@@ -27,3 +27,8 @@ ipcMain.handle('project:open',async()=>{
   const stat=await fs.stat(result.filePaths[0]);if(stat.size>2_000_000)throw new Error('2 MB 이하의 회로 파일만 열 수 있습니다.');
   return await fs.readFile(result.filePaths[0],'utf8');
 });
+ipcMain.handle('waveform:export',async(_event,text)=>{
+  if(typeof text!=='string'||Buffer.byteLength(text)>2_000_000||!text.startsWith('time_ms,'))throw new Error('파형 데이터가 올바르지 않습니다.');
+  const result=await dialog.showSaveDialog(win,{title:'파형 CSV 저장',defaultPath:'stm-emulator-waveform.csv',filters:[{name:'CSV',extensions:['csv']}]});
+  if(result.canceled)return null;await fs.writeFile(result.filePath,text,'utf8');return result.filePath;
+});

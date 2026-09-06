@@ -60,6 +60,9 @@ export function solveCircuit(project,gpio={},pressed={},transient={}){
     }
     if(p.type==='rgb')for(const [n,channel,vf]of [[1,'r',1.8],[3,'g',2.1],[4,'b',2.8]])branch(pin(n),pin(2),12,{id:p.id,diode:true,led:true,vf,channel});
     if(p.type==='sevenseg')PART_DEFS.sevenseg.labels.forEach((label,i)=>{if(!label.startsWith('K'))branch(pin(i+1),pin(3),12,{id:p.id,diode:true,led:true,vf:1.8,channel:label});});
+    if(p.type==='lcd'){branch(pin(2),pin(1),4200,{id:p.id});branch(pin(15),pin(16),220,{diode:true,vf:2.1});}
+    if(['uart','i2c','spi'].includes(p.type))branch(pin(1),pin(2),10000,{id:p.id});
+    if(p.type==='i2c'){branch(pin(3),pin(1),10000);branch(pin(4),pin(1),10000);}
     if(p.type==='temperature'||p.type==='ultrasonic'){
       const temp=p.type==='temperature',gnd=pin(temp?3:4),output=pin(temp?2:3);
       branch(pin(1),gnd,temp?200000:2500);
@@ -117,5 +120,6 @@ export class CircuitSimulation{
    this.time=time;const result=solveCircuit(project,gpio,pressed,{dt:this.dt,capacitors:this.base,echoHigh});
    if(!result.fault)this.latest=result.capacitors;return result;
  }
+ hold(project,gpio,pressed,echoHigh={}){return solveCircuit(project,gpio,pressed,{dt:1e-9,capacitors:this.latest,echoHigh});}
 }
 export function digitalRead(pin,result){const v=result?.voltage(`signal:${canonicalPin(pin)}`);return v!=null&&v>=1.65?1:0;}

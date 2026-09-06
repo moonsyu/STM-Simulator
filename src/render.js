@@ -57,7 +57,7 @@ export function renderParts(project,selected,result,pressed){const ordered=[...p
  if(p.type==='led'){const color=LED_COLORS[p.color],on=result?.parts[p.id]?.on;shape=`<circle class="led-glow" r="23" fill="${color}" opacity="${on?.6:0}" filter="url(#led-glow)"/><circle class="led-lens" r="12" fill="${on?color:'#704b4c'}" stroke="${color}" stroke-width="2"/><ellipse cx="-4" cy="-4" rx="3" ry="4" fill="#fff" opacity=".3"/><path d="M8 -8V8" stroke="#421e26" stroke-width="2"/>`+text(-18,-13,'+',10,color)+text(15,-13,'−',10,color);}
  if(p.type==='button')shape=rect(-16,-11,32,22,'#a1adb3',3,'stroke="#6d7f8b"')+`<circle class="switch-cap" r="9" fill="${pressed[p.id]?'#168775':'#354857'}" stroke="#233541" stroke-width="2"/>`;
  if(p.type==='lcd'){
-   shape=rect(-121,-46,242,84,'#286e61',4,'stroke="#184a40" stroke-width="2"')+rect(-110,-34,220,57,'#213950',4)+rect(-103,-27,206,43,'#9ba958',2)+text(0,-9,'LCD 1602',13,'#394721','text-anchor="middle" font-family="monospace"')+text(0,7,'16 PIN MODEL',9,'#4b572e','text-anchor="middle" font-family="monospace"');
+   shape=rect(-121,-46,242,84,'#286e61',4,'stroke="#184a40" stroke-width="2"')+rect(-110,-34,220,57,'#213950',4)+rect(-103,-27,206,43,'#9ba958',2)+`<g class="lcd-content">${lcdContent(result?.parts[p.id]?.lcd)}</g>`;
    for(const xx of [-114,114])for(const yy of [-39,31])shape+=`<circle cx="${xx}" cy="${yy}" r="3" fill="#e6d395"/>`;
    shape+=text(-105,34,'1',7,'#d0e7df')+text(105,34,'16',7,'#d0e7df','text-anchor="end"');
  }
@@ -84,9 +84,16 @@ export function renderPinSearch(pins,selectedId=null){return [...pins.filter(p=>
  }).join('');}
 export function updateSimulationSvg(svg,project,result,pressed){
  for(const p of project.components){const g=svg.querySelector(`[data-part="${p.id}"]`);if(!g)continue;
+   if(p.type==='lcd')g.querySelector('.lcd-content').innerHTML=lcdContent(result?.fault?null:result?.parts[p.id]?.lcd);
    updateExtraSvg(g,p,result?.fault?null:result?.parts[p.id]);
    if(p.type==='led'){const on=!result?.fault&&result?.parts[p.id]?.on;g.querySelector('.led-lens')?.setAttribute('fill',on?LED_COLORS[p.color]:'#704b4c');g.querySelector('.led-glow')?.setAttribute('opacity',on?'.6':'0');}
    if(p.type==='button')g.querySelector('.switch-cap')?.setAttribute('fill',pressed[p.id]?'#168775':'#354857');
  }
  const on=result&&!result.fault&&result.voltage('signal:PA5')>1.8,led=svg.querySelector('#builtin-led');led.setAttribute('fill',on?'#64e66b':'#89a486');led.style.filter=on?'drop-shadow(0 0 5px #59dc65)':'';
+}
+export function lcdContent(lcd){
+ if(!lcd?.visible)return text(0,-9,lcd?.powered?'LCD · INITIALIZE':'LCD 1602',12,'#687440','text-anchor="middle"')+text(0,7,lcd?.powered?'RS / E / DATA / VO':'5 V POWER',8,'#687440','text-anchor="middle"');
+ let output=lcd.lines.map((line,row)=>`<text class="lcd-line" data-row="${row}" x="-96" y="${-10+row*19}" font-family="Consolas,monospace" font-size="12" textLength="192" lengthAdjust="spacingAndGlyphs" xml:space="preserve" fill="#293e1b">${esc(line)}</text>`).join('');
+ lcd.codes.forEach((row,r)=>row.forEach((code,c)=>{if(code>=8)return;for(let y=0;y<8;y++)for(let x=0;x<5;x++)if(lcd.cgram[code*8+y]&(1<<(4-x)))output+=rect(-96+c*12+x*1.9,-22+r*19+y*1.7,1.5,1.4,'#293e1b');}));
+ if(lcd.cursor||lcd.blink){const row=lcd.address>=64?1:0,col=(lcd.address%64-lcd.shift+40)%40;if(col<16)output+=rect(-96+col*12,-8+row*19-(lcd.blink?13:0),10,lcd.blink?15:1.5,'#293e1b');}return output;
 }

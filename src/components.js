@@ -1,11 +1,14 @@
 // Geometry shared by rendering, hit testing, mounting and project validation.
 export const TWO_PIN_TYPES=['resistor','led','capacitor','diode','buzzer'];
-export const MULTI_PIN_TYPES=['button','lcd','potentiometer','slide','rgb','sevenseg','temperature','ultrasonic'];
+export const MULTI_PIN_TYPES=['button','lcd','potentiometer','slide','rgb','sevenseg','temperature','ultrasonic','uart','i2c','spi'];
 export const PART_DEFS={
+ uart:{name:'UART 터미널',prefix:'UART',icon:'↔',hint:'4핀 · 송수신 터미널',defaults:{baud:9600},labels:['VCC','GND','TX','RX'],help:'3.3 V 전원을 연결하고 TX를 보드 RX(PA3), RX를 보드 TX(PA2)에 연결하세요. Serial1.begin(9600)으로 시작합니다. 속도는 부품과 코드가 같아야 하며 하단 통신 탭에서 문자를 보낼 수 있습니다.'},
+ i2c:{name:'I²C 메모리',prefix:'I2C',icon:'▦',hint:'4핀 · 주소 / 256 B',defaults:{address:80},labels:['VCC','GND','SDA','SCL'],help:'256바이트 범용 메모리 모델입니다. 3.3 V, GND, SDA(PB9), SCL(PB8)를 연결하세요. 모듈에 10 kΩ 풀업을 포함합니다. 첫 전송 바이트가 메모리 위치이고 이후 바이트가 데이터입니다.'},
+ spi:{name:'SPI 메모리',prefix:'SPI',icon:'⇄',hint:'6핀 · CS / 256 B',defaults:{},labels:['VCC','GND','CS','SCK','MOSI','MISO'],help:'256바이트 범용 메모리 모델입니다. CS LOW 상태에서 명령 0x02(쓰기) 또는 0x03(읽기), 1바이트 주소, 데이터를 전송합니다. 기본 핀은 SCK PA5, MOSI PA7, MISO PA6입니다. CS는 별도로 GPIO로 제어하세요.'},
  potentiometer:{name:'가변저항',prefix:'VR',icon:'◉',hint:'3핀 · 저항 / 위치 조절',defaults:{value:10000,position:50},labels:['1','2 · WIPER','3'],help:'1–3은 전체 저항, 2는 가변 접점입니다. 1을 GND, 3을 3.3 V, 2를 ADC에 연결하면 조절 위치에 따라 전압이 바뀝니다.'},
  slide:{name:'슬라이드 스위치',prefix:'SW',icon:'▣',hint:'3핀 · 연결 방향 유지',defaults:{position:0},labels:['A','COM','B'],help:'COM을 A 또는 B에 연결하는 SPDT 스위치입니다. 실행 중 몸체를 클릭하거나 속성에서 연결 방향을 바꿀 수 있습니다.'},
  rgb:{name:'RGB LED',prefix:'RGB',icon:'◉',hint:'4핀 · 공통 음극',defaults:{},labels:['R (+)','K (−)','G (+)','B (+)'],help:'공통 음극 K를 GND에 연결하세요. R·G·B에는 각각 직렬 저항이 필요하며 채널 전류에 따라 혼합색을 표시합니다.'},
- capacitor:{name:'커패시터',prefix:'C',icon:'⊣',hint:'2핀 · 충전 / 방전',defaults:{value:100},help:'비극성 커패시터 모델입니다. 용량 단위는 µF이며 20 ms 시간 간격의 RC 충전·방전을 계산합니다. 실행을 다시 시작하면 초기 전압은 0 V입니다.'},
+ capacitor:{name:'커패시터',prefix:'C',icon:'⊣',hint:'2핀 · 충전 / 방전',defaults:{value:100},help:'비극성 커패시터 모델입니다. 용량 단위는 µF이며 파형 탭에서 선택한 0.1~20 ms 간격으로 RC 충전·방전을 계산합니다. 실행을 다시 시작하면 초기 전압은 0 V입니다.'},
  diode:{name:'다이오드',prefix:'D',icon:'▶',hint:'2핀 · A → K 정류',defaults:{},help:'첫 번째 다리가 A, 띠가 있는 두 번째 다리가 K입니다. 순방향 전압 0.7 V의 학습용 모델이며 역방향 항복은 계산하지 않습니다.'},
  buzzer:{name:'능동 부저',prefix:'BZ',icon:'◔',hint:'2핀 · 전압에 따른 소리',defaults:{},help:'첫 다리는 +, 두 번째는 −입니다. 2 V 이상에서 동작하는 능동 부저 모델입니다. 상단의 소리 버튼을 켜면 실행 중 울립니다.'},
  sevenseg:{name:'7세그먼트',prefix:'DISP',icon:'8',hint:'10핀 · 공통 음극',defaults:{},labels:['e','d','K1','c','dp','b','a','K2','f','g'],help:'K1·K2는 내부 연결된 공통 음극입니다. a–g·dp에 각각 직렬 저항을 연결하세요. 각 세그먼트의 전류에 따라 점등합니다.'},

@@ -2,7 +2,9 @@ import {blankProject} from './project.js';
 import {PART_DEFS,TWO_PIN_TYPES} from './components.js';
 import {boardPin} from './pins.js';
 import {findMount,applyMount} from './placement.js';
+import {featureExample} from './feature-examples.js';
 export function componentExample(type){
+ if(['uart','i2c','spi'].includes(type))return featureExample(type);
  const def=PART_DEFS[type];if(!def)throw new Error('지원하지 않는 예제입니다.');
  const project=blankProject();project.name=def.name+' 실습';
  const part={id:'demo',type,name:def.prefix+'1',x:type==='sevenseg'?795:type==='ultrasonic'?848:844,y:type==='sevenseg'||['potentiometer','slide','temperature'].includes(type)?310:303,rotation:90,...def.defaults};

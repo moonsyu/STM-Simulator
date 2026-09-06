@@ -115,8 +115,8 @@ test('pin search normalizes case and whitespace and finds all physical aliases',
  assert.equal(searchPins('D13')[0].signal,'PA5');assert.equal(searchPins('CN7 - 23')[0].signal,'PC13');
  assert.equal(searchPins('PC99').length,0);assert.equal(searchPins('   ').length,0);
 });
-test('all nine new parts have complete mountable footprints, valid examples and persistent settings',()=>{
- assert.equal(Object.keys(PART_DEFS).length,9);
+test('all extra parts have complete mountable footprints, valid examples and persistent settings',()=>{
+ assert.equal(Object.keys(PART_DEFS).length,12);
  for(const type of Object.keys(PART_DEFS)){
    const p=componentExample(type),part=p.components[0];assert.deepEqual(validateProject(p),p,type);assert.equal(Object.keys(attachments(part)).length,terminalKeys(part).length,type);
    for(const key of terminalKeys(part)){const e=endpointInfo(`part:demo:${key}`,p.components),h=endpointInfo(attachments(part)[key]);close(e.x,h.x);close(e.y,h.y);}
