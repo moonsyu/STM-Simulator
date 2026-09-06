@@ -13,12 +13,19 @@ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
  try{
    let port;for(let i=0;i<160;i++){try{port=(await fs.readFile(path.join(profile,'DevToolsActivePort'),'utf8')).split('\n')[0];break;}catch{await sleep(250);}}
    if(!port)throw new Error('Portable application did not expose its test port.');
-   browser=await chromium.connectOverCDP('http://127.0.0.1:'+port);page=browser.contexts()[0].pages()[0];await page.waitForSelector('.pin-hit');
-   assert.equal(await page.locator('.hole').count(),400);assert.equal(await page.locator('[data-add]').count(),13);assert.equal(await page.locator('[data-color]').count(),10);await page.locator('#pin-search').fill('PC 13');assert.equal(await page.locator('#pin-results button').count(),1);await page.locator('#pin-results button').click();assert.equal(await page.locator('#search-layer [data-selected="true"]').count(),1);await page.locator('#pin-search').fill('');await page.click('#zoom-reset');await page.click('#run');await sleep(100);assert.ok(Number.parseFloat(await page.locator('#sim-current').innerText())>3);assert.match(await page.locator('#run-status').innerText(),/실행 중/);
+   browser=await chromium.connectOverCDP('http://127.0.0.1:'+port);page=browser.contexts()[0].pages()[0];const errors=[];page.on('pageerror',e=>errors.push(e.message));await page.waitForSelector('.pin-hit');
+   assert.equal(await page.locator('.hole').count(),400);assert.equal(await page.locator('[data-add]').count(),16);assert.equal(await page.locator('[data-color]').count(),10);await page.locator('#pin-search').fill('PC 13');assert.equal(await page.locator('#pin-results button').count(),1);await page.locator('#pin-results button').click();assert.equal(await page.locator('#search-layer [data-selected="true"]').count(),1);await page.locator('#pin-search').fill('');await page.click('#zoom-reset');await page.click('#run');await sleep(100);assert.ok(Number.parseFloat(await page.locator('#sim-current').innerText())>3);assert.match(await page.locator('#run-status').innerText(),/실행 중/);
    await page.screenshot({path:path.join(out,'portable-app.png')});
    await page.click('#run');await page.selectOption('#extra-example','ultrasonic');await page.click('#run');await sleep(150);assert.match(await page.locator('#console-output').innerText(),/100/);assert.match(await page.locator('#run-status').innerText(),/실행 중/);
-   await fs.writeFile(path.join(out,'portable-smoke.json'),JSON.stringify({passed:true,exe,url:page.url(),checks:['portable extraction and launch','400 interactive breadboard holes','13 part types','selected search pin','LED simulation runs','HC-SR04 example runs']},null,2));
-   console.log('Portable EXE passed: extraction, launch, 400 holes, LED simulation.');
+   const feature=async type=>{await page.click('#run');await page.selectOption('#feature-example',type);if(await page.locator('#replace-dialog').isVisible())await page.click('#replace-confirm');await page.click('#clear-console');await page.click('#run');await sleep(180);assert.match(await page.locator('#run-status').innerText(),/실행 중/);};
+   await feature('lcd');assert.equal(await page.locator('.lcd-line[data-row="0"]').textContent(),'STM Emulator    ');
+   await feature('uart');await page.click('[data-monitor="bus"]');await page.fill('#serial-input','Portable UART');await page.click('#serial-send');await sleep(180);assert.match(await page.locator('#uart-output').innerText(),/Portable UART/);
+   for(const type of ['i2c','spi']){await feature(type);assert.match(await page.locator('#console-output').textContent(),/42/);}
+   await feature('language');assert.match(await page.locator('#console-output').textContent(),/25/);
+   await feature('dma');assert.match(await page.locator('#console-output').textContent(),/204[78]/);
+   await feature('pwm');await page.click('[data-monitor="wave"]');await sleep(150);assert.equal(await page.locator('.trace-channel').count(),4);assert.ok((await page.locator('.trace-channel').first().getAttribute('d')).length>100);await page.screenshot({path:path.join(out,'portable-waveform.png')});assert.deepEqual(errors,[]);
+   await fs.writeFile(path.join(out,'portable-smoke.json'),JSON.stringify({passed:true,exe,url:page.url(),checks:['portable extraction and launch','400 interactive breadboard holes','16 part types','selected search pin','LED simulation runs','HC-SR04 example runs','LCD live text','UART round trip','I2C/SPI memory read','language example','ADC DMA completion','four-channel PWM/RC waveform'],errors},null,2));
+   console.log('Portable EXE passed: launch, editor, LED, HC-SR04, LCD, UART/I2C/SPI, language, DMA and PWM/RC.');
  }finally{
    if(page)await page.evaluate(()=>window.close()).catch(()=>{});
    if(browser)await browser.close().catch(()=>{});

@@ -83,6 +83,8 @@ export function validateProject(data){
     if(p.type==='slide'){if(![0,1].includes(p.position))throw new Error('스위치 위치가 올바르지 않습니다.');q.position=p.position;}
     if(p.type==='temperature')number('temperature',-40,125);
     if(p.type==='ultrasonic')number('distance',2,400);
+    if(p.type==='uart'){number('baud',300,2000000);if(!Number.isInteger(p.baud))throw new Error('UART 속도는 정수여야 합니다.');}
+    if(p.type==='i2c'){number('address',8,119);if(!Number.isInteger(p.address))throw new Error('I²C 주소는 정수여야 합니다.');}
     return q;
   });
   const end=id=>{if(base(id))return true;const m=/^part:([^:]+):([a-d]|p\d+)$/.exec(id);const p=m&&components.find(p=>p.id===m[1]);return !!p&&terminalKeys(p).includes(m[2]);};
@@ -91,5 +93,7 @@ export function validateProject(data){
     if(!safeId(w.id)||wireIds.has(w.id)||!end(w.from)||!end(w.to)||w.from===w.to||!/^#[0-9a-fA-F]{6}$/.test(w.color))throw new Error('배선 정보가 올바르지 않습니다.');
     wireIds.add(w.id);return {id:w.id,from:w.from,to:w.to,color:w.color};
   });
-  return {format:data.format,version:2,name:data.name,code:data.code,components,wires};
+  const project={format:data.format,version:2,name:data.name,code:data.code,components,wires};
+  if(data.simulation!==undefined){const s=data.simulation;if(!s||typeof s!=='object'||![.1,.5,1,5,20].includes(s.stepMs)||typeof s.pwmWaveform!=='boolean')throw new Error('시뮬레이션 시간 설정이 올바르지 않습니다.');project.simulation={stepMs:s.stepMs,pwmWaveform:s.pwmWaveform};}
+  return project;
 }

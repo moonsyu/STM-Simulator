@@ -12,17 +12,27 @@ STMicroelectronics와 제휴·후원 관계가 없는 비공식 학습용 프로
 
 1. 위 링크에서 초록색 체크가 있는 최신 **Build Windows EXE** 실행을 선택하세요.
 2. 실행 화면 아래 **Artifacts → STM-Emulator-Windows-x64**를 눌러 ZIP을 다운로드하세요. 빌드 Summary의 **Download EXE bundle** 링크로도 받을 수 있습니다.
-3. ZIP을 풀고 `STM-Emulator-0.3.2-win-x64.exe`를 실행하세요. 이후 버전은 파일명의 버전 숫자가 달라집니다.
+3. ZIP을 풀고 `STM-Emulator-0.4.0-win-x64.exe`를 실행하세요. 이후 버전은 파일명의 버전 숫자가 달라집니다.
 
 **Windows x64용**이며 별도 Node.js 설치가 필요 없습니다. 첫 화면의 **시뮬레이션 시작** 버튼으로 LED 깜빡이기 예제를 실행합니다. macOS/Linux용 실행파일은 현재 제공하지 않습니다. 코드 서명 인증서는 적용하지 않았습니다.
 
 Private 저장소이므로 GitHub 로그인과 저장소 읽기 권한이 필요합니다. Artifacts는 90일 보관하며, 만료되면 해당 Actions 페이지의 **Run workflow**로 다시 빌드할 수 있습니다(실행 권한 필요). 다운로드 방법은 [GitHub 공식 안내](https://docs.github.com/en/actions/how-tos/manage-workflow-runs/download-workflow-artifacts)를 참고하세요.
 
-ZIP에는 EXE, `SHA256.txt`, `BUILD-INFO.json`, README와 제3자 라이선스 고지가 들어 있습니다. 라이선스 고지도 함께 보관하세요. 체크섬은 PowerShell의 `Get-FileHash .\STM-Emulator-0.3.2-win-x64.exe -Algorithm SHA256` 결과와 비교할 수 있습니다. `BUILD-INFO.json`에서 빌드한 커밋과 Actions 실행 링크를 확인할 수 있습니다.
+ZIP에는 EXE, `SHA256.txt`, `BUILD-INFO.json`, README와 제3자 라이선스 고지가 들어 있습니다. 라이선스 고지도 함께 보관하세요. 체크섬은 PowerShell의 `Get-FileHash .\STM-Emulator-0.4.0-win-x64.exe -Algorithm SHA256` 결과와 비교할 수 있습니다. `BUILD-INFO.json`에서 빌드한 커밋과 Actions 실행 링크를 확인할 수 있습니다.
 
 0.3.2는 GitHub 빌드·다운로드를 추가하고, 장식용 ST 표기를 일반 기능 표기로 교체했습니다. 재배포 허락이 확인되지 않은 참고 이미지와 과거 스크린샷은 저장소·EXE에 포함하지 않습니다.
 
 0.3.1부터 프로젝트·앱 이름을 **STM Emulator**로 변경했습니다. 기존 자동 저장 위치와 `.stm32lab` 파일 형식을 유지하므로 이전 회로를 계속 사용할 수 있습니다.
+
+## 0.4.0 추가 기능
+
+- LCD 1602의 4/8비트 명령·문자 출력·커서·사용자 문자.
+- UART 터미널, I²C 메모리, SPI 메모리 부품과 전원·배선 기반 송수신. **총 16종 부품**입니다.
+- 사용자 함수·배열·구조체·범위 검사 포인터, for/do 반복문, 비트 연산.
+- Timer 콜백, GPIO 에지 인터럽트, ADC/PWM 배열 전송용 DMA 모델.
+- 4채널 파형, 평균/PWM 전환, 0.1~20 ms 계산 간격, CSV 저장.
+
+왼쪽 **LCD · 통신 · 파형 실습**에서 9가지 기능 예제를 여세요. 하단 **로그 / 파형 / 통신** 탭으로 동작을 확인할 수 있습니다. [스케치 API와 모델 범위](docs/SKETCH-API.md)에 함수·기본 핀·제약을 정리했습니다.
 
 ## 사용
 
@@ -33,23 +43,26 @@ ZIP에는 EXE, `SHA256.txt`, `BUILD-INFO.json`, README와 제3자 라이선스 �
 5. 코드를 작성하고 실행하세요. 실행 중 버튼은 누르는 동안 연결됩니다. 핀·부품을 선택하면 전압·전류를 측정합니다.
 6. **파일 저장**으로 `.stm32lab` 파일을 만들고 **불러오기**로 다시 엽니다. 마지막 작업 회로는 앱의 로컬 저장소에도 자동 저장합니다.
 7. 보드 핀 검색에 `PC 13`, `PA 8`, `D13` 등을 입력하세요. 공백과 대소문자를 무시하며 같은 GPIO의 Arduino·Morpho 위치를 함께 표시합니다. 결과 클릭 또는 Enter로 해당 핀을 확대하고 **선택한 물리 핀 하나를 파란 표식·핀 이름으로 강조**합니다. 목록의 선택 행도 함께 표시되며 다른 검색 결과는 노란색으로 남습니다.
-8. 왼쪽 아래 **부품별 실행 예제**에서 추가 부품 9종 각각의 완성 회로와 코드를 열 수 있습니다. 실행 중 가변저항·스위치·온도·거리를 오른쪽 속성에서 바꾸세요. 능동 부저 소리는 상단 **소리 꺼짐** 버튼을 눌러 켭니다.
+8. 왼쪽 아래 **부품별 실행 예제**에서 추가 부품 12종 각각의 완성 회로와 코드를 열 수 있습니다. 실행 중 가변저항·스위치·온도·거리를 오른쪽 속성에서 바꾸세요. 능동 부저 소리는 상단 **소리 꺼짐** 버튼을 눌러 켭니다.
 
 단축키: `W` 배선, `V` 선택, `Esc` / `Delete` 선택한 부품·배선 삭제, `R` 45° 회전, `Ctrl+Z` 취소, `Ctrl+Y` 재실행, `Ctrl+S` 파일 저장. 연결 중 Esc는 연결 취소이며, 코드·입력칸 편집 중에는 부품을 삭제하지 않습니다. 마우스 휠로 확대하고 빈 공간을 끌어 이동합니다.
 
 배선은 초록·빨강·검정·보라·파랑·노랑·주황·분홍·갈색·흰색 10가지를 제공합니다. 배선을 선택한 뒤 색을 누르면 기존 선의 색도 변경됩니다. 빵판 구멍과 겹친 부품 몸체는 구멍보다 먼저 선택됩니다.
 
 0.1.0 회로 파일과 이전 자동 저장을 읽어 새 형식으로 변환합니다. 기존 버튼의 두 연결점은 유지하며, 새로 추가하는 버튼은 네 다리를 모두 장착합니다. 0.2.0 파일은 이전 버전에서 열 수 없습니다.
-0.3.0은 기존 버전 2 회로도 읽습니다. 새 부품이 포함된 회로는 0.1.0/0.2.0 앱에서 열 수 없습니다.
+0.4.0도 기존 버전 2 회로를 읽습니다. 새 부품·문법·시뮬레이션 설정을 사용하는 회로는 구형 앱에서 동일하게 동작하지 않습니다.
 
-## 0.3.0 추가 부품 9종
+## 추가 부품 12종
 
 | 부품 | 동작 및 조절 |
 |---|---|
+| UART 터미널 | 4핀, 기본 9600 baud. TX/RX를 교차 연결하고 Serial1 송수신. 하단 통신 탭으로 입력 |
+| I²C 메모리 | 4핀, 기본 0x50, 256바이트 RAM. 내장 풀업, 주소·ACK/NACK·순차 읽기/쓰기 |
+| SPI 메모리 | 6핀, 256바이트 RAM. CS 제어 및 0x02 쓰기/0x03 읽기 명령 |
 | 가변저항 | 3핀, 기본 10 kΩ. 1–3 전체 저항과 2번 가변 접점, 0–100% 위치를 조절하며 부하까지 반영한 분압 계산 |
 | 슬라이드 스위치 | 3핀 SPDT. COM↔A/B 연결 유지. 실행 중 몸체 클릭 또는 속성으로 전환 |
 | RGB LED | R/K/G/B 4핀 공통 음극. 채널별 전류와 혼합색 표시, 외부 직렬 저항 필요 |
-| 커패시터 | 비극성 2핀, 0.001–100,000 µF. 초기 0 V에서 20 ms 간격의 RC 충·방전 |
+| 커패시터 | 비극성 2핀, 0.001–100,000 µF. 초기 0 V에서 선택한 0.1~20 ms 간격의 RC 충·방전 |
 | 다이오드 | A/K 2핀. 순방향 0.7 V와 1 Ω 동적 저항, 역방향 차단 모델 |
 | 능동 부저 | +/− 2핀. 2 V 이상 동작, 1 kΩ 부하 모델. 2.3 kHz 합성음 켜기/끄기 |
 | 7세그먼트 | 10핀 공통 음극, a–g와 dp의 독립 점등. K1/K2 내부 연결, 각 세그먼트에 저항 필요 |
@@ -62,8 +75,8 @@ ZIP에는 EXE, `SHA256.txt`, `BUILD-INFO.json`, README와 제3자 라이선스 �
 - 정확히 400개인 빵판 구멍: 30행 × 10개 일반 구멍, 4개 전원 레일 × 25개 구멍.
 - 같은 행 A–E와 F–J 각각 연결, 중앙 홈 양쪽 분리. 각 전원 레일은 세로 전체가 연결되어 있으며 네 레일은 독립적입니다.
 - 저항, LED(빨강·초록·파랑·노랑), 4핀 순간 버튼. 버튼 A1–A2와 B1–B2는 각각 내부 연결이며, 누를 때 두 쪽이 연결됩니다.
-- LCD 1602의 16핀 배치·배선 모형. VSS/VDD/VO/RS/RW/E/DB0–DB7/A/K 단자에 배선을 연결할 수 있습니다.
-- GPIO 출력/입력/풀업/풀다운, 12비트 ADC 값, 평균 전압 방식 PWM.
+- LCD 1602의 16핀 배치·배선과 명령·문자 출력. VSS/VDD/VO/RS/RW/E/DB0–DB7/A/K 단자에 배선을 연결할 수 있습니다.
+- GPIO 출력/입력/풀업/풀다운, 12비트 ADC 값, 평균 전압 또는 시간별 HIGH/LOW 방식 PWM.
 - 저항 및 LED DC 해석, 전원 단락 시 정지, GPIO·LED 과전류 및 저항 전력 경고.
 - LED, 외부 버튼, 전압 분배 예제.
 - 코드 실행 시간, Serial 텍스트 출력, 전압·전류 측정, 실행 취소·재실행, 프로젝트 파일 저장.
@@ -85,16 +98,17 @@ void loop() {
 }
 ```
 
-지원 함수: `pinMode`, `digitalWrite`, `digitalRead`, `analogRead`, `analogWrite`, `delay`, `millis`, `micros`, `delayMicroseconds`, `pulseIn`, `Serial.begin`, `Serial.print`, `Serial.println`.
+기존 GPIO·시간·Serial API에 LiquidCrystal, Serial1, Wire, SPI, Timer, GPIO 인터럽트, DMA를 추가했습니다. 사용자 함수·배열·구조체·단일 포인터·for/while/do 반복문을 지원하며, 실행 및 메모리 사용 한도와 인덱스·포인터 유효성 검사를 적용합니다.
 
-지원 문법: `setup()` / `loop()`, 숫자·문자열, 변수 선언과 할당, `#define`, 산술·비교·논리 연산, `if/else`, `while`, `++/--`. 일반 사용자 함수, 배열·포인터·구조체, `for`, `#include`, 라이브러리 연결은 지원하지 않습니다. 루프에 `delay()`가 없으면 실행 예산을 초과할 수 있습니다. 임의 JavaScript나 파일·네트워크 API는 실행하지 않습니다.
+외부 헤더를 컴파일하는 방식은 아니며 허용된 include는 내장 API를 사용한다는 표시입니다. 일반 C/C++ 전체의 자료형·문법·ABI와 일치하지 않습니다. 정확한 지원 함수와 인수는 [스케치 API](docs/SKETCH-API.md)를 확인하세요.
 
 ## 모델의 한계
 
-- LCD는 배치·배선만 지원하며 HD44780 명령 해석이나 문자열 출력은 아직 구현하지 않았습니다.
+- LCD는 쓰기 측 명령·ASCII·사용자 문자 8개를 지원합니다. busy-flag 읽기, 모든 폰트 ROM과 전원 상승 시퀀스는 미지원입니다.
 - 부품 회전은 45° 간격입니다. 모든 다리가 빈 구멍에 맞을 때만 장착하며 접점은 구멍의 정확한 좌표를 사용합니다. 시각적 다리 굽힘을 허용하는 배치 모델로, 실제 부품의 기계 치수·충돌 전체를 검증하는 CAD는 아닙니다.
-- **CubeIDE에서 만든 ELF/BIN 펌웨어는 실행할 수 없습니다.** Cortex-M4 명령과 STM32 주변장치 레지스터를 에뮬레이션하지 않습니다. HAL 전체, UART/I²C/SPI, DMA, 타이머, 인터럽트 등은 이후 개발 범위입니다.
-- 시뮬레이션은 20 ms 단위로 진행하며 실제 MCU 클록 또는 명령 실행 시간과 일치하지 않습니다. PWM은 파형 대신 평균 DC 전압입니다.
+- **CubeIDE에서 만든 ELF/BIN 펌웨어는 실행할 수 없습니다.** Cortex-M4 명령과 STM32 주변장치 레지스터를 에뮬레이션하지 않습니다. HAL 전체는 미지원입니다. UART/I²C/SPI, Timer·인터럽트·DMA는 앱의 스케치 모델이며 STM32 레지스터·주변장치 전체의 재현이 아닙니다.
+- 화면은 약 20 ms마다 갱신하고, 회로는 선택한 0.1~20 ms 간격과 GPIO 전환 시점에 계산합니다. 실제 MCU 클록 또는 명령 실행 시간과 일치하지 않습니다. PWM 파형 모드는 기본 꺼짐이며 파형 탭에서 켤 수 있습니다.
+- UART/I²C/SPI는 트랜잭션 모델입니다. UART 8N1 수신 바이트 시간과 I²C/SPI 전송 시간은 반영하지만, 각 통신선의 비트 에지·노이즈·중재·clock stretching·SPI 모드 전체는 미지원입니다. 타이머·DMA 콜백도 실제 CPU 선점/주변장치 우선순위 모델은 아닙니다.
 - 커패시터는 후진 오일러 방식이며 매우 짧은 RC 시정수·고속 펄스의 정밀 파형에는 적합하지 않습니다. 실행 중 같은 시간의 전압을 반복해서 읽어도 충전 시간이 추가로 진행되지 않습니다.
 - TMP36 출력은 100 Ω 출력 저항으로 단순화했습니다. HC-SR04는 전원과 연결, TRIG 호출 간격을 검사하는 모델입니다. `delayMicroseconds`는 스케치의 펄스 간격을 기록하고 `pulseIn(HIGH)`는 준비된 ECHO의 길이를 반환합니다. µs 단위 CPU 실행, 실제 대기 시간, 임의 GPIO의 펄스 측정, 센서 노이즈·재질·반사 환경은 구현하지 않습니다. 이 버전의 `pulseIn`은 ECHO와 입력 핀이 도선으로 같은 노드에 연결되어야 하며 저항 분압을 거친 펄스 측정은 지원하지 않습니다. ECHO는 5 V 모델입니다.
 - LED는 고정 순방향 전압과 12 Ω 동적 저항을 사용하며 GPIO 출력 저항은 40 Ω로 단순화합니다. 이 값들은 학습용 모델이며 칩 전기적 특성의 보증값이 아닙니다.
@@ -121,7 +135,7 @@ GitHub Actions는 `main`에 push하거나 수동 실행할 때 Windows에서 의
 
 `npm run dev:web`은 개발 확인용 로컬 웹 서버를 `http://127.0.0.1:4173`에 띄웁니다. 데스크톱 앱은 웹 서버 없이 동작합니다.
 
-UI 검증: Playwright가 설치된 환경에서 `node scripts/ui-smoke.cjs`, `node scripts/editor-smoke.cjs`, `node scripts/parts-smoke.cjs`. `PLAYWRIGHT_MODULE` 환경 변수로 별도 설치된 Playwright 패키지 경로를 지정할 수 있습니다. `LAB_EXE`는 패키징된 `win-unpacked` 앱 본체 경로입니다. 단일 EXE 검증은 `node scripts/portable-smoke.cjs`입니다. 결과는 `test-results/`에 기록합니다.
+UI 검증: Playwright가 설치된 환경에서 `node scripts/ui-smoke.cjs`, `node scripts/editor-smoke.cjs`, `node scripts/parts-smoke.cjs`, `node scripts/features-smoke.cjs`. `PLAYWRIGHT_MODULE` 환경 변수로 별도 설치된 Playwright 패키지 경로를 지정할 수 있습니다. `LAB_EXE`는 패키징된 `win-unpacked` 앱 본체 경로입니다. 단일 EXE 검증은 `node scripts/portable-smoke.cjs`입니다. 결과는 `test-results/`에 기록합니다.
 
 구조: `src/pins.js` 핀 좌표와 검색, `src/components.js` 부품 다리 구조, `src/placement.js` 장착 계산, `src/engine.js` 회로 해석, `src/program.js` 인터프리터, `src/project.js` 프로젝트/예제/검증, `src/render.js` 벡터 그림, `src/app.js` 편집과 실행 UI, `desktop/` 실행파일 호스트.
 
@@ -133,7 +147,7 @@ STM32·NUCLEO 및 ST 관련 상표는 각 권리자에게 있습니다. Electron
 
 데스크톱 패키징: [Electron 공식 문서](https://www.electronjs.org/docs/latest/tutorial/application-distribution).
 
-LCD 단자 명칭: [Winstar WH1602A 데이터시트](https://www.winstar.com.tw/uploads/files/7dbd3015ddf41b06f3f8c89aa4c5fb03.pdf). 앱 그림은 범용 16핀 배치 모형입니다.
+LCD 단자 명칭: [Winstar WH1602A 데이터시트](https://www.winstar.com.tw/uploads/files/7dbd3015ddf41b06f3f8c89aa4c5fb03.pdf). 앱 그림과 제어기는 범용 16핀 학습용 모형입니다. 특정 LCD 제조사의 전기 특성 보증이 아닙니다.
 
 가변저항 구조는 [Bourns 3386 데이터시트](https://www.bourns.com/data/global/pdfs/3386.pdf), RGB의 공통 단자 구성은 [Kingbright RGB 제품 안내](https://www.kingbrightusa.com/lobbyRGB.asp), 표시기 단자 구성은 [Kingbright SC56-21GWA](https://www.kingbrightusa.com/images/catalog/spec/sc56-21gwa.pdf)를 참고했습니다. 범용 모형이며 실제 부품의 기계 치수 전체를 복제한 것은 아닙니다.
 

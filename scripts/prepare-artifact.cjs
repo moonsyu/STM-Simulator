@@ -18,7 +18,7 @@ const assert = require('node:assert/strict');
   assert.ok(!entries.some(p => /\.png$/i.test(p)), 'Legacy screenshots must not be packaged');
   const packed = JSON.parse(asar.extractFile(archive, 'package.json').toString());
   assert.equal(packed.version, pkg.version, 'Packaged version must match source');
-  for (const file of ['README.md', 'THIRD_PARTY_NOTICES.md', 'docs/COPYRIGHT-REVIEW.md']) {
+  for (const file of ['README.md', 'THIRD_PARTY_NOTICES.md', 'docs/COPYRIGHT-REVIEW.md', 'docs/SKETCH-API.md']) {
     assert.ok(entries.includes('/' + file), 'Missing notice: ' + file);
   }
   // Check that upstream notices survived packaging without modification.
@@ -38,7 +38,10 @@ const assert = require('node:assert/strict');
   for (const file of ['README.md', 'THIRD_PARTY_NOTICES.md']) {
     await fs.copyFile(path.join(root, file), path.join(output, file));
   }
-  await fs.copyFile(path.join(root, 'docs/COPYRIGHT-REVIEW.md'), path.join(output, 'COPYRIGHT-REVIEW.md'));
+  await fs.mkdir(path.join(output, 'docs'));
+  for (const file of ['COPYRIGHT-REVIEW.md', 'SKETCH-API.md']) {
+    await fs.copyFile(path.join(root, 'docs', file), path.join(output, 'docs', file));
+  }
   await fs.writeFile(path.join(output, 'SHA256.txt'), `${hash}  ${name}\n`);
   await fs.writeFile(path.join(output, 'BUILD-INFO.json'), JSON.stringify({
     version: pkg.version, filename: name, bytes: binary.length, sha256: hash,

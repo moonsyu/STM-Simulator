@@ -4,6 +4,10 @@ STM Emulator is an independent educational project. It is not an official STMicr
 
 Reference photographs, supplied pin-map images, generated reference illustrations, and legacy screenshots are excluded from the repository and executable. See [copyright review](https://github.com/moonsyu/STM-Emulator/blob/main/docs/COPYRIGHT-REVIEW.md).
 
+## Sketch interfaces added in 0.4.0
+
+LiquidCrystal, Wire, SPI, and Arduino-style API names describe the compatible portions of the educational sketch interface. The parser, interpreter, LCD controller and communication models are independently implemented in this repository. Arduino library implementations and STM32 firmware are not linked or bundled. The supported subset and references are recorded in `docs/SKETCH-API.md`.
+
 ## Electron 44.2.0
 
 Electron is used under the MIT license. The original Electron license is retained as `LICENSE.electron.txt` in the packaged runtime and download bundle. Electron's Chromium and other bundled components have their own notices, retained in the unmodified `LICENSES.chromium.html` file. The portable EXE includes these runtime files in its payload; the download bundle also exposes them for reading.
