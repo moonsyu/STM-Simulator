@@ -2,6 +2,8 @@
 
 NUCLEO-F446RE 보드와 400홀 빵판을 연결하고 GPIO 스케치를 실행하는 Windows 데스크톱 회로 실습 앱입니다.
 
+**개발 이어가기:** [작업 인계 문서 — 구현 현황·코드 구조·검증·남은 작업](https://github.com/moonsyu/STM-Emulator/blob/main/HANDOFF.md)
+
 STMicroelectronics와 제휴·후원 관계가 없는 비공식 학습용 프로젝트입니다. 권리 확인이 끝나지 않은 참고 자료가 있어 저장소는 **Private**으로 운영합니다. [저작권·상표 검토 결과](docs/COPYRIGHT-REVIEW.md)를 확인하세요.
 
 ## EXE 다운로드 / 실행
