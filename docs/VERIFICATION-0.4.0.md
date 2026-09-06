@@ -32,7 +32,18 @@
 
 ## 배포
 
-0.4.0의 GitHub 빌드·다운로드 EXE 검증은 배포 후 이 절에 실행 링크와 해시로 추가합니다. 개발용 Electron UI 검증을 portable EXE 검증으로 대신 표기하지 않습니다.
+- 소스 커밋: [`112497923e7805882b49319d740c2fd4e5ddfc36`](https://github.com/moonsyu/STM-Emulator/commit/112497923e7805882b49319d740c2fd4e5ddfc36).
+- [GitHub Actions 실행 34039203704](https://github.com/moonsyu/STM-Emulator/actions/runs/34039203704): **성공**. 모델 테스트·Windows portable 빌드·패키지 내용과 원문 라이선스 비교·Artifact 업로드 완료.
+- [다운로드 Artifact 9991195856](https://github.com/moonsyu/STM-Emulator/actions/runs/34039203704/artifacts/9991195856): `STM-Emulator-Windows-x64`, ZIP **102,286,300 bytes**. 검사 당시 만료일 2026-12-05 UTC.
+- EXE: `STM-Emulator-0.4.0-win-x64.exe`, **100,139,303 bytes**.
+- ZIP SHA-256: `90d1016a6fb446cdd7281455ad5ae8a16d63fad60f7be085e0b569abc1d3e0e6`. GitHub Artifact digest와 일치.
+- EXE SHA-256: `36fbad3891f6d828ff913f2a5a06361e332f151beda51d9a8bb0c1c8e79d2f48`. 다운로드 안의 BUILD-INFO.json/SHA256.txt와 일치. 빌드 정보의 버전·소스 커밋·파일 크기도 확인.
+
+GitHub에서 받은 해당 EXE를 `scripts/portable-smoke.cjs`로 별도 프로필에서 직접 실행했습니다. 자체 압축 해제·실행, 400홀, 16종 부품, 선택 핀 강조, LED·HC-SR04, LCD 실시간 문자, UART 왕복 입력, I²C/SPI 메모리 읽기, 확장 문법 예제, ADC DMA 완료, 4채널 PWM/RC 파형이 **모두 통과**했습니다. 페이지 스크립트 오류는 0건입니다.
+
+로컬 기록: `test-results/portable-smoke.json`, `test-results/portable-app.png`, `test-results/portable-waveform.png`. EXE는 `dist/STM-Emulator-0.4.0-win-x64.exe`에 보관했습니다. 이는 이 Windows 환경에서의 검증이며 깨끗한 다른 PC/다른 OS 검증을 뜻하지 않습니다. 저장소 Private 상태도 확인했습니다.
+
+이 배포 결과를 덧붙인 후속 문서 커밋은 `[skip ci]`로 게시합니다. 배포 바이너리의 소스 커밋은 위 `1124979`이며, 문서만 갱신된 저장소 HEAD와 구분합니다.
 
 ## 범위
 

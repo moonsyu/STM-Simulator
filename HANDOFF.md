@@ -11,8 +11,8 @@
 - 앱: Electron **44.2.0**, electron-builder **26.15.3**, JavaScript ES modules/SVG. 의존성 lockfile 유지.
 - 개발 검증 Node.js: **24.19.0**. CI는 Node.js 24 계열.
 - 버전: **0.4.0**, EXE 이름 `STM-Emulator-0.4.0-win-x64.exe`.
-- 현재 로컬 검증: 모델 테스트 **53개**, 기존 UI·편집·부품 및 새 기능 UI 스크립트 통과.
-- 배포 실행과 EXE 해시는 [0.4.0 검증 기록](docs/VERIFICATION-0.4.0.md)의 배포 절을 확인합니다. 아직 기록되지 않은 빌드를 검증 완료로 추정하지 마세요.
+- 검증: 모델 테스트 **53개**, 기존 UI·편집·부품 및 새 기능 UI 스크립트 통과. GitHub 빌드와 다운로드한 portable EXE 검증도 통과.
+- 배포 소스는 `112497923e7805882b49319d740c2fd4e5ddfc36`, [성공한 빌드 34039203704](https://github.com/moonsyu/STM-Emulator/actions/runs/34039203704)입니다. EXE 해시와 검증 항목은 [0.4.0 검증 기록](docs/VERIFICATION-0.4.0.md)의 배포 절을 확인합니다. 후속 문서 커밋과 바이너리 소스 커밋을 구분하세요.
 
 기존 0.3.2 기준 인계 기록은 [문서 커밋 ab1c486](https://github.com/moonsyu/STM-Emulator/blob/ab1c486bb012c71ad713f0f6db3ec12ad624ef17/HANDOFF.md)에 보존되어 있습니다. 위 버전과 현재 HEAD가 다르면 `git log`와 소스를 우선 확인하세요.
 
@@ -125,7 +125,7 @@ node scripts/portable-smoke.cjs
 
 `LAB_EXE`는 첫 네 스크립트를 `win-unpacked` 앱 본체로 돌릴 때 사용합니다. portable 래퍼를 Playwright `_electron.launch`로 넘기지 말고 전용 portable 스크립트를 쓰세요. 이 스크립트는 별도 프로필과 디버깅 포트를 사용합니다. `ELECTRON_RUN_AS_NODE`도 제거합니다.
 
-GitHub Actions는 모델 테스트·빌드·패키지/라이선스 검사를 수행합니다. 실제 Playwright/portable UI는 현재 CI에 자동 포함되지 않으며 별도 실행 결과와 구분해야 합니다. 마지막 작업 환경에서는 모델 테스트와 개발용 UI를 확인했고, 배포 후 받은 EXE 검증은 버전별 기록에 별도로 추가합니다.
+GitHub Actions는 모델 테스트·빌드·패키지/라이선스 검사를 수행합니다. 실제 Playwright/portable UI는 현재 CI에 자동 포함되지 않으며 별도 실행 결과와 구분해야 합니다. 마지막 작업 환경에서는 모델 테스트와 개발용 UI 및 GitHub에서 다운로드한 0.4.0 EXE를 확인했고, 항목별 결과를 버전별 검증 기록에 남겼습니다.
 
 ## 6. 배포와 자료 위치
 
