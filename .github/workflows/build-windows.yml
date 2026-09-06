@@ -1,0 +1,59 @@
+name: Build Windows EXE
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: windows-build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Windows x64 portable
+    runs-on: windows-latest
+    timeout-minutes: 20
+    steps:
+      - name: Check out source
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - name: Set up Node.js
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: '24'
+          cache: npm
+      - name: Install locked dependencies
+        run: npm ci
+      - name: Ensure Electron runtime is installed
+        run: node node_modules/electron/install.js
+      - name: Test circuit engine and editor models
+        run: npm test
+      - name: Build portable executable
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+        run: npm run build
+      - name: Verify package and prepare download
+        run: npm run build:artifact
+      - name: Upload Windows download
+        id: upload
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: STM-Emulator-Windows-x64
+          path: dist/artifact/*
+          if-no-files-found: error
+          retention-days: 90
+          compression-level: 6
+      - name: Add download link to build summary
+        env:
+          DOWNLOAD_URL: ${{ steps.upload.outputs.artifact-url }}
+        shell: pwsh
+        run: |
+          "## STM Emulator for Windows x64" >> $env:GITHUB_STEP_SUMMARY
+          "[Download EXE bundle]($env:DOWNLOAD_URL)" >> $env:GITHUB_STEP_SUMMARY
+          "Extract the ZIP, then run STM-Emulator-*-win-x64.exe. Node.js is not required." >> $env:GITHUB_STEP_SUMMARY
+          "The bundle includes SHA256.txt and third-party license notices. Repository access is required." >> $env:GITHUB_STEP_SUMMARY

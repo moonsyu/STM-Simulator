@@ -1,0 +1,13 @@
+node_modules/
+dist/
+.cache/
+test-results/
+*.log
+
+# Local reference media have no verified redistribution permission.
+assets/
+docs/*.png
+.env
+.env.*
+*.pem
+*.key
