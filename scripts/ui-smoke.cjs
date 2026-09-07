@@ -10,6 +10,7 @@ const {_electron}=require(process.env.PLAYWRIGHT_MODULE||'playwright');
  try{
  const {circuitFixture}=await import('../tests/fixtures/circuits.js');
  const page=await app.firstWindow(),errors=[];page.on('pageerror',e=>errors.push(e.message));await page.waitForSelector('[data-endpoint="board:CN5:6"]');
+ assert.equal(await page.title(),'STM Simulator');assert.equal(await page.locator('.brand strong').innerText(),'STM Simulator');assert.equal(await app.evaluate(({app})=>app.getName()),'STM Simulator');
  await app.evaluate(({BrowserWindow})=>BrowserWindow.getAllWindows()[0].showInactive());
  assert.equal(await page.locator('[data-example],#extra-example,#feature-example').count(),0);await openFixture(page,circuitFixture());
  assert.equal(await page.locator('.hole').count(),400);assert.equal(await page.locator('.pin-hit').count(),512);

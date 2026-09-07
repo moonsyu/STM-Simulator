@@ -11,20 +11,20 @@ test('all feature examples validate, run, and stay finite',()=>{
 });
 test('LCD follows real 4-bit wiring, power, cursor and screen clearing',()=>{
  const p=featureExample('lcd'),{session}=run(p,40);let lcd=session.result.parts.demo.lcd;
- assert.equal(lcd.visible,true);assert.equal(lcd.lines[0],'STM Emulator    ');assert.match(lcd.lines[1],/^Time: /);
+ assert.equal(lcd.visible,true);assert.equal(lcd.lines[0],'STM Simulator   ');assert.match(lcd.lines[1],/^Time: /);
  p.wires=p.wires.filter(w=>w.to!=='part:demo:p2');session.changed();assert.equal(session.result.parts.demo.lcd.powered,false);
  const disconnected=featureExample('lcd');disconnected.wires=disconnected.wires.filter(w=>w.to!=='part:demo:p6');assert.equal(run(disconnected).session.result.parts.demo.lcd.visible,false);
- const clear=featureExample('lcd');clear.code=clear.code.replace('lcd.print("STM Emulator");','lcd.print("OLD"); lcd.clear(); lcd.setCursor(3, 0); lcd.print("NEW");');assert.equal(run(clear).session.result.parts.demo.lcd.lines[0],'   NEW          ');
+ const clear=featureExample('lcd');clear.code=clear.code.replace('lcd.print("STM Simulator");','lcd.print("OLD"); lcd.clear(); lcd.setCursor(3, 0); lcd.print("NEW");');assert.equal(run(clear).session.result.parts.demo.lcd.lines[0],'   NEW          ');
 });
 test('LCD custom character memory and display control work without eval',()=>{
- const p=featureExample('lcd');p.code=p.code.replace('lcd.print("STM Emulator");','byte glyph[8]={0,10,0,0,17,14,0,0}; lcd.createChar(0,glyph); lcd.write(0); lcd.cursor();');
+ const p=featureExample('lcd');p.code=p.code.replace('lcd.print("STM Simulator");','byte glyph[8]={0,10,0,0,17,14,0,0}; lcd.createChar(0,glyph); lcd.write(0); lcd.cursor();');
  const {session}=run(p,40);const lcd=session.result.parts.demo.lcd;assert.deepEqual(lcd.cgram.slice(0,8),[0,10,0,0,17,14,0,0]);assert.equal(lcd.codes[0][0],0);assert.equal(lcd.cursor,true);
 });
 test('LCD eight-bit wiring and R/W blocking are respected',()=>{
  const p=featureExample('lcd');p.wires=p.wires.filter(w=>!['p11','p12','p13','p14'].some(k=>w.to==='part:demo:'+k));
  for(let i=0;i<8;i++)p.wires.push({id:'data'+i,from:boardPin('D'+(i+4)),to:'part:demo:p'+(i+7),color:'#23a68a'});
  p.code=p.code.replace('LiquidCrystal lcd(D2, D3, D4, D5, D6, D7);','LiquidCrystal lcd(D2, D3, D4, D5, D6, D7, D8, D9, D10, D11);');
- assert.equal(run(p,40).session.result.parts.demo.lcd.lines[0],'STM Emulator    ');
+ assert.equal(run(p,40).session.result.parts.demo.lcd.lines[0],'STM Simulator   ');
  const blocked=featureExample('lcd');blocked.wires=blocked.wires.filter(w=>w.to!=='part:demo:p5');blocked.wires.push({id:'rw',from:boardPin('3V3'),to:'part:demo:p5',color:'#dd654c'});assert.equal(run(blocked,40).session.result.parts.demo.lcd.visible,false);
 });
 test('UART terminal enforces power and baud and receives timed input',()=>{

@@ -1,4 +1,4 @@
-# STM Emulator 스케치 API
+# STM Simulator 스케치 API
 
 **STM32 HAL · C 소스** 모드와 Pinout 설정은 [HAL-API.md](HAL-API.md)를 확인하세요.
 
@@ -34,7 +34,7 @@
 LiquidCrystal lcd(D2, D3, D4, D5, D6, D7); // RS, E, DB4~DB7
 void setup() {
   lcd.begin(16, 2);
-  lcd.print("STM Emulator");
+  lcd.print("STM Simulator");
   lcd.setCursor(0, 1);
   lcd.print("Hello!");
 }

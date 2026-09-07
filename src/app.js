@@ -27,7 +27,7 @@ let sourceFile='main.c';
 const pinout=new PinoutPanel({getProject:()=>project,isRunning:running,onError:message=>log(message,'error'),apply:({mcu,code})=>{checkpoint();project.mcu=mcu;if(code!==null){project.code=code;project.firmware={mode:'hal',files:[]};sourceFile='main.c';}syncEditor();changed();log(code===null?'핀 설정을 적용했습니다.':'설정에 맞는 HAL main.c를 생성했습니다.');}});
 svg.addEventListener('contextmenu',e=>{const id=e.target.closest('[data-endpoint]')?.dataset.endpoint,p=PIN_BY_ID.get(id);if(p&&/^P[A-H]\d+$/.test(p.signal)){e.preventDefault();pinout.open(p.signal);}});
 $('extra-parts').innerHTML=Object.entries(PART_DEFS).map(([type,def])=>`<button class="part-card" data-add="${type}"><span class="part-icon extra-icon">${def.icon}</span><span><strong>${def.name}</strong><small>${def.hint}</small></span><b>+</b></button>`).join('');
-$('hal-example').innerHTML='<option value="">HAL 코드 예제 선택…</option>'+Object.entries(HAL_EXAMPLES).map(([id,name])=>`<option value="${id}">${name}</option>`).join('');
+$('hal-example').innerHTML='<option value="">HAL 예제 선택…</option>'+Object.entries(HAL_EXAMPLES).map(([id,name])=>`<option value="${id}">${name}</option>`).join('');
 const uartLines=new Map();let pendingHalExample=null;
 function uid(prefix){return prefix+crypto.randomUUID().replaceAll('-','').slice(0,12);}
 function running(){return status==='running'||status==='paused';}
@@ -233,7 +233,7 @@ function requestReplace(action){if(dirty){replaceAction=action;$('replace-dialog
 $('replace-cancel').onclick=()=>{$('replace-dialog').close();replaceAction=null;};$('replace-confirm').onclick=()=>{$('replace-dialog').close();replaceAction?.();replaceAction=null;};
 $('hal-example').onchange=e=>{if(running())return;pendingHalExample=e.target.value;e.target.value='';if(!pendingHalExample)return;$('hal-example-guide').textContent=HAL_GUIDES[pendingHalExample];$('hal-example-dialog').showModal();};
 $('hal-example-cancel').onclick=()=>{$('hal-example-dialog').close();pendingHalExample=null;};
-$('hal-example-confirm').onclick=()=>{if(!pendingHalExample||running())return;const type=pendingHalExample;checkpoint();project=applyHalExample(project,type);sourceFile='main.c';runtime=null;session=null;result=null;status='stopped';simTime=0;monitor.clear();uartLines.clear();syncEditor();changed();tab('code');log(HAL_EXAMPLES[type]+' · '+HAL_GUIDES[type]);$('hal-example-dialog').close();pendingHalExample=null;};
+$('hal-example-confirm').onclick=()=>{if(!pendingHalExample||running())return;const type=pendingHalExample;checkpoint();project=applyHalExample(project,type);sourceFile='main.c';runtime=null;session=null;result=null;status='stopped';simTime=0;pressed={};selection=null;pending=null;drag=null;mode='select';lastWarnings='';$('preview-layer').innerHTML='';view={x:0,y:0,w:1120,h:730};viewUpdate();monitor.clear();uartLines.clear();syncEditor();changed();tab('code');log(HAL_EXAMPLES[type]+' · '+HAL_GUIDES[type]);$('hal-example-dialog').close();pendingHalExample=null;};
 $('new').onclick=()=>requestReplace(()=>replaceProject(blankProject()));
 $('project-name').onchange=e=>{checkpoint();project.name=e.target.value.trim()||'새 회로';changed();};
 let lastCodeCheckpoint=0;

@@ -1,4 +1,4 @@
-# STM Emulator
+# STM Simulator
 
 NUCLEO-F446RE 보드와 400홀 빵판을 연결하고 HAL C 소스를 실행하는 Windows 데스크톱 회로 실습 앱입니다.
 
@@ -12,33 +12,33 @@ NUCLEO-F446RE 보드와 400홀 빵판을 연결하고 HAL C 소스를 실행하�
 
 - 왼쪽 **Pinout & Configuration**에서 GPIO/EXTI와 UART/USART 6개·I²C1·SPI1·ADC1·TIM2 핀을 활성화하고 pull·AF·NVIC·주변장치 설정을 구성합니다.
 - `.ioc`와 `main.c` 및 필요한 `.c/.h`를 가져오거나 Cube 프로젝트 폴더를 선택합니다. 소스 파일을 전환해 편집하고, 설정에서 HAL 초기화 코드를 생성할 수 있습니다.
-- `main(void)`에서 HAL GPIO, UART blocking/IT, EXTI callback, TIM2 주기/PWM/카운터, ADC, I²C/SPI 메모리 전송을 회로와 연결해 실행합니다. HAL 코드 예제 13개가 포함됩니다.
+- `main(void)`에서 HAL GPIO, UART blocking/IT, EXTI callback, TIM2 주기/PWM/카운터, ADC, I²C/SPI 메모리 전송을 회로와 연결해 실행합니다. HAL 코드·회로 예제 13개가 포함됩니다.
 - HAL 모드는 **구현된 HAL API를 회로 모델에 연결하는 소스 인터프리터**입니다. ST HAL 드라이버 전체를 컴파일하는 환경이나 ELF/BIN 실행기는 아닙니다. 지원 함수·문법·타이밍 제한은 [HAL API](docs/HAL-API.md)를 확인하세요.
 - 기존 스케치와 회로 파일을 유지합니다. HAL 소스·핀 설정도 `.stm32lab`에 함께 저장합니다.
 
-빠른 시작: **HAL 코드 예제 선택 → HAL · 함수·배열·구조체 → 코드·핀 설정 적용 → 시뮬레이션 시작 → 로그**에서 `average=25`를 확인하세요. 새 회로는 빈 빵판과 HAL `main.c`로 시작합니다.
+빠른 시작: **HAL 예제 선택 → HAL · UART 수신 인터럽트 → 회로·코드·핀 설정 적용 → 시뮬레이션 시작 → 통신 탭 입력**. 연결된 UART 터미널과 로그 탭에서 송수신을 확인하세요. 새 회로는 빈 빵판과 HAL `main.c`로 시작합니다.
 
-예제는 코드·핀 설정만 적용하며 현재 부품·배선·회로 이름을 유지합니다. 적용 창의 배선 안내를 따라 회로를 직접 구성하세요. Ctrl+Z로 코드와 핀 설정을 되돌릴 수 있습니다. 시리얼/스케치 예제와 완성 회로 메뉴는 제공하지 않습니다.
+HAL 예제를 적용하면 코드·핀 설정·부품·배선·계산 설정을 해당 예제로 함께 교체하고 사용자가 정한 회로 이름은 유지합니다. GPIO LED/버튼, ADC 분압, 전원 연결 센서·통신 모듈, PWM RC 회로를 구성하며 함수·배열 예제는 외부 부품이 필요 없습니다. 적용 창에서 취소하거나 Ctrl+Z로 이전 작업 전체를 복원할 수 있습니다. 별도의 시리얼/스케치 예제 메뉴는 제공하지 않습니다.
 
 제공 예제는 HAL과 표준 `printf`를 사용합니다. `printf`/`puts`는 UART 설정 없이 **로그** 탭에 출력하며, HAL UART blocking/IT 송수신도 `[USART2 TX]`, `[USART2 RX]`처럼 포트·방향별로 표시합니다. UART 송신 로그는 외부 터미널 수신 성공을 뜻하지 않습니다. UART 예제의 실제 입력·에코는 터미널 전원, PA2(TX)↔터미널 RX, PA3(RX)↔터미널 TX, 공통 GND와 9600 baud가 필요합니다. 통신 탭에서 활성 UART를 골라 입력하세요. 실제 STM32에서 `printf`를 UART로 출력하려면 해당 프로젝트의 출력 리타게팅을 구성해야 합니다.
 
-**개발 이어가기:** [작업 인계 문서 — 구현 현황·코드 구조·검증·남은 작업](https://github.com/moonsyu/STM-Emulator/blob/main/HANDOFF.md)
+**개발 이어가기:** [작업 인계 문서 — 구현 현황·코드 구조·검증·남은 작업](https://github.com/moonsyu/STM-Simulator/blob/main/HANDOFF.md)
 
 STMicroelectronics와 제휴·후원 관계가 없는 비공식 학습용 프로젝트입니다. 권리 확인이 끝나지 않은 참고 자료가 있어 저장소는 **Private**으로 운영합니다. [저작권·상표 검토 결과](docs/COPYRIGHT-REVIEW.md)를 확인하세요.
 
 ## EXE 다운로드 / 실행
 
-**[Windows EXE 빌드·다운로드 열기](https://github.com/moonsyu/STM-Emulator/actions/workflows/build-windows.yml)**
+**[Windows EXE 빌드·다운로드 열기](https://github.com/moonsyu/STM-Simulator/actions/workflows/build-windows.yml)**
 
 1. 위 링크에서 초록색 체크가 있는 최신 **Build Windows EXE** 실행을 선택하세요.
-2. 실행 화면 아래 **Artifacts → STM-Emulator-Windows-x64**를 눌러 ZIP을 다운로드하세요. 빌드 Summary의 **Download EXE bundle** 링크로도 받을 수 있습니다.
-3. ZIP을 풀고 `STM-Emulator-<버전>-win-x64.exe`를 실행하세요. 로컬 개발 버전은 0.6.0이며 원격 Artifact는 해당 실행의 버전을 확인하세요.
+2. 실행 화면 아래 **Artifacts → STM-Simulator-Windows-x64**를 눌러 ZIP을 다운로드하세요. 빌드 Summary의 **Download EXE bundle** 링크로도 받을 수 있습니다.
+3. ZIP을 풀고 `STM-Simulator-<버전>-win-x64.exe`를 실행하세요. 로컬 개발 버전은 0.7.0이며 원격 Artifact는 해당 실행의 버전을 확인하세요.
 
 **Windows x64용**이며 별도 Node.js 설치가 필요 없습니다. 첫 화면의 **시뮬레이션 시작** 버튼으로 HAL 기본 코드의 `HAL ready` 로그를 확인합니다. 기존 자동 저장이 있으면 작업하던 회로를 복원합니다. macOS/Linux용 실행파일은 현재 제공하지 않습니다. 코드 서명 인증서는 적용하지 않았습니다.
 
 Private 저장소이므로 GitHub 로그인과 저장소 읽기 권한이 필요합니다. Artifacts는 90일 보관하며, 만료되면 해당 Actions 페이지의 **Run workflow**로 다시 빌드할 수 있습니다(실행 권한 필요). 다운로드 방법은 [GitHub 공식 안내](https://docs.github.com/en/actions/how-tos/manage-workflow-runs/download-workflow-artifacts)를 참고하세요.
 
-ZIP에는 EXE, `SHA256.txt`, `BUILD-INFO.json`, README와 제3자 라이선스 고지가 들어 있습니다. 라이선스 고지도 함께 보관하세요. 체크섬은 PowerShell의 `Get-FileHash .\STM-Emulator-*-win-x64.exe -Algorithm SHA256` 결과와 비교할 수 있습니다. `BUILD-INFO.json`에서 빌드한 커밋과 Actions 실행 링크를 확인할 수 있습니다. 로컬 실행 묶음은 `dist/artifact/`에 최신 결과만 유지합니다.
+ZIP에는 EXE, `SHA256.txt`, `BUILD-INFO.json`, README와 제3자 라이선스 고지가 들어 있습니다. 라이선스 고지도 함께 보관하세요. 체크섬은 PowerShell의 `Get-FileHash .\STM-Simulator-*-win-x64.exe -Algorithm SHA256` 결과와 비교할 수 있습니다. `BUILD-INFO.json`에서 빌드한 커밋과 Actions 실행 링크를 확인할 수 있습니다. 로컬 실행 묶음은 `dist/artifact/`에 최신 결과만 유지합니다.
 
 ## 회로·통신 실습
 
@@ -48,7 +48,7 @@ ZIP에는 EXE, `SHA256.txt`, `BUILD-INFO.json`, README와 제3자 라이선스 �
 - Timer 콜백, GPIO 에지 인터럽트, ADC/PWM 배열 전송용 DMA 모델.
 - 4채널 파형, 평균/PWM 전환, 0.1~20 ms 계산 간격, CSV 저장.
 
-왼쪽 **HAL 코드 예제**에서 GPIO LED·버튼 입력·EXTI·UART·TIM2 인터럽트·ADC·온도·배열 샘플링·I²C·SPI·함수/구조체·PWM·초음파 코드를 선택합니다. 부품은 직접 추가하고 배선합니다. 하단 **로그 / 파형 / 통신** 탭으로 동작을 확인합니다. ADC 배열 예제는 polling이며 HAL DMA는 구현하지 않았습니다. 기존 스케치 파일의 함수·핀·제약은 [호환 스케치 API](docs/SKETCH-API.md)에 정리했습니다.
+왼쪽 **HAL 예제**에서 GPIO LED·버튼 입력·EXTI·UART·TIM2 인터럽트·ADC·온도·배열 샘플링·I²C·SPI·함수/구조체·PWM·초음파를 선택하면 필요한 회로도 함께 불러옵니다. 부품과 배선을 직접 편집할 수도 있습니다. 하단 **로그 / 파형 / 통신** 탭으로 동작을 확인합니다. ADC 배열 예제는 polling이며 HAL DMA는 구현하지 않았습니다. 기존 스케치 파일의 함수·핀·제약은 [호환 스케치 API](docs/SKETCH-API.md)에 정리했습니다.
 
 ## 사용
 
@@ -93,7 +93,7 @@ ZIP에는 EXE, `SHA256.txt`, `BUILD-INFO.json`, README와 제3자 라이선스 �
 - LCD 1602의 16핀 배치·배선과 명령·문자 출력. VSS/VDD/VO/RS/RW/E/DB0–DB7/A/K 단자에 배선을 연결할 수 있습니다.
 - GPIO 출력/입력/풀업/풀다운, 12비트 ADC 값, 평균 전압 또는 시간별 HIGH/LOW 방식 PWM.
 - 저항 및 LED DC 해석, 전원 단락 시 정지, GPIO·LED 과전류 및 저항 전력 경고.
-- HAL 코드 예제와 핀 설정·배선 안내.
+- HAL 코드·회로 예제와 핀 설정·배선 안내.
 - 코드 실행 시간, printf 및 UART TX/RX 로그, 전압·전류 측정, 실행 취소·재실행, 프로젝트 파일 저장.
 
 ## 코드 문법
@@ -138,7 +138,7 @@ npm run build
 npm run build:artifact
 ```
 
-EXE는 `dist/`에, 다운로드 묶음은 `dist/artifact/`에 생성됩니다. `build:artifact`는 버전·참고 이미지 제외·Electron/Chromium 라이선스 원문 보존을 검사합니다. `dist/artifact/`가 비어 있지 않으면 중단하므로 재생성 전에 해당 생성 결과를 지웁니다. 과거 소스와 문서는 Git 이력으로 관리하며, 버전별 백업 폴더·이전 EXE·검증 문서 사본을 남기지 않습니다. 현재 검증은 [VERIFICATION.md](docs/VERIFICATION.md)에 갱신합니다.
+EXE는 `dist/`에, 다운로드 묶음은 `dist/artifact/`에 생성됩니다. `build:artifact`는 버전·참고 이미지 제외·Electron/Chromium 라이선스 원문 보존을 검사합니다. `npm run build`는 먼저 이전 빌드의 EXE·배포 묶음·win-unpacked를 정리합니다. 기존 이름의 실행 파일과 버전별 artifact 폴더도 포함합니다. 실행 중인 EXE가 잠겨 있으면 삭제 전에 중단하고 종료할 파일을 안내하므로 앱을 닫은 뒤 다시 빌드하세요. 사용자 파일과 링크 대상은 삭제하지 않습니다. `build:artifact`도 검증 후 기존 배포 묶음을 최신 결과로 교체합니다. 과거 소스와 문서는 Git 이력으로 관리하며, 버전별 백업 폴더·이전 EXE·검증 문서 사본을 남기지 않습니다. 현재 검증은 [VERIFICATION.md](docs/VERIFICATION.md)에 갱신합니다.
 
 GitHub Actions는 `main`에 push하거나 수동 실행할 때 Windows에서 의존성 설치 → 회로 모델 테스트 → EXE 빌드 → 패키지 검사 → Artifact 업로드를 수행합니다. 소스 저장소에 대용량 EXE나 `node_modules`를 커밋하지 않습니다. 워크플로 정의는 [build-windows.yml](.github/workflows/build-windows.yml)입니다.
 
@@ -146,7 +146,7 @@ GitHub Actions는 `main`에 push하거나 수동 실행할 때 Windows에서 의
 
 UI 검증은 `npm run test:ui`로 편집·부품·통신·HAL·레이아웃·코드 예제 및 로그 등 7개 스크립트를 실행합니다. `PLAYWRIGHT_MODULE` 환경 변수로 별도 설치된 Playwright 패키지 경로를 지정할 수 있습니다. `LAB_EXE`는 패키징된 `win-unpacked` 앱 본체 경로입니다. 단일 EXE 검증은 `node scripts/portable-smoke.cjs`입니다. 결과는 `test-results/`의 동일 파일에 최신 실행 결과로 갱신하고 테스트 전용 프로필은 검증 후 제거합니다.
 
-구조: `src/pins.js` 핀 좌표와 검색, `src/components.js` 부품 다리 구조, `src/placement.js` 장착 계산, `src/engine.js` 회로 해석, `src/program.js` 인터프리터, `src/project.js` 빈 HAL 프로젝트/검증, `src/hal-examples.js` HAL 코드 예제, `src/hal-stdio.js` printf 로그, `src/render.js` 벡터 그림, `src/app.js` 편집과 실행 UI, `desktop/` 실행파일 호스트.
+구조: `src/pins.js` 핀 좌표와 검색, `src/components.js` 부품 다리 구조, `src/placement.js` 장착 계산, `src/engine.js` 회로 해석, `src/program.js` 인터프리터, `src/project.js` 빈 HAL 프로젝트/검증, `src/hal-examples.js` HAL 코드·회로 예제, `src/hal-circuits.js` 예제 회로 구성, `src/hal-stdio.js` printf 로그, `src/render.js` 벡터 그림, `src/app.js` 편집과 실행 UI, `desktop/` 실행파일 호스트.
 
 ## 참고
 

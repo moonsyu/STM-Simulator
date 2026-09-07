@@ -4,8 +4,7 @@ import {defaultMcu,validateMcu,configProblems,importIoc,generateHal} from '../sr
 import {compileHal} from '../src/hal-source.js';
 import {Runtime} from '../src/runtime.js';
 import {HAL_CONSTANTS} from '../src/hal.js';
-import {HAL_EXAMPLES} from '../src/hal-examples.js';
-import {halCircuit as halExample} from './fixtures/hal.js';
+import {HAL_EXAMPLES,halExample} from '../src/hal-examples.js';
 import {SimulationSession} from '../src/session.js';
 import {validateProject} from '../src/project.js';
 import {circuitFixture as example} from './fixtures/circuits.js';
