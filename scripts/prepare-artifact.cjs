@@ -18,7 +18,7 @@ const assert = require('node:assert/strict');
   assert.ok(!entries.some(p => /\.png$/i.test(p)), 'Legacy screenshots must not be packaged');
   const packed = JSON.parse(asar.extractFile(archive, 'package.json').toString());
   assert.equal(packed.version, pkg.version, 'Packaged version must match source');
-  for (const file of ['README.md', 'THIRD_PARTY_NOTICES.md', 'docs/COPYRIGHT-REVIEW.md', 'docs/SKETCH-API.md']) {
+  for (const file of ['README.md', 'THIRD_PARTY_NOTICES.md', 'docs/COPYRIGHT-REVIEW.md', 'docs/SKETCH-API.md', 'docs/HAL-API.md']) {
     assert.ok(entries.includes('/' + file), 'Missing notice: ' + file);
   }
   // Check that upstream notices survived packaging without modification.
@@ -39,7 +39,7 @@ const assert = require('node:assert/strict');
     await fs.copyFile(path.join(root, file), path.join(output, file));
   }
   await fs.mkdir(path.join(output, 'docs'));
-  for (const file of ['COPYRIGHT-REVIEW.md', 'SKETCH-API.md']) {
+  for (const file of ['COPYRIGHT-REVIEW.md', 'SKETCH-API.md', 'HAL-API.md']) {
     await fs.copyFile(path.join(root, 'docs', file), path.join(output, 'docs', file));
   }
   await fs.writeFile(path.join(output, 'SHA256.txt'), `${hash}  ${name}\n`);

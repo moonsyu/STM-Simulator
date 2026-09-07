@@ -1,6 +1,27 @@
 # STM Emulator — 작업 인계 및 이어가기
 
-마지막 정리: **2026-09-06 (KST)**. 현재 개발 버전은 **0.4.0**입니다. 실제 STM32 펌웨어 실행은 이번 구현에서 제외한다는 사용자 지시를 유지합니다. 대화 없이 저장소만 받아도 이어서 작업할 수 있도록 정리했습니다.
+마지막 정리: **2026-09-07 (KST)**. 현재 개발 버전은 **0.5.1**입니다. 사용자가 CubeMX 생성 C 소스의 HAL 호출과 Pinout 설정을 요청해 범위를 확장했습니다. 현재 구현은 HAL 소스 호환 모델이며 ELF/BIN 실행은 구현하지 않았습니다.
+
+## 0.5.1 후속 수정
+
+- `src/editor-layout.js`: 코드/속성 공통 너비 조절, 드래그·키보드·로컬 저장·창 크기 제한. 최소 회로 폭에서도 도구 모음이 줄바꿈되어 실행 버튼이 보임.
+- `src/serial-config.js`: F446RE LQFP64 USART1/2/3/6, UART4/5의 실제 TX/RX·AF7/8. 자동 배정, 대체 핀 선택, 사용 중인 핀 보호, 비활성화 시 해당 핀/IRQ 해제.
+- HAL 생성/가져오기/실행을 여섯 통신 장치로 확장. 핸들별 송수신 버퍼·busy·IRQ 독립. 하단 입력 대상에 실제 포트 표시.
+- ST DS10693 표 10/11과 로컬 CubeMX XML을 대조. USART2 PD5/PD6, TIM2 CH4 PB11은 F446RE LQFP64 보드 후보에서 제외.
+- `HAL · …` 7개 예제는 HAL 사용. 기존 스케치 예제는 유지. ADC/I2C/SPI의 Serial.println은 로그 확장임을 문서화.
+- 모델 테스트에 전체 핀 조합과 두 포트 동시 통신 추가. UI에 너비·실제 라우트·충돌·저장 검증 추가. 검증 기록: [0.5.1](docs/VERIFICATION-0.5.1.md).
+
+## 0.5.0 후속 작업
+
+- `src/mcu-config.js`: F446RE 핀 용도, GPIO/EXTI 충돌, 주변장치/NVIC, `.ioc`, HAL 코드 생성.
+- `src/hal-source.js`, `src/hal.js`: 로컬 소스 전처리, HAL 구조체/상수/호출, GPIO/UART/EXTI/TIM/ADC/I2C/SPI 모델.
+- `src/pinout-ui.js`, `src/firmware-import.js`, `src/hal-examples.js`: 설정 화면, 다중 소스 가져오기, 예제 7개.
+- `parser.js`/`runtime.js`에 opt-in HAL main/타입/콜백 동작 추가. 스케치의 기존 의미 유지.
+- `project.mcu`, `project.firmware={mode,files}`를 선택적 v2 필드로 저장. main.c는 기존 `project.code` 사용.
+- `npm run test:ui`로 기존 4개와 HAL UI 검증을 실행하며 CI에도 추가. Playwright 고정 버전을 devDependency로 포함.
+- CubeMX 창 제목은 `interrupt_hard.ioc`로 확인했으나 화면 접근은 앱 승인 시간 초과. 해당 `.ioc`를 읽고 핀·NVIC를 대조했으며 생성 코드 파싱을 검증함. 실제 CubeMX 화면을 확인했다고 기록하지 말 것.
+- 자세한 호환성 범위: [HAL API](docs/HAL-API.md). 완료 검증: [0.5.0 검증](docs/VERIFICATION-0.5.0.md).
+- 아래 0.4.0의 원격 빌드/커밋/해시는 과거 배포 이력이며 0.5.0 로컬 변경과 구분.
 
 ## 1. 현재 목표와 결정
 

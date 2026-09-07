@@ -10,7 +10,7 @@ export class BusDevices {
   terminal(part,index){return `part:${part.id}:p${index}`;}
   powered(part){const r=this.result(),vcc=r?.voltage(this.terminal(part,1)),gnd=r?.voltage(this.terminal(part,2));return !r?.fault&&vcc!=null&&gnd!=null&&gnd<.1&&vcc-gnd>=2.7&&vcc-gnd<=5.5;}
   memory(part){if(!this.memories.has(part.id))this.memories.set(part.id,{data:new Uint8Array(256),address:0});return this.memories.get(part.id);}
-  report(runtime,protocol,message){this.trace({micros:runtime.microTime,protocol,message});}
+  report(runtime,protocol,message){this.trace({micros:runtime.microTime,protocol,message:protocol==='UART'&&this.uart.instance?`${this.uart.instance} · ${message}`:message});}
   bytes(value,runtime,length){
     if(typeof value==='number')return [value&255];if(typeof value==='string')return [...value].map(c=>c.charCodeAt(0)&255);
     if(length===undefined)throw new Error('버퍼 전송은 길이를 지정하세요.');if(!Number.isInteger(length)||length<0||length>256)throw new Error('버퍼 길이 범위: 0~256');return Array.from({length},(_,i)=>runtime.get(runtime.pointerCell(value,i))&255);

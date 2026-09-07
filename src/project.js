@@ -1,5 +1,6 @@
 import {boardPin,PIN_BY_ID,HOLE_BY_ID} from './pins.js';
 import {terminalKeys,TWO_PIN_TYPES,MULTI_PIN_TYPES,normalizeAngle} from './components.js';
+import {validateMcu} from './mcu-config.js';
 export const BLINK=`// D13 = PA5 · GPIO 출력으로 LED를 깜빡입니다.
 void setup() {
   pinMode(D13, OUTPUT);
@@ -94,6 +95,15 @@ export function validateProject(data){
     wireIds.add(w.id);return {id:w.id,from:w.from,to:w.to,color:w.color};
   });
   const project={format:data.format,version:2,name:data.name,code:data.code,components,wires};
+  if(data.mcu!==undefined)project.mcu=validateMcu(data.mcu);
+  if(data.firmware!==undefined){
+    if(!data.firmware||!['sketch','hal'].includes(data.firmware.mode)||!Array.isArray(data.firmware.files)||data.firmware.files.length>40)throw new Error('펌웨어 소스 설정이 올바르지 않습니다.');
+    const names=new Set();let size=data.code.length;
+    const files=data.firmware.files.map(f=>{if(!f||typeof f.name!=='string'||! /^[\w.-]+\.[ch]$/.test(f.name)||f.name==='main.c'||names.has(f.name)||typeof f.text!=='string')throw new Error('소스 파일 이름/내용을 확인하세요.');names.add(f.name);size+=f.text.length;return {name:f.name,text:f.text};});
+    if(size>300000)throw new Error('HAL 소스 전체는 300 KB 이하로 선택하세요.');
+    if(data.firmware.mode==='hal'&&!project.mcu)throw new Error('HAL 프로젝트에는 핀 설정이 필요합니다.');
+    project.firmware={mode:data.firmware.mode,files};
+  }
   if(data.simulation!==undefined){const s=data.simulation;if(!s||typeof s!=='object'||![.1,.5,1,5,20].includes(s.stepMs)||typeof s.pwmWaveform!=='boolean')throw new Error('시뮬레이션 시간 설정이 올바르지 않습니다.');project.simulation={stepMs:s.stepMs,pwmWaveform:s.pwmWaveform};}
   return project;
 }

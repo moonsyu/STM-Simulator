@@ -7,18 +7,31 @@ import {partControls,partReadouts} from './part-controls.js';
 import {componentExample} from './component-examples.js';
 import {FEATURE_EXAMPLES,featureExample} from './feature-examples.js';
 import {blankProject,example,validateProject} from './project.js';
+import {PinoutPanel} from './pinout-ui.js';
+import {defaultMcu} from './mcu-config.js';
+import {importFirmware} from './firmware-import.js';
+import {compileHal} from './hal-source.js';
+import {compile} from './parser.js';
+import {HAL_EXAMPLES,halExample} from './hal-examples.js';
+import {setupEditorResize} from './editor-layout.js';
+import {SERIAL_IDS} from './serial-config.js';
 import {esc,initSvg,renderWires,renderParts,renderEndpoints,route,updateSimulationSvg,renderMountPreview,renderPinSearch} from './render.js';
 
 const $=id=>document.getElementById(id),svg=$('circuit');
+setupEditorResize();
 let project=example(),mode='select',pending=null,selection=null,color='#23a68a',status='stopped',result=null,runtime=null,simTime=0,pressed={},undoStack=[],redoStack=[],dirty=false;
 let view={x:0,y:0,w:1120,h:730},drag=null,lastWarnings='',replaceAction=null,paintCounter=0,saveTimer,searchSelectedId=null;
 try{const cached=localStorage.getItem('stm32lab.project.v2')||localStorage.getItem('stm32lab.project.v1');if(cached)project=validateProject(JSON.parse(cached));}catch{}
 initSvg(svg);
 let session=null,audioEnabled=false,audioContext,oscillator,audioGain;
 const monitor=new Monitor({getSession:()=>session,isRunning:()=>running(),onSettings:settings=>{if(running())return;checkpoint();project.simulation=settings;autosave();},onError:message=>log(message,'error')});
+let sourceFile='main.c';
+const pinout=new PinoutPanel({getProject:()=>project,isRunning:running,onError:message=>log(message,'error'),apply:({mcu,code})=>{checkpoint();project.mcu=mcu;if(code!==null){project.code=code;project.firmware={mode:'hal',files:[]};sourceFile='main.c';}syncEditor();changed();log(code===null?'핀 설정을 적용했습니다.':'설정에 맞는 HAL main.c를 생성했습니다.');}});
+svg.addEventListener('contextmenu',e=>{const id=e.target.closest('[data-endpoint]')?.dataset.endpoint,p=PIN_BY_ID.get(id);if(p&&/^P[A-H]\d+$/.test(p.signal)){e.preventDefault();pinout.open(p.signal);}});
 $('extra-parts').innerHTML=Object.entries(PART_DEFS).map(([type,def])=>`<button class="part-card" data-add="${type}"><span class="part-icon extra-icon">${def.icon}</span><span><strong>${def.name}</strong><small>${def.hint}</small></span><b>+</b></button>`).join('');
 $('extra-example').innerHTML='<option value="">추가 부품 예제 선택…</option>'+Object.entries(PART_DEFS).map(([type,def])=>`<option value="${type}">${def.name} 실습</option>`).join('');
 $('feature-example').innerHTML='<option value="">기능 예제 선택…</option>'+Object.entries(FEATURE_EXAMPLES).map(([id,name])=>`<option value="${id}">${name}</option>`).join('');
+$('hal-example').innerHTML='<option value="">HAL 예제 선택…</option>'+Object.entries(HAL_EXAMPLES).map(([id,name])=>`<option value="${id}">${name}</option>`).join('');
 function uid(prefix){return prefix+crypto.randomUUID().replaceAll('-','').slice(0,12);}
 function running(){return status==='running'||status==='paused';}
 function log(message,type='info'){
@@ -30,7 +43,17 @@ function autosave(){clearTimeout(saveTimer);$('save-state').textContent='저장 
 function checkpoint(){undoStack.push(JSON.stringify(project));if(undoStack.length>80)undoStack.shift();redoStack=[];dirty=true;}
 function changed(){autosave();refresh();}
 function setMode(m){if(running()){log('편집하려면 시뮬레이션을 먼저 정지하세요.');return;}mode=m;pending=null;selection=null;$('preview-layer').innerHTML='';refresh();}
-function syncEditor(){ $('project-name').value=project.name;$('code').value=project.code;lineNumbers();monitor.settings(project.simulation); }
+function syncEditor(){
+ $('project-name').value=project.name;const files=project.firmware?.files||[],hal=project.firmware?.mode==='hal';if(!files.some(f=>f.name===sourceFile))sourceFile='main.c';
+ $('source-file').innerHTML=`<option value="main.c">${hal?'main.c':'main.ino'}</option>`+files.map(f=>`<option value="${esc(f.name)}">${esc(f.name)}</option>`).join('');$('source-file').value=sourceFile;
+ $('code').value=sourceFile==='main.c'?project.code:files.find(f=>f.name===sourceFile).text;$('firmware-mode').value=hal?'hal':'sketch';$('firmware-status').textContent=hal?'main(void) · HAL 소스 실행 · ELF/BIN 미지원':'setup() / loop()';
+ document.querySelector('.language-badge').textContent=hal?'STM32 HAL':'GPIO 스케치';lineNumbers();monitor.settings(project.simulation);
+ document.querySelector('.code-note code').textContent=hal?'HAL_GPIO_Init · WritePin · ReadPin · TogglePin\nHAL_UART_Transmit · Receive_IT\nHAL_GPIO_EXTI_Callback\nHAL_TIM_Base_Start_IT · HAL_ADC_GetValue\nHAL_I2C_Mem_Read · HAL_SPI_Transmit':'pinMode · digitalWrite · digitalRead\nanalogRead · analogWrite · delay\nLiquidCrystal · Serial1 · Wire · SPI\nTimer · attachInterrupt · DMA';
+ document.querySelector('.code-note p').textContent=hal?'main(void)와 지원 HAL API를 회로에 연결합니다. 전체 HAL 드라이버·ELF/BIN 실행은 지원하지 않습니다.':'GPIO 스케치 문법의 일부를 실행합니다. ELF/BIN 펌웨어 로더는 포함되지 않습니다.';
+ const selectedSerial=$('serial-target').value,serials=hal?SERIAL_IDS.filter(id=>project.mcu?.peripherals[id]?.enabled):[],serialKey=hal?serials.join(','):'sketch',keepSerial=$('serial-target').dataset.channels===serialKey;
+ $('serial-target').innerHTML='<option value="Serial">USB 콘솔 → Serial</option>'+(hal?serials.map(id=>`<option value="${id}">UART 터미널 → ${id}</option>`).join(''):'<option value="Serial1">UART 터미널 → Serial1</option>');
+ $('serial-target').value=keepSerial&&[...$('serial-target').options].some(o=>o.value===selectedSerial)?selectedSerial:serials[0]??(hal?'Serial':'Serial1');$('serial-target').dataset.channels=serialKey;
+}
 function lineNumbers(){ $('line-numbers').textContent=Array.from({length:$('code').value.split('\n').length},(_,i)=>i+1).join('\n'); }
 function tab(name){document.querySelectorAll('[data-tab]').forEach(b=>b.classList.toggle('active',b.dataset.tab===name));$('code-panel').hidden=name!=='code';$('inspect-panel').hidden=name!=='inspect';}
 function refresh(){
@@ -44,6 +67,7 @@ function refresh(){
  $('undo').disabled=running()||!undoStack.length;$('redo').disabled=running()||!redoStack.length;$('delete').disabled=running()||!['part','wire'].includes(selection?.type);
  $('rotate').disabled=running()||selection?.type!=='part';
  $('code').readOnly=running();$('project-name').readOnly=running();
+ for(const id of ['pinout-open','firmware-mode','firmware-import','firmware-folder','firmware-check'])$(id).disabled=running();
  $('run').classList.toggle('running',running());$('run').textContent=running()?'■  시뮬레이션 정지':'▶  시뮬레이션 시작';
  $('step').disabled=status==='running';
  $('mode-label').textContent=running()?'시뮬레이션 실행 중':status==='error'?'회로 확인 필요':'회로 편집';
@@ -204,10 +228,19 @@ $('replace-cancel').onclick=()=>{$('replace-dialog').close();replaceAction=null;
 document.querySelectorAll('[data-example]').forEach(b=>b.onclick=()=>requestReplace(()=>replaceProject(example(b.dataset.example))));
 $('extra-example').onchange=e=>{const type=e.target.value;if(type)requestReplace(()=>replaceProject(componentExample(type)));e.target.value='';};
 $('feature-example').onchange=e=>{const type=e.target.value;if(type)requestReplace(()=>replaceProject(featureExample(type)));e.target.value='';};
+$('hal-example').onchange=e=>{const type=e.target.value;if(type)requestReplace(()=>replaceProject(halExample(type)));e.target.value='';};
 $('new').onclick=()=>requestReplace(()=>replaceProject(blankProject()));
 $('project-name').onchange=e=>{checkpoint();project.name=e.target.value.trim()||'새 회로';changed();};
 let lastCodeCheckpoint=0;
-$('code').addEventListener('input',()=>{if(Date.now()-lastCodeCheckpoint>1000){checkpoint();lastCodeCheckpoint=Date.now();}project.code=$('code').value;lineNumbers();autosave();$('undo').disabled=false;});
+$('code').addEventListener('input',()=>{if(Date.now()-lastCodeCheckpoint>1000){checkpoint();lastCodeCheckpoint=Date.now();}if(sourceFile==='main.c')project.code=$('code').value;else project.firmware.files.find(f=>f.name===sourceFile).text=$('code').value;lineNumbers();autosave();$('undo').disabled=false;});
+$('source-file').onchange=e=>{sourceFile=e.target.value;syncEditor();};
+$('firmware-mode').onchange=e=>{if(running())return;checkpoint();project.firmware={mode:e.target.value,files:project.firmware?.files||[]};if(e.target.value==='hal')project.mcu??=defaultMcu();syncEditor();changed();};
+$('firmware-check').onclick=()=>{try{if(project.firmware?.mode==='hal')compileHal(project.code,project.firmware.files);else compile(project.code);$('firmware-status').textContent='문법 검사 통과 · 배선과 HAL 설정은 실행 시 검사';log('소스 문법 검사를 통과했습니다.');}catch(e){$('firmware-status').textContent=e.message;log(e.message,'error');}};
+function applyFirmware(files){try{if(!files)return;const imported=importFirmware(project,files);checkpoint();project=imported.project;sourceFile='main.c';syncEditor();changed();log('가져왔습니다: '+files.map(f=>f.name).join(', '));for(const warning of imported.warnings)log(warning,'error');$('firmware-status').textContent=imported.warnings.length?imported.warnings.join(' · '):'가져오기 완료 · Pinout과 코드 검사로 확인하세요.';}catch(e){log(e.message,'error');$('firmware-status').textContent=e.message;}}
+$('firmware-import').onclick=async()=>{try{if(window.desktop?.importFirmware)applyFirmware(await window.desktop.importFirmware(false));else $('firmware-files').click();}catch(e){log(e.message,'error');}};
+$('firmware-folder').hidden=!window.desktop?.importFirmware;
+$('firmware-folder').onclick=async()=>{try{applyFirmware(await window.desktop.importFirmware(true));}catch(e){log(e.message,'error');}};
+$('firmware-files').onchange=async e=>{const chosen=[...e.target.files];try{if(chosen.length>41||chosen.reduce((n,f)=>n+f.size,0)>800000)throw new Error('파일은 41개, 합계 800 KB 이하로 선택하세요.');applyFirmware(await Promise.all(chosen.map(async f=>({name:f.name,text:await f.text()}))));}catch(err){log(err.message,'error');}finally{e.target.value='';}};
 $('code').addEventListener('scroll',()=>{$('line-numbers').scrollTop=$('code').scrollTop;});
 $('code').addEventListener('keydown',e=>{if(e.key==='Tab'){e.preventDefault();if(running())return;const a=e.target.selectionStart,b=e.target.selectionEnd;e.target.setRangeText('  ',a,b,'end');e.target.dispatchEvent(new Event('input'));}});
 async function save(){try{const data=JSON.stringify(project,null,2);if(window.desktop){const path=await window.desktop.save(data);if(!path)return;}else{const blob=new Blob([data],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=project.name.replace(/[^\w가-힣-]/g,'_')+'.stm32lab';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}dirty=false;log('회로 파일을 저장했습니다.');}catch(e){log('저장 실패: '+e.message,'error');}}

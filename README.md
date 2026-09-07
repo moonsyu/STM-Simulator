@@ -2,6 +2,22 @@
 
 NUCLEO-F446RE 보드와 400홀 빵판을 연결하고 GPIO 스케치를 실행하는 Windows 데스크톱 회로 실습 앱입니다.
 
+## 0.5.1 — 편집기 너비 / UART·USART 핀 활성화
+
+- 회로와 **코드 / 속성·측정** 사이의 세로 경계선을 드래그해 패널 너비를 조절합니다. 너비는 로컬에 저장되며 두 번 클릭하면 기본값 440px로 돌아갑니다. 경계선에 포커스를 둔 뒤 방향키(20px), Shift+방향키(50px), Home/End도 사용할 수 있습니다.
+- F446RE LQFP64의 USART1/2/3/6, UART4/5를 켜면 사용 가능한 TX/RX를 자동 배정합니다. 실제 대체 핀만 선택할 수 있고 다른 용도의 핀은 덮어쓰지 않습니다. 비활성화하면 해당 핀과 IRQ를 해제합니다.
+- 포트별 HAL 핸들, AF7/AF8, baud, NVIC와 독립 송수신을 지원합니다. 하단 통신 탭에서 입력할 포트를 선택합니다. 지원 모드는 비동기 8N1입니다.
+
+## Pinout & Configuration / HAL 소스
+
+- 왼쪽 **Pinout & Configuration**에서 GPIO/EXTI와 UART/USART 6개·I²C1·SPI1·ADC1·TIM2 핀을 활성화하고 pull·AF·NVIC·주변장치 설정을 구성합니다.
+- `.ioc`와 `main.c` 및 필요한 `.c/.h`를 가져오거나 Cube 프로젝트 폴더를 선택합니다. 소스 파일을 전환해 편집하고, 설정에서 HAL 초기화 코드를 생성할 수 있습니다.
+- `main(void)`에서 HAL GPIO, UART blocking/IT, EXTI callback, TIM2 주기/PWM, ADC, I²C/SPI 메모리 전송을 회로와 연결해 실행합니다. HAL 예제 7개가 포함됩니다.
+- HAL 모드는 **구현된 HAL API를 회로 모델에 연결하는 소스 인터프리터**입니다. ST HAL 드라이버 전체를 컴파일하는 환경이나 ELF/BIN 실행기는 아닙니다. 지원 함수·문법·타이밍 제한은 [HAL API](docs/HAL-API.md)를 확인하세요.
+- 기존 스케치와 회로 파일을 유지합니다. HAL 소스·핀 설정도 `.stm32lab`에 함께 저장합니다.
+
+빠른 시작: **HAL 예제 선택 → HAL · UART 수신 인터럽트 → 시뮬레이션 시작 → 통신 탭에서 입력**. 직접 설정할 때는 핀과 NVIC를 지정하고 **설정으로 HAL 코드 생성**을 누르세요. `HAL · …`로 표시한 7개 예제는 HAL API를 사용합니다. 기존 스케치 예제는 `setup/loop` 환경이며, HAL ADC/I²C/SPI 예제의 `Serial.println`은 결과 확인용 시뮬레이터 로그입니다.
+
 **개발 이어가기:** [작업 인계 문서 — 구현 현황·코드 구조·검증·남은 작업](https://github.com/moonsyu/STM-Emulator/blob/main/HANDOFF.md)
 
 STMicroelectronics와 제휴·후원 관계가 없는 비공식 학습용 프로젝트입니다. 권리 확인이 끝나지 않은 참고 자료가 있어 저장소는 **Private**으로 운영합니다. [저작권·상표 검토 결과](docs/COPYRIGHT-REVIEW.md)를 확인하세요.
@@ -12,7 +28,7 @@ STMicroelectronics와 제휴·후원 관계가 없는 비공식 학습용 프로
 
 1. 위 링크에서 초록색 체크가 있는 최신 **Build Windows EXE** 실행을 선택하세요.
 2. 실행 화면 아래 **Artifacts → STM-Emulator-Windows-x64**를 눌러 ZIP을 다운로드하세요. 빌드 Summary의 **Download EXE bundle** 링크로도 받을 수 있습니다.
-3. ZIP을 풀고 `STM-Emulator-0.4.0-win-x64.exe`를 실행하세요. 이후 버전은 파일명의 버전 숫자가 달라집니다.
+3. ZIP을 풀고 `STM-Emulator-<버전>-win-x64.exe`를 실행하세요. 로컬 개발 버전은 0.5.1이며 원격 Artifact는 해당 실행의 버전을 확인하세요.
 
 **Windows x64용**이며 별도 Node.js 설치가 필요 없습니다. 첫 화면의 **시뮬레이션 시작** 버튼으로 LED 깜빡이기 예제를 실행합니다. macOS/Linux용 실행파일은 현재 제공하지 않습니다. 코드 서명 인증서는 적용하지 않았습니다.
 
@@ -106,7 +122,7 @@ void loop() {
 
 - LCD는 쓰기 측 명령·ASCII·사용자 문자 8개를 지원합니다. busy-flag 읽기, 모든 폰트 ROM과 전원 상승 시퀀스는 미지원입니다.
 - 부품 회전은 45° 간격입니다. 모든 다리가 빈 구멍에 맞을 때만 장착하며 접점은 구멍의 정확한 좌표를 사용합니다. 시각적 다리 굽힘을 허용하는 배치 모델로, 실제 부품의 기계 치수·충돌 전체를 검증하는 CAD는 아닙니다.
-- **CubeIDE에서 만든 ELF/BIN 펌웨어는 실행할 수 없습니다.** Cortex-M4 명령과 STM32 주변장치 레지스터를 에뮬레이션하지 않습니다. HAL 전체는 미지원입니다. UART/I²C/SPI, Timer·인터럽트·DMA는 앱의 스케치 모델이며 STM32 레지스터·주변장치 전체의 재현이 아닙니다.
+- **CubeIDE에서 만든 ELF/BIN 펌웨어는 실행할 수 없습니다.** Cortex-M4 명령과 STM32 주변장치 레지스터를 에뮬레이션하지 않습니다. HAL 소스 모드의 API 일부와 기존 스케치 API를 지원하며 전체 HAL/주변장치 재현은 아닙니다.
 - 화면은 약 20 ms마다 갱신하고, 회로는 선택한 0.1~20 ms 간격과 GPIO 전환 시점에 계산합니다. 실제 MCU 클록 또는 명령 실행 시간과 일치하지 않습니다. PWM 파형 모드는 기본 꺼짐이며 파형 탭에서 켤 수 있습니다.
 - UART/I²C/SPI는 트랜잭션 모델입니다. UART 8N1 수신 바이트 시간과 I²C/SPI 전송 시간은 반영하지만, 각 통신선의 비트 에지·노이즈·중재·clock stretching·SPI 모드 전체는 미지원입니다. 타이머·DMA 콜백도 실제 CPU 선점/주변장치 우선순위 모델은 아닙니다.
 - 커패시터는 후진 오일러 방식이며 매우 짧은 RC 시정수·고속 펄스의 정밀 파형에는 적합하지 않습니다. 실행 중 같은 시간의 전압을 반복해서 읽어도 충전 시간이 추가로 진행되지 않습니다.

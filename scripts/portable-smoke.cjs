@@ -24,8 +24,9 @@ const sleep=ms=>new Promise(r=>setTimeout(r,ms));
    await feature('language');assert.match(await page.locator('#console-output').textContent(),/25/);
    await feature('dma');assert.match(await page.locator('#console-output').textContent(),/204[78]/);
    await feature('pwm');await page.click('[data-monitor="wave"]');await sleep(150);assert.equal(await page.locator('.trace-channel').count(),4);assert.ok((await page.locator('.trace-channel').first().getAttribute('d')).length>100);await page.screenshot({path:path.join(out,'portable-waveform.png')});assert.deepEqual(errors,[]);
+   await page.click('#run');await page.selectOption('#hal-example','uart');if(await page.locator('#replace-dialog').isVisible())await page.click('#replace-confirm');await page.click('[data-monitor="bus"]');await page.click('#run');await sleep(120);await page.fill('#serial-input','Portable HAL');await page.click('#serial-send');await sleep(180);assert.match(await page.locator('#uart-output').textContent(),/Portable HAL/);assert.match(await page.locator('#run-status').textContent(),/실행 중/);await page.click('#run');await page.click('#pinout-open');assert.equal(await page.locator('[data-peripheral="USART2"]').isChecked(),true);await page.screenshot({path:path.join(out,'portable-hal-pinout.png')});await page.click('#pinout-close');assert.deepEqual(errors,[]);
    await fs.writeFile(path.join(out,'portable-smoke.json'),JSON.stringify({passed:true,exe,url:page.url(),checks:['portable extraction and launch','400 interactive breadboard holes','16 part types','selected search pin','LED simulation runs','HC-SR04 example runs','LCD live text','UART round trip','I2C/SPI memory read','language example','ADC DMA completion','four-channel PWM/RC waveform'],errors},null,2));
-   console.log('Portable EXE passed: launch, editor, LED, HC-SR04, LCD, UART/I2C/SPI, language, DMA and PWM/RC.');
+   console.log('Portable EXE passed: launch, editor, LED, HC-SR04, LCD, UART/I2C/SPI, language, DMA, PWM/RC, HAL UART interrupt and Pinout.');
  }finally{
    if(page)await page.evaluate(()=>window.close()).catch(()=>{});
    if(browser)await browser.close().catch(()=>{});

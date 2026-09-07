@@ -33,6 +33,8 @@ jobs:
         run: node node_modules/electron/install.js
       - name: Test circuit engine and editor models
         run: npm test
+      - name: Test Electron editing and HAL workflows
+        run: npm run test:ui
       - name: Build portable executable
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: 'false'
