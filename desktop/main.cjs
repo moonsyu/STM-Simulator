@@ -14,6 +14,23 @@ app.whenReady().then(()=>{
   win.loadFile(path.join(__dirname,'../index.html'));
 });
 app.on('window-all-closed',()=>app.quit());
+ipcMain.handle('firmware:import',async(_event,folder)=>{
+  const result=await dialog.showOpenDialog(win,{title:folder?'Cube 프로젝트 루트 폴더 선택':'.ioc, main.c와 필요한 .c/.h 선택',properties:folder?['openDirectory']:['openFile','multiSelections'],...(!folder?{filters:[{name:'Cube 소스와 설정',extensions:['ioc','c','h']}]}:{})});
+  if(result.canceled)return null;
+  let paths=result.filePaths;
+  if(folder){
+    const root=paths[0];paths=[];
+    for(const relative of ['','Core/Src','Core/Inc']){
+      const directory=path.join(root,relative);let entries;try{entries=await fs.readdir(directory,{withFileTypes:true});}catch(error){if(error.code==='ENOENT')continue;throw error;}
+      for(const entry of entries){if(!entry.isFile())continue;const ext=relative?/\.[ch]$/:/\.ioc$/;
+        if(ext.test(entry.name)&&!['syscalls.c','sysmem.c','system_stm32f4xx.c','stm32f4xx_hal_conf.h'].includes(entry.name))paths.push(path.join(directory,entry.name));}
+    }
+  }
+  if(!paths.length||paths.length>41)throw new Error('소스 파일 1~41개를 선택하세요.');
+  const files=[];let total=0;
+  for(const filename of paths){if(!/\.(ioc|c|h)$/.test(filename))throw new Error('.ioc 및 .c/.h 파일만 읽을 수 있습니다.');const stat=await fs.stat(filename);total+=stat.size;if(total>800000)throw new Error('소스는 합계 800 KB 이하로 선택하세요.');files.push({name:path.basename(filename),text:await fs.readFile(filename,'utf8')});}
+  return files;
+});
 ipcMain.handle('project:save',async(_event,text)=>{
   if(typeof text!=='string'||Buffer.byteLength(text)>2_000_000)throw new Error('회로 파일이 너무 큽니다.');
   JSON.parse(text);

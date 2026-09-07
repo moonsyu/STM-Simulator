@@ -11,9 +11,9 @@ export class Runtime {
     this.globals={cells:Object.create(null),alive:true};this.scopes=[this.globals];this.vars=Object.create(null);
     this.events=[];this.nextId=1;this.nextOrder=1;this.timers=new Map();this.dmas=new Map();this.interrupts=new Map();this.interruptsEnabled=true;this.inCallback=false;this.pwm=new Map();this.pwmFrequency=new Map();
     const constants={HIGH:1,LOW:0,true:1,false:0,NULL:0,OUTPUT:'OUTPUT',INPUT:'INPUT',INPUT_PULLUP:'INPUT_PULLUP',INPUT_PULLDOWN:'INPUT_PULLDOWN',CHANGE:'CHANGE',RISING:'RISING',FALLING:'FALLING',LSBFIRST:0,MSBFIRST:1,DEC:10,HEX:16,OCT:8,BIN:2,PI:Math.PI};
-    for(const [key,value]of Object.entries({...constants,...Object.fromEntries([...GPIO_PINS,...Object.keys(ALIASES)].map(p=>[p,p]))}))this.declareCell(key,value,true);
+    for(const [key,value]of Object.entries({...constants,...api.constants,...Object.fromEntries([...GPIO_PINS,...Object.keys(ALIASES)].map(p=>[p,p]))}))this.declareCell(key,value,true);
     for(const name of ['Serial','Serial1','Wire','SPI','Timer','DMA'])this.declareCell(name,{kind:'library',name},true);
-    this.iterator=this.run();this.wake=0;
+    this.staticCells=new Map();this.iterator=this.run();this.wake=0;
   }
   budget(){if(++this.steps>30000)throw new Error('실행 한도를 넘었습니다. 반복문 안에 delay()를 넣으세요.');}
   clone(value,owner,depth=0){
@@ -33,7 +33,8 @@ export class Runtime {
   }
   cell(name){for(let i=this.scopes.length-1;i>=0;i--)if(own(this.scopes[i].cells,name))return this.scopes[i].cells[name];throw new Error(`정의되지 않은 이름: ${name}`);}
   get(cell){if(cell.owner&&!cell.owner.alive)throw new Error('유효기간이 끝난 지역 변수를 참조했습니다.');return cell.value;}
-  set(cell,value){this.get(cell);if(cell.constant)throw new Error('const 값은 변경할 수 없습니다.');cell.value=this.clone(value,cell.owner);return cell.value;}
+  coerce(type,value){if(!this.program.hal||typeof value!=='number'||!type)return value;if(['float','double'].includes(type))return type==='float'?Math.fround(value):value;if(type==='bool')return Number(!!value);const v=Math.trunc(value);if(['uint8_t','byte'].includes(type))return v&255;if(['char','int8_t'].includes(type))return (v<<24)>>24;if(type==='uint16_t')return v&65535;if(['short','int16_t'].includes(type))return (v<<16)>>16;return ['uint32_t','unsigned','size_t'].includes(type)?v>>>0:v|0;}
+  set(cell,value){this.get(cell);if(cell.constant)throw new Error('const 값은 변경할 수 없습니다.');cell.value=this.clone(this.coerce(cell.dataType,value),cell.owner);return cell.value;}
   array(values,owner=this.scope()){if(values.length>4096)throw new Error('배열은 4096개 이하로 선언하세요.');this.allocations+=values.length;if(this.allocations>50000)throw new Error('한 단계의 메모리 할당 한도를 넘었습니다.');return {kind:'array',cells:values.map(value=>({value:this.clone(value,owner),owner,constant:false}))};}
   pointer(value){return isArray(value)?{kind:'pointer',array:value,index:0}:value;}
   pointerCell(p,offset=0){
@@ -67,7 +68,7 @@ export class Runtime {
     if(n.type==='name'){if(own(this.program.functions,n.name))return {kind:'function',name:n.name};return this.get(this.cell(n.name));}
     if(n.type==='list'){const values=[];for(const v of n.values)values.push(yield* this.evaluate(v));return {kind:'initializer',values};}
     if(n.type==='construct'){const args=[];for(const v of n.args)args.push(yield* this.evaluate(v));if(n.name!=='LiquidCrystal')throw new Error('지원하지 않는 생성자입니다.');return this.api.construct?.(n.name,args,this)??{kind:'device',name:n.name,args};}
-    if(n.type==='cast'){const value=yield* this.evaluate(n.a);return n.to==='String'?String(value):n.to==='bool'?Number(truth(value)):['float','double'].includes(n.to)?checkedNumber(value):integer(value);}
+    if(n.type==='cast'){const value=yield* this.evaluate(n.a);if(n.pointer){if(typeof value==='string')return this.pointer(this.array([...value].map(c=>c.charCodeAt(0)).concat(0),this.globals));return this.pointer(value);}return n.to==='String'?String(value):n.to==='bool'?Number(truth(value)):this.program.hal?this.coerce(n.to,checkedNumber(value)):['float','double'].includes(n.to)?checkedNumber(value):integer(value);}
     if(n.type==='index'||n.type==='member')return this.get(yield* this.reference(n));
     if(n.type==='unary'){
       if(n.op==='&'){if(n.a.type==='index')return {kind:'pointer',array:(this.pointer(yield* this.evaluate(n.a.object))).array,index:integer(yield* this.evaluate(n.a.index))};return {kind:'pointer',cell:yield* this.reference(n.a)};}
@@ -80,11 +81,13 @@ export class Runtime {
     if(n.type==='conditional')return yield* this.evaluate(truth(yield* this.evaluate(n.test))?n.yes:n.no);
     if(n.type==='binary'){
       const a=yield* this.evaluate(n.a);if(n.op==='&&')return a?Number(truth(yield* this.evaluate(n.b))):0;if(n.op==='||')return a?1:Number(truth(yield* this.evaluate(n.b)));
-      return this.binary(n.op,a,yield* this.evaluate(n.b));
+      const value=this.binary(n.op,a,yield* this.evaluate(n.b));return this.program.hal&&n.op==='/'&&this.numericType(n.a)!=='float'&&this.numericType(n.b)!=='float'?Math.trunc(value):value;
     }
     if(n.type==='call'){
+      if(this.program.hal&&n.callee.type==='name'&&n.callee.name==='sizeof'){if(n.args.length!==1)throw new Error('sizeof 인수를 확인하세요.');const value=yield* this.evaluate(n.args[0]);return isArray(value)?value.cells.length*this.typeSize(value.cells[0]?.dataType):typeof value==='string'?value.length+1:this.typeSize(n.args[0].type==='name'?this.cell(n.args[0].name).dataType:'int');}
       const args=[];for(const a of n.args)args.push(yield* this.evaluate(a));
       if(n.callee.type==='name'){
+        if(this.api.invoke){const iterator=this.api.invoke(n.callee.name,args,this);if(iterator)return yield* iterator;}
         if(own(this.program.functions,n.callee.name))return yield* this.invoke(n.callee.name,args);
         if(n.callee.name==='delay'){if(this.inCallback)throw new Error('콜백에서는 delay()를 사용할 수 없습니다.');const ms=this.interval(args[0],0);if(args.length!==1)throw new Error('delay(ms) 인수 하나가 필요합니다.');yield Math.max(.001,ms);return 0;}
         return this.call(n.callee.name,args);
@@ -94,26 +97,30 @@ export class Runtime {
     }
     throw new Error('표현식을 실행할 수 없습니다.');
   }
+  typeSize(type){return ['char','byte','bool','uint8_t','int8_t'].includes(type)?1:['short','uint16_t','int16_t'].includes(type)?2:type==='double'?8:4;}
+  numericType(n){if(n.type==='literal')return n.numericType==='double'?'float':'int';if(n.type==='cast')return ['float','double'].includes(n.to)?'float':'int';if(n.type==='name'){try{return ['float','double'].includes(this.cell(n.name).dataType)?'float':'int';}catch{return 'int';}}if(n.type==='binary')return this.numericType(n.a)==='float'||this.numericType(n.b)==='float'?'float':'int';if(n.type==='call'&&n.callee.type==='name')return ['float','double'].includes(this.program.functions[n.callee.name]?.type)?'float':'int';return 'int';}
   defaultValue(type,owner=this.scope(),depth=0){
     this.budget();if(depth>32||++this.allocations>50000)throw new Error('구조체 메모리 한도를 넘었습니다.');
-    if(own(this.program.structs,type))return {kind:'struct',type,fields:Object.fromEntries(this.program.structs[type].map(f=>[f.name,{value:this.defaultValue(f.type,owner,depth+1),owner,constant:f.constant}]))};
+    if(own(this.program.structs,type))return {kind:'struct',type,fields:Object.fromEntries(this.program.structs[type].map(f=>[f.name,{value:this.defaultValue(f.type,owner,depth+1),owner,constant:f.constant,dataType:f.type}]))};
     return type==='String'?'':0;
   }
   initialize(type,value,owner=this.scope()){
     if(own(this.program.structs,type)){
       if(value?.kind==='struct')return this.clone(value);
-      const result=this.defaultValue(type,owner);if(value?.kind==='initializer'){const keys=Object.keys(result.fields);if(value.values.length>keys.length)throw new Error('구조체 초기값이 너무 많습니다.');value.values.forEach((v,i)=>{result.fields[keys[i]].value=this.clone(v);});}return result;
+      const result=this.defaultValue(type,owner);if(value?.kind==='initializer'){const keys=Object.keys(result.fields);if(value.values.length>keys.length)throw new Error('구조체 초기값이 너무 많습니다.');if(value.values.length===1&&value.values[0]===0)return result;value.values.forEach((v,i)=>{result.fields[keys[i]].value=this.clone(v);});}return result;
     }
-    if(value?.kind==='initializer')throw new Error('배열 또는 구조체에만 초기값 목록을 사용하세요.');return value??this.defaultValue(type,owner);
+    if(value?.kind==='initializer')throw new Error('배열 또는 구조체에만 초기값 목록을 사용하세요.');return this.coerce(type,value??this.defaultValue(type,owner));
   }
   *statement(s){
     this.budget();
     if(s.type==='declare'){
-      for(const d of s.declarations){let value=d.value?yield* this.evaluate(d.value):undefined;
+      for(const d of s.declarations){if(d.external)continue;if(d.storage&&this.staticCells.has(d)){this.scope().cells[d.name]=this.staticCells.get(d);continue;}let value=d.value?yield* this.evaluate(d.value):undefined;
         if(d.array){let values=value?.kind==='initializer'?value.values:typeof value==='string'?[...value].map(c=>c.charCodeAt(0)).concat(0):[];const length=d.size?integer(yield* this.evaluate(d.size)):values.length;if(length<1||length>4096||values.length>length)throw new Error('배열 크기 또는 초기값 개수를 확인하세요.');value=this.array(Array.from({length},(_,i)=>this.initialize(d.type,values[i])));if(d.constant)value.cells.forEach(c=>c.constant=true);}
         else if(d.pointer){if(typeof value==='string')value=this.array([...value].map(c=>c.charCodeAt(0)).concat(0),this.globals);value=this.pointer(value??0);if(value!==0&&!isPointer(value))throw new Error('포인터 초기값을 확인하세요.');}
         else if(d.type!=='LiquidCrystal')value=this.initialize(d.type,value);
-        this.declareCell(d.name,value,d.constant);
+        if(d.array)value.cells.forEach(c=>c.dataType=d.type);
+        const cell=this.declareCell(d.name,value,d.constant);cell.dataType=d.pointer?'pointer':d.type;
+        if(d.storage){cell.owner=this.globals;this.staticCells.set(d,cell);if(d.array)value.cells.forEach(c=>c.owner=this.globals);}
       }return;
     }
     if(s.type==='block'){this.pushScope();try{return yield* this.statements(s.body);}finally{this.popScope();}}
@@ -122,7 +129,7 @@ export class Runtime {
     if(['while','for','do'].includes(s.type)){
       this.pushScope();try{
         if(s.init)yield* this.statement(s.init);let first=true;
-        while((s.type==='do'&&first)||truth(yield* this.evaluate(s.test))){first=false;const signal=yield* this.statement(s.body);if(signal?.type==='return')return signal;if(signal?.type==='break')break;if(s.update)yield* this.evaluate(s.update);this.budget();}
+        while((s.type==='do'&&first)||truth(yield* this.evaluate(s.test))){first=false;const signal=yield* this.statement(s.body);if(signal?.type==='return')return signal;if(signal?.type==='break')break;if(s.update)yield* this.evaluate(s.update);if(this.program.hal&&!this.inCallback&&this.depth===1){this.steps=0;yield .1;}this.budget();}
       }finally{this.popScope();}return;
     }
     if(s.type==='return')return {type:'return',value:s.value?yield* this.evaluate(s.value):0};
@@ -133,10 +140,10 @@ export class Runtime {
     const fn=this.program.functions[name];if(!fn)throw new Error(`정의되지 않은 함수: ${name}`);if(args.length!==fn.params.length)throw new Error(`${name}(): 인수 개수를 확인하세요.`);
     if(++this.depth>32)throw new Error('함수 호출 깊이 한도를 넘었습니다.');
     const previous=this.scopes;this.scopes=[this.globals];this.pushScope();
-    try{fn.params.forEach((p,i)=>this.declareCell(p.name,p.pointer?this.pointer(args[i]):this.clone(args[i]),p.constant));const signal=yield* this.statement(fn.body);if(signal&&signal.type!=='return')throw new Error('break/continue는 반복문 안에서 사용하세요.');return signal?.value??0;}
+    try{fn.params.forEach((p,i)=>{const cell=this.declareCell(p.name,p.pointer?this.pointer(args[i]):this.initialize(p.type,args[i]),p.constant);cell.dataType=p.pointer?'pointer':p.type;});const signal=yield* this.statement(fn.body);if(signal&&signal.type!=='return')throw new Error('break/continue는 반복문 안에서 사용하세요.');return this.coerce(fn.type,signal?.value??0);}
     finally{this.popScope();this.scopes=previous;this.depth--;}
   }
-  *run(){yield* this.statements(this.program.globals);if(this.program.functions.setup)yield* this.invoke('setup');while(true){yield* this.invoke('loop');yield 1;}}
+  *run(){yield* this.statements(this.program.globals);if(this.program.hal){yield* this.invoke('main');return;}if(this.program.functions.setup)yield* this.invoke('setup');while(true){yield* this.invoke('loop');yield 1;}}
   pin(name){const pin=canonicalPin(name);if(!GPIO_PINS.includes(pin))throw new Error(`GPIO 핀 이름을 확인하세요: ${name}`);return pin;}
   interval(value,min=1){checkedNumber(value);if(value<min||value>3600000)throw new Error(`시간 범위: ${min}~3600000 ms`);return value;}
   output(pin,value){if(this.gpio[pin]?.mode!=='OUTPUT')throw new Error(`${pin}: pinMode(${pin}, OUTPUT)을 먼저 설정하세요.`);this.api.beforeChange?.(this.microTime);this.gpio[pin].value=value;this.api.changed?.(this.microTime);this.pollInterrupts();}
@@ -147,7 +154,7 @@ export class Runtime {
     const fire=()=>{if(!timer.active)return;if(once){timer.active=false;this.timers.delete(id);}else this.event(this.microTime/1000+period,fire);this.runCallback(callback);};
     this.event(this.microTime/1000+period,fire);return id;
   }
-  runCallback(callback){this.inCallback=true;try{const iterator=this.invoke(callback.name,[]),r=iterator.next();if(!r.done){iterator.return();throw new Error('콜백에서 대기할 수 없습니다.');}}finally{this.inCallback=false;}}
+  runCallback(callback){const previous=this.inCallback;this.inCallback=true;try{if(callback.host){callback.host();return;}const iterator=this.invoke(callback.name,callback.args||[]),r=iterator.next();if(!r.done){iterator.return();throw new Error('콜백에서 대기할 수 없습니다.');}}finally{this.inCallback=previous;}}
   pollInterrupts(){
     if(!this.api.read)return;
     for(const [pin,s]of this.interrupts){const state=Number(!!this.api.read(pin));const fired=state!==s.previous&&(s.mode==='CHANGE'||(s.mode==='RISING'&&state)||(s.mode==='FALLING'&&!state));s.previous=state;if(fired&&!s.pending){s.pending=true;}}
@@ -207,6 +214,7 @@ export class Runtime {
     while(true){
       if(++count>4000)throw new Error('시간당 실행 한도를 초과했습니다. 주파수나 반복 횟수를 줄이세요.');
       if(this.interruptsEnabled){for(const state of this.interrupts.values())if(state.pending){state.pending=false;this.runCallback(state.callback);}}
+      this.api.poll?.(this);
       this.events.sort((a,b)=>a.at-b.at||a.order-b.order);const event=this.events[0],at=Math.min(this.wake,event?.at??Infinity);if(at>target)break;
       this.time=at;this.microTime=Math.max(this.microTime,at*1000);this.api.advance?.(this.microTime);
       if(event&&event.at<=this.wake){this.events.shift();event.fn();}
