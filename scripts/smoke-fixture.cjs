@@ -5,4 +5,4 @@ exports.openFixture=async(page,project)=>{
  await page.waitForFunction(code=>document.getElementById('code').value===code,project.code);
  await page.click('[data-tab="code"]');
 };
-exports.chooseHal=async(page,kind)=>{await page.selectOption('#hal-example',kind);await page.click('#hal-example-confirm');};
+exports.chooseHal=async(page,kind)=>{await page.selectOption('#hal-example',kind);};
