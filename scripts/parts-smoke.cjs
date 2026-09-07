@@ -1,3 +1,4 @@
+const {openFixture,chooseHal}=require('./smoke-fixture.cjs');
 const assert=require('node:assert/strict'),fs=require('node:fs/promises'),path=require('node:path');
 const {_electron}=require(process.env.PLAYWRIGHT_MODULE||'playwright');
 (async()=>{
@@ -5,13 +6,14 @@ const {_electron}=require(process.env.PLAYWRIGHT_MODULE||'playwright');
  const env={...process.env,CIRCUIT_LAB_SMOKE:'1',CIRCUIT_LAB_TEST_PROFILE:path.join(out,'parts-profile-'+Date.now())};delete env.ELECTRON_RUN_AS_NODE;
  const app=await _electron.launch({executablePath:process.env.LAB_EXE||path.join(root,'node_modules/electron/dist/electron.exe'),args:process.env.LAB_EXE?[]:[root],cwd:root,env});
  try{
+ const {deviceFixture}=await import('../tests/fixtures/devices.js');
  const page=await app.firstWindow(),errors=[];page.on('pageerror',e=>errors.push(e.message));await page.waitForSelector('.pin-hit');await app.evaluate(({BrowserWindow})=>BrowserWindow.getAllWindows()[0].showInactive());
  const snapshot=async()=>{await page.waitForTimeout(230);return page.evaluate(()=>JSON.parse(localStorage.getItem('stm32lab.project.v2')));};
  const clickXY=async(x,y)=>{const p=await page.evaluate(({x,y})=>{const svg=document.getElementById('circuit'),q=svg.createSVGPoint();q.x=x;q.y=y;const r=q.matrixTransform(svg.getScreenCTM());return {x:r.x,y:r.y};},{x,y});await page.mouse.click(p.x,p.y);};
- const load=async type=>{await page.selectOption('#extra-example',type);if(await page.locator('#replace-dialog').isVisible())await page.click('#replace-confirm');await page.click('#zoom-reset');};
+ const load=async type=>{await openFixture(page,deviceFixture(type));await page.click('#zoom-reset');};
  const selectDemo=async()=>{const p=(await snapshot()).components[0];await clickXY(p.x,p.y);};
  const setRange=async(id,n)=>{await page.locator(id).focus();await page.keyboard.press('Home');for(let i=0;i<n;i++)await page.keyboard.press('ArrowRight');};
- assert.equal(await page.locator('[data-add]').count(),16);assert.equal(await page.locator('#extra-example option').count(),13);
+ assert.equal(await page.locator('[data-add]').count(),16);assert.equal(await page.locator('#extra-example').count(),0);
  // Selected physical header pin is distinct even when both match the same GPIO.
  await page.fill('#pin-search','PA 8');await page.click('[data-search-pin="board:CN10:23"]');
  assert.equal(await page.locator('#search-layer [data-selected="true"]').getAttribute('data-search-highlight'),'board:CN10:23');

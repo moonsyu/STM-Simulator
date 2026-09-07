@@ -1,6 +1,6 @@
 # STM Emulator
 
-NUCLEO-F446RE 보드와 400홀 빵판을 연결하고 GPIO 스케치를 실행하는 Windows 데스크톱 회로 실습 앱입니다.
+NUCLEO-F446RE 보드와 400홀 빵판을 연결하고 HAL C 소스를 실행하는 Windows 데스크톱 회로 실습 앱입니다.
 
 ## 편집기 너비 / UART·USART 핀 활성화
 
@@ -12,11 +12,15 @@ NUCLEO-F446RE 보드와 400홀 빵판을 연결하고 GPIO 스케치를 실행�
 
 - 왼쪽 **Pinout & Configuration**에서 GPIO/EXTI와 UART/USART 6개·I²C1·SPI1·ADC1·TIM2 핀을 활성화하고 pull·AF·NVIC·주변장치 설정을 구성합니다.
 - `.ioc`와 `main.c` 및 필요한 `.c/.h`를 가져오거나 Cube 프로젝트 폴더를 선택합니다. 소스 파일을 전환해 편집하고, 설정에서 HAL 초기화 코드를 생성할 수 있습니다.
-- `main(void)`에서 HAL GPIO, UART blocking/IT, EXTI callback, TIM2 주기/PWM, ADC, I²C/SPI 메모리 전송을 회로와 연결해 실행합니다. HAL 예제 7개가 포함됩니다.
+- `main(void)`에서 HAL GPIO, UART blocking/IT, EXTI callback, TIM2 주기/PWM/카운터, ADC, I²C/SPI 메모리 전송을 회로와 연결해 실행합니다. HAL 코드 예제 13개가 포함됩니다.
 - HAL 모드는 **구현된 HAL API를 회로 모델에 연결하는 소스 인터프리터**입니다. ST HAL 드라이버 전체를 컴파일하는 환경이나 ELF/BIN 실행기는 아닙니다. 지원 함수·문법·타이밍 제한은 [HAL API](docs/HAL-API.md)를 확인하세요.
 - 기존 스케치와 회로 파일을 유지합니다. HAL 소스·핀 설정도 `.stm32lab`에 함께 저장합니다.
 
-빠른 시작: **HAL 예제 선택 → HAL · UART 수신 인터럽트 → 시뮬레이션 시작 → 통신 탭에서 입력**. 직접 설정할 때는 핀과 NVIC를 지정하고 **설정으로 HAL 코드 생성**을 누르세요. `HAL · …`로 표시한 7개 예제는 HAL API를 사용합니다. 기존 스케치 예제는 `setup/loop` 환경이며, HAL ADC/I²C/SPI 예제의 `Serial.println`은 결과 확인용 시뮬레이터 로그입니다.
+빠른 시작: **HAL 코드 예제 선택 → HAL · 함수·배열·구조체 → 코드·핀 설정 적용 → 시뮬레이션 시작 → 로그**에서 `average=25`를 확인하세요. 새 회로는 빈 빵판과 HAL `main.c`로 시작합니다.
+
+예제는 코드·핀 설정만 적용하며 현재 부품·배선·회로 이름을 유지합니다. 적용 창의 배선 안내를 따라 회로를 직접 구성하세요. Ctrl+Z로 코드와 핀 설정을 되돌릴 수 있습니다. 시리얼/스케치 예제와 완성 회로 메뉴는 제공하지 않습니다.
+
+제공 예제는 HAL과 표준 `printf`를 사용합니다. `printf`/`puts`는 UART 설정 없이 **로그** 탭에 출력하며, HAL UART blocking/IT 송수신도 `[USART2 TX]`, `[USART2 RX]`처럼 포트·방향별로 표시합니다. UART 송신 로그는 외부 터미널 수신 성공을 뜻하지 않습니다. UART 예제의 실제 입력·에코는 터미널 전원, PA2(TX)↔터미널 RX, PA3(RX)↔터미널 TX, 공통 GND와 9600 baud가 필요합니다. 통신 탭에서 활성 UART를 골라 입력하세요. 실제 STM32에서 `printf`를 UART로 출력하려면 해당 프로젝트의 출력 리타게팅을 구성해야 합니다.
 
 **개발 이어가기:** [작업 인계 문서 — 구현 현황·코드 구조·검증·남은 작업](https://github.com/moonsyu/STM-Emulator/blob/main/HANDOFF.md)
 
@@ -28,9 +32,9 @@ STMicroelectronics와 제휴·후원 관계가 없는 비공식 학습용 프로
 
 1. 위 링크에서 초록색 체크가 있는 최신 **Build Windows EXE** 실행을 선택하세요.
 2. 실행 화면 아래 **Artifacts → STM-Emulator-Windows-x64**를 눌러 ZIP을 다운로드하세요. 빌드 Summary의 **Download EXE bundle** 링크로도 받을 수 있습니다.
-3. ZIP을 풀고 `STM-Emulator-<버전>-win-x64.exe`를 실행하세요. 로컬 개발 버전은 0.5.1이며 원격 Artifact는 해당 실행의 버전을 확인하세요.
+3. ZIP을 풀고 `STM-Emulator-<버전>-win-x64.exe`를 실행하세요. 로컬 개발 버전은 0.6.0이며 원격 Artifact는 해당 실행의 버전을 확인하세요.
 
-**Windows x64용**이며 별도 Node.js 설치가 필요 없습니다. 첫 화면의 **시뮬레이션 시작** 버튼으로 LED 깜빡이기 예제를 실행합니다. macOS/Linux용 실행파일은 현재 제공하지 않습니다. 코드 서명 인증서는 적용하지 않았습니다.
+**Windows x64용**이며 별도 Node.js 설치가 필요 없습니다. 첫 화면의 **시뮬레이션 시작** 버튼으로 HAL 기본 코드의 `HAL ready` 로그를 확인합니다. 기존 자동 저장이 있으면 작업하던 회로를 복원합니다. macOS/Linux용 실행파일은 현재 제공하지 않습니다. 코드 서명 인증서는 적용하지 않았습니다.
 
 Private 저장소이므로 GitHub 로그인과 저장소 읽기 권한이 필요합니다. Artifacts는 90일 보관하며, 만료되면 해당 Actions 페이지의 **Run workflow**로 다시 빌드할 수 있습니다(실행 권한 필요). 다운로드 방법은 [GitHub 공식 안내](https://docs.github.com/en/actions/how-tos/manage-workflow-runs/download-workflow-artifacts)를 참고하세요.
 
@@ -44,7 +48,7 @@ ZIP에는 EXE, `SHA256.txt`, `BUILD-INFO.json`, README와 제3자 라이선스 �
 - Timer 콜백, GPIO 에지 인터럽트, ADC/PWM 배열 전송용 DMA 모델.
 - 4채널 파형, 평균/PWM 전환, 0.1~20 ms 계산 간격, CSV 저장.
 
-왼쪽 **LCD · 통신 · 파형 실습**에서 9가지 기능 예제를 여세요. 하단 **로그 / 파형 / 통신** 탭으로 동작을 확인할 수 있습니다. [스케치 API와 모델 범위](docs/SKETCH-API.md)에 함수·기본 핀·제약을 정리했습니다.
+왼쪽 **HAL 코드 예제**에서 GPIO LED·버튼 입력·EXTI·UART·TIM2 인터럽트·ADC·온도·배열 샘플링·I²C·SPI·함수/구조체·PWM·초음파 코드를 선택합니다. 부품은 직접 추가하고 배선합니다. 하단 **로그 / 파형 / 통신** 탭으로 동작을 확인합니다. ADC 배열 예제는 polling이며 HAL DMA는 구현하지 않았습니다. 기존 스케치 파일의 함수·핀·제약은 [호환 스케치 API](docs/SKETCH-API.md)에 정리했습니다.
 
 ## 사용
 
@@ -55,7 +59,7 @@ ZIP에는 EXE, `SHA256.txt`, `BUILD-INFO.json`, README와 제3자 라이선스 �
 5. 코드를 작성하고 실행하세요. 실행 중 버튼은 누르는 동안 연결됩니다. 핀·부품을 선택하면 전압·전류를 측정합니다.
 6. **파일 저장**으로 `.stm32lab` 파일을 만들고 **불러오기**로 다시 엽니다. 마지막 작업 회로는 앱의 로컬 저장소에도 자동 저장합니다.
 7. 보드 핀 검색에 `PC 13`, `PA 8`, `D13` 등을 입력하세요. 공백과 대소문자를 무시하며 같은 GPIO의 Arduino·Morpho 위치를 함께 표시합니다. 결과 클릭 또는 Enter로 해당 핀을 확대하고 **선택한 물리 핀 하나를 파란 표식·핀 이름으로 강조**합니다. 목록의 선택 행도 함께 표시되며 다른 검색 결과는 노란색으로 남습니다.
-8. 왼쪽 아래 **부품별 실행 예제**에서 추가 부품 12종 각각의 완성 회로와 코드를 열 수 있습니다. 실행 중 가변저항·스위치·온도·거리를 오른쪽 속성에서 바꾸세요. 능동 부저 소리는 상단 **소리 꺼짐** 버튼을 눌러 켭니다.
+8. 실행 중 가변저항·스위치·온도·거리를 오른쪽 속성에서 바꾸세요. 능동 부저 소리는 상단 **소리 꺼짐** 버튼을 눌러 켭니다.
 
 단축키: `W` 배선, `V` 선택, `Esc` / `Delete` 선택한 부품·배선 삭제, `R` 45° 회전, `Ctrl+Z` 취소, `Ctrl+Y` 재실행, `Ctrl+S` 파일 저장. 연결 중 Esc는 연결 취소이며, 코드·입력칸 편집 중에는 부품을 삭제하지 않습니다. 마우스 휠로 확대하고 빈 공간을 끌어 이동합니다.
 
@@ -67,7 +71,7 @@ ZIP에는 EXE, `SHA256.txt`, `BUILD-INFO.json`, README와 제3자 라이선스 �
 
 | 부품 | 동작 및 조절 |
 |---|---|
-| UART 터미널 | 4핀, 기본 9600 baud. TX/RX를 교차 연결하고 Serial1 송수신. 하단 통신 탭으로 입력 |
+| UART 터미널 | 4핀, 기본 9600 baud. 활성 UART/USART의 TX/RX를 교차 연결. 하단 통신 탭으로 입력 |
 | I²C 메모리 | 4핀, 기본 0x50, 256바이트 RAM. 내장 풀업, 주소·ACK/NACK·순차 읽기/쓰기 |
 | SPI 메모리 | 6핀, 256바이트 RAM. CS 제어 및 0x02 쓰기/0x03 읽기 명령 |
 | 가변저항 | 3핀, 기본 10 kΩ. 1–3 전체 저항과 2번 가변 접점, 0–100% 위치를 조절하며 부하까지 반영한 분압 계산 |
@@ -78,7 +82,7 @@ ZIP에는 EXE, `SHA256.txt`, `BUILD-INFO.json`, README와 제3자 라이선스 �
 | 능동 부저 | +/− 2핀. 2 V 이상 동작, 1 kΩ 부하 모델. 2.3 kHz 합성음 켜기/끄기 |
 | 7세그먼트 | 10핀 공통 음극, a–g와 dp의 독립 점등. K1/K2 내부 연결, 각 세그먼트에 저항 필요 |
 | 온도 센서 | TMP36 전달식, −40~125°C 조절. 유효 전원 2.7–5.5 V일 때 VOUT = 0.5 + 0.01 × °C |
-| 초음파 센서 | HC-SR04 프로토콜 모델, 2–400 cm 조절. 5 V 전원, 10 µs 이상 TRIG 후 ECHO에서 `pulseIn(pin, HIGH, timeout)` 결과 = cm × 58 µs |
+| 초음파 센서 | HC-SR04 프로토콜 모델, 2–400 cm 조절. 5 V 전원, 10 µs 이상 TRIG 후 ECHO 길이 = cm × 58 µs. HAL 예제는 GPIO와 TIM2 카운터로 측정 |
 
 ## 구현한 범위
 
@@ -89,29 +93,22 @@ ZIP에는 EXE, `SHA256.txt`, `BUILD-INFO.json`, README와 제3자 라이선스 �
 - LCD 1602의 16핀 배치·배선과 명령·문자 출력. VSS/VDD/VO/RS/RW/E/DB0–DB7/A/K 단자에 배선을 연결할 수 있습니다.
 - GPIO 출력/입력/풀업/풀다운, 12비트 ADC 값, 평균 전압 또는 시간별 HIGH/LOW 방식 PWM.
 - 저항 및 LED DC 해석, 전원 단락 시 정지, GPIO·LED 과전류 및 저항 전력 경고.
-- LED, 외부 버튼, 전압 분배 예제.
-- 코드 실행 시간, Serial 텍스트 출력, 전압·전류 측정, 실행 취소·재실행, 프로젝트 파일 저장.
+- HAL 코드 예제와 핀 설정·배선 안내.
+- 코드 실행 시간, printf 및 UART TX/RX 로그, 전압·전류 측정, 실행 취소·재실행, 프로젝트 파일 저장.
 
 ## 코드 문법
 
-이 앱은 **GPIO 스케치 일부를 자체 인터프리터로 실행**합니다. 일반 C/C++ 컴파일러 또는 ARM CPU 에뮬레이터가 아닙니다.
+이 앱은 **지원 HAL C 소스를 자체 인터프리터로 실행**합니다. 일반 C/C++ 컴파일러 또는 ARM CPU 에뮬레이터가 아닙니다. HAL GPIO LED 예제의 초기화가 완료된 뒤 반복문에 다음 코드를 작성할 수 있습니다.
 
-```cpp
-void setup() {
-  pinMode(D13, OUTPUT);  // PA5와 동일
-}
-
-void loop() {
-  digitalWrite(D13, HIGH);
-  delay(500);
-  digitalWrite(D13, LOW);
-  delay(500);
-}
+```c
+HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_5);
+printf("PA5=%u\n", HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_5));
+HAL_Delay(500);
 ```
 
-기존 GPIO·시간·Serial API에 LiquidCrystal, Serial1, Wire, SPI, Timer, GPIO 인터럽트, DMA를 추가했습니다. 사용자 함수·배열·구조체·단일 포인터·for/while/do 반복문을 지원하며, 실행 및 메모리 사용 한도와 인덱스·포인터 유효성 검사를 적용합니다.
+기존 사용자 회로의 GPIO 스케치 API도 계속 읽고 실행합니다. 사용자 함수·배열·구조체·단일 포인터·for/while/do 반복문을 지원하며, 실행 및 메모리 사용 한도와 인덱스·포인터 유효성 검사를 적용합니다.
 
-외부 헤더를 컴파일하는 방식은 아니며 허용된 include는 내장 API를 사용한다는 표시입니다. 일반 C/C++ 전체의 자료형·문법·ABI와 일치하지 않습니다. 정확한 지원 함수와 인수는 [스케치 API](docs/SKETCH-API.md)를 확인하세요.
+외부 헤더를 컴파일하는 방식은 아니며 허용된 include는 내장 API를 사용한다는 표시입니다. 일반 C/C++ 전체의 자료형·문법·ABI와 일치하지 않습니다. 정확한 지원 함수와 인수는 [HAL API](docs/HAL-API.md)를 확인하세요.
 
 ## 모델의 한계
 
@@ -147,9 +144,9 @@ GitHub Actions는 `main`에 push하거나 수동 실행할 때 Windows에서 의
 
 `npm run dev:web`은 개발 확인용 로컬 웹 서버를 `http://127.0.0.1:4173`에 띄웁니다. 데스크톱 앱은 웹 서버 없이 동작합니다.
 
-UI 검증은 `npm run test:ui`로 편집·부품·통신·HAL·레이아웃 등 6개 스크립트를 실행합니다. `PLAYWRIGHT_MODULE` 환경 변수로 별도 설치된 Playwright 패키지 경로를 지정할 수 있습니다. `LAB_EXE`는 패키징된 `win-unpacked` 앱 본체 경로입니다. 단일 EXE 검증은 `node scripts/portable-smoke.cjs`입니다. 결과는 `test-results/`의 동일 파일에 최신 실행 결과로 갱신하고 테스트 전용 프로필은 검증 후 제거합니다.
+UI 검증은 `npm run test:ui`로 편집·부품·통신·HAL·레이아웃·코드 예제 및 로그 등 7개 스크립트를 실행합니다. `PLAYWRIGHT_MODULE` 환경 변수로 별도 설치된 Playwright 패키지 경로를 지정할 수 있습니다. `LAB_EXE`는 패키징된 `win-unpacked` 앱 본체 경로입니다. 단일 EXE 검증은 `node scripts/portable-smoke.cjs`입니다. 결과는 `test-results/`의 동일 파일에 최신 실행 결과로 갱신하고 테스트 전용 프로필은 검증 후 제거합니다.
 
-구조: `src/pins.js` 핀 좌표와 검색, `src/components.js` 부품 다리 구조, `src/placement.js` 장착 계산, `src/engine.js` 회로 해석, `src/program.js` 인터프리터, `src/project.js` 프로젝트/예제/검증, `src/render.js` 벡터 그림, `src/app.js` 편집과 실행 UI, `desktop/` 실행파일 호스트.
+구조: `src/pins.js` 핀 좌표와 검색, `src/components.js` 부품 다리 구조, `src/placement.js` 장착 계산, `src/engine.js` 회로 해석, `src/program.js` 인터프리터, `src/project.js` 빈 HAL 프로젝트/검증, `src/hal-examples.js` HAL 코드 예제, `src/hal-stdio.js` printf 로그, `src/render.js` 벡터 그림, `src/app.js` 편집과 실행 UI, `desktop/` 실행파일 호스트.
 
 ## 참고
 

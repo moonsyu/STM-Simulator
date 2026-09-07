@@ -1,9 +1,10 @@
-import {blankProject} from './project.js';
-import {PART_DEFS,TWO_PIN_TYPES} from './components.js';
-import {boardPin} from './pins.js';
-import {findMount,applyMount} from './placement.js';
-import {featureExample} from './feature-examples.js';
-export function componentExample(type){
+// Test-only circuits and sketch compatibility programs, never shipped.
+import {blankFixture as blankProject} from './circuits.js';
+import {PART_DEFS,TWO_PIN_TYPES} from '../../src/components.js';
+import {boardPin} from '../../src/pins.js';
+import {findMount,applyMount} from '../../src/placement.js';
+import {programFixture as featureExample} from './programs.js';
+export function deviceFixture(type){
  if(['uart','i2c','spi'].includes(type))return featureExample(type);
  const def=PART_DEFS[type];if(!def)throw new Error('지원하지 않는 예제입니다.');
  const project=blankProject();project.name=def.name+' 실습';

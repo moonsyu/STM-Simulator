@@ -9,14 +9,14 @@ import {compileHal} from './hal-source.js';
 import {HalAdapter,HAL_CONSTANTS} from './hal.js';
 
 export class SimulationSession {
-  constructor(project,{print=()=>{},trace=()=>{},channels}={}){
+  constructor(project,{print=()=>{},trace=()=>{},uart=()=>{},channels}={}){
     this.project=project;this.pressed={};this.result=null;this.time=0;this.integrated=-1;this.stepMs=project.simulation?.stepMs??1;this.circuit=new CircuitSimulation();this.sensors=new UltrasonicSignals();this.lcds=new Map();this.wave=new WaveRecorder(channels);this.serial=[];
     this.buses=new BusDevices(project,()=>this.result,trace);
     this.hal=project.firmware?.mode==='hal'?new HalAdapter(project.mcu,this.buses):null;
     this.runtime=new Runtime(this.hal?compileHal(project.code,project.firmware.files):compile(project.code),{
       constants:this.hal?HAL_CONSTANTS:undefined,
       invoke:(name,args,runtime)=>this.hal?.invoke(name,args,runtime),poll:runtime=>this.hal?.poll(runtime),
-      print,pwmEnabled:project.simulation?.pwmWaveform??false,
+      print,uart,pwmEnabled:project.simulation?.pwmWaveform??false,
       beforeChange:us=>this.advance(us),changed:us=>this.changed(us),advance:us=>this.advance(us),
       read:pin=>digitalRead(pin,this.result),voltage:pin=>this.result?.voltage('signal:'+pin),
       pulseIn:(pin,state,timeout,us)=>{this.changed(us);return this.sensors.pulseIn(project,this.result,pin,state,timeout,us);},

@@ -1,4 +1,4 @@
-# STM Emulator 0.5.1 — HAL 소스 및 핀 설정
+# STM Emulator 0.6.0 — HAL 소스 및 핀 설정
 
 STM32F446RE용 **HAL API 호환 회로 모델**입니다. CubeMX/CubeIDE의 `main.c`와 필요한 사용자 `.c/.h`, `.ioc`를 가져옵니다. ST HAL 드라이버 자체를 컴파일·링크하거나 ARM 명령을 실행하지 않습니다. 따라서 지원 범위 안의 생성 소스와 사용자 코드를 사용할 수 있으며, 임의 Cube 프로젝트의 전체 호환성을 보장하지 않습니다. ELF/BIN은 입력 대상이 아닙니다.
 
@@ -12,7 +12,9 @@ STM32F446RE용 **HAL API 호환 회로 모델**입니다. CubeMX/CubeIDE의 `mai
 6. 데스크톱의 **Cube 프로젝트 폴더**는 루트 `.ioc`, `Core/Src`, `Core/Inc`를 읽습니다. `Drivers`, startup, syscalls, sysmem, system_stm32f4xx 및 HAL conf 구현은 가져오지 않습니다. 파일은 원본에 쓰지 않고 회로 프로젝트에 복사합니다.
 7. 편집기 상단에서 `main.c`와 가져온 `.c/.h`를 전환해 수정합니다. **코드 검사**는 문법을 검사하고, 시뮬레이션 시작 시 핀·초기화·배선·지원 API를 검사합니다.
 
-HAL 예제 드롭다운에는 GPIO LED, USER EXTI, UART RX 인터럽트, TIM2, ADC 분압, I²C와 SPI 메모리의 회로·코드가 있습니다. `HAL · …` 예제 7개는 HAL API를 사용하며, 기존 스케치 예제와 별도입니다. UART 예제는 USART2의 PA2(TX)/PA3(RX), 9600 baud를 사용합니다. 하단 통신 탭에서 포트를 골라 입력합니다. 일부 예제의 `Serial.println`은 시뮬레이터 로그 확장입니다. CubeIDE 소스에서는 이 로그 호출을 UART 출력 등으로 바꾸세요.
+HAL 코드 예제는 GPIO LED·버튼 입력·USER EXTI·UART RX 인터럽트·TIM2 인터럽트·ADC·TMP36·ADC 배열·I²C·SPI·함수/구조체·PWM·초음파의 13개입니다. 모두 HAL C를 사용하며 Serial 호출은 없습니다. 코드와 MCU 설정만 적용하고 현재 부품·배선·회로 이름·계산 설정은 유지합니다. 적용 창과 코드 첫머리의 안내에 따라 직접 배선하세요. 취소하면 바뀌지 않으며 적용 후 Ctrl+Z로 되돌립니다. 새 회로도 부품·배선 없이 HAL 코드로 시작합니다.
+
+UART 예제는 USART2 PA2(TX)/PA3(RX), 9600 baud입니다. 터미널 전원·공통 GND·TX/RX 교차 배선을 구성하고 하단 통신 탭에서 포트를 골라 입력합니다. ADC 배열 예제는 8회 polling으로 값을 저장하며 DMA 예제가 아닙니다. 초음파 예제는 TIM2 1 MHz 카운터와 GPIO ECHO 폴링을 사용하며 0.1 ms 협력 실행 해상도의 측정 모델입니다. 하드웨어 입력 캡처 및 CPU 명령 타이밍은 재현하지 않습니다.
 
 편집기와 회로 사이의 세로 경계선을 드래그하면 코드 및 속성·측정 패널의 너비를 조절할 수 있습니다. 로컬에 너비를 저장하며, 두 번 클릭하면 기본값(440px)으로 돌아갑니다. 경계선의 방향키/Home/End 입력도 지원합니다.
 
@@ -36,6 +38,7 @@ F446RE **LQFP64** 및 보드에서 접근 가능한 핀 기준입니다. TX와 R
 | 모듈 | 지원 API 및 조건 |
 |---|---|
 | 기본 | `HAL_Init`, `HAL_Delay`, `HAL_GetTick`, `__disable_irq`, `__enable_irq` |
+| 로그 | `<stdio.h>`의 `printf`, `puts`; 지원 형식과 한도는 아래 참고 |
 | GPIO | `HAL_GPIO_Init/DeInit`, `WritePin`, `ReadPin`, `TogglePin`; INPUT/OUTPUT_PP/ANALOG/AF_PP/AF_OD, EXTI rising/falling/both. AF는 해당 UART/USART/I2C1/SPI1/TIM2 기능에 한정 |
 | EXTI/NVIC | `HAL_NVIC_SetPriority/EnableIRQ/DisableIRQ`, `HAL_GPIO_EXTI_IRQHandler`, `HAL_GPIO_EXTI_Callback(uint16_t)`; EXTI0~4, EXTI9_5, EXTI15_10 |
 | UART/USART 6개 | `HAL_UART_Init`, blocking `Transmit/Receive`, `Transmit_IT/Receive_IT`, `AbortReceive`, `RxCpltCallback/TxCpltCallback`; 비동기 8N1, TX/RX, HW flow 없음, oversampling 16. 포트마다 독립 버퍼·busy 상태·NVIC |
@@ -43,6 +46,7 @@ F446RE **LQFP64** 및 보드에서 접근 가능한 핀 기준입니다. TX와 R
 | SPI1 | `HAL_SPI_Init`, `Transmit/Receive/TransmitReceive`; master, 8비트, mode 0, MSB first, software CS |
 | ADC1 | `HAL_ADC_Init/ConfigChannel/Start/Stop/PollForConversion/GetValue`; 외부 단일 채널, 12비트, 오른쪽 정렬, 소프트웨어 시작 |
 | TIM2 | `HAL_TIM_Base_Init/Start_IT/Stop_IT`, `HAL_TIM_PeriodElapsedCallback`; 내부 클록, up count. 주기 `(PSC+1)*(ARR+1)/timerClockHz`, 1ms 이상 |
+| TIM2 카운터 | `HAL_TIM_Base_Start/Stop`, `__HAL_TIM_GET_COUNTER/SET_COUNTER`; PSC와 timerClockHz에 따른 증가, ARR에서 순환. 독립 polling 용도이며 IT/PWM과 카운터 조작을 혼합하는 타이머 레지스터 동작은 재현하지 않음 |
 | TIM2 PWM | `HAL_TIM_PWM_Init/ConfigChannel/Start/Stop`, `__HAL_TIM_SET_COMPARE`; PWM1 active high, 1~2000Hz, 기본 평균 출력, 기존 파형 모드 사용 가능 |
 
 UART 전원과 TX/RX 배선·baud, I²C 주소·전원·풀업, SPI CS·전원·배선은 기존 회로 모델로 검사합니다. UART RX 완료는 수신 바이트 도착 시간에 처리합니다. UART와 I²C/SPI timeout은 구현된 전송 시간에 기반합니다. I²C/SPI timeout이 부족하면 전송 전 HAL_TIMEOUT을 반환하는 단순 모델이며 부분 전송을 재현하지 않습니다.
@@ -51,13 +55,21 @@ UART 전원과 TX/RX 배선·baud, I²C 주소·전원·풀업, SPI CS·전원·
 
 핀 설정과 소스의 GPIO 모드/pull/AF, 각 UART/USART baud, I²C 속도, TIM2 PSC/ARR가 다르면 실행을 중단합니다. STM32의 가능한 모든 AF를 표시하지 않고 구현된 주변장치의 실제 대체 핀만 제공합니다. 지원되지 않는 `.ioc` 신호는 예약 핀으로 가져오고 경고합니다. CAN, USB, RTOS, DAC, HAL DMA 등은 아직 실행하지 않습니다. UART는 외부 터미널 및 같은 포트의 TX/RX 루프백을 모델링하며 서로 다른 MCU UART 간 직접 배선 전송은 구현하지 않았습니다.
 
+## 로그
+
+`printf("value=%lu\n", value)`와 `puts("ready")`는 배선 없이 실행 모니터의 로그 탭에 표시됩니다. 이는 앱의 디버그 출력 연결입니다. 실제 MCU에서는 프로젝트의 `_write` 등 출력 리타게팅이 필요하며, 부동소수점 printf는 툴체인의 float 출력 설정도 필요할 수 있습니다. 앱은 syscalls 구현을 실행하지 않습니다.
+
+`printf`는 d/i/u/x/X/o/f/c/s/%%, 부호·정렬·0 채움, 고정 폭(최대 80), 정밀도(최대 8), 정수 h/hh/l을 지원합니다. 형식은 1024자, 값은 32개, 출력은 호출당 4096자로 제한합니다. 와이드 문자, %n, 동적 폭/정밀도, 임의 가변인자 함수는 지원하지 않습니다. 잘못된 형식·누락 인수·잘못된 포인터는 실행 오류를 표시합니다. 각 호출은 로그 항목 하나이며 끝의 줄바꿈 하나를 생략하고 내부 줄바꿈을 보존합니다.
+
+HAL UART blocking/IT 송수신은 `[USART2 TX]`, `[USART2 RX]`와 같이 실제 인스턴스 및 방향을 표시합니다. 같은 포트·방향의 바이트는 줄바꿈 또는 길이 한도까지 한 줄로 모읍니다. TX는 전송 요청이 수락됐다는 뜻이며 외부 수신 성공을 보장하지 않습니다. 전원·배선·baud가 맞아야 터미널에 도착하고 실제 수신 바이트에만 RX 로그를 남깁니다. HAL_BUSY/HAL_TIMEOUT으로 시작하지 못한 송신은 성공 로그를 남기지 않습니다. `printf`는 UART 통신선이나 터미널에 바이트를 보내지 않습니다.
+
 ## C 소스 모델
 
 `main(void)`, 함수/프로토타입, include guard, 선택한 로컬 헤더, scalar typedef, extern 선언, 배열·구조체·단일 포인터, 기본 포인터 cast 및 `sizeof(변수)`를 지원합니다. 선택한 .c들을 하나의 프로그램으로 해석하므로 서로 다른 파일의 동일한 static 함수 이름은 지원하지 않습니다. 파일 상한은 40개 보조 소스, main.c 50,000자, 합계 300,000자입니다.
 
 HAL 모드에서 정수 변수 대입·캐스트를 정해진 폭으로 변환하고, 스칼라 정수 나눗셈·float 변수·static 스칼라 수명을 처리합니다. 전체 C 표준의 정수 승격, 복합식 타입 추론, 부동소수점 ABI, 포인터/구조체 메모리 레이아웃을 보장하지 않습니다. 스케치 모드의 기존 숫자 동작은 유지합니다.
 
-기본 `#ifdef/#ifndef/#if 0/1/#if defined`, `#else/#endif`, object define을 지원합니다. 복잡한 #if, 함수형 매크로, enum/switch, 구조체 typedef, 다차원 배열, 이중 포인터, 가변인자 printf, 임의 외부 라이브러리는 지원되지 않습니다. 알 수 없는 문법·헤더·HAL 함수는 오류를 표시하며 성공한 것으로 건너뛰지 않습니다.
+기본 `#ifdef/#ifndef/#if 0/1/#if defined`, `#else/#endif`, object define을 지원합니다. 복잡한 #if, 함수형 매크로, enum/switch, 구조체 typedef, 다차원 배열, 이중 포인터, 사용자 가변인자 함수, 임의 외부 라이브러리는 지원되지 않습니다. 알 수 없는 문법·헤더·HAL 함수는 오류를 표시하며 성공한 것으로 건너뛰지 않습니다.
 
 표준 HAL handle/init 구조체는 인터프리터 내부 값으로 구성합니다. GPIO/주변장치 clock-enable, 기본 RCC OscConfig/ClockConfig/PWR 호출은 생성 소스를 수용하는 초기화 호환 호출입니다. CPU·클록 트리·전압 스케일·Flash latency의 실제 하드웨어 동작은 재현하지 않습니다. TIM2 입력 클록은 설정 화면 또는 `.ioc`의 APB1 timer clock 값을 사용합니다. SPI 전송 속도는 설정 화면의 Clock 값을 사용하고 원본 `BaudRatePrescaler`를 클록 트리로 환산하지 않습니다.
 
@@ -65,4 +77,4 @@ main 최상위 반복은 0.1ms씩 협력적으로 진행하므로 빈 `while(1)`
 
 ## 인터페이스 근거
 
-함수/구조체 명칭은 [ST의 STM32F4 HAL GPIO 헤더](https://github.com/STMicroelectronics/stm32f4xx-hal-driver/blob/master/Inc/stm32f4xx_hal_gpio.h), [UART 헤더](https://github.com/STMicroelectronics/stm32f4xx-hal-driver/blob/master/Inc/stm32f4xx_hal_uart.h)를 확인했습니다. 로컬 CubeMX F446RE 기종 정보와 `.ioc`도 대조했습니다. ST 드라이버 소스 및 CubeMX 데이터베이스 파일은 앱에 포함하지 않습니다.
+함수/구조체 명칭은 [ST의 STM32F4 HAL GPIO 헤더](https://github.com/STMicroelectronics/stm32f4xx-hal-driver/blob/master/Inc/stm32f4xx_hal_gpio.h), [UART 헤더](https://github.com/STMicroelectronics/stm32f4xx-hal-driver/blob/master/Inc/stm32f4xx_hal_uart.h), [TIM 헤더](https://github.com/STMicroelectronics/stm32f4xx-hal-driver/blob/master/Inc/stm32f4xx_hal_tim.h)를 확인했습니다. 로컬 CubeMX F446RE 기종 정보와 `.ioc`도 대조했습니다. ST 드라이버 소스 및 CubeMX 데이터베이스 파일은 앱에 포함하지 않습니다.

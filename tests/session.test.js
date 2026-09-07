@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {SimulationSession} from '../src/session.js';
-import {FEATURE_EXAMPLES,featureExample} from '../src/feature-examples.js';
+import {PROGRAM_FIXTURES as FEATURE_EXAMPLES,programFixture as featureExample} from './fixtures/programs.js';
 import {validateProject} from '../src/project.js';
 import {boardPin} from '../src/pins.js';
 import {WaveRecorder,waveSvg} from '../src/trace.js';

@@ -1,6 +1,7 @@
 import {validateMcu,configProblems,irqForPin,IRQ_NAMES} from './mcu-config.js';
 import {BusDevices} from './buses.js';
 import {SERIAL_IDS,isSerial,serialAf,serialFunction} from './serial-config.js';
+import {formatPrintf} from './hal-stdio.js';
 
 export const HAL_CONSTANTS={HAL_OK:0,HAL_ERROR:1,HAL_BUSY:2,HAL_TIMEOUT:3,HAL_MAX_DELAY:4294967295,
   GPIO_PIN_RESET:0,GPIO_PIN_SET:1,GPIO_MODE_INPUT:0,GPIO_MODE_OUTPUT_PP:1,GPIO_MODE_OUTPUT_OD:17,GPIO_MODE_AF_PP:2,GPIO_MODE_AF_OD:18,GPIO_MODE_ANALOG:3,
@@ -27,13 +28,14 @@ for(const [name,n]of [['GPIO_AF4_I2C1',4],['GPIO_AF5_SPI1',5],['GPIO_AF1_TIM2',1
 
 const int=(value,min,max,label)=>{if(!Number.isInteger(value)||value<min||value>max)throw new Error(`${label}: ${min}~${max} 범위의 정수가 필요합니다.`);return value;};
 export class HalAdapter {
-  constructor(config,buses){this.config=validateMcu(config);const errors=configProblems(this.config);if(errors.length)throw new Error(errors.join('\n'));this.buses=buses;this.nvic=new Map();this.pending=[];this.extiPending=0;this.serials=new Map();this.handles=new Map();this.timers=new Map();this.adc=new Map();this.pwm=new Map();this.latches=new Map();this.priorities=new Map();}
+  constructor(config,buses){this.config=validateMcu(config);const errors=configProblems(this.config);if(errors.length)throw new Error(errors.join('\n'));this.buses=buses;this.nvic=new Map();this.pending=[];this.extiPending=0;this.serials=new Map();this.handles=new Map();this.timers=new Map();this.adc=new Map();this.pwm=new Map();this.latches=new Map();this.priorities=new Map();this.counters=new Map();}
   uart(id){
     if(!isSerial(id))throw new Error(`지원하지 않는 UART 인스턴스: ${id}`);
     if(!this.serials.has(id)){const bus=id==='USART2'?this.buses:new BusDevices(this.buses.project,this.buses.getResult,this.buses.trace);bus.uart.instance=id;bus.received=this.buses.received;this.serials.set(id,{bus,rx:null,tx:null});}
     return this.serials.get(id);
   }
-  uartWrite(channel,bytes,r){const before=channel.bus.uart.queue.length;channel.bus.call('Serial1.write',[r.array(bytes),bytes.length],r);for(const byte of channel.bus.uart.queue.slice(before))r.event(byte.at/1000,()=>{});}
+  uartWrite(channel,bytes,r){const before=channel.bus.uart.queue.length;channel.bus.call('Serial1.write',[r.array(bytes),bytes.length],r);r.api.uart?.({instance:channel.bus.uart.instance,direction:'TX',bytes,micros:r.microTime});for(const byte of channel.bus.uart.queue.slice(before))r.event(byte.at/1000,()=>{});}
+  uartRead(channel,r){const value=channel.bus.call('Serial1.read',[],r);if(value>=0)r.api.uart?.({instance:channel.bus.uart.instance,direction:'RX',bytes:[value],micros:r.microTime});return value;}
   field(object,key){if(object?.kind!=='struct'||!Object.hasOwn(object.fields,key))throw new Error(`HAL 구조체 필드 오류: ${key}`);return object.fields[key].value;}
   handle(ptr,r,type){const h=r.get(r.pointerCell(ptr));if(h?.type!==type+'_HandleTypeDef')throw new Error(`${type} 핸들 포인터가 필요합니다.`);const id=this.field(h,'Instance');if(!this.config.peripherals[id]?.enabled)throw new Error(`${id}: Pinout & Configuration에서 주변장치를 활성화하세요.`);return {h,id,init:this.field(h,'Init')};}
   requireHandle(ptr,r,type){const x=this.handle(ptr,r,type);if(this.handles.get(x.id)!==x.h)throw new Error(`${x.id}: HAL 초기화가 필요합니다.`);return x;}
@@ -45,7 +47,7 @@ export class HalAdapter {
   poll(r){
     for(const [id,channel]of this.serials){
       if(channel.tx&&channel.tx.at<=r.microTime+1e-6){const job=channel.tx;channel.tx=null;this.queue(id+'_IRQn',()=>this.callback(r,'HAL_UART_TxCpltCallback',[job.handle]),id+':tx');}
-      if(channel.rx){const job=channel.rx;while(job.index<job.count&&channel.bus.call('Serial1.available',[],r)>0)r.set(r.pointerCell(job.buffer,job.index++),channel.bus.call('Serial1.read',[],r));
+      if(channel.rx){const job=channel.rx;while(job.index<job.count&&channel.bus.call('Serial1.available',[],r)>0)r.set(r.pointerCell(job.buffer,job.index++),this.uartRead(channel,r));
         if(job.index===job.count){channel.rx=null;this.queue(id+'_IRQn',()=>this.callback(r,'HAL_UART_RxCpltCallback',[job.handle]),id+':rx');}}
     }
     if(!r.interruptsEnabled||r.inCallback)return;
@@ -65,10 +67,11 @@ export class HalAdapter {
       this.uartWrite(channel,bytes,r);yield duration;return 0;
     }
     if(channel.rx)return 2;r.pointerCell(buffer,count-1);let index=0;
-    while(index<count){while(index<count&&channel.bus.call('Serial1.available',[],r)>0)r.set(r.pointerCell(buffer,index++),channel.bus.call('Serial1.read',[],r));if(index===count)return 0;if(r.microTime/1000-start>=timeout)return 3;yield Math.min(1,timeout-(r.microTime/1000-start));}
+    while(index<count){while(index<count&&channel.bus.call('Serial1.available',[],r)>0)r.set(r.pointerCell(buffer,index++),this.uartRead(channel,r));if(index===count)return 0;if(r.microTime/1000-start>=timeout)return 3;yield Math.min(1,timeout-(r.microTime/1000-start));}
     return 0;
   }
   bytes(buffer,count,r){int(count,1,256,'전송 길이');if(typeof buffer==='string'){if(count>buffer.length+1)throw new Error('문자열 범위를 벗어난 전송');return Array.from({length:count},(_,i)=>buffer.charCodeAt(i)||0);}return Array.from({length:count},(_,i)=>int(r.get(r.pointerCell(buffer,i)),0,255,'전송 바이트'));}
+  counter(id,init,r){const state=this.counters.get(id)||{value:0,at:r.microTime,active:false},period=this.field(init,'Period')+1,hz=this.config.timerClockHz/(this.field(init,'Prescaler')+1);return Math.floor((state.value+(state.active?(r.microTime-state.at)*hz/1e6:0))%period);}
   call(name,args,r){
     const [a,b,c,d,e,f,g]=args;
     if(name==='HAL_Init'){this.callback(r,'HAL_MspInit');return 0;}
@@ -129,6 +132,13 @@ export class HalAdapter {
       const {id}=this.requireHandle(a,r,'ADC'),s=this.adc.get(id);if(s.channel===null)throw new Error('ADC 채널 설정이 필요합니다.');
       if(name==='HAL_ADC_Stop'){s.active=false;return 0;}if(name==='HAL_ADC_Start'){s.value=r.call('analogRead',[this.pinFor('ADC1_IN'+s.channel)]);s.active=true;return 0;}if(!s.active)return name==='HAL_ADC_GetValue'?s.value:1;return name==='HAL_ADC_GetValue'?s.value:0;
     }
+    if(['HAL_TIM_Base_Start','HAL_TIM_Base_Stop','__HAL_TIM_GET_COUNTER','__HAL_TIM_SET_COUNTER'].includes(name)){
+      const {id,init}=this.requireHandle(a,r,'TIM'),value=this.counter(id,init,r),state=this.counters.get(id);
+      if(name==='__HAL_TIM_GET_COUNTER')return value;
+      if(name==='HAL_TIM_Base_Start'&&state?.active)return 2;
+      const next=name==='__HAL_TIM_SET_COUNTER'?int(b,0,this.field(init,'Period'),'TIM counter'):value;
+      this.counters.set(id,{value:next,at:r.microTime,active:name==='HAL_TIM_Base_Start'?true:name==='HAL_TIM_Base_Stop'?false:state?.active??false});return 0;
+    }
     if(name==='HAL_TIM_Base_Start_IT'){
       const {id,init}=this.requireHandle(a,r,'TIM');if(this.timers.has(id))return 2;const ms=(this.field(init,'Prescaler')+1)*(this.field(init,'Period')+1)*1000/this.config.timerClockHz;if(ms<1||ms>3600000)throw new Error('TIM2 인터럽트 주기 범위: 1~3600000 ms');
       const job={active:true};this.timers.set(id,job);const fire=()=>{if(!job.active)return;this.queue('TIM2_IRQn',()=>{if(job.active)this.callback(r,'HAL_TIM_PeriodElapsedCallback',[a]);});r.event(r.microTime/1000+ms,fire);};r.event(r.microTime/1000+ms,fire);return 0;
@@ -154,7 +164,8 @@ export class HalAdapter {
       this.requireHandle(a,r,'SPI');const both=name==='HAL_SPI_TransmitReceive',receive=name!=='HAL_SPI_Transmit',count=both?d:c;int(count,1,256,'SPI 길이');const timeout=int(both?e:d,0,4294967295,'SPI timeout');const rx=both?c:b;if(receive)r.pointerCell(rx,count-1);const bytes=name==='HAL_SPI_Receive'?Array(count).fill(255):this.bytes(b,count,r);if(count*8000/this.buses.spi.clock>timeout){r.microTime+=timeout*1000;return 3;}bytes.forEach((value,i)=>{const result=this.buses.call('SPI.transfer',[value],r);if(receive)r.set(r.pointerCell(rx,i),result);});return 0;
     }
     if(name==='strlen'){const str=r.format([a]);return str.length;}
-    if(name==='printf'){if(typeof a!=='string'||args.length!==1||a.includes('%'))throw new Error('printf는 형식 인자 없는 문자열만 지원합니다. UART는 HAL_UART_Transmit을 사용하세요.');r.api.print(a);return a.length;}
+    if(name==='printf'){const text=formatPrintf(args,r);if(text)r.api.print(text.replace(/\r?\n$/,''));return text.length;}
+    if(name==='puts'){if(args.length!==1)throw new Error('puts는 문자열 하나가 필요합니다.');const text=r.format([a]);if(text.length>4096)throw new Error('puts 출력 한도는 4096자입니다.');r.api.print(text);return text.length+1;}
     if(name.startsWith('HAL_')||name.startsWith('__HAL_'))throw new Error(`지원하지 않는 HAL API: ${name}`);
     return undefined;
   }
