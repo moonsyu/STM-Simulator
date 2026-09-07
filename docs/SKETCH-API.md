@@ -1,6 +1,6 @@
-# STM Emulator 0.4.0 스케치 API
+# STM Emulator 스케치 API
 
-0.5.0에서도 이 스케치 모드를 유지합니다. 새 **STM32 HAL · C 소스** 모드와 Pinout 설정은 [HAL-API.md](HAL-API.md)를 확인하세요.
+**STM32 HAL · C 소스** 모드와 Pinout 설정은 [HAL-API.md](HAL-API.md)를 확인하세요.
 
 이 문서는 앱에서 실제 지원하는 API입니다. Arduino/STM32의 모든 라이브러리와 ABI를 구현한 것은 아닙니다. 기능 예제 드롭다운의 회로·코드를 함께 사용하세요.
 
@@ -23,7 +23,7 @@
 
 기존 `pinMode`, `digitalWrite`, `digitalRead`, `analogRead`, `analogWrite`, `delay`, `millis`, `micros`, `delayMicroseconds`, `pulseIn`을 유지합니다. 핀은 `D13`, `PA5`, `A0` 등 이름으로 지정합니다. ADC는 0~4095, PWM 설정값은 0~255입니다.
 
-`analogWriteFrequency(pin, hz)`는 1~2000 Hz, 기본 500 Hz입니다. **파형 탭 → PWM 파형으로 계산**을 켜면 GPIO가 시간별 HIGH/LOW로 바뀌고 실제 회로 해석에 반영됩니다. 끄면 이전 버전처럼 평균 전압을 사용합니다. 설정은 실행 전에 바꾸세요.
+`analogWriteFrequency(pin, hz)`는 1~2000 Hz, 기본 500 Hz입니다. **파형 탭 → PWM 파형으로 계산**을 켜면 GPIO가 시간별 HIGH/LOW로 바뀌고 실제 회로 해석에 반영됩니다. 끄면 평균 전압을 사용합니다. 설정은 실행 전에 바꾸세요.
 
 `Serial.begin`, `Serial.print/println/write`, `Serial.available/read`는 배선 없는 USB 콘솔 모델입니다. 하단 통신 탭의 **USB 콘솔 → Serial**로 입력합니다. `Serial.print`는 현재 로그 항목 단위로 표시되며 네이티브 Arduino 터미널의 줄 편집 동작 전체를 재현하지 않습니다.
 
