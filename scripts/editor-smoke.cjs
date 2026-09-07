@@ -1,3 +1,4 @@
+const {openFixture,chooseHal}=require('./smoke-fixture.cjs');
 const assert=require('node:assert/strict');
 const fs=require('node:fs/promises');
 const path=require('node:path');
@@ -7,8 +8,10 @@ const {_electron}=require(process.env.PLAYWRIGHT_MODULE||'playwright');
  const env={...process.env,CIRCUIT_LAB_SMOKE:'1',CIRCUIT_LAB_TEST_PROFILE:path.join(out,'editor-profile-'+Date.now())};delete env.ELECTRON_RUN_AS_NODE;
  const app=await _electron.launch({executablePath:process.env.LAB_EXE||path.join(root,'node_modules/electron/dist/electron.exe'),args:process.env.LAB_EXE?[]:[root],cwd:root,env});
  try{
+ const {circuitFixture}=await import('../tests/fixtures/circuits.js');
  const page=await app.firstWindow(),errors=[];page.on('pageerror',e=>errors.push(e.message));await page.waitForSelector('.pin-hit');
  await app.evaluate(({BrowserWindow})=>BrowserWindow.getAllWindows()[0].showInactive());
+ await openFixture(page,circuitFixture());
  const client=async(x,y)=>page.evaluate(({x,y})=>{const svg=document.getElementById('circuit'),p=svg.createSVGPoint();p.x=x;p.y=y;const q=p.matrixTransform(svg.getScreenCTM());return {x:q.x,y:q.y};},{x,y});
  const clickXY=async(x,y)=>{const p=await client(x,y);await page.mouse.click(p.x,p.y);};
  const snapshot=async()=>{await page.waitForTimeout(240);return page.evaluate(()=>JSON.parse(localStorage.getItem('stm32lab.project.v2')));};

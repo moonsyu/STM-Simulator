@@ -1,11 +1,12 @@
-import {blankProject,example} from './project.js';
-import {boardPin} from './pins.js';
-import {PART_DEFS} from './components.js';
-import {findMount,applyMount} from './placement.js';
-export const FEATURE_EXAMPLES={lcd:'LCD 문자 출력',uart:'UART 터미널 송수신',i2c:'I²C 메모리 읽기/쓰기',spi:'SPI 메모리 읽기/쓰기',timer:'타이머로 LED 제어',interrupt:'버튼 인터럽트',dma:'ADC 버퍼 전송',language:'함수·배열·구조체',pwm:'PWM 파형과 RC 필터'};
-export function featureExample(type){
-  if(!Object.hasOwn(FEATURE_EXAMPLES,type))throw new Error('지원하지 않는 기능 예제입니다.');
-  const p=['timer','interrupt','pwm'].includes(type)?example(type==='interrupt'?'button':'blink'):type==='dma'?example('divider'):blankProject();p.name=FEATURE_EXAMPLES[type];
+// Test-only circuits and sketch compatibility programs, never shipped.
+import {blankFixture as blankProject,circuitFixture as example} from './circuits.js';
+import {boardPin} from '../../src/pins.js';
+import {PART_DEFS} from '../../src/components.js';
+import {findMount,applyMount} from '../../src/placement.js';
+export const PROGRAM_FIXTURES={lcd:'LCD 문자 출력',uart:'UART 터미널 송수신',i2c:'I²C 메모리 읽기/쓰기',spi:'SPI 메모리 읽기/쓰기',timer:'타이머로 LED 제어',interrupt:'버튼 인터럽트',dma:'ADC 버퍼 전송',language:'함수·배열·구조체',pwm:'PWM 파형과 RC 필터'};
+export function programFixture(type){
+  if(!Object.hasOwn(PROGRAM_FIXTURES,type))throw new Error('지원하지 않는 기능 예제입니다.');
+  const p=['timer','interrupt','pwm'].includes(type)?example(type==='interrupt'?'button':'blink'):type==='dma'?example('divider'):blankProject();p.name=PROGRAM_FIXTURES[type];
   let id=100;const wire=(from,to,color='#23a68a')=>p.wires.push({id:'f'+id++,from,to,color});
   const pin=n=>'part:demo:p'+n,power=(n,name)=>wire(boardPin(name),pin(n),name==='GND'?'#4e647b':'#dd654c');
   if(type==='lcd'){

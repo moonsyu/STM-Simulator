@@ -4,12 +4,13 @@ import {PINS,HOLES,boardPin,endpointInfo,searchPins} from '../src/pins.js';
 import {terminalKeys,attachments,detachPart,normalizeAngle} from '../src/components.js';
 import {findMount,applyMount} from '../src/placement.js';
 import {topology,solveCircuit,digitalRead} from '../src/engine.js';
-import {example,blankProject,validateProject} from '../src/project.js';
+import {validateProject} from '../src/project.js';
+import {circuitFixture as example,blankFixture as blankProject} from './fixtures/circuits.js';
 import {compile,Runtime} from '../src/program.js';
 import {PART_DEFS} from '../src/components.js';
 import {CircuitSimulation} from '../src/engine.js';
 import {UltrasonicSignals} from '../src/sensors.js';
-import {componentExample} from '../src/component-examples.js';
+import {deviceFixture as componentExample} from './fixtures/devices.js';
 const close=(actual,expected,tolerance=1e-5)=>assert.ok(Math.abs(actual-expected)<tolerance,`${actual} ≠ ${expected}`);
 test('physical connectors: 108 board pins, 300 terminals and 100 rail holes',()=>{
  assert.equal(PINS.length,108);assert.equal(new Set(PINS.map(p=>p.id)).size,108);assert.equal(HOLES.length,400);assert.equal(new Set(HOLES.map(p=>p.id)).size,400);

@@ -1,50 +1,45 @@
-# 현재 검증 기록 — 0.5.1
+# 현재 검증 기록 — 0.6.0
 
 2026-09-07, Windows x64, Node.js 24.18.0, Electron 44.2.0, Playwright 1.58.2.
 
-## 변경과 근거
+## 변경
 
-- 코드/속성·측정 패널 경계선을 드래그하거나 키보드로 조절. 너비 저장/복원, 기본값 복귀, 최소 창 크기에서 회로와 실행 버튼 접근성.
-- USART1/2/3/6, UART4/5의 F446RE LQFP64 TX/RX 대체 핀, AF7/8, 장치 활성화 시 자동 배정, 충돌 방지, 비활성화 시 해당 핀·IRQ 해제.
-- 포트별 HAL 생성·초기화·blocking/IT 송수신·NVIC·입력 대상. 기존 USART2 회로/스케치 호환 유지.
-- 근거: [ST DS10693 표 10·11](https://www.st.com/resource/en/datasheet/stm32f446re.pdf), 로컬 CubeMX `STM32F446R(C-E)Tx.xml`, `GPIO-STM32F446_gpio_v1_0_Modes.xml`. 참조 XML 자체는 소스/EXE에 포함하지 않음.
-- HAL 예제 7개와 기존 스케치 예제의 차이, ADC/I2C/SPI 예제의 로그 확장을 문서화.
+- 제공 예제를 HAL C 코드 13개로 통합. Serial 호출, 스케치 예제 메뉴, 완성 회로 메뉴와 제품의 회로 생성 코드를 제거했다.
+- 새 프로젝트는 부품·배선 없이 HAL main.c로 시작한다. 기존 사용자 자동 저장은 계속 복원한다.
+- HAL 예제 적용은 코드·MCU 설정만 교체한다. 현재 부품·배선·이름·계산 설정 유지, 적용 취소 및 실행 취소를 지원한다.
+- printf/puts 디버그 로그와 HAL UART 포트별 TX/RX 로그를 지원한다. 송신 기록은 터미널 없이도 보이며 실제 수신에는 전원·배선·baud 조건이 필요하다.
+- 온도·ADC 배열·초음파를 HAL API로 측정하고 printf로 출력한다. ADC 배열은 polling, 초음파는 TIM2 카운터 및 GPIO 폴링 모델이다.
+- 과거 회로 프로그램은 제품에서 제거했다. `tests/fixtures/`의 회로·프로그램은 기존 사용자 파일 호환성과 전기 모델을 검사하는 테스트 입력이며 EXE에 포함하지 않는다.
 
 ## 모델 검증
 
-`npm test`: **85개 통과** (기존 72 + 신규 13).
+`npm test`: **96개 통과**, 실패 없음.
 
-신규 검증은 전체 직렬 통신 핀 후보의 보드 존재 여부, 실제 핀 선택 제한, 사용 중인 핀 보호, 설정 실패 시 부분 변경 방지, 대체 핀 이동/해제, USART3/UART4 공유 핀 충돌, 여섯 장치 각각의 모든 TX/RX 조합에서 HAL 생성·송신·RX 인터럽트 에코·NVIC 비활성/재활성, `.ioc`의 포트별 baud/IRQ, 두 UART 동시 통신의 버퍼/busy/출력 분리, AF/baud 불일치 오류를 확인한다.
+새 검증 11개는 빈 HAL 시작, 전체 제공 예제의 HAL 실행·빈 회로·Serial 호출 부재, 적용 시 사용자 회로 보존, printf 형식·길이·인수·포인터 오류, 배선 없는 출력, UART 실제 RX 시간 및 IT 에코, busy/timeout 시 가짜 TX 방지, TMP36 25°C·ADC 약 2048·초음파 100cm·미연결 timeout, TIM 카운터의 ARR 순환·정지를 확인한다. 기존 GPIO·회로·부품·HAL·UART 여섯 장치의 핀/IRQ 및 독립 통신 검증도 통과했다.
 
 ## Electron UI 검증
 
-`npm run test:ui`: **6개 스크립트 통과** (ui/editor/parts/features/hal/layout-serial).
+`npm run test:ui`: **7개 스크립트 통과** (ui/editor/parts/features/hal/layout-serial/hal-examples).
 
-신규 `layout-serial-smoke.cjs`: 마우스/키보드 너비 조절, 코드/속성 간 너비 공유, 재시작 복원, 최소 창 크기와 실행 버튼 표시, 기본 너비 복귀, TX/RX 실제 후보, 자동 배정/대체 핀/비활성 해제, 핀 직접 선택 시 주변장치 활성화, 충돌 표시 및 기존 핀 보존, 여섯 통신 장치와 NVIC, HAL 생성·검사·실행, 설정 저장, 통신 입력 대상 변경.
+`hal-examples-smoke.cjs`는 초기 빈 회로·HAL 환경, 제거한 메뉴 부재, 예제 13개 선택/검사/실행, 부품·배선 자동 추가 없음, 현재 회로 보존·취소·실행 취소, 실행 중 적용 방지, printf 값, UART TX/RX 문자열 합치기·로그 지우기, TMP36 측정, 새 회로·재시작 복원을 확인한다.
 
-빌드된 `dist/win-unpacked/STM Emulator.exe`에서도 `layout-serial-smoke.cjs` 통과.
+패키징한 `dist/win-unpacked/STM Emulator.exe`에서도 같은 HAL 예제·로그 UI 테스트를 통과했다. 제한 환경의 첫 실행은 GPU 프로세스가 시작되지 않아 종료됐으며, 일반 Windows 실행 환경에서 재검증했다. 앱 소스나 GPU 설정 변경 없이 통과했다.
 
-스크린샷 `13-editor-min-window.png`, `14-resizable-editor.png`, `15-uart-fixed-routes.png` 및 `test-results/*-smoke.json`은 로컬 검증 자료이며 Git/배포에 포함하지 않는다. 테스트는 실제 사용자 자동 저장과 분리한 전용 프로필을 사용했다.
+`node scripts/portable-smoke.cjs`: **0.6.0 단일 EXE 직접 실행 통과**. 빈 HAL 시작, printf 출력, HAL USART2 송수신 로그·IRQ·Pinout 및 기존 회로 파일의 편집·부품·LCD·UART/I²C/SPI·파형 동작을 확인했다. 렌더러 오류 없음.
 
-## 범위
-
-비동기 8N1 HAL UART 호환 모델이다. 동기식 USART CK, RTS/CTS, HAL DMA, 서로 다른 MCU UART 간 직접 배선 전송, 전체 ST HAL 드라이버/ARM/ELF 실행은 구현하지 않았다. 원격 push/Release/Actions는 수행하지 않았다. 기능 소스는 Git 커밋 852b273에 기록했다.
+테스트는 `CIRCUIT_LAB_TEST_PROFILE`로 실제 사용자 자동 저장과 분리했다. 최신 JSON·PNG·CSV 증거만 지정 저장소의 `test-results/`에 보관하며 테스트 프로필과 빌드 작업 폴더의 중복 생성물은 검증 후 정리한다.
 
 ## 배포 검증
 
-- `npm run build`: 0.5.1 portable EXE 생성 완료.
-- `node scripts/portable-smoke.cjs`: 단일 EXE 직접 추출/실행, 기존 회로/부품/통신/파형과 HAL UART 수신 인터럽트·Pinout 통과. 렌더러 오류 없음.
-- `npm run build:artifact`: 패키지 버전/자료 제외/라이선스 고지 검사 통과.
-- 빌드 소스, 지정 저장소, app.asar의 35개 소스·UI·문서 파일 바이트 일치. package.json은 빌더가 개발 필드를 제외하므로 name/version/main/type 일치로 확인.
-- EXE: `STM-Emulator-0.5.1-win-x64.exe`, **100,162,248 bytes**.
-- SHA-256: `1ab446e102ce6901263922ff31c5cfbd62c31037334d61461d46340ff85ef538`.
-- 소스 반영 위치: `C:\Users\SSAFY\Desktop\ct\STM-Emulator`.
-- 새 실행 묶음: 해당 저장소의 `dist/artifact/`. 이전 실행 파일과 버전별 폴더는 제거한다.
-- 로컬 검증 자료 복사: 해당 저장소의 `test-results/`. 테스트 전용 프로필과 개인 자동 저장은 복사하지 않음.
+- `npm run build`, `npm run build:artifact` 통과.
+- 패키지 버전, 테스트/회로 fixture 및 폐기 예제 모듈 제외, HAL 예제의 Serial 호출 부재, Electron/Chromium 고지 원문 보존 확인.
+- 지정 저장소·빌드 소스·app.asar의 소스/UI/문서 **36개 파일 바이트 일치**. package.json의 name/version/main/type 일치, 상대 문서 링크 정상.
+- EXE: `STM-Emulator-0.6.0-win-x64.exe`, **100,162,511 bytes**.
+- SHA-256: `cbfc7298ffc412f24a5fa9e10ca5d489cdff0866fdd8606a9fdb1348c584961f`.
+- 소스 위치: `C:\Users\SSAFY\Desktop\ct\STM-Emulator`.
+- 최신 실행 묶음: 해당 저장소의 `dist/artifact/`. 과거 소스와 검증 문서는 Git 이력으로 관리한다.
+- 정리 예외: 사용자가 실행 중인 `dist/artifact-0.5.1/STM-Emulator-0.5.1-win-x64.exe`는 Windows 파일 잠금으로 남아 있다. 사용자 작업을 보호하기 위해 강제 종료하지 않았다. 앱 종료 후 이전 EXE와 빈 폴더를 제거해야 한다.
 
-## 저장소 정리 검증
+## 범위
 
-- 버전별 검증 문서 6개를 현재 문서 하나로 통합. 과거 내용은 Git 이력에서 조회.
-- README와 인계 문서를 현재 기능·고정 경로·Git 이력 관리 원칙으로 갱신. 상대 문서 링크 검사 통과.
-- 프로그램 코드 변경 없이 문서를 반영해 EXE 재패키징. 최종 portable 직접 실행 및 패키지 고지 검사 통과.
-- 테스트 CSV 이름을 waveform.csv로 통일. 해당 스크립트 구문 검사 통과.
+HAL 소스 인터프리터이며 전체 ST 드라이버·ARM/ELF/BIN 실행기는 아니다. 비동기 8N1 UART, 협력적 IRQ, polling ADC/타이머 모델이다. HAL DMA, 동기식 USART, MCU UART 간 직접 배선 전송, 실제 NVIC 선점은 미지원이다. printf는 앱의 디버그 출력 연결이며 실제 MCU 출력 리타게팅과 구별한다. 원격 push/Release/Actions는 수행하지 않았다.

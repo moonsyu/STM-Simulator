@@ -4,9 +4,11 @@ import {defaultMcu,validateMcu,configProblems,importIoc,generateHal} from '../sr
 import {compileHal} from '../src/hal-source.js';
 import {Runtime} from '../src/runtime.js';
 import {HAL_CONSTANTS} from '../src/hal.js';
-import {HAL_EXAMPLES,halExample} from '../src/hal-examples.js';
+import {HAL_EXAMPLES} from '../src/hal-examples.js';
+import {halCircuit as halExample} from './fixtures/hal.js';
 import {SimulationSession} from '../src/session.js';
-import {validateProject,example} from '../src/project.js';
+import {validateProject} from '../src/project.js';
+import {circuitFixture as example} from './fixtures/circuits.js';
 import {importFirmware} from '../src/firmware-import.js';
 const start=(p)=>{const output=[];const s=new SimulationSession(p,{print:x=>output.push(x)});s.tick(0);return {s,output};};
 
@@ -74,11 +76,11 @@ test('preprocessor rejects unknown includes and unsafe or unsupported constructs
   assert.throws(()=>compileHal('#if VALUE == 2\nint main(void){}\n#endif'),/#if/);
 });
 test('HAL I2C/SPI timeout and UART busy return explicit status without buffer writes',()=>{
-  for(const kind of ['i2c','spi']){const p=halExample(kind);p.code=p.code.replace(kind==='i2c'?'HAL_I2C_Mem_Read(&hi2c1, 0x50 << 1, 0x10, I2C_MEMADD_SIZE_8BIT, rx, 1, 100);':'HAL_SPI_Receive(&hspi1, rx, 1, 100);',kind==='i2c'?'Serial.println(HAL_I2C_Mem_Read(&hi2c1, 0x50 << 1, 0x10, I2C_MEMADD_SIZE_8BIT, rx, 1, 0));':'Serial.println(HAL_SPI_Receive(&hspi1, rx, 1, 0));');const {output}=start(p);assert.deepEqual(output,['3','0']);}
+  for(const kind of ['i2c','spi']){const p=halExample(kind);p.code=p.code.replace(kind==='i2c'?'HAL_I2C_Mem_Read(&hi2c1, 0x50 << 1, 0x10, I2C_MEMADD_SIZE_8BIT, rx, 1, 100);':'HAL_SPI_Receive(&hspi1, rx, 1, 100);',kind==='i2c'?'Serial.println(HAL_I2C_Mem_Read(&hi2c1, 0x50 << 1, 0x10, I2C_MEMADD_SIZE_8BIT, rx, 1, 0));':'Serial.println(HAL_SPI_Receive(&hspi1, rx, 1, 0));');const {output}=start(p);assert.deepEqual(output.filter(x=>/^\d+$/.test(x)),['3','0']);}
   const p=halExample('uart');p.code=p.code.replace('HAL_UART_Receive_IT(&huart2, rx, 1);','HAL_UART_Receive_IT(&huart2, rx, 1);Serial.println(HAL_UART_Receive_IT(&huart2, rx, 1));');const {s,output}=start(p);s.tick(30);assert.ok(output.includes('2'));
 });
 test('shared EXTI handler only calls the callback for pending masks',()=>{
-  const p=halExample('exti');p.code+='\nvoid EXTI15_10_IRQHandler(void){HAL_GPIO_EXTI_IRQHandler(GPIO_PIN_12);HAL_GPIO_EXTI_IRQHandler(GPIO_PIN_13);}\n';p.code=p.code.replace('if (GPIO_Pin == GPIO_PIN_13) HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_5);','Serial.println(GPIO_Pin);');const {s,output}=start(p);s.setPressed({USER:true});s.tick(20);assert.deepEqual(output,['8192']);
+  const p=halExample('exti');p.code+='\nvoid EXTI15_10_IRQHandler(void){HAL_GPIO_EXTI_IRQHandler(GPIO_PIN_12);HAL_GPIO_EXTI_IRQHandler(GPIO_PIN_13);}\n';p.code=p.code.replace('printf("EXTI PC13\\n");','printf("%u\\n", GPIO_Pin);');const {s,output}=start(p);s.setPressed({USER:true});s.tick(20);assert.deepEqual(output,['8192']);
 });
 test('PWM configured through HAL produces the requested average voltage',()=>{
   const p=halExample('timer');p.mcu.pins.PA5.function='TIM2_CH1';p.code=generateHal(p.mcu).replace('HAL_TIM_Base_Init(&htim2);','HAL_TIM_PWM_Init(&htim2); TIM_OC_InitTypeDef oc={0}; oc.OCMode=TIM_OCMODE_PWM1; oc.Pulse=250; HAL_TIM_PWM_ConfigChannel(&htim2,&oc,TIM_CHANNEL_1);');p.code=p.code.replace('HAL_TIM_Base_Start_IT(&htim2);','HAL_TIM_PWM_Start(&htim2,TIM_CHANNEL_1);');const {s}=start(p);assert.ok(Math.abs(s.runtime.gpio.PA5.value-.825)<.01);

@@ -1,3 +1,4 @@
+const {openFixture,chooseHal}=require('./smoke-fixture.cjs');
 const assert=require('node:assert/strict');
 const fs=require('node:fs/promises');
 const path=require('node:path');
@@ -7,8 +8,10 @@ const {_electron}=require(process.env.PLAYWRIGHT_MODULE||'playwright');
  const env={...process.env,CIRCUIT_LAB_SMOKE:'1',CIRCUIT_LAB_TEST_PROFILE:path.join(out,'profile-'+Date.now())};delete env.ELECTRON_RUN_AS_NODE;
  const app=await _electron.launch({executablePath:process.env.LAB_EXE||path.join(root,'node_modules/electron/dist/electron.exe'),args:process.env.LAB_EXE?[]:[root],cwd:root,env});
  try{
+ const {circuitFixture}=await import('../tests/fixtures/circuits.js');
  const page=await app.firstWindow(),errors=[];page.on('pageerror',e=>errors.push(e.message));await page.waitForSelector('[data-endpoint="board:CN5:6"]');
  await app.evaluate(({BrowserWindow})=>BrowserWindow.getAllWindows()[0].showInactive());
+ assert.equal(await page.locator('[data-example],#extra-example,#feature-example').count(),0);await openFixture(page,circuitFixture());
  assert.equal(await page.locator('.hole').count(),400);assert.equal(await page.locator('.pin-hit').count(),512);
  await page.screenshot({path:path.join(out,'01-workspace.png')});
  await page.click('#run');await page.waitForTimeout(100);
@@ -25,11 +28,11 @@ const {_electron}=require(process.env.PLAYWRIGHT_MODULE||'playwright');
  await page.locator('[data-add="led"]').click();await page.locator('[data-endpoint="bb:b:22"]').click();await page.locator('[data-endpoint="bb:b:24"]').click();
  assert.match(await page.locator('#connection-count').innerText(),/부품 3개/);await page.click('#remove-part');assert.match(await page.locator('#connection-count').innerText(),/부품 2개/);
  // Button example, including pointer capture and release during live re-render.
- await page.locator('[data-example="button"]').click();if(await page.locator('#replace-dialog').isVisible())await page.click('#replace-confirm');
+ await openFixture(page,circuitFixture('button'));if(await page.locator('#replace-dialog').isVisible())await page.click('#replace-confirm');
  await page.click('#run');await page.waitForTimeout(120);assert.ok(Number.parseFloat(await page.locator('#sim-current').innerText())<0.1);
  const bb=await page.locator('[data-part="b1"] .part-body').boundingBox();await page.mouse.move(bb.x+bb.width/2,bb.y+bb.height/2);await page.mouse.down();await page.waitForTimeout(150);assert.ok(Number.parseFloat(await page.locator('#sim-current').innerText())>3);await page.mouse.up();await page.waitForTimeout(100);assert.ok(Number.parseFloat(await page.locator('#sim-current').innerText())<0.1);await page.click('#run');
  // Real renderer uses the divider output in Serial.
- await page.locator('[data-example="divider"]').click();await page.click('#run');await page.waitForTimeout(100);assert.match(await page.locator('#console-output').innerText(),/204[78]/);await page.click('#run');
+ await openFixture(page,circuitFixture('divider'));await page.click('#run');await page.waitForTimeout(100);assert.match(await page.locator('#console-output').innerText(),/204[78]/);await page.click('#run');
  // Invalid code must stop without hanging the renderer.
  await page.locator('[data-tab="code"]').click();await page.locator('#code').fill('void loop() { while (true) { } }');await page.click('#run');await page.waitForTimeout(100);assert.match(await page.locator('#run-status').innerText(),/오류/);
  // Save and open via actual IPC handlers, substituting only native picker paths.
@@ -38,7 +41,7 @@ const {_electron}=require(process.env.PLAYWRIGHT_MODULE||'playwright');
  await page.click('#save');await page.waitForTimeout(200);const data=JSON.parse(await fs.readFile(saved,'utf8'));assert.equal(data.format,'stm32-circuit-lab');
  await page.click('#new');await page.click('#open');await page.waitForTimeout(150);assert.equal(await page.locator('#project-name').inputValue(),data.name);
  // Return to the clean useful first example for the screenshot.
- await page.locator('[data-example="blink"]').click();await page.locator('[data-tab="code"]').click();await page.click('#run');await page.waitForTimeout(100);
+ await openFixture(page,circuitFixture('blink'));await page.locator('[data-tab="code"]').click();await page.click('#run');await page.waitForTimeout(100);
  await page.screenshot({path:path.join(out,'03-final-app.png')});await page.click('#run');
  assert.deepEqual(errors,[]);await fs.writeFile(path.join(out,'ui-smoke.json'),JSON.stringify({passed:true,checks:['400 holes','blink high/low','wire create undo redo','LED mount delete','button press release','ADC serial','busy loop stop','desktop save/open IPC'],errors},null,2));
  console.log('UI smoke passed: wiring, parts, simulation, button input, interpreter limits, desktop file save/open.');

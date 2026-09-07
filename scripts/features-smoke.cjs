@@ -1,3 +1,4 @@
+const {openFixture,chooseHal}=require('./smoke-fixture.cjs');
 const assert=require('node:assert/strict'),fs=require('node:fs/promises'),path=require('node:path');
 const {_electron}=require(process.env.PLAYWRIGHT_MODULE||'playwright');
 (async()=>{
@@ -5,10 +6,11 @@ const {_electron}=require(process.env.PLAYWRIGHT_MODULE||'playwright');
  const env={...process.env,CIRCUIT_LAB_SMOKE:'1',CIRCUIT_LAB_TEST_PROFILE:path.join(out,'features-profile-'+Date.now())};delete env.ELECTRON_RUN_AS_NODE;
  const app=await _electron.launch({executablePath:process.env.LAB_EXE||path.join(root,'node_modules/electron/dist/electron.exe'),args:process.env.LAB_EXE?[]:[root],cwd:root,env});
  try{
+  const {programFixture}=await import('../tests/fixtures/programs.js');
   const page=await app.firstWindow(),errors=[];page.on('pageerror',e=>errors.push(e.message));await page.waitForSelector('.pin-hit');await app.evaluate(({BrowserWindow})=>BrowserWindow.getAllWindows()[0].showInactive());
-  const load=async type=>{if((await page.locator('#run').innerText()).includes('정지'))await page.click('#run');await page.selectOption('#feature-example',type);if(await page.locator('#replace-dialog').isVisible())await page.click('#replace-confirm');await page.click('#clear-console');await page.click('[data-tab="code"]');await page.click('#zoom-reset');};
+  const load=async type=>{if((await page.locator('#run').innerText()).includes('정지'))await page.click('#run');await openFixture(page,programFixture(type));await page.click('#clear-console');await page.click('[data-tab="code"]');await page.click('#zoom-reset');};
   const run=async()=>{await page.click('#run');await page.waitForTimeout(180);assert.match(await page.locator('#run-status').innerText(),/실행 중/);};
-  assert.equal(await page.locator('[data-add]').count(),16);assert.equal(await page.locator('#feature-example option').count(),10);
+  assert.equal(await page.locator('[data-add]').count(),16);assert.equal(await page.locator('#feature-example').count(),0);
   await load('lcd');await run();assert.equal(await page.locator('.lcd-line[data-row="0"]').textContent(),'STM Emulator    ');await page.screenshot({path:path.join(out,'08-lcd-running.png')});
   await load('uart');await page.click('[data-monitor="bus"]');await run();assert.match(await page.locator('#uart-output').innerText(),/UART ready/);await page.fill('#serial-input','Hello UART');await page.click('#serial-send');await page.waitForTimeout(180);assert.match(await page.locator('#uart-output').innerText(),/Hello UART/);assert.match(await page.locator('#bus-events').innerText(),/INPUT/);await page.screenshot({path:path.join(out,'09-uart-running.png')});
   await load('i2c');await run();assert.match(await page.locator('#console-output').textContent(),/42/);assert.match(await page.locator('#bus-events').innerText(),/ACK/);

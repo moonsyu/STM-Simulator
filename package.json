@@ -1,6 +1,6 @@
 {
   "name": "stm-emulator",
-  "version": "0.5.1",
+  "version": "0.6.0",
   "description": "NUCLEO-F446RE circuit and GPIO simulator",
   "author": "STM Emulator",
   "private": true,
@@ -12,7 +12,7 @@
     "build": "electron-builder --win portable --x64 --publish never",
     "build:artifact": "node scripts/prepare-artifact.cjs",
     "dev:web": "node scripts/serve.cjs",
-    "test:ui": "node scripts/ui-smoke.cjs && node scripts/editor-smoke.cjs && node scripts/parts-smoke.cjs && node scripts/features-smoke.cjs && node scripts/hal-smoke.cjs && node scripts/layout-serial-smoke.cjs"
+    "test:ui": "node scripts/ui-smoke.cjs && node scripts/editor-smoke.cjs && node scripts/parts-smoke.cjs && node scripts/features-smoke.cjs && node scripts/hal-smoke.cjs && node scripts/layout-serial-smoke.cjs && node scripts/hal-examples-smoke.cjs"
   },
   "devDependencies": {
     "electron": "44.2.0",

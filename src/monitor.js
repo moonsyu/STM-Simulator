@@ -19,7 +19,7 @@ export class Monitor {
   clear(){this.events=[];this.dirty=true;$('serial-feedback').textContent='';$('bus-events').textContent='';$('uart-output').textContent='';$('wave-svg').textContent='시뮬레이션을 실행하면 파형이 표시됩니다.';}
   trace(event){this.events.push(event);if(this.events.length>250)this.events.shift();this.dirty=true;}
   render(){
-    const running=this.isRunning();$('sim-resolution').disabled=running;$('pwm-waveform').disabled=running;$('serial-send').disabled=!running;
+    const running=this.isRunning();$('sim-resolution').disabled=running;$('pwm-waveform').disabled=running;$('serial-send').disabled=!running||!$('serial-target').value;
     if(!this.dirty&&performance.now()-this.lastPaint<100)return;this.lastPaint=performance.now();this.dirty=false;
     const session=this.getSession();
     if(this.view==='wave'){

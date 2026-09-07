@@ -1,3 +1,4 @@
+const {openFixture,chooseHal}=require('./smoke-fixture.cjs');
 const assert=require('node:assert/strict'),fs=require('node:fs/promises'),path=require('node:path');
 const {_electron}=require(process.env.PLAYWRIGHT_MODULE||'playwright');
 (async()=>{
@@ -31,9 +32,9 @@ const {_electron}=require(process.env.PLAYWRIGHT_MODULE||'playwright');
   await page.check('[data-peripheral="UART5"]');await page.check('[data-peripheral="USART6"]');await page.check('[data-irq="UART4_IRQn"]');await page.screenshot({path:path.join(out,'15-uart-fixed-routes.png')});
   await page.click('#hal-generate');await page.click('#hal-replace-confirm');const source=await page.locator('#code').inputValue();assert.match(source,/huart4.Instance = UART4/);assert.match(source,/GPIO_AF8_UART4/);assert.match(source,/GPIO_AF7_USART1/);assert.match(source,/HAL_NVIC_EnableIRQ\(UART4_IRQn\)/);
   await page.click('#firmware-check');assert.match(await page.locator('#firmware-status').textContent(),/통과/);await page.click('#run');await page.waitForTimeout(100);assert.equal(await page.locator('#run-status').textContent(),'실행 중');await page.click('#run');
-  assert.deepEqual(await page.locator('#serial-target option').evaluateAll(nodes=>nodes.map(n=>n.value)),['Serial','USART1','USART3','UART4','UART5','USART6']);
+  assert.deepEqual(await page.locator('#serial-target option').evaluateAll(nodes=>nodes.map(n=>n.value)),['USART1','USART3','UART4','UART5','USART6']);
   await page.reload();await page.waitForSelector('#pinout-open');await page.click('#pinout-open');assert.equal(await route('USART1','TX').inputValue(),'PB6');assert.equal(await route('UART4','RX').inputValue(),'PA1');await page.click('#pinout-close');
-  await page.selectOption('#hal-example','uart');if(await page.locator('#replace-dialog').isVisible())await page.click('#replace-confirm');assert.equal(await page.locator('#serial-target').inputValue(),'USART2');
+  await chooseHal(page,'uart');assert.equal(await page.locator('#serial-target').inputValue(),'USART2');
   assert.deepEqual(errors,[]);await fs.writeFile(path.join(out,'layout-serial-smoke.json'),JSON.stringify({passed:true,checks:['pointer resize across code/properties','keyboard and persisted width','minimum window bounds','default width reset','actual TX/RX choices','automatic allocation','alternate routes and release','manual pin activation','atomic pin conflict rejection','all six port configuration','AF7/AF8 generation and execution','configuration persistence','UART monitor target'],errors},null,2));console.log('Layout and serial UI smoke passed.');
  }finally{await app.close();}
 })().catch(e=>{console.error(e);process.exitCode=1;});

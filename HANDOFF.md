@@ -1,6 +1,6 @@
 # STM Emulator — 개발 인계
 
-현재 버전: **0.5.1**. 정리일: **2026-09-07**. NUCLEO-F446RE와 빵판을 연결하고 GPIO 스케치 또는 지원 HAL C 소스를 실행하는 Windows 회로 실습 앱이다. 사용자에게는 한국어 존댓말로 응답한다.
+현재 버전: **0.6.0**. 정리일: **2026-09-07**. NUCLEO-F446RE와 빵판을 연결하고 GPIO 스케치 또는 지원 HAL C 소스를 실행하는 Windows 회로 실습 앱이다. 사용자에게는 한국어 존댓말로 응답한다.
 
 ## 저장소 관리 원칙
 
@@ -18,7 +18,8 @@
 - 스케치 함수·배열·구조체·포인터·타이머·IRQ·DMA와 실행 한도. 지원 API는 [스케치 API](docs/SKETCH-API.md)에 정리한다.
 - `.ioc`, `main.c`, 사용자 `.c/.h`, Cube 프로젝트 폴더 가져오기. Pinout GPIO/EXTI·주변장치·NVIC 및 HAL 코드 생성.
 - F446RE LQFP64의 USART1/2/3/6, UART4/5 실제 TX/RX·AF7/8. 자동 배정·대체 핀·충돌 방지·독립 송수신/IRQ. I2C1/SPI1/ADC1/TIM2도 지원.
-- `HAL · …` 예제 7개. 일부 ADC/I2C/SPI 예제의 `Serial.println`은 결과 표시용 로그 확장이다.
+- 새 프로젝트는 빈 회로와 HAL main.c다. HAL 코드 예제 13개는 코드·핀 설정만 적용하며 현재 부품·배선·이름·시뮬레이션 설정을 보존한다. 시리얼/스케치 예제와 완성 회로 메뉴는 제거했다.
+- printf/puts는 UART 배선 없이 로그에 출력한다. HAL UART TX/RX는 포트·방향별로 표시한다. 실제 수신은 전원·배선·baud 조건을 검사한다. ADC 배열은 polling, 초음파는 HAL GPIO와 TIM2 카운터 모델을 사용한다.
 - 코드/속성 패널 너비를 마우스·키보드로 조절하며 로컬에 저장한다.
 - HAL은 지원 API를 회로에 연결하는 소스 해석 모델이다. 전체 ST HAL 드라이버·C ABI·ARM/ELF/BIN 실행은 구현하지 않았다. 세부 한계는 [HAL API](docs/HAL-API.md)를 따른다.
 
@@ -27,10 +28,10 @@
 | 파일 | 담당 |
 |---|---|
 | `src/pins.js`, `src/components.js`, `src/placement.js` | 핀·부품·다리·별칭·구멍 장착 |
-| `src/project.js`, `src/*examples.js` | 파일 검증·변환·예제 |
+| `src/project.js`, `src/hal-examples.js` | 빈 HAL 프로젝트·파일 검증·코드 예제 |
 | `src/parser.js`, `src/runtime.js`, `src/program.js` | 문법·실행기·API 진입점 |
 | `src/mcu-config.js`, `src/serial-config.js` | MCU 설정·IOC·HAL 생성·실제 직렬 핀맵 |
-| `src/hal-source.js`, `src/hal.js`, `src/firmware-import.js` | HAL 소스/전처리·호환 API·가져오기 |
+| `src/hal-source.js`, `src/hal.js`, `src/hal-stdio.js`, `src/firmware-import.js` | HAL 소스/전처리·호환 API·printf·가져오기 |
 | `src/session.js`, `src/engine.js` | 실행기/회로 연결·DC/RC 계산 |
 | `src/lcd.js`, `src/buses.js`, `src/sensors.js` | 부품·버스 모델 |
 | `src/trace.js`, `src/monitor.js` | 파형·통신·로그 |
@@ -45,7 +46,8 @@ GPIO 변경 전 `beforeChange`로 이전 출력의 시간 구간을 적분하고
 ## 데이터와 실행 규칙
 
 - appId `local.stm32.circuitlab`, 사용자 데이터 폴더 `STM32 Circuit Lab`, 확장자 `.stm32lab`, JSON format `stm32-circuit-lab`, 스키마 version 2를 유지한다.
-- 자동 저장 키 `stm32lab.project.v2`와 v1 읽기 지원은 사용자 회로 보존을 위한 현재 기능이다.
+- 자동 저장 키 `stm32lab.project.v2`와 v1 읽기 지원은 사용자 회로 보존을 위한 현재 기능이다. 새 기본값을 이유로 기존 자동 저장 회로를 덮어쓰지 않는다.
+- `tests/fixtures/`는 모델·UI 회귀 검증용 물리 회로와 기존 사용자 파일 호환 프로그램이다. 앱에서 가져오지 않으며 EXE에 포함하지 않는다. 제공 예제 코드는 `src/hal-examples.js`에만 둔다.
 - `simulation`, `mcu`, `firmware`는 선택적 필드다. main.c는 `project.code`, 보조 소스는 `firmware.files`에 저장한다.
 - 두 핀 부품의 `attachA/attachB`와 다핀 `attachments`는 헬퍼로 처리한다.
 - renderer의 contextIsolation/sandbox를 유지하고 nodeIntegration을 켜지 않는다.
