@@ -2,7 +2,7 @@
 
 NUCLEO-F446RE 보드와 400홀 빵판을 연결하고 GPIO 스케치를 실행하는 Windows 데스크톱 회로 실습 앱입니다.
 
-## 0.5.1 — 편집기 너비 / UART·USART 핀 활성화
+## 편집기 너비 / UART·USART 핀 활성화
 
 - 회로와 **코드 / 속성·측정** 사이의 세로 경계선을 드래그해 패널 너비를 조절합니다. 너비는 로컬에 저장되며 두 번 클릭하면 기본값 440px로 돌아갑니다. 경계선에 포커스를 둔 뒤 방향키(20px), Shift+방향키(50px), Home/End도 사용할 수 있습니다.
 - F446RE LQFP64의 USART1/2/3/6, UART4/5를 켜면 사용 가능한 TX/RX를 자동 배정합니다. 실제 대체 핀만 선택할 수 있고 다른 용도의 핀은 덮어쓰지 않습니다. 비활성화하면 해당 핀과 IRQ를 해제합니다.
@@ -34,13 +34,9 @@ STMicroelectronics와 제휴·후원 관계가 없는 비공식 학습용 프로
 
 Private 저장소이므로 GitHub 로그인과 저장소 읽기 권한이 필요합니다. Artifacts는 90일 보관하며, 만료되면 해당 Actions 페이지의 **Run workflow**로 다시 빌드할 수 있습니다(실행 권한 필요). 다운로드 방법은 [GitHub 공식 안내](https://docs.github.com/en/actions/how-tos/manage-workflow-runs/download-workflow-artifacts)를 참고하세요.
 
-ZIP에는 EXE, `SHA256.txt`, `BUILD-INFO.json`, README와 제3자 라이선스 고지가 들어 있습니다. 라이선스 고지도 함께 보관하세요. 체크섬은 PowerShell의 `Get-FileHash .\STM-Emulator-0.4.0-win-x64.exe -Algorithm SHA256` 결과와 비교할 수 있습니다. `BUILD-INFO.json`에서 빌드한 커밋과 Actions 실행 링크를 확인할 수 있습니다.
+ZIP에는 EXE, `SHA256.txt`, `BUILD-INFO.json`, README와 제3자 라이선스 고지가 들어 있습니다. 라이선스 고지도 함께 보관하세요. 체크섬은 PowerShell의 `Get-FileHash .\STM-Emulator-*-win-x64.exe -Algorithm SHA256` 결과와 비교할 수 있습니다. `BUILD-INFO.json`에서 빌드한 커밋과 Actions 실행 링크를 확인할 수 있습니다. 로컬 실행 묶음은 `dist/artifact/`에 최신 결과만 유지합니다.
 
-0.3.2는 GitHub 빌드·다운로드를 추가하고, 장식용 ST 표기를 일반 기능 표기로 교체했습니다. 재배포 허락이 확인되지 않은 참고 이미지와 과거 스크린샷은 저장소·EXE에 포함하지 않습니다.
-
-0.3.1부터 프로젝트·앱 이름을 **STM Emulator**로 변경했습니다. 기존 자동 저장 위치와 `.stm32lab` 파일 형식을 유지하므로 이전 회로를 계속 사용할 수 있습니다.
-
-## 0.4.0 추가 기능
+## 회로·통신 실습
 
 - LCD 1602의 4/8비트 명령·문자 출력·커서·사용자 문자.
 - UART 터미널, I²C 메모리, SPI 메모리 부품과 전원·배선 기반 송수신. **총 16종 부품**입니다.
@@ -65,8 +61,7 @@ ZIP에는 EXE, `SHA256.txt`, `BUILD-INFO.json`, README와 제3자 라이선스 �
 
 배선은 초록·빨강·검정·보라·파랑·노랑·주황·분홍·갈색·흰색 10가지를 제공합니다. 배선을 선택한 뒤 색을 누르면 기존 선의 색도 변경됩니다. 빵판 구멍과 겹친 부품 몸체는 구멍보다 먼저 선택됩니다.
 
-0.1.0 회로 파일과 이전 자동 저장을 읽어 새 형식으로 변환합니다. 기존 버튼의 두 연결점은 유지하며, 새로 추가하는 버튼은 네 다리를 모두 장착합니다. 0.2.0 파일은 이전 버전에서 열 수 없습니다.
-0.4.0도 기존 버전 2 회로를 읽습니다. 새 부품·문법·시뮬레이션 설정을 사용하는 회로는 구형 앱에서 동일하게 동작하지 않습니다.
+회로 파일은 JSON 스키마 version 2를 사용하며, version 1 파일과 자동 저장도 읽어 변환합니다. 기존 버튼의 두 연결점은 유지하며, 새로 추가하는 버튼은 네 다리를 모두 장착합니다. 새 부품·문법·시뮬레이션 설정을 사용하는 회로는 구형 앱에서 동일하게 동작하지 않을 수 있습니다.
 
 ## 추가 부품 12종
 
@@ -134,30 +129,31 @@ void loop() {
 
 ## 개발 / 빌드
 
-Node.js 22.12 이상이 필요합니다. 이 작업에서는 Node.js 24.19.0으로 검증합니다.
+Node.js 22.12 이상이 필요합니다. 현재 검증 환경은 Node.js 24.18.0입니다.
 
 ```powershell
 npm ci
 node node_modules/electron/install.js
 npm start
 npm test
+npm run test:ui
 npm run build
 npm run build:artifact
 ```
 
-EXE는 `dist/`에, 다운로드 묶음은 `dist/artifact/`에 생성됩니다. `build:artifact`는 버전·참고 이미지 제외·Electron/Chromium 라이선스 원문 보존을 검사합니다. 이전 `dist/artifact/`가 비어 있지 않으면 중단하므로 재실행 전 이전 결과를 별도 보관하세요.
+EXE는 `dist/`에, 다운로드 묶음은 `dist/artifact/`에 생성됩니다. `build:artifact`는 버전·참고 이미지 제외·Electron/Chromium 라이선스 원문 보존을 검사합니다. `dist/artifact/`가 비어 있지 않으면 중단하므로 재생성 전에 해당 생성 결과를 지웁니다. 과거 소스와 문서는 Git 이력으로 관리하며, 버전별 백업 폴더·이전 EXE·검증 문서 사본을 남기지 않습니다. 현재 검증은 [VERIFICATION.md](docs/VERIFICATION.md)에 갱신합니다.
 
 GitHub Actions는 `main`에 push하거나 수동 실행할 때 Windows에서 의존성 설치 → 회로 모델 테스트 → EXE 빌드 → 패키지 검사 → Artifact 업로드를 수행합니다. 소스 저장소에 대용량 EXE나 `node_modules`를 커밋하지 않습니다. 워크플로 정의는 [build-windows.yml](.github/workflows/build-windows.yml)입니다.
 
 `npm run dev:web`은 개발 확인용 로컬 웹 서버를 `http://127.0.0.1:4173`에 띄웁니다. 데스크톱 앱은 웹 서버 없이 동작합니다.
 
-UI 검증: Playwright가 설치된 환경에서 `node scripts/ui-smoke.cjs`, `node scripts/editor-smoke.cjs`, `node scripts/parts-smoke.cjs`, `node scripts/features-smoke.cjs`. `PLAYWRIGHT_MODULE` 환경 변수로 별도 설치된 Playwright 패키지 경로를 지정할 수 있습니다. `LAB_EXE`는 패키징된 `win-unpacked` 앱 본체 경로입니다. 단일 EXE 검증은 `node scripts/portable-smoke.cjs`입니다. 결과는 `test-results/`에 기록합니다.
+UI 검증은 `npm run test:ui`로 편집·부품·통신·HAL·레이아웃 등 6개 스크립트를 실행합니다. `PLAYWRIGHT_MODULE` 환경 변수로 별도 설치된 Playwright 패키지 경로를 지정할 수 있습니다. `LAB_EXE`는 패키징된 `win-unpacked` 앱 본체 경로입니다. 단일 EXE 검증은 `node scripts/portable-smoke.cjs`입니다. 결과는 `test-results/`의 동일 파일에 최신 실행 결과로 갱신하고 테스트 전용 프로필은 검증 후 제거합니다.
 
 구조: `src/pins.js` 핀 좌표와 검색, `src/components.js` 부품 다리 구조, `src/placement.js` 장착 계산, `src/engine.js` 회로 해석, `src/program.js` 인터프리터, `src/project.js` 프로젝트/예제/검증, `src/render.js` 벡터 그림, `src/app.js` 편집과 실행 UI, `desktop/` 실행파일 호스트.
 
 ## 참고
 
-사용자 제공 핀맵을 [ST UM1724 Rev 17](https://www.st.com/resource/en/user_manual/um1724-stm32-nucleo64-boards-mb1136-stmicroelectronics.pdf)의 Figure 24, Table 19, Table 29와 대조했습니다. 실제 클릭 좌표와 기능 그림은 자체 SVG 코드로 그립니다. 참고 사진·핀맵·생성 이미지는 로컬에만 보관하며 저장소와 EXE에서 제외합니다. 과거 검증 문서에 적힌 PNG 경로 역시 로컬 기록입니다.
+사용자 제공 핀맵을 [ST UM1724 Rev 17](https://www.st.com/resource/en/user_manual/um1724-stm32-nucleo64-boards-mb1136-stmicroelectronics.pdf)의 Figure 24, Table 19, Table 29와 대조했습니다. 실제 클릭 좌표와 기능 그림은 자체 SVG 코드로 그립니다. 참고 사진·핀맵·생성 이미지는 저장소와 EXE에서 제외합니다.
 
 STM32·NUCLEO 및 ST 관련 상표는 각 권리자에게 있습니다. Electron 등 포함된 소프트웨어의 이용 조건은 [제3자 고지](THIRD_PARTY_NOTICES.md)를 참고하세요. 이번 업로드는 프로젝트 전체에 별도의 오픈소스 라이선스를 부여하지 않습니다.
 
