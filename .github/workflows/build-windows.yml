@@ -45,7 +45,7 @@ jobs:
         id: upload
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
-          name: STM-Emulator-Windows-x64
+          name: STM-Simulator-Windows-x64
           path: dist/artifact/
           if-no-files-found: error
           retention-days: 90
@@ -55,7 +55,7 @@ jobs:
           DOWNLOAD_URL: ${{ steps.upload.outputs.artifact-url }}
         shell: pwsh
         run: |
-          "## STM Emulator for Windows x64" >> $env:GITHUB_STEP_SUMMARY
+          "## STM Simulator for Windows x64" >> $env:GITHUB_STEP_SUMMARY
           "[Download EXE bundle]($env:DOWNLOAD_URL)" >> $env:GITHUB_STEP_SUMMARY
-          "Extract the ZIP, then run STM-Emulator-*-win-x64.exe. Node.js is not required." >> $env:GITHUB_STEP_SUMMARY
+          "Extract the ZIP, then run STM-Simulator-*-win-x64.exe. Node.js is not required." >> $env:GITHUB_STEP_SUMMARY
           "The bundle includes SHA256.txt and third-party license notices. Repository access is required." >> $env:GITHUB_STEP_SUMMARY

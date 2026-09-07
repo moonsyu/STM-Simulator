@@ -1,14 +1,14 @@
-# STM Emulator — 개발 인계
+# STM Simulator — 개발 인계
 
-현재 버전: **0.6.0**. 정리일: **2026-09-07**. NUCLEO-F446RE와 빵판을 연결하고 GPIO 스케치 또는 지원 HAL C 소스를 실행하는 Windows 회로 실습 앱이다. 사용자에게는 한국어 존댓말로 응답한다.
+현재 버전: **0.7.0**. 정리일: **2026-09-07**. NUCLEO-F446RE와 빵판을 연결하고 GPIO 스케치 또는 지원 HAL C 소스를 실행하는 Windows 회로 실습 앱이다. 사용자에게는 한국어 존댓말로 응답한다.
 
 ## 저장소 관리 원칙
 
-- 사용자 지정 저장소: `C:\Users\SSAFY\Desktop\ct\STM-Emulator`, 원격 `moonsyu/STM-Emulator`, 기본 브랜치 `main`.
+- 사용자 지정 저장소: `C:\Users\SSAFY\Desktop\ct\STM-Simulator`, 원격 `moonsyu/STM-Simulator`, 기본 브랜치 `main`.
 - 과거 버전은 **Git 커밋 이력**으로만 관리한다. 버전별 백업 폴더·이전 실행 파일·옛 검증 문서 사본을 남기지 않는다.
 - 최신 배포 묶음은 `dist/artifact/`, 최신 검증 문서는 `docs/VERIFICATION.md`, 최신 실행 증거는 `test-results/`에 갱신한다. 테스트가 만든 임시 프로필은 종료 후 제거한다.
 - 별도 빌드 작업 폴더를 쓰면 검증이 끝난 생성물 중복과 임시 파일도 정리한다. 사용자 회로·소스·자동 저장은 생성물 정리 대상이 아니다.
-- 현재 기능 및 정리 변경을 커밋한다. 원격 게시 여부는 사용자 요청에 따른다.
+- 현재 기능 및 정리 변경을 커밋한다. 원격 게시 여부는 사용자 요청에 따른다. 저장소 이름은 STM-Simulator이며 원격 URL과 문서 링크도 이 이름을 사용한다.
 - `dist/`, `node_modules/`, `test-results/`, `.cache/`, 참고 미디어는 Git에서 제외한다.
 
 ## 현재 구현
@@ -18,7 +18,7 @@
 - 스케치 함수·배열·구조체·포인터·타이머·IRQ·DMA와 실행 한도. 지원 API는 [스케치 API](docs/SKETCH-API.md)에 정리한다.
 - `.ioc`, `main.c`, 사용자 `.c/.h`, Cube 프로젝트 폴더 가져오기. Pinout GPIO/EXTI·주변장치·NVIC 및 HAL 코드 생성.
 - F446RE LQFP64의 USART1/2/3/6, UART4/5 실제 TX/RX·AF7/8. 자동 배정·대체 핀·충돌 방지·독립 송수신/IRQ. I2C1/SPI1/ADC1/TIM2도 지원.
-- 새 프로젝트는 빈 회로와 HAL main.c다. HAL 코드 예제 13개는 코드·핀 설정만 적용하며 현재 부품·배선·이름·시뮬레이션 설정을 보존한다. 시리얼/스케치 예제와 완성 회로 메뉴는 제거했다.
+- 새 프로젝트는 빈 회로와 HAL main.c다. HAL 예제 13개를 선택하면 코드·핀·부품·배선·계산 설정을 함께 교체하며 사용자가 정한 회로 이름은 유지한다. 취소/Undo/Redo로 복구할 수 있다. 별도 시리얼/스케치 예제 메뉴는 없다.
 - printf/puts는 UART 배선 없이 로그에 출력한다. HAL UART TX/RX는 포트·방향별로 표시한다. 실제 수신은 전원·배선·baud 조건을 검사한다. ADC 배열은 polling, 초음파는 HAL GPIO와 TIM2 카운터 모델을 사용한다.
 - 코드/속성 패널 너비를 마우스·키보드로 조절하며 로컬에 저장한다.
 - HAL은 지원 API를 회로에 연결하는 소스 해석 모델이다. 전체 ST HAL 드라이버·C ABI·ARM/ELF/BIN 실행은 구현하지 않았다. 세부 한계는 [HAL API](docs/HAL-API.md)를 따른다.
@@ -28,7 +28,7 @@
 | 파일 | 담당 |
 |---|---|
 | `src/pins.js`, `src/components.js`, `src/placement.js` | 핀·부품·다리·별칭·구멍 장착 |
-| `src/project.js`, `src/hal-examples.js` | 빈 HAL 프로젝트·파일 검증·코드 예제 |
+| `src/project.js`, `src/hal-examples.js`, `src/hal-circuits.js` | 빈 HAL 프로젝트·파일 검증·HAL 예제 코드/회로 |
 | `src/parser.js`, `src/runtime.js`, `src/program.js` | 문법·실행기·API 진입점 |
 | `src/mcu-config.js`, `src/serial-config.js` | MCU 설정·IOC·HAL 생성·실제 직렬 핀맵 |
 | `src/hal-source.js`, `src/hal.js`, `src/hal-stdio.js`, `src/firmware-import.js` | HAL 소스/전처리·호환 API·printf·가져오기 |
@@ -47,7 +47,7 @@ GPIO 변경 전 `beforeChange`로 이전 출력의 시간 구간을 적분하고
 
 - appId `local.stm32.circuitlab`, 사용자 데이터 폴더 `STM32 Circuit Lab`, 확장자 `.stm32lab`, JSON format `stm32-circuit-lab`, 스키마 version 2를 유지한다.
 - 자동 저장 키 `stm32lab.project.v2`와 v1 읽기 지원은 사용자 회로 보존을 위한 현재 기능이다. 새 기본값을 이유로 기존 자동 저장 회로를 덮어쓰지 않는다.
-- `tests/fixtures/`는 모델·UI 회귀 검증용 물리 회로와 기존 사용자 파일 호환 프로그램이다. 앱에서 가져오지 않으며 EXE에 포함하지 않는다. 제공 예제 코드는 `src/hal-examples.js`에만 둔다.
+- `tests/fixtures/`는 모델·UI 회귀 검증용 물리 회로와 기존 사용자 파일 호환 프로그램이다. 앱에서 가져오지 않으며 EXE에 포함하지 않는다. 제공 HAL 예제는 `src/hal-examples.js`와 `src/hal-circuits.js`에서 구성한다.
 - `simulation`, `mcu`, `firmware`는 선택적 필드다. main.c는 `project.code`, 보조 소스는 `firmware.files`에 저장한다.
 - 두 핀 부품의 `attachA/attachB`와 다핀 `attachments`는 헬퍼로 처리한다.
 - renderer의 contextIsolation/sandbox를 유지하고 nodeIntegration을 켜지 않는다.
@@ -68,9 +68,9 @@ npm run build:artifact
 node scripts/portable-smoke.cjs
 ```
 
-`build:artifact` 전에 기존 `dist/artifact/` 생성 결과를 제거한다. 버전별 폴더로 옮겨 보관하지 않는다. 패키지 검사에는 Electron/Chromium 라이선스 원문과 참고 자료 제외 검증이 포함된다. `win-unpacked`는 빌드/검증 중간 결과이며 전달 후 정리할 수 있다.
+`npm run build`는 `scripts/clean-build.cjs`로 이전 EXE·배포 묶음·win-unpacked를 먼저 정리한다. 실행 파일이 잠겼으면 아무 파일도 지우기 전에 중단하고 앱 종료를 안내한다. `build:artifact`도 이전 생성 묶음을 안전하게 교체한다. 버전별 폴더로 옮겨 보관하지 않는다. 패키지 검사에는 Electron/Chromium 라이선스 원문과 참고 자료 제외 검증이 포함된다. `win-unpacked`는 빌드/검증 중간 결과이며 전달 후 정리할 수 있다.
 
-`LAB_EXE`로 UI smoke에 `win-unpacked/STM Emulator.exe`를 지정할 수 있다. 단일 portable EXE는 전용 `portable-smoke.cjs`로 검증한다. 현재 검증 결과와 한계는 [VERIFICATION.md](docs/VERIFICATION.md)를 확인한다.
+`LAB_EXE`로 UI smoke에 `win-unpacked/STM Simulator.exe`를 지정할 수 있다. 단일 portable EXE는 전용 `portable-smoke.cjs`로 검증한다. 현재 검증 결과와 한계는 [VERIFICATION.md](docs/VERIFICATION.md)를 확인한다.
 
 ## 권리와 모델 범위
 

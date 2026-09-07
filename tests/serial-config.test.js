@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {SERIAL_IDS,SERIAL_ROUTES,serialAf,serialHandle,assignSerialPin,setSerialEnabled} from '../src/serial-config.js';
 import {defaultMcu,validateMcu,configProblems,pinFunctions,importIoc,generateHal} from '../src/mcu-config.js';
 import {GPIO_PINS,boardPin} from '../src/pins.js';
-import {halCircuit as halExample} from './fixtures/hal.js';
+import {halExample} from '../src/hal-examples.js';
 import {SimulationSession} from '../src/session.js';
 import {validateProject} from '../src/project.js';
 

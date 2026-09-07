@@ -3,6 +3,7 @@ const fs = require('node:fs/promises');
 const path = require('node:path');
 const {createHash} = require('node:crypto');
 const assert = require('node:assert/strict');
+const {cleanArtifactOutput} = require('./clean-build.cjs');
 
 (async () => {
   const root = path.resolve(__dirname, '..');
@@ -16,11 +17,13 @@ const assert = require('node:assert/strict');
   const entries = asar.listPackage(archive).map(p => p.replaceAll('\\', '/'));
   assert.ok(!entries.some(p => /^\/(assets|test-results|tests|scripts)(\/|$)/.test(p)), 'Reference media and test fixtures must not be packaged');
   for (const file of ['src/feature-examples.js', 'src/component-examples.js']) assert.ok(!entries.includes('/' + file), 'Removed example module must not be packaged: ' + file);
-  for (const file of ['src/hal-examples.js', 'src/hal-stdio.js']) assert.ok(entries.includes('/' + file), 'Missing HAL module: ' + file);
+  for (const file of ['src/hal-examples.js', 'src/hal-circuits.js', 'src/hal-stdio.js']) assert.ok(entries.includes('/' + file), 'Missing HAL module: ' + file);
   assert.doesNotMatch(asar.extractFile(archive, 'src/hal-examples.js').toString(), /\bSerial\d*\./, 'Shipped examples must use HAL and stdio');
   assert.ok(!entries.some(p => /\.png$/i.test(p)), 'Legacy screenshots must not be packaged');
   const packed = JSON.parse(asar.extractFile(archive, 'package.json').toString());
   assert.equal(packed.version, pkg.version, 'Packaged version must match source');
+  assert.equal(packed.name, pkg.name, 'Packaged name must match source');
+  assert.match(asar.extractFile(archive, 'index.html').toString(), /<title>STM Simulator<\/title>/, 'Packaged app must display the current product name');
   for (const file of ['README.md', 'THIRD_PARTY_NOTICES.md', 'docs/COPYRIGHT-REVIEW.md', 'docs/SKETCH-API.md', 'docs/HAL-API.md']) {
     assert.ok(entries.includes('/' + file), 'Missing notice: ' + file);
   }
@@ -31,9 +34,10 @@ const assert = require('node:assert/strict');
   const binary = await fs.readFile(path.join(dist, name));
   assert.equal(binary.subarray(0, 2).toString(), 'MZ', 'Expected Windows executable');
   const hash = createHash('sha256').update(binary).digest('hex');
-  // Refuse stale output instead of deleting a directory that might contain user files.
+  // Replace a recognized older bundle only after the new binary and notices pass.
+  // Unknown files and running executables abort without deleting the previous bundle.
+  await cleanArtifactOutput(root);
   await fs.mkdir(output, {recursive: true});
-  assert.equal((await fs.readdir(output)).length, 0, 'dist/artifact must be empty before preparation');
   await fs.writeFile(path.join(output, name), binary);
   for (const file of ['LICENSE.electron.txt', 'LICENSES.chromium.html']) {
     await fs.copyFile(path.join(unpacked, file), path.join(output, file));

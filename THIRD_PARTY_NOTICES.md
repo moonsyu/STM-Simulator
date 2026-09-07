@@ -1,8 +1,8 @@
 # Third-party notices
 
-STM Emulator is an independent educational project. It is not an official STMicroelectronics product and does not claim endorsement, sponsorship, or affiliation. STM32, NUCLEO, ST and other product names belong to their respective owners and identify the modeled hardware.
+STM Simulator is an independent educational project. It is not an official STMicroelectronics product and does not claim endorsement, sponsorship, or affiliation. STM32, NUCLEO, ST and other product names belong to their respective owners and identify the modeled hardware.
 
-Reference photographs, supplied pin-map images, generated reference illustrations, and legacy screenshots are excluded from the repository and executable. See [copyright review](https://github.com/moonsyu/STM-Emulator/blob/main/docs/COPYRIGHT-REVIEW.md).
+Reference photographs, supplied pin-map images, generated reference illustrations, and legacy screenshots are excluded from the repository and executable. See [copyright review](https://github.com/moonsyu/STM-Simulator/blob/main/docs/COPYRIGHT-REVIEW.md).
 
 ## Sketch interfaces added in 0.4.0
 

@@ -17,7 +17,7 @@ export function programFixture(type){
 LiquidCrystal lcd(D2, D3, D4, D5, D6, D7);
 void setup() {
   lcd.begin(16, 2);
-  lcd.print("STM Emulator");
+  lcd.print("STM Simulator");
 }
 void loop() {
   lcd.setCursor(0, 1);

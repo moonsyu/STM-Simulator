@@ -1,4 +1,4 @@
-const {openFixture,chooseHal}=require('./smoke-fixture.cjs');
+const {chooseHal}=require('./smoke-fixture.cjs');
 const assert=require('node:assert/strict'),fs=require('node:fs/promises'),path=require('node:path');
 const {_electron}=require(process.env.PLAYWRIGHT_MODULE||'playwright');
 (async()=>{
@@ -6,7 +6,6 @@ const {_electron}=require(process.env.PLAYWRIGHT_MODULE||'playwright');
  const env={...process.env,CIRCUIT_LAB_SMOKE:'1',CIRCUIT_LAB_TEST_PROFILE:path.join(out,'hal-profile-'+Date.now())};delete env.ELECTRON_RUN_AS_NODE;
  const app=await _electron.launch({executablePath:process.env.LAB_EXE||path.join(root,'node_modules/electron/dist/electron.exe'),args:process.env.LAB_EXE?[]:[root],cwd:root,env});
  try{
-  const {halCircuit}=await import('../tests/fixtures/hal.js');
   const page=await app.firstWindow(),errors=[];page.on('pageerror',e=>errors.push(e.message));await page.waitForSelector('#pinout-open');
   await app.evaluate(({BrowserWindow})=>BrowserWindow.getAllWindows()[0].showInactive());
   await page.click('#pinout-open');await page.click('[data-config-pin="PC13"]');await page.selectOption('#pin-function','GPIO_EXTI');await page.selectOption('#pin-pull','PULLUP');await page.check('[data-irq="EXTI15_10_IRQn"]');
@@ -14,7 +13,7 @@ const {_electron}=require(process.env.PLAYWRIGHT_MODULE||'playwright');
   await page.click('#hal-generate');await page.click('#hal-replace-confirm');assert.equal(await page.locator('#firmware-mode').inputValue(),'hal');assert.match(await page.locator('#code').inputValue(),/HAL_GPIO_Init/);
   await page.click('#firmware-check');assert.match(await page.locator('#firmware-status').textContent(),/통과/);
   await page.click('#run');await page.waitForTimeout(80);assert.equal(await page.locator('#run-status').textContent(),'실행 중');await page.click('#run');
-  const load=async kind=>{await openFixture(page,halCircuit(kind));await chooseHal(page,kind);};
+  const load=kind=>chooseHal(page,kind);
   await load('uart');await page.click('[data-monitor="bus"]');await page.click('#run');await page.waitForTimeout(120);assert.match(await page.locator('#uart-output').textContent(),/HAL UART ready/);await page.fill('#serial-input','Hello HAL');await page.click('#serial-send');await page.waitForTimeout(180);assert.match(await page.locator('#uart-output').textContent(),/Hello HAL/);await page.screenshot({path:path.join(out,'12-hal-uart.png')});await page.click('#run');
   const nativeIoc=path.join(out,'import-smoke.ioc'),nativeMain=path.join(out,'main.c'),nativeHeader=path.join(out,'main.h');
   await fs.writeFile(nativeIoc,'Mcu.Name=STM32F446RETx\nPA5.Signal=GPIO_Output');
