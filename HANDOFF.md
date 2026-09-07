@@ -1,12 +1,13 @@
 # STM Simulator — 개발 인계
 
-현재 버전: **0.7.0**. 정리일: **2026-09-07**. NUCLEO-F446RE와 빵판을 연결하고 GPIO 스케치 또는 지원 HAL C 소스를 실행하는 Windows 회로 실습 앱이다. 사용자에게는 한국어 존댓말로 응답한다.
+현재 버전: **0.8.0**. 정리일: **2026-09-07**. NUCLEO-F446RE와 빵판을 연결하고 GPIO 스케치 또는 지원 HAL C 소스를 실행하는 Windows 회로 실습 앱이다. 사용자에게는 한국어 존댓말로 응답한다.
 
 ## 저장소 관리 원칙
 
 - 사용자 지정 저장소: `C:\Users\SSAFY\Desktop\ct\STM-Simulator`, 원격 `moonsyu/STM-Simulator`, 기본 브랜치 `main`.
 - 과거 버전은 **Git 커밋 이력**으로만 관리한다. 버전별 백업 폴더·이전 실행 파일·옛 검증 문서 사본을 남기지 않는다.
 - 최신 배포 묶음은 `dist/artifact/`, 최신 검증 문서는 `docs/VERIFICATION.md`, 최신 실행 증거는 `test-results/`에 갱신한다. 테스트가 만든 임시 프로필은 종료 후 제거한다.
+- 사용자 다운로드 공간은 GitHub Releases의 Assets다. README는 프로젝트 소개·현재 기능·빌드 방법·Releases 다운로드 링크만 유지한다. 게시 요청 시 원격 README 반영과 검증한 실행 파일 업로드까지 완료한다.
 - 별도 빌드 작업 폴더를 쓰면 검증이 끝난 생성물 중복과 임시 파일도 정리한다. 사용자 회로·소스·자동 저장은 생성물 정리 대상이 아니다.
 - 현재 기능 및 정리 변경을 커밋한다. 원격 게시 여부는 사용자 요청에 따른다. 저장소 이름은 STM-Simulator이며 원격 URL과 문서 링크도 이 이름을 사용한다.
 - `dist/`, `node_modules/`, `test-results/`, `.cache/`, 참고 미디어는 Git에서 제외한다.
@@ -18,8 +19,9 @@
 - 스케치 함수·배열·구조체·포인터·타이머·IRQ·DMA와 실행 한도. 지원 API는 [스케치 API](docs/SKETCH-API.md)에 정리한다.
 - `.ioc`, `main.c`, 사용자 `.c/.h`, Cube 프로젝트 폴더 가져오기. Pinout GPIO/EXTI·주변장치·NVIC 및 HAL 코드 생성.
 - F446RE LQFP64의 USART1/2/3/6, UART4/5 실제 TX/RX·AF7/8. 자동 배정·대체 핀·충돌 방지·독립 송수신/IRQ. I2C1/SPI1/ADC1/TIM2도 지원.
-- 새 프로젝트는 빈 회로와 HAL main.c다. HAL 예제 13개를 선택하면 코드·핀·부품·배선·계산 설정을 함께 교체하며 사용자가 정한 회로 이름은 유지한다. 취소/Undo/Redo로 복구할 수 있다. 별도 시리얼/스케치 예제 메뉴는 없다.
+- 새 프로젝트는 빈 회로와 HAL main.c다. HAL 예제 13개를 선택하면 확인 창 없이 코드·핀·부품·배선·계산 설정을 즉시 교체하며 사용자가 정한 회로 이름은 유지한다. Undo/Redo로 복구할 수 있다. 별도 시리얼/스케치 예제 메뉴는 없다.
 - printf/puts는 UART 배선 없이 로그에 출력한다. HAL UART TX/RX는 포트·방향별로 표시한다. 실제 수신은 전원·배선·baud 조건을 검사한다. ADC 배열은 polling, 초음파는 HAL GPIO와 TIM2 카운터 모델을 사용한다.
+- 부품 검색창에서 이름·종류로 찾고, 비어 있으면 16종 전체를 세로 스크롤 목록에 표시한다.
 - 코드/속성 패널 너비를 마우스·키보드로 조절하며 로컬에 저장한다.
 - HAL은 지원 API를 회로에 연결하는 소스 해석 모델이다. 전체 ST HAL 드라이버·C ABI·ARM/ELF/BIN 실행은 구현하지 않았다. 세부 한계는 [HAL API](docs/HAL-API.md)를 따른다.
 
@@ -28,6 +30,7 @@
 | 파일 | 담당 |
 |---|---|
 | `src/pins.js`, `src/components.js`, `src/placement.js` | 핀·부품·다리·별칭·구멍 장착 |
+| `src/part-library.js` | 전체 부품 카탈로그·한글/영문 검색 |
 | `src/project.js`, `src/hal-examples.js`, `src/hal-circuits.js` | 빈 HAL 프로젝트·파일 검증·HAL 예제 코드/회로 |
 | `src/parser.js`, `src/runtime.js`, `src/program.js` | 문법·실행기·API 진입점 |
 | `src/mcu-config.js`, `src/serial-config.js` | MCU 설정·IOC·HAL 생성·실제 직렬 핀맵 |
