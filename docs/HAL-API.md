@@ -1,4 +1,4 @@
-# STM Simulator 0.9.0 — HAL 소스 및 핀 설정
+# STM Simulator 0.10.0 — HAL 소스 및 핀 설정
 
 STM32F446RE용 **HAL API 호환 회로 모델**입니다. CubeMX/CubeIDE의 `main.c`와 필요한 사용자 `.c/.h`, `.ioc`를 가져옵니다. ST HAL 드라이버 자체를 컴파일·링크하거나 ARM 명령을 실행하지 않습니다. 따라서 지원 범위 안의 생성 소스와 사용자 코드를 사용할 수 있으며, 임의 Cube 프로젝트의 전체 호환성을 보장하지 않습니다. ELF/BIN은 입력 대상이 아닙니다.
 
@@ -12,7 +12,7 @@ STM32F446RE용 **HAL API 호환 회로 모델**입니다. CubeMX/CubeIDE의 `mai
 6. 데스크톱의 **Cube 프로젝트 폴더**는 루트 `.ioc`, `Core/Src`, `Core/Inc`를 읽습니다. `Drivers`, startup, syscalls, sysmem, system_stm32f4xx 및 HAL conf 구현은 가져오지 않습니다. 파일은 원본에 쓰지 않고 회로 프로젝트에 복사합니다.
 7. 편집기 상단에서 `main.c`와 가져온 `.c/.h`를 전환해 수정합니다. **코드 검사**는 문법을 검사하고, 시뮬레이션 시작 시 핀·초기화·배선·지원 API를 검사합니다.
 
-HAL 코드·회로 예제는 GPIO LED·버튼 입력·USER EXTI·UART RX 인터럽트·TIM2 인터럽트·ADC·TMP36·ADC 배열·I²C·SPI·함수/구조체·PWM·초음파의 13개입니다. 모두 HAL C를 사용하며 Serial 호출은 없습니다. 선택한 예제의 코드·MCU 설정·부품·배선·계산 설정을 함께 적용하고 회로 이름은 유지합니다. 전원과 통신/센서 배선까지 구성되며, PWM 예제는 파형 계산 설정도 적용합니다. 함수·배열 예제는 외부 부품 없이 로그로 실행합니다. 예제를 선택하는 즉시 확인 창 없이 적용하며 Ctrl+Z로 이전 작업 전체를 되돌립니다. 새 회로도 부품·배선 없이 HAL 코드로 시작합니다.
+HAL 코드·회로 예제는 GPIO·EXTI·UART·TIM2·ADC·I²C·SPI·함수/구조체·PWM·초음파와 확장 센서·화면·구동·입력 부품을 포함한 27개입니다. 모두 HAL C를 사용하며 Serial 호출은 없습니다. 선택한 예제의 코드·MCU 설정·부품·배선·계산 설정을 함께 적용하고 회로 이름은 유지합니다. 전원과 통신/센서 배선까지 구성되며, PWM 예제는 파형 계산 설정도 적용합니다. 함수·배열 예제는 외부 부품 없이 로그로 실행합니다. 예제를 선택하는 즉시 확인 창 없이 적용하며 Ctrl+Z로 이전 작업 전체를 되돌립니다. 새 회로도 부품·배선 없이 HAL 코드로 시작합니다.
 
 UART 예제는 USART2 PA2(TX)/PA3(RX), 9600 baud입니다. 예제에 터미널 전원·공통 GND·TX/RX 교차 배선이 포함됩니다. 하단 통신 탭에서 포트를 골라 입력합니다. ADC 배열 예제는 8회 polling으로 값을 저장하며 DMA 예제가 아닙니다. 초음파 예제는 TIM2 1 MHz 카운터와 GPIO ECHO 폴링을 사용하며 0.1 ms 협력 실행 해상도의 측정 모델입니다. 하드웨어 입력 캡처 및 CPU 명령 타이밍은 재현하지 않습니다.
 
@@ -75,6 +75,42 @@ HAL 모드에서 정수 변수 대입·캐스트를 정해진 폭으로 변환�
 
 main 최상위 반복은 0.1ms씩 협력적으로 진행하므로 빈 `while(1)`에서도 인터럽트 처리가 가능합니다. 이는 명령 실행 시간 모델이 아닙니다. 내부 무한 반복/재귀/메모리/이벤트에는 기존 실행 한도가 적용됩니다. EXTI는 사용자 정의 IRQHandler가 있으면 해당 handler의 HAL_GPIO_EXTI_IRQHandler 호출을 경유합니다. UART/TIM 완료는 협력적 큐에서 HAL callback으로 전달하며 전체 USART/TIM ISR 레지스터 흐름은 구현하지 않습니다.
 
-## 인터페이스 근거
+## 센서·화면·구동 부품과 HAL 예제
+
+부품 31종, HAL 예제 27개를 제공합니다. 아래 14종은 각각 회로·핀 설정·C 코드가 함께 적용되는 예제가 있습니다. `printf`는 하단 로그에 측정값 또는 제어 명령을 표시합니다. SPI의 전송 성공은 화면의 수신 확인을 뜻하지 않으며, 전원과 CS/DC/RST 배선도 맞아야 표시됩니다.
+
+| 부품 | 예제 연결 / 사용 HAL | 실행 중 확인 |
+|---|---|---|
+| LDR | 3V3–LDR–PA0–10 kΩ–GND / ADC | 조도 1~100,000 lux, ADC 전압 |
+| NTC | 3V3–10 kΩ–PA0–NTC–GND / ADC, `log` | −40~125 °C, 계산 온도·저항 |
+| SHT31 | 3V3/GND, PB9 SDA/PB8 SCL / I2C Master | 온습도, CRC, NACK |
+| MPU6050 | 3V3/GND, PB9 SDA/PB8 SCL / I2C Mem | 6축 g·°/s, WHO_AM_I |
+| PIR | 5V/GND, OUT PA10 / GPIO EXTI | 움직임 HIGH/LOW, 양쪽 에지 로그 |
+| SSD1306 OLED | 3V3/GND, PB9 SDA/PB8 SCL / I2C Master | 128×64 픽셀, 움직이는 막대 |
+| ST7735 TFT | 3V3/GND, PA5 SCK/PA7 MOSI, PB6 CS/PB7 DC/PC7 RST / SPI | 128×160 RGB565 컬러 바 |
+| MAX7219 매트릭스 | 5V/GND, PA5 CLK/PA7 DIN/PB6 LOAD / SPI | 8×8 이동 패턴 |
+| RC 서보 | 5V/GND, PA5 TIM2 CH1 / TIM PWM | 50 Hz, 1/1.5/2 ms, 0/90/180° |
+| DC 모터 + H 브리지 | 5V/GND, PA5 PWM, PB6 IN1/PB7 IN2 | 정·역회전, PWM 속도, rpm |
+| 4상 스테퍼 + 드라이버 | 5V/GND, PB3~PB6 IN1~IN4 / GPIO | 1.8° 스텝, 방향·상 전환 |
+| 릴레이 | 5V/GND, PA5 IN, COM 3V3, NO–330 Ω–LED–GND / GPIO | COM–NO/NC 실제 회로 전환 |
+| 조이스틱 | 3V3/GND, PA0/PA1 ADC, PA10 SW / ADC, GPIO | X/Y 0~100%, 버튼 |
+| 로터리 인코더 | 3V3/GND, PA0 A/PA1 B EXTI, PA10 SW | 방향, 4전이/칸 카운트, 버튼 |
+
+모듈의 핀 순서는 부품 단자 툴팁과 속성 도움말에 표시합니다. 이는 위 표에 지정한 모듈 모델의 핀 순서이며, 모든 시판 모듈의 실제 PCB 핀 순서가 같다는 뜻은 아닙니다. I²C 모듈에는 10 kΩ 풀업, MAX7219 모듈에는 3.3 V 논리 레벨 변환기를 포함합니다. SPI 화면의 CS/LOAD에는 풀업이 있어 연결이 끊기면 선택되지 않습니다. 3.3 V 모듈은 2.7~3.6 V, 5 V 모듈은 4.5~5.5 V와 보드 공통 GND가 있어야 동작합니다.
+
+### 모델 범위
+
+- LDR은 `10 kΩ × (10/lux)^0.7`을 100 Ω~1 MΩ로 제한한 가상 광저항, NTC는 R25=10 kΩ/B=3950 K 모델입니다. 개별 제품의 공차·열 용량은 적용하지 않습니다.
+- SHT31은 주소 0x44/0x45, 단발 측정 0x2400(15 ms 뒤 6바이트), 소프트 리셋 0x30A2를 지원합니다. 온도·습도마다 CRC-8(다항식 0x31, 초기값 0xFF)을 전송합니다. 측정 전/진행 중/잘못된 주소·배선에는 NACK를 반환합니다. 주기 측정·히터·clock stretching은 지원하지 않습니다. [Sensirion 데이터시트](https://sensirion.com/media/documents/213E6A3B/63A5A569/Datasheet_SHT3x_DIS.pdf)
+- MPU6050은 주소 0x68/0x69, WHO_AM_I(0x75), PWR_MGMT_1 절전/리셋, 가속도·자이로 범위 레지스터(0x1B/0x1C), 0x3B부터 14바이트 읽기를 지원합니다. ±2/4/8/16 g, ±250/500/1000/2000 °/s 범위를 적용합니다. 온도 레지스터는 25 °C 고정입니다. 샘플레이트/DLPF 설정 값은 저장하지만 필터·시간 동작, FIFO·DMP·보조 버스·DATA_READY IRQ는 모델링하지 않습니다. [TDK/InvenSense 레지스터 문서](https://invensense.tdk.com/wp-content/uploads/2015/02/MPU-6000-Register-Map1.pdf)
+- SSD1306은 0x3C/0x3D, 제어 바이트 0x00/0x40, 1024바이트 RAM, 페이지·수평·수직 주소, 표시 ON/OFF·반전·전체 점등·밝기·방향·시작 행을 지원합니다. 64행 MUX와 일반 초기화 명령을 받으며, 전하펌프·클록·전기 설정의 아날로그 효과와 하드웨어 스크롤은 구현하지 않습니다. [Solomon Systech 데이터시트](https://cdn-shop.adafruit.com/datasheets/SSD1306.pdf)
+- ST7735는 리셋, SLPIN/SLPOUT, DISPOFF/DISPON, INVON/INVOFF, CASET/RASET/RAMWR, MADCTL의 행·열 교환/반전/BGR, COLMOD=0x55를 지원합니다. 주소 원점 (0,0)의 128×160 영역을 표시하며, 감마·전원 시퀀스·읽기·18비트 색상은 지원하지 않습니다. 명령 대기 시간의 실제 아날로그 효과는 모델링하지 않지만 예제는 리셋과 sleep out 뒤 120 ms를 기다립니다. [Sitronix 데이터시트](https://www.crystalfontz.com/controllers/Sitronix/ST7735S/437)
+- MAX7219는 LOAD 상승 시 마지막 16비트를 래치하며 digit 1~8, no-decode, intensity, scan-limit, shutdown, display-test를 지원합니다. 캐스케이드·BCD 디코드는 지원하지 않습니다. [Analog Devices 데이터시트](https://www.analog.com/media/en/technical-documentation/data-sheets/MAX7219-MAX7221.pdf)
+- 서보는 실제 에지에서 1~2 ms 펄스를 읽고 최대 360°/s로 움직입니다. 100 ms 신호 누락 시 제어를 해제합니다. DC 모터는 최대 3000 rpm/시정수 150 ms의 속도 모델이며, 스테퍼는 한 상씩의 인접 전환을 셉니다. 이들은 드라이버를 포함한 학습용 모듈입니다. 모터 권선 전류·토크·부하·역기전력·탈조를 계산하지 않으며 표시 전류는 모듈의 간이 대기 부하입니다. 릴레이는 접점 0.1 Ω의 즉시 전환 모델이며 기계적 지연·바운스가 없습니다.
+- 조이스틱은 두 개의 10 kΩ 가변저항과 LOW 활성 버튼입니다. 인코더는 조절한 한 칸마다 2 ms 간격의 직교 신호 4전이를 예약하며, 실제 A/B 배선을 통해 EXTI 콜백이 발생합니다. 접점 바운스는 없습니다. PIR은 속성으로 입력한 감지 상태를 3.3 V OUT으로 출력하는 모듈입니다.
+
+새 시뮬레이션을 시작하면 화면 메모리·통신 상태·회전 상태는 초기화됩니다. 환경 설정과 회로 배선은 프로젝트에 저장됩니다. 알려지지 않은 화면 명령과 미지원 레지스터 쓰기는 오류로 표시합니다.
+
+## HAL 인터페이스 근거
 
 함수/구조체 명칭은 [ST의 STM32F4 HAL GPIO 헤더](https://github.com/STMicroelectronics/stm32f4xx-hal-driver/blob/master/Inc/stm32f4xx_hal_gpio.h), [UART 헤더](https://github.com/STMicroelectronics/stm32f4xx-hal-driver/blob/master/Inc/stm32f4xx_hal_uart.h), [TIM 헤더](https://github.com/STMicroelectronics/stm32f4xx-hal-driver/blob/master/Inc/stm32f4xx_hal_tim.h)를 확인했습니다. 로컬 CubeMX F446RE 기종 정보와 `.ioc`도 대조했습니다. ST 드라이버 소스 및 CubeMX 데이터베이스 파일은 앱에 포함하지 않습니다.

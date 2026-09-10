@@ -1,8 +1,9 @@
+import {deviceControls,deviceReadouts} from './device-ui.js';
 import {PART_DEFS} from './components.js';
 const number=(key,label,value,min,max,live=false,type='number')=>`<label for="extra-${key}">${label}</label><input id="extra-${key}" data-part-prop="${key}" data-live="${live}" type="${type}" min="${min}" max="${max}" step="${type==='range'?1:'any'}" value="${value}"><output id="output-${key}">${type==='range'?value:''}</output>`;
 export function partControls(p,running){
  const def=PART_DEFS[p.type];if(!def)return '';
- let controls='';
+ let controls=deviceControls(p);
  if(p.type==='uart')controls+=number('baud','UART 속도 (baud)',p.baud,300,2000000);
  if(p.type==='i2c')controls+=number('address','I²C 주소 (10진수, 80 = 0x50)',p.address,8,119);
  if(['capacitor','potentiometer'].includes(p.type))controls+=number('value',p.type==='capacitor'?'용량 (µF)':'전체 저항 (Ω)',p.value,p.type==='capacitor'?.001:1,p.type==='capacitor'?100000:1e7);
@@ -15,6 +16,7 @@ export function partControls(p,running){
 }
 export function partReadouts(p,result){
  const read=result?.parts[p.id];if(!read)return '';
+ const device=deviceReadouts(p,read);if(device)return device;
  if(p.type==='lcd')return `<p>${read.lcd?.powered?'LCD 전원 연결됨':'LCD 5 V 전원을 확인하세요.'} · ${read.lcd?.visible?'문자 표시 중':'디스플레이 초기화·VO 연결을 확인하세요.'}</p>`;
  if(['uart','i2c','spi'].includes(p.type))return `<p>${read.powered?'전원 연결됨':'전원과 GND를 확인하세요.'}</p>${p.type==='uart'?'<p>송수신 내용은 하단 통신 탭에서 확인할 수 있습니다.</p>':`<p>메모리 0x10: ${read.memory?.[16]??0}</p>`}`;
  if(p.type==='potentiometer'){const v=result.voltage(`part:${p.id}:p2`),base=result.voltage(`part:${p.id}:p1`);return `<p>가변 접점 전압 (1 기준): <b>${v!=null&&base!=null?(v-base).toFixed(3)+' V':'—'}</b></p>`;}

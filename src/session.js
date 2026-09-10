@@ -1,3 +1,4 @@
+import {MotionDevices} from './device-motion.js';
 import {CircuitSimulation,digitalRead} from './engine.js';
 import {Runtime} from './runtime.js';
 import {compile} from './parser.js';
@@ -10,7 +11,7 @@ import {HalAdapter,HAL_CONSTANTS} from './hal.js';
 
 export class SimulationSession {
   constructor(project,{print=()=>{},trace=()=>{},uart=()=>{},channels}={}){
-    this.project=project;this.pressed={};this.result=null;this.time=0;this.integrated=-1;this.stepMs=project.simulation?.stepMs??1;this.circuit=new CircuitSimulation();this.sensors=new UltrasonicSignals();this.lcds=new Map();this.wave=new WaveRecorder(channels);this.serial=[];
+    this.project=project;this.pressed={};this.result=null;this.time=0;this.integrated=-1;this.stepMs=project.simulation?.stepMs??1;this.circuit=new CircuitSimulation();this.motion=new MotionDevices();this.sensors=new UltrasonicSignals();this.lcds=new Map();this.wave=new WaveRecorder(channels);this.serial=[];
     this.buses=new BusDevices(project,()=>this.result,trace);
     this.hal=project.firmware?.mode==='hal'?new HalAdapter(project.mcu,this.buses):null;
     this.runtime=new Runtime(this.hal?compileHal(project.code,project.firmware.files):compile(project.code),{
@@ -28,17 +29,17 @@ export class SimulationSession {
     if(!this.result||this.result.fault)return;
     this.sensors.update(this.project,this.result,micros);
     for(const p of this.project.components.filter(p=>p.type==='lcd')){if(!this.lcds.has(p.id))this.lcds.set(p.id,new LCDController());const lcd=this.lcds.get(p.id).update(p,this.result,micros);this.result.parts[p.id]={...this.result.parts[p.id],lcd};}
-    this.buses.update(this.result);this.wave.record(micros,this.result);
+    this.motion.update(this.project,this.result,micros,this.runtime,us=>this.changed(us));this.buses.update(this.result);this.wave.record(micros,this.result);
   }
   advance(micros){
     const target=micros/1000;if(target<this.integrated)return;
-    if(this.integrated<0){this.result=this.circuit.solve(this.project,this.runtime.gpio,this.pressed,0,this.sensors.echoHigh(0));this.integrated=0;this.enrich(0);}
+    if(this.integrated<0){this.result=this.circuit.solve(this.project,this.runtime.gpio,this.pressed,0,this.sensors.echoHigh(0),this.motion.signals);this.integrated=0;this.enrich(0);}
     let count=0;
-    while(target-this.integrated>1e-8){if(++count>20000)throw new Error('회로 시간 간격이 너무 큽니다.');const next=Math.min(target,this.integrated+this.stepMs);this.result=this.circuit.solve(this.project,this.runtime.gpio,this.pressed,next,this.sensors.echoHigh(next*1000));this.integrated=next;this.enrich(next*1000);if(this.result.fault)throw new Error(this.result.warnings[0]||'회로 해석 오류');}
+    while(target-this.integrated>1e-8){if(++count>20000)throw new Error('회로 시간 간격이 너무 큽니다.');const next=Math.min(target,this.integrated+this.stepMs);this.result=this.circuit.solve(this.project,this.runtime.gpio,this.pressed,next,this.sensors.echoHigh(next*1000),this.motion.signals);this.integrated=next;this.enrich(next*1000);if(this.result.fault)throw new Error(this.result.warnings[0]||'회로 해석 오류');}
     this.time=Math.max(this.time,target);
   }
   changed(micros=this.runtime.microTime){
-    this.advance(micros);this.result=this.circuit.hold(this.project,this.runtime.gpio,this.pressed,this.sensors.echoHigh(micros));this.enrich(micros);if(this.result.fault)throw new Error(this.result.warnings[0]||'회로 해석 오류');return this.result;
+    this.advance(micros);this.result=this.circuit.hold(this.project,this.runtime.gpio,this.pressed,this.sensors.echoHigh(micros),this.motion.signals);this.enrich(micros);if(this.result.fault)throw new Error(this.result.warnings[0]||'회로 해석 오류');return this.result;
   }
   tick(time){this.runtime.tick(time);return this.changed(this.runtime.microTime);}
   setPressed(pressed){this.pressed=pressed;this.changed();this.runtime.pollInterrupts();}

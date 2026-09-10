@@ -9,7 +9,8 @@ const {_electron}=require(process.env.PLAYWRIGHT_MODULE||'playwright');
   const page=await app.firstWindow(),errors=[];page.on('pageerror',e=>errors.push(e.message));await page.waitForSelector('#editor-resizer');
   await app.evaluate(({BrowserWindow})=>{const win=BrowserWindow.getAllWindows()[0];win.setSize(1540,1020);win.showInactive();});
   const width=async()=>Math.round((await page.locator('.editor-panel').boundingBox()).width);
-  const drag=async delta=>{const box=await page.locator('#editor-resizer').boundingBox();await page.mouse.move(box.x+box.width/2,box.y+180);await page.mouse.down();await page.mouse.move(box.x+box.width/2-delta,box.y+180,{steps:12});await page.mouse.up();};
+  // Hide only for the short pointer gesture so physical mouse movement cannot cancel capture.
+  const drag=async delta=>{await app.evaluate(({BrowserWindow})=>BrowserWindow.getAllWindows()[0].hide());const box=await page.locator('#editor-resizer').boundingBox();await page.mouse.move(box.x+box.width/2,box.y+180);await page.mouse.down();await page.mouse.move(box.x+box.width/2-delta,box.y+180,{steps:12});await page.mouse.up();await app.evaluate(({BrowserWindow})=>BrowserWindow.getAllWindows()[0].showInactive());await page.waitForTimeout(80);};
   assert.equal(await width(),440);await drag(160);await page.waitForTimeout(80);assert.equal(await width(),600);
   await page.click('[data-tab="inspect"]');assert.equal(await width(),600);await drag(-60);assert.equal(await width(),540);
   await page.reload();await page.waitForSelector('#editor-resizer');assert.equal(await width(),540);

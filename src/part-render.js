@@ -1,8 +1,10 @@
+import {deviceShape,updateDeviceSvg} from './device-ui.js';
 export function rgbColor(read){
  const values=['r','g','b'].map(c=>read?.channels?.[c]?.on?Math.round(255*Math.min(1,Math.sqrt(Math.max(0,read.channels[c].current)/.006))):0);
  return values.some(Boolean)?`rgb(${values.join(',')})`:'#465366';
 }
 export function extraShape(p,result){
+ const device=deviceShape(p);if(device)return device;
  const read=result?.parts[p.id];
  if(['uart','i2c','spi'].includes(p.type))return `<rect x="-39" y="-24" width="78" height="47" rx="4" fill="#356b80" stroke="#234657"/><rect x="-22" y="-15" width="44" height="23" rx="2" fill="#243342"/><text y="0" text-anchor="middle" font-size="9" fill="#dfedf3">${p.type.toUpperCase()}</text><circle class="bus-power" cx="-29" cy="-14" r="3" fill="${read?.powered?'#65dc9a':'#647987'}"/><text y="19" text-anchor="middle" font-size="8" fill="#c5e0e7">${p.type==='uart'?p.baud+' baud':p.type==='i2c'?'0x'+p.address.toString(16)+' · 256 B':'256 B · CS LOW'}</text>`;
  if(p.type==='potentiometer')return `<rect x="-21" y="-22" width="42" height="43" rx="5" fill="#287ea6" stroke="#205673"/><circle cy="-3" r="15" fill="#e7e3d2" stroke="#b0b8b8"/><path class="pot-knob" d="M0 -3V-15" stroke="#3d5367" stroke-width="4" transform="rotate(${-135+p.position*2.7} 0 -3)"/><text class="environment-label" y="18" text-anchor="middle" font-size="7" fill="white">${p.position}%</text>`;
@@ -20,6 +22,7 @@ export function extraShape(p,result){
  return '';
 }
 export function updateExtraSvg(g,p,read){
+ updateDeviceSvg(g,p,read);
  if(['uart','i2c','spi'].includes(p.type))g.querySelector('.bus-power')?.setAttribute('fill',read?.powered?'#65dc9a':'#647987');
  if(p.type==='rgb'){const color=rgbColor(read);g.querySelector('.rgb-lens')?.setAttribute('fill',color);const glow=g.querySelector('.rgb-glow');glow?.setAttribute('fill',color);glow?.setAttribute('opacity',read?.on?'.55':'0');}
  if(p.type==='sevenseg')g.querySelectorAll('[data-segment]').forEach(s=>s.setAttribute('fill',read?.channels?.[s.dataset.segment]?.on?'#ff594b':'#443f45'));

@@ -17,7 +17,7 @@ const {cleanArtifactOutput} = require('./clean-build.cjs');
   const entries = asar.listPackage(archive).map(p => p.replaceAll('\\', '/'));
   assert.ok(!entries.some(p => /^\/(assets|test-results|tests|scripts)(\/|$)/.test(p)), 'Reference media and test fixtures must not be packaged');
   for (const file of ['src/feature-examples.js', 'src/component-examples.js']) assert.ok(!entries.includes('/' + file), 'Removed example module must not be packaged: ' + file);
-  for (const file of ['src/hal-examples.js', 'src/hal-circuits.js', 'src/hal-stdio.js']) assert.ok(entries.includes('/' + file), 'Missing HAL module: ' + file);
+  for (const file of ['src/hal-examples.js', 'src/hal-circuits.js', 'src/hal-stdio.js', 'src/device-defs.js', 'src/device-buses.js', 'src/device-motion.js', 'src/device-examples.js', 'src/device-ui.js']) assert.ok(entries.includes('/' + file), 'Missing HAL module: ' + file);
   assert.doesNotMatch(asar.extractFile(archive, 'src/hal-examples.js').toString(), /\bSerial\d*\./, 'Shipped examples must use HAL and stdio');
   assert.ok(!entries.some(p => /\.png$/i.test(p)), 'Legacy screenshots must not be packaged');
   const packed = JSON.parse(asar.extractFile(archive, 'package.json').toString());

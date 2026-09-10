@@ -63,12 +63,13 @@ export function renderParts(project,selected,result,pressed){const parts=project
  }
  const label=['resistor','potentiometer'].includes(p.type)?`${p.name} · ${p.value>=1000?(p.value/1000)+' kΩ':p.value+' Ω'}`:p.type==='capacitor'?`${p.name} · ${p.value} µF`:p.name;
  const radians=angle*Math.PI/180,lcdHeight=Math.abs(Math.sin(radians))*121+Math.abs(Math.cos(radians))*46;
- const labelY=Math.min(y-(p.type==='lcd'?lcdHeight+14:PART_DEFS[p.type]?42:27),...terminalKeys(p).map(key=>endpointInfo(`part:${p.id}:${key}`,project.components).y-13));
+ const body=PART_DEFS[p.type]?.body,bodyHeight=body?(Math.abs(Math.sin(radians))*body.width+Math.abs(Math.cos(radians))*body.height)/2+14:42;
+ const labelY=Math.min(y-(p.type==='lcd'?lcdHeight+14:PART_DEFS[p.type]?bodyHeight:27),...terminalKeys(p).map(key=>endpointInfo(`part:${p.id}:${key}`,project.components).y-13));
  const leads=terms.map((t,i)=>{const end=endpointInfo(`part:${p.id}:${t.key}`,project.components);let root;
    if(p.type==='button')root=rotatePoint(Math.sign(t.x)*14,Math.sign(t.y)*9,angle);
    else if(p.type==='lcd')root=rotatePoint(t.x,35,angle);
    else if(p.type==='sevenseg')root=rotatePoint(t.x,Math.sign(t.y)*27,angle);
-   else if(PART_DEFS[p.type]?.labels)root=rotatePoint(t.x,p.type==='ultrasonic'?22:14,angle);
+   else if(PART_DEFS[p.type]?.labels)root=rotatePoint(t.x,PART_DEFS[p.type].pinY?PART_DEFS[p.type].pinY-14:p.type==='ultrasonic'?22:14,angle);
    else if(['capacitor','diode','buzzer'].includes(p.type))root=rotatePoint(Math.sign(t.x)*(p.type==='buzzer'?16:12),0,angle);
    else root=rotatePoint(Math.sign(t.x)*(p.type==='led'?10:half),0,angle);
    return `<path d="M${x+root.x} ${y+root.y}L${nominal[i].x} ${nominal[i].y}L${end.x} ${end.y}" fill="none" stroke="#708c9b" stroke-width="3" stroke-linejoin="round"/><circle class="part-contact" cx="${end.x}" cy="${end.y}" r="3" fill="${attachments(p)[t.key]?'#20a985':'#bdcdd5'}" stroke="#607d8d"/>`;
