@@ -117,8 +117,8 @@ test('pin search normalizes case and whitespace and finds all physical aliases',
  assert.equal(searchPins('PC99').length,0);assert.equal(searchPins('   ').length,0);
 });
 test('all extra parts have complete mountable footprints, valid examples and persistent settings',()=>{
- assert.equal(Object.keys(PART_DEFS).length,12);
- for(const type of Object.keys(PART_DEFS)){
+ assert.equal(Object.keys(PART_DEFS).length,26);
+ for(const type of ['uart','i2c','spi','potentiometer','slide','rgb','capacitor','diode','buzzer','sevenseg','temperature','ultrasonic']){
    const p=componentExample(type),part=p.components[0];assert.deepEqual(validateProject(p),p,type);assert.equal(Object.keys(attachments(part)).length,terminalKeys(part).length,type);
    for(const key of terminalKeys(part)){const e=endpointInfo(`part:demo:${key}`,p.components),h=endpointInfo(attachments(part)[key]);close(e.x,h.x);close(e.y,h.y);}
    assert.ok(compile(p.code));

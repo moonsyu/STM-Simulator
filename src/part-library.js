@@ -12,6 +12,7 @@ const ALIASES={
  uart:'serial terminal 시리얼 직렬 통신',i2c:'memory 메모리 통신',spi:'memory 메모리 통신',
  potentiometer:'variable resistor 가변 저항',slide:'switch 스위치',rgb:'color 색상',capacitor:'capacitance 콘덴서 축전기',
  diode:'rectifier 정류',buzzer:'sound speaker 소리 스피커',sevenseg:'7 segment seven segment display 디스플레이',
+ ldr:'light photoresistor sensor 조도 광저항 빛',ntc:'thermistor sensor 온도 서미스터',sht31:'humidity temperature sensor 온습도',mpu6050:'accelerometer gyroscope sensor 가속도 자이로 자세',pir:'motion sensor 인체 움직임',oled:'display screen 디스플레이 화면',tft:'display screen color 디스플레이 화면 컬러',matrix:'display screen led matrix 디스플레이 화면 도트',servo:'actuator motor 서보 구동',motor:'actuator dc motor h bridge 구동 모터',stepper:'actuator step motor 스텝 구동',relay:'actuator switch 릴레이 구동',joystick:'input game stick 입력',encoder:'rotary input quadrature 입력 회전',
  temperature:'sensor temperature 온도 센서',ultrasonic:'sensor distance 거리 센서 초음파'
 };
 const normalize=value=>String(value).normalize('NFKC').toLowerCase().replace(/[\s_-]+/g,'');

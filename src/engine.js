@@ -1,3 +1,4 @@
+import {MODULE_DEVICES,I2C_DEVICES,ldrResistance,ntcResistance} from './device-defs.js';
 import {PINS, circuitHoles, GPIO_PINS, canonicalPin} from './pins.js';
 import {terminalKeys,attachments,PART_DEFS} from './components.js';
 
@@ -50,6 +51,18 @@ export function solveCircuit(project,gpio={},pressed={},transient={}){
   for(const p of project.components){
     const a=`part:${p.id}:a`,b=`part:${p.id}:b`,pin=n=>`part:${p.id}:p${n}`;
     if(p.type==='resistor')branch(a,b,p.value,{id:p.id});
+    if(p.type==='ldr'||p.type==='ntc')branch(a,b,p.type==='ldr'?ldrResistance(p.lux):ntcResistance(p.temperature),{id:p.id});
+    if(MODULE_DEVICES.includes(p.type)){
+      branch(pin(1),pin(2),10000,{id:p.id});
+      if(I2C_DEVICES.includes(p.type))for(const n of [3,4])branch(pin(n),pin(1),10000);
+      if(p.type==='joystick')for(const [n,pos] of [[3,p.axisX],[4,p.axisY]]){branch(pin(n),pin(2),Math.max(.01,10000*pos/100));branch(pin(n),pin(1),Math.max(.01,10000*(1-pos/100)));}
+      if(['joystick','encoder'].includes(p.type)){branch(pin(5),pin(1),10000);if(p.switch)branch(pin(5),pin(2),1);}
+      if(p.type==='encoder')for(const n of [3,4]){branch(pin(n),pin(1),10000);if((transient.deviceSignals?.[p.id]??[1,1])[n-3]===0)branch(pin(n),pin(2),1);}
+      if(p.type==='pir')branch(pin(3),pin(2),100,{sensor:{supply:uf.find(pin(1)),ground:uf.find(pin(2)),min:4.5,max:5.5},emf:p.motion?3.3:0});
+      if(p.type==='relay')for(const [n,normallyOpen] of [[5,true],[6,false]])branch(pin(4),pin(n),.1,{relay:{supply:uf.find(pin(1)),ground:uf.find(pin(2)),input:uf.find(pin(3)),normallyOpen},contact:p.name});
+      const inputs=({servo:[3],motor:[3,4,5],stepper:[3,4,5,6],relay:[3],tft:[3,4,5,6,7],matrix:[3,4,5]})[p.type]||[];
+      for(const n of inputs)if(n===3&&['tft','matrix'].includes(p.type))branch(pin(n),pin(1),100000);else branch(pin(n),pin(2),1000000);
+    }
     if(p.type==='led')branch(a,b,12,{id:p.id,diode:true,led:true,vf:({red:1.8,green:2.1,blue:2.8,yellow:2.0})[p.color]||1.8});
     if(p.type==='diode')branch(a,b,1,{id:p.id,diode:true,vf:0.7});
     if(p.type==='buzzer')branch(a,b,1000,{id:p.id,buzzer:true});
@@ -77,7 +90,8 @@ export function solveCircuit(project,gpio={},pressed={},transient={}){
     for(let i=0;i<n;i++)A[i][i]=1e-10; // Numerical shunt, 10 GΩ.
     for(const b of branches){
       const supply=b.sensor?(volt.get(b.sensor.supply)??0)-(volt.get(b.sensor.ground)??0):0;
-      const on=(!b.diode||(volt.get(b.a)-volt.get(b.b)>b.vf))&&(!b.sensor||(supply>=b.sensor.min&&supply<=b.sensor.max));
+      const relayOn=b.relay?((volt.get(b.relay.supply)-volt.get(b.relay.ground)>=4.5&&volt.get(b.relay.supply)-volt.get(b.relay.ground)<=5.5&&volt.get(b.relay.input)-volt.get(b.relay.ground)>=2)===b.relay.normallyOpen):true;
+      const on=relayOn&&(!b.diode||(volt.get(b.a)-volt.get(b.b)>b.vf))&&(!b.sensor||(supply>=b.sensor.min&&supply<=b.sensor.max));
       const g=!on?1e-10:1/b.r,offset=on?(b.diode?b.vf:b.emf??0):0;
       const i=index.get(b.a),j=index.get(b.b);
       if(i!==undefined){A[i][i]+=g;if(j!==undefined)A[i][j]-=g;else z[i]+=g*known.get(b.b);z[i]+=g*offset;}
@@ -91,12 +105,13 @@ export function solveCircuit(project,gpio={},pressed={},transient={}){
   const parts={};let maxCurrent=0;
   for(const b of branches){
     const supply=b.sensor?(volt.get(b.sensor.supply)??0)-(volt.get(b.sensor.ground)??0):0,powered=!b.sensor||(supply>=b.sensor.min&&supply<=b.sensor.max);
-    const dv=volt.get(b.a)-volt.get(b.b),i=!powered?0:b.diode?Math.max(0,(dv-b.vf)/b.r):(dv-(b.emf??0))/b.r;
+    const dv=volt.get(b.a)-volt.get(b.b),relayOn=b.relay?((volt.get(b.relay.supply)-volt.get(b.relay.ground)>=4.5&&volt.get(b.relay.supply)-volt.get(b.relay.ground)<=5.5&&volt.get(b.relay.input)-volt.get(b.relay.ground)>=2)===b.relay.normallyOpen):true,i=!powered||!relayOn?0:b.diode?Math.max(0,(dv-b.vf)/b.r):(dv-(b.emf??0))/b.r;
     const read={voltage:dv,current:i,on:b.buzzer?dv>=2:b.led&&i>0.00008,power:Math.abs(dv*i),...(b.sensor?{powered}: {})};
     if(b.id){
       if(b.channel){const total=parts[b.id]??={voltage:0,current:0,power:0,on:false,channels:{}};total.channels[b.channel]=read;total.voltage=Math.max(total.voltage,dv);total.current=b.pot?Math.max(total.current,Math.abs(i)):total.current+i;total.power+=read.power;total.on||=read.on;}
       else parts[b.id]=read;
     }
+    if(b.contact&&Math.abs(i)>1)warnings.push(b.contact+': 접점 전류 1 A 초과. 부하와 전원 배선을 확인하세요.');
     if(b.gpio&&Math.abs(i)>0.02)warnings.push(`${b.gpio}: GPIO 전류 ${(Math.abs(i)*1000).toFixed(1)} mA. 저항과 배선을 확인하세요.`);
     if(b.led&&i>0.02)warnings.push(`${project.components.find(p=>p.id===b.id)?.name}${b.channel?' '+b.channel:''}: LED 전류 ${(i*1000).toFixed(1)} mA. 직렬 저항을 늘리세요.`);
     if(b.id)maxCurrent=Math.max(maxCurrent,Math.abs(i));
@@ -115,11 +130,11 @@ export function solveCircuit(project,gpio={},pressed={},transient={}){
 // A read at the same simulation time must not advance capacitor charge again.
 export class CircuitSimulation{
  constructor(){this.time=null;this.base={};this.latest={};this.dt=1e-6;}
- solve(project,gpio,pressed,time,echoHigh={}){
+ solve(project,gpio,pressed,time,echoHigh={},deviceSignals={}){
    if(this.time!==null&&time>this.time){this.base={...this.latest};this.dt=(time-this.time)/1000;}
-   this.time=time;const result=solveCircuit(project,gpio,pressed,{dt:this.dt,capacitors:this.base,echoHigh});
+   this.time=time;const result=solveCircuit(project,gpio,pressed,{dt:this.dt,capacitors:this.base,echoHigh,deviceSignals});
    if(!result.fault)this.latest=result.capacitors;return result;
  }
- hold(project,gpio,pressed,echoHigh={}){return solveCircuit(project,gpio,pressed,{dt:1e-9,capacitors:this.latest,echoHigh});}
+ hold(project,gpio,pressed,echoHigh={},deviceSignals={}){return solveCircuit(project,gpio,pressed,{dt:1e-9,capacitors:this.latest,echoHigh,deviceSignals});}
 }
 export function digitalRead(pin,result){const v=result?.voltage(`signal:${canonicalPin(pin)}`);return v!=null&&v>=1.65?1:0;}

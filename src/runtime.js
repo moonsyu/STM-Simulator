@@ -98,7 +98,7 @@ export class Runtime {
     throw new Error('표현식을 실행할 수 없습니다.');
   }
   typeSize(type){return ['char','byte','bool','uint8_t','int8_t'].includes(type)?1:['short','uint16_t','int16_t'].includes(type)?2:type==='double'?8:4;}
-  numericType(n){if(n.type==='literal')return n.numericType==='double'?'float':'int';if(n.type==='cast')return ['float','double'].includes(n.to)?'float':'int';if(n.type==='name'){try{return ['float','double'].includes(this.cell(n.name).dataType)?'float':'int';}catch{return 'int';}}if(n.type==='binary')return this.numericType(n.a)==='float'||this.numericType(n.b)==='float'?'float':'int';if(n.type==='call'&&n.callee.type==='name')return ['float','double'].includes(this.program.functions[n.callee.name]?.type)?'float':'int';return 'int';}
+  numericType(n){if(n.type==='literal')return n.numericType==='double'?'float':'int';if(n.type==='cast')return ['float','double'].includes(n.to)?'float':'int';if(n.type==='name'){try{return ['float','double'].includes(this.cell(n.name).dataType)?'float':'int';}catch{return 'int';}}if(n.type==='binary')return this.numericType(n.a)==='float'||this.numericType(n.b)==='float'?'float':'int';if(n.type==='unary')return this.numericType(n.a);if(n.type==='conditional')return this.numericType(n.yes)==='float'||this.numericType(n.no)==='float'?'float':'int';if(n.type==='call'&&n.callee.type==='name')return ['sin','cos','tan','sqrt','floor','ceil','round','pow','log'].includes(n.callee.name)||['float','double'].includes(this.program.functions[n.callee.name]?.type)?'float':'int';return 'int';}
   defaultValue(type,owner=this.scope(),depth=0){
     this.budget();if(depth>32||++this.allocations>50000)throw new Error('구조체 메모리 한도를 넘었습니다.');
     if(own(this.program.structs,type))return {kind:'struct',type,fields:Object.fromEntries(this.program.structs[type].map(f=>[f.name,{value:this.defaultValue(f.type,owner,depth+1),owner,constant:f.constant,dataType:f.type}]))};
@@ -203,7 +203,7 @@ export class Runtime {
     if(name==='map'){if(c===b)throw new Error('map 입력 범위가 0입니다.');return (a-b)*(e-d)/(c-b)+d;}
     if(name==='bitRead')return (integer(a)>>>integer(b))&1;
     if(name==='abs')return Math.abs(checkedNumber(a));if(name==='min')return Math.min(...args.map(checkedNumber));if(name==='max')return Math.max(...args.map(checkedNumber));
-    if(['sin','cos','tan','sqrt','floor','ceil','round','pow'].includes(name)){const value=Math[name](...args.map(checkedNumber));if(!Number.isFinite(value))throw new Error('수학 함수 결과가 유효하지 않습니다.');return value;}
+    if(['sin','cos','tan','sqrt','floor','ceil','round','pow','log'].includes(name)){const value=Math[name](...args.map(checkedNumber));if(!Number.isFinite(value))throw new Error('수학 함수 결과가 유효하지 않습니다.');return value;}
     if(['int','long','byte','char','uint8_t','uint16_t','uint32_t','float','double'].includes(name)){const value=checkedNumber(a);return ['float','double'].includes(name)?value:['byte','char','uint8_t'].includes(name)?integer(value)&255:name==='uint16_t'?integer(value)&65535:integer(value);}
     if(name==='String')return this.format(args);
     if(this.api.call){const result=this.api.call(name,args,this);if(result!==undefined)return result;}

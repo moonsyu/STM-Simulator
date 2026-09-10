@@ -1,14 +1,17 @@
+import {DeviceBuses} from './device-buses.js';
+import {I2C_DEVICES,SPI_DEVICES} from './device-defs.js';
+import {modulePowered} from './device-motion.js';
 import {canonicalPin} from './pins.js';
 
 // Transaction-level teaching devices. Pin connectivity and power are checked.
 // UART is timed 8N1; I2C memory and SPI memory are generic 256-byte devices.
 export class BusDevices {
-  constructor(project,getResult,trace=()=>{}){this.project=project;this.getResult=getResult;this.trace=trace;this.memories=new Map();this.uart={tx:'PA2',rx:'PA3',baud:9600,queue:[],ready:false};this.wire={sda:'PB9',scl:'PB8',clock:100000,ready:false,address:null,tx:[],rx:[]};this.spi={mosi:'PA7',miso:'PA6',sck:'PA5',clock:1000000,ready:false};this.spiSessions=new Map();this.received=new Map();}
+  constructor(project,getResult,trace=()=>{}){this.project=project;this.getResult=getResult;this.trace=trace;this.memories=new Map();this.devices=new DeviceBuses();this.uart={tx:'PA2',rx:'PA3',baud:9600,queue:[],ready:false};this.wire={sda:'PB9',scl:'PB8',clock:100000,ready:false,address:null,tx:[],rx:[]};this.spi={mosi:'PA7',miso:'PA6',sck:'PA5',clock:1000000,ready:false};this.spiSessions=new Map();this.received=new Map();}
   result(){return this.getResult();}
   same(a,b,result=this.result()){return !!result&&!result.fault&&result.uf.find(a)===result.uf.find(b);}
   pin(pin){return 'signal:'+canonicalPin(pin);}
   terminal(part,index){return `part:${part.id}:p${index}`;}
-  powered(part){const r=this.result(),vcc=r?.voltage(this.terminal(part,1)),gnd=r?.voltage(this.terminal(part,2));return !r?.fault&&vcc!=null&&gnd!=null&&gnd<.1&&vcc-gnd>=2.7&&vcc-gnd<=5.5;}
+  powered(part){if([...I2C_DEVICES,...SPI_DEVICES].includes(part.type))return modulePowered(part,this.result());const r=this.result(),vcc=r?.voltage(this.terminal(part,1)),gnd=r?.voltage(this.terminal(part,2));return !r?.fault&&vcc!=null&&gnd!=null&&gnd<.1&&vcc-gnd>=2.7&&vcc-gnd<=5.5;}
   memory(part){if(!this.memories.has(part.id))this.memories.set(part.id,{data:new Uint8Array(256),address:0});return this.memories.get(part.id);}
   report(runtime,protocol,message){this.trace({micros:runtime.microTime,protocol,message:protocol==='UART'&&this.uart.instance?`${this.uart.instance} · ${message}`:message});}
   bytes(value,runtime,length){
@@ -48,14 +51,15 @@ export class BusDevices {
       if(name==='Wire.read')return w.rx.shift()??-1;
       if(name==='Wire.endTransmission'||name==='Wire.requestFrom'){
         const address=name==='Wire.requestFrom'?a:w.address;if(!Number.isInteger(address)||address<8||address>119)throw new Error('I²C 주소를 확인하세요.');
-        const candidates=this.project.components.filter(p=>p.type==='i2c'&&p.address===address&&this.powered(p)&&this.same(this.terminal(p,3),this.pin(w.sda))&&this.same(this.terminal(p,4),this.pin(w.scl)));
-        const result=this.result(),sda=result?.voltage(this.pin(w.sda)),scl=result?.voltage(this.pin(w.scl)),ready=candidates.length===1&&sda>2&&scl>2&&!this.same(this.pin(w.sda),this.pin(w.scl));
+        const candidates=this.project.components.filter(p=>['i2c',...I2C_DEVICES].includes(p.type)&&p.address===address&&this.powered(p)&&this.same(this.terminal(p,3),this.pin(w.sda))&&this.same(this.terminal(p,4),this.pin(w.scl)));
+        const result=this.result(),sda=result?.voltage(this.pin(w.sda)),scl=result?.voltage(this.pin(w.scl)),connected=candidates.length===1&&sda>2&&scl>2&&!this.same(this.pin(w.sda),this.pin(w.scl));
+        let ready=connected;
         if(name==='Wire.requestFrom'){
           if(!Number.isInteger(b)||b<0||b>256)throw new Error('I²C 읽기 길이 범위: 0~256');w.rx=[];
-          if(ready){const m=this.memory(candidates[0]);for(let i=0;i<b;i++){w.rx.push(m.data[m.address]);m.address=(m.address+1)&255;}}
+          if(ready){const part=candidates[0];if(part.type==='i2c'){const m=this.memory(part);for(let i=0;i<b;i++){w.rx.push(m.data[m.address]);m.address=(m.address+1)&255;}}else{const bytes=this.devices.readI2c(part,b,runtime.microTime);ready=bytes!==null;w.rx=bytes??[];}}
           runtime.microTime+=(b+1)*9e6/w.clock;this.report(runtime,'I²C',`0x${address.toString(16)} READ ${w.rx.length} B · ${ready?'ACK':'NACK'}`);return w.rx.length;
         }
-        if(ready&&w.tx.length){const m=this.memory(candidates[0]);m.address=w.tx[0];for(const value of w.tx.slice(1)){m.data[m.address]=value;m.address=(m.address+1)&255;}}
+        if(ready&&w.tx.length){const part=candidates[0];if(part.type==='i2c'){const m=this.memory(part);m.address=w.tx[0];for(const value of w.tx.slice(1)){m.data[m.address]=value;m.address=(m.address+1)&255;}}else ready=this.devices.writeI2c(part,w.tx,runtime.microTime);}
         runtime.microTime+=(w.tx.length+1)*9e6/w.clock;this.report(runtime,'I²C',`0x${address.toString(16)} WRITE ${w.tx.length} B · ${ready?'ACK':'NACK'}`);w.address=null;w.tx=[];return ready?0:2;
       }
     }
@@ -64,16 +68,18 @@ export class BusDevices {
     if(name==='SPI.setClock'){if(!Number.isInteger(a)||a<1000||a>20000000)throw new Error('SPI 속도 범위: 1000~20000000 Hz');s.clock=a;return 0;}
     if(name==='SPI.transfer'){
       if(!s.ready)throw new Error('SPI.begin()을 먼저 호출하세요.');const value=Number(a)&255;
-      const active=this.project.components.filter(p=>p.type==='spi'&&this.powered(p)&&this.same(this.terminal(p,4),this.pin(s.sck))&&this.same(this.terminal(p,5),this.pin(s.mosi))&&this.same(this.terminal(p,6),this.pin(s.miso))&&this.result()?.voltage(this.terminal(p,3))!=null&&this.result()?.voltage(this.terminal(p,3))<.8);
+      const active=this.project.components.filter(p=>['spi',...SPI_DEVICES].includes(p.type)&&this.powered(p)&&this.same(this.terminal(p,4),this.pin(s.sck))&&this.same(this.terminal(p,5),this.pin(s.mosi))&&(p.type!=='spi'||this.same(this.terminal(p,6),this.pin(s.miso)))&&this.result()?.voltage(this.terminal(p,3))!=null&&this.result()?.voltage(this.terminal(p,3))<.8);
       if(active.length>1)throw new Error('SPI CS가 동시에 활성화되었습니다.');
       let answer=this.same(this.pin(s.mosi),this.pin(s.miso))?value:255;
-      if(active.length===1){const part=active[0],memory=this.memory(part);let session=this.spiSessions.get(part.id);if(!session){session={phase:0,command:0};this.spiSessions.set(part.id,session);}if(session.phase===0){session.command=value;session.phase=1;answer=0;}else if(session.phase===1){memory.address=value;session.phase=2;answer=0;}else {if(session.command===3)answer=memory.data[memory.address];else if(session.command===2){memory.data[memory.address]=value;answer=0;}memory.address=(memory.address+1)&255;}}
+      if(active.length===1&&active[0].type!=='spi')answer=this.devices.transfer(active[0],value,this.result());
+      if(active.length===1&&active[0].type==='spi'){const part=active[0],memory=this.memory(part);let session=this.spiSessions.get(part.id);if(!session){session={phase:0,command:0};this.spiSessions.set(part.id,session);}if(session.phase===0){session.command=value;session.phase=1;answer=0;}else if(session.phase===1){memory.address=value;session.phase=2;answer=0;}else {if(session.command===3)answer=memory.data[memory.address];else if(session.command===2){memory.data[memory.address]=value;answer=0;}memory.address=(memory.address+1)&255;}}
       runtime.microTime+=8e6/s.clock;this.report(runtime,'SPI',`TX ${value.toString(16).padStart(2,'0')} · RX ${answer.toString(16).padStart(2,'0')}`);return answer;
     }
     if(name==='SPI.end'){s.ready=false;this.spiSessions.clear();return 0;}
     return undefined;
   }
   update(result){
+    this.devices.update(this.project,result);
     for(const p of this.project.components){
       if(p.type==='spi'&&(!this.powered(p)||result?.voltage(this.terminal(p,3))>=.8||result?.voltage(this.terminal(p,3))==null))this.spiSessions.delete(p.id);
       if(['uart','i2c','spi'].includes(p.type))result.parts[p.id]={voltage:(result.voltage(this.terminal(p,1))??0)-(result.voltage(this.terminal(p,2))??0),current:0,power:0,powered:this.powered(p),on:this.powered(p),received:this.received.get(p.id)||'',memory:[...this.memory(p).data]};

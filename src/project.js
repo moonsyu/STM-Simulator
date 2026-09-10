@@ -1,3 +1,4 @@
+import {DEVICE_RANGES,DEVICE_ADDRESSES} from './device-defs.js';
 import {PIN_BY_ID,holeInfo} from './pins.js';
 import {terminalKeys,TWO_PIN_TYPES,MULTI_PIN_TYPES,normalizeAngle} from './components.js';
 import {defaultMcu,validateMcu} from './mcu-config.js';
@@ -37,6 +38,8 @@ export function validateProject(data){
     if(p.type==='ultrasonic')number('distance',2,400);
     if(p.type==='uart'){number('baud',300,2000000);if(!Number.isInteger(p.baud))throw new Error('UART 속도는 정수여야 합니다.');}
     if(p.type==='i2c'){number('address',8,119);if(!Number.isInteger(p.address))throw new Error('I²C 주소는 정수여야 합니다.');}
+    for(const [key,[min,max]] of Object.entries(DEVICE_RANGES[p.type]||{})){number(key,min,max);if(['switch','motion'].includes(key)||p.type==='encoder'&&key==='position')if(!Number.isInteger(p[key]))throw new Error(p.name+': 정수 값을 입력하세요.');}
+    if(DEVICE_ADDRESSES[p.type]){if(!DEVICE_ADDRESSES[p.type].includes(p.address))throw new Error(p.name+': 지원하지 않는 I²C 주소입니다.');q.address=p.address;}
     return q;
   });
   const end=id=>{if(base(id))return true;const m=/^part:([^:]+):([a-d]|p\d+)$/.exec(id);const p=m&&components.find(p=>p.id===m[1]);return !!p&&terminalKeys(p).includes(m[2]);};
