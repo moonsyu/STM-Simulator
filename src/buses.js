@@ -30,8 +30,10 @@ export class BusDevices {
     if(name==='Serial1.begin'){if(!Number.isInteger(a)||a<300||a>2000000)throw new Error('UART 속도 범위: 300~2000000 baud');u.baud=a;u.ready=true;this.beginPins(runtime,[u.tx],[u.rx]);return 0;}
     if(name.startsWith('Serial1.')){
       if(!u.ready)throw new Error('Serial1.begin(baud)를 먼저 호출하세요.');
-      if(name==='Serial1.available')return u.queue.filter(x=>x.at<=runtime.microTime).length;
-      if(name==='Serial1.read'){const i=u.queue.findIndex(x=>x.at<=runtime.microTime);return i<0?-1:u.queue.splice(i,1)[0].value;}
+      // Scheduler events convert microseconds to milliseconds and back. Treat the
+      // resulting sub-nanosecond rounding error consistently with HAL TX completion.
+      if(name==='Serial1.available')return u.queue.filter(x=>x.at<=runtime.microTime+1e-6).length;
+      if(name==='Serial1.read'){const i=u.queue.findIndex(x=>x.at<=runtime.microTime+1e-6);return i<0?-1:u.queue.splice(i,1)[0].value;}
       if(name==='Serial1.print'||name==='Serial1.println'||name==='Serial1.write'){
         const bytes=name==='Serial1.write'?this.bytes(a,runtime,b):this.bytes(runtime.format(args)+(name==='Serial1.println'?'\r\n':''),runtime);if(bytes.length>256||u.queue.length+bytes.length>4096)throw new Error('UART 버퍼 한도를 넘었습니다.');
         const loopback=this.same(this.pin(u.tx),this.pin(u.rx));let at=Math.max(runtime.microTime,u.lastTx??0);

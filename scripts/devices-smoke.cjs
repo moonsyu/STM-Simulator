@@ -8,7 +8,9 @@ const {chooseHal}=require('./smoke-fixture.cjs');
  try{
   const page=await app.firstWindow(),errors=[];page.on('pageerror',e=>errors.push(e.message));await page.waitForSelector('#hal-example');await app.evaluate(({BrowserWindow})=>BrowserWindow.getAllWindows()[0].showInactive());
   const {DEVICE_DEFS}=await import('../src/device-defs.js');
-  const select=async()=>{await page.locator('#part-layer [data-part="demo"]').click({position:{x:35,y:25}});};
+  // A part group's bounds include long leads and labels. Click its visible body
+  // so scaling cannot move the target onto a breadboard hole or another wire.
+  const select=async()=>{await page.locator('#part-layer [data-part="demo"] .part-body').click();assert.equal(await page.locator('#inspect-panel').isVisible(),true);};
   const logs=()=>page.locator('#console-output').innerText();
   const expectLog=async text=>page.waitForFunction(text=>document.getElementById('console-output').textContent.includes(text),text,{timeout:30000});
   const begin=async kind=>{if((await page.locator('#run').textContent()).includes('정지'))await page.click('#run');await chooseHal(page,kind);assert.equal(await page.locator('dialog[open]').count(),0);await page.click('#clear-console');await page.click('#zoom-reset');await select();await page.click('#run');};

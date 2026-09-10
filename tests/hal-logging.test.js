@@ -42,6 +42,20 @@ test('HAL UART traces timed RX and IT echo with port identity',()=>{
 test('HAL UART timeout and busy calls do not emit extra TX log events',()=>{
   const p=halExample('uart');p.code=p.code.replace('  HAL_UART_Transmit(&huart2, message, sizeof(message)-1, 100);','  HAL_UART_Transmit(&huart2, message, sizeof(message)-1, 0);\n  HAL_UART_Transmit_IT(&huart2, message, sizeof(message)-1);\n  HAL_UART_Transmit_IT(&huart2, message, sizeof(message)-1);');const events=[],s=new SimulationSession(p,{uart:e=>events.push(e)});s.tick(0);assert.equal(events.filter(e=>e.direction==='TX').length,1);
 });
+test('UART echo preserves every byte across fractional baud deadlines and UI tick boundaries',()=>{
+  for(const baud of [9600,115200])for(const start of [30,240,260,262,280,1000])for(const step of [1,20]){
+    const p=halExample('uart');p.mcu.peripherals.USART2.baud=baud;p.components.find(p=>p.type==='uart').baud=baud;p.code=p.code.replace('BaudRate = 9600','BaudRate = '+baud);
+    const events=[],s=new SimulationSession(p,{uart:e=>events.push(e)});s.tick(0);s.tick(start);
+    const message='HAL log\n';assert.equal(s.inject(message,'USART2'),message.length);
+    const firstByte=start*1000+1e7/baud;s.tick((firstByte-.01)/1000);
+    assert.equal(events.filter(e=>e.direction==='RX').length,0,'a byte cannot arrive before its baud deadline');
+    for(let t=start+step;t<=start+40;t+=step)s.tick(t);
+    const received=direction=>events.filter(e=>e.direction===direction).slice(direction==='TX'?1:0).flatMap(e=>e.bytes);
+    assert.equal(String.fromCharCode(...received('RX')),message,`RX: ${baud} baud at ${start} ms, step ${step}`);
+    assert.equal(String.fromCharCode(...received('TX')),message,`TX: ${baud} baud at ${start} ms, step ${step}`);
+    assert.equal(s.buses.received.get('demo'),'HAL UART ready\r\n'+message);
+  }
+});
 test('converted sensor and sampling examples produce measured HAL log values',()=>{
   for(const [kind,pattern]of [['temperature',/TMP36=25.0 C/],['samples',/sample\[7\]=204[78]/],['ultrasonic',/distance=100.0 cm/],['language',/average=25/]]){const output=[],s=new SimulationSession(halExample(kind),{print:x=>output.push(x),channels:kind==='ultrasonic'?['PA9']:undefined});s.tick(0);for(let t=5;t<=120;t+=5)s.tick(t);assert.match(output.join('\n'),pattern,kind);if(kind==='ultrasonic'){const echoPeak=Math.max(...s.wave.samples.map(x=>x.values[0]??0));assert.ok(echoPeak>3.1&&echoPeak<3.3,'ECHO divider limits the GPIO input voltage');}}
   const p=halExample('ultrasonic');p.wires=p.wires.filter(w=>w.to!=='part:demo:p1');const output=[],s=new SimulationSession(p,{print:x=>output.push(x)});s.tick(0);s.tick(100);assert.ok(output.includes('HC-SR04 timeout'));

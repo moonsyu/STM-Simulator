@@ -17,7 +17,14 @@ const {_electron}=require(process.env.PLAYWRIGHT_MODULE||'playwright');
   await load('spi');await run();assert.match(await page.locator('#console-output').textContent(),/42/);assert.match(await page.locator('#bus-events').innerText(),/SPI/);
   await load('language');await run();assert.match(await page.locator('#console-output').textContent(),/25/);
   await load('dma');await run();assert.match(await page.locator('#console-output').textContent(),/204[78]/);
-  await load('timer');await run();await page.waitForTimeout(120);assert.equal(await page.locator('.led-lens').getAttribute('fill'),'#f05a4b');
+  // Advance the real step control to known simulation times; host speed cannot
+  // choose which half of the 250 ms blink cycle this assertion observes.
+  await load('timer');await page.click('#step');
+  for(let i=0;i<12;i++)await page.click('#step');
+  assert.equal(await page.locator('#sim-time').textContent(),'0.240 s');assert.equal(await page.locator('.led-lens').getAttribute('fill'),'#704b4c');
+  await page.click('#step');assert.equal(await page.locator('#sim-time').textContent(),'0.260 s');assert.equal(await page.locator('.led-lens').getAttribute('fill'),'#f05a4b');
+  for(let i=0;i<12;i++)await page.click('#step');
+  assert.equal(await page.locator('#sim-time').textContent(),'0.500 s');assert.equal(await page.locator('.led-lens').getAttribute('fill'),'#704b4c');
   await load('interrupt');await run();const bb=await page.locator('[data-part="b1"] .part-body').boundingBox();await page.mouse.move(bb.x+bb.width/2,bb.y+bb.height/2);await page.mouse.down();await page.waitForTimeout(50);await page.mouse.up();assert.equal(await page.locator('.led-lens').getAttribute('fill'),'#f05a4b');
   await load('pwm');await page.click('[data-monitor="wave"]');assert.equal(await page.locator('#pwm-waveform').isChecked(),true);assert.equal(await page.locator('#sim-resolution').inputValue(),'0.1');await page.selectOption('#wave-window','100');await run();await page.waitForTimeout(200);assert.equal(await page.locator('.trace-channel').count(),4);assert.ok((await page.locator('.trace-channel').first().getAttribute('d')).length>100);assert.equal(await page.locator('#sim-resolution').isDisabled(),true);
   const csv=path.join(out,'waveform.csv');await app.evaluate(({dialog},csv)=>{dialog.showSaveDialog=async()=>({canceled:false,filePath:csv});},csv);await page.click('#wave-export');await page.waitForTimeout(180);const data=await fs.readFile(csv,'utf8');assert.match(data,/^time_ms,PA5_V,PA10_V,PA0_V,PC13_V\n/);assert.ok(data.split('\n').length>100);await page.screenshot({path:path.join(out,'10-pwm-waveform.png')});
