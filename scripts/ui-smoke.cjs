@@ -1,4 +1,4 @@
-const {openFixture,chooseHal}=require('./smoke-fixture.cjs');
+const {openFixture,chooseHal,saveProject,openProject}=require('./smoke-fixture.cjs');
 const assert=require('node:assert/strict');
 const fs=require('node:fs/promises');
 const path=require('node:path');
@@ -39,8 +39,8 @@ const {_electron}=require(process.env.PLAYWRIGHT_MODULE||'playwright');
  // Save and open via actual IPC handlers, substituting only native picker paths.
  const saved=path.join(out,'round-trip.stm32lab');
  await app.evaluate(({dialog},saved)=>{dialog.showSaveDialog=async()=>({canceled:false,filePath:saved});dialog.showOpenDialog=async()=>({canceled:false,filePaths:[saved]});},saved);
- await page.click('#save');await page.waitForTimeout(200);const data=JSON.parse(await fs.readFile(saved,'utf8'));assert.equal(data.format,'stm32-circuit-lab');
- await page.click('#new');await page.click('#open');await page.waitForTimeout(150);assert.equal(await page.locator('#project-name').inputValue(),data.name);
+ await saveProject(page);const data=JSON.parse(await fs.readFile(saved,'utf8'));assert.equal(data.format,'stm32-circuit-lab');
+ await page.click('#new');await openProject(page);assert.equal(await page.locator('#project-name').inputValue(),data.name);
  // Return to the clean useful first example for the screenshot.
  await openFixture(page,circuitFixture('blink'));await page.locator('[data-tab="code"]').click();await page.click('#run');await page.waitForTimeout(100);
  await page.screenshot({path:path.join(out,'03-final-app.png')});await page.click('#run');

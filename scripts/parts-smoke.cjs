@@ -1,4 +1,4 @@
-const {openFixture}=require('./smoke-fixture.cjs');
+const {openFixture,saveProject,openProject}=require('./smoke-fixture.cjs');
 const assert=require('node:assert/strict'),fs=require('node:fs/promises'),path=require('node:path');
 const {_electron}=require(process.env.PLAYWRIGHT_MODULE||'playwright');
 (async()=>{
@@ -36,7 +36,7 @@ const {_electron}=require(process.env.PLAYWRIGHT_MODULE||'playwright');
  await page.click('#new');const types=['potentiometer','slide','rgb','capacitor','diode','buzzer','sevenseg','temperature','ultrasonic'];
  for(let i=0;i<types.length;i++){const type=types[i];await page.fill('#part-search',type);await page.click(`[data-add="${type}"]`);if(['capacitor','diode','buzzer'].includes(type))await clickXY(530,200+i*35);assert.equal((await snapshot()).components.at(-1).type,type);}await page.fill('#part-search','');
  const saved=path.join(out,'nine-parts.stm32lab');await app.evaluate(({dialog},saved)=>{dialog.showSaveDialog=async()=>({canceled:false,filePath:saved});dialog.showOpenDialog=async()=>({canceled:false,filePaths:[saved]});},saved);
- await page.click('#save');await page.waitForTimeout(200);const persisted=JSON.parse(await fs.readFile(saved,'utf8'));assert.equal(persisted.components.length,9);await page.click('#new');await page.click('#open');assert.deepEqual(await snapshot(),persisted);
+ await saveProject(page);const persisted=JSON.parse(await fs.readFile(saved,'utf8'));assert.equal(persisted.components.length,9);await page.click('#new');await openProject(page);assert.deepEqual(await snapshot(),persisted);
  // Live potentiometer change persists through keyboard interaction and changes ADC result.
  await load('potentiometer');await selectDemo();await page.click('#run');await page.waitForTimeout(80);assert.match(await page.locator('#console-output').innerText(),/204[78]/);await page.fill('#part-search','uart');assert.equal(await page.locator('[data-add="uart"]').isVisible(),true);assert.equal(await page.locator('[data-add="uart"]').isDisabled(),true);await page.fill('#part-search','');assert.equal(await page.locator('[data-add]:disabled').count(),31);
  await setRange('#extra-position',25);assert.equal(await page.locator('#extra-position').inputValue(),'25');await page.waitForTimeout(240);assert.match(await page.locator('#part-live').innerText(),/0.825 V/);assert.equal((await snapshot()).components[0].position,25);await page.click('#run');

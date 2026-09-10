@@ -6,3 +6,13 @@ exports.openFixture=async(page,project)=>{
  await page.click('[data-tab="code"]');
 };
 exports.chooseHal=async(page,kind)=>{await page.selectOption('#hal-example',kind);};
+
+// A click only starts the async IPC operation. Wait for the app's completion
+// message before reading the file or checking the newly opened document.
+async function fileAction(page,button,message){
+ await page.click('#clear-console');
+ await page.click(button);
+ await page.waitForFunction(message=>document.getElementById('console-output').textContent.includes(message),message);
+}
+exports.saveProject=page=>fileAction(page,'#save','회로 파일을 저장했습니다.');
+exports.openProject=page=>fileAction(page,'#open','회로를 열었습니다:');

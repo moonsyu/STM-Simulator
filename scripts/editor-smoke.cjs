@@ -1,4 +1,4 @@
-const {openFixture,chooseHal}=require('./smoke-fixture.cjs');
+const {openFixture,chooseHal,saveProject,openProject}=require('./smoke-fixture.cjs');
 const assert=require('node:assert/strict');
 const fs=require('node:fs/promises');
 const path=require('node:path');
@@ -56,8 +56,8 @@ const {_electron}=require(process.env.PLAYWRIGHT_MODULE||'playwright');
  // Verify persisted rotation, span and every multi-pin attachment through native IPC.
  const saved=path.join(out,'editor-round-trip.stm32lab');
  await app.evaluate(({dialog},saved)=>{dialog.showSaveDialog=async()=>({canceled:false,filePath:saved});dialog.showOpenDialog=async()=>({canceled:false,filePaths:[saved]});},saved);
- await page.click('#save');await page.waitForTimeout(250);const before=JSON.parse(await fs.readFile(saved,'utf8'));assert.equal(before.version,2);
- await page.click('#new');await page.click('#open');assert.deepEqual(await snapshot(),before);
+ await saveProject(page);const before=JSON.parse(await fs.readFile(saved,'utf8'));assert.equal(before.version,2);
+ await page.click('#new');await openProject(page);assert.deepEqual(await snapshot(),before);
  await page.locator('#pin-search').fill('pC 13');assert.equal(await page.locator('#pin-results button').count(),1);assert.equal(await page.locator('#search-layer g').count(),1);
  await page.locator('#pin-search').press('Enter');assert.match(await page.locator('#inspector').innerText(),/PC13/);assert.equal((await snapshot()).wires.length,2);
  await page.locator('#pin-search').fill('PA 8');assert.equal(await page.locator('#pin-results button').count(),2);assert.equal(await page.locator('#search-layer g').count(),2);

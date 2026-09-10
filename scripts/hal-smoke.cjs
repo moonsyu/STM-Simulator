@@ -1,4 +1,4 @@
-const {chooseHal}=require('./smoke-fixture.cjs');
+const {chooseHal,saveProject,openProject}=require('./smoke-fixture.cjs');
 const assert=require('node:assert/strict'),fs=require('node:fs/promises'),path=require('node:path');
 const {_electron}=require(process.env.PLAYWRIGHT_MODULE||'playwright');
 (async()=>{
@@ -23,8 +23,8 @@ const {_electron}=require(process.env.PLAYWRIGHT_MODULE||'playwright');
   await page.click('#firmware-import');await page.waitForFunction(()=>document.querySelector('#code').value.includes('LED_Pin'));await page.selectOption('#source-file','main.h');assert.match(await page.locator('#code').inputValue(),/#define LED_Pin/);await page.fill('#code','#ifndef MAIN_H\n#define MAIN_H\n#define LED_Pin GPIO_PIN_5\n#endif\n// edited');await page.selectOption('#source-file','main.c');
   await page.click('#firmware-check');assert.match(await page.locator('#firmware-status').textContent(),/통과/);await page.click('#run');await page.waitForTimeout(70);assert.equal(await page.locator('#run-status').textContent(),'실행 중');assert.equal(await page.locator('#pinout-open').isDisabled(),true);await page.click('#run');
   const saved=path.join(out,'hal-round-trip.stm32lab');await app.evaluate(({dialog},saved)=>{dialog.showSaveDialog=async()=>({canceled:false,filePath:saved});dialog.showOpenDialog=async()=>({canceled:false,filePaths:[saved]});},saved);
-  await page.click('#save');await page.waitForTimeout(120);const data=JSON.parse(await fs.readFile(saved,'utf8'));assert.equal(data.firmware.mode,'hal');assert.equal(data.mcu.pins.PA5.function,'GPIO_Output');assert.match(data.firmware.files[0].text,/edited/);
-  await page.click('#open');await page.waitForTimeout(100);assert.equal(await page.locator('#firmware-mode').inputValue(),'hal');
+  await saveProject(page);const data=JSON.parse(await fs.readFile(saved,'utf8'));assert.equal(data.firmware.mode,'hal');assert.equal(data.mcu.pins.PA5.function,'GPIO_Output');assert.match(data.firmware.files[0].text,/edited/);
+  await openProject(page);assert.equal(await page.locator('#firmware-mode').inputValue(),'hal');
   const cube=path.join(out,'cube-import');await fs.mkdir(path.join(cube,'Core','Src'),{recursive:true});await fs.mkdir(path.join(cube,'Core','Inc'),{recursive:true});
   await fs.copyFile(nativeIoc,path.join(cube,'smoke.ioc'));await fs.copyFile(nativeMain,path.join(cube,'Core','Src','main.c'));await fs.copyFile(nativeHeader,path.join(cube,'Core','Inc','main.h'));await fs.writeFile(path.join(cube,'Core','Src','syscalls.c'),'EXCLUDED SYSTEM SOURCE');
   await app.evaluate(({dialog},cube)=>{dialog.showOpenDialog=async()=>({canceled:false,filePaths:[cube]});},cube);await page.click('#firmware-folder');await page.waitForFunction(()=>document.querySelector('#code').value.includes('LED_Pin'));await page.click('#firmware-check');assert.match(await page.locator('#firmware-status').textContent(),/통과/);assert.equal(await page.locator('#source-file option').count(),2);
