@@ -1,3 +1,4 @@
+import {isSelected,wirePoints} from './circuit-edit.js';
 import {PINS,HOLES,BB,endpointInfo,circuitHoles,breadboardPrefix} from './pins.js';
 import {terminalKeys,localTerminals,nominalTerminals,rotatePoint,attachments,PART_DEFS} from './components.js';
 import {extraShape,updateExtraSvg} from './part-render.js';
@@ -31,7 +32,7 @@ export function boardSvg(){
 }
 export function breadboardSvg(part=null,selected=null){
  const prefix=part?breadboardPrefix(part.id):'',attributes=part?` data-part="${part.id}" data-rotation="${part.rotation}" transform="translate(${part.x} ${part.y}) rotate(${part.rotation}) translate(${-BB.x-BB.w/2} ${-BB.y-BB.h/2})"`:'';
- let s=`<g class="breadboard ${part&&selected?.id===part.id?'part-selected':''}"${attributes}>${rect(BB.x,BB.y,BB.w,BB.h,'url(#plastic)',6,'stroke="#cbd1d4" filter="url(#shadow)" class="breadboard-body"')}`;
+ let s=`<g class="breadboard ${part&&isSelected(selected,'part',part.id)?'part-selected':''}"${attributes}>${rect(BB.x,BB.y,BB.w,BB.h,'url(#plastic)',6,'stroke="#cbd1d4" filter="url(#shadow)" class="breadboard-body"')}`;
  s+=rect(BB.x+157,BB.startY-12,13,436,'#dce3e5',3)+rect(BB.x+160,BB.startY-9,6,429,'#d0d9dc',2);
  for(const [x,sign,color]of [[BB.x+12,'+','#d87565'],[BB.x+48,'−','#6c9eca'],[BB.x+290,'+','#d87565'],[BB.x+326,'−','#6c9eca']]){
    s+=`<path d="M${x} ${BB.startY-10}V${BB.startY+425}" stroke="${color}" stroke-width="1.5"/>`+text(x,BB.startY-20,sign,15,color,'text-anchor="middle"');
@@ -42,11 +43,11 @@ export function breadboardSvg(part=null,selected=null){
  s+=text(BB.x+BB.w/2,BB.y+BB.h-20,part?`${part.name} · 400 POINTS`:'400 POINTS  /  30 ROWS',9,'#9aa7ae','text-anchor="middle" letter-spacing="1.2"');
  return s+'</g>';
 }
-export function initSvg(svg){svg.innerHTML=`<defs><linearGradient id="pcb" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#fff"/><stop offset="1" stop-color="#edf1ef"/></linearGradient><linearGradient id="plastic" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#fffefa"/><stop offset="1" stop-color="#f0f0e9"/></linearGradient><filter id="shadow" x="-20%" y="-10%" width="145%" height="140%"><feDropShadow dx="0" dy="6" stdDeviation="5" flood-color="#536c7b" flood-opacity=".16"/></filter><filter id="led-glow" x="-100%" y="-100%" width="300%" height="300%"><feGaussianBlur stdDeviation="6"/></filter></defs><g id="surface">${boardSvg()}${breadboardSvg()}${text(46,32,'01  /  MICROCONTROLLER',9,'#8395a3','letter-spacing="1.6"')}${text(BB.x,51,'02  /  BREADBOARD',9,'#8395a3','letter-spacing="1.6"')}<g id="breadboard-layer"></g><g id="endpoint-layer"></g><g id="wire-layer"></g><g id="part-layer"></g><g id="search-layer" pointer-events="none"></g><g id="preview-layer" pointer-events="none"></g>${text(48,710,'2핀: 두 연결점 클릭  /  다핀: 모형을 끌어 설치  /  R: 45° 회전  /  Esc: 선택 삭제',10,'#a0afb9','pointer-events="none"')}</g>`;}
+export function initSvg(svg){svg.innerHTML=`<defs><linearGradient id="pcb" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#fff"/><stop offset="1" stop-color="#edf1ef"/></linearGradient><linearGradient id="plastic" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#fffefa"/><stop offset="1" stop-color="#f0f0e9"/></linearGradient><filter id="shadow" x="-20%" y="-10%" width="145%" height="140%"><feDropShadow dx="0" dy="6" stdDeviation="5" flood-color="#536c7b" flood-opacity=".16"/></filter><filter id="led-glow" x="-100%" y="-100%" width="300%" height="300%"><feGaussianBlur stdDeviation="6"/></filter></defs><g id="surface">${boardSvg()}${breadboardSvg()}${text(46,32,'01  /  MICROCONTROLLER',9,'#8395a3','letter-spacing="1.6"')}${text(BB.x,51,'02  /  BREADBOARD',9,'#8395a3','letter-spacing="1.6"')}<g id="breadboard-layer"></g><g id="endpoint-layer"></g><g id="wire-layer"></g><g id="part-layer"></g><g id="net-layer" pointer-events="none"></g><g id="wire-handle-layer"></g><g id="search-layer" pointer-events="none"></g><g id="preview-layer" pointer-events="none"></g>${text(48,710,'2핀: 두 연결점 클릭  /  다핀: 모형을 끌어 설치  /  R: 45° 회전  /  Esc: 선택 삭제',10,'#a0afb9','pointer-events="none"')}</g>`;}
 export function route(a,b){const mid=a.x+(b.x-a.x)*.47;return `M${a.x} ${a.y} L${mid} ${a.y} L${mid} ${b.y} L${b.x} ${b.y}`;}
 export function renderWires(project,selected){return project.wires.map(w=>{
   const a=endpointInfo(w.from,project.components),b=endpointInfo(w.to,project.components);if(!a||!b)return '';
-  const d=route(a,b);return `<g class="${selected?.type==='wire'&&selected.id===w.id?'wire-selected':''}" data-wire="${w.id}"><path d="${d}" stroke="#0d25331a" stroke-width="6" class="wire-visible" transform="translate(0 2)"/><path d="${d}" stroke="${w.color}" stroke-width="3.5" class="wire-visible"/><path d="${d}" class="wire-hit"/><circle cx="${a.x}" cy="${a.y}" r="3" fill="${w.color}"/><circle cx="${b.x}" cy="${b.y}" r="3" fill="${w.color}"/></g>`;
+  const d=wirePoints(project,w).map((p,i)=>`${i?'L':'M'}${p.x} ${p.y}`).join(' ');return `<g class="${isSelected(selected,'wire',w.id)?'wire-selected':''}" data-wire="${w.id}"><path d="${d}" stroke="#0d25331a" stroke-width="6" class="wire-visible" transform="translate(0 2)"/><path d="${d}" stroke="${w.color}" stroke-width="3.5" class="wire-visible"/><path d="${d}" class="wire-hit"/><circle cx="${a.x}" cy="${a.y}" r="3" fill="${w.color}"/><circle cx="${b.x}" cy="${b.y}" r="3" fill="${w.color}"/></g>`;
 }).join('');}
 export const LED_COLORS={red:'#f05a4b',green:'#65c668',blue:'#53a8f7',yellow:'#f4c941'};
 export function renderBreadboards(project,selected){return project.components.filter(p=>p.type==='breadboard').map(p=>breadboardSvg(p,selected)).join('');}
@@ -75,7 +76,7 @@ export function renderParts(project,selected,result,pressed){const parts=project
    return `<path d="M${x+root.x} ${y+root.y}L${nominal[i].x} ${nominal[i].y}L${end.x} ${end.y}" fill="none" stroke="#708c9b" stroke-width="3" stroke-linejoin="round"/><circle class="part-contact" cx="${end.x}" cy="${end.y}" r="3" fill="${attachments(p)[t.key]?'#20a985':'#bdcdd5'}" stroke="#607d8d"/>`;
  }).join('');
  const hits=terminalKeys(p).map(key=>{const e=endpointInfo(`part:${p.id}:${key}`,project.components);return `<circle cx="${e.x}" cy="${e.y}" r="5.5" data-endpoint="${e.id}" class="pin-hit part-pin"/>`;}).join('');
- return `<g data-part="${p.id}" data-rotation="${angle}" data-mounted="${Object.keys(attachments(p)).length}" class="${selected?.type==='part'&&selected.id===p.id?'part-selected':''}">${leads}<g class="part-body" transform="translate(${x} ${y}) rotate(${angle})">${shape}</g>${text(x,labelY,label,9,'#496477','text-anchor="middle" pointer-events="none"')}${hits}</g>`;
+ return `<g data-part="${p.id}" data-rotation="${angle}" data-mounted="${Object.keys(attachments(p)).length}" class="${isSelected(selected,'part',p.id)?'part-selected':''}">${leads}<g class="part-body" transform="translate(${x} ${y}) rotate(${angle})">${shape}</g>${text(x,labelY,label,9,'#496477','text-anchor="middle" pointer-events="none"')}${hits}</g>`;
 }).join('');}
 export function renderEndpoints(project,pending){return [...PINS,...circuitHoles(project.components)].map(e=>`<circle cx="${e.x}" cy="${e.y}" r="6.5" data-endpoint="${e.id}" class="pin-hit ${pending===e.id?'pending':''}"/>`).join('');}
 export function renderMountPreview(mount){return mount?mount.points.map(h=>`<circle cx="${h.x}" cy="${h.y}" r="6" fill="#24b78b44" stroke="#159b73" stroke-width="1.6"/>`).join(''):'';}

@@ -49,3 +49,9 @@ ipcMain.handle('waveform:export',async(_event,text)=>{
   const result=await dialog.showSaveDialog(win,{title:'파형 CSV 저장',defaultPath:'stm-simulator-waveform.csv',filters:[{name:'CSV',extensions:['csv']}]});
   if(result.canceled)return null;await fs.writeFile(result.filePath,text,'utf8');return result.filePath;
 });
+
+ipcMain.handle('firmware:export-main',async(_event,text)=>{
+  if(typeof text!=='string'||text.length>50000)throw new Error('main.c는 50,000자 이하로 저장하세요.');
+  const result=await dialog.showSaveDialog(win,{title:'HAL main.c 저장',defaultPath:'main.c',filters:[{name:'C 소스',extensions:['c']}]});
+  if(result.canceled)return null;await fs.writeFile(result.filePath,text,'utf8');return result.filePath;
+});

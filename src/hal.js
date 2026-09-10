@@ -1,3 +1,5 @@
+import {TIMER_IDS,timerAf} from './timer-config.js';
+import {HalTimers} from './hal-timers.js';
 import {validateMcu,configProblems,irqForPin,IRQ_NAMES} from './mcu-config.js';
 import {BusDevices} from './buses.js';
 import {SERIAL_IDS,isSerial,serialAf,serialFunction} from './serial-config.js';
@@ -10,8 +12,8 @@ export const HAL_CONSTANTS={HAL_OK:0,HAL_ERROR:1,HAL_BUSY:2,HAL_TIMEOUT:3,HAL_MA
   ENABLE:1,DISABLE:0,RESET:0,SET:1,UART_WORDLENGTH_8B:0,UART_WORDLENGTH_9B:4096,UART_STOPBITS_1:0,UART_STOPBITS_2:8192,UART_PARITY_NONE:0,UART_PARITY_EVEN:1024,UART_PARITY_ODD:1536,UART_MODE_TX_RX:12,UART_MODE_RX:4,UART_MODE_TX:8,UART_HWCONTROL_NONE:0,UART_OVERSAMPLING_16:0,
   I2C_ADDRESSINGMODE_7BIT:16384,I2C_ADDRESSINGMODE_10BIT:49152,I2C_DUTYCYCLE_2:0,I2C_DUALADDRESS_DISABLE:0,I2C_GENERALCALL_DISABLE:0,I2C_NOSTRETCH_DISABLE:0,I2C_MEMADD_SIZE_8BIT:1,I2C_MEMADD_SIZE_16BIT:16,
   SPI_MODE_MASTER:260,SPI_MODE_SLAVE:0,SPI_DIRECTION_2LINES:0,SPI_DATASIZE_8BIT:0,SPI_DATASIZE_16BIT:2048,SPI_POLARITY_LOW:0,SPI_POLARITY_HIGH:2,SPI_PHASE_1EDGE:0,SPI_PHASE_2EDGE:1,SPI_NSS_SOFT:512,SPI_FIRSTBIT_MSB:0,SPI_FIRSTBIT_LSB:128,SPI_TIMODE_DISABLE:0,SPI_CRCCALCULATION_DISABLE:0,
-  ADC_RESOLUTION_12B:0,ADC_DATAALIGN_RIGHT:0,ADC_SCAN_DISABLE:0,ADC_SOFTWARE_START:0,ADC_EXTERNALTRIGCONVEDGE_NONE:0,ADC_EOC_SINGLE_CONV:1,ADC_CLOCK_SYNC_PCLK_DIV4:65536,ADC_SAMPLETIME_3CYCLES:0,
-  TIM_COUNTERMODE_UP:0,TIM_CLOCKDIVISION_DIV1:0,TIM_AUTORELOAD_PRELOAD_DISABLE:0,TIM_CLOCKSOURCE_INTERNAL:0,TIM_TRGO_RESET:0,TIM_MASTERSLAVEMODE_DISABLE:0,TIM_OCMODE_PWM1:96,TIM_OCPOLARITY_HIGH:0,TIM_OCFAST_DISABLE:0,
+  ADC_RESOLUTION_12B:0,ADC_DATAALIGN_RIGHT:0,ADC_SCAN_DISABLE:0,ADC_SOFTWARE_START:0,ADC_EXTERNALTRIGCONVEDGE_NONE:0,ADC_EOC_SINGLE_CONV:1,ADC_CLOCK_SYNC_PCLK_DIV4:65536,ADC_SAMPLETIME_3CYCLES:0,ADC_SAMPLETIME_480CYCLES:7,
+  TIM_COUNTERMODE_UP:0,TIM_CLOCKDIVISION_DIV1:0,TIM_AUTORELOAD_PRELOAD_DISABLE:0,TIM_CLOCKSOURCE_INTERNAL:0,TIM_TRGO_RESET:0,TIM_MASTERSLAVEMODE_DISABLE:0,TIM_OCMODE_PWM1:96,TIM_OCPOLARITY_HIGH:0,TIM_OCFAST_DISABLE:0,TIM_CHANNEL_ALL:60,TIM_ICPOLARITY_RISING:0,TIM_ICPOLARITY_FALLING:2,TIM_ICPOLARITY_BOTHEDGE:10,TIM_ICSELECTION_DIRECTTI:1,TIM_ICSELECTION_INDIRECTTI:2,TIM_ICPSC_DIV1:0,TIM_ICPSC_DIV2:4,TIM_ICPSC_DIV4:8,TIM_ICPSC_DIV8:12,TIM_ENCODERMODE_TI1:1,TIM_ENCODERMODE_TI2:2,TIM_ENCODERMODE_TI12:3,HAL_TIM_ACTIVE_CHANNEL_1:1,HAL_TIM_ACTIVE_CHANNEL_2:2,HAL_TIM_ACTIVE_CHANNEL_3:4,HAL_TIM_ACTIVE_CHANNEL_4:8,HAL_TIM_ACTIVE_CHANNEL_CLEARED:0,
   RCC_OSCILLATORTYPE_HSI:2,RCC_OSCILLATORTYPE_HSE:1,RCC_OSCILLATORTYPE_LSE:4,RCC_OSCILLATORTYPE_LSI:8,RCC_HSI_ON:1,RCC_HSE_ON:1,RCC_HSE_BYPASS:5,RCC_LSE_ON:1,RCC_LSI_ON:1,RCC_HSICALIBRATION_DEFAULT:16,RCC_PLL_ON:2,RCC_PLLSOURCE_HSI:0,RCC_PLLSOURCE_HSE:1,RCC_PLLP_DIV2:2,RCC_PLLP_DIV4:4,RCC_PLLP_DIV6:6,RCC_PLLP_DIV8:8,
   RCC_CLOCKTYPE_HCLK:2,RCC_CLOCKTYPE_SYSCLK:1,RCC_CLOCKTYPE_PCLK1:4,RCC_CLOCKTYPE_PCLK2:8,RCC_SYSCLKSOURCE_PLLCLK:2,RCC_SYSCLKSOURCE_HSI:0,RCC_SYSCLK_DIV1:1,RCC_HCLK_DIV1:1,RCC_HCLK_DIV2:2,RCC_HCLK_DIV4:4,PWR_REGULATOR_VOLTAGE_SCALE1:1,PWR_REGULATOR_VOLTAGE_SCALE2:2,PWR_REGULATOR_VOLTAGE_SCALE3:3,
   FLASH_LATENCY_0:0,FLASH_LATENCY_1:1,FLASH_LATENCY_2:2,FLASH_LATENCY_3:3,FLASH_LATENCY_4:4,FLASH_LATENCY_5:5,NVIC_PRIORITYGROUP_0:7,NVIC_PRIORITYGROUP_4:3
@@ -22,13 +24,14 @@ HAL_CONSTANTS.GPIO_PIN_All=65535;
 for(let i=0;i<16;i++)HAL_CONSTANTS['ADC_CHANNEL_'+i]=i;
 for(let i=1;i<=4;i++)HAL_CONSTANTS['TIM_CHANNEL_'+i]=(i-1)*4;
 for(const n of [2,4,8,16,32,64,128,256])HAL_CONSTANTS['SPI_BAUDRATEPRESCALER_'+n]=Math.log2(n)-1;
-for(const id of [...SERIAL_IDS,'I2C1','SPI1','ADC1','TIM2',...IRQ_NAMES])HAL_CONSTANTS[id]=id;
+for(const id of [...SERIAL_IDS,'I2C1','SPI1','ADC1',...TIMER_IDS,...IRQ_NAMES])HAL_CONSTANTS[id]=id;
+for(const id of TIMER_IDS)HAL_CONSTANTS[`GPIO_AF${timerAf(id)}_${id}`]=timerAf(id);
 for(const id of SERIAL_IDS)HAL_CONSTANTS[`GPIO_AF${serialAf(id)}_${id}`]=serialAf(id);
 for(const [name,n]of [['GPIO_AF4_I2C1',4],['GPIO_AF5_SPI1',5],['GPIO_AF1_TIM2',1]])HAL_CONSTANTS[name]=n;
 
 const int=(value,min,max,label)=>{if(!Number.isInteger(value)||value<min||value>max)throw new Error(`${label}: ${min}~${max} 범위의 정수가 필요합니다.`);return value;};
 export class HalAdapter {
-  constructor(config,buses){this.config=validateMcu(config);const errors=configProblems(this.config);if(errors.length)throw new Error(errors.join('\n'));this.buses=buses;this.nvic=new Map();this.pending=[];this.extiPending=0;this.serials=new Map();this.handles=new Map();this.timers=new Map();this.adc=new Map();this.pwm=new Map();this.latches=new Map();this.priorities=new Map();this.counters=new Map();}
+  constructor(config,buses){this.config=validateMcu(config);const errors=configProblems(this.config);if(errors.length)throw new Error(errors.join('\n'));this.buses=buses;this.nvic=new Map();this.pending=[];this.extiPending=0;this.serials=new Map();this.handles=new Map();this.timerModel=new HalTimers(this);this.adc=new Map();this.latches=new Map();this.priorities=new Map();}
   uart(id){
     if(!isSerial(id))throw new Error(`지원하지 않는 UART 인스턴스: ${id}`);
     if(!this.serials.has(id)){const bus=id==='USART2'?this.buses:new BusDevices(this.buses.project,this.buses.getResult,this.buses.trace);bus.uart.instance=id;bus.received=this.buses.received;this.serials.set(id,{bus,rx:null,tx:null});}
@@ -45,6 +48,7 @@ export class HalAdapter {
   callback(r,name,args=[]){if(r.program.functions[name])r.runCallback({name,args});}
   queue(irq,callback,key=irq){if(this.pending.some(j=>j.key===key))return;this.pending.push({irq,callback,key});if(this.pending.length>256)throw new Error('HAL 인터럽트 대기열 한도를 넘었습니다.');}
   poll(r){
+    this.timerModel.observe(r);
     for(const [id,channel]of this.serials){
       if(channel.tx&&channel.tx.at<=r.microTime+1e-6){const job=channel.tx;channel.tx=null;this.queue(id+'_IRQn',()=>this.callback(r,'HAL_UART_TxCpltCallback',[job.handle]),id+':tx');}
       if(channel.rx){const job=channel.rx;while(job.index<job.count&&channel.bus.call('Serial1.available',[],r)>0)r.set(r.pointerCell(job.buffer,job.index++),this.uartRead(channel,r));
@@ -71,14 +75,13 @@ export class HalAdapter {
     return 0;
   }
   bytes(buffer,count,r){int(count,1,256,'전송 길이');if(typeof buffer==='string'){if(count>buffer.length+1)throw new Error('문자열 범위를 벗어난 전송');return Array.from({length:count},(_,i)=>buffer.charCodeAt(i)||0);}return Array.from({length:count},(_,i)=>int(r.get(r.pointerCell(buffer,i)),0,255,'전송 바이트'));}
-  counter(id,init,r){const state=this.counters.get(id)||{value:0,at:r.microTime,active:false},period=this.field(init,'Period')+1,hz=this.config.timerClockHz/(this.field(init,'Prescaler')+1);return Math.floor((state.value+(state.active?(r.microTime-state.at)*hz/1e6:0))%period);}
   call(name,args,r){
     const [a,b,c,d,e,f,g]=args;
     if(name==='HAL_Init'){this.callback(r,'HAL_MspInit');return 0;}
     if(name==='HAL_GetTick')return Math.floor(r.microTime/1000)>>>0;
     if(name==='__disable_irq'){r.interruptsEnabled=false;return 0;}if(name==='__enable_irq'){r.interruptsEnabled=true;return 0;}
     if(name==='Error_Handler')throw new Error('Error_Handler(): HAL 초기화 또는 사용자 코드 오류');
-    if(/^__HAL_RCC_(GPIO[ABCDH]|SYSCFG|PWR|USART[1236]|UART[45]|I2C1|SPI1|ADC1|TIM2)_CLK_ENABLE$/.test(name))return 0;
+    if(/^__HAL_RCC_(GPIO[ABCDH]|SYSCFG|PWR|USART[1236]|UART[45]|I2C1|SPI1|ADC1|TIM[2345])_CLK_ENABLE$/.test(name))return 0;
     if(['HAL_RCC_OscConfig','HAL_RCC_ClockConfig','HAL_PWREx_ControlVoltageScaling','HAL_PWREx_EnableOverDrive','__HAL_PWR_VOLTAGESCALING_CONFIG','HAL_NVIC_SetPriorityGrouping'].includes(name))return 0;
     if(name==='HAL_NVIC_SetPriority'){if(!IRQ_NAMES.includes(a))throw new Error(`미지원 IRQ: ${a}`);int(b,0,15,'IRQ priority');this.priorities.set(a,b);if(this.nvic.has(a))this.nvic.set(a,b);return 0;}
     if(name==='HAL_NVIC_EnableIRQ'){if(!IRQ_NAMES.includes(a)||!this.config.nvic[a]?.enabled)throw new Error(`${a}: NVIC 설정에서 인터럽트를 활성화하세요.`);this.nvic.set(a,this.priorities.get(a)??this.config.nvic[a].priority);return 0;}
@@ -88,7 +91,7 @@ export class HalAdapter {
       for(const pin of this.pins(a,mask)){
         const p=this.configured(pin),expected=p.function==='GPIO_Output'?1:p.function==='GPIO_Input'?0:p.function==='GPIO_EXTI'?HAL_CONSTANTS['GPIO_MODE_IT_'+(p.edge==='CHANGE'?'RISING_FALLING':p.edge)]:p.function==='Analog'||p.function.startsWith('ADC1_')?3:p.function.startsWith('I2C1_')?18:2;
         if(mode!==expected||pull!==['NOPULL','PULLUP','PULLDOWN'].indexOf(p.pull))throw new Error(`${pin}: HAL_GPIO_Init 모드/풀 설정과 Pinout이 다릅니다.`);
-        if([2,18].includes(mode)){const serial=serialFunction(p.function),af=serial?serialAf(serial):p.function.startsWith('I2C1_')?4:p.function.startsWith('SPI1_')?5:1;if(this.field(init,'Alternate')!==af)throw new Error(`${pin}: GPIO Alternate(AF) 설정을 확인하세요.`);}
+        if([2,18].includes(mode)){const serial=serialFunction(p.function),af=serial?serialAf(serial):p.function.startsWith('I2C1_')?4:p.function.startsWith('SPI1_')?5:timerAf(p.function.split('_')[0]);if(this.field(init,'Alternate')!==af)throw new Error(`${pin}: GPIO Alternate(AF) 설정을 확인하세요.`);}
         if(mode===1){r.call('pinMode',[pin,'OUTPUT']);r.call('digitalWrite',[pin,this.latches.get(pin)??p.initial]);}
         else r.call('pinMode',[pin,p.pull==='PULLUP'?'INPUT_PULLUP':p.pull==='PULLDOWN'?'INPUT_PULLDOWN':'INPUT']);
         if(p.function==='GPIO_EXTI')r.interrupts.set(pin,{mode:p.edge,previous:Number(!!r.api.read(pin)),pending:false,callback:{host:()=>{const mask=1<<Number(pin.slice(2));this.extiPending|=mask;this.queue(irqForPin(pin),()=>{const handler=irqForPin(pin).replace('_IRQn','_IRQHandler');if(r.program.functions[handler])this.callback(r,handler);else this.call('HAL_GPIO_EXTI_IRQHandler',[mask],r);},pin);}}});
@@ -100,8 +103,8 @@ export class HalAdapter {
       return 0;
     }
     if(name==='HAL_GPIO_EXTI_IRQHandler'){int(a,1,65535,'EXTI 마스크');if(this.extiPending&a){this.extiPending&=~a;this.callback(r,'HAL_GPIO_EXTI_Callback',[a]);}return 0;}
-    if(['HAL_UART_Init','HAL_I2C_Init','HAL_SPI_Init','HAL_ADC_Init','HAL_TIM_Base_Init','HAL_TIM_PWM_Init'].includes(name)){
-      const type=name.split('_')[1],{h,id,init}=this.handle(a,r,type),get=k=>this.field(init,k);this.callback(r,`HAL_${type}${type==='TIM'?'_Base':''}_MspInit`,[a]);
+    if(['HAL_UART_Init','HAL_I2C_Init','HAL_SPI_Init','HAL_ADC_Init','HAL_TIM_Base_Init','HAL_TIM_PWM_Init','HAL_TIM_IC_Init','HAL_TIM_Encoder_Init'].includes(name)){
+      const type=name.split('_')[1],{h,id,init}=this.handle(a,r,type),get=k=>this.field(init,k);this.callback(r,`HAL_${type}${type==='TIM'?'_'+name.split('_')[2]:''}_MspInit`,[a]);
       if(type==='UART'){
         if(!isSerial(id)||get('WordLength')!==0||get('StopBits')!==0||get('Parity')!==0||get('HwFlowCtl')!==0||get('Mode')!==12||get('OverSampling')!==0)throw new Error(`${id}: 비동기 8N1, TX/RX, 흐름제어 없음, oversampling 16을 지원합니다.`);
         if(get('BaudRate')!==this.config.peripherals[id].baud)throw new Error(`${id}: 소스와 Pinout의 baud rate가 다릅니다.`);
@@ -116,7 +119,7 @@ export class HalAdapter {
         this.buses.call('SPI.setPins',[this.pinFor('SPI1_MOSI'),this.pinFor('SPI1_MISO'),this.pinFor('SPI1_SCK')],r);this.buses.call('SPI.begin',[],r);this.buses.call('SPI.setClock',[this.config.peripherals.SPI1.clock],r);
       }
       if(type==='ADC'){if(get('Resolution')||get('DataAlign')||get('ScanConvMode')||get('ExternalTrigConvEdge')||get('NbrOfConversion')>1)throw new Error('ADC1: 12비트, 오른쪽 정렬, 단일 소프트웨어 채널만 지원합니다.');this.adc.set(id,{active:false,channel:null,value:0});}
-      if(type==='TIM'){if(get('CounterMode')||get('ClockDivision'))throw new Error('TIM2: up counter, DIV1만 지원합니다.');int(get('Prescaler'),0,65535,'Prescaler');int(get('Period'),0,4294967295,'Period');if(get('Prescaler')!==this.config.peripherals.TIM2.prescaler||get('Period')!==this.config.peripherals.TIM2.period)throw new Error('TIM2: 소스와 Pinout의 Prescaler/Period가 다릅니다.');}
+      if(type==='TIM')this.timerModel.init(a,r,name.split('_')[2],b);
       this.handles.set(id,h);return 0;
     }
     if(name==='HAL_UART_Receive_IT'){
@@ -132,27 +135,7 @@ export class HalAdapter {
       const {id}=this.requireHandle(a,r,'ADC'),s=this.adc.get(id);if(s.channel===null)throw new Error('ADC 채널 설정이 필요합니다.');
       if(name==='HAL_ADC_Stop'){s.active=false;return 0;}if(name==='HAL_ADC_Start'){s.value=r.call('analogRead',[this.pinFor('ADC1_IN'+s.channel)]);s.active=true;return 0;}if(!s.active)return name==='HAL_ADC_GetValue'?s.value:1;return name==='HAL_ADC_GetValue'?s.value:0;
     }
-    if(['HAL_TIM_Base_Start','HAL_TIM_Base_Stop','__HAL_TIM_GET_COUNTER','__HAL_TIM_SET_COUNTER'].includes(name)){
-      const {id,init}=this.requireHandle(a,r,'TIM'),value=this.counter(id,init,r),state=this.counters.get(id);
-      if(name==='__HAL_TIM_GET_COUNTER')return value;
-      if(name==='HAL_TIM_Base_Start'&&state?.active)return 2;
-      const next=name==='__HAL_TIM_SET_COUNTER'?int(b,0,this.field(init,'Period'),'TIM counter'):value;
-      this.counters.set(id,{value:next,at:r.microTime,active:name==='HAL_TIM_Base_Start'?true:name==='HAL_TIM_Base_Stop'?false:state?.active??false});return 0;
-    }
-    if(name==='HAL_TIM_Base_Start_IT'){
-      const {id,init}=this.requireHandle(a,r,'TIM');if(this.timers.has(id))return 2;const ms=(this.field(init,'Prescaler')+1)*(this.field(init,'Period')+1)*1000/this.config.timerClockHz;if(ms<1||ms>3600000)throw new Error('TIM2 인터럽트 주기 범위: 1~3600000 ms');
-      const job={active:true};this.timers.set(id,job);const fire=()=>{if(!job.active)return;this.queue('TIM2_IRQn',()=>{if(job.active)this.callback(r,'HAL_TIM_PeriodElapsedCallback',[a]);});r.event(r.microTime/1000+ms,fire);};r.event(r.microTime/1000+ms,fire);return 0;
-    }
-    if(name==='HAL_TIM_Base_Stop_IT'){const {id}=this.requireHandle(a,r,'TIM'),s=this.timers.get(id);if(s)s.active=false;this.timers.delete(id);return 0;}
-    if(name==='HAL_TIM_ConfigClockSource'){this.handle(a,r,'TIM');if(this.field(r.get(r.pointerCell(b)),'ClockSource')!==0)throw new Error('TIM2 내부 클록만 지원합니다.');return 0;}
-    if(name==='HAL_TIMEx_MasterConfigSynchronization'){this.handle(a,r,'TIM');const cfg=r.get(r.pointerCell(b));if(this.field(cfg,'MasterOutputTrigger')||this.field(cfg,'MasterSlaveMode'))throw new Error('타이머 동기화는 지원하지 않습니다.');return 0;}
-    if(name==='HAL_TIM_MspPostInit'){this.handle(a,r,'TIM');return 0;}
-    if(name==='HAL_TIM_PWM_ConfigChannel'){const {id}=this.requireHandle(a,r,'TIM'),cfg=r.get(r.pointerCell(b));if(this.field(cfg,'OCMode')!==96||this.field(cfg,'OCPolarity'))throw new Error('PWM1 active high만 지원합니다.');int(c/4+1,1,4,'TIM 채널');this.pwm.set(id+':'+c,{pulse:this.field(cfg,'Pulse'),active:false});return 0;}
-    if(['HAL_TIM_PWM_Start','HAL_TIM_PWM_Stop','__HAL_TIM_SET_COMPARE'].includes(name)){
-      const {id,init}=this.requireHandle(a,r,'TIM'),channel=int(b/4+1,1,4,'TIM 채널'),key=id+':'+b,entry=this.pwm.get(key);if(!entry)throw new Error('PWM 채널 초기화가 필요합니다.');const pin=this.pinFor('TIM2_CH'+channel),period=this.field(init,'Period')+1;
-      if(name==='__HAL_TIM_SET_COMPARE')entry.pulse=int(c,0,period,'PWM compare');else entry.active=name==='HAL_TIM_PWM_Start';
-      const hz=this.config.timerClockHz/((this.field(init,'Prescaler')+1)*period);r.call('pinMode',[pin,'OUTPUT']);if(entry.active){r.call('analogWriteFrequency',[pin,hz]);r.call('analogWrite',[pin,Math.max(0,Math.min(255,entry.pulse/period*255))]);}else r.call('digitalWrite',[pin,0]);return 0;
-    }
+    const timerResult=this.timerModel.call(name,args,r);if(timerResult!==undefined)return timerResult;
     if(['HAL_I2C_Master_Transmit','HAL_I2C_Master_Receive','HAL_I2C_Mem_Write','HAL_I2C_Mem_Read'].includes(name)){
       this.requireHandle(a,r,'I2C');int(b,16,238,'HAL I2C 주소(7비트 주소 << 1)');if(b&1)throw new Error('HAL I2C 주소는 7비트 주소를 왼쪽으로 1비트 이동하세요.');const addr=b>>1,mem=name.includes('_Mem_'),buffer=mem?e:c,count=mem?f:d;int(count,1,mem?255:256,'I2C 길이');int(mem?g:e,0,4294967295,'I2C timeout');if(mem&&d!==1)throw new Error('I2C 메모리는 8비트 주소를 지원합니다.');
       const receive=name.endsWith('Receive')||name.endsWith('Read');if(receive)r.pointerCell(buffer,count-1);

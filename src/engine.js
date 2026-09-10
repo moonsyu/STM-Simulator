@@ -1,5 +1,5 @@
 import {MODULE_DEVICES,I2C_DEVICES,ldrResistance,ntcResistance} from './device-defs.js';
-import {PINS, circuitHoles, GPIO_PINS, canonicalPin} from './pins.js';
+import {PINS, circuitHoles, GPIO_PINS, canonicalPin, boardPin} from './pins.js';
 import {terminalKeys,attachments,PART_DEFS} from './components.js';
 
 export class UnionFind {
@@ -31,7 +31,8 @@ function gaussian(A,b){
   const x=new Float64Array(n);for(let i=n-1;i>=0;i--){let s=b[i];for(let j=i+1;j<n;j++)s-=A[i][j]*x[j];x[i]=s/A[i][i];}return x;
 }
 export function solveCircuit(project,gpio={},pressed={},transient={}){
-  const uf=topology(project,pressed),known=new Map(),warnings=[],branches=[],roots=new Set();
+  const uf=topology(project,pressed),known=new Map(),warnings=[],diagnostics=[],branches=[],roots=new Set();
+  const warn=(message,target)=>{warnings.push(message);diagnostics.push({message,target});};
   const fixed=(id,v)=>{const r=uf.find(id);if(known.has(r)&&Math.abs(known.get(r)-v)>0.01)warnings.push('전원 단락: 서로 다른 전압의 전원 또는 GND가 직접 연결되었습니다.');else known.set(r,v);roots.add(r);};
   fixed('signal:GND',0);
   for(const p of ['3V3','VDD','AVDD','IOREF'])fixed(`signal:${p}`,3.3);
@@ -59,7 +60,7 @@ export function solveCircuit(project,gpio={},pressed={},transient={}){
       if(['joystick','encoder'].includes(p.type)){branch(pin(5),pin(1),10000);if(p.switch)branch(pin(5),pin(2),1);}
       if(p.type==='encoder')for(const n of [3,4]){branch(pin(n),pin(1),10000);if((transient.deviceSignals?.[p.id]??[1,1])[n-3]===0)branch(pin(n),pin(2),1);}
       if(p.type==='pir')branch(pin(3),pin(2),100,{sensor:{supply:uf.find(pin(1)),ground:uf.find(pin(2)),min:4.5,max:5.5},emf:p.motion?3.3:0});
-      if(p.type==='relay')for(const [n,normallyOpen] of [[5,true],[6,false]])branch(pin(4),pin(n),.1,{relay:{supply:uf.find(pin(1)),ground:uf.find(pin(2)),input:uf.find(pin(3)),normallyOpen},contact:p.name});
+      if(p.type==='relay')for(const [n,normallyOpen] of [[5,true],[6,false]])branch(pin(4),pin(n),.1,{relay:{supply:uf.find(pin(1)),ground:uf.find(pin(2)),input:uf.find(pin(3)),normallyOpen},contact:p.name,contactId:p.id});
       const inputs=({servo:[3],motor:[3,4,5],stepper:[3,4,5,6],relay:[3],tft:[3,4,5,6,7],matrix:[3,4,5]})[p.type]||[];
       for(const n of inputs)if(n===3&&['tft','matrix'].includes(p.type))branch(pin(n),pin(1),100000);else branch(pin(n),pin(2),1000000);
     }
@@ -111,12 +112,12 @@ export function solveCircuit(project,gpio={},pressed={},transient={}){
       if(b.channel){const total=parts[b.id]??={voltage:0,current:0,power:0,on:false,channels:{}};total.channels[b.channel]=read;total.voltage=Math.max(total.voltage,dv);total.current=b.pot?Math.max(total.current,Math.abs(i)):total.current+i;total.power+=read.power;total.on||=read.on;}
       else parts[b.id]=read;
     }
-    if(b.contact&&Math.abs(i)>1)warnings.push(b.contact+': 접점 전류 1 A 초과. 부하와 전원 배선을 확인하세요.');
-    if(b.gpio&&Math.abs(i)>0.02)warnings.push(`${b.gpio}: GPIO 전류 ${(Math.abs(i)*1000).toFixed(1)} mA. 저항과 배선을 확인하세요.`);
-    if(b.led&&i>0.02)warnings.push(`${project.components.find(p=>p.id===b.id)?.name}${b.channel?' '+b.channel:''}: LED 전류 ${(i*1000).toFixed(1)} mA. 직렬 저항을 늘리세요.`);
+    if(b.contact&&Math.abs(i)>1)warn(b.contact+': 접점 전류 1 A 초과. 부하와 전원 배선을 확인하세요.',{type:'part',id:b.contactId});
+    if(b.gpio&&Math.abs(i)>0.02)warn(`${b.gpio}: GPIO 전류 ${(Math.abs(i)*1000).toFixed(1)} mA. 저항과 배선을 확인하세요.`,{type:'endpoint',id:boardPin(b.gpio)});
+    if(b.led&&i>0.02)warn(`${project.components.find(p=>p.id===b.id)?.name}${b.channel?' '+b.channel:''}: LED 전류 ${(i*1000).toFixed(1)} mA. 직렬 저항을 늘리세요.`,{type:'part',id:b.id});
     if(b.id)maxCurrent=Math.max(maxCurrent,Math.abs(i));
   }
-  for(const p of project.components)if(p.type==='resistor'&&parts[p.id]?.power>0.25)warnings.push(`${p.name}: 저항 소비 전력이 0.25 W를 넘습니다.`);
+  for(const p of project.components)if(p.type==='resistor'&&parts[p.id]?.power>0.25)warn(`${p.name}: 저항 소비 전력이 0.25 W를 넘습니다.`,{type:'part',id:p.id});
   // Only expose ground-referenced voltages. An isolated circuit must not read as ground.
   const anchored=new Set(known.keys());let changed=true;
   while(changed){changed=false;for(const b of branches){if(anchored.has(b.a)&&!anchored.has(b.b)){anchored.add(b.b);changed=true;}if(anchored.has(b.b)&&!anchored.has(b.a)){anchored.add(b.a);changed=true;}}}
@@ -125,7 +126,7 @@ export function solveCircuit(project,gpio={},pressed={},transient={}){
     if(p.type==='capacitor'){const va=voltage(`part:${p.id}:a`),vb=voltage(`part:${p.id}:b`);capacitors[p.id]=va!=null&&vb!=null?va-vb:transient.capacitors?.[p.id]??0;if(!parts[p.id])parts[p.id]={voltage:capacitors[p.id],current:0,power:0,on:false};}
     if(p.type==='potentiometer')parts[p.id].voltage=(voltage(`part:${p.id}:p3`)??0)-(voltage(`part:${p.id}:p1`)??0);
   }
-  return {fault:!converged,warnings:[...new Set(warnings)],parts,current:maxCurrent,uf,capacitors,voltage};
+  return {fault:!converged,diagnostics,warnings:[...new Set(warnings)],parts,current:maxCurrent,uf,capacitors,voltage};
 }
 // A read at the same simulation time must not advance capacitor charge again.
 export class CircuitSimulation{
