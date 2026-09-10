@@ -4,7 +4,7 @@ const $=id=>document.getElementById(id);
 export class Monitor {
   constructor(options){
     Object.assign(this,options);this.events=[];this.view='log';this.lastPaint=0;this.dirty=true;
-    document.querySelectorAll('[data-monitor]').forEach(button=>button.onclick=()=>{this.view=button.dataset.monitor;document.querySelectorAll('[data-monitor]').forEach(b=>b.classList.toggle('active',b===button));$('console-output').hidden=this.view!=='log';$('wave-panel').hidden=this.view!=='wave';$('bus-panel').hidden=this.view!=='bus';if(this.view==='log')$('console-output').scrollTop=$('console-output').scrollHeight;this.dirty=true;this.render();});
+    document.querySelectorAll('[data-monitor]').forEach(button=>button.onclick=()=>{this.view=button.dataset.monitor;document.querySelectorAll('[data-monitor]').forEach(b=>b.classList.toggle('active',b===button));$('console-output').hidden=this.view!=='log';$('wave-panel').hidden=this.view!=='wave';$('bus-panel').hidden=this.view!=='bus';$('issues-panel').hidden=this.view!=='issues';if(this.view==='log')$('console-output').scrollTop=$('console-output').scrollHeight;this.dirty=true;this.render();});
     ['PA5','PA10','PA0','PC13'].forEach((pin,i)=>{const select=$('channel-'+i);select.innerHTML=GPIO_PINS.map(p=>`<option ${pin===p?'selected':''}>${p}</option>`).join('');select.onchange=()=>{this.getSession()?.wave.setChannels(this.channels());this.dirty=true;this.render();};});
     $('wave-window').onchange=()=>{this.dirty=true;this.render();};
     $('wave-clear').onclick=()=>{this.getSession()?.wave.clear();this.dirty=true;this.render();};

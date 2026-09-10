@@ -29,7 +29,7 @@ export class SimulationSession {
     if(!this.result||this.result.fault)return;
     this.sensors.update(this.project,this.result,micros);
     for(const p of this.project.components.filter(p=>p.type==='lcd')){if(!this.lcds.has(p.id))this.lcds.set(p.id,new LCDController());const lcd=this.lcds.get(p.id).update(p,this.result,micros);this.result.parts[p.id]={...this.result.parts[p.id],lcd};}
-    this.motion.update(this.project,this.result,micros,this.runtime,us=>this.changed(us));this.buses.update(this.result);this.wave.record(micros,this.result);
+    this.motion.update(this.project,this.result,micros,this.runtime,us=>this.changed(us));this.hal?.timerModel.observe(this.runtime,micros);this.buses.update(this.result);this.wave.record(micros,this.result);
   }
   advance(micros){
     const target=micros/1000;if(target<this.integrated)return;

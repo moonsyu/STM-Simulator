@@ -1,3 +1,5 @@
+import {selectedIds,isSelected,toggleSelection,wirePoints,insertWirePoint,connectedNet,copySelection,pasteSelection,moveSelection} from './circuit-edit.js';
+import {circuitDiagnostics} from './circuit-diagnostics.js';
 import {PINS,BB,PIN_BY_ID,endpointInfo,searchPins,circuitHoles,holeInfo} from './pins.js';
 import {TWO_PIN_TYPES,MULTI_PIN_TYPES,WIRE_COLORS,PART_DEFS,terminalKeys,attachments,detachPart,normalizeAngle} from './components.js';
 import {findMount,applyMount,occupiedHoles} from './placement.js';
@@ -26,7 +28,7 @@ try{const cached=localStorage.getItem('stm32lab.project.v2')||localStorage.getIt
 initSvg(svg);
 let session=null,audioEnabled=false,audioContext,oscillator,audioGain;
 const monitor=new Monitor({getSession:()=>session,isRunning:()=>running(),onSettings:settings=>{if(running())return;checkpoint();project.simulation=settings;autosave();},onError:message=>log(message,'error')});
-let sourceFile='main.c';
+let sourceFile='main.c',circuitClipboard=null,clipboardOffset=28,issuesStamp=0,issuesKey='';
 const pinout=new PinoutPanel({getProject:()=>project,isRunning:running,onError:message=>log(message,'error'),apply:({mcu,code})=>{checkpoint();project.mcu=mcu;if(code!==null){project.code=code;project.firmware={mode:'hal',files:[]};sourceFile='main.c';}syncEditor();changed();log(code===null?'핀 설정을 적용했습니다.':'설정에 맞는 HAL main.c를 생성했습니다.');}});
 const updateBoardPicker=setupBoardPicker({getProject:()=>project,isRunning:running,onSelect:id=>{sourceFile='main.c';replaceProject(projectForBoard(id));log('선택한 보드의 기본 회로로 시작합니다.');}});
 svg.addEventListener('contextmenu',e=>{const id=e.target.closest('[data-endpoint]')?.dataset.endpoint,p=PIN_BY_ID.get(id);if(p&&/^P[A-H]\d+$/.test(p.signal)){e.preventDefault();pinout.open(p.signal);}});
@@ -78,11 +80,12 @@ function refresh(){
  $('wire-layer').innerHTML=renderWires(project,selection);
  $('part-layer').innerHTML=renderParts(project,selection,result,pressed);
  $('endpoint-layer').innerHTML=renderEndpoints(project,pending);
+ renderConnections();renderIssues(true);
  $('builtin-led').setAttribute('fill',result&&result.voltage('signal:PA5')>1.8?'#64e66b':'#89a486');
  $('builtin-led').style.filter=result&&result.voltage('signal:PA5')>1.8?'drop-shadow(0 0 5px #59dc65)':'';
  $('tool-select').classList.toggle('active',mode==='select');$('tool-wire').classList.toggle('active',mode==='wire');
  document.querySelectorAll('[data-add]').forEach(b=>{b.classList.toggle('active',mode===b.dataset.add);b.disabled=running();});
- $('undo').disabled=running()||!undoStack.length;$('redo').disabled=running()||!redoStack.length;$('delete').disabled=running()||!['part','wire'].includes(selection?.type);
+ $('undo').disabled=running()||!undoStack.length;$('redo').disabled=running()||!redoStack.length;$('delete').disabled=running()||!['part','wire','group'].includes(selection?.type);
  $('rotate').disabled=running()||selection?.type!=='part';
  $('code').readOnly=running();$('project-name').readOnly=running();
  for(const id of ['pinout-open','firmware-mode','firmware-import','firmware-folder','firmware-check','hal-example'])$(id).disabled=running();
@@ -99,19 +102,41 @@ function updateAudio(){if(audioGain)audioGain.gain.setTargetAtTime(audioEnabled&
 $('sound').onclick=async()=>{audioEnabled=!audioEnabled;if(audioEnabled&&!audioContext){audioContext=new AudioContext();oscillator=audioContext.createOscillator();audioGain=audioContext.createGain();oscillator.frequency.value=2300;audioGain.gain.value=0;oscillator.connect(audioGain).connect(audioContext.destination);oscillator.start();}if(audioEnabled)await audioContext.resume();$('sound').textContent=audioEnabled?'소리 켜짐':'소리 꺼짐';$('sound').setAttribute('aria-pressed',String(audioEnabled));updateAudio();};
 function updateReadouts(){
  updateAudio();
- monitor.render();
+ monitor.render();renderIssues();
  if(selection?.type==='part'){const p=project.components.find(p=>p.id===selection.id);if(p&&$('part-live'))$('part-live').innerHTML=partReadouts(p,result);const read=p&&result?.parts[p.id];if($('part-voltage'))$('part-voltage').textContent=read?read.voltage.toFixed(3)+' V':'—';if($('part-current'))$('part-current').textContent=read?(read.current*1000).toFixed(3)+' mA':'—';}
  $('sim-time').textContent=(simTime/1000).toFixed(3)+' s';
  $('sim-current').textContent=result&&!result.fault?(result.current*1000).toFixed(2)+' mA':'—';
  $('warning-count').textContent=result?.warnings.length?`확인 ${result.warnings.length}건`:running()?'연결 상태 정상':'정지 상태';
 }
+function renderConnections(){
+ const endpoint=selection?.type==='endpoint'?selection.id:selection?.type==='wire'?project.wires.find(w=>w.id===selection.id)?.from:null;
+ const net=endpoint?connectedNet(project,endpoint,pressed):null;
+ $('net-layer').innerHTML=net?net.wires.map(w=>`<path d="${wirePoints(project,w).map((p,i)=>`${i?'L':'M'}${p.x} ${p.y}`).join(' ')}" fill="none" stroke="#e8b843" stroke-width="8" opacity=".45"/>`).join('')+net.endpoints.map(p=>`<circle data-net-endpoint="${p.id}" cx="${p.x}" cy="${p.y}" r="7" fill="#ffcf4233" stroke="#c28b14" stroke-width="1.5"/>`).join(''):'';
+ const wire=selection?.type==='wire'?project.wires.find(w=>w.id===selection.id):null;
+ $('wire-handle-layer').innerHTML=!running()&&wire?(wire.points||[]).map((p,i)=>`<circle data-wire-point="${i}" data-owner-wire="${wire.id}" cx="${p.x}" cy="${p.y}" r="6" fill="white" stroke="#2579a1" stroke-width="2" tabindex="0" role="button" aria-label="배선 꺾임점 ${i+1}; 끌어서 이동, 우클릭으로 삭제"/>`).join(''):'';
+}
+function focusIssue(target){
+ if(!target){pinout.open();return;}
+ pending=null;mode='select';selection=target;const p=target.type==='endpoint'?endpointInfo(target.id,project.components):project.components.find(p=>p.id===target.id);
+ if(p){view={x:p.x-310,y:p.y-202,w:620,h:620*730/1120};viewUpdate();}tab('inspect');refresh();svg.focus({preventScroll:true});
+}
+function renderIssues(force=false){
+ if(!force&&performance.now()-issuesStamp<250)return;issuesStamp=performance.now();
+ const issues=circuitDiagnostics(project,result,pressed),key=JSON.stringify(issues);if(key===issuesKey)return;issuesKey=key;
+ $('circuit-issues').innerHTML=issues.length?issues.map((issue,i)=>`<button class="circuit-issue ${issue.severity}" data-issue="${i}" ${!issue.target&&running()?'disabled':''}><span>${issue.severity==='error'?'!':'·'}</span>${esc(issue.message)}<b>위치 보기 ↗</b></button>`).join(''):'<p class="issues-clear">현재 연결 검사에서 발견한 문제가 없습니다. 실행 중 전압·전류 검사도 함께 표시됩니다.</p>';
+ $('circuit-issues').querySelectorAll('[data-issue]').forEach(b=>b.onclick=()=>focusIssue(issues[Number(b.dataset.issue)].target));
+ document.querySelector('[data-monitor="issues"]').textContent='회로 검사'+(issues.length?` (${issues.length})`:'');
+}
+function copyCircuit(){if(!selection)return;circuitClipboard=copySelection(project,selection);clipboardOffset=28;log(`부품 ${circuitClipboard.components.length}개와 내부 배선 ${circuitClipboard.wires.length}개를 복사했습니다.`);}
+function pasteCircuit(){if(running()||!circuitClipboard)return;try{const draft=structuredClone(project),next=pasteSelection(draft,circuitClipboard,uid,clipboardOffset);validateProject(draft);checkpoint();project=draft;selection=next;clipboardOffset+=28;pending=null;mode='select';tab('inspect');changed();}catch(e){log(e.message,'error');}}
 function inspector(){
  const el=$('inspector');
  if(!selection){el.innerHTML='<span class="overline">CIRCUIT INSPECTOR</span><h2>회로 살펴보기</h2><div class="empty-inspector">핀, 배선 또는 부품을 선택하세요.<br>실행 중 전압과 전류를 확인할 수 있습니다.</div>';return;}
+ if(selection.type==='group'){el.innerHTML=`<span class="overline">MULTIPLE SELECTION</span><h2>여러 항목 선택</h2><p>부품 ${selection.parts.length}개 · 배선 ${selection.wires.length}개</p><p>Shift+클릭으로 선택을 바꾸고 선택한 부품을 끌어 함께 이동합니다. Ctrl+C/V로 내부 배선과 함께 복사할 수 있습니다.</p><button id="copy-group" class="inspector-action">선택 복사</button><button id="remove-group" class="inspector-action danger" ${running()?'disabled':''}>선택 삭제</button>`;$('copy-group').onclick=copyCircuit;$('remove-group').onclick=removeSelected;return;}
  if(selection.type==='endpoint'){
    const e=endpointInfo(selection.id,project.components),pin=PIN_BY_ID.get(selection.id),v=result?.voltage(selection.id);
-   const connected=result?[...PINS,...circuitHoles(project.components)].filter(p=>result.uf.find(p.id)===result.uf.find(selection.id)).length:0;
-   el.innerHTML=`<span class="overline">CONNECTION POINT</span><h2>${esc(e?.label||selection.id)}</h2><p>${pin?esc(pin.signal==='NC'?'연결되지 않은 NC 핀':`신호: ${pin.signal}`):'빵판의 실제 연결 그룹을 기준으로 계산합니다.'}</p><div class="measure"><span>전압 · GND 기준</span><b>${v!=null?v.toFixed(3)+' V':'—'}</b></div><div class="measure"><span>연결된 핀 / 구멍</span><b>${result?connected:'—'}</b></div><p>${running()?'전압이 표시되지 않으면 부유 상태이거나 전원에 연결되지 않은 노드입니다.':'시뮬레이션을 실행하면 연결점의 전압을 확인할 수 있습니다.'}</p>`;
+   const connected=connectedNet(project,selection.id,pressed).endpoints.length;
+   el.innerHTML=`<span class="overline">CONNECTION POINT</span><h2>${esc(e?.label||selection.id)}</h2><p>${pin?esc(pin.signal==='NC'?'연결되지 않은 NC 핀':`신호: ${pin.signal}`):'빵판의 실제 연결 그룹을 기준으로 계산합니다.'}</p><div class="measure"><span>전압 · GND 기준</span><b>${v!=null?v.toFixed(3)+' V':'—'}</b></div><div class="measure"><span>연결된 핀 / 구멍</span><b>${connected}</b></div><p>${running()?'전압이 표시되지 않으면 부유 상태이거나 전원에 연결되지 않은 노드입니다.':'시뮬레이션을 실행하면 연결점의 전압을 확인할 수 있습니다.'}</p>`;
  } else if(selection.type==='part'){
    const p=project.components.find(p=>p.id===selection.id);if(!p)return;
    if(p.type==='breadboard'){
@@ -128,13 +153,14 @@ function inspector(){
    $('remove-part').onclick=removeSelected;$('rotate-part').onclick=rotateSelected;
  } else if(selection.type==='wire'){
    const w=project.wires.find(w=>w.id===selection.id);if(!w)return;
-   el.innerHTML=`<span class="overline">WIRE</span><h2>점퍼선</h2><div class="inspector-card"><label>시작</label><p>${esc(endpointInfo(w.from,project.components)?.label)}</p><label>끝</label><p>${esc(endpointInfo(w.to,project.components)?.label)}</p></div><p>전기 저항이 없는 이상적인 도선으로 계산합니다. 선이 교차하는 위치는 서로 연결되지 않습니다.</p><button class="inspector-action danger" id="remove-wire" ${running()?'disabled':''}>배선 삭제</button>`;
-   $('remove-wire').onclick=removeSelected;
+   el.innerHTML=`<span class="overline">WIRE</span><h2>점퍼선</h2><div class="inspector-card"><label>시작</label><p>${esc(endpointInfo(w.from,project.components)?.label)}</p><label>끝</label><p>${esc(endpointInfo(w.to,project.components)?.label)}</p></div><p>전기 저항이 없는 이상적인 도선으로 계산합니다. 선이 교차하는 위치는 서로 연결되지 않습니다. 선택한 배선과 전기적으로 이어진 연결망을 금색으로 표시합니다.</p><p>배선을 더블클릭해 꺾임점을 추가하고 점을 끌어 이동하세요. 점 우클릭은 삭제입니다.</p><button class="inspector-action" id="reset-wire-route" ${running()?'disabled':''}>배선 경로 자동 정렬</button><button class="inspector-action danger" id="remove-wire" ${running()?'disabled':''}>배선 삭제</button>`;
+   $('remove-wire').onclick=removeSelected;$('reset-wire-route').onclick=()=>{checkpoint();delete w.points;changed();};
  }
 }
 function removeSelected(){
  if(running()||!selection)return;
- if(selection.type==='part'){checkpoint();if(project.components.find(p=>p.id===selection.id)?.type==='breadboard')removeBreadboard(project,selection.id);else {project.components=project.components.filter(p=>p.id!==selection.id);project.wires=project.wires.filter(w=>![w.from,w.to].some(id=>id.startsWith(`part:${selection.id}:`)));}}
+ if(selection.type==='group'){checkpoint();const parts=new Set(selection.parts),wires=new Set(selection.wires);for(const id of parts)if(project.components.find(p=>p.id===id)?.type==='breadboard')removeBreadboard(project,id);project.components=project.components.filter(p=>!parts.has(p.id));project.wires=project.wires.filter(w=>!wires.has(w.id)&&![w.from,w.to].some(id=>id.startsWith('part:')&&parts.has(id.split(':')[1])));}
+ else if(selection.type==='part'){checkpoint();if(project.components.find(p=>p.id===selection.id)?.type==='breadboard')removeBreadboard(project,selection.id);else {project.components=project.components.filter(p=>p.id!==selection.id);project.wires=project.wires.filter(w=>![w.from,w.to].some(id=>id.startsWith(`part:${selection.id}:`)));}}
  else if(selection.type==='wire'){checkpoint();project.wires=project.wires.filter(w=>w.id!==selection.id);}else return;
  selection=null;pending=null;drag=null;$('preview-layer').innerHTML='';changed();
 }
@@ -182,6 +208,9 @@ svg.addEventListener('pointerdown',e=>{
    if(p?.type==='slide'&&!target.closest('[data-endpoint]')){checkpoint();p.position=1-p.position;selection={type:'part',id:p.id};tab('inspect');recompute();autosave();refresh();return;}
    if(id==='USER'||p?.type==='button'){pressed[id]=true;drag={type:'press',id};svg.setPointerCapture(e.pointerId);recompute();refresh();return;}
  }
+ const handle=target.closest('[data-wire-point]');if(handle&&!running()){drag={type:'wire-point',id:handle.dataset.ownerWire,index:Number(handle.dataset.wirePoint),moved:false};svg.setPointerCapture(e.pointerId);return;}
+ if(e.shiftKey&&!running()){const wire=target.closest('[data-wire]');if(wire||part){selection=toggleSelection(selection,wire?'wire':'part',wire?.dataset.wire||part.dataset.part);pending=null;mode='select';tab('inspect');refresh();return;}}
+ if(part&&selection?.type==='group'&&isSelected(selection,'part',part.dataset.part)&&!running()){drag={type:'group',start:point(e),base:structuredClone(project),moved:false};svg.setPointerCapture(e.pointerId);return;}
  const pin=target.closest('[data-endpoint]');if(pin){clickEndpoint(pin.dataset.endpoint);return;}
  const wire=target.closest('[data-wire]');if(wire){pending=null;selection={type:'wire',id:wire.dataset.wire};tab('inspect');refresh();return;}
  if(part){
@@ -196,6 +225,8 @@ svg.addEventListener('pointerdown',e=>{
 });
 svg.addEventListener('pointermove',e=>{
  const q=point(e);
+ if(drag?.type==='wire-point'){const w=project.wires.find(w=>w.id===drag.id);if(!drag.moved){checkpoint();drag.moved=true;}w.points[drag.index]={x:Math.max(0,Math.min(6000,q.x)),y:Math.max(0,Math.min(6000,q.y))};refresh();return;}
+ if(drag?.type==='group'){let dx=q.x-drag.start.x,dy=q.y-drag.start.y;if(!drag.moved&&Math.hypot(dx,dy)<=3)return;if(!drag.moved){checkpoint();drag.moved=true;}const selected=drag.base.components.filter(p=>isSelected(selection,'part',p.id));if(selected.length){dx=Math.max(-Math.min(...selected.map(p=>p.x)),Math.min(6000-Math.max(...selected.map(p=>p.x)),dx));dy=Math.max(-Math.min(...selected.map(p=>p.y)),Math.min(6000-Math.max(...selected.map(p=>p.y)),dy));}try{const next=structuredClone(drag.base);moveSelection(next,selection,dx,dy);validateProject(next);project=next;refresh();}catch{}return;}
  if(drag?.type==='part'){
    const p=project.components.find(p=>p.id===drag.id),dx=q.x-drag.start.x,dy=q.y-drag.start.y;
    if(!drag.moved&&Math.hypot(dx,dy)>3){checkpoint();drag.moved=true;detachPart(p);}
@@ -210,7 +241,9 @@ svg.addEventListener('pointermove',e=>{
    $('tooltip').textContent=info.label+(running()?`\n${v==null?'부유 상태':v.toFixed(3)+' V'}`:'');const box=$('canvas-container').getBoundingClientRect();$('tooltip').style.left=Math.min(e.clientX-box.left+12,box.width-220)+'px';$('tooltip').style.top=Math.max(0,e.clientY-box.top-47)+'px';$('tooltip').hidden=false;
  }else $('tooltip').hidden=true;
 });
-function release(){if(drag?.type==='press'){pressed[drag.id]=false;recompute();refresh();}if(drag?.type==='part'&&drag.moved){const p=project.components.find(p=>p.id===drag.id);if(p?.type==='breadboard')log(p.name+': 빵판과 장착 부품을 이동했습니다.');else if(p){const mounted=applyMount(p,findMount(p,project.components));log(mounted?`${p.name}: ${terminalKeys(p).length}개 다리를 빵판에 장착했습니다.`:`${p.name}: 자유 배치 상태입니다. 모든 다리가 구멍에 맞을 때 장착됩니다.`);}autosave();}drag=null;$('preview-layer').innerHTML='';refresh();}
+svg.addEventListener('dblclick',e=>{if(running()||mode!=='select')return;const hit=e.target.closest('[data-wire]');if(!hit)return;const w=project.wires.find(w=>w.id===hit.dataset.wire);try{const next=structuredClone(w);insertWirePoint(project,next,point(e));checkpoint();w.points=next.points;selection={type:'wire',id:w.id};pending=null;changed();}catch(error){log(error.message,'error');}});
+svg.addEventListener('contextmenu',e=>{const hit=e.target.closest('[data-wire-point]');if(!hit||running())return;e.preventDefault();checkpoint();project.wires.find(w=>w.id===hit.dataset.ownerWire).points.splice(Number(hit.dataset.wirePoint),1);changed();});
+function release(){if(['wire-point','group'].includes(drag?.type)&&drag.moved)autosave();if(drag?.type==='press'){pressed[drag.id]=false;recompute();refresh();}if(drag?.type==='part'&&drag.moved){const p=project.components.find(p=>p.id===drag.id);if(p?.type==='breadboard')log(p.name+': 빵판과 장착 부품을 이동했습니다.');else if(p){const mounted=applyMount(p,findMount(p,project.components));log(mounted?`${p.name}: ${terminalKeys(p).length}개 다리를 빵판에 장착했습니다.`:`${p.name}: 자유 배치 상태입니다. 모든 다리가 구멍에 맞을 때 장착됩니다.`);}autosave();}drag=null;$('preview-layer').innerHTML='';refresh();}
 svg.addEventListener('pointerup',release);svg.addEventListener('pointercancel',release);window.addEventListener('blur',()=>{if(Object.values(pressed).some(Boolean)){pressed={};recompute();refresh();}});
 svg.addEventListener('pointerleave',()=>{$('tooltip').hidden=true;});
 function zoom(mult){const nw=Math.max(430,Math.min(9000,view.w*mult)),nh=nw*730/1120;view.x+=(view.w-nw)/2;view.y+=(view.h-nh)/2;view.w=nw;view.h=nh;viewUpdate();}
@@ -229,7 +262,7 @@ $('pin-search').addEventListener('keydown',e=>{if(e.key==='Enter'){const p=searc
 function recompute(){if(!runtime||!session)return;try{session.setPressed(pressed);result=session.result;const warning=result.warnings.join('|');if(warning&&warning!==lastWarnings)result.warnings.forEach(w=>log(w,'error'));lastWarnings=warning;}catch(e){result=session.result;status='error';log(e.message,'error');}}
 function initializeRuntime(){
  try{simTime=0;pressed={};lastWarnings='';result=null;monitor.clear();uartLines.clear();session=new SimulationSession(project,{print:s=>log(s,'serial'),uart:logUart,trace:event=>monitor.trace(event),channels:monitor.channels()});runtime=session.runtime;status='paused';pending=null;mode='select';result=session.tick(0);log(project.firmware?.mode==='hal'?'HAL 프로그램을 시작했습니다.':'스케치를 시작했습니다.');return true;}
- catch(e){runtime=null;status='error';log(e.message,'error');return false;}
+ catch(e){runtime=null;result=session?.result??null;status='error';log(e.message,'error');return false;}
 }
 function stop(){status='stopped';runtime=null;result=null;pressed={};pending=null;$('preview-layer').innerHTML='';log('시뮬레이션을 정지했습니다.');refresh();}
 $('run').onclick=()=>{if(running())stop();else {if(initializeRuntime())status='running';refresh();}};
@@ -239,7 +272,7 @@ setInterval(()=>{
  try{simTime+=20;result=session.tick(simTime);recompute();
    updateSimulationSvg(svg,project,result,pressed);updateReadouts();
    if(status==='error')refresh();else if(++paintCounter%10===0&&!$('inspect-panel').hidden&&!$('inspector').contains(document.activeElement))inspector();
- }catch(e){status='error';log(e.message,'error');refresh();}
+ }catch(e){result=session?.result??result;status='error';log(e.message,'error');refresh();}
 },20);
 $('tool-select').onclick=()=>setMode('select');$('tool-wire').onclick=()=>setMode('wire');$('delete').onclick=removeSelected;$('rotate').onclick=rotateSelected;$('undo').onclick=()=>editUndo();$('redo').onclick=()=>editUndo(true);
 document.querySelectorAll('[data-add]').forEach(b=>b.onclick=()=>{if(running())return;const type=b.dataset.add;if(type==='breadboard'){
@@ -269,6 +302,7 @@ $('firmware-files').onchange=async e=>{const chosen=[...e.target.files];try{if(c
 $('code').addEventListener('scroll',()=>{$('line-numbers').scrollTop=$('code').scrollTop;});
 $('code').addEventListener('keydown',e=>{if(e.key==='Tab'){e.preventDefault();if(running())return;const a=e.target.selectionStart,b=e.target.selectionEnd;e.target.setRangeText('  ',a,b,'end');e.target.dispatchEvent(new Event('input'));}});
 async function save(){try{const data=JSON.stringify(project,null,2);if(window.desktop){const path=await window.desktop.save(data);if(!path)return;}else{const blob=new Blob([data],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=project.name.replace(/[^\w가-힣-]/g,'_')+'.stm32lab';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}dirty=false;log('회로 파일을 저장했습니다.');}catch(e){log('저장 실패: '+e.message,'error');}}
+$('main-export').onclick=async()=>{try{if(project.firmware?.mode!=='hal')throw new Error('HAL main.c를 선택하세요.');compileHal(project.code,project.firmware.files);if(window.desktop?.exportMain){if(!await window.desktop.exportMain(project.code))return;}else{const url=URL.createObjectURL(new Blob([project.code],{type:'text/plain;charset=utf-8'})),a=document.createElement('a');a.href=url;a.download='main.c';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}log('main.c를 저장했습니다. 실제 프로젝트의 핀·주변장치·NVIC 설정을 동일하게 구성하세요.');}catch(e){log(e.message,'error');}};
 $('save').onclick=save;
 async function open(){try{if(window.desktop){const data=await window.desktop.open();if(data!=null)replaceProject(validateProject(JSON.parse(data)));}else $('file-input').click();}catch(e){log('불러오기 실패: '+e.message,'error');}}
 $('open').onclick=()=>requestReplace(open);
@@ -277,14 +311,16 @@ $('clear-console').onclick=()=>{$('console-output').textContent='';uartLines.cle
 $('help').onclick=$('api-help').onclick=()=>$('help-dialog').showModal();
 window.addEventListener('keydown',e=>{
  const editing=['INPUT','TEXTAREA','SELECT'].includes(document.activeElement.tagName),modal=document.querySelector('dialog[open]');
- if(e.ctrlKey&&e.key==='F5'){e.preventDefault();if(!modal&&!e.repeat)$('run').click();return;}
+ if(e.key==='F5'){e.preventDefault();if(!e.ctrlKey&&!e.metaKey&&!e.altKey&&!e.shiftKey&&!modal&&!e.repeat)$('run').click();return;}
  if(modal)return;
  if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='s'){e.preventDefault();save();return;}
  if(editing)return;
- if(e.key==='Escape'){e.preventDefault();if(!pending&&['part','wire'].includes(selection?.type)){removeSelected();}else {pending=null;mode='select';selection=null;$('preview-layer').innerHTML='';refresh();}}
+ if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='c'){e.preventDefault();copyCircuit();return;}
+ if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='v'){e.preventDefault();pasteCircuit();return;}
+ if(e.key==='Escape'){e.preventDefault();if(!pending&&['part','wire','group'].includes(selection?.type)){removeSelected();}else {pending=null;mode='select';selection=null;$('preview-layer').innerHTML='';refresh();}}
  if(e.key==='Delete'||e.key==='Backspace'){e.preventDefault();removeSelected();}
  if(e.key.toLowerCase()==='r')rotateSelected();if(e.key.toLowerCase()==='w')setMode('wire');if(e.key.toLowerCase()==='v')setMode('select');
  if(e.ctrlKey&&e.key.toLowerCase()==='z'){e.preventDefault();editUndo(e.shiftKey);}if(e.ctrlKey&&e.key.toLowerCase()==='y'){e.preventDefault();editUndo(true);}
 });
 window.addEventListener('error',e=>log('화면 오류: '+e.message,'error'));
-syncEditor();fitView();refresh();log('회로를 연결하고 시뮬레이션 시작 또는 Ctrl+F5를 눌러 보세요.');
+syncEditor();fitView();refresh();log('회로를 연결하고 시뮬레이션 시작 또는 F5를 눌러 보세요.');

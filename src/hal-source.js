@@ -16,6 +16,8 @@ export const HAL_STRUCTS={
   TIM_HandleTypeDef:'Instance Init:TIM_Base_InitTypeDef Channel',
   TIM_ClockConfigTypeDef:'ClockSource ClockPolarity ClockPrescaler ClockFilter',
   TIM_MasterConfigTypeDef:'MasterOutputTrigger MasterSlaveMode',
+  TIM_IC_InitTypeDef:'ICPolarity ICSelection ICPrescaler ICFilter',
+  TIM_Encoder_InitTypeDef:'EncoderMode IC1Polarity IC1Selection IC1Prescaler IC1Filter IC2Polarity IC2Selection IC2Prescaler IC2Filter',
   TIM_OC_InitTypeDef:'OCMode Pulse OCPolarity OCNPolarity OCFastMode OCIdleState OCNIdleState',
   RCC_PLLInitTypeDef:'PLLState PLLSource PLLM PLLN PLLP PLLQ PLLR',
   RCC_OscInitTypeDef:'OscillatorType HSEState LSEState HSIState HSICalibrationValue LSIState PLL:RCC_PLLInitTypeDef',

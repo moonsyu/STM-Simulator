@@ -1,9 +1,9 @@
 import {DEVICE_RANGES,DEVICE_ADDRESSES} from './device-defs.js';
 import {PIN_BY_ID,holeInfo} from './pins.js';
 import {terminalKeys,TWO_PIN_TYPES,MULTI_PIN_TYPES,normalizeAngle} from './components.js';
-import {defaultMcu,validateMcu} from './mcu-config.js';
+import {generateHal,defaultMcu,validateMcu} from './mcu-config.js';
 import {DEFAULT_BOARD_ID,getBoard} from './boards.js';
-export function blankProject(){return {format:'stm32-circuit-lab',version:2,name:'새 회로',components:[],wires:[],mcu:{...defaultMcu(),pins:{}},firmware:{mode:'hal',files:[]},code:'#include "main.h"\n#include <stdio.h>\n\nint main(void) {\n  HAL_Init();\n  printf("HAL ready\\n");\n  while (1) {\n    HAL_Delay(1000);\n  }\n}\n'};}
+export function blankProject(){const mcu={...defaultMcu(),pins:{}};return {format:'stm32-circuit-lab',version:2,name:'새 회로',components:[],wires:[],mcu,firmware:{mode:'hal',files:[]},code:generateHal(mcu).replace('/* USER CODE BEGIN 2 */','/* USER CODE BEGIN 2 */\n  printf("HAL ready\\n");')};}
 export function validateProject(data){
   if(!data||data.format!=='stm32-circuit-lab'||![1,2].includes(data.version))throw new Error('지원하지 않는 회로 파일 형식입니다.');
   if(typeof data.name!=='string'||data.name.length>120||typeof data.code!=='string'||data.code.length>50000)throw new Error('회로 이름 또는 코드가 올바르지 않습니다.');
@@ -46,7 +46,8 @@ export function validateProject(data){
   const wireIds=new Set();
   const wires=data.wires.map(w=>{
     if(!safeId(w.id)||wireIds.has(w.id)||!end(w.from)||!end(w.to)||w.from===w.to||!/^#[0-9a-fA-F]{6}$/.test(w.color))throw new Error('배선 정보가 올바르지 않습니다.');
-    wireIds.add(w.id);return {id:w.id,from:w.from,to:w.to,color:w.color};
+    if(w.points!==undefined&&(!Array.isArray(w.points)||w.points.length>32||w.points.some(p=>!p||!Number.isFinite(p.x)||!Number.isFinite(p.y)||p.x<0||p.x>6000||p.y<0||p.y>6000)))throw new Error('배선 꺾임점은 작업 공간 내 32개까지 지원합니다.');
+    wireIds.add(w.id);return {id:w.id,from:w.from,to:w.to,color:w.color,...(w.points?{points:w.points.map(p=>({x:p.x,y:p.y}))}:{})};
   });
   const project={format:data.format,version:2,name:data.name,code:data.code,components,wires};
   if(data.boardId!==undefined)project.boardId=data.boardId;

@@ -11,7 +11,7 @@ test('new projects start as HAL without prebuilt circuits',()=>{
   const p=validateProject(blankProject());assert.equal(p.firmware.mode,'hal');assert.deepEqual(p.components,[]);assert.deepEqual(p.wires,[]);assert.deepEqual(p.mcu.pins,{});assert.match(p.code,/int main\(void\)/);assert.deepEqual(start(p.code).output,['HAL ready']);
 });
 test('every shipped HAL example has its configured circuit and runs without electrical faults',()=>{
-  const counts={ldr:[2,4],ntc:[2,4],sht31:[1,4],mpu6050:[1,4],pir:[1,3],oled:[1,4],tft:[1,7],matrix:[1,5],servo:[1,3],motor:[1,5],stepper:[1,6],relay:[3,7],joystick:[1,5],encoder:[1,5],blink:[2,3],button:[3,5],exti:[2,3],uart:[1,4],timer:[2,3],adc:[2,3],temperature:[1,3],samples:[2,3],i2c:[1,4],spi:[1,6],language:[0,0],pwm:[2,3],ultrasonic:[3,6]};
+  const counts={timer_multi:[2,8],timer_capture:[0,1],timer_encoder:[1,5],ldr:[2,4],ntc:[2,4],sht31:[1,4],mpu6050:[1,4],pir:[1,3],oled:[1,4],tft:[1,7],matrix:[1,5],servo:[1,3],motor:[1,5],stepper:[1,6],relay:[3,7],joystick:[1,5],encoder:[1,5],blink:[2,3],button:[3,5],exti:[2,3],uart:[1,4],timer:[2,3],adc:[2,3],temperature:[1,3],samples:[2,3],i2c:[1,4],spi:[1,6],language:[0,0],pwm:[2,3],ultrasonic:[3,6]};
   for(const kind of Object.keys(HAL_EXAMPLES)){const p=validateProject(halExample(kind));assert.deepEqual([p.components.length,p.wires.length],counts[kind],kind);assert.equal(p.firmware.mode,'hal');assert.ok(HAL_GUIDES[kind]);assert.doesNotMatch(p.code,/\bSerial\d*\.|\bsetup\s*\(|\bloop\s*\(/);const s=new SimulationSession(p);s.tick(0);s.tick(150);assert.equal(s.result.fault,false,kind);}
   for(const file of ['src/feature-examples.js','src/component-examples.js'])assert.equal(fs.existsSync(file),false);
 });

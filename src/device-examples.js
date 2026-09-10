@@ -55,7 +55,7 @@ export function deviceExample(kind){
   else {connect('3V3','a','r1');wire(term('b','r1'),term('a'));connect('PA0','a');connect('GND','b');}
  }
  if(kind==='pir'){m.pins.PA10=pin('GPIO_EXTI');m.nvic.EXTI15_10_IRQn={enabled:true,priority:0};connect('PA10',3);}
- if(['servo','motor'].includes(kind)){m.pins.PA5=pin('TIM2_CH1');m.peripherals.TIM2={enabled:true,prescaler:83,period:kind==='servo'?19999:999};connect('PA5',3);p.simulation={stepMs:1,pwmWaveform:true};}
+ if(['servo','motor'].includes(kind)){m.pins.PA5=pin('TIM2_CH1');m.peripherals.TIM2={enabled:true,prescaler:83,period:kind==='servo'?19999:999,mode:'pwm'};connect('PA5',3);p.simulation={stepMs:1,pwmWaveform:true};}
  if(kind==='motor'){output('PB6');output('PB7');connect('PB6',4);connect('PB7',5);}
  if(kind==='stepper')for(let i=0;i<4;i++){output('PB'+(i+3));connect('PB'+(i+3),i+3);}
  if(kind==='relay'){
@@ -207,7 +207,7 @@ void matrixWrite(uint8_t reg, uint8_t value) {
     HAL_Delay(1000);`;
  if(kind==='joystick'){
   helpers=`uint32_t readAxis(uint32_t channel) {
-  ADC_ChannelConfTypeDef config = {0}; config.Channel = channel; config.Rank = 1;
+  ADC_ChannelConfTypeDef config = {0}; config.Channel = channel; config.Rank = 1; config.SamplingTime = ADC_SAMPLETIME_480CYCLES;
   HAL_ADC_ConfigChannel(&hadc1, &config); HAL_ADC_Start(&hadc1);
   HAL_ADC_PollForConversion(&hadc1, 10); return HAL_ADC_GetValue(&hadc1);
 }
