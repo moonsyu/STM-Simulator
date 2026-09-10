@@ -20,9 +20,26 @@
 - 모델 검증에서 겹친 빵판끼리의 전기적 절연, 회전한 구멍 좌표, 점유 검사, 잘못된 연결 ID 거부, 다른 지지대에 걸친 부품의 부분 연결 해제를 확인했다.
 - 1120×760 최소 창과 기본 창에서 상단바·보드 검색·변경 경고·추가 빵판 화면을 직접 확인했다. 렌더러 오류 없음.
 
-## 배포 검증 상태
+## 배포 검증
 
-소스 검증 후 0.9.0 Windows EXE를 빌드 중이다. 패키지와 단일 EXE 실행, GitHub Releases 게시, 이전 빌드 정리 결과는 완료 후 이 문서에 갱신한다.
+- 최종 S 아이콘 제거 후 새로 빌드했다. npm run build 및 build:artifact의 버전·패키지 내용·Electron/Chromium 라이선스 검사를 통과했다.
+- 패키지 앱에서 boards-smoke.cjs를 실행해 배선·단축키·보드 검색/초기화 보호·추가 빵판 동작을 다시 확인했다. 최종 최소 창 스크린샷에서 S 아이콘 제거를 확인했다.
+- 단일 EXE 직접 실행 검증 통과. HAL 회로·UART RX/TX 로그·Pinout, 기존 LED·센서·LCD·통신·파형 기능을 확인했고 렌더러 오류는 없었다.
+- 지정 저장소·빌드 소스·app.asar의 소스/UI/문서 **41개 파일 바이트 일치**, package.json 주요 메타데이터 일치. 새 보드 모듈 포함과 S 아이콘 마크업/CSS 제거를 확인했다.
+- 빌드 소스 커밋: 5235e4df1127e920ec517a756dcfa49363d7decb.
+- EXE: STM-Simulator-0.9.0-win-x64.exe, **100,161,826 bytes**.
+- EXE SHA-256: 1adf2547b167ed058fa8c82717345154c32764658a9d5d95f8d0e8d94522ac00.
+- ZIP: STM-Simulator-0.9.0-Windows-x64.zip, **102,854,717 bytes**.
+- ZIP SHA-256: 6bb57065168f7166b4495a89516fd62db21c8ddf8cdfccd3f7ed8ec755eb906c.
+- [GitHub Releases v0.9.0](https://github.com/moonsyu/STM-Simulator/releases/tag/v0.9.0)에 EXE·ZIP·SHA256.txt를 게시했다. Release ID: 385953982. 최신 Release 링크와 v0.9.0 태그의 빌드 커밋, GitHub main의 README 내용이 일치한다.
+- ZIP 내부 파일 목록과 EXE 체크섬을 검사했고, GitHub가 보고한 세 Assets의 크기·SHA-256도 업로드 원본과 일치한다. 저장소의 Private 설정을 유지했다.
+
+## 저장 위치와 정리
+
+- 소스: C:/Users/SSAFY/Desktop/ct/STM-Simulator. 최신 로컬 배포: dist/artifact/.
+- 이전 0.8.0 배포의 파일 10개·폴더 2개를 자동 정리했다. 실제 저장소 dist에는 최종 0.9.0 EXE 하나만 남겼다.
+- 별도 작업 폴더의 중간 빌드, 최종 빌드 중복 85개·폴더 5개, 테스트 임시 프로필을 정리했다. 사용자 앱을 강제로 종료하지 않았고 사용자 회로·자동 저장은 변경하지 않았다.
+- 현재 검증 JSON·CSV와 최종 S 아이콘 제거 후 스크린샷만 test-results/에 유지한다. Release 게시 증거는 release-proof.json에 기록했다.
 
 ## 범위
 
