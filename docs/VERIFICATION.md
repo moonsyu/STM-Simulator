@@ -20,6 +20,12 @@
 - 파일 저장·열기 UI 검사는 IPC 완료 로그를 기다린 뒤 읽는다. 350 ms 지연 쓰기로 새 파일 저장과 덮어쓰기도 검증한다.
 - UI 증거와 구조화된 결과는 test-results에 저장한다. 사용자 자동 저장과 분리한 프로필에서 검증한다.
 
+## GitHub Actions
+
+- 수정 커밋 `5d1595ab2a40ced9c53119857b91c2bb61fa7dba`의 [Windows 빌드](https://github.com/moonsyu/STM-Simulator/actions/runs/34443054652)가 2026-09-10 성공했다. 서버에서 모델 테스트 155개와 UI 스크립트 10개, EXE 생성·패키지 검사·아티팩트 업로드까지 통과했다.
+- 서버 EXE는 100,190,585 bytes, SHA-256 `4e42ee61b007938bcf3369560498a853c27f08a92ca16cb425f349b6d366ee18`이다. `STM-Simulator-Windows-x64` 아티팩트 ID는 `10138771337`이다.
+- 현재 CI 증거는 `test-results/ci-proof.json`과 `github-actions.log`에 저장한다. 릴리스에 게시된 빌드는 아래 별도로 기록한다.
+
 ## 배포된 릴리스
 
 - 빌드 커밋: `343bcd7b43734fc9127f7bc14038d4d1ccc82ea6`.
