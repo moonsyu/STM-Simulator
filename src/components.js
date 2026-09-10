@@ -22,7 +22,7 @@ export const WIRE_COLORS=[
   ['#8b603e','갈색'],['#edf2f5','흰색']
 ];
 export const normalizeAngle=n=>((n%360)+360)%360;
-export function terminalKeys(p){return p.type==='button'?['a','b','c','d']:p.type==='lcd'?LCD_LABELS.map((_,i)=>'p'+(i+1)):PART_DEFS[p.type]?.labels?PART_DEFS[p.type].labels.map((_,i)=>'p'+(i+1)):['a','b'];}
+export function terminalKeys(p){return p.type==='breadboard'?[]:p.type==='button'?['a','b','c','d']:p.type==='lcd'?LCD_LABELS.map((_,i)=>'p'+(i+1)):PART_DEFS[p.type]?.labels?PART_DEFS[p.type].labels.map((_,i)=>'p'+(i+1)):['a','b'];}
 export function attachments(p){return TWO_PIN_TYPES.includes(p.type)?{...(p.attachA?{a:p.attachA}:{}),...(p.attachB?{b:p.attachB}:{})}:p.attachments||{};}
 export function terminalLabel(p,key){
  if(p.type==='lcd')return `${Number(key.slice(1))} · ${LCD_LABELS[Number(key.slice(1))-1]}`;
@@ -31,6 +31,7 @@ export function terminalLabel(p,key){
  return ['led','diode'].includes(p.type)?(key==='a'?'A (+)':'K (−)'):p.type==='buzzer'?(key==='a'?'+':'−'):key.toUpperCase();
 }
 export function localTerminals(p){
+ if(p.type==='breadboard')return [];
  if(p.type==='button')return [{key:'a',x:-21,y:-14},{key:'b',x:21,y:-14},{key:'c',x:-21,y:14},{key:'d',x:21,y:14}];
  if(p.type==='lcd')return LCD_LABELS.map((_,i)=>({key:'p'+(i+1),x:(i-7.5)*14,y:44}));
  if(p.type==='sevenseg')return terminalKeys(p).map((key,i)=>({key,x:i<5?(i-2)*14:(7-i)*14,y:i<5?35:-35}));
@@ -40,4 +41,4 @@ export function localTerminals(p){
 export function rotatePoint(x,y,angle){const r=angle*Math.PI/180;return {x:x*Math.cos(r)-y*Math.sin(r),y:x*Math.sin(r)+y*Math.cos(r)};}
 export function nominalTerminals(p){return localTerminals(p).map(t=>{const v=rotatePoint(t.x,t.y,p.rotation);return {...t,x:p.x+v.x,y:p.y+v.y};});}
 export function detachPart(p){delete p.attachA;delete p.attachB;delete p.attachments;}
-export function assignAttachments(p,map){detachPart(p);if(TWO_PIN_TYPES.includes(p.type)){p.attachA=map.a;p.attachB=map.b;}else p.attachments={...map};}
+export function assignAttachments(p,map){detachPart(p);if(TWO_PIN_TYPES.includes(p.type)){if(map.a)p.attachA=map.a;if(map.b)p.attachB=map.b;}else if(Object.keys(map).length)p.attachments={...map};}

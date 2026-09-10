@@ -1,4 +1,4 @@
-import {terminalKeys,terminalLabel,nominalTerminals,attachments} from './components.js';
+import {terminalKeys,terminalLabel,nominalTerminals,attachments,rotatePoint} from './components.js';
 // MB1136, UM1724 Rev 17, Figure 24 / Tables 19 and 29.
 // Default A4/A5 solder bridges: PC1/PC0. Hardware jumper behavior is not modeled.
 export const ALIASES = Object.freeze({D0:'PA3',D1:'PA2',D2:'PA10',D3:'PB3',D4:'PB5',D5:'PB4',D6:'PB10',D7:'PA8',D8:'PA9',D9:'PC7',D10:'PB6',D11:'PA7',D12:'PA6',D13:'PA5',D14:'PB9',D15:'PB8',A0:'PA0',A1:'PA1',A2:'PA4',A3:'PB0',A4:'PC1',A5:'PC0',LED_BUILTIN:'PA5',USER_BUTTON:'PC13'});
@@ -39,14 +39,28 @@ for(const side of ['L','R'])for(const sign of ['+','-'])for(let n=1;n<=25;n++) {
   HOLES.push({id:`rail:${side}:${sign}:${n}`,label:`${side==='L'?'왼쪽':'오른쪽'} ${sign} 전원 레일 ${n}`,x,y:BB.startY+(n-1)*14+Math.floor((n-1)/5)*14,bus:`rail:${side}:${sign}`});
 }
 export const HOLE_BY_ID = new Map(HOLES.map(h=>[h.id,h]));
+const breadboardCache=new WeakMap();
+export const breadboardPrefix=id=>`breadboard:${id}:`;
+export function breadboardHoles(part){
+  const key=[part.id,part.x,part.y,part.rotation,part.name].join('|'),cached=breadboardCache.get(part);
+  if(cached?.key===key)return cached.holes;
+  const prefix=breadboardPrefix(part.id),holes=HOLES.map(h=>{const q=rotatePoint(h.x-(BB.x+BB.w/2),h.y-(BB.y+BB.h/2),part.rotation);return {...h,id:prefix+h.id,bus:prefix+h.bus,x:part.x+q.x,y:part.y+q.y,label:`${part.name} · ${h.label}`};});
+  breadboardCache.set(part,{key,holes,byId:new Map(holes.map(h=>[h.id,h]))});return holes;
+}
+export function circuitHoles(components=[]){return [...HOLES,...components.filter(p=>p.type==='breadboard').flatMap(breadboardHoles)];}
+export function holeInfo(id,components=[]){
+  if(HOLE_BY_ID.has(id))return HOLE_BY_ID.get(id);
+  const match=/^breadboard:([^:]+):/.exec(id),part=match&&components.find(p=>p.id===match[1]&&p.type==='breadboard');
+  if(!part)return null;breadboardHoles(part);return breadboardCache.get(part).byId.get(id)||null;
+}
 export function endpointInfo(id,components=[]) {
   if(PIN_BY_ID.has(id)) {const p=PIN_BY_ID.get(id);return {...p,label:`${p.header}-${p.number} · ${p.label}${p.signal!==p.label?' / '+p.signal:''}`};}
-  if(HOLE_BY_ID.has(id))return HOLE_BY_ID.get(id);
+  const hole=holeInfo(id,components);if(hole)return hole;
   const m=/^part:([^:]+):([a-d]|p\d+)$/.exec(id);
-  if(m){const p=components.find(c=>c.id===m[1]);if(p&&terminalKeys(p).includes(m[2])){const t=nominalTerminals(p).find(t=>t.key===m[2]),anchor=attachments(p)[m[2]],point=anchor?endpointInfo(anchor,[]):null;return {id,x:point?.x??t.x,y:point?.y??t.y,label:`${p.name} ${terminalLabel(p,m[2])}`};}}
+  if(m){const p=components.find(c=>c.id===m[1]);if(p&&terminalKeys(p).includes(m[2])){const t=nominalTerminals(p).find(t=>t.key===m[2]),anchor=attachments(p)[m[2]],point=anchor?(PIN_BY_ID.get(anchor)||holeInfo(anchor,components)):null;return {id,x:point?.x??t.x,y:point?.y??t.y,label:`${p.name} ${terminalLabel(p,m[2])}`};}}
   return null;
 }
-export function endpoints(components) {return [...PINS,...HOLES,...components.flatMap(p=>terminalKeys(p).map(t=>endpointInfo(`part:${p.id}:${t}`,components)))];}
+export function endpoints(components) {return [...PINS,...circuitHoles(components),...components.flatMap(p=>terminalKeys(p).map(t=>endpointInfo(`part:${p.id}:${t}`,components)))];}
 export function boardPin(name) {const p=PINS.find(p=>p.label===name&&['CN5','CN6','CN8','CN9'].includes(p.header))||PINS.find(p=>p.signal===canonicalPin(name));return p?.id;}
 export const normalizePinQuery=q=>String(q).toUpperCase().replace(/\s+/g,'');
 export function searchPins(query){const q=normalizePinQuery(query);if(!q)return [];const exact=PINS.filter(p=>p.signal===q||p.label===q||`${p.header}-${p.number}`===q);return exact.length?exact:PINS.filter(p=>p.signal.startsWith(q)||p.label.startsWith(q));}
