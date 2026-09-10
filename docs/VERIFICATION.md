@@ -19,6 +19,13 @@
 
 ## 배포
 
-배포 버전은 0.11.0이다. 검증된 실행 파일의 위치·해시와 배포 확인은 빌드 완료 시 이 문서에 갱신한다.
+- 빌드 커밋: `343bcd7b43734fc9127f7bc14038d4d1ccc82ea6`.
+- 실행 파일: `dist/artifact/STM-Simulator-0.11.0-win-x64.exe` — 100,190,082 bytes.
+- EXE SHA-256: `4f50c0a2cbb172f0a44a48fdab4674e300c5f23160e5013860d920ec342957c8`.
+- ZIP: `STM-Simulator-0.11.0-Windows-x64.zip` — 102,888,587 bytes.
+- ZIP SHA-256: `7465ae0ac4c30b87d352f1e83bf1fa781e0e81e17d0550ac3fdc9b7d12cd80c3`.
+- [GitHub Release v0.11.0](https://github.com/moonsyu/STM-Simulator/releases/tag/v0.11.0), release ID 386023190. EXE·ZIP·SHA256.txt 업로드 크기·서버 digest와 latest release를 확인했다. 저장소는 Private이다.
+- 빌드된 win-unpacked 앱에서 새 기능 UI 검사, 단일 portable EXE의 실행·HAL UART·회로·파형 검사를 통과했다. ASAR의 소스·문서 52개를 작업 파일 및 빌드 커밋과 대조했고, ARM 검사한 main.c 31개의 해시도 현재 예제와 일치한다.
+- 이전 실행 파일과 중간 빌드 출력, 테스트용 프로필, 검증에 사용한 임시 ARM 객체/ELF와 업로드 ZIP을 정리한다. 최신 실행 파일은 dist/artifact, 현재 검증 결과는 test-results에 보존한다.
 
 실물 보드 실행은 검증하지 않았다. 실제 프로젝트에는 동일 핀·주변장치·NVIC와 Cube의 MSP/IRQ/SysTick/syscalls가 있어야 한다. printf는 SWV ITM 포트 0이며 newlib-nano의 소수 출력에는 -u _printf_float 링크 옵션이 필요하다. 앱은 전체 ST HAL/C ABI/ARM 실행기가 아니며 필터·DMA·외부 타이머 클록·NVIC 선점은 지원하지 않는다. 세부 범위는 [HAL API](HAL-API.md)를 따른다.
