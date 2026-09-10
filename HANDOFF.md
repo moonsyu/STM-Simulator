@@ -89,6 +89,8 @@ node scripts/portable-smoke.cjs
 
 `npm run build`는 `scripts/clean-build.cjs`로 이전 EXE·배포 묶음·win-unpacked를 먼저 정리한다. 실행 파일이 잠겼으면 아무 파일도 지우기 전에 중단하고 앱 종료를 안내한다. `build:artifact`도 이전 생성 묶음을 안전하게 교체한다. 버전별 폴더로 옮겨 보관하지 않는다. 패키지 검사에는 Electron/Chromium 라이선스 원문과 참고 자료 제외 검증이 포함된다. `win-unpacked`는 빌드/검증 중간 결과이며 전달 후 정리할 수 있다.
 
+`main` 푸시 후에는 해당 커밋의 GitHub Actions 실행 결과까지 확인한다. 로컬 테스트 성공과 원격 빌드 성공을 구분한다. 타이머 UI 검사는 벽시계 대기 대신 단계 실행으로 시뮬레이션 시각을 고정하고, 부품 선택은 `.part-body`를 클릭한다. 파일 저장·열기는 `saveProject`/`openProject` 테스트 헬퍼로 완료 로그를 기다린 뒤 검사한다. UART의 소수 baud 시각 비교에는 ms/µs 왕복 반올림 오차를 고려해야 한다. 실패한 UI 실행의 로그·스크린샷·JSON은 Actions의 `Windows-test-diagnostics`에 14일 보관한다.
+
 `LAB_EXE`로 UI smoke에 `win-unpacked/STM Simulator.exe`를 지정할 수 있다. 단일 portable EXE는 전용 `portable-smoke.cjs`로 검증한다. 현재 검증 결과와 한계는 [VERIFICATION.md](docs/VERIFICATION.md)를 확인한다.
 
 ## 권리와 모델 범위
