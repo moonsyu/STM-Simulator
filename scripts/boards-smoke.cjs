@@ -1,6 +1,6 @@
 const assert=require('node:assert/strict'),fs=require('node:fs/promises'),path=require('node:path');
 const {_electron}=require(process.env.PLAYWRIGHT_MODULE||'playwright');
-const {openFixture}=require('./smoke-fixture.cjs');
+const {openFixture,saveProject}=require('./smoke-fixture.cjs');
 (async()=>{
  const root=path.resolve(__dirname,'..'),out=path.join(root,'test-results');await fs.mkdir(out,{recursive:true});
  const env={...process.env,CIRCUIT_LAB_SMOKE:'1',CIRCUIT_LAB_TEST_PROFILE:path.join(out,'boards-profile-'+Date.now())};delete env.ELECTRON_RUN_AS_NODE;
@@ -22,7 +22,12 @@ const {openFixture}=require('./smoke-fixture.cjs');
   await page.evaluate(()=>window.dispatchEvent(new KeyboardEvent('keydown',{key:'F5',repeat:true,bubbles:true})));assert.equal(await page.locator('#run-status').textContent(),'실행 중');await page.keyboard.press('F5');assert.equal(await page.locator('#run-status').textContent(),'준비됨');
   let before=await saved();await selectBoard();assert.equal(await page.locator('#board-change-dialog').isVisible(),true);await page.keyboard.press('F5');assert.equal(await page.locator('#run-status').textContent(),'준비됨');await page.click('#board-change-cancel');assert.deepEqual(await saved(),before);
   // A real file save does not bypass protection against resetting changed content.
-  const savePath=path.join(out,'board-work.stm32lab');await app.evaluate(({dialog},savePath)=>{dialog.showSaveDialog=async()=>({canceled:false,filePath:savePath});},savePath);await page.click('#save');await fs.access(savePath);
+  const savePath=path.join(out,'board-work.stm32lab');await app.evaluate(({dialog},savePath)=>{
+    dialog.showSaveDialog=async()=>({canceled:false,filePath:savePath});
+    // Exercise slow disk writes, including overwriting an existing project.
+    const fs=process.getBuiltinModule('fs/promises'),writeFile=fs.writeFile;
+    fs.writeFile=async(file,...args)=>{if(file===savePath)await new Promise(resolve=>setTimeout(resolve,350));return writeFile(file,...args);};
+  },savePath);await saveProject(page);await fs.access(savePath);
   await selectBoard();assert.equal(await page.locator('#board-change-dialog').isVisible(),true);await page.screenshot({path:path.join(out,'board-change-warning.png')});await page.keyboard.press('Escape');assert.deepEqual(await saved(),before);await selectBoard();await page.click('#board-change-confirm');assert.deepEqual(await saved(),projectForBoard());
   // Undo all edits back to the actual defaults: no warning is needed.
   await page.fill('#project-name','temporary');await page.locator('#project-name').press('Tab');await page.click('#undo');await selectBoard();assert.equal(await page.locator('#board-change-dialog').isVisible(),false);
@@ -39,7 +44,7 @@ const {openFixture}=require('./smoke-fixture.cjs');
   // Drag the board body, keeping mounted components and connected wires aligned.
   const start=await point(bb.x,bb.y-245),finish=await point(bb.x+80,bb.y+120-245);await page.mouse.move(start.x,start.y);await page.mouse.down();await page.mouse.move(finish.x,finish.y,{steps:6});await page.mouse.up();p=await saved();const moved=p.components.find(c=>c.id===bb.id),movedPart=p.components.find(c=>c.id===resistor.id);assert.ok(moved.x>bb.x+70);assert.ok(moved.y>bb.y+100);assert.ok(movedPart.x>resistor.x+70);assert.equal(p.wires.length,2);
   await page.click('#rotate');p=await saved();assert.equal(p.components.find(c=>c.id===bb.id).rotation,45);assert.equal(p.components.find(c=>c.id===resistor.id).rotation,45);assert.deepEqual(validateProject(p),p);
-  await page.click('#save');const onDisk=JSON.parse(await fs.readFile(savePath,'utf8'));assert.deepEqual(onDisk,p);await page.reload();await page.waitForSelector('#code');assert.equal(await page.locator('.hole').count(),800);assert.deepEqual(await saved(),p);
+  await saveProject(page);const onDisk=JSON.parse(await fs.readFile(savePath,'utf8'));assert.deepEqual(onDisk,p);await page.reload();await page.waitForSelector('#code');assert.equal(await page.locator('.hole').count(),800);assert.deepEqual(await saved(),p);
   // Removing an added board removes its wires, detaches its parts, and Undo restores everything.
   const movedBoard=p.components.find(c=>c.type==='breadboard');await click(movedBoard.x,movedBoard.y);await page.click('#remove-part');let removed=await saved();assert.equal(removed.components.length,1);assert.equal(removed.components[0].type,'resistor');assert.equal(removed.wires.length,0);assert.equal(removed.components[0].attachA,undefined);assert.equal(await page.locator('.hole').count(),400);await page.click('#undo');assert.deepEqual(await saved(),p);
   await app.evaluate(({BrowserWindow})=>BrowserWindow.getAllWindows()[0].setSize(1120,760));await page.screenshot({path:path.join(out,'warm-topbar-compact.png')});const overflow=await page.evaluate(()=>document.querySelector('.top-actions').getBoundingClientRect().right>innerWidth);assert.equal(overflow,false);
