@@ -1,4 +1,4 @@
-// Prepare a download from this build only; old EXEs in dist are never included.
+// Prepare a download from this build only; old EXEs are never included.
 const fs = require('node:fs/promises');
 const path = require('node:path');
 const {createHash} = require('node:crypto');
@@ -9,15 +9,15 @@ const {cleanArtifactOutput} = require('./clean-build.cjs');
   const root = path.resolve(__dirname, '..');
   const pkg = JSON.parse(await fs.readFile(path.join(root, 'package.json'), 'utf8'));
   const name = pkg.build.portable.artifactName.replace('${version}', pkg.version);
-  const dist = path.join(root, 'dist');
+  const dist = path.join(root, 'work', 'build');
   const unpacked = path.join(dist, 'win-unpacked');
-  const output = path.join(dist, 'artifact');
+  const output = path.join(root, 'outputs', 'artifact');
   const asar = await import('@electron/asar');
   const archive = path.join(unpacked, 'resources', 'app.asar');
   const entries = asar.listPackage(archive).map(p => p.replaceAll('\\', '/'));
-  assert.ok(!entries.some(p => /^\/(assets|test-results|tests|scripts)(\/|$)/.test(p)), 'Reference media and test fixtures must not be packaged');
+  assert.ok(!entries.some(p => /^\/(assets|work|outputs|test-results|tests|scripts)(\/|$)/.test(p)), 'Reference media and test fixtures must not be packaged');
   for (const file of ['src/feature-examples.js', 'src/component-examples.js']) assert.ok(!entries.includes('/' + file), 'Removed example module must not be packaged: ' + file);
-  for (const file of ['src/hal-examples.js', 'src/hal-circuits.js', 'src/hal-stdio.js', 'src/device-defs.js', 'src/device-buses.js', 'src/device-motion.js', 'src/device-examples.js', 'src/device-ui.js']) assert.ok(entries.includes('/' + file), 'Missing HAL module: ' + file);
+  for (const file of ['src/editor-search.js', 'src/hal-examples.js', 'src/hal-circuits.js', 'src/hal-stdio.js', 'src/device-defs.js', 'src/device-buses.js', 'src/device-motion.js', 'src/device-examples.js', 'src/device-ui.js']) assert.ok(entries.includes('/' + file), 'Missing HAL module: ' + file);
   assert.doesNotMatch(asar.extractFile(archive, 'src/hal-examples.js').toString(), /\bSerial\d*\./, 'Shipped examples must use HAL and stdio');
   assert.ok(!entries.some(p => /\.png$/i.test(p)), 'Legacy screenshots must not be packaged');
   const packed = JSON.parse(asar.extractFile(archive, 'package.json').toString());
@@ -36,7 +36,7 @@ const {cleanArtifactOutput} = require('./clean-build.cjs');
   const hash = createHash('sha256').update(binary).digest('hex');
   // Replace a recognized older bundle only after the new binary and notices pass.
   // Unknown files and running executables abort without deleting the previous bundle.
-  await cleanArtifactOutput(root);
+  await cleanArtifactOutput(root, {outputDirectory:'outputs'});
   await fs.mkdir(output, {recursive: true});
   await fs.writeFile(path.join(output, name), binary);
   for (const file of ['LICENSE.electron.txt', 'LICENSES.chromium.html']) {

@@ -8,7 +8,7 @@ import {spawn} from 'node:child_process';
 import {once} from 'node:events';
 
 const require = createRequire(import.meta.url);
-const {cleanBuildOutputs, cleanArtifactOutput, makePlan} = require('../scripts/clean-build.cjs');
+const {cleanBuildOutputs, cleanArtifactOutput, cleanAllBuildOutputs, makePlan} = require('../scripts/clean-build.cjs');
 
 async function fixture(t) {
   const root = await fs.mkdtemp(path.join(os.tmpdir(), 'stm-build-cleanup-'));
@@ -178,4 +178,32 @@ test('cleanup supports Korean project paths without shell interpolation', async 
   await write('한글 프로젝트 $(literal)/dist/artifact/STM-Simulator-0.7.0-win-x64.exe');
   assert.deepEqual(await cleanBuildOutputs(project), {files: 1, directories: 1});
   assert.deepEqual(await fs.readdir(path.join(project, 'dist')), []);
+});
+
+test('work/build and outputs are cleaned together, preserving unrelated work files', async t => {
+  const {root, write} = await fixture(t);
+  for (const name of ['dist/STM-Simulator-0.11.0-win-x64.exe', 'work/build/win-unpacked/resources/app.asar', 'outputs/artifact/README.md', 'outputs/STM-Simulator-0.11.0-Windows-x64.zip']) await write(name);
+  const userFile = await write('work/notes.txt', 'keep');
+  const result = await cleanAllBuildOutputs(root);
+  assert.equal(result.files, 4);
+  assert.equal(await fs.readFile(userFile, 'utf8'), 'keep');
+});
+
+test('unknown final output blocks cleanup of intermediate and legacy builds too', async t => {
+  const {root, write} = await fixture(t);
+  const old = await write('dist/STM-Simulator-0.11.0-win-x64.exe', 'old');
+  const current = await write('work/build/STM-Simulator-0.12.0-win-x64.exe', 'current');
+  await write('outputs/artifact/my-circuit.json', 'keep');
+  await assert.rejects(cleanAllBuildOutputs(root), /확인할 수 없는 파일/);
+  assert.equal(await fs.readFile(old, 'utf8'), 'old');
+  assert.equal(await fs.readFile(current, 'utf8'), 'current');
+});
+
+test('nested build output refuses redirected parents and arbitrary output locations', async t => {
+  const {root, write} = await fixture(t);
+  const target = await write('outside/build/STM-Simulator-0.12.0-win-x64.exe', 'keep');
+  await fs.symlink(path.join(root, 'outside'), path.join(root, 'work'), process.platform === 'win32' ? 'junction' : 'dir');
+  await assert.rejects(cleanBuildOutputs(root, {outputDirectory:'work/build'}), /출력 상위 경로가 링크/);
+  await assert.rejects(makePlan(root, false, '../outside'), /허용된 빌드 출력 경로/);
+  assert.equal(await fs.readFile(target, 'utf8'), 'keep');
 });

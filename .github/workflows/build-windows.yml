@@ -36,8 +36,8 @@ jobs:
       - name: Test Electron editing and HAL workflows
         shell: pwsh
         run: |
-          New-Item -ItemType Directory -Force test-results | Out-Null
-          npm run test:ui 2>&1 | Tee-Object -FilePath test-results/ui-tests.log
+          New-Item -ItemType Directory -Force work/test-results | Out-Null
+          npm run test:ui 2>&1 | Tee-Object -FilePath work/test-results/ui-tests.log
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Upload test diagnostics on failure
         if: failure()
@@ -45,9 +45,9 @@ jobs:
         with:
           name: Windows-test-diagnostics
           path: |
-            test-results/*.log
-            test-results/*.json
-            test-results/*.png
+            work/test-results/*.log
+            work/test-results/*.json
+            work/test-results/*.png
           if-no-files-found: ignore
           retention-days: 14
       - name: Build portable executable
@@ -61,7 +61,7 @@ jobs:
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: STM-Simulator-Windows-x64
-          path: dist/artifact/
+          path: outputs/artifact/
           if-no-files-found: error
           retention-days: 90
           compression-level: 6
