@@ -48,4 +48,8 @@ npm run build:artifact
 
 Releases의 **Assets**에서 `STM-Simulator-<버전>-Windows-x64.zip`을 받아 압축을 풀고 EXE를 실행하세요. 실행할 때는 Node.js 설치가 필요 없습니다. ZIP에는 실행 파일, 라이선스 고지와 체크섬이 포함됩니다.
 
-현재 저장소는 비공개이므로 다운로드하려면 GitHub 로그인과 저장소 접근 권한이 필요합니다.
+## 권리 관련 안내
+
+STM Simulator는 STMicroelectronics의 공식 제품이 아닌 개인 학습 프로젝트이며, ST의 후원·승인·제휴를 주장하지 않습니다. STM32, NUCLEO 등 제품명과 상표의 권리는 각 권리자에게 있습니다.
+
+모든 자료의 권리 관계에 대한 법률 검토가 완료된 것은 아닙니다. **저작권·상표권·라이선스 등 권리 관련 문제 또는 법적 문제가 확인되는 경우, 해당 저장소를 삭제 조치하겠습니다.** 관련 문제는 [GitHub Issues](https://github.com/moonsyu/STM-Simulator/issues)를 통해 알려 주세요.
