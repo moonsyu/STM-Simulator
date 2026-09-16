@@ -1,16 +1,16 @@
 # STM Simulator — 개발 인계
 
-현재 버전: **0.11.0**. 정리일: **2026-09-10**. NUCLEO-F446RE와 빵판을 연결하고 GPIO 스케치 또는 지원 HAL C 소스를 실행하는 Windows 회로 실습 앱이다. 사용자에게는 한국어 존댓말로 응답한다.
+현재 버전: **0.12.0**. 정리일: **2026-09-16**. NUCLEO-F446RE와 빵판을 연결하고 GPIO 스케치 또는 지원 HAL C 소스를 실행하는 Windows 회로 실습 앱이다. 사용자에게는 한국어 존댓말로 응답한다.
 
 ## 저장소 관리 원칙
 
-- 사용자 지정 저장소: `C:\Users\SSAFY\Desktop\ct\STM-Simulator`, 원격 `moonsyu/STM-Simulator`, 기본 브랜치 `main`.
+- 사용자 지정 저장소: `D:\codex\projects\ct\STM-Simulator`, 원격 `moonsyu/STM-Simulator`, 기본 브랜치 `main`.
 - 과거 버전은 **Git 커밋 이력**으로만 관리한다. 버전별 백업 폴더·이전 실행 파일·옛 검증 문서 사본을 남기지 않는다.
-- 최신 배포 묶음은 `dist/artifact/`, 최신 검증 문서는 `docs/VERIFICATION.md`, 최신 실행 증거는 `test-results/`에 갱신한다. 테스트가 만든 임시 프로필은 종료 후 제거한다.
+- 최신 배포 묶음은 `outputs/artifact/`, 최신 검증 문서는 `docs/VERIFICATION.md`, 최신 실행 증거는 `work/test-results/`에 갱신한다. 테스트가 만든 임시 프로필은 종료 후 제거한다.
 - 사용자 다운로드 공간은 GitHub Releases의 Assets다. README는 프로젝트 소개·현재 기능·빌드 방법·Releases 다운로드 링크만 유지한다. 게시 요청 시 원격 README 반영과 검증한 실행 파일 업로드까지 완료한다.
 - 별도 빌드 작업 폴더를 쓰면 검증이 끝난 생성물 중복과 임시 파일도 정리한다. 사용자 회로·소스·자동 저장은 생성물 정리 대상이 아니다.
 - 현재 기능 및 정리 변경을 커밋한다. 원격 게시 여부는 사용자 요청에 따른다. 저장소 이름은 STM-Simulator이며 원격 URL과 문서 링크도 이 이름을 사용한다.
-- `dist/`, `node_modules/`, `test-results/`, `.cache/`, 참고 미디어는 Git에서 제외한다.
+- `dist/`, `work/`, `outputs/`, `node_modules/`, `work/test-results/`, `.cache/`, 참고 미디어는 Git에서 제외한다.
 
 ## 현재 구현
 
@@ -27,6 +27,8 @@
 - 보드 검색/선택은 현재 NUCLEO-F446RE 한 종류만 제공한다. 기본 프로젝트와 코드·회로·핀·소스·계산 설정을 비교해 초기화 경고를 판단하므로 저장해도 경고가 유지되고 Undo로 기본 상태가 되면 경고하지 않는다.
 - 추가 빵판은 components의 breadboard 타입으로 최대 8개. 고정 기본 빵판은 기존 사용자 파일 호환을 위해 유지한다. 추가 빵판의 구멍/버스 ID는 breadboard:<id>: 접두사로 분리하며 이동/회전 시 장착 부품도 변환한다. 삭제 시 해당 구멍의 배선과 장착 연결만 제거한다.
 - 확장 14종: LDR, NTC, SHT31, MPU6050, PIR, SSD1306 OLED, ST7735 TFT, MAX7219, RC 서보, DC 모터/드라이버, 4상 스테퍼/드라이버, 릴레이, 조이스틱, 인코더. 각 HAL 예제와 전원·배선·프로토콜 조건 검사가 있다. 세부 명령 범위와 기계 모델 한계는 HAL-API 문서를 따른다.
+- Ctrl+F로 현재 소스에서 문자 그대로 검색하고 Ctrl+R로 단일/전체 치환한다. 치환은 파일 크기 제한과 프로젝트 Undo/Redo·저장을 따르며 실행 중에는 검색만 가능하다.
+- 배선 선택 시 SVG 선을 보존해 실제 더블클릭 이벤트를 유지한다. 꺾임점 크기는 화면 확대율에 맞추고 끌기는 누른 위치의 이동량을 적용한다.
 - 코드/속성 패널 너비를 마우스·키보드로 조절하며 로컬에 저장한다.
 - HAL은 지원 API를 회로에 연결하는 소스 해석 모델이다. 전체 ST HAL 드라이버·C ABI·ARM/ELF/BIN 실행은 구현하지 않았다. 세부 한계는 [HAL API](docs/HAL-API.md)를 따른다.
 
@@ -54,6 +56,7 @@
 | `src/device-defs.js`, `src/device-buses.js`, `src/device-motion.js` | 확장 센서·화면·구동·입력 모델과 핀 구성 |
 | `src/device-examples.js`, `src/device-ui.js` | 확장 14종 HAL 회로/코드, 속성·실시간 픽셀/회전 표시 |
 | `src/trace.js`, `src/monitor.js` | 파형·통신·로그 |
+| `src/editor-search.js` | 현재 소스 찾기·바꾸기와 검색 패널 |
 | `src/app.js`, `src/pinout-ui.js`, `src/editor-layout.js` | 편집/실행·핀 설정·패널 너비 |
 | `src/render.js`, `src/part-render.js`, `src/part-controls.js` | SVG·부품 속성/측정 |
 | `desktop/` | Electron·파일/폴더 가져오기·저장 IPC |
@@ -87,7 +90,7 @@ npm run build:artifact
 node scripts/portable-smoke.cjs
 ```
 
-`npm run build`는 `scripts/clean-build.cjs`로 이전 EXE·배포 묶음·win-unpacked를 먼저 정리한다. 실행 파일이 잠겼으면 아무 파일도 지우기 전에 중단하고 앱 종료를 안내한다. `build:artifact`도 이전 생성 묶음을 안전하게 교체한다. 버전별 폴더로 옮겨 보관하지 않는다. 패키지 검사에는 Electron/Chromium 라이선스 원문과 참고 자료 제외 검증이 포함된다. `win-unpacked`는 빌드/검증 중간 결과이며 전달 후 정리할 수 있다.
+`npm run build`는 `scripts/clean-build.cjs`로 이전 EXE·배포 묶음·win-unpacked를 먼저 정리한다. 실행 파일이 잠겼으면 아무 파일도 지우기 전에 중단하고 앱 종료를 안내한다. `build:artifact`도 이전 생성 묶음을 안전하게 교체한다. 버전별 폴더로 옮겨 보관하지 않는다. 패키지 검사에는 Electron/Chromium 라이선스 원문과 참고 자료 제외 검증이 포함된다. `work/build/win-unpacked`는 빌드/검증 중간 결과이며 전달 후 정리할 수 있다.
 
 `main` 푸시 후에는 해당 커밋의 GitHub Actions 실행 결과까지 확인한다. 로컬 테스트 성공과 원격 빌드 성공을 구분한다. 타이머 UI 검사는 벽시계 대기 대신 단계 실행으로 시뮬레이션 시각을 고정하고, 부품 선택은 `.part-body`를 클릭한다. 파일 저장·열기는 `saveProject`/`openProject` 테스트 헬퍼로 완료 로그를 기다린 뒤 검사한다. UART의 소수 baud 시각 비교에는 ms/µs 왕복 반올림 오차를 고려해야 한다. 실패한 UI 실행의 로그·스크린샷·JSON은 Actions의 `Windows-test-diagnostics`에 14일 보관한다.
 

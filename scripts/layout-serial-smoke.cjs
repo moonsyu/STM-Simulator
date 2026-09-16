@@ -2,7 +2,7 @@ const {openFixture,chooseHal}=require('./smoke-fixture.cjs');
 const assert=require('node:assert/strict'),fs=require('node:fs/promises'),path=require('node:path');
 const {_electron}=require(process.env.PLAYWRIGHT_MODULE||'playwright');
 (async()=>{
- const root=path.resolve(__dirname,'..'),out=path.join(root,'test-results');await fs.mkdir(out,{recursive:true});
+ const root=path.resolve(__dirname,'..'),out=path.join(root,'work','test-results');await fs.mkdir(out,{recursive:true});
  const env={...process.env,CIRCUIT_LAB_SMOKE:'1',CIRCUIT_LAB_TEST_PROFILE:path.join(out,'layout-serial-profile-'+Date.now())};delete env.ELECTRON_RUN_AS_NODE;
  const app=await _electron.launch({executablePath:process.env.LAB_EXE||path.join(root,'node_modules/electron/dist/electron.exe'),args:process.env.LAB_EXE?[]:[root],cwd:root,env});
  try{

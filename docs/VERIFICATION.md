@@ -1,40 +1,25 @@
-# 현재 검증 기록 — 0.11.0
+# 현재 검증 기록 — 0.12.0
 
-2026-09-10, Windows x64, Node.js 24.18.0, Electron 44.2.0, Playwright 1.58.2.
+2026-09-16, Windows x64, Node.js 24, Electron 44.2.0, Playwright 1.58.2.
 
 ## 변경
 
-- 배선 꺾임점 추가·이동·삭제·자동 정렬, 다중 선택·그룹 이동·복사, 연결망 강조. 원본 빵판에서 분리한 복사 부품 사이의 연결도 보존한다.
-- 회로 검사 탭에서 전원 단락·전원/GND·신호 미연결·I²C 주소 중복·과전류를 찾고 해당 핀/부품으로 이동한다.
-- 생성 main.c에 HSI PLL 클록, GPIO AF, 주변장치 클록, ADC·SPI 등 정식 초기화, SWV printf 연결을 포함했다. 현재 main.c를 저장하는 IPC를 추가했다.
-- TIM2/5 32비트, TIM3/4 16비트 카운터·주기 인터럽트·독립 PWM·입력 캡처·직교 엔코더. HAL 예제는 독립 서보/DC 모터, 캡처 주파수 측정, 타이머 엔코더를 추가해 총 30개다. 부품은 31종이다.
-- F5로 시작/정지한다. 편집기 포커스에서도 동작하고 Ctrl/Alt/Shift 수정키, 반복, 열린 모달에서는 실행하지 않는다.
+- 코드 편집기에 Ctrl+F 찾기, Ctrl+R 단일/전체 바꾸기, 대소문자 구분, 다음/이전 항목 이동을 추가했다. 현재 소스 파일에만 적용하며 실행 중에는 검색만 허용한다.
+- 치환은 프로젝트 Undo/Redo·자동 저장·파일 저장을 따르고 소스 크기 제한을 검사한다. 교체 문자열은 특수 기호도 문자 그대로 처리한다.
+- 배선 선택 시 SVG 선을 유지해 실제 마우스 더블클릭으로 꺾임점을 추가한다. 점을 잡은 위치를 기준으로 이동하며 확대율에 맞는 크기의 핸들을 표시한다.
+- 빌드 중간 파일과 검사 결과는 work/build 및 work/test-results, 배포 묶음은 outputs/artifact에 생성한다. 기존 dist와 새 출력의 알려진 빌드 파일만 정리하며 링크·잠긴 파일·출력 안의 사용자 파일은 삭제하지 않는다.
 
-## 검증
+## 로컬 검증
 
-- 모델 테스트 155개 통과. 기존 HAL·부품·회로와 배선 경로 저장, 복사 연결망/빵판 ID 재배정, 진단 위치, 서로 다른 PWM, 캡처 카운터 넘침, NVIC, 엔코더 정역회전/정지, ARR 변경을 검사했다.
-- Electron UI 10개 스크립트 통과: ui/editor/parts/features/hal/layout-serial/hal-examples/boards/devices/circuit-tools. 새 회로 도구, 저장·불러오기·Undo/Redo, F5, main.c 저장 IPC, 세 타이머 예제 실시간 로그를 확인했다.
-- 기본 main.c + HAL 예제 30개 모두 ARM GCC 14.3.1, STM32CubeF4 V1.28.3의 정식 HAL/CMSIS/startup을 사용해 컴파일·ELF 링크 통과. 함수 선언과 포인터 불일치를 오류로 검사했다. main.c SHA-256별 기록은 test-results/main-c-check.json에 남긴다. HAL 대체 헤더를 사용하지 않는다.
-- UART 소수점 baud 마감 시각의 ms/µs 변환 오차를 수정했다. 9600/115200 baud, 시작 시각 6종, 1/20 ms 간격에서 수신 시각과 전체 에코 바이트를 검사했다. UI에서도 260 ms 시점의 `HAL log` 에코를 재현해 검사한다.
-- 타이머 UI 검사는 실제 단계 실행 버튼으로 240/260/500 ms의 LED 전환을 확인한다. 부품은 배선·라벨을 포함한 그룹 좌표 대신 보이는 본체를 클릭한다.
-- 파일 저장·열기 UI 검사는 IPC 완료 로그를 기다린 뒤 읽는다. 350 ms 지연 쓰기로 새 파일 저장과 덮어쓰기도 검증한다.
-- UI 증거와 구조화된 결과는 test-results에 저장한다. 사용자 자동 저장과 분리한 프로필에서 검증한다.
+- 모델 테스트 161개 통과. 기존 HAL·타이머·회로·저장 모델과 문자 검색·치환·크기 제한, 새 출력 위치 및 정리 범위를 검사했다.
+- Electron UI 스크립트 11개 통과: ui/editor/parts/features/hal/layout-serial/hal-examples/boards/devices/circuit-tools/editor-tools.
+- 새 편집기 검사는 실제 Ctrl+F/Ctrl+R, 검색 결과 순환, 먼 줄/열로 스크롤, 단일/전체/삭제 치환, Ctrl+Z/Y, 헤더 파일 분리, IPC 저장·열기, 실행 중 잠금, 1120×760 창을 확인한다.
+- 배선 검사는 합성 dblclick 이벤트 대신 실제 마우스 더블클릭과 드래그를 사용한다. 전기적 시작/끝점 보존, 우클릭 삭제, Undo/Redo, 저장·재열기, 실행 중 편집 제한을 확인한다.
+- UI 검사에는 분리된 테스트 프로필을 사용한다. 결과와 스크린샷은 work/test-results에 보관한다.
+- 이번 변경은 main.c 생성기와 HAL 예제 내용을 바꾸지 않았다. 정식 ST HAL/ARM GCC 컴파일·링크 검사는 기존 검증에 해당하며 이번 작업에서 재실행하지 않았다.
 
-## GitHub Actions
+## 빌드와 배포
 
-- 수정 커밋 `5d1595ab2a40ced9c53119857b91c2bb61fa7dba`의 [Windows 빌드](https://github.com/moonsyu/STM-Simulator/actions/runs/34443054652)가 2026-09-10 성공했다. 서버에서 모델 테스트 155개와 UI 스크립트 10개, EXE 생성·패키지 검사·아티팩트 업로드까지 통과했다.
-- 서버 EXE는 100,190,585 bytes, SHA-256 `4e42ee61b007938bcf3369560498a853c27f08a92ca16cb425f349b6d366ee18`이다. `STM-Simulator-Windows-x64` 아티팩트 ID는 `10138771337`이다.
-- 현재 CI 증거는 `test-results/ci-proof.json`과 `github-actions.log`에 저장한다. 릴리스에 게시된 빌드는 아래 별도로 기록한다.
+현재 변경의 실행 파일 빌드, 패키지 실행 검사, 해당 커밋의 GitHub Actions 및 Releases 검증 결과를 완료 후 이 문서에 갱신한다.
 
-## 배포된 릴리스
-
-- 빌드 커밋: `343bcd7b43734fc9127f7bc14038d4d1ccc82ea6`.
-- 실행 파일: `dist/artifact/STM-Simulator-0.11.0-win-x64.exe` — 100,190,082 bytes.
-- EXE SHA-256: `4f50c0a2cbb172f0a44a48fdab4674e300c5f23160e5013860d920ec342957c8`.
-- ZIP: `STM-Simulator-0.11.0-Windows-x64.zip` — 102,888,587 bytes.
-- ZIP SHA-256: `7465ae0ac4c30b87d352f1e83bf1fa781e0e81e17d0550ac3fdc9b7d12cd80c3`.
-- [GitHub Release v0.11.0](https://github.com/moonsyu/STM-Simulator/releases/tag/v0.11.0), release ID 386023190. EXE·ZIP·SHA256.txt 업로드 크기·서버 digest와 latest release를 확인했다. 저장소는 Private이다.
-- 빌드된 win-unpacked 앱에서 새 기능 UI 검사, 단일 portable EXE의 실행·HAL UART·회로·파형 검사를 통과했다. 릴리스 빌드 당시 ASAR의 소스·문서 52개를 작업 파일 및 빌드 커밋과 대조했고, ARM 검사한 main.c 31개의 해시도 해당 예제와 일치했다.
-- 이전 실행 파일과 중간 빌드 출력, 테스트용 프로필, 검증에 사용한 임시 ARM 객체/ELF와 업로드 ZIP을 정리한다. 최신 실행 파일은 dist/artifact, 현재 검증 결과는 test-results에 보존한다.
-
-실물 보드 실행은 검증하지 않았다. 실제 프로젝트에는 동일 핀·주변장치·NVIC와 Cube의 MSP/IRQ/SysTick/syscalls가 있어야 한다. printf는 SWV ITM 포트 0이며 newlib-nano의 소수 출력에는 -u _printf_float 링크 옵션이 필요하다. 앱은 전체 ST HAL/C ABI/ARM 실행기가 아니며 필터·DMA·외부 타이머 클록·NVIC 선점은 지원하지 않는다. 세부 범위는 [HAL API](HAL-API.md)를 따른다.
+실물 보드 실행은 검증하지 않았다. 앱은 지원 HAL API를 실행하는 소스 해석 모델이며 전체 ST HAL/C ABI/ARM 실행기는 아니다. 세부 범위는 [HAL API](HAL-API.md)를 따른다.

@@ -5,6 +5,7 @@ const {spawnSync} = require('node:child_process');
 
 const VERSION = String.raw`\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?`;
 const PORTABLE = new RegExp(`^STM-(?:Emulator|Simulator)-${VERSION}-win-x64\\.exe$`, 'i');
+const RELEASE_ZIP = new RegExp(`^STM-Simulator-${VERSION}-Windows-x64\\.zip$`, 'i');
 const NSIS_ARCHIVE = new RegExp(`^stm-(?:emulator|simulator)-${VERSION}-x64\\.nsis\\.7z$`, 'i');
 const VERSIONED_ARTIFACT = new RegExp(`^artifact-${VERSION}$`, 'i');
 const BUNDLE_FILES = new Set(['LICENSE.electron.txt', 'LICENSES.chromium.html', 'README.md', 'THIRD_PARTY_NOTICES.md', 'SHA256.txt', 'BUILD-INFO.json']);
@@ -31,12 +32,17 @@ function refuse(message, target) {
   throw new Error(`빌드 정리를 중단했습니다: ${message}\n${target}\n사용자 파일은 별도 위치로 옮긴 후 다시 빌드하세요.`);
 }
 
-async function makePlan(root, onlyArtifact = false) {
+async function makePlan(root, onlyArtifact = false, outputDirectory = 'dist') {
   root = path.resolve(root);
   const rootStat = await fs.lstat(root);
   if (rootStat.isSymbolicLink() || !rootStat.isDirectory()) refuse('프로젝트 경로가 실제 폴더가 아닙니다.', root);
-  const dist = path.resolve(root, 'dist');
+  if (!['dist', 'work/build', 'outputs'].includes(outputDirectory)) refuse('허용된 빌드 출력 경로가 아닙니다.', outputDirectory);
+  const dist = path.resolve(root, outputDirectory);
   const plan = {root, dist, files: [], directories: [], paths: []};
+  for (let ancestor = path.dirname(dist); ancestor !== root; ancestor = path.dirname(ancestor)) {
+    const stat = await statIfPresent(ancestor);
+    if (stat && (stat.isSymbolicLink() || !stat.isDirectory())) refuse('출력 상위 경로가 링크 또는 실제 폴더가 아닙니다.', ancestor);
+  }
   const distStat = await statIfPresent(dist);
   if (!distStat) return plan;
   if (!inside(root, dist) || distStat.isSymbolicLink() || !distStat.isDirectory()) refuse('dist가 링크 또는 실제 폴더가 아닌 경로입니다.', dist);
@@ -80,7 +86,7 @@ async function makePlan(root, onlyArtifact = false) {
       const stat = await fs.lstat(target);
       if (!stat.isDirectory() || stat.isSymbolicLink()) refuse('실행 파일 출력 경로가 실제 폴더가 아닙니다.', target);
       await inspect(target, 'runtime');
-    } else if (!onlyArtifact && (PORTABLE.test(name) || NSIS_ARCHIVE.test(name) || ['builder-debug.yml', 'builder-effective-config.yaml'].includes(name))) {
+    } else if (!onlyArtifact && (PORTABLE.test(name) || RELEASE_ZIP.test(name) || NSIS_ARCHIVE.test(name) || ['builder-debug.yml', 'builder-effective-config.yaml'].includes(name))) {
       const target = path.join(dist, name);
       const stat = await fs.lstat(target);
       if (!stat.isFile() || stat.isSymbolicLink()) refuse('실행 파일 출력 경로가 일반 파일이 아닙니다.', target);
@@ -129,6 +135,9 @@ async function executePlan(plan, {preflight = preflightWindows} = {}) {
   // Recheck each path immediately before mutation in case the output changed meanwhile.
   const fileSet = new Set(plan.files);
   for (const target of [...plan.files, ...plan.directories]) {
+    for (let ancestor = path.dirname(plan.dist); ancestor !== plan.root; ancestor = path.dirname(ancestor)) {
+      if (!inside(plan.root, ancestor) || (await fs.lstat(ancestor)).isSymbolicLink()) refuse('정리 중 출력 상위 경로가 변경되었습니다.', ancestor);
+    }
     const distStat = await fs.lstat(plan.dist);
     if (distStat.isSymbolicLink() || !distStat.isDirectory() || await fs.realpath(plan.dist) !== plan.realDist) {
       refuse('정리 중 dist 경로가 변경되었습니다.', plan.dist);
@@ -153,13 +162,25 @@ async function executePlan(plan, {preflight = preflightWindows} = {}) {
   return {files: plan.files.length, directories: plan.directories.length};
 }
 
-async function cleanBuildOutputs(root, options) { return executePlan(await makePlan(root), options); }
-async function cleanArtifactOutput(root, options) { return executePlan(await makePlan(root, true), options); }
+async function cleanBuildOutputs(root, options = {}) { return executePlan(await makePlan(root, false, options.outputDirectory), options); }
+async function cleanArtifactOutput(root, options = {}) { return executePlan(await makePlan(root, true, options.outputDirectory), options); }
 
-module.exports = {cleanBuildOutputs, cleanArtifactOutput, makePlan, preflightWindows};
+async function cleanAllBuildOutputs(root) {
+  const plans = await Promise.all(['dist', 'work/build', 'outputs'].map(directory => makePlan(root, false, directory)));
+  // Check every output location before removing anything, including file locks.
+  await preflightWindows({paths:plans.flatMap(p => p.paths), files:plans.flatMap(p => p.files)});
+  const total = {files:0, directories:0};
+  for (const plan of plans) {
+    const result = await executePlan(plan, {preflight:async () => {}});
+    total.files += result.files;total.directories += result.directories;
+  }
+  return total;
+}
+
+module.exports = {cleanBuildOutputs, cleanArtifactOutput, cleanAllBuildOutputs, makePlan, preflightWindows};
 
 if (require.main === module) {
-  cleanBuildOutputs(path.resolve(__dirname, '..')).then(result => {
+  cleanAllBuildOutputs(path.resolve(__dirname, '..')).then(result => {
     console.log(`이전 빌드 출력 정리 완료: 파일 ${result.files}개, 폴더 ${result.directories}개`);
   }).catch(error => { console.error(error.message); process.exitCode = 1; });
 }

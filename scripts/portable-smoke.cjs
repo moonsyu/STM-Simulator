@@ -7,10 +7,10 @@ const {chromium}=require(process.env.PLAYWRIGHT_MODULE||'playwright');
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 (async()=>{
  const {circuitFixture}=await import('../tests/fixtures/circuits.js'),{programFixture}=await import('../tests/fixtures/programs.js'),{deviceFixture}=await import('../tests/fixtures/devices.js');
- const root=path.resolve(__dirname,'..'),out=path.join(root,'test-results'),profile=path.join(out,'portable-profile-'+Date.now());await fs.mkdir(profile,{recursive:true});
+ const root=path.resolve(__dirname,'..'),out=path.join(root,'work','test-results'),profile=path.join(out,'portable-profile-'+Date.now());await fs.mkdir(profile,{recursive:true});
  const env={...process.env,CIRCUIT_LAB_TEST_PROFILE:profile};delete env.ELECTRON_RUN_AS_NODE;delete env.CIRCUIT_LAB_SMOKE;
  const pkg=JSON.parse(await fs.readFile(path.join(root,'package.json'),'utf8'));
- const exe=path.join(root,'dist',pkg.build.portable.artifactName.replace('${version}',pkg.version));
+ const exe=path.join(root,'outputs','artifact',pkg.build.portable.artifactName.replace('${version}',pkg.version));
  const child=spawn(exe,['--remote-debugging-port=0'],{cwd:root,env,windowsHide:true,stdio:'ignore'});let browser,page;
  try{
    let port;for(let i=0;i<160;i++){try{port=(await fs.readFile(path.join(profile,'DevToolsActivePort'),'utf8')).split('\n')[0];break;}catch{await sleep(250);}}

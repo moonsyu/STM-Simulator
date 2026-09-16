@@ -18,7 +18,7 @@ STM Simulator는 **NUCLEO-F446RE 보드와 400홀 빵판에서 STM32 회로와 H
 - **화면·구동 부품**: LCD·7세그먼트 외 SSD1306 OLED, ST7735 컬러 TFT, MAX7219 LED 매트릭스의 실제 수신 픽셀 표시. RC 서보, PWM DC 모터, 4상 스테퍼, COM/NO/NC 접점 릴레이 모듈.
 - **HAL 예제 30개**: GPIO·통신·타이머·ADC 예제와 새 부품 14종의 예제를 제공. 선택 즉시 회로·배선·코드·핀 설정을 함께 구성하며 측정값·전송 상태·제어 명령을 로그에 표시.
 - **실행 결과 확인**: `printf`와 UART TX/RX 로그, 4채널 파형, CSV 내보내기, 핀 전압·부품 전류 측정, 전원 단락·과전류 경고.
-- **작업 저장 및 편집**: `.stm32lab` 파일 저장·불러오기, 자동 저장, 실행 취소·재실행, 코드 편집기 너비 조절. F5로 시뮬레이션 시작·정지.
+- **작업 저장 및 편집**: `.stm32lab` 파일 저장·불러오기, 자동 저장, 실행 취소·재실행, 코드 편집기 너비 조절. Ctrl+F로 현재 파일에서 찾기, Ctrl+R로 하나씩 또는 전체 바꾸기, 대소문자 구분과 검색 결과 이동. F5로 시뮬레이션 시작·정지.
 
 ## 빌드 방법
 
@@ -33,8 +33,9 @@ npm run build
 npm run build:artifact
 ```
 
-- 실행 파일: `dist/STM-Simulator-<버전>-win-x64.exe`
-- 실행 파일과 라이선스 고지를 포함한 배포 묶음: `dist/artifact/`
+- 실행 파일: `outputs/artifact/STM-Simulator-<버전>-win-x64.exe`
+- 실행 파일과 라이선스 고지를 포함한 배포 묶음: `outputs/artifact/`
+- 빌드 중간 파일: `work/build/`, 검사 결과: `work/test-results/`
 - 개발 중 실행: `npm start`
 - 검증: `npm test`, `npm run test:ui`
 - 실제 ARM 컴파일·링크 검사: ARM GCC와 STM32CubeF4 설치 후 `npm run test:main-c`. 패키지 위치가 다르면 `STM32CUBE_F4_ROOT`, 컴파일러 위치는 `ARM_GCC`로 지정.

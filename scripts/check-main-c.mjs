@@ -50,5 +50,5 @@ for(const [name,project]of [['blank',blankProject()],...Object.keys(HAL_EXAMPLES
   run([...flags,'-Tstm32f446re.ld','-nostartfiles','--specs=nano.specs','--specs=nosys.specs','-Wl,--gc-sections','-u','_printf_float',name+'.o','cube-environment.o',...objects,'-lm','-o',name+'.elf']);
   sources[name]=createHash('sha256').update(project.code).digest('hex');checked.push(name);console.log('ARM HAL compile/link:',name);
 }
-await fs.mkdir(path.join(root,'test-results'),{recursive:true});
-await fs.writeFile(path.join(root,'test-results/main-c-check.json'),JSON.stringify({passed:true,cube,gcc,checked,sources,hardwareRun:false},null,2));
+await fs.mkdir(path.join(root,'work','test-results'),{recursive:true});
+await fs.writeFile(path.join(root,'work/test-results/main-c-check.json'),JSON.stringify({passed:true,cube,gcc,checked,sources,hardwareRun:false},null,2));
