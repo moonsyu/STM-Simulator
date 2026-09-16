@@ -20,6 +20,18 @@
 
 ## 빌드와 배포
 
-현재 변경의 실행 파일 빌드, 패키지 실행 검사, 해당 커밋의 GitHub Actions 및 Releases 검증 결과를 완료 후 이 문서에 갱신한다.
+- 빌드 커밋: `8c72fba70627a62ad874e4c82a8b16ebf7468483`.
+- `npm run build` 및 `npm run build:artifact` 통과. 새 빌드 전에 이전 0.11.0 실행 파일과 배포 묶음을 정리했다.
+- 패키징한 소스·문서 54개를 빌드 커밋과 대조했다. package.json은 electron-builder가 제거하는 개발 설정을 제외한 실행 메타데이터를 비교했다.
+- win-unpacked 앱에서 새 편집기 UI 검사, 단일 portable EXE에서 실행·회로·HAL 통신·Pinout·파형 검사를 통과했다.
+- 실행 파일: `outputs/artifact/STM-Simulator-0.12.0-win-x64.exe` — 100,191,890 bytes.
+- EXE SHA-256: `c0d3d7e32eff9c073afb33a17c590b3ae5fdce0a1cb973e14d19f74d71bd7bf3`.
+- ZIP: `outputs/STM-Simulator-0.12.0-Windows-x64.zip` — 102,890,956 bytes.
+- ZIP SHA-256: `a24fc057162615f5ee7c9306991487ceadb760f6c1c26381377121fb201a1b6e`.
+
+- 해당 커밋의 [GitHub Actions](https://github.com/moonsyu/STM-Simulator/actions/runs/35038624651)가 성공했다. 원격 모델 테스트 161개, UI 11개, Windows EXE 빌드, 패키지 검사, 업로드까지 확인했다. 아티팩트 ID는 10424557028이다.
+- [GitHub Releases v0.12.0](https://github.com/moonsyu/STM-Simulator/releases/tag/v0.12.0)에 로컬 검증한 EXE·ZIP·SHA256.txt를 게시했다. 릴리스 ID는 389554596이며 업로드 크기와 GitHub 서버 SHA-256이 로컬 값과 일치한다.
+- 현재 원격 증거는 work/test-results/ci-proof.json, github-actions.log, release-proof.json에 기록했다.
+- 알려진 이전 실행 파일과 중간 빌드 파일 75개는 정리했다. 임시 테스트 프로필과 이전 검사 자료의 폴더 삭제는 자동 승인 검토에서 차단되어 남아 있다. 상세 차단 사유는 제공되지 않았다.
 
 실물 보드 실행은 검증하지 않았다. 앱은 지원 HAL API를 실행하는 소스 해석 모델이며 전체 ST HAL/C ABI/ARM 실행기는 아니다. 세부 범위는 [HAL API](HAL-API.md)를 따른다.
