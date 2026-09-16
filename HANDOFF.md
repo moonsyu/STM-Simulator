@@ -98,7 +98,7 @@ node scripts/portable-smoke.cjs
 
 ## 권리와 모델 범위
 
-저장소는 Private이며 [저작권 검토](docs/COPYRIGHT-REVIEW.md)와 [제3자 고지](THIRD_PARTY_NOTICES.md)를 유지한다. ST 드라이버/CubeMX XML, 참고 사진·생성 이미지를 앱에 넣지 않는다. 프로젝트 전체에 라이선스를 임의로 부여하지 않는다.
+저장소는 2026-09-16 소유자 요청으로 Public으로 전환했으며 [저작권 검토](docs/COPYRIGHT-REVIEW.md)와 [제3자 고지](THIRD_PARTY_NOTICES.md)를 유지한다. ST 드라이버/CubeMX XML, 참고 사진·생성 이미지를 앱에 넣지 않는다. 프로젝트 전체에 라이선스를 임의로 부여하지 않는다. README에 권리 관련 문제 또는 법적 문제가 확인되면 저장소를 삭제 조치한다는 안내를 유지한다.
 
 통신 비트 파형/노이즈, 실제 NVIC 선점, 동기식 USART, HAL DMA, MCU UART 간 직접 배선 전송, 전체 C/C++·CPU·레지스터 재현은 미지원이다. 모델을 정밀 하드웨어 에뮬레이션으로 설명하지 않는다.
 
