@@ -1,6 +1,6 @@
 {
   "name": "stm-simulator",
-  "version": "0.12.0",
+  "version": "0.12.1",
   "description": "NUCLEO-F446RE circuit and GPIO simulator",
   "author": "STM Simulator",
   "private": true,
@@ -13,7 +13,8 @@
     "build:artifact": "node scripts/prepare-artifact.cjs",
     "dev:web": "node scripts/serve.cjs",
     "test:ui": "node scripts/ui-smoke.cjs && node scripts/editor-smoke.cjs && node scripts/parts-smoke.cjs && node scripts/features-smoke.cjs && node scripts/hal-smoke.cjs && node scripts/layout-serial-smoke.cjs && node scripts/hal-examples-smoke.cjs && node scripts/boards-smoke.cjs && node scripts/devices-smoke.cjs && node scripts/circuit-tools-smoke.cjs && node scripts/editor-tools-smoke.cjs",
-    "test:main-c": "node scripts/check-main-c.mjs"
+    "test:main-c": "node scripts/check-main-c.mjs",
+    "build:icon": "electron scripts/prepare-icon.cjs"
   },
   "devDependencies": {
     "electron": "44.2.0",
@@ -34,12 +35,14 @@
       "README.md",
       "THIRD_PARTY_NOTICES.md",
       "docs/COPYRIGHT-REVIEW.md",
+      "docs/APP-ICON.md",
       "docs/SKETCH-API.md",
       "docs/HAL-API.md"
     ],
     "win": {
       "target": "portable",
-      "signAndEditExecutable": false
+      "signExecutable": false,
+      "icon": "desktop/icons/stm-simulator.ico"
     },
     "portable": {
       "artifactName": "STM-Simulator-${version}-win-x64.exe"

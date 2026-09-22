@@ -4,10 +4,11 @@ const path=require('node:path');
 // Keep the existing profile so renaming the app retains auto-saved circuits.
 const legacyUserData=path.join(app.getPath('appData'),'STM32 Circuit Lab');
 app.setName('STM Simulator');
+app.setAppUserModelId('local.stm32.circuitlab');
 app.setPath('userData',process.env.CIRCUIT_LAB_TEST_PROFILE||legacyUserData);
 let win;
 app.whenReady().then(()=>{
-  win=new BrowserWindow({width:1540,height:1020,minWidth:1120,minHeight:760,show:process.env.CIRCUIT_LAB_SMOKE!=='1',backgroundColor:'#101b29',title:'STM Simulator',webPreferences:{preload:path.join(__dirname,'preload.cjs'),contextIsolation:true,nodeIntegration:false,sandbox:true}});
+  win=new BrowserWindow({icon:path.join(__dirname,'icons/stm-simulator.ico'),width:1540,height:1020,minWidth:1120,minHeight:760,show:process.env.CIRCUIT_LAB_SMOKE!=='1',backgroundColor:'#101b29',title:'STM Simulator',webPreferences:{preload:path.join(__dirname,'preload.cjs'),contextIsolation:true,nodeIntegration:false,sandbox:true}});
   win.setMenuBarVisibility(false);
   win.webContents.setWindowOpenHandler(()=>({action:'deny'}));
   win.webContents.on('will-navigate',e=>e.preventDefault());
