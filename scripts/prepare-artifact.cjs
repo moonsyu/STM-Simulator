@@ -21,7 +21,7 @@ const {cleanArtifactOutput} = require('./clean-build.cjs');
   assert.doesNotMatch(asar.extractFile(archive, 'src/hal-examples.js').toString(), /\bSerial\d*\./, 'Shipped examples must use HAL and stdio');
   assert.ok(!entries.some(p => /\.png$/i.test(p) && p !== '/desktop/icons/stm-simulator.png'), 'Only the app icon PNG may be packaged');
   for (const file of ['desktop/icons/stm-simulator.png', 'desktop/icons/stm-simulator.ico']) {
-    assert.deepEqual(asar.extractFile(archive, file), await fs.readFile(path.join(root, file)), 'Packaged app icon differs from source: ' + file);
+    assert.deepEqual(asar.extractFile(archive, path.normalize(file)), await fs.readFile(path.join(root, file)), 'Packaged app icon differs from source: ' + file);
   }
   const packed = JSON.parse(asar.extractFile(archive, 'package.json').toString());
   assert.equal(packed.version, pkg.version, 'Packaged version must match source');
@@ -46,7 +46,7 @@ const {cleanArtifactOutput} = require('./clean-build.cjs');
     const items = groups[0].getIconItemsFromEntries(resources.entries);
     for (const size of [16,32,48,256]) {
       const expected = icon.icons.find(item => item.data.width === size).data;
-      const actual = items.find(item => item.width === size);
+      const actual = items.find(item => (item.width || 256) === size);
       assert.ok(actual?.isRaw(), `Missing ${size}px app icon in ${label}`);
       assert.deepEqual(Buffer.from(actual.bin), Buffer.from(expected.bin), `Wrong ${size}px app icon in ${label}`);
     }
