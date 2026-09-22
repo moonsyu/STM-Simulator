@@ -19,12 +19,15 @@ const {cleanArtifactOutput} = require('./clean-build.cjs');
   for (const file of ['src/feature-examples.js', 'src/component-examples.js']) assert.ok(!entries.includes('/' + file), 'Removed example module must not be packaged: ' + file);
   for (const file of ['src/editor-search.js', 'src/hal-examples.js', 'src/hal-circuits.js', 'src/hal-stdio.js', 'src/device-defs.js', 'src/device-buses.js', 'src/device-motion.js', 'src/device-examples.js', 'src/device-ui.js']) assert.ok(entries.includes('/' + file), 'Missing HAL module: ' + file);
   assert.doesNotMatch(asar.extractFile(archive, 'src/hal-examples.js').toString(), /\bSerial\d*\./, 'Shipped examples must use HAL and stdio');
-  assert.ok(!entries.some(p => /\.png$/i.test(p)), 'Legacy screenshots must not be packaged');
+  assert.ok(!entries.some(p => /\.png$/i.test(p) && p !== '/desktop/icons/stm-simulator.png'), 'Only the app icon PNG may be packaged');
+  for (const file of ['desktop/icons/stm-simulator.png', 'desktop/icons/stm-simulator.ico']) {
+    assert.deepEqual(asar.extractFile(archive, file), await fs.readFile(path.join(root, file)), 'Packaged app icon differs from source: ' + file);
+  }
   const packed = JSON.parse(asar.extractFile(archive, 'package.json').toString());
   assert.equal(packed.version, pkg.version, 'Packaged version must match source');
   assert.equal(packed.name, pkg.name, 'Packaged name must match source');
   assert.match(asar.extractFile(archive, 'index.html').toString(), /<title>STM Simulator<\/title>/, 'Packaged app must display the current product name');
-  for (const file of ['README.md', 'THIRD_PARTY_NOTICES.md', 'docs/COPYRIGHT-REVIEW.md', 'docs/SKETCH-API.md', 'docs/HAL-API.md']) {
+  for (const file of ['README.md', 'THIRD_PARTY_NOTICES.md', 'docs/COPYRIGHT-REVIEW.md', 'docs/APP-ICON.md', 'docs/SKETCH-API.md', 'docs/HAL-API.md']) {
     assert.ok(entries.includes('/' + file), 'Missing notice: ' + file);
   }
   // Check that upstream notices survived packaging without modification.
@@ -33,6 +36,21 @@ const {cleanArtifactOutput} = require('./clean-build.cjs');
   }
   const binary = await fs.readFile(path.join(dist, name));
   assert.equal(binary.subarray(0, 2).toString(), 'MZ', 'Expected Windows executable');
+  // Check the actual default Windows icon, not just the builder configuration.
+  const resedit = require('resedit');
+  const icon = resedit.Data.IconFile.from(await fs.readFile(path.join(root, 'desktop/icons/stm-simulator.ico')));
+  for (const [label, bytes] of [[name, binary], ['STM Simulator.exe', await fs.readFile(path.join(unpacked, 'STM Simulator.exe'))]]) {
+    const resources = resedit.NtExecutableResource.from(resedit.NtExecutable.from(bytes));
+    const groups = resedit.Resource.IconGroupEntry.fromEntries(resources.entries).sort((a,b) => Number(a.id) - Number(b.id));
+    assert.ok(groups.length, 'Missing Windows icon: ' + label);
+    const items = groups[0].getIconItemsFromEntries(resources.entries);
+    for (const size of [16,32,48,256]) {
+      const expected = icon.icons.find(item => item.data.width === size).data;
+      const actual = items.find(item => item.width === size);
+      assert.ok(actual?.isRaw(), `Missing ${size}px app icon in ${label}`);
+      assert.deepEqual(Buffer.from(actual.bin), Buffer.from(expected.bin), `Wrong ${size}px app icon in ${label}`);
+    }
+  }
   const hash = createHash('sha256').update(binary).digest('hex');
   // Replace a recognized older bundle only after the new binary and notices pass.
   // Unknown files and running executables abort without deleting the previous bundle.
@@ -46,7 +64,7 @@ const {cleanArtifactOutput} = require('./clean-build.cjs');
     await fs.copyFile(path.join(root, file), path.join(output, file));
   }
   await fs.mkdir(path.join(output, 'docs'));
-  for (const file of ['COPYRIGHT-REVIEW.md', 'SKETCH-API.md', 'HAL-API.md']) {
+  for (const file of ['COPYRIGHT-REVIEW.md', 'APP-ICON.md', 'SKETCH-API.md', 'HAL-API.md']) {
     await fs.copyFile(path.join(root, 'docs', file), path.join(output, 'docs', file));
   }
   await fs.writeFile(path.join(output, 'SHA256.txt'), `${hash}  ${name}\n`);
