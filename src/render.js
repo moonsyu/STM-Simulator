@@ -71,7 +71,7 @@ export function renderParts(project,selected,result,pressed){const parts=project
    else if(p.type==='lcd')root=rotatePoint(t.x,35,angle);
    else if(p.type==='sevenseg')root=rotatePoint(t.x,Math.sign(t.y)*27,angle);
    else if(PART_DEFS[p.type]?.labels)root=rotatePoint(t.x,PART_DEFS[p.type].pinY?PART_DEFS[p.type].pinY-14:p.type==='ultrasonic'?22:14,angle);
-   else if(['capacitor','diode','buzzer'].includes(p.type))root=rotatePoint(Math.sign(t.x)*(p.type==='buzzer'?16:12),0,angle);
+   else if(['capacitor','diode','buzzer','passive_buzzer'].includes(p.type))root=rotatePoint(Math.sign(t.x)*(['buzzer','passive_buzzer'].includes(p.type)?16:12),0,angle);
    else root=rotatePoint(Math.sign(t.x)*(p.type==='led'?10:half),0,angle);
    return `<path d="M${x+root.x} ${y+root.y}L${nominal[i].x} ${nominal[i].y}L${end.x} ${end.y}" fill="none" stroke="#708c9b" stroke-width="3" stroke-linejoin="round"/><circle class="part-contact" cx="${end.x}" cy="${end.y}" r="3" fill="${attachments(p)[t.key]?'#20a985':'#bdcdd5'}" stroke="#607d8d"/>`;
  }).join('');

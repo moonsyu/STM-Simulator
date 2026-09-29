@@ -9,10 +9,12 @@
   "scripts": {
     "start": "electron .",
     "test": "node --test tests/*.test.js",
+    "test:passive-buzzer": "node --test tests/passive-buzzer.test.js",
+    "test:passive-buzzer:ui": "node scripts/passive-buzzer-smoke.cjs",
     "build": "node scripts/clean-build.cjs && electron-builder --win portable --x64 --publish never",
     "build:artifact": "node scripts/prepare-artifact.cjs",
     "dev:web": "node scripts/serve.cjs",
-    "test:ui": "node scripts/ui-smoke.cjs && node scripts/editor-smoke.cjs && node scripts/parts-smoke.cjs && node scripts/features-smoke.cjs && node scripts/hal-smoke.cjs && node scripts/layout-serial-smoke.cjs && node scripts/hal-examples-smoke.cjs && node scripts/boards-smoke.cjs && node scripts/devices-smoke.cjs && node scripts/circuit-tools-smoke.cjs && node scripts/editor-tools-smoke.cjs",
+    "test:ui": "node scripts/ui-smoke.cjs && node scripts/editor-smoke.cjs && node scripts/parts-smoke.cjs && node scripts/features-smoke.cjs && node scripts/hal-smoke.cjs && node scripts/layout-serial-smoke.cjs && node scripts/hal-examples-smoke.cjs && node scripts/boards-smoke.cjs && node scripts/devices-smoke.cjs && node scripts/circuit-tools-smoke.cjs && node scripts/editor-tools-smoke.cjs && node scripts/passive-buzzer-smoke.cjs",
     "test:main-c": "node scripts/check-main-c.mjs",
     "build:icon": "electron scripts/prepare-icon.cjs"
   },

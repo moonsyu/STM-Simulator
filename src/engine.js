@@ -67,6 +67,7 @@ export function solveCircuit(project,gpio={},pressed={},transient={}){
     if(p.type==='led')branch(a,b,12,{id:p.id,diode:true,led:true,vf:({red:1.8,green:2.1,blue:2.8,yellow:2.0})[p.color]||1.8});
     if(p.type==='diode')branch(a,b,1,{id:p.id,diode:true,vf:0.7});
     if(p.type==='buzzer')branch(a,b,1000,{id:p.id,buzzer:true});
+    if(p.type==='passive_buzzer')branch(a,b,1e6,{id:p.id});
     if(p.type==='capacitor'&&transient.dt>0)branch(a,b,transient.dt/(p.value*1e-6),{id:p.id,emf:transient.capacitors?.[p.id]??0,capacitor:true});
     if(p.type==='potentiometer'){
       branch(pin(1),pin(2),Math.max(.01,p.value*p.position/100),{id:p.id,channel:'1–2',pot:true});

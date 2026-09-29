@@ -4,6 +4,7 @@ import {PINS,BB,PIN_BY_ID,endpointInfo,searchPins,circuitHoles,holeInfo} from '.
 import {TWO_PIN_TYPES,MULTI_PIN_TYPES,WIRE_COLORS,PART_DEFS,terminalKeys,attachments,detachPart,normalizeAngle} from './components.js';
 import {findMount,applyMount,occupiedHoles} from './placement.js';
 import {SimulationSession} from './session.js';
+import {BuzzerAudio} from './buzzer-audio.js';
 import {Monitor} from './monitor.js';
 import {partControls,partReadouts} from './part-controls.js';
 import {blankProject,validateProject,projectForBoard} from './project.js';
@@ -27,7 +28,7 @@ let project=blankProject(),mode='select',pending=null,selection=null,color='#23a
 let view={x:0,y:0,w:1120,h:730},drag=null,lastWarnings='',replaceAction=null,paintCounter=0,saveTimer,searchSelectedId=null;
 try{const cached=localStorage.getItem('stm32lab.project.v2')||localStorage.getItem('stm32lab.project.v1');if(cached)project=validateProject(JSON.parse(cached));}catch{}
 initSvg(svg);
-let session=null,audioEnabled=false,audioContext,oscillator,audioGain;
+let session=null,audioEnabled=false,audioContext,buzzerAudio;
 const monitor=new Monitor({getSession:()=>session,isRunning:()=>running(),onSettings:settings=>{if(running())return;checkpoint();project.simulation=settings;autosave();},onError:message=>log(message,'error')});
 let sourceFile='main.c',circuitClipboard=null,clipboardOffset=28,issuesStamp=0,issuesKey='';
 const pinout=new PinoutPanel({getProject:()=>project,isRunning:running,onError:message=>log(message,'error'),apply:({mcu,code})=>{checkpoint();project.mcu=mcu;if(code!==null){project.code=code;project.firmware={mode:'hal',files:[]};sourceFile='main.c';}syncEditor();changed();log(code===null?'핀 설정을 적용했습니다.':'설정에 맞는 HAL main.c를 생성했습니다.');}});
@@ -107,8 +108,8 @@ function refresh({preserveWires=false}={}){
  $('hint').textContent=running()?'실행 중 핀을 클릭하면 전압을 측정합니다. 버튼은 누르는 동안 연결됩니다.':pending?'연결할 두 번째 핀 또는 구멍을 클릭하세요. Esc로 취소합니다.':TWO_PIN_TYPES.includes(mode)?'빵판 구멍 두 곳을 선택해 다리를 꽂으세요. 빈 공간 클릭 시 자유 배치합니다.':drag?.type==='part'?'초록색 표시가 나타나면 놓아서 장착하세요. R: 45° 회전':'부품을 끌어 빵판에 장착 · R: 45° 회전 · 선택 후 Esc: 삭제';
  updateReadouts();inspector();
 }
-function updateAudio(){if(audioGain)audioGain.gain.setTargetAtTime(audioEnabled&&status==='running'&&project.components.some(p=>p.type==='buzzer'&&result?.parts[p.id]?.on)&&!result?.fault?0.025:0,audioContext.currentTime,.015);}
-$('sound').onclick=async()=>{audioEnabled=!audioEnabled;if(audioEnabled&&!audioContext){audioContext=new AudioContext();oscillator=audioContext.createOscillator();audioGain=audioContext.createGain();oscillator.frequency.value=2300;audioGain.gain.value=0;oscillator.connect(audioGain).connect(audioContext.destination);oscillator.start();}if(audioEnabled)await audioContext.resume();$('sound').textContent=audioEnabled?'소리 켜짐':'소리 꺼짐';$('sound').setAttribute('aria-pressed',String(audioEnabled));updateAudio();};
+function updateAudio(){buzzerAudio?.update(project,result,audioEnabled,status==='running');}
+$('sound').onclick=async()=>{audioEnabled=!audioEnabled;if(audioEnabled&&!audioContext){audioContext=new AudioContext();buzzerAudio=new BuzzerAudio(audioContext);}if(audioEnabled)await audioContext.resume();$('sound').textContent=audioEnabled?'소리 켜짐':'소리 꺼짐';$('sound').setAttribute('aria-pressed',String(audioEnabled));updateAudio();};
 function updateReadouts(){
  updateAudio();
  monitor.render();renderIssues();
