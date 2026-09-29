@@ -1,4 +1,5 @@
 import {MotionDevices} from './device-motion.js';
+import {PassiveBuzzers} from './passive-buzzer.js';
 import {CircuitSimulation,digitalRead} from './engine.js';
 import {Runtime} from './runtime.js';
 import {compile} from './parser.js';
@@ -11,6 +12,7 @@ import {HalAdapter,HAL_CONSTANTS} from './hal.js';
 
 export class SimulationSession {
   constructor(project,{print=()=>{},trace=()=>{},uart=()=>{},channels}={}){
+    this.passiveBuzzers=new PassiveBuzzers();
     this.project=project;this.pressed={};this.result=null;this.time=0;this.integrated=-1;this.stepMs=project.simulation?.stepMs??1;this.circuit=new CircuitSimulation();this.motion=new MotionDevices();this.sensors=new UltrasonicSignals();this.lcds=new Map();this.wave=new WaveRecorder(channels);this.serial=[];
     this.buses=new BusDevices(project,()=>this.result,trace);
     this.hal=project.firmware?.mode==='hal'?new HalAdapter(project.mcu,this.buses):null;
@@ -26,6 +28,7 @@ export class SimulationSession {
     });
   }
   enrich(micros){
+    this.passiveBuzzers.update(this.project,this.result,micros);
     if(!this.result||this.result.fault)return;
     this.sensors.update(this.project,this.result,micros);
     for(const p of this.project.components.filter(p=>p.type==='lcd')){if(!this.lcds.has(p.id))this.lcds.set(p.id,new LCDController());const lcd=this.lcds.get(p.id).update(p,this.result,micros);this.result.parts[p.id]={...this.result.parts[p.id],lcd};}

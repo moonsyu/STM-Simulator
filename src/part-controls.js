@@ -23,5 +23,6 @@ export function partReadouts(p,result){
  if(['temperature','ultrasonic'].includes(p.type))return `<p>${read.powered?'전원 연결됨':'전원 전압 또는 배선을 확인하세요.'}${p.type==='temperature'&&read.powered?` · 출력 ${read.voltage.toFixed(3)} V`:''}</p>`;
  if(read.channels)return `<div class="channel-readouts">${Object.entries(read.channels).map(([key,value])=>`<span>${key.toUpperCase()} <b>${(value.current*1000).toFixed(2)} mA</b></span>`).join('')}</div>`;
  if(p.type==='buzzer')return `<p>${read.on?'부저 동작 중':'부저 꺼짐'} · 상단 소리 버튼으로 음향을 켤 수 있습니다.</p>`;
+ if(p.type==='passive_buzzer')return `<p>${read.on?`수동 부저 동작 중 · <b>${read.frequency.toFixed(1)} Hz</b> · 듀티 ${(read.duty*100).toFixed(1)}%`:'수동 부저 무음 · 배선과 20~2000 Hz 사각파를 확인하세요. DC 전압에서는 지속음이 나지 않습니다.'}</p><p>상단 소리 버튼으로 음향을 켤 수 있습니다.${result&&!read.on?' PWM 사용 시 파형 설정을 켜세요.':''}</p>`;
  return '';
 }

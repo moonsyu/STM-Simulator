@@ -13,6 +13,7 @@ export function extraShape(p,result){
  if(p.type==='capacitor')return '<path d="M-12 0H-4M4 0H12M-4 -13V13M4 -13V13" stroke="#3689ae" stroke-width="4" fill="none"/><rect x="-8" y="-15" width="16" height="30" fill="transparent"/>';
  if(p.type==='diode')return '<rect x="-14" y="-7" width="28" height="14" rx="4" fill="#394655" stroke="#223243"/><path d="M8 -7V7" stroke="#c6d2d6" stroke-width="4"/><text x="-21" y="-11" font-size="7" fill="#496477">A</text><text x="16" y="-11" font-size="7" fill="#496477">K</text>';
  if(p.type==='buzzer')return `<circle r="18" fill="#24343e" stroke="#536978" stroke-width="2"/><circle r="5" fill="#0f1b26"/><text x="-12" y="-7" font-size="9" fill="#ccd8e0">+</text><path class="buzzer-wave" d="M22 -9Q30 0 22 9M28 -14Q40 0 28 14" stroke="#23a78a" fill="none" stroke-width="2" opacity="${read?.on?1:0}"/>`;
+ if(p.type==='passive_buzzer')return `<circle r="19" fill="#24343e" stroke="#9275b5" stroke-width="2"/><circle cy="-4" r="6" fill="#0f1b26"/><text x="-13" y="-8" font-size="9" fill="#e4d7f2">+</text><text y="12" text-anchor="middle" font-size="8" fill="#e4d7f2">PWM</text><path class="buzzer-wave" d="M23 -9Q31 0 23 9M29 -14Q41 0 29 14" stroke="#725394" fill="none" stroke-width="2" opacity="${read?.on?1:0}"/><text class="buzzer-frequency" y="-26" text-anchor="middle" font-size="10" fill="#4b365f">${read?.on?Math.round(read.frequency)+' Hz':'무음'}</text>`;
  if(p.type==='temperature')return `<path d="M-17 12V-8Q-17 -23 0 -23Q17 -23 17 -8V12Z" fill="#384959" stroke="#203443"/><text y="-7" text-anchor="middle" font-size="7" fill="#c4d8e1">TMP36</text><text class="environment-label" y="6" text-anchor="middle" font-size="8" fill="#8fddca">${p.temperature}°C</text>`;
  if(p.type==='ultrasonic')return `<rect x="-49" y="-26" width="98" height="49" rx="3" fill="#34789d" stroke="#215772"/>${[-27,27].map(x=>`<circle cx="${x}" cy="-5" r="18" fill="#c9d2d4" stroke="#7894a1"/><circle cx="${x}" cy="-5" r="13" fill="#394f5d"/><circle cx="${x}" cy="-5" r="9" fill="#7b929c" stroke="#243e4e" stroke-dasharray="1 2" stroke-width="7"/>`).join('')}<text class="environment-label" y="20" text-anchor="middle" font-size="8" fill="white">${p.distance} cm</text>`;
  if(p.type==='sevenseg'){
@@ -26,7 +27,8 @@ export function updateExtraSvg(g,p,read){
  if(['uart','i2c','spi'].includes(p.type))g.querySelector('.bus-power')?.setAttribute('fill',read?.powered?'#65dc9a':'#647987');
  if(p.type==='rgb'){const color=rgbColor(read);g.querySelector('.rgb-lens')?.setAttribute('fill',color);const glow=g.querySelector('.rgb-glow');glow?.setAttribute('fill',color);glow?.setAttribute('opacity',read?.on?'.55':'0');}
  if(p.type==='sevenseg')g.querySelectorAll('[data-segment]').forEach(s=>s.setAttribute('fill',read?.channels?.[s.dataset.segment]?.on?'#ff594b':'#443f45'));
- if(p.type==='buzzer')g.querySelector('.buzzer-wave')?.setAttribute('opacity',read?.on?'1':'0');
+ if(['buzzer','passive_buzzer'].includes(p.type))g.querySelector('.buzzer-wave')?.setAttribute('opacity',read?.on?'1':'0');
+ if(p.type==='passive_buzzer')g.querySelector('.buzzer-frequency').textContent=read?.on?Math.round(read.frequency)+' Hz':'무음';
  if(p.type==='slide')g.querySelector('.slide-thumb')?.setAttribute('x',p.position?'2':'-17');
  if(p.type==='potentiometer')g.querySelector('.pot-knob')?.setAttribute('transform',`rotate(${-135+p.position*2.7} 0 -3)`);
  const label=g.querySelector('.environment-label');if(label)label.textContent=p.type==='potentiometer'?`${p.position}%`:p.type==='temperature'?`${p.temperature}°C`:`${p.distance} cm`;

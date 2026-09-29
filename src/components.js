@@ -1,6 +1,6 @@
 import {DEVICE_DEFS} from './device-defs.js';
 // Geometry shared by rendering, hit testing, mounting and project validation.
-export const TWO_PIN_TYPES=['resistor','led','capacitor','diode','buzzer','ldr','ntc'];
+export const TWO_PIN_TYPES=['resistor','led','capacitor','diode','buzzer','passive_buzzer','ldr','ntc'];
 export const MULTI_PIN_TYPES=['button','lcd','potentiometer','slide','rgb','sevenseg','temperature','ultrasonic','uart','i2c','spi',...Object.keys(DEVICE_DEFS).filter(t=>!['ldr','ntc'].includes(t))];
 export const PART_DEFS={
  ...DEVICE_DEFS,
@@ -13,6 +13,7 @@ export const PART_DEFS={
  capacitor:{name:'커패시터',prefix:'C',icon:'⊣',hint:'2핀 · 충전 / 방전',defaults:{value:100},help:'비극성 커패시터 모델입니다. 용량 단위는 µF이며 파형 탭에서 선택한 0.1~20 ms 간격으로 RC 충전·방전을 계산합니다. 실행을 다시 시작하면 초기 전압은 0 V입니다.'},
  diode:{name:'다이오드',prefix:'D',icon:'▶',hint:'2핀 · A → K 정류',defaults:{},help:'첫 번째 다리가 A, 띠가 있는 두 번째 다리가 K입니다. 순방향 전압 0.7 V의 학습용 모델이며 역방향 항복은 계산하지 않습니다.'},
  buzzer:{name:'능동 부저',prefix:'BZ',icon:'◔',hint:'2핀 · 전압에 따른 소리',defaults:{},help:'첫 다리는 +, 두 번째는 −입니다. 2 V 이상에서 동작하는 능동 부저 모델입니다. 상단의 소리 버튼을 켜면 실행 중 울립니다.'},
+ passive_buzzer:{name:'수동 부저',prefix:'PBZ',icon:'◔',hint:'2핀 · PWM 주파수 / 멜로디',defaults:{},help:'PWM 또는 GPIO 사각파로 구동하는 수동 피에조 부저입니다. +를 출력 핀, −를 GND에 연결하세요. 2 V 이상 HIGH와 0.8 V 이하 LOW가 반복될 때 20~2000 Hz 신호의 음높이를 재현합니다. DC와 듀티 0%·100%에서는 지속음이 나지 않습니다. PWM 파형 설정과 상단 소리 버튼을 켜세요(예제는 PWM 파형 자동 설정). 1 MΩ 부하의 학습용 모델이며 공진·실제 음압은 계산하지 않습니다.'},
  sevenseg:{name:'7세그먼트',prefix:'DISP',icon:'8',hint:'10핀 · 공통 음극',defaults:{},labels:['e','d','K1','c','dp','b','a','K2','f','g'],help:'K1·K2는 내부 연결된 공통 음극입니다. a–g·dp에 각각 직렬 저항을 연결하세요. 각 세그먼트의 전류에 따라 점등합니다.'},
  temperature:{name:'온도 센서',prefix:'TMP',icon:'♧',hint:'TMP36 · 아날로그 출력',defaults:{temperature:25},labels:['VS','VOUT','GND'],help:'TMP36 전달식 모델입니다. VS 2.7–5.5 V, VOUT = 0.5 + 0.01 × 온도(°C)입니다. 실행 중 온도를 바꾸고 ADC로 측정할 수 있습니다.'},
  ultrasonic:{name:'초음파 센서',prefix:'US',icon:'◉',hint:'HC-SR04 · 거리 조절',defaults:{distance:100},labels:['VCC','TRIG','ECHO','GND'],help:'VCC 5 V와 GND를 연결하고 TRIG에 10 µs 이상 HIGH 펄스를 주세요. ECHO에 연결한 입력에서 pulseIn(pin, HIGH)로 거리 × 58 µs를 읽습니다. 20 ms 화면에서 µs 파형을 직접 재현하지 않는 거리 모델입니다.'}
@@ -30,7 +31,7 @@ export function terminalLabel(p,key){
  if(p.type==='lcd')return `${Number(key.slice(1))} · ${LCD_LABELS[Number(key.slice(1))-1]}`;
  if(p.type==='button')return ({a:'A1',c:'A2',b:'B1',d:'B2'})[key];
  if(PART_DEFS[p.type]?.labels)return PART_DEFS[p.type].labels[Number(key.slice(1))-1];
- return ['led','diode'].includes(p.type)?(key==='a'?'A (+)':'K (−)'):p.type==='buzzer'?(key==='a'?'+':'−'):key.toUpperCase();
+ return ['led','diode'].includes(p.type)?(key==='a'?'A (+)':'K (−)'):['buzzer','passive_buzzer'].includes(p.type)?(key==='a'?'+':'−'):key.toUpperCase();
 }
 export function localTerminals(p){
  if(p.type==='breadboard')return [];

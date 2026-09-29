@@ -4,6 +4,14 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
+    inputs:
+      test_scope:
+        description: Functional test scope
+        type: choice
+        default: all
+        options:
+          - all
+          - passive-buzzer
 
 permissions:
   contents: read
@@ -17,6 +25,9 @@ jobs:
     name: Windows x64 portable
     runs-on: windows-latest
     timeout-minutes: 20
+    env:
+      # An explicit marker limits only this push; subsequent pushes default to all.
+      TEST_SCOPE: ${{ inputs.test_scope || (contains(github.event.head_commit.message, '[test:passive-buzzer]') && 'passive-buzzer') || 'all' }}
     steps:
       - name: Check out source
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
@@ -32,12 +43,20 @@ jobs:
       - name: Ensure Electron runtime is installed
         run: node node_modules/electron/install.js
       - name: Test circuit engine and editor models
-        run: npm test
+        shell: pwsh
+        run: |
+          if ($env:TEST_SCOPE -eq 'passive-buzzer') { npm run test:passive-buzzer }
+          else { npm test }
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Test Electron editing and HAL workflows
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force work/test-results | Out-Null
-          npm run test:ui 2>&1 | Tee-Object -FilePath work/test-results/ui-tests.log
+          if ($env:TEST_SCOPE -eq 'passive-buzzer') {
+            npm run test:passive-buzzer:ui 2>&1 | Tee-Object -FilePath work/test-results/ui-tests.log
+          } else {
+            npm run test:ui 2>&1 | Tee-Object -FilePath work/test-results/ui-tests.log
+          }
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Upload test diagnostics on failure
         if: failure()

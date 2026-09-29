@@ -1,35 +1,35 @@
-# 현재 검증 기록 — 0.12.1
+# 현재 검증 기록 — 0.12.1 (수동 부저 추가)
 
-2026-09-22, Windows x64, Node.js 24, Electron 44.2.0, Playwright 1.58.2.
+2026-09-29, Windows x64, Node.js 24.18.0, Electron 44.2.0, Playwright 1.58.2.
 
 ## 변경
 
-- 참고 이미지 없이 내장 image_gen으로 앱 아이콘을 제작했다. 원본 PNG와 16/20/24/32/40/48/64/128/256px ICO를 desktop/icons에 둔다. 제작 프롬프트와 변환 방법은 [APP-ICON.md](APP-ICON.md)에 기록한다.
-- 앱 창·작업 표시줄·웹 파비콘·Windows EXE에 아이콘을 연결했다. appId와 사용자 자동 저장 위치를 유지한다.
-- 아이콘 리소스 편집을 허용하도록 signAndEditExecutable:false를 signExecutable:false로 변경했다. EXE 코드 서명은 수행하지 않는다.
-- 패키지 검사에서 아이콘의 ASAR 포함 여부 및 portable/내부 EXE의 기본 아이콘 리소스를 ICO와 대조한다. Windows의 중첩 ASAR 경로와 256px ICO 크기 표기를 정규화했다.
+- 수동 피에조 부저(`passive_buzzer`)를 별도 2핀 부품으로 추가했다. 실제 단자 전압의 반복 전이에서 20~2000 Hz 주파수와 듀티를 측정한다.
+- DC, 듀티 0%·100%, 평균 전압 PWM에서는 지속음이 나지 않는다. 배선 단절과 출력 중단 시 무음으로 전환한다.
+- 부저별 Web Audio 음원으로 독립 음높이를 출력한다. 소리 버튼·시뮬레이션 정지·한 단계 실행은 음향 출력을 제어한다.
+- HAL 수동 부저 PWM 멜로디 예제는 PA0(TIM2 CH1)–부저–GND 배선, 1 MHz 타이머, 50% 듀티, 도레미파솔라시도와 쉼표를 설정한다.
+- 부품은 32종, HAL 예제는 31개다. 기존 카탈로그 개수 검사도 갱신했다.
 
-## 로컬 검증
+## 검증 범위 및 결과
 
-- 모델 테스트 161개 통과.
-- 원본 PNG의 정사각형 크기·투명한 모서리, 패키지 내부 ICO 로딩, 앱 이름·창 제목, 파비콘 로딩·시작 검사를 통과했다.
-- 패키징한 앱에서 코드 찾기·바꾸기, 실제 배선 더블클릭·드래그, 저장·열기·Undo/Redo 검사를 통과했다.
-- portable EXE의 실행·회로·HAL UART 송수신·Pinout·파형 검사를 통과했다.
-- Windows의 실제 EXE 아이콘 추출 결과를 확인했다. work/test-results/icon-shell.png에 증거를 남긴다.
-- 패키징한 소스·문서·아이콘 57개가 커밋 c675008f8d293038360945d9deb0cd6ade14a5df와 일치한다. package.json은 electron-builder가 제거하는 개발 설정을 제외한 실행 메타데이터를 비교했다.
-- HAL 모델과 main.c 생성 코드는 변경하지 않았다. 이번 작업에서 ARM 컴파일·실물 보드 검사는 재실행하지 않았다.
+사용자 요청에 따라 기능 테스트는 수동 부저에 한정했다. 다른 부품의 전체 회귀 테스트는 실행하지 않았다.
 
-## 빌드와 배포
+- `npm run test:passive-buzzer`: 9개 통과. 검색·단자·저장 형식, 8개 음과 쉼표·반복, PWM 주파수·듀티·시간 간격, DC/고립 회로 무음, 단절·복구·역방향·낮은 전압, GPIO 전이, 타이머 정지·재시작, 잘못된 전이·회로 오류 초기화, 독립 부저, 음소거·정지·음원 제거를 확인했다.
+- `npm run test:passive-buzzer:ui`: Electron에서 통과. 부품 검색·배치, 예제 회로·코드 검사, 주파수·듀티 표시, Web Audio 523/587 Hz 출력, 음소거·정지·한 단계 실행, DC 무음, 자동 저장 후 복원을 확인했다.
+- 배포 EXE를 `LAB_PORTABLE_EXE`로 지정해 같은 수동 부저 전용 UI·음향 검사를 통과했다. 실제 portable 추출·실행과 패키징된 기능을 확인했다.
+- 앞선 브라우저 렌더러 검사도 통과했다. 실제 스피커 청취나 실물 STM32 보드 실행·ARM 컴파일은 수행하지 않았다.
+- 증거: `work/test-results/passive-buzzer-portable-smoke.json`, `passive-buzzer-portable-running.png`.
 
-- npm run build 및 npm run build:artifact 통과.
-- EXE: outputs/artifact/STM-Simulator-0.12.1-win-x64.exe — 101,629,428 bytes.
-- EXE SHA-256: `42013d55f1ebcfca35c1bdfec8ea12e41f4c5ef178abc19d1747ef1c4a99170f`.
-- ZIP: outputs/STM-Simulator-0.12.1-Windows-x64.zip — 104,330,021 bytes.
-- ZIP SHA-256: `1f78c5a23eff3e9f5ac3c288ba7594fad538c1c52a372a5c665eab81ecc76928`.
+## 빌드
 
-- 커밋 c675008f8d293038360945d9deb0cd6ade14a5df의 [GitHub Actions](https://github.com/moonsyu/STM-Simulator/actions/runs/35687990966)가 성공했다. 모델 테스트 161개, UI 스크립트 11개, EXE 빌드, 실제 아이콘을 포함한 패키지 검사, 업로드까지 통과했다. 아티팩트 ID는 10678245172이다.
-- [GitHub Releases v0.12.1](https://github.com/moonsyu/STM-Simulator/releases/tag/v0.12.1)에 로컬 검증한 EXE·ZIP·SHA256.txt를 게시했다. 릴리스 ID는 393461876이며 업로드 파일 크기와 서버 SHA-256이 로컬 값과 일치한다.
-- 원격 검증 증거는 work/test-results의 ci-proof.json, github-actions.log, release-proof.json에 남긴다.
-- 이전 버전 배포 파일과 검증이 끝난 중간 빌드 파일을 정리했다. 최신 배포 파일은 outputs에 유지한다.
+- `npm ci`, Electron 런타임 설치, `npm run build`, `npm run build:artifact` 통과.
+- EXE: `outputs/artifact/STM-Simulator-0.12.1-win-x64.exe` — 101,631,200 bytes.
+- EXE SHA-256: `4889a258f945ca1f3025448c414363e1c85dbe6caa1f6ff061e2dca18917528d`.
+- 배포 검사에서 수동 부저 3개 모듈이 소스와 같은지, EXE 형식·아이콘·라이선스와 패키지 포함 파일이 올바른지 확인했다.
+- 이번 작업은 기존 버전 번호로 빌드·Git 푸시하며 기존 GitHub Release 자산은 교체하지 않는다.
 
-앱은 지원 HAL API를 실행하는 소스 해석 모델이며 전체 ST HAL/C ABI/ARM 실행기는 아니다. 세부 범위는 [HAL API](HAL-API.md)를 따른다.
+## 원격 빌드
+
+Windows CI는 기본적으로 전체 테스트를 실행한다. 이번 푸시는 커밋 메시지의 `[test:passive-buzzer]`로 수동 부저 전용 테스트만 실행하며 EXE 빌드·패키지 검증·아티팩트 업로드는 유지한다. 수동 실행에서도 `test_scope=passive-buzzer`를 선택할 수 있다. 원격 실행 결과는 해당 커밋의 GitHub Actions와 `work/test-results/ci-proof.json`에서 확인한다.
+
+앱은 지원 HAL API를 실행하는 소스 해석 모델이다. 상세 범위는 [HAL API](HAL-API.md)를 따른다.
