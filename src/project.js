@@ -31,6 +31,7 @@ export function validateProject(data){
     if(p.type==='resistor'){if(!Number.isFinite(p.value)||p.value<1||p.value>10000000)throw new Error('저항 범위는 1 Ω~10 MΩ입니다.');q.value=p.value;}
     if(p.type==='led'){if(!['red','green','blue','yellow'].includes(p.color))throw new Error('LED 색상이 올바르지 않습니다.');q.color=p.color;}
     const number=(key,min,max)=>{if(!Number.isFinite(p[key])||p[key]<min||p[key]>max)throw new Error(`${p.name}: ${key} 범위는 ${min}~${max}입니다.`);q[key]=p[key];};
+    if(p.type==='dc_supply')number('voltage',6,24);
     if(p.type==='capacitor')number('value',0.001,100000);
     if(p.type==='potentiometer'){number('value',1,1e7);number('position',0,100);}
     if(p.type==='slide'){if(![0,1].includes(p.position))throw new Error('스위치 위치가 올바르지 않습니다.');q.position=p.position;}

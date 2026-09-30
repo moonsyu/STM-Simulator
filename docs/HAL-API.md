@@ -144,3 +144,19 @@ main 최상위 반복은 0.1ms씩 협력적으로 진행하므로 빈 `while(1)`
 ## HAL 인터페이스 근거
 
 함수/구조체 명칭은 [ST의 STM32F4 HAL GPIO 헤더](https://github.com/STMicroelectronics/stm32f4xx-hal-driver/blob/master/Inc/stm32f4xx_hal_gpio.h), [UART 헤더](https://github.com/STMicroelectronics/stm32f4xx-hal-driver/blob/master/Inc/stm32f4xx_hal_uart.h), [TIM 헤더](https://github.com/STMicroelectronics/stm32f4xx-hal-driver/blob/master/Inc/stm32f4xx_hal_tim.h)를 확인했습니다. 로컬 CubeMX F446RE 기종 정보와 `.ioc`도 대조했습니다. ST 드라이버 소스 및 CubeMX 데이터베이스 파일은 앱에 포함하지 않습니다.
+
+## L298N 듀얼 DC 모터 예제
+
+- 메뉴: **HAL · L298N 듀얼 DC 모터 제어**. 별도 L298N·2핀 DC 모터 2개·외부 DC 전원과 배선 14개 자동 구성.
+- 전원: 외부 12 V → VM, 외부 전원 음극·드라이버 GND·NUCLEO GND 공통 연결, NUCLEO 5V → 논리 5V 입력.
+- 제어: PA0(TIM2 CH1) → ENA, PA1(TIM2 CH2) → ENB, PB4/PB5/PB6/PB7 → IN1/IN2/IN3/IN4. OUT1/2 → 모터 A, OUT3/4 → 모터 B.
+- 모듈 구성: ENA·ENB 점퍼 제거, 5V-EN 레귤레이터 점퍼 제거 후 외부 논리 5 V 공급. 5V 단자를 입력으로 취급하는 모듈 모델이며 시판 PCB 배치·점퍼 동작은 해당 제품 설명 확인.
+- 타이머: 84 MHz 타이머 클록, PSC=83, ARR=999, 1 kHz. PWM 파형 자동 활성화. CCR=0은 0%, CCR=1000은 100%. 평균 전압 모드에서는 듀티 제어를 재현하지 않으므로 파형 설정 유지.
+- 실행 순서: A 정회전 75% / B 역회전 40% 2초 → 자유 정지 1초 → A 역회전 50% / B 정회전 100% 2초 → 두 채널 제동 1초 → 자유 정지 1초 → 반복.
+- 진리표: EN LOW는 출력 고임피던스·자유 정지. EN HIGH에서 IN=(1,0)은 정회전, (0,1)은 역회전, (0,0)과 (1,1)은 제동. 화면의 채널 상태는 PWM 순간값, rpm은 시간에 따른 속도.
+- 논리 기준: LOW −0.3~1.5 V, HIGH 2.3 V~논리 전원. 중간 전압은 잘못된 논리로 판정해 해당 채널 차단. 떠 있는 입력은 학습용 1 MΩ 풀다운으로 LOW 처리.
+- 모델 범위: VM 6~24 V, 논리 전원 4.5~5.5 V와 직접 연결된 공통 GND 필요. 각 출력의 고정 1 V 강하와 0.5 Ω 저항으로 통전 시 약 2 V의 브리지 강하 근사. IC 전체 전압 범위를 구현한 모델은 아님.
+- 모터 모델: 24 Ω 저항 부하, 단자 12 V에서 목표 3000 rpm, 시정수 150 ms·제동 시 50 ms. 부하의 전류를 외부 전원 및 출력 회로에 반영. 실제 기동 전류·역기전력·권선 인덕턴스·토크·부하·환류 과도현상·발열·보호 차단 미구현.
+- 과전류: 외부 전원 또는 출력 경로에서 2 A 초과 시 배선·부하 경고. 실제 모듈의 연속 정격이나 방열 성능 보장을 뜻하지 않음.
+- 근거: [ST L298 데이터시트 DS0218 Rev 5](https://www.st.com/resource/en/datasheet/l298.pdf)의 이중 브리지·분리 전원·TTL 입력·Enable/방향 진리표 확인. 고정 전압 강하와 모터 수치는 시뮬레이터의 학습용 근사값.
+- 시뮬레이터가 생성한 main.c의 ST HAL 컴파일·링크 검증과 실물 보드·모터 실행 검증은 별개.

@@ -58,7 +58,7 @@ const {openFixture,saveProject,openProject} = require('./smoke-fixture.cjs');
     assert.equal(await page.locator('[data-wire-point]').count(),3,'a real double click adds a waypoint');
     const handle=page.locator('[data-wire-point="0"]');const box=await handle.boundingBox();await page.mouse.move(box.x+box.width/2,box.y+box.height/2);await page.mouse.down();await page.mouse.move(box.x+box.width/2+40,box.y+box.height/2-30,{steps:8});await page.mouse.up();
     const expectedPoint=await handle.evaluate(el=>({x:Number(el.getAttribute('cx')),y:Number(el.getAttribute('cy'))}));
-    await page.waitForFunction(expected=>{const point=JSON.parse(localStorage.getItem('stm32lab.project.v2')).wires[0].points?.[0];return point?.x===expected.x&&point?.y===expected.y;},expectedPoint);
+    await page.waitForFunction(expected=>{const point=JSON.parse(localStorage.getItem('stm32lab.project.v2')).wires[0]?.points?.[0];return point?.x===expected.x&&point?.y===expected.y;},expectedPoint);
     const moved=await page.evaluate(()=>JSON.parse(localStorage.getItem('stm32lab.project.v2')));assert.notDeepEqual(moved.wires[0].points[0],corner);assert.equal(moved.wires[0].from,wireProject.wires[0].from);assert.equal(moved.wires[0].to,wireProject.wires[0].to);
     await page.click('#undo');await page.click('#redo');await saveProject(page);assert.deepEqual(JSON.parse(await fs.readFile(saved,'utf8')).wires,moved.wires);await openProject(page);assert.equal(await page.locator('[data-wire="route"]').count(),1);
     const restored=moved.wires[0],shown=await point((restored.points[0].x+restored.points[1].x)/2,(restored.points[0].y+restored.points[1].y)/2);

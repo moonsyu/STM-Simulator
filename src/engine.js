@@ -1,3 +1,4 @@
+import {l298Branches,l298BranchOn,l298State} from './l298n.js';
 import {MODULE_DEVICES,I2C_DEVICES,ldrResistance,ntcResistance} from './device-defs.js';
 import {PINS, circuitHoles, GPIO_PINS, canonicalPin, boardPin} from './pins.js';
 import {terminalKeys,attachments,PART_DEFS} from './components.js';
@@ -51,6 +52,9 @@ export function solveCircuit(project,gpio={},pressed={},transient={}){
   if(pressed.USER)branch('signal:PC13','signal:GND',1);
   for(const p of project.components){
     const a=`part:${p.id}:a`,b=`part:${p.id}:b`,pin=n=>`part:${p.id}:p${n}`;
+    if(p.type==='l298n')l298Branches(p,uf,branch);
+    if(p.type==='dc_supply')branch(a,b,.1,{id:p.id,emf:p.voltage,supply:p.name});
+    if(p.type==='dc_motor')branch(a,b,24,{id:p.id});
     if(p.type==='resistor')branch(a,b,p.value,{id:p.id});
     if(p.type==='ldr'||p.type==='ntc')branch(a,b,p.type==='ldr'?ldrResistance(p.lux):ntcResistance(p.temperature),{id:p.id});
     if(MODULE_DEVICES.includes(p.type)){
@@ -93,7 +97,7 @@ export function solveCircuit(project,gpio={},pressed={},transient={}){
     for(const b of branches){
       const supply=b.sensor?(volt.get(b.sensor.supply)??0)-(volt.get(b.sensor.ground)??0):0;
       const relayOn=b.relay?((volt.get(b.relay.supply)-volt.get(b.relay.ground)>=4.5&&volt.get(b.relay.supply)-volt.get(b.relay.ground)<=5.5&&volt.get(b.relay.input)-volt.get(b.relay.ground)>=2)===b.relay.normallyOpen):true;
-      const on=relayOn&&(!b.diode||(volt.get(b.a)-volt.get(b.b)>b.vf))&&(!b.sensor||(supply>=b.sensor.min&&supply<=b.sensor.max));
+      const on=l298BranchOn(b,volt,uf)&&relayOn&&(!b.diode||(volt.get(b.a)-volt.get(b.b)>b.vf))&&(!b.sensor||(supply>=b.sensor.min&&supply<=b.sensor.max));
       const g=!on?1e-10:1/b.r,offset=on?(b.diode?b.vf:b.emf??0):0;
       const i=index.get(b.a),j=index.get(b.b);
       if(i!==undefined){A[i][i]+=g;if(j!==undefined)A[i][j]-=g;else z[i]+=g*known.get(b.b);z[i]+=g*offset;}
@@ -107,12 +111,14 @@ export function solveCircuit(project,gpio={},pressed={},transient={}){
   const parts={};let maxCurrent=0;
   for(const b of branches){
     const supply=b.sensor?(volt.get(b.sensor.supply)??0)-(volt.get(b.sensor.ground)??0):0,powered=!b.sensor||(supply>=b.sensor.min&&supply<=b.sensor.max);
-    const dv=volt.get(b.a)-volt.get(b.b),relayOn=b.relay?((volt.get(b.relay.supply)-volt.get(b.relay.ground)>=4.5&&volt.get(b.relay.supply)-volt.get(b.relay.ground)<=5.5&&volt.get(b.relay.input)-volt.get(b.relay.ground)>=2)===b.relay.normallyOpen):true,i=!powered||!relayOn?0:b.diode?Math.max(0,(dv-b.vf)/b.r):(dv-(b.emf??0))/b.r;
+    const dv=volt.get(b.a)-volt.get(b.b),relayOn=b.relay?((volt.get(b.relay.supply)-volt.get(b.relay.ground)>=4.5&&volt.get(b.relay.supply)-volt.get(b.relay.ground)<=5.5&&volt.get(b.relay.input)-volt.get(b.relay.ground)>=2)===b.relay.normallyOpen):true,i=!l298BranchOn(b,volt,uf)||!powered||!relayOn?0:b.diode?Math.max(0,(dv-b.vf)/b.r):(dv-(b.emf??0))/b.r;
     const read={voltage:dv,current:i,on:b.buzzer?dv>=2:b.led&&i>0.00008,power:Math.abs(dv*i),...(b.sensor?{powered}: {})};
     if(b.id){
       if(b.channel){const total=parts[b.id]??={voltage:0,current:0,power:0,on:false,channels:{}};total.channels[b.channel]=read;total.voltage=Math.max(total.voltage,dv);total.current=b.pot?Math.max(total.current,Math.abs(i)):total.current+i;total.power+=read.power;total.on||=read.on;}
       else parts[b.id]=read;
     }
+    if(b.driver&&Math.abs(i)>2)warn(`${project.components.find(p=>p.id===b.driver).name}: L298N 출력 전류 2 A 초과. 단락·부하를 확인하세요.`,{type:'part',id:b.driver});
+    if(b.supply&&Math.abs(i)>2)warn(`${b.supply}: 외부 전원 전류 2 A 초과. 단락·부하를 확인하세요.`,{type:'part',id:b.id});
     if(b.contact&&Math.abs(i)>1)warn(b.contact+': 접점 전류 1 A 초과. 부하와 전원 배선을 확인하세요.',{type:'part',id:b.contactId});
     if(b.gpio&&Math.abs(i)>0.02)warn(`${b.gpio}: GPIO 전류 ${(Math.abs(i)*1000).toFixed(1)} mA. 저항과 배선을 확인하세요.`,{type:'endpoint',id:boardPin(b.gpio)});
     if(b.led&&i>0.02)warn(`${project.components.find(p=>p.id===b.id)?.name}${b.channel?' '+b.channel:''}: LED 전류 ${(i*1000).toFixed(1)} mA. 직렬 저항을 늘리세요.`,{type:'part',id:b.id});
@@ -121,9 +127,10 @@ export function solveCircuit(project,gpio={},pressed={},transient={}){
   for(const p of project.components)if(p.type==='resistor'&&parts[p.id]?.power>0.25)warn(`${p.name}: 저항 소비 전력이 0.25 W를 넘습니다.`,{type:'part',id:p.id});
   // Only expose ground-referenced voltages. An isolated circuit must not read as ground.
   const anchored=new Set(known.keys());let changed=true;
-  while(changed){changed=false;for(const b of branches){if(anchored.has(b.a)&&!anchored.has(b.b)){anchored.add(b.b);changed=true;}if(anchored.has(b.b)&&!anchored.has(b.a)){anchored.add(b.a);changed=true;}}}
+  while(changed){changed=false;for(const b of branches){if(!l298BranchOn(b,volt,uf))continue;if(anchored.has(b.a)&&!anchored.has(b.b)){anchored.add(b.b);changed=true;}if(anchored.has(b.b)&&!anchored.has(b.a)){anchored.add(b.a);changed=true;}}}
   const voltage=id=>{const r=uf.find(id);return anchored.has(r)&&volt.has(r)?volt.get(r):null;},capacitors={};
   for(const p of project.components){
+    if(p.type==='l298n'){const state=l298State(p,voltage,uf.find(`part:${p.id}:p2`)===uf.find('signal:GND'));Object.assign(parts[p.id],state,{on:state.powered});}
     if(p.type==='capacitor'){const va=voltage(`part:${p.id}:a`),vb=voltage(`part:${p.id}:b`);capacitors[p.id]=va!=null&&vb!=null?va-vb:transient.capacitors?.[p.id]??0;if(!parts[p.id])parts[p.id]={voltage:capacitors[p.id],current:0,power:0,on:false};}
     if(p.type==='potentiometer')parts[p.id].voltage=(voltage(`part:${p.id}:p3`)??0)-(voltage(`part:${p.id}:p1`)??0);
   }

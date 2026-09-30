@@ -70,6 +70,8 @@ export function renderParts(project,selected,result,pressed){const parts=project
    if(p.type==='button')root=rotatePoint(Math.sign(t.x)*14,Math.sign(t.y)*9,angle);
    else if(p.type==='lcd')root=rotatePoint(t.x,35,angle);
    else if(p.type==='sevenseg')root=rotatePoint(t.x,Math.sign(t.y)*27,angle);
+   else if(p.type==='l298n')root=rotatePoint(Math.max(-82,Math.min(82,t.x)),Math.max(-56,Math.min(56,t.y)),angle);
+   else if(['dc_motor','dc_supply'].includes(p.type))root=rotatePoint(Math.sign(t.x)*28,0,angle);
    else if(PART_DEFS[p.type]?.labels)root=rotatePoint(t.x,PART_DEFS[p.type].pinY?PART_DEFS[p.type].pinY-14:p.type==='ultrasonic'?22:14,angle);
    else if(['capacitor','diode','buzzer','passive_buzzer'].includes(p.type))root=rotatePoint(Math.sign(t.x)*(['buzzer','passive_buzzer'].includes(p.type)?16:12),0,angle);
    else root=rotatePoint(Math.sign(t.x)*(p.type==='led'?10:half),0,angle);
