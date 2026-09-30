@@ -18,8 +18,8 @@ const {cleanArtifactOutput} = require('./clean-build.cjs');
   assert.ok(!entries.some(p => /^\/(assets|work|outputs|test-results|tests|scripts)(\/|$)/.test(p)), 'Reference media and test fixtures must not be packaged');
   for (const file of ['src/feature-examples.js', 'src/component-examples.js']) assert.ok(!entries.includes('/' + file), 'Removed example module must not be packaged: ' + file);
   for (const file of ['src/editor-search.js', 'src/hal-examples.js', 'src/hal-circuits.js', 'src/hal-stdio.js', 'src/device-defs.js', 'src/device-buses.js', 'src/device-motion.js', 'src/device-examples.js', 'src/device-ui.js']) assert.ok(entries.includes('/' + file), 'Missing HAL module: ' + file);
-  for (const file of ['src/passive-buzzer.js', 'src/passive-buzzer-example.js', 'src/buzzer-audio.js']) {
-    assert.deepEqual(asar.extractFile(archive, path.normalize(file)), await fs.readFile(path.join(root, file)), 'Packaged passive buzzer module differs from source: ' + file);
+  for (const file of ['src/passive-buzzer.js', 'src/passive-buzzer-example.js', 'src/buzzer-audio.js', 'src/l298n.js', 'src/l298n-example.js', 'src/l298n-ui.js']) {
+    assert.deepEqual(asar.extractFile(archive, path.normalize(file)), await fs.readFile(path.join(root, file)), 'Packaged feature module differs from source: ' + file);
   }
   assert.doesNotMatch(asar.extractFile(archive, 'src/hal-examples.js').toString(), /\bSerial\d*\./, 'Shipped examples must use HAL and stdio');
   assert.ok(!entries.some(p => /\.png$/i.test(p) && p !== '/desktop/icons/stm-simulator.png'), 'Only the app icon PNG may be packaged');

@@ -1,3 +1,4 @@
+import {L298_CHANNELS} from './l298n.js';
 import {MODULE_DEVICES} from './device-defs.js';
 
 export const deviceTerminal=(p,n)=>`part:${p.id}:p${n}`;
@@ -11,7 +12,7 @@ export class MotionDevices{
  update(project,result,micros,runtime,changed){
   this.currentResult=result;
   for(const p of project.components){
-   if(!MODULE_DEVICES.includes(p.type))continue;
+   if(!MODULE_DEVICES.includes(p.type)&&p.type!=='dc_motor')continue;
    const powered=modulePowered(p,result),v=n=>result.voltage(deviceTerminal(p,n)),high=n=>v(n)!=null&&v(n)>=2;
    let s=this.states.get(p.id);if(!s){s={at:micros,angle:90,speed:0,steps:0,phase:null,position:p.position??0,scheduled:0,encoderPhase:0};this.states.set(p.id,s);}
    const dt=Math.max(0,micros-s.at)/1e6;s.at=micros;
@@ -26,6 +27,21 @@ export class MotionDevices{
     if(active)s.angle+=Math.sign(s.target-s.angle)*Math.min(Math.abs(s.target-s.angle),360*dt);
     Object.assign(read,{on:active,angle:s.angle,target:active?s.target:null,pulse:active?s.pulse:null});
     if(!powered){s.rise=null;s.validAt=null;}
+   }
+   if(p.type==='dc_motor'){
+    const a=result.voltage(`part:${p.id}:a`),b=result.voltage(`part:${p.id}:b`),voltage=a!=null&&b!=null?a-b:0;
+    let mode=Math.abs(voltage)>.01?'drive':'coast';
+    const net=id=>result.uf.find(id),ends=[net(`part:${p.id}:a`),net(`part:${p.id}:b`)];
+    for(const driver of project.components.filter(q=>q.type==='l298n'))for(const channel of L298_CHANNELS){
+     const outputs=channel.outputs.map(n=>net(`part:${driver.id}:p${n}`));
+     if(ends[0]!==ends[1]&&ends.every(e=>outputs.includes(e)))mode=result.parts[driver.id]?.channels[channel.name].mode??mode;
+    }
+    const target=Math.max(-6000,Math.min(6000,voltage/12*3000));
+    const previous=s.previousTarget??0;
+    s.speed=previous+(s.speed-previous)*Math.exp(-dt/(s.previousTau??.15));
+    s.previousTarget=target;s.previousTau=mode==='brake'?.05:.15;
+    s.angle=(s.angle+s.speed*6*dt)%360;
+    Object.assign(read,{powered:a!=null&&b!=null,on:Math.abs(s.speed)>1,rpm:s.speed,angle:s.angle,direction:Math.abs(s.speed)>1?Math.sign(s.speed):0,mode});
    }
    if(p.type==='motor'){
     const direction=high(4)===high(5)?0:high(4)?1:-1;

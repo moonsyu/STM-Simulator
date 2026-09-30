@@ -10,8 +10,12 @@ export function circuitDiagnostics(project,result=null,pressed={}){
   const linked=new Set();for(const w of project.wires){linked.add(uf.find(w.from));linked.add(uf.find(w.to));}
   for(const p of project.components)for(const key of terminalKeys(p)){
     const id=`part:${p.id}:${key}`,label=terminalLabel(p,key),root=uf.find(id),other=project.components.some(q=>q.id!==p.id&&terminalKeys(q).some(k=>uf.find(`part:${q.id}:${k}`)===root))||PINS.some(pin=>pin.signal!=='NC'&&uf.find(pin.id)===root);
-    if(['VCC','VM','VDD','VSS','GND'].includes(label)&&!measured.fault){const v=measured.voltage(id),ground=['VSS','GND'].includes(label);if(v==null||(!ground&&v<.5)||ground&&Math.abs(v)>.3)add('power:'+id,`${p.name}: ${label} ${v==null?'전원 기준이 없습니다':ground?'공통 GND가 올바르지 않습니다':'공급 전압이 부족합니다'}. 전원까지 이어지는 배선을 확인하세요.`,{type:'endpoint',id});}
-    if(['SDA','SCL','SCK','MOSI','MISO','TX','RX','PWM','TRIG','ECHO'].includes(label)&&!other&&!linked.has(root))add('open:'+id,`${p.name}: ${label} 신호 핀이 연결되지 않았습니다.`,{type:'endpoint',id});
+    if(['VCC','VM','VDD','VSS','GND','5V'].includes(label)&&!measured.fault){const v=measured.voltage(id),ground=['VSS','GND'].includes(label);if(v==null||(!ground&&v<.5)||ground&&Math.abs(v)>.3)add('power:'+id,`${p.name}: ${label} ${v==null?'전원 기준이 없습니다':ground?'공통 GND가 올바르지 않습니다':'공급 전압이 부족합니다'}. 전원까지 이어지는 배선을 확인하세요.`,{type:'endpoint',id});}
+    if(['SDA','SCL','SCK','MOSI','MISO','TX','RX','PWM','TRIG','ECHO','ENA','ENB','IN1','IN2','IN3','IN4'].includes(label)&&!other&&!linked.has(root))add('open:'+id,`${p.name}: ${label} 신호 핀이 연결되지 않았습니다.`,{type:'endpoint',id});
+  }
+  for(const p of project.components.filter(p=>p.type==='l298n')){
+   if(!measured.fault&&!measured.parts[p.id]?.powered)add('l298-power:'+p.id,p.name+': VM 6~24 V, 5V 4.5~5.5 V와 보드 공통 GND를 확인하세요.',{type:'part',id:p.id});
+   if(Object.values(measured.parts[p.id]?.channels??{}).some(c=>c.mode==='invalid'))add('l298-logic:'+p.id,p.name+': 입력은 LOW 0~1.5 V / HIGH 2.3 V 이상이어야 합니다. PWM 파형 설정을 확인하세요.',{type:'part',id:p.id});
   }
   const i2c=project.components.filter(p=>PART_DEFS[p.type]?.labels?.includes('SDA')&&p.address!==undefined);
   for(let i=0;i<i2c.length;i++)for(let j=i+1;j<i2c.length;j++){const a=i2c[i],b=i2c[j];if(a.address===b.address&&uf.find(`part:${a.id}:p3`)===uf.find(`part:${b.id}:p3`)&&uf.find(`part:${a.id}:p4`)===uf.find(`part:${b.id}:p4`))add('address:'+a.id+':'+b.id,`${a.name} / ${b.name}: 같은 I²C 버스에서 주소 0x${a.address.toString(16)}가 중복됩니다. 부품 속성에서 주소를 변경하세요.`,{type:'part',id:b.id},'error');}

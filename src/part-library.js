@@ -8,6 +8,7 @@ const BASE_PARTS={
  breadboard:{name:'빵판',icon:'▦',iconClass:'breadboard-icon',hint:'400홀 · 추가 배선 공간'}
 };
 const ALIASES={
+ l298n:'l298 dual h bridge driver motor 모터 드라이버 듀얼',dc_motor:'dc motor 모터 직류',dc_supply:'power battery supply 전원 배터리 외부 전원',
  breadboard:'bread board 브레드보드 브레드 보드 빵판',resistor:'resistance',led:'light diode 발광 다이오드',button:'push switch 스위치',lcd:'display liquid crystal 디스플레이 액정',
  uart:'serial terminal 시리얼 직렬 통신',i2c:'memory 메모리 통신',spi:'memory 메모리 통신',
  potentiometer:'variable resistor 가변 저항',slide:'switch 스위치',rgb:'color 색상',capacitor:'capacitance 콘덴서 축전기',

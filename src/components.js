@@ -1,9 +1,10 @@
+import {L298_DEFS} from './l298n.js';
 import {DEVICE_DEFS} from './device-defs.js';
 // Geometry shared by rendering, hit testing, mounting and project validation.
-export const TWO_PIN_TYPES=['resistor','led','capacitor','diode','buzzer','passive_buzzer','ldr','ntc'];
-export const MULTI_PIN_TYPES=['button','lcd','potentiometer','slide','rgb','sevenseg','temperature','ultrasonic','uart','i2c','spi',...Object.keys(DEVICE_DEFS).filter(t=>!['ldr','ntc'].includes(t))];
+export const TWO_PIN_TYPES=['resistor','led','capacitor','diode','buzzer','passive_buzzer','ldr','ntc','dc_motor','dc_supply'];
+export const MULTI_PIN_TYPES=['l298n','button','lcd','potentiometer','slide','rgb','sevenseg','temperature','ultrasonic','uart','i2c','spi',...Object.keys(DEVICE_DEFS).filter(t=>!['ldr','ntc'].includes(t))];
 export const PART_DEFS={
- ...DEVICE_DEFS,
+ ...DEVICE_DEFS,...L298_DEFS,
  uart:{name:'UART 터미널',prefix:'UART',icon:'↔',hint:'4핀 · 송수신 터미널',defaults:{baud:9600},labels:['VCC','GND','TX','RX'],help:'3.3 V 전원을 연결하고 TX를 보드 RX(PA3), RX를 보드 TX(PA2)에 연결하세요. Serial1.begin(9600)으로 시작합니다. 속도는 부품과 코드가 같아야 하며 하단 통신 탭에서 문자를 보낼 수 있습니다.'},
  i2c:{name:'I²C 메모리',prefix:'I2C',icon:'▦',hint:'4핀 · 주소 / 256 B',defaults:{address:80},labels:['VCC','GND','SDA','SCL'],help:'256바이트 범용 메모리 모델입니다. 3.3 V, GND, SDA(PB9), SCL(PB8)를 연결하세요. 모듈에 10 kΩ 풀업을 포함합니다. 첫 전송 바이트가 메모리 위치이고 이후 바이트가 데이터입니다.'},
  spi:{name:'SPI 메모리',prefix:'SPI',icon:'⇄',hint:'6핀 · CS / 256 B',defaults:{},labels:['VCC','GND','CS','SCK','MOSI','MISO'],help:'256바이트 범용 메모리 모델입니다. CS LOW 상태에서 명령 0x02(쓰기) 또는 0x03(읽기), 1바이트 주소, 데이터를 전송합니다. 기본 핀은 SCK PA5, MOSI PA7, MISO PA6입니다. CS는 별도로 GPIO로 제어하세요.'},
@@ -31,12 +32,13 @@ export function terminalLabel(p,key){
  if(p.type==='lcd')return `${Number(key.slice(1))} · ${LCD_LABELS[Number(key.slice(1))-1]}`;
  if(p.type==='button')return ({a:'A1',c:'A2',b:'B1',d:'B2'})[key];
  if(PART_DEFS[p.type]?.labels)return PART_DEFS[p.type].labels[Number(key.slice(1))-1];
- return ['led','diode'].includes(p.type)?(key==='a'?'A (+)':'K (−)'):['buzzer','passive_buzzer'].includes(p.type)?(key==='a'?'+':'−'):key.toUpperCase();
+ return ['led','diode'].includes(p.type)?(key==='a'?'A (+)':'K (−)'):['buzzer','passive_buzzer','dc_supply'].includes(p.type)?(key==='a'?'+':'−'):key.toUpperCase();
 }
 export function localTerminals(p){
  if(p.type==='breadboard')return [];
  if(p.type==='button')return [{key:'a',x:-21,y:-14},{key:'b',x:21,y:-14},{key:'c',x:-21,y:14},{key:'d',x:21,y:14}];
  if(p.type==='lcd')return LCD_LABELS.map((_,i)=>({key:'p'+(i+1),x:(i-7.5)*14,y:44}));
+ if(PART_DEFS[p.type]?.terminals)return PART_DEFS[p.type].terminals.map(([x,y],i)=>({key:'p'+(i+1),x,y}));
  if(p.type==='sevenseg')return terminalKeys(p).map((key,i)=>({key,x:i<5?(i-2)*14:(7-i)*14,y:i<5?35:-35}));
  if(PART_DEFS[p.type]?.labels){const keys=terminalKeys(p);return keys.map((key,i)=>({key,x:(i-(keys.length-1)/2)*14,y:PART_DEFS[p.type].pinY??(p.type==='ultrasonic'?32:28)}));}
  const half=(p.span??70)/2;return [{key:'a',x:-half,y:0},{key:'b',x:half,y:0}];
