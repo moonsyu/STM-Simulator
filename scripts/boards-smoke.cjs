@@ -8,7 +8,7 @@ const {openFixture,saveProject}=require('./smoke-fixture.cjs');
  const app=await _electron.launch({executablePath:process.env.LAB_EXE||path.join(root,'node_modules/electron/dist/electron.exe'),args:process.env.LAB_EXE?[]:[root],cwd:root,env});
  try{
   const {blankProject,projectForBoard,validateProject}=await import('../src/project.js'),{endpointInfo,breadboardPrefix,boardPin}=await import('../src/pins.js');
-  const page=await app.firstWindow(),errors=[];page.on('pageerror',e=>errors.push(e.message));await page.waitForSelector('#board-open');await app.evaluate(({BrowserWindow})=>BrowserWindow.getAllWindows()[0].showInactive());
+  const page=await app.firstWindow(),errors=[];page.on('pageerror',e=>errors.push(e.message));await page.waitForSelector('.monaco-editor');await app.evaluate(({BrowserWindow})=>BrowserWindow.getAllWindows()[0].showInactive());
   const saved=async()=>{await page.waitForTimeout(260);return page.evaluate(()=>JSON.parse(localStorage.getItem('stm32lab.project.v2')));};
   const point=async(x,y)=>page.evaluate(({x,y})=>{const s=document.getElementById('circuit'),q=s.createSVGPoint();q.x=x;q.y=y;const r=q.matrixTransform(s.getScreenCTM());return {x:r.x,y:r.y};},{x,y});
   const click=async(x,y)=>{const q=await point(x,y);await page.mouse.click(q.x,q.y);};
@@ -45,7 +45,7 @@ const {openFixture,saveProject}=require('./smoke-fixture.cjs');
   // Drag the board body, keeping mounted components and connected wires aligned.
   const start=await point(bb.x,bb.y-245),finish=await point(bb.x+80,bb.y+120-245);await page.mouse.move(start.x,start.y);await page.mouse.down();await page.mouse.move(finish.x,finish.y,{steps:6});await page.mouse.up();p=await saved();const moved=p.components.find(c=>c.id===bb.id),movedPart=p.components.find(c=>c.id===resistor.id);assert.ok(moved.x>bb.x+70);assert.ok(moved.y>bb.y+100);assert.ok(movedPart.x>resistor.x+70);assert.equal(p.wires.length,2);
   await page.click('#rotate');p=await saved();assert.equal(p.components.find(c=>c.id===bb.id).rotation,45);assert.equal(p.components.find(c=>c.id===resistor.id).rotation,45);assert.deepEqual(validateProject(p),p);
-  await saveProject(page);const onDisk=JSON.parse(await fs.readFile(savePath,'utf8'));assert.deepEqual(onDisk,p);await page.reload();await page.waitForSelector('#code');assert.equal(await page.locator('.hole').count(),800);assert.deepEqual(await saved(),p);
+  await saveProject(page);const onDisk=JSON.parse(await fs.readFile(savePath,'utf8'));assert.deepEqual(onDisk,p);await page.reload();await page.waitForSelector('.monaco-editor');assert.equal(await page.locator('.hole').count(),800);assert.deepEqual(await saved(),p);
   // Removing an added board removes its wires, detaches its parts, and Undo restores everything.
   const movedBoard=p.components.find(c=>c.type==='breadboard');await click(movedBoard.x,movedBoard.y);await page.click('#remove-part');let removed=await saved();assert.equal(removed.components.length,1);assert.equal(removed.components[0].type,'resistor');assert.equal(removed.wires.length,0);assert.equal(removed.components[0].attachA,undefined);assert.equal(await page.locator('.hole').count(),400);await page.click('#undo');assert.deepEqual(await saved(),p);
   await app.evaluate(({BrowserWindow})=>BrowserWindow.getAllWindows()[0].setSize(1120,760));await page.screenshot({path:path.join(out,'warm-topbar-compact.png')});const overflow=await page.evaluate(()=>document.querySelector('.top-actions').getBoundingClientRect().right>innerWidth);assert.equal(overflow,false);

@@ -6,7 +6,7 @@ const {chooseHal}=require('./smoke-fixture.cjs');
  const env={...process.env,CIRCUIT_LAB_SMOKE:'1',CIRCUIT_LAB_TEST_PROFILE:path.join(out,'devices-profile-'+Date.now())};delete env.ELECTRON_RUN_AS_NODE;
  const app=await _electron.launch({executablePath:process.env.LAB_EXE||path.join(root,'node_modules/electron/dist/electron.exe'),args:process.env.LAB_EXE?[]:[root],cwd:root,env});
  try{
-  const page=await app.firstWindow(),errors=[];page.on('pageerror',e=>errors.push(e.message));await page.waitForSelector('#hal-example');await app.evaluate(({BrowserWindow})=>BrowserWindow.getAllWindows()[0].showInactive());
+  const page=await app.firstWindow(),errors=[];page.on('pageerror',e=>errors.push(e.message));await page.waitForSelector('.monaco-editor');await app.evaluate(({BrowserWindow})=>BrowserWindow.getAllWindows()[0].showInactive());
   const {DEVICE_DEFS}=await import('../src/device-defs.js');
   // A part group's bounds include long leads and labels. Click its visible body
   // so scaling cannot move the target onto a breadboard hole or another wire.
@@ -31,7 +31,7 @@ const {chooseHal}=require('./smoke-fixture.cjs');
   await begin('motor');await page.waitForFunction(()=>document.getElementById('part-live').textContent.includes('정회전'));await page.screenshot({path:path.join(out,'devices-motor.png')});
   await begin('stepper');await expectLog('Stepper command direction');assert.match(await page.locator('#part-live').innerText(),/스텝/);
   await page.click('#run');await chooseHal(page,'relay');await select();await page.click('#step');await page.click('#step');await expectLog('Relay command=1');assert.equal(await page.locator('.relay-contact').getAttribute('d'),'M15 0L29 -13');assert.equal(await page.locator('[data-part="led1"] .led-lens').getAttribute('fill'),'#65c668');
-  await page.click('#debug-stop');await chooseHal(page,'sht31');await select();await live('temperature',35);await live('humidity',65);await page.waitForTimeout(300);await page.reload();await page.waitForSelector('#code');await select();assert.equal(await page.locator('#extra-temperature').inputValue(),'35');assert.equal(await page.locator('#extra-humidity').inputValue(),'65');
+  await page.click('#debug-stop');await chooseHal(page,'sht31');await select();await live('temperature',35);await live('humidity',65);await page.waitForTimeout(300);await page.reload();await page.waitForSelector('.monaco-editor');await select();assert.equal(await page.locator('#extra-temperature').inputValue(),'35');assert.equal(await page.locator('#extra-humidity').inputValue(),'65');
   assert.deepEqual(errors,[]);await fs.writeFile(path.join(out,'devices-smoke.json'),JSON.stringify({passed:true,checks:['35 searchable parts','14 new HAL examples compile and install circuits immediately','live SHT31/NTC/MPU6050 measurements','PIR EXTI rising and falling','joystick ADC channels and switch','encoder timed quadrature and EXTI in both directions','OLED framebuffer rendering','TFT RGB565 exact canvas pixels','MAX7219 eight illuminated pixels','servo pulse and angle view','DC motor direction and speed view','stepper phase view','relay contact and load LED','environment properties survive reload'],errors},null,2));console.log('New device UI smoke passed.');
  }finally{await app.close();}
 })().catch(e=>{console.error(e);process.exitCode=1;});
