@@ -1,4 +1,4 @@
-const {app,BrowserWindow,ipcMain,dialog}=require('electron');
+const {app,BrowserWindow,ipcMain,dialog,shell}=require('electron');
 const fs=require('node:fs/promises');
 const path=require('node:path');
 // Keep the existing profile so renaming the app retains auto-saved circuits.
@@ -9,6 +9,35 @@ app.setPath('userData',process.env.CIRCUIT_LAB_TEST_PROFILE||legacyUserData);
 let win;
 let chosenProjectParent=null,workspaceState=null;
 const workspace=require('./workspace.cjs');
+const {NativeIde}=require('./native-ide.cjs');
+const {TOOL_KEYS,detectTools,probeTools}=require('./native-build.cjs');
+const nativeIde=new NativeIde(app.getPath('userData'));
+nativeIde.on('event',data=>{if(win&&!win.isDestroyed())win.webContents.send('native:event',data);});
+let quitting=false;
+app.on('before-quit',event=>{if(quitting)return;event.preventDefault();quitting=true;nativeIde.close().finally(()=>app.quit());});
+function nativeHandle(name,handler){ipcMain.handle('native:'+name,async(event,...args)=>{if(event.sender!==win?.webContents||event.senderFrame?.parent)throw new Error('허용하지 않는 요청입니다.');return handler(...args);});}
+nativeHandle('settings',()=>nativeIde.settings());
+nativeHandle('detect',async()=>detectTools(await nativeIde.settings()));
+nativeHandle('configure',value=>nativeIde.configure(value));
+nativeHandle('probe',async()=>probeTools(await nativeIde.settings()));
+nativeHandle('choose-tool',async key=>{if(!TOOL_KEYS.includes(key))throw new Error('지원하지 않는 도구입니다.');const r=await dialog.showOpenDialog(win,{title:['cube','buildRoot'].includes(key)?'STM32CubeF4 SDK 폴더 선택':'개발 도구 실행 파일 선택',properties:[['cube','buildRoot'].includes(key)?'openDirectory':'openFile'],...(['cube','buildRoot'].includes(key)?{}:{filters:[{name:'실행 파일',extensions:['exe']}]})});return r.canceled?null:r.filePaths[0];});
+nativeHandle('build',(text,config)=>nativeIde.compile(text,config));
+nativeHandle('run',data=>nativeIde.run(data));
+nativeHandle('debug',data=>nativeIde.startDebug(data));
+nativeHandle('stop',()=>nativeIde.stop());
+nativeHandle('action',action=>nativeIde.gdb.action(action));
+nativeHandle('inspect',frame=>nativeIde.gdb.inspect(frame));
+nativeHandle('evaluate',expression=>nativeIde.gdb.evaluate(expression));
+nativeHandle('memory',(address,count)=>nativeIde.gdb.memory(address,count));
+nativeHandle('breakpoints',points=>nativeIde.gdb.setBreakpoints(points));
+nativeHandle('input',text=>nativeIde.input(text));
+nativeHandle('language',(text,config)=>nativeIde.language(text,config));
+nativeHandle('language-stop',()=>nativeIde.lsp.stop());
+nativeHandle('language-query',(method,file,position)=>nativeIde.lsp.query(method,file,position));
+nativeHandle('artifacts',async()=>{if(!nativeIde.result)throw new Error('먼저 빌드를 완료하세요.');return shell.openPath(nativeIde.result.directory);});
+nativeHandle('terminal-open',()=>nativeIde.openTerminal(workspaceState?.directory));
+nativeHandle('terminal-input',text=>nativeIde.terminalInput(text));
+nativeHandle('terminal-close',()=>nativeIde.closeTerminal());
 app.whenReady().then(()=>{
   win=new BrowserWindow({icon:path.join(__dirname,'icons/stm-simulator.ico'),width:1540,height:1020,minWidth:900,minHeight:560,show:process.env.CIRCUIT_LAB_SMOKE!=='1',backgroundColor:'#f6f4ec',title:'STM Simulator',webPreferences:{preload:path.join(__dirname,'preload.cjs'),contextIsolation:true,nodeIntegration:false,sandbox:true}});
   win.setMenuBarVisibility(false);

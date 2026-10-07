@@ -1,6 +1,6 @@
 {
   "name": "stm-simulator",
-  "version": "0.14.0",
+  "version": "0.15.0",
   "description": "STM32 learning IDE with integrated circuit simulation",
   "author": "STM Simulator",
   "private": true,
@@ -21,7 +21,10 @@
     "test:l298n:ui": "node scripts/l298n-smoke.cjs",
     "build:editor": "node scripts/build-editor.mjs",
     "postinstall": "npm run build:editor",
-    "test:ide:ui": "node scripts/ide-smoke.cjs"
+    "test:ide:ui": "node scripts/ide-smoke.cjs",
+    "test:native": "node scripts/native-ide-check.cjs",
+    "test:native:ui": "node scripts/native-ide-smoke.cjs",
+    "test:arm-gdb": "node scripts/arm-gdb-check.cjs"
   },
   "devDependencies": {
     "electron": "44.2.0",

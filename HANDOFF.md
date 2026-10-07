@@ -1,6 +1,6 @@
 # STM Simulator — 개발 인계
 
-현재 버전: **0.14.0**. 정리일: **2026-10-07**. NUCLEO-F446RE와 빵판을 연결하고 GPIO 스케치 또는 지원 HAL C 소스를 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다.
+현재 버전: **0.15.0**. 정리일: **2026-10-07**. NUCLEO-F446RE와 빵판을 연결하고 GPIO 스케치 또는 지원 HAL C 소스를 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다.
 
 ## 저장소 관리 원칙
 
@@ -12,12 +12,25 @@
 - 현재 기능 및 정리 변경을 커밋한다. 원격 게시 여부는 사용자 요청에 따른다. 저장소 이름은 STM-Simulator이며 원격 URL과 문서 링크도 이 이름을 사용한다.
 - `dist/`, `work/`, `outputs/`, `node_modules/`, `work/test-results/`, `.cache/`, 참고 미디어는 Git에서 제외한다.
 
+## 0.15.0 실제 IDE 인계
+
+- `desktop/native-build.cjs`: GCC/g++ 실행·Debug/Release·ST HAL/CMSIS/F446 startup/링커·ELF/BIN/HEX/MAP/EXE·SHA-256·오류 파싱. 빌드마다 독립 디렉터리를 만들어 이전 결과를 잘못 실행하지 않는다.
+- `desktop/gdb-mi.cjs`: 실제 GDB/MI 파서 및 프로세스, 로컬/ARM remote, 중단점/step/continue/interrupt/프레임/변수/감시식/레지스터/메모리. 감시식 부작용과 GDB 자동 로드를 차단한다.
+- `desktop/clangd.cjs`: stdio JSON-RPC와 live source overlay. `desktop/native-ide.cjs`: 생명주기, 캐시, 빌드 취소, OpenOCD, 프로그램 stdin/stdout, 명령 터미널. 경로·명령은 renderer가 직접 프로세스로 실행하지 않고 IPC를 통해 검증한다.
+- `src/native-ide-ui.js`와 Monaco 어댑터: 대상 선택, 도구 설정, 빌드 결과, GDB UI, clangd, 터미널. 기존 회로 시뮬레이터의 실행기는 보존했다.
+- 도구 설정은 앱 데이터의 `native-tools.json`, GDB 서버 연결은 로컬 `stm32lab.debugConnection`, 실행 대상/구성은 회로 `ide.native`에 저장한다. 기존 문서는 기본 simulator로 열린다.
+- 외부 도구는 EXE에 포함하지 않는다. 설치 헬퍼는 `scripts/setup-native-tools.ps1`; SHA-256 및 ST SDK 커밋을 고정했다. 기본 `%LOCALAPPDATA%/STM-Simulator-Tools`는 자동 검색한다. Windows GCC/GDB는 MSYS2/PATH에서 검색한다. SDK와 GCC는 영문 경로; 사용자 프로젝트는 한글 경로 가능.
+- 빌드 작업 폴더와 언어 서버 소스 스냅샷은 앱 데이터 또는 설정한 영문 빌드 작업 폴더에 남는다. 사용자 파일과 분리하며 자동으로 재귀 삭제하지 않는다.
+- 실제 Windows GCC/GDB/clangd, ARM GCC/ST HAL, ARM GDB 원격 검증(QEMU STM32F405 Cortex-M4)을 수행했다. QEMU는 검증 도구이며 제품의 F446 에뮬레이터가 아니다. 연결된 ST-LINK는 확인되지 않아 실물 플래시·디버그는 검증하지 않았다.
+- 다음 검증 명령: `npm test`, `npm run test:ui`, `npm run test:native`, `npm run test:native:ui`, `npm run test:arm-gdb` (`QEMU_ARM` 지정 가능). 실제 도구 통합 검사는 개발 도구를 설치한 환경에서 실행한다.
+- 이번 구현은 로컬 0.15.0이며 게시 전 GitHub 최신 Release와 구분한다. 원격 업로드는 사용자 요청 시 진행한다.
+
 ## 현재 구현
 
 - IDE 중심 화면에 프로젝트·코드·시뮬레이터·터미널 패널을 통합했다. 모든 패널은 1~99% 분할, 도킹 이동·접기·최대화를 지원한다. 과거 코드 300px/회로 470px/터미널 높이 제한은 없고 배치는 `stm32lab.workspaceLayout.v1`에 저장한다.
 - 폴더 프로젝트 생성·열기·저장, C/H 추가·이름 변경·삭제와 include 갱신, 외부 파일 변경 시 덮어쓰기 거부. 기존 `.stm32lab`과 프로필은 유지한다. 자동 복구된 프로젝트는 폴더 연결 없이 복구하므로 원래 폴더를 다시 열어야 한다.
-- Monaco 0.57.0 로컬 번들: 구문 강조·기본 완성·함수 정의 찾기·다중 커서·접기. clangd와 완전한 C 의미 분석은 없다. `npm ci`의 postinstall과 빌드에서 `src/generated/`를 생성한다. 이 폴더는 Git에 넣지 않는다.
-- 지원 소스 빌드·원본 파일 오류 위치, 중단점·일시정지·step into/over/out·변수·호출 스택·읽기 전용 감시식. 콜백은 원자적으로 처리해 내부 중단점은 지원하지 않는다. 실제 ARM/GDB는 제외한다. 사용자 사용법·한계는 [IDE 문서](docs/IDE.md).
+- Monaco 0.57.0 로컬 번들: 구문 강조·기본 완성·함수 정의 찾기·다중 커서·접기. ARM/Windows 대상에 clangd의 의미 분석·완성·호버·정의/참조·인수 안내·서식 정리를 연결한다. `npm ci`의 postinstall과 빌드에서 `src/generated/`를 생성한다. 이 폴더는 Git에 넣지 않는다.
+- 지원 소스 빌드·원본 파일 오류 위치, 중단점·일시정지·step into/over/out·변수·호출 스택·읽기 전용 감시식. 콜백은 원자적으로 처리해 내부 중단점은 지원하지 않는다. 실행 대상이 ARM/Windows일 때는 실제 GCC 및 GDB를 사용한다. 사용자 사용법·한계는 [IDE 문서](docs/IDE.md).
 
 - 보드 커넥터 108개, 빵판 400홀, GPIO 별칭, 배선 10색, 부품 35종과 45도 회전·구멍 장착·속성/측정.
 - DC/RC 회로 모델, GPIO·ADC·PWM, USER 버튼/LD2, LED·센서·LCD·UART/I²C/SPI, 파형 및 CSV.
@@ -35,7 +48,7 @@
 - 확장 14종: LDR, NTC, SHT31, MPU6050, PIR, SSD1306 OLED, ST7735 TFT, MAX7219, RC 서보, DC 모터/드라이버, 4상 스테퍼/드라이버, 릴레이, 조이스틱, 인코더. 각 HAL 예제와 전원·배선·프로토콜 조건 검사가 있다. 세부 명령 범위와 기계 모델 한계는 HAL-API 문서를 따른다.
 - Ctrl+F로 현재 소스에서 문자 그대로 검색하고 Ctrl+R로 단일/전체 치환한다. 치환은 파일 크기 제한과 프로젝트 Undo/Redo·저장을 따르며 실행 중에는 검색만 가능하다.
 - 배선 선택 시 SVG 선을 보존해 실제 더블클릭 이벤트를 유지한다. 꺾임점 크기는 화면 확대율에 맞추고 끌기는 누른 위치의 이동량을 적용한다.
-- HAL은 지원 API를 회로에 연결하는 소스 해석 모델이다. 전체 ST HAL 드라이버·C ABI·ARM/ELF/BIN 실행은 구현하지 않았다. 세부 한계는 [HAL API](docs/HAL-API.md)를 따른다.
+- 회로 시뮬레이터의 HAL은 지원 API를 회로에 연결하는 소스 해석 모델이다. ARM 대상의 실제 ST HAL 빌드·GDB 보드 실행과는 별개이며 ARM ELF를 가상 빵판에 연결하는 CPU 에뮬레이션은 구현하지 않았다. 세부 한계는 [HAL API](docs/HAL-API.md)를 따른다.
 
 - 배선 꺾임점 추가/드래그/삭제/자동 정렬, Shift 다중 선택과 Ctrl+C/V, 연결망 강조, 클릭 가능한 회로 진단을 제공한다. 원본 빵판을 제외하고 부품만 복사할 때도 부품 사이의 전기적 연결을 배선으로 보존한다.
 - 생성 main.c는 HSI PLL 클록과 정식 HAL 초기화를 포함하며 동일 Cube 환경으로 이식한다. `main.c 저장` IPC 및 ARM GCC/ST HAL 컴파일·링크 검사 스크립트가 있다. 실제 보드 실행은 별도이며 printf는 SWV 포트 0, nano float는 링크 옵션이 필요하다.

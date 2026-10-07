@@ -49,7 +49,7 @@ $('part-search').addEventListener('input',filterParts);filterParts();
 $('hal-example').innerHTML='<option value="">HAL 예제 선택…</option>'+Object.entries(HAL_EXAMPLES).map(([id,name])=>`<option value="${id}">${name}</option>`).join('');
 const uartLines=new Map();
 function uid(prefix){return prefix+crypto.randomUUID().replaceAll('-','').slice(0,12);}
-function running(){return status==='running'||status==='paused';}
+function running(){return status==='running'||status==='paused'||!!ide?.nativeBusy();}
 function log(message,type='info'){
  const div=document.createElement('div');div.className=`log-line ${type}`;
  const span=document.createElement('span');span.className='stamp';span.textContent=(simTime/1000).toFixed(3)+' s';div.append(span,document.createTextNode(message));
@@ -318,7 +318,7 @@ $('wire-palette').innerHTML=WIRE_COLORS.map(([value,name])=>`<button data-color=
 document.querySelectorAll('[data-color]').forEach(b=>b.onclick=()=>{color=b.dataset.color;document.querySelectorAll('[data-color]').forEach(s=>s.classList.toggle('active',s===b));if(!running()&&selection?.type==='wire'){checkpoint();project.wires.find(w=>w.id===selection.id).color=color;changed();}});
 document.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>tab(b.dataset.tab));
 function replaceProject(p){if(running())stop();project=validateProject(p);mode='select';pressed={};lastWarnings='';uartLines.clear();searchSelectedId=null;$('pin-search').value='';pinSearch();fitView();selection=null;pending=null;drag=null;$('preview-layer').innerHTML='';undoStack=[];redoStack=[];status='stopped';runtime=null;session=null;monitor.clear();result=null;simTime=0;dirty=false;sourceFile='main.c';syncEditor();ide?.reset();autosave();refresh();log('회로를 열었습니다: '+project.name);}
-function requestReplace(action){if(dirty){replaceAction=action;$('replace-dialog').showModal();}else action();}
+function requestReplace(action){if(ide?.nativeBusy()){log('빌드·실행·디버그를 정지한 뒤 프로젝트를 변경하세요.','error');return;}if(dirty){replaceAction=action;$('replace-dialog').showModal();}else action();}
 $('replace-cancel').onclick=()=>{$('replace-dialog').close();replaceAction=null;};$('replace-confirm').onclick=()=>{$('replace-dialog').close();replaceAction?.();replaceAction=null;};
 $('hal-example').onchange=e=>{const type=e.target.value;e.target.value='';if(running()||!Object.hasOwn(HAL_EXAMPLES,type))return;checkpoint();project=applyHalExample(project,type);sourceFile='main.c';runtime=null;session=null;result=null;status='stopped';simTime=0;pressed={};selection=null;pending=null;drag=null;mode='select';lastWarnings='';$('preview-layer').innerHTML='';view={x:0,y:0,w:1120,h:730};viewUpdate();monitor.clear();uartLines.clear();syncEditor();changed();tab('code');log(HAL_EXAMPLES[type]+' · '+HAL_GUIDES[type]);svg.focus({preventScroll:true});};
 $('new').onclick=()=>requestReplace(()=>replaceProject(blankProject()));
@@ -345,7 +345,7 @@ $('firmware-files').onchange=async e=>{const chosen=[...e.target.files];try{if(c
 $('code').addEventListener('scroll',()=>{$('line-numbers').scrollTop=$('code').scrollTop;});
 $('code').addEventListener('keydown',e=>{if(e.key==='Tab'){e.preventDefault();if(running())return;const a=e.target.selectionStart,b=e.target.selectionEnd;e.target.setRangeText('  ',a,b,'end');e.target.dispatchEvent(new Event('input'));}});
 async function save(){try{const data=JSON.stringify(project,null,2);if(await ide?.saveWorkspace(data)){}else if(window.desktop){const path=await window.desktop.save(data);if(!path)return;}else{const blob=new Blob([data],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=project.name.replace(/[^\w가-힣-]/g,'_')+'.stm32lab';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}dirty=false;log('회로 파일을 저장했습니다.');}catch(e){log('저장 실패: '+e.message,'error');}}
-$('main-export').onclick=async()=>{try{if(project.firmware?.mode!=='hal')throw new Error('HAL main.c를 선택하세요.');compileHal(project.code,project.firmware.files);if(window.desktop?.exportMain){if(!await window.desktop.exportMain(project.code))return;}else{const url=URL.createObjectURL(new Blob([project.code],{type:'text/plain;charset=utf-8'})),a=document.createElement('a');a.href=url;a.download='main.c';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}log('main.c를 저장했습니다. 실제 프로젝트의 핀·주변장치·NVIC 설정을 동일하게 구성하세요.');}catch(e){log(e.message,'error');}};
+$('main-export').onclick=async()=>{try{if(project.firmware?.mode!=='hal')throw new Error('HAL main.c를 선택하세요.');if($('native-target').value==='simulator')compileHal(project.code,project.firmware.files);if(window.desktop?.exportMain){if(!await window.desktop.exportMain(project.code))return;}else{const url=URL.createObjectURL(new Blob([project.code],{type:'text/plain;charset=utf-8'})),a=document.createElement('a');a.href=url;a.download='main.c';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}log('main.c를 저장했습니다. 실제 프로젝트의 핀·주변장치·NVIC 설정을 동일하게 구성하세요.');}catch(e){log(e.message,'error');}};
 $('save').onclick=save;
 async function open(){try{if(window.desktop){const data=await window.desktop.open();if(data!=null)replaceProject(validateProject(JSON.parse(data)));}else $('file-input').click();}catch(e){log('불러오기 실패: '+e.message,'error');}}
 $('open').onclick=()=>requestReplace(open);
@@ -368,7 +368,7 @@ window.addEventListener('keydown',e=>{
 });
 window.addEventListener('error',e=>log('화면 오류: '+e.message,'error'));
 document.addEventListener('ide-undo',e=>editUndo(e.detail));
-ide=setupIde({getProject:()=>project,getSource:()=>sourceFile,getSession:()=>runtime?session:null,isRunning:running,checkpoint,saveLocal:autosave,layout,log,requestReplace,replaceProject,debugCommand,
+ide=setupIde({getProject:()=>project,getSource:()=>sourceFile,getSession:()=>runtime?session:null,isRunning:running,isSimulationRunning:()=>status==='running'||status==='paused',refresh,checkpoint,saveLocal:autosave,layout,log,requestReplace,replaceProject,debugCommand,
  selectSource:name=>{if(name!=='main.c'&&!project.firmware?.files.some(f=>f.name===name))return;sourceFile=name;syncEditor();},
  applySources:(p,file)=>{checkpoint();project=validateProject(p);sourceFile=file;syncEditor();changed();ide.invalidate();}});
 syncEditor();fitView();refresh();log('회로를 연결하고 시뮬레이션 시작 또는 F5를 눌러 보세요.');

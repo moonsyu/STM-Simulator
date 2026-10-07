@@ -21,7 +21,7 @@ const {cleanArtifactOutput} = require('./clean-build.cjs');
   for (const file of ['src/passive-buzzer.js', 'src/passive-buzzer-example.js', 'src/buzzer-audio.js', 'src/l298n.js', 'src/l298n-example.js', 'src/l298n-ui.js']) {
     assert.deepEqual(asar.extractFile(archive, path.normalize(file)), await fs.readFile(path.join(root, file)), 'Packaged feature module differs from source: ' + file);
   }
-  for (const file of ['desktop/workspace.cjs', 'src/parser.js', 'src/runtime.js', 'src/hal-source.js', 'src/session.js', 'src/ide-ui.js', 'src/workspace-layout.js', 'src/layout-model.js', 'src/debug-tools.js', 'src/ide.css', 'src/generated/code-editor.js', 'src/generated/code-editor.css', 'src/generated/editor.worker.js', 'src/generated/MONACO-LICENSE.txt', 'src/generated/MONACO-NOTICES.txt']) {
+  for (const file of ['desktop/workspace.cjs', 'desktop/native-build.cjs', 'desktop/native-ide.cjs', 'desktop/gdb-mi.cjs', 'desktop/clangd.cjs', 'desktop/process-tools.cjs', 'src/native-ide-ui.js', 'src/parser.js', 'src/runtime.js', 'src/hal-source.js', 'src/session.js', 'src/ide-ui.js', 'src/workspace-layout.js', 'src/layout-model.js', 'src/debug-tools.js', 'src/ide.css', 'src/generated/code-editor.js', 'src/generated/code-editor.css', 'src/generated/editor.worker.js', 'src/generated/MONACO-LICENSE.txt', 'src/generated/MONACO-NOTICES.txt']) {
     assert.deepEqual(asar.extractFile(archive, path.normalize(file)), await fs.readFile(path.join(root, file)), 'Packaged IDE asset differs: ' + file);
   }
   for (const [source, target] of [['LICENSE', 'MONACO-LICENSE.txt'], ['ThirdPartyNotices.txt', 'MONACO-NOTICES.txt']]) {

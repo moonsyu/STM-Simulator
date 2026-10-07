@@ -1,50 +1,46 @@
-# 현재 검증 기록 — 0.14.0 (IDE와 이동 가능한 패널)
+# 현재 검증 기록 — 0.15.0 (실제 GCC / GDB IDE)
 
-- 검증일: 2026-10-07.
-- 환경: Windows x64, Node.js 24, Electron 44.2.0, Monaco Editor 0.57.0, Playwright 1.58.2.
+- 검증일: 2026-10-07. Windows x64, Node.js 24, Electron 44.2.0, Monaco 0.57.0, Playwright 1.58.2.
+- 도구: ARM GCC 15.2.1 (xPack), Windows GCC/GDB (MSYS2 UCRT64), clangd 23.1.0, STM32CubeF4 v1.28.3. OpenOCD 0.12.0-7 설치 헬퍼 실행 완료.
 
-## 변경
+## 검사 결과
 
-- IDE 중심으로 프로젝트·코드·시뮬레이터·터미널을 배치하고 네 패널 모두 크기 조절·도킹·접기·최대화·로컬 배치 저장 지원.
-- 과거 코드 300px, 시뮬레이터 470px, 터미널 255px 이상의 고정 최소 크기 제한 제거. 분할 비율 1~99%, 접기로 완전 숨김.
-- 폴더 프로젝트 생성·열기·저장, C/H 파일 추가·이름 변경·삭제, include 갱신, 외부 파일 수정 시 덮어쓰기 차단.
-- Monaco 로컬 번들, C/H 구문 강조·기본 완성·함수 정의 이동·파일별 편집 상태.
-- 지원 소스 빌드·원래 파일 오류 위치, 중단점·일시정지·함수 진입/복귀·한 줄 실행·변수·호출 스택·읽기 전용 감시식.
-- 편집 시 중단점 줄 이동, 찾기/바꾸기·프로젝트 Undo/Redo 연결.
-- 일시정지·단계 실행 후에도 릴레이 접점 등 동적 부품 그림을 계산 결과와 동기화.
+- 실제 ST HAL/CMSIS/startup과 사용자 소스를 ARM GCC로 컴파일·링크해 ELF/BIN/HEX/MAP, compile_commands.json과 SHA-256 기록을 생성했다. 컴파일러 모형을 사용하지 않았다.
+- Windows GCC Debug/Release 빌드, 실제 EXE 실행·출력을 검사했다. C/C++ 여러 소스와 std::vector를 링크한 프로그램이 10을 출력했다.
+- 실제 GDB/MI로 main·줄 중단점, step into/over/out, continue/interrupt, 지역·전역 변수, 스택, 감시식, 레지스터·메모리를 검사했다. 디버그 종료 뒤 다시 빌드·실행할 수 있음을 UI에서 확인했다.
+- ARM GDB를 QEMU netduinoplus2 (STM32F405 Cortex-M4)에 TCP로 연결했다. ARM ELF의 main/helper 단계 실행, 중단점, counter=7, SRAM 07 00 00 00, PC 및 일시정지를 검사했다. 이는 F446RE 실물이나 가상 빵판 전체 에뮬레이션 검증이 아니다.
+- 실제 clangd 호버·정의 결과와 Electron 편집기의 저장 전 소스 오류 밑줄을 확인했다. GCC 오류 파일 이동과 개발 도구 설정도 검사했다.
+- 실제 Windows 명령 프롬프트의 명령 실행과 출력을 UI에서 확인했다.
+- 실패·취소 시 이전 바이너리를 실행하지 않도록 결과가 무효화되는지, 컴파일러 프로세스가 종료되는지 검사했다.
+- 모델 189/189 통과. 기존 회로·IDE 모델과 GDB MI 구문, 컴파일 진단, 도구 경로 검사 포함. 마지막 변경 후 IDE·네이티브 단위 검사 11개도 통과했다.
+- 기존 Electron UI 14개 스크립트 모두 통과. 신규 네이티브 IDE UI도 통과했다.
+- 1024×640 창에서 문서 가로 넘침 없음. 도구 모음은 내부 스크롤, 패널은 이동·크기 조절·최대화로 접근한다. 데스크톱과 작은 창 캡처를 함께 확인했다.
+- Impeccable 수동 검사 1회: 기존 디버그 화살표 테두리를 카드 장식으로 판단한 경고만 출력했다. 해당 진단은 적용 대상이 아니다.
 
-## 검증 결과
+## 배포 검사
 
-- GitHub Windows 러너에서 정적 버튼이 먼저 나타나 초기화 전에 클릭하던 UI 테스트 대기 조건을 수정했다. 이제 Monaco 편집기 생성이 끝난 뒤 조작을 시작하며, 재로드 시에도 같은 조건을 사용한다.
+- EXE: outputs/artifact/STM-Simulator-0.15.0-win-x64.exe
+- 크기: 102583777 bytes
+- SHA-256: 713b8c566b963d65ae1925cf58e0e512e397027142ed986f42f427eeef95d9b7
+- ZIP: outputs/STM-Simulator-0.15.0-Windows-x64.zip
+- ZIP SHA-256: 77717e3fb7dee7711524eb339dbf0ca9258fb65c95ec4df237c9bd1422c0b1f4
+- asar의 네이티브 서비스·GDB·clangd·UI·Monaco와 소스 바이트 일치, 아이콘·라이선스 원문, 테스트·참고자료 제외 검사를 통과했다.
+- win-unpacked 앱에서도 기존 IDE 및 새 네이티브 IDE UI 검사를 통과했다.
+- 실제 단일 portable EXE에서 Monaco 초기화, GCC 컴파일, GDB main 정지·레지스터, 종료 후 재실행 및 Hello from STM Simulator: 42 출력을 확인했다.
+- NSIS 런처는 Playwright Electron 런처의 inspector stderr를 전달하지 않아 직접 _electron.launch 검사를 진행하지 못했다. 해당 검사 프로세스만 종료하고, 동일 EXE의 자식 앱에 로컬 CDP로 연결하는 전용 검사로 위 결과를 확인했다.
+- 이번 결과는 로컬 빌드다. 0.15.0 GitHub Release/Actions 게시 검증은 수행하지 않았다.
 
-- 전체 모델 테스트 **186/186 통과**. 기존 178개와 IDE 모델 8개.
-- IDE 모델은 도킹 트리의 모든 이동 방향, step into/over/out의 실제 실행 순서·변수·시간, 반복문 중단점 재진입, 다중 파일 원본 줄, 감시식 부작용 차단, C/H 관리, 디버그 설정 검증, 폴더 저장 충돌을 검사.
-- 전체 Electron UI **14개 스크립트 통과** (`npm run test:ui`). 이전 부품·통신·센서·타이머·저장·검색·수동 부저·L298N 회귀 검증 포함.
-- IDE UI는 실제 키보드 편집, 네이티브 폴더 저장/재열기, 오류 파일 이동, 디버그 단계·감시식·중단점, 줄 삽입 시 중단점 이동, 100px 미만 가로 축소, 터미널 세로 축소, 터미널 재배치와 재시작 유지, 제목 드래그 도킹, 접기·복원·최대화를 검사.
-- 창 1024×640에서 문서 전체 가로 넘침 없음. 데스크톱/작은 창 스크린샷을 확인. 큰 내용을 볼 때는 패널 스크롤 또는 최대화를 사용.
-- Impeccable 수동 탐지 1회 실행. 새 IDE 기능 글씨는 11px 이상으로 보완. 디버그 화살표의 삼각형 테두리와 Monaco 진행 표시를 장식 카드·자동 스크롤로 판단한 항목은 적용 대상이 아니다. 기존 회로 화면의 작은 라벨·색상 전체 재설계는 이번 변경 범위 밖이다.
-- Windows x64 portable 빌드 및 패키지 검사 통과. IDE/실행기/편집기/워커 원본과 asar 바이트 일치, 앱 아이콘, Electron/Chromium/Monaco 라이선스 원문, 참고 자료·테스트 파일 제외 검증.
-- 패키지된 `win-unpacked/STM Simulator.exe`에서도 IDE UI 시나리오 전체 통과. 개발 소스 파일 경로에 의존하지 않고 폴더 저장과 Monaco를 실행.
+## 미검증 및 범위
 
-- 단일 portable EXE 추출·시작과 LED·LCD·UART/I²C/SPI·언어·DMA·파형·HAL UART/Pinout 검증 통과. `work/test-results/portable-smoke.json`과 `portable-tests.log`에 기록.
-- 테스트 임시 프로필 일괄 삭제는 자동 승인 검토에서 차단되어 생략했다. 해당 폴더는 Git과 EXE에서 제외된다.
-
-## 범위와 한계
-
-- 앱의 빌드는 지원 소스 해석기용이다. 실제 ARM ELF/BIN 생성·실행, clangd, GDB/ST-LINK, 전체 C/C++ 지원은 포함하지 않는다.
-- 인터럽트·주변장치 콜백 내부 중단점과 한 줄 실행은 지원하지 않는다.
-- 실제 ARM GCC/ST HAL 컴파일·링크 검사와 실물 보드 검증은 이번 변경에서 실행하지 않았다. 생성 HAL 코드·회로 모델 한계는 [HAL API](HAL-API.md), IDE 조작은 [IDE 사용법](IDE.md) 참조.
-
-## 배포 파일
-
-- EXE: `outputs/artifact/STM-Simulator-0.14.0-win-x64.exe`.
-- 크기: 102562796 bytes.
-- SHA-256: `45c0b5b4e60508eb1bd067239d0fe6c58e49f80256c4400e7cef450b4244f077`.
-- ZIP: `outputs/STM-Simulator-0.14.0-Windows-x64.zip` (EXE·문서·라이선스·체크섬).
-- 실행 파일과 고지 문서를 `outputs/artifact/`에 제공한다. 게시 대상은 `moonsyu/STM-Simulator`의 `v0.14.0` Release이며, 업로드한 파일의 해시와 태그 커밋·Actions 결과는 `work/test-results/release-proof.json`에 기록한다.
+- 현재 PC에서 연결된 ST-LINK를 확인하지 못했다. OpenOCD 자동 시작·GDB 서버·선택적 보드 기록 기능은 구현했으나 F446RE 실물 플래시·실행·디버그는 미검증이다.
+- GCC/GDB·SDK·clangd·OpenOCD는 별도 설치 도구이며 EXE에 번들하지 않는다. 현재 PC에는 검사 도구를 준비했고 앱에서 경로 설정 및 사용을 검증했다.
+- ARM ELF를 가상 빵판과 연결하는 CPU/주변장치 에뮬레이터는 제공하지 않는다. 기존 회로 소스 실행기의 C 부분집합·콜백 내부 디버그 제한은 실제 GDB 대상과 별개다.
+- 프로젝트, 터미널, 언어 서버의 구체적인 지원 범위는 [IDE 사용법](IDE.md)에 기록했다.
 
 ## 로컬 증거
 
-- `work/test-results/model-tests.log`, `ui-tests.log`, `ide-model-tests.log`, `build.log`.
-- `work/test-results/ide-smoke.json`, `ide-packaged-smoke.json`, `design-detect.json`.
-- `work/test-results/ide-desktop.png`, `ide-compact.png`.
+- work/test-results/native-ide-check.json, native-ide-check.log
+- work/test-results/arm-gdb-check.json, arm-gdb-check.log
+- work/test-results/native-ide-smoke.json, native-packaged-tests.log, native-portable-check.json
+- work/test-results/native-ide-desktop.png, native-ide-compact.png
+- work/test-results/ui-native-regression.log, native-build-package.log, native-design-detect.json

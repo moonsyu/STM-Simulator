@@ -1,13 +1,14 @@
 # STM Simulator
 
-STM Simulator는 **NUCLEO-F446RE 회로 시뮬레이터를 통합한 Windows 학습용 IDE**입니다. 프로젝트 생성, C/H 코드 작성, 시뮬레이터용 빌드·디버그와 빵판 회로 실습을 한 화면에서 진행합니다.
+STM Simulator는 **NUCLEO-F446RE 회로 시뮬레이터를 통합한 Windows 학습용 IDE**입니다. 프로젝트 생성, C/C++ 코드 작성, 실제 GCC 빌드·GDB 디버그와 빵판 회로 실습을 한 화면에서 진행합니다.
 
-지원하는 HAL API를 회로 모델에 연결해 실행합니다. 전체 ST HAL 라이브러리를 빌드하거나 ARM 명령·ELF/BIN 펌웨어를 실행하는 방식은 아닙니다.
+실행 대상에서 **회로 시뮬레이터**, **STM32 · ARM GCC**, **Windows · C/C++**를 선택합니다. 회로 시뮬레이터는 지원 HAL 소스를 회로 모델에 연결합니다. ARM 대상은 실제 ST HAL·CMSIS와 함께 ELF/BIN/HEX를 만들고 ST-LINK/GDB 서버로 실물 보드를 실행·디버그합니다. 컴파일된 ARM 펌웨어가 가상 빵판에서 실행되는 CPU 에뮬레이터는 포함하지 않습니다.
 
 ## 주요 기능
 
-- **IDE 프로젝트**: 폴더 프로젝트 생성·열기, C/H 파일 추가·이름 변경·삭제·저장, 파일 탐색기와 탭. Monaco 편집기의 구문 색상·괄호·접기·기본 자동 완성·함수 정의 이동.
-- **빌드와 디버그**: 지원 소스 빌드, 파일·줄별 오류 이동, 중단점, 한 줄 실행, 함수 진입·복귀, 호출 스택·지역/전역 변수·읽기 전용 감시식. ARM ELF/BIN 빌드나 GDB 연동은 포함하지 않습니다.
+- **IDE 프로젝트**: 폴더 프로젝트 생성·열기, C/C++/H 파일 추가·이름 변경·삭제·저장, 파일 탐색기와 탭. Monaco 편집기의 구문 색상·괄호·접기·기본 자동 완성·함수 정의 이동. clangd 연결 시 의미 분석 오류, 멤버 자동 완성, 호버·정의·참조·함수 인수 안내·서식 정리.
+- **실제 빌드와 디버그**: ARM/Windows GCC의 Debug·Release 컴파일·링크, ELF/BIN/HEX/MAP/EXE와 컴파일 데이터베이스, 파일·줄별 오류 이동. GDB 중단점·일시정지·계속 실행·함수 진입/복귀·한 줄 실행·스택·지역/전역 변수·감시식·레지스터·메모리. OpenOCD 자동 시작 또는 외부 GDB 서버 연결, 선택적으로 보드에 펌웨어 기록.
+- **실행과 터미널**: Windows 프로그램 실행·출력·표준 입력, 프로젝트 위치에서 명령 프롬프트 시작·명령 입력·종료. 개발 도구 경로 자동 검색·검사·저장.
 - **패널 배치**: 프로젝트·코드·시뮬레이터·터미널 모두 가로·세로 크기 조절과 위치 이동, 접기·최대화·배치 저장. 기존 코드·시뮬레이터·터미널의 고정 최소 크기 제한을 제거했습니다. [IDE 사용법과 단축키](docs/IDE.md)를 참고하세요.
 - **회로 편집**: 보드 핀 검색, 부품명·종류 검색, 세로 스크롤 부품 목록, 빵판 배선, 부품 배치·회전·속성 변경. 저항·LED·버튼·LCD·UART 터미널·메모리·센서와 추가 빵판 등 35종 부품 지원. 배선과 구멍이 겹치면 배선 우선 선택. 더블클릭으로 배선 꺾임점 추가·끌어서 이동·우클릭 삭제, Shift+클릭 다중 선택과 Ctrl+C/V 복사, 연결망 전체 강조.
 - **보드 선택**: 보드명·MCU 이름 검색 및 선택. 현재 NUCLEO-F446RE 한 종류를 지원하며, 기본 상태에서 변경된 작업은 보드 초기화 전에 확인.
@@ -43,6 +44,7 @@ npm run build:artifact
 - 빌드 중간 파일: `work/build/`, 검사 결과: `work/test-results/`
 - 개발 중 실행: `npm start`
 - 검증: `npm test`, `npm run test:ui`
+- 네이티브 IDE 검증: 개발 도구 설치 후 `npm run test:native`, `npm run test:native:ui`. ARM GDB 원격 검증은 QEMU 설치 후 `npm run test:arm-gdb` (`QEMU_ARM` 경로).
 - IDE 검증: `node --test tests/ide.test.js`, `npm run test:ide:ui`
 - L298N만 검증: `npm run test:l298n`, `npm run test:l298n:ui`
 - 수동 부저만 검증: `npm run test:passive-buzzer`, `npm run test:passive-buzzer:ui`
@@ -56,7 +58,7 @@ npm run build:artifact
 
 **[최신 실행 파일 다운로드 — GitHub Releases](https://github.com/moonsyu/STM-Simulator/releases/latest)**
 
-Releases의 **Assets**에서 `STM-Simulator-<버전>-Windows-x64.zip`을 받아 압축을 풀고 EXE를 실행하세요. 실행할 때는 Node.js 설치가 필요 없습니다. ZIP에는 실행 파일, 라이선스 고지와 체크섬이 포함됩니다.
+Releases의 **Assets**에서 `STM-Simulator-<버전>-Windows-x64.zip`을 받아 압축을 풀고 EXE를 실행하세요. 실행할 때는 Node.js 설치가 필요 없습니다. 회로 시뮬레이션은 EXE만으로 사용할 수 있습니다. **실제 빌드·GDB·clangd 기능에는 각 개발 도구와 SDK가 별도로 필요합니다.** 설정·설치 방법은 [IDE 사용법](docs/IDE.md)을 확인하세요. ZIP에는 실행 파일, 라이선스 고지와 체크섬이 포함됩니다.
 
 ## 권리 관련 안내
 
