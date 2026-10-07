@@ -23,11 +23,11 @@ export class HalTimers {
   get(ptr,r){const {id}=this.hal.requireHandle(ptr,r,'TIM'),s=this.states.get(id);if(!s)throw new Error(id+': 타이머 초기화가 필요합니다.');return s;}
   period(s){return this.hal.field(s.init,'Period')+1;}
   hz(s){return this.hal.config.timerClockHz/(this.hal.field(s.init,'Prescaler')+1);}
-  counter(s,us){return Math.floor(wrap(s.value+(s.active&&s.kind!=='Encoder'?(us-s.at)*this.hz(s)/1e6:0),this.period(s)));}
+  counter(s,us){if(this.period(s)===1)return s.value;return Math.floor(wrap(s.value+(s.active&&s.kind!=='Encoder'?(us-s.at)*this.hz(s)/1e6:0),this.period(s)));}
   freeze(s,us){s.value=this.counter(s,us);s.at=us;}
   syncActive(s,r){this.freeze(s,r.microTime);s.active=s.base||s.baseIT||s.encoderActive||[...s.channels.values()].some(c=>c.active);}
   schedule(s,r){
-    const generation=++s.generation;if(!s.baseIT)return;
+    const generation=++s.generation;if(!s.baseIT||this.period(s)===1)return;
     const ms=(this.period(s)-this.counter(s,r.microTime))*1000/this.hz(s);
     const full=this.period(s)*1000/this.hz(s);if(full<.1||full>3600000)throw new Error(s.id+': 인터럽트 주기 범위 0.1~3600000 ms');
     const fire=()=>{if(generation!==s.generation||!s.baseIT)return;this.hal.queue(s.id+'_IRQn',()=>{if(s.baseIT)this.hal.callback(r,'HAL_TIM_PeriodElapsedCallback',[s.ptr]);},s.id+':update');r.event(r.microTime/1000+full,fire);};
@@ -40,7 +40,7 @@ export class HalTimers {
       if(!s.active)continue;
       if(s.kind==='Encoder'&&s.encoderActive){
         const a=Number(!!r.api.read(this.hal.pinFor(s.id+'_CH1'))),b=Number(!!r.api.read(this.hal.pinFor(s.id+'_CH2'))),next=a*2+b,prev=s.previous;
-        s.previous=next;if(prev===undefined||prev===next)continue;
+        s.previous=next;if(prev===undefined||prev===next||this.period(s)===1)continue;
         const changed=prev^next,allowed=s.encoderMode===3||s.encoderMode===1&&changed===2||s.encoderMode===2&&changed===1,delta=allowed?quadrature[prev*4+next]:0;
         if(delta){s.value=wrap(s.value+delta,this.period(s));s.at=us;s.down=delta<0;const key=changed===2?0:4;this.notify(s,{active:s.encoderActive,it:s.encoderIT},key,r);}
       }else for(const [key,c]of s.channels){
@@ -54,7 +54,8 @@ export class HalTimers {
   pwm(s,c,r){
     const pin=c.pin,period=this.period(s),hz=this.hz(s)/period;
     r.call('pinMode',[pin,'OUTPUT']);
-    if(c.active){r.call('analogWriteFrequency',[pin,hz]);r.call('analogWrite',[pin,Math.min(1,c.pulse/period)*255]);}
+    if(c.active&&period>1){r.call('analogWriteFrequency',[pin,hz]);r.call('analogWrite',[pin,Math.min(1,c.pulse/period)*255]);}
+    else if(c.active)r.call('digitalWrite',[pin,Number(this.counter(s,r.microTime)<c.pulse)]);
     else r.call('digitalWrite',[pin,0]);
   }
   call(name,args,r){
@@ -65,10 +66,10 @@ export class HalTimers {
     if(name==='HAL_TIM_MspPostInit'||name==='HAL_TIM_IRQHandler')return 0;
     if(name==='__HAL_TIM_GET_COUNTER')return this.counter(s,r.microTime);
     if(name==='__HAL_TIM_IS_TIM_COUNTING_DOWN')return Number(s.down);
-    if(name==='__HAL_TIM_SET_COUNTER'){s.value=integer(b,0,this.period(s)-1,'TIM counter');s.at=r.microTime;this.schedule(s,r);return 0;}
+    if(name==='__HAL_TIM_SET_COUNTER'){s.value=integer(b,0,timerMax(s.id),'TIM counter');s.at=r.microTime;this.schedule(s,r);return 0;}
     if(name==='__HAL_TIM_GET_AUTORELOAD')return this.period(s)-1;
     if(name==='__HAL_TIM_SET_AUTORELOAD'||name==='__HAL_TIM_SET_PRESCALER'){
-      this.freeze(s,r.microTime);const key=name.endsWith('AUTORELOAD')?'Period':'Prescaler';s.init.fields[key].value=integer(b,0,key==='Period'?timerMax(s.id):65535,key);s.value%=this.period(s);this.schedule(s,r);for(const ch of s.channels.values())if(ch.kind==='PWM')this.pwm(s,ch,r);return 0;
+      this.freeze(s,r.microTime);const key=name.endsWith('AUTORELOAD')?'Period':'Prescaler';s.init.fields[key].value=integer(b,0,key==='Period'?timerMax(s.id):65535,key);if(this.period(s)>1)s.value%=this.period(s);this.schedule(s,r);for(const ch of s.channels.values())if(ch.kind==='PWM')this.pwm(s,ch,r);return 0;
     }
     if(/^HAL_TIM_Base_(Start|Stop)(_IT)?$/.test(name)){
       if(s.kind==='Encoder')throw new Error(s.id+': 엔코더 Start/Stop을 사용하세요.');
@@ -78,7 +79,7 @@ export class HalTimers {
     if(name==='HAL_TIM_PWM_ConfigChannel'){
       if(s.kind==='Encoder')throw new Error('엔코더와 PWM은 같은 타이머를 공유할 수 없습니다.');
       integer(c/4,0,3,'TIM 채널');const cfg=r.get(r.pointerCell(b));if(h.field(cfg,'OCMode')!==96||h.field(cfg,'OCPolarity'))throw new Error('PWM1 active high만 지원합니다.');
-      s.channels.set(c,{kind:'PWM',pulse:integer(h.field(cfg,'Pulse'),0,this.period(s),'PWM compare'),active:false,pin:h.pinFor(s.id+'_CH'+(c/4+1))});return 0;
+      s.channels.set(c,{kind:'PWM',pulse:integer(h.field(cfg,'Pulse'),0,timerMax(s.id),'PWM compare'),active:false,pin:h.pinFor(s.id+'_CH'+(c/4+1))});return 0;
     }
     if(name==='HAL_TIM_IC_ConfigChannel'){
       if(s.kind==='Encoder')throw new Error('엔코더와 입력 캡처는 같은 타이머를 공유할 수 없습니다.');
@@ -91,7 +92,7 @@ export class HalTimers {
       if(name==='HAL_TIM_ReadCapturedValue')return ch.captured??ch.pulse;
       if(name==='__HAL_TIM_GET_COMPARE')return ch.pulse??ch.captured;
       if(name==='__HAL_TIM_SET_CAPTUREPOLARITY'){if(![0,2,10].includes(c)||ch.kind!=='IC')throw new Error('입력 캡처 polarity를 확인하세요.');ch.polarity=c;return 0;}
-      if(name==='__HAL_TIM_SET_COMPARE'){if(ch.kind!=='PWM')throw new Error('PWM 채널이 필요합니다.');ch.pulse=integer(c,0,this.period(s),'PWM compare');}
+      if(name==='__HAL_TIM_SET_COMPARE'){if(ch.kind!=='PWM')throw new Error('PWM 채널이 필요합니다.');ch.pulse=integer(c,0,timerMax(s.id),'PWM compare');}
       else {
         if(!name.includes('_'+ch.kind+'_'))throw new Error('타이머 채널 모드가 다릅니다.');
         if(ch.kind==='PWM'&&name.endsWith('_IT'))throw new Error('PWM 완료 인터럽트는 지원하지 않습니다.');

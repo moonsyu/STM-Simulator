@@ -38,7 +38,7 @@ test('HAL ADC measures the actual divider; I2C and SPI exchange memory data',()=
   for(const kind of ['i2c','spi']){const {s,output}=start(halExample(kind));s.tick(20);assert.ok(output.includes('42'),kind+': '+output);}
 });
 test('pin function, EXTI line, signal duplicate and missing route conflicts are detected',()=>{
-  const m=defaultMcu();m.pins.PA2={...m.pins.PA5,function:'USART2_TX'};m.peripherals.USART2={enabled:true};assert.match(configProblems(m).join(),/RX/);
+  const m=defaultMcu();m.pins.PA2={function:'USART2_TX',pull:'NOPULL',edge:'FALLING',initial:0,label:''};m.peripherals.USART2={enabled:true};assert.match(configProblems(m).join(),/RX/);
   m.pins.PA2.function='SPI1_SCK';assert.throws(()=>validateMcu(m),/지원하지 않는/);
   m.pins.PA2.function='GPIO_EXTI';m.pins.PC2={...m.pins.PA2};assert.match(configProblems(m).join(),/EXTI2/);
 });

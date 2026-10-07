@@ -1,6 +1,6 @@
 {
   "name": "stm-simulator",
-  "version": "0.15.0",
+  "version": "0.15.1",
   "description": "STM32 learning IDE with integrated circuit simulation",
   "author": "STM Simulator",
   "private": true,
@@ -14,7 +14,7 @@
     "build": "npm run build:editor && node scripts/clean-build.cjs && electron-builder --win portable --x64 --publish never",
     "build:artifact": "node scripts/prepare-artifact.cjs",
     "dev:web": "node scripts/serve.cjs",
-    "test:ui": "node scripts/ui-smoke.cjs && node scripts/editor-smoke.cjs && node scripts/parts-smoke.cjs && node scripts/features-smoke.cjs && node scripts/hal-smoke.cjs && node scripts/layout-serial-smoke.cjs && node scripts/hal-examples-smoke.cjs && node scripts/boards-smoke.cjs && node scripts/devices-smoke.cjs && node scripts/circuit-tools-smoke.cjs && node scripts/editor-tools-smoke.cjs && node scripts/passive-buzzer-smoke.cjs && node scripts/l298n-smoke.cjs && node scripts/ide-smoke.cjs",
+    "test:ui": "node scripts/ui-smoke.cjs && node scripts/editor-smoke.cjs && node scripts/parts-smoke.cjs && node scripts/features-smoke.cjs && node scripts/hal-smoke.cjs && node scripts/layout-serial-smoke.cjs && node scripts/hal-examples-smoke.cjs && node scripts/boards-smoke.cjs && node scripts/devices-smoke.cjs && node scripts/circuit-tools-smoke.cjs && node scripts/editor-tools-smoke.cjs && node scripts/passive-buzzer-smoke.cjs && node scripts/l298n-smoke.cjs && node scripts/ide-smoke.cjs && node scripts/mcu-defaults-smoke.cjs",
     "test:main-c": "node scripts/check-main-c.mjs",
     "build:icon": "electron scripts/prepare-icon.cjs",
     "test:l298n": "node --test tests/l298n.test.js",
@@ -24,7 +24,8 @@
     "test:ide:ui": "node scripts/ide-smoke.cjs",
     "test:native": "node scripts/native-ide-check.cjs",
     "test:native:ui": "node scripts/native-ide-smoke.cjs",
-    "test:arm-gdb": "node scripts/arm-gdb-check.cjs"
+    "test:arm-gdb": "node scripts/arm-gdb-check.cjs",
+    "test:mcu-defaults:ui": "node scripts/mcu-defaults-smoke.cjs"
   },
   "devDependencies": {
     "electron": "44.2.0",
@@ -50,7 +51,8 @@
       "docs/APP-ICON.md",
       "docs/SKETCH-API.md",
       "docs/HAL-API.md",
-      "docs/IDE.md"
+      "docs/IDE.md",
+      "docs/MCU-DEFAULTS.md"
     ],
     "win": {
       "target": "portable",

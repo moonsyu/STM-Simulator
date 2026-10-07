@@ -2,12 +2,13 @@ import {blankProject} from './project.js';
 import {deviceExample} from './device-examples.js';
 import {validateMcu,generateHal} from './mcu-config.js';
 import {boardPin} from './pins.js';
+import {EXAMPLE_TIMER_CLOCK_HZ} from './mcu-defaults.js';
 export const TIMER_EXAMPLES={timer_multi:'HAL · 독립 타이머 서보·DC 모터',timer_capture:'HAL · TIM4 입력 캡처',timer_encoder:'HAL · TIM4 엔코더 모드'};
 export const TIMER_GUIDES={timer_multi:'TIM2 PA5: 서보 50 Hz · TIM3 PA6: DC 모터 1 kHz · PB6/PB7 방향 제어',timer_capture:'TIM3 CH1 PA6 (250 Hz) → TIM4 CH1 PB6 입력 캡처 · TIM4 1 MHz, NVIC 활성',timer_encoder:'엔코더 A→TIM4 CH1 PB6, B→CH2 PB7, SW→PA10 · 하드웨어 TI12 직교 카운터'};
 const pin=fn=>({function:fn,pull:'NOPULL',edge:'RISING',initial:0,label:''});
 export function timerExample(kind){
   const p=kind==='timer_multi'?deviceExample('motor'):kind==='timer_encoder'?deviceExample('encoder'):blankProject();p.name=TIMER_EXAMPLES[kind];
-  const m=p.mcu;let globals='',init='',loop='',callback='';
+  const m=p.mcu;m.timerClockHz=EXAMPLE_TIMER_CLOCK_HZ;let globals='',init='',loop='',callback='';
   if(kind==='timer_multi'){
     m.pins.PA6=pin('TIM3_CH1');m.peripherals.TIM2={enabled:true,prescaler:83,period:19999,mode:'pwm'};m.peripherals.TIM3={enabled:true,prescaler:83,period:999,mode:'pwm'};
     p.wires.find(w=>w.to==='part:demo:p3').from=boardPin('PA6');p.components[0].y=380;
@@ -18,7 +19,7 @@ export function timerExample(kind){
     p.simulation={stepMs:1,pwmWaveform:true};
   }
   if(kind==='timer_capture'){
-    m.pins={PA6:pin('TIM3_CH1'),PB6:pin('TIM4_CH1')};m.peripherals={TIM3:{enabled:true,prescaler:83,period:3999,mode:'pwm'},TIM4:{enabled:true,prescaler:83,period:65535,mode:'capture'}};m.nvic={TIM4_IRQn:{enabled:true,priority:1}};
+    m.pins={PA6:pin('TIM3_CH1'),PB6:pin('TIM4_CH1')};m.peripherals={TIM3:{enabled:true,prescaler:83,period:3999,pulse:2000,mode:'pwm'},TIM4:{enabled:true,prescaler:83,period:65535,mode:'capture'}};m.nvic={TIM4_IRQn:{enabled:true,priority:1}};
     p.wires=[{id:'capture-signal',from:boardPin('PA6'),to:boardPin('PB6'),color:'#8064d8'}];p.simulation={stepMs:.1,pwmWaveform:true};
     globals='volatile uint32_t capturePrevious = 0, capturePeriod = 0, captureReady = 0;\nuint32_t captureSeen = 0;\n';
     init='  HAL_TIM_IC_Start_IT(&htim4, TIM_CHANNEL_1);\n  HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_1);';

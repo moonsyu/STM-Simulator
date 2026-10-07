@@ -1,46 +1,43 @@
-# 현재 검증 기록 — 0.15.0 (실제 GCC / GDB IDE)
+# 현재 검증 기록 — 0.15.1 (문서 기준 MCU 기본값)
 
-- 검증일: 2026-10-07. Windows x64, Node.js 24, Electron 44.2.0, Monaco 0.57.0, Playwright 1.58.2.
-- 도구: ARM GCC 15.2.1 (xPack), Windows GCC/GDB (MSYS2 UCRT64), clangd 23.1.0, STM32CubeF4 v1.28.3. OpenOCD 0.12.0-7 설치 헬퍼 실행 완료.
+- 검증일: 2026-10-07. Windows x64, Node.js 24, Electron 44.2.0, Playwright 1.58.2.
+- 기준: [NUCLEO-F446RE 기본 설정](MCU-DEFAULTS.md). UM1724 Rev 17, RM0390 Rev 9의 리셋 프리셋을 적용했다.
 
-## 검사 결과
+## 이번 검사 결과
 
-- 실제 ST HAL/CMSIS/startup과 사용자 소스를 ARM GCC로 컴파일·링크해 ELF/BIN/HEX/MAP, compile_commands.json과 SHA-256 기록을 생성했다. 컴파일러 모형을 사용하지 않았다.
-- Windows GCC Debug/Release 빌드, 실제 EXE 실행·출력을 검사했다. C/C++ 여러 소스와 std::vector를 링크한 프로그램이 10을 출력했다.
-- 실제 GDB/MI로 main·줄 중단점, step into/over/out, continue/interrupt, 지역·전역 변수, 스택, 감시식, 레지스터·메모리를 검사했다. 디버그 종료 뒤 다시 빌드·실행할 수 있음을 UI에서 확인했다.
-- ARM GDB를 QEMU netduinoplus2 (STM32F405 Cortex-M4)에 TCP로 연결했다. ARM ELF의 main/helper 단계 실행, 중단점, counter=7, SRAM 07 00 00 00, PC 및 일시정지를 검사했다. 이는 F446RE 실물이나 가상 빵판 전체 에뮬레이션 검증이 아니다.
-- 실제 clangd 호버·정의 결과와 Electron 편집기의 저장 전 소스 오류 밑줄을 확인했다. GCC 오류 파일 이동과 개발 도구 설정도 검사했다.
-- 실제 Windows 명령 프롬프트의 명령 실행과 출력을 UI에서 확인했다.
-- 실패·취소 시 이전 바이너리를 실행하지 않도록 결과가 무효화되는지, 컴파일러 프로세스가 종료되는지 검사했다.
-- 모델 189/189 통과. 기존 회로·IDE 모델과 GDB MI 구문, 컴파일 진단, 도구 경로 검사 포함. 마지막 변경 후 IDE·네이티브 단위 검사 11개도 통과했다.
-- 기존 Electron UI 14개 스크립트 모두 통과. 신규 네이티브 IDE UI도 통과했다.
-- 1024×640 창에서 문서 가로 넘침 없음. 도구 모음은 내부 스크롤, 패널은 이동·크기 조절·최대화로 접근한다. 데스크톱과 작은 창 캡처를 함께 확인했다.
-- Impeccable 수동 검사 1회: 기존 디버그 화살표 테두리를 카드 장식으로 판단한 경고만 출력했다. 해당 진단은 적용 대상이 아니다.
+- 전체 모델 **194/194 통과**. 새 프로젝트 16 MHz/미할당 GPIO/비활성 주변장치·NVIC, 누락 TIM 필드 PSC/ARR/CCR 0, 기존 저장값 유지, ARR=0 카운터 정지·IRQ 취소와 재개, 입력 캡처의 정지 카운터 래치, PWM 초기 듀티 및 CCR 폭을 검사했다.
+- 기존 Electron UI **14개 스크립트 통과**, 신규 기본값 UI **1개 통과**. 기존 GPIO/통신/모터/서보/입력 캡처/부저/IDE 기능을 회귀 검사했다.
+- Pinout의 기본값, 16/32비트 입력 범위, ARR=0 안내, 초기 Pulse 편집, HAL 생성·실행, 파일 저장/재개, 명시적 84 MHz 예제를 확인했다. 데스크톱 및 1024×640 캡처를 함께 확인했다.
+- 실제 ARM GCC 15.2.1과 ST HAL/CMSIS/startup (STM32CubeF4 v1.28.3)으로 **빈 프로젝트 + HAL 예제 32개, 총 33개**를 컴파일·링크했다. 기본 프로젝트는 HSI 직접 연결/PLL OFF/APB 분주 1이고 예제의 84 MHz 설정도 유효하다.
+- 패키징된 win-unpacked 앱에서도 신규 기본값 UI 검사가 통과했다.
+- 실제 단일 portable EXE를 실행해 HSI 16 MHz·TIM PSC/ARR 0·주변장치 비활성·PLL OFF 생성 코드를 확인했다. 이어서 해당 EXE에서 Windows GCC 빌드, GDB main 정지·레지스터, 디버그 종료 후 재실행과 출력 42를 확인했다.
+- git diff --check 통과.
 
 ## 배포 검사
 
-- EXE: outputs/artifact/STM-Simulator-0.15.0-win-x64.exe
-- 크기: 102583777 bytes
-- SHA-256: 713b8c566b963d65ae1925cf58e0e512e397027142ed986f42f427eeef95d9b7
-- ZIP: outputs/STM-Simulator-0.15.0-Windows-x64.zip
-- ZIP SHA-256: 77717e3fb7dee7711524eb339dbf0ca9258fb65c95ec4df237c9bd1422c0b1f4
-- asar의 네이티브 서비스·GDB·clangd·UI·Monaco와 소스 바이트 일치, 아이콘·라이선스 원문, 테스트·참고자료 제외 검사를 통과했다.
-- win-unpacked 앱에서도 기존 IDE 및 새 네이티브 IDE UI 검사를 통과했다.
-- 실제 단일 portable EXE에서 Monaco 초기화, GCC 컴파일, GDB main 정지·레지스터, 종료 후 재실행 및 Hello from STM Simulator: 42 출력을 확인했다.
-- NSIS 런처는 Playwright Electron 런처의 inspector stderr를 전달하지 않아 직접 _electron.launch 검사를 진행하지 못했다. 해당 검사 프로세스만 종료하고, 동일 EXE의 자식 앱에 로컬 CDP로 연결하는 전용 검사로 위 결과를 확인했다.
-- 이번 결과는 로컬 빌드다. 0.15.0 GitHub Release/Actions 게시 검증은 수행하지 않았다.
+- EXE: outputs/artifact/STM-Simulator-0.15.1-win-x64.exe
+- 크기: 102584485 bytes
+- SHA-256: 49af5adaddc7234914ba3f923279345dc9a5632a340ae87907c000be48329254
+- ZIP: outputs/STM-Simulator-0.15.1-Windows-x64.zip
+- 크기: 104780267 bytes
+- SHA-256: 32491e98108810e949fc0d70716a06dd13ccf2671b7e5d7514cb9d79faa7e695
+- asar의 MCU 기본값·검증기·TIM 모델·HAL 생성기·Pinout 및 기존 네이티브 서비스·Monaco 소스 일치 검사, 아이콘/라이선스 검사 통과. docs/MCU-DEFAULTS.md 포함. 참고 PDF·테스트·도구체인은 배포하지 않는다.
+- ZIP 무결성과 기본값 문서 포함을 검사했다.
+- 로컬 빌드다. 이번 턴에서 GitHub Release/Actions 게시 검증은 수행하지 않았다. BUILD-INFO.json의 commit/workflow는 로컬 빌드이므로 null이다.
 
-## 미검증 및 범위
+## 재현 명령과 증거
 
-- 현재 PC에서 연결된 ST-LINK를 확인하지 못했다. OpenOCD 자동 시작·GDB 서버·선택적 보드 기록 기능은 구현했으나 F446RE 실물 플래시·실행·디버그는 미검증이다.
-- GCC/GDB·SDK·clangd·OpenOCD는 별도 설치 도구이며 EXE에 번들하지 않는다. 현재 PC에는 검사 도구를 준비했고 앱에서 경로 설정 및 사용을 검증했다.
-- ARM ELF를 가상 빵판과 연결하는 CPU/주변장치 에뮬레이터는 제공하지 않는다. 기존 회로 소스 실행기의 C 부분집합·콜백 내부 디버그 제한은 실제 GDB 대상과 별개다.
-- 프로젝트, 터미널, 언어 서버의 구체적인 지원 범위는 [IDE 사용법](IDE.md)에 기록했다.
+- npm test → work/test-results/mcu-defaults-model.log
+- npm run test:ui → 기존 14개 결과는 mcu-defaults-ui-regression.log, 추가 기본값 검사 결과는 mcu-defaults-ui.log. test:ui에 추가 검사를 연결했다.
+- npm run test:mcu-defaults:ui → mcu-defaults-smoke.json, mcu-defaults-desktop.png, mcu-defaults-compact.png
+- npm run test:main-c (ARM_GCC / STM32CUBE_F4_ROOT 지정) → main-c-check.json, mcu-defaults-arm.log
+- npm run build 및 npm run build:artifact → mcu-defaults-build.log
+- LAB_EXE=win-unpacked 실행 파일로 test:mcu-defaults:ui → mcu-defaults-packaged-ui.log
+- node scripts/native-portable-check.cjs → native-portable-check.json, mcu-defaults-portable.log
 
-## 로컬 증거
+## 검증 범위
 
-- work/test-results/native-ide-check.json, native-ide-check.log
-- work/test-results/arm-gdb-check.json, arm-gdb-check.log
-- work/test-results/native-ide-smoke.json, native-packaged-tests.log, native-portable-check.json
-- work/test-results/native-ide-desktop.png, native-ide-compact.png
-- work/test-results/ui-native-regression.log, native-build-package.log, native-design-detect.json
+- 실제 F446RE 보드의 ARR 리셋값 및 플래시·실물 디버그는 검증하지 않았다. ARR=0은 RM0390에 기재된 값을 채택한 프리셋이며 실리콘 전체 레지스터 모델이라는 의미가 아니다.
+- 컴파일된 ARM ELF/BIN을 가상 빵판에서 실행하는 CPU 에뮬레이션은 제공하지 않는다. 회로는 기존 HAL/C 인터프리터로 동작한다.
+- 0.15.0의 전체 네이티브 IDE/clangd/ARM 원격 GDB 검사 기록은 eac667c 커밋의 검증 문서에 있다. 이번에는 변경된 HAL 생성 소스의 ARM 빌드와 패키지의 Windows GCC/GDB 경로를 재검사했다.
+- GCC/SDK/GDB/clangd/OpenOCD는 필요에 따라 별도 설치한다. 타인 PC의 도구 설치 상태는 검증하지 않았다.
