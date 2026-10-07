@@ -39,7 +39,7 @@
 - 크기: 102562796 bytes.
 - SHA-256: `45c0b5b4e60508eb1bd067239d0fe6c58e49f80256c4400e7cef450b4244f077`.
 - ZIP: `outputs/STM-Simulator-0.14.0-Windows-x64.zip` (EXE·문서·라이선스·체크섬).
-- 실행 파일과 고지 문서를 `outputs/artifact/`에 제공한다. 이번 변경은 로컬 빌드이며 GitHub 업로드·Release 게시를 수행하지 않았다.
+- 실행 파일과 고지 문서를 `outputs/artifact/`에 제공한다. 게시 대상은 `moonsyu/STM-Simulator`의 `v0.14.0` Release이며, 업로드한 파일의 해시와 태그 커밋·Actions 결과는 `work/test-results/release-proof.json`에 기록한다.
 
 ## 로컬 증거
 
