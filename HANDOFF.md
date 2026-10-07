@@ -32,7 +32,7 @@
 - 빌드 작업 폴더와 언어 서버 소스 스냅샷은 앱 데이터 또는 설정한 영문 빌드 작업 폴더에 남는다. 사용자 파일과 분리하며 자동으로 재귀 삭제하지 않는다.
 - 실제 Windows GCC/GDB/clangd, ARM GCC/ST HAL, ARM GDB 원격 검증(QEMU STM32F405 Cortex-M4)을 수행했다. QEMU는 검증 도구이며 제품의 F446 에뮬레이터가 아니다. 연결된 ST-LINK는 확인되지 않아 실물 플래시·디버그는 검증하지 않았다.
 - 다음 검증 명령: `npm test`, `npm run test:ui`, `npm run test:native`, `npm run test:native:ui`, `npm run test:arm-gdb` (`QEMU_ARM` 지정 가능). 실제 도구 통합 검사는 개발 도구를 설치한 환경에서 실행한다.
-- IDE 구현은 0.15.0에서 추가했으며 현재 로컬 버전 0.15.2과 GitHub 최신 Release는 구분한다. 원격 업로드는 사용자 요청 시 진행한다.
+- IDE 구현은 0.15.0에서 추가했으며 현재 앱 버전은 0.15.2다. 게시할 때는 main과 릴리즈 태그, 성공한 Actions 빌드의 커밋을 일치시키고 다운로드 자산의 해시를 확인한다. 원격 게시 증거는 `work/test-results/release-proof.json`에 기록한다.
 
 ## 현재 구현
 

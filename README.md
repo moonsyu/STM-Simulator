@@ -60,6 +60,8 @@ npm run build:artifact
 
 Releases의 **Assets**에서 `STM-Simulator-<버전>-Windows-x64.zip`을 받아 압축을 풀고 EXE를 실행하세요. 실행할 때는 Node.js 설치가 필요 없습니다. 회로 시뮬레이션은 EXE만으로 사용할 수 있습니다. **실제 빌드·GDB·clangd 기능에는 각 개발 도구와 SDK가 별도로 필요합니다.** 설정·설치 방법은 [IDE 사용법](docs/IDE.md)을 확인하세요. ZIP에는 실행 파일, 라이선스 고지와 체크섬이 포함됩니다.
 
+[GitHub Actions 빌드](https://github.com/moonsyu/STM-Simulator/actions/workflows/build-windows.yml)에서도 성공한 실행의 **Artifacts → STM-Simulator-Windows-x64**를 받을 수 있습니다. `BUILD-INFO.json`에서 빌드 커밋과 실행 링크를 확인할 수 있으며, 릴리즈는 해당 버전의 성공한 빌드 결과를 게시합니다.
+
 ## 권리 관련 안내
 
 STM Simulator는 STMicroelectronics의 공식 제품이 아닌 개인 학습 프로젝트이며, ST의 후원·승인·제휴를 주장하지 않습니다. STM32, NUCLEO 등 제품명과 상표의 권리는 각 권리자에게 있습니다.
