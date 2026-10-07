@@ -66,4 +66,4 @@ STM Simulator는 STMicroelectronics의 공식 제품이 아닌 개인 학습 프
 
 모든 자료의 권리 관계에 대한 법률 검토가 완료된 것은 아닙니다. **저작권·상표권·라이선스 등 권리 관련 문제 또는 법적 문제가 확인되는 경우, 해당 저장소를 삭제 조치하겠습니다.** 관련 문제는 [GitHub Issues](https://github.com/moonsyu/STM-Simulator/issues)를 통해 알려 주세요.
 
-새 프로젝트는 RM0390 문서 기준 HSI 16 MHz·TIM PSC/ARR/CCR 0에서 시작합니다. ARR=0에서는 카운터가 멈추며 기존 예제의 84 MHz 설정은 유지됩니다. 자세한 적용 범위는 [보드 기본값](docs/MCU-DEFAULTS.md)을 참고하세요.
+새 프로젝트는 HSI 16 MHz에서 시작합니다. TIM 활성화 초기값은 CubeMX 기준 PSC=0, TIM2/5 ARR=4,294,967,295, TIM3/4 ARR=65,535, PWM Pulse=0입니다. 기존 저장값과 예제의 84 MHz 설정은 유지됩니다. 자세한 적용 범위는 [보드 기본값](docs/MCU-DEFAULTS.md)을 참고하세요.

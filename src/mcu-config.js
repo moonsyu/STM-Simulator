@@ -2,7 +2,7 @@ import {TIMER_ROUTES,TIMER_IDS,isTimer,timerMax} from './timer-config.js';
 import {generateMain} from './hal-generator.js';
 import {GPIO_PINS} from './pins.js';
 import {SERIAL_ROUTES,SERIAL_IDS,isSerial,serialFunction} from './serial-config.js';
-import {RESET_TIMER_CLOCK_HZ,TIMER_RESET} from './mcu-defaults.js';
+import {DEFAULT_TIMER_CLOCK_HZ,timerDefaults} from './mcu-defaults.js';
 
 // F446RE routes used by this simulator. Peripheral alternatives are explicit;
 // choosing a peripheral never assigns an arbitrary GPIO as an alternate function.
@@ -17,10 +17,10 @@ export const IRQ_NAMES=['EXTI0_IRQn','EXTI1_IRQn','EXTI2_IRQn','EXTI3_IRQn','EXT
 export const MODES=['Reset','GPIO_Input','GPIO_Output','GPIO_EXTI','Analog','Reserved'];
 export const irqForPin=pin=>{const n=Number(pin.slice(2));return n<5?`EXTI${n}_IRQn`:n<10?'EXTI9_5_IRQn':'EXTI15_10_IRQn';};
 export function pinFunctions(pin){return [...MODES,...Object.entries(ROUTES).flatMap(([id,routes])=>Object.entries(routes).filter(([,pins])=>pins.includes(pin)).map(([signal])=>`${id}_${signal}`))];}
-export function defaultMcu(){return {family:'STM32F446RE',pins:{},peripherals:{},nvic:{},timerClockHz:RESET_TIMER_CLOCK_HZ};}
+export function defaultMcu(){return {family:'STM32F446RE',pins:{},peripherals:{},nvic:{},timerClockHz:DEFAULT_TIMER_CLOCK_HZ};}
 export function validateMcu(value){
   if(!value||value.family!=='STM32F446RE'||!value.pins||!value.peripherals||!value.nvic)throw new Error('STM32F446RE 핀 설정이 필요합니다.');
-  const out={family:value.family,pins:{},peripherals:{},nvic:{},timerClockHz:value.timerClockHz??RESET_TIMER_CLOCK_HZ};
+  const out={family:value.family,pins:{},peripherals:{},nvic:{},timerClockHz:value.timerClockHz??DEFAULT_TIMER_CLOCK_HZ};
   if(!Number.isInteger(out.timerClockHz)||out.timerClockHz<1000000||out.timerClockHz>180000000)throw new Error('APB1 타이머 클록 범위: 1~180 MHz');
   for(const [pin,p] of Object.entries(value.pins)){
     if(!GPIO_PINS.includes(pin)||!p||!pinFunctions(pin).includes(p.function))throw new Error(`${pin}: 지원하지 않는 핀 기능입니다.`);
@@ -29,9 +29,9 @@ export function validateMcu(value){
   }
   for(const [id,p]of Object.entries(value.peripherals)){
     if(!Object.hasOwn(ROUTES,id)||!p||typeof p.enabled!=='boolean')throw new Error(`${id}: 지원하지 않는 주변장치입니다.`);
-    const q={enabled:p.enabled};
-    for(const [key,def,min,max]of isSerial(id)?[['baud',115200,300,2000000]]:id==='I2C1'?[['clock',100000,1000,1000000]]:id==='SPI1'?[['clock',1000000,1000,20000000]]:isTimer(id)?[['prescaler',TIMER_RESET.prescaler,0,65535],['period',TIMER_RESET.period,0,timerMax(id)],['pulse',TIMER_RESET.pulse,0,timerMax(id)]]:[]){q[key]=p[key]??def;if(!Number.isInteger(q[key])||q[key]<min||q[key]>max)throw new Error(`${id}.${key}: 범위를 확인하세요.`);}
-    if(isTimer(id)){q.mode=p.mode??TIMER_RESET.mode;if(!['base','pwm','capture','encoder'].includes(q.mode))throw new Error(id+': 타이머 모드를 확인하세요.');}
+    const q={enabled:p.enabled},defaults=isTimer(id)?timerDefaults(id):null;
+    for(const [key,def,min,max]of isSerial(id)?[['baud',115200,300,2000000]]:id==='I2C1'?[['clock',100000,1000,1000000]]:id==='SPI1'?[['clock',1000000,1000,20000000]]:isTimer(id)?[['prescaler',defaults.prescaler,0,65535],['period',defaults.period,0,timerMax(id)],['pulse',defaults.pulse,0,timerMax(id)]]:[]){q[key]=p[key]??def;if(!Number.isInteger(q[key])||q[key]<min||q[key]>max)throw new Error(`${id}.${key}: 범위를 확인하세요.`);}
+    if(isTimer(id)){q.mode=p.mode??defaults.mode;if(!['base','pwm','capture','encoder'].includes(q.mode))throw new Error(id+': 타이머 모드를 확인하세요.');}
     out.peripherals[id]=q;
   }
   for(const [irq,p]of Object.entries(value.nvic)){if(!IRQ_NAMES.includes(irq)||!p||typeof p.enabled!=='boolean'||!Number.isInteger(p.priority)||p.priority<0||p.priority>15)throw new Error('NVIC 설정을 확인하세요.');out.nvic[irq]={enabled:p.enabled,priority:p.priority};}
@@ -74,8 +74,8 @@ export function importIoc(text){
   }
   for(const id of SERIAL_IDS)if(config.peripherals[id])config.peripherals[id].baud=Number(values[id+'.BaudRate']||115200);
   if(config.peripherals.I2C1)config.peripherals.I2C1.clock=Number(values['I2C1.ClockSpeed']||100000);
-  for(const id of TIMER_IDS)if(config.peripherals[id]){const p=config.peripherals[id];p.prescaler=Number(values[id+'.Prescaler']??TIMER_RESET.prescaler);p.period=Number(values[id+'.Period']??TIMER_RESET.period);const settings=Object.entries(values).filter(([k])=>k.startsWith(id+'.')).map(([,v])=>v).join(' ');p.mode=/Encoder|ENCODER/.test(settings)?'encoder':/PWM/.test(settings)?'pwm':/INPUTCAPTURE|Input_Capture|IC_CHANNEL/.test(settings)?'capture':'base';}
-  config.timerClockHz=Number(values['RCC.APB1TimFreq_Value']??RESET_TIMER_CLOCK_HZ);
+  for(const id of TIMER_IDS)if(config.peripherals[id]){const p=config.peripherals[id],defaults=timerDefaults(id);p.prescaler=Number(values[id+'.Prescaler']??defaults.prescaler);p.period=Number(values[id+'.Period']??defaults.period);const settings=Object.entries(values).filter(([k])=>k.startsWith(id+'.')).map(([,v])=>v).join(' ');p.mode=/Encoder|ENCODER/.test(settings)?'encoder':/PWM/.test(settings)?'pwm':/INPUTCAPTURE|Input_Capture|IC_CHANNEL/.test(settings)?'capture':'base';}
+  config.timerClockHz=Number(values['RCC.APB1TimFreq_Value']??DEFAULT_TIMER_CLOCK_HZ);
   for(const irq of IRQ_NAMES){const raw=values['NVIC.'+irq];if(raw){const [enabled,priority]=raw.split(':');config.nvic[irq]={enabled:enabled==='true',priority:Number(priority)};}}
   for(const [key,v]of Object.entries(values))if(/^Mcu.IP\d+$/.test(key)&&!Object.hasOwn(ROUTES,v)&&!['GPIO','RCC','NVIC','SYS','NUCLEO-F446RE'].includes(v))warnings.push(`${v}: 실행 모델 미지원`);
   const clean=validateMcu(config);return {config:clean,warnings:[...new Set([...warnings,...configProblems(clean)])]};

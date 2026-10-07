@@ -22,7 +22,7 @@ UART 예제는 USART2 PA2(TX)/PA3(RX), 9600 baud입니다. 예제에 터미널 �
 
 편집기의 **main.c 저장**으로 현재 소스를 저장합니다. 생성 코드와 제공 예제는 STM32F446RE의 `main.h` 및 표준 ST HAL만 사용합니다. 실제 프로젝트에는 동일한 GPIO/AF·주변장치·NVIC 설정과 Cube가 생성한 MSP/IRQ 처리, SysTick, startup, syscalls가 있다고 가정합니다. 추가 사용자 드라이버 파일을 가져온 경우 그 파일까지 main.c 하나로 합치는 기능은 아닙니다.
 
-생성 코드에는 GPIO/주변장치 클록 활성화, GPIO AF, UART·I²C·SPI·ADC·타이머 초기화, `Error_Handler`가 포함됩니다. 새 프로젝트는 HSI 16 MHz 직접 연결, PLL OFF, AHB/APB1/APB2 분주 1, Flash 0 wait state로 생성합니다. 다른 클록은 HSI PLL과 APB1=/2·APB2=/1을 사용합니다. PLL로 정확히 만들 수 있는 12.5~90 MHz를 지원하며 기존 84 MHz 예제는 해당 값을 명시합니다. [문서 기준 기본값](MCU-DEFAULTS.md)에 TIM의 PSC/ARR/CCR 초기값과 적용 범위를 정리했습니다. 지원하지 않는 클록은 생성 단계에서 안내합니다. SPI 목표 속도는 APB2에서 만들 수 있는 2~256 분주 중 목표 이하의 속도로 설정합니다.
+생성 코드에는 GPIO/주변장치 클록 활성화, GPIO AF, UART·I²C·SPI·ADC·타이머 초기화, `Error_Handler`가 포함됩니다. 새 프로젝트는 HSI 16 MHz 직접 연결, PLL OFF, AHB/APB1/APB2 분주 1, Flash 0 wait state로 생성합니다. 다른 클록은 HSI PLL과 APB1=/2·APB2=/1을 사용합니다. PLL로 정확히 만들 수 있는 12.5~90 MHz를 지원하며 기존 84 MHz 예제는 해당 값을 명시합니다. [CubeMX 활성화 초기값](MCU-DEFAULTS.md)에 TIM의 PSC/ARR/CCR 초기값과 적용 범위를 정리했습니다. 지원하지 않는 클록은 생성 단계에서 안내합니다. SPI 목표 속도는 APB2에서 만들 수 있는 2~256 분주 중 목표 이하의 속도로 설정합니다.
 
 기본 main.c와 예제 30개는 ARM GCC 및 STM32CubeF4의 정식 HAL·CMSIS·startup으로 컴파일·링크 검사합니다(`npm run test:main-c`). 실물 보드에서 센서·디스플레이 모듈의 세부 변형까지 시험한 것은 아닙니다. 메모리 예제는 명시된 범용 프로토콜 모델이며 특정 EEPROM 제품 드라이버를 뜻하지 않습니다.
 

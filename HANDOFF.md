@@ -1,6 +1,6 @@
 # STM Simulator — 개발 인계
 
-현재 버전: **0.15.1**. 정리일: **2026-10-07**. NUCLEO-F446RE와 빵판을 연결하고 GPIO 스케치 또는 지원 HAL C 소스를 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다.
+현재 버전: **0.15.2**. 정리일: **2026-10-07**. NUCLEO-F446RE와 빵판을 연결하고 GPIO 스케치 또는 지원 HAL C 소스를 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다.
 
 ## 저장소 관리 원칙
 
@@ -12,14 +12,14 @@
 - 현재 기능 및 정리 변경을 커밋한다. 원격 게시 여부는 사용자 요청에 따른다. 저장소 이름은 STM-Simulator이며 원격 URL과 문서 링크도 이 이름을 사용한다.
 - `dist/`, `work/`, `outputs/`, `node_modules/`, `work/test-results/`, `.cache/`, 참고 미디어는 Git에서 제외한다.
 
-## 0.15.1 문서 기준 기본값
+## 0.15.2 CubeMX 활성화 초기값
 
-- [MCU-DEFAULTS.md](docs/MCU-DEFAULTS.md): UM1724 / RM0390 확인 근거와 모델 범위. F443RE 요청은 기존 F446RE로 해석했다.
-- 새 MCU: HSI 16 MHz, GPIO 미할당, 주변장치/NVIC 비활성. TIM PSC/ARR/CCR=0은 RM0390 Rev 9에 기재된 리셋값 프리셋이며 실물 ARR 리셋 검증은 하지 않았다.
-- ARR=0 카운터 정지·IRQ 취소·PWM 정적 출력, 재설정 시 카운트 재개. TIM별 16/32비트 CCR 범위 적용.
-- Pinout PSC/ARR 기본값과 PWM 초기 Pulse 입력, 기본 클록 안내. 생성 코드도 HSI 직접 연결/PLL OFF와 일치한다.
-- 기존 저장값과 HAL 예제 84 MHz 주기를 보존한다. 예제는 더 이상 새 프로젝트의 기본 클록/핀/Pulse에 의존하지 않는다.
-- 검증: `tests/mcu-defaults.test.js`, `scripts/mcu-defaults-smoke.cjs`, 전체 모델 검사, ARM GCC 빌드. 원격 게시와 로컬 빌드는 구분한다.
+- 사용자가 원한 기준은 CubeMX에서 TIM을 켰을 때 채워지는 설정이다. [MCU-DEFAULTS.md](docs/MCU-DEFAULTS.md)에 근거와 모델 범위를 정리했다.
+- 새 MCU: HSI 16 MHz, GPIO 미할당, 주변장치/NVIC 비활성. TIM PSC=0, TIM2/5 ARR=4294967295, TIM3/4 ARR=65535, PWM Pulse=0. 공통 정의는 `src/mcu-defaults.js`다.
+- Pinout, 검증기, 누락 `.ioc` 필드, 생성 HAL 코드에 동일한 초기값을 적용한다. 기존 파일의 명시적 ARR=0과 사용자 코드, HAL 예제 84 MHz 설정은 보존한다.
+- 32비트 ARR 기본값에서 HAL PWM의 1 Hz 미만 주파수를 허용한다. 스케치 API 1~2000 Hz와 HAL PWM 상한은 유지한다. Pulse=0 출력은 LOW이며 nonzero Pulse는 긴 주기의 에지를 예약한다.
+- 명시적 ARR=0은 카운터 정지·IRQ 취소·PWM 정적 출력, 재설정 시 카운트 재개를 유지한다.
+- 검증: `tests/mcu-defaults.test.js`, `scripts/mcu-defaults-smoke.cjs`, 전체 모델 검사, 기본 TIM 네 개를 포함한 실제 ARM GCC 빌드. 최신 결과와 배포 해시는 `docs/VERIFICATION.md`를 확인한다.
 
 ## 0.15.0 실제 IDE 인계
 
@@ -32,7 +32,7 @@
 - 빌드 작업 폴더와 언어 서버 소스 스냅샷은 앱 데이터 또는 설정한 영문 빌드 작업 폴더에 남는다. 사용자 파일과 분리하며 자동으로 재귀 삭제하지 않는다.
 - 실제 Windows GCC/GDB/clangd, ARM GCC/ST HAL, ARM GDB 원격 검증(QEMU STM32F405 Cortex-M4)을 수행했다. QEMU는 검증 도구이며 제품의 F446 에뮬레이터가 아니다. 연결된 ST-LINK는 확인되지 않아 실물 플래시·디버그는 검증하지 않았다.
 - 다음 검증 명령: `npm test`, `npm run test:ui`, `npm run test:native`, `npm run test:native:ui`, `npm run test:arm-gdb` (`QEMU_ARM` 지정 가능). 실제 도구 통합 검사는 개발 도구를 설치한 환경에서 실행한다.
-- IDE 구현은 0.15.0에서 추가했으며 현재 로컬 버전 0.15.1과 GitHub 최신 Release는 구분한다. 원격 업로드는 사용자 요청 시 진행한다.
+- IDE 구현은 0.15.0에서 추가했으며 현재 로컬 버전 0.15.2과 GitHub 최신 Release는 구분한다. 원격 업로드는 사용자 요청 시 진행한다.
 
 ## 현재 구현
 
