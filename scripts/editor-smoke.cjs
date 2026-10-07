@@ -1,3 +1,4 @@
+const {fillCode,newProject}=require('./smoke-fixture.cjs');
 const {openFixture,chooseHal,saveProject,openProject}=require('./smoke-fixture.cjs');
 const assert=require('node:assert/strict');
 const fs=require('node:fs/promises');
@@ -26,7 +27,7 @@ const {_electron}=require(process.env.PLAYWRIGHT_MODULE||'playwright');
    const p=JSON.parse(localStorage.getItem('stm32lab.project.v2')).components.find(p=>p.id===id),map=p.attachments||{a:p.attachA,b:p.attachB};
    return Object.entries(map).every(([key,hole])=>{const a=document.querySelector(`[data-endpoint="part:${id}:${key}"]`),b=document.querySelector(`[data-endpoint="${hole}"]`);return a.getAttribute('cx')===b.getAttribute('cx')&&a.getAttribute('cy')===b.getAttribute('cy');});
  },id);
- await page.click('#new');assert.equal(await page.locator('[data-part]').count(),0);
+ await newProject(page);assert.equal(await page.locator('[data-part]').count(),0);
  assert.equal(await page.locator('[data-color]').count(),10);
  // Two-point placement; the body lies directly over c10 and must win hit testing.
  await page.click('[data-add="resistor"]');await page.click('[data-endpoint="bb:b:10"]');await page.click('[data-endpoint="bb:d:10"]');
@@ -57,7 +58,7 @@ const {_electron}=require(process.env.PLAYWRIGHT_MODULE||'playwright');
  const saved=path.join(out,'editor-round-trip.stm32lab');
  await app.evaluate(({dialog},saved)=>{dialog.showSaveDialog=async()=>({canceled:false,filePath:saved});dialog.showOpenDialog=async()=>({canceled:false,filePaths:[saved]});},saved);
  await saveProject(page);const before=JSON.parse(await fs.readFile(saved,'utf8'));assert.equal(before.version,2);
- await page.click('#new');await openProject(page);assert.deepEqual(await snapshot(),before);
+ await newProject(page);await openProject(page);assert.deepEqual(await snapshot(),before);
  await page.locator('#pin-search').fill('pC 13');assert.equal(await page.locator('#pin-results button').count(),1);assert.equal(await page.locator('#search-layer g').count(),1);
  await page.locator('#pin-search').press('Enter');assert.match(await page.locator('#inspector').innerText(),/PC13/);assert.equal((await snapshot()).wires.length,2);
  await page.locator('#pin-search').fill('PA 8');assert.equal(await page.locator('#pin-results button').count(),2);assert.equal(await page.locator('#search-layer g').count(),2);

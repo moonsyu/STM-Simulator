@@ -11,12 +11,13 @@ import {compileHal} from './hal-source.js';
 import {HalAdapter,HAL_CONSTANTS} from './hal.js';
 
 export class SimulationSession {
-  constructor(project,{print=()=>{},trace=()=>{},uart=()=>{},channels}={}){
+  constructor(project,{print=()=>{},trace=()=>{},uart=()=>{},channels,debug,program}={}){
     this.passiveBuzzers=new PassiveBuzzers();
     this.project=project;this.pressed={};this.result=null;this.time=0;this.integrated=-1;this.stepMs=project.simulation?.stepMs??1;this.circuit=new CircuitSimulation();this.motion=new MotionDevices();this.sensors=new UltrasonicSignals();this.lcds=new Map();this.wave=new WaveRecorder(channels);this.serial=[];
     this.buses=new BusDevices(project,()=>this.result,trace);
     this.hal=project.firmware?.mode==='hal'?new HalAdapter(project.mcu,this.buses):null;
-    this.runtime=new Runtime(this.hal?compileHal(project.code,project.firmware.files):compile(project.code),{
+    this.runtime=new Runtime(program??(this.hal?compileHal(project.code,project.firmware.files):compile(project.code)),{
+      debug,
       constants:this.hal?HAL_CONSTANTS:undefined,
       invoke:(name,args,runtime)=>this.hal?.invoke(name,args,runtime),poll:runtime=>this.hal?.poll(runtime),
       print,uart,pwmEnabled:project.simulation?.pwmWaveform??false,

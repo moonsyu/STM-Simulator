@@ -7,14 +7,20 @@ app.setName('STM Simulator');
 app.setAppUserModelId('local.stm32.circuitlab');
 app.setPath('userData',process.env.CIRCUIT_LAB_TEST_PROFILE||legacyUserData);
 let win;
+let chosenProjectParent=null,workspaceState=null;
+const workspace=require('./workspace.cjs');
 app.whenReady().then(()=>{
-  win=new BrowserWindow({icon:path.join(__dirname,'icons/stm-simulator.ico'),width:1540,height:1020,minWidth:1120,minHeight:760,show:process.env.CIRCUIT_LAB_SMOKE!=='1',backgroundColor:'#101b29',title:'STM Simulator',webPreferences:{preload:path.join(__dirname,'preload.cjs'),contextIsolation:true,nodeIntegration:false,sandbox:true}});
+  win=new BrowserWindow({icon:path.join(__dirname,'icons/stm-simulator.ico'),width:1540,height:1020,minWidth:900,minHeight:560,show:process.env.CIRCUIT_LAB_SMOKE!=='1',backgroundColor:'#f6f4ec',title:'STM Simulator',webPreferences:{preload:path.join(__dirname,'preload.cjs'),contextIsolation:true,nodeIntegration:false,sandbox:true}});
   win.setMenuBarVisibility(false);
   win.webContents.setWindowOpenHandler(()=>({action:'deny'}));
   win.webContents.on('will-navigate',e=>e.preventDefault());
   win.loadFile(path.join(__dirname,'../index.html'));
 });
 app.on('window-all-closed',()=>app.quit());
+ipcMain.handle('workspace:choose-parent',async()=>{const r=await dialog.showOpenDialog(win,{title:'프로젝트를 생성할 상위 폴더',properties:['openDirectory','createDirectory']});if(r.canceled)return null;chosenProjectParent=r.filePaths[0];return chosenProjectParent;});
+ipcMain.handle('workspace:create',async(_event,{name,text})=>{if(!chosenProjectParent)throw new Error('저장할 상위 폴더를 먼저 선택하세요.');workspaceState=await workspace.createWorkspace(chosenProjectParent,name,text);return workspaceState.directory;});
+ipcMain.handle('workspace:open',async()=>{const r=await dialog.showOpenDialog(win,{title:'STM Simulator 프로젝트 폴더 열기',properties:['openDirectory']});if(r.canceled)return null;const opened=await workspace.openWorkspace(r.filePaths[0]);workspaceState=opened.state;return {text:opened.text,directory:workspaceState.directory};});
+ipcMain.handle('workspace:save',async(_event,text)=>workspace.saveWorkspace(workspaceState,text));
 ipcMain.handle('firmware:import',async(_event,folder)=>{
   const result=await dialog.showOpenDialog(win,{title:folder?'Cube 프로젝트 루트 폴더 선택':'.ioc, main.c와 필요한 .c/.h 선택',properties:folder?['openDirectory']:['openFile','multiSelections'],...(!folder?{filters:[{name:'Cube 소스와 설정',extensions:['ioc','c','h']}]}:{})});
   if(result.canceled)return null;

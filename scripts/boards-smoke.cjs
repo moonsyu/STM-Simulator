@@ -1,3 +1,4 @@
+const {fillCode,newProject}=require('./smoke-fixture.cjs');
 const assert=require('node:assert/strict'),fs=require('node:fs/promises'),path=require('node:path');
 const {_electron}=require(process.env.PLAYWRIGHT_MODULE||'playwright');
 const {openFixture,saveProject}=require('./smoke-fixture.cjs');
@@ -18,7 +19,7 @@ const {openFixture,saveProject}=require('./smoke-fixture.cjs');
   for(const query of ['nucleo',' stm32 f446re ','F4','']){await page.fill('#board-search',query);assert.equal(await page.locator('[data-board-id]').count(),1);}
   await page.fill('#board-search','unknown board');assert.equal(await page.locator('[data-board-id]').count(),0);assert.match(await page.locator('#board-results').textContent(),/검색 결과가 없습니다/);await page.fill('#board-search','');await page.screenshot({path:path.join(out,'board-picker.png')});await page.click('[data-board-id]');assert.equal(await page.locator('#board-change-dialog').isVisible(),false);assert.deepEqual(await saved(),projectForBoard());
   // F5 works while typing, never reloads, and ignores held-key repeat and open dialogs.
-  await page.fill('#code',(await page.locator('#code').inputValue())+'\n// shortcut marker');await page.keyboard.press('F5');assert.equal(await page.locator('#run-status').textContent(),'실행 중');assert.match(await page.locator('#code').inputValue(),/shortcut marker/);assert.equal(await page.locator('#board-open').isDisabled(),true);
+  await fillCode(page,(await page.locator('#code').inputValue())+'\n// shortcut marker');await page.keyboard.press('F5');assert.equal(await page.locator('#run-status').textContent(),'실행 중');assert.match(await page.locator('#code').inputValue(),/shortcut marker/);assert.equal(await page.locator('#board-open').isDisabled(),true);
   await page.evaluate(()=>window.dispatchEvent(new KeyboardEvent('keydown',{key:'F5',repeat:true,bubbles:true})));assert.equal(await page.locator('#run-status').textContent(),'실행 중');await page.keyboard.press('F5');assert.equal(await page.locator('#run-status').textContent(),'준비됨');
   let before=await saved();await selectBoard();assert.equal(await page.locator('#board-change-dialog').isVisible(),true);await page.keyboard.press('F5');assert.equal(await page.locator('#run-status').textContent(),'준비됨');await page.click('#board-change-cancel');assert.deepEqual(await saved(),before);
   // A real file save does not bypass protection against resetting changed content.

@@ -38,7 +38,15 @@ OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ```
 
+## Monaco Editor 0.57.0
+
+Monaco Editor is used under the MIT license, copyright (c) 2016 - present Microsoft Corporation. The editor, language definitions, font and worker are bundled locally. The original license and third-party notices are retained in `src/generated/MONACO-LICENSE.txt` and `src/generated/MONACO-NOTICES.txt` inside the application and as `MONACO-LICENSE.txt` and `MONACO-NOTICES.txt` in the download bundle.
+
+Source: [Monaco Editor](https://github.com/microsoft/monaco-editor).
+
 ## Build tooling
+
+esbuild 0.28.2 is used at build time under the MIT license. Its original notice is retained in its npm package. The downloaded executable does not run esbuild.
 
 electron-builder 26.15.3 is a build-time dependency under the MIT license, copyright (c) 2015 Loopline Systems. Its dependencies retain their respective licenses in their npm packages; `package-lock.json` pins the dependency graph. These build tools are not application JavaScript runtime dependencies. This notice does not replace the notices bundled with Electron or grant rights to ST materials.
 

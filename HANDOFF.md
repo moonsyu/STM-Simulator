@@ -1,6 +1,6 @@
 # STM Simulator — 개발 인계
 
-현재 버전: **0.13.0**. 정리일: **2026-09-30**. NUCLEO-F446RE와 빵판을 연결하고 GPIO 스케치 또는 지원 HAL C 소스를 실행하는 Windows 회로 실습 앱이다. 사용자에게는 한국어 존댓말로 응답한다.
+현재 버전: **0.14.0**. 정리일: **2026-10-07**. NUCLEO-F446RE와 빵판을 연결하고 GPIO 스케치 또는 지원 HAL C 소스를 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다.
 
 ## 저장소 관리 원칙
 
@@ -14,12 +14,17 @@
 
 ## 현재 구현
 
+- IDE 중심 화면에 프로젝트·코드·시뮬레이터·터미널 패널을 통합했다. 모든 패널은 1~99% 분할, 도킹 이동·접기·최대화를 지원한다. 과거 코드 300px/회로 470px/터미널 높이 제한은 없고 배치는 `stm32lab.workspaceLayout.v1`에 저장한다.
+- 폴더 프로젝트 생성·열기·저장, C/H 추가·이름 변경·삭제와 include 갱신, 외부 파일 변경 시 덮어쓰기 거부. 기존 `.stm32lab`과 프로필은 유지한다. 자동 복구된 프로젝트는 폴더 연결 없이 복구하므로 원래 폴더를 다시 열어야 한다.
+- Monaco 0.57.0 로컬 번들: 구문 강조·기본 완성·함수 정의 찾기·다중 커서·접기. clangd와 완전한 C 의미 분석은 없다. `npm ci`의 postinstall과 빌드에서 `src/generated/`를 생성한다. 이 폴더는 Git에 넣지 않는다.
+- 지원 소스 빌드·원본 파일 오류 위치, 중단점·일시정지·step into/over/out·변수·호출 스택·읽기 전용 감시식. 콜백은 원자적으로 처리해 내부 중단점은 지원하지 않는다. 실제 ARM/GDB는 제외한다. 사용자 사용법·한계는 [IDE 문서](docs/IDE.md).
+
 - 보드 커넥터 108개, 빵판 400홀, GPIO 별칭, 배선 10색, 부품 35종과 45도 회전·구멍 장착·속성/측정.
 - DC/RC 회로 모델, GPIO·ADC·PWM, USER 버튼/LD2, LED·센서·LCD·UART/I²C/SPI, 파형 및 CSV.
 - 스케치 함수·배열·구조체·포인터·타이머·IRQ·DMA와 실행 한도. 지원 API는 [스케치 API](docs/SKETCH-API.md)에 정리한다.
 - `.ioc`, `main.c`, 사용자 `.c/.h`, Cube 프로젝트 폴더 가져오기. Pinout GPIO/EXTI·주변장치·NVIC 및 HAL 코드 생성.
 - F446RE LQFP64의 USART1/2/3/6, UART4/5 실제 TX/RX·AF7/8. 자동 배정·대체 핀·충돌 방지·독립 송수신/IRQ. I2C1/SPI1/ADC1/TIM2·3·4·5도 지원.
-- 새 프로젝트는 빈 회로와 HAL main.c다. HAL 예제 32개를 선택하면 확인 창 없이 코드·핀·부품·배선·계산 설정을 즉시 교체하며 사용자가 정한 회로 이름은 유지한다. Undo/Redo로 복구할 수 있다. 별도 시리얼/스케치 예제 메뉴는 없다.
+- 새 프로젝트 마법사는 이름·보드·빈 HAL/예제 템플릿·상위 폴더를 선택한다. HAL 예제 32개를 선택하면 확인 창 없이 코드·핀·부품·배선·계산 설정을 즉시 교체하며 사용자가 정한 회로 이름은 유지한다. Undo/Redo로 복구할 수 있다. 별도 시리얼/스케치 예제 메뉴는 없다.
 - printf/puts는 UART 배선 없이 로그에 출력한다. HAL UART TX/RX는 포트·방향별로 표시한다. 실제 수신은 전원·배선·baud 조건을 검사한다. ADC 배열은 polling, 초음파는 HAL GPIO와 TIM2 카운터 모델을 사용한다.
 - 부품 검색창에서 이름·종류로 찾고, 비어 있으면 35종 전체를 세로 스크롤 목록에 표시한다.
 - 배선은 선택 모드에서 빵판 구멍보다 우선한다. 배선 도구(W) 또는 연결 중에는 구멍을 선택할 수 있다. F5는 편집기에서도 실행/정지하며 열린 대화상자와 키 반복에는 실행하지 않는다.
@@ -30,7 +35,6 @@
 - 확장 14종: LDR, NTC, SHT31, MPU6050, PIR, SSD1306 OLED, ST7735 TFT, MAX7219, RC 서보, DC 모터/드라이버, 4상 스테퍼/드라이버, 릴레이, 조이스틱, 인코더. 각 HAL 예제와 전원·배선·프로토콜 조건 검사가 있다. 세부 명령 범위와 기계 모델 한계는 HAL-API 문서를 따른다.
 - Ctrl+F로 현재 소스에서 문자 그대로 검색하고 Ctrl+R로 단일/전체 치환한다. 치환은 파일 크기 제한과 프로젝트 Undo/Redo·저장을 따르며 실행 중에는 검색만 가능하다.
 - 배선 선택 시 SVG 선을 보존해 실제 더블클릭 이벤트를 유지한다. 꺾임점 크기는 화면 확대율에 맞추고 끌기는 누른 위치의 이동량을 적용한다.
-- 코드/속성 패널 너비를 마우스·키보드로 조절하며 로컬에 저장한다.
 - HAL은 지원 API를 회로에 연결하는 소스 해석 모델이다. 전체 ST HAL 드라이버·C ABI·ARM/ELF/BIN 실행은 구현하지 않았다. 세부 한계는 [HAL API](docs/HAL-API.md)를 따른다.
 
 - 배선 꺾임점 추가/드래그/삭제/자동 정렬, Shift 다중 선택과 Ctrl+C/V, 연결망 강조, 클릭 가능한 회로 진단을 제공한다. 원본 빵판을 제외하고 부품만 복사할 때도 부품 사이의 전기적 연결을 배선으로 보존한다.
@@ -63,7 +67,12 @@
 | `src/passive-buzzer.js`, `src/passive-buzzer-example.js`, `src/buzzer-audio.js` | 수동 부저 파형 측정·HAL 멜로디·부저별 음향 |
 | `src/trace.js`, `src/monitor.js` | 파형·통신·로그 |
 | `src/editor-search.js` | 현재 소스 찾기·바꾸기와 검색 패널 |
-| `src/app.js`, `src/pinout-ui.js`, `src/editor-layout.js` | 편집/실행·핀 설정·패널 너비 |
+| `src/app.js`, `src/pinout-ui.js` | 편집/실행·핀 설정 |
+| `src/ide-ui.js`, `src/code-editor.js`, `src/ide.css` | IDE 도구·프로젝트 UI·Monaco 연결 |
+| `src/layout-model.js`, `src/workspace-layout.js` | 분할 트리·이동·크기·로컬 배치 |
+| `src/debug-tools.js`, `src/parser.js`, `src/runtime.js`, `src/hal-source.js` | 소스 위치·실행 중단·변수·감시식 |
+| `src/source-files.js`, `desktop/workspace.cjs` | C/H 파일 편집·폴더 저장·충돌 방지 |
+| `scripts/build-editor.mjs`, `tests/ide.test.js`, `scripts/ide-smoke.cjs` | 로컬 편집기 번들·IDE 모델/UI 검증 |
 | `src/render.js`, `src/part-render.js`, `src/part-controls.js` | SVG·부품 속성/측정 |
 | `desktop/` | Electron·파일/폴더 가져오기·저장 IPC |
 | `tests/`, `scripts/*-smoke.cjs` | 모델·실제 UI/EXE 검증 |
@@ -76,7 +85,7 @@ GPIO 변경 전 `beforeChange`로 이전 출력의 시간 구간을 적분하고
 - appId `local.stm32.circuitlab`, 사용자 데이터 폴더 `STM32 Circuit Lab`, 확장자 `.stm32lab`, JSON format `stm32-circuit-lab`, 스키마 version 2를 유지한다.
 - 자동 저장 키 `stm32lab.project.v2`와 v1 읽기 지원은 사용자 회로 보존을 위한 현재 기능이다. 새 기본값을 이유로 기존 자동 저장 회로를 덮어쓰지 않는다.
 - `tests/fixtures/`는 모델·UI 회귀 검증용 물리 회로와 기존 사용자 파일 호환 프로그램이다. 앱에서 가져오지 않으며 EXE에 포함하지 않는다. 제공 HAL 예제는 `src/hal-examples.js`와 `src/hal-circuits.js`에서 구성한다.
-- `simulation`, `mcu`, `firmware`는 선택적 필드다. main.c는 `project.code`, 보조 소스는 `firmware.files`에 저장한다.
+- `simulation`, `mcu`, `firmware`, `ide`는 선택적 필드다. `ide`는 검증된 소스 파일별 중단점과 감시식을 저장한다. main.c는 `project.code`, 보조 소스는 `firmware.files`에 저장한다.
 - 두 핀 부품의 `attachA/attachB`와 다핀 `attachments`는 헬퍼로 처리한다.
 - renderer의 contextIsolation/sandbox를 유지하고 nodeIntegration을 켜지 않는다.
 - UI 테스트는 `CIRCUIT_LAB_TEST_PROFILE`로 분리한다. 실제 사용자의 자동 저장 폴더는 건드리지 않는다.
@@ -96,7 +105,7 @@ npm run build:artifact
 node scripts/portable-smoke.cjs
 ```
 
-`npm run build`는 `scripts/clean-build.cjs`로 이전 EXE·배포 묶음·win-unpacked를 먼저 정리한다. 실행 파일이 잠겼으면 아무 파일도 지우기 전에 중단하고 앱 종료를 안내한다. `build:artifact`도 이전 생성 묶음을 안전하게 교체한다. 버전별 폴더로 옮겨 보관하지 않는다. 패키지 검사에는 Electron/Chromium 라이선스 원문과 참고 자료 제외 검증이 포함된다. `work/build/win-unpacked`는 빌드/검증 중간 결과이며 전달 후 정리할 수 있다.
+`npm run build`는 `scripts/clean-build.cjs`로 이전 EXE·배포 묶음·win-unpacked를 먼저 정리한다. 실행 파일이 잠겼으면 아무 파일도 지우기 전에 중단하고 앱 종료를 안내한다. `build:artifact`도 이전 생성 묶음을 안전하게 교체한다. 버전별 폴더로 옮겨 보관하지 않는다. 패키지 검사에는 Electron/Chromium/Monaco 라이선스 원문과 참고 자료 제외 검증이 포함된다. `work/build/win-unpacked`는 빌드/검증 중간 결과이며 전달 후 정리할 수 있다.
 
 수동 부저 전용 검증은 `npm run test:passive-buzzer`와 `npm run test:passive-buzzer:ui`다. Windows CI는 기본적으로 전체 테스트를 실행한다. 사용자가 범위를 수동 부저로 제한한 작업에서는 푸시의 최신 커밋 메시지에 `[test:passive-buzzer]`를 넣거나 수동 실행의 `test_scope=passive-buzzer`를 선택한다. 해당 실행만 전용 테스트로 제한하고 EXE 빌드·패키지 검증·업로드는 그대로 수행한다.
 

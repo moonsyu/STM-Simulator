@@ -62,6 +62,12 @@ export function validateProject(data){
     project.firmware={mode:data.firmware.mode,files};
   }
   if(data.simulation!==undefined){const s=data.simulation;if(!s||typeof s!=='object'||![.1,.5,1,5,20].includes(s.stepMs)||typeof s.pwmWaveform!=='boolean')throw new Error('시뮬레이션 시간 설정이 올바르지 않습니다.');project.simulation={stepMs:s.stepMs,pwmWaveform:s.pwmWaveform};}
+  if(data.ide!==undefined){
+    const s=data.ide,names=new Set(['main.c',...(project.firmware?.files||[]).map(f=>f.name)]);
+    if(!s||!Array.isArray(s.breakpoints)||s.breakpoints.length>1000||!Array.isArray(s.watches)||s.watches.length>20)throw new Error('디버그 설정을 확인하세요.');
+    if(s.breakpoints.some(b=>!b||!names.has(b.file)||!Number.isInteger(b.line)||b.line<1||b.line>50000)||s.watches.some(w=>typeof w!=='string'||!w.trim()||w.length>250))throw new Error('중단점 또는 감시식이 올바르지 않습니다.');
+    project.ide={breakpoints:s.breakpoints.map(b=>({file:b.file,line:b.line})),watches:[...s.watches]};
+  }
   return project;
 }
 export function projectForBoard(id=DEFAULT_BOARD_ID){if(!getBoard(id))throw new Error('지원하지 않는 보드입니다.');return {...blankProject(),boardId:id};}
