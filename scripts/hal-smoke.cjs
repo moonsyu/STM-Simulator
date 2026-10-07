@@ -7,7 +7,7 @@ const {_electron}=require(process.env.PLAYWRIGHT_MODULE||'playwright');
  const env={...process.env,CIRCUIT_LAB_SMOKE:'1',CIRCUIT_LAB_TEST_PROFILE:path.join(out,'hal-profile-'+Date.now())};delete env.ELECTRON_RUN_AS_NODE;
  const app=await _electron.launch({executablePath:process.env.LAB_EXE||path.join(root,'node_modules/electron/dist/electron.exe'),args:process.env.LAB_EXE?[]:[root],cwd:root,env});
  try{
-  const page=await app.firstWindow(),errors=[];page.on('pageerror',e=>errors.push(e.message));await page.waitForSelector('#pinout-open');
+  const page=await app.firstWindow(),errors=[];page.on('pageerror',e=>errors.push(e.message));await page.waitForSelector('.monaco-editor');
   await app.evaluate(({BrowserWindow})=>BrowserWindow.getAllWindows()[0].showInactive());
   await page.click('#pinout-open');await page.click('[data-config-pin="PC13"]');await page.selectOption('#pin-function','GPIO_EXTI');await page.selectOption('#pin-pull','PULLUP');await page.check('[data-irq="EXTI15_10_IRQn"]');
   await page.screenshot({path:path.join(out,'11-pinout-hal.png')});

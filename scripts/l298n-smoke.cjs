@@ -17,7 +17,7 @@ const {chooseHal,openFixture}=require('./smoke-fixture.cjs');
    app=await _electron.launch({executablePath:path.join(root,'node_modules/electron/dist/electron.exe'),args:[root],cwd:root,env});page=await app.firstWindow();
    await app.evaluate(({BrowserWindow})=>BrowserWindow.getAllWindows()[0].showInactive());
   }
-  const errors=[];page.on('pageerror',e=>errors.push(e.message));page.setDefaultTimeout(20000);await page.waitForSelector('#hal-example');
+  const errors=[];page.on('pageerror',e=>errors.push(e.message));page.setDefaultTimeout(20000);await page.waitForSelector('.monaco-editor');
   for(const [query,type]of [['L298N','l298n'],['DC 모터','dc_motor'],['외부 전원','dc_supply']]){
    await page.fill('#part-search',query);assert.equal(await page.locator(`[data-add="${type}"]:visible`).count(),1);
    await page.click(`[data-add="${type}"]`);

@@ -6,7 +6,7 @@ const {openFixture,chooseHal}=require('./smoke-fixture.cjs');
  const env={...process.env,CIRCUIT_LAB_SMOKE:'1',CIRCUIT_LAB_TEST_PROFILE:path.join(out,'circuit-tools-profile-'+Date.now())};delete env.ELECTRON_RUN_AS_NODE;
  const app=await _electron.launch({executablePath:process.env.LAB_EXE||path.join(root,'node_modules/electron/dist/electron.exe'),args:process.env.LAB_EXE?[]:[root],cwd:root,env});
  try{
-  const page=await app.firstWindow(),errors=[];page.on('pageerror',e=>errors.push(e.message));await page.waitForSelector('#hal-example');await app.evaluate(({BrowserWindow})=>BrowserWindow.getAllWindows()[0].showInactive());
+  const page=await app.firstWindow(),errors=[];page.on('pageerror',e=>errors.push(e.message));await page.waitForSelector('.monaco-editor');await app.evaluate(({BrowserWindow})=>BrowserWindow.getAllWindows()[0].showInactive());
   const {halExample}=await import('../src/hal-examples.js'),{blankProject,validateProject}=await import('../src/project.js'),{boardPin}=await import('../src/pins.js');
   const saved=async()=>{await page.waitForTimeout(300);return page.evaluate(()=>JSON.parse(localStorage.getItem('stm32lab.project.v2')));};
   await chooseHal(page,'blink');

@@ -36,7 +36,7 @@ const {chooseHal,openFixture}=require('./smoke-fixture.cjs');
       }
     });
     if(web)await page.goto(process.env.LAB_WEB_URL);else await page.reload();
-    await page.waitForSelector('#hal-example');
+    await page.waitForSelector('.monaco-editor');
     if(!web&&!portable)await app.evaluate(({BrowserWindow})=>BrowserWindow.getAllWindows()[0].showInactive());
     for(const query of ['수동 부저','passive buzzer','piezo']){
       await page.fill('#part-search',query);assert.equal(await page.locator('[data-add="passive_buzzer"]:visible').count(),1);
