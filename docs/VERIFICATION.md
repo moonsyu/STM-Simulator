@@ -13,7 +13,7 @@
 - 실제 단일 portable EXE를 실행해 16 MHz·PSC=0·비트 폭별 ARR 최댓값·주변장치 비활성·PLL OFF 생성 코드를 확인했다. 같은 EXE에서 Windows GCC 빌드, GDB main 중단·레지스터, 디버그 종료 후 재실행과 출력 42를 확인했다.
 - git diff --check 통과.
 
-## 배포 검사
+## 로컬 배포 검사
 
 - EXE: outputs/artifact/STM-Simulator-0.15.2-win-x64.exe
 - 크기: 102585574 bytes
@@ -23,7 +23,7 @@
 - SHA-256: 0086eda5941e5c48aa77313b31abb7acce43aea2b36525ed963bc1d16892dacd
 - asar의 MCU 기본값·검증기·TIM 모델·HAL 생성기·Pinout 및 네이티브 서비스·Monaco 소스 일치, 아이콘/라이선스 검사 통과. docs/MCU-DEFAULTS.md 포함. 참고 PDF·테스트·도구체인은 배포하지 않는다.
 - ZIP 무결성과 기본값 문서 원본 일치를 검사했다.
-- 로컬 빌드다. 이번 턴에서 GitHub 업로드는 하지 않았다. BUILD-INFO.json의 commit/workflow는 로컬 빌드이므로 null이다.
+- 위 크기와 해시는 로컬 검증 빌드의 기록이며 해당 BUILD-INFO.json의 commit/workflow는 null이다. GitHub 릴리즈에는 동일 버전의 성공한 Actions 빌드 결과를 게시한다. 릴리즈 자산의 실제 해시는 첨부 SHA256.txt, 빌드 커밋과 실행 링크는 ZIP의 BUILD-INFO.json을 확인한다. 원격 게시 검증 결과는 `work/test-results/release-proof.json`에 기록한다.
 
 ## 재현 명령과 증거
 
