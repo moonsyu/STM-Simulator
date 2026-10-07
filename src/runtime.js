@@ -8,6 +8,7 @@ const isArray=v=>v?.kind==='array', isPointer=v=>v?.kind==='pointer';
 export class Runtime {
   constructor(program,api={}){
     this.program=program;this.api=api;this.gpio={};this.time=0;this.microTime=0;this.steps=0;this.depth=0;this.allocations=0;
+    this.frames=[];this.location=null;this.finished=false;this.debug={enabled:!!api.debug,paused:false,mode:api.debug?.entry?'into':'continue',depth:0,breakpoints:new Set(api.debug?.breakpoints||[])};
     this.globals={cells:Object.create(null),alive:true};this.scopes=[this.globals];this.vars=Object.create(null);
     this.events=[];this.nextId=1;this.nextOrder=1;this.timers=new Map();this.dmas=new Map();this.interrupts=new Map();this.interruptsEnabled=true;this.inCallback=false;this.pwm=new Map();this.pwmFrequency=new Map();
     const constants={HIGH:1,LOW:0,true:1,false:0,NULL:0,OUTPUT:'OUTPUT',INPUT:'INPUT',INPUT_PULLUP:'INPUT_PULLUP',INPUT_PULLDOWN:'INPUT_PULLDOWN',CHANGE:'CHANGE',RISING:'RISING',FALLING:'FALLING',LSBFIRST:0,MSBFIRST:1,DEC:10,HEX:16,OCT:8,BIN:2,PI:Math.PI};
@@ -113,6 +114,7 @@ export class Runtime {
   }
   *statement(s){
     this.budget();
+    if(s.type!=='block'&&s.type!=='empty')yield* this.checkpoint(s.loc);
     if(s.type==='declare'){
       for(const d of s.declarations){if(d.external)continue;if(d.storage&&this.staticCells.has(d)){this.scope().cells[d.name]=this.staticCells.get(d);continue;}let value=d.value?yield* this.evaluate(d.value):undefined;
         if(d.array){let values=value?.kind==='initializer'?value.values:typeof value==='string'?[...value].map(c=>c.charCodeAt(0)).concat(0):[];const length=d.size?integer(yield* this.evaluate(d.size)):values.length;if(length<1||length>4096||values.length>length)throw new Error('배열 크기 또는 초기값 개수를 확인하세요.');value=this.array(Array.from({length},(_,i)=>this.initialize(d.type,values[i])));if(d.constant)value.cells.forEach(c=>c.constant=true);}
@@ -129,7 +131,7 @@ export class Runtime {
     if(['while','for','do'].includes(s.type)){
       this.pushScope();try{
         if(s.init)yield* this.statement(s.init);let first=true;
-        while((s.type==='do'&&first)||truth(yield* this.evaluate(s.test))){first=false;const signal=yield* this.statement(s.body);if(signal?.type==='return')return signal;if(signal?.type==='break')break;if(s.update)yield* this.evaluate(s.update);if(this.program.hal&&!this.inCallback&&this.depth===1){this.steps=0;yield .1;}this.budget();}
+        while((s.type==='do'&&first)||truth(yield* this.evaluate(s.test))){if(!first)yield* this.checkpoint(s.loc);first=false;const signal=yield* this.statement(s.body);if(signal?.type==='return')return signal;if(signal?.type==='break')break;if(s.update)yield* this.evaluate(s.update);if(this.program.hal&&!this.inCallback&&this.depth===1){this.steps=0;yield .1;}this.budget();}
       }finally{this.popScope();}return;
     }
     if(s.type==='return')return {type:'return',value:s.value?yield* this.evaluate(s.value):0};
@@ -139,9 +141,18 @@ export class Runtime {
   *invoke(name,args=[]){
     const fn=this.program.functions[name];if(!fn)throw new Error(`정의되지 않은 함수: ${name}`);if(args.length!==fn.params.length)throw new Error(`${name}(): 인수 개수를 확인하세요.`);
     if(++this.depth>32)throw new Error('함수 호출 깊이 한도를 넘었습니다.');
-    const previous=this.scopes;this.scopes=[this.globals];this.pushScope();
+    const previous=this.scopes;this.scopes=[this.globals];this.pushScope();this.frames.push({name,scopes:this.scopes,loc:fn.loc});
     try{fn.params.forEach((p,i)=>{const cell=this.declareCell(p.name,p.pointer?this.pointer(args[i]):this.initialize(p.type,args[i]),p.constant);cell.dataType=p.pointer?'pointer':p.type;});const signal=yield* this.statement(fn.body);if(signal&&signal.type!=='return')throw new Error('break/continue는 반복문 안에서 사용하세요.');return this.coerce(fn.type,signal?.value??0);}
-    finally{this.popScope();this.scopes=previous;this.depth--;}
+    finally{this.frames.pop();this.popScope();this.scopes=previous;this.depth--;}
+  }
+  *checkpoint(loc){
+    if(!loc)return;this.location=loc;if(this.frames.length)this.frames.at(-1).loc=loc;
+    // Peripheral callbacks execute atomically in the current cooperative model.
+    if(this.debug.enabled&&!this.inCallback&&this.depth>0)yield {kind:'debug-location',loc,depth:this.depth};
+  }
+  resume(mode='continue'){
+    if(!['continue','into','over','out'].includes(mode))throw new Error('디버그 명령이 올바르지 않습니다.');
+    this.debug.mode=mode;this.debug.depth=this.depth;this.debug.paused=false;
   }
   *run(){yield* this.statements(this.program.globals);if(this.program.hal){yield* this.invoke('main');return;}if(this.program.functions.setup)yield* this.invoke('setup');while(true){yield* this.invoke('loop');yield 1;}}
   pin(name){const pin=canonicalPin(name);if(!GPIO_PINS.includes(pin))throw new Error(`GPIO 핀 이름을 확인하세요: ${name}`);return pin;}
@@ -210,6 +221,7 @@ export class Runtime {
     throw new Error(`지원하지 않는 함수: ${name}`);
   }
   tick(target){
+    if(this.debug.paused)return;
     if(!Number.isFinite(target)||target<0)throw new Error('시뮬레이션 시간이 올바르지 않습니다.');this.steps=0;this.allocations=0;let count=0;this.pollInterrupts();
     while(true){
       if(++count>4000)throw new Error('시간당 실행 한도를 초과했습니다. 주파수나 반복 횟수를 줄이세요.');
@@ -218,7 +230,11 @@ export class Runtime {
       this.events.sort((a,b)=>a.at-b.at||a.order-b.order);const event=this.events[0],at=Math.min(this.wake,event?.at??Infinity);if(at>target)break;
       this.time=at;this.microTime=Math.max(this.microTime,at*1000);this.api.advance?.(this.microTime);
       if(event&&event.at<=this.wake){this.events.shift();event.fn();}
-      else {const next=this.iterator.next();if(next.done){this.wake=Infinity;}else this.wake=Math.max(this.wake,this.microTime/1000)+next.value;}
+      else {const next=this.iterator.next();if(next.done){this.wake=Infinity;this.finished=true;}
+        else if(next.value?.kind==='debug-location'){
+          const d=this.debug,p=next.value,stop=d.breakpoints.has(`${p.loc.file}:${p.loc.line}`)||d.mode==='into'||d.mode==='over'&&p.depth<=d.depth||d.mode==='out'&&p.depth<d.depth;
+          if(stop){d.paused=true;this.time=this.microTime/1000;return;}
+        }else this.wake=Math.max(this.wake,this.microTime/1000)+next.value;}
       this.pollInterrupts();
     }
     this.time=target;this.microTime=Math.max(this.microTime,target*1000);this.api.advance?.(this.microTime);

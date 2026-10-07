@@ -24,19 +24,21 @@ export const HAL_STRUCTS={
   RCC_ClkInitTypeDef:'ClockType SYSCLKSource AHBCLKDivider APB1CLKDivider APB2CLKDivider'
 };
 const SYSTEM_HEADERS=new Set(['main.h','stm32f4xx_hal.h','stm32f4xx.h','stdint.h','stddef.h','stdbool.h','string.h','stdio.h','math.h',...['gpio','uart','tim','adc','i2c','spi','rcc','rcc_ex','cortex','pwr','pwr_ex'].map(n=>`stm32f4xx_hal_${n}.h`)]);
-export function prepareHalSource(source,files=[]){
+export function prepareHalSource(source,files=[],options={}){
   if(typeof source!=='string'||source.length>50000||!Array.isArray(files)||files.length>40)throw new Error('HAL 소스 크기 또는 파일 수 한도를 넘었습니다.');
   const map=new Map();let total=source.length;
   for(const file of files){if(!file||typeof file.name!=='string'||! /^[\w.-]+\.[ch]$/.test(file.name)||typeof file.text!=='string'||map.has(file.name))throw new Error('소스 파일 이름이 중복되거나 올바르지 않습니다.');total+=file.text.length;if(total>300000)throw new Error('HAL 소스 전체는 300 KB 이하로 선택하세요.');map.set(file.name,file.text);}
   map.set('main.c',source);
   const definitions=new Map([['STM32F446xx','1'],['USE_HAL_DRIVER','1']]),stack=[],included=new Set();
   const preprocess=(text,name)=>{
-    if(stack.includes(name))throw new Error(`순환 include: ${name}`);stack.push(name);const output=[],condition=[];let active=true,inComment=false;
+    if(stack.includes(name))throw new Error(`순환 include: ${name}`);stack.push(name);const output=[],locations=[],condition=[];let active=true,inComment=false,currentLine=1;
+    const append=output.push.bind(output);output.push=value=>{if(typeof value==='object'){locations.push(...value.locations);return append(value.text);}locations.push({file:name,line:currentLine});return append(value);};
     for(const [index,line]of text.split(/\r?\n/).entries()){
+      currentLine=index+1;
       // Strip comments without touching string/character literals or line numbering.
       let clean='',quote='',escape=false;
       for(let i=0;i<line.length;i++){const c=line[i],next=line[i+1];if(inComment){if(c==='*'&&next==='/'){inComment=false;i++;}continue;}if(quote){clean+=c;if(escape)escape=false;else if(c==='\\')escape=true;else if(c===quote)quote='';continue;}if(c==='"'||c==="'"){quote=c;clean+=c;}else if(c==='/'&&next==='*'){inComment=true;i++;clean+=' ';}else if(c==='/'&&next==='/')break;else clean+=c;}
-      const directive=/^\s*#\s*(\w+)\s*(.*)$/.exec(clean),error=message=>{throw new Error(`${name}:${index+1}: ${message}`);};
+      const directive=/^\s*#\s*(\w+)\s*(.*)$/.exec(clean),error=message=>{const e=new Error(`${name}:${index+1}: ${message}`);e.location={file:name,line:index+1};throw e;};
       if(!directive){output.push(active?clean:'');continue;}
       const [,op,arg]=directive;
       if(['ifdef','ifndef','if'].includes(op)){
@@ -60,13 +62,15 @@ export function prepareHalSource(source,files=[]){
       }else if(op==='pragma'&&arg.trim()==='once')output.push('');
       else error(`지원하지 않는 전처리 지시문: #${op}`);
     }
-    if(condition.length||inComment)throw new Error(`${name}: 닫히지 않은 조건부 전처리 또는 주석`);stack.pop();return output.join('\n');
+    if(condition.length||inComment)throw new Error(`${name}: 닫히지 않은 조건부 전처리 또는 주석`);stack.pop();return {text:output.join('\n'),locations};
   };
   const chunks=[preprocess(source,'main.c')];
   for(const [name,text]of map)if(name.endsWith('.c')&&name!=='main.c')chunks.push(preprocess(text,name));
-  return chunks.join('\n');
+  const text=chunks.map(c=>c.text).join('\n'),sourceMap=chunks.flatMap(c=>c.locations);return options.withMap?{text,sourceMap}:text;
 }
 export function compileHal(source,files=[]){
   const structs=Object.fromEntries(Object.entries(HAL_STRUCTS).map(([name,fields])=>[name,fields.split(' ').map(f=>{const [key,type='uint32_t']=f.split(':');return {name:key,type,constant:false};})]));
-  return compile(prepareHalSource(source,files),{hal:true,structs});
+  const prepared=prepareHalSource(source,files,{withMap:true});
+  try{return compile(prepared.text,{hal:true,structs,sourceMap:prepared.sourceMap});}
+  catch(error){if(!error.location){const m=/^(\d+)행:/.exec(error.message);if(m){error.location=prepared.sourceMap[Number(m[1])-1];if(error.location)error.message=error.message.replace(/^\d+행:/,`${error.location.file}:${error.location.line}:`);}}throw error;}
 }

@@ -74,7 +74,7 @@ export function setupEditorSearch({applyEdit, maxLength}) {
 
   function open(replace) {
     const selected = code.value.slice(code.selectionStart, code.selectionEnd);
-    if (document.activeElement === code && selected && !/[\r\n]/.test(selected)) query.value = selected;
+    if ((document.activeElement === code || document.activeElement?.closest('#monaco-host')) && selected && !/[\r\n]/.test(selected)) query.value = selected;
     panel.hidden = false;$('code-replace-row').hidden = !replace;$('code-panel').classList.add('searching');
     message.textContent = '';refresh({select:true});query.focus();query.select();
   }

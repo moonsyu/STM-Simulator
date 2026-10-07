@@ -30,7 +30,8 @@ export function compile(source,options={}) {
   const program={globals:[],functions:Object.create(null),structs:Object.assign(Object.create(null),options.structs||{}),hal:!!options.hal};
   const aliases=new Map([['HAL_StatusTypeDef','int'],['GPIO_PinState','int']]);
   const peek=(n=0)=>tokens[at+n]?.v??'<end>',take=()=>tokens[at++].v;
-  const fail=message=>{throw new Error(`${tokens[at]?.line??line}행: ${message}`);};
+  const location=(index=at)=>options.sourceMap?.[(tokens[index]?.line??line)-1]??{file:options.filename??'main.c',line:tokens[index]?.line??line};
+  const fail=(message,index=at)=>{const loc=location(index),error=new Error(`${loc.file}:${loc.line}: ${message}`);error.location=loc;throw error;};
   const expect=value=>{if(peek()!==value)fail(`'${value}'가 필요합니다. 현재 '${peek()}'`);take();};
   const identifier=()=>{if(!/^[A-Za-z_]\w*$/.test(peek()))fail('이름이 필요합니다.');const name=take();if(['__proto__','prototype','constructor'].includes(name))fail('사용할 수 없는 이름입니다.');return name;};
   const isType=()=>TYPES.has(peek())||aliases.has(peek())||QUALIFIERS.has(peek())||['struct','extern'].includes(peek())||Object.hasOwn(program.structs,peek());
@@ -72,7 +73,7 @@ export function compile(source,options={}) {
     else if(t[0]==='"'){try{node={type:'literal',value:JSON.parse(t)};}catch{fail('문자열 형식이 잘못되었습니다.');}}
     else if(t[0]==="'"){const raw=t.slice(1,-1),char=raw.startsWith('\\')?({'n':'\n','r':'\r','t':'\t','0':'\0',"'":"'",'\\':'\\'}[raw.slice(1)]):raw;if(char===undefined)fail('문자 이스케이프가 잘못되었습니다.');node={type:'literal',value:char.charCodeAt(0)};}
     else if(/^[A-Za-z_]\w*$/.test(t))node={type:'name',name:t};
-    else fail(`표현식 오류: ${t}`);
+    else fail(`표현식 오류: ${t}`,at-1);
     while(true){
       if(peek()==='('){node={type:'call',callee:node,args:argumentsList()};continue;}
       if(peek()==='['){take();const index=expression();expect(']');node={type:'index',object:node,index};continue;}
@@ -85,7 +86,7 @@ export function compile(source,options={}) {
   }
   function block(){expect('{');const body=[];while(peek()!=='}'){if(peek()==='<end>')fail("닫는 '}'가 없습니다.");body.push(statement());}take();return {type:'block',body};}
   function statement(){
-    if(++depth>80)fail('문장 중첩이 너무 깊습니다.');let result;
+    if(++depth>80)fail('문장 중첩이 너무 깊습니다.');let result;const loc=location();
     const t=peek();
     if(t===';'){take();result={type:'empty'};}
     else if(t==='{')result=block();
@@ -100,7 +101,7 @@ export function compile(source,options={}) {
     else if(t==='break'||t==='continue'){take();expect(';');result={type:t};}
     else if(isType()){const base=spec();result=finishDeclaration(declarator(base),base);}
     else {result={type:'expression',expr:expression()};expect(';');}
-    depth--;return result;
+    depth--;return {...result,loc};
   }
   while(peek()!=='<end>'){
     if(peek()==='typedef'){take();const base=spec(),d=declarator(base);if(d.pointer)fail('포인터 typedef는 지원하지 않습니다.');expect(';');aliases.set(d.name,base.type);continue;}
@@ -110,14 +111,14 @@ export function compile(source,options={}) {
       take();expect(';');program.structs[name]=fields;continue;
     }
     if(!isType())fail('전역 변수 또는 함수 정의가 필요합니다.');
-    const base=spec(),d=declarator(base);
+    const loc=location(),base=spec(),d=declarator(base);
     if(peek()==='('&&base.type!=='LiquidCrystal'){
       take();const params=[];if(peek()==='void'&&peek(1)===')')take();
       else if(peek()!==')')do{const p=declarator(spec());if(peek()==='['){take();expect(']');p.pointer=true;}params.push(p);if(peek()!==',')break;take();}while(true);
       expect(')');if(peek()===';'){take();continue;}
       if(Object.hasOwn(program.functions,d.name))fail(`${d.name}() 함수가 중복되었습니다.`);
-      program.functions[d.name]={...d,params,body:block()};
-    }else program.globals.push(finishDeclaration(d,base));
+      program.functions[d.name]={...d,params,loc,body:block()};
+    }else program.globals.push({...finishDeclaration(d,base),loc});
   }
   if(options.hal){if(!program.functions.main)fail('int main(void) 함수를 작성하세요.');if(program.functions.main.params.length)fail('main(void) 형식을 사용하세요.');}
   else if(!program.functions.loop)fail('void loop() 함수를 작성하세요.');

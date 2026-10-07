@@ -1,3 +1,4 @@
+const {fillCode,newProject}=require('./smoke-fixture.cjs');
 const {chooseHal,saveProject,openProject}=require('./smoke-fixture.cjs');
 const assert=require('node:assert/strict'),fs=require('node:fs/promises'),path=require('node:path');
 const {_electron}=require(process.env.PLAYWRIGHT_MODULE||'playwright');
@@ -20,7 +21,7 @@ const {_electron}=require(process.env.PLAYWRIGHT_MODULE||'playwright');
   await fs.writeFile(nativeMain,'#include "main.h"\nint main(void){HAL_Init();GPIO_InitTypeDef gpio={0};gpio.Pin=LED_Pin;gpio.Mode=GPIO_MODE_OUTPUT_PP;HAL_GPIO_Init(GPIOA,&gpio);while(1){HAL_GPIO_TogglePin(GPIOA,LED_Pin);HAL_Delay(100);}}');
   await fs.writeFile(nativeHeader,'#ifndef MAIN_H\n#define MAIN_H\n#define LED_Pin GPIO_PIN_5\n#endif');
   await app.evaluate(({dialog},files)=>{dialog.showOpenDialog=async()=>({canceled:false,filePaths:files});},[nativeIoc,nativeMain,nativeHeader]);
-  await page.click('#firmware-import');await page.waitForFunction(()=>document.querySelector('#code').value.includes('LED_Pin'));await page.selectOption('#source-file','main.h');assert.match(await page.locator('#code').inputValue(),/#define LED_Pin/);await page.fill('#code','#ifndef MAIN_H\n#define MAIN_H\n#define LED_Pin GPIO_PIN_5\n#endif\n// edited');await page.selectOption('#source-file','main.c');
+  await page.click('#firmware-import');await page.waitForFunction(()=>document.querySelector('#code').value.includes('LED_Pin'));await page.selectOption('#source-file','main.h');assert.match(await page.locator('#code').inputValue(),/#define LED_Pin/);await fillCode(page,'#ifndef MAIN_H\n#define MAIN_H\n#define LED_Pin GPIO_PIN_5\n#endif\n// edited');await page.selectOption('#source-file','main.c');
   await page.click('#firmware-check');assert.match(await page.locator('#firmware-status').textContent(),/통과/);await page.click('#run');await page.waitForTimeout(70);assert.equal(await page.locator('#run-status').textContent(),'실행 중');assert.equal(await page.locator('#pinout-open').isDisabled(),true);await page.click('#run');
   const saved=path.join(out,'hal-round-trip.stm32lab');await app.evaluate(({dialog},saved)=>{dialog.showSaveDialog=async()=>({canceled:false,filePath:saved});dialog.showOpenDialog=async()=>({canceled:false,filePaths:[saved]});},saved);
   await saveProject(page);const data=JSON.parse(await fs.readFile(saved,'utf8'));assert.equal(data.firmware.mode,'hal');assert.equal(data.mcu.pins.PA5.function,'GPIO_Output');assert.match(data.firmware.files[0].text,/edited/);

@@ -6,6 +6,16 @@ exports.openFixture=async(page,project)=>{
  await page.click('[data-tab="code"]');
 };
 exports.chooseHal=async(page,kind)=>{await page.selectOption('#hal-example',kind);};
+// Fixture source replacement uses the same input bridge as the Monaco editor.
+// Actual keyboard editing is covered by ide-smoke.cjs.
+exports.fillCode=(page,text)=>page.locator('#code').evaluate((el,text)=>{el.value=text;el.dispatchEvent(new Event('input',{bubbles:true}));},text);
+exports.newProject=async page=>{
+ await page.click('#new');
+ if(await page.locator('#replace-dialog').isVisible())await page.click('#replace-confirm');
+ await page.selectOption('#new-project-template','blank');
+ await page.click('#project-create');
+ await page.waitForSelector('#project-dialog',{state:'hidden'});
+};
 
 // A click only starts the async IPC operation. Wait for the app's completion
 // message before reading the file or checking the newly opened document.

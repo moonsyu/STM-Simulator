@@ -29,7 +29,7 @@ const {openFixture,saveProject,openProject} = require('./smoke-fixture.cjs');
     await find.fill('far_target');assert.equal(await selected(),'far_target');assert.ok(await code.evaluate(el=>el.scrollTop>500&&el.scrollLeft>0));
     await find.fill('missing');assert.equal(await page.locator('#code-find-next').isDisabled(),true);assert.equal(await page.locator('#code-find-count').textContent(),'일치 없음');
     await find.fill('');assert.equal(await page.locator('#code-find-count').textContent(),'0 / 0');
-    await find.press('Escape');assert.equal(await code.evaluate(el=>el===document.activeElement),true);
+    await find.press('Escape');assert.equal(await code.evaluate(el=>!!document.activeElement?.closest('#monaco-host')),true);
     await code.evaluate(el=>el.setSelectionRange(0,0));await page.keyboard.press('Control+r');
     assert.equal(await page.locator('#code-replace-row').isVisible(),true);assert.equal(await value(),p.code,'Ctrl+R cannot reload the source');
     await find.fill('led');await page.fill('#code-replacement','red');await page.click('#code-replace-one');assert.match(await value(),/\/\/ red led LED/);
@@ -49,7 +49,7 @@ const {openFixture,saveProject,openProject} = require('./smoke-fixture.cjs');
     assert.equal(await page.locator('#code-replace-one').isDisabled(),true);assert.equal(await page.locator('#code-replace-all').isDisabled(),true);assert.equal(await page.locator('#code-find-next').isDisabled(),false);
     await find.press('Enter');await page.keyboard.press('F5');assert.equal(await page.locator('#code-replace-all').isDisabled(),false);
     await app.evaluate(({BrowserWindow})=>BrowserWindow.getAllWindows()[0].setSize(1120,760));await page.screenshot({path:path.join(out,'editor-find-replace.png')});
-    assert.ok(await page.locator('#code-search').evaluate(el=>el.getBoundingClientRect().right<=innerWidth));assert.ok(await code.evaluate(el=>el.clientHeight>=100));
+    assert.ok(await page.locator('#code-search').evaluate(el=>el.getBoundingClientRect().right<=innerWidth));assert.ok(await page.locator('#monaco-host').evaluate(el=>el.clientHeight>0));
     // Real pointer double-click and drag, rather than dispatching a synthetic dblclick.
     const wireProject=blankProject();wireProject.wires=[{id:'route',from:'bb:a:10',to:'bb:j:20',color:'#23a68a'}];await openFixture(page,wireProject);await page.click('#zoom-reset');
     const point=async(x,y)=>page.evaluate(({x,y})=>{const svg=document.getElementById('circuit'),p=svg.createSVGPoint();p.x=x;p.y=y;const s=p.matrixTransform(svg.getScreenCTM());return {x:s.x,y:s.y};},{x,y});

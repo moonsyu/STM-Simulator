@@ -1,0 +1,44 @@
+import * as monaco from 'monaco-editor/editor/editor.api.js';
+import 'monaco-editor/features/register.all.js';
+import 'monaco-editor/languages/definitions/cpp/register.js';
+
+globalThis.MonacoEnvironment={getWorker:()=>new Worker(new URL('./editor.worker.js',import.meta.url),{name:'stm-editor'})};
+const API={HAL_GPIO_WritePin:'HAL_GPIO_WritePin(GPIOx, GPIO_Pin, PinState)',HAL_GPIO_ReadPin:'HAL_GPIO_ReadPin(GPIOx, GPIO_Pin)',HAL_GPIO_TogglePin:'HAL_GPIO_TogglePin(GPIOx, GPIO_Pin)',HAL_Delay:'HAL_Delay(milliseconds)',HAL_GetTick:'HAL_GetTick()',HAL_UART_Transmit:'HAL_UART_Transmit(&huart, data, size, timeout)',HAL_ADC_GetValue:'HAL_ADC_GetValue(&hadc)',HAL_TIM_PWM_Start:'HAL_TIM_PWM_Start(&htim, channel)',printf:'printf("format", values)',pinMode:'pinMode(pin, OUTPUT)',digitalWrite:'digitalWrite(pin, HIGH)',digitalRead:'digitalRead(pin)',analogRead:'analogRead(pin)',delay:'delay(milliseconds)'};
+export function createCodeEditor({textarea,getFile,getFiles,onBreakpoint,onBreakpointsMoved,onPosition}){
+  const wrapper=textarea.parentElement,host=document.createElement('div');host.id='monaco-host';wrapper.append(host);wrapper.classList.add('monaco-ready');
+  monaco.editor.defineTheme('stm-light',{base:'vs',inherit:true,rules:[{token:'comment',foreground:'567B60'},{token:'keyword',foreground:'8755A1'},{token:'string',foreground:'A34D2F'},{token:'number',foreground:'246D90'}],colors:{'editor.background':'#FCFDFC','editor.foreground':'#263E34','editorLineNumber.foreground':'#718579','editor.lineHighlightBackground':'#EFF5F1','editor.selectionBackground':'#CBE8D9','editorCursor.foreground':'#166E4E','editorGutter.background':'#F5F8F6'}});
+  const editor=monaco.editor.create(host,{value:textarea.value,language:'cpp',theme:'stm-light',automaticLayout:true,editContext:false,fontSize:13,lineHeight:21,fontFamily:"Consolas, 'Malgun Gothic', monospace",minimap:{enabled:false},glyphMargin:true,scrollBeyondLastLine:false,tabSize:2,insertSpaces:true,wordWrap:'off',folding:true,bracketPairColorization:{enabled:true},padding:{top:9,bottom:9},fixedOverflowWidgets:true,ariaLabel:'C 소스 코드 편집기',readOnly:textarea.readOnly});
+  const models=new Map(),states=new Map();let active='',syncing=false,breakpoints=[],current=null,diagnostics=[];
+  const nativeValue=Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype,'value'),nativeSelect=textarea.setSelectionRange.bind(textarea);
+  function sync(value){
+    const name=getFile();syncing=true;
+    if(active!==name){if(active)states.set(active,editor.saveViewState());let model=models.get(name);if(!model){model=monaco.editor.createModel(value,'cpp',monaco.Uri.parse('inmemory://stm/'+encodeURIComponent(name)));models.set(name,model);}active=name;editor.setModel(model);if(model.getValue()!==value)model.setValue(value);editor.restoreViewState(states.get(name));}
+    else if(editor.getValue()!==value)editor.setValue(value);
+    nativeValue.set.call(textarea,value);syncing=false;decorate();
+  }
+  Object.defineProperty(textarea,'value',{configurable:true,get(){return nativeValue.get.call(this);},set(value){sync(String(value));}});
+  textarea.setSelectionRange=(start,end,direction)=>{nativeSelect(start,end,direction);const model=editor.getModel(),a=model.getPositionAt(start),b=model.getPositionAt(end);editor.setSelection(new monaco.Range(a.lineNumber,a.column,b.lineNumber,b.column));editor.revealPositionInCenterIfOutsideViewport(a);};
+  textarea.focus=()=>editor.focus();
+  textarea.addEventListener('input',()=>{if(!syncing)sync(nativeValue.get.call(textarea));});
+  editor.onDidChangeModelContent(()=>{if(syncing)return;const moved=breakpoints.filter(b=>b.file===active).map((b,i)=>({...b,line:decorations.getRange(i)?.startLineNumber||b.line}));nativeValue.set.call(textarea,editor.getValue());textarea.dispatchEvent(new Event('input',{bubbles:true}));if(moved.some((b,i)=>b.line!==breakpoints.filter(p=>p.file===active)[i]?.line))onBreakpointsMoved?.(active,moved);});
+  editor.onDidChangeCursorSelection(e=>{const m=editor.getModel();nativeSelect(m.getOffsetAt(e.selection.getStartPosition()),m.getOffsetAt(e.selection.getEndPosition()));onPosition?.(editor.getPosition());});
+  new MutationObserver(()=>editor.updateOptions({readOnly:textarea.readOnly})).observe(textarea,{attributes:true,attributeFilter:['readonly']});
+  editor.onMouseDown(e=>{if(e.target.type===monaco.editor.MouseTargetType.GUTTER_GLYPH_MARGIN&&e.target.position)onBreakpoint(active,e.target.position.lineNumber);});
+  editor.addCommand(monaco.KeyCode.F9,()=>onBreakpoint(active,editor.getPosition().lineNumber));
+  editor.addCommand(monaco.KeyMod.CtrlCmd|monaco.KeyCode.KeyZ,()=>document.dispatchEvent(new CustomEvent('ide-undo',{detail:false})));
+  editor.addCommand(monaco.KeyMod.CtrlCmd|monaco.KeyCode.KeyY,()=>document.dispatchEvent(new CustomEvent('ide-undo',{detail:true})));
+  editor.addCommand(monaco.KeyMod.CtrlCmd|monaco.KeyMod.Shift|monaco.KeyCode.KeyZ,()=>document.dispatchEvent(new CustomEvent('ide-undo',{detail:true})));
+  const decorations=editor.createDecorationsCollection();
+  function decorate(){
+    const ds=breakpoints.filter(b=>b.file===active).map(b=>({range:new monaco.Range(b.line,1,b.line,1),options:{isWholeLine:false,stickiness:monaco.editor.TrackedRangeStickiness.NeverGrowsWhenTypingAtEdges,glyphMarginClassName:'debug-breakpoint',glyphMarginHoverMessage:{value:'중단점 — 클릭하여 해제'}}}));
+    if(current?.file===active)ds.push({range:new monaco.Range(current.line,1,current.line,1),options:{isWholeLine:true,className:'debug-current-line',glyphMarginClassName:'debug-current-glyph'}});
+    decorations.set(ds);for(const [file,model]of models)monaco.editor.setModelMarkers(model,'stm-build',diagnostics.filter(d=>d.file===file).map(d=>({severity:monaco.MarkerSeverity.Error,message:d.message,startLineNumber:d.line,startColumn:1,endLineNumber:d.line,endColumn:Math.max(2,model.getLineMaxColumn(Math.min(d.line,model.getLineCount())))})));
+  }
+  monaco.languages.registerCompletionItemProvider('cpp',{provideCompletionItems(model,position){const word=model.getWordUntilPosition(position),range={startLineNumber:position.lineNumber,endLineNumber:position.lineNumber,startColumn:word.startColumn,endColumn:word.endColumn},words=new Set(getFiles().flatMap(f=>f.text.match(/\b[A-Za-z_]\w*\b/g)||[]));return {suggestions:[...Object.keys(API),...words].filter((w,i,a)=>a.indexOf(w)===i).slice(0,1500).map(word=>({label:word,kind:API[word]?monaco.languages.CompletionItemKind.Function:monaco.languages.CompletionItemKind.Text,insertText:word,detail:API[word]||'프로젝트의 식별자',range}))};}});
+  monaco.languages.registerHoverProvider('cpp',{provideHover(model,position){const w=model.getWordAtPosition(position);return w&&API[w.word]?{contents:[{value:'```c\n'+API[w.word]+';\n```'},{value:'STM Simulator에서 지원하는 API입니다. 상세 범위는 HAL API 문서를 확인하세요.'}]}:null;}});
+  monaco.languages.registerDefinitionProvider('cpp',{provideDefinition(model,position){const name=model.getWordAtPosition(position)?.word;if(!name)return [];const matches=[];for(const file of getFiles()){const regex=new RegExp('\\b'+name+'\\s*\\([^;{}]*\\)\\s*\\{','g'),m=regex.exec(file.text);if(m){let target=models.get(file.name);if(!target){target=monaco.editor.createModel(file.text,'cpp',monaco.Uri.parse('inmemory://stm/'+encodeURIComponent(file.name)));models.set(file.name,target);}else if(target.getValue()!==file.text)target.setValue(file.text);const p=target.getPositionAt(m.index);matches.push({uri:target.uri,range:new monaco.Range(p.lineNumber,p.column,p.lineNumber,p.column+name.length)});}}return matches;}});
+  // Route definition navigation back through the project's file selection.
+  monaco.editor.registerEditorOpener({openCodeEditor(_source,resource,selection){const file=decodeURIComponent(resource.path.slice(1));if(!getFiles().some(f=>f.name===file))return false;document.dispatchEvent(new CustomEvent('ide-open-source',{detail:{file,line:selection?.startLineNumber||selection?.lineNumber||1}}));return true;}});
+  sync(textarea.value);
+  return {editor,sync,focus:()=>editor.focus(),position:()=>editor.getPosition(),goto(line){editor.revealLineInCenterIfOutsideViewport(line);editor.setPosition({lineNumber:line,column:1});editor.focus();},updateDebug(points,loc){breakpoints=points;current=loc;decorate();},diagnostics(items){diagnostics=items;decorate();},reset(){for(const [file,m]of models)if(file!==active&&!getFiles().some(f=>f.name===file)){m.dispose();models.delete(file);states.delete(file);}},dispose(){editor.dispose();for(const m of models.values())m.dispose();}};
+}
