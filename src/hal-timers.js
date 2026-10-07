@@ -54,7 +54,12 @@ export class HalTimers {
   pwm(s,c,r){
     const pin=c.pin,period=this.period(s),hz=this.hz(s)/period;
     r.call('pinMode',[pin,'OUTPUT']);
-    if(c.active&&period>1){r.call('analogWriteFrequency',[pin,hz]);r.call('analogWrite',[pin,Math.min(1,c.pulse/period)*255]);}
+    if(c.active&&period>1){
+      // Full-width 32-bit ARR gives a valid period of several minutes.
+      // The sketch API's 1 Hz lower bound must not reject an initialized HAL timer.
+      if(hz<1)r.pwmFrequency.set(pin,hz);else r.call('analogWriteFrequency',[pin,hz]);
+      r.call('analogWrite',[pin,Math.min(1,c.pulse/period)*255]);
+    }
     else if(c.active)r.call('digitalWrite',[pin,Number(this.counter(s,r.microTime)<c.pulse)]);
     else r.call('digitalWrite',[pin,0]);
   }

@@ -1,9 +1,9 @@
 import {SERIAL_IDS,isSerial,serialAf,serialHandle,serialFunction} from './serial-config.js';
 import {TIMER_IDS,isTimer,timerAf} from './timer-config.js';
-import {RESET_TIMER_CLOCK_HZ} from './mcu-defaults.js';
+import {DEFAULT_TIMER_CLOCK_HZ} from './mcu-defaults.js';
 
 export function clockPlan(hz){
-  if(hz===RESET_TIMER_CLOCK_HZ)return {source:'HSI',apb1:1,latency:0};
+  if(hz===DEFAULT_TIMER_CLOCK_HZ)return {source:'HSI',apb1:1,latency:0};
   // HSI removes any dependency on the Nucleo ST-LINK MCO / HSE jumper.
   // APB1=/2, TIMx=HCLK, APB2=/1; F446 APB1 is limited to 45 MHz.
   for(const divider of [4,2,6,8]){const n=hz*divider/1000000;if(hz<=90000000&&Number.isInteger(n)&&n>=100&&n<=432)return {source:'PLLCLK',apb1:2,n,divider,latency:Math.ceil(hz/30000000)-1};}

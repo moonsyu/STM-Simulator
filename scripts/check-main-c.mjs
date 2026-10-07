@@ -5,6 +5,7 @@ import {spawnSync} from 'node:child_process';
 import {fileURLToPath} from 'node:url';
 import {HAL_EXAMPLES,halExample} from '../src/hal-examples.js';
 import {blankProject} from '../src/project.js';
+import {validateMcu,generateHal} from '../src/mcu-config.js';
 import {isSerial,serialHandle} from '../src/serial-config.js';
 import {isTimer} from '../src/timer-config.js';
 
@@ -37,8 +38,14 @@ SECTIONS {
  .bss : { . = ALIGN(4); _sbss = .; __bss_start__ = .; *(.bss*) *(COMMON) . = ALIGN(4); _ebss = .; __bss_end__ = .; end = .; _end = .; } >RAM
 }
 `);
+const defaults=blankProject();
+for(const [id,pin]of [['TIM2','PA5'],['TIM3','PA6'],['TIM4','PB6'],['TIM5','PA0']]){
+  defaults.mcu.pins[pin]={function:id+'_CH1',pull:'NOPULL',edge:'FALLING',initial:0,label:''};
+  defaults.mcu.peripherals[id]={enabled:true,mode:'pwm'};
+}
+defaults.mcu=validateMcu(defaults.mcu);defaults.code=generateHal(defaults.mcu);
 const checked=[],sources={};
-for(const [name,project]of [['blank',blankProject()],...Object.keys(HAL_EXAMPLES).map(k=>[k,halExample(k)])]){
+for(const [name,project]of [['blank',blankProject()],['cubemx-defaults',defaults],...Object.keys(HAL_EXAMPLES).map(k=>[k,halExample(k)])]){
   const definitions=Object.entries(project.mcu.pins).filter(([,p])=>p.label).map(([pin,p])=>`#define ${p.label}_Pin GPIO_PIN_${pin.slice(2)}\n#define ${p.label}_GPIO_Port GPIO${pin[1]}`).join('\n');
   await fs.writeFile(path.join(out,'main.h'),'#pragma once\n#include "stm32f4xx_hal.h"\nvoid Error_Handler(void);\n'+definitions+'\n');
   await fs.writeFile(path.join(out,'main.c'),project.code);
