@@ -1,2 +1,6 @@
 const {contextBridge,ipcRenderer}=require('electron');
+const native={};
+for(const name of ['settings','detect','configure','probe','choose-tool','build','run','debug','stop','action','inspect','evaluate','memory','breakpoints','input','language','language-stop','language-query','artifacts','terminal-open','terminal-input','terminal-close'])native[name]=(...args)=>ipcRenderer.invoke('native:'+name,...args);
+native.onEvent=callback=>{const handler=(_event,data)=>callback(data);ipcRenderer.on('native:event',handler);return()=>ipcRenderer.removeListener('native:event',handler);};
+contextBridge.exposeInMainWorld('nativeIde',native);
 contextBridge.exposeInMainWorld('desktop',{chooseProjectParent:()=>ipcRenderer.invoke('workspace:choose-parent'),createWorkspace:data=>ipcRenderer.invoke('workspace:create',data),openWorkspace:()=>ipcRenderer.invoke('workspace:open'),saveWorkspace:text=>ipcRenderer.invoke('workspace:save',text),exportMain:text=>ipcRenderer.invoke('firmware:export-main',text),save:text=>ipcRenderer.invoke('project:save',text),open:()=>ipcRenderer.invoke('project:open'),exportCsv:text=>ipcRenderer.invoke('waveform:export',text),importFirmware:folder=>ipcRenderer.invoke('firmware:import',folder===true)});

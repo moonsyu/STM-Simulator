@@ -56,7 +56,7 @@ export function validateProject(data){
   if(data.firmware!==undefined){
     if(!data.firmware||!['sketch','hal'].includes(data.firmware.mode)||!Array.isArray(data.firmware.files)||data.firmware.files.length>40)throw new Error('펌웨어 소스 설정이 올바르지 않습니다.');
     const names=new Set();let size=data.code.length;
-    const files=data.firmware.files.map(f=>{if(!f||typeof f.name!=='string'||! /^[\w.-]+\.[ch]$/.test(f.name)||f.name==='main.c'||names.has(f.name)||typeof f.text!=='string')throw new Error('소스 파일 이름/내용을 확인하세요.');names.add(f.name);size+=f.text.length;return {name:f.name,text:f.text};});
+    const files=data.firmware.files.map(f=>{if(!f||typeof f.name!=='string'||! /^[\w.-]+\.(c|h|cpp|hpp|cc)$/.test(f.name)||f.name.toLowerCase()==='main.c'||names.has(f.name.toLowerCase())||typeof f.text!=='string')throw new Error('소스 파일 이름/내용을 확인하세요.');names.add(f.name.toLowerCase());size+=f.text.length;return {name:f.name,text:f.text};});
     if(size>300000)throw new Error('HAL 소스 전체는 300 KB 이하로 선택하세요.');
     if(data.firmware.mode==='hal'&&!project.mcu)throw new Error('HAL 프로젝트에는 핀 설정이 필요합니다.');
     project.firmware={mode:data.firmware.mode,files};
@@ -67,6 +67,7 @@ export function validateProject(data){
     if(!s||!Array.isArray(s.breakpoints)||s.breakpoints.length>1000||!Array.isArray(s.watches)||s.watches.length>20)throw new Error('디버그 설정을 확인하세요.');
     if(s.breakpoints.some(b=>!b||!names.has(b.file)||!Number.isInteger(b.line)||b.line<1||b.line>50000)||s.watches.some(w=>typeof w!=='string'||!w.trim()||w.length>250))throw new Error('중단점 또는 감시식이 올바르지 않습니다.');
     project.ide={breakpoints:s.breakpoints.map(b=>({file:b.file,line:b.line})),watches:[...s.watches]};
+    if(s.native!==undefined){const n=s.native;if(!n||!['simulator','arm','host'].includes(n.target)||!['Debug','Release'].includes(n.configuration))throw new Error('IDE 실행 대상 설정을 확인하세요.');project.ide.native={target:n.target,configuration:n.configuration};}
   }
   return project;
 }

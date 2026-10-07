@@ -51,3 +51,7 @@ esbuild 0.28.2 is used at build time under the MIT license. Its original notice 
 electron-builder 26.15.3 is a build-time dependency under the MIT license, copyright (c) 2015 Loopline Systems. Its dependencies retain their respective licenses in their npm packages; `package-lock.json` pins the dependency graph. These build tools are not application JavaScript runtime dependencies. This notice does not replace the notices bundled with Electron or grant rights to ST materials.
 
 Source: [electron-builder](https://github.com/electron-userland/electron-builder).
+
+## Optional external development tools
+
+ARM GCC/GDB, MinGW-w64 GCC/GDB, clangd, OpenOCD and STM32CubeF4 are separate user-installed programs and SDKs, not bundled into the application EXE. The optional setup script downloads unmodified vendor distributions, verifies their checksums or Git revisions, and preserves their license files. Their individual licenses and device restrictions continue to apply. ST HAL/CMSIS source files are compiled from the configured external SDK; no ST driver source has been copied into the application repository. QEMU is used only by the optional ARM GDB integration test and is not shipped with the application.
