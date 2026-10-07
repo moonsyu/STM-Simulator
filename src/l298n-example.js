@@ -1,11 +1,12 @@
 import {blankProject} from './project.js';
 import {validateMcu,generateHal} from './mcu-config.js';
 import {boardPin} from './pins.js';
+import {EXAMPLE_TIMER_CLOCK_HZ} from './mcu-defaults.js';
 export const L298_EXAMPLES={l298n:'HAL · L298N 듀얼 DC 모터 제어'};
 export const L298_GUIDES={l298n:'외부 12 V→VM · 5V 입력·공통 GND · PA0/PA1(TIM2 CH1/2)→ENA/ENB · PB4/PB5/PB6/PB7→IN1~4 · OUT1/2·OUT3/4→모터 · ENA/ENB·5V-EN 점퍼 제거'};
 const pin=fn=>({function:fn,pull:'NOPULL',edge:'RISING',initial:0,label:''});
 export function l298Example(){
- const p=blankProject();p.name=L298_EXAMPLES.l298n;
+ const p=blankProject();p.name=L298_EXAMPLES.l298n;p.mcu.timerClockHz=EXAMPLE_TIMER_CLOCK_HZ;
  p.components=[{id:'driver',name:'L298N1',type:'l298n',x:775,y:350,rotation:0},{id:'supply',name:'12 V 전원',type:'dc_supply',x:775,y:155,rotation:0,span:98,voltage:12},{id:'motorA',name:'모터 A',type:'dc_motor',x:590,y:350,rotation:90,span:70},{id:'motorB',name:'모터 B',type:'dc_motor',x:970,y:350,rotation:90,span:70}];
  const wire=(from,to,color='#23a68a')=>p.wires.push({id:'l298-wire-'+p.wires.length,from,to,color});
  wire('part:supply:a','part:driver:p1','#dd654c');wire('part:supply:b','part:driver:p2','#4e647b');

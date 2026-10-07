@@ -1,17 +1,19 @@
 import {SERIAL_IDS,isSerial,serialAf,serialHandle,serialFunction} from './serial-config.js';
 import {TIMER_IDS,isTimer,timerAf} from './timer-config.js';
+import {RESET_TIMER_CLOCK_HZ} from './mcu-defaults.js';
 
 export function clockPlan(hz){
+  if(hz===RESET_TIMER_CLOCK_HZ)return {source:'HSI',apb1:1,latency:0};
   // HSI removes any dependency on the Nucleo ST-LINK MCO / HSE jumper.
   // APB1=/2, TIMx=HCLK, APB2=/1; F446 APB1 is limited to 45 MHz.
-  for(const divider of [4,2,6,8]){const n=hz*divider/1000000;if(hz<=90000000&&Number.isInteger(n)&&n>=100&&n<=432)return {n,divider,latency:Math.ceil(hz/30000000)-1};}
-  throw new Error('main.c 생성: HSI PLL로 만들 수 있는 APB1 타이머 클록(12.5~90 MHz)을 사용하세요. 기본값은 84 MHz입니다.');
+  for(const divider of [4,2,6,8]){const n=hz*divider/1000000;if(hz<=90000000&&Number.isInteger(n)&&n>=100&&n<=432)return {source:'PLLCLK',apb1:2,n,divider,latency:Math.ceil(hz/30000000)-1};}
+  throw new Error('main.c 생성: HSI 기본 16 MHz 또는 HSI PLL로 만들 수 있는 APB1 타이머 클록(12.5~90 MHz)을 사용하세요.');
 }
 export function generateMain(config){
   const clock=clockPlan(config.timerClockHz),lines=['#include "main.h"','#include <stdio.h>','',
     '/* Copy this main.c into a CubeIDE STM32F446RE project with matching',
     ' * pin / peripheral / NVIC settings and Cube-generated IRQ / MSP files.',
-    ' * Clock: HSI PLL, APB1 timer clock = '+config.timerClockHz+' Hz.',
+    ' * Clock: '+(clock.source==='HSI'?'HSI direct (PLL off)':'HSI PLL')+', APB1 timer clock = '+config.timerClockHz+' Hz.',
     ' * printf: SWV ITM port 0 (enable SWV in the debugger). UART uses its pins.',
     ' * With newlib-nano, enable -u _printf_float for floating-point printf. */',''];
   for(const [pin,p]of Object.entries(config.pins))if(p.label)lines.push(`#ifndef ${p.label}_Pin`,`#define ${p.label}_Pin GPIO_PIN_${pin.slice(2)}`,'#endif',`#ifndef ${p.label}_GPIO_Port`,`#define ${p.label}_GPIO_Port GPIO${pin[1]}`,'#endif');
@@ -33,11 +35,11 @@ export function generateMain(config){
     'void SystemClock_Config(void) {','  RCC_OscInitTypeDef osc = {0};','  RCC_ClkInitTypeDef clk = {0};',
     '  __HAL_RCC_PWR_CLK_ENABLE();','  __HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE1);',
     '  osc.OscillatorType = RCC_OSCILLATORTYPE_HSI;','  osc.HSIState = RCC_HSI_ON;','  osc.HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT;',
-    '  osc.PLL.PLLState = RCC_PLL_ON;','  osc.PLL.PLLSource = RCC_PLLSOURCE_HSI;','  osc.PLL.PLLM = 16;',`  osc.PLL.PLLN = ${clock.n};`,`  osc.PLL.PLLP = RCC_PLLP_DIV${clock.divider};`,'  osc.PLL.PLLQ = 7;',
+    ...(clock.source==='HSI'?['  osc.PLL.PLLState = RCC_PLL_OFF;']:['  osc.PLL.PLLState = RCC_PLL_ON;','  osc.PLL.PLLSource = RCC_PLLSOURCE_HSI;','  osc.PLL.PLLM = 16;',`  osc.PLL.PLLN = ${clock.n};`,`  osc.PLL.PLLP = RCC_PLLP_DIV${clock.divider};`,'  osc.PLL.PLLQ = 7;']),
     '  if (HAL_RCC_OscConfig(&osc) != HAL_OK) Error_Handler();',
     '  clk.ClockType = RCC_CLOCKTYPE_HCLK | RCC_CLOCKTYPE_SYSCLK | RCC_CLOCKTYPE_PCLK1 | RCC_CLOCKTYPE_PCLK2;',
-    '  clk.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;','  clk.AHBCLKDivider = RCC_SYSCLK_DIV1;',
-    '  clk.APB1CLKDivider = RCC_HCLK_DIV2;','  clk.APB2CLKDivider = RCC_HCLK_DIV1;',
+    `  clk.SYSCLKSource = RCC_SYSCLKSOURCE_${clock.source};`,'  clk.AHBCLKDivider = RCC_SYSCLK_DIV1;',
+    `  clk.APB1CLKDivider = RCC_HCLK_DIV${clock.apb1};`,'  clk.APB2CLKDivider = RCC_HCLK_DIV1;',
     `  if (HAL_RCC_ClockConfig(&clk, FLASH_LATENCY_${clock.latency}) != HAL_OK) Error_Handler();`,'}',
     '', 'static void MX_GPIO_Init(void) {','  GPIO_InitTypeDef GPIO_InitStruct = {0};');
   for(const port of new Set(Object.keys(config.pins).map(p=>p[1])))lines.push(`  __HAL_RCC_GPIO${port}_CLK_ENABLE();`);
@@ -66,7 +68,7 @@ export function generateMain(config){
     if(id==='ADC1'){const channel=Object.values(config.pins).find(p=>p.function.startsWith('ADC1_IN')).function.slice(7);lines.push('  ADC_ChannelConfTypeDef sConfig = {0};',`  sConfig.Channel = ADC_CHANNEL_${channel};`,'  sConfig.Rank = 1;','  sConfig.SamplingTime = ADC_SAMPLETIME_480CYCLES;','  HAL_ADC_ConfigChannel(&hadc1, &sConfig);');}
     if(isTimer(id)&&['pwm','capture'].includes(p.mode)){
       lines.push(`  ${p.mode==='pwm'?'TIM_OC_InitTypeDef':'TIM_IC_InitTypeDef'} channel = {0};`);
-      if(p.mode==='pwm')lines.push('  channel.OCMode = TIM_OCMODE_PWM1;','  channel.OCPolarity = TIM_OCPOLARITY_HIGH;',`  channel.Pulse = ${Math.floor((p.period+1)/2)};`,'  channel.OCFastMode = TIM_OCFAST_DISABLE;');
+      if(p.mode==='pwm')lines.push('  channel.OCMode = TIM_OCMODE_PWM1;','  channel.OCPolarity = TIM_OCPOLARITY_HIGH;',`  channel.Pulse = ${p.pulse};`,'  channel.OCFastMode = TIM_OCFAST_DISABLE;');
       else lines.push('  channel.ICPolarity = TIM_ICPOLARITY_RISING;','  channel.ICSelection = TIM_ICSELECTION_DIRECTTI;','  channel.ICPrescaler = TIM_ICPSC_DIV1;','  channel.ICFilter = 0;');
       for(const value of Object.values(config.pins)){const m=new RegExp('^'+id+'_CH([1-4])$').exec(value.function);if(m)lines.push(`  HAL_TIM_${p.mode==='pwm'?'PWM':'IC'}_ConfigChannel(&${name}, &channel, TIM_CHANNEL_${m[1]});`);}
     }
