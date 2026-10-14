@@ -1,4 +1,4 @@
-# 현재 검증 기록 — 0.17.1 (장치 크기·IDE 설정·업데이트 도우미)
+# 현재 검증 기록 — 0.17.2 (장치 크기·IDE 설정·자동 업데이트)
 
 - 검증일: 2026-10-14. Windows x64, Electron 44.2.0, Monaco 0.57.0, Playwright 1.58.2.
 - 변경 범위: 모든 장치의 기하 배율, Jellybean 기본 테마, IDE 표시 설정, 사용자 테마와 설정 파일, 공개 릴리스 자동 업데이트 검증.
@@ -27,8 +27,8 @@
 
 v0.16.1의 공개 EXE에서 v0.17.0을 조회·다운로드하고 해시 검증까지 통과했다. 실제 GUI에서 도우미를 생성할 때 `spawn EPERM`이 발생해 교체에는 실패했다. 이전 앱과 작성 중인 코드는 유지됐으며, 이 결과를 자동 업데이트 성공으로 기록하지 않는다.
 
-v0.17.1은 중첩 인코딩 명령을 짧은 파일 실행 인자로 변경한다. 수정된 개발 앱과 패키징된 GUI의 도우미 검사는 통과했다. 수정된 공개 EXE를 출발점으로 사용해 다음 정식 릴리스로 실제 업그레이드를 재검사해야 한다.
+v0.17.1은 중첩 인코딩 명령을 짧은 파일 실행 인자로 변경했다. 수정된 개발 앱과 패키징된 GUI의 도우미 검사 및 전체 모델 217개는 통과했다. 최종 재현 검사는 수정된 공개 v0.17.1 EXE를 출발점으로 공개 v0.17.2를 대상으로 한다.
 
-`node scripts/release-update-check.cjs`는 이전 공개 EXE 자체의 원본 업데이트 코드로 GitHub 조회·다운로드·SHA-256 검증·저장 후 재시작·실제 파일 교체를 수행한다. 도우미가 실행한 새 프로세스의 asar 버전과 EXE 해시를 검사하고 새 앱을 다시 열어 버전·기존 코드·설정 화면을 확인한다. 네트워크나 업데이트 IPC를 대체하지 않는다. 성공 시에만 work/test-results/release-update-proof.json을 생성한다.
+`node scripts/release-update-check.cjs`는 이전 공개 EXE 자체의 원본 업데이트 코드로 GitHub 조회·다운로드·SHA-256 검증·저장 후 재시작·실제 파일 교체를 수행한다. 자동 확인을 켠 뒤 원본 스케줄러에 맡기며 수동 확인·다운로드 메서드를 호출하지 않는다. 도우미가 실행한 새 프로세스의 asar 버전과 EXE 해시를 검사하고 새 앱을 다시 열어 버전·기존 코드·Jellybean·글꼴·보드 크기·자동 설정 보존을 확인한다. 네트워크나 업데이트 IPC를 대체하지 않는다. 성공 시에만 work/test-results/release-update-proof.json을 생성한다.
 
 최종 공개 실행 결과는 [최신 릴리스](https://github.com/moonsyu/STM-Simulator/releases/latest)의 **UPDATE-VERIFICATION.json / UPDATE-VERIFICATION.md** 첨부 유무와 내용으로 확인한다. 이 문서를 작성한 시점의 계획과 실제 실행 증거를 구분한다. 공개 EXE·ZIP·태그·빌드 커밋 검증은 work/test-results/release-proof.json에 기록한다. 테스트 프로필과 중간 EXE는 각 검증 종료 시 해당 시험이 만든 경로만 정리한다.
