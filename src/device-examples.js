@@ -129,6 +129,7 @@ export function deviceExample(kind){
       for (int x = 0; x < 128; x++) pixels[x+1] = (x < oledFrame || x == 0 || x == 127) ? 255 : (page == 0 ? 1 : (page == 7 ? 128 : 0));
       status |= HAL_I2C_Master_Transmit(&hi2c1, 0x3C << 1, address, 4, 100);
       status |= HAL_I2C_Master_Transmit(&hi2c1, 0x3C << 1, pixels, 129, 100);
+      HAL_Delay(1);
     }
     printf("OLED frame=%u transfer status=%d\\n", oledFrame, status);
     oledFrame = (oledFrame + 16) % 128;

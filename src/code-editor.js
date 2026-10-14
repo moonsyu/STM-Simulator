@@ -3,6 +3,7 @@ import 'monaco-editor/features/register.all.js';
 import 'monaco-editor/editor/contrib/semanticTokens/browser/documentSemanticTokens.js';
 import 'monaco-editor/languages/definitions/cpp/register.js';
 import {loadPreferences,selectedTheme} from './ide-preferences.js';
+import {editorTheme} from './colorscheme.js';
 
 globalThis.MonacoEnvironment={getWorker:()=>new Worker(new URL('./editor.worker.js',import.meta.url),{name:'stm-editor'})};
 const API={HAL_GPIO_WritePin:'HAL_GPIO_WritePin(GPIOx, GPIO_Pin, PinState)',HAL_GPIO_ReadPin:'HAL_GPIO_ReadPin(GPIOx, GPIO_Pin)',HAL_GPIO_TogglePin:'HAL_GPIO_TogglePin(GPIOx, GPIO_Pin)',HAL_Delay:'HAL_Delay(milliseconds)',HAL_GetTick:'HAL_GetTick()',HAL_UART_Transmit:'HAL_UART_Transmit(&huart, data, size, timeout)',HAL_ADC_GetValue:'HAL_ADC_GetValue(&hadc)',HAL_TIM_PWM_Start:'HAL_TIM_PWM_Start(&htim, channel)',printf:'printf("format", values)',pinMode:'pinMode(pin, OUTPUT)',digitalWrite:'digitalWrite(pin, HIGH)',digitalRead:'digitalRead(pin)',analogRead:'analogRead(pin)',delay:'delay(milliseconds)'};
@@ -14,7 +15,7 @@ export function createCodeEditor({textarea,getFile,getFiles,onBreakpoint,onBreak
   function preferences(value){
     preferredTabSize=value.tabSize;
     const theme=selectedTheme(value),c=theme.colors;
-    monaco.editor.defineTheme('stm-custom',{base:theme.base==='dark'?'vs-dark':'vs',inherit:true,rules:[...['keyword','type','string','number','comment','identifier','function'].map(token=>({token,foreground:c[token].slice(1)})),{token:'keyword.directive',foreground:c.type.slice(1)},{token:'delimiter',foreground:c.muted.slice(1)}],colors:{'editor.background':c.background,'editor.foreground':c.foreground,'editorLineNumber.foreground':c.muted,'editorLineNumber.activeForeground':c.accent,'editor.lineHighlightBackground':c.line,'editor.selectionBackground':c.selection,'editor.inactiveSelectionBackground':c.selection,'editor.findMatchBackground':c.search,'editor.findMatchHighlightBackground':c.search,'editor.wordHighlightBackground':c.search,'editor.wordHighlightStrongBackground':c.search,'editorCursor.foreground':c.accent,'editorGutter.background':c.background,'editorError.foreground':c.error,'editorWarning.foreground':c.warning,'editorWidget.background':c.panel,'editorWidget.border':c.border}});
+    monaco.editor.defineTheme('stm-custom',editorTheme(theme));
     monaco.editor.setTheme('stm-custom');editor.updateOptions({fontSize:value.fontSize,fontFamily:value.fontFamily,lineHeight:value.lineHeight,tabSize:value.tabSize,wordWrap:value.wordWrap?'on':'off',lineNumbers:value.lineNumbers?'on':'off',minimap:{enabled:value.minimap},bracketPairColorization:{enabled:value.bracketColors},'semanticHighlighting.enabled':true});
     for(const model of monaco.editor.getModels())model.updateOptions({tabSize:value.tabSize,insertSpaces:true});
   }

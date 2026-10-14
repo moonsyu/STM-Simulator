@@ -1,4 +1,5 @@
 import {L298_EXAMPLES,L298_GUIDES,l298Example} from './l298n-example.js';
+import {BASIC_EXAMPLES,BASIC_GUIDES,basicHalExample} from './basic-hal-examples.js';
 import {TIMER_EXAMPLES,TIMER_GUIDES,timerExample} from './timer-examples.js';
 import {BUZZER_EXAMPLES,BUZZER_GUIDES,passiveBuzzerExample} from './passive-buzzer-example.js';
 import {DEVICE_EXAMPLES,DEVICE_GUIDES,deviceExample} from './device-examples.js';
@@ -7,10 +8,11 @@ import {defaultMcu,validateMcu,generateHal} from './mcu-config.js';
 import {configureHalCircuit} from './hal-circuits.js';
 import {EXAMPLE_TIMER_CLOCK_HZ} from './mcu-defaults.js';
 
-export const HAL_EXAMPLES={...L298_EXAMPLES,...BUZZER_EXAMPLES,...DEVICE_EXAMPLES,...TIMER_EXAMPLES,blink:'HAL · GPIO LED',button:'HAL · GPIO 버튼 입력',exti:'HAL · USER 버튼 EXTI',uart:'HAL · UART 수신 인터럽트',timer:'HAL · TIM2 주기 인터럽트',adc:'HAL · ADC 입력',temperature:'HAL · TMP36 온도',samples:'HAL · ADC 배열 샘플링',i2c:'HAL · I²C 메모리',spi:'HAL · SPI 메모리',language:'HAL · 함수·배열·구조체',pwm:'HAL · TIM2 PWM',ultrasonic:'HAL · 초음파 거리 측정'};
-export const HAL_GUIDES={...L298_GUIDES,...BUZZER_GUIDES,...DEVICE_GUIDES,...TIMER_GUIDES,blink:'PA5 → 330 Ω → LED → GND · 500 ms 점멸',button:'PA10 입력(PULLUP)–버튼–GND · 누르는 동안 PA5 LED 점등',exti:'보드 USER(PC13) → EXTI15_10_IRQn · 누를 때마다 PA5 LED 전환',uart:'USART2 PA2(TX)/PA3(RX), 9600 baud · 전원과 교차 배선이 연결된 터미널에서 송수신',timer:'TIM2 100 ms 인터럽트 · PA5 → 330 Ω → LED → GND',adc:'3V3–10 kΩ–PA0–10 kΩ–GND · 약 1.65 V, ADC 2048',temperature:'TMP36 VOUT→PA0, VCC→3V3, GND · 센서 속성에서 온도 조절',samples:'PA0에 연결된 10 kΩ / 10 kΩ 분압 · HAL polling으로 8개 값을 배열에 저장',i2c:'I2C1 PB8(SCL)/PB9(SDA) · 주소 0x50 메모리, 3V3/GND와 모듈 내부 10 kΩ 풀업',spi:'SPI1 PA5(SCK)/PA6(MISO)/PA7(MOSI), PB6(CS) · 3V3/GND 메모리',language:'외부 부품 없이 printf 로그로 평균값 확인',pwm:'TIM2 CH1 PA5 → 1 kΩ / 10 µF RC 필터 → PA0 · 100 Hz, 50%; PWM 파형 자동 활성화',ultrasonic:'HC-SR04 TRIG→PC7, ECHO→1 kΩ / 2 kΩ 분압→PA9, 5V/GND · TIM2 1 MHz, 0.1 ms 폴링'};
+export const HAL_EXAMPLES={...BASIC_EXAMPLES,...L298_EXAMPLES,...BUZZER_EXAMPLES,...DEVICE_EXAMPLES,...TIMER_EXAMPLES,blink:'HAL · GPIO LED',button:'HAL · GPIO 버튼 입력',exti:'HAL · USER 버튼 EXTI',uart:'HAL · UART 수신 인터럽트',timer:'HAL · TIM2 주기 인터럽트',adc:'HAL · ADC 입력',temperature:'HAL · TMP36 온도',samples:'HAL · ADC 배열 샘플링',i2c:'HAL · I²C 메모리',spi:'HAL · SPI 메모리',language:'HAL · 함수·배열·구조체',pwm:'HAL · TIM2 PWM',ultrasonic:'HAL · 초음파 거리 측정'};
+export const HAL_GUIDES={...BASIC_GUIDES,...L298_GUIDES,...BUZZER_GUIDES,...DEVICE_GUIDES,...TIMER_GUIDES,blink:'PA5 → 330 Ω → LED → GND · 500 ms 점멸',button:'PA10 입력(PULLUP)–버튼–GND · 누르는 동안 PA5 LED 점등',exti:'보드 USER(PC13) → EXTI15_10_IRQn · 누를 때마다 PA5 LED 전환',uart:'USART2 PA2(TX)/PA3(RX), 9600 baud · 전원과 교차 배선이 연결된 터미널에서 송수신',timer:'TIM2 100 ms 인터럽트 · PA5 → 330 Ω → LED → GND',adc:'3V3–10 kΩ–PA0–10 kΩ–GND · 약 1.65 V, ADC 2048',temperature:'TMP36 VOUT→PA0, VCC→3V3, GND · 센서 속성에서 온도 조절',samples:'PA0에 연결된 10 kΩ / 10 kΩ 분압 · HAL polling으로 8개 값을 배열에 저장',i2c:'I2C1 PB8(SCL)/PB9(SDA) · 주소 0x50 메모리, 3V3/GND와 모듈 내부 10 kΩ 풀업',spi:'SPI1 PA5(SCK)/PA6(MISO)/PA7(MOSI), PB6(CS) · 3V3/GND 메모리',language:'외부 부품 없이 printf 로그로 평균값 확인',pwm:'TIM2 CH1 PA5 → 1 kΩ / 10 µF RC 필터 → PA0 · 100 Hz, 50%; PWM 파형 자동 활성화',ultrasonic:'HC-SR04 TRIG→PC7, ECHO→1 kΩ / 2 kΩ 분압→PA9, 5V/GND · TIM2 1 MHz, 0.1 ms 폴링'};
 const pin=(fn,pull='NOPULL',label='')=>({function:fn,pull,label,edge:'FALLING',initial:0});
 export function halExample(kind){
+  if(BASIC_EXAMPLES[kind])return basicHalExample(kind);
   if(L298_EXAMPLES[kind])return l298Example();
   if(BUZZER_EXAMPLES[kind])return passiveBuzzerExample();
   if(TIMER_EXAMPLES[kind])return timerExample(kind);

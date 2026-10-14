@@ -52,9 +52,9 @@ electron-builder 26.15.3 is a build-time dependency under the MIT license, copyr
 
 Source: [electron-builder](https://github.com/electron-userland/electron-builder).
 
-## Jellybean palette reference
+## Jellybeans colorscheme
 
-The Jellybean theme references color values from [jellybeans.vim](https://github.com/nanotech/jellybeans.vim), copyright (c) 2009-2019 NanoTech, published under the MIT license. The original license is available in the [upstream source header](https://github.com/nanotech/jellybeans.vim/blob/master/colors/jellybeans.vim). The Monaco rules, workbench appearance and preference editor are implemented in this repository.
+The unmodified `colors/jellybeans.vim` from [nanotech/jellybeans.vim](https://github.com/nanotech/jellybeans.vim/tree/ef83bf4dc8b3eacffc97bf5c96ab2581b415c9fa), copyright (c) 2009-2019 NanoTech, is included in `src/themes/jellybeans/jellybeans.vim`. Its full MIT permission notice remains in the original source header. `source.json` records the pinned commit and SHA-256. The application build converts the upstream default GUI highlights into a registered Monaco theme using `scripts/build-colorschemes.mjs`. Workbench colors without an upstream equivalent are application additions. User-imported themes retain their own licensing terms.
 
 ## Optional external development tools
 

@@ -10,7 +10,11 @@ STM Simulator 0.17.0은 프로젝트·코드·시뮬레이터·터미널을 한 
 
 각 변경은 즉시 적용·자동 저장한다. **설정 내보내기**로 JSON 파일을 저장하고 **설정 가져오기**로 다시 적용할 수 있다. 잘못된 형식·범위·색상·글꼴 값은 적용하지 않는다. 설정은 `stm32lab.idePreferences.v1`로 앱 프로필에 저장하며 프로젝트 전환·재시작 후에도 유지한다. 장치 온도·회전·저항값 등은 기존 **속성 / 측정**에서 변경한다.
 
-Jellybean의 색상 팔레트는 [NanoTech jellybeans.vim](https://github.com/nanotech/jellybeans.vim)의 색상을 참고했다. Monaco 구문 규칙·IDE 화면 매핑·설정 화면은 이 프로젝트에서 구현했다.
+기본 Jellybeans는 [nanotech/jellybeans.vim](https://github.com/nanotech/jellybeans.vim)의 원본 파일을 포함한다. 커밋 `ef83bf4dc8b3eacffc97bf5c96ab2581b415c9fa`와 SHA-256을 `src/themes/jellybeans/source.json`에 고정하고, 빌드 시 원본 GUI 하이라이트를 읽어 Monaco 테마로 등록한다. Vim 실행 환경이나 언어별 문법 엔진 자체를 이식한 것은 아니다. IDE 패널과 회로 강조처럼 원본에 없는 항목은 앱의 보완 색상을 사용한다. 원본의 MIT 고지를 그대로 보존한다.
+
+**Colorscheme 등록**에서 Monaco 테마 `.json`, VS Code 테마 `.json`/`.jsonc`, 정적 Vim `.vim` 파일을 선택하면 목록에 추가되고 즉시 적용된다. 여러 테마를 등록해 전환·복사·편집·삭제할 수 있으며 앱 재시작 후에도 유지된다. **테마 JSON 내보내기**는 현재 색상 수정까지 포함한 Monaco 파일을 저장한다. **설정 가져오기/내보내기**는 글꼴과 모든 등록 테마를 포함하는 별도 기능이다.
+
+Vim은 `highlight ... guifg=#RRGGBB guibg=#RRGGBB gui=...`, `highlight link`, 배경·이름 설정을 지원하며 Normal의 전경·배경이 필요하다. 번들에 고정된 Jellybeans 원본은 SHA-256 확인 후 전용 변환 결과를 등록한다. 다른 동적 Vimscript·플러그인·외부 파일 include는 실행하지 않고 오류를 표시한다. VS Code 테마는 기본 C/C++ TextMate 토큰을 대응하며 문맥별 scope·semanticTokenColors는 지원하지 않는다. 테마당 500 KB, 기본 테마 포함 30개 제한이다. 기존 팔레트 사용자는 원본 테마로 이동하되 직접 수정한 색상은 보존된다.
 
 ## 장치 크기
 

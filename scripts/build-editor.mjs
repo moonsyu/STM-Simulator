@@ -1,4 +1,5 @@
 import {build} from 'esbuild';
+import './build-colorschemes.mjs';
 import {mkdir,copyFile} from 'node:fs/promises';
 await mkdir('src/generated',{recursive:true});
 await build({entryPoints:['src/code-editor.js'],bundle:true,format:'esm',platform:'browser',target:'chrome142',outfile:'src/generated/code-editor.js',loader:{'.ttf':'file'},minify:true,legalComments:'eof'});
