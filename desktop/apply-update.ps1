@@ -54,5 +54,6 @@ try {
   Remove-Item -LiteralPath $updateJob.ready -Force -ErrorAction SilentlyContinue
   Remove-Item -LiteralPath $updateJob.cancel -Force -ErrorAction SilentlyContinue
   Remove-Item -LiteralPath $PSCommandPath -Force -ErrorAction SilentlyContinue
+  Remove-Item -LiteralPath (Join-Path ([IO.Path]::GetDirectoryName($ConfigPath)) 'start.ps1') -Force -ErrorAction SilentlyContinue
   Remove-Item -LiteralPath ([IO.Path]::GetDirectoryName($ConfigPath)) -ErrorAction SilentlyContinue
 }
