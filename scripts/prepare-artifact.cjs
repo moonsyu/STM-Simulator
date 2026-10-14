@@ -33,6 +33,9 @@ const {cleanArtifactOutput} = require('./clean-build.cjs');
     assert.deepEqual(asar.extractFile(archive, path.normalize(file)), await fs.readFile(path.join(root, file)), 'Packaged app icon differs from source: ' + file);
   }
   const packed = JSON.parse(asar.extractFile(archive, 'package.json').toString());
+  for (const file of ['desktop/main.cjs', 'desktop/preload.cjs', 'desktop/updater.cjs', 'desktop/apply-update.ps1', 'src/update-ui.js', 'docs/UPDATES.md']) {
+    assert.deepEqual(asar.extractFile(archive, path.normalize(file)), await fs.readFile(path.join(root, file)), 'Packaged updater differs from source: ' + file);
+  }
   assert.equal(packed.version, pkg.version, 'Packaged version must match source');
   assert.equal(packed.name, pkg.name, 'Packaged name must match source');
   assert.match(asar.extractFile(archive, 'index.html').toString(), /<title>STM Simulator<\/title>/, 'Packaged app must display the current product name');
@@ -74,10 +77,11 @@ const {cleanArtifactOutput} = require('./clean-build.cjs');
   }
   for (const file of ['MONACO-LICENSE.txt', 'MONACO-NOTICES.txt']) await fs.copyFile(path.join(root, 'src/generated', file), path.join(output, file));
   await fs.mkdir(path.join(output, 'docs'));
-  for (const file of ['COPYRIGHT-REVIEW.md', 'APP-ICON.md', 'SKETCH-API.md', 'HAL-API.md', 'IDE.md', 'MCU-DEFAULTS.md']) {
+  for (const file of ['COPYRIGHT-REVIEW.md', 'APP-ICON.md', 'SKETCH-API.md', 'HAL-API.md', 'IDE.md', 'MCU-DEFAULTS.md', 'UPDATES.md']) {
     await fs.copyFile(path.join(root, 'docs', file), path.join(output, 'docs', file));
   }
   await fs.writeFile(path.join(output, 'SHA256.txt'), `${hash}  ${name}\n`);
+  await fs.writeFile(path.join(output, 'update-manifest.json'), JSON.stringify({schemaVersion:1, version:pkg.version, filename:name, bytes:binary.length, sha256:hash}, null, 2) + '\n');
   await fs.writeFile(path.join(output, 'BUILD-INFO.json'), JSON.stringify({
     version: pkg.version, filename: name, bytes: binary.length, sha256: hash,
     commit: process.env.GITHUB_SHA || null,

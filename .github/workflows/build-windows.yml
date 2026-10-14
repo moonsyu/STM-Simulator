@@ -3,6 +3,7 @@ name: Build Windows EXE
 on:
   push:
     branches: [main]
+    tags: ['v*']
   workflow_dispatch:
     inputs:
       test_scope:
@@ -27,7 +28,7 @@ jobs:
     timeout-minutes: 20
     env:
       # An explicit marker limits only this push; subsequent pushes default to all.
-      TEST_SCOPE: ${{ inputs.test_scope || (contains(github.event.head_commit.message, '[test:passive-buzzer]') && 'passive-buzzer') || 'all' }}
+      TEST_SCOPE: ${{ !startsWith(github.ref, 'refs/tags/') && (inputs.test_scope || (contains(github.event.head_commit.message, '[test:passive-buzzer]') && 'passive-buzzer')) || 'all' }}
     steps:
       - name: Check out source
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
@@ -42,12 +43,22 @@ jobs:
         run: npm ci
       - name: Ensure Electron runtime is installed
         run: node node_modules/electron/install.js
+      - name: Verify release tag matches package version
+        if: startsWith(github.ref, 'refs/tags/')
+        shell: pwsh
+        run: |
+          $releaseVersion = (Get-Content package.json -Raw | ConvertFrom-Json).version
+          if ($env:GITHUB_REF_NAME -cne "v$releaseVersion" -or $releaseVersion -notmatch '^\d+\.\d+\.\d+$') { throw 'Release tag must match the stable package version.' }
       - name: Test circuit engine and editor models
         shell: pwsh
         run: |
           if ($env:TEST_SCOPE -eq 'passive-buzzer') { npm run test:passive-buzzer }
           else { npm test }
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Test update dialog and save-before-restart
+        run: npm run test:updates:ui
+      - name: Test Windows EXE replacement and rollback
+        run: node scripts/update-apply-check.cjs
       - name: Test Electron editing and HAL workflows
         shell: pwsh
         run: |
@@ -75,6 +86,8 @@ jobs:
         run: npm run build
       - name: Verify package and prepare download
         run: npm run build:artifact
+      - name: Verify updater in the actual portable EXE
+        run: node scripts/update-portable-check.cjs
       - name: Upload Windows download
         id: upload
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
@@ -93,3 +106,44 @@ jobs:
           "[Download EXE bundle]($env:DOWNLOAD_URL)" >> $env:GITHUB_STEP_SUMMARY
           "Extract the ZIP, then run STM-Simulator-*-win-x64.exe. Node.js is not required." >> $env:GITHUB_STEP_SUMMARY
           "The bundle includes SHA256.txt and third-party license notices. Repository access is required." >> $env:GITHUB_STEP_SUMMARY
+
+  release:
+    name: Publish verified release and update manifest
+    if: startsWith(github.ref, 'refs/tags/')
+    needs: build
+    runs-on: windows-latest
+    timeout-minutes: 10
+    permissions:
+      actions: read
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+    steps:
+      - name: Download this run's verified build
+        shell: pwsh
+        run: |
+          gh run download $env:GITHUB_RUN_ID --name STM-Simulator-Windows-x64 --dir outputs/artifact
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Verify files and publish complete release
+        shell: pwsh
+        run: |
+          $releaseVersion = $env:GITHUB_REF_NAME.Substring(1)
+          $releaseExe = "STM-Simulator-$releaseVersion-win-x64.exe"
+          $releaseZip = "STM-Simulator-$releaseVersion-Windows-x64.zip"
+          $releaseManifest = Get-Content outputs/artifact/update-manifest.json -Raw | ConvertFrom-Json
+          $releaseInfo = Get-Content outputs/artifact/BUILD-INFO.json -Raw | ConvertFrom-Json
+          if ($releaseManifest.version -cne $releaseVersion -or $releaseManifest.filename -cne $releaseExe -or $releaseInfo.commit -cne $env:GITHUB_SHA) { throw 'Build metadata does not match this tag.' }
+          $releaseHash = (Get-FileHash -LiteralPath "outputs/artifact/$releaseExe" -Algorithm SHA256).Hash.ToLowerInvariant()
+          if ($releaseHash -cne $releaseManifest.sha256 -or (Get-Item -LiteralPath "outputs/artifact/$releaseExe").Length -ne $releaseManifest.bytes) { throw 'EXE verification failed.' }
+          Compress-Archive -Path outputs/artifact/* -DestinationPath "outputs/$releaseZip"
+          $releaseZipHash = (Get-FileHash -LiteralPath "outputs/$releaseZip" -Algorithm SHA256).Hash.ToLowerInvariant()
+          @("$releaseHash  $releaseExe", "$releaseZipHash  $releaseZip") | Set-Content outputs/SHA256.txt -Encoding utf8NoBOM
+          gh release view $env:GITHUB_REF_NAME --json isDraft 2>$null
+          if ($LASTEXITCODE -eq 0) { throw 'Release already exists. Inspect it before retrying publication.' }
+          gh release create $env:GITHUB_REF_NAME --verify-tag --draft --title "STM Simulator $releaseVersion" --generate-notes
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          gh release upload $env:GITHUB_REF_NAME "outputs/artifact/$releaseExe" "outputs/$releaseZip" outputs/SHA256.txt outputs/artifact/BUILD-INFO.json outputs/artifact/update-manifest.json
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          gh release edit $env:GITHUB_REF_NAME --draft=false --latest
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
