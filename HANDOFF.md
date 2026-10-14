@@ -17,6 +17,8 @@
 - 도우미를 수정한 공개 v0.17.1을 출발점으로, 공개 v0.17.2를 대상으로 검사한다. 두 버전의 실행 파일에 같은 수정이 들어가며 이 버전은 공개 버전 간 검증과 절차를 완성하는 릴리스다.
 - `release-update-check.cjs`에서 수동 확인/다운로드 호출을 제거했다. 실제 앱에서 자동 확인 설정을 켜고 원본 스케줄러가 GitHub 감지·다운로드·해시 검증을 끝낼 때까지 기다린 뒤 저장 후 재시작 버튼을 누른다.
 - 새 앱의 실제 asar 버전·프로세스 생존·EXE 해시·기존 코드, Jellybean/글꼴 크기·장치 크기·자동 확인 설정 보존까지 확인한다. 성공 파일은 통과했을 때만 작성한다. 게시 후 실행 결과와 증거 URL은 해당 릴리스의 UPDATE-VERIFICATION.json/md를 기준으로 확인한다.
+- 실제 실행 결과(2026-10-14 10:15:51 UTC): 공개 v0.17.1→v0.17.2 자동 업데이트 통과. 새 EXE SHA-256은 `f0f2c55b90ea6e8894b92c672d9ae26febb74090cf524494265da88a735d6479`. 도우미가 실행한 새 main의 asar 버전 0.17.2와 실행 유지, 재열기 후 코드·글꼴 17·보드 125%·Jellybean·자동 설정 보존을 확인했다. [공개 검증 JSON](https://github.com/moonsyu/STM-Simulator/releases/download/v0.17.2/UPDATE-VERIFICATION.json), [검증 설명](https://github.com/moonsyu/STM-Simulator/releases/download/v0.17.2/UPDATE-VERIFICATION.md)을 업로드하고 다시 내려받아 일치를 확인했다.
+- 공개 EXE 빌드/태그 커밋 `fa56d116be7b2f39f25f53ee541e9ee69767c4ec`, 태그 CI `38547037000` 성공. 게시 뒤 main에는 이 검증 기록과 시험의 비동기 대기 처리만 보완했다. 앱 런타임 소스와 패키지 버전은 공개 태그와 동일하다.
 
 ## 0.17.1 업데이트 GUI 실행 수정
 
