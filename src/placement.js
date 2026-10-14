@@ -5,9 +5,9 @@ export function occupiedHoles(components,exceptId){const used=new Set();for(cons
 const distance=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
 // Find one complete, collision-free footprint. Never connect only some new legs.
 // Small lead bends are allowed; all electrical and visible contact points use exact holes.
-export function findMount(p,components=[],radius=15){
+export function findMount(p,components=[],radius=15,surfaces){
  if(p.type==='breadboard')return null;
- const terms=nominalTerminals(p),occupied=occupiedHoles(components,p.id),available=circuitHoles(components).filter(h=>!occupied.has(h.id));
+ const terms=nominalTerminals(p),occupied=occupiedHoles(components,p.id),available=circuitHoles(components,surfaces).filter(h=>!occupied.has(h.id));
  const candidates=available.map(h=>({h,d:distance(h,terms[0])})).filter(x=>x.d<=radius).sort((a,b)=>a.d-b.d).slice(0,8);
  let best=null;
  for(const {h}of candidates){

@@ -86,6 +86,12 @@ ipcMain.handle('project:save',async(_event,text)=>{
   if(result.canceled)return null;
   await fs.writeFile(result.filePath,text,'utf8');return result.filePath;
 });
+ipcMain.handle('preferences:export',async(event,text)=>{
+  if(event.sender!==win?.webContents||event.senderFrame?.parent||typeof text!=='string'||Buffer.byteLength(text)>150000)throw new Error('IDE 설정 내보내기 요청을 확인하세요.');
+  const {validatePreferences}=await import('../src/ide-preferences.js');const preferences=validatePreferences(JSON.parse(text));
+  const result=await dialog.showSaveDialog(win,{title:'IDE 설정 내보내기',defaultPath:'stm-ide-settings.json',filters:[{name:'IDE 설정',extensions:['json']}]});
+  if(result.canceled)return null;await fs.writeFile(result.filePath,JSON.stringify(preferences,null,2),'utf8');return result.filePath;
+});
 ipcMain.handle('project:open',async()=>{
   const result=await dialog.showOpenDialog(win,{title:'회로 불러오기',properties:['openFile'],filters:[{name:'STM Simulator',extensions:['stm32lab','json']}]});
   if(result.canceled)return null;

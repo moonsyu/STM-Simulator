@@ -52,6 +52,10 @@ electron-builder 26.15.3 is a build-time dependency under the MIT license, copyr
 
 Source: [electron-builder](https://github.com/electron-userland/electron-builder).
 
+## Jellybean palette reference
+
+The Jellybean theme references color values from [jellybeans.vim](https://github.com/nanotech/jellybeans.vim), copyright (c) 2009-2019 NanoTech, published under the MIT license. The original license is available in the [upstream source header](https://github.com/nanotech/jellybeans.vim/blob/master/colors/jellybeans.vim). The Monaco rules, workbench appearance and preference editor are implemented in this repository.
+
 ## Optional external development tools
 
 ARM GCC/GDB, MinGW-w64 GCC/GDB, clangd, OpenOCD and STM32CubeF4 are separate user-installed programs and SDKs, not bundled into the application EXE. The optional setup script downloads unmodified vendor distributions, verifies their checksums or Git revisions, and preserves their license files. Their individual licenses and device restrictions continue to apply. ST HAL/CMSIS source files are compiled from the configured external SDK; no ST driver source has been copied into the application repository. QEMU is used only by the optional ARM GDB integration test and is not shipped with the application.

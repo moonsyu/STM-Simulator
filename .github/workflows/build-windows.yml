@@ -59,6 +59,8 @@ jobs:
         run: npm run test:updates:ui
       - name: Test Windows EXE replacement and rollback
         run: node scripts/update-apply-check.cjs
+      - name: Test device resizing, themes and IDE preferences
+        run: npm run test:appearance:ui
       - name: Test Electron editing and HAL workflows
         shell: pwsh
         run: |

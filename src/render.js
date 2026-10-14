@@ -2,6 +2,7 @@ import {isSelected,wirePoints} from './circuit-edit.js';
 import {PINS,HOLES,BB,endpointInfo,circuitHoles,breadboardPrefix} from './pins.js';
 import {terminalKeys,localTerminals,nominalTerminals,rotatePoint,attachments,PART_DEFS} from './components.js';
 import {extraShape,updateExtraSvg} from './part-render.js';
+import {scaleOf,surfaceTransform,surfacePoint} from './geometry.js';
 export const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const text=(x,y,s,size=10,color='#4a6e87',other='')=>`<text x="${x}" y="${y}" font-size="${size}" fill="${color}" ${other}>${esc(s)}</text>`;
 const rect=(x,y,w,h,fill,rx=0,extra='')=>`<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${rx}" fill="${fill}" ${extra}/>`;
@@ -31,7 +32,7 @@ export function boardSvg(){
  return s+'</g>';
 }
 export function breadboardSvg(part=null,selected=null){
- const prefix=part?breadboardPrefix(part.id):'',attributes=part?` data-part="${part.id}" data-rotation="${part.rotation}" transform="translate(${part.x} ${part.y}) rotate(${part.rotation}) translate(${-BB.x-BB.w/2} ${-BB.y-BB.h/2})"`:'';
+ const prefix=part?breadboardPrefix(part.id):'',attributes=part?` data-part="${part.id}" data-rotation="${part.rotation}" transform="translate(${part.x} ${part.y}) rotate(${part.rotation}) scale(${scaleOf(part)}) translate(${-BB.x-BB.w/2} ${-BB.y-BB.h/2})"`:' data-surface="breadboard"';
  let s=`<g class="breadboard ${part&&isSelected(selected,'part',part.id)?'part-selected':''}"${attributes}>${rect(BB.x,BB.y,BB.w,BB.h,'url(#plastic)',6,'stroke="#cbd1d4" filter="url(#shadow)" class="breadboard-body"')}`;
  s+=rect(BB.x+157,BB.startY-12,13,436,'#dce3e5',3)+rect(BB.x+160,BB.startY-9,6,429,'#d0d9dc',2);
  for(const [x,sign,color]of [[BB.x+12,'+','#d87565'],[BB.x+48,'−','#6c9eca'],[BB.x+290,'+','#d87565'],[BB.x+326,'−','#6c9eca']]){
@@ -46,13 +47,14 @@ export function breadboardSvg(part=null,selected=null){
 export function initSvg(svg){svg.innerHTML=`<defs><linearGradient id="pcb" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#fff"/><stop offset="1" stop-color="#edf1ef"/></linearGradient><linearGradient id="plastic" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#fffefa"/><stop offset="1" stop-color="#f0f0e9"/></linearGradient><filter id="shadow" x="-20%" y="-10%" width="145%" height="140%"><feDropShadow dx="0" dy="6" stdDeviation="5" flood-color="#536c7b" flood-opacity=".16"/></filter><filter id="led-glow" x="-100%" y="-100%" width="300%" height="300%"><feGaussianBlur stdDeviation="6"/></filter></defs><g id="surface">${boardSvg()}${breadboardSvg()}${text(46,32,'01  /  MICROCONTROLLER',9,'#8395a3','letter-spacing="1.6"')}${text(BB.x,51,'02  /  BREADBOARD',9,'#8395a3','letter-spacing="1.6"')}<g id="breadboard-layer"></g><g id="endpoint-layer"></g><g id="wire-layer"></g><g id="part-layer"></g><g id="net-layer" pointer-events="none"></g><g id="wire-handle-layer"></g><g id="search-layer" pointer-events="none"></g><g id="preview-layer" pointer-events="none"></g>${text(48,710,'2핀: 두 연결점 클릭  /  다핀: 모형을 끌어 설치  /  R: 45° 회전  /  Esc: 선택 삭제',10,'#a0afb9','pointer-events="none"')}</g>`;}
 export function route(a,b){const mid=a.x+(b.x-a.x)*.47;return `M${a.x} ${a.y} L${mid} ${a.y} L${mid} ${b.y} L${b.x} ${b.y}`;}
 export function renderWires(project,selected){return project.wires.map(w=>{
-  const a=endpointInfo(w.from,project.components),b=endpointInfo(w.to,project.components);if(!a||!b)return '';
+  const a=endpointInfo(w.from,project.components,project.surfaces),b=endpointInfo(w.to,project.components,project.surfaces);if(!a||!b)return '';
   const d=wirePoints(project,w).map((p,i)=>`${i?'L':'M'}${p.x} ${p.y}`).join(' ');return `<g class="${isSelected(selected,'wire',w.id)?'wire-selected':''}" data-wire="${w.id}"><path d="${d}" stroke="#0d25331a" stroke-width="6" class="wire-visible" transform="translate(0 2)"/><path d="${d}" stroke="${w.color}" stroke-width="3.5" class="wire-visible"/><path d="${d}" class="wire-hit"/><circle cx="${a.x}" cy="${a.y}" r="3" fill="${w.color}"/><circle cx="${b.x}" cy="${b.y}" r="3" fill="${w.color}"/></g>`;
 }).join('');}
 export const LED_COLORS={red:'#f05a4b',green:'#65c668',blue:'#53a8f7',yellow:'#f4c941'};
 export function renderBreadboards(project,selected){return project.components.filter(p=>p.type==='breadboard').map(p=>breadboardSvg(p,selected)).join('');}
+export function updateSurfaces(svg,project,selected){for(const [key,selector]of [['board','.board'],['breadboard','[data-surface="breadboard"]']]){const group=svg.querySelector(selector);group.dataset.surface=key;group.setAttribute('transform',surfaceTransform(key,project.surfaces));group.classList.toggle('part-selected',selected?.type==='surface'&&selected.id===key);}}
 export function renderParts(project,selected,result,pressed){const parts=project.components.filter(p=>p.type!=='breadboard'),ordered=[...parts.filter(p=>selected?.id!==p.id),...parts.filter(p=>selected?.id===p.id)];return ordered.map(p=>{
- const x=p.x,y=p.y,angle=p.rotation,terms=localTerminals(p),nominal=nominalTerminals(p),half=Math.min(18,Math.max(4,(p.span??70)/2-4));
+ const x=p.x,y=p.y,angle=p.rotation,scale=scaleOf(p),terms=localTerminals({...p,scale:1}),nominal=nominalTerminals(p),half=Math.min(18,Math.max(4,(p.span??70)/2-4));
  let shape=extraShape(p,result);
  if(p.type==='resistor')shape=rect(-half,-7,half*2,14,'#ddc394',4,'stroke="#9f895f"')+[-.6,-.2,.25,.7].map((v,i)=>rect(v*half,-7,Math.min(3,half/5),14,['#c26839','#bf6638','#805139','#d7b543'][i])).join('');
  if(p.type==='led'){const color=LED_COLORS[p.color],on=result?.parts[p.id]?.on;shape=`<circle class="led-glow" r="23" fill="${color}" opacity="${on?.6:0}" filter="url(#led-glow)"/><circle class="led-lens" r="12" fill="${on?color:'#704b4c'}" stroke="${color}" stroke-width="2"/><ellipse cx="-4" cy="-4" rx="3" ry="4" fill="#fff" opacity=".3"/><path d="M8 -8V8" stroke="#421e26" stroke-width="2"/>`+text(-18,-13,'+',10,color)+text(15,-13,'−',10,color);}
@@ -63,10 +65,10 @@ export function renderParts(project,selected,result,pressed){const parts=project
    shape+=text(-105,34,'1',7,'#d0e7df')+text(105,34,'16',7,'#d0e7df','text-anchor="end"');
  }
  const label=['resistor','potentiometer'].includes(p.type)?`${p.name} · ${p.value>=1000?(p.value/1000)+' kΩ':p.value+' Ω'}`:p.type==='capacitor'?`${p.name} · ${p.value} µF`:p.name;
- const radians=angle*Math.PI/180,lcdHeight=Math.abs(Math.sin(radians))*121+Math.abs(Math.cos(radians))*46;
- const body=PART_DEFS[p.type]?.body,bodyHeight=body?(Math.abs(Math.sin(radians))*body.width+Math.abs(Math.cos(radians))*body.height)/2+14:42;
- const labelY=Math.min(y-(p.type==='lcd'?lcdHeight+14:PART_DEFS[p.type]?bodyHeight:27),...terminalKeys(p).map(key=>endpointInfo(`part:${p.id}:${key}`,project.components).y-13));
- const leads=terms.map((t,i)=>{const end=endpointInfo(`part:${p.id}:${t.key}`,project.components);let root;
+ const radians=angle*Math.PI/180,lcdHeight=(Math.abs(Math.sin(radians))*121+Math.abs(Math.cos(radians))*46)*scale;
+ const body=PART_DEFS[p.type]?.body,bodyHeight=(body?(Math.abs(Math.sin(radians))*body.width+Math.abs(Math.cos(radians))*body.height)/2+14:42)*scale;
+ const labelY=Math.min(y-(p.type==='lcd'?lcdHeight+14:PART_DEFS[p.type]?bodyHeight:27),...terminalKeys(p).map(key=>endpointInfo(`part:${p.id}:${key}`,project.components,project.surfaces).y-13));
+ const leads=terms.map((t,i)=>{const end=endpointInfo(`part:${p.id}:${t.key}`,project.components,project.surfaces);let root;
    if(p.type==='button')root=rotatePoint(Math.sign(t.x)*14,Math.sign(t.y)*9,angle);
    else if(p.type==='lcd')root=rotatePoint(t.x,35,angle);
    else if(p.type==='sevenseg')root=rotatePoint(t.x,Math.sign(t.y)*27,angle);
@@ -75,14 +77,14 @@ export function renderParts(project,selected,result,pressed){const parts=project
    else if(PART_DEFS[p.type]?.labels)root=rotatePoint(t.x,PART_DEFS[p.type].pinY?PART_DEFS[p.type].pinY-14:p.type==='ultrasonic'?22:14,angle);
    else if(['capacitor','diode','buzzer','passive_buzzer'].includes(p.type))root=rotatePoint(Math.sign(t.x)*(['buzzer','passive_buzzer'].includes(p.type)?16:12),0,angle);
    else root=rotatePoint(Math.sign(t.x)*(p.type==='led'?10:half),0,angle);
-   return `<path d="M${x+root.x} ${y+root.y}L${nominal[i].x} ${nominal[i].y}L${end.x} ${end.y}" fill="none" stroke="#708c9b" stroke-width="3" stroke-linejoin="round"/><circle class="part-contact" cx="${end.x}" cy="${end.y}" r="3" fill="${attachments(p)[t.key]?'#20a985':'#bdcdd5'}" stroke="#607d8d"/>`;
+   return `<path d="M${x+root.x*scale} ${y+root.y*scale}L${nominal[i].x} ${nominal[i].y}L${end.x} ${end.y}" fill="none" stroke="#708c9b" stroke-width="3" stroke-linejoin="round"/><circle class="part-contact" cx="${end.x}" cy="${end.y}" r="3" fill="${attachments(p)[t.key]?'#20a985':'#bdcdd5'}" stroke="#607d8d"/>`;
  }).join('');
- const hits=terminalKeys(p).map(key=>{const e=endpointInfo(`part:${p.id}:${key}`,project.components);return `<circle cx="${e.x}" cy="${e.y}" r="5.5" data-endpoint="${e.id}" class="pin-hit part-pin"/>`;}).join('');
- return `<g data-part="${p.id}" data-rotation="${angle}" data-mounted="${Object.keys(attachments(p)).length}" class="${isSelected(selected,'part',p.id)?'part-selected':''}">${leads}<g class="part-body" transform="translate(${x} ${y}) rotate(${angle})">${shape}</g>${text(x,labelY,label,9,'#496477','text-anchor="middle" pointer-events="none"')}${hits}</g>`;
+ const hits=terminalKeys(p).map(key=>{const e=endpointInfo(`part:${p.id}:${key}`,project.components,project.surfaces);return `<circle cx="${e.x}" cy="${e.y}" r="5.5" data-endpoint="${e.id}" class="pin-hit part-pin"/>`;}).join('');
+ return `<g data-part="${p.id}" data-rotation="${angle}" data-scale="${scale}" data-mounted="${Object.keys(attachments(p)).length}" class="${isSelected(selected,'part',p.id)?'part-selected':''}">${leads}<g class="part-body" transform="translate(${x} ${y}) rotate(${angle}) scale(${scale})">${shape}</g>${text(x,labelY,label,9,'#496477','text-anchor="middle" pointer-events="none"')}${hits}</g>`;
 }).join('');}
-export function renderEndpoints(project,pending){return [...PINS,...circuitHoles(project.components)].map(e=>`<circle cx="${e.x}" cy="${e.y}" r="6.5" data-endpoint="${e.id}" class="pin-hit ${pending===e.id?'pending':''}"/>`).join('');}
+export function renderEndpoints(project,pending){return [...PINS.map(p=>surfacePoint(p,'board',project.surfaces)),...circuitHoles(project.components,project.surfaces)].map(e=>`<circle cx="${e.x}" cy="${e.y}" r="6.5" data-endpoint="${e.id}" class="pin-hit ${pending===e.id?'pending':''}"/>`).join('');}
 export function renderMountPreview(mount){return mount?mount.points.map(h=>`<circle cx="${h.x}" cy="${h.y}" r="6" fill="#24b78b44" stroke="#159b73" stroke-width="1.6"/>`).join(''):'';}
-export function renderPinSearch(pins,selectedId=null){return [...pins.filter(p=>p.id!==selectedId),...pins.filter(p=>p.id===selectedId)].map(p=>{
+export function renderPinSearch(pins,selectedId=null,surfaces){return [...pins.filter(p=>p.id!==selectedId),...pins.filter(p=>p.id===selectedId)].map(raw=>{const p=surfacePoint(raw,'board',surfaces);
  const selected=p.id===selectedId,x=p.x<260?p.x+24:p.x-154;
  return `<g data-search-highlight="${p.id}" data-selected="${selected}"><title>${esc(`${selected?'선택됨: ':''}${p.header}-${p.number} · ${p.signal}`)}</title><circle cx="${p.x}" cy="${p.y}" r="${selected?16:9}" fill="${selected?'#2786d744':'#ffda6120'}" stroke="${selected?'#1979cc':'#e7a71f'}" stroke-width="${selected?3:1.5}"/>${selected?`<circle cx="${p.x}" cy="${p.y}" r="7" fill="#1979cc" stroke="white" stroke-width="2"/><path d="M${p.x} ${p.y-16}V${p.y-33}H${x+65}" fill="none" stroke="#1979cc" stroke-width="1.5"/>${rect(x,p.y-57,130,24,'#1764a4',5)}${text(x+65,p.y-41,`${p.header}-${p.number} · ${p.signal}`,10,'white','text-anchor="middle" font-weight="700"')}`:`<circle cx="${p.x}" cy="${p.y}" r="3" fill="#ffe389"/>`}</g>`;
  }).join('');}
