@@ -33,6 +33,8 @@ Windows x64 포터블 EXE는 앱 시작 8초 후, 이후 실행 중 6시간마�
 - `node scripts/update-apply-check.cjs`: Windows에서 실제 실행 파일 잠금을 기다려 교체·재실행하고, 잘못된 EXE의 시작 실패 시 원본 복원을 검사합니다.
 - `npm run build` / `npm run build:artifact`: 업데이트 JS·PowerShell·UI·문서가 실제 패키지에 들어갔는지 원본과 비교합니다.
 
-공개 서버를 통한 서로 다른 두 정식 앱 버전의 실제 업그레이드는 두 버전의 게시 후 별도로 확인해야 합니다.
+공개 서버를 통한 서로 다른 두 정식 앱 버전의 실제 업그레이드는 두 버전 게시 후 `node scripts/release-update-check.cjs`로 확인합니다. 이전 공개 EXE와 해시 증거(`work/test-results/update-release-baseline.json`)를 준비하고 실행하면, 이전 앱의 원본 업데이트 코드로 GitHub 조회·다운로드·검증·저장 후 재시작·실제 파일 교체를 수행합니다. 새로 실행된 프로세스의 asar 버전과 파일 해시를 확인하고 새 앱을 다시 열어 코드 보존·새 설정 화면을 검사합니다. 이 검사는 업데이트 네트워크나 main IPC를 대체하지 않습니다.
+
+실행 증거는 `work/test-results/release-update-proof.json`, 공개 배포 검증 증거는 릴리스 자산의 `UPDATE-VERIFICATION.json`으로 관리합니다.
 
 기술 근거: [GitHub Releases API](https://docs.github.com/en/rest/releases/releases#get-the-latest-release), [electron-builder v26 포터블 설정](https://www.electron.build/v26/docs/nsis/#portable), 빌드에 사용한 `app-builder-lib/templates/nsis/portable.nsi`의 `PORTABLE_EXECUTABLE_FILE` 환경 변수. 포터블 EXE는 표준 설치형 자동 업데이트 대상이 아니므로 현재 배포 형식에 맞는 별도 교체 과정을 사용합니다.

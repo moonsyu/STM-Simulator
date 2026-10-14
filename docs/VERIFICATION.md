@@ -1,36 +1,35 @@
-# 현재 검증 기록 — 0.16.0 (포터블 자동 업데이트)
+# 현재 검증 기록 — 0.17.0 (장치 크기와 IDE 설정)
 
-- 검증일: 2026-10-14. Windows x64, Electron 44.2.0, Playwright 1.58.2.
-- 범위: 포터블 EXE 자동 확인·다운로드·검증·저장 후 재시작, Windows 교체 도우미와 태그 릴리스 게시 구성.
-- 현재 결과는 로컬 구현·빌드 검증이다. 공개 GitHub 최신 릴리스는 API 확인 시 v0.15.2였다. 이 변경은 아직 게시하지 않았다.
+- 검증일: 2026-10-14. Windows x64, Electron 44.2.0, Monaco 0.57.0, Playwright 1.58.2.
+- 변경 범위: 모든 장치의 기하 배율, Jellybean 기본 테마, IDE 표시 설정, 사용자 테마와 설정 파일, 공개 릴리스 자동 업데이트 검증.
 
 ## 검사 결과
 
 | 검사 | 결과 | 증거 |
 | --- | --- | --- |
-| 전체 모델 | 209/209 통과 | work/test-results/updates-model.log |
-| 업데이트 모델·전송 | 13/13 통과. 버전 비교, 업로드 완료, HTTPS 주소, SHA-256, 잘림/초과, 중복 요청, 오프라인, 캐시 재사용/변조 | tests/updater.test.js |
-| 기존 Electron UI | 15개 스크립트 모두 통과. 회로·편집·부품·HAL·IDE·레이아웃·타이머 기본값 | work/test-results/updates-regression-ui.log |
-| 업데이트 Electron UI | 설정·준비 상태·설치 오류·1024px 창 검사. 설치 요청 직전 현재 코드의 캐시와 실제 프로젝트 폴더 저장 확인 | update-ui-check.json, update-ready.png, update-compact.png |
-| 실제 Windows 교체 | 실행 파일 잠금 해제 대기, 원자적 교체·재실행, 잘못된 EXE의 원본 복원, 부모 종료 후 도우미 생존·재실행, 한글/공백/따옴표/$ 경로 통과 | update-apply-check.json |
-| 실제 단일 포터블 EXE | 추출·실행, 올바른 버전, 업데이트 활성화, 설정 영속화, 공개 GitHub 수동 확인 완료 | update-portable-check.json, update-portable.png |
-| 패키지·라이선스 | 업데이트 JS·PowerShell·문서 및 기존 IDE 파일의 asar/원본 일치, 아이콘·런타임·Monaco 라이선스 보존 | npm run build:artifact |
-| 게시 구성 | YAML 파싱, 태그 빌드와 성공 빌드 의존성, 게시 PowerShell 구문 파싱 통과 | .github/workflows/build-windows.yml |
-| 변경 형식 | git diff --check 통과 | Git 작업 트리 |
+| 전체 모델 | 217/217 통과 | work/test-results/v017-model.log |
+| 새 모델 검사 | 모든 부품의 회전/배율, STM 핀과 배선, 기본/추가 빵판 장착 위치, 전류 보존, 원자적 범위 검사, 테마 저장/검증 8개 통과 | tests/appearance.test.js |
+| 기존 Electron UI | 15개 스크립트 모두 통과 | work/test-results/v017-ui.log |
+| 새 Electron UI | 35종 부품을 실제 UI에서 150%로 변경. STM/기본 빵판 핀·선택 검색·회로 실행, 설정 재시작/프로젝트 전환 보존, JSON 내보내기/가져오기, 잘못된 설정 거부, Light 전환과 함수 색상, 1024px 배치 검사 통과 | appearance-smoke.json, ide-settings-jellybean.png, jellybean-code-highlights.png, all-devices-scaled.png, ide-settings-compact.png |
+| IDE 회귀 검사 | 프로젝트·Monaco·디버거·패널·저장 통과 | ide-smoke.json |
+| 네이티브 IDE | 실제 GCC 빌드, GDB step/watch/register, EXE 실행·터미널, clangd 진단·오류 이동·실패 빌드 무효화 통과 | native-ide-smoke.json |
+| 업데이트 UI/도우미 | 좁은 창·저장 후 재시작 및 실제 Windows EXE 잠금·교체·재실행·원본 복원·부모 종료 후 생존 검사 통과 | update-ui-check.json, update-apply-check.json |
+| 패키지 | 새 기하·테마·설정·업데이터 파일의 asar/원본 일치, 버전·아이콘·런타임/Monaco 고지 검사 통과 | npm run build:artifact |
 
-증거 파일명만 적은 항목은 work/test-results/ 아래에 있다. 업데이트 창의 0.17.0 표시는 IPC 테스트용 가상 버전이며 실제 공개 릴리스가 아니다. Windows 교체 시험은 별도로 컴파일한 작은 EXE를 사용했다.
+파일명만 적은 증거는 work/test-results/ 아래에 있다. 함수/자료형 색 구분은 C/C++ 토큰과 호출 형태를 사용하는 표시 기능이며 네이티브 컴파일러의 정적 분석 결과는 clangd 경로로 제공한다.
 
-## 로컬 배포 파일
+## 로컬 빌드
 
-- EXE: outputs/artifact/STM-Simulator-0.16.0-win-x64.exe
-- 크기: 102592788 bytes
-- SHA-256: 70c512e9f7874aed93bb79ce9d2813a95e54208f014388bdd82be47d82f6740e
-- 자동 업데이트 매니페스트: outputs/artifact/update-manifest.json
-- 빌드 정보·해시: outputs/artifact/BUILD-INFO.json, outputs/artifact/SHA256.txt
-- 로컬 빌드이므로 BUILD-INFO의 commit/workflow는 null이다. 공개 배포 시 태그 CI에서 다시 만든 산출물의 커밋·해시를 사용한다.
+- EXE: outputs/artifact/STM-Simulator-0.17.0-win-x64.exe
+- 크기: 102606633 bytes
+- SHA-256: d80b3cf58afdcf1d85b7f26b2dd652c990be93fef4d6b0bc19af78f19844bed9
+- 매니페스트: outputs/artifact/update-manifest.json
+- 이 해시는 로컬 빌드다. GitHub의 태그 CI 산출물은 별도 빌드이며, 공개 Assets의 SHA256.txt와 BUILD-INFO.json을 기준으로 확인한다.
 
-## 검증의 범위
+## 공개 릴리스와 실제 자동 업데이트
 
-공개 서버에 서로 다른 두 정식 앱 버전을 게시한 뒤 실제 앱 간 업그레이드를 수행하는 검사는 남아 있다. 태그 게시 작업도 아직 원격에서 실행하지 않았다. 현재는 실제 Windows 도우미의 교체/복원/부모 종료 동작과 실제 포터블 앱의 GitHub 확인을 각각 검증했다.
+v0.16.1의 태그 CI 38540312010이 빌드/게시까지 성공했다. 공개 EXE를 다시 내려받아 102591677 bytes, SHA-256 b6133ff34e1c17401f9ef519becf35824eb590bd62534290af395516f6858a63, 빌드 커밋 a09d41039fdb8f530d9c9e0fe2e39e5acc2d97a0을 확인했다. 이 EXE를 공개 업그레이드 출발점으로 사용한다.
 
-교체 도우미는 새 프로세스를 시작하는 데 실패할 때 백업 복원을 시도한다. 앱이 시작 후 정상 동작하는지 판정하는 롤백 기능은 아니다. 자세한 동작·제약·재현 명령은 UPDATES.md를 참고한다.
+공개 v0.17.0 게시 후 `node scripts/release-update-check.cjs`는 이전 공개 EXE 자체의 원본 업데이트 코드로 GitHub 조회·다운로드·SHA-256 검증·저장 후 재시작·실제 파일 교체를 수행한다. 교체 도우미가 실행한 새 프로세스의 asar 버전과 새 EXE 해시를 검사하고, 새 앱을 다시 열어 현재 버전·기존 코드·새 IDE 설정 화면을 확인한다. 네트워크나 업데이트 IPC 응답을 대체하지 않는다.
+
+최종 공개 실행 결과는 [v0.17.0 릴리스](https://github.com/moonsyu/STM-Simulator/releases/tag/v0.17.0)의 **UPDATE-VERIFICATION.json**, 로컬 work/test-results/release-update-proof.json에서 확인한다. 공개 EXE/ZIP/태그/빌드 커밋 검증은 work/test-results/release-proof.json에 기록한다. 테스트 프로필과 중간 EXE는 검증 종료 후 정리한다.

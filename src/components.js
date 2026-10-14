@@ -1,5 +1,6 @@
 import {L298_DEFS} from './l298n.js';
 import {DEVICE_DEFS} from './device-defs.js';
+import {scaleOf} from './geometry.js';
 // Geometry shared by rendering, hit testing, mounting and project validation.
 export const TWO_PIN_TYPES=['resistor','led','capacitor','diode','buzzer','passive_buzzer','ldr','ntc','dc_motor','dc_supply'];
 export const MULTI_PIN_TYPES=['l298n','button','lcd','potentiometer','slide','rgb','sevenseg','temperature','ultrasonic','uart','i2c','spi',...Object.keys(DEVICE_DEFS).filter(t=>!['ldr','ntc'].includes(t))];
@@ -34,7 +35,7 @@ export function terminalLabel(p,key){
  if(PART_DEFS[p.type]?.labels)return PART_DEFS[p.type].labels[Number(key.slice(1))-1];
  return ['led','diode'].includes(p.type)?(key==='a'?'A (+)':'K (−)'):['buzzer','passive_buzzer','dc_supply'].includes(p.type)?(key==='a'?'+':'−'):key.toUpperCase();
 }
-export function localTerminals(p){
+function rawTerminals(p){
  if(p.type==='breadboard')return [];
  if(p.type==='button')return [{key:'a',x:-21,y:-14},{key:'b',x:21,y:-14},{key:'c',x:-21,y:14},{key:'d',x:21,y:14}];
  if(p.type==='lcd')return LCD_LABELS.map((_,i)=>({key:'p'+(i+1),x:(i-7.5)*14,y:44}));
@@ -44,6 +45,7 @@ export function localTerminals(p){
  const half=(p.span??70)/2;return [{key:'a',x:-half,y:0},{key:'b',x:half,y:0}];
 }
 export function rotatePoint(x,y,angle){const r=angle*Math.PI/180;return {x:x*Math.cos(r)-y*Math.sin(r),y:x*Math.sin(r)+y*Math.cos(r)};}
+export function localTerminals(p){const scale=scaleOf(p);return rawTerminals(p).map(t=>({...t,x:t.x*scale,y:t.y*scale}));}
 export function nominalTerminals(p){return localTerminals(p).map(t=>{const v=rotatePoint(t.x,t.y,p.rotation);return {...t,x:p.x+v.x,y:p.y+v.y};});}
 export function detachPart(p){delete p.attachA;delete p.attachB;delete p.attachments;}
 export function assignAttachments(p,map){detachPart(p);if(TWO_PIN_TYPES.includes(p.type)){if(map.a)p.attachA=map.a;if(map.b)p.attachB=map.b;}else if(Object.keys(map).length)p.attachments={...map};}

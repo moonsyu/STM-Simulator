@@ -3,6 +3,7 @@ import {PIN_BY_ID,holeInfo} from './pins.js';
 import {terminalKeys,TWO_PIN_TYPES,MULTI_PIN_TYPES,normalizeAngle} from './components.js';
 import {generateHal,defaultMcu,validateMcu} from './mcu-config.js';
 import {DEFAULT_BOARD_ID,getBoard} from './boards.js';
+import {validScale} from './geometry.js';
 export function blankProject(){const mcu={...defaultMcu(),pins:{}};return {format:'stm32-circuit-lab',version:2,name:'새 회로',components:[],wires:[],mcu,firmware:{mode:'hal',files:[]},code:generateHal(mcu).replace('/* USER CODE BEGIN 2 */','/* USER CODE BEGIN 2 */\n  printf("HAL ready\\n");')};}
 export function validateProject(data){
   if(!data||data.format!=='stm32-circuit-lab'||![1,2].includes(data.version))throw new Error('지원하지 않는 회로 파일 형식입니다.');
@@ -17,6 +18,7 @@ export function validateProject(data){
     if(![...TWO_PIN_TYPES,...MULTI_PIN_TYPES,'breadboard'].includes(p.type)||typeof p.name!=='string'||p.name.length>80)throw new Error('지원하지 않는 부품입니다.');
     if(!Number.isFinite(p.x)||!Number.isFinite(p.y)||p.x<0||p.x>6000||p.y<0||p.y>6000||!Number.isFinite(p.rotation)||(data.version===1?![0,1].includes(p.rotation):p.rotation<0||p.rotation>=360))throw new Error('부품 좌표 또는 회전 각도가 올바르지 않습니다.');
     const q={id:p.id,name:p.name,type:p.type,x:p.x,y:p.y,rotation:data.version===1?p.rotation*90:p.rotation};
+    if(p.scale!==undefined)q.scale=validScale(p.scale);
     if(TWO_PIN_TYPES.includes(p.type)){
       q.span=p.span??70;if(!Number.isFinite(q.span)||q.span<4||q.span>1000)throw new Error('부품 다리 간격이 올바르지 않습니다.');
       for(const k of ['attachA','attachB'])if(p[k]!=null){if(!base(p[k]))throw new Error('존재하지 않는 부품 연결점입니다.');q[k]=p[k];}
@@ -52,6 +54,10 @@ export function validateProject(data){
   });
   const project={format:data.format,version:2,name:data.name,code:data.code,components,wires};
   if(data.boardId!==undefined)project.boardId=data.boardId;
+  if(data.surfaces!==undefined){
+    if(!data.surfaces||typeof data.surfaces!=='object'||Array.isArray(data.surfaces))throw new Error('보드 크기 설정을 확인하세요.');
+    project.surfaces={};for(const key of ['board','breadboard'])if(data.surfaces[key]!==undefined)project.surfaces[key]={scale:validScale(data.surfaces[key]?.scale)};
+  }
   if(data.mcu!==undefined)project.mcu=validateMcu(data.mcu);
   if(data.firmware!==undefined){
     if(!data.firmware||!['sketch','hal'].includes(data.firmware.mode)||!Array.isArray(data.firmware.files)||data.firmware.files.length>40)throw new Error('펌웨어 소스 설정이 올바르지 않습니다.');

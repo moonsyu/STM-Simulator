@@ -10,7 +10,7 @@ export function toggleSelection(selection,type,id){
   const next=ids.includes(id)?ids.filter(v=>v!==id):[...ids,id];
   return {type:'group',parts:type==='part'?next:parts,wires:type==='wire'?next:wires};
 }
-export function wirePoints(project,wire){const a=endpointInfo(wire.from,project.components),b=endpointInfo(wire.to,project.components);if(!a||!b)return [];return wire.points?[a,...wire.points,b]:[a,{x:a.x+(b.x-a.x)*.47,y:a.y},{x:a.x+(b.x-a.x)*.47,y:b.y},b];}
+export function wirePoints(project,wire){const a=endpointInfo(wire.from,project.components,project.surfaces),b=endpointInfo(wire.to,project.components,project.surfaces);if(!a||!b)return [];return wire.points?[a,...wire.points,b]:[a,{x:a.x+(b.x-a.x)*.47,y:a.y},{x:a.x+(b.x-a.x)*.47,y:b.y},b];}
 export function insertWirePoint(project,wire,point){
   const points=wirePoints(project,wire);if(points.length>=34)throw new Error('배선 꺾임점은 32개까지 추가할 수 있습니다.');
   let best=Infinity,index=1;
@@ -18,7 +18,7 @@ export function insertWirePoint(project,wire,point){
   points.splice(index,0,{x:point.x,y:point.y});wire.points=points.slice(1,-1);return index-1;
 }
 export function connectedNet(project,endpoint,pressed={}){
-  const uf=topology(project,pressed),root=uf.find(endpoint),all=[...PINS,...circuitHoles(project.components),...project.components.flatMap(p=>terminalKeys(p).map(k=>endpointInfo(`part:${p.id}:${k}`,project.components)))];
+  const uf=topology(project,pressed),root=uf.find(endpoint),all=[...PINS.map(p=>endpointInfo(p.id,project.components,project.surfaces)),...circuitHoles(project.components,project.surfaces),...project.components.flatMap(p=>terminalKeys(p).map(k=>endpointInfo(`part:${p.id}:${k}`,project.components,project.surfaces)))];
   return {endpoints:all.filter(p=>uf.find(p.id)===root),wires:project.wires.filter(w=>uf.find(w.from)===root)};
 }
 export function copySelection(project,selection){
