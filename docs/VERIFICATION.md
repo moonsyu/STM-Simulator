@@ -10,8 +10,16 @@
 | Colorscheme 실제 UI | 원본 Vim·Monaco·VS Code 등록, 실제 편집기 색상/이탤릭체, 전환·내보내기·재시작·잘못된 파일 거부 통과 | work/test-results/colorscheme-smoke.json |
 | 원본 보존 | Jellybeans ef83bf4, SHA-256 791e387b998fecb14169601ee4e925b8d0991da6a235d2a4ef4c2b3225c58f8c; 원본 MIT 헤더 보존 | src/themes/jellybeans/source.json |
 
-전체 모델 **235/235 통과**, 기존 Electron UI **15개 스크립트 통과**. 새 Colorscheme/Docs UI 2종도 통과했다. 최종 패키지 확인은 빌드 후 갱신한다.
+전체 모델 **235/235 통과**, 기존 Electron UI **15개 스크립트 통과**. 새 Colorscheme/Docs UI 2종도 통과했다. 최종 패키지의 Colorscheme/장치 Docs UI 2종도 별도 시험 프로필에서 통과했다.
 
 Bare-metal은 초기화를 HAL에 맡기는 레지스터 학습 코드이며 전체 장치의 HAL 없는 드라이버를 의미하지 않는다. SPI/I2C 레지스터 항목은 상태 관찰 예제다. 실물 보드 실행은 검사하지 않았다. 가상 ARM CPU 펌웨어 실행은 포함하지 않는다.
 
 기존 공개 v0.17.1 → v0.17.2 자동 업데이트의 감지·다운로드·교체·재실행 증거는 [공개 검증 문서](https://github.com/moonsyu/STM-Simulator/releases/download/v0.17.2/UPDATE-VERIFICATION.md)에 있다. 이번 변경은 업데이트 코드에 손대지 않았다.
+
+## 로컬 실행 파일
+
+- 런타임 소스 커밋: `82a7454`. 로컬 Git 저장 완료, GitHub 릴리스는 이번 작업에서 게시하지 않았다.
+- `outputs/artifact/STM-Simulator-0.18.0-win-x64.exe`: 102,631,616 bytes.
+- SHA-256: `c76f5881759b8f4619a9fe8352af267c654c4b5b95f30af50925e735d1c64a9d`.
+- `prepare-artifact.cjs`의 실제 asar 소스·원본 colorscheme·라이선스·문서·아이콘·버전 일치 검사 통과.
+- `LAB_EXE=work/build/win-unpacked/STM Simulator.exe`로 새 UI 2종을 실행해 배포 패키지 내부 앱을 검증했다. 포터블 래퍼의 별도 재실행/새 버전 공개 자동 업데이트 시험은 이번 변경의 검사 범위에 포함하지 않았다.

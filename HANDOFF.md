@@ -190,3 +190,5 @@ node scripts/portable-smoke.cjs
 - `colorscheme.js`: 데이터 전용 Monaco/VS Code JSON, 정적 Vim import. 동적 Vimscript는 실행하지 않는다. 원본 규칙·이탤릭체·세부 토큰·출처를 보존하고 사용자 색상 수정과 기존 설정 마이그레이션을 지원한다.
 - 설정의 Colorscheme 등록 / 테마 JSON 내보내기와 기존 설정 전체 가져오기는 별도 동작이다.
 - 검증 증거: work/test-results/device-docs-arm.json(118개 ARM 컴파일·링크), device-docs-arm-followup.json(추가 10개), device-docs-smoke.json, colorscheme-smoke.json, docs-full-tests.log. 최종 결과는 docs/VERIFICATION.md를 확인한다.
+
+- 최종 결과: 모델 235/235, 기존 UI 15종, 새 UI 2종과 패키징 앱의 새 UI 2종 모두 통과. 로컬 포터블 EXE 0.18.0 생성 및 asar/라이선스/소스 일치 검증 완료. 런타임 커밋 82a7454, EXE SHA-256 c76f5881759b8f4619a9fe8352af267c654c4b5b95f30af50925e735d1c64a9d.
