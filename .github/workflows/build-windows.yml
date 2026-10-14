@@ -88,6 +88,12 @@ jobs:
         run: npm run build
       - name: Verify package and prepare download
         run: npm run build:artifact
+      - name: Verify update helper from packaged Electron main
+        shell: pwsh
+        run: |
+          $env:LAB_EXE = Join-Path $PWD 'work/build/win-unpacked/STM Simulator.exe'
+          node scripts/update-gui-helper-check.cjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Verify updater in the actual portable EXE
         run: node scripts/update-portable-check.cjs
       - name: Upload Windows download

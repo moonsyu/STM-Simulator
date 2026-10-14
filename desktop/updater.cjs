@@ -82,18 +82,16 @@ async function downloadFile(info,filename,{signal,onProgress=()=>{}}={}){
 }
 async function launchHelper({directory,source,target,info,pid=process.pid}){
   const jobDirectory=await fs.mkdtemp(path.join(directory,'apply-'));
-  const config=path.join(jobDirectory,'job.json'),script=path.join(jobDirectory,'apply.ps1');
+  const config=path.join(jobDirectory,'job.json'),script=path.join(jobDirectory,'apply.ps1'),starter=path.join(jobDirectory,'start.ps1');
   await fs.copyFile(path.join(__dirname,'apply-update.ps1'),script);
+  await fs.copyFile(path.join(__dirname,'start-update.ps1'),starter);
   const ready=path.join(jobDirectory,'ready'),cancel=path.join(jobDirectory,'cancel'),result=path.join(directory,'last-result.json');
   await fs.rm(result,{force:true});
   await fs.writeFile(config,JSON.stringify({source,target,sha256:info.sha256,bytes:info.bytes,pid,token:randomUUID(),result,ready,cancel}));
   const powershell=path.join(process.env.SystemRoot||'C:\\Windows','System32','WindowsPowerShell','v1.0','powershell.exe');
-  const command=`& '${script.replaceAll("'","''")}' -ConfigPath '${config.replaceAll("'","''")}'`;
-  const launch=Buffer.from(JSON.stringify({powershell,command:Buffer.from(command,'utf16le').toString('base64'),log:path.join(directory,'helper.log'),error:path.join(directory,'helper-error.log')})).toString('base64');
-  // Start-Process gives the helper its own hidden console. Node detached PowerShell
-  // exits without running in disconnected Windows sessions; an attached child dies with the app.
-  const bootstrap=`$ErrorActionPreference='Stop'; $updateLaunch=ConvertFrom-Json ([Text.Encoding]::UTF8.GetString([Convert]::FromBase64String('${launch}'))); Start-Process -FilePath $updateLaunch.powershell -ArgumentList @('-NoProfile','-NonInteractive','-ExecutionPolicy','Bypass','-EncodedCommand',$updateLaunch.command) -WindowStyle Hidden -RedirectStandardOutput $updateLaunch.log -RedirectStandardError $updateLaunch.error`;
-  const child=spawn(powershell,['-NoProfile','-NonInteractive','-EncodedCommand',Buffer.from(bootstrap,'utf16le').toString('base64')],{stdio:'ignore',windowsHide:true});
+  // File-based argv keeps paths out of executable command text and avoids deeply
+  // nested encoded commands, which can fail with EPERM from a packaged GUI app.
+  const child=spawn(powershell,['-NoProfile','-NonInteractive','-ExecutionPolicy','Bypass','-File',starter,'-ConfigPath',config],{cwd:directory,stdio:'ignore',windowsHide:true});
   await new Promise((resolve,reject)=>{child.once('spawn',resolve);child.once('error',reject);});
   // Keep the app open unless the helper has validated/staged the replacement.
   for(let i=0;i<150;i++){

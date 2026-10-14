@@ -33,7 +33,7 @@ const {cleanArtifactOutput} = require('./clean-build.cjs');
     assert.deepEqual(asar.extractFile(archive, path.normalize(file)), await fs.readFile(path.join(root, file)), 'Packaged app icon differs from source: ' + file);
   }
   const packed = JSON.parse(asar.extractFile(archive, 'package.json').toString());
-  for (const file of ['desktop/main.cjs', 'desktop/preload.cjs', 'desktop/updater.cjs', 'desktop/apply-update.ps1', 'src/update-ui.js', 'src/geometry.js', 'src/resize.js', 'src/resize-ui.js', 'src/ide-preferences.js', 'src/ide-settings-ui.js', 'src/preferences.css', 'src/components.js', 'src/pins.js', 'src/render.js', 'docs/UPDATES.md']) {
+  for (const file of ['desktop/main.cjs', 'desktop/preload.cjs', 'desktop/updater.cjs', 'desktop/apply-update.ps1', 'desktop/start-update.ps1', 'src/update-ui.js', 'src/geometry.js', 'src/resize.js', 'src/resize-ui.js', 'src/ide-preferences.js', 'src/ide-settings-ui.js', 'src/preferences.css', 'src/components.js', 'src/pins.js', 'src/render.js', 'docs/UPDATES.md']) {
     assert.deepEqual(asar.extractFile(archive, path.normalize(file)), await fs.readFile(path.join(root, file)), 'Packaged updater differs from source: ' + file);
   }
   assert.equal(packed.version, pkg.version, 'Packaged version must match source');
