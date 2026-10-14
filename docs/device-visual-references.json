@@ -1,0 +1,5293 @@
+{
+  "schema_version": 1,
+  "title": "STM32 장치 외형과 핀 구성 자료집",
+  "checked_on": "2026-10-14",
+  "repository_commit": "a24bc1972f4807bde8138e4d802070f0e0ae7344",
+  "scope": "현재 부품 라이브러리 35종 전체와 제조사별 핀·인터페이스 변형, 추가 주변장치 연결 예시",
+  "counting_rule": "pin_count는 선정한 모델의 주요 외부 연결 접점 수입니다. 중복 전원 패드·STEMMA QT·점퍼·기구 지지 탭은 additional_contacts로 구분합니다. null은 회로도에서 확정할 대상이며 0핀 소자를 의미하지 않습니다.",
+  "images": "사진은 원본 출처 URL로 표시합니다. 이미지 파일을 앱·EXE에 포함하지 않습니다. source_ids는 기술 근거, visual_source_id는 외형 참고를 가리킵니다.",
+  "implemented_parts": [
+    {
+      "type": "resistor",
+      "name": "저항",
+      "pins": [
+        "A",
+        "B"
+      ],
+      "reference_variant_ids": [
+        "resistor-axial-2"
+      ]
+    },
+    {
+      "type": "led",
+      "name": "LED",
+      "pins": [
+        "A (+)",
+        "K (−)"
+      ],
+      "reference_variant_ids": [
+        "led-tht-2"
+      ]
+    },
+    {
+      "type": "button",
+      "name": "푸시 버튼",
+      "pins": [
+        "A1",
+        "B1",
+        "A2",
+        "B2"
+      ],
+      "reference_variant_ids": [
+        "button-2",
+        "button-4",
+        "button-module-3"
+      ]
+    },
+    {
+      "type": "lcd",
+      "name": "LCD 1602",
+      "pins": [
+        "1 · VSS",
+        "2 · VDD",
+        "3 · VO",
+        "4 · RS",
+        "5 · R/W",
+        "6 · E",
+        "7 · DB0",
+        "8 · DB1",
+        "9 · DB2",
+        "10 · DB3",
+        "11 · DB4",
+        "12 · DB5",
+        "13 · DB6",
+        "14 · DB7",
+        "15 · A",
+        "16 · K"
+      ],
+      "reference_variant_ids": [
+        "lcd-parallel-16",
+        "lcd-i2c-4"
+      ]
+    },
+    {
+      "type": "breadboard",
+      "name": "빵판",
+      "pins": [],
+      "reference_variant_ids": [
+        "breadboard-400"
+      ]
+    },
+    {
+      "type": "ldr",
+      "name": "조도 센서 · LDR",
+      "pins": [
+        "A",
+        "B"
+      ],
+      "reference_variant_ids": [
+        "ldr-bare-2",
+        "ldr-module-3",
+        "ldr-comparator-4"
+      ]
+    },
+    {
+      "type": "ntc",
+      "name": "NTC 서미스터",
+      "pins": [
+        "A",
+        "B"
+      ],
+      "reference_variant_ids": [
+        "ntc-bare-2",
+        "ntc-module-3"
+      ]
+    },
+    {
+      "type": "sht31",
+      "name": "SHT31 온습도 센서",
+      "pins": [
+        "VCC",
+        "GND",
+        "SDA",
+        "SCL"
+      ],
+      "reference_variant_ids": [
+        "sht31-grove-4",
+        "sht31-breakout-7"
+      ]
+    },
+    {
+      "type": "mpu6050",
+      "name": "MPU6050 가속도·자이로",
+      "pins": [
+        "VCC",
+        "GND",
+        "SDA",
+        "SCL"
+      ],
+      "reference_variant_ids": [
+        "mpu6050-8"
+      ]
+    },
+    {
+      "type": "pir",
+      "name": "PIR 움직임 센서",
+      "pins": [
+        "VCC",
+        "GND",
+        "OUT"
+      ],
+      "reference_variant_ids": [
+        "pir-3"
+      ]
+    },
+    {
+      "type": "oled",
+      "name": "OLED · SSD1306",
+      "pins": [
+        "VCC",
+        "GND",
+        "SDA",
+        "SCL"
+      ],
+      "reference_variant_ids": [
+        "oled-i2c-4",
+        "oled-configurable-7",
+        "oled-configurable-8"
+      ]
+    },
+    {
+      "type": "tft",
+      "name": "TFT · ST7735",
+      "pins": [
+        "VCC",
+        "GND",
+        "CS",
+        "SCK",
+        "MOSI",
+        "DC",
+        "RST"
+      ],
+      "reference_variant_ids": [
+        "st7735-8"
+      ]
+    },
+    {
+      "type": "matrix",
+      "name": "LED 매트릭스 · MAX7219",
+      "pins": [
+        "VCC",
+        "GND",
+        "LOAD",
+        "CLK",
+        "DIN"
+      ],
+      "reference_variant_ids": [
+        "matrix-10"
+      ]
+    },
+    {
+      "type": "servo",
+      "name": "RC 서보 모터",
+      "pins": [
+        "VCC",
+        "GND",
+        "PWM"
+      ],
+      "reference_variant_ids": [
+        "servo-3",
+        "servo-feedback-4"
+      ]
+    },
+    {
+      "type": "motor",
+      "name": "DC 모터 + H 브리지",
+      "pins": [
+        "VM",
+        "GND",
+        "PWM",
+        "IN1",
+        "IN2"
+      ],
+      "reference_variant_ids": [
+        "motor-driver-hat",
+        "dc-motor-2",
+        "l298n-module-13"
+      ]
+    },
+    {
+      "type": "stepper",
+      "name": "스테퍼 모터 + 드라이버",
+      "pins": [
+        "VM",
+        "GND",
+        "IN1",
+        "IN2",
+        "IN3",
+        "IN4"
+      ],
+      "reference_variant_ids": [
+        "stepper-bipolar-4",
+        "stepper-unipolar-5",
+        "stepper-driver-11"
+      ]
+    },
+    {
+      "type": "relay",
+      "name": "릴레이 모듈",
+      "pins": [
+        "VCC",
+        "GND",
+        "IN",
+        "COM",
+        "NO",
+        "NC"
+      ],
+      "reference_variant_ids": [
+        "relay-module-6"
+      ]
+    },
+    {
+      "type": "joystick",
+      "name": "조이스틱",
+      "pins": [
+        "VCC",
+        "GND",
+        "VRX",
+        "VRY",
+        "SW"
+      ],
+      "reference_variant_ids": [
+        "joystick-module-5"
+      ]
+    },
+    {
+      "type": "encoder",
+      "name": "로터리 인코더",
+      "pins": [
+        "VCC",
+        "GND",
+        "A",
+        "B",
+        "SW"
+      ],
+      "reference_variant_ids": [
+        "encoder-bare-5",
+        "encoder-module-5"
+      ]
+    },
+    {
+      "type": "l298n",
+      "name": "L298N 모터 드라이버",
+      "pins": [
+        "VM",
+        "GND",
+        "5V",
+        "ENA",
+        "IN1",
+        "IN2",
+        "IN3",
+        "IN4",
+        "ENB",
+        "OUT1",
+        "OUT2",
+        "OUT3",
+        "OUT4"
+      ],
+      "reference_variant_ids": [
+        "l298n-module-13",
+        "l298n-bare-15",
+        "l298p-bare-20"
+      ]
+    },
+    {
+      "type": "dc_motor",
+      "name": "DC 모터 · 2핀",
+      "pins": [
+        "A",
+        "B"
+      ],
+      "reference_variant_ids": [
+        "dc-motor-2",
+        "motor-driver-hat"
+      ]
+    },
+    {
+      "type": "dc_supply",
+      "name": "외부 DC 전원",
+      "pins": [
+        "+",
+        "−"
+      ],
+      "reference_variant_ids": [
+        "dc-supply-2"
+      ]
+    },
+    {
+      "type": "uart",
+      "name": "UART 터미널",
+      "pins": [
+        "VCC",
+        "GND",
+        "TX",
+        "RX"
+      ],
+      "reference_variant_ids": [
+        "uart-cable-4",
+        "uart-cable-6"
+      ]
+    },
+    {
+      "type": "i2c",
+      "name": "I²C 메모리",
+      "pins": [
+        "VCC",
+        "GND",
+        "SDA",
+        "SCL"
+      ],
+      "reference_variant_ids": [
+        "i2c-eeprom-8",
+        "i2c-eeprom-5"
+      ]
+    },
+    {
+      "type": "spi",
+      "name": "SPI 메모리",
+      "pins": [
+        "VCC",
+        "GND",
+        "CS",
+        "SCK",
+        "MOSI",
+        "MISO"
+      ],
+      "reference_variant_ids": [
+        "spi-eeprom-8"
+      ]
+    },
+    {
+      "type": "potentiometer",
+      "name": "가변저항",
+      "pins": [
+        "1",
+        "2 · WIPER",
+        "3"
+      ],
+      "reference_variant_ids": [
+        "pot-bare-3",
+        "pot-module-3"
+      ]
+    },
+    {
+      "type": "slide",
+      "name": "슬라이드 스위치",
+      "pins": [
+        "A",
+        "COM",
+        "B"
+      ],
+      "reference_variant_ids": [
+        "slide-spdt-3",
+        "slide-dpdt-6",
+        "slide-dp3t-8"
+      ]
+    },
+    {
+      "type": "rgb",
+      "name": "RGB LED",
+      "pins": [
+        "R (+)",
+        "K (−)",
+        "G (+)",
+        "B (+)"
+      ],
+      "reference_variant_ids": [
+        "rgb-common-anode-4",
+        "rgb-common-cathode-4",
+        "rgb-neopixel-4",
+        "rgb-neopixel-flora-4",
+        "rgb-gravity-3"
+      ]
+    },
+    {
+      "type": "capacitor",
+      "name": "커패시터",
+      "pins": [
+        "A",
+        "B"
+      ],
+      "reference_variant_ids": [
+        "capacitor-ceramic-2",
+        "capacitor-electrolytic-2"
+      ]
+    },
+    {
+      "type": "diode",
+      "name": "다이오드",
+      "pins": [
+        "A (+)",
+        "K (−)"
+      ],
+      "reference_variant_ids": [
+        "diode-axial-2"
+      ]
+    },
+    {
+      "type": "buzzer",
+      "name": "능동 부저",
+      "pins": [
+        "+",
+        "−"
+      ],
+      "reference_variant_ids": [
+        "buzzer-active-2",
+        "buzzer-active-module-3"
+      ]
+    },
+    {
+      "type": "passive_buzzer",
+      "name": "수동 부저",
+      "pins": [
+        "+",
+        "−"
+      ],
+      "reference_variant_ids": [
+        "buzzer-passive-2",
+        "buzzer-passive-module-3"
+      ]
+    },
+    {
+      "type": "sevenseg",
+      "name": "7세그먼트",
+      "pins": [
+        "e",
+        "d",
+        "K1",
+        "c",
+        "dp",
+        "b",
+        "a",
+        "K2",
+        "f",
+        "g"
+      ],
+      "reference_variant_ids": [
+        "sevenseg-common-cathode-10",
+        "sevenseg-common-anode-10",
+        "sevenseg-4digit-12",
+        "sevenseg-tm1637-4"
+      ]
+    },
+    {
+      "type": "temperature",
+      "name": "온도 센서",
+      "pins": [
+        "VS",
+        "VOUT",
+        "GND"
+      ],
+      "reference_variant_ids": [
+        "tmp36-to92-3",
+        "ds18b20-to92-3",
+        "ds18b20-probe-3"
+      ]
+    },
+    {
+      "type": "ultrasonic",
+      "name": "초음파 센서",
+      "pins": [
+        "VCC",
+        "TRIG",
+        "ECHO",
+        "GND"
+      ],
+      "reference_variant_ids": [
+        "hcsr04-4",
+        "urm09-trig-3",
+        "urm09-i2c-4"
+      ]
+    }
+  ],
+  "variants": [
+    {
+      "id": "nucleo-f446re",
+      "family": "board",
+      "name": "NUCLEO-F446RE 보드",
+      "pin_count": null,
+      "pins": [],
+      "interface": "보드",
+      "appearance": "흰색 PCB 상단 ST-LINK, 중앙 MCU, 양쪽 Arduino/Morpho 헤더.",
+      "notes": "MCU 패키지 64핀과 보드 헤더 접점 수는 서로 다른 수입니다. 보드 헤더의 핀·전원·NC를 별도로 구분합니다.",
+      "additional_contacts": "보드 커넥터는 보드 핀맵 기준; 부품용 핀 수 필터에서 제외",
+      "source_ids": [
+        "board",
+        "mcu"
+      ],
+      "visual_source_id": "board",
+      "pin_order": "신호 구성 목록입니다. 실제 좌우·상하 순서는 출처의 해당 모델 도면과 실크를 확인하세요."
+    },
+    {
+      "id": "resistor-axial-2",
+      "family": "resistor",
+      "name": "축형 저항 2핀",
+      "pin_count": 2,
+      "pins": [
+        "R1",
+        "R2"
+      ],
+      "interface": "수동 소자",
+      "appearance": "색띠가 있는 원통형 몸체 양끝에 리드.",
+      "notes": "출처 제품은 220Ω입니다. 앱 기본 330Ω과 값이 다르지만 동일한 축형 외형 참고입니다.",
+      "additional_contacts": "",
+      "source_ids": [
+        "resistor"
+      ],
+      "visual_source_id": "resistor",
+      "pin_order": "신호 구성 목록입니다. 실제 좌우·상하 순서는 출처의 해당 모델 도면과 실크를 확인하세요."
+    },
+    {
+      "id": "led-tht-2",
+      "family": "led",
+      "name": "5mm 단색 LED 2핀",
+      "pin_count": 2,
+      "pins": [
+        "A",
+        "K"
+      ],
+      "interface": "GPIO/PWM",
+      "appearance": "둥근 렌즈와 길이가 다른 두 다리. 케이스 평면과 캐소드 표시 확인.",
+      "notes": "",
+      "additional_contacts": "",
+      "source_ids": [
+        "led"
+      ],
+      "visual_source_id": "led",
+      "pin_order": "신호 구성 목록입니다. 실제 좌우·상하 순서는 출처의 해당 모델 도면과 실크를 확인하세요."
+    },
+    {
+      "id": "button-2",
+      "family": "button",
+      "name": "2핀 순간 버튼",
+      "pin_count": 2,
+      "pins": [
+        "SW1",
+        "SW2"
+      ],
+      "interface": "GPIO/EXTI",
+      "appearance": "작은 누름 몸체에 두 전기 단자. 누를 때 연결.",
+      "notes": "",
+      "additional_contacts": "",
+      "source_ids": [
+        "button2"
+      ],
+      "visual_source_id": "button2",
+      "pin_order": "신호 구성 목록입니다. 실제 좌우·상하 순서는 출처의 해당 모델 도면과 실크를 확인하세요."
+    },
+    {
+      "id": "button-4",
+      "family": "button",
+      "name": "4핀 택트 버튼",
+      "pin_count": 4,
+      "pins": [
+        "A1",
+        "B1",
+        "A2",
+        "B2"
+      ],
+      "interface": "GPIO/EXTI",
+      "appearance": "사각 플라스틱 몸체와 금속 덮개, 양쪽 두 다리.",
+      "notes": "4핀은 독립 스위치 네 개가 아닙니다. 같은 측 접점 쌍의 내부 연결은 제조사 도면으로 확인합니다.",
+      "additional_contacts": "",
+      "source_ids": [
+        "button4"
+      ],
+      "visual_source_id": "button4",
+      "pin_order": "신호 구성 목록입니다. 실제 좌우·상하 순서는 출처의 해당 모델 도면과 실크를 확인하세요."
+    },
+    {
+      "id": "button-module-3",
+      "family": "button",
+      "name": "KY-004 버튼 모듈 3핀",
+      "pin_count": 3,
+      "pins": [
+        "S",
+        "+V",
+        "GND"
+      ],
+      "interface": "GPIO/EXTI",
+      "appearance": "택트 스위치가 작은 PCB 위에 있고 한쪽에 3핀 헤더.",
+      "notes": "",
+      "additional_contacts": "",
+      "source_ids": [
+        "button3"
+      ],
+      "visual_source_id": "button3",
+      "pin_order": "신호 구성 목록입니다. 실제 좌우·상하 순서는 출처의 해당 모델 도면과 실크를 확인하세요."
+    },
+    {
+      "id": "lcd-parallel-16",
+      "family": "lcd",
+      "name": "LCD 1602 병렬형 16핀",
+      "pin_count": 16,
+      "pins": [
+        "VSS",
+        "VDD",
+        "VO",
+        "RS",
+        "R/W",
+        "E",
+        "D0",
+        "D1",
+        "D2",
+        "D3",
+        "D4",
+        "D5",
+        "D6",
+        "D7",
+        "A",
+        "K"
+      ],
+      "interface": "GPIO 병렬",
+      "appearance": "긴 문자 LCD와 한 줄 16개 패드·헤더.",
+      "notes": "4비트 모드로 사용해도 물리 핀은 16개입니다. 현재 앱은 이 형태입니다.",
+      "additional_contacts": "",
+      "source_ids": [
+        "lcd16"
+      ],
+      "visual_source_id": "lcd16",
+      "pin_order": "신호 구성 목록입니다. 실제 좌우·상하 순서는 출처의 해당 모델 도면과 실크를 확인하세요."
+    },
+    {
+      "id": "lcd-i2c-4",
+      "family": "lcd",
+      "name": "LCD1602 I²C 모듈 4핀",
+      "pin_count": 4,
+      "pins": [
+        "VCC",
+        "GND",
+        "SCL",
+        "SDA"
+      ],
+      "interface": "I²C",
+      "appearance": "문자 LCD에 I²C 변환 보드가 결합된 형태.",
+      "notes": "외부 인터페이스는 4핀입니다. LCD 본체의 16핀과 합쳐 세지 않습니다. 현재 병렬 LCD와 구동 코드가 다릅니다.",
+      "additional_contacts": "",
+      "source_ids": [
+        "lcd4"
+      ],
+      "visual_source_id": "lcd4",
+      "pin_order": "신호 구성 목록입니다. 실제 좌우·상하 순서는 출처의 해당 모델 도면과 실크를 확인하세요."
+    },
+    {
+      "id": "breadboard-400",
+      "family": "breadboard",
+      "name": "400홀 빵판",
+      "pin_count": null,
+      "pins": [],
+      "interface": "배선",
+      "appearance": "중앙 홈 양옆의 접점과 두 쌍의 전원 레일.",
+      "notes": "400은 구멍 수입니다. 400핀 IC로 분류하지 않습니다.",
+      "additional_contacts": "400홀; 내부 버스 연결은 레일 분리 여부까지 확인",
+      "source_ids": [
+        "breadboard"
+      ],
+      "visual_source_id": "breadboard",
+      "pin_order": "신호 구성 목록입니다. 실제 좌우·상하 순서는 출처의 해당 모델 도면과 실크를 확인하세요."
+    },
+    {
+      "id": "ldr-bare-2",
+      "family": "ldr",
+      "name": "CdS 광저항 소자 2핀",
+      "pin_count": 2,
+      "pins": [
+        "R1",
+        "R2"
+      ],
+      "interface": "ADC 분압",
+      "appearance": "원형 감광 면 위 지그재그 패턴과 두 리드.",
+      "notes": "",
+      "additional_contacts": "",
+      "source_ids": [
+        "ldr2"
+      ],
+      "visual_source_id": "ldr2",
+      "pin_order": "신호 구성 목록입니다. 실제 좌우·상하 순서는 출처의 해당 모델 도면과 실크를 확인하세요."
+    },
+    {
+      "id": "ldr-module-3",
+      "family": "ldr",
+      "name": "KY-018 광저항 분압 모듈 3핀",
+      "pin_count": 3,
+      "pins": [
+        "S",
+        "+V",
+        "GND"
+      ],
+      "interface": "ADC",
+      "appearance": "광저항과 고정 저항이 작은 PCB에 실장됨.",
+      "notes": "",
+      "additional_contacts": "",
+      "source_ids": [
+        "ldr3"
+      ],
+      "visual_source_id": "ldr3",
+      "pin_order": "신호 구성 목록입니다. 실제 좌우·상하 순서는 출처의 해당 모델 도면과 실크를 확인하세요."
+    },
+    {
+      "id": "ldr-comparator-4",
+      "family": "ldr",
+      "name": "광저항 AO/DO 비교기 모듈 4핀",
+      "pin_count": 4,
+      "pins": [
+        "VCC",
+        "GND",
+        "AO",
+        "DO"
+      ],
+      "interface": "ADC/GPIO",
+      "appearance": "광저항, 임계값 조절 트리머, 비교기 칩이 있는 PCB.",
+      "notes": "AO 아날로그 출력과 DO 임계값 출력은 별도 신호입니다.",
+      "additional_contacts": "",
+      "source_ids": [
+        "ldr4"
+      ],
+      "visual_source_id": "ldr4",
+      "pin_order": "신호 구성 목록입니다. 실제 좌우·상하 순서는 출처의 해당 모델 도면과 실크를 확인하세요."
+    },
+    {
+      "id": "ntc-bare-2",
+      "family": "ntc",
+      "name": "NTC 서미스터 2핀",
+      "pin_count": 2,
+      "pins": [
+        "R1",
+        "R2"
+      ],
+      "interface": "ADC 분압",
+      "appearance": "작은 에폭시 비드 센서와 두 리드·케이블.",
+      "notes": "",
+      "additional_contacts": "",
+      "source_ids": [
+        "ntc2"
+      ],
+      "visual_source_id": "ntc2",
+      "pin_order": "신호 구성 목록입니다. 실제 좌우·상하 순서는 출처의 해당 모델 도면과 실크를 확인하세요."
+    },
+    {
+      "id": "ntc-module-3",
+      "family": "ntc",
+      "name": "KY-013 NTC 분압 모듈 3핀",
+      "pin_count": 3,
+      "pins": [
+        "S",
+        "+V",
+        "GND"
+      ],
+      "interface": "ADC",
+      "appearance": "서미스터와 분압 저항이 붙은 3핀 PCB.",
+      "notes": "",
+      "additional_contacts": "",
+      "source_ids": [
+        "ntc3"
+      ],
+      "visual_source_id": "ntc3",
+      "pin_order": "신호 구성 목록입니다. 실제 좌우·상하 순서는 출처의 해당 모델 도면과 실크를 확인하세요."
+    },
+    {
+      "id": "sht31-grove-4",
+      "family": "sht31",
+      "name": "Grove SHT31 4핀",
+      "pin_count": 4,
+      "pins": [
+        "VCC",
+        "GND",
+        "SDA",
+        "SCL"
+      ],
+      "interface": "I²C",
+      "appearance": "작은 센서 칩과 Grove 4핀 소켓.",
+      "notes": "현재 4신호 모델과 인터페이스가 대응합니다. 커넥터 배치·기구는 앱 그림과 다릅니다.",
+      "additional_contacts": "",
+      "source_ids": [
+        "sht31four"
+      ],
+      "visual_source_id": "sht31four",
+      "pin_order": "신호 구성 목록입니다. 실제 좌우·상하 순서는 출처의 해당 모델 도면과 실크를 확인하세요."
+    },
+    {
+      "id": "sht31-breakout-7",
+      "family": "sht31",
+      "name": "Adafruit SHT31-D 헤더 7핀",
+      "pin_count": 7,
+      "pins": [
+        "VIN",
+        "GND",
+        "SCL",
+        "SDA",
+        "ADR",
+        "RST",
+        "ALR"
+      ],
+      "interface": "I²C",
+      "appearance": "센서 칩, 주소 점퍼, 추가 신호를 꺼낸 PCB.",
+      "notes": "주소·리셋·알림 세 신호가 4핀형과의 차이입니다.",
+      "additional_contacts": "STEMMA QT판은 중복 I²C 커넥터 4접점×2 추가",
+      "source_ids": [
+        "sht31",
+        "sht31product"
+      ],
+      "visual_source_id": "sht31product",
+      "pin_order": "신호 구성 목록입니다. 실제 좌우·상하 순서는 출처의 해당 모델 도면과 실크를 확인하세요."
+    },
+    {
+      "id": "mpu6050-8",
+      "family": "mpu6050",
+      "name": "SEN-MPU6050 8핀",
+      "pin_count": 8,
+      "pins": [
+        "VCC",
+        "GND",
+        "SCL",
+        "SDA",
+        "XDA",
+        "XCL",
+        "AD0",
+        "INT"
+      ],
+      "interface": "I²C",
+      "appearance": "MCU와 작은 레귤레이터, 장착홀, 한 줄 8핀 헤더.",
+      "notes": "앱은 VCC/GND/SDA/SCL 네 단자만 표현합니다. 보조 I²C·주소·인터럽트 핀은 표현되지 않습니다.",
+      "additional_contacts": "",
+      "source_ids": [
+        "mpu8"
+      ],
+      "visual_source_id": "mpu8",
+      "pin_order": "신호 구성 목록입니다. 실제 좌우·상하 순서는 출처의 해당 모델 도면과 실크를 확인하세요."
+    },
+    {
+      "id": "pir-3",
+      "family": "pir",
+      "name": "PIR 감지 모듈 3핀",
+      "pin_count": 3,
+      "pins": [
+        "VCC",
+        "OUT",
+        "GND"
+      ],
+      "interface": "GPIO/EXTI",
+      "appearance": "흰색 프레넬 렌즈가 센서 위를 덮고 하부에 PCB가 있음.",
+      "notes": "전면 방향만 보고 3핀 순서를 추정하지 않고 PCB 실크를 확인합니다.",
+      "additional_contacts": "",
+      "source_ids": [
+        "pir"
+      ],
+      "visual_source_id": "pir",
+      "pin_order": "신호 구성 목록입니다. 실제 좌우·상하 순서는 출처의 해당 모델 도면과 실크를 확인하세요."
+    },
+    {
+      "id": "oled-i2c-4",
+      "family": "oled",
+      "name": "SSD1306 I²C OLED 4핀",
+      "pin_count": 4,
+      "pins": [
+        "VCC",
+        "GND",
+        "SCL",
+        "SDA"
+      ],
+      "interface": "I²C",
+      "appearance": "작은 검은 유리 표시창과 4핀 헤더가 있는 PCB.",
+      "notes": "",
+      "additional_contacts": "",
+      "source_ids": [
+        "oled4"
+      ],
+      "visual_source_id": "oled4",
+      "pin_order": "신호 구성 목록입니다. 실제 좌우·상하 순서는 출처의 해당 모델 도면과 실크를 확인하세요."
+    },
+    {
+      "id": "oled-configurable-7",
+      "family": "oled",
+      "name": "Waveshare 0.96 OLED 헤더 7핀",
+      "pin_count": 7,
+      "pins": [
+        "VCC",
+        "GND",
+        "DIN",
+        "CLK",
+        "CS",
+        "DC",
+        "RES"
+      ],
+      "interface": "SPI/I²C 선택",
+      "appearance": "작은 OLED 뒤쪽에 통신 선택 저항과 추가 제어 핀.",
+      "notes": "현재 제품 문서는 SSD1315를 명시합니다. SSD1306과 같은 칩으로 취급하지 않습니다. I²C 선택 시에도 물리 헤더는 7핀입니다.",
+      "additional_contacts": "",
+      "source_ids": [
+        "oled7"
+      ],
+      "visual_source_id": "oled7",
+      "pin_order": "신호 구성 목록입니다. 실제 좌우·상하 순서는 출처의 해당 모델 도면과 실크를 확인하세요."
+    },
+    {
+      "id": "oled-configurable-8",
+      "family": "oled",
+      "name": "Adafruit 구형 128×64 OLED 8핀",
+      "pin_count": 8,
+      "pins": [
+        "GND",
+        "3V3",
+        "VIN",
+        "D0",
+        "D1",
+        "RST",
+        "DC",
+        "CS"
+      ],
+      "interface": "SPI/I²C 선택",
+      "appearance": "전원 핀 둘과 데이터·제어 핀을 한 줄로 꺼낸 OLED PCB.",
+      "notes": "가이드에서 8핀 헤더를 확인했습니다. 신형 리비전과 핀 구성이 다를 수 있습니다.",
+      "additional_contacts": "",
+      "source_ids": [
+        "oledspi"
+      ],
+      "visual_source_id": "oledspi",
+      "pin_order": "신호 구성 목록입니다. 실제 좌우·상하 순서는 출처의 해당 모델 도면과 실크를 확인하세요."
+    },
+    {
+      "id": "st7735-8",
+      "family": "tft",
+      "name": "ST7735S 1.8인치 TFT 8핀",
+      "pin_count": 8,
+      "pins": [
+        "VCC",
+        "GND",
+        "DIN",
+        "CLK",
+        "CS",
+        "DC",
+        "RST",
+        "BL"
+      ],
+      "interface": "SPI",
+      "appearance": "컬러 표시창과 8핀 케이블 인터페이스.",
+      "notes": "앱 7핀 모델에는 BL 백라이트 제어 단자가 없습니다. 실제 모듈의 화면 원점·컨트롤러도 확인해야 합니다.",
+      "additional_contacts": "",
+      "source_ids": [
+        "tft8"
+      ],
+      "visual_source_id": "tft8",
+      "pin_order": "신호 구성 목록입니다. 실제 좌우·상하 순서는 출처의 해당 모델 도면과 실크를 확인하세요."
+    },
+    {
+      "id": "matrix-10",
+      "family": "matrix",
+      "name": "MAX7219 8×8 매트릭스 입력5+출력5",
+      "pin_count": 10,
+      "pins": [
+        "VCC-IN",
+        "GND-IN",
+        "DIN",
+        "CS/LOAD-IN",
+        "CLK-IN",
+        "VCC-OUT",
+        "GND-OUT",
+        "DOUT",
+        "CS/LOAD-OUT",
+        "CLK-OUT"
+      ],
+      "interface": "직렬/SPI 유사",
+      "appearance": "큰 8×8 LED 블록 뒤에 드라이버 PCB와 양쪽 5핀 헤더.",
+      "notes": "앱의 5핀은 입력 측만 모델링합니다. 체인 출력 다섯 접점은 별도입니다.",
+      "additional_contacts": "",
+      "source_ids": [
+        "matrix"
+      ],
+      "visual_source_id": "matrix",
+      "pin_order": "신호 구성 목록입니다. 실제 좌우·상하 순서는 출처의 해당 모델 도면과 실크를 확인하세요."
+    },
+    {
+      "id": "servo-3",
+      "family": "servo",
+      "name": "RC 마이크로 서보 3선",
+      "pin_count": 3,
+      "pins": [
+        "VCC",
+        "GND",
+        "PWM"
+      ],
+      "interface": "TIM PWM",
+      "appearance": "작은 기어박스, 회전축·혼, 3선 케이블.",
+      "notes": "",
+      "additional_contacts": "",
+      "source_ids": [
+        "servo3"
+      ],
+      "visual_source_id": "servo3",
+      "pin_order": "신호 구성 목록입니다. 실제 좌우·상하 순서는 출처의 해당 모델 도면과 실크를 확인하세요."
+    },
+    {
+      "id": "servo-feedback-4",
+      "family": "servo",
+      "name": "위치 피드백 RC 서보 4선",
+      "pin_count": 4,
+      "pins": [
+        "VCC",
+        "GND",
+        "PWM",
+        "FEEDBACK"
+      ],
+      "interface": "TIM PWM + ADC",
+      "appearance": "일반 서보와 비슷하지만 위치 전압 피드백 선이 하나 더 있음.",
+      "notes": "추가 선은 두 번째 PWM 입력이 아닙니다. 현재 앱은 피드백 출력이 없는 3선형입니다.",
+      "additional_contacts": "",
+      "source_ids": [
+        "servo4"
+      ],
+      "visual_source_id": "servo4",
+      "pin_order": "신호 구성 목록입니다. 실제 좌우·상하 순서는 출처의 해당 모델 도면과 실크를 확인하세요."
+    },
+    {
+      "id": "dc-motor-2",
+      "family": "dc_motor",
+      "name": "브러시 DC 모터 2단자",
+      "pin_count": 2,
+      "pins": [
+        "M+",
+        "M-"
+      ],
+      "interface": "외부 드라이버",
+      "appearance": "금속 원통, 회전축, 두 전원 단자.",
+      "notes": "앱의 별도 DC 모터 및 모터+브리지 통합 부품의 모터 외형 참고입니다.",
+      "additional_contacts": "",
+      "source_ids": [
+        "dc2"
+      ],
+      "visual_source_id": "dc2",
+      "pin_order": "신호 구성 목록입니다. 실제 좌우·상하 순서는 출처의 해당 모델 도면과 실크를 확인하세요."
+    },
+    {
+      "id": "motor-driver-hat",
+      "family": "motor",
+      "name": "모터와 드라이버를 분리한 실물 구성",
+      "pin_count": null,
+      "pins": [],
+      "interface": "모터 드라이버",
+      "appearance": "모터는 2단자이고 별도 드라이버 보드에 제어·전원·출력이 모임.",
+      "notes": "현재 motor의 VM/GND/PWM/IN1/IN2 5핀 통합 모델과 정확히 일치하는 실물 제품으로 간주하지 않습니다. 사진은 드라이버 HAT 예시입니다.",
+      "additional_contacts": "HAT 연결 수는 해당 보드 회로도 기준; 앱의 추상 5핀과 별도",
+      "source_ids": [
+        "motor"
+      ],
+      "visual_source_id": "motor",
+      "pin_order": "신호 구성 목록입니다. 실제 좌우·상하 순서는 출처의 해당 모델 도면과 실크를 확인하세요."
+    },
+    {
+      "id": "stepper-bipolar-4",
+      "family": "stepper",
+      "name": "바이폴라 스테퍼 4선",
+      "pin_count": 4,
+      "pins": [
+        "A+",
+        "A-",
+        "B+",
+        "B-"
+      ],
+      "interface": "스테퍼 드라이버",
+      "appearance": "사각 금속 모터와 4선 케이블.",
+      "notes": "1.8°/스텝의 4선 모터입니다. 모터 4선은 IN1~IN4 논리 입력과 다릅니다.",
+      "additional_contacts": "",
+      "source_ids": [
+        "step4"
+      ],
+      "visual_source_id": "step4",
+      "pin_order": "신호 구성 목록입니다. 실제 좌우·상하 순서는 출처의 해당 모델 도면과 실크를 확인하세요."
+    },
+    {
+      "id": "stepper-unipolar-5",
+      "family": "stepper",
+      "name": "28BYJ-48 모터 5선",
+      "pin_count": 5,
+      "pins": [
+        "COMMON",
+        "COIL1",
+        "COIL2",
+        "COIL3",
+        "COIL4"
+      ],
+      "interface": "ULN2003 구동",
+      "appearance": "둥근 기어 모터, 평평한 출력축과 5핀 케이블.",
+      "notes": "4선 NEMA 모터와 코일 구성·기어비가 다릅니다. 앱의 1.8° 모델과 동일한 회전각으로 취급하지 않습니다.",
+      "additional_contacts": "",
+      "source_ids": [
+        "step5"
+      ],
+      "visual_source_id": "step5",
+      "pin_order": "신호 구성 목록입니다. 실제 좌우·상하 순서는 출처의 해당 모델 도면과 실크를 확인하세요."
+    },
+    {
+      "id": "stepper-driver-11",
+      "family": "stepper",
+      "name": "ULN2003 모듈 제어4+전원2+모터5",
+      "pin_count": 11,
+      "pins": [
+        "IN1",
+        "IN2",
+        "IN3",
+        "IN4",
+        "V+",
+        "GND",
+        "M-COM",
+        "M1",
+        "M2",
+        "M3",
+        "M4"
+      ],
+      "interface": "4상 논리 입력",
+      "appearance": "드라이버 칩, 상태 LED, 모터 소켓이 있는 PCB.",
+      "notes": "앱의 6핀은 제어4+전원2만 표현합니다. 모터 소켓의 5접점은 별도로 셉니다.",
+      "additional_contacts": "",
+      "source_ids": [
+        "step5"
+      ],
+      "visual_source_id": "step5",
+      "pin_order": "신호 구성 목록입니다. 실제 좌우·상하 순서는 출처의 해당 모델 도면과 실크를 확인하세요."
+    },
+    {
+      "id": "relay-module-6",
+      "family": "relay",
+      "name": "릴레이 모듈 제어3+접점3",
+      "pin_count": 6,
+      "pins": [
+        "VCC",
+        "GND",
+        "IN",
+        "COM",
+        "NO",
+        "NC"
+      ],
+      "interface": "GPIO",
+      "appearance": "파란 릴레이 블록, 3핀 제어 헤더, 3개 나사 단자.",
+      "notes": "3핀 릴레이 모듈이라는 이름은 제어 측만 가리킵니다. 접점까지 포함하면 6단자입니다.",
+      "additional_contacts": "",
+      "source_ids": [
+        "relay"
+      ],
+      "visual_source_id": "relay",
+      "pin_order": "신호 구성 목록입니다. 실제 좌우·상하 순서는 출처의 해당 모델 도면과 실크를 확인하세요."
+    },
+    {
+      "id": "joystick-module-5",
+      "family": "joystick",
+      "name": "KY-023 조이스틱 5핀",
+      "pin_count": 5,
+      "pins": [
+        "VCC",
+        "GND",
+        "VRX",
+        "VRY",
+        "SW"
+      ],
+      "interface": "ADC×2 + GPIO",
+      "appearance": "검은 스틱과 두 가변저항, 누름 스위치가 있는 PCB.",
+      "notes": "",
+      "additional_contacts": "",
+      "source_ids": [
+        "joystick"
+      ],
+      "visual_source_id": "joystick",
+      "pin_order": "신호 구성 목록입니다. 실제 좌우·상하 순서는 출처의 해당 모델 도면과 실크를 확인하세요."
+    },
+    {
+      "id": "encoder-bare-5",
+      "family": "encoder",
+      "name": "누름 기능 로터리 인코더 소자 5접점",
+      "pin_count": 5,
+      "pins": [
+        "A",
+        "COMMON",
+        "B",
+        "SW1",
+        "SW2"
+      ],
+      "interface": "TIM Encoder/EXTI",
+      "appearance": "금속 회전축과 본체, 회전 접점 3개와 버튼 접점 2개.",
+      "notes": "지지용 금속 탭은 전기 핀 수에서 제외합니다. 5핀이어도 모듈형의 VCC/GND 핀 배치와 다릅니다.",
+      "additional_contacts": "",
+      "source_ids": [
+        "encoderbare"
+      ],
+      "visual_source_id": "encoderbare",
+      "pin_order": "신호 구성 목록입니다. 실제 좌우·상하 순서는 출처의 해당 모델 도면과 실크를 확인하세요."
+    },
+    {
+      "id": "encoder-module-5",
+      "family": "encoder",
+      "name": "KY-040 인코더 모듈 5핀",
+      "pin_count": 5,
+      "pins": [
+        "VCC",
+        "GND",
+        "CLK/A",
+        "DT/B",
+        "SW"
+      ],
+      "interface": "TIM Encoder/EXTI",
+      "appearance": "회전축과 노브, 저항이 실장된 PCB와 5핀 헤더.",
+      "notes": "",
+      "additional_contacts": "",
+      "source_ids": [
+        "encoder"
+      ],
+      "visual_source_id": "encoder",
+      "pin_order": "신호 구성 목록입니다. 실제 좌우·상하 순서는 출처의 해당 모델 도면과 실크를 확인하세요."
+    },
+    {
+      "id": "l298n-module-13",
+      "family": "l298n",
+      "name": "L298N 모듈 주요 외부 단자 13개",
+      "pin_count": 13,
+      "pins": [
+        "VM",
+        "GND",
+        "5V",
+        "ENA",
+        "IN1",
+        "IN2",
+        "IN3",
+        "IN4",
+        "ENB",
+        "OUT1",
+        "OUT2",
+        "OUT3",
+        "OUT4"
+      ],
+      "interface": "TIM PWM/GPIO",
+      "appearance": "빨간 PCB, 큰 검은 방열판, 나사 단자 세 묶음과 제어 헤더.",
+      "notes": "현재 앱은 ENA/ENB와 5V-EN 점퍼를 제거한 구성입니다. 5V가 입력인지 출력인지는 점퍼·보드 회로를 확인합니다.",
+      "additional_contacts": "ENA/ENB/5V-EN 점퍼 접점은 주요 외부 단자 13개와 별도",
+      "source_ids": [
+        "l298n"
+      ],
+      "visual_source_id": "l298n",
+      "pin_order": "신호 구성 목록입니다. 실제 좌우·상하 순서는 출처의 해당 모델 도면과 실크를 확인하세요."
+    },
+    {
+      "id": "dc-supply-2",
+      "family": "dc_supply",
+      "name": "배터리 팩 외부 전원 2선",
+      "pin_count": 2,
+      "pins": [
+        "+",
+        "-"
+      ],
+      "interface": "전원",
+      "appearance": "배터리 홀더와 양·음극 2선.",
+      "notes": "외형 참고는 AA 홀더입니다. 이 제품이 앱의 기본 12V 전원이라는 뜻은 아닙니다.",
+      "additional_contacts": "",
+      "source_ids": [
+        "dc_supply"
+      ],
+      "visual_source_id": "dc_supply",
+      "pin_order": "신호 구성 목록입니다. 실제 좌우·상하 순서는 출처의 해당 모델 도면과 실크를 확인하세요."
+    },
+    {
+      "id": "uart-cable-4",
+      "family": "uart",
+      "name": "USB–TTL 시리얼 케이블 4선",
+      "pin_count": 4,
+      "pins": [
+        "USB-5V",
+        "GND",
+        "TXD",
+        "RXD"
+      ],
+      "interface": "UART",
+      "appearance": "USB 플러그와 끝이 갈라진 4선 케이블.",
+      "notes": "출처의 전원 선은 USB 5V입니다. 앱의 3.3V 전원 터미널과 전원 전압이 다릅니다.",
+      "additional_contacts": "",
+      "source_ids": [
+        "uart4"
+      ],
+      "visual_source_id": "uart4",
+      "pin_order": "신호 구성 목록입니다. 실제 좌우·상하 순서는 출처의 해당 모델 도면과 실크를 확인하세요."
+    },
+    {
+      "id": "uart-cable-6",
+      "family": "uart",
+      "name": "FTDI TTL 시리얼 케이블 6접점",
+      "pin_count": 6,
+      "pins": [
+        "GND",
+        "CTS",
+        "VCC",
+        "TXD",
+        "RXD",
+        "RTS"
+      ],
+      "interface": "UART + 흐름 제어",
+      "appearance": "USB 플러그와 1×6 소켓.",
+      "notes": "4선 케이블에 CTS/RTS 흐름 제어가 추가된 형식입니다. 3.3V/5V 제품을 구분합니다.",
+      "additional_contacts": "",
+      "source_ids": [
+        "uart6"
+      ],
+      "visual_source_id": "uart6",
+      "pin_order": "신호 구성 목록입니다. 실제 좌우·상하 순서는 출처의 해당 모델 도면과 실크를 확인하세요."
+    },
+    {
+      "id": "i2c-eeprom-8",
+      "family": "i2c",
+      "name": "24LC02B I²C EEPROM PDIP8",
+      "pin_count": 8,
+      "pins": [
+        "NC1",
+        "NC2",
+        "NC3",
+        "VSS",
+        "SDA",
+        "SCL",
+        "WP",
+        "VCC"
+      ],
+      "interface": "I²C",
+      "appearance": "검은 DIP8 패키지와 방향을 나타내는 홈.",
+      "notes": "이 24LC02B의 1~3번은 NC입니다. 24LC256 같은 다른 EEPROM의 주소 핀 설명을 그대로 적용하면 안 됩니다. 앱 4핀 메모리는 칩의 부가 핀을 단순화한 범용 모델입니다.",
+      "additional_contacts": "",
+      "source_ids": [
+        "i2c8"
+      ],
+      "visual_source_id": "i2c8",
+      "pin_order": "신호 구성 목록입니다. 실제 좌우·상하 순서는 출처의 해당 모델 도면과 실크를 확인하세요."
+    },
+    {
+      "id": "i2c-eeprom-5",
+      "family": "i2c",
+      "name": "24LC02B SOT-23-5 패키지",
+      "pin_count": 5,
+      "pins": [
+        "SCL",
+        "VSS",
+        "SDA",
+        "VCC",
+        "WP"
+      ],
+      "interface": "I²C",
+      "appearance": "작은 표면실장 패키지의 다섯 접점.",
+      "notes": "PDIP8과 같은 계열의 패키지 변형입니다. 핀 번호는 데이터시트 SOT-23 도면 기준입니다.",
+      "additional_contacts": "",
+      "source_ids": [
+        "i2c5"
+      ],
+      "visual_source_id": "i2c5",
+      "pin_order": "신호 구성 목록입니다. 실제 좌우·상하 순서는 출처의 해당 모델 도면과 실크를 확인하세요."
+    },
+    {
+      "id": "spi-eeprom-8",
+      "family": "spi",
+      "name": "25LC020A SPI EEPROM 8핀",
+      "pin_count": 8,
+      "pins": [
+        "CS",
+        "SO",
+        "WP",
+        "VSS",
+        "SI",
+        "SCK",
+        "HOLD",
+        "VCC"
+      ],
+      "interface": "SPI",
+      "appearance": "DIP8/SOIC8 패키지와 방향 표시.",
+      "notes": "앱 6핀 모델은 WP/HOLD를 노출하지 않습니다. 실제 칩 연결 시에는 이 부가 핀의 고정 상태가 필요합니다.",
+      "additional_contacts": "",
+      "source_ids": [
+        "spi8"
+      ],
+      "visual_source_id": "spi8",
+      "pin_order": "신호 구성 목록입니다. 실제 좌우·상하 순서는 출처의 해당 모델 도면과 실크를 확인하세요."
+    },
+    {
+      "id": "pot-bare-3",
+      "family": "potentiometer",
+      "name": "10kΩ 트리머 가변저항 3핀",
+      "pin_count": 3,
+      "pins": [
+        "END1",
+        "WIPER",
+        "END2"
+      ],
+      "interface": "ADC 분압",
+      "appearance": "조절 슬롯이 있는 작은 회전 트리머와 3개 리드.",
+      "notes": "물리 3핀 중 2개만 써서 가변저항처럼 사용할 수 있지만 2핀 패키지로 재분류하지 않습니다.",
+      "additional_contacts": "",
+      "source_ids": [
+        "pot"
+      ],
+      "visual_source_id": "pot",
+      "pin_order": "신호 구성 목록입니다. 실제 좌우·상하 순서는 출처의 해당 모델 도면과 실크를 확인하세요."
+    },
+    {
+      "id": "pot-module-3",
+      "family": "potentiometer",
+      "name": "회전 가변저항 센서 모듈 3핀",
+      "pin_count": 3,
+      "pins": [
+        "VCC",
+        "GND",
+        "SIGNAL"
+      ],
+      "interface": "ADC",
+      "appearance": "손잡이와 PCB, 3핀 센서 커넥터.",
+      "notes": "3핀이지만 나형 가변저항의 END/WIPER 명칭 대신 전원·신호 단자로 표시됩니다.",
+      "additional_contacts": "",
+      "source_ids": [
+        "potmodule"
+      ],
+      "visual_source_id": "potmodule",
+      "pin_order": "신호 구성 목록입니다. 실제 좌우·상하 순서는 출처의 해당 모델 도면과 실크를 확인하세요."
+    },
+    {
+      "id": "slide-spdt-3",
+      "family": "slide",
+      "name": "SPDT 슬라이드 스위치 3핀",
+      "pin_count": 3,
+      "pins": [
+        "A",
+        "COM",
+        "B"
+      ],
+      "interface": "GPIO/전원 선택",
+      "appearance": "옆으로 움직이는 손잡이와 일렬 3핀.",
+      "notes": "두 핀만 사용하면 ON/OFF 용도로 쓸 수 있어도 물리 핀은 3개입니다.",
+      "additional_contacts": "",
+      "source_ids": [
+        "slide3"
+      ],
+      "visual_source_id": "slide3",
+      "pin_order": "신호 구성 목록입니다. 실제 좌우·상하 순서는 출처의 해당 모델 도면과 실크를 확인하세요."
+    },
+    {
+      "id": "rgb-common-anode-4",
+      "family": "rgb",
+      "name": "공통 양극 RGB LED 4핀",
+      "pin_count": 4,
+      "pins": [
+        "R",
+        "COMMON-A",
+        "G",
+        "B"
+      ],
+      "interface": "PWM×3",
+      "appearance": "단색 LED와 비슷한 렌즈에 다리 네 개.",
+      "notes": "앱은 공통 음극입니다. 공통 양극형은 공통 전원 연결과 논리가 반대입니다.",
+      "additional_contacts": "",
+      "source_ids": [
+        "rgbca"
+      ],
+      "visual_source_id": "rgbca",
+      "pin_order": "신호 구성 목록입니다. 실제 좌우·상하 순서는 출처의 해당 모델 도면과 실크를 확인하세요."
+    },
+    {
+      "id": "rgb-common-cathode-4",
+      "family": "rgb",
+      "name": "KY-016 공통 음극 RGB 모듈 4핀",
+      "pin_count": 4,
+      "pins": [
+        "R",
+        "G",
+        "B",
+        "COMMON-K"
+      ],
+      "interface": "PWM×3",
+      "appearance": "4리드 RGB LED를 작은 PCB와 저항에 실장한 형태.",
+      "notes": "앱의 나형 LED와 PCB 외형은 다릅니다. 공통 음극과 세 색 입력을 비교하는 자료입니다.",
+      "additional_contacts": "",
+      "source_ids": [
+        "rgbcc"
+      ],
+      "visual_source_id": "rgbcc",
+      "pin_order": "신호 구성 목록입니다. 실제 좌우·상하 순서는 출처의 해당 모델 도면과 실크를 확인하세요."
+    },
+    {
+      "id": "rgb-neopixel-4",
+      "family": "rgb",
+      "name": "주소지정 NeoPixel THT 4핀",
+      "pin_count": 4,
+      "pins": [
+        "VDD",
+        "GND",
+        "DIN",
+        "DOUT"
+      ],
+      "interface": "단선 디지털 프로토콜",
+      "appearance": "일반 RGB LED처럼 4리드 렌즈이지만 내부 드라이버가 있음.",
+      "notes": "핀 수만 보고 공통극 RGB LED와 호환시키면 안 됩니다.",
+      "additional_contacts": "",
+      "source_ids": [
+        "neopixel4"
+      ],
+      "visual_source_id": "neopixel4",
+      "pin_order": "신호 구성 목록입니다. 실제 좌우·상하 순서는 출처의 해당 모델 도면과 실크를 확인하세요."
+    },
+    {
+      "id": "rgb-neopixel-flora-4",
+      "family": "rgb",
+      "name": "FLORA NeoPixel 연결 패드 4개",
+      "pin_count": 4,
+      "pins": [
+        "V+",
+        "GND",
+        "DIN",
+        "DOUT"
+      ],
+      "interface": "단선 디지털 프로토콜",
+      "appearance": "원형 PCB 중앙의 주소지정 LED와 바느질용 패드.",
+      "notes": "한 개 구동에 쓰는 입력 3신호와 실제 패드 4개를 구분합니다. DOUT은 다음 LED 연결용입니다.",
+      "additional_contacts": "",
+      "source_ids": [
+        "neopixel3"
+      ],
+      "visual_source_id": "neopixel3",
+      "pin_order": "신호 구성 목록입니다. 실제 좌우·상하 순서는 출처의 해당 모델 도면과 실크를 확인하세요."
+    },
+    {
+      "id": "rgb-gravity-3",
+      "family": "rgb",
+      "name": "Gravity 디지털 RGB 모듈 3핀",
+      "pin_count": 3,
+      "pins": [
+        "VCC",
+        "GND",
+        "DATA"
+      ],
+      "interface": "단선 디지털 프로토콜",
+      "appearance": "주소지정 RGB LED와 3핀 Gravity 커넥터가 있는 PCB.",
+      "notes": "3핀 입력 인터페이스를 쓰는 DFR0605입니다. 일반 R/G/B 채널 LED와 구분합니다.",
+      "additional_contacts": "제조사 핀 표의 DO는 별도 체인 출력 패드입니다. 3핀 커넥터와 따로 기록합니다.",
+      "source_ids": [
+        "neopixelgravity"
+      ],
+      "visual_source_id": "neopixelgravity",
+      "pin_order": "신호 구성 목록입니다. 실제 좌우·상하 순서는 출처의 해당 모델 도면과 실크를 확인하세요."
+    },
+    {
+      "id": "capacitor-ceramic-2",
+      "family": "capacitor",
+      "name": "세라믹 커패시터 2핀",
+      "pin_count": 2,
+      "pins": [
+        "C1",
+        "C2"
+      ],
+      "interface": "수동 소자",
+      "appearance": "작은 원판·덩어리 몸체와 두 리드. 극성 표시 없음.",
+      "notes": "사진의 0.1µF와 앱 기본 용량은 서로 다른 값입니다.",
+      "additional_contacts": "",
+      "source_ids": [
+        "capacitor"
+      ],
+      "visual_source_id": "capacitor",
+      "pin_order": "신호 구성 목록입니다. 실제 좌우·상하 순서는 출처의 해당 모델 도면과 실크를 확인하세요."
+    },
+    {
+      "id": "capacitor-electrolytic-2",
+      "family": "capacitor",
+      "name": "알루미늄 전해 커패시터 2핀",
+      "pin_count": 2,
+      "pins": [
+        "+",
+        "-"
+      ],
+      "interface": "수동 소자",
+      "appearance": "원통형 캔과 음극 줄무늬, 두 리드.",
+      "notes": "앱 커패시터는 비극성 모델입니다. 실제 전해형의 극성·정격 전압을 동일하게 재현하지 않습니다.",
+      "additional_contacts": "",
+      "source_ids": [
+        "electrolytic"
+      ],
+      "visual_source_id": "electrolytic",
+      "pin_order": "신호 구성 목록입니다. 실제 좌우·상하 순서는 출처의 해당 모델 도면과 실크를 확인하세요."
+    },
+    {
+      "id": "diode-axial-2",
+      "family": "diode",
+      "name": "1N4001 축형 다이오드 2핀",
+      "pin_count": 2,
+      "pins": [
+        "A",
+        "K"
+      ],
+      "interface": "수동 소자",
+      "appearance": "검은 원통 몸체 한쪽에 캐소드 띠, 양끝 리드.",
+      "notes": "",
+      "additional_contacts": "",
+      "source_ids": [
+        "diode"
+      ],
+      "visual_source_id": "diode",
+      "pin_order": "신호 구성 목록입니다. 실제 좌우·상하 순서는 출처의 해당 모델 도면과 실크를 확인하세요."
+    },
+    {
+      "id": "buzzer-active-2",
+      "family": "buzzer",
+      "name": "발진기 내장 능동 부저 2핀",
+      "pin_count": 2,
+      "pins": [
+        "+",
+        "-"
+      ],
+      "interface": "DC/GPIO",
+      "appearance": "윗면에 소리 구멍이 있는 원통형 케이스.",
+      "notes": "DC를 인가하면 자체 발진으로 소리 납니다. 외형만으로 수동형과 구별하지 않습니다.",
+      "additional_contacts": "",
+      "source_ids": [
+        "buzzer2"
+      ],
+      "visual_source_id": "buzzer2",
+      "pin_order": "신호 구성 목록입니다. 실제 좌우·상하 순서는 출처의 해당 모델 도면과 실크를 확인하세요."
+    },
+    {
+      "id": "buzzer-active-module-3",
+      "family": "buzzer",
+      "name": "KY-012 능동 부저 모듈 3핀",
+      "pin_count": 3,
+      "pins": [
+        "S",
+        "+V(미사용)",
+        "GND"
+      ],
+      "interface": "GPIO",
+      "appearance": "능동 부저와 3핀 헤더가 달린 PCB.",
+      "notes": "이 제조사 배선 예제는 +V에 연결하지 않고 S/GND를 사용합니다. 다른 3핀 부저의 독립 전원+신호 회로와 구분합니다.",
+      "additional_contacts": "",
+      "source_ids": [
+        "buzzer3"
+      ],
+      "visual_source_id": "buzzer3",
+      "pin_order": "신호 구성 목록입니다. 실제 좌우·상하 순서는 출처의 해당 모델 도면과 실크를 확인하세요."
+    },
+    {
+      "id": "buzzer-passive-2",
+      "family": "passive_buzzer",
+      "name": "외부 구동 피에조 부저 2핀",
+      "pin_count": 2,
+      "pins": [
+        "P1",
+        "P2"
+      ],
+      "interface": "TIM PWM",
+      "appearance": "원통형 피에조 케이스와 두 리드.",
+      "notes": "연속음에는 외부 교류·사각파가 필요합니다. 출처 제품의 공진대역과 앱 20~2000Hz 범위는 다릅니다.",
+      "additional_contacts": "",
+      "source_ids": [
+        "passive2"
+      ],
+      "visual_source_id": "passive2",
+      "pin_order": "신호 구성 목록입니다. 실제 좌우·상하 순서는 출처의 해당 모델 도면과 실크를 확인하세요."
+    },
+    {
+      "id": "buzzer-passive-module-3",
+      "family": "passive_buzzer",
+      "name": "KY-006 수동 부저 모듈 3핀",
+      "pin_count": 3,
+      "pins": [
+        "S",
+        "+V(미사용)",
+        "GND"
+      ],
+      "interface": "TIM PWM",
+      "appearance": "수동 피에조와 3핀 PCB.",
+      "notes": "같은 3핀이라도 미사용 단자를 포함할 수 있습니다. 제조사 배선도에 따라 S/GND를 연결합니다.",
+      "additional_contacts": "",
+      "source_ids": [
+        "passive3"
+      ],
+      "visual_source_id": "passive3",
+      "pin_order": "신호 구성 목록입니다. 실제 좌우·상하 순서는 출처의 해당 모델 도면과 실크를 확인하세요."
+    },
+    {
+      "id": "sevenseg-common-cathode-10",
+      "family": "sevenseg",
+      "name": "SC56-11EWA 공통 음극 10핀",
+      "pin_count": 10,
+      "pins": [
+        "e",
+        "d",
+        "K1",
+        "c",
+        "dp",
+        "b",
+        "a",
+        "K2",
+        "f",
+        "g"
+      ],
+      "interface": "GPIO/PWM",
+      "appearance": "단일 숫자 표시창과 위·아래 두 줄의 다리.",
+      "notes": "단자 구성은 앱과 대응합니다. 도면의 위에서 본 방향과 핀1 위치를 확인합니다.",
+      "additional_contacts": "",
+      "source_ids": [
+        "sevencc"
+      ],
+      "visual_source_id": "sevencc",
+      "pin_order": "신호 구성 목록입니다. 실제 좌우·상하 순서는 출처의 해당 모델 도면과 실크를 확인하세요."
+    },
+    {
+      "id": "sevenseg-common-anode-10",
+      "family": "sevenseg",
+      "name": "SA56-11EWA 공통 양극 10핀",
+      "pin_count": 10,
+      "pins": [
+        "e",
+        "d",
+        "A1",
+        "c",
+        "dp",
+        "b",
+        "a",
+        "A2",
+        "f",
+        "g"
+      ],
+      "interface": "GPIO/PWM",
+      "appearance": "공통 음극형과 유사한 단일 숫자 패키지.",
+      "notes": "생김새·핀 수가 같아도 공통극이 반대입니다. 사진 대신 제조사 외형도·회로도를 연결했습니다.",
+      "additional_contacts": "",
+      "source_ids": [
+        "sevenca"
+      ],
+      "visual_source_id": "sevenca",
+      "pin_order": "신호 구성 목록입니다. 실제 좌우·상하 순서는 출처의 해당 모델 도면과 실크를 확인하세요."
+    },
+    {
+      "id": "sevenseg-4digit-12",
+      "family": "sevenseg",
+      "name": "나형 4자리 7세그먼트 12핀",
+      "pin_count": 12,
+      "pins": [
+        "a",
+        "b",
+        "c",
+        "d",
+        "e",
+        "f",
+        "g",
+        "dp",
+        "DIG1",
+        "DIG2",
+        "DIG3",
+        "DIG4"
+      ],
+      "interface": "GPIO 멀티플렉싱",
+      "appearance": "숫자 네 자리가 하나의 긴 패키지에 있음.",
+      "notes": "핀 구성 목록은 논리 신호입니다. 실제 패키지 핀 순서는 제품 도면을 확인합니다. 콜론 연결이 있는 제품은 회로를 함께 확인합니다.",
+      "additional_contacts": "",
+      "source_ids": [
+        "sevenraw"
+      ],
+      "visual_source_id": "sevenraw",
+      "pin_order": "신호 구성 목록입니다. 실제 좌우·상하 순서는 출처의 해당 모델 도면과 실크를 확인하세요."
+    },
+    {
+      "id": "sevenseg-tm1637-4",
+      "family": "sevenseg",
+      "name": "TM1637 4자리 표시 모듈 4핀",
+      "pin_count": 4,
+      "pins": [
+        "VCC",
+        "GND",
+        "CLK",
+        "DIO"
+      ],
+      "interface": "TM1637 전용 2선",
+      "appearance": "4자리 표시창 뒤에 드라이버 PCB와 Grove 커넥터.",
+      "notes": "표시 소자는 12핀이나 외부 연결은 4핀입니다. CLK/DIO는 I²C SDA/SCL과 같은 프로토콜이 아닙니다.",
+      "additional_contacts": "",
+      "source_ids": [
+        "seven4"
+      ],
+      "visual_source_id": "seven4",
+      "pin_order": "신호 구성 목록입니다. 실제 좌우·상하 순서는 출처의 해당 모델 도면과 실크를 확인하세요."
+    },
+    {
+      "id": "tmp36-to92-3",
+      "family": "temperature",
+      "name": "TMP36 아날로그 온도 센서 3핀",
+      "pin_count": 3,
+      "pins": [
+        "VS",
+        "VOUT",
+        "GND"
+      ],
+      "interface": "ADC",
+      "appearance": "검은 TO-92 반원형 몸체와 세 다리.",
+      "notes": "DS18B20과 비슷하게 보여도 출력은 아날로그 전압입니다.",
+      "additional_contacts": "",
+      "source_ids": [
+        "tmp36"
+      ],
+      "visual_source_id": "tmp36",
+      "pin_order": "신호 구성 목록입니다. 실제 좌우·상하 순서는 출처의 해당 모델 도면과 실크를 확인하세요."
+    },
+    {
+      "id": "ds18b20-to92-3",
+      "family": "temperature",
+      "name": "DS18B20 디지털 온도 센서 3핀",
+      "pin_count": 3,
+      "pins": [
+        "GND",
+        "DQ",
+        "VDD"
+      ],
+      "interface": "1-Wire",
+      "appearance": "TMP36과 비슷한 TO-92 패키지.",
+      "notes": "동일한 3핀 외형이어도 TMP36과 핀 기능·통신 방식이 다릅니다. 앱은 TMP36 전달식을 사용합니다.",
+      "additional_contacts": "",
+      "source_ids": [
+        "ds18b20"
+      ],
+      "visual_source_id": "ds18b20",
+      "pin_order": "신호 구성 목록입니다. 실제 좌우·상하 순서는 출처의 해당 모델 도면과 실크를 확인하세요."
+    },
+    {
+      "id": "ds18b20-probe-3",
+      "family": "temperature",
+      "name": "방수 DS18B20 프로브 3선",
+      "pin_count": 3,
+      "pins": [
+        "VDD",
+        "GND",
+        "DQ"
+      ],
+      "interface": "1-Wire",
+      "appearance": "스테인리스 튜브 센서와 길게 나온 3선 케이블.",
+      "notes": "선 색상만으로 신호를 단정하지 않고 해당 제품 배선 설명을 확인합니다.",
+      "additional_contacts": "",
+      "source_ids": [
+        "dsprobe"
+      ],
+      "visual_source_id": "dsprobe",
+      "pin_order": "신호 구성 목록입니다. 실제 좌우·상하 순서는 출처의 해당 모델 도면과 실크를 확인하세요."
+    },
+    {
+      "id": "hcsr04-4",
+      "family": "ultrasonic",
+      "name": "HC-SR04 초음파 4핀",
+      "pin_count": 4,
+      "pins": [
+        "VCC",
+        "TRIG",
+        "ECHO",
+        "GND"
+      ],
+      "interface": "GPIO/TIM Capture",
+      "appearance": "두 원형 초음파 소자가 나란히 있는 PCB와 4핀 헤더.",
+      "notes": "",
+      "additional_contacts": "",
+      "source_ids": [
+        "ultrasonic4"
+      ],
+      "visual_source_id": "ultrasonic4",
+      "pin_order": "신호 구성 목록입니다. 실제 좌우·상하 순서는 출처의 해당 모델 도면과 실크를 확인하세요."
+    },
+    {
+      "id": "urm09-trig-3",
+      "family": "ultrasonic",
+      "name": "URM09 Trig 초음파 3핀",
+      "pin_count": 3,
+      "pins": [
+        "VCC",
+        "GND",
+        "TRIG-ECHO"
+      ],
+      "interface": "GPIO 양방향",
+      "appearance": "초음파 소자와 3핀 Gravity 커넥터.",
+      "notes": "Trig/Echo 공유 한 신호를 쓰므로 앱의 분리 4핀 HC-SR04와 다르게 구현해야 합니다.",
+      "additional_contacts": "",
+      "source_ids": [
+        "ultrasonic3"
+      ],
+      "visual_source_id": "ultrasonic3",
+      "pin_order": "신호 구성 목록입니다. 실제 좌우·상하 순서는 출처의 해당 모델 도면과 실크를 확인하세요."
+    },
+    {
+      "id": "urm09-i2c-4",
+      "family": "ultrasonic",
+      "name": "URM09 I²C 초음파 4핀",
+      "pin_count": 4,
+      "pins": [
+        "VCC",
+        "GND",
+        "SDA",
+        "SCL"
+      ],
+      "interface": "I²C",
+      "appearance": "초음파 센서와 I²C 커넥터.",
+      "notes": "4핀이라는 점만 같고 HC-SR04의 TRIG/ECHO와 기능이 다릅니다.",
+      "additional_contacts": "",
+      "source_ids": [
+        "ultrasonicI2C"
+      ],
+      "visual_source_id": "ultrasonicI2C",
+      "pin_order": "신호 구성 목록입니다. 실제 좌우·상하 순서는 출처의 해당 모델 도면과 실크를 확인하세요."
+    },
+    {
+      "id": "ads1115-10",
+      "family": "external_adc",
+      "name": "ADS1115 외부 ADC 메인 헤더 10핀",
+      "pin_count": 10,
+      "pins": [
+        "VIN",
+        "GND",
+        "SCL",
+        "SDA",
+        "ADDR",
+        "ALRT",
+        "A0",
+        "A1",
+        "A2",
+        "A3"
+      ],
+      "interface": "I²C",
+      "appearance": "ADC 칩과 아날로그 입력 핀을 꺼낸 PCB.",
+      "notes": "MCU 내부 ADC1/2/3과 다른 외부 칩입니다. 실제 사진의 보드 리비전을 확인합니다.",
+      "additional_contacts": "QT판은 중복 I²C 커넥터 4접점×2 추가",
+      "source_ids": [
+        "adc",
+        "adcproduct"
+      ],
+      "visual_source_id": "adcproduct",
+      "pin_order": "신호 구성 목록입니다. 실제 좌우·상하 순서는 출처의 해당 모델 도면과 실크를 확인하세요."
+    },
+    {
+      "id": "mcp4725-6",
+      "family": "external_dac",
+      "name": "MCP4725 외부 DAC 메인 헤더 6핀",
+      "pin_count": 6,
+      "pins": [
+        "VIN",
+        "GND",
+        "SCL",
+        "SDA",
+        "A0",
+        "VOUT"
+      ],
+      "interface": "I²C",
+      "appearance": "DAC 칩과 아날로그 출력이 있는 작은 PCB.",
+      "notes": "MCU 내부 DAC의 외형이 아니라 외부 I²C DAC 예시입니다.",
+      "additional_contacts": "QT판은 중복 I²C 커넥터 4접점×2 및 VOUT/GND 단자 옵션",
+      "source_ids": [
+        "dac",
+        "dacproduct"
+      ],
+      "visual_source_id": "dacproduct",
+      "pin_order": "신호 구성 목록입니다. 실제 좌우·상하 순서는 출처의 해당 모델 도면과 실크를 확인하세요."
+    },
+    {
+      "id": "can-transceiver-6",
+      "family": "can",
+      "name": "SN65HVD230 CAN 보드 주요 6단자",
+      "pin_count": 6,
+      "pins": [
+        "3V3",
+        "GND",
+        "CAN-TX",
+        "CAN-RX",
+        "CANH",
+        "CANL"
+      ],
+      "interface": "MCU CAN ↔ CAN 버스",
+      "appearance": "CAN 트랜시버 PCB에 논리 측 4핀 헤더와 버스 측 2단자.",
+      "notes": "제조사 회로도에서 Header4 + Header2를 확인했습니다. CANH/CANL은 MCU GPIO에 직접 연결하는 선이 아닙니다.",
+      "additional_contacts": "",
+      "source_ids": [
+        "can-schematic",
+        "can",
+        "canproduct"
+      ],
+      "visual_source_id": "can",
+      "pin_order": "신호 구성 목록입니다. 실제 좌우·상하 순서는 출처의 해당 모델 도면과 실크를 확인하세요."
+    },
+    {
+      "id": "isolated-rs485",
+      "family": "rs485",
+      "name": "DFR0845 절연 RS485 모듈 총 10접점",
+      "pin_count": 10,
+      "pins": [
+        "TX",
+        "RX",
+        "GND-UART",
+        "VCC",
+        "12V-OUT",
+        "GND-485",
+        "A",
+        "B",
+        "12V-IN",
+        "GND-IN"
+      ],
+      "interface": "UART ↔ RS485",
+      "appearance": "절연 전원과 버스 단자가 있는 통신 변환 PCB.",
+      "notes": "제조사 핀 표에서 UART 4핀, RS485 4단자, 외부 전원 입력 2단자를 구분합니다.",
+      "additional_contacts": "UART 4 + RS485 4 + 외부 전원 2",
+      "source_ids": [
+        "rs485-pinout",
+        "rs485"
+      ],
+      "visual_source_id": "rs485",
+      "pin_order": "신호 구성 목록입니다. 실제 좌우·상하 순서는 출처의 해당 모델 도면과 실크를 확인하세요."
+    },
+    {
+      "id": "ds3231-8",
+      "family": "external_rtc",
+      "name": "DS3231 RTC 메인 헤더 8핀",
+      "pin_count": 8,
+      "pins": [
+        "VIN",
+        "GND",
+        "SCL",
+        "SDA",
+        "BAT",
+        "32K",
+        "SQW",
+        "RST"
+      ],
+      "interface": "I²C",
+      "appearance": "RTC 칩과 코인셀 홀더를 함께 실장한 보드.",
+      "notes": "내부 RTC 주변장치와 별개인 외부 RTC입니다.",
+      "additional_contacts": "QT판은 중복 I²C 커넥터 4접점×2 추가",
+      "source_ids": [
+        "rtc",
+        "rtcproduct"
+      ],
+      "visual_source_id": "rtcproduct",
+      "pin_order": "신호 구성 목록입니다. 실제 좌우·상하 순서는 출처의 해당 모델 도면과 실크를 확인하세요."
+    },
+    {
+      "id": "sd-storage-board",
+      "family": "sd",
+      "name": "Micro SD Storage Board 9핀",
+      "pin_count": 9,
+      "pins": [
+        "3V3",
+        "D0",
+        "D1",
+        "D2",
+        "D3",
+        "CMD",
+        "CLK",
+        "GND",
+        "CD"
+      ],
+      "interface": "SPI/SDIO",
+      "appearance": "microSD 소켓과 한 줄 9핀 헤더가 있는 PCB.",
+      "notes": "제조사 회로도 P1은 Header9입니다. SD카드 자체 8접점, 소켓의 검출 접점과 외부 헤더를 구분합니다.",
+      "additional_contacts": "",
+      "source_ids": [
+        "sd-schematic",
+        "sd",
+        "sdproduct"
+      ],
+      "visual_source_id": "sd",
+      "pin_order": "신호 구성 목록입니다. 실제 좌우·상하 순서는 출처의 해당 모델 도면과 실크를 확인하세요."
+    },
+    {
+      "id": "max98357a-9",
+      "family": "i2s",
+      "name": "MAX98357A 모노 앰프 입력7+스피커2",
+      "pin_count": 9,
+      "pins": [
+        "VIN",
+        "GND",
+        "DIN",
+        "BCLK",
+        "LRC",
+        "GAIN",
+        "SD",
+        "SPK+",
+        "SPK-"
+      ],
+      "interface": "I²S",
+      "appearance": "작은 앰프 PCB와 두 개의 스피커 나사 단자.",
+      "notes": "I²S 디지털 오디오용입니다. I²C 제어장치 또는 피에조 부저와 다른 장치입니다.",
+      "additional_contacts": "",
+      "source_ids": [
+        "i2s",
+        "i2sproduct"
+      ],
+      "visual_source_id": "i2sproduct",
+      "pin_order": "신호 구성 목록입니다. 실제 좌우·상하 순서는 출처의 해당 모델 도면과 실크를 확인하세요."
+    },
+    {
+      "id": "ov2640-camera",
+      "family": "dcmi",
+      "name": "OV2640 Camera Board 18핀",
+      "pin_count": 18,
+      "pins": [
+        "3V3",
+        "GND",
+        "SIO_CLK",
+        "SIO_DAT",
+        "VSYNC",
+        "HREF",
+        "PCLK",
+        "XCLK",
+        "Y9",
+        "Y8",
+        "Y7",
+        "Y6",
+        "Y5",
+        "Y4",
+        "Y3",
+        "Y2",
+        "RESET",
+        "PWDN"
+      ],
+      "interface": "DCMI/DVP + SCCB",
+      "appearance": "작은 렌즈가 올라간 카메라 PCB와 9×2 병렬 신호 헤더.",
+      "notes": "제조사 회로도 P1은 Header 9×2입니다. 센서 자체 24핀과 외부 헤더 18핀을 혼동하지 않습니다. F446RE에서의 사용 가능 핀 조합은 별도 검토 대상입니다.",
+      "additional_contacts": "",
+      "source_ids": [
+        "camera-schematic",
+        "camera",
+        "cameraproduct"
+      ],
+      "visual_source_id": "camera",
+      "pin_order": "신호 구성 목록입니다. 실제 좌우·상하 순서는 출처의 해당 모델 도면과 실크를 확인하세요."
+    },
+    {
+      "id": "dht11-module-3",
+      "family": "dht11",
+      "name": "DHT11 센서 모듈 3핀",
+      "pin_count": 3,
+      "pins": [
+        "VCC",
+        "GND",
+        "DATA"
+      ],
+      "interface": "단선 전용",
+      "appearance": "구멍이 있는 센서 케이스가 소형 PCB에 장착됨.",
+      "notes": "나형 DHT11의 4핀에는 NC가 포함됩니다. 모듈 외부 3핀과 나형 4핀을 구분합니다.",
+      "additional_contacts": "",
+      "source_ids": [
+        "dht11"
+      ],
+      "visual_source_id": "dht11",
+      "pin_order": "신호 구성 목록입니다. 실제 좌우·상하 순서는 출처의 해당 모델 도면과 실크를 확인하세요."
+    },
+    {
+      "id": "dht22-module-3",
+      "family": "dht22",
+      "name": "DHT22 센서 모듈 3핀",
+      "pin_count": 3,
+      "pins": [
+        "VCC",
+        "GND",
+        "DATA"
+      ],
+      "interface": "단선 전용",
+      "appearance": "환기 구멍이 있는 케이스와 PCB·3핀 커넥터.",
+      "notes": "나형 DHT22의 4핀과 구분합니다. SHT31의 I²C 통신과도 다릅니다.",
+      "additional_contacts": "",
+      "source_ids": [
+        "dht22"
+      ],
+      "visual_source_id": "dht22",
+      "pin_order": "신호 구성 목록입니다. 실제 좌우·상하 순서는 출처의 해당 모델 도면과 실크를 확인하세요."
+    },
+    {
+      "id": "l298n-bare-15",
+      "family": "l298n",
+      "name": "L298N 나형 드라이버 IC 15핀",
+      "pin_count": 15,
+      "pins": [
+        "SENSE-A",
+        "OUT1",
+        "OUT2",
+        "VS",
+        "IN1",
+        "ENA",
+        "IN2",
+        "GND",
+        "VSS",
+        "IN3",
+        "ENB",
+        "IN4",
+        "OUT3",
+        "OUT4",
+        "SENSE-B"
+      ],
+      "interface": "GPIO/구동",
+      "appearance": "금속 방열 탭이 있는 Multiwatt15 패키지와 한쪽으로 나온 15개 리드.",
+      "notes": "앱의 L298N 모듈 외부 13단자와 칩 자체의 15핀은 다릅니다. 전류 감지·전원 등의 칩 핀까지 확인합니다.",
+      "additional_contacts": "방열 탭은 GND에 연결되며 별도 제어 핀으로 세지 않습니다.",
+      "source_ids": [
+        "l298-chip"
+      ],
+      "visual_source_id": "l298-chip",
+      "pin_order": "신호 구성 목록입니다. 실제 좌우·상하 순서는 출처의 해당 모델 도면과 실크를 확인하세요."
+    },
+    {
+      "id": "l298p-bare-20",
+      "family": "l298n",
+      "name": "L298P PowerSO20 드라이버 IC 20핀",
+      "pin_count": 20,
+      "pins": [
+        "NC1",
+        "SENSE-A",
+        "OUT1",
+        "OUT2",
+        "VS",
+        "IN1",
+        "ENA",
+        "IN2",
+        "GND1",
+        "GND2",
+        "GND3",
+        "GND4",
+        "VSS",
+        "IN3",
+        "ENB",
+        "IN4",
+        "OUT3",
+        "OUT4",
+        "SENSE-B",
+        "NC20"
+      ],
+      "interface": "GPIO/구동",
+      "appearance": "양쪽에 리드가 나온 PowerSO20 표면실장 패키지.",
+      "notes": "같은 L298 계열이라도 Multiwatt15와 패키지 핀 수·기구가 다릅니다. 패키지별 도면을 사용합니다.",
+      "additional_contacts": "",
+      "source_ids": [
+        "l298-chip"
+      ],
+      "visual_source_id": "l298-chip",
+      "pin_order": "신호 구성 목록입니다. 실제 좌우·상하 순서는 출처의 해당 모델 도면과 실크를 확인하세요."
+    },
+    {
+      "id": "slide-dpdt-6",
+      "family": "slide",
+      "name": "C&K JS202011JCQN DPDT 6핀",
+      "pin_count": 6,
+      "pins": [
+        "A1",
+        "COM1",
+        "B1",
+        "A2",
+        "COM2",
+        "B2"
+      ],
+      "interface": "접점 선택",
+      "appearance": "두 회로를 동시에 바꾸는 슬라이드 스위치의 6개 전기 단자.",
+      "notes": "제조사 JS Series의 DPDT 모델입니다. 3핀 SPDT와 별도 모델로 취급합니다. 단자별 위치는 부품 번호의 도면을 따릅니다.",
+      "additional_contacts": "기구 고정 탭은 전기 접점 수에서 제외합니다.",
+      "source_ids": [
+        "slide-js"
+      ],
+      "visual_source_id": "slide-js",
+      "pin_order": "신호 구성 목록입니다. 실제 좌우·상하 순서는 출처의 해당 모델 도면과 실크를 확인하세요."
+    },
+    {
+      "id": "slide-dp3t-8",
+      "family": "slide",
+      "name": "C&K JS203011JAQN DP3T 8핀",
+      "pin_count": 8,
+      "pins": [
+        "A1",
+        "B1",
+        "C1",
+        "COM1",
+        "A2",
+        "B2",
+        "C2",
+        "COM2"
+      ],
+      "interface": "접점 선택",
+      "appearance": "세 위치를 선택하며 두 회로를 함께 전환하는 슬라이드 스위치.",
+      "notes": "제조사 JS Series의 DP3T 모델입니다. 3핀·6핀형과 내부 연결표 및 선택 위치 수가 다릅니다.",
+      "additional_contacts": "고정용 금속 탭과 실제 전기 접점을 구분합니다.",
+      "source_ids": [
+        "slide-js"
+      ],
+      "visual_source_id": "slide-js",
+      "pin_order": "신호 구성 목록입니다. 실제 좌우·상하 순서는 출처의 해당 모델 도면과 실크를 확인하세요."
+    }
+  ],
+  "internal_peripherals": [
+    {
+      "name": "GPIO/EXTI",
+      "implementation": "일부 구현",
+      "appearance_note": "입출력·Pull·외부 인터럽트. 물리 외형은 MCU 핀과 보드 헤더입니다.",
+      "source_ids": [
+        "mcu",
+        "mcu-datasheet"
+      ]
+    },
+    {
+      "name": "TIM1/TIM8",
+      "implementation": "미구현",
+      "appearance_note": "고급 제어 타이머. 보완 출력·데드타임 등의 기능은 별도 모델 대상입니다.",
+      "source_ids": [
+        "mcu",
+        "mcu-datasheet"
+      ]
+    },
+    {
+      "name": "TIM2/TIM5",
+      "implementation": "부분 구현",
+      "appearance_note": "32비트 카운터·IRQ·PWM·입력 캡처·엔코더 지원 범위 확인.",
+      "source_ids": [
+        "mcu",
+        "mcu-datasheet"
+      ]
+    },
+    {
+      "name": "TIM3/TIM4",
+      "implementation": "부분 구현",
+      "appearance_note": "16비트 카운터·IRQ·PWM·입력 캡처·엔코더 지원 범위 확인.",
+      "source_ids": [
+        "mcu",
+        "mcu-datasheet"
+      ]
+    },
+    {
+      "name": "TIM6/TIM7",
+      "implementation": "미구현",
+      "appearance_note": "기본 타이머. 자체 부품 외형은 없습니다.",
+      "source_ids": [
+        "mcu",
+        "mcu-datasheet"
+      ]
+    },
+    {
+      "name": "TIM9~TIM14",
+      "implementation": "미구현",
+      "appearance_note": "추가 타이머. 실제 채널 핀은 F446RE 패키지 AF 표에서 확인.",
+      "source_ids": [
+        "mcu",
+        "mcu-datasheet"
+      ]
+    },
+    {
+      "name": "ADC1/ADC2/ADC3",
+      "implementation": "ADC1 일부",
+      "appearance_note": "내부 ADC는 독립 센서가 아닙니다. 분압·온도 센서 등이 입력 예시입니다.",
+      "source_ids": [
+        "mcu",
+        "mcu-datasheet"
+      ]
+    },
+    {
+      "name": "DAC",
+      "implementation": "미구현",
+      "appearance_note": "내부 아날로그 출력. 외부 MCP4725와 별개입니다.",
+      "source_ids": [
+        "mcu",
+        "mcu-datasheet"
+      ]
+    },
+    {
+      "name": "USART1/2/3/6 및 UART4/5",
+      "implementation": "일부 구현",
+      "appearance_note": "TX/RX·포트별 처리. RS485 같은 물리 계층은 외부 트랜시버를 구분합니다.",
+      "source_ids": [
+        "mcu",
+        "mcu-datasheet"
+      ]
+    },
+    {
+      "name": "I²C 및 FMPI2C",
+      "implementation": "I2C1 일부",
+      "appearance_note": "기타 인스턴스·FMPI2C는 별도. 데이터시트의 패키지별 핀 확인.",
+      "source_ids": [
+        "mcu",
+        "mcu-datasheet"
+      ]
+    },
+    {
+      "name": "SPI/I²S",
+      "implementation": "SPI1 일부",
+      "appearance_note": "SPI 메모리·표시장치와 I²S 오디오 장치는 별도 프로토콜입니다.",
+      "source_ids": [
+        "mcu",
+        "mcu-datasheet"
+      ]
+    },
+    {
+      "name": "SAI1/SAI2",
+      "implementation": "미구현",
+      "appearance_note": "직렬 오디오. 보드에서 사용할 수 있는 신호 조합 확인.",
+      "source_ids": [
+        "mcu",
+        "mcu-datasheet"
+      ]
+    },
+    {
+      "name": "CAN1/CAN2",
+      "implementation": "미구현",
+      "appearance_note": "CAN 컨트롤러는 MCU 내부이며 외부 트랜시버·버스 단자가 필요합니다.",
+      "source_ids": [
+        "mcu",
+        "mcu-datasheet"
+      ]
+    },
+    {
+      "name": "USB OTG FS/HS",
+      "implementation": "미구현",
+      "appearance_note": "MCU 사용자 USB와 보드의 ST-LINK USB를 구분합니다. HS는 PHY 구성도 확인.",
+      "source_ids": [
+        "mcu",
+        "mcu-datasheet"
+      ]
+    },
+    {
+      "name": "SDIO",
+      "implementation": "미구현",
+      "appearance_note": "SD 카드·소켓은 외부 부품, SDIO는 내부 인터페이스입니다.",
+      "source_ids": [
+        "mcu",
+        "mcu-datasheet"
+      ]
+    },
+    {
+      "name": "DCMI",
+      "implementation": "미구현",
+      "appearance_note": "카메라 병렬 신호와 실제 64핀 패키지의 사용 가능 핀 대조.",
+      "source_ids": [
+        "mcu",
+        "mcu-datasheet"
+      ]
+    },
+    {
+      "name": "QUADSPI",
+      "implementation": "미구현",
+      "appearance_note": "외부 플래시 패키지와 별개인 내부 메모리 인터페이스입니다.",
+      "source_ids": [
+        "mcu",
+        "mcu-datasheet"
+      ]
+    },
+    {
+      "name": "FMC",
+      "implementation": "미구현/패키지 검토",
+      "appearance_note": "시리즈 공통 기능을 64핀 보드에 곧바로 사용 가능하다고 간주하지 않습니다.",
+      "source_ids": [
+        "mcu",
+        "mcu-datasheet"
+      ]
+    },
+    {
+      "name": "SPDIFRX/CEC",
+      "implementation": "미구현",
+      "appearance_note": "외부 오디오·HDMI 연결 회로가 별도로 필요합니다.",
+      "source_ids": [
+        "mcu",
+        "mcu-datasheet"
+      ]
+    },
+    {
+      "name": "RTC/Backup",
+      "implementation": "미구현",
+      "appearance_note": "내부 RTC와 외부 DS3231 모듈을 구분합니다.",
+      "source_ids": [
+        "mcu",
+        "mcu-datasheet"
+      ]
+    },
+    {
+      "name": "DMA1/DMA2",
+      "implementation": "소스 해석 모델 일부",
+      "appearance_note": "실제 DMA 스트림·채널·버스 동작 전체와는 구분합니다.",
+      "source_ids": [
+        "mcu",
+        "mcu-datasheet"
+      ]
+    },
+    {
+      "name": "IWDG/WWDG/SysTick",
+      "implementation": "HAL Tick 일부",
+      "appearance_note": "감시 타이머·코어 타이머. 외형은 MCU 자체입니다.",
+      "source_ids": [
+        "mcu",
+        "mcu-datasheet"
+      ]
+    },
+    {
+      "name": "RCC/PWR/FLASH/SYSCFG/CRC",
+      "implementation": "부분 설정 또는 미구현",
+      "appearance_note": "클록·전원·플래시·시스템 설정·CRC는 내부 블록입니다.",
+      "source_ids": [
+        "mcu",
+        "mcu-datasheet"
+      ]
+    },
+    {
+      "name": "NVIC/Core Debug",
+      "implementation": "IRQ/외부 GDB 일부",
+      "appearance_note": "NVIC·코어 기능과 ST-LINK 같은 외부 디버거의 외형을 구분합니다.",
+      "source_ids": [
+        "mcu",
+        "mcu-datasheet"
+      ]
+    }
+  ],
+  "sources": {
+    "button4": {
+      "id": "button4",
+      "title": "Tactile Switch Buttons (12mm square, 6mm tall) x 10 pack : Adafruit Industries, Unique & fun DIY electronics and kits",
+      "url": "https://www.adafruit.com/product/1119",
+      "image_url": "https://cdn-shop.adafruit.com/970x728/1119-03.jpg",
+      "checked_on": "2026-10-14",
+      "http_status": 200,
+      "source_kind": "제조사·개발사 원문",
+      "image_candidates": [
+        {
+          "url": "https://cdn-shop.adafruit.com/100x75/6526-00.jpg",
+          "alt": "Angled Shot of the NeoPixel Ring - 12 x 5050 WWA with Integrated Drivers."
+        },
+        {
+          "url": "https://cdn-shop.adafruit.com/100x75/6527-00.jpg",
+          "alt": "Angled Shot of the NeoPixel Ring - 16 x 5050 WWA LED with Integrated Drivers"
+        },
+        {
+          "url": "https://cdn-shop.adafruit.com/100x75/6525-00.jpg",
+          "alt": "Angled Shot of the Adafruit TCS3448 Multi-Spectral Sensor"
+        },
+        {
+          "url": "https://cdn-shop.adafruit.com/100x75/6524-00.jpg",
+          "alt": "Angled Shot of the Adafruit TSL2585 Digital UVA and Ambient Light Sensor."
+        },
+        {
+          "url": "https://cdn-shop.adafruit.com/100x75/6407-05.jpg",
+          "alt": "Temperature and pressure sensor breakout displaying sensor information on a connected TFT display breakout."
+        },
+        {
+          "url": "https://cdn-shop.adafruit.com/product-videos/320x240/6353-05.jpg",
+          "alt": "Video of a motor stepper driver board driving a stepper motor connected to a microcontroller."
+        }
+      ]
+    },
+    "button2": {
+      "id": "button2",
+      "title": "Soft Tactile Button (8mm) x 10 : Adafruit Industries, Unique & fun DIY electronics and kits",
+      "url": "https://www.adafruit.com/product/3101",
+      "image_url": "https://cdn-shop.adafruit.com/970x728/3101-00.jpg",
+      "checked_on": "2026-10-14",
+      "http_status": 200,
+      "source_kind": "제조사·개발사 원문",
+      "image_candidates": [
+        {
+          "url": "https://cdn-shop.adafruit.com/100x75/6526-00.jpg",
+          "alt": "Angled Shot of the NeoPixel Ring - 12 x 5050 WWA with Integrated Drivers."
+        },
+        {
+          "url": "https://cdn-shop.adafruit.com/100x75/6527-00.jpg",
+          "alt": "Angled Shot of the NeoPixel Ring - 16 x 5050 WWA LED with Integrated Drivers"
+        },
+        {
+          "url": "https://cdn-shop.adafruit.com/100x75/6525-00.jpg",
+          "alt": "Angled Shot of the Adafruit TCS3448 Multi-Spectral Sensor"
+        },
+        {
+          "url": "https://cdn-shop.adafruit.com/100x75/6524-00.jpg",
+          "alt": "Angled Shot of the Adafruit TSL2585 Digital UVA and Ambient Light Sensor."
+        },
+        {
+          "url": "https://cdn-shop.adafruit.com/100x75/6407-05.jpg",
+          "alt": "Temperature and pressure sensor breakout displaying sensor information on a connected TFT display breakout."
+        },
+        {
+          "url": "https://cdn-shop.adafruit.com/product-videos/320x240/6353-05.jpg",
+          "alt": "Video of a motor stepper driver board driving a stepper motor connected to a microcontroller."
+        }
+      ]
+    },
+    "lcd16": {
+      "id": "lcd16",
+      "title": "Standard LCD 16x2 + extras [white on blue] : Adafruit Industries, Unique & fun DIY electronics and kits",
+      "url": "https://www.adafruit.com/product/181",
+      "image_url": "https://cdn-shop.adafruit.com/970x728/181-06.jpg",
+      "checked_on": "2026-10-14",
+      "http_status": 200,
+      "source_kind": "제조사·개발사 원문",
+      "image_candidates": [
+        {
+          "url": "https://cdn-shop.adafruit.com/100x75/6526-00.jpg",
+          "alt": "Angled Shot of the NeoPixel Ring - 12 x 5050 WWA with Integrated Drivers."
+        },
+        {
+          "url": "https://cdn-shop.adafruit.com/100x75/6527-00.jpg",
+          "alt": "Angled Shot of the NeoPixel Ring - 16 x 5050 WWA LED with Integrated Drivers"
+        },
+        {
+          "url": "https://cdn-shop.adafruit.com/100x75/6525-00.jpg",
+          "alt": "Angled Shot of the Adafruit TCS3448 Multi-Spectral Sensor"
+        },
+        {
+          "url": "https://cdn-shop.adafruit.com/100x75/6524-00.jpg",
+          "alt": "Angled Shot of the Adafruit TSL2585 Digital UVA and Ambient Light Sensor."
+        },
+        {
+          "url": "https://cdn-shop.adafruit.com/100x75/6407-05.jpg",
+          "alt": "Temperature and pressure sensor breakout displaying sensor information on a connected TFT display breakout."
+        },
+        {
+          "url": "https://cdn-shop.adafruit.com/product-videos/320x240/6353-05.jpg",
+          "alt": "Video of a motor stepper driver board driving a stepper motor connected to a microcontroller."
+        }
+      ]
+    },
+    "led": {
+      "id": "led",
+      "title": "Super Bright Red 5mm LED (25 pack) : Adafruit Industries, Unique & fun DIY electronics and kits",
+      "url": "https://www.adafruit.com/product/297",
+      "image_url": "https://cdn-shop.adafruit.com/970x728/297-00.jpg",
+      "checked_on": "2026-10-14",
+      "http_status": 200,
+      "source_kind": "제조사·개발사 원문",
+      "image_candidates": [
+        {
+          "url": "https://cdn-shop.adafruit.com/100x75/6526-00.jpg",
+          "alt": "Angled Shot of the NeoPixel Ring - 12 x 5050 WWA with Integrated Drivers."
+        },
+        {
+          "url": "https://cdn-shop.adafruit.com/100x75/6527-00.jpg",
+          "alt": "Angled Shot of the NeoPixel Ring - 16 x 5050 WWA LED with Integrated Drivers"
+        },
+        {
+          "url": "https://cdn-shop.adafruit.com/100x75/6525-00.jpg",
+          "alt": "Angled Shot of the Adafruit TCS3448 Multi-Spectral Sensor"
+        },
+        {
+          "url": "https://cdn-shop.adafruit.com/100x75/6524-00.jpg",
+          "alt": "Angled Shot of the Adafruit TSL2585 Digital UVA and Ambient Light Sensor."
+        },
+        {
+          "url": "https://cdn-shop.adafruit.com/100x75/6407-05.jpg",
+          "alt": "Temperature and pressure sensor breakout displaying sensor information on a connected TFT display breakout."
+        },
+        {
+          "url": "https://cdn-shop.adafruit.com/product-videos/320x240/6353-05.jpg",
+          "alt": "Video of a motor stepper driver board driving a stepper motor connected to a microcontroller."
+        }
+      ]
+    },
+    "breadboard": {
+      "id": "breadboard",
+      "title": "Half Sized Premium Breadboard - 400 Tie Points : Adafruit Industries, Unique & fun DIY electronics and kits",
+      "url": "https://www.adafruit.com/product/64",
+      "image_url": "https://cdn-shop.adafruit.com/970x728/64-06.jpg",
+      "checked_on": "2026-10-14",
+      "http_status": 200,
+      "source_kind": "제조사·개발사 원문",
+      "image_candidates": [
+        {
+          "url": "https://cdn-shop.adafruit.com/100x75/6526-00.jpg",
+          "alt": "Angled Shot of the NeoPixel Ring - 12 x 5050 WWA with Integrated Drivers."
+        },
+        {
+          "url": "https://cdn-shop.adafruit.com/100x75/6527-00.jpg",
+          "alt": "Angled Shot of the NeoPixel Ring - 16 x 5050 WWA LED with Integrated Drivers"
+        },
+        {
+          "url": "https://cdn-shop.adafruit.com/100x75/6525-00.jpg",
+          "alt": "Angled Shot of the Adafruit TCS3448 Multi-Spectral Sensor"
+        },
+        {
+          "url": "https://cdn-shop.adafruit.com/100x75/6524-00.jpg",
+          "alt": "Angled Shot of the Adafruit TSL2585 Digital UVA and Ambient Light Sensor."
+        },
+        {
+          "url": "https://cdn-shop.adafruit.com/100x75/6407-05.jpg",
+          "alt": "Temperature and pressure sensor breakout displaying sensor information on a connected TFT display breakout."
+        },
+        {
+          "url": "https://cdn-shop.adafruit.com/product-videos/320x240/6353-05.jpg",
+          "alt": "Video of a motor stepper driver board driving a stepper motor connected to a microcontroller."
+        }
+      ]
+    },
+    "resistor": {
+      "id": "resistor",
+      "title": "Through-Hole Resistors - 220 ohm 5% 1/4W - Pack of 25 : Adafruit Industries, Unique & fun DIY electronics and kits",
+      "url": "https://www.adafruit.com/product/2780",
+      "image_url": "https://cdn-shop.adafruit.com/970x728/2780-00.jpg",
+      "checked_on": "2026-10-14",
+      "http_status": 200,
+      "source_kind": "제조사·개발사 원문",
+      "image_candidates": [
+        {
+          "url": "https://cdn-shop.adafruit.com/100x75/6526-00.jpg",
+          "alt": "Angled Shot of the NeoPixel Ring - 12 x 5050 WWA with Integrated Drivers."
+        },
+        {
+          "url": "https://cdn-shop.adafruit.com/100x75/6527-00.jpg",
+          "alt": "Angled Shot of the NeoPixel Ring - 16 x 5050 WWA LED with Integrated Drivers"
+        },
+        {
+          "url": "https://cdn-shop.adafruit.com/100x75/6525-00.jpg",
+          "alt": "Angled Shot of the Adafruit TCS3448 Multi-Spectral Sensor"
+        },
+        {
+          "url": "https://cdn-shop.adafruit.com/100x75/6524-00.jpg",
+          "alt": "Angled Shot of the Adafruit TSL2585 Digital UVA and Ambient Light Sensor."
+        },
+        {
+          "url": "https://cdn-shop.adafruit.com/100x75/6407-05.jpg",
+          "alt": "Temperature and pressure sensor breakout displaying sensor information on a connected TFT display breakout."
+        },
+        {
+          "url": "https://cdn-shop.adafruit.com/product-videos/320x240/6353-05.jpg",
+          "alt": "Video of a motor stepper driver board driving a stepper motor connected to a microcontroller."
+        }
+      ]
+    },
+    "ldr2": {
+      "id": "ldr2",
+      "title": "Photo cell (CdS photoresistor) : Adafruit Industries, Unique & fun DIY electronics and kits",
+      "url": "https://www.adafruit.com/product/161",
+      "image_url": "https://cdn-shop.adafruit.com/970x728/161-00.jpg",
+      "checked_on": "2026-10-14",
+      "http_status": 200,
+      "source_kind": "제조사·개발사 원문",
+      "image_candidates": [
+        {
+          "url": "https://cdn-shop.adafruit.com/100x75/6526-00.jpg",
+          "alt": "Angled Shot of the NeoPixel Ring - 12 x 5050 WWA with Integrated Drivers."
+        },
+        {
+          "url": "https://cdn-shop.adafruit.com/100x75/6527-00.jpg",
+          "alt": "Angled Shot of the NeoPixel Ring - 16 x 5050 WWA LED with Integrated Drivers"
+        },
+        {
+          "url": "https://cdn-shop.adafruit.com/100x75/6525-00.jpg",
+          "alt": "Angled Shot of the Adafruit TCS3448 Multi-Spectral Sensor"
+        },
+        {
+          "url": "https://cdn-shop.adafruit.com/100x75/6524-00.jpg",
+          "alt": "Angled Shot of the Adafruit TSL2585 Digital UVA and Ambient Light Sensor."
+        },
+        {
+          "url": "https://cdn-shop.adafruit.com/100x75/6407-05.jpg",
+          "alt": "Temperature and pressure sensor breakout displaying sensor information on a connected TFT display breakout."
+        },
+        {
+          "url": "https://cdn-shop.adafruit.com/product-videos/320x240/6353-05.jpg",
+          "alt": "Video of a motor stepper driver board driving a stepper motor connected to a microcontroller."
+        }
+      ]
+    },
+    "ntc2": {
+      "id": "ntc2",
+      "title": "10K Precision Epoxy Thermistor [3950 NTC] : Adafruit Industries, Unique & fun DIY electronics and kits",
+      "url": "https://www.adafruit.com/product/372",
+      "image_url": "https://cdn-shop.adafruit.com/970x728/372-01.jpg",
+      "checked_on": "2026-10-14",
+      "http_status": 200,
+      "source_kind": "제조사·개발사 원문",
+      "image_candidates": [
+        {
+          "url": "https://cdn-shop.adafruit.com/100x75/6526-00.jpg",
+          "alt": "Angled Shot of the NeoPixel Ring - 12 x 5050 WWA with Integrated Drivers."
+        },
+        {
+          "url": "https://cdn-shop.adafruit.com/100x75/6527-00.jpg",
+          "alt": "Angled Shot of the NeoPixel Ring - 16 x 5050 WWA LED with Integrated Drivers"
+        },
+        {
+          "url": "https://cdn-shop.adafruit.com/100x75/6525-00.jpg",
+          "alt": "Angled Shot of the Adafruit TCS3448 Multi-Spectral Sensor"
+        },
+        {
+          "url": "https://cdn-shop.adafruit.com/100x75/6524-00.jpg",
+          "alt": "Angled Shot of the Adafruit TSL2585 Digital UVA and Ambient Light Sensor."
+        },
+        {
+          "url": "https://cdn-shop.adafruit.com/100x75/6407-05.jpg",
+          "alt": "Temperature and pressure sensor breakout displaying sensor information on a connected TFT display breakout."
+        },
+        {
+          "url": "https://cdn-shop.adafruit.com/product-videos/320x240/6353-05.jpg",
+          "alt": "Video of a motor stepper driver board driving a stepper motor connected to a microcontroller."
+        }
+      ]
+    },
+    "lcd4": {
+      "id": "lcd4",
+      "title": "LCD1602 I2C Module - Waveshare Wiki",
+      "url": "https://www.waveshare.com/wiki/LCD1602_I2C_Module",
+      "image_url": "https://www.waveshare.com/w/upload/9/9e/LCD1602_RGB_Module011.jpg",
+      "checked_on": "2026-10-14",
+      "http_status": 200,
+      "source_kind": "제조사·개발사 원문",
+      "image_candidates": [
+        {
+          "url": "https://www.waveshare.com/w/upload/thumb/9/9e/LCD1602_RGB_Module011.jpg/300px-LCD1602_RGB_Module011.jpg",
+          "alt": "LCD1602 RGB Module011.jpg"
+        },
+        {
+          "url": "https://www.waveshare.com/w/upload/d/d2/LCD1602_I2C_Module10.png",
+          "alt": "LCD1602 I2C Module10.png"
+        },
+        {
+          "url": "https://www.waveshare.com/w/upload/5/5c/RPI_open_i2c.png",
+          "alt": "RPI open i2c.png"
+        },
+        {
+          "url": "https://www.waveshare.com/w/upload/0/01/LCD1602_RGB_Module007.jpg",
+          "alt": "LCD1602 RGB Module007.jpg"
+        },
+        {
+          "url": "https://www.waveshare.com/w/upload/8/84/LCD1602_RGB_Module006.jpg",
+          "alt": "LCD1602 RGB Module006.jpg"
+        },
+        {
+          "url": "https://www.waveshare.com/w/upload/c/c3/LCD1602_I2C_Module_PICO05.jpg",
+          "alt": "LCD1602 I2C Module PICO05.jpg"
+        }
+      ]
+    },
+    "sht31": {
+      "id": "sht31",
+      "title": "Pinouts | Adafruit SHT31-D Temperature & Humidity Sensor Breakout | Adafruit Learning System",
+      "url": "https://learn.adafruit.com/adafruit-sht31-d-temperature-and-humidity-sensor-breakout/pinouts",
+      "image_url": "https://cdn-learn.adafruit.com/guides/images/000/001/184/medium800/SHT31_top_guide.jpg",
+      "checked_on": "2026-10-14",
+      "http_status": 200,
+      "source_kind": "제조사·개발사 원문",
+      "image_candidates": [
+        {
+          "url": "https://cdn-shop.adafruit.com/640x480/2857-03.jpg",
+          "alt": "Adafruit Sensirion SHT31-D Humidity sensor"
+        },
+        {
+          "url": "https://cdn-learn.adafruit.com/assets/assets/000/101/419/medium800/adafruit_products_SHT31_pinouts.jpg?1618419579",
+          "alt": ""
+        },
+        {
+          "url": "https://cdn-learn.adafruit.com/assets/assets/000/028/974/medium800/adafruit_products_2857_top_ORIG.jpg?1449606682",
+          "alt": ""
+        },
+        {
+          "url": "https://cdn-learn.adafruit.com/guides/cropped_images/000/003/529/medium640/thumb3.png?1646688852",
+          "alt": "Retro-themed graphic with the text \"Working with I2C Devices\" over a sunset and palm trees. Neon grid and starry sky in the background."
+        },
+        {
+          "url": "https://cdn-learn.adafruit.com/guides/cropped_images/000/002/594/medium640/4286-03.jpg?1564789861",
+          "alt": "A black rectangular DS3502 I2C digital potentiometer breakout board with labeled pins: Vcc, GND, SDA, SCL, A0, A1, RL, RW, RH, V+. Features two STEMMA QT I2C co"
+        },
+        {
+          "url": "https://cdn-learn.adafruit.com/guides/cropped_images/000/000/357/medium640/leds-1024.jpg?1520540964",
+          "alt": "A blue pwm breakout board with white lettering is on a breadboard and connected to four LEDs with silver wires. The LEDs are arranged in a square around the boa"
+        }
+      ]
+    },
+    "ldr4": {
+      "id": "ldr4",
+      "title": "Photoresistor Module — SunFounder Universal Maker Sensor Kit  documentation",
+      "url": "https://docs.sunfounder.com/projects/umsk/en/latest/01_components_basic/11-component_photoresistor.html",
+      "image_url": "https://docs.sunfounder.com/projects/umsk/en/latest/_images/11_photoresistor_module.png",
+      "checked_on": "2026-10-14",
+      "http_status": 200,
+      "source_kind": "제조사·개발사 원문",
+      "image_candidates": [
+        {
+          "url": "https://docs.sunfounder.com/projects/umsk/en/latest/_images/11_photoresistor_module.png",
+          "alt": "../_images/11_photoresistor_module.png"
+        },
+        {
+          "url": "https://docs.sunfounder.com/projects/umsk/en/latest/_images/11_photoresistor_symbol_2.png",
+          "alt": "../_images/11_photoresistor_symbol_2.png"
+        },
+        {
+          "url": "https://docs.sunfounder.com/projects/umsk/en/latest/_images/11_photoresistor_module_schematic.png",
+          "alt": "../_images/11_photoresistor_module_schematic.png"
+        }
+      ]
+    },
+    "sht31product": {
+      "id": "sht31product",
+      "title": "Adafruit Sensirion SHT31-D [Temperature & Humidity Sensor] : Adafruit Industries, Unique & fun DIY electronics and kits",
+      "url": "https://www.adafruit.com/product/2857",
+      "image_url": "https://cdn-shop.adafruit.com/970x728/2857-03.jpg",
+      "checked_on": "2026-10-14",
+      "http_status": 200,
+      "source_kind": "제조사·개발사 원문",
+      "image_candidates": [
+        {
+          "url": "https://cdn-shop.adafruit.com/100x75/6526-00.jpg",
+          "alt": "Angled Shot of the NeoPixel Ring - 12 x 5050 WWA with Integrated Drivers."
+        },
+        {
+          "url": "https://cdn-shop.adafruit.com/100x75/6527-00.jpg",
+          "alt": "Angled Shot of the NeoPixel Ring - 16 x 5050 WWA LED with Integrated Drivers"
+        },
+        {
+          "url": "https://cdn-shop.adafruit.com/100x75/6525-00.jpg",
+          "alt": "Angled Shot of the Adafruit TCS3448 Multi-Spectral Sensor"
+        },
+        {
+          "url": "https://cdn-shop.adafruit.com/100x75/6524-00.jpg",
+          "alt": "Angled Shot of the Adafruit TSL2585 Digital UVA and Ambient Light Sensor."
+        },
+        {
+          "url": "https://cdn-shop.adafruit.com/100x75/6407-05.jpg",
+          "alt": "Temperature and pressure sensor breakout displaying sensor information on a connected TFT display breakout."
+        },
+        {
+          "url": "https://cdn-shop.adafruit.com/product-videos/320x240/6353-05.jpg",
+          "alt": "Video of a motor stepper driver board driving a stepper motor connected to a microcontroller."
+        }
+      ]
+    },
+    "button3": {
+      "id": "button3",
+      "title": "KY-004 Button - SensorKit",
+      "url": "https://sensorkit.joy-it.net/en/sensors/ky-004",
+      "image_url": "https://sensorkit.joy-it.net/files/files/sensors/KY-004/KY-004.png",
+      "checked_on": "2026-10-14",
+      "http_status": 200,
+      "source_kind": "제조사·개발사 원문",
+      "image_candidates": [
+        {
+          "url": "https://sensorkit.joy-it.net/files/files/sensors/KY-004/KY-004.png",
+          "alt": ""
+        },
+        {
+          "url": "https://sensorkit.joy-it.net/files/files/sensors/KY-004/KY-004.svg",
+          "alt": ""
+        },
+        {
+          "url": "https://sensorkit.joy-it.net/files/files/sensors/KY-004/004-ARD.svg",
+          "alt": ""
+        },
+        {
+          "url": "https://sensorkit.joy-it.net/files/files/sensors/KY-004/KY-004.png",
+          "alt": ""
+        },
+        {
+          "url": "https://sensorkit.joy-it.net/files/files/sensors/KY-004/KY-004.svg",
+          "alt": ""
+        },
+        {
+          "url": "https://sensorkit.joy-it.net/files/files/sensors/KY-004/004-RPi.svg",
+          "alt": ""
+        }
+      ]
+    },
+    "oledspi": {
+      "id": "oledspi",
+      "title": "Wiring 128x64 OLEDs | Monochrome OLED Breakouts | Adafruit Learning System",
+      "url": "https://learn.adafruit.com/monochrome-oled-breakouts/wiring-128x64-oleds",
+      "image_url": "https://cdn-learn.adafruit.com/guides/images/000/000/039/medium800/938-17.jpg",
+      "checked_on": "2026-10-14",
+      "http_status": 200,
+      "source_kind": "제조사·개발사 원문",
+      "image_candidates": [
+        {
+          "url": "https://cdn-shop.adafruit.com/product-videos/640x480/938-05.jpg",
+          "alt": "Monochrome 1.3\" OLED module with Adafruit logos falling like snow"
+        },
+        {
+          "url": "https://cdn-shop.adafruit.com/640x480/326-04.jpg",
+          "alt": "Monochrome 0.96\" OLED module with Adafruit logo"
+        },
+        {
+          "url": "https://cdn-shop.adafruit.com/640x480/661-12.jpg",
+          "alt": "Angled Front Shot of the OLED Graphic Display."
+        },
+        {
+          "url": "https://cdn-shop.adafruit.com/640x480/931-10.jpg",
+          "alt": "Monochrome 0.91\" I2C OLED module with white text"
+        },
+        {
+          "url": "https://cdn-shop.adafruit.com/product-videos/640x480/4440-06.jpg",
+          "alt": "Monochrome OLED module wired to Feather showing text and circles"
+        },
+        {
+          "url": "https://cdn-learn.adafruit.com/assets/assets/000/002/616/medium640/lcds___displays_headerplace.jpg?1396785089",
+          "alt": "lcds___displays_headerplace.jpg"
+        }
+      ]
+    },
+    "sht31four": {
+      "id": "sht31four",
+      "title": "Grove - Temp and Humi Sensor(SHT31) | Seeed Studio Wiki",
+      "url": "https://wiki.seeedstudio.com/Grove-TempAndHumi_Sensor-SHT31/",
+      "image_url": "https://files.seeedstudio.com/wiki/Grove-TempAndHumi_Sensor-SHT31/img/main_new.jpg",
+      "checked_on": "2026-10-14",
+      "http_status": 200,
+      "source_kind": "제조사·개발사 원문",
+      "image_candidates": [
+        {
+          "url": "https://files.seeedstudio.com/wiki/Grove-TempAndHumi_Sensor-SHT31/img/main_new.jpg",
+          "alt": ""
+        },
+        {
+          "url": "https://files.seeedstudio.com/wiki/K1100_overview/S21012103.png",
+          "alt": ""
+        },
+        {
+          "url": "https://files.seeedstudio.com/wiki/Grove_Light_Sensor/images/gs_1.jpg",
+          "alt": ""
+        },
+        {
+          "url": "https://files.seeedstudio.com/wiki/Grove_Light_Sensor/images/gs_4.jpg",
+          "alt": ""
+        },
+        {
+          "url": "https://files.seeedstudio.com/wiki/Grove-TempAndHumi_Sensor-SHT31/img/thumbnail.jpg",
+          "alt": ""
+        },
+        {
+          "url": "https://files.seeedstudio.com/wiki/Grove-TempAndHumi_Sensor-SHT31/img/arduino_connect.jpg",
+          "alt": ""
+        }
+      ]
+    },
+    "pir": {
+      "id": "pir",
+      "title": "PIR (motion) sensor : Adafruit Industries, Unique & fun DIY electronics and kits",
+      "url": "https://www.adafruit.com/product/189",
+      "image_url": "https://cdn-shop.adafruit.com/970x728/189-04.jpg",
+      "checked_on": "2026-10-14",
+      "http_status": 200,
+      "source_kind": "제조사·개발사 원문",
+      "image_candidates": [
+        {
+          "url": "https://cdn-shop.adafruit.com/100x75/6526-00.jpg",
+          "alt": "Angled Shot of the NeoPixel Ring - 12 x 5050 WWA with Integrated Drivers."
+        },
+        {
+          "url": "https://cdn-shop.adafruit.com/100x75/6527-00.jpg",
+          "alt": "Angled Shot of the NeoPixel Ring - 16 x 5050 WWA LED with Integrated Drivers"
+        },
+        {
+          "url": "https://cdn-shop.adafruit.com/100x75/6525-00.jpg",
+          "alt": "Angled Shot of the Adafruit TCS3448 Multi-Spectral Sensor"
+        },
+        {
+          "url": "https://cdn-shop.adafruit.com/100x75/6524-00.jpg",
+          "alt": "Angled Shot of the Adafruit TSL2585 Digital UVA and Ambient Light Sensor."
+        },
+        {
+          "url": "https://cdn-shop.adafruit.com/100x75/6407-05.jpg",
+          "alt": "Temperature and pressure sensor breakout displaying sensor information on a connected TFT display breakout."
+        },
+        {
+          "url": "https://cdn-shop.adafruit.com/product-videos/320x240/6353-05.jpg",
+          "alt": "Video of a motor stepper driver board driving a stepper motor connected to a microcontroller."
+        }
+      ]
+    },
+    "mpu8": {
+      "id": "mpu8",
+      "title": "Motion sensor MPU6050 (Gyroscope) | Joy-IT",
+      "url": "https://www.joy-it.net/en/products/SEN-MPU6050",
+      "image_url": "https://www.joy-it.net/files/files/Produkte/SEN-MPU6050/SEN-MPU6050_1.png",
+      "checked_on": "2026-10-14",
+      "http_status": 200,
+      "source_kind": "제조사·개발사 원문",
+      "image_candidates": [
+        {
+          "url": "https://www.joy-it.net/en/products/files/files/Produkte/SEN-MPU6050/SEN-MPU6050_1.png",
+          "alt": ""
+        },
+        {
+          "url": "https://www.joy-it.net/en/products/files/files/Produkte/SEN-MPU6050/SEN-MPU6050_2.png",
+          "alt": ""
+        },
+        {
+          "url": "https://www.joy-it.net/en/products/files/files/Produkte/SEN-MPU6050/SEN-MPU6050_3.png",
+          "alt": ""
+        },
+        {
+          "url": "https://www.joy-it.net/assets/images/x/SEN-MPU6050_1-2sj8hmvxm5ymfnx.png",
+          "alt": ""
+        },
+        {
+          "url": "https://www.joy-it.net/assets/images/e/SEN-MPU6050_2-36wmafzxzzp3w25.png",
+          "alt": ""
+        },
+        {
+          "url": "https://www.joy-it.net/assets/images/3/SEN-MPU6050_3-wkzhkyahp68hqs7.png",
+          "alt": ""
+        }
+      ]
+    },
+    "oled4": {
+      "id": "oled4",
+      "title": "0,96\" OLED display | Joy-IT",
+      "url": "https://www.joy-it.net/en/products/SBC-OLED01",
+      "image_url": "https://www.joy-it.net/files/files/Produkte/SBC-OLED01/SBC-OLED01-1b.png",
+      "checked_on": "2026-10-14",
+      "http_status": 200,
+      "source_kind": "제조사·개발사 원문",
+      "image_candidates": [
+        {
+          "url": "https://www.joy-it.net/en/products/files/files/Produkte/SBC-OLED01/SBC-OLED01-1b.png",
+          "alt": ""
+        },
+        {
+          "url": "https://www.joy-it.net/en/products/files/files/Produkte/SBC-OLED01/SBC-OLED01-2.png",
+          "alt": ""
+        },
+        {
+          "url": "https://www.joy-it.net/en/products/files/files/Produkte/SBC-OLED01/SBC-OLED01-3.png",
+          "alt": ""
+        },
+        {
+          "url": "https://www.joy-it.net/assets/images/w/SBC-OLED01-1b-a6jq078pe3kfhcb.png",
+          "alt": ""
+        },
+        {
+          "url": "https://www.joy-it.net/assets/images/v/SBC-OLED01-2-wxtyt651n3w9fsk.png",
+          "alt": ""
+        },
+        {
+          "url": "https://www.joy-it.net/assets/images/1/SBC-OLED01-3-wdvrae4ev5ckfvp.png",
+          "alt": ""
+        }
+      ]
+    },
+    "ntc3": {
+      "id": "ntc3",
+      "title": "KY-013 Temperature sensor (NTC) - SensorKit",
+      "url": "https://sensorkit.joy-it.net/en/sensors/ky-013",
+      "image_url": "https://sensorkit.joy-it.net/files/files/sensors/KY-013/KY-013.png",
+      "checked_on": "2026-10-14",
+      "http_status": 200,
+      "source_kind": "제조사·개발사 원문",
+      "image_candidates": [
+        {
+          "url": "https://sensorkit.joy-it.net/files/files/sensors/KY-013/KY-013.png",
+          "alt": ""
+        },
+        {
+          "url": "https://sensorkit.joy-it.net/files/files/sensors/KY-013/KY-013-NTC-Kurve-EN.svg",
+          "alt": ""
+        },
+        {
+          "url": "https://sensorkit.joy-it.net/files/files/sensors/KY-013/KY-013-VoltDivide-EN.svg",
+          "alt": ""
+        },
+        {
+          "url": "https://sensorkit.joy-it.net/files/files/sensors/KY-013/KY-013.svg",
+          "alt": ""
+        },
+        {
+          "url": "https://sensorkit.joy-it.net/files/files/sensors/KY-013/013-ARD.svg",
+          "alt": ""
+        },
+        {
+          "url": "https://sensorkit.joy-it.net/files/files/sensors/KY-013/KY-013.png",
+          "alt": ""
+        }
+      ]
+    },
+    "ldr3": {
+      "id": "ldr3",
+      "title": "KY-018 Photoresistor - SensorKit",
+      "url": "https://sensorkit.joy-it.net/en/sensors/ky-018",
+      "image_url": "https://sensorkit.joy-it.net/files/files/sensors/KY-018/KY-018.png",
+      "checked_on": "2026-10-14",
+      "http_status": 200,
+      "source_kind": "제조사·개발사 원문",
+      "image_candidates": [
+        {
+          "url": "https://sensorkit.joy-it.net/files/files/sensors/KY-018/KY-018.png",
+          "alt": ""
+        },
+        {
+          "url": "https://sensorkit.joy-it.net/files/files/sensors/KY-018/KY-018-LDR-Kurve-EN.svg",
+          "alt": ""
+        },
+        {
+          "url": "https://sensorkit.joy-it.net/files/files/sensors/KY-013/KY-013-VoltDivide-EN.svg",
+          "alt": ""
+        },
+        {
+          "url": "https://sensorkit.joy-it.net/files/files/sensors/KY-018/KY-018.svg",
+          "alt": ""
+        },
+        {
+          "url": "https://sensorkit.joy-it.net/files/files/sensors/KY-018/018-ARD.svg",
+          "alt": ""
+        },
+        {
+          "url": "https://sensorkit.joy-it.net/files/files/sensors/KY-018/KY-018.png",
+          "alt": ""
+        }
+      ]
+    },
+    "servo4": {
+      "id": "servo4",
+      "title": "Analog Feedback Micro Servo - Plastic Gear : Adafruit Industries, Unique & fun DIY electronics and kits",
+      "url": "https://www.adafruit.com/product/1449",
+      "image_url": "https://cdn-shop.adafruit.com/970x728/1449-05.jpg",
+      "checked_on": "2026-10-14",
+      "http_status": 200,
+      "source_kind": "제조사·개발사 원문",
+      "image_candidates": [
+        {
+          "url": "https://cdn-shop.adafruit.com/100x75/6526-00.jpg",
+          "alt": "Angled Shot of the NeoPixel Ring - 12 x 5050 WWA with Integrated Drivers."
+        },
+        {
+          "url": "https://cdn-shop.adafruit.com/100x75/6527-00.jpg",
+          "alt": "Angled Shot of the NeoPixel Ring - 16 x 5050 WWA LED with Integrated Drivers"
+        },
+        {
+          "url": "https://cdn-shop.adafruit.com/100x75/6525-00.jpg",
+          "alt": "Angled Shot of the Adafruit TCS3448 Multi-Spectral Sensor"
+        },
+        {
+          "url": "https://cdn-shop.adafruit.com/100x75/6524-00.jpg",
+          "alt": "Angled Shot of the Adafruit TSL2585 Digital UVA and Ambient Light Sensor."
+        },
+        {
+          "url": "https://cdn-shop.adafruit.com/100x75/6407-05.jpg",
+          "alt": "Temperature and pressure sensor breakout displaying sensor information on a connected TFT display breakout."
+        },
+        {
+          "url": "https://cdn-shop.adafruit.com/product-videos/320x240/6353-05.jpg",
+          "alt": "Video of a motor stepper driver board driving a stepper motor connected to a microcontroller."
+        }
+      ]
+    },
+    "matrix": {
+      "id": "matrix",
+      "title": "LED Matrix Module — SunFounder Ulimate Raphael Kit for Raspberry Pi  documentation",
+      "url": "https://docs.sunfounder.com/projects/raphael-kit/en/latest/_shared/component/cpn_max7219_module.html",
+      "image_url": "https://docs.sunfounder.com/projects/raphael-kit/en/latest/_images/max7219_module.jpg",
+      "checked_on": "2026-10-14",
+      "http_status": 200,
+      "source_kind": "제조사·개발사 원문",
+      "image_candidates": [
+        {
+          "url": "https://docs.sunfounder.com/projects/raphael-kit/en/latest/_images/max7219_module.jpg",
+          "alt": "../../_images/max7219_module.jpg"
+        },
+        {
+          "url": "https://docs.sunfounder.com/projects/raphael-kit/en/latest/_images/max7219_sche.png",
+          "alt": "../../_images/max7219_sche.png"
+        }
+      ]
+    },
+    "servo3": {
+      "id": "servo3",
+      "title": "Micro servo [TowerPro SG92R] : Adafruit Industries, Unique & fun DIY electronics and kits",
+      "url": "https://www.adafruit.com/product/169",
+      "image_url": "https://cdn-shop.adafruit.com/970x728/169-06.jpg",
+      "checked_on": "2026-10-14",
+      "http_status": 200,
+      "source_kind": "제조사·개발사 원문",
+      "image_candidates": [
+        {
+          "url": "https://cdn-shop.adafruit.com/100x75/6526-00.jpg",
+          "alt": "Angled Shot of the NeoPixel Ring - 12 x 5050 WWA with Integrated Drivers."
+        },
+        {
+          "url": "https://cdn-shop.adafruit.com/100x75/6527-00.jpg",
+          "alt": "Angled Shot of the NeoPixel Ring - 16 x 5050 WWA LED with Integrated Drivers"
+        },
+        {
+          "url": "https://cdn-shop.adafruit.com/100x75/6525-00.jpg",
+          "alt": "Angled Shot of the Adafruit TCS3448 Multi-Spectral Sensor"
+        },
+        {
+          "url": "https://cdn-shop.adafruit.com/100x75/6524-00.jpg",
+          "alt": "Angled Shot of the Adafruit TSL2585 Digital UVA and Ambient Light Sensor."
+        },
+        {
+          "url": "https://cdn-shop.adafruit.com/100x75/6407-05.jpg",
+          "alt": "Temperature and pressure sensor breakout displaying sensor information on a connected TFT display breakout."
+        },
+        {
+          "url": "https://cdn-shop.adafruit.com/product-videos/320x240/6353-05.jpg",
+          "alt": "Video of a motor stepper driver board driving a stepper motor connected to a microcontroller."
+        }
+      ]
+    },
+    "dc2": {
+      "id": "dc2",
+      "title": "DC Toy / Hobby Motor - 130 Size : Adafruit Industries, Unique & fun DIY electronics and kits",
+      "url": "https://www.adafruit.com/product/711",
+      "image_url": "https://cdn-shop.adafruit.com/970x728/711-06.jpg",
+      "checked_on": "2026-10-14",
+      "http_status": 200,
+      "source_kind": "제조사·개발사 원문",
+      "image_candidates": [
+        {
+          "url": "https://cdn-shop.adafruit.com/100x75/6526-00.jpg",
+          "alt": "Angled Shot of the NeoPixel Ring - 12 x 5050 WWA with Integrated Drivers."
+        },
+        {
+          "url": "https://cdn-shop.adafruit.com/100x75/6527-00.jpg",
+          "alt": "Angled Shot of the NeoPixel Ring - 16 x 5050 WWA LED with Integrated Drivers"
+        },
+        {
+          "url": "https://cdn-shop.adafruit.com/100x75/6525-00.jpg",
+          "alt": "Angled Shot of the Adafruit TCS3448 Multi-Spectral Sensor"
+        },
+        {
+          "url": "https://cdn-shop.adafruit.com/100x75/6524-00.jpg",
+          "alt": "Angled Shot of the Adafruit TSL2585 Digital UVA and Ambient Light Sensor."
+        },
+        {
+          "url": "https://cdn-shop.adafruit.com/100x75/6407-05.jpg",
+          "alt": "Temperature and pressure sensor breakout displaying sensor information on a connected TFT display breakout."
+        },
+        {
+          "url": "https://cdn-shop.adafruit.com/product-videos/320x240/6353-05.jpg",
+          "alt": "Video of a motor stepper driver board driving a stepper motor connected to a microcontroller."
+        }
+      ]
+    },
+    "step4": {
+      "id": "step4",
+      "title": "Stepper motor - NEMA-17 size - 200 steps/rev, 12V 350mA : Adafruit Industries, Unique & fun DIY electronics and kits",
+      "url": "https://www.adafruit.com/product/324",
+      "image_url": "https://cdn-shop.adafruit.com/970x728/324-03.jpg",
+      "checked_on": "2026-10-14",
+      "http_status": 200,
+      "source_kind": "제조사·개발사 원문",
+      "image_candidates": [
+        {
+          "url": "https://cdn-shop.adafruit.com/100x75/6526-00.jpg",
+          "alt": "Angled Shot of the NeoPixel Ring - 12 x 5050 WWA with Integrated Drivers."
+        },
+        {
+          "url": "https://cdn-shop.adafruit.com/100x75/6527-00.jpg",
+          "alt": "Angled Shot of the NeoPixel Ring - 16 x 5050 WWA LED with Integrated Drivers"
+        },
+        {
+          "url": "https://cdn-shop.adafruit.com/100x75/6525-00.jpg",
+          "alt": "Angled Shot of the Adafruit TCS3448 Multi-Spectral Sensor"
+        },
+        {
+          "url": "https://cdn-shop.adafruit.com/100x75/6524-00.jpg",
+          "alt": "Angled Shot of the Adafruit TSL2585 Digital UVA and Ambient Light Sensor."
+        },
+        {
+          "url": "https://cdn-shop.adafruit.com/100x75/6407-05.jpg",
+          "alt": "Temperature and pressure sensor breakout displaying sensor information on a connected TFT display breakout."
+        },
+        {
+          "url": "https://cdn-shop.adafruit.com/product-videos/320x240/6353-05.jpg",
+          "alt": "Video of a motor stepper driver board driving a stepper motor connected to a microcontroller."
+        }
+      ]
+    },
+    "oled7": {
+      "id": "oled7",
+      "title": "0.96inch OLED Module - Waveshare Wiki",
+      "url": "https://www.waveshare.com/wiki/0.96inch_OLED_Module",
+      "image_url": "https://www.waveshare.com/w/upload/4/4a/0.96inch_OLED_Module.jpg",
+      "checked_on": "2026-10-14",
+      "http_status": 200,
+      "source_kind": "제조사·개발사 원문",
+      "image_candidates": [
+        {
+          "url": "https://www.waveshare.com/w/upload/thumb/4/4a/0.96inch_OLED_Module.jpg/300px-0.96inch_OLED_Module.jpg",
+          "alt": "0.96inch OLED Module.jpg"
+        },
+        {
+          "url": "https://www.waveshare.com/w/upload/thumb/5/51/0.96inch_OLED_Module002.jpg/300px-0.96inch_OLED_Module002.jpg",
+          "alt": "0.96inch OLED Module002.jpg"
+        },
+        {
+          "url": "https://www.waveshare.com/w/upload/thumb/2/27/0.96inch_OLED_Module3.jpg/300px-0.96inch_OLED_Module3.jpg",
+          "alt": "0.96inch OLED Module3.jpg"
+        },
+        {
+          "url": "https://www.waveshare.com/w/upload/e/e0/0.96inch_OLED_Module2.jpg",
+          "alt": "0.96inch OLED Module2.jpg"
+        },
+        {
+          "url": "https://www.waveshare.com/w/upload/1/13/0.96inch_OLED_Module_connect_RPi.jpg",
+          "alt": "0.96inch OLED Module connect RPi.jpg"
+        },
+        {
+          "url": "https://www.waveshare.com/w/upload/1/1e/RPI_open_spi.png",
+          "alt": "RPI open spi.png"
+        }
+      ]
+    },
+    "step5": {
+      "id": "step5",
+      "title": "Moto1 Stepper motor controller | Joy-IT",
+      "url": "https://www.joy-it.net/en/products/SBC-Moto1",
+      "image_url": "https://www.joy-it.net/files/files/Produkte/SBC-Moto1/SBC-Moto1_01.png",
+      "checked_on": "2026-10-14",
+      "http_status": 200,
+      "source_kind": "제조사·개발사 원문",
+      "image_candidates": [
+        {
+          "url": "https://www.joy-it.net/en/products/files/files/Produkte/SBC-Moto1/SBC-Moto1_01.png",
+          "alt": ""
+        },
+        {
+          "url": "https://www.joy-it.net/en/products/files/files/Produkte/SBC-Moto1/SBC-Moto1_02.png",
+          "alt": ""
+        },
+        {
+          "url": "https://www.joy-it.net/assets/images/a/SBC-Moto1_01-29mp9jpmxr4axcm.png",
+          "alt": ""
+        },
+        {
+          "url": "https://www.joy-it.net/assets/images/5/SBC-Moto1_02-6hkwvand1kmxet5.png",
+          "alt": ""
+        },
+        {
+          "url": "https://www.joy-it.net/assets/images/k/RB-Moto2-03-9ew0wx4w224hgde.png",
+          "alt": ""
+        },
+        {
+          "url": "https://www.joy-it.net/assets/images/k/ARD-Moto1-01g-wmxyc0t19jzwp7c.png",
+          "alt": ""
+        }
+      ]
+    },
+    "tft8": {
+      "id": "tft8",
+      "title": "1.8inch LCD Module - Waveshare Wiki",
+      "url": "https://www.waveshare.com/wiki/1.8inch_LCD_Module",
+      "image_url": "https://www.waveshare.com/w/upload/a/ae/1.8inch-LCD-Module-1.jpg",
+      "checked_on": "2026-10-14",
+      "http_status": 200,
+      "source_kind": "제조사·개발사 원문",
+      "image_candidates": [
+        {
+          "url": "https://www.waveshare.com/w/upload/thumb/a/ae/1.8inch-LCD-Module-1.jpg/300px-1.8inch-LCD-Module-1.jpg",
+          "alt": "1.8inch-LCD-Module-1.jpg"
+        },
+        {
+          "url": "https://www.waveshare.com/w/upload/thumb/f/fa/1.8-rpi.jpg/800px-1.8-rpi.jpg",
+          "alt": "1.8-rpi.jpg"
+        },
+        {
+          "url": "https://www.waveshare.com/w/upload/2/2f/1.8-STM32.jpg",
+          "alt": "1.8-STM32.jpg"
+        },
+        {
+          "url": "https://www.waveshare.com/w/upload/4/45/1.8-Aduino.jpg",
+          "alt": "1.8-Aduino.jpg"
+        },
+        {
+          "url": "https://www.waveshare.com/w/upload/1/10/0.96inch_lcd_module_spi.png",
+          "alt": "0.96inch lcd module spi.png"
+        },
+        {
+          "url": "https://www.waveshare.com/w/upload/1/1e/RPI_open_spi.png",
+          "alt": "RPI open spi.png"
+        }
+      ]
+    },
+    "encoderbare": {
+      "id": "encoderbare",
+      "title": "Rotary Encoder + Extras : Adafruit Industries, Unique & fun DIY electronics and kits",
+      "url": "https://www.adafruit.com/product/377",
+      "image_url": "https://cdn-shop.adafruit.com/970x728/377-02.jpg",
+      "checked_on": "2026-10-14",
+      "http_status": 200,
+      "source_kind": "제조사·개발사 원문",
+      "image_candidates": [
+        {
+          "url": "https://cdn-shop.adafruit.com/100x75/6526-00.jpg",
+          "alt": "Angled Shot of the NeoPixel Ring - 12 x 5050 WWA with Integrated Drivers."
+        },
+        {
+          "url": "https://cdn-shop.adafruit.com/100x75/6527-00.jpg",
+          "alt": "Angled Shot of the NeoPixel Ring - 16 x 5050 WWA LED with Integrated Drivers"
+        },
+        {
+          "url": "https://cdn-shop.adafruit.com/100x75/6525-00.jpg",
+          "alt": "Angled Shot of the Adafruit TCS3448 Multi-Spectral Sensor"
+        },
+        {
+          "url": "https://cdn-shop.adafruit.com/100x75/6524-00.jpg",
+          "alt": "Angled Shot of the Adafruit TSL2585 Digital UVA and Ambient Light Sensor."
+        },
+        {
+          "url": "https://cdn-shop.adafruit.com/100x75/6407-05.jpg",
+          "alt": "Temperature and pressure sensor breakout displaying sensor information on a connected TFT display breakout."
+        },
+        {
+          "url": "https://cdn-shop.adafruit.com/product-videos/320x240/6353-05.jpg",
+          "alt": "Video of a motor stepper driver board driving a stepper motor connected to a microcontroller."
+        }
+      ]
+    },
+    "relay": {
+      "id": "relay",
+      "title": "KY-019 5V Relais - SensorKit",
+      "url": "https://sensorkit.joy-it.net/en/sensors/ky-019",
+      "image_url": "https://sensorkit.joy-it.net/files/files/sensors/KY-019/KY-019.png",
+      "checked_on": "2026-10-14",
+      "http_status": 200,
+      "source_kind": "제조사·개발사 원문",
+      "image_candidates": [
+        {
+          "url": "https://sensorkit.joy-it.net/files/files/sensors/KY-019/KY-019.png",
+          "alt": ""
+        },
+        {
+          "url": "https://sensorkit.joy-it.net/files/files/sensors/KY-019/507px-KY-019_NC_NO.png",
+          "alt": ""
+        },
+        {
+          "url": "https://sensorkit.joy-it.net/files/files/sensors/KY-019/KY-019.svg",
+          "alt": ""
+        },
+        {
+          "url": "https://sensorkit.joy-it.net/files/files/sensors/KY-019/019-ARD.svg",
+          "alt": ""
+        },
+        {
+          "url": "https://sensorkit.joy-it.net/files/files/sensors/KY-019/KY-019.png",
+          "alt": ""
+        },
+        {
+          "url": "https://sensorkit.joy-it.net/files/files/sensors/KY-019/507px-KY-019_NC_NO.png",
+          "alt": ""
+        }
+      ]
+    },
+    "i2c8": {
+      "id": "i2c8",
+      "title": "Microchip 24AA02/24LC02B 데이터시트",
+      "url": "https://ww1.microchip.com/downloads/en/devicedoc/21709j.pdf",
+      "image_url": "https://product.hstatic.net/200000551749/product/24_7f79743fbdb945058afcb92c43f4f153_grande.png",
+      "checked_on": "2026-10-14",
+      "http_status": 200,
+      "source_kind": "제조사·개발사 원문",
+      "image_candidates": [],
+      "image_page_url": "https://linhkienhatech.com/products/ic-eeprom-24lc02b-dip-8-chinh-hang-microchip",
+      "image_kind": "판매처 제품 사진"
+    },
+    "spi8": {
+      "id": "spi8",
+      "title": "Microchip 25AA020A/25LC020A 데이터시트",
+      "url": "https://ww1.microchip.com/downloads/en/DeviceDoc/21833G.pdf",
+      "image_url": null,
+      "checked_on": "2026-10-14",
+      "http_status": 200,
+      "source_kind": "제조사·개발사 원문",
+      "image_candidates": []
+    },
+    "joystick": {
+      "id": "joystick",
+      "title": "KY-023 Joystick (X-Y-Axis) - SensorKit",
+      "url": "https://sensorkit.joy-it.net/en/sensors/ky-023",
+      "image_url": "https://sensorkit.joy-it.net/files/files/sensors/KY-023/KY-023.png",
+      "checked_on": "2026-10-14",
+      "http_status": 200,
+      "source_kind": "제조사·개발사 원문",
+      "image_candidates": [
+        {
+          "url": "https://sensorkit.joy-it.net/files/files/sensors/KY-023/KY-023.png",
+          "alt": ""
+        },
+        {
+          "url": "https://sensorkit.joy-it.net/files/files/sensors/KY-023/KY-023-VoltDivide-EN.svg",
+          "alt": ""
+        },
+        {
+          "url": "https://sensorkit.joy-it.net/files/files/sensors/KY-023/KY-023.svg",
+          "alt": ""
+        },
+        {
+          "url": "https://sensorkit.joy-it.net/files/files/sensors/KY-023/023-ARD.svg",
+          "alt": ""
+        },
+        {
+          "url": "https://sensorkit.joy-it.net/files/files/sensors/KY-023/KY-023.png",
+          "alt": ""
+        },
+        {
+          "url": "https://sensorkit.joy-it.net/files/files/sensors/KY-023/KY-023-VoltDivide-EN.svg",
+          "alt": ""
+        }
+      ]
+    },
+    "dc_supply": {
+      "id": "dc_supply",
+      "title": "4 x AA Battery Holder with On/Off Switch : Adafruit Industries, Unique & fun DIY electronics and kits",
+      "url": "https://www.adafruit.com/product/830",
+      "image_url": "https://cdn-shop.adafruit.com/970x728/830-07.jpg",
+      "checked_on": "2026-10-14",
+      "http_status": 200,
+      "source_kind": "제조사·개발사 원문",
+      "image_candidates": [
+        {
+          "url": "https://cdn-shop.adafruit.com/100x75/6526-00.jpg",
+          "alt": "Angled Shot of the NeoPixel Ring - 12 x 5050 WWA with Integrated Drivers."
+        },
+        {
+          "url": "https://cdn-shop.adafruit.com/100x75/6527-00.jpg",
+          "alt": "Angled Shot of the NeoPixel Ring - 16 x 5050 WWA LED with Integrated Drivers"
+        },
+        {
+          "url": "https://cdn-shop.adafruit.com/100x75/6525-00.jpg",
+          "alt": "Angled Shot of the Adafruit TCS3448 Multi-Spectral Sensor"
+        },
+        {
+          "url": "https://cdn-shop.adafruit.com/100x75/6524-00.jpg",
+          "alt": "Angled Shot of the Adafruit TSL2585 Digital UVA and Ambient Light Sensor."
+        },
+        {
+          "url": "https://cdn-shop.adafruit.com/100x75/6407-05.jpg",
+          "alt": "Temperature and pressure sensor breakout displaying sensor information on a connected TFT display breakout."
+        },
+        {
+          "url": "https://cdn-shop.adafruit.com/product-videos/320x240/6353-05.jpg",
+          "alt": "Video of a motor stepper driver board driving a stepper motor connected to a microcontroller."
+        }
+      ]
+    },
+    "motor": {
+      "id": "motor",
+      "title": "Motor Driver HAT - Waveshare Wiki",
+      "url": "https://www.waveshare.com/wiki/Motor_Driver_HAT",
+      "image_url": "https://www.waveshare.com/w/upload/9/9e/Motor-Driver-HAT-intro.JPG",
+      "checked_on": "2026-10-14",
+      "http_status": 200,
+      "source_kind": "제조사·개발사 원문",
+      "image_candidates": [
+        {
+          "url": "https://www.waveshare.com/w/upload/thumb/9/9e/Motor-Driver-HAT-intro.JPG/400px-Motor-Driver-HAT-intro.JPG",
+          "alt": "Motor-Driver-HAT-intro.JPG"
+        },
+        {
+          "url": "https://www.waveshare.com/w/upload/thumb/f/f5/Motor_Driver_HATExample1.png/600px-Motor_Driver_HATExample1.png",
+          "alt": "Motor Driver HATExample1.png"
+        },
+        {
+          "url": "https://www.waveshare.com/w/upload/thumb/0/04/Example3.png/600px-Example3.png",
+          "alt": "Example3.png"
+        },
+        {
+          "url": "https://www.waveshare.com/w/upload/thumb/9/95/Example5.png/600px-Example5.png",
+          "alt": "Example5.png"
+        },
+        {
+          "url": "https://www.waveshare.com/w/upload/thumb/5/58/Motor_Driver_HATExample6.png/700px-Motor_Driver_HATExample6.png",
+          "alt": "Motor Driver HATExample6.png"
+        },
+        {
+          "url": "https://www.waveshare.com/w/upload/thumb/2/20/Example7.png/300px-Example7.png",
+          "alt": "Example7.png"
+        }
+      ]
+    },
+    "uart4": {
+      "id": "uart4",
+      "title": "USB to TTL Serial Cable - Debug / Console Cable for Raspberry Pi : Adafruit Industries, Unique & fun DIY electronics and kits",
+      "url": "https://www.adafruit.com/product/954",
+      "image_url": "https://cdn-shop.adafruit.com/970x728/954-02.jpg",
+      "checked_on": "2026-10-14",
+      "http_status": 200,
+      "source_kind": "제조사·개발사 원문",
+      "image_candidates": [
+        {
+          "url": "https://cdn-shop.adafruit.com/100x75/6526-00.jpg",
+          "alt": "Angled Shot of the NeoPixel Ring - 12 x 5050 WWA with Integrated Drivers."
+        },
+        {
+          "url": "https://cdn-shop.adafruit.com/100x75/6527-00.jpg",
+          "alt": "Angled Shot of the NeoPixel Ring - 16 x 5050 WWA LED with Integrated Drivers"
+        },
+        {
+          "url": "https://cdn-shop.adafruit.com/100x75/6525-00.jpg",
+          "alt": "Angled Shot of the Adafruit TCS3448 Multi-Spectral Sensor"
+        },
+        {
+          "url": "https://cdn-shop.adafruit.com/100x75/6524-00.jpg",
+          "alt": "Angled Shot of the Adafruit TSL2585 Digital UVA and Ambient Light Sensor."
+        },
+        {
+          "url": "https://cdn-shop.adafruit.com/100x75/6407-05.jpg",
+          "alt": "Temperature and pressure sensor breakout displaying sensor information on a connected TFT display breakout."
+        },
+        {
+          "url": "https://cdn-shop.adafruit.com/product-videos/320x240/6353-05.jpg",
+          "alt": "Video of a motor stepper driver board driving a stepper motor connected to a microcontroller."
+        }
+      ]
+    },
+    "l298n": {
+      "id": "l298n",
+      "title": "MotoDriver2 DC motor control | Joy-IT",
+      "url": "https://www.joy-it.net/en/products/SBC-Motodriver2",
+      "image_url": "https://www.joy-it.net/files/files/Produkte/SBC-MotorDriver2/SBC-Motodriver2-1neu.png",
+      "checked_on": "2026-10-14",
+      "http_status": 200,
+      "source_kind": "제조사·개발사 원문",
+      "image_candidates": [
+        {
+          "url": "https://www.joy-it.net/en/products/files/files/Produkte/SBC-MotorDriver2/SBC-Motodriver2-1neu.png",
+          "alt": ""
+        },
+        {
+          "url": "https://www.joy-it.net/en/products/files/files/Produkte/SBC-MotorDriver2/SBC-Motodriver2-2neu.png",
+          "alt": ""
+        },
+        {
+          "url": "https://www.joy-it.net/en/products/files/files/Produkte/SBC-MotorDriver2/SBC-Motodriver2-3neu.png",
+          "alt": ""
+        },
+        {
+          "url": "https://www.joy-it.net/assets/images/a/SBC-Motodriver2-1neu-f4w6d7n1ehj5csb.png",
+          "alt": ""
+        },
+        {
+          "url": "https://www.joy-it.net/assets/images/n/SBC-Motodriver2-2neu-zpb4fc7tkkat0j6.png",
+          "alt": ""
+        },
+        {
+          "url": "https://www.joy-it.net/assets/images/x/SBC-Motodriver2-3neu-vcxzef75aa99v43.png",
+          "alt": ""
+        }
+      ]
+    },
+    "uart6": {
+      "id": "uart6",
+      "title": "FTDI Serial TTL-232 USB Cable : Adafruit Industries, Unique & fun DIY electronics and kits",
+      "url": "https://www.adafruit.com/product/70",
+      "image_url": "https://cdn-shop.adafruit.com/970x728/70-03.jpg",
+      "checked_on": "2026-10-14",
+      "http_status": 200,
+      "source_kind": "제조사·개발사 원문",
+      "image_candidates": [
+        {
+          "url": "https://cdn-shop.adafruit.com/100x75/6526-00.jpg",
+          "alt": "Angled Shot of the NeoPixel Ring - 12 x 5050 WWA with Integrated Drivers."
+        },
+        {
+          "url": "https://cdn-shop.adafruit.com/100x75/6527-00.jpg",
+          "alt": "Angled Shot of the NeoPixel Ring - 16 x 5050 WWA LED with Integrated Drivers"
+        },
+        {
+          "url": "https://cdn-shop.adafruit.com/100x75/6525-00.jpg",
+          "alt": "Angled Shot of the Adafruit TCS3448 Multi-Spectral Sensor"
+        },
+        {
+          "url": "https://cdn-shop.adafruit.com/100x75/6524-00.jpg",
+          "alt": "Angled Shot of the Adafruit TSL2585 Digital UVA and Ambient Light Sensor."
+        },
+        {
+          "url": "https://cdn-shop.adafruit.com/100x75/6407-05.jpg",
+          "alt": "Temperature and pressure sensor breakout displaying sensor information on a connected TFT display breakout."
+        },
+        {
+          "url": "https://cdn-shop.adafruit.com/product-videos/320x240/6353-05.jpg",
+          "alt": "Video of a motor stepper driver board driving a stepper motor connected to a microcontroller."
+        }
+      ]
+    },
+    "pot": {
+      "id": "pot",
+      "title": "Breadboard trim potentiometer [10K] : Adafruit Industries, Unique & fun DIY electronics and kits",
+      "url": "https://www.adafruit.com/product/356",
+      "image_url": "https://cdn-shop.adafruit.com/970x728/356-03.jpg",
+      "checked_on": "2026-10-14",
+      "http_status": 200,
+      "source_kind": "제조사·개발사 원문",
+      "image_candidates": [
+        {
+          "url": "https://cdn-shop.adafruit.com/100x75/6526-00.jpg",
+          "alt": "Angled Shot of the NeoPixel Ring - 12 x 5050 WWA with Integrated Drivers."
+        },
+        {
+          "url": "https://cdn-shop.adafruit.com/100x75/6527-00.jpg",
+          "alt": "Angled Shot of the NeoPixel Ring - 16 x 5050 WWA LED with Integrated Drivers"
+        },
+        {
+          "url": "https://cdn-shop.adafruit.com/100x75/6525-00.jpg",
+          "alt": "Angled Shot of the Adafruit TCS3448 Multi-Spectral Sensor"
+        },
+        {
+          "url": "https://cdn-shop.adafruit.com/100x75/6524-00.jpg",
+          "alt": "Angled Shot of the Adafruit TSL2585 Digital UVA and Ambient Light Sensor."
+        },
+        {
+          "url": "https://cdn-shop.adafruit.com/100x75/6407-05.jpg",
+          "alt": "Temperature and pressure sensor breakout displaying sensor information on a connected TFT display breakout."
+        },
+        {
+          "url": "https://cdn-shop.adafruit.com/product-videos/320x240/6353-05.jpg",
+          "alt": "Video of a motor stepper driver board driving a stepper motor connected to a microcontroller."
+        }
+      ]
+    },
+    "encoder": {
+      "id": "encoder",
+      "title": "KY-040 Rotary encoder - SensorKit",
+      "url": "https://sensorkit.joy-it.net/en/sensors/ky-040",
+      "image_url": "https://sensorkit.joy-it.net/files/files/sensors/KY-040/KY-040.png",
+      "checked_on": "2026-10-14",
+      "http_status": 200,
+      "source_kind": "제조사·개발사 원문",
+      "image_candidates": [
+        {
+          "url": "https://sensorkit.joy-it.net/files/files/sensors/KY-040/KY-040.png",
+          "alt": ""
+        },
+        {
+          "url": "https://sensorkit.joy-it.net/files/files/sensors/KY-040/KY-040.svg",
+          "alt": ""
+        },
+        {
+          "url": "https://sensorkit.joy-it.net/files/files/sensors/KY-040/040-ARD.svg",
+          "alt": ""
+        },
+        {
+          "url": "https://sensorkit.joy-it.net/files/files/sensors/KY-040/KY-040.png",
+          "alt": ""
+        },
+        {
+          "url": "https://sensorkit.joy-it.net/files/files/sensors/KY-040/KY-040.svg",
+          "alt": ""
+        },
+        {
+          "url": "https://sensorkit.joy-it.net/files/files/sensors/KY-040/040-RPi.svg",
+          "alt": ""
+        }
+      ]
+    },
+    "slide3": {
+      "id": "slide3",
+      "title": "Breadboard-friendly SPDT Slide Switch : Adafruit Industries, Unique & fun DIY electronics and kits",
+      "url": "https://www.adafruit.com/product/805",
+      "image_url": "https://cdn-shop.adafruit.com/970x728/805-03.jpg",
+      "checked_on": "2026-10-14",
+      "http_status": 200,
+      "source_kind": "제조사·개발사 원문",
+      "image_candidates": [
+        {
+          "url": "https://cdn-shop.adafruit.com/100x75/6526-00.jpg",
+          "alt": "Angled Shot of the NeoPixel Ring - 12 x 5050 WWA with Integrated Drivers."
+        },
+        {
+          "url": "https://cdn-shop.adafruit.com/100x75/6527-00.jpg",
+          "alt": "Angled Shot of the NeoPixel Ring - 16 x 5050 WWA LED with Integrated Drivers"
+        },
+        {
+          "url": "https://cdn-shop.adafruit.com/100x75/6525-00.jpg",
+          "alt": "Angled Shot of the Adafruit TCS3448 Multi-Spectral Sensor"
+        },
+        {
+          "url": "https://cdn-shop.adafruit.com/100x75/6524-00.jpg",
+          "alt": "Angled Shot of the Adafruit TSL2585 Digital UVA and Ambient Light Sensor."
+        },
+        {
+          "url": "https://cdn-shop.adafruit.com/100x75/6407-05.jpg",
+          "alt": "Temperature and pressure sensor breakout displaying sensor information on a connected TFT display breakout."
+        },
+        {
+          "url": "https://cdn-shop.adafruit.com/product-videos/320x240/6353-05.jpg",
+          "alt": "Video of a motor stepper driver board driving a stepper motor connected to a microcontroller."
+        }
+      ]
+    },
+    "rgbca": {
+      "id": "rgbca",
+      "title": "Diffused RGB (tri-color) LED [Common Anode] : Adafruit Industries, Unique & fun DIY electronics and kits",
+      "url": "https://www.adafruit.com/product/159",
+      "image_url": "https://cdn-shop.adafruit.com/970x728/159-02.jpg",
+      "checked_on": "2026-10-14",
+      "http_status": 200,
+      "source_kind": "제조사·개발사 원문",
+      "image_candidates": [
+        {
+          "url": "https://cdn-shop.adafruit.com/100x75/6526-00.jpg",
+          "alt": "Angled Shot of the NeoPixel Ring - 12 x 5050 WWA with Integrated Drivers."
+        },
+        {
+          "url": "https://cdn-shop.adafruit.com/100x75/6527-00.jpg",
+          "alt": "Angled Shot of the NeoPixel Ring - 16 x 5050 WWA LED with Integrated Drivers"
+        },
+        {
+          "url": "https://cdn-shop.adafruit.com/100x75/6525-00.jpg",
+          "alt": "Angled Shot of the Adafruit TCS3448 Multi-Spectral Sensor"
+        },
+        {
+          "url": "https://cdn-shop.adafruit.com/100x75/6524-00.jpg",
+          "alt": "Angled Shot of the Adafruit TSL2585 Digital UVA and Ambient Light Sensor."
+        },
+        {
+          "url": "https://cdn-shop.adafruit.com/100x75/6407-05.jpg",
+          "alt": "Temperature and pressure sensor breakout displaying sensor information on a connected TFT display breakout."
+        },
+        {
+          "url": "https://cdn-shop.adafruit.com/product-videos/320x240/6353-05.jpg",
+          "alt": "Video of a motor stepper driver board driving a stepper motor connected to a microcontroller."
+        }
+      ]
+    },
+    "potmodule": {
+      "id": "potmodule",
+      "title": "Gravity: Analog Rotation Potentiometer Sensor for Arduino - Rotation 300° - DFRobot",
+      "url": "https://www.dfrobot.com/product-87.html",
+      "image_url": "https://dfimg.dfrobot.com/enshop/DFR0054/DFR0054_Main_01.jpg",
+      "checked_on": "2026-10-14",
+      "http_status": 200,
+      "source_kind": "제조사·개발사 원문",
+      "image_candidates": [
+        {
+          "url": "https://www.dfrobot.com/dfrobotshop/images/pc/nologinhead.png",
+          "alt": "userhead"
+        },
+        {
+          "url": "https://dfimg.dfrobot.com/enshop/DFR0054/DFR0054_Main_01_150x100.jpg.webp",
+          "alt": "Angled shot of Gravity Analog Rotation Sensor V1 with 300° rotation potentiometer module.-DFRobot product sku:DFR0054 image."
+        },
+        {
+          "url": "https://dfimg.dfrobot.com/enshop/DFR0054_Dim_02_150x100.jpg.webp",
+          "alt": "Front view of Gravity Analog Rotation Sensor for Arduino 300° Rotation Potentiometer with USB connector and labeled dimensions"
+        },
+        {
+          "url": "https://dfimg.dfrobot.com/enshop/DFR0054_Back_03_150x100.jpg.webp",
+          "alt": "Front of black phone case with white circular logo and stylized "
+        },
+        {
+          "url": "https://dfimg.dfrobot.com/enshop/DFR0054_ShipList_04_150x100.jpg.webp",
+          "alt": "Front of blue and black analog rotation sensor with cable, 300-degree rotation for Arduino"
+        },
+        {
+          "url": "https://dfimg.dfrobot.com/enshop/DFR0054_Detail_05_150x100.jpg.webp",
+          "alt": "Angled shot of Gravity analog rotation sensor with black knob and blue base, 300° rotation"
+        }
+      ]
+    },
+    "neopixel3": {
+      "id": "neopixel3",
+      "title": "Flora RGB Smart NeoPixel version 3 - Pack of 4 : Adafruit Industries, Unique & fun DIY electronics and kits",
+      "url": "https://www.adafruit.com/product/1260",
+      "image_url": "https://cdn-shop.adafruit.com/970x728/1260-09.jpg",
+      "checked_on": "2026-10-14",
+      "http_status": 200,
+      "source_kind": "제조사·개발사 원문",
+      "image_candidates": [
+        {
+          "url": "https://cdn-shop.adafruit.com/100x75/6526-00.jpg",
+          "alt": "Angled Shot of the NeoPixel Ring - 12 x 5050 WWA with Integrated Drivers."
+        },
+        {
+          "url": "https://cdn-shop.adafruit.com/100x75/6527-00.jpg",
+          "alt": "Angled Shot of the NeoPixel Ring - 16 x 5050 WWA LED with Integrated Drivers"
+        },
+        {
+          "url": "https://cdn-shop.adafruit.com/100x75/6525-00.jpg",
+          "alt": "Angled Shot of the Adafruit TCS3448 Multi-Spectral Sensor"
+        },
+        {
+          "url": "https://cdn-shop.adafruit.com/100x75/6524-00.jpg",
+          "alt": "Angled Shot of the Adafruit TSL2585 Digital UVA and Ambient Light Sensor."
+        },
+        {
+          "url": "https://cdn-shop.adafruit.com/100x75/6407-05.jpg",
+          "alt": "Temperature and pressure sensor breakout displaying sensor information on a connected TFT display breakout."
+        },
+        {
+          "url": "https://cdn-shop.adafruit.com/product-videos/320x240/6353-05.jpg",
+          "alt": "Video of a motor stepper driver board driving a stepper motor connected to a microcontroller."
+        }
+      ]
+    },
+    "capacitor": {
+      "id": "capacitor",
+      "title": "0.1uF ceramic capacitors - 10 pack : Adafruit Industries, Unique & fun DIY electronics and kits",
+      "url": "https://www.adafruit.com/product/753",
+      "image_url": "https://cdn-shop.adafruit.com/970x728/753-02.jpg",
+      "checked_on": "2026-10-14",
+      "http_status": 200,
+      "source_kind": "제조사·개발사 원문",
+      "image_candidates": [
+        {
+          "url": "https://cdn-shop.adafruit.com/100x75/6526-00.jpg",
+          "alt": "Angled Shot of the NeoPixel Ring - 12 x 5050 WWA with Integrated Drivers."
+        },
+        {
+          "url": "https://cdn-shop.adafruit.com/100x75/6527-00.jpg",
+          "alt": "Angled Shot of the NeoPixel Ring - 16 x 5050 WWA LED with Integrated Drivers"
+        },
+        {
+          "url": "https://cdn-shop.adafruit.com/100x75/6525-00.jpg",
+          "alt": "Angled Shot of the Adafruit TCS3448 Multi-Spectral Sensor"
+        },
+        {
+          "url": "https://cdn-shop.adafruit.com/100x75/6524-00.jpg",
+          "alt": "Angled Shot of the Adafruit TSL2585 Digital UVA and Ambient Light Sensor."
+        },
+        {
+          "url": "https://cdn-shop.adafruit.com/100x75/6407-05.jpg",
+          "alt": "Temperature and pressure sensor breakout displaying sensor information on a connected TFT display breakout."
+        },
+        {
+          "url": "https://cdn-shop.adafruit.com/product-videos/320x240/6353-05.jpg",
+          "alt": "Video of a motor stepper driver board driving a stepper motor connected to a microcontroller."
+        }
+      ]
+    },
+    "neopixel4": {
+      "id": "neopixel4",
+      "title": "NeoPixel Diffused 5mm Through-Hole LED - 5 Pack : Adafruit Industries, Unique & fun DIY electronics and kits",
+      "url": "https://www.adafruit.com/product/1938",
+      "image_url": "https://cdn-shop.adafruit.com/970x728/1938-01.jpg",
+      "checked_on": "2026-10-14",
+      "http_status": 200,
+      "source_kind": "제조사·개발사 원문",
+      "image_candidates": [
+        {
+          "url": "https://cdn-shop.adafruit.com/100x75/6526-00.jpg",
+          "alt": "Angled Shot of the NeoPixel Ring - 12 x 5050 WWA with Integrated Drivers."
+        },
+        {
+          "url": "https://cdn-shop.adafruit.com/100x75/6527-00.jpg",
+          "alt": "Angled Shot of the NeoPixel Ring - 16 x 5050 WWA LED with Integrated Drivers"
+        },
+        {
+          "url": "https://cdn-shop.adafruit.com/100x75/6525-00.jpg",
+          "alt": "Angled Shot of the Adafruit TCS3448 Multi-Spectral Sensor"
+        },
+        {
+          "url": "https://cdn-shop.adafruit.com/100x75/6524-00.jpg",
+          "alt": "Angled Shot of the Adafruit TSL2585 Digital UVA and Ambient Light Sensor."
+        },
+        {
+          "url": "https://cdn-shop.adafruit.com/100x75/6407-05.jpg",
+          "alt": "Temperature and pressure sensor breakout displaying sensor information on a connected TFT display breakout."
+        },
+        {
+          "url": "https://cdn-shop.adafruit.com/product-videos/320x240/6353-05.jpg",
+          "alt": "Video of a motor stepper driver board driving a stepper motor connected to a microcontroller."
+        }
+      ]
+    },
+    "rgbcc": {
+      "id": "rgbcc",
+      "title": "KY-016 RGB 5mm LED - SensorKit",
+      "url": "https://sensorkit.joy-it.net/en/sensors/ky-016",
+      "image_url": "https://sensorkit.joy-it.net/files/files/sensors/KY-016/KY-016.png",
+      "checked_on": "2026-10-14",
+      "http_status": 200,
+      "source_kind": "제조사·개발사 원문",
+      "image_candidates": [
+        {
+          "url": "https://sensorkit.joy-it.net/files/files/sensors/KY-016/KY-016.png",
+          "alt": ""
+        },
+        {
+          "url": "https://sensorkit.joy-it.net/files/files/sensors/KY-016/KY-016.svg",
+          "alt": ""
+        },
+        {
+          "url": "https://sensorkit.joy-it.net/files/files/sensors/KY-016/016-ARD.svg",
+          "alt": ""
+        },
+        {
+          "url": "https://sensorkit.joy-it.net/files/files/sensors/KY-016/KY-016.png",
+          "alt": ""
+        },
+        {
+          "url": "https://sensorkit.joy-it.net/files/files/sensors/KY-016/KY-016.svg",
+          "alt": ""
+        },
+        {
+          "url": "https://sensorkit.joy-it.net/files/files/sensors/KY-016/016-RPi.svg",
+          "alt": ""
+        }
+      ]
+    },
+    "diode": {
+      "id": "diode",
+      "title": "1N4001 Diode - 10 pack : Adafruit Industries, Unique & fun DIY electronics and kits",
+      "url": "https://www.adafruit.com/product/755",
+      "image_url": "https://cdn-shop.adafruit.com/970x728/755-03.jpg",
+      "checked_on": "2026-10-14",
+      "http_status": 200,
+      "source_kind": "제조사·개발사 원문",
+      "image_candidates": [
+        {
+          "url": "https://cdn-shop.adafruit.com/100x75/6526-00.jpg",
+          "alt": "Angled Shot of the NeoPixel Ring - 12 x 5050 WWA with Integrated Drivers."
+        },
+        {
+          "url": "https://cdn-shop.adafruit.com/100x75/6527-00.jpg",
+          "alt": "Angled Shot of the NeoPixel Ring - 16 x 5050 WWA LED with Integrated Drivers"
+        },
+        {
+          "url": "https://cdn-shop.adafruit.com/100x75/6525-00.jpg",
+          "alt": "Angled Shot of the Adafruit TCS3448 Multi-Spectral Sensor"
+        },
+        {
+          "url": "https://cdn-shop.adafruit.com/100x75/6524-00.jpg",
+          "alt": "Angled Shot of the Adafruit TSL2585 Digital UVA and Ambient Light Sensor."
+        },
+        {
+          "url": "https://cdn-shop.adafruit.com/100x75/6407-05.jpg",
+          "alt": "Temperature and pressure sensor breakout displaying sensor information on a connected TFT display breakout."
+        },
+        {
+          "url": "https://cdn-shop.adafruit.com/product-videos/320x240/6353-05.jpg",
+          "alt": "Video of a motor stepper driver board driving a stepper motor connected to a microcontroller."
+        }
+      ]
+    },
+    "electrolytic": {
+      "id": "electrolytic",
+      "title": "100uF 16V Electrolytic Capacitors - Pack of 10 : Adafruit Industries, Unique & fun DIY electronics and kits",
+      "url": "https://www.adafruit.com/product/2193",
+      "image_url": "https://cdn-shop.adafruit.com/970x728/2193-00.jpg",
+      "checked_on": "2026-10-14",
+      "http_status": 200,
+      "source_kind": "제조사·개발사 원문",
+      "image_candidates": [
+        {
+          "url": "https://cdn-shop.adafruit.com/100x75/6526-00.jpg",
+          "alt": "Angled Shot of the NeoPixel Ring - 12 x 5050 WWA with Integrated Drivers."
+        },
+        {
+          "url": "https://cdn-shop.adafruit.com/100x75/6527-00.jpg",
+          "alt": "Angled Shot of the NeoPixel Ring - 16 x 5050 WWA LED with Integrated Drivers"
+        },
+        {
+          "url": "https://cdn-shop.adafruit.com/100x75/6525-00.jpg",
+          "alt": "Angled Shot of the Adafruit TCS3448 Multi-Spectral Sensor"
+        },
+        {
+          "url": "https://cdn-shop.adafruit.com/100x75/6524-00.jpg",
+          "alt": "Angled Shot of the Adafruit TSL2585 Digital UVA and Ambient Light Sensor."
+        },
+        {
+          "url": "https://cdn-shop.adafruit.com/100x75/6407-05.jpg",
+          "alt": "Temperature and pressure sensor breakout displaying sensor information on a connected TFT display breakout."
+        },
+        {
+          "url": "https://cdn-shop.adafruit.com/product-videos/320x240/6353-05.jpg",
+          "alt": "Video of a motor stepper driver board driving a stepper motor connected to a microcontroller."
+        }
+      ]
+    },
+    "buzzer2": {
+      "id": "buzzer2",
+      "title": "Buzzer 5V - Breadboard friendly : Adafruit Industries, Unique & fun DIY electronics and kits",
+      "url": "https://www.adafruit.com/product/1536",
+      "image_url": "https://cdn-shop.adafruit.com/970x728/1536-06.jpg",
+      "checked_on": "2026-10-14",
+      "http_status": 200,
+      "source_kind": "제조사·개발사 원문",
+      "image_candidates": [
+        {
+          "url": "https://cdn-shop.adafruit.com/100x75/6526-00.jpg",
+          "alt": "Angled Shot of the NeoPixel Ring - 12 x 5050 WWA with Integrated Drivers."
+        },
+        {
+          "url": "https://cdn-shop.adafruit.com/100x75/6527-00.jpg",
+          "alt": "Angled Shot of the NeoPixel Ring - 16 x 5050 WWA LED with Integrated Drivers"
+        },
+        {
+          "url": "https://cdn-shop.adafruit.com/100x75/6525-00.jpg",
+          "alt": "Angled Shot of the Adafruit TCS3448 Multi-Spectral Sensor"
+        },
+        {
+          "url": "https://cdn-shop.adafruit.com/100x75/6524-00.jpg",
+          "alt": "Angled Shot of the Adafruit TSL2585 Digital UVA and Ambient Light Sensor."
+        },
+        {
+          "url": "https://cdn-shop.adafruit.com/100x75/6407-05.jpg",
+          "alt": "Temperature and pressure sensor breakout displaying sensor information on a connected TFT display breakout."
+        },
+        {
+          "url": "https://cdn-shop.adafruit.com/product-videos/320x240/6353-05.jpg",
+          "alt": "Video of a motor stepper driver board driving a stepper motor connected to a microcontroller."
+        }
+      ]
+    },
+    "passive2": {
+      "id": "passive2",
+      "title": "Piezo Buzzer [PS1240] : Adafruit Industries, Unique & fun DIY electronics and kits",
+      "url": "https://www.adafruit.com/product/160",
+      "image_url": "https://cdn-shop.adafruit.com/970x728/160-01.jpg",
+      "checked_on": "2026-10-14",
+      "http_status": 200,
+      "source_kind": "제조사·개발사 원문",
+      "image_candidates": [
+        {
+          "url": "https://cdn-shop.adafruit.com/100x75/6526-00.jpg",
+          "alt": "Angled Shot of the NeoPixel Ring - 12 x 5050 WWA with Integrated Drivers."
+        },
+        {
+          "url": "https://cdn-shop.adafruit.com/100x75/6527-00.jpg",
+          "alt": "Angled Shot of the NeoPixel Ring - 16 x 5050 WWA LED with Integrated Drivers"
+        },
+        {
+          "url": "https://cdn-shop.adafruit.com/100x75/6525-00.jpg",
+          "alt": "Angled Shot of the Adafruit TCS3448 Multi-Spectral Sensor"
+        },
+        {
+          "url": "https://cdn-shop.adafruit.com/100x75/6524-00.jpg",
+          "alt": "Angled Shot of the Adafruit TSL2585 Digital UVA and Ambient Light Sensor."
+        },
+        {
+          "url": "https://cdn-shop.adafruit.com/100x75/6407-05.jpg",
+          "alt": "Temperature and pressure sensor breakout displaying sensor information on a connected TFT display breakout."
+        },
+        {
+          "url": "https://cdn-shop.adafruit.com/product-videos/320x240/6353-05.jpg",
+          "alt": "Video of a motor stepper driver board driving a stepper motor connected to a microcontroller."
+        }
+      ]
+    },
+    "seven4": {
+      "id": "seven4",
+      "title": "Grove - 4-Digit Display | Seeed Studio Wiki",
+      "url": "https://wiki.seeedstudio.com/Grove-4-Digit_Display/",
+      "image_url": "https://files.seeedstudio.com/wiki/Grove-4-Digit_Display/img/Grove-4_digit_display.jpg",
+      "checked_on": "2026-10-14",
+      "http_status": 200,
+      "source_kind": "제조사·개발사 원문",
+      "image_candidates": [
+        {
+          "url": "https://files.seeedstudio.com/wiki/Grove-4-Digit_Display/img/Grove-4_digit_display.jpg",
+          "alt": "pir"
+        },
+        {
+          "url": "https://files.seeedstudio.com/wiki/wiki_english/docs/images/seeeduino_v4.2.jpg",
+          "alt": "pir"
+        },
+        {
+          "url": "https://files.seeedstudio.com/wiki/wiki_english/docs/images/base_shield.jpg",
+          "alt": "pir"
+        },
+        {
+          "url": "https://files.seeedstudio.com/wiki/Grove_4_Digit_Display/image/500px-Grove_-_4_digit_display_s.jpg",
+          "alt": "pir"
+        },
+        {
+          "url": "https://files.seeedstudio.com/wiki/Grove_4_Digit_Display/image/seeeduino_digital_led.jpg",
+          "alt": "pir"
+        },
+        {
+          "url": "https://files.seeedstudio.com/wiki/Grove_4_Digit_Display/image/arduino_example.jpg",
+          "alt": "pir"
+        }
+      ]
+    },
+    "tmp36": {
+      "id": "tmp36",
+      "title": "TMP36 - Analog Temperature sensor [TMP36] : Adafruit Industries, Unique & fun DIY electronics and kits",
+      "url": "https://www.adafruit.com/product/165",
+      "image_url": "https://cdn-shop.adafruit.com/970x728/165-02.jpg",
+      "checked_on": "2026-10-14",
+      "http_status": 200,
+      "source_kind": "제조사·개발사 원문",
+      "image_candidates": [
+        {
+          "url": "https://cdn-shop.adafruit.com/100x75/6526-00.jpg",
+          "alt": "Angled Shot of the NeoPixel Ring - 12 x 5050 WWA with Integrated Drivers."
+        },
+        {
+          "url": "https://cdn-shop.adafruit.com/100x75/6527-00.jpg",
+          "alt": "Angled Shot of the NeoPixel Ring - 16 x 5050 WWA LED with Integrated Drivers"
+        },
+        {
+          "url": "https://cdn-shop.adafruit.com/100x75/6525-00.jpg",
+          "alt": "Angled Shot of the Adafruit TCS3448 Multi-Spectral Sensor"
+        },
+        {
+          "url": "https://cdn-shop.adafruit.com/100x75/6524-00.jpg",
+          "alt": "Angled Shot of the Adafruit TSL2585 Digital UVA and Ambient Light Sensor."
+        },
+        {
+          "url": "https://cdn-shop.adafruit.com/100x75/6407-05.jpg",
+          "alt": "Temperature and pressure sensor breakout displaying sensor information on a connected TFT display breakout."
+        },
+        {
+          "url": "https://cdn-shop.adafruit.com/product-videos/320x240/6353-05.jpg",
+          "alt": "Video of a motor stepper driver board driving a stepper motor connected to a microcontroller."
+        }
+      ]
+    },
+    "sevenraw": {
+      "id": "sevenraw",
+      "title": "Green 7-segment clock display - 0.56 digit height : Adafruit Industries, Unique & fun DIY electronics and kits",
+      "url": "https://www.adafruit.com/product/813",
+      "image_url": "https://cdn-shop.adafruit.com/970x728/813-06.jpg",
+      "checked_on": "2026-10-14",
+      "http_status": 200,
+      "source_kind": "제조사·개발사 원문",
+      "image_candidates": [
+        {
+          "url": "https://cdn-shop.adafruit.com/100x75/6526-00.jpg",
+          "alt": "Angled Shot of the NeoPixel Ring - 12 x 5050 WWA with Integrated Drivers."
+        },
+        {
+          "url": "https://cdn-shop.adafruit.com/100x75/6527-00.jpg",
+          "alt": "Angled Shot of the NeoPixel Ring - 16 x 5050 WWA LED with Integrated Drivers"
+        },
+        {
+          "url": "https://cdn-shop.adafruit.com/100x75/6525-00.jpg",
+          "alt": "Angled Shot of the Adafruit TCS3448 Multi-Spectral Sensor"
+        },
+        {
+          "url": "https://cdn-shop.adafruit.com/100x75/6524-00.jpg",
+          "alt": "Angled Shot of the Adafruit TSL2585 Digital UVA and Ambient Light Sensor."
+        },
+        {
+          "url": "https://cdn-shop.adafruit.com/100x75/6407-05.jpg",
+          "alt": "Temperature and pressure sensor breakout displaying sensor information on a connected TFT display breakout."
+        },
+        {
+          "url": "https://cdn-shop.adafruit.com/product-videos/320x240/6353-05.jpg",
+          "alt": "Video of a motor stepper driver board driving a stepper motor connected to a microcontroller."
+        }
+      ]
+    },
+    "buzzer3": {
+      "id": "buzzer3",
+      "title": "KY-012 Active Piezo-Buzzer - SensorKit",
+      "url": "https://sensorkit.joy-it.net/en/sensors/ky-012",
+      "image_url": "https://sensorkit.joy-it.net/files/files/sensors/KY-006/KY-006.png",
+      "checked_on": "2026-10-14",
+      "http_status": 200,
+      "source_kind": "제조사·개발사 원문",
+      "image_candidates": [
+        {
+          "url": "https://sensorkit.joy-it.net/files/files/sensors/KY-006/KY-006.png",
+          "alt": ""
+        },
+        {
+          "url": "https://sensorkit.joy-it.net/files/files/sensors/KY-012/KY-012.svg",
+          "alt": ""
+        },
+        {
+          "url": "https://sensorkit.joy-it.net/files/files/sensors/KY-012/012-ARD.svg",
+          "alt": ""
+        },
+        {
+          "url": "https://sensorkit.joy-it.net/files/files/sensors/KY-006/KY-006.png",
+          "alt": ""
+        },
+        {
+          "url": "https://sensorkit.joy-it.net/files/files/sensors/KY-012/KY-012.svg",
+          "alt": ""
+        },
+        {
+          "url": "https://sensorkit.joy-it.net/files/files/sensors/KY-012/012-RPi.svg",
+          "alt": ""
+        }
+      ]
+    },
+    "passive3": {
+      "id": "passive3",
+      "title": "Passive Piezo-Buzzer - SensorKit",
+      "url": "https://sensorkit.joy-it.net/en/sensors/ky-006",
+      "image_url": "https://sensorkit.joy-it.net/files/files/sensors/KY-006/KY-006.png",
+      "checked_on": "2026-10-14",
+      "http_status": 200,
+      "source_kind": "제조사·개발사 원문",
+      "image_candidates": [
+        {
+          "url": "https://sensorkit.joy-it.net/files/files/sensors/KY-006/KY-006.png",
+          "alt": ""
+        },
+        {
+          "url": "https://sensorkit.joy-it.net/files/files/sensors/KY-006/KY-006.svg",
+          "alt": ""
+        },
+        {
+          "url": "https://sensorkit.joy-it.net/files/files/sensors/KY-006/006-ARD.svg",
+          "alt": ""
+        },
+        {
+          "url": "https://sensorkit.joy-it.net/files/files/sensors/KY-006/KY-006.png",
+          "alt": ""
+        },
+        {
+          "url": "https://sensorkit.joy-it.net/files/files/sensors/KY-006/KY-006.svg",
+          "alt": ""
+        },
+        {
+          "url": "https://sensorkit.joy-it.net/files/files/sensors/KY-006/006-RPi.svg",
+          "alt": ""
+        }
+      ]
+    },
+    "ds18b20": {
+      "id": "ds18b20",
+      "title": "DS18B20 Digital temperature sensor + extras : Adafruit Industries, Unique & fun DIY electronics and kits",
+      "url": "https://www.adafruit.com/product/374",
+      "image_url": "https://cdn-shop.adafruit.com/970x728/374-01.jpg",
+      "checked_on": "2026-10-14",
+      "http_status": 200,
+      "source_kind": "제조사·개발사 원문",
+      "image_candidates": [
+        {
+          "url": "https://cdn-shop.adafruit.com/100x75/6526-00.jpg",
+          "alt": "Angled Shot of the NeoPixel Ring - 12 x 5050 WWA with Integrated Drivers."
+        },
+        {
+          "url": "https://cdn-shop.adafruit.com/100x75/6527-00.jpg",
+          "alt": "Angled Shot of the NeoPixel Ring - 16 x 5050 WWA LED with Integrated Drivers"
+        },
+        {
+          "url": "https://cdn-shop.adafruit.com/100x75/6525-00.jpg",
+          "alt": "Angled Shot of the Adafruit TCS3448 Multi-Spectral Sensor"
+        },
+        {
+          "url": "https://cdn-shop.adafruit.com/100x75/6524-00.jpg",
+          "alt": "Angled Shot of the Adafruit TSL2585 Digital UVA and Ambient Light Sensor."
+        },
+        {
+          "url": "https://cdn-shop.adafruit.com/100x75/6407-05.jpg",
+          "alt": "Temperature and pressure sensor breakout displaying sensor information on a connected TFT display breakout."
+        },
+        {
+          "url": "https://cdn-shop.adafruit.com/product-videos/320x240/6353-05.jpg",
+          "alt": "Video of a motor stepper driver board driving a stepper motor connected to a microcontroller."
+        }
+      ]
+    },
+    "sevencc": {
+      "id": "sevencc",
+      "title": "Kingbright SC56-11EWA 데이터시트",
+      "url": "https://www.kingbrightusa.com/images/catalog/spec/sc56-11ewa.pdf",
+      "image_url": "https://static.rapidonline.com/catalogueimages/product/57/01/s57-0127p01wl.jpg",
+      "checked_on": "2026-10-14",
+      "http_status": 200,
+      "source_kind": "제조사·개발사 원문",
+      "image_candidates": [],
+      "image_page_url": "https://www.rapidonline.com/kingbright-sc56-11ewa-14-2mm-high-efficiency-red-led-display-cathode-57-0127",
+      "image_kind": "판매처 제품 사진"
+    },
+    "sevenca": {
+      "id": "sevenca",
+      "title": "Kingbright SA56-11EWA 데이터시트",
+      "url": "https://www.kingbrightusa.com/images/catalog/spec/sa56-11ewa.pdf",
+      "image_url": null,
+      "checked_on": "2026-10-14",
+      "http_status": 200,
+      "source_kind": "제조사·개발사 원문",
+      "image_candidates": []
+    },
+    "dsprobe": {
+      "id": "dsprobe",
+      "title": "Waterproof 1-Wire DS18B20 Digital temperature sensor : Adafruit Industries, Unique & fun DIY electronics and kits",
+      "url": "https://www.adafruit.com/product/381",
+      "image_url": "https://cdn-shop.adafruit.com/970x728/381-01.jpg",
+      "checked_on": "2026-10-14",
+      "http_status": 200,
+      "source_kind": "제조사·개발사 원문",
+      "image_candidates": [
+        {
+          "url": "https://cdn-shop.adafruit.com/100x75/6526-00.jpg",
+          "alt": "Angled Shot of the NeoPixel Ring - 12 x 5050 WWA with Integrated Drivers."
+        },
+        {
+          "url": "https://cdn-shop.adafruit.com/100x75/6527-00.jpg",
+          "alt": "Angled Shot of the NeoPixel Ring - 16 x 5050 WWA LED with Integrated Drivers"
+        },
+        {
+          "url": "https://cdn-shop.adafruit.com/100x75/6525-00.jpg",
+          "alt": "Angled Shot of the Adafruit TCS3448 Multi-Spectral Sensor"
+        },
+        {
+          "url": "https://cdn-shop.adafruit.com/100x75/6524-00.jpg",
+          "alt": "Angled Shot of the Adafruit TSL2585 Digital UVA and Ambient Light Sensor."
+        },
+        {
+          "url": "https://cdn-shop.adafruit.com/100x75/6407-05.jpg",
+          "alt": "Temperature and pressure sensor breakout displaying sensor information on a connected TFT display breakout."
+        },
+        {
+          "url": "https://cdn-shop.adafruit.com/product-videos/320x240/6353-05.jpg",
+          "alt": "Video of a motor stepper driver board driving a stepper motor connected to a microcontroller."
+        }
+      ]
+    },
+    "ultrasonic3": {
+      "id": "ultrasonic3",
+      "title": "Gravity: URM09 Ultrasonic Distance Sensor (2～500cm, Trig) | DFRobot Wiki",
+      "url": "https://wiki.dfrobot.com/sen0388/",
+      "image_url": "https://dfimg.dfrobot.com/enshop/image/data/SEN0388/SEN0388_251022 (1)_1200x630.jpg.webp",
+      "checked_on": "2026-10-14",
+      "http_status": 200,
+      "source_kind": "제조사·개발사 원문",
+      "image_candidates": [
+        {
+          "url": "https://wiki.dfrobot.com/dfrobotshop/images/pc/nologinhead.png",
+          "alt": "userhead"
+        },
+        {
+          "url": "https://dfimg.dfrobot.com/enshop/image/data/SEN0388/SEN0388_251022 (1)_360x240.jpg.webp",
+          "alt": "Overhead shot of Gravity: URM09 Ultrasonic Distance Sensor"
+        },
+        {
+          "url": "https://dfimg.dfrobot.com/nobody/wiki/1b9ef81e49f2d0df0936dc55db16bf80_0x0.jpg.webp",
+          "alt": "Measuring Angle"
+        },
+        {
+          "url": "https://dfimg.dfrobot.com/nobody/wiki/445e62ea42024dcc9d9dded57f1f0ac6_0x0.png.webp",
+          "alt": "Board Overview"
+        },
+        {
+          "url": "https://dfimg.dfrobot.com/nobody/cmsen/db2912e87687bced255e0a28c5784c8c_325x230.jpg.webp",
+          "alt": "thumb"
+        },
+        {
+          "url": "https://wiki.dfrobot.com/dfrobotshop/images/pc/nologinhead.png",
+          "alt": "author"
+        }
+      ]
+    },
+    "ultrasonic4": {
+      "id": "ultrasonic4",
+      "title": "HC-SR04 Ultrasonic Sonar Distance Sensor + 2 x 10K resistors : Adafruit Industries, Unique & fun DIY electronics and kits",
+      "url": "https://www.adafruit.com/product/3942",
+      "image_url": "https://cdn-shop.adafruit.com/970x728/3942-00.jpg",
+      "checked_on": "2026-10-14",
+      "http_status": 200,
+      "source_kind": "제조사·개발사 원문",
+      "image_candidates": [
+        {
+          "url": "https://cdn-shop.adafruit.com/100x75/6526-00.jpg",
+          "alt": "Angled Shot of the NeoPixel Ring - 12 x 5050 WWA with Integrated Drivers."
+        },
+        {
+          "url": "https://cdn-shop.adafruit.com/100x75/6527-00.jpg",
+          "alt": "Angled Shot of the NeoPixel Ring - 16 x 5050 WWA LED with Integrated Drivers"
+        },
+        {
+          "url": "https://cdn-shop.adafruit.com/100x75/6525-00.jpg",
+          "alt": "Angled Shot of the Adafruit TCS3448 Multi-Spectral Sensor"
+        },
+        {
+          "url": "https://cdn-shop.adafruit.com/100x75/6524-00.jpg",
+          "alt": "Angled Shot of the Adafruit TSL2585 Digital UVA and Ambient Light Sensor."
+        },
+        {
+          "url": "https://cdn-shop.adafruit.com/100x75/6407-05.jpg",
+          "alt": "Temperature and pressure sensor breakout displaying sensor information on a connected TFT display breakout."
+        },
+        {
+          "url": "https://cdn-shop.adafruit.com/product-videos/320x240/6353-05.jpg",
+          "alt": "Video of a motor stepper driver board driving a stepper motor connected to a microcontroller."
+        }
+      ]
+    },
+    "canproduct": {
+      "id": "canproduct",
+      "title": "SN65HVD230 CAN Board Accessory board used for connecting MCUs to the CAN network, 3.3V, ESD protection",
+      "url": "https://www.waveshare.com/product/sn65hvd230-can-board.htm",
+      "image_url": "https://www.waveshare.com/media/catalog/product/cache/1/thumbnail/122x122/9df78eab33525d08d6e5fb8d27136e95/s/n/sn65hvd230-can-board_l_1_5.jpg",
+      "checked_on": "2026-10-14",
+      "http_status": 200,
+      "source_kind": "제조사·개발사 원문",
+      "image_candidates": [
+        {
+          "url": "https://www.waveshare.com/media/catalog/product/cache/1/thumbnail/122x122/9df78eab33525d08d6e5fb8d27136e95/s/n/sn65hvd230-can-board_l_1_5.jpg",
+          "alt": ""
+        },
+        {
+          "url": "https://www.waveshare.com/media/catalog/product/cache/1/thumbnail/122x122/9df78eab33525d08d6e5fb8d27136e95/s/n/sn65hvd230-can-board-2_5.jpg",
+          "alt": ""
+        },
+        {
+          "url": "https://www.waveshare.com/media/catalog/product/cache/1/thumbnail/122x122/9df78eab33525d08d6e5fb8d27136e95/s/n/sn65hvd230-can-board-5_5.jpg",
+          "alt": ""
+        },
+        {
+          "url": "https://www.waveshare.com/media/catalog/product/cache/1/thumbnail/122x122/9df78eab33525d08d6e5fb8d27136e95/s/n/sn65hvd230-can-board-4_5.jpg",
+          "alt": ""
+        },
+        {
+          "url": "https://www.waveshare.com/media/catalog/product/cache/1/thumbnail/122x122/9df78eab33525d08d6e5fb8d27136e95/s/n/sn65hvd230-can-board-3_5.jpg",
+          "alt": ""
+        },
+        {
+          "url": "https://www.waveshare.com/media/catalog/product/cache/1/image/560x560/9df78eab33525d08d6e5fb8d27136e95/s/n/sn65hvd230-can-board_l_1_5.jpg",
+          "alt": "SN65HVD230 CAN Board"
+        }
+      ]
+    },
+    "rtcproduct": {
+      "id": "rtcproduct",
+      "title": "Adafruit DS3231 Precision RTC Breakout : Adafruit Industries, Unique & fun DIY electronics and kits",
+      "url": "https://www.adafruit.com/product/3013",
+      "image_url": "https://cdn-shop.adafruit.com/970x728/3013-06.jpg",
+      "checked_on": "2026-10-14",
+      "http_status": 200,
+      "source_kind": "제조사·개발사 원문",
+      "image_candidates": [
+        {
+          "url": "https://cdn-shop.adafruit.com/100x75/6526-00.jpg",
+          "alt": "Angled Shot of the NeoPixel Ring - 12 x 5050 WWA with Integrated Drivers."
+        },
+        {
+          "url": "https://cdn-shop.adafruit.com/100x75/6527-00.jpg",
+          "alt": "Angled Shot of the NeoPixel Ring - 16 x 5050 WWA LED with Integrated Drivers"
+        },
+        {
+          "url": "https://cdn-shop.adafruit.com/100x75/6525-00.jpg",
+          "alt": "Angled Shot of the Adafruit TCS3448 Multi-Spectral Sensor"
+        },
+        {
+          "url": "https://cdn-shop.adafruit.com/100x75/6524-00.jpg",
+          "alt": "Angled Shot of the Adafruit TSL2585 Digital UVA and Ambient Light Sensor."
+        },
+        {
+          "url": "https://cdn-shop.adafruit.com/100x75/6407-05.jpg",
+          "alt": "Temperature and pressure sensor breakout displaying sensor information on a connected TFT display breakout."
+        },
+        {
+          "url": "https://cdn-shop.adafruit.com/product-videos/320x240/6353-05.jpg",
+          "alt": "Video of a motor stepper driver board driving a stepper motor connected to a microcontroller."
+        }
+      ]
+    },
+    "adc": {
+      "id": "adc",
+      "title": "Pinouts | Adafruit 4-Channel ADC Breakouts | Adafruit Learning System",
+      "url": "https://learn.adafruit.com/adafruit-4-channel-adc-breakouts/pinouts",
+      "image_url": "https://cdn-learn.adafruit.com/guides/images/000/000/145/medium800/1085-05.jpg",
+      "checked_on": "2026-10-14",
+      "http_status": 200,
+      "source_kind": "제조사·개발사 원문",
+      "image_candidates": [
+        {
+          "url": "https://cdn-shop.adafruit.com/640x480/1085-10.jpg",
+          "alt": "Angled shot of a black rectangular ADC breakout board."
+        },
+        {
+          "url": "https://cdn-shop.adafruit.com/640x480/1083-07.jpg",
+          "alt": "Angled shot of a blue rectangular ADC breakout board."
+        },
+        {
+          "url": "https://cdn-shop.adafruit.com/640x480/4399-00.jpg",
+          "alt": "Angled of of JST SH 4-Pin Cable."
+        },
+        {
+          "url": "https://cdn-shop.adafruit.com/640x480/914-00.jpg",
+          "alt": "Angled shot of assembled Adafruit Assembled Pi Cobbler Breakout on a populated breadboard connected to a Raspberry Pi A via a GPIO ribbon cable."
+        },
+        {
+          "url": "https://cdn-shop.adafruit.com/640x480/50-09.jpg",
+          "alt": "Angled shot of a Adafruit METRO 328 Fully Assembled"
+        },
+        {
+          "url": "https://cdn-shop.adafruit.com/640x480/239-03.jpg",
+          "alt": "Angled shot of full sized breadboard."
+        }
+      ]
+    },
+    "rtc": {
+      "id": "rtc",
+      "title": "Pinouts | Adafruit DS3231 Precision RTC Breakout | Adafruit Learning System",
+      "url": "https://learn.adafruit.com/adafruit-ds3231-precision-rtc-breakout/pinouts",
+      "image_url": "https://cdn-learn.adafruit.com/guides/images/000/001/231/medium800/DS3231_top_angle.jpg",
+      "checked_on": "2026-10-14",
+      "http_status": 200,
+      "source_kind": "제조사·개발사 원문",
+      "image_candidates": [
+        {
+          "url": "https://cdn-shop.adafruit.com/640x480/3013-06.jpg",
+          "alt": "Angled Shot of the Adafruit DS3231 Precision RTC Breakout."
+        },
+        {
+          "url": "https://cdn-shop.adafruit.com/640x480/380-01.jpg",
+          "alt": "Angled shot of CR1220 12mm Diameter - 3V Lithium Coin Cell Battery - CR1220."
+        },
+        {
+          "url": "https://cdn-shop.adafruit.com/640x480/5188-05.jpg",
+          "alt": "Angled shot of RTC breakout."
+        },
+        {
+          "url": "https://cdn-learn.adafruit.com/assets/assets/000/103/729/medium800/components_DS3231_top.jpg?1628094735",
+          "alt": ""
+        },
+        {
+          "url": "https://cdn-learn.adafruit.com/assets/assets/000/030/348/medium800/components_3013_top_ORIG.jpg?1454531982",
+          "alt": ""
+        },
+        {
+          "url": "https://cdn-learn.adafruit.com/guides/cropped_images/000/001/821/medium640/PCF8523_top_angle.jpg?1628024511",
+          "alt": "A black Adafruit PCT2075 temperature sensor breakout board with white labeled pins for VDD, GND, SCL, and SDA. Compact design with 4 mounting holes and two STEM"
+        }
+      ]
+    },
+    "can": {
+      "id": "can",
+      "title": "SN65HVD230 CAN Board - Waveshare Wiki",
+      "url": "https://www.waveshare.com/wiki/SN65HVD230_CAN_Board",
+      "image_url": "https://www.waveshare.com/w/upload/9/92/SN65HVD230-CAN-Board_l.jpg",
+      "checked_on": "2026-10-14",
+      "http_status": 200,
+      "source_kind": "제조사·개발사 원문",
+      "image_candidates": [
+        {
+          "url": "https://www.waveshare.com/w/upload/thumb/9/92/SN65HVD230-CAN-Board_l.jpg/300px-SN65HVD230-CAN-Board_l.jpg",
+          "alt": "SN65HVD230-CAN-Board"
+        },
+        {
+          "url": "https://www.waveshare.com/w/upload/a/a6/SN65HVD230-CAN-Board-2-1.jpg",
+          "alt": "SN65HVD230-CAN-Board-2-1.jpg"
+        }
+      ]
+    },
+    "dht11": {
+      "id": "dht11",
+      "title": "DHT11 Temperature-Humidity Sensor - Waveshare Wiki",
+      "url": "https://www.waveshare.com/wiki/DHT11_Temperature-Humidity_Sensor",
+      "image_url": "https://www.waveshare.com/w/upload/f/f4/Temperature-Humidity-Sensor_l.jpg",
+      "checked_on": "2026-10-14",
+      "http_status": 200,
+      "source_kind": "제조사·개발사 원문",
+      "image_candidates": [
+        {
+          "url": "https://www.waveshare.com/w/upload/thumb/f/f4/Temperature-Humidity-Sensor_l.jpg/300px-Temperature-Humidity-Sensor_l.jpg",
+          "alt": "Temperature-Humidity-Sensor"
+        },
+        {
+          "url": "https://www.waveshare.com/w/upload/thumb/8/80/DHT11-Temperature-Humidity-Pico_1.jpg/500px-DHT11-Temperature-Humidity-Pico_1.jpg",
+          "alt": "DHT11-Temperature-Humidity-Pico 1.jpg"
+        },
+        {
+          "url": "https://www.waveshare.com/w/upload/c/cd/Pico-lcd-0.96-img-config.png",
+          "alt": "Pico-lcd-0.96-img-config.png"
+        },
+        {
+          "url": "https://www.waveshare.com/w/upload/2/2c/Pico-lcd-0.96-img-run.png",
+          "alt": "Pico-lcd-0.96-img-run.png"
+        },
+        {
+          "url": "https://www.waveshare.com/w/upload/a/a9/Pico-lcd-0.96-img-config2.png",
+          "alt": "400"
+        },
+        {
+          "url": "https://www.waveshare.com/w/upload/thumb/1/1e/DHT11_Line_1.png/500px-DHT11_Line_1.png",
+          "alt": "DHT11 Line 1.png"
+        }
+      ]
+    },
+    "dac": {
+      "id": "dac",
+      "title": "Pinouts | MCP4725 12-Bit DAC Tutorial | Adafruit Learning System",
+      "url": "https://learn.adafruit.com/mcp4725-12-bit-dac-tutorial/pinouts",
+      "image_url": "https://cdn-learn.adafruit.com/guides/images/000/000/107/medium800/MCP4725_top_angle.jpg",
+      "checked_on": "2026-10-14",
+      "http_status": 200,
+      "source_kind": "제조사·개발사 원문",
+      "image_candidates": [
+        {
+          "url": "https://cdn-shop.adafruit.com/640x480/935-11.jpg",
+          "alt": "Angled shot of MCP4725 Breakout Board - 12-Bit DAC w/I2C Interface."
+        },
+        {
+          "url": "https://cdn-learn.adafruit.com/assets/assets/000/108/829/medium800/adafruit_products_MCP4725_pinouts.jpg?1644426465",
+          "alt": ""
+        },
+        {
+          "url": "https://cdn-learn.adafruit.com/guides/cropped_images/000/003/639/medium640thumb/00050.gif?1659469132",
+          "alt": "A Bb major scale being played on a MIDI keyboard outputting to  CV signals."
+        },
+        {
+          "url": "https://cdn-learn.adafruit.com/guides/cropped_images/000/002/667/medium640/27822897253_b4a96de558_m.jpg?1566414502",
+          "alt": "Three colorful books are stacked with titles: \"Resources, Tutorials,\" \"Projects and More,\" and \"For Educators!\" An Adabot robot head with antennae is on the rig"
+        },
+        {
+          "url": "https://cdn-learn.adafruit.com/guides/cropped_images/000/003/832/medium640/I2SBFF_top_angle.jpg?1686694290",
+          "alt": "Adafruit MAX98357A I2S amplifier BFF breakout board with gold-plated pins and a white connector on a gray background."
+        },
+        {
+          "url": "https://cdn-learn.adafruit.com/guides/cropped_images/000/003/525/medium640/ADXL375_top_angle.jpg?1644440921",
+          "alt": "Purple breakout board featuring a ADXL375 chip with labeled pins for VIN, GND, SCL, and SDA. Includes two  QT I2C connectors on opposite sides."
+        }
+      ]
+    },
+    "dht22": {
+      "id": "dht22",
+      "title": "DHT22 Temperature-Humidity Sensor - Waveshare Wiki",
+      "url": "https://www.waveshare.com/wiki/DHT22_Temperature-Humidity_Sensor",
+      "image_url": "https://www.waveshare.com/w/upload/5/52/DHT22-Temperature-Humidity-Sensor-1.jpg",
+      "checked_on": "2026-10-14",
+      "http_status": 200,
+      "source_kind": "제조사·개발사 원문",
+      "image_candidates": [
+        {
+          "url": "https://www.waveshare.com/w/upload/thumb/5/52/DHT22-Temperature-Humidity-Sensor-1.jpg/300px-DHT22-Temperature-Humidity-Sensor-1.jpg",
+          "alt": "DHT22-Temperature-Humidity-Sensor"
+        },
+        {
+          "url": "https://www.waveshare.com/w/upload/thumb/b/b6/DHT22-Temperature-Humidity-Sensor-User-Manual-1.gif/500px-DHT22-Temperature-Humidity-Sensor-User-Manual-1.gif",
+          "alt": "DHT22-Temperature-Humidity-Sensor-User-Manual-1.gif"
+        },
+        {
+          "url": "https://www.waveshare.com/w/upload/8/8b/DHT22-Temperature-Humidity-Sensor-User-Manual-2.gif",
+          "alt": "DHT22-Temperature-Humidity-Sensor-User-Manual-2.gif"
+        },
+        {
+          "url": "https://www.waveshare.com/w/upload/e/e8/DHT22-Temperature-Humidity-Sensor-User-Manual-3.gif",
+          "alt": "DHT22-Temperature-Humidity-Sensor-User-Manual-3.gif"
+        },
+        {
+          "url": "https://www.waveshare.com/w/upload/c/c5/DHT22-Temperature-Humidity-Sensor-User-Manual-4.gif",
+          "alt": "DHT22-Temperature-Humidity-Sensor-User-Manual-4.gif"
+        },
+        {
+          "url": "https://www.waveshare.com/w/upload/5/56/MicroPython_Firmware_Download.gif",
+          "alt": "MicroPython Firmware Download.gif"
+        }
+      ]
+    },
+    "adcproduct": {
+      "id": "adcproduct",
+      "title": "ADS1115 16-Bit ADC - 4 Channel with Programmable Gain Amplifier [STEMMA QT / Qwiic] : Adafruit Industries, Unique & fun DIY electronics and kits",
+      "url": "https://www.adafruit.com/product/1085",
+      "image_url": "https://cdn-shop.adafruit.com/970x728/1085-10.jpg",
+      "checked_on": "2026-10-14",
+      "http_status": 200,
+      "source_kind": "제조사·개발사 원문",
+      "image_candidates": [
+        {
+          "url": "https://cdn-shop.adafruit.com/100x75/6526-00.jpg",
+          "alt": "Angled Shot of the NeoPixel Ring - 12 x 5050 WWA with Integrated Drivers."
+        },
+        {
+          "url": "https://cdn-shop.adafruit.com/100x75/6527-00.jpg",
+          "alt": "Angled Shot of the NeoPixel Ring - 16 x 5050 WWA LED with Integrated Drivers"
+        },
+        {
+          "url": "https://cdn-shop.adafruit.com/100x75/6525-00.jpg",
+          "alt": "Angled Shot of the Adafruit TCS3448 Multi-Spectral Sensor"
+        },
+        {
+          "url": "https://cdn-shop.adafruit.com/100x75/6524-00.jpg",
+          "alt": "Angled Shot of the Adafruit TSL2585 Digital UVA and Ambient Light Sensor."
+        },
+        {
+          "url": "https://cdn-shop.adafruit.com/100x75/6407-05.jpg",
+          "alt": "Temperature and pressure sensor breakout displaying sensor information on a connected TFT display breakout."
+        },
+        {
+          "url": "https://cdn-shop.adafruit.com/product-videos/320x240/6353-05.jpg",
+          "alt": "Video of a motor stepper driver board driving a stepper motor connected to a microcontroller."
+        }
+      ]
+    },
+    "dacproduct": {
+      "id": "dacproduct",
+      "title": "MCP4725 Breakout Board - 12-Bit DAC with I2C Interface [STEMMA QT / qwiic] : Adafruit Industries, Unique & fun DIY electronics and kits",
+      "url": "https://www.adafruit.com/product/935",
+      "image_url": "https://cdn-shop.adafruit.com/970x728/935-11.jpg",
+      "checked_on": "2026-10-14",
+      "http_status": 200,
+      "source_kind": "제조사·개발사 원문",
+      "image_candidates": [
+        {
+          "url": "https://cdn-shop.adafruit.com/100x75/6526-00.jpg",
+          "alt": "Angled Shot of the NeoPixel Ring - 12 x 5050 WWA with Integrated Drivers."
+        },
+        {
+          "url": "https://cdn-shop.adafruit.com/100x75/6527-00.jpg",
+          "alt": "Angled Shot of the NeoPixel Ring - 16 x 5050 WWA LED with Integrated Drivers"
+        },
+        {
+          "url": "https://cdn-shop.adafruit.com/100x75/6525-00.jpg",
+          "alt": "Angled Shot of the Adafruit TCS3448 Multi-Spectral Sensor"
+        },
+        {
+          "url": "https://cdn-shop.adafruit.com/100x75/6524-00.jpg",
+          "alt": "Angled Shot of the Adafruit TSL2585 Digital UVA and Ambient Light Sensor."
+        },
+        {
+          "url": "https://cdn-shop.adafruit.com/100x75/6407-05.jpg",
+          "alt": "Temperature and pressure sensor breakout displaying sensor information on a connected TFT display breakout."
+        },
+        {
+          "url": "https://cdn-shop.adafruit.com/product-videos/320x240/6353-05.jpg",
+          "alt": "Video of a motor stepper driver board driving a stepper motor connected to a microcontroller."
+        }
+      ]
+    },
+    "sdproduct": {
+      "id": "sdproduct",
+      "title": "Micro SD Storage Board Micro SD card module",
+      "url": "https://www.waveshare.com/product/micro-sd-storage-board.htm",
+      "image_url": "https://www.waveshare.com/media/catalog/product/cache/1/thumbnail/122x122/9df78eab33525d08d6e5fb8d27136e95/m/i/micro-sd-storage-board_l_1_5.jpg",
+      "checked_on": "2026-10-14",
+      "http_status": 200,
+      "source_kind": "제조사·개발사 원문",
+      "image_candidates": [
+        {
+          "url": "https://www.waveshare.com/media/catalog/product/cache/1/thumbnail/122x122/9df78eab33525d08d6e5fb8d27136e95/m/i/micro-sd-storage-board_l_1_5.jpg",
+          "alt": ""
+        },
+        {
+          "url": "https://www.waveshare.com/media/catalog/product/cache/1/thumbnail/122x122/9df78eab33525d08d6e5fb8d27136e95/m/i/micro-sd-storage-board-3.jpg",
+          "alt": ""
+        },
+        {
+          "url": "https://www.waveshare.com/media/catalog/product/cache/1/thumbnail/122x122/9df78eab33525d08d6e5fb8d27136e95/m/i/micro-sd-storage-board-4.jpg",
+          "alt": ""
+        },
+        {
+          "url": "https://www.waveshare.com/media/catalog/product/cache/1/thumbnail/122x122/9df78eab33525d08d6e5fb8d27136e95/m/i/micro-sd-storage-board-2.jpg",
+          "alt": ""
+        },
+        {
+          "url": "https://www.waveshare.com/media/catalog/product/cache/1/thumbnail/122x122/9df78eab33525d08d6e5fb8d27136e95/m/i/micro-sd-storage-board-5.jpg",
+          "alt": ""
+        },
+        {
+          "url": "https://www.waveshare.com/media/catalog/product/cache/1/image/560x560/9df78eab33525d08d6e5fb8d27136e95/m/i/micro-sd-storage-board_l_1_5.jpg",
+          "alt": "Micro SD(TF) Storage Board"
+        }
+      ]
+    },
+    "i2s": {
+      "id": "i2s",
+      "title": "Pinouts - Mono | Adafruit MAX98357 I2S Class-D Amps - Stereo and Mono | Adafruit Learning System",
+      "url": "https://learn.adafruit.com/adafruit-max98357-i2s-class-d-mono-amp/pinouts",
+      "image_url": "https://cdn-learn.adafruit.com/guides/images/000/001/328/medium800/thump.jpg",
+      "checked_on": "2026-10-14",
+      "http_status": 200,
+      "source_kind": "제조사·개발사 원문",
+      "image_candidates": [
+        {
+          "url": "https://cdn-shop.adafruit.com/640x480/3006-04.jpg",
+          "alt": "Angled shot of blue, square-shaped, amplifier breakout with a pre-soldered terminal block."
+        },
+        {
+          "url": "https://cdn-shop.adafruit.com/640x480/6513-00.jpg",
+          "alt": "Angled Shot of the Adafruit I2S 3W Amplifier Breakout - Dual MAX98357A"
+        },
+        {
+          "url": "https://cdn-learn.adafruit.com/assets/assets/000/032/613/medium800/adafruit_products_pinouts.jpg?1464025812",
+          "alt": ""
+        },
+        {
+          "url": "https://cdn-learn.adafruit.com/assets/assets/000/032/615/medium800/adafruit_products_spkr.jpg?1464026436",
+          "alt": ""
+        },
+        {
+          "url": "https://cdn-learn.adafruit.com/assets/assets/000/032/614/medium800/adafruit_products_power.jpg?1464025962",
+          "alt": ""
+        },
+        {
+          "url": "https://cdn-learn.adafruit.com/assets/assets/000/032/616/medium800/adafruit_products_i2spin.jpg?1464026643",
+          "alt": ""
+        }
+      ]
+    },
+    "cameraproduct": {
+      "id": "cameraproduct",
+      "title": "OV2640 Camera Board Camera module, 2 Megapixel",
+      "url": "https://www.waveshare.com/product/ov2640-camera-board.htm",
+      "image_url": "https://www.waveshare.com/media/catalog/product/cache/1/thumbnail/122x122/9df78eab33525d08d6e5fb8d27136e95/o/v/ov2640-camera-board_l_1_5.jpg",
+      "checked_on": "2026-10-14",
+      "http_status": 200,
+      "source_kind": "제조사·개발사 원문",
+      "image_candidates": [
+        {
+          "url": "https://www.waveshare.com/media/catalog/product/cache/1/thumbnail/122x122/9df78eab33525d08d6e5fb8d27136e95/o/v/ov2640-camera-board_l_1_5.jpg",
+          "alt": ""
+        },
+        {
+          "url": "https://www.waveshare.com/media/catalog/product/cache/1/thumbnail/122x122/9df78eab33525d08d6e5fb8d27136e95/o/v/ov2640-camera-board-5_5.jpg",
+          "alt": ""
+        },
+        {
+          "url": "https://www.waveshare.com/media/catalog/product/cache/1/thumbnail/122x122/9df78eab33525d08d6e5fb8d27136e95/o/v/ov2640-camera-board-2_5.jpg",
+          "alt": ""
+        },
+        {
+          "url": "https://www.waveshare.com/media/catalog/product/cache/1/thumbnail/122x122/9df78eab33525d08d6e5fb8d27136e95/o/v/ov2640-camera-board-4_5.jpg",
+          "alt": ""
+        },
+        {
+          "url": "https://www.waveshare.com/media/catalog/product/cache/1/thumbnail/122x122/9df78eab33525d08d6e5fb8d27136e95/o/v/ov2640-camera-board-3_5.jpg",
+          "alt": ""
+        },
+        {
+          "url": "https://www.waveshare.com/media/catalog/product/cache/1/image/560x560/9df78eab33525d08d6e5fb8d27136e95/o/v/ov2640-camera-board_l_1_5.jpg",
+          "alt": "OV2640 Camera Board"
+        }
+      ]
+    },
+    "i2sproduct": {
+      "id": "i2sproduct",
+      "title": "Adafruit I2S 3W Class D Amplifier Breakout - MAX98357A : Adafruit Industries, Unique & fun DIY electronics and kits",
+      "url": "https://www.adafruit.com/product/3006",
+      "image_url": "https://cdn-shop.adafruit.com/970x728/3006-04.jpg",
+      "checked_on": "2026-10-14",
+      "http_status": 200,
+      "source_kind": "제조사·개발사 원문",
+      "image_candidates": [
+        {
+          "url": "https://cdn-shop.adafruit.com/100x75/6526-00.jpg",
+          "alt": "Angled Shot of the NeoPixel Ring - 12 x 5050 WWA with Integrated Drivers."
+        },
+        {
+          "url": "https://cdn-shop.adafruit.com/100x75/6527-00.jpg",
+          "alt": "Angled Shot of the NeoPixel Ring - 16 x 5050 WWA LED with Integrated Drivers"
+        },
+        {
+          "url": "https://cdn-shop.adafruit.com/100x75/6525-00.jpg",
+          "alt": "Angled Shot of the Adafruit TCS3448 Multi-Spectral Sensor"
+        },
+        {
+          "url": "https://cdn-shop.adafruit.com/100x75/6524-00.jpg",
+          "alt": "Angled Shot of the Adafruit TSL2585 Digital UVA and Ambient Light Sensor."
+        },
+        {
+          "url": "https://cdn-shop.adafruit.com/100x75/6407-05.jpg",
+          "alt": "Temperature and pressure sensor breakout displaying sensor information on a connected TFT display breakout."
+        },
+        {
+          "url": "https://cdn-shop.adafruit.com/product-videos/320x240/6353-05.jpg",
+          "alt": "Video of a motor stepper driver board driving a stepper motor connected to a microcontroller."
+        }
+      ]
+    },
+    "ultrasonicI2C": {
+      "id": "ultrasonicI2C",
+      "title": "Gravity: URM09 Ultrasonic Distance Sensor (2～500cm, I2C) - DFRobot",
+      "url": "https://www.dfrobot.com/product-1832.html",
+      "image_url": "https://dfimg.dfrobot.com/enshop/image/data/SEN0304/SEN0304_Main_01.jpg",
+      "checked_on": "2026-10-14",
+      "http_status": 200,
+      "source_kind": "제조사·개발사 원문",
+      "image_candidates": [
+        {
+          "url": "https://www.dfrobot.com/dfrobotshop/images/pc/nologinhead.png",
+          "alt": "userhead"
+        },
+        {
+          "url": "https://dfimg.dfrobot.com/enshop/image/data/SEN0304/SEN0304_Main_01_144x96.jpg.webp",
+          "alt": "I²C"
+        },
+        {
+          "url": "https://dfimg.dfrobot.com/enshop/SEN0307/SEN0307_Main_01_144x96.jpg.webp",
+          "alt": "Analog"
+        },
+        {
+          "url": "https://dfimg.dfrobot.com/enshop/image/data/SEN0388/SEN0388_251022 (1)_144x96.jpg.webp",
+          "alt": "Trig"
+        },
+        {
+          "url": "https://dfimg.dfrobot.com/enshop/image/data/SEN0304/URM09-2_0x0.png.webp",
+          "alt": "URM09 Beam Angle"
+        },
+        {
+          "url": "https://dfimg.dfrobot.com/652ce179aa9508d63a4326b8/dfapi/1174404c053216419cb8e4538ff2e188_924x560.jpg.webp",
+          "alt": "Transform Your Space with RGB LED Strip Controllers! 🌈"
+        }
+      ]
+    },
+    "sd": {
+      "id": "sd",
+      "title": "Micro SD Storage Board - Waveshare Wiki",
+      "url": "https://www.waveshare.com/wiki/Micro_SD_Storage_Board",
+      "image_url": "https://www.waveshare.com/w/upload/3/31/Micro-SD-Storage-Board_l.jpg",
+      "checked_on": "2026-10-14",
+      "http_status": 200,
+      "source_kind": "제조사·개발사 원문",
+      "image_candidates": [
+        {
+          "url": "https://www.waveshare.com/w/upload/thumb/3/31/Micro-SD-Storage-Board_l.jpg/300px-Micro-SD-Storage-Board_l.jpg",
+          "alt": "Micro SD Storage Board"
+        },
+        {
+          "url": "https://www.waveshare.com/w/upload/b/ba/Micro_SD_Storage_Board.jpg",
+          "alt": "Micro SD Storage Board.jpg"
+        }
+      ]
+    },
+    "camera": {
+      "id": "camera",
+      "title": "OV2640 Camera Board - Waveshare Wiki",
+      "url": "https://www.waveshare.com/wiki/OV2640_Camera_Board",
+      "image_url": "https://www.waveshare.com/w/upload/8/81/OV2640-Camera-Board_l.jpg",
+      "checked_on": "2026-10-14",
+      "http_status": 200,
+      "source_kind": "제조사·개발사 원문",
+      "image_candidates": [
+        {
+          "url": "https://www.waveshare.com/w/upload/thumb/8/81/OV2640-Camera-Board_l.jpg/300px-OV2640-Camera-Board_l.jpg",
+          "alt": "OV2640-Camera-Board"
+        }
+      ]
+    },
+    "rs485": {
+      "id": "rs485",
+      "title": "Active Isolated RS485 to UART Signal Adapter Module - DFRobot",
+      "url": "https://www.dfrobot.com/product-2392.html",
+      "image_url": "https://dfimg.dfrobot.com/enshop/DFR0845/DFR0845_Main_01.jpg",
+      "checked_on": "2026-10-14",
+      "http_status": 200,
+      "source_kind": "제조사·개발사 원문",
+      "image_candidates": [
+        {
+          "url": "https://www.dfrobot.com/dfrobotshop/images/pc/nologinhead.png",
+          "alt": "userhead"
+        },
+        {
+          "url": "https://dfimg.dfrobot.com/enshop/DFR0845/DFR0845_Main_01_150x100.jpg.webp",
+          "alt": "Front of RS485 to UART Signal Adapter with Industry Isolation, green pins and black connector.-DFRobot product sku:DFR0845 image."
+        },
+        {
+          "url": "https://dfimg.dfrobot.com/enshop/DFR0845_Dim_02_150x100.jpg.webp",
+          "alt": "Front of active isolated RS485 to UART adapter module with USB connector and protection circuits."
+        },
+        {
+          "url": "https://dfimg.dfrobot.com/enshop/DFR0845_Back_03_150x100.jpg.webp",
+          "alt": "Front of active isolated RS485 to UART adapter module with labeled ports and logo."
+        },
+        {
+          "url": "https://dfimg.dfrobot.com/enshop/DFR0845_ShipList_04_150x100.jpg.webp",
+          "alt": "Front of active isolated RS485 to UART signal adapter module with green circuit board and two wires."
+        },
+        {
+          "url": "https://dfimg.dfrobot.com/enshop/DFR0845_Detail_05_150x100.jpg.webp",
+          "alt": "Front of green terminal block with RS485 to UART isolation adapter and industry signal isolation module"
+        }
+      ]
+    },
+    "mcu": {
+      "id": "mcu",
+      "title": "ST STM32F446RE 공식 MCU 페이지",
+      "url": "https://www.st.com/en/microcontrollers-microprocessors/stm32f446re.html",
+      "image_url": null,
+      "checked_on": "2026-10-14",
+      "http_status": null,
+      "source_kind": "제조사·개발사 원문",
+      "image_candidates": []
+    },
+    "board": {
+      "id": "board",
+      "title": "ST NUCLEO-F446RE 공식 보드 페이지",
+      "url": "https://www.st.com/en/evaluation-tools/nucleo-f446re.html",
+      "image_url": "https://a.allegroimg.com/original/1131a1/bd4caa2543e88d68cc0e2b339dae/STM32-NUCLEO-F446RE-STM32F446RE-ARM-Cortex-M4",
+      "checked_on": "2026-10-14",
+      "http_status": null,
+      "source_kind": "제조사·개발사 원문",
+      "image_candidates": [],
+      "image_page_url": "https://allegro.pl/produkt/stm32-nucleo-f446re-stm32f446re-arm-cortex-m4-d51b334f-c80d-4a90-8f57-36e1ff15b44a",
+      "image_kind": "판매처 사진; 기술 사양은 ST 원문 기준"
+    },
+    "neopixelgravity": {
+      "id": "neopixelgravity",
+      "title": "Gravity: Digital RGB LED Module - Easy LED Solutions | DFRobot Wiki",
+      "url": "https://wiki.dfrobot.com/dfr0605/",
+      "image_url": "https://dfimg.dfrobot.com/enshop/DFR0605/DFR0605_Main_01_1200x630.jpg.webp",
+      "checked_on": "2026-10-14",
+      "http_status": 200,
+      "source_kind": "제조사·개발사 원문",
+      "image_candidates": [
+        {
+          "url": "https://wiki.dfrobot.com/dfrobotshop/images/pc/nologinhead.png",
+          "alt": "userhead"
+        },
+        {
+          "url": "https://dfimg.dfrobot.com/enshop/DFR0605/DFR0605_Main_01_360x240.jpg.webp",
+          "alt": "Front of Gravity digital RGB LED module with visible pins and label-DFRobot product sku:DFR0605 image."
+        },
+        {
+          "url": "https://dfimg.dfrobot.com/63158dbfaa9508d63a425e17/wikien/ad259646e015dc9df8d8de35eb3ec25a_0x0.png.webp",
+          "alt": ""
+        },
+        {
+          "url": "https://dfimg.dfrobot.com/0ec839ad01f347938df640cd2dbfa755/community/384f4f30f616542c2545e0ed3bdf2321_325x230.jpg.webp",
+          "alt": "thumb"
+        },
+        {
+          "url": "https://dfimg.dfrobot.com/dfPortrait2_34x34.png.webp",
+          "alt": "author"
+        },
+        {
+          "url": "https://dfimg.dfrobot.com/nobody/makelog/aff2b6230271445c5b7e1c4be514cbb5_325x230.JPG.webp",
+          "alt": "thumb"
+        }
+      ]
+    },
+    "i2c5": {
+      "id": "i2c5",
+      "title": "24LC02B SOT-23-5 외형도",
+      "url": "https://ww1.microchip.com/downloads/en/devicedoc/21709j.pdf",
+      "image_url": null,
+      "checked_on": "2026-10-14",
+      "http_status": 200,
+      "source_kind": "제조사·개발사 원문",
+      "image_candidates": [],
+      "image_page_url": null,
+      "image_kind": "판매처 제품 사진"
+    },
+    "camera-schematic": {
+      "id": "camera-schematic",
+      "title": "Waveshare OV2640 Camera Board 회로도 P1 Header 9×2",
+      "url": "https://files.waveshare.com/upload/9/99/OV2640-Camera-Board-Schematic.pdf",
+      "image_url": null,
+      "checked_on": "2026-10-14",
+      "http_status": 200,
+      "source_kind": "제조사 회로도"
+    },
+    "rs485-pinout": {
+      "id": "rs485-pinout",
+      "title": "DFRobot DFR0845 핀 구성",
+      "url": "https://wiki.dfrobot.com/dfr0845/",
+      "image_url": null,
+      "checked_on": "2026-10-14",
+      "http_status": 200,
+      "source_kind": "제조사 핀 설명"
+    },
+    "sd-schematic": {
+      "id": "sd-schematic",
+      "title": "Waveshare Micro SD Storage Board 회로도 P1 Header 9",
+      "url": "https://files.waveshare.com/upload/8/83/Micro-SD-Storage-Board-Schematic.pdf",
+      "image_url": null,
+      "checked_on": "2026-10-14",
+      "http_status": 200,
+      "source_kind": "제조사 회로도"
+    },
+    "can-schematic": {
+      "id": "can-schematic",
+      "title": "Waveshare CAN Board 회로도 Header4 + Header2",
+      "url": "https://files.waveshare.com/upload/c/c5/SN65HVD230-CAN-Board-Schematic.pdf",
+      "image_url": null,
+      "checked_on": "2026-10-14",
+      "http_status": 200,
+      "source_kind": "제조사 회로도"
+    },
+    "mcu-datasheet": {
+      "id": "mcu-datasheet",
+      "title": "STM32F446xC/E DS10693 데이터시트",
+      "url": "https://www.st.com/resource/en/datasheet/stm32f446mc.pdf",
+      "image_url": null,
+      "checked_on": "2026-10-14",
+      "source_kind": "제조사 데이터시트"
+    },
+    "l298-chip": {
+      "id": "l298-chip",
+      "title": "ST L298 Multiwatt15 및 PowerSO20 데이터시트",
+      "url": "https://www.st.com/resource/en/datasheet/l298.pdf",
+      "image_url": null,
+      "checked_on": "2026-10-14",
+      "http_status": 200,
+      "source_kind": "제조사 외형도·회로도"
+    },
+    "slide-js": {
+      "id": "slide-js",
+      "title": "C&K JS Series 슬라이드 스위치 데이터시트",
+      "url": "https://www.ckswitches.com/media/1422/js.pdf",
+      "image_url": null,
+      "checked_on": "2026-10-14",
+      "http_status": 200,
+      "source_kind": "제조사 외형도·회로도"
+    }
+  }
+}

@@ -36,6 +36,8 @@
 
 ## 현재 구현
 
+- 장치 외형 조사(2026-10-14): [DEVICE-VISUAL-REFERENCES.md](docs/DEVICE-VISUAL-REFERENCES.md), [사진·핀 수 검색 자료집](docs/device-reference-gallery.html), 원본 `docs/device-visual-references.json`. 현재 부품 35종 전부를 80개 외형·핀 구성과 연결하고 MCU 내부 기능 24분류를 별도로 정리했다. 핀 수는 주요 외부 접점 기준이며 제어/부하/중복 커넥터·점퍼를 나눠 기록한다. 메모리 패키지와 7세그먼트 일부는 사진 대신 제조사 외형도를 연결한다. 사진은 원본 URL이며 앱 배포 자산에 포함하지 않는다. `node scripts/build-device-reference.mjs`로 현재 소스의 35종과 단자 일치를 확인하고 문서·HTML을 다시 생성한다. 실제 부품 추가 시 이 자료의 시뮬레이터 단순화·공통극·통신 방식 차이를 먼저 확인한다. 자료집 검증: 현재 소스 35종·단자 대조, 2/3핀 필터·LCD 4/16핀 구분·검색·표 전환·390px 모바일 표시, 사진 73항목 로드 및 제조사 도면 7항목 연결을 확인했다. 실행 증거는 `work/test-results/device-reference-check.json`과 `device-reference-*.png`다.
+
 - IDE 중심 화면에 프로젝트·코드·시뮬레이터·터미널 패널을 통합했다. 모든 패널은 1~99% 분할, 도킹 이동·접기·최대화를 지원한다. 과거 코드 300px/회로 470px/터미널 높이 제한은 없고 배치는 `stm32lab.workspaceLayout.v1`에 저장한다.
 - 폴더 프로젝트 생성·열기·저장, C/H 추가·이름 변경·삭제와 include 갱신, 외부 파일 변경 시 덮어쓰기 거부. 기존 `.stm32lab`과 프로필은 유지한다. 자동 복구된 프로젝트는 폴더 연결 없이 복구하므로 원래 폴더를 다시 열어야 한다.
 - Monaco 0.57.0 로컬 번들: 구문 강조·기본 완성·함수 정의 찾기·다중 커서·접기. ARM/Windows 대상에 clangd의 의미 분석·완성·호버·정의/참조·인수 안내·서식 정리를 연결한다. `npm ci`의 postinstall과 빌드에서 `src/generated/`를 생성한다. 이 폴더는 Git에 넣지 않는다.
