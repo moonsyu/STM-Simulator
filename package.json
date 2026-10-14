@@ -1,6 +1,6 @@
 {
   "name": "stm-simulator",
-  "version": "0.17.2",
+  "version": "0.18.0",
   "description": "STM32 learning IDE with integrated circuit simulation",
   "author": "STM Simulator",
   "private": true,
@@ -27,7 +27,10 @@
     "test:arm-gdb": "node scripts/arm-gdb-check.cjs",
     "test:mcu-defaults:ui": "node scripts/mcu-defaults-smoke.cjs",
     "test:updates:ui": "node scripts/update-smoke.cjs",
-    "test:appearance:ui": "node scripts/appearance-smoke.cjs"
+    "test:appearance:ui": "node scripts/appearance-smoke.cjs",
+    "test:colorscheme:ui": "node scripts/colorscheme-smoke.cjs",
+    "test:device-docs:ui": "node scripts/device-docs-smoke.cjs",
+    "test:device-docs:arm": "node scripts/device-docs-arm-check.cjs"
   },
   "devDependencies": {
     "electron": "44.2.0",
@@ -55,7 +58,8 @@
       "docs/HAL-API.md",
       "docs/IDE.md",
       "docs/MCU-DEFAULTS.md",
-      "docs/UPDATES.md"
+      "docs/UPDATES.md",
+      "docs/DEVICE-DOCS.md"
     ],
     "win": {
       "target": "portable",

@@ -1,44 +1,17 @@
-# 현재 검증 기록 — 0.17.2 (장치 크기·IDE 설정·자동 업데이트)
+# 현재 검증 기록 — 0.18.0 (로컬 구현)
 
-- 검증일: 2026-10-14. Windows x64, Electron 44.2.0, Monaco 0.57.0, Playwright 1.58.2.
-- 변경 범위: 모든 장치의 기하 배율, Jellybean 기본 테마, IDE 표시 설정, 사용자 테마와 설정 파일, 공개 릴리스 자동 업데이트 검증.
+검증일: 2026-10-14. Windows x64, Electron 44.2.0, Monaco 0.57.0. 최신 공개 릴리스는 v0.17.2이며 0.18.0은 아직 게시하지 않았다.
 
-## 검사 결과
-
-| 검사 | 결과 | 증거 |
+| 검사 | 확인 내용 | 증거 |
 | --- | --- | --- |
-| 전체 모델 | 217/217 통과 | work/test-results/v017-model.log |
-| 새 모델 검사 | 모든 부품의 회전/배율, STM 핀과 배선, 기본/추가 빵판 장착 위치, 전류 보존, 원자적 범위 검사, 테마 저장/검증 8개 통과 | tests/appearance.test.js |
-| 기존 Electron UI | 15개 스크립트 모두 통과 | work/test-results/v017-ui.log |
-| 새 Electron UI | 35종 부품을 실제 UI에서 150%로 변경. STM/기본 빵판 핀·선택 검색·회로 실행, 설정 재시작/프로젝트 전환 보존, JSON 내보내기/가져오기, 잘못된 설정 거부, Light 전환과 함수 색상, 1024px 배치 검사 통과 | appearance-smoke.json, ide-settings-jellybean.png, jellybean-code-highlights.png, all-devices-scaled.png, ide-settings-compact.png |
-| IDE 회귀 검사 | 프로젝트·Monaco·디버거·패널·저장 통과 | ide-smoke.json |
-| 네이티브 IDE | 실제 GCC 빌드, GDB step/watch/register, EXE 실행·터미널, clangd 진단·오류 이동·실패 빌드 무효화 통과 | native-ide-smoke.json |
-| 업데이트 UI/도우미 | 좁은 창·저장 후 재시작 및 실제 Windows EXE 잠금·교체·재실행·원본 복원·부모 종료 후 생존 검사 통과 | update-ui-check.json, update-apply-check.json |
-| 패키징 GUI 도우미 | 실제 Electron main/asar에서 긴 한글·공백·작은따옴표·달러 경로로 도우미 시작, GUI 종료 뒤 교체와 EXE 실행 통과 | update-gui-helper-check.json |
-| 패키지 | 새 기하·테마·설정·업데이터 파일의 asar/원본 일치, 버전·아이콘·런타임/Monaco 고지 검사 통과 | npm run build:artifact |
+| HAL 및 장치 Docs 모델 | 35종 전체 예제 결합/실행, LCD 실제 문자, RGB 채널/7세그먼트, 기존 소스/정상 배선 보존, 누락·오접속 보완, 재적용, ADC·타이머·UART 분리, 주소 충돌 거부 | tests/device-docs.test.js, tests/basic-hal-examples.test.js |
+| ARM GCC + 실제 ST HAL/CMSIS | 35종의 HAL·레지스터 예제 총 118개 컴파일·링크 통과. UART 분리 등 후속 10개 추가 통과 | work/test-results/device-docs-arm.json, device-docs-arm-followup.json |
+| 장치 Docs 실제 UI | 35종 Docs, 코드 결합·자동 배선·시뮬레이션, ARM 대상 전환, Ctrl+Z와 파일 이동·재시작 보존 통과 | work/test-results/device-docs-smoke.json |
+| Colorscheme 실제 UI | 원본 Vim·Monaco·VS Code 등록, 실제 편집기 색상/이탤릭체, 전환·내보내기·재시작·잘못된 파일 거부 통과 | work/test-results/colorscheme-smoke.json |
+| 원본 보존 | Jellybeans ef83bf4, SHA-256 791e387b998fecb14169601ee4e925b8d0991da6a235d2a4ef4c2b3225c58f8c; 원본 MIT 헤더 보존 | src/themes/jellybeans/source.json |
 
-파일명만 적은 증거는 work/test-results/ 아래에 있다. 함수/자료형 색 구분은 C/C++ 토큰과 호출 형태를 사용하는 표시 기능이며 네이티브 컴파일러의 정적 분석 결과는 clangd 경로로 제공한다.
+전체 모델 **235/235 통과**, 기존 Electron UI **15개 스크립트 통과**. 새 Colorscheme/Docs UI 2종도 통과했다. 최종 패키지 확인은 빌드 후 갱신한다.
 
-## 패키지와 공개 파일
+Bare-metal은 초기화를 HAL에 맡기는 레지스터 학습 코드이며 전체 장치의 HAL 없는 드라이버를 의미하지 않는다. SPI/I2C 레지스터 항목은 상태 관찰 예제다. 실물 보드 실행은 검사하지 않았다. 가상 ARM CPU 펌웨어 실행은 포함하지 않는다.
 
-`npm run build:artifact`는 outputs/artifact/의 EXE와 매니페스트, asar의 버전과 소스 포함 상태를 확인한다. GitHub 태그 CI는 별도 빌드이므로 공개 Assets의 SHA256.txt·update-manifest.json·BUILD-INFO.json을 기준으로 확인한다. 로컬 빌드의 해시를 공개 EXE의 해시로 사용하지 않는다.
-
-## 공개 릴리스와 실제 자동 업데이트
-
-**최종 결과: 공개 v0.17.1 → 공개 v0.17.2 자동 업데이트 통과 (2026-10-14 10:15:51 UTC).** 원본 앱의 자동 스케줄러가 새 버전을 감지·다운로드했고, 저장 후 재시작으로 정확한 공개 EXE로 교체했다. 도우미가 실행한 새 main의 asar 버전 0.17.2와 프로세스 생존을 확인했다. 새 앱을 재열어 코드·Jellybean·글꼴 17·보드 125%·자동 확인 설정 보존도 확인했다. 네트워크/업데이트 IPC 대체나 수동 확인/다운로드 호출은 사용하지 않았다.
-
-- [공개 실행 증거 JSON](https://github.com/moonsyu/STM-Simulator/releases/download/v0.17.2/UPDATE-VERIFICATION.json) / [검증 설명](https://github.com/moonsyu/STM-Simulator/releases/download/v0.17.2/UPDATE-VERIFICATION.md). 업로드 후 다시 다운로드해 일치를 확인했다.
-- [v0.17.2 태그 CI](https://github.com/moonsyu/STM-Simulator/actions/runs/38547037000): 전체 검사·빌드·게시 성공. 공개 빌드 커밋/태그는 `fa56d116be7b2f39f25f53ee541e9ee69767c4ec`.
-- 공개 EXE: 102606207 bytes, SHA-256 `f0f2c55b90ea6e8894b92c672d9ae26febb74090cf524494265da88a735d6479`.
-- 공개 ZIP: SHA-256 `f8583f809cd87cb431a395c14734d93684c939f95383fc06d96bc31870164121`. ZIP을 다시 내려받아 해시·CRC·내부 EXE·매니페스트·문서와 빌드 커밋을 검증했다.
-- 게시 이후 main의 추가 변경은 실행 증거 문서와 검증 스크립트 대기 처리뿐이며, 앱 런타임과 버전은 공개 태그와 동일하다.
-
-### 발견한 오류와 수정 경과
-
-v0.16.1의 공개 EXE에서 v0.17.0을 조회·다운로드하고 해시 검증까지 통과했다. 실제 GUI에서 도우미를 생성할 때 `spawn EPERM`이 발생해 교체에는 실패했다. 이전 앱과 작성 중인 코드는 유지됐으며, 이 결과를 자동 업데이트 성공으로 기록하지 않는다.
-
-v0.17.1은 중첩 인코딩 명령을 짧은 파일 실행 인자로 변경했다. 수정된 개발 앱과 패키징된 GUI의 도우미 검사 및 전체 모델 217개는 통과했다. 최종 재현 검사는 수정된 공개 v0.17.1 EXE를 출발점으로 공개 v0.17.2를 대상으로 한다.
-
-`node scripts/release-update-check.cjs`는 이전 공개 EXE 자체의 원본 업데이트 코드로 GitHub 조회·다운로드·SHA-256 검증·저장 후 재시작·실제 파일 교체를 수행한다. 자동 확인을 켠 뒤 원본 스케줄러에 맡기며 수동 확인·다운로드 메서드를 호출하지 않는다. 도우미가 실행한 새 프로세스의 asar 버전과 EXE 해시를 검사하고 새 앱을 다시 열어 버전·기존 코드·Jellybean·글꼴·보드 크기·자동 설정 보존을 확인한다. 네트워크나 업데이트 IPC를 대체하지 않는다. 성공 시에만 work/test-results/release-update-proof.json을 생성한다.
-
-최종 공개 실행 결과는 [최신 릴리스](https://github.com/moonsyu/STM-Simulator/releases/latest)의 **UPDATE-VERIFICATION.json / UPDATE-VERIFICATION.md** 첨부 유무와 내용으로 확인한다. 이 문서를 작성한 시점의 계획과 실제 실행 증거를 구분한다. 공개 EXE·ZIP·태그·빌드 커밋 검증은 work/test-results/release-proof.json에 기록한다. 테스트 프로필과 중간 EXE는 각 검증 종료 시 해당 시험이 만든 경로만 정리한다.
+기존 공개 v0.17.1 → v0.17.2 자동 업데이트의 감지·다운로드·교체·재실행 증거는 [공개 검증 문서](https://github.com/moonsyu/STM-Simulator/releases/download/v0.17.2/UPDATE-VERIFICATION.md)에 있다. 이번 변경은 업데이트 코드에 손대지 않았다.

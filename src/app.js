@@ -1,3 +1,5 @@
+import {setupDeviceDocs} from './device-docs-ui.js';
+import {applyDeviceExample} from './device-assistance.js';
 import {selectedIds,isSelected,toggleSelection,wirePoints,insertWirePoint,connectedNet,copySelection,pasteSelection,moveSelection} from './circuit-edit.js';
 import {circuitDiagnostics} from './circuit-diagnostics.js';
 import {PINS,BB,PIN_BY_ID,endpointInfo,searchPins,circuitHoles,holeInfo} from './pins.js';
@@ -29,7 +31,7 @@ import {PART_LIBRARY,searchParts} from './part-library.js';
 import {esc,initSvg,renderWires,renderParts,renderBreadboards,renderEndpoints,route,updateSimulationSvg,renderMountPreview,renderPinSearch,updateSurfaces} from './render.js';
 
 const $=id=>document.getElementById(id),svg=$('circuit');
-mountIdeChrome();const layout=setupWorkspaceLayout();let ide=null,resizing=null;
+mountIdeChrome();const layout=setupWorkspaceLayout();let ide=null,resizing=null,deviceDocs=null;
 let project=blankProject(),mode='select',pending=null,selection=null,color='#23a68a',status='stopped',result=null,runtime=null,simTime=0,pressed={},undoStack=[],redoStack=[],dirty=false;
 let view={x:0,y:0,w:1120,h:730},drag=null,lastWarnings='',replaceAction=null,paintCounter=0,saveTimer,searchSelectedId=null;
 try{const cached=localStorage.getItem('stm32lab.project.v2')||localStorage.getItem('stm32lab.project.v1');if(cached)project=validateProject(JSON.parse(cached));}catch{}
@@ -88,8 +90,10 @@ function syncEditor(){
  ide?.sync();
 }
 function lineNumbers(){ $('line-numbers').textContent=Array.from({length:$('code').value.split('\n').length},(_,i)=>i+1).join('\n'); }
-function tab(name){document.querySelectorAll('[data-tab]').forEach(b=>b.classList.toggle('active',b.dataset.tab===name));$('code-panel').hidden=name!=='code';$('inspect-panel').hidden=name!=='inspect';if($('ide-settings-panel'))$('ide-settings-panel').hidden=name!=='settings';}
+function tab(name){document.querySelectorAll('[data-tab]').forEach(b=>b.classList.toggle('active',b.dataset.tab===name));$('code-panel').hidden=name!=='code';$('inspect-panel').hidden=name!=='inspect';if($('ide-settings-panel'))$('ide-settings-panel').hidden=name!=='settings';if($('device-docs-panel'))$('device-docs-panel').hidden=name!=='docs';}
+function inspectTab(){if(!document.querySelector('[data-tab=docs].active'))tab('inspect');}
 function refresh({preserveWires=false}={}){
+ deviceDocs?.refresh();
  updateSurfaces(svg,project,selection);resizing?.refresh();
  updateBoardPicker();svg.classList.toggle('connecting',mode==='wire'||!!pending||TWO_PIN_TYPES.includes(mode));
  $('breadboard-layer').innerHTML=renderBreadboards(project,selection);
@@ -139,7 +143,7 @@ function renderConnections(){
 function focusIssue(target){
  if(!target){pinout.open();return;}
  pending=null;mode='select';selection=target;const p=target.type==='endpoint'?endpointInfo(target.id,project.components,project.surfaces):project.components.find(p=>p.id===target.id);
- if(p){view={x:p.x-310,y:p.y-202,w:620,h:620*730/1120};viewUpdate();}tab('inspect');refresh();svg.focus({preventScroll:true});
+ if(p){view={x:p.x-310,y:p.y-202,w:620,h:620*730/1120};viewUpdate();}inspectTab();refresh();svg.focus({preventScroll:true});
 }
 function renderIssues(force=false){
  if(!force&&performance.now()-issuesStamp<250)return;issuesStamp=performance.now();
@@ -149,7 +153,7 @@ function renderIssues(force=false){
  document.querySelector('[data-monitor="issues"]').textContent='회로 검사'+(issues.length?` (${issues.length})`:'');
 }
 function copyCircuit(){if(!selection)return;circuitClipboard=copySelection(project,selection);clipboardOffset=28;log(`부품 ${circuitClipboard.components.length}개와 내부 배선 ${circuitClipboard.wires.length}개를 복사했습니다.`);}
-function pasteCircuit(){if(running()||!circuitClipboard)return;try{const draft=structuredClone(project),next=pasteSelection(draft,circuitClipboard,uid,clipboardOffset);validateProject(draft);checkpoint();project=draft;selection=next;clipboardOffset+=28;pending=null;mode='select';tab('inspect');changed();}catch(e){log(e.message,'error');}}
+function pasteCircuit(){if(running()||!circuitClipboard)return;try{const draft=structuredClone(project),next=pasteSelection(draft,circuitClipboard,uid,clipboardOffset);validateProject(draft);checkpoint();project=draft;selection=next;clipboardOffset+=28;pending=null;mode='select';inspectTab();changed();}catch(e){log(e.message,'error');}}
 function inspector(){
  const el=$('inspector');
  if(!selection){el.innerHTML='<span class="overline">CIRCUIT INSPECTOR</span><h2>회로 살펴보기</h2><div class="empty-inspector">핀, 배선 또는 부품을 선택하세요.<br>실행 중 전압과 전류를 확인할 수 있습니다.</div>';return;}
@@ -203,13 +207,13 @@ function addPart(type,a,b,position){
  const p={id:uid('p'),type,name,x:position?.x??(a.x+b.x)/2,y:position?.y??(a.y+b.y)/2,rotation:0};
  if(type==='resistor')p.value=330;if(type==='led')p.color='red';Object.assign(p,PART_DEFS[type]?.defaults||{});
  if(TWO_PIN_TYPES.includes(type)){p.span=a&&b?Math.hypot(b.x-a.x,b.y-a.y):70;if(a&&b){p.attachA=a.id;p.attachB=b.id;p.rotation=normalizeAngle(Math.atan2(b.y-a.y,b.x-a.x)*180/Math.PI);}}
- checkpoint();project.components.push(p);selection={type:'part',id:p.id};pending=null;mode='select';$('preview-layer').innerHTML='';tab('inspect');changed();
+ checkpoint();project.components.push(p);selection={type:'part',id:p.id};pending=null;mode='select';$('preview-layer').innerHTML='';inspectTab();changed();
 }
 function clickEndpoint(id){
  const pin=PIN_BY_ID.get(id);selection={type:'endpoint',id};
- if(running()){tab('inspect');refresh();return;}
+ if(running()){inspectTab();refresh();return;}
  if(pin?.signal==='NC'){log('NC 핀은 내부에 연결되지 않았습니다.');pending=null;refresh();return;}
- if(!pending){pending=id;tab('inspect');refresh();return;}
+ if(!pending){pending=id;inspectTab();refresh();return;}
  if(pending===id){pending=null;refresh();return;}
  if(TWO_PIN_TYPES.includes(mode)){
    if(id.startsWith('part:')||pending.startsWith('part:')){log('부품을 꽂으려면 보드 핀 또는 빵판 구멍을 선택하세요.');return;}
@@ -228,17 +232,17 @@ svg.addEventListener('pointerdown',e=>{
  if(running()&&(onboard||part)){
    if(onboard?.dataset.button==='RESET'){if(status==='running'){initializeRuntime();status='running';}else initializeRuntime();refresh();return;}
    const id=onboard?.dataset.button||part?.dataset.part,p=project.components.find(p=>p.id===id);
-   if(p?.type==='slide'&&!target.closest('[data-endpoint]')){checkpoint();p.position=1-p.position;selection={type:'part',id:p.id};tab('inspect');recompute();autosave();refresh();return;}
+   if(p?.type==='slide'&&!target.closest('[data-endpoint]')){checkpoint();p.position=1-p.position;selection={type:'part',id:p.id};inspectTab();recompute();autosave();refresh();return;}
    if(id==='USER'||p?.type==='button'){pressed[id]=true;drag={type:'press',id};svg.setPointerCapture(e.pointerId);recompute();refresh();return;}
  }
  const handle=target.closest('[data-wire-point]');if(handle&&!running()){const id=handle.dataset.ownerWire,index=Number(handle.dataset.wirePoint);drag={type:'wire-point',id,index,start:point(e),origin:{...project.wires.find(w=>w.id===id).points[index]},moved:false};svg.setPointerCapture(e.pointerId);return;}
- if(e.shiftKey&&!running()){const wire=target.closest('[data-wire]');if(wire||part){selection=toggleSelection(selection,wire?'wire':'part',wire?.dataset.wire||part.dataset.part);pending=null;mode='select';tab('inspect');refresh();return;}}
+ if(e.shiftKey&&!running()){const wire=target.closest('[data-wire]');if(wire||part){selection=toggleSelection(selection,wire?'wire':'part',wire?.dataset.wire||part.dataset.part);pending=null;mode='select';inspectTab();refresh();return;}}
  if(part&&selection?.type==='group'&&isSelected(selection,'part',part.dataset.part)&&!running()){drag={type:'group',start:point(e),base:structuredClone(project),moved:false};svg.setPointerCapture(e.pointerId);return;}
  const pin=target.closest('[data-endpoint]');if(pin){clickEndpoint(pin.dataset.endpoint);return;}
- const wire=target.closest('[data-wire]');if(wire){pending=null;selection={type:'wire',id:wire.dataset.wire};tab('inspect');refresh({preserveWires:true});return;}
- const surface=target.closest('[data-surface]');if(surface&&!part&&e.button===0&&mode==='select'&&!pending){selection={type:'surface',id:surface.dataset.surface};tab('inspect');refresh();return;}
+ const wire=target.closest('[data-wire]');if(wire){pending=null;selection={type:'wire',id:wire.dataset.wire};inspectTab();refresh({preserveWires:true});return;}
+ const surface=target.closest('[data-surface]');if(surface&&!part&&e.button===0&&mode==='select'&&!pending){selection={type:'surface',id:surface.dataset.surface};inspectTab();refresh();return;}
  if(part){
-   pending=null;selection={type:'part',id:part.dataset.part};tab('inspect');
+   pending=null;selection={type:'part',id:part.dataset.part};inspectTab();
    if(!running()){const p=project.components.find(p=>p.id===part.dataset.part),q=point(e);drag={type:'part',id:p.id,start:q,x:p.x,y:p.y,moved:false};svg.setPointerCapture(e.pointerId);}
    refresh();return;
  }
@@ -292,7 +296,7 @@ function pinSearch(){
  $('pin-results').innerHTML=!$('pin-search').value.trim()?'':pins.length?pins.map(p=>`<button data-search-pin="${p.id}" class="${p.id===searchSelectedId?'selected':''}" aria-pressed="${p.id===searchSelectedId}"><strong>${esc(p.signal)}</strong><span>${esc(p.header)}-${p.number} · ${esc(p.label)}</span></button>`).join(''):'<p>일치하는 핀이 없습니다.</p>';
  $('pin-results').querySelectorAll('button').forEach(b=>b.onclick=()=>focusPin(b.dataset.searchPin));
 }
-function focusPin(id){const p=endpointInfo(id,project.components,project.surfaces);if(!p)return;pending=null;selection={type:'endpoint',id};searchSelectedId=id;$('preview-layer').innerHTML='';pinSearch();view={x:p.x-310,y:p.y-202,w:620,h:620*730/1120};viewUpdate();tab('inspect');refresh();svg.focus({preventScroll:true});}
+function focusPin(id){const p=endpointInfo(id,project.components,project.surfaces);if(!p)return;pending=null;selection={type:'endpoint',id};searchSelectedId=id;$('preview-layer').innerHTML='';pinSearch();view={x:p.x-310,y:p.y-202,w:620,h:620*730/1120};viewUpdate();inspectTab();refresh();svg.focus({preventScroll:true});}
 $('pin-search').addEventListener('input',()=>{searchSelectedId=null;pinSearch();});
 $('pin-search').addEventListener('keydown',e=>{if(e.key==='Enter'){const p=searchPins(e.target.value)[0];if(p)focusPin(p.id);}if(e.key==='Escape'){e.stopPropagation();e.target.value='';searchSelectedId=null;pinSearch();}});
 function recompute(){if(!runtime||!session)return;try{session.setPressed(pressed);result=session.result;const warning=result.warnings.join('|');if(warning&&warning!==lastWarnings)result.warnings.forEach(w=>log(w,'error'));lastWarnings=warning;}catch(e){result=session.result;status='error';log(e.message,'error');}}
@@ -385,7 +389,8 @@ ide=setupIde({getProject:()=>project,getSource:()=>sourceFile,getSession:()=>run
  selectSource:name=>{if(name!=='main.c'&&!project.firmware?.files.some(f=>f.name===name))return;sourceFile=name;syncEditor();},
  applySources:(p,file)=>{checkpoint();project=validateProject(p);sourceFile=file;syncEditor();changed();ide.invalidate();}});
 setupIdeSettings({editor:ide.editor,layout,open:()=>tab('settings')});
-resizing=setupResizing({getProject:()=>project,getSelection:()=>selection,isRunning:running,onError:message=>log(message,'error'),select:target=>{selection=target;pending=null;tab('inspect');refresh();},resize:(target,scale)=>{if(running())return;const draft=structuredClone(project);resizeObject(draft,target,scale);validateProject(draft);checkpoint();project=draft;selection=target;changed();pinSearch();fitView();}});
+deviceDocs=setupDeviceDocs({getProject:()=>project,getSelection:()=>selection,isRunning:running,open:()=>tab('docs'),showSource:file=>{sourceFile=file;syncEditor();tab('code');},apply:(target,options)=>{if(running())throw new Error('실행을 정지한 뒤 적용하세요.');const result=applyDeviceExample(project,target,options);checkpoint();project=result.project;sourceFile=result.file;runtime=null;session=null;status='stopped';syncEditor();changed();ide.invalidate();return result;}});
+resizing=setupResizing({getProject:()=>project,getSelection:()=>selection,isRunning:running,onError:message=>log(message,'error'),select:target=>{selection=target;pending=null;inspectTab();refresh();},resize:(target,scale)=>{if(running())return;const draft=structuredClone(project);resizeObject(draft,target,scale);validateProject(draft);checkpoint();project=draft;selection=target;changed();pinSearch();fitView();}});
 syncEditor();fitView();refresh();log('회로를 연결하고 시뮬레이션 시작 또는 F5를 눌러 보세요.');
 setupUpdates({beforeInstall:async()=>{
  clearTimeout(saveTimer);

@@ -75,6 +75,12 @@ export function validateProject(data){
     project.ide={breakpoints:s.breakpoints.map(b=>({file:b.file,line:b.line})),watches:[...s.watches]};
     if(s.native!==undefined){const n=s.native;if(!n||!['simulator','arm','host'].includes(n.target)||!['Debug','Release'].includes(n.configuration))throw new Error('IDE 실행 대상 설정을 확인하세요.');project.ide.native={target:n.target,configuration:n.configuration};}
   }
+  if(data.deviceDocs!==undefined){
+    const docs=data.deviceDocs;if(!docs||!Array.isArray(docs.bindings)||docs.bindings.length>100)throw new Error('장치 Docs 연결 정보를 확인하세요.');
+    const map=value=>{if(!value||typeof value!=='object'||Array.isArray(value)||Object.keys(value).length>100||Object.entries(value).some(([k,v])=>!safeId(k)||!safeId(v)))throw new Error('장치 Docs 매핑을 확인하세요.');return {...value};};
+    const keys=new Set();project.deviceDocs={bindings:docs.bindings.map(b=>{if(!b||!safeId(b.key)||keys.has(b.key)||!safeId(b.type)||typeof b.api!=='string'||b.api.length>100)throw new Error('장치 Docs 식별자를 확인하세요.');keys.add(b.key);return {key:b.key,type:b.type,api:b.api,mode:b.mode==='baremetal'?'baremetal':'hal',parts:map(b.parts),pins:map(b.pins),peripherals:map(b.peripherals)};})};
+    for(const key of ['checksum','headerChecksum'])if(docs[key]!==undefined){if(typeof docs[key]!=='string'||!/^[a-f0-9]{1,8}$/.test(docs[key]))throw new Error('장치 Docs 소스 정보를 확인하세요.');project.deviceDocs[key]=docs[key];}
+  }
   return project;
 }
 export function projectForBoard(id=DEFAULT_BOARD_ID){if(!getBoard(id))throw new Error('지원하지 않는 보드입니다.');return {...blankProject(),boardId:id};}

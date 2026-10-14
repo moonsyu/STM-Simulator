@@ -1,6 +1,6 @@
 # STM Simulator — 개발 인계
 
-현재 구현 버전: **0.17.2**. 정리일: **2026-10-14**. NUCLEO-F446RE와 빵판을 연결하고 GPIO 스케치 또는 지원 HAL C 소스를 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+현재 로컬 구현 버전: **0.18.0**. 정리일: **2026-10-14**. NUCLEO-F446RE와 빵판을 연결하고 GPIO 스케치 또는 지원 HAL C 소스를 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
 
 ## 저장소 관리 원칙
 
@@ -178,3 +178,15 @@ node scripts/portable-smoke.cjs
 통신 비트 파형/노이즈, 실제 NVIC 선점, 동기식 USART, HAL DMA, MCU UART 간 직접 배선 전송, 전체 C/C++·CPU·레지스터 재현은 미지원이다. 모델을 정밀 하드웨어 에뮬레이션으로 설명하지 않는다.
 
 다음 작업은 Git 상태와 이 문서, README/API 문서를 확인한 뒤 사용자 요청 범위에서 진행한다. 변경에 맞는 검증을 수행하고 현재 문서만 갱신한다.
+
+## 0.18.0 장치 Docs와 colorscheme 등록
+
+- 로컬 구현 0.18.0, 최신 공개 릴리스는 0.17.2다. 이번 변경은 아직 원격으로 게시하지 않았다.
+- `basic-hal-examples.js`: 누락된 7종을 추가하여 HAL 예제 39개. LCD 실제 4비트 초기화/문자, RGB/7세그먼트 각각 직렬 저항, ADC/스위치/능동 부저/다이오드 회로를 검증한다.
+- `device-docs-data.js`, `device-docs-ui.js`, `device-docs.css`: 35종 부품 + 보드/빵판의 개요·핀 연결표·HAL 호출·레지스터 예제. 선택 장치가 바뀌면 Docs도 전환한다.
+- `device-assistance.js`, `c-source-edit.js`: 현재 사용자 소스를 보존해 stm_device_docs.c/.h와 main 초기화/반복 호출을 연결한다. 함수 버튼은 해당 함수를 사용하는 장치 예제와 의존성을 함께 적용한다. 정상 연결 보존, 부족한 부품/선 추가, 선택 주변 오접속 분리, GPIO/ADC/타이머/UART 배정, I2C 주소 충돌 거부, 생성 소스 편집 보호, 저장/재적용 멱등성, 원자적 실행 취소를 지원한다.
+- Bare-metal 버튼은 HAL 초기화 + 직접 레지스터 동작의 학습 예제이며 ARM 대상으로 전환한다. 전체 HAL을 제거한 드라이버나 가상 ARM CPU 실행이 아니다. SPI/I2C 항목은 상태 레지스터 관찰이다. docs/DEVICE-DOCS.md에 동작 범위와 제약을 기록했다.
+- Jellybeans는 직접 지정 팔레트 대신 Git 원본(ef83bf4) 기반 변환·등록으로 변경했다. 원본·SHA-256·MIT 헤더는 src/themes/jellybeans에 포함하며 원본 .vim은 Git 줄 끝 변환을 금지한다.
+- `colorscheme.js`: 데이터 전용 Monaco/VS Code JSON, 정적 Vim import. 동적 Vimscript는 실행하지 않는다. 원본 규칙·이탤릭체·세부 토큰·출처를 보존하고 사용자 색상 수정과 기존 설정 마이그레이션을 지원한다.
+- 설정의 Colorscheme 등록 / 테마 JSON 내보내기와 기존 설정 전체 가져오기는 별도 동작이다.
+- 검증 증거: work/test-results/device-docs-arm.json(118개 ARM 컴파일·링크), device-docs-arm-followup.json(추가 10개), device-docs-smoke.json, colorscheme-smoke.json, docs-full-tests.log. 최종 결과는 docs/VERIFICATION.md를 확인한다.

@@ -33,13 +33,13 @@ const {cleanArtifactOutput} = require('./clean-build.cjs');
     assert.deepEqual(asar.extractFile(archive, path.normalize(file)), await fs.readFile(path.join(root, file)), 'Packaged app icon differs from source: ' + file);
   }
   const packed = JSON.parse(asar.extractFile(archive, 'package.json').toString());
-  for (const file of ['desktop/main.cjs', 'desktop/preload.cjs', 'desktop/updater.cjs', 'desktop/apply-update.ps1', 'desktop/start-update.ps1', 'src/update-ui.js', 'src/geometry.js', 'src/resize.js', 'src/resize-ui.js', 'src/ide-preferences.js', 'src/ide-settings-ui.js', 'src/preferences.css', 'src/components.js', 'src/pins.js', 'src/render.js', 'docs/UPDATES.md']) {
+  for (const file of ['desktop/main.cjs', 'desktop/preload.cjs', 'desktop/updater.cjs', 'desktop/apply-update.ps1', 'desktop/start-update.ps1', 'src/update-ui.js', 'src/geometry.js', 'src/resize.js', 'src/resize-ui.js', 'src/ide-preferences.js', 'src/colorscheme.js', 'src/device-docs-ui.js', 'src/device-assistance.js', 'src/device-baremetal.js', 'src/device-docs.css', 'src/themes/jellybeans/jellybeans.vim', 'src/themes/jellybeans/theme.js', 'src/ide-settings-ui.js', 'src/preferences.css', 'src/components.js', 'src/pins.js', 'src/render.js', 'docs/UPDATES.md']) {
     assert.deepEqual(asar.extractFile(archive, path.normalize(file)), await fs.readFile(path.join(root, file)), 'Packaged updater differs from source: ' + file);
   }
   assert.equal(packed.version, pkg.version, 'Packaged version must match source');
   assert.equal(packed.name, pkg.name, 'Packaged name must match source');
   assert.match(asar.extractFile(archive, 'index.html').toString(), /<title>STM Simulator<\/title>/, 'Packaged app must display the current product name');
-  for (const file of ['README.md', 'THIRD_PARTY_NOTICES.md', 'docs/COPYRIGHT-REVIEW.md', 'docs/APP-ICON.md', 'docs/SKETCH-API.md', 'docs/HAL-API.md', 'docs/IDE.md', 'docs/MCU-DEFAULTS.md']) {
+  for (const file of ['README.md', 'THIRD_PARTY_NOTICES.md', 'docs/COPYRIGHT-REVIEW.md', 'docs/APP-ICON.md', 'docs/SKETCH-API.md', 'docs/HAL-API.md', 'docs/IDE.md', 'docs/MCU-DEFAULTS.md', 'docs/DEVICE-DOCS.md']) {
     assert.ok(entries.includes('/' + file), 'Missing notice: ' + file);
   }
   // Check that upstream notices survived packaging without modification.
@@ -77,7 +77,7 @@ const {cleanArtifactOutput} = require('./clean-build.cjs');
   }
   for (const file of ['MONACO-LICENSE.txt', 'MONACO-NOTICES.txt']) await fs.copyFile(path.join(root, 'src/generated', file), path.join(output, file));
   await fs.mkdir(path.join(output, 'docs'));
-  for (const file of ['COPYRIGHT-REVIEW.md', 'APP-ICON.md', 'SKETCH-API.md', 'HAL-API.md', 'IDE.md', 'MCU-DEFAULTS.md', 'UPDATES.md']) {
+  for (const file of ['COPYRIGHT-REVIEW.md', 'APP-ICON.md', 'SKETCH-API.md', 'HAL-API.md', 'IDE.md', 'MCU-DEFAULTS.md', 'UPDATES.md', 'DEVICE-DOCS.md']) {
     await fs.copyFile(path.join(root, 'docs', file), path.join(output, 'docs', file));
   }
   await fs.writeFile(path.join(output, 'SHA256.txt'), `${hash}  ${name}\n`);
