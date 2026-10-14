@@ -7,7 +7,9 @@ const {_electron}=require(process.env.PLAYWRIGHT_MODULE||'playwright');
  const app=await _electron.launch({executablePath:path.join(root,'node_modules/electron/dist/electron.exe'),args:[root],cwd:root,env});let page;
  try{
   page=await app.firstWindow();const errors=[];page.on('pageerror',error=>errors.push(error.message));await page.waitForSelector('.monaco-editor');await app.evaluate(({BrowserWindow})=>BrowserWindow.getAllWindows()[0].showInactive());
+  await app.evaluate(({BrowserWindow})=>BrowserWindow.getAllWindows()[0].setContentSize(1024,640));assert.equal(await page.locator('#app-update').isVisible(),true);
   await page.click('#app-update');assert.match(await page.locator('#update-status').textContent(),/포터블/);assert.equal(await page.locator('#update-check').isDisabled(),true);await page.click('#update-close');
+  await app.evaluate(({BrowserWindow})=>BrowserWindow.getAllWindows()[0].setContentSize(1540,1020));
   await page.click('#new');await page.fill('#new-project-name','Update Test');await app.evaluate(({dialog},directory)=>{dialog.showOpenDialog=async()=>({canceled:false,filePaths:[directory]});},parent);await page.click('#project-folder-choose');await page.click('#project-create');await page.waitForSelector('#project-dialog',{state:'hidden'});
   await page.locator('.monaco-editor .inputarea').focus();await page.keyboard.press('Control+a');await page.keyboard.insertText('int update_saved = 42;\nint main(void) { return update_saved; }\n');
   // Substitute IPC responses only inside this test; no production test feed or executable is used.
