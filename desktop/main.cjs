@@ -10,11 +10,22 @@ let win;
 let chosenProjectParent=null,workspaceState=null;
 const workspace=require('./workspace.cjs');
 const {NativeIde}=require('./native-ide.cjs');
+const {PortableUpdater,RELEASES}=require('./updater.cjs');
+const updater=new PortableUpdater({version:app.getVersion(),directory:path.join(app.getPath('userData'),'updates'),target:process.env.PORTABLE_EXECUTABLE_FILE,enabled:app.isPackaged&&process.platform==='win32'&&!!process.env.PORTABLE_EXECUTABLE_FILE});
+updater.on('state',state=>{if(win&&!win.isDestroyed())win.webContents.send('update:state',state);});
+let updaterReady;
 const {TOOL_KEYS,detectTools,probeTools}=require('./native-build.cjs');
 const nativeIde=new NativeIde(app.getPath('userData'));
 nativeIde.on('event',data=>{if(win&&!win.isDestroyed())win.webContents.send('native:event',data);});
 let quitting=false;
-app.on('before-quit',event=>{if(quitting)return;event.preventDefault();quitting=true;nativeIde.close().finally(()=>app.quit());});
+app.on('before-quit',event=>{if(quitting)return;event.preventDefault();quitting=true;updater.close();nativeIde.close().finally(()=>app.quit());});
+function updateHandle(name,handler){ipcMain.handle('update:'+name,async(event,...args)=>{if(event.sender!==win?.webContents||event.senderFrame?.parent)throw new Error('허용하지 않는 요청입니다.');await updaterReady;return handler(...args);});}
+updateHandle('state',()=>updater.snapshot());
+updateHandle('check',()=>updater.check());
+updateHandle('download',()=>updater.download());
+updateHandle('configure',automatic=>updater.configure(automatic));
+updateHandle('releases',()=>shell.openExternal(RELEASES));
+updateHandle('install',async()=>{await updater.install();setImmediate(()=>app.quit());return true;});
 function nativeHandle(name,handler){ipcMain.handle('native:'+name,async(event,...args)=>{if(event.sender!==win?.webContents||event.senderFrame?.parent)throw new Error('허용하지 않는 요청입니다.');return handler(...args);});}
 nativeHandle('settings',()=>nativeIde.settings());
 nativeHandle('detect',async()=>detectTools(await nativeIde.settings()));
@@ -39,6 +50,7 @@ nativeHandle('terminal-open',()=>nativeIde.openTerminal(workspaceState?.director
 nativeHandle('terminal-input',text=>nativeIde.terminalInput(text));
 nativeHandle('terminal-close',()=>nativeIde.closeTerminal());
 app.whenReady().then(()=>{
+  updaterReady=updater.init().catch(error=>updater.set('error',{message:'업데이트 설정을 읽지 못했습니다: '+error.message}));
   win=new BrowserWindow({icon:path.join(__dirname,'icons/stm-simulator.ico'),width:1540,height:1020,minWidth:900,minHeight:560,show:process.env.CIRCUIT_LAB_SMOKE!=='1',backgroundColor:'#f6f4ec',title:'STM Simulator',webPreferences:{preload:path.join(__dirname,'preload.cjs'),contextIsolation:true,nodeIntegration:false,sandbox:true}});
   win.setMenuBarVisibility(false);
   win.webContents.setWindowOpenHandler(()=>({action:'deny'}));

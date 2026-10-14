@@ -1,43 +1,36 @@
-# 현재 검증 기록 — 0.15.2 (CubeMX 활성화 초기값)
+# 현재 검증 기록 — 0.16.0 (포터블 자동 업데이트)
 
-- 검증일: 2026-10-07. Windows x64, Node.js 24, Electron 44.2.0, Playwright 1.58.2.
-- 기준: [NUCLEO-F446RE 기본 설정](MCU-DEFAULTS.md). 사용자 확인에 따라 CubeMX에서 TIM을 활성화할 때 사용하는 PSC=0, 비트 폭별 ARR 최댓값, Pulse=0을 적용했다.
+- 검증일: 2026-10-14. Windows x64, Electron 44.2.0, Playwright 1.58.2.
+- 범위: 포터블 EXE 자동 확인·다운로드·검증·저장 후 재시작, Windows 교체 도우미와 태그 릴리스 게시 구성.
+- 현재 결과는 로컬 구현·빌드 검증이다. 공개 GitHub 최신 릴리스는 API 확인 시 v0.15.2였다. 이 변경은 아직 게시하지 않았다.
 
-## 이번 검사 결과
+## 검사 결과
 
-- 전체 모델 **196/196 통과**. 16 MHz 새 프로젝트, 비활성 주변장치/NVIC, TIM2/5 ARR=4294967295, TIM3/4 ARR=65535, 누락 .ioc 필드, 기존 저장값과 명시적 ARR=0 보존을 검사했다.
-- 타이머 네 개의 초기 카운트와 전체 ARR 주기 인터럽트 예약을 검사했다. 초기 PWM Pulse=0 출력, 32비트 ARR에서 1 Hz 미만 PWM, 50% 듀티의 다음 에지 시각을 검사했다. 기존 ARR=0 정지/재개, 입력 캡처, PWM CCR 폭 검사도 통과했다.
-- 기본값 Electron UI 검사 통과: TIM 네 개의 기본값 및 활성화, Pulse 편집, ARR=0 안내, HAL 생성·실행, 저장·재열기, 기존 84 MHz 예제. 데스크톱 및 1024×640 창의 캡처를 확인했다.
-- ARM GCC 15.2.1과 ST HAL/CMSIS/startup (STM32CubeF4 v1.28.3)으로 **빈 프로젝트 + 기본 TIM PWM 네 개를 활성화한 프로젝트 + HAL 예제 32개, 총 34개**를 컴파일·링크했다. 4294967295 정수 상수를 포함하는 생성 소스를 실제 도구체인으로 확인했다.
-- 패키징된 win-unpacked 앱에서도 동일한 기본값 UI 검사가 통과했다.
-- 실제 단일 portable EXE를 실행해 16 MHz·PSC=0·비트 폭별 ARR 최댓값·주변장치 비활성·PLL OFF 생성 코드를 확인했다. 같은 EXE에서 Windows GCC 빌드, GDB main 중단·레지스터, 디버그 종료 후 재실행과 출력 42를 확인했다.
-- git diff --check 통과.
+| 검사 | 결과 | 증거 |
+| --- | --- | --- |
+| 전체 모델 | 209/209 통과 | work/test-results/updates-model.log |
+| 업데이트 모델·전송 | 13/13 통과. 버전 비교, 업로드 완료, HTTPS 주소, SHA-256, 잘림/초과, 중복 요청, 오프라인, 캐시 재사용/변조 | tests/updater.test.js |
+| 기존 Electron UI | 15개 스크립트 모두 통과. 회로·편집·부품·HAL·IDE·레이아웃·타이머 기본값 | work/test-results/updates-regression-ui.log |
+| 업데이트 Electron UI | 설정·준비 상태·설치 오류·1024px 창 검사. 설치 요청 직전 현재 코드의 캐시와 실제 프로젝트 폴더 저장 확인 | update-ui-check.json, update-ready.png, update-compact.png |
+| 실제 Windows 교체 | 실행 파일 잠금 해제 대기, 원자적 교체·재실행, 잘못된 EXE의 원본 복원, 부모 종료 후 도우미 생존·재실행, 한글/공백/따옴표/$ 경로 통과 | update-apply-check.json |
+| 실제 단일 포터블 EXE | 추출·실행, 올바른 버전, 업데이트 활성화, 설정 영속화, 공개 GitHub 수동 확인 완료 | update-portable-check.json, update-portable.png |
+| 패키지·라이선스 | 업데이트 JS·PowerShell·문서 및 기존 IDE 파일의 asar/원본 일치, 아이콘·런타임·Monaco 라이선스 보존 | npm run build:artifact |
+| 게시 구성 | YAML 파싱, 태그 빌드와 성공 빌드 의존성, 게시 PowerShell 구문 파싱 통과 | .github/workflows/build-windows.yml |
+| 변경 형식 | git diff --check 통과 | Git 작업 트리 |
 
-## 로컬 배포 검사
+증거 파일명만 적은 항목은 work/test-results/ 아래에 있다. 업데이트 창의 0.17.0 표시는 IPC 테스트용 가상 버전이며 실제 공개 릴리스가 아니다. Windows 교체 시험은 별도로 컴파일한 작은 EXE를 사용했다.
 
-- EXE: outputs/artifact/STM-Simulator-0.15.2-win-x64.exe
-- 크기: 102585574 bytes
-- SHA-256: cbbf31bd82b0e976cb8a748b497d453df22478cc5b2dae573527feabcff8eb33
-- ZIP: outputs/STM-Simulator-0.15.2-Windows-x64.zip
-- 크기: 104781498 bytes
-- SHA-256: 0086eda5941e5c48aa77313b31abb7acce43aea2b36525ed963bc1d16892dacd
-- asar의 MCU 기본값·검증기·TIM 모델·HAL 생성기·Pinout 및 네이티브 서비스·Monaco 소스 일치, 아이콘/라이선스 검사 통과. docs/MCU-DEFAULTS.md 포함. 참고 PDF·테스트·도구체인은 배포하지 않는다.
-- ZIP 무결성과 기본값 문서 원본 일치를 검사했다.
-- 위 크기와 해시는 로컬 검증 빌드의 기록이며 해당 BUILD-INFO.json의 commit/workflow는 null이다. GitHub 릴리즈에는 동일 버전의 성공한 Actions 빌드 결과를 게시한다. 릴리즈 자산의 실제 해시는 첨부 SHA256.txt, 빌드 커밋과 실행 링크는 ZIP의 BUILD-INFO.json을 확인한다. 원격 게시 검증 결과는 `work/test-results/release-proof.json`에 기록한다.
+## 로컬 배포 파일
 
-## 재현 명령과 증거
+- EXE: outputs/artifact/STM-Simulator-0.16.0-win-x64.exe
+- 크기: 102592788 bytes
+- SHA-256: 70c512e9f7874aed93bb79ce9d2813a95e54208f014388bdd82be47d82f6740e
+- 자동 업데이트 매니페스트: outputs/artifact/update-manifest.json
+- 빌드 정보·해시: outputs/artifact/BUILD-INFO.json, outputs/artifact/SHA256.txt
+- 로컬 빌드이므로 BUILD-INFO의 commit/workflow는 null이다. 공개 배포 시 태그 CI에서 다시 만든 산출물의 커밋·해시를 사용한다.
 
-- npm test → work/test-results/cubemx-defaults-model.log
-- npm run test:mcu-defaults:ui → cubemx-defaults-ui.log, mcu-defaults-desktop.png, mcu-defaults-compact.png
-- npm run test:main-c (ARM_GCC / STM32CUBE_F4_ROOT 지정) → main-c-check.json, cubemx-defaults-arm.log
-- npm run build 및 npm run build:artifact → cubemx-defaults-build.log
-- LAB_EXE=win-unpacked 실행 파일로 test:mcu-defaults:ui → cubemx-defaults-packaged-ui.log, mcu-defaults-smoke.json
-- node scripts/native-portable-check.cjs → native-portable-check.json, cubemx-defaults-portable.log
-- ZIP 무결성 및 해시 → cubemx-defaults-zip.json
+## 검증의 범위
 
-## 검증 범위
+공개 서버에 서로 다른 두 정식 앱 버전을 게시한 뒤 실제 앱 간 업그레이드를 수행하는 검사는 남아 있다. 태그 게시 작업도 아직 원격에서 실행하지 않았다. 현재는 실제 Windows 도우미의 교체/복원/부모 종료 동작과 실제 포터블 앱의 GitHub 확인을 각각 검증했다.
 
-- 이번 UI 재검사는 변경된 기본값·HAL 생성·저장 경로와 실제 portable GCC/GDB 실행에 집중했다. 이전 전체 UI 검증은 100d422 커밋, 전체 네이티브 IDE/clangd/ARM 원격 GDB 기록은 eac667c 커밋의 검증 문서에 있다.
-- 실제 F446RE 보드의 플래시·실물 디버그 및 전원 인가 직후 레지스터값은 이번 검사 범위에 포함하지 않는다.
-- 컴파일된 ARM ELF/BIN을 가상 빵판에서 실행하는 CPU 에뮬레이션은 제공하지 않는다. 회로는 지원 HAL/C 소스 해석 모델로 동작한다.
-- GCC/SDK/GDB/clangd/OpenOCD는 필요에 따라 별도 설치한다. 다른 PC의 도구 설치 상태는 검증하지 않았다.
+교체 도우미는 새 프로세스를 시작하는 데 실패할 때 백업 복원을 시도한다. 앱이 시작 후 정상 동작하는지 판정하는 롤백 기능은 아니다. 자세한 동작·제약·재현 명령은 UPDATES.md를 참고한다.

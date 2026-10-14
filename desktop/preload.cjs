@@ -1,4 +1,8 @@
 const {contextBridge,ipcRenderer}=require('electron');
+const updates={};
+for(const name of ['state','check','download','configure','releases','install'])updates[name]=(...args)=>ipcRenderer.invoke('update:'+name,...args);
+updates.onState=callback=>{const handler=(_event,state)=>callback(state);ipcRenderer.on('update:state',handler);return()=>ipcRenderer.removeListener('update:state',handler);};
+contextBridge.exposeInMainWorld('appUpdates',updates);
 const native={};
 for(const name of ['settings','detect','configure','probe','choose-tool','build','run','debug','stop','action','inspect','evaluate','memory','breakpoints','input','language','language-stop','language-query','artifacts','terminal-open','terminal-input','terminal-close'])native[name]=(...args)=>ipcRenderer.invoke('native:'+name,...args);
 native.onEvent=callback=>{const handler=(_event,data)=>callback(data);ipcRenderer.on('native:event',handler);return()=>ipcRenderer.removeListener('native:event',handler);};

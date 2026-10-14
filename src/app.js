@@ -18,6 +18,7 @@ import {compile} from './parser.js';
 import {HAL_EXAMPLES,HAL_GUIDES,applyHalExample} from './hal-examples.js';
 import {setupWorkspaceLayout} from './workspace-layout.js';
 import {mountIdeChrome,setupIde} from './ide-ui.js';
+import {setupUpdates} from './update-ui.js';
 import {setupEditorSearch} from './editor-search.js';
 import {SERIAL_IDS} from './serial-config.js';
 import {PART_LIBRARY,searchParts} from './part-library.js';
@@ -372,3 +373,10 @@ ide=setupIde({getProject:()=>project,getSource:()=>sourceFile,getSession:()=>run
  selectSource:name=>{if(name!=='main.c'&&!project.firmware?.files.some(f=>f.name===name))return;sourceFile=name;syncEditor();},
  applySources:(p,file)=>{checkpoint();project=validateProject(p);sourceFile=file;syncEditor();changed();ide.invalidate();}});
 syncEditor();fitView();refresh();log('회로를 연결하고 시뮬레이션 시작 또는 F5를 눌러 보세요.');
+setupUpdates({beforeInstall:async()=>{
+ clearTimeout(saveTimer);
+ const text=JSON.stringify(project);
+ localStorage.setItem('stm32lab.project.v2',text);
+ await ide.saveWorkspace(text);
+ $('save-state').textContent='자동 저장됨';
+}});
