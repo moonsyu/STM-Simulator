@@ -29,8 +29,9 @@ async function processes(target){
   await page.selectOption('#resize-target','surface:board');await page.fill('#object-scale','125');await page.locator('#object-scale').press('Tab');
   // Configure the genuine automatic scheduler; do not call manual check/download.
   await page.evaluate(()=>window.appUpdates.configure(true));
-  const readyState=await page.waitForFunction(async()=>{const state=await window.appUpdates.state();return ['ready','error'].includes(state.phase)?state:false;},null,{timeout:240000});
-  const downloaded=await readyState.jsonValue();await readyState.dispose();assert.equal(downloaded.phase,'ready',JSON.stringify(downloaded));assert.equal(downloaded.latestVersion,manifest.version);assert.equal(await hash(path.join(profile,'updates/pending.exe')),manifest.sha256);
+  let downloaded,lastPhase;const downloadDeadline=Date.now()+240000;
+  while(Date.now()<downloadDeadline){const state=await page.evaluate(()=>window.appUpdates.state());if(state.phase!==lastPhase){console.log('Automatic updater:',state.phase);lastPhase=state.phase;}if(state.phase==='error')throw new Error(state.message);if(state.phase==='ready'){downloaded=state;break;}await wait(300);}
+  assert.equal(downloaded?.phase,'ready',JSON.stringify(downloaded));assert.equal(downloaded.latestVersion,manifest.version);assert.equal(await hash(path.join(profile,'updates/pending.exe')),manifest.sha256);
   await page.click('#app-update');await page.screenshot({path:path.join(out,'public-update-ready.png')});
   await page.click('#update-install').catch(error=>{if(!/closed|disconnected/i.test(error.message))throw error;});
   let result;for(let i=0;i<600;i++){try{result=JSON.parse((await fs.readFile(path.join(profile,'updates/last-result.json'),'utf8')).replace(/^\uFEFF/,''));if(result.ok)break;throw new Error(result.message);}catch(error){if(error.code!=='ENOENT'&&!(error instanceof SyntaxError))throw error;}if((await fs.stat(target)).size===manifest.bytes&&await hash(target)===manifest.sha256){result={ok:true};break;}if(i%5===0){const state=await page.evaluate(()=>window.appUpdates.state()).catch(()=>null);if(state?.phase==='ready'&&state.message.startsWith('적용하지 못했습니다'))throw new Error(state.message);}await wait(200);}assert.equal(result?.ok,true,'Portable replacement did not finish');
