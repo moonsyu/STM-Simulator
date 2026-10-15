@@ -1,3 +1,6 @@
+import {CatalogSingleWire} from './catalog-singlewire.js';
+import {CatalogMotion} from './catalog-motion.js';
+import {physicalToModel,physicalResult} from './catalog-model.js';
 import {MotionDevices} from './device-motion.js';
 import {PassiveBuzzers} from './passive-buzzer.js';
 import {CircuitSimulation,digitalRead} from './engine.js';
@@ -12,12 +15,13 @@ import {HalAdapter,HAL_CONSTANTS} from './hal.js';
 
 export class SimulationSession {
   constructor(project,{print=()=>{},trace=()=>{},uart=()=>{},channels,debug,program}={}){
+    project=physicalToModel(project);
     this.passiveBuzzers=new PassiveBuzzers();
-    this.project=project;this.pressed={};this.result=null;this.time=0;this.integrated=-1;this.stepMs=project.simulation?.stepMs??1;this.circuit=new CircuitSimulation();this.motion=new MotionDevices();this.sensors=new UltrasonicSignals();this.lcds=new Map();this.wave=new WaveRecorder(channels);this.serial=[];
+    this.project=project;this.pressed={};this.result=null;this.time=0;this.integrated=-1;this.stepMs=project.simulation?.stepMs??1;this.circuit=new CircuitSimulation();this.motion=new MotionDevices();this.catalogMotion=new CatalogMotion();this.singleWire=new CatalogSingleWire();this.sensors=new UltrasonicSignals();this.lcds=new Map();this.wave=new WaveRecorder(channels);this.serial=[];
     this.buses=new BusDevices(project,()=>this.result,trace);
     this.hal=project.firmware?.mode==='hal'?new HalAdapter(project.mcu,this.buses):null;
     this.runtime=new Runtime(program??(this.hal?compileHal(project.code,project.firmware.files):compile(project.code)),{
-      debug,
+      debug,preciseTiming:project.components.some(p=>p.type==='catalog_singlewire'),
       constants:this.hal?HAL_CONSTANTS:undefined,
       invoke:(name,args,runtime)=>this.hal?.invoke(name,args,runtime),poll:runtime=>this.hal?.poll(runtime),
       print,uart,pwmEnabled:project.simulation?.pwmWaveform??false,
@@ -29,11 +33,13 @@ export class SimulationSession {
     });
   }
   enrich(micros){
+    this.hal?.catalog.update(this.project,this.result,micros);
+    this.singleWire.update(this.project,this.result,micros,this.runtime);
     this.passiveBuzzers.update(this.project,this.result,micros);
     if(!this.result||this.result.fault)return;
     this.sensors.update(this.project,this.result,micros);
     for(const p of this.project.components.filter(p=>p.type==='lcd')){if(!this.lcds.has(p.id))this.lcds.set(p.id,new LCDController());const lcd=this.lcds.get(p.id).update(p,this.result,micros);this.result.parts[p.id]={...this.result.parts[p.id],lcd};}
-    this.motion.update(this.project,this.result,micros,this.runtime,us=>this.changed(us));this.hal?.timerModel.observe(this.runtime,micros);this.buses.update(this.result);this.wave.record(micros,this.result);
+    this.motion.update(this.project,this.result,micros,this.runtime,us=>this.changed(us));this.hal?.timerModel.observe(this.runtime,micros);this.buses.update(this.result);this.catalogMotion.update(this.project,this.result,micros,this.runtime);this.wave.record(micros,this.result);
   }
   advance(micros){
     const target=micros/1000;if(target<this.integrated)return;
@@ -45,7 +51,14 @@ export class SimulationSession {
   changed(micros=this.runtime.microTime){
     this.advance(micros);this.result=this.circuit.hold(this.project,this.runtime.gpio,this.pressed,this.sensors.echoHigh(micros),this.motion.signals);this.enrich(micros);if(this.result.fault)throw new Error(this.result.warnings[0]||'회로 해석 오류');return this.result;
   }
-  tick(time){this.runtime.tick(time);return this.changed(this.runtime.microTime);}
+  get viewResult(){return physicalResult(this.result,this.project);}
+  tick(time){if(this.project.components.some(p=>p.type==='catalog_singlewire')){while(this.runtime.time<time&&!this.runtime.debug.paused)this.runtime.tick(Math.min(time,this.runtime.time+1));if(time===0)this.runtime.tick(0);}else this.runtime.tick(time);return physicalResult(this.changed(this.runtime.microTime),this.project);}
   setPressed(pressed){this.pressed=pressed;this.changed();this.runtime.pollInterrupts();}
-  inject(text,target='Serial1'){if(target==='Serial'){const bytes=[...String(text)].slice(0,256).map(c=>c.charCodeAt(0)&255);if(this.serial.length+bytes.length>4096)throw new Error('Serial 수신 버퍼가 가득 찼습니다.');this.serial.push(...bytes);return bytes.length;}const bus=this.hal?this.hal.serials.get(target==='Serial1'?'USART2':target)?.bus:this.buses;if(!bus)return 0;const count=bus.inject(text,this.runtime.microTime);if(this.hal&&count)for(const byte of bus.uart.queue.slice(-count))this.runtime.event(byte.at/1000,()=>{});return count;}
+  inject(text,target='Serial1'){
+    if(target==='Serial'){const bytes=[...String(text)].slice(0,256).map(c=>c.charCodeAt(0)&255);if(this.serial.length+bytes.length>4096)throw new Error('Serial 수신 버퍼가 가득 찼습니다.');this.serial.push(...bytes);return bytes.length;}
+    const external=target.endsWith(':external'),id=external?target.slice(0,-9):target,bus=this.hal?this.hal.serials.get(id==='Serial1'?'USART2':id)?.bus:this.buses;
+    if(!bus)return 0;
+    const count=bus.inject(text,this.runtime.microTime,external?'external':this.hal&&['USART2','Serial1'].includes(id)?'vcp':'external');
+    if(this.hal&&count)for(const byte of bus.uart.queue.slice(-count))this.runtime.event(byte.at/1000,()=>{});return count;
+  }
 }

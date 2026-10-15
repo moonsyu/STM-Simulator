@@ -71,6 +71,10 @@ jobs:
             npm run test:ui 2>&1 | Tee-Object -FilePath work/test-results/ui-tests.log
           }
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Test catalog search, Docs, inline main.c and routed wiring
+        run: npm run test:catalog:ui
+      - name: Test onboard USART2 VCP and external UART wiring
+        run: npm run test:uart:ui
       - name: Upload test diagnostics on failure
         if: failure()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
@@ -117,10 +121,13 @@ jobs:
 
   release:
     name: Publish verified release and update manifest
-    if: startsWith(github.ref, 'refs/tags/')
+    if: startsWith(github.ref, 'refs/tags/') || (github.event_name == 'push' && github.ref == 'refs/heads/main' && !contains(github.event.head_commit.message, '[test:passive-buzzer]'))
     needs: build
     runs-on: windows-latest
     timeout-minutes: 10
+    concurrency:
+      group: windows-release-publication
+      cancel-in-progress: false
     permissions:
       actions: read
       contents: write
@@ -136,22 +143,34 @@ jobs:
       - name: Verify files and publish complete release
         shell: pwsh
         run: |
-          $releaseVersion = $env:GITHUB_REF_NAME.Substring(1)
+          $releaseInfo = Get-Content outputs/artifact/BUILD-INFO.json -Raw | ConvertFrom-Json
+          $releaseVersion = $releaseInfo.version
+          if ($releaseVersion -notmatch '^\d+\.\d+\.\d+$') { throw 'Only stable package versions can be published.' }
+          $releaseTag = "v$releaseVersion"
+          if ($env:GITHUB_REF_TYPE -eq 'tag' -and $env:GITHUB_REF_NAME -cne $releaseTag) { throw 'Release tag does not match the package.' }
           $releaseExe = "STM-Simulator-$releaseVersion-win-x64.exe"
           $releaseZip = "STM-Simulator-$releaseVersion-Windows-x64.zip"
           $releaseManifest = Get-Content outputs/artifact/update-manifest.json -Raw | ConvertFrom-Json
-          $releaseInfo = Get-Content outputs/artifact/BUILD-INFO.json -Raw | ConvertFrom-Json
           if ($releaseManifest.version -cne $releaseVersion -or $releaseManifest.filename -cne $releaseExe -or $releaseInfo.commit -cne $env:GITHUB_SHA) { throw 'Build metadata does not match this tag.' }
           $releaseHash = (Get-FileHash -LiteralPath "outputs/artifact/$releaseExe" -Algorithm SHA256).Hash.ToLowerInvariant()
           if ($releaseHash -cne $releaseManifest.sha256 -or (Get-Item -LiteralPath "outputs/artifact/$releaseExe").Length -ne $releaseManifest.bytes) { throw 'EXE verification failed.' }
           Compress-Archive -Path outputs/artifact/* -DestinationPath "outputs/$releaseZip"
           $releaseZipHash = (Get-FileHash -LiteralPath "outputs/$releaseZip" -Algorithm SHA256).Hash.ToLowerInvariant()
           @("$releaseHash  $releaseExe", "$releaseZipHash  $releaseZip") | Set-Content outputs/SHA256.txt -Encoding utf8NoBOM
-          gh release view $env:GITHUB_REF_NAME --json isDraft 2>$null
-          if ($LASTEXITCODE -eq 0) { throw 'Release already exists. Inspect it before retrying publication.' }
-          gh release create $env:GITHUB_REF_NAME --verify-tag --draft --title "STM Simulator $releaseVersion" --generate-notes
+          $existing = gh release view $releaseTag --json isDraft,url 2>$null
+          if ($LASTEXITCODE -eq 0) {
+            $existingRelease = $existing | ConvertFrom-Json
+            if ($existingRelease.isDraft) { throw 'An unpublished draft exists; inspect and resume it without replacing the tag.' }
+            "Release $releaseTag already exists: $($existingRelease.url). Published assets are unchanged." >> $env:GITHUB_STEP_SUMMARY
+            exit 0
+          }
+          $tagCommit = gh api "repos/$env:GH_REPO/git/ref/tags/$releaseTag" --jq '.object.sha' 2>$null
+          if ($LASTEXITCODE -eq 0 -and $tagCommit -cne $env:GITHUB_SHA) { throw 'Existing tag points to another commit.' }
+          gh release create $releaseTag --target $env:GITHUB_SHA --draft --title "STM Simulator $releaseVersion" --generate-notes
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          gh release upload $env:GITHUB_REF_NAME "outputs/artifact/$releaseExe" "outputs/$releaseZip" outputs/SHA256.txt outputs/artifact/BUILD-INFO.json outputs/artifact/update-manifest.json
+          gh release upload $releaseTag "outputs/artifact/$releaseExe" "outputs/$releaseZip" outputs/SHA256.txt outputs/artifact/BUILD-INFO.json outputs/artifact/update-manifest.json
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          gh release edit $env:GITHUB_REF_NAME --draft=false --latest
+          $latestTag = gh release view --json tagName --jq '.tagName' 2>$null
+          $makeLatest = $LASTEXITCODE -ne 0 -or $latestTag -notmatch '^v\d+\.\d+\.\d+$' -or [version]$releaseVersion -ge [version]$latestTag.Substring(1)
+          gh release edit $releaseTag --draft=false "--latest=$($makeLatest.ToString().ToLowerInvariant())"
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }

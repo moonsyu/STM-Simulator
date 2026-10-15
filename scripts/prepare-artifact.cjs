@@ -18,6 +18,9 @@ const {cleanArtifactOutput} = require('./clean-build.cjs');
   assert.ok(!entries.some(p => /^\/(assets|work|outputs|test-results|tests|scripts)(\/|$)/.test(p)), 'Reference media and test fixtures must not be packaged');
   for (const file of ['src/feature-examples.js', 'src/component-examples.js']) assert.ok(!entries.includes('/' + file), 'Removed example module must not be packaged: ' + file);
   for (const file of ['src/editor-search.js', 'src/hal-examples.js', 'src/hal-circuits.js', 'src/hal-stdio.js', 'src/device-defs.js', 'src/device-buses.js', 'src/device-motion.js', 'src/device-examples.js', 'src/device-ui.js']) assert.ok(entries.includes('/' + file), 'Missing HAL module: ' + file);
+  for (const file of entries.filter(p=>/^\/src\/(catalog-|device-code-insertion|device-catalog-data|device-register-setup|wire-draft|hal-example-search)/.test(p))) {
+    assert.deepEqual(asar.extractFile(archive, path.normalize(file.slice(1))), await fs.readFile(path.join(root,file.slice(1))), 'Packaged catalog module differs: '+file);
+  }
   for (const file of ['src/passive-buzzer.js', 'src/passive-buzzer-example.js', 'src/buzzer-audio.js', 'src/l298n.js', 'src/l298n-example.js', 'src/l298n-ui.js']) {
     assert.deepEqual(asar.extractFile(archive, path.normalize(file)), await fs.readFile(path.join(root, file)), 'Packaged feature module differs from source: ' + file);
   }
@@ -32,6 +35,17 @@ const {cleanArtifactOutput} = require('./clean-build.cjs');
   for (const file of ['desktop/icons/stm-simulator.png', 'desktop/icons/stm-simulator.ico']) {
     assert.deepEqual(asar.extractFile(archive, path.normalize(file)), await fs.readFile(path.join(root, file)), 'Packaged app icon differs from source: ' + file);
   }
+  async function verifySource(directory) {
+    for (const item of await fs.readdir(path.join(root, directory), {withFileTypes: true})) {
+      const file = directory + '/' + item.name;
+      if (item.isDirectory()) await verifySource(file);
+      else {
+        assert.ok(entries.includes('/' + file), 'Missing source module: ' + file);
+        assert.deepEqual(asar.extractFile(archive, path.normalize(file)), await fs.readFile(path.join(root, file)), 'Packaged source differs: ' + file);
+      }
+    }
+  }
+  await verifySource('src');
   const packed = JSON.parse(asar.extractFile(archive, 'package.json').toString());
   for (const file of ['desktop/main.cjs', 'desktop/preload.cjs', 'desktop/updater.cjs', 'desktop/apply-update.ps1', 'desktop/start-update.ps1', 'src/update-ui.js', 'src/geometry.js', 'src/resize.js', 'src/resize-ui.js', 'src/ide-preferences.js', 'src/colorscheme.js', 'src/device-docs-ui.js', 'src/device-assistance.js', 'src/device-baremetal.js', 'src/device-docs.css', 'src/themes/jellybeans/jellybeans.vim', 'src/themes/jellybeans/theme.js', 'src/ide-settings-ui.js', 'src/preferences.css', 'src/components.js', 'src/pins.js', 'src/render.js', 'docs/UPDATES.md']) {
     assert.deepEqual(asar.extractFile(archive, path.normalize(file)), await fs.readFile(path.join(root, file)), 'Packaged updater differs from source: ' + file);
@@ -39,7 +53,7 @@ const {cleanArtifactOutput} = require('./clean-build.cjs');
   assert.equal(packed.version, pkg.version, 'Packaged version must match source');
   assert.equal(packed.name, pkg.name, 'Packaged name must match source');
   assert.match(asar.extractFile(archive, 'index.html').toString(), /<title>STM Simulator<\/title>/, 'Packaged app must display the current product name');
-  for (const file of ['README.md', 'THIRD_PARTY_NOTICES.md', 'docs/COPYRIGHT-REVIEW.md', 'docs/APP-ICON.md', 'docs/SKETCH-API.md', 'docs/HAL-API.md', 'docs/IDE.md', 'docs/MCU-DEFAULTS.md', 'docs/DEVICE-DOCS.md']) {
+  for (const file of ['README.md', 'THIRD_PARTY_NOTICES.md', 'docs/COPYRIGHT-REVIEW.md', 'docs/APP-ICON.md', 'docs/SKETCH-API.md', 'docs/HAL-API.md', 'docs/IDE.md', 'docs/MCU-DEFAULTS.md', 'docs/DEVICE-DOCS.md', 'docs/DEVICE-CATALOG.md', 'docs/device-model-gallery.html', 'docs/DEVICE-VISUAL-REFERENCES.md', 'docs/device-reference-gallery.html', 'docs/device-visual-references.json']) {
     assert.ok(entries.includes('/' + file), 'Missing notice: ' + file);
   }
   // Check that upstream notices survived packaging without modification.
@@ -77,7 +91,7 @@ const {cleanArtifactOutput} = require('./clean-build.cjs');
   }
   for (const file of ['MONACO-LICENSE.txt', 'MONACO-NOTICES.txt']) await fs.copyFile(path.join(root, 'src/generated', file), path.join(output, file));
   await fs.mkdir(path.join(output, 'docs'));
-  for (const file of ['COPYRIGHT-REVIEW.md', 'APP-ICON.md', 'SKETCH-API.md', 'HAL-API.md', 'IDE.md', 'MCU-DEFAULTS.md', 'UPDATES.md', 'DEVICE-DOCS.md']) {
+  for (const file of ['COPYRIGHT-REVIEW.md', 'APP-ICON.md', 'SKETCH-API.md', 'HAL-API.md', 'IDE.md', 'MCU-DEFAULTS.md', 'UPDATES.md', 'DEVICE-DOCS.md', 'DEVICE-CATALOG.md', 'device-model-gallery.html', 'DEVICE-VISUAL-REFERENCES.md', 'device-reference-gallery.html', 'device-visual-references.json']) {
     await fs.copyFile(path.join(root, 'docs', file), path.join(output, 'docs', file));
   }
   await fs.writeFile(path.join(output, 'SHA256.txt'), `${hash}  ${name}\n`);

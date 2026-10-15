@@ -8,9 +8,9 @@ import {terminalKeys,terminalLabel} from '../src/components.js';
 const root=fileURLToPath(new URL('..',import.meta.url));
 const data=JSON.parse(await fs.readFile(path.join(root,'docs/device-visual-references.json'),'utf8'));
 const variants=new Map(data.variants.map(v=>[v.id,v]));
-assert.equal(data.implemented_parts.length,PART_LIBRARY.length);
+assert.equal(data.implemented_parts.length,PART_LIBRARY.filter(p=>!p.type.startsWith('ref_')).length);
 assert.equal(variants.size,data.variants.length);
-for(const part of PART_LIBRARY){
+for(const part of PART_LIBRARY.filter(p=>!p.type.startsWith('ref_'))){
   const record=data.implemented_parts.find(p=>p.type===part.type);assert.ok(record,part.type);
   assert.deepEqual(record.pins,terminalKeys(part).map(k=>terminalLabel(part,k)));
   assert.ok(record.reference_variant_ids.length);
@@ -29,12 +29,12 @@ const familyName=id=>data.implemented_parts.find(p=>p.type===id)?.name||({board:
 const families=[...new Set(data.variants.map(v=>v.family))];
 const lines=[
 '# STM32 장치 외형과 핀 구성 자료집','',
-`확인일: ${data.checked_on}. 기준 소스: \`${data.repository_commit.slice(0,7)}\`. 현재 부품 라이브러리 **${data.implemented_parts.length}종 전체**, 외형·핀 구성 **${data.variants.length}항목**, MCU 내부 주변장치 **${data.internal_peripherals.length}분류**를 연결한다.`,
+`확인일: ${data.checked_on}. 기준 소스: \`${data.repository_commit.slice(0,7)}\`. 기존 학습 부품 라이브러리 **${data.implemented_parts.length}종 전체**, 외형·핀 구성 **${data.variants.length}항목**, MCU 내부 주변장치 **${data.internal_peripherals.length}분류**를 연결한다.`,
 '','[사진과 핀 수로 찾아보기](device-reference-gallery.html) · [구조화된 원본 목록](device-visual-references.json)','',
 '## 핀을 세는 기준','',
 '핀 수는 선정한 제품의 주요 외부 연결 접점 수다. 릴레이 제어 헤더와 접점, 모터 드라이버 제어와 모터 출력처럼 역할이 다른 단자는 나눠 기록한다. 중복 I²C 커넥터·점퍼·지지 탭은 별도 표기한다. 빵판은 구멍 수, 보드는 MCU 패키지 핀과 헤더 접점을 구분한다. 핀 목록은 신호 구성이고, 실제 좌우 순서는 해당 모델의 도면·실크 기준이다.',
 '','이 목록은 아래 제조사 모델을 구분한 자료다. 같은 이름의 모든 시판 리비전을 하나의 핀맵으로 묶지 않는다. 사진은 원본 URL로 표시하며 애플리케이션 배포 이미지로 포함하지 않는다.','',
-'## 현재 구현된 부품 35종','',
+'## 기존 학습 부품 35종','',
 '| 앱 타입 | 부품 | 현재 앱 단자 | 실제 외형과 변형 |','|---|---|---|---|',
 ...data.implemented_parts.map(p=>`| \`${p.type}\` | ${md(p.name)} | ${p.type==='breadboard'?'400홀, 외부 핀 없음':`${p.pins.length}단자: ${md(p.pins.join(', '))}`} | ${p.reference_variant_ids.map(id=>`[${md(variants.get(id).name)}](#${id})`).join('<br>')} |`),
 '','## 모델별 사진과 단자',''

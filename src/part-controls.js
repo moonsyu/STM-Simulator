@@ -1,8 +1,10 @@
+import {CATALOG_BY_TYPE,catalogMap} from './catalog-defs.js';
 import {l298Readouts} from './l298n-ui.js';
 import {deviceControls,deviceReadouts} from './device-ui.js';
 import {PART_DEFS} from './components.js';
 const number=(key,label,value,min,max,live=false,type='number')=>`<label for="extra-${key}">${label}</label><input id="extra-${key}" data-part-prop="${key}" data-live="${live}" type="${type}" min="${min}" max="${max}" step="${type==='range'?1:'any'}" value="${value}"><output id="output-${key}">${type==='range'?value:''}</output>`;
 export function partControls(p,running){
+ const variant=CATALOG_BY_TYPE[p.type];if(variant){const family=variant.family,base={...p,type:family};if(family==='resistor')return number('value','저항 (Ω)',p.value,1,1e7)+'<div id="part-live"></div>';if(family==='led')return '<label>LED 색상</label><select data-part-prop="color" data-value-type="string">'+['red','green','blue','yellow'].map(c=>'<option '+(c===p.color?'selected':'')+'>'+c+'</option>').join('')+'</select><div id="part-live"></div>';if(['dht11','dht22'].includes(family))return number('temperature','온도 (°C)',p.temperature,family==='dht11'?0:-40,family==='dht11'?50:80,true)+number('humidity','습도 (%)',p.humidity,family==='dht11'?20:0,family==='dht11'?90:100,true)+'<div id="part-live"></div>';if(PART_DEFS[family]){let html=partControls(base,running);if(variant.id.includes('dp3t'))html=html.replace('</select>','<option value="2" '+(p.position===2?'selected':'')+'>COM ↔ C</option></select>');return html+'<p>'+variant.appearance+'</p>';}return '<p>'+variant.appearance+'</p><div id="part-live"></div>';}
  const def=PART_DEFS[p.type];if(!def)return '';
  let controls=deviceControls(p);
  if(p.type==='dc_supply')controls+=number('voltage','출력 전압 (V)',p.voltage,6,24);
@@ -17,6 +19,7 @@ export function partControls(p,running){
  return `${controls?`<div class="inspector-card part-controls">${controls}</div>`:''}<p>${def.help}</p><div id="part-live"></div>`;
 }
 export function partReadouts(p,result){
+ const variant=CATALOG_BY_TYPE[p.type];if(variant){const r=result?.parts[p.id];if(variant.family==='can')return '<p>CAN 송신 '+(r?.transmitted??0)+'회 · 오류 '+(r?.errors??0)+' · '+(r?.loopback?'내부 루프백':'외부 노드 ACK 필요')+'</p>';if(variant.family==='i2s')return '<p>'+(r?.powered?'전원 연결됨':'전원 확인')+' · '+(r?.frames??0)+' 프레임 · '+(r?.frequency??0)+' Hz</p>';if(['dht11','dht22'].includes(variant.family))return '<p>'+(r?.powered?'전원 연결됨 · 측정값은 HAL 로그에서 확인하세요.':'전원을 확인하세요.')+'</p>';if(variant.id.startsWith('ds18b20'))return '<p>'+(r?.powered?'1-Wire 전원 연결됨 · 변환/CRC 결과는 HAL 로그에서 확인하세요.':'전원을 확인하세요.')+'</p>';if(r?.digits)return '<p>세그먼트: '+r.digits.map(n=>n.toString(16).padStart(2,'0')).join(' ')+'</p>';if(r?.steps!==undefined)return '<p>'+r.steps+' 스텝 · '+r.angle.toFixed(1)+'°</p>';if(['lcd-i2c-4','ads1115-10','mcp4725-6','ds3231-8','motor-driver-hat'].includes(variant.id))return '<p>'+(r?.powered?'전원 연결됨 · 측정값은 실행 로그에서 확인하세요.':'전원과 GND를 확인하세요.')+'</p>';const map=catalogMap(p.type);return partReadouts({...p,type:variant.family},result&&map?{...result,voltage:id=>result.voltage(id.replace(new RegExp('^part:'+p.id+':(.*)$'),(_,key)=>'part:'+p.id+':'+(map[key]||key)))}:result);}
  const read=result?.parts[p.id];if(!read)return '';
  const l298=l298Readouts(p,read);if(l298)return l298;
  const device=deviceReadouts(p,read);if(device)return device;

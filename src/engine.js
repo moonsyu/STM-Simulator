@@ -1,3 +1,5 @@
+import {physicalToModel,physicalResult,physicalTopology} from './catalog-model.js';
+import {catalogBranches} from './catalog-electrical.js';
 import {l298Branches,l298BranchOn,l298State} from './l298n.js';
 import {MODULE_DEVICES,I2C_DEVICES,ldrResistance,ntcResistance} from './device-defs.js';
 import {PINS, circuitHoles, GPIO_PINS, canonicalPin, boardPin} from './pins.js';
@@ -9,16 +11,18 @@ export class UnionFind {
   join(a,b){this.parent.set(this.find(a),this.find(b));}
 }
 export function topology(project,pressed={}) {
+  const model=physicalToModel(project);if(model!==project)return physicalTopology(topology(model,pressed),model);
   const uf=new UnionFind();
   for(const p of PINS){uf.find(p.id);if(p.signal!=='NC')uf.join(p.id,`signal:${p.signal==='AGND'?'GND':p.signal}`);}
   for(const h of circuitHoles(project.components))uf.join(h.id,h.bus);
   for(const p of project.components){
     for(const key of terminalKeys(p)){const id=`part:${p.id}:${key}`;uf.find(id);if(attachments(p)[key])uf.join(id,attachments(p)[key]);}
     if(p.type==='button'){uf.join(`part:${p.id}:a`,`part:${p.id}:c`);uf.join(`part:${p.id}:b`,`part:${p.id}:d`);if(pressed[p.id])uf.join(`part:${p.id}:a`,`part:${p.id}:b`);}
+    if(p.type==='catalog_switch'){const t=n=>`part:${p.id}:p${n}`;if(p.catalogVariant.includes('dp3t')){uf.join(t(4),t(1+(p.position??0)));uf.join(t(8),t(5+(p.position??0)));}else {uf.join(t(2),t(p.position?3:1));uf.join(t(5),t(p.position?6:4));}}
     if(p.type==='slide')uf.join(`part:${p.id}:p2`,`part:${p.id}:p${p.position?3:1}`);
     if(p.type==='sevenseg')uf.join(`part:${p.id}:p3`,`part:${p.id}:p8`);
   }
-  for(const w of project.wires)uf.join(w.from,w.to);
+  for(const w of project.wires)uf.join(w.from,w.to);for(const [a,b]of project.catalogTies||[])uf.join(a,b);
   return uf;
 }
 function gaussian(A,b){
@@ -32,6 +36,7 @@ function gaussian(A,b){
   const x=new Float64Array(n);for(let i=n-1;i>=0;i--){let s=b[i];for(let j=i+1;j<n;j++)s-=A[i][j]*x[j];x[i]=s/A[i][i];}return x;
 }
 export function solveCircuit(project,gpio={},pressed={},transient={}){
+  const model=physicalToModel(project);if(model!==project)return physicalResult(solveCircuit(model,gpio,pressed,transient),model);
   const uf=topology(project,pressed),known=new Map(),warnings=[],diagnostics=[],branches=[],roots=new Set();
   const warn=(message,target)=>{warnings.push(message);diagnostics.push({message,target});};
   const fixed=(id,v)=>{const r=uf.find(id);if(known.has(r)&&Math.abs(known.get(r)-v)>0.01)warnings.push('전원 단락: 서로 다른 전압의 전원 또는 GND가 직접 연결되었습니다.');else known.set(r,v);roots.add(r);};
@@ -42,16 +47,20 @@ export function solveCircuit(project,gpio={},pressed={},transient={}){
   const branch=(a,b,r,extra={})=>{const aa=uf.find(a),bb=uf.find(b);roots.add(aa);roots.add(bb);branches.push({a:aa,b:bb,r,...extra});};
   for(const pin of GPIO_PINS){
     const g=gpio[pin]||{mode:'INPUT'};
-    if(g.mode==='OUTPUT'){
+    if(g.mode==='OUTPUT'&&!(g.openDrain&&g.value>0)){
       fixed(`drive:${pin}`,g.value??0);branch(`signal:${pin}`,`drive:${pin}`,40,{gpio:pin});
     }else if(g.mode==='INPUT_PULLUP')branch(`signal:${pin}`,'signal:3V3',40000);
     else if(g.mode==='INPUT_PULLDOWN')branch(`signal:${pin}`,'signal:GND',40000);
+    if(g.mode==='OUTPUT'&&g.pull)branch(`signal:${pin}`,g.pull===1?'signal:3V3':'signal:GND',40000);
   }
   // The on-board USER button is active LOW with a modeled pull-up.
   branch('signal:PC13','signal:3V3',4700);
   if(pressed.USER)branch('signal:PC13','signal:GND',1);
   for(const p of project.components){
     const a=`part:${p.id}:a`,b=`part:${p.id}:b`,pin=n=>`part:${p.id}:p${n}`;
+    catalogBranches(p,uf,branch,pressed);
+    if(p.type==='catalog_analog'){branch(pin(1),pin(2),10000);const resistance=p.catalogVariant.startsWith('ntc')?ntcResistance(p.temperature):ldrResistance(p.lux);branch(pin(3),pin(1),resistance);branch(pin(3),pin(2),10000);if(p.catalogVariant==='ldr-comparator-4')branch(pin(4),pin(2),100,{sensor:{supply:uf.find(pin(1)),ground:uf.find(pin(2)),min:2.7,max:5.5},emf:(p.lux??100)>100?3.3:0});}
+    if(p.catalogVariant==='mcp4725-6')branch(pin(5),pin(2),1,{emf:p.catalogState.voltage??0});
     if(p.type==='l298n')l298Branches(p,uf,branch);
     if(p.type==='dc_supply')branch(a,b,.1,{id:p.id,emf:p.voltage,supply:p.name});
     if(p.type==='dc_motor')branch(a,b,24,{id:p.id});
@@ -77,8 +86,8 @@ export function solveCircuit(project,gpio={},pressed={},transient={}){
       branch(pin(1),pin(2),Math.max(.01,p.value*p.position/100),{id:p.id,channel:'1–2',pot:true});
       branch(pin(2),pin(3),Math.max(.01,p.value*(1-p.position/100)),{id:p.id,channel:'2–3',pot:true});
     }
-    if(p.type==='rgb')for(const [n,channel,vf]of [[1,'r',1.8],[3,'g',2.1],[4,'b',2.8]])branch(pin(n),pin(2),12,{id:p.id,diode:true,led:true,vf,channel});
-    if(p.type==='sevenseg')PART_DEFS.sevenseg.labels.forEach((label,i)=>{if(!label.startsWith('K'))branch(pin(i+1),pin(3),12,{id:p.id,diode:true,led:true,vf:1.8,channel:label});});
+    if(p.type==='rgb')for(const [n,channel,vf]of [[1,'r',1.8],[3,'g',2.1],[4,'b',2.8]])branch(pin(p.commonAnode?2:n),pin(p.commonAnode?n:2),12,{id:p.id,diode:true,led:true,vf,channel});
+    if(p.type==='sevenseg')PART_DEFS.sevenseg.labels.forEach((label,i)=>{if(!label.startsWith('K'))branch(pin(p.commonAnode?3:i+1),pin(p.commonAnode?i+1:3),12,{id:p.id,diode:true,led:true,vf:1.8,channel:label});});
     if(p.type==='lcd'){branch(pin(2),pin(1),4200,{id:p.id});branch(pin(15),pin(16),220,{diode:true,vf:2.1});}
     if(['uart','i2c','spi'].includes(p.type))branch(pin(1),pin(2),10000,{id:p.id});
     if(p.type==='i2c'){branch(pin(3),pin(1),10000);branch(pin(4),pin(1),10000);}

@@ -1,3 +1,4 @@
+import {CATALOG_DEFS,CATALOG_BY_TYPE} from './catalog-defs.js';
 import {DEVICE_RANGES,DEVICE_ADDRESSES} from './device-defs.js';
 import {PIN_BY_ID,holeInfo} from './pins.js';
 import {terminalKeys,TWO_PIN_TYPES,MULTI_PIN_TYPES,normalizeAngle} from './components.js';
@@ -7,7 +8,7 @@ import {validScale} from './geometry.js';
 export function blankProject(){const mcu={...defaultMcu(),pins:{}};return {format:'stm32-circuit-lab',version:2,name:'새 회로',components:[],wires:[],mcu,firmware:{mode:'hal',files:[]},code:generateHal(mcu).replace('/* USER CODE BEGIN 2 */','/* USER CODE BEGIN 2 */\n  printf("HAL ready\\n");')};}
 export function validateProject(data){
   if(!data||data.format!=='stm32-circuit-lab'||![1,2].includes(data.version))throw new Error('지원하지 않는 회로 파일 형식입니다.');
-  if(typeof data.name!=='string'||data.name.length>120||typeof data.code!=='string'||data.code.length>50000)throw new Error('회로 이름 또는 코드가 올바르지 않습니다.');
+  if(typeof data.name!=='string'||data.name.length>120||typeof data.code!=='string'||data.code.length>300000)throw new Error('회로 이름 또는 코드가 올바르지 않습니다.');
   if(!Array.isArray(data.components)||data.components.length>100||!Array.isArray(data.wires)||data.wires.length>500)throw new Error('부품 100개, 배선 500개까지 지원합니다.');
   const ids=new Set(),safeId=s=>typeof s==='string'&&/^[A-Za-z0-9_-]{1,64}$/.test(s);
   if(data.boardId!==undefined&&!getBoard(data.boardId))throw new Error('지원하지 않는 보드입니다.');
@@ -19,6 +20,15 @@ export function validateProject(data){
     if(!Number.isFinite(p.x)||!Number.isFinite(p.y)||p.x<0||p.x>6000||p.y<0||p.y>6000||!Number.isFinite(p.rotation)||(data.version===1?![0,1].includes(p.rotation):p.rotation<0||p.rotation>=360))throw new Error('부품 좌표 또는 회전 각도가 올바르지 않습니다.');
     const q={id:p.id,name:p.name,type:p.type,x:p.x,y:p.y,rotation:data.version===1?p.rotation*90:p.rotation};
     if(p.scale!==undefined)q.scale=validScale(p.scale);
+    if(CATALOG_DEFS[p.type])for(const [key,value]of Object.entries(CATALOG_DEFS[p.type].defaults)){const input=p[key]??value;if(typeof value==='number'&&(!Number.isFinite(input)||Math.abs(input)>1e7))throw new Error(p.name+': '+key+' 값을 확인하세요.');if(typeof value==='string'&&typeof input!=='string')throw new Error(p.name+': '+key+' 값을 확인하세요.');q[key]=input;}
+    if(CATALOG_DEFS[p.type]){
+      const family=CATALOG_BY_TYPE[p.type].family,ranges={...({resistor:{value:[1,1e7]},potentiometer:{value:[1,1e7],position:[0,100]},capacitor:{value:[.001,100000]},slide:{position:[0,p.type.includes('dp3t')?2:1]},temperature:{temperature:[-40,125]},ultrasonic:{distance:[2,400]},dc_supply:{voltage:[6,24]},uart:{baud:[300,2000000]},rs485:{baud:[300,2000000]},dht11:{temperature:[0,50],humidity:[20,90]},dht22:{temperature:[-40,80],humidity:[0,100]}})[family],...DEVICE_RANGES[family]};
+      for(const [key,[min,max]]of Object.entries(ranges)){if(q[key]<min||q[key]>max)throw new Error(p.name+': '+key+' 범위는 '+min+'~'+max+'입니다.');}
+      if(family==='slide'&&!Number.isInteger(q.position))throw new Error('스위치 위치는 정수입니다.');
+      if(family==='i2c'&&(!Number.isInteger(q.address)||q.address<8||q.address>119))throw new Error('I2C 주소를 확인하세요.');
+      if(DEVICE_ADDRESSES[family]&&!DEVICE_ADDRESSES[family].includes(q.address))throw new Error(p.name+': 지원하지 않는 I2C 주소입니다.');
+      if(family==='led'&&!['red','green','blue','yellow'].includes(q.color))throw new Error('LED 색상을 확인하세요.');
+    }
     if(TWO_PIN_TYPES.includes(p.type)){
       q.span=p.span??70;if(!Number.isFinite(q.span)||q.span<4||q.span>1000)throw new Error('부품 다리 간격이 올바르지 않습니다.');
       for(const k of ['attachA','attachB'])if(p[k]!=null){if(!base(p[k]))throw new Error('존재하지 않는 부품 연결점입니다.');q[k]=p[k];}
@@ -79,7 +89,7 @@ export function validateProject(data){
     const docs=data.deviceDocs;if(!docs||!Array.isArray(docs.bindings)||docs.bindings.length>100)throw new Error('장치 Docs 연결 정보를 확인하세요.');
     const map=value=>{if(!value||typeof value!=='object'||Array.isArray(value)||Object.keys(value).length>100||Object.entries(value).some(([k,v])=>!safeId(k)||!safeId(v)))throw new Error('장치 Docs 매핑을 확인하세요.');return {...value};};
     const keys=new Set();project.deviceDocs={bindings:docs.bindings.map(b=>{if(!b||!safeId(b.key)||keys.has(b.key)||!safeId(b.type)||typeof b.api!=='string'||b.api.length>100)throw new Error('장치 Docs 식별자를 확인하세요.');keys.add(b.key);return {key:b.key,type:b.type,api:b.api,mode:b.mode==='baremetal'?'baremetal':'hal',parts:map(b.parts),pins:map(b.pins),peripherals:map(b.peripherals)};})};
-    for(const key of ['checksum','headerChecksum'])if(docs[key]!==undefined){if(typeof docs[key]!=='string'||!/^[a-f0-9]{1,8}$/.test(docs[key]))throw new Error('장치 Docs 소스 정보를 확인하세요.');project.deviceDocs[key]=docs[key];}
+    for(const key of ['checksum','headerChecksum','inlineChecksum'])if(docs[key]!==undefined){if(typeof docs[key]!=='string'||!/^[a-f0-9]{1,8}$/.test(docs[key]))throw new Error('장치 Docs 소스 정보를 확인하세요.');project.deviceDocs[key]=docs[key];}
   }
   return project;
 }

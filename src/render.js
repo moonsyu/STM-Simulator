@@ -1,3 +1,4 @@
+import {remodelLegacyShape,updateCatalogView} from './catalog-view.js';
 import {isSelected,wirePoints} from './circuit-edit.js';
 import {PINS,HOLES,BB,endpointInfo,circuitHoles,breadboardPrefix} from './pins.js';
 import {terminalKeys,localTerminals,nominalTerminals,rotatePoint,attachments,PART_DEFS} from './components.js';
@@ -64,12 +65,14 @@ export function renderParts(project,selected,result,pressed){const parts=project
    for(const xx of [-114,114])for(const yy of [-39,31])shape+=`<circle cx="${xx}" cy="${yy}" r="3" fill="#e6d395"/>`;
    shape+=text(-105,34,'1',7,'#d0e7df')+text(105,34,'16',7,'#d0e7df','text-anchor="end"');
  }
+ shape=remodelLegacyShape(p,shape,result);
  const label=['resistor','potentiometer'].includes(p.type)?`${p.name} · ${p.value>=1000?(p.value/1000)+' kΩ':p.value+' Ω'}`:p.type==='capacitor'?`${p.name} · ${p.value} µF`:p.name;
  const radians=angle*Math.PI/180,lcdHeight=(Math.abs(Math.sin(radians))*121+Math.abs(Math.cos(radians))*46)*scale;
  const body=PART_DEFS[p.type]?.body,bodyHeight=(body?(Math.abs(Math.sin(radians))*body.width+Math.abs(Math.cos(radians))*body.height)/2+14:42)*scale;
  const labelY=Math.min(y-(p.type==='lcd'?lcdHeight+14:PART_DEFS[p.type]?bodyHeight:27),...terminalKeys(p).map(key=>endpointInfo(`part:${p.id}:${key}`,project.components,project.surfaces).y-13));
  const leads=terms.map((t,i)=>{const end=endpointInfo(`part:${p.id}:${t.key}`,project.components,project.surfaces);let root;
-   if(p.type==='button')root=rotatePoint(Math.sign(t.x)*14,Math.sign(t.y)*9,angle);
+   if(p.type.startsWith('ref_')){const b=PART_DEFS[p.type].body;root=rotatePoint(Math.max(-b.width/2,Math.min(b.width/2,t.x)),Math.max(-b.height/2,Math.min(b.height/2,t.y)),angle);}
+   else if(p.type==='button')root=rotatePoint(Math.sign(t.x)*14,Math.sign(t.y)*9,angle);
    else if(p.type==='lcd')root=rotatePoint(t.x,35,angle);
    else if(p.type==='sevenseg')root=rotatePoint(t.x,Math.sign(t.y)*27,angle);
    else if(p.type==='l298n')root=rotatePoint(Math.max(-82,Math.min(82,t.x)),Math.max(-56,Math.min(56,t.y)),angle);
@@ -90,8 +93,8 @@ export function renderPinSearch(pins,selectedId=null,surfaces){return [...pins.f
  }).join('');}
 export function updateSimulationSvg(svg,project,result,pressed){
  for(const p of project.components){const g=svg.querySelector(`[data-part="${p.id}"]`);if(!g)continue;
-   if(p.type==='lcd')g.querySelector('.lcd-content').innerHTML=lcdContent(result?.fault?null:result?.parts[p.id]?.lcd);
-   updateExtraSvg(g,p,result?.fault?null:result?.parts[p.id]);
+   if(p.type==='lcd'&&g.querySelector('.lcd-content'))g.querySelector('.lcd-content').innerHTML=lcdContent(result?.fault?null:result?.parts[p.id]?.lcd);
+   updateExtraSvg(g,p,result?.fault?null:result?.parts[p.id]);updateCatalogView(g,p,result?.fault?null:result?.parts[p.id],!!pressed[p.id],lcdContent);
    if(p.type==='led'){const on=!result?.fault&&result?.parts[p.id]?.on;g.querySelector('.led-lens')?.setAttribute('fill',on?LED_COLORS[p.color]:'#704b4c');g.querySelector('.led-glow')?.setAttribute('opacity',on?'.6':'0');}
    if(p.type==='button')g.querySelector('.switch-cap')?.setAttribute('fill',pressed[p.id]?'#168775':'#354857');
  }

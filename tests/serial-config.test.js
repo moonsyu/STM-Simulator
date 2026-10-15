@@ -9,7 +9,7 @@ import {validateProject} from '../src/project.js';
 
 const outputPin=()=>({function:'GPIO_Output',pull:'NOPULL',edge:'FALLING',initial:0,label:''});
 function serialProject(id,tx=SERIAL_ROUTES[id].TX[0],rx=SERIAL_ROUTES[id].RX[0]){
-  const p=halExample('uart');p.mcu=setSerialEnabled(setSerialEnabled(p.mcu,'USART2',false),id,true);
+  const p=halExample('uart_external');p.mcu=setSerialEnabled(setSerialEnabled(p.mcu,'USART2',false),id,true);
   assignSerialPin(p.mcu,id,'TX',tx);assignSerialPin(p.mcu,id,'RX',rx);
   p.mcu.peripherals[id].baud=9600;p.mcu.nvic[id+'_IRQn']={enabled:true,priority:0};
   p.code='uint8_t rx[1];\n'+generateHal(p.mcu);
@@ -49,8 +49,8 @@ test('overlapping USART3 and UART4 routes cannot steal one another',()=>{
 for(const id of SERIAL_IDS)test(`${id} all TX/RX alternatives generate HAL, transmit and echo through its own NVIC`,()=>{
   for(const tx of SERIAL_ROUTES[id].TX)for(const rx of SERIAL_ROUTES[id].RX){
     const p=serialProject(id,tx,rx),s=new SimulationSession(p);assert.match(p.code,new RegExp(`GPIO_AF${serialAf(id)}_${id}`));s.tick(0);advance(s,5,30);assert.match(s.buses.received.get('demo'),/HAL ready/);
-    assert.equal(s.inject('AB',id),2);advance(s,35,70);assert.match(s.buses.received.get('demo'),/AB$/);assert.equal(s.hal.uart(id).bus.uart.tx,tx);assert.equal(s.hal.uart(id).bus.uart.rx,rx);
-    s.hal.call('HAL_NVIC_DisableIRQ',[id+'_IRQn'],s.runtime);assert.equal(s.inject('Z',id),1);advance(s,75,90);assert.ok(!s.buses.received.get('demo').endsWith('Z'));
+    assert.equal(s.inject('AB',id+':external'),2);advance(s,35,70);assert.match(s.buses.received.get('demo'),/AB$/);assert.equal(s.hal.uart(id).bus.uart.tx,tx);assert.equal(s.hal.uart(id).bus.uart.rx,rx);
+    s.hal.call('HAL_NVIC_DisableIRQ',[id+'_IRQn'],s.runtime);assert.equal(s.inject('Z',id+':external'),1);advance(s,75,90);assert.ok(!s.buses.received.get('demo').endsWith('Z'));
     s.hal.call('HAL_NVIC_EnableIRQ',[id+'_IRQn'],s.runtime);advance(s,95,110);assert.ok(s.buses.received.get('demo').endsWith('Z'));
   }
 });
@@ -64,7 +64,7 @@ test('two UART instances keep buffers, busy states, NVIC events and physical ter
   p.code='uint8_t rx2[1]; uint8_t rx4[1];\n'+generateHal(p.mcu);
   p.code=p.code.replace('  /* USER CODE END 2 */','  HAL_UART_Receive_IT(&huart2, rx2, 1);\n  HAL_UART_Receive_IT(&huart4, rx4, 1);\n  HAL_UART_Transmit_IT(&huart2, "2", 1);\n  if (HAL_UART_Transmit_IT(&huart4, "4", 1) != HAL_OK) Error_Handler();\n  /* USER CODE END 2 */');
   p.code=p.code.replace('  /* HAL_UART_Receive_IT() 수신 완료 */','  if (huart->Instance == USART2) { HAL_UART_Transmit_IT(huart, rx2, 1); HAL_UART_Receive_IT(huart, rx2, 1); }\n  if (huart->Instance == UART4) { HAL_UART_Transmit_IT(huart, rx4, 1); HAL_UART_Receive_IT(huart, rx4, 1); }');
-  const s=new SimulationSession(validateProject(p));s.tick(0);advance(s,5,40);assert.equal(s.inject('ab','USART2'),2);assert.equal(s.inject('CD','UART4'),2);assert.equal(s.inject('bad','UART5'),0);advance(s,45,90);
+  const s=new SimulationSession(validateProject(p));s.tick(0);advance(s,5,40);assert.equal(s.inject('ab','USART2:external'),2);assert.equal(s.inject('CD','UART4'),2);assert.equal(s.inject('bad','UART5'),0);advance(s,45,90);
   assert.match(s.buses.received.get('demo'),/2ab$/);assert.match(s.buses.received.get('second'),/4CD$/);assert.notEqual(s.hal.uart('USART2').bus.uart,s.hal.uart('UART4').bus.uart);
 });
 test('HAL rejects a serial AF or baud mismatch for non-USART2 instances',()=>{

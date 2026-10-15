@@ -2,7 +2,7 @@ const fs=require('node:fs/promises'),path=require('node:path'),os=require('node:
 const {randomUUID,createHash}=require('node:crypto');
 const {execute}=require('./process-tools.cjs');
 const TOOL_KEYS=['armGcc','armGdb','cube','hostGcc','hostGdb','clangd','openocd','buildRoot'];
-const HAL_MODULES=['hal','hal_rcc','hal_rcc_ex','hal_gpio','hal_cortex','hal_pwr','hal_pwr_ex','hal_flash','hal_flash_ex','hal_dma','hal_dma_ex','hal_uart','hal_usart','hal_adc','hal_adc_ex','hal_i2c','hal_spi','hal_tim','hal_tim_ex'];
+const HAL_MODULES=['hal','hal_rcc','hal_rcc_ex','hal_gpio','hal_cortex','hal_pwr','hal_pwr_ex','hal_flash','hal_flash_ex','hal_dma','hal_dma_ex','hal_can','hal_i2s','hal_i2s_ex','hal_uart','hal_usart','hal_adc','hal_adc_ex','hal_i2c','hal_spi','hal_tim','hal_tim_ex'];
 const LINKER=`ENTRY(Reset_Handler)
 MEMORY { FLASH (rx) : ORIGIN = 0x08000000, LENGTH = 512K
 RAM (xrw) : ORIGIN = 0x20000000, LENGTH = 128K }

@@ -1,3 +1,4 @@
+import {catalogShape} from './catalog-render.js';
 import {l298Shape,updateL298Svg} from './l298n-ui.js';
 import {deviceShape,updateDeviceSvg} from './device-ui.js';
 export function rgbColor(read){
@@ -5,6 +6,7 @@ export function rgbColor(read){
  return values.some(Boolean)?`rgb(${values.join(',')})`:'#465366';
 }
 export function extraShape(p,result){
+ const catalog=catalogShape(p,result?.parts[p.id]);if(catalog)return catalog;
  const l298=l298Shape(p);if(l298)return l298;
  const device=deviceShape(p);if(device)return device;
  const read=result?.parts[p.id];

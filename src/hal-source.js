@@ -2,6 +2,16 @@ import {compile} from './parser.js';
 
 // These are interpreter value layouts, not STM32 register or ABI definitions.
 export const HAL_STRUCTS={
+  CAN_InitTypeDef:'Prescaler Mode SyncJumpWidth TimeSeg1 TimeSeg2 TimeTriggeredMode AutoBusOff AutoWakeUp AutoRetransmission ReceiveFifoLocked TransmitFifoPriority',
+  CAN_HandleTypeDef:'Instance Init:CAN_InitTypeDef',
+  CAN_FilterTypeDef:'FilterIdHigh FilterIdLow FilterMaskIdHigh FilterMaskIdLow FilterFIFOAssignment FilterBank FilterMode FilterScale FilterActivation SlaveStartFilterBank',
+  CAN_TxHeaderTypeDef:'StdId ExtId IDE RTR DLC TransmitGlobalTime',
+  CAN_RxHeaderTypeDef:'StdId ExtId IDE RTR DLC Timestamp FilterMatchIndex',
+  I2S_InitTypeDef:'Mode Standard DataFormat MCLKOutput AudioFreq CPOL ClockSource FullDuplexMode',
+  I2S_HandleTypeDef:'Instance Init:I2S_InitTypeDef',
+  RCC_PLLI2SInitTypeDef:'PLLI2SN PLLI2SR PLLI2SQ',
+  RCC_PeriphCLKInitTypeDef:'PeriphClockSelection PLLI2S:RCC_PLLI2SInitTypeDef PLLI2SDivQ I2sApb1ClockSelection',
+
   GPIO_InitTypeDef:'Pin Mode Pull Speed Alternate',
   UART_InitTypeDef:'BaudRate WordLength StopBits Parity Mode HwFlowCtl OverSampling',
   UART_HandleTypeDef:'Instance Init:UART_InitTypeDef ErrorCode gState RxState',

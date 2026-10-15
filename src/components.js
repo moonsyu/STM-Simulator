@@ -1,12 +1,14 @@
+import {CATALOG_DEFS,CATALOG_TWO_PIN} from './catalog-defs.js';
 import {L298_DEFS} from './l298n.js';
 import {DEVICE_DEFS} from './device-defs.js';
 import {scaleOf} from './geometry.js';
 // Geometry shared by rendering, hit testing, mounting and project validation.
-export const TWO_PIN_TYPES=['resistor','led','capacitor','diode','buzzer','passive_buzzer','ldr','ntc','dc_motor','dc_supply'];
-export const MULTI_PIN_TYPES=['l298n','button','lcd','potentiometer','slide','rgb','sevenseg','temperature','ultrasonic','uart','i2c','spi',...Object.keys(DEVICE_DEFS).filter(t=>!['ldr','ntc'].includes(t))];
+export const TWO_PIN_TYPES=[...CATALOG_TWO_PIN,'resistor','led','capacitor','diode','buzzer','passive_buzzer','ldr','ntc','dc_motor','dc_supply'];
+export const MULTI_PIN_TYPES=[...Object.keys(CATALOG_DEFS).filter(t=>!CATALOG_TWO_PIN.includes(t)),'l298n','button','lcd','potentiometer','slide','rgb','sevenseg','temperature','ultrasonic','uart','i2c','spi',...Object.keys(DEVICE_DEFS).filter(t=>!['ldr','ntc'].includes(t))];
 export const PART_DEFS={
+ ...CATALOG_DEFS,
  ...DEVICE_DEFS,...L298_DEFS,
- uart:{name:'UART 터미널',prefix:'UART',icon:'↔',hint:'4핀 · 송수신 터미널',defaults:{baud:9600},labels:['VCC','GND','TX','RX'],help:'3.3 V 전원을 연결하고 TX를 보드 RX(PA3), RX를 보드 TX(PA2)에 연결하세요. Serial1.begin(9600)으로 시작합니다. 속도는 부품과 코드가 같아야 하며 하단 통신 탭에서 문자를 보낼 수 있습니다.'},
+ uart:{name:'외부 UART 터미널',prefix:'UART',icon:'↔',hint:'4핀 · 외부 장치 배선 연습',defaults:{baud:9600},labels:['VCC','GND','TX','RX'],help:'외부 UART 장치 연결을 연습하는 선택 부품입니다. VCC→3V3, GND→GND, TX→보드 RX(PA3), RX→보드 TX(PA2)로 교차 배선하고 코드와 부품의 baud를 맞추세요. 하단 통신 탭에서 외부 UART 장치 → USART2를 선택합니다. 기본 USART2 통신은 이 부품 없이 내장 ST-LINK VCP로 가능합니다.'},
  i2c:{name:'I²C 메모리',prefix:'I2C',icon:'▦',hint:'4핀 · 주소 / 256 B',defaults:{address:80},labels:['VCC','GND','SDA','SCL'],help:'256바이트 범용 메모리 모델입니다. 3.3 V, GND, SDA(PB9), SCL(PB8)를 연결하세요. 모듈에 10 kΩ 풀업을 포함합니다. 첫 전송 바이트가 메모리 위치이고 이후 바이트가 데이터입니다.'},
  spi:{name:'SPI 메모리',prefix:'SPI',icon:'⇄',hint:'6핀 · CS / 256 B',defaults:{},labels:['VCC','GND','CS','SCK','MOSI','MISO'],help:'256바이트 범용 메모리 모델입니다. CS LOW 상태에서 명령 0x02(쓰기) 또는 0x03(읽기), 1바이트 주소, 데이터를 전송합니다. 기본 핀은 SCK PA5, MOSI PA7, MISO PA6입니다. CS는 별도로 GPIO로 제어하세요.'},
  potentiometer:{name:'가변저항',prefix:'VR',icon:'◉',hint:'3핀 · 저항 / 위치 조절',defaults:{value:10000,position:50},labels:['1','2 · WIPER','3'],help:'1–3은 전체 저항, 2는 가변 접점입니다. 1을 GND, 3을 3.3 V, 2를 ADC에 연결하면 조절 위치에 따라 전압이 바뀝니다.'},
@@ -27,8 +29,8 @@ export const WIRE_COLORS=[
   ['#8b603e','갈색'],['#edf2f5','흰색']
 ];
 export const normalizeAngle=n=>((n%360)+360)%360;
-export function terminalKeys(p){return p.type==='breadboard'?[]:p.type==='button'?['a','b','c','d']:p.type==='lcd'?LCD_LABELS.map((_,i)=>'p'+(i+1)):PART_DEFS[p.type]?.labels?PART_DEFS[p.type].labels.map((_,i)=>'p'+(i+1)):['a','b'];}
-export function attachments(p){return TWO_PIN_TYPES.includes(p.type)?{...(p.attachA?{a:p.attachA}:{}),...(p.attachB?{b:p.attachB}:{})}:p.attachments||{};}
+export function terminalKeys(p){if(p.electricalPins)return p.electricalPins;return p.type==='breadboard'?[]:p.type==='button'?['a','b','c','d']:p.type==='lcd'?LCD_LABELS.map((_,i)=>'p'+(i+1)):PART_DEFS[p.type]?.labels?PART_DEFS[p.type].labels.map((_,i)=>'p'+(i+1)):['a','b'];}
+export function attachments(p){return TWO_PIN_TYPES.includes(p.type)?{...(p.attachA?{[CATALOG_TWO_PIN.includes(p.type)?'p1':'a']:p.attachA}:{}),...(p.attachB?{[CATALOG_TWO_PIN.includes(p.type)?'p2':'b']:p.attachB}:{})}:p.attachments||{};}
 export function terminalLabel(p,key){
  if(p.type==='lcd')return `${Number(key.slice(1))} · ${LCD_LABELS[Number(key.slice(1))-1]}`;
  if(p.type==='button')return ({a:'A1',c:'A2',b:'B1',d:'B2'})[key];
@@ -39,6 +41,7 @@ function rawTerminals(p){
  if(p.type==='breadboard')return [];
  if(p.type==='button')return [{key:'a',x:-21,y:-14},{key:'b',x:21,y:-14},{key:'c',x:-21,y:14},{key:'d',x:21,y:14}];
  if(p.type==='lcd')return LCD_LABELS.map((_,i)=>({key:'p'+(i+1),x:(i-7.5)*14,y:44}));
+ if(CATALOG_TWO_PIN.includes(p.type))return [{key:'p1',x:-(p.span??70)/2,y:0},{key:'p2',x:(p.span??70)/2,y:0}];
  if(PART_DEFS[p.type]?.terminals)return PART_DEFS[p.type].terminals.map(([x,y],i)=>({key:'p'+(i+1),x,y}));
  if(p.type==='sevenseg')return terminalKeys(p).map((key,i)=>({key,x:i<5?(i-2)*14:(7-i)*14,y:i<5?35:-35}));
  if(PART_DEFS[p.type]?.labels){const keys=terminalKeys(p);return keys.map((key,i)=>({key,x:(i-(keys.length-1)/2)*14,y:PART_DEFS[p.type].pinY??(p.type==='ultrasonic'?32:28)}));}
@@ -48,4 +51,4 @@ export function rotatePoint(x,y,angle){const r=angle*Math.PI/180;return {x:x*Mat
 export function localTerminals(p){const scale=scaleOf(p);return rawTerminals(p).map(t=>({...t,x:t.x*scale,y:t.y*scale}));}
 export function nominalTerminals(p){return localTerminals(p).map(t=>{const v=rotatePoint(t.x,t.y,p.rotation);return {...t,x:p.x+v.x,y:p.y+v.y};});}
 export function detachPart(p){delete p.attachA;delete p.attachB;delete p.attachments;}
-export function assignAttachments(p,map){detachPart(p);if(TWO_PIN_TYPES.includes(p.type)){if(map.a)p.attachA=map.a;if(map.b)p.attachB=map.b;}else if(Object.keys(map).length)p.attachments={...map};}
+export function assignAttachments(p,map){detachPart(p);if(TWO_PIN_TYPES.includes(p.type)){const keys=CATALOG_TWO_PIN.includes(p.type)?['p1','p2']:['a','b'];if(map[keys[0]])p.attachA=map[keys[0]];if(map[keys[1]])p.attachB=map[keys[1]];}else if(Object.keys(map).length)p.attachments={...map};}

@@ -9,6 +9,7 @@ const {prepareBuild}=require('../desktop/native-build.cjs'),{toolSettings}=requi
   command(plan.gcc,[...plan.flags,...objects,...plan.linkFlags,'-Wl,--gc-sections','-Wl,-Map='+path.join(plan.directory,'firmware.map'),'-lm','-o',plan.elf],plan.directory);results.push({label,elf:plan.elf,bytes:(await fs.stat(plan.elf)).size});console.log(label+' compiled and linked');
  }
  const selected=process.env.DOCS_ARM_TYPES?.split(',');
+ if(selected?.includes('uart')){const {halExample}=await import('../src/hal-examples.js');for(const kind of ['uart','uart_external'])await verify(halExample(kind),kind+' standalone main.c');}
  for(const part of PART_LIBRARY.filter(p=>!selected||selected.includes(p.type))){const p=blankProject();p.components=[{id:'selected',name:part.name,type:part.type,x:800,y:350,rotation:0,span:70,...PART_DEFS[part.type]?.defaults,...(part.type==='resistor'?{value:10000}:{}),...(part.type==='led'?{color:'red'}:{})}];
   const target={type:'part',id:'selected'};await verify(applyDeviceExample(p,target).project,part.type+' HAL');
   for(const card of baremetalCards(deviceDocs(part.type).sample.mcu,part.type))await verify(applyDeviceExample(p,target,{mode:'baremetal',api:card.id}).project,part.type+' '+card.id);

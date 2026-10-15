@@ -18,7 +18,8 @@ export function circuitDiagnostics(project,result=null,pressed={}){
    if(Object.values(measured.parts[p.id]?.channels??{}).some(c=>c.mode==='invalid'))add('l298-logic:'+p.id,p.name+': 입력은 LOW 0~1.5 V / HIGH 2.3 V 이상이어야 합니다. PWM 파형 설정을 확인하세요.',{type:'part',id:p.id});
   }
   const i2c=project.components.filter(p=>PART_DEFS[p.type]?.labels?.includes('SDA')&&p.address!==undefined);
-  for(let i=0;i<i2c.length;i++)for(let j=i+1;j<i2c.length;j++){const a=i2c[i],b=i2c[j];if(a.address===b.address&&uf.find(`part:${a.id}:p3`)===uf.find(`part:${b.id}:p3`)&&uf.find(`part:${a.id}:p4`)===uf.find(`part:${b.id}:p4`))add('address:'+a.id+':'+b.id,`${a.name} / ${b.name}: 같은 I²C 버스에서 주소 0x${a.address.toString(16)}가 중복됩니다. 부품 속성에서 주소를 변경하세요.`,{type:'part',id:b.id},'error');}
+  const busPin=(p,label)=>'part:'+p.id+':'+terminalKeys(p)[PART_DEFS[p.type].labels.indexOf(label)];
+  for(let i=0;i<i2c.length;i++)for(let j=i+1;j<i2c.length;j++){const a=i2c[i],b=i2c[j];if(a.address===b.address&&uf.find(busPin(a,'SDA'))===uf.find(busPin(b,'SDA'))&&uf.find(busPin(a,'SCL'))===uf.find(busPin(b,'SCL')))add('address:'+a.id+':'+b.id,`${a.name} / ${b.name}: 같은 I²C 버스에서 주소 0x${a.address.toString(16)}가 중복됩니다. 부품 속성에서 주소를 변경하세요.`,{type:'part',id:b.id},'error');}
   if(project.mcu)for(const [i,message]of configProblems(project.mcu).entries()){const pin=/\bP[ABCDH]\d+\b/.exec(message)?.[0];add('config:'+i,message,pin?{type:'endpoint',id:boardPin(pin)}:null,'error');}
   for(const [i,detail]of (measured.diagnostics||[]).entries())add('runtime:'+i,detail.message,detail.target,'error');
   for(const [i,message]of (measured.warnings||[]).entries()){

@@ -1,3 +1,4 @@
+import {CatalogPeripherals,CATALOG_HAL_CONSTANTS} from './catalog-peripherals.js';
 import {TIMER_IDS,timerAf} from './timer-config.js';
 import {HalTimers} from './hal-timers.js';
 import {validateMcu,configProblems,irqForPin,IRQ_NAMES} from './mcu-config.js';
@@ -5,7 +6,7 @@ import {BusDevices} from './buses.js';
 import {SERIAL_IDS,isSerial,serialAf,serialFunction} from './serial-config.js';
 import {formatPrintf} from './hal-stdio.js';
 
-export const HAL_CONSTANTS={HAL_OK:0,HAL_ERROR:1,HAL_BUSY:2,HAL_TIMEOUT:3,HAL_MAX_DELAY:4294967295,
+export const HAL_CONSTANTS={...CATALOG_HAL_CONSTANTS,HAL_OK:0,HAL_ERROR:1,HAL_BUSY:2,HAL_TIMEOUT:3,HAL_MAX_DELAY:4294967295,
   GPIO_PIN_RESET:0,GPIO_PIN_SET:1,GPIO_MODE_INPUT:0,GPIO_MODE_OUTPUT_PP:1,GPIO_MODE_OUTPUT_OD:17,GPIO_MODE_AF_PP:2,GPIO_MODE_AF_OD:18,GPIO_MODE_ANALOG:3,
   GPIO_MODE_IT_RISING:0x10110000,GPIO_MODE_IT_FALLING:0x10210000,GPIO_MODE_IT_RISING_FALLING:0x10310000,GPIO_NOPULL:0,GPIO_PULLUP:1,GPIO_PULLDOWN:2,
   GPIO_SPEED_FREQ_LOW:0,GPIO_SPEED_FREQ_MEDIUM:1,GPIO_SPEED_FREQ_HIGH:2,GPIO_SPEED_FREQ_VERY_HIGH:3,
@@ -31,7 +32,7 @@ for(const [name,n]of [['GPIO_AF4_I2C1',4],['GPIO_AF5_SPI1',5],['GPIO_AF1_TIM2',1
 
 const int=(value,min,max,label)=>{if(!Number.isInteger(value)||value<min||value>max)throw new Error(`${label}: ${min}~${max} 범위의 정수가 필요합니다.`);return value;};
 export class HalAdapter {
-  constructor(config,buses){this.config=validateMcu(config);const errors=configProblems(this.config);if(errors.length)throw new Error(errors.join('\n'));this.buses=buses;this.nvic=new Map();this.pending=[];this.extiPending=0;this.serials=new Map();this.handles=new Map();this.timerModel=new HalTimers(this);this.adc=new Map();this.latches=new Map();this.priorities=new Map();}
+  constructor(config,buses){this.config=validateMcu(config);const errors=configProblems(this.config);if(errors.length)throw new Error(errors.join('\n'));this.buses=buses;this.nvic=new Map();this.pending=[];this.extiPending=0;this.serials=new Map();this.handles=new Map();this.timerModel=new HalTimers(this);this.adc=new Map();this.latches=new Map();this.priorities=new Map();this.initializedGpio=new Set();this.catalog=new CatalogPeripherals(this);}
   uart(id){
     if(!isSerial(id))throw new Error(`지원하지 않는 UART 인스턴스: ${id}`);
     if(!this.serials.has(id)){const bus=id==='USART2'?this.buses:new BusDevices(this.buses.project,this.buses.getResult,this.buses.trace);bus.uart.instance=id;bus.received=this.buses.received;this.serials.set(id,{bus,rx:null,tx:null});}
@@ -57,7 +58,10 @@ export class HalAdapter {
     if(!r.interruptsEnabled||r.inCallback)return;
     const ready=this.pending.filter(j=>this.nvic.has(j.irq));this.pending=this.pending.filter(j=>!this.nvic.has(j.irq));ready.sort((a,b)=>this.nvic.get(a.irq)-this.nvic.get(b.irq));for(const job of ready)r.runCallback({host:job.callback});
   }
+  *pollCounter(name,args,r){yield .002;r.steps=0;return this.call(name,args,r);}
   invoke(name,args,r){
+    if(name==='HAL_I2S_Transmit')return this.catalog.transmit(args,r);
+    if(name==='__HAL_TIM_GET_COUNTER'&&this.buses.project.components.some(p=>p.type==='catalog_singlewire'))return this.pollCounter(name,args,r);
     if(name==='HAL_Delay'||name==='HAL_UART_Transmit'||name==='HAL_UART_Receive')return this.blocking(name,args,r);
     return null;
   }
@@ -76,7 +80,7 @@ export class HalAdapter {
   }
   bytes(buffer,count,r){int(count,1,256,'전송 길이');if(typeof buffer==='string'){if(count>buffer.length+1)throw new Error('문자열 범위를 벗어난 전송');return Array.from({length:count},(_,i)=>buffer.charCodeAt(i)||0);}return Array.from({length:count},(_,i)=>int(r.get(r.pointerCell(buffer,i)),0,255,'전송 바이트'));}
   call(name,args,r){
-    const [a,b,c,d,e,f,g]=args;
+    const [a,b,c,d,e,f,g]=args;const catalogResult=this.catalog.call(name,args,r);if(catalogResult!==undefined)return catalogResult;
     if(name==='HAL_Init'){this.callback(r,'HAL_MspInit');return 0;}
     if(name==='HAL_GetTick')return Math.floor(r.microTime/1000)>>>0;
     if(name==='__disable_irq'){r.interruptsEnabled=false;return 0;}if(name==='__enable_irq'){r.interruptsEnabled=true;return 0;}
@@ -89,11 +93,14 @@ export class HalAdapter {
     if(name==='HAL_GPIO_Init'){
       const init=r.get(r.pointerCell(b)),mask=this.field(init,'Pin'),mode=this.field(init,'Mode'),pull=this.field(init,'Pull');
       for(const pin of this.pins(a,mask)){
+        if(this.catalog.configurePin(pin,mode,this.field(init,'Alternate'),r))continue;
         const p=this.configured(pin),expected=p.function==='GPIO_Output'?1:p.function==='GPIO_Input'?0:p.function==='GPIO_EXTI'?HAL_CONSTANTS['GPIO_MODE_IT_'+(p.edge==='CHANGE'?'RISING_FALLING':p.edge)]:p.function==='Analog'||p.function.startsWith('ADC1_')?3:p.function.startsWith('I2C1_')?18:2;
-        if(mode!==expected||pull!==['NOPULL','PULLUP','PULLDOWN'].indexOf(p.pull))throw new Error(`${pin}: HAL_GPIO_Init 모드/풀 설정과 Pinout이 다릅니다.`);
+        const dynamic=this.initializedGpio.has(pin)&&['GPIO_Output','GPIO_Input'].includes(p.function)&&[0,1,17].includes(mode);
+        if(!dynamic&&(mode!==expected&&!(expected===1&&mode===17)||pull!==['NOPULL','PULLUP','PULLDOWN'].indexOf(p.pull)))throw new Error(`${pin}: HAL_GPIO_Init 모드/풀 설정과 Pinout이 다릅니다.`);
         if([2,18].includes(mode)){const serial=serialFunction(p.function),af=serial?serialAf(serial):p.function.startsWith('I2C1_')?4:p.function.startsWith('SPI1_')?5:timerAf(p.function.split('_')[0]);if(this.field(init,'Alternate')!==af)throw new Error(`${pin}: GPIO Alternate(AF) 설정을 확인하세요.`);}
-        if(mode===1){r.call('pinMode',[pin,'OUTPUT']);r.call('digitalWrite',[pin,this.latches.get(pin)??p.initial]);}
-        else r.call('pinMode',[pin,p.pull==='PULLUP'?'INPUT_PULLUP':p.pull==='PULLDOWN'?'INPUT_PULLDOWN':'INPUT']);
+        this.initializedGpio.add(pin);
+        if(mode===1||mode===17){r.call('pinMode',[pin,'OUTPUT']);r.gpio[pin].openDrain=mode===17;r.gpio[pin].pull=pull;r.call('digitalWrite',[pin,this.latches.get(pin)??p.initial]);}
+        else r.call('pinMode',[pin,pull===1?'INPUT_PULLUP':pull===2?'INPUT_PULLDOWN':'INPUT']);
         if(p.function==='GPIO_EXTI')r.interrupts.set(pin,{mode:p.edge,previous:Number(!!r.api.read(pin)),pending:false,callback:{host:()=>{const mask=1<<Number(pin.slice(2));this.extiPending|=mask;this.queue(irqForPin(pin),()=>{const handler=irqForPin(pin).replace('_IRQn','_IRQHandler');if(r.program.functions[handler])this.callback(r,handler);else this.call('HAL_GPIO_EXTI_IRQHandler',[mask],r);},pin);}}});
       }return 0;
     }

@@ -1,6 +1,19 @@
 # STM Simulator — 개발 인계
 
-현재 로컬 구현 버전: **0.18.0**. 정리일: **2026-10-14**. NUCLEO-F446RE와 빵판을 연결하고 GPIO 스케치 또는 지원 HAL C 소스를 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+현재 로컬 구현 버전: **0.19.0**. 정리일: **2026-10-15**. NUCLEO-F446RE와 빵판을 연결하고 GPIO 스케치 또는 지원 HAL C 소스를 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+
+## 0.19.0 장치 조사 적용
+
+- `docs/device-visual-references.json`의 80항목 → `scripts/build-device-catalog.mjs` → `src/device-catalog-data.js`. 원본 사진은 배포하지 않고 독립 SVG를 사용합니다. 4자리 12핀으로 분류됐던 Adafruit 813은 도면상 14핀으로 정정했으며 내부 ID는 기존 참조 호환을 위해 유지합니다. HAT은 외부·나사·Pi 커넥터 51접점으로 구분합니다.
+- `catalog-defs/render/view/model/topology/electrical/motion/buses/singlewire/peripherals`가 물리 핀, 외형, 기존 모델 투영과 새 버스 동작을 분리합니다. 기존 35종 보존 + 78개 변형 = 부품 메뉴 113항목. 보드·빵판 포함 HAL 예제 120개.
+- `device-code-insertion.js` 및 `device-assistance.js`: 선언·초기화·반복 코드를 main.c에 직접 삽입, 함수별 필요한 호출까지 선택, 이전 생성 파일 이동, 재적용/사용자 수정 보호/정상 배선 보존과 단락 보완.
+- `device-register-setup.js`: 레지스터 초기화·대기·SPI 송수신·I2C ACK/수신. 기존 main의 시스템 초기화는 유지합니다.
+- `hal-example-search.js`: 이름·핀 수·인터페이스·실제 HAL API 검색. `wire-draft.js`: 바닥 연속 클릭 경유점, Backspace·Esc, 완료 시에만 연결 생성.
+- 80개 조사 항목의 기본 예제는 회로 모델에서 실행합니다. 단선 센서는 GPIO 에지/응답, CAN은 내부 루프백, I2S는 PCM 전송, 카메라는 SCCB ID까지입니다. 카메라/SD 등 예제 범위는 `docs/DEVICE-DOCS.md`, `docs/DEVICE-CATALOG.md`에 명시합니다. 80개 모두가 완전한 주변장치 에뮬레이션이라는 주장을 해서는 안 됩니다.
+- 검증: 전체 모델 260/260, 조사 80개 원본/삽입 HAL 160건 ARM 컴파일·링크, 패키지 카탈로그 UI, 단일 포터블 EXE 실행 모두 통과했습니다. `npm test`, `npm run test:catalog:ui`, `npm run test:catalog:arm`, `node scripts/portable-smoke.cjs`로 재검사합니다. ARM 검사에는 ARM GCC·STM32CubeF4가 필요합니다. 정확한 파일 해시와 한계는 `docs/VERIFICATION.md`에 있습니다.
+- USART2 PA2/PA3는 HAL 초기화 후 내장 ST-LINK VCP로 하단 통신 탭에서 바로 송수신합니다. 기본 UART 예제는 부품 0개/배선 0개이며 `uart_external`과 UART 부품 Docs/4·6핀 변형은 외부 배선 연습용입니다. 외부 입력 경로는 내장 VCP로 우회하지 않습니다.
+- USART2 변경 검증: 전체 모델 260/260, UART/Docs 레지스터 예제 실제 ARM 링크 12건, 내장/외부 UART UI 통과.
+- 사용자 요청에 따라 앞으로 버전 상승은 Release 게시까지 포함합니다. `AGENTS.md`와 `docs/UPDATES.md`의 게시 절차를 따릅니다. 0.18.0은 기존 커밋을 태그로 보충 게시하고 0.19.0은 main CI에서 자동 게시합니다. 공개 자산 확인 후 `docs/VERIFICATION.md`를 갱신합니다.
 
 ## 저장소 관리 원칙
 
