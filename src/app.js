@@ -31,6 +31,7 @@ import {BOARD,scaleXOf,scaleYOf,surfaceOrigin,partVector} from './geometry.js';
 import {setupEditorSearch} from './editor-search.js';
 import {SERIAL_IDS} from './serial-config.js';
 import {PART_LIBRARY,searchParts} from './part-library.js';
+import {setupPartPreviews} from './part-preview-ui.js';
 import {esc,initSvg,renderWires,renderParts,renderBreadboards,renderEndpoints,route,updateSimulationSvg,renderMountPreview,renderPinSearch,updateSurfaces} from './render.js';
 
 const $=id=>document.getElementById(id),svg=$('circuit');
@@ -51,6 +52,7 @@ const editorSearch=setupEditorSearch({applyEdit:replaceCodeText,maxLength:()=>{
 }});
 svg.addEventListener('contextmenu',e=>{const id=e.target.closest('[data-endpoint]')?.dataset.endpoint,p=PIN_BY_ID.get(id);if(p&&/^P[A-H]\d+$/.test(p.signal)){e.preventDefault();pinout.open(p.signal);}});
 $('part-list').innerHTML=PART_LIBRARY.map(part=>`<button class="part-card" data-add="${part.type}"><span class="part-icon ${part.iconClass}">${part.icon}</span><span><strong>${part.name}</strong><small>${part.hint}</small></span><b>+</b></button>`).join('')+'<p id="part-no-results" hidden>검색 결과가 없습니다.<br>다른 이름으로 검색해 주세요.</p>';
+setupPartPreviews();
 function filterParts(){
  const matches=new Set(searchParts($('part-search').value).map(part=>part.type));
  $('part-list').querySelectorAll('[data-add]').forEach(button=>{button.hidden=!matches.has(button.dataset.add);});

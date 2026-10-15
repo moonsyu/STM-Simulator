@@ -63,6 +63,8 @@ jobs:
         run: npm run test:appearance:ui
       - name: Test edge resizing of every device and both surfaces
         run: npm run test:resize:ui
+      - name: Test every part model thumbnail and hover preview
+        run: npm run test:part-previews:ui
       - name: Test Electron editing and HAL workflows
         shell: pwsh
         run: |

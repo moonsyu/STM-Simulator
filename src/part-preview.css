@@ -1,0 +1,7 @@
+.part-card .part-model-icon{display:grid;place-items:center;width:40px;height:40px;flex:0 0 40px;border-radius:4px;background:#edf2ec;text-shadow:none}
+.part-thumbnail{display:block;width:36px;height:36px;object-fit:contain;pointer-events:none}
+#part-model-preview{position:fixed;inset:auto;margin:0;padding:12px;width:min(320px,calc(100vw - 16px));max-height:calc(100vh - 16px);overflow:hidden;border:1px solid var(--ide-border,#cbd8ce);border-radius:6px;background:var(--ide-chrome,#f8faf7);color:var(--ide-foreground,#263e34);z-index:1000}
+.part-preview-name{display:block;font-size:13px;line-height:1.5;overflow-wrap:anywhere}
+.part-preview-image{height:min(240px,45vh);margin:8px 0;background:#edf2ec;border-radius:4px;display:grid;place-items:center;padding:12px}
+.part-preview-image img{display:block;width:100%;height:100%;min-height:0;object-fit:contain}
+.part-preview-detail{margin:0;font-size:11px;line-height:1.6;color:var(--ide-foreground,#263e34);overflow-wrap:anywhere}
