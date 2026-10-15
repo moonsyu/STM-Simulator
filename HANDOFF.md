@@ -1,15 +1,15 @@
 # STM Simulator — 개발 인계
 
-현재 공개 버전: **0.19.0**. 정리일: **2026-10-15**. NUCLEO-F446RE와 빵판을 연결하고 GPIO 스케치 또는 지원 HAL C 소스를 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+현재 공개 버전: **0.20.0**. 정리일: **2026-10-15**. NUCLEO-F446RE와 빵판을 연결하고 GPIO 스케치 또는 지원 HAL C 소스를 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
 
-## 0.20.0 가장자리 크기 조절 (배포 준비)
+## 0.20.0 가장자리 크기 조절 (공개 완료)
 
 - `resize-ui.js`: 선택한 장치의 네 변·네 모서리에서 실제 포인터로 크기 조절. 백분율 입력 제거, 장치 선택 목록은 위치 찾기용으로 유지합니다. Shift 비율 유지, 방향키 미세 조절, Alt+방향키 10배 간격, Esc/창 포커스 이탈 취소, 한 번의 Undo/Redo를 지원합니다.
 - `geometry.js`, `resize.js`: 독립 `scaleX/scaleY`, 표면 원점 이동과 회전·비균등 변형을 공유합니다. 기존 `scale` 파일은 호환됩니다. 장착 부품은 전체 좌표 변환을 받아 핀과 구멍이 일치하고 배선 ID를 보존합니다. `project.js`가 새 좌표와 크기를 검증·저장합니다.
 - 기존 10~400% 제한을 제거하고 연속 조절합니다. 수치 오류를 막는 양수 배율과 프로젝트 작업 공간 검증은 유지합니다. 실행 중에는 조절점과 편집을 비활성화합니다.
 - 로컬 검사: 전체 모델 269개, 113종 실제 드래그 UI, 두 기본 표면·회전·독립 축·취소·Undo/Redo·키보드·저장 복원, 기존 외형/설정 UI 통과. `npm run test:resize:ui`가 CI에도 포함됩니다.
 - 실행 파일은 `STM-Simulator.exe`, ZIP 내부 이름과 두 검증 JSON의 filename도 동일합니다. 0.19.0 이하 배포본은 0.20.0을 한 번 수동 다운로드해야 합니다. 버전만 올린 이전 이름의 호환 EXE를 별도로 배포하지 않습니다.
-- 공개 버전·빌드 커밋·해시는 실제 CI/Release 게시 후 아래와 `docs/VERIFICATION.md`에 갱신합니다.
+- [공개 v0.20.0](https://github.com/moonsyu/STM-Simulator/releases/tag/v0.20.0), 빌드/태그 `a5f1b2dd9d8939ec96f536d5ad99a4387f1bd8b4`, [Windows CI](https://github.com/moonsyu/STM-Simulator/actions/runs/38695514691) 성공. 공개 EXE/ZIP 재다운로드·해시·문서 일치와 실제 공개 EXE의 크기 조절/기존 기능 검사를 통과했습니다. 최신 로컬 배포는 `outputs/artifact/STM-Simulator.exe`입니다. 상세 해시는 `docs/VERIFICATION.md`에 있습니다.
 
 ## 0.19.0 장치 조사 적용
 
