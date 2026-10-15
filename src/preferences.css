@@ -25,7 +25,13 @@
 :root[data-ide-theme] #net-layer path{stroke:var(--ide-net)}
 :root[data-ide-theme] #net-layer circle{stroke:var(--ide-net);fill:color-mix(in srgb,var(--ide-net) 20%,transparent)}
 .object-size-tools{display:flex;align-items:center;gap:7px;flex-wrap:wrap;padding:7px 12px;background:var(--ide-panel,#f5f8f6);color:var(--ide-foreground,#263e34);border-bottom:1px solid var(--ide-border,#cbd8ce);font-size:12px;flex-shrink:0}
-.object-size-tools select{max-width:190px;min-width:100px;flex:1}.object-size-tools input{width:65px}.object-size-tools :is(select,input,button){border:1px solid var(--ide-border,#cbd8ce);border-radius:3px;padding:4px 6px}
+.object-size-tools select{max-width:190px;min-width:100px;flex:1}.object-size-tools :is(select,button){border:1px solid var(--ide-border,#cbd8ce);border-radius:3px;padding:4px 6px}
+.resize-help{font-size:11px;color:var(--ide-foreground,#263e34)}#resize-size{font-variant-numeric:tabular-nums;white-space:nowrap}
+.resize-outline{fill:none;stroke:#1979cc;stroke-width:1.5;vector-effect:non-scaling-stroke;pointer-events:none}
+.resize-edge-hit{fill:none;stroke:transparent;stroke-width:10;vector-effect:non-scaling-stroke;pointer-events:stroke}
+.resize-handle{fill:#fff;stroke:#1979cc;stroke-width:1.5;vector-effect:non-scaling-stroke;pointer-events:all;touch-action:none}
+.resize-handle:hover,.resize-handle:focus-visible{fill:#b9dcff;stroke:#084c8e;stroke-width:2.5;outline:none}
+.resizing-device{user-select:none;touch-action:none}
 [data-surface].part-selected>path:first-child,[data-surface].part-selected>.breadboard-body{stroke:var(--ide-accent,#166e4e);stroke-width:3}
 #ide-settings-panel{flex:1;min-height:0;overflow:auto;padding:18px 16px 28px;background:var(--ide-panel);color:var(--ide-foreground);scrollbar-gutter:stable}
 .settings-heading{display:flex;align-items:center;gap:12px;justify-content:space-between}.settings-heading h2{font-size:18px;margin:0}.settings-heading span{font-size:11px;color:var(--ide-muted)}.settings-intro{font-size:12px;line-height:1.6;margin:10px 0 20px}

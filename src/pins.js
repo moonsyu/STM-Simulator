@@ -1,5 +1,5 @@
 import {terminalKeys,terminalLabel,nominalTerminals,attachments,rotatePoint} from './components.js';
-import {BOARD,BB,scaleOf,surfacePoint} from './geometry.js';
+import {BOARD,BB,scaleXOf,scaleYOf,partVector,surfacePoint} from './geometry.js';
 export {BOARD,BB} from './geometry.js';
 // MB1136, UM1724 Rev 17, Figure 24 / Tables 19 and 29.
 // Default A4/A5 solder bridges: PC1/PC0. Hardware jumper behavior is not modeled.
@@ -42,12 +42,12 @@ export const HOLE_BY_ID = new Map(HOLES.map(h=>[h.id,h]));
 const breadboardCache=new WeakMap();
 export const breadboardPrefix=id=>`breadboard:${id}:`;
 export function breadboardHoles(part){
-  const key=[part.id,part.x,part.y,part.rotation,part.name,scaleOf(part)].join('|'),cached=breadboardCache.get(part);
+  const key=[part.id,part.x,part.y,part.rotation,part.name,scaleXOf(part),scaleYOf(part),part.skewX??0].join('|'),cached=breadboardCache.get(part);
   if(cached?.key===key)return cached.holes;
-  const prefix=breadboardPrefix(part.id),holes=HOLES.map(h=>{const q=rotatePoint((h.x-(BB.x+BB.w/2))*scaleOf(part),(h.y-(BB.y+BB.h/2))*scaleOf(part),part.rotation);return {...h,id:prefix+h.id,bus:prefix+h.bus,x:part.x+q.x,y:part.y+q.y,label:`${part.name} · ${h.label}`};});
+  const prefix=breadboardPrefix(part.id),holes=HOLES.map(h=>{const q=partVector(part,h.x-(BB.x+BB.w/2),h.y-(BB.y+BB.h/2));return {...h,id:prefix+h.id,bus:prefix+h.bus,x:part.x+q.x,y:part.y+q.y,label:`${part.name} · ${h.label}`};});
   breadboardCache.set(part,{key,holes,byId:new Map(holes.map(h=>[h.id,h]))});return holes;
 }
-export function circuitHoles(components=[],surfaces){return [...(scaleOf(surfaces?.breadboard)===1?HOLES:HOLES.map(h=>surfacePoint(h,'breadboard',surfaces))),...components.filter(p=>p.type==='breadboard').flatMap(breadboardHoles)];}
+export function circuitHoles(components=[],surfaces){return [...HOLES.map(h=>surfacePoint(h,'breadboard',surfaces)),...components.filter(p=>p.type==='breadboard').flatMap(breadboardHoles)];}
 export function holeInfo(id,components=[],surfaces){
   if(HOLE_BY_ID.has(id))return surfacePoint(HOLE_BY_ID.get(id),'breadboard',surfaces);
   const match=/^breadboard:([^:]+):/.exec(id),part=match&&components.find(p=>p.id===match[1]&&p.type==='breadboard');

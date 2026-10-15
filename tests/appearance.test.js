@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {blankProject,validateProject} from '../src/project.js';
 import {resizeObject} from '../src/resize.js';
-import {BOARD,BB,surfacePoint} from '../src/geometry.js';
+import {BOARD,BB,surfacePoint,MAX_SCALE} from '../src/geometry.js';
 import {PINS,boardPin,endpointInfo,holeInfo,breadboardHoles} from '../src/pins.js';
 import {nominalTerminals,PART_DEFS,TWO_PIN_TYPES,MULTI_PIN_TYPES} from '../src/components.js';
 import {wirePoints} from '../src/circuit-edit.js';
@@ -41,9 +41,9 @@ test('individual mounted resizing preserves connection IDs and resizing does not
  assert.deepEqual(p.wires,before.wires);const result=simulation.solve(p,{PA5:{mode:'OUTPUT',value:3.3}},{});assert.equal(result.fault,old.fault);assert.equal(result.parts.led1.on,true);for(const id of Object.keys(old.parts))close(result.parts[id].current,old.parts[id].current);
 });
 test('invalid and compound out-of-range resizing is rejected before any mutation, and scale fields round trip',()=>{
- const p=blankProject();for(const scale of [0,-1,Infinity,NaN,4.1])assert.throws(()=>resizeObject(p,{type:'surface',id:'board'},scale));
- p.components=[{id:'r',type:'resistor',name:'R',value:330,x:750,y:230,rotation:0,span:70,scale:4,attachA:'bb:a:1',attachB:'bb:b:1'}];const before=JSON.stringify(p);assert.throws(()=>resizeObject(p,{type:'surface',id:'breadboard'},2));assert.equal(JSON.stringify(p),before);
- assert.equal(validateProject(p).components[0].scale,4);assert.throws(()=>validateProject({...p,surfaces:{board:{scale:'2'}}}));
+ const p=blankProject();for(const scale of [0,-1,Infinity,NaN,MAX_SCALE+1])assert.throws(()=>resizeObject(p,{type:'surface',id:'board'},scale));
+ p.components=[{id:'r',type:'resistor',name:'R',value:330,x:750,y:230,rotation:0,span:70,scale:MAX_SCALE,attachA:'bb:a:1',attachB:'bb:b:1'}];const before=JSON.stringify(p);assert.throws(()=>resizeObject(p,{type:'surface',id:'breadboard'},2));assert.equal(JSON.stringify(p),before);
+ assert.equal(validateProject(p).components[0].scale,MAX_SCALE);assert.throws(()=>validateProject({...p,surfaces:{board:{scale:'2'}}}));
 });
 test('IDE defaults use Jellybean and settings are independent from circuit projects',()=>{
  const prefs=defaultPreferences();assert.equal(prefs.theme,'jellybean');assert.equal(selectedTheme(prefs).colors.background,'#151515');assert.equal(blankProject().preferences,undefined);

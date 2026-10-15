@@ -20,6 +20,8 @@ export function validateProject(data){
     if(!Number.isFinite(p.x)||!Number.isFinite(p.y)||p.x<0||p.x>6000||p.y<0||p.y>6000||!Number.isFinite(p.rotation)||(data.version===1?![0,1].includes(p.rotation):p.rotation<0||p.rotation>=360))throw new Error('부품 좌표 또는 회전 각도가 올바르지 않습니다.');
     const q={id:p.id,name:p.name,type:p.type,x:p.x,y:p.y,rotation:data.version===1?p.rotation*90:p.rotation};
     if(p.scale!==undefined)q.scale=validScale(p.scale);
+    for(const key of ['scaleX','scaleY'])if(p[key]!==undefined)q[key]=validScale(p[key]);
+    if(p.skewX!==undefined){if(!Number.isFinite(p.skewX)||Math.abs(p.skewX)>=90)throw new Error('장치 변형 정보를 확인하세요.');q.skewX=p.skewX;}
     if(CATALOG_DEFS[p.type])for(const [key,value]of Object.entries(CATALOG_DEFS[p.type].defaults)){const input=p[key]??value;if(typeof value==='number'&&(!Number.isFinite(input)||Math.abs(input)>1e7))throw new Error(p.name+': '+key+' 값을 확인하세요.');if(typeof value==='string'&&typeof input!=='string')throw new Error(p.name+': '+key+' 값을 확인하세요.');q[key]=input;}
     if(CATALOG_DEFS[p.type]){
       const family=CATALOG_BY_TYPE[p.type].family,ranges={...({resistor:{value:[1,1e7]},potentiometer:{value:[1,1e7],position:[0,100]},capacitor:{value:[.001,100000]},slide:{position:[0,p.type.includes('dp3t')?2:1]},temperature:{temperature:[-40,125]},ultrasonic:{distance:[2,400]},dc_supply:{voltage:[6,24]},uart:{baud:[300,2000000]},rs485:{baud:[300,2000000]},dht11:{temperature:[0,50],humidity:[20,90]},dht22:{temperature:[-40,80],humidity:[0,100]}})[family],...DEVICE_RANGES[family]};
@@ -66,7 +68,12 @@ export function validateProject(data){
   if(data.boardId!==undefined)project.boardId=data.boardId;
   if(data.surfaces!==undefined){
     if(!data.surfaces||typeof data.surfaces!=='object'||Array.isArray(data.surfaces))throw new Error('보드 크기 설정을 확인하세요.');
-    project.surfaces={};for(const key of ['board','breadboard'])if(data.surfaces[key]!==undefined)project.surfaces[key]={scale:validScale(data.surfaces[key]?.scale)};
+    project.surfaces={};for(const key of ['board','breadboard'])if(data.surfaces[key]!==undefined){
+      const source=data.surfaces[key];if(!source||typeof source!=='object'||Array.isArray(source))throw new Error('보드 크기 설정을 확인하세요.');
+      const surface={};for(const field of ['scale','scaleX','scaleY'])if(source[field]!==undefined)surface[field]=validScale(source[field]);
+      for(const field of ['x','y'])if(source[field]!==undefined){if(!Number.isFinite(source[field])||source[field]<0||source[field]>6000)throw new Error('보드 위치를 확인하세요.');surface[field]=source[field];}
+      project.surfaces[key]=surface;
+    }
   }
   if(data.mcu!==undefined)project.mcu=validateMcu(data.mcu);
   if(data.firmware!==undefined){

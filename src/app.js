@@ -27,7 +27,7 @@ import {setupUpdates} from './update-ui.js';
 import {setupResizing} from './resize-ui.js';
 import {setupIdeSettings} from './ide-settings-ui.js';
 import {resizeObject} from './resize.js';
-import {BOARD,scaleOf} from './geometry.js';
+import {BOARD,scaleXOf,scaleYOf,surfaceOrigin,partVector} from './geometry.js';
 import {setupEditorSearch} from './editor-search.js';
 import {SERIAL_IDS} from './serial-config.js';
 import {PART_LIBRARY,searchParts} from './part-library.js';
@@ -99,7 +99,7 @@ function tab(name){document.querySelectorAll('[data-tab]').forEach(b=>b.classLis
 function inspectTab(){if(!document.querySelector('[data-tab=docs].active'))tab('inspect');}
 function refresh({preserveWires=false}={}){
  deviceDocs?.refresh();
- updateSurfaces(svg,project,selection);resizing?.refresh();
+ updateSurfaces(svg,project,selection);
  updateBoardPicker();svg.classList.toggle('connecting',mode==='wire'||!!pending||TWO_PIN_TYPES.includes(mode));
  $('breadboard-layer').innerHTML=renderBreadboards(project,selection);
  if(!preserveWires)$('wire-layer').innerHTML=renderWires(project,selection);
@@ -123,8 +123,8 @@ function refresh({preserveWires=false}={}){
  $('run-status').textContent=runtime?.debug.paused?'일시정지':({running:'실행 중',paused:'한 단계 실행',stopped:'준비됨',error:'오류로 정지'})[status];
  $('status-led').className=running()?'running':'';
  $('connection-count').textContent=`부품 ${project.components.length}개 · 배선 ${project.wires.length}개`;
- $('hint').textContent=running()?'실행 중 핀을 클릭하면 전압을 측정합니다. 버튼은 누르는 동안 연결됩니다.':pending?'핀을 클릭하면 연결 · 바닥 클릭으로 꺾임점 추가 · Backspace: 마지막 점 취소 · Esc: 취소':TWO_PIN_TYPES.includes(mode)?'빵판 구멍 두 곳을 선택해 다리를 꽂으세요. 빈 공간 클릭 시 자유 배치합니다.':drag?.type==='part'?'초록색 표시가 나타나면 놓아서 장착하세요. R: 45° 회전':'부품을 끌어 빵판에 장착 · R: 45° 회전 · 선택 후 Esc: 삭제';
- updateReadouts();inspector();
+ $('hint').textContent=running()?'실행 중 핀을 클릭하면 전압을 측정합니다. 버튼은 누르는 동안 연결됩니다.':pending?'핀을 클릭하면 연결 · 바닥 클릭으로 꺾임점 추가 · Backspace: 마지막 점 취소 · Esc: 취소':TWO_PIN_TYPES.includes(mode)?'빵판 구멍 두 곳을 선택해 다리를 꽂으세요. 빈 공간 클릭 시 자유 배치합니다.':drag?.type==='part'?'초록색 표시가 나타나면 놓아서 장착하세요. R: 45° 회전':'장치 선택 후 가장자리로 크기 조절 · Shift: 비율 유지 · R: 회전 · Esc: 삭제';
+ updateReadouts();inspector();resizing?.refresh();
  ide?.controls();
 }
 function updateAudio(){buzzerAudio?.update(project,result,audioEnabled,status==='running');}
@@ -164,7 +164,7 @@ function inspector(){
  if(!selection){el.innerHTML='<span class="overline">CIRCUIT INSPECTOR</span><h2>회로 살펴보기</h2><div class="empty-inspector">핀, 배선 또는 부품을 선택하세요.<br>실행 중 전압과 전류를 확인할 수 있습니다.</div>';return;}
  if(selection.type==='group'){el.innerHTML=`<span class="overline">MULTIPLE SELECTION</span><h2>여러 항목 선택</h2><p>부품 ${selection.parts.length}개 · 배선 ${selection.wires.length}개</p><p>Shift+클릭으로 선택을 바꾸고 선택한 부품을 끌어 함께 이동합니다. Ctrl+C/V로 내부 배선과 함께 복사할 수 있습니다.</p><button id="copy-group" class="inspector-action">선택 복사</button><button id="remove-group" class="inspector-action danger" ${running()?'disabled':''}>선택 삭제</button>`;$('copy-group').onclick=copyCircuit;$('remove-group').onclick=removeSelected;return;}
  if(selection.type==='surface'){
-   el.innerHTML=`<h2>${selection.id==='board'?'STM32 보드':'기본 빵판'}</h2><p>회로 위의 장치 크기에서 10~400%로 조절할 수 있습니다. 연결된 핀과 배선도 함께 이동하며 장착 부품의 크기도 따라갑니다.</p>`;
+   el.innerHTML=`<h2>${selection.id==='board'?'STM32 보드':'기본 빵판'}</h2><p>장치 가장자리와 모서리를 끌어 가로·세로 크기를 조절하세요. Shift를 누르면 비율을 유지하고, 드래그 중 Esc를 누르면 취소합니다. 연결된 핀·배선과 장착 부품도 함께 이동합니다.</p>`;
  } else if(selection.type==='endpoint'){
    const e=endpointInfo(selection.id,project.components,project.surfaces),pin=PIN_BY_ID.get(selection.id),v=result?.voltage(selection.id);
    const connected=connectedNet(project,selection.id,pressed).endpoints.length;
@@ -230,7 +230,7 @@ function clickEndpoint(id){
  pending=null;selection=null;$('preview-layer').innerHTML='';changed();
 }
 function point(e){const p=svg.createSVGPoint();p.x=e.clientX;p.y=e.clientY;return p.matrixTransform(svg.getScreenCTM().inverse());}
-function viewUpdate(){svg.setAttribute('viewBox',`${view.x} ${view.y} ${view.w} ${view.h}`);$('zoom-reset').textContent=Math.round(1120/view.w*100)+'%';renderConnections();}
+function viewUpdate(){svg.setAttribute('viewBox',`${view.x} ${view.y} ${view.w} ${view.h}`);$('zoom-reset').textContent=Math.round(1120/view.w*100)+'%';renderConnections();resizing?.refresh();}
 svg.addEventListener('pointerdown',e=>{
  if(e.button!==0&&e.button!==1)return;svg.focus({preventScroll:true});
  const target=e.target,part=target.closest('[data-part]'),onboard=target.closest('[data-button]');
@@ -291,8 +291,8 @@ function zoom(mult){const nw=Math.max(430,Math.min(9000,view.w*mult)),nh=nw*730/
 svg.addEventListener('wheel',e=>{e.preventDefault();zoom(e.deltaY>0?1.08:1/1.08);},{passive:false});
 $('zoom-in').onclick=()=>zoom(1/1.2);$('zoom-out').onclick=()=>zoom(1.2);$('zoom-reset').onclick=fitView;
 function fitView(){
- const scaled=Object.values(project.surfaces||{}).some(s=>scaleOf(s)!==1)||project.components.some(p=>scaleOf(p)!==1);
- if(scaled){const boxes=[{x:0,y:0,w:1120,h:730},{...BOARD,w:BOARD.w*scaleOf(project.surfaces?.board),h:BOARD.h*scaleOf(project.surfaces?.board)},{...BB,w:BB.w*scaleOf(project.surfaces?.breadboard),h:BB.h*scaleOf(project.surfaces?.breadboard)},...project.components.map(p=>({x:p.x-150*scaleOf(p),y:p.y-280*scaleOf(p),w:320*scaleOf(p),h:560*scaleOf(p)}))],x=Math.min(...boxes.map(b=>b.x))-20,y=Math.min(...boxes.map(b=>b.y))-20,right=Math.max(...boxes.map(b=>b.x+b.w))+20,bottom=Math.max(...boxes.map(b=>b.y+b.h))+20,w=Math.max(right-x,(bottom-y)*1120/730);view={x,y,w,h:w*730/1120};}
+ const scaled=Object.values(project.surfaces||{}).some(s=>scaleXOf(s)!==1||scaleYOf(s)!==1||s.x!==undefined)||project.components.some(p=>scaleXOf(p)!==1||scaleYOf(p)!==1||p.skewX);
+ if(scaled){const boxes=[{x:0,y:0,w:1120,h:730},...Object.entries({board:BOARD,breadboard:BB}).map(([name,b])=>({...surfaceOrigin(name,project.surfaces),w:b.w*scaleXOf(project.surfaces?.[name]),h:b.h*scaleYOf(project.surfaces?.[name])})),...project.components.map(p=>{const points=[[-170,-280],[170,-280],[170,280],[-170,280]].map(([x,y])=>partVector(p,x,y)),xs=points.map(v=>p.x+v.x),ys=points.map(v=>p.y+v.y);return {x:Math.min(...xs),y:Math.min(...ys),w:Math.max(...xs)-Math.min(...xs),h:Math.max(...ys)-Math.min(...ys)};})],x=Math.min(...boxes.map(b=>b.x))-20,y=Math.min(...boxes.map(b=>b.y))-20,right=Math.max(...boxes.map(b=>b.x+b.w))+20,bottom=Math.max(...boxes.map(b=>b.y+b.h))+20,w=Math.max(right-x,(bottom-y)*1120/730);view={x,y,w,h:w*730/1120};}
  else{const extra=project.components.filter(p=>p.type==='breadboard');let w=1120;if(extra.length)w=Math.max(w,...project.components.map(p=>p.x+360),...project.components.map(p=>(p.y+360)*1120/730));view={x:0,y:0,w,h:w*730/1120};}viewUpdate();
 }
 function pinSearch(){
@@ -396,7 +396,7 @@ ide=setupIde({getProject:()=>project,getSource:()=>sourceFile,getSession:()=>run
  applySources:(p,file)=>{checkpoint();project=validateProject(p);sourceFile=file;syncEditor();changed();ide.invalidate();}});
 setupIdeSettings({editor:ide.editor,layout,open:()=>tab('settings')});
 deviceDocs=setupDeviceDocs({getProject:()=>project,getSelection:()=>selection,isRunning:running,open:()=>tab('docs'),showSource:file=>{sourceFile=file;syncEditor();tab('code');},apply:(target,options)=>{if(running())throw new Error('실행을 정지한 뒤 적용하세요.');const result=applyDeviceExample(project,target,options);checkpoint();project=result.project;sourceFile=result.file;runtime=null;session=null;status='stopped';syncEditor();changed();if(result.binding.type==='uart'||CATALOG_BY_TYPE[result.binding.type]?.family==='uart'){const id=result.binding.peripherals.USART2;$('serial-target').value=id==='USART2'?'USART2:external':id;}ide.invalidate();return result;}});
-resizing=setupResizing({getProject:()=>project,getSelection:()=>selection,isRunning:running,onError:message=>log(message,'error'),select:target=>{selection=target;pending=null;inspectTab();refresh();},resize:(target,scale)=>{if(running())return;const draft=structuredClone(project);resizeObject(draft,target,scale);validateProject(draft);checkpoint();project=draft;selection=target;changed();pinSearch();fitView();}});
+resizing=setupResizing({getProject:()=>project,getSelection:()=>selection,isRunning:running,canResize:()=>!drag&&!pending&&mode==='select',focus:frame=>{const b=frame.bounds,points=[[0,0],[1,0],[1,1],[0,1]].map(([x,y])=>frame.point(b.x+x*b.width,b.y+y*b.height)),xs=points.map(p=>p.x),ys=points.map(p=>p.y),left=Math.min(...xs),top=Math.min(...ys),width=Math.max(...xs)-left,height=Math.max(...ys)-top,w=Math.max(430,width*1.8,height*1.8*1120/730);view={x:left+width/2-w/2,y:top+height/2-w*730/1120/2,w,h:w*730/1120};viewUpdate();},onError:message=>log(message,'error'),select:target=>{selection=target;pending=null;mode='select';inspectTab();refresh();},preview:draft=>{clearTimeout(saveTimer);project=draft;refresh();pinSearch();},cancel:base=>{project=base;changed();pinSearch();},commit:(base,draft)=>{validateProject(draft);project=base;checkpoint();project=draft;changed();pinSearch();},resize:(target,scale)=>{if(running())return;const draft=structuredClone(project);resizeObject(draft,target,scale);validateProject(draft);checkpoint();project=draft;selection=target;changed();pinSearch();}});
 syncEditor();fitView();refresh();log('회로를 연결하고 시뮬레이션 시작 또는 F5를 눌러 보세요.');
 setupUpdates({beforeInstall:async()=>{
  clearTimeout(saveTimer);

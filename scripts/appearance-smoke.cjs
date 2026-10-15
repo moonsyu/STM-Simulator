@@ -1,6 +1,7 @@
 const assert=require('node:assert/strict'),fs=require('node:fs/promises'),path=require('node:path');
 const {_electron}=require(process.env.PLAYWRIGHT_MODULE||'playwright');
 const {openFixture}=require('./smoke-fixture.cjs');
+const {resizeDevice}=require('./resize-gesture.cjs');
 (async()=>{
  const root=path.resolve(__dirname,'..'),out=path.join(root,'work/test-results');await fs.mkdir(out,{recursive:true});const temp=await fs.mkdtemp(path.join(out,'appearance-'));
  const env={...process.env,CIRCUIT_LAB_SMOKE:'1',CIRCUIT_LAB_TEST_PROFILE:path.join(temp,'profile')};delete env.ELECTRON_RUN_AS_NODE;
@@ -19,14 +20,14 @@ const {openFixture}=require('./smoke-fixture.cjs');
   await page.click('[data-tab="settings"]');await page.screenshot({path:path.join(out,'ide-settings-jellybean.png')});
   const led=circuitFixture('led');await openFixture(page,led);
   const areas=await page.evaluate(()=>['.canvas-heading','.object-size-tools','#circuit'].map(selector=>{const r=document.querySelector(selector).getBoundingClientRect();return {top:r.top,bottom:r.bottom};}));assert.ok(areas[0].bottom<=areas[1].top+1&&areas[1].bottom<=areas[2].top+1,'Canvas heading, resize controls and circuit must not overlap');
-  const resize=async(target,percent)=>{await page.selectOption('#resize-target',target);await page.fill('#object-scale',String(percent));await page.locator('#object-scale').press('Tab');await page.waitForTimeout(250);};
+  const resize=async(target,percent)=>resizeDevice(page,target,percent/100,percent/100);
   await resize('surface:board',150);await resize('surface:breadboard',150);
-  let saved=await page.evaluate(()=>JSON.parse(localStorage.getItem('stm32lab.project.v2')));assert.equal(saved.surfaces.board.scale,1.5);assert.equal(saved.surfaces.breadboard.scale,1.5);const pin=endpointInfo(boardPin('D13'),saved.components,saved.surfaces);assert.equal(Number(await page.locator(`[data-endpoint="${pin.id}"]`).getAttribute('cx')),pin.x);
+  let saved=await page.evaluate(()=>JSON.parse(localStorage.getItem('stm32lab.project.v2')));for(const s of [saved.surfaces.board,saved.surfaces.breadboard]){assert.ok(Math.abs((s.scaleX??s.scale)-1.5)<.02);assert.ok(Math.abs((s.scaleY??s.scale)-1.5)<.02);}const pin=endpointInfo(boardPin('D13'),saved.components,saved.surfaces);assert.equal(Number(await page.locator(`[data-endpoint="${pin.id}"]`).getAttribute('cx')),pin.x);
   await page.fill('#pin-search','PC 13');await page.locator('[data-search-pin]').first().click();const id=await page.locator('[data-search-pin]').first().getAttribute('data-search-pin'),expected=endpointInfo(id,saved.components,saved.surfaces);assert.equal(Number(await page.locator('[data-search-highlight][data-selected=true] circle').first().getAttribute('cx')),expected.x);
   await page.click('#run');await page.waitForTimeout(300);assert.match(await page.locator('#run-status').textContent(),/실행 중/);await page.click('#run');
   const all=blankProject();all.components=PART_LIBRARY.filter(p=>!p.type.startsWith('ref_')).map((part,i)=>({id:'size'+i,type:part.type,name:part.name,x:1200+i%5*220,y:450+Math.floor(i/5)*160,rotation:0,span:70,...PART_DEFS[part.type]?.defaults,...(part.type==='resistor'?{value:330}:{}),...(part.type==='led'?{color:'red'}:{})}));validateProject(all);await openFixture(page,all);
-  for(const part of all.components){await resize('part:'+part.id,150);const selector=part.type==='breadboard'?`[data-part="${part.id}"]`:`[data-part="${part.id}"] .part-body`;assert.match(await page.locator(selector).getAttribute('transform'),/scale\(1.5\)/);}
-  saved=await page.evaluate(()=>JSON.parse(localStorage.getItem('stm32lab.project.v2')));assert.equal(saved.components.filter(p=>p.scale===1.5).length,35);assert.equal((await prefs()).theme,settings.theme);
+  for(const part of all.components){await resize('part:'+part.id,150);const selector=part.type==='breadboard'?`[data-part="${part.id}"]`:`[data-part="${part.id}"] .part-body`;assert.match(await page.locator(selector).getAttribute('transform'),/scale\(/);}
+  saved=await page.evaluate(()=>JSON.parse(localStorage.getItem('stm32lab.project.v2')));assert.equal(saved.components.filter(p=>Math.abs((p.scaleX??p.scale)-1.5)<.05&&Math.abs((p.scaleY??p.scale)-1.5)<.05).length,35);assert.equal((await prefs()).theme,settings.theme);
   await page.screenshot({path:path.join(out,'all-devices-scaled.png')});
   await page.click('[data-tab="settings"]');await page.fill('#color-function','#11ccff');await page.locator('#color-function').dispatchEvent('change');await page.click('[data-tab="code"]');await page.locator('#code').evaluate(el=>{el.value='#include <stdio.h>\nint main(void) {\n  // Custom syntax colors\n  printf("STM Simulator\\n");\n  return 0;\n}\n';el.dispatchEvent(new Event('input',{bubbles:true}));});
   await page.waitForFunction(()=>[...document.querySelectorAll('.view-line span')].some(el=>el.textContent==='main'&&getComputedStyle(el).color==='rgb(17, 204, 255)'));await page.screenshot({path:path.join(out,'jellybean-code-highlights.png')});
