@@ -2,7 +2,8 @@ async function handlePoints(page){return page.evaluate(()=>Object.fromEntries([.
 async function resizeDevice(page,target,xFactor,yFactor,{handle='se',shift=false,cancel=false}={}){
  await page.selectOption('#resize-target',target);
  await page.waitForSelector('#resize-layer rect[data-resize-handle="'+handle+'"]');
- const p=await handlePoints(page),start=p[handle];
+ const p=await handlePoints(page),start=await page.evaluate(handle=>{const el=document.querySelector('#resize-layer rect[data-resize-handle="'+handle+'"]'),b=el.getBoundingClientRect();for(const x of [.5,.2,.8])for(const y of [.5,.2,.8]){const p={x:b.x+b.width*x,y:b.y+b.height*y};if(document.elementFromPoint(p.x,p.y)?.closest('[data-resize-handle]')?.dataset.resizeHandle===handle)return p;}return null;},handle);
+ if(!start)throw new Error('Resize handle is fully covered: '+target+' '+handle);
  const dx={x:(p.ne.x-p.nw.x)*(xFactor-1)*(handle.includes('w')?-1:1),y:(p.ne.y-p.nw.y)*(xFactor-1)*(handle.includes('w')?-1:1)};
  const dy={x:(p.sw.x-p.nw.x)*(yFactor-1)*(handle.includes('n')?-1:1),y:(p.sw.y-p.nw.y)*(yFactor-1)*(handle.includes('n')?-1:1)};
  await page.mouse.move(start.x,start.y);if(shift)await page.keyboard.down('Shift');await page.mouse.down();
