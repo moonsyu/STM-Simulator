@@ -1,6 +1,6 @@
 # STM Simulator — 개발 인계
 
-현재 공개 버전: **0.20.0**. 정리일: **2026-10-15**. NUCLEO-F446RE와 빵판을 연결하고 GPIO 스케치 또는 지원 HAL C 소스를 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+현재 공개 버전: **0.21.0**. 정리일: **2026-10-15**. NUCLEO-F446RE와 빵판을 연결하고 GPIO 스케치 또는 지원 HAL C 소스를 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
 
 ## 0.21.0 부품 검색 이미지와 장치 외 기능 점검
 
@@ -9,7 +9,7 @@
 - 장치 외 기능의 실패 경로 4건을 재현했으며 이번 범위에서는 수정하지 않았습니다. **후속 수정은 `docs/NON-DEVICE-AUDIT.md`부터 읽으세요.** 원인·코드 위치·재현 절차·우선순위·수정 방향이 있습니다. 사용자 응답에는 코드 위치를 나열하지 않습니다.
 - `scripts/audits/non-device-repro.cjs`는 알려진 결함의 재현용이며 정상 회귀 테스트가 아닙니다. CI에 넣지 않았습니다. 저장 트랜잭션/dirty flag(P1)부터 수정한 뒤 터미널 문맥/종료 자동 저장(P2)을 처리합니다.
 - 로컬 전체 모델 269개, 실제 GCC/GDB/clangd 및 ARM HAL 링크, IDE 프로젝트·파일·검색·디버그·패널, colorscheme 등록, 업데이트 UI 검사를 통과했습니다. 실제 보드 디버깅은 미검증입니다.
-- 0.21.0 공개 배포 및 해시 검증 결과는 게시 완료 후 `docs/VERIFICATION.md`에 기록합니다.
+- [공개 v0.21.0](https://github.com/moonsyu/STM-Simulator/releases/tag/v0.21.0), 빌드/태그 `835ba6c7897f314fac2804aca51735a248dffeb4`, [전체 Windows CI](https://github.com/moonsyu/STM-Simulator/actions/runs/38700043749) 성공. 공개 EXE/ZIP 재다운로드·해시·커밋 문서 일치와 실제 공개 EXE의 113종 미리보기/기존 기능 검사를 통과했습니다. 최신 배포는 `outputs/artifact/STM-Simulator.exe`이며 상세 증거는 `docs/VERIFICATION.md`에 있습니다.
 
 ## 0.20.0 가장자리 크기 조절 (공개 완료)
 
@@ -18,7 +18,7 @@
 - 기존 10~400% 제한을 제거하고 연속 조절합니다. 수치 오류를 막는 양수 배율과 프로젝트 작업 공간 검증은 유지합니다. 실행 중에는 조절점과 편집을 비활성화합니다.
 - 로컬 검사: 전체 모델 269개, 113종 실제 드래그 UI, 두 기본 표면·회전·독립 축·취소·Undo/Redo·키보드·저장 복원, 기존 외형/설정 UI 통과. `npm run test:resize:ui`가 CI에도 포함됩니다.
 - 실행 파일은 `STM-Simulator.exe`, ZIP 내부 이름과 두 검증 JSON의 filename도 동일합니다. 0.19.0 이하 배포본은 0.20.0을 한 번 수동 다운로드해야 합니다. 버전만 올린 이전 이름의 호환 EXE를 별도로 배포하지 않습니다.
-- [공개 v0.20.0](https://github.com/moonsyu/STM-Simulator/releases/tag/v0.20.0), 빌드/태그 `a5f1b2dd9d8939ec96f536d5ad99a4387f1bd8b4`, [Windows CI](https://github.com/moonsyu/STM-Simulator/actions/runs/38695514691) 성공. 공개 EXE/ZIP 재다운로드·해시·문서 일치와 실제 공개 EXE의 크기 조절/기존 기능 검사를 통과했습니다. 최신 로컬 배포는 `outputs/artifact/STM-Simulator.exe`입니다. 상세 해시는 `docs/VERIFICATION.md`에 있습니다.
+- [공개 v0.20.0](https://github.com/moonsyu/STM-Simulator/releases/tag/v0.20.0), 빌드/태그 `a5f1b2dd9d8939ec96f536d5ad99a4387f1bd8b4`, [Windows CI](https://github.com/moonsyu/STM-Simulator/actions/runs/38695514691) 성공. 공개 EXE/ZIP 재다운로드·해시·문서 일치와 실제 공개 EXE의 크기 조절/기존 기능 검사를 통과했습니다. 당시 배포 증거는 v0.20.0 이후 문서 커밋에서 확인할 수 있습니다. 현재 로컬 배포는 상단 최신 버전을 따릅니다.
 
 ## 0.19.0 장치 조사 적용
 
