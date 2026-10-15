@@ -1,3 +1,4 @@
+import {resetCatalogBus,writeCatalogI2c,readCatalogI2c,transferCatalogSpi} from './catalog-buses.js';
 import {I2C_DEVICES,SPI_DEVICES} from './device-defs.js';
 import {modulePowered,deviceTerminal} from './device-motion.js';
 
@@ -12,17 +13,17 @@ export class DeviceBuses{
   return this.states.get(p.id);
  }
  reset(p){
-  const s={version:++this.revision,pointer:0,powered:false};
+  const s={version:++this.revision,pointer:0,powered:false};if(p.type.startsWith('catalog_'))Object.assign(s,resetCatalogBus(p));
   if(p.type==='sht31')Object.assign(s,{readyAt:null,sample:null});
   if(p.type==='mpu6050'){s.registers=new Uint8Array(128);s.registers[0x75]=0x68;s.registers[0x6b]=0x40;}
-  if(p.type==='oled')Object.assign(s,{ram:new Uint8Array(1024),display:false,invert:false,all:false,mode:2,col:0,page:0,colStart:0,colEnd:127,pageStart:0,pageEnd:7,remap:false,flip:false,startLine:0,offset:0,contrast:127,pending:[],need:0});
+  if(p.type==='oled'||p.catalogVariant?.startsWith('oled-configurable'))Object.assign(s,{ram:new Uint8Array(1024),display:false,invert:false,all:false,mode:2,col:0,page:0,colStart:0,colEnd:127,pageStart:0,pageEnd:7,remap:false,flip:false,startLine:0,offset:0,contrast:127,pending:[],need:0});
   if(p.type==='tft')Object.assign(s,{ram:new Uint16Array(128*160),display:false,sleep:true,invert:false,format:0x55,madctl:0,colStart:0,colEnd:127,rowStart:0,rowEnd:159,col:0,row:0,command:null,args:[],highByte:null});
   if(p.type==='matrix')Object.assign(s,{ram:new Uint8Array(8),display:false,test:false,intensity:0,scan:7,shift:[],selected:false});
   this.states.set(p.id,s);return s;
  }
  touch(s){s.version=++this.revision;}
- writeI2c(p,bytes,micros){
-  const s=this.state(p);if(!bytes.length)return true;
+ writeI2c(p,bytes,micros,result){
+  const s=this.state(p);if(!bytes.length)return true;if(p.type==='catalog_i2c')return writeCatalogI2c(p,s,bytes,micros,result);
   if(p.type==='sht31'){
    const command=bytes[0]*256+bytes[1];if(bytes.length!==2)return false;
    if(command===0x30a2){this.reset(p).powered=true;return true;}
@@ -52,6 +53,7 @@ export class DeviceBuses{
  }
  readI2c(p,count,micros){
   const s=this.state(p);
+  if(p.type==='catalog_i2c')return readCatalogI2c(p,s,count,micros);
   if(p.type==='sht31'){if(s.readyAt==null||micros<s.readyAt||count!==6)return null;const bytes=s.sample;s.readyAt=null;return bytes;}
   if(p.type==='mpu6050'){
    if(!(s.registers[0x6b]&0x40)){
@@ -87,6 +89,7 @@ export class DeviceBuses{
  }
  transfer(p,value,result){
   const s=this.state(p);
+  if(p.type==='catalog_spi'){if(p.catalogVariant.startsWith('oled-configurable')){if((result.voltage(deviceTerminal(p,7))??0)<2)return 255;this.writeI2c({...p,type:'oled'},[(result.voltage(deviceTerminal(p,6))??0)>=2?0x40:0,value],0);return 255;}return transferCatalogSpi(p,s,value);}
   if(p.type==='matrix'){s.selected=true;s.shift.push(value);if(s.shift.length>2)s.shift.shift();return 255;}
   if(p.type!=='tft')return 255;
   if((result.voltage(deviceTerminal(p,7))??0)<2)return 255;
@@ -130,7 +133,7 @@ export class DeviceBuses{
  }
  update(project,result){
   for(const p of project.components){if(![...I2C_DEVICES,...SPI_DEVICES].includes(p.type))continue;
-   const powered=modulePowered(p,result);let s=this.state(p);
+   const powered=modulePowered(p,result)&&(p.catalogVariant!=='ov2640-camera'||(result.voltage(deviceTerminal(p,5))??0)>2&&(result.voltage(deviceTerminal(p,6))??3.3)<.8);let s=this.state(p);
    if(!powered&&s.powered)s=this.reset(p);s.powered=powered;
    if(p.type==='tft'){
     const reset=(result.voltage(deviceTerminal(p,7))??0)<2;
@@ -142,7 +145,7 @@ export class DeviceBuses{
     if(load==null){s.shift=[];s.selected=false;}
    }
    const visible=powered&&(p.type==='matrix'?(s.display||s.test):s.display&&!s.sleep);
-   Object.assign(result.parts[p.id]??={voltage:0,current:0,power:0},{powered,on:visible,device:s,visible});
+   Object.assign(result.parts[p.id]??={voltage:0,current:0,power:0},{powered,on:visible,device:s,visible,...(s.lcd?{lcd:s.lcd.snapshot(true)}:{})});
   }
  }
 }

@@ -1,6 +1,6 @@
 {
   "name": "stm-simulator",
-  "version": "0.18.0",
+  "version": "0.19.0",
   "description": "STM32 learning IDE with integrated circuit simulation",
   "author": "STM Simulator",
   "private": true,
@@ -30,7 +30,11 @@
     "test:appearance:ui": "node scripts/appearance-smoke.cjs",
     "test:colorscheme:ui": "node scripts/colorscheme-smoke.cjs",
     "test:device-docs:ui": "node scripts/device-docs-smoke.cjs",
-    "test:device-docs:arm": "node scripts/device-docs-arm-check.cjs"
+    "test:device-docs:arm": "node scripts/device-docs-arm-check.cjs",
+    "build:catalog": "node scripts/build-device-catalog.mjs && node scripts/build-model-gallery.mjs",
+    "test:catalog:ui": "node scripts/catalog-ui-check.cjs",
+    "test:catalog:arm": "node scripts/catalog-arm-check.cjs",
+    "test:uart:ui": "node scripts/uart-vcp-smoke.cjs"
   },
   "devDependencies": {
     "electron": "44.2.0",
@@ -59,7 +63,12 @@
       "docs/IDE.md",
       "docs/MCU-DEFAULTS.md",
       "docs/UPDATES.md",
-      "docs/DEVICE-DOCS.md"
+      "docs/DEVICE-DOCS.md",
+      "docs/DEVICE-CATALOG.md",
+      "docs/device-model-gallery.html",
+      "docs/DEVICE-VISUAL-REFERENCES.md",
+      "docs/device-reference-gallery.html",
+      "docs/device-visual-references.json"
     ],
     "win": {
       "target": "portable",

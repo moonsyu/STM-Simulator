@@ -7,7 +7,7 @@ const isArray=v=>v?.kind==='array', isPointer=v=>v?.kind==='pointer';
 
 export class Runtime {
   constructor(program,api={}){
-    this.program=program;this.api=api;this.gpio={};this.time=0;this.microTime=0;this.steps=0;this.depth=0;this.allocations=0;
+    this.program=program;this.api=api;this.gpio={};this.time=0;this.microTime=0;this.steps=0;this.depth=0;this.loopDepth=0;this.allocations=0;
     this.frames=[];this.location=null;this.finished=false;this.debug={enabled:!!api.debug,paused:false,mode:api.debug?.entry?'into':'continue',depth:0,breakpoints:new Set(api.debug?.breakpoints||[])};
     this.globals={cells:Object.create(null),alive:true};this.scopes=[this.globals];this.vars=Object.create(null);
     this.events=[];this.nextId=1;this.nextOrder=1;this.timers=new Map();this.dmas=new Map();this.interrupts=new Map();this.interruptsEnabled=true;this.inCallback=false;this.pwm=new Map();this.pwmFrequency=new Map();
@@ -129,10 +129,10 @@ export class Runtime {
     if(s.type==='expression'){yield* this.evaluate(s.expr);return;}
     if(s.type==='if'){const branch=truth(yield* this.evaluate(s.test))?s.yes:s.no;if(branch)return yield* this.statement(branch);return;}
     if(['while','for','do'].includes(s.type)){
-      this.pushScope();try{
+      this.loopDepth++;this.pushScope();try{
         if(s.init)yield* this.statement(s.init);let first=true;
-        while((s.type==='do'&&first)||truth(yield* this.evaluate(s.test))){if(!first)yield* this.checkpoint(s.loc);first=false;const signal=yield* this.statement(s.body);if(signal?.type==='return')return signal;if(signal?.type==='break')break;if(s.update)yield* this.evaluate(s.update);if(this.program.hal&&!this.inCallback&&this.depth===1){this.steps=0;yield .1;}this.budget();}
-      }finally{this.popScope();}return;
+        while((s.type==='do'&&first)||truth(yield* this.evaluate(s.test))){if(!first)yield* this.checkpoint(s.loc);first=false;const signal=yield* this.statement(s.body);if(signal?.type==='return')return signal;if(signal?.type==='break')break;if(s.update)yield* this.evaluate(s.update);if(this.program.hal&&!this.inCallback&&this.depth===1&&(!this.api.preciseTiming||this.loopDepth===1)){this.steps=0;yield .1;}this.budget();}
+      }finally{this.popScope();this.loopDepth--;}return;
     }
     if(s.type==='return')return {type:'return',value:s.value?yield* this.evaluate(s.value):0};
     if(s.type==='break'||s.type==='continue')return {type:s.type};

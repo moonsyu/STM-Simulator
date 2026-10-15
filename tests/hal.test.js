@@ -12,7 +12,7 @@ import {importFirmware} from '../src/firmware-import.js';
 const start=(p)=>{const output=[];const s=new SimulationSession(p,{print:x=>output.push(x)});s.tick(0);return {s,output};};
 
 test('all generated HAL examples parse, persist and run against their circuit',()=>{
-  for(const name of Object.keys(HAL_EXAMPLES)){const p=validateProject(halExample(name));assert.equal(p.firmware.mode,'hal');const {s}=start(p);for(let t=20;t<=120;t+=20)s.tick(t);assert.equal(s.result.fault,false,name);}
+  for(const name of Object.keys(HAL_EXAMPLES)){const p=validateProject(halExample(name));assert.equal(p.firmware.mode,'hal');if(p.ide?.native?.target==='arm'){assert.ok(compileHal(p.code));continue;}const {s}=start(p);for(let t=20;t<=120;t+=20)s.tick(t);assert.equal(s.result.fault,false,name);}
 });
 test('HAL main, GPIO initialization, writes and delay drive the external LED',()=>{
   const {s}=start(halExample('blink'));assert.equal(s.result.parts.led1.on,true);s.tick(501);assert.equal(s.result.parts.led1.on,false);
@@ -24,7 +24,7 @@ test('disabled NVIC retains EXTI pending until enabled and IRQ masks work',()=>{
   const p=halExample('exti');p.code=p.code.replace('/* USER CODE BEGIN 2 */','/* USER CODE BEGIN 2 */\n HAL_NVIC_DisableIRQ(EXTI15_10_IRQn);');const {s}=start(p);s.setPressed({USER:true});s.tick(20);assert.equal(s.result.parts.led1.on,false);s.hal.call('HAL_NVIC_EnableIRQ',['EXTI15_10_IRQn'],s.runtime);s.tick(40);assert.equal(s.result.parts.led1.on,true);
 });
 test('UART receives timed bytes and rearms a one-byte interrupt buffer',()=>{
-  const {s}=start(halExample('uart'));s.tick(30);assert.match(s.buses.received.get('demo'),/HAL UART ready/);assert.equal(s.inject('ok'),2);for(let t=40;t<=80;t+=10)s.tick(t);assert.match(s.buses.received.get('demo'),/ok$/);
+  const {s}=start(halExample('uart'));s.tick(30);assert.match(s.buses.vcpOutput,/HAL UART ready/);assert.equal(s.inject('ok'),2);for(let t=40;t<=80;t+=10)s.tick(t);assert.match(s.buses.vcpOutput,/ok$/);
 });
 test('UART polling receive times out and rejects dangling RX buffers',()=>{
   let p=halExample('uart');p.code=p.code.replace('HAL_UART_Receive_IT(&huart2, rx, 1);','Serial.println(HAL_UART_Receive(&huart2, rx, 1, 5));');const {s,output}=start(p);s.tick(40);assert.ok(output.includes('3'));
@@ -45,7 +45,7 @@ test('pin function, EXTI line, signal duplicate and missing route conflicts are 
 test('mismatched configuration and unsupported HAL fail explicitly',()=>{
   const p=halExample('blink');p.mcu.pins.PA5.function='GPIO_Input';assert.throws(()=>start(p),/GPIO_Output|Pinout/);
   const q=halExample('uart');q.code=q.code.replace('UART_PARITY_NONE','UART_PARITY_EVEN');assert.throws(()=>start(q),/8N1/);
-  const r=halExample('blink');r.code=r.code.replace('HAL_Init();','HAL_CAN_Start(0);');assert.throws(()=>start(r),/지원하지 않는 HAL/);
+  const r=halExample('blink');r.code=r.code.replace('HAL_Init();','HAL_ETH_Start(0);');assert.throws(()=>start(r),/지원하지 않는 HAL/);
 });
 test('Cube IOC imports GPIO EXTI UART and disabled NVIC without changing original project',()=>{
   const text='Mcu.Name=STM32F446R(C-E)Tx\nPA5.Signal=GPIO_Output\nPC13.Signal=GPXTI13\nPC13.GPIO_PuPd=GPIO_PULLUP\nPC13.GPIO_ModeDefaultEXTI=GPIO_MODE_IT_FALLING\nPA2.Signal=USART2_TX\nPA3.Signal=USART2_RX\nUSART2.BaudRate=9600\nNVIC.EXTI15_10_IRQn=true\\:2\\:0\nNVIC.USART2_IRQn=false\\:0\\:0';

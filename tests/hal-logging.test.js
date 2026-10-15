@@ -11,8 +11,8 @@ test('new projects start as HAL without prebuilt circuits',()=>{
   const p=validateProject(blankProject());assert.equal(p.firmware.mode,'hal');assert.deepEqual(p.components,[]);assert.deepEqual(p.wires,[]);assert.deepEqual(p.mcu.pins,{});assert.match(p.code,/int main\(void\)/);assert.deepEqual(start(p.code).output,['HAL ready']);
 });
 test('every shipped HAL example has its configured circuit and runs without electrical faults',()=>{
-  const counts={potentiometer:[1,3],slide:[1,3],rgb:[4,7],lcd:[2,13],diode:[2,4],buzzer:[1,2],sevenseg:[9,18],l298n:[4,14],passive_buzzer:[1,2],timer_multi:[2,8],timer_capture:[0,1],timer_encoder:[1,5],ldr:[2,4],ntc:[2,4],sht31:[1,4],mpu6050:[1,4],pir:[1,3],oled:[1,4],tft:[1,7],matrix:[1,5],servo:[1,3],motor:[1,5],stepper:[1,6],relay:[3,7],joystick:[1,5],encoder:[1,5],blink:[2,3],button:[3,5],exti:[2,3],uart:[1,4],timer:[2,3],adc:[2,3],temperature:[1,3],samples:[2,3],i2c:[1,4],spi:[1,6],language:[0,0],pwm:[2,3],ultrasonic:[3,6]};
-  for(const kind of Object.keys(HAL_EXAMPLES)){const p=validateProject(halExample(kind));assert.deepEqual([p.components.length,p.wires.length],counts[kind],kind);assert.equal(p.firmware.mode,'hal');assert.ok(HAL_GUIDES[kind]);assert.doesNotMatch(p.code,/\bSerial\d*\.|\bsetup\s*\(|\bloop\s*\(/);const s=new SimulationSession(p);s.tick(0);s.tick(150);assert.equal(s.result.fault,false,kind);}
+  const counts={potentiometer:[1,3],slide:[1,3],rgb:[4,7],lcd:[2,13],diode:[2,4],buzzer:[1,2],sevenseg:[9,18],l298n:[4,14],passive_buzzer:[1,2],timer_multi:[2,8],timer_capture:[0,1],timer_encoder:[1,5],ldr:[2,4],ntc:[2,4],sht31:[1,4],mpu6050:[1,4],pir:[1,3],oled:[1,4],tft:[1,7],matrix:[1,5],servo:[1,3],motor:[1,5],stepper:[1,6],relay:[3,7],joystick:[1,5],encoder:[1,5],blink:[2,3],button:[3,5],exti:[2,3],uart:[0,0],uart_external:[1,4],timer:[2,3],adc:[2,3],temperature:[1,3],samples:[2,3],i2c:[1,4],spi:[1,6],language:[0,0],pwm:[2,3],ultrasonic:[3,6]};
+  for(const kind of Object.keys(HAL_EXAMPLES).filter(id=>!id.startsWith('ref_'))){const p=validateProject(halExample(kind));assert.deepEqual([p.components.length,p.wires.length],counts[kind],kind);assert.equal(p.firmware.mode,'hal');assert.ok(HAL_GUIDES[kind]);assert.doesNotMatch(p.code,/\bSerial\d*\.|\bsetup\s*\(|\bloop\s*\(/);const s=new SimulationSession(p);s.tick(0);s.tick(150);assert.equal(s.result.fault,false,kind);}
   for(const file of ['src/feature-examples.js','src/component-examples.js'])assert.equal(fs.existsSync(file),false);
 });
 test('applying a HAL example replaces circuit, code, pins and timing while retaining the document name',()=>{
@@ -32,7 +32,7 @@ test('invalid printf formats, pointers, lengths and missing values fail explicit
   assert.throws(()=>start('int main(void){char bad[2]={65,66};printf("%s",bad);}'),/범위/);
 });
 test('HAL UART transmit logging works without a terminal but does not fabricate received bytes',()=>{
-  const p=halExample('uart');p.components=[];p.wires=[];const events=[],s=new SimulationSession(p,{uart:e=>events.push(e)});s.tick(0);s.tick(30);assert.equal(s.inject('not wired','USART2'),0);assert.equal(s.buses.received.size,0);
+  const p=halExample('uart');p.components=[];p.wires=[];const events=[],s=new SimulationSession(p,{uart:e=>events.push(e)});s.tick(0);s.tick(30);assert.equal(s.inject('not wired','USART2:external'),0);assert.equal(s.buses.received.size,0);assert.equal(s.buses.uart.queue.length,0);assert.equal(s.buses.vcpOutput,'HAL UART ready\r\n');
   assert.equal(events[0].instance,'USART2');assert.equal(events[0].direction,'TX');assert.equal(String.fromCharCode(...events[0].bytes),'HAL UART ready\r\n');assert.equal(events.filter(e=>e.direction==='RX').length,0);
 });
 test('HAL UART traces timed RX and IT echo with port identity',()=>{
@@ -44,7 +44,7 @@ test('HAL UART timeout and busy calls do not emit extra TX log events',()=>{
 });
 test('UART echo preserves every byte across fractional baud deadlines and UI tick boundaries',()=>{
   for(const baud of [9600,115200])for(const start of [30,240,260,262,280,1000])for(const step of [1,20]){
-    const p=halExample('uart');p.mcu.peripherals.USART2.baud=baud;p.components.find(p=>p.type==='uart').baud=baud;p.code=p.code.replace('BaudRate = 9600','BaudRate = '+baud);
+    const p=halExample('uart');p.mcu.peripherals.USART2.baud=baud;p.code=p.code.replace('BaudRate = 9600','BaudRate = '+baud);
     const events=[],s=new SimulationSession(p,{uart:e=>events.push(e)});s.tick(0);s.tick(start);
     const message='HAL log\n';assert.equal(s.inject(message,'USART2'),message.length);
     const firstByte=start*1000+1e7/baud;s.tick((firstByte-.01)/1000);
@@ -53,7 +53,7 @@ test('UART echo preserves every byte across fractional baud deadlines and UI tic
     const received=direction=>events.filter(e=>e.direction===direction).slice(direction==='TX'?1:0).flatMap(e=>e.bytes);
     assert.equal(String.fromCharCode(...received('RX')),message,`RX: ${baud} baud at ${start} ms, step ${step}`);
     assert.equal(String.fromCharCode(...received('TX')),message,`TX: ${baud} baud at ${start} ms, step ${step}`);
-    assert.equal(s.buses.received.get('demo'),'HAL UART ready\r\n'+message);
+    assert.equal(s.buses.vcpOutput,'HAL UART ready\r\n'+message);
   }
 });
 test('converted sensor and sampling examples produce measured HAL log values',()=>{

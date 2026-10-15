@@ -1,6 +1,6 @@
 # STM32 장치 외형과 핀 구성 자료집
 
-확인일: 2026-10-14. 기준 소스: `a24bc19`. 현재 부품 라이브러리 **35종 전체**, 외형·핀 구성 **80항목**, MCU 내부 주변장치 **24분류**를 연결한다.
+확인일: 2026-10-14. 기준 소스: `a24bc19`. 기존 학습 부품 라이브러리 **35종 전체**, 외형·핀 구성 **80항목**, MCU 내부 주변장치 **24분류**를 연결한다.
 
 [사진과 핀 수로 찾아보기](device-reference-gallery.html) · [구조화된 원본 목록](device-visual-references.json)
 
@@ -10,7 +10,7 @@
 
 이 목록은 아래 제조사 모델을 구분한 자료다. 같은 이름의 모든 시판 리비전을 하나의 핀맵으로 묶지 않는다. 사진은 원본 URL로 표시하며 애플리케이션 배포 이미지로 포함하지 않는다.
 
-## 현재 구현된 부품 35종
+## 기존 학습 부품 35종
 
 | 앱 타입 | 부품 | 현재 앱 단자 | 실제 외형과 변형 |
 |---|---|---|---|
@@ -28,13 +28,13 @@
 | `tft` | TFT · ST7735 | 7단자: VCC, GND, CS, SCK, MOSI, DC, RST | [ST7735S 1.8인치 TFT 8핀](#st7735-8) |
 | `matrix` | LED 매트릭스 · MAX7219 | 5단자: VCC, GND, LOAD, CLK, DIN | [MAX7219 8×8 매트릭스 입력5+출력5](#matrix-10) |
 | `servo` | RC 서보 모터 | 3단자: VCC, GND, PWM | [RC 마이크로 서보 3선](#servo-3)<br>[위치 피드백 RC 서보 4선](#servo-feedback-4) |
-| `motor` | DC 모터 + H 브리지 | 5단자: VM, GND, PWM, IN1, IN2 | [모터와 드라이버를 분리한 실물 구성](#motor-driver-hat)<br>[브러시 DC 모터 2단자](#dc-motor-2)<br>[L298N 모듈 주요 외부 단자 13개](#l298n-module-13) |
+| `motor` | DC 모터 + H 브리지 | 5단자: VM, GND, PWM, IN1, IN2 | [PCA9685 / TB6612 모터 Driver HAT](#motor-driver-hat)<br>[브러시 DC 모터 2단자](#dc-motor-2)<br>[L298N 모듈 주요 외부 단자 13개](#l298n-module-13) |
 | `stepper` | 스테퍼 모터 + 드라이버 | 6단자: VM, GND, IN1, IN2, IN3, IN4 | [바이폴라 스테퍼 4선](#stepper-bipolar-4)<br>[28BYJ-48 모터 5선](#stepper-unipolar-5)<br>[ULN2003 모듈 제어4+전원2+모터5](#stepper-driver-11) |
 | `relay` | 릴레이 모듈 | 6단자: VCC, GND, IN, COM, NO, NC | [릴레이 모듈 제어3+접점3](#relay-module-6) |
 | `joystick` | 조이스틱 | 5단자: VCC, GND, VRX, VRY, SW | [KY-023 조이스틱 5핀](#joystick-module-5) |
 | `encoder` | 로터리 인코더 | 5단자: VCC, GND, A, B, SW | [누름 기능 로터리 인코더 소자 5접점](#encoder-bare-5)<br>[KY-040 인코더 모듈 5핀](#encoder-module-5) |
 | `l298n` | L298N 모터 드라이버 | 13단자: VM, GND, 5V, ENA, IN1, IN2, IN3, IN4, ENB, OUT1, OUT2, OUT3, OUT4 | [L298N 모듈 주요 외부 단자 13개](#l298n-module-13)<br>[L298N 나형 드라이버 IC 15핀](#l298n-bare-15)<br>[L298P PowerSO20 드라이버 IC 20핀](#l298p-bare-20) |
-| `dc_motor` | DC 모터 · 2핀 | 2단자: A, B | [브러시 DC 모터 2단자](#dc-motor-2)<br>[모터와 드라이버를 분리한 실물 구성](#motor-driver-hat) |
+| `dc_motor` | DC 모터 · 2핀 | 2단자: A, B | [브러시 DC 모터 2단자](#dc-motor-2)<br>[PCA9685 / TB6612 모터 Driver HAT](#motor-driver-hat) |
 | `dc_supply` | 외부 DC 전원 | 2단자: +, − | [배터리 팩 외부 전원 2선](#dc-supply-2) |
 | `uart` | UART 터미널 | 4단자: VCC, GND, TX, RX | [USB–TTL 시리얼 케이블 4선](#uart-cable-4)<br>[FTDI TTL 시리얼 케이블 6접점](#uart-cable-6) |
 | `i2c` | I²C 메모리 | 4단자: VCC, GND, SDA, SCL | [24LC02B I²C EEPROM PDIP8](#i2c-eeprom-8)<br>[24LC02B SOT-23-5 패키지](#i2c-eeprom-5) |
@@ -46,7 +46,7 @@
 | `diode` | 다이오드 | 2단자: A (+), K (−) | [1N4001 축형 다이오드 2핀](#diode-axial-2) |
 | `buzzer` | 능동 부저 | 2단자: +, − | [발진기 내장 능동 부저 2핀](#buzzer-active-2)<br>[KY-012 능동 부저 모듈 3핀](#buzzer-active-module-3) |
 | `passive_buzzer` | 수동 부저 | 2단자: +, − | [외부 구동 피에조 부저 2핀](#buzzer-passive-2)<br>[KY-006 수동 부저 모듈 3핀](#buzzer-passive-module-3) |
-| `sevenseg` | 7세그먼트 | 10단자: e, d, K1, c, dp, b, a, K2, f, g | [SC56-11EWA 공통 음극 10핀](#sevenseg-common-cathode-10)<br>[SA56-11EWA 공통 양극 10핀](#sevenseg-common-anode-10)<br>[나형 4자리 7세그먼트 12핀](#sevenseg-4digit-12)<br>[TM1637 4자리 표시 모듈 4핀](#sevenseg-tm1637-4) |
+| `sevenseg` | 7세그먼트 | 10단자: e, d, K1, c, dp, b, a, K2, f, g | [SC56-11EWA 공통 음극 10핀](#sevenseg-common-cathode-10)<br>[SA56-11EWA 공통 양극 10핀](#sevenseg-common-anode-10)<br>[4자리 시계 7세그먼트 14핀 · 콜론](#sevenseg-4digit-12)<br>[TM1637 4자리 표시 모듈 4핀](#sevenseg-tm1637-4) |
 | `temperature` | 온도 센서 | 3단자: VS, VOUT, GND | [TMP36 아날로그 온도 센서 3핀](#tmp36-to92-3)<br>[DS18B20 디지털 온도 센서 3핀](#ds18b20-to92-3)<br>[방수 DS18B20 프로브 3선](#ds18b20-probe-3) |
 | `ultrasonic` | 초음파 센서 | 4단자: VCC, TRIG, ECHO, GND | [HC-SR04 초음파 4핀](#hcsr04-4)<br>[URM09 Trig 초음파 3핀](#urm09-trig-3)<br>[URM09 I²C 초음파 4핀](#urm09-i2c-4) |
 
@@ -315,10 +315,10 @@
 ### DC 모터 + H 브리지
 
 <a id="motor-driver-hat"></a>
-#### 모터와 드라이버를 분리한 실물 구성
+#### PCA9685 / TB6612 모터 Driver HAT
 
 - 외형: 모터는 2단자이고 별도 드라이버 보드에 제어·전원·출력이 모임. [사진](https://www.waveshare.com/w/upload/9/9e/Motor-Driver-HAT-intro.JPG)
-- 주요 핀: 보드·기구 또는 회로도 별도 확인
+- 주요 핀: 51접점 — 5V, 3V3, GND, SDA, SCL, VIN, A1, A2, B1, B2, PGND, PI1:3V3, PI2:5V, PI3:SDA, PI4:5V, PI5:SCL, PI6:GND, PI7:GPIO4, PI8:TXD, PI9:GND, PI10:RXD, PI11:GPIO17, PI12:GPIO18, PI13:GPIO27, PI14:GND, PI15:GPIO22, PI16:GPIO23, PI17:3V3, PI18:GPIO24, PI19:MOSI, PI20:GND, PI21:MISO, PI22:GPIO25, PI23:SCLK, PI24:CE0, PI25:GND, PI26:CE1, PI27:ID_SD, PI28:ID_SC, PI29:GPIO5, PI30:GND, PI31:GPIO6, PI32:GPIO12, PI33:GPIO13, PI34:GND, PI35:GPIO19, PI36:GPIO16, PI37:GPIO26, PI38:GPIO20, PI39:GND, PI40:GPIO21
 - 연결 방식: 모터 드라이버
 - 별도 접점: HAT 연결 수는 해당 보드 회로도 기준; 앱의 추상 5핀과 별도
 - 구분점: 현재 motor의 VM/GND/PWM/IN1/IN2 5핀 통합 모델과 정확히 일치하는 실물 제품으로 간주하지 않습니다. 사진은 드라이버 HAT 예시입니다.
@@ -419,7 +419,7 @@
 #### L298P PowerSO20 드라이버 IC 20핀
 
 - 외형: 양쪽에 리드가 나온 PowerSO20 표면실장 패키지. [외형도 원문](https://www.st.com/resource/en/datasheet/l298.pdf)
-- 주요 핀: 20접점 — NC1, SENSE-A, OUT1, OUT2, VS, IN1, ENA, IN2, GND1, GND2, GND3, GND4, VSS, IN3, ENB, IN4, OUT3, OUT4, SENSE-B, NC20
+- 주요 핀: 20접점 — GND1, SENSE-A, NC3, OUT1, OUT2, VS, IN1, ENA, IN2, GND10, GND11, VSS, IN3, ENB, IN4, OUT3, OUT4, NC18, SENSE-B, GND20
 - 연결 방식: GPIO/구동
 - 구분점: 같은 L298 계열이라도 Multiwatt15와 패키지 핀 수·기구가 다릅니다. 패키지별 도면을 사용합니다.
 - 근거: [ST L298 Multiwatt15 및 PowerSO20 데이터시트](https://www.st.com/resource/en/datasheet/l298.pdf)
@@ -676,13 +676,13 @@
 - 근거: [Kingbright SA56-11EWA 데이터시트](https://www.kingbrightusa.com/images/catalog/spec/sa56-11ewa.pdf)
 
 <a id="sevenseg-4digit-12"></a>
-#### 나형 4자리 7세그먼트 12핀
+#### 4자리 시계 7세그먼트 14핀 · 콜론
 
 - 외형: 숫자 네 자리가 하나의 긴 패키지에 있음. [사진](https://cdn-shop.adafruit.com/970x728/813-06.jpg)
-- 주요 핀: 12접점 — a, b, c, d, e, f, g, dp, DIG1, DIG2, DIG3, DIG4
+- 주요 핀: 14접점 — e, d, dp, c, g, DIG4, COLON-K, COLON-A, b, DIG3, DIG2, f, a, DIG1
 - 연결 방식: GPIO 멀티플렉싱
-- 구분점: 핀 구성 목록은 논리 신호입니다. 실제 패키지 핀 순서는 제품 도면을 확인합니다. 콜론 연결이 있는 제품은 회로를 함께 확인합니다.
-- 근거: [Green 7-segment clock display - 0.56 digit height : Adafruit Industries, Unique & fun DIY electronics and kits](https://www.adafruit.com/product/813)
+- 구분점: 기존 조사에서 12핀으로 분류했으나 원본 제품이 연결한 BL-Q56C-43 도면은 콜론 접점 포함 14핀입니다. 참조 ID는 기존 파일 호환을 위해 유지합니다.
+- 근거: [Green 7-segment clock display - 0.56 digit height : Adafruit Industries, Unique & fun DIY electronics and kits](https://www.adafruit.com/product/813) · [Adafruit linked BL-Q56C-43 pinout, page 3](https://cdn-shop.adafruit.com/datasheets/BL-Q56C-43.pdf)
 
 <a id="sevenseg-tm1637-4"></a>
 #### TM1637 4자리 표시 모듈 4핀
@@ -736,7 +736,7 @@
 #### URM09 Trig 초음파 3핀
 
 - 외형: 초음파 소자와 3핀 Gravity 커넥터. [사진](https://dfimg.dfrobot.com/enshop/image/data/SEN0388/SEN0388_251022 (1)_1200x630.jpg.webp)
-- 주요 핀: 3접점 — VCC, GND, TRIG-ECHO
+- 주요 핀: 3접점 — GND, VCC, TRIG-ECHO
 - 연결 방식: GPIO 양방향
 - 구분점: Trig/Echo 공유 한 신호를 쓰므로 앱의 분리 4핀 HC-SR04와 다르게 구현해야 합니다.
 - 근거: [Gravity: URM09 Ultrasonic Distance Sensor (2～500cm, Trig)  /  DFRobot Wiki](https://wiki.dfrobot.com/sen0388/)

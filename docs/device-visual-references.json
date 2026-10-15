@@ -1071,9 +1071,61 @@
     {
       "id": "motor-driver-hat",
       "family": "motor",
-      "name": "모터와 드라이버를 분리한 실물 구성",
-      "pin_count": null,
-      "pins": [],
+      "name": "PCA9685 / TB6612 모터 Driver HAT",
+      "pin_count": 51,
+      "pins": [
+        "5V",
+        "3V3",
+        "GND",
+        "SDA",
+        "SCL",
+        "VIN",
+        "A1",
+        "A2",
+        "B1",
+        "B2",
+        "PGND",
+        "PI1:3V3",
+        "PI2:5V",
+        "PI3:SDA",
+        "PI4:5V",
+        "PI5:SCL",
+        "PI6:GND",
+        "PI7:GPIO4",
+        "PI8:TXD",
+        "PI9:GND",
+        "PI10:RXD",
+        "PI11:GPIO17",
+        "PI12:GPIO18",
+        "PI13:GPIO27",
+        "PI14:GND",
+        "PI15:GPIO22",
+        "PI16:GPIO23",
+        "PI17:3V3",
+        "PI18:GPIO24",
+        "PI19:MOSI",
+        "PI20:GND",
+        "PI21:MISO",
+        "PI22:GPIO25",
+        "PI23:SCLK",
+        "PI24:CE0",
+        "PI25:GND",
+        "PI26:CE1",
+        "PI27:ID_SD",
+        "PI28:ID_SC",
+        "PI29:GPIO5",
+        "PI30:GND",
+        "PI31:GPIO6",
+        "PI32:GPIO12",
+        "PI33:GPIO13",
+        "PI34:GND",
+        "PI35:GPIO19",
+        "PI36:GPIO16",
+        "PI37:GPIO26",
+        "PI38:GPIO20",
+        "PI39:GND",
+        "PI40:GPIO21"
+      ],
       "interface": "모터 드라이버",
       "appearance": "모터는 2단자이고 별도 드라이버 보드에 제어·전원·출력이 모임.",
       "notes": "현재 motor의 VM/GND/PWM/IN1/IN2 5핀 통합 모델과 정확히 일치하는 실물 제품으로 간주하지 않습니다. 사진은 드라이버 HAT 예시입니다.",
@@ -1082,7 +1134,7 @@
         "motor"
       ],
       "visual_source_id": "motor",
-      "pin_order": "신호 구성 목록입니다. 실제 좌우·상하 순서는 출처의 해당 모델 도면과 실크를 확인하세요."
+      "pin_order": "외부 제어 5핀, 전원/모터 나사 단자 6개, Raspberry Pi 40핀 커넥터를 구분한 학습용 배치. PI 번호는 Pi 헤더의 물리 핀 번호입니다."
     },
     {
       "id": "stepper-bipolar-4",
@@ -1765,31 +1817,34 @@
     {
       "id": "sevenseg-4digit-12",
       "family": "sevenseg",
-      "name": "나형 4자리 7세그먼트 12핀",
-      "pin_count": 12,
+      "name": "4자리 시계 7세그먼트 14핀 · 콜론",
+      "pin_count": 14,
       "pins": [
-        "a",
-        "b",
-        "c",
-        "d",
         "e",
-        "f",
-        "g",
+        "d",
         "dp",
-        "DIG1",
-        "DIG2",
+        "c",
+        "g",
+        "DIG4",
+        "COLON-K",
+        "COLON-A",
+        "b",
         "DIG3",
-        "DIG4"
+        "DIG2",
+        "f",
+        "a",
+        "DIG1"
       ],
       "interface": "GPIO 멀티플렉싱",
       "appearance": "숫자 네 자리가 하나의 긴 패키지에 있음.",
-      "notes": "핀 구성 목록은 논리 신호입니다. 실제 패키지 핀 순서는 제품 도면을 확인합니다. 콜론 연결이 있는 제품은 회로를 함께 확인합니다.",
+      "notes": "기존 조사에서 12핀으로 분류했으나 원본 제품이 연결한 BL-Q56C-43 도면은 콜론 접점 포함 14핀입니다. 참조 ID는 기존 파일 호환을 위해 유지합니다.",
       "additional_contacts": "",
       "source_ids": [
-        "sevenraw"
+        "sevenraw",
+        "sevenraw-pinout"
       ],
       "visual_source_id": "sevenraw",
-      "pin_order": "신호 구성 목록입니다. 실제 좌우·상하 순서는 출처의 해당 모델 도면과 실크를 확인하세요."
+      "pin_order": "제품 페이지가 연결한 BL-Q56C-43 datasheet page 3의 전면도: 아래 1→7, 위 14→8."
     },
     {
       "id": "sevenseg-tm1637-4",
@@ -1899,8 +1954,8 @@
       "name": "URM09 Trig 초음파 3핀",
       "pin_count": 3,
       "pins": [
-        "VCC",
         "GND",
+        "VCC",
         "TRIG-ECHO"
       ],
       "interface": "GPIO 양방향",
@@ -1911,7 +1966,7 @@
         "ultrasonic3"
       ],
       "visual_source_id": "ultrasonic3",
-      "pin_order": "신호 구성 목록입니다. 실제 좌우·상하 순서는 출처의 해당 모델 도면과 실크를 확인하세요."
+      "pin_order": "DFRobot SEN0388: pin 1 GND, pin 2 VCC, pin 3 D."
     },
     {
       "id": "urm09-i2c-4",
@@ -2235,26 +2290,26 @@
       "name": "L298P PowerSO20 드라이버 IC 20핀",
       "pin_count": 20,
       "pins": [
-        "NC1",
+        "GND1",
         "SENSE-A",
+        "NC3",
         "OUT1",
         "OUT2",
         "VS",
         "IN1",
         "ENA",
         "IN2",
-        "GND1",
-        "GND2",
-        "GND3",
-        "GND4",
+        "GND10",
+        "GND11",
         "VSS",
         "IN3",
         "ENB",
         "IN4",
         "OUT3",
         "OUT4",
+        "NC18",
         "SENSE-B",
-        "NC20"
+        "GND20"
       ],
       "interface": "GPIO/구동",
       "appearance": "양쪽에 리드가 나온 PowerSO20 표면실장 패키지.",
@@ -2264,7 +2319,7 @@
         "l298-chip"
       ],
       "visual_source_id": "l298-chip",
-      "pin_order": "신호 구성 목록입니다. 실제 좌우·상하 순서는 출처의 해당 모델 도면과 실크를 확인하세요."
+      "pin_order": "ST L298 datasheet Figure 2 PowerSO20 top view, pins 1–20 counterclockwise."
     },
     {
       "id": "slide-dpdt-6",
@@ -5288,6 +5343,10 @@
       "checked_on": "2026-10-14",
       "http_status": 200,
       "source_kind": "제조사 외형도·회로도"
+    },
+    "sevenraw-pinout": {
+      "title": "Adafruit linked BL-Q56C-43 pinout, page 3",
+      "url": "https://cdn-shop.adafruit.com/datasheets/BL-Q56C-43.pdf"
     }
   }
 }

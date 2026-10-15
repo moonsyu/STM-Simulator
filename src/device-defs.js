@@ -15,8 +15,8 @@ export const DEVICE_DEFS={
  joystick:{name:'조이스틱',prefix:'JOY',icon:'✛',hint:'입력 · X/Y ADC / 누름 스위치',defaults:{axisX:50,axisY:50,switch:0},labels:['VCC','GND','VRX','VRY','SW'],help:'3.3 V로 공급하는 두 개의 10 kΩ 가변저항과 누름 스위치 모델입니다. VRX/ VRY는 ADC, SW는 풀업 GPIO에 연결합니다. 실행 중 X/Y와 누름 상태를 조절합니다.'},
  encoder:{name:'로터리 인코더',prefix:'ENC',icon:'↻',hint:'입력 · A/B 직교 펄스 / 버튼',defaults:{position:0,switch:0},labels:['VCC','GND','A','B','SW'],help:'3.3 V, 내부 10 kΩ 풀업이 있는 인코더 모듈입니다. 위치를 한 칸 바꾸면 2 ms 간격의 A/B 4개 전이가 발생합니다. A/B의 양쪽 에지 EXTI 예제로 방향과 카운트를 읽습니다. 누름 스위치도 LOW 활성입니다.'}
 };
-export const I2C_DEVICES=['sht31','mpu6050','oled'];
-export const SPI_DEVICES=['tft','matrix'];
+export const I2C_DEVICES=['catalog_i2c','sht31','mpu6050','oled'];
+export const SPI_DEVICES=['catalog_spi','tft','matrix'];
 export const MODULE_DEVICES=[...I2C_DEVICES,...SPI_DEVICES,'pir','servo','motor','stepper','relay','encoder','joystick'];
 export const DEVICE_RANGES={ldr:{lux:[1,100000]},ntc:{temperature:[-40,125]},sht31:{temperature:[-40,125],humidity:[0,100]},mpu6050:{ax:[-16,16],ay:[-16,16],az:[-16,16],gx:[-2000,2000],gy:[-2000,2000],gz:[-2000,2000]},pir:{motion:[0,1]},joystick:{axisX:[0,100],axisY:[0,100],switch:[0,1]},encoder:{position:[-1000,1000],switch:[0,1]}};
 export const DEVICE_ADDRESSES={sht31:[0x44,0x45],mpu6050:[0x68,0x69],oled:[0x3c,0x3d]};
