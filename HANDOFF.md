@@ -1,6 +1,6 @@
 # STM Simulator — 개발 인계
 
-현재 로컬 구현 버전: **0.19.0**. 정리일: **2026-10-15**. NUCLEO-F446RE와 빵판을 연결하고 GPIO 스케치 또는 지원 HAL C 소스를 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+현재 공개 버전: **0.19.0**. 정리일: **2026-10-15**. NUCLEO-F446RE와 빵판을 연결하고 GPIO 스케치 또는 지원 HAL C 소스를 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
 
 ## 0.19.0 장치 조사 적용
 
@@ -13,7 +13,8 @@
 - 검증: 전체 모델 260/260, 조사 80개 원본/삽입 HAL 160건 ARM 컴파일·링크, 패키지 카탈로그 UI, 단일 포터블 EXE 실행 모두 통과했습니다. `npm test`, `npm run test:catalog:ui`, `npm run test:catalog:arm`, `node scripts/portable-smoke.cjs`로 재검사합니다. ARM 검사에는 ARM GCC·STM32CubeF4가 필요합니다. 정확한 파일 해시와 한계는 `docs/VERIFICATION.md`에 있습니다.
 - USART2 PA2/PA3는 HAL 초기화 후 내장 ST-LINK VCP로 하단 통신 탭에서 바로 송수신합니다. 기본 UART 예제는 부품 0개/배선 0개이며 `uart_external`과 UART 부품 Docs/4·6핀 변형은 외부 배선 연습용입니다. 외부 입력 경로는 내장 VCP로 우회하지 않습니다.
 - USART2 변경 검증: 전체 모델 260/260, UART/Docs 레지스터 예제 실제 ARM 링크 12건, 내장/외부 UART UI 통과.
-- 사용자 요청에 따라 앞으로 버전 상승은 Release 게시까지 포함합니다. `AGENTS.md`와 `docs/UPDATES.md`의 게시 절차를 따릅니다. 0.18.0은 기존 커밋을 태그로 보충 게시하고 0.19.0은 main CI에서 자동 게시합니다. 공개 자산 확인 후 `docs/VERIFICATION.md`를 갱신합니다.
+- 사용자 요청에 따라 앞으로 버전 상승은 Release 게시까지 포함합니다. `AGENTS.md`와 `docs/UPDATES.md`의 게시 절차를 따릅니다. 0.18.0 보충 게시와 0.19.0 main CI 자동 게시가 완료됐습니다. 0.19.0 빌드 커밋은 `23708264e9c77671630466b3abb1d0f4b0f996e5`, CI는 `38667438539`입니다. 두 공개 버전의 EXE/ZIP 재다운로드·해시 대조와 최신 공개 EXE 실행을 통과했습니다.
+- 공개 0.17.2 → 0.19.0 자동 업데이트 시험은 GitHub 비인증 API 요청 한도로 완료하지 못했습니다. 다운로드·교체 성공으로 보고하지 않습니다. API 한도 회복 후 재검사할 때 `scripts/release-update-check.cjs`를 사용하며 상세 증거는 `docs/VERIFICATION.md`에 있습니다.
 
 ## 저장소 관리 원칙
 

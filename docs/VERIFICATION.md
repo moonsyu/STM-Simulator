@@ -1,42 +1,51 @@
-# 현재 검증 기록 — 0.19.0 (로컬 구현)
+# 검증 기록 — 0.19.0 공개 릴리스
 
-검증일: 2026-10-15. Windows x64, Electron 44.2.0, Monaco 0.57.0. 0.18.0 보충 게시 및 0.19.0 CI 게시를 진행하며 공개 자산 검증 결과는 완료 후 갱신합니다.
+검증일: 2026-10-15. Windows x64, Electron 44.2.0, Monaco 0.57.0.
 
-| 검사 | 확인 내용 | 증거 |
+## 게시 결과
+
+| 버전 | 빌드 커밋 | CI 및 공개 릴리스 |
 | --- | --- | --- |
-| 전체 모델 | 260/260 통과. 80항목의 접점·예제, 기존 35종 호환, main.c 삽입/보존, 정상 배선 보존·단락 보완, 저장 복원, 검색, 경유점, 기존 HAL/디버거/업데이트 회귀 검사 | `work/uart-full-test.log`, `tests/catalog.test.js`, `tests/catalog-peripherals.test.js` |
-| 추가 통신 모델 | DS18B20 변환·부호·CRC·실시간 온도, DHT 온습도/체크섬, URM09 거리, 전원/신호 단선, CAN 루프백·ID 필터·ACK 오류, I2S 프레임/주파수·정지, OV2640 뱅크 ID 및 XCLK/리셋 실패 | `tests/catalog-peripherals.test.js` |
-| 실제 ARM GCC + ST HAL/CMSIS | 조사 80개 HAL 예제와 각각의 main.c 삽입 결과, **160건 컴파일·링크 통과** | `work/test-results/catalog-arm.json`, `work/catalog-arm-final.log` |
-| 레지스터 코드 | GPIO·ADC·PWM·UART·SPI·I2C 초기화/동작 대표 18건, 변형 장치·UART 분리 후속 11건 ARM 컴파일·링크 통과 | `work/baremetal-arm.log`, `work/variant-register-arm.log`, `work/test-results/device-docs-arm-followup.json` |
-| 실제 Electron UI | 78개 부품 Docs/접점, HAL 검색, 바닥 경유점·Backspace·Undo/Redo, 2핀 설치와 Esc 삭제, MCP4725 main.c 삽입·배선·1.650 V 실행, 저장 복원, TM1637 표시, DS18B20/DHT22 측정, CAN 루프백, 카메라 ID, I2S 1 kHz 프레임 표시 | `work/test-results/catalog-ui.json` |
-| 기존 UI 회귀 | 기존 UI 15종 통과 후 HAL·HAL 예제·Docs를 최종 통신 모델로 재검사하여 통과 | `work/ui-current.log`, `work/ui-followup.log`, `work/ui-last.log`, `work/ui-regression-final.log` |
-| 외형 검수 | 참고 자료를 바탕으로 작성한 SVG, 보드·빵판 포함 80개 갤러리와 OLED 변형, 장치 Docs/실행 화면 확인. 원본 사진은 URL 참조만 제공 | `work/test-results/catalog-gallery-top.png`, `catalog-gallery-oled.png`, `catalog-docs-main.png`, `catalog-display-run.png` |
-| 패키지 정리/접점 후속 검사 | 29/29 통과 | `work/catalog-package-final.log` |
+| 0.18.0 | `5ff4872f0e90f68c2422ea1bb2869ea40371a266` | [태그 CI](https://github.com/moonsyu/STM-Simulator/actions/runs/38666607669) · [누락 릴리스 보충 게시](https://github.com/moonsyu/STM-Simulator/releases/tag/v0.18.0) |
+| 0.19.0 | `23708264e9c77671630466b3abb1d0f4b0f996e5` | [main CI](https://github.com/moonsyu/STM-Simulator/actions/runs/38667438539) · [최신 Release](https://github.com/moonsyu/STM-Simulator/releases/tag/v0.19.0) |
 
-DS18B20과 DHT22를 같은 프로젝트에 순차 적용하여 PA0/PA1, TIM2/TIM5에 배정한 뒤 두 측정값이 출력되는 통합 실행도 확인했습니다.
+두 버전 모두 EXE·ZIP·SHA256.txt·BUILD-INFO.json·update-manifest.json을 게시했습니다. 공개 다운로드 주소에서 EXE와 ZIP을 다시 내려받아 크기·해시·ZIP 내부 파일·빌드 커밋·커밋된 문서 일치를 확인했습니다. `work/test-results/release-0.18.0-proof.json`, `release-0.19.0-proof.json`에 기록했습니다.
+
+0.16.0은 과거 CI에 실패하고 0.16.1로 대체된 개발 태그이므로 실패 산출물을 신규 Release로 게시하지 않았습니다.
+
+## 기능 및 빌드 검사
+
+| 검사 | 결과 | 증거 |
+| --- | --- | --- |
+| 전체 모델 | 260/260 통과: 80개 조사 항목, 기존 35종 호환, main.c 삽입·보존, 배선 보완, 검색·경유점, HAL·디버거·업데이트 회귀 | `work/uart-full-test.log`, 공개 CI |
+| 카탈로그 ARM 빌드 | 카탈로그 구현 시 원본 HAL 80개와 main.c 삽입 결과 80개, 총 160건 컴파일·링크 통과 | `work/test-results/catalog-arm.json` |
+| UART 후속 ARM 빌드 | 기본/외부 UART main.c 2개, UART 및 4/6핀 장치 HAL·레지스터 9개, UART 두 인스턴스 1개: 총 12건 통과 | `work/uart-arm.log`, `work/test-results/device-docs-arm-followup.json` |
+| 실제 UI | 기존 UI 전체, 78개 장치 Docs·접점, 검색, main.c 직접 삽입, 바닥 경유점, 센서/화면/구동, 저장 복원 통과 | 공개 CI, `work/release-ui-followup.log`, `work/uart-ui-regression.log` |
+| USART2 VCP | 별도 부품·배선 없이 HAL 초기화와 인터럽트 에코. 외부 경로의 부품 누락·전원·TX/RX·baud 검사, 4/6핀 변형, 다른 포트 분리 통과 | `tests/uart-vcp.test.js`, `work/test-results/uart-vcp-ui.json`, 공개 CI |
+| 공개 단일 EXE | 실제 공개 파일 압축 해제·실행, 0.19.0 버전, 부품/배선 0개의 USART2 송수신, LED/거리/LCD, UART/I2C/SPI, DMA, PWM/RC, Pinout 통과 | `work/test-results/portable-smoke.json`, `work/portable-release-019.log` |
+| 자동 게시 | 새 package 버전으로 main 푸시 → 전체 검사·빌드 → 태그 및 Release 자동 생성 성공 | 위 0.19.0 main CI의 release 작업 |
+
+CI 첫 시도는 예제 수의 고정 기대값 때문에 실패했습니다. 120개 예제와 선택 안내 항목을 실제 HAL 목록에 맞춰 검사하도록 수정한 뒤 전체 CI가 통과했습니다. 앱 소스는 최초 0.19.0 기능 커밋과 같습니다.
+
+## 자동 업데이트 검증의 구분
+
+CI에서는 업데이트 UI·저장 후 재시작, 실제 Windows 파일 잠금 해제·교체·롤백, 패키지/포터블 EXE의 업데이트 도우미 검사가 통과했습니다.
+
+**공개 0.17.2 → 0.19.0 전체 업데이트 시험은 완료하지 못했습니다.** 원본 공개 0.17.2 EXE의 자동 스케줄러를 실행했지만 검증 PC의 GitHub 비인증 API 한도 60회가 소진되어 요청 한도 오류를 표시했습니다. 다운로드·교체·재시작·작업 보존까지 이번 공개 경로에서 통과했다고 주장하지 않습니다. 증거는 `work/release-update-019.log`와 `work/test-results/release-update-019.json`입니다. 당시 API 응답의 한도 초기화 시각은 2026-10-15 02:32:53 UTC였습니다.
+
+이전 버전의 성공한 공개 업데이트 기록을 이번 버전의 성공 증거로 재사용하지 않습니다. 공개 EXE 직접 다운로드 및 실행 검사는 위와 같이 별도로 통과했습니다.
+
+## 최신 파일
+
+- EXE: `outputs/artifact/STM-Simulator-0.19.0-win-x64.exe` — 102,728,271 bytes.
+- EXE SHA-256: `35bc530857105f76c77496630df30b2298c71b581fa44d78ff5fe8fff7ece775`.
+- ZIP SHA-256: `dd7bffd5ab50017ee7ac6e6951f7e1e5fbf4da2c5049af9551232b1fa84541dc`.
+- 빌드 커밋: `23708264e9c77671630466b3abb1d0f4b0f996e5`.
+- 로컬 `outputs/artifact/`도 공개 ZIP의 내용으로 갱신했습니다. 원본 사진이나 테스트 프로필은 배포하지 않습니다.
+- 게시 뒤 검증 기록만 후속 커밋하며 앱 코드·패키지 버전·공개 태그·배포 자산을 변경하지 않습니다.
 
 ## 구현 범위
 
-[장치 Docs](DEVICE-DOCS.md)와 [80개 항목 표](DEVICE-CATALOG.md)에 기능별 범위를 기록했습니다. 80개는 조사한 외형·핀 변형 항목이며, 기본 실행 예제를 제공한다는 뜻입니다. 카메라는 SCCB ID 확인까지, SD는 초기화/OCR까지, CAN은 내부 루프백까지입니다. I2S 소리는 측정 주파수의 시험음이며 음악 재생·스피커 전력 모델은 아닙니다. 영상 캡처, SD 파일시스템, 외부 CAN 중재는 구현하지 않았습니다.
+[장치 Docs](DEVICE-DOCS.md), [80개 항목 표](DEVICE-CATALOG.md), [HAL API](HAL-API.md)에 범위를 명시했습니다. 80개는 외형·핀 변형을 구분한 조사 항목입니다. 카메라는 SCCB ID, SD는 초기화/OCR, CAN은 내부 루프백, I2S는 기본 PCM 전송까지입니다. 영상 캡처·SD 파일시스템·외부 CAN 중재·실제 ARM CPU 명령 실행·실물 보드 검증을 완료한 것은 아닙니다.
 
-레지스터 예제는 추가되는 GPIO·주변장치 초기화/동작을 CMSIS로 수행하지만 기존 main의 HAL/시스템 클록 초기화는 유지합니다. 실제 ARM CPU의 명령 실행과 실물 보드 검증은 포함하지 않습니다.
-
-## USART2 내장 터미널 후속 검사
-
-- 기본 UART 예제의 부품·배선 0개, HAL 초기화 전 입력 거절, 초기화 후 TX/RX·인터럽트 에코, 외부 장치의 전원·단선·baud 검사, 다른 UART 포트 분리를 확인했습니다. `tests/uart-vcp.test.js`와 전체 모델 260/260 통과.
-- 내장/외부 경로 전환, 외부 부품 누락과 baud 불일치 거절, 6핀 변형 에코 및 기본 예제 복원: `work/test-results/uart-vcp-ui.json`.
-- 실제 ARM 컴파일·링크 12건: 기본/외부 UART main.c 2개, UART 및 4/6핀 변형의 HAL/레지스터 예제 9개, 두 UART 인스턴스 1개. `work/uart-arm.log`.
-
-## 게시 준비
-
-최신 USART2 수정 전의 로컬 EXE 검증 기록은 공개 빌드 증거로 사용하지 않습니다. 게시된 0.19.0 EXE·ZIP·매니페스트의 버전/커밋/해시를 확인한 뒤 이 구역에 기록합니다.
-
-## 이전 로컬 실행 검사 (USART2 수정 전)
-
-- 실행 파일: `outputs/artifact/STM-Simulator-0.19.0-win-x64.exe` (102,727,699 bytes).
-- SHA-256: `1491b0b39ac53f864c594ec699ca1f7edf123d953e1c395081532d557fbf670b`.
-- `prepare-artifact.cjs`: 패키지의 모든 src 파일과 현재 소스의 바이트 일치, 버전·아이콘·라이선스·문서·EXE 형식 검사 통과. 아직 커밋하지 않은 로컬 빌드이므로 BUILD-INFO의 commit은 null입니다.
-- 패키지 앱(`work/build/win-unpacked/STM Simulator.exe`)에서 카탈로그 UI 전체 검사 통과. `catalog-ui.json`의 version=0.19.0, packaged=true를 확인했습니다.
-- **단일 포터블 EXE 실행 검사 통과**: 압축 해제·시작·편집기, 핀 검색, LED/거리/LCD, UART/I2C/SPI, DMA, PWM/RC 및 HAL UART 인터럽트. 증거: `work/test-results/portable-smoke.json`, `work/portable-final.log`.
-- `git diff --check` 통과. GitHub 업로드 및 0.19.0 공개 자동 업데이트 시험은 수행하지 않았습니다.
-- 테스트용 `catalog-ui-*` 임시 프로필 일괄 삭제는 자동 승인 검토에서 차단되어 남겨뒀습니다. 저장소 추적 대상이 아니며 실제 사용자 프로필은 사용하지 않았습니다.
+STM32 레지스터 예제는 ARM 빌드용이며 main의 HAL/시스템 초기화는 유지합니다. VCP는 USART2의 가상 입력·출력 경로이며 솔더 브리지와 USB 전기적 동작을 재현하지 않습니다.
