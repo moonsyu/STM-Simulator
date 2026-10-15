@@ -1,13 +1,13 @@
 # STM Simulator — 개발 인계
 
-현재 공개 버전: **0.21.1**. 정리일: **2026-10-15**. NUCLEO-F446RE와 빵판을 연결하고 GPIO 스케치 또는 지원 HAL C 소스를 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+현재 공개 버전: **0.21.2**. 정리일: **2026-10-15**. NUCLEO-F446RE와 빵판을 연결하고 GPIO 스케치 또는 지원 HAL C 소스를 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
 
 ## 0.21.2 검색 카드 강조 상태 보완
 
 - 0.21.1 공개 EXE 검사에서 부품 카드 hover 설명의 대비 4.31:1을 추가로 발견했습니다. 기존 `:is()` 그룹에 포함된 ID 선택자의 우선순위 때문에 hover 보조 글자색 규칙이 적용되지 않았습니다.
 - 부품 카드 hover/활성화, 보드 카드/검색 결과 hover, 핀 검색 hover/선택의 보조 글자를 선택 배경과 함께 적용합니다. F4 아이콘의 고유 배경/글자색은 보존합니다.
 - `npm run test:contrast:ui`를 두 테마 52개 상태로 확대하여 통과했습니다. 부품 확대 미리보기·키보드 초점·배치 모드·보드/핀 검색 상태가 포함됩니다.
-- 공개 배포 결과는 게시 완료 후 `docs/VERIFICATION.md`에 기록합니다.
+- [공개 v0.21.2](https://github.com/moonsyu/STM-Simulator/releases/tag/v0.21.2), 빌드/태그 `a932f0595854d8e22d53dfe069a5ea25d744b4e9`, [전체 Windows CI](https://github.com/moonsyu/STM-Simulator/actions/runs/38705485223) 성공. 공개 EXE/ZIP의 해시·버전·커밋 일치와 실제 공개 EXE의 두 테마 대비 검사를 통과했습니다. 최신 로컬 파일은 `outputs/artifact/STM-Simulator.exe`이며 상세 검증은 `docs/VERIFICATION.md`에 있습니다.
 
 ## 0.21.1 UI 글자 대비 수정
 
