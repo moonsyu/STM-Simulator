@@ -26,6 +26,7 @@ test('build cleanup removes both product names and obsolete generated bundles', 
   const {root, write} = await fixture(t);
   const generated = [
     'dist/STM-Emulator-0.5.1-win-x64.exe', 'dist/STM-Simulator-0.7.0-win-x64.exe',
+    'dist/STM-Simulator.exe', 'dist/artifact/STM-Simulator.exe',
     'dist/stm-emulator-0.6.0-x64.nsis.7z', 'dist/stm-simulator-0.7.0-x64.nsis.7z',
     'dist/artifact-0.5.1/STM-Emulator-0.5.1-win-x64.exe', 'dist/artifact-0.6.0/docs/HAL-API.md',
     'dist/artifact/STM-Simulator-0.7.0-win-x64.exe', 'dist/artifact/BUILD-INFO.json',
@@ -53,14 +54,14 @@ test('build cleanup removes both product names and obsolete generated bundles', 
 
 test('artifact preparation replaces only the fixed bundle and preserves the current build input', async t => {
   const {root, write} = await fixture(t);
-  await write('dist/artifact/STM-Emulator-0.6.0-win-x64.exe');
+  await write('dist/artifact/STM-Simulator.exe');
   await write('dist/artifact/README.md');
   await write('dist/artifact/docs/HAL-API.md');
-  await write('dist/STM-Simulator-0.7.0-win-x64.exe', 'new binary');
+  await write('dist/STM-Simulator.exe', 'new binary');
   await write('dist/win-unpacked/resources/app.asar', 'new archive');
   const result = await cleanArtifactOutput(root);
   assert.equal(result.files, 3);
-  assert.equal(await fs.readFile(path.join(root, 'dist/STM-Simulator-0.7.0-win-x64.exe'), 'utf8'), 'new binary');
+  assert.equal(await fs.readFile(path.join(root, 'dist/STM-Simulator.exe'), 'utf8'), 'new binary');
   assert.equal(await fs.readFile(path.join(root, 'dist/win-unpacked/resources/app.asar'), 'utf8'), 'new archive');
   await assert.rejects(fs.stat(path.join(root, 'dist/artifact')), {code: 'ENOENT'});
 });

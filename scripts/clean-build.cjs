@@ -4,7 +4,7 @@ const path = require('node:path');
 const {spawnSync} = require('node:child_process');
 
 const VERSION = String.raw`\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?`;
-const PORTABLE = new RegExp(`^STM-(?:Emulator|Simulator)-${VERSION}-win-x64\\.exe$`, 'i');
+const PORTABLE = new RegExp(`^(?:STM-Simulator|STM-(?:Emulator|Simulator)-${VERSION}-win-x64)\\.exe$`, 'i');
 const RELEASE_ZIP = new RegExp(`^STM-Simulator-${VERSION}-Windows-x64\\.zip$`, 'i');
 const NSIS_ARCHIVE = new RegExp(`^stm-(?:emulator|simulator)-${VERSION}-x64\\.nsis\\.7z$`, 'i');
 const VERSIONED_ARTIFACT = new RegExp(`^artifact-${VERSION}$`, 'i');

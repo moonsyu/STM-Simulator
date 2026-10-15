@@ -49,7 +49,7 @@ npm run build
 npm run build:artifact
 ```
 
-- 실행 파일: `outputs/artifact/STM-Simulator-<버전>-win-x64.exe`
+- 실행 파일: `outputs/artifact/STM-Simulator.exe` (이후 배포부터 고정 파일명 사용)
 - 실행 파일과 라이선스 고지를 포함한 배포 묶음: `outputs/artifact/`
 - 빌드 중간 파일: `work/build/`, 검사 결과: `work/test-results/`
 - 개발 중 실행: `npm start`

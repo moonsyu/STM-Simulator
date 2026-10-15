@@ -5,7 +5,7 @@ const wait=ms=>new Promise(resolve=>setTimeout(resolve,ms));
  const root=path.resolve(__dirname,'..'),out=path.join(root,'work/test-results'),pkg=require('../package.json');await fs.mkdir(out,{recursive:true});
  const profile=await fs.mkdtemp(path.join(out,'update-portable-'));
  const port=await new Promise(resolve=>{const server=net.createServer();server.listen(0,'127.0.0.1',()=>{const port=server.address().port;server.close(()=>resolve(port));});});
- const exe=path.join(root,`outputs/artifact/STM-Simulator-${pkg.version}-win-x64.exe`),env={...process.env,CIRCUIT_LAB_SMOKE:'0',CIRCUIT_LAB_TEST_PROFILE:profile};delete env.ELECTRON_RUN_AS_NODE;
+ const exe=path.join(root,'outputs','artifact',pkg.build.portable.artifactName),env={...process.env,CIRCUIT_LAB_SMOKE:'0',CIRCUIT_LAB_TEST_PROFILE:profile};delete env.ELECTRON_RUN_AS_NODE;
  const child=launch(exe,[`--remote-debugging-port=${port}`,'--remote-debugging-address=127.0.0.1'],{env});let browser;
  try{
   let ready=false;for(let i=0;i<300;i++){try{ready=(await fetch(`http://127.0.0.1:${port}/json/version`)).ok;if(ready)break;}catch{}await wait(200);}assert.ok(ready,'Portable app did not start');
