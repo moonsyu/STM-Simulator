@@ -5,7 +5,7 @@ const {chromium}=require('playwright'),{launch,terminate}=require('../desktop/pr
 (async()=>{
  const root=path.resolve(__dirname,'..'),pkg=require('../package.json'),profile=await fs.mkdtemp(path.join(os.tmpdir(),'stm-portable-native-'));
  const port=await new Promise(resolve=>{const server=net.createServer();server.listen(0,'127.0.0.1',()=>{const p=server.address().port;server.close(()=>resolve(p));});});
- const exe=path.join(root,`outputs/artifact/STM-Simulator-${pkg.version}-win-x64.exe`),env={...process.env,CIRCUIT_LAB_SMOKE:'0',CIRCUIT_LAB_TEST_PROFILE:profile};delete env.ELECTRON_RUN_AS_NODE;
+ const exe=path.join(root,'outputs','artifact',pkg.build.portable.artifactName),env={...process.env,CIRCUIT_LAB_SMOKE:'0',CIRCUIT_LAB_TEST_PROFILE:profile};delete env.ELECTRON_RUN_AS_NODE;
  const child=launch(exe,[`--remote-debugging-port=${port}`,'--remote-debugging-address=127.0.0.1'],{env});child.on('error',e=>console.error(e));let browser;
  try{
   await waitUntil(async()=>{try{return (await fetch(`http://127.0.0.1:${port}/json/version`)).ok;}catch{return false;}},'portable renderer startup',60000);

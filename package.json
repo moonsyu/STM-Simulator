@@ -76,7 +76,7 @@
       "icon": "desktop/icons/stm-simulator.ico"
     },
     "portable": {
-      "artifactName": "STM-Simulator-${version}-win-x64.exe"
+      "artifactName": "STM-Simulator.exe"
     }
   }
 }

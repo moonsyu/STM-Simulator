@@ -116,7 +116,7 @@ jobs:
         run: |
           "## STM Simulator for Windows x64" >> $env:GITHUB_STEP_SUMMARY
           "[Download EXE bundle]($env:DOWNLOAD_URL)" >> $env:GITHUB_STEP_SUMMARY
-          "Extract the ZIP, then run STM-Simulator-*-win-x64.exe. Node.js is not required." >> $env:GITHUB_STEP_SUMMARY
+          "Extract the ZIP, then run STM-Simulator.exe. Node.js is not required." >> $env:GITHUB_STEP_SUMMARY
           "The bundle includes SHA256.txt and third-party license notices. Repository access is required." >> $env:GITHUB_STEP_SUMMARY
 
   release:
@@ -148,10 +148,10 @@ jobs:
           if ($releaseVersion -notmatch '^\d+\.\d+\.\d+$') { throw 'Only stable package versions can be published.' }
           $releaseTag = "v$releaseVersion"
           if ($env:GITHUB_REF_TYPE -eq 'tag' -and $env:GITHUB_REF_NAME -cne $releaseTag) { throw 'Release tag does not match the package.' }
-          $releaseExe = "STM-Simulator-$releaseVersion-win-x64.exe"
+          $releaseExe = 'STM-Simulator.exe'
           $releaseZip = "STM-Simulator-$releaseVersion-Windows-x64.zip"
           $releaseManifest = Get-Content outputs/artifact/update-manifest.json -Raw | ConvertFrom-Json
-          if ($releaseManifest.version -cne $releaseVersion -or $releaseManifest.filename -cne $releaseExe -or $releaseInfo.commit -cne $env:GITHUB_SHA) { throw 'Build metadata does not match this tag.' }
+          if ($releaseManifest.version -cne $releaseVersion -or $releaseManifest.filename -cne $releaseExe -or $releaseInfo.filename -cne $releaseExe -or $releaseInfo.commit -cne $env:GITHUB_SHA) { throw 'Build metadata does not match this tag.' }
           $releaseHash = (Get-FileHash -LiteralPath "outputs/artifact/$releaseExe" -Algorithm SHA256).Hash.ToLowerInvariant()
           if ($releaseHash -cne $releaseManifest.sha256 -or (Get-Item -LiteralPath "outputs/artifact/$releaseExe").Length -ne $releaseManifest.bytes) { throw 'EXE verification failed.' }
           Compress-Archive -Path outputs/artifact/* -DestinationPath "outputs/$releaseZip"

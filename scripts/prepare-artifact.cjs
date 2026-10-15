@@ -9,6 +9,7 @@ const {cleanArtifactOutput} = require('./clean-build.cjs');
   const root = path.resolve(__dirname, '..');
   const pkg = JSON.parse(await fs.readFile(path.join(root, 'package.json'), 'utf8'));
   const name = pkg.build.portable.artifactName.replace('${version}', pkg.version);
+  assert.equal(name, 'STM-Simulator.exe', 'Release executable filename must stay fixed');
   const dist = path.join(root, 'work', 'build');
   const unpacked = path.join(dist, 'win-unpacked');
   const output = path.join(root, 'outputs', 'artifact');

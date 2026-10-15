@@ -11,8 +11,8 @@ import {Readable} from 'node:stream';
 const require=createRequire(import.meta.url);
 const {PortableUpdater,compareVersions,allowedUrl,releaseInfo,validateManifest,verifyFile,readJson,downloadFile}=require('../desktop/updater.cjs');
 const binary=Buffer.from('MZ update fixture'),hash=createHash('sha256').update(binary).digest('hex');
-function fixture(version='0.17.0'){
- const filename=`STM-Simulator-${version}-win-x64.exe`,base=`https://github.com/moonsyu/STM-Simulator/releases/download/v${version}/`;
+function fixture(version='0.17.0',filename='STM-Simulator.exe'){
+ const base=`https://github.com/moonsyu/STM-Simulator/releases/download/v${version}/`;
  return {release:{tag_name:'v'+version,draft:false,prerelease:false,assets:[filename,'update-manifest.json'].map(name=>({name,state:'uploaded',size:binary.length,browser_download_url:base+name}))},manifest:{schemaVersion:1,version,filename,bytes:binary.length,sha256:hash}};
 }
 async function setup(t,options={}){
@@ -37,6 +37,24 @@ test('releases require a newer stable version, matching exact EXE and complete u
  assert.throws(()=>releaseInfo({...release,assets:release.assets.slice(0,1)},'0.16.0'));
  assert.throws(()=>releaseInfo({...release,assets:[{...release.assets[0],browser_download_url:'https://example.com/evil.exe'},release.assets[1]]},'0.16.0'));
  for(const field of ['version','filename','bytes','sha256','schemaVersion'])assert.throws(()=>validateManifest({...manifest,[field]:'wrong'},info));
+});
+test('already published versioned executables remain compatible with their manifests',()=>{
+ const {release,manifest}=fixture('0.19.0','STM-Simulator-0.19.0-win-x64.exe');
+ const info=releaseInfo(release,'0.18.0');assert.equal(info.filename,manifest.filename);assert.equal(validateManifest(manifest,info).sha256,hash);
+ const wrongVersion=fixture('0.19.0','STM-Simulator-0.18.0-win-x64.exe');assert.throws(()=>releaseInfo(wrongVersion.release,'0.18.0'));
+});
+test('fixed release filename takes precedence and must match the manifest',()=>{
+ const {release,manifest}=fixture();const legacy=fixture('0.17.0','STM-Simulator-0.17.0-win-x64.exe');
+ release.assets.unshift(legacy.release.assets[0]);
+ const info=releaseInfo(release,'0.16.0');assert.equal(info.filename,'STM-Simulator.exe');assert.equal(validateManifest(manifest,info).sha256,hash);
+ assert.throws(()=>validateManifest(legacy.manifest,info));
+});
+test('incomplete, duplicated or redirected fixed assets cannot fall back to legacy files',()=>{
+ const {release}=fixture();const legacy=fixture('0.17.0','STM-Simulator-0.17.0-win-x64.exe').release.assets[0];
+ for(const asset of [{...release.assets[0],state:'new'},{...release.assets[0],browser_download_url:legacy.browser_download_url}]){
+  assert.throws(()=>releaseInfo({...release,assets:[legacy,asset,release.assets[1]]},'0.16.0'));
+ }
+ assert.throws(()=>releaseInfo({...release,assets:[...release.assets,release.assets[0],legacy]},'0.16.0'));
 });
 test('manual checks offer download, deduplicate concurrent requests and verify before installation',async t=>{
  const {updater,counts,target}=await setup(t);await Promise.all([updater.check(),updater.check()]);

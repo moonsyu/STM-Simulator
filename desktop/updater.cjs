@@ -51,7 +51,9 @@ function releaseInfo(release,current){
   if(release.draft||release.prerelease)throw new Error('정식 릴리스만 업데이트할 수 있습니다.');
   const version=String(release.tag_name||'').replace(/^v/,'');
   if(compareVersions(version,current)<=0)return null;
-  const filename=`STM-Simulator-${version}-win-x64.exe`;
+  // Prefer the fixed name; retain support for already published versioned assets.
+  // A present but incomplete fixed-name upload must fail rather than fall back.
+  const filename=(release.assets||[]).some(asset=>asset.name==='STM-Simulator.exe')?'STM-Simulator.exe':`STM-Simulator-${version}-win-x64.exe`;
   const find=name=>{
     const rows=(release.assets||[]).filter(asset=>asset.name===name&&asset.state==='uploaded');
     if(rows.length!==1)throw new Error('릴리스 파일 게시가 완료되지 않았습니다. 잠시 후 다시 확인하세요.');
