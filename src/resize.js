@@ -11,7 +11,7 @@ export function resizeObject(project,target,size){
  const {surface,object,origin}=objectInfo(project,target),{id}=target;
  const fields=typeof size==='number'?scaleFields(size,size):scaleFields(size.scaleX??scaleXOf(object),size.scaleY??scaleYOf(object));
  const destination={x:size.x??origin.x,y:size.y??origin.y};
- const validPosition=p=>Number.isFinite(p.x)&&Number.isFinite(p.y)&&p.x>=0&&p.y>=0&&p.x<=6000&&p.y<=6000;
+ const validPosition=p=>Number.isFinite(p.x)&&Number.isFinite(p.y);
  if(!validPosition(destination))throw new Error('장치가 작업 공간을 벗어납니다.');
  const next={...object};assignScale(next,fields);
  const transform=multiply(matrixOf(next),inverse(matrixOf(object)));

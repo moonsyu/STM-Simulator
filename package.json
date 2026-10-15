@@ -1,6 +1,6 @@
 {
   "name": "stm-simulator",
-  "version": "0.21.2",
+  "version": "0.22.0",
   "description": "STM32 learning IDE with integrated circuit simulation",
   "author": "STM Simulator",
   "private": true,
@@ -30,6 +30,7 @@
     "test:appearance:ui": "node scripts/appearance-smoke.cjs",
     "test:resize:ui": "node scripts/resize-ui-check.cjs",
     "test:part-previews:ui": "node scripts/part-preview-ui-check.cjs",
+    "test:appearance-canvas:ui": "node scripts/appearance-canvas-ui.cjs",
     "test:contrast:ui": "node scripts/ui-contrast-check.cjs",
     "test:colorscheme:ui": "node scripts/colorscheme-smoke.cjs",
     "test:device-docs:ui": "node scripts/device-docs-smoke.cjs",

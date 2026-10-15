@@ -2,6 +2,16 @@
 
 현재 공개 버전: **0.21.2**. 정리일: **2026-10-15**. NUCLEO-F446RE와 빵판을 연결하고 GPIO 스케치 또는 지원 HAL C 소스를 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
 
+## 0.22.0 화면 테마 분리와 자유 배치 (게시 검증 진행 중)
+
+- 화면은 `ide-preferences.js`의 System/Dark/White, 코드는 모드별 Jellybeans/GitHub Light Default로 분리했습니다. `ide-settings-ui.js` 상단 토글·System 복귀·설정 선택, OS media 변경을 반영합니다. colorscheme 등록/수정은 `--code-*`와 Monaco에만 영향을 줍니다.
+- GitHub Theme 6.3.5 원본/해시/MIT/선정 근거는 `src/themes/github-light/`에 있습니다. 빌드 시 두 원본 테마를 해시 검증 후 변환합니다. 기본 Tab은 스페이스 4칸, 구버전 환경설정은 v2 스키마로 호환 이전합니다.
+- `surface-move.js`, `app.js`: 기본 보드·빵판 몸체 드래그, 장착 부품과 내부 경유점 이동, 한 번의 Undo/Redo, Esc·포커스 이탈 취소. 가장자리 크기 조절과 핀 배선 우선순위는 유지합니다.
+- `app.js` 우클릭은 진행 중 배선 전체를 취소하며 GPIO에서 누를 때도 Pinout 창을 열지 않습니다. 기존 완성 배선은 보존합니다.
+- `project.js`, `resize.js`, `circuit-edit.js`, `wire-draft.js` 좌표 상한 제거. 음수·6000 초과 배치/저장, 무제한 줌아웃·팬, 전체 보기 경유점 포함. 부품 수/배선 수/배율의 수치 검증은 유지합니다.
+- `tests/appearance-canvas.test.js`와 `scripts/appearance-canvas-ui.cjs`: 테마 분리·시스템 변경·4칸 입력·실제 드래그·취소·Undo·재시작·우클릭·먼 좌표 배치 검사를 추가했습니다. 기존 테마/미리보기/대비 검사도 화면 테마를 명시하도록 변경했습니다.
+- 기존 비장치 감사 4건은 이번 범위에서 수정하지 않았으며 `docs/NON-DEVICE-AUDIT.md`에 유지합니다. 코드 위치는 사용자 응답에 나열하지 않습니다.
+
 ## 0.21.2 검색 카드 강조 상태 보완
 
 - 0.21.1 공개 EXE 검사에서 부품 카드 hover 설명의 대비 4.31:1을 추가로 발견했습니다. 기존 `:is()` 그룹에 포함된 ID 선택자의 우선순위 때문에 hover 보조 글자색 규칙이 적용되지 않았습니다.

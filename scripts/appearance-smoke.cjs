@@ -9,6 +9,7 @@ const {resizeDevice}=require('./resize-gesture.cjs');
  try{
   const {blankProject,validateProject}=await import('../src/project.js'),{PART_LIBRARY}=await import('../src/part-library.js'),{PART_DEFS}=await import('../src/components.js'),{circuitFixture}=await import('../tests/fixtures/circuits.js'),{endpointInfo,boardPin}=await import('../src/pins.js');
   page=await app.firstWindow();const errors=[];page.on('pageerror',e=>errors.push(e.message));await page.waitForSelector('.monaco-editor');await app.evaluate(({BrowserWindow})=>{const w=BrowserWindow.getAllWindows()[0];w.setContentSize(1540,1020);w.showInactive();});
+  await page.click('[data-tab="settings"]');await page.selectOption('#pref-appearance','dark');
   assert.equal(await page.evaluate(()=>document.documentElement.dataset.colorscheme),'jellybean');assert.equal(await page.locator('.monaco-editor').first().evaluate(el=>getComputedStyle(el).backgroundColor),'rgb(21, 21, 21)');
   await page.click('[data-tab="settings"]');await page.fill('#pref-fontSize','18');await page.locator('#pref-fontSize').press('Tab');await page.click('#theme-add');await page.fill('#theme-name','My Jellybean');await page.locator('#theme-name').press('Tab');await page.fill('#color-keyword','#ff6688');await page.locator('#color-keyword').dispatchEvent('change');
   const prefs=()=>page.evaluate(()=>JSON.parse(localStorage.getItem('stm32lab.idePreferences.v1')));let settings=await prefs();assert.equal(settings.fontSize,18);assert.equal(settings.themes.find(t=>t.id===settings.theme).colors.keyword,'#ff6688');

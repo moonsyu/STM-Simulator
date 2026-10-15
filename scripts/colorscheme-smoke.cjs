@@ -7,7 +7,7 @@ const {_electron}=require('playwright');
  try{
   const page=await app.firstWindow(),errors=[];page.on('pageerror',e=>errors.push(e.message));await page.waitForSelector('.monaco-editor');
   await app.evaluate(({BrowserWindow})=>{const w=BrowserWindow.getAllWindows()[0];w.setContentSize(1440,950);w.showInactive();});
-  await page.click('[data-tab="settings"]');assert.match(await page.locator('#colorscheme-source').textContent(),/nanotech\/jellybeans.vim.*ef83bf4/);
+  await page.click('[data-tab="settings"]');await page.selectOption('#pref-appearance','dark');assert.match(await page.locator('#colorscheme-source').textContent(),/nanotech\/jellybeans.vim.*ef83bf4/);
   const prefs=()=>page.evaluate(()=>JSON.parse(localStorage.getItem('stm32lab.idePreferences.v1')));
   await page.locator('#colorscheme-file').setInputFiles(path.join(root,'src/themes/jellybeans/jellybeans.vim'));await page.waitForFunction(()=>document.getElementById('ide-settings-status').textContent==='Colorscheme 등록 및 적용 완료');
   let state=await prefs();assert.equal(state.themes.at(-1).editor.rules.find(r=>r.token==='comment').fontStyle,'italic');

@@ -50,7 +50,7 @@ test('IDE defaults use Jellybean and settings are independent from circuit proje
  prefs.fontSize=18;prefs.lineHeight=28;prefs.themes[0].colors.keyword='#abcdef';const serialized=JSON.stringify(validatePreferences(prefs)),storage={getItem:key=>key===PREFERENCES_KEY?serialized:null};assert.equal(loadPreferences(storage).fontSize,18);assert.equal(selectedTheme(loadPreferences(storage)).colors.keyword,'#abcdef');assert.equal(defaultPreferences().themes[0].colors.keyword,'#8197bf');
 });
 test('theme addition and editing survive export/import and unsafe or excessive options are refused',()=>{
- const p=defaultPreferences(),theme=structuredClone(p.themes[0]);theme.id='my-theme';theme.name='내 테마';theme.colors.selection='#345678';p.themes.push(theme);p.theme=theme.id;const loaded=validatePreferences(JSON.parse(JSON.stringify(p)));assert.equal(selectedTheme(loaded).colors.selection,'#345678');
+ const p=defaultPreferences(),theme=structuredClone(p.themes[0]);theme.id='my-theme';theme.name='내 테마';theme.colors.selection='#345678';p.themes.push(theme);p.theme=p.darkTheme=theme.id;const loaded=validatePreferences(JSON.parse(JSON.stringify(p)));assert.equal(selectedTheme(loaded).colors.selection,'#345678');
  for(const change of [{fontSize:100},{fontFamily:'x; background:url(https://bad)'},{tabSize:0},{lineHeight:5},{theme:'missing'}])assert.throws(()=>validatePreferences({...p,...change}));
  const invalid=structuredClone(p);invalid.themes[0].colors.background='url(x)';assert.throws(()=>validatePreferences(invalid));assert.equal(loadPreferences({getItem:()=>'{bad'}).theme,'jellybean');
 });

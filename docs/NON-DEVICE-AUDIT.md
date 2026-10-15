@@ -88,3 +88,9 @@ node scripts/audits/non-device-repro.cjs
 - `src/part-preview-ui.js`, `src/part-preview.css`: 기존 카드 구조 안의 작은 이미지, 지연 생성, 마우스/키보드 확대 미리보기, 화면 범위 제한, Esc/검색/클릭/스크롤 닫기.
 - `scripts/part-preview-ui-check.cjs`: 113종 전수 이미지 decode/썸네일 일치, hover로 회로 변경 없음, 검색/추가/실행 중 미리보기, 키보드/Esc 삭제 방지, 좁은 창, 밝은/어두운 테마 검사. Windows CI에 포함한다.
 - 디자인 정적 검사에서 숨겨진 tooltip의 초기 `<img>`에 src가 없다는 경고 1건이 나왔다. 실제 이미지를 할당한 뒤에만 tooltip을 표시하며 전수 decode 검사가 통과했다. 초기 빈 img는 화면에 표시되지 않으므로 오탐으로 분류한다.
+
+## 2026-10-15 요청 수정: 화면/코드 테마와 기본 표면 이동
+
+- 원인: `ide-preferences.js`가 코드 colorscheme를 화면 전체의 CSS 변수에 적용했고, `app.js`의 기본 `data-surface` pointerdown은 선택 후 종료해 이동 상태를 만들지 않았습니다. 좌표 검증과 드래그·붙여넣기 경로에는 0~6000 등의 제한이 혼재했습니다.
+- 수정: 고정 UI 팔레트/코드 팔레트 분리, OS 반응/상단 토글, 기본 표면 이동 트랜잭션, 작성 중 배선 우클릭 취소, 모든 편집 경로에서 공간 좌표 상한 제거. 경유점·장착 부품·Undo·저장에 관한 회귀 검사는 `appearance-canvas` 모델/UI 테스트에서 재현합니다.
+- 위 조치는 앞서 기록한 파일 저장/dirty flag/터미널 위치/종료 자동 저장 4건의 해결을 의미하지 않습니다.
