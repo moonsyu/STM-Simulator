@@ -7,7 +7,7 @@ const {chooseHal}=require('./smoke-fixture.cjs');
  const app=await _electron.launch({executablePath:process.env.LAB_EXE||path.join(root,'node_modules/electron/dist/electron.exe'),args:process.env.LAB_EXE?[]:[root],cwd:root,env});
  try{
   const page=await app.firstWindow(),errors=[];page.on('pageerror',e=>errors.push(e.message));await page.waitForSelector('.monaco-editor');await app.evaluate(({BrowserWindow})=>BrowserWindow.getAllWindows()[0].showInactive());
-  const {DEVICE_DEFS}=await import('../src/device-defs.js');
+  const {DEVICE_DEFS}=await import('../src/device-defs.js'),{HAL_EXAMPLES}=await import('../src/hal-examples.js');
   // A part group's bounds include long leads and labels. Click its visible body
   // so scaling cannot move the target onto a breadboard hole or another wire.
   const select=async()=>{await page.locator('#part-layer [data-part="demo"] .part-body').click();assert.equal(await page.locator('#inspect-panel').isVisible(),true);};
@@ -16,7 +16,7 @@ const {chooseHal}=require('./smoke-fixture.cjs');
   const begin=async kind=>{if((await page.locator('#run').textContent()).includes('정지'))await page.click('#run');await chooseHal(page,kind);assert.equal(await page.locator('dialog[open]').count(),0);await page.click('#clear-console');await page.click('#zoom-reset');await select();await page.click('#run');};
   const live=async(key,value)=>{const input=page.locator('#extra-'+key);if(await input.evaluate(x=>x.tagName==='SELECT'))await input.selectOption(String(value));else if(await input.getAttribute('type')==='range')await input.evaluate((x,v)=>{x.value=v;x.dispatchEvent(new Event('input',{bubbles:true}));x.dispatchEvent(new Event('change',{bubbles:true}));},String(value));else await input.fill(String(value));};
   for(const type of Object.keys(DEVICE_DEFS)){await page.fill('#part-search',type);assert.ok(await page.locator(`[data-add="${type}"]:visible`).count());await chooseHal(page,type);assert.ok(await page.locator('#part-layer [data-part="demo"]').count());await page.click('#firmware-check');assert.match(await page.locator('#firmware-status').innerText(),/통과/);}
-  await page.fill('#part-search','');assert.equal(await page.locator('[data-add]:visible').count(),113);assert.equal(await page.locator('#hal-example option').count(),120);
+  await page.fill('#part-search','');assert.equal(await page.locator('[data-add]:visible').count(),113);assert.equal(await page.locator('#hal-example option').count(),Object.keys(HAL_EXAMPLES).length+1);
   await begin('sht31');await expectLog('25.0 C RH=50.0');await live('temperature',40);await live('humidity',80);await expectLog('40.0 C RH=80.0');await page.screenshot({path:path.join(out,'devices-sht31.png')});
   await begin('ntc');await live('temperature',60);await expectLog('NTC=60.');
   await begin('mpu6050');await live('ax',-1);await live('gz',90);await expectLog('g=(-1.00,0.00,1.00) dps=(0.0,0.0,90.0)');
