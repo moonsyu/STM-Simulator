@@ -59,6 +59,14 @@ node scripts/audits/non-device-repro.cjs
 
 ## 정상 동작을 확인한 범위
 
+### 후속 사용자 제보 — UI 글자 대비 (0.21.1 수정)
+
+- 사용자 이미지에서 상단 `회로 파일 열기` hover, Pinout 핀 카드와 하단 고정 footer에 밝은 글자/밝은 배경 충돌을 확인했습니다. 최초 감사는 기능 성공 경로 위주였고 이 UI 상태를 놓쳤습니다.
+- 위치: `src/style.css`의 `.topbar .quiet:hover`, `.pin-tile`, `#pinout-dialog footer`와 `src/preferences.css`의 테마 덮어쓰기. 일부 영역은 글자색만 테마로 바뀌고 배경이 밝은 테마 전용 값으로 남았습니다. 반대로 일부 라벨은 어두운 테마에서 짙은 고정 글자색을 유지했습니다.
+- 같은 원인을 가진 찾기/바꾸기, 터미널 버튼/입력, 보드 선택, 검색 안내/placeholder, 디버그 라벨/상태, 도움말과 비활성 컨트롤도 보완했습니다. 선택/hover/예약 핀 상태, 고정 footer의 글자·배경을 쌍으로 테마 변수에 연결했습니다. 비활성 상태는 전체 opacity 대신 읽을 수 있는 보조 글자색과 점선 테두리로 표시합니다. 비활성 동작 자체는 유지합니다.
+- 실제 Electron의 Jellybeans/STM Light 38개 화면 상태에서 HTML 텍스트와 placeholder의 계산된 대비를 측정했습니다. 기준 4.5:1 미만 0건. 작은 창, Pinout 활성/선택/hover, 코드 검색, 빌드 오류, 설정/프로젝트/업데이트/도움말/보드 선택 창 포함입니다. 사용자 colorscheme의 소스 토큰과 장치 SVG 도색은 검사/변경 대상에서 분리합니다.
+- 회귀 검사: `npm run test:contrast:ui` / `scripts/ui-contrast-check.cjs`, 결과 `work/test-results/ui-contrast.json`. 기능 CI에 추가했습니다. `--record-before`는 수정 전 결함 기록용입니다. 원래 감사의 저장/터미널 문맥/종료 4건은 여전히 미수정입니다.
+
 | 영역 | 실행 검사와 결과 |
 | --- | --- |
 | 전체 모델 | `npm test`: 269/269 통과 |

@@ -20,6 +20,34 @@
 :root[data-ide-theme] .log-line.serial{color:var(--ide-string)}
 :root[data-ide-theme] :is(.hal-example-note,.code-note,.project-folder-note,.firmware-tools small){color:var(--ide-muted)}
 :root[data-ide-theme] :is(.editor-search-tools,.firmware-tools button,.language-badge,#language-toggle){background:var(--ide-chrome);color:var(--ide-foreground);border-color:var(--ide-border)}
+/* Theme both sides of each text/background pair, including transient states. */
+:root[data-ide-theme] :is(.pin-tile,.board-option,.board-option-icon,.help-api,#code-search,.code-search-row button,.code-replace-actions button,.wave-toolbar button,.serial-input-row button,.native-build-actions button,.native-terminal-tools button,#native-input-form button,#native-memory-form button){background:var(--ide-chrome);color:var(--ide-foreground);border-color:var(--ide-border)}
+:root[data-ide-theme] #pinout-dialog footer{background:var(--ide-panel);color:var(--ide-foreground);border-color:var(--ide-border)}
+:root[data-ide-theme] :is(#bus-events,#uart-output){background:var(--ide-background);color:var(--ide-foreground)}
+:root[data-ide-theme] :is(#source-file,#serial-input,#board-search,#native-input-form input,#native-input-form select,#native-memory-form input,#code-search input:not([type=checkbox])){background:var(--ide-background);color:var(--ide-foreground);border-color:var(--ide-border)}
+:root[data-ide-theme] :is(.native-target-label,#build-status,.pinout-layout label,.pinout-layout .check-label,.board-search-label,.board-option strong,.board-option-action,.debug-grid h3,.debug-grid td:first-child,.native-terminal-tools span,.monitor-strip b,.wave-toolbar,.wave-settings,.serial-input-row,.channel-readouts,.part-controls output,.part-card b,.tool,.step-button,.library-bottom button,.help-api pre){color:var(--ide-foreground)}
+:root[data-ide-theme] :is(.pinout-heading p,.pinout-layout p,#pinout-dialog footer span,.serial-mode-note,.pin-search>label,.part-search label,#part-count,#part-no-results,.board-dialog-hint,.board-option small,.board-empty,#board-change-dialog p,.help-grid p,.help-api p,.help-limits,#replace-dialog p,.console-header span,.console-header button,.editor-search-tools kbd,#wave-svg,#native-artifact-list,#pin-results span,.measure span,#inspector p){color:var(--ide-muted)}
+:root[data-ide-theme] :is(.eyebrow,.pin-search:focus-within>label,.part-search:focus-within label){color:var(--ide-accent)}
+:root[data-ide-theme] :is(.pin-tile.enabled,.pin-tile.selected,#pin-results button.selected,#pin-results button.selected span,.debug-frame.active){background:var(--ide-selection);color:var(--ide-foreground);border-color:var(--ide-accent)}
+:root[data-ide-theme] .pin-tile.reserved{background:var(--ide-background);color:var(--ide-muted)}
+:root[data-ide-theme] .pin-tile.selected{outline-color:var(--ide-accent)}
+:root[data-ide-theme] :is(.topbar .quiet,.dock-heading button,#file-tree button,.part-card,.board-card,.board-option,.pin-tile,#pin-results button,.code-search-row button,.code-replace-actions button,.wave-toolbar button,.serial-input-row button,.native-terminal-tools button):not(:disabled):hover{background:var(--ide-selection);color:var(--ide-foreground);filter:none}
+:root[data-ide-theme] :is(.board-option:hover strong,.board-option:hover small,.board-option:hover .board-option-action,.part-card:hover strong,.part-card:hover small){color:var(--ide-foreground)}
+:root[data-ide-theme] #code-replace-all{background:var(--ide-accent);color:var(--ide-background);border-color:var(--ide-accent)}
+:root[data-ide-theme] :is(input,textarea)::placeholder{color:var(--ide-muted);opacity:1}
+/* Disabled controls stay readable; a dashed border and cursor identify them. */
+:root[data-ide-theme] :is(#run,button,input,select,textarea):disabled{opacity:1;background:var(--ide-panel);color:var(--ide-muted);border-color:var(--ide-border);border-style:dashed;cursor:not-allowed;filter:none}
+:root[data-ide-theme] :is(#run,button):disabled :is(span,strong,small,b){color:var(--ide-muted)}
+:root[data-ide-theme] #hal-example-count{color:var(--ide-muted);opacity:1}
+:root[data-ide-theme] :is(.issues-note,.issues-clear){color:var(--ide-muted)}
+:root[data-ide-theme] :is(.danger,#pinout-errors,#serial-feedback){color:var(--ide-error)}
+:root[data-ide-theme] :is(.build-error.warning,#code-search-readonly,#pin-results p){color:var(--ide-warning)}
+:root[data-ide-theme] .build-error.info{color:var(--ide-foreground)}
+:root[data-ide-theme] :is(.circuit-issue,.circuit-issue.error){background:var(--ide-panel);color:var(--ide-foreground);border-color:var(--ide-border)}
+:root[data-ide-theme] .panel-tabs button.active:after{background:var(--ide-accent)}
+:root[data-ide-theme] .ide-shell ::selection{background:var(--ide-selection);color:var(--ide-foreground)}
+:root[data-ide-theme] .ide-shell ::-webkit-scrollbar-thumb{background:var(--ide-muted);border-color:var(--ide-chrome)}
+:root[data-ide-theme] .ide-shell ::-webkit-scrollbar-track{background:var(--ide-chrome)}
 .ide-shell #canvas-container{display:flex;flex-direction:column}.ide-shell .canvas-heading{position:static;flex-shrink:0;white-space:normal;border-radius:0;min-height:25px;padding:5px 10px}.ide-shell #circuit{flex:1;min-height:0;height:0}
 :root[data-ide-theme] .debug-current-line{background:var(--ide-debug)!important}
 :root[data-ide-theme] #net-layer path{stroke:var(--ide-net)}

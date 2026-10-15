@@ -65,6 +65,8 @@ jobs:
         run: npm run test:resize:ui
       - name: Test every part model thumbnail and hover preview
         run: npm run test:part-previews:ui
+      - name: Test readable UI text in dark and light themes
+        run: npm run test:contrast:ui
       - name: Test Electron editing and HAL workflows
         shell: pwsh
         run: |
