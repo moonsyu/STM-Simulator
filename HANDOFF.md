@@ -18,6 +18,7 @@
 
 ## 저장소 관리 원칙
 
+- Git 작성자·커미터·푸시 인증은 `moonsyu`를 사용합니다. 2026-10-15 작성자 정정으로 커밋 11개와 태그 7개의 SHA가 바뀌었으며 소스 트리는 동일합니다. 기존 공개 실행 파일과 빌드 SHA는 보존합니다. 대응표와 설정은 `docs/GIT-IDENTITY.md` 및 `docs/commit-identity-map.json`을 참고합니다.
 - 작업 저장소: 현재 Git 체크아웃, 원격 `moonsyu/STM-Simulator`, 기본 브랜치 `main`.
 - 과거 버전은 **Git 커밋 이력**으로만 관리한다. 버전별 백업 폴더·이전 실행 파일·옛 검증 문서 사본을 남기지 않는다.
 - 최신 배포 묶음은 `outputs/artifact/`, 최신 검증 문서는 `docs/VERIFICATION.md`, 최신 실행 증거는 `work/test-results/`에 갱신한다. 테스트가 만든 임시 프로필은 종료 후 제거한다.
