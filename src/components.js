@@ -1,7 +1,7 @@
 import {CATALOG_DEFS,CATALOG_TWO_PIN} from './catalog-defs.js';
 import {L298_DEFS} from './l298n.js';
 import {DEVICE_DEFS} from './device-defs.js';
-import {scaleOf} from './geometry.js';
+import {scaleXOf,scaleYOf} from './geometry.js';
 // Geometry shared by rendering, hit testing, mounting and project validation.
 export const TWO_PIN_TYPES=[...CATALOG_TWO_PIN,'resistor','led','capacitor','diode','buzzer','passive_buzzer','ldr','ntc','dc_motor','dc_supply'];
 export const MULTI_PIN_TYPES=[...Object.keys(CATALOG_DEFS).filter(t=>!CATALOG_TWO_PIN.includes(t)),'l298n','button','lcd','potentiometer','slide','rgb','sevenseg','temperature','ultrasonic','uart','i2c','spi',...Object.keys(DEVICE_DEFS).filter(t=>!['ldr','ntc'].includes(t))];
@@ -48,7 +48,7 @@ function rawTerminals(p){
  const half=(p.span??70)/2;return [{key:'a',x:-half,y:0},{key:'b',x:half,y:0}];
 }
 export function rotatePoint(x,y,angle){const r=angle*Math.PI/180;return {x:x*Math.cos(r)-y*Math.sin(r),y:x*Math.sin(r)+y*Math.cos(r)};}
-export function localTerminals(p){const scale=scaleOf(p);return rawTerminals(p).map(t=>({...t,x:t.x*scale,y:t.y*scale}));}
+export function localTerminals(p){const x=scaleXOf(p),y=scaleYOf(p),k=Math.tan((p.skewX??0)*Math.PI/180);return rawTerminals(p).map(t=>({...t,x:t.x*x+t.y*y*k,y:t.y*y}));}
 export function nominalTerminals(p){return localTerminals(p).map(t=>{const v=rotatePoint(t.x,t.y,p.rotation);return {...t,x:p.x+v.x,y:p.y+v.y};});}
 export function detachPart(p){delete p.attachA;delete p.attachB;delete p.attachments;}
 export function assignAttachments(p,map){detachPart(p);if(TWO_PIN_TYPES.includes(p.type)){const keys=CATALOG_TWO_PIN.includes(p.type)?['p1','p2']:['a','b'];if(map[keys[0]])p.attachA=map[keys[0]];if(map[keys[1]])p.attachB=map[keys[1]];}else if(Object.keys(map).length)p.attachments={...map};}

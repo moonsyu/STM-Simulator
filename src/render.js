@@ -3,7 +3,7 @@ import {isSelected,wirePoints} from './circuit-edit.js';
 import {PINS,HOLES,BB,endpointInfo,circuitHoles,breadboardPrefix} from './pins.js';
 import {terminalKeys,localTerminals,nominalTerminals,rotatePoint,attachments,PART_DEFS} from './components.js';
 import {extraShape,updateExtraSvg} from './part-render.js';
-import {scaleOf,surfaceTransform,surfacePoint} from './geometry.js';
+import {scaleXOf,scaleYOf,partTransform,partVector,surfaceTransform,surfacePoint} from './geometry.js';
 export const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const text=(x,y,s,size=10,color='#4a6e87',other='')=>`<text x="${x}" y="${y}" font-size="${size}" fill="${color}" ${other}>${esc(s)}</text>`;
 const rect=(x,y,w,h,fill,rx=0,extra='')=>`<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${rx}" fill="${fill}" ${extra}/>`;
@@ -33,7 +33,7 @@ export function boardSvg(){
  return s+'</g>';
 }
 export function breadboardSvg(part=null,selected=null){
- const prefix=part?breadboardPrefix(part.id):'',attributes=part?` data-part="${part.id}" data-rotation="${part.rotation}" transform="translate(${part.x} ${part.y}) rotate(${part.rotation}) scale(${scaleOf(part)}) translate(${-BB.x-BB.w/2} ${-BB.y-BB.h/2})"`:' data-surface="breadboard"';
+ const prefix=part?breadboardPrefix(part.id):'',attributes=part?` data-part="${part.id}" data-rotation="${part.rotation}" transform="${partTransform(part)} translate(${-BB.x-BB.w/2} ${-BB.y-BB.h/2})"`:' data-surface="breadboard"';
  let s=`<g class="breadboard ${part&&isSelected(selected,'part',part.id)?'part-selected':''}"${attributes}>${rect(BB.x,BB.y,BB.w,BB.h,'url(#plastic)',6,'stroke="#cbd1d4" filter="url(#shadow)" class="breadboard-body"')}`;
  s+=rect(BB.x+157,BB.startY-12,13,436,'#dce3e5',3)+rect(BB.x+160,BB.startY-9,6,429,'#d0d9dc',2);
  for(const [x,sign,color]of [[BB.x+12,'+','#d87565'],[BB.x+48,'−','#6c9eca'],[BB.x+290,'+','#d87565'],[BB.x+326,'−','#6c9eca']]){
@@ -55,7 +55,7 @@ export const LED_COLORS={red:'#f05a4b',green:'#65c668',blue:'#53a8f7',yellow:'#f
 export function renderBreadboards(project,selected){return project.components.filter(p=>p.type==='breadboard').map(p=>breadboardSvg(p,selected)).join('');}
 export function updateSurfaces(svg,project,selected){for(const [key,selector]of [['board','.board'],['breadboard','[data-surface="breadboard"]']]){const group=svg.querySelector(selector);group.dataset.surface=key;group.setAttribute('transform',surfaceTransform(key,project.surfaces));group.classList.toggle('part-selected',selected?.type==='surface'&&selected.id===key);}}
 export function renderParts(project,selected,result,pressed){const parts=project.components.filter(p=>p.type!=='breadboard'),ordered=[...parts.filter(p=>selected?.id!==p.id),...parts.filter(p=>selected?.id===p.id)];return ordered.map(p=>{
- const x=p.x,y=p.y,angle=p.rotation,scale=scaleOf(p),terms=localTerminals({...p,scale:1}),nominal=nominalTerminals(p),half=Math.min(18,Math.max(4,(p.span??70)/2-4));
+ const x=p.x,y=p.y,angle=p.rotation,scale=Math.max(scaleXOf(p),scaleYOf(p)),terms=localTerminals({...p,scale:1,scaleX:1,scaleY:1,skewX:0}),nominal=nominalTerminals(p),half=Math.min(18,Math.max(4,(p.span??70)/2-4));
  let shape=extraShape(p,result);
  if(p.type==='resistor')shape=rect(-half,-7,half*2,14,'#ddc394',4,'stroke="#9f895f"')+[-.6,-.2,.25,.7].map((v,i)=>rect(v*half,-7,Math.min(3,half/5),14,['#c26839','#bf6638','#805139','#d7b543'][i])).join('');
  if(p.type==='led'){const color=LED_COLORS[p.color],on=result?.parts[p.id]?.on;shape=`<circle class="led-glow" r="23" fill="${color}" opacity="${on?.6:0}" filter="url(#led-glow)"/><circle class="led-lens" r="12" fill="${on?color:'#704b4c'}" stroke="${color}" stroke-width="2"/><ellipse cx="-4" cy="-4" rx="3" ry="4" fill="#fff" opacity=".3"/><path d="M8 -8V8" stroke="#421e26" stroke-width="2"/>`+text(-18,-13,'+',10,color)+text(15,-13,'−',10,color);}
@@ -71,19 +71,19 @@ export function renderParts(project,selected,result,pressed){const parts=project
  const body=PART_DEFS[p.type]?.body,bodyHeight=(body?(Math.abs(Math.sin(radians))*body.width+Math.abs(Math.cos(radians))*body.height)/2+14:42)*scale;
  const labelY=Math.min(y-(p.type==='lcd'?lcdHeight+14:PART_DEFS[p.type]?bodyHeight:27),...terminalKeys(p).map(key=>endpointInfo(`part:${p.id}:${key}`,project.components,project.surfaces).y-13));
  const leads=terms.map((t,i)=>{const end=endpointInfo(`part:${p.id}:${t.key}`,project.components,project.surfaces);let root;
-   if(p.type.startsWith('ref_')){const b=PART_DEFS[p.type].body;root=rotatePoint(Math.max(-b.width/2,Math.min(b.width/2,t.x)),Math.max(-b.height/2,Math.min(b.height/2,t.y)),angle);}
-   else if(p.type==='button')root=rotatePoint(Math.sign(t.x)*14,Math.sign(t.y)*9,angle);
-   else if(p.type==='lcd')root=rotatePoint(t.x,35,angle);
-   else if(p.type==='sevenseg')root=rotatePoint(t.x,Math.sign(t.y)*27,angle);
-   else if(p.type==='l298n')root=rotatePoint(Math.max(-82,Math.min(82,t.x)),Math.max(-56,Math.min(56,t.y)),angle);
-   else if(['dc_motor','dc_supply'].includes(p.type))root=rotatePoint(Math.sign(t.x)*28,0,angle);
-   else if(PART_DEFS[p.type]?.labels)root=rotatePoint(t.x,PART_DEFS[p.type].pinY?PART_DEFS[p.type].pinY-14:p.type==='ultrasonic'?22:14,angle);
-   else if(['capacitor','diode','buzzer','passive_buzzer'].includes(p.type))root=rotatePoint(Math.sign(t.x)*(['buzzer','passive_buzzer'].includes(p.type)?16:12),0,angle);
-   else root=rotatePoint(Math.sign(t.x)*(p.type==='led'?10:half),0,angle);
-   return `<path d="M${x+root.x*scale} ${y+root.y*scale}L${nominal[i].x} ${nominal[i].y}L${end.x} ${end.y}" fill="none" stroke="#708c9b" stroke-width="3" stroke-linejoin="round"/><circle class="part-contact" cx="${end.x}" cy="${end.y}" r="3" fill="${attachments(p)[t.key]?'#20a985':'#bdcdd5'}" stroke="#607d8d"/>`;
+   if(p.type.startsWith('ref_')){const b=PART_DEFS[p.type].body;root=partVector(p,Math.max(-b.width/2,Math.min(b.width/2,t.x)),Math.max(-b.height/2,Math.min(b.height/2,t.y)));}
+   else if(p.type==='button')root=partVector(p,Math.sign(t.x)*14,Math.sign(t.y)*9);
+   else if(p.type==='lcd')root=partVector(p,t.x,35);
+   else if(p.type==='sevenseg')root=partVector(p,t.x,Math.sign(t.y)*27);
+   else if(p.type==='l298n')root=partVector(p,Math.max(-82,Math.min(82,t.x)),Math.max(-56,Math.min(56,t.y)));
+   else if(['dc_motor','dc_supply'].includes(p.type))root=partVector(p,Math.sign(t.x)*28,0);
+   else if(PART_DEFS[p.type]?.labels)root=partVector(p,t.x,PART_DEFS[p.type].pinY?PART_DEFS[p.type].pinY-14:p.type==='ultrasonic'?22:14);
+   else if(['capacitor','diode','buzzer','passive_buzzer'].includes(p.type))root=partVector(p,Math.sign(t.x)*(['buzzer','passive_buzzer'].includes(p.type)?16:12),0);
+   else root=partVector(p,Math.sign(t.x)*(p.type==='led'?10:half),0);
+   return `<path d="M${x+root.x} ${y+root.y}L${nominal[i].x} ${nominal[i].y}L${end.x} ${end.y}" fill="none" stroke="#708c9b" stroke-width="3" stroke-linejoin="round"/><circle class="part-contact" cx="${end.x}" cy="${end.y}" r="3" fill="${attachments(p)[t.key]?'#20a985':'#bdcdd5'}" stroke="#607d8d"/>`;
  }).join('');
  const hits=terminalKeys(p).map(key=>{const e=endpointInfo(`part:${p.id}:${key}`,project.components,project.surfaces);return `<circle cx="${e.x}" cy="${e.y}" r="5.5" data-endpoint="${e.id}" class="pin-hit part-pin"/>`;}).join('');
- return `<g data-part="${p.id}" data-rotation="${angle}" data-scale="${scale}" data-mounted="${Object.keys(attachments(p)).length}" class="${isSelected(selected,'part',p.id)?'part-selected':''}">${leads}<g class="part-body" transform="translate(${x} ${y}) rotate(${angle}) scale(${scale})">${shape}</g>${text(x,labelY,label,9,'#496477','text-anchor="middle" pointer-events="none"')}${hits}</g>`;
+ return `<g data-part="${p.id}" data-rotation="${angle}" data-scale="${scale}" data-mounted="${Object.keys(attachments(p)).length}" class="${isSelected(selected,'part',p.id)?'part-selected':''}">${leads}<g class="part-body" transform="${partTransform(p)}">${shape}</g>${text(x,labelY,label,9,'#496477','text-anchor="middle" pointer-events="none"')}${hits}</g>`;
 }).join('');}
 export function renderEndpoints(project,pending){return [...PINS.map(p=>surfacePoint(p,'board',project.surfaces)),...circuitHoles(project.components,project.surfaces)].map(e=>`<circle cx="${e.x}" cy="${e.y}" r="6.5" data-endpoint="${e.id}" class="pin-hit ${pending===e.id?'pending':''}"/>`).join('');}
 export function renderMountPreview(mount){return mount?mount.points.map(h=>`<circle cx="${h.x}" cy="${h.y}" r="6" fill="#24b78b44" stroke="#159b73" stroke-width="1.6"/>`).join(''):'';}
