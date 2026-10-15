@@ -59,3 +59,7 @@ The unmodified `colors/jellybeans.vim` from [nanotech/jellybeans.vim](https://gi
 ## Optional external development tools
 
 ARM GCC/GDB, MinGW-w64 GCC/GDB, clangd, OpenOCD and STM32CubeF4 are separate user-installed programs and SDKs, not bundled into the application EXE. The optional setup script downloads unmodified vendor distributions, verifies their checksums or Git revisions, and preserves their license files. Their individual licenses and device restrictions continue to apply. ST HAL/CMSIS source files are compiled from the configured external SDK; no ST driver source has been copied into the application repository. QEMU is used only by the optional ARM GDB integration test and is not shipped with the application.
+
+## GitHub Light Default colorscheme
+
+GitHub Theme 6.3.5, copyright (c) 2020 Primer, is used under the MIT license. The unmodified `themes/light-default.json` and complete MIT notice are retained in `src/themes/github-light/light-default.json` and `src/themes/github-light/LICENSE.txt` inside the application. `source.json` records the upstream release commit and SHA-256. The build converts supported C/C++ TextMate tokens to a registered Monaco theme; UI chrome is independent of the code palette. Source: [primer/github-vscode-theme](https://github.com/primer/github-vscode-theme/tree/ad3f17519f2f7d7060afffac2b557c69c4534610).

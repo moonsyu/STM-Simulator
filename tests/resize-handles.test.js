@@ -53,7 +53,7 @@ test('nonuniform scaling of a rotated breadboard carries diagonal mounted footpr
 });
 test('invalid dimensions and malformed persisted transforms do not partially modify circuits',()=>{
  const project=blankProject();project.components=[part(0)];const before=JSON.stringify(project);
- for(const size of [{scaleX:NaN},{scaleY:-1},{scaleX:2,x:-1}])assert.throws(()=>resizeObject(project,{type:'part',id:'r'},size));assert.equal(JSON.stringify(project),before);
+ for(const size of [{scaleX:NaN},{scaleY:-1},{scaleX:2,x:Infinity}])assert.throws(()=>resizeObject(project,{type:'part',id:'r'},size));assert.equal(JSON.stringify(project),before);
  for(const fields of [{scaleX:'2'},{scaleY:Infinity},{skewX:90}])assert.throws(()=>validateProject({...project,components:[{...part(0),...fields}]}));
  assert.throws(()=>validateProject({...project,surfaces:{board:{x:'20'}}}));
 });

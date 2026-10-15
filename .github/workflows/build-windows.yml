@@ -67,6 +67,10 @@ jobs:
         run: npm run test:part-previews:ui
       - name: Test readable UI text in dark and light themes
         run: npm run test:contrast:ui
+      - name: Test system appearance, surface movement and unlimited canvas
+        run: npm run test:appearance-canvas:ui
+      - name: Test code-only colorscheme registration
+        run: npm run test:colorscheme:ui
       - name: Test Electron editing and HAL workflows
         shell: pwsh
         run: |

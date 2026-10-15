@@ -22,7 +22,7 @@ STM32 학습 프로젝트를 생성하고 C/H C/C++ 코드를 작성·컴파일�
 
 ## Brand Commitments
 
-제품명 STM Simulator와 기존 아이보리·초록색 UI를 유지합니다. 한국어 인터페이스를 사용합니다. IDE 정보는 파일·소스·오류·실행 상태 중심으로 구성합니다.
+제품명 STM Simulator와 한국어 인터페이스를 유지합니다. 화면은 System을 기본으로 Dark/White를 전환합니다. 코드 colorscheme는 편집기 내부에만 적용하고 화면 팔레트와 분리합니다. Dark의 기본 코드는 Jellybeans, White는 GitHub Light Default입니다. IDE 정보는 파일·소스·오류·실행 상태 중심으로 구성합니다.
 
 ## Evidence on Hand
 

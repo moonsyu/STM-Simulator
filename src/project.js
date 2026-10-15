@@ -17,7 +17,7 @@ export function validateProject(data){
   const components=data.components.map(p=>{
     if(!safeId(p.id)||ids.has(p.id))throw new Error('부품 ID가 중복되거나 올바르지 않습니다.');ids.add(p.id);
     if(![...TWO_PIN_TYPES,...MULTI_PIN_TYPES,'breadboard'].includes(p.type)||typeof p.name!=='string'||p.name.length>80)throw new Error('지원하지 않는 부품입니다.');
-    if(!Number.isFinite(p.x)||!Number.isFinite(p.y)||p.x<0||p.x>6000||p.y<0||p.y>6000||!Number.isFinite(p.rotation)||(data.version===1?![0,1].includes(p.rotation):p.rotation<0||p.rotation>=360))throw new Error('부품 좌표 또는 회전 각도가 올바르지 않습니다.');
+    if(!Number.isFinite(p.x)||!Number.isFinite(p.y)||!Number.isFinite(p.rotation)||(data.version===1?![0,1].includes(p.rotation):p.rotation<0||p.rotation>=360))throw new Error('부품 좌표 또는 회전 각도가 올바르지 않습니다.');
     const q={id:p.id,name:p.name,type:p.type,x:p.x,y:p.y,rotation:data.version===1?p.rotation*90:p.rotation};
     if(p.scale!==undefined)q.scale=validScale(p.scale);
     for(const key of ['scaleX','scaleY'])if(p[key]!==undefined)q[key]=validScale(p[key]);
@@ -61,7 +61,7 @@ export function validateProject(data){
   const wireIds=new Set();
   const wires=data.wires.map(w=>{
     if(!safeId(w.id)||wireIds.has(w.id)||!end(w.from)||!end(w.to)||w.from===w.to||!/^#[0-9a-fA-F]{6}$/.test(w.color))throw new Error('배선 정보가 올바르지 않습니다.');
-    if(w.points!==undefined&&(!Array.isArray(w.points)||w.points.length>32||w.points.some(p=>!p||!Number.isFinite(p.x)||!Number.isFinite(p.y)||p.x<0||p.x>6000||p.y<0||p.y>6000)))throw new Error('배선 꺾임점은 작업 공간 내 32개까지 지원합니다.');
+    if(w.points!==undefined&&(!Array.isArray(w.points)||w.points.length>32||w.points.some(p=>!p||!Number.isFinite(p.x)||!Number.isFinite(p.y))))throw new Error('배선 꺾임점은 유효한 좌표로 32개까지 지원합니다.');
     wireIds.add(w.id);return {id:w.id,from:w.from,to:w.to,color:w.color,...(w.points?{points:w.points.map(p=>({x:p.x,y:p.y}))}:{})};
   });
   const project={format:data.format,version:2,name:data.name,code:data.code,components,wires};
@@ -71,7 +71,7 @@ export function validateProject(data){
     project.surfaces={};for(const key of ['board','breadboard'])if(data.surfaces[key]!==undefined){
       const source=data.surfaces[key];if(!source||typeof source!=='object'||Array.isArray(source))throw new Error('보드 크기 설정을 확인하세요.');
       const surface={};for(const field of ['scale','scaleX','scaleY'])if(source[field]!==undefined)surface[field]=validScale(source[field]);
-      for(const field of ['x','y'])if(source[field]!==undefined){if(!Number.isFinite(source[field])||source[field]<0||source[field]>6000)throw new Error('보드 위치를 확인하세요.');surface[field]=source[field];}
+      for(const field of ['x','y'])if(source[field]!==undefined){if(!Number.isFinite(source[field]))throw new Error('보드 위치를 확인하세요.');surface[field]=source[field];}
       project.surfaces[key]=surface;
     }
   }

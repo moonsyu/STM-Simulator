@@ -10,11 +10,11 @@ const API={HAL_GPIO_WritePin:'HAL_GPIO_WritePin(GPIOx, GPIO_Pin, PinState)',HAL_
 export function createCodeEditor({textarea,getFile,getFiles,onBreakpoint,onBreakpointsMoved,onPosition}){
   const wrapper=textarea.parentElement,host=document.createElement('div');host.id='monaco-host';wrapper.append(host);wrapper.classList.add('monaco-ready');
   monaco.editor.defineTheme('stm-light',{base:'vs',inherit:true,rules:[{token:'comment',foreground:'567B60'},{token:'keyword',foreground:'8755A1'},{token:'string',foreground:'A34D2F'},{token:'number',foreground:'246D90'}],colors:{'editor.background':'#FCFDFC','editor.foreground':'#263E34','editorLineNumber.foreground':'#718579','editor.lineHighlightBackground':'#EFF5F1','editor.selectionBackground':'#CBE8D9','editorCursor.foreground':'#166E4E','editorGutter.background':'#F5F8F6'}});
-  const editor=monaco.editor.create(host,{value:textarea.value,language:'cpp',theme:'stm-light',automaticLayout:true,editContext:false,fontSize:13,lineHeight:21,fontFamily:"Consolas, 'Malgun Gothic', monospace",minimap:{enabled:false},glyphMargin:true,scrollBeyondLastLine:false,tabSize:2,insertSpaces:true,wordWrap:'off',folding:true,bracketPairColorization:{enabled:true},padding:{top:9,bottom:9},fixedOverflowWidgets:true,ariaLabel:'C 소스 코드 편집기',readOnly:textarea.readOnly});
-  let preferredTabSize=2;
+  const editor=monaco.editor.create(host,{value:textarea.value,language:'cpp',theme:'stm-light',automaticLayout:true,editContext:false,fontSize:13,lineHeight:21,fontFamily:"Consolas, 'Malgun Gothic', monospace",minimap:{enabled:false},glyphMargin:true,scrollBeyondLastLine:false,tabSize:4,insertSpaces:true,wordWrap:'off',folding:true,bracketPairColorization:{enabled:true},padding:{top:9,bottom:9},fixedOverflowWidgets:true,ariaLabel:'C 소스 코드 편집기',readOnly:textarea.readOnly});
+  let preferredTabSize=4;
   function preferences(value){
     preferredTabSize=value.tabSize;
-    const theme=selectedTheme(value),c=theme.colors;
+    const theme=selectedTheme(value);host.style.colorScheme=theme.base;
     monaco.editor.defineTheme('stm-custom',editorTheme(theme));
     monaco.editor.setTheme('stm-custom');editor.updateOptions({fontSize:value.fontSize,fontFamily:value.fontFamily,lineHeight:value.lineHeight,tabSize:value.tabSize,wordWrap:value.wordWrap?'on':'off',lineNumbers:value.lineNumbers?'on':'off',minimap:{enabled:value.minimap},bracketPairColorization:{enabled:value.bracketColors},'semanticHighlighting.enabled':true});
     for(const model of monaco.editor.getModels())model.updateOptions({tabSize:value.tabSize,insertSpaces:true});

@@ -21,8 +21,8 @@ async function main(){
  try{
   page=await app.firstWindow();page.on('pageerror',e=>errors.push(e.message));await page.waitForSelector('.monaco-editor');await app.evaluate(({BrowserWindow})=>{const w=BrowserWindow.getAllWindows()[0];w.setContentSize(1540,1020);w.showInactive();});
   const scan=async(name,shot=false)=>{await page.waitForTimeout(50);const result=await page.evaluate(inspectContrast);results.push({name,...result});if(shot&&!process.argv.includes('--record-before'))await page.screenshot({path:path.join(out,'contrast-'+name+'.png')});console.log(name+': '+result.checked+' text checks, '+result.findings.length+' low contrast');};
-  for(const theme of ['jellybean','stm-light']){
-   await page.click('[data-tab="settings"]');await page.selectOption('#pref-theme',theme);await scan(theme+'-settings');await page.click('[data-tab="code"]');
+  for(const theme of ['jellybean','github-light']){
+   await page.click('[data-tab="settings"]');await page.selectOption('#pref-appearance',theme==='jellybean'?'dark':'light');await page.selectOption('#pref-theme',theme);await scan(theme+'-settings');await page.click('[data-tab="code"]');
    await page.locator('#open').hover();await scan(theme+'-toolbar-hover',true);await page.mouse.move(900,40);
    await page.locator('.board-card').hover();await scan(theme+'-board-card-hover');
    await page.fill('#pin-search','PA5');await page.locator('#pin-results button').first().hover();await scan(theme+'-pin-results-hover');await page.locator('#pin-results button').first().click();await scan(theme+'-pin-results-selected');await page.fill('#pin-search','');
