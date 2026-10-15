@@ -1,8 +1,8 @@
 # STM Simulator — 개발 인계
 
-현재 공개 버전: **0.21.2**. 정리일: **2026-10-15**. NUCLEO-F446RE와 빵판을 연결하고 GPIO 스케치 또는 지원 HAL C 소스를 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+현재 공개 버전: **0.22.0**. 정리일: **2026-10-15**. NUCLEO-F446RE와 빵판을 연결하고 GPIO 스케치 또는 지원 HAL C 소스를 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
 
-## 0.22.0 화면 테마 분리와 자유 배치 (게시 검증 진행 중)
+## 0.22.0 화면 테마 분리와 자유 배치 (공개 완료)
 
 - 화면은 `ide-preferences.js`의 System/Dark/White, 코드는 모드별 Jellybeans/GitHub Light Default로 분리했습니다. `ide-settings-ui.js` 상단 토글·System 복귀·설정 선택, OS media 변경을 반영합니다. colorscheme 등록/수정은 `--code-*`와 Monaco에만 영향을 줍니다.
 - GitHub Theme 6.3.5 원본/해시/MIT/선정 근거는 `src/themes/github-light/`에 있습니다. 빌드 시 두 원본 테마를 해시 검증 후 변환합니다. 기본 Tab은 스페이스 4칸, 구버전 환경설정은 v2 스키마로 호환 이전합니다.
@@ -11,6 +11,8 @@
 - `project.js`, `resize.js`, `circuit-edit.js`, `wire-draft.js` 좌표 상한 제거. 음수·6000 초과 배치/저장, 무제한 줌아웃·팬, 전체 보기 경유점 포함. 부품 수/배선 수/배율의 수치 검증은 유지합니다.
 - `tests/appearance-canvas.test.js`와 `scripts/appearance-canvas-ui.cjs`: 테마 분리·시스템 변경·4칸 입력·실제 드래그·취소·Undo·재시작·우클릭·먼 좌표 배치 검사를 추가했습니다. 기존 테마/미리보기/대비 검사도 화면 테마를 명시하도록 변경했습니다.
 - 기존 비장치 감사 4건은 이번 범위에서 수정하지 않았으며 `docs/NON-DEVICE-AUDIT.md`에 유지합니다. 코드 위치는 사용자 응답에 나열하지 않습니다.
+
+- [공개 v0.22.0](https://github.com/moonsyu/STM-Simulator/releases/tag/v0.22.0), 빌드/태그 `3e9b3e40059b6ebf98a2f7f7667d2e1e1db9ba48`, [전체 Windows CI](https://github.com/moonsyu/STM-Simulator/actions/runs/38709544798) 성공. 모델 273개·52상태 대비·113종 크기·카탈로그 UI를 통과했고 공개 EXE/ZIP 재다운로드 및 실제 공개 EXE의 새 기능/12상태 대비까지 확인했습니다. 최신 `outputs/artifact/STM-Simulator.exe`와 `docs/VERIFICATION.md`를 확인하세요.
 
 ## 0.21.2 검색 카드 강조 상태 보완
 
