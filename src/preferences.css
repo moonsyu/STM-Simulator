@@ -32,7 +32,7 @@
 :root[data-ide-theme] .pin-tile.reserved{background:var(--ide-background);color:var(--ide-muted)}
 :root[data-ide-theme] .pin-tile.selected{outline-color:var(--ide-accent)}
 :root[data-ide-theme] :is(.topbar .quiet,.dock-heading button,#file-tree button,.part-card,.board-card,.board-option,.pin-tile,#pin-results button,.code-search-row button,.code-replace-actions button,.wave-toolbar button,.serial-input-row button,.native-terminal-tools button):not(:disabled):hover{background:var(--ide-selection);color:var(--ide-foreground);filter:none}
-:root[data-ide-theme] :is(.board-option:hover strong,.board-option:hover small,.board-option:hover .board-option-action,.part-card:hover strong,.part-card:hover small){color:var(--ide-foreground)}
+:root[data-ide-theme] :is(#part-list .part-card,#board-results .board-option,.board-card):is(:hover,.active,.selected) :is(strong,small,b),:root[data-ide-theme] #pin-results button:is(:hover,.selected) span{color:var(--ide-foreground)}
 :root[data-ide-theme] #code-replace-all{background:var(--ide-accent);color:var(--ide-background);border-color:var(--ide-accent)}
 :root[data-ide-theme] :is(input,textarea)::placeholder{color:var(--ide-muted);opacity:1}
 /* Disabled controls stay readable; a dashed border and cursor identify them. */
