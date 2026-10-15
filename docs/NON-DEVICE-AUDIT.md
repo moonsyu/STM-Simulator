@@ -66,6 +66,7 @@ node scripts/audits/non-device-repro.cjs
 - 같은 원인을 가진 찾기/바꾸기, 터미널 버튼/입력, 보드 선택, 검색 안내/placeholder, 디버그 라벨/상태, 도움말과 비활성 컨트롤도 보완했습니다. 선택/hover/예약 핀 상태, 고정 footer의 글자·배경을 쌍으로 테마 변수에 연결했습니다. 비활성 상태는 전체 opacity 대신 읽을 수 있는 보조 글자색과 점선 테두리로 표시합니다. 비활성 동작 자체는 유지합니다.
 - 실제 Electron의 Jellybeans/STM Light 38개 화면 상태에서 HTML 텍스트와 placeholder의 계산된 대비를 측정했습니다. 기준 4.5:1 미만 0건. 작은 창, Pinout 활성/선택/hover, 코드 검색, 빌드 오류, 설정/프로젝트/업데이트/도움말/보드 선택 창 포함입니다. 사용자 colorscheme의 소스 토큰과 장치 SVG 도색은 검사/변경 대상에서 분리합니다.
 - 회귀 검사: `npm run test:contrast:ui` / `scripts/ui-contrast-check.cjs`, 결과 `work/test-results/ui-contrast.json`. 기능 CI에 추가했습니다. `--record-before`는 수정 전 결함 기록용입니다. 원래 감사의 저장/터미널 문맥/종료 4건은 여전히 미수정입니다.
+- 0.21.2 보완: 0.21.1 공개 EXE에서 부품 카드 hover 설명이 4.31:1로 남은 것을 발견했습니다. `src/preferences.css`의 기존 `:is()` 그룹에 포함된 ID가 hover 글자색보다 우선순위를 높인 원인입니다. 부품/보드 카드와 핀 검색 결과의 강조 보조 글자에 올바른 선택자 우선순위를 부여했습니다. F4 아이콘은 고유 쌍을 유지합니다. 확대 미리보기·키보드 초점·배치 모드·보드 카드/검색·핀 검색 hover/선택을 추가한 52개 상태가 통과했습니다.
 
 | 영역 | 실행 검사와 결과 |
 | --- | --- |
