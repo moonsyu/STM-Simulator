@@ -1,3 +1,18 @@
+# 검증 기록 — 0.23.1 배포 전 검사
+
+검증일: 2026-10-16. 작업 경로 `D:\codex\project\STM-Simulator`.
+
+- 사용자 자동 저장 데이터의 읽기 전용 사본에서 0.23.0 WritePin 적용 후 main STEP이 비어 있음을 확인. 최신 사본에는 LED 캐소드의 GND 선도 없음. GND 선이 사라진 조작은 확인하지 못함.
+- 수정 후 모델 검사 **287개 통과**. 새 회귀 검사에서 main의 SET 점등·RESET 소등, 기존 초기화/사용자 코드/함수 목록/파일 보존, 빵판 GND 누락 복구, PA5 점유 시 핀 재배정과 카탈로그 LED를 확인.
+- 실제 저장 사본 두 개에 재적용해 정상 선을 그대로 유지하고 최신 사본의 GND 1개만 추가. LED 모의 전류 **3.9267 mA**, 점등 확인. 사본으로 검증했으며 현재 열린 사용자 회로는 수정하지 않음.
+- 두 사본의 적용 결과를 실제 ST HAL/CMSIS와 ARM GCC로 컴파일·링크. 실물 보드 실행 검사는 아님.
+- `node scripts/docs-writepin-check.cjs`: 분리된 숨긴 Electron 프로필에서 실제 Docs 카드 버튼, main 삽입, 실행 로그의 점등/소등, 재적용 GND 복구, 이벤트-회로 해시 일치 통과. 사용자 앱 프로필에 접근하지 않음.
+- 로컬 진단 단위 검사: 파일 회전, 잘못된/과대 입력 거부, 디스크 실패 복구, 기록 순서와 스냅샷 시점, 웹 환경·저장 실패 시 앱 동작 유지.
+- 증거: ignored `work/diagnostics/{all-tests.log,user-project-verification.json,arm-verification.json}`, `work/test-results/docs-writepin-check.json`.
+- 전체 Windows CI 및 공개 Release 자산: 게시 후 별도로 검증 예정.
+
+---
+
 # 검증 기록 — 0.23.0 공개 릴리스
 
 검증일: 2026-10-16. Windows x64. 새 회로는 빈 공간으로 시작하고 검색으로 보드 한 개와 빵판 여러 개를 추가합니다. 코드 실행과 Pinout은 기존 단일 보드 방식입니다.
