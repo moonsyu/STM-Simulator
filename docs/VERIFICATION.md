@@ -1,11 +1,25 @@
-# 0.23.0 검증 진행 기록
+# 검증 기록 — 0.23.0 공개 릴리스
 
-2026-10-16. 빈 시작 화면, 단일 보드/여러 빵판 검색 추가, main 내부 Docs 예제와 기존 초기화 병합, 배선 20색을 검사합니다. 아래 v0.22.0의 공개 배포 기록과는 구분합니다.
+검증일: 2026-10-16. Windows x64. 새 회로는 빈 공간으로 시작하고 검색으로 보드 한 개와 빵판 여러 개를 추가합니다. 코드 실행과 Pinout은 기존 단일 보드 방식입니다.
 
-- `tests/empty-workspace-inline.test.js`: 빈 접점, 구버전 저장 호환, 모든 검색 장치와 HAL 함수별 적용/미리보기, 추가 함수/파일 없음, 재적용, 기존 GPIO 설정 보존, UART 폴링 에코, C 전개 제어 흐름과 구버전 콜백 정리.
-- `scripts/empty-workspace-ui.cjs`: 실제 검색/클릭으로 보드 1개·빵판 여러 개, 20색 재색칠, 삭제/되돌리기/재열기, Docs 적용 및 LCD 실행, 핀 선택 후 빈 프로젝트 생성.
-- ARM 검사: `scripts/device-docs-arm-check.cjs`로 실제 ST HAL/CMSIS 컴파일·링크. 실물 보드 검증은 아닙니다.
-- 모델 검사 280개, 114개 장치의 HAL 함수 카드 977개 적용·미리보기, 장치 HAL/레지스터 예제 381개 ARM 컴파일·링크를 통과했습니다. CI, 공개 파일 해시와 EXE 실행 검증은 Release 게시 확인 후 기록합니다.
+## 게시와 공개 실행 파일
+
+- [Release](https://github.com/moonsyu/STM-Simulator/releases/tag/v0.23.0) · [전체 Windows CI](https://github.com/moonsyu/STM-Simulator/actions/runs/38850545260) 성공. 검증 시 GitHub latest는 v0.23.0입니다.
+- 빌드 커밋과 공개 태그: `81fe66f6753a25221b05dba91cc711d02d49af2f`. 작성자·커미터·푸시/검증 인증은 `moonsyu`입니다.
+- `STM-Simulator.exe`, `STM-Simulator-0.23.0-Windows-x64.zip`, `SHA256.txt`, `BUILD-INFO.json`, `update-manifest.json` 다섯 자산을 게시했습니다.
+- 공개 EXE/ZIP을 비인증 다운로드하여 크기·SHA-256·ZIP 내부 EXE·두 JSON·태그/빌드 커밋·커밋된 README/HAL/업데이트 문서를 대조했습니다. 로컬 `outputs/artifact/`도 같은 공개 ZIP으로 갱신했습니다.
+- EXE 102,747,334 bytes. SHA-256 `16c6d108b794f7a856b4889ffd77cb33426c295c962d28ae9de0699cbf925ab4`.
+- ZIP SHA-256 `44382be573c940c0a211db705692fb14979c33ce89d4a96de4c2d8623e1bdb14`.
+- 공개 EXE를 별도 임시 프로필에서 직접 실행하여 빈 화면, 검색 보드 중복 방지, 빵판 여러 개, 기존 Pinout, 배선 20색, 삭제/되돌리기/재열기, main 내부 Docs 적용 및 LCD 실행을 확인했습니다. Dark/White 12개 화면 상태에서 글자 대비 문제는 없었습니다.
+- 증거: `work/test-results/release-0.23.0-proof.json`, `work/test-results/public-023/public-exe-proof.json`, `work/test-results/release-0.23.0-ci.json`.
+
+## 기능 및 회귀 검사
+
+- 모델 검사 **280개** 통과. **114개 검색 항목의 HAL 함수 카드 977개** 적용·미리보기에서 새 함수/파일 없음, 재적용, 기존 GPIO 설정과 사용자 main 코드 보존을 검사했습니다.
+- 실제 ST HAL/CMSIS를 사용하는 **381개 HAL/레지스터 예제** ARM 컴파일·링크 통과. 마지막 초기화/이전 코드 호환 변경 후 UART·LCD·SHT31·SD 및 두 UART 사례 **16개**를 추가 컴파일·링크했습니다. 실물 보드 실행 검증은 아닙니다.
+- 모든 113종 부품과 보드/기본 빵판 크기 조절, 114개 검색 미리보기, Dark/White 글자 대비, 시스템 테마, 이동/무제한 캔버스, colorscheme 등록, IDE 편집/빌드/실행, HAL 예제, 회로 편집, Docs, USART2 터미널, 자동 업데이트 회귀 검사를 통과했습니다.
+- 새 회귀 검사: `tests/empty-workspace-inline.test.js`, `scripts/empty-workspace-ui.cjs`. UI 검사에는 핀 선택 후 새 프로젝트 생성도 포함됩니다.
+- Docs는 main에 넣을 문장만 표시합니다. 기존 MX 초기화 함수가 있으면 보완하고 없으면 main에 초기화 본문을 넣습니다. UART/EXTI Docs는 새 콜백 없이 폴링하며, 기존 별도 HAL 예제 메뉴의 인터럽트 예제는 유지합니다.
 
 ---
 
