@@ -9,14 +9,15 @@ import {PINS,boardPin} from '../../src/pins.js';
 import {cFunctions} from '../../src/c-source-edit.js';
 import {apply,execute,fixture,referenceFor} from './runtime.mjs';
 import {assess} from './oracles.mjs';
+import paths from './paths.cjs';
 
-const root=new URL('../../',import.meta.url),out=new URL('work/test-results/docs-audit/',root);
+const {out}=paths;
 const hash=v=>createHash('sha256').update(JSON.stringify(v)).digest('hex');
 function netGroups(sample,binding){return expectedNets(sample).map(net=>[...new Set(net.map(id=>{const pin=PINS.find(p=>p.id===id);if(pin)return boardPin(binding.pins[pin.signal]||pin.signal);const [,part,key]=id.split(':');return `part:${binding.parts[part]}:${key}`;}))]);}
 function topology(project,groups){const uf=wiringTopology(project);return {connected:groups.every(g=>g.every(id=>uf.find(id)===uf.find(g[0]))),isolated:groups.every((g,i)=>groups.slice(i+1).every(other=>uf.find(other[0])!==uf.find(g[0])))};}
 function structural(original,p){return {userCodePreserved:p.code.includes('int auditUserKeep(void) { return 42; }'),noNewFiles:JSON.stringify(p.firmware.files)===JSON.stringify(original.firmware.files),noNewFunctions:JSON.stringify(cFunctions(p.code).map(f=>f.name).sort())===JSON.stringify(cFunctions(original.code).map(f=>f.name).sort())};}
 async function core(type){
- const {project:original,target}=fixture(type),a=apply(type),docs=deviceDocs(type),groups=netGroups(docs.sample,a.binding),end=/dht/.test(type)?5500:3500;
+ const {project:original,target}=fixture(type),a=apply(type),docs=deviceDocs(type),groups=netGroups(docs.sample,a.binding),end=/dht|ds18b20/.test(type)?5500:3500;
  const execution=execute(a.project,{end}),assessment=assess(type,execution),nets=topology(a.project,groups),structure=structural(original,a.project);
  const repeat=applyDeviceExample(a.project,target),idempotent=hash(repeat.project)===hash(a.project),removed=[];
  for(const wire of a.project.wires){const p=structuredClone(a.project);p.wires=p.wires.filter(w=>w.id!==wire.id);try{const fixed=applyDeviceExample(p,target);removed.push({wire:wire.id,...topology(fixed.project,groups)});}catch(e){removed.push({wire:wire.id,error:e.message});}}

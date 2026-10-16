@@ -31,9 +31,8 @@ function compact(value,depth=0){
  }
  return Object.fromEntries(Object.entries(value).filter(([k])=>!['queue','ptr','init'].includes(k)).map(([k,v])=>[k,compact(v,depth+1)]));
 }
-function stimulate(p,s,phase){
- for(const part of p.components){const f=family(part.type),next={};
-  if(f==='button')s.pressed[part.id]=phase===1;
+export function inputChanges(type,phase){
+  const f=family(type),next={};
   if(f==='potentiometer')next.position=phase===1?20:80;
   if(f==='ldr')next.lux=phase===1?1:100;
   if(['ntc','temperature','sht31','dht11','dht22'].includes(f))next.temperature=phase===1?10:45;
@@ -44,7 +43,12 @@ function stimulate(p,s,phase){
   if(f==='mpu6050')Object.assign(next,{ax:phase===1?-.5:.75,gz:phase===1?90:-45});
   if(f==='slide')next.position=phase===1?1:0;
   if(f==='encoder'){next.position=phase===1?3:1;next.switch=phase===1?1:0;}
-  Object.assign(part,next);
+  return next;
+}
+function stimulate(p,s,phase){
+ for(const part of p.components){
+  if(family(part.type)==='button')s.pressed[part.id]=phase===1;
+  Object.assign(part,inputChanges(part.type,phase));
  }
  s.setPressed(s.pressed);s.changed();
 }

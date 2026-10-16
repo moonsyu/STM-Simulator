@@ -1,0 +1,1744 @@
+{
+  "version": "0.23.2",
+  "stage": "source",
+  "passed": true,
+  "problems": [],
+  "devices": 114,
+  "behaviorPassed": 114,
+  "repairPassed": 114,
+  "wireRecoveryChecks": 701,
+  "halCards": 979,
+  "apiExercised": 979,
+  "baremetalCards": 274,
+  "baremetalRuntimeVerified": 0,
+  "migrationPassed": 10,
+  "packagedRuns": 0,
+  "diagnostics": [
+    {
+      "type": "tft",
+      "characters": 249305,
+      "savedCharacters": 1129,
+      "accepted": true,
+      "ram": {
+        "length": 20480,
+        "nonzero": 20480,
+        "sha256": "d0dfca169874816302f42080ed12cf9c5c0fde81bb6651e35ad85b3993b03d59",
+        "first": [
+          63488,
+          63488,
+          63488,
+          63488,
+          63488,
+          63488,
+          63488,
+          63488,
+          63488,
+          63488,
+          63488,
+          63488,
+          63488,
+          63488,
+          63488,
+          63488
+        ],
+        "last": [
+          31,
+          31,
+          31,
+          31
+        ]
+      }
+    },
+    {
+      "type": "ref_st7735_8",
+      "characters": 249305,
+      "savedCharacters": 1129,
+      "accepted": true,
+      "ram": {
+        "length": 20480,
+        "nonzero": 20480,
+        "sha256": "d0dfca169874816302f42080ed12cf9c5c0fde81bb6651e35ad85b3993b03d59",
+        "first": [
+          63488,
+          63488,
+          63488,
+          63488,
+          63488,
+          63488,
+          63488,
+          63488,
+          63488,
+          63488,
+          63488,
+          63488,
+          63488,
+          63488,
+          63488,
+          63488
+        ],
+        "last": [
+          31,
+          31,
+          31,
+          31
+        ]
+      }
+    }
+  ],
+  "rows": [
+    {
+      "type": "board",
+      "name": "NUCLEO-F446RE 보드",
+      "behavior": true,
+      "repair": true,
+      "structure": true,
+      "wireChecks": 3,
+      "wireFailures": [],
+      "observed": [
+        "HAL ready",
+        "PA5=1",
+        "PA5=0"
+      ]
+    },
+    {
+      "type": "resistor",
+      "name": "저항",
+      "behavior": true,
+      "repair": true,
+      "structure": true,
+      "wireChecks": 4,
+      "wireFailures": [],
+      "observed": [
+        "HAL ready",
+        "3964"
+      ]
+    },
+    {
+      "type": "led",
+      "name": "LED",
+      "behavior": true,
+      "repair": true,
+      "structure": true,
+      "wireChecks": 3,
+      "wireFailures": [],
+      "observed": [
+        "HAL ready",
+        "PA5=1",
+        "PA5=0"
+      ]
+    },
+    {
+      "type": "button",
+      "name": "푸시 버튼",
+      "behavior": true,
+      "repair": true,
+      "structure": true,
+      "wireChecks": 5,
+      "wireFailures": [],
+      "observed": [
+        "HAL ready",
+        "button=0",
+        "button=1"
+      ]
+    },
+    {
+      "type": "lcd",
+      "name": "LCD 1602",
+      "behavior": true,
+      "repair": true,
+      "structure": true,
+      "wireChecks": 13,
+      "wireFailures": [],
+      "observed": [
+        "HAL ready"
+      ]
+    },
+    {
+      "type": "breadboard",
+      "name": "빵판",
+      "behavior": true,
+      "repair": true,
+      "structure": true,
+      "wireChecks": 2,
+      "wireFailures": [],
+      "observed": [
+        "HAL ready",
+        "PA5=1",
+        "PA5=0"
+      ]
+    },
+    {
+      "type": "ref_resistor_axial_2",
+      "name": "축형 저항 2핀",
+      "behavior": true,
+      "repair": true,
+      "structure": true,
+      "wireChecks": 4,
+      "wireFailures": [],
+      "observed": [
+        "HAL ready",
+        "3964"
+      ]
+    },
+    {
+      "type": "ref_led_tht_2",
+      "name": "5mm 단색 LED 2핀",
+      "behavior": true,
+      "repair": true,
+      "structure": true,
+      "wireChecks": 3,
+      "wireFailures": [],
+      "observed": [
+        "HAL ready",
+        "PA5=1",
+        "PA5=0"
+      ]
+    },
+    {
+      "type": "ref_button_2",
+      "name": "2핀 순간 버튼",
+      "behavior": true,
+      "repair": true,
+      "structure": true,
+      "wireChecks": 5,
+      "wireFailures": [],
+      "observed": [
+        "HAL ready",
+        "button=0",
+        "button=1"
+      ]
+    },
+    {
+      "type": "ref_button_4",
+      "name": "4핀 택트 버튼",
+      "behavior": true,
+      "repair": true,
+      "structure": true,
+      "wireChecks": 5,
+      "wireFailures": [],
+      "observed": [
+        "HAL ready",
+        "button=0",
+        "button=1"
+      ]
+    },
+    {
+      "type": "ref_button_module_3",
+      "name": "KY-004 버튼 모듈 3핀",
+      "behavior": true,
+      "repair": true,
+      "structure": true,
+      "wireChecks": 6,
+      "wireFailures": [],
+      "observed": [
+        "HAL ready",
+        "button=0",
+        "button=1"
+      ]
+    },
+    {
+      "type": "ref_lcd_parallel_16",
+      "name": "LCD 1602 병렬형 16핀",
+      "behavior": true,
+      "repair": true,
+      "structure": true,
+      "wireChecks": 13,
+      "wireFailures": [],
+      "observed": [
+        "HAL ready"
+      ]
+    },
+    {
+      "type": "ref_lcd_i2c_4",
+      "name": "LCD1602 I²C 모듈 4핀",
+      "behavior": true,
+      "repair": true,
+      "structure": true,
+      "wireChecks": 4,
+      "wireFailures": [],
+      "observed": [
+        "HAL ready"
+      ]
+    },
+    {
+      "type": "ref_ldr_bare_2",
+      "name": "CdS 광저항 소자 2핀",
+      "behavior": true,
+      "repair": true,
+      "structure": true,
+      "wireChecks": 4,
+      "wireFailures": [],
+      "observed": [
+        "HAL ready",
+        "LDR ADC=3414 voltage=2.751 V",
+        "LDR ADC=681 voltage=0.549 V"
+      ]
+    },
+    {
+      "type": "ref_ldr_module_3",
+      "name": "KY-018 광저항 분압 모듈 3핀",
+      "behavior": true,
+      "repair": true,
+      "structure": true,
+      "wireChecks": 3,
+      "wireFailures": [],
+      "observed": [
+        "HAL ready",
+        "ADC=3414 voltage=2.751 V",
+        "ADC=681 voltage=0.549 V"
+      ]
+    },
+    {
+      "type": "ref_ldr_comparator_4",
+      "name": "광저항 AO/DO 비교기 모듈 4핀",
+      "behavior": true,
+      "repair": true,
+      "structure": true,
+      "wireChecks": 4,
+      "wireFailures": [],
+      "observed": [
+        "HAL ready",
+        "ADC=3414 voltage=2.751 V",
+        "threshold=0",
+        "ADC=681 voltage=0.549 V"
+      ]
+    },
+    {
+      "type": "ref_ntc_bare_2",
+      "name": "NTC 서미스터 2핀",
+      "behavior": true,
+      "repair": true,
+      "structure": true,
+      "wireChecks": 4,
+      "wireFailures": [],
+      "observed": [
+        "HAL ready",
+        "NTC=25.0 C R=9995 ohm",
+        "NTC=10.0 C R=20177 ohm",
+        "NTC=45.0 C R=4348 ohm"
+      ]
+    },
+    {
+      "type": "ref_ntc_module_3",
+      "name": "KY-013 NTC 분압 모듈 3핀",
+      "behavior": true,
+      "repair": true,
+      "structure": true,
+      "wireChecks": 3,
+      "wireFailures": [],
+      "observed": [
+        "HAL ready",
+        "ADC=2047 voltage=1.650 V",
+        "ADC=1357 voltage=1.094 V",
+        "ADC=2854 voltage=2.300 V"
+      ]
+    },
+    {
+      "type": "ref_sht31_grove_4",
+      "name": "Grove SHT31 4핀",
+      "behavior": true,
+      "repair": true,
+      "structure": true,
+      "wireChecks": 4,
+      "wireFailures": [],
+      "observed": [
+        "HAL ready",
+        "SHT31=25.0 C RH=50.0 %",
+        "SHT31=10.0 C RH=30.0 %",
+        "SHT31=45.0 C RH=70.0 %"
+      ]
+    },
+    {
+      "type": "ref_sht31_breakout_7",
+      "name": "Adafruit SHT31-D 헤더 7핀",
+      "behavior": true,
+      "repair": true,
+      "structure": true,
+      "wireChecks": 6,
+      "wireFailures": [],
+      "observed": [
+        "HAL ready",
+        "SHT31=25.0 C RH=50.0 %",
+        "SHT31=10.0 C RH=30.0 %",
+        "SHT31=45.0 C RH=70.0 %"
+      ]
+    },
+    {
+      "type": "ref_mpu6050_8",
+      "name": "SEN-MPU6050 8핀",
+      "behavior": true,
+      "repair": true,
+      "structure": true,
+      "wireChecks": 5,
+      "wireFailures": [],
+      "observed": [
+        "MPU6050 status=0 WHO_AM_I=0x68",
+        "HAL ready",
+        "MPU6050 g=(0.00,0.00,1.00) dps=(0.0,0.0,0.0)",
+        "MPU6050 g=(-0.50,0.00,1.00) dps=(0.0,0.0,90.0)",
+        "MPU6050 g=(0.75,0.00,1.00) dps=(0.0,0.0,-45.0)"
+      ]
+    },
+    {
+      "type": "ref_pir_3",
+      "name": "PIR 감지 모듈 3핀",
+      "behavior": true,
+      "repair": true,
+      "structure": true,
+      "wireChecks": 3,
+      "wireFailures": [],
+      "observed": [
+        "PIR: change motion in part properties",
+        "HAL ready",
+        "PIR EXTI motion=0",
+        "PIR EXTI motion=1"
+      ]
+    },
+    {
+      "type": "ref_oled_i2c_4",
+      "name": "SSD1306 I²C OLED 4핀",
+      "behavior": true,
+      "repair": true,
+      "structure": true,
+      "wireChecks": 4,
+      "wireFailures": [],
+      "observed": [
+        "OLED init status=0",
+        "HAL ready",
+        "OLED frame=0 transfer status=0",
+        "OLED frame=16 transfer status=0",
+        "OLED frame=32 transfer status=0",
+        "OLED frame=48 transfer status=0",
+        "OLED frame=64 transfer status=0",
+        "OLED frame=80 transfer status=0",
+        "OLED frame=96 transfer status=0",
+        "OLED frame=112 transfer status=0"
+      ]
+    },
+    {
+      "type": "ref_oled_configurable_7",
+      "name": "Waveshare 0.96 OLED 헤더 7핀",
+      "behavior": true,
+      "repair": true,
+      "structure": true,
+      "wireChecks": 7,
+      "wireFailures": [],
+      "observed": [
+        "HAL ready"
+      ]
+    },
+    {
+      "type": "ref_oled_configurable_8",
+      "name": "Adafruit 구형 128×64 OLED 8핀",
+      "behavior": true,
+      "repair": true,
+      "structure": true,
+      "wireChecks": 7,
+      "wireFailures": [],
+      "observed": [
+        "HAL ready"
+      ]
+    },
+    {
+      "type": "ref_st7735_8",
+      "name": "ST7735S 1.8인치 TFT 8핀",
+      "behavior": true,
+      "repair": true,
+      "structure": true,
+      "wireChecks": 8,
+      "wireFailures": [],
+      "observed": [
+        "TFT: initializing RGB565 display",
+        "TFT: RGB565 color bars sent (CS/DC/RST and power required)",
+        "HAL ready"
+      ]
+    },
+    {
+      "type": "ref_matrix_10",
+      "name": "MAX7219 8×8 매트릭스 입력5+출력5",
+      "behavior": true,
+      "repair": true,
+      "structure": true,
+      "wireChecks": 5,
+      "wireFailures": [],
+      "observed": [
+        "HAL ready",
+        "MAX7219 frame sent=0",
+        "MAX7219 frame sent=1",
+        "MAX7219 frame sent=2",
+        "MAX7219 frame sent=3",
+        "MAX7219 frame sent=4",
+        "MAX7219 frame sent=5",
+        "MAX7219 frame sent=6",
+        "MAX7219 frame sent=7"
+      ]
+    },
+    {
+      "type": "ref_servo_3",
+      "name": "RC 마이크로 서보 3선",
+      "behavior": true,
+      "repair": true,
+      "structure": true,
+      "wireChecks": 3,
+      "wireFailures": [],
+      "observed": [
+        "HAL ready",
+        "Servo command=0 deg pulse=1000 us",
+        "Servo command=90 deg pulse=1500 us",
+        "Servo command=180 deg pulse=2000 us"
+      ]
+    },
+    {
+      "type": "ref_servo_feedback_4",
+      "name": "위치 피드백 RC 서보 4선",
+      "behavior": true,
+      "repair": true,
+      "structure": true,
+      "wireChecks": 4,
+      "wireFailures": [],
+      "observed": [
+        "HAL ready",
+        "Feedback=1.65 V",
+        "Servo command=0 deg pulse=1000 us",
+        "Feedback=0.00 V",
+        "Servo command=90 deg pulse=1500 us",
+        "Servo command=180 deg pulse=2000 us"
+      ]
+    },
+    {
+      "type": "ref_dc_motor_2",
+      "name": "브러시 DC 모터 2단자",
+      "behavior": true,
+      "repair": true,
+      "structure": true,
+      "wireChecks": 14,
+      "wireFailures": [],
+      "observed": [
+        "HAL ready",
+        "L298N: A forward 75%, B reverse 40% (1 kHz)",
+        "L298N: coast before direction change",
+        "L298N: A reverse 50%, B forward 100%"
+      ]
+    },
+    {
+      "type": "ref_motor_driver_hat",
+      "name": "PCA9685 / TB6612 모터 Driver HAT",
+      "behavior": true,
+      "repair": true,
+      "structure": true,
+      "wireChecks": 8,
+      "wireFailures": [],
+      "observed": [
+        "HAL ready"
+      ]
+    },
+    {
+      "type": "ref_stepper_bipolar_4",
+      "name": "바이폴라 스테퍼 4선",
+      "behavior": true,
+      "repair": true,
+      "structure": true,
+      "wireChecks": 14,
+      "wireFailures": [],
+      "observed": [
+        "HAL ready"
+      ]
+    },
+    {
+      "type": "ref_stepper_unipolar_5",
+      "name": "28BYJ-48 모터 5선",
+      "behavior": true,
+      "repair": true,
+      "structure": true,
+      "wireChecks": 11,
+      "wireFailures": [],
+      "observed": [
+        "HAL ready"
+      ]
+    },
+    {
+      "type": "ref_stepper_driver_11",
+      "name": "ULN2003 모듈 제어4+전원2+모터5",
+      "behavior": true,
+      "repair": true,
+      "structure": true,
+      "wireChecks": 11,
+      "wireFailures": [],
+      "observed": [
+        "HAL ready"
+      ]
+    },
+    {
+      "type": "ref_relay_module_6",
+      "name": "릴레이 모듈 제어3+접점3",
+      "behavior": true,
+      "repair": true,
+      "structure": true,
+      "wireChecks": 7,
+      "wireFailures": [],
+      "observed": [
+        "HAL ready",
+        "Relay command=1 (NO powers LED)",
+        "Relay command=0 (NO powers LED)"
+      ]
+    },
+    {
+      "type": "ref_joystick_module_5",
+      "name": "KY-023 조이스틱 5핀",
+      "behavior": true,
+      "repair": true,
+      "structure": true,
+      "wireChecks": 5,
+      "wireFailures": [],
+      "observed": [
+        "HAL ready",
+        "Joystick X=2047 Y=2047 pressed=0",
+        "Joystick X=1024 Y=3071 pressed=1",
+        "Joystick X=3071 Y=1024 pressed=0"
+      ]
+    },
+    {
+      "type": "ref_encoder_bare_5",
+      "name": "누름 기능 로터리 인코더 소자 5접점",
+      "behavior": true,
+      "repair": true,
+      "structure": true,
+      "wireChecks": 5,
+      "wireFailures": [],
+      "observed": [
+        "HAL ready",
+        "A/B=1 button=0",
+        "A/B=0 button=0",
+        "A/B=2 button=0",
+        "A/B=3 button=0",
+        "A/B=2 button=1",
+        "A/B=0 button=1",
+        "A/B=1 button=1",
+        "A/B=3 button=1"
+      ]
+    },
+    {
+      "type": "ref_encoder_module_5",
+      "name": "KY-040 인코더 모듈 5핀",
+      "behavior": true,
+      "repair": true,
+      "structure": true,
+      "wireChecks": 5,
+      "wireFailures": [],
+      "observed": [
+        "HAL ready",
+        "TIM4 encoder: count=0 edges=0 pressed=0",
+        "TIM4 encoder: count=1 edges=5 pressed=1",
+        "TIM4 encoder: count=3 edges=12 pressed=1",
+        "TIM4 encoder: count=1 edges=6 pressed=0",
+        "TIM4 encoder: count=1 edges=4 pressed=0"
+      ]
+    },
+    {
+      "type": "ref_l298n_module_13",
+      "name": "L298N 모듈 주요 외부 단자 13개",
+      "behavior": true,
+      "repair": true,
+      "structure": true,
+      "wireChecks": 14,
+      "wireFailures": [],
+      "observed": [
+        "HAL ready",
+        "L298N: A forward 75%, B reverse 40% (1 kHz)",
+        "L298N: coast before direction change",
+        "L298N: A reverse 50%, B forward 100%"
+      ]
+    },
+    {
+      "type": "ref_dc_supply_2",
+      "name": "배터리 팩 외부 전원 2선",
+      "behavior": true,
+      "repair": true,
+      "structure": true,
+      "wireChecks": 14,
+      "wireFailures": [],
+      "observed": [
+        "HAL ready",
+        "L298N: A forward 75%, B reverse 40% (1 kHz)",
+        "L298N: coast before direction change",
+        "L298N: A reverse 50%, B forward 100%"
+      ]
+    },
+    {
+      "type": "ref_uart_cable_4",
+      "name": "USB–TTL 시리얼 케이블 4선",
+      "behavior": true,
+      "repair": true,
+      "structure": true,
+      "wireChecks": 4,
+      "wireFailures": [],
+      "observed": [
+        "HAL ready"
+      ]
+    },
+    {
+      "type": "ref_uart_cable_6",
+      "name": "FTDI TTL 시리얼 케이블 6접점",
+      "behavior": true,
+      "repair": true,
+      "structure": true,
+      "wireChecks": 4,
+      "wireFailures": [],
+      "observed": [
+        "HAL ready"
+      ]
+    },
+    {
+      "type": "ref_i2c_eeprom_8",
+      "name": "24LC02B I²C EEPROM PDIP8",
+      "behavior": true,
+      "repair": true,
+      "structure": true,
+      "wireChecks": 5,
+      "wireFailures": [],
+      "observed": [
+        "I2C write=0 read=0",
+        "42",
+        "HAL ready"
+      ]
+    },
+    {
+      "type": "ref_i2c_eeprom_5",
+      "name": "24LC02B SOT-23-5 패키지",
+      "behavior": true,
+      "repair": true,
+      "structure": true,
+      "wireChecks": 5,
+      "wireFailures": [],
+      "observed": [
+        "I2C write=0 read=0",
+        "42",
+        "HAL ready"
+      ]
+    },
+    {
+      "type": "ref_spi_eeprom_8",
+      "name": "25LC020A SPI EEPROM 8핀",
+      "behavior": true,
+      "repair": true,
+      "structure": true,
+      "wireChecks": 8,
+      "wireFailures": [],
+      "observed": [
+        "42",
+        "HAL ready"
+      ]
+    },
+    {
+      "type": "ref_pot_bare_3",
+      "name": "10kΩ 트리머 가변저항 3핀",
+      "behavior": true,
+      "repair": true,
+      "structure": true,
+      "wireChecks": 3,
+      "wireFailures": [],
+      "observed": [
+        "HAL ready",
+        "ADC=2047, voltage=1.650 V",
+        "ADC=819, voltage=0.660 V",
+        "ADC=3276, voltage=2.640 V"
+      ]
+    },
+    {
+      "type": "ref_pot_module_3",
+      "name": "회전 가변저항 센서 모듈 3핀",
+      "behavior": true,
+      "repair": true,
+      "structure": true,
+      "wireChecks": 3,
+      "wireFailures": [],
+      "observed": [
+        "HAL ready",
+        "ADC=2047, voltage=1.650 V",
+        "ADC=819, voltage=0.660 V",
+        "ADC=3276, voltage=2.640 V"
+      ]
+    },
+    {
+      "type": "ref_slide_spdt_3",
+      "name": "SPDT 슬라이드 스위치 3핀",
+      "behavior": true,
+      "repair": true,
+      "structure": true,
+      "wireChecks": 3,
+      "wireFailures": [],
+      "observed": [
+        "HAL ready",
+        "switch=0",
+        "switch=1"
+      ]
+    },
+    {
+      "type": "ref_rgb_common_anode_4",
+      "name": "공통 양극 RGB LED 4핀",
+      "behavior": true,
+      "repair": true,
+      "structure": true,
+      "wireChecks": 7,
+      "wireFailures": [],
+      "observed": [
+        "HAL ready"
+      ]
+    },
+    {
+      "type": "ref_rgb_common_cathode_4",
+      "name": "KY-016 공통 음극 RGB 모듈 4핀",
+      "behavior": true,
+      "repair": true,
+      "structure": true,
+      "wireChecks": 7,
+      "wireFailures": [],
+      "observed": [
+        "HAL ready"
+      ]
+    },
+    {
+      "type": "ref_rgb_neopixel_4",
+      "name": "주소지정 NeoPixel THT 4핀",
+      "behavior": true,
+      "repair": true,
+      "structure": true,
+      "wireChecks": 3,
+      "wireFailures": [],
+      "observed": [
+        "HAL ready"
+      ]
+    },
+    {
+      "type": "ref_rgb_neopixel_flora_4",
+      "name": "FLORA NeoPixel 연결 패드 4개",
+      "behavior": true,
+      "repair": true,
+      "structure": true,
+      "wireChecks": 3,
+      "wireFailures": [],
+      "observed": [
+        "HAL ready"
+      ]
+    },
+    {
+      "type": "ref_rgb_gravity_3",
+      "name": "Gravity 디지털 RGB 모듈 3핀",
+      "behavior": true,
+      "repair": true,
+      "structure": true,
+      "wireChecks": 3,
+      "wireFailures": [],
+      "observed": [
+        "HAL ready"
+      ]
+    },
+    {
+      "type": "ref_capacitor_ceramic_2",
+      "name": "세라믹 커패시터 2핀",
+      "behavior": true,
+      "repair": true,
+      "structure": true,
+      "wireChecks": 4,
+      "wireFailures": [],
+      "observed": [
+        "TIM2 PWM: 100 Hz, duty 50%",
+        "HAL ready"
+      ]
+    },
+    {
+      "type": "ref_capacitor_electrolytic_2",
+      "name": "알루미늄 전해 커패시터 2핀",
+      "behavior": true,
+      "repair": true,
+      "structure": true,
+      "wireChecks": 4,
+      "wireFailures": [],
+      "observed": [
+        "TIM2 PWM: 100 Hz, duty 50%",
+        "HAL ready"
+      ]
+    },
+    {
+      "type": "ref_diode_axial_2",
+      "name": "1N4001 축형 다이오드 2핀",
+      "behavior": true,
+      "repair": true,
+      "structure": true,
+      "wireChecks": 4,
+      "wireFailures": [],
+      "observed": [
+        "HAL ready",
+        "ADC=872, voltage=0.703 V"
+      ]
+    },
+    {
+      "type": "ref_buzzer_active_2",
+      "name": "발진기 내장 능동 부저 2핀",
+      "behavior": true,
+      "repair": true,
+      "structure": true,
+      "wireChecks": 2,
+      "wireFailures": [],
+      "observed": [
+        "HAL ready"
+      ]
+    },
+    {
+      "type": "ref_buzzer_active_module_3",
+      "name": "KY-012 능동 부저 모듈 3핀",
+      "behavior": true,
+      "repair": true,
+      "structure": true,
+      "wireChecks": 2,
+      "wireFailures": [],
+      "observed": [
+        "HAL ready"
+      ]
+    },
+    {
+      "type": "ref_buzzer_passive_2",
+      "name": "외부 구동 피에조 부저 2핀",
+      "behavior": true,
+      "repair": true,
+      "structure": true,
+      "wireChecks": 2,
+      "wireFailures": [],
+      "observed": [
+        "HAL ready",
+        "Passive buzzer: 523 Hz",
+        "Passive buzzer: rest",
+        "Passive buzzer: 587 Hz",
+        "Passive buzzer: 659 Hz",
+        "Passive buzzer: 698 Hz",
+        "Passive buzzer: 784 Hz",
+        "Passive buzzer: 880 Hz",
+        "Passive buzzer: 988 Hz",
+        "Passive buzzer: 1047 Hz"
+      ]
+    },
+    {
+      "type": "ref_buzzer_passive_module_3",
+      "name": "KY-006 수동 부저 모듈 3핀",
+      "behavior": true,
+      "repair": true,
+      "structure": true,
+      "wireChecks": 2,
+      "wireFailures": [],
+      "observed": [
+        "HAL ready",
+        "Passive buzzer: 523 Hz",
+        "Passive buzzer: rest",
+        "Passive buzzer: 587 Hz",
+        "Passive buzzer: 659 Hz",
+        "Passive buzzer: 698 Hz",
+        "Passive buzzer: 784 Hz",
+        "Passive buzzer: 880 Hz",
+        "Passive buzzer: 988 Hz",
+        "Passive buzzer: 1047 Hz"
+      ]
+    },
+    {
+      "type": "ref_sevenseg_common_cathode_10",
+      "name": "SC56-11EWA 공통 음극 10핀",
+      "behavior": true,
+      "repair": true,
+      "structure": true,
+      "wireChecks": 17,
+      "wireFailures": [],
+      "observed": [
+        "HAL ready",
+        "digit=0",
+        "digit=1",
+        "digit=2",
+        "digit=3",
+        "digit=4",
+        "digit=5",
+        "digit=6"
+      ]
+    },
+    {
+      "type": "ref_sevenseg_common_anode_10",
+      "name": "SA56-11EWA 공통 양극 10핀",
+      "behavior": true,
+      "repair": true,
+      "structure": true,
+      "wireChecks": 17,
+      "wireFailures": [],
+      "observed": [
+        "HAL ready",
+        "digit=0",
+        "digit=1",
+        "digit=2",
+        "digit=3",
+        "digit=4",
+        "digit=5",
+        "digit=6"
+      ]
+    },
+    {
+      "type": "ref_sevenseg_4digit_12",
+      "name": "4자리 시계 7세그먼트 14핀 · 콜론",
+      "behavior": true,
+      "repair": true,
+      "structure": true,
+      "wireChecks": 23,
+      "wireFailures": [],
+      "observed": [
+        "HAL ready"
+      ]
+    },
+    {
+      "type": "ref_sevenseg_tm1637_4",
+      "name": "TM1637 4자리 표시 모듈 4핀",
+      "behavior": true,
+      "repair": true,
+      "structure": true,
+      "wireChecks": 4,
+      "wireFailures": [],
+      "observed": [
+        "HAL ready"
+      ]
+    },
+    {
+      "type": "ref_tmp36_to92_3",
+      "name": "TMP36 아날로그 온도 센서 3핀",
+      "behavior": true,
+      "repair": true,
+      "structure": true,
+      "wireChecks": 3,
+      "wireFailures": [],
+      "observed": [
+        "HAL ready",
+        "TMP36=25.0 C",
+        "TMP36=10.0 C",
+        "TMP36=45.0 C"
+      ]
+    },
+    {
+      "type": "ref_ds18b20_to92_3",
+      "name": "DS18B20 디지털 온도 센서 3핀",
+      "behavior": true,
+      "repair": true,
+      "structure": true,
+      "wireChecks": 5,
+      "wireFailures": [],
+      "observed": [
+        "HAL ready",
+        "DS18B20=25.00 C",
+        "DS18B20=10.00 C",
+        "DS18B20=45.00 C"
+      ]
+    },
+    {
+      "type": "ref_ds18b20_probe_3",
+      "name": "방수 DS18B20 프로브 3선",
+      "behavior": true,
+      "repair": true,
+      "structure": true,
+      "wireChecks": 5,
+      "wireFailures": [],
+      "observed": [
+        "HAL ready",
+        "DS18B20=25.00 C",
+        "DS18B20=10.00 C",
+        "DS18B20=45.00 C"
+      ]
+    },
+    {
+      "type": "ref_hcsr04_4",
+      "name": "HC-SR04 초음파 4핀",
+      "behavior": true,
+      "repair": true,
+      "structure": true,
+      "wireChecks": 7,
+      "wireFailures": [],
+      "observed": [
+        "HAL ready",
+        "distance=100.0 cm",
+        "distance=53.4 cm",
+        "distance=169.0 cm"
+      ]
+    },
+    {
+      "type": "ref_urm09_trig_3",
+      "name": "URM09 Trig 초음파 3핀",
+      "behavior": true,
+      "repair": true,
+      "structure": true,
+      "wireChecks": 3,
+      "wireFailures": [],
+      "observed": [
+        "HAL ready",
+        "URM09=100.0 cm",
+        "URM09=55.0 cm",
+        "URM09=170.0 cm"
+      ]
+    },
+    {
+      "type": "ref_urm09_i2c_4",
+      "name": "URM09 I²C 초음파 4핀",
+      "behavior": true,
+      "repair": true,
+      "structure": true,
+      "wireChecks": 4,
+      "wireFailures": [],
+      "observed": [
+        "HAL ready",
+        "distance=100 cm",
+        "distance=55 cm",
+        "distance=170 cm"
+      ]
+    },
+    {
+      "type": "ref_ads1115_10",
+      "name": "ADS1115 외부 ADC 메인 헤더 10핀",
+      "behavior": true,
+      "repair": true,
+      "structure": true,
+      "wireChecks": 9,
+      "wireFailures": [],
+      "observed": [
+        "HAL ready",
+        "AIN0=3.3000 V"
+      ]
+    },
+    {
+      "type": "ref_mcp4725_6",
+      "name": "MCP4725 외부 DAC 메인 헤더 6핀",
+      "behavior": true,
+      "repair": true,
+      "structure": true,
+      "wireChecks": 6,
+      "wireFailures": [],
+      "observed": [
+        "HAL ready",
+        "ADC=2047 voltage=1.650 V"
+      ]
+    },
+    {
+      "type": "ref_can_transceiver_6",
+      "name": "SN65HVD230 CAN 보드 주요 6단자",
+      "behavior": true,
+      "repair": true,
+      "structure": true,
+      "wireChecks": 4,
+      "wireFailures": [],
+      "observed": [
+        "HAL ready",
+        "CAN id=123 length=2",
+        "CAN errors=0 (loopback=0; normal mode needs a peer ACK)"
+      ]
+    },
+    {
+      "type": "ref_isolated_rs485",
+      "name": "DFR0845 절연 RS485 모듈 총 10접점",
+      "behavior": true,
+      "repair": true,
+      "structure": true,
+      "wireChecks": 4,
+      "wireFailures": [],
+      "observed": [
+        "HAL ready"
+      ]
+    },
+    {
+      "type": "ref_ds3231_8",
+      "name": "DS3231 RTC 메인 헤더 8핀",
+      "behavior": true,
+      "repair": true,
+      "structure": true,
+      "wireChecks": 4,
+      "wireFailures": [],
+      "observed": [
+        "HAL ready",
+        "RTC 00:00:00",
+        "RTC 00:00:01",
+        "RTC 00:00:02",
+        "RTC 00:00:03"
+      ]
+    },
+    {
+      "type": "ref_sd_storage_board",
+      "name": "Micro SD Storage Board 9핀",
+      "behavior": true,
+      "repair": true,
+      "structure": true,
+      "wireChecks": 7,
+      "wireFailures": [],
+      "observed": [
+        "HAL ready",
+        "SD OCR=40ff8000"
+      ]
+    },
+    {
+      "type": "ref_max98357a_9",
+      "name": "MAX98357A 모노 앰프 입력7+스피커2",
+      "behavior": true,
+      "repair": true,
+      "structure": true,
+      "wireChecks": 6,
+      "wireFailures": [],
+      "observed": [
+        "HAL ready"
+      ]
+    },
+    {
+      "type": "ref_ov2640_camera",
+      "name": "OV2640 Camera Board 18핀",
+      "behavior": true,
+      "repair": true,
+      "structure": true,
+      "wireChecks": 7,
+      "wireFailures": [],
+      "observed": [
+        "HAL ready",
+        "OV2640 sensor PID/VER=26 42"
+      ]
+    },
+    {
+      "type": "ref_dht11_module_3",
+      "name": "DHT11 센서 모듈 3핀",
+      "behavior": true,
+      "repair": true,
+      "structure": true,
+      "wireChecks": 5,
+      "wireFailures": [],
+      "observed": [
+        "HAL ready",
+        "humidity=30.0% temperature=10.0 C",
+        "humidity=70.0% temperature=45.0 C"
+      ]
+    },
+    {
+      "type": "ref_dht22_module_3",
+      "name": "DHT22 센서 모듈 3핀",
+      "behavior": true,
+      "repair": true,
+      "structure": true,
+      "wireChecks": 5,
+      "wireFailures": [],
+      "observed": [
+        "HAL ready",
+        "humidity=30.0% temperature=10.0 C",
+        "humidity=70.0% temperature=45.0 C"
+      ]
+    },
+    {
+      "type": "ref_l298n_bare_15",
+      "name": "L298N 나형 드라이버 IC 15핀",
+      "behavior": true,
+      "repair": true,
+      "structure": true,
+      "wireChecks": 16,
+      "wireFailures": [],
+      "observed": [
+        "HAL ready",
+        "L298N: A forward 75%, B reverse 40% (1 kHz)",
+        "L298N: coast before direction change",
+        "L298N: A reverse 50%, B forward 100%"
+      ]
+    },
+    {
+      "type": "ref_l298p_bare_20",
+      "name": "L298P PowerSO20 드라이버 IC 20핀",
+      "behavior": true,
+      "repair": true,
+      "structure": true,
+      "wireChecks": 16,
+      "wireFailures": [],
+      "observed": [
+        "HAL ready",
+        "L298N: A forward 75%, B reverse 40% (1 kHz)",
+        "L298N: coast before direction change",
+        "L298N: A reverse 50%, B forward 100%"
+      ]
+    },
+    {
+      "type": "ref_slide_dpdt_6",
+      "name": "C&K JS202011JCQN DPDT 6핀",
+      "behavior": true,
+      "repair": true,
+      "structure": true,
+      "wireChecks": 6,
+      "wireFailures": [],
+      "observed": [
+        "HAL ready",
+        "pole 1=0",
+        "pole 2=0",
+        "pole 1=4095",
+        "pole 2=4095"
+      ]
+    },
+    {
+      "type": "ref_slide_dp3t_8",
+      "name": "C&K JS203011JAQN DP3T 8핀",
+      "behavior": true,
+      "repair": true,
+      "structure": true,
+      "wireChecks": 14,
+      "wireFailures": [],
+      "observed": [
+        "HAL ready",
+        "pole 1=0",
+        "pole 2=0",
+        "pole 1=2047",
+        "pole 2=2047"
+      ]
+    },
+    {
+      "type": "ldr",
+      "name": "조도 센서 · LDR",
+      "behavior": true,
+      "repair": true,
+      "structure": true,
+      "wireChecks": 4,
+      "wireFailures": [],
+      "observed": [
+        "HAL ready",
+        "LDR ADC=3414 voltage=2.751 V",
+        "LDR ADC=681 voltage=0.549 V"
+      ]
+    },
+    {
+      "type": "ntc",
+      "name": "NTC 서미스터",
+      "behavior": true,
+      "repair": true,
+      "structure": true,
+      "wireChecks": 4,
+      "wireFailures": [],
+      "observed": [
+        "HAL ready",
+        "NTC=25.0 C R=9995 ohm",
+        "NTC=10.0 C R=20177 ohm",
+        "NTC=45.0 C R=4348 ohm"
+      ]
+    },
+    {
+      "type": "sht31",
+      "name": "SHT31 온습도 센서",
+      "behavior": true,
+      "repair": true,
+      "structure": true,
+      "wireChecks": 4,
+      "wireFailures": [],
+      "observed": [
+        "HAL ready",
+        "SHT31=25.0 C RH=50.0 %",
+        "SHT31=10.0 C RH=30.0 %",
+        "SHT31=45.0 C RH=70.0 %"
+      ]
+    },
+    {
+      "type": "mpu6050",
+      "name": "MPU6050 가속도·자이로",
+      "behavior": true,
+      "repair": true,
+      "structure": true,
+      "wireChecks": 4,
+      "wireFailures": [],
+      "observed": [
+        "MPU6050 status=0 WHO_AM_I=0x68",
+        "HAL ready",
+        "MPU6050 g=(0.00,0.00,1.00) dps=(0.0,0.0,0.0)",
+        "MPU6050 g=(-0.50,0.00,1.00) dps=(0.0,0.0,90.0)",
+        "MPU6050 g=(0.75,0.00,1.00) dps=(0.0,0.0,-45.0)"
+      ]
+    },
+    {
+      "type": "pir",
+      "name": "PIR 움직임 센서",
+      "behavior": true,
+      "repair": true,
+      "structure": true,
+      "wireChecks": 3,
+      "wireFailures": [],
+      "observed": [
+        "PIR: change motion in part properties",
+        "HAL ready",
+        "PIR EXTI motion=0",
+        "PIR EXTI motion=1"
+      ]
+    },
+    {
+      "type": "oled",
+      "name": "OLED · SSD1306",
+      "behavior": true,
+      "repair": true,
+      "structure": true,
+      "wireChecks": 4,
+      "wireFailures": [],
+      "observed": [
+        "OLED init status=0",
+        "HAL ready",
+        "OLED frame=0 transfer status=0",
+        "OLED frame=16 transfer status=0",
+        "OLED frame=32 transfer status=0",
+        "OLED frame=48 transfer status=0",
+        "OLED frame=64 transfer status=0",
+        "OLED frame=80 transfer status=0",
+        "OLED frame=96 transfer status=0",
+        "OLED frame=112 transfer status=0"
+      ]
+    },
+    {
+      "type": "tft",
+      "name": "TFT · ST7735",
+      "behavior": true,
+      "repair": true,
+      "structure": true,
+      "wireChecks": 7,
+      "wireFailures": [],
+      "observed": [
+        "TFT: initializing RGB565 display",
+        "TFT: RGB565 color bars sent (CS/DC/RST and power required)",
+        "HAL ready"
+      ]
+    },
+    {
+      "type": "matrix",
+      "name": "LED 매트릭스 · MAX7219",
+      "behavior": true,
+      "repair": true,
+      "structure": true,
+      "wireChecks": 5,
+      "wireFailures": [],
+      "observed": [
+        "HAL ready",
+        "MAX7219 frame sent=0",
+        "MAX7219 frame sent=1",
+        "MAX7219 frame sent=2",
+        "MAX7219 frame sent=3",
+        "MAX7219 frame sent=4",
+        "MAX7219 frame sent=5",
+        "MAX7219 frame sent=6",
+        "MAX7219 frame sent=7"
+      ]
+    },
+    {
+      "type": "servo",
+      "name": "RC 서보 모터",
+      "behavior": true,
+      "repair": true,
+      "structure": true,
+      "wireChecks": 3,
+      "wireFailures": [],
+      "observed": [
+        "HAL ready",
+        "Servo command=0 deg pulse=1000 us",
+        "Servo command=90 deg pulse=1500 us",
+        "Servo command=180 deg pulse=2000 us"
+      ]
+    },
+    {
+      "type": "motor",
+      "name": "DC 모터 + H 브리지",
+      "behavior": true,
+      "repair": true,
+      "structure": true,
+      "wireChecks": 5,
+      "wireFailures": [],
+      "observed": [
+        "HAL ready",
+        "DC command direction=1 duty=75 %",
+        "DC command direction=-1 duty=35 %"
+      ]
+    },
+    {
+      "type": "stepper",
+      "name": "스테퍼 모터 + 드라이버",
+      "behavior": true,
+      "repair": true,
+      "structure": true,
+      "wireChecks": 6,
+      "wireFailures": [],
+      "observed": [
+        "HAL ready",
+        "Stepper command direction=-1 steps=100",
+        "Stepper command direction=1 steps=200",
+        "Stepper command direction=-1 steps=300",
+        "Stepper command direction=1 steps=400"
+      ]
+    },
+    {
+      "type": "relay",
+      "name": "릴레이 모듈",
+      "behavior": true,
+      "repair": true,
+      "structure": true,
+      "wireChecks": 7,
+      "wireFailures": [],
+      "observed": [
+        "HAL ready",
+        "Relay command=1 (NO powers LED)",
+        "Relay command=0 (NO powers LED)"
+      ]
+    },
+    {
+      "type": "joystick",
+      "name": "조이스틱",
+      "behavior": true,
+      "repair": true,
+      "structure": true,
+      "wireChecks": 5,
+      "wireFailures": [],
+      "observed": [
+        "HAL ready",
+        "Joystick X=2047 Y=2047 pressed=0",
+        "Joystick X=1024 Y=3071 pressed=1",
+        "Joystick X=3071 Y=1024 pressed=0"
+      ]
+    },
+    {
+      "type": "encoder",
+      "name": "로터리 인코더",
+      "behavior": true,
+      "repair": true,
+      "structure": true,
+      "wireChecks": 5,
+      "wireFailures": [],
+      "observed": [
+        "HAL ready",
+        "TIM4 encoder: count=0 edges=0 pressed=0",
+        "TIM4 encoder: count=1 edges=5 pressed=1",
+        "TIM4 encoder: count=3 edges=12 pressed=1",
+        "TIM4 encoder: count=1 edges=6 pressed=0",
+        "TIM4 encoder: count=1 edges=4 pressed=0"
+      ]
+    },
+    {
+      "type": "l298n",
+      "name": "L298N 모터 드라이버",
+      "behavior": true,
+      "repair": true,
+      "structure": true,
+      "wireChecks": 14,
+      "wireFailures": [],
+      "observed": [
+        "HAL ready",
+        "L298N: A forward 75%, B reverse 40% (1 kHz)",
+        "L298N: coast before direction change",
+        "L298N: A reverse 50%, B forward 100%"
+      ]
+    },
+    {
+      "type": "dc_motor",
+      "name": "DC 모터 · 2핀",
+      "behavior": true,
+      "repair": true,
+      "structure": true,
+      "wireChecks": 14,
+      "wireFailures": [],
+      "observed": [
+        "HAL ready",
+        "L298N: A forward 75%, B reverse 40% (1 kHz)",
+        "L298N: coast before direction change",
+        "L298N: A reverse 50%, B forward 100%"
+      ]
+    },
+    {
+      "type": "dc_supply",
+      "name": "외부 DC 전원",
+      "behavior": true,
+      "repair": true,
+      "structure": true,
+      "wireChecks": 14,
+      "wireFailures": [],
+      "observed": [
+        "HAL ready",
+        "L298N: A forward 75%, B reverse 40% (1 kHz)",
+        "L298N: coast before direction change",
+        "L298N: A reverse 50%, B forward 100%"
+      ]
+    },
+    {
+      "type": "uart",
+      "name": "외부 UART 터미널",
+      "behavior": true,
+      "repair": true,
+      "structure": true,
+      "wireChecks": 4,
+      "wireFailures": [],
+      "observed": [
+        "HAL ready"
+      ]
+    },
+    {
+      "type": "i2c",
+      "name": "I²C 메모리",
+      "behavior": true,
+      "repair": true,
+      "structure": true,
+      "wireChecks": 4,
+      "wireFailures": [],
+      "observed": [
+        "I2C write=0 read=0",
+        "42",
+        "HAL ready"
+      ]
+    },
+    {
+      "type": "spi",
+      "name": "SPI 메모리",
+      "behavior": true,
+      "repair": true,
+      "structure": true,
+      "wireChecks": 6,
+      "wireFailures": [],
+      "observed": [
+        "42",
+        "HAL ready"
+      ]
+    },
+    {
+      "type": "potentiometer",
+      "name": "가변저항",
+      "behavior": true,
+      "repair": true,
+      "structure": true,
+      "wireChecks": 3,
+      "wireFailures": [],
+      "observed": [
+        "HAL ready",
+        "ADC=2047, voltage=1.650 V",
+        "ADC=819, voltage=0.660 V",
+        "ADC=3276, voltage=2.640 V"
+      ]
+    },
+    {
+      "type": "slide",
+      "name": "슬라이드 스위치",
+      "behavior": true,
+      "repair": true,
+      "structure": true,
+      "wireChecks": 3,
+      "wireFailures": [],
+      "observed": [
+        "HAL ready",
+        "switch=0",
+        "switch=1"
+      ]
+    },
+    {
+      "type": "rgb",
+      "name": "RGB LED",
+      "behavior": true,
+      "repair": true,
+      "structure": true,
+      "wireChecks": 7,
+      "wireFailures": [],
+      "observed": [
+        "HAL ready"
+      ]
+    },
+    {
+      "type": "capacitor",
+      "name": "커패시터",
+      "behavior": true,
+      "repair": true,
+      "structure": true,
+      "wireChecks": 4,
+      "wireFailures": [],
+      "observed": [
+        "TIM2 PWM: 100 Hz, duty 50%",
+        "HAL ready"
+      ]
+    },
+    {
+      "type": "diode",
+      "name": "다이오드",
+      "behavior": true,
+      "repair": true,
+      "structure": true,
+      "wireChecks": 4,
+      "wireFailures": [],
+      "observed": [
+        "HAL ready",
+        "ADC=872, voltage=0.703 V"
+      ]
+    },
+    {
+      "type": "buzzer",
+      "name": "능동 부저",
+      "behavior": true,
+      "repair": true,
+      "structure": true,
+      "wireChecks": 2,
+      "wireFailures": [],
+      "observed": [
+        "HAL ready"
+      ]
+    },
+    {
+      "type": "passive_buzzer",
+      "name": "수동 부저",
+      "behavior": true,
+      "repair": true,
+      "structure": true,
+      "wireChecks": 2,
+      "wireFailures": [],
+      "observed": [
+        "HAL ready",
+        "Passive buzzer: 523 Hz",
+        "Passive buzzer: rest",
+        "Passive buzzer: 587 Hz",
+        "Passive buzzer: 659 Hz",
+        "Passive buzzer: 698 Hz",
+        "Passive buzzer: 784 Hz",
+        "Passive buzzer: 880 Hz",
+        "Passive buzzer: 988 Hz",
+        "Passive buzzer: 1047 Hz"
+      ]
+    },
+    {
+      "type": "sevenseg",
+      "name": "7세그먼트",
+      "behavior": true,
+      "repair": true,
+      "structure": true,
+      "wireChecks": 17,
+      "wireFailures": [],
+      "observed": [
+        "HAL ready",
+        "digit=0",
+        "digit=1",
+        "digit=2",
+        "digit=3",
+        "digit=4",
+        "digit=5",
+        "digit=6"
+      ]
+    },
+    {
+      "type": "temperature",
+      "name": "온도 센서",
+      "behavior": true,
+      "repair": true,
+      "structure": true,
+      "wireChecks": 3,
+      "wireFailures": [],
+      "observed": [
+        "HAL ready",
+        "TMP36=25.0 C",
+        "TMP36=10.0 C",
+        "TMP36=45.0 C"
+      ]
+    },
+    {
+      "type": "ultrasonic",
+      "name": "초음파 센서",
+      "behavior": true,
+      "repair": true,
+      "structure": true,
+      "wireChecks": 7,
+      "wireFailures": [],
+      "observed": [
+        "HAL ready",
+        "distance=100.0 cm",
+        "distance=53.4 cm",
+        "distance=169.0 cm"
+      ]
+    }
+  ]
+}
