@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {blankProject,validateProject} from '../src/project.js';
+import {exampleProject as blankProject,validateProject} from '../src/project.js';
 import {resizeObject,resizeFrame,resizeFromHandle} from '../src/resize.js';
 import {BOARD,BB,scaleXOf,scaleYOf,matrixOf,vector,inverse,multiply} from '../src/geometry.js';
 import {PART_LIBRARY} from '../src/part-library.js';
@@ -34,8 +34,8 @@ test('continuous sizing exceeds the old 400 percent ceiling and Shift retains as
  next=resizeFromHandle(project,target,bounds,'se',{x:0,y:0},{x:17.3,y:9.1},true);close(scaleXOf(next.components[0]),scaleYOf(next.components[0]));
 });
 test('all 113 menu devices preserve terminals, transforms and saved dimensions under independent resizing',()=>{
- assert.equal(PART_LIBRARY.length,113);
- for(const item of PART_LIBRARY){
+ assert.equal(PART_LIBRARY.length,114);
+ for(const item of PART_LIBRARY.filter(p=>p.type!=='board')){
   const p={...part(45),id:'device',type:item.type,name:item.name,...PART_DEFS[item.type]?.defaults,...(item.type==='led'?{color:'red'}:{})};
   const project=blankProject();project.components=[p];const old=nominalTerminals(p),oldMatrix=matrixOf(p);resizeObject(project,{type:'part',id:p.id},{scaleX:2.317,scaleY:.637});
   const transform=multiply(matrixOf(p),inverse(oldMatrix));nominalTerminals(p).forEach((t,i)=>same({x:t.x-p.x,y:t.y-p.y},vector(transform,{x:old[i].x-p.x,y:old[i].y-p.y})));

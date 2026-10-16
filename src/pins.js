@@ -47,20 +47,20 @@ export function breadboardHoles(part){
   const prefix=breadboardPrefix(part.id),holes=HOLES.map(h=>{const q=partVector(part,h.x-(BB.x+BB.w/2),h.y-(BB.y+BB.h/2));return {...h,id:prefix+h.id,bus:prefix+h.bus,x:part.x+q.x,y:part.y+q.y,label:`${part.name} · ${h.label}`};});
   breadboardCache.set(part,{key,holes,byId:new Map(holes.map(h=>[h.id,h]))});return holes;
 }
-export function circuitHoles(components=[],surfaces){return [...HOLES.map(h=>surfacePoint(h,'breadboard',surfaces)),...components.filter(p=>p.type==='breadboard').flatMap(breadboardHoles)];}
+export function circuitHoles(components=[],surfaces){return [...(surfaces?.breadboard?.hidden?[]:HOLES.map(h=>surfacePoint(h,'breadboard',surfaces))),...components.filter(p=>p.type==='breadboard').flatMap(breadboardHoles)];}
 export function holeInfo(id,components=[],surfaces){
-  if(HOLE_BY_ID.has(id))return surfacePoint(HOLE_BY_ID.get(id),'breadboard',surfaces);
+  if(HOLE_BY_ID.has(id)&&!surfaces?.breadboard?.hidden)return surfacePoint(HOLE_BY_ID.get(id),'breadboard',surfaces);
   const match=/^breadboard:([^:]+):/.exec(id),part=match&&components.find(p=>p.id===match[1]&&p.type==='breadboard');
   if(!part)return null;breadboardHoles(part);return breadboardCache.get(part).byId.get(id)||null;
 }
 export function endpointInfo(id,components=[],surfaces) {
-  if(PIN_BY_ID.has(id)) {const p=surfacePoint(PIN_BY_ID.get(id),'board',surfaces);return {...p,label:`${p.header}-${p.number} · ${p.label}${p.signal!==p.label?' / '+p.signal:''}`};}
+  if(PIN_BY_ID.has(id)&&!surfaces?.board?.hidden) {const p=surfacePoint(PIN_BY_ID.get(id),'board',surfaces);return {...p,label:`${p.header}-${p.number} · ${p.label}${p.signal!==p.label?' / '+p.signal:''}`};}
   const hole=holeInfo(id,components,surfaces);if(hole)return hole;
   const m=/^part:([^:]+):([a-d]|p\d+)$/.exec(id);
   if(m){const p=components.find(c=>c.id===m[1]);if(p&&terminalKeys(p).includes(m[2])){const t=nominalTerminals(p).find(t=>t.key===m[2]),anchor=attachments(p)[m[2]],point=anchor?endpointInfo(anchor,components,surfaces):null;return {id,x:point?.x??t.x,y:point?.y??t.y,label:`${p.name} ${terminalLabel(p,m[2])}`};}}
   return null;
 }
-export function endpoints(components,surfaces) {return [...PINS.map(p=>surfacePoint(p,'board',surfaces)),...circuitHoles(components,surfaces),...components.flatMap(p=>terminalKeys(p).map(t=>endpointInfo(`part:${p.id}:${t}`,components,surfaces)))];}
+export function endpoints(components,surfaces) {return [...(surfaces?.board?.hidden?[]:PINS.map(p=>surfacePoint(p,'board',surfaces))),...circuitHoles(components,surfaces),...components.flatMap(p=>terminalKeys(p).map(t=>endpointInfo(`part:${p.id}:${t}`,components,surfaces)))];}
 export function boardPin(name) {const p=PINS.find(p=>p.label===name&&['CN5','CN6','CN8','CN9'].includes(p.header))||PINS.find(p=>p.signal===canonicalPin(name));return p?.id;}
 export const normalizePinQuery=q=>String(q).toUpperCase().replace(/\s+/g,'');
 export function searchPins(query){const q=normalizePinQuery(query);if(!q)return [];const exact=PINS.filter(p=>p.signal===q||p.label===q||`${p.header}-${p.number}`===q);return exact.length?exact:PINS.filter(p=>p.signal.startsWith(q)||p.label.startsWith(q));}

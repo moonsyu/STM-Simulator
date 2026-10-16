@@ -7,8 +7,8 @@ const {openFixture,saveProject}=require('./smoke-fixture.cjs');
  const env={...process.env,CIRCUIT_LAB_SMOKE:'1',CIRCUIT_LAB_TEST_PROFILE:path.join(out,'boards-profile-'+Date.now())};delete env.ELECTRON_RUN_AS_NODE;
  const app=await _electron.launch({executablePath:process.env.LAB_EXE||path.join(root,'node_modules/electron/dist/electron.exe'),args:process.env.LAB_EXE?[]:[root],cwd:root,env});
  try{
-  const {blankProject,projectForBoard,validateProject}=await import('../src/project.js'),{endpointInfo,breadboardPrefix,boardPin}=await import('../src/pins.js');
-  const page=await app.firstWindow(),errors=[];page.on('pageerror',e=>errors.push(e.message));await page.waitForSelector('.monaco-editor');await app.evaluate(({BrowserWindow})=>BrowserWindow.getAllWindows()[0].showInactive());
+  const {exampleProject:blankProject,projectForBoard,validateProject}=await import('../src/project.js'),{endpointInfo,breadboardPrefix,boardPin}=await import('../src/pins.js');
+  const page=await app.firstWindow(),errors=[];page.on('pageerror',e=>errors.push(e.message));await page.waitForSelector('.monaco-editor');await app.evaluate(({BrowserWindow})=>BrowserWindow.getAllWindows()[0].showInactive());await openFixture(page,projectForBoard());
   const saved=async()=>{await page.waitForTimeout(260);return page.evaluate(()=>JSON.parse(localStorage.getItem('stm32lab.project.v2')));};
   const point=async(x,y)=>page.evaluate(({x,y})=>{const s=document.getElementById('circuit'),q=s.createSVGPoint();q.x=x;q.y=y;const r=q.matrixTransform(s.getScreenCTM());return {x:r.x,y:r.y};},{x,y});
   const click=async(x,y)=>{const q=await point(x,y);await page.mouse.click(q.x,q.y);};

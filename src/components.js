@@ -26,7 +26,10 @@ export const LCD_LABELS=['VSS','VDD','VO','RS','R/W','E','DB0','DB1','DB2','DB3'
 export const WIRE_COLORS=[
   ['#23a68a','초록'],['#dd654c','빨강'],['#4e647b','검정'],['#8064d8','보라'],
   ['#2786d7','파랑'],['#ebbd2b','노랑'],['#ee8735','주황'],['#df68ac','분홍'],
-  ['#8b603e','갈색'],['#edf2f5','흰색']
+  ['#8b603e','갈색'],['#edf2f5','흰색'],
+  ['#f4a6a6','파스텔 빨강'],['#f6c28b','파스텔 주황'],['#f5e6a1','파스텔 노랑'],
+  ['#b8dfa4','파스텔 연두'],['#a4d8c5','파스텔 민트'],['#a9d6ed','파스텔 하늘'],
+  ['#b4bbed','파스텔 파랑'],['#cdb4e8','파스텔 보라'],['#edbad5','파스텔 분홍'],['#d8c5b4','파스텔 베이지']
 ];
 export const normalizeAngle=n=>((n%360)+360)%360;
 export function terminalKeys(p){if(p.electricalPins)return p.electricalPins;return p.type==='breadboard'?[]:p.type==='button'?['a','b','c','d']:p.type==='lcd'?LCD_LABELS.map((_,i)=>'p'+(i+1)):PART_DEFS[p.type]?.labels?PART_DEFS[p.type].labels.map((_,i)=>'p'+(i+1)):['a','b'];}

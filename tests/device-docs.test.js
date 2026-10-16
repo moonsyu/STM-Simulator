@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {PART_LIBRARY} from '../src/part-library.js';
 import {PART_DEFS} from '../src/components.js';
-import {blankProject,validateProject} from '../src/project.js';
+import {exampleProject as blankProject,validateProject} from '../src/project.js';
 import {deviceDocs,expectedNets,wiringTopology} from '../src/device-docs-data.js';
 import {applyDeviceExample} from '../src/device-assistance.js';
 import {halExample} from '../src/hal-examples.js';

@@ -5,7 +5,9 @@ import {terminalKeys,TWO_PIN_TYPES,MULTI_PIN_TYPES,normalizeAngle} from './compo
 import {generateHal,defaultMcu,validateMcu} from './mcu-config.js';
 import {DEFAULT_BOARD_ID,getBoard} from './boards.js';
 import {validScale} from './geometry.js';
-export function blankProject(){const mcu={...defaultMcu(),pins:{}};return {format:'stm32-circuit-lab',version:2,name:'새 회로',components:[],wires:[],mcu,firmware:{mode:'hal',files:[]},code:generateHal(mcu).replace('/* USER CODE BEGIN 2 */','/* USER CODE BEGIN 2 */\n  printf("HAL ready\\n");')};}
+export function blankProject(){const mcu={...defaultMcu(),pins:{}};return {format:'stm32-circuit-lab',version:2,name:'새 회로',components:[],wires:[],surfaces:{board:{hidden:true},breadboard:{hidden:true}},mcu,firmware:{mode:'hal',files:[]},code:generateHal(mcu).replace('/* USER CODE BEGIN 2 */','/* USER CODE BEGIN 2 */\n  printf("HAL ready\\n");')};}
+// Complete example circuits explicitly include the legacy board and breadboard.
+export function exampleProject(){const p=blankProject();delete p.surfaces;return p;}
 export function validateProject(data){
   if(!data||data.format!=='stm32-circuit-lab'||![1,2].includes(data.version))throw new Error('지원하지 않는 회로 파일 형식입니다.');
   if(typeof data.name!=='string'||data.name.length>120||typeof data.code!=='string'||data.code.length>300000)throw new Error('회로 이름 또는 코드가 올바르지 않습니다.');
@@ -13,7 +15,7 @@ export function validateProject(data){
   const ids=new Set(),safeId=s=>typeof s==='string'&&/^[A-Za-z0-9_-]{1,64}$/.test(s);
   if(data.boardId!==undefined&&!getBoard(data.boardId))throw new Error('지원하지 않는 보드입니다.');
   if(data.components.filter(p=>p?.type==='breadboard').length>8)throw new Error('추가 빵판은 8개까지 지원합니다.');
-  const base=id=>PIN_BY_ID.has(id)||!!holeInfo(id,data.components);
+  const base=id=>(data.surfaces?.board?.hidden!==true&&PIN_BY_ID.has(id))||!!holeInfo(id,data.components,data.surfaces);
   const components=data.components.map(p=>{
     if(!safeId(p.id)||ids.has(p.id))throw new Error('부품 ID가 중복되거나 올바르지 않습니다.');ids.add(p.id);
     if(![...TWO_PIN_TYPES,...MULTI_PIN_TYPES,'breadboard'].includes(p.type)||typeof p.name!=='string'||p.name.length>80)throw new Error('지원하지 않는 부품입니다.');
@@ -70,7 +72,7 @@ export function validateProject(data){
     if(!data.surfaces||typeof data.surfaces!=='object'||Array.isArray(data.surfaces))throw new Error('보드 크기 설정을 확인하세요.');
     project.surfaces={};for(const key of ['board','breadboard'])if(data.surfaces[key]!==undefined){
       const source=data.surfaces[key];if(!source||typeof source!=='object'||Array.isArray(source))throw new Error('보드 크기 설정을 확인하세요.');
-      const surface={};for(const field of ['scale','scaleX','scaleY'])if(source[field]!==undefined)surface[field]=validScale(source[field]);
+      const surface={};if(source.hidden!==undefined){if(typeof source.hidden!=='boolean')throw new Error('장치 표시 설정을 확인하세요.');surface.hidden=source.hidden;}for(const field of ['scale','scaleX','scaleY'])if(source[field]!==undefined)surface[field]=validScale(source[field]);
       for(const field of ['x','y'])if(source[field]!==undefined){if(!Number.isFinite(source[field]))throw new Error('보드 위치를 확인하세요.');surface[field]=source[field];}
       project.surfaces[key]=surface;
     }
@@ -100,10 +102,10 @@ export function validateProject(data){
   }
   return project;
 }
-export function projectForBoard(id=DEFAULT_BOARD_ID){if(!getBoard(id))throw new Error('지원하지 않는 보드입니다.');return {...blankProject(),boardId:id};}
+export function projectForBoard(id=DEFAULT_BOARD_ID){if(!getBoard(id))throw new Error('지원하지 않는 보드입니다.');return {...blankProject(),boardId:id,surfaces:{board:{hidden:false},breadboard:{hidden:true}}};}
 // Compare document contents, not the file-save flag. Saving does not make a circuit blank.
 export function hasBoardChanges(project){
  const normalize=p=>{const q=validateProject(p);return {...q,boardId:q.boardId??DEFAULT_BOARD_ID,simulation:q.simulation??{stepMs:1,pwmWaveform:false}};};
  const stable=value=>Array.isArray(value)?value.map(stable):value&&typeof value==='object'?Object.fromEntries(Object.keys(value).sort().map(key=>[key,stable(value[key])])):value;
- return JSON.stringify(stable(normalize(project)))!==JSON.stringify(stable(normalize(projectForBoard(project.boardId??DEFAULT_BOARD_ID))));
+ const current=JSON.stringify(stable(normalize(project)));return [blankProject(),projectForBoard(project.boardId??DEFAULT_BOARD_ID)].every(base=>current!==JSON.stringify(stable(normalize(base))));
 }

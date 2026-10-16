@@ -83,6 +83,8 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Test catalog search, Docs, inline main.c and routed wiring
         run: npm run test:catalog:ui
+      - name: Test empty canvas, single board, breadboards and inline Docs
+        run: npm run test:empty-workspace:ui
       - name: Test onboard USART2 VCP and external UART wiring
         run: npm run test:uart:ui
       - name: Upload test diagnostics on failure

@@ -5,7 +5,7 @@ const {_electron}=require('playwright'),{openFixture}=require('./smoke-fixture.c
  const env={...process.env,CIRCUIT_LAB_SMOKE:'1',CIRCUIT_LAB_TEST_PROFILE:path.join(temp,'profile')};delete env.ELECTRON_RUN_AS_NODE;
  const app=await _electron.launch({executablePath:process.env.LAB_EXE||path.join(root,'node_modules/electron/dist/electron.exe'),args:process.env.LAB_EXE?[]:[root],cwd:root,env});let page;
  try{
-  const {blankProject,validateProject}=await import('../src/project.js'),{PART_LIBRARY}=await import('../src/part-library.js'),{PART_DEFS}=await import('../src/components.js'),{scaleXOf,scaleYOf}=await import('../src/geometry.js'),{circuitFixture}=await import('../tests/fixtures/circuits.js');
+  const {exampleProject:blankProject,validateProject}=await import('../src/project.js'),{PART_LIBRARY}=await import('../src/part-library.js'),{PART_DEFS}=await import('../src/components.js'),{scaleXOf,scaleYOf}=await import('../src/geometry.js'),{circuitFixture}=await import('../tests/fixtures/circuits.js');
   page=await app.firstWindow();const errors=[];page.on('pageerror',e=>errors.push(e.message));await page.waitForSelector('.monaco-editor');await app.evaluate(({BrowserWindow})=>{const w=BrowserWindow.getAllWindows()[0];w.setContentSize(1540,1020);w.showInactive();});
   const settle=()=>page.waitForFunction(()=>document.getElementById('save-state').textContent==='자동 저장됨');
   const read=async()=>{await settle();return page.evaluate(()=>JSON.parse(localStorage.getItem('stm32lab.project.v2')));};
@@ -19,7 +19,7 @@ const {_electron}=require('playwright'),{openFixture}=require('./smoke-fixture.c
   await page.click('#run');await page.waitForTimeout(250);assert.match(await page.locator('#run-status').textContent(),/실행 중/);assert.equal(await page.locator('#resize-layer rect').count(),0);assert.equal(await page.locator('#resize-target').isDisabled(),true);await page.click('#run');
   await page.selectOption('#resize-target','surface:board');const beforeKey=await read();await page.locator('#resize-layer rect[data-resize-handle="e"]').focus();await page.keyboard.press('ArrowRight');saved=await read();assert.ok(scaleXOf(saved.surfaces.board)>scaleXOf(beforeKey.surfaces.board));
   await page.click('#zoom-reset');await page.screenshot({path:path.join(out,'edge-resize-board.png')});
-  const all=PART_LIBRARY.map((part,i)=>({id:'device'+i,type:part.type,name:part.name,x:850+i%8*350,y:650+Math.floor(i/8)*250,rotation:i%3===0?45:0,span:70,...PART_DEFS[part.type]?.defaults,...(part.type==='resistor'?{value:330}:{}),...(part.type==='led'?{color:'red'}:{})}));
+  const all=PART_LIBRARY.filter(p=>p.type!=='board').map((part,i)=>({id:'device'+i,type:part.type,name:part.name,x:850+i%8*350,y:650+Math.floor(i/8)*250,rotation:i%3===0?45:0,span:70,...PART_DEFS[part.type]?.defaults,...(part.type==='resistor'?{value:330}:{}),...(part.type==='led'?{color:'red'}:{})}));
   for(let start=0;start<all.length;start+=60){
    const batch=blankProject();batch.components=all.slice(start,start+60);validateProject(batch);await openFixture(page,batch);
    for(const [i,part]of batch.components.entries()){

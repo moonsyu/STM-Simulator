@@ -1,11 +1,11 @@
-import {blankProject} from './project.js';
+import {exampleProject} from './project.js';
 import {PART_DEFS} from './components.js';
 import {boardPin} from './pins.js';
 import {generateHal,validateMcu} from './mcu-config.js';
 export const BASIC_EXAMPLES={potentiometer:'HAL · 가변저항 ADC',slide:'HAL · 슬라이드 스위치',rgb:'HAL · RGB LED',lcd:'HAL · LCD 1602 4비트',diode:'HAL · 다이오드 순방향 전압',buzzer:'HAL · 능동 부저',sevenseg:'HAL · 7세그먼트 숫자'};
 export const BASIC_GUIDES={potentiometer:'1→GND, 2(WIPER)→PA0 ADC1, 3→3V3 · 위치 50%에서 약 1.65 V / 2048',slide:'A→GND, COM→PA10 입력, B→3V3 · 위치에 따라 0/1 출력',rgb:'R/G/B 각각 PB3/PB4/PB5→330 Ω→애노드, 공통 K→GND · 빨강/초록/파랑 순환',lcd:'VSS/VO/RW/K→GND, VDD→5V, A→220 Ω→5V · RS PB0, E PB1, DB4~7 PB4~7 · DB0~3 미연결',diode:'PA5→1 kΩ→다이오드 A, K→GND · A→PA0 ADC · HIGH에서 약 0.7 V',buzzer:'+→PA5, −→GND · 능동 부저는 내부 발진기 사용, 0.5초 켜기/끄기',sevenseg:'PB0~7→각 1 kΩ→a/b/c/d/e/f/g/dp, K1/K2→GND · 0~9 반복'};
 export function basicHalExample(kind){
- const p=blankProject();p.name=BASIC_EXAMPLES[kind];p.simulation={stepMs:1,pwmWaveform:false};const m=p.mcu;let count=0;
+ const p=exampleProject();p.name=BASIC_EXAMPLES[kind];p.simulation={stepMs:1,pwmWaveform:false};const m=p.mcu;let count=0;
  const def=PART_DEFS[kind];p.components=[{id:'demo',name:def?.prefix+'1',type:kind,x:820,y:330,rotation:0,span:70,...def?.defaults}];
  const term=(n,id='demo')=>`part:${id}:${typeof n==='number'?'p'+n:n}`,wire=(a,b)=>p.wires.push({id:'w'+(++count),from:a,to:b,color:'#23a68a'}),connect=(signal,n)=>wire(boardPin(signal),term(n));
  const pin=(name,fn,pull='NOPULL')=>m.pins[name]={function:fn,pull,edge:'FALLING',initial:0,label:''};

@@ -2,6 +2,7 @@ import {CATALOG_BY_TYPE} from './catalog-defs.js';
 import {PART_DEFS} from './components.js';
 
 const BASE_PARTS={
+ board:{name:'NUCLEO-F446RE 보드',icon:'F4',hint:'STM32F446RE · 보드 1개'},
  resistor:{name:'저항',icon:'▰',iconClass:'resistor-icon',hint:'330 Ω · 값 변경 가능'},
  led:{name:'LED',icon:'●',iconClass:'led-icon',hint:'전류에 따른 점등'},
  button:{name:'푸시 버튼',icon:'▣',iconClass:'button-icon',hint:'4핀 · 모형을 끌어 설치'},
@@ -9,6 +10,7 @@ const BASE_PARTS={
  breadboard:{name:'빵판',icon:'▦',iconClass:'breadboard-icon',hint:'400홀 · 추가 배선 공간'}
 };
 const ALIASES={
+ board:'STM STM32 STM32F446RE Nucleo MCU 마이크로컨트롤러 보드',
  l298n:'l298 dual h bridge driver motor 모터 드라이버 듀얼',dc_motor:'dc motor 모터 직류',dc_supply:'power battery supply 전원 배터리 외부 전원',
  breadboard:'bread board 브레드보드 브레드 보드 빵판',resistor:'resistance',led:'light diode 발광 다이오드',button:'push switch 스위치',lcd:'display liquid crystal 디스플레이 액정',
  uart:'serial terminal 시리얼 직렬 통신',i2c:'memory 메모리 통신',spi:'memory 메모리 통신',

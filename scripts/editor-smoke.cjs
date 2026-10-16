@@ -10,7 +10,7 @@ const {_electron}=require(process.env.PLAYWRIGHT_MODULE||'playwright');
  const app=await _electron.launch({executablePath:process.env.LAB_EXE||path.join(root,'node_modules/electron/dist/electron.exe'),args:process.env.LAB_EXE?[]:[root],cwd:root,env});
  try{
  const {circuitFixture}=await import('../tests/fixtures/circuits.js');
- const page=await app.firstWindow(),errors=[];page.on('pageerror',e=>errors.push(e.message));await page.waitForSelector('.pin-hit');
+ const page=await app.firstWindow(),errors=[];page.on('pageerror',e=>errors.push(e.message));await page.waitForSelector('.monaco-editor');
  await app.evaluate(({BrowserWindow})=>BrowserWindow.getAllWindows()[0].showInactive());
  await openFixture(page,circuitFixture());
  const client=async(x,y)=>page.evaluate(({x,y})=>{const svg=document.getElementById('circuit'),p=svg.createSVGPoint();p.x=x;p.y=y;const q=p.matrixTransform(svg.getScreenCTM());return {x:q.x,y:q.y};},{x,y});
@@ -27,8 +27,8 @@ const {_electron}=require(process.env.PLAYWRIGHT_MODULE||'playwright');
    const p=JSON.parse(localStorage.getItem('stm32lab.project.v2')).components.find(p=>p.id===id),map=p.attachments||{a:p.attachA,b:p.attachB};
    return Object.entries(map).every(([key,hole])=>{const a=document.querySelector(`[data-endpoint="part:${id}:${key}"]`),b=document.querySelector(`[data-endpoint="${hole}"]`);return a.getAttribute('cx')===b.getAttribute('cx')&&a.getAttribute('cy')===b.getAttribute('cy');});
  },id);
- await newProject(page);assert.equal(await page.locator('[data-part]').count(),0);
- assert.equal(await page.locator('[data-color]').count(),10);
+ await newProject(page);const {exampleProject}=await import('../src/project.js');await openFixture(page,exampleProject());assert.equal(await page.locator('[data-part]').count(),0);
+ assert.equal(await page.locator('[data-color]').count(),20);
  // Two-point placement; the body lies directly over c10 and must win hit testing.
  await page.click('[data-add="resistor"]');await page.click('[data-endpoint="bb:b:10"]');await page.click('[data-endpoint="bb:d:10"]');
  const resistor=await lastPart();assert.equal(resistor.span,28);assert.ok(await aligned(resistor.id));

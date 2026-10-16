@@ -75,7 +75,7 @@ export class HalAdapter {
       this.uartWrite(channel,bytes,r);yield duration;return 0;
     }
     if(channel.rx)return 2;r.pointerCell(buffer,count-1);let index=0;
-    while(index<count){while(index<count&&channel.bus.call('Serial1.available',[],r)>0)r.set(r.pointerCell(buffer,index++),this.uartRead(channel,r));if(index===count)return 0;if(r.microTime/1000-start>=timeout)return 3;yield Math.min(1,timeout-(r.microTime/1000-start));}
+    while(index<count){while(index<count&&channel.bus.call('Serial1.available',[],r)>0)r.set(r.pointerCell(buffer,index++),this.uartRead(channel,r));if(index===count)return 0;const remaining=timeout-(r.microTime/1000-start);if(remaining<=1e-9)return 3;yield Math.min(1,remaining);}
     return 0;
   }
   bytes(buffer,count,r){int(count,1,256,'전송 길이');if(typeof buffer==='string'){if(count>buffer.length+1)throw new Error('문자열 범위를 벗어난 전송');return Array.from({length:count},(_,i)=>buffer.charCodeAt(i)||0);}return Array.from({length:count},(_,i)=>int(r.get(r.pointerCell(buffer,i)),0,255,'전송 바이트'));}
