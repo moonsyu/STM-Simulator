@@ -45,11 +45,14 @@ test('diagnostics do not break web mode or app operations when the disk service 
 test('TFT state logs retain complete pixel hashes and capture values before queued writes',async t=>{
  const sink=await fixture(t),pixels=Array.from({length:128*160},(_,i)=>i%128<43?0xf800:i%128<86?0x07e0:0x001f);
  const expected=createHash('sha256').update(JSON.stringify(pixels)).digest('hex');
- const parts=Object.fromEntries(Array.from({length:8},(_,i)=>['tft'+i,{visible:true,device:{ram:pixels},pixels}]));
- const first=sink.record({type:'simulation.state',detail:{simulationMs:3500,parts}});
+ const typed=new Uint16Array(pixels),parts=Object.fromEntries(Array.from({length:8},(_,i)=>['tft'+i,{visible:true,device:{ram:typed},pixels}]));
+ const errors=[],record=createDiagnostics(input=>sink.record(input),()=>null,e=>errors.push(e));
+ const first=record('simulation.state',{simulationMs:3500,parts});
  pixels.fill(0);
- const second=sink.record({type:'simulation.state',detail:{simulationMs:4000,parts}});
+ typed.fill(0);
+ const second=record('simulation.state',{simulationMs:4000,parts});
  await Promise.all([first,second]);
+ assert.deepEqual(errors,[]);
  const events=(await fs.readFile(path.join(sink.directory,'events.jsonl'),'utf8')).trim().split('\n').map(JSON.parse);
  assert.deepEqual(events.map(e=>e.detail.simulationMs),[3500,4000]);
  for(const part of Object.values(events[0].detail.parts)){
