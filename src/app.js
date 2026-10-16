@@ -6,6 +6,7 @@ import {loadPreferences} from './ide-preferences.js';
 import {WireDraft} from './wire-draft.js';
 import {setupDeviceDocs} from './device-docs-ui.js';
 import {applyDeviceExample} from './device-assistance.js';
+import {createDiagnostics} from './diagnostics.js';
 import {selectedIds,isSelected,toggleSelection,wirePoints,insertWirePoint,connectedNet,copySelection,pasteSelection,moveSelection} from './circuit-edit.js';
 import {circuitDiagnostics} from './circuit-diagnostics.js';
 import {PINS,BB,PIN_BY_ID,endpointInfo,searchPins,circuitHoles,holeInfo} from './pins.js';
@@ -43,6 +44,7 @@ const wireDraft=new WireDraft();
 let project=blankProject(),mode='select',pending=null,selection=null,color='#23a68a',status='stopped',result=null,runtime=null,simTime=0,pressed={},undoStack=[],redoStack=[],dirty=false;
 let view={x:0,y:0,w:1120,h:730},drag=null,lastWarnings='',replaceAction=null,paintCounter=0,saveTimer,searchSelectedId=null;
 try{const cached=localStorage.getItem('stm32lab.project.v2')||localStorage.getItem('stm32lab.project.v1');if(cached)project=validateProject(JSON.parse(cached));}catch{}
+const diagnostic=createDiagnostics(window.localDiagnostics?.record,()=>project);
 initSvg(svg);
 let session=null,audioEnabled=false,audioContext,buzzerAudio;
 const monitor=new Monitor({getSession:()=>session,isRunning:()=>running(),onSettings:settings=>{if(running())return;checkpoint();project.simulation=settings;autosave();},onError:message=>log(message,'error')});
@@ -68,12 +70,14 @@ const uartLines=new Map();
 function uid(prefix){return prefix+crypto.randomUUID().replaceAll('-','').slice(0,12);}
 function running(){return status==='running'||status==='paused'||!!ide?.nativeBusy();}
 function log(message,type='info'){
+ diagnostic('console',{type,message:String(message).slice(0,8000),simulationMs:simTime,status});
  const div=document.createElement('div');div.className=`log-line ${type}`;
  const span=document.createElement('span');span.className='stamp';span.textContent=(simTime/1000).toFixed(3)+' s';div.append(span,document.createTextNode(message));
  $('console-output').append(div);while($('console-output').children.length>150)$('console-output').firstChild.remove();$('console-output').scrollTop=$('console-output').scrollHeight;
  return div;
 }
 function logUart(event){
+ diagnostic('uart',{instance:event.instance,direction:event.direction,bytes:Array.from(event.bytes).slice(0,512),micros:event.micros});
  const key=event.instance+' '+event.direction;
  for(const byte of event.bytes){if(byte===13)continue;if(byte===10){uartLines.delete(key);continue;}
   let row=uartLines.get(key);if(!row?.node.isConnected||row.text.length>=512){row={node:log('['+key+'] ','serial'),text:''};row.node.querySelector('.stamp').textContent=(event.micros/1e6).toFixed(3)+' s';uartLines.set(key,row);}
@@ -81,7 +85,7 @@ function logUart(event){
  }
  $('console-output').scrollTop=$('console-output').scrollHeight;
 }
-function autosave(){clearTimeout(saveTimer);$('save-state').textContent='저장 중…';saveTimer=setTimeout(()=>{try{localStorage.setItem('stm32lab.project.v2',JSON.stringify(project));$('save-state').textContent='자동 저장됨';}catch{$('save-state').textContent='파일로 저장해 주세요';}},200);}
+function autosave(){clearTimeout(saveTimer);$('save-state').textContent='저장 중…';saveTimer=setTimeout(()=>{try{localStorage.setItem('stm32lab.project.v2',JSON.stringify(project));$('save-state').textContent='자동 저장됨';}catch{$('save-state').textContent='파일로 저장해 주세요';}diagnostic('project.saved',{status},true);},200);}
 function checkpoint(){undoStack.push(JSON.stringify(project));if(undoStack.length>80)undoStack.shift();redoStack=[];dirty=true;}
 function changed(){autosave();refresh();}
 function setMode(m){if(running()){log('편집하려면 시뮬레이션을 먼저 정지하세요.');return;}mode=m;pending=null;selection=null;$('preview-layer').innerHTML='';refresh();}
@@ -317,10 +321,12 @@ $('pin-search').addEventListener('keydown',e=>{if(e.key==='Enter'){const p=searc
 function recompute(){if(!runtime||!session)return;try{session.setPressed(pressed);result=session.viewResult;const warning=result.warnings.join('|');if(warning&&warning!==lastWarnings)result.warnings.forEach(w=>log(w,'error'));lastWarnings=warning;}catch(e){result=session.viewResult;status='error';log(e.message,'error');}}
 function initializeRuntime({debug=false,entry=false}={}){
  const program=ide?.build({reveal:false});if(ide&&!program){status='error';runtime=null;session=null;layout.reveal('terminal');document.querySelector('[data-monitor="build"]').click();return false;}
- try{simTime=0;pressed={};lastWarnings='';result=null;monitor.clear();uartLines.clear();session=new SimulationSession(project,{program,debug:debug?{entry,breakpoints:ide?.breakpoints()||[]}:undefined,print:s=>log(s,'serial'),uart:logUart,trace:event=>monitor.trace(event),channels:monitor.channels()});runtime=session.runtime;status='paused';pending=null;mode='select';result=session.tick(0);log(project.firmware?.mode==='hal'?'HAL 프로그램을 시작했습니다.':'스케치를 시작했습니다.');ide?.debugView();return true;}
+ try{simTime=0;pressed={};lastWarnings='';result=null;monitor.clear();uartLines.clear();session=new SimulationSession(project,{program,debug:debug?{entry,breakpoints:ide?.breakpoints()||[]}:undefined,print:s=>log(s,'serial'),uart:logUart,trace:event=>monitor.trace(event),channels:monitor.channels()});runtime=session.runtime;status='paused';pending=null;mode='select';result=session.tick(0);diagnostic('simulation.started',{debug,entry},true);log(project.firmware?.mode==='hal'?'HAL 프로그램을 시작했습니다.':'스케치를 시작했습니다.');ide?.debugView();return true;}
  catch(e){runtime=null;result=session?.viewResult??null;status='error';log(e.message,'error');return false;}
 }
-function stop(){status='stopped';runtime=null;result=null;pressed={};pending=null;$('preview-layer').innerHTML='';log('시뮬레이션을 정지했습니다.');refresh();ide?.debugView();}
+function recordSimulation(){if(result)diagnostic('simulation.state',{status,simulationMs:simTime,pins:runtime?.gpio||{},parts:result.parts,fault:result.fault,warnings:result.warnings});}
+setInterval(recordSimulation,2000);
+function stop(){recordSimulation();status='stopped';runtime=null;result=null;pressed={};pending=null;$('preview-layer').innerHTML='';log('시뮬레이션을 정지했습니다.');refresh();ide?.debugView();}
 $('run').onclick=()=>{if(runtime?.debug.paused){runtime.resume();simTime=runtime.microTime/1000;status='running';ide?.debugView();refresh();}else if(running())stop();else {if(initializeRuntime({debug:!!ide?.breakpoints().length}))status=runtime.debug.paused?'paused':'running';refresh();}};
 function debugCommand(command){
  if(command==='stop'){if(running())stop();return;}
@@ -408,13 +414,22 @@ ide=setupIde({getProject:()=>project,getSource:()=>sourceFile,getSession:()=>run
  selectSource:name=>{if(name!=='main.c'&&!project.firmware?.files.some(f=>f.name===name))return;sourceFile=name;syncEditor();},
  applySources:(p,file)=>{checkpoint();project=validateProject(p);sourceFile=file;syncEditor();changed();ide.invalidate();}});
 setupIdeSettings({editor:ide.editor,layout,open:()=>tab('settings')});
-deviceDocs=setupDeviceDocs({getProject:()=>project,getSelection:()=>selection,isRunning:running,open:()=>tab('docs'),showSource:file=>{sourceFile=file;syncEditor();tab('code');},apply:(target,options)=>{if(running())throw new Error('실행을 정지한 뒤 적용하세요.');const result=applyDeviceExample(project,target,options);checkpoint();project=result.project;sourceFile=result.file;runtime=null;session=null;status='stopped';syncEditor();changed();if(result.binding.type==='uart'||CATALOG_BY_TYPE[result.binding.type]?.family==='uart'){const id=result.binding.peripherals.USART2;$('serial-target').value=id==='USART2'?'USART2:external':id;}ide.invalidate();return result;}});
+deviceDocs=setupDeviceDocs({getProject:()=>project,getSelection:()=>selection,isRunning:running,open:()=>tab('docs'),showSource:file=>{sourceFile=file;syncEditor();tab('code');},apply:(target,options)=>{
+ if(running())throw new Error('실행을 정지한 뒤 적용하세요.');
+ let applied;try{applied=applyDeviceExample(project,target,options);}catch(error){diagnostic('docs.failed',{target,options,message:error.message},true);throw error;}
+ checkpoint();project=applied.project;sourceFile=applied.file;runtime=null;session=null;status='stopped';syncEditor();changed();
+ diagnostic('docs.applied',{target,binding:applied.binding,report:applied.report},true);
+ if(applied.binding.type==='uart'||CATALOG_BY_TYPE[applied.binding.type]?.family==='uart'){const id=applied.binding.peripherals.USART2;$('serial-target').value=id==='USART2'?'USART2:external':id;}
+ ide.invalidate();return applied;
+}});
 resizing=setupResizing({getProject:()=>project,getSelection:()=>selection,isRunning:running,canResize:()=>!drag&&!pending&&mode==='select',focus:frame=>{const b=frame.bounds,points=[[0,0],[1,0],[1,1],[0,1]].map(([x,y])=>frame.point(b.x+x*b.width,b.y+y*b.height)),xs=points.map(p=>p.x),ys=points.map(p=>p.y),left=Math.min(...xs),top=Math.min(...ys),width=Math.max(...xs)-left,height=Math.max(...ys)-top,w=Math.max(430,width*1.8,height*1.8*1120/730);view={x:left+width/2-w/2,y:top+height/2-w*730/1120/2,w,h:w*730/1120};viewUpdate();},onError:message=>log(message,'error'),select:target=>{selection=target;pending=null;mode='select';inspectTab();refresh();},preview:draft=>{clearTimeout(saveTimer);project=draft;refresh();pinSearch();},cancel:base=>{project=base;changed();pinSearch();},commit:(base,draft)=>{validateProject(draft);project=base;checkpoint();project=draft;changed();pinSearch();},resize:(target,scale)=>{if(running())return;const draft=structuredClone(project);resizeObject(draft,target,scale);validateProject(draft);checkpoint();project=draft;selection=target;changed();pinSearch();}});
 syncEditor();fitView();refresh();log('회로를 연결하고 시뮬레이션 시작 또는 F5를 눌러 보세요.');
+diagnostic('app.started',{status},true);
 setupUpdates({beforeInstall:async()=>{
  clearTimeout(saveTimer);
  const text=JSON.stringify(project);
  localStorage.setItem('stm32lab.project.v2',text);
+ await diagnostic('app.before-update',{status},true);
  await ide.saveWorkspace(text);
  $('save-state').textContent='자동 저장됨';
 }});

@@ -1,4 +1,5 @@
 const {contextBridge,ipcRenderer}=require('electron');
+contextBridge.exposeInMainWorld('localDiagnostics',{record:input=>ipcRenderer.invoke('diagnostics:record',input)});
 const updates={};
 for(const name of ['state','check','download','configure','releases','install'])updates[name]=(...args)=>ipcRenderer.invoke('update:'+name,...args);
 updates.onState=callback=>{const handler=(_event,state)=>callback(state);ipcRenderer.on('update:state',handler);return()=>ipcRenderer.removeListener('update:state',handler);};

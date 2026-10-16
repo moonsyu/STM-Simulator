@@ -85,6 +85,8 @@ jobs:
         run: npm run test:catalog:ui
       - name: Test empty canvas, single board, breadboards and inline Docs
         run: npm run test:empty-workspace:ui
+      - name: Test LED WritePin and persisted circuit diagnostics
+        run: node scripts/docs-writepin-check.cjs
       - name: Test onboard USART2 VCP and external UART wiring
         run: npm run test:uart:ui
       - name: Upload test diagnostics on failure

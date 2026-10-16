@@ -16,9 +16,15 @@ updater.on('state',state=>{if(win&&!win.isDestroyed())win.webContents.send('upda
 let updaterReady;
 const {TOOL_KEYS,detectTools,probeTools}=require('./native-build.cjs');
 const nativeIde=new NativeIde(app.getPath('userData'));
+const {Diagnostics}=require('./diagnostics.cjs');
+const diagnostics=new Diagnostics(app.getPath('userData'),app.getVersion());
+ipcMain.handle('diagnostics:record',(event,input)=>{
+ if(event.sender!==win?.webContents||!event.senderFrame||event.senderFrame!==win.webContents.mainFrame)throw new Error('허용하지 않는 요청입니다.');
+ return diagnostics.record(input);
+});
 nativeIde.on('event',data=>{if(win&&!win.isDestroyed())win.webContents.send('native:event',data);});
 let quitting=false;
-app.on('before-quit',event=>{if(quitting)return;event.preventDefault();quitting=true;updater.close();nativeIde.close().finally(()=>app.quit());});
+app.on('before-quit',event=>{if(quitting)return;event.preventDefault();quitting=true;updater.close();Promise.allSettled([nativeIde.close(),diagnostics.flush()]).finally(()=>app.quit());});
 function updateHandle(name,handler){ipcMain.handle('update:'+name,async(event,...args)=>{if(event.sender!==win?.webContents||event.senderFrame?.parent)throw new Error('허용하지 않는 요청입니다.');await updaterReady;return handler(...args);});}
 updateHandle('state',()=>updater.snapshot());
 updateHandle('check',()=>updater.check());
