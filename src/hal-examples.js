@@ -30,7 +30,7 @@ export function halExample(kind){
   if(['adc','temperature','samples'].includes(kind)){m.pins.PA0=pin('ADC1_IN0');m.peripherals.ADC1={enabled:true};}
   if(kind==='i2c'){m.pins.PB8=pin('I2C1_SCL');m.pins.PB9=pin('I2C1_SDA');m.peripherals.I2C1={enabled:true,clock:100000};}
   if(kind==='spi'){m.pins.PA5=pin('SPI1_SCK');m.pins.PA6=pin('SPI1_MISO');m.pins.PA7=pin('SPI1_MOSI');m.pins.PB6=pin('GPIO_Output');m.pins.PB6.initial=1;m.peripherals.SPI1={enabled:true,clock:1000000};}
-  if(kind==='pwm'){m.pins.PA5=pin('TIM2_CH1');m.pins.PA0=pin('GPIO_Input');m.peripherals.TIM2={enabled:true,prescaler:839,period:999};}
+  if(kind==='pwm'){m.pins.PA5=pin('TIM2_CH1');m.pins.PA0=pin('GPIO_Input');m.peripherals.TIM2={enabled:true,prescaler:839,period:999,mode:'pwm'};}
   if(kind==='ultrasonic'){m.pins.PC7=pin('GPIO_Output');m.pins.PA9=pin('GPIO_Input');m.peripherals.TIM2={enabled:true,prescaler:83,period:4294967295};}
   p.mcu=validateMcu(m);p.code=generateHal(p.mcu);
   const user=(section,text)=>{const re=new RegExp(`/\\* USER CODE BEGIN ${section} \\*/[\\s\\S]*?/\\* USER CODE END ${section} \\*/`);p.code=p.code.replace(re,`/* USER CODE BEGIN ${section} */\n${text}\n    /* USER CODE END ${section} */`);};

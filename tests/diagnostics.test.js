@@ -41,3 +41,22 @@ test('diagnostics do not break web mode or app operations when the disk service 
  const errors=[],record=createDiagnostics(()=>Promise.reject(new Error('disk full')),()=>blankProject(),e=>errors.push(e));
  await record('first');await record('second');assert.equal(errors.length,1);assert.match(errors[0],/disk full/);
 });
+
+test('TFT state logs retain complete pixel hashes and capture values before queued writes',async t=>{
+ const sink=await fixture(t),pixels=Array.from({length:128*160},(_,i)=>i%128<43?0xf800:i%128<86?0x07e0:0x001f);
+ const expected=createHash('sha256').update(JSON.stringify(pixels)).digest('hex');
+ const parts=Object.fromEntries(Array.from({length:8},(_,i)=>['tft'+i,{visible:true,device:{ram:pixels},pixels}]));
+ const first=sink.record({type:'simulation.state',detail:{simulationMs:3500,parts}});
+ pixels.fill(0);
+ const second=sink.record({type:'simulation.state',detail:{simulationMs:4000,parts}});
+ await Promise.all([first,second]);
+ const events=(await fs.readFile(path.join(sink.directory,'events.jsonl'),'utf8')).trim().split('\n').map(JSON.parse);
+ assert.deepEqual(events.map(e=>e.detail.simulationMs),[3500,4000]);
+ for(const part of Object.values(events[0].detail.parts)){
+  assert.equal(part.device.ram.length,20480);assert.equal(part.device.ram.nonzero,20480);
+  assert.equal(part.device.ram.sha256,expected);assert.equal(part.pixels.sha256,expected);assert.equal(part.visible,true);
+ }
+ assert.equal(events[1].detail.parts.tft0.device.ram.nonzero,0);
+ assert.ok(JSON.stringify(events[0]).length<65536);
+ await assert.rejects(sink.record({type:'simulation.state',detail:{text:'x'.repeat(65537)}}));
+});
