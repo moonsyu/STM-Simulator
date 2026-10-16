@@ -87,6 +87,10 @@ jobs:
         run: npm run test:empty-workspace:ui
       - name: Test LED WritePin and persisted circuit diagnostics
         run: node scripts/docs-writepin-check.cjs
+      - name: Test TFT frame diagnostics and UART input through Electron
+        env:
+          DOCS_AUDIT_TYPES: tft,ref_st7735_8,uart
+        run: node scripts/docs-audit/packaged.cjs --dev
       - name: Test onboard USART2 VCP and external UART wiring
         run: npm run test:uart:ui
       - name: Upload test diagnostics on failure
@@ -98,6 +102,7 @@ jobs:
             work/test-results/*.log
             work/test-results/*.json
             work/test-results/*.png
+            work/test-results/docs-audit-*/*.json
           if-no-files-found: ignore
           retention-days: 14
       - name: Build portable executable
