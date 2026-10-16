@@ -1,4 +1,4 @@
-# 검증 기록 — 0.23.1 배포 전 검사
+# 검증 기록 — 0.23.1 공개 릴리스
 
 검증일: 2026-10-16. 작업 경로 `D:\codex\project\STM-Simulator`.
 
@@ -9,7 +9,11 @@
 - `node scripts/docs-writepin-check.cjs`: 분리된 숨긴 Electron 프로필에서 실제 Docs 카드 버튼, main 삽입, 실행 로그의 점등/소등, 재적용 GND 복구, 이벤트-회로 해시 일치 통과. 사용자 앱 프로필에 접근하지 않음.
 - 로컬 진단 단위 검사: 파일 회전, 잘못된/과대 입력 거부, 디스크 실패 복구, 기록 순서와 스냅샷 시점, 웹 환경·저장 실패 시 앱 동작 유지.
 - 증거: ignored `work/diagnostics/{all-tests.log,user-project-verification.json,arm-verification.json}`, `work/test-results/docs-writepin-check.json`.
-- 전체 Windows CI 및 공개 Release 자산: 게시 후 별도로 검증 예정.
+- [전체 Windows CI](https://github.com/moonsyu/STM-Simulator/actions/runs/38918319975)와 [Release v0.23.1](https://github.com/moonsyu/STM-Simulator/releases/tag/v0.23.1) 게시 성공. 빌드/태그 `99f8f02e578dfc1510fe06a834e111f11f9e4197`, Git 작성자/커미터 및 게시 인증 `moonsyu` 확인. GitHub latest는 v0.23.1.
+- 공개 `STM-Simulator.exe`, `STM-Simulator-0.23.1-Windows-x64.zip`, `SHA256.txt`, `BUILD-INFO.json`, `update-manifest.json` 다섯 자산을 검증. EXE/ZIP 비인증 다운로드, ZIP 내부 EXE, 버전·태그·빌드 커밋·크기·해시·문서 일치 확인. 로컬 `outputs/artifact/`도 해당 ZIP으로 갱신.
+- EXE 102,750,052 bytes, SHA-256 `fab499411f0d9c97f907b23ada771b111aed367aaf069acde32644d307ddcd45`. ZIP SHA-256 `c6f9c6646fc27ea414973d86fa9e36d6749f975b2083cdce54bbab7b07d1a36d`.
+- 내려받은 공개 EXE를 별도의 숨긴 프로필에서 실제 실행. WritePin 카드 → main SET → 실행 로그의 LED 점등, GND 삭제 후 재적용 복원, main RESET으로 변경 후 소등, 앱 버전 0.23.1의 파일 로그 기록까지 통과. 현재 사용자 앱과 원본 회로는 변경하지 않음.
+- 공개 검증 증거: `work/test-results/release-0.23.1-ci.json`, `release-0.23.1-proof.json`, `public-0231-proof.json`. 기존 회로의 빈 STEP은 자동 변경하지 않으므로 업데이트 후 WritePin 카드를 재적용해야 함.
 
 ---
 
