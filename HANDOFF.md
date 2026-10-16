@@ -1,6 +1,15 @@
 # STM Simulator — 개발 인계
 
-현재 공개/개발 버전: **0.23.0**. 정리일: **2026-10-16**. NUCLEO-F446RE와 빵판을 연결하고 GPIO 스케치 또는 지원 HAL C 소스를 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+개발 버전: **0.23.1**, 마지막 검증된 공개 버전: **0.23.0**. 정리일: **2026-10-16**. NUCLEO-F446RE와 빵판을 연결하고 GPIO 스케치 또는 지원 HAL C 소스를 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+
+## 0.23.1 WritePin 적용 및 파일 진단
+
+- 작업 위치는 `D:\codex\project\STM-Simulator`. 현재 앱 상태 조사는 화면 조작보다 [로컬 진단 파일](docs/DIAGNOSTICS.md)을 먼저 사용한다.
+- 0.23.0 LED WritePin 카드는 MX_GPIO_Init의 RESET만 보여 주고 main의 STEP은 비워 두었다. `src/device-inline-example.js`에서 실제 main용 SET 호출을 생성하며 미리 보기와 삽입 코드가 일치한다. 전체 TogglePin 예제는 그대로다.
+- 당시 자동 저장 사본 두 개 중 최신 사본에는 LED GND 선도 없었다. 없어지게 된 조작은 확인되지 않았다. 기존 배선 복구 로직으로 재적용 시 GND 1개를 추가하고 정상 선은 보존함을 검증했다. 사용자 원본 프로필은 변경하지 않았다.
+- `desktop/diagnostics.cjs`, `src/diagnostics.js`: 로컬 JSONL 1 MB×2, 최근 회로 사본 2 MB 이하, 코드/배선 해시 및 실행 상태 기록. 로그 외부 전송 없음. 실제 사용자 회로 사본은 ignored `work/diagnostics/`에만 보관.
+- `tests/docs-gpio-operation.test.js`, `tests/diagnostics.test.js`, `scripts/docs-writepin-check.cjs`: 단독 API 실제 출력, GND 복원, 카탈로그 LED와 핀 재배정, 파일 기록/회전/오류 복구 검사. 이전 977개 카드 검사는 컴파일/형식 위주였으므로 동작 검증 완료로 해석하면 안 된다.
+- 로컬 모델 287개, 별도 숨긴 Electron 프로필의 Docs 적용·SET/RESET·로그, 저장 사본 두 개의 실제 ST HAL/CMSIS ARM 링크 통과. 전체 Windows CI 및 공개 자산 검증은 아래 검증 기록의 최신 항목을 확인한다.
 
 ## 0.23.0 빈 회로와 main 내부 예제 (공개 완료)
 
