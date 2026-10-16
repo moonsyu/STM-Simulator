@@ -1,6 +1,6 @@
 {
   "version": "0.23.2",
-  "stage": "source",
+  "stage": "public-release",
   "passed": true,
   "problems": [],
   "devices": 114,
@@ -12,7 +12,10 @@
   "baremetalCards": 274,
   "baremetalRuntimeVerified": 0,
   "migrationPassed": 10,
-  "packagedRuns": 0,
+  "packagedRuns": 114,
+  "exeSha256": "f39b30431204776ce37f202ce20f6265d3216baeb190da5009963732e487956b",
+  "releaseCommit": "dfdd09c86e93cb6273af66d6d6ee5308c2d0b8b2",
+  "releaseUrl": "https://github.com/moonsyu/STM-Simulator/releases/tag/v0.23.2",
   "diagnostics": [
     {
       "type": "tft",
@@ -98,7 +101,20 @@
         "HAL ready",
         "PA5=1",
         "PA5=0"
-      ]
+      ],
+      "packaged": {
+        "version": "0.23.2",
+        "applied": true,
+        "started": true,
+        "correctTarget": true,
+        "sameCode": true,
+        "sameWires": true,
+        "stateEvents": 3,
+        "simulationMs": 3560,
+        "stimuli": [],
+        "inputChecks": [],
+        "errors": []
+      }
     },
     {
       "type": "resistor",
@@ -111,7 +127,20 @@
       "observed": [
         "HAL ready",
         "3964"
-      ]
+      ],
+      "packaged": {
+        "version": "0.23.2",
+        "applied": true,
+        "started": true,
+        "correctTarget": true,
+        "sameCode": true,
+        "sameWires": true,
+        "stateEvents": 3,
+        "simulationMs": 3500,
+        "stimuli": [],
+        "inputChecks": [],
+        "errors": []
+      }
     },
     {
       "type": "led",
@@ -125,7 +154,20 @@
         "HAL ready",
         "PA5=1",
         "PA5=0"
-      ]
+      ],
+      "packaged": {
+        "version": "0.23.2",
+        "applied": true,
+        "started": true,
+        "correctTarget": true,
+        "sameCode": true,
+        "sameWires": true,
+        "stateEvents": 3,
+        "simulationMs": 3500,
+        "stimuli": [],
+        "inputChecks": [],
+        "errors": []
+      }
     },
     {
       "type": "button",
@@ -139,7 +181,20 @@
         "HAL ready",
         "button=0",
         "button=1"
-      ]
+      ],
+      "packaged": {
+        "version": "0.23.2",
+        "applied": true,
+        "started": true,
+        "correctTarget": true,
+        "sameCode": true,
+        "sameWires": true,
+        "stateEvents": 3,
+        "simulationMs": 3540,
+        "stimuli": [],
+        "inputChecks": [],
+        "errors": []
+      }
     },
     {
       "type": "lcd",
@@ -151,7 +206,20 @@
       "wireFailures": [],
       "observed": [
         "HAL ready"
-      ]
+      ],
+      "packaged": {
+        "version": "0.23.2",
+        "applied": true,
+        "started": true,
+        "correctTarget": true,
+        "sameCode": true,
+        "sameWires": true,
+        "stateEvents": 3,
+        "simulationMs": 3500,
+        "stimuli": [],
+        "inputChecks": [],
+        "errors": []
+      }
     },
     {
       "type": "breadboard",
@@ -165,7 +233,20 @@
         "HAL ready",
         "PA5=1",
         "PA5=0"
-      ]
+      ],
+      "packaged": {
+        "version": "0.23.2",
+        "applied": true,
+        "started": true,
+        "correctTarget": true,
+        "sameCode": true,
+        "sameWires": true,
+        "stateEvents": 3,
+        "simulationMs": 3580,
+        "stimuli": [],
+        "inputChecks": [],
+        "errors": []
+      }
     },
     {
       "type": "ref_resistor_axial_2",
@@ -178,7 +259,20 @@
       "observed": [
         "HAL ready",
         "3964"
-      ]
+      ],
+      "packaged": {
+        "version": "0.23.2",
+        "applied": true,
+        "started": true,
+        "correctTarget": true,
+        "sameCode": true,
+        "sameWires": true,
+        "stateEvents": 3,
+        "simulationMs": 3600,
+        "stimuli": [],
+        "inputChecks": [],
+        "errors": []
+      }
     },
     {
       "type": "ref_led_tht_2",
@@ -192,7 +286,20 @@
         "HAL ready",
         "PA5=1",
         "PA5=0"
-      ]
+      ],
+      "packaged": {
+        "version": "0.23.2",
+        "applied": true,
+        "started": true,
+        "correctTarget": true,
+        "sameCode": true,
+        "sameWires": true,
+        "stateEvents": 3,
+        "simulationMs": 3500,
+        "stimuli": [],
+        "inputChecks": [],
+        "errors": []
+      }
     },
     {
       "type": "ref_button_2",
@@ -206,7 +313,20 @@
         "HAL ready",
         "button=0",
         "button=1"
-      ]
+      ],
+      "packaged": {
+        "version": "0.23.2",
+        "applied": true,
+        "started": true,
+        "correctTarget": true,
+        "sameCode": true,
+        "sameWires": true,
+        "stateEvents": 3,
+        "simulationMs": 3600,
+        "stimuli": [],
+        "inputChecks": [],
+        "errors": []
+      }
     },
     {
       "type": "ref_button_4",
@@ -220,7 +340,20 @@
         "HAL ready",
         "button=0",
         "button=1"
-      ]
+      ],
+      "packaged": {
+        "version": "0.23.2",
+        "applied": true,
+        "started": true,
+        "correctTarget": true,
+        "sameCode": true,
+        "sameWires": true,
+        "stateEvents": 3,
+        "simulationMs": 3560,
+        "stimuli": [],
+        "inputChecks": [],
+        "errors": []
+      }
     },
     {
       "type": "ref_button_module_3",
@@ -234,7 +367,20 @@
         "HAL ready",
         "button=0",
         "button=1"
-      ]
+      ],
+      "packaged": {
+        "version": "0.23.2",
+        "applied": true,
+        "started": true,
+        "correctTarget": true,
+        "sameCode": true,
+        "sameWires": true,
+        "stateEvents": 3,
+        "simulationMs": 3580,
+        "stimuli": [],
+        "inputChecks": [],
+        "errors": []
+      }
     },
     {
       "type": "ref_lcd_parallel_16",
@@ -246,7 +392,20 @@
       "wireFailures": [],
       "observed": [
         "HAL ready"
-      ]
+      ],
+      "packaged": {
+        "version": "0.23.2",
+        "applied": true,
+        "started": true,
+        "correctTarget": true,
+        "sameCode": true,
+        "sameWires": true,
+        "stateEvents": 3,
+        "simulationMs": 3600,
+        "stimuli": [],
+        "inputChecks": [],
+        "errors": []
+      }
     },
     {
       "type": "ref_lcd_i2c_4",
@@ -258,7 +417,20 @@
       "wireFailures": [],
       "observed": [
         "HAL ready"
-      ]
+      ],
+      "packaged": {
+        "version": "0.23.2",
+        "applied": true,
+        "started": true,
+        "correctTarget": true,
+        "sameCode": true,
+        "sameWires": true,
+        "stateEvents": 3,
+        "simulationMs": 3540,
+        "stimuli": [],
+        "inputChecks": [],
+        "errors": []
+      }
     },
     {
       "type": "ref_ldr_bare_2",
@@ -272,7 +444,35 @@
         "HAL ready",
         "LDR ADC=3414 voltage=2.751 V",
         "LDR ADC=681 voltage=0.549 V"
-      ]
+      ],
+      "packaged": {
+        "version": "0.23.2",
+        "applied": true,
+        "started": true,
+        "correctTarget": true,
+        "sameCode": true,
+        "sameWires": true,
+        "stateEvents": 3,
+        "simulationMs": 3580,
+        "stimuli": [
+          {
+            "requestedMs": 1100,
+            "observedTime": "1.200 s",
+            "changes": {
+              "lux": 1
+            }
+          },
+          {
+            "requestedMs": 2300,
+            "observedTime": "2.380 s",
+            "changes": {
+              "lux": 100
+            }
+          }
+        ],
+        "inputChecks": [],
+        "errors": []
+      }
     },
     {
       "type": "ref_ldr_module_3",
@@ -286,7 +486,35 @@
         "HAL ready",
         "ADC=3414 voltage=2.751 V",
         "ADC=681 voltage=0.549 V"
-      ]
+      ],
+      "packaged": {
+        "version": "0.23.2",
+        "applied": true,
+        "started": true,
+        "correctTarget": true,
+        "sameCode": true,
+        "sameWires": true,
+        "stateEvents": 3,
+        "simulationMs": 3500,
+        "stimuli": [
+          {
+            "requestedMs": 1100,
+            "observedTime": "1.100 s",
+            "changes": {
+              "lux": 1
+            }
+          },
+          {
+            "requestedMs": 2300,
+            "observedTime": "2.300 s",
+            "changes": {
+              "lux": 100
+            }
+          }
+        ],
+        "inputChecks": [],
+        "errors": []
+      }
     },
     {
       "type": "ref_ldr_comparator_4",
@@ -301,7 +529,35 @@
         "ADC=3414 voltage=2.751 V",
         "threshold=0",
         "ADC=681 voltage=0.549 V"
-      ]
+      ],
+      "packaged": {
+        "version": "0.23.2",
+        "applied": true,
+        "started": true,
+        "correctTarget": true,
+        "sameCode": true,
+        "sameWires": true,
+        "stateEvents": 3,
+        "simulationMs": 3560,
+        "stimuli": [
+          {
+            "requestedMs": 1100,
+            "observedTime": "1.180 s",
+            "changes": {
+              "lux": 1
+            }
+          },
+          {
+            "requestedMs": 2300,
+            "observedTime": "2.380 s",
+            "changes": {
+              "lux": 100
+            }
+          }
+        ],
+        "inputChecks": [],
+        "errors": []
+      }
     },
     {
       "type": "ref_ntc_bare_2",
@@ -316,7 +572,35 @@
         "NTC=25.0 C R=9995 ohm",
         "NTC=10.0 C R=20177 ohm",
         "NTC=45.0 C R=4348 ohm"
-      ]
+      ],
+      "packaged": {
+        "version": "0.23.2",
+        "applied": true,
+        "started": true,
+        "correctTarget": true,
+        "sameCode": true,
+        "sameWires": true,
+        "stateEvents": 3,
+        "simulationMs": 3540,
+        "stimuli": [
+          {
+            "requestedMs": 1100,
+            "observedTime": "1.100 s",
+            "changes": {
+              "temperature": 10
+            }
+          },
+          {
+            "requestedMs": 2300,
+            "observedTime": "2.380 s",
+            "changes": {
+              "temperature": 45
+            }
+          }
+        ],
+        "inputChecks": [],
+        "errors": []
+      }
     },
     {
       "type": "ref_ntc_module_3",
@@ -331,7 +615,35 @@
         "ADC=2047 voltage=1.650 V",
         "ADC=1357 voltage=1.094 V",
         "ADC=2854 voltage=2.300 V"
-      ]
+      ],
+      "packaged": {
+        "version": "0.23.2",
+        "applied": true,
+        "started": true,
+        "correctTarget": true,
+        "sameCode": true,
+        "sameWires": true,
+        "stateEvents": 3,
+        "simulationMs": 3560,
+        "stimuli": [
+          {
+            "requestedMs": 1100,
+            "observedTime": "1.100 s",
+            "changes": {
+              "temperature": 10
+            }
+          },
+          {
+            "requestedMs": 2300,
+            "observedTime": "2.380 s",
+            "changes": {
+              "temperature": 45
+            }
+          }
+        ],
+        "inputChecks": [],
+        "errors": []
+      }
     },
     {
       "type": "ref_sht31_grove_4",
@@ -346,7 +658,37 @@
         "SHT31=25.0 C RH=50.0 %",
         "SHT31=10.0 C RH=30.0 %",
         "SHT31=45.0 C RH=70.0 %"
-      ]
+      ],
+      "packaged": {
+        "version": "0.23.2",
+        "applied": true,
+        "started": true,
+        "correctTarget": true,
+        "sameCode": true,
+        "sameWires": true,
+        "stateEvents": 3,
+        "simulationMs": 3600,
+        "stimuli": [
+          {
+            "requestedMs": 1100,
+            "observedTime": "1.200 s",
+            "changes": {
+              "temperature": 10,
+              "humidity": 30
+            }
+          },
+          {
+            "requestedMs": 2300,
+            "observedTime": "2.400 s",
+            "changes": {
+              "temperature": 45,
+              "humidity": 70
+            }
+          }
+        ],
+        "inputChecks": [],
+        "errors": []
+      }
     },
     {
       "type": "ref_sht31_breakout_7",
@@ -361,7 +703,37 @@
         "SHT31=25.0 C RH=50.0 %",
         "SHT31=10.0 C RH=30.0 %",
         "SHT31=45.0 C RH=70.0 %"
-      ]
+      ],
+      "packaged": {
+        "version": "0.23.2",
+        "applied": true,
+        "started": true,
+        "correctTarget": true,
+        "sameCode": true,
+        "sameWires": true,
+        "stateEvents": 2,
+        "simulationMs": 3560,
+        "stimuli": [
+          {
+            "requestedMs": 1100,
+            "observedTime": "1.200 s",
+            "changes": {
+              "temperature": 10,
+              "humidity": 30
+            }
+          },
+          {
+            "requestedMs": 2300,
+            "observedTime": "2.380 s",
+            "changes": {
+              "temperature": 45,
+              "humidity": 70
+            }
+          }
+        ],
+        "inputChecks": [],
+        "errors": []
+      }
     },
     {
       "type": "ref_mpu6050_8",
@@ -377,7 +749,37 @@
         "MPU6050 g=(0.00,0.00,1.00) dps=(0.0,0.0,0.0)",
         "MPU6050 g=(-0.50,0.00,1.00) dps=(0.0,0.0,90.0)",
         "MPU6050 g=(0.75,0.00,1.00) dps=(0.0,0.0,-45.0)"
-      ]
+      ],
+      "packaged": {
+        "version": "0.23.2",
+        "applied": true,
+        "started": true,
+        "correctTarget": true,
+        "sameCode": true,
+        "sameWires": true,
+        "stateEvents": 2,
+        "simulationMs": 3500,
+        "stimuli": [
+          {
+            "requestedMs": 1100,
+            "observedTime": "1.100 s",
+            "changes": {
+              "ax": -0.5,
+              "gz": 90
+            }
+          },
+          {
+            "requestedMs": 2300,
+            "observedTime": "2.300 s",
+            "changes": {
+              "ax": 0.75,
+              "gz": -45
+            }
+          }
+        ],
+        "inputChecks": [],
+        "errors": []
+      }
     },
     {
       "type": "ref_pir_3",
@@ -392,7 +794,35 @@
         "HAL ready",
         "PIR EXTI motion=0",
         "PIR EXTI motion=1"
-      ]
+      ],
+      "packaged": {
+        "version": "0.23.2",
+        "applied": true,
+        "started": true,
+        "correctTarget": true,
+        "sameCode": true,
+        "sameWires": true,
+        "stateEvents": 2,
+        "simulationMs": 3500,
+        "stimuli": [
+          {
+            "requestedMs": 1100,
+            "observedTime": "1.100 s",
+            "changes": {
+              "motion": 1
+            }
+          },
+          {
+            "requestedMs": 2300,
+            "observedTime": "2.300 s",
+            "changes": {
+              "motion": 0
+            }
+          }
+        ],
+        "inputChecks": [],
+        "errors": []
+      }
     },
     {
       "type": "ref_oled_i2c_4",
@@ -413,7 +843,20 @@
         "OLED frame=80 transfer status=0",
         "OLED frame=96 transfer status=0",
         "OLED frame=112 transfer status=0"
-      ]
+      ],
+      "packaged": {
+        "version": "0.23.2",
+        "applied": true,
+        "started": true,
+        "correctTarget": true,
+        "sameCode": true,
+        "sameWires": true,
+        "stateEvents": 2,
+        "simulationMs": 3500,
+        "stimuli": [],
+        "inputChecks": [],
+        "errors": []
+      }
     },
     {
       "type": "ref_oled_configurable_7",
@@ -425,7 +868,20 @@
       "wireFailures": [],
       "observed": [
         "HAL ready"
-      ]
+      ],
+      "packaged": {
+        "version": "0.23.2",
+        "applied": true,
+        "started": true,
+        "correctTarget": true,
+        "sameCode": true,
+        "sameWires": true,
+        "stateEvents": 2,
+        "simulationMs": 3500,
+        "stimuli": [],
+        "inputChecks": [],
+        "errors": []
+      }
     },
     {
       "type": "ref_oled_configurable_8",
@@ -437,7 +893,20 @@
       "wireFailures": [],
       "observed": [
         "HAL ready"
-      ]
+      ],
+      "packaged": {
+        "version": "0.23.2",
+        "applied": true,
+        "started": true,
+        "correctTarget": true,
+        "sameCode": true,
+        "sameWires": true,
+        "stateEvents": 2,
+        "simulationMs": 3580,
+        "stimuli": [],
+        "inputChecks": [],
+        "errors": []
+      }
     },
     {
       "type": "ref_st7735_8",
@@ -451,7 +920,22 @@
         "TFT: initializing RGB565 display",
         "TFT: RGB565 color bars sent (CS/DC/RST and power required)",
         "HAL ready"
-      ]
+      ],
+      "packaged": {
+        "version": "0.23.2",
+        "applied": true,
+        "started": true,
+        "correctTarget": true,
+        "sameCode": true,
+        "sameWires": true,
+        "stateEvents": 2,
+        "simulationMs": 3520,
+        "stimuli": [],
+        "inputChecks": [
+          true
+        ],
+        "errors": []
+      }
     },
     {
       "type": "ref_matrix_10",
@@ -471,7 +955,20 @@
         "MAX7219 frame sent=5",
         "MAX7219 frame sent=6",
         "MAX7219 frame sent=7"
-      ]
+      ],
+      "packaged": {
+        "version": "0.23.2",
+        "applied": true,
+        "started": true,
+        "correctTarget": true,
+        "sameCode": true,
+        "sameWires": true,
+        "stateEvents": 2,
+        "simulationMs": 3540,
+        "stimuli": [],
+        "inputChecks": [],
+        "errors": []
+      }
     },
     {
       "type": "ref_servo_3",
@@ -486,7 +983,20 @@
         "Servo command=0 deg pulse=1000 us",
         "Servo command=90 deg pulse=1500 us",
         "Servo command=180 deg pulse=2000 us"
-      ]
+      ],
+      "packaged": {
+        "version": "0.23.2",
+        "applied": true,
+        "started": true,
+        "correctTarget": true,
+        "sameCode": true,
+        "sameWires": true,
+        "stateEvents": 2,
+        "simulationMs": 3560,
+        "stimuli": [],
+        "inputChecks": [],
+        "errors": []
+      }
     },
     {
       "type": "ref_servo_feedback_4",
@@ -503,7 +1013,20 @@
         "Feedback=0.00 V",
         "Servo command=90 deg pulse=1500 us",
         "Servo command=180 deg pulse=2000 us"
-      ]
+      ],
+      "packaged": {
+        "version": "0.23.2",
+        "applied": true,
+        "started": true,
+        "correctTarget": true,
+        "sameCode": true,
+        "sameWires": true,
+        "stateEvents": 3,
+        "simulationMs": 3580,
+        "stimuli": [],
+        "inputChecks": [],
+        "errors": []
+      }
     },
     {
       "type": "ref_dc_motor_2",
@@ -518,7 +1041,20 @@
         "L298N: A forward 75%, B reverse 40% (1 kHz)",
         "L298N: coast before direction change",
         "L298N: A reverse 50%, B forward 100%"
-      ]
+      ],
+      "packaged": {
+        "version": "0.23.2",
+        "applied": true,
+        "started": true,
+        "correctTarget": true,
+        "sameCode": true,
+        "sameWires": true,
+        "stateEvents": 3,
+        "simulationMs": 3540,
+        "stimuli": [],
+        "inputChecks": [],
+        "errors": []
+      }
     },
     {
       "type": "ref_motor_driver_hat",
@@ -530,7 +1066,20 @@
       "wireFailures": [],
       "observed": [
         "HAL ready"
-      ]
+      ],
+      "packaged": {
+        "version": "0.23.2",
+        "applied": true,
+        "started": true,
+        "correctTarget": true,
+        "sameCode": true,
+        "sameWires": true,
+        "stateEvents": 3,
+        "simulationMs": 3580,
+        "stimuli": [],
+        "inputChecks": [],
+        "errors": []
+      }
     },
     {
       "type": "ref_stepper_bipolar_4",
@@ -542,7 +1091,20 @@
       "wireFailures": [],
       "observed": [
         "HAL ready"
-      ]
+      ],
+      "packaged": {
+        "version": "0.23.2",
+        "applied": true,
+        "started": true,
+        "correctTarget": true,
+        "sameCode": true,
+        "sameWires": true,
+        "stateEvents": 3,
+        "simulationMs": 3500,
+        "stimuli": [],
+        "inputChecks": [],
+        "errors": []
+      }
     },
     {
       "type": "ref_stepper_unipolar_5",
@@ -554,7 +1116,20 @@
       "wireFailures": [],
       "observed": [
         "HAL ready"
-      ]
+      ],
+      "packaged": {
+        "version": "0.23.2",
+        "applied": true,
+        "started": true,
+        "correctTarget": true,
+        "sameCode": true,
+        "sameWires": true,
+        "stateEvents": 3,
+        "simulationMs": 3580,
+        "stimuli": [],
+        "inputChecks": [],
+        "errors": []
+      }
     },
     {
       "type": "ref_stepper_driver_11",
@@ -566,7 +1141,20 @@
       "wireFailures": [],
       "observed": [
         "HAL ready"
-      ]
+      ],
+      "packaged": {
+        "version": "0.23.2",
+        "applied": true,
+        "started": true,
+        "correctTarget": true,
+        "sameCode": true,
+        "sameWires": true,
+        "stateEvents": 3,
+        "simulationMs": 3560,
+        "stimuli": [],
+        "inputChecks": [],
+        "errors": []
+      }
     },
     {
       "type": "ref_relay_module_6",
@@ -580,7 +1168,20 @@
         "HAL ready",
         "Relay command=1 (NO powers LED)",
         "Relay command=0 (NO powers LED)"
-      ]
+      ],
+      "packaged": {
+        "version": "0.23.2",
+        "applied": true,
+        "started": true,
+        "correctTarget": true,
+        "sameCode": true,
+        "sameWires": true,
+        "stateEvents": 3,
+        "simulationMs": 3580,
+        "stimuli": [],
+        "inputChecks": [],
+        "errors": []
+      }
     },
     {
       "type": "ref_joystick_module_5",
@@ -595,7 +1196,39 @@
         "Joystick X=2047 Y=2047 pressed=0",
         "Joystick X=1024 Y=3071 pressed=1",
         "Joystick X=3071 Y=1024 pressed=0"
-      ]
+      ],
+      "packaged": {
+        "version": "0.23.2",
+        "applied": true,
+        "started": true,
+        "correctTarget": true,
+        "sameCode": true,
+        "sameWires": true,
+        "stateEvents": 2,
+        "simulationMs": 3580,
+        "stimuli": [
+          {
+            "requestedMs": 1100,
+            "observedTime": "1.100 s",
+            "changes": {
+              "axisX": 25,
+              "axisY": 75,
+              "switch": 1
+            }
+          },
+          {
+            "requestedMs": 2300,
+            "observedTime": "2.300 s",
+            "changes": {
+              "axisX": 75,
+              "axisY": 25,
+              "switch": 0
+            }
+          }
+        ],
+        "inputChecks": [],
+        "errors": []
+      }
     },
     {
       "type": "ref_encoder_bare_5",
@@ -615,7 +1248,37 @@
         "A/B=0 button=1",
         "A/B=1 button=1",
         "A/B=3 button=1"
-      ]
+      ],
+      "packaged": {
+        "version": "0.23.2",
+        "applied": true,
+        "started": true,
+        "correctTarget": true,
+        "sameCode": true,
+        "sameWires": true,
+        "stateEvents": 2,
+        "simulationMs": 3580,
+        "stimuli": [
+          {
+            "requestedMs": 1100,
+            "observedTime": "1.100 s",
+            "changes": {
+              "position": 3,
+              "switch": 1
+            }
+          },
+          {
+            "requestedMs": 2300,
+            "observedTime": "2.400 s",
+            "changes": {
+              "position": 1,
+              "switch": 0
+            }
+          }
+        ],
+        "inputChecks": [],
+        "errors": []
+      }
     },
     {
       "type": "ref_encoder_module_5",
@@ -632,7 +1295,39 @@
         "TIM4 encoder: count=3 edges=12 pressed=1",
         "TIM4 encoder: count=1 edges=6 pressed=0",
         "TIM4 encoder: count=1 edges=4 pressed=0"
-      ]
+      ],
+      "packaged": {
+        "version": "0.23.2",
+        "applied": true,
+        "started": true,
+        "correctTarget": true,
+        "sameCode": true,
+        "sameWires": true,
+        "stateEvents": 2,
+        "simulationMs": 3580,
+        "stimuli": [
+          {
+            "requestedMs": 1100,
+            "observedTime": "1.100 s",
+            "changes": {
+              "position": 3,
+              "switch": 1
+            }
+          },
+          {
+            "requestedMs": 2300,
+            "observedTime": "2.300 s",
+            "changes": {
+              "position": 1,
+              "switch": 0
+            }
+          }
+        ],
+        "inputChecks": [
+          true
+        ],
+        "errors": []
+      }
     },
     {
       "type": "ref_l298n_module_13",
@@ -647,7 +1342,20 @@
         "L298N: A forward 75%, B reverse 40% (1 kHz)",
         "L298N: coast before direction change",
         "L298N: A reverse 50%, B forward 100%"
-      ]
+      ],
+      "packaged": {
+        "version": "0.23.2",
+        "applied": true,
+        "started": true,
+        "correctTarget": true,
+        "sameCode": true,
+        "sameWires": true,
+        "stateEvents": 3,
+        "simulationMs": 3540,
+        "stimuli": [],
+        "inputChecks": [],
+        "errors": []
+      }
     },
     {
       "type": "ref_dc_supply_2",
@@ -662,7 +1370,20 @@
         "L298N: A forward 75%, B reverse 40% (1 kHz)",
         "L298N: coast before direction change",
         "L298N: A reverse 50%, B forward 100%"
-      ]
+      ],
+      "packaged": {
+        "version": "0.23.2",
+        "applied": true,
+        "started": true,
+        "correctTarget": true,
+        "sameCode": true,
+        "sameWires": true,
+        "stateEvents": 3,
+        "simulationMs": 3560,
+        "stimuli": [],
+        "inputChecks": [],
+        "errors": []
+      }
     },
     {
       "type": "ref_uart_cable_4",
@@ -674,7 +1395,25 @@
       "wireFailures": [],
       "observed": [
         "HAL ready"
-      ]
+      ],
+      "packaged": {
+        "version": "0.23.2",
+        "applied": true,
+        "started": true,
+        "correctTarget": true,
+        "sameCode": true,
+        "sameWires": true,
+        "stateEvents": 3,
+        "simulationMs": 3560,
+        "stimuli": [
+          {
+            "input": "UART",
+            "text": "Audit42"
+          }
+        ],
+        "inputChecks": [],
+        "errors": []
+      }
     },
     {
       "type": "ref_uart_cable_6",
@@ -686,7 +1425,25 @@
       "wireFailures": [],
       "observed": [
         "HAL ready"
-      ]
+      ],
+      "packaged": {
+        "version": "0.23.2",
+        "applied": true,
+        "started": true,
+        "correctTarget": true,
+        "sameCode": true,
+        "sameWires": true,
+        "stateEvents": 3,
+        "simulationMs": 3540,
+        "stimuli": [
+          {
+            "input": "UART",
+            "text": "Audit42"
+          }
+        ],
+        "inputChecks": [],
+        "errors": []
+      }
     },
     {
       "type": "ref_i2c_eeprom_8",
@@ -700,7 +1457,20 @@
         "I2C write=0 read=0",
         "42",
         "HAL ready"
-      ]
+      ],
+      "packaged": {
+        "version": "0.23.2",
+        "applied": true,
+        "started": true,
+        "correctTarget": true,
+        "sameCode": true,
+        "sameWires": true,
+        "stateEvents": 3,
+        "simulationMs": 3560,
+        "stimuli": [],
+        "inputChecks": [],
+        "errors": []
+      }
     },
     {
       "type": "ref_i2c_eeprom_5",
@@ -714,7 +1484,20 @@
         "I2C write=0 read=0",
         "42",
         "HAL ready"
-      ]
+      ],
+      "packaged": {
+        "version": "0.23.2",
+        "applied": true,
+        "started": true,
+        "correctTarget": true,
+        "sameCode": true,
+        "sameWires": true,
+        "stateEvents": 3,
+        "simulationMs": 3560,
+        "stimuli": [],
+        "inputChecks": [],
+        "errors": []
+      }
     },
     {
       "type": "ref_spi_eeprom_8",
@@ -727,7 +1510,20 @@
       "observed": [
         "42",
         "HAL ready"
-      ]
+      ],
+      "packaged": {
+        "version": "0.23.2",
+        "applied": true,
+        "started": true,
+        "correctTarget": true,
+        "sameCode": true,
+        "sameWires": true,
+        "stateEvents": 3,
+        "simulationMs": 3560,
+        "stimuli": [],
+        "inputChecks": [],
+        "errors": []
+      }
     },
     {
       "type": "ref_pot_bare_3",
@@ -742,7 +1538,35 @@
         "ADC=2047, voltage=1.650 V",
         "ADC=819, voltage=0.660 V",
         "ADC=3276, voltage=2.640 V"
-      ]
+      ],
+      "packaged": {
+        "version": "0.23.2",
+        "applied": true,
+        "started": true,
+        "correctTarget": true,
+        "sameCode": true,
+        "sameWires": true,
+        "stateEvents": 3,
+        "simulationMs": 3580,
+        "stimuli": [
+          {
+            "requestedMs": 1100,
+            "observedTime": "1.100 s",
+            "changes": {
+              "position": 20
+            }
+          },
+          {
+            "requestedMs": 2300,
+            "observedTime": "2.400 s",
+            "changes": {
+              "position": 80
+            }
+          }
+        ],
+        "inputChecks": [],
+        "errors": []
+      }
     },
     {
       "type": "ref_pot_module_3",
@@ -757,7 +1581,35 @@
         "ADC=2047, voltage=1.650 V",
         "ADC=819, voltage=0.660 V",
         "ADC=3276, voltage=2.640 V"
-      ]
+      ],
+      "packaged": {
+        "version": "0.23.2",
+        "applied": true,
+        "started": true,
+        "correctTarget": true,
+        "sameCode": true,
+        "sameWires": true,
+        "stateEvents": 3,
+        "simulationMs": 3540,
+        "stimuli": [
+          {
+            "requestedMs": 1100,
+            "observedTime": "1.100 s",
+            "changes": {
+              "position": 20
+            }
+          },
+          {
+            "requestedMs": 2300,
+            "observedTime": "2.380 s",
+            "changes": {
+              "position": 80
+            }
+          }
+        ],
+        "inputChecks": [],
+        "errors": []
+      }
     },
     {
       "type": "ref_slide_spdt_3",
@@ -771,7 +1623,35 @@
         "HAL ready",
         "switch=0",
         "switch=1"
-      ]
+      ],
+      "packaged": {
+        "version": "0.23.2",
+        "applied": true,
+        "started": true,
+        "correctTarget": true,
+        "sameCode": true,
+        "sameWires": true,
+        "stateEvents": 3,
+        "simulationMs": 3540,
+        "stimuli": [
+          {
+            "requestedMs": 1100,
+            "observedTime": "1.200 s",
+            "changes": {
+              "position": 1
+            }
+          },
+          {
+            "requestedMs": 2300,
+            "observedTime": "2.380 s",
+            "changes": {
+              "position": 0
+            }
+          }
+        ],
+        "inputChecks": [],
+        "errors": []
+      }
     },
     {
       "type": "ref_rgb_common_anode_4",
@@ -783,7 +1663,20 @@
       "wireFailures": [],
       "observed": [
         "HAL ready"
-      ]
+      ],
+      "packaged": {
+        "version": "0.23.2",
+        "applied": true,
+        "started": true,
+        "correctTarget": true,
+        "sameCode": true,
+        "sameWires": true,
+        "stateEvents": 3,
+        "simulationMs": 3540,
+        "stimuli": [],
+        "inputChecks": [],
+        "errors": []
+      }
     },
     {
       "type": "ref_rgb_common_cathode_4",
@@ -795,7 +1688,20 @@
       "wireFailures": [],
       "observed": [
         "HAL ready"
-      ]
+      ],
+      "packaged": {
+        "version": "0.23.2",
+        "applied": true,
+        "started": true,
+        "correctTarget": true,
+        "sameCode": true,
+        "sameWires": true,
+        "stateEvents": 3,
+        "simulationMs": 3580,
+        "stimuli": [],
+        "inputChecks": [],
+        "errors": []
+      }
     },
     {
       "type": "ref_rgb_neopixel_4",
@@ -807,7 +1713,20 @@
       "wireFailures": [],
       "observed": [
         "HAL ready"
-      ]
+      ],
+      "packaged": {
+        "version": "0.23.2",
+        "applied": true,
+        "started": true,
+        "correctTarget": true,
+        "sameCode": true,
+        "sameWires": true,
+        "stateEvents": 3,
+        "simulationMs": 3580,
+        "stimuli": [],
+        "inputChecks": [],
+        "errors": []
+      }
     },
     {
       "type": "ref_rgb_neopixel_flora_4",
@@ -819,7 +1738,20 @@
       "wireFailures": [],
       "observed": [
         "HAL ready"
-      ]
+      ],
+      "packaged": {
+        "version": "0.23.2",
+        "applied": true,
+        "started": true,
+        "correctTarget": true,
+        "sameCode": true,
+        "sameWires": true,
+        "stateEvents": 3,
+        "simulationMs": 3580,
+        "stimuli": [],
+        "inputChecks": [],
+        "errors": []
+      }
     },
     {
       "type": "ref_rgb_gravity_3",
@@ -831,7 +1763,20 @@
       "wireFailures": [],
       "observed": [
         "HAL ready"
-      ]
+      ],
+      "packaged": {
+        "version": "0.23.2",
+        "applied": true,
+        "started": true,
+        "correctTarget": true,
+        "sameCode": true,
+        "sameWires": true,
+        "stateEvents": 3,
+        "simulationMs": 3580,
+        "stimuli": [],
+        "inputChecks": [],
+        "errors": []
+      }
     },
     {
       "type": "ref_capacitor_ceramic_2",
@@ -844,7 +1789,20 @@
       "observed": [
         "TIM2 PWM: 100 Hz, duty 50%",
         "HAL ready"
-      ]
+      ],
+      "packaged": {
+        "version": "0.23.2",
+        "applied": true,
+        "started": true,
+        "correctTarget": true,
+        "sameCode": true,
+        "sameWires": true,
+        "stateEvents": 3,
+        "simulationMs": 3500,
+        "stimuli": [],
+        "inputChecks": [],
+        "errors": []
+      }
     },
     {
       "type": "ref_capacitor_electrolytic_2",
@@ -857,7 +1815,20 @@
       "observed": [
         "TIM2 PWM: 100 Hz, duty 50%",
         "HAL ready"
-      ]
+      ],
+      "packaged": {
+        "version": "0.23.2",
+        "applied": true,
+        "started": true,
+        "correctTarget": true,
+        "sameCode": true,
+        "sameWires": true,
+        "stateEvents": 3,
+        "simulationMs": 3600,
+        "stimuli": [],
+        "inputChecks": [],
+        "errors": []
+      }
     },
     {
       "type": "ref_diode_axial_2",
@@ -870,7 +1841,20 @@
       "observed": [
         "HAL ready",
         "ADC=872, voltage=0.703 V"
-      ]
+      ],
+      "packaged": {
+        "version": "0.23.2",
+        "applied": true,
+        "started": true,
+        "correctTarget": true,
+        "sameCode": true,
+        "sameWires": true,
+        "stateEvents": 2,
+        "simulationMs": 3540,
+        "stimuli": [],
+        "inputChecks": [],
+        "errors": []
+      }
     },
     {
       "type": "ref_buzzer_active_2",
@@ -882,7 +1866,20 @@
       "wireFailures": [],
       "observed": [
         "HAL ready"
-      ]
+      ],
+      "packaged": {
+        "version": "0.23.2",
+        "applied": true,
+        "started": true,
+        "correctTarget": true,
+        "sameCode": true,
+        "sameWires": true,
+        "stateEvents": 2,
+        "simulationMs": 3540,
+        "stimuli": [],
+        "inputChecks": [],
+        "errors": []
+      }
     },
     {
       "type": "ref_buzzer_active_module_3",
@@ -894,7 +1891,20 @@
       "wireFailures": [],
       "observed": [
         "HAL ready"
-      ]
+      ],
+      "packaged": {
+        "version": "0.23.2",
+        "applied": true,
+        "started": true,
+        "correctTarget": true,
+        "sameCode": true,
+        "sameWires": true,
+        "stateEvents": 2,
+        "simulationMs": 3540,
+        "stimuli": [],
+        "inputChecks": [],
+        "errors": []
+      }
     },
     {
       "type": "ref_buzzer_passive_2",
@@ -915,7 +1925,20 @@
         "Passive buzzer: 880 Hz",
         "Passive buzzer: 988 Hz",
         "Passive buzzer: 1047 Hz"
-      ]
+      ],
+      "packaged": {
+        "version": "0.23.2",
+        "applied": true,
+        "started": true,
+        "correctTarget": true,
+        "sameCode": true,
+        "sameWires": true,
+        "stateEvents": 2,
+        "simulationMs": 3580,
+        "stimuli": [],
+        "inputChecks": [],
+        "errors": []
+      }
     },
     {
       "type": "ref_buzzer_passive_module_3",
@@ -936,7 +1959,20 @@
         "Passive buzzer: 880 Hz",
         "Passive buzzer: 988 Hz",
         "Passive buzzer: 1047 Hz"
-      ]
+      ],
+      "packaged": {
+        "version": "0.23.2",
+        "applied": true,
+        "started": true,
+        "correctTarget": true,
+        "sameCode": true,
+        "sameWires": true,
+        "stateEvents": 2,
+        "simulationMs": 3500,
+        "stimuli": [],
+        "inputChecks": [],
+        "errors": []
+      }
     },
     {
       "type": "ref_sevenseg_common_cathode_10",
@@ -955,7 +1991,20 @@
         "digit=4",
         "digit=5",
         "digit=6"
-      ]
+      ],
+      "packaged": {
+        "version": "0.23.2",
+        "applied": true,
+        "started": true,
+        "correctTarget": true,
+        "sameCode": true,
+        "sameWires": true,
+        "stateEvents": 2,
+        "simulationMs": 3500,
+        "stimuli": [],
+        "inputChecks": [],
+        "errors": []
+      }
     },
     {
       "type": "ref_sevenseg_common_anode_10",
@@ -974,7 +2023,20 @@
         "digit=4",
         "digit=5",
         "digit=6"
-      ]
+      ],
+      "packaged": {
+        "version": "0.23.2",
+        "applied": true,
+        "started": true,
+        "correctTarget": true,
+        "sameCode": true,
+        "sameWires": true,
+        "stateEvents": 2,
+        "simulationMs": 3500,
+        "stimuli": [],
+        "inputChecks": [],
+        "errors": []
+      }
     },
     {
       "type": "ref_sevenseg_4digit_12",
@@ -986,7 +2048,20 @@
       "wireFailures": [],
       "observed": [
         "HAL ready"
-      ]
+      ],
+      "packaged": {
+        "version": "0.23.2",
+        "applied": true,
+        "started": true,
+        "correctTarget": true,
+        "sameCode": true,
+        "sameWires": true,
+        "stateEvents": 3,
+        "simulationMs": 3560,
+        "stimuli": [],
+        "inputChecks": [],
+        "errors": []
+      }
     },
     {
       "type": "ref_sevenseg_tm1637_4",
@@ -998,7 +2073,20 @@
       "wireFailures": [],
       "observed": [
         "HAL ready"
-      ]
+      ],
+      "packaged": {
+        "version": "0.23.2",
+        "applied": true,
+        "started": true,
+        "correctTarget": true,
+        "sameCode": true,
+        "sameWires": true,
+        "stateEvents": 3,
+        "simulationMs": 3580,
+        "stimuli": [],
+        "inputChecks": [],
+        "errors": []
+      }
     },
     {
       "type": "ref_tmp36_to92_3",
@@ -1013,7 +2101,35 @@
         "TMP36=25.0 C",
         "TMP36=10.0 C",
         "TMP36=45.0 C"
-      ]
+      ],
+      "packaged": {
+        "version": "0.23.2",
+        "applied": true,
+        "started": true,
+        "correctTarget": true,
+        "sameCode": true,
+        "sameWires": true,
+        "stateEvents": 2,
+        "simulationMs": 3560,
+        "stimuli": [
+          {
+            "requestedMs": 1100,
+            "observedTime": "1.200 s",
+            "changes": {
+              "temperature": 10
+            }
+          },
+          {
+            "requestedMs": 2300,
+            "observedTime": "2.380 s",
+            "changes": {
+              "temperature": 45
+            }
+          }
+        ],
+        "inputChecks": [],
+        "errors": []
+      }
     },
     {
       "type": "ref_ds18b20_to92_3",
@@ -1028,7 +2144,37 @@
         "DS18B20=25.00 C",
         "DS18B20=10.00 C",
         "DS18B20=45.00 C"
-      ]
+      ],
+      "packaged": {
+        "version": "0.23.2",
+        "applied": true,
+        "started": true,
+        "correctTarget": true,
+        "sameCode": true,
+        "sameWires": true,
+        "stateEvents": 4,
+        "simulationMs": 5560,
+        "stimuli": [
+          {
+            "requestedMs": 1100,
+            "observedTime": "1.200 s",
+            "changes": {
+              "temperature": 10
+            }
+          },
+          {
+            "requestedMs": 2300,
+            "observedTime": "2.320 s",
+            "changes": {
+              "temperature": 45
+            }
+          }
+        ],
+        "inputChecks": [
+          true
+        ],
+        "errors": []
+      }
     },
     {
       "type": "ref_ds18b20_probe_3",
@@ -1043,7 +2189,37 @@
         "DS18B20=25.00 C",
         "DS18B20=10.00 C",
         "DS18B20=45.00 C"
-      ]
+      ],
+      "packaged": {
+        "version": "0.23.2",
+        "applied": true,
+        "started": true,
+        "correctTarget": true,
+        "sameCode": true,
+        "sameWires": true,
+        "stateEvents": 4,
+        "simulationMs": 5540,
+        "stimuli": [
+          {
+            "requestedMs": 1100,
+            "observedTime": "1.180 s",
+            "changes": {
+              "temperature": 10
+            }
+          },
+          {
+            "requestedMs": 2300,
+            "observedTime": "2.320 s",
+            "changes": {
+              "temperature": 45
+            }
+          }
+        ],
+        "inputChecks": [
+          true
+        ],
+        "errors": []
+      }
     },
     {
       "type": "ref_hcsr04_4",
@@ -1058,7 +2234,35 @@
         "distance=100.0 cm",
         "distance=53.4 cm",
         "distance=169.0 cm"
-      ]
+      ],
+      "packaged": {
+        "version": "0.23.2",
+        "applied": true,
+        "started": true,
+        "correctTarget": true,
+        "sameCode": true,
+        "sameWires": true,
+        "stateEvents": 2,
+        "simulationMs": 3520,
+        "stimuli": [
+          {
+            "requestedMs": 1100,
+            "observedTime": "1.120 s",
+            "changes": {
+              "distance": 55
+            }
+          },
+          {
+            "requestedMs": 2300,
+            "observedTime": "2.320 s",
+            "changes": {
+              "distance": 170
+            }
+          }
+        ],
+        "inputChecks": [],
+        "errors": []
+      }
     },
     {
       "type": "ref_urm09_trig_3",
@@ -1073,7 +2277,35 @@
         "URM09=100.0 cm",
         "URM09=55.0 cm",
         "URM09=170.0 cm"
-      ]
+      ],
+      "packaged": {
+        "version": "0.23.2",
+        "applied": true,
+        "started": true,
+        "correctTarget": true,
+        "sameCode": true,
+        "sameWires": true,
+        "stateEvents": 4,
+        "simulationMs": 3560,
+        "stimuli": [
+          {
+            "requestedMs": 1100,
+            "observedTime": "1.100 s",
+            "changes": {
+              "distance": 55
+            }
+          },
+          {
+            "requestedMs": 2300,
+            "observedTime": "2.340 s",
+            "changes": {
+              "distance": 170
+            }
+          }
+        ],
+        "inputChecks": [],
+        "errors": []
+      }
     },
     {
       "type": "ref_urm09_i2c_4",
@@ -1088,7 +2320,35 @@
         "distance=100 cm",
         "distance=55 cm",
         "distance=170 cm"
-      ]
+      ],
+      "packaged": {
+        "version": "0.23.2",
+        "applied": true,
+        "started": true,
+        "correctTarget": true,
+        "sameCode": true,
+        "sameWires": true,
+        "stateEvents": 3,
+        "simulationMs": 3580,
+        "stimuli": [
+          {
+            "requestedMs": 1100,
+            "observedTime": "1.100 s",
+            "changes": {
+              "distance": 55
+            }
+          },
+          {
+            "requestedMs": 2300,
+            "observedTime": "2.380 s",
+            "changes": {
+              "distance": 170
+            }
+          }
+        ],
+        "inputChecks": [],
+        "errors": []
+      }
     },
     {
       "type": "ref_ads1115_10",
@@ -1101,7 +2361,20 @@
       "observed": [
         "HAL ready",
         "AIN0=3.3000 V"
-      ]
+      ],
+      "packaged": {
+        "version": "0.23.2",
+        "applied": true,
+        "started": true,
+        "correctTarget": true,
+        "sameCode": true,
+        "sameWires": true,
+        "stateEvents": 2,
+        "simulationMs": 3560,
+        "stimuli": [],
+        "inputChecks": [],
+        "errors": []
+      }
     },
     {
       "type": "ref_mcp4725_6",
@@ -1114,7 +2387,20 @@
       "observed": [
         "HAL ready",
         "ADC=2047 voltage=1.650 V"
-      ]
+      ],
+      "packaged": {
+        "version": "0.23.2",
+        "applied": true,
+        "started": true,
+        "correctTarget": true,
+        "sameCode": true,
+        "sameWires": true,
+        "stateEvents": 2,
+        "simulationMs": 3500,
+        "stimuli": [],
+        "inputChecks": [],
+        "errors": []
+      }
     },
     {
       "type": "ref_can_transceiver_6",
@@ -1128,7 +2414,20 @@
         "HAL ready",
         "CAN id=123 length=2",
         "CAN errors=0 (loopback=0; normal mode needs a peer ACK)"
-      ]
+      ],
+      "packaged": {
+        "version": "0.23.2",
+        "applied": true,
+        "started": true,
+        "correctTarget": true,
+        "sameCode": true,
+        "sameWires": true,
+        "stateEvents": 2,
+        "simulationMs": 3540,
+        "stimuli": [],
+        "inputChecks": [],
+        "errors": []
+      }
     },
     {
       "type": "ref_isolated_rs485",
@@ -1140,7 +2439,20 @@
       "wireFailures": [],
       "observed": [
         "HAL ready"
-      ]
+      ],
+      "packaged": {
+        "version": "0.23.2",
+        "applied": true,
+        "started": true,
+        "correctTarget": true,
+        "sameCode": true,
+        "sameWires": true,
+        "stateEvents": 2,
+        "simulationMs": 3540,
+        "stimuli": [],
+        "inputChecks": [],
+        "errors": []
+      }
     },
     {
       "type": "ref_ds3231_8",
@@ -1156,7 +2468,20 @@
         "RTC 00:00:01",
         "RTC 00:00:02",
         "RTC 00:00:03"
-      ]
+      ],
+      "packaged": {
+        "version": "0.23.2",
+        "applied": true,
+        "started": true,
+        "correctTarget": true,
+        "sameCode": true,
+        "sameWires": true,
+        "stateEvents": 2,
+        "simulationMs": 3520,
+        "stimuli": [],
+        "inputChecks": [],
+        "errors": []
+      }
     },
     {
       "type": "ref_sd_storage_board",
@@ -1169,7 +2494,22 @@
       "observed": [
         "HAL ready",
         "SD OCR=40ff8000"
-      ]
+      ],
+      "packaged": {
+        "version": "0.23.2",
+        "applied": true,
+        "started": true,
+        "correctTarget": true,
+        "sameCode": true,
+        "sameWires": true,
+        "stateEvents": 3,
+        "simulationMs": 3580,
+        "stimuli": [],
+        "inputChecks": [
+          true
+        ],
+        "errors": []
+      }
     },
     {
       "type": "ref_max98357a_9",
@@ -1181,7 +2521,20 @@
       "wireFailures": [],
       "observed": [
         "HAL ready"
-      ]
+      ],
+      "packaged": {
+        "version": "0.23.2",
+        "applied": true,
+        "started": true,
+        "correctTarget": true,
+        "sameCode": true,
+        "sameWires": true,
+        "stateEvents": 3,
+        "simulationMs": 3500,
+        "stimuli": [],
+        "inputChecks": [],
+        "errors": []
+      }
     },
     {
       "type": "ref_ov2640_camera",
@@ -1194,7 +2547,20 @@
       "observed": [
         "HAL ready",
         "OV2640 sensor PID/VER=26 42"
-      ]
+      ],
+      "packaged": {
+        "version": "0.23.2",
+        "applied": true,
+        "started": true,
+        "correctTarget": true,
+        "sameCode": true,
+        "sameWires": true,
+        "stateEvents": 3,
+        "simulationMs": 3580,
+        "stimuli": [],
+        "inputChecks": [],
+        "errors": []
+      }
     },
     {
       "type": "ref_dht11_module_3",
@@ -1208,7 +2574,37 @@
         "HAL ready",
         "humidity=30.0% temperature=10.0 C",
         "humidity=70.0% temperature=45.0 C"
-      ]
+      ],
+      "packaged": {
+        "version": "0.23.2",
+        "applied": true,
+        "started": true,
+        "correctTarget": true,
+        "sameCode": true,
+        "sameWires": true,
+        "stateEvents": 4,
+        "simulationMs": 5560,
+        "stimuli": [
+          {
+            "requestedMs": 1100,
+            "observedTime": "1.200 s",
+            "changes": {
+              "temperature": 10,
+              "humidity": 30
+            }
+          },
+          {
+            "requestedMs": 2300,
+            "observedTime": "2.380 s",
+            "changes": {
+              "temperature": 45,
+              "humidity": 70
+            }
+          }
+        ],
+        "inputChecks": [],
+        "errors": []
+      }
     },
     {
       "type": "ref_dht22_module_3",
@@ -1222,7 +2618,37 @@
         "HAL ready",
         "humidity=30.0% temperature=10.0 C",
         "humidity=70.0% temperature=45.0 C"
-      ]
+      ],
+      "packaged": {
+        "version": "0.23.2",
+        "applied": true,
+        "started": true,
+        "correctTarget": true,
+        "sameCode": true,
+        "sameWires": true,
+        "stateEvents": 4,
+        "simulationMs": 5560,
+        "stimuli": [
+          {
+            "requestedMs": 1100,
+            "observedTime": "1.200 s",
+            "changes": {
+              "temperature": 10,
+              "humidity": 30
+            }
+          },
+          {
+            "requestedMs": 2300,
+            "observedTime": "2.360 s",
+            "changes": {
+              "temperature": 45,
+              "humidity": 70
+            }
+          }
+        ],
+        "inputChecks": [],
+        "errors": []
+      }
     },
     {
       "type": "ref_l298n_bare_15",
@@ -1237,7 +2663,20 @@
         "L298N: A forward 75%, B reverse 40% (1 kHz)",
         "L298N: coast before direction change",
         "L298N: A reverse 50%, B forward 100%"
-      ]
+      ],
+      "packaged": {
+        "version": "0.23.2",
+        "applied": true,
+        "started": true,
+        "correctTarget": true,
+        "sameCode": true,
+        "sameWires": true,
+        "stateEvents": 3,
+        "simulationMs": 3620,
+        "stimuli": [],
+        "inputChecks": [],
+        "errors": []
+      }
     },
     {
       "type": "ref_l298p_bare_20",
@@ -1252,7 +2691,20 @@
         "L298N: A forward 75%, B reverse 40% (1 kHz)",
         "L298N: coast before direction change",
         "L298N: A reverse 50%, B forward 100%"
-      ]
+      ],
+      "packaged": {
+        "version": "0.23.2",
+        "applied": true,
+        "started": true,
+        "correctTarget": true,
+        "sameCode": true,
+        "sameWires": true,
+        "stateEvents": 3,
+        "simulationMs": 3520,
+        "stimuli": [],
+        "inputChecks": [],
+        "errors": []
+      }
     },
     {
       "type": "ref_slide_dpdt_6",
@@ -1268,7 +2720,35 @@
         "pole 2=0",
         "pole 1=4095",
         "pole 2=4095"
-      ]
+      ],
+      "packaged": {
+        "version": "0.23.2",
+        "applied": true,
+        "started": true,
+        "correctTarget": true,
+        "sameCode": true,
+        "sameWires": true,
+        "stateEvents": 3,
+        "simulationMs": 3580,
+        "stimuli": [
+          {
+            "requestedMs": 1100,
+            "observedTime": "1.100 s",
+            "changes": {
+              "position": 1
+            }
+          },
+          {
+            "requestedMs": 2300,
+            "observedTime": "2.400 s",
+            "changes": {
+              "position": 0
+            }
+          }
+        ],
+        "inputChecks": [],
+        "errors": []
+      }
     },
     {
       "type": "ref_slide_dp3t_8",
@@ -1284,7 +2764,35 @@
         "pole 2=0",
         "pole 1=2047",
         "pole 2=2047"
-      ]
+      ],
+      "packaged": {
+        "version": "0.23.2",
+        "applied": true,
+        "started": true,
+        "correctTarget": true,
+        "sameCode": true,
+        "sameWires": true,
+        "stateEvents": 3,
+        "simulationMs": 3600,
+        "stimuli": [
+          {
+            "requestedMs": 1100,
+            "observedTime": "1.100 s",
+            "changes": {
+              "position": 1
+            }
+          },
+          {
+            "requestedMs": 2300,
+            "observedTime": "2.300 s",
+            "changes": {
+              "position": 0
+            }
+          }
+        ],
+        "inputChecks": [],
+        "errors": []
+      }
     },
     {
       "type": "ldr",
@@ -1298,7 +2806,35 @@
         "HAL ready",
         "LDR ADC=3414 voltage=2.751 V",
         "LDR ADC=681 voltage=0.549 V"
-      ]
+      ],
+      "packaged": {
+        "version": "0.23.2",
+        "applied": true,
+        "started": true,
+        "correctTarget": true,
+        "sameCode": true,
+        "sameWires": true,
+        "stateEvents": 3,
+        "simulationMs": 3560,
+        "stimuli": [
+          {
+            "requestedMs": 1100,
+            "observedTime": "1.100 s",
+            "changes": {
+              "lux": 1
+            }
+          },
+          {
+            "requestedMs": 2300,
+            "observedTime": "2.380 s",
+            "changes": {
+              "lux": 100
+            }
+          }
+        ],
+        "inputChecks": [],
+        "errors": []
+      }
     },
     {
       "type": "ntc",
@@ -1313,7 +2849,35 @@
         "NTC=25.0 C R=9995 ohm",
         "NTC=10.0 C R=20177 ohm",
         "NTC=45.0 C R=4348 ohm"
-      ]
+      ],
+      "packaged": {
+        "version": "0.23.2",
+        "applied": true,
+        "started": true,
+        "correctTarget": true,
+        "sameCode": true,
+        "sameWires": true,
+        "stateEvents": 3,
+        "simulationMs": 3560,
+        "stimuli": [
+          {
+            "requestedMs": 1100,
+            "observedTime": "1.100 s",
+            "changes": {
+              "temperature": 10
+            }
+          },
+          {
+            "requestedMs": 2300,
+            "observedTime": "2.380 s",
+            "changes": {
+              "temperature": 45
+            }
+          }
+        ],
+        "inputChecks": [],
+        "errors": []
+      }
     },
     {
       "type": "sht31",
@@ -1328,7 +2892,37 @@
         "SHT31=25.0 C RH=50.0 %",
         "SHT31=10.0 C RH=30.0 %",
         "SHT31=45.0 C RH=70.0 %"
-      ]
+      ],
+      "packaged": {
+        "version": "0.23.2",
+        "applied": true,
+        "started": true,
+        "correctTarget": true,
+        "sameCode": true,
+        "sameWires": true,
+        "stateEvents": 3,
+        "simulationMs": 3580,
+        "stimuli": [
+          {
+            "requestedMs": 1100,
+            "observedTime": "1.100 s",
+            "changes": {
+              "temperature": 10,
+              "humidity": 30
+            }
+          },
+          {
+            "requestedMs": 2300,
+            "observedTime": "2.400 s",
+            "changes": {
+              "temperature": 45,
+              "humidity": 70
+            }
+          }
+        ],
+        "inputChecks": [],
+        "errors": []
+      }
     },
     {
       "type": "mpu6050",
@@ -1344,7 +2938,37 @@
         "MPU6050 g=(0.00,0.00,1.00) dps=(0.0,0.0,0.0)",
         "MPU6050 g=(-0.50,0.00,1.00) dps=(0.0,0.0,90.0)",
         "MPU6050 g=(0.75,0.00,1.00) dps=(0.0,0.0,-45.0)"
-      ]
+      ],
+      "packaged": {
+        "version": "0.23.2",
+        "applied": true,
+        "started": true,
+        "correctTarget": true,
+        "sameCode": true,
+        "sameWires": true,
+        "stateEvents": 3,
+        "simulationMs": 3580,
+        "stimuli": [
+          {
+            "requestedMs": 1100,
+            "observedTime": "1.120 s",
+            "changes": {
+              "ax": -0.5,
+              "gz": 90
+            }
+          },
+          {
+            "requestedMs": 2300,
+            "observedTime": "2.300 s",
+            "changes": {
+              "ax": 0.75,
+              "gz": -45
+            }
+          }
+        ],
+        "inputChecks": [],
+        "errors": []
+      }
     },
     {
       "type": "pir",
@@ -1359,7 +2983,35 @@
         "HAL ready",
         "PIR EXTI motion=0",
         "PIR EXTI motion=1"
-      ]
+      ],
+      "packaged": {
+        "version": "0.23.2",
+        "applied": true,
+        "started": true,
+        "correctTarget": true,
+        "sameCode": true,
+        "sameWires": true,
+        "stateEvents": 3,
+        "simulationMs": 3500,
+        "stimuli": [
+          {
+            "requestedMs": 1100,
+            "observedTime": "1.180 s",
+            "changes": {
+              "motion": 1
+            }
+          },
+          {
+            "requestedMs": 2300,
+            "observedTime": "2.340 s",
+            "changes": {
+              "motion": 0
+            }
+          }
+        ],
+        "inputChecks": [],
+        "errors": []
+      }
     },
     {
       "type": "oled",
@@ -1380,7 +3032,20 @@
         "OLED frame=80 transfer status=0",
         "OLED frame=96 transfer status=0",
         "OLED frame=112 transfer status=0"
-      ]
+      ],
+      "packaged": {
+        "version": "0.23.2",
+        "applied": true,
+        "started": true,
+        "correctTarget": true,
+        "sameCode": true,
+        "sameWires": true,
+        "stateEvents": 3,
+        "simulationMs": 3520,
+        "stimuli": [],
+        "inputChecks": [],
+        "errors": []
+      }
     },
     {
       "type": "tft",
@@ -1394,7 +3059,22 @@
         "TFT: initializing RGB565 display",
         "TFT: RGB565 color bars sent (CS/DC/RST and power required)",
         "HAL ready"
-      ]
+      ],
+      "packaged": {
+        "version": "0.23.2",
+        "applied": true,
+        "started": true,
+        "correctTarget": true,
+        "sameCode": true,
+        "sameWires": true,
+        "stateEvents": 3,
+        "simulationMs": 3520,
+        "stimuli": [],
+        "inputChecks": [
+          true
+        ],
+        "errors": []
+      }
     },
     {
       "type": "matrix",
@@ -1414,7 +3094,20 @@
         "MAX7219 frame sent=5",
         "MAX7219 frame sent=6",
         "MAX7219 frame sent=7"
-      ]
+      ],
+      "packaged": {
+        "version": "0.23.2",
+        "applied": true,
+        "started": true,
+        "correctTarget": true,
+        "sameCode": true,
+        "sameWires": true,
+        "stateEvents": 3,
+        "simulationMs": 3600,
+        "stimuli": [],
+        "inputChecks": [],
+        "errors": []
+      }
     },
     {
       "type": "servo",
@@ -1429,7 +3122,20 @@
         "Servo command=0 deg pulse=1000 us",
         "Servo command=90 deg pulse=1500 us",
         "Servo command=180 deg pulse=2000 us"
-      ]
+      ],
+      "packaged": {
+        "version": "0.23.2",
+        "applied": true,
+        "started": true,
+        "correctTarget": true,
+        "sameCode": true,
+        "sameWires": true,
+        "stateEvents": 3,
+        "simulationMs": 3560,
+        "stimuli": [],
+        "inputChecks": [],
+        "errors": []
+      }
     },
     {
       "type": "motor",
@@ -1443,7 +3149,20 @@
         "HAL ready",
         "DC command direction=1 duty=75 %",
         "DC command direction=-1 duty=35 %"
-      ]
+      ],
+      "packaged": {
+        "version": "0.23.2",
+        "applied": true,
+        "started": true,
+        "correctTarget": true,
+        "sameCode": true,
+        "sameWires": true,
+        "stateEvents": 2,
+        "simulationMs": 3540,
+        "stimuli": [],
+        "inputChecks": [],
+        "errors": []
+      }
     },
     {
       "type": "stepper",
@@ -1459,7 +3178,20 @@
         "Stepper command direction=1 steps=200",
         "Stepper command direction=-1 steps=300",
         "Stepper command direction=1 steps=400"
-      ]
+      ],
+      "packaged": {
+        "version": "0.23.2",
+        "applied": true,
+        "started": true,
+        "correctTarget": true,
+        "sameCode": true,
+        "sameWires": true,
+        "stateEvents": 2,
+        "simulationMs": 3580,
+        "stimuli": [],
+        "inputChecks": [],
+        "errors": []
+      }
     },
     {
       "type": "relay",
@@ -1473,7 +3205,20 @@
         "HAL ready",
         "Relay command=1 (NO powers LED)",
         "Relay command=0 (NO powers LED)"
-      ]
+      ],
+      "packaged": {
+        "version": "0.23.2",
+        "applied": true,
+        "started": true,
+        "correctTarget": true,
+        "sameCode": true,
+        "sameWires": true,
+        "stateEvents": 2,
+        "simulationMs": 3540,
+        "stimuli": [],
+        "inputChecks": [],
+        "errors": []
+      }
     },
     {
       "type": "joystick",
@@ -1488,7 +3233,39 @@
         "Joystick X=2047 Y=2047 pressed=0",
         "Joystick X=1024 Y=3071 pressed=1",
         "Joystick X=3071 Y=1024 pressed=0"
-      ]
+      ],
+      "packaged": {
+        "version": "0.23.2",
+        "applied": true,
+        "started": true,
+        "correctTarget": true,
+        "sameCode": true,
+        "sameWires": true,
+        "stateEvents": 2,
+        "simulationMs": 3520,
+        "stimuli": [
+          {
+            "requestedMs": 1100,
+            "observedTime": "1.180 s",
+            "changes": {
+              "axisX": 25,
+              "axisY": 75,
+              "switch": 1
+            }
+          },
+          {
+            "requestedMs": 2300,
+            "observedTime": "2.340 s",
+            "changes": {
+              "axisX": 75,
+              "axisY": 25,
+              "switch": 0
+            }
+          }
+        ],
+        "inputChecks": [],
+        "errors": []
+      }
     },
     {
       "type": "encoder",
@@ -1505,7 +3282,39 @@
         "TIM4 encoder: count=3 edges=12 pressed=1",
         "TIM4 encoder: count=1 edges=6 pressed=0",
         "TIM4 encoder: count=1 edges=4 pressed=0"
-      ]
+      ],
+      "packaged": {
+        "version": "0.23.2",
+        "applied": true,
+        "started": true,
+        "correctTarget": true,
+        "sameCode": true,
+        "sameWires": true,
+        "stateEvents": 2,
+        "simulationMs": 3580,
+        "stimuli": [
+          {
+            "requestedMs": 1100,
+            "observedTime": "1.200 s",
+            "changes": {
+              "position": 3,
+              "switch": 1
+            }
+          },
+          {
+            "requestedMs": 2300,
+            "observedTime": "2.380 s",
+            "changes": {
+              "position": 1,
+              "switch": 0
+            }
+          }
+        ],
+        "inputChecks": [
+          true
+        ],
+        "errors": []
+      }
     },
     {
       "type": "l298n",
@@ -1520,7 +3329,20 @@
         "L298N: A forward 75%, B reverse 40% (1 kHz)",
         "L298N: coast before direction change",
         "L298N: A reverse 50%, B forward 100%"
-      ]
+      ],
+      "packaged": {
+        "version": "0.23.2",
+        "applied": true,
+        "started": true,
+        "correctTarget": true,
+        "sameCode": true,
+        "sameWires": true,
+        "stateEvents": 3,
+        "simulationMs": 3540,
+        "stimuli": [],
+        "inputChecks": [],
+        "errors": []
+      }
     },
     {
       "type": "dc_motor",
@@ -1535,7 +3357,20 @@
         "L298N: A forward 75%, B reverse 40% (1 kHz)",
         "L298N: coast before direction change",
         "L298N: A reverse 50%, B forward 100%"
-      ]
+      ],
+      "packaged": {
+        "version": "0.23.2",
+        "applied": true,
+        "started": true,
+        "correctTarget": true,
+        "sameCode": true,
+        "sameWires": true,
+        "stateEvents": 3,
+        "simulationMs": 3540,
+        "stimuli": [],
+        "inputChecks": [],
+        "errors": []
+      }
     },
     {
       "type": "dc_supply",
@@ -1550,7 +3385,20 @@
         "L298N: A forward 75%, B reverse 40% (1 kHz)",
         "L298N: coast before direction change",
         "L298N: A reverse 50%, B forward 100%"
-      ]
+      ],
+      "packaged": {
+        "version": "0.23.2",
+        "applied": true,
+        "started": true,
+        "correctTarget": true,
+        "sameCode": true,
+        "sameWires": true,
+        "stateEvents": 3,
+        "simulationMs": 3540,
+        "stimuli": [],
+        "inputChecks": [],
+        "errors": []
+      }
     },
     {
       "type": "uart",
@@ -1562,7 +3410,25 @@
       "wireFailures": [],
       "observed": [
         "HAL ready"
-      ]
+      ],
+      "packaged": {
+        "version": "0.23.2",
+        "applied": true,
+        "started": true,
+        "correctTarget": true,
+        "sameCode": true,
+        "sameWires": true,
+        "stateEvents": 2,
+        "simulationMs": 3580,
+        "stimuli": [
+          {
+            "input": "UART",
+            "text": "Audit42"
+          }
+        ],
+        "inputChecks": [],
+        "errors": []
+      }
     },
     {
       "type": "i2c",
@@ -1576,7 +3442,20 @@
         "I2C write=0 read=0",
         "42",
         "HAL ready"
-      ]
+      ],
+      "packaged": {
+        "version": "0.23.2",
+        "applied": true,
+        "started": true,
+        "correctTarget": true,
+        "sameCode": true,
+        "sameWires": true,
+        "stateEvents": 2,
+        "simulationMs": 3540,
+        "stimuli": [],
+        "inputChecks": [],
+        "errors": []
+      }
     },
     {
       "type": "spi",
@@ -1589,7 +3468,20 @@
       "observed": [
         "42",
         "HAL ready"
-      ]
+      ],
+      "packaged": {
+        "version": "0.23.2",
+        "applied": true,
+        "started": true,
+        "correctTarget": true,
+        "sameCode": true,
+        "sameWires": true,
+        "stateEvents": 2,
+        "simulationMs": 3520,
+        "stimuli": [],
+        "inputChecks": [],
+        "errors": []
+      }
     },
     {
       "type": "potentiometer",
@@ -1604,7 +3496,35 @@
         "ADC=2047, voltage=1.650 V",
         "ADC=819, voltage=0.660 V",
         "ADC=3276, voltage=2.640 V"
-      ]
+      ],
+      "packaged": {
+        "version": "0.23.2",
+        "applied": true,
+        "started": true,
+        "correctTarget": true,
+        "sameCode": true,
+        "sameWires": true,
+        "stateEvents": 3,
+        "simulationMs": 3580,
+        "stimuli": [
+          {
+            "requestedMs": 1100,
+            "observedTime": "1.100 s",
+            "changes": {
+              "position": 20
+            }
+          },
+          {
+            "requestedMs": 2300,
+            "observedTime": "2.300 s",
+            "changes": {
+              "position": 80
+            }
+          }
+        ],
+        "inputChecks": [],
+        "errors": []
+      }
     },
     {
       "type": "slide",
@@ -1618,7 +3538,35 @@
         "HAL ready",
         "switch=0",
         "switch=1"
-      ]
+      ],
+      "packaged": {
+        "version": "0.23.2",
+        "applied": true,
+        "started": true,
+        "correctTarget": true,
+        "sameCode": true,
+        "sameWires": true,
+        "stateEvents": 3,
+        "simulationMs": 3540,
+        "stimuli": [
+          {
+            "requestedMs": 1100,
+            "observedTime": "1.180 s",
+            "changes": {
+              "position": 1
+            }
+          },
+          {
+            "requestedMs": 2300,
+            "observedTime": "2.380 s",
+            "changes": {
+              "position": 0
+            }
+          }
+        ],
+        "inputChecks": [],
+        "errors": []
+      }
     },
     {
       "type": "rgb",
@@ -1630,7 +3578,20 @@
       "wireFailures": [],
       "observed": [
         "HAL ready"
-      ]
+      ],
+      "packaged": {
+        "version": "0.23.2",
+        "applied": true,
+        "started": true,
+        "correctTarget": true,
+        "sameCode": true,
+        "sameWires": true,
+        "stateEvents": 3,
+        "simulationMs": 3580,
+        "stimuli": [],
+        "inputChecks": [],
+        "errors": []
+      }
     },
     {
       "type": "capacitor",
@@ -1643,7 +3604,20 @@
       "observed": [
         "TIM2 PWM: 100 Hz, duty 50%",
         "HAL ready"
-      ]
+      ],
+      "packaged": {
+        "version": "0.23.2",
+        "applied": true,
+        "started": true,
+        "correctTarget": true,
+        "sameCode": true,
+        "sameWires": true,
+        "stateEvents": 3,
+        "simulationMs": 3500,
+        "stimuli": [],
+        "inputChecks": [],
+        "errors": []
+      }
     },
     {
       "type": "diode",
@@ -1656,7 +3630,20 @@
       "observed": [
         "HAL ready",
         "ADC=872, voltage=0.703 V"
-      ]
+      ],
+      "packaged": {
+        "version": "0.23.2",
+        "applied": true,
+        "started": true,
+        "correctTarget": true,
+        "sameCode": true,
+        "sameWires": true,
+        "stateEvents": 3,
+        "simulationMs": 3560,
+        "stimuli": [],
+        "inputChecks": [],
+        "errors": []
+      }
     },
     {
       "type": "buzzer",
@@ -1668,7 +3655,20 @@
       "wireFailures": [],
       "observed": [
         "HAL ready"
-      ]
+      ],
+      "packaged": {
+        "version": "0.23.2",
+        "applied": true,
+        "started": true,
+        "correctTarget": true,
+        "sameCode": true,
+        "sameWires": true,
+        "stateEvents": 3,
+        "simulationMs": 3560,
+        "stimuli": [],
+        "inputChecks": [],
+        "errors": []
+      }
     },
     {
       "type": "passive_buzzer",
@@ -1689,7 +3689,20 @@
         "Passive buzzer: 880 Hz",
         "Passive buzzer: 988 Hz",
         "Passive buzzer: 1047 Hz"
-      ]
+      ],
+      "packaged": {
+        "version": "0.23.2",
+        "applied": true,
+        "started": true,
+        "correctTarget": true,
+        "sameCode": true,
+        "sameWires": true,
+        "stateEvents": 3,
+        "simulationMs": 3500,
+        "stimuli": [],
+        "inputChecks": [],
+        "errors": []
+      }
     },
     {
       "type": "sevenseg",
@@ -1708,7 +3721,20 @@
         "digit=4",
         "digit=5",
         "digit=6"
-      ]
+      ],
+      "packaged": {
+        "version": "0.23.2",
+        "applied": true,
+        "started": true,
+        "correctTarget": true,
+        "sameCode": true,
+        "sameWires": true,
+        "stateEvents": 3,
+        "simulationMs": 3580,
+        "stimuli": [],
+        "inputChecks": [],
+        "errors": []
+      }
     },
     {
       "type": "temperature",
@@ -1723,7 +3749,35 @@
         "TMP36=25.0 C",
         "TMP36=10.0 C",
         "TMP36=45.0 C"
-      ]
+      ],
+      "packaged": {
+        "version": "0.23.2",
+        "applied": true,
+        "started": true,
+        "correctTarget": true,
+        "sameCode": true,
+        "sameWires": true,
+        "stateEvents": 3,
+        "simulationMs": 3580,
+        "stimuli": [
+          {
+            "requestedMs": 1100,
+            "observedTime": "1.200 s",
+            "changes": {
+              "temperature": 10
+            }
+          },
+          {
+            "requestedMs": 2300,
+            "observedTime": "2.380 s",
+            "changes": {
+              "temperature": 45
+            }
+          }
+        ],
+        "inputChecks": [],
+        "errors": []
+      }
     },
     {
       "type": "ultrasonic",
@@ -1738,7 +3792,35 @@
         "distance=100.0 cm",
         "distance=53.4 cm",
         "distance=169.0 cm"
-      ]
+      ],
+      "packaged": {
+        "version": "0.23.2",
+        "applied": true,
+        "started": true,
+        "correctTarget": true,
+        "sameCode": true,
+        "sameWires": true,
+        "stateEvents": 3,
+        "simulationMs": 3520,
+        "stimuli": [
+          {
+            "requestedMs": 1100,
+            "observedTime": "1.120 s",
+            "changes": {
+              "distance": 55
+            }
+          },
+          {
+            "requestedMs": 2300,
+            "observedTime": "2.320 s",
+            "changes": {
+              "distance": 170
+            }
+          }
+        ],
+        "inputChecks": [],
+        "errors": []
+      }
     }
   ]
 }
