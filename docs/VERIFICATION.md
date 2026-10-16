@@ -1,3 +1,22 @@
+# 검증 기록 — 0.23.2 공개 릴리스
+
+검증일: 2026-10-17. 작업 경로 `D:\codex\project\STM-Simulator`. 사용자 앱/회로를 조작하지 않고 독립 프로젝트와 숨긴 테스트 프로필을 사용했습니다.
+
+- Docs 반환값 이름 충돌, 버튼 2종 접점 병합, 인코더 에지 누락, 커패시터 PWM 모드, TFT 상태 크기/typed array IPC 문제 수정.
+- 단위 검사 299개 통과. 최종 inline·장치 동작·진단 회귀 23개 통과. 수정 관련 HAL/CMSIS 예제 47개 ARM GCC 컴파일·링크 통과. 실물 보드 실행 결과는 아닙니다.
+- 전체 장치 114개와 모든 배선 누락·오접속 복구 회로 114개를 실제 시뮬레이터로 실행. 센서 값/버튼/회전 입력을 변경해 출력·통신·전류·메모리·기계 상태 판정.
+- 단선 701건의 연결 복구·신호 분리 검사, HAL 카드 979개 선택 API 호출/반환 확인. API 도달과 전체 장치 동작은 별도 판정. 구버전 문제 회로 10개 재적용 후 동작·사용자 코드/함수/파일 보존 확인.
+- Bare-metal 274개 삽입·ARM 대상 전환은 통과. 직접 레지스터 코드는 HAL 실행기에서 실행하지 않으며 동작 검증으로 계산하지 않습니다.
+- [전체 Windows CI](https://github.com/moonsyu/STM-Simulator/actions/runs/38928311749) 및 [Release](https://github.com/moonsyu/STM-Simulator/releases/tag/v0.23.2) 성공. 태그/빌드 커밋 `dfdd09c86e93cb6273af66d6d6ee5308c2d0b8b2`. GitHub latest `v0.23.2` 확인.
+- 공개 EXE, ZIP, SHA256.txt, BUILD-INFO.json, update-manifest.json 다섯 자산 검증. 비인증 공개 다운로드, ZIP 내부 EXE, 버전·크기·태그/빌드 커밋·해시·문서 일치 확인.
+- EXE 102,751,106 bytes, SHA-256 `f39b30431204776ce37f202ce20f6265d3216baeb190da5009963732e487956b`. ZIP SHA-256 `2b1df0d632c1d6da619e75f746fa77cab407eac0495d75631ed18a1dd0bc9cbb`.
+- 내려받은 공개 EXE로 114개 실제 파일 열기 → Docs 버튼 → 실행. 전부 상태 파일 기록, 소스 감사와 main 코드·배선 일치, 실행/페이지 오류 및 전기 단락 없음. 환경값 입력 UI와 UART 송신도 사용. 두 TFT의 20,480개 RGB565 픽셀 전체 해시 확인.
+- DS18B20 두 모델 `25.00 → 10.00 → 45.00 C`, 인코더 두 모델 `count=3/edges=12 → count=1/edges=4`, SD `OCR=40ff8000` 실제 공개 EXE 로그 확인.
+- [장치별 보고서](audits/0.23.2-device-docs/REPORT.md), results.json, hal-cards.csv와 별도 수정 위치 기록 저장. 원시 테스트 데이터는 `work/test-results/docs-audit-0.23.2` 및 `work/audit-archives/docs-audit-0.23.2.zip`에 보관합니다. 실제 사용자 진단 자료는 포함하지 않습니다.
+- 기존에 삽입된 main은 자동으로 변경하지 않습니다. 업데이트 후 해당 Docs를 재적용해야 수정 코드/배선이 반영되며 직접 편집한 관리 영역은 보호합니다.
+
+---
+
 # 검증 기록 — 0.23.1 공개 릴리스
 
 검증일: 2026-10-16. 작업 경로 `D:\codex\project\STM-Simulator`.
