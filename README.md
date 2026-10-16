@@ -58,6 +58,7 @@ npm run build:artifact
 - 빌드 중간 파일: `work/build/`, 검사 결과: `work/test-results/`
 - 개발 중 실행: `npm start`
 - 검증: `npm test`, `npm run test:ui`
+- LED Docs 적용·로컬 로그 검증: `node scripts/docs-writepin-check.cjs`. 오류 조사에는 [로컬 진단 파일](docs/DIAGNOSTICS.md)의 코드·핀·배선·실행 상태를 먼저 확인합니다.
 - 네이티브 IDE 검증: 개발 도구 설치 후 `npm run test:native`, `npm run test:native:ui`. ARM GDB 원격 검증은 QEMU 설치 후 `npm run test:arm-gdb` (`QEMU_ARM` 경로).
 - IDE 검증: `node --test tests/ide.test.js`, `npm run test:ide:ui`
 - L298N만 검증: `npm run test:l298n`, `npm run test:l298n:ui`
