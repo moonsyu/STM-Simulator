@@ -5,7 +5,9 @@ import {compileHal} from './hal-source.js';
 export function inlineStatements(source,helpers='',prefix='example_'){
  const parsed=compileHal(helpers+'\nint main(void) {\n'+source+'\n}'),functions=parsed.functions;
  let serial=0;
- const fresh=()=>prefix+(++serial);
+ const names=new Set((source+'\n'+helpers).match(/\b[A-Za-z_]\w*\b/g)||[]);
+ const unique=base=>{let name=base;while(names.has(name))name=base+'_'+(++serial);names.add(name);return name;};
+ const fresh=()=>unique(prefix+(++serial));
  const type=d=>(d.constant?'const ':'')+(d.volatile?'volatile ':'')+d.type+(d.pointer?' *':' ');
  const hasReturn=n=>n&&typeof n==='object'&&(n.type==='return'||Object.values(n).some(v=>Array.isArray(v)?v.some(hasReturn):hasReturn(v)));
  function expr(n,env={},stack=[]){
@@ -17,10 +19,10 @@ export function inlineStatements(source,helpers='',prefix='example_'){
    const args=n.args.map(a=>expr(a,env,stack)),name=n.callee.name,fn=functions[name];
    if(!fn||name==='main')return result(expr(n.callee,env,stack).code+'('+args.map(a=>a.code).join(', ')+')',args.map(a=>a.before).join(''));
    if(stack.includes(name))throw new Error('재귀 함수는 main 내부 예제로 펼칠 수 없습니다: '+name);
-   const local={},id=fresh(),ret=fn.type==='void'?'':id+'_value',done=hasReturn(fn.body)?id+'_done':null;
+   const local={},id=fresh(),ret=fn.type==='void'?'':unique(id+'_return'),done=hasReturn(fn.body)?unique(id+'_done'):null;
    // Only helper-local names are renamed; shared example state keeps its name.
-   const collect=node=>{if(!node||typeof node!=='object')return;if(node.type==='declare')for(const d of node.declarations)local[d.name]=id+'_'+d.name;for(const v of Object.values(node))if(Array.isArray(v))v.forEach(collect);else if(v&&typeof v==='object')collect(v);};collect(fn.body);
-   fn.params.forEach(p=>local[p.name]=id+'_'+p.name);
+   const collect=node=>{if(!node||typeof node!=='object')return;if(node.type==='declare')for(const d of node.declarations)local[d.name]??=unique(id+'_local_'+d.name);for(const v of Object.values(node))if(Array.isArray(v))v.forEach(collect);else if(v&&typeof v==='object')collect(v);};collect(fn.body);
+   fn.params.forEach(p=>local[p.name]??=unique(id+'_local_'+p.name));
    let before=args.map(a=>a.before).join('')+(ret?type(fn)+ret+' = 0;\n':'')+'{\n';
    before+=fn.params.map((p,i)=>type(p)+local[p.name]+' = '+args[i].code+';\n').join('');
    if(done)before+='int '+done+' = 0;\n';

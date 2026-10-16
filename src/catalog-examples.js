@@ -8,7 +8,7 @@ import {defaultMcu,generateHal,validateMcu} from './mcu-config.js';
 import {protocolExample} from './catalog-protocol-examples.js';
 export const CATALOG_EXAMPLES=Object.fromEntries(DEVICE_CATALOG.map(v=>[catalogType(v.id),'HAL · '+v.name]));
 export const CATALOG_GUIDES=Object.fromEntries(DEVICE_CATALOG.map(v=>[catalogType(v.id),v.interface+' · '+v.pins.join(' / ')+' · '+v.appearance+' '+(CATALOG_SCOPE[v.id]||'')]));
-const familyRecipe={uart:'uart_external',board:'blink',breadboard:'blink',resistor:'adc',led:'blink',button:'button',capacitor:'pwm',dc_motor:'l298n',dc_supply:'l298n'};
+const familyRecipe={uart:'uart_external',board:'blink',breadboard:'blink',resistor:'adc',led:'blink',button:'button',capacitor:'pwm',dc_motor:'l298n',dc_supply:'l298n',encoder:'timer_encoder'};
 export function catalogExample(type,baseFactory){
  const v=CATALOG_BY_TYPE[type]||DEVICE_CATALOG.find(v=>catalogType(v.id)===type),map=catalogMap(type);
  if(!v)throw new Error('장치 모델을 찾을 수 없습니다.');
@@ -17,9 +17,15 @@ export function catalogExample(type,baseFactory){
  if(['board','breadboard'].includes(v.family))return p;
  const part=p.components.find(c=>c.type===v.family);if(!part)throw new Error('예제의 주 장치가 없습니다: '+v.name);
  const old=part.id,mounts=attachments(part);part.type=type;part.name=v.name;for(const [key,value]of Object.entries(CATALOG_DEFS[type].defaults))if(part[key]===undefined)part[key]=value;
- assignAttachments(part,Object.fromEntries(Object.entries(mounts).map(([key,hole])=>[map[key],hole])));
+ const mappedMounts={},mountWires=[];
+ for(const [key,hole]of Object.entries(mounts)){
+  const contact=map[key];
+  if(mappedMounts[contact]&&mappedMounts[contact]!==hole)mountWires.push({id:'catalogMount'+key,from:`part:${old}:${contact}`,to:hole,color:'#23a68a'});
+  else mappedMounts[contact]=hole;
+ }
+ assignAttachments(part,mappedMounts);
  const endpoint=id=>{const [head,idPart,key]=id.split(':');return head==='part'&&idPart===old?'part:'+old+':'+map[key]:id;};
- p.wires=p.wires.map(w=>({...w,from:endpoint(w.from),to:endpoint(w.to)}));
+ p.wires=[...p.wires.map(w=>({...w,from:endpoint(w.from),to:endpoint(w.to)})),...mountWires];
  const tie=(n,signal)=>p.wires.push({id:'catalogTie'+n,from:`part:${old}:p${n}`,to:boardPin(signal),color:signal==='GND'?'#4e647b':'#dd654c'});
  const ties={ 'sht31-breakout-7':{5:'GND',6:'3V3'},'mpu6050-8':{7:'GND'},'st7735-8':{8:'3V3'},'i2c-eeprom-8':{7:'GND'},'i2c-eeprom-5':{5:'GND'},'spi-eeprom-8':{3:'3V3',7:'3V3'},'l298n-bare-15':{1:'GND',15:'GND'},'l298p-bare-20':{2:'GND',10:'GND',11:'GND',20:'GND',19:'GND'},'button-module-3':{2:'3V3'}};
  for(const [n,signal]of Object.entries(ties[v.id]||{}))tie(n,signal);

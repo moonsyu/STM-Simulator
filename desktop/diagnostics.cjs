@@ -2,6 +2,22 @@ const fs=require('node:fs/promises');
 const path=require('node:path');
 const {createHash,randomUUID}=require('node:crypto');
 
+// Keep display/memory evidence without repeating tens of thousands of pixels in
+// every state event. The hash covers every value, in order, before truncation.
+function compactState(value){
+ if(!value||typeof value!=='object')return value;
+ if(Array.isArray(value)||ArrayBuffer.isView(value)&&!(value instanceof DataView)){
+  const values=Array.from(value);
+  if(values.length>32&&values.every(Number.isFinite))return {
+   length:values.length,nonzero:values.filter(Boolean).length,
+   sha256:createHash('sha256').update(JSON.stringify(values)).digest('hex'),
+   first:values.slice(0,16),last:values.slice(-4)
+  };
+  return values.map(compactState);
+ }
+ return Object.fromEntries(Object.entries(value).map(([key,item])=>[key,compactState(item)]));
+}
+
 // Fixed local files only. A renderer never chooses a path or destination.
 class Diagnostics {
  constructor(profile,version,{maxBytes=1_000_000}={}){
@@ -10,7 +26,7 @@ class Diagnostics {
  }
  async record(input){
   if(!input||typeof input.type!=='string'||!/^[a-z][a-z0-9.-]{0,63}$/.test(input.type))throw new Error('Invalid diagnostic event');
-  const detail=JSON.stringify(input.detail??{});
+  const detail=JSON.stringify(input.type==='simulation.state'?compactState(input.detail??{}):input.detail??{});
   if(detail.length>65_536||Buffer.byteLength(detail)>131_072)throw new Error('Diagnostic event is too large');
   const text=input.project;
   if(text!==undefined){
