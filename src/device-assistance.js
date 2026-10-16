@@ -1,6 +1,9 @@
+import {exampleStatements} from './device-inline-example.js';
+import {inlineStatements} from './c-inline.js';
+import {showSurface} from './surfaces.js';
 import {CATALOG_BY_TYPE} from './catalog-defs.js';
 import {registerSetup,REGISTER_HELPERS} from './device-register-setup.js';
-import {insertDeviceCode,managedChecksum,managedRegion,stripDeviceRegions,selectOperation} from './device-code-insertion.js';
+import {insertDeviceCode,managedChecksum,stripDeviceRegions,removeLegacyDeviceHooks} from './device-code-insertion.js';
 import {recipeFor,primaryPart,expectedNets,wiringTopology,DEVICE_RECIPES} from './device-docs-data.js';
 import {PINS,PIN_BY_ID,GPIO_PINS,boardPin,endpointInfo} from './pins.js';
 import {terminalKeys,terminalLabel,attachments,assignAttachments} from './components.js';
@@ -9,7 +12,7 @@ import {timerMax} from './timer-config.js';
 import {SERIAL_IDS,serialHandle} from './serial-config.js';
 import {validateProject} from './project.js';
 import {compileHal} from './hal-source.js';
-import {cFunctions,replaceIdentifiers,insertMainHooks,checksum} from './c-source-edit.js';
+import {cFunctions,replaceIdentifiers,checksum} from './c-source-edit.js';
 import {baremetalCards} from './device-baremetal.js';
 const FILE='stm_device_docs.c',HEADER='stm_device_docs.h';
 const partTerminal=(id,key)=>`part:${id}:${key}`;
@@ -24,7 +27,7 @@ function bindParts(p,sample,target,prior,report){
   const candidate=p.components.find(part=>part.type===template.type&&!Object.values(map).includes(part.id)&&matchesValue(part)&&terminalKeys(part).some(key=>{const root=uf.find(partTerminal(part.id,key));return !powerRoots.has(root)&&peers.some(peer=>uf.find(peer)===root);}));
   if(candidate){map[template.id]=candidate.id;report.reused++;continue;}
   const added=structuredClone(template);added.id=newId(p,'docsPart');added.name=template.name+' · Docs';delete added.attachA;delete added.attachB;delete added.attachments;
-  const anchor=p.components.find(part=>part.id===target.id);if(anchor){added.x=Math.min(5800,anchor.x+210+report.addedParts%3*125);added.y=Math.min(5800,anchor.y+Math.floor(report.addedParts/3)*125);}
+  const anchor=p.components.find(part=>part.id===target.id);if(anchor){added.x=anchor.x+210+report.addedParts%3*125;added.y=anchor.y+Math.floor(report.addedParts/3)*125;}
   if(target.type==='breadboard'){
    const mounted=Object.fromEntries(Object.entries(attachments(template)).map(([key,hole])=>[key,anchor?'breadboard:'+anchor.id+':'+hole:hole])),used=new Set(p.components.flatMap(part=>Object.values(attachments(part))));
    if(Object.keys(mounted).length===2&&Object.values(mounted).every(hole=>!used.has(hole))){const [a,b]=Object.values(mounted).map(hole=>endpointInfo(hole,p.components,p.surfaces));if(a&&b){added.x=(a.x+b.x)/2;added.y=(a.y+b.y)/2;added.span=Math.hypot(b.x-a.x,b.y-a.y);added.rotation=(Math.atan2(b.y-a.y,b.x-a.x)*180/Math.PI+360)%360;assignAttachments(added,mounted);}}
@@ -96,48 +99,34 @@ function deviceSource(binding,project,index){
  const sample=recipeFor(binding.type),template=primaryPart(sample,binding.type),selected=project.components.find(p=>p.id===binding.parts[template?.id]);
  if(template?.address!==undefined&&selected?.address!==undefined&&template.address!==selected.address)sample.code=sample.code.replace(new RegExp('0x'+template.address.toString(16)+'(?=\\s*<<\\s*1)','gi'),'0x'+selected.address.toString(16));
  if(template?.address!==undefined&&selected?.address!==undefined)template.address=selected.address;
- const prefix='STM_D'+index+'_',functions=cFunctions(sample.code),parsed=compileHal(sample.code),handles=parsed.globals.flatMap(g=>g.declarations).filter(d=>d.type.endsWith('_HandleTypeDef')),names={};
+ const prefix='STM_D'+index+'_',parsed=compileHal(sample.code),handles=parsed.globals.flatMap(g=>g.declarations).filter(d=>d.type.endsWith('_HandleTypeDef')),names={};
  for(const g of parsed.globals.flatMap(g=>g.declarations))if(!handles.some(h=>h.name===g.name))names[g.name]=prefix+g.name;
- const helpers=functions.filter(f=>!['main','SystemClock_Config','Error_Handler','__io_putchar'].includes(f.name)&&!f.name.startsWith('MX_'));for(const f of helpers)names[f.name]=prefix+f.name;
- let globals=sample.code;for(const f of [...functions].reverse())globals=globals.slice(0,f.start)+globals.slice(f.end);globals=globals.replace(/^\s*#include[^\n]*\n/gm,'').replace(/^\s*(?:static\s+)?(?:void|int)\s+\w+\([^;]*\);\s*$/gm,'').replace(/^\s*\w+_HandleTypeDef\s+\w+\s*;\s*$/gm,'');
- const section=n=>sample.code.match(new RegExp('/\\* USER CODE BEGIN '+n+' \\*/([\\s\\S]*?)/\\* USER CODE END '+n+' \\*/'))?.[1]||'';
  const ownConfig={...structuredClone(project.mcu),pins:Object.fromEntries(Object.values(binding.pins).map(pin=>[pin,project.mcu.pins[pin]])),peripherals:Object.fromEntries(Object.values(binding.peripherals).map(id=>[id,project.mcu.peripherals[id]]))};
  if(binding.mode==='baremetal'){
   const card=baremetalCards(ownConfig,binding.type,sample).find(c=>c.id===binding.api);if(!card)throw new Error('해당 장치에서 사용할 수 없는 레지스터 예제입니다.');
-  const tokens=Object.fromEntries([...REGISTER_HELPERS.matchAll(/\b(BM_\w+)\s*\(/g)].map(m=>[m[1],prefix+m[1]]));
-  return {declarations:replaceIdentifiers(REGISTER_HELPERS,tokens),init:replaceIdentifiers(registerSetup(ownConfig),tokens),step:replaceIdentifiers(card.code+'\nBM_delay(100);',tokens),handles:[],callbacks:[],prefix};
+  const expand=text=>inlineStatements(text.replace(/__IO\s+/g,'volatile '),REGISTER_HELPERS.replace(/__IO\s+/g,'volatile '),prefix);
+  return {declarations:'',init:expand(registerSetup(ownConfig)),step:expand(card.code+'\nBM_delay(100);'),handles:[]};
  }
- const generated=cFunctions(generateHal(ownConfig)).filter(f=>f.name.startsWith('MX_'));const initNames=Object.fromEntries(generated.map(f=>[f.name,prefix+f.name]));
- let initializers=generated.map(f=>replaceIdentifiers(f.text,initNames)).join('\n');
- const body=remapCode(replaceIdentifiers(globals+'\n'+helpers.map(f=>f.name.startsWith('HAL_UART_')?f.text.replace('{','{\n  if (huart->Instance != USART2) return;'):f.text).join('\n'),names),binding,sample);
- const selectedInit=binding.mode==='hal'&&binding.api!=='all'&&!selectOperation(section(3),binding.api,helpers).trim()&&selectOperation(section(2),binding.api,helpers).trim()?selectOperation(section(2),binding.api,helpers):section(2);
- const init=remapCode(replaceIdentifiers(selectedInit.replace(/\bMX_\w+_Init\s*\(\s*\)\s*;/g,''),names),binding,sample);let step=remapCode(replaceIdentifiers(selectOperation(section(3),binding.mode==='hal'?binding.api:'all',helpers),names),binding,sample);
+ const example=exampleStatements(sample,binding.api,prefix),map=text=>remapCode(replaceIdentifiers(text,names),binding,sample);
  const adc=Object.values(binding.pins).find(pin=>project.mcu.pins[pin].function.startsWith('ADC1_')),channel=adc?project.mcu.pins[adc].function.slice(7):null;
- const adcSelect=adc?`  ADC_ChannelConfTypeDef docsChannel = {0}; docsChannel.Channel = ADC_CHANNEL_${channel}; docsChannel.Rank = 1; docsChannel.SamplingTime = ADC_SAMPLETIME_3CYCLES; HAL_ADC_ConfigChannel(&hadc1, &docsChannel);\n`:'';
- const callbacks=helpers.filter(f=>f.name.startsWith('HAL_')).map(f=>({name:f.name,signature:f.signature,call:names[f.name]+'('+f.signature.slice(f.signature.indexOf('(')+1,-1).split(',').map(s=>s.match(/\w+\s*$/)?.[0].trim()).join(', ')+');'}));
- return {declarations:body+'\n'+initializers,init:generated.map(f=>'  '+initNames[f.name]+'();').join('\n')+'\n'+init,step:adcSelect+step,text:body+'\n'+initializers+`\nvoid ${prefix}Init(void) {\n${generated.map(f=>'  '+initNames[f.name]+'();').join('\n')}\n${init}\n}\nvoid ${prefix}Step(void) {\n${adcSelect}${step}\n}\n`,handles:handles.map(h=>({type:h.type,name:remapCode(h.name,binding,sample)})),callbacks,prefix};
+ const adcSelect=adc?`ADC_ChannelConfTypeDef docsChannel = {0}; docsChannel.Channel = ADC_CHANNEL_${channel}; docsChannel.Rank = 1; docsChannel.SamplingTime = ADC_SAMPLETIME_3CYCLES; HAL_ADC_ConfigChannel(&hadc1, &docsChannel);\n`:'';
+ return {declarations:map(example.globals),init:map(example.init),step:adcSelect+map(example.step),handles:handles.map(h=>({type:h.type,name:remapCode(h.name,binding,sample)})),config:ownConfig};
 }
 function installCode(project){
  const modules=project.deviceDocs.bindings.map((b,i)=>deviceSource(b,project,i)),existing=sourceText(project),handles=new Map(modules.flatMap(m=>m.handles).map(h=>[h.name,h]));
- let declarations='#include <stdio.h>\n#include <math.h>\n'+[...handles.values()].map(h=>(new RegExp('\\b'+h.type+'\\s+'+h.name+'\\b').test(existing)?'extern ':'')+h.type+' '+h.name+';').join('\n')+'\n'+modules.map(m=>m.declarations).join('\n');
- let main=stripDeviceRegions(project.code),callbacks=new Map();
- for(const m of modules)for(const cb of m.callbacks){if(!callbacks.has(cb.name))callbacks.set(cb.name,{...cb,calls:[]});callbacks.get(cb.name).calls.push(cb.call);}
- for(const cb of callbacks.values()){
-  const dispatcher=cb.name.replace('HAL_','STM_Devices_'),signature=cb.signature.replace(cb.name,dispatcher),args=cb.signature.slice(cb.signature.indexOf('(')+1,-1).split(',').map(s=>s.match(/\w+\s*$/)?.[0].trim()).join(', '),call=dispatcher+'('+args+');';
-  declarations+='\n'+signature+' {\n'+cb.calls.map(c=>'  '+c).join('\n')+'\n}\n';
-  const fn=cFunctions(main).find(f=>f.name===cb.name),external=project.firmware.files.filter(f=>f.name!==FILE&&/\.c$/.test(f.name)).map(file=>({file,fn:cFunctions(file.text).find(f=>f.name===cb.name)})).find(v=>v.fn);
-  if(fn){if(!fn.body.includes(dispatcher+'('))main=main.slice(0,fn.open+1)+'\n  '+call+main.slice(fn.open+1);}
-  else if(external){if(!external.fn.body.includes(dispatcher+'(')){const f=external.file,at=external.fn.open+1;f.text=signature+';\n'+f.text.slice(0,at)+'\n  '+call+f.text.slice(at);}}
-  else main+='\n'+cb.signature+' { '+call+' }\n';
- }
- project.code=insertDeviceCode(main,{declarations,init:modules.map(m=>'{\n'+m.init+'\n}').join('\n'),step:modules.map(m=>'{\n'+m.step+'\n}').join('\n')});
- project.firmware={mode:'hal',files:project.firmware.files.filter(f=>f.name!==FILE&&f.name!==HEADER)};
+ const main=stripDeviceRegions(project.code),hasHandle=(text,h)=>new RegExp('\\b'+h.type+'\\s+'+h.name+'\\b').test(text);
+ const headers='#include <stdio.h>\n#include <math.h>\n'+[...handles.values()].filter(h=>!hasHandle(main,h)).map(h=>(hasHandle(existing,h)?'extern ':'')+h.type+' '+h.name+';').join('\n');
+ const config={...structuredClone(project.mcu),pins:Object.assign({},...modules.map(m=>m.config?.pins||{})),peripherals:Object.assign({},...modules.map(m=>m.config?.peripherals||{}))};
+ const initializers=(modules.some(m=>m.config)?cFunctions(generateHal(config)):[]).filter(f=>f.name.startsWith('MX_')).map(f=>({name:f.name,body:f.body}));
+ project.code=insertDeviceCode(project.code,{headers,declarations:modules.map(m=>m.declarations).join('\n'),initializers,init:modules.map(m=>'{\n'+m.init+'\n}').join('\n'),step:modules.map(m=>'{\n'+m.step+'\n}').join('\n')});
+ project.firmware={mode:'hal',files:project.firmware.files.filter(f=>f.name!==FILE&&f.name!==HEADER).map(f=>({...f,text:removeLegacyDeviceHooks(f.text)}))};
  project.deviceDocs.inlineChecksum=managedChecksum(project.code);delete project.deviceDocs.checksum;delete project.deviceDocs.headerChecksum;
 }
 export function applyDeviceExample(original,target,{api='all',mode='hal'}={}){
  const project=structuredClone(original),report={addedParts:0,reused:0,addedWires:0,removedWires:0,detached:0,preserved:0};
  if(project.firmware?.mode!=='hal')throw new Error('현재 프로젝트를 STM32 HAL 실행 환경으로 전환한 뒤 적용하세요.');
  const component=target.type==='part'?project.components.find(p=>p.id===target.id):null,type=component?.type||(target.id==='board'?'board':target.id==='breadboard'?'breadboard':null);if(!type||!DEVICE_RECIPES[type])throw new Error('장치 또는 보드/빵판을 먼저 선택하세요.');
+ showSurface(project,'board');
  const sample=recipeFor(type);if(sample.mcu.timerClockHz!==project.mcu.timerClockHz&&/^ref_rgb_(neopixel|gravity)/.test(type)){if(Object.keys(project.mcu.pins).length||project.deviceDocs?.bindings.length)throw new Error('이 장치의 비트 타이밍에는 '+sample.mcu.timerClockHz+' Hz 클록이 필요합니다. Pinout의 클록을 맞춰 주세요.');project.mcu.timerClockHz=sample.mcu.timerClockHz;project.code=project.code.replace(cFunctions(project.code).find(f=>f.name==='SystemClock_Config')?.text||'__no_clock__',cFunctions(generateHal(project.mcu)).find(f=>f.name==='SystemClock_Config')?.text||'');}
  const busPin=(p,label)=>partTerminal(p.id,terminalKeys(p).find(k=>terminalLabel(p,k)===label));
  const key=component?.id||'surface_'+type;project.deviceDocs??={bindings:[]};

@@ -16,7 +16,7 @@ function until(s,end){for(let t=Math.ceil(s.runtime.microTime/1000)+10;t<=end;t+
 const disconnect=(p,n)=>p.wires=p.wires.filter(w=>w.to!==`part:demo:p${n}`);
 
 test('35 searchable parts include 14 distinct device models with persistent controls and real terminals',()=>{
- assert.equal(PART_LIBRARY.filter(p=>!p.type.startsWith('ref_')).length,35);assert.equal(Object.keys(DEVICE_DEFS).length,14);
+ assert.equal(PART_LIBRARY.filter(p=>p.type!=='board'&&!p.type.startsWith('ref_')).length,35);assert.equal(Object.keys(DEVICE_DEFS).length,14);
  for(const kind of Object.keys(DEVICE_DEFS)){
   const p=deviceExample(kind),part=p.components[0],q=validateProject(p);
   assert.deepEqual(q,p,kind);assert.equal(nominalTerminals(part).length,terminalKeys(part).length);

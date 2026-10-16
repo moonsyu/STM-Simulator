@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {blankProject,validateProject} from '../src/project.js';
+import {exampleProject as blankProject,validateProject} from '../src/project.js';
 import {resizeObject} from '../src/resize.js';
 import {BOARD,BB,surfacePoint,MAX_SCALE} from '../src/geometry.js';
 import {PINS,boardPin,endpointInfo,holeInfo,breadboardHoles} from '../src/pins.js';

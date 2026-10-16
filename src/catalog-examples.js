@@ -3,7 +3,7 @@ import {CATALOG_BY_TYPE,CATALOG_DEFS,catalogMap,catalogType,CATALOG_SCOPE} from 
 import {attachments,assignAttachments} from './components.js';
 import {cFunctions} from './c-source-edit.js';
 import {boardPin} from './pins.js';
-import {blankProject} from './project.js';
+import {exampleProject} from './project.js';
 import {defaultMcu,generateHal,validateMcu} from './mcu-config.js';
 import {protocolExample} from './catalog-protocol-examples.js';
 export const CATALOG_EXAMPLES=Object.fromEntries(DEVICE_CATALOG.map(v=>[catalogType(v.id),'HAL · '+v.name]));
@@ -43,7 +43,7 @@ export function catalogExample(type,baseFactory){
  return p;
 }
 export function makeCatalogProject(v){
- const p=blankProject(),type=catalogType(v.id),def=CATALOG_DEFS[type];p.name=CATALOG_EXAMPLES[type];p.mcu={...defaultMcu(),pins:{},peripherals:{},nvic:{}};p.components=[{id:'demo',type,name:v.name,x:790,y:340,rotation:0,...def.defaults}];p.simulation={stepMs:1,pwmWaveform:false};
+ const p=exampleProject(),type=catalogType(v.id),def=CATALOG_DEFS[type];p.name=CATALOG_EXAMPLES[type];p.mcu={...defaultMcu(),pins:{},peripherals:{},nvic:{}};p.components=[{id:'demo',type,name:v.name,x:790,y:340,rotation:0,...def.defaults}];p.simulation={stepMs:1,pwmWaveform:false};
  const pin=(signal,fn='GPIO_Output',pull='NOPULL',initial=0)=>p.mcu.pins[signal]={function:fn,pull,initial,label:'',edge:'CHANGE'};
  const connect=(n,signal)=>{if(!n)return;p.wires.push({id:'w'+(p.wires.length+1),from:boardPin(signal),to:'part:demo:p'+n,color:signal==='GND'?'#4e647b':'#23a68a'});};
  const find=label=>v.pins.indexOf(label)+1;

@@ -36,11 +36,11 @@ export function compile(source,options={}) {
   const identifier=()=>{if(!/^[A-Za-z_]\w*$/.test(peek()))fail('이름이 필요합니다.');const name=take();if(['__proto__','prototype','constructor'].includes(name))fail('사용할 수 없는 이름입니다.');return name;};
   const isType=()=>TYPES.has(peek())||aliases.has(peek())||QUALIFIERS.has(peek())||['struct','extern'].includes(peek())||Object.hasOwn(program.structs,peek());
   function spec(){
-    let constant=false,external=false,storage=false;while(QUALIFIERS.has(peek())||peek()==='extern'){const q=take();if(q==='const')constant=true;if(q==='extern')external=true;if(q==='static')storage=true;}
+    let constant=false,external=false,storage=false,volatile=false;while(QUALIFIERS.has(peek())||peek()==='extern'){const q=take();if(q==='const')constant=true;if(q==='extern')external=true;if(q==='static')storage=true;if(q==='volatile')volatile=true;}
     let type;
     if(peek()==='struct'){take();type=identifier();if(!Object.hasOwn(program.structs,type))fail('정의되지 않은 구조체입니다.');}
     else {if(!isType())fail('자료형이 필요합니다.');const specs=[take()];while(['long','short','int','unsigned','signed','char','double'].includes(peek()))specs.push(take());type=specs.at(-1);if(specs.includes('unsigned'))type=specs.includes('char')?'uint8_t':specs.includes('short')?'uint16_t':'uint32_t';else if(specs.includes('short'))type='int16_t';}
-    return {type:aliases.get(type)||type,constant,external,storage};
+    return {type:aliases.get(type)||type,constant,external,storage,volatile};
   }
   function declarator(base){
     let pointer=false;while(peek()==='*'){take();if(pointer)fail('이중 포인터는 지원하지 않습니다.');pointer=true;}
@@ -62,14 +62,15 @@ export function compile(source,options={}) {
     if(semicolon)expect(';');return {type:'declare',declarations};
   }
   function argumentsList(){expect('(');const args=[];if(peek()!==')')do{args.push(expression());if(peek()!==',')break;take();}while(true);expect(')');return args;}
+  function castAhead(){let i=0;while(['const','volatile'].includes(peek(i)))i++;if(!TYPES.has(peek(i))&&!Object.hasOwn(program.structs,peek(i)))return false;i++;if(peek(i)==='*')i++;return peek(i)===')';}
   function expression(min=0){
     if(++depth>80)fail('표현식 중첩이 너무 깊습니다.');let node;const t=take();
     if(['!','~','-','+','*','&','++','--'].includes(t))node={type:'unary',op:t,a:expression(13)};
     else if(t==='('){
-      if((TYPES.has(peek())||Object.hasOwn(program.structs,peek()))&&(peek(1)===')'||(peek(1)==='*'&&peek(2)===')'))){const to=take(),pointer=peek()==='*';if(pointer)take();take();node={type:'cast',to,pointer,a:expression(13)};}
+      if(castAhead()){const base=spec(),pointer=peek()==='*';if(pointer)take();take();node={type:'cast',to:base.type,constant:base.constant,volatile:base.volatile,pointer,a:expression(13)};}
       else {node=expression();expect(')');}
     }
-    else if(/^\d|^\.\d/.test(t)){const raw=(/^0[xb]/i.test(t)?t.replace(/[uUlL]+$/,''):t.replace(/[uUlLfF]+$/,''));node={type:'literal',value:Number(raw),numericType:/^0[xb]/i.test(t)?'int':/[.eEfF]/.test(t)?'double':'int'};if(!Number.isFinite(node.value))fail('숫자 형식이 잘못되었습니다.');}
+    else if(/^\d|^\.\d/.test(t)){const raw=(/^0[xb]/i.test(t)?t.replace(/[uUlL]+$/,''):t.replace(/[uUlLfF]+$/,''));node={type:'literal',value:Number(raw),raw:t,numericType:/^0[xb]/i.test(t)?'int':/[.eEfF]/.test(t)?'double':'int'};if(!Number.isFinite(node.value))fail('숫자 형식이 잘못되었습니다.');}
     else if(t[0]==='"'){try{node={type:'literal',value:JSON.parse(t)};}catch{fail('문자열 형식이 잘못되었습니다.');}}
     else if(t[0]==="'"){const raw=t.slice(1,-1),char=raw.startsWith('\\')?({'n':'\n','r':'\r','t':'\t','0':'\0',"'":"'",'\\':'\\'}[raw.slice(1)]):raw;if(char===undefined)fail('문자 이스케이프가 잘못되었습니다.');node={type:'literal',value:char.charCodeAt(0)};}
     else if(/^[A-Za-z_]\w*$/.test(t))node={type:'name',name:t};

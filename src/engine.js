@@ -13,8 +13,8 @@ export class UnionFind {
 export function topology(project,pressed={}) {
   const model=physicalToModel(project);if(model!==project)return physicalTopology(topology(model,pressed),model);
   const uf=new UnionFind();
-  for(const p of PINS){uf.find(p.id);if(p.signal!=='NC')uf.join(p.id,`signal:${p.signal==='AGND'?'GND':p.signal}`);}
-  for(const h of circuitHoles(project.components))uf.join(h.id,h.bus);
+  for(const p of (project.surfaces?.board?.hidden?[]:PINS)){uf.find(p.id);if(p.signal!=='NC')uf.join(p.id,`signal:${p.signal==='AGND'?'GND':p.signal}`);}
+  for(const h of circuitHoles(project.components,project.surfaces))uf.join(h.id,h.bus);
   for(const p of project.components){
     for(const key of terminalKeys(p)){const id=`part:${p.id}:${key}`;uf.find(id);if(attachments(p)[key])uf.join(id,attachments(p)[key]);}
     if(p.type==='button'){uf.join(`part:${p.id}:a`,`part:${p.id}:c`);uf.join(`part:${p.id}:b`,`part:${p.id}:d`);if(pressed[p.id])uf.join(`part:${p.id}:a`,`part:${p.id}:b`);}

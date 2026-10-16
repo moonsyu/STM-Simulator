@@ -1,5 +1,5 @@
 import {topology} from './engine.js';
-import {PINS,circuitHoles,endpointInfo,breadboardPrefix} from './pins.js';
+import {PINS,circuitHoles,endpointInfo,breadboardPrefix,endpoints as circuitEndpoints} from './pins.js';
 import {terminalKeys,attachments,assignAttachments} from './components.js';
 import {moveBreadboard} from './breadboards.js';
 
@@ -19,7 +19,7 @@ export function insertWirePoint(project,wire,point){
 }
 export function connectedNet(project,endpoint,pressed={}){
   const uf=topology(project,pressed),root=uf.find(endpoint),all=[...PINS.map(p=>endpointInfo(p.id,project.components,project.surfaces)),...circuitHoles(project.components,project.surfaces),...project.components.flatMap(p=>terminalKeys(p).map(k=>endpointInfo(`part:${p.id}:${k}`,project.components,project.surfaces)))];
-  return {endpoints:all.filter(p=>uf.find(p.id)===root),wires:project.wires.filter(w=>uf.find(w.from)===root)};
+  return {endpoints:all.filter(p=>p&&uf.find(p.id)===root),wires:project.wires.filter(w=>uf.find(w.from)===root)};
 }
 export function copySelection(project,selection){
   const wanted=new Set(selectedIds(selection,'part'));
@@ -41,7 +41,7 @@ export function pasteSelection(project,clip,uid,offset=28){
   const ids=new Map(clip.components.map(p=>[p.id,uid('p')]));
   const remap=id=>{if(id.startsWith('part:')){const [,part,key]=id.split(':');return ids.has(part)?`part:${ids.get(part)}:${key}`:id;}for(const p of clip.components)if(p.type==='breadboard'&&id.startsWith(breadboardPrefix(p.id)))return breadboardPrefix(ids.get(p.id))+id.slice(breadboardPrefix(p.id).length);return id;};
   const components=clip.components.map(p=>{const q=structuredClone(p);q.id=ids.get(p.id);q.name=p.name.slice(0,77)+' 복사';q.x+=offset;q.y+=offset;if(!Number.isFinite(q.x)||!Number.isFinite(q.y))throw new Error('복사할 위치가 올바르지 않습니다.');assignAttachments(q,Object.fromEntries(Object.entries(attachments(q)).filter(([,id])=>remap(id)!==id).map(([key,id])=>[key,remap(id)])));return q;});
-  const endpoints=new Set([...PINS,...circuitHoles([...project.components,...components])].map(p=>p.id));for(const p of [...project.components,...components])for(const k of terminalKeys(p))endpoints.add(`part:${p.id}:${k}`);
+  const endpoints=new Set(circuitEndpoints([...project.components,...components],project.surfaces).filter(Boolean).map(p=>p.id));for(const p of [...project.components,...components])for(const k of terminalKeys(p))endpoints.add(`part:${p.id}:${k}`);
   const wires=clip.wires.map(w=>({...structuredClone(w),id:uid('w'),from:remap(w.from),to:remap(w.to),...(w.points?{points:w.points.map(p=>({x:p.x+offset,y:p.y+offset}))}:{})})).filter(w=>endpoints.has(w.from)&&endpoints.has(w.to));
   project.components.push(...components);project.wires.push(...wires);return {type:'group',parts:components.map(p=>p.id),wires:wires.map(w=>w.id)};
 }

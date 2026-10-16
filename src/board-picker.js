@@ -20,5 +20,5 @@ export function setupBoardPicker({getProject,isRunning,onSelect}){
  $('board-change-confirm').onclick=apply;
  $('board-change-cancel').onclick=()=>{$('board-change-dialog').close();pending=null;$('board-open').focus();};
  $('board-change-dialog').addEventListener('cancel',()=>{pending=null;});
- return ()=>{const board=getBoard(getProject().boardId??DEFAULT_BOARD_ID);$('current-board-name').textContent=board.name;$('canvas-board-name').textContent=board.name+' + Breadboard';$('board-open').disabled=isRunning();};
+ return ()=>{const board=getBoard(getProject().boardId??DEFAULT_BOARD_ID);$('current-board-name').textContent=board.name;$('canvas-board-name').textContent=getProject().surfaces?.board?.hidden?'회로 배치 공간':board.name;$('board-open').disabled=isRunning();};
 }

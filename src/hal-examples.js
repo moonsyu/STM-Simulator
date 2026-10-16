@@ -4,7 +4,7 @@ import {BASIC_EXAMPLES,BASIC_GUIDES,basicHalExample} from './basic-hal-examples.
 import {TIMER_EXAMPLES,TIMER_GUIDES,timerExample} from './timer-examples.js';
 import {BUZZER_EXAMPLES,BUZZER_GUIDES,passiveBuzzerExample} from './passive-buzzer-example.js';
 import {DEVICE_EXAMPLES,DEVICE_GUIDES,deviceExample} from './device-examples.js';
-import {blankProject} from './project.js';
+import {exampleProject} from './project.js';
 import {defaultMcu,validateMcu,generateHal} from './mcu-config.js';
 import {configureHalCircuit} from './hal-circuits.js';
 import {EXAMPLE_TIMER_CLOCK_HZ} from './mcu-defaults.js';
@@ -21,7 +21,7 @@ export function halExample(kind){
   if(DEVICE_EXAMPLES[kind])return deviceExample(kind);
   if(!HAL_EXAMPLES[kind])throw new Error('HAL 예제를 확인하세요.');
   const exampleId=kind;if(kind==='uart_external')kind='uart';
-  const p=blankProject();p.name=HAL_EXAMPLES[exampleId];p.mcu=defaultMcu();p.mcu.timerClockHz=EXAMPLE_TIMER_CLOCK_HZ;if(['blink','button','exti','timer'].includes(kind))p.mcu.pins.PA5=pin('GPIO_Output','NOPULL','LD2');
+  const p=exampleProject();p.name=HAL_EXAMPLES[exampleId];p.mcu=defaultMcu();p.mcu.timerClockHz=EXAMPLE_TIMER_CLOCK_HZ;if(['blink','button','exti','timer'].includes(kind))p.mcu.pins.PA5=pin('GPIO_Output','NOPULL','LD2');
   const m=p.mcu;
   if(kind==='exti'){m.pins.PC13=pin('GPIO_EXTI','PULLUP','B1');m.nvic.EXTI15_10_IRQn={enabled:true,priority:0};}
   if(kind==='button')m.pins.PA10=pin('GPIO_Input','PULLUP','BUTTON');

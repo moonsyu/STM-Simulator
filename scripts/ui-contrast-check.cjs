@@ -20,6 +20,7 @@ async function main(){
  const app=await _electron.launch({executablePath:process.env.LAB_EXE||path.join(root,'node_modules/electron/dist/electron.exe'),args:process.env.LAB_EXE?[]:[root],cwd:root,env});const results=[],errors=[];let page;
  try{
   page=await app.firstWindow();page.on('pageerror',e=>errors.push(e.message));await page.waitForSelector('.monaco-editor');await app.evaluate(({BrowserWindow})=>{const w=BrowserWindow.getAllWindows()[0];w.setContentSize(1540,1020);w.showInactive();});
+  const {exampleProject}=await import('../src/project.js');await require('./smoke-fixture.cjs').openFixture(page,exampleProject());
   const scan=async(name,shot=false)=>{await page.waitForTimeout(50);const result=await page.evaluate(inspectContrast);results.push({name,...result});if(shot&&!process.argv.includes('--record-before'))await page.screenshot({path:path.join(out,'contrast-'+name+'.png')});console.log(name+': '+result.checked+' text checks, '+result.findings.length+' low contrast');};
   for(const theme of ['jellybean','github-light']){
    await page.click('[data-tab="settings"]');await page.selectOption('#pref-appearance',theme==='jellybean'?'dark':'light');await page.selectOption('#pref-theme',theme);await scan(theme+'-settings');await page.click('[data-tab="code"]');
@@ -37,7 +38,7 @@ async function main(){
    await page.click('[data-tab="docs"]');await scan(theme+'-docs');
    await app.evaluate(({BrowserWindow})=>BrowserWindow.getAllWindows()[0].setContentSize(1024,640));await page.click('#pinout-open');await scan(theme+'-compact-pinout',true);await page.click('#pinout-close');await app.evaluate(({BrowserWindow})=>BrowserWindow.getAllWindows()[0].setContentSize(1540,1020));
    await page.click('[data-tab="code"]');const source=await page.locator('#code').inputValue();const {fillCode,openFixture}=require('./smoke-fixture.cjs');await fillCode(page,'int main(void) { int broken = ; }');await page.click('#ide-build');assert.match(await page.locator('#build-status').textContent(),/실패/);await scan(theme+'-build-error');
-   await page.selectOption('#native-target','host');await scan(theme+'-native-build-controls');const {blankProject}=await import('../src/project.js');const project=blankProject();project.code=source;await openFixture(page,project);
+   await page.selectOption('#native-target','host');await scan(theme+'-native-build-controls');const project=exampleProject();project.code=source;await openFixture(page,project);
   }
   await fs.writeFile(path.join(out,process.argv.includes('--record-before')?'ui-contrast-before.json':'ui-contrast.json'),JSON.stringify({passed:results.every(r=>!r.findings.length)&&!errors.length,results,errors},null,2));
   assert.deepEqual(errors,[]);if(!process.argv.includes('--record-before'))assert.deepEqual(results.filter(r=>r.findings.length),[],'UI text must have at least 4.5:1 contrast');

@@ -52,14 +52,14 @@ export function setupResizing(o){
  new ResizeObserver(()=>refresh()).observe(svg);
  function refresh(){
   const p=o.getProject(),selection=o.getSelection();if(['part','surface'].includes(selection?.type))target=selection;
-  const items=[{type:'surface',id:'board',name:'STM32 보드'},{type:'surface',id:'breadboard',name:'기본 빵판'},...p.components.map(c=>({type:'part',id:c.id,name:c.name}))];
-  if(!items.some(item=>item.id===target.id&&item.type===target.type))target=items[0];
+  const items=[{type:'surface',id:'board',name:'STM32 보드'},{type:'surface',id:'breadboard',name:'기본 빵판'}].filter(item=>!p.surfaces?.[item.id]?.hidden).concat(p.components.map(c=>({type:'part',id:c.id,name:c.name})));
+  if(!items.some(item=>item.id===target?.id&&item.type===target?.type))target=items[0];
   const select=$('resize-target'),key=items.map(item=>`${item.type}:${item.id}:${item.name}`).join('|');
   if(select.dataset.items!==key){select.replaceChildren(...items.map(item=>new Option(item.name,`${item.type}:${item.id}`)));select.dataset.items=key;}
-  select.value=`${target.type}:${target.id}`;
-  for(const id of ['resize-target','object-scale-reset'])$(id).disabled=o.isRunning();
+  select.value=target?`${target.type}:${target.id}`:'';
+  for(const id of ['resize-target','object-scale-reset'])$(id).disabled=o.isRunning()||!target;
   layer.replaceChildren();frame=null;$('resize-size').textContent='';
-  if(!available()||!['surface','part'].includes(selection?.type))return;
+  if(!target||!available()||!['surface','part'].includes(selection?.type))return;
   const bodyBounds=boundsFor(p);if(!bodyBounds)return;const bounds=active?.bounds??{...bodyBounds};
   const part=target.type==='part'?svg.querySelector(`[data-part="${target.id}"]`):null;if(part?.parentElement.id==='part-layer')part.parentElement.insertBefore(layer,part);else $('surface').append(layer);
   frame=resizeFrame(p,target,bounds);const unit=1/Math.hypot(svg.getScreenCTM()?.a||1,svg.getScreenCTM()?.b||0),r=5*unit;

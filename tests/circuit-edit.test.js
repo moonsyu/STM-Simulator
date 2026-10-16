@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {copySelection,pasteSelection,connectedNet,insertWirePoint,wirePoints,moveSelection} from '../src/circuit-edit.js';
 import {circuitDiagnostics} from '../src/circuit-diagnostics.js';
-import {validateProject,blankProject} from '../src/project.js';
+import {validateProject,exampleProject as blankProject} from '../src/project.js';
 import {halExample} from '../src/hal-examples.js';
 import {boardPin} from '../src/pins.js';
 import {attachments} from '../src/components.js';

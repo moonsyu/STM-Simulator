@@ -14,7 +14,7 @@ exports.newProject=async page=>{
  if(await page.locator('#replace-dialog').isVisible())await page.click('#replace-confirm');
  await page.selectOption('#new-project-template','blank');
  await page.click('#project-create');
- await page.waitForSelector('#project-dialog',{state:'hidden'});
+ try{await page.waitForSelector('#project-dialog',{state:'hidden'});}catch(error){throw new Error('Project creation failed: '+await page.locator('#project-form-error').textContent(),{cause:error});}
 };
 
 // A click only starts the async IPC operation. Wait for the app's completion

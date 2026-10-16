@@ -1,6 +1,17 @@
 # STM Simulator — 개발 인계
 
-현재 공개 버전: **0.22.0**. 정리일: **2026-10-15**. NUCLEO-F446RE와 빵판을 연결하고 GPIO 스케치 또는 지원 HAL C 소스를 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+개발 버전: **0.23.0**, 현재 공개 버전: **0.22.0**. 정리일: **2026-10-16**. NUCLEO-F446RE와 빵판을 연결하고 GPIO 스케치 또는 지원 HAL C 소스를 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+
+## 0.23.0 빈 회로와 main 내부 예제 (검증 진행 중)
+
+- 사용자 최종 결정: **보드는 1개, 기존 실행/Pinout 방식 유지**. 다중 보드·다중 펌웨어는 범위에서 제외. 빵판은 검색으로 여러 개(8개까지) 추가.
+- `project.js`: 새 프로젝트 `surfaces.board.hidden/breadboard.hidden=true`. 표시 플래그가 없는 구버전 프로젝트는 두 기본 표면 유지. 기존 샘플 생성기는 `exampleProject()`로 명시적 보드/빵판 사용.
+- `surfaces.js`, `pins.js`, `engine.js`, `circuit-edit.js`: 숨긴 표면의 접점/내부 버스 제거, 삭제 시 배선·장착 해제. app의 검색 보드 추가는 단일 표면 재사용. 기존 MCU 설정은 유지.
+- `device-inline-example.js`와 `c-inline.js`: Docs 전용 main 예제, UART/EXTI 폴링, 보조 함수의 인자·지역 변수·반환·분기·반복문을 C 블록으로 전개. 함수 정의를 추가하지 않음. 원본 HAL 예제 메뉴는 유지.
+- `device-code-insertion.js`: 기존 MX 초기화 함수 보완, 없는 초기화는 main에 본문 삽입, 사용자 코드 보존, HEADERS/DECLARATIONS/INIT/STEP/MX_* 영역 체크섬. 예전 Docs 콜백 연결 코드만 제거하고 사용자 콜백 본문 보존.
+- `hal.js`: UART 폴링의 소수 시간 누적에 따른 0에 가까운 반복 yield 방지. `hal-source.js`: main 소스 한도를 프로젝트 한도와 동일한 300 KB로 정리.
+- 배치 공간의 고정 제목/설명 제거. 부품 검색 114개(단일 보드 포함), 배선 기본 10 + 파스텔 10.
+- 새 검사: `tests/empty-workspace-inline.test.js`, `scripts/empty-workspace-ui.cjs`; CI도 실행. 회귀 테스트는 예전 기본 표면 가정을 명시적 fixture로 바꿈. 공개 버전/해시/CI 증거는 게시 확인 후 갱신.
 
 ## 0.22.0 화면 테마 분리와 자유 배치 (공개 완료)
 

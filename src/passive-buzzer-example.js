@@ -1,4 +1,4 @@
-import {blankProject} from './project.js';
+import {exampleProject} from './project.js';
 import {validateMcu,generateHal} from './mcu-config.js';
 import {boardPin} from './pins.js';
 import {EXAMPLE_TIMER_CLOCK_HZ} from './mcu-defaults.js';
@@ -6,7 +6,7 @@ import {EXAMPLE_TIMER_CLOCK_HZ} from './mcu-defaults.js';
 export const BUZZER_EXAMPLES={passive_buzzer:'HAL · 수동 부저 PWM 멜로디'};
 export const BUZZER_GUIDES={passive_buzzer:'TIM2 CH1 PA0 → 수동 부저 +, − → GND · 1 MHz 타이머 / 듀티 50% · 도레미파솔라시도와 쉼표 · 상단 소리 버튼으로 듣기'};
 export function passiveBuzzerExample(){
-  const p=blankProject();p.name=BUZZER_EXAMPLES.passive_buzzer;p.mcu.timerClockHz=EXAMPLE_TIMER_CLOCK_HZ;
+  const p=exampleProject();p.name=BUZZER_EXAMPLES.passive_buzzer;p.mcu.timerClockHz=EXAMPLE_TIMER_CLOCK_HZ;
   p.components=[{id:'demo',name:'PBZ1',type:'passive_buzzer',x:780,y:300,rotation:0,span:70}];
   p.wires=[{id:'tone',from:boardPin('PA0'),to:'part:demo:a',color:'#8064d8'},
     {id:'ground',from:boardPin('GND'),to:'part:demo:b',color:'#4e647b'}];

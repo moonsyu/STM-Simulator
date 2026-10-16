@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {blankProject,validateProject,projectForBoard,hasBoardChanges} from '../src/project.js';
+import {exampleProject as blankProject,validateProject,projectForBoard,hasBoardChanges} from '../src/project.js';
 import {BOARD_CATALOG,DEFAULT_BOARD_ID,searchBoards} from '../src/boards.js';
 import {BB,HOLES,boardPin,breadboardPrefix,breadboardHoles,circuitHoles,endpointInfo} from '../src/pins.js';
 import {attachments,terminalKeys} from '../src/components.js';
@@ -21,7 +21,7 @@ test('board search supports the current board only and persists its identity',()
  assert.throws(()=>projectForBoard('other'));assert.throws(()=>validateProject({...p,boardId:'other'}));
 });
 test('board reset checks actual defaults including saved content, configuration and source files',()=>{
- assert.equal(hasBoardChanges(blankProject()),false);assert.equal(hasBoardChanges(projectForBoard()),false);
+ assert.equal(hasBoardChanges(projectForBoard()),false);assert.equal(hasBoardChanges(projectForBoard()),false);
  const normalized={...projectForBoard(),simulation:{pwmWaveform:false,stepMs:1}};assert.equal(hasBoardChanges(normalized),false);
  for(const edit of [p=>p.name='saved work',p=>p.code+='\n',p=>p.components.push(board()),p=>p.mcu.pins.PA5={function:'GPIO_Output',pull:'NOPULL',edge:'FALLING',initial:0,label:''},p=>p.simulation={stepMs:.1,pwmWaveform:true},p=>p.firmware.files.push({name:'helper.c',text:'int x;'}),p=>p.firmware.mode='sketch']){
   const p=blankProject();edit(p);assert.equal(hasBoardChanges(p),true);

@@ -12,7 +12,7 @@ const {openFixture,saveProject,openProject} = require('./smoke-fixture.cjs');
   try {
     page = await app.firstWindow();const errors=[];page.on('pageerror',e=>errors.push(e.message));
     await page.waitForSelector('.monaco-editor');await app.evaluate(({BrowserWindow})=>BrowserWindow.getAllWindows()[0].showInactive());
-    const {blankProject}=await import('../src/project.js');
+    const {exampleProject:blankProject}=await import('../src/project.js');
     const p=blankProject();p.code+='\n// led led LED\n// a.b $& 한글 😀\n'+Array.from({length:90},(_,i)=>'// line '+i).join('\n')+'\n// '+ 'x'.repeat(180)+' far_target';
     p.firmware.files=[{name:'user.h',text:'// led only in this header\n'}];
     await openFixture(page,p);

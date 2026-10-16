@@ -1,4 +1,4 @@
-import {blankProject} from './project.js';
+import {exampleProject} from './project.js';
 import {DEVICE_DEFS,I2C_DEVICES} from './device-defs.js';
 import {defaultMcu,validateMcu,generateHal} from './mcu-config.js';
 import {EXAMPLE_TIMER_CLOCK_HZ} from './mcu-defaults.js';
@@ -38,7 +38,7 @@ void tftCommand(uint8_t command) {
 void tftEnd(void) { HAL_GPIO_WritePin(GPIOB, GPIO_PIN_6, GPIO_PIN_SET); }
 `;
 export function deviceExample(kind){
- const p=blankProject(),m=defaultMcu();m.timerClockHz=EXAMPLE_TIMER_CLOCK_HZ;m.pins={};m.peripherals={};m.nvic={};
+ const p=exampleProject(),m=defaultMcu();m.timerClockHz=EXAMPLE_TIMER_CLOCK_HZ;m.pins={};m.peripherals={};m.nvic={};
  p.name=DEVICE_EXAMPLES[kind];p.simulation={stepMs:1,pwmWaveform:false};
  const def=DEVICE_DEFS[kind];p.components=[{id:'demo',name:def.prefix+'1',type:kind,x:780,y:300,rotation:0,...(['ldr','ntc'].includes(kind)?{span:70}:{}),...def.defaults}];
  let n=0;const wire=(from,to)=>p.wires.push({id:'w'+(++n),from,to,color:from===boardPin('GND')?'#4e647b':from===boardPin('3V3')||from===boardPin('5V')?'#dd654c':'#23a68a'});

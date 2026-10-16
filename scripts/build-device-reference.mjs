@@ -8,9 +8,9 @@ import {terminalKeys,terminalLabel} from '../src/components.js';
 const root=fileURLToPath(new URL('..',import.meta.url));
 const data=JSON.parse(await fs.readFile(path.join(root,'docs/device-visual-references.json'),'utf8'));
 const variants=new Map(data.variants.map(v=>[v.id,v]));
-assert.equal(data.implemented_parts.length,PART_LIBRARY.filter(p=>!p.type.startsWith('ref_')).length);
+assert.equal(data.implemented_parts.length,PART_LIBRARY.filter(p=>p.type!=='board'&&!p.type.startsWith('ref_')).length);
 assert.equal(variants.size,data.variants.length);
-for(const part of PART_LIBRARY.filter(p=>!p.type.startsWith('ref_'))){
+for(const part of PART_LIBRARY.filter(p=>p.type!=='board'&&!p.type.startsWith('ref_'))){
   const record=data.implemented_parts.find(p=>p.type===part.type);assert.ok(record,part.type);
   assert.deepEqual(record.pins,terminalKeys(part).map(k=>terminalLabel(part,k)));
   assert.ok(record.reference_variant_ids.length);

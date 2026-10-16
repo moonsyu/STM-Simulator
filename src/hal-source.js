@@ -35,7 +35,7 @@ export const HAL_STRUCTS={
 };
 const SYSTEM_HEADERS=new Set(['main.h','stm32f4xx_hal.h','stm32f4xx.h','stdint.h','stddef.h','stdbool.h','string.h','stdio.h','math.h',...['gpio','uart','tim','adc','i2c','spi','rcc','rcc_ex','cortex','pwr','pwr_ex'].map(n=>`stm32f4xx_hal_${n}.h`)]);
 export function prepareHalSource(source,files=[],options={}){
-  if(typeof source!=='string'||source.length>50000||!Array.isArray(files)||files.length>40)throw new Error('HAL 소스 크기 또는 파일 수 한도를 넘었습니다.');
+  if(typeof source!=='string'||source.length>300000||!Array.isArray(files)||files.length>40)throw new Error('HAL 소스 크기 또는 파일 수 한도를 넘었습니다.');
   const map=new Map();let total=source.length;
   for(const file of files){if(!file||typeof file.name!=='string'||! /^[\w.-]+\.[ch]$/.test(file.name)||typeof file.text!=='string'||map.has(file.name))throw new Error('소스 파일 이름이 중복되거나 올바르지 않습니다.');total+=file.text.length;if(total>300000)throw new Error('HAL 소스 전체는 300 KB 이하로 선택하세요.');map.set(file.name,file.text);}
   map.set('main.c',source);

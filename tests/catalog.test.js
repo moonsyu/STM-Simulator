@@ -7,7 +7,7 @@ import {terminalKeys,attachments} from '../src/components.js';
 import {catalogShape} from '../src/catalog-render.js';
 import {halExample} from '../src/hal-examples.js';
 import {searchHalExamples} from '../src/hal-example-search.js';
-import {blankProject,validateProject} from '../src/project.js';
+import {exampleProject as blankProject,validateProject} from '../src/project.js';
 import {compileHal} from '../src/hal-source.js';
 import {SimulationSession} from '../src/session.js';
 import {deviceDocs,wiringTopology} from '../src/device-docs-data.js';
@@ -18,7 +18,7 @@ import {boardPin} from '../src/pins.js';
 const part=type=>({id:'selected',type,name:CATALOG_DEFS[type].name,x:850,y:350,rotation:0,...CATALOG_DEFS[type].defaults});
 const run=(id,until=200)=>{const p=halExample(catalogType(id)),output=[],session=new SimulationSession(p,{print:s=>output.push(s)});for(let t=0;t<=until;t+=10)session.tick(t);return {p,session,output};};
 test('80 references have distinct physical assets and pins; all 35 older part formats remain available',()=>{
- assert.equal(DEVICE_CATALOG.length,80);assert.equal(Object.keys(CATALOG_BY_TYPE).length,78);assert.equal(PART_LIBRARY.filter(p=>!p.type.startsWith('ref_')).length,35);
+ assert.equal(DEVICE_CATALOG.length,80);assert.equal(Object.keys(CATALOG_BY_TYPE).length,78);assert.equal(PART_LIBRARY.filter(p=>p.type!=='board'&&!p.type.startsWith('ref_')).length,35);
  for(const [type,ref]of Object.entries(CATALOG_BY_TYPE)){const p=part(type),def=CATALOG_DEFS[type];assert.equal(terminalKeys(p).length,ref.pins.length,type);assert.equal(def.terminals.length,ref.pins.length,type);assert.equal(new Set(def.terminals.map(p=>p.join(','))).size,ref.pins.length,type);assert.match(catalogShape(p),new RegExp('data-reference="'+ref.id+'"'));assert.ok(ref.source.every(s=>s.url.startsWith('https://')));}
  assert.equal(CATALOG_BY_TYPE.ref_sevenseg_4digit_12.pins.length,14);
  assert.deepEqual(CATALOG_BY_TYPE.ref_l298p_bare_20.pins.slice(0,6),['GND1','SENSE-A','NC3','OUT1','OUT2','VS']);
