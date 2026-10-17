@@ -1,0 +1,98 @@
+{
+  "version": "0.23.5",
+  "unitTests": 314,
+  "electron": {
+    "passed": true,
+    "checks": [
+      "remapped Docs preview",
+      "cancel and Escape preserve code",
+      "default focus on Cancel",
+      "main reset from helper tab",
+      "unused aliases removed while pin labels preserved",
+      "circuit/config/files preserved",
+      "undo/redo",
+      "disabled during execution",
+      "LED off after reset",
+      "reapply without duplicate parts/wires or aliases",
+      "LED on after Docs apply",
+      "persisted code.reset and simulation.state",
+      "split-port stepper and L298N motion",
+      "new project main.c and main.h contain no unused aliases"
+    ],
+    "off": {
+      "voltage": 0,
+      "current": 0,
+      "on": false,
+      "power": 0
+    },
+    "on": {
+      "voltage": 1.8471204163063295,
+      "current": 0.003926701358860789,
+      "on": true,
+      "power": 0.00725309024868957
+    }
+  },
+  "publicRelease": {
+    "passed": true,
+    "version": "0.23.5",
+    "commit": "10b3b6f286991505ab28eea25a6c3e1df5fe1abb",
+    "sha256": "82b2003ae13ea04cf35448ad780efc14ec30fb626bc5ae6303e2bdd1c3fb213b",
+    "latest": "v0.23.5",
+    "assets": [
+      {
+        "name": "BUILD-INFO.json",
+        "size": 343
+      },
+      {
+        "name": "SHA256.txt",
+        "size": 189
+      },
+      {
+        "name": "STM-Simulator-0.23.5-Windows-x64.zip",
+        "size": 105626351
+      },
+      {
+        "name": "STM-Simulator.exe",
+        "size": 102755272
+      },
+      {
+        "name": "update-manifest.json",
+        "size": 185
+      }
+    ],
+    "checks": [
+      "remapped Docs preview",
+      "cancel and Escape preserve code",
+      "default focus on Cancel",
+      "main reset from helper tab",
+      "unused aliases removed while pin labels preserved",
+      "circuit/config/files preserved",
+      "undo/redo",
+      "disabled during execution",
+      "LED off after reset",
+      "reapply without duplicate parts/wires or aliases",
+      "LED on after Docs apply",
+      "persisted code.reset and simulation.state",
+      "split-port stepper and L298N motion",
+      "new project main.c and main.h contain no unused aliases"
+    ],
+    "off": {
+      "voltage": 0,
+      "current": 0,
+      "on": false,
+      "power": 0
+    },
+    "on": {
+      "voltage": 1.8471204163063295,
+      "current": 0.003926701358860789,
+      "on": true,
+      "power": 0.00725309024868957
+    },
+    "ci": "https://github.com/moonsyu/STM-Simulator/actions/runs/39050535848"
+  },
+  "arm": {
+    "passed": true,
+    "count": 122,
+    "hardwareRun": false
+  }
+}

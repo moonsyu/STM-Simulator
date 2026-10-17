@@ -117,3 +117,10 @@
 - 시각 검사: `controls-visual-check.cjs`, Dark/White 1360×900 및 1024×640. 숨김 Electron의 모달 화면 캡처 지연은 headless 브라우저의 동일 화면 검사로 분리했다. 실제 기능 검증은 Electron에서 수행했다.
 - 공개 Release/EXE 검증 완료: [0.23.4](https://github.com/moonsyu/STM-Simulator/releases/tag/v0.23.4), [Windows CI](https://github.com/moonsyu/STM-Simulator/actions/runs/39013524275). 공개 EXE에서도 9개 기능 검사와 실제 Windows GDB 단계 실행 통과. [보고서](audits/0.23.4-controls/REPORT.md).
 - 빌드 커밋 `69ab8d988a347559f7d54f7c30cafcb006ff260f`, EXE SHA-256 `c5117ac8e5c31a560af81847c742d8d5dddcad9cc535abdccb4f10869476d61e`. 5개 배포 자산과 최신 Release 선택 검증.
+
+
+## 0.23.5 미사용 핀 별칭 제거
+
+- 단위/모델 314개, ARM 컴파일·링크 122개, 독립 Electron 14개 및 공개 EXE 동일 검사 통과.
+- 초기화 후 LD2 매크로 제거, Pinout 라벨 보존, LED OFF 0 A → Docs 재적용 ON 약 3.93 mA 확인.
+- Windows 전체 CI와 공개 5개 자산·태그 커밋·해시·최신 릴리스 확인. [보고서](audits/0.23.5-pin-aliases/REPORT.md).

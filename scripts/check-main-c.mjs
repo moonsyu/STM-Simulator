@@ -19,7 +19,7 @@ await fs.copyFile(path.join(hal,'Inc/stm32f4xx_hal_conf_template.h'),path.join(o
 const flags=['-mcpu=cortex-m4','-mthumb','-mfpu=fpv4-sp-d16','-mfloat-abi=hard','-DSTM32F446xx','-DUSE_HAL_DRIVER','-std=c11','-Os','-ffunction-sections','-fdata-sections','-Werror=implicit-function-declaration','-Werror=incompatible-pointer-types',...['.',path.join(hal,'Inc'),path.join(device,'Include'),core].map(p=>'-I'+p)];
 function run(args){const p=spawnSync(gcc,args,{cwd:out,encoding:'utf8',windowsHide:true});if(p.error||p.status!==0)throw new Error(p.error?.message||p.stderr||p.stdout);}
 const objects=[];
-for(const module of ['hal','hal_rcc','hal_rcc_ex','hal_gpio','hal_cortex','hal_pwr','hal_pwr_ex','hal_flash','hal_flash_ex','hal_dma','hal_dma_ex','hal_uart','hal_adc','hal_adc_ex','hal_i2c','hal_spi','hal_tim','hal_tim_ex']){const obj=module+'.o';run([...flags,'-c',path.join(hal,'Src/stm32f4xx_'+module+'.c'),'-o',obj]);objects.push(obj);}
+for(const module of ['hal','hal_rcc','hal_rcc_ex','hal_gpio','hal_cortex','hal_pwr','hal_pwr_ex','hal_flash','hal_flash_ex','hal_dma','hal_dma_ex','hal_can','hal_i2s','hal_i2s_ex','hal_uart','hal_usart','hal_adc','hal_adc_ex','hal_i2c','hal_spi','hal_tim','hal_tim_ex']){const obj=module+'.o';run([...flags,'-c',path.join(hal,'Src/stm32f4xx_'+module+'.c'),'-o',obj]);objects.push(obj);}
 for(const [name,source]of [['system',path.join(device,'Source/Templates/system_stm32f4xx.c')],['startup',path.join(device,'Source/Templates/gcc/startup_stm32f446xx.s')]]){run([...flags,'-c',source,'-o',name+'.o']);objects.push(name+'.o');}
 await fs.writeFile(path.join(out,'stm32f446re.ld'),`ENTRY(Reset_Handler)
 MEMORY { FLASH (rx) : ORIGIN = 0x08000000, LENGTH = 512K
