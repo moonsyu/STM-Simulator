@@ -87,6 +87,8 @@ jobs:
         run: npm run test:empty-workspace:ui
       - name: Test LED WritePin and persisted circuit diagnostics
         run: node scripts/docs-writepin-check.cjs
+      - name: Test code reset, undo and legacy Docs preview
+        run: node scripts/code-reset-check.cjs
       - name: Test TFT frame diagnostics and UART input through Electron
         env:
           DOCS_AUDIT_TYPES: tft,ref_st7735_8,uart

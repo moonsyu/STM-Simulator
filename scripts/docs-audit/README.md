@@ -2,6 +2,8 @@
 
 Node 24와 저장소 의존성을 사용합니다. 명령은 저장소 루트에서 실행합니다.
 
+기존 예제 전용: `node scripts/docs-audit/legacy.mjs`는 카탈로그 변형을 제외한 **40개 HAL 원본**을 직접 실행하고 각각의 출력 조건을 판정합니다. Docs 매핑을 거치지 않으므로 USER EXTI·내장 UART·타이머 캡처·독립 타이머·배열·함수 예제도 포함됩니다. `node scripts/docs-audit/remapped.mjs`는 PB 핀을 예약한 뒤 스테퍼/L298N을 다른 포트에 배선하고 실제 정·역회전을 검사합니다. `node scripts/device-docs-arm-check.cjs --legacy`는 원본 40개, 초기화 4개, 포트 재할당 2개를 ARM GCC로 링크합니다. `node scripts/code-reset-check.cjs`는 격리 Electron에서 초기화·취소·되돌리기·재적용·LED/모터 동작과 파일 진단을 검사합니다. `LAB_EXE`가 있으면 해당 배포 EXE를 사용합니다.
+
 ```powershell
 node scripts/docs-audit/audit.mjs core
 node scripts/docs-audit/audit.mjs cards
