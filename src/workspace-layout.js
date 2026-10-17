@@ -7,14 +7,21 @@ export function setupWorkspaceLayout() {
   const contents={project:document.querySelector('.library'),code:document.querySelector('.editor-panel'),simulator:document.querySelector('.workbench'),terminal:document.querySelector('.console')};
   let tree=structuredClone(DEFAULT_LAYOUT),hidden=new Set(),maximized=null,dragging=null;
   try{const s=JSON.parse(localStorage.getItem(KEY));if(s){tree=validateLayout(s.tree);hidden=new Set((s.hidden||[]).filter(x=>PANELS.includes(x)));if(hidden.size===4)hidden.clear();}}catch{}
-  const panels=new Map();
+  const panels=new Map();let moving=null;
+  const moveDialog=document.createElement('dialog');moveDialog.id='dock-move-dialog';moveDialog.setAttribute('aria-labelledby','dock-move-title');
+  moveDialog.innerHTML='<h2 id="dock-move-title">패널 이동</h2><label for="dock-move-target">이동할 위치</label><select id="dock-move-target"></select><div class="dialog-actions"><button id="dock-move-cancel" autofocus>취소</button><button id="dock-move-apply" class="run-button">이동</button></div>';
+  document.body.append(moveDialog);const moveSelect=moveDialog.querySelector('select');
+  moveDialog.querySelector('#dock-move-cancel').onclick=()=>moveDialog.close();
+  moveDialog.querySelector('#dock-move-apply').onclick=()=>{const [target,edge]=moveSelect.value.split(':');if(!moving||!target)return;tree=movePanel(tree,moving,target,edge);hidden.delete(target);hidden.delete(moving);maximized=null;moveDialog.close();paint();save();panels.get(moving).querySelector('.dock-heading').focus();};
+  const openMove=id=>{if(document.querySelector('dialog[open]'))return;moving=id;moveDialog.querySelector('h2').textContent=names[id]+' 이동';moveSelect.replaceChildren(...PANELS.filter(p=>p!==id).flatMap(p=>['left','right','top','bottom'].map((edge,i)=>new Option(names[p]+' '+['왼쪽','오른쪽','위','아래'][i],p+':'+edge))));moveDialog.showModal();};
   for(const id of PANELS){
     const pane=document.createElement('section');pane.className='dock-pane';pane.dataset.panel=id;pane.setAttribute('aria-label',names[id]);
-    const head=document.createElement('header');head.className='dock-heading';head.draggable=true;head.innerHTML=`<span class="dock-grab" title="제목을 끌어 패널 이동">${svg('M6 5h.01M6 10h.01M6 15h.01M11 5h.01M11 10h.01M11 15h.01')}</span><strong>${names[id]}</strong><select aria-label="${names[id]} 위치 이동" title="다른 패널 기준으로 이동"><option value="">이동</option>${PANELS.filter(p=>p!==id).map(p=>['left','right','top','bottom'].map((e,i)=>`<option value="${p}:${e}">${names[p]} ${['왼쪽','오른쪽','위','아래'][i]}</option>`).join('')).join('')}</select><button class="dock-maximize" title="최대화 / 복원" aria-label="${names[id]} 최대화">${svg('M3 8V3h5M12 3h5v5M17 12v5h-5M8 17H3v-5')}</button><button class="dock-collapse" title="패널 접기" aria-label="${names[id]} 접기">${svg('M4 10h12')}</button>`;
+    const head=document.createElement('header');head.className='dock-heading';head.draggable=true;head.tabIndex=0;head.title='제목을 끌어 이동 · 우클릭 / Shift+F10: 이동 위치 선택';head.innerHTML=`<span class="dock-grab" title="제목을 끌어 패널 이동">${svg('M6 5h.01M6 10h.01M6 15h.01M11 5h.01M11 10h.01M11 15h.01')}</span><strong>${names[id]}</strong><button class="dock-maximize" title="최대화 / 복원" aria-label="${names[id]} 최대화">${svg('M3 8V3h5M12 3h5v5M17 12v5h-5M8 17H3v-5')}</button><button class="dock-collapse" title="패널 접기" aria-label="${names[id]} 접기">${svg('M4 10h12')}</button>`;
     const body=document.createElement('div');body.className='dock-content';body.append(contents[id]);pane.append(head,body);panels.set(id,pane);
     head.addEventListener('dragstart',e=>{if(e.target.closest('button,select')){e.preventDefault();return;}dragging=id;e.dataTransfer.setData('text/plain',id);e.dataTransfer.effectAllowed='move';root.classList.add('docking');});
     head.addEventListener('dragend',clearDrop);
-    head.querySelector('select').onchange=e=>{const [target,edge]=e.target.value.split(':');if(!target)return;tree=movePanel(tree,id,target,edge);hidden.delete(target);hidden.delete(id);maximized=null;paint();save();e.target.value='';};
+    head.oncontextmenu=e=>{e.preventDefault();openMove(id);};
+    head.onkeydown=e=>{if(e.key==='ContextMenu'||e.shiftKey&&!e.ctrlKey&&!e.altKey&&!e.metaKey&&e.key==='F10'){e.preventDefault();e.stopPropagation();openMove(id);}};
     head.querySelector('.dock-maximize').onclick=()=>{maximized=maximized===id?null:id;paint();};
     head.querySelector('.dock-collapse').onclick=()=>{if(hidden.size===3)return;hidden.add(id);maximized=null;paint();save();};
     head.ondblclick=e=>{if(!e.target.closest('button,select')){maximized=maximized===id?null:id;paint();}};

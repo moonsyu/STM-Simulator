@@ -23,7 +23,7 @@ const {saveProject,openProject}=require('./smoke-fixture.cjs');
   await page.screenshot({path:path.join(out,'mcu-defaults-desktop.png')});
   await app.evaluate(({BrowserWindow})=>BrowserWindow.getAllWindows()[0].setSize(1024,640));await page.screenshot({path:path.join(out,'mcu-defaults-compact.png')});
   await page.click('#hal-generate');await page.click('#hal-replace-confirm');const code=await page.inputValue('#code');assert.match(code,/RCC_PLL_OFF/);assert.match(code,/htim3.Init.Prescaler = 15/);assert.match(code,/htim3.Init.Period = 999/);assert.match(code,/channel.Pulse = 250/);
-  await page.click('#firmware-check');assert.match(await page.locator('#firmware-status').textContent(),/통과/);await page.click('#run');await page.waitForFunction(()=>document.getElementById('run-status').textContent==='실행 중');await page.click('#run');
+  await page.click('#firmware-check');assert.match(await page.locator('#build-status').textContent(),/통과/);await page.click('#run');await page.waitForFunction(()=>document.getElementById('run-status').textContent==='실행 중');await page.click('#run');
   const saved=path.join(out,'mcu-defaults-round-trip.stm32lab');await app.evaluate(({dialog},file)=>{dialog.showSaveDialog=async()=>({canceled:false,filePath:file});dialog.showOpenDialog=async()=>({canceled:false,filePaths:[file]});},saved);
   await saveProject(page);const doc=JSON.parse(await fs.readFile(saved,'utf8'));assert.equal(doc.mcu.timerClockHz,16000000);assert.equal(doc.mcu.peripherals.TIM3.pulse,250);assert.equal(doc.mcu.peripherals.TIM3.period,999);
   await openProject(page);await page.click('#pinout-open');assert.equal(await page.inputValue(field('pulse')),'250');await page.click('#pinout-close');

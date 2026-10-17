@@ -3,7 +3,7 @@ import {localTerminals} from './components.js';
 import {resizeFrame,resizeFromHandle} from './resize.js';
 const $=id=>document.getElementById(id);
 export function setupResizing(o){
- const row=document.createElement('div');row.className='object-size-tools';row.innerHTML='<label for="resize-target">장치 선택</label><select id="resize-target" aria-label="크기를 바꿀 장치"></select><output id="resize-size" aria-live="polite"></output><button id="object-scale-reset" type="button">기본 크기</button><span class="resize-help">가장자리 드래그 · Shift: 비율 유지</span>';
+ const row=document.createElement('div');row.className='object-size-tools';row.innerHTML='<label for="resize-target">장치 선택</label><select id="resize-target" aria-label="크기를 바꿀 장치"></select><output id="resize-size" aria-live="polite"></output>';
  document.querySelector('.canvas-heading').after(row);
  const svg=$('circuit'),layer=document.createElementNS('http://www.w3.org/2000/svg','g');layer.id='resize-layer';layer.setAttribute('pointer-events','none');$('surface').insertBefore(layer,$('part-layer'));
  const positions={nw:[0,0],n:[.5,0],ne:[1,0],e:[1,.5],se:[1,1],s:[.5,1],sw:[0,1],w:[0,.5]};
@@ -12,7 +12,7 @@ export function setupResizing(o){
  const point=e=>new DOMPoint(e.clientX,e.clientY).matrixTransform(svg.getScreenCTM().inverse());
  const available=()=>!o.isRunning()&&o.canResize();
  $('resize-target').onchange=()=>{const [type,id]=$('resize-target').value.split(':');target={type,id};o.select(target);refresh();if(frame)o.focus(frame);};
- $('object-scale-reset').onclick=()=>{try{o.resize(target,1);}catch(error){o.onError(error.message);}refresh();};
+ row.title='가장자리 드래그 · Shift: 비율 유지 · Alt+0: 선택한 장치 기본 크기';
  function boundsFor(p){
   if(target.type==='surface'){const box=svg.querySelector(`[data-surface="${target.id}"]`)?.getBBox();return box&&{x:box.x,y:box.y,width:box.width,height:box.height};}
   const object=p.components.find(c=>c.id===target.id);if(!object)return null;
@@ -43,6 +43,10 @@ export function setupResizing(o){
  window.addEventListener('blur',()=>finish(true));
  window.addEventListener('keydown',e=>{
   if(active){if(e.key==='Escape'){e.preventDefault();e.stopImmediatePropagation();finish(true);}else if(e.key!=='Shift'){e.preventDefault();e.stopImmediatePropagation();}return;}
+  if(e.altKey&&!e.ctrlKey&&!e.metaKey&&!e.shiftKey&&e.key==='0'&&!e.repeat&&!document.querySelector('dialog[open]')&&(svg.contains(e.target)||row.contains(e.target))){
+   e.preventDefault();e.stopImmediatePropagation();
+   if(available()&&target&&['part','surface'].includes(o.getSelection()?.type)){try{o.resize(target,1);}catch(error){o.onError(error.message);}refresh();}return;
+  }
   const handle=e.target.closest?.('[data-resize-handle]');if(!handle||!available()||!frame||!e.key.startsWith('Arrow'))return;
   e.preventDefault();e.stopImmediatePropagation();const step=(e.altKey?10:1)/Math.hypot(svg.getScreenCTM().a,svg.getScreenCTM().b),key=handle.dataset.resizeHandle;
   const end={x:e.key==='ArrowLeft'?-step:e.key==='ArrowRight'?step:0,y:e.key==='ArrowUp'?-step:e.key==='ArrowDown'?step:0};
@@ -57,7 +61,7 @@ export function setupResizing(o){
   const select=$('resize-target'),key=items.map(item=>`${item.type}:${item.id}:${item.name}`).join('|');
   if(select.dataset.items!==key){select.replaceChildren(...items.map(item=>new Option(item.name,`${item.type}:${item.id}`)));select.dataset.items=key;}
   select.value=target?`${target.type}:${target.id}`:'';
-  for(const id of ['resize-target','object-scale-reset'])$(id).disabled=o.isRunning()||!target;
+  $('resize-target').disabled=o.isRunning()||!target;
   layer.replaceChildren();frame=null;$('resize-size').textContent='';
   if(!target||!available()||!['surface','part'].includes(selection?.type))return;
   const bodyBounds=boundsFor(p);if(!bodyBounds)return;const bounds=active?.bounds??{...bodyBounds};

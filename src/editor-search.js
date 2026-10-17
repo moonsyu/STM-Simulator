@@ -102,8 +102,6 @@ export function setupEditorSearch({applyEdit, maxLength}) {
     } catch (error) {message.textContent = error.message;}
   }
 
-  $('code-find-open').onclick = () => open(false);
-  $('code-replace-open').onclick = () => open(true);
   $('code-search-close').onclick = close;
   $('code-find-prev').onclick = () => navigate(-1);
   $('code-find-next').onclick = () => navigate(1);

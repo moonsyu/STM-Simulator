@@ -48,7 +48,7 @@ const {chooseHal,openFixture}=require('./smoke-fixture.cjs');
     await chooseHal(page,'passive_buzzer');
     assert.equal(await page.locator('#connection-count').innerText(),'부품 1개 · 배선 2개');
     assert.equal(await page.locator('#pwm-waveform').isChecked(),true);
-    await page.click('#firmware-check');assert.match(await page.locator('#firmware-status').innerText(),/통과/);
+    await page.click('#firmware-check');assert.match(await page.locator('#build-status').innerText(),/통과/);
     const select=async()=>page.locator('#part-layer [data-part="demo"] .part-body').click();
     await select();await page.click('#sound');await page.click('#run');
     const pitch=hz=>page.waitForFunction(hz=>window.buzzerProbe.oscillators.some(o=>o.type==='square'&&Math.abs(o.frequency.value-hz)<2)&&window.buzzerProbe.gains.some(g=>g.gain.value>.01),hz);
