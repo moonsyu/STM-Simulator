@@ -7,6 +7,7 @@ import {WireDraft} from './wire-draft.js';
 import {setupDeviceDocs} from './device-docs-ui.js';
 import {applyDeviceExample} from './device-assistance.js';
 import {createDiagnostics} from './diagnostics.js';
+import {resetMainCode} from './code-reset.js';
 import {selectedIds,isSelected,toggleSelection,wirePoints,insertWirePoint,connectedNet,copySelection,pasteSelection,moveSelection} from './circuit-edit.js';
 import {circuitDiagnostics} from './circuit-diagnostics.js';
 import {PINS,BB,PIN_BY_ID,endpointInfo,searchPins,circuitHoles,holeInfo} from './pins.js';
@@ -125,7 +126,7 @@ function refresh({preserveWires=false}={}){
  $('rotate').disabled=running()||selection?.type!=='part';
  $('code').readOnly=running();$('project-name').readOnly=running();
  editorSearch.refresh();
- for(const id of ['pinout-open','firmware-mode','firmware-import','firmware-folder','firmware-check','hal-example'])$(id).disabled=running();
+ for(const id of ['pinout-open','firmware-mode','firmware-import','firmware-folder','firmware-check','hal-example','code-reset'])$(id).disabled=running();
  $('run').classList.toggle('running',running());$('run').textContent=runtime?.debug.paused?'계속 실행 (F5)':running()?'■  시뮬레이션 정지':'▶  실행 (F5)';
  $('step').disabled=status==='running';
  $('mode-label').textContent=running()?'시뮬레이션 실행 중':status==='error'?'회로 확인 필요':'회로 편집';
@@ -376,6 +377,18 @@ function replaceCodeText(edit){
 }
 $('code').addEventListener('input',()=>{if(replaceCheckpoint||Date.now()-lastCodeCheckpoint>1000){checkpoint();lastCodeCheckpoint=Date.now();}if(sourceFile==='main.c')project.code=$('code').value;else project.firmware.files.find(f=>f.name===sourceFile).text=$('code').value;lineNumbers();autosave();ide?.invalidate();$('undo').disabled=false;$('redo').disabled=true;});
 $('source-file').onchange=e=>{sourceFile=e.target.value;syncEditor();};
+$('code-reset').onclick=()=>{if(running())return;$('code-reset-error').textContent='';$('code-reset-file').textContent=project.firmware?.mode==='hal'?'main.c':'main.ino';$('code-reset-dialog').showModal();};
+$('code-reset-cancel').onclick=()=>$('code-reset-dialog').close();
+$('code-reset-confirm').onclick=()=>{
+ try{
+  if(running())throw new Error('빌드·실행·디버그를 정지한 뒤 초기화하세요.');
+  const beforeLength=project.code.length,next=resetMainCode(project);
+  checkpoint();project=next;sourceFile='main.c';runtime=null;session=null;result=null;status='stopped';simTime=0;pressed={};monitor.clear();uartLines.clear();
+  syncEditor();changed();ide?.invalidate();tab('code');layout.reveal('code');
+  diagnostic('code.reset',{file:'main.c',mode:project.firmware?.mode,beforeLength,afterLength:project.code.length,preservedParts:project.components.length,preservedWires:project.wires.length},true);
+  $('code-reset-dialog').close();log('기본 코드로 초기화했습니다. 회로·핀 설정·다른 파일은 유지됩니다. Ctrl+Z로 되돌릴 수 있습니다.');
+ }catch(error){$('code-reset-error').textContent=error.message;}
+};
 $('firmware-mode').onchange=e=>{if(running())return;checkpoint();project.firmware={mode:e.target.value,files:project.firmware?.files||[]};if(e.target.value==='hal')project.mcu??=defaultMcu();syncEditor();changed();};
 $('firmware-check').onclick=()=>{try{if(project.firmware?.mode==='hal')compileHal(project.code,project.firmware.files);else compile(project.code);$('firmware-status').textContent='문법 검사 통과 · 배선과 HAL 설정은 실행 시 검사';log('소스 문법 검사를 통과했습니다.');}catch(e){$('firmware-status').textContent=e.message;log(e.message,'error');}};
 function applyFirmware(files){try{if(!files)return;const imported=importFirmware(project,files);checkpoint();project=imported.project;sourceFile='main.c';syncEditor();changed();log('가져왔습니다: '+files.map(f=>f.name).join(', '));for(const warning of imported.warnings)log(warning,'error');$('firmware-status').textContent=imported.warnings.length?imported.warnings.join(' · '):'가져오기 완료 · Pinout과 코드 검사로 확인하세요.';}catch(e){log(e.message,'error');$('firmware-status').textContent=e.message;}}

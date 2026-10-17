@@ -9,6 +9,14 @@ const {prepareBuild}=require('../desktop/native-build.cjs'),{toolSettings}=requi
   command(plan.gcc,[...plan.flags,...objects,...plan.linkFlags,'-Wl,--gc-sections','-Wl,-Map='+path.join(plan.directory,'firmware.map'),'-lm','-o',plan.elf],plan.directory);results.push({label,elf:plan.elf,bytes:(await fs.stat(plan.elf)).size});console.log(label+' compiled and linked');
  }
  const selected=process.env.DOCS_ARM_TYPES?.split(',');
+ if(process.argv.includes('--legacy')){
+  const {legacyIds}=await import('./docs-audit/legacy.mjs'),{halExample}=await import('../src/hal-examples.js'),{resetMainCode}=await import('../src/code-reset.js');
+  for(const id of legacyIds)await verify(halExample(id),'legacy '+id);
+  for(const id of ['blink','servo','uart','timer_capture'])await verify(resetMainCode(halExample(id)),'reset '+id);
+  const {fixture}=await import('./docs-audit/runtime.mjs');
+  for(const type of ['stepper','l298n']){const {project,target}=fixture(type);project.mcu.pins[type==='stepper'?'PB3':'PB4']={function:'GPIO_Output',pull:'NOPULL',edge:'FALLING',initial:0,label:'keep'};await verify(applyDeviceExample(project,target).project,'split-port Docs '+type);}
+  await fs.writeFile(path.join(out,'legacy-docs-arm.json'),JSON.stringify({passed:true,hardwareRun:false,compiler:tools.armGcc,results},null,2));console.log('All '+results.length+' legacy/reset HAL examples compiled and linked.');return;
+ }
  if(selected?.includes('uart')){const {halExample}=await import('../src/hal-examples.js');for(const kind of ['uart','uart_external'])await verify(halExample(kind),kind+' standalone main.c');}
  for(const part of PART_LIBRARY.filter(p=>p.type!=='board'&&(!selected||selected.includes(p.type)))){const p=blankProject();p.components=[{id:'selected',name:part.name,type:part.type,x:800,y:350,rotation:0,span:70,...PART_DEFS[part.type]?.defaults,...(part.type==='resistor'?{value:10000}:{}),...(part.type==='led'?{color:'red'}:{})}];
   const target={type:'part',id:'selected'};await verify(applyDeviceExample(p,target).project,part.type+' HAL');
