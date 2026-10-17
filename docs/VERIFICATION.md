@@ -115,4 +115,5 @@
 - F11의 helper 입력 3, F10 후 doubled=6, Shift+F11 반환 후 counter=7을 확인했다. F6 일시정지와 Shift+F5 정지 및 유휴/모달에서의 잘못된 실행 방지를 검사했다. 같은 단축키로 실제 Windows GCC/GDB 진입/단계 실행/종료도 검사했다.
 - 파일 로그: `work/test-results/controls-reset-dev.json`, `controls-reset-unit.log`. UI 상태와 앱 `board.reset`, `debug.command`, `debug.paused` 이벤트를 보존한다.
 - 시각 검사: `controls-visual-check.cjs`, Dark/White 1360×900 및 1024×640. 숨김 Electron의 모달 화면 캡처 지연은 headless 브라우저의 동일 화면 검사로 분리했다. 실제 기능 검증은 Electron에서 수행했다.
-- 공개 Release/EXE 검증 대기.
+- 공개 Release/EXE 검증 완료: [0.23.4](https://github.com/moonsyu/STM-Simulator/releases/tag/v0.23.4), [Windows CI](https://github.com/moonsyu/STM-Simulator/actions/runs/39013524275). 공개 EXE에서도 9개 기능 검사와 실제 Windows GDB 단계 실행 통과. [보고서](audits/0.23.4-controls/REPORT.md).
+- 빌드 커밋 `69ab8d988a347559f7d54f7c30cafcb006ff260f`, EXE SHA-256 `c5117ac8e5c31a560af81847c742d8d5dddcad9cc535abdccb4f10869476d61e`. 5개 배포 자산과 최신 Release 선택 검증.
