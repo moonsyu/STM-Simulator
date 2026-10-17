@@ -5,7 +5,9 @@
 - 소스 검증: 기존 HAL 원본 40개, 기존 Docs 36개, HAL 카드 308개, 단선 복구 204개, 교차 포트 스테퍼/L298N 실행 통과.
 - 단위 검사 310개, 실제 ARM GCC 링크 46개 통과.
 - 독립 Electron에서 취소/Esc/undo/redo/핀·회로·파일 보존, 초기화 LED OFF와 재적용 ON, 모터 재배선의 진단 파일 통과.
-- 공개 배포 검증 대기. [상세 보고서](audits/0.23.3-legacy-docs/REPORT.md).
+- 공개 배포 검증 완료: Windows CI [39008820868](https://github.com/moonsyu/STM-Simulator/actions/runs/39008820868) 성공. 공개 EXE Docs 36개 및 코드 초기화/재배선 실행 로그 통과. [상세 보고서](audits/0.23.3-legacy-docs/REPORT.md).
+- Release: https://github.com/moonsyu/STM-Simulator/releases/tag/v0.23.3 · 빌드 커밋 `7bf2600d78fdfbf85d224969f15bf10e01e8332f`. 공개 EXE/ZIP/체크섬/빌드 정보/매니페스트 5개와 최신 릴리스 선택 확인.
+- 공개 STM-Simulator.exe SHA-256: `217f07be77a159e52245390953d50e790092f1faf6e9b8df946cecbb8fb81c40`. 이후 검증 기록 커밋은 배포 코드/버전을 바꾸지 않음.
 
 검증일: 2026-10-17. 작업 경로 `D:\codex\project\STM-Simulator`. 사용자 앱/회로를 조작하지 않고 독립 프로젝트와 숨긴 테스트 프로필을 사용했습니다.
 
