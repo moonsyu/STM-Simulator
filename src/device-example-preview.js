@@ -5,6 +5,10 @@ import {cFunctions} from './c-source-edit.js';
 import {generateHal} from './mcu-config.js';
 import {indentC} from './device-code-insertion.js';
 
+export function deviceDescriptionText(text,binding){
+ return text.replace(/\b(?:P[A-H]\d+|TIM\d+|USART\d+|UART\d+|ADC\d+|I2C\d+|SPI\d+)\b/g,name=>binding?.pins[name]||binding?.peripherals[name]||name);
+}
+
 // Use the same pin/handle mapping as insertion, without allocating or changing a circuit.
 export function deviceExamplePreview(project,type,{api='all',binding,part}={}){
  const sample=recipeFor(type),template=primaryPart(sample,type);
