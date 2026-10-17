@@ -11,6 +11,7 @@ const {createHash}=require('node:crypto'),{chromium}=require('playwright'),{laun
   browser=await chromium.connectOverCDP(`http://127.0.0.1:${port}`);const page=browser.contexts()[0].pages()[0];page.setDefaultTimeout(15000);await page.waitForSelector('.monaco-editor');page.on('pageerror',e=>errors.push(e.message));
   const {fixture}=await import('./docs-audit/runtime.mjs'),{applyDeviceExample}=await import('../src/device-assistance.js'),{resetMainCode}=await import('../src/code-reset.js');
   const f=fixture('led');f.project.mcu.pins.PA5={function:'GPIO_Output',pull:'NOPULL',edge:'FALLING',initial:0,label:'keep'};
+  f.project.code='#ifndef LD2_Pin\n#define LD2_Pin GPIO_PIN_5\n#endif\n#ifndef LD2_GPIO_Port\n#define LD2_GPIO_Port GPIOA\n#endif\n'+f.project.code;
   f.project.firmware.files=[{name:'notes.h',text:'#pragma once\n// keep this file\n'}];
   const applied=applyDeviceExample(f.project,f.target,{api:'HAL_GPIO_WritePin'}),p=applied.project,expected=resetMainCode(p);
   const click=selector=>selector.startsWith('#code-reset')?page.locator(selector).click():page.locator(selector).dispatchEvent('click');
@@ -26,11 +27,13 @@ const {createHash}=require('node:crypto'),{chromium}=require('playwright'),{laun
   await click('#code-reset');await page.locator('#code-reset-cancel').press('Escape');assert.equal(await page.locator('#code-reset-dialog').isVisible(),false);assert.equal((await saved()).code,p.code);
   await click('#code-reset');await click('#code-reset-confirm');assert.equal(await page.locator('#code-reset-dialog').isVisible(),false);
   let next=await saved();assert.equal(next.code,expected.code);for(const key of ['components','wires','mcu','surfaces','firmware'])assert.deepEqual(next[key],p[key],key);assert.equal(next.deviceDocs,undefined);assert.equal(await page.locator('#source-file').inputValue(),'main.c');
+  assert.doesNotMatch(next.code,/\bLD2_(?:Pin|GPIO_Port)\b/);assert.equal(next.mcu.pins[pin].label,'LD2');
   await click('#undo');assert.equal((await saved()).code,p.code);await click('#redo');assert.equal((await saved()).code,expected.code);
   const run=async(ms=200)=>{await click('#run');await page.waitForFunction(ms=>parseFloat(document.getElementById('sim-time').textContent)*1000>=ms,ms);assert.equal(await page.locator('#code-reset').isDisabled(),true);await click('#run');await page.waitForTimeout(200);return (await events()).filter(e=>e.type==='simulation.state').at(-1);};
   const off=await run();assert.equal(off.detail.parts.selected.on,false);
   await page.selectOption('#resize-target','part:selected');await click('[data-tab="docs"]');await click('[data-docs-apply="HAL_GPIO_WritePin"]');await page.waitForFunction(()=>document.getElementById('docs-result').textContent.includes('적용 완료'));
   next=await saved();assert.deepEqual(next.components,p.components);assert.deepEqual(next.wires,p.wires);
+  assert.doesNotMatch(next.code,/\bLD2_(?:Pin|GPIO_Port)\b/);
   const on=await run();assert.equal(on.detail.parts.selected.on,true);
   const remapped=[];
   for(const type of ['stepper','l298n']){
@@ -42,9 +45,13 @@ const {createHash}=require('node:crypto'),{chromium}=require('playwright'),{laun
    else{const motors=Object.values(state.detail.parts).filter(p=>'rpm'in p);assert.ok(motors.some(p=>p.rpm>500));assert.ok(motors.some(p=>p.rpm< -500));assert.equal(state.detail.parts.selected.channels.A.mode,'reverse');assert.equal(state.detail.parts.selected.channels.B.mode,'forward');}
    remapped.push({type,circuit,state});
   }
+  await click('#new');if(await page.locator('#replace-dialog').isVisible())await click('#replace-confirm');
+  await page.waitForSelector('#project-dialog[open]');await page.fill('#new-project-name','No unused pin aliases');await page.selectOption('#new-project-template','blink');await click('#project-create');await page.waitForSelector('#project-dialog',{state:'hidden'});
+  const created=await saved();assert.equal(created.mcu.pins.PA5.label,'LD2');
+  for(const source of [created.code,...created.firmware.files.map(f=>f.text)])assert.doesNotMatch(source,/\bLD2_(?:Pin|GPIO_Port)\b/);
   const recorded=await events(),reset=recorded.find(e=>e.type==='code.reset');assert.ok(reset);assert.equal(reset.detail.preservedWires,p.wires.length);assert.equal(recorded.filter(e=>e.type==='code.reset').length,1);assert.deepEqual(errors,[]);
   const version=(await page.evaluate(()=>window.appUpdates.state())).currentVersion;
-  const report={passed:true,version,exeSha256:createHash('sha256').update(await fs.readFile(exe)).digest('hex'),packaged:!!process.env.LAB_EXE,checks:['remapped Docs preview','cancel and Escape preserve code','default focus on Cancel','main reset from helper tab','circuit/config/files preserved','undo/redo','disabled during execution','LED off after reset','reapply without duplicate parts/wires','LED on after Docs apply','persisted code.reset and simulation.state','split-port stepper and L298N motion'],reset,off,on,remapped,errors,events:recorded};
+  const report={passed:true,version,exeSha256:createHash('sha256').update(await fs.readFile(exe)).digest('hex'),packaged:!!process.env.LAB_EXE,checks:['remapped Docs preview','cancel and Escape preserve code','default focus on Cancel','main reset from helper tab','unused aliases removed while pin labels preserved','circuit/config/files preserved','undo/redo','disabled during execution','LED off after reset','reapply without duplicate parts/wires or aliases','LED on after Docs apply','persisted code.reset and simulation.state','split-port stepper and L298N motion','new project main.c and main.h contain no unused aliases'],reset,off,on,remapped,created,errors,events:recorded};
   await fs.writeFile(path.join(out,process.env.LAB_EXE?'code-reset-public.json':'code-reset-dev.json'),JSON.stringify(report,null,2));console.log(JSON.stringify({passed:true,version,checks:report.checks,ledOff:off.detail.parts.selected,ledOn:on.detail.parts.selected}));
  }finally{await browser?.close().catch(()=>{});await terminate(child);}
 })().catch(e=>{console.error(e);process.exitCode=1;});

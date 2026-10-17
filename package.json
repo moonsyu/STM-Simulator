@@ -1,6 +1,6 @@
 {
   "name": "stm-simulator",
-  "version": "0.23.4",
+  "version": "0.23.5",
   "description": "STM32 learning IDE with integrated circuit simulation",
   "author": "STM Simulator",
   "private": true,

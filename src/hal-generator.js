@@ -16,7 +16,6 @@ export function generateMain(config){
     ' * Clock: '+(clock.source==='HSI'?'HSI direct (PLL off)':'HSI PLL')+', APB1 timer clock = '+config.timerClockHz+' Hz.',
     ' * printf: SWV ITM port 0 (enable SWV in the debugger). UART uses its pins.',
     ' * With newlib-nano, enable -u _printf_float for floating-point printf. */',''];
-  for(const [pin,p]of Object.entries(config.pins))if(p.label)lines.push(`#ifndef ${p.label}_Pin`,`#define ${p.label}_Pin GPIO_PIN_${pin.slice(2)}`,'#endif',`#ifndef ${p.label}_GPIO_Port`,`#define ${p.label}_GPIO_Port GPIO${pin[1]}`,'#endif');
   const handles={...Object.fromEntries(SERIAL_IDS.map(id=>[id,['UART',serialHandle(id)]])),I2C1:['I2C','hi2c1'],SPI1:['SPI','hspi1'],ADC1:['ADC','hadc1'],...Object.fromEntries(TIMER_IDS.map(id=>[id,['TIM','htim'+id.slice(3)]]))};
   const active=Object.entries(config.peripherals).filter(([,p])=>p.enabled),serials=active.filter(([id])=>isSerial(id)),timers=active.filter(([id])=>isTimer(id));
   for(const [id]of active){const [type,name]=handles[id];lines.push(`${type}_HandleTypeDef ${name};`);}
