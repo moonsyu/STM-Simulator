@@ -23,4 +23,3 @@ export function assertMinimal(project){
  const functions=cFunctions(code);
  for(const f of functions)if(f.name!=='main')assert.ok(functions.some(other=>other!==f&&new RegExp('\\b'+f.name+'\\s*\\(').test(other.body)),f.name+' is unused');
 }
-
