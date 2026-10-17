@@ -1,11 +1,16 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {deviceExamplePreview} from '../src/device-example-preview.js';
+import {deviceExamplePreview,deviceDescriptionText} from '../src/device-example-preview.js';
 import {applyDeviceExample} from '../src/device-assistance.js';
 import {fixture,execute} from '../scripts/docs-audit/runtime.mjs';
 import {halExample} from '../src/hal-examples.js';
 import {mainOnlyRecipe} from '../src/device-inline-example.js';
 import {assess} from '../scripts/docs-audit/oracles.mjs';
+
+test('Docs wiring instructions follow both allocated pins and peripheral names',()=>{
+ const binding={pins:{PA5:'PA6',PA2:'PA9',PA3:'PA10'},peripherals:{TIM2:'TIM3',USART2:'USART1'}};
+ assert.equal(deviceDescriptionText('TIM2 CH1 PA5 · USART2 PA2(TX)/PA3(RX)',binding),'TIM3 CH1 PA6 · USART1 PA9(TX)/PA10(RX)');
+});
 
 test('old LED Docs preview uses the actual remapped GPIO and drives that LED',()=>{
  const {project,target}=fixture('led');project.mcu.pins.PA5={function:'GPIO_Output',pull:'NOPULL',edge:'FALLING',initial:0,label:'reservedOutput'};
