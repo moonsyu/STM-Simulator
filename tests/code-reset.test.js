@@ -5,6 +5,31 @@ import {applyDeviceExample} from '../src/device-assistance.js';
 import {fixture,execute} from '../scripts/docs-audit/runtime.mjs';
 import {SimulationSession} from '../src/session.js';
 import {halExample} from '../src/hal-examples.js';
+import {generateHal} from '../src/mcu-config.js';
+
+test('reset discards old pin aliases without changing pin configuration or user headers',()=>{
+ const original=halExample('blink');
+ original.mcu.pins.PA5.label='LD2';
+ original.mcu.pins.PC13={function:'GPIO_Input',pull:'PULLUP',edge:'FALLING',initial:0,label:'USER_BUTTON'};
+ original.code='#ifndef LD2_Pin\n#define LD2_Pin GPIO_PIN_5\n#endif\n#ifndef LD2_GPIO_Port\n#define LD2_GPIO_Port GPIOA\n#endif\n'+original.code;
+ original.firmware.files=[{name:'user.h',text:'#define USER_LED_Pin GPIO_PIN_5\n'}];
+ const reset=resetMainCode(original);
+ assert.doesNotMatch(reset.code,/\b(?:LD2|USER_BUTTON)_(?:Pin|GPIO_Port)\b/);
+ assert.deepEqual(reset.mcu,original.mcu);
+ assert.deepEqual(reset.firmware.files,original.firmware.files);
+ const session=new SimulationSession(reset);session.tick(100);
+ assert.equal(session.result.fault,false);assert.equal(session.result.parts.led1.on,false);
+ assert.equal(session.runtime.gpio.PA5.mode,'OUTPUT');
+});
+
+test('HAL regeneration needs no label macros to drive the configured LED',()=>{
+ const original=halExample('blink');original.mcu.pins.PA5.label='LD2';
+ original.code=generateHal(original.mcu);
+ assert.doesNotMatch(original.code,/\bLD2_(?:Pin|GPIO_Port)\b/);
+ const session=new SimulationSession(original);session.tick(0);
+ assert.equal(session.result.parts.led1.on,true);session.tick(501);
+ assert.equal(session.result.parts.led1.on,false);
+});
 
 test('reset removes main behavior, preserves circuit/config/files and allows Docs reapplication',()=>{
  const {project,target}=fixture('led');
