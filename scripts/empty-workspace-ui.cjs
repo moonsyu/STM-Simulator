@@ -14,7 +14,7 @@ async function exercise(page,{out}){
  await page.fill('#part-search','빵판');await page.click('[data-add="breadboard"]');await page.click('[data-add="breadboard"]');
  let p=await read();assert.equal(p.components.filter(c=>c.type==='breadboard').length,2);assert.equal(await page.locator('#breadboard-layer .hole').count(),800);
  const first=p.components[0],hole='breadboard:'+first.id+':bb:a:8';
- await page.click('#tool-wire');await page.locator(`[data-endpoint="${boardPin('PA5')}"]`).click();await page.locator(`[data-endpoint="${hole}"]`).click();
+ await page.locator('#circuit').focus();await page.keyboard.press('w');await page.locator(`[data-endpoint="${boardPin('PA5')}"]`).click();await page.locator(`[data-endpoint="${hole}"]`).click();
  assert.equal((await read()).wires.length,1);await page.click('#tool-select');const hit=await page.locator('[data-wire] path').first().evaluate(path=>{const p=path.getPointAtLength(path.getTotalLength()*.5),q=new DOMPoint(p.x,p.y).matrixTransform(path.getScreenCTM());return {x:q.x,y:q.y};});await page.mouse.click(hit.x,hit.y);
  assert.equal(await page.locator('[data-color]').count(),20);assert.equal(await page.locator('[data-palette="pastel"]').count(),10);
  for(const swatch of await page.locator('[data-color]').all()){await swatch.click();assert.equal((await read()).wires[0].color,await swatch.getAttribute('data-color'));}

@@ -107,3 +107,12 @@
 앞서 재현한 저장 트랜잭션 실패, 저장 직후 편집 시 미저장 경고 누락, 새 프로젝트의 터미널 경로, 종료 직전 자동 저장 지연 4건은 이번 요청 범위에 포함하지 않았습니다. `docs/NON-DEVICE-AUDIT.md`에 원인·코드 위치·재현·수정 방향을 보존했습니다.
 
 이 게시 후 기록은 같은 버전의 문서 커밋으로 남기며 공개 태그/자산을 덮어쓰지 않습니다. 0.19.0 이하에서 고정 EXE 이름으로 전환하려면 0.20.0 이상을 한 번 수동 다운로드합니다.
+
+
+## 0.23.4 지정 UI 제거·단축키·보드 초기화
+
+- 단위/모델 312개 통과. `controls-reset-check.cjs`의 독립 Electron 프로필에서 제거된 UI, Ctrl+F/R, W 실제 배선, Alt+0 크기, 패널 이동/복원, 초기화 취소/Esc/코드 보존/undo/redo/재시작을 검증했다.
+- F11의 helper 입력 3, F10 후 doubled=6, Shift+F11 반환 후 counter=7을 확인했다. F6 일시정지와 Shift+F5 정지 및 유휴/모달에서의 잘못된 실행 방지를 검사했다. 같은 단축키로 실제 Windows GCC/GDB 진입/단계 실행/종료도 검사했다.
+- 파일 로그: `work/test-results/controls-reset-dev.json`, `controls-reset-unit.log`. UI 상태와 앱 `board.reset`, `debug.command`, `debug.paused` 이벤트를 보존한다.
+- 시각 검사: `controls-visual-check.cjs`, Dark/White 1360×900 및 1024×640. 숨김 Electron의 모달 화면 캡처 지연은 headless 브라우저의 동일 화면 검사로 분리했다. 실제 기능 검증은 Electron에서 수행했다.
+- 공개 Release/EXE 검증 대기.

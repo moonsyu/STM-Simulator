@@ -8,6 +8,7 @@ import {setupDeviceDocs} from './device-docs-ui.js';
 import {applyDeviceExample} from './device-assistance.js';
 import {createDiagnostics} from './diagnostics.js';
 import {resetMainCode} from './code-reset.js';
+import {resetBoardConfiguration} from './board-reset.js';
 import {selectedIds,isSelected,toggleSelection,wirePoints,insertWirePoint,connectedNet,copySelection,pasteSelection,moveSelection} from './circuit-edit.js';
 import {circuitDiagnostics} from './circuit-diagnostics.js';
 import {PINS,BB,PIN_BY_ID,endpointInfo,searchPins,circuitHoles,holeInfo} from './pins.js';
@@ -94,7 +95,7 @@ function syncEditor(){
  lastCodeCheckpoint=0;
  $('project-name').value=project.name;const files=project.firmware?.files||[],hal=project.firmware?.mode==='hal';if(!files.some(f=>f.name===sourceFile))sourceFile='main.c';
  $('source-file').innerHTML=`<option value="main.c">${hal?'main.c':'main.ino'}</option>`+files.map(f=>`<option value="${esc(f.name)}">${esc(f.name)}</option>`).join('');$('source-file').value=sourceFile;
- $('code').value=sourceFile==='main.c'?project.code:files.find(f=>f.name===sourceFile).text;$('firmware-mode').value=hal?'hal':'sketch';$('firmware-status').textContent=hal?'main(void) · HAL 소스 실행 · ELF/BIN 미지원':'setup() / loop()';
+ $('code').value=sourceFile==='main.c'?project.code:files.find(f=>f.name===sourceFile).text;$('firmware-mode').value=hal?'hal':'sketch';
  document.querySelector('.language-badge').textContent=hal?'STM32 HAL':'GPIO 스케치';lineNumbers();monitor.settings(project.simulation);
  document.querySelector('.code-note code').textContent=hal?'HAL_GPIO_Init · WritePin · ReadPin · TogglePin\nHAL_UART_Transmit · Receive_IT\nHAL_GPIO_EXTI_Callback\nHAL_TIM_Base_Start_IT · HAL_ADC_GetValue\nHAL_I2C_Mem_Read · HAL_SPI_Transmit\nprintf("value=%lu\\n", value)':'pinMode · digitalWrite · digitalRead\nanalogRead · analogWrite · delay\nLiquidCrystal · Serial1 · Wire · SPI\nTimer · attachInterrupt · DMA';
  document.querySelector('.code-note p').textContent=hal?'main(void)와 지원 HAL API를 회로에 연결합니다. 전체 HAL 드라이버·ELF/BIN 실행은 지원하지 않습니다.':'GPIO 스케치 문법의 일부를 실행합니다. ELF/BIN 펌웨어 로더는 포함되지 않습니다.';
@@ -120,13 +121,13 @@ function refresh({preserveWires=false}={}){
  renderConnections();renderIssues(true);
  $('builtin-led').setAttribute('fill',result&&result.voltage('signal:PA5')>1.8?'#64e66b':'#89a486');
  $('builtin-led').style.filter=result&&result.voltage('signal:PA5')>1.8?'drop-shadow(0 0 5px #59dc65)':'';
- $('tool-select').classList.toggle('active',mode==='select');$('tool-wire').classList.toggle('active',mode==='wire');
+ $('tool-select').classList.toggle('active',mode==='select');
  document.querySelectorAll('[data-add]').forEach(b=>{b.classList.toggle('active',mode===b.dataset.add);b.disabled=running();if(b.dataset.add==='board')b.querySelector('b').textContent=project.surfaces?.board?.hidden?'+':'✓';});
  $('undo').disabled=running()||!undoStack.length;$('redo').disabled=running()||!redoStack.length;$('delete').disabled=running()||!['part','wire','group','surface'].includes(selection?.type);
  $('rotate').disabled=running()||selection?.type!=='part';
  $('code').readOnly=running();$('project-name').readOnly=running();
  editorSearch.refresh();
- for(const id of ['pinout-open','firmware-mode','firmware-import','firmware-folder','firmware-check','hal-example','code-reset'])$(id).disabled=running();
+ for(const id of ['pinout-open','firmware-mode','firmware-import','firmware-folder','firmware-check','hal-example','code-reset','board-reset'])$(id).disabled=running();
  $('run').classList.toggle('running',running());$('run').textContent=runtime?.debug.paused?'계속 실행 (F5)':running()?'■  시뮬레이션 정지':'▶  실행 (F5)';
  $('step').disabled=status==='running';
  $('mode-label').textContent=running()?'시뮬레이션 실행 중':status==='error'?'회로 확인 필요':'회로 편집';
@@ -330,6 +331,7 @@ setInterval(recordSimulation,2000);
 function stop(){recordSimulation();status='stopped';runtime=null;result=null;pressed={};pending=null;$('preview-layer').innerHTML='';log('시뮬레이션을 정지했습니다.');refresh();ide?.debugView();}
 $('run').onclick=()=>{if(runtime?.debug.paused){runtime.resume();simTime=runtime.microTime/1000;status='running';ide?.debugView();refresh();}else if(running())stop();else {if(initializeRuntime({debug:!!ide?.breakpoints().length}))status=runtime.debug.paused?'paused':'running';refresh();}};
 function debugCommand(command){
+ diagnostic('debug.command',{command,status,location:runtime?.location??null});
  if(command==='stop'){if(running())stop();return;}
  if(command==='start'){if(running())return;if(initializeRuntime({debug:true,entry:true})){status=runtime.debug.paused?'paused':'running';refresh();ide?.debugView();}return;}
  if(!runtime)return;
@@ -341,13 +343,13 @@ $('step').onclick=()=>{if(!runtime||status==='error'){initializeRuntime();}else 
 setInterval(()=>{
  if(status!=='running')return;
  try{simTime+=20;result=session.tick(simTime);recompute();
-   if(runtime.debug.paused){simTime=runtime.microTime/1000;status='paused';refresh();ide?.debugView();return;}
+   if(runtime.debug.paused){simTime=runtime.microTime/1000;status='paused';recordSimulation();diagnostic('debug.paused',{location:runtime.location,depth:runtime.depth,simulationMs:simTime});refresh();ide?.debugView();return;}
    if(runtime.finished&&runtime.debug.enabled){status='paused';log('프로그램이 종료되었습니다. 정지 버튼으로 편집을 재개하세요.');refresh();ide?.debugView();return;}
    updateSimulationSvg(svg,project,result,pressed);updateReadouts();
    if(status==='error')refresh();else if(++paintCounter%10===0&&!$('inspect-panel').hidden&&!$('inspector').contains(document.activeElement))inspector();
  }catch(e){result=session?.viewResult??result;status='error';log(e.message,'error');refresh();}
 },20);
-$('tool-select').onclick=()=>setMode('select');$('tool-wire').onclick=()=>setMode('wire');$('delete').onclick=removeSelected;$('rotate').onclick=rotateSelected;$('undo').onclick=()=>editUndo();$('redo').onclick=()=>editUndo(true);
+$('tool-select').onclick=()=>setMode('select');$('delete').onclick=removeSelected;$('rotate').onclick=rotateSelected;$('undo').onclick=()=>editUndo();$('redo').onclick=()=>editUndo(true);
 document.querySelectorAll('[data-add]').forEach(b=>b.onclick=()=>{if(running())return;const type=b.dataset.add;if(type==='board'){
  if(project.surfaces?.board?.hidden){checkpoint();showSurface(project,'board');changed();pinSearch();}
  selection={type:'surface',id:'board'};pending=null;mode='select';inspectTab();fitView();refresh();svg.focus({preventScroll:true});return;
@@ -377,6 +379,19 @@ function replaceCodeText(edit){
 }
 $('code').addEventListener('input',()=>{if(replaceCheckpoint||Date.now()-lastCodeCheckpoint>1000){checkpoint();lastCodeCheckpoint=Date.now();}if(sourceFile==='main.c')project.code=$('code').value;else project.firmware.files.find(f=>f.name===sourceFile).text=$('code').value;lineNumbers();autosave();ide?.invalidate();$('undo').disabled=false;$('redo').disabled=true;});
 $('source-file').onchange=e=>{sourceFile=e.target.value;syncEditor();};
+$('board-reset').onclick=()=>{if(running())return;$('board-reset-error').textContent='';$('board-reset-dialog').showModal();};
+$('board-reset-cancel').onclick=()=>$('board-reset-dialog').close();
+$('board-reset-confirm').onclick=()=>{
+ try{
+  if(running())throw new Error('빌드·실행·디버그를 정지한 뒤 초기화하세요.');
+  const removedParts=project.components.length,removedWires=project.wires.length,next=resetBoardConfiguration(project);
+  checkpoint();project=next;runtime=null;session=null;result=null;status='stopped';simTime=0;pressed={};selection=null;pending=null;mode='select';searchSelectedId=null;
+  wireDraft.reset();$('preview-layer').innerHTML='';$('search-layer').innerHTML='';$('pin-search').value='';monitor.clear();uartLines.clear();
+  syncEditor();pinSearch();changed();ide?.invalidate();fitView();
+  diagnostic('board.reset',{removedParts,removedWires,preservedCode:true},true);
+  $('board-reset-dialog').close();log('보드 구성을 초기화했습니다. 코드와 다른 소스 파일은 유지됩니다. Ctrl+Z로 되돌릴 수 있습니다.');
+ }catch(error){$('board-reset-error').textContent=error.message;}
+};
 $('code-reset').onclick=()=>{if(running())return;$('code-reset-error').textContent='';$('code-reset-file').textContent=project.firmware?.mode==='hal'?'main.c':'main.ino';$('code-reset-dialog').showModal();};
 $('code-reset-cancel').onclick=()=>$('code-reset-dialog').close();
 $('code-reset-confirm').onclick=()=>{
@@ -390,8 +405,8 @@ $('code-reset-confirm').onclick=()=>{
  }catch(error){$('code-reset-error').textContent=error.message;}
 };
 $('firmware-mode').onchange=e=>{if(running())return;checkpoint();project.firmware={mode:e.target.value,files:project.firmware?.files||[]};if(e.target.value==='hal')project.mcu??=defaultMcu();syncEditor();changed();};
-$('firmware-check').onclick=()=>{try{if(project.firmware?.mode==='hal')compileHal(project.code,project.firmware.files);else compile(project.code);$('firmware-status').textContent='문법 검사 통과 · 배선과 HAL 설정은 실행 시 검사';log('소스 문법 검사를 통과했습니다.');}catch(e){$('firmware-status').textContent=e.message;log(e.message,'error');}};
-function applyFirmware(files){try{if(!files)return;const imported=importFirmware(project,files);checkpoint();project=imported.project;sourceFile='main.c';syncEditor();changed();log('가져왔습니다: '+files.map(f=>f.name).join(', '));for(const warning of imported.warnings)log(warning,'error');$('firmware-status').textContent=imported.warnings.length?imported.warnings.join(' · '):'가져오기 완료 · Pinout과 코드 검사로 확인하세요.';}catch(e){log(e.message,'error');$('firmware-status').textContent=e.message;}}
+$('firmware-check').onclick=()=>{try{if(project.firmware?.mode==='hal')compileHal(project.code,project.firmware.files);else compile(project.code);log('소스 문법 검사를 통과했습니다.');}catch(e){log(e.message,'error');}};
+function applyFirmware(files){try{if(!files)return;const imported=importFirmware(project,files);checkpoint();project=imported.project;sourceFile='main.c';syncEditor();changed();log('가져왔습니다: '+files.map(f=>f.name).join(', '));for(const warning of imported.warnings)log(warning,'error');}catch(e){log(e.message,'error');}}
 $('firmware-import').onclick=async()=>{try{if(window.desktop?.importFirmware)applyFirmware(await window.desktop.importFirmware(false));else $('firmware-files').click();}catch(e){log(e.message,'error');}};
 $('firmware-folder').hidden=!window.desktop?.importFirmware;
 $('firmware-folder').onclick=async()=>{try{applyFirmware(await window.desktop.importFirmware(true));}catch(e){log(e.message,'error');}};

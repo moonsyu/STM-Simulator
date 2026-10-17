@@ -30,9 +30,7 @@ export function setupNativeIde({o,editor,select,showMonitor,points,watches,toggl
   if(!native){$('ide-build').title='시뮬레이터용 빌드 (Ctrl+Shift+B)';return;}
   document.querySelector('.language-badge').textContent=config().target==='arm'?'ARM · STM32 HAL':'C/C++ · GCC';
   $('ide-build').title='GCC 컴파일 및 링크 (Ctrl+Shift+B)';
-  if(config().target==='arm')$('firmware-status').textContent='실제 ST HAL / CMSIS · ARM GCC · ELF / BIN / HEX';
   $('code').readOnly=locked;for(const id of ['source-add','ide-build','debug-start','new','open','workspace-open','source-rename','source-delete'])$(id).disabled=locked||(['source-rename','source-delete'].includes(id)&&o.getSource()==='main.c');
-  $('debug-pause').disabled=state!=='running';$('debug-stop').disabled=!locked;$('debug-into').disabled=$('debug-over').disabled=$('debug-out').disabled=!paused||working;
   $('run').disabled=building||working;$('run').textContent=paused?'계속 실행 (F5)':locked?'■ 실행 정지':'▶ 실행 (F5)';$('step').disabled=true;
   $('run-status').textContent=building?'컴파일 중':({idle:'준비됨',starting:'디버거 연결 중',running:'실행 중',paused:'일시정지',exited:'실행 종료'})[state]||state;
   $('mode-label').textContent=config().target==='arm'?'STM32 보드 실행':'Windows 프로그램 실행';
@@ -42,6 +40,8 @@ export function setupNativeIde({o,editor,select,showMonitor,points,watches,toggl
  async function build(){if(!api)return report(new Error('실제 빌드는 Windows 데스크톱 앱에서 사용할 수 있습니다.'));if(busy())return;working=true;lockUpdate();$('build-output').textContent='';$('build-errors').replaceChildren();$('native-artifact-list').textContent='';$('native-artifacts').disabled=true;showMonitor('build');try{return await api.build(text(),config());}catch(e){report(e);return null;}finally{working=false;lockUpdate();}}
  async function command(action){
   if(!selected())return false;
+  if(!api){report(new Error('실제 빌드와 디버그는 데스크톱 앱에서 사용할 수 있습니다.'));return true;}
+  if(action==='start'&&busy()||action==='pause'&&(state!=='running'||working)||['into','over','out'].includes(action)&&(state!=='paused'||working))return true;
   if(action==='stop'){await guard(()=>api.stop());state='idle';building=false;working=false;lastStop=null;editor.updateDebug(points(),null);lockUpdate();return true;}
   if(working)return true;working=true;lockUpdate();
   try{

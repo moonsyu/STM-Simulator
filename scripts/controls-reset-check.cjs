@@ -1,0 +1,55 @@
+const fs=require('node:fs/promises'),path=require('node:path'),net=require('node:net'),assert=require('node:assert/strict');
+const {createHash}=require('node:crypto'),{chromium}=require('playwright'),{launch,terminate}=require('../desktop/process-tools.cjs');
+(async()=>{
+ const root=path.resolve(__dirname,'..'),out=path.join(root,'work/test-results'),exe=process.env.LAB_EXE||require('electron');await fs.mkdir(out,{recursive:true});
+ const profile=await fs.mkdtemp(path.join(out,'controls-profile-'));await fs.mkdir(path.join(profile,'updates'));await fs.writeFile(path.join(profile,'updates/settings.json'),'{"automatic":false}');
+ const port=await new Promise(resolve=>{const s=net.createServer();s.listen(0,'127.0.0.1',()=>{const port=s.address().port;s.close(()=>resolve(port));});});
+ const env={...process.env,CIRCUIT_LAB_SMOKE:'1',CIRCUIT_LAB_TEST_PROFILE:profile};delete env.ELECTRON_RUN_AS_NODE;
+ const child=launch(exe,[...(process.env.LAB_EXE?[]:[root]),`--remote-debugging-port=${port}`,'--remote-debugging-address=127.0.0.1'],{env,cwd:root});let browser;
+ const checks=[],errors=[],debug=[];
+ try{
+  for(let i=0;i<300;i++){try{if((await fetch(`http://127.0.0.1:${port}/json/version`)).ok)break;}catch{}await new Promise(r=>setTimeout(r,200));}
+  browser=await chromium.connectOverCDP(`http://127.0.0.1:${port}`);const page=browser.contexts()[0].pages()[0];page.setDefaultTimeout(15000);await page.waitForSelector('.monaco-editor');page.on('pageerror',e=>errors.push(e.message));
+  const {halExample}=await import('../src/hal-examples.js'),{blankProject}=await import('../src/project.js'),{resetBoardConfiguration}=await import('../src/board-reset.js'),{boardPin}=await import('../src/pins.js');
+  const click=s=>page.locator(s).click(),press=k=>page.keyboard.press(k);
+  const saved=async()=>{await page.waitForTimeout(300);return JSON.parse(await fs.readFile(path.join(profile,'diagnostics/latest-project.stm32lab'),'utf8'));};
+  const load=async p=>{await page.locator('#file-input').setInputFiles({name:'fixture.stm32lab',mimeType:'application/json',buffer:Buffer.from(JSON.stringify(p))});await page.waitForFunction(code=>document.getElementById('code').value===code,p.code);};
+  const focusCode=async()=>{await click('[data-tab="code"]');await page.locator('.monaco-editor .inputarea').focus();};
+  for(const id of ['debug-pause','debug-over','debug-into','debug-out','debug-stop','object-scale-reset','firmware-status','code-find-open','code-replace-open','tool-wire'])assert.equal(await page.locator('#'+id).count(),0,id);
+  assert.equal(await page.locator('.resize-help,.dock-heading select').count(),0);checks.push('specified controls and text removed');
+  const p=halExample('blink');p.firmware.files.push({name:'keep.h',text:'#pragma once\n'});p.surfaces={board:{scale:1.3},breadboard:{}};
+  await load(p);await focusCode();await press('Control+f');assert.equal(await page.locator('#code-search').isVisible(),true);await press('Escape');await press('Control+r');assert.equal(await page.locator('#code-replace-row').isVisible(),true);await press('Escape');checks.push('Ctrl+F/Ctrl+R and Escape');
+  await page.selectOption('#resize-target','surface:board');await page.locator('#resize-target').focus();await press('Alt+0');assert.equal((await saved()).surfaces.board.scale,1);checks.push('Alt+0 restores device size');
+  await click('#zoom-reset');await page.locator('#circuit').focus();await press('w');assert.equal(await page.locator('#circuit.connecting').count(),1);
+  await page.locator(`[data-endpoint="${boardPin('PB0')}"]`).click();await page.locator('[data-endpoint="bb:a:1"]').click();assert.equal((await saved()).wires.length,p.wires.length+1);await press('v');await click('#undo');checks.push('W connects a real wire and V selects');
+  const heading=page.locator('[data-panel="terminal"] .dock-heading');await heading.focus();await press('Shift+F10');assert.equal(await page.locator('#dock-move-dialog').isVisible(),true);await page.selectOption('#dock-move-target','code:right');await click('#dock-move-apply');
+  let terminal=await page.locator('[data-panel="terminal"]').boundingBox(),code=await page.locator('[data-panel="code"]').boundingBox();assert.ok(terminal.x>code.x);await page.reload();await page.waitForSelector('.monaco-editor');terminal=await page.locator('[data-panel="terminal"]').boundingBox();code=await page.locator('[data-panel="code"]').boundingBox();assert.ok(terminal.x>code.x);await click('#layout-reset');
+  await page.locator('[data-panel="code"] .dock-heading').click({button:'right'});assert.equal(await page.locator('#dock-move-dialog').isVisible(),true);await press('Escape');checks.push('panel context move persists, Shift+F10 is not debug step');
+  const before=await saved();await click('#board-reset');assert.equal(await page.evaluate(()=>document.activeElement.id),'board-reset-cancel');await press('F11');assert.equal(await page.locator('#run-status').textContent(),'준비됨');await press('Escape');assert.deepEqual(await saved(),before);
+  await click('#board-reset');await click('#board-reset-cancel');assert.deepEqual(await saved(),before);await click('#board-reset');await click('#board-reset-confirm');assert.deepEqual(await saved(),resetBoardConfiguration(before));
+  await click('#undo');assert.deepEqual(await saved(),before);await click('#redo');assert.deepEqual(await saved(),resetBoardConfiguration(before));await page.reload();await page.waitForSelector('.monaco-editor');assert.deepEqual(await saved(),resetBoardConfiguration(before));checks.push('board reset cancel/Escape/code preservation/undo/redo/reload');
+  const d=blankProject();d.firmware.files=[{name:'main.h',text:'#include "stm32f4xx_hal.h"\n'},{name:'user.h',text:'int marker=5;\n'}];
+  d.code='#include "main.h"\n#include "user.h"\nint counter=0;\nint helper(int value) {\n  int doubled=value*2;\n  return doubled;\n}\nint main(void) {\n  counter=helper(3);\n  counter++;\n  while (1) {\n    HAL_Delay(50);\n  }\n}';
+  await load(d);await focusCode();await press('Control+Shift+F5');await page.waitForFunction(()=>document.getElementById('debug-location').textContent.includes('main.c:9'));
+  const capture=async key=>debug.push({key,location:await page.locator('#debug-location').textContent(),locals:await page.locator('#debug-locals').textContent(),globals:await page.locator('#debug-globals').textContent(),stack:await page.locator('#debug-stack').textContent()});
+  assert.equal(await page.locator('#board-reset').isDisabled(),true);await press('F11');await page.waitForFunction(()=>document.getElementById('debug-location').textContent.includes('main.c:5'));assert.match(await page.locator('#debug-locals').textContent(),/value\s*3/);await capture('F11');
+  await press('F10');await page.waitForFunction(()=>document.getElementById('debug-location').textContent.includes('main.c:6'));assert.match(await page.locator('#debug-locals').textContent(),/doubled\s*6/);await capture('F10');
+  await press('Shift+F11');await page.waitForFunction(()=>document.getElementById('debug-location').textContent.includes('main.c:10'));await capture('Shift+F11');await press('F10');await page.waitForFunction(()=>document.getElementById('debug-location').textContent.includes('main.c:11'));assert.match(await page.locator('#debug-globals').textContent(),/counter\s*7/);
+  await press('F5');await page.waitForFunction(()=>document.getElementById('run-status').textContent==='실행 중');await page.waitForTimeout(100);await press('F6');await page.waitForFunction(()=>document.getElementById('run-status').textContent==='일시정지');await capture('F6');
+  await press('Shift+F5');await page.waitForFunction(()=>document.getElementById('run-status').textContent==='준비됨');await press('F11');assert.equal(await page.locator('#run-status').textContent(),'준비됨');assert.equal(await page.evaluate(()=>!!document.fullscreenElement),false);checks.push('real simulator keyboard stepping, locals 3/6 and counter 7, pause/stop, idle guard');
+  if(process.env.CONTROLS_NATIVE==='1'){
+   const tools=await require('./native-ide-check.cjs').toolSettings();assert.ok(tools.hostGcc&&tools.hostGdb);
+   await click('#native-tools');for(const [key,value]of Object.entries(tools))if(value)await page.fill('#tool-'+key,value);await page.locator('#native-tools-form .run-button').click();
+   const n=blankProject();n.ide={breakpoints:[],watches:[],native:{target:'host',configuration:'Debug'}};n.code='#include <stdio.h>\nint counter=0;\nint helper(int value) {\n  int doubled=value*2;\n  return doubled;\n}\nint main(void) {\n  counter=helper(3);\n  counter++;\n  printf("result=%d\\n",counter);\n  return 0;\n}\n';
+   await load(n);await focusCode();await press('Control+Shift+F5');await page.waitForFunction(()=>document.getElementById('debug-location').textContent.includes('GDB · main'));
+   assert.equal(await page.locator('#board-reset').isDisabled(),true);await press('F11');await page.waitForFunction(()=>document.getElementById('debug-location').textContent.includes('GDB · helper'));await capture('GDB F11');assert.match(await page.locator('#debug-locals').textContent(),/value\s*3/);
+   await press('F10');await page.waitForFunction(()=>document.getElementById('debug-locals').textContent.includes('6'));await capture('GDB F10');await press('Shift+F11');await page.waitForFunction(()=>document.getElementById('debug-location').textContent.includes('GDB · main'));await capture('GDB Shift+F11');await press('Shift+F5');await page.waitForFunction(()=>!document.getElementById('code').readOnly);checks.push('native GCC/GDB keyboard stepping and stop');
+  }
+  await load(p);await page.setViewportSize({width:1360,height:900});
+  for(const theme of ['dark','light']){await page.emulateMedia({colorScheme:theme});await page.waitForFunction(theme=>document.documentElement.dataset.ideTheme===theme,theme);await click('#board-reset');assert.equal(await page.locator('#board-reset-dialog').isVisible(),true);await press('Escape');}
+  await page.setViewportSize({width:1024,height:640});assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);checks.push('dark/light and compact window');
+  const events=(await fs.readFile(path.join(profile,'diagnostics/events.jsonl'),'utf8')).trim().split('\n').map(JSON.parse);assert.ok(events.some(e=>e.type==='board.reset'&&e.detail.preservedCode));assert.ok(events.some(e=>e.type==='debug.paused'));assert.deepEqual(errors,[]);
+  const version=(await page.evaluate(()=>window.appUpdates.state())).currentVersion,report={passed:true,version,exeSha256:createHash('sha256').update(await fs.readFile(exe)).digest('hex'),packaged:!!process.env.LAB_EXE,checks,debug,errors,events};
+  await fs.writeFile(path.join(out,process.env.LAB_EXE?'controls-reset-public.json':'controls-reset-dev.json'),JSON.stringify(report,null,2));console.log(JSON.stringify({passed:true,version,checks}));
+ }catch(error){console.error('Controls check failed:',error);throw error;}finally{await browser?.close().catch(()=>{});await terminate(child);}
+})().catch(e=>{console.error(e);process.exitCode=1;});
