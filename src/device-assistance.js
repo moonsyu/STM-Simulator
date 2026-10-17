@@ -1,4 +1,5 @@
 import {exampleStatements} from './device-inline-example.js';
+import {remapGpioCalls} from './device-gpio-remap.js';
 import {inlineStatements} from './c-inline.js';
 import {showSurface} from './surfaces.js';
 import {CATALOG_BY_TYPE} from './catalog-defs.js';
@@ -89,8 +90,8 @@ function repairWiring(p,sample,parts,pins,report){
   for(const group of groups)for(const next of group.slice(1))if(uf.find(group[0])!==uf.find(next)){p.wires.push({id:newId(p,'docsWire'),from:group[0],to:next,color:'#23a68a'});uf.join(group[0],next);report.addedWires++;}
  }
 }
-function remapCode(text,binding,sample){
- const placeholders=[];text=text.replace(/GPIO([A-H])\s*,\s*GPIO_PIN_(\d+)/g,(whole,port,n)=>{const pin=binding.pins['P'+port+n];if(!pin)return whole;const id='DOCS_GPIO_PAIR_'+placeholders.length;placeholders.push(`GPIO${pin[1]}, GPIO_PIN_${Number(pin.slice(2))}`);return id;});
+export function remapCode(text,binding,sample){
+ const placeholders=[];text=remapGpioCalls(text,binding.pins,call=>{const id='DOCS_GPIO_PAIR_'+placeholders.length;placeholders.push(call);return id;});
  const names={};for(const [old,next]of Object.entries(binding.peripherals)){names[old]=next;names[SERIAL_IDS.includes(old)?serialHandle(old):'h'+old.toLowerCase()]=SERIAL_IDS.includes(next)?serialHandle(next):'h'+next.toLowerCase();names[old+'_IRQn']=next+'_IRQn';}
  for(const [old,next]of Object.entries(binding.pins)){const fn=sample.mcu.pins[old].function;if(fn==='GPIO_EXTI')names['GPIO_PIN_'+Number(old.slice(2))]='GPIO_PIN_'+Number(next.slice(2));if(fn.startsWith('ADC1_'))names['ADC_CHANNEL_'+fn.slice(7)]='ADC_CHANNEL_'+Object.entries(ROUTES.ADC1).find(([,pins])=>pins.includes(next))[0].slice(2);}
  text=replaceIdentifiers(text,names);return text.replace(/DOCS_GPIO_PAIR_(\d+)/g,(_,i)=>placeholders[i]);

@@ -17,8 +17,8 @@ export function mainOnlyRecipe(sample){
    }
   }else if(cb.name==='HAL_GPIO_EXTI_Callback'&&cb.body.replace(/\/\*[\s\S]*?\*\//g,'').trim()){
    const pins=Object.entries(sample.mcu.pins).filter(([,p])=>p.function==='GPIO_EXTI');
-   let poll='';for(const [pin]of pins){const n=Number(pin.slice(2)),prev='docsPrevious'+pin,current='docsCurrent'+pin;
-    poll+=`static int ${prev} = -1;\nint ${current} = HAL_GPIO_ReadPin(GPIO${pin[1]}, GPIO_PIN_${n});\nif (${prev} != ${current}) {\n${prev} = ${current};\n${replaceIdentifiers(cb.body,{GPIO_Pin:'GPIO_PIN_'+n})}\n}\n`;
+   let poll='';for(const [pin,config]of pins){const n=Number(pin.slice(2)),prev='docsPrevious'+pin,current='docsCurrent'+pin,edge=config.edge==='RISING'?`${current} == GPIO_PIN_SET`:config.edge==='FALLING'?`${current} == GPIO_PIN_RESET`:'1';
+    poll+=`static int ${prev} = -1;\nint ${current} = HAL_GPIO_ReadPin(GPIO${pin[1]}, GPIO_PIN_${n});\nif (${prev} >= 0 && ${prev} != ${current} && ${edge}) {\n${replaceIdentifiers(cb.body.replace('PIR EXTI motion=', 'PIR GPIO motion='),{GPIO_Pin:'GPIO_PIN_'+n})}\n}\n${prev} = ${current};\n`;
    }
    code=code.replace('/* USER CODE BEGIN 3 */','/* USER CODE BEGIN 3 */\n'+poll);
   }
@@ -39,7 +39,7 @@ export function exampleStatements(sample,api='all',prefix='example_'){
   return {globals:'',init:'',step:operation,preview:operation};
  }
  let globals=sample.code;for(const f of [...functions].reverse())globals=globals.slice(0,f.start)+globals.slice(f.end);
- globals=globals.replace(/\/\*[\s\S]*?\*\//g,'').replace(/^\s*#include[^\n]*\n/gm,'').replace(/^\s*(?:static\s+)?(?:void|int)\s+\w+\([^;]*\);\s*$/gm,'').replace(/^\s*\w+_HandleTypeDef\s+\w+\s*;\s*$/gm,'');
+ globals=globals.replace(/\/\*[\s\S]*?\*\/|\/\/[^\n]*|"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'/g,token=>token.startsWith('/')?'':token).replace(/^\s*#include[^\n]*\n/gm,'').replace(/^\s*(?:static\s+)?(?:void|int)\s+\w+\([^;]*\);\s*$/gm,'').replace(/^\s*\w+_HandleTypeDef\s+\w+\s*;\s*$/gm,'').trim();
  const definitions=helpers.map(f=>f.text).join('\n'),expand=text=>inlineStatements(text.replace(/\bMX_\w+_Init\s*\(\s*\)\s*;/g,''),definitions,prefix);
  const setup=api!=='all'&&!step.trim()&&!init.trim()?functions.find(f=>f.name!=='main'&&new RegExp('\\b'+api+'\\s*\\(').test(f.body))?.body||(api==='HAL_Init'?'HAL_Init();':'') :'';
  return {globals,init:expand(init),step:expand(step),preview:indentC([globals,expand(init||setup),expand(step)].filter(t=>t.trim()).join('\n'))};

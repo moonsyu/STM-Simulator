@@ -13,7 +13,7 @@ export const DEVICE_DEFS={
  stepper:{name:'스테퍼 모터 + 드라이버',prefix:'STEP',icon:'✥',hint:'구동 · 4상 / 1.8° 스텝',defaults:{},labels:['VM','GND','IN1','IN2','IN3','IN4'],help:'5 V 전원, 3.3 V 논리 입력의 4상 드라이버 모델입니다. 1000→0100→0010→0001 파형의 인접한 상 전환마다 1.8° 이동합니다. 역순이면 역회전합니다. 부하·탈조·가속은 모델링하지 않습니다.'},
  relay:{name:'릴레이 모듈',prefix:'RELAY',icon:'⌁',hint:'구동 · COM / NO / NC 접점',defaults:{},labels:['VCC','GND','IN','COM','NO','NC'],help:'5 V 전원, 3.3 V HIGH 활성 입력의 릴레이 모듈입니다. 전원이 있고 IN이 HIGH면 COM–NO, 아니면 COM–NC가 연결됩니다. 접점 저항 0.1 Ω, 이상적인 즉시 전환 모델입니다.'},
  joystick:{name:'조이스틱',prefix:'JOY',icon:'✛',hint:'입력 · X/Y ADC / 누름 스위치',defaults:{axisX:50,axisY:50,switch:0},labels:['VCC','GND','VRX','VRY','SW'],help:'3.3 V로 공급하는 두 개의 10 kΩ 가변저항과 누름 스위치 모델입니다. VRX/ VRY는 ADC, SW는 풀업 GPIO에 연결합니다. 실행 중 X/Y와 누름 상태를 조절합니다.'},
- encoder:{name:'로터리 인코더',prefix:'ENC',icon:'↻',hint:'입력 · A/B 직교 펄스 / 버튼',defaults:{position:0,switch:0},labels:['VCC','GND','A','B','SW'],help:'3.3 V, 내부 10 kΩ 풀업이 있는 인코더 모듈입니다. 위치를 한 칸 바꾸면 2 ms 간격의 A/B 4개 전이가 발생합니다. A/B의 양쪽 에지 EXTI 예제로 방향과 카운트를 읽습니다. 누름 스위치도 LOW 활성입니다.'}
+ encoder:{name:'로터리 인코더',prefix:'ENC',icon:'↻',hint:'입력 · A/B 직교 펄스 / 버튼',defaults:{position:0,switch:0},labels:['VCC','GND','A','B','SW'],help:'3.3 V, 내부 10 kΩ 풀업이 있는 인코더 모듈입니다. 위치를 한 칸 바꾸면 2 ms 간격의 A/B 4개 전이가 발생합니다. Docs는 TIM4 하드웨어 엔코더로 방향과 카운트를 읽습니다. HAL 예제 목록에는 양쪽 에지 EXTI 예제도 있습니다. 누름 스위치도 LOW 활성입니다.'}
 };
 export const I2C_DEVICES=['catalog_i2c','sht31','mpu6050','oled'];
 export const SPI_DEVICES=['catalog_spi','tft','matrix'];
