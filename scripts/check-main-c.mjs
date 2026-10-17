@@ -5,6 +5,8 @@ import {spawnSync} from 'node:child_process';
 import {fileURLToPath} from 'node:url';
 import {HAL_EXAMPLES,halExample} from '../src/hal-examples.js';
 import {blankProject} from '../src/project.js';
+import {resetMainCode} from '../src/code-reset.js';
+import {resetAuditCases} from './reset-audit-cases.mjs';
 import {validateMcu,generateHal} from '../src/mcu-config.js';
 import {isSerial,serialHandle} from '../src/serial-config.js';
 import {isTimer} from '../src/timer-config.js';
@@ -44,17 +46,18 @@ for(const [id,pin]of [['TIM2','PA5'],['TIM3','PA6'],['TIM4','PB6'],['TIM5','PA0'
   defaults.mcu.peripherals[id]={enabled:true,mode:'pwm'};
 }
 defaults.mcu=validateMcu(defaults.mcu);defaults.code=generateHal(defaults.mcu);
-const checked=[],sources={};
-for(const [name,project]of [['blank',blankProject()],['cubemx-defaults',defaults],...Object.keys(HAL_EXAMPLES).map(k=>[k,halExample(k)])]){
+const resetOnly=process.argv.includes('--reset-only'),checked=[],sources={};
+const cases=resetOnly?resetAuditCases().map(([id,p])=>['reset-'+id,resetMainCode(p)]):[['blank',blankProject()],['cubemx-defaults',defaults],...Object.keys(HAL_EXAMPLES).map(k=>[k,halExample(k)])];
+for(const [name,project]of cases){
   await fs.writeFile(path.join(out,'main.h'),'#pragma once\n#include "stm32f4xx_hal.h"\nvoid Error_Handler(void);\n');
   await fs.writeFile(path.join(out,'main.c'),project.code);
-  const env=['void _init(void) {}','void _fini(void) {}','#include "main.h"','extern int __io_putchar(int);','void SysTick_Handler(void) { HAL_IncTick(); }','__attribute__((weak)) int _write(int file, char *ptr, int len) { (void)file; for(int i=0;i<len;i++) __io_putchar(ptr[i]); return len; }'];
+  const env=['void _init(void) {}','void _fini(void) {}','#include "main.h"','void SysTick_Handler(void) { HAL_IncTick(); }',...(resetOnly?[]:['extern int __io_putchar(int);','__attribute__((weak)) int _write(int file, char *ptr, int len) { (void)file; for(int i=0;i<len;i++) __io_putchar(ptr[i]); return len; }'])];
   for(const [id,p]of Object.entries(project.mcu.peripherals))if(p.enabled){if(isSerial(id))env.push(`extern UART_HandleTypeDef ${serialHandle(id)};`);if(isTimer(id))env.push(`extern TIM_HandleTypeDef htim${id.slice(3)};`);}
   for(const [irq,p]of Object.entries(project.mcu.nvic))if(p.enabled){const id=irq.replace('_IRQn','');const body=isTimer(id)?`HAL_TIM_IRQHandler(&htim${id.slice(3)});`:isSerial(id)?`HAL_UART_IRQHandler(&${serialHandle(id)});`:Object.entries(project.mcu.pins).filter(([,p])=>p.function==='GPIO_EXTI').map(([pin])=>`HAL_GPIO_EXTI_IRQHandler(GPIO_PIN_${pin.slice(2)});`).join('');env.push(`void ${id}_IRQHandler(void) { ${body} }`);}
   await fs.writeFile(path.join(out,'cube-environment.c'),env.join('\n'));
-  run([...flags,'-c','main.c','-o',name+'.o']);run([...flags,'-c','cube-environment.c','-o','cube-environment.o']);
+  run([...flags,...(resetOnly?['-Wall','-Wextra','-Werror=unused-variable','-Werror=unused-function','-Werror=unused-but-set-variable','-Werror=unused-parameter']:[]),'-c','main.c','-o',name+'.o']);run([...flags,'-c','cube-environment.c','-o','cube-environment.o']);
   run([...flags,'-Tstm32f446re.ld','-nostartfiles','--specs=nano.specs','--specs=nosys.specs','-Wl,--gc-sections','-u','_printf_float',name+'.o','cube-environment.o',...objects,'-lm','-o',name+'.elf']);
   sources[name]=createHash('sha256').update(project.code).digest('hex');checked.push(name);console.log('ARM HAL compile/link:',name);
 }
 await fs.mkdir(path.join(root,'work','test-results'),{recursive:true});
-await fs.writeFile(path.join(root,'work/test-results/main-c-check.json'),JSON.stringify({passed:true,cube,gcc,checked,sources,hardwareRun:false},null,2));
+await fs.writeFile(path.join(root,'work/test-results',resetOnly?'minimal-reset-arm.json':'main-c-check.json'),JSON.stringify({passed:true,cube,gcc,checked,sources,hardwareRun:false},null,2));

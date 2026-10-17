@@ -14,7 +14,7 @@ export class Runtime {
     const constants={HIGH:1,LOW:0,true:1,false:0,NULL:0,OUTPUT:'OUTPUT',INPUT:'INPUT',INPUT_PULLUP:'INPUT_PULLUP',INPUT_PULLDOWN:'INPUT_PULLDOWN',CHANGE:'CHANGE',RISING:'RISING',FALLING:'FALLING',LSBFIRST:0,MSBFIRST:1,DEC:10,HEX:16,OCT:8,BIN:2,PI:Math.PI};
     for(const [key,value]of Object.entries({...constants,...api.constants,...Object.fromEntries([...GPIO_PINS,...Object.keys(ALIASES)].map(p=>[p,p]))}))this.declareCell(key,value,true);
     for(const name of ['Serial','Serial1','Wire','SPI','Timer','DMA'])this.declareCell(name,{kind:'library',name},true);
-    this.staticCells=new Map();this.iterator=this.run();this.wake=0;
+    this.staticCells=new Map();this.iterator=this.run();this.wake=0;this.idleMain=false;
   }
   budget(){if(++this.steps>30000)throw new Error('실행 한도를 넘었습니다. 반복문 안에 delay()를 넣으세요.');}
   clone(value,owner,depth=0){
@@ -131,7 +131,7 @@ export class Runtime {
     if(['while','for','do'].includes(s.type)){
       this.loopDepth++;this.pushScope();try{
         if(s.init)yield* this.statement(s.init);let first=true;
-        while((s.type==='do'&&first)||truth(yield* this.evaluate(s.test))){if(!first)yield* this.checkpoint(s.loc);first=false;const signal=yield* this.statement(s.body);if(signal?.type==='return')return signal;if(signal?.type==='break')break;if(s.update)yield* this.evaluate(s.update);if(this.program.hal&&!this.inCallback&&this.depth===1&&(!this.api.preciseTiming||this.loopDepth===1)){this.steps=0;yield .1;}this.budget();}
+        while((s.type==='do'&&first)||truth(yield* this.evaluate(s.test))){if(!first)yield* this.checkpoint(s.loc);first=false;const signal=yield* this.statement(s.body);if(signal?.type==='return')return signal;if(signal?.type==='break')break;if(s.update)yield* this.evaluate(s.update);if(this.program.hal&&!this.inCallback&&this.depth===1&&(!this.api.preciseTiming||this.loopDepth===1)){this.steps=0;const idle=this.loopDepth===1&&s.type==='while'&&s.test.type==='literal'&&truth(s.test.value)&&s.body.type==='block'&&s.body.body.every(n=>n.type==='empty');this.idleMain=idle;yield idle?Infinity:.1;}this.budget();}
       }finally{this.popScope();this.loopDepth--;}return;
     }
     if(s.type==='return')return {type:'return',value:s.value?yield* this.evaluate(s.value):0};
@@ -223,6 +223,7 @@ export class Runtime {
   tick(target){
     if(this.debug.paused)return;
     if(!Number.isFinite(target)||target<0)throw new Error('시뮬레이션 시간이 올바르지 않습니다.');this.steps=0;this.allocations=0;let count=0;this.pollInterrupts();
+    if(this.idleMain){this.idleMain=false;this.wake=this.microTime/1000;}
     while(true){
       if(++count>4000)throw new Error('시간당 실행 한도를 초과했습니다. 주파수나 반복 횟수를 줄이세요.');
       if(this.interruptsEnabled){for(const state of this.interrupts.values())if(state.pending){state.pending=false;this.runCallback(state.callback);}}

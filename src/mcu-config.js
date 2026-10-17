@@ -80,4 +80,4 @@ export function importIoc(text){
   for(const [key,v]of Object.entries(values))if(/^Mcu.IP\d+$/.test(key)&&!Object.hasOwn(ROUTES,v)&&!['GPIO','RCC','NVIC','SYS','NUCLEO-F446RE'].includes(v))warnings.push(`${v}: 실행 모델 미지원`);
   const clean=validateMcu(config);return {config:clean,warnings:[...new Set([...warnings,...configProblems(clean)])]};
 }
-export function generateHal(config){const clean=validateMcu(config),errors=configProblems(clean);if(errors.length)throw new Error(errors.join('\n'));return generateMain(clean);}
+export function generateHal(config,options){const clean=validateMcu(config),errors=configProblems(clean);if(errors.length)throw new Error(errors.join('\n'));return generateMain(clean,options);}

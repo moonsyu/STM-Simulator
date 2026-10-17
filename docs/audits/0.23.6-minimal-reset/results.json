@@ -1,0 +1,1268 @@
+{
+  "version": "0.23.6",
+  "unitTests": 322,
+  "arm": {
+    "passed": true,
+    "count": 128,
+    "sources": {
+      "reset-blank": "7d5728bfad84be82fe8399224266ae05693f99887f5387c8be69f8085d9b0e1e",
+      "reset-ref_nucleo_f446re": "5373233fd8c391a44327981bfdd92fc100c27448e038057f4cf2ae5fbdb69f85",
+      "reset-ref_resistor_axial_2": "2fc31ea04dbe9db04dc4cadb23bea686aa088ec6a788a44250ec05cb1c6cbd49",
+      "reset-ref_led_tht_2": "5373233fd8c391a44327981bfdd92fc100c27448e038057f4cf2ae5fbdb69f85",
+      "reset-ref_button_2": "cf6e4c1ae3699dee4af71d26567839c566651d87b4a8b7645187fac1845a6477",
+      "reset-ref_button_4": "cf6e4c1ae3699dee4af71d26567839c566651d87b4a8b7645187fac1845a6477",
+      "reset-ref_button_module_3": "cf6e4c1ae3699dee4af71d26567839c566651d87b4a8b7645187fac1845a6477",
+      "reset-ref_lcd_parallel_16": "94e7ce2e71bda0dc736839a638880e34c3d30b41330f1ba1eb290cb1ec7e981e",
+      "reset-ref_lcd_i2c_4": "265526824d937c1be19696bc35161ba0d99afcdf2ac37725b31c49619a447cb2",
+      "reset-ref_breadboard_400": "5373233fd8c391a44327981bfdd92fc100c27448e038057f4cf2ae5fbdb69f85",
+      "reset-ref_ldr_bare_2": "2fc31ea04dbe9db04dc4cadb23bea686aa088ec6a788a44250ec05cb1c6cbd49",
+      "reset-ref_ldr_module_3": "cd1b8904001a7c2a7bbec9a969812415f1bc93e96992232b5083d323b5da52b5",
+      "reset-ref_ldr_comparator_4": "972705f606b239d22e9525d24ab7fb481362c364c0a0ecfde56c98b62b2da4ee",
+      "reset-ref_ntc_bare_2": "2fc31ea04dbe9db04dc4cadb23bea686aa088ec6a788a44250ec05cb1c6cbd49",
+      "reset-ref_ntc_module_3": "cd1b8904001a7c2a7bbec9a969812415f1bc93e96992232b5083d323b5da52b5",
+      "reset-ref_sht31_grove_4": "094255470973dc7a691a487063f027b5cd40d531babd75e6395828a9a4a81b3c",
+      "reset-ref_sht31_breakout_7": "094255470973dc7a691a487063f027b5cd40d531babd75e6395828a9a4a81b3c",
+      "reset-ref_mpu6050_8": "094255470973dc7a691a487063f027b5cd40d531babd75e6395828a9a4a81b3c",
+      "reset-ref_pir_3": "8db652fa4921b97f59e95580152466eb762756528484e5301ee28cc49531a661",
+      "reset-ref_oled_i2c_4": "094255470973dc7a691a487063f027b5cd40d531babd75e6395828a9a4a81b3c",
+      "reset-ref_oled_configurable_7": "fa2a7accf6c4c14fa97029f77963376b34e3aac76f2d0e443f270562610068ac",
+      "reset-ref_oled_configurable_8": "fa2a7accf6c4c14fa97029f77963376b34e3aac76f2d0e443f270562610068ac",
+      "reset-ref_st7735_8": "695128678306e914db51dabbd3d50b505c0978e33dfe24486dcc22c7af4beee2",
+      "reset-ref_matrix_10": "ccf2a231265b7af8ceed11d13fc86a6e73a18ce5232b932cad1d3a2732889604",
+      "reset-ref_servo_3": "76f329d7719ce43fd4131bfae952e7207f705ad07fb0be417744493eb6cd2ffa",
+      "reset-ref_servo_feedback_4": "9cad5f65a4c8ad38df58e90740a7321c1b1665b93029273612e1d92e193da783",
+      "reset-ref_dc_motor_2": "c92cfa1e4404d6f8e3269d728bfdfb1e20a354199ffd9ed6e13b59359c028834",
+      "reset-ref_motor_driver_hat": "265526824d937c1be19696bc35161ba0d99afcdf2ac37725b31c49619a447cb2",
+      "reset-ref_stepper_bipolar_4": "3d3a0996dfbf6bf29eccf185e181c325f3304db7128c704ac3e54be1d96a73d3",
+      "reset-ref_stepper_unipolar_5": "3d3a0996dfbf6bf29eccf185e181c325f3304db7128c704ac3e54be1d96a73d3",
+      "reset-ref_stepper_driver_11": "3d3a0996dfbf6bf29eccf185e181c325f3304db7128c704ac3e54be1d96a73d3",
+      "reset-ref_relay_module_6": "5373233fd8c391a44327981bfdd92fc100c27448e038057f4cf2ae5fbdb69f85",
+      "reset-ref_joystick_module_5": "00ace3669323a6a735fdeb52b0278ea25f6141fcf42a229f93e0021a05c0e1b5",
+      "reset-ref_encoder_bare_5": "bf46b93b5c6500f9422fb0a8bcd724b49b27449ccf0a13fcb8223eacdbcf213a",
+      "reset-ref_encoder_module_5": "c271d201ac4675036ca0945528296b6fba7504232ec48a8fb425a065989aa658",
+      "reset-ref_l298n_module_13": "c92cfa1e4404d6f8e3269d728bfdfb1e20a354199ffd9ed6e13b59359c028834",
+      "reset-ref_dc_supply_2": "c92cfa1e4404d6f8e3269d728bfdfb1e20a354199ffd9ed6e13b59359c028834",
+      "reset-ref_uart_cable_4": "6d689df1e54816a53fbda91b0631562f8e3b907e75cc29dd7fec9a2a88db1e61",
+      "reset-ref_uart_cable_6": "6d689df1e54816a53fbda91b0631562f8e3b907e75cc29dd7fec9a2a88db1e61",
+      "reset-ref_i2c_eeprom_8": "094255470973dc7a691a487063f027b5cd40d531babd75e6395828a9a4a81b3c",
+      "reset-ref_i2c_eeprom_5": "094255470973dc7a691a487063f027b5cd40d531babd75e6395828a9a4a81b3c",
+      "reset-ref_spi_eeprom_8": "ccf2a231265b7af8ceed11d13fc86a6e73a18ce5232b932cad1d3a2732889604",
+      "reset-ref_pot_bare_3": "cd1b8904001a7c2a7bbec9a969812415f1bc93e96992232b5083d323b5da52b5",
+      "reset-ref_pot_module_3": "cd1b8904001a7c2a7bbec9a969812415f1bc93e96992232b5083d323b5da52b5",
+      "reset-ref_slide_spdt_3": "8d91de35dd136eef59790ad6baff8bc7814e955579b5ff010910ad3a5c93befe",
+      "reset-ref_rgb_common_anode_4": "f9e57f979192427902f57f6cf9862165e93cd068d28fad1099d9f771eb881657",
+      "reset-ref_rgb_common_cathode_4": "f9e57f979192427902f57f6cf9862165e93cd068d28fad1099d9f771eb881657",
+      "reset-ref_rgb_neopixel_4": "be2034327314cac3d300639e86be9bf3be8e62ae42b1562bd25b2bec8814f150",
+      "reset-ref_rgb_neopixel_flora_4": "be2034327314cac3d300639e86be9bf3be8e62ae42b1562bd25b2bec8814f150",
+      "reset-ref_rgb_gravity_3": "be2034327314cac3d300639e86be9bf3be8e62ae42b1562bd25b2bec8814f150",
+      "reset-ref_capacitor_ceramic_2": "d94a8584fa49e4b10f6fd1d4633ffcac2ddd479d0d13f35eed0cea378403cd84",
+      "reset-ref_capacitor_electrolytic_2": "d94a8584fa49e4b10f6fd1d4633ffcac2ddd479d0d13f35eed0cea378403cd84",
+      "reset-ref_diode_axial_2": "29c3ebd4887a103dadaa636a2c6784ea0c905d416cf5f8f41a797b6424e7b80d",
+      "reset-ref_buzzer_active_2": "ba10b4146b876a97032da1cf8771e4a14355268e78a6c7fe3cd388feb6b25cd4",
+      "reset-ref_buzzer_active_module_3": "ba10b4146b876a97032da1cf8771e4a14355268e78a6c7fe3cd388feb6b25cd4",
+      "reset-ref_buzzer_passive_2": "1dee8f9755a5e7d9b98568bf0b8629ba8fbc73669227e9f0c605718c7ee75b6a",
+      "reset-ref_buzzer_passive_module_3": "1dee8f9755a5e7d9b98568bf0b8629ba8fbc73669227e9f0c605718c7ee75b6a",
+      "reset-ref_sevenseg_common_cathode_10": "cc1ec13a3283ca5be8308d626a85904b3f3b06a37e3f91ba9ad94f65d26ec2b6",
+      "reset-ref_sevenseg_common_anode_10": "cc1ec13a3283ca5be8308d626a85904b3f3b06a37e3f91ba9ad94f65d26ec2b6",
+      "reset-ref_sevenseg_4digit_12": "3204c352ab1230ba96698e8105b5090c0539d16ad4d0b7cb97075c29d80751e0",
+      "reset-ref_sevenseg_tm1637_4": "deb48acb8b7f8814e1980f47492dd52ac838467f6e528c7a808f21342c0099a6",
+      "reset-ref_tmp36_to92_3": "2fc31ea04dbe9db04dc4cadb23bea686aa088ec6a788a44250ec05cb1c6cbd49",
+      "reset-ref_ds18b20_to92_3": "095e7813e984b45188570034cf9f6ede39abd1ea1c23dd222529fcfe641e69bb",
+      "reset-ref_ds18b20_probe_3": "095e7813e984b45188570034cf9f6ede39abd1ea1c23dd222529fcfe641e69bb",
+      "reset-ref_hcsr04_4": "0eacea8eb8b8e32def9bcc6fbc8e9b9e6342d65d22039c96828600a18c9a7810",
+      "reset-ref_urm09_trig_3": "095e7813e984b45188570034cf9f6ede39abd1ea1c23dd222529fcfe641e69bb",
+      "reset-ref_urm09_i2c_4": "265526824d937c1be19696bc35161ba0d99afcdf2ac37725b31c49619a447cb2",
+      "reset-ref_ads1115_10": "265526824d937c1be19696bc35161ba0d99afcdf2ac37725b31c49619a447cb2",
+      "reset-ref_mcp4725_6": "bfd947a467caf6b3afc70b10449f4ddb2b61ac673cda64a01c6ff1408aefea93",
+      "reset-ref_can_transceiver_6": "7d5728bfad84be82fe8399224266ae05693f99887f5387c8be69f8085d9b0e1e",
+      "reset-ref_isolated_rs485": "efd113e4316c29ef8d6e0ff644b69f945b0b0e373eb93f2ba359ede3252b7518",
+      "reset-ref_ds3231_8": "265526824d937c1be19696bc35161ba0d99afcdf2ac37725b31c49619a447cb2",
+      "reset-ref_sd_storage_board": "108b7a6469dd96e0abc095f1dfaa5ceafcd3a3ea161fdb6ec77b4db226ea5d9e",
+      "reset-ref_max98357a_9": "7d5728bfad84be82fe8399224266ae05693f99887f5387c8be69f8085d9b0e1e",
+      "reset-ref_ov2640_camera": "c4d673578abede7a4806d2f0bff8a08c0f4f9bd632ff11c30534f7b3bbac61b0",
+      "reset-ref_dht11_module_3": "095e7813e984b45188570034cf9f6ede39abd1ea1c23dd222529fcfe641e69bb",
+      "reset-ref_dht22_module_3": "095e7813e984b45188570034cf9f6ede39abd1ea1c23dd222529fcfe641e69bb",
+      "reset-ref_l298n_bare_15": "c92cfa1e4404d6f8e3269d728bfdfb1e20a354199ffd9ed6e13b59359c028834",
+      "reset-ref_l298p_bare_20": "c92cfa1e4404d6f8e3269d728bfdfb1e20a354199ffd9ed6e13b59359c028834",
+      "reset-ref_slide_dpdt_6": "e5cf44e4eb8fc689371066cf84afc8006d6b3d85a0a6dc580beb6495744e303a",
+      "reset-ref_slide_dp3t_8": "e5cf44e4eb8fc689371066cf84afc8006d6b3d85a0a6dc580beb6495744e303a",
+      "reset-potentiometer": "cd1b8904001a7c2a7bbec9a969812415f1bc93e96992232b5083d323b5da52b5",
+      "reset-slide": "8d91de35dd136eef59790ad6baff8bc7814e955579b5ff010910ad3a5c93befe",
+      "reset-rgb": "f9e57f979192427902f57f6cf9862165e93cd068d28fad1099d9f771eb881657",
+      "reset-lcd": "94e7ce2e71bda0dc736839a638880e34c3d30b41330f1ba1eb290cb1ec7e981e",
+      "reset-diode": "29c3ebd4887a103dadaa636a2c6784ea0c905d416cf5f8f41a797b6424e7b80d",
+      "reset-buzzer": "ba10b4146b876a97032da1cf8771e4a14355268e78a6c7fe3cd388feb6b25cd4",
+      "reset-sevenseg": "cc1ec13a3283ca5be8308d626a85904b3f3b06a37e3f91ba9ad94f65d26ec2b6",
+      "reset-l298n": "c92cfa1e4404d6f8e3269d728bfdfb1e20a354199ffd9ed6e13b59359c028834",
+      "reset-passive_buzzer": "1dee8f9755a5e7d9b98568bf0b8629ba8fbc73669227e9f0c605718c7ee75b6a",
+      "reset-ldr": "2fc31ea04dbe9db04dc4cadb23bea686aa088ec6a788a44250ec05cb1c6cbd49",
+      "reset-ntc": "2fc31ea04dbe9db04dc4cadb23bea686aa088ec6a788a44250ec05cb1c6cbd49",
+      "reset-sht31": "094255470973dc7a691a487063f027b5cd40d531babd75e6395828a9a4a81b3c",
+      "reset-mpu6050": "094255470973dc7a691a487063f027b5cd40d531babd75e6395828a9a4a81b3c",
+      "reset-pir": "8db652fa4921b97f59e95580152466eb762756528484e5301ee28cc49531a661",
+      "reset-oled": "094255470973dc7a691a487063f027b5cd40d531babd75e6395828a9a4a81b3c",
+      "reset-tft": "695128678306e914db51dabbd3d50b505c0978e33dfe24486dcc22c7af4beee2",
+      "reset-matrix": "ccf2a231265b7af8ceed11d13fc86a6e73a18ce5232b932cad1d3a2732889604",
+      "reset-servo": "76f329d7719ce43fd4131bfae952e7207f705ad07fb0be417744493eb6cd2ffa",
+      "reset-motor": "5bdb80927089c58479c5ce5404964f242f172664a998cf5e125f622e85af3a1b",
+      "reset-stepper": "9ecd03ab428b3ac6eed574c1f4ca862378454f26ac5a7a734f146392258db361",
+      "reset-relay": "5373233fd8c391a44327981bfdd92fc100c27448e038057f4cf2ae5fbdb69f85",
+      "reset-joystick": "00ace3669323a6a735fdeb52b0278ea25f6141fcf42a229f93e0021a05c0e1b5",
+      "reset-encoder": "a87ea104ae673005df83296cba404b8da74d52af16c2a2ca95eddba3d2d54ebc",
+      "reset-timer_multi": "3852a93e5ac4d8d46cd844d4a142d8a5c655cc878dd4f3afc16604479ee0657e",
+      "reset-timer_capture": "4a5de549b9d2f08e734ea7a4be5103382439dc2e1118b472a1004867c9f6037a",
+      "reset-timer_encoder": "c271d201ac4675036ca0945528296b6fba7504232ec48a8fb425a065989aa658",
+      "reset-blink": "5373233fd8c391a44327981bfdd92fc100c27448e038057f4cf2ae5fbdb69f85",
+      "reset-button": "cf6e4c1ae3699dee4af71d26567839c566651d87b4a8b7645187fac1845a6477",
+      "reset-exti": "3b574734ba97d22f42053c793644e81d0faaa0c586e79761449efcacd12a62e2",
+      "reset-uart": "6d689df1e54816a53fbda91b0631562f8e3b907e75cc29dd7fec9a2a88db1e61",
+      "reset-uart_external": "6d689df1e54816a53fbda91b0631562f8e3b907e75cc29dd7fec9a2a88db1e61",
+      "reset-timer": "4cd3a12e6e472f44a4464b0a7944225fce6b91368f5e1c7c6f3a1cd18e5ce752",
+      "reset-adc": "2fc31ea04dbe9db04dc4cadb23bea686aa088ec6a788a44250ec05cb1c6cbd49",
+      "reset-temperature": "2fc31ea04dbe9db04dc4cadb23bea686aa088ec6a788a44250ec05cb1c6cbd49",
+      "reset-samples": "2fc31ea04dbe9db04dc4cadb23bea686aa088ec6a788a44250ec05cb1c6cbd49",
+      "reset-i2c": "094255470973dc7a691a487063f027b5cd40d531babd75e6395828a9a4a81b3c",
+      "reset-spi": "ccf2a231265b7af8ceed11d13fc86a6e73a18ce5232b932cad1d3a2732889604",
+      "reset-language": "3e63dc6b4dc6ab0e43e08d35596b556c9d37c5c3a2b395ae892c73757d499046",
+      "reset-pwm": "d94a8584fa49e4b10f6fd1d4633ffcac2ddd479d0d13f35eed0cea378403cd84",
+      "reset-ultrasonic": "0eacea8eb8b8e32def9bcc6fbc8e9b9e6342d65d22039c96828600a18c9a7810",
+      "reset-reset-reserved-disabled": "7d5728bfad84be82fe8399224266ae05693f99887f5387c8be69f8085d9b0e1e",
+      "reset-nvic-only": "fbc91fc171f52ab36c50d7352ed55ba013b8b382dcbaec5bd6e47746e09e70e9",
+      "reset-GPIO_Input": "6fb559096d2fb83465a66abaa1a936ab5262a826fe0d07a2a49e454a6a55b6f0",
+      "reset-GPIO_Output": "6abc22a6ea9efd8765a8a35423fddb968781d8a73e608cbc2db45a3e12ebfbdf",
+      "reset-GPIO_EXTI": "35de09e6164e174c139e16ff5c5d295a3c6b6360b2c55b26d75d46e4bb8dee92",
+      "reset-Analog": "6e385f64204f10df7319e12532133f5811c3d53dd9f3af9d35f1a0f7a1118c75",
+      "reset-base-timer-no-pins": "2d71abaf8e064d4851305acb281f5232a7140c3468a54335aaf7c4753a6515ab"
+    }
+  },
+  "runtime": {
+    "passed": true,
+    "resetCount": 128,
+    "reapplyCount": 114,
+    "results": [
+      {
+        "id": "blank",
+        "passed": true
+      },
+      {
+        "id": "ref_nucleo_f446re",
+        "passed": true
+      },
+      {
+        "id": "ref_resistor_axial_2",
+        "passed": true
+      },
+      {
+        "id": "ref_led_tht_2",
+        "passed": true
+      },
+      {
+        "id": "ref_button_2",
+        "passed": true
+      },
+      {
+        "id": "ref_button_4",
+        "passed": true
+      },
+      {
+        "id": "ref_button_module_3",
+        "passed": true
+      },
+      {
+        "id": "ref_lcd_parallel_16",
+        "passed": true
+      },
+      {
+        "id": "ref_lcd_i2c_4",
+        "passed": true
+      },
+      {
+        "id": "ref_breadboard_400",
+        "passed": true
+      },
+      {
+        "id": "ref_ldr_bare_2",
+        "passed": true
+      },
+      {
+        "id": "ref_ldr_module_3",
+        "passed": true
+      },
+      {
+        "id": "ref_ldr_comparator_4",
+        "passed": true
+      },
+      {
+        "id": "ref_ntc_bare_2",
+        "passed": true
+      },
+      {
+        "id": "ref_ntc_module_3",
+        "passed": true
+      },
+      {
+        "id": "ref_sht31_grove_4",
+        "passed": true
+      },
+      {
+        "id": "ref_sht31_breakout_7",
+        "passed": true
+      },
+      {
+        "id": "ref_mpu6050_8",
+        "passed": true
+      },
+      {
+        "id": "ref_pir_3",
+        "passed": true
+      },
+      {
+        "id": "ref_oled_i2c_4",
+        "passed": true
+      },
+      {
+        "id": "ref_oled_configurable_7",
+        "passed": true
+      },
+      {
+        "id": "ref_oled_configurable_8",
+        "passed": true
+      },
+      {
+        "id": "ref_st7735_8",
+        "passed": true
+      },
+      {
+        "id": "ref_matrix_10",
+        "passed": true
+      },
+      {
+        "id": "ref_servo_3",
+        "passed": true
+      },
+      {
+        "id": "ref_servo_feedback_4",
+        "passed": true
+      },
+      {
+        "id": "ref_dc_motor_2",
+        "passed": true
+      },
+      {
+        "id": "ref_motor_driver_hat",
+        "passed": true
+      },
+      {
+        "id": "ref_stepper_bipolar_4",
+        "passed": true
+      },
+      {
+        "id": "ref_stepper_unipolar_5",
+        "passed": true
+      },
+      {
+        "id": "ref_stepper_driver_11",
+        "passed": true
+      },
+      {
+        "id": "ref_relay_module_6",
+        "passed": true
+      },
+      {
+        "id": "ref_joystick_module_5",
+        "passed": true
+      },
+      {
+        "id": "ref_encoder_bare_5",
+        "passed": true
+      },
+      {
+        "id": "ref_encoder_module_5",
+        "passed": true
+      },
+      {
+        "id": "ref_l298n_module_13",
+        "passed": true
+      },
+      {
+        "id": "ref_dc_supply_2",
+        "passed": true
+      },
+      {
+        "id": "ref_uart_cable_4",
+        "passed": true
+      },
+      {
+        "id": "ref_uart_cable_6",
+        "passed": true
+      },
+      {
+        "id": "ref_i2c_eeprom_8",
+        "passed": true
+      },
+      {
+        "id": "ref_i2c_eeprom_5",
+        "passed": true
+      },
+      {
+        "id": "ref_spi_eeprom_8",
+        "passed": true
+      },
+      {
+        "id": "ref_pot_bare_3",
+        "passed": true
+      },
+      {
+        "id": "ref_pot_module_3",
+        "passed": true
+      },
+      {
+        "id": "ref_slide_spdt_3",
+        "passed": true
+      },
+      {
+        "id": "ref_rgb_common_anode_4",
+        "passed": true
+      },
+      {
+        "id": "ref_rgb_common_cathode_4",
+        "passed": true
+      },
+      {
+        "id": "ref_rgb_neopixel_4",
+        "passed": true
+      },
+      {
+        "id": "ref_rgb_neopixel_flora_4",
+        "passed": true
+      },
+      {
+        "id": "ref_rgb_gravity_3",
+        "passed": true
+      },
+      {
+        "id": "ref_capacitor_ceramic_2",
+        "passed": true
+      },
+      {
+        "id": "ref_capacitor_electrolytic_2",
+        "passed": true
+      },
+      {
+        "id": "ref_diode_axial_2",
+        "passed": true
+      },
+      {
+        "id": "ref_buzzer_active_2",
+        "passed": true
+      },
+      {
+        "id": "ref_buzzer_active_module_3",
+        "passed": true
+      },
+      {
+        "id": "ref_buzzer_passive_2",
+        "passed": true
+      },
+      {
+        "id": "ref_buzzer_passive_module_3",
+        "passed": true
+      },
+      {
+        "id": "ref_sevenseg_common_cathode_10",
+        "passed": true
+      },
+      {
+        "id": "ref_sevenseg_common_anode_10",
+        "passed": true
+      },
+      {
+        "id": "ref_sevenseg_4digit_12",
+        "passed": true
+      },
+      {
+        "id": "ref_sevenseg_tm1637_4",
+        "passed": true
+      },
+      {
+        "id": "ref_tmp36_to92_3",
+        "passed": true
+      },
+      {
+        "id": "ref_ds18b20_to92_3",
+        "passed": true
+      },
+      {
+        "id": "ref_ds18b20_probe_3",
+        "passed": true
+      },
+      {
+        "id": "ref_hcsr04_4",
+        "passed": true
+      },
+      {
+        "id": "ref_urm09_trig_3",
+        "passed": true
+      },
+      {
+        "id": "ref_urm09_i2c_4",
+        "passed": true
+      },
+      {
+        "id": "ref_ads1115_10",
+        "passed": true
+      },
+      {
+        "id": "ref_mcp4725_6",
+        "passed": true
+      },
+      {
+        "id": "ref_can_transceiver_6",
+        "passed": true
+      },
+      {
+        "id": "ref_isolated_rs485",
+        "passed": true
+      },
+      {
+        "id": "ref_ds3231_8",
+        "passed": true
+      },
+      {
+        "id": "ref_sd_storage_board",
+        "passed": true
+      },
+      {
+        "id": "ref_max98357a_9",
+        "passed": true
+      },
+      {
+        "id": "ref_ov2640_camera",
+        "passed": true
+      },
+      {
+        "id": "ref_dht11_module_3",
+        "passed": true
+      },
+      {
+        "id": "ref_dht22_module_3",
+        "passed": true
+      },
+      {
+        "id": "ref_l298n_bare_15",
+        "passed": true
+      },
+      {
+        "id": "ref_l298p_bare_20",
+        "passed": true
+      },
+      {
+        "id": "ref_slide_dpdt_6",
+        "passed": true
+      },
+      {
+        "id": "ref_slide_dp3t_8",
+        "passed": true
+      },
+      {
+        "id": "potentiometer",
+        "passed": true
+      },
+      {
+        "id": "slide",
+        "passed": true
+      },
+      {
+        "id": "rgb",
+        "passed": true
+      },
+      {
+        "id": "lcd",
+        "passed": true
+      },
+      {
+        "id": "diode",
+        "passed": true
+      },
+      {
+        "id": "buzzer",
+        "passed": true
+      },
+      {
+        "id": "sevenseg",
+        "passed": true
+      },
+      {
+        "id": "l298n",
+        "passed": true
+      },
+      {
+        "id": "passive_buzzer",
+        "passed": true
+      },
+      {
+        "id": "ldr",
+        "passed": true
+      },
+      {
+        "id": "ntc",
+        "passed": true
+      },
+      {
+        "id": "sht31",
+        "passed": true
+      },
+      {
+        "id": "mpu6050",
+        "passed": true
+      },
+      {
+        "id": "pir",
+        "passed": true
+      },
+      {
+        "id": "oled",
+        "passed": true
+      },
+      {
+        "id": "tft",
+        "passed": true
+      },
+      {
+        "id": "matrix",
+        "passed": true
+      },
+      {
+        "id": "servo",
+        "passed": true
+      },
+      {
+        "id": "motor",
+        "passed": true
+      },
+      {
+        "id": "stepper",
+        "passed": true
+      },
+      {
+        "id": "relay",
+        "passed": true
+      },
+      {
+        "id": "joystick",
+        "passed": true
+      },
+      {
+        "id": "encoder",
+        "passed": true
+      },
+      {
+        "id": "timer_multi",
+        "passed": true
+      },
+      {
+        "id": "timer_capture",
+        "passed": true
+      },
+      {
+        "id": "timer_encoder",
+        "passed": true
+      },
+      {
+        "id": "blink",
+        "passed": true
+      },
+      {
+        "id": "button",
+        "passed": true
+      },
+      {
+        "id": "exti",
+        "passed": true
+      },
+      {
+        "id": "uart",
+        "passed": true
+      },
+      {
+        "id": "uart_external",
+        "passed": true
+      },
+      {
+        "id": "timer",
+        "passed": true
+      },
+      {
+        "id": "adc",
+        "passed": true
+      },
+      {
+        "id": "temperature",
+        "passed": true
+      },
+      {
+        "id": "samples",
+        "passed": true
+      },
+      {
+        "id": "i2c",
+        "passed": true
+      },
+      {
+        "id": "spi",
+        "passed": true
+      },
+      {
+        "id": "language",
+        "passed": true
+      },
+      {
+        "id": "pwm",
+        "passed": true
+      },
+      {
+        "id": "ultrasonic",
+        "passed": true
+      },
+      {
+        "id": "reset-reserved-disabled",
+        "passed": true
+      },
+      {
+        "id": "nvic-only",
+        "passed": true
+      },
+      {
+        "id": "GPIO_Input",
+        "passed": true
+      },
+      {
+        "id": "GPIO_Output",
+        "passed": true
+      },
+      {
+        "id": "GPIO_EXTI",
+        "passed": true
+      },
+      {
+        "id": "Analog",
+        "passed": true
+      },
+      {
+        "id": "base-timer-no-pins",
+        "passed": true
+      },
+      {
+        "type": "board",
+        "reapplied": true,
+        "passed": true
+      },
+      {
+        "type": "resistor",
+        "reapplied": true,
+        "passed": true
+      },
+      {
+        "type": "led",
+        "reapplied": true,
+        "passed": true
+      },
+      {
+        "type": "button",
+        "reapplied": true,
+        "passed": true
+      },
+      {
+        "type": "lcd",
+        "reapplied": true,
+        "passed": true
+      },
+      {
+        "type": "breadboard",
+        "reapplied": true,
+        "passed": true
+      },
+      {
+        "type": "ref_resistor_axial_2",
+        "reapplied": true,
+        "passed": true
+      },
+      {
+        "type": "ref_led_tht_2",
+        "reapplied": true,
+        "passed": true
+      },
+      {
+        "type": "ref_button_2",
+        "reapplied": true,
+        "passed": true
+      },
+      {
+        "type": "ref_button_4",
+        "reapplied": true,
+        "passed": true
+      },
+      {
+        "type": "ref_button_module_3",
+        "reapplied": true,
+        "passed": true
+      },
+      {
+        "type": "ref_lcd_parallel_16",
+        "reapplied": true,
+        "passed": true
+      },
+      {
+        "type": "ref_lcd_i2c_4",
+        "reapplied": true,
+        "passed": true
+      },
+      {
+        "type": "ref_ldr_bare_2",
+        "reapplied": true,
+        "passed": true
+      },
+      {
+        "type": "ref_ldr_module_3",
+        "reapplied": true,
+        "passed": true
+      },
+      {
+        "type": "ref_ldr_comparator_4",
+        "reapplied": true,
+        "passed": true
+      },
+      {
+        "type": "ref_ntc_bare_2",
+        "reapplied": true,
+        "passed": true
+      },
+      {
+        "type": "ref_ntc_module_3",
+        "reapplied": true,
+        "passed": true
+      },
+      {
+        "type": "ref_sht31_grove_4",
+        "reapplied": true,
+        "passed": true
+      },
+      {
+        "type": "ref_sht31_breakout_7",
+        "reapplied": true,
+        "passed": true
+      },
+      {
+        "type": "ref_mpu6050_8",
+        "reapplied": true,
+        "passed": true
+      },
+      {
+        "type": "ref_pir_3",
+        "reapplied": true,
+        "passed": true
+      },
+      {
+        "type": "ref_oled_i2c_4",
+        "reapplied": true,
+        "passed": true
+      },
+      {
+        "type": "ref_oled_configurable_7",
+        "reapplied": true,
+        "passed": true
+      },
+      {
+        "type": "ref_oled_configurable_8",
+        "reapplied": true,
+        "passed": true
+      },
+      {
+        "type": "ref_st7735_8",
+        "reapplied": true,
+        "passed": true
+      },
+      {
+        "type": "ref_matrix_10",
+        "reapplied": true,
+        "passed": true
+      },
+      {
+        "type": "ref_servo_3",
+        "reapplied": true,
+        "passed": true
+      },
+      {
+        "type": "ref_servo_feedback_4",
+        "reapplied": true,
+        "passed": true
+      },
+      {
+        "type": "ref_dc_motor_2",
+        "reapplied": true,
+        "passed": true
+      },
+      {
+        "type": "ref_motor_driver_hat",
+        "reapplied": true,
+        "passed": true
+      },
+      {
+        "type": "ref_stepper_bipolar_4",
+        "reapplied": true,
+        "passed": true
+      },
+      {
+        "type": "ref_stepper_unipolar_5",
+        "reapplied": true,
+        "passed": true
+      },
+      {
+        "type": "ref_stepper_driver_11",
+        "reapplied": true,
+        "passed": true
+      },
+      {
+        "type": "ref_relay_module_6",
+        "reapplied": true,
+        "passed": true
+      },
+      {
+        "type": "ref_joystick_module_5",
+        "reapplied": true,
+        "passed": true
+      },
+      {
+        "type": "ref_encoder_bare_5",
+        "reapplied": true,
+        "passed": true
+      },
+      {
+        "type": "ref_encoder_module_5",
+        "reapplied": true,
+        "passed": true
+      },
+      {
+        "type": "ref_l298n_module_13",
+        "reapplied": true,
+        "passed": true
+      },
+      {
+        "type": "ref_dc_supply_2",
+        "reapplied": true,
+        "passed": true
+      },
+      {
+        "type": "ref_uart_cable_4",
+        "reapplied": true,
+        "passed": true
+      },
+      {
+        "type": "ref_uart_cable_6",
+        "reapplied": true,
+        "passed": true
+      },
+      {
+        "type": "ref_i2c_eeprom_8",
+        "reapplied": true,
+        "passed": true
+      },
+      {
+        "type": "ref_i2c_eeprom_5",
+        "reapplied": true,
+        "passed": true
+      },
+      {
+        "type": "ref_spi_eeprom_8",
+        "reapplied": true,
+        "passed": true
+      },
+      {
+        "type": "ref_pot_bare_3",
+        "reapplied": true,
+        "passed": true
+      },
+      {
+        "type": "ref_pot_module_3",
+        "reapplied": true,
+        "passed": true
+      },
+      {
+        "type": "ref_slide_spdt_3",
+        "reapplied": true,
+        "passed": true
+      },
+      {
+        "type": "ref_rgb_common_anode_4",
+        "reapplied": true,
+        "passed": true
+      },
+      {
+        "type": "ref_rgb_common_cathode_4",
+        "reapplied": true,
+        "passed": true
+      },
+      {
+        "type": "ref_rgb_neopixel_4",
+        "reapplied": true,
+        "passed": true
+      },
+      {
+        "type": "ref_rgb_neopixel_flora_4",
+        "reapplied": true,
+        "passed": true
+      },
+      {
+        "type": "ref_rgb_gravity_3",
+        "reapplied": true,
+        "passed": true
+      },
+      {
+        "type": "ref_capacitor_ceramic_2",
+        "reapplied": true,
+        "passed": true
+      },
+      {
+        "type": "ref_capacitor_electrolytic_2",
+        "reapplied": true,
+        "passed": true
+      },
+      {
+        "type": "ref_diode_axial_2",
+        "reapplied": true,
+        "passed": true
+      },
+      {
+        "type": "ref_buzzer_active_2",
+        "reapplied": true,
+        "passed": true
+      },
+      {
+        "type": "ref_buzzer_active_module_3",
+        "reapplied": true,
+        "passed": true
+      },
+      {
+        "type": "ref_buzzer_passive_2",
+        "reapplied": true,
+        "passed": true
+      },
+      {
+        "type": "ref_buzzer_passive_module_3",
+        "reapplied": true,
+        "passed": true
+      },
+      {
+        "type": "ref_sevenseg_common_cathode_10",
+        "reapplied": true,
+        "passed": true
+      },
+      {
+        "type": "ref_sevenseg_common_anode_10",
+        "reapplied": true,
+        "passed": true
+      },
+      {
+        "type": "ref_sevenseg_4digit_12",
+        "reapplied": true,
+        "passed": true
+      },
+      {
+        "type": "ref_sevenseg_tm1637_4",
+        "reapplied": true,
+        "passed": true
+      },
+      {
+        "type": "ref_tmp36_to92_3",
+        "reapplied": true,
+        "passed": true
+      },
+      {
+        "type": "ref_ds18b20_to92_3",
+        "reapplied": true,
+        "passed": true
+      },
+      {
+        "type": "ref_ds18b20_probe_3",
+        "reapplied": true,
+        "passed": true
+      },
+      {
+        "type": "ref_hcsr04_4",
+        "reapplied": true,
+        "passed": true
+      },
+      {
+        "type": "ref_urm09_trig_3",
+        "reapplied": true,
+        "passed": true
+      },
+      {
+        "type": "ref_urm09_i2c_4",
+        "reapplied": true,
+        "passed": true
+      },
+      {
+        "type": "ref_ads1115_10",
+        "reapplied": true,
+        "passed": true
+      },
+      {
+        "type": "ref_mcp4725_6",
+        "reapplied": true,
+        "passed": true
+      },
+      {
+        "type": "ref_can_transceiver_6",
+        "reapplied": true,
+        "passed": true
+      },
+      {
+        "type": "ref_isolated_rs485",
+        "reapplied": true,
+        "passed": true
+      },
+      {
+        "type": "ref_ds3231_8",
+        "reapplied": true,
+        "passed": true
+      },
+      {
+        "type": "ref_sd_storage_board",
+        "reapplied": true,
+        "passed": true
+      },
+      {
+        "type": "ref_max98357a_9",
+        "reapplied": true,
+        "passed": true
+      },
+      {
+        "type": "ref_ov2640_camera",
+        "reapplied": true,
+        "passed": true
+      },
+      {
+        "type": "ref_dht11_module_3",
+        "reapplied": true,
+        "passed": true
+      },
+      {
+        "type": "ref_dht22_module_3",
+        "reapplied": true,
+        "passed": true
+      },
+      {
+        "type": "ref_l298n_bare_15",
+        "reapplied": true,
+        "passed": true
+      },
+      {
+        "type": "ref_l298p_bare_20",
+        "reapplied": true,
+        "passed": true
+      },
+      {
+        "type": "ref_slide_dpdt_6",
+        "reapplied": true,
+        "passed": true
+      },
+      {
+        "type": "ref_slide_dp3t_8",
+        "reapplied": true,
+        "passed": true
+      },
+      {
+        "type": "ldr",
+        "reapplied": true,
+        "passed": true
+      },
+      {
+        "type": "ntc",
+        "reapplied": true,
+        "passed": true
+      },
+      {
+        "type": "sht31",
+        "reapplied": true,
+        "passed": true
+      },
+      {
+        "type": "mpu6050",
+        "reapplied": true,
+        "passed": true
+      },
+      {
+        "type": "pir",
+        "reapplied": true,
+        "passed": true
+      },
+      {
+        "type": "oled",
+        "reapplied": true,
+        "passed": true
+      },
+      {
+        "type": "tft",
+        "reapplied": true,
+        "passed": true
+      },
+      {
+        "type": "matrix",
+        "reapplied": true,
+        "passed": true
+      },
+      {
+        "type": "servo",
+        "reapplied": true,
+        "passed": true
+      },
+      {
+        "type": "motor",
+        "reapplied": true,
+        "passed": true
+      },
+      {
+        "type": "stepper",
+        "reapplied": true,
+        "passed": true
+      },
+      {
+        "type": "relay",
+        "reapplied": true,
+        "passed": true
+      },
+      {
+        "type": "joystick",
+        "reapplied": true,
+        "passed": true
+      },
+      {
+        "type": "encoder",
+        "reapplied": true,
+        "passed": true
+      },
+      {
+        "type": "l298n",
+        "reapplied": true,
+        "passed": true
+      },
+      {
+        "type": "dc_motor",
+        "reapplied": true,
+        "passed": true
+      },
+      {
+        "type": "dc_supply",
+        "reapplied": true,
+        "passed": true
+      },
+      {
+        "type": "uart",
+        "reapplied": true,
+        "passed": true
+      },
+      {
+        "type": "i2c",
+        "reapplied": true,
+        "passed": true
+      },
+      {
+        "type": "spi",
+        "reapplied": true,
+        "passed": true
+      },
+      {
+        "type": "potentiometer",
+        "reapplied": true,
+        "passed": true
+      },
+      {
+        "type": "slide",
+        "reapplied": true,
+        "passed": true
+      },
+      {
+        "type": "rgb",
+        "reapplied": true,
+        "passed": true
+      },
+      {
+        "type": "capacitor",
+        "reapplied": true,
+        "passed": true
+      },
+      {
+        "type": "diode",
+        "reapplied": true,
+        "passed": true
+      },
+      {
+        "type": "buzzer",
+        "reapplied": true,
+        "passed": true
+      },
+      {
+        "type": "passive_buzzer",
+        "reapplied": true,
+        "passed": true
+      },
+      {
+        "type": "sevenseg",
+        "reapplied": true,
+        "passed": true
+      },
+      {
+        "type": "temperature",
+        "reapplied": true,
+        "passed": true
+      },
+      {
+        "type": "ultrasonic",
+        "reapplied": true,
+        "passed": true
+      }
+    ],
+    "errors": []
+  },
+  "circuitPreservation": {
+    "checked": 114,
+    "passed": true,
+    "failures": []
+  },
+  "electron": {
+    "passed": true,
+    "checks": [
+      "remapped Docs preview",
+      "cancel and Escape preserve code",
+      "default focus on Cancel",
+      "main reset from helper tab",
+      "unused aliases removed while pin labels preserved",
+      "circuit/config/files preserved",
+      "undo/redo",
+      "disabled during execution",
+      "LED off after reset",
+      "reapply without duplicate parts/wires or aliases",
+      "LED on after Docs apply",
+      "persisted code.reset and simulation.state",
+      "split-port stepper and L298N motion",
+      "new project main.c and main.h contain no unused aliases"
+    ],
+    "off": {
+      "voltage": 0,
+      "current": 0,
+      "on": false,
+      "power": 0
+    },
+    "on": {
+      "voltage": 1.8471204163063295,
+      "current": 0.003926701358860789,
+      "on": true,
+      "power": 0.00725309024868957
+    },
+    "allResetCases": "pending"
+  },
+  "publicRelease": {
+    "status": "pending"
+  }
+}
