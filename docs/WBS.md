@@ -5,7 +5,7 @@
 | ID | 산출물 | 담당 | 의존 | 예상 | 상태 | 완료 기준 |
 |---|---|---|---|---|---|---|
 | ALIAS-01 | HAL 생성·초기화의 미사용 별칭 제거 | Codex | 없음 | 10분 | done | 단위 314개·Electron 실행 통과. LD2/사용자 라벨 매크로 없이 GPIO 동작, MCU 설정·사용자 파일 보존 |
-| ALIAS-02 | 실행 로그 및 배포 검증 | Codex | ALIAS-01 | 15분 | in_progress | 초기화·Docs 재적용 로그, Windows CI, 공개 EXE·ZIP·메타데이터 검증 |
+| ALIAS-02 | 실행 로그 및 배포 검증 | Codex | ALIAS-01 | 15분 | done | ARM 링크 122개, 전체 Windows CI 및 공개 EXE 14개 동작 검사, 5개 자산·해시·최신 선택 검증 |
 
 ## 기존 HAL 예제 재검사 · 코드 초기화
 
