@@ -1,0 +1,2343 @@
+{
+  "version": "0.23.3",
+  "sourcePassed": true,
+  "publicPassed": false,
+  "legacyCount": 40,
+  "deviceCount": 36,
+  "halCardCount": 308,
+  "singleWireRepairs": 204,
+  "armLinks": 46,
+  "legacy": [
+    {
+      "id": "potentiometer",
+      "name": "HAL · 가변저항 ADC",
+      "checks": [
+        {
+          "name": "runtime completed without exception",
+          "passed": true,
+          "evidence": null
+        },
+        {
+          "name": "no electrical short fault",
+          "passed": true,
+          "evidence": []
+        },
+        {
+          "name": "ADC follows 20 and 80 percent",
+          "passed": true,
+          "evidence": [
+            "ADC=2047, voltage=1.650 V",
+            "ADC=819, voltage=0.660 V",
+            "ADC=3276, voltage=2.640 V"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "slide",
+      "name": "HAL · 슬라이드 스위치",
+      "checks": [
+        {
+          "name": "runtime completed without exception",
+          "passed": true,
+          "evidence": null
+        },
+        {
+          "name": "no electrical short fault",
+          "passed": true,
+          "evidence": []
+        },
+        {
+          "name": "switch state changes",
+          "passed": true,
+          "evidence": [
+            "switch=0",
+            "switch=1"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "rgb",
+      "name": "HAL · RGB LED",
+      "checks": [
+        {
+          "name": "runtime completed without exception",
+          "passed": true,
+          "evidence": null
+        },
+        {
+          "name": "no electrical short fault",
+          "passed": true,
+          "evidence": []
+        },
+        {
+          "name": "all three RGB channels light",
+          "passed": true,
+          "evidence": [
+            {
+              "r": {
+                "voltage": 1.8471204163063295,
+                "current": 0.003926701358860789,
+                "on": true,
+                "power": 0.00725309024868957
+              },
+              "g": {
+                "voltage": 0,
+                "current": 0,
+                "on": false,
+                "power": 0
+              },
+              "b": {
+                "voltage": 0,
+                "current": 0,
+                "on": false,
+                "power": 0
+              }
+            },
+            {
+              "r": {
+                "voltage": 1.8471204163063295,
+                "current": 0.003926701358860789,
+                "on": true,
+                "power": 0.00725309024868957
+              },
+              "g": {
+                "voltage": 0,
+                "current": 0,
+                "on": false,
+                "power": 0
+              },
+              "b": {
+                "voltage": 0,
+                "current": 0,
+                "on": false,
+                "power": 0
+              }
+            },
+            {
+              "r": {
+                "voltage": 1.8471204163063295,
+                "current": 0.003926701358860789,
+                "on": true,
+                "power": 0.00725309024868957
+              },
+              "g": {
+                "voltage": 0,
+                "current": 0,
+                "on": false,
+                "power": 0
+              },
+              "b": {
+                "voltage": 0,
+                "current": 0,
+                "on": false,
+                "power": 0
+              }
+            },
+            {
+              "r": {
+                "voltage": 1.8471204163063295,
+                "current": 0.003926701358860789,
+                "on": true,
+                "power": 0.00725309024868957
+              },
+              "g": {
+                "voltage": 0,
+                "current": 0,
+                "on": false,
+                "power": 0
+              },
+              "b": {
+                "voltage": 0,
+                "current": 0,
+                "on": false,
+                "power": 0
+              }
+            },
+            {
+              "r": {
+                "voltage": 0,
+                "current": 0,
+                "on": false,
+                "power": 0
+              },
+              "g": {
+                "voltage": 2.137696332195011,
+                "current": 0.0031413610162509173,
+                "on": true,
+                "power": 0.006715275922539979
+              },
+              "b": {
+                "voltage": 0,
+                "current": 0,
+                "on": false,
+                "power": 0
+              }
+            },
+            {
+              "r": {
+                "voltage": 0,
+                "current": 0,
+                "on": false,
+                "power": 0
+              },
+              "g": {
+                "voltage": 2.137696332195011,
+                "current": 0.0031413610162509173,
+                "on": true,
+                "power": 0.006715275922539979
+              },
+              "b": {
+                "voltage": 0,
+                "current": 0,
+                "on": false,
+                "power": 0
+              }
+            },
+            {
+              "r": {
+                "voltage": 0,
+                "current": 0,
+                "on": false,
+                "power": 0
+              },
+              "g": {
+                "voltage": 0,
+                "current": 0,
+                "on": false,
+                "power": 0
+              },
+              "b": {
+                "voltage": 2.815706802601935,
+                "current": 0.0013089002168279462,
+                "on": true,
+                "power": 0.003685479244449596
+              }
+            },
+            {
+              "r": {
+                "voltage": 1.8471204163063295,
+                "current": 0.003926701358860789,
+                "on": true,
+                "power": 0.00725309024868957
+              },
+              "g": {
+                "voltage": 0,
+                "current": 0,
+                "on": false,
+                "power": 0
+              },
+              "b": {
+                "voltage": 0,
+                "current": 0,
+                "on": false,
+                "power": 0
+              }
+            },
+            {
+              "r": {
+                "voltage": 0,
+                "current": 0,
+                "on": false,
+                "power": 0
+              },
+              "g": {
+                "voltage": 2.137696332195011,
+                "current": 0.0031413610162509173,
+                "on": true,
+                "power": 0.006715275922539979
+              },
+              "b": {
+                "voltage": 0,
+                "current": 0,
+                "on": false,
+                "power": 0
+              }
+            },
+            {
+              "r": {
+                "voltage": 0,
+                "current": 0,
+                "on": false,
+                "power": 0
+              },
+              "g": {
+                "voltage": 2.137696332195011,
+                "current": 0.0031413610162509173,
+                "on": true,
+                "power": 0.006715275922539979
+              },
+              "b": {
+                "voltage": 0,
+                "current": 0,
+                "on": false,
+                "power": 0
+              }
+            },
+            {
+              "r": {
+                "voltage": 0,
+                "current": 0,
+                "on": false,
+                "power": 0
+              },
+              "g": {
+                "voltage": 0,
+                "current": 0,
+                "on": false,
+                "power": 0
+              },
+              "b": {
+                "voltage": 2.815706802601935,
+                "current": 0.0013089002168279462,
+                "on": true,
+                "power": 0.003685479244449596
+              }
+            },
+            {
+              "r": {
+                "voltage": 1.8471204163063295,
+                "current": 0.003926701358860789,
+                "on": true,
+                "power": 0.00725309024868957
+              },
+              "g": {
+                "voltage": 0,
+                "current": 0,
+                "on": false,
+                "power": 0
+              },
+              "b": {
+                "voltage": 0,
+                "current": 0,
+                "on": false,
+                "power": 0
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "lcd",
+      "name": "HAL · LCD 1602 4비트",
+      "checks": [
+        {
+          "name": "runtime completed without exception",
+          "passed": true,
+          "evidence": null
+        },
+        {
+          "name": "no electrical short fault",
+          "passed": true,
+          "evidence": []
+        },
+        {
+          "name": "LCD received text",
+          "passed": true,
+          "evidence": {
+            "last": {
+              "voltage": 5,
+              "current": 0.0011904761904761906,
+              "power": 0.005952380952380953,
+              "lcd": {
+                "powered": true,
+                "visible": true,
+                "lines": [
+                  "STM Emulator    ",
+                  "HAL 4-bit LCD   "
+                ],
+                "codes": [
+                  [
+                    83,
+                    84,
+                    77,
+                    32,
+                    69,
+                    109,
+                    117,
+                    108,
+                    97,
+                    116,
+                    111,
+                    114,
+                    32,
+                    32,
+                    32,
+                    32
+                  ],
+                  [
+                    72,
+                    65,
+                    76,
+                    32,
+                    52,
+                    45,
+                    98,
+                    105,
+                    116,
+                    32,
+                    76,
+                    67,
+                    68,
+                    32,
+                    32,
+                    32
+                  ]
+                ],
+                "cgram": {
+                  "length": 64,
+                  "nonzero": 0,
+                  "sha256": "ca0101ae4bf3b31bd300f93f576d862c57e98cb85d8ff6db4078eea404b88a9a",
+                  "first": [
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0
+                  ],
+                  "last": [
+                    0,
+                    0,
+                    0,
+                    0
+                  ]
+                },
+                "cursor": false,
+                "blink": false,
+                "address": 77,
+                "shift": 0
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "diode",
+      "name": "HAL · 다이오드 순방향 전압",
+      "checks": [
+        {
+          "name": "runtime completed without exception",
+          "passed": true,
+          "evidence": null
+        },
+        {
+          "name": "no electrical short fault",
+          "passed": true,
+          "evidence": []
+        },
+        {
+          "name": "forward drop near 0.7V",
+          "passed": true,
+          "evidence": {
+            "voltage": 0.7024975983805378,
+            "current": 0.0024975983805378688,
+            "power": 0.0017545568640469735
+          }
+        }
+      ]
+    },
+    {
+      "id": "buzzer",
+      "name": "HAL · 능동 부저",
+      "checks": [
+        {
+          "name": "runtime completed without exception",
+          "passed": true,
+          "evidence": null
+        },
+        {
+          "name": "no electrical short fault",
+          "passed": true,
+          "evidence": []
+        },
+        {
+          "name": "buzzer switches on and off",
+          "passed": true,
+          "evidence": [
+            true,
+            true,
+            true,
+            true,
+            false,
+            false,
+            true,
+            false,
+            true,
+            true,
+            false,
+            true
+          ]
+        }
+      ]
+    },
+    {
+      "id": "sevenseg",
+      "name": "HAL · 7세그먼트 숫자",
+      "checks": [
+        {
+          "name": "runtime completed without exception",
+          "passed": true,
+          "evidence": null
+        },
+        {
+          "name": "no electrical short fault",
+          "passed": true,
+          "evidence": []
+        },
+        {
+          "name": "segment patterns change",
+          "passed": true,
+          "evidence": [
+            [
+              "e",
+              "d",
+              "c",
+              "b",
+              "a",
+              "f"
+            ],
+            [
+              "e",
+              "d",
+              "c",
+              "b",
+              "a",
+              "f"
+            ],
+            [
+              "e",
+              "d",
+              "c",
+              "b",
+              "a",
+              "f"
+            ],
+            [
+              "e",
+              "d",
+              "c",
+              "b",
+              "a",
+              "f"
+            ],
+            [
+              "c",
+              "b"
+            ],
+            [
+              "c",
+              "b"
+            ],
+            [
+              "e",
+              "d",
+              "b",
+              "a",
+              "g"
+            ],
+            [
+              "d",
+              "c",
+              "b",
+              "a",
+              "g"
+            ],
+            [
+              "c",
+              "b",
+              "f",
+              "g"
+            ],
+            [
+              "c",
+              "b",
+              "f",
+              "g"
+            ],
+            [
+              "d",
+              "c",
+              "a",
+              "f",
+              "g"
+            ],
+            [
+              "e",
+              "d",
+              "c",
+              "a",
+              "f",
+              "g"
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "id": "l298n",
+      "name": "HAL · L298N 듀얼 DC 모터 제어",
+      "checks": [
+        {
+          "name": "runtime completed without exception",
+          "passed": true,
+          "evidence": null
+        },
+        {
+          "name": "no electrical short fault",
+          "passed": true,
+          "evidence": []
+        },
+        {
+          "name": "motor forward and reverse rotation",
+          "passed": true,
+          "evidence": [
+            {
+              "rpm": 0,
+              "direction": 0
+            },
+            {
+              "rpm": 0,
+              "direction": 0
+            },
+            {
+              "rpm": 223.13090412441943,
+              "direction": 1
+            },
+            {
+              "rpm": -118.64342689859086,
+              "direction": -1
+            },
+            {
+              "rpm": 869.7794199869618,
+              "direction": 1
+            },
+            {
+              "rpm": -462.4801366626484,
+              "direction": -1
+            },
+            {
+              "rpm": 1316.3390639905087,
+              "direction": 1
+            },
+            {
+              "rpm": -699.9253560377842,
+              "direction": -1
+            },
+            {
+              "rpm": 1754.7860551937988,
+              "direction": 1
+            },
+            {
+              "rpm": -933.0569061198335,
+              "direction": -1
+            },
+            {
+              "rpm": 1785.250865320855,
+              "direction": 1
+            },
+            {
+              "rpm": -949.2556908084568,
+              "direction": -1
+            },
+            {
+              "rpm": 1786.9260829077134,
+              "direction": 1
+            },
+            {
+              "rpm": -950.1464394749817,
+              "direction": -1
+            },
+            {
+              "rpm": 1787.5147480491976,
+              "direction": 1
+            },
+            {
+              "rpm": -950.4594451966755,
+              "direction": -1
+            },
+            {
+              "rpm": 471.1859038639511,
+              "direction": 1
+            },
+            {
+              "rpm": -250.53952324576713,
+              "direction": -1
+            },
+            {
+              "rpm": 63.7680777565276,
+              "direction": 1
+            },
+            {
+              "rpm": -33.906837340432034,
+              "direction": -1
+            },
+            {
+              "rpm": 2.27486198165343,
+              "direction": 1
+            },
+            {
+              "rpm": -1.2095922897087803,
+              "direction": -1
+            },
+            {
+              "rpm": -1145.9989915910246,
+              "direction": -1
+            },
+            {
+              "rpm": 2300.5250366850073,
+              "direction": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "passive_buzzer",
+      "name": "HAL · 수동 부저 PWM 멜로디",
+      "checks": [
+        {
+          "name": "runtime completed without exception",
+          "passed": true,
+          "evidence": null
+        },
+        {
+          "name": "no electrical short fault",
+          "passed": true,
+          "evidence": []
+        },
+        {
+          "name": "buzzer produces tones and silence",
+          "passed": true,
+          "evidence": [
+            {
+              "frequency": 0,
+              "on": false
+            },
+            {
+              "frequency": 523.0125523012563,
+              "on": true
+            },
+            {
+              "frequency": 523.0125523012553,
+              "on": true
+            },
+            {
+              "frequency": 523.0125523012632,
+              "on": true
+            },
+            {
+              "frequency": 587.1990604815434,
+              "on": true
+            },
+            {
+              "frequency": 659.1957811470006,
+              "on": true
+            },
+            {
+              "frequency": 659.1957811468994,
+              "on": true
+            },
+            {
+              "frequency": 784.3137254903393,
+              "on": true
+            },
+            {
+              "frequency": 880.2816901404842,
+              "on": true
+            },
+            {
+              "frequency": 880.2816901404842,
+              "on": true
+            },
+            {
+              "frequency": 0,
+              "on": false
+            },
+            {
+              "frequency": 0,
+              "on": false
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ldr",
+      "name": "HAL · 조도 센서 · LDR",
+      "checks": [
+        {
+          "name": "runtime completed without exception",
+          "passed": true,
+          "evidence": null
+        },
+        {
+          "name": "no electrical short fault",
+          "passed": true,
+          "evidence": []
+        },
+        {
+          "name": "ADC reacts to illumination",
+          "passed": true,
+          "evidence": {
+            "returns": {
+              "681": 5,
+              "3414": 9
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "ntc",
+      "name": "HAL · NTC 서미스터",
+      "checks": [
+        {
+          "name": "runtime completed without exception",
+          "passed": true,
+          "evidence": null
+        },
+        {
+          "name": "no electrical short fault",
+          "passed": true,
+          "evidence": []
+        },
+        {
+          "name": "temperature changes to 10 and 45 C",
+          "passed": true,
+          "evidence": [
+            "NTC=25.0 C R=9995 ohm",
+            "NTC=10.0 C R=20177 ohm",
+            "NTC=45.0 C R=4348 ohm"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "sht31",
+      "name": "HAL · SHT31 온습도 센서",
+      "checks": [
+        {
+          "name": "runtime completed without exception",
+          "passed": true,
+          "evidence": null
+        },
+        {
+          "name": "no electrical short fault",
+          "passed": true,
+          "evidence": []
+        },
+        {
+          "name": "temperature changes to 10 and 45 C",
+          "passed": true,
+          "evidence": [
+            "SHT31=25.0 C RH=50.0 %",
+            "SHT31=10.0 C RH=30.0 %",
+            "SHT31=45.0 C RH=70.0 %"
+          ]
+        },
+        {
+          "name": "humidity changes to 30 and 70 percent",
+          "passed": true,
+          "evidence": [
+            "SHT31=25.0 C RH=50.0 %",
+            "SHT31=10.0 C RH=30.0 %",
+            "SHT31=45.0 C RH=70.0 %"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "mpu6050",
+      "name": "HAL · MPU6050 가속도·자이로",
+      "checks": [
+        {
+          "name": "runtime completed without exception",
+          "passed": true,
+          "evidence": null
+        },
+        {
+          "name": "no electrical short fault",
+          "passed": true,
+          "evidence": []
+        },
+        {
+          "name": "accelerometer and gyro input changes",
+          "passed": true,
+          "evidence": [
+            "MPU6050 status=0 WHO_AM_I=0x68",
+            "MPU6050 g=(0.00,0.00,1.00) dps=(0.0,0.0,0.0)",
+            "MPU6050 g=(-0.50,0.00,1.00) dps=(0.0,0.0,90.0)",
+            "MPU6050 g=(0.75,0.00,1.00) dps=(0.0,0.0,-45.0)"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "pir",
+      "name": "HAL · PIR 움직임 센서",
+      "checks": [
+        {
+          "name": "runtime completed without exception",
+          "passed": true,
+          "evidence": null
+        },
+        {
+          "name": "no electrical short fault",
+          "passed": true,
+          "evidence": []
+        },
+        {
+          "name": "motion rising and falling",
+          "passed": true,
+          "evidence": [
+            "PIR: change motion in part properties",
+            "PIR EXTI motion=1",
+            "PIR EXTI motion=0"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "oled",
+      "name": "HAL · OLED · SSD1306",
+      "checks": [
+        {
+          "name": "runtime completed without exception",
+          "passed": true,
+          "evidence": null
+        },
+        {
+          "name": "no electrical short fault",
+          "passed": true,
+          "evidence": []
+        },
+        {
+          "name": "OLED visible with written pixels",
+          "passed": true,
+          "evidence": {
+            "length": 1024,
+            "nonzero": 934,
+            "sha256": "0ac9ee69bfd91a06d7985b35c45840076e88cba7cb56d8d6f955712d251482af",
+            "first": [
+              255,
+              255,
+              255,
+              255,
+              255,
+              255,
+              255,
+              255,
+              255,
+              255,
+              255,
+              255,
+              255,
+              255,
+              255,
+              255
+            ],
+            "last": [
+              128,
+              128,
+              128,
+              255
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "tft",
+      "name": "HAL · TFT · ST7735",
+      "checks": [
+        {
+          "name": "runtime completed without exception",
+          "passed": true,
+          "evidence": null
+        },
+        {
+          "name": "no electrical short fault",
+          "passed": true,
+          "evidence": []
+        },
+        {
+          "name": "complete RGB565 frame matches all 20480 pixels",
+          "passed": true,
+          "evidence": {
+            "length": 20480,
+            "nonzero": 20480,
+            "sha256": "d0dfca169874816302f42080ed12cf9c5c0fde81bb6651e35ad85b3993b03d59",
+            "first": [
+              63488,
+              63488,
+              63488,
+              63488,
+              63488,
+              63488,
+              63488,
+              63488,
+              63488,
+              63488,
+              63488,
+              63488,
+              63488,
+              63488,
+              63488,
+              63488
+            ],
+            "last": [
+              31,
+              31,
+              31,
+              31
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "matrix",
+      "name": "HAL · LED 매트릭스 · MAX7219",
+      "checks": [
+        {
+          "name": "runtime completed without exception",
+          "passed": true,
+          "evidence": null
+        },
+        {
+          "name": "no electrical short fault",
+          "passed": true,
+          "evidence": []
+        },
+        {
+          "name": "matrix visible and frame changes",
+          "passed": true,
+          "evidence": [
+            [
+              1,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            [
+              1,
+              2,
+              4,
+              8,
+              16,
+              32,
+              64,
+              128
+            ],
+            [
+              1,
+              2,
+              4,
+              8,
+              16,
+              32,
+              64,
+              128
+            ],
+            [
+              1,
+              2,
+              4,
+              8,
+              16,
+              32,
+              64,
+              128
+            ],
+            [
+              4,
+              8,
+              16,
+              32,
+              64,
+              128,
+              1,
+              2
+            ],
+            [
+              16,
+              32,
+              64,
+              128,
+              1,
+              2,
+              4,
+              8
+            ],
+            [
+              32,
+              64,
+              128,
+              1,
+              2,
+              4,
+              8,
+              16
+            ],
+            [
+              1,
+              2,
+              4,
+              8,
+              16,
+              32,
+              64,
+              128
+            ],
+            [
+              4,
+              8,
+              16,
+              32,
+              64,
+              128,
+              1,
+              2
+            ],
+            [
+              16,
+              32,
+              64,
+              128,
+              1,
+              2,
+              4,
+              8
+            ],
+            [
+              64,
+              128,
+              1,
+              2,
+              4,
+              8,
+              16,
+              32
+            ],
+            [
+              2,
+              4,
+              8,
+              16,
+              32,
+              64,
+              128,
+              1
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "id": "servo",
+      "name": "HAL · RC 서보 모터",
+      "checks": [
+        {
+          "name": "runtime completed without exception",
+          "passed": true,
+          "evidence": null
+        },
+        {
+          "name": "no electrical short fault",
+          "passed": true,
+          "evidence": []
+        },
+        {
+          "name": "servo reaches 0,90,180 degrees",
+          "passed": true,
+          "evidence": [
+            {
+              "angle": 90,
+              "target": null
+            },
+            {
+              "angle": 90,
+              "target": null
+            },
+            {
+              "angle": 61.560000000000045,
+              "target": 0
+            },
+            {
+              "angle": 25.5600000000001,
+              "target": 0
+            },
+            {
+              "angle": 0,
+              "target": 0
+            },
+            {
+              "angle": 0,
+              "target": 0
+            },
+            {
+              "angle": 0,
+              "target": 0
+            },
+            {
+              "angle": 90,
+              "target": 90
+            },
+            {
+              "angle": 90,
+              "target": 90
+            },
+            {
+              "angle": 118.00799999999995,
+              "target": 180
+            },
+            {
+              "angle": 180,
+              "target": 180
+            },
+            {
+              "angle": 180,
+              "target": 180
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "motor",
+      "name": "HAL · DC 모터 + H 브리지",
+      "checks": [
+        {
+          "name": "runtime completed without exception",
+          "passed": true,
+          "evidence": null
+        },
+        {
+          "name": "no electrical short fault",
+          "passed": true,
+          "evidence": []
+        },
+        {
+          "name": "motor forward and reverse rotation",
+          "passed": true,
+          "evidence": [
+            0,
+            280.614626553946,
+            1093.8548744814466,
+            1655.4586927774697,
+            2206.8598497933854,
+            2245.1731051910956,
+            2247.2798978802452,
+            -602.0041301650151,
+            -1017.3666251826431,
+            -1044.1849901993107,
+            -1048.2327942005643,
+            2133.2639900980867
+          ]
+        }
+      ]
+    },
+    {
+      "id": "stepper",
+      "name": "HAL · 스테퍼 모터 + 드라이버",
+      "checks": [
+        {
+          "name": "runtime completed without exception",
+          "passed": true,
+          "evidence": null
+        },
+        {
+          "name": "no electrical short fault",
+          "passed": true,
+          "evidence": []
+        },
+        {
+          "name": "stepper shaft moves",
+          "passed": true,
+          "evidence": [
+            0,
+            0,
+            2,
+            2,
+            12,
+            12,
+            24,
+            24,
+            74,
+            74,
+            77,
+            77,
+            52,
+            52,
+            22,
+            22,
+            71,
+            71,
+            92,
+            92,
+            30,
+            30,
+            32,
+            32
+          ]
+        },
+        {
+          "name": "stepper reverses",
+          "passed": true,
+          "evidence": [
+            0,
+            0,
+            2,
+            2,
+            12,
+            12,
+            24,
+            24,
+            74,
+            74,
+            77,
+            77,
+            52,
+            52,
+            22,
+            22,
+            71,
+            71,
+            92,
+            92,
+            30,
+            30,
+            32,
+            32
+          ]
+        }
+      ]
+    },
+    {
+      "id": "relay",
+      "name": "HAL · 릴레이 모듈",
+      "checks": [
+        {
+          "name": "runtime completed without exception",
+          "passed": true,
+          "evidence": null
+        },
+        {
+          "name": "no electrical short fault",
+          "passed": true,
+          "evidence": []
+        },
+        {
+          "name": "relay NO/NC and load on/off",
+          "passed": true,
+          "evidence": [
+            "NO",
+            "NO",
+            "NO",
+            "NO",
+            "NO",
+            "NO",
+            "NC",
+            "NC",
+            "NO",
+            "NO",
+            "NO",
+            "NC"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "joystick",
+      "name": "HAL · 조이스틱",
+      "checks": [
+        {
+          "name": "runtime completed without exception",
+          "passed": true,
+          "evidence": null
+        },
+        {
+          "name": "no electrical short fault",
+          "passed": true,
+          "evidence": []
+        },
+        {
+          "name": "axes and switch follow inputs",
+          "passed": true,
+          "evidence": [
+            "Joystick X=2047 Y=2047 pressed=0",
+            "Joystick X=1024 Y=3071 pressed=1",
+            "Joystick X=3071 Y=1024 pressed=0"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "encoder",
+      "name": "HAL · 로터리 인코더",
+      "checks": [
+        {
+          "name": "runtime completed without exception",
+          "passed": true,
+          "evidence": null
+        },
+        {
+          "name": "no electrical short fault",
+          "passed": true,
+          "evidence": []
+        },
+        {
+          "name": "encoder counts forward and reverse edges",
+          "passed": true,
+          "evidence": [
+            "Encoder count=0 edges=0 pressed=0",
+            "Encoder count=1 edges=5 pressed=1",
+            "Encoder count=3 edges=12 pressed=1",
+            "Encoder count=1 edges=6 pressed=0",
+            "Encoder count=1 edges=4 pressed=0"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "timer_multi",
+      "name": "HAL · 독립 타이머 서보·DC 모터",
+      "checks": [
+        {
+          "name": "execution without exception or circuit short",
+          "passed": true,
+          "evidence": null
+        },
+        {
+          "name": "servo independently reaches 0, 90 and 180 degrees",
+          "passed": true,
+          "evidence": [
+            90,
+            90,
+            108.07441171329367,
+            90,
+            98.08886832580197,
+            61.559999999999995,
+            224.2059945335973,
+            25.55999999999947,
+            91.0099379157684,
+            0,
+            58.63122097350435,
+            0,
+            237.75475447721738,
+            0,
+            59.997599059731876,
+            90,
+            61.92457542971683,
+            90,
+            153.364967547243,
+            118.00799999999995,
+            65.73921627011354,
+            180,
+            338.11357348057174,
+            180
+          ]
+        },
+        {
+          "name": "motor keeps positive rotation above 2000 rpm",
+          "passed": true,
+          "evidence": [
+            0,
+            280.614626553946,
+            1093.8548744814466,
+            1655.4586927774697,
+            2206.8598497933854,
+            2245.1731051910956,
+            2247.2798978802452,
+            2248.0202168848714,
+            2248.0330695502125,
+            2248.033899397575,
+            2248.034024649779,
+            2248.034029118027
+          ]
+        }
+      ]
+    },
+    {
+      "id": "timer_capture",
+      "name": "HAL · TIM4 입력 캡처",
+      "checks": [
+        {
+          "name": "execution without exception or circuit short",
+          "passed": true,
+          "evidence": null
+        },
+        {
+          "name": "250 Hz captures have 4000 us periods",
+          "passed": true,
+          "evidence": [
+            {
+              "atMs": 100.1,
+              "text": "TIM4 capture: period=4000 us frequency=250 Hz"
+            },
+            {
+              "atMs": 200.2,
+              "text": "TIM4 capture: period=4000 us frequency=250 Hz"
+            },
+            {
+              "atMs": 300.3,
+              "text": "TIM4 capture: period=4000 us frequency=250 Hz"
+            },
+            {
+              "atMs": 400.40000000000003,
+              "text": "TIM4 capture: period=4000 us frequency=250 Hz"
+            },
+            {
+              "atMs": 500.50000000000006,
+              "text": "TIM4 capture: period=4000 us frequency=250 Hz"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "timer_encoder",
+      "name": "HAL · TIM4 엔코더 모드",
+      "checks": [
+        {
+          "name": "runtime completed without exception",
+          "passed": true,
+          "evidence": null
+        },
+        {
+          "name": "no electrical short fault",
+          "passed": true,
+          "evidence": []
+        },
+        {
+          "name": "encoder counts forward and reverse edges",
+          "passed": true,
+          "evidence": [
+            "TIM4 encoder: count=0 edges=0 pressed=0",
+            "TIM4 encoder: count=1 edges=5 pressed=1",
+            "TIM4 encoder: count=3 edges=12 pressed=1",
+            "TIM4 encoder: count=1 edges=6 pressed=0",
+            "TIM4 encoder: count=1 edges=4 pressed=0"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "blink",
+      "name": "HAL · GPIO LED",
+      "checks": [
+        {
+          "name": "runtime completed without exception",
+          "passed": true,
+          "evidence": null
+        },
+        {
+          "name": "no electrical short fault",
+          "passed": true,
+          "evidence": []
+        },
+        {
+          "name": "LED lights and extinguishes",
+          "passed": true,
+          "evidence": [
+            {
+              "current": 0.003926701543572818
+            },
+            {
+              "on": true,
+              "current": 0.003926701358860789
+            },
+            {
+              "on": true,
+              "current": 0.003926701358860789
+            },
+            {
+              "current": 0.003926701543572818
+            },
+            {
+              "on": true,
+              "current": 0.003926701358860789
+            },
+            {
+              "on": true,
+              "current": 0.003926701358860789
+            },
+            {
+              "current": 0.003926701543572818
+            },
+            {
+              "on": true,
+              "current": 0.003926701358860789
+            },
+            {
+              "on": true,
+              "current": 0.003926701358860789
+            },
+            {
+              "current": 0.003926701543572818
+            },
+            {
+              "on": true,
+              "current": 0.003926701358860789
+            },
+            {
+              "on": true,
+              "current": 0.003926701358860789
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "button",
+      "name": "HAL · GPIO 버튼 입력",
+      "checks": [
+        {
+          "name": "runtime completed without exception",
+          "passed": true,
+          "evidence": null
+        },
+        {
+          "name": "no electrical short fault",
+          "passed": true,
+          "evidence": []
+        },
+        {
+          "name": "press and release read back",
+          "passed": true,
+          "evidence": [
+            "button=0",
+            "button=1"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "exti",
+      "name": "HAL · USER 버튼 EXTI",
+      "checks": [
+        {
+          "name": "execution without exception or circuit short",
+          "passed": true,
+          "evidence": null
+        },
+        {
+          "name": "one falling edge causes exactly one LED transition",
+          "passed": true,
+          "evidence": [
+            {
+              "atMs": 1090,
+              "text": "EXTI PC13"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "uart",
+      "name": "HAL · USART2 내장 터미널 (ST-LINK VCP)",
+      "checks": [
+        {
+          "name": "execution without exception or circuit short",
+          "passed": true,
+          "evidence": null
+        },
+        {
+          "name": "onboard VCP greeting and injected bytes echoed without UART component",
+          "passed": true,
+          "evidence": "HAL UART ready\r\nVcp42"
+        }
+      ]
+    },
+    {
+      "id": "uart_external",
+      "name": "HAL · 외부 UART 장치 배선 연습",
+      "checks": [
+        {
+          "name": "runtime completed without exception",
+          "passed": true,
+          "evidence": null
+        },
+        {
+          "name": "no electrical short fault",
+          "passed": true,
+          "evidence": []
+        },
+        {
+          "name": "UART transmit and injected receive echo",
+          "passed": true,
+          "evidence": "HAL UART ready\r\nAudit42"
+        }
+      ]
+    },
+    {
+      "id": "timer",
+      "name": "HAL · TIM2 주기 인터럽트",
+      "checks": [
+        {
+          "name": "execution without exception or circuit short",
+          "passed": true,
+          "evidence": null
+        },
+        {
+          "name": "100 ms timer interrupt cadence",
+          "passed": true,
+          "evidence": [
+            100,
+            200,
+            300,
+            400,
+            500,
+            600,
+            700,
+            800,
+            900,
+            1000,
+            1100,
+            1200,
+            1300,
+            1400,
+            1500,
+            1600,
+            1700,
+            1800,
+            1900,
+            2000,
+            2100,
+            2200,
+            2300,
+            2400,
+            2500,
+            2600,
+            2700,
+            2800,
+            2900,
+            3000,
+            3100,
+            3200,
+            3300,
+            3400,
+            3500
+          ]
+        }
+      ]
+    },
+    {
+      "id": "adc",
+      "name": "HAL · ADC 입력",
+      "checks": [
+        {
+          "name": "runtime completed without exception",
+          "passed": true,
+          "evidence": null
+        },
+        {
+          "name": "no electrical short fault",
+          "passed": true,
+          "evidence": []
+        },
+        {
+          "name": "divider current and ADC conversion",
+          "passed": true,
+          "evidence": {
+            "part": {
+              "voltage": 1.6500008249995874,
+              "current": 0.00016500008249995874,
+              "power": 0.00027225027224993194
+            },
+            "returns": {
+              "2047": 7
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "temperature",
+      "name": "HAL · TMP36 온도",
+      "checks": [
+        {
+          "name": "runtime completed without exception",
+          "passed": true,
+          "evidence": null
+        },
+        {
+          "name": "no electrical short fault",
+          "passed": true,
+          "evidence": []
+        },
+        {
+          "name": "temperature changes to 10 and 45 C",
+          "passed": true,
+          "evidence": [
+            "TMP36=25.0 C",
+            "TMP36=10.0 C",
+            "TMP36=45.0 C"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "samples",
+      "name": "HAL · ADC 배열 샘플링",
+      "checks": [
+        {
+          "name": "execution without exception or circuit short",
+          "passed": true,
+          "evidence": null
+        },
+        {
+          "name": "all eight ADC array entries read the divider",
+          "passed": true,
+          "evidence": [
+            {
+              "atMs": 0,
+              "text": "sample[0]=2047"
+            },
+            {
+              "atMs": 10.1,
+              "text": "sample[1]=2047"
+            },
+            {
+              "atMs": 20.200000000000003,
+              "text": "sample[2]=2047"
+            },
+            {
+              "atMs": 30.300000000000004,
+              "text": "sample[3]=2047"
+            },
+            {
+              "atMs": 40.400000000000006,
+              "text": "sample[4]=2047"
+            },
+            {
+              "atMs": 50.50000000000001,
+              "text": "sample[5]=2047"
+            },
+            {
+              "atMs": 60.60000000000001,
+              "text": "sample[6]=2047"
+            },
+            {
+              "atMs": 70.7,
+              "text": "sample[7]=2047"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "i2c",
+      "name": "HAL · I²C 메모리",
+      "checks": [
+        {
+          "name": "runtime completed without exception",
+          "passed": true,
+          "evidence": null
+        },
+        {
+          "name": "no electrical short fault",
+          "passed": true,
+          "evidence": []
+        },
+        {
+          "name": "EEPROM write/read returns 42",
+          "passed": true,
+          "evidence": [
+            "I2C write=0 read=0",
+            "42"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "spi",
+      "name": "HAL · SPI 메모리",
+      "checks": [
+        {
+          "name": "runtime completed without exception",
+          "passed": true,
+          "evidence": null
+        },
+        {
+          "name": "no electrical short fault",
+          "passed": true,
+          "evidence": []
+        },
+        {
+          "name": "EEPROM write/read returns 42",
+          "passed": true,
+          "evidence": [
+            "42"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "language",
+      "name": "HAL · 함수·배열·구조체",
+      "checks": [
+        {
+          "name": "execution without exception or circuit short",
+          "passed": true,
+          "evidence": null
+        },
+        {
+          "name": "helper/array/structure computes average 25",
+          "passed": true,
+          "evidence": "average=25"
+        }
+      ]
+    },
+    {
+      "id": "pwm",
+      "name": "HAL · TIM2 PWM",
+      "checks": [
+        {
+          "name": "runtime completed without exception",
+          "passed": true,
+          "evidence": null
+        },
+        {
+          "name": "no electrical short fault",
+          "passed": true,
+          "evidence": []
+        },
+        {
+          "name": "capacitor charges under PWM",
+          "passed": true,
+          "evidence": [
+            3.1730766057692294e-7,
+            1.0763788996780168,
+            1.2625343396830413,
+            1.26262250197829,
+            1.2626225081350402,
+            1.2626225081350402,
+            1.2626225081353784,
+            1.2626225081353784,
+            1.2626225081353784,
+            1.2626225081353784,
+            1.2626225081353784,
+            1.2626225081353784
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ultrasonic",
+      "name": "HAL · 초음파 거리 측정",
+      "checks": [
+        {
+          "name": "runtime completed without exception",
+          "passed": true,
+          "evidence": null
+        },
+        {
+          "name": "no electrical short fault",
+          "passed": true,
+          "evidence": []
+        },
+        {
+          "name": "distance follows 55 and 170 cm",
+          "passed": true,
+          "evidence": [
+            100,
+            100,
+            100,
+            100,
+            100,
+            100,
+            100,
+            100,
+            100,
+            100,
+            100,
+            100,
+            100,
+            100,
+            100,
+            100,
+            100,
+            100,
+            100,
+            53.4,
+            53.4,
+            53.4,
+            53.4,
+            53.4,
+            53.4,
+            53.4,
+            53.4,
+            53.4,
+            53.4,
+            53.4,
+            53.4,
+            53.4,
+            53.4,
+            53.4,
+            53.4,
+            53.4,
+            53.4,
+            53.4,
+            53.4,
+            169,
+            169,
+            169,
+            169,
+            169,
+            169,
+            169,
+            169,
+            169,
+            169,
+            169,
+            169,
+            169,
+            169,
+            169,
+            169,
+            169,
+            169,
+            169
+          ]
+        }
+      ]
+    }
+  ],
+  "devices": [
+    {
+      "type": "board",
+      "name": "NUCLEO-F446RE 보드",
+      "passed": true,
+      "wireRepairs": 3,
+      "halCards": 8
+    },
+    {
+      "type": "resistor",
+      "name": "저항",
+      "passed": true,
+      "wireRepairs": 4,
+      "halCards": 10
+    },
+    {
+      "type": "led",
+      "name": "LED",
+      "passed": true,
+      "wireRepairs": 3,
+      "halCards": 8
+    },
+    {
+      "type": "button",
+      "name": "푸시 버튼",
+      "passed": true,
+      "wireRepairs": 5,
+      "halCards": 7
+    },
+    {
+      "type": "lcd",
+      "name": "LCD 1602",
+      "passed": true,
+      "wireRepairs": 13,
+      "halCards": 6
+    },
+    {
+      "type": "breadboard",
+      "name": "빵판",
+      "passed": true,
+      "wireRepairs": 2,
+      "halCards": 8
+    },
+    {
+      "type": "ldr",
+      "name": "조도 센서 · LDR",
+      "passed": true,
+      "wireRepairs": 4,
+      "halCards": 10
+    },
+    {
+      "type": "ntc",
+      "name": "NTC 서미스터",
+      "passed": true,
+      "wireRepairs": 4,
+      "halCards": 10
+    },
+    {
+      "type": "sht31",
+      "name": "SHT31 온습도 센서",
+      "passed": true,
+      "wireRepairs": 4,
+      "halCards": 8
+    },
+    {
+      "type": "mpu6050",
+      "name": "MPU6050 가속도·자이로",
+      "passed": true,
+      "wireRepairs": 4,
+      "halCards": 8
+    },
+    {
+      "type": "pir",
+      "name": "PIR 움직임 센서",
+      "passed": true,
+      "wireRepairs": 3,
+      "halCards": 8
+    },
+    {
+      "type": "oled",
+      "name": "OLED · SSD1306",
+      "passed": true,
+      "wireRepairs": 4,
+      "halCards": 7
+    },
+    {
+      "type": "tft",
+      "name": "TFT · ST7735",
+      "passed": true,
+      "wireRepairs": 7,
+      "halCards": 8
+    },
+    {
+      "type": "matrix",
+      "name": "LED 매트릭스 · MAX7219",
+      "passed": true,
+      "wireRepairs": 5,
+      "halCards": 8
+    },
+    {
+      "type": "servo",
+      "name": "RC 서보 모터",
+      "passed": true,
+      "wireRepairs": 3,
+      "halCards": 9
+    },
+    {
+      "type": "motor",
+      "name": "DC 모터 + H 브리지",
+      "passed": true,
+      "wireRepairs": 5,
+      "halCards": 10
+    },
+    {
+      "type": "stepper",
+      "name": "스테퍼 모터 + 드라이버",
+      "passed": true,
+      "wireRepairs": 6,
+      "halCards": 6
+    },
+    {
+      "type": "relay",
+      "name": "릴레이 모듈",
+      "passed": true,
+      "wireRepairs": 7,
+      "halCards": 8
+    },
+    {
+      "type": "joystick",
+      "name": "조이스틱",
+      "passed": true,
+      "wireRepairs": 5,
+      "halCards": 11
+    },
+    {
+      "type": "encoder",
+      "name": "로터리 인코더",
+      "passed": true,
+      "wireRepairs": 5,
+      "halCards": 9
+    },
+    {
+      "type": "l298n",
+      "name": "L298N 모터 드라이버",
+      "passed": true,
+      "wireRepairs": 14,
+      "halCards": 10
+    },
+    {
+      "type": "dc_motor",
+      "name": "DC 모터 · 2핀",
+      "passed": true,
+      "wireRepairs": 14,
+      "halCards": 10
+    },
+    {
+      "type": "dc_supply",
+      "name": "외부 DC 전원",
+      "passed": true,
+      "wireRepairs": 14,
+      "halCards": 10
+    },
+    {
+      "type": "uart",
+      "name": "외부 UART 터미널",
+      "passed": true,
+      "wireRepairs": 4,
+      "halCards": 9
+    },
+    {
+      "type": "i2c",
+      "name": "I²C 메모리",
+      "passed": true,
+      "wireRepairs": 4,
+      "halCards": 8
+    },
+    {
+      "type": "spi",
+      "name": "SPI 메모리",
+      "passed": true,
+      "wireRepairs": 6,
+      "halCards": 9
+    },
+    {
+      "type": "potentiometer",
+      "name": "가변저항",
+      "passed": true,
+      "wireRepairs": 3,
+      "halCards": 10
+    },
+    {
+      "type": "slide",
+      "name": "슬라이드 스위치",
+      "passed": true,
+      "wireRepairs": 3,
+      "halCards": 6
+    },
+    {
+      "type": "rgb",
+      "name": "RGB LED",
+      "passed": true,
+      "wireRepairs": 7,
+      "halCards": 6
+    },
+    {
+      "type": "capacitor",
+      "name": "커패시터",
+      "passed": true,
+      "wireRepairs": 4,
+      "halCards": 8
+    },
+    {
+      "type": "diode",
+      "name": "다이오드",
+      "passed": true,
+      "wireRepairs": 4,
+      "halCards": 11
+    },
+    {
+      "type": "buzzer",
+      "name": "능동 부저",
+      "passed": true,
+      "wireRepairs": 2,
+      "halCards": 7
+    },
+    {
+      "type": "passive_buzzer",
+      "name": "수동 부저",
+      "passed": true,
+      "wireRepairs": 2,
+      "halCards": 12
+    },
+    {
+      "type": "sevenseg",
+      "name": "7세그먼트",
+      "passed": true,
+      "wireRepairs": 17,
+      "halCards": 6
+    },
+    {
+      "type": "temperature",
+      "name": "온도 센서",
+      "passed": true,
+      "wireRepairs": 3,
+      "halCards": 10
+    },
+    {
+      "type": "ultrasonic",
+      "name": "초음파 센서",
+      "passed": true,
+      "wireRepairs": 7,
+      "halCards": 9
+    }
+  ],
+  "remapped": [
+    {
+      "type": "stepper",
+      "passed": true,
+      "binding": {
+        "key": "selected",
+        "type": "stepper",
+        "parts": {
+          "demo": "selected"
+        },
+        "pins": {
+          "PB3": "PA0",
+          "PB4": "PB4",
+          "PB5": "PB5",
+          "PB6": "PB6"
+        },
+        "peripherals": {},
+        "api": "all",
+        "mode": "hal"
+      }
+    },
+    {
+      "type": "l298n",
+      "passed": true,
+      "binding": {
+        "key": "selected",
+        "type": "l298n",
+        "parts": {
+          "driver": "selected",
+          "supply": "docsPart1",
+          "motorA": "docsPart2",
+          "motorB": "docsPart3"
+        },
+        "pins": {
+          "PA0": "PA0",
+          "PA1": "PA1",
+          "PB4": "PA10",
+          "PB5": "PB5",
+          "PB6": "PB6",
+          "PB7": "PB7"
+        },
+        "peripherals": {
+          "TIM2": "TIM2"
+        },
+        "api": "all",
+        "mode": "hal"
+      }
+    }
+  ],
+  "resetChecks": [
+    "remapped Docs preview",
+    "cancel and Escape preserve code",
+    "default focus on Cancel",
+    "main reset from helper tab",
+    "circuit/config/files preserved",
+    "undo/redo",
+    "disabled during execution",
+    "LED off after reset",
+    "reapply without duplicate parts/wires",
+    "LED on after Docs apply",
+    "persisted code.reset and simulation.state",
+    "split-port stepper and L298N motion"
+  ],
+  "release": null
+}

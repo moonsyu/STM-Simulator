@@ -1,4 +1,6 @@
 import fs from 'node:fs/promises';
+import path from 'node:path';
+import {pathToFileURL} from 'node:url';
 import {Worker,isMainThread,parentPort,workerData} from 'node:worker_threads';
 import {HAL_EXAMPLES,halExample} from '../../src/hal-examples.js';
 import {CATALOG_EXAMPLES} from '../../src/catalog-examples.js';
@@ -40,7 +42,7 @@ async function run(id){
  return {id,name:HAL_EXAMPLES[id],...assessment};
 }
 if(!isMainThread){run(workerData).then(result=>parentPort.postMessage(result)).catch(error=>parentPort.postMessage({id:workerData,passed:false,error:error.message}));}
-else if(process.argv[1]&&new URL(import.meta.url).pathname.replace(/^\//,'').toLowerCase()===process.argv[1].replaceAll('\\','/').toLowerCase()){
+else if(process.argv[1]&&pathToFileURL(path.resolve(process.argv[1])).href===import.meta.url){
  await fs.mkdir(paths.directory,{recursive:true});const queue=[...legacyIds],results=[];
  await Promise.all(Array.from({length:3},async()=>{while(queue.length){const id=queue.shift(),row=await new Promise((resolve,reject)=>{const w=new Worker(new URL(import.meta.url),{workerData:id});w.once('message',resolve);w.once('error',reject);w.once('exit',code=>{if(code)reject(new Error(id+' worker exit '+code));});});results.push(row);console.log(id+': '+(row.passed?'PASS':'FAIL'));}}));
  const report={version:paths.version,passed:results.every(r=>r.passed),count:results.length,results:results.sort((a,b)=>a.id.localeCompare(b.id))};
