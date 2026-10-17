@@ -52,7 +52,7 @@ function stimulate(p,s,phase){
  }
  s.setPressed(s.pressed);s.changed();
 }
-export function execute(input,{end=3500,stimulus=true,api=null}={}){
+export function execute(input,{end=3500,stimulus=true,api=null,onTick=null}={}){
  const project=structuredClone(input),printed=[],uart=[],trace=[],calls={},frames=[];
  let s,error=null,time=0;
  const add=(name,args,r,result,failed=false)=>{
@@ -68,6 +68,7 @@ export function execute(input,{end=3500,stimulus=true,api=null}={}){
   s.hal.invoke=(name,args,r)=>{const generator=invoke(name,args,r);if(!generator)return generator;return(function*(){try{const result=yield* generator;add(name,args,r,result);return result;}catch(e){add(name,args,r,e.message,true);throw e;}})();};
   const milestones=new Set([0,20,100,200,600,1000,1200,1800,2200,2500,3000,3500,4500,5500,end]);
   for(time=0;time<=end;time+=10){
+   onTick?.({time,project,session:s});
    if(stimulus&&time===100)for(const id of s.hal.serials.keys())s.inject('Audit42',id+':external');
    if(stimulus&&time===1100)stimulate(project,s,1);
    if(stimulus&&time===2300)stimulate(project,s,2);
