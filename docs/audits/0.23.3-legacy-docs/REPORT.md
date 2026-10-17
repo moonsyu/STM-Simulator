@@ -1,6 +1,6 @@
 # 0.23.3 기존 HAL 예제·Docs·코드 초기화 검증
 
-상태: 소스·개발 Electron 검증 완료. 공개 Release 검증 대기.
+상태: 공개 Release EXE 검증 완료.
 
 ## 수정 내용
 
@@ -20,7 +20,9 @@
 | 다른 포트에 재배선 | 스테퍼 정·역회전, L298N 양방향 회전 통과 |
 | ARM GCC + ST HAL/CMSIS | 원본 40 + 초기화 4 + 재배선 2 = 46개 링크 |
 | 코드 초기화 앱 로그 | 12개 확인, LED OFF 0 A → 재적용 ON 약 3.93 mA |
-| 공개 EXE | 대기 |
+| 공개 EXE | 36개 Docs + 초기화·재배선 앱 로그 대조 통과 |
+
+공개 EXE는 36개 장치의 출력 값도 대조했다. 버튼 누름/해제와 RGB 모든 채널은 촘촘한 소스 실행 로그로 확인했으며, 공개 자동 실행에서는 버튼의 초기 상태와 RGB 점등을 확인했다. 매트릭스·서보·릴레이는 앱의 스텝 버튼으로 구간별 상태를 추가 기록했다. MPU6050의 데스크톱 입력은 슬라이더 0.1 g 간격에 맞춰 0.75가 0.8 g로 반올림된다.
 
 기존 원본 예제는 Docs 레시피로 대체하지 않고 직접 실행했다. 원본 EXTI 엔코더, USER 버튼, 내장 USART2 VCP, TIM 인터럽트/입력 캡처/독립 PWM, ADC 배열, 함수·구조체 예제를 포함한다.
 
@@ -115,5 +117,8 @@
 ## 재현과 증거
 
 - 실행 스크립트: scripts/docs-audit/README.md 참고. 원본/Docs/수리/카드/재배선 로그: work/test-results/docs-audit-0.23.3/.
-- 초기화 앱 파일 로그: work/test-results/code-reset-dev.json. 격리 프로필을 사용하며 사용자 앱은 조작하지 않았다.
+- 초기화 앱 파일 로그: work/test-results/code-reset-public.json. 격리 프로필을 사용하며 사용자 앱은 조작하지 않았다.
 - 상세 수정 위치는 FIX-LOCATIONS.md에 별도로 기록.
+- 공개 Release: https://github.com/moonsyu/STM-Simulator/releases/tag/v0.23.3
+- 빌드 커밋: 7bf2600d78fdfbf85d224969f15bf10e01e8332f
+- STM-Simulator.exe SHA-256: 217f07be77a159e52245390953d50e790092f1faf6e9b8df946cecbb8fb81c40

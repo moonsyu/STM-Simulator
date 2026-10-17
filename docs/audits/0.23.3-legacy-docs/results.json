@@ -1,7 +1,7 @@
 {
   "version": "0.23.3",
   "sourcePassed": true,
-  "publicPassed": false,
+  "publicPassed": true,
   "legacyCount": 40,
   "deviceCount": 36,
   "halCardCount": 308,
@@ -2028,252 +2028,680 @@
       "name": "NUCLEO-F446RE 보드",
       "passed": true,
       "wireRepairs": 3,
-      "halCards": 8
+      "halCards": 8,
+      "publicChecks": [
+        {
+          "name": "GPIO reads alternate HIGH/LOW (periodic LED snapshots can alias)",
+          "passed": true
+        }
+      ]
     },
     {
       "type": "resistor",
       "name": "저항",
       "passed": true,
       "wireRepairs": 4,
-      "halCards": 10
+      "halCards": 10,
+      "publicChecks": [
+        {
+          "name": "divider current and ADC output for the selected resistance",
+          "passed": true
+        }
+      ]
     },
     {
       "type": "led",
       "name": "LED",
       "passed": true,
       "wireRepairs": 3,
-      "halCards": 8
+      "halCards": 8,
+      "publicChecks": [
+        {
+          "name": "GPIO reads alternate HIGH/LOW (periodic LED snapshots can alias)",
+          "passed": true
+        }
+      ]
     },
     {
       "type": "button",
       "name": "푸시 버튼",
       "passed": true,
       "wireRepairs": 5,
-      "halCards": 7
+      "halCards": 7,
+      "publicChecks": [
+        {
+          "name": "unpressed button is read correctly",
+          "passed": true
+        }
+      ]
     },
     {
       "type": "lcd",
       "name": "LCD 1602",
       "passed": true,
       "wireRepairs": 13,
-      "halCards": 6
+      "halCards": 6,
+      "publicChecks": [
+        {
+          "name": "runtime completed without exception",
+          "passed": true
+        },
+        {
+          "name": "no electrical short fault",
+          "passed": true
+        },
+        {
+          "name": "LCD received text",
+          "passed": true
+        }
+      ]
     },
     {
       "type": "breadboard",
       "name": "빵판",
       "passed": true,
       "wireRepairs": 2,
-      "halCards": 8
+      "halCards": 8,
+      "publicChecks": [
+        {
+          "name": "GPIO reads alternate HIGH/LOW (periodic LED snapshots can alias)",
+          "passed": true
+        }
+      ]
     },
     {
       "type": "ldr",
       "name": "조도 센서 · LDR",
       "passed": true,
       "wireRepairs": 4,
-      "halCards": 10
+      "halCards": 10,
+      "publicChecks": [
+        {
+          "name": "printed ADC changes with illumination",
+          "passed": true
+        }
+      ]
     },
     {
       "type": "ntc",
       "name": "NTC 서미스터",
       "passed": true,
       "wireRepairs": 4,
-      "halCards": 10
+      "halCards": 10,
+      "publicChecks": [
+        {
+          "name": "runtime completed without exception",
+          "passed": true
+        },
+        {
+          "name": "no electrical short fault",
+          "passed": true
+        },
+        {
+          "name": "temperature changes to 10 and 45 C",
+          "passed": true
+        }
+      ]
     },
     {
       "type": "sht31",
       "name": "SHT31 온습도 센서",
       "passed": true,
       "wireRepairs": 4,
-      "halCards": 8
+      "halCards": 8,
+      "publicChecks": [
+        {
+          "name": "runtime completed without exception",
+          "passed": true
+        },
+        {
+          "name": "no electrical short fault",
+          "passed": true
+        },
+        {
+          "name": "temperature changes to 10 and 45 C",
+          "passed": true
+        },
+        {
+          "name": "humidity changes to 30 and 70 percent",
+          "passed": true
+        }
+      ]
     },
     {
       "type": "mpu6050",
       "name": "MPU6050 가속도·자이로",
       "passed": true,
       "wireRepairs": 4,
-      "halCards": 8
+      "halCards": 8,
+      "publicChecks": [
+        {
+          "name": "WHO_AM_I and desktop quantized acceleration/gyro inputs",
+          "passed": true
+        }
+      ]
     },
     {
       "type": "pir",
       "name": "PIR 움직임 센서",
       "passed": true,
       "wireRepairs": 3,
-      "halCards": 8
+      "halCards": 8,
+      "publicChecks": [
+        {
+          "name": "runtime completed without exception",
+          "passed": true
+        },
+        {
+          "name": "no electrical short fault",
+          "passed": true
+        },
+        {
+          "name": "motion rising and falling",
+          "passed": true
+        }
+      ]
     },
     {
       "type": "oled",
       "name": "OLED · SSD1306",
       "passed": true,
       "wireRepairs": 4,
-      "halCards": 7
+      "halCards": 7,
+      "publicChecks": [
+        {
+          "name": "runtime completed without exception",
+          "passed": true
+        },
+        {
+          "name": "no electrical short fault",
+          "passed": true
+        },
+        {
+          "name": "OLED visible with written pixels",
+          "passed": true
+        }
+      ]
     },
     {
       "type": "tft",
       "name": "TFT · ST7735",
       "passed": true,
       "wireRepairs": 7,
-      "halCards": 8
+      "halCards": 8,
+      "publicChecks": [
+        {
+          "name": "runtime completed without exception",
+          "passed": true
+        },
+        {
+          "name": "no electrical short fault",
+          "passed": true
+        },
+        {
+          "name": "complete RGB565 frame matches all 20480 pixels",
+          "passed": true
+        }
+      ]
     },
     {
       "type": "matrix",
       "name": "LED 매트릭스 · MAX7219",
       "passed": true,
       "wireRepairs": 5,
-      "halCards": 8
+      "halCards": 8,
+      "publicChecks": [
+        {
+          "name": "runtime completed without exception",
+          "passed": true
+        },
+        {
+          "name": "no electrical short fault",
+          "passed": true
+        },
+        {
+          "name": "matrix visible and frame changes",
+          "passed": true
+        }
+      ]
     },
     {
       "type": "servo",
       "name": "RC 서보 모터",
       "passed": true,
       "wireRepairs": 3,
-      "halCards": 9
+      "halCards": 9,
+      "publicChecks": [
+        {
+          "name": "runtime completed without exception",
+          "passed": true
+        },
+        {
+          "name": "no electrical short fault",
+          "passed": true
+        },
+        {
+          "name": "servo reaches 0,90,180 degrees",
+          "passed": true
+        }
+      ]
     },
     {
       "type": "motor",
       "name": "DC 모터 + H 브리지",
       "passed": true,
       "wireRepairs": 5,
-      "halCards": 10
+      "halCards": 10,
+      "publicChecks": [
+        {
+          "name": "runtime completed without exception",
+          "passed": true
+        },
+        {
+          "name": "no electrical short fault",
+          "passed": true
+        },
+        {
+          "name": "motor forward and reverse rotation",
+          "passed": true
+        }
+      ]
     },
     {
       "type": "stepper",
       "name": "스테퍼 모터 + 드라이버",
       "passed": true,
       "wireRepairs": 6,
-      "halCards": 6
+      "halCards": 6,
+      "publicChecks": [
+        {
+          "name": "shaft moves and both directions are commanded",
+          "passed": true
+        }
+      ]
     },
     {
       "type": "relay",
       "name": "릴레이 모듈",
       "passed": true,
       "wireRepairs": 7,
-      "halCards": 8
+      "halCards": 8,
+      "publicChecks": [
+        {
+          "name": "runtime completed without exception",
+          "passed": true
+        },
+        {
+          "name": "no electrical short fault",
+          "passed": true
+        },
+        {
+          "name": "relay NO/NC and load on/off",
+          "passed": true
+        }
+      ]
     },
     {
       "type": "joystick",
       "name": "조이스틱",
       "passed": true,
       "wireRepairs": 5,
-      "halCards": 11
+      "halCards": 11,
+      "publicChecks": [
+        {
+          "name": "runtime completed without exception",
+          "passed": true
+        },
+        {
+          "name": "no electrical short fault",
+          "passed": true
+        },
+        {
+          "name": "axes and switch follow inputs",
+          "passed": true
+        }
+      ]
     },
     {
       "type": "encoder",
       "name": "로터리 인코더",
       "passed": true,
       "wireRepairs": 5,
-      "halCards": 9
+      "halCards": 9,
+      "publicChecks": [
+        {
+          "name": "runtime completed without exception",
+          "passed": true
+        },
+        {
+          "name": "no electrical short fault",
+          "passed": true
+        },
+        {
+          "name": "encoder counts forward and reverse edges",
+          "passed": true
+        }
+      ]
     },
     {
       "type": "l298n",
       "name": "L298N 모터 드라이버",
       "passed": true,
       "wireRepairs": 14,
-      "halCards": 10
+      "halCards": 10,
+      "publicChecks": [
+        {
+          "name": "runtime completed without exception",
+          "passed": true
+        },
+        {
+          "name": "no electrical short fault",
+          "passed": true
+        },
+        {
+          "name": "motor forward and reverse rotation",
+          "passed": true
+        }
+      ]
     },
     {
       "type": "dc_motor",
       "name": "DC 모터 · 2핀",
       "passed": true,
       "wireRepairs": 14,
-      "halCards": 10
+      "halCards": 10,
+      "publicChecks": [
+        {
+          "name": "runtime completed without exception",
+          "passed": true
+        },
+        {
+          "name": "no electrical short fault",
+          "passed": true
+        },
+        {
+          "name": "motor forward and reverse rotation",
+          "passed": true
+        }
+      ]
     },
     {
       "type": "dc_supply",
       "name": "외부 DC 전원",
       "passed": true,
       "wireRepairs": 14,
-      "halCards": 10
+      "halCards": 10,
+      "publicChecks": [
+        {
+          "name": "runtime completed without exception",
+          "passed": true
+        },
+        {
+          "name": "no electrical short fault",
+          "passed": true
+        },
+        {
+          "name": "motor forward and reverse rotation",
+          "passed": true
+        }
+      ]
     },
     {
       "type": "uart",
       "name": "외부 UART 터미널",
       "passed": true,
       "wireRepairs": 4,
-      "halCards": 9
+      "halCards": 9,
+      "publicChecks": [
+        {
+          "name": "runtime completed without exception",
+          "passed": true
+        },
+        {
+          "name": "no electrical short fault",
+          "passed": true
+        },
+        {
+          "name": "UART transmit and injected receive echo",
+          "passed": true
+        }
+      ]
     },
     {
       "type": "i2c",
       "name": "I²C 메모리",
       "passed": true,
       "wireRepairs": 4,
-      "halCards": 8
+      "halCards": 8,
+      "publicChecks": [
+        {
+          "name": "runtime completed without exception",
+          "passed": true
+        },
+        {
+          "name": "no electrical short fault",
+          "passed": true
+        },
+        {
+          "name": "EEPROM write/read returns 42",
+          "passed": true
+        }
+      ]
     },
     {
       "type": "spi",
       "name": "SPI 메모리",
       "passed": true,
       "wireRepairs": 6,
-      "halCards": 9
+      "halCards": 9,
+      "publicChecks": [
+        {
+          "name": "runtime completed without exception",
+          "passed": true
+        },
+        {
+          "name": "no electrical short fault",
+          "passed": true
+        },
+        {
+          "name": "EEPROM write/read returns 42",
+          "passed": true
+        }
+      ]
     },
     {
       "type": "potentiometer",
       "name": "가변저항",
       "passed": true,
       "wireRepairs": 3,
-      "halCards": 10
+      "halCards": 10,
+      "publicChecks": [
+        {
+          "name": "runtime completed without exception",
+          "passed": true
+        },
+        {
+          "name": "no electrical short fault",
+          "passed": true
+        },
+        {
+          "name": "ADC follows 20 and 80 percent",
+          "passed": true
+        }
+      ]
     },
     {
       "type": "slide",
       "name": "슬라이드 스위치",
       "passed": true,
       "wireRepairs": 3,
-      "halCards": 6
+      "halCards": 6,
+      "publicChecks": [
+        {
+          "name": "runtime completed without exception",
+          "passed": true
+        },
+        {
+          "name": "no electrical short fault",
+          "passed": true
+        },
+        {
+          "name": "switch state changes",
+          "passed": true
+        }
+      ]
     },
     {
       "type": "rgb",
       "name": "RGB LED",
       "passed": true,
       "wireRepairs": 7,
-      "halCards": 6
+      "halCards": 6,
+      "publicChecks": [
+        {
+          "name": "RGB output is lit",
+          "passed": true
+        }
+      ]
     },
     {
       "type": "capacitor",
       "name": "커패시터",
       "passed": true,
       "wireRepairs": 4,
-      "halCards": 8
+      "halCards": 8,
+      "publicChecks": [
+        {
+          "name": "capacitor charges under PWM",
+          "passed": true
+        }
+      ]
     },
     {
       "type": "diode",
       "name": "다이오드",
       "passed": true,
       "wireRepairs": 4,
-      "halCards": 11
+      "halCards": 11,
+      "publicChecks": [
+        {
+          "name": "runtime completed without exception",
+          "passed": true
+        },
+        {
+          "name": "no electrical short fault",
+          "passed": true
+        },
+        {
+          "name": "forward drop near 0.7V",
+          "passed": true
+        }
+      ]
     },
     {
       "type": "buzzer",
       "name": "능동 부저",
       "passed": true,
       "wireRepairs": 2,
-      "halCards": 7
+      "halCards": 7,
+      "publicChecks": [
+        {
+          "name": "runtime completed without exception",
+          "passed": true
+        },
+        {
+          "name": "no electrical short fault",
+          "passed": true
+        },
+        {
+          "name": "buzzer switches on and off",
+          "passed": true
+        }
+      ]
     },
     {
       "type": "passive_buzzer",
       "name": "수동 부저",
       "passed": true,
       "wireRepairs": 2,
-      "halCards": 12
+      "halCards": 12,
+      "publicChecks": [
+        {
+          "name": "runtime completed without exception",
+          "passed": true
+        },
+        {
+          "name": "no electrical short fault",
+          "passed": true
+        },
+        {
+          "name": "buzzer produces tones and silence",
+          "passed": true
+        }
+      ]
     },
     {
       "type": "sevenseg",
       "name": "7세그먼트",
       "passed": true,
       "wireRepairs": 17,
-      "halCards": 6
+      "halCards": 6,
+      "publicChecks": [
+        {
+          "name": "runtime completed without exception",
+          "passed": true
+        },
+        {
+          "name": "no electrical short fault",
+          "passed": true
+        },
+        {
+          "name": "segment patterns change",
+          "passed": true
+        }
+      ]
     },
     {
       "type": "temperature",
       "name": "온도 센서",
       "passed": true,
       "wireRepairs": 3,
-      "halCards": 10
+      "halCards": 10,
+      "publicChecks": [
+        {
+          "name": "runtime completed without exception",
+          "passed": true
+        },
+        {
+          "name": "no electrical short fault",
+          "passed": true
+        },
+        {
+          "name": "temperature changes to 10 and 45 C",
+          "passed": true
+        }
+      ]
     },
     {
       "type": "ultrasonic",
       "name": "초음파 센서",
       "passed": true,
       "wireRepairs": 7,
-      "halCards": 9
+      "halCards": 9,
+      "publicChecks": [
+        {
+          "name": "runtime completed without exception",
+          "passed": true
+        },
+        {
+          "name": "no electrical short fault",
+          "passed": true
+        },
+        {
+          "name": "distance follows 55 and 170 cm",
+          "passed": true
+        }
+      ]
     }
   ],
   "remapped": [
@@ -2339,5 +2767,9 @@
     "persisted code.reset and simulation.state",
     "split-port stepper and L298N motion"
   ],
-  "release": null
+  "release": {
+    "url": "https://github.com/moonsyu/STM-Simulator/releases/tag/v0.23.3",
+    "commit": "7bf2600d78fdfbf85d224969f15bf10e01e8332f",
+    "exeSha256": "217f07be77a159e52245390953d50e790092f1faf6e9b8df946cecbb8fb81c40"
+  }
 }

@@ -19,6 +19,7 @@ node scripts/docs-audit/verify.mjs --public
 - `DOCS_AUDIT_WORKERS`: Node 테스트 worker 수, 기본 3. 사람/대화 에이전트를 생성하지 않습니다.
 - 공개 EXE는 `outputs/artifact/STM-Simulator.exe`, 또는 `LAB_EXE`로 지정. 별도 프로필/숨김 창 사용. 실행 중인 사용자 앱은 건드리지 않습니다.
 - `packaged.cjs --dev`는 저장소 Electron으로 동일 UI/IPC 경로를 검사합니다. 개발 검사로 공개 EXE 검증을 대체하지 않습니다.
+- 0.23.3 기존 예제 공개 검증: `node scripts/docs-audit/verify-legacy.mjs --public`. 먼저 `DOCS_AUDIT_TYPES=matrix,servo,relay`, `DOCS_AUDIT_OUT=work/test-results/docs-audit-0.23.3/phase-samples` 환경 변수로 `node scripts/docs-audit/packaged.cjs --step-samples`를 실행합니다. 앱의 20 ms 스텝 버튼으로 진행하고 구간마다 2초 파일 로거를 기다려 주기적인 상태를 놓치지 않고 검사합니다. 실행 후 두 환경 변수를 해제합니다.
 - `core`: 실제 신규 배치 기본값, main 직접 삽입/기존 코드 보존, 원본과 동작 비교, 입력 변화, 모든 자동 생성 선의 단선 복구, 전체 누락/오접속 복구 후 실제 재실행.
 - `cards`: 각 카드로 새 프로젝트에 적용 후 실제 HAL 호출·반환·회로 상태 기록. API 도달을 장치 전체 기능 통과로 취급하지 않습니다.
 - `baremetal`: main 삽입/ARM 대상 전환만 검사. 레지스터 코드의 실제 실행은 검증하지 않습니다.

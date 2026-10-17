@@ -2,7 +2,7 @@ const fs=require('node:fs/promises'),path=require('node:path'),net=require('node
 const {createHash}=require('node:crypto');
  const {chromium}=require('playwright'),{launch,terminate}=require('../../desktop/process-tools.cjs');
 (async()=>{
- const {root,directory:out,version}=require('./paths.cjs'),dev=process.argv.includes('--dev'),exe=dev?require('electron'):process.env.LAB_EXE||path.join(root,'outputs/artifact/STM-Simulator.exe');
+ const {root,directory:out,version}=require('./paths.cjs'),dev=process.argv.includes('--dev'),stepSamples=process.argv.includes('--step-samples'),exe=dev?require('electron'):process.env.LAB_EXE||path.join(root,'outputs/artifact/STM-Simulator.exe');
  await fs.mkdir(out,{recursive:true});
  const {PART_LIBRARY}=await import('../../src/part-library.js'),{fixture,inputChanges,family}=await import('./runtime.mjs');
  const profile=await fs.mkdtemp(path.join(out,'packaged-'));await fs.mkdir(path.join(profile,'updates'),{recursive:true});await fs.writeFile(path.join(profile,'updates/settings.json'),JSON.stringify({automatic:false}));
@@ -27,7 +27,20 @@ const {createHash}=require('node:crypto');
     await page.selectOption('#resize-target',type==='board'?'surface:board':'part:selected');await page.locator('[data-tab="docs"]').dispatchEvent('click');await page.locator('#docs-apply-all').dispatchEvent('click');
     await page.waitForFunction(()=>document.getElementById('docs-result').textContent.includes('적용 완료'));
     await page.waitForTimeout(250);const saved=JSON.parse(await fs.readFile(path.join(profile,'diagnostics/latest-project.stm32lab'),'utf8'));
-    await page.locator('#run').dispatchEvent('click');
+    if(stepSamples){
+     await page.locator('#step').dispatchEvent('click');
+     for(const atMs of [200,500,1000,1500,2000,2500,3000,3500]){
+      await page.evaluate(atMs=>{
+       let count=0;
+       while(parseFloat(document.getElementById('sim-time').textContent)*1000<atMs){
+        if(++count>200)throw new Error('Step control did not advance simulation');
+        document.getElementById('step').click();
+       }
+      },atMs);
+      // Let the unchanged application's 2-second file logger sample each phase.
+      await page.waitForTimeout(2100);
+     }
+    }else await page.locator('#run').dispatchEvent('click');
     result.stimuli=[];
     if(family(type)==='uart'){
      await waitSimulation(100);await page.locator('[data-monitor="bus"]').dispatchEvent('click');
@@ -48,7 +61,7 @@ const {createHash}=require('node:crypto');
        if(!input||input.dataset.live!=='true')throw new Error('Missing live input: '+key);
        input.value=String(value);input.dispatchEvent(new Event('input',{bubbles:true}));input.dispatchEvent(new Event('change',{bubbles:true}));
       }
-      return {requestedMs:atMs,observedTime:document.getElementById('sim-time').textContent,changes};
+      return {requestedMs:atMs,observedTime:document.getElementById('sim-time').textContent,changes,actual:Object.fromEntries(Object.keys(changes).map(key=>[key,document.querySelector('[data-part-prop="'+key+'"]').value]))};
      },{changes,atMs}));
     }
     await waitSimulation(/dht|ds18b20/.test(type)?5500:3500);
@@ -59,7 +72,7 @@ const {createHash}=require('node:crypto');
    }catch(e){result.error=e.message;}
    await fs.writeFile(path.join(out,`packaged-${type}.json`),JSON.stringify(result,null,2));const {events,console:consoleRows,...summary}=result;rows.push(summary);console.log(JSON.stringify(summary));
   }
-  await fs.writeFile(path.join(out,'packaged-summary.json'),JSON.stringify({exe,profile,dev,version:state.currentVersion,exeSha256:createHash('sha256').update(await fs.readFile(exe)).digest('hex'),rows},null,2));
+  await fs.writeFile(path.join(out,'packaged-summary.json'),JSON.stringify({exe,profile,dev,stepSamples,version:state.currentVersion,exeSha256:createHash('sha256').update(await fs.readFile(exe)).digest('hex'),rows},null,2));
   if(rows.some(r=>r.error||r.errors?.length||r.version!==version||!r.applied||!r.started||!r.stateEvents))process.exitCode=1;
   await page.evaluate(()=>window.close()).catch(()=>{});
  }finally{if(browser)await browser.close().catch(()=>{});await terminate(child);}
