@@ -24,8 +24,14 @@ function bindParts(p,sample,target,prior,report){
  const uf=wiringTopology(p),nets=expectedNets(sample),powerRoots=new Set(PINS.filter(pin=>!/^P[A-H]\d+$/.test(pin.signal)).map(pin=>uf.find(pin.id)));
  for(const template of sample.components){if(map[template.id]&&p.components.some(part=>part.id===map[template.id]&&part.type===template.type))continue;
   const peers=nets.filter(net=>net.some(id=>id.startsWith('part:'+template.id+':'))).flatMap(net=>net.filter(id=>id.startsWith('part:')&&map[id.split(':')[1]]).map(id=>partTerminal(map[id.split(':')[1]],id.split(':')[2])));
+  // Reset discards example code ownership; recover unchanged wiring from its configured GPIO nets.
+  const configuredPeers=nets.filter(net=>net.some(id=>id.startsWith('part:'+template.id+':'))).flatMap(net=>net.flatMap(id=>{
+   const signal=PIN_BY_ID.get(id)?.signal,cfg=sample.mcu.pins[signal];if(!cfg)return [];
+   return Object.entries(p.mcu.pins).filter(([pin,c])=>c.function===cfg.function&&c.pull===cfg.pull&&(cfg.label?c.label===cfg.label:pin===signal)).map(([pin])=>boardPin(pin));
+  }));
+  const claimed=new Set((p.deviceDocs?.bindings||[]).filter(b=>b!==prior).flatMap(b=>Object.values(b.parts)));
   const matchesValue=part=>!['resistor','capacitor'].includes(part.type)||part.value===template.value||part.type==='resistor'&&['led','rgb','sevenseg','relay','lcd'].includes(target.type)&&part.value>=template.value&&part.value<=template.value*4;
-  const candidate=p.components.find(part=>part.type===template.type&&!Object.values(map).includes(part.id)&&matchesValue(part)&&terminalKeys(part).some(key=>{const root=uf.find(partTerminal(part.id,key));return !powerRoots.has(root)&&peers.some(peer=>uf.find(peer)===root);}));
+  const candidate=p.components.find(part=>part.type===template.type&&!Object.values(map).includes(part.id)&&!claimed.has(part.id)&&matchesValue(part)&&terminalKeys(part).some(key=>{const root=uf.find(partTerminal(part.id,key));return !powerRoots.has(root)&&[...peers,...configuredPeers].some(peer=>uf.find(peer)===root);}));
   if(candidate){map[template.id]=candidate.id;report.reused++;continue;}
   const added=structuredClone(template);added.id=newId(p,'docsPart');added.name=template.name+' · Docs';delete added.attachA;delete added.attachB;delete added.attachments;
   const anchor=p.components.find(part=>part.id===target.id);if(anchor){added.x=anchor.x+210+report.addedParts%3*125;added.y=anchor.y+Math.floor(report.addedParts/3)*125;}
@@ -63,7 +69,11 @@ function allocatePins(p,sample,parts,prior){
   if(!chosen){const connected=candidates.find(pin=>!assigned.has(pin)&&config.pins[pin]?.function===fn&&!otherTerminals.some(id=>uf.find(id)===uf.find(boardPin(pin))));chosen=connected;}
   if(!chosen)throw new Error(old+'에 필요한 '+fn+'의 사용 가능한 핀이 없습니다.');
   if(fn==='GPIO_EXTI'&&Object.entries(config.pins).some(([name,c])=>name!==chosen&&c.function==='GPIO_EXTI'&&name.slice(2)===chosen.slice(2)))throw new Error(chosen+'의 EXTI 번호가 이미 사용 중입니다.');
-  map[old]=chosen;assigned.add(chosen);const next={...cfg};if(fn.startsWith('ADC1_'))next.function='ADC1_'+Object.entries(ROUTES.ADC1).find(([,pins])=>pins.includes(chosen))[0];else if(peripherals[periph])next.function=peripherals[periph]+'_'+role;config.pins[chosen]=next;if(fn==='GPIO_EXTI')config.nvic[irqForPin(chosen)]={enabled:true,priority:0};
+  map[old]=chosen;assigned.add(chosen);const next={...cfg};if(fn.startsWith('ADC1_'))next.function='ADC1_'+Object.entries(ROUTES.ADC1).find(([,pins])=>pins.includes(chosen))[0];else if(peripherals[periph])next.function=peripherals[periph]+'_'+role;
+  if(config.pins[chosen]?.label)next.label=config.pins[chosen].label;
+  const labels=new Set(Object.entries(config.pins).filter(([pin])=>pin!==chosen).map(([,p])=>p.label));
+  if(next.label&&labels.has(next.label)){const base=next.label.slice(0,28)+'_'+chosen;next.label=base;let suffix=2;while(labels.has(next.label))next.label=base+'_'+suffix++;}
+  config.pins[chosen]=next;if(fn==='GPIO_EXTI')config.nvic[irqForPin(chosen)]={enabled:true,priority:0};
  }
  for(const [irq,value]of Object.entries(sample.mcu.nvic))if(!irq.startsWith('EXTI'))config.nvic[(peripherals[irq.replace('_IRQn','')]||irq.replace('_IRQn',''))+'_IRQn']=value;
  return {pins:map,peripherals,config:validateMcu(config)};
