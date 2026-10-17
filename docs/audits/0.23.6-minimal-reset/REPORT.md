@@ -28,8 +28,18 @@
 - 초기화된 코드의 무출력·비활성 타이머·오류 없음, 설정/회로/사용자 파일 보존 검사.
 - 장치 114개: Docs 적용 → 초기화 → Docs 재적용 → 입력 변화/LED/모터/표시/통신별 동작 판정.
 - 독립 Electron: 초기화 버튼/취소/undo/실행 중 제한, 128개 실제 초기화·실행 및 파일 진단.
-- 단위 322개, 초기화 모델 128개, 장치 재적용 114개, 회로 보존 114개, Electron 기본 동작 14개 통과. Electron 전수 초기화·Windows CI·공개 배포 검증은 진행 중.
+- 단위 322개, 초기화 모델 128개, 장치 재적용 114개, 회로 보존 114개, Electron 기본 동작 14개 통과. Electron 전수 초기화 128개 통과. Windows CI·공개 배포 검증 완료.
 
 실행 시간: DHT/DS18B20은 두 차례 입력 변경 이후 변환 결과까지 기다리도록 5.5초, 나머지 장치는 3.5초. 실행 로그는 시뮬레이터 관측값이며 실물 보드 측정이 아니다.
 
 코드 위치는 별도 `FIX-LOCATIONS.md`에 기록한다.
+
+## 공개 배포 검증 완료
+
+- Windows 전체 CI 성공: https://github.com/moonsyu/STM-Simulator/actions/runs/39055652945
+- 공개 EXE에서 128개 초기화 → 실행 → code.reset/simulation.state 파일 로그 검사 통과. 생성 코드 128개 해시가 ARM 컴파일한 소스와 일치한다. 4개 독립 프로필에 분할했으며 각 프로필에서 기본 동작 14개도 통과했다.
+- 초기화 LED OFF 0 A → Docs 재적용 ON 약 3.93 mA. 타이머·센서의 전체 재적용 판정은 모델 실행 로그와 구분한다.
+- EXE/ZIP/SHA256.txt/BUILD-INFO.json/update-manifest.json의 버전·파일명·커밋·해시, ZIP 무결성, latest 선택 확인.
+- 빌드 커밋: `922c96cefad3c192c5c18cd98cc65f02f46c4ecb`
+- EXE SHA-256: `3e584d79d224dd2131ec6427ac781af5a7099f9631b031aa6e96d973b20ad230`
+- 전체 실행 증거: `work/audit-archives/minimal-reset-0.23.6.zip`. 기존 태그/배포 파일은 후속 기록 커밋으로 교체하지 않는다.

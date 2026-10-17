@@ -124,3 +124,10 @@
 - 단위/모델 314개, ARM 컴파일·링크 122개, 독립 Electron 14개 및 공개 EXE 동일 검사 통과.
 - 초기화 후 LD2 매크로 제거, Pinout 라벨 보존, LED OFF 0 A → Docs 재적용 ON 약 3.93 mA 확인.
 - Windows 전체 CI와 공개 5개 자산·태그 커밋·해시·최신 릴리스 확인. [보고서](audits/0.23.5-pin-aliases/REPORT.md).
+
+
+## 0.23.6 코드 초기화 전수 정리
+
+- 단위 322개, 초기화 모델/ARM 빌드 128개, 장치 Docs 재적용 동작·회로 보존 114개 통과.
+- 개발/공개 EXE에서 초기화 128개와 기본 동작 14개 검사 통과. 로그에 무출력·고장 없음·LED OFF/ON 확인.
+- Windows 전체 CI와 공개 5개 자산·버전·커밋·해시·latest 확인. [보고서](audits/0.23.6-minimal-reset/REPORT.md).
