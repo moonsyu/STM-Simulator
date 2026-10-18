@@ -42,6 +42,8 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 Monaco Editor is used under the MIT license, copyright (c) 2016 - present Microsoft Corporation. The editor, language definitions, font and worker are bundled locally. The original license and third-party notices are retained in `src/generated/MONACO-LICENSE.txt` and `src/generated/MONACO-NOTICES.txt` inside the application and as `MONACO-LICENSE.txt` and `MONACO-NOTICES.txt` in the download bundle.
 
+The editor's vendored DOMPurify module is replaced at bundle time by unmodified DOMPurify 3.4.17 from Cure53, under its Apache-2.0 OR MPL-2.0 license. Its original license is retained as `src/generated/DOMPURIFY-LICENSE.txt` and `DOMPURIFY-LICENSE.txt` in the download bundle. The original Monaco notices are preserved for attribution; the build checks that its older sanitizer is not bundled.
+
 Source: [Monaco Editor](https://github.com/microsoft/monaco-editor).
 
 ## Build tooling
