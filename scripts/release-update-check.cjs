@@ -22,10 +22,11 @@ async function processes(target){
  try{
   await open();assert.equal((await page.evaluate(()=>window.appUpdates.state())).currentVersion,baseline.manifest.version);await page.evaluate(()=>window.appUpdates.configure(false));
   await page.click('#new');await page.fill('#new-project-name','Live Update Project');
+  await page.selectOption('#new-project-template','blink');
   // The project is created through the actual UI; the updater and network are untouched.
   await page.click('#project-create');await page.waitForSelector('#project-dialog',{state:'hidden'});
   const marker='STM_PUBLIC_UPDATE_SURVIVES';await page.locator('#code').evaluate((el,marker)=>{el.value='// '+marker+'\nint main(void) { return 0; }\n';el.dispatchEvent(new Event('input',{bubbles:true}));},marker);
-  await page.click('[data-tab="settings"]');await page.fill('#pref-fontSize','17');await page.locator('#pref-fontSize').press('Tab');await page.click('[data-tab="code"]');
+  await page.click('[data-tab="settings"]');await page.selectOption('#pref-appearance','dark');await page.selectOption('#pref-theme','jellybean');await page.fill('#pref-fontSize','17');await page.locator('#pref-fontSize').press('Tab');await page.click('[data-tab="code"]');
   if(await page.locator('#object-scale').count()){await page.selectOption('#resize-target','surface:board');await page.fill('#object-scale','125');await page.locator('#object-scale').press('Tab');}
   else await require('./resize-gesture.cjs').resizeDevice(page,'surface:board',1.25,1.25);
   // Configure the genuine automatic scheduler; do not call manual check/download.

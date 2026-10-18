@@ -3,6 +3,7 @@ const fs = require('node:fs/promises');
 const path = require('node:path');
 const {createHash} = require('node:crypto');
 const assert = require('node:assert/strict');
+const {execFileSync} = require('node:child_process');
 const {cleanArtifactOutput} = require('./clean-build.cjs');
 
 (async () => {
@@ -92,7 +93,7 @@ const {cleanArtifactOutput} = require('./clean-build.cjs');
   for (const file of ['README.md', 'THIRD_PARTY_NOTICES.md']) {
     await fs.copyFile(path.join(root, file), path.join(output, file));
   }
-  for (const file of ['MONACO-LICENSE.txt', 'MONACO-NOTICES.txt']) await fs.copyFile(path.join(root, 'src/generated', file), path.join(output, file));
+  for (const file of ['MONACO-LICENSE.txt', 'MONACO-NOTICES.txt','DOMPURIFY-LICENSE.txt']) await fs.copyFile(path.join(root, 'src/generated', file), path.join(output, file));
   await fs.mkdir(path.join(output, 'docs'));
   await fs.copyFile(path.join(root,'docs/DIAGNOSTICS.md'),path.join(output,'docs/DIAGNOSTICS.md'));
   for (const file of ['COPYRIGHT-REVIEW.md', 'APP-ICON.md', 'SKETCH-API.md', 'HAL-API.md', 'IDE.md', 'MCU-DEFAULTS.md', 'UPDATES.md', 'DEVICE-DOCS.md', 'DEVICE-CATALOG.md', 'device-model-gallery.html', 'DEVICE-VISUAL-REFERENCES.md', 'device-reference-gallery.html', 'device-visual-references.json']) {
@@ -100,10 +101,14 @@ const {cleanArtifactOutput} = require('./clean-build.cjs');
   }
   await fs.writeFile(path.join(output, 'SHA256.txt'), `${hash}  ${name}\n`);
   await fs.writeFile(path.join(output, 'update-manifest.json'), JSON.stringify({schemaVersion:1, version:pkg.version, filename:name, bytes:binary.length, sha256:hash}, null, 2) + '\n');
+  const commit=process.env.GITHUB_SHA||execFileSync('git',['rev-parse','HEAD'],{cwd:root,encoding:'utf8',windowsHide:true}).trim();
+  const sourceDirty=!!execFileSync('git',['status','--porcelain','--untracked-files=no'],{cwd:root,encoding:'utf8',windowsHide:true}).trim();
+  assert.match(commit,/^[a-f0-9]{40}$/,'Build commit must be recorded');
+  if(process.env.GITHUB_ACTIONS){assert.ok(process.env.GITHUB_RUN_ID&&process.env.GITHUB_REPOSITORY,'CI provenance is required');assert.equal(sourceDirty,false,'Release build source must be committed');}
   await fs.writeFile(path.join(output, 'BUILD-INFO.json'), JSON.stringify({
     version: pkg.version, filename: name, bytes: binary.length, sha256: hash,
-    commit: process.env.GITHUB_SHA || null,
-    workflow: process.env.GITHUB_RUN_ID ? `https://github.com/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID}` : null,
+    commit,sourceDirty,
+    workflow: process.env.GITHUB_RUN_ID ? `https://github.com/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID}` : 'local',
     builtAt: new Date().toISOString()
   }, null, 2) + '\n');
   console.log(`Verified ${name}: ${binary.length} bytes, SHA-256 ${hash}`);
