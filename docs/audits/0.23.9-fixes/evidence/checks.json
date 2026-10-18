@@ -1,0 +1,13 @@
+{
+  "passed": true,
+  "count": 365,
+  "node": "24.19.0",
+  "native": [
+    "GCC compile/link/run",
+    "GDB breakpoints/step/watch/memory/registers/interrupt",
+    "clangd hover/definition",
+    "C/C++ multi-file standard library",
+    "ARM GCC with STM32CubeF4 HAL/CMSIS ELF/BIN/HEX/MAP",
+    "failed/cancelled build invalidation"
+  ]
+}

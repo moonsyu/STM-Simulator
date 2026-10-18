@@ -1,0 +1,148 @@
+{
+  "recordedAt": "2026-10-18T12:28:14.909Z",
+  "source": "fd53440acc5a64f0cddcdc6d8715d2ee0f1c3616",
+  "armAbi": {
+    "compiler": "D:\\codex\\project\\STM-Simulator\\work\\native-tools\\xpack-arm-none-eabi-gcc-15.2.1-1.1\\bin\\arm-none-eabi-gcc.exe",
+    "passed": true
+  },
+  "cases": [
+    {
+      "id": "struct-padding",
+      "source": "#include <stdint.h>\nstruct Reading { float v; uint16_t raw; };\ndouble result=0;\nint main(void){result=sizeof(struct Reading);return 0;}\n",
+      "native": 8,
+      "simulator": 8,
+      "mismatch": false
+    },
+    {
+      "id": "sizeof-side-effect",
+      "source": "#include <stdint.h>\n\ndouble result=0;\nint main(void){int i=1; result=sizeof(i++); result=result*100+i;return 0;}\n",
+      "native": 401,
+      "simulator": 401,
+      "mismatch": false
+    },
+    {
+      "id": "sizeof-double-expression",
+      "source": "#include <stdint.h>\n\ndouble result=0;\nint main(void){double x=2; result=sizeof(x+1);return 0;}\n",
+      "native": 8,
+      "simulator": 8,
+      "mismatch": false
+    },
+    {
+      "id": "float-pointer-index",
+      "source": "#include <stdint.h>\n\ndouble result=0;\nint main(void){float a[1]={5.0f};float *p=a;result=p[0]/2;return 0;}\n",
+      "native": 2.5,
+      "simulator": 2.5,
+      "mismatch": false
+    },
+    {
+      "id": "float-nested-member",
+      "source": "#include <stdint.h>\nstruct A { float v; };struct B { struct A a; };\ndouble result=0;\nint main(void){struct B b={{5.0f}};result=b.a.v/2;return 0;}\n",
+      "native": 2.5,
+      "simulator": 2.5,
+      "mismatch": false
+    },
+    {
+      "id": "struct-initializer-width",
+      "source": "#include <stdint.h>\nstruct A { uint8_t v; };\ndouble result=0;\nint main(void){struct A a={300};result=a.v;return 0;}\n",
+      "native": 44,
+      "simulator": 44,
+      "mismatch": false
+    },
+    {
+      "id": "float-struct-array",
+      "source": "#include <stdint.h>\nstruct A { float v; };\ndouble result=0;\nint main(void){struct A a[1]={{5.0f}};result=a[0].v/2;return 0;}\n",
+      "native": 2.5,
+      "simulator": 2.5,
+      "mismatch": false
+    },
+    {
+      "id": "comparison-type",
+      "source": "#include <stdint.h>\n\ndouble result=0;\nint main(void){result=(1.0<2.0)/2;return 0;}\n",
+      "native": 0,
+      "simulator": 0,
+      "mismatch": false
+    },
+    {
+      "id": "unsigned-right-shift",
+      "source": "#include <stdint.h>\n\ndouble result=0;\nint main(void){uint32_t x=0x80000000U;result=x>>1;return 0;}\n",
+      "native": 1073741824,
+      "simulator": 1073741824,
+      "mismatch": false
+    },
+    {
+      "id": "unsigned-promotion",
+      "source": "#include <stdint.h>\n\ndouble result=0;\nint main(void){uint32_t x=0xffffffffU;int y=-1;result=(x==y);return 0;}\n",
+      "native": 1,
+      "simulator": 1,
+      "mismatch": false
+    },
+    {
+      "id": "unsigned-addition-wrap",
+      "source": "#include <stdint.h>\n\ndouble result=0;\nint main(void){uint32_t x=0xffffffffU;result=x+1U;return 0;}\n",
+      "native": 0,
+      "simulator": 0,
+      "mismatch": false
+    },
+    {
+      "id": "octal-literal",
+      "source": "#include <stdint.h>\n\ndouble result=0;\nint main(void){result=010;return 0;}\n",
+      "native": 8,
+      "simulator": 8,
+      "mismatch": false
+    },
+    {
+      "id": "enum-expression",
+      "source": "#include <stdint.h>\nenum E { A=1<<3, B };\ndouble result=0;\nint main(void){result=B;return 0;}\n",
+      "native": 9,
+      "simulator": 9,
+      "mismatch": false
+    },
+    {
+      "id": "function-return-conversion",
+      "source": "#include <stdint.h>\nint f(void){return 3.5;}\ndouble result=0;\nint main(void){result=f();return 0;}\n",
+      "native": 3,
+      "simulator": 3,
+      "mismatch": false
+    },
+    {
+      "id": "inline-sizeof",
+      "source": "int n=sizeof(uint32_t);",
+      "generated": "int n = sizeof(uint32_t);",
+      "native": 4,
+      "expected": 4,
+      "mismatch": false
+    },
+    {
+      "id": "inline-switch",
+      "source": "int n=0;switch(1){case 1:n=2;break;default:n=3;}",
+      "generated": "int n = 0;\nswitch (1) {\ncase 1:;\n(n = 2);\nbreak;\ndefault:;\n(n = 3);\n}",
+      "native": 2,
+      "expected": 2,
+      "mismatch": false
+    },
+    {
+      "id": "custom-label-reapply-board",
+      "beforeParts": 2,
+      "afterParts": 2,
+      "beforeWires": 3,
+      "afterWires": 3,
+      "mismatch": false
+    },
+    {
+      "id": "custom-label-reapply-breadboard",
+      "beforeParts": 3,
+      "afterParts": 3,
+      "beforeWires": 2,
+      "afterWires": 2,
+      "mismatch": false
+    },
+    {
+      "id": "custom-label-reapply-button",
+      "beforeParts": 3,
+      "afterParts": 3,
+      "beforeWires": 5,
+      "afterWires": 5,
+      "mismatch": false
+    }
+  ]
+}
