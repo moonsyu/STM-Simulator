@@ -21,6 +21,7 @@ export function expressionType(runtime,n){
  }
  if(n.type==='unary'){
   const a=of(n.a);if(n.op==='&')return {type:a.type,pointer:true};if(n.op==='*')return scalar(a.type);
+  if(n.op==='++'||n.op==='--')return a;
   return scalar(n.op==='!'?'int':promote(a.type));
  }
  if(n.type==='postfix'||n.type==='assign')return of(n.a);
