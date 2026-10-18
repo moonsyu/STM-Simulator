@@ -1,0 +1,93 @@
+{
+  "passed": true,
+  "results": [
+    {
+      "kind": "standalone",
+      "version": "0.23.9",
+      "updaterSupported": true,
+      "semantics": [
+        {
+          "name": "padding",
+          "expected": 8,
+          "actual": 8
+        },
+        {
+          "name": "sizeof",
+          "expected": 401,
+          "actual": 401
+        },
+        {
+          "name": "float-pointer",
+          "expected": 2.5,
+          "actual": 2.5
+        },
+        {
+          "name": "comparison",
+          "expected": 0,
+          "actual": 0
+        },
+        {
+          "name": "unsigned",
+          "expected": 0,
+          "actual": 0
+        },
+        {
+          "name": "enum",
+          "expected": 9,
+          "actual": 9
+        },
+        {
+          "name": "octal",
+          "expected": 8,
+          "actual": 8
+        }
+      ],
+      "closeRestoredLatest": true,
+      "passed": true
+    },
+    {
+      "kind": "zip",
+      "version": "0.23.9",
+      "updaterSupported": true,
+      "semantics": [
+        {
+          "name": "padding",
+          "expected": 8,
+          "actual": 8
+        },
+        {
+          "name": "sizeof",
+          "expected": 401,
+          "actual": 401
+        },
+        {
+          "name": "float-pointer",
+          "expected": 2.5,
+          "actual": 2.5
+        },
+        {
+          "name": "comparison",
+          "expected": 0,
+          "actual": 0
+        },
+        {
+          "name": "unsigned",
+          "expected": 0,
+          "actual": 0
+        },
+        {
+          "name": "enum",
+          "expected": 9,
+          "actual": 9
+        },
+        {
+          "name": "octal",
+          "expected": 8,
+          "actual": 8
+        }
+      ],
+      "closeRestoredLatest": true,
+      "passed": true
+    }
+  ]
+}

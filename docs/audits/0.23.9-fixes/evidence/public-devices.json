@@ -1,0 +1,55 @@
+{
+  "passed": true,
+  "kind": "public-exe",
+  "exeSha256": "8aa6bc0deafe4b315242df85f2310c320bce56617bb56cdd6b811486dd18f585",
+  "rows": [
+    {
+      "type": "board",
+      "stateEvents": 3,
+      "passed": true,
+      "version": "0.23.9"
+    },
+    {
+      "type": "breadboard",
+      "stateEvents": 3,
+      "passed": true,
+      "version": "0.23.9"
+    },
+    {
+      "type": "button",
+      "stateEvents": 3,
+      "passed": true,
+      "version": "0.23.9"
+    },
+    {
+      "type": "led",
+      "stateEvents": 3,
+      "passed": true,
+      "version": "0.23.9"
+    },
+    {
+      "type": "tft",
+      "stateEvents": 2,
+      "passed": true,
+      "version": "0.23.9",
+      "frameSha256": "d0dfca169874816302f42080ed12cf9c5c0fde81bb6651e35ad85b3993b03d59",
+      "pixelCount": 20480
+    },
+    {
+      "type": "ref_st7735_8",
+      "stateEvents": 3,
+      "passed": true,
+      "version": "0.23.9",
+      "frameSha256": "d0dfca169874816302f42080ed12cf9c5c0fde81bb6651e35ad85b3993b03d59",
+      "pixelCount": 20480
+    },
+    {
+      "type": "uart",
+      "stateEvents": 2,
+      "passed": true,
+      "version": "0.23.9",
+      "RX": "Audit42\n",
+      "TX": "HAL UART ready\r\nAudit42\n"
+    }
+  ]
+}

@@ -1,0 +1,10 @@
+AssertionError [ERR_ASSERTION]: Portable startup: standalone
+    at open (D:\codex\project\STM-Simulator\scripts\release-runtime-check.cjs:14:159)
+    at async D:\codex\project\STM-Simulator\scripts\release-runtime-check.cjs:18:4 {
+  generatedMessage: false,
+  code: 'ERR_ASSERTION',
+  actual: false,
+  expected: true,
+  operator: '==',
+  diff: 'simple'
+}

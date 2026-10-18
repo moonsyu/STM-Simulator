@@ -1,4 +1,15 @@
-# 검증 기록 — 0.23.2 공개 릴리스
+# 검증 기록
+
+## 0.23.9 감사 결함 수정·공개 배포
+
+2026-10-18. 저장·복구를 포함한 A01~A17 수정과 실제 실행 검증을 완료했습니다. [상세 보고서와 증거](audits/0.23.9-fixes/REPORT.md).
+
+- 365 단위 검사, 독립 GCC/ARM 대조, 114 장치·979 HAL 카드 실행, 701 단선·114 손상 회로 복구, 128 최소 코드 초기화·114 재적용 통과.
+- 독립 Electron 저장 오류/빠른 편집/프로젝트 전환/종료 복원, 52 화면 대비 검사, 실제 GCC/GDB/clangd/ARM 도구와 clean npm audit 0 확인.
+- [Windows CI 39128144301](https://github.com/moonsyu/STM-Simulator/actions/runs/39128144301) 전체 성공. [v0.23.9 Release](https://github.com/moonsyu/STM-Simulator/releases/tag/v0.23.9) 최신 선택과 공개 5개 자산, ZIP 내부 포터블 EXE, 버전/해시/출처 확인. 제품 커밋 `105eab70a2f3cb2bb8151042768eacb62c93f9fc`.
+- 공개 EXE/ZIP 각각 C 회귀 7개와 입력 직후 종료·재실행 복원 통과. 공개 EXE Docs 적용·실행 7종의 파일 로그, TFT 전체 픽셀, UART RX/TX 확인.
+- 구버전 공개 EXE 사본에서 0.23.8→0.23.9 실제 자동 다운로드·해시 검증·교체·재실행·코드/설정 보존 통과. 사용자 앱은 조작하지 않았습니다.
+- 공개 EXE SHA-256: `8aa6bc0deafe4b315242df85f2310c320bce56617bb56cdd6b811486dd18f585`. 이후 문서 커밋은 이 배포를 덮어쓰지 않습니다.
 
 ## 0.23.3 기존 HAL 예제·코드 초기화
 

@@ -41,4 +41,11 @@ DOMPurify는 공식 [3.4.17 릴리스](https://github.com/cure53/DOMPurify/relea
 
 ## 배포 상태
 
-소스·로컬 검증을 완료했습니다. Windows CI와 공개 EXE/ZIP/자동 업데이트 검증이 끝난 뒤 아래에 확정 기록을 추가합니다.
+- [Windows 전체 CI 39128144301](https://github.com/moonsyu/STM-Simulator/actions/runs/39128144301)의 검사·빌드·게시 작업이 성공했습니다. 제품 소스/태그 커밋은 `105eab70a2f3cb2bb8151042768eacb62c93f9fc`입니다.
+- [v0.23.9 Release](https://github.com/moonsyu/STM-Simulator/releases/tag/v0.23.9)가 latest이며 공개 EXE, ZIP, SHA256.txt, BUILD-INFO.json, update-manifest.json 5개를 직접 내려받아 검증했습니다. 버전·커밋·성공한 CI·크기·해시 및 ZIP 내부 포터블 EXE가 일치합니다.
+- 공개 `STM-Simulator.exe`: 102,760,961 bytes, SHA-256 `8aa6bc0deafe4b315242df85f2310c320bce56617bb56cdd6b811486dd18f585`.
+- 공개 단독 EXE와 ZIP 내부 EXE를 각각 실행해 C 의미 회귀 7개, updater 지원, 입력 직후 정상 종료·재실행 시 최신 코드 복원을 확인했습니다.
+- 공개 EXE에서 board/breadboard/button/LED/TFT/ST7735/UART 7종을 실제 Docs 버튼으로 적용하고 실행한 진단 파일을 확인했습니다. 두 TFT의 전체 20,480 RGB565 픽셀 해시가 기대값과 일치하고 UART RX/TX에 `Audit42\n` 전체 바이트가 남습니다. 전체 114종 검증은 위 소스 실행 검사이며 공개 EXE UI 검사 7종과 구분합니다.
+- 수정하지 않은 구버전 공개 EXE 사본으로 **0.23.8 → 0.23.9 자동 업데이트**를 확인했습니다. 자동 탐색·다운로드·SHA-256 검증·저장 후 교체·새 패키지 재실행이 성공했으며 코드/Jellybean/폰트 17/보드 크기/자동 업데이트 설정이 보존됐습니다. 사용 중인 앱 대신 독립 사본을 사용했습니다.
+- 동시 실행 중 첫 공개 실행 검사에서 자동화 연결 준비 시간이 초과됐습니다. 원래 실패 로그를 보존했고, 다른 검사가 종료된 뒤 제품과 검사 코드를 바꾸지 않고 단독 재실행하여 EXE/ZIP 모두 통과했습니다. 시간 초과의 정확한 원인을 제품 결함으로 단정하지 않습니다.
+- 배포 검증 증거는 `evidence/public-assets.json`, `public-runtime.json`, `public-update.json`, `public-devices.json`, `public-ci.json`, `public-runtime-first-attempt.txt`에 저장했습니다. 후속 검증 문서 커밋은 배포 소스/태그/기존 자산을 바꾸지 않습니다.
