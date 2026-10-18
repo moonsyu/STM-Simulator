@@ -42,11 +42,16 @@
     "test:empty-workspace:ui": "node scripts/empty-workspace-ui.cjs"
   },
   "devDependencies": {
+    "dompurify": "3.4.17",
     "electron": "44.2.0",
     "electron-builder": "26.15.3",
     "esbuild": "0.28.2",
     "monaco-editor": "0.57.0",
     "playwright": "1.58.2"
+  },
+  "overrides": {
+    "dompurify": "$dompurify",
+    "global-agent": "4.1.3"
   },
   "build": {
     "appId": "local.stm32.circuitlab",
