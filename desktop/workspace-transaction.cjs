@@ -36,7 +36,11 @@ async function commit(directory,files,names,expected){
    if(value!==null)await durableWrite(path.join(folder,`next-${i}`),value);
   }
   await durableWrite(path.join(folder,'journal.tmp'),JSON.stringify({version:1,entries}));await fs.rename(path.join(folder,'journal.tmp'),path.join(folder,'journal.json'));journalWritten=true;
-  for(const [i,name]of [...names].entries()){const dest=path.join(directory,name);if(files.has(name))await fs.rename(path.join(folder,`next-${i}`),dest);else await fs.unlink(dest);}
+  for(const [i,name]of [...names].entries()){
+   const dest=path.join(directory,name),current=await readFile(dest),before=entries[i].before;
+   if((current===null?null:hash(current))!==(before===null?null:hash(Buffer.from(before,'base64'))))throw Error(`${name} 파일이 저장 준비 중 앱 밖에서 변경되었습니다.`);
+   if(files.has(name))await fs.rename(path.join(folder,`next-${i}`),dest);else await fs.unlink(dest);
+  }
   await durableWrite(path.join(folder,'committed'),'1');committed=true;
  }catch(error){
   try{if(journalWritten)await recover(directory);else await removeJournal(directory);}catch(recovery){throw new Error(`저장에 실패했고 복구 기록을 남겼습니다. 폴더를 다시 열어 복구하세요. ${recovery.message}`,{cause:error});}
