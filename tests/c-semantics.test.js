@@ -10,6 +10,7 @@ for(const [name,body,expected,globals='']of [
  ['struct alignment','result=sizeof(struct Reading);',8,'struct Reading {float v;uint16_t raw;};'],
  ['nested alignment','result=sizeof(struct Outer);',24,'struct Inner {double d;char c;};struct Outer {char a;struct Inner b;};'],
  ['unevaluated increment','int i=1;result=sizeof(i++);result=result*100+i;',401],
+ ['unevaluated narrow prefix','uint8_t i=1;result=sizeof(++i);result=result*100+i;',101],
  ['unevaluated null dereference','double *p=0;result=sizeof(*p);',8],
  ['unevaluated call','result=sizeof(f());result=result*10+calls;',80,'int calls;double f(void){calls++;return 0;}'],
  ['double expression','double x=2;result=sizeof(x+1);',8],
