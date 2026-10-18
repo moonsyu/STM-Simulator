@@ -1,5 +1,7 @@
-const fs=require('node:fs/promises'),path=require('node:path'),{createHash,randomUUID}=require('node:crypto');
+const fs=require('node:fs/promises'),path=require('node:path'),{createHash}=require('node:crypto');
 const hash=text=>createHash('sha256').update(text).digest('hex');
+const transaction=require('./workspace-transaction.cjs'),pending=new Map();
+function serial(directory,action){const key=path.resolve(directory).toLowerCase(),previous=pending.get(key)||Promise.resolve(),next=previous.catch(()=>{}).then(action);pending.set(key,next);next.finally(()=>{if(pending.get(key)===next)pending.delete(key);}).catch(()=>{});return next;}
 const safeName=name=>typeof name==='string'&&/^[\w가-힣][\w가-힣 .-]{0,79}$/.test(name)&&!/[. ]$/.test(name)&&! /^(con|prn|aux|nul|com[1-9]|lpt[1-9])(?:\.|$)/i.test(name);
 async function filesFor(text){
   if(typeof text!=='string'||Buffer.byteLength(text)>2000000)throw new Error('프로젝트 크기 제한을 넘었습니다.');
@@ -17,20 +19,24 @@ async function createWorkspace(parent,name,text){
   await fs.writeFile(path.join(directory,'stm-project.json'),JSON.stringify({format:'stm-simulator-workspace',version:1,document:'project.stm32lab'},null,2)+'\n',{flag:'wx'});
   return {directory,hashes:await snapshot(directory,files.keys())};
 }
-async function openWorkspace(directory){
+async function readWorkspace(directory){
   const marker=JSON.parse(await fs.readFile(path.join(directory,'stm-project.json'),'utf8'));
   if(marker.format!=='stm-simulator-workspace'||marker.document!=='project.stm32lab')throw new Error('STM Simulator 프로젝트 폴더가 아닙니다.');
+  await transaction.recover(directory);
   const stat=await fs.stat(path.join(directory,'project.stm32lab'));if(stat.size>2000000)throw new Error('프로젝트 크기 제한을 넘었습니다.');
   const text=await fs.readFile(path.join(directory,'project.stm32lab'),'utf8'),files=await filesFor(text),hashes=await snapshot(directory,files.keys()),project=JSON.parse(text);
   for(const name of files.keys()){if(name==='project.stm32lab')continue;if(hashes.get(name)===null)throw new Error(`${name} 소스 파일이 없습니다.`);const stat=await fs.stat(path.join(directory,name));if(stat.size>1200000)throw new Error('소스 파일 크기 제한을 넘었습니다.');const value=await fs.readFile(path.join(directory,name),'utf8');if(name==='main.c')project.code=value;else project.firmware.files.find(f=>f.name===name).text=value;}
   const updated=JSON.stringify(project);await filesFor(updated);return {text:updated,state:{directory,hashes}};
 }
-async function saveWorkspace(state,text){
+async function writeWorkspace(state,text){
   if(!state)throw new Error('먼저 프로젝트 폴더를 생성하거나 여세요.');const files=await filesFor(text);
+  await transaction.recover(state.directory);
   const names=new Set([...state.hashes.keys(),...files.keys()]),actual=await snapshot(state.directory,names);
   for(const name of names)if(actual.get(name)!==(state.hashes.get(name)??null))throw new Error(`${name} 파일이 앱 밖에서 변경되었습니다. 다른 위치에 저장하거나 원본을 확인한 뒤 다시 여세요.`);
-  for(const [name,value]of files){const dest=path.join(state.directory,name),temp=dest+'.'+randomUUID()+'.tmp';try{await fs.writeFile(temp,value,'utf8');await fs.rename(temp,dest);}finally{await fs.unlink(temp).catch(e=>{if(e.code!=='ENOENT')throw e;});}}
-  for(const name of state.hashes.keys())if(!files.has(name))await fs.unlink(path.join(state.directory,name));
+  await transaction.commit(state.directory,files,names,actual);
   state.hashes=await snapshot(state.directory,files.keys());return state.directory;
 }
-module.exports={createWorkspace,openWorkspace,saveWorkspace,safeName};
+const openWorkspace=directory=>serial(directory,()=>readWorkspace(directory));
+const saveWorkspace=(state,text)=>state?serial(state.directory,()=>writeWorkspace(state,text)):Promise.reject(new Error('먼저 프로젝트 폴더를 생성하거나 여세요.'));
+const flush=()=>Promise.allSettled([...pending.values()]);
+module.exports={createWorkspace,openWorkspace,saveWorkspace,safeName,flush};

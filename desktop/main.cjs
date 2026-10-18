@@ -23,8 +23,14 @@ ipcMain.handle('diagnostics:record',(event,input)=>{
  return diagnostics.record(input);
 });
 nativeIde.on('event',data=>{if(win&&!win.isDestroyed())win.webContents.send('native:event',data);});
-let quitting=false;
-app.on('before-quit',event=>{if(quitting)return;event.preventDefault();quitting=true;updater.close();Promise.allSettled([nativeIde.close(),diagnostics.flush()]).finally(()=>app.quit());});
+let quitting=false,closing=null;
+app.on('before-quit',event=>{
+ if(quitting)return;event.preventDefault();
+ // Let the renderer synchronously persist its latest draft before its window dies.
+ // A failed draft write may veto close; keep the app and tools usable in that case.
+ if(win&&!win.isDestroyed()){win.close();return;}
+ if(!closing){updater.close();closing=Promise.allSettled([nativeIde.close(),workspace.flush(),diagnostics.flush()]).finally(()=>{quitting=true;app.quit();});}
+});
 function updateHandle(name,handler){ipcMain.handle('update:'+name,async(event,...args)=>{if(event.sender!==win?.webContents||event.senderFrame?.parent)throw new Error('허용하지 않는 요청입니다.');await updaterReady;return handler(...args);});}
 updateHandle('state',()=>updater.snapshot());
 updateHandle('check',()=>updater.check());
@@ -65,9 +71,10 @@ app.whenReady().then(()=>{
 });
 app.on('window-all-closed',()=>app.quit());
 ipcMain.handle('workspace:choose-parent',async()=>{const r=await dialog.showOpenDialog(win,{title:'프로젝트를 생성할 상위 폴더',properties:['openDirectory','createDirectory']});if(r.canceled)return null;chosenProjectParent=r.filePaths[0];return chosenProjectParent;});
-ipcMain.handle('workspace:create',async(_event,{name,text})=>{if(!chosenProjectParent)throw new Error('저장할 상위 폴더를 먼저 선택하세요.');workspaceState=await workspace.createWorkspace(chosenProjectParent,name,text);return workspaceState.directory;});
-ipcMain.handle('workspace:open',async()=>{const r=await dialog.showOpenDialog(win,{title:'STM Simulator 프로젝트 폴더 열기',properties:['openDirectory']});if(r.canceled)return null;const opened=await workspace.openWorkspace(r.filePaths[0]);workspaceState=opened.state;return {text:opened.text,directory:workspaceState.directory};});
+ipcMain.handle('workspace:create',async(_event,{name,text})=>{if(!chosenProjectParent)throw new Error('저장할 상위 폴더를 먼저 선택하세요.');const created=await workspace.createWorkspace(chosenProjectParent,name,text);await nativeIde.closeTerminal();workspaceState=created;return workspaceState.directory;});
+ipcMain.handle('workspace:open',async()=>{const r=await dialog.showOpenDialog(win,{title:'STM Simulator 프로젝트 폴더 열기',properties:['openDirectory']});if(r.canceled)return null;const opened=await workspace.openWorkspace(r.filePaths[0]);await nativeIde.closeTerminal();workspaceState=opened.state;return {text:opened.text,directory:workspaceState.directory};});
 ipcMain.handle('workspace:save',async(_event,text)=>workspace.saveWorkspace(workspaceState,text));
+ipcMain.handle('workspace:clear',async event=>{if(event.sender!==win?.webContents||event.senderFrame?.parent)throw new Error('허용하지 않는 요청입니다.');workspaceState=null;await nativeIde.closeTerminal();});
 ipcMain.handle('firmware:import',async(_event,folder)=>{
   const result=await dialog.showOpenDialog(win,{title:folder?'Cube 프로젝트 루트 폴더 선택':'.ioc, main.c와 필요한 .c/.h 선택',properties:folder?['openDirectory']:['openFile','multiSelections'],...(!folder?{filters:[{name:'Cube 소스와 설정',extensions:['ioc','c','h']}]}:{})});
   if(result.canceled)return null;
