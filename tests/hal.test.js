@@ -84,3 +84,37 @@ test('shared EXTI handler only calls the callback for pending masks',()=>{
 test('PWM configured through HAL produces the requested average voltage',()=>{
   const p=halExample('timer');p.mcu.pins.PA5.function='TIM2_CH1';p.code=generateHal(p.mcu).replace('HAL_TIM_Base_Init(&htim2);','HAL_TIM_PWM_Init(&htim2); TIM_OC_InitTypeDef oc={0}; oc.OCMode=TIM_OCMODE_PWM1; oc.Pulse=250; HAL_TIM_PWM_ConfigChannel(&htim2,&oc,TIM_CHANNEL_1);');p.code=p.code.replace('HAL_TIM_Base_Start_IT(&htim2);','HAL_TIM_PWM_Start(&htim2,TIM_CHANNEL_1);');const {s}=start(p);assert.ok(Math.abs(s.runtime.gpio.PA5.value-.825)<.01);
 });
+test('HAL supports switch/case/default, enum/typedef enum, sizeof(type), float/string #define, and float array/member division',()=>{
+  const code=`#define VREF 3.3f
+#define TAG "OK"
+typedef enum { MODE_IDLE = 0, MODE_RUN = 2, MODE_FAST } RunMode;
+struct Reading { float v; uint16_t raw; };
+int main(void) {
+  RunMode mode = MODE_FAST;
+  int score = 0;
+  switch (mode) {
+    case MODE_IDLE: score = 10; break;
+    case MODE_RUN: score += 5;
+    case MODE_FAST: score += 20;
+    default: score += 1; break;
+  }
+  float samples[2] = { 5.0f, 3.0f };
+  struct Reading r = { 7.0f, 100 };
+  unsigned int casted = (unsigned int)VREF;
+  GPIO_PinState pin = (GPIO_PinState)1;
+  Serial.println(TAG);
+  Serial.println(score);
+  Serial.println(sizeof(uint32_t));
+  Serial.println(sizeof(struct Reading));
+  Serial.println(VREF);
+  Serial.println(samples[0] / 2);
+  Serial.println(r.v / 2);
+  Serial.println(casted + pin);
+  return 0;
+}`;
+  const out=[],program=compileHal(code);
+  const r=new Runtime(program,{constants:HAL_CONSTANTS,print:x=>out.push(x)});
+  r.tick(0);
+  assert.deepEqual(out,['OK','21','4','6','3.3','2.5','3.5','4']);
+});
+

@@ -40,6 +40,7 @@ export function inlineStatements(source,helpers='',prefix='example_'){
    return result('('+a.code+' '+n.op+' '+b.code+')',a.before+b.before);
   }
   if(n.type==='unary'||n.type==='postfix'||n.type==='cast'){const a=expr(n.a,env,stack);return result(n.type==='cast'?'('+(n.constant?'const ':'')+(n.volatile?'volatile ':'')+n.to+(n.pointer?' *':'')+')('+a.code+')':n.type==='postfix'?'('+a.code+n.op+')':'('+n.op+a.code+')',a.before);}
+  if(n.type==='sizeofType')return result('sizeof('+(n.constant?'const ':'')+(n.volatile?'volatile ':'')+n.targetType+(n.pointer?' *':'')+')');
   if(n.type==='member'){const a=expr(n.object,env,stack);return result(a.code+(n.pointer?'->':'.')+n.key,a.before);}
   if(n.type==='index'){const a=expr(n.object,env,stack),b=expr(n.index,env,stack);return result(a.code+'['+b.code+']',a.before+b.before);}
   if(n.type==='list'){const values=n.values.map(v=>expr(v,env,stack));return result('{'+values.map(v=>v.code).join(', ')+'}',values.map(v=>v.before).join(''));}
@@ -54,8 +55,9 @@ export function inlineStatements(source,helpers='',prefix='example_'){
   }
   if(n.type==='declare')return n.declarations.map(d=>{const v=e(d.value),size=e(d.size);return size.before+v.before+(d.storage?'static ':'')+type(d)+(env[d.name]||d.name)+(d.array?'['+size.code+']':'')+(d.value?' = '+v.code:'')+';';}).join('\n');
   if(n.type==='expression'){const v=e(n.expr);return v.before+(v.code==='0'&&v.before?'':v.code+';');}
-  if(n.type==='return'){const v=e(n.value);return '{\n'+v.before+(flow.ret?flow.ret+' = '+v.code+';\n':'')+flow.done+' = 1;\n}';}
+  if(n.type==='return'){const v=e(n.value);if(!flow.done)return v.before+'return'+(n.value?' '+v.code:'')+';';return '{\n'+v.before+(flow.ret?flow.ret+' = '+v.code+';\n':'')+flow.done+' = 1;\n}';}
   if(n.type==='if'){const v=e(n.test);return v.before+'if ('+v.code+') '+s(n.yes)+(n.no?' else '+s(n.no):'');}
+  if(n.type==='switch'){const v=e(n.discriminant);return v.before+'switch ('+v.code+') {\n'+n.cases.map(c=>(c.test?'case '+e(c.test).code+':\n':'default:\n')+c.consequent.map(s).join('\n')).join('\n')+'\n}';}
   if(n.type==='while'){const v=e(n.test);return v.before?'while ('+(flow.done?'!'+flow.done:'1')+') {\n'+v.before+'if (!('+v.code+')) break;\n'+s(n.body)+'\n}':'while ('+guard+'('+v.code+')) '+s(n.body);}
   if(n.type==='for'){const t=e(n.test),u=e(n.update);if(u.before)throw new Error('for 증감식의 보조 함수는 본문으로 옮겨 주세요.');return '{\n'+s(n.init)+'\nfor (; '+(t.before?(flow.done?'!'+flow.done:'1'):guard+'('+t.code+')')+'; '+u.code+') {\n'+t.before+(t.before?'if (!('+t.code+')) break;\n':'')+s(n.body)+'\n}\n}';}
   if(n.type==='do'){const t=e(n.test);if(t.before)throw new Error('do 조건의 보조 함수는 본문으로 옮겨 주세요.');return 'do '+s(n.body)+' while ('+guard+'('+t.code+'));';}
