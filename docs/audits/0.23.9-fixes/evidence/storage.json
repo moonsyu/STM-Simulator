@@ -1,0 +1,29 @@
+{
+  "passed": true,
+  "date": "2026-10-18T12:27:34.719Z",
+  "findings": [
+    {
+      "id": "A01",
+      "passed": true,
+      "rolledBack": true,
+      "retrySavedNewCode": true
+    },
+    {
+      "id": "A02",
+      "passed": true,
+      "unsavedWarningShown": true,
+      "cancelPreservedCode": true
+    },
+    {
+      "id": "A04",
+      "passed": true,
+      "terminalUsesNewProfile": true,
+      "terminalOutput": "Microsoft Windows [Version 10.0.26300.9711]\r\n(c) Microsoft Corporation. All rights reserved.\r\n\r\nD:\\codex\\project\\STM-Simulator\\work\\test-results\\non-device-audit-DI3zay\\profile>\r\nD:\\codex\\project\\STM-Simulator\\work\\test-results\\non-device-audit-DI3zay\\profile>D:\\codex\\project\\STM-Simulator\\work\\test-results\\non-device-audit-DI3zay\\profile\r\n\r\nD:\\codex\\project\\STM-Simulator\\work\\test-results\\non-device-audit-DI3zay\\profile>"
+    },
+    {
+      "id": "A03",
+      "passed": true,
+      "lastEditRestored": true
+    }
+  ]
+}

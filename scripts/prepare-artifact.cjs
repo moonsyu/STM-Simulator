@@ -48,6 +48,7 @@ const {cleanArtifactOutput} = require('./clean-build.cjs');
     }
   }
   await verifySource('src');
+  await verifySource('desktop');
   assert.deepEqual(asar.extractFile(archive, 'desktop/diagnostics.cjs'), await fs.readFile(path.join(root,'desktop/diagnostics.cjs')), 'Packaged diagnostics differ from source');
   assert.deepEqual(asar.extractFile(archive, 'docs/DIAGNOSTICS.md'), await fs.readFile(path.join(root,'docs/DIAGNOSTICS.md')), 'Packaged diagnostics guide differs from source');
   const packed = JSON.parse(asar.extractFile(archive, 'package.json').toString());
