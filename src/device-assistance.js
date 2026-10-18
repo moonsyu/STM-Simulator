@@ -27,7 +27,9 @@ function bindParts(p,sample,target,prior,report){
   // Reset discards example code ownership; recover unchanged wiring from its configured GPIO nets.
   const configuredPeers=nets.filter(net=>net.some(id=>id.startsWith('part:'+template.id+':'))).flatMap(net=>net.flatMap(id=>{
    const signal=PIN_BY_ID.get(id)?.signal,cfg=sample.mcu.pins[signal];if(!cfg)return [];
-   return Object.entries(p.mcu.pins).filter(([pin,c])=>c.function===cfg.function&&c.pull===cfg.pull&&(cfg.label?c.label===cfg.label:pin===signal)).map(([pin])=>boardPin(pin));
+   // Labels are user-facing aliases, not circuit ownership. Recover the
+   // compatible electrical connection even after a pin has been renamed.
+   return Object.entries(p.mcu.pins).filter(([,c])=>c.function===cfg.function&&c.pull===cfg.pull).sort(([a],[b])=>Number(b===signal)-Number(a===signal)).map(([pin])=>boardPin(pin));
   }));
   const claimed=new Set((p.deviceDocs?.bindings||[]).filter(b=>b!==prior).flatMap(b=>Object.values(b.parts)));
   const matchesValue=part=>!['resistor','capacitor'].includes(part.type)||part.value===template.value||part.type==='resistor'&&['led','rgb','sevenseg','relay','lcd'].includes(target.type)&&part.value>=template.value&&part.value<=template.value*4;
