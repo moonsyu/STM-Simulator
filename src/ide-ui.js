@@ -36,7 +36,7 @@ export function setupIde(o){
     $('file-tree').innerHTML=files.map(f=>`<button data-source="${esc(f.name)}" class="${f.name===active?'active':''}" title="${esc(f.name)}"><span class="file-kind">${f.name.endsWith('.h')?'H':'C'}</span><span class="file-label">${esc(f.name)}</span></button>`).join('');
     $('source-tabs').innerHTML=files.map(f=>`<button data-source="${esc(f.name)}" class="${f.name===active?'active':''}">${esc(f.name)}</button>`).join('');
     for(const el of document.querySelectorAll('[data-source]'))el.onclick=()=>select(el.dataset.source);
-    $('workspace-path').textContent=folder||'미저장 프로젝트';editor.reset();if(!native?.selected())editor.updateDebug(points(),o.getSession()?.runtime?.debug.paused?o.getSession().runtime.location:null);native?.sync();controls();
+    const wp=folder||'미저장 프로젝트';$('workspace-path').textContent=wp;$('workspace-path').title=wp;editor.reset();if(!native?.selected())editor.updateDebug(points(),o.getSession()?.runtime?.debug.paused?o.getSession().runtime.location:null);native?.sync();controls();
   }
   function controls(){const running=o.isRunning(),r=o.getSession()?.runtime,paused=!!r?.debug.paused;
     native?.controls();if(native?.selected())return;

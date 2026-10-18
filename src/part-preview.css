@@ -1,7 +1,7 @@
-.part-card .part-model-icon{display:grid;place-items:center;width:40px;height:40px;flex:0 0 40px;border-radius:6px;background:#edf3ef;border:1px solid #d5e2db;text-shadow:none}
-.part-thumbnail{display:block;width:36px;height:36px;object-fit:contain;pointer-events:none}
-#part-model-preview{position:fixed;inset:auto;margin:0;padding:13px;width:min(320px,calc(100vw - 16px));max-height:calc(100vh - 16px);overflow:hidden;border:1px solid var(--ide-border,#c5d4cc);border-radius:9px;background:var(--ide-chrome,#e7efec);color:var(--ide-foreground,#1a2b25);box-shadow:0 12px 32px #00000038;z-index:1000}
-.part-preview-name{display:block;font-size:13px;font-weight:700;line-height:1.45;overflow-wrap:anywhere}
-.part-preview-image{height:min(240px,45vh);margin:9px 0;background:#edf3ef;border:1px solid #d5e2db;border-radius:6px;display:grid;place-items:center;padding:12px}
+.part-card .part-model-icon{display:grid;place-items:center;width:36px;height:36px;flex:0 0 36px;border-radius:6px;background:#edf3ef;border:1px solid #d5e2db;text-shadow:none}
+.part-thumbnail{display:block;width:32px;height:32px;object-fit:contain;pointer-events:none}
+#part-model-preview{position:fixed;inset:auto;margin:0;padding:12px;width:min(310px,calc(100vw - 16px));max-height:calc(100vh - 16px);overflow:hidden;border:1px solid var(--ide-border,#c5d4cc);border-radius:8px;background:var(--ide-chrome,#e7efec);color:var(--ide-foreground,#1a2b25);box-shadow:0 12px 32px #00000038;z-index:1000}
+.part-preview-name{display:block;font-size:12.5px;font-weight:700;line-height:1.4;overflow-wrap:anywhere}
+.part-preview-image{height:min(230px,44vh);margin:8px 0;background:#edf3ef;border:1px solid #d5e2db;border-radius:6px;display:grid;place-items:center;padding:10px}
 .part-preview-image img{display:block;width:100%;height:100%;min-height:0;object-fit:contain}
-.part-preview-detail{margin:0;font-size:11.5px;line-height:1.6;color:var(--ide-foreground,#1a2b25);overflow-wrap:anywhere}
+.part-preview-detail{margin:0;font-size:11px;line-height:1.55;color:var(--ide-foreground,#1a2b25);overflow-wrap:anywhere}
