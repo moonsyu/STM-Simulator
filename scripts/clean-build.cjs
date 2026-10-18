@@ -8,7 +8,7 @@ const PORTABLE = new RegExp(`^(?:STM-Simulator|STM-(?:Emulator|Simulator)-${VERS
 const RELEASE_ZIP = new RegExp(`^STM-Simulator-${VERSION}-Windows-x64\\.zip$`, 'i');
 const NSIS_ARCHIVE = new RegExp(`^stm-(?:emulator|simulator)-${VERSION}-x64\\.nsis\\.7z$`, 'i');
 const VERSIONED_ARTIFACT = new RegExp(`^artifact-${VERSION}$`, 'i');
-const BUNDLE_FILES = new Set(['LICENSE.electron.txt', 'LICENSES.chromium.html', 'MONACO-LICENSE.txt', 'MONACO-NOTICES.txt', 'README.md', 'THIRD_PARTY_NOTICES.md', 'SHA256.txt', 'BUILD-INFO.json', 'update-manifest.json']);
+const BUNDLE_FILES = new Set(['LICENSE.electron.txt', 'LICENSES.chromium.html', 'MONACO-LICENSE.txt', 'MONACO-NOTICES.txt', 'DOMPURIFY-LICENSE.txt', 'README.md', 'THIRD_PARTY_NOTICES.md', 'SHA256.txt', 'BUILD-INFO.json', 'update-manifest.json']);
 const BUNDLE_DOCS = new Set(['APP-ICON.md', 'COPYRIGHT-REVIEW.md', 'SKETCH-API.md', 'HAL-API.md', 'IDE.md', 'MCU-DEFAULTS.md', 'UPDATES.md', 'DEVICE-DOCS.md', 'DIAGNOSTICS.md', 'DEVICE-CATALOG.md', 'device-model-gallery.html', 'DEVICE-VISUAL-REFERENCES.md', 'device-reference-gallery.html', 'device-visual-references.json']);
 const RUNTIME_FILES = new Set([
   'STM Emulator.exe', 'STM Simulator.exe', 'LICENSE.electron.txt', 'LICENSES.chromium.html',

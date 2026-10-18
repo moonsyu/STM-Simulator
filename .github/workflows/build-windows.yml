@@ -43,6 +43,8 @@ jobs:
         run: npm ci
       - name: Ensure Electron runtime is installed
         run: node node_modules/electron/install.js
+      - name: Reject vulnerable locked dependencies
+        run: npm audit --audit-level=low
       - name: Verify release tag matches package version
         if: startsWith(github.ref, 'refs/tags/')
         shell: pwsh
@@ -57,6 +59,8 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Test update dialog and save-before-restart
         run: npm run test:updates:ui
+      - name: Test failed saves, workspace transitions and close recovery
+        run: node scripts/storage-recovery-check.cjs
       - name: Test Windows EXE replacement and rollback
         run: node scripts/update-apply-check.cjs
       - name: Test device resizing, themes and IDE preferences
@@ -158,6 +162,10 @@ jobs:
       GH_TOKEN: ${{ github.token }}
       GH_REPO: ${{ github.repository }}
     steps:
+      - name: Check out release verification tools
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
       - name: Download this run's verified build
         shell: pwsh
         run: |
@@ -174,7 +182,7 @@ jobs:
           $releaseExe = 'STM-Simulator.exe'
           $releaseZip = "STM-Simulator-$releaseVersion-Windows-x64.zip"
           $releaseManifest = Get-Content outputs/artifact/update-manifest.json -Raw | ConvertFrom-Json
-          if ($releaseManifest.version -cne $releaseVersion -or $releaseManifest.filename -cne $releaseExe -or $releaseInfo.filename -cne $releaseExe -or $releaseInfo.commit -cne $env:GITHUB_SHA) { throw 'Build metadata does not match this tag.' }
+          if ($releaseManifest.version -cne $releaseVersion -or $releaseManifest.filename -cne $releaseExe -or $releaseInfo.filename -cne $releaseExe -or $releaseInfo.commit -cne $env:GITHUB_SHA -or $releaseInfo.workflow -cne "https://github.com/$env:GITHUB_REPOSITORY/actions/runs/$env:GITHUB_RUN_ID") { throw 'Build metadata does not match this tag and workflow.' }
           $releaseHash = (Get-FileHash -LiteralPath "outputs/artifact/$releaseExe" -Algorithm SHA256).Hash.ToLowerInvariant()
           if ($releaseHash -cne $releaseManifest.sha256 -or (Get-Item -LiteralPath "outputs/artifact/$releaseExe").Length -ne $releaseManifest.bytes) { throw 'EXE verification failed.' }
           Compress-Archive -Path outputs/artifact/* -DestinationPath "outputs/$releaseZip"
@@ -184,6 +192,7 @@ jobs:
           if ($LASTEXITCODE -eq 0) {
             $existingRelease = $existing | ConvertFrom-Json
             if ($existingRelease.isDraft) { throw 'An unpublished draft exists; inspect and resume it without replacing the tag.' }
+            ./scripts/verify-release.ps1 -Tag $releaseTag
             "Release $releaseTag already exists: $($existingRelease.url). Published assets are unchanged." >> $env:GITHUB_STEP_SUMMARY
             exit 0
           }
@@ -197,3 +206,4 @@ jobs:
           $makeLatest = $LASTEXITCODE -ne 0 -or $latestTag -notmatch '^v\d+\.\d+\.\d+$' -or [version]$releaseVersion -ge [version]$latestTag.Substring(1)
           gh release edit $releaseTag --draft=false "--latest=$($makeLatest.ToString().ToLowerInvariant())"
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          ./scripts/verify-release.ps1 -Tag $releaseTag -ExpectedCommit $env:GITHUB_SHA -RequireLatest:$makeLatest
