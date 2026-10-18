@@ -1,0 +1,1118 @@
+{
+  "cards-summary.json": {
+    "bytes": 157,
+    "sha256": "7cb657098588737ea690b4f2905d93dffaa937074baab41ea2f5b503b6a8a943"
+  },
+  "cards.log": {
+    "bytes": 7496,
+    "sha256": "5a3a84607edda6c3c68fc86c4f9d64ae78de9b34bb10c93236afe08c821c8785"
+  },
+  "ci-jobs.json": {
+    "bytes": 9971,
+    "sha256": "689cff258908ecd260eda4c9156606796e96c0cc4f3fbdd663720a5280ff84fc"
+  },
+  "contrast.log": {
+    "bytes": 3018,
+    "sha256": "1d428fd5437d4c491a82e919c7e27939e4a7afd4a3e38c702894c59cb7e52e24"
+  },
+  "dependencies.json": {
+    "bytes": 14009,
+    "sha256": "dafb27d9211c4ad0208bd5910d88a439770135dd58d6f0f018cf3203b400cc4b"
+  },
+  "dependency-tree.log": {
+    "bytes": 1123,
+    "sha256": "004d903adc7bae591aab03f8be0708f74c91c4393ed08b53c1c1d6818031cd30"
+  },
+  "devices-summary.json": {
+    "bytes": 301,
+    "sha256": "a3b9953a2b80a6217dfc9c642c2c3954b44096e1648d1f8bd8125dd8d65802b4"
+  },
+  "devices.log": {
+    "bytes": 7442,
+    "sha256": "e70349ffa90a0b99d21e74eeab0e31b7b641ad466dad8abd0093207b9e19f941"
+  },
+  "docs-reapply.json": {
+    "bytes": 19904,
+    "sha256": "416ea25017c5ab1f2411cc2c29c9273c53dbb082f207313280fc308da185841d"
+  },
+  "docs-reapply.log": {
+    "bytes": 737,
+    "sha256": "b88f4efe449a09a0f1745c23cd1557332d019cc144800304e3013d5d73b104e5"
+  },
+  "native-configured.log": {
+    "bytes": 428,
+    "sha256": "3a8c2963baa555e0b1e1575f02bc521911df0b7ca5bfa826990f4ca029fd819d"
+  },
+  "native-ide-check.json": {
+    "bytes": 2596,
+    "sha256": "ccab900c71fa369065a35da4e53d0c25122ec464e54a08719226822466466051"
+  },
+  "native.log": {
+    "bytes": 300,
+    "sha256": "28c024f65691fa4be31185d3fd1c4cd427683c975488b3c7afba40c01c92fa2c"
+  },
+  "non-device-audit.json": {
+    "bytes": 1925,
+    "sha256": "2fbf8797f257e04e0cc7b16cf9d0e7099c8d1e588dc335b05995788ef92bbcc9"
+  },
+  "non-device.log": {
+    "bytes": 261,
+    "sha256": "9595d4f146190ec6083d1238f571ea6e2436aab367ecd9d19f581d9c8368ff3c"
+  },
+  "public-metadata.json": {
+    "bytes": 523,
+    "sha256": "72c3d6f7cc19a0f30698f1424fec05a86b0f98ceb3bb39b80312cf3086b0b563"
+  },
+  "release-assets.json": {
+    "bytes": 3064,
+    "sha256": "b5ac2c4702ed5ad50aaf076787ce518b3f60017031f4849fe14e4bbf7b9feb41"
+  },
+  "release-assets.log": {
+    "bytes": 245,
+    "sha256": "e6d2367f21c0bfa2f7dbdccb10315c42ba99e95ff51354bc2e67c4b862f19f25"
+  },
+  "release-integrity.log": {
+    "bytes": 3066,
+    "sha256": "5b5bd2cde1f8c798c1ad06ef8909560b4463662b90ba0948fa338cdd10adf3bb"
+  },
+  "release-runtime.json": {
+    "bytes": 562,
+    "sha256": "be97818140b3ca92ddc5ff338530295c440f3fca0f3dfad9a170d7185a430642"
+  },
+  "release-runtime.log": {
+    "bytes": 409,
+    "sha256": "77be70b63e8620dd3d563739e27d00d801bc2645c7e691dca4cca248cd44e66a"
+  },
+  "release-source.json": {
+    "bytes": 1347,
+    "sha256": "4e80795b1e7749892e537640fb4c318d16eb96e385682c597b621b4b18a40729"
+  },
+  "release.json": {
+    "bytes": 2657,
+    "sha256": "44a88c31dca0c8ce5714f6d03209d37312ec439d841bb7f3f8baf3cc1020d997"
+  },
+  "reset.json": {
+    "bytes": 7151,
+    "sha256": "2a8fae27436a4131fb1958b959fef1e4c1e23b90e7bd0a65f154eb0cfb5154ab"
+  },
+  "reset.log": {
+    "bytes": 27,
+    "sha256": "35c0cb2df4061211fb0f309f0a45a02f9673f897681e94a2e99a409c8e4be6ea"
+  },
+  "semantics.log": {
+    "bytes": 2914,
+    "sha256": "ca34764fd510f6bb5991184854df5f9d75348e0b19d9f132c2e2e18bba96f8c6"
+  },
+  "ui-contrast.json": {
+    "bytes": 5101,
+    "sha256": "bace9c0036a864a3b35e24c9999765f5983eb31e7e54b26248606a15da2c7342"
+  },
+  "unit.log": {
+    "bytes": 31130,
+    "sha256": "ff466c28475b2e3372e1c9b9bbeadf78c28955630dfe1d12e49f7ee846a6b99e"
+  },
+  "update-ui-check.json": {
+    "bytes": 328,
+    "sha256": "a0cb7d5e4744fcebca5ca245bdc2b97aa75b86abc98f8de2f8e78365576d5e67"
+  },
+  "update.log": {
+    "bytes": 88,
+    "sha256": "63749fe5761c45a927ac81d780f499a9a2017fae4d662cd331655a5467488453"
+  },
+  "devices/cards-board.json": {
+    "bytes": 84968,
+    "sha256": "98784b5b67dc46807147aea490f9ce554ad416542dafc3d8c71fdc2f51552627"
+  },
+  "devices/cards-breadboard.json": {
+    "bytes": 84973,
+    "sha256": "4bcbc25e2c36c1aae716139130b314e64753df28f549e8a9621f74db8a66e7ad"
+  },
+  "devices/cards-button.json": {
+    "bytes": 70199,
+    "sha256": "4dc9ea6cd13e204f370328d88d3260e68eff262adcdb46dd410efabeeac24c1c"
+  },
+  "devices/cards-buzzer.json": {
+    "bytes": 56498,
+    "sha256": "bca9ead28ac738d7ef28a8c60fe3d96c66bc09b14190cd38af4ca9ed374ecd7f"
+  },
+  "devices/cards-capacitor.json": {
+    "bytes": 98448,
+    "sha256": "007b6d519ce67fb29f4dc320779787b69c04bed86cb0e24f23fd7b896c192cb3"
+  },
+  "devices/cards-dc_motor.json": {
+    "bytes": 297551,
+    "sha256": "7bf4c14666786628b6f62fd4426c8c6cea06948e21c6cbe20cf70d01993a48da"
+  },
+  "devices/cards-dc_supply.json": {
+    "bytes": 297615,
+    "sha256": "784c85e662ba6ece7880f72ca22f4a2b237b280694ea70be7cbe17030ff2649f"
+  },
+  "devices/cards-diode.json": {
+    "bytes": 146068,
+    "sha256": "b7b617191b336c0a24ff794b41937e6e4eb0fb1d08aff84147e52f3a1bffd980"
+  },
+  "devices/cards-encoder.json": {
+    "bytes": 131541,
+    "sha256": "a4abceb5a0d1c6a82a741a7bb577d91e4ca7e544ea08dc2afe4af61dcac6e295"
+  },
+  "devices/cards-i2c.json": {
+    "bytes": 113064,
+    "sha256": "1e4b4c6d04a2622e887499d1fc55728e5e0671a885dc310cd8cda960c9d6c002"
+  },
+  "devices/cards-joystick.json": {
+    "bytes": 170018,
+    "sha256": "23bfdbb73f521e85c4bee93ad80549ff21501b0c3299575e6561ed1bd68a4dee"
+  },
+  "devices/cards-l298n.json": {
+    "bytes": 297611,
+    "sha256": "e8000698a7f441ca8a40cadcdef6e71b53d08f2932b9233e2555b0318525c85e"
+  },
+  "devices/cards-lcd.json": {
+    "bytes": 167471,
+    "sha256": "7f9f3bf040566d9bbc279fb4251e4b07e2b3f67139d825bc4b86073f9e3c7878"
+  },
+  "devices/cards-ldr.json": {
+    "bytes": 119612,
+    "sha256": "f48f9f7d1860d556005b829f54e724add5ccc93572bcfae74dbe742860f950be"
+  },
+  "devices/cards-led.json": {
+    "bytes": 84918,
+    "sha256": "f4d805348d6a93cb37900086f3ec60b8d6ec4066837cd5f46b7a4cb46331143e"
+  },
+  "devices/cards-matrix.json": {
+    "bytes": 139173,
+    "sha256": "36ed2527531c2290a326537427e1e165188f8a1f386fd35793c5859dfcf960bd"
+  },
+  "devices/cards-motor.json": {
+    "bytes": 167466,
+    "sha256": "0e2561763aab7f188e617028fab612ea9e1ffbd0b8f694c3807c20173d001e84"
+  },
+  "devices/cards-mpu6050.json": {
+    "bytes": 144251,
+    "sha256": "ac40240b83dd1b28bd9283320d7e15499af77b1e85af07f3595a87db0dc5aff5"
+  },
+  "devices/cards-ntc.json": {
+    "bytes": 119884,
+    "sha256": "bd2c2c2e4c8d1865631ea5ba7e7f5842f45cac711a89d1ea08e8fefa4bc77859"
+  },
+  "devices/cards-oled.json": {
+    "bytes": 140470,
+    "sha256": "d2866855b8fa3d099e24534d2eef26905745359f12f487b0d9d24c3320fd83db"
+  },
+  "devices/cards-passive_buzzer.json": {
+    "bytes": 161541,
+    "sha256": "c3ddb4e44d71608b0600dae9637c9ee8da55e87fc7bc84c5f813ac542b2695b2"
+  },
+  "devices/cards-pir.json": {
+    "bytes": 67791,
+    "sha256": "92fd215b1407be724b9283f4926600170e665920bbbfc6f510c672c478cea545"
+  },
+  "devices/cards-potentiometer.json": {
+    "bytes": 135330,
+    "sha256": "eb5a0807c57ae581c876909d4dfffc86edf336a71888a157b99d77fac35b56e8"
+  },
+  "devices/cards-ref_ads1115_10.json": {
+    "bytes": 172376,
+    "sha256": "297ce5c0adc4898dd9af15c5597f66c743b7b7bf09921032c03c7c77c8820ba4"
+  },
+  "devices/cards-ref_button_2.json": {
+    "bytes": 76967,
+    "sha256": "3970e201bbff4fbfbaa3d9d40ce3527e96f48f4fd49de941700f8f175adc9985"
+  },
+  "devices/cards-ref_button_4.json": {
+    "bytes": 76967,
+    "sha256": "be5e6c470e4d84d34544213cdd2eb4389a9e638acb49b009b7dbc73508bbb0a8"
+  },
+  "devices/cards-ref_button_module_3.json": {
+    "bytes": 76974,
+    "sha256": "c02277a8df20802fa93582c65b1ffbffa2cc789e4f093469532a69de1f7e11c0"
+  },
+  "devices/cards-ref_buzzer_active_2.json": {
+    "bytes": 56511,
+    "sha256": "a8259bff5ecaec35dafda624ccd351c7a60567df1caaf8c4f5baaf5e6ba5d69f"
+  },
+  "devices/cards-ref_buzzer_active_module_3.json": {
+    "bytes": 56518,
+    "sha256": "e1873bcf56415914c34d91c5635a2488666610f8b75cb3b212e2f1c82d4f13b3"
+  },
+  "devices/cards-ref_buzzer_passive_2.json": {
+    "bytes": 161547,
+    "sha256": "4e529c18d2156ae71f065664093fe9da2d08699cb3878145a227b5c0b17203bf"
+  },
+  "devices/cards-ref_buzzer_passive_module_3.json": {
+    "bytes": 161554,
+    "sha256": "1b124566da51b6d52e5b41abe887e74fd6452379035c4e17c54f2418ce01d93c"
+  },
+  "devices/cards-ref_can_transceiver_6.json": {
+    "bytes": 222978,
+    "sha256": "736516fcca0ee58931c7144127571cb01cd738a6d64ab9a2bc3e9b20938930f9"
+  },
+  "devices/cards-ref_capacitor_ceramic_2.json": {
+    "bytes": 98462,
+    "sha256": "14ac3708b5a6badccd539262a0c236879ed45c2aceabad0b88f08dc7b32bebd7"
+  },
+  "devices/cards-ref_capacitor_electrolytic_2.json": {
+    "bytes": 98467,
+    "sha256": "ebb2ed5e59e6c3c17b5a6a2440d4f1c50e0dccf5017c2b60abff333ea9d2cde5"
+  },
+  "devices/cards-ref_dc_motor_2.json": {
+    "bytes": 297557,
+    "sha256": "a819825187fef9f7a187d2efdf93df35e63e708e1048c5959ee5da95473ab3d4"
+  },
+  "devices/cards-ref_dc_supply_2.json": {
+    "bytes": 297621,
+    "sha256": "a62e475f7e11b497c573fa5a60a0a0927bb07cfb50d3cf5627661f14d0333346"
+  },
+  "devices/cards-ref_dht11_module_3.json": {
+    "bytes": 223703,
+    "sha256": "959dd5b43c0b8002fd957fa2df485fb90c0d2ab7f26448d105e28850c1167745"
+  },
+  "devices/cards-ref_dht22_module_3.json": {
+    "bytes": 223617,
+    "sha256": "8e2befe3c302714e8414e74736c2bff18759ef3f95a7c826a33c061f3950f52a"
+  },
+  "devices/cards-ref_diode_axial_2.json": {
+    "bytes": 146080,
+    "sha256": "59a2b476b13de3b98734dc6646b71805dc9faf65b919604074fa2f739288d2a8"
+  },
+  "devices/cards-ref_ds18b20_probe_3.json": {
+    "bytes": 208521,
+    "sha256": "df3957d99b6335004a061d722fb08b19d419d28a84dd7647e01be175e0b48797"
+  },
+  "devices/cards-ref_ds18b20_to92_3.json": {
+    "bytes": 208520,
+    "sha256": "a08399767d6956d0f27a01c57c58035aae0b278debe337944544a75c0995ed5a"
+  },
+  "devices/cards-ref_ds3231_8.json": {
+    "bytes": 149101,
+    "sha256": "1493959d5c3b5c36667d58b282dcdaac21e5115b1dda705047cb50440cb8c30f"
+  },
+  "devices/cards-ref_encoder_bare_5.json": {
+    "bytes": 56934,
+    "sha256": "21a5c9c78b76c248d5dde4596f1cab0f96ebea856638d5aa0f2647b7bea2e836"
+  },
+  "devices/cards-ref_encoder_module_5.json": {
+    "bytes": 131554,
+    "sha256": "bf427c23bfea3c245f1a1b2da18dc9fa04529a8092588c5043781544d05eeefd"
+  },
+  "devices/cards-ref_hcsr04_4.json": {
+    "bytes": 126251,
+    "sha256": "cc59bb54923a1fa060c4f97b82c26f0bb125778b4acebda07b22c2fd4c32a40d"
+  },
+  "devices/cards-ref_i2c_eeprom_5.json": {
+    "bytes": 113077,
+    "sha256": "f0420aade04fc86a6a1623851faaa20e090e97c3980121da505df35fb3eb4fe1"
+  },
+  "devices/cards-ref_i2c_eeprom_8.json": {
+    "bytes": 113077,
+    "sha256": "e60490c39a214bb26b849c6fb8bd1cd4a0e4b5466e5a55c06b5c2dec344835b8"
+  },
+  "devices/cards-ref_isolated_rs485.json": {
+    "bytes": 122677,
+    "sha256": "9581f5a9b4b241d1c1f0b1540e49a2f683edb8277e57ecb21542db1b2d34815a"
+  },
+  "devices/cards-ref_joystick_module_5.json": {
+    "bytes": 170031,
+    "sha256": "d18b71baebcfa408cbc124694ac647df7761e6f88b07341e7ae0b840da7da2a9"
+  },
+  "devices/cards-ref_l298n_bare_15.json": {
+    "bytes": 297623,
+    "sha256": "db62765ee452c94d045d919425c8b9d89d2e7173010c99e52c11b1a8550b40b0"
+  },
+  "devices/cards-ref_l298n_module_13.json": {
+    "bytes": 297625,
+    "sha256": "8e19fff07d9b8660950f83d379a36a274f95c2436d84c29b5aaf03f35c64d139"
+  },
+  "devices/cards-ref_l298p_bare_20.json": {
+    "bytes": 297623,
+    "sha256": "5967cec421c69d140d76c507138a400496bb947edce3db3ec221f3a427b4d1ae"
+  },
+  "devices/cards-ref_lcd_i2c_4.json": {
+    "bytes": 312029,
+    "sha256": "d9adccd508b4ffbc1c365f5d81abbcedfa0a41e8345080030646f12cbb4b7605"
+  },
+  "devices/cards-ref_lcd_parallel_16.json": {
+    "bytes": 167487,
+    "sha256": "d04b0b22791b015f355b3213cee5a591a7556368eed8d5c790323c6eed2ea882"
+  },
+  "devices/cards-ref_ldr_bare_2.json": {
+    "bytes": 119623,
+    "sha256": "bc0e37f125a5408a040bbd2be1438647401f8aa3b54e7b159584373b521e4e3b"
+  },
+  "devices/cards-ref_ldr_comparator_4.json": {
+    "bytes": 158593,
+    "sha256": "6cdff10644a8aacc149c5dba66dcaccbe541576f10e021df65e46452beebd912"
+  },
+  "devices/cards-ref_ldr_module_3.json": {
+    "bytes": 133930,
+    "sha256": "9013da70a0a85a2271d2ab0e119d8aeaf11d3f14eb15340fe78eb6dc264aa491"
+  },
+  "devices/cards-ref_led_tht_2.json": {
+    "bytes": 84928,
+    "sha256": "cacead258b820c71f582e0dd7a252f73b54c67929bb02d0dc608caf579f8814c"
+  },
+  "devices/cards-ref_matrix_10.json": {
+    "bytes": 139180,
+    "sha256": "26283970296dce1bd77e2811989d086bbcbd20529bbb99eb4ac753856ae06742"
+  },
+  "devices/cards-ref_max98357a_9.json": {
+    "bytes": 62732,
+    "sha256": "3a0ac285c86c8a8ab4b4dabc78c4f54ec50ea98abe5bf4683089adcdca566396"
+  },
+  "devices/cards-ref_mcp4725_6.json": {
+    "bytes": 302847,
+    "sha256": "39bf0ec0a0ffd631adcee5d36d31e0a400fdf5223dc7acf2ae9458d126508d69"
+  },
+  "devices/cards-ref_motor_driver_hat.json": {
+    "bytes": 141851,
+    "sha256": "d9425aa6279fae446a1ee71e902def63108b59ef42f056674b6616d36361c8b4"
+  },
+  "devices/cards-ref_mpu6050_8.json": {
+    "bytes": 144257,
+    "sha256": "81809c0c3beb21ea66c7ee9f2ae5b4798e2aa360454c17277450a82a06183be6"
+  },
+  "devices/cards-ref_ntc_bare_2.json": {
+    "bytes": 119895,
+    "sha256": "44a725874cf7eb94e77946e266ae0f8a7638f33a3f61bc61993e0b6ac79a0f9f"
+  },
+  "devices/cards-ref_ntc_module_3.json": {
+    "bytes": 133930,
+    "sha256": "6564dd2943a6e98b2d14ae4bbf68d795ef70badef5e00d3e57d5d09f4b19277a"
+  },
+  "devices/cards-ref_oled_configurable_7.json": {
+    "bytes": 253761,
+    "sha256": "6aa1922711907337d7b7d2f662587e301f9267001f90bb119120a774b66a34bb"
+  },
+  "devices/cards-ref_oled_configurable_8.json": {
+    "bytes": 253761,
+    "sha256": "3af3527ee59571f8b452a544781af42747edb889a02742ef95a972ad2263b43a"
+  },
+  "devices/cards-ref_oled_i2c_4.json": {
+    "bytes": 140480,
+    "sha256": "32ae3ebf17a9cccd0ab527a312f3a6995aaeb2c0a53c45acfed50526243efd69"
+  },
+  "devices/cards-ref_ov2640_camera.json": {
+    "bytes": 349265,
+    "sha256": "1a74ea5a1493f1b9896d506003229954ece81aa1c64883531aa5a7d420e268f4"
+  },
+  "devices/cards-ref_pir_3.json": {
+    "bytes": 67797,
+    "sha256": "2607387ef37d7cee50ee583bdf11b69279cfe1b3f535e4257bc35e455445ea2e"
+  },
+  "devices/cards-ref_pot_bare_3.json": {
+    "bytes": 135331,
+    "sha256": "2a9be50243e070424ffd121f0fa7e539059a7f2fd7c2981d21a22700779f5bd2"
+  },
+  "devices/cards-ref_pot_module_3.json": {
+    "bytes": 135333,
+    "sha256": "fedcb1dcafe38c9c9fbbd4bf4991332edd20edb9bddd87691cd3648c2f6e0484"
+  },
+  "devices/cards-ref_relay_module_6.json": {
+    "bytes": 113197,
+    "sha256": "2809c5549db4481b635e5ad78d9279a9f8f1e6c390d95e892baa1357fab93b7f"
+  },
+  "devices/cards-ref_resistor_axial_2.json": {
+    "bytes": 118535,
+    "sha256": "356cf08b4547418295d2064ef59e17e66d6a40ce96a19f8727609984c0499141"
+  },
+  "devices/cards-ref_rgb_common_anode_4.json": {
+    "bytes": 112496,
+    "sha256": "6637da3fb47deedc6fed6c545a50e639905f8506dfb6709703ff72c035bf72c0"
+  },
+  "devices/cards-ref_rgb_common_cathode_4.json": {
+    "bytes": 100772,
+    "sha256": "cfdb488e8caf919570e346d7fc7a51c4ac79ee05cbef55c4822e37052f11d7da"
+  },
+  "devices/cards-ref_rgb_gravity_3.json": {
+    "bytes": 163968,
+    "sha256": "9460ca21fac11dc773e8de8932f231f3b41bc156e6f10235142cde3ce52ba798"
+  },
+  "devices/cards-ref_rgb_neopixel_4.json": {
+    "bytes": 163969,
+    "sha256": "f9de9abca0f77560da381cec9cd0d39e8eae9dde35a066e56fdb2a728dfbc070"
+  },
+  "devices/cards-ref_rgb_neopixel_flora_4.json": {
+    "bytes": 163975,
+    "sha256": "2cff91352f802926841a7c5c5751f1db65739e4292b04aa1c31d39f18d7e1950"
+  },
+  "devices/cards-ref_sd_storage_board.json": {
+    "bytes": 311220,
+    "sha256": "e2d9474fd7a9e86307f0d4d5fd2a74937e6acb6245b41f6fbcb1bbd7cf94a2ea"
+  },
+  "devices/cards-ref_servo_3.json": {
+    "bytes": 116535,
+    "sha256": "41aacec6c46e9bdfbe02e1b1447d6bc96861a519511182a682bf631bc32e17d4"
+  },
+  "devices/cards-ref_servo_feedback_4.json": {
+    "bytes": 279105,
+    "sha256": "269d5cc9d24d4be2017598b5714c1a2fac292a6fe4bd917226525116313452a8"
+  },
+  "devices/cards-ref_sevenseg_4digit_12.json": {
+    "bytes": 393547,
+    "sha256": "db6a006892dce038d1a6c2bcef531541f1a24ca6cbe2e1a7c0cddfd1df045794"
+  },
+  "devices/cards-ref_sevenseg_common_anode_10.json": {
+    "bytes": 218976,
+    "sha256": "b77205ae3cd25f7ef0edde5213f7a8179592e0760397cd0c73e8fa870e56f808"
+  },
+  "devices/cards-ref_sevenseg_common_cathode_10.json": {
+    "bytes": 189056,
+    "sha256": "988bb4104f10c474703ad3839ce0ab40042307a3e75ddf311a9818c507d783b2"
+  },
+  "devices/cards-ref_sevenseg_tm1637_4.json": {
+    "bytes": 76450,
+    "sha256": "fe7555d38e733d2e5998078596972895adb488d39a49af4b70b1c449214e829c"
+  },
+  "devices/cards-ref_sht31_breakout_7.json": {
+    "bytes": 106050,
+    "sha256": "3f5fd97cd35b5d827b4da7e98ebf52afd3407f81de41a703a9bcd692c103c334"
+  },
+  "devices/cards-ref_sht31_grove_4.json": {
+    "bytes": 106047,
+    "sha256": "b1c0287537c20b98331f34331e91206cede6790d567b6c24476fbf8447a8cfb6"
+  },
+  "devices/cards-ref_slide_dp3t_8.json": {
+    "bytes": 212146,
+    "sha256": "c60dcffa6c50a348d3ad394608ddb1f8b8c1bf831ed447280f9663d3dd6b1035"
+  },
+  "devices/cards-ref_slide_dpdt_6.json": {
+    "bytes": 166066,
+    "sha256": "52566080bed2118bf4713f1b56c18a7eaaae8862cd7709ebe3c4546ebd0238c5"
+  },
+  "devices/cards-ref_slide_spdt_3.json": {
+    "bytes": 55129,
+    "sha256": "23f0470b4f965f1b054fa0809f1ee9f665c1736a3558c29a6aacecfad679d851"
+  },
+  "devices/cards-ref_spi_eeprom_8.json": {
+    "bytes": 154626,
+    "sha256": "4952f33e7792b5e516ac4edfa73f0937792319d29524d5204d14df60a136b486"
+  },
+  "devices/cards-ref_st7735_8.json": {
+    "bytes": 330672,
+    "sha256": "696d81ccfcaf732ad860a86c6c15ddd0a97a70fb6a5623dc0ffe6d0e3c1d075d"
+  },
+  "devices/cards-ref_stepper_bipolar_4.json": {
+    "bytes": 106269,
+    "sha256": "cea50da2fccab7ac7ac573f0bb99aa1f98daf29460087eb2ebf496c24cbd9783"
+  },
+  "devices/cards-ref_stepper_driver_11.json": {
+    "bytes": 81087,
+    "sha256": "235f4501b67dffe9288fe4fbec4fb7c0e79555bf46a15266a9dfb7b9c126bd81"
+  },
+  "devices/cards-ref_stepper_unipolar_5.json": {
+    "bytes": 80992,
+    "sha256": "3d25891a4e2cd300f28d822226e0a812b381f923a5a234072383dacf9e3a23fc"
+  },
+  "devices/cards-ref_tmp36_to92_3.json": {
+    "bytes": 108556,
+    "sha256": "5e45611368e3e3eb12091b98ae0ae85bf0d03895a06465bf7d91b8df9452ca74"
+  },
+  "devices/cards-ref_uart_cable_4.json": {
+    "bytes": 145264,
+    "sha256": "55f5858e58b48f2c9d20be1de239d107792c37ba060ca468acdb3c5a75bb46d6"
+  },
+  "devices/cards-ref_uart_cable_6.json": {
+    "bytes": 145372,
+    "sha256": "286fd1b2148a2e8ce0dccd6f42b1f5f626cde2963a1499e940e69dd452627836"
+  },
+  "devices/cards-ref_urm09_i2c_4.json": {
+    "bytes": 149444,
+    "sha256": "f37ef6a584cf5d313332c7e309a03993f1058bc6a2e16d6a1cde04c149da931c"
+  },
+  "devices/cards-ref_urm09_trig_3.json": {
+    "bytes": 129840,
+    "sha256": "1d9597549f8dd4974984e1d36a2016f8d6e29db5aaa99a994c7d96291bba956b"
+  },
+  "devices/cards-relay.json": {
+    "bytes": 113184,
+    "sha256": "a5e442151255d16f88df9ea83f40e9f448a37b33bb23cf9a00844fa890bb6c10"
+  },
+  "devices/cards-resistor.json": {
+    "bytes": 118523,
+    "sha256": "1b4d9b3c5e1cea850f16c0c4a385e0be546c34a92d452092a5d3da1649cf3370"
+  },
+  "devices/cards-rgb.json": {
+    "bytes": 100751,
+    "sha256": "be7cec03e4c56777ca342c298a8c31cb5b6f1c8d4edfa066307e8fc29166d962"
+  },
+  "devices/cards-servo.json": {
+    "bytes": 116529,
+    "sha256": "f6bca9486dd74a2f2d529a2c4e6e4e793fea1d20bff3a748dc4a9fd6a965080e"
+  },
+  "devices/cards-sevenseg.json": {
+    "bytes": 189034,
+    "sha256": "59a59ef2856b35e680710a3b4962b7443b0b6a20da2ff8d500d2850fec04af35"
+  },
+  "devices/cards-sht31.json": {
+    "bytes": 106035,
+    "sha256": "d9113d7e6d8bb0d673b7e0a5d1d1065d6c2bcb3b4716c2ae9fb2d15f7f240707"
+  },
+  "devices/cards-slide.json": {
+    "bytes": 48890,
+    "sha256": "732846f68c41400282dffc9064e916bf2c90c3b6d07baa8adbc952ab3a268569"
+  },
+  "devices/cards-spi.json": {
+    "bytes": 153600,
+    "sha256": "1c95ce21b220d3ac010bf925ea7f5b4cb9754796badf7c106127613938fe455d"
+  },
+  "devices/cards-stepper.json": {
+    "bytes": 74481,
+    "sha256": "783e56043602043613887e8901ff5a38d7ec796f31b769f545ea4148f1a0a75a"
+  },
+  "devices/cards-summary.json": {
+    "bytes": 10804,
+    "sha256": "8f9e10bc1252625f7e491a44deb6901e5677c631483cab0bb270b9d2d3217fce"
+  },
+  "devices/cards-temperature.json": {
+    "bytes": 108551,
+    "sha256": "d3c7bea1c211e9a6c30d9d6de884e391770888c5eecf5e9ca2eaac545b7a5ca4"
+  },
+  "devices/cards-tft.json": {
+    "bytes": 330663,
+    "sha256": "00d7dbcdc5841fb531bc89a7371c8b9c03e2eda1019440308fa9e75e7506a905"
+  },
+  "devices/cards-uart.json": {
+    "bytes": 145360,
+    "sha256": "4050f2afd6dfc0419b5d2b087b3bd0dfca9c775784629e80f893acac65eb2db5"
+  },
+  "devices/cards-ultrasonic.json": {
+    "bytes": 126249,
+    "sha256": "c9565a6957823008b74ad089db4c7e382b014d9f18fc3db780d7e3251ba68da3"
+  },
+  "devices/core-board.json": {
+    "bytes": 50226,
+    "sha256": "898e56d15c0db2baa97577744b1a6ea27490c59abedddfff1bccb16c6538105e"
+  },
+  "devices/core-breadboard.json": {
+    "bytes": 50123,
+    "sha256": "65cda7dba38ba02a65593f9c1b384827ef9a1257681714a4d6972961c9bf63a9"
+  },
+  "devices/core-button.json": {
+    "bytes": 57280,
+    "sha256": "08c6deed8ef87a53dd2cd969b997ec5b968f275e57532ba9f9637039b0bf532b"
+  },
+  "devices/core-buzzer.json": {
+    "bytes": 39222,
+    "sha256": "7dbbc737a2922bad4864eeaf464d9937c3fdaac611adf1c0d440c3746733b1d7"
+  },
+  "devices/core-capacitor.json": {
+    "bytes": 62194,
+    "sha256": "18fb2a497133a4eadfb0eac30d62bd2e47b4566de11bad3e2fda2cd6e0dd355d"
+  },
+  "devices/core-dc_motor.json": {
+    "bytes": 142738,
+    "sha256": "c54b9beff8413b5baa96c2f9889d05fec5adfe0a89ef79aefe1f1815001d6e17"
+  },
+  "devices/core-dc_supply.json": {
+    "bytes": 142826,
+    "sha256": "4ffa1da707f3bfe102f5f13ea2911e4609d2b0a3ed82bfbde4a11600eca16225"
+  },
+  "devices/core-diode.json": {
+    "bytes": 70592,
+    "sha256": "a8064c3077d3826b9a5287d804212e401c99b47832bf19a3a71d8ad9a3c83e07"
+  },
+  "devices/core-encoder.json": {
+    "bytes": 75029,
+    "sha256": "bf4316611fd1574fe6e022301087e2c44683c5e130f8317a15e11b4840d6ded1"
+  },
+  "devices/core-i2c.json": {
+    "bytes": 70583,
+    "sha256": "2921808b808e6cba99dea10b1922dd506360a887ba698c78bab98248fe8561d9"
+  },
+  "devices/core-joystick.json": {
+    "bytes": 77780,
+    "sha256": "8a5ab307b7fef6ef8f2d958801ce6e918e0c23b58750fd024691d5cd7e6031ee"
+  },
+  "devices/core-l298n.json": {
+    "bytes": 142859,
+    "sha256": "99a4e63e9b930a22af5c40c137df9609d8264a252148d02fc1fc5290c7bf4d35"
+  },
+  "devices/core-lcd.json": {
+    "bytes": 146889,
+    "sha256": "b591a973ad62ccd8770779a1ccc68bbb5fa572a62a22ecdaac4ec30e7e357d6f"
+  },
+  "devices/core-ldr.json": {
+    "bytes": 61708,
+    "sha256": "f43f05024c999d6c4d4f320ba2974dbe66edc3ead51fe3f6386bf3812390aac8"
+  },
+  "devices/core-led.json": {
+    "bytes": 50122,
+    "sha256": "0b4fa558769a597a46a049662356ef89cb3eb77266080cf1f260415937e14068"
+  },
+  "devices/core-matrix.json": {
+    "bytes": 95833,
+    "sha256": "8da698befa0361425b757c4460d2b2d818f403ec71e8a37e02a06b0db2cb3bef"
+  },
+  "devices/core-motor.json": {
+    "bytes": 74740,
+    "sha256": "c2c666073716035bd45d595075fb36775c0b1ba3956a67b0316b27512ceef52e"
+  },
+  "devices/core-mpu6050.json": {
+    "bytes": 93805,
+    "sha256": "55e116648949851b5c0850979411143c9bf68ec9499cf3813bd6a4a377414ba0"
+  },
+  "devices/core-ntc.json": {
+    "bytes": 61709,
+    "sha256": "5c84957e6755235dafd87f14a06ce32e591ffd77c13a687b4115c11d97122ec6"
+  },
+  "devices/core-oled.json": {
+    "bytes": 111665,
+    "sha256": "6a15b532962b1b8c200f6823ce5274fa8d7dea3ae0da017b062131cb20176ffb"
+  },
+  "devices/core-passive_buzzer.json": {
+    "bytes": 71147,
+    "sha256": "ca7c1db0c7f2ab5749e492aad5acbe6604ace7875d7121a3718797eca991ebd3"
+  },
+  "devices/core-pir.json": {
+    "bytes": 41649,
+    "sha256": "25eb30ea820e3bf5adb5f02bbd1842a29a040d7c305a298bf0833bff986b921c"
+  },
+  "devices/core-potentiometer.json": {
+    "bytes": 71670,
+    "sha256": "0d8d6cb519a1db9b1c8359f5de3ec3a380365b84a5c20bf8b3e46573928581f2"
+  },
+  "devices/core-ref_ads1115_10.json": {
+    "bytes": 103570,
+    "sha256": "9dacfc85b6c088b9bdbe3021a1a250f35dcd3d567c8f85c1a3e7e01ba89ac493"
+  },
+  "devices/core-ref_button_2.json": {
+    "bytes": 62084,
+    "sha256": "8cc1df450b03da8cf22ef52ace3d36a2eb908045af04313b8e43b7490eb27ef9"
+  },
+  "devices/core-ref_button_4.json": {
+    "bytes": 62086,
+    "sha256": "57864004e5bc846350a9f2fb97852c14049e648d2a64b2effe1d965cdf67d897"
+  },
+  "devices/core-ref_button_module_3.json": {
+    "bytes": 62210,
+    "sha256": "90de8cdb1bcd7202c51ccd8f7cdcce48b0cef6d0365c1302769fa9fa2b13a710"
+  },
+  "devices/core-ref_buzzer_active_2.json": {
+    "bytes": 39254,
+    "sha256": "df0e302bb98f0e7ff09b0616a08c0dfb843389414970dc29f92808a02affd958"
+  },
+  "devices/core-ref_buzzer_active_module_3.json": {
+    "bytes": 39283,
+    "sha256": "43c574c1100b6ca43af7523b27e7797e997187a6112edd92d35a83db7ef6914f"
+  },
+  "devices/core-ref_buzzer_passive_2.json": {
+    "bytes": 71097,
+    "sha256": "5d8bf6e8f062bdc244b9ccef620b368c5b54f848f91ac90568664df19ab49870"
+  },
+  "devices/core-ref_buzzer_passive_module_3.json": {
+    "bytes": 71129,
+    "sha256": "0af24fc58eae9653f1b610f89308bc3c4789de063b2457d1a818183dc316509b"
+  },
+  "devices/core-ref_can_transceiver_6.json": {
+    "bytes": 67884,
+    "sha256": "60d86dd927f8ebf590271dfe0269090259d37cd45d44a8e634748fd5ef1bce9b"
+  },
+  "devices/core-ref_capacitor_ceramic_2.json": {
+    "bytes": 62258,
+    "sha256": "510cc2a96139a2c1c49ac9afb490e5fc0cbd9517884dc3e2ba3fc4c3a61de0b3"
+  },
+  "devices/core-ref_capacitor_electrolytic_2.json": {
+    "bytes": 62294,
+    "sha256": "f5a5f68d32b2189c71e9aabbcae7ab2ba1926be69520501e0f5c7a7f4ebc2ea3"
+  },
+  "devices/core-ref_dc_motor_2.json": {
+    "bytes": 142737,
+    "sha256": "a77a747655336c28670e82892319a47fad5a0cb3b92cab19fcab6b5e325b65da"
+  },
+  "devices/core-ref_dc_supply_2.json": {
+    "bytes": 142809,
+    "sha256": "4df97e3e808309990836f81252faa67c99ffc8fb96a074e0273e5ace24cb7aa2"
+  },
+  "devices/core-ref_dht11_module_3.json": {
+    "bytes": 73662,
+    "sha256": "876552f6ab4432f3c0dcc8829bace42cda5b2dadbce3f3352a32b4c2921c0fc7"
+  },
+  "devices/core-ref_dht22_module_3.json": {
+    "bytes": 73659,
+    "sha256": "a2ec9d8e2c8f316023cf179af363144c9dc63b09fb022e87d49faec6e0fe7b42"
+  },
+  "devices/core-ref_diode_axial_2.json": {
+    "bytes": 70662,
+    "sha256": "d16a93fbd52e786e44274301564f5bb4d34c7afef9d9a3ddd087949144a48b4c"
+  },
+  "devices/core-ref_ds18b20_probe_3.json": {
+    "bytes": 72967,
+    "sha256": "537343a0c4f4a6e1b51ad8ab7fd953aadc2171ecd9b975d1b03b687dac710e9d"
+  },
+  "devices/core-ref_ds18b20_to92_3.json": {
+    "bytes": 72976,
+    "sha256": "87889c5cefea91cc33b0e3eaed22a435d589a781db88dc9e9deeacc79bf08771"
+  },
+  "devices/core-ref_ds3231_8.json": {
+    "bytes": 87402,
+    "sha256": "329cce393b383e73cd78c519b53ec9de6cae91aa6e9f19d729dd066eb245b44a"
+  },
+  "devices/core-ref_encoder_bare_5.json": {
+    "bytes": 51517,
+    "sha256": "5b64fa5c3c93f41c285a2c0b64570050e0d2fa2aad51cdeb8a94d05a5b2ee3cc"
+  },
+  "devices/core-ref_encoder_module_5.json": {
+    "bytes": 75061,
+    "sha256": "a90f23bfd3fbb03f090d4f6ccae6d24ea598f0102d36a084845b8209431cc0b2"
+  },
+  "devices/core-ref_hcsr04_4.json": {
+    "bytes": 84505,
+    "sha256": "d8210d153508cb97b88e313123726a0308b117ecfd5358d4c588dcb5c0e37919"
+  },
+  "devices/core-ref_i2c_eeprom_5.json": {
+    "bytes": 70714,
+    "sha256": "991db4694e41b9d07f3aba28448e225eb4c3b82c3958c7f604ac94cf06336977"
+  },
+  "devices/core-ref_i2c_eeprom_8.json": {
+    "bytes": 70721,
+    "sha256": "7449efc88bb1765b34445e2bbba0313c0b812036c79d29baa4acfe25b15bc8c9"
+  },
+  "devices/core-ref_isolated_rs485.json": {
+    "bytes": 83045,
+    "sha256": "e661813d59930132a8a6b343fa51ef3a29fe5388d133fbfe2e595636ca38e57d"
+  },
+  "devices/core-ref_joystick_module_5.json": {
+    "bytes": 77823,
+    "sha256": "743737636f1c576aed14177f449b1c76f49fb412b83962128b187074eb2f1b53"
+  },
+  "devices/core-ref_l298n_bare_15.json": {
+    "bytes": 143067,
+    "sha256": "5d2f17e1bc80fde4b293c769bf3070fb910b72d88139633c660df1453811ecaf"
+  },
+  "devices/core-ref_l298n_module_13.json": {
+    "bytes": 142894,
+    "sha256": "a712a322a4f9316011588405f20f2de0495d69f355d65d52e4437f0a1c48943c"
+  },
+  "devices/core-ref_l298p_bare_20.json": {
+    "bytes": 143096,
+    "sha256": "44d81d488d1f2fd1b37e9acac513b3f6eecdfbae5694aa0011c69443a4614d97"
+  },
+  "devices/core-ref_lcd_i2c_4.json": {
+    "bytes": 243492,
+    "sha256": "9c5c341a8e85ed9af3cc13267ef9c89afb406d2abd40179fbced5e1c7ad8c303"
+  },
+  "devices/core-ref_lcd_parallel_16.json": {
+    "bytes": 146953,
+    "sha256": "bc3fe3439b0f9277ebbe397b36d84919d5cf68371fe350c6bbc31aa2d931ed6d"
+  },
+  "devices/core-ref_ldr_bare_2.json": {
+    "bytes": 61695,
+    "sha256": "15e9e3ca80ab39cec8b155a2518ba44fe4e2746120485e61a611ea81e79d5f3b"
+  },
+  "devices/core-ref_ldr_comparator_4.json": {
+    "bytes": 75221,
+    "sha256": "6021d7bc05ccd31b331f09c5dff9a8d9aed340e6c356d516fa19056d584320ec"
+  },
+  "devices/core-ref_ldr_module_3.json": {
+    "bytes": 60158,
+    "sha256": "a845ad0fe98432f886c2abaa46ff413be36b791ae71071218616772d1c5214ac"
+  },
+  "devices/core-ref_led_tht_2.json": {
+    "bytes": 50150,
+    "sha256": "0db8e8c9d6ecb54c168013d0ac9c2591997b5f544e8e2276538a3ba97ad3276e"
+  },
+  "devices/core-ref_matrix_10.json": {
+    "bytes": 95914,
+    "sha256": "e466a02e365e2cdadf41b2a4069ca2aeb3ed294bff12a4a52490cf2ebf7187f9"
+  },
+  "devices/core-ref_max98357a_9.json": {
+    "bytes": 91137,
+    "sha256": "13ec25df3a880276bb0dbaa5558429b1d26a63afdef72500c1866ecbd3649e79"
+  },
+  "devices/core-ref_mcp4725_6.json": {
+    "bytes": 128303,
+    "sha256": "c06455fb69855a2914efa30a2b5d3eca74391b42b854305dd19f54e903dca8ca"
+  },
+  "devices/core-ref_motor_driver_hat.json": {
+    "bytes": 116453,
+    "sha256": "0aa0c754c259d170525dc583a24e34f3238a09bd221bdbd8c5b55d664fe20023"
+  },
+  "devices/core-ref_mpu6050_8.json": {
+    "bytes": 93852,
+    "sha256": "e4103bf6072f00e2914222ea4fbaee1c20d61addb7a609648d304c3080edb566"
+  },
+  "devices/core-ref_ntc_bare_2.json": {
+    "bytes": 61716,
+    "sha256": "fcbeef302de06798868a7e03f0de63dc77c9c9d264b3ffdfe90c93681a09eb21"
+  },
+  "devices/core-ref_ntc_module_3.json": {
+    "bytes": 60384,
+    "sha256": "c5507508d43a2634f2a73b6f2ac6b276b6560fd7666b3d7c1200a85d7b05a627"
+  },
+  "devices/core-ref_oled_configurable_7.json": {
+    "bytes": 163438,
+    "sha256": "c49aa96f9edde94dc0fcdae67f47d4a839b0a8efbdd742996f5b1f00a7358b02"
+  },
+  "devices/core-ref_oled_configurable_8.json": {
+    "bytes": 163443,
+    "sha256": "8d7c81f231f4886ccb98345aec2e53c17bb34a97a0876550918e9d9b73c00a2a"
+  },
+  "devices/core-ref_oled_i2c_4.json": {
+    "bytes": 111668,
+    "sha256": "870fa4e16a5d38434db48a39357d50dd2f1614cf1ac37121c51baffd721e5bfe"
+  },
+  "devices/core-ref_ov2640_camera.json": {
+    "bytes": 168865,
+    "sha256": "558cd7e3e7e896ecd8587bb25451e36446eef04c190fddb154748540f806076f"
+  },
+  "devices/core-ref_pir_3.json": {
+    "bytes": 41624,
+    "sha256": "78d416bfeabe4415bad294b9b2c4f0bc666a094923a5d2d75d036ba16dc7442c"
+  },
+  "devices/core-ref_pot_bare_3.json": {
+    "bytes": 71681,
+    "sha256": "e9407fc7960dcf993f1066d26b5657178f309673865f90843e8adfe69c9e317b"
+  },
+  "devices/core-ref_pot_module_3.json": {
+    "bytes": 71684,
+    "sha256": "1a377041b2f0ffcd13ee72ca507e4acd1eadf08078092311db0e0e5e51ff8f3e"
+  },
+  "devices/core-ref_relay_module_6.json": {
+    "bytes": 57745,
+    "sha256": "2c7d1016d017d8f1f10c3298847e60f603f5585f315c502d4be7a004a82c9b9a"
+  },
+  "devices/core-ref_resistor_axial_2.json": {
+    "bytes": 59282,
+    "sha256": "2fa7d0b90153304aae0c7ba692960bf49a6fd94b6897d5c3f8d4250fc0c21a7e"
+  },
+  "devices/core-ref_rgb_common_anode_4.json": {
+    "bytes": 106026,
+    "sha256": "07d76df8424ce1301c4fda25e889f7679814a69280bbf2effd970c1d4e7d9a13"
+  },
+  "devices/core-ref_rgb_common_cathode_4.json": {
+    "bytes": 99012,
+    "sha256": "17cec127580ea8a24b04e754421f0f45bac74e5aa81ba0581afee417b8944276"
+  },
+  "devices/core-ref_rgb_gravity_3.json": {
+    "bytes": 111661,
+    "sha256": "317783943a256c1e09c97d60d1a51fa84e644c4ac2e80b5e972b67fbf3292b76"
+  },
+  "devices/core-ref_rgb_neopixel_4.json": {
+    "bytes": 111663,
+    "sha256": "5c8c6f49e040eab3099359a4c289851492a78b60797a0b42c99ad4ee502e1797"
+  },
+  "devices/core-ref_rgb_neopixel_flora_4.json": {
+    "bytes": 111689,
+    "sha256": "d8d61dec4b13073185ff287008d2cc4583508774f5f2e80cc69b7e5bb18896b1"
+  },
+  "devices/core-ref_sd_storage_board.json": {
+    "bytes": 117072,
+    "sha256": "036e21c777ca2b3e0dbfc960e5ee933c1a16daf7fba4053cbe91c240ec090000"
+  },
+  "devices/core-ref_servo_3.json": {
+    "bytes": 59411,
+    "sha256": "3e727001b03657596fba80f078c84b8ba4f261c9f95e546b68126c54d595e8e5"
+  },
+  "devices/core-ref_servo_feedback_4.json": {
+    "bytes": 80289,
+    "sha256": "dd70c1c5dc901bde33e354611c2288aab26584cb6fcfd7a38cb4f02e0ce75258"
+  },
+  "devices/core-ref_sevenseg_4digit_12.json": {
+    "bytes": 389754,
+    "sha256": "f5c7d49a97d9dafde170c7ebd9d639c4d682afba266770e58ce71454fb2550ff"
+  },
+  "devices/core-ref_sevenseg_common_anode_10.json": {
+    "bytes": 194389,
+    "sha256": "9a37e088d1189765a331f176f62469e2573f6bec7d4878091b2c751f9d88dad2"
+  },
+  "devices/core-ref_sevenseg_common_cathode_10.json": {
+    "bytes": 184368,
+    "sha256": "299aea0e493c09a4dacf2905fe1fc88c8e7a3604c70a8d20eef73276d0e15ce2"
+  },
+  "devices/core-ref_sevenseg_tm1637_4.json": {
+    "bytes": 51770,
+    "sha256": "a64db710917cdeb91e85b7239fa4d4a30e3792145ea0a9c0bd21d224134b7865"
+  },
+  "devices/core-ref_sht31_breakout_7.json": {
+    "bytes": 68556,
+    "sha256": "617671f2e71c64a62abd4baa887b1e434e3ae77a0aba9200cbc431bb48896653"
+  },
+  "devices/core-ref_sht31_grove_4.json": {
+    "bytes": 68337,
+    "sha256": "4b3ca937bd18bdbfc87877e228597d9d8ca61894477c09ed4a5a7ac3e9bf1544"
+  },
+  "devices/core-ref_slide_dp3t_8.json": {
+    "bytes": 98499,
+    "sha256": "b5090bd1900b3d9ee77fc11e6f5e872bc72a4b0b1a41b9a47e82d45ada141206"
+  },
+  "devices/core-ref_slide_dpdt_6.json": {
+    "bytes": 72136,
+    "sha256": "e6b4e4da9d4ee5f57887439b7041d14bc605b0a7beff71f09eafc312feefa34b"
+  },
+  "devices/core-ref_slide_spdt_3.json": {
+    "bytes": 43020,
+    "sha256": "dfcf5047000eb30b3da88f60b822d8548790b419ab7b74c8098622c4965c0536"
+  },
+  "devices/core-ref_spi_eeprom_8.json": {
+    "bytes": 86085,
+    "sha256": "d09b6d77b36952495a7438b0d7193e6ad9bd047d24d8bcecf9efb22f1bc89dfa"
+  },
+  "devices/core-ref_st7735_8.json": {
+    "bytes": 132646,
+    "sha256": "498fc312ff5c5bca3fb9a5d5a04033e07133149b9650e3e6cd88f8409d556638"
+  },
+  "devices/core-ref_stepper_bipolar_4.json": {
+    "bytes": 88968,
+    "sha256": "6d49502453da2298b021f5a7e58559390dc3dcbe5a2a0d5e5aa8202f3d92f194"
+  },
+  "devices/core-ref_stepper_driver_11.json": {
+    "bytes": 64755,
+    "sha256": "e9a5ef85027ec34b533a2d2a2c371d19e9c1a0f224b7f703b7a2c0448c4d505e"
+  },
+  "devices/core-ref_stepper_unipolar_5.json": {
+    "bytes": 64651,
+    "sha256": "fbb1bbf7e698af02fd89cd1725458bfe2eaafb3dd50c44d02a435413bf626ca5"
+  },
+  "devices/core-ref_tmp36_to92_3.json": {
+    "bytes": 53743,
+    "sha256": "a9858f69f761df99ac0db12df5cd584b04e9fc0d93c04bea566df123856f44c1"
+  },
+  "devices/core-ref_uart_cable_4.json": {
+    "bytes": 88973,
+    "sha256": "d7124b8e16ed238533b0e6fbe8e57b14da2eb64c1689aa0e775241542c6dbe78"
+  },
+  "devices/core-ref_uart_cable_6.json": {
+    "bytes": 89081,
+    "sha256": "54069b6f8824746b6bc7c822b0f4addb0c06bf103b2fccdfa8e101f27335843b"
+  },
+  "devices/core-ref_urm09_i2c_4.json": {
+    "bytes": 100918,
+    "sha256": "78a40cb1a2b4e0b19c0f118de5855850cd1989a987753bd6b2f29cef307787d1"
+  },
+  "devices/core-ref_urm09_trig_3.json": {
+    "bytes": 66389,
+    "sha256": "9da801001a0b484c3bf7172d0f7052539ce54a4743bcffca0e0d199cf840f463"
+  },
+  "devices/core-relay.json": {
+    "bytes": 57711,
+    "sha256": "4970bb6446196e87dd76e57471a330b3069628050678f932b80f6c51d0014ff6"
+  },
+  "devices/core-resistor.json": {
+    "bytes": 59224,
+    "sha256": "46b3c41be4140441824fc0cf1427db5ac5198a2a42b00e1b55507888014d9253"
+  },
+  "devices/core-rgb.json": {
+    "bytes": 98897,
+    "sha256": "21b1c6982a5be47898f64518ea961acb596ed4a61a6a97c366bc942dc129a8d5"
+  },
+  "devices/core-servo.json": {
+    "bytes": 59406,
+    "sha256": "18ae08a5e8d22a2281ffcd301ce7b0d4ea5cc48777605a0ee41e9256b17c31a3"
+  },
+  "devices/core-sevenseg.json": {
+    "bytes": 184285,
+    "sha256": "aefdcc386b56a678e99d195386194f481c29e27fa9d100a9410ce00d77b698e8"
+  },
+  "devices/core-sht31.json": {
+    "bytes": 68361,
+    "sha256": "55ece7cb32b4e747851f8cf310ae3d3747effc31e13cfbe0de8a654f5f07287c"
+  },
+  "devices/core-slide.json": {
+    "bytes": 37584,
+    "sha256": "25e20649169c7989c7d6d248c6d39832043280f495b6199060f3d436cafff3a0"
+  },
+  "devices/core-spi.json": {
+    "bytes": 84731,
+    "sha256": "6b5e4da933fa32dc552e0406bf20c44823c5a8779f1d0bd6be2421bfc1d4fb39"
+  },
+  "devices/core-stepper.json": {
+    "bytes": 60819,
+    "sha256": "b77e8dcc5a576eff4960a24566875fb72f76609b5228706ec8b7f675d16d6245"
+  },
+  "devices/core-summary.json": {
+    "bytes": 10750,
+    "sha256": "9d226d55c79ddc9e4ef546b3e5a01b9e6df6b74731716d1af44d3100fdf21d4b"
+  },
+  "devices/core-temperature.json": {
+    "bytes": 53727,
+    "sha256": "c3fd0980ae97f69cd1fae7a06aecaae1a60d75c974f178c672c08d7a4c150e4c"
+  },
+  "devices/core-tft.json": {
+    "bytes": 132559,
+    "sha256": "bee51b4ea8d65933b855360f5c2584d211ee87646470056f8f04dd2a074a309b"
+  },
+  "devices/core-uart.json": {
+    "bytes": 89041,
+    "sha256": "27f63ca8e53bb96139d2819016324e5abe3cfc283927b39ccabeea1af0dfae05"
+  },
+  "devices/core-ultrasonic.json": {
+    "bytes": 84500,
+    "sha256": "cbdd92605d84848ded4c9e8349e63f05c1ee5d0f4de1f098ff6b5ad3796ad1bd"
+  },
+  "semantics/arm-abi.c": {
+    "bytes": 210,
+    "sha256": "73ee07abed024626a761c9d3f9cbfd92d0cd9d630a654dca6c306f9406b2f026"
+  },
+  "semantics/comparison-type.c": {
+    "bytes": 201,
+    "sha256": "19dcf873e359ca160ea009402639c57e5462ec8311d575ff775fc91d02becb49"
+  },
+  "semantics/enum-expression.c": {
+    "bytes": 212,
+    "sha256": "996411c1adcdf8605c08041ccad49e13a6ffebf62b91d58b429ad6b470813d6c"
+  },
+  "semantics/float-nested-member.c": {
+    "bytes": 264,
+    "sha256": "9887160c8a7dd12e867a6e1dc81e178ae3d197b4ff9a072110243a55398f006b"
+  },
+  "semantics/float-pointer-index.c": {
+    "bytes": 225,
+    "sha256": "24f8e6bad016a5c0dd879c4d7017bc1150c2926a8b285e8bf01d2a51aed8aa02"
+  },
+  "semantics/float-struct-array.c": {
+    "bytes": 243,
+    "sha256": "9ff6223ac5768b80882396b89e2e4449aa0310c59a9a0cb16ed785f20c124c42"
+  },
+  "semantics/function-return-conversion.c": {
+    "bytes": 217,
+    "sha256": "49e5aa1f4247fec467b6d6279d681a66319d591183e4e6845bc470a9fca130eb"
+  },
+  "semantics/octal-literal.c": {
+    "bytes": 193,
+    "sha256": "1e56784624b8c9e2ebb7851a2eec4384e8cee07a1581cb54d340ada2d5d39a9c"
+  },
+  "semantics/reapply-board.json": {
+    "bytes": 10465,
+    "sha256": "c94ef8b15a77487097414934e5397992416dcaf1509be2967e19dfaeaf21ff3b"
+  },
+  "semantics/reapply-breadboard.json": {
+    "bytes": 10901,
+    "sha256": "2e95166328f5ca3e09519583da22fd719e13fca0188790a2f88e079b0aec4abf"
+  },
+  "semantics/reapply-button.json": {
+    "bytes": 12524,
+    "sha256": "5e7c06baf8c018357eb90d8d2b36fa8b1991eebfd52a1d7cc47bd623c35ac4bd"
+  },
+  "semantics/results.json": {
+    "bytes": 4768,
+    "sha256": "97f0f4602dc789dbbde9ddde2398c7166f25e23848f78f3f64000e81935c7cab"
+  },
+  "semantics/sizeof-double-expression.c": {
+    "bytes": 213,
+    "sha256": "64e7ec06344d66a1360798d156db3cd43e64985bd9d9399e17e96256de11c64e"
+  },
+  "semantics/sizeof-side-effect.c": {
+    "bytes": 231,
+    "sha256": "b632d2968d88e7ff972b58ea415378fb384f7f761112730bc1ceb2f2ebf06608"
+  },
+  "semantics/struct-initializer-width.c": {
+    "bytes": 234,
+    "sha256": "7a945bffe40afb10966fa8a4b311245234bab496a0dee3f4a7e76f5c31b45d22"
+  },
+  "semantics/struct-padding.c": {
+    "bytes": 254,
+    "sha256": "e66a438af3de067b05da19e47d9c76e0428ba24778cc3bce259cfd87b9891480"
+  },
+  "semantics/unsigned-addition-wrap.c": {
+    "bytes": 217,
+    "sha256": "e45d9ac54f499c4ee8b31fd48df3c885eb1e39f0dda09fc923ddacae5ac1f849"
+  },
+  "semantics/unsigned-promotion.c": {
+    "bytes": 228,
+    "sha256": "1d51547de0e3bbf9feb00ff9da507c70bc8c978304ac71f24488a749f35aa7b2"
+  },
+  "semantics/unsigned-right-shift.c": {
+    "bytes": 217,
+    "sha256": "7683a0f333d94b52d06b07e428ea7598a1e770d014b22e18e300442a02f2cbf8"
+  }
+}

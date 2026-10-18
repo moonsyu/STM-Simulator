@@ -1,0 +1,42 @@
+{
+  "version": "0.23.8",
+  "checked": 130,
+  "mismatches": [
+    {
+      "name": "package.json",
+      "matches": false
+    },
+    {
+      "name": "src/themes/github-light/LICENSE.txt",
+      "error": "\"src/themes/github-light/LICENSE.txt\" was not found in this archive"
+    },
+    {
+      "name": "src/themes/github-light/README.md",
+      "error": "\"src/themes/github-light/README.md\" was not found in this archive"
+    },
+    {
+      "name": "src/themes/github-light/light-default.json",
+      "error": "\"src/themes/github-light/light-default.json\" was not found in this archive"
+    },
+    {
+      "name": "src/themes/github-light/source.json",
+      "error": "\"src/themes/github-light/source.json\" was not found in this archive"
+    },
+    {
+      "name": "src/themes/github-light/theme.js",
+      "error": "\"src/themes/github-light/theme.js\" was not found in this archive"
+    },
+    {
+      "name": "src/themes/jellybeans/jellybeans.vim",
+      "error": "\"src/themes/jellybeans/jellybeans.vim\" was not found in this archive"
+    },
+    {
+      "name": "src/themes/jellybeans/source.json",
+      "error": "\"src/themes/jellybeans/source.json\" was not found in this archive"
+    },
+    {
+      "name": "src/themes/jellybeans/theme.js",
+      "error": "\"src/themes/jellybeans/theme.js\" was not found in this archive"
+    }
+  ]
+}

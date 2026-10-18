@@ -1,0 +1,57 @@
+{
+  "passed": true,
+  "hardwareRun": false,
+  "tools": {
+    "armGcc": "D:\\codex\\project\\STM-Simulator\\work\\native-tools\\xpack-arm-none-eabi-gcc-15.2.1-1.1\\bin\\arm-none-eabi-gcc.exe",
+    "armGdb": "D:\\codex\\project\\STM-Simulator\\work\\native-tools\\xpack-arm-none-eabi-gcc-15.2.1-1.1\\bin\\arm-none-eabi-gdb.exe",
+    "cube": "D:\\codex\\project\\STM-Simulator\\work\\tools\\STM32CubeF4",
+    "hostGcc": "C:\\msys64\\ucrt64\\bin\\gcc.exe",
+    "hostGdb": "C:\\msys64\\ucrt64\\bin\\gdb.exe",
+    "clangd": "D:\\codex\\project\\STM-Simulator\\work\\tools\\clangd_23.1.0\\bin\\clangd.exe",
+    "openocd": "",
+    "buildRoot": ""
+  },
+  "checks": [
+    "Windows GCC compilation and actual executable output",
+    "GDB/MI breakpoint and stepping",
+    "GDB watch, stack, registers and memory",
+    "GDB interrupt",
+    "clangd hover and definition",
+    "C/C++ multi-file standard library executable",
+    "ARM GCC with actual ST HAL and CMSIS ELF/BIN/HEX/MAP",
+    "failed build clears old artifact",
+    "build cancellation"
+  ],
+  "armArtifacts": [
+    {
+      "name": "firmware.elf",
+      "path": "C:\\Users\\wn981\\AppData\\Local\\Temp\\stm-native-check-XXXXXXxJKJ1D\\native-builds\\627b9129-a916-48d9-844a-1e217d616d4e\\firmware.elf",
+      "bytes": 1341840,
+      "sha256": "ae9c830cef10582798a1037ba996db99508130c260839b979d33a30342737794"
+    },
+    {
+      "name": "firmware.map",
+      "path": "C:\\Users\\wn981\\AppData\\Local\\Temp\\stm-native-check-XXXXXXxJKJ1D\\native-builds\\627b9129-a916-48d9-844a-1e217d616d4e\\firmware.map",
+      "bytes": 1093952,
+      "sha256": "9dc4896edc6877ec36bd35cb36698bf8b21a54ece6ca9e99eb3b1eb479a11341"
+    },
+    {
+      "name": "compile_commands.json",
+      "path": "C:\\Users\\wn981\\AppData\\Local\\Temp\\stm-native-check-XXXXXXxJKJ1D\\native-builds\\627b9129-a916-48d9-844a-1e217d616d4e\\compile_commands.json",
+      "bytes": 39360,
+      "sha256": "3cd630da8e4818149424b714d9493102c8029b87542213ab1c5ac6f65a4976fc"
+    },
+    {
+      "name": "firmware.bin",
+      "path": "C:\\Users\\wn981\\AppData\\Local\\Temp\\stm-native-check-XXXXXXxJKJ1D\\native-builds\\627b9129-a916-48d9-844a-1e217d616d4e\\firmware.bin",
+      "bytes": 20296,
+      "sha256": "ac6bf7d615261ff537f4c48b03e8fb782ba7c13230f41c750c0d29281556b53c"
+    },
+    {
+      "name": "firmware.hex",
+      "path": "C:\\Users\\wn981\\AppData\\Local\\Temp\\stm-native-check-XXXXXXxJKJ1D\\native-builds\\627b9129-a916-48d9-844a-1e217d616d4e\\firmware.hex",
+      "bytes": 57129,
+      "sha256": "f88e33f4f4c74674fd3ceeed7f8c9e00c1aee17f4a20a0cb5fdd3ed312a28dc3"
+    }
+  ]
+}
