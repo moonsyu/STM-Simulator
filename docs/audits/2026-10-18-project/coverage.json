@@ -1,0 +1,90 @@
+{
+  "date": "2026-10-18",
+  "head": "dc999bfc55f42664aa58968c320abaeab847e8c4",
+  "version": "0.23.8",
+  "unit": {
+    "passed": 323,
+    "failed": 0
+  },
+  "devices": {
+    "devices": 114,
+    "runtime": 114,
+    "topology": 114,
+    "structure": 114,
+    "idempotent": 114,
+    "wireRemovalCases": 701,
+    "wireRemovalFailures": 0,
+    "repairRuntime": 114,
+    "repairTopology": 114,
+    "preservedUnrelated": 114
+  },
+  "halCards": {
+    "deviceCount": 114,
+    "cardCount": 979,
+    "runtimeSuccess": 979,
+    "structurePass": 979,
+    "topologyPass": 979,
+    "failures": [],
+    "fatal": []
+  },
+  "resetConditions": 128,
+  "docsReapply": {
+    "normalPassed": 114,
+    "customLabelPreserved": 108,
+    "customLabelFailures": 6
+  },
+  "cSemanticProbes": {
+    "hostComparisons": 14,
+    "different": 13,
+    "armAbiAssertionsPassed": true,
+    "inlineTransformerFailures": 2
+  },
+  "native": {
+    "passed": true,
+    "checks": [
+      "Windows GCC compilation and actual executable output",
+      "GDB/MI breakpoint and stepping",
+      "GDB watch, stack, registers and memory",
+      "GDB interrupt",
+      "clangd hover and definition",
+      "C/C++ multi-file standard library executable",
+      "ARM GCC with actual ST HAL and CMSIS ELF/BIN/HEX/MAP",
+      "failed build clears old artifact",
+      "build cancellation"
+    ],
+    "hardwareRun": false
+  },
+  "ui": {
+    "states": 52,
+    "textChecks": 22684,
+    "contrastFailures": 0,
+    "pageErrors": [],
+    "screenshotInspections": [
+      "Dark compact Pinout 1024x640",
+      "White main IDE 1540x1020"
+    ]
+  },
+  "updates": {
+    "isolatedUiPassed": true,
+    "publicPortableStartupEnabled": true,
+    "publicZipStartupEnabled": false,
+    "actualVersionReplacementPerformed": false
+  },
+  "dependencies": {
+    "info": 0,
+    "low": 2,
+    "moderate": 9,
+    "high": 2,
+    "critical": 0,
+    "total": 13
+  },
+  "scopeLimits": [
+    "No physical STM32/ST-LINK test",
+    "No all-card Bare-metal rebuild",
+    "No live version-to-version update install",
+    "No exhaustive C standard conformance",
+    "No demonstrated dependency exploit",
+    "UI source tokens, user themes, all DPI and screen-reader states not exhaustively tested"
+  ],
+  "productSourceModified": false
+}

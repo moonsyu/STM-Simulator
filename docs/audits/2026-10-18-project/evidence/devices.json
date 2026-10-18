@@ -1,0 +1,15 @@
+{
+  "counts": {
+    "devices": 114,
+    "runtime": 114,
+    "topology": 114,
+    "structure": 114,
+    "idempotent": 114,
+    "wireRemovalCases": 701,
+    "wireRemovalFailures": 0,
+    "repairRuntime": 114,
+    "repairTopology": 114,
+    "preservedUnrelated": 114
+  },
+  "failures": []
+}

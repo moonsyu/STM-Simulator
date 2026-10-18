@@ -1,0 +1,148 @@
+{
+  "recordedAt": "2026-10-18T09:40:37.192Z",
+  "source": "dc999bfc55f42664aa58968c320abaeab847e8c4",
+  "armAbi": {
+    "compiler": "D:\\codex\\project\\STM-Simulator\\work\\native-tools\\xpack-arm-none-eabi-gcc-15.2.1-1.1\\bin\\arm-none-eabi-gcc.exe",
+    "passed": true
+  },
+  "cases": [
+    {
+      "id": "struct-padding",
+      "source": "#include <stdint.h>\nstruct Reading { float v; uint16_t raw; };\ndouble result=0;\nint main(void){result=sizeof(struct Reading);return 0;}\n",
+      "native": 8,
+      "simulator": 6,
+      "mismatch": true
+    },
+    {
+      "id": "sizeof-side-effect",
+      "source": "#include <stdint.h>\n\ndouble result=0;\nint main(void){int i=1; result=sizeof(i++); result=result*100+i;return 0;}\n",
+      "native": 401,
+      "simulator": 402,
+      "mismatch": true
+    },
+    {
+      "id": "sizeof-double-expression",
+      "source": "#include <stdint.h>\n\ndouble result=0;\nint main(void){double x=2; result=sizeof(x+1);return 0;}\n",
+      "native": 8,
+      "simulator": 4,
+      "mismatch": true
+    },
+    {
+      "id": "float-pointer-index",
+      "source": "#include <stdint.h>\n\ndouble result=0;\nint main(void){float a[1]={5.0f};float *p=a;result=p[0]/2;return 0;}\n",
+      "native": 2.5,
+      "simulator": 2,
+      "mismatch": true
+    },
+    {
+      "id": "float-nested-member",
+      "source": "#include <stdint.h>\nstruct A { float v; };struct B { struct A a; };\ndouble result=0;\nint main(void){struct B b={{5.0f}};result=b.a.v/2;return 0;}\n",
+      "native": 2.5,
+      "simulator": {
+        "error": "구조체 필드가 없습니다: v"
+      },
+      "mismatch": true
+    },
+    {
+      "id": "struct-initializer-width",
+      "source": "#include <stdint.h>\nstruct A { uint8_t v; };\ndouble result=0;\nint main(void){struct A a={300};result=a.v;return 0;}\n",
+      "native": 44,
+      "simulator": 300,
+      "mismatch": true
+    },
+    {
+      "id": "float-struct-array",
+      "source": "#include <stdint.h>\nstruct A { float v; };\ndouble result=0;\nint main(void){struct A a[1]={{5.0f}};result=a[0].v/2;return 0;}\n",
+      "native": 2.5,
+      "simulator": 2,
+      "mismatch": true
+    },
+    {
+      "id": "comparison-type",
+      "source": "#include <stdint.h>\n\ndouble result=0;\nint main(void){result=(1.0<2.0)/2;return 0;}\n",
+      "native": 0,
+      "simulator": 0.5,
+      "mismatch": true
+    },
+    {
+      "id": "unsigned-right-shift",
+      "source": "#include <stdint.h>\n\ndouble result=0;\nint main(void){uint32_t x=0x80000000U;result=x>>1;return 0;}\n",
+      "native": 1073741824,
+      "simulator": -1073741824,
+      "mismatch": true
+    },
+    {
+      "id": "unsigned-promotion",
+      "source": "#include <stdint.h>\n\ndouble result=0;\nint main(void){uint32_t x=0xffffffffU;int y=-1;result=(x==y);return 0;}\n",
+      "native": 1,
+      "simulator": 0,
+      "mismatch": true
+    },
+    {
+      "id": "unsigned-addition-wrap",
+      "source": "#include <stdint.h>\n\ndouble result=0;\nint main(void){uint32_t x=0xffffffffU;result=x+1U;return 0;}\n",
+      "native": 0,
+      "simulator": 4294967296,
+      "mismatch": true
+    },
+    {
+      "id": "octal-literal",
+      "source": "#include <stdint.h>\n\ndouble result=0;\nint main(void){result=010;return 0;}\n",
+      "native": 8,
+      "simulator": 10,
+      "mismatch": true
+    },
+    {
+      "id": "enum-expression",
+      "source": "#include <stdint.h>\nenum E { A=1<<3, B };\ndouble result=0;\nint main(void){result=B;return 0;}\n",
+      "native": 9,
+      "simulator": {
+        "error": "main.c:2: 열거형 항목의 상수를 지정하세요."
+      },
+      "mismatch": true
+    },
+    {
+      "id": "function-return-conversion",
+      "source": "#include <stdint.h>\nint f(void){return 3.5;}\ndouble result=0;\nint main(void){result=f();return 0;}\n",
+      "native": 3,
+      "simulator": 3,
+      "mismatch": false
+    },
+    {
+      "id": "inline-sizeof",
+      "source": "int n=sizeof(uint32_t);",
+      "generated": "int n = sizeof(undefined);",
+      "mismatch": true
+    },
+    {
+      "id": "inline-switch",
+      "source": "int n=0;switch(1){case 1:n=2;break;default:n=3;}",
+      "error": "Cannot read properties of undefined (reading 'map')",
+      "mismatch": true
+    },
+    {
+      "id": "custom-label-reapply-board",
+      "beforeParts": 2,
+      "afterParts": 4,
+      "beforeWires": 3,
+      "afterWires": 6,
+      "mismatch": true
+    },
+    {
+      "id": "custom-label-reapply-breadboard",
+      "beforeParts": 3,
+      "afterParts": 5,
+      "beforeWires": 2,
+      "afterWires": 5,
+      "mismatch": true
+    },
+    {
+      "id": "custom-label-reapply-button",
+      "beforeParts": 3,
+      "afterParts": 5,
+      "beforeWires": 5,
+      "afterWires": 8,
+      "mismatch": true
+    }
+  ]
+}

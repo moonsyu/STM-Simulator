@@ -1,0 +1,26 @@
+{
+  "zip": {
+    "state": {
+      "phase": "unsupported",
+      "currentVersion": "0.23.8",
+      "automatic": true,
+      "message": "자동 업데이트는 Windows 포터블 배포 EXE에서 사용할 수 있습니다."
+    },
+    "semantics": {
+      "sizeofStruct": 6,
+      "expected": 8
+    }
+  },
+  "portable": {
+    "state": {
+      "phase": "idle",
+      "currentVersion": "0.23.8",
+      "automatic": true,
+      "message": "새 버전을 자동으로 확인합니다."
+    },
+    "semantics": {
+      "sizeofStruct": 6,
+      "expected": 8
+    }
+  }
+}

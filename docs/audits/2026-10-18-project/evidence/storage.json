@@ -1,0 +1,40 @@
+{
+  "purpose": "Known issue reproduction; these findings remain unfixed",
+  "findings": [
+    {
+      "id": "AUDIT-01",
+      "confirmed": true,
+      "method": "Injected one EACCES on main.c rename in an isolated workspace",
+      "projectJsonContainsNewCode": true,
+      "mainCContainsOldCode": true,
+      "retryError": "project.stm32lab 파일이 앱 밖에서 변경되었습니다. 다른 위치에 저장하거나 원본을 확인한 뒤 다시 여세요.",
+      "reopenedCodeIsOld": true
+    },
+    {
+      "id": "AUDIT-02",
+      "confirmed": true,
+      "method": "Edit, save, edit again within 1 second, New Project",
+      "unsavedWarningShown": false,
+      "fileContainsEarlierCode": true,
+      "laterEditDiscarded": true
+    },
+    {
+      "id": "AUDIT-03",
+      "confirmed": true,
+      "method": "Open workspace A, create unsaved project B, start terminal, run cd",
+      "uiWorkspace": "미저장 프로젝트",
+      "terminalStillUsesPreviousWorkspace": true,
+      "terminalOutput": "Microsoft Windows [Version 10.0.26300.9711]\r\n(c) Microsoft Corporation. All rights reserved.\r\n\r\nD:\\codex\\project\\STM-Simulator\\work\\test-results\\non-device-audit-XXXXXXKCvD9H\\workspace-a>\r\nD:\\codex\\project\\STM-Simulator\\work\\test-results\\non-device-audit-XXXXXXKCvD9H\\workspace-a>D:\\codex\\project\\STM-Simulator\\work\\test-results\\non-device-audit-XXXXXXKCvD9H\\workspace-a\r\n\r\nD:\\codex\\project\\STM-Simulator\\work\\test-results\\non-device-audit-XXXXXXKCvD9H\\workspace-a>"
+    },
+    {
+      "id": "AUDIT-04",
+      "confirmed": true,
+      "method": "Close normal app window immediately after edit, reopen the same isolated profile",
+      "previousAutosaveRestored": true,
+      "lastEditLost": true
+    }
+  ],
+  "originalScriptDate": "2026-10-15",
+  "auditedDate": "2026-10-18",
+  "auditedHead": "dc999bfc55f42664aa58968c320abaeab847e8c4"
+}

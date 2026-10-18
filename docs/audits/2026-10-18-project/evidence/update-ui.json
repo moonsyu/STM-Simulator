@@ -1,0 +1,11 @@
+{
+  "passed": true,
+  "checks": [
+    "Development build disables automatic updates",
+    "Ready state via IPC, preference and dialog",
+    "Synchronous project cache and workspace sources saved before install",
+    "Installation errors retain the open app",
+    "1024px layout without horizontal overflow"
+  ],
+  "errors": []
+}

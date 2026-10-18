@@ -1,0 +1,848 @@
+{
+  "checked": 114,
+  "normalFailures": [],
+  "customLabelFailures": [
+    {
+      "type": "board",
+      "normalPreserved": true,
+      "customLabelsPreservedCircuit": false,
+      "addedParts": 2,
+      "addedWires": 3
+    },
+    {
+      "type": "button",
+      "normalPreserved": true,
+      "customLabelsPreservedCircuit": false,
+      "addedParts": 2,
+      "addedWires": 3
+    },
+    {
+      "type": "breadboard",
+      "normalPreserved": true,
+      "customLabelsPreservedCircuit": false,
+      "addedParts": 2,
+      "addedWires": 3
+    },
+    {
+      "type": "ref_button_2",
+      "normalPreserved": true,
+      "customLabelsPreservedCircuit": false,
+      "addedParts": 2,
+      "addedWires": 3
+    },
+    {
+      "type": "ref_button_4",
+      "normalPreserved": true,
+      "customLabelsPreservedCircuit": false,
+      "addedParts": 2,
+      "addedWires": 3
+    },
+    {
+      "type": "ref_button_module_3",
+      "normalPreserved": true,
+      "customLabelsPreservedCircuit": false,
+      "addedParts": 2,
+      "addedWires": 3
+    }
+  ],
+  "results": [
+    {
+      "type": "board",
+      "normalPreserved": true,
+      "customLabelsPreservedCircuit": false,
+      "addedParts": 2,
+      "addedWires": 3
+    },
+    {
+      "type": "resistor",
+      "normalPreserved": true,
+      "customLabelsPreservedCircuit": true,
+      "addedParts": 0,
+      "addedWires": 0
+    },
+    {
+      "type": "led",
+      "normalPreserved": true,
+      "customLabelsPreservedCircuit": true,
+      "addedParts": 0,
+      "addedWires": 0
+    },
+    {
+      "type": "button",
+      "normalPreserved": true,
+      "customLabelsPreservedCircuit": false,
+      "addedParts": 2,
+      "addedWires": 3
+    },
+    {
+      "type": "lcd",
+      "normalPreserved": true,
+      "customLabelsPreservedCircuit": true,
+      "addedParts": 0,
+      "addedWires": 0
+    },
+    {
+      "type": "breadboard",
+      "normalPreserved": true,
+      "customLabelsPreservedCircuit": false,
+      "addedParts": 2,
+      "addedWires": 3
+    },
+    {
+      "type": "ref_resistor_axial_2",
+      "normalPreserved": true,
+      "customLabelsPreservedCircuit": true,
+      "addedParts": 0,
+      "addedWires": 0
+    },
+    {
+      "type": "ref_led_tht_2",
+      "normalPreserved": true,
+      "customLabelsPreservedCircuit": true,
+      "addedParts": 0,
+      "addedWires": 0
+    },
+    {
+      "type": "ref_button_2",
+      "normalPreserved": true,
+      "customLabelsPreservedCircuit": false,
+      "addedParts": 2,
+      "addedWires": 3
+    },
+    {
+      "type": "ref_button_4",
+      "normalPreserved": true,
+      "customLabelsPreservedCircuit": false,
+      "addedParts": 2,
+      "addedWires": 3
+    },
+    {
+      "type": "ref_button_module_3",
+      "normalPreserved": true,
+      "customLabelsPreservedCircuit": false,
+      "addedParts": 2,
+      "addedWires": 3
+    },
+    {
+      "type": "ref_lcd_parallel_16",
+      "normalPreserved": true,
+      "customLabelsPreservedCircuit": true,
+      "addedParts": 0,
+      "addedWires": 0
+    },
+    {
+      "type": "ref_lcd_i2c_4",
+      "normalPreserved": true,
+      "customLabelsPreservedCircuit": true,
+      "addedParts": 0,
+      "addedWires": 0
+    },
+    {
+      "type": "ref_ldr_bare_2",
+      "normalPreserved": true,
+      "customLabelsPreservedCircuit": true,
+      "addedParts": 0,
+      "addedWires": 0
+    },
+    {
+      "type": "ref_ldr_module_3",
+      "normalPreserved": true,
+      "customLabelsPreservedCircuit": true,
+      "addedParts": 0,
+      "addedWires": 0
+    },
+    {
+      "type": "ref_ldr_comparator_4",
+      "normalPreserved": true,
+      "customLabelsPreservedCircuit": true,
+      "addedParts": 0,
+      "addedWires": 0
+    },
+    {
+      "type": "ref_ntc_bare_2",
+      "normalPreserved": true,
+      "customLabelsPreservedCircuit": true,
+      "addedParts": 0,
+      "addedWires": 0
+    },
+    {
+      "type": "ref_ntc_module_3",
+      "normalPreserved": true,
+      "customLabelsPreservedCircuit": true,
+      "addedParts": 0,
+      "addedWires": 0
+    },
+    {
+      "type": "ref_sht31_grove_4",
+      "normalPreserved": true,
+      "customLabelsPreservedCircuit": true,
+      "addedParts": 0,
+      "addedWires": 0
+    },
+    {
+      "type": "ref_sht31_breakout_7",
+      "normalPreserved": true,
+      "customLabelsPreservedCircuit": true,
+      "addedParts": 0,
+      "addedWires": 0
+    },
+    {
+      "type": "ref_mpu6050_8",
+      "normalPreserved": true,
+      "customLabelsPreservedCircuit": true,
+      "addedParts": 0,
+      "addedWires": 0
+    },
+    {
+      "type": "ref_pir_3",
+      "normalPreserved": true,
+      "customLabelsPreservedCircuit": true,
+      "addedParts": 0,
+      "addedWires": 0
+    },
+    {
+      "type": "ref_oled_i2c_4",
+      "normalPreserved": true,
+      "customLabelsPreservedCircuit": true,
+      "addedParts": 0,
+      "addedWires": 0
+    },
+    {
+      "type": "ref_oled_configurable_7",
+      "normalPreserved": true,
+      "customLabelsPreservedCircuit": true,
+      "addedParts": 0,
+      "addedWires": 0
+    },
+    {
+      "type": "ref_oled_configurable_8",
+      "normalPreserved": true,
+      "customLabelsPreservedCircuit": true,
+      "addedParts": 0,
+      "addedWires": 0
+    },
+    {
+      "type": "ref_st7735_8",
+      "normalPreserved": true,
+      "customLabelsPreservedCircuit": true,
+      "addedParts": 0,
+      "addedWires": 0
+    },
+    {
+      "type": "ref_matrix_10",
+      "normalPreserved": true,
+      "customLabelsPreservedCircuit": true,
+      "addedParts": 0,
+      "addedWires": 0
+    },
+    {
+      "type": "ref_servo_3",
+      "normalPreserved": true,
+      "customLabelsPreservedCircuit": true,
+      "addedParts": 0,
+      "addedWires": 0
+    },
+    {
+      "type": "ref_servo_feedback_4",
+      "normalPreserved": true,
+      "customLabelsPreservedCircuit": true,
+      "addedParts": 0,
+      "addedWires": 0
+    },
+    {
+      "type": "ref_dc_motor_2",
+      "normalPreserved": true,
+      "customLabelsPreservedCircuit": true,
+      "addedParts": 0,
+      "addedWires": 0
+    },
+    {
+      "type": "ref_motor_driver_hat",
+      "normalPreserved": true,
+      "customLabelsPreservedCircuit": true,
+      "addedParts": 0,
+      "addedWires": 0
+    },
+    {
+      "type": "ref_stepper_bipolar_4",
+      "normalPreserved": true,
+      "customLabelsPreservedCircuit": true,
+      "addedParts": 0,
+      "addedWires": 0
+    },
+    {
+      "type": "ref_stepper_unipolar_5",
+      "normalPreserved": true,
+      "customLabelsPreservedCircuit": true,
+      "addedParts": 0,
+      "addedWires": 0
+    },
+    {
+      "type": "ref_stepper_driver_11",
+      "normalPreserved": true,
+      "customLabelsPreservedCircuit": true,
+      "addedParts": 0,
+      "addedWires": 0
+    },
+    {
+      "type": "ref_relay_module_6",
+      "normalPreserved": true,
+      "customLabelsPreservedCircuit": true,
+      "addedParts": 0,
+      "addedWires": 0
+    },
+    {
+      "type": "ref_joystick_module_5",
+      "normalPreserved": true,
+      "customLabelsPreservedCircuit": true,
+      "addedParts": 0,
+      "addedWires": 0
+    },
+    {
+      "type": "ref_encoder_bare_5",
+      "normalPreserved": true,
+      "customLabelsPreservedCircuit": true,
+      "addedParts": 0,
+      "addedWires": 0
+    },
+    {
+      "type": "ref_encoder_module_5",
+      "normalPreserved": true,
+      "customLabelsPreservedCircuit": true,
+      "addedParts": 0,
+      "addedWires": 0
+    },
+    {
+      "type": "ref_l298n_module_13",
+      "normalPreserved": true,
+      "customLabelsPreservedCircuit": true,
+      "addedParts": 0,
+      "addedWires": 0
+    },
+    {
+      "type": "ref_dc_supply_2",
+      "normalPreserved": true,
+      "customLabelsPreservedCircuit": true,
+      "addedParts": 0,
+      "addedWires": 0
+    },
+    {
+      "type": "ref_uart_cable_4",
+      "normalPreserved": true,
+      "customLabelsPreservedCircuit": true,
+      "addedParts": 0,
+      "addedWires": 0
+    },
+    {
+      "type": "ref_uart_cable_6",
+      "normalPreserved": true,
+      "customLabelsPreservedCircuit": true,
+      "addedParts": 0,
+      "addedWires": 0
+    },
+    {
+      "type": "ref_i2c_eeprom_8",
+      "normalPreserved": true,
+      "customLabelsPreservedCircuit": true,
+      "addedParts": 0,
+      "addedWires": 0
+    },
+    {
+      "type": "ref_i2c_eeprom_5",
+      "normalPreserved": true,
+      "customLabelsPreservedCircuit": true,
+      "addedParts": 0,
+      "addedWires": 0
+    },
+    {
+      "type": "ref_spi_eeprom_8",
+      "normalPreserved": true,
+      "customLabelsPreservedCircuit": true,
+      "addedParts": 0,
+      "addedWires": 0
+    },
+    {
+      "type": "ref_pot_bare_3",
+      "normalPreserved": true,
+      "customLabelsPreservedCircuit": true,
+      "addedParts": 0,
+      "addedWires": 0
+    },
+    {
+      "type": "ref_pot_module_3",
+      "normalPreserved": true,
+      "customLabelsPreservedCircuit": true,
+      "addedParts": 0,
+      "addedWires": 0
+    },
+    {
+      "type": "ref_slide_spdt_3",
+      "normalPreserved": true,
+      "customLabelsPreservedCircuit": true,
+      "addedParts": 0,
+      "addedWires": 0
+    },
+    {
+      "type": "ref_rgb_common_anode_4",
+      "normalPreserved": true,
+      "customLabelsPreservedCircuit": true,
+      "addedParts": 0,
+      "addedWires": 0
+    },
+    {
+      "type": "ref_rgb_common_cathode_4",
+      "normalPreserved": true,
+      "customLabelsPreservedCircuit": true,
+      "addedParts": 0,
+      "addedWires": 0
+    },
+    {
+      "type": "ref_rgb_neopixel_4",
+      "normalPreserved": true,
+      "customLabelsPreservedCircuit": true,
+      "addedParts": 0,
+      "addedWires": 0
+    },
+    {
+      "type": "ref_rgb_neopixel_flora_4",
+      "normalPreserved": true,
+      "customLabelsPreservedCircuit": true,
+      "addedParts": 0,
+      "addedWires": 0
+    },
+    {
+      "type": "ref_rgb_gravity_3",
+      "normalPreserved": true,
+      "customLabelsPreservedCircuit": true,
+      "addedParts": 0,
+      "addedWires": 0
+    },
+    {
+      "type": "ref_capacitor_ceramic_2",
+      "normalPreserved": true,
+      "customLabelsPreservedCircuit": true,
+      "addedParts": 0,
+      "addedWires": 0
+    },
+    {
+      "type": "ref_capacitor_electrolytic_2",
+      "normalPreserved": true,
+      "customLabelsPreservedCircuit": true,
+      "addedParts": 0,
+      "addedWires": 0
+    },
+    {
+      "type": "ref_diode_axial_2",
+      "normalPreserved": true,
+      "customLabelsPreservedCircuit": true,
+      "addedParts": 0,
+      "addedWires": 0
+    },
+    {
+      "type": "ref_buzzer_active_2",
+      "normalPreserved": true,
+      "customLabelsPreservedCircuit": true,
+      "addedParts": 0,
+      "addedWires": 0
+    },
+    {
+      "type": "ref_buzzer_active_module_3",
+      "normalPreserved": true,
+      "customLabelsPreservedCircuit": true,
+      "addedParts": 0,
+      "addedWires": 0
+    },
+    {
+      "type": "ref_buzzer_passive_2",
+      "normalPreserved": true,
+      "customLabelsPreservedCircuit": true,
+      "addedParts": 0,
+      "addedWires": 0
+    },
+    {
+      "type": "ref_buzzer_passive_module_3",
+      "normalPreserved": true,
+      "customLabelsPreservedCircuit": true,
+      "addedParts": 0,
+      "addedWires": 0
+    },
+    {
+      "type": "ref_sevenseg_common_cathode_10",
+      "normalPreserved": true,
+      "customLabelsPreservedCircuit": true,
+      "addedParts": 0,
+      "addedWires": 0
+    },
+    {
+      "type": "ref_sevenseg_common_anode_10",
+      "normalPreserved": true,
+      "customLabelsPreservedCircuit": true,
+      "addedParts": 0,
+      "addedWires": 0
+    },
+    {
+      "type": "ref_sevenseg_4digit_12",
+      "normalPreserved": true,
+      "customLabelsPreservedCircuit": true,
+      "addedParts": 0,
+      "addedWires": 0
+    },
+    {
+      "type": "ref_sevenseg_tm1637_4",
+      "normalPreserved": true,
+      "customLabelsPreservedCircuit": true,
+      "addedParts": 0,
+      "addedWires": 0
+    },
+    {
+      "type": "ref_tmp36_to92_3",
+      "normalPreserved": true,
+      "customLabelsPreservedCircuit": true,
+      "addedParts": 0,
+      "addedWires": 0
+    },
+    {
+      "type": "ref_ds18b20_to92_3",
+      "normalPreserved": true,
+      "customLabelsPreservedCircuit": true,
+      "addedParts": 0,
+      "addedWires": 0
+    },
+    {
+      "type": "ref_ds18b20_probe_3",
+      "normalPreserved": true,
+      "customLabelsPreservedCircuit": true,
+      "addedParts": 0,
+      "addedWires": 0
+    },
+    {
+      "type": "ref_hcsr04_4",
+      "normalPreserved": true,
+      "customLabelsPreservedCircuit": true,
+      "addedParts": 0,
+      "addedWires": 0
+    },
+    {
+      "type": "ref_urm09_trig_3",
+      "normalPreserved": true,
+      "customLabelsPreservedCircuit": true,
+      "addedParts": 0,
+      "addedWires": 0
+    },
+    {
+      "type": "ref_urm09_i2c_4",
+      "normalPreserved": true,
+      "customLabelsPreservedCircuit": true,
+      "addedParts": 0,
+      "addedWires": 0
+    },
+    {
+      "type": "ref_ads1115_10",
+      "normalPreserved": true,
+      "customLabelsPreservedCircuit": true,
+      "addedParts": 0,
+      "addedWires": 0
+    },
+    {
+      "type": "ref_mcp4725_6",
+      "normalPreserved": true,
+      "customLabelsPreservedCircuit": true,
+      "addedParts": 0,
+      "addedWires": 0
+    },
+    {
+      "type": "ref_can_transceiver_6",
+      "normalPreserved": true,
+      "customLabelsPreservedCircuit": true,
+      "addedParts": 0,
+      "addedWires": 0
+    },
+    {
+      "type": "ref_isolated_rs485",
+      "normalPreserved": true,
+      "customLabelsPreservedCircuit": true,
+      "addedParts": 0,
+      "addedWires": 0
+    },
+    {
+      "type": "ref_ds3231_8",
+      "normalPreserved": true,
+      "customLabelsPreservedCircuit": true,
+      "addedParts": 0,
+      "addedWires": 0
+    },
+    {
+      "type": "ref_sd_storage_board",
+      "normalPreserved": true,
+      "customLabelsPreservedCircuit": true,
+      "addedParts": 0,
+      "addedWires": 0
+    },
+    {
+      "type": "ref_max98357a_9",
+      "normalPreserved": true,
+      "customLabelsPreservedCircuit": true,
+      "addedParts": 0,
+      "addedWires": 0
+    },
+    {
+      "type": "ref_ov2640_camera",
+      "normalPreserved": true,
+      "customLabelsPreservedCircuit": true,
+      "addedParts": 0,
+      "addedWires": 0
+    },
+    {
+      "type": "ref_dht11_module_3",
+      "normalPreserved": true,
+      "customLabelsPreservedCircuit": true,
+      "addedParts": 0,
+      "addedWires": 0
+    },
+    {
+      "type": "ref_dht22_module_3",
+      "normalPreserved": true,
+      "customLabelsPreservedCircuit": true,
+      "addedParts": 0,
+      "addedWires": 0
+    },
+    {
+      "type": "ref_l298n_bare_15",
+      "normalPreserved": true,
+      "customLabelsPreservedCircuit": true,
+      "addedParts": 0,
+      "addedWires": 0
+    },
+    {
+      "type": "ref_l298p_bare_20",
+      "normalPreserved": true,
+      "customLabelsPreservedCircuit": true,
+      "addedParts": 0,
+      "addedWires": 0
+    },
+    {
+      "type": "ref_slide_dpdt_6",
+      "normalPreserved": true,
+      "customLabelsPreservedCircuit": true,
+      "addedParts": 0,
+      "addedWires": 0
+    },
+    {
+      "type": "ref_slide_dp3t_8",
+      "normalPreserved": true,
+      "customLabelsPreservedCircuit": true,
+      "addedParts": 0,
+      "addedWires": 0
+    },
+    {
+      "type": "ldr",
+      "normalPreserved": true,
+      "customLabelsPreservedCircuit": true,
+      "addedParts": 0,
+      "addedWires": 0
+    },
+    {
+      "type": "ntc",
+      "normalPreserved": true,
+      "customLabelsPreservedCircuit": true,
+      "addedParts": 0,
+      "addedWires": 0
+    },
+    {
+      "type": "sht31",
+      "normalPreserved": true,
+      "customLabelsPreservedCircuit": true,
+      "addedParts": 0,
+      "addedWires": 0
+    },
+    {
+      "type": "mpu6050",
+      "normalPreserved": true,
+      "customLabelsPreservedCircuit": true,
+      "addedParts": 0,
+      "addedWires": 0
+    },
+    {
+      "type": "pir",
+      "normalPreserved": true,
+      "customLabelsPreservedCircuit": true,
+      "addedParts": 0,
+      "addedWires": 0
+    },
+    {
+      "type": "oled",
+      "normalPreserved": true,
+      "customLabelsPreservedCircuit": true,
+      "addedParts": 0,
+      "addedWires": 0
+    },
+    {
+      "type": "tft",
+      "normalPreserved": true,
+      "customLabelsPreservedCircuit": true,
+      "addedParts": 0,
+      "addedWires": 0
+    },
+    {
+      "type": "matrix",
+      "normalPreserved": true,
+      "customLabelsPreservedCircuit": true,
+      "addedParts": 0,
+      "addedWires": 0
+    },
+    {
+      "type": "servo",
+      "normalPreserved": true,
+      "customLabelsPreservedCircuit": true,
+      "addedParts": 0,
+      "addedWires": 0
+    },
+    {
+      "type": "motor",
+      "normalPreserved": true,
+      "customLabelsPreservedCircuit": true,
+      "addedParts": 0,
+      "addedWires": 0
+    },
+    {
+      "type": "stepper",
+      "normalPreserved": true,
+      "customLabelsPreservedCircuit": true,
+      "addedParts": 0,
+      "addedWires": 0
+    },
+    {
+      "type": "relay",
+      "normalPreserved": true,
+      "customLabelsPreservedCircuit": true,
+      "addedParts": 0,
+      "addedWires": 0
+    },
+    {
+      "type": "joystick",
+      "normalPreserved": true,
+      "customLabelsPreservedCircuit": true,
+      "addedParts": 0,
+      "addedWires": 0
+    },
+    {
+      "type": "encoder",
+      "normalPreserved": true,
+      "customLabelsPreservedCircuit": true,
+      "addedParts": 0,
+      "addedWires": 0
+    },
+    {
+      "type": "l298n",
+      "normalPreserved": true,
+      "customLabelsPreservedCircuit": true,
+      "addedParts": 0,
+      "addedWires": 0
+    },
+    {
+      "type": "dc_motor",
+      "normalPreserved": true,
+      "customLabelsPreservedCircuit": true,
+      "addedParts": 0,
+      "addedWires": 0
+    },
+    {
+      "type": "dc_supply",
+      "normalPreserved": true,
+      "customLabelsPreservedCircuit": true,
+      "addedParts": 0,
+      "addedWires": 0
+    },
+    {
+      "type": "uart",
+      "normalPreserved": true,
+      "customLabelsPreservedCircuit": true,
+      "addedParts": 0,
+      "addedWires": 0
+    },
+    {
+      "type": "i2c",
+      "normalPreserved": true,
+      "customLabelsPreservedCircuit": true,
+      "addedParts": 0,
+      "addedWires": 0
+    },
+    {
+      "type": "spi",
+      "normalPreserved": true,
+      "customLabelsPreservedCircuit": true,
+      "addedParts": 0,
+      "addedWires": 0
+    },
+    {
+      "type": "potentiometer",
+      "normalPreserved": true,
+      "customLabelsPreservedCircuit": true,
+      "addedParts": 0,
+      "addedWires": 0
+    },
+    {
+      "type": "slide",
+      "normalPreserved": true,
+      "customLabelsPreservedCircuit": true,
+      "addedParts": 0,
+      "addedWires": 0
+    },
+    {
+      "type": "rgb",
+      "normalPreserved": true,
+      "customLabelsPreservedCircuit": true,
+      "addedParts": 0,
+      "addedWires": 0
+    },
+    {
+      "type": "capacitor",
+      "normalPreserved": true,
+      "customLabelsPreservedCircuit": true,
+      "addedParts": 0,
+      "addedWires": 0
+    },
+    {
+      "type": "diode",
+      "normalPreserved": true,
+      "customLabelsPreservedCircuit": true,
+      "addedParts": 0,
+      "addedWires": 0
+    },
+    {
+      "type": "buzzer",
+      "normalPreserved": true,
+      "customLabelsPreservedCircuit": true,
+      "addedParts": 0,
+      "addedWires": 0
+    },
+    {
+      "type": "passive_buzzer",
+      "normalPreserved": true,
+      "customLabelsPreservedCircuit": true,
+      "addedParts": 0,
+      "addedWires": 0
+    },
+    {
+      "type": "sevenseg",
+      "normalPreserved": true,
+      "customLabelsPreservedCircuit": true,
+      "addedParts": 0,
+      "addedWires": 0
+    },
+    {
+      "type": "temperature",
+      "normalPreserved": true,
+      "customLabelsPreservedCircuit": true,
+      "addedParts": 0,
+      "addedWires": 0
+    },
+    {
+      "type": "ultrasonic",
+      "normalPreserved": true,
+      "customLabelsPreservedCircuit": true,
+      "addedParts": 0,
+      "addedWires": 0
+    }
+  ]
+}
