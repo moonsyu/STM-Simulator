@@ -66,6 +66,7 @@ export class Runtime {
   *evaluate(n){
     this.budget();
     if(n.type==='literal')return n.value;
+    if(n.type==='sizeofType')return this.typeSize(n.to);
     if(n.type==='name'){if(own(this.program.functions,n.name))return {kind:'function',name:n.name};return this.get(this.cell(n.name));}
     if(n.type==='list'){const values=[];for(const v of n.values)values.push(yield* this.evaluate(v));return {kind:'initializer',values};}
     if(n.type==='construct'){const args=[];for(const v of n.args)args.push(yield* this.evaluate(v));if(n.name!=='LiquidCrystal')throw new Error('지원하지 않는 생성자입니다.');return this.api.construct?.(n.name,args,this)??{kind:'device',name:n.name,args};}
@@ -98,8 +99,8 @@ export class Runtime {
     }
     throw new Error('표현식을 실행할 수 없습니다.');
   }
-  typeSize(type){return ['char','byte','bool','uint8_t','int8_t'].includes(type)?1:['short','uint16_t','int16_t'].includes(type)?2:type==='double'?8:4;}
-  numericType(n){if(n.type==='literal')return n.numericType==='double'?'float':'int';if(n.type==='cast')return ['float','double'].includes(n.to)?'float':'int';if(n.type==='name'){try{return ['float','double'].includes(this.cell(n.name).dataType)?'float':'int';}catch{return 'int';}}if(n.type==='binary')return this.numericType(n.a)==='float'||this.numericType(n.b)==='float'?'float':'int';if(n.type==='unary')return this.numericType(n.a);if(n.type==='conditional')return this.numericType(n.yes)==='float'||this.numericType(n.no)==='float'?'float':'int';if(n.type==='call'&&n.callee.type==='name')return ['sin','cos','tan','sqrt','floor','ceil','round','pow','log'].includes(n.callee.name)||['float','double'].includes(this.program.functions[n.callee.name]?.type)?'float':'int';return 'int';}
+  typeSize(type){if(own(this.program.structs,type))return this.program.structs[type].reduce((sum,f)=>sum+this.typeSize(f.type),0)||4;return ['char','byte','bool','uint8_t','int8_t'].includes(type)?1:['short','uint16_t','int16_t'].includes(type)?2:type==='double'?8:4;}
+  numericType(n){if(n.type==='literal')return n.numericType==='double'?'float':'int';if(n.type==='cast')return ['float','double'].includes(n.to)?'float':'int';if(n.type==='name'){try{return ['float','double'].includes(this.cell(n.name).dataType)?'float':'int';}catch{return 'int';}}if(n.type==='index'&&n.object.type==='name'){try{const v=this.get(this.cell(n.object.name));if(isArray(v)&&['float','double'].includes(v.cells[0]?.dataType))return 'float';}catch{}return 'int';}if(n.type==='member'&&n.object.type==='name'){try{const v=this.get(this.cell(n.object.name)),s=n.pointer?this.pointerCell(v).value:v;if(s?.kind==='struct'&&['float','double'].includes(s.fields[n.key]?.dataType))return 'float';}catch{}return 'int';}if(n.type==='binary')return this.numericType(n.a)==='float'||this.numericType(n.b)==='float'?'float':'int';if(n.type==='unary')return this.numericType(n.a);if(n.type==='conditional')return this.numericType(n.yes)==='float'||this.numericType(n.no)==='float'?'float':'int';if(n.type==='call'&&n.callee.type==='name')return ['sin','cos','tan','sqrt','floor','ceil','round','pow','log'].includes(n.callee.name)||['float','double'].includes(this.program.functions[n.callee.name]?.type)?'float':'int';return 'int';}
   defaultValue(type,owner=this.scope(),depth=0){
     this.budget();if(depth>32||++this.allocations>50000)throw new Error('구조체 메모리 한도를 넘었습니다.');
     if(own(this.program.structs,type))return {kind:'struct',type,fields:Object.fromEntries(this.program.structs[type].map(f=>[f.name,{value:this.defaultValue(f.type,owner,depth+1),owner,constant:f.constant,dataType:f.type}]))};
@@ -128,6 +129,19 @@ export class Runtime {
     if(s.type==='block'){this.pushScope();try{return yield* this.statements(s.body);}finally{this.popScope();}}
     if(s.type==='expression'){yield* this.evaluate(s.expr);return;}
     if(s.type==='if'){const branch=truth(yield* this.evaluate(s.test))?s.yes:s.no;if(branch)return yield* this.statement(branch);return;}
+    if(s.type==='switch'){
+      const target=yield* this.evaluate(s.discriminant);let matched=false,defaultIndex=-1;
+      this.pushScope();try{
+        for(let i=0;i<s.cases.length;i++){
+          const c=s.cases[i];
+          if(!matched){if(c.test===null){defaultIndex=i;continue;}if(this.binary('==',target,yield* this.evaluate(c.test)))matched=true;}
+          if(matched){const signal=yield* this.statements(c.body);if(signal?.type==='break')return;if(signal)return signal;}
+        }
+        if(!matched&&defaultIndex>=0){
+          for(let i=defaultIndex;i<s.cases.length;i++){const signal=yield* this.statements(s.cases[i].body);if(signal?.type==='break')return;if(signal)return signal;}
+        }
+      }finally{this.popScope();}return;
+    }
     if(['while','for','do'].includes(s.type)){
       this.loopDepth++;this.pushScope();try{
         if(s.init)yield* this.statement(s.init);let first=true;
