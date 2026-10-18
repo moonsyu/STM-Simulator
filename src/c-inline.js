@@ -1,4 +1,4 @@
-import {compileHal} from './hal-source.js';
+import {compileHal,HAL_STRUCTS} from './hal-source.js';
 
 // Expand demonstration helpers into ordinary C blocks. Argument temporaries are
 // evaluated once; return flags leave nested loops without returning from main.
@@ -8,7 +8,8 @@ export function inlineStatements(source,helpers='',prefix='example_'){
  const names=new Set((source+'\n'+helpers).match(/\b[A-Za-z_]\w*\b/g)||[]);
  const unique=base=>{let name=base;while(names.has(name))name=base+'_'+(++serial);names.add(name);return name;};
  const fresh=()=>unique(prefix+(++serial));
- const type=d=>(d.constant?'const ':'')+(d.volatile?'volatile ':'')+d.type+(d.pointer?' *':' ');
+ const typeName=t=>parsed.structs[t]&&!HAL_STRUCTS[t]?'struct '+t:t;
+ const type=d=>(d.constant?'const ':'')+(d.volatile?'volatile ':'')+typeName(d.type)+(d.pointer?' *':' ');
  const hasReturn=n=>n&&typeof n==='object'&&(n.type==='return'||Object.values(n).some(v=>Array.isArray(v)?v.some(hasReturn):hasReturn(v)));
  function expr(n,env={},stack=[]){
   if(!n)return {code:'',before:''};
@@ -16,6 +17,7 @@ export function inlineStatements(source,helpers='',prefix='example_'){
   if(n.type==='name')return result(env[n.name]||n.name);
   if(n.type==='literal')return result(n.raw??(typeof n.value==='string'?JSON.stringify(n.value):String(n.value)+(n.numericType==='double'&&Number.isInteger(n.value)?'.0':n.value>2147483647?'U':'')));
   if(n.type==='call'){
+   if(stack.includes('$sizeof')&&functions[n.callee.name]){const f=functions[n.callee.name];return result(f.pointer?'(('+typeName(f.type)+' *)0)':'(*(('+typeName(f.type)+' *)0))');}
    const args=n.args.map(a=>expr(a,env,stack)),name=n.callee.name,fn=functions[name];
    if(!fn||name==='main')return result(expr(n.callee,env,stack).code+'('+args.map(a=>a.code).join(', ')+')',args.map(a=>a.before).join(''));
    if(stack.includes(name))throw new Error('재귀 함수는 main 내부 예제로 펼칠 수 없습니다: '+name);
@@ -40,7 +42,8 @@ export function inlineStatements(source,helpers='',prefix='example_'){
    return result('('+a.code+' '+n.op+' '+b.code+')',a.before+b.before);
   }
   if(n.type==='unary'||n.type==='postfix'||n.type==='cast'){const a=expr(n.a,env,stack);return result(n.type==='cast'?'('+(n.constant?'const ':'')+(n.volatile?'volatile ':'')+n.to+(n.pointer?' *':'')+')('+a.code+')':n.type==='postfix'?'('+a.code+n.op+')':'('+n.op+a.code+')',a.before);}
-  if(n.type==='sizeofType')return result('sizeof('+(n.constant?'const ':'')+(n.volatile?'volatile ':'')+n.targetType+(n.pointer?' *':'')+')');
+  if(n.type==='sizeofType')return result('sizeof('+typeName(n.to)+(n.pointer?' *':'')+')');
+  if(n.type==='sizeofExpr')return result('sizeof('+expr(n.arg,env,[...stack,'$sizeof']).code+')');
   if(n.type==='member'){const a=expr(n.object,env,stack);return result(a.code+(n.pointer?'->':'.')+n.key,a.before);}
   if(n.type==='index'){const a=expr(n.object,env,stack),b=expr(n.index,env,stack);return result(a.code+'['+b.code+']',a.before+b.before);}
   if(n.type==='list'){const values=n.values.map(v=>expr(v,env,stack));return result('{'+values.map(v=>v.code).join(', ')+'}',values.map(v=>v.before).join(''));}
@@ -57,7 +60,7 @@ export function inlineStatements(source,helpers='',prefix='example_'){
   if(n.type==='expression'){const v=e(n.expr);return v.before+(v.code==='0'&&v.before?'':v.code+';');}
   if(n.type==='return'){const v=e(n.value);if(!flow.done)return v.before+'return'+(n.value?' '+v.code:'')+';';return '{\n'+v.before+(flow.ret?flow.ret+' = '+v.code+';\n':'')+flow.done+' = 1;\n}';}
   if(n.type==='if'){const v=e(n.test);return v.before+'if ('+v.code+') '+s(n.yes)+(n.no?' else '+s(n.no):'');}
-  if(n.type==='switch'){const v=e(n.discriminant);return v.before+'switch ('+v.code+') {\n'+n.cases.map(c=>(c.test?'case '+e(c.test).code+':\n':'default:\n')+c.consequent.map(s).join('\n')).join('\n')+'\n}';}
+  if(n.type==='switch'){const v=e(n.discriminant);return v.before+'switch ('+v.code+') {\n'+n.cases.map(c=>(c.test?'case '+e(c.test).code+':;\n':'default:;\n')+s({type:'block',body:c.body}).slice(2,-2)+(flow.done?'\nif ('+flow.done+') break;':'')).join('\n')+'\n}';}
   if(n.type==='while'){const v=e(n.test);return v.before?'while ('+(flow.done?'!'+flow.done:'1')+') {\n'+v.before+'if (!('+v.code+')) break;\n'+s(n.body)+'\n}':'while ('+guard+'('+v.code+')) '+s(n.body);}
   if(n.type==='for'){const t=e(n.test),u=e(n.update);if(u.before)throw new Error('for 증감식의 보조 함수는 본문으로 옮겨 주세요.');return '{\n'+s(n.init)+'\nfor (; '+(t.before?(flow.done?'!'+flow.done:'1'):guard+'('+t.code+')')+'; '+u.code+') {\n'+t.before+(t.before?'if (!('+t.code+')) break;\n':'')+s(n.body)+'\n}\n}';}
   if(n.type==='do'){const t=e(n.test);if(t.before)throw new Error('do 조건의 보조 함수는 본문으로 옮겨 주세요.');return 'do '+s(n.body)+' while ('+guard+'('+t.code+'));';}

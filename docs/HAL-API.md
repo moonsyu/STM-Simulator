@@ -103,11 +103,11 @@ HAL UART blocking/IT 송수신은 `[USART2 TX]`, `[USART2 RX]`와 같이 실제 
 
 ## C 소스 모델
 
-`main(void)`, 함수/프로토타입, include guard, 선택한 로컬 헤더, scalar typedef, extern 선언, 배열·구조체·단일 포인터, 기본 포인터 cast 및 `sizeof(변수)`를 지원합니다. 선택한 .c들을 하나의 프로그램으로 해석하므로 서로 다른 파일의 동일한 static 함수 이름은 지원하지 않습니다. 파일 상한은 40개 보조 소스, main.c 50,000자, 합계 300,000자입니다.
+`main(void)`, 함수/프로토타입, include guard, 선택한 로컬 헤더, scalar typedef, extern 선언, 배열·구조체·단일 포인터, 기본 포인터 cast, `enum`/`typedef enum`, `switch/case/default`, `sizeof(타입/표현식)`을 지원합니다. sizeof 안의 호출·증감·역참조는 실행하지 않습니다. 선택한 .c들을 하나의 프로그램으로 해석하므로 서로 다른 파일의 동일한 static 함수 이름은 지원하지 않습니다. 파일 상한은 40개 보조 소스, main.c 50,000자, 합계 300,000자입니다.
 
-HAL 모드에서 정수 변수 대입·캐스트를 정해진 폭으로 변환하고, 스칼라 정수 나눗셈·float 변수·static 스칼라 수명을 처리합니다. 전체 C 표준의 정수 승격, 복합식 타입 추론, 부동소수점 ABI, 포인터/구조체 메모리 레이아웃을 보장하지 않습니다. 스케치 모드의 기존 숫자 동작은 유지합니다.
+HAL 모드의 지원 스칼라에는 32비트 int/long/포인터, 8·16·32비트 정수, float/double이 있습니다. 정수 승격, signed/unsigned 변환, unsigned 식의 순환·논리 우측 시프트, 비교식의 int 결과, 포인터/배열/중첩 구조체 필드 타입을 반영합니다. 사용자 구조체 sizeof는 Cortex-M4의 자연 정렬과 끝 패딩을 포함합니다. 8진수와 정수 상수식 enum도 지원합니다. 전체 C 표준·원시 메모리 배치·부동소수점 ABI를 구현한 것은 아니며 64비트 정수, 비트 필드, packed 구조체, 정의되지 않은 C 연산은 지원 범위 밖입니다. 스케치 모드의 기존 숫자 동작은 유지합니다.
 
-기본 `#ifdef/#ifndef/#if 0/1/#if defined`, `#else/#endif`, object define을 지원합니다. 복잡한 #if, 함수형 매크로, enum/switch, 구조체 typedef, 다차원 배열, 이중 포인터, 사용자 가변인자 함수, 임의 외부 라이브러리는 지원되지 않습니다. 알 수 없는 문법·헤더·HAL 함수는 오류를 표시하며 성공한 것으로 건너뛰지 않습니다.
+기본 `#ifdef/#ifndef/#if 0/1/#if defined`, `#else/#endif`, object define을 지원합니다. 복잡한 #if, 함수형 매크로, 구조체 typedef, 다차원 배열, 이중 포인터, 사용자 가변인자 함수, 임의 외부 라이브러리는 지원되지 않습니다. 알 수 없는 문법·헤더·HAL 함수는 오류를 표시하며 성공한 것으로 건너뛰지 않습니다.
 
 표준 HAL handle/init 구조체는 인터프리터 내부 값으로 구성합니다. GPIO/주변장치 clock-enable, 기본 RCC OscConfig/ClockConfig/PWR 호출은 생성 소스를 수용하는 초기화 호환 호출입니다. CPU·클록 트리·전압 스케일·Flash latency의 실제 하드웨어 동작은 재현하지 않습니다. APB1 타이머 입력 클록은 설정 화면 또는 `.ioc`의 APB1 timer clock 값을 사용합니다. SPI 전송 속도는 설정 화면의 Clock 값을 사용하고 원본 `BaudRatePrescaler`를 클록 트리로 환산하지 않습니다.
 

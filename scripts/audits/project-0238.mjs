@@ -10,7 +10,7 @@ import {fixture} from '../docs-audit/runtime.mjs';
 import {applyDeviceExample} from '../../src/device-assistance.js';
 import {resetMainCode} from '../../src/code-reset.js';
 
-const root=path.resolve(import.meta.dirname,'../..'),out=path.join(root,'work/test-results/project-audit-0238/semantics');await fs.mkdir(out,{recursive:true});
+const root=path.resolve(import.meta.dirname,'../..'),out=path.resolve(root,process.env.AUDIT_OUT||'work/test-results/project-audit-0238/semantics');await fs.mkdir(out,{recursive:true});
 const gcc=process.env.AUDIT_HOST_GCC||'C:/msys64/ucrt64/bin/gcc.exe';
 const cases=[
  ['struct-padding','struct Reading { float v; uint16_t raw; };','result=sizeof(struct Reading);'],
@@ -45,9 +45,12 @@ for(const [id,preamble,body]of cases){
  try{const r=new Runtime(compileHal(source),{constants:HAL_CONSTANTS});r.tick(0);simulator=r.vars.result;}catch(e){simulator={error:e.message};}
  const row={id,source,native,simulator,nativeError:error,mismatch:!error&&native!==simulator};results.push(row);console.log(JSON.stringify(row));
 }
-for(const [id,source]of [['inline-sizeof','int n=sizeof(uint32_t);'],['inline-switch','int n=0;switch(1){case 1:n=2;break;default:n=3;}']]){
- let generated,error;try{generated=inlineStatements(source);}catch(e){error=e.message;}
- results.push({id,source,generated,error,mismatch:!!error||generated?.includes('undefined')});
+for(const [id,source,expected]of [['inline-sizeof','int n=sizeof(uint32_t);',4],['inline-switch','int n=0;switch(1){case 1:n=2;break;default:n=3;}',2]]){
+ let generated,error,native;try{generated=inlineStatements(source);
+ const filename=path.join(out,id+'.c'),exe=path.join(out,id+'.exe');await fs.writeFile(filename,'#include <stdint.h>\n#include <stdio.h>\nint main(void){'+generated+'\nprintf("%d",n);return 0;}');
+ const build=spawnSync(gcc,['-std=c11',filename,'-o',exe],{encoding:'utf8',windowsHide:true});if(build.status!==0)throw Error(build.stderr||build.error?.message);const run=spawnSync(exe,[],{encoding:'utf8',windowsHide:true});if(run.status!==0)throw Error(run.stderr);native=Number(run.stdout);
+ }catch(e){error=e.message;}
+ results.push({id,source,generated,native,expected,error,mismatch:!!error||native!==expected});
 }
 for(const type of ['board','breadboard','button']){
  const f=fixture(type),first=applyDeviceExample(f.project,f.target).project;
@@ -58,3 +61,4 @@ for(const type of ['board','breadboard','button']){
 }
 await fs.writeFile(path.join(out,'results.json'),JSON.stringify({recordedAt:new Date().toISOString(),source:spawnSync('git',['rev-parse','HEAD'],{cwd:root,encoding:'utf8',windowsHide:true}).stdout.trim(),armAbi,cases:results},null,2));
 console.log(JSON.stringify({checked:results.length,confirmedDifferences:results.filter(r=>r.mismatch).length}));
+if(process.env.AUDIT_ASSERT&&(!armAbi.passed||results.some(r=>r.mismatch||r.nativeError)))process.exitCode=1;

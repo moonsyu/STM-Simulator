@@ -115,6 +115,6 @@ int main(void) {
   const out=[],program=compileHal(code);
   const r=new Runtime(program,{constants:HAL_CONSTANTS,print:x=>out.push(x)});
   r.tick(0);
-  assert.deepEqual(out,['OK','21','4','6','3.3','2.5','3.5','4']);
+  assert.deepEqual(out,['OK','21','4','8','3.3','2.5','3.5','4']);
 });
 
