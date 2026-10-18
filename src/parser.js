@@ -1,4 +1,5 @@
 // A bounded C-like parser. Sketches never enter the JavaScript evaluator.
+import {numberLiteral,arithmetic,convert,promote,commonType} from './c-types.js';
 const TYPES = new Set(['void','int','bool','float','double','long','short','char','byte','String','unsigned','signed','uint8_t','uint16_t','uint32_t','int8_t','int16_t','int32_t','size_t','LiquidCrystal']);
 const QUALIFIERS = new Set(['const','volatile','static']);
 const INCLUDES = new Set(['Arduino.h','LiquidCrystal.h','Wire.h','SPI.h','stdint.h','math.h']);
@@ -28,21 +29,32 @@ export function compile(source,options={}) {
   }
   tokens.push({v:'<end>',line});let at=0,depth=0;
   const program={globals:[],functions:Object.create(null),structs:Object.assign(Object.create(null),options.structs||{}),hal:!!options.hal};
-  const aliases=new Map([['HAL_StatusTypeDef','int'],['GPIO_PinState','int']]);
+  const aliases=new Map([['HAL_StatusTypeDef','int'],['GPIO_PinState','int']]),enumConstants=new Map();
   const peek=(n=0)=>tokens[at+n]?.v??'<end>',take=()=>tokens[at++].v;
   const location=(index=at)=>options.sourceMap?.[(tokens[index]?.line??line)-1]??{file:options.filename??'main.c',line:tokens[index]?.line??line};
   const fail=(message,index=at)=>{const loc=location(index),error=new Error(`${loc.file}:${loc.line}: ${message}`);error.location=loc;throw error;};
   const expect=value=>{if(peek()!==value)fail(`'${value}'가 필요합니다. 현재 '${peek()}'`);take();};
   const identifier=()=>{if(!/^[A-Za-z_]\w*$/.test(peek()))fail('이름이 필요합니다.');const name=take();if(['__proto__','prototype','constructor'].includes(name))fail('사용할 수 없는 이름입니다.');return name;};
   const isType=()=>TYPES.has(peek())||aliases.has(peek())||QUALIFIERS.has(peek())||['struct','enum','extern'].includes(peek())||Object.hasOwn(program.structs,peek());
+  function constantValue(n){
+    if(n.type==='literal'&&typeof n.value==='number'&&Number.isInteger(n.value))return {value:n.value,type:n.numericType||'int'};
+    if(n.type==='name'&&enumConstants.has(n.name))return enumConstants.get(n.name);
+    if(n.type==='cast'&&!n.pointer){const a=constantValue(n.a);return {value:convert(n.to,a.value),type:n.to};}
+    if(n.type==='unary'&&['+','-','~','!'].includes(n.op)){const a=constantValue(n.a),type=promote(a.type);return {value:n.op==='!'?Number(!a.value):convert(type,n.op==='-'?-a.value:n.op==='~'?~a.value:a.value),type:n.op==='!'?'int':type};}
+    if(n.type==='conditional')return constantValue(constantValue(n.test).value?n.yes:n.no);
+    if(n.type==='binary'){const a=constantValue(n.a);if(n.op==='&&'&&!a.value)return {value:0,type:'int'};if(n.op==='||'&&a.value)return {value:1,type:'int'};const b=constantValue(n.b);const value=['&&','||'].includes(n.op)?Number(!!b.value):arithmetic(n.op,a.value,b.value,a.type,b.type);return {value,type:['&&','||','==','!=','<','>','<=','>='].includes(n.op)?'int':['<<','>>'].includes(n.op)?promote(a.type):commonType(a.type,b.type)};}
+    fail('정수 상수식이 필요합니다.');
+  }
   function parseEnumBody(){
     expect('{');const items=[];let nextVal=0;
     while(peek()!=='}'){
       if(peek()==='<end>')fail("닫는 '}'가 없습니다.");
       const name=identifier();let exprNode;
-      if(peek()==='='){take();exprNode=expression(2);if(exprNode.type==='literal'&&typeof exprNode.value==='number')nextVal=Math.trunc(exprNode.value)+1;else if(exprNode.type==='unary'&&exprNode.op==='-'&&exprNode.a.type==='literal'&&typeof exprNode.a.value==='number')nextVal=-Math.trunc(exprNode.a.value)+1;else nextVal=null;}
+      if(peek()==='='){take();exprNode=expression(2);nextVal=constantValue(exprNode).value;exprNode={type:'literal',value:nextVal++,numericType:'int'};}
       else if(nextVal!==null){exprNode={type:'literal',value:nextVal++,numericType:'int'};}
       else fail('열거형 항목의 상수를 지정하세요.');
+      if(exprNode.value<-2147483648||exprNode.value>2147483647)fail('열거형은 지원하는 int 범위 안에서 지정하세요.');
+      enumConstants.set(name,{value:exprNode.value,type:'int'});
       items.push({type:'int',constant:true,external:false,storage:false,volatile:false,name,pointer:false,value:exprNode});
       if(peek()!==',')break;take();if(peek()==='}')break;
     }
@@ -71,7 +83,8 @@ export function compile(source,options={}) {
       if(peek()==='['){take();d.array=true;if(peek()!==']')d.size=expression();expect(']');if(peek()==='[')fail('다차원 배열은 지원하지 않습니다.');}
       if(peek()==='='){take();d.value=initializer();}
       else if(d.type==='LiquidCrystal'&&peek()==='('){d.value={type:'construct',name:d.type,args:argumentsList()};}
-      declarations.push(d);if(peek()!==',')break;take();d=declarator(base);
+      declarations.push(d);if(d.constant&&d.value&&!d.pointer&&!d.array){try{enumConstants.set(d.name,constantValue(d.value));}catch{}}
+      if(peek()!==',')break;take();d=declarator(base);
     }while(true);
     if(semicolon)expect(';');return {type:'declare',declarations};
   }
@@ -86,16 +99,17 @@ export function compile(source,options={}) {
   function expression(min=0){
     if(++depth>80)fail('표현식 중첩이 너무 깊습니다.');let node;const t=take();
     if(['!','~','-','+','*','&','++','--'].includes(t))node={type:'unary',op:t,a:expression(13)};
-    else if(t==='sizeof'&&peek()==='('){
-      take();
-      if(castAhead()){const base=spec(),pointer=peek()==='*';if(pointer)take();expect(')');node={type:'sizeofType',to:pointer?'pointer':base.type};}
-      else {const arg=expression();expect(')');node={type:'call',callee:{type:'name',name:'sizeof'},args:[arg]};}
+    else if(t==='sizeof'){
+      if(peek()==='('){take();
+       if(castAhead()){const base=spec(),pointer=peek()==='*';if(pointer)take();expect(')');node={type:'sizeofType',to:base.type,pointer};}
+       else {const arg=expression();expect(')');node={type:'sizeofExpr',arg};}
+      }else node={type:'sizeofExpr',arg:expression(13)};
     }
     else if(t==='('){
       if(castAhead()){const base=spec(),pointer=peek()==='*';if(pointer)take();take();node={type:'cast',to:base.type,constant:base.constant,volatile:base.volatile,pointer,a:expression(13)};}
       else {node=expression();expect(')');}
     }
-    else if(/^\d|^\.\d/.test(t)){const raw=(/^0[xb]/i.test(t)?t.replace(/[uUlL]+$/,''):t.replace(/[uUlLfF]+$/,''));node={type:'literal',value:Number(raw),raw:t,numericType:/^0[xb]/i.test(t)?'int':/[.eEfF]/.test(t)?'double':'int'};if(!Number.isFinite(node.value))fail('숫자 형식이 잘못되었습니다.');}
+    else if(/^\d|^\.\d/.test(t)){try{node={type:'literal',...numberLiteral(t),raw:t};}catch(error){fail(error.message);}}
     else if(t[0]==='"'){try{node={type:'literal',value:JSON.parse(t)};}catch{fail('문자열 형식이 잘못되었습니다.');}}
     else if(t[0]==="'"){const raw=t.slice(1,-1),char=raw.startsWith('\\')?({'n':'\n','r':'\r','t':'\t','0':'\0',"'":"'",'\\':'\\'}[raw.slice(1)]):raw;if(char===undefined)fail('문자 이스케이프가 잘못되었습니다.');node={type:'literal',value:char.charCodeAt(0)};}
     else if(/^[A-Za-z_]\w*$/.test(t))node={type:'name',name:t};
@@ -110,7 +124,7 @@ export function compile(source,options={}) {
     }
     depth--;return node;
   }
-  function block(){expect('{');const body=[];while(peek()!=='}'){if(peek()==='<end>')fail("닫는 '}'가 없습니다.");body.push(statement());}take();return {type:'block',body};}
+  function block(){expect('{');const constants=new Map(enumConstants),body=[];while(peek()!=='}'){if(peek()==='<end>')fail("닫는 '}'가 없습니다.");body.push(statement());}take();enumConstants.clear();for(const [k,v]of constants)enumConstants.set(k,v);return {type:'block',body};}
   function statement(){
     if(++depth>80)fail('문장 중첩이 너무 깊습니다.');let result;const loc=location();
     const t=peek();

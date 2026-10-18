@@ -1,4 +1,6 @@
 import {GPIO_PINS,ALIASES,canonicalPin} from './pins.js';
+import {convert,arithmetic} from './c-types.js';
+import {expressionType} from './c-expression-type.js';
 
 const own=(o,k)=>Object.hasOwn(o,k), truth=v=>!!v;
 const checkedNumber=v=>{if(typeof v!=='number'||!Number.isFinite(v))throw new Error('유한한 숫자가 필요합니다.');return v;};
@@ -34,7 +36,7 @@ export class Runtime {
   }
   cell(name){for(let i=this.scopes.length-1;i>=0;i--)if(own(this.scopes[i].cells,name))return this.scopes[i].cells[name];throw new Error(`정의되지 않은 이름: ${name}`);}
   get(cell){if(cell.owner&&!cell.owner.alive)throw new Error('유효기간이 끝난 지역 변수를 참조했습니다.');return cell.value;}
-  coerce(type,value){if(!this.program.hal||typeof value!=='number'||!type)return value;if(['float','double'].includes(type))return type==='float'?Math.fround(value):value;if(type==='bool')return Number(!!value);const v=Math.trunc(value);if(['uint8_t','byte'].includes(type))return v&255;if(['char','int8_t'].includes(type))return (v<<24)>>24;if(type==='uint16_t')return v&65535;if(['short','int16_t'].includes(type))return (v<<16)>>16;return ['uint32_t','unsigned','size_t'].includes(type)?v>>>0:v|0;}
+  coerce(type,value){return this.program.hal?convert(type,value):value;}
   set(cell,value){this.get(cell);if(cell.constant)throw new Error('const 값은 변경할 수 없습니다.');cell.value=this.clone(this.coerce(cell.dataType,value),cell.owner);return cell.value;}
   array(values,owner=this.scope()){if(values.length>4096)throw new Error('배열은 4096개 이하로 선언하세요.');this.allocations+=values.length;if(this.allocations>50000)throw new Error('한 단계의 메모리 할당 한도를 넘었습니다.');return {kind:'array',cells:values.map(value=>({value:this.clone(value,owner),owner,constant:false}))};}
   pointer(value){return isArray(value)?{kind:'pointer',array:value,index:0}:value;}
@@ -55,9 +57,10 @@ export class Runtime {
     }
     throw new Error('대입할 수 없는 값입니다.');
   }
-  binary(op,a,b){
+  binary(op,a,b,ta,tb){
     if((isPointer(a)||isArray(a))&&['+','-'].includes(op)){const p=this.pointer(a);if(!p.array)throw new Error('포인터 산술에는 배열이 필요합니다.');const index=p.index+(op==='+'?1:-1)*integer(b);if(index<0||index>p.array.cells.length)throw new Error('포인터가 배열 범위를 벗어났습니다.');return {...p,index};}
     if(op==='+'&&(typeof a==='string'||typeof b==='string'))return String(a)+String(b);
+    if(this.program.hal&&ta&&typeof a==='number'&&typeof b==='number')return arithmetic(op,a,b,ta,tb);
     if(['==','!='].includes(op)){let eq=a===b;if(isPointer(a)&&isPointer(b))eq=a.array? a.array===b.array&&a.index===b.index:a.cell===b.cell;return Number(op==='=='?eq:!eq);}
     checkedNumber(a);checkedNumber(b);if(['/','%'].includes(op)&&b===0)throw new Error('0으로 나눌 수 없습니다.');
     const value=({'+':()=>a+b,'-':()=>a-b,'*':()=>a*b,'/':()=>a/b,'%':()=>a%b,'<':()=>Number(a<b),'>':()=>Number(a>b),'<=':()=>Number(a<=b),'>=':()=>Number(a>=b),'&':()=>a&b,'|':()=>a|b,'^':()=>a^b,'<<':()=>a<<b,'>>':()=>a>>b})[op]?.();
@@ -66,7 +69,8 @@ export class Runtime {
   *evaluate(n){
     this.budget();
     if(n.type==='literal')return n.value;
-    if(n.type==='sizeofType')return this.typeSize(n.to);
+    if(n.type==='sizeofType')return n.pointer?4:this.typeSize(n.to);
+    if(n.type==='sizeofExpr'){const type=expressionType(this,n.arg);return type.pointer?4:this.typeSize(type.type)*(type.array?type.length:1);}
     if(n.type==='name'){if(own(this.program.functions,n.name))return {kind:'function',name:n.name};return this.get(this.cell(n.name));}
     if(n.type==='list'){const values=[];for(const v of n.values)values.push(yield* this.evaluate(v));return {kind:'initializer',values};}
     if(n.type==='construct'){const args=[];for(const v of n.args)args.push(yield* this.evaluate(v));if(n.name!=='LiquidCrystal')throw new Error('지원하지 않는 생성자입니다.');return this.api.construct?.(n.name,args,this)??{kind:'device',name:n.name,args};}
@@ -76,17 +80,16 @@ export class Runtime {
       if(n.op==='&'){if(n.a.type==='index')return {kind:'pointer',array:(this.pointer(yield* this.evaluate(n.a.object))).array,index:integer(yield* this.evaluate(n.a.index))};return {kind:'pointer',cell:yield* this.reference(n.a)};}
       if(n.op==='*')return this.get(this.pointerCell(yield* this.evaluate(n.a)));
       if(n.op==='++'||n.op==='--'){const cell=yield* this.reference(n.a);return this.set(cell,this.binary(n.op==='++'?'+':'-',this.get(cell),1));}
-      const a=yield* this.evaluate(n.a);return n.op==='!'?Number(!a):n.op==='~'?~integer(a):n.op==='-'?-checkedNumber(a):checkedNumber(a);
+      const a=yield* this.evaluate(n.a),value=n.op==='!'?Number(!a):n.op==='~'?~integer(a):n.op==='-'?-checkedNumber(a):checkedNumber(a);return this.program.hal?this.coerce(expressionType(this,n).type,value):value;
     }
     if(n.type==='postfix'){const cell=yield* this.reference(n.a),old=this.get(cell);this.set(cell,this.binary(n.op==='++'?'+':'-',old,1));return old;}
-    if(n.type==='assign'){const cell=yield* this.reference(n.a),value=yield* this.evaluate(n.b);return this.set(cell,n.op==='='?value:this.binary(n.op.slice(0,-1),this.get(cell),value));}
-    if(n.type==='conditional')return yield* this.evaluate(truth(yield* this.evaluate(n.test))?n.yes:n.no);
+    if(n.type==='assign'){const cell=yield* this.reference(n.a),value=yield* this.evaluate(n.b);return this.set(cell,n.op==='='?value:this.binary(n.op.slice(0,-1),this.get(cell),value,cell.dataType,this.program.hal?expressionType(this,n.b).type:undefined));}
+    if(n.type==='conditional'){const value=yield* this.evaluate(truth(yield* this.evaluate(n.test))?n.yes:n.no);return this.program.hal?this.coerce(expressionType(this,n).type,value):value;}
     if(n.type==='binary'){
       const a=yield* this.evaluate(n.a);if(n.op==='&&')return a?Number(truth(yield* this.evaluate(n.b))):0;if(n.op==='||')return a?1:Number(truth(yield* this.evaluate(n.b)));
-      const value=this.binary(n.op,a,yield* this.evaluate(n.b));return this.program.hal&&n.op==='/'&&this.numericType(n.a)!=='float'&&this.numericType(n.b)!=='float'?Math.trunc(value):value;
+      const b=yield* this.evaluate(n.b);return this.binary(n.op,a,b,this.program.hal?expressionType(this,n.a).type:undefined,this.program.hal?expressionType(this,n.b).type:undefined);
     }
     if(n.type==='call'){
-      if(this.program.hal&&n.callee.type==='name'&&n.callee.name==='sizeof'){if(n.args.length!==1)throw new Error('sizeof 인수를 확인하세요.');const value=yield* this.evaluate(n.args[0]);return isArray(value)?value.cells.length*this.typeSize(value.cells[0]?.dataType):typeof value==='string'?value.length+1:this.typeSize(n.args[0].type==='name'?this.cell(n.args[0].name).dataType:'int');}
       const args=[];for(const a of n.args)args.push(yield* this.evaluate(a));
       if(n.callee.type==='name'){
         if(this.api.invoke){const iterator=this.api.invoke(n.callee.name,args,this);if(iterator)return yield* iterator;}
@@ -99,8 +102,15 @@ export class Runtime {
     }
     throw new Error('표현식을 실행할 수 없습니다.');
   }
-  typeSize(type){if(own(this.program.structs,type))return this.program.structs[type].reduce((sum,f)=>sum+this.typeSize(f.type),0)||4;return ['char','byte','bool','uint8_t','int8_t'].includes(type)?1:['short','uint16_t','int16_t'].includes(type)?2:type==='double'?8:4;}
-  numericType(n){if(n.type==='literal')return n.numericType==='double'?'float':'int';if(n.type==='cast')return ['float','double'].includes(n.to)?'float':'int';if(n.type==='name'){try{return ['float','double'].includes(this.cell(n.name).dataType)?'float':'int';}catch{return 'int';}}if(n.type==='index'&&n.object.type==='name'){try{const v=this.get(this.cell(n.object.name));if(isArray(v)&&['float','double'].includes(v.cells[0]?.dataType))return 'float';}catch{}return 'int';}if(n.type==='member'&&n.object.type==='name'){try{const v=this.get(this.cell(n.object.name)),s=n.pointer?this.pointerCell(v).value:v;if(s?.kind==='struct'&&['float','double'].includes(s.fields[n.key]?.dataType))return 'float';}catch{}return 'int';}if(n.type==='binary')return this.numericType(n.a)==='float'||this.numericType(n.b)==='float'?'float':'int';if(n.type==='unary')return this.numericType(n.a);if(n.type==='conditional')return this.numericType(n.yes)==='float'||this.numericType(n.no)==='float'?'float':'int';if(n.type==='call'&&n.callee.type==='name')return ['sin','cos','tan','sqrt','floor','ceil','round','pow','log'].includes(n.callee.name)||['float','double'].includes(this.program.functions[n.callee.name]?.type)?'float':'int';return 'int';}
+  typeLayout(type,depth=0){
+    if(depth>32)throw Error('구조체 중첩 한도를 넘었습니다.');
+    this.layouts??=new Map();if(this.layouts.has(type))return this.layouts.get(type);
+    let layout;
+    if(own(this.program.structs,type)){let size=0,alignment=1;for(const field of this.program.structs[type]){const next=this.typeLayout(field.type,depth+1);alignment=Math.max(alignment,next.alignment);size=Math.ceil(size/next.alignment)*next.alignment+next.size;}layout={size:Math.ceil(size/alignment)*alignment,alignment};}
+    else{const size=['char','byte','bool','uint8_t','int8_t'].includes(type)?1:['short','uint16_t','int16_t'].includes(type)?2:type==='double'?8:4;layout={size,alignment:size};}
+    this.layouts.set(type,layout);return layout;
+  }
+  typeSize(type){return this.typeLayout(type).size;}
   defaultValue(type,owner=this.scope(),depth=0){
     this.budget();if(depth>32||++this.allocations>50000)throw new Error('구조체 메모리 한도를 넘었습니다.');
     if(own(this.program.structs,type))return {kind:'struct',type,fields:Object.fromEntries(this.program.structs[type].map(f=>[f.name,{value:this.defaultValue(f.type,owner,depth+1),owner,constant:f.constant,dataType:f.type}]))};
@@ -108,8 +118,8 @@ export class Runtime {
   }
   initialize(type,value,owner=this.scope()){
     if(own(this.program.structs,type)){
-      if(value?.kind==='struct')return this.clone(value);
-      const result=this.defaultValue(type,owner);if(value?.kind==='initializer'){const keys=Object.keys(result.fields);if(value.values.length>keys.length)throw new Error('구조체 초기값이 너무 많습니다.');if(value.values.length===1&&value.values[0]===0)return result;value.values.forEach((v,i)=>{result.fields[keys[i]].value=this.clone(v);});}return result;
+      if(value?.kind==='struct')return this.clone(value,owner);
+      const result=this.defaultValue(type,owner);if(value?.kind==='initializer'){const keys=Object.keys(result.fields);if(value.values.length>keys.length)throw new Error('구조체 초기값이 너무 많습니다.');if(value.values.length===1&&value.values[0]===0)return result;value.values.forEach((v,i)=>{const field=result.fields[keys[i]];field.value=this.initialize(field.dataType,v,owner);});}return result;
     }
     if(value?.kind==='initializer')throw new Error('배열 또는 구조체에만 초기값 목록을 사용하세요.');return this.coerce(type,value??this.defaultValue(type,owner));
   }
@@ -122,7 +132,7 @@ export class Runtime {
         else if(d.pointer){if(typeof value==='string')value=this.array([...value].map(c=>c.charCodeAt(0)).concat(0),this.globals);value=this.pointer(value??0);if(value!==0&&!isPointer(value))throw new Error('포인터 초기값을 확인하세요.');}
         else if(d.type!=='LiquidCrystal')value=this.initialize(d.type,value);
         if(d.array)value.cells.forEach(c=>c.dataType=d.type);
-        const cell=this.declareCell(d.name,value,d.constant);cell.dataType=d.pointer?'pointer':d.type;
+        const cell=this.declareCell(d.name,value,d.constant);cell.dataType=d.pointer?'pointer':d.type;if(d.pointer)cell.pointeeType=d.type;
         if(d.storage){cell.owner=this.globals;this.staticCells.set(d,cell);if(d.array)value.cells.forEach(c=>c.owner=this.globals);}
       }return;
     }
@@ -156,7 +166,7 @@ export class Runtime {
     const fn=this.program.functions[name];if(!fn)throw new Error(`정의되지 않은 함수: ${name}`);if(args.length!==fn.params.length)throw new Error(`${name}(): 인수 개수를 확인하세요.`);
     if(++this.depth>32)throw new Error('함수 호출 깊이 한도를 넘었습니다.');
     const previous=this.scopes;this.scopes=[this.globals];this.pushScope();this.frames.push({name,scopes:this.scopes,loc:fn.loc});
-    try{fn.params.forEach((p,i)=>{const cell=this.declareCell(p.name,p.pointer?this.pointer(args[i]):this.initialize(p.type,args[i]),p.constant);cell.dataType=p.pointer?'pointer':p.type;});const signal=yield* this.statement(fn.body);if(signal&&signal.type!=='return')throw new Error('break/continue는 반복문 안에서 사용하세요.');return this.coerce(fn.type,signal?.value??0);}
+    try{fn.params.forEach((p,i)=>{const cell=this.declareCell(p.name,p.pointer?this.pointer(args[i]):this.initialize(p.type,args[i]),p.constant);cell.dataType=p.pointer?'pointer':p.type;if(p.pointer)cell.pointeeType=p.type;});const signal=yield* this.statement(fn.body);if(signal&&signal.type!=='return')throw new Error('break/continue는 반복문 안에서 사용하세요.');return this.coerce(fn.type,signal?.value??0);}
     finally{this.frames.pop();this.popScope();this.scopes=previous;this.depth--;}
   }
   *checkpoint(loc){
