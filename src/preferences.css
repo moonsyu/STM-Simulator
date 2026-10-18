@@ -50,15 +50,15 @@
 :root[data-ide-theme] .ide-shell ::-webkit-scrollbar-thumb{background:var(--ide-muted);border-color:var(--ide-chrome)}
 :root[data-ide-theme] .ide-shell ::-webkit-scrollbar-track{background:var(--ide-chrome)}
 .ide-shell #canvas-container{display:flex;flex-direction:column}
-.ide-shell .canvas-heading{position:static;flex-shrink:0;white-space:normal;border-radius:0;border-bottom:1px solid var(--ide-border);min-height:28px;padding:5px 12px}
+.ide-shell .canvas-heading{position:static;flex-shrink:0;white-space:normal;border-radius:0;border-bottom:1px solid var(--ide-border);min-height:24px;padding:3px 10px}
 .ide-shell #circuit{flex:1;min-height:0;height:0}
 :root[data-ide-theme] .debug-current-line{background:var(--code-debug)!important}
 :root[data-ide-theme] #net-layer path{stroke:var(--ide-net)}
 :root[data-ide-theme] #net-layer circle{stroke:var(--ide-net);fill:color-mix(in srgb,var(--ide-net) 20%,transparent)}
-.object-size-tools{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:6px 12px;background:var(--ide-panel,#f3f7f5);color:var(--ide-foreground,#1a2b25);border-bottom:1px solid var(--ide-border,#c5d4cc);font-size:12px;flex-shrink:0}
-.object-size-tools label{font-weight:500}
-.object-size-tools select{max-width:195px;min-width:100px;flex:1}
-.object-size-tools :is(select,button){border:1px solid var(--ide-border,#c5d4cc);border-radius:5px;padding:4px 7px}
+.object-size-tools{display:flex;align-items:center;gap:6px;flex-wrap:wrap;padding:4px 10px;background:var(--ide-panel,#f3f7f5);color:var(--ide-foreground,#1a2b25);border-bottom:1px solid var(--ide-border,#c5d4cc);font-size:11.5px;flex-shrink:0}
+.object-size-tools label{font-weight:600;font-size:11px}
+.object-size-tools select{max-width:185px;min-width:95px;flex:1}
+.object-size-tools :is(select,button){border:1px solid var(--ide-border,#c5d4cc);border-radius:5px;padding:3px 6px}
 .resize-help{font-size:11px;color:var(--ide-foreground,#1a2b25)}
 #resize-size{font-variant-numeric:tabular-nums;white-space:nowrap;font-family:Consolas,monospace;font-size:11.5px;color:var(--ide-muted)}
 .resize-outline{fill:none;stroke:#1979cc;stroke-width:1.5;vector-effect:non-scaling-stroke;pointer-events:none}
