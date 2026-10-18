@@ -25,6 +25,12 @@ test('process exit during a save is recovered before reading project sources',()
 test('serialized saves finish with the latest complete project',()=>fixture(async(p,state)=>{
  const a=edit(p),b=edit(p);b.code='int main(void){return 3;}';await Promise.all([workspace.saveWorkspace(state,JSON.stringify(a)),workspace.saveWorkspace(state,JSON.stringify(b))]);assert.equal(JSON.parse((await workspace.openWorkspace(state.directory)).text).code,b.code);
 }));
+test('external edits during staging are preserved instead of replaced',()=>fixture(async(p,state)=>{
+ const rename=fs.rename,filename=path.join(state.directory,'main.c');
+ try{fs.rename=async(from,to)=>{await rename(from,to);if(path.basename(to)==='journal.json')await fs.writeFile(filename,'external code');};await assert.rejects(workspace.saveWorkspace(state,JSON.stringify(edit(p))),/복구 기록/);}finally{fs.rename=rename;}
+ assert.equal(await fs.readFile(filename,'utf8'),'external code');
+ await fs.writeFile(filename,p.code);await checkOld(p,state);
+}));
 test('rollback failure leaves recoverable journal and never overwrites an external edit',()=>fixture(async(p,state)=>{
  const rename=fs.rename;try{fs.rename=async(from,to)=>{if(to===path.join(state.directory,'main.c')||path.basename(from).startsWith('restore-'))throw Error('locked rollback');return rename(from,to);};await assert.rejects(workspace.saveWorkspace(state,JSON.stringify(edit(p))),/복구 기록/);}finally{fs.rename=rename;}
  const filename=path.join(state.directory,'project.stm32lab'),partial=await fs.readFile(filename);await fs.writeFile(filename,'external edit');await assert.rejects(workspace.openWorkspace(state.directory),/외부 변경/);assert.equal(await fs.readFile(filename,'utf8'),'external edit');await fs.writeFile(filename,partial);await checkOld(p,state);
