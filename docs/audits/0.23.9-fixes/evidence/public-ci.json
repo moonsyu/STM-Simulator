@@ -1,0 +1,25 @@
+{
+  "id": 39128144301,
+  "html_url": "https://github.com/moonsyu/STM-Simulator/actions/runs/39128144301",
+  "head_sha": "105eab70a2f3cb2bb8151042768eacb62c93f9fc",
+  "status": "completed",
+  "conclusion": "success",
+  "created_at": "2026-10-18T12:38:43Z",
+  "updated_at": "2026-10-18T12:55:57Z",
+  "jobs": [
+    {
+      "name": "Windows x64 portable",
+      "status": "completed",
+      "conclusion": "success",
+      "started_at": "2026-10-18T12:38:46Z",
+      "completed_at": "2026-10-18T12:55:08Z"
+    },
+    {
+      "name": "Publish verified release and update manifest",
+      "status": "completed",
+      "conclusion": "success",
+      "started_at": "2026-10-18T12:55:11Z",
+      "completed_at": "2026-10-18T12:55:56Z"
+    }
+  ]
+}
