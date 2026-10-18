@@ -1,4 +1,5 @@
 import fs from 'node:fs/promises';
+import path from 'node:path';
 import {PART_LIBRARY} from '../../src/part-library.js';
 import {fixture} from '../docs-audit/runtime.mjs';
 import {applyDeviceExample} from '../../src/device-assistance.js';
@@ -15,5 +16,7 @@ for(const {type}of PART_LIBRARY){
  }catch(error){results.push({type,error:error.message});}
 }
 const report={checked:results.length,normalFailures:results.filter(r=>!r.normalPreserved),customLabelFailures:results.filter(r=>!r.customLabelsPreservedCircuit),results};
-await fs.writeFile(new URL('../../work/test-results/project-audit-0238/docs-reapply.json',import.meta.url),JSON.stringify(report,null,2));
+const output=path.resolve(process.env.AUDIT_OUT||'work/test-results/project-audit-0238/docs-reapply.json');await fs.mkdir(path.dirname(output),{recursive:true});
+await fs.writeFile(output,JSON.stringify(report,null,2));
 console.log(JSON.stringify({checked:report.checked,normalFailures:report.normalFailures,customLabelFailures:report.customLabelFailures}));
+if(process.env.AUDIT_ASSERT&&(report.normalFailures.length||report.customLabelFailures.length))process.exitCode=1;
