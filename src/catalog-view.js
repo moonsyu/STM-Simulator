@@ -20,7 +20,9 @@ export function updateCatalogView(g,p,r,pressed=false,lcdRender=null){
  const rpm=g.querySelector('.dc-rpm');if(rpm)rpm.textContent=`${(r?.rpm??0).toFixed(0)} rpm`;
  if(family==='dc_motor')g.querySelector('.device-rotor')?.setAttribute('transform',`rotate(${r?.angle??0} 0 -7)`);
  g.querySelector('.pot-knob')?.setAttribute('transform',`rotate(${(p.position??50)*2.7-135} 0 -5)`);
- const display=g.querySelector('.catalog-display');if(display&&family==='lcd'&&lcdRender){display.innerHTML=lcdRender(r?.lcd).replaceAll('#293e1b','#b9e5f6');return;}if(display){const lines=r?.lcd?.lines;if(lines){display.innerHTML='';for(let i=0;i<2;i++){const text=document.createElementNS('http://www.w3.org/2000/svg','text');text.setAttribute('class','lcd-line');text.setAttribute('data-row',String(i));text.setAttribute('xml:space','preserve');text.setAttribute('x','-96');text.setAttribute('y',String(-5+i*19));text.setAttribute('font-family','Consolas,monospace');text.setAttribute('font-size','12');text.setAttribute('fill','#b9e5f6');text.textContent=r.lcd.visible===false?'':lines[i];display.append(text);}}
+ const thumb=g.querySelector('.catalog-slide-thumb');if(thumb)thumb.setAttribute('transform',`translate(${Number(thumb.dataset.start)+(p.position??0)*Number(thumb.dataset.step)} 0)`);
+ const glow=g.querySelector('.led-glow, .rgb-glow');if(glow){glow.setAttribute('opacity',r?.on?'.32':'0');glow.setAttribute('fill',light?.getAttribute('fill')||'#f16f52');}
+ const display=g.querySelector('.catalog-display');if(display&&family==='lcd'&&lcdRender){display.innerHTML=lcdRender(r?.lcd);return;}if(display){const lines=r?.lcd?.lines;if(lines){display.innerHTML='';for(let i=0;i<2;i++){const text=document.createElementNS('http://www.w3.org/2000/svg','text');text.setAttribute('class','lcd-line');text.setAttribute('data-row',String(i));text.setAttribute('xml:space','preserve');text.setAttribute('x','-96');text.setAttribute('y',String(-5+i*19));text.setAttribute('font-family','Consolas,monospace');text.setAttribute('font-size','12');text.setAttribute('fill','#293e1b');text.textContent=r.lcd.visible===false?'':lines[i];display.append(text);}}
 
  }
 }
