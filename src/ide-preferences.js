@@ -7,6 +7,18 @@ export const JELLYBEAN=jellybeans;
 const LEGACY_JELLYBEAN={background:'#151515',foreground:'#e8e8d3',panel:'#1f1f1f',chrome:'#262626',border:'#403c41',muted:'#a0a8b0',accent:'#fad07a',selection:'#403c41',line:'#202020',search:'#5c3446',keyword:'#8197bf',type:'#ffb964',string:'#99ad6a',number:'#cf6a4c',comment:'#888888',identifier:'#c6b6ee',function:'#fad07a',debug:'#43512d',error:'#e07070',warning:'#fad07a',net:'#e8b843'};
 export const LIGHT={id:'stm-light',name:'STM Light',base:'light',colors:{background:'#fcfdfc',foreground:'#1a2b25',panel:'#f3f7f5',chrome:'#e7efec',border:'#c5d4cc',muted:'#4d6358',accent:'#126b4c',selection:'#cde7da',line:'#edf4f0',search:'#f5dc9c',keyword:'#7e4a9e',type:'#9c4526',string:'#7a5d1c',number:'#1d6587',comment:'#4f7359',identifier:'#2f526b',function:'#654480',debug:'#e8e5a7',error:'#a82c2c',warning:'#7a5710',net:'#b88210'}};
 export const BUILTIN_THEMES=[JELLYBEAN,githubLight,LIGHT];
+// Fingerprint of the old conversion of this exact pinned GitHub Light source.
+// Comparing the full editor payload avoids replacing imported/customized rules.
+const LEGACY_GITHUB_LIGHT_COLORS={background:'#ffffff',foreground:'#1f2328',panel:'#ffffff',chrome:'#f6f8fa',border:'#cbd8ce',muted:'#8c959f',accent:'#0969da',selection:'#cbe8d9',line:'#eaeef2',search:'#bf8700',keyword:'#cf222e',type:'#116329',string:'#0a3069',number:'#0a3069',comment:'#6e7781',identifier:'#1f2328',function:'#8250df',debug:'#d4a72c',error:'#e07070',warning:'#fad07a',net:'#e8b843'};
+const LEGACY_GITHUB_LIGHT_RULES=[['comment','6e7781'],['delimiter','6e7781'],['string','6e7781'],['number','cf222e'],['number','cf222e'],['number','0550ae'],['identifier','0550ae'],['identifier','0550ae'],['identifier','0550ae'],['identifier','1f2328'],['function','8250df'],['keyword','cf222e'],['type','cf222e'],['type','cf222e'],['type','1f2328'],['type','1f2328'],['type','1f2328'],['string','0a3069'],['identifier','953800'],['identifier','1f2328'],['string','0a3069'],['string','0a3069'],['type','116329'],['delimiter','953800'],['delimiter','82071e','ffebe9'],['delimiter','cf222e'],['delimiter','116329','dafbe1'],['delimiter','953800','ffd8b5'],['number','0a3069'],['string','0a3069']].map(([token,foreground,background])=>({token,foreground,...(background?{background}:{})}));
+const sameFields=(a,b)=>!!a&&!!b&&Object.keys(a).length===Object.keys(b).length&&Object.keys(b).every(key=>a[key]===b[key]);
+function migrateGithubLight(theme){
+ const editor=theme.editor;
+ if(theme.id!=='github-light'||!sameFields(theme.source,githubLight.source)||!sameFields(theme.originalColors,LEGACY_GITHUB_LIGHT_COLORS)||!editor||editor.base!=='vs'||editor.inherit!==true||!sameFields(editor.colors,githubLight.editor.colors)||editor.rules.length!==LEGACY_GITHUB_LIGHT_RULES.length||!editor.rules.every((rule,i)=>sameFields(rule,LEGACY_GITHUB_LIGHT_RULES[i])))return theme;
+ const next={...theme,editor:structuredClone(githubLight.editor),originalColors:{...githubLight.originalColors},colors:{...githubLight.colors}};
+ for(const key of Object.keys(COLOR_LABELS))if(theme.colors[key]!==theme.originalColors[key])next.colors[key]=theme.colors[key];
+ return next;
+}
 export const EDITOR_COLOR_LABELS={background:'코드 배경',foreground:'코드 글자',panel:'코드 팝업 배경',border:'코드 팝업 테두리',muted:'줄 번호',accent:'커서',selection:'선택 영역',line:'현재 줄',search:'검색 결과',keyword:'키워드',type:'자료형',string:'문자열',number:'숫자 / 상수',comment:'주석',identifier:'식별자',function:'함수',debug:'디버그 현재 줄',error:'코드 오류',warning:'코드 경고'};
 // Windows/Fluent neutral surfaces and mode-specific blue accents. Editor themes stay independent.
 const LIGHT_UI={...LIGHT.colors,background:'#ffffff',foreground:'#1a1a1a',panel:'#fafafa',chrome:'#f3f3f3',border:'#c7c7c7',muted:'#5c5c5c',accent:'#0067c0',selection:'#e5f1fb',line:'#f5f5f5',error:'#b3261e',warning:'#835000',string:'#216b2c',net:'#956500'};
@@ -29,7 +41,7 @@ export function validatePreferences(value){
   if(theme.source!==undefined){const s=theme.source;if(!s||typeof s.repository!=='string'||!/^https:\/\/github\.com\/[\w.-]+\/[\w.-]+$/.test(s.repository)||!/^\w{40}$/.test(s.commit)||!/^\w{64}$/.test(s.sha256)||typeof s.file!=='string'||s.file.length>150||typeof s.license!=='string'||s.license.length>60)throw new Error('테마 출처 정보를 확인하세요.');result.source={repository:s.repository,commit:s.commit,sha256:s.sha256,file:s.file,license:s.license};}
   if(theme.importNote!==undefined){if(typeof theme.importNote!=='string'||theme.importNote.length>500)throw new Error('테마 안내 문구가 너무 깁니다.');result.importNote=theme.importNote;}
   if(theme.id==='jellybean'&&!theme.editor){const updated=structuredClone(JELLYBEAN);for(const key of Object.keys(COLOR_LABELS))if(colors[key]!==LEGACY_JELLYBEAN[key])updated.colors[key]=colors[key];updated.base=theme.base;return updated;}
-  return result;
+  return migrateGithubLight(result);
  });
  // Built-ins always remain available, even when importing a custom-theme-only file.
  for(const theme of BUILTIN_THEMES)if(!ids.has(theme.id)){result.themes.push(structuredClone(theme));ids.add(theme.id);}
