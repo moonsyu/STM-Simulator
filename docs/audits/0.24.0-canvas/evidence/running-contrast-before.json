@@ -1,0 +1,125 @@
+{
+  "passed": false,
+  "checks": [
+    {
+      "name": "Cursor wheel/pinch anchor, fine pinch step, zero delta and toolbar center zoom",
+      "passed": true,
+      "samples": [
+        {
+          "ctrlKey": false,
+          "deltaY": -120,
+          "error": 0
+        },
+        {
+          "ctrlKey": false,
+          "deltaY": 120,
+          "error": 0
+        },
+        {
+          "ctrlKey": true,
+          "deltaY": -120,
+          "error": 0.00004315837287515549
+        },
+        {
+          "ctrlKey": true,
+          "deltaY": 120,
+          "error": 0.00004315837287515549
+        }
+      ]
+    },
+    {
+      "name": "Shift blank drag adds parts and fully contained wire to prior selection",
+      "passed": true
+    },
+    {
+      "name": "Group Escape deletes with undo; Ctrl+A selects all and Ctrl+D duplicates in one undo step",
+      "passed": true
+    },
+    {
+      "name": "Ctrl+A/D during a live group drag preserves selection and models; continuation and one-step undo remain correct",
+      "passed": true
+    },
+    {
+      "name": "Escape cancels an active marquee while preserving the previous selection and circuit",
+      "passed": true
+    },
+    {
+      "name": "Text/Monaco input focus and running-state guards preserve circuit structure",
+      "passed": true
+    },
+    {
+      "name": "Additional breadboard DOM cached during ordinary/group movement; rename/rotate/resize/delete/undo invalidate correctly",
+      "passed": true
+    },
+    {
+      "name": "Inspector has all 20 wire colors, mutation is undoable, palette disabled while running",
+      "passed": true
+    },
+    {
+      "name": "Running wire and endpoint badges report HIGH/LOW/ANALOG/floating with live voltage",
+      "passed": true,
+      "signals": [
+        {
+          "id": "w1",
+          "label": "HIGH",
+          "text": "3.300 V"
+        },
+        {
+          "id": "w2",
+          "label": "LOW",
+          "text": "0.000 V"
+        },
+        {
+          "id": "w3",
+          "label": "ANALOG",
+          "text": "1.650 V"
+        },
+        {
+          "id": "floating",
+          "label": "부유",
+          "text": "—"
+        }
+      ]
+    },
+    {
+      "name": "Running GPIO changes patch wire/endpoint voltages and badges in existing nodes; resistor power is present",
+      "passed": true,
+      "wireStart": "HIGH",
+      "wireChanged": "LOW",
+      "endpointStart": "LOW",
+      "endpointChanged": "HIGH"
+    }
+  ],
+  "contrastResults": [
+    {
+      "name": "wire-palette-active-hover",
+      "checked": 461,
+      "findings": []
+    },
+    {
+      "name": "wire-palette-keyboard-focus",
+      "checked": 461,
+      "findings": []
+    },
+    {
+      "name": "live-slider-input-focus",
+      "checked": 482,
+      "findings": [
+        {
+          "selector": "span.mini-chip",
+          "text": "F4",
+          "contrast": 1,
+          "foreground": "rgb(77, 99, 88)",
+          "background": [
+            18,
+            107,
+            76
+          ],
+          "disabled": true
+        }
+      ]
+    }
+  ],
+  "errors": [],
+  "error": "AssertionError [ERR_ASSERTION]: live-slider-input-focus text must have at least 4.5:1 contrast\n+ actual - expected\n\n+ [\n+   {\n+     background: [\n+       18,\n+       107,\n+       76\n+     ],\n+     contrast: 1,\n+     disabled: true,\n+     foreground: 'rgb(77, 99, 88)',\n+     pseudo: undefined,\n+     selector: 'span.mini-chip',\n+     text: 'F4'\n+   }\n+ ]\n- []\n\n    at contrast (D:\\codex\\project\\STM-Simulator\\scripts\\canvas-ux-check.cjs:27:157)\n    at async main (D:\\codex\\project\\STM-Simulator\\scripts\\canvas-ux-check.cjs:222:3)"
+}
