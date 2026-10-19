@@ -46,3 +46,12 @@
 - 기존 편집 검사의 핀 검색 Esc 실패를 확인했습니다. 테스트가 닫힌 메뉴의 입력에 키를 보내던 부분은 실제 opener를 여는 방식으로 수정했고, 제품에서는 비어 있지 않은 핀 검색의 기존 Esc 취소가 상위 메뉴 핸들러에 가로막히지 않게 했습니다. editor/parts/features/HAL/layout-serial/HAL-examples가 다시 통과했습니다.
 - 기존 boards 검사에서 새 모델이 예전에 제거한 보드 실크텍스트를 다시 넣은 회귀를 발견했습니다. 해당 텍스트만 제거하고 USER/RESET/LD2 등 기능 라벨과 모델 접점은 유지합니다.
 - 네이티브 기능 검사는 첫 실행에서 이 환경 PATH에 clangd가 없어 중단했습니다. 기존 도구 위치를 명시한 재검사에서는 실제 Windows GCC 실행, GDB 중단점·step·감시·메모리·레지스터, clangd hover/정의, C/C++ 링크/실행, ARM 산출물, 빌드실패·취소 보호가 모두 통과했습니다. 네이티브 UI 회귀는 별도 수행합니다.
+
+## 게시 라운드1 · 전체 Windows CI
+
+- 소스와 버전0.25.0을 main76cb883으로 푸시했습니다. Git author/committer와 실제 GitHub 인증은 moonsyu로 확인했습니다.
+- [첫 CI39209525819](https://github.com/moonsyu/STM-Simulator/actions/runs/39209525819)는 전체 단위·저장복구·테마·크기조절·프리뷰·대비·새 workbench 통합·기존 편집/HAL·검색/빈회로·WritePin 검사를 통과했지만 code-reset 검사에서 중단했습니다. Release는 게시되지 않았습니다.
+- 실패는 새 테스트 helper가 ID 없는 닫힌 `.docs-function` details를 열지 못한 검사 경로 누락입니다. 코드 초기화/취소/Esc/Undo·Redo와 초기화 후 LED OFF는 그 이전까지 실행됐습니다. 실제 summary를 클릭하도록 helper만 보완하며 제품 코드를 변경하지 않습니다. 실패 로그와 진단은 `work/test-results/ci-39209525819`에 보존합니다.
+- 별도 개발 Electron의 114개 Docs 적용/실행 로그는 모두 통과했습니다. 소스 감사가 생성한 코드·배선과 앱 저장본, 입력 응답, TFT 전체 RAM 해시, 오류/fault를 대조했습니다. 공개 배포 EXE 검증과 구분합니다.
+- helper 수정 후 code-reset 검사에서 L298N의 마지막 샘플만 보는 기존 시간 가정도 드러났습니다. 동일 실행의 실제 JSONL은1320ms A+1787/B-950rpm, 4880ms A reverse-1188/B forward+2385rpm으로 정상이나, 정지 클릭이 끝난5960ms에는 예정된 brake로 거의0rpm입니다. 해당 실행 시작 이후 로그에서 같은 샘플의 채널 모드와 양/음 회전 조건을 함께 판정하도록 검사를 보완합니다. 이전 실행 샘플을 섞거나 timeout만 늘리지 않습니다. 최초 실패 프로필/로그는 보존합니다.
+- 보완 후 코드 초기화·보드 초기화/단축키·TFT 두 종류/UART Docs·내장/외부 UART 검사가 모두 통과했습니다. LED는 초기화 후0V/0A/OFF, 재적용 후1.847V/3.927mA/ON입니다. L298N의3780ms 동일 샘플에서 A reverse-1181.9/B forward+2372.5rpm을 확인했습니다. TFT 두 모델은20480픽셀 전체 해시, UART는Audit42 RX/TX 바이트와 실제 received를 확인했습니다. helper와 검사 대기 방식만 수정했고 제품 소스는 변경하지 않았습니다.
