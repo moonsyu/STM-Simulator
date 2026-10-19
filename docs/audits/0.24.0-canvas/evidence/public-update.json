@@ -1,0 +1,25 @@
+{
+  "passed": true,
+  "verifiedAt": "2026-10-19T02:01:57.095Z",
+  "from": "0.23.9",
+  "to": "0.24.0",
+  "sourceRelease": "https://github.com/moonsyu/STM-Simulator/releases/tag/v0.23.9",
+  "targetRelease": "https://github.com/moonsyu/STM-Simulator/releases/tag/v0.24.0",
+  "beforeSha256": "8aa6bc0deafe4b315242df85f2310c320bce56617bb56cdd6b811486dd18f585",
+  "afterSha256": "1cafaa7669f0782ff339ea1f4a1a2cfaaedb0e8aaef87885c4b7de80999ccf81",
+  "restartProof": {
+    "launcher": 38860,
+    "main": 47708,
+    "version": "0.24.0"
+  },
+  "checks": [
+    "Original publicly downloaded EXE, no updater/network mocks",
+    "Automatic scheduler discovers public latest release without manual check",
+    "Automatic download and SHA-256 verification",
+    "Save and restart button",
+    "Old EXE atomically replaced with exact public asset",
+    "Helper launches new package and keeps it running",
+    "New version and preserved source confirmed after reopening",
+    "Jellybean, font size, device scale and automatic preference preserved"
+  ]
+}

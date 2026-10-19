@@ -1,0 +1,15 @@
+{
+  "version": "0.24.0",
+  "sha256": "b57e898377adbe88067eedefcd972e169004a85cbaa0c7256f13ca1a476bcc57",
+  "events": 143,
+  "types": {
+    "console": 82,
+    "app.started": 1,
+    "project.saved": 24,
+    "simulation.started": 8,
+    "simulation.state": 28
+  },
+  "firstTime": "2026-10-19T02:02:23.856Z",
+  "lastTime": "2026-10-19T02:05:07.989Z",
+  "isolatedProfile": true
+}

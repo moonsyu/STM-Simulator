@@ -1,0 +1,238 @@
+{
+  "passed": true,
+  "execution": {
+    "mode": "portable-exe-cdp",
+    "viewportKind": "renderer CSS viewport",
+    "exeSha256": "1cafaa7669f0782ff339ea1f4a1a2cfaaedb0e8aaef87885c4b7de80999ccf81",
+    "version": "0.24.0"
+  },
+  "checks": [
+    {
+      "name": "Cursor wheel/pinch anchor, fine pinch step, zero delta and toolbar center zoom",
+      "passed": true,
+      "samples": [
+        {
+          "ctrlKey": false,
+          "deltaY": -120,
+          "error": 0
+        },
+        {
+          "ctrlKey": false,
+          "deltaY": 120,
+          "error": 0
+        },
+        {
+          "ctrlKey": true,
+          "deltaY": -120,
+          "error": 4.315837287515549e-05
+        },
+        {
+          "ctrlKey": true,
+          "deltaY": 120,
+          "error": 4.315837287515549e-05
+        }
+      ]
+    },
+    {
+      "name": "Shift blank drag adds parts and fully contained wire to prior selection",
+      "passed": true
+    },
+    {
+      "name": "Group Escape deletes with undo; Ctrl+A selects all and Ctrl+D duplicates in one undo step",
+      "passed": true
+    },
+    {
+      "name": "Ctrl+A/D during a live group drag preserves selection and models; continuation and one-step undo remain correct",
+      "passed": true
+    },
+    {
+      "name": "Escape cancels an active marquee while preserving the previous selection and circuit",
+      "passed": true
+    },
+    {
+      "name": "Text/Monaco input focus and running-state guards preserve circuit structure",
+      "passed": true
+    },
+    {
+      "name": "Additional breadboard DOM cached during ordinary/group movement; rename/rotate/resize/delete/undo invalidate correctly",
+      "passed": true
+    },
+    {
+      "name": "Inspector has all 20 wire colors, mutation is undoable, palette disabled while running",
+      "passed": true
+    },
+    {
+      "name": "Running wire and endpoint badges report HIGH/LOW/ANALOG/floating with live voltage",
+      "passed": true,
+      "signals": [
+        {
+          "id": "w1",
+          "label": "HIGH",
+          "text": "3.300 V"
+        },
+        {
+          "id": "w2",
+          "label": "LOW",
+          "text": "0.000 V"
+        },
+        {
+          "id": "w3",
+          "label": "ANALOG",
+          "text": "1.650 V"
+        },
+        {
+          "id": "floating",
+          "label": "부유",
+          "text": "—"
+        }
+      ]
+    },
+    {
+      "name": "Running GPIO changes patch wire/endpoint voltages and badges in existing nodes; resistor power is present",
+      "passed": true,
+      "wireStart": "HIGH",
+      "wireChanged": "LOW",
+      "endpointStart": "LOW",
+      "endpointChanged": "HIGH",
+      "wireTransition": {
+        "before": "HIGH",
+        "after": "LOW",
+        "startedAt": "0.000 s",
+        "changedAt": "0.500 s"
+      },
+      "endpointTransition": {
+        "before": "LOW",
+        "after": "HIGH",
+        "startedAt": "0.500 s",
+        "changedAt": "1.020 s"
+      }
+    },
+    {
+      "name": "Simulation patches readouts without replacing inspector controls, focus or scroll; live slider changes actual voltage",
+      "passed": true,
+      "stability": {
+        "sameSlider": true,
+        "sameName": true,
+        "sameFirst": true,
+        "sameVoltage": true,
+        "focused": true,
+        "scrollTop": 45,
+        "time": "0.640 s"
+      }
+    },
+    {
+      "name": "Dark/White running inspector screenshots at 1366x768 and 1024x640",
+      "passed": true,
+      "screenshots": [
+        "canvas-dark-1366x768.png",
+        "canvas-dark-1024x640.png",
+        "canvas-light-1366x768.png",
+        "canvas-light-1024x640.png"
+      ]
+    },
+    {
+      "name": "Inspector palette hover/focus, live input focus and all running signal badges meet 4.5:1 contrast",
+      "passed": true,
+      "states": 19,
+      "textChecks": 9962
+    }
+  ],
+  "contrastResults": [
+    {
+      "name": "wire-palette-active-hover",
+      "checked": 461,
+      "findings": []
+    },
+    {
+      "name": "wire-palette-keyboard-focus",
+      "checked": 461,
+      "findings": []
+    },
+    {
+      "name": "live-slider-input-focus",
+      "checked": 488,
+      "findings": []
+    },
+    {
+      "name": "dark-1366x768-wire-HIGH",
+      "checked": 491,
+      "findings": []
+    },
+    {
+      "name": "dark-1366x768-wire-LOW",
+      "checked": 491,
+      "findings": []
+    },
+    {
+      "name": "dark-1366x768-wire-부유",
+      "checked": 491,
+      "findings": []
+    },
+    {
+      "name": "dark-1366x768-wire-ANALOG",
+      "checked": 491,
+      "findings": []
+    },
+    {
+      "name": "dark-1024x640-wire-HIGH",
+      "checked": 518,
+      "findings": []
+    },
+    {
+      "name": "dark-1024x640-wire-LOW",
+      "checked": 518,
+      "findings": []
+    },
+    {
+      "name": "dark-1024x640-wire-부유",
+      "checked": 518,
+      "findings": []
+    },
+    {
+      "name": "dark-1024x640-wire-ANALOG",
+      "checked": 518,
+      "findings": []
+    },
+    {
+      "name": "light-1366x768-wire-HIGH",
+      "checked": 551,
+      "findings": []
+    },
+    {
+      "name": "light-1366x768-wire-LOW",
+      "checked": 551,
+      "findings": []
+    },
+    {
+      "name": "light-1366x768-wire-부유",
+      "checked": 551,
+      "findings": []
+    },
+    {
+      "name": "light-1366x768-wire-ANALOG",
+      "checked": 551,
+      "findings": []
+    },
+    {
+      "name": "light-1024x640-wire-HIGH",
+      "checked": 578,
+      "findings": []
+    },
+    {
+      "name": "light-1024x640-wire-LOW",
+      "checked": 578,
+      "findings": []
+    },
+    {
+      "name": "light-1024x640-wire-부유",
+      "checked": 578,
+      "findings": []
+    },
+    {
+      "name": "light-1024x640-wire-ANALOG",
+      "checked": 578,
+      "findings": []
+    }
+  ],
+  "errors": []
+}
