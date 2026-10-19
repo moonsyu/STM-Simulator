@@ -33,7 +33,7 @@ test('reapplying WritePin repairs a missing breadboard ground and restores LED c
  const p=applyDeviceExample(fixture(),target,{api:'HAL_GPIO_WritePin'}).project;p.wires=p.wires.filter(w=>w.id!=='ground');
  const disconnected=new SimulationSession(p);disconnected.tick(20);assert.equal(disconnected.result.parts.led.on,false);
  const {project:q,report}=applyDeviceExample(p,target,{api:'HAL_GPIO_WritePin'}),net=wiringTopology(q);
- assert.equal(net.find('part:led:b'),net.find(boardPin('GND')));assert.equal(report.addedParts,0);assert.equal(report.addedWires,1);
+ assert.equal(net.find('part:led:b'),net.find(boardPin('GND')));assert.equal(report.addedParts,0);assert.ok(report.addedWires>=1);assert.ok(q.wires.every(w=>!w.from.startsWith('part:')&&!w.to.startsWith('part:')));
  const repaired=new SimulationSession(q);repaired.tick(20);assert.equal(repaired.result.parts.led.on,true);
 });
 test('LED catalog variant and a remapped output pin use the selected WritePin operation',()=>{

@@ -1,4 +1,5 @@
 import {exampleStatements} from './device-inline-example.js';
+import {arrangeExampleOnBreadboards} from './example-breadboard.js';
 import {remapGpioCalls} from './device-gpio-remap.js';
 import {inlineStatements} from './c-inline.js';
 import {showSurface} from './surfaces.js';
@@ -149,6 +150,7 @@ export function applyDeviceExample(original,target,{api='all',mode='hal'}={}){
  if(project.deviceDocs.inlineChecksum&&managedChecksum(project.code)!==project.deviceDocs.inlineChecksum)throw new Error('main.c의 장치 예제 영역이 직접 수정되어 있습니다. 수정 코드를 영역 밖으로 옮긴 뒤 다시 적용하세요.');
  const prior=project.deviceDocs.bindings.find(b=>b.key===key),parts=bindParts(project,sample,{id:component?.id,type},prior,report),allocation=allocatePins(project,sample,parts,prior);
  repairWiring(project,sample,parts,allocation.pins,report);project.mcu=allocation.config;
+ arrangeExampleOnBreadboards(project,{partIds:Object.values(parts),preferredBoard:type==='breadboard'?component?.id:undefined,report});
  if(component?.address!==undefined){const net=wiringTopology(project);if(project.components.some(other=>other.id!==component.id&&other.address===component.address&&net.find(busPin(other,'SDA'))===net.find(busPin(component,'SDA'))))throw new Error('같은 I2C 버스에 주소 0x'+component.address.toString(16)+' 장치가 이미 있습니다. 장치 속성에서 지원하는 다른 주소를 선택하세요.');}
  if(!['hal','baremetal'].includes(mode))throw new Error('예제 모드를 확인하세요.');
  if(mode==='hal'&&api!=='all'&&!sample.code.includes(api+'('))throw new Error('이 장치의 HAL 함수 목록에서 적용할 함수를 선택하세요.');

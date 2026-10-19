@@ -1,5 +1,5 @@
 import {catalogTies} from './catalog-topology.js';
-import {attachments as contacts} from './components.js';
+import {attachments as contacts,assignAttachments} from './components.js';
 import {CATALOG_BY_TYPE,catalogMap} from './catalog-defs.js';
 export const CUSTOM_MODELS={
  'can-transceiver-6':['catalog_can',0,[1,2,3,4,5,6]],'max98357a-9':['catalog_i2s',0,[1,2,3,4,5,6,7,8,9]],'ov2640-camera':['catalog_i2c',0x30,[1,2,4,3,17,18,8]],
@@ -26,8 +26,10 @@ export function physicalToModel(project){
   for(let n=1;n<=v.pins.length;n++)replacements.set(`part:${p.id}:p${n}`,`part:${p.id}:${inverse['p'+n]||'extra'+n}`);
   const model={...p};for(const key of Object.keys(p))if(['value','color','lux','temperature','humidity','position','switch','motion','axisX','axisY','ax','ay','az','gx','gy','gz','baud','distance','voltage'].includes(key))Object.defineProperty(model,key,{enumerable:true,get:()=>p[key]});Object.assign(model,{type:custom?.[0]||v.family,catalogVariant:v.id,commonAnode:v.id.includes('common-anode'),catalogState:{}});
   if(custom){model.address=custom[1];model.electricalPins=custom[2].map((_,i)=>'p'+(i+1));model.catalogState={};}
-  const attachments={};for(const [physical,hole]of Object.entries(contacts(p)))if(inverse[physical])attachments[inverse[physical]]=hole;
-  if(Object.hasOwn(map,'a')){model.attachA=attachments.a;model.attachB=attachments.b;model.span=p.span??70;}else model.attachments=attachments;
+  const attachments={};for(const [physical,hole]of Object.entries(contacts(p))){if(inverse[physical])attachments[inverse[physical]]=hole;else ties.push([`part:${p.id}:extra${physical.slice(1)}`,hole]);}
+  // A two-contact physical switch still maps to the four-leg button model.
+  // Use the model's storage convention, not the physical contact map's names.
+  assignAttachments(model,attachments);if(Object.hasOwn(map,'a'))model.span=p.span??70;
   components.push(model);
  }
  const convert=id=>replacements.get(id)||id;

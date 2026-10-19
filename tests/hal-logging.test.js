@@ -17,7 +17,7 @@ test('every shipped HAL example has its configured circuit and runs without elec
 });
 test('applying a HAL example replaces circuit, code, pins and timing while retaining the document name',()=>{
   const p=halExample('uart');p.name='user circuit';p.simulation={stepMs:.5,pwmWaveform:true};p.firmware.files=[{name:'old.h',text:'// old source'}];const before=structuredClone(p),next=applyHalExample(p,'adc');
-  assert.deepEqual(p,before);assert.deepEqual(next,{...halExample('adc'),name:p.name});assert.notDeepEqual(next.components,p.components);assert.notDeepEqual(next.wires,p.wires);assert.notDeepEqual(next.mcu,p.mcu);assert.notDeepEqual(next.simulation,p.simulation);assert.deepEqual(next.firmware.files,[]);next.components[0].name='changed';assert.notEqual(next.components[0].name,halExample('adc').components[0].name);
+  assert.deepEqual(p,before);assert.equal(next.name,p.name);for(const key of ['code','mcu','simulation','firmware'])assert.deepEqual(next[key],halExample('adc')[key]);assert.notDeepEqual(next.components,p.components);assert.notDeepEqual(next.wires,p.wires);assert.notDeepEqual(next.mcu,p.mcu);assert.notDeepEqual(next.simulation,p.simulation);assert.deepEqual(next.firmware.files,[]);next.components[0].name='changed';assert.notEqual(next.components[0].name,halExample('adc').components[0].name);
   const pwm=applyHalExample(next,'pwm');assert.deepEqual(pwm.simulation,{stepMs:.1,pwmWaveform:true});const language=applyHalExample(pwm,'language');assert.deepEqual(language.components,[]);assert.deepEqual(language.wires,[]);assert.deepEqual(language.simulation,{stepMs:1,pwmWaveform:false});
 });
 test('printf handles C integers, width, precision, strings, pointers and literal percent',()=>{

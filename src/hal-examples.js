@@ -1,4 +1,5 @@
 import {CATALOG_EXAMPLES,CATALOG_GUIDES,catalogExample} from './catalog-examples.js';
+import {arrangeExampleOnBreadboards} from './example-breadboard.js';
 import {L298_EXAMPLES,L298_GUIDES,l298Example} from './l298n-example.js';
 import {BASIC_EXAMPLES,BASIC_GUIDES,basicHalExample} from './basic-hal-examples.js';
 import {TIMER_EXAMPLES,TIMER_GUIDES,timerExample} from './timer-examples.js';
@@ -62,6 +63,6 @@ export function halExample(kind){
 }
 
 export function applyHalExample(project,kind){
-  const sample=halExample(kind);
+  const sample=arrangeExampleOnBreadboards(halExample(kind));
   return {...sample,name:project.name};
 }
