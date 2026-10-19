@@ -19,6 +19,9 @@ const {chooseHal,openFixture}=require('./smoke-fixture.cjs');
    await app.evaluate(({BrowserWindow})=>BrowserWindow.getAllWindows()[0].showInactive());
   }
   const errors=[];page.on('pageerror',e=>errors.push(e.message));page.setDefaultTimeout(20000);await page.waitForSelector('.monaco-editor');
+  // Exercise the compact CI viewport where a neighbouring resize edge used
+  // to intercept the supply body after selecting a motor.
+  await page.setViewportSize({width:1008,height:681});
   for(const [query,type]of [['L298N','l298n'],['DC 모터','dc_motor'],['외부 전원','dc_supply']]){
    await page.fill('#part-search',query);assert.equal(await page.locator(`[data-add="${type}"]:visible`).count(),1);
    await page.click(`[data-add="${type}"]`);
@@ -45,7 +48,7 @@ const {chooseHal,openFixture}=require('./smoke-fixture.cjs');
   await openFixture(page,broken);await page.locator('[data-part="driver"] .part-body').first().click();await page.click('#run');
   await log('A forward 75%');assert.equal(await page.locator('.l298-power').getAttribute('fill'),'#68443e');assert.match(await page.locator('#part-live').innerText(),/VM·5V·공통 GND/);
   await page.click('#run');assert.deepEqual(errors,[]);
-  await fs.writeFile(path.join(out,'l298n-'+renderer+'-smoke.json'),JSON.stringify({passed:true,checks:['three searchable and placeable parts','13 distinct module terminals','HAL example circuit and firmware check','two-channel PWM with direction reversal, brake and coast','motor speed and driver power views','supply setting persists','missing logic supply disables driver'],errors},null,2));
+  await fs.writeFile(path.join(out,'l298n-'+renderer+'-smoke.json'),JSON.stringify({passed:true,viewport:{width:1008,height:681},checks:['three searchable and placeable parts','13 distinct module terminals','HAL example circuit and firmware check','two-channel PWM with direction reversal, brake and coast','motor speed and driver power views','compact viewport: neighbouring supply remains clickable over motor resize handles','supply setting persists','missing logic supply disables driver'],errors},null,2));
   console.log('L298N '+renderer+' smoke passed.');
  }finally{
   if(portable&&page)await page.evaluate(()=>window.close()).catch(()=>{});
