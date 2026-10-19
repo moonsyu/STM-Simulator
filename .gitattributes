@@ -9,3 +9,4 @@ src/themes/jellybeans/jellybeans.vim -text
 docs/audits/pin-options-2026-10-19/evidence/** -text -diff
 docs/audits/hal-docs-multi-2026-10-19/evidence/** -text -diff
 docs/audits/0.25.1-release/evidence/** -text -diff
+docs/audits/0.25.2-breadboard/evidence/** -text -diff

@@ -1,0 +1,19 @@
+{
+  "passed": true,
+  "verifiedAt": "2026-10-19T13:38:34.349536+00:00",
+  "version": "0.25.2",
+  "commit": "7b4c3fb5328c0e383a8e499f6f5c1e1aac3c65d9",
+  "ciRun": 39257882264,
+  "release": "https://github.com/moonsyu/STM-Simulator/releases/tag/v0.25.2",
+  "exeSha256": "85b1bbb5a387e3a8cdb71bee9263fd38fc15f37296aeda5ef52c1d2ce7baed1c",
+  "zipSha256": "f7c1a1744c41a1ea1d062ae0fc3e2efe12dc9833a91120e26342d9bf756ed4c0",
+  "unitTests": 411,
+  "modelDevices": 114,
+  "modelWireCuts": 1068,
+  "publicUiDocsDevices": 6,
+  "publicTimerLoopback": true,
+  "publicCompactL298n": true,
+  "standaloneAndZipExecutables": 2,
+  "automaticUpdate": "0.25.1 -> 0.25.2",
+  "scope": "Model audit covers all 114 devices; public EXE UI covers six Docs devices, one timer loopback and the compact L298N library example. Physical MCU execution is not covered."
+}

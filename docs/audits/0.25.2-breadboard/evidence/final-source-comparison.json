@@ -1,0 +1,14 @@
+{
+  "passed": true,
+  "verifiedAt": "2026-10-19T13:11:12.658146+00:00",
+  "runtimeAuditedCommit": "97d1aa3e787b9e7007db0869412d7b8fe44313c9",
+  "releaseCandidateCommit": "7b4c3fb5328c0e383a8e499f6f5c1e1aac3c65d9",
+  "unchangedApplicationFiles": 142,
+  "changedApplicationFiles": {
+    "src/resize-ui.js": {
+      "previousSha256": "79a55dc8fa22a8c63cb86b0a31df7d9c7261304add77476805d76eeb4627c84c",
+      "currentSha256": "cefbbef9e1749b9d4b7570bf3f256c48e9495b011ee374debd7a5a00c9479294"
+    }
+  },
+  "scope": "Circuit runtime, HAL source generation and breadboard layout bytes match the 114-device audit; the resize UI layer is separately tested by real pointer interactions."
+}
