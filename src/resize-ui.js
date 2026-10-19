@@ -65,7 +65,9 @@ export function setupResizing(o){
   layer.replaceChildren();frame=null;$('resize-size').textContent='';
   if(!target||!available()||!['surface','part'].includes(selection?.type))return;
   const bodyBounds=boundsFor(p);if(!bodyBounds)return;const bounds=active?.bounds??{...bodyBounds};
-  const part=target.type==='part'?svg.querySelector(`[data-part="${target.id}"]`):null;if(part?.parentElement.id==='part-layer')part.parentElement.insertBefore(layer,part);else $('surface').append(layer);
+  // Nearby components and their pins must remain clickable when another
+  // device's resize frame overlaps them, regardless of component order.
+  $('surface').insertBefore(layer,$('part-layer'));
   frame=resizeFrame(p,target,bounds);const unit=1/Math.hypot(svg.getScreenCTM()?.a||1,svg.getScreenCTM()?.b||0),r=5*unit;
   // Leave the body draggable and keep real terminals above the resize controls.
   if(!active){const ux=unit/Math.hypot(frame.matrix.a,frame.matrix.b),uy=unit/Math.hypot(frame.matrix.c,frame.matrix.d),w=Math.max(bounds.width+16*ux,32*ux),h=Math.max(bounds.height+16*uy,32*uy);bounds.x-=(w-bounds.width)/2;bounds.y-=(h-bounds.height)/2;bounds.width=w;bounds.height=h;}
