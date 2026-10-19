@@ -1,14 +1,13 @@
-import {CATALOG_BY_TYPE,catalogType} from './catalog-defs.js';
+import {CATALOG_BY_TYPE} from './catalog-defs.js';
 import {updateDeviceSvg} from './device-ui.js';
 import {catalogShape} from './catalog-render.js';
-const legacy={resistor:'resistor-axial-2',led:'led-tht-2',button:'button-4',ldr:'ldr-bare-2',ntc:'ntc-bare-2',sht31:'sht31-grove-4',mpu6050:'mpu6050-8',pir:'pir-3',potentiometer:'pot-bare-3',slide:'slide-spdt-3',rgb:'rgb-common-cathode-4',capacitor:'capacitor-ceramic-2',diode:'diode-axial-2',buzzer:'buzzer-active-2',passive_buzzer:'buzzer-passive-2',temperature:'tmp36-to92-3',ultrasonic:'hcsr04-4',dc_motor:'dc-motor-2',dc_supply:'dc-supply-2',relay:'relay-module-6',joystick:'joystick-module-5',encoder:'encoder-module-5',lcd:'lcd-parallel-16',oled:'oled-i2c-4',tft:'st7735-8',matrix:'matrix-10',sevenseg:'sevenseg-common-cathode-10',stepper:'stepper-bipolar-4',motor:'motor-driver-hat',l298n:'l298n-module-13',servo:'servo-3',uart:'uart-cable-4',i2c:'i2c-eeprom-8',spi:'spi-eeprom-8'};
+import {displayModel} from './model-geometry.js';
 export function remodelLegacyShape(p,shape,result){
- if(CATALOG_BY_TYPE[p.type])return shape;
-
- const id=legacy[p.type];if(!id)return shape;
- const ref=catalogShape({...p,type:catalogType(id)},result?.parts[p.id],false);
+ const model=displayModel(p);if(!model)return shape;
+ if(CATALOG_BY_TYPE[p.type])return model.scale===1?shape:`<g transform="scale(${model.scale})">${shape}</g>`;
+ const ref=catalogShape({...p,type:model.referenceType},result?.parts[p.id],false);
  // Silkscreen/header labels are rendered by the existing physical terminal layer.
- return `<g class="remodeled-device" transform="scale(${['led','rgb','button','temperature','potentiometer'].includes(p.type)?.65:['resistor','diode','capacitor'].includes(p.type)?.7:.8})">${ref}</g>`;
+ return `<g class="remodeled-device" transform="scale(${model.scale})">${ref}</g>`;
 }
 export function updateCatalogView(g,p,r,pressed=false,lcdRender=null){
  const v=CATALOG_BY_TYPE[p.type],family=v?.family||p.type;

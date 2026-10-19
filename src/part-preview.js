@@ -1,5 +1,5 @@
 import {PART_DEFS,terminalKeys} from './components.js';
-import {initSvg,renderParts,renderBreadboards,boardSvg} from './render.js';
+import {initSvg,renderParts,renderBreadboards,boardSvg,updateSimulationSvg} from './render.js';
 
 const cache=new Map();
 let drawing,definitions;
@@ -16,6 +16,7 @@ export function partPreview(type){
   const part={id:'preview',type,name:'',x:0,y:0,rotation:0,span:70,...PART_DEFS[type]?.defaults,...(type==='resistor'?{value:330}:{}),...(type==='led'?{color:'red'}:{})};
   const project={components:[part],wires:[]};
   drawing.innerHTML=definitions+`<g>${type==='board'?boardSvg():type==='breadboard'?renderBreadboards(project,null):renderParts(project,null,null,{})}</g>`;
+  updateSimulationSvg(drawing,project,null,{});
   const model=drawing.querySelector(':scope > g');model.querySelectorAll('.pin-hit').forEach(node=>node.remove());
   if(type!=='breadboard')model.querySelectorAll(':scope > [data-part] > text').forEach(node=>node.remove());
   const box=model.getBBox(),padding=8,viewBox=[box.x-padding,box.y-padding,Math.max(1,box.width)+padding*2,Math.max(1,box.height)+padding*2].join(' ');

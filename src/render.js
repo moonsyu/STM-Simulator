@@ -1,4 +1,5 @@
 import {remodelLegacyShape,updateCatalogView} from './catalog-view.js';
+import {displayModel,catalogPadPosition,packageLeadRoot} from './model-geometry.js';
 import {isSelected,wirePoints} from './circuit-edit.js';
 import {roundedWirePath} from './wire-path.js';
 import {PINS,HOLES,BB,endpointInfo,circuitHoles,breadboardPrefix} from './pins.js';
@@ -23,10 +24,10 @@ export function boardSvg(){
  s+=text(440,192,'DBG',12,'#34749c','text-anchor="middle"');
  s+=button(212,255,'#2d8bc5','USER','USER · PC13')+button(327,255,'#29333b','RESET','RESET');
  for(const [x,y]of [[111,257],[420,258],[161,563],[362,563]])s+=`<circle cx="${x}" cy="${y}" r="9" fill="#ecf1f3" stroke="#c7d1d5"/>`;
- s+=chip(219,415,77,77)+text(257.5,445,'STM32',10,'#b9bdb8','text-anchor="middle"')+text(257.5,459,'F446RE',8,'#a1a6a2','text-anchor="middle"')+text(257.5,472,'ARM Cortex-M4',5.5,'#949c98','text-anchor="middle"');
+ s+=chip(219,415,77,77)+text(257.5,459,'ARM Cortex-M4',5.5,'#949c98','text-anchor="middle"');
  s+=rect(192,332,35,29,'#303d46',2)+rect(235,331,19,30,'#d5b86b',2)+rect(286,325,21,28,'#384951',2)+rect(322,338,18,15,'#ccbb89',2);
  for(let i=0;i<20;i++){const x=177+(i%5)*33,y=379+Math.floor(i/5)*9;s+=rect(x,y,12,5,i%3?'#cbbb92':'#79898a',1);}
- s+=rect(249,514,47,17,'#dce1dc',8,'stroke="#939e99"')+rect(254,517,37,11,'#eff1e9',5)+text(320,543,'NUCLEO',12,'#286783')+text(320,556,'F446RE',9,'#286783')+text(179,294,'MB1136',7,'#4e706d');
+ s+=rect(249,514,47,17,'#dce1dc',8,'stroke="#939e99"')+rect(254,517,37,11,'#eff1e9',5);
  s+=`<circle id="builtin-led" cx="294" cy="354" r="5" fill="#89a486" stroke="#6c886b"/>`+text(305,357,'LD2 · PA5',7);
  // Header wells are computed from the exact same pin list as interaction and simulation.
  for(const name of ['CN7','CN10','CN6','CN8','CN5','CN9']){
@@ -77,8 +78,11 @@ export function renderParts(project,selected,result,pressed){const parts=project
  const radians=angle*Math.PI/180,lcdHeight=(Math.abs(Math.sin(radians))*121+Math.abs(Math.cos(radians))*46)*scale;
  const body=PART_DEFS[p.type]?.body,bodyHeight=(body?(Math.abs(Math.sin(radians))*body.width+Math.abs(Math.cos(radians))*body.height)/2+14:42)*scale;
  const labelY=Math.min(y-(p.type==='lcd'?lcdHeight+14:PART_DEFS[p.type]?bodyHeight:27),...terminalKeys(p).map(key=>endpointInfo(`part:${p.id}:${key}`,project.components,project.surfaces).y-13));
+ const model=displayModel(p);
  const leads=terms.map((t,i)=>{const end=endpointInfo(`part:${p.id}:${t.key}`,project.components,project.surfaces);let root;
-   if(p.type.startsWith('ref_')){const b=PART_DEFS[p.type].body;root=partVector(p,Math.max(-b.width/2,Math.min(b.width/2,t.x)),Math.max(-b.height/2,Math.min(b.height/2,t.y)));}
+   if(p.type==='uart'&&model)root=partVector(p,t.x*model.scale,model.bounds.bottom);
+   else if(model){const start=p.type.startsWith('ref_')&&terms.length>2?catalogPadPosition(p.type,i):packageLeadRoot(model.bounds,t);root=partVector(p,start.x,start.y);}
+   else if(p.type.startsWith('ref_')){const b=PART_DEFS[p.type].body;root=partVector(p,Math.max(-b.width/2,Math.min(b.width/2,t.x)),Math.max(-b.height/2,Math.min(b.height/2,t.y)));}
    else if(p.type==='button')root=partVector(p,Math.sign(t.x)*14,Math.sign(t.y)*9);
    else if(p.type==='lcd')root=partVector(p,t.x*.8,33.6);
    else if(p.type==='sevenseg')root=partVector(p,Math.max(-24.8,Math.min(24.8,t.x)),Math.sign(t.y)*24.8);
@@ -94,10 +98,11 @@ export function renderParts(project,selected,result,pressed){const parts=project
    else if(['capacitor','diode','buzzer','passive_buzzer'].includes(p.type))root=partVector(p,Math.sign(t.x)*(['buzzer','passive_buzzer'].includes(p.type)?16:12),0);
    else root=partVector(p,Math.sign(t.x)*(p.type==='led'?10:half),0);
    const d=`M${x+root.x} ${y+root.y}L${nominal[i].x} ${nominal[i].y}L${end.x} ${end.y}`;
-   return `<path d="${d}" fill="none" stroke="#737d78" stroke-width="3.2" stroke-linejoin="round"/><path d="${d}" fill="none" stroke="#d6dcd5" stroke-width="1.5" stroke-linejoin="round"/><circle class="part-contact" cx="${end.x}" cy="${end.y}" r="2.7" fill="${attachments(p)[t.key]?'#acc5ad':'#dce1d8'}" stroke="#68776c" stroke-width=".8"/>`;
+   return `<path d="${d}" fill="none" stroke="#737d78" stroke-width="3.2" stroke-linejoin="round"/><path d="${d}" fill="none" stroke="#d6dcd5" stroke-width="1.5" stroke-linejoin="round"/>`;
  }).join('');
+ const contacts=terms.map(t=>{const end=endpointInfo(`part:${p.id}:${t.key}`,project.components,project.surfaces);return `<circle class="part-contact" cx="${end.x}" cy="${end.y}" r="2.7" fill="${attachments(p)[t.key]?'#acc5ad':'#dce1d8'}" stroke="#68776c" stroke-width=".8"/>`;}).join('');
  const hits=terminalKeys(p).map(key=>{const e=endpointInfo(`part:${p.id}:${key}`,project.components,project.surfaces);return `<circle cx="${e.x}" cy="${e.y}" r="5.5" data-endpoint="${e.id}" class="pin-hit part-pin"/>`;}).join('');
- return `<g data-part="${p.id}" data-rotation="${angle}" data-scale="${scale}" data-mounted="${Object.keys(attachments(p)).length}" class="${isSelected(selected,'part',p.id)?'part-selected':''}">${leads}<g class="part-body" transform="${partTransform(p)}">${shape}</g>${text(x,labelY,label,9,'#496477','text-anchor="middle" pointer-events="none"')}${hits}</g>`;
+ return `<g data-part="${p.id}" data-rotation="${angle}" data-scale="${scale}" data-mounted="${Object.keys(attachments(p)).length}" class="${isSelected(selected,'part',p.id)?'part-selected':''}">${leads}<g class="part-body" transform="${partTransform(p)}">${shape}</g>${contacts}${text(x,labelY,label,9,'#496477','text-anchor="middle" pointer-events="none"')}${hits}</g>`;
 }).join('');}
 export function renderEndpoints(project,pending){return [...(project.surfaces?.board?.hidden?[]:PINS.map(p=>surfacePoint(p,'board',project.surfaces))),...circuitHoles(project.components,project.surfaces)].map(e=>`<circle cx="${e.x}" cy="${e.y}" r="6.5" data-endpoint="${e.id}" class="pin-hit ${pending===e.id?'pending':''}"/>`).join('');}
 export function renderMountPreview(mount){return mount?mount.points.map(h=>`<circle cx="${h.x}" cy="${h.y}" r="6" fill="#24b78b44" stroke="#159b73" stroke-width="1.6"/>`).join(''):'';}
@@ -112,7 +117,7 @@ export function updateSimulationSvg(svg,project,result,pressed){
    if(p.type==='led'){const on=!result?.fault&&result?.parts[p.id]?.on;g.querySelector('.led-lens')?.setAttribute('fill',on?LED_COLORS[p.color]:'#704b4c');g.querySelector('.led-glow')?.setAttribute('opacity',on?'.6':'0');}
    if(p.type==='button')g.querySelector('.switch-cap')?.setAttribute('fill',pressed[p.id]?'#168775':'#354857');
  }
- const on=result&&!result.fault&&result.voltage('signal:PA5')>1.8,led=svg.querySelector('#builtin-led');led.setAttribute('fill',on?'#64e66b':'#89a486');led.style.filter=on?'drop-shadow(0 0 5px #59dc65)':'';
+ const on=result&&!result.fault&&result.voltage('signal:PA5')>1.8,led=svg.querySelector('#builtin-led');if(led){led.setAttribute('fill',on?'#64e66b':'#89a486');led.style.filter=on?'drop-shadow(0 0 5px #59dc65)':'';}
 }
 export function lcdContent(lcd){
  if(!lcd?.visible)return text(0,-9,lcd?.powered?'LCD · INITIALIZE':'LCD 1602',12,'#687440','text-anchor="middle"')+text(0,7,lcd?.powered?'RS / E / DATA / VO':'5 V POWER',8,'#687440','text-anchor="middle"');
