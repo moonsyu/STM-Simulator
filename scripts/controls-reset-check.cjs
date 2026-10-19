@@ -1,4 +1,5 @@
 const fs=require('node:fs/promises'),path=require('node:path'),net=require('node:net'),assert=require('node:assert/strict');
+const {clickUiControl}=require('./workbench-ui-actions.cjs');
 const {createHash}=require('node:crypto'),{chromium}=require('playwright'),{launch,terminate}=require('../desktop/process-tools.cjs');
 (async()=>{
  const root=path.resolve(__dirname,'..'),out=path.join(root,'work/test-results'),exe=process.env.LAB_EXE||require('electron');await fs.mkdir(out,{recursive:true});
@@ -11,7 +12,7 @@ const {createHash}=require('node:crypto'),{chromium}=require('playwright'),{laun
   for(let i=0;i<300;i++){try{if((await fetch(`http://127.0.0.1:${port}/json/version`)).ok)break;}catch{}await new Promise(r=>setTimeout(r,200));}
   browser=await chromium.connectOverCDP(`http://127.0.0.1:${port}`);page=browser.contexts()[0].pages()[0];page.setDefaultTimeout(15000);await page.waitForSelector('.monaco-editor');page.on('pageerror',e=>errors.push(e.message));
   const {halExample}=await import('../src/hal-examples.js'),{blankProject}=await import('../src/project.js'),{resetBoardConfiguration}=await import('../src/board-reset.js'),{boardPin}=await import('../src/pins.js');
-  const click=s=>page.locator(s).click(),press=k=>page.keyboard.press(k);
+  const click=s=>clickUiControl(page,s),press=k=>page.keyboard.press(k);
   const saved=async()=>{await page.waitForTimeout(300);return JSON.parse(await fs.readFile(path.join(profile,'diagnostics/latest-project.stm32lab'),'utf8'));};
   const load=async p=>{await page.locator('#file-input').setInputFiles({name:'fixture.stm32lab',mimeType:'application/json',buffer:Buffer.from(JSON.stringify(p))});await page.waitForFunction(code=>document.getElementById('code').value===code,p.code);};
   const focusCode=async()=>{await click('[data-tab="code"]');await page.locator('.monaco-editor .inputarea').focus();};

@@ -1,3 +1,4 @@
+const {revealUiControl,clickUiControl}=require('./workbench-ui-actions.cjs');
 const fs=require('node:fs/promises'),path=require('node:path'),net=require('node:net'),assert=require('node:assert/strict');
 const {chromium}=require('playwright'),{launch,terminate}=require('../desktop/process-tools.cjs');
 const wait=ms=>new Promise(resolve=>setTimeout(resolve,ms));
@@ -11,7 +12,7 @@ const wait=ms=>new Promise(resolve=>setTimeout(resolve,ms));
   let ready=false;for(let i=0;i<300;i++){try{ready=(await fetch(`http://127.0.0.1:${port}/json/version`)).ok;if(ready)break;}catch{}await wait(200);}assert.ok(ready,'Portable app did not start');
   browser=await chromium.connectOverCDP(`http://127.0.0.1:${port}`);const page=browser.contexts()[0].pages()[0];await page.waitForSelector('.monaco-editor');
   const initial=await page.evaluate(()=>window.appUpdates.state());assert.equal(initial.currentVersion,pkg.version);assert.notEqual(initial.phase,'unsupported');
-  await page.evaluate(()=>window.appUpdates.configure(false));await page.click('#app-update');await page.waitForFunction(()=>!document.getElementById('update-automatic').checked);assert.equal(await page.locator('#update-automatic').isDisabled(),false);
+  await page.evaluate(()=>window.appUpdates.configure(false));await clickUiControl(page, '#app-update');await page.waitForFunction(()=>!document.getElementById('update-automatic').checked);assert.equal(await page.locator('#update-automatic').isDisabled(),false);
   const result=await page.evaluate(()=>window.appUpdates.check());assert.ok(['current','available','error'].includes(result.phase),JSON.stringify(result));
   assert.equal(JSON.parse(await fs.readFile(path.join(profile,'updates/settings.json'),'utf8')).automatic,false);
   await page.screenshot({path:path.join(out,'update-portable.png')});

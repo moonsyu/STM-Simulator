@@ -1,5 +1,6 @@
 const fs=require('node:fs/promises'),path=require('node:path'),net=require('node:net');
 const {createHash}=require('node:crypto');
+const {clickUiControl}=require('../workbench-ui-actions.cjs');
  const {chromium}=require('playwright'),{launch,terminate}=require('../../desktop/process-tools.cjs');
 (async()=>{
  const {root,directory:out,version}=require('./paths.cjs'),dev=process.argv.includes('--dev'),stepSamples=process.argv.includes('--step-samples'),exe=dev?require('electron'):process.env.LAB_EXE||path.join(root,'outputs/artifact/STM-Simulator.exe');
@@ -28,7 +29,7 @@ const {createHash}=require('node:crypto');
     await page.waitForFunction(()=>document.getElementById('docs-result').textContent.includes('적용 완료'));
     await page.waitForTimeout(250);const saved=JSON.parse(await fs.readFile(path.join(profile,'diagnostics/latest-project.stm32lab'),'utf8'));
     if(stepSamples){
-     await page.locator('#step').dispatchEvent('click');
+     await clickUiControl(page,'#step');
      for(const atMs of [200,500,1000,1500,2000,2500,3000,3500]){
       await page.evaluate(atMs=>{
        let count=0;

@@ -1,3 +1,4 @@
+const {revealUiControl,clickUiControl}=require('./workbench-ui-actions.cjs');
 // Load a test document through the real file-input handler; no app test backdoor.
 exports.openFixture=async(page,project)=>{
  if((await page.locator('#run').textContent()).includes('정지'))await page.click('#run');
@@ -5,12 +6,12 @@ exports.openFixture=async(page,project)=>{
  await page.waitForFunction(code=>document.getElementById('code').value===code,project.code);
  await page.click('[data-tab="code"]');
 };
-exports.chooseHal=async(page,kind)=>{await page.selectOption('#hal-example',kind);};
+exports.chooseHal=async(page,kind)=>{await revealUiControl(page,'#hal-example');await page.selectOption('#hal-example',kind);};
 // Fixture source replacement uses the same input bridge as the Monaco editor.
 // Actual keyboard editing is covered by ide-smoke.cjs.
 exports.fillCode=(page,text)=>page.locator('#code').evaluate((el,text)=>{el.value=text;el.dispatchEvent(new Event('input',{bubbles:true}));},text);
 exports.newProject=async page=>{
- await page.click('#new');
+ await clickUiControl(page,'#new');
  if(await page.locator('#replace-dialog').isVisible())await page.click('#replace-confirm');
  await page.selectOption('#new-project-template','blank');
  await page.click('#project-create');
@@ -21,7 +22,7 @@ exports.newProject=async page=>{
 // message before reading the file or checking the newly opened document.
 async function fileAction(page,button,message){
  await page.click('#clear-console');
- await page.click(button);
+ await clickUiControl(page,button);
  await page.waitForFunction(message=>document.getElementById('console-output').textContent.includes(message),message);
 }
 exports.saveProject=page=>fileAction(page,'#save','회로 파일을 저장했습니다.');

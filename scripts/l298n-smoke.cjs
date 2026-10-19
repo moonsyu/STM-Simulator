@@ -1,3 +1,4 @@
+const {revealUiControl,clickUiControl}=require('./workbench-ui-actions.cjs');
 const assert=require('node:assert/strict'),fs=require('node:fs/promises'),path=require('node:path');
 const {spawn}=require('node:child_process');
 const {_electron,chromium}=require(process.env.PLAYWRIGHT_MODULE||'playwright');
@@ -27,7 +28,7 @@ const {chooseHal,openFixture}=require('./smoke-fixture.cjs');
   }
   await page.fill('#part-search','');await chooseHal(page,'l298n');
   assert.equal(await page.locator('#connection-count').innerText(),'부품 4개 · 배선 14개');assert.equal(await page.locator('[data-part="driver"] [data-endpoint]').count(),13);
-  assert.equal(await page.locator('#pwm-waveform').isChecked(),true);await page.click('#firmware-check');assert.match(await page.locator('#build-status').innerText(),/통과/);
+  assert.equal(await page.locator('#pwm-waveform').isChecked(),true);await clickUiControl(page, '#firmware-check');assert.match(await page.locator('#build-status').innerText(),/통과/);
   await page.locator('[data-part="motorA"] .part-body').click();await page.click('#run');
   const log=text=>page.waitForFunction(text=>document.getElementById('console-output').textContent.includes(text),text,{timeout:45000});
   await log('A forward 75%');await page.waitForFunction(()=>document.getElementById('part-live').textContent.includes('정회전'));

@@ -1,3 +1,4 @@
+const {revealUiControl,clickUiControl}=require('./workbench-ui-actions.cjs');
 const assert=require('node:assert/strict'),fs=require('node:fs/promises'),path=require('node:path');
 const {_electron,chromium}=require(process.env.PLAYWRIGHT_MODULE||'playwright');
 const {spawn}=require('node:child_process');
@@ -48,18 +49,18 @@ const {chooseHal,openFixture}=require('./smoke-fixture.cjs');
     await chooseHal(page,'passive_buzzer');
     assert.equal(await page.locator('#connection-count').innerText(),'부품 1개 · 배선 2개');
     assert.equal(await page.locator('#pwm-waveform').isChecked(),true);
-    await page.click('#firmware-check');assert.match(await page.locator('#build-status').innerText(),/통과/);
+    await clickUiControl(page, '#firmware-check');assert.match(await page.locator('#build-status').innerText(),/통과/);
     const select=async()=>page.locator('#part-layer [data-part="demo"] .part-body').click();
-    await select();await page.click('#sound');await page.click('#run');
+    await select();await clickUiControl(page, '#sound');await page.click('#run');
     const pitch=hz=>page.waitForFunction(hz=>window.buzzerProbe.oscillators.some(o=>o.type==='square'&&Math.abs(o.frequency.value-hz)<2)&&window.buzzerProbe.gains.some(g=>g.gain.value>.01),hz);
     await pitch(523);assert.equal(await page.locator('.buzzer-wave').getAttribute('opacity'),'1');assert.match(await page.locator('#part-live').innerText(),/Hz.*듀티/);
     await page.screenshot({path:path.join(out,'passive-buzzer-'+renderer+'-running.png')});
     await pitch(587);assert.match(await page.locator('#console-output').innerText(),/Passive buzzer: rest/);
     const silent=()=>page.waitForFunction(()=>window.buzzerProbe.gains.every(g=>g.gain.value<.0001));
-    await page.click('#sound');assert.equal(await page.locator('#sound').getAttribute('aria-pressed'),'false');await silent();
-    await page.click('#sound');await page.waitForFunction(()=>window.buzzerProbe.gains.some(g=>g.gain.value>.01));
+    await clickUiControl(page, '#sound');assert.equal(await page.locator('#sound').getAttribute('aria-pressed'),'false');await silent();
+    await clickUiControl(page, '#sound');await page.waitForFunction(()=>window.buzzerProbe.gains.some(g=>g.gain.value>.01));
     await page.click('#run');await silent();assert.equal(await page.locator('.buzzer-frequency').textContent(),'무음');
-    await page.click('#step');await silent();assert.equal(await page.locator('#run-status').innerText(),'한 단계 실행');
+    await clickUiControl(page, '#step');await silent();assert.equal(await page.locator('#run-status').innerText(),'한 단계 실행');
     await page.click('#run');await silent(); // finish the paused session
 
     const {halExample}=await import('../src/hal-examples.js');

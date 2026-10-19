@@ -1,3 +1,4 @@
+const {revealUiControl,clickUiControl}=require('./workbench-ui-actions.cjs');
 const {fillCode,newProject}=require('./smoke-fixture.cjs');
 const {openFixture,saveProject,openProject}=require('./smoke-fixture.cjs');
 const assert=require('node:assert/strict'),fs=require('node:fs/promises'),path=require('node:path');
@@ -28,12 +29,12 @@ const {_electron}=require(process.env.PLAYWRIGHT_MODULE||'playwright');
  await app.evaluate(({BrowserWindow})=>BrowserWindow.getAllWindows()[0].setSize(1120,760));await page.waitForTimeout(80);const compact=await page.evaluate(()=>({viewport:innerHeight,list:document.getElementById('part-list').getBoundingClientRect().height,help:document.getElementById('help').getBoundingClientRect().bottom,library:document.querySelector('.library').scrollTop}));assert.ok(compact.list>=92);await page.locator('#help').scrollIntoViewIfNeeded();assert.ok((await page.locator('#help').boundingBox()).y<compact.viewport);await page.screenshot({path:path.join(out,'parts-search-compact.png')});await app.evaluate(({BrowserWindow})=>BrowserWindow.getAllWindows()[0].setSize(1540,1020));
  await page.click('[data-add="board"]');
  // Selected physical header pin is distinct even when both match the same GPIO.
- await page.fill('#pin-search','PA 8');await page.click('[data-search-pin="board:CN10:23"]');
+ await (await revealUiControl(page, '#pin-search')).fill('PA 8');await page.click('[data-search-pin="board:CN10:23"]');
  assert.equal(await page.locator('#search-layer [data-selected="true"]').getAttribute('data-search-highlight'),'board:CN10:23');
  assert.equal(await page.locator('#pin-results [aria-pressed="true"]').getAttribute('data-search-pin'),'board:CN10:23');
  await page.click('[data-search-pin="board:CN9:8"]');assert.equal(await page.locator('#search-layer [data-selected="true"]').count(),1);assert.equal(await page.locator('#search-layer [data-selected="true"]').getAttribute('data-search-highlight'),'board:CN9:8');
  assert.match(await page.locator('#search-layer [data-selected="true"] text').textContent(),/CN9-8 · PA8/);
- await page.screenshot({path:path.join(out,'05-selected-pin.png')});await page.fill('#pin-search','PC13');assert.equal(await page.locator('#search-layer [data-selected="true"]').count(),0);await page.locator('#pin-search').press('Escape');
+ await page.screenshot({path:path.join(out,'05-selected-pin.png')});await (await revealUiControl(page, '#pin-search')).fill('PC13');assert.equal(await page.locator('#search-layer [data-selected="true"]').count(),0);await page.locator('#pin-search').press('Escape');
  // Add each new model through its library card and persist it in one project.
  await newProject(page);const types=['potentiometer','slide','rgb','capacitor','diode','buzzer','sevenseg','temperature','ultrasonic'];
  for(let i=0;i<types.length;i++){const type=types[i];await page.fill('#part-search',type);await page.click(`[data-add="${type}"]`);if(['capacitor','diode','buzzer'].includes(type))await clickXY(530,200+i*35);assert.equal((await snapshot()).components.at(-1).type,type);}await page.fill('#part-search','');
@@ -48,7 +49,7 @@ const {_electron}=require(process.env.PLAYWRIGHT_MODULE||'playwright');
  await load('capacitor');await selectDemo();await page.click('#run');await page.waitForTimeout(300);assert.ok(Number.parseFloat(await page.locator('#sim-current').innerText())>.01);assert.match(await page.locator('#run-status').innerText(),/실행 중/);await page.click('#run');
  await load('diode');await page.click('#run');await page.waitForTimeout(100);assert.ok(Number.parseFloat(await page.locator('#sim-current').innerText())>6);await page.click('#run');
  await load('buzzer');await page.click('#run');await page.waitForTimeout(100);assert.equal(await page.locator('.buzzer-wave').getAttribute('opacity'),'1');
- const cdp=await page.context().newCDPSession(page);await cdp.send('WebAudio.enable');const contexts=[];cdp.on('WebAudio.contextCreated',e=>contexts.push(e.context));await page.click('#sound');await page.waitForTimeout(80);assert.equal(await page.locator('#sound').getAttribute('aria-pressed'),'true');assert.ok(contexts.length>0);await page.click('#sound');await page.click('#run');await cdp.detach();
+ const cdp=await page.context().newCDPSession(page);await cdp.send('WebAudio.enable');const contexts=[];cdp.on('WebAudio.contextCreated',e=>contexts.push(e.context));await clickUiControl(page, '#sound');await page.waitForTimeout(80);assert.equal(await page.locator('#sound').getAttribute('aria-pressed'),'true');assert.ok(contexts.length>0);await clickUiControl(page, '#sound');await page.click('#run');await cdp.detach();
  await load('temperature');await selectDemo();await page.click('#run');await setRange('#extra-temperature',90); // -40 + 90 = 50°C.
  await page.waitForTimeout(240);assert.match(await page.locator('#part-live').innerText(),/1.000 V/);assert.equal((await snapshot()).components[0].temperature,50);await page.click('#run');
  await load('ultrasonic');await selectDemo();await page.click('#run');await page.waitForTimeout(100);assert.match(await page.locator('#console-output').innerText(),/100/);await setRange('#extra-distance',148);await page.waitForTimeout(240);assert.match(await page.locator('#console-output').innerText(),/150/);assert.equal((await snapshot()).components[0].distance,150);await page.screenshot({path:path.join(out,'07-ultrasonic-running.png')});await page.click('#run');

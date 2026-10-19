@@ -1,3 +1,4 @@
+const {revealUiControl,clickUiControl}=require('./workbench-ui-actions.cjs');
 const {fillCode,newProject}=require('./smoke-fixture.cjs');
 const {openFixture,chooseHal,saveProject,openProject}=require('./smoke-fixture.cjs');
 const assert=require('node:assert/strict');
@@ -42,7 +43,7 @@ const {_electron}=require(process.env.PLAYWRIGHT_MODULE||'playwright');
  await page.click('[data-endpoint="bb:a:25"]');await page.keyboard.press('Escape');assert.equal((await snapshot()).wires.length,0);
  await page.click('[data-endpoint="bb:a:25"]');await page.click('[data-endpoint="bb:f:25"]');
  const colors=await page.locator('[data-color]').evaluateAll(bs=>bs.map(b=>b.dataset.color));
- for(const color of colors){await clickXY(795,464);await page.locator(`[data-color="${color}"]`).click();assert.equal((await snapshot()).wires[0].color,color);}
+ for(const color of colors){await clickXY(795,464);await clickUiControl(page,`[data-color="${color}"]`);assert.equal((await snapshot()).wires[0].color,color);}
  await clickXY(795,464);await page.keyboard.press('Escape');assert.equal((await snapshot()).wires.length,0);await page.click('#undo');assert.equal((await snapshot()).wires.length,1);
  // Multi-pin models exist immediately, drag all contacts into holes, then detach off-board.
  await page.click('[data-add="button"]');let button=await lastPart();assert.equal(button.type,'button');assert.equal(await page.locator(`[data-part="${button.id}"] .part-pin`).count(),4);
@@ -59,11 +60,11 @@ const {_electron}=require(process.env.PLAYWRIGHT_MODULE||'playwright');
  await app.evaluate(({dialog},saved)=>{dialog.showSaveDialog=async()=>({canceled:false,filePath:saved});dialog.showOpenDialog=async()=>({canceled:false,filePaths:[saved]});},saved);
  await saveProject(page);const before=JSON.parse(await fs.readFile(saved,'utf8'));assert.equal(before.version,2);
  await newProject(page);await openProject(page);assert.deepEqual(await snapshot(),before);
- await page.locator('#pin-search').fill('pC 13');assert.equal(await page.locator('#pin-results button').count(),1);assert.equal(await page.locator('#search-layer g').count(),1);
+ await (await revealUiControl(page, '#pin-search')).fill('pC 13');assert.equal(await page.locator('#pin-results button').count(),1);assert.equal(await page.locator('#search-layer g').count(),1);
  await page.locator('#pin-search').press('Enter');assert.match(await page.locator('#inspector').innerText(),/PC13/);assert.equal((await snapshot()).wires.length,2);
- await page.locator('#pin-search').fill('PA 8');assert.equal(await page.locator('#pin-results button').count(),2);assert.equal(await page.locator('#search-layer g').count(),2);
+ await (await revealUiControl(page, '#pin-search')).fill('PA 8');assert.equal(await page.locator('#pin-results button').count(),2);assert.equal(await page.locator('#search-layer g').count(),2);
  await page.click('#zoom-reset');await page.screenshot({path:path.join(out,'04-editor-updates.png')});
- await page.locator('#pin-search').press('Escape');assert.equal(await page.locator('#search-layer g').count(),0);
+ await (await revealUiControl(page,'#pin-search')).press('Escape');assert.equal(await page.locator('#search-layer g').count(),0);
  assert.deepEqual(errors,[]);
  await fs.writeFile(path.join(out,'editor-smoke.json'),JSON.stringify({passed:true,checks:['two-pin exact placement','body hit priority over covered hole','45-degree rotation and wrap','10 persisted wire colors','Escape cancel versus delete and undo','LED drag snap','4-pin button drag mount and detach','16-pin LCD rotation and drag mount','LCD terminal wiring','schema 2 IPC round trip','case/space-insensitive pin search and alias highlighting'],errors},null,2));
  console.log('Editor smoke passed: all seven requested changes, mounted contacts, file round trip, no renderer errors.');
