@@ -74,3 +74,9 @@
 최종 headless 검사에서 갤러리 부품 78개의 SVG DOM이 실제 `renderParts` 결과와 모두 일치하고, 핀 개수와 80개 카드의 이름·출처 URL을 확인했습니다. 오류 0이며 결과는 `render-final.json`의 `gallery` 항목에 있습니다. 최신 보드 수정 후 114개 연락판과 White/Dark 회로도 다시 생성했습니다. 갤러리 상단 및 DC 모터·TMP36 검색 결과(`gallery-top.png`, `gallery-motor.png`, `gallery-temperature.png`), `models-01.png`의 보드, White/Dark 회로를 직접 열어 최종 화면을 확인했습니다.
 
 생성 HTML의 검색 정규식은 실제 `/\s+/`이며 템플릿 소스의 이중 이스케이프가 정상임을 확인했습니다. 검색 안내와 달리 인터페이스 문자열이 검색 대상에서 빠져 있던 기존 문제를 수정했습니다. 별도 headless Chrome에서 다중 단어·역순·탭/연속 공백·대소문자·일치 없음·초기화 검색 8건을 검사했습니다. `ADC 3핀`은 수정 전 0건에서 해당 부품 5건으로 바뀌었으며 오류 0입니다. 결과는 `work/tinkercad-render-final/gallery-search.json`, 직접 확인한 화면은 `gallery-search-adc.png`입니다.
+
+## 저장소에 보관한 공개 증거
+
+[재현 안내와 범위](evidence/README.md), [집계 JSON](evidence/rendering-summary.json), [재현 스크립트](evidence/reproduce-rendering.cjs)를 함께 보관합니다. 최종 연락판 중 [대표 부품 12개](evidence/models-01.png)와 [구동기·통신 부품 12개](evidence/models-09.png), [갤러리 검색 결과](evidence/gallery-search-adc.png)만 공개용 대표 화면으로 복사했습니다. 원본 로컬 증거는 유지했습니다.
+
+공개 자료는 저장소 상대경로와 합성 기본 부품만 포함합니다. 재현 스크립트를 독립 headless Chrome에서 실제 실행하여 **114개 모델·80개 갤러리 카드·78개 렌더 대조·검색 8건**을 다시 통과했습니다. 재현 출력은 `work/rendering-evidence-reproduction/`에 별도로 저장됩니다.

@@ -55,3 +55,20 @@
 - 별도 개발 Electron의 114개 Docs 적용/실행 로그는 모두 통과했습니다. 소스 감사가 생성한 코드·배선과 앱 저장본, 입력 응답, TFT 전체 RAM 해시, 오류/fault를 대조했습니다. 공개 배포 EXE 검증과 구분합니다.
 - helper 수정 후 code-reset 검사에서 L298N의 마지막 샘플만 보는 기존 시간 가정도 드러났습니다. 동일 실행의 실제 JSONL은1320ms A+1787/B-950rpm, 4880ms A reverse-1188/B forward+2385rpm으로 정상이나, 정지 클릭이 끝난5960ms에는 예정된 brake로 거의0rpm입니다. 해당 실행 시작 이후 로그에서 같은 샘플의 채널 모드와 양/음 회전 조건을 함께 판정하도록 검사를 보완합니다. 이전 실행 샘플을 섞거나 timeout만 늘리지 않습니다. 최초 실패 프로필/로그는 보존합니다.
 - 보완 후 코드 초기화·보드 초기화/단축키·TFT 두 종류/UART Docs·내장/외부 UART 검사가 모두 통과했습니다. LED는 초기화 후0V/0A/OFF, 재적용 후1.847V/3.927mA/ON입니다. L298N의3780ms 동일 샘플에서 A reverse-1181.9/B forward+2372.5rpm을 확인했습니다. TFT 두 모델은20480픽셀 전체 해시, UART는Audit42 RX/TX 바이트와 실제 received를 확인했습니다. helper와 검사 대기 방식만 수정했고 제품 소스는 변경하지 않았습니다.
+
+## 게시 라운드2 · 코드 테마 importer 결함과 게시 전 취소
+
+- 새 테마 검사 중 JSON/Java 등 특정 언어의 세부 scope가 C의 공통 `type`·`number`·`delimiter` 규칙까지 덮는 importer 변환 결함을 확인했습니다. Windows의 System/White/Dark 전환과는 별개인 코드 토큰 범위 변환 문제입니다.
+- [2차 CI39211377769](https://github.com/moonsyu/STM-Simulator/actions/runs/39211377769)는 이 결함이 포함된 산출물의 게시를 막기 위해 게시 전에 취소했습니다. 취소 요청 HTTP 202 접수 이후 취소 완료를 확인했습니다. **검사 실패에 따른 CI 실패가 아니라 의도한 취소**이며, 새 CI를 통해 게시합니다.
+- 화면에서 순수 빨강/초록이 사용된 것 같다는 최초 의심은 해당 PNG의 픽셀 검사에서 `#ff0000`·`#00ff00`이 각각 0개여서 해소했습니다. 실제 색은 원본 GitHub 테마의 `#cf222e`·`#116329`였습니다. 확정 결함은 색을 임의로 바꾼 문제가 아니라 언어별 scope를 공통 C 토큰으로 잘못 변환한 문제입니다.
+- importer의 언어별 scope 변환과 저장된 기본 테마의 이전 변환 오류 교정을 완료했습니다. 관련 단위27개와 실제 Electron colorscheme 검사에서 원본 GitHub/Jellybeans C 토큰 색, 구버전 저장 fixture 재로드, import/export 및 사용자 색 보존을 확인했습니다.
+- 수정 후 전체 단위397/397이 `work/test-results/workbench-unit-color-final.log`에서 통과했습니다. appearance-canvas, Electron nativeTheme System, 실제 편집기 토큰 검사도 `workbench-appearance-color-final.log`, `appearance-native-theme.json`, `editor-theme-tokens.json`에서 통과했습니다. 다른 기능의 완료 검증과 최초 실패·취소 기록은 유지합니다. 새 CI·공개 릴리스 검증이 끝나기 전에는 배포 완료로 보고하지 않습니다.
+
+## 게시 라운드3 · 수정 소스 전체 CI
+
+- 제품 수정과 기존 저장 테마 교정, 실제 C 토큰 회귀 검사를 `cad2c902b118157d746e682d244bffaaf9a89744`로 커밋하고 main에 푸시했습니다. 작성자·커미터·실제 GitHub 계정은 moonsyu로 확인했습니다.
+- [3차 CI39212542491](https://github.com/moonsyu/STM-Simulator/actions/runs/39212542491)의 전체 검사를 시작했습니다. 공개 자산은 이 실행이 빌드와 게시까지 성공한 뒤 별도 검증합니다.
+- 3차 CI는 기존 HAL·카탈로그 검사까지 통과한 뒤 `controls-reset-check.cjs:28:90`의 코드 패널 헤더 우클릭 검사에서 실패했습니다. **Release는 게시되지 않았습니다.** 그 앞의 Shift+F10 패널 이동, 터미널 도킹과 재시작 복원은 성공했습니다.
+- 검사는 합쳐진 코드 `.dock-heading`의 중앙을 우클릭했지만 이 위치는 탭/버튼 같은 interactive 자식일 수 있습니다. 해당 자식에서 패널 이동 메뉴를 열지 않는 제품의 contextmenu 가드에 따라 dialog가 열리지 않아야 하므로, 헤더 중앙을 이동 손잡이로 간주한 검사 대상이 잘못됐습니다.
+- 실제 `.dock-grab` 우클릭으로 이동 메뉴가 열리는지와 탭 우클릭으로는 차단되는지를 분리하도록 테스트를 최소 수정 중입니다. 제품 코드는 변경하지 않으며 수정 후 재검사 대기입니다. 이 실행의 실패와 이전 2차 CI의 의도한 취소를 구분해 보존합니다.
+- 수정 후 `controls-reset-ci3-recheck.log`의 전체 검사가 통과했습니다. desktop/1024/900의 실제 hit target을 기록했고 900폭 헤더 중앙은 `role=tab` 버튼, 이동 손잡이는 모두 비대화형 SVG였습니다. 탭의 우클릭/Shift+F10 차단과 손잡이 이동창, 보드 초기화·Undo/Redo·복원, F11/F10/Shift+F11/F6/F5 및 실제 변수3/6/7, 양테마/작은 창을 다시 확인했습니다. 제품 코드는 바꾸지 않았습니다.

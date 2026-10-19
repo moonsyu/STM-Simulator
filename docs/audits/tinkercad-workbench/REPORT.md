@@ -1,6 +1,8 @@
 # 작업 화면 · 장치 모델 반복 검수
 
-2026-10-19. **배포 대상은 0.25.0 예정이며 아직 공개하지 않았습니다.** 기존 단일 NUCLEO-F446RE 학습 IDE를 유지하고, 사용자가 제공한 Tinkercad 이미지/탭의 부품 식별성과 배선 표현을 자체 SVG에 적용했습니다. Windows 밝은/어두운 테마를 참고하고 System은 운영체제 모드 변경을 따릅니다. 아래 결과는 독립 프로필에서 수행한 로컬 소스 검증이며, 새 버전의 Windows CI와 공개 릴리스 검증은 pending입니다.
+2026-10-19. **배포 대상은 0.25.0 예정이며 아직 공개하지 않았습니다.** 기존 단일 NUCLEO-F446RE 학습 IDE를 유지하고, 사용자가 제공한 Tinkercad 이미지/탭의 부품 식별성과 배선 표현을 자체 SVG에 적용했습니다. Windows 밝은/어두운 테마를 참고하고 System은 운영체제 모드 변경을 따릅니다. 아래 결과는 독립 프로필에서 수행한 로컬 소스 검증입니다. 새 테마 importer의 scope 변환 결함을 발견해 2차 CI를 게시 전에 취소했고, 수정과 로컬 재검사는 완료했습니다. 새 Windows CI·공개 릴리스 검증은 pending입니다.
+
+후속 3차 CI는 패널 헤더 우클릭의 테스트 대상 오류로 실패했습니다. Release는 게시되지 않았으며, 제품 변경 없이 해당 검사 보완과 재실행을 진행합니다.
 
 ## 확인한 결함과 수정
 
@@ -28,7 +30,9 @@
 
 | 검사 | 결과 | 근거 |
 |---|---|---|
-| 전체 단위 검사 | 387/387 통과, 실패0 | `work/test-results/workbench-unit-release.log` |
+| 전체 단위 검사 | importer 수정 후 397/397 통과 | `work/test-results/workbench-unit-color-final.log` |
+| 코드 테마 importer·저장 호환 | 관련 단위27개·실제 Electron 원본 C 토큰 색·구버전 기본 테마 교정·import/export·사용자 색 보존 통과 | `workbench-colorscheme-final.log`, `colorscheme-smoke.json` |
+| 테마 영향 재검사 | appearance-canvas·native System·실제 편집기 토큰 통과 | `workbench-appearance-color-final.log`, `appearance-native-theme.json`, `editor-theme-tokens.json` |
 | 최종 화면 | 24조합·72상태·427개 판정 통과, 대비 텍스트36,228건에서 저대비0, renderer 오류0 | `work/test-results/workbench-review-final-layout/summary.json` |
 | 최종 모델 | 114종 검색/hover/디코딩, 일반모델112종의 실제 변환·637접점, 보드108핀·빵판400홀 통과 | `work/test-results/workbench-review-final-models/summary.json`, `model-pin-parity.json` |
 | 키보드·배선·실행 | Round7 성공9시나리오: 메뉴/탭, 회로/경유점, 드래그 가드, GPIO/UART, RESET/paused/F5 | `work/test-results/workbench-review-round7-functional/summary.json`, `runtime-events.jsonl` |
@@ -37,6 +41,9 @@
 | 기존 UI 최종 묶음 | boards, devices, circuit-tools, editor-tools, passive-buzzer, l298n, ide, mcu-defaults 8개 통과 | `work/test-results/workbench-final-*-smoke.cjs.log`의 해당 8개 로그 |
 | 네이티브 백엔드 | 실제 GCC/GDB/clangd·ARM 산출물·실패/취소 보호 통과 | `work/test-results/native-ide-check.json` |
 | 네이티브 UI | 재검사 통과:실제 Debug/Release 빌드·GDB step/watch/register·실행 stdout·터미널·clangd·오류 이동/이전 산출물 보호, renderer 오류0 | `work/test-results/workbench-native-ui-recheck.log`, `native-ide-smoke.json` |
+| 모든 장치 Docs·함수 카드 | 장치114·API 카드979·단선 위치701·전체 손상 회로114 복구 후 실행 통과 | [행동 판정](evidence/docs-behavior.json) |
+| 개발 앱 Docs 실제 로그 | 114장치·338상태, 생성 코드/배선·입력/응답·TFT 전체 프레임·fault/error 대조 통과 | [앱 로그 판정](evidence/docs-runtime.json) |
+| 초기화·외부 UART 최종 재검사 | 코드/보드 초기화·LED OFF/ON·모터 정역회전·TFT 두 모델·UART RX/TX 통과 | `code-reset-phase-recheck.log`, `controls-reset-workbench-helper-recheck.log`, `docs-workbench-helper-recheck.log`, `uart-vcp-workbench-helper-recheck.log` |
 
 Round7 전체 결과 파일은 당시 저장 검사 대기 누락으로 실패 상태를 유지합니다. 그 파일의 성공9시나리오와 대기 수정 후 Round8 저장 성공을 함께 판정 근거로 사용하며, 실패 기록을 성공으로 바꾸지 않았습니다. 네이티브 UI의 첫 timeout도 보존했고, 초기화 전 지역변수를 잘못 매칭하던 테스트 대기 조건을 실제 정지 프레임·다음 명령 가능 상태·정확한 변수값으로 보강한 뒤 재검사했습니다. 해당 보강은 제품 동작을 바꾸지 않았습니다.
 
@@ -47,7 +54,14 @@ Round7 전체 결과 파일은 당시 저장 검사 대기 누락으로 실패 �
 - 122개 HAL 프로젝트를 실제 ST HAL/CMSIS·ARM GCC로 컴파일·링크했습니다. 실물 보드 실행을 뜻하지 않습니다.
 - HAL GPIO/USART2/버튼 검사는 시뮬레이터 실제 실행의 JSONL 전압·전류·송수신 바이트로 판정했습니다.
 - 자동 수치 검사가 통과해도 PNG 직접 검토에서 찾은 문제를 남겨 수정했습니다. 최초 실패/중간 검사를 성공으로 덮어쓰지 않았습니다. 상세 순서는 [단계 로그](LOG.md), [검사 기록](CHECKLOG.md)에 있습니다.
+- API 카드 호출/반환, 장치 전체 동작, 단선별 연결 상태, 손상 회로 복구 후 실행은 별도 기준으로 판정합니다. 개발 앱114개 검증을 공개 EXE114개 검증으로 확대하지 않습니다. 공개용 집계와 재현 명령은 [증거 안내](evidence/README.md)에 있습니다.
 
 ## 게시와 최종 수렴
 
 기능 브랜치에서 계획525f174, 모델9e6ac70, UI d22658e로 분리 커밋했습니다. 후속 모델·표시 수정의 로컬 최종 화면/모델 검사와 네이티브 UI 재검사는 완료했습니다. **0.25.0의 전체 Windows CI, Release 게시, 공개 5자산의 버전·커밋·해시/latest, 공개 EXE/ZIP 실행·복원·자동 업데이트 검증은 pending**입니다. 이 보고서는 0.25.0의 게시·배포 완료를 주장하지 않습니다.
+
+게시 전 추가 검사에서 JSON/Java 등 특정 언어의 세부 scope가 C의 공통 `type`·`number`·`delimiter` 규칙을 덮는 코드 테마 importer 결함을 확인했습니다. 이를 포함한 산출물의 게시를 막기 위해 [2차 CI39211377769](https://github.com/moonsyu/STM-Simulator/actions/runs/39211377769)를 취소했고 HTTP 202 접수 이후 취소 완료를 확인했습니다. **이 실행은 검사 실패가 아닌 의도한 취소**입니다. importer와 저장된 기본 테마의 알려진 변환 오류 교정을 완료하고, 실제 코드 토큰·사용자 설정 보존·전체397개 단위·System 영향 재검사를 통과했습니다. 새 CI 및 공개 자산 검증은 별도입니다.
+
+순수 빨강/초록이 표시된 것 같다는 최초 의심은 PNG 픽셀 검사에서 `#ff0000`·`#00ff00` 각각 0개로 해소됐습니다. 실제 색은 원본 GitHub 테마의 `#cf222e`·`#116329`였습니다. 확정된 문제는 색의 임의 변경이 아니라 언어별 scope 변환 범위입니다. 다른 기능의 완료 검증은 유지하되, 기존 System 전환 성공을 importer 정확성의 근거로 확대하지 않습니다.
+
+[3차 CI39212542491](https://github.com/moonsyu/STM-Simulator/actions/runs/39212542491)는 기존 HAL·카탈로그까지 통과한 뒤 `controls-reset-check.cjs:28:90`에서 실패했습니다. Shift+F10 패널 이동·터미널 도킹·재시작 복원은 성공했지만 코드 `.dock-heading` 중앙 우클릭이 탭/버튼에 닿아 이동 dialog가 열리지 않았습니다. interactive 자식에서 패널 메뉴를 열지 않는 가드는 유지해야 하므로, 실제 `.dock-grab` 우클릭 성공과 탭 우클릭 차단을 구분하도록 테스트만 최소 수정 중입니다. **Release 미게시이며 수정 후 재검사 대기**입니다. 앞선 의도한 CI 취소와 이번 검사 실패를 구분합니다.

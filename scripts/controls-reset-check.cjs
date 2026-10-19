@@ -7,7 +7,7 @@ const {createHash}=require('node:crypto'),{chromium}=require('playwright'),{laun
  const port=await new Promise(resolve=>{const s=net.createServer();s.listen(0,'127.0.0.1',()=>{const port=s.address().port;s.close(()=>resolve(port));});});
  const env={...process.env,CIRCUIT_LAB_SMOKE:'1',CIRCUIT_LAB_TEST_PROFILE:profile};delete env.ELECTRON_RUN_AS_NODE;
  const child=launch(exe,[...(process.env.LAB_EXE?[]:[root]),`--remote-debugging-port=${port}`,'--remote-debugging-address=127.0.0.1'],{env,cwd:root});let browser,page;
- const checks=[],errors=[],debug=[];
+ const checks=[],errors=[],debug=[],dockHits=[];
  try{
   for(let i=0;i<300;i++){try{if((await fetch(`http://127.0.0.1:${port}/json/version`)).ok)break;}catch{}await new Promise(r=>setTimeout(r,200));}
   browser=await chromium.connectOverCDP(`http://127.0.0.1:${port}`);page=browser.contexts()[0].pages()[0];page.setDefaultTimeout(15000);await page.waitForSelector('.monaco-editor');page.on('pageerror',e=>errors.push(e.message));
@@ -25,7 +25,21 @@ const {createHash}=require('node:crypto'),{chromium}=require('playwright'),{laun
   await page.locator(`[data-endpoint="${boardPin('PB0')}"]`).click();await page.locator('[data-endpoint="bb:a:1"]').click();assert.equal((await saved()).wires.length,p.wires.length+1);await press('v');await click('#undo');checks.push('W connects a real wire and V selects');
   const heading=page.locator('[data-panel="terminal"] .dock-heading');await heading.focus();await press('Shift+F10');assert.equal(await page.locator('#dock-move-dialog').isVisible(),true);await page.selectOption('#dock-move-target','code:right');await click('#dock-move-apply');
   let terminal=await page.locator('[data-panel="terminal"]').boundingBox(),code=await page.locator('[data-panel="code"]').boundingBox();assert.ok(terminal.x>code.x);await page.reload();await page.waitForSelector('.monaco-editor');terminal=await page.locator('[data-panel="terminal"]').boundingBox();code=await page.locator('[data-panel="code"]').boundingBox();assert.ok(terminal.x>code.x);await click('#layout-reset');
-  await page.locator('[data-panel="code"] .dock-heading').click({button:'right'});assert.equal(await page.locator('#dock-move-dialog').isVisible(),true);await press('Escape');checks.push('panel context move persists, Shift+F10 is not debug step');
+  const originalViewport=await page.evaluate(()=>({width:innerWidth,height:innerHeight}));
+  for(const viewport of [originalViewport,{width:1024,height:640},{width:900,height:560}]){
+   await page.setViewportSize(viewport);
+   const grip=page.locator('[data-panel="code"] .dock-grab');
+   const hit=await grip.evaluate(el=>{
+    const head=el.closest('.dock-heading'),atCenter=element=>{const r=element.getBoundingClientRect(),hit=document.elementFromPoint(r.x+r.width/2,r.y+r.height/2);return {tag:hit?.tagName,id:hit?.id,role:hit?.getAttribute('role'),control:!!hit?.closest('button,select,input,textarea,a,[role="tab"]'),withinHeading:hit?.closest('.dock-heading')===head};};
+    return {viewport:{width:innerWidth,height:innerHeight},headingCenter:atCenter(head),grip:atCenter(el)};
+   });dockHits.push(hit);assert.equal(hit.grip.withinHeading,true);assert.equal(hit.grip.control,false);
+   // A merged heading contains actual tabs; right-clicking a tab must not
+   // open the panel menu. Click the visible noninteractive grip instead.
+   await page.locator('[data-tab="code"]').click({button:'right'});assert.equal(await page.locator('#dock-move-dialog').isVisible(),false);
+   await page.locator('[data-tab="code"]').focus();await press('Shift+F10');assert.equal(await page.locator('#dock-move-dialog').isVisible(),false);
+   await grip.click({button:'right'});await page.waitForSelector('#dock-move-dialog[open]');await press('Escape');
+  }
+  await page.setViewportSize(originalViewport);checks.push('panel context move persists, noninteractive grip works at desktop/1024/900, tabs ignore context move and Shift+F10');
   const before=await saved();await click('#board-reset');assert.equal(await page.evaluate(()=>document.activeElement.id),'board-reset-cancel');await press('F11');assert.equal(await page.locator('#run-status').textContent(),'준비됨');await press('Escape');assert.deepEqual(await saved(),before);
   await click('#board-reset');await click('#board-reset-cancel');assert.deepEqual(await saved(),before);await click('#board-reset');await click('#board-reset-confirm');assert.deepEqual(await saved(),resetBoardConfiguration(before));
   await click('#undo');assert.deepEqual(await saved(),before);await click('#redo');assert.deepEqual(await saved(),resetBoardConfiguration(before));await page.reload();await page.waitForSelector('.monaco-editor');assert.deepEqual(await saved(),resetBoardConfiguration(before));checks.push('board reset cancel/Escape/code preservation/undo/redo/reload');
@@ -51,7 +65,7 @@ const {createHash}=require('node:crypto'),{chromium}=require('playwright'),{laun
   for(const theme of ['dark','light']){await page.emulateMedia({colorScheme:theme});await page.waitForFunction(theme=>document.documentElement.dataset.ideTheme===theme,theme);await click('#board-reset');assert.equal(await page.locator('#board-reset-dialog').isVisible(),true);await press('Escape');}
   await page.setViewportSize({width:1024,height:640});assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);checks.push('dark/light and compact window');
   const events=(await fs.readFile(path.join(profile,'diagnostics/events.jsonl'),'utf8')).trim().split('\n').map(JSON.parse);assert.ok(events.some(e=>e.type==='board.reset'&&e.detail.preservedCode));assert.ok(events.some(e=>e.type==='debug.paused'));assert.deepEqual(errors,[]);
-  const version=(await page.evaluate(()=>window.appUpdates.state())).currentVersion,report={passed:true,version,exeSha256:createHash('sha256').update(await fs.readFile(exe)).digest('hex'),packaged:!!process.env.LAB_EXE,checks,debug,errors,events};
+  const version=(await page.evaluate(()=>window.appUpdates.state())).currentVersion,report={passed:true,version,exeSha256:createHash('sha256').update(await fs.readFile(exe)).digest('hex'),packaged:!!process.env.LAB_EXE,checks,dockHits,debug,errors,events};
   await fs.writeFile(path.join(out,process.env.LAB_EXE?'controls-reset-public.json':'controls-reset-dev.json'),JSON.stringify(report,null,2));console.log(JSON.stringify({passed:true,version,checks}));
- }catch(error){console.error('Controls check failed:',error);await fs.writeFile(path.join(out,'controls-reset-failure.json'),JSON.stringify({error:error.message,checks,debug,state:await page?.evaluate(()=>({status:document.getElementById('run-status')?.textContent,location:document.getElementById('debug-location')?.textContent,locals:document.getElementById('debug-locals')?.textContent,output:document.getElementById('native-output')?.textContent,working:document.getElementById('run')?.disabled})).catch(()=>null)},null,2));throw error;}finally{await browser?.close().catch(()=>{});await terminate(child);}
+ }catch(error){console.error('Controls check failed:',error);await page?.screenshot({path:path.join(out,'controls-reset-failure.png')}).catch(()=>{});await fs.writeFile(path.join(out,'controls-reset-failure.json'),JSON.stringify({error:error.message,checks,dockHits,debug,state:await page?.evaluate(()=>({status:document.getElementById('run-status')?.textContent,location:document.getElementById('debug-location')?.textContent,locals:document.getElementById('debug-locals')?.textContent,output:document.getElementById('native-output')?.textContent,working:document.getElementById('run')?.disabled})).catch(()=>null)},null,2));throw error;}finally{await browser?.close().catch(()=>{});await terminate(child);}
 })().catch(e=>{console.error(e);process.exitCode=1;});

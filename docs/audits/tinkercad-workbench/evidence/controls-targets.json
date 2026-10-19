@@ -1,0 +1,108 @@
+{
+  "passed": true,
+  "version": "0.25.0",
+  "packaged": false,
+  "checks": [
+    "specified controls and text removed",
+    "Ctrl+F/Ctrl+R and Escape",
+    "Alt+0 restores device size",
+    "W connects a real wire and V selects",
+    "panel context move persists, noninteractive grip works at desktop/1024/900, tabs ignore context move and Shift+F10",
+    "board reset cancel/Escape/code preservation/undo/redo/reload",
+    "real simulator keyboard stepping, locals 3/6 and counter 7, pause/stop, idle guard",
+    "dark/light and compact window"
+  ],
+  "dockHits": [
+    {
+      "viewport": {
+        "width": 1524,
+        "height": 981
+      },
+      "headingCenter": {
+        "tag": "DIV",
+        "id": "",
+        "role": "tablist",
+        "control": false,
+        "withinHeading": true
+      },
+      "grip": {
+        "tag": "svg",
+        "id": "",
+        "role": null,
+        "control": false,
+        "withinHeading": true
+      }
+    },
+    {
+      "viewport": {
+        "width": 1024,
+        "height": 640
+      },
+      "headingCenter": {
+        "tag": "DIV",
+        "id": "",
+        "role": "tablist",
+        "control": false,
+        "withinHeading": true
+      },
+      "grip": {
+        "tag": "svg",
+        "id": "",
+        "role": null,
+        "control": false,
+        "withinHeading": true
+      }
+    },
+    {
+      "viewport": {
+        "width": 900,
+        "height": 560
+      },
+      "headingCenter": {
+        "tag": "BUTTON",
+        "id": "data-tab-3",
+        "role": "tab",
+        "control": true,
+        "withinHeading": true
+      },
+      "grip": {
+        "tag": "svg",
+        "id": "",
+        "role": null,
+        "control": false,
+        "withinHeading": true
+      }
+    }
+  ],
+  "debug": [
+    {
+      "key": "F11",
+      "location": "일시정지 · main.c:5 · 0.000 ms",
+      "locals": "value3",
+      "globals": "marker5counter0",
+      "stack": "helper() · main.c:5main() · main.c:9"
+    },
+    {
+      "key": "F10",
+      "location": "일시정지 · main.c:6 · 0.000 ms",
+      "locals": "value3doubled6",
+      "globals": "marker5counter0",
+      "stack": "helper() · main.c:6main() · main.c:9"
+    },
+    {
+      "key": "Shift+F11",
+      "location": "일시정지 · main.c:10 · 0.000 ms",
+      "locals": "없음",
+      "globals": "marker5counter6",
+      "stack": "main() · main.c:10"
+    },
+    {
+      "key": "F6",
+      "location": "일시정지 · main.c:11 · 100.200 ms",
+      "locals": "없음",
+      "globals": "marker5counter7",
+      "stack": "main() · main.c:11"
+    }
+  ],
+  "errors": []
+}
