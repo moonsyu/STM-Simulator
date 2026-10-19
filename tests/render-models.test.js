@@ -1,12 +1,13 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {PART_LIBRARY} from '../src/part-library.js';
-import {PART_DEFS,terminalKeys,nominalTerminals} from '../src/components.js';
+import {PART_DEFS,terminalKeys,nominalTerminals,localTerminals} from '../src/components.js';
 import {CATALOG_BY_TYPE,CATALOG_DEFS} from '../src/catalog-defs.js';
 import {PINS,HOLES,endpointInfo} from '../src/pins.js';
 import {boardSvg,breadboardSvg,renderParts} from '../src/render.js';
 import {catalogShape} from '../src/catalog-render.js';
 import {updateCatalogView} from '../src/catalog-view.js';
+import {displayModel,catalogHasBoard,catalogBodyBounds,catalogPadPosition} from '../src/model-geometry.js';
 const part=type=>({id:'device',type,name:type,x:850,y:360,rotation:0,span:70,value:330,color:'red',...PART_DEFS[type]?.defaults});
 const attr=(tag,name)=>tag.match(new RegExp(`(?:^|\\s)${name}="([^"]*)"`))?.[1];
 
@@ -14,7 +15,7 @@ test('all 114 library models render without altering any physical contact defini
  assert.equal(PART_LIBRARY.length,114);
  const definitions=structuredClone(PART_DEFS);
  for(const {type}of PART_LIBRARY){
-  if(type==='board'){assert.match(boardSvg(),/F446RE/);continue;}
+  if(type==='board'){assert.match(boardSvg(),/ARM Cortex-M4/);assert.doesNotMatch(boardSvg(),/F446RE|STM32|NUCLEO|MB1136/i);assert.match(PART_LIBRARY.find(p=>p.type==='board').name,/NUCLEO-F446RE/);continue;}
   const p=part(type),project={components:[p],wires:[]},before=structuredClone(project);
   const svg=type==='breadboard'?breadboardSvg(p):renderParts(project,null,null,{});
   assert.doesNotMatch(svg,/NaN|Infinity|undefined/,type);assert.deepEqual(project,before,type);
@@ -47,6 +48,7 @@ test('breadboard wells and Nucleo header metal retain the exact shared hole and 
  for(const h of HOLES){const tag=[...breadboard.matchAll(/<rect[^>]*data-hole="([^"]+)"[^>]*>/g)].find(m=>m[1]===h.id)?.[0];assert.ok(tag,h.id);assert.ok(Math.abs(Number(attr(tag,'x'))+2.4-h.x)<1e-9);assert.ok(Math.abs(Number(attr(tag,'y'))+2.4-h.y)<1e-9);}
  for(const pin of PINS)assert.ok(board.includes(`x="${pin.x-3.4}" y="${pin.y-3.4}" width="6.8" height="6.8"`),pin.id);
  assert.match(board,/data-button="USER"/);assert.match(board,/data-button="RESET"/);assert.match(board,/id="builtin-led"/);
+ assert.match(board,/USER · PC13/);assert.match(board,/LD2 · PA5/);assert.doesNotMatch(board,/F446RE|STM32|NUCLEO|MB1136/i);
 });
 test('legacy remapped bodies have continuous metal leads into the visible package',()=>{
  // Visible package bounds after the legacy model scale, before user transforms.
@@ -79,4 +81,22 @@ test('live slide position, LCD pixels and LED glow update the new model hooks',(
  updateCatalogView(g,{...part('ref_slide_dp3t_8'),position:2},null);assert.equal(thumb.attrs.transform,'translate(18 0)');
  updateCatalogView(g,part('ref_led_tht_2'),{on:true});assert.equal(light.attrs.fill,'#f05a4b');assert.equal(glow.attrs.fill,'#f05a4b');assert.equal(glow.attrs.opacity,'.32');
  updateCatalogView(g,part('ref_lcd_parallel_16'),{lcd:{visible:true}},false,()=>'<text fill="#293e1b">A</text>');assert.equal(display.innerHTML,'<text fill="#293e1b">A</text>');
+});
+test('visible bodies leave real contacts clear and contacts paint above every package',()=>{
+ for(const {type}of PART_LIBRARY.filter(p=>!['board','breadboard'].includes(p.type))){
+  const p=part(type),model=displayModel(p),terms=localTerminals(p),svg=renderParts({components:[p],wires:[]},null,null,{});
+  assert.ok(svg.indexOf('class="part-contact"')>svg.indexOf('class="part-body"'),type);
+  if(!type.startsWith('ref_'))for(const t of terms){const b=model.bounds,clear=t.x<b.left-2.7||t.x>b.right+2.7||t.y<b.top-2.7||t.y>b.bottom+2.7;assert.ok(clear,`${type}: contact ${t.key} is covered by the painted body`);}
+  if(terms.length===2)for(const span of [14,42,70,140]){const next={...p,span},b=displayModel(next).bounds,ends=localTerminals(next);assert.ok(b.left>=ends[0].x+4-1e-9,type);assert.ok(b.right<=ends[1].x-4+1e-9,type);}
+ }
+});
+test('every bare multi-pin package bridges from inside its body to each unchanged connector pad',()=>{
+ for(const [type,ref]of Object.entries(CATALOG_BY_TYPE).filter(([type,ref])=>!catalogHasBoard(type)&&ref.family!=='uart'&&ref.pins.length>2)){
+  const p=part(type),svg=catalogShape(p),bounds=catalogBodyBounds(type),paths=[...svg.matchAll(/<path class="package-lead" data-pin="(\d+)" d="M([^ ]+) ([^L]+)L([^ ]+) ([^"]+)"/g)];
+  assert.equal(paths.length,ref.pins.length,type);
+  for(const [,pin,x,y,px,py]of paths){const pad=catalogPadPosition(type,Number(pin)-1),cx=(bounds.left+bounds.right)/2,cy=(bounds.top+bounds.bottom)/2,rx=(bounds.right-bounds.left)/2,ry=(bounds.bottom-bounds.top)/2;
+   assert.ok(Math.hypot((Number(x)-cx)/rx,(Number(y)-cy)/ry)<1,`${type}: root must enter the package`);assert.equal(Number(px),pad.x);assert.equal(Number(py),pad.y);
+  }
+ }
+ for(const type of ['ref_l298n_bare_15','ref_l298p_bare_20'])assert.doesNotMatch(catalogShape(part(type)),/class="l298-power"/,type);
 });

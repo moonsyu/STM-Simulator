@@ -1,4 +1,5 @@
 import {CATALOG_BY_TYPE,CATALOG_DEFS} from './catalog-defs.js';
+import {catalogHasBoard,catalogBodyBounds,catalogPadPosition,packageLeadRoot} from './model-geometry.js';
 const esc=s=>String(s).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('"','&quot;');
 const rect=(x,y,w,h,fill,rx=2,extra='')=>`<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${rx}" fill="${fill}" ${extra}/>`;
 const circle=(x,y,r,fill,extra='')=>`<circle cx="${x}" cy="${y}" r="${r}" fill="${fill}" ${extra}/>`;
@@ -9,7 +10,7 @@ function pcb(w,h,color='#235f51'){return rect(-w/2,-h/2,w,h,color,3,'stroke="#14
 function resistorBands(value){const colors=['#202420','#70472c','#b63d2f','#db7e2c','#e4c84a','#347149','#3675aa','#795791','#858c85','#f1f0dc'];const resistance=Number(value);if(!(resistance>0)||!Number.isFinite(resistance))return [colors[0],colors[0],colors[0],'#b99d4c'];const [significand,power]=resistance.toExponential(1).split('e'),digits=Math.round(Number(significand)*10),exponent=Number(power)-1;return [colors[Math.floor(digits/10)],colors[digits%10],exponent===-1?'#b99d4c':exponent<0?'#bac1b8':colors[Math.min(9,exponent)],'#b99d4c'];}
 export function catalogShape(p,read,physicalPins=true){
  const v=CATALOG_BY_TYPE[p.type];if(!v)return '';const {width:w,height:h}=CATALOG_DEFS[p.type].body,f=v.family,id=v.id;
- let s='',board=!/^(?:resistor|led|capacitor|diode|dc_motor|dc_supply|uart|servo)$/.test(f)&&!id.includes('bare-')&&!id.includes('to92')&&!id.includes('probe')&&!id.includes('eeprom')&&!['button-2','button-4','rgb-common-anode-4','rgb-neopixel-4','buzzer-active-2','buzzer-passive-2','slide-spdt-3','slide-dpdt-6','slide-dp3t-8','sevenseg-common-cathode-10','sevenseg-common-anode-10','sevenseg-4digit-12','stepper-bipolar-4','stepper-unipolar-5'].includes(id);
+ let s='',board=catalogHasBoard(p.type);
  if(board)s=pcb(w,h,id==='l298n-module-13'?'#9d4239':/grove|tft|oled|dht|storage|can-|hcsr/.test(id)?'#256b8a':/KY-|module|breakout|flora|gravity/.test(v.name+id)?'#2e4940':'#327149');
  if(f==='resistor')s='<path d="M-25 -5Q-25 -10 -20 -10H-13L-9 -8H9L13 -10H20Q25 -10 25 -5V5Q25 10 20 10H13L9 8H-9L-13 10H-20Q-25 10 -25 5Z" fill="#d4b985" stroke="#90764d" stroke-width=".8"/>'+[-17,-8,2,16].map((x,i)=>rect(x,i===1||i===2?-8:-9,3.5,i===1||i===2?16:18,resistorBands(p.value??330)[i],.4)).join('')+'<path d="M-20 -6H-13M-4 -5H-2M9 -5H12M21 -5V4" stroke="#fff4cf" stroke-width="1.2" opacity=".6"/>';
  else if(f==='led'||f==='rgb')s+=circle(0,-5,23,read?.on?'#f16f52':'#85968b',`class="${f==='led'?'led-glow':'rgb-glow'}" opacity="${read?.on?.32:0}" filter="url(#led-glow)"`)+`<path d="M14 -17A18 18 0 1 0 14 7Z" fill="#d9d9c5" stroke="#8e9b8b" stroke-width="1.2"/>`+circle(0,-5,15,read?.on?'#ff835b':'#9da9aa',`class="catalog-light ${f==='led'?'led-lens':'rgb-lens'}" opacity=".85"`)+`<path d="M-5 9V-8H3V9M3 -3L7 -9V9" fill="none" stroke="#d6d9c4" stroke-width="2" opacity=".75"/><path d="M-11 -11Q-6 -18 2 -17" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" opacity=".7"/>`+(id.includes('flora')?chip(0,20,12,8):'');
@@ -49,14 +50,15 @@ export function catalogShape(p,read,physicalPins=true){
  if(['buzzer','passive_buzzer'].includes(f))s+='<path class="buzzer-wave" d="M29 -10Q40 0 29 10M36 -16Q51 0 36 16" stroke="#23a78a" fill="none" stroke-width="2" opacity="0"/>';
  if(f==='passive_buzzer')s+='<text class="buzzer-frequency" x="0" y="-35" text-anchor="middle" fill="#495c61" font-size="9">PWM</text>';
  if(f==='relay')s+='<path class="relay-contact" d="M15 0L29 10" stroke="#f3dc8b" stroke-width="3" fill="none"/>';
- if(f==='l298n')s+=circle(-w/2+10,-h/2+10,3,'#68443e','class="l298-power"');
+ if(f==='l298n'&&board)s+=circle(-w/2+10,-h/2+10,3,'#68443e','class="l298-power"');
  if(f==='dc_motor')s+='<text class="dc-rpm" y="-34" text-anchor="middle" fill="#567477" font-size="10">0 rpm</text>';
  if(board)s+=label(0,h/2-7,id.split('-')[0].toUpperCase(),7,'#d5e2cc');
  if(board&&['uart','i2c','spi','motor','l298n','relay'].includes(f))s+=circle(-w/2+11,-h/2+11,2.3,'#586d4d','class="device-power bus-power" stroke="#c3c9a3" stroke-width=".6"');
- if(physicalPins&&v.pins.length>2)s+=CATALOG_DEFS[p.type].terminals.map(([x,y],i,terminals)=>{
-  const side=Math.abs(x)>w/2,inside=Math.abs(y)<=h/2&&!side,rows=terminals.filter(([xx,yy])=>xx===x&&Math.sign(yy)===Math.sign(y)).map(([,yy])=>Math.abs(yy)),rowOffset=Math.abs(y)-Math.min(...rows),px=side?Math.sign(x)*(w/2-5):x,py=side?y:inside?y:Math.sign(y)*(h/2-5+rowOffset),tx=side?x+Math.sign(x)*7:x,ty=side?y+2:y+(y<0?-6:10);
+ if(physicalPins&&v.pins.length>2)s+=CATALOG_DEFS[p.type].terminals.map(([x,y],i)=>{
+  const side=Math.abs(x)>w/2,{x:px,y:py}=catalogPadPosition(p.type,i),tx=side?x+Math.sign(x)*7:x,ty=side?y+2:y+(y<0?-6:10);
   const name=v.pins[i].replace(/^PI(\d+):.*/, '$1'),short=name.length>4?name.slice(0,4):name;
   return `<g data-pad="${i+1}">${i===0?rect(px-3.5,py-3.5,7,7,'#d2b66c',.7,'stroke="#f2dfa4" stroke-width=".5"'):circle(px,py,3.5,'#c6ae68','stroke="#ead79e" stroke-width=".5"')}${rect(px-1.5,py-1.5,3,3,'#263d2d',.3)}<text class="terminal-label" x="${tx}" y="${ty}" text-anchor="${side?(x>0?'start':'end'):'middle'}" font-size="5" fill="#405844" pointer-events="none"><title>${esc(v.pins[i])}</title>${esc(short)}</text></g>`;
  }).join('');
- return `<g data-reference="${v.id}" data-model-family="${f}">${rect(-w/2-4,-h/2-6,w+8,h+12,'transparent',3,'pointer-events="all"')}${physicalPins&&v.pins.length===2?'<path d="M-35 0H35" stroke="#778573" stroke-width="3"/><path d="M-35 0H35" stroke="#d4dccb" stroke-width="1.4"/>':''}${s}</g>`;
+ const bridges=physicalPins&&!board&&f!=='uart'&&v.pins.length>2?CATALOG_DEFS[p.type].terminals.map((_,i)=>{const pad=catalogPadPosition(p.type,i),root=packageLeadRoot(catalogBodyBounds(p.type),pad),d=`M${root.x} ${root.y}L${pad.x} ${pad.y}`;return `<path class="package-lead" data-pin="${i+1}" d="${d}" fill="none" stroke="#737d78" stroke-width="3.2"/><path d="${d}" fill="none" stroke="#d6dcd5" stroke-width="1.5"/>`;}).join(''):'';
+ return `<g data-reference="${v.id}" data-model-family="${f}">${rect(-w/2-4,-h/2-6,w+8,h+12,'transparent',3,'pointer-events="all"')}${bridges}${s}</g>`;
 }
