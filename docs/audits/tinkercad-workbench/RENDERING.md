@@ -37,4 +37,40 @@
 - OV2640 등 2열 헤더가 하나의 패드 행으로 투영되던 문제: 같은 열의 행 간격을 유지. 전체 카탈로그의 패드 좌표가 중복되지 않는 회귀 검사를 추가.
 - 기존 L298N·I²C/SPI·LCD·LDR/NTC 등의 축소된 몸체와 다리 시작점 사이의 시각적 단절: 전기 끝점은 유지하고 몸체 쪽 시작점을 실제 표시 경계에 연결. LDR/NTC bare 소자 중심과 리드 모양을 정리하고, 해당 패키지 안으로 다리가 이어지는 회귀 검사를 추가.
 
-이 1차 PNG는 위 추가 수정 전 화면이며, 최종 화면 재검사는 통합 검수 담당에게 인계했습니다. 배포 파일/실제 회로 실행 확인은 통합 결과에 별도 기록합니다.
+이 1차 PNG는 위 추가 수정 전 화면입니다. 아래 최종 증거가 이를 대체합니다. 배포 파일/실제 회로 실행 확인은 통합 결과에 별도 기록합니다.
+
+## 최종 화면 재검사와 접점 보완
+
+2026-10-19, 사용자 브라우저/프로필 및 Electron에 접근하지 않는 별도 **headless Chrome 155**에서 현재 소스를 임시 localhost 서버로 열고 다시 검사했습니다. 재현 스크립트는 `work/tinkercad-render-final-probe.cjs`입니다.
+
+최종 검수 중 초기 프리뷰와 실제 정지 화면의 LED 등 표시색이 달라지는 경로를 확인했습니다. `part-preview.js`도 실제 화면과 같은 `updateSimulationSvg(..., null, {})` 후처리를 호출합니다. 보드가 없는 단일 부품 SVG에서도 동작하도록 `render.js`의 내장 LED 접근에 null 검사를 추가했습니다.
+
+추가로 발견한 몸체·접점 문제와 수정:
+
+- 기존 motor, relay, stepper, DC motor, DC supply 등에서 새 몸체가 원래 핀을 가렸습니다. `model-geometry.js`의 공유 표시 배율 계산으로 기존 전기 끝점을 움직이지 않고 몸체만 핀 사이에 맞춥니다. TFT 등은 표시 몸체 경계에서 금속 리드를 시작합니다.
+- TO-92, 방수 온도 프로브, bare RGB, SPDT, 트리머, L298N/P 등은 정의된 배치용 사각형보다 실제 패키지가 작아 리드가 떨어져 보였습니다. 실제 패키지 안에서 커넥터 패드까지 금속 리드를 그려 연결합니다. 원형 렌즈에서도 리드 시작점이 몸체 안에 놓이도록 내부 타원으로 제한합니다.
+- 접점 원은 몸체 다음에 그립니다. HAT의 PCB 내부 헤더 접점도 배경에 가려지지 않습니다. UART는 기존 유색 케이블 끝에 이어 그리며 2핀의 중복 리드와 bare L298의 몸체 밖 전원 표시점을 제거했습니다.
+- 저장된 핀 ID·좌표, 전기 정의, HAL 및 자동 배선 계산은 변경하지 않았습니다.
+
+수정 전 실패 화면은 `work/tinkercad-render-before-contact-fix/`에 별도로 보존했습니다. 이 폴더의 `models-05.png`~`models-09.png`에서 분리된 bare 리드와 가려진 기존 접점을 비교할 수 있습니다.
+
+최종 증거는 **`work/tinkercad-render-final/`**에 있습니다.
+
+- `models-01.png`~`models-10.png`: 114항목 전체 연락판. 10장 모두 직접 열어 핀 라벨, 두 줄 패드, 몸체와 리드의 연속성, 가려진 접점 유무를 재확인했습니다.
+- `regression-details.png`: 기존 LCD/7세그먼트/L298N/I²C/SPI/온도센서/가변저항/스위치/LDR/NTC와 OV2640 2열 패드의 확대 비교.
+- `circuit-light.png`, `circuit-dark.png`: 실제 파일 입력으로 연 버튼+LED 회로의 White/Dark 화면. 두 장 모두 직접 확인했습니다. `workbench-light.png`, `workbench-dark.png`도 함께 저장했습니다.
+- `svg/`: 114항목의 실제 프리뷰 SVG 원본.
+- `render-final.json`: 모델 114개 디코딩 성공, 프리뷰와 실제 idle 렌더 DOM 일치 114개, pageerror 및 console error 0, 검사 도중 렌더 소스 해시 불변. 비교에서는 프리뷰 전용 히트 영역/부품명 제거와 XML 속성 namespace 직렬화 차이만 정규화하며, 요소 namespace·핀·도형·색·문자는 비교합니다.
+- `unit-tests.txt`: 최종 `render-models`, `wire-path`, `catalog` **26/26 성공**. 기본/변환/실장 접점 유지, 몸체가 핀을 가리지 않음, 패키지 내부에서 패드까지의 리드 연결, 원래 HAL/Docs 회귀를 포함합니다.
+
+이 검수는 기본 모델과 대표 회로의 표시, 원래 전기 좌표와 변환/실장 보존을 확인합니다. 114항목 각각의 모든 실행 상태에 대한 시각 검증을 뜻하지는 않으며, 실제 실행·키보드·배포 검증은 통합 검수에 별도로 남깁니다.
+
+## 보드 텍스트 계약과 공개 갤러리 최종 반영
+
+기존 배치 공간 텍스트 제거 계약에 맞춰 보드 모형에 새로 넣었던 STM32/F446RE/NUCLEO/MB1136 실크 문자를 제거했습니다. ARM Cortex-M4, USER·PC13, LD2·PA5 등 기능 표기와 108개 접점, 검색 카드의 NUCLEO-F446RE 제품명은 유지합니다. 이 변경 후 `render-models`와 `wire-path` **13/13 성공** 결과를 `work/tinkercad-render-final/board-contract-tests.txt`에 저장했습니다.
+
+`scripts/build-model-gallery.mjs`는 부품 몸체와 리드를 별도로 조합하던 코드를 제거하고 앱의 `renderParts`를 직접 사용합니다. 따라서 공유 `model-geometry`의 몸체 배율·리드 시작점·패드 배치가 `docs/device-model-gallery.html`에도 반영됩니다. 기존 80개 검색 카드의 이름·인터페이스·핀 설명·출처는 유지했습니다. 갤러리는 정적 기본 렌더 모형이며, 앱 프리뷰는 여기에 실행 상태 표시 후처리를 적용합니다.
+
+최종 headless 검사에서 갤러리 부품 78개의 SVG DOM이 실제 `renderParts` 결과와 모두 일치하고, 핀 개수와 80개 카드의 이름·출처 URL을 확인했습니다. 오류 0이며 결과는 `render-final.json`의 `gallery` 항목에 있습니다. 최신 보드 수정 후 114개 연락판과 White/Dark 회로도 다시 생성했습니다. 갤러리 상단 및 DC 모터·TMP36 검색 결과(`gallery-top.png`, `gallery-motor.png`, `gallery-temperature.png`), `models-01.png`의 보드, White/Dark 회로를 직접 열어 최종 화면을 확인했습니다.
+
+생성 HTML의 검색 정규식은 실제 `/\s+/`이며 템플릿 소스의 이중 이스케이프가 정상임을 확인했습니다. 검색 안내와 달리 인터페이스 문자열이 검색 대상에서 빠져 있던 기존 문제를 수정했습니다. 별도 headless Chrome에서 다중 단어·역순·탭/연속 공백·대소문자·일치 없음·초기화 검색 8건을 검사했습니다. `ADC 3핀`은 수정 전 0건에서 해당 부품 5건으로 바뀌었으며 오류 0입니다. 결과는 `work/tinkercad-render-final/gallery-search.json`, 직접 확인한 화면은 `gallery-search-adc.png`입니다.
