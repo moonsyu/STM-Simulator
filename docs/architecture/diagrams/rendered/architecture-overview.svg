@@ -17,7 +17,7 @@
 <rect x="355" y="178" width="180" height="116" rx="8" class="node"/>
 <text x="373" y="209" class="node-title" text-anchor="start">Preload</text>
 <text x="373" y="237" class="body" text-anchor="start">제한된 IPC</text>
-<text x="373" y="262" class="body" text-anchor="start">Node 직접 노출 없음</text>
+<text x="373" y="262" class="body" text-anchor="start">Node API 비공개</text>
 <rect x="590" y="178" width="294" height="116" rx="8" class="node"/>
 <text x="608" y="209" class="node-title" text-anchor="start">Main</text>
 <text x="608" y="237" class="body" text-anchor="start">파일 · 네이티브 도구</text>
@@ -48,7 +48,7 @@
 <text x="44" y="440" class="caption" text-anchor="start">실행 범위: 지원 C/HAL 해석과 회로 모델 + 선택 네이티브 도구. 모든 ARM 펌웨어 실행을 뜻하지 않습니다.</text>
 <rect x="20" y="477" width="1400" height="354" rx="8" class="panel"/>
 <text x="44" y="515" class="number" text-anchor="start">02</text>
-<text x="92" y="515" class="panel-title" text-anchor="start">UI 모듈과 의존 방향</text>
+<text x="92" y="515" class="panel-title" text-anchor="start">UI 모듈과 초기화 / 호출 관계</text>
 <rect x="48" y="545" width="390" height="94" rx="8" class="node"/>
 <text x="66" y="576" class="node-title" text-anchor="start">workbench-ui · workspace-layout</text>
 <text x="66" y="604" class="body" text-anchor="start">실제 컨트롤 재배치 / 메뉴 / 도킹</text>
@@ -66,15 +66,15 @@
 <rect x="940" y="670" width="450" height="94" rx="8" class="node"/>
 <text x="958" y="701" class="node-title" text-anchor="start">ide-preferences · ui-feedback</text>
 <text x="958" y="729" class="body" text-anchor="start">UI / 코드 테마 분리 · 지속 오류 표시</text>
-<path d="M438 592H483V617H523" class="arrow " marker-end="url(#arrow)"/>
-<path d="M438 717H483V689H523" class="arrow " marker-end="url(#arrow)"/>
+<path d="M530 617H483V592H445" class="arrow " marker-end="url(#arrow)"/>
+<path d="M530 689H483V717H445" class="arrow " marker-end="url(#arrow)"/>
 <path d="M848 617H894V592H933" class="arrow " marker-end="url(#arrow)"/>
 <path d="M848 689H894V717H933" class="arrow " marker-end="url(#arrow)"/>
 <text x="48" y="807" class="caption" text-anchor="start">기존 DOM ID와 이벤트를 유지합니다. 프로젝트·설정 파일 형식과 사용자가 조절한 도킹 비율은 유지합니다.</text>
 <rect x="20" y="853" width="1400" height="470" rx="8" class="panel"/>
 <text x="44" y="891" class="number" text-anchor="start">03</text>
 <text x="92" y="891" class="panel-title" text-anchor="start">회로 편집 → 검증 → 저장 → 오류 복구</text>
-<text x="44" y="923" class="caption" text-anchor="start">이동·크기·배선 편집에서 같은 프로젝트 모델과 검증 경로 사용</text>
+<text x="44" y="923" class="caption" text-anchor="start">draft 검증을 거치는 회로 편집 경로 (예: 키보드 이동 · 크기 변경)</text>
 <rect x="48" y="954" width="174" height="107" rx="8" class="node"/>
 <text x="66" y="985" class="node-title" text-anchor="start">편집 입력</text>
 <text x="66" y="1013" class="body" text-anchor="start">마우스 / 키보드</text>
@@ -112,5 +112,5 @@
 <path d="M972 1061V1123" class="arrow error" marker-end="url(#error-arrow)"/>
 <path d="M1265 1061V1123" class="arrow error" marker-end="url(#error-arrow)"/>
 <text x="44" y="1287" class="caption" text-anchor="start">성공한 재시도는 해당 오류를 해제합니다. 자동 저장 성공으로 이전 파일 저장 실패를 덮지 않습니다.</text>
-<text x="28" y="1353" class="small" text-anchor="start">편집 가능한 원본: architecture-overview.cjs · 외부 이미지 / 런타임 의존성 없음</text>
+<text x="28" y="1353" class="small" text-anchor="start">편집 가능한 원본: diagrams/src/architecture-overview.cjs · 외부 이미지 / 런타임 의존성 없음</text>
 </svg>

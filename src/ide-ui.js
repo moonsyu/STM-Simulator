@@ -32,11 +32,13 @@ export function setupIde(o){
   function showMonitor(name){o.layout.reveal('terminal');document.querySelector(`[data-monitor="${name}"]`).click();}
   function toggleBreakpoint(file,line){if(!Number.isInteger(line)||line<1)return;o.checkpoint();const p=settings(),i=p.breakpoints.findIndex(b=>b.file===file&&b.line===line);if(i<0)p.breakpoints.push({file,line});else p.breakpoints.splice(i,1);const r=o.getSession()?.runtime;if(r)r.debug.breakpoints=new Set(points().map(b=>`${b.file}:${b.line}`));o.saveLocal();native?.syncBreakpoints();debugView();}
   function sync(){
+    const focused=document.activeElement?.closest('[data-source]'),focusSource=focused?.dataset.source,focusContainer=focused?.parentElement.id;
     const files=sourceFiles(o.getProject()),active=o.getSource(),key=JSON.stringify([o.getProject().firmware?.mode,files]);if(sourceKey&&sourceKey!==key){built=null;$('build-status').textContent='변경됨 · 빌드 필요';editor.diagnostics([]);}sourceKey=key;
     $('file-tree').innerHTML=files.map(f=>`<button data-source="${esc(f.name)}" class="${f.name===active?'active':''}" title="${esc(f.name)}"><span class="file-kind">${f.name.endsWith('.h')?'H':'C'}</span><span class="file-label">${esc(f.name)}</span></button>`).join('');
     $('source-tabs').innerHTML=files.map(f=>`<button data-source="${esc(f.name)}" class="${f.name===active?'active':''}">${esc(f.name)}</button>`).join('');
     for(const el of document.querySelectorAll('[data-source]'))el.onclick=()=>select(el.dataset.source);
     const wp=folder||'미저장 프로젝트';$('workspace-path').textContent=wp;$('workspace-path').title=wp;editor.reset();if(!native?.selected())editor.updateDebug(points(),o.getSession()?.runtime?.debug.paused?o.getSession().runtime.location:null);native?.sync();controls();
+    if(focusSource&&focusContainer)[...$(focusContainer).querySelectorAll('[data-source]')].find(el=>el.dataset.source===focusSource)?.focus({preventScroll:true});
   }
   function controls(){const running=o.isRunning(),r=o.getSession()?.runtime,paused=!!r?.debug.paused;
     native?.controls();if(native?.selected())return;
@@ -81,7 +83,7 @@ export function setupIde(o){
   $('project-folder-choose').disabled=!window.desktop?.chooseProjectParent;
   $('project-folder-choose').onclick=async()=>{try{const path=await window.desktop.chooseProjectParent();if(path)$('new-project-folder').value=path;}catch(e){$('project-form-error').textContent=e.message;}};
   $('project-form').onsubmit=async e=>{e.preventDefault();$('project-create').disabled=true;try{const name=$('new-project-name').value.trim();if(!name)throw new Error('프로젝트 이름을 입력하세요.');let p=['blank','native-host'].includes($('new-project-template').value)?blankProject():halExample($('new-project-template').value);p.name=name;p.firmware.files.push({name:'main.h',text:'#pragma once\n#include "stm32f4xx_hal.h"\nvoid Error_Handler(void);\n'});if($('new-project-template').value==='native-host'){p.code='#include <stdio.h>\nint main(void) {\n  int value=21;\n  printf("Hello from STM Simulator: %d\\n",value*2);\n  return 0;\n}\n';p.firmware.files=[{name:'main.h',text:'#pragma once\n'}];p.ide={breakpoints:[],watches:[],native:{target:'host',configuration:'Debug'}};}p=validateProject(p);const directory=$('new-project-folder').value?await window.desktop.createWorkspace({name,text:JSON.stringify(p)}):'';o.replaceProject(p,{preserveWorkspace:!!directory});folder=directory;sync();$('project-dialog').close();select('main.c');}catch(e){$('project-form-error').textContent=e.message;}finally{$('project-create').disabled=false;}};
-  $('workspace-open').disabled=!window.desktop?.openWorkspace;$('workspace-open').onclick=()=>o.requestReplace(async()=>{try{const opened=await window.desktop.openWorkspace();if(!opened)return;o.replaceProject(validateProject(JSON.parse(opened.text)),{preserveWorkspace:true});folder=opened.directory;sync();}catch(e){o.log(e.message,'error');}});
+  $('workspace-open').disabled=!window.desktop?.openWorkspace;$('workspace-open').onclick=()=>o.requestReplace(async()=>{try{const opened=await window.desktop.openWorkspace();if(!opened)return;o.replaceProject(validateProject(JSON.parse(opened.text)),{preserveWorkspace:true});folder=opened.directory;sync();o.feedback.clear('open');}catch(e){o.log(e.message,'error');o.feedback.show('프로젝트를 열지 못했습니다. 현재 작업은 유지됩니다. 파일과 폴더를 확인해 다시 열어 주세요.','open');}});
   document.addEventListener('ide-open-source',e=>select(e.detail.file,e.detail.line));
   window.addEventListener('keydown',e=>{
     if(document.querySelector('dialog[open]')||e.repeat||e.isComposing)return;
