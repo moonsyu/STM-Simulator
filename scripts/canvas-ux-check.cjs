@@ -82,6 +82,14 @@ async function main(){
   };
   const run=async()=>{await page.click('#run');await page.waitForFunction(()=>document.getElementById('run-status').textContent==='실행 중');};
   const stop=async()=>{if((await page.locator('#run-status').textContent())==='실행 중')await page.click('#run');};
+  // The portable smoke window is hidden. Its paint/rAF schedule must not sample
+  // a periodic GPIO signal at the same phase every time; observe the DOM change.
+  const signalTransition=selector=>page.locator(selector).evaluate(el=>new Promise((resolve,reject)=>{
+   const before=el.textContent,startedAt=document.getElementById('sim-time').textContent;
+   const observer=new MutationObserver(()=>{const after=el.textContent;if(after!==before){clearTimeout(timeout);observer.disconnect();resolve({before,after,startedAt,changedAt:document.getElementById('sim-time').textContent});}});
+   const timeout=setTimeout(()=>{observer.disconnect();reject(new Error('Signal did not change: '+before+' at '+startedAt+' to '+document.getElementById('sim-time').textContent));},5000);
+   observer.observe(el,{subtree:true,childList:true,characterData:true});
+  }));
   const base=blankFixture();base.name='Canvas UX regression';base.code='void setup() {}\nvoid loop() { delay(20); }';
   base.surfaces={board:{hidden:true},breadboard:{hidden:true}};
   base.components=[
@@ -201,19 +209,17 @@ async function main(){
 
   await load(circuitFixture());await run();await selectWire('w1');
   await page.locator('#wire-voltage').evaluate(el=>{window.__canvasUxWireVoltage=el;});
-  const wireStart=await page.locator('#wire-signal').textContent();
-  await page.waitForFunction(label=>document.getElementById('wire-signal').textContent!==label,wireStart);
+  const wireTransition=await signalTransition('#wire-signal'),wireStart=wireTransition.before;
   assert.equal(await page.locator('#wire-voltage').evaluate(el=>el===window.__canvasUxWireVoltage),true);
-  const wireChanged=await page.locator('#wire-signal').textContent();assert.ok(['HIGH','LOW'].includes(wireChanged));
+  const wireChanged=wireTransition.after;assert.ok(['HIGH','LOW'].includes(wireChanged));
   await selectEndpoint(boardPin('D13'));
   await page.locator('#endpoint-voltage').evaluate(el=>{window.__canvasUxEndpointVoltage=el;});
-  const endpointStart=await page.locator('#endpoint-signal').textContent();
-  await page.waitForFunction(label=>document.getElementById('endpoint-signal').textContent!==label,endpointStart);
+  const endpointTransition=await signalTransition('#endpoint-signal'),endpointStart=endpointTransition.before;
   assert.equal(await page.locator('#endpoint-voltage').evaluate(el=>el===window.__canvasUxEndpointVoltage),true);
-  const endpointChanged=await page.locator('#endpoint-signal').textContent();assert.ok(['HIGH','LOW'].includes(endpointChanged));
+  const endpointChanged=endpointTransition.after;assert.ok(['HIGH','LOW'].includes(endpointChanged));
   await clickXY(795,226);await page.waitForSelector('#part-power');
   assert.match(await page.locator('#part-power').textContent(),/mW/);
-  record('Running GPIO changes patch wire/endpoint voltages and badges in existing nodes; resistor power is present',{wireStart,wireChanged,endpointStart,endpointChanged});
+  record('Running GPIO changes patch wire/endpoint voltages and badges in existing nodes; resistor power is present',{wireStart,wireChanged,endpointStart,endpointChanged,wireTransition,endpointTransition});
   await stop();
 
   const pot=blankFixture();pot.name='Inspector live stability';pot.code='void setup() {}\nvoid loop() { delay(20); }';

@@ -8,7 +8,7 @@
 | UX-02 | 이벤트·측정 패치·캐시 | root | UI 명세 | 35분 | done | Esc/undo/실행 중 차단·focus/scroll 보존 |
 | UX-03 | 테마 상태·숫자 표시 | canvas_styles | 시안 | 20분 | done | Dark/White 4.5:1·포커스·고정폭 숫자 |
 | UX-04 | 실제 입력/DOM 회귀 검사 | ui_regression | 명세 | 30분 | done | 새 기능 전체 실제 Electron 입력/로그/화면 |
-| UX-05 | 전체 검증·0.24.0 게시 | root | UX-01~04 | 30분 | in_progress | 전체 검사·CI·공개 EXE/ZIP/update 검증 |
+| UX-05 | 전체 검증·0.24.0 게시 | root | UX-01~04 | 30분 | done | 전체 CI 39186362509·공개 5자산·EXE/ZIP 실행 복원·13개 UI·19상태 대비·0.23.9→0.24.0 자동 업데이트 통과 |
 
 병렬 구현은 파일 소유 범위를 분리합니다. 현재 사용자 앱/프로필은 조작하지 않습니다.
 

@@ -18,10 +18,16 @@
 
 ## 로컬 검증
 
-374개 단위 검사 통과. 기존 52상태 대비와 신규 19상태(9,380텍스트) 모두 저대비 0건. 새 동작 13개 통합 범주 통과, renderer 오류 0건. 모든 필수 핵심 스모크 및 추가 무제한 캔버스/회로 도구/저장 복구 검사 통과. Monaco 빌드, npm audit 0건, 디자인 정적 검사 0건 확인.
+374개 단위 검사 통과. 기존 52상태 대비와 신규 19상태(9,382텍스트) 모두 저대비 0건. 새 동작 13개 통합 범주 통과, renderer 오류 0건. 모든 필수 핵심 스모크 및 추가 무제한 캔버스/회로 도구/저장 복구 검사 통과. Monaco 빌드, npm audit 0건, 디자인 정적 검사 0건 확인.
 
 `evidence/local-summary.json`과 개별 JSON에 결과를 보존합니다. Dark/White 1366×768 및 1024×640 실제 화면 PNG를 함께 보존합니다. 시안은 `../../ui/mockups/`입니다.
 
 ## 배포
 
-개발 버전 0.24.0. Windows 전체 CI 및 공개 EXE/ZIP/자동 업데이트 확인 후 배포 결과를 추가합니다. 기존 릴리스/태그를 교체하지 않습니다.
+- [Windows CI 39186362509](https://github.com/moonsyu/STM-Simulator/actions/runs/39186362509) 두 작업 전체 성공. [v0.24.0](https://github.com/moonsyu/STM-Simulator/releases/tag/v0.24.0)을 최신 릴리스로 게시했습니다.
+- 제품 빌드/태그 커밋 `649d412d16b3ac1174e11434d56a1b7e1790c0bb`, sourceDirty=false, CI 출처 일치. 공개 EXE·ZIP·SHA256·BUILD-INFO·update-manifest 5개 자산과 버전/커밋/해시/latest를 확인했습니다. ZIP 실행 바이너리는 `STM-Simulator.exe` 하나입니다.
+- 공개 EXE SHA-256: `1cafaa7669f0782ff339ea1f4a1a2cfaaedb0e8aaef87885c4b7de80999ccf81`. EXE 102,762,858 bytes, ZIP 105,640,391 bytes. 비인증 다운로드와 ZIP 내부 EXE/메타데이터/배포 문서를 대조했습니다.
+- 내려받은 공개 EXE에서 13개 통합 범주, 19개 대비 상태(9,962텍스트), Dark/White 2해상도 화면을 통과했습니다. renderer 오류와 저대비 0건. 파일 진단 로그의 버전/종류/해시는 `evidence/public-runtime-log.json`에 보존합니다.
+- 단독 EXE와 ZIP 속 EXE 각각 C 의미 7조건 및 편집 직후 종료→재실행 복원을 통과했습니다.
+- 공개 0.23.9 EXE의 실제 자동 스케줄러에서 새 릴리스 검색→다운로드→SHA-256 검증→저장/교체→새 버전 재실행을 확인했습니다. 코드, Jellybean, 글꼴 17, 장치 배율 1.25, 자동 업데이트 설정을 보존했습니다. 사용자 앱/프로필은 조작하지 않았습니다.
+- 첫 공개 검사에서는 숨겨진 창의 requestAnimationFrame 폴링이 주기적인 GPIO 변화와 맞물려 30초 timeout이 발생했습니다. 제품 변경 없이 검사만 같은 DOM의 실제 MutationObserver 변화(5초 상한)로 수정했습니다. 시작/변화 시각과 DOM 동일성, 초기 실패 증거를 함께 보존합니다. 후속 커밋은 이 검사와 검증 문서만 보완하며 배포 제품 소스/태그/자산을 교체하지 않습니다.
