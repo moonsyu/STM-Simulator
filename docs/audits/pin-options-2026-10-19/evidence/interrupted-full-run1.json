@@ -1,0 +1,1864 @@
+{
+  "passed": false,
+  "completeMatrix": false,
+  "requestedCompleteMatrix": true,
+  "packageVersion": "0.25.0",
+  "appVersion": "0.25.0",
+  "sourceCommit": "5b74ec9586820f082249eee935b8696c2fa7167c",
+  "sourceDirty": true,
+  "sourceStatus": "M .github/workflows/build-windows.yml\n M package.json\n M scripts/mcu-defaults-smoke.cjs\n M src/hal.js\n M src/pinout-ui.js\n?? docs/audits/pin-options-2026-10-19/\n?? scripts/pin-options-ui-check.cjs\n?? tests/hal-nvic-dispatch.test.js",
+  "sourceSha256": "f4bd4860a73b43b41b5a58d6b6c75c5b257fe147b55d764b3c4ba6a628afa6a7",
+  "startedAt": "2026-10-19T08:00:08.954Z",
+  "runId": "2026-10-19T08-00-08-544Z",
+  "scopes": [
+    "validation",
+    "functions",
+    "gpio",
+    "exti",
+    "callbacks"
+  ],
+  "limit": null,
+  "cases": [
+    {
+      "id": "validation-hidden-ccr-0",
+      "settings": {
+        "value": "",
+        "requestedMode": "base"
+      },
+      "startedAt": "2026-10-19T08:00:10.931Z",
+      "passed": true,
+      "invalidHiddenFieldRemainsEditable": true,
+      "finishedAt": "2026-10-19T08:00:12.019Z"
+    },
+    {
+      "id": "validation-hidden-ccr-1",
+      "settings": {
+        "value": "1.5",
+        "requestedMode": "capture"
+      },
+      "startedAt": "2026-10-19T08:00:12.024Z",
+      "passed": true,
+      "invalidHiddenFieldRemainsEditable": true,
+      "finishedAt": "2026-10-19T08:00:12.809Z"
+    },
+    {
+      "id": "validation-hidden-ccr-2",
+      "settings": {
+        "value": "4294967296",
+        "requestedMode": "encoder"
+      },
+      "startedAt": "2026-10-19T08:00:12.812Z",
+      "passed": true,
+      "invalidHiddenFieldRemainsEditable": true,
+      "finishedAt": "2026-10-19T08:00:13.449Z"
+    },
+    {
+      "id": "validation-label-timer-mode",
+      "settings": {
+        "label": "AUDIT_LABEL",
+        "timer": "TIM2",
+        "mode": "pwm"
+      },
+      "startedAt": "2026-10-19T08:00:13.451Z",
+      "passed": true,
+      "labelPreserved": true,
+      "finishedAt": "2026-10-19T08:00:14.258Z"
+    },
+    {
+      "id": "validation-conflict-retains-edits",
+      "settings": {
+        "pin": "PA2",
+        "occupied": "PA3",
+        "label": "CONFLICT_LABEL",
+        "pull": "PULLDOWN",
+        "edge": "CHANGE",
+        "initial": 1
+      },
+      "startedAt": "2026-10-19T08:00:14.261Z",
+      "passed": true,
+      "rollbackKeepsPriorEdits": true,
+      "finishedAt": "2026-10-19T08:00:15.257Z"
+    },
+    {
+      "id": "validation-empty-priority",
+      "settings": {
+        "field": "priority",
+        "input": ""
+      },
+      "startedAt": "2026-10-19T08:00:15.263Z",
+      "passed": true,
+      "emptyRejected": true,
+      "finishedAt": "2026-10-19T08:00:15.898Z"
+    },
+    {
+      "id": "validation-empty-prescaler",
+      "settings": {
+        "field": "prescaler",
+        "input": ""
+      },
+      "startedAt": "2026-10-19T08:00:15.901Z",
+      "passed": true,
+      "emptyRejected": true,
+      "finishedAt": "2026-10-19T08:00:16.644Z"
+    },
+    {
+      "id": "validation-empty-period",
+      "settings": {
+        "field": "period",
+        "input": ""
+      },
+      "startedAt": "2026-10-19T08:00:16.647Z",
+      "passed": true,
+      "emptyRejected": true,
+      "finishedAt": "2026-10-19T08:00:17.334Z"
+    },
+    {
+      "id": "validation-empty-pulse",
+      "settings": {
+        "field": "pulse",
+        "input": ""
+      },
+      "startedAt": "2026-10-19T08:00:17.336Z",
+      "passed": true,
+      "emptyRejected": true,
+      "finishedAt": "2026-10-19T08:00:18.025Z"
+    },
+    {
+      "id": "validation-empty-clock",
+      "settings": {
+        "field": "clock",
+        "input": ""
+      },
+      "startedAt": "2026-10-19T08:00:18.027Z",
+      "passed": true,
+      "emptyRejected": true,
+      "finishedAt": "2026-10-19T08:00:18.711Z"
+    },
+    {
+      "id": "validation-priority--1",
+      "settings": {
+        "value": -1
+      },
+      "startedAt": "2026-10-19T08:00:18.713Z",
+      "passed": true,
+      "invalidPriorityRejected": true,
+      "finishedAt": "2026-10-19T08:00:19.248Z"
+    },
+    {
+      "id": "validation-priority-16",
+      "settings": {
+        "value": 16
+      },
+      "startedAt": "2026-10-19T08:00:19.250Z",
+      "passed": true,
+      "invalidPriorityRejected": true,
+      "finishedAt": "2026-10-19T08:00:19.847Z"
+    },
+    {
+      "id": "validation-priority-1_5",
+      "settings": {
+        "value": 1.5
+      },
+      "startedAt": "2026-10-19T08:00:19.849Z",
+      "passed": true,
+      "invalidPriorityRejected": true,
+      "finishedAt": "2026-10-19T08:00:20.432Z"
+    },
+    {
+      "id": "validation-cancel-preserves-project",
+      "settings": {},
+      "startedAt": "2026-10-19T08:00:20.434Z",
+      "passed": true,
+      "cancelPreservesConfigurationAndCode": true,
+      "finishedAt": "2026-10-19T08:00:21.459Z"
+    },
+    {
+      "id": "validation-label-pin-switch-save",
+      "settings": {
+        "label": "LD2_AUDIT"
+      },
+      "startedAt": "2026-10-19T08:00:21.462Z",
+      "passed": true,
+      "roundTrip": {
+        "file": "validation-label-pin-switch-save.stm32lab",
+        "sha256": "46c233c84862ddeebacf16ed25fcfcb2eac95c38224402e7bb3abb28b04637b6"
+      },
+      "generatedCodeSha256": "bb3eeeaaa5a79ad7d5ab60745b539bdf04d4ffb3c35cd6b18d916d559c4e4625",
+      "finishedAt": "2026-10-19T08:00:23.398Z"
+    },
+    {
+      "id": "validation-invalid-label-0",
+      "settings": {
+        "label": "9bad"
+      },
+      "startedAt": "2026-10-19T08:00:23.401Z",
+      "passed": true,
+      "invalidLabelRejected": true,
+      "finishedAt": "2026-10-19T08:00:23.944Z"
+    },
+    {
+      "id": "validation-invalid-label-1",
+      "settings": {
+        "label": "two words"
+      },
+      "startedAt": "2026-10-19T08:00:23.946Z",
+      "passed": true,
+      "invalidLabelRejected": true,
+      "finishedAt": "2026-10-19T08:00:24.582Z"
+    },
+    {
+      "id": "validation-invalid-label-2",
+      "settings": {
+        "label": "__proto__"
+      },
+      "startedAt": "2026-10-19T08:00:24.583Z",
+      "passed": true,
+      "invalidLabelRejected": true,
+      "finishedAt": "2026-10-19T08:00:25.153Z"
+    },
+    {
+      "id": "validation-generate-rejects-empty-priority",
+      "settings": {},
+      "startedAt": "2026-10-19T08:00:25.155Z",
+      "passed": true,
+      "invalidGenerationPreservesOriginalCode": true,
+      "finishedAt": "2026-10-19T08:00:25.903Z"
+    },
+    {
+      "id": "function-selection",
+      "settings": {
+        "kind": "selection-only"
+      },
+      "startedAt": "2026-10-19T08:00:25.906Z",
+      "passed": true,
+      "selectionOnly": true,
+      "choices": 370,
+      "generatedOrExecuted": false,
+      "finishedAt": "2026-10-19T08:00:59.419Z"
+    },
+    {
+      "id": "gpio-Reset-NOPULL-0",
+      "settings": {
+        "mode": "Reset",
+        "pull": "NOPULL",
+        "initial": 0,
+        "pins": [
+          "PA0",
+          "PA1",
+          "PA10",
+          "PA11",
+          "PA12",
+          "PA13",
+          "PA14",
+          "PA15",
+          "PA2",
+          "PA3",
+          "PA4",
+          "PA5",
+          "PA6",
+          "PA7",
+          "PA8",
+          "PA9",
+          "PB0",
+          "PB1",
+          "PB10",
+          "PB12",
+          "PB13",
+          "PB14",
+          "PB15",
+          "PB2",
+          "PB3",
+          "PB4",
+          "PB5",
+          "PB6",
+          "PB7",
+          "PB8",
+          "PB9",
+          "PC0",
+          "PC1",
+          "PC10",
+          "PC11",
+          "PC12",
+          "PC13",
+          "PC14",
+          "PC15",
+          "PC2",
+          "PC3",
+          "PC4",
+          "PC5",
+          "PC6",
+          "PC7",
+          "PC8",
+          "PC9",
+          "PD2",
+          "PH0",
+          "PH1"
+        ]
+      },
+      "startedAt": "2026-10-19T08:00:59.422Z",
+      "passed": false,
+      "error": "page.waitForSelector: Target page, context or browser has been closed\nCall log:\n\u001b[2m  - waiting for locator('#endpoint-voltage') to be visible\u001b[22m\n\n    at D:\\codex\\project\\STM-Simulator\\scripts\\pin-options-ui-check.cjs:92:145\n    at async scenario (D:\\codex\\project\\STM-Simulator\\scripts\\pin-options-ui-check.cjs:55:150)\n    at async main (D:\\codex\\project\\STM-Simulator\\scripts\\pin-options-ui-check.cjs:86:5)",
+      "console": "",
+      "observed": null,
+      "finishedAt": "2026-10-19T08:01:12.550Z"
+    }
+  ],
+  "functionChoices": [
+    {
+      "pin": "PA0",
+      "function": "Reset"
+    },
+    {
+      "pin": "PA0",
+      "function": "GPIO_Input"
+    },
+    {
+      "pin": "PA0",
+      "function": "GPIO_Output"
+    },
+    {
+      "pin": "PA0",
+      "function": "GPIO_EXTI"
+    },
+    {
+      "pin": "PA0",
+      "function": "Analog"
+    },
+    {
+      "pin": "PA0",
+      "function": "Reserved"
+    },
+    {
+      "pin": "PA0",
+      "function": "UART4_TX"
+    },
+    {
+      "pin": "PA0",
+      "function": "ADC1_IN0"
+    },
+    {
+      "pin": "PA0",
+      "function": "TIM2_CH1"
+    },
+    {
+      "pin": "PA0",
+      "function": "TIM5_CH1"
+    },
+    {
+      "pin": "PA1",
+      "function": "Reset"
+    },
+    {
+      "pin": "PA1",
+      "function": "GPIO_Input"
+    },
+    {
+      "pin": "PA1",
+      "function": "GPIO_Output"
+    },
+    {
+      "pin": "PA1",
+      "function": "GPIO_EXTI"
+    },
+    {
+      "pin": "PA1",
+      "function": "Analog"
+    },
+    {
+      "pin": "PA1",
+      "function": "Reserved"
+    },
+    {
+      "pin": "PA1",
+      "function": "UART4_RX"
+    },
+    {
+      "pin": "PA1",
+      "function": "ADC1_IN1"
+    },
+    {
+      "pin": "PA1",
+      "function": "TIM2_CH2"
+    },
+    {
+      "pin": "PA1",
+      "function": "TIM5_CH2"
+    },
+    {
+      "pin": "PA10",
+      "function": "Reset"
+    },
+    {
+      "pin": "PA10",
+      "function": "GPIO_Input"
+    },
+    {
+      "pin": "PA10",
+      "function": "GPIO_Output"
+    },
+    {
+      "pin": "PA10",
+      "function": "GPIO_EXTI"
+    },
+    {
+      "pin": "PA10",
+      "function": "Analog"
+    },
+    {
+      "pin": "PA10",
+      "function": "Reserved"
+    },
+    {
+      "pin": "PA10",
+      "function": "USART1_RX"
+    },
+    {
+      "pin": "PA11",
+      "function": "Reset"
+    },
+    {
+      "pin": "PA11",
+      "function": "GPIO_Input"
+    },
+    {
+      "pin": "PA11",
+      "function": "GPIO_Output"
+    },
+    {
+      "pin": "PA11",
+      "function": "GPIO_EXTI"
+    },
+    {
+      "pin": "PA11",
+      "function": "Analog"
+    },
+    {
+      "pin": "PA11",
+      "function": "Reserved"
+    },
+    {
+      "pin": "PA12",
+      "function": "Reset"
+    },
+    {
+      "pin": "PA12",
+      "function": "GPIO_Input"
+    },
+    {
+      "pin": "PA12",
+      "function": "GPIO_Output"
+    },
+    {
+      "pin": "PA12",
+      "function": "GPIO_EXTI"
+    },
+    {
+      "pin": "PA12",
+      "function": "Analog"
+    },
+    {
+      "pin": "PA12",
+      "function": "Reserved"
+    },
+    {
+      "pin": "PA13",
+      "function": "Reset"
+    },
+    {
+      "pin": "PA13",
+      "function": "GPIO_Input"
+    },
+    {
+      "pin": "PA13",
+      "function": "GPIO_Output"
+    },
+    {
+      "pin": "PA13",
+      "function": "GPIO_EXTI"
+    },
+    {
+      "pin": "PA13",
+      "function": "Analog"
+    },
+    {
+      "pin": "PA13",
+      "function": "Reserved"
+    },
+    {
+      "pin": "PA14",
+      "function": "Reset"
+    },
+    {
+      "pin": "PA14",
+      "function": "GPIO_Input"
+    },
+    {
+      "pin": "PA14",
+      "function": "GPIO_Output"
+    },
+    {
+      "pin": "PA14",
+      "function": "GPIO_EXTI"
+    },
+    {
+      "pin": "PA14",
+      "function": "Analog"
+    },
+    {
+      "pin": "PA14",
+      "function": "Reserved"
+    },
+    {
+      "pin": "PA15",
+      "function": "Reset"
+    },
+    {
+      "pin": "PA15",
+      "function": "GPIO_Input"
+    },
+    {
+      "pin": "PA15",
+      "function": "GPIO_Output"
+    },
+    {
+      "pin": "PA15",
+      "function": "GPIO_EXTI"
+    },
+    {
+      "pin": "PA15",
+      "function": "Analog"
+    },
+    {
+      "pin": "PA15",
+      "function": "Reserved"
+    },
+    {
+      "pin": "PA15",
+      "function": "TIM2_CH1"
+    },
+    {
+      "pin": "PA2",
+      "function": "Reset"
+    },
+    {
+      "pin": "PA2",
+      "function": "GPIO_Input"
+    },
+    {
+      "pin": "PA2",
+      "function": "GPIO_Output"
+    },
+    {
+      "pin": "PA2",
+      "function": "GPIO_EXTI"
+    },
+    {
+      "pin": "PA2",
+      "function": "Analog"
+    },
+    {
+      "pin": "PA2",
+      "function": "Reserved"
+    },
+    {
+      "pin": "PA2",
+      "function": "USART2_TX"
+    },
+    {
+      "pin": "PA2",
+      "function": "ADC1_IN2"
+    },
+    {
+      "pin": "PA2",
+      "function": "TIM2_CH3"
+    },
+    {
+      "pin": "PA2",
+      "function": "TIM5_CH3"
+    },
+    {
+      "pin": "PA3",
+      "function": "Reset"
+    },
+    {
+      "pin": "PA3",
+      "function": "GPIO_Input"
+    },
+    {
+      "pin": "PA3",
+      "function": "GPIO_Output"
+    },
+    {
+      "pin": "PA3",
+      "function": "GPIO_EXTI"
+    },
+    {
+      "pin": "PA3",
+      "function": "Analog"
+    },
+    {
+      "pin": "PA3",
+      "function": "Reserved"
+    },
+    {
+      "pin": "PA3",
+      "function": "USART2_RX"
+    },
+    {
+      "pin": "PA3",
+      "function": "ADC1_IN3"
+    },
+    {
+      "pin": "PA3",
+      "function": "TIM2_CH4"
+    },
+    {
+      "pin": "PA3",
+      "function": "TIM5_CH4"
+    },
+    {
+      "pin": "PA4",
+      "function": "Reset"
+    },
+    {
+      "pin": "PA4",
+      "function": "GPIO_Input"
+    },
+    {
+      "pin": "PA4",
+      "function": "GPIO_Output"
+    },
+    {
+      "pin": "PA4",
+      "function": "GPIO_EXTI"
+    },
+    {
+      "pin": "PA4",
+      "function": "Analog"
+    },
+    {
+      "pin": "PA4",
+      "function": "Reserved"
+    },
+    {
+      "pin": "PA4",
+      "function": "ADC1_IN4"
+    },
+    {
+      "pin": "PA5",
+      "function": "Reset"
+    },
+    {
+      "pin": "PA5",
+      "function": "GPIO_Input"
+    },
+    {
+      "pin": "PA5",
+      "function": "GPIO_Output"
+    },
+    {
+      "pin": "PA5",
+      "function": "GPIO_EXTI"
+    },
+    {
+      "pin": "PA5",
+      "function": "Analog"
+    },
+    {
+      "pin": "PA5",
+      "function": "Reserved"
+    },
+    {
+      "pin": "PA5",
+      "function": "SPI1_SCK"
+    },
+    {
+      "pin": "PA5",
+      "function": "ADC1_IN5"
+    },
+    {
+      "pin": "PA5",
+      "function": "TIM2_CH1"
+    },
+    {
+      "pin": "PA6",
+      "function": "Reset"
+    },
+    {
+      "pin": "PA6",
+      "function": "GPIO_Input"
+    },
+    {
+      "pin": "PA6",
+      "function": "GPIO_Output"
+    },
+    {
+      "pin": "PA6",
+      "function": "GPIO_EXTI"
+    },
+    {
+      "pin": "PA6",
+      "function": "Analog"
+    },
+    {
+      "pin": "PA6",
+      "function": "Reserved"
+    },
+    {
+      "pin": "PA6",
+      "function": "SPI1_MISO"
+    },
+    {
+      "pin": "PA6",
+      "function": "ADC1_IN6"
+    },
+    {
+      "pin": "PA6",
+      "function": "TIM3_CH1"
+    },
+    {
+      "pin": "PA7",
+      "function": "Reset"
+    },
+    {
+      "pin": "PA7",
+      "function": "GPIO_Input"
+    },
+    {
+      "pin": "PA7",
+      "function": "GPIO_Output"
+    },
+    {
+      "pin": "PA7",
+      "function": "GPIO_EXTI"
+    },
+    {
+      "pin": "PA7",
+      "function": "Analog"
+    },
+    {
+      "pin": "PA7",
+      "function": "Reserved"
+    },
+    {
+      "pin": "PA7",
+      "function": "SPI1_MOSI"
+    },
+    {
+      "pin": "PA7",
+      "function": "ADC1_IN7"
+    },
+    {
+      "pin": "PA7",
+      "function": "TIM3_CH2"
+    },
+    {
+      "pin": "PA8",
+      "function": "Reset"
+    },
+    {
+      "pin": "PA8",
+      "function": "GPIO_Input"
+    },
+    {
+      "pin": "PA8",
+      "function": "GPIO_Output"
+    },
+    {
+      "pin": "PA8",
+      "function": "GPIO_EXTI"
+    },
+    {
+      "pin": "PA8",
+      "function": "Analog"
+    },
+    {
+      "pin": "PA8",
+      "function": "Reserved"
+    },
+    {
+      "pin": "PA9",
+      "function": "Reset"
+    },
+    {
+      "pin": "PA9",
+      "function": "GPIO_Input"
+    },
+    {
+      "pin": "PA9",
+      "function": "GPIO_Output"
+    },
+    {
+      "pin": "PA9",
+      "function": "GPIO_EXTI"
+    },
+    {
+      "pin": "PA9",
+      "function": "Analog"
+    },
+    {
+      "pin": "PA9",
+      "function": "Reserved"
+    },
+    {
+      "pin": "PA9",
+      "function": "USART1_TX"
+    },
+    {
+      "pin": "PB0",
+      "function": "Reset"
+    },
+    {
+      "pin": "PB0",
+      "function": "GPIO_Input"
+    },
+    {
+      "pin": "PB0",
+      "function": "GPIO_Output"
+    },
+    {
+      "pin": "PB0",
+      "function": "GPIO_EXTI"
+    },
+    {
+      "pin": "PB0",
+      "function": "Analog"
+    },
+    {
+      "pin": "PB0",
+      "function": "Reserved"
+    },
+    {
+      "pin": "PB0",
+      "function": "ADC1_IN8"
+    },
+    {
+      "pin": "PB0",
+      "function": "TIM3_CH3"
+    },
+    {
+      "pin": "PB1",
+      "function": "Reset"
+    },
+    {
+      "pin": "PB1",
+      "function": "GPIO_Input"
+    },
+    {
+      "pin": "PB1",
+      "function": "GPIO_Output"
+    },
+    {
+      "pin": "PB1",
+      "function": "GPIO_EXTI"
+    },
+    {
+      "pin": "PB1",
+      "function": "Analog"
+    },
+    {
+      "pin": "PB1",
+      "function": "Reserved"
+    },
+    {
+      "pin": "PB1",
+      "function": "ADC1_IN9"
+    },
+    {
+      "pin": "PB1",
+      "function": "TIM3_CH4"
+    },
+    {
+      "pin": "PB10",
+      "function": "Reset"
+    },
+    {
+      "pin": "PB10",
+      "function": "GPIO_Input"
+    },
+    {
+      "pin": "PB10",
+      "function": "GPIO_Output"
+    },
+    {
+      "pin": "PB10",
+      "function": "GPIO_EXTI"
+    },
+    {
+      "pin": "PB10",
+      "function": "Analog"
+    },
+    {
+      "pin": "PB10",
+      "function": "Reserved"
+    },
+    {
+      "pin": "PB10",
+      "function": "USART3_TX"
+    },
+    {
+      "pin": "PB10",
+      "function": "TIM2_CH3"
+    },
+    {
+      "pin": "PB12",
+      "function": "Reset"
+    },
+    {
+      "pin": "PB12",
+      "function": "GPIO_Input"
+    },
+    {
+      "pin": "PB12",
+      "function": "GPIO_Output"
+    },
+    {
+      "pin": "PB12",
+      "function": "GPIO_EXTI"
+    },
+    {
+      "pin": "PB12",
+      "function": "Analog"
+    },
+    {
+      "pin": "PB12",
+      "function": "Reserved"
+    },
+    {
+      "pin": "PB13",
+      "function": "Reset"
+    },
+    {
+      "pin": "PB13",
+      "function": "GPIO_Input"
+    },
+    {
+      "pin": "PB13",
+      "function": "GPIO_Output"
+    },
+    {
+      "pin": "PB13",
+      "function": "GPIO_EXTI"
+    },
+    {
+      "pin": "PB13",
+      "function": "Analog"
+    },
+    {
+      "pin": "PB13",
+      "function": "Reserved"
+    },
+    {
+      "pin": "PB14",
+      "function": "Reset"
+    },
+    {
+      "pin": "PB14",
+      "function": "GPIO_Input"
+    },
+    {
+      "pin": "PB14",
+      "function": "GPIO_Output"
+    },
+    {
+      "pin": "PB14",
+      "function": "GPIO_EXTI"
+    },
+    {
+      "pin": "PB14",
+      "function": "Analog"
+    },
+    {
+      "pin": "PB14",
+      "function": "Reserved"
+    },
+    {
+      "pin": "PB15",
+      "function": "Reset"
+    },
+    {
+      "pin": "PB15",
+      "function": "GPIO_Input"
+    },
+    {
+      "pin": "PB15",
+      "function": "GPIO_Output"
+    },
+    {
+      "pin": "PB15",
+      "function": "GPIO_EXTI"
+    },
+    {
+      "pin": "PB15",
+      "function": "Analog"
+    },
+    {
+      "pin": "PB15",
+      "function": "Reserved"
+    },
+    {
+      "pin": "PB2",
+      "function": "Reset"
+    },
+    {
+      "pin": "PB2",
+      "function": "GPIO_Input"
+    },
+    {
+      "pin": "PB2",
+      "function": "GPIO_Output"
+    },
+    {
+      "pin": "PB2",
+      "function": "GPIO_EXTI"
+    },
+    {
+      "pin": "PB2",
+      "function": "Analog"
+    },
+    {
+      "pin": "PB2",
+      "function": "Reserved"
+    },
+    {
+      "pin": "PB3",
+      "function": "Reset"
+    },
+    {
+      "pin": "PB3",
+      "function": "GPIO_Input"
+    },
+    {
+      "pin": "PB3",
+      "function": "GPIO_Output"
+    },
+    {
+      "pin": "PB3",
+      "function": "GPIO_EXTI"
+    },
+    {
+      "pin": "PB3",
+      "function": "Analog"
+    },
+    {
+      "pin": "PB3",
+      "function": "Reserved"
+    },
+    {
+      "pin": "PB3",
+      "function": "SPI1_SCK"
+    },
+    {
+      "pin": "PB3",
+      "function": "TIM2_CH2"
+    },
+    {
+      "pin": "PB4",
+      "function": "Reset"
+    },
+    {
+      "pin": "PB4",
+      "function": "GPIO_Input"
+    },
+    {
+      "pin": "PB4",
+      "function": "GPIO_Output"
+    },
+    {
+      "pin": "PB4",
+      "function": "GPIO_EXTI"
+    },
+    {
+      "pin": "PB4",
+      "function": "Analog"
+    },
+    {
+      "pin": "PB4",
+      "function": "Reserved"
+    },
+    {
+      "pin": "PB4",
+      "function": "SPI1_MISO"
+    },
+    {
+      "pin": "PB4",
+      "function": "TIM3_CH1"
+    },
+    {
+      "pin": "PB5",
+      "function": "Reset"
+    },
+    {
+      "pin": "PB5",
+      "function": "GPIO_Input"
+    },
+    {
+      "pin": "PB5",
+      "function": "GPIO_Output"
+    },
+    {
+      "pin": "PB5",
+      "function": "GPIO_EXTI"
+    },
+    {
+      "pin": "PB5",
+      "function": "Analog"
+    },
+    {
+      "pin": "PB5",
+      "function": "Reserved"
+    },
+    {
+      "pin": "PB5",
+      "function": "SPI1_MOSI"
+    },
+    {
+      "pin": "PB5",
+      "function": "TIM3_CH2"
+    },
+    {
+      "pin": "PB6",
+      "function": "Reset"
+    },
+    {
+      "pin": "PB6",
+      "function": "GPIO_Input"
+    },
+    {
+      "pin": "PB6",
+      "function": "GPIO_Output"
+    },
+    {
+      "pin": "PB6",
+      "function": "GPIO_EXTI"
+    },
+    {
+      "pin": "PB6",
+      "function": "Analog"
+    },
+    {
+      "pin": "PB6",
+      "function": "Reserved"
+    },
+    {
+      "pin": "PB6",
+      "function": "USART1_TX"
+    },
+    {
+      "pin": "PB6",
+      "function": "I2C1_SCL"
+    },
+    {
+      "pin": "PB6",
+      "function": "TIM4_CH1"
+    },
+    {
+      "pin": "PB7",
+      "function": "Reset"
+    },
+    {
+      "pin": "PB7",
+      "function": "GPIO_Input"
+    },
+    {
+      "pin": "PB7",
+      "function": "GPIO_Output"
+    },
+    {
+      "pin": "PB7",
+      "function": "GPIO_EXTI"
+    },
+    {
+      "pin": "PB7",
+      "function": "Analog"
+    },
+    {
+      "pin": "PB7",
+      "function": "Reserved"
+    },
+    {
+      "pin": "PB7",
+      "function": "USART1_RX"
+    },
+    {
+      "pin": "PB7",
+      "function": "I2C1_SDA"
+    },
+    {
+      "pin": "PB7",
+      "function": "TIM4_CH2"
+    },
+    {
+      "pin": "PB8",
+      "function": "Reset"
+    },
+    {
+      "pin": "PB8",
+      "function": "GPIO_Input"
+    },
+    {
+      "pin": "PB8",
+      "function": "GPIO_Output"
+    },
+    {
+      "pin": "PB8",
+      "function": "GPIO_EXTI"
+    },
+    {
+      "pin": "PB8",
+      "function": "Analog"
+    },
+    {
+      "pin": "PB8",
+      "function": "Reserved"
+    },
+    {
+      "pin": "PB8",
+      "function": "I2C1_SCL"
+    },
+    {
+      "pin": "PB8",
+      "function": "TIM4_CH3"
+    },
+    {
+      "pin": "PB9",
+      "function": "Reset"
+    },
+    {
+      "pin": "PB9",
+      "function": "GPIO_Input"
+    },
+    {
+      "pin": "PB9",
+      "function": "GPIO_Output"
+    },
+    {
+      "pin": "PB9",
+      "function": "GPIO_EXTI"
+    },
+    {
+      "pin": "PB9",
+      "function": "Analog"
+    },
+    {
+      "pin": "PB9",
+      "function": "Reserved"
+    },
+    {
+      "pin": "PB9",
+      "function": "I2C1_SDA"
+    },
+    {
+      "pin": "PB9",
+      "function": "TIM4_CH4"
+    },
+    {
+      "pin": "PC0",
+      "function": "Reset"
+    },
+    {
+      "pin": "PC0",
+      "function": "GPIO_Input"
+    },
+    {
+      "pin": "PC0",
+      "function": "GPIO_Output"
+    },
+    {
+      "pin": "PC0",
+      "function": "GPIO_EXTI"
+    },
+    {
+      "pin": "PC0",
+      "function": "Analog"
+    },
+    {
+      "pin": "PC0",
+      "function": "Reserved"
+    },
+    {
+      "pin": "PC0",
+      "function": "ADC1_IN10"
+    },
+    {
+      "pin": "PC1",
+      "function": "Reset"
+    },
+    {
+      "pin": "PC1",
+      "function": "GPIO_Input"
+    },
+    {
+      "pin": "PC1",
+      "function": "GPIO_Output"
+    },
+    {
+      "pin": "PC1",
+      "function": "GPIO_EXTI"
+    },
+    {
+      "pin": "PC1",
+      "function": "Analog"
+    },
+    {
+      "pin": "PC1",
+      "function": "Reserved"
+    },
+    {
+      "pin": "PC1",
+      "function": "ADC1_IN11"
+    },
+    {
+      "pin": "PC10",
+      "function": "Reset"
+    },
+    {
+      "pin": "PC10",
+      "function": "GPIO_Input"
+    },
+    {
+      "pin": "PC10",
+      "function": "GPIO_Output"
+    },
+    {
+      "pin": "PC10",
+      "function": "GPIO_EXTI"
+    },
+    {
+      "pin": "PC10",
+      "function": "Analog"
+    },
+    {
+      "pin": "PC10",
+      "function": "Reserved"
+    },
+    {
+      "pin": "PC10",
+      "function": "USART3_TX"
+    },
+    {
+      "pin": "PC10",
+      "function": "UART4_TX"
+    },
+    {
+      "pin": "PC11",
+      "function": "Reset"
+    },
+    {
+      "pin": "PC11",
+      "function": "GPIO_Input"
+    },
+    {
+      "pin": "PC11",
+      "function": "GPIO_Output"
+    },
+    {
+      "pin": "PC11",
+      "function": "GPIO_EXTI"
+    },
+    {
+      "pin": "PC11",
+      "function": "Analog"
+    },
+    {
+      "pin": "PC11",
+      "function": "Reserved"
+    },
+    {
+      "pin": "PC11",
+      "function": "USART3_RX"
+    },
+    {
+      "pin": "PC11",
+      "function": "UART4_RX"
+    },
+    {
+      "pin": "PC12",
+      "function": "Reset"
+    },
+    {
+      "pin": "PC12",
+      "function": "GPIO_Input"
+    },
+    {
+      "pin": "PC12",
+      "function": "GPIO_Output"
+    },
+    {
+      "pin": "PC12",
+      "function": "GPIO_EXTI"
+    },
+    {
+      "pin": "PC12",
+      "function": "Analog"
+    },
+    {
+      "pin": "PC12",
+      "function": "Reserved"
+    },
+    {
+      "pin": "PC12",
+      "function": "UART5_TX"
+    },
+    {
+      "pin": "PC13",
+      "function": "Reset"
+    },
+    {
+      "pin": "PC13",
+      "function": "GPIO_Input"
+    },
+    {
+      "pin": "PC13",
+      "function": "GPIO_Output"
+    },
+    {
+      "pin": "PC13",
+      "function": "GPIO_EXTI"
+    },
+    {
+      "pin": "PC13",
+      "function": "Analog"
+    },
+    {
+      "pin": "PC13",
+      "function": "Reserved"
+    },
+    {
+      "pin": "PC14",
+      "function": "Reset"
+    },
+    {
+      "pin": "PC14",
+      "function": "GPIO_Input"
+    },
+    {
+      "pin": "PC14",
+      "function": "GPIO_Output"
+    },
+    {
+      "pin": "PC14",
+      "function": "GPIO_EXTI"
+    },
+    {
+      "pin": "PC14",
+      "function": "Analog"
+    },
+    {
+      "pin": "PC14",
+      "function": "Reserved"
+    },
+    {
+      "pin": "PC15",
+      "function": "Reset"
+    },
+    {
+      "pin": "PC15",
+      "function": "GPIO_Input"
+    },
+    {
+      "pin": "PC15",
+      "function": "GPIO_Output"
+    },
+    {
+      "pin": "PC15",
+      "function": "GPIO_EXTI"
+    },
+    {
+      "pin": "PC15",
+      "function": "Analog"
+    },
+    {
+      "pin": "PC15",
+      "function": "Reserved"
+    },
+    {
+      "pin": "PC2",
+      "function": "Reset"
+    },
+    {
+      "pin": "PC2",
+      "function": "GPIO_Input"
+    },
+    {
+      "pin": "PC2",
+      "function": "GPIO_Output"
+    },
+    {
+      "pin": "PC2",
+      "function": "GPIO_EXTI"
+    },
+    {
+      "pin": "PC2",
+      "function": "Analog"
+    },
+    {
+      "pin": "PC2",
+      "function": "Reserved"
+    },
+    {
+      "pin": "PC2",
+      "function": "ADC1_IN12"
+    },
+    {
+      "pin": "PC3",
+      "function": "Reset"
+    },
+    {
+      "pin": "PC3",
+      "function": "GPIO_Input"
+    },
+    {
+      "pin": "PC3",
+      "function": "GPIO_Output"
+    },
+    {
+      "pin": "PC3",
+      "function": "GPIO_EXTI"
+    },
+    {
+      "pin": "PC3",
+      "function": "Analog"
+    },
+    {
+      "pin": "PC3",
+      "function": "Reserved"
+    },
+    {
+      "pin": "PC3",
+      "function": "ADC1_IN13"
+    },
+    {
+      "pin": "PC4",
+      "function": "Reset"
+    },
+    {
+      "pin": "PC4",
+      "function": "GPIO_Input"
+    },
+    {
+      "pin": "PC4",
+      "function": "GPIO_Output"
+    },
+    {
+      "pin": "PC4",
+      "function": "GPIO_EXTI"
+    },
+    {
+      "pin": "PC4",
+      "function": "Analog"
+    },
+    {
+      "pin": "PC4",
+      "function": "Reserved"
+    },
+    {
+      "pin": "PC4",
+      "function": "ADC1_IN14"
+    },
+    {
+      "pin": "PC5",
+      "function": "Reset"
+    },
+    {
+      "pin": "PC5",
+      "function": "GPIO_Input"
+    },
+    {
+      "pin": "PC5",
+      "function": "GPIO_Output"
+    },
+    {
+      "pin": "PC5",
+      "function": "GPIO_EXTI"
+    },
+    {
+      "pin": "PC5",
+      "function": "Analog"
+    },
+    {
+      "pin": "PC5",
+      "function": "Reserved"
+    },
+    {
+      "pin": "PC5",
+      "function": "USART3_RX"
+    },
+    {
+      "pin": "PC5",
+      "function": "ADC1_IN15"
+    },
+    {
+      "pin": "PC6",
+      "function": "Reset"
+    },
+    {
+      "pin": "PC6",
+      "function": "GPIO_Input"
+    },
+    {
+      "pin": "PC6",
+      "function": "GPIO_Output"
+    },
+    {
+      "pin": "PC6",
+      "function": "GPIO_EXTI"
+    },
+    {
+      "pin": "PC6",
+      "function": "Analog"
+    },
+    {
+      "pin": "PC6",
+      "function": "Reserved"
+    },
+    {
+      "pin": "PC6",
+      "function": "USART6_TX"
+    },
+    {
+      "pin": "PC6",
+      "function": "TIM3_CH1"
+    },
+    {
+      "pin": "PC7",
+      "function": "Reset"
+    },
+    {
+      "pin": "PC7",
+      "function": "GPIO_Input"
+    },
+    {
+      "pin": "PC7",
+      "function": "GPIO_Output"
+    },
+    {
+      "pin": "PC7",
+      "function": "GPIO_EXTI"
+    },
+    {
+      "pin": "PC7",
+      "function": "Analog"
+    },
+    {
+      "pin": "PC7",
+      "function": "Reserved"
+    },
+    {
+      "pin": "PC7",
+      "function": "USART6_RX"
+    },
+    {
+      "pin": "PC7",
+      "function": "TIM3_CH2"
+    },
+    {
+      "pin": "PC8",
+      "function": "Reset"
+    },
+    {
+      "pin": "PC8",
+      "function": "GPIO_Input"
+    },
+    {
+      "pin": "PC8",
+      "function": "GPIO_Output"
+    },
+    {
+      "pin": "PC8",
+      "function": "GPIO_EXTI"
+    },
+    {
+      "pin": "PC8",
+      "function": "Analog"
+    },
+    {
+      "pin": "PC8",
+      "function": "Reserved"
+    },
+    {
+      "pin": "PC8",
+      "function": "TIM3_CH3"
+    },
+    {
+      "pin": "PC9",
+      "function": "Reset"
+    },
+    {
+      "pin": "PC9",
+      "function": "GPIO_Input"
+    },
+    {
+      "pin": "PC9",
+      "function": "GPIO_Output"
+    },
+    {
+      "pin": "PC9",
+      "function": "GPIO_EXTI"
+    },
+    {
+      "pin": "PC9",
+      "function": "Analog"
+    },
+    {
+      "pin": "PC9",
+      "function": "Reserved"
+    },
+    {
+      "pin": "PC9",
+      "function": "TIM3_CH4"
+    },
+    {
+      "pin": "PD2",
+      "function": "Reset"
+    },
+    {
+      "pin": "PD2",
+      "function": "GPIO_Input"
+    },
+    {
+      "pin": "PD2",
+      "function": "GPIO_Output"
+    },
+    {
+      "pin": "PD2",
+      "function": "GPIO_EXTI"
+    },
+    {
+      "pin": "PD2",
+      "function": "Analog"
+    },
+    {
+      "pin": "PD2",
+      "function": "Reserved"
+    },
+    {
+      "pin": "PD2",
+      "function": "UART5_RX"
+    },
+    {
+      "pin": "PH0",
+      "function": "Reset"
+    },
+    {
+      "pin": "PH0",
+      "function": "GPIO_Input"
+    },
+    {
+      "pin": "PH0",
+      "function": "GPIO_Output"
+    },
+    {
+      "pin": "PH0",
+      "function": "GPIO_EXTI"
+    },
+    {
+      "pin": "PH0",
+      "function": "Analog"
+    },
+    {
+      "pin": "PH0",
+      "function": "Reserved"
+    },
+    {
+      "pin": "PH1",
+      "function": "Reset"
+    },
+    {
+      "pin": "PH1",
+      "function": "GPIO_Input"
+    },
+    {
+      "pin": "PH1",
+      "function": "GPIO_Output"
+    },
+    {
+      "pin": "PH1",
+      "function": "GPIO_EXTI"
+    },
+    {
+      "pin": "PH1",
+      "function": "Analog"
+    },
+    {
+      "pin": "PH1",
+      "function": "Reserved"
+    }
+  ],
+  "pageErrors": [],
+  "execution": {
+    "mode": "electron",
+    "viewportKind": "BrowserWindow content size"
+  },
+  "limitations": [
+    "Actual simulator execution; no physical STM32 hardware or ARM firmware claim.",
+    "Speed is generated VERY_HIGH and AF is derived from function; no independent Speed/AF selector exists.",
+    "Peripheral function selection coverage is distinct from peripheral electrical execution coverage.",
+    "Executed instrumentation preserves generated initialization; USER CODE 3 automatic Toggle is replaced by an idle delay to observe initial values."
+  ],
+  "diagnosticWarnings": [],
+  "gpioPins": [
+    "PA0",
+    "PA1",
+    "PA10",
+    "PA11",
+    "PA12",
+    "PA13",
+    "PA14",
+    "PA15",
+    "PA2",
+    "PA3",
+    "PA4",
+    "PA5",
+    "PA6",
+    "PA7",
+    "PA8",
+    "PA9",
+    "PB0",
+    "PB1",
+    "PB10",
+    "PB12",
+    "PB13",
+    "PB14",
+    "PB15",
+    "PB2",
+    "PB3",
+    "PB4",
+    "PB5",
+    "PB6",
+    "PB7",
+    "PB8",
+    "PB9",
+    "PC0",
+    "PC1",
+    "PC10",
+    "PC11",
+    "PC12",
+    "PC13",
+    "PC14",
+    "PC15",
+    "PC2",
+    "PC3",
+    "PC4",
+    "PC5",
+    "PC6",
+    "PC7",
+    "PC8",
+    "PC9",
+    "PD2",
+    "PH0",
+    "PH1"
+  ],
+  "expected": {
+    "functionChoices": 370,
+    "gpioCases": 30,
+    "gpioPinCombinations": 1500,
+    "extiEnabledCases": 288,
+    "extiEnabledPinCombinations": 2016,
+    "extiDisabledCases": 18,
+    "extiDisabledPinCombinations": 126
+  },
+  "error": "page.waitForSelector: Target page, context or browser has been closed\nCall log:\n\u001b[2m  - waiting for locator('#endpoint-voltage') to be visible\u001b[22m\n\n    at D:\\codex\\project\\STM-Simulator\\scripts\\pin-options-ui-check.cjs:92:145\n    at async scenario (D:\\codex\\project\\STM-Simulator\\scripts\\pin-options-ui-check.cjs:55:150)\n    at async main (D:\\codex\\project\\STM-Simulator\\scripts\\pin-options-ui-check.cjs:86:5)",
+  "finishedAt": "2026-10-19T08:01:12.559Z",
+  "completedCases": 20
+}

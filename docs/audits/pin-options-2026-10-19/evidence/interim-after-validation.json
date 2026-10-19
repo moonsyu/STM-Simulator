@@ -1,0 +1,176 @@
+{
+  "passed": true,
+  "completeMatrix": false,
+  "packageVersion": "0.25.0",
+  "appVersion": "0.25.0",
+  "sourceCommit": "5b74ec9586820f082249eee935b8696c2fa7167c",
+  "sourceDirty": true,
+  "sourceStatus": "M scripts/mcu-defaults-smoke.cjs\n M src/hal.js\n M src/pinout-ui.js\n?? docs/audits/pin-options-2026-10-19/\n?? scripts/pin-options-ui-check.cjs\n?? tests/hal-nvic-dispatch.test.js",
+  "sourceSha256": "0b6f912d2dd39d700ce8017443f35205bada2e5060693f3defe9c77c7aca2a02",
+  "startedAt": "2026-10-19T07:53:53.548Z",
+  "runId": "2026-10-19T07-53-53-100Z",
+  "scopes": [
+    "validation"
+  ],
+  "limit": null,
+  "cases": [
+    {
+      "id": "validation-label-timer-mode",
+      "settings": {
+        "label": "AUDIT_LABEL",
+        "timer": "TIM2",
+        "mode": "pwm"
+      },
+      "startedAt": "2026-10-19T07:53:55.686Z",
+      "passed": true,
+      "labelPreserved": true,
+      "finishedAt": "2026-10-19T07:53:56.832Z"
+    },
+    {
+      "id": "validation-conflict-retains-edits",
+      "settings": {
+        "pin": "PA2",
+        "occupied": "PA3",
+        "label": "CONFLICT_LABEL",
+        "pull": "PULLDOWN",
+        "edge": "CHANGE",
+        "initial": 1
+      },
+      "startedAt": "2026-10-19T07:53:56.851Z",
+      "passed": true,
+      "rollbackKeepsPriorEdits": true,
+      "finishedAt": "2026-10-19T07:53:58.033Z"
+    },
+    {
+      "id": "validation-empty-priority",
+      "settings": {
+        "field": "priority",
+        "input": ""
+      },
+      "startedAt": "2026-10-19T07:53:58.038Z",
+      "passed": true,
+      "emptyRejected": true,
+      "finishedAt": "2026-10-19T07:53:58.801Z"
+    },
+    {
+      "id": "validation-empty-prescaler",
+      "settings": {
+        "field": "prescaler",
+        "input": ""
+      },
+      "startedAt": "2026-10-19T07:53:58.804Z",
+      "passed": true,
+      "emptyRejected": true,
+      "finishedAt": "2026-10-19T07:53:59.616Z"
+    },
+    {
+      "id": "validation-empty-period",
+      "settings": {
+        "field": "period",
+        "input": ""
+      },
+      "startedAt": "2026-10-19T07:53:59.618Z",
+      "passed": true,
+      "emptyRejected": true,
+      "finishedAt": "2026-10-19T07:54:00.393Z"
+    },
+    {
+      "id": "validation-empty-pulse",
+      "settings": {
+        "field": "pulse",
+        "input": ""
+      },
+      "startedAt": "2026-10-19T07:54:00.395Z",
+      "passed": true,
+      "emptyRejected": true,
+      "finishedAt": "2026-10-19T07:54:01.157Z"
+    },
+    {
+      "id": "validation-empty-clock",
+      "settings": {
+        "field": "clock",
+        "input": ""
+      },
+      "startedAt": "2026-10-19T07:54:01.160Z",
+      "passed": true,
+      "emptyRejected": true,
+      "finishedAt": "2026-10-19T07:54:01.868Z"
+    }
+  ],
+  "functionChoices": [],
+  "pageErrors": [],
+  "execution": {
+    "mode": "electron",
+    "viewportKind": "BrowserWindow content size"
+  },
+  "limitations": [
+    "Actual simulator execution; no physical STM32 hardware or ARM firmware claim.",
+    "Speed is generated VERY_HIGH and AF is derived from function; no independent Speed/AF selector exists.",
+    "Peripheral function selection coverage is distinct from peripheral electrical execution coverage.",
+    "Executed instrumentation preserves generated initialization; USER CODE 3 automatic Toggle is replaced by an idle delay to observe initial values."
+  ],
+  "gpioPins": [
+    "PA0",
+    "PA1",
+    "PA10",
+    "PA11",
+    "PA12",
+    "PA13",
+    "PA14",
+    "PA15",
+    "PA2",
+    "PA3",
+    "PA4",
+    "PA5",
+    "PA6",
+    "PA7",
+    "PA8",
+    "PA9",
+    "PB0",
+    "PB1",
+    "PB10",
+    "PB12",
+    "PB13",
+    "PB14",
+    "PB15",
+    "PB2",
+    "PB3",
+    "PB4",
+    "PB5",
+    "PB6",
+    "PB7",
+    "PB8",
+    "PB9",
+    "PC0",
+    "PC1",
+    "PC10",
+    "PC11",
+    "PC12",
+    "PC13",
+    "PC14",
+    "PC15",
+    "PC2",
+    "PC3",
+    "PC4",
+    "PC5",
+    "PC6",
+    "PC7",
+    "PC8",
+    "PC9",
+    "PD2",
+    "PH0",
+    "PH1"
+  ],
+  "expected": {
+    "functionChoices": 370,
+    "gpioCases": 30,
+    "gpioPinCombinations": 1500,
+    "extiEnabledCases": 288,
+    "extiEnabledPinCombinations": 2016,
+    "extiDisabledCases": 18,
+    "extiDisabledPinCombinations": 126
+  },
+  "sourceSha256After": "0b6f912d2dd39d700ce8017443f35205bada2e5060693f3defe9c77c7aca2a02",
+  "finishedAt": "2026-10-19T07:54:02.037Z",
+  "completedCases": 7
+}

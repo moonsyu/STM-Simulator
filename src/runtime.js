@@ -180,6 +180,8 @@ export class Runtime {
   }
   *run(){yield* this.statements(this.program.globals);if(this.program.hal){yield* this.invoke('main');return;}if(this.program.functions.setup)yield* this.invoke('setup');while(true){yield* this.invoke('loop');yield 1;}}
   pin(name){const pin=canonicalPin(name);if(!GPIO_PINS.includes(pin))throw new Error(`GPIO 핀 이름을 확인하세요: ${name}`);return pin;}
+  setPinMode(pin,mode){this.pwm.delete(pin);this.gpio[pin]={mode,value:0};this.api.changed?.(this.microTime);}
+  inputLevel(pin){return this.gpio[pin]?.mode==='ANALOG'?0:Number(!!this.api.read?.(pin));}
   interval(value,min=1){checkedNumber(value);if(value<min||value>3600000)throw new Error(`시간 범위: ${min}~3600000 ms`);return value;}
   output(pin,value){if(this.gpio[pin]?.mode!=='OUTPUT')throw new Error(`${pin}: pinMode(${pin}, OUTPUT)을 먼저 설정하세요.`);this.api.beforeChange?.(this.microTime);this.gpio[pin].value=value;this.api.changed?.(this.microTime);this.pollInterrupts();}
   event(at,fn){if(this.events.length>=4096)throw new Error('예약 이벤트 한도를 넘었습니다.');this.events.push({at,fn,order:this.nextOrder++});}
@@ -192,14 +194,14 @@ export class Runtime {
   runCallback(callback){const previous=this.inCallback;this.inCallback=true;try{if(callback.host){callback.host();return;}const iterator=this.invoke(callback.name,callback.args||[]),r=iterator.next();if(!r.done){iterator.return();throw new Error('콜백에서 대기할 수 없습니다.');}}finally{this.inCallback=previous;}}
   pollInterrupts(){
     if(!this.api.read)return;
-    for(const [pin,s]of this.interrupts){const state=Number(!!this.api.read(pin));const fired=state!==s.previous&&(s.mode==='CHANGE'||(s.mode==='RISING'&&state)||(s.mode==='FALLING'&&!state));s.previous=state;if(fired&&!s.pending){s.pending=true;}}
+    for(const [pin,s]of this.interrupts){const state=this.inputLevel(pin);const fired=state!==s.previous&&(s.mode==='CHANGE'||(s.mode==='RISING'&&state)||(s.mode==='FALLING'&&!state));s.previous=state;if(fired&&!s.pending){s.pending=true;}}
   }
   format(args){const [value,base]=args;if(base!==undefined&&typeof value==='number'){if(Number.isInteger(value)&&[2,8,10,16].includes(base))return Math.trunc(value).toString(base).toUpperCase();if(Number.isInteger(base)&&base>=0&&base<=8)return value.toFixed(base);}if(isPointer(value)||isArray(value)){const p=this.pointer(value);let s='';for(let i=0;i<4096;i++){const n=this.get(this.pointerCell(p,i));if(n===0)return s;s+=String.fromCharCode(integer(n));}throw new Error('문자열 종료 문자가 없습니다.');}return args.map(String).join(' ');}
   call(name,args){
     const [a,b,c,d,e]=args;
     if(['pinMode','digitalWrite','digitalRead','analogRead','analogWrite','analogWriteFrequency','pulseIn','attachInterrupt','detachInterrupt','digitalPinToInterrupt'].includes(name)){
       const pin=this.pin(a);
-      if(name==='pinMode'){if(!['OUTPUT','INPUT','INPUT_PULLUP','INPUT_PULLDOWN'].includes(b))throw new Error('pinMode 모드가 올바르지 않습니다.');this.pwm.delete(pin);this.gpio[pin]={mode:b,value:0};this.api.changed?.(this.microTime);return 0;}
+      if(name==='pinMode'){if(!['OUTPUT','INPUT','INPUT_PULLUP','INPUT_PULLDOWN'].includes(b))throw new Error('pinMode 모드가 올바르지 않습니다.');this.setPinMode(pin,b);return 0;}
       if(name==='digitalWrite'){this.pwm.delete(pin);this.output(pin,b?3.3:0);return 0;}
       if(name==='analogWriteFrequency'){checkedNumber(b);if(b<1||b>2000)throw new Error('PWM 주파수 범위: 1~2000 Hz');this.pwmFrequency.set(pin,b);return 0;}
       if(name==='analogWrite'){
@@ -208,12 +210,12 @@ export class Runtime {
         const period=1000/(this.pwmFrequency.get(pin)||500),state={high:true};this.pwm.set(pin,state);this.output(pin,3.3);
         const edge=()=>{if(this.pwm.get(pin)!==state)return;state.high=!state.high;this.output(pin,state.high?3.3:0);this.event(this.microTime/1000+period*(state.high?duty:1-duty),edge);};this.event(this.microTime/1000+period*duty,edge);return 0;
       }
-      if(name==='digitalRead')return Number(!!this.api.read?.(pin));
+      if(name==='digitalRead')return this.inputLevel(pin);
       if(name==='analogRead')return Math.round(Math.max(0,Math.min(3.3,this.api.voltage?.(pin)??0))/3.3*4095);
       if(name==='digitalPinToInterrupt')return pin;
-      if(name==='attachInterrupt'){this.callback(b);if(!['CHANGE','RISING','FALLING'].includes(c))throw new Error('인터럽트 모드는 CHANGE/RISING/FALLING입니다.');this.interrupts.set(pin,{callback:b,mode:c,previous:Number(!!this.api.read?.(pin)),pending:false});return 0;}
+      if(name==='attachInterrupt'){this.callback(b);if(!['CHANGE','RISING','FALLING'].includes(c))throw new Error('인터럽트 모드는 CHANGE/RISING/FALLING입니다.');this.interrupts.set(pin,{callback:b,mode:c,previous:this.inputLevel(pin),pending:false});return 0;}
       if(name==='detachInterrupt'){this.interrupts.delete(pin);return 0;}
-      if(name==='pulseIn'){const timeout=c??1e6;if(![0,1].includes(b)||!Number.isFinite(timeout)||timeout<0||timeout>1e7)throw new Error('pulseIn 인수를 확인하세요.');if(this.gpio[pin]?.mode==='OUTPUT')throw new Error('pulseIn은 입력 핀에 사용하세요.');return this.api.pulseIn?.(pin,b,timeout,this.microTime)??0;}
+      if(name==='pulseIn'){const timeout=c??1e6;if(![0,1].includes(b)||!Number.isFinite(timeout)||timeout<0||timeout>1e7)throw new Error('pulseIn 인수를 확인하세요.');if(this.gpio[pin]?.mode==='OUTPUT')throw new Error('pulseIn은 입력 핀에 사용하세요.');return this.gpio[pin]?.mode==='ANALOG'?0:this.api.pulseIn?.(pin,b,timeout,this.microTime)??0;}
     }
     if(name==='millis')return Math.floor(this.microTime/1000);
     if(name==='micros')return Math.floor(this.microTime);

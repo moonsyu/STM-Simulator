@@ -1,0 +1,9 @@
+{
+  "passed": true,
+  "entries": 1113,
+  "everyEntryMatchesOriginalSha256": true,
+  "profilesExcluded": true,
+  "archive": "ui-runtime-evidence.zip",
+  "sha256": "d9830cb40b064bfc30fe05b896239b90168b9fe9bbc0f5b6bf826d729524edfc",
+  "verifiedAt": "2026-10-19T08:26:35.4345028Z"
+}

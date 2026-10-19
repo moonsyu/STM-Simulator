@@ -1,0 +1,26 @@
+{
+  "passed": true,
+  "version": "0.25.0",
+  "appVersion": "0.25.0",
+  "packaged": false,
+  "runId": "2026-10-19T08-08-18-695Z",
+  "startedAt": "2026-10-19T08:08:18.703Z",
+  "sourceCommit": "5b74ec9586820f082249eee935b8696c2fa7167c",
+  "sourceDirty": true,
+  "sourceHashes": {
+    "src/pinout-ui.js": "ae24a40965f31628ba4e575cc4bca1e1abcaed768862a364453d2380c72880e2",
+    "src/mcu-config.js": "d667230f420ef600112c64596e89fbfe0d7e4581e8d1d815b9cccf099f88f540",
+    "src/hal-generator.js": "aae3b58aa00717f85909758748f4a8b271bace6998985a4281a171bc17f49919",
+    "src/hal.js": "008d3d1b1923d8c6e74cf72a90e809624e466ac29b464832f812beb984c0c4b1",
+    "src/hal-timers.js": "4286cff86ce374425ee6438e472b6098c19ced029294c897b331558f357c3529"
+  },
+  "checks": [
+    "CubeMX fields, disabled peripherals/IRQs and activation",
+    "PWM initial pulse input",
+    "ARR zero helper updates",
+    "HSI HAL generation and simulator run",
+    "configured values persist on reopen",
+    "84 MHz example remains explicit"
+  ],
+  "finishedAt": "2026-10-19T08:08:24.761Z"
+}

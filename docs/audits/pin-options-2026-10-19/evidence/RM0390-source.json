@@ -1,0 +1,24 @@
+{
+  "document": "RM0390",
+  "title": "STM32F446xx advanced Arm-based 32-bit MCUs reference manual",
+  "revision": 9,
+  "section": "7.3.12 Analog configuration",
+  "printedPage": 182,
+  "totalPages": 1321,
+  "url": "https://www.st.com/resource/en/reference_manual/dm00135183.pdf",
+  "alternateOfficialUrl": "https://www.st.com/resource/en/reference_manual/dm00135183-stm32f446xx-advanced-arm-based-32-bit-mcus-stmicroelectronics.pdf",
+  "checkedOn": "2026-10-19",
+  "access": {
+    "verifiedBy": "Web search index of the official ST PDF; section and page footer returned together",
+    "originalPdfSaved": false,
+    "originalPdfSha256": null,
+    "directDownloadStatus": "Current short and long URLs timed out; three previous official aliases also timed out. Original PDF bytes and their hash are not available.",
+    "savedTextType": "Two short verified excerpts and a paraphrase, not a complete page extraction"
+  },
+  "verifiedExcerpts": [
+    "The weak pull-up and pull-down resistors are disabled",
+    "Read access to the input data register gets the value 0"
+  ],
+  "paraphrase": "In Analog mode the output buffer and Schmitt-trigger digital input are inactive. The input logic is fixed low, internal pulls are off, and the analog peripheral path remains connected.",
+  "implementationBoundary": "Retain configured/generated Pull selections, but do not create internal resistors in Analog mode. Digital reads return zero without clamping the physical node voltage or the ADC measurement."
+}

@@ -1,0 +1,1615 @@
+{
+  "passed": false,
+  "version": "0.25.0",
+  "runId": "2026-10-19T08-31-51-878Z",
+  "startedAt": "2026-10-19T08:31:51.883Z",
+  "sourceCommit": "5b74ec9586820f082249eee935b8696c2fa7167c",
+  "sourceDirty": true,
+  "sourceSha256": "1b43991b345387c0105aac31e2b3e3eb6b11cddac11ee19b44fe1604f0363e32",
+  "execution": {
+    "mode": "electron",
+    "viewportKind": "BrowserWindow content size"
+  },
+  "pageErrors": [],
+  "diagnosticWarnings": [],
+  "scenarios": [
+    {
+      "id": "same-device-cards",
+      "passed": true,
+      "snapshots": [
+        {
+          "label": "baseline",
+          "projectFile": "same-device-cards-01-baseline.stm32lab",
+          "projectSha256": "7bb8d98636faade80c191d4a710558d94ce505c6ce387368b7c67babfe88f7bc",
+          "codeFile": "same-device-cards-01-baseline-main.c",
+          "codeSha256": "722df4a8c317f14879cbac9622df19f040985dd911b05756591d28f7181201e4",
+          "bindings": [],
+          "pinCount": 1,
+          "componentCount": 2,
+          "wireCount": 2,
+          "step": ""
+        },
+        {
+          "label": "led1-HAL_GPIO_WritePin",
+          "projectFile": "same-device-cards-02-led1-HAL_GPIO_WritePin.stm32lab",
+          "projectSha256": "e595f764943ec14e2040e42fe08f87026778538a2bc6e1a85db4e3ed35a70d03",
+          "codeFile": "same-device-cards-02-led1-HAL_GPIO_WritePin-main.c",
+          "codeSha256": "095d01fce5d7756deafc6646b8f93694d5cd3044b682567dc21ee49e427f741b",
+          "bindings": [
+            {
+              "key": "led1",
+              "type": "led",
+              "api": "HAL_GPIO_WritePin",
+              "mode": "hal",
+              "parts": {
+                "led1": "led1",
+                "r1": "docsPart1"
+              },
+              "pins": {
+                "PA5": "PA5"
+              },
+              "peripherals": {}
+            }
+          ],
+          "pinCount": 2,
+          "componentCount": 3,
+          "wireCount": 5,
+          "step": "\n        {\n            HAL_GPIO_WritePin(GPIOA, GPIO_PIN_5, GPIO_PIN_SET);\n        }\n"
+        },
+        {
+          "label": "led1-HAL_GPIO_TogglePin",
+          "projectFile": "same-device-cards-03-led1-HAL_GPIO_TogglePin.stm32lab",
+          "projectSha256": "070693056ff3790c48d0a3557e63aeb5d44ba09933e54c5cd31885c2eb5298ae",
+          "codeFile": "same-device-cards-03-led1-HAL_GPIO_TogglePin-main.c",
+          "codeSha256": "183356997447154b5a7daf9c14026388630811127b8a79bd184aff116c7f8356",
+          "bindings": [
+            {
+              "key": "led1",
+              "type": "led",
+              "api": "HAL_GPIO_TogglePin",
+              "mode": "hal",
+              "parts": {
+                "led1": "led1",
+                "r1": "docsPart1"
+              },
+              "pins": {
+                "PA5": "PA5"
+              },
+              "peripherals": {}
+            }
+          ],
+          "pinCount": 2,
+          "componentCount": 3,
+          "wireCount": 5,
+          "step": "\n        {\n            HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_5);\n        }\n"
+        },
+        {
+          "label": "led1-HAL_GPIO_ReadPin",
+          "projectFile": "same-device-cards-04-led1-HAL_GPIO_ReadPin.stm32lab",
+          "projectSha256": "dada09d830f62877e0da076954273498291b6525b6686a5b604e03deebc5de08",
+          "codeFile": "same-device-cards-04-led1-HAL_GPIO_ReadPin-main.c",
+          "codeSha256": "33361514c681a69ff8608abd7cfa3bae8e84b6d637a2bb9dfef87970be884ff0",
+          "bindings": [
+            {
+              "key": "led1",
+              "type": "led",
+              "api": "HAL_GPIO_ReadPin",
+              "mode": "hal",
+              "parts": {
+                "led1": "led1",
+                "r1": "docsPart1"
+              },
+              "pins": {
+                "PA5": "PA5"
+              },
+              "peripherals": {}
+            }
+          ],
+          "pinCount": 2,
+          "componentCount": 3,
+          "wireCount": 5,
+          "step": "\n        {\n            HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_5);\n            printf(\"PA5=%u\\n\", HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_5));\n        }\n"
+        },
+        {
+          "label": "led1-HAL_GPIO_WritePin",
+          "projectFile": "same-device-cards-05-led1-HAL_GPIO_WritePin.stm32lab",
+          "projectSha256": "e595f764943ec14e2040e42fe08f87026778538a2bc6e1a85db4e3ed35a70d03",
+          "codeFile": "same-device-cards-05-led1-HAL_GPIO_WritePin-main.c",
+          "codeSha256": "095d01fce5d7756deafc6646b8f93694d5cd3044b682567dc21ee49e427f741b",
+          "bindings": [
+            {
+              "key": "led1",
+              "type": "led",
+              "api": "HAL_GPIO_WritePin",
+              "mode": "hal",
+              "parts": {
+                "led1": "led1",
+                "r1": "docsPart1"
+              },
+              "pins": {
+                "PA5": "PA5"
+              },
+              "peripherals": {}
+            }
+          ],
+          "pinCount": 2,
+          "componentCount": 3,
+          "wireCount": 5,
+          "step": "\n        {\n            HAL_GPIO_WritePin(GPIOA, GPIO_PIN_5, GPIO_PIN_SET);\n        }\n"
+        }
+      ],
+      "applies": [
+        {
+          "id": "led1",
+          "api": "HAL_GPIO_WritePin",
+          "message": "적용 완료 · 부품 1개 추가 / 배선 3개 추가 / 오접속 0개 보완 / 기존 연결 0개 유지",
+          "preview": "HAL_GPIO_WritePin(GPIOA, GPIO_PIN_5, GPIO_PIN_SET);",
+          "report": {
+            "addedParts": 1,
+            "reused": 0,
+            "addedWires": 3,
+            "removedWires": 0,
+            "detached": 0,
+            "preserved": 0
+          },
+          "projectSha256": "e595f764943ec14e2040e42fe08f87026778538a2bc6e1a85db4e3ed35a70d03"
+        },
+        {
+          "id": "led1",
+          "api": "HAL_GPIO_TogglePin",
+          "message": "적용 완료 · 부품 0개 추가 / 배선 0개 추가 / 오접속 0개 보완 / 기존 연결 3개 유지",
+          "preview": "HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_5);",
+          "report": {
+            "addedParts": 0,
+            "reused": 0,
+            "addedWires": 0,
+            "removedWires": 0,
+            "detached": 0,
+            "preserved": 3
+          },
+          "projectSha256": "070693056ff3790c48d0a3557e63aeb5d44ba09933e54c5cd31885c2eb5298ae"
+        },
+        {
+          "id": "led1",
+          "api": "HAL_GPIO_ReadPin",
+          "message": "적용 완료 · 부품 0개 추가 / 배선 0개 추가 / 오접속 0개 보완 / 기존 연결 3개 유지",
+          "preview": "HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_5);\nprintf(\"PA5=%u\\n\", HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_5));",
+          "report": {
+            "addedParts": 0,
+            "reused": 0,
+            "addedWires": 0,
+            "removedWires": 0,
+            "detached": 0,
+            "preserved": 3
+          },
+          "projectSha256": "dada09d830f62877e0da076954273498291b6525b6686a5b604e03deebc5de08"
+        },
+        {
+          "id": "led1",
+          "api": "HAL_GPIO_WritePin",
+          "message": "적용 완료 · 부품 0개 추가 / 배선 0개 추가 / 오접속 0개 보완 / 기존 연결 3개 유지",
+          "preview": "HAL_GPIO_WritePin(GPIOA, GPIO_PIN_5, GPIO_PIN_SET);",
+          "report": {
+            "addedParts": 0,
+            "reused": 0,
+            "addedWires": 0,
+            "removedWires": 0,
+            "detached": 0,
+            "preserved": 3
+          },
+          "projectSha256": "e595f764943ec14e2040e42fe08f87026778538a2bc6e1a85db4e3ed35a70d03"
+        }
+      ],
+      "roundTrips": [
+        {
+          "file": "same-device-cards-restored.stm32lab",
+          "sha256": "2990c940f7d22ab51d34b7957f49e6475e27597783719bb5607d732c28429be3"
+        }
+      ],
+      "runs": [
+        {
+          "label": "write-first",
+          "file": "same-device-cards-write-first-events.jsonl",
+          "events": 7,
+          "stateCount": 3,
+          "states": [
+            {
+              "simulationMs": 240,
+              "parts": {
+                "led1": {
+                  "voltage": 1.8471204163063295,
+                  "current": 0.003926701358860789,
+                  "on": true,
+                  "power": 0.00725309024868957
+                },
+                "userRes": {
+                  "voltage": 3.286852576546404,
+                  "current": 0.0003286852576546404,
+                  "power": 0.0010803399859949734
+                },
+                "docsPart1": {
+                  "voltage": 1.29581150937903,
+                  "current": 0.003926701543572818,
+                  "power": 0.00508826505405806
+                }
+              },
+              "pins": {
+                "PB12": {
+                  "mode": "OUTPUT",
+                  "value": 3.3,
+                  "openDrain": false,
+                  "pull": 0
+                },
+                "PA5": {
+                  "mode": "OUTPUT",
+                  "value": 3.3,
+                  "openDrain": false,
+                  "pull": 0
+                }
+              }
+            },
+            {
+              "simulationMs": 2240,
+              "parts": {
+                "led1": {
+                  "voltage": 1.8471204163063295,
+                  "current": 0.003926701358860789,
+                  "on": true,
+                  "power": 0.00725309024868957
+                },
+                "userRes": {
+                  "voltage": 3.286852576546404,
+                  "current": 0.0003286852576546404,
+                  "power": 0.0010803399859949734
+                },
+                "docsPart1": {
+                  "voltage": 1.29581150937903,
+                  "current": 0.003926701543572818,
+                  "power": 0.00508826505405806
+                }
+              },
+              "pins": {
+                "PB12": {
+                  "mode": "OUTPUT",
+                  "value": 3.3,
+                  "openDrain": false,
+                  "pull": 0
+                },
+                "PA5": {
+                  "mode": "OUTPUT",
+                  "value": 3.3,
+                  "openDrain": false,
+                  "pull": 0
+                }
+              }
+            },
+            {
+              "simulationMs": 2520,
+              "parts": {
+                "led1": {
+                  "voltage": 1.8471204163063295,
+                  "current": 0.003926701358860789,
+                  "on": true,
+                  "power": 0.00725309024868957
+                },
+                "userRes": {
+                  "voltage": 3.286852576546404,
+                  "current": 0.0003286852576546404,
+                  "power": 0.0010803399859949734
+                },
+                "docsPart1": {
+                  "voltage": 1.29581150937903,
+                  "current": 0.003926701543572818,
+                  "power": 0.00508826505405806
+                }
+              },
+              "pins": {
+                "PB12": {
+                  "mode": "OUTPUT",
+                  "value": 3.3,
+                  "openDrain": false,
+                  "pull": 0
+                },
+                "PA5": {
+                  "mode": "OUTPUT",
+                  "value": 3.3,
+                  "openDrain": false,
+                  "pull": 0
+                }
+              }
+            }
+          ],
+          "console": [
+            {
+              "type": "serial",
+              "message": "USER_KEEP_same-device-cards=42",
+              "simulationMs": 0,
+              "status": "paused"
+            },
+            {
+              "type": "info",
+              "message": "HAL 프로그램을 시작했습니다.",
+              "simulationMs": 0,
+              "status": "paused"
+            },
+            {
+              "type": "info",
+              "message": "시뮬레이션을 정지했습니다.",
+              "simulationMs": 2520,
+              "status": "stopped"
+            }
+          ],
+          "uart": []
+        },
+        {
+          "label": "toggle",
+          "file": "same-device-cards-toggle-events.jsonl",
+          "events": 7,
+          "stateCount": 3,
+          "states": [
+            {
+              "simulationMs": 1260,
+              "parts": {
+                "led1": {
+                  "voltage": 0,
+                  "current": 0,
+                  "on": false,
+                  "power": 0
+                },
+                "userRes": {
+                  "voltage": 3.286852576546404,
+                  "current": 0.0003286852576546404,
+                  "power": 0.0010803399859949734
+                },
+                "docsPart1": {
+                  "voltage": 0,
+                  "current": 0,
+                  "power": 0
+                }
+              },
+              "pins": {
+                "PB12": {
+                  "mode": "OUTPUT",
+                  "value": 3.3,
+                  "openDrain": false,
+                  "pull": 0
+                },
+                "PA5": {
+                  "mode": "OUTPUT",
+                  "value": 0,
+                  "openDrain": false,
+                  "pull": 0
+                }
+              }
+            },
+            {
+              "simulationMs": 3260,
+              "parts": {
+                "led1": {
+                  "voltage": 0,
+                  "current": 0,
+                  "on": false,
+                  "power": 0
+                },
+                "userRes": {
+                  "voltage": 3.286852576546404,
+                  "current": 0.0003286852576546404,
+                  "power": 0.0010803399859949734
+                },
+                "docsPart1": {
+                  "voltage": 0,
+                  "current": 0,
+                  "power": 0
+                }
+              },
+              "pins": {
+                "PB12": {
+                  "mode": "OUTPUT",
+                  "value": 3.3,
+                  "openDrain": false,
+                  "pull": 0
+                },
+                "PA5": {
+                  "mode": "OUTPUT",
+                  "value": 0,
+                  "openDrain": false,
+                  "pull": 0
+                }
+              }
+            },
+            {
+              "simulationMs": 5220,
+              "parts": {
+                "led1": {
+                  "voltage": 1.8471204163063295,
+                  "current": 0.003926701358860789,
+                  "on": true,
+                  "power": 0.00725309024868957
+                },
+                "userRes": {
+                  "voltage": 3.286852576546404,
+                  "current": 0.0003286852576546404,
+                  "power": 0.0010803399859949734
+                },
+                "docsPart1": {
+                  "voltage": 1.29581150937903,
+                  "current": 0.003926701543572818,
+                  "power": 0.00508826505405806
+                }
+              },
+              "pins": {
+                "PB12": {
+                  "mode": "OUTPUT",
+                  "value": 3.3,
+                  "openDrain": false,
+                  "pull": 0
+                },
+                "PA5": {
+                  "mode": "OUTPUT",
+                  "value": 3.3,
+                  "openDrain": false,
+                  "pull": 0
+                }
+              }
+            }
+          ],
+          "console": [
+            {
+              "type": "serial",
+              "message": "USER_KEEP_same-device-cards=42",
+              "simulationMs": 0,
+              "status": "paused"
+            },
+            {
+              "type": "info",
+              "message": "HAL 프로그램을 시작했습니다.",
+              "simulationMs": 0,
+              "status": "paused"
+            },
+            {
+              "type": "info",
+              "message": "시뮬레이션을 정지했습니다.",
+              "simulationMs": 5220,
+              "status": "stopped"
+            }
+          ],
+          "uart": []
+        },
+        {
+          "label": "read-prerequisites",
+          "file": "same-device-cards-read-prerequisites-events.jsonl",
+          "events": 25,
+          "stateCount": 2,
+          "states": [
+            {
+              "simulationMs": 1620,
+              "parts": {
+                "led1": {
+                  "voltage": 0,
+                  "current": 0,
+                  "on": false,
+                  "power": 0
+                },
+                "userRes": {
+                  "voltage": 3.286852576546404,
+                  "current": 0.0003286852576546404,
+                  "power": 0.0010803399859949734
+                },
+                "docsPart1": {
+                  "voltage": 0,
+                  "current": 0,
+                  "power": 0
+                }
+              },
+              "pins": {
+                "PB12": {
+                  "mode": "OUTPUT",
+                  "value": 3.3,
+                  "openDrain": false,
+                  "pull": 0
+                },
+                "PA5": {
+                  "mode": "OUTPUT",
+                  "value": 0,
+                  "openDrain": false,
+                  "pull": 0
+                }
+              }
+            },
+            {
+              "simulationMs": 2520,
+              "parts": {
+                "led1": {
+                  "voltage": 1.8471204163063295,
+                  "current": 0.003926701358860789,
+                  "on": true,
+                  "power": 0.00725309024868957
+                },
+                "userRes": {
+                  "voltage": 3.286852576546404,
+                  "current": 0.0003286852576546404,
+                  "power": 0.0010803399859949734
+                },
+                "docsPart1": {
+                  "voltage": 1.29581150937903,
+                  "current": 0.003926701543572818,
+                  "power": 0.00508826505405806
+                }
+              },
+              "pins": {
+                "PB12": {
+                  "mode": "OUTPUT",
+                  "value": 3.3,
+                  "openDrain": false,
+                  "pull": 0
+                },
+                "PA5": {
+                  "mode": "OUTPUT",
+                  "value": 3.3,
+                  "openDrain": false,
+                  "pull": 0
+                }
+              }
+            }
+          ],
+          "console": [
+            {
+              "type": "serial",
+              "message": "USER_KEEP_same-device-cards=42",
+              "simulationMs": 0,
+              "status": "paused"
+            },
+            {
+              "type": "serial",
+              "message": "PA5=1",
+              "simulationMs": 0,
+              "status": "paused"
+            },
+            {
+              "type": "info",
+              "message": "HAL 프로그램을 시작했습니다.",
+              "simulationMs": 0,
+              "status": "paused"
+            },
+            {
+              "type": "serial",
+              "message": "PA5=0",
+              "simulationMs": 140,
+              "status": "running"
+            },
+            {
+              "type": "serial",
+              "message": "PA5=1",
+              "simulationMs": 280,
+              "status": "running"
+            },
+            {
+              "type": "serial",
+              "message": "PA5=0",
+              "simulationMs": 420,
+              "status": "running"
+            },
+            {
+              "type": "serial",
+              "message": "PA5=1",
+              "simulationMs": 560,
+              "status": "running"
+            },
+            {
+              "type": "serial",
+              "message": "PA5=0",
+              "simulationMs": 700,
+              "status": "running"
+            },
+            {
+              "type": "serial",
+              "message": "PA5=1",
+              "simulationMs": 840,
+              "status": "running"
+            },
+            {
+              "type": "serial",
+              "message": "PA5=0",
+              "simulationMs": 960,
+              "status": "running"
+            },
+            {
+              "type": "serial",
+              "message": "PA5=1",
+              "simulationMs": 1100,
+              "status": "running"
+            },
+            {
+              "type": "serial",
+              "message": "PA5=0",
+              "simulationMs": 1240,
+              "status": "running"
+            },
+            {
+              "type": "serial",
+              "message": "PA5=1",
+              "simulationMs": 1380,
+              "status": "running"
+            },
+            {
+              "type": "serial",
+              "message": "PA5=0",
+              "simulationMs": 1520,
+              "status": "running"
+            },
+            {
+              "type": "serial",
+              "message": "PA5=1",
+              "simulationMs": 1660,
+              "status": "running"
+            },
+            {
+              "type": "serial",
+              "message": "PA5=0",
+              "simulationMs": 1800,
+              "status": "running"
+            },
+            {
+              "type": "serial",
+              "message": "PA5=1",
+              "simulationMs": 1920,
+              "status": "running"
+            },
+            {
+              "type": "serial",
+              "message": "PA5=0",
+              "simulationMs": 2060,
+              "status": "running"
+            },
+            {
+              "type": "serial",
+              "message": "PA5=1",
+              "simulationMs": 2200,
+              "status": "running"
+            },
+            {
+              "type": "serial",
+              "message": "PA5=0",
+              "simulationMs": 2340,
+              "status": "running"
+            },
+            {
+              "type": "serial",
+              "message": "PA5=1",
+              "simulationMs": 2480,
+              "status": "running"
+            },
+            {
+              "type": "info",
+              "message": "시뮬레이션을 정지했습니다.",
+              "simulationMs": 2520,
+              "status": "stopped"
+            }
+          ],
+          "uart": []
+        },
+        {
+          "label": "write-restored",
+          "file": "same-device-cards-write-restored-events.jsonl",
+          "events": 7,
+          "stateCount": 3,
+          "states": [
+            {
+              "simulationMs": 280,
+              "parts": {
+                "led1": {
+                  "voltage": 1.8471204163063295,
+                  "current": 0.003926701358860789,
+                  "on": true,
+                  "power": 0.00725309024868957
+                },
+                "userRes": {
+                  "voltage": 3.286852576546404,
+                  "current": 0.0003286852576546404,
+                  "power": 0.0010803399859949734
+                },
+                "docsPart1": {
+                  "voltage": 1.29581150937903,
+                  "current": 0.003926701543572818,
+                  "power": 0.00508826505405806
+                }
+              },
+              "pins": {
+                "PB12": {
+                  "mode": "OUTPUT",
+                  "value": 3.3,
+                  "openDrain": false,
+                  "pull": 0
+                },
+                "PA5": {
+                  "mode": "OUTPUT",
+                  "value": 3.3,
+                  "openDrain": false,
+                  "pull": 0
+                }
+              }
+            },
+            {
+              "simulationMs": 2280,
+              "parts": {
+                "led1": {
+                  "voltage": 1.8471204163063295,
+                  "current": 0.003926701358860789,
+                  "on": true,
+                  "power": 0.00725309024868957
+                },
+                "userRes": {
+                  "voltage": 3.286852576546404,
+                  "current": 0.0003286852576546404,
+                  "power": 0.0010803399859949734
+                },
+                "docsPart1": {
+                  "voltage": 1.29581150937903,
+                  "current": 0.003926701543572818,
+                  "power": 0.00508826505405806
+                }
+              },
+              "pins": {
+                "PB12": {
+                  "mode": "OUTPUT",
+                  "value": 3.3,
+                  "openDrain": false,
+                  "pull": 0
+                },
+                "PA5": {
+                  "mode": "OUTPUT",
+                  "value": 3.3,
+                  "openDrain": false,
+                  "pull": 0
+                }
+              }
+            },
+            {
+              "simulationMs": 2520,
+              "parts": {
+                "led1": {
+                  "voltage": 1.8471204163063295,
+                  "current": 0.003926701358860789,
+                  "on": true,
+                  "power": 0.00725309024868957
+                },
+                "userRes": {
+                  "voltage": 3.286852576546404,
+                  "current": 0.0003286852576546404,
+                  "power": 0.0010803399859949734
+                },
+                "docsPart1": {
+                  "voltage": 1.29581150937903,
+                  "current": 0.003926701543572818,
+                  "power": 0.00508826505405806
+                }
+              },
+              "pins": {
+                "PB12": {
+                  "mode": "OUTPUT",
+                  "value": 3.3,
+                  "openDrain": false,
+                  "pull": 0
+                },
+                "PA5": {
+                  "mode": "OUTPUT",
+                  "value": 3.3,
+                  "openDrain": false,
+                  "pull": 0
+                }
+              }
+            }
+          ],
+          "console": [
+            {
+              "type": "serial",
+              "message": "USER_KEEP_same-device-cards=42",
+              "simulationMs": 0,
+              "status": "paused"
+            },
+            {
+              "type": "info",
+              "message": "HAL 프로그램을 시작했습니다.",
+              "simulationMs": 0,
+              "status": "paused"
+            },
+            {
+              "type": "info",
+              "message": "시뮬레이션을 정지했습니다.",
+              "simulationMs": 2520,
+              "status": "stopped"
+            }
+          ],
+          "uart": []
+        }
+      ],
+      "startedAt": "2026-10-19T08:31:54.173Z",
+      "policy": {
+        "sameDeviceCardsAccumulate": false,
+        "behavior": "Last card replaces this device STEP; selected operation may retain prerequisite operations.",
+        "initializationWritePinExcludedFromDecision": true
+      },
+      "finishedAt": "2026-10-19T08:32:09.779Z"
+    },
+    {
+      "id": "two-leds",
+      "passed": true,
+      "snapshots": [
+        {
+          "label": "baseline",
+          "projectFile": "two-leds-01-baseline.stm32lab",
+          "projectSha256": "b36b23c14e3cba4927a897cccd110758279494a176845ef823981dfe5ae4519b",
+          "codeFile": "two-leds-01-baseline-main.c",
+          "codeSha256": "6a1f300560e51122998e19a6533eddeb1d3e5d24f43f0d95d80af641d248f318",
+          "bindings": [],
+          "pinCount": 1,
+          "componentCount": 3,
+          "wireCount": 2,
+          "step": ""
+        },
+        {
+          "label": "led1-HAL_GPIO_WritePin",
+          "projectFile": "two-leds-02-led1-HAL_GPIO_WritePin.stm32lab",
+          "projectSha256": "8caab0860e82acece875c7f6a3b096a7741839b2a7fdfeebb35a6a904df2d606",
+          "codeFile": "two-leds-02-led1-HAL_GPIO_WritePin-main.c",
+          "codeSha256": "2b142a21fc7daec80f9e1c8295a463921878080291770868d30095e98bece584",
+          "bindings": [
+            {
+              "key": "led1",
+              "type": "led",
+              "api": "HAL_GPIO_WritePin",
+              "mode": "hal",
+              "parts": {
+                "led1": "led1",
+                "r1": "docsPart1"
+              },
+              "pins": {
+                "PA5": "PA5"
+              },
+              "peripherals": {}
+            }
+          ],
+          "pinCount": 2,
+          "componentCount": 4,
+          "wireCount": 5,
+          "step": "\n        {\n            HAL_GPIO_WritePin(GPIOA, GPIO_PIN_5, GPIO_PIN_SET);\n        }\n"
+        },
+        {
+          "label": "led2-HAL_GPIO_WritePin",
+          "projectFile": "two-leds-03-led2-HAL_GPIO_WritePin.stm32lab",
+          "projectSha256": "41f7ddf5869f12fbcb9cea8d41a9c528be4884e1db455390ff3526e902377986",
+          "codeFile": "two-leds-03-led2-HAL_GPIO_WritePin-main.c",
+          "codeSha256": "5ee2af4470dafbd3046fa6b87735fc958e5a6169f6789b8aba55377e8ecafc3a",
+          "bindings": [
+            {
+              "key": "led1",
+              "type": "led",
+              "api": "HAL_GPIO_WritePin",
+              "mode": "hal",
+              "parts": {
+                "led1": "led1",
+                "r1": "docsPart1"
+              },
+              "pins": {
+                "PA5": "PA5"
+              },
+              "peripherals": {}
+            },
+            {
+              "key": "led2",
+              "type": "led",
+              "api": "HAL_GPIO_WritePin",
+              "mode": "hal",
+              "parts": {
+                "led1": "led2",
+                "r1": "docsPart2"
+              },
+              "pins": {
+                "PA5": "PA0"
+              },
+              "peripherals": {}
+            }
+          ],
+          "pinCount": 3,
+          "componentCount": 5,
+          "wireCount": 8,
+          "step": "\n        {\n            HAL_GPIO_WritePin(GPIOA, GPIO_PIN_5, GPIO_PIN_SET);\n        }\n        {\n            HAL_GPIO_WritePin(GPIOA, GPIO_PIN_0, GPIO_PIN_SET);\n        }\n"
+        },
+        {
+          "label": "led1-HAL_GPIO_WritePin",
+          "projectFile": "two-leds-04-led1-HAL_GPIO_WritePin.stm32lab",
+          "projectSha256": "41f7ddf5869f12fbcb9cea8d41a9c528be4884e1db455390ff3526e902377986",
+          "codeFile": "two-leds-04-led1-HAL_GPIO_WritePin-main.c",
+          "codeSha256": "5ee2af4470dafbd3046fa6b87735fc958e5a6169f6789b8aba55377e8ecafc3a",
+          "bindings": [
+            {
+              "key": "led1",
+              "type": "led",
+              "api": "HAL_GPIO_WritePin",
+              "mode": "hal",
+              "parts": {
+                "led1": "led1",
+                "r1": "docsPart1"
+              },
+              "pins": {
+                "PA5": "PA5"
+              },
+              "peripherals": {}
+            },
+            {
+              "key": "led2",
+              "type": "led",
+              "api": "HAL_GPIO_WritePin",
+              "mode": "hal",
+              "parts": {
+                "led1": "led2",
+                "r1": "docsPart2"
+              },
+              "pins": {
+                "PA5": "PA0"
+              },
+              "peripherals": {}
+            }
+          ],
+          "pinCount": 3,
+          "componentCount": 5,
+          "wireCount": 8,
+          "step": "\n        {\n            HAL_GPIO_WritePin(GPIOA, GPIO_PIN_5, GPIO_PIN_SET);\n        }\n        {\n            HAL_GPIO_WritePin(GPIOA, GPIO_PIN_0, GPIO_PIN_SET);\n        }\n"
+        }
+      ],
+      "applies": [
+        {
+          "id": "led1",
+          "api": "HAL_GPIO_WritePin",
+          "message": "적용 완료 · 부품 1개 추가 / 배선 3개 추가 / 오접속 0개 보완 / 기존 연결 0개 유지",
+          "preview": "HAL_GPIO_WritePin(GPIOA, GPIO_PIN_5, GPIO_PIN_SET);",
+          "report": {
+            "addedParts": 1,
+            "reused": 0,
+            "addedWires": 3,
+            "removedWires": 0,
+            "detached": 0,
+            "preserved": 0
+          },
+          "projectSha256": "8caab0860e82acece875c7f6a3b096a7741839b2a7fdfeebb35a6a904df2d606"
+        },
+        {
+          "id": "led2",
+          "api": "HAL_GPIO_WritePin",
+          "message": "적용 완료 · 부품 1개 추가 / 배선 3개 추가 / 오접속 0개 보완 / 기존 연결 0개 유지",
+          "preview": "HAL_GPIO_WritePin(GPIOA, GPIO_PIN_5, GPIO_PIN_SET);",
+          "report": {
+            "addedParts": 1,
+            "reused": 0,
+            "addedWires": 3,
+            "removedWires": 0,
+            "detached": 0,
+            "preserved": 0
+          },
+          "projectSha256": "41f7ddf5869f12fbcb9cea8d41a9c528be4884e1db455390ff3526e902377986"
+        },
+        {
+          "id": "led1",
+          "api": "HAL_GPIO_WritePin",
+          "message": "적용 완료 · 부품 0개 추가 / 배선 0개 추가 / 오접속 0개 보완 / 기존 연결 3개 유지",
+          "preview": "HAL_GPIO_WritePin(GPIOA, GPIO_PIN_5, GPIO_PIN_SET);",
+          "report": {
+            "addedParts": 0,
+            "reused": 0,
+            "addedWires": 0,
+            "removedWires": 0,
+            "detached": 0,
+            "preserved": 3
+          },
+          "projectSha256": "41f7ddf5869f12fbcb9cea8d41a9c528be4884e1db455390ff3526e902377986"
+        }
+      ],
+      "roundTrips": [
+        {
+          "file": "two-leds-restored.stm32lab",
+          "sha256": "9ab684e2400b3eb41c0ef35aed1c0ca13cc3f52dfd330540379428a8b2fae407"
+        }
+      ],
+      "runs": [
+        {
+          "label": "both-on",
+          "file": "two-leds-both-on-events.jsonl",
+          "events": 6,
+          "stateCount": 2,
+          "states": [
+            {
+              "simulationMs": 1880,
+              "parts": {
+                "led1": {
+                  "voltage": 1.8471204163063295,
+                  "current": 0.003926701358860789,
+                  "on": true,
+                  "power": 0.00725309024868957
+                },
+                "led2": {
+                  "voltage": 1.8471204163063295,
+                  "current": 0.003926701358860789,
+                  "on": true,
+                  "power": 0.00725309024868957
+                },
+                "userRes": {
+                  "voltage": 3.286852576546404,
+                  "current": 0.0003286852576546404,
+                  "power": 0.0010803399859949734
+                },
+                "docsPart1": {
+                  "voltage": 1.29581150937903,
+                  "current": 0.003926701543572818,
+                  "power": 0.00508826505405806
+                },
+                "docsPart2": {
+                  "voltage": 1.29581150937903,
+                  "current": 0.003926701543572818,
+                  "power": 0.00508826505405806
+                }
+              },
+              "pins": {
+                "PB12": {
+                  "mode": "OUTPUT",
+                  "value": 3.3,
+                  "openDrain": false,
+                  "pull": 0
+                },
+                "PA5": {
+                  "mode": "OUTPUT",
+                  "value": 3.3,
+                  "openDrain": false,
+                  "pull": 0
+                },
+                "PA0": {
+                  "mode": "OUTPUT",
+                  "value": 3.3,
+                  "openDrain": false,
+                  "pull": 0
+                }
+              }
+            },
+            {
+              "simulationMs": 2520,
+              "parts": {
+                "led1": {
+                  "voltage": 1.8471204163063295,
+                  "current": 0.003926701358860789,
+                  "on": true,
+                  "power": 0.00725309024868957
+                },
+                "led2": {
+                  "voltage": 1.8471204163063295,
+                  "current": 0.003926701358860789,
+                  "on": true,
+                  "power": 0.00725309024868957
+                },
+                "userRes": {
+                  "voltage": 3.286852576546404,
+                  "current": 0.0003286852576546404,
+                  "power": 0.0010803399859949734
+                },
+                "docsPart1": {
+                  "voltage": 1.29581150937903,
+                  "current": 0.003926701543572818,
+                  "power": 0.00508826505405806
+                },
+                "docsPart2": {
+                  "voltage": 1.29581150937903,
+                  "current": 0.003926701543572818,
+                  "power": 0.00508826505405806
+                }
+              },
+              "pins": {
+                "PB12": {
+                  "mode": "OUTPUT",
+                  "value": 3.3,
+                  "openDrain": false,
+                  "pull": 0
+                },
+                "PA5": {
+                  "mode": "OUTPUT",
+                  "value": 3.3,
+                  "openDrain": false,
+                  "pull": 0
+                },
+                "PA0": {
+                  "mode": "OUTPUT",
+                  "value": 3.3,
+                  "openDrain": false,
+                  "pull": 0
+                }
+              }
+            }
+          ],
+          "console": [
+            {
+              "type": "serial",
+              "message": "USER_KEEP_two-leds=42",
+              "simulationMs": 0,
+              "status": "paused"
+            },
+            {
+              "type": "info",
+              "message": "HAL 프로그램을 시작했습니다.",
+              "simulationMs": 0,
+              "status": "paused"
+            },
+            {
+              "type": "info",
+              "message": "시뮬레이션을 정지했습니다.",
+              "simulationMs": 2520,
+              "status": "stopped"
+            }
+          ],
+          "uart": []
+        }
+      ],
+      "startedAt": "2026-10-19T08:32:09.780Z",
+      "distinctOutputPins": [
+        "PA5",
+        "PA0"
+      ],
+      "finishedAt": "2026-10-19T08:32:14.167Z"
+    },
+    {
+      "id": "four-device-mix",
+      "passed": false,
+      "snapshots": [
+        {
+          "label": "baseline",
+          "projectFile": "four-device-mix-01-baseline.stm32lab",
+          "projectSha256": "bd952d63e6d435931e82a08070fbd88079ae2953749619387291d8e6cea02208",
+          "codeFile": "four-device-mix-01-baseline-main.c",
+          "codeSha256": "ddcc083d6655e466321f682516b8145fe8a9c0a85f813d85c4608adf8e9d5cd0",
+          "bindings": [],
+          "pinCount": 1,
+          "componentCount": 5,
+          "wireCount": 2,
+          "step": ""
+        },
+        {
+          "label": "led1-HAL_GPIO_WritePin",
+          "projectFile": "four-device-mix-02-led1-HAL_GPIO_WritePin.stm32lab",
+          "projectSha256": "f955b3e28182795ea386e26f1a69589685ac58944f90ed632eff91ca7e44b24d",
+          "codeFile": "four-device-mix-02-led1-HAL_GPIO_WritePin-main.c",
+          "codeSha256": "49dbbadef1f0c5ae0d10e4be8166a0694b094f8f25c87ccf5f1ffc76b8916849",
+          "bindings": [
+            {
+              "key": "led1",
+              "type": "led",
+              "api": "HAL_GPIO_WritePin",
+              "mode": "hal",
+              "parts": {
+                "led1": "led1",
+                "r1": "docsPart1"
+              },
+              "pins": {
+                "PA5": "PA5"
+              },
+              "peripherals": {}
+            }
+          ],
+          "pinCount": 2,
+          "componentCount": 6,
+          "wireCount": 5,
+          "step": "\n        {\n            HAL_GPIO_WritePin(GPIOA, GPIO_PIN_5, GPIO_PIN_SET);\n        }\n"
+        },
+        {
+          "label": "pot1-all",
+          "projectFile": "four-device-mix-03-pot1-all.stm32lab",
+          "projectSha256": "15a0eacb32b6886398b511293d755e2cb197edba40353b270211168f7656ba1b",
+          "codeFile": "four-device-mix-03-pot1-all-main.c",
+          "codeSha256": "0927e780701f3ae810fc61aab503183b563e28bd2727fac26685992327e4428a",
+          "bindings": [
+            {
+              "key": "led1",
+              "type": "led",
+              "api": "HAL_GPIO_WritePin",
+              "mode": "hal",
+              "parts": {
+                "led1": "led1",
+                "r1": "docsPart1"
+              },
+              "pins": {
+                "PA5": "PA5"
+              },
+              "peripherals": {}
+            },
+            {
+              "key": "pot1",
+              "type": "potentiometer",
+              "api": "all",
+              "mode": "hal",
+              "parts": {
+                "demo": "pot1"
+              },
+              "pins": {
+                "PA0": "PA0"
+              },
+              "peripherals": {
+                "ADC1": "ADC1"
+              }
+            }
+          ],
+          "pinCount": 3,
+          "componentCount": 6,
+          "wireCount": 8,
+          "step": "\n        {\n            HAL_GPIO_WritePin(GPIOA, GPIO_PIN_5, GPIO_PIN_SET);\n        }\n        {\n            ADC_ChannelConfTypeDef docsChannel = {0}; docsChannel.Channel = ADC_CHANNEL_0; docsChannel.Rank = 1; docsChannel.SamplingTime = ADC_SAMPLETIME_3CYCLES; HAL_ADC_ConfigChannel(&hadc1, &docsChannel);\n            HAL_ADC_Start((&hadc1));\n            HAL_ADC_PollForConversion((&hadc1), 10);\n            uint32_t raw = HAL_ADC_GetValue((&hadc1));\n            printf(\"ADC=%lu, voltage=%.3f V\\n\", raw, ((raw * 3.3) / 4095));\n            HAL_Delay(200);\n        }\n"
+        },
+        {
+          "label": "uart1-all",
+          "projectFile": "four-device-mix-04-uart1-all.stm32lab",
+          "projectSha256": "19dfc5b7427478b1881e0d4a11d271cc180359583609f28d5beabc7977f47e9a",
+          "codeFile": "four-device-mix-04-uart1-all-main.c",
+          "codeSha256": "d760ce3e39cc30bfc79d02b4dd2ea93b21e3362407b954b545d526900725d4c7",
+          "bindings": [
+            {
+              "key": "led1",
+              "type": "led",
+              "api": "HAL_GPIO_WritePin",
+              "mode": "hal",
+              "parts": {
+                "led1": "led1",
+                "r1": "docsPart1"
+              },
+              "pins": {
+                "PA5": "PA5"
+              },
+              "peripherals": {}
+            },
+            {
+              "key": "pot1",
+              "type": "potentiometer",
+              "api": "all",
+              "mode": "hal",
+              "parts": {
+                "demo": "pot1"
+              },
+              "pins": {
+                "PA0": "PA0"
+              },
+              "peripherals": {
+                "ADC1": "ADC1"
+              }
+            },
+            {
+              "key": "uart1",
+              "type": "uart",
+              "api": "all",
+              "mode": "hal",
+              "parts": {
+                "demo": "uart1"
+              },
+              "pins": {
+                "PA2": "PA2",
+                "PA3": "PA3"
+              },
+              "peripherals": {
+                "USART2": "USART2"
+              }
+            }
+          ],
+          "pinCount": 5,
+          "componentCount": 6,
+          "wireCount": 12,
+          "step": "\n        {\n            HAL_GPIO_WritePin(GPIOA, GPIO_PIN_5, GPIO_PIN_SET);\n        }\n        {\n            ADC_ChannelConfTypeDef docsChannel = {0}; docsChannel.Channel = ADC_CHANNEL_0; docsChannel.Rank = 1; docsChannel.SamplingTime = ADC_SAMPLETIME_3CYCLES; HAL_ADC_ConfigChannel(&hadc1, &docsChannel);\n            HAL_ADC_Start((&hadc1));\n            HAL_ADC_PollForConversion((&hadc1), 10);\n            uint32_t raw = HAL_ADC_GetValue((&hadc1));\n            printf(\"ADC=%lu, voltage=%.3f V\\n\", raw, ((raw * 3.3) / 4095));\n            HAL_Delay(200);\n        }\n        {\n            if ((HAL_UART_Receive((&huart2), STM_D2_rx, 1, 10) == HAL_OK)) {\n                HAL_UART_Transmit((&huart2), STM_D2_rx, 1, 100);\n            }\n        }\n"
+        },
+        {
+          "label": "servo1-all",
+          "projectFile": "four-device-mix-05-servo1-all.stm32lab",
+          "projectSha256": "e241626692c4f14e2da6b1a9f7cb51c2ba0c7b4c75a938c121049fbfb76e2132",
+          "codeFile": "four-device-mix-05-servo1-all-main.c",
+          "codeSha256": "35812a1dc245ce0e3fffa045effef80a8d685bb2979d0a498dfbf8c659d46d09",
+          "bindings": [
+            {
+              "key": "led1",
+              "type": "led",
+              "api": "HAL_GPIO_WritePin",
+              "mode": "hal",
+              "parts": {
+                "led1": "led1",
+                "r1": "docsPart1"
+              },
+              "pins": {
+                "PA5": "PA5"
+              },
+              "peripherals": {}
+            },
+            {
+              "key": "pot1",
+              "type": "potentiometer",
+              "api": "all",
+              "mode": "hal",
+              "parts": {
+                "demo": "pot1"
+              },
+              "pins": {
+                "PA0": "PA0"
+              },
+              "peripherals": {
+                "ADC1": "ADC1"
+              }
+            },
+            {
+              "key": "uart1",
+              "type": "uart",
+              "api": "all",
+              "mode": "hal",
+              "parts": {
+                "demo": "uart1"
+              },
+              "pins": {
+                "PA2": "PA2",
+                "PA3": "PA3"
+              },
+              "peripherals": {
+                "USART2": "USART2"
+              }
+            },
+            {
+              "key": "servo1",
+              "type": "servo",
+              "api": "all",
+              "mode": "hal",
+              "parts": {
+                "demo": "servo1"
+              },
+              "pins": {
+                "PA5": "PA15"
+              },
+              "peripherals": {
+                "TIM2": "TIM2"
+              }
+            }
+          ],
+          "pinCount": 6,
+          "componentCount": 6,
+          "wireCount": 15,
+          "step": "\n        {\n            HAL_GPIO_WritePin(GPIOA, GPIO_PIN_5, GPIO_PIN_SET);\n        }\n        {\n            ADC_ChannelConfTypeDef docsChannel = {0}; docsChannel.Channel = ADC_CHANNEL_0; docsChannel.Rank = 1; docsChannel.SamplingTime = ADC_SAMPLETIME_3CYCLES; HAL_ADC_ConfigChannel(&hadc1, &docsChannel);\n            HAL_ADC_Start((&hadc1));\n            HAL_ADC_PollForConversion((&hadc1), 10);\n            uint32_t raw = HAL_ADC_GetValue((&hadc1));\n            printf(\"ADC=%lu, voltage=%.3f V\\n\", raw, ((raw * 3.3) / 4095));\n            HAL_Delay(200);\n        }\n        {\n            if ((HAL_UART_Receive((&huart2), STM_D2_rx, 1, 10) == HAL_OK)) {\n                HAL_UART_Transmit((&huart2), STM_D2_rx, 1, 100);\n            }\n        }\n        {\n            uint32_t pulse = (1000 + (STM_D3_servoStep * 500));\n            __HAL_TIM_SET_COMPARE((&htim2), TIM_CHANNEL_1, pulse);\n            printf(\"Servo command=%lu deg pulse=%lu us\\n\", (STM_D3_servoStep * 90), pulse);\n            (STM_D3_servoStep = ((STM_D3_servoStep + 1) % 3));\n            HAL_Delay(1200);\n        }\n"
+        },
+        {
+          "label": "pot1-all",
+          "projectFile": "four-device-mix-06-pot1-all.stm32lab",
+          "projectSha256": "e241626692c4f14e2da6b1a9f7cb51c2ba0c7b4c75a938c121049fbfb76e2132",
+          "codeFile": "four-device-mix-06-pot1-all-main.c",
+          "codeSha256": "35812a1dc245ce0e3fffa045effef80a8d685bb2979d0a498dfbf8c659d46d09",
+          "bindings": [
+            {
+              "key": "led1",
+              "type": "led",
+              "api": "HAL_GPIO_WritePin",
+              "mode": "hal",
+              "parts": {
+                "led1": "led1",
+                "r1": "docsPart1"
+              },
+              "pins": {
+                "PA5": "PA5"
+              },
+              "peripherals": {}
+            },
+            {
+              "key": "pot1",
+              "type": "potentiometer",
+              "api": "all",
+              "mode": "hal",
+              "parts": {
+                "demo": "pot1"
+              },
+              "pins": {
+                "PA0": "PA0"
+              },
+              "peripherals": {
+                "ADC1": "ADC1"
+              }
+            },
+            {
+              "key": "uart1",
+              "type": "uart",
+              "api": "all",
+              "mode": "hal",
+              "parts": {
+                "demo": "uart1"
+              },
+              "pins": {
+                "PA2": "PA2",
+                "PA3": "PA3"
+              },
+              "peripherals": {
+                "USART2": "USART2"
+              }
+            },
+            {
+              "key": "servo1",
+              "type": "servo",
+              "api": "all",
+              "mode": "hal",
+              "parts": {
+                "demo": "servo1"
+              },
+              "pins": {
+                "PA5": "PA15"
+              },
+              "peripherals": {
+                "TIM2": "TIM2"
+              }
+            }
+          ],
+          "pinCount": 6,
+          "componentCount": 6,
+          "wireCount": 15,
+          "step": "\n        {\n            HAL_GPIO_WritePin(GPIOA, GPIO_PIN_5, GPIO_PIN_SET);\n        }\n        {\n            ADC_ChannelConfTypeDef docsChannel = {0}; docsChannel.Channel = ADC_CHANNEL_0; docsChannel.Rank = 1; docsChannel.SamplingTime = ADC_SAMPLETIME_3CYCLES; HAL_ADC_ConfigChannel(&hadc1, &docsChannel);\n            HAL_ADC_Start((&hadc1));\n            HAL_ADC_PollForConversion((&hadc1), 10);\n            uint32_t raw = HAL_ADC_GetValue((&hadc1));\n            printf(\"ADC=%lu, voltage=%.3f V\\n\", raw, ((raw * 3.3) / 4095));\n            HAL_Delay(200);\n        }\n        {\n            if ((HAL_UART_Receive((&huart2), STM_D2_rx, 1, 10) == HAL_OK)) {\n                HAL_UART_Transmit((&huart2), STM_D2_rx, 1, 100);\n            }\n        }\n        {\n            uint32_t pulse = (1000 + (STM_D3_servoStep * 500));\n            __HAL_TIM_SET_COMPARE((&htim2), TIM_CHANNEL_1, pulse);\n            printf(\"Servo command=%lu deg pulse=%lu us\\n\", (STM_D3_servoStep * 90), pulse);\n            (STM_D3_servoStep = ((STM_D3_servoStep + 1) % 3));\n            HAL_Delay(1200);\n        }\n"
+        },
+        {
+          "label": "failure",
+          "projectFile": "four-device-mix-07-failure.stm32lab",
+          "projectSha256": "e241626692c4f14e2da6b1a9f7cb51c2ba0c7b4c75a938c121049fbfb76e2132",
+          "codeFile": "four-device-mix-07-failure-main.c",
+          "codeSha256": "35812a1dc245ce0e3fffa045effef80a8d685bb2979d0a498dfbf8c659d46d09",
+          "bindings": [
+            {
+              "key": "led1",
+              "type": "led",
+              "api": "HAL_GPIO_WritePin",
+              "mode": "hal",
+              "parts": {
+                "led1": "led1",
+                "r1": "docsPart1"
+              },
+              "pins": {
+                "PA5": "PA5"
+              },
+              "peripherals": {}
+            },
+            {
+              "key": "pot1",
+              "type": "potentiometer",
+              "api": "all",
+              "mode": "hal",
+              "parts": {
+                "demo": "pot1"
+              },
+              "pins": {
+                "PA0": "PA0"
+              },
+              "peripherals": {
+                "ADC1": "ADC1"
+              }
+            },
+            {
+              "key": "uart1",
+              "type": "uart",
+              "api": "all",
+              "mode": "hal",
+              "parts": {
+                "demo": "uart1"
+              },
+              "pins": {
+                "PA2": "PA2",
+                "PA3": "PA3"
+              },
+              "peripherals": {
+                "USART2": "USART2"
+              }
+            },
+            {
+              "key": "servo1",
+              "type": "servo",
+              "api": "all",
+              "mode": "hal",
+              "parts": {
+                "demo": "servo1"
+              },
+              "pins": {
+                "PA5": "PA15"
+              },
+              "peripherals": {
+                "TIM2": "TIM2"
+              }
+            }
+          ],
+          "pinCount": 6,
+          "componentCount": 6,
+          "wireCount": 15,
+          "step": "\n        {\n            HAL_GPIO_WritePin(GPIOA, GPIO_PIN_5, GPIO_PIN_SET);\n        }\n        {\n            ADC_ChannelConfTypeDef docsChannel = {0}; docsChannel.Channel = ADC_CHANNEL_0; docsChannel.Rank = 1; docsChannel.SamplingTime = ADC_SAMPLETIME_3CYCLES; HAL_ADC_ConfigChannel(&hadc1, &docsChannel);\n            HAL_ADC_Start((&hadc1));\n            HAL_ADC_PollForConversion((&hadc1), 10);\n            uint32_t raw = HAL_ADC_GetValue((&hadc1));\n            printf(\"ADC=%lu, voltage=%.3f V\\n\", raw, ((raw * 3.3) / 4095));\n            HAL_Delay(200);\n        }\n        {\n            if ((HAL_UART_Receive((&huart2), STM_D2_rx, 1, 10) == HAL_OK)) {\n                HAL_UART_Transmit((&huart2), STM_D2_rx, 1, 100);\n            }\n        }\n        {\n            uint32_t pulse = (1000 + (STM_D3_servoStep * 500));\n            __HAL_TIM_SET_COMPARE((&htim2), TIM_CHANNEL_1, pulse);\n            printf(\"Servo command=%lu deg pulse=%lu us\\n\", (STM_D3_servoStep * 90), pulse);\n            (STM_D3_servoStep = ((STM_D3_servoStep + 1) % 3));\n            HAL_Delay(1200);\n        }\n"
+        }
+      ],
+      "applies": [
+        {
+          "id": "led1",
+          "api": "HAL_GPIO_WritePin",
+          "message": "적용 완료 · 부품 1개 추가 / 배선 3개 추가 / 오접속 0개 보완 / 기존 연결 0개 유지",
+          "preview": "HAL_GPIO_WritePin(GPIOA, GPIO_PIN_5, GPIO_PIN_SET);",
+          "report": {
+            "addedParts": 1,
+            "reused": 0,
+            "addedWires": 3,
+            "removedWires": 0,
+            "detached": 0,
+            "preserved": 0
+          },
+          "projectSha256": "f955b3e28182795ea386e26f1a69589685ac58944f90ed632eff91ca7e44b24d"
+        },
+        {
+          "id": "pot1",
+          "api": "all",
+          "message": "적용 완료 · 부품 0개 추가 / 배선 3개 추가 / 오접속 0개 보완 / 기존 연결 0개 유지",
+          "preview": "HAL_ADC_Start((&hadc1));\nHAL_ADC_PollForConversion((&hadc1), 10);\nuint32_t raw = HAL_ADC_GetValue((&hadc1));\nprintf(\"ADC=%lu, voltage=%.3f V\\n\", raw, ((raw * 3.3) / 4095));\nHAL_Delay(200);",
+          "report": {
+            "addedParts": 0,
+            "reused": 0,
+            "addedWires": 3,
+            "removedWires": 0,
+            "detached": 0,
+            "preserved": 0
+          },
+          "projectSha256": "15a0eacb32b6886398b511293d755e2cb197edba40353b270211168f7656ba1b"
+        },
+        {
+          "id": "uart1",
+          "api": "all",
+          "message": "적용 완료 · 부품 0개 추가 / 배선 4개 추가 / 오접속 0개 보완 / 기존 연결 0개 유지",
+          "preview": "uint8_t rx[1];\nuint8_t message[] = \"HAL UART ready\\r\\n\";\nHAL_UART_Transmit((&huart2), message, (sizeof(message) - 1), 100);\nif ((HAL_UART_Receive((&huart2), rx, 1, 10) == HAL_OK)) {\n    HAL_UART_Transmit((&huart2), rx, 1, 100);\n}",
+          "report": {
+            "addedParts": 0,
+            "reused": 0,
+            "addedWires": 4,
+            "removedWires": 0,
+            "detached": 0,
+            "preserved": 0
+          },
+          "projectSha256": "19dfc5b7427478b1881e0d4a11d271cc180359583609f28d5beabc7977f47e9a"
+        },
+        {
+          "id": "servo1",
+          "api": "all",
+          "message": "적용 완료 · 부품 0개 추가 / 배선 3개 추가 / 오접속 0개 보완 / 기존 연결 0개 유지",
+          "preview": "uint32_t servoStep = 0;\nTIM_OC_InitTypeDef channel = {0};\n(channel.OCMode = TIM_OCMODE_PWM1);\n(channel.OCPolarity = TIM_OCPOLARITY_HIGH);\n(channel.Pulse = 1000);\nHAL_TIM_PWM_ConfigChannel((&htim2), (&channel), TIM_CHANNEL_1);\nHAL_TIM_PWM_Start((&htim2), TIM_CHANNEL_1);\nuint32_t pulse = (1000 + (servoStep * 500));\n__HAL_TIM_SET_COMPARE((&htim2), TIM_CHANNEL_1, pulse);\nprintf(\"Servo command=%lu deg pulse=%lu us\\n\", (servoStep * 90), pulse);\n(servoStep = ((servoStep + 1) % 3));\nHAL_Delay(1200);",
+          "report": {
+            "addedParts": 0,
+            "reused": 0,
+            "addedWires": 3,
+            "removedWires": 0,
+            "detached": 0,
+            "preserved": 0
+          },
+          "projectSha256": "e241626692c4f14e2da6b1a9f7cb51c2ba0c7b4c75a938c121049fbfb76e2132"
+        },
+        {
+          "id": "pot1",
+          "api": "all",
+          "message": "적용 완료 · 부품 0개 추가 / 배선 0개 추가 / 오접속 0개 보완 / 기존 연결 3개 유지",
+          "preview": "HAL_ADC_Start((&hadc1));\nHAL_ADC_PollForConversion((&hadc1), 10);\nuint32_t raw = HAL_ADC_GetValue((&hadc1));\nprintf(\"ADC=%lu, voltage=%.3f V\\n\", raw, ((raw * 3.3) / 4095));\nHAL_Delay(200);",
+          "report": {
+            "addedParts": 0,
+            "reused": 0,
+            "addedWires": 0,
+            "removedWires": 0,
+            "detached": 0,
+            "preserved": 3
+          },
+          "projectSha256": "e241626692c4f14e2da6b1a9f7cb51c2ba0c7b4c75a938c121049fbfb76e2132"
+        }
+      ],
+      "roundTrips": [
+        {
+          "file": "four-device-mix-restored.stm32lab",
+          "sha256": "4e32bcc04b146cf354dff57e68b219230282460e5557b6738d459438439ac0d7"
+        }
+      ],
+      "runs": [],
+      "startedAt": "2026-10-19T08:32:14.168Z",
+      "error": "page.selectOption: Timeout 15000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('#resize-target')\u001b[22m\n\u001b[2m    - locator resolved to <select disabled id=\"resize-target\" aria-label=\"크기를 바꿀 장치\" data-items=\"surface:board:STM32 보드|part:led1:led1|part:pot1:pot1|part:uart1:uart1|part:servo1:servo1|part:userRes:User load|part:docsPart1:R1 · Docs\">…</select>\u001b[22m\n\u001b[2m  - attempting select option action\u001b[22m\n\u001b[2m    2 × waiting for element to be visible and enabled\u001b[22m\n\u001b[2m      - element is not enabled\u001b[22m\n\u001b[2m    - retrying select option action\u001b[22m\n\u001b[2m    - waiting 20ms\u001b[22m\n\u001b[2m    2 × waiting for element to be visible and enabled\u001b[22m\n\u001b[2m      - element is not enabled\u001b[22m\n\u001b[2m    - retrying select option action\u001b[22m\n\u001b[2m      - waiting 100ms\u001b[22m\n\u001b[2m    29 × waiting for element to be visible and enabled\u001b[22m\n\u001b[2m       - element is not enabled\u001b[22m\n\u001b[2m     - retrying select option action\u001b[22m\n\u001b[2m       - waiting 500ms\u001b[22m\n\n    at stimulus (D:\\codex\\project\\STM-Simulator\\scripts\\docs-multi-apply-check.cjs:41:475)\n    at async run (D:\\codex\\project\\STM-Simulator\\scripts\\docs-multi-apply-check.cjs:29:220)\n    at async D:\\codex\\project\\STM-Simulator\\scripts\\docs-multi-apply-check.cjs:41:16\n    at async scenario (D:\\codex\\project\\STM-Simulator\\scripts\\docs-multi-apply-check.cjs:30:150)\n    at async main (D:\\codex\\project\\STM-Simulator\\scripts\\docs-multi-apply-check.cjs:40:3)",
+      "console": "0.000 s회로를 열었습니다: four-device-mix0.000 s[USART2 TX] HAL UART ready0.000 sHAL 프로그램을 시작했습니다.0.020 sUSER_KEEP_four-device-mix=420.020 sADC=819, voltage=0.660 V0.240 sServo command=0 deg pulse=1000 us1.580 sADC=819, voltage=0.660 V1.764 s[USART2 RX] Q1.764 s[USART2 TX] Q1.780 sServo command=90 deg pulse=1500 us3.120 sADC=819, voltage=0.660 V3.320 sServo command=180 deg pulse=2000 us4.660 sADC=819, voltage=0.660 V4.860 sServo command=0 deg pulse=1000 us6.200 sADC=819, voltage=0.660 V6.400 sServo command=90 deg pulse=1500 us7.740 sADC=819, voltage=0.660 V7.960 sServo command=180 deg pulse=2000 us9.300 sADC=819, voltage=0.660 V9.500 sServo command=0 deg pulse=1000 us10.840 sADC=819, voltage=0.660 V11.040 sServo command=90 deg pulse=1500 us12.380 sADC=819, voltage=0.660 V12.600 sServo command=180 deg pulse=2000 us13.940 sADC=819, voltage=0.660 V14.140 sServo command=0 deg pulse=1000 us15.480 sADC=819, voltage=0.660 V15.680 sServo command=90 deg pulse=1500 us",
+      "finishedAt": "2026-10-19T08:32:33.519Z"
+    }
+  ],
+  "limitations": [
+    "Simulator execution, not physical STM32 or ARM firmware verification.",
+    "Same-device cards select one operation and its prerequisites; different-device examples execute sequentially in main."
+  ],
+  "appVersion": "0.25.0",
+  "sourceSha256After": "1b43991b345387c0105aac31e2b3e3eb6b11cddac11ee19b44fe1604f0363e32",
+  "finishedAt": "2026-10-19T08:32:33.659Z"
+}

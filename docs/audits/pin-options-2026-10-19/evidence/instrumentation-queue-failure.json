@@ -1,0 +1,878 @@
+{
+  "passed": false,
+  "completeMatrix": false,
+  "requestedCompleteMatrix": false,
+  "packageVersion": "0.25.0",
+  "appVersion": "0.25.0",
+  "sourceCommit": "5b74ec9586820f082249eee935b8696c2fa7167c",
+  "sourceDirty": true,
+  "sourceStatus": "M scripts/mcu-defaults-smoke.cjs\n M src/hal.js\n M src/pinout-ui.js\n?? docs/audits/pin-options-2026-10-19/\n?? scripts/pin-options-ui-check.cjs\n?? tests/hal-nvic-dispatch.test.js",
+  "sourceSha256": "0b6f912d2dd39d700ce8017443f35205bada2e5060693f3defe9c77c7aca2a02",
+  "startedAt": "2026-10-19T07:55:17.653Z",
+  "runId": "2026-10-19T07-55-15-716Z",
+  "scopes": [
+    "gpio",
+    "exti",
+    "callbacks"
+  ],
+  "limit": 1,
+  "cases": [
+    {
+      "id": "gpio-GPIO_Output-PULLDOWN-1",
+      "settings": {
+        "mode": "GPIO_Output",
+        "pull": "PULLDOWN",
+        "initial": 1,
+        "pins": [
+          "PA0",
+          "PA1",
+          "PA10",
+          "PA11",
+          "PA12",
+          "PA13",
+          "PA14",
+          "PA15",
+          "PA2",
+          "PA3",
+          "PA4",
+          "PA5",
+          "PA6",
+          "PA7",
+          "PA8",
+          "PA9",
+          "PB0",
+          "PB1",
+          "PB10",
+          "PB12",
+          "PB13",
+          "PB14",
+          "PB15",
+          "PB2",
+          "PB3",
+          "PB4",
+          "PB5",
+          "PB6",
+          "PB7",
+          "PB8",
+          "PB9",
+          "PC0",
+          "PC1",
+          "PC10",
+          "PC11",
+          "PC12",
+          "PC13",
+          "PC14",
+          "PC15",
+          "PC2",
+          "PC3",
+          "PC4",
+          "PC5",
+          "PC6",
+          "PC7",
+          "PC8",
+          "PC9",
+          "PD2",
+          "PH0",
+          "PH1"
+        ]
+      },
+      "startedAt": "2026-10-19T07:55:24.791Z",
+      "passed": true,
+      "generatedCodeSha256": "cf8b3063de4eb37df16f677e9bb13e8aaa61083ae817854ccdb0c88ba5b656c7",
+      "executedCodeSha256": "a01ab9f0beb8df8b563d0a515c1f81c703b58ac74878dd21acc275e418a3978c",
+      "runtimeEvents": 56,
+      "voltages": {
+        "PA0": "3.297 V",
+        "PA1": "3.297 V",
+        "PA10": "3.297 V",
+        "PA11": "3.297 V",
+        "PA12": "3.297 V",
+        "PA13": "3.297 V",
+        "PA14": "3.297 V",
+        "PA15": "3.297 V",
+        "PA2": "3.297 V",
+        "PA3": "3.297 V",
+        "PA4": "3.297 V",
+        "PA5": "3.297 V",
+        "PA6": "3.297 V",
+        "PA7": "3.297 V",
+        "PA8": "3.297 V",
+        "PA9": "3.297 V",
+        "PB0": "3.297 V",
+        "PB1": "3.297 V",
+        "PB10": "3.297 V",
+        "PB12": "3.297 V",
+        "PB13": "3.297 V",
+        "PB14": "3.297 V",
+        "PB15": "3.297 V",
+        "PB2": "3.297 V",
+        "PB3": "3.297 V",
+        "PB4": "3.297 V",
+        "PB5": "3.297 V",
+        "PB6": "3.297 V",
+        "PB7": "3.297 V",
+        "PB8": "3.297 V",
+        "PB9": "3.297 V",
+        "PC0": "3.297 V",
+        "PC1": "3.297 V",
+        "PC10": "3.297 V",
+        "PC11": "3.297 V",
+        "PC12": "3.297 V",
+        "PC13": "3.297 V",
+        "PC14": "3.297 V",
+        "PC15": "3.297 V",
+        "PC2": "3.297 V",
+        "PC3": "3.297 V",
+        "PC4": "3.297 V",
+        "PC5": "3.297 V",
+        "PC6": "3.297 V",
+        "PC7": "3.297 V",
+        "PC8": "3.297 V",
+        "PC9": "3.297 V",
+        "PD2": "3.297 V",
+        "PH0": "3.297 V",
+        "PH1": "3.297 V"
+      },
+      "roundTrip": {
+        "file": "gpio-GPIO_Output-PULLDOWN-1.stm32lab",
+        "sha256": "757fa0c71d8d0e68ac2bca79be1757a2747a3f657147f79ce0e63b7d14fe80a4"
+      },
+      "finishedAt": "2026-10-19T07:55:45.910Z"
+    },
+    {
+      "id": "exti-enabled-CHANGE-PULLUP-1-p15",
+      "settings": {
+        "enabled": true,
+        "edge": "CHANGE",
+        "pull": "PULLUP",
+        "initial": 1,
+        "priority": 15,
+        "receivers": [
+          "PA0",
+          "PA1",
+          "PA2",
+          "PA3",
+          "PA4",
+          "PA5",
+          "PA10"
+        ],
+        "drivers": [
+          "PB0",
+          "PB1",
+          "PB2",
+          "PB3",
+          "PB4",
+          "PB5",
+          "PB6"
+        ],
+        "irq": [
+          "EXTI0_IRQn",
+          "EXTI1_IRQn",
+          "EXTI2_IRQn",
+          "EXTI3_IRQn",
+          "EXTI4_IRQn",
+          "EXTI9_5_IRQn",
+          "EXTI15_10_IRQn"
+        ]
+      },
+      "startedAt": "2026-10-19T07:55:45.914Z",
+      "passed": false,
+      "error": "AssertionError [ERR_ASSERTION]: exti-enabled-CHANGE-PULLUP-1-p15 LOW PA1 expected 0; actual MASK_HIGH PA1=1; MASK_HIGH PA10=1; MASKED PA1=0; MASKED PA10=0; PENDING PA1=1; PENDING PA10=1; RISE PA1=1; RISE PA10=1; HIGH PA1=1; HIGH PA10=1; FALL PA1=2; FALL PA10=2\n    at D:\\codex\\project\\STM-Simulator\\scripts\\pin-options-ui-check.cjs:107:223\n    at async scenario (D:\\codex\\project\\STM-Simulator\\scripts\\pin-options-ui-check.cjs:51:150)\n    at async main (D:\\codex\\project\\STM-Simulator\\scripts\\pin-options-ui-check.cjs:98:5)",
+      "console": "0.000 sHAL 프로그램을 시작했습니다.0.020 sMASK_HIGH PA0=10.020 sMASK_HIGH PA1=10.020 sMASK_HIGH PA2=10.020 sMASK_HIGH PA3=10.020 sMASK_HIGH PA4=10.020 sMASK_HIGH PA5=10.020 sMASK_HIGH PA10=10.020 sMASKED PA0=00.020 sMASKED PA1=00.020 sMASKED PA2=00.020 sMASKED PA3=00.020 sMASKED PA4=00.020 sMASKED PA5=00.020 sMASKED PA10=00.020 sCALL 1 00.020 sCALL 1 10.020 sCALL 1 20.020 sCALL 1 30.020 sCALL 1 40.020 sCALL 1 50.020 sCALL 1 100.020 sPENDING PA0=10.020 sPENDING PA1=10.020 sPENDING PA2=10.020 sPENDING PA3=10.020 sPENDING PA4=10.020 sPENDING PA5=10.020 sPENDING PA10=10.020 sCALL 2 00.020 sCALL 2 10.020 sCALL 2 20.020 sCALL 2 30.020 sCALL 2 40.020 sCALL 2 50.020 sCALL 2 100.020 sRISE PA0=10.020 sRISE PA1=10.020 sRISE PA2=10.020 sRISE PA3=10.020 sRISE PA4=10.020 sRISE PA5=10.020 sRISE PA10=10.020 sHIGH PA0=10.020 sHIGH PA1=10.020 sHIGH PA2=10.020 sHIGH PA3=10.020 sHIGH PA4=10.020 sHIGH PA5=10.020 sHIGH PA10=10.020 sCALL 2 00.020 sCALL 2 10.020 sCALL 2 20.020 sCALL 2 30.020 sCALL 2 40.020 sCALL 2 50.020 sCALL 2 100.020 sFALL PA0=20.020 sFALL PA1=20.020 sFALL PA2=20.020 sFALL PA3=20.020 sFALL PA4=20.020 sFALL PA5=20.020 sFALL PA10=20.020 sLOW PA0=00.020 sLOW PA1=00.020 sLOW PA2=00.020 sLOW PA3=00.020 sLOW PA4=00.020 sLOW PA5=00.020 sLOW PA10=00.020 sEXTI_DONE0.080 s시뮬레이션을 정지했습니다.",
+      "observed": {
+        "pinError": "",
+        "dialogOpen": false,
+        "fields": [
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "peripheral": "USART1"
+            }
+          },
+          {
+            "id": "",
+            "value": "",
+            "dataset": {
+              "serialRoute": "USART1",
+              "role": "TX"
+            }
+          },
+          {
+            "id": "",
+            "value": "",
+            "dataset": {
+              "serialRoute": "USART1",
+              "role": "RX"
+            }
+          },
+          {
+            "id": "",
+            "value": "115200",
+            "dataset": {
+              "peripheralValue": "USART1",
+              "key": "baud"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "peripheral": "USART2"
+            }
+          },
+          {
+            "id": "",
+            "value": "",
+            "dataset": {
+              "serialRoute": "USART2",
+              "role": "TX"
+            }
+          },
+          {
+            "id": "",
+            "value": "",
+            "dataset": {
+              "serialRoute": "USART2",
+              "role": "RX"
+            }
+          },
+          {
+            "id": "",
+            "value": "115200",
+            "dataset": {
+              "peripheralValue": "USART2",
+              "key": "baud"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "peripheral": "USART3"
+            }
+          },
+          {
+            "id": "",
+            "value": "",
+            "dataset": {
+              "serialRoute": "USART3",
+              "role": "TX"
+            }
+          },
+          {
+            "id": "",
+            "value": "",
+            "dataset": {
+              "serialRoute": "USART3",
+              "role": "RX"
+            }
+          },
+          {
+            "id": "",
+            "value": "115200",
+            "dataset": {
+              "peripheralValue": "USART3",
+              "key": "baud"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "peripheral": "UART4"
+            }
+          },
+          {
+            "id": "",
+            "value": "",
+            "dataset": {
+              "serialRoute": "UART4",
+              "role": "TX"
+            }
+          },
+          {
+            "id": "",
+            "value": "",
+            "dataset": {
+              "serialRoute": "UART4",
+              "role": "RX"
+            }
+          },
+          {
+            "id": "",
+            "value": "115200",
+            "dataset": {
+              "peripheralValue": "UART4",
+              "key": "baud"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "peripheral": "UART5"
+            }
+          },
+          {
+            "id": "",
+            "value": "",
+            "dataset": {
+              "serialRoute": "UART5",
+              "role": "TX"
+            }
+          },
+          {
+            "id": "",
+            "value": "",
+            "dataset": {
+              "serialRoute": "UART5",
+              "role": "RX"
+            }
+          },
+          {
+            "id": "",
+            "value": "115200",
+            "dataset": {
+              "peripheralValue": "UART5",
+              "key": "baud"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "peripheral": "USART6"
+            }
+          },
+          {
+            "id": "",
+            "value": "",
+            "dataset": {
+              "serialRoute": "USART6",
+              "role": "TX"
+            }
+          },
+          {
+            "id": "",
+            "value": "",
+            "dataset": {
+              "serialRoute": "USART6",
+              "role": "RX"
+            }
+          },
+          {
+            "id": "",
+            "value": "115200",
+            "dataset": {
+              "peripheralValue": "USART6",
+              "key": "baud"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "peripheral": "I2C1"
+            }
+          },
+          {
+            "id": "",
+            "value": "100000",
+            "dataset": {
+              "peripheralValue": "I2C1",
+              "key": "clock"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "peripheral": "SPI1"
+            }
+          },
+          {
+            "id": "",
+            "value": "1000000",
+            "dataset": {
+              "peripheralValue": "SPI1",
+              "key": "clock"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "peripheral": "ADC1"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "peripheral": "TIM2"
+            }
+          },
+          {
+            "id": "",
+            "value": "base",
+            "dataset": {
+              "timerMode": "TIM2"
+            }
+          },
+          {
+            "id": "",
+            "value": "0",
+            "dataset": {
+              "peripheralValue": "TIM2",
+              "key": "prescaler"
+            }
+          },
+          {
+            "id": "",
+            "value": "4294967295",
+            "dataset": {
+              "peripheralValue": "TIM2",
+              "key": "period"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "peripheral": "TIM3"
+            }
+          },
+          {
+            "id": "",
+            "value": "base",
+            "dataset": {
+              "timerMode": "TIM3"
+            }
+          },
+          {
+            "id": "",
+            "value": "0",
+            "dataset": {
+              "peripheralValue": "TIM3",
+              "key": "prescaler"
+            }
+          },
+          {
+            "id": "",
+            "value": "65535",
+            "dataset": {
+              "peripheralValue": "TIM3",
+              "key": "period"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "peripheral": "TIM4"
+            }
+          },
+          {
+            "id": "",
+            "value": "base",
+            "dataset": {
+              "timerMode": "TIM4"
+            }
+          },
+          {
+            "id": "",
+            "value": "0",
+            "dataset": {
+              "peripheralValue": "TIM4",
+              "key": "prescaler"
+            }
+          },
+          {
+            "id": "",
+            "value": "65535",
+            "dataset": {
+              "peripheralValue": "TIM4",
+              "key": "period"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "peripheral": "TIM5"
+            }
+          },
+          {
+            "id": "",
+            "value": "base",
+            "dataset": {
+              "timerMode": "TIM5"
+            }
+          },
+          {
+            "id": "",
+            "value": "0",
+            "dataset": {
+              "peripheralValue": "TIM5",
+              "key": "prescaler"
+            }
+          },
+          {
+            "id": "",
+            "value": "4294967295",
+            "dataset": {
+              "peripheralValue": "TIM5",
+              "key": "period"
+            }
+          },
+          {
+            "id": "pin-function",
+            "value": "GPIO_Output",
+            "dataset": {}
+          },
+          {
+            "id": "pin-pull",
+            "value": "NOPULL",
+            "dataset": {}
+          },
+          {
+            "id": "pin-edge",
+            "value": "FALLING",
+            "dataset": {}
+          },
+          {
+            "id": "pin-level",
+            "value": "0",
+            "dataset": {}
+          },
+          {
+            "id": "pin-label",
+            "value": "",
+            "dataset": {}
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "irq": "EXTI0_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "15",
+            "dataset": {
+              "priority": "EXTI0_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "irq": "EXTI1_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "15",
+            "dataset": {
+              "priority": "EXTI1_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "irq": "EXTI2_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "15",
+            "dataset": {
+              "priority": "EXTI2_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "irq": "EXTI3_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "15",
+            "dataset": {
+              "priority": "EXTI3_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "irq": "EXTI4_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "15",
+            "dataset": {
+              "priority": "EXTI4_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "irq": "EXTI9_5_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "15",
+            "dataset": {
+              "priority": "EXTI9_5_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "irq": "EXTI15_10_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "15",
+            "dataset": {
+              "priority": "EXTI15_10_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "irq": "USART1_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "0",
+            "dataset": {
+              "priority": "USART1_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "irq": "USART2_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "0",
+            "dataset": {
+              "priority": "USART2_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "irq": "USART3_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "0",
+            "dataset": {
+              "priority": "USART3_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "irq": "UART4_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "0",
+            "dataset": {
+              "priority": "UART4_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "irq": "UART5_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "0",
+            "dataset": {
+              "priority": "UART5_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "irq": "USART6_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "0",
+            "dataset": {
+              "priority": "USART6_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "irq": "TIM2_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "0",
+            "dataset": {
+              "priority": "TIM2_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "irq": "TIM3_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "0",
+            "dataset": {
+              "priority": "TIM3_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "irq": "TIM4_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "0",
+            "dataset": {
+              "priority": "TIM4_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "irq": "TIM5_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "0",
+            "dataset": {
+              "priority": "TIM5_IRQn"
+            }
+          },
+          {
+            "id": "timer-clock",
+            "value": "16000000",
+            "dataset": {}
+          }
+        ]
+      },
+      "finishedAt": "2026-10-19T07:55:51.632Z"
+    }
+  ],
+  "functionChoices": [],
+  "pageErrors": [],
+  "execution": {
+    "mode": "electron",
+    "viewportKind": "BrowserWindow content size"
+  },
+  "limitations": [
+    "Actual simulator execution; no physical STM32 hardware or ARM firmware claim.",
+    "Speed is generated VERY_HIGH and AF is derived from function; no independent Speed/AF selector exists.",
+    "Peripheral function selection coverage is distinct from peripheral electrical execution coverage.",
+    "Executed instrumentation preserves generated initialization; USER CODE 3 automatic Toggle is replaced by an idle delay to observe initial values."
+  ],
+  "gpioPins": [
+    "PA0",
+    "PA1",
+    "PA10",
+    "PA11",
+    "PA12",
+    "PA13",
+    "PA14",
+    "PA15",
+    "PA2",
+    "PA3",
+    "PA4",
+    "PA5",
+    "PA6",
+    "PA7",
+    "PA8",
+    "PA9",
+    "PB0",
+    "PB1",
+    "PB10",
+    "PB12",
+    "PB13",
+    "PB14",
+    "PB15",
+    "PB2",
+    "PB3",
+    "PB4",
+    "PB5",
+    "PB6",
+    "PB7",
+    "PB8",
+    "PB9",
+    "PC0",
+    "PC1",
+    "PC10",
+    "PC11",
+    "PC12",
+    "PC13",
+    "PC14",
+    "PC15",
+    "PC2",
+    "PC3",
+    "PC4",
+    "PC5",
+    "PC6",
+    "PC7",
+    "PC8",
+    "PC9",
+    "PD2",
+    "PH0",
+    "PH1"
+  ],
+  "expected": {
+    "functionChoices": 370,
+    "gpioCases": 30,
+    "gpioPinCombinations": 1500,
+    "extiEnabledCases": 288,
+    "extiEnabledPinCombinations": 2016,
+    "extiDisabledCases": 18,
+    "extiDisabledPinCombinations": 126
+  },
+  "error": "AssertionError [ERR_ASSERTION]: exti-enabled-CHANGE-PULLUP-1-p15 LOW PA1 expected 0; actual MASK_HIGH PA1=1; MASK_HIGH PA10=1; MASKED PA1=0; MASKED PA10=0; PENDING PA1=1; PENDING PA10=1; RISE PA1=1; RISE PA10=1; HIGH PA1=1; HIGH PA10=1; FALL PA1=2; FALL PA10=2\n    at D:\\codex\\project\\STM-Simulator\\scripts\\pin-options-ui-check.cjs:107:223\n    at async scenario (D:\\codex\\project\\STM-Simulator\\scripts\\pin-options-ui-check.cjs:51:150)\n    at async main (D:\\codex\\project\\STM-Simulator\\scripts\\pin-options-ui-check.cjs:98:5)",
+  "finishedAt": "2026-10-19T07:55:51.635Z",
+  "completedCases": 1
+}
