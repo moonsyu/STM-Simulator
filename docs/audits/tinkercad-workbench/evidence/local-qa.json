@@ -1,0 +1,375 @@
+{
+  "scope": "Local final runtime source review before 0.25.0 publication; not a public binary verification",
+  "unit": {
+    "passed": true,
+    "tests": 397,
+    "log": "work/test-results/workbench-unit-color-final.log"
+  },
+  "layout": {
+    "passed": true,
+    "checks": 427,
+    "states": 72,
+    "contrastTexts": 36228,
+    "contrastFindings": 0,
+    "rendererErrors": []
+  },
+  "models": {
+    "passed": true,
+    "scenarios": [
+      {
+        "name": "all 114 previews preserve live model and contact geometry",
+        "passed": true
+      }
+    ],
+    "rendererErrors": []
+  },
+  "functional": {
+    "originalRoundPassed": false,
+    "note": "Round 7 original save timing failure is preserved. Round 8 separately rechecks save completion and recovery.",
+    "scenarios": [
+      {
+        "name": "tab keyboard and accessible selection",
+        "passed": true
+      },
+      {
+        "name": "menus enter controls and Escape restores their opener",
+        "passed": true
+      },
+      {
+        "name": "save and open failures remain visible and recover",
+        "passed": false
+      },
+      {
+        "name": "autosave quota failure and recovery are visible",
+        "passed": true
+      },
+      {
+        "name": "keyboard objects pins bends undo and running guards",
+        "passed": true
+      },
+      {
+        "name": "floor routing cancel rounded geometry undo and reload",
+        "passed": true
+      },
+      {
+        "name": "keyboard focus survives zoom and cannot alter active group drag",
+        "passed": true
+      },
+      {
+        "name": "all 114 previews preserve live model and contact geometry",
+        "passed": true
+      },
+      {
+        "name": "HAL GPIO and built-in USART2 execute in diagnostic files",
+        "passed": true,
+        "gpioSamples": [
+          {
+            "at": 80,
+            "on": true,
+            "current": 0.003926701358860789
+          },
+          {
+            "at": 560,
+            "on": false,
+            "current": 0
+          }
+        ],
+        "uart": {
+          "TX": "HAL UART ready\r\nWorkbench HAL echo\n",
+          "RX": "Workbench HAL echo\n"
+        },
+        "source": "diagnostics/events.jsonl"
+      },
+      {
+        "name": "Space operates runtime buttons switches and reset without stuck keys",
+        "passed": true,
+        "buttonVoltage": {
+          "released": "3.300 V",
+          "pressed": "0.000 V"
+        },
+        "keyupRelease": true,
+        "focusExitRelease": true,
+        "userExtiOnce": true,
+        "resetInitializations": 1,
+        "mouseReset": {
+          "before": {
+            "starts": 7,
+            "time": 0.84
+          },
+          "after": {
+            "starts": 8,
+            "time": 0.12
+          }
+        },
+        "pausedResetTime": 0,
+        "slidePositions": [
+          1,
+          0
+        ],
+        "source": "diagnostics/events.jsonl"
+      }
+    ]
+  },
+  "saveRecheck": {
+    "passed": true,
+    "scenarios": [
+      {
+        "name": "save and open failures remain visible and recover",
+        "passed": true
+      }
+    ]
+  },
+  "systemTheme": {
+    "passed": true,
+    "execution": {
+      "mode": "electron",
+      "viewportKind": "BrowserWindow content size",
+      "appVersion": "0.25.0"
+    },
+    "nativeStates": [
+      {
+        "appearance": "system",
+        "mode": "dark",
+        "code": "jellybean",
+        "panel": "#272727"
+      },
+      {
+        "appearance": "system",
+        "mode": "light",
+        "code": "github-light",
+        "panel": "#fafafa"
+      },
+      {
+        "appearance": "system",
+        "mode": "dark",
+        "code": "jellybean",
+        "panel": "#272727"
+      }
+    ],
+    "manualOverridePreserved": true,
+    "windowsSettingsChanged": false
+  },
+  "editorTokens": {
+    "passed": true,
+    "syntax": [
+      {
+        "theme": "jellybean",
+        "tokens": [
+          {
+            "text": "int",
+            "color": "rgb(255, 185, 100)"
+          },
+          {
+            "text": "main",
+            "color": "rgb(250, 208, 122)"
+          },
+          {
+            "text": "return",
+            "color": "rgb(129, 151, 191)"
+          },
+          {
+            "text": "42",
+            "color": "rgb(207, 106, 76)"
+          },
+          {
+            "text": "// Theme review",
+            "color": "rgb(136, 136, 136)"
+          },
+          {
+            "text": "\"hello\"",
+            "color": "rgb(153, 173, 106)"
+          }
+        ]
+      },
+      {
+        "theme": "github-light",
+        "tokens": [
+          {
+            "text": "int",
+            "color": "rgb(207, 34, 46)"
+          },
+          {
+            "text": "main",
+            "color": "rgb(130, 80, 223)"
+          },
+          {
+            "text": "return",
+            "color": "rgb(207, 34, 46)"
+          },
+          {
+            "text": "42",
+            "color": "rgb(5, 80, 174)"
+          },
+          {
+            "text": "// Theme review",
+            "color": "rgb(110, 119, 129)"
+          },
+          {
+            "text": "\"hello\"",
+            "color": "rgb(10, 48, 105)"
+          }
+        ]
+      }
+    ]
+  },
+  "nativeBackend": {
+    "passed": true,
+    "hardwareRun": false,
+    "checks": [
+      "Windows GCC compilation and actual executable output",
+      "GDB/MI breakpoint and stepping",
+      "GDB watch, stack, registers and memory",
+      "GDB interrupt",
+      "clangd hover and definition",
+      "C/C++ multi-file standard library executable",
+      "ARM GCC with actual ST HAL and CMSIS ELF/BIN/HEX/MAP",
+      "failed build clears old artifact",
+      "build cancellation"
+    ]
+  },
+  "nativeUi": {
+    "passed": true,
+    "checks": [
+      "development tool settings",
+      "Windows project template",
+      "real GCC Debug and Release builds",
+      "GDB step into/over/out",
+      "GDB watch and registers",
+      "real executable stdout",
+      "cmd terminal command",
+      "clangd connected",
+      "compiler diagnostic navigation",
+      "invalid build removes artifacts",
+      "desktop and compact layout"
+    ],
+    "errors": []
+  },
+  "arm": {
+    "passed": true,
+    "hardwareRun": false,
+    "checked": [
+      "blank",
+      "cubemx-defaults",
+      "ref_nucleo_f446re",
+      "ref_resistor_axial_2",
+      "ref_led_tht_2",
+      "ref_button_2",
+      "ref_button_4",
+      "ref_button_module_3",
+      "ref_lcd_parallel_16",
+      "ref_lcd_i2c_4",
+      "ref_breadboard_400",
+      "ref_ldr_bare_2",
+      "ref_ldr_module_3",
+      "ref_ldr_comparator_4",
+      "ref_ntc_bare_2",
+      "ref_ntc_module_3",
+      "ref_sht31_grove_4",
+      "ref_sht31_breakout_7",
+      "ref_mpu6050_8",
+      "ref_pir_3",
+      "ref_oled_i2c_4",
+      "ref_oled_configurable_7",
+      "ref_oled_configurable_8",
+      "ref_st7735_8",
+      "ref_matrix_10",
+      "ref_servo_3",
+      "ref_servo_feedback_4",
+      "ref_dc_motor_2",
+      "ref_motor_driver_hat",
+      "ref_stepper_bipolar_4",
+      "ref_stepper_unipolar_5",
+      "ref_stepper_driver_11",
+      "ref_relay_module_6",
+      "ref_joystick_module_5",
+      "ref_encoder_bare_5",
+      "ref_encoder_module_5",
+      "ref_l298n_module_13",
+      "ref_dc_supply_2",
+      "ref_uart_cable_4",
+      "ref_uart_cable_6",
+      "ref_i2c_eeprom_8",
+      "ref_i2c_eeprom_5",
+      "ref_spi_eeprom_8",
+      "ref_pot_bare_3",
+      "ref_pot_module_3",
+      "ref_slide_spdt_3",
+      "ref_rgb_common_anode_4",
+      "ref_rgb_common_cathode_4",
+      "ref_rgb_neopixel_4",
+      "ref_rgb_neopixel_flora_4",
+      "ref_rgb_gravity_3",
+      "ref_capacitor_ceramic_2",
+      "ref_capacitor_electrolytic_2",
+      "ref_diode_axial_2",
+      "ref_buzzer_active_2",
+      "ref_buzzer_active_module_3",
+      "ref_buzzer_passive_2",
+      "ref_buzzer_passive_module_3",
+      "ref_sevenseg_common_cathode_10",
+      "ref_sevenseg_common_anode_10",
+      "ref_sevenseg_4digit_12",
+      "ref_sevenseg_tm1637_4",
+      "ref_tmp36_to92_3",
+      "ref_ds18b20_to92_3",
+      "ref_ds18b20_probe_3",
+      "ref_hcsr04_4",
+      "ref_urm09_trig_3",
+      "ref_urm09_i2c_4",
+      "ref_ads1115_10",
+      "ref_mcp4725_6",
+      "ref_can_transceiver_6",
+      "ref_isolated_rs485",
+      "ref_ds3231_8",
+      "ref_sd_storage_board",
+      "ref_max98357a_9",
+      "ref_ov2640_camera",
+      "ref_dht11_module_3",
+      "ref_dht22_module_3",
+      "ref_l298n_bare_15",
+      "ref_l298p_bare_20",
+      "ref_slide_dpdt_6",
+      "ref_slide_dp3t_8",
+      "potentiometer",
+      "slide",
+      "rgb",
+      "lcd",
+      "diode",
+      "buzzer",
+      "sevenseg",
+      "l298n",
+      "passive_buzzer",
+      "ldr",
+      "ntc",
+      "sht31",
+      "mpu6050",
+      "pir",
+      "oled",
+      "tft",
+      "matrix",
+      "servo",
+      "motor",
+      "stepper",
+      "relay",
+      "joystick",
+      "encoder",
+      "timer_multi",
+      "timer_capture",
+      "timer_encoder",
+      "blink",
+      "button",
+      "exti",
+      "uart",
+      "uart_external",
+      "timer",
+      "adc",
+      "temperature",
+      "samples",
+      "i2c",
+      "spi",
+      "language",
+      "pwm",
+      "ultrasonic"
+    ]
+  }
+}

@@ -1,0 +1,2027 @@
+{
+  "version": "0.25.0",
+  "verifiedAt": "2026-10-19T06:41:28.616Z",
+  "passed": true,
+  "devices": 114,
+  "cards": 979,
+  "removedWires": 701,
+  "damagedCircuits": 114,
+  "rows": [
+    {
+      "type": "board",
+      "passed": true,
+      "deviceChecks": 3,
+      "removedWires": 3,
+      "cards": 8,
+      "apis": [
+        "HAL_Init",
+        "HAL_GPIO_TogglePin",
+        "HAL_GPIO_ReadPin",
+        "HAL_Delay",
+        "HAL_RCC_OscConfig",
+        "HAL_RCC_ClockConfig",
+        "HAL_GPIO_WritePin",
+        "HAL_GPIO_Init"
+      ]
+    },
+    {
+      "type": "resistor",
+      "passed": true,
+      "deviceChecks": 3,
+      "removedWires": 4,
+      "cards": 10,
+      "apis": [
+        "HAL_Init",
+        "HAL_ADC_Start",
+        "HAL_ADC_PollForConversion",
+        "HAL_ADC_GetValue",
+        "HAL_Delay",
+        "HAL_RCC_OscConfig",
+        "HAL_RCC_ClockConfig",
+        "HAL_GPIO_Init",
+        "HAL_ADC_Init",
+        "HAL_ADC_ConfigChannel"
+      ]
+    },
+    {
+      "type": "led",
+      "passed": true,
+      "deviceChecks": 3,
+      "removedWires": 3,
+      "cards": 8,
+      "apis": [
+        "HAL_Init",
+        "HAL_GPIO_TogglePin",
+        "HAL_GPIO_ReadPin",
+        "HAL_Delay",
+        "HAL_RCC_OscConfig",
+        "HAL_RCC_ClockConfig",
+        "HAL_GPIO_WritePin",
+        "HAL_GPIO_Init"
+      ]
+    },
+    {
+      "type": "button",
+      "passed": true,
+      "deviceChecks": 3,
+      "removedWires": 5,
+      "cards": 7,
+      "apis": [
+        "HAL_Init",
+        "HAL_GPIO_ReadPin",
+        "HAL_GPIO_WritePin",
+        "HAL_Delay",
+        "HAL_RCC_OscConfig",
+        "HAL_RCC_ClockConfig",
+        "HAL_GPIO_Init"
+      ]
+    },
+    {
+      "type": "lcd",
+      "passed": true,
+      "deviceChecks": 3,
+      "removedWires": 13,
+      "cards": 6,
+      "apis": [
+        "HAL_GPIO_WritePin",
+        "HAL_Delay",
+        "HAL_Init",
+        "HAL_RCC_OscConfig",
+        "HAL_RCC_ClockConfig",
+        "HAL_GPIO_Init"
+      ]
+    },
+    {
+      "type": "breadboard",
+      "passed": true,
+      "deviceChecks": 3,
+      "removedWires": 2,
+      "cards": 8,
+      "apis": [
+        "HAL_Init",
+        "HAL_GPIO_TogglePin",
+        "HAL_GPIO_ReadPin",
+        "HAL_Delay",
+        "HAL_RCC_OscConfig",
+        "HAL_RCC_ClockConfig",
+        "HAL_GPIO_WritePin",
+        "HAL_GPIO_Init"
+      ]
+    },
+    {
+      "type": "ref_resistor_axial_2",
+      "passed": true,
+      "deviceChecks": 3,
+      "removedWires": 4,
+      "cards": 10,
+      "apis": [
+        "HAL_Init",
+        "HAL_ADC_Start",
+        "HAL_ADC_PollForConversion",
+        "HAL_ADC_GetValue",
+        "HAL_Delay",
+        "HAL_RCC_OscConfig",
+        "HAL_RCC_ClockConfig",
+        "HAL_GPIO_Init",
+        "HAL_ADC_Init",
+        "HAL_ADC_ConfigChannel"
+      ]
+    },
+    {
+      "type": "ref_led_tht_2",
+      "passed": true,
+      "deviceChecks": 3,
+      "removedWires": 3,
+      "cards": 8,
+      "apis": [
+        "HAL_Init",
+        "HAL_GPIO_TogglePin",
+        "HAL_GPIO_ReadPin",
+        "HAL_Delay",
+        "HAL_RCC_OscConfig",
+        "HAL_RCC_ClockConfig",
+        "HAL_GPIO_WritePin",
+        "HAL_GPIO_Init"
+      ]
+    },
+    {
+      "type": "ref_button_2",
+      "passed": true,
+      "deviceChecks": 3,
+      "removedWires": 5,
+      "cards": 7,
+      "apis": [
+        "HAL_Init",
+        "HAL_GPIO_ReadPin",
+        "HAL_GPIO_WritePin",
+        "HAL_Delay",
+        "HAL_RCC_OscConfig",
+        "HAL_RCC_ClockConfig",
+        "HAL_GPIO_Init"
+      ]
+    },
+    {
+      "type": "ref_button_4",
+      "passed": true,
+      "deviceChecks": 3,
+      "removedWires": 5,
+      "cards": 7,
+      "apis": [
+        "HAL_Init",
+        "HAL_GPIO_ReadPin",
+        "HAL_GPIO_WritePin",
+        "HAL_Delay",
+        "HAL_RCC_OscConfig",
+        "HAL_RCC_ClockConfig",
+        "HAL_GPIO_Init"
+      ]
+    },
+    {
+      "type": "ref_button_module_3",
+      "passed": true,
+      "deviceChecks": 3,
+      "removedWires": 6,
+      "cards": 7,
+      "apis": [
+        "HAL_Init",
+        "HAL_GPIO_ReadPin",
+        "HAL_GPIO_WritePin",
+        "HAL_Delay",
+        "HAL_RCC_OscConfig",
+        "HAL_RCC_ClockConfig",
+        "HAL_GPIO_Init"
+      ]
+    },
+    {
+      "type": "ref_lcd_parallel_16",
+      "passed": true,
+      "deviceChecks": 3,
+      "removedWires": 13,
+      "cards": 6,
+      "apis": [
+        "HAL_GPIO_WritePin",
+        "HAL_Delay",
+        "HAL_Init",
+        "HAL_RCC_OscConfig",
+        "HAL_RCC_ClockConfig",
+        "HAL_GPIO_Init"
+      ]
+    },
+    {
+      "type": "ref_lcd_i2c_4",
+      "passed": true,
+      "deviceChecks": 3,
+      "removedWires": 4,
+      "cards": 7,
+      "apis": [
+        "HAL_I2C_Master_Transmit",
+        "HAL_Delay",
+        "HAL_Init",
+        "HAL_RCC_OscConfig",
+        "HAL_RCC_ClockConfig",
+        "HAL_GPIO_Init",
+        "HAL_I2C_Init"
+      ]
+    },
+    {
+      "type": "ref_ldr_bare_2",
+      "passed": true,
+      "deviceChecks": 3,
+      "removedWires": 4,
+      "cards": 10,
+      "apis": [
+        "HAL_Init",
+        "HAL_ADC_Start",
+        "HAL_ADC_PollForConversion",
+        "HAL_ADC_GetValue",
+        "HAL_Delay",
+        "HAL_RCC_OscConfig",
+        "HAL_RCC_ClockConfig",
+        "HAL_GPIO_Init",
+        "HAL_ADC_Init",
+        "HAL_ADC_ConfigChannel"
+      ]
+    },
+    {
+      "type": "ref_ldr_module_3",
+      "passed": true,
+      "deviceChecks": 3,
+      "removedWires": 3,
+      "cards": 10,
+      "apis": [
+        "HAL_Init",
+        "HAL_ADC_Start",
+        "HAL_ADC_PollForConversion",
+        "HAL_ADC_GetValue",
+        "HAL_Delay",
+        "HAL_RCC_OscConfig",
+        "HAL_RCC_ClockConfig",
+        "HAL_GPIO_Init",
+        "HAL_ADC_Init",
+        "HAL_ADC_ConfigChannel"
+      ]
+    },
+    {
+      "type": "ref_ldr_comparator_4",
+      "passed": true,
+      "deviceChecks": 3,
+      "removedWires": 4,
+      "cards": 11,
+      "apis": [
+        "HAL_Init",
+        "HAL_ADC_Start",
+        "HAL_ADC_PollForConversion",
+        "HAL_ADC_GetValue",
+        "HAL_Delay",
+        "HAL_GPIO_ReadPin",
+        "HAL_RCC_OscConfig",
+        "HAL_RCC_ClockConfig",
+        "HAL_GPIO_Init",
+        "HAL_ADC_Init",
+        "HAL_ADC_ConfigChannel"
+      ]
+    },
+    {
+      "type": "ref_ntc_bare_2",
+      "passed": true,
+      "deviceChecks": 3,
+      "removedWires": 4,
+      "cards": 10,
+      "apis": [
+        "HAL_Init",
+        "HAL_ADC_Start",
+        "HAL_ADC_PollForConversion",
+        "HAL_ADC_GetValue",
+        "HAL_Delay",
+        "HAL_RCC_OscConfig",
+        "HAL_RCC_ClockConfig",
+        "HAL_GPIO_Init",
+        "HAL_ADC_Init",
+        "HAL_ADC_ConfigChannel"
+      ]
+    },
+    {
+      "type": "ref_ntc_module_3",
+      "passed": true,
+      "deviceChecks": 3,
+      "removedWires": 3,
+      "cards": 10,
+      "apis": [
+        "HAL_Init",
+        "HAL_ADC_Start",
+        "HAL_ADC_PollForConversion",
+        "HAL_ADC_GetValue",
+        "HAL_Delay",
+        "HAL_RCC_OscConfig",
+        "HAL_RCC_ClockConfig",
+        "HAL_GPIO_Init",
+        "HAL_ADC_Init",
+        "HAL_ADC_ConfigChannel"
+      ]
+    },
+    {
+      "type": "ref_sht31_grove_4",
+      "passed": true,
+      "deviceChecks": 4,
+      "removedWires": 4,
+      "cards": 8,
+      "apis": [
+        "HAL_Init",
+        "HAL_I2C_Master_Transmit",
+        "HAL_Delay",
+        "HAL_I2C_Master_Receive",
+        "HAL_RCC_OscConfig",
+        "HAL_RCC_ClockConfig",
+        "HAL_GPIO_Init",
+        "HAL_I2C_Init"
+      ]
+    },
+    {
+      "type": "ref_sht31_breakout_7",
+      "passed": true,
+      "deviceChecks": 4,
+      "removedWires": 6,
+      "cards": 8,
+      "apis": [
+        "HAL_Init",
+        "HAL_I2C_Master_Transmit",
+        "HAL_Delay",
+        "HAL_I2C_Master_Receive",
+        "HAL_RCC_OscConfig",
+        "HAL_RCC_ClockConfig",
+        "HAL_GPIO_Init",
+        "HAL_I2C_Init"
+      ]
+    },
+    {
+      "type": "ref_mpu6050_8",
+      "passed": true,
+      "deviceChecks": 3,
+      "removedWires": 5,
+      "cards": 8,
+      "apis": [
+        "HAL_Init",
+        "HAL_I2C_Mem_Read",
+        "HAL_I2C_Mem_Write",
+        "HAL_Delay",
+        "HAL_RCC_OscConfig",
+        "HAL_RCC_ClockConfig",
+        "HAL_GPIO_Init",
+        "HAL_I2C_Init"
+      ]
+    },
+    {
+      "type": "ref_pir_3",
+      "passed": true,
+      "deviceChecks": 3,
+      "removedWires": 3,
+      "cards": 8,
+      "apis": [
+        "HAL_Init",
+        "HAL_GPIO_ReadPin",
+        "HAL_Delay",
+        "HAL_RCC_OscConfig",
+        "HAL_RCC_ClockConfig",
+        "HAL_GPIO_Init",
+        "HAL_NVIC_SetPriority",
+        "HAL_NVIC_EnableIRQ"
+      ]
+    },
+    {
+      "type": "ref_oled_i2c_4",
+      "passed": true,
+      "deviceChecks": 3,
+      "removedWires": 4,
+      "cards": 7,
+      "apis": [
+        "HAL_Init",
+        "HAL_I2C_Master_Transmit",
+        "HAL_Delay",
+        "HAL_RCC_OscConfig",
+        "HAL_RCC_ClockConfig",
+        "HAL_GPIO_Init",
+        "HAL_I2C_Init"
+      ]
+    },
+    {
+      "type": "ref_oled_configurable_7",
+      "passed": true,
+      "deviceChecks": 3,
+      "removedWires": 7,
+      "cards": 8,
+      "apis": [
+        "HAL_GPIO_WritePin",
+        "HAL_SPI_Transmit",
+        "HAL_Init",
+        "HAL_Delay",
+        "HAL_RCC_OscConfig",
+        "HAL_RCC_ClockConfig",
+        "HAL_GPIO_Init",
+        "HAL_SPI_Init"
+      ]
+    },
+    {
+      "type": "ref_oled_configurable_8",
+      "passed": true,
+      "deviceChecks": 3,
+      "removedWires": 7,
+      "cards": 8,
+      "apis": [
+        "HAL_GPIO_WritePin",
+        "HAL_SPI_Transmit",
+        "HAL_Init",
+        "HAL_Delay",
+        "HAL_RCC_OscConfig",
+        "HAL_RCC_ClockConfig",
+        "HAL_GPIO_Init",
+        "HAL_SPI_Init"
+      ]
+    },
+    {
+      "type": "ref_st7735_8",
+      "passed": true,
+      "deviceChecks": 3,
+      "removedWires": 8,
+      "cards": 8,
+      "apis": [
+        "HAL_SPI_Transmit",
+        "HAL_GPIO_WritePin",
+        "HAL_Init",
+        "HAL_Delay",
+        "HAL_RCC_OscConfig",
+        "HAL_RCC_ClockConfig",
+        "HAL_GPIO_Init",
+        "HAL_SPI_Init"
+      ]
+    },
+    {
+      "type": "ref_matrix_10",
+      "passed": true,
+      "deviceChecks": 3,
+      "removedWires": 5,
+      "cards": 8,
+      "apis": [
+        "HAL_GPIO_WritePin",
+        "HAL_SPI_Transmit",
+        "HAL_Init",
+        "HAL_Delay",
+        "HAL_RCC_OscConfig",
+        "HAL_RCC_ClockConfig",
+        "HAL_GPIO_Init",
+        "HAL_SPI_Init"
+      ]
+    },
+    {
+      "type": "ref_servo_3",
+      "passed": true,
+      "deviceChecks": 3,
+      "removedWires": 3,
+      "cards": 9,
+      "apis": [
+        "HAL_Init",
+        "HAL_TIM_PWM_ConfigChannel",
+        "HAL_TIM_PWM_Start",
+        "__HAL_TIM_SET_COMPARE",
+        "HAL_Delay",
+        "HAL_RCC_OscConfig",
+        "HAL_RCC_ClockConfig",
+        "HAL_GPIO_Init",
+        "HAL_TIM_PWM_Init"
+      ]
+    },
+    {
+      "type": "ref_servo_feedback_4",
+      "passed": true,
+      "deviceChecks": 3,
+      "removedWires": 4,
+      "cards": 14,
+      "apis": [
+        "HAL_ADC_Init",
+        "HAL_ADC_ConfigChannel",
+        "HAL_Init",
+        "HAL_TIM_PWM_ConfigChannel",
+        "HAL_TIM_PWM_Start",
+        "HAL_ADC_Start",
+        "HAL_ADC_PollForConversion",
+        "HAL_ADC_GetValue",
+        "__HAL_TIM_SET_COMPARE",
+        "HAL_Delay",
+        "HAL_RCC_OscConfig",
+        "HAL_RCC_ClockConfig",
+        "HAL_GPIO_Init",
+        "HAL_TIM_PWM_Init"
+      ]
+    },
+    {
+      "type": "ref_dc_motor_2",
+      "passed": true,
+      "deviceChecks": 3,
+      "removedWires": 14,
+      "cards": 10,
+      "apis": [
+        "HAL_Init",
+        "__HAL_TIM_SET_COMPARE",
+        "HAL_TIM_PWM_Start",
+        "HAL_GPIO_WritePin",
+        "HAL_Delay",
+        "HAL_RCC_OscConfig",
+        "HAL_RCC_ClockConfig",
+        "HAL_GPIO_Init",
+        "HAL_TIM_PWM_Init",
+        "HAL_TIM_PWM_ConfigChannel"
+      ]
+    },
+    {
+      "type": "ref_motor_driver_hat",
+      "passed": true,
+      "deviceChecks": 3,
+      "removedWires": 8,
+      "cards": 7,
+      "apis": [
+        "HAL_Init",
+        "HAL_I2C_Mem_Write",
+        "HAL_Delay",
+        "HAL_RCC_OscConfig",
+        "HAL_RCC_ClockConfig",
+        "HAL_GPIO_Init",
+        "HAL_I2C_Init"
+      ]
+    },
+    {
+      "type": "ref_stepper_bipolar_4",
+      "passed": true,
+      "deviceChecks": 3,
+      "removedWires": 14,
+      "cards": 6,
+      "apis": [
+        "HAL_Init",
+        "HAL_GPIO_WritePin",
+        "HAL_Delay",
+        "HAL_RCC_OscConfig",
+        "HAL_RCC_ClockConfig",
+        "HAL_GPIO_Init"
+      ]
+    },
+    {
+      "type": "ref_stepper_unipolar_5",
+      "passed": true,
+      "deviceChecks": 3,
+      "removedWires": 11,
+      "cards": 6,
+      "apis": [
+        "HAL_Init",
+        "HAL_GPIO_WritePin",
+        "HAL_Delay",
+        "HAL_RCC_OscConfig",
+        "HAL_RCC_ClockConfig",
+        "HAL_GPIO_Init"
+      ]
+    },
+    {
+      "type": "ref_stepper_driver_11",
+      "passed": true,
+      "deviceChecks": 3,
+      "removedWires": 11,
+      "cards": 6,
+      "apis": [
+        "HAL_Init",
+        "HAL_GPIO_WritePin",
+        "HAL_Delay",
+        "HAL_RCC_OscConfig",
+        "HAL_RCC_ClockConfig",
+        "HAL_GPIO_Init"
+      ]
+    },
+    {
+      "type": "ref_relay_module_6",
+      "passed": true,
+      "deviceChecks": 3,
+      "removedWires": 7,
+      "cards": 8,
+      "apis": [
+        "HAL_Init",
+        "HAL_GPIO_TogglePin",
+        "HAL_GPIO_ReadPin",
+        "HAL_Delay",
+        "HAL_RCC_OscConfig",
+        "HAL_RCC_ClockConfig",
+        "HAL_GPIO_WritePin",
+        "HAL_GPIO_Init"
+      ]
+    },
+    {
+      "type": "ref_joystick_module_5",
+      "passed": true,
+      "deviceChecks": 3,
+      "removedWires": 5,
+      "cards": 11,
+      "apis": [
+        "HAL_ADC_ConfigChannel",
+        "HAL_ADC_Start",
+        "HAL_ADC_PollForConversion",
+        "HAL_ADC_GetValue",
+        "HAL_Init",
+        "HAL_GPIO_ReadPin",
+        "HAL_Delay",
+        "HAL_RCC_OscConfig",
+        "HAL_RCC_ClockConfig",
+        "HAL_GPIO_Init",
+        "HAL_ADC_Init"
+      ]
+    },
+    {
+      "type": "ref_encoder_bare_5",
+      "passed": true,
+      "deviceChecks": 3,
+      "removedWires": 5,
+      "cards": 6,
+      "apis": [
+        "HAL_Init",
+        "HAL_GPIO_ReadPin",
+        "HAL_Delay",
+        "HAL_RCC_OscConfig",
+        "HAL_RCC_ClockConfig",
+        "HAL_GPIO_Init"
+      ]
+    },
+    {
+      "type": "ref_encoder_module_5",
+      "passed": true,
+      "deviceChecks": 3,
+      "removedWires": 5,
+      "cards": 9,
+      "apis": [
+        "HAL_Init",
+        "HAL_TIM_Encoder_Start",
+        "__HAL_TIM_GET_COUNTER",
+        "HAL_GPIO_ReadPin",
+        "HAL_Delay",
+        "HAL_RCC_OscConfig",
+        "HAL_RCC_ClockConfig",
+        "HAL_GPIO_Init",
+        "HAL_TIM_Encoder_Init"
+      ]
+    },
+    {
+      "type": "ref_l298n_module_13",
+      "passed": true,
+      "deviceChecks": 3,
+      "removedWires": 14,
+      "cards": 10,
+      "apis": [
+        "HAL_Init",
+        "__HAL_TIM_SET_COMPARE",
+        "HAL_TIM_PWM_Start",
+        "HAL_GPIO_WritePin",
+        "HAL_Delay",
+        "HAL_RCC_OscConfig",
+        "HAL_RCC_ClockConfig",
+        "HAL_GPIO_Init",
+        "HAL_TIM_PWM_Init",
+        "HAL_TIM_PWM_ConfigChannel"
+      ]
+    },
+    {
+      "type": "ref_dc_supply_2",
+      "passed": true,
+      "deviceChecks": 3,
+      "removedWires": 14,
+      "cards": 10,
+      "apis": [
+        "HAL_Init",
+        "__HAL_TIM_SET_COMPARE",
+        "HAL_TIM_PWM_Start",
+        "HAL_GPIO_WritePin",
+        "HAL_Delay",
+        "HAL_RCC_OscConfig",
+        "HAL_RCC_ClockConfig",
+        "HAL_GPIO_Init",
+        "HAL_TIM_PWM_Init",
+        "HAL_TIM_PWM_ConfigChannel"
+      ]
+    },
+    {
+      "type": "ref_uart_cable_4",
+      "passed": true,
+      "deviceChecks": 3,
+      "removedWires": 4,
+      "cards": 9,
+      "apis": [
+        "HAL_Init",
+        "HAL_UART_Transmit",
+        "HAL_UART_Receive",
+        "HAL_RCC_OscConfig",
+        "HAL_RCC_ClockConfig",
+        "HAL_GPIO_Init",
+        "HAL_NVIC_SetPriority",
+        "HAL_NVIC_EnableIRQ",
+        "HAL_UART_Init"
+      ]
+    },
+    {
+      "type": "ref_uart_cable_6",
+      "passed": true,
+      "deviceChecks": 3,
+      "removedWires": 4,
+      "cards": 9,
+      "apis": [
+        "HAL_Init",
+        "HAL_UART_Transmit",
+        "HAL_UART_Receive",
+        "HAL_RCC_OscConfig",
+        "HAL_RCC_ClockConfig",
+        "HAL_GPIO_Init",
+        "HAL_NVIC_SetPriority",
+        "HAL_NVIC_EnableIRQ",
+        "HAL_UART_Init"
+      ]
+    },
+    {
+      "type": "ref_i2c_eeprom_8",
+      "passed": true,
+      "deviceChecks": 3,
+      "removedWires": 5,
+      "cards": 8,
+      "apis": [
+        "HAL_Init",
+        "HAL_I2C_Mem_Write",
+        "HAL_I2C_Mem_Read",
+        "HAL_Delay",
+        "HAL_RCC_OscConfig",
+        "HAL_RCC_ClockConfig",
+        "HAL_GPIO_Init",
+        "HAL_I2C_Init"
+      ]
+    },
+    {
+      "type": "ref_i2c_eeprom_5",
+      "passed": true,
+      "deviceChecks": 3,
+      "removedWires": 5,
+      "cards": 8,
+      "apis": [
+        "HAL_Init",
+        "HAL_I2C_Mem_Write",
+        "HAL_I2C_Mem_Read",
+        "HAL_Delay",
+        "HAL_RCC_OscConfig",
+        "HAL_RCC_ClockConfig",
+        "HAL_GPIO_Init",
+        "HAL_I2C_Init"
+      ]
+    },
+    {
+      "type": "ref_spi_eeprom_8",
+      "passed": true,
+      "deviceChecks": 3,
+      "removedWires": 8,
+      "cards": 9,
+      "apis": [
+        "HAL_Init",
+        "HAL_GPIO_WritePin",
+        "HAL_SPI_Transmit",
+        "HAL_Delay",
+        "HAL_SPI_Receive",
+        "HAL_RCC_OscConfig",
+        "HAL_RCC_ClockConfig",
+        "HAL_GPIO_Init",
+        "HAL_SPI_Init"
+      ]
+    },
+    {
+      "type": "ref_pot_bare_3",
+      "passed": true,
+      "deviceChecks": 3,
+      "removedWires": 3,
+      "cards": 10,
+      "apis": [
+        "HAL_Init",
+        "HAL_ADC_Start",
+        "HAL_ADC_PollForConversion",
+        "HAL_ADC_GetValue",
+        "HAL_Delay",
+        "HAL_RCC_OscConfig",
+        "HAL_RCC_ClockConfig",
+        "HAL_GPIO_Init",
+        "HAL_ADC_Init",
+        "HAL_ADC_ConfigChannel"
+      ]
+    },
+    {
+      "type": "ref_pot_module_3",
+      "passed": true,
+      "deviceChecks": 3,
+      "removedWires": 3,
+      "cards": 10,
+      "apis": [
+        "HAL_Init",
+        "HAL_ADC_Start",
+        "HAL_ADC_PollForConversion",
+        "HAL_ADC_GetValue",
+        "HAL_Delay",
+        "HAL_RCC_OscConfig",
+        "HAL_RCC_ClockConfig",
+        "HAL_GPIO_Init",
+        "HAL_ADC_Init",
+        "HAL_ADC_ConfigChannel"
+      ]
+    },
+    {
+      "type": "ref_slide_spdt_3",
+      "passed": true,
+      "deviceChecks": 3,
+      "removedWires": 3,
+      "cards": 6,
+      "apis": [
+        "HAL_Init",
+        "HAL_GPIO_ReadPin",
+        "HAL_Delay",
+        "HAL_RCC_OscConfig",
+        "HAL_RCC_ClockConfig",
+        "HAL_GPIO_Init"
+      ]
+    },
+    {
+      "type": "ref_rgb_common_anode_4",
+      "passed": true,
+      "deviceChecks": 3,
+      "removedWires": 7,
+      "cards": 6,
+      "apis": [
+        "HAL_Init",
+        "HAL_GPIO_WritePin",
+        "HAL_Delay",
+        "HAL_RCC_OscConfig",
+        "HAL_RCC_ClockConfig",
+        "HAL_GPIO_Init"
+      ]
+    },
+    {
+      "type": "ref_rgb_common_cathode_4",
+      "passed": true,
+      "deviceChecks": 3,
+      "removedWires": 7,
+      "cards": 6,
+      "apis": [
+        "HAL_Init",
+        "HAL_GPIO_WritePin",
+        "HAL_Delay",
+        "HAL_RCC_OscConfig",
+        "HAL_RCC_ClockConfig",
+        "HAL_GPIO_Init"
+      ]
+    },
+    {
+      "type": "ref_rgb_neopixel_4",
+      "passed": true,
+      "deviceChecks": 3,
+      "removedWires": 3,
+      "cards": 8,
+      "apis": [
+        "HAL_Init",
+        "HAL_SPI_Transmit",
+        "HAL_Delay",
+        "HAL_RCC_OscConfig",
+        "HAL_RCC_ClockConfig",
+        "HAL_GPIO_Init",
+        "HAL_GPIO_WritePin",
+        "HAL_SPI_Init"
+      ]
+    },
+    {
+      "type": "ref_rgb_neopixel_flora_4",
+      "passed": true,
+      "deviceChecks": 3,
+      "removedWires": 3,
+      "cards": 8,
+      "apis": [
+        "HAL_Init",
+        "HAL_SPI_Transmit",
+        "HAL_Delay",
+        "HAL_RCC_OscConfig",
+        "HAL_RCC_ClockConfig",
+        "HAL_GPIO_Init",
+        "HAL_GPIO_WritePin",
+        "HAL_SPI_Init"
+      ]
+    },
+    {
+      "type": "ref_rgb_gravity_3",
+      "passed": true,
+      "deviceChecks": 3,
+      "removedWires": 3,
+      "cards": 8,
+      "apis": [
+        "HAL_Init",
+        "HAL_SPI_Transmit",
+        "HAL_Delay",
+        "HAL_RCC_OscConfig",
+        "HAL_RCC_ClockConfig",
+        "HAL_GPIO_Init",
+        "HAL_GPIO_WritePin",
+        "HAL_SPI_Init"
+      ]
+    },
+    {
+      "type": "ref_capacitor_ceramic_2",
+      "passed": true,
+      "deviceChecks": 3,
+      "removedWires": 4,
+      "cards": 8,
+      "apis": [
+        "HAL_Init",
+        "HAL_TIM_PWM_ConfigChannel",
+        "HAL_TIM_PWM_Start",
+        "HAL_Delay",
+        "HAL_RCC_OscConfig",
+        "HAL_RCC_ClockConfig",
+        "HAL_GPIO_Init",
+        "HAL_TIM_PWM_Init"
+      ]
+    },
+    {
+      "type": "ref_capacitor_electrolytic_2",
+      "passed": true,
+      "deviceChecks": 3,
+      "removedWires": 4,
+      "cards": 8,
+      "apis": [
+        "HAL_Init",
+        "HAL_TIM_PWM_ConfigChannel",
+        "HAL_TIM_PWM_Start",
+        "HAL_Delay",
+        "HAL_RCC_OscConfig",
+        "HAL_RCC_ClockConfig",
+        "HAL_GPIO_Init",
+        "HAL_TIM_PWM_Init"
+      ]
+    },
+    {
+      "type": "ref_diode_axial_2",
+      "passed": true,
+      "deviceChecks": 3,
+      "removedWires": 4,
+      "cards": 11,
+      "apis": [
+        "HAL_Init",
+        "HAL_GPIO_WritePin",
+        "HAL_ADC_Start",
+        "HAL_ADC_PollForConversion",
+        "HAL_ADC_GetValue",
+        "HAL_Delay",
+        "HAL_RCC_OscConfig",
+        "HAL_RCC_ClockConfig",
+        "HAL_GPIO_Init",
+        "HAL_ADC_Init",
+        "HAL_ADC_ConfigChannel"
+      ]
+    },
+    {
+      "type": "ref_buzzer_active_2",
+      "passed": true,
+      "deviceChecks": 3,
+      "removedWires": 2,
+      "cards": 7,
+      "apis": [
+        "HAL_Init",
+        "HAL_GPIO_TogglePin",
+        "HAL_Delay",
+        "HAL_RCC_OscConfig",
+        "HAL_RCC_ClockConfig",
+        "HAL_GPIO_WritePin",
+        "HAL_GPIO_Init"
+      ]
+    },
+    {
+      "type": "ref_buzzer_active_module_3",
+      "passed": true,
+      "deviceChecks": 3,
+      "removedWires": 2,
+      "cards": 7,
+      "apis": [
+        "HAL_Init",
+        "HAL_GPIO_TogglePin",
+        "HAL_Delay",
+        "HAL_RCC_OscConfig",
+        "HAL_RCC_ClockConfig",
+        "HAL_GPIO_WritePin",
+        "HAL_GPIO_Init"
+      ]
+    },
+    {
+      "type": "ref_buzzer_passive_2",
+      "passed": true,
+      "deviceChecks": 3,
+      "removedWires": 2,
+      "cards": 12,
+      "apis": [
+        "HAL_TIM_PWM_Stop",
+        "__HAL_TIM_SET_AUTORELOAD",
+        "__HAL_TIM_SET_COMPARE",
+        "__HAL_TIM_SET_COUNTER",
+        "HAL_TIM_PWM_Start",
+        "HAL_Delay",
+        "HAL_Init",
+        "HAL_RCC_OscConfig",
+        "HAL_RCC_ClockConfig",
+        "HAL_GPIO_Init",
+        "HAL_TIM_PWM_Init",
+        "HAL_TIM_PWM_ConfigChannel"
+      ]
+    },
+    {
+      "type": "ref_buzzer_passive_module_3",
+      "passed": true,
+      "deviceChecks": 3,
+      "removedWires": 2,
+      "cards": 12,
+      "apis": [
+        "HAL_TIM_PWM_Stop",
+        "__HAL_TIM_SET_AUTORELOAD",
+        "__HAL_TIM_SET_COMPARE",
+        "__HAL_TIM_SET_COUNTER",
+        "HAL_TIM_PWM_Start",
+        "HAL_Delay",
+        "HAL_Init",
+        "HAL_RCC_OscConfig",
+        "HAL_RCC_ClockConfig",
+        "HAL_GPIO_Init",
+        "HAL_TIM_PWM_Init",
+        "HAL_TIM_PWM_ConfigChannel"
+      ]
+    },
+    {
+      "type": "ref_sevenseg_common_cathode_10",
+      "passed": true,
+      "deviceChecks": 3,
+      "removedWires": 17,
+      "cards": 6,
+      "apis": [
+        "HAL_Init",
+        "HAL_GPIO_WritePin",
+        "HAL_Delay",
+        "HAL_RCC_OscConfig",
+        "HAL_RCC_ClockConfig",
+        "HAL_GPIO_Init"
+      ]
+    },
+    {
+      "type": "ref_sevenseg_common_anode_10",
+      "passed": true,
+      "deviceChecks": 3,
+      "removedWires": 17,
+      "cards": 6,
+      "apis": [
+        "HAL_Init",
+        "HAL_GPIO_WritePin",
+        "HAL_Delay",
+        "HAL_RCC_OscConfig",
+        "HAL_RCC_ClockConfig",
+        "HAL_GPIO_Init"
+      ]
+    },
+    {
+      "type": "ref_sevenseg_4digit_12",
+      "passed": true,
+      "deviceChecks": 3,
+      "removedWires": 23,
+      "cards": 6,
+      "apis": [
+        "HAL_Init",
+        "HAL_GPIO_WritePin",
+        "HAL_Delay",
+        "HAL_RCC_OscConfig",
+        "HAL_RCC_ClockConfig",
+        "HAL_GPIO_Init"
+      ]
+    },
+    {
+      "type": "ref_sevenseg_tm1637_4",
+      "passed": true,
+      "deviceChecks": 3,
+      "removedWires": 4,
+      "cards": 7,
+      "apis": [
+        "HAL_GPIO_WritePin",
+        "HAL_Delay",
+        "HAL_GPIO_Init",
+        "HAL_GPIO_ReadPin",
+        "HAL_Init",
+        "HAL_RCC_OscConfig",
+        "HAL_RCC_ClockConfig"
+      ]
+    },
+    {
+      "type": "ref_tmp36_to92_3",
+      "passed": true,
+      "deviceChecks": 3,
+      "removedWires": 3,
+      "cards": 10,
+      "apis": [
+        "HAL_Init",
+        "HAL_ADC_Start",
+        "HAL_ADC_PollForConversion",
+        "HAL_ADC_GetValue",
+        "HAL_Delay",
+        "HAL_RCC_OscConfig",
+        "HAL_RCC_ClockConfig",
+        "HAL_GPIO_Init",
+        "HAL_ADC_Init",
+        "HAL_ADC_ConfigChannel"
+      ]
+    },
+    {
+      "type": "ref_ds18b20_to92_3",
+      "passed": true,
+      "deviceChecks": 3,
+      "removedWires": 5,
+      "cards": 10,
+      "apis": [
+        "__HAL_TIM_GET_COUNTER",
+        "HAL_GPIO_ReadPin",
+        "HAL_GPIO_Init",
+        "HAL_GPIO_WritePin",
+        "HAL_Init",
+        "HAL_TIM_Base_Start",
+        "HAL_Delay",
+        "HAL_RCC_OscConfig",
+        "HAL_RCC_ClockConfig",
+        "HAL_TIM_Base_Init"
+      ]
+    },
+    {
+      "type": "ref_ds18b20_probe_3",
+      "passed": true,
+      "deviceChecks": 3,
+      "removedWires": 5,
+      "cards": 10,
+      "apis": [
+        "__HAL_TIM_GET_COUNTER",
+        "HAL_GPIO_ReadPin",
+        "HAL_GPIO_Init",
+        "HAL_GPIO_WritePin",
+        "HAL_Init",
+        "HAL_TIM_Base_Start",
+        "HAL_Delay",
+        "HAL_RCC_OscConfig",
+        "HAL_RCC_ClockConfig",
+        "HAL_TIM_Base_Init"
+      ]
+    },
+    {
+      "type": "ref_hcsr04_4",
+      "passed": true,
+      "deviceChecks": 3,
+      "removedWires": 7,
+      "cards": 9,
+      "apis": [
+        "HAL_Init",
+        "HAL_TIM_Base_Start",
+        "__HAL_TIM_GET_COUNTER",
+        "HAL_GPIO_WritePin",
+        "HAL_GPIO_ReadPin",
+        "HAL_RCC_OscConfig",
+        "HAL_RCC_ClockConfig",
+        "HAL_GPIO_Init",
+        "HAL_TIM_Base_Init"
+      ]
+    },
+    {
+      "type": "ref_urm09_trig_3",
+      "passed": true,
+      "deviceChecks": 3,
+      "removedWires": 3,
+      "cards": 10,
+      "apis": [
+        "__HAL_TIM_GET_COUNTER",
+        "HAL_GPIO_ReadPin",
+        "HAL_GPIO_Init",
+        "HAL_GPIO_WritePin",
+        "HAL_Init",
+        "HAL_TIM_Base_Start",
+        "HAL_Delay",
+        "HAL_RCC_OscConfig",
+        "HAL_RCC_ClockConfig",
+        "HAL_TIM_Base_Init"
+      ]
+    },
+    {
+      "type": "ref_urm09_i2c_4",
+      "passed": true,
+      "deviceChecks": 3,
+      "removedWires": 4,
+      "cards": 8,
+      "apis": [
+        "HAL_Init",
+        "HAL_I2C_Mem_Write",
+        "HAL_Delay",
+        "HAL_I2C_Mem_Read",
+        "HAL_RCC_OscConfig",
+        "HAL_RCC_ClockConfig",
+        "HAL_GPIO_Init",
+        "HAL_I2C_Init"
+      ]
+    },
+    {
+      "type": "ref_ads1115_10",
+      "passed": true,
+      "deviceChecks": 3,
+      "removedWires": 9,
+      "cards": 8,
+      "apis": [
+        "HAL_Init",
+        "HAL_I2C_Master_Transmit",
+        "HAL_Delay",
+        "HAL_I2C_Master_Receive",
+        "HAL_RCC_OscConfig",
+        "HAL_RCC_ClockConfig",
+        "HAL_GPIO_Init",
+        "HAL_I2C_Init"
+      ]
+    },
+    {
+      "type": "ref_mcp4725_6",
+      "passed": true,
+      "deviceChecks": 3,
+      "removedWires": 6,
+      "cards": 12,
+      "apis": [
+        "HAL_Init",
+        "HAL_I2C_Master_Transmit",
+        "HAL_ADC_Start",
+        "HAL_ADC_PollForConversion",
+        "HAL_ADC_GetValue",
+        "HAL_Delay",
+        "HAL_RCC_OscConfig",
+        "HAL_RCC_ClockConfig",
+        "HAL_GPIO_Init",
+        "HAL_I2C_Init",
+        "HAL_ADC_Init",
+        "HAL_ADC_ConfigChannel"
+      ]
+    },
+    {
+      "type": "ref_can_transceiver_6",
+      "passed": true,
+      "deviceChecks": 3,
+      "removedWires": 4,
+      "cards": 14,
+      "apis": [
+        "HAL_Init",
+        "HAL_GPIO_Init",
+        "HAL_RCC_GetPCLK1Freq",
+        "HAL_CAN_Init",
+        "HAL_CAN_ConfigFilter",
+        "HAL_CAN_Start",
+        "HAL_CAN_GetTxMailboxesFreeLevel",
+        "HAL_CAN_AddTxMessage",
+        "HAL_CAN_GetRxFifoFillLevel",
+        "HAL_CAN_GetRxMessage",
+        "HAL_CAN_GetError",
+        "HAL_Delay",
+        "HAL_RCC_OscConfig",
+        "HAL_RCC_ClockConfig"
+      ]
+    },
+    {
+      "type": "ref_isolated_rs485",
+      "passed": true,
+      "deviceChecks": 3,
+      "removedWires": 4,
+      "cards": 7,
+      "apis": [
+        "HAL_Init",
+        "HAL_UART_Transmit",
+        "HAL_Delay",
+        "HAL_RCC_OscConfig",
+        "HAL_RCC_ClockConfig",
+        "HAL_GPIO_Init",
+        "HAL_UART_Init"
+      ]
+    },
+    {
+      "type": "ref_ds3231_8",
+      "passed": true,
+      "deviceChecks": 3,
+      "removedWires": 4,
+      "cards": 7,
+      "apis": [
+        "HAL_Init",
+        "HAL_I2C_Mem_Read",
+        "HAL_Delay",
+        "HAL_RCC_OscConfig",
+        "HAL_RCC_ClockConfig",
+        "HAL_GPIO_Init",
+        "HAL_I2C_Init"
+      ]
+    },
+    {
+      "type": "ref_sd_storage_board",
+      "passed": true,
+      "deviceChecks": 3,
+      "removedWires": 7,
+      "cards": 8,
+      "apis": [
+        "HAL_SPI_TransmitReceive",
+        "HAL_GPIO_WritePin",
+        "HAL_Init",
+        "HAL_Delay",
+        "HAL_RCC_OscConfig",
+        "HAL_RCC_ClockConfig",
+        "HAL_GPIO_Init",
+        "HAL_SPI_Init"
+      ]
+    },
+    {
+      "type": "ref_max98357a_9",
+      "passed": true,
+      "deviceChecks": 3,
+      "removedWires": 6,
+      "cards": 7,
+      "apis": [
+        "HAL_Init",
+        "HAL_RCCEx_PeriphCLKConfig",
+        "HAL_GPIO_Init",
+        "HAL_I2S_Init",
+        "HAL_I2S_Transmit",
+        "HAL_RCC_OscConfig",
+        "HAL_RCC_ClockConfig"
+      ]
+    },
+    {
+      "type": "ref_ov2640_camera",
+      "passed": true,
+      "deviceChecks": 3,
+      "removedWires": 7,
+      "cards": 10,
+      "apis": [
+        "HAL_Init",
+        "HAL_RCC_MCOConfig",
+        "HAL_GPIO_WritePin",
+        "HAL_Delay",
+        "HAL_I2C_Mem_Write",
+        "HAL_I2C_Mem_Read",
+        "HAL_RCC_OscConfig",
+        "HAL_RCC_ClockConfig",
+        "HAL_GPIO_Init",
+        "HAL_I2C_Init"
+      ]
+    },
+    {
+      "type": "ref_dht11_module_3",
+      "passed": true,
+      "deviceChecks": 4,
+      "removedWires": 5,
+      "cards": 10,
+      "apis": [
+        "__HAL_TIM_GET_COUNTER",
+        "HAL_GPIO_ReadPin",
+        "HAL_GPIO_Init",
+        "HAL_GPIO_WritePin",
+        "HAL_Init",
+        "HAL_TIM_Base_Start",
+        "HAL_Delay",
+        "HAL_RCC_OscConfig",
+        "HAL_RCC_ClockConfig",
+        "HAL_TIM_Base_Init"
+      ]
+    },
+    {
+      "type": "ref_dht22_module_3",
+      "passed": true,
+      "deviceChecks": 4,
+      "removedWires": 5,
+      "cards": 10,
+      "apis": [
+        "__HAL_TIM_GET_COUNTER",
+        "HAL_GPIO_ReadPin",
+        "HAL_GPIO_Init",
+        "HAL_GPIO_WritePin",
+        "HAL_Init",
+        "HAL_TIM_Base_Start",
+        "HAL_Delay",
+        "HAL_RCC_OscConfig",
+        "HAL_RCC_ClockConfig",
+        "HAL_TIM_Base_Init"
+      ]
+    },
+    {
+      "type": "ref_l298n_bare_15",
+      "passed": true,
+      "deviceChecks": 3,
+      "removedWires": 16,
+      "cards": 10,
+      "apis": [
+        "HAL_Init",
+        "__HAL_TIM_SET_COMPARE",
+        "HAL_TIM_PWM_Start",
+        "HAL_GPIO_WritePin",
+        "HAL_Delay",
+        "HAL_RCC_OscConfig",
+        "HAL_RCC_ClockConfig",
+        "HAL_GPIO_Init",
+        "HAL_TIM_PWM_Init",
+        "HAL_TIM_PWM_ConfigChannel"
+      ]
+    },
+    {
+      "type": "ref_l298p_bare_20",
+      "passed": true,
+      "deviceChecks": 3,
+      "removedWires": 16,
+      "cards": 10,
+      "apis": [
+        "HAL_Init",
+        "__HAL_TIM_SET_COMPARE",
+        "HAL_TIM_PWM_Start",
+        "HAL_GPIO_WritePin",
+        "HAL_Delay",
+        "HAL_RCC_OscConfig",
+        "HAL_RCC_ClockConfig",
+        "HAL_GPIO_Init",
+        "HAL_TIM_PWM_Init",
+        "HAL_TIM_PWM_ConfigChannel"
+      ]
+    },
+    {
+      "type": "ref_slide_dpdt_6",
+      "passed": true,
+      "deviceChecks": 3,
+      "removedWires": 6,
+      "cards": 10,
+      "apis": [
+        "HAL_Init",
+        "HAL_ADC_ConfigChannel",
+        "HAL_ADC_Start",
+        "HAL_ADC_PollForConversion",
+        "HAL_ADC_GetValue",
+        "HAL_Delay",
+        "HAL_RCC_OscConfig",
+        "HAL_RCC_ClockConfig",
+        "HAL_GPIO_Init",
+        "HAL_ADC_Init"
+      ]
+    },
+    {
+      "type": "ref_slide_dp3t_8",
+      "passed": true,
+      "deviceChecks": 3,
+      "removedWires": 14,
+      "cards": 10,
+      "apis": [
+        "HAL_Init",
+        "HAL_ADC_ConfigChannel",
+        "HAL_ADC_Start",
+        "HAL_ADC_PollForConversion",
+        "HAL_ADC_GetValue",
+        "HAL_Delay",
+        "HAL_RCC_OscConfig",
+        "HAL_RCC_ClockConfig",
+        "HAL_GPIO_Init",
+        "HAL_ADC_Init"
+      ]
+    },
+    {
+      "type": "ldr",
+      "passed": true,
+      "deviceChecks": 3,
+      "removedWires": 4,
+      "cards": 10,
+      "apis": [
+        "HAL_Init",
+        "HAL_ADC_Start",
+        "HAL_ADC_PollForConversion",
+        "HAL_ADC_GetValue",
+        "HAL_Delay",
+        "HAL_RCC_OscConfig",
+        "HAL_RCC_ClockConfig",
+        "HAL_GPIO_Init",
+        "HAL_ADC_Init",
+        "HAL_ADC_ConfigChannel"
+      ]
+    },
+    {
+      "type": "ntc",
+      "passed": true,
+      "deviceChecks": 3,
+      "removedWires": 4,
+      "cards": 10,
+      "apis": [
+        "HAL_Init",
+        "HAL_ADC_Start",
+        "HAL_ADC_PollForConversion",
+        "HAL_ADC_GetValue",
+        "HAL_Delay",
+        "HAL_RCC_OscConfig",
+        "HAL_RCC_ClockConfig",
+        "HAL_GPIO_Init",
+        "HAL_ADC_Init",
+        "HAL_ADC_ConfigChannel"
+      ]
+    },
+    {
+      "type": "sht31",
+      "passed": true,
+      "deviceChecks": 4,
+      "removedWires": 4,
+      "cards": 8,
+      "apis": [
+        "HAL_Init",
+        "HAL_I2C_Master_Transmit",
+        "HAL_Delay",
+        "HAL_I2C_Master_Receive",
+        "HAL_RCC_OscConfig",
+        "HAL_RCC_ClockConfig",
+        "HAL_GPIO_Init",
+        "HAL_I2C_Init"
+      ]
+    },
+    {
+      "type": "mpu6050",
+      "passed": true,
+      "deviceChecks": 3,
+      "removedWires": 4,
+      "cards": 8,
+      "apis": [
+        "HAL_Init",
+        "HAL_I2C_Mem_Read",
+        "HAL_I2C_Mem_Write",
+        "HAL_Delay",
+        "HAL_RCC_OscConfig",
+        "HAL_RCC_ClockConfig",
+        "HAL_GPIO_Init",
+        "HAL_I2C_Init"
+      ]
+    },
+    {
+      "type": "pir",
+      "passed": true,
+      "deviceChecks": 3,
+      "removedWires": 3,
+      "cards": 8,
+      "apis": [
+        "HAL_Init",
+        "HAL_GPIO_ReadPin",
+        "HAL_Delay",
+        "HAL_RCC_OscConfig",
+        "HAL_RCC_ClockConfig",
+        "HAL_GPIO_Init",
+        "HAL_NVIC_SetPriority",
+        "HAL_NVIC_EnableIRQ"
+      ]
+    },
+    {
+      "type": "oled",
+      "passed": true,
+      "deviceChecks": 3,
+      "removedWires": 4,
+      "cards": 7,
+      "apis": [
+        "HAL_Init",
+        "HAL_I2C_Master_Transmit",
+        "HAL_Delay",
+        "HAL_RCC_OscConfig",
+        "HAL_RCC_ClockConfig",
+        "HAL_GPIO_Init",
+        "HAL_I2C_Init"
+      ]
+    },
+    {
+      "type": "tft",
+      "passed": true,
+      "deviceChecks": 3,
+      "removedWires": 7,
+      "cards": 8,
+      "apis": [
+        "HAL_SPI_Transmit",
+        "HAL_GPIO_WritePin",
+        "HAL_Init",
+        "HAL_Delay",
+        "HAL_RCC_OscConfig",
+        "HAL_RCC_ClockConfig",
+        "HAL_GPIO_Init",
+        "HAL_SPI_Init"
+      ]
+    },
+    {
+      "type": "matrix",
+      "passed": true,
+      "deviceChecks": 3,
+      "removedWires": 5,
+      "cards": 8,
+      "apis": [
+        "HAL_GPIO_WritePin",
+        "HAL_SPI_Transmit",
+        "HAL_Init",
+        "HAL_Delay",
+        "HAL_RCC_OscConfig",
+        "HAL_RCC_ClockConfig",
+        "HAL_GPIO_Init",
+        "HAL_SPI_Init"
+      ]
+    },
+    {
+      "type": "servo",
+      "passed": true,
+      "deviceChecks": 3,
+      "removedWires": 3,
+      "cards": 9,
+      "apis": [
+        "HAL_Init",
+        "HAL_TIM_PWM_ConfigChannel",
+        "HAL_TIM_PWM_Start",
+        "__HAL_TIM_SET_COMPARE",
+        "HAL_Delay",
+        "HAL_RCC_OscConfig",
+        "HAL_RCC_ClockConfig",
+        "HAL_GPIO_Init",
+        "HAL_TIM_PWM_Init"
+      ]
+    },
+    {
+      "type": "motor",
+      "passed": true,
+      "deviceChecks": 3,
+      "removedWires": 5,
+      "cards": 10,
+      "apis": [
+        "HAL_Init",
+        "HAL_TIM_PWM_ConfigChannel",
+        "HAL_TIM_PWM_Start",
+        "HAL_GPIO_WritePin",
+        "__HAL_TIM_SET_COMPARE",
+        "HAL_Delay",
+        "HAL_RCC_OscConfig",
+        "HAL_RCC_ClockConfig",
+        "HAL_GPIO_Init",
+        "HAL_TIM_PWM_Init"
+      ]
+    },
+    {
+      "type": "stepper",
+      "passed": true,
+      "deviceChecks": 4,
+      "removedWires": 6,
+      "cards": 6,
+      "apis": [
+        "HAL_Init",
+        "HAL_GPIO_WritePin",
+        "HAL_Delay",
+        "HAL_RCC_OscConfig",
+        "HAL_RCC_ClockConfig",
+        "HAL_GPIO_Init"
+      ]
+    },
+    {
+      "type": "relay",
+      "passed": true,
+      "deviceChecks": 3,
+      "removedWires": 7,
+      "cards": 8,
+      "apis": [
+        "HAL_Init",
+        "HAL_GPIO_TogglePin",
+        "HAL_GPIO_ReadPin",
+        "HAL_Delay",
+        "HAL_RCC_OscConfig",
+        "HAL_RCC_ClockConfig",
+        "HAL_GPIO_WritePin",
+        "HAL_GPIO_Init"
+      ]
+    },
+    {
+      "type": "joystick",
+      "passed": true,
+      "deviceChecks": 3,
+      "removedWires": 5,
+      "cards": 11,
+      "apis": [
+        "HAL_ADC_ConfigChannel",
+        "HAL_ADC_Start",
+        "HAL_ADC_PollForConversion",
+        "HAL_ADC_GetValue",
+        "HAL_Init",
+        "HAL_GPIO_ReadPin",
+        "HAL_Delay",
+        "HAL_RCC_OscConfig",
+        "HAL_RCC_ClockConfig",
+        "HAL_GPIO_Init",
+        "HAL_ADC_Init"
+      ]
+    },
+    {
+      "type": "encoder",
+      "passed": true,
+      "deviceChecks": 3,
+      "removedWires": 5,
+      "cards": 9,
+      "apis": [
+        "HAL_Init",
+        "HAL_TIM_Encoder_Start",
+        "__HAL_TIM_GET_COUNTER",
+        "HAL_GPIO_ReadPin",
+        "HAL_Delay",
+        "HAL_RCC_OscConfig",
+        "HAL_RCC_ClockConfig",
+        "HAL_GPIO_Init",
+        "HAL_TIM_Encoder_Init"
+      ]
+    },
+    {
+      "type": "l298n",
+      "passed": true,
+      "deviceChecks": 3,
+      "removedWires": 14,
+      "cards": 10,
+      "apis": [
+        "HAL_Init",
+        "__HAL_TIM_SET_COMPARE",
+        "HAL_TIM_PWM_Start",
+        "HAL_GPIO_WritePin",
+        "HAL_Delay",
+        "HAL_RCC_OscConfig",
+        "HAL_RCC_ClockConfig",
+        "HAL_GPIO_Init",
+        "HAL_TIM_PWM_Init",
+        "HAL_TIM_PWM_ConfigChannel"
+      ]
+    },
+    {
+      "type": "dc_motor",
+      "passed": true,
+      "deviceChecks": 3,
+      "removedWires": 14,
+      "cards": 10,
+      "apis": [
+        "HAL_Init",
+        "__HAL_TIM_SET_COMPARE",
+        "HAL_TIM_PWM_Start",
+        "HAL_GPIO_WritePin",
+        "HAL_Delay",
+        "HAL_RCC_OscConfig",
+        "HAL_RCC_ClockConfig",
+        "HAL_GPIO_Init",
+        "HAL_TIM_PWM_Init",
+        "HAL_TIM_PWM_ConfigChannel"
+      ]
+    },
+    {
+      "type": "dc_supply",
+      "passed": true,
+      "deviceChecks": 3,
+      "removedWires": 14,
+      "cards": 10,
+      "apis": [
+        "HAL_Init",
+        "__HAL_TIM_SET_COMPARE",
+        "HAL_TIM_PWM_Start",
+        "HAL_GPIO_WritePin",
+        "HAL_Delay",
+        "HAL_RCC_OscConfig",
+        "HAL_RCC_ClockConfig",
+        "HAL_GPIO_Init",
+        "HAL_TIM_PWM_Init",
+        "HAL_TIM_PWM_ConfigChannel"
+      ]
+    },
+    {
+      "type": "uart",
+      "passed": true,
+      "deviceChecks": 3,
+      "removedWires": 4,
+      "cards": 9,
+      "apis": [
+        "HAL_Init",
+        "HAL_UART_Transmit",
+        "HAL_UART_Receive",
+        "HAL_RCC_OscConfig",
+        "HAL_RCC_ClockConfig",
+        "HAL_GPIO_Init",
+        "HAL_NVIC_SetPriority",
+        "HAL_NVIC_EnableIRQ",
+        "HAL_UART_Init"
+      ]
+    },
+    {
+      "type": "i2c",
+      "passed": true,
+      "deviceChecks": 3,
+      "removedWires": 4,
+      "cards": 8,
+      "apis": [
+        "HAL_Init",
+        "HAL_I2C_Mem_Write",
+        "HAL_I2C_Mem_Read",
+        "HAL_Delay",
+        "HAL_RCC_OscConfig",
+        "HAL_RCC_ClockConfig",
+        "HAL_GPIO_Init",
+        "HAL_I2C_Init"
+      ]
+    },
+    {
+      "type": "spi",
+      "passed": true,
+      "deviceChecks": 3,
+      "removedWires": 6,
+      "cards": 9,
+      "apis": [
+        "HAL_Init",
+        "HAL_GPIO_WritePin",
+        "HAL_SPI_Transmit",
+        "HAL_SPI_Receive",
+        "HAL_Delay",
+        "HAL_RCC_OscConfig",
+        "HAL_RCC_ClockConfig",
+        "HAL_GPIO_Init",
+        "HAL_SPI_Init"
+      ]
+    },
+    {
+      "type": "potentiometer",
+      "passed": true,
+      "deviceChecks": 3,
+      "removedWires": 3,
+      "cards": 10,
+      "apis": [
+        "HAL_Init",
+        "HAL_ADC_Start",
+        "HAL_ADC_PollForConversion",
+        "HAL_ADC_GetValue",
+        "HAL_Delay",
+        "HAL_RCC_OscConfig",
+        "HAL_RCC_ClockConfig",
+        "HAL_GPIO_Init",
+        "HAL_ADC_Init",
+        "HAL_ADC_ConfigChannel"
+      ]
+    },
+    {
+      "type": "slide",
+      "passed": true,
+      "deviceChecks": 3,
+      "removedWires": 3,
+      "cards": 6,
+      "apis": [
+        "HAL_Init",
+        "HAL_GPIO_ReadPin",
+        "HAL_Delay",
+        "HAL_RCC_OscConfig",
+        "HAL_RCC_ClockConfig",
+        "HAL_GPIO_Init"
+      ]
+    },
+    {
+      "type": "rgb",
+      "passed": true,
+      "deviceChecks": 3,
+      "removedWires": 7,
+      "cards": 6,
+      "apis": [
+        "HAL_Init",
+        "HAL_GPIO_WritePin",
+        "HAL_Delay",
+        "HAL_RCC_OscConfig",
+        "HAL_RCC_ClockConfig",
+        "HAL_GPIO_Init"
+      ]
+    },
+    {
+      "type": "capacitor",
+      "passed": true,
+      "deviceChecks": 3,
+      "removedWires": 4,
+      "cards": 8,
+      "apis": [
+        "HAL_Init",
+        "HAL_TIM_PWM_ConfigChannel",
+        "HAL_TIM_PWM_Start",
+        "HAL_Delay",
+        "HAL_RCC_OscConfig",
+        "HAL_RCC_ClockConfig",
+        "HAL_GPIO_Init",
+        "HAL_TIM_PWM_Init"
+      ]
+    },
+    {
+      "type": "diode",
+      "passed": true,
+      "deviceChecks": 3,
+      "removedWires": 4,
+      "cards": 11,
+      "apis": [
+        "HAL_Init",
+        "HAL_GPIO_WritePin",
+        "HAL_ADC_Start",
+        "HAL_ADC_PollForConversion",
+        "HAL_ADC_GetValue",
+        "HAL_Delay",
+        "HAL_RCC_OscConfig",
+        "HAL_RCC_ClockConfig",
+        "HAL_GPIO_Init",
+        "HAL_ADC_Init",
+        "HAL_ADC_ConfigChannel"
+      ]
+    },
+    {
+      "type": "buzzer",
+      "passed": true,
+      "deviceChecks": 3,
+      "removedWires": 2,
+      "cards": 7,
+      "apis": [
+        "HAL_Init",
+        "HAL_GPIO_TogglePin",
+        "HAL_Delay",
+        "HAL_RCC_OscConfig",
+        "HAL_RCC_ClockConfig",
+        "HAL_GPIO_WritePin",
+        "HAL_GPIO_Init"
+      ]
+    },
+    {
+      "type": "passive_buzzer",
+      "passed": true,
+      "deviceChecks": 3,
+      "removedWires": 2,
+      "cards": 12,
+      "apis": [
+        "HAL_TIM_PWM_Stop",
+        "__HAL_TIM_SET_AUTORELOAD",
+        "__HAL_TIM_SET_COMPARE",
+        "__HAL_TIM_SET_COUNTER",
+        "HAL_TIM_PWM_Start",
+        "HAL_Delay",
+        "HAL_Init",
+        "HAL_RCC_OscConfig",
+        "HAL_RCC_ClockConfig",
+        "HAL_GPIO_Init",
+        "HAL_TIM_PWM_Init",
+        "HAL_TIM_PWM_ConfigChannel"
+      ]
+    },
+    {
+      "type": "sevenseg",
+      "passed": true,
+      "deviceChecks": 3,
+      "removedWires": 17,
+      "cards": 6,
+      "apis": [
+        "HAL_Init",
+        "HAL_GPIO_WritePin",
+        "HAL_Delay",
+        "HAL_RCC_OscConfig",
+        "HAL_RCC_ClockConfig",
+        "HAL_GPIO_Init"
+      ]
+    },
+    {
+      "type": "temperature",
+      "passed": true,
+      "deviceChecks": 3,
+      "removedWires": 3,
+      "cards": 10,
+      "apis": [
+        "HAL_Init",
+        "HAL_ADC_Start",
+        "HAL_ADC_PollForConversion",
+        "HAL_ADC_GetValue",
+        "HAL_Delay",
+        "HAL_RCC_OscConfig",
+        "HAL_RCC_ClockConfig",
+        "HAL_GPIO_Init",
+        "HAL_ADC_Init",
+        "HAL_ADC_ConfigChannel"
+      ]
+    },
+    {
+      "type": "ultrasonic",
+      "passed": true,
+      "deviceChecks": 3,
+      "removedWires": 7,
+      "cards": 9,
+      "apis": [
+        "HAL_Init",
+        "HAL_TIM_Base_Start",
+        "__HAL_TIM_GET_COUNTER",
+        "HAL_GPIO_WritePin",
+        "HAL_GPIO_ReadPin",
+        "HAL_RCC_OscConfig",
+        "HAL_RCC_ClockConfig",
+        "HAL_GPIO_Init",
+        "HAL_TIM_Base_Init"
+      ]
+    }
+  ],
+  "testedCommit": "76cb883dc57c8e70cbb17e7e7afe320d6a6b1503",
+  "stage": "source-simulation",
+  "nodeVersion": "24.19.0",
+  "workers": 2,
+  "scope": "Complete device examples and all HAL API cards; inline code/user-source preservation, idempotency, topology, single-wire repair, and damaged-circuit rerun.",
+  "limits": [
+    "Single-wire removals verify topology; each isolated removal is not dynamically rerun.",
+    "All 114 fully damaged circuits are dynamically rerun.",
+    "HAL card API exercise is separate from complete device behavior.",
+    "No physical STM32 or Bare-metal runtime verification."
+  ]
+}

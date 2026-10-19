@@ -1,0 +1,63 @@
+{
+  "passed": true,
+  "syntax": [
+    {
+      "theme": "jellybean",
+      "tokens": [
+        {
+          "text": "int",
+          "color": "rgb(255, 185, 100)"
+        },
+        {
+          "text": "main",
+          "color": "rgb(250, 208, 122)"
+        },
+        {
+          "text": "return",
+          "color": "rgb(129, 151, 191)"
+        },
+        {
+          "text": "42",
+          "color": "rgb(207, 106, 76)"
+        },
+        {
+          "text": "// Theme review",
+          "color": "rgb(136, 136, 136)"
+        },
+        {
+          "text": "\"hello\"",
+          "color": "rgb(153, 173, 106)"
+        }
+      ]
+    },
+    {
+      "theme": "github-light",
+      "tokens": [
+        {
+          "text": "int",
+          "color": "rgb(207, 34, 46)"
+        },
+        {
+          "text": "main",
+          "color": "rgb(130, 80, 223)"
+        },
+        {
+          "text": "return",
+          "color": "rgb(207, 34, 46)"
+        },
+        {
+          "text": "42",
+          "color": "rgb(5, 80, 174)"
+        },
+        {
+          "text": "// Theme review",
+          "color": "rgb(110, 119, 129)"
+        },
+        {
+          "text": "\"hello\"",
+          "color": "rgb(10, 48, 105)"
+        }
+      ]
+    }
+  ]
+}

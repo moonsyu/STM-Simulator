@@ -1,6 +1,8 @@
 # 화면·동작 검사 로그
 
-현재 배포 대상: **0.25.0 예정, 미공개**. 아래는 공개0.24.0 기준선과 개발 소스의 로컬 검사 이력입니다. 새 버전 Windows CI와 공개 릴리스 검증은 pending이며, 과거 실패 기록은 당시 상태로 보존합니다.
+현재 배포 대상: **0.25.0 예정, 미공개**. 아래는 공개0.24.0 기준선과 개발 소스의 로컬 검사 이력입니다. 새 테마 importer의 scope 변환 결함으로 2차 CI39211377769를 게시 전에 취소했고 취소 완료를 확인했습니다. 수정과 로컬 영향 재검사는 완료됐으며, 이번 CI 종료는 검사 실패가 아닌 의도한 취소입니다. 새 버전 Windows CI와 공개 릴리스 검증은 pending이며, 과거 실패 기록은 당시 상태로 보존합니다.
+
+후속 3차 CI39212542491은 패널 헤더 우클릭의 검사 대상 오류로 실패했고 Release는 게시되지 않았습니다. 제품 변경 없이 테스트를 최소 수정 중이며 해당 검사 재실행을 기다립니다.
 
 ## 기준 검수 — 공개0.24.0
 
@@ -62,3 +64,18 @@
 - `work/test-results/workbench-final-native-ide-smoke.cjs.log`: 첫 네이티브 UI 검사는 빌드 성공 후 waitForFunction에서30초 timeout으로 끝났습니다. 초기화 전 지역변수의 임의값에 `6`이 포함되면 F10 완료로 잘못 판정해, 아직 작업 중인 GDB에 다음 명령을 보내던 테스트 동기화 문제였습니다. 실패 로그는 보존합니다.
 - `work/test-results/workbench-native-ui-recheck.log` 및 `native-ide-smoke.json`: 제품 변경 없이 실제 helper 정지 프레임·다음 명령 가능 상태를 기다린 뒤 `doubled=6`을 정확하게 확인하도록 테스트를 보강했습니다. 최종 네이티브 UI의 실제 GCC Debug/Release 빌드, GDB into/over/out·감시·레지스터, 실행 stdout, cmd 터미널, clangd, 컴파일 오류 이동/실패 후 이전 산출물 보호, 데스크톱/작은 화면이 모두 통과했고 renderer 오류0건입니다.
 - **게시 상태 pending:** 0.25.0 버전 게시와 새 Windows CI, 새 Release5자산·공개 해시/커밋/latest·실제 EXE/ZIP 실행/복원·자동 업데이트는 아직 완료 근거가 없습니다. 기존0.24.0 공개 검증을 새 버전의 성공으로 대체하지 않습니다.
+
+## 게시 전 추가 발견 — 코드 테마 scope 변환
+
+- 확정 결함: JSON/Java 등 언어별 세부 scope를 가져오는 과정에서 C의 공통 `type`·`number`·`delimiter`에 규칙이 덮여 적용됐습니다. importer와 저장된 기본 테마의 이전 변환 오류 교정을 완료했습니다. 사용자 테마 선택·가져온 테마·직접 지정한 색은 유지합니다.
+- 원색 의심 분리: 문제가 제기된 PNG에서 `#ff0000`·`#00ff00` 픽셀은 각각 0개였습니다. 실제 색은 원본 GitHub 테마의 `#cf222e`·`#116329`로 확인했습니다. 색 자체가 원본과 다르다는 주장은 채택하지 않고, 재현된 scope 범위 변환만 제품 결함으로 기록합니다.
+- [CI39211377769](https://github.com/moonsyu/STM-Simulator/actions/runs/39211377769) 게시 전 취소 요청 HTTP 202 접수 후 취소 완료 확인. **취소이며 CI 검사 실패가 아닙니다.** 새 CI로 게시를 재개합니다.
+- 기존 모델·레이아웃·저장·실행·Docs 등의 완료 증거는 유지합니다. System 자동 전환/수동 테마 선택의 기존 성공 결과도 importer의 언어별 scope 정확성을 검증한 것으로 확대하지 않습니다.
+- 수정 후 관련 단위27개와 실제 Electron colorscheme 검사를 통과했습니다. 원본 GitHub/Jellybeans C 토큰 색, 구버전 저장 fixture 재로드 후 정상 색, import/export·사용자 색 유지가 포함됩니다(`work/test-results/workbench-colorscheme-final.log`, `colorscheme-smoke.json`).
+- 최종 전체 단위 **397/397 통과**: `work/test-results/workbench-unit-color-final.log`. appearance-canvas, Electron nativeTheme System과 실제 편집기 토큰 검사도 통과했습니다(`workbench-appearance-color-final.log`, `appearance-native-theme.json`, `editor-theme-tokens.json`). 이전387개 결과는 당시 검사 이력으로 유지합니다.
+
+## 3차 CI 실패 — 패널 이동 우클릭 검사 대상
+
+- [CI39212542491](https://github.com/moonsyu/STM-Simulator/actions/runs/39212542491)는 기존 HAL·카탈로그까지 통과한 뒤 `controls-reset-check.cjs:28:90`에서 코드 `.dock-heading` 중앙 우클릭 후 이동 dialog가 열리지 않아 실패했습니다. **Release 미게시** 상태를 유지합니다.
+- 동일 검사에서 Shift+F10 패널 이동·터미널 도킹·재시작 복원은 성공했습니다. 합쳐진 헤더 중앙은 탭/버튼일 수 있으며, interactive 자식 우클릭은 제품 가드가 정상적으로 차단해야 합니다. 이 실패는 이동 손잡이와 탭을 구분하지 않은 테스트 대상 오류입니다.
+- `.dock-grab` 우클릭 성공과 탭 우클릭 차단을 각각 검사하도록 최소 보완 중입니다. 제품 소스 변경은 없으며, 수정 후 재검사 결과는 아직 pending입니다. 최초 실패를 성공으로 덮어쓰지 않습니다.

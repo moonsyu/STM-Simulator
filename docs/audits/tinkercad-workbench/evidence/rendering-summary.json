@@ -1,0 +1,115 @@
+{
+  "schemaVersion": 1,
+  "capturedOn": "2026-10-19",
+  "browser": {
+    "mode": "isolated headless Chrome",
+    "version": "155.0.8059.84"
+  },
+  "scope": "Default model SVG rendering and idle preview parity; standalone gallery and search. Not a firmware or exhaustive runtime-state test.",
+  "models": {
+    "library": 114,
+    "decoded": 114,
+    "previewMatchesLive": 114,
+    "failures": 0
+  },
+  "gallery": {
+    "cards": 80,
+    "rendererModels": 78,
+    "metadataPreserved": true,
+    "failures": 0
+  },
+  "search": {
+    "regexCorrect": true,
+    "passed": 8,
+    "cases": [
+      {
+        "query": "OLED 4핀",
+        "matches": 1,
+        "names": [
+          "SSD1306 I²C OLED 4핀"
+        ]
+      },
+      {
+        "query": "3핀 TMP36",
+        "matches": 1,
+        "names": [
+          "TMP36 아날로그 온도 센서 3핀"
+        ]
+      },
+      {
+        "query": "  TMP36\t  3핀  ",
+        "matches": 1,
+        "names": [
+          "TMP36 아날로그 온도 센서 3핀"
+        ]
+      },
+      {
+        "query": "ADC 3핀",
+        "matches": 5,
+        "names": [
+          "KY-018 광저항 분압 모듈 3핀",
+          "KY-013 NTC 분압 모듈 3핀",
+          "10kΩ 트리머 가변저항 3핀",
+          "회전 가변저항 센서 모듈 3핀",
+          "TMP36 아날로그 온도 센서 3핀"
+        ]
+      },
+      {
+        "query": "3핀 adc",
+        "matches": 5,
+        "names": [
+          "KY-018 광저항 분압 모듈 3핀",
+          "KY-013 NTC 분압 모듈 3핀",
+          "10kΩ 트리머 가변저항 3핀",
+          "회전 가변저항 센서 모듈 3핀",
+          "TMP36 아날로그 온도 센서 3핀"
+        ]
+      },
+      {
+        "query": "TMP36 SCK",
+        "matches": 0,
+        "names": []
+      },
+      {
+        "query": "",
+        "matches": 80
+      },
+      {
+        "query": " \t ",
+        "matches": 80
+      }
+    ]
+  },
+  "errors": {
+    "page": 0,
+    "console": 0
+  },
+  "sourceHashes": {
+    "src/render.js": "e496f6c0c3e9251058e3418c68ebc5bea8d0be40aae15f1186c5ba2b9f20595b",
+    "src/catalog-render.js": "a2bd3b7c4488e89c60c4f1aa53539b619772d662a11ed5c1ce3281967175ce62",
+    "src/catalog-view.js": "4e3c8b2cf94b5e09f07cdb886cdbc8a4a0e05f7ad5bce60399eef6a8114fd9a3",
+    "src/model-geometry.js": "6c957be279e5bdead9a7c8ad56622fbf7ebb18891d139341dad624d549d8eb8f",
+    "src/part-render.js": "7aeff795614eb5f8fa5e1047bfa9f6f590c309176e017f11b3e1bc2229cd2b14",
+    "src/part-preview.js": "40cd38ae33b848f303945bd1d536e0cc1e7c6a3c3e505539503e883cd32004fc",
+    "src/components.js": "017bf69fb250524d2b4491b6ec33e3f8ed374412044c56402d268affb4bdcc16",
+    "src/catalog-defs.js": "9b13ac57765925a9e3627e0c42f41979bff9ae6ff6d9eef513aa288a93c7cefe",
+    "src/pins.js": "5228cfd52b40fba1251de61b475945065fad307a686463120047644467fc2e6a",
+    "src/wire-path.js": "8d8d7975437ce9e58810f273e2d15c56b2a528108428b9b6706d3f70fb38a964"
+  },
+  "comparison": "Preview-only hit areas and part-name labels are removed; XML attribute namespace serialization is normalized while element namespaces, attributes and text are retained. Gallery comparison uses static renderParts SVG.",
+  "screenshots": [
+    {
+      "file": "models-01.png",
+      "sha256": "480cac0e27fa36c17c49585fab089f529004e8d133bdd6cdc097e8c5c186874e"
+    },
+    {
+      "file": "models-09.png",
+      "sha256": "6893c133260df0af133f7cdc7b9c3aacddee9490e08d5d4c95eb0fca5cd677cd"
+    },
+    {
+      "file": "gallery-search-adc.png",
+      "sha256": "ad370da8292e46474c1758610f1fc6d9e06e1e2b1b76d5f0bb89dfae0a53efca"
+    }
+  ],
+  "reproducedBy": "reproduce-rendering.cjs"
+}

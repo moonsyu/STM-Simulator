@@ -1,0 +1,321 @@
+{
+  "run": 39209525819,
+  "commit": "76cb883dc57c8e70cbb17e7e7afe320d6a6b1503",
+  "jobs": [
+    {
+      "name": "Windows x64 portable",
+      "status": "completed",
+      "conclusion": "failure",
+      "html_url": "https://github.com/moonsyu/STM-Simulator/actions/runs/39209525819/job/117919588720",
+      "started_at": "2026-10-19T06:22:25Z",
+      "completed_at": "2026-10-19T06:35:25Z",
+      "steps": [
+        {
+          "name": "Set up job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 1,
+          "started_at": "2026-10-19T06:22:26Z",
+          "completed_at": "2026-10-19T06:22:26Z"
+        },
+        {
+          "name": "Check out source",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 2,
+          "started_at": "2026-10-19T06:22:26Z",
+          "completed_at": "2026-10-19T06:22:34Z"
+        },
+        {
+          "name": "Set up Node.js",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 3,
+          "started_at": "2026-10-19T06:22:34Z",
+          "completed_at": "2026-10-19T06:22:41Z"
+        },
+        {
+          "name": "Install locked dependencies",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 4,
+          "started_at": "2026-10-19T06:22:41Z",
+          "completed_at": "2026-10-19T06:22:56Z"
+        },
+        {
+          "name": "Ensure Electron runtime is installed",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 5,
+          "started_at": "2026-10-19T06:22:56Z",
+          "completed_at": "2026-10-19T06:23:00Z"
+        },
+        {
+          "name": "Reject vulnerable locked dependencies",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 6,
+          "started_at": "2026-10-19T06:23:00Z",
+          "completed_at": "2026-10-19T06:23:01Z"
+        },
+        {
+          "name": "Verify release tag matches package version",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 7,
+          "started_at": "2026-10-19T06:23:01Z",
+          "completed_at": "2026-10-19T06:23:01Z"
+        },
+        {
+          "name": "Test circuit engine and editor models",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 8,
+          "started_at": "2026-10-19T06:23:01Z",
+          "completed_at": "2026-10-19T06:23:50Z"
+        },
+        {
+          "name": "Test update dialog and save-before-restart",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 9,
+          "started_at": "2026-10-19T06:23:50Z",
+          "completed_at": "2026-10-19T06:23:56Z"
+        },
+        {
+          "name": "Test failed saves, workspace transitions and close recovery",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 10,
+          "started_at": "2026-10-19T06:23:56Z",
+          "completed_at": "2026-10-19T06:24:34Z"
+        },
+        {
+          "name": "Test Windows EXE replacement and rollback",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 11,
+          "started_at": "2026-10-19T06:24:34Z",
+          "completed_at": "2026-10-19T06:24:44Z"
+        },
+        {
+          "name": "Test device resizing, themes and IDE preferences",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 12,
+          "started_at": "2026-10-19T06:24:44Z",
+          "completed_at": "2026-10-19T06:25:18Z"
+        },
+        {
+          "name": "Test edge resizing of every device and both surfaces",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 13,
+          "started_at": "2026-10-19T06:25:18Z",
+          "completed_at": "2026-10-19T06:27:35Z"
+        },
+        {
+          "name": "Test every part model thumbnail and hover preview",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 14,
+          "started_at": "2026-10-19T06:27:35Z",
+          "completed_at": "2026-10-19T06:28:09Z"
+        },
+        {
+          "name": "Test readable UI text in dark and light themes",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 15,
+          "started_at": "2026-10-19T06:28:09Z",
+          "completed_at": "2026-10-19T06:28:26Z"
+        },
+        {
+          "name": "Test system appearance, surface movement and unlimited canvas",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 16,
+          "started_at": "2026-10-19T06:28:26Z",
+          "completed_at": "2026-10-19T06:28:43Z"
+        },
+        {
+          "name": "Test canvas selection, zoom and live inspector",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 17,
+          "started_at": "2026-10-19T06:28:43Z",
+          "completed_at": "2026-10-19T06:29:00Z"
+        },
+        {
+          "name": "Test workbench layouts, themes, keyboard editing and recovery",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 18,
+          "started_at": "2026-10-19T06:29:00Z",
+          "completed_at": "2026-10-19T06:30:22Z"
+        },
+        {
+          "name": "Test code-only colorscheme registration",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 19,
+          "started_at": "2026-10-19T06:30:22Z",
+          "completed_at": "2026-10-19T06:30:27Z"
+        },
+        {
+          "name": "Test Electron editing and HAL workflows",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 20,
+          "started_at": "2026-10-19T06:30:27Z",
+          "completed_at": "2026-10-19T06:33:39Z"
+        },
+        {
+          "name": "Test catalog search, Docs, inline main.c and routed wiring",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 21,
+          "started_at": "2026-10-19T06:33:39Z",
+          "completed_at": "2026-10-19T06:34:00Z"
+        },
+        {
+          "name": "Test empty canvas, single board, breadboards and inline Docs",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 22,
+          "started_at": "2026-10-19T06:34:00Z",
+          "completed_at": "2026-10-19T06:34:17Z"
+        },
+        {
+          "name": "Test LED WritePin and persisted circuit diagnostics",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 23,
+          "started_at": "2026-10-19T06:34:17Z",
+          "completed_at": "2026-10-19T06:34:46Z"
+        },
+        {
+          "name": "Test code reset, undo and legacy Docs preview",
+          "status": "completed",
+          "conclusion": "failure",
+          "number": 24,
+          "started_at": "2026-10-19T06:34:46Z",
+          "completed_at": "2026-10-19T06:35:19Z"
+        },
+        {
+          "name": "Test compact controls, debug shortcuts and board reset",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 25,
+          "started_at": "2026-10-19T06:35:19Z",
+          "completed_at": "2026-10-19T06:35:19Z"
+        },
+        {
+          "name": "Test TFT frame diagnostics and UART input through Electron",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 26,
+          "started_at": "2026-10-19T06:35:19Z",
+          "completed_at": "2026-10-19T06:35:19Z"
+        },
+        {
+          "name": "Test onboard USART2 VCP and external UART wiring",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 27,
+          "started_at": "2026-10-19T06:35:19Z",
+          "completed_at": "2026-10-19T06:35:19Z"
+        },
+        {
+          "name": "Upload test diagnostics on failure",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 28,
+          "started_at": "2026-10-19T06:35:19Z",
+          "completed_at": "2026-10-19T06:35:21Z"
+        },
+        {
+          "name": "Build portable executable",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 29,
+          "started_at": "2026-10-19T06:35:21Z",
+          "completed_at": "2026-10-19T06:35:21Z"
+        },
+        {
+          "name": "Verify package and prepare download",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 30,
+          "started_at": "2026-10-19T06:35:21Z",
+          "completed_at": "2026-10-19T06:35:21Z"
+        },
+        {
+          "name": "Verify update helper from packaged Electron main",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 31,
+          "started_at": "2026-10-19T06:35:21Z",
+          "completed_at": "2026-10-19T06:35:21Z"
+        },
+        {
+          "name": "Verify updater in the actual portable EXE",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 32,
+          "started_at": "2026-10-19T06:35:21Z",
+          "completed_at": "2026-10-19T06:35:21Z"
+        },
+        {
+          "name": "Upload Windows download",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 33,
+          "started_at": "2026-10-19T06:35:21Z",
+          "completed_at": "2026-10-19T06:35:21Z"
+        },
+        {
+          "name": "Add download link to build summary",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 34,
+          "started_at": "2026-10-19T06:35:21Z",
+          "completed_at": "2026-10-19T06:35:21Z"
+        },
+        {
+          "name": "Post Set up Node.js",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 67,
+          "started_at": "2026-10-19T06:35:21Z",
+          "completed_at": "2026-10-19T06:35:21Z"
+        },
+        {
+          "name": "Post Check out source",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 68,
+          "started_at": "2026-10-19T06:35:21Z",
+          "completed_at": "2026-10-19T06:35:23Z"
+        },
+        {
+          "name": "Complete job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 69,
+          "started_at": "2026-10-19T06:35:23Z",
+          "completed_at": "2026-10-19T06:35:23Z"
+        }
+      ]
+    },
+    {
+      "name": "Publish verified release and update manifest",
+      "status": "completed",
+      "conclusion": "skipped",
+      "html_url": "https://github.com/moonsyu/STM-Simulator/actions/runs/39209525819/job/117923472510",
+      "started_at": "2026-10-19T06:35:26Z",
+      "completed_at": "2026-10-19T06:35:25Z",
+      "steps": []
+    }
+  ]
+}
