@@ -1,0 +1,30 @@
+
+> stm-simulator@0.25.2 test:ui
+> node scripts/ui-smoke.cjs && node scripts/editor-smoke.cjs && node scripts/parts-smoke.cjs && node scripts/features-smoke.cjs && node scripts/hal-smoke.cjs && node scripts/layout-serial-smoke.cjs && node scripts/hal-examples-smoke.cjs && node scripts/boards-smoke.cjs && node scripts/devices-smoke.cjs && node scripts/circuit-tools-smoke.cjs && node scripts/editor-tools-smoke.cjs && node scripts/passive-buzzer-smoke.cjs && node scripts/l298n-smoke.cjs && node scripts/ide-smoke.cjs && node scripts/mcu-defaults-smoke.cjs
+
+UI smoke passed: wiring, parts, simulation, button input, interpreter limits, desktop file save/open.
+Editor smoke passed: all seven requested changes, mounted contacts, file round trip, no renderer errors.
+Parts smoke passed: searchable scroll list, selected pin, all nine parts, live controls, WebAudio and file persistence.
+Features smoke passed: LCD, UART/I2C/SPI, language, timers, interrupts, DMA, waveform and CSV.
+HAL UI smoke passed.
+Layout and serial UI smoke passed.
+HAL circuits and logging UI smoke passed.
+Boards UI passed: wire priority, shortcut, board picker/protection, real breadboards and persistence.
+New device UI smoke passed.
+Circuit tools / main.c / expanded timers / F5 UI passed.
+Editor tools UI passed: find/replace and real wire waypoint editing.
+AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
++ actual - expected
+
++ '부품 1개 · 배선 3개'
+- '부품 1개 · 배선 2개'
+              ^
+
+    at D:\a\STM-Simulator\STM-Simulator\scripts\passive-buzzer-smoke.cjs:50:12 {
+  generatedMessage: true,
+  code: 'ERR_ASSERTION',
+  actual: '부품 1개 · 배선 3개',
+  expected: '부품 1개 · 배선 2개',
+  operator: 'strictEqual',
+  diff: 'simple'
+}

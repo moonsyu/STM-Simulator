@@ -1,0 +1,13 @@
+✔ all HAL library examples mount every device, separate sockets and preserve every electrical net (8749.6714ms)
+✔ all 114 Docs devices use breadboards and remain identical after reload and reapply (12673.9896ms)
+✔ an occupied power rail is never reassigned to another voltage by Docs (60.0773ms)
+✔ a missing jumper on an extended LCD strip can be repaired without stacking contacts (1173.6851ms)
+✔ a moved enlarged MCU leaves room for the automatic breadboard and device (56.3793ms)
+ℹ tests 5
+ℹ suites 0
+ℹ pass 5
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 23028.022

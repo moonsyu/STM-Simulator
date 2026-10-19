@@ -1,0 +1,1 @@
+{"passed":true,"checks":["WritePin card inserts SET directly in main","Persisted Docs event matches circuit hash","Runtime log proves LED is on","Missing GND repaired on reapply","RESET turns LED off","No new files or user profile changes"],"errors":[]}
