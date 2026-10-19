@@ -25,7 +25,7 @@ jobs:
   build:
     name: Windows x64 portable
     runs-on: windows-latest
-    timeout-minutes: 20
+    timeout-minutes: 30
     env:
       # An explicit marker limits only this push; subsequent pushes default to all.
       TEST_SCOPE: ${{ !startsWith(github.ref, 'refs/tags/') && (inputs.test_scope || (contains(github.event.head_commit.message, '[test:passive-buzzer]') && 'passive-buzzer')) || 'all' }}
@@ -75,6 +75,8 @@ jobs:
         run: npm run test:appearance-canvas:ui
       - name: Test canvas selection, zoom and live inspector
         run: npm run test:canvas-ux:ui
+      - name: Test workbench layouts, themes, keyboard editing and recovery
+        run: npm run test:workbench:ui
       - name: Test code-only colorscheme registration
         run: npm run test:colorscheme:ui
       - name: Test Electron editing and HAL workflows
@@ -112,6 +114,9 @@ jobs:
             work/test-results/*.log
             work/test-results/*.json
             work/test-results/*.png
+            work/test-results/workbench-review/*.json
+            work/test-results/workbench-review/*.jsonl
+            work/test-results/workbench-review/*.png
             work/test-results/docs-audit-*/*.json
           if-no-files-found: ignore
           retention-days: 14

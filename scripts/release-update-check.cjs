@@ -1,3 +1,4 @@
+const {revealUiControl,clickUiControl}=require('./workbench-ui-actions.cjs');
 // Run after publishing: the old public EXE must use its own unmodified updater.
 const assert=require('node:assert/strict'),fs=require('node:fs/promises'),path=require('node:path'),net=require('node:net');
 const {createHash}=require('node:crypto'),{createReadStream}=require('node:fs');
@@ -21,7 +22,7 @@ async function processes(target){
  async function open(){const port=await freePort();child=launch(target,[`--remote-debugging-port=${port}`,'--remote-debugging-address=127.0.0.1'],{env});let ready=false;for(let i=0;i<300;i++){try{if((await fetch(`http://127.0.0.1:${port}/json/version`)).ok){ready=true;break;}}catch{}await wait(200);}assert.ok(ready,'App did not start');browser=await chromium.connectOverCDP(`http://127.0.0.1:${port}`);page=browser.contexts()[0].pages()[0];await page.waitForSelector('.monaco-editor');}
  try{
   await open();assert.equal((await page.evaluate(()=>window.appUpdates.state())).currentVersion,baseline.manifest.version);await page.evaluate(()=>window.appUpdates.configure(false));
-  await page.click('#new');await page.fill('#new-project-name','Live Update Project');
+  await clickUiControl(page, '#new');await page.fill('#new-project-name','Live Update Project');
   await page.selectOption('#new-project-template','blink');
   // The project is created through the actual UI; the updater and network are untouched.
   await page.click('#project-create');await page.waitForSelector('#project-dialog',{state:'hidden'});
@@ -34,7 +35,7 @@ async function processes(target){
   let downloaded,lastPhase;const downloadDeadline=Date.now()+240000;
   while(Date.now()<downloadDeadline){const state=await page.evaluate(()=>window.appUpdates.state());if(state.phase!==lastPhase){console.log('Automatic updater:',state.phase);lastPhase=state.phase;}if(state.phase==='error')throw new Error(state.message);if(state.phase==='ready'){downloaded=state;break;}await wait(300);}
   assert.equal(downloaded?.phase,'ready',JSON.stringify(downloaded));assert.equal(downloaded.latestVersion,manifest.version);assert.equal(await hash(path.join(profile,'updates/pending.exe')),manifest.sha256);
-  await page.click('#app-update');await page.screenshot({path:path.join(out,'public-update-ready.png')});
+  await clickUiControl(page, '#app-update');await page.screenshot({path:path.join(out,'public-update-ready.png')});
   await page.click('#update-install').catch(error=>{if(!/closed|disconnected/i.test(error.message))throw error;});
   let result;for(let i=0;i<600;i++){try{result=JSON.parse((await fs.readFile(path.join(profile,'updates/last-result.json'),'utf8')).replace(/^\uFEFF/,''));if(result.ok)break;throw new Error(result.message);}catch(error){if(error.code!=='ENOENT'&&!(error instanceof SyntaxError))throw error;}if((await fs.stat(target)).size===manifest.bytes&&await hash(target)===manifest.sha256){result={ok:true};break;}if(i%5===0){const state=await page.evaluate(()=>window.appUpdates.state()).catch(()=>null);if(state?.phase==='ready'&&state.message.startsWith('적용하지 못했습니다'))throw new Error(state.message);}await wait(200);}assert.equal(result?.ok,true,'Portable replacement did not finish');
   assert.equal(await hash(target),manifest.sha256);

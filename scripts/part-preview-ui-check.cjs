@@ -6,7 +6,7 @@ const {openFixture,chooseHal}=require('./smoke-fixture.cjs');
  const app=await _electron.launch({executablePath:process.env.LAB_EXE||path.join(root,'node_modules/electron/dist/electron.exe'),args:process.env.LAB_EXE?[]:[root],cwd:root,env});let page;
  try{
   const {PART_LIBRARY}=await import('../src/part-library.js'),{circuitFixture}=await import('../tests/fixtures/circuits.js');
-  page=await app.firstWindow();const errors=[];page.on('pageerror',e=>errors.push(e.message));await page.waitForSelector('.monaco-editor');await app.evaluate(({BrowserWindow})=>{const w=BrowserWindow.getAllWindows()[0];w.setContentSize(1540,1020);w.showInactive();});
+  page=await app.firstWindow();const errors=[];page.on('pageerror',e=>errors.push(e.message));await page.waitForSelector('.monaco-editor');await app.evaluate(({BrowserWindow})=>{const w=BrowserWindow.getAllWindows()[0];w.setContentSize(1540,1020);w.showInactive();w.setIgnoreMouseEvents(true);});
   assert.equal(await page.locator('.part-thumbnail').count(),114);assert.equal(await page.locator('.hole').count(),400);assert.equal(await page.locator('[data-part]').count(),0);
   const preview=page.locator('#part-model-preview');
   async function hover(type){await page.mouse.move(900,40);await page.fill('#part-search',type);await page.locator(`[data-add="${type}"]`).hover();try{await page.waitForFunction(type=>{const p=document.getElementById('part-model-preview'),img=p.querySelector('img');return !p.hidden&&p.dataset.type===type&&img.complete&&img.naturalWidth>0;},type);}catch(error){throw new Error(`Preview failed: ${type}`,{cause:error});}}

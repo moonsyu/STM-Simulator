@@ -1,3 +1,4 @@
+const {revealUiControl,clickUiControl}=require('./workbench-ui-actions.cjs');
 const assert=require('node:assert/strict'),fs=require('node:fs/promises'),path=require('node:path');
 const {openFixture,fillCode}=require('./smoke-fixture.cjs');
 async function exercise(page,{out,resizeWindow}){
@@ -20,7 +21,7 @@ async function exercise(page,{out,resizeWindow}){
  await openFixture(page,circuitFixture('led'));
  for(const mode of ['dark','light']){
   await page.click('[data-tab="settings"]');await page.selectOption('#pref-appearance',mode);await page.click('[data-tab="code"]');await resizeWindow(1540,1020);await page.screenshot({path:path.join(out,'appearance-canvas-'+mode+'.png')});
-  await page.click('#pinout-open');await page.selectOption('#pin-function','GPIO_Output');await page.screenshot({path:path.join(out,'appearance-canvas-'+mode+'-pinout.png')});await page.click('#pinout-close');
+  await clickUiControl(page, '#pinout-open');await page.selectOption('#pin-function','GPIO_Output');await page.screenshot({path:path.join(out,'appearance-canvas-'+mode+'-pinout.png')});await page.click('#pinout-close');
   await resizeWindow(1024,640);await page.click('[data-tab="settings"]');assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);assert.ok(await page.locator('#appearance-toggle').isVisible());await page.screenshot({path:path.join(out,'appearance-canvas-'+mode+'-compact.png')});
  }
  await resizeWindow(1540,1020);await page.click('[data-tab="code"]');
@@ -53,8 +54,20 @@ module.exports={exercise};
 async function main(){
  const {_electron}=require('playwright'),root=path.resolve(__dirname,'..'),out=path.join(root,'work/test-results');await fs.mkdir(out,{recursive:true});const profile=await fs.mkdtemp(path.join(out,'appearance-canvas-')),env={...process.env,CIRCUIT_LAB_SMOKE:'1',CIRCUIT_LAB_TEST_PROFILE:profile};delete env.ELECTRON_RUN_AS_NODE;
  const app=await _electron.launch({executablePath:path.join(root,'node_modules/electron/dist/electron.exe'),args:[root],cwd:root,env});let page;
- try{page=await app.firstWindow();const resizeWindow=(width,height)=>app.evaluate(({BrowserWindow},{width,height})=>{const w=BrowserWindow.getAllWindows()[0];w.setContentSize(width,height);w.showInactive();},{width,height});await resizeWindow(1540,1020);await exercise(page,{out,resizeWindow});console.log('Appearance and unlimited canvas UI passed.');}
+ try{page=await app.firstWindow();const resizeWindow=(width,height)=>app.evaluate(({BrowserWindow},{width,height})=>{const w=BrowserWindow.getAllWindows()[0];w.setContentSize(width,height);w.showInactive();},{width,height});await resizeWindow(1540,1020);await exercise(page,{out,resizeWindow});
+  // Exercise Electron's native preference notifications without changing Windows settings.
+  await page.emulateMedia({colorScheme:null});await page.click('#appearance-system');const nativeStates=[];
+  for(const mode of ['dark','light','dark']){
+   await app.evaluate(({nativeTheme},mode)=>{nativeTheme.themeSource=mode;},mode);
+   await page.waitForFunction(mode=>document.documentElement.dataset.ideTheme===mode,mode);
+   const state=await page.evaluate(()=>({appearance:document.documentElement.dataset.appearance,mode:document.documentElement.dataset.ideTheme,code:document.documentElement.dataset.colorscheme,panel:getComputedStyle(document.documentElement).getPropertyValue('--ide-panel').trim()}));
+   assert.deepEqual(state,{appearance:'system',mode,code:mode==='dark'?'jellybean':'github-light',panel:mode==='dark'?'#272727':'#fafafa'});nativeStates.push(state);
+  }
+  await page.click('#appearance-toggle');await app.evaluate(({nativeTheme})=>{nativeTheme.themeSource='dark';});assert.equal(await page.evaluate(()=>document.documentElement.dataset.ideTheme),'light');
+  await page.click('#appearance-system');await page.waitForFunction(()=>document.documentElement.dataset.ideTheme==='dark');
+  await fs.writeFile(path.join(out,'appearance-native-theme.json'),JSON.stringify({passed:true,nativeStates,manualOverridePreserved:true,windowsSettingsChanged:false},null,2));
+  console.log('Appearance, native System theme events and unlimited canvas UI passed.');}
  catch(error){if(page)await page.screenshot({path:path.join(out,'appearance-canvas-failure.png')}).catch(()=>{});throw error;}
- finally{await app.close();if(path.dirname(profile)!==out||!path.basename(profile).startsWith('appearance-canvas-'))throw Error('Invalid cleanup');await fs.rm(profile,{recursive:true,force:true});}
+ finally{await app.evaluate(({nativeTheme})=>{nativeTheme.themeSource='system';}).catch(()=>{});await app.close();if(path.dirname(profile)!==out||!path.basename(profile).startsWith('appearance-canvas-'))throw Error('Invalid cleanup');await fs.rm(profile,{recursive:true,force:true});}
 }
 if(require.main===module)main().catch(error=>{console.error(error);process.exitCode=1;});

@@ -1,3 +1,4 @@
+const {revealUiControl,clickUiControl}=require('./workbench-ui-actions.cjs');
 const assert=require('node:assert/strict'),fs=require('node:fs/promises'),path=require('node:path');
 const {_electron}=require('playwright'),{openFixture}=require('./smoke-fixture.cjs');
 (async()=>{const root=path.resolve(__dirname,'..'),out=path.join(root,'work/test-results');await fs.mkdir(out,{recursive:true});const profile=await fs.mkdtemp(path.join(out,'catalog-ui-')),env={...process.env,CIRCUIT_LAB_SMOKE:'1',CIRCUIT_LAB_TEST_PROFILE:profile};delete env.ELECTRON_RUN_AS_NODE;
@@ -5,7 +6,7 @@ const {_electron}=require('playwright'),{openFixture}=require('./smoke-fixture.c
  try{page=await app.firstWindow();page.setDefaultTimeout(15000);const errors=[];page.on('pageerror',e=>errors.push(e.message));await page.waitForSelector('.monaco-editor');await app.evaluate(({BrowserWindow})=>{const w=BrowserWindow.getAllWindows()[0];w.setContentSize(1600,1050);w.webContents.setZoomFactor(1);w.showInactive();});
  const {exampleProject:blankProject}=await import('../src/project.js'),{CATALOG_BY_TYPE,CATALOG_DEFS}=await import('../src/catalog-defs.js'),{boardPin}=await import('../src/pins.js'),{halExample}=await import('../src/hal-examples.js');
  const read=async()=>{await page.waitForFunction(()=>document.getElementById('save-state').textContent==='자동 저장됨');return page.evaluate(()=>JSON.parse(localStorage.getItem('stm32lab.project.v2')));};
- await page.fill('#hal-example-search','부저 3핀');assert.equal(await page.locator('#hal-example option').count(),3);await page.fill('#hal-example-search','HAL_I2C_Mem_Read');assert.ok(await page.locator('#hal-example option[value="ref_ds3231_8"]').count());await page.fill('#hal-example-search','');
+ await (await revealUiControl(page, '#hal-example-search')).fill('부저 3핀');assert.equal(await page.locator('#hal-example option').count(),3);await (await revealUiControl(page, '#hal-example-search')).fill('HAL_I2C_Mem_Read');assert.ok(await page.locator('#hal-example option[value="ref_ds3231_8"]').count());await (await revealUiControl(page, '#hal-example-search')).fill('');
  const p=blankProject();await openFixture(page,p);await page.locator(`[data-endpoint="${boardPin('PA8')}"]`).click();
  const floor=async(x,y)=>{const point=await page.locator('#circuit').evaluate((svg,p)=>{const a=svg.createSVGPoint();a.x=p.x;a.y=p.y;const b=a.matrixTransform(svg.getScreenCTM());return {x:b.x,y:b.y};},{x,y});await page.mouse.click(point.x,point.y);};
  await floor(540,620);await floor(580,650);await page.keyboard.press('Backspace');await floor(580,630);await page.locator('[data-endpoint="bb:a:2"]').click();await page.waitForFunction(()=>JSON.parse(localStorage.getItem('stm32lab.project.v2')).wires.length===1);

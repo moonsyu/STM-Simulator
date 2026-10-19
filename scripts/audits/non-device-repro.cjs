@@ -1,3 +1,4 @@
+const {revealUiControl,clickUiControl}=require('../workbench-ui-actions.cjs');
 // Manual audit probes for known, unfixed issues. This is deliberately not a CI
 // pass/fail regression suite: assertions confirm the recorded faulty behavior.
 const assert=require('node:assert/strict'),fs=require('node:fs/promises'),path=require('node:path');
@@ -24,11 +25,11 @@ const {fillCode,newProject}=require('../smoke-fixture.cjs');
 
   const workspace=await createWorkspace(temp,'workspace-a',JSON.stringify(old));await launch();
   await app.evaluate(({dialog},directory)=>{dialog.showOpenDialog=async()=>({canceled:false,filePaths:[directory]});},workspace.directory);
-  await page.click('#workspace-open');await page.waitForFunction(()=>document.getElementById('workspace-path').textContent.includes('workspace-a'));
+  await clickUiControl(page, '#workspace-open');await page.waitForFunction(()=>document.getElementById('workspace-path').textContent.includes('workspace-a'));
   // One normal save, followed by another edit within the typing checkpoint window.
   const codeA='int main(void) { return 31; }\n',codeB='int main(void) { return 32; }\n';
   await fillCode(page,codeA);await page.locator('#save').evaluate(el=>el.click());await page.waitForFunction(()=>document.getElementById('console-output').textContent.includes('회로 파일을 저장했습니다.'));
-  await fillCode(page,codeB);await page.locator('#new').evaluate(el=>el.click());
+  await fillCode(page,codeB);await clickUiControl(page,'#new');
   const replaceVisible=await page.locator('#replace-dialog').isVisible(),createVisible=await page.locator('#project-dialog').isVisible();
   assert.equal(replaceVisible,false);assert.equal(createVisible,true);assert.equal(await fs.readFile(path.join(workspace.directory,'main.c'),'utf8'),codeA);
   await page.selectOption('#new-project-template','blank');await page.click('#project-create');await page.waitForSelector('#project-dialog',{state:'hidden'});assert.notEqual(await page.locator('#code').inputValue(),codeB);

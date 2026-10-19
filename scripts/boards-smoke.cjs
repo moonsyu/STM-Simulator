@@ -1,3 +1,4 @@
+const {revealUiControl,clickUiControl}=require('./workbench-ui-actions.cjs');
 const {fillCode,newProject}=require('./smoke-fixture.cjs');
 const assert=require('node:assert/strict'),fs=require('node:fs/promises'),path=require('node:path');
 const {_electron}=require(process.env.PLAYWRIGHT_MODULE||'playwright');
@@ -12,10 +13,10 @@ const {openFixture,saveProject}=require('./smoke-fixture.cjs');
   const saved=async()=>{await page.waitForTimeout(260);return page.evaluate(()=>JSON.parse(localStorage.getItem('stm32lab.project.v2')));};
   const point=async(x,y)=>page.evaluate(({x,y})=>{const s=document.getElementById('circuit'),q=s.createSVGPoint();q.x=x;q.y=y;const r=q.matrixTransform(s.getScreenCTM());return {x:r.x,y:r.y};},{x,y});
   const click=async(x,y)=>{const q=await point(x,y);await page.mouse.click(q.x,q.y);};
-  const selectBoard=async()=>{await page.click('#board-open');await page.click('[data-board-id="nucleo-f446re"]');};
+  const selectBoard=async()=>{await clickUiControl(page, '#board-open');await page.click('[data-board-id="nucleo-f446re"]');};
   assert.doesNotMatch(await page.locator('svg .board').textContent(),/F446RE|STM32|NUCLEO|MB1136/i);assert.match(await page.locator('svg .board').textContent(),/USER · PC13/);assert.match(await page.locator('svg .board').textContent(),/LD2 · PA5/);assert.equal(await page.locator('[data-endpoint^="board:"]').count(),108);
   // The only selectable board remains discoverable by board and MCU names.
-  await page.click('#board-open');assert.equal(await page.locator('[data-board-id]').count(),1);
+  await clickUiControl(page, '#board-open');assert.equal(await page.locator('[data-board-id]').count(),1);
   for(const query of ['nucleo',' stm32 f446re ','F4','']){await page.fill('#board-search',query);assert.equal(await page.locator('[data-board-id]').count(),1);}
   await page.fill('#board-search','unknown board');assert.equal(await page.locator('[data-board-id]').count(),0);assert.match(await page.locator('#board-results').textContent(),/검색 결과가 없습니다/);await page.fill('#board-search','');await page.screenshot({path:path.join(out,'board-picker.png')});await page.click('[data-board-id]');assert.equal(await page.locator('#board-change-dialog').isVisible(),false);assert.deepEqual(await saved(),projectForBoard());
   // F5 works while typing, never reloads, and ignores held-key repeat and open dialogs.

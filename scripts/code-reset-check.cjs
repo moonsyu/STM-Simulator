@@ -1,3 +1,4 @@
+const {revealUiControl,clickUiControl}=require('./workbench-ui-actions.cjs');
 const fs=require('node:fs/promises'),path=require('node:path'),net=require('node:net'),assert=require('node:assert/strict');
 const {createHash}=require('node:crypto'),{chromium}=require('playwright'),{launch,terminate}=require('../desktop/process-tools.cjs');
 (async()=>{
@@ -17,7 +18,7 @@ const {createHash}=require('node:crypto'),{chromium}=require('playwright'),{laun
   f.project.code='#ifndef LD2_Pin\n#define LD2_Pin GPIO_PIN_5\n#endif\n#ifndef LD2_GPIO_Port\n#define LD2_GPIO_Port GPIOA\n#endif\n'+f.project.code;
   f.project.firmware.files=[{name:'notes.h',text:'#pragma once\n// keep this file\n'}];
   const applied=applyDeviceExample(f.project,f.target,{api:'HAL_GPIO_WritePin'}),p=applied.project,expected=resetMainCode(p);
-  const click=selector=>selector.startsWith('#code-reset')?page.locator(selector).click():page.locator(selector).dispatchEvent('click');
+  const click=selector=>clickUiControl(page,selector);
   const events=async()=>JSON.parse(JSON.stringify((await fs.readFile(path.join(profile,'diagnostics/events.jsonl'),'utf8')).trim().split('\n').filter(Boolean).map(JSON.parse)));
   const saved=async()=>{await page.waitForTimeout(300);return JSON.parse(await fs.readFile(path.join(profile,'diagnostics/latest-project.stm32lab'),'utf8'));};
   await page.locator('#file-input').setInputFiles({name:'reset.stm32lab',mimeType:'application/json',buffer:Buffer.from(JSON.stringify(p))});await page.waitForFunction(code=>document.getElementById('code').value===code,p.code);

@@ -1,3 +1,4 @@
+const {revealUiControl,clickUiControl}=require('./workbench-ui-actions.cjs');
 const fs=require('node:fs/promises'),path=require('node:path'),http=require('node:http'),assert=require('node:assert/strict'),{chromium}=require('playwright');
 (async()=>{
  const root=path.resolve(__dirname,'..'),out=path.join(root,'work/test-results'),mime={'.html':'text/html','.css':'text/css','.js':'text/javascript','.png':'image/png','.json':'application/json'};
@@ -9,7 +10,7 @@ const fs=require('node:fs/promises'),path=require('node:path'),http=require('nod
   const {halExample}=await import('../src/hal-examples.js'),p=halExample('blink');await page.locator('#file-input').setInputFiles({name:'visual.stm32lab',mimeType:'application/json',buffer:Buffer.from(JSON.stringify(p))});
   for(const theme of ['dark','light']){
    await page.emulateMedia({colorScheme:theme});await page.waitForFunction(theme=>document.documentElement.dataset.ideTheme===theme,theme);await page.screenshot({path:path.join(out,'controls-'+theme+'.png')});
-   await page.click('#board-reset');assert.equal(await page.locator('#board-reset-dialog').isVisible(),true);await page.screenshot({path:path.join(out,'board-reset-'+theme+'.png')});await page.keyboard.press('Escape');
+   await clickUiControl(page, '#board-reset');assert.equal(await page.locator('#board-reset-dialog').isVisible(),true);await page.screenshot({path:path.join(out,'board-reset-'+theme+'.png')});await page.keyboard.press('Escape');
    await page.locator('[data-panel="terminal"] .dock-heading').focus();await page.keyboard.press('Shift+F10');await page.screenshot({path:path.join(out,'panel-move-'+theme+'.png')});await page.keyboard.press('Escape');
   }
   await page.setViewportSize({width:1024,height:640});assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);await page.screenshot({path:path.join(out,'controls-compact.png')});console.log('Dark/light/reset/panel move and 1024px visual checks passed');
