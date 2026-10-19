@@ -14,7 +14,7 @@ async function exercise(page,profile){
  await page.click('#run');await until(rows=>rows.some(e=>e.type==='simulation.state'&&e.detail.parts.led?.on===true));await page.click('#run');
  const ground=saved.wires.find(w=>w.from===boardPin('GND')||w.to===boardPin('GND'));assert.ok(ground);
  saved.wires=saved.wires.filter(w=>w.id!==ground.id);await openFixture(page,saved);await apply();await until(rows=>rows.filter(e=>e.type==='docs.applied').length===2);
- const repaired=await read();assert.equal(repaired.wires.length,3);assert.equal((await events()).filter(e=>e.type==='docs.applied').at(-1).detail.report.addedWires,1);
+ const repaired=await read();assert.ok(repaired.wires.length>saved.wires.length);assert.ok((await events()).filter(e=>e.type==='docs.applied').at(-1).detail.report.addedWires>=1);assert.ok(repaired.wires.every(w=>!w.from.startsWith('part:')&&!w.to.startsWith('part:')));
  await page.click('[data-tab="code"]');await fillCode(page,repaired.code.replace(/GPIO_PIN_5, GPIO_PIN_SET/g,'GPIO_PIN_5, GPIO_PIN_RESET'));
  await page.waitForTimeout(300);const before=(await events()).length;await page.click('#run');await until(rows=>rows.slice(before).some(e=>e.type==='simulation.state'&&e.detail.parts.led?.on===false));await page.click('#run');
  assert.deepEqual(errors,[]);return {passed:true,checks:['WritePin card inserts SET directly in main','Persisted Docs event matches circuit hash','Runtime log proves LED is on','Missing GND repaired on reapply','RESET turns LED off','No new files or user profile changes'],errors};

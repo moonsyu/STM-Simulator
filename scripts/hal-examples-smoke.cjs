@@ -9,7 +9,8 @@ const {openFixture,chooseHal}=require('./smoke-fixture.cjs');
  const app=await _electron.launch({executablePath:process.env.LAB_EXE||path.join(root,'node_modules/electron/dist/electron.exe'),args:process.env.LAB_EXE?[]:[root],cwd:root,env});
  try{
   const page=await app.firstWindow(),errors=[];page.on('pageerror',e=>errors.push(e.message));await page.waitForSelector('.monaco-editor');await app.evaluate(({BrowserWindow})=>BrowserWindow.getAllWindows()[0].showInactive());
-  const {HAL_EXAMPLES,halExample}=await import('../src/hal-examples.js'),{validateProject}=await import('../src/project.js');
+  const {HAL_EXAMPLES,applyHalExample}=await import('../src/hal-examples.js'),{validateProject}=await import('../src/project.js');
+  const halExample=kind=>applyHalExample({name:HAL_EXAMPLES[kind]},kind);
   const saved=async()=>{await page.waitForTimeout(240);return page.evaluate(()=>JSON.parse(localStorage.getItem('stm32lab.project.v2')));};
   const circuitCount=async p=>assert.equal(await page.locator('#connection-count').textContent(),`부품 ${p.components.length}개 · 배선 ${p.wires.length}개`);
   assert.equal(await page.locator('[data-example],#extra-example,#feature-example,.example-card,#hal-example-dialog').count(),0);await circuitCount({components:[],wires:[]});assert.equal(await page.locator('#firmware-mode').inputValue(),'hal');assert.equal(await page.locator('#hal-example option').count(),Object.keys(HAL_EXAMPLES).length+1);

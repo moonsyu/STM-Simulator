@@ -1,6 +1,6 @@
 {
   "name": "stm-simulator",
-  "version": "0.25.1",
+  "version": "0.25.2",
   "description": "STM32 learning IDE with integrated circuit simulation",
   "author": "STM Simulator",
   "private": true,
@@ -43,7 +43,8 @@
     "test:catalog:ui": "node scripts/catalog-ui-check.cjs",
     "test:catalog:arm": "node scripts/catalog-arm-check.cjs",
     "test:uart:ui": "node scripts/uart-vcp-smoke.cjs",
-    "test:empty-workspace:ui": "node scripts/empty-workspace-ui.cjs"
+    "test:empty-workspace:ui": "node scripts/empty-workspace-ui.cjs",
+    "test:examples:breadboard:ui": "node scripts/breadboard-examples-ui.cjs"
   },
   "devDependencies": {
     "dompurify": "3.4.17",

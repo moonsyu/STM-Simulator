@@ -111,6 +111,8 @@ jobs:
         run: npm run test:pin-options:ui
       - name: Test multiple Docs examples, live devices and saved projects
         run: npm run test:device-docs:multi:ui
+      - name: Test breadboard mounting, Docs and example runtime logs
+        run: npm run test:examples:breadboard:ui
       - name: Upload test diagnostics on failure
         if: failure()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
@@ -120,6 +122,7 @@ jobs:
             work/test-results/*.log
             work/test-results/*.json
             work/test-results/*.png
+            work/test-results/breadboard-layout/**
             work/test-results/workbench-review/*.json
             work/test-results/workbench-review/*.jsonl
             work/test-results/workbench-review/*.png
