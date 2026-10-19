@@ -1,4 +1,4 @@
-:root[data-ide-theme] body{background:var(--ide-background);color:var(--ide-foreground);font-size:var(--ide-ui-size)}
+:root[data-ide-theme] body{background:var(--ide-background);color:var(--ide-foreground);font-family:'Segoe UI Variable','Segoe UI','Malgun Gothic',sans-serif;font-size:var(--ide-ui-size,13px)}
 :root[data-ide-theme] :is(.topbar,.ide-toolbar,.dock-heading,.panel-tabs,.source-tabs,.canvas-heading,.canvas-footer,.monitor-strip,.console-heading,.console-header,.editor-heading,.editor-position,.firmware-tools,.layout-toolbar){background:var(--ide-chrome);color:var(--ide-foreground);border-color:var(--ide-border);box-shadow:none}
 :root[data-ide-theme] :is(.library,.editor-panel,.workbench,.console,.dock-pane,.dock-content,.project-files,.project-folder-note,#build-panel,#debug-panel,#native-panel,#inspect-panel,#code-panel,.code-note,.firmware-tools,.empty-inspector,.inspector-card,.measure,.bus-columns,.wave-settings,.wave-toolbar,dialog){background:var(--ide-panel);color:var(--ide-foreground);border-color:var(--ide-border)}
 :root[data-ide-theme] :is(button,input,select,textarea){color:var(--ide-foreground);border-color:var(--ide-border)}
@@ -39,6 +39,7 @@
 /* Disabled controls stay readable; a dashed border and cursor identify them. */
 :root[data-ide-theme] :is(#run,button,input,select,textarea):disabled{opacity:1;background:var(--ide-panel);color:var(--ide-muted);border-color:var(--ide-border);border-style:dashed;cursor:not-allowed;filter:none}
 :root[data-ide-theme] :is(#run,button):disabled :is(span,strong,small,b){color:var(--ide-muted)}
+:root[data-ide-theme] .board-card:disabled .mini-chip{background:var(--ide-panel)}
 :root[data-ide-theme] #hal-example-count{color:var(--ide-muted);opacity:1}
 :root[data-ide-theme] :is(.issues-note,.issues-clear){color:var(--ide-muted)}
 :root[data-ide-theme] :is(.danger,#pinout-errors,#serial-feedback){color:var(--ide-error)}
@@ -99,3 +100,26 @@
 :root[data-ide-theme] #line-numbers{background:var(--code-background);color:var(--code-muted)}
 [data-surface]{cursor:grab}
 .resizing-device [data-surface]{cursor:inherit}
+
+/* Canvas editing overlays stay legible at any zoom level. */
+.marquee-box{fill:color-mix(in srgb,var(--ide-accent) 12%,transparent);stroke:var(--ide-accent);stroke-width:1.5;stroke-dasharray:6 4;vector-effect:non-scaling-stroke;pointer-events:none}
+#inspector .measure:has(.measure-value){gap:8px;flex-wrap:wrap}
+#inspector .measure-value{display:flex;align-items:center;justify-content:flex-end;flex-wrap:wrap;gap:6px;min-width:0;margin-left:auto}
+:root[data-ide-theme] #inspector .signal-badge{display:inline-block;min-width:6.5ch;padding:2px 6px;border:1px solid var(--ide-border);border-radius:3px;background-color:var(--ide-chrome);color:var(--ide-foreground);font-size:10px;font-weight:700;line-height:1.4;text-align:center;white-space:nowrap}
+:root[data-ide-theme] #inspector .signal-badge[data-signal=high]{border-color:var(--ide-accent)}
+:root[data-ide-theme] #inspector .signal-badge[data-signal=low]{border-color:var(--ide-muted)}
+:root[data-ide-theme] #inspector .signal-badge[data-signal=analog]{border-color:var(--ide-warning)}
+:root[data-ide-theme] #inspector .signal-badge[data-signal=floating]{border-color:var(--ide-warning);border-style:dashed}
+:root[data-ide-theme] #inspector .signal-badge[data-signal=idle]{border-color:var(--ide-muted);border-style:dashed}
+#inspector .wire-terminals{display:grid;grid-template-columns:auto minmax(0,1fr);align-items:center;gap:6px 12px;padding:8px}
+#inspector .wire-terminals :is(label,p){margin:0}
+#inspector .wire-terminals p{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#inspector .wire-colors{display:grid;grid-template-columns:repeat(auto-fit,24px);gap:8px;margin:12px 0 4px;padding:4px 0;min-width:0;max-width:312px}
+:root[data-ide-theme] #inspector .wire-colors button[data-wire-color]{width:24px;height:24px;padding:0;border:1px solid var(--ide-muted);border-radius:50%;background:var(--swatch);color:var(--ide-foreground);opacity:1;filter:none;transform:none}
+:root[data-ide-theme] #inspector .wire-colors button[data-wire-color]:hover:not(:disabled){border-color:var(--ide-foreground);transform:scale(1.08)}
+:root[data-ide-theme] #inspector .wire-colors button[data-wire-color]:is(.active,[aria-pressed=true]){outline:2px solid var(--ide-accent);outline-offset:2px;box-shadow:inset 0 0 0 2px var(--ide-panel)}
+:root[data-ide-theme] #inspector .wire-colors button[data-wire-color]:focus-visible{outline:2px solid var(--ide-accent);outline-offset:4px}
+:root[data-ide-theme] #inspector .wire-colors button[data-wire-color]:disabled{border-style:dashed;cursor:not-allowed;transform:none}
+:is(#sim-time,#sim-current,#part-voltage,#part-current,#part-power,#part-live,#wire-voltage,#wire-connected,#endpoint-voltage,#endpoint-connected,#resize-size,#zoom-reset,#inspector .measure b,#inspector output,#inspector [data-live],#inspector input[type=number]){font-variant-numeric:tabular-nums}
+:is(#sim-time,#sim-current,#part-voltage,#part-current,#part-power,#wire-voltage,#wire-connected,#endpoint-voltage,#endpoint-connected,#resize-size,#inspector .measure b){font-family:var(--ide-font,'Cascadia Code',Consolas,monospace)}
+:is(#workspace-path,#inspector h2){min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}

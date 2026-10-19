@@ -11,6 +11,20 @@ export function toggleSelection(selection,type,id){
   return {type:'group',parts:type==='part'?next:parts,wires:type==='wire'?next:wires};
 }
 export function wirePoints(project,wire){const a=endpointInfo(wire.from,project.components,project.surfaces),b=endpointInfo(wire.to,project.components,project.surfaces);if(!a||!b)return [];return wire.points?[a,...wire.points,b]:[a,{x:a.x+(b.x-a.x)*.47,y:a.y},{x:a.x+(b.x-a.x)*.47,y:b.y},b];}
+export function boxSelection(project,rect){
+  const selection={type:'group',parts:[],wires:[]};
+  if(!rect||![rect.minX,rect.minY,rect.maxX,rect.maxY].every(Number.isFinite))return selection;
+  const minX=Math.min(rect.minX,rect.maxX),maxX=Math.max(rect.minX,rect.maxX),minY=Math.min(rect.minY,rect.maxY),maxY=Math.max(rect.minY,rect.maxY);
+  const inside=p=>p&&Number.isFinite(p.x)&&Number.isFinite(p.y)&&p.x>=minX&&p.x<=maxX&&p.y>=minY&&p.y<=maxY;
+  const components=Array.isArray(project?.components)?project.components.filter(p=>p&&typeof p==='object'):[],wires=Array.isArray(project?.wires)?project.wires:[];
+  selection.parts=components.filter(inside).map(p=>p.id);
+  for(const wire of wires){
+    if(!wire||typeof wire.from!=='string'||typeof wire.to!=='string'||wire.points!==undefined&&!Array.isArray(wire.points))continue;
+    const points=wirePoints({components,surfaces:project?.surfaces},wire);
+    if(points.length>=2&&points.every(inside))selection.wires.push(wire.id);
+  }
+  return selection;
+}
 export function insertWirePoint(project,wire,point){
   const points=wirePoints(project,wire);if(points.length>=34)throw new Error('배선 꺾임점은 32개까지 추가할 수 있습니다.');
   let best=Infinity,index=1;

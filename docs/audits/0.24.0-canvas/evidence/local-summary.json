@@ -1,0 +1,21 @@
+{
+  "unitTests": 374,
+  "unitFailed": 0,
+  "newUiGroups": 13,
+  "newContrastStates": 19,
+  "newContrastTexts": 9380,
+  "existingContrastStates": 52,
+  "existingContrastTexts": 22690,
+  "lowContrast": 0,
+  "detectorFindings": 0,
+  "smokes": [
+    "editor-smoke",
+    "appearance-smoke",
+    "part-preview-ui-check",
+    "ide-smoke",
+    "device-docs-smoke",
+    "appearance-canvas-ui",
+    "circuit-tools-smoke",
+    "storage-recovery-check"
+  ]
+}

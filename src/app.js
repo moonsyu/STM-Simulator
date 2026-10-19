@@ -9,7 +9,8 @@ import {applyDeviceExample} from './device-assistance.js';
 import {createDiagnostics} from './diagnostics.js';
 import {resetMainCode} from './code-reset.js';
 import {resetBoardConfiguration} from './board-reset.js';
-import {selectedIds,isSelected,toggleSelection,wirePoints,insertWirePoint,connectedNet,copySelection,pasteSelection,moveSelection} from './circuit-edit.js';
+import {selectedIds,isSelected,toggleSelection,wirePoints,insertWirePoint,connectedNet,copySelection,pasteSelection,moveSelection,boxSelection} from './circuit-edit.js';
+import {zoomView} from './canvas-view.js';
 import {circuitDiagnostics} from './circuit-diagnostics.js';
 import {PINS,BB,PIN_BY_ID,endpointInfo,searchPins,circuitHoles,holeInfo} from './pins.js';
 import {TWO_PIN_TYPES,MULTI_PIN_TYPES,WIRE_COLORS,PART_DEFS,terminalKeys,attachments,detachPart,normalizeAngle} from './components.js';
@@ -44,7 +45,7 @@ const $=id=>document.getElementById(id),svg=$('circuit');
 mountIdeChrome();const layout=setupWorkspaceLayout();let ide=null,resizing=null,deviceDocs=null;
 const wireDraft=new WireDraft();
 let project=blankProject(),mode='select',pending=null,selection=null,color='#23a68a',status='stopped',result=null,runtime=null,simTime=0,pressed={},undoStack=[],redoStack=[],dirty=false;
-let view={x:0,y:0,w:1120,h:730},drag=null,lastWarnings='',replaceAction=null,paintCounter=0,saveTimer,searchSelectedId=null;
+let view={x:0,y:0,w:1120,h:730},drag=null,lastWarnings='',replaceAction=null,saveTimer,searchSelectedId=null,breadboardKey='',inspectorKey='',inspectorModel=null;
 try{const cached=localStorage.getItem('stm32lab.project.v2')||localStorage.getItem('stm32lab.project.v1');if(cached)project=validateProject(JSON.parse(cached));}catch{}
 const diagnostic=createDiagnostics(window.localDiagnostics?.record,()=>project);
 initSvg(svg);
@@ -58,7 +59,7 @@ const editorSearch=setupEditorSearch({applyEdit:replaceCodeText,maxLength:()=>{
  return sourceFile==='main.c'?300000-otherFiles:300000-project.code.length-otherFiles;
 }});
 svg.addEventListener('contextmenu',e=>{if(pending&&!running()){e.preventDefault();e.stopImmediatePropagation();cancelWireDraft();return;}const id=e.target.closest('[data-endpoint]')?.dataset.endpoint,p=PIN_BY_ID.get(id);if(p&&/^P[A-H]\d+$/.test(p.signal)){e.preventDefault();pinout.open(p.signal);}});
-$('part-list').innerHTML=PART_LIBRARY.map(part=>`<button class="part-card" data-add="${part.type}"><span class="part-icon ${part.iconClass}">${part.icon}</span><span><strong>${part.name}</strong><small>${part.hint}</small></span><b>+</b></button>`).join('')+'<p id="part-no-results" hidden>검색 결과가 없습니다.<br>다른 이름으로 검색해 주세요.</p>';
+$('part-list').innerHTML=PART_LIBRARY.map(part=>`<button class="part-card" data-add="${part.type}"><span class="part-icon ${part.iconClass}">${part.icon}</span><span><strong title="${esc(part.name)}">${esc(part.name)}</strong><small title="${esc(part.hint)}">${esc(part.hint)}</small></span><b>+</b></button>`).join('')+'<p id="part-no-results" hidden>검색 결과가 없습니다.<br>다른 이름으로 검색해 주세요.</p>';
 setupPartPreviews();
 function filterParts(){
  const matches=new Set(searchParts($('part-search').value).map(part=>part.type));
@@ -114,7 +115,8 @@ function refresh({preserveWires=false}={}){
  deviceDocs?.refresh();
  updateSurfaces(svg,project,selection);
  updateBoardPicker();if(project.surfaces?.board?.hidden)$('search-layer').innerHTML='';svg.classList.toggle('connecting',mode==='wire'||!!pending||TWO_PIN_TYPES.includes(mode));
- $('breadboard-layer').innerHTML=renderBreadboards(project,selection);
+ const boards=project.components.filter(p=>p.type==='breadboard'),nextBreadboardKey=JSON.stringify(boards.map(p=>[p,isSelected(selection,'part',p.id)]));
+ if(nextBreadboardKey!==breadboardKey){$('breadboard-layer').innerHTML=renderBreadboards(project,selection);breadboardKey=nextBreadboardKey;}
  if(!preserveWires)$('wire-layer').innerHTML=renderWires(project,selection);
  else $('wire-layer').querySelectorAll('[data-wire]').forEach(el=>el.classList.toggle('wire-selected',isSelected(selection,'wire',el.dataset.wire)));
  $('part-layer').innerHTML=renderParts(project,selection,result,pressed);
@@ -137,19 +139,38 @@ function refresh({preserveWires=false}={}){
  $('status-led').className=running()?'running':'';
  $('connection-count').textContent=`부품 ${project.components.length}개 · 배선 ${project.wires.length}개`;
  $('hint').textContent=running()?'실행 중 핀을 클릭하면 전압을 측정합니다. 버튼은 누르는 동안 연결됩니다.':pending?'핀을 클릭하면 연결 · 바닥 클릭으로 꺾임점 추가 · 우클릭 / Esc: 작성 중 배선 취소':TWO_PIN_TYPES.includes(mode)?'빵판 구멍 두 곳을 선택해 다리를 꽂으세요. 빈 공간 클릭 시 자유 배치합니다.':drag?.type==='part'?'초록색 표시가 나타나면 놓아서 장착하세요. R: 45° 회전':'몸체: 이동 · 가장자리: 크기 조절 · 빈 공간 / 가운데 버튼: 화면 이동 · 배치 범위 제한 없음';
- updateReadouts();inspector();resizing?.refresh();
+ inspector();updateReadouts();resizing?.refresh();
  ide?.controls();
 }
 function updateAudio(){buzzerAudio?.update(project,result,audioEnabled,status==='running');}
 $('sound').onclick=async()=>{audioEnabled=!audioEnabled;if(audioEnabled&&!audioContext){audioContext=new AudioContext();buzzerAudio=new BuzzerAudio(audioContext);}if(audioEnabled)await audioContext.resume();$('sound').textContent=audioEnabled?'소리 켜짐':'소리 꺼짐';$('sound').setAttribute('aria-pressed',String(audioEnabled));updateAudio();};
+function signalState(voltage){
+ if(!result)return {kind:'idle',label:'미측정'};
+ if(!Number.isFinite(voltage))return {kind:'floating',label:'부유'};
+ return voltage>=2?{kind:'high',label:'HIGH'}:voltage<=.8?{kind:'low',label:'LOW'}:{kind:'analog',label:'ANALOG'};
+}
+function patchText(id,text){const el=$(id);if(el&&el.textContent!==String(text))el.textContent=text;}
+function patchSignal(id,voltage){const el=$(id);if(!el)return;const state=signalState(voltage);el.dataset.signal=state.kind;patchText(id,state.label);}
 function updateReadouts(){
  updateAudio();
  monitor.render();renderIssues();
- if(selection?.type==='part'){const p=project.components.find(p=>p.id===selection.id);if(p&&$('part-live'))$('part-live').innerHTML=partReadouts(p,result);const read=p&&result?.parts[p.id];if($('part-voltage'))$('part-voltage').textContent=read?read.voltage.toFixed(3)+' V':'—';if($('part-current'))$('part-current').textContent=read?(read.current*1000).toFixed(3)+' mA':'—';}
- if(selection?.type==='wire'&&$('wire-voltage')){const w=project.wires.find(w=>w.id===selection.id),v=w&&result?.voltage(w.from);$('wire-voltage').textContent=v!=null?v.toFixed(3)+' V':'—';}
- $('sim-time').textContent=(simTime/1000).toFixed(3)+' s';
- $('sim-current').textContent=result&&!result.fault?(result.current*1000).toFixed(2)+' mA':'—';
- $('warning-count').textContent=result?.warnings.length?`확인 ${result.warnings.length}건`:running()?'연결 상태 정상':'정지 상태';
+ if(selection?.type==='part'){
+  const p=project.components.find(p=>p.id===selection.id),read=p&&result?.parts[p.id],live=$('part-live');
+  if(p&&live){const html=partReadouts(p,result);if(live.innerHTML!==html)live.innerHTML=html;}
+  patchText('part-voltage',Number.isFinite(read?.voltage)?read.voltage.toFixed(3)+' V':'—');
+  patchText('part-current',Number.isFinite(read?.current)?(read.current*1000).toFixed(3)+' mA':'—');
+  patchText('part-power',Number.isFinite(read?.power)?(read.power*1000).toFixed(2)+' mW':'—');
+ }
+ const endpoint=selection?.type==='endpoint'?selection.id:selection?.type==='wire'?project.wires.find(w=>w.id===selection.id)?.from:null;
+ if(endpoint){
+  const prefix=selection.type,v=result?.voltage(endpoint);
+  patchText(prefix+'-voltage',Number.isFinite(v)?v.toFixed(3)+' V':'—');
+  patchSignal(prefix+'-signal',v);
+  patchText(prefix+'-connected',connectedNet(project,endpoint,pressed).endpoints.length);
+ }
+ patchText('sim-time',(simTime/1000).toFixed(3)+' s');
+ patchText('sim-current',result&&!result.fault?(result.current*1000).toFixed(2)+' mA':'—');
+ patchText('warning-count',result?.warnings.length?`확인 ${result.warnings.length}건`:running()?'연결 상태 정상':'정지 상태');
 }
 function renderConnections(){
  const endpoint=selection?.type==='endpoint'?selection.id:selection?.type==='wire'?project.wires.find(w=>w.id===selection.id)?.from:null;
@@ -171,38 +192,42 @@ function renderIssues(force=false){
  $('circuit-issues').querySelectorAll('[data-issue]').forEach(b=>b.onclick=()=>focusIssue(issues[Number(b.dataset.issue)].target));
  document.querySelector('[data-monitor="issues"]').textContent='회로 검사'+(issues.length?` (${issues.length})`:'');
 }
-function copyCircuit(){if(!selection)return;circuitClipboard=copySelection(project,selection);clipboardOffset=28;log(`부품 ${circuitClipboard.components.length}개와 내부 배선 ${circuitClipboard.wires.length}개를 복사했습니다.`);}
+function copyCircuit(){if(!selectedIds(selection,'part').length&&!selectedIds(selection,'wire').length)return false;circuitClipboard=copySelection(project,selection);clipboardOffset=28;log(`부품 ${circuitClipboard.components.length}개와 내부 배선 ${circuitClipboard.wires.length}개를 복사했습니다.`);return true;}
 function pasteCircuit(){if(running()||!circuitClipboard)return;try{const draft=structuredClone(project),next=pasteSelection(draft,circuitClipboard,uid,clipboardOffset);validateProject(draft);checkpoint();project=draft;selection=next;clipboardOffset+=28;pending=null;mode='select';inspectTab();changed();}catch(e){log(e.message,'error');}}
-function inspector(){
- const el=$('inspector');
+function inspector(force=false){
+ const el=$('inspector'),selected=selection?.type==='part'?project.components.find(p=>p.id===selection.id):selection?.type==='wire'?project.wires.find(w=>w.id===selection.id):selection?.type==='endpoint'?endpointInfo(selection.id,project.components,project.surfaces):null;
+ const key=JSON.stringify([selection,selected,running()]);
+ if(!force&&key===inspectorKey&&(!['part','wire'].includes(selection?.type)||selected===inspectorModel))return;
+ inspectorKey=key;inspectorModel=selected;
  if(!selection){el.innerHTML='<span class="overline">CIRCUIT INSPECTOR</span><h2>회로 살펴보기</h2><div class="empty-inspector">핀, 배선 또는 부품을 선택하세요.<br>실행 중 전압과 전류를 확인할 수 있습니다.</div>';return;}
- if(selection.type==='group'){el.innerHTML=`<span class="overline">MULTIPLE SELECTION</span><h2>여러 항목 선택</h2><p>부품 ${selection.parts.length}개 · 배선 ${selection.wires.length}개</p><p>Shift+클릭으로 선택을 바꾸고 선택한 부품을 끌어 함께 이동합니다. Ctrl+C/V로 내부 배선과 함께 복사할 수 있습니다.</p><button id="copy-group" class="inspector-action">선택 복사</button><button id="remove-group" class="inspector-action danger" ${running()?'disabled':''}>선택 삭제</button>`;$('copy-group').onclick=copyCircuit;$('remove-group').onclick=removeSelected;return;}
+ if(selection.type==='group'){el.innerHTML=`<span class="overline">MULTIPLE SELECTION</span><h2>여러 항목 선택</h2><p>부품 ${selection.parts.length}개 · 배선 ${selection.wires.length}개</p><p>Shift+클릭 또는 Shift+빈 공간 드래그로 선택을 추가합니다. Ctrl+A: 전체 선택 · Ctrl+D: 복제 · Ctrl+C/V: 복사/붙여넣기 · Esc: 선택 삭제.</p><button id="copy-group" class="inspector-action">선택 복사</button><button id="remove-group" class="inspector-action danger" ${running()?'disabled':''}>선택 삭제</button>`;$('copy-group').onclick=copyCircuit;$('remove-group').onclick=removeSelected;return;}
  if(selection.type==='surface'){
    el.innerHTML=`<h2>${selection.id==='board'?'STM32 보드':'기본 빵판'}</h2><p>몸체를 끌어 이동하고, 가장자리와 모서리를 끌어 가로·세로 크기를 조절하세요. Shift를 누르면 비율을 유지하고, 드래그 중 Esc를 누르면 취소합니다. 연결된 핀·배선과 장착 부품도 함께 이동합니다.</p><button class="inspector-action" id="inspect-open-docs">장치 Docs · 배선/예제 보기</button>`;
    $('inspect-open-docs').onclick=()=>tab('docs');
  } else if(selection.type==='endpoint'){
-   const e=endpointInfo(selection.id,project.components,project.surfaces),pin=PIN_BY_ID.get(selection.id),v=result?.voltage(selection.id);
+   const e=endpointInfo(selection.id,project.components,project.surfaces),pin=PIN_BY_ID.get(selection.id);
    const connected=connectedNet(project,selection.id,pressed).endpoints.length;
-   el.innerHTML=`<span class="overline">CONNECTION POINT</span><h2>${esc(e?.label||selection.id)}</h2><p>${pin?esc(pin.signal==='NC'?'연결되지 않은 NC 핀':`신호: ${pin.signal}`):'빵판의 실제 연결 그룹을 기준으로 계산합니다.'}</p><div class="measure"><span>전압 · GND 기준</span><b>${v!=null?v.toFixed(3)+' V':'—'}</b></div><div class="measure"><span>연결된 핀 / 구멍</span><b>${connected}</b></div><p>${running()?'전압이 표시되지 않으면 부유 상태이거나 전원에 연결되지 않은 노드입니다.':'시뮬레이션을 실행하면 연결점의 전압을 확인할 수 있습니다.'}</p>`;
+   el.innerHTML=`<span class="overline">CONNECTION POINT</span><h2 title="${esc(e?.label||selection.id)}">${esc(e?.label||selection.id)}</h2><p>${pin?esc(pin.signal==='NC'?'연결되지 않은 NC 핀':`신호: ${pin.signal}`):'빵판의 실제 연결 그룹을 기준으로 계산합니다.'}</p><div class="measure"><span>전압 · GND 기준</span><span class="measure-value"><b id="endpoint-voltage">—</b><span id="endpoint-signal" class="signal-badge" data-signal="idle">미측정</span></span></div><div class="measure"><span>연결된 핀 / 구멍</span><b id="endpoint-connected">${connected}</b></div><p>${running()?'전압이 표시되지 않으면 부유 상태이거나 전원에 연결되지 않은 노드입니다.':'시뮬레이션을 실행하면 연결점의 전압을 확인할 수 있습니다.'}</p>`;
  } else if(selection.type==='part'){
    const p=project.components.find(p=>p.id===selection.id);if(!p)return;
    if(p.type==='breadboard'){
-    el.innerHTML=`<span class="overline">BREADBOARD</span><h2>${esc(p.name)}</h2><p>400홀 · A–E / F–J 행과 전원 레일은 각각 연결됩니다. 다른 빵판과는 배선으로 연결해야 합니다.</p><div class="inspector-card"><label for="part-name">빵판 이름</label><input id="part-name" value="${esc(p.name)}" maxlength="80" ${running()?'disabled':''}></div><p>테두리를 끌어 이동하세요. 장착한 부품과 배선도 함께 이동합니다. 삭제하면 구멍에 연결된 배선과 장착 연결이 해제되며 다른 부품은 남습니다.</p><div class="measure"><span>회전 각도</span><b>${p.rotation}°</b></div><button class="inspector-action" id="inspect-open-docs">장치 Docs · 배선/예제 보기</button><button class="inspector-action" id="rotate-part" ${running()?'disabled':''}>45° 회전 (R)</button><button class="inspector-action danger" id="remove-part" ${running()?'disabled':''}>빵판 삭제</button>`;
+    el.innerHTML=`<span class="overline">BREADBOARD</span><h2 title="${esc(p.name)}">${esc(p.name)}</h2><p>400홀 · A–E / F–J 행과 전원 레일은 각각 연결됩니다. 다른 빵판과는 배선으로 연결해야 합니다.</p><div class="inspector-card"><label for="part-name">빵판 이름</label><input id="part-name" value="${esc(p.name)}" maxlength="80" ${running()?'disabled':''}></div><p>테두리를 끌어 이동하세요. 장착한 부품과 배선도 함께 이동합니다. 삭제하면 구멍에 연결된 배선과 장착 연결이 해제되며 다른 부품은 남습니다.</p><div class="measure"><span>회전 각도</span><b>${p.rotation}°</b></div><button class="inspector-action" id="inspect-open-docs">장치 Docs · 배선/예제 보기</button><button class="inspector-action" id="rotate-part" ${running()?'disabled':''}>45° 회전 (R)</button><button class="inspector-action danger" id="remove-part" ${running()?'disabled':''}>빵판 삭제</button>`;
     $('part-name').onchange=e=>{checkpoint();p.name=e.target.value.trim()||p.name;changed();};$('inspect-open-docs').onclick=()=>tab('docs');$('rotate-part').onclick=rotateSelected;$('remove-part').onclick=removeSelected;return;
    }
    const read=result?.parts[p.id],mounted=Object.keys(attachments(p)).length;
-   el.innerHTML=`<span class="overline">${p.type.toUpperCase()}</span><h2>${esc(p.name)}</h2><p>${mounted?`${mounted} / ${terminalKeys(p).length}개 다리 장착`:'자유 배치 · 끌어서 빵판에 놓으세요.'}</p><div class="inspector-card"><label for="part-name">부품 이름</label><input id="part-name" value="${esc(p.name)}" maxlength="80" ${running()?'disabled':''}>${p.type==='resistor'?`<label for="part-value">저항 (Ω)</label><input id="part-value" type="number" value="${p.value}" min="1" max="10000000" ${running()?'disabled':''}>`:''}${p.type==='led'?`<label for="part-color">LED 색상</label><select id="part-color" ${running()?'disabled':''}>${[['red','빨강'],['green','초록'],['blue','파랑'],['yellow','노랑']].map(([v,l])=>`<option value="${v}" ${p.color===v?'selected':''}>${l}</option>`).join('')}</select>`:''}</div>${partControls(p,running())}<div class="measure"><span>부품 전압</span><b id="part-voltage">${read?read.voltage.toFixed(3)+' V':'—'}</b></div><div class="measure"><span>전류</span><b id="part-current">${read?(read.current*1000).toFixed(3)+' mA':'—'}</b></div>${p.type==='resistor'?`<div class="measure"><span>소비 전력</span><b>${read?(read.power*1000).toFixed(2)+' mW':'—'}</b></div>`:''}${p.type==='button'?'<p>실행 중 버튼 몸체를 누르고 계시면 연결되고 손을 떼면 끊어집니다. A1–A2, B1–B2는 항상 연결되며, 누르면 양쪽이 연결됩니다.</p>':''}${p.type==='lcd'?'<p>LCD 1602의 4/8비트 명령·문자 출력을 지원합니다. VDD 5 V, VSS·R/W·VO를 GND에 연결하고 RS/E/DATA 핀을 배선하세요. 기존 스케치의 LiquidCrystal API를 사용할 수 있습니다.</p>':''}<div class="measure"><span>회전 각도</span><b>${Number(p.rotation.toFixed(1))}°</b></div><button class="inspector-action" id="inspect-open-docs">장치 Docs · 배선/예제 보기</button><button class="inspector-action" id="rotate-part" ${running()?'disabled':''}>45° 회전 (R)</button><button class="inspector-action danger" id="remove-part" ${running()?'disabled':''}>부품 삭제</button>`;
+   el.innerHTML=`<span class="overline">${p.type.toUpperCase()}</span><h2 title="${esc(p.name)}">${esc(p.name)}</h2><p>${mounted?`${mounted} / ${terminalKeys(p).length}개 다리 장착`:'자유 배치 · 끌어서 빵판에 놓으세요.'}</p><div class="inspector-card"><label for="part-name">부품 이름</label><input id="part-name" value="${esc(p.name)}" maxlength="80" ${running()?'disabled':''}>${p.type==='resistor'?`<label for="part-value">저항 (Ω)</label><input id="part-value" type="number" value="${p.value}" min="1" max="10000000" ${running()?'disabled':''}>`:''}${p.type==='led'?`<label for="part-color">LED 색상</label><select id="part-color" ${running()?'disabled':''}>${[['red','빨강'],['green','초록'],['blue','파랑'],['yellow','노랑']].map(([v,l])=>`<option value="${v}" ${p.color===v?'selected':''}>${l}</option>`).join('')}</select>`:''}</div>${partControls(p,running())}<div class="measure"><span>부품 전압</span><b id="part-voltage">${read?read.voltage.toFixed(3)+' V':'—'}</b></div><div class="measure"><span>전류</span><b id="part-current">${read?(read.current*1000).toFixed(3)+' mA':'—'}</b></div>${p.type==='resistor'?`<div class="measure"><span>소비 전력</span><b id="part-power">${read?(read.power*1000).toFixed(2)+' mW':'—'}</b></div>`:''}${p.type==='button'?'<p>실행 중 버튼 몸체를 누르고 계시면 연결되고 손을 떼면 끊어집니다. A1–A2, B1–B2는 항상 연결되며, 누르면 양쪽이 연결됩니다.</p>':''}${p.type==='lcd'?'<p>LCD 1602의 4/8비트 명령·문자 출력을 지원합니다. VDD 5 V, VSS·R/W·VO를 GND에 연결하고 RS/E/DATA 핀을 배선하세요. 기존 스케치의 LiquidCrystal API를 사용할 수 있습니다.</p>':''}<div class="measure"><span>회전 각도</span><b>${Number(p.rotation.toFixed(1))}°</b></div><button class="inspector-action" id="inspect-open-docs">장치 Docs · 배선/예제 보기</button><button class="inspector-action" id="rotate-part" ${running()?'disabled':''}>45° 회전 (R)</button><button class="inspector-action danger" id="remove-part" ${running()?'disabled':''}>부품 삭제</button>`;
    $('part-name').onchange=e=>{checkpoint();p.name=e.target.value||p.name;changed();};
-   if($('part-value'))$('part-value').onchange=e=>{const n=Number(e.target.value);if(!Number.isFinite(n)||n<1||n>1e7){log('저항 범위: 1 Ω~10 MΩ','error');inspector();return;}checkpoint();p.value=n;changed();};
+   if($('part-value'))$('part-value').onchange=e=>{const n=Number(e.target.value);if(!Number.isFinite(n)||n<1||n>1e7){log('저항 범위: 1 Ω~10 MΩ','error');inspector(true);updateReadouts();return;}checkpoint();p.value=n;changed();};
    if($('part-color'))$('part-color').onchange=e=>{checkpoint();p.color=e.target.value;changed();};
    if($('part-live'))$('part-live').innerHTML=partReadouts(p,result);
    el.querySelectorAll('[data-part-prop]').forEach(input=>{input.oninput=()=>{if(running()&&input.dataset.live!=='true')return;const key=input.dataset.partProp,n=key==='color'?input.value:Number(input.value);if(key==='color'){if(!['red','green','blue','yellow'].includes(n))return;checkpoint();p.color=n;changed();return;}if(!Number.isFinite(n)||(input.min!==undefined&&input.min!==''&&n<Number(input.min))||(input.max!==undefined&&input.max!==''&&n>Number(input.max)))return;if((['switch','motion'].includes(key)||p.type==='encoder'&&key==='position')&&!Number.isInteger(n))return;if(!input.dataset.checkpoint){checkpoint();input.dataset.checkpoint='1';}p[key]=n;if($('output-'+key))$('output-'+key).textContent=input.type==='range'?n:'';autosave();if(running())recompute();updateSimulationSvg(svg,project,result,pressed);updateReadouts();};input.onchange=()=>{delete input.dataset.checkpoint;};});
    $('inspect-open-docs').onclick=()=>tab('docs');$('remove-part').onclick=removeSelected;$('rotate-part').onclick=rotateSelected;
  } else if(selection.type==='wire'){
    const w=project.wires.find(w=>w.id===selection.id);if(!w)return;
-   const v=result?.voltage(w.from),connected=connectedNet(project,w.from,pressed).endpoints.length;
-   el.innerHTML=`<span class="overline">WIRE</span><h2>점퍼선</h2><div class="inspector-card"><label>시작</label><p>${esc(endpointInfo(w.from,project.components,project.surfaces)?.label)}</p><label>끝</label><p>${esc(endpointInfo(w.to,project.components,project.surfaces)?.label)}</p></div><div class="measure"><span>전압 · GND 기준</span><b id="wire-voltage">${v!=null?v.toFixed(3)+' V':'—'}</b></div><div class="measure"><span>연결된 핀 / 구멍</span><b>${connected}</b></div><p>전기 저항이 없는 이상적인 도선으로 계산합니다. 선이 교차하는 위치는 서로 연결되지 않습니다. 선택한 배선과 전기적으로 이어진 연결망을 금색으로 표시합니다.</p><p>배선을 더블클릭해 꺾임점을 추가하고 점을 끌어 이동하세요. 점 우클릭은 삭제입니다.</p><button class="inspector-action" id="reset-wire-route" ${running()?'disabled':''}>배선 경로 자동 정렬</button><button class="inspector-action danger" id="remove-wire" ${running()?'disabled':''}>배선 삭제</button>`;
-   $('remove-wire').onclick=removeSelected;$('reset-wire-route').onclick=()=>{checkpoint();delete w.points;changed();};
+   const connected=connectedNet(project,w.from,pressed).endpoints.length;
+   el.innerHTML=`<span class="overline">WIRE</span><h2>점퍼선</h2><div class="inspector-card wire-terminals"><label>시작</label><p title="${esc(endpointInfo(w.from,project.components,project.surfaces)?.label)}">${esc(endpointInfo(w.from,project.components,project.surfaces)?.label)}</p><label>끝</label><p title="${esc(endpointInfo(w.to,project.components,project.surfaces)?.label)}">${esc(endpointInfo(w.to,project.components,project.surfaces)?.label)}</p></div><div class="measure"><span>전압 · GND 기준</span><span class="measure-value"><b id="wire-voltage">—</b><span id="wire-signal" class="signal-badge" data-signal="idle">미측정</span></span></div><div class="measure"><span>연결된 핀 / 구멍</span><b id="wire-connected">${connected}</b></div><div class="inspector-card"><span>배선 색상</span><div class="wire-colors" role="group" aria-label="선택한 배선 색상">${WIRE_COLORS.map(([value,name])=>`<button type="button" class="swatch ${value===w.color?'active':''}" data-wire-color="${value}" style="--swatch:${value}" title="${name} 배선" aria-label="${name} 배선" aria-pressed="${value===w.color}" ${running()?'disabled':''}></button>`).join('')}</div></div><p>전기 저항이 없는 이상적인 도선으로 계산합니다. 선이 교차하는 위치는 서로 연결되지 않습니다. 선택한 배선과 전기적으로 이어진 연결망을 금색으로 표시합니다.</p><p>배선을 더블클릭해 꺾임점을 추가하고 점을 끌어 이동하세요. 점 우클릭은 삭제입니다.</p><button class="inspector-action" id="reset-wire-route" ${running()?'disabled':''}>배선 경로 자동 정렬</button><button class="inspector-action danger" id="remove-wire" ${running()?'disabled':''}>배선 삭제</button>`;
+   $('remove-wire').onclick=removeSelected;$('reset-wire-route').onclick=()=>{if(running())return;checkpoint();delete w.points;changed();};
+   el.querySelectorAll('[data-wire-color]').forEach(button=>button.onclick=()=>{if(running())return;setWireColor(button.dataset.wireColor);});
  }
 }
 function removeSelected(){
@@ -271,12 +296,14 @@ svg.addEventListener('pointerdown',e=>{
    refresh();return;
  }
  const q=point(e);
+ if(e.shiftKey&&!running()&&mode==='select'&&!pending){drag={type:'marquee',start:q,current:q,additive:true,selection:structuredClone(selection)};e.preventDefault();svg.setPointerCapture(e.pointerId);return;}
  if(!running()&&TWO_PIN_TYPES.includes(mode)){addPart(mode,null,null,{x:q.x,y:q.y});return;}
  if(pending&&!running()&&e.button===0){try{wireDraft.add(pending,q);$('hint').textContent='꺾임점 추가 · 다음 바닥 또는 연결할 핀을 클릭하세요. Backspace: 마지막 점 취소 / Esc: 배선 취소';}catch(error){log(error.message,'error');}return;}
  selection=null;drag={type:'pan',clientX:e.clientX,clientY:e.clientY,x:view.x,y:view.y};svg.setPointerCapture(e.pointerId);refresh();
 });
 svg.addEventListener('pointermove',e=>{
  const q=point(e);
+ if(drag?.type==='marquee'){drag.current=q;const x=Math.min(drag.start.x,q.x),y=Math.min(drag.start.y,q.y),w=Math.abs(drag.start.x-q.x),h=Math.abs(drag.start.y-q.y);$('preview-layer').innerHTML=`<rect class="marquee-box" x="${x}" y="${y}" width="${w}" height="${h}" vector-effect="non-scaling-stroke"/>`;return;}
  if(drag?.type==='surface'){const dx=q.x-drag.start.x,dy=q.y-drag.start.y;if(!drag.moved&&Math.hypot(dx,dy)<=3)return;const next=structuredClone(drag.base);try{moveSurface(next,drag.id,{x:drag.origin.x+dx,y:drag.origin.y+dy});validateProject(next);clearTimeout(saveTimer);drag.moved=true;project=next;refresh();pinSearch();}catch(error){log(error.message,'error');}return;}
  if(drag?.type==='wire-point'){const w=project.wires.find(w=>w.id===drag.id),dx=q.x-drag.start.x,dy=q.y-drag.start.y;if(!drag.moved&&Math.hypot(dx,dy)<2)return;if(!drag.moved){checkpoint();drag.moved=true;}w.points[drag.index]={x:drag.origin.x+dx,y:drag.origin.y+dy};refresh();return;}
  if(drag?.type==='group'){let dx=q.x-drag.start.x,dy=q.y-drag.start.y;if(!drag.moved&&Math.hypot(dx,dy)<=3)return;if(!drag.moved){checkpoint();drag.moved=true;}try{const next=structuredClone(drag.base);moveSelection(next,selection,dx,dy);validateProject(next);project=next;refresh();}catch{}return;}
@@ -288,11 +315,11 @@ svg.addEventListener('pointermove',e=>{
  }
  if(drag?.type==='pan'){const box=svg.getBoundingClientRect();view.x=drag.x-(e.clientX-drag.clientX)*view.w/box.width;view.y=drag.y-(e.clientY-drag.clientY)*view.h/box.height;viewUpdate();return;}
  if(pending){const a=endpointInfo(pending,project.components,project.surfaces);$('preview-layer').innerHTML=`<path d="${wireDraft.points.length?wireDraft.path(pending,a,q):route(a,q)}" fill="none" stroke="${color}" stroke-width="2" stroke-dasharray="5 5" pointer-events="none"/>`;}
- const hit=e.target.closest('[data-endpoint]');
+ const hit=e.target.closest('[data-endpoint]'),wireHit=e.target.closest('[data-wire]');
  document.querySelectorAll('.same-net').forEach(el=>el.classList.remove('same-net'));
  if(hit){const id=hit.dataset.endpoint,info=endpointInfo(id,project.components,project.surfaces),v=result?.voltage(id),hole=holeInfo(id,project.components,project.surfaces);if(hole)for(const h of circuitHoles(project.components,project.surfaces))if(h.bus===hole.bus)svg.querySelector(`[data-hole="${h.id}"]`)?.classList.add('same-net');
-   $('tooltip').textContent=info.label+(running()?`\n${v==null?'부유 상태':v.toFixed(3)+' V'}`:'');const box=$('canvas-container').getBoundingClientRect();$('tooltip').style.left=Math.min(e.clientX-box.left+12,box.width-220)+'px';$('tooltip').style.top=Math.max(0,e.clientY-box.top-47)+'px';$('tooltip').hidden=false;
- }else $('tooltip').hidden=true;
+   $('tooltip').textContent=info.label+(result?`\n${Number.isFinite(v)?v.toFixed(3)+' V · ':''}${signalState(v).label}`:'');const box=$('canvas-container').getBoundingClientRect();$('tooltip').style.left=Math.min(e.clientX-box.left+12,box.width-220)+'px';$('tooltip').style.top=Math.max(0,e.clientY-box.top-47)+'px';$('tooltip').hidden=false;
+ }else if(wireHit&&result){const w=project.wires.find(w=>w.id===wireHit.dataset.wire),v=w&&result.voltage(w.from),box=$('canvas-container').getBoundingClientRect();$('tooltip').textContent=`점퍼선 · ${Number.isFinite(v)?v.toFixed(3)+' V · ':''}${signalState(v).label}`;$('tooltip').style.left=Math.min(e.clientX-box.left+12,box.width-220)+'px';$('tooltip').style.top=Math.max(0,e.clientY-box.top-47)+'px';$('tooltip').hidden=false;}else $('tooltip').hidden=true;
 });
 svg.addEventListener('dblclick',e=>{
  if(running()||mode!=='select')return;
@@ -304,12 +331,18 @@ svg.addEventListener('dblclick',e=>{
  catch(error){log(error.message,'error');}
 });
 svg.addEventListener('contextmenu',e=>{const hit=e.target.closest('[data-wire-point]');if(!hit||running())return;e.preventDefault();checkpoint();project.wires.find(w=>w.id===hit.dataset.ownerWire).points.splice(Number(hit.dataset.wirePoint),1);changed();});
-function release(event){if(!drag)return;if(drag.type==='surface'){const next=project;project=drag.base;if(drag.moved&&event?.type!=='pointercancel'){checkpoint();project=next;}if(drag.moved)autosave();drag=null;refresh();pinSearch();return;}if(['wire-point','group'].includes(drag?.type)&&drag.moved)autosave();if(drag?.type==='press'){pressed[drag.id]=false;recompute();refresh();}if(drag?.type==='part'&&drag.moved){const p=project.components.find(p=>p.id===drag.id);if(p?.type==='breadboard')log(p.name+': 빵판과 장착 부품을 이동했습니다.');else if(p){const mounted=applyMount(p,findMount(p,project.components,15,project.surfaces));log(mounted?`${p.name}: ${terminalKeys(p).length}개 다리를 빵판에 장착했습니다.`:`${p.name}: 자유 배치 상태입니다. 모든 다리가 구멍에 맞을 때 장착됩니다.`);}autosave();}drag=null;$('preview-layer').innerHTML='';refresh();}
-svg.addEventListener('pointerup',release);svg.addEventListener('pointercancel',release);window.addEventListener('blur',()=>{if(drag?.type==='surface')release({type:'pointercancel'});if(Object.values(pressed).some(Boolean)){pressed={};recompute();refresh();}});
-window.addEventListener('keydown',e=>{if(e.key==='Escape'&&drag?.type==='surface'){e.preventDefault();e.stopImmediatePropagation();release({type:'pointercancel'});}},true);
+function release(event){if(!drag)return;
+ if(drag.type==='marquee'){
+  const previous=drag.selection;
+  if(event?.type==='pointercancel'||running())selection=previous;
+  else {const found=boxSelection(project,{minX:drag.start.x,minY:drag.start.y,maxX:drag.current.x,maxY:drag.current.y});selection={type:'group',parts:[...new Set([...selectedIds(previous,'part'),...found.parts])],wires:[...new Set([...selectedIds(previous,'wire'),...found.wires])]};if(!selection.parts.length&&!selection.wires.length)selection=null;}
+  drag=null;$('preview-layer').innerHTML='';if(selection)inspectTab();refresh();return;
+ }if(drag.type==='surface'){const next=project;project=drag.base;if(drag.moved&&event?.type!=='pointercancel'){checkpoint();project=next;}if(drag.moved)autosave();drag=null;refresh();pinSearch();return;}if(['wire-point','group'].includes(drag?.type)&&drag.moved)autosave();if(drag?.type==='press'){pressed[drag.id]=false;recompute();refresh();}if(drag?.type==='part'&&drag.moved){const p=project.components.find(p=>p.id===drag.id);if(p?.type==='breadboard')log(p.name+': 빵판과 장착 부품을 이동했습니다.');else if(p){const mounted=applyMount(p,findMount(p,project.components,15,project.surfaces));log(mounted?`${p.name}: ${terminalKeys(p).length}개 다리를 빵판에 장착했습니다.`:`${p.name}: 자유 배치 상태입니다. 모든 다리가 구멍에 맞을 때 장착됩니다.`);}autosave();}drag=null;$('preview-layer').innerHTML='';refresh();}
+svg.addEventListener('pointerup',release);svg.addEventListener('pointercancel',release);window.addEventListener('blur',()=>{if(['surface','marquee'].includes(drag?.type))release({type:'pointercancel'});if(Object.values(pressed).some(Boolean)){pressed={};recompute();refresh();}});
+window.addEventListener('keydown',e=>{if(e.key==='Escape'&&['surface','marquee'].includes(drag?.type)){e.preventDefault();e.stopImmediatePropagation();release({type:'pointercancel'});}},true);
 svg.addEventListener('pointerleave',()=>{$('tooltip').hidden=true;});
-function zoom(mult){const nw=Math.max(100,view.w*mult),nh=nw*730/1120;if(!Number.isFinite(nw)||!Number.isFinite(nh))return;view.x+=(view.w-nw)/2;view.y+=(view.h-nh)/2;view.w=nw;view.h=nh;viewUpdate();}
-svg.addEventListener('wheel',e=>{e.preventDefault();zoom(e.deltaY>0?1.08:1/1.08);},{passive:false});
+function zoom(mult,anchor=null){view=zoomView(view,mult,anchor);viewUpdate();}
+svg.addEventListener('wheel',e=>{e.preventDefault();if(!e.deltaY)return;const step=e.ctrlKey?1.04:1.08;zoom(e.deltaY>0?step:1/step,point(e));},{passive:false});
 $('zoom-in').onclick=()=>zoom(1/1.2);$('zoom-out').onclick=()=>zoom(1.2);$('zoom-reset').onclick=fitView;
 function fitView(){
  const scaled=Object.values(project.surfaces||{}).some(s=>scaleXOf(s)!==1||scaleYOf(s)!==1||s.x!==undefined)||project.components.some(p=>scaleXOf(p)!==1||scaleYOf(p)!==1||p.skewX||p.x<0||p.y<0||p.x>1120||p.y>730)||project.wires.some(w=>w.points?.some(p=>p.x<0||p.y<0||p.x>1120||p.y>730));
@@ -351,7 +384,7 @@ setInterval(()=>{
    if(runtime.debug.paused){simTime=runtime.microTime/1000;status='paused';recordSimulation();diagnostic('debug.paused',{location:runtime.location,depth:runtime.depth,simulationMs:simTime});refresh();ide?.debugView();return;}
    if(runtime.finished&&runtime.debug.enabled){status='paused';log('프로그램이 종료되었습니다. 정지 버튼으로 편집을 재개하세요.');refresh();ide?.debugView();return;}
    updateSimulationSvg(svg,project,result,pressed);updateReadouts();
-   if(status==='error')refresh();else if(++paintCounter%10===0&&!$('inspect-panel').hidden&&!$('inspector').contains(document.activeElement))inspector();
+   if(status==='error')refresh();
  }catch(e){result=session?.viewResult??result;status='error';log(e.message,'error');refresh();}
 },20);
 $('tool-select').onclick=()=>setMode('select');$('delete').onclick=removeSelected;$('rotate').onclick=rotateSelected;$('undo').onclick=()=>editUndo();$('redo').onclick=()=>editUndo(true);
@@ -364,7 +397,12 @@ document.querySelectorAll('[data-add]').forEach(b=>b.onclick=()=>{if(running())r
  addPart(type,null,null,position);fitView();svg.focus({preventScroll:true});
 }else if(MULTI_PIN_TYPES.includes(type)){addPart(type,null,null,{x:view.x+view.w*.48,y:view.y+view.h*.85});svg.focus({preventScroll:true});}else setMode(type);});
 $('wire-palette').innerHTML=WIRE_COLORS.map(([value,name],i)=>`<button data-palette="${i<10?'basic':'pastel'}" data-color="${value}" class="swatch ${value===color?'active':''}" style="--swatch:${value}" title="${name} 배선" aria-label="${name} 배선"></button>`).join('');
-document.querySelectorAll('[data-color]').forEach(b=>b.onclick=()=>{color=b.dataset.color;document.querySelectorAll('[data-color]').forEach(s=>s.classList.toggle('active',s===b));if(!running()&&selection?.type==='wire'){checkpoint();project.wires.find(w=>w.id===selection.id).color=color;changed();}});
+function setWireColor(value){
+ color=value;document.querySelectorAll('[data-color]').forEach(s=>{s.classList.toggle('active',s.dataset.color===value);s.setAttribute('aria-pressed',String(s.dataset.color===value));});
+ const wire=selection?.type==='wire'&&project.wires.find(w=>w.id===selection.id);
+ if(!running()&&wire&&wire.color!==value){checkpoint();wire.color=value;changed();}
+}
+document.querySelectorAll('[data-color]').forEach(b=>b.onclick=()=>setWireColor(b.dataset.color));
 document.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>tab(b.dataset.tab));
 function replaceProject(p,{preserveWorkspace=false}={}){if(running())stop();project=validateProject(p);selection=null;pending=null;drag=null;mode='select';pressed={};lastWarnings='';uartLines.clear();searchSelectedId=null;$('pin-search').value='';pinSearch();fitView();selection=null;pending=null;drag=null;$('preview-layer').innerHTML='';undoStack=[];redoStack=[];status='stopped';runtime=null;session=null;monitor.clear();result=null;simTime=0;dirty=false;lastCodeCheckpoint=0;sourceFile='main.c';syncEditor();ide?.reset({preserveWorkspace});autosave();refresh();log('회로를 열었습니다: '+project.name);}
 function requestReplace(action){if(ide?.nativeBusy()){log('빌드·실행·디버그를 정지한 뒤 프로젝트를 변경하세요.','error');return;}if(dirty){replaceAction=action;$('replace-dialog').showModal();}else action();}
@@ -427,12 +465,19 @@ $('file-input').onchange=async e=>{try{const f=e.target.files[0];if(!f)return;if
 $('clear-console').onclick=()=>{$('console-output').textContent='';uartLines.clear();};
 $('help').onclick=$('api-help').onclick=()=>$('help-dialog').showModal();
 window.addEventListener('keydown',e=>{
- const editing=['INPUT','TEXTAREA','SELECT'].includes(document.activeElement.tagName),modal=document.querySelector('dialog[open]');
+ const editing=['INPUT','TEXTAREA','SELECT'].includes(document.activeElement.tagName)||document.activeElement.isContentEditable,modal=document.querySelector('dialog[open]');
  if(e.key==='F5'){e.preventDefault();if(!e.ctrlKey&&!e.metaKey&&!e.altKey&&!e.shiftKey&&!modal&&!e.repeat)$('run').click();return;}
  if(modal)return;
  if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='s'){e.preventDefault();save();return;}
  if(document.activeElement===$('code')&&(e.ctrlKey||e.metaKey)&&['z','y'].includes(e.key.toLowerCase())){e.preventDefault();editUndo(e.key.toLowerCase()==='y'||e.shiftKey);return;}
  if(editing)return;
+ if((e.ctrlKey||e.metaKey)&&['a','d'].includes(e.key.toLowerCase())){
+  if(drag){e.preventDefault();return;}
+  if(running())return;
+  if(e.key.toLowerCase()==='a'){e.preventDefault();pending=null;wireDraft.reset();mode='select';selection={type:'group',parts:project.components.map(p=>p.id),wires:project.wires.map(w=>w.id)};if(!selection.parts.length&&!selection.wires.length)selection=null;$('preview-layer').innerHTML='';inspectTab();refresh();}
+  else if(copyCircuit()){e.preventDefault();pasteCircuit();}
+  return;
+ }
  if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='c'){e.preventDefault();copyCircuit();return;}
  if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='v'){e.preventDefault();pasteCircuit();return;}
  if(e.key==='Backspace'&&pending){e.preventDefault();wireDraft.sync(pending);wireDraft.back();$('preview-layer').innerHTML='';return;}

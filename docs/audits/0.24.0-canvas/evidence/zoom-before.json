@@ -1,0 +1,6 @@
+{
+  "passed": false,
+  "checks": [],
+  "errors": [],
+  "error": "AssertionError [ERR_ASSERTION]: cursor anchor drift 22.87845765078739\n    at main (D:\\codex\\project\\STM-Simulator\\scripts\\canvas-ux-check.cjs:70:11)"
+}
