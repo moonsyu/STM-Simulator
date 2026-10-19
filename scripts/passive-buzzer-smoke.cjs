@@ -47,7 +47,10 @@ const {chooseHal,openFixture}=require('./smoke-fixture.cjs');
     await page.mouse.click(spot.x,spot.y);
     assert.equal(await page.locator('.buzzer-frequency').count(),1);
     await chooseHal(page,'passive_buzzer');
-    assert.equal(await page.locator('#connection-count').innerText(),'부품 1개 · 배선 2개');
+    const {halExample,applyHalExample}=await import('../src/hal-examples.js');
+    const mounted=applyHalExample({name:'Passive buzzer'},'passive_buzzer');
+    assert.equal(await page.locator('#connection-count').innerText(),`부품 1개 · 배선 ${mounted.wires.length}개`);
+    assert.ok(mounted.wires.every(w=>!w.from.startsWith('part:')&&!w.to.startsWith('part:')));
     assert.equal(await page.locator('#pwm-waveform').isChecked(),true);
     await clickUiControl(page, '#firmware-check');assert.match(await page.locator('#build-status').innerText(),/통과/);
     const select=async()=>page.locator('#part-layer [data-part="demo"] .part-body').click();
@@ -63,7 +66,6 @@ const {chooseHal,openFixture}=require('./smoke-fixture.cjs');
     await clickUiControl(page, '#step');await silent();assert.equal(await page.locator('#run-status').innerText(),'한 단계 실행');
     await page.click('#run');await silent(); // finish the paused session
 
-    const {halExample}=await import('../src/hal-examples.js');
     const dc=halExample('passive_buzzer');dc.wires[0].from=(await import('../src/pins.js')).boardPin('3V3');
     await openFixture(page,dc);await select();await page.click('#run');
     await page.waitForFunction(()=>parseFloat(document.getElementById('sim-time').textContent)>.12);
@@ -72,7 +74,7 @@ const {chooseHal,openFixture}=require('./smoke-fixture.cjs');
     await page.waitForFunction(expected=>{
       const saved=JSON.parse(localStorage.getItem('stm32lab.project.v2'));
       return saved?.components[0]?.type==='passive_buzzer'&&saved.wires[0].from===expected.wires[0].from&&saved.code===expected.code;
-    },halExample('passive_buzzer'));
+    },mounted);
     await page.reload();await page.waitForSelector('.buzzer-frequency');await select();
     assert.match(await page.locator('#inspector').innerText(),/수동 피에조 부저/);
     assert.equal(await page.locator('#sound').getAttribute('aria-pressed'),'false');
