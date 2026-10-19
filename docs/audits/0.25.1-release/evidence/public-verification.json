@@ -1,0 +1,304 @@
+{
+  "schemaVersion": 1,
+  "passed": true,
+  "version": "0.25.1",
+  "productCommit": "243ecf205354e18ed4701213c117906ab6a35080",
+  "ciRun": "39227299473",
+  "collectedAt": "2026-10-19T09:36:43.563159+00:00",
+  "sourceDirty": false,
+  "sourceSha256": "6354826c8b46609e1ffa92f5cdda271434d71fc3e1611b79242a30c5360f32fb",
+  "sourceHashScope": "Git tracked src/, desktop/, package.json; not the entire repository",
+  "release": {
+    "url": "https://github.com/moonsyu/STM-Simulator/releases/tag/v0.25.1",
+    "tag": "v0.25.1",
+    "latest": "v0.25.1",
+    "assets": 5,
+    "exeSha256": "8ab5fc812df020b4bf68b9eb8941e521be75199e0c1cc66ff1a45e08d2c58566",
+    "exeBytes": 102784459,
+    "zipSha256": "2fd38473e8440c3e9e44ea6d80c01f49876274179ebc3be48302f910f886bc94"
+  },
+  "ci": {
+    "passed": true,
+    "url": "https://github.com/moonsyu/STM-Simulator/actions/runs/39227299473",
+    "jobs": 2,
+    "rawLogArchive": {
+      "file": "ci-logs.zip",
+      "proof": "ci-log-proof.json",
+      "sha256": "5a71775ca532e579c7576a90f5ef9af87352fe0f08de44ef54216dd9be06c627",
+      "bytes": 92005,
+      "members": 47,
+      "counts": {
+        "unit": 406,
+        "pin": 25,
+        "docs": 3
+      },
+      "scope": "CI source tests before packaging, separate from public executable tests; PIN covers the 25-case subset."
+    }
+  },
+  "downloadedFiles": {
+    "standalone": "work/release-audit/0.25.1/STM-Simulator.exe",
+    "zip": "work/release-audit/0.25.1/STM-Simulator-0.25.1-Windows-x64.zip",
+    "extractedExe": "work/release-audit/0.25.1/zip-portable/STM-Simulator.exe",
+    "exeSha256": "8ab5fc812df020b4bf68b9eb8941e521be75199e0c1cc66ff1a45e08d2c58566",
+    "zipSha256": "2fd38473e8440c3e9e44ea6d80c01f49876274179ebc3be48302f910f886bc94"
+  },
+  "unit": {
+    "tests": 406,
+    "pass": 406,
+    "fail": 0,
+    "cancelled": 0,
+    "skipped": 0,
+    "todo": 0
+  },
+  "standaloneAndZip": {
+    "executables": 2,
+    "semanticChecks": 14,
+    "closeAndReopenChecks": 2
+  },
+  "automaticUpdate": {
+    "from": "0.25.0",
+    "to": "0.25.1",
+    "checks": 8,
+    "restartObserved": true,
+    "screenshots": [
+      {
+        "file": "public-update-ready.png",
+        "bytes": 275197,
+        "sha256": "7c9c5f5d9bb3dc84353565107a88f39fd9f75acc7ba4d77f3bd02be9fd6bd069"
+      },
+      {
+        "file": "public-update-applied.png",
+        "bytes": 202935,
+        "sha256": "3276079651b3ad98dad6a3f24d75b599aab585b89f69f72e5bc8839627b50221"
+      }
+    ]
+  },
+  "publicTests": {
+    "pin-exe": {
+      "passed": true,
+      "scenarios": 25,
+      "validationCases": 19,
+      "callbackCases": 3,
+      "adcCases": 3,
+      "generatedExecutedPairs": 6,
+      "runtimeStates": 6,
+      "savedProjects": 1,
+      "inputRejectionLogs": 12,
+      "rendererErrors": 0,
+      "diagnosticWarnings": 0,
+      "runtimeConsoleErrors": 0,
+      "circuitFaults": 0,
+      "circuitWarnings": 0,
+      "eventCounts": {
+        "app.started": 1,
+        "console": 85,
+        "project.saved": 42,
+        "simulation.started": 6,
+        "simulation.state": 6
+      },
+      "summary": "public-tests/pin-exe.json",
+      "evidenceDirectory": "public-tests/pin-exe",
+      "startedAt": "2026-10-19T09:29:13.632Z",
+      "finishedAt": "2026-10-19T09:29:48.684Z",
+      "sourceCommit": "243ecf205354e18ed4701213c117906ab6a35080",
+      "sourceDirty": false,
+      "exeSha256": "8ab5fc812df020b4bf68b9eb8941e521be75199e0c1cc66ff1a45e08d2c58566",
+      "copiedFiles": 21
+    },
+    "docs-exe": {
+      "passed": true,
+      "scenarios": 3,
+      "runs": 6,
+      "snapshots": 15,
+      "applies": 12,
+      "runtimeStates": 17,
+      "savedProjects": 3,
+      "rendererErrors": 0,
+      "diagnosticWarnings": 0,
+      "runtimeConsoleErrors": 0,
+      "circuitFaults": 0,
+      "circuitWarnings": 0,
+      "eventCounts": {
+        "app.started": 1,
+        "console": 60,
+        "docs.applied": 12,
+        "project.saved": 20,
+        "simulation.started": 6,
+        "simulation.state": 17,
+        "uart": 5
+      },
+      "togglePhaseProof": {
+        "acquisition": "Real Step UI: hold 0ms ON, advance seven 20ms steps, hold 140ms OFF",
+        "samples": [
+          {
+            "simulationMs": 0,
+            "ledOn": true,
+            "pa5Voltage": 3.3
+          },
+          {
+            "simulationMs": 140,
+            "ledOn": false,
+            "pa5Voltage": 0
+          }
+        ],
+        "codeSha256": "183356997447154b5a7daf9c14026388630811127b8a79bd184aff116c7f8356",
+        "runtimeFile": "same-device-cards-toggle-events.jsonl"
+      },
+      "harness": {
+        "source": "work/docs-multi-apply-phase-proof.cjs",
+        "file": "harness/docs-multi-apply-phase-proof.cjs",
+        "sha256": "f0dd66bde022ffe1f54703a75e482c7f5b360f35f44c548e6b55cfa7fa75ed49"
+      },
+      "summary": "public-tests/docs-exe.json",
+      "evidenceDirectory": "public-tests/docs-exe",
+      "startedAt": "2026-10-19T09:32:23.167Z",
+      "finishedAt": "2026-10-19T09:32:58.615Z",
+      "sourceCommit": "243ecf205354e18ed4701213c117906ab6a35080",
+      "sourceDirty": false,
+      "exeSha256": "8ab5fc812df020b4bf68b9eb8941e521be75199e0c1cc66ff1a45e08d2c58566",
+      "copiedFiles": 41
+    },
+    "pin-zip": {
+      "passed": true,
+      "scenarios": 25,
+      "validationCases": 19,
+      "callbackCases": 3,
+      "adcCases": 3,
+      "generatedExecutedPairs": 6,
+      "runtimeStates": 6,
+      "savedProjects": 1,
+      "inputRejectionLogs": 12,
+      "rendererErrors": 0,
+      "diagnosticWarnings": 0,
+      "runtimeConsoleErrors": 0,
+      "circuitFaults": 0,
+      "circuitWarnings": 0,
+      "eventCounts": {
+        "app.started": 1,
+        "console": 85,
+        "project.saved": 42,
+        "simulation.started": 6,
+        "simulation.state": 6
+      },
+      "summary": "public-tests/pin-zip.json",
+      "evidenceDirectory": "public-tests/pin-zip",
+      "startedAt": "2026-10-19T09:34:03.497Z",
+      "finishedAt": "2026-10-19T09:34:35.743Z",
+      "sourceCommit": "243ecf205354e18ed4701213c117906ab6a35080",
+      "sourceDirty": false,
+      "exeSha256": "8ab5fc812df020b4bf68b9eb8941e521be75199e0c1cc66ff1a45e08d2c58566",
+      "copiedFiles": 21
+    },
+    "docs-zip": {
+      "passed": true,
+      "scenarios": 3,
+      "runs": 6,
+      "snapshots": 15,
+      "applies": 12,
+      "runtimeStates": 18,
+      "savedProjects": 3,
+      "rendererErrors": 0,
+      "diagnosticWarnings": 0,
+      "runtimeConsoleErrors": 0,
+      "circuitFaults": 0,
+      "circuitWarnings": 0,
+      "eventCounts": {
+        "app.started": 1,
+        "console": 60,
+        "docs.applied": 12,
+        "project.saved": 20,
+        "simulation.started": 6,
+        "simulation.state": 18,
+        "uart": 5
+      },
+      "togglePhaseProof": {
+        "acquisition": "Real Step UI: hold 0ms ON, advance seven 20ms steps, hold 140ms OFF",
+        "samples": [
+          {
+            "simulationMs": 0,
+            "ledOn": true,
+            "pa5Voltage": 3.3
+          },
+          {
+            "simulationMs": 140,
+            "ledOn": false,
+            "pa5Voltage": 0
+          }
+        ],
+        "codeSha256": "183356997447154b5a7daf9c14026388630811127b8a79bd184aff116c7f8356",
+        "runtimeFile": "same-device-cards-toggle-events.jsonl"
+      },
+      "harness": {
+        "source": "work/docs-multi-apply-phase-proof.cjs",
+        "file": "harness/docs-multi-apply-phase-proof.cjs",
+        "sha256": "f0dd66bde022ffe1f54703a75e482c7f5b360f35f44c548e6b55cfa7fa75ed49"
+      },
+      "summary": "public-tests/docs-zip.json",
+      "evidenceDirectory": "public-tests/docs-zip",
+      "startedAt": "2026-10-19T09:34:45.775Z",
+      "finishedAt": "2026-10-19T09:35:21.318Z",
+      "sourceCommit": "243ecf205354e18ed4701213c117906ab6a35080",
+      "sourceDirty": false,
+      "exeSha256": "8ab5fc812df020b4bf68b9eb8941e521be75199e0c1cc66ff1a45e08d2c58566",
+      "copiedFiles": 41
+    }
+  },
+  "firstFailure": {
+    "passed": false,
+    "excludedFromFinalSuccessTotals": true,
+    "scenarioId": "same-device-cards",
+    "expectedReason": "2 s snapshot sampling aliases 137 ms toggle",
+    "reasonStatus": "Consistent with original code and sample timestamps; final execution checks are recorded separately.",
+    "sampleTimesMs": [
+      1520,
+      3520,
+      5200
+    ],
+    "observedLedStates": [
+      false,
+      false,
+      false
+    ],
+    "toggleIntervalMs": 137,
+    "periodicSnapshotIntervalMs": 2000,
+    "toggleCodeSha256": "183356997447154b5a7daf9c14026388630811127b8a79bd184aff116c7f8356",
+    "runtimeFile": "first-attempt-docs/same-device-cards-toggle-events.jsonl",
+    "summary": "first-attempt-docs/summary.json",
+    "events": 83,
+    "runId": "2026-10-19T09-30-03-568Z",
+    "startedAt": "2026-10-19T09:30:03.572Z",
+    "finishedAt": "2026-10-19T09:30:35.555Z",
+    "sourceCommit": "243ecf205354e18ed4701213c117906ab6a35080",
+    "sourceDirty": false,
+    "exeSha256": "8ab5fc812df020b4bf68b9eb8941e521be75199e0c1cc66ff1a45e08d2c58566",
+    "copiedFiles": 37,
+    "followUp": {
+      "sameToggleCode": true,
+      "finalRuns": [
+        "docs-exe",
+        "docs-zip"
+      ],
+      "bothRunsObservedOnAtMs": 0,
+      "bothRunsObservedOffAtMs": 140,
+      "conclusion": "Identical toggle code exhibits both physical output states when held at known simulation times."
+    }
+  },
+  "totals": {
+    "pinScenarios": 50,
+    "pinExecutions": 12,
+    "docsScenarios": 6,
+    "docsExecutions": 12
+  },
+  "checksums": {
+    "file": "checksums.json",
+    "sha256": "678d86c292407ad2bf31ba9ad7da9aed696831ab2ada1736d782f1f7f9af1048",
+    "originalFiles": 176
+  },
+  "limitations": [
+    "Public PIN runs each cover the 25-case validation/callback/ADC subset, not the development 362-case matrix.",
+    "Docs public runs each cover three combinations and six executions, not all arbitrary device combinations.",
+    "Simulator runtime evidence is not physical STM32 board or ARM instruction execution verification.",
+    "Raw runtime.json has version evidence but no embedded EXE hash; current downloaded EXE/ZIP bytes and hashed public test execution metadata are separately checked.",
+    "Source hashes include package.json and therefore intentionally differ from the 0.25.0 development audit."
+  ]
+}

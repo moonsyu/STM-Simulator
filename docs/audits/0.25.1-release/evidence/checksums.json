@@ -1,0 +1,1239 @@
+{
+  "schemaVersion": 1,
+  "algorithm": "SHA-256",
+  "copyPolicy": "Original bytes, only top-level summaries/JSONL/C/project files; profile directories excluded.",
+  "files": [
+    {
+      "source": "work/test-results/release-0.25.1-proof.json",
+      "file": "public-assets.json",
+      "bytes": 1582,
+      "originalSha256": "87777be44399b18f14be09ed9053b8d1c2337e1c44be31e396b23ee53e6535b4",
+      "copiedSha256": "87777be44399b18f14be09ed9053b8d1c2337e1c44be31e396b23ee53e6535b4"
+    },
+    {
+      "source": "work/test-results/release-runtime-0.25.1.json",
+      "file": "runtime.json",
+      "bytes": 1784,
+      "originalSha256": "a29f7d5d8a6216e8b16a9cc9643e0e3b0e40495b436c4310a7775e3ac28bfe79",
+      "copiedSha256": "a29f7d5d8a6216e8b16a9cc9643e0e3b0e40495b436c4310a7775e3ac28bfe79"
+    },
+    {
+      "source": "work/test-results/release-update-proof.json",
+      "file": "update.json",
+      "bytes": 1036,
+      "originalSha256": "b0fc4c9cd3a963cf8f545b9c9b337166fa592b054677267ce3e268f3689300ca",
+      "copiedSha256": "b0fc4c9cd3a963cf8f545b9c9b337166fa592b054677267ce3e268f3689300ca"
+    },
+    {
+      "source": "work/release-audit/0.25.1/ci-run-latest.json",
+      "file": "ci-run.json",
+      "bytes": 13890,
+      "originalSha256": "97b6d54f59a303911a2ef873d4b7387e1b00e7bee75788bbe742f5d9abf3b521",
+      "copiedSha256": "97b6d54f59a303911a2ef873d4b7387e1b00e7bee75788bbe742f5d9abf3b521"
+    },
+    {
+      "source": "work/release-audit/0.25.1/ci-jobs-latest.json",
+      "file": "ci-jobs.json",
+      "bytes": 14936,
+      "originalSha256": "71491184a980201b3c2874147c0f7d5cb1a5ad9a932054e92ac613352501b929",
+      "copiedSha256": "71491184a980201b3c2874147c0f7d5cb1a5ad9a932054e92ac613352501b929"
+    },
+    {
+      "source": "work/test-results/public-update-ready.png",
+      "file": "public-update-ready.png",
+      "bytes": 275197,
+      "originalSha256": "7c9c5f5d9bb3dc84353565107a88f39fd9f75acc7ba4d77f3bd02be9fd6bd069",
+      "copiedSha256": "7c9c5f5d9bb3dc84353565107a88f39fd9f75acc7ba4d77f3bd02be9fd6bd069"
+    },
+    {
+      "source": "work/test-results/public-update-applied.png",
+      "file": "public-update-applied.png",
+      "bytes": 202935,
+      "originalSha256": "3276079651b3ad98dad6a3f24d75b599aab585b89f69f72e5bc8839627b50221",
+      "copiedSha256": "3276079651b3ad98dad6a3f24d75b599aab585b89f69f72e5bc8839627b50221"
+    },
+    {
+      "source": "work/release-audit/0.25.1/ci-logs.zip",
+      "file": "ci-logs.zip",
+      "bytes": 92005,
+      "originalSha256": "5a71775ca532e579c7576a90f5ef9af87352fe0f08de44ef54216dd9be06c627",
+      "copiedSha256": "5a71775ca532e579c7576a90f5ef9af87352fe0f08de44ef54216dd9be06c627"
+    },
+    {
+      "source": "work/release-audit/0.25.1/ci-log-proof.json",
+      "file": "ci-log-proof.json",
+      "bytes": 5049,
+      "originalSha256": "663a2dcc3b3554df2b3f5fc53627327909a81abacc172ee79a393cb216cc54a0",
+      "copiedSha256": "663a2dcc3b3554df2b3f5fc53627327909a81abacc172ee79a393cb216cc54a0"
+    },
+    {
+      "source": "work/release-audit/0.25.1/unit-tests.log",
+      "file": "unit-tests.log",
+      "bytes": 37487,
+      "originalSha256": "9d93e8828296d78ce4441836eeaf7aae1644565a7259b903a2aacb0e6b2c9e1e",
+      "copiedSha256": "9d93e8828296d78ce4441836eeaf7aae1644565a7259b903a2aacb0e6b2c9e1e"
+    },
+    {
+      "source": "work/test-results/pin-options-0.25.1-public-standalone-2026-10-19/summary.json",
+      "file": "public-tests/pin-exe.json",
+      "bytes": 11982,
+      "originalSha256": "816c6b7e763e965e4205ccca279c62ba71b4851c287489727d777eeebdaa3a75",
+      "copiedSha256": "816c6b7e763e965e4205ccca279c62ba71b4851c287489727d777eeebdaa3a75"
+    },
+    {
+      "source": "work/test-results/pin-options-0.25.1-public-standalone-2026-10-19/adc-analog-0-events.jsonl",
+      "file": "public-tests/pin-exe/adc-analog-0-events.jsonl",
+      "bytes": 2308,
+      "originalSha256": "1c53359b2589146d7c76675f3ad9cef3500fa572998b80db952b33f43024fa76",
+      "copiedSha256": "1c53359b2589146d7c76675f3ad9cef3500fa572998b80db952b33f43024fa76"
+    },
+    {
+      "source": "work/test-results/pin-options-0.25.1-public-standalone-2026-10-19/adc-analog-0-executed.c",
+      "file": "public-tests/pin-exe/adc-analog-0-executed.c",
+      "bytes": 3037,
+      "originalSha256": "1d1cfccf84316a7329a5d4cf87f340fe3e40b37aa8f3da02d72380241946adb0",
+      "copiedSha256": "1d1cfccf84316a7329a5d4cf87f340fe3e40b37aa8f3da02d72380241946adb0"
+    },
+    {
+      "source": "work/test-results/pin-options-0.25.1-public-standalone-2026-10-19/adc-analog-0-generated.c",
+      "file": "public-tests/pin-exe/adc-analog-0-generated.c",
+      "bytes": 2813,
+      "originalSha256": "681e607c5011a03dd477244e97eeaa8c046ca8c83ee39f8f02bc3b43db5d9af4",
+      "copiedSha256": "681e607c5011a03dd477244e97eeaa8c046ca8c83ee39f8f02bc3b43db5d9af4"
+    },
+    {
+      "source": "work/test-results/pin-options-0.25.1-public-standalone-2026-10-19/adc-analog-1-events.jsonl",
+      "file": "public-tests/pin-exe/adc-analog-1-events.jsonl",
+      "bytes": 2307,
+      "originalSha256": "f69a33a63575333787bda6af668b1735ae02648778c9b8a698b012f30cd3a1b7",
+      "copiedSha256": "f69a33a63575333787bda6af668b1735ae02648778c9b8a698b012f30cd3a1b7"
+    },
+    {
+      "source": "work/test-results/pin-options-0.25.1-public-standalone-2026-10-19/adc-analog-1-executed.c",
+      "file": "public-tests/pin-exe/adc-analog-1-executed.c",
+      "bytes": 3039,
+      "originalSha256": "415f4dfd488ae5ab89d8197c49a13534faa4524d3733021cebd31a72e12dab5d",
+      "copiedSha256": "415f4dfd488ae5ab89d8197c49a13534faa4524d3733021cebd31a72e12dab5d"
+    },
+    {
+      "source": "work/test-results/pin-options-0.25.1-public-standalone-2026-10-19/adc-analog-1-generated.c",
+      "file": "public-tests/pin-exe/adc-analog-1-generated.c",
+      "bytes": 2815,
+      "originalSha256": "9a7d20a9c9997fcd8efe1a266a0804700e616bbcc7d5d3d4e3c705c4a6160f82",
+      "copiedSha256": "9a7d20a9c9997fcd8efe1a266a0804700e616bbcc7d5d3d4e3c705c4a6160f82"
+    },
+    {
+      "source": "work/test-results/pin-options-0.25.1-public-standalone-2026-10-19/adc-analog-2-events.jsonl",
+      "file": "public-tests/pin-exe/adc-analog-2-events.jsonl",
+      "bytes": 2303,
+      "originalSha256": "0b2bf36d7201356f845c8bf3b13b7f82e7afaa4805fa8349e7408012e3ddb7ca",
+      "copiedSha256": "0b2bf36d7201356f845c8bf3b13b7f82e7afaa4805fa8349e7408012e3ddb7ca"
+    },
+    {
+      "source": "work/test-results/pin-options-0.25.1-public-standalone-2026-10-19/adc-analog-2-executed.c",
+      "file": "public-tests/pin-exe/adc-analog-2-executed.c",
+      "bytes": 3037,
+      "originalSha256": "50351711485106e906a6bd6d905ca7978eb5f9aa4fc9f6688ff64715bcf253c9",
+      "copiedSha256": "50351711485106e906a6bd6d905ca7978eb5f9aa4fc9f6688ff64715bcf253c9"
+    },
+    {
+      "source": "work/test-results/pin-options-0.25.1-public-standalone-2026-10-19/adc-analog-2-generated.c",
+      "file": "public-tests/pin-exe/adc-analog-2-generated.c",
+      "bytes": 2813,
+      "originalSha256": "1f6cdf0ee3a78e3edef91a4c3f120ffa7587bbe296f7e2db74fbbf8ff5b75eb0",
+      "copiedSha256": "1f6cdf0ee3a78e3edef91a4c3f120ffa7587bbe296f7e2db74fbbf8ff5b75eb0"
+    },
+    {
+      "source": "work/test-results/pin-options-0.25.1-public-standalone-2026-10-19/callbacks-change-priority-events.jsonl",
+      "file": "public-tests/pin-exe/callbacks-change-priority-events.jsonl",
+      "bytes": 2942,
+      "originalSha256": "5cdae0eae7fe4e8ffdc8351a1de97e733da168faa7f0c8eb3b1629537e362775",
+      "copiedSha256": "5cdae0eae7fe4e8ffdc8351a1de97e733da168faa7f0c8eb3b1629537e362775"
+    },
+    {
+      "source": "work/test-results/pin-options-0.25.1-public-standalone-2026-10-19/callbacks-change-priority-executed.c",
+      "file": "public-tests/pin-exe/callbacks-change-priority-executed.c",
+      "bytes": 3834,
+      "originalSha256": "8074d35fd18eaef4f8de5f0a7d2ecfa721433dd72788c0aca7912842dfb38fb4",
+      "copiedSha256": "8074d35fd18eaef4f8de5f0a7d2ecfa721433dd72788c0aca7912842dfb38fb4"
+    },
+    {
+      "source": "work/test-results/pin-options-0.25.1-public-standalone-2026-10-19/callbacks-change-priority-generated.c",
+      "file": "public-tests/pin-exe/callbacks-change-priority-generated.c",
+      "bytes": 3581,
+      "originalSha256": "d0e41aa3eef05482e6226a34e4da1e12cb9b54d8e0592cda1c11429e1618e905",
+      "copiedSha256": "d0e41aa3eef05482e6226a34e4da1e12cb9b54d8e0592cda1c11429e1618e905"
+    },
+    {
+      "source": "work/test-results/pin-options-0.25.1-public-standalone-2026-10-19/callbacks-disable-global-events.jsonl",
+      "file": "public-tests/pin-exe/callbacks-disable-global-events.jsonl",
+      "bytes": 2941,
+      "originalSha256": "36ccb6fe38f971bad6f65566b55f516d34e695ac69788699df3f8e5c2123a6f0",
+      "copiedSha256": "36ccb6fe38f971bad6f65566b55f516d34e695ac69788699df3f8e5c2123a6f0"
+    },
+    {
+      "source": "work/test-results/pin-options-0.25.1-public-standalone-2026-10-19/callbacks-disable-global-executed.c",
+      "file": "public-tests/pin-exe/callbacks-disable-global-executed.c",
+      "bytes": 3784,
+      "originalSha256": "1882a413d89fa6db8f87f431775ee6488cc61e6071bc3c7ab3e4d90ef0b9b63c",
+      "copiedSha256": "1882a413d89fa6db8f87f431775ee6488cc61e6071bc3c7ab3e4d90ef0b9b63c"
+    },
+    {
+      "source": "work/test-results/pin-options-0.25.1-public-standalone-2026-10-19/callbacks-disable-global-generated.c",
+      "file": "public-tests/pin-exe/callbacks-disable-global-generated.c",
+      "bytes": 3581,
+      "originalSha256": "d0e41aa3eef05482e6226a34e4da1e12cb9b54d8e0592cda1c11429e1618e905",
+      "copiedSha256": "d0e41aa3eef05482e6226a34e4da1e12cb9b54d8e0592cda1c11429e1618e905"
+    },
+    {
+      "source": "work/test-results/pin-options-0.25.1-public-standalone-2026-10-19/callbacks-disable-other-events.jsonl",
+      "file": "public-tests/pin-exe/callbacks-disable-other-events.jsonl",
+      "bytes": 2940,
+      "originalSha256": "2ce9ab7960239ccece35dcefaf639e369d78ae43238109ce504894c6b9c0b6d9",
+      "copiedSha256": "2ce9ab7960239ccece35dcefaf639e369d78ae43238109ce504894c6b9c0b6d9"
+    },
+    {
+      "source": "work/test-results/pin-options-0.25.1-public-standalone-2026-10-19/callbacks-disable-other-executed.c",
+      "file": "public-tests/pin-exe/callbacks-disable-other-executed.c",
+      "bytes": 3815,
+      "originalSha256": "e6af0d344e5de2b168f6e8363168e9895b5fac875f951a6724546d5c8aa4540b",
+      "copiedSha256": "e6af0d344e5de2b168f6e8363168e9895b5fac875f951a6724546d5c8aa4540b"
+    },
+    {
+      "source": "work/test-results/pin-options-0.25.1-public-standalone-2026-10-19/callbacks-disable-other-generated.c",
+      "file": "public-tests/pin-exe/callbacks-disable-other-generated.c",
+      "bytes": 3581,
+      "originalSha256": "86366a79fda6f92d069d82ab14db2caf5c4664eaee3142391f8605d4140a603b",
+      "copiedSha256": "86366a79fda6f92d069d82ab14db2caf5c4664eaee3142391f8605d4140a603b"
+    },
+    {
+      "source": "work/test-results/pin-options-0.25.1-public-standalone-2026-10-19/runtime-events.jsonl",
+      "file": "public-tests/pin-exe/runtime-events.jsonl",
+      "bytes": 41804,
+      "originalSha256": "1d0e5523b526bf38dcec469ec7c6e6e0cff39d80c571604673101c79a26c1d44",
+      "copiedSha256": "1d0e5523b526bf38dcec469ec7c6e6e0cff39d80c571604673101c79a26c1d44"
+    },
+    {
+      "source": "work/test-results/pin-options-0.25.1-public-standalone-2026-10-19/summary.json",
+      "file": "public-tests/pin-exe/summary.json",
+      "bytes": 11982,
+      "originalSha256": "816c6b7e763e965e4205ccca279c62ba71b4851c287489727d777eeebdaa3a75",
+      "copiedSha256": "816c6b7e763e965e4205ccca279c62ba71b4851c287489727d777eeebdaa3a75"
+    },
+    {
+      "source": "work/test-results/pin-options-0.25.1-public-standalone-2026-10-19/validation-label-pin-switch-save.stm32lab",
+      "file": "public-tests/pin-exe/validation-label-pin-switch-save.stm32lab",
+      "bytes": 2973,
+      "originalSha256": "46c233c84862ddeebacf16ed25fcfcb2eac95c38224402e7bb3abb28b04637b6",
+      "copiedSha256": "46c233c84862ddeebacf16ed25fcfcb2eac95c38224402e7bb3abb28b04637b6"
+    },
+    {
+      "source": "work/test-results/docs-multi-apply-0.25.1-public-standalone-phase-proof-2026-10-19/summary.json",
+      "file": "public-tests/docs-exe.json",
+      "bytes": 78510,
+      "originalSha256": "e2caf8da4e563fe03a1d9eb04f064272e6b612c9a455ef43e449f302bce0d0b6",
+      "copiedSha256": "e2caf8da4e563fe03a1d9eb04f064272e6b612c9a455ef43e449f302bce0d0b6"
+    },
+    {
+      "source": "work/test-results/docs-multi-apply-0.25.1-public-standalone-phase-proof-2026-10-19/four-device-mix-01-baseline-main.c",
+      "file": "public-tests/docs-exe/four-device-mix-01-baseline-main.c",
+      "bytes": 2153,
+      "originalSha256": "ddcc083d6655e466321f682516b8145fe8a9c0a85f813d85c4608adf8e9d5cd0",
+      "copiedSha256": "ddcc083d6655e466321f682516b8145fe8a9c0a85f813d85c4608adf8e9d5cd0"
+    },
+    {
+      "source": "work/test-results/docs-multi-apply-0.25.1-public-standalone-phase-proof-2026-10-19/four-device-mix-01-baseline.stm32lab",
+      "file": "public-tests/docs-exe/four-device-mix-01-baseline.stm32lab",
+      "bytes": 3982,
+      "originalSha256": "80bb312bdf5705706e63378d0f821820293442f049d6592b7fcb3fc51c8713c9",
+      "copiedSha256": "80bb312bdf5705706e63378d0f821820293442f049d6592b7fcb3fc51c8713c9"
+    },
+    {
+      "source": "work/test-results/docs-multi-apply-0.25.1-public-standalone-phase-proof-2026-10-19/four-device-mix-02-led1-HAL_GPIO_WritePin-main.c",
+      "file": "public-tests/docs-exe/four-device-mix-02-led1-HAL_GPIO_WritePin-main.c",
+      "bytes": 3014,
+      "originalSha256": "49dbbadef1f0c5ae0d10e4be8166a0694b094f8f25c87ccf5f1ffc76b8916849",
+      "copiedSha256": "49dbbadef1f0c5ae0d10e4be8166a0694b094f8f25c87ccf5f1ffc76b8916849"
+    },
+    {
+      "source": "work/test-results/docs-multi-apply-0.25.1-public-standalone-phase-proof-2026-10-19/four-device-mix-02-led1-HAL_GPIO_WritePin.stm32lab",
+      "file": "public-tests/docs-exe/four-device-mix-02-led1-HAL_GPIO_WritePin.stm32lab",
+      "bytes": 6016,
+      "originalSha256": "f6286ff2003701f01b22ef3671f9f0677f22d46bce6a981a616ecdc0a043e6bb",
+      "copiedSha256": "f6286ff2003701f01b22ef3671f9f0677f22d46bce6a981a616ecdc0a043e6bb"
+    },
+    {
+      "source": "work/test-results/docs-multi-apply-0.25.1-public-standalone-phase-proof-2026-10-19/four-device-mix-03-pot1-all-main.c",
+      "file": "public-tests/docs-exe/four-device-mix-03-pot1-all-main.c",
+      "bytes": 4685,
+      "originalSha256": "0927e780701f3ae810fc61aab503183b563e28bd2727fac26685992327e4428a",
+      "copiedSha256": "0927e780701f3ae810fc61aab503183b563e28bd2727fac26685992327e4428a"
+    },
+    {
+      "source": "work/test-results/docs-multi-apply-0.25.1-public-standalone-phase-proof-2026-10-19/four-device-mix-03-pot1-all.stm32lab",
+      "file": "public-tests/docs-exe/four-device-mix-03-pot1-all.stm32lab",
+      "bytes": 8580,
+      "originalSha256": "94cf62eaa1cb5333bdb519697be90f9a3ce77d9fa7cdc8ab18ea1856fb9019d4",
+      "copiedSha256": "94cf62eaa1cb5333bdb519697be90f9a3ce77d9fa7cdc8ab18ea1856fb9019d4"
+    },
+    {
+      "source": "work/test-results/docs-multi-apply-0.25.1-public-standalone-phase-proof-2026-10-19/four-device-mix-04-uart1-all-main.c",
+      "file": "public-tests/docs-exe/four-device-mix-04-uart1-all-main.c",
+      "bytes": 6114,
+      "originalSha256": "d760ce3e39cc30bfc79d02b4dd2ea93b21e3362407b954b545d526900725d4c7",
+      "copiedSha256": "d760ce3e39cc30bfc79d02b4dd2ea93b21e3362407b954b545d526900725d4c7"
+    },
+    {
+      "source": "work/test-results/docs-multi-apply-0.25.1-public-standalone-phase-proof-2026-10-19/four-device-mix-04-uart1-all.stm32lab",
+      "file": "public-tests/docs-exe/four-device-mix-04-uart1-all.stm32lab",
+      "bytes": 11306,
+      "originalSha256": "011f6bdfbbad914ecd48a677b6065a53da63390432ada5ea0db32b9f107e4b79",
+      "copiedSha256": "011f6bdfbbad914ecd48a677b6065a53da63390432ada5ea0db32b9f107e4b79"
+    },
+    {
+      "source": "work/test-results/docs-multi-apply-0.25.1-public-standalone-phase-proof-2026-10-19/four-device-mix-05-servo1-all-main.c",
+      "file": "public-tests/docs-exe/four-device-mix-05-servo1-all-main.c",
+      "bytes": 7735,
+      "originalSha256": "35812a1dc245ce0e3fffa045effef80a8d685bb2979d0a498dfbf8c659d46d09",
+      "copiedSha256": "35812a1dc245ce0e3fffa045effef80a8d685bb2979d0a498dfbf8c659d46d09"
+    },
+    {
+      "source": "work/test-results/docs-multi-apply-0.25.1-public-standalone-phase-proof-2026-10-19/four-device-mix-05-servo1-all.stm32lab",
+      "file": "public-tests/docs-exe/four-device-mix-05-servo1-all.stm32lab",
+      "bytes": 13915,
+      "originalSha256": "4e32bcc04b146cf354dff57e68b219230282460e5557b6738d459438439ac0d7",
+      "copiedSha256": "4e32bcc04b146cf354dff57e68b219230282460e5557b6738d459438439ac0d7"
+    },
+    {
+      "source": "work/test-results/docs-multi-apply-0.25.1-public-standalone-phase-proof-2026-10-19/four-device-mix-06-pot1-all-main.c",
+      "file": "public-tests/docs-exe/four-device-mix-06-pot1-all-main.c",
+      "bytes": 7735,
+      "originalSha256": "35812a1dc245ce0e3fffa045effef80a8d685bb2979d0a498dfbf8c659d46d09",
+      "copiedSha256": "35812a1dc245ce0e3fffa045effef80a8d685bb2979d0a498dfbf8c659d46d09"
+    },
+    {
+      "source": "work/test-results/docs-multi-apply-0.25.1-public-standalone-phase-proof-2026-10-19/four-device-mix-06-pot1-all.stm32lab",
+      "file": "public-tests/docs-exe/four-device-mix-06-pot1-all.stm32lab",
+      "bytes": 13915,
+      "originalSha256": "4e32bcc04b146cf354dff57e68b219230282460e5557b6738d459438439ac0d7",
+      "copiedSha256": "4e32bcc04b146cf354dff57e68b219230282460e5557b6738d459438439ac0d7"
+    },
+    {
+      "source": "work/test-results/docs-multi-apply-0.25.1-public-standalone-phase-proof-2026-10-19/four-device-mix-live-stimuli-events.jsonl",
+      "file": "public-tests/docs-exe/four-device-mix-live-stimuli-events.jsonl",
+      "bytes": 13272,
+      "originalSha256": "78de422ba897a5a8fa1018c93f7bbcca8e99e40aaf4cac4a5865ae4bdb8025c3",
+      "copiedSha256": "78de422ba897a5a8fa1018c93f7bbcca8e99e40aaf4cac4a5865ae4bdb8025c3"
+    },
+    {
+      "source": "work/test-results/docs-multi-apply-0.25.1-public-standalone-phase-proof-2026-10-19/four-device-mix-restored.stm32lab",
+      "file": "public-tests/docs-exe/four-device-mix-restored.stm32lab",
+      "bytes": 13915,
+      "originalSha256": "4e32bcc04b146cf354dff57e68b219230282460e5557b6738d459438439ac0d7",
+      "copiedSha256": "4e32bcc04b146cf354dff57e68b219230282460e5557b6738d459438439ac0d7"
+    },
+    {
+      "source": "work/test-results/docs-multi-apply-0.25.1-public-standalone-phase-proof-2026-10-19/runtime-events.jsonl",
+      "file": "public-tests/docs-exe/runtime-events.jsonl",
+      "bytes": 48919,
+      "originalSha256": "b0b6589f41a6483922bbadacbbc75a21c27b6170f312acca19767a99629fa7cd",
+      "copiedSha256": "b0b6589f41a6483922bbadacbbc75a21c27b6170f312acca19767a99629fa7cd"
+    },
+    {
+      "source": "work/test-results/docs-multi-apply-0.25.1-public-standalone-phase-proof-2026-10-19/same-device-cards-01-baseline-main.c",
+      "file": "public-tests/docs-exe/same-device-cards-01-baseline-main.c",
+      "bytes": 2155,
+      "originalSha256": "722df4a8c317f14879cbac9622df19f040985dd911b05756591d28f7181201e4",
+      "copiedSha256": "722df4a8c317f14879cbac9622df19f040985dd911b05756591d28f7181201e4"
+    },
+    {
+      "source": "work/test-results/docs-multi-apply-0.25.1-public-standalone-phase-proof-2026-10-19/same-device-cards-01-baseline.stm32lab",
+      "file": "public-tests/docs-exe/same-device-cards-01-baseline.stm32lab",
+      "bytes": 3518,
+      "originalSha256": "0e383b35e9fa5c6ee4b0634fd169a9107d1bc07e83f9679dea1e225690e2fcbb",
+      "copiedSha256": "0e383b35e9fa5c6ee4b0634fd169a9107d1bc07e83f9679dea1e225690e2fcbb"
+    },
+    {
+      "source": "work/test-results/docs-multi-apply-0.25.1-public-standalone-phase-proof-2026-10-19/same-device-cards-02-led1-HAL_GPIO_WritePin-main.c",
+      "file": "public-tests/docs-exe/same-device-cards-02-led1-HAL_GPIO_WritePin-main.c",
+      "bytes": 3016,
+      "originalSha256": "095d01fce5d7756deafc6646b8f93694d5cd3044b682567dc21ee49e427f741b",
+      "copiedSha256": "095d01fce5d7756deafc6646b8f93694d5cd3044b682567dc21ee49e427f741b"
+    },
+    {
+      "source": "work/test-results/docs-multi-apply-0.25.1-public-standalone-phase-proof-2026-10-19/same-device-cards-02-led1-HAL_GPIO_WritePin.stm32lab",
+      "file": "public-tests/docs-exe/same-device-cards-02-led1-HAL_GPIO_WritePin.stm32lab",
+      "bytes": 5552,
+      "originalSha256": "2990c940f7d22ab51d34b7957f49e6475e27597783719bb5607d732c28429be3",
+      "copiedSha256": "2990c940f7d22ab51d34b7957f49e6475e27597783719bb5607d732c28429be3"
+    },
+    {
+      "source": "work/test-results/docs-multi-apply-0.25.1-public-standalone-phase-proof-2026-10-19/same-device-cards-03-led1-HAL_GPIO_TogglePin-main.c",
+      "file": "public-tests/docs-exe/same-device-cards-03-led1-HAL_GPIO_TogglePin-main.c",
+      "bytes": 3003,
+      "originalSha256": "183356997447154b5a7daf9c14026388630811127b8a79bd184aff116c7f8356",
+      "copiedSha256": "183356997447154b5a7daf9c14026388630811127b8a79bd184aff116c7f8356"
+    },
+    {
+      "source": "work/test-results/docs-multi-apply-0.25.1-public-standalone-phase-proof-2026-10-19/same-device-cards-03-led1-HAL_GPIO_TogglePin.stm32lab",
+      "file": "public-tests/docs-exe/same-device-cards-03-led1-HAL_GPIO_TogglePin.stm32lab",
+      "bytes": 5540,
+      "originalSha256": "02e852c72583d08d0d60bb95b081031fe81dcd9d1fbe0934a89be5c457b44cd7",
+      "copiedSha256": "02e852c72583d08d0d60bb95b081031fe81dcd9d1fbe0934a89be5c457b44cd7"
+    },
+    {
+      "source": "work/test-results/docs-multi-apply-0.25.1-public-standalone-phase-proof-2026-10-19/same-device-cards-04-led1-HAL_GPIO_ReadPin-main.c",
+      "file": "public-tests/docs-exe/same-device-cards-04-led1-HAL_GPIO_ReadPin-main.c",
+      "bytes": 3072,
+      "originalSha256": "33361514c681a69ff8608abd7cfa3bae8e84b6d637a2bb9dfef87970be884ff0",
+      "copiedSha256": "33361514c681a69ff8608abd7cfa3bae8e84b6d637a2bb9dfef87970be884ff0"
+    },
+    {
+      "source": "work/test-results/docs-multi-apply-0.25.1-public-standalone-phase-proof-2026-10-19/same-device-cards-04-led1-HAL_GPIO_ReadPin.stm32lab",
+      "file": "public-tests/docs-exe/same-device-cards-04-led1-HAL_GPIO_ReadPin.stm32lab",
+      "bytes": 5610,
+      "originalSha256": "9d9375b7606028e2f9bd157598ace92738eee0a4fb6a43beb41969731a29824a",
+      "copiedSha256": "9d9375b7606028e2f9bd157598ace92738eee0a4fb6a43beb41969731a29824a"
+    },
+    {
+      "source": "work/test-results/docs-multi-apply-0.25.1-public-standalone-phase-proof-2026-10-19/same-device-cards-05-led1-HAL_GPIO_WritePin-main.c",
+      "file": "public-tests/docs-exe/same-device-cards-05-led1-HAL_GPIO_WritePin-main.c",
+      "bytes": 3016,
+      "originalSha256": "095d01fce5d7756deafc6646b8f93694d5cd3044b682567dc21ee49e427f741b",
+      "copiedSha256": "095d01fce5d7756deafc6646b8f93694d5cd3044b682567dc21ee49e427f741b"
+    },
+    {
+      "source": "work/test-results/docs-multi-apply-0.25.1-public-standalone-phase-proof-2026-10-19/same-device-cards-05-led1-HAL_GPIO_WritePin.stm32lab",
+      "file": "public-tests/docs-exe/same-device-cards-05-led1-HAL_GPIO_WritePin.stm32lab",
+      "bytes": 5552,
+      "originalSha256": "2990c940f7d22ab51d34b7957f49e6475e27597783719bb5607d732c28429be3",
+      "copiedSha256": "2990c940f7d22ab51d34b7957f49e6475e27597783719bb5607d732c28429be3"
+    },
+    {
+      "source": "work/test-results/docs-multi-apply-0.25.1-public-standalone-phase-proof-2026-10-19/same-device-cards-read-prerequisites-events.jsonl",
+      "file": "public-tests/docs-exe/same-device-cards-read-prerequisites-events.jsonl",
+      "bytes": 8044,
+      "originalSha256": "3d86af040fd75e1ca99b67a77b2ffff3b82d7254a1f8e70d11226405bc81ba98",
+      "copiedSha256": "3d86af040fd75e1ca99b67a77b2ffff3b82d7254a1f8e70d11226405bc81ba98"
+    },
+    {
+      "source": "work/test-results/docs-multi-apply-0.25.1-public-standalone-phase-proof-2026-10-19/same-device-cards-restored.stm32lab",
+      "file": "public-tests/docs-exe/same-device-cards-restored.stm32lab",
+      "bytes": 5552,
+      "originalSha256": "2990c940f7d22ab51d34b7957f49e6475e27597783719bb5607d732c28429be3",
+      "copiedSha256": "2990c940f7d22ab51d34b7957f49e6475e27597783719bb5607d732c28429be3"
+    },
+    {
+      "source": "work/test-results/docs-multi-apply-0.25.1-public-standalone-phase-proof-2026-10-19/same-device-cards-toggle-events.jsonl",
+      "file": "public-tests/docs-exe/same-device-cards-toggle-events.jsonl",
+      "bytes": 3213,
+      "originalSha256": "3c57bb73308d96efb730b0c4c53dcc1710be549a52722bfdfcfd345267e6e098",
+      "copiedSha256": "3c57bb73308d96efb730b0c4c53dcc1710be549a52722bfdfcfd345267e6e098"
+    },
+    {
+      "source": "work/test-results/docs-multi-apply-0.25.1-public-standalone-phase-proof-2026-10-19/same-device-cards-write-first-events.jsonl",
+      "file": "public-tests/docs-exe/same-device-cards-write-first-events.jsonl",
+      "bytes": 2689,
+      "originalSha256": "b573930a092feba092faf563612c11179ab6a4f9b65adf0abe062ea52345660e",
+      "copiedSha256": "b573930a092feba092faf563612c11179ab6a4f9b65adf0abe062ea52345660e"
+    },
+    {
+      "source": "work/test-results/docs-multi-apply-0.25.1-public-standalone-phase-proof-2026-10-19/same-device-cards-write-restored-events.jsonl",
+      "file": "public-tests/docs-exe/same-device-cards-write-restored-events.jsonl",
+      "bytes": 3435,
+      "originalSha256": "affc4f47b21d2b3216626535b2ee3dac83a5541deb5535d548c0ccb5e5cabfa1",
+      "copiedSha256": "affc4f47b21d2b3216626535b2ee3dac83a5541deb5535d548c0ccb5e5cabfa1"
+    },
+    {
+      "source": "work/test-results/docs-multi-apply-0.25.1-public-standalone-phase-proof-2026-10-19/summary.json",
+      "file": "public-tests/docs-exe/summary.json",
+      "bytes": 78510,
+      "originalSha256": "e2caf8da4e563fe03a1d9eb04f064272e6b612c9a455ef43e449f302bce0d0b6",
+      "copiedSha256": "e2caf8da4e563fe03a1d9eb04f064272e6b612c9a455ef43e449f302bce0d0b6"
+    },
+    {
+      "source": "work/test-results/docs-multi-apply-0.25.1-public-standalone-phase-proof-2026-10-19/two-leds-01-baseline-main.c",
+      "file": "public-tests/docs-exe/two-leds-01-baseline-main.c",
+      "bytes": 2146,
+      "originalSha256": "6a1f300560e51122998e19a6533eddeb1d3e5d24f43f0d95d80af641d248f318",
+      "copiedSha256": "6a1f300560e51122998e19a6533eddeb1d3e5d24f43f0d95d80af641d248f318"
+    },
+    {
+      "source": "work/test-results/docs-multi-apply-0.25.1-public-standalone-phase-proof-2026-10-19/two-leds-01-baseline.stm32lab",
+      "file": "public-tests/docs-exe/two-leds-01-baseline.stm32lab",
+      "bytes": 3668,
+      "originalSha256": "29e39ba64366324f2242a4f75c6e93dc3084e568f8f03038952a1e44e105eac8",
+      "copiedSha256": "29e39ba64366324f2242a4f75c6e93dc3084e568f8f03038952a1e44e105eac8"
+    },
+    {
+      "source": "work/test-results/docs-multi-apply-0.25.1-public-standalone-phase-proof-2026-10-19/two-leds-02-led1-HAL_GPIO_WritePin-main.c",
+      "file": "public-tests/docs-exe/two-leds-02-led1-HAL_GPIO_WritePin-main.c",
+      "bytes": 3007,
+      "originalSha256": "2b142a21fc7daec80f9e1c8295a463921878080291770868d30095e98bece584",
+      "copiedSha256": "2b142a21fc7daec80f9e1c8295a463921878080291770868d30095e98bece584"
+    },
+    {
+      "source": "work/test-results/docs-multi-apply-0.25.1-public-standalone-phase-proof-2026-10-19/two-leds-02-led1-HAL_GPIO_WritePin.stm32lab",
+      "file": "public-tests/docs-exe/two-leds-02-led1-HAL_GPIO_WritePin.stm32lab",
+      "bytes": 5702,
+      "originalSha256": "ea3304dba0970c3dffe87697cb2947c28a089aa2bf08747a4be2e04626eaf208",
+      "copiedSha256": "ea3304dba0970c3dffe87697cb2947c28a089aa2bf08747a4be2e04626eaf208"
+    },
+    {
+      "source": "work/test-results/docs-multi-apply-0.25.1-public-standalone-phase-proof-2026-10-19/two-leds-03-led2-HAL_GPIO_WritePin-main.c",
+      "file": "public-tests/docs-exe/two-leds-03-led2-HAL_GPIO_WritePin-main.c",
+      "bytes": 3383,
+      "originalSha256": "5ee2af4470dafbd3046fa6b87735fc958e5a6169f6789b8aba55377e8ecafc3a",
+      "copiedSha256": "5ee2af4470dafbd3046fa6b87735fc958e5a6169f6789b8aba55377e8ecafc3a"
+    },
+    {
+      "source": "work/test-results/docs-multi-apply-0.25.1-public-standalone-phase-proof-2026-10-19/two-leds-03-led2-HAL_GPIO_WritePin.stm32lab",
+      "file": "public-tests/docs-exe/two-leds-03-led2-HAL_GPIO_WritePin.stm32lab",
+      "bytes": 7086,
+      "originalSha256": "9ab684e2400b3eb41c0ef35aed1c0ca13cc3f52dfd330540379428a8b2fae407",
+      "copiedSha256": "9ab684e2400b3eb41c0ef35aed1c0ca13cc3f52dfd330540379428a8b2fae407"
+    },
+    {
+      "source": "work/test-results/docs-multi-apply-0.25.1-public-standalone-phase-proof-2026-10-19/two-leds-04-led1-HAL_GPIO_WritePin-main.c",
+      "file": "public-tests/docs-exe/two-leds-04-led1-HAL_GPIO_WritePin-main.c",
+      "bytes": 3383,
+      "originalSha256": "5ee2af4470dafbd3046fa6b87735fc958e5a6169f6789b8aba55377e8ecafc3a",
+      "copiedSha256": "5ee2af4470dafbd3046fa6b87735fc958e5a6169f6789b8aba55377e8ecafc3a"
+    },
+    {
+      "source": "work/test-results/docs-multi-apply-0.25.1-public-standalone-phase-proof-2026-10-19/two-leds-04-led1-HAL_GPIO_WritePin.stm32lab",
+      "file": "public-tests/docs-exe/two-leds-04-led1-HAL_GPIO_WritePin.stm32lab",
+      "bytes": 7086,
+      "originalSha256": "9ab684e2400b3eb41c0ef35aed1c0ca13cc3f52dfd330540379428a8b2fae407",
+      "copiedSha256": "9ab684e2400b3eb41c0ef35aed1c0ca13cc3f52dfd330540379428a8b2fae407"
+    },
+    {
+      "source": "work/test-results/docs-multi-apply-0.25.1-public-standalone-phase-proof-2026-10-19/two-leds-both-on-events.jsonl",
+      "file": "public-tests/docs-exe/two-leds-both-on-events.jsonl",
+      "bytes": 4236,
+      "originalSha256": "3b889ba13591434fd6058d0569622fd4c612fa703ae7b53b440f5d257c1edf2a",
+      "copiedSha256": "3b889ba13591434fd6058d0569622fd4c612fa703ae7b53b440f5d257c1edf2a"
+    },
+    {
+      "source": "work/test-results/docs-multi-apply-0.25.1-public-standalone-phase-proof-2026-10-19/two-leds-restored.stm32lab",
+      "file": "public-tests/docs-exe/two-leds-restored.stm32lab",
+      "bytes": 7086,
+      "originalSha256": "9ab684e2400b3eb41c0ef35aed1c0ca13cc3f52dfd330540379428a8b2fae407",
+      "copiedSha256": "9ab684e2400b3eb41c0ef35aed1c0ca13cc3f52dfd330540379428a8b2fae407"
+    },
+    {
+      "source": "work/docs-multi-apply-phase-proof.cjs",
+      "file": "harness/docs-multi-apply-phase-proof.cjs",
+      "bytes": 16823,
+      "originalSha256": "f0dd66bde022ffe1f54703a75e482c7f5b360f35f44c548e6b55cfa7fa75ed49",
+      "copiedSha256": "f0dd66bde022ffe1f54703a75e482c7f5b360f35f44c548e6b55cfa7fa75ed49"
+    },
+    {
+      "source": "work/test-results/pin-options-0.25.1-public-zip-2026-10-19/summary.json",
+      "file": "public-tests/pin-zip.json",
+      "bytes": 11982,
+      "originalSha256": "a0251c33c625d5538b6fdf7325f5b4f817b1277498949dbbd89c505405880a11",
+      "copiedSha256": "a0251c33c625d5538b6fdf7325f5b4f817b1277498949dbbd89c505405880a11"
+    },
+    {
+      "source": "work/test-results/pin-options-0.25.1-public-zip-2026-10-19/adc-analog-0-events.jsonl",
+      "file": "public-tests/pin-zip/adc-analog-0-events.jsonl",
+      "bytes": 2308,
+      "originalSha256": "fe021fce3cb6d2dc2c8c87992d91949532e34bae118065247b0a033205304ce2",
+      "copiedSha256": "fe021fce3cb6d2dc2c8c87992d91949532e34bae118065247b0a033205304ce2"
+    },
+    {
+      "source": "work/test-results/pin-options-0.25.1-public-zip-2026-10-19/adc-analog-0-executed.c",
+      "file": "public-tests/pin-zip/adc-analog-0-executed.c",
+      "bytes": 3037,
+      "originalSha256": "1d1cfccf84316a7329a5d4cf87f340fe3e40b37aa8f3da02d72380241946adb0",
+      "copiedSha256": "1d1cfccf84316a7329a5d4cf87f340fe3e40b37aa8f3da02d72380241946adb0"
+    },
+    {
+      "source": "work/test-results/pin-options-0.25.1-public-zip-2026-10-19/adc-analog-0-generated.c",
+      "file": "public-tests/pin-zip/adc-analog-0-generated.c",
+      "bytes": 2813,
+      "originalSha256": "681e607c5011a03dd477244e97eeaa8c046ca8c83ee39f8f02bc3b43db5d9af4",
+      "copiedSha256": "681e607c5011a03dd477244e97eeaa8c046ca8c83ee39f8f02bc3b43db5d9af4"
+    },
+    {
+      "source": "work/test-results/pin-options-0.25.1-public-zip-2026-10-19/adc-analog-1-events.jsonl",
+      "file": "public-tests/pin-zip/adc-analog-1-events.jsonl",
+      "bytes": 2305,
+      "originalSha256": "e70cf99b0323e7462651e0724f7cd8477cd30197b28a3b1808b4a22ef6e502cd",
+      "copiedSha256": "e70cf99b0323e7462651e0724f7cd8477cd30197b28a3b1808b4a22ef6e502cd"
+    },
+    {
+      "source": "work/test-results/pin-options-0.25.1-public-zip-2026-10-19/adc-analog-1-executed.c",
+      "file": "public-tests/pin-zip/adc-analog-1-executed.c",
+      "bytes": 3039,
+      "originalSha256": "415f4dfd488ae5ab89d8197c49a13534faa4524d3733021cebd31a72e12dab5d",
+      "copiedSha256": "415f4dfd488ae5ab89d8197c49a13534faa4524d3733021cebd31a72e12dab5d"
+    },
+    {
+      "source": "work/test-results/pin-options-0.25.1-public-zip-2026-10-19/adc-analog-1-generated.c",
+      "file": "public-tests/pin-zip/adc-analog-1-generated.c",
+      "bytes": 2815,
+      "originalSha256": "9a7d20a9c9997fcd8efe1a266a0804700e616bbcc7d5d3d4e3c705c4a6160f82",
+      "copiedSha256": "9a7d20a9c9997fcd8efe1a266a0804700e616bbcc7d5d3d4e3c705c4a6160f82"
+    },
+    {
+      "source": "work/test-results/pin-options-0.25.1-public-zip-2026-10-19/adc-analog-2-events.jsonl",
+      "file": "public-tests/pin-zip/adc-analog-2-events.jsonl",
+      "bytes": 2301,
+      "originalSha256": "1a7cc54892a335f8270bd63904a987a6b88746d0e2ea6595a93dcb3364b7a157",
+      "copiedSha256": "1a7cc54892a335f8270bd63904a987a6b88746d0e2ea6595a93dcb3364b7a157"
+    },
+    {
+      "source": "work/test-results/pin-options-0.25.1-public-zip-2026-10-19/adc-analog-2-executed.c",
+      "file": "public-tests/pin-zip/adc-analog-2-executed.c",
+      "bytes": 3037,
+      "originalSha256": "50351711485106e906a6bd6d905ca7978eb5f9aa4fc9f6688ff64715bcf253c9",
+      "copiedSha256": "50351711485106e906a6bd6d905ca7978eb5f9aa4fc9f6688ff64715bcf253c9"
+    },
+    {
+      "source": "work/test-results/pin-options-0.25.1-public-zip-2026-10-19/adc-analog-2-generated.c",
+      "file": "public-tests/pin-zip/adc-analog-2-generated.c",
+      "bytes": 2813,
+      "originalSha256": "1f6cdf0ee3a78e3edef91a4c3f120ffa7587bbe296f7e2db74fbbf8ff5b75eb0",
+      "copiedSha256": "1f6cdf0ee3a78e3edef91a4c3f120ffa7587bbe296f7e2db74fbbf8ff5b75eb0"
+    },
+    {
+      "source": "work/test-results/pin-options-0.25.1-public-zip-2026-10-19/callbacks-change-priority-events.jsonl",
+      "file": "public-tests/pin-zip/callbacks-change-priority-events.jsonl",
+      "bytes": 2942,
+      "originalSha256": "b3db65efc04279795d9d328e5415766ae173eb9856b0cfb09506fcafa413d87d",
+      "copiedSha256": "b3db65efc04279795d9d328e5415766ae173eb9856b0cfb09506fcafa413d87d"
+    },
+    {
+      "source": "work/test-results/pin-options-0.25.1-public-zip-2026-10-19/callbacks-change-priority-executed.c",
+      "file": "public-tests/pin-zip/callbacks-change-priority-executed.c",
+      "bytes": 3834,
+      "originalSha256": "8074d35fd18eaef4f8de5f0a7d2ecfa721433dd72788c0aca7912842dfb38fb4",
+      "copiedSha256": "8074d35fd18eaef4f8de5f0a7d2ecfa721433dd72788c0aca7912842dfb38fb4"
+    },
+    {
+      "source": "work/test-results/pin-options-0.25.1-public-zip-2026-10-19/callbacks-change-priority-generated.c",
+      "file": "public-tests/pin-zip/callbacks-change-priority-generated.c",
+      "bytes": 3581,
+      "originalSha256": "d0e41aa3eef05482e6226a34e4da1e12cb9b54d8e0592cda1c11429e1618e905",
+      "copiedSha256": "d0e41aa3eef05482e6226a34e4da1e12cb9b54d8e0592cda1c11429e1618e905"
+    },
+    {
+      "source": "work/test-results/pin-options-0.25.1-public-zip-2026-10-19/callbacks-disable-global-events.jsonl",
+      "file": "public-tests/pin-zip/callbacks-disable-global-events.jsonl",
+      "bytes": 2941,
+      "originalSha256": "e54edc6ced96d88d3fd8fa6ba71ea85441443a350030d4ff71a448ef6b67ccd3",
+      "copiedSha256": "e54edc6ced96d88d3fd8fa6ba71ea85441443a350030d4ff71a448ef6b67ccd3"
+    },
+    {
+      "source": "work/test-results/pin-options-0.25.1-public-zip-2026-10-19/callbacks-disable-global-executed.c",
+      "file": "public-tests/pin-zip/callbacks-disable-global-executed.c",
+      "bytes": 3784,
+      "originalSha256": "1882a413d89fa6db8f87f431775ee6488cc61e6071bc3c7ab3e4d90ef0b9b63c",
+      "copiedSha256": "1882a413d89fa6db8f87f431775ee6488cc61e6071bc3c7ab3e4d90ef0b9b63c"
+    },
+    {
+      "source": "work/test-results/pin-options-0.25.1-public-zip-2026-10-19/callbacks-disable-global-generated.c",
+      "file": "public-tests/pin-zip/callbacks-disable-global-generated.c",
+      "bytes": 3581,
+      "originalSha256": "d0e41aa3eef05482e6226a34e4da1e12cb9b54d8e0592cda1c11429e1618e905",
+      "copiedSha256": "d0e41aa3eef05482e6226a34e4da1e12cb9b54d8e0592cda1c11429e1618e905"
+    },
+    {
+      "source": "work/test-results/pin-options-0.25.1-public-zip-2026-10-19/callbacks-disable-other-events.jsonl",
+      "file": "public-tests/pin-zip/callbacks-disable-other-events.jsonl",
+      "bytes": 2940,
+      "originalSha256": "a55562c20c14bb6483d6c45efd1e679624a5d4bc2ced1006c77a4621b2ba9ff9",
+      "copiedSha256": "a55562c20c14bb6483d6c45efd1e679624a5d4bc2ced1006c77a4621b2ba9ff9"
+    },
+    {
+      "source": "work/test-results/pin-options-0.25.1-public-zip-2026-10-19/callbacks-disable-other-executed.c",
+      "file": "public-tests/pin-zip/callbacks-disable-other-executed.c",
+      "bytes": 3815,
+      "originalSha256": "e6af0d344e5de2b168f6e8363168e9895b5fac875f951a6724546d5c8aa4540b",
+      "copiedSha256": "e6af0d344e5de2b168f6e8363168e9895b5fac875f951a6724546d5c8aa4540b"
+    },
+    {
+      "source": "work/test-results/pin-options-0.25.1-public-zip-2026-10-19/callbacks-disable-other-generated.c",
+      "file": "public-tests/pin-zip/callbacks-disable-other-generated.c",
+      "bytes": 3581,
+      "originalSha256": "86366a79fda6f92d069d82ab14db2caf5c4664eaee3142391f8605d4140a603b",
+      "copiedSha256": "86366a79fda6f92d069d82ab14db2caf5c4664eaee3142391f8605d4140a603b"
+    },
+    {
+      "source": "work/test-results/pin-options-0.25.1-public-zip-2026-10-19/runtime-events.jsonl",
+      "file": "public-tests/pin-zip/runtime-events.jsonl",
+      "bytes": 41800,
+      "originalSha256": "46b05a370c8b997b927c661a9346c9e0c8b5b24c6e6cc6f63bdb4c3f081e894e",
+      "copiedSha256": "46b05a370c8b997b927c661a9346c9e0c8b5b24c6e6cc6f63bdb4c3f081e894e"
+    },
+    {
+      "source": "work/test-results/pin-options-0.25.1-public-zip-2026-10-19/summary.json",
+      "file": "public-tests/pin-zip/summary.json",
+      "bytes": 11982,
+      "originalSha256": "a0251c33c625d5538b6fdf7325f5b4f817b1277498949dbbd89c505405880a11",
+      "copiedSha256": "a0251c33c625d5538b6fdf7325f5b4f817b1277498949dbbd89c505405880a11"
+    },
+    {
+      "source": "work/test-results/pin-options-0.25.1-public-zip-2026-10-19/validation-label-pin-switch-save.stm32lab",
+      "file": "public-tests/pin-zip/validation-label-pin-switch-save.stm32lab",
+      "bytes": 2973,
+      "originalSha256": "46c233c84862ddeebacf16ed25fcfcb2eac95c38224402e7bb3abb28b04637b6",
+      "copiedSha256": "46c233c84862ddeebacf16ed25fcfcb2eac95c38224402e7bb3abb28b04637b6"
+    },
+    {
+      "source": "work/test-results/docs-multi-apply-0.25.1-public-zip-phase-proof-2026-10-19/summary.json",
+      "file": "public-tests/docs-zip.json",
+      "bytes": 79606,
+      "originalSha256": "fb47e6fb52f6326b334e851bf2972e61b5d4fdee845a0e7a0853b725b59df3eb",
+      "copiedSha256": "fb47e6fb52f6326b334e851bf2972e61b5d4fdee845a0e7a0853b725b59df3eb"
+    },
+    {
+      "source": "work/test-results/docs-multi-apply-0.25.1-public-zip-phase-proof-2026-10-19/four-device-mix-01-baseline-main.c",
+      "file": "public-tests/docs-zip/four-device-mix-01-baseline-main.c",
+      "bytes": 2153,
+      "originalSha256": "ddcc083d6655e466321f682516b8145fe8a9c0a85f813d85c4608adf8e9d5cd0",
+      "copiedSha256": "ddcc083d6655e466321f682516b8145fe8a9c0a85f813d85c4608adf8e9d5cd0"
+    },
+    {
+      "source": "work/test-results/docs-multi-apply-0.25.1-public-zip-phase-proof-2026-10-19/four-device-mix-01-baseline.stm32lab",
+      "file": "public-tests/docs-zip/four-device-mix-01-baseline.stm32lab",
+      "bytes": 3982,
+      "originalSha256": "80bb312bdf5705706e63378d0f821820293442f049d6592b7fcb3fc51c8713c9",
+      "copiedSha256": "80bb312bdf5705706e63378d0f821820293442f049d6592b7fcb3fc51c8713c9"
+    },
+    {
+      "source": "work/test-results/docs-multi-apply-0.25.1-public-zip-phase-proof-2026-10-19/four-device-mix-02-led1-HAL_GPIO_WritePin-main.c",
+      "file": "public-tests/docs-zip/four-device-mix-02-led1-HAL_GPIO_WritePin-main.c",
+      "bytes": 3014,
+      "originalSha256": "49dbbadef1f0c5ae0d10e4be8166a0694b094f8f25c87ccf5f1ffc76b8916849",
+      "copiedSha256": "49dbbadef1f0c5ae0d10e4be8166a0694b094f8f25c87ccf5f1ffc76b8916849"
+    },
+    {
+      "source": "work/test-results/docs-multi-apply-0.25.1-public-zip-phase-proof-2026-10-19/four-device-mix-02-led1-HAL_GPIO_WritePin.stm32lab",
+      "file": "public-tests/docs-zip/four-device-mix-02-led1-HAL_GPIO_WritePin.stm32lab",
+      "bytes": 6016,
+      "originalSha256": "f6286ff2003701f01b22ef3671f9f0677f22d46bce6a981a616ecdc0a043e6bb",
+      "copiedSha256": "f6286ff2003701f01b22ef3671f9f0677f22d46bce6a981a616ecdc0a043e6bb"
+    },
+    {
+      "source": "work/test-results/docs-multi-apply-0.25.1-public-zip-phase-proof-2026-10-19/four-device-mix-03-pot1-all-main.c",
+      "file": "public-tests/docs-zip/four-device-mix-03-pot1-all-main.c",
+      "bytes": 4685,
+      "originalSha256": "0927e780701f3ae810fc61aab503183b563e28bd2727fac26685992327e4428a",
+      "copiedSha256": "0927e780701f3ae810fc61aab503183b563e28bd2727fac26685992327e4428a"
+    },
+    {
+      "source": "work/test-results/docs-multi-apply-0.25.1-public-zip-phase-proof-2026-10-19/four-device-mix-03-pot1-all.stm32lab",
+      "file": "public-tests/docs-zip/four-device-mix-03-pot1-all.stm32lab",
+      "bytes": 8580,
+      "originalSha256": "94cf62eaa1cb5333bdb519697be90f9a3ce77d9fa7cdc8ab18ea1856fb9019d4",
+      "copiedSha256": "94cf62eaa1cb5333bdb519697be90f9a3ce77d9fa7cdc8ab18ea1856fb9019d4"
+    },
+    {
+      "source": "work/test-results/docs-multi-apply-0.25.1-public-zip-phase-proof-2026-10-19/four-device-mix-04-uart1-all-main.c",
+      "file": "public-tests/docs-zip/four-device-mix-04-uart1-all-main.c",
+      "bytes": 6114,
+      "originalSha256": "d760ce3e39cc30bfc79d02b4dd2ea93b21e3362407b954b545d526900725d4c7",
+      "copiedSha256": "d760ce3e39cc30bfc79d02b4dd2ea93b21e3362407b954b545d526900725d4c7"
+    },
+    {
+      "source": "work/test-results/docs-multi-apply-0.25.1-public-zip-phase-proof-2026-10-19/four-device-mix-04-uart1-all.stm32lab",
+      "file": "public-tests/docs-zip/four-device-mix-04-uart1-all.stm32lab",
+      "bytes": 11306,
+      "originalSha256": "011f6bdfbbad914ecd48a677b6065a53da63390432ada5ea0db32b9f107e4b79",
+      "copiedSha256": "011f6bdfbbad914ecd48a677b6065a53da63390432ada5ea0db32b9f107e4b79"
+    },
+    {
+      "source": "work/test-results/docs-multi-apply-0.25.1-public-zip-phase-proof-2026-10-19/four-device-mix-05-servo1-all-main.c",
+      "file": "public-tests/docs-zip/four-device-mix-05-servo1-all-main.c",
+      "bytes": 7735,
+      "originalSha256": "35812a1dc245ce0e3fffa045effef80a8d685bb2979d0a498dfbf8c659d46d09",
+      "copiedSha256": "35812a1dc245ce0e3fffa045effef80a8d685bb2979d0a498dfbf8c659d46d09"
+    },
+    {
+      "source": "work/test-results/docs-multi-apply-0.25.1-public-zip-phase-proof-2026-10-19/four-device-mix-05-servo1-all.stm32lab",
+      "file": "public-tests/docs-zip/four-device-mix-05-servo1-all.stm32lab",
+      "bytes": 13915,
+      "originalSha256": "4e32bcc04b146cf354dff57e68b219230282460e5557b6738d459438439ac0d7",
+      "copiedSha256": "4e32bcc04b146cf354dff57e68b219230282460e5557b6738d459438439ac0d7"
+    },
+    {
+      "source": "work/test-results/docs-multi-apply-0.25.1-public-zip-phase-proof-2026-10-19/four-device-mix-06-pot1-all-main.c",
+      "file": "public-tests/docs-zip/four-device-mix-06-pot1-all-main.c",
+      "bytes": 7735,
+      "originalSha256": "35812a1dc245ce0e3fffa045effef80a8d685bb2979d0a498dfbf8c659d46d09",
+      "copiedSha256": "35812a1dc245ce0e3fffa045effef80a8d685bb2979d0a498dfbf8c659d46d09"
+    },
+    {
+      "source": "work/test-results/docs-multi-apply-0.25.1-public-zip-phase-proof-2026-10-19/four-device-mix-06-pot1-all.stm32lab",
+      "file": "public-tests/docs-zip/four-device-mix-06-pot1-all.stm32lab",
+      "bytes": 13915,
+      "originalSha256": "4e32bcc04b146cf354dff57e68b219230282460e5557b6738d459438439ac0d7",
+      "copiedSha256": "4e32bcc04b146cf354dff57e68b219230282460e5557b6738d459438439ac0d7"
+    },
+    {
+      "source": "work/test-results/docs-multi-apply-0.25.1-public-zip-phase-proof-2026-10-19/four-device-mix-live-stimuli-events.jsonl",
+      "file": "public-tests/docs-zip/four-device-mix-live-stimuli-events.jsonl",
+      "bytes": 13253,
+      "originalSha256": "5d1aa744d5f741608508f4389487694c76b259a9b385038323c009fc083408cb",
+      "copiedSha256": "5d1aa744d5f741608508f4389487694c76b259a9b385038323c009fc083408cb"
+    },
+    {
+      "source": "work/test-results/docs-multi-apply-0.25.1-public-zip-phase-proof-2026-10-19/four-device-mix-restored.stm32lab",
+      "file": "public-tests/docs-zip/four-device-mix-restored.stm32lab",
+      "bytes": 13915,
+      "originalSha256": "4e32bcc04b146cf354dff57e68b219230282460e5557b6738d459438439ac0d7",
+      "copiedSha256": "4e32bcc04b146cf354dff57e68b219230282460e5557b6738d459438439ac0d7"
+    },
+    {
+      "source": "work/test-results/docs-multi-apply-0.25.1-public-zip-phase-proof-2026-10-19/runtime-events.jsonl",
+      "file": "public-tests/docs-zip/runtime-events.jsonl",
+      "bytes": 49645,
+      "originalSha256": "16551b8e0e7305c681a570d8e0526357ef9c392225bcd3f5901eb850b420d3e5",
+      "copiedSha256": "16551b8e0e7305c681a570d8e0526357ef9c392225bcd3f5901eb850b420d3e5"
+    },
+    {
+      "source": "work/test-results/docs-multi-apply-0.25.1-public-zip-phase-proof-2026-10-19/same-device-cards-01-baseline-main.c",
+      "file": "public-tests/docs-zip/same-device-cards-01-baseline-main.c",
+      "bytes": 2155,
+      "originalSha256": "722df4a8c317f14879cbac9622df19f040985dd911b05756591d28f7181201e4",
+      "copiedSha256": "722df4a8c317f14879cbac9622df19f040985dd911b05756591d28f7181201e4"
+    },
+    {
+      "source": "work/test-results/docs-multi-apply-0.25.1-public-zip-phase-proof-2026-10-19/same-device-cards-01-baseline.stm32lab",
+      "file": "public-tests/docs-zip/same-device-cards-01-baseline.stm32lab",
+      "bytes": 3518,
+      "originalSha256": "0e383b35e9fa5c6ee4b0634fd169a9107d1bc07e83f9679dea1e225690e2fcbb",
+      "copiedSha256": "0e383b35e9fa5c6ee4b0634fd169a9107d1bc07e83f9679dea1e225690e2fcbb"
+    },
+    {
+      "source": "work/test-results/docs-multi-apply-0.25.1-public-zip-phase-proof-2026-10-19/same-device-cards-02-led1-HAL_GPIO_WritePin-main.c",
+      "file": "public-tests/docs-zip/same-device-cards-02-led1-HAL_GPIO_WritePin-main.c",
+      "bytes": 3016,
+      "originalSha256": "095d01fce5d7756deafc6646b8f93694d5cd3044b682567dc21ee49e427f741b",
+      "copiedSha256": "095d01fce5d7756deafc6646b8f93694d5cd3044b682567dc21ee49e427f741b"
+    },
+    {
+      "source": "work/test-results/docs-multi-apply-0.25.1-public-zip-phase-proof-2026-10-19/same-device-cards-02-led1-HAL_GPIO_WritePin.stm32lab",
+      "file": "public-tests/docs-zip/same-device-cards-02-led1-HAL_GPIO_WritePin.stm32lab",
+      "bytes": 5552,
+      "originalSha256": "2990c940f7d22ab51d34b7957f49e6475e27597783719bb5607d732c28429be3",
+      "copiedSha256": "2990c940f7d22ab51d34b7957f49e6475e27597783719bb5607d732c28429be3"
+    },
+    {
+      "source": "work/test-results/docs-multi-apply-0.25.1-public-zip-phase-proof-2026-10-19/same-device-cards-03-led1-HAL_GPIO_TogglePin-main.c",
+      "file": "public-tests/docs-zip/same-device-cards-03-led1-HAL_GPIO_TogglePin-main.c",
+      "bytes": 3003,
+      "originalSha256": "183356997447154b5a7daf9c14026388630811127b8a79bd184aff116c7f8356",
+      "copiedSha256": "183356997447154b5a7daf9c14026388630811127b8a79bd184aff116c7f8356"
+    },
+    {
+      "source": "work/test-results/docs-multi-apply-0.25.1-public-zip-phase-proof-2026-10-19/same-device-cards-03-led1-HAL_GPIO_TogglePin.stm32lab",
+      "file": "public-tests/docs-zip/same-device-cards-03-led1-HAL_GPIO_TogglePin.stm32lab",
+      "bytes": 5540,
+      "originalSha256": "02e852c72583d08d0d60bb95b081031fe81dcd9d1fbe0934a89be5c457b44cd7",
+      "copiedSha256": "02e852c72583d08d0d60bb95b081031fe81dcd9d1fbe0934a89be5c457b44cd7"
+    },
+    {
+      "source": "work/test-results/docs-multi-apply-0.25.1-public-zip-phase-proof-2026-10-19/same-device-cards-04-led1-HAL_GPIO_ReadPin-main.c",
+      "file": "public-tests/docs-zip/same-device-cards-04-led1-HAL_GPIO_ReadPin-main.c",
+      "bytes": 3072,
+      "originalSha256": "33361514c681a69ff8608abd7cfa3bae8e84b6d637a2bb9dfef87970be884ff0",
+      "copiedSha256": "33361514c681a69ff8608abd7cfa3bae8e84b6d637a2bb9dfef87970be884ff0"
+    },
+    {
+      "source": "work/test-results/docs-multi-apply-0.25.1-public-zip-phase-proof-2026-10-19/same-device-cards-04-led1-HAL_GPIO_ReadPin.stm32lab",
+      "file": "public-tests/docs-zip/same-device-cards-04-led1-HAL_GPIO_ReadPin.stm32lab",
+      "bytes": 5610,
+      "originalSha256": "9d9375b7606028e2f9bd157598ace92738eee0a4fb6a43beb41969731a29824a",
+      "copiedSha256": "9d9375b7606028e2f9bd157598ace92738eee0a4fb6a43beb41969731a29824a"
+    },
+    {
+      "source": "work/test-results/docs-multi-apply-0.25.1-public-zip-phase-proof-2026-10-19/same-device-cards-05-led1-HAL_GPIO_WritePin-main.c",
+      "file": "public-tests/docs-zip/same-device-cards-05-led1-HAL_GPIO_WritePin-main.c",
+      "bytes": 3016,
+      "originalSha256": "095d01fce5d7756deafc6646b8f93694d5cd3044b682567dc21ee49e427f741b",
+      "copiedSha256": "095d01fce5d7756deafc6646b8f93694d5cd3044b682567dc21ee49e427f741b"
+    },
+    {
+      "source": "work/test-results/docs-multi-apply-0.25.1-public-zip-phase-proof-2026-10-19/same-device-cards-05-led1-HAL_GPIO_WritePin.stm32lab",
+      "file": "public-tests/docs-zip/same-device-cards-05-led1-HAL_GPIO_WritePin.stm32lab",
+      "bytes": 5552,
+      "originalSha256": "2990c940f7d22ab51d34b7957f49e6475e27597783719bb5607d732c28429be3",
+      "copiedSha256": "2990c940f7d22ab51d34b7957f49e6475e27597783719bb5607d732c28429be3"
+    },
+    {
+      "source": "work/test-results/docs-multi-apply-0.25.1-public-zip-phase-proof-2026-10-19/same-device-cards-read-prerequisites-events.jsonl",
+      "file": "public-tests/docs-zip/same-device-cards-read-prerequisites-events.jsonl",
+      "bytes": 8044,
+      "originalSha256": "f3d827b889eb32a8aa46348c5d86b6ea386711bd0f00956842c5accdfae86a1f",
+      "copiedSha256": "f3d827b889eb32a8aa46348c5d86b6ea386711bd0f00956842c5accdfae86a1f"
+    },
+    {
+      "source": "work/test-results/docs-multi-apply-0.25.1-public-zip-phase-proof-2026-10-19/same-device-cards-restored.stm32lab",
+      "file": "public-tests/docs-zip/same-device-cards-restored.stm32lab",
+      "bytes": 5552,
+      "originalSha256": "2990c940f7d22ab51d34b7957f49e6475e27597783719bb5607d732c28429be3",
+      "copiedSha256": "2990c940f7d22ab51d34b7957f49e6475e27597783719bb5607d732c28429be3"
+    },
+    {
+      "source": "work/test-results/docs-multi-apply-0.25.1-public-zip-phase-proof-2026-10-19/same-device-cards-toggle-events.jsonl",
+      "file": "public-tests/docs-zip/same-device-cards-toggle-events.jsonl",
+      "bytes": 3213,
+      "originalSha256": "b63474000b827831151b509f87143893432448aab808546b2f4668b75ea6090b",
+      "copiedSha256": "b63474000b827831151b509f87143893432448aab808546b2f4668b75ea6090b"
+    },
+    {
+      "source": "work/test-results/docs-multi-apply-0.25.1-public-zip-phase-proof-2026-10-19/same-device-cards-write-first-events.jsonl",
+      "file": "public-tests/docs-zip/same-device-cards-write-first-events.jsonl",
+      "bytes": 3435,
+      "originalSha256": "170dd6cd3f39ae2eb879266ff5cc805409fc2519b9b9887f7eec810efd46d5f8",
+      "copiedSha256": "170dd6cd3f39ae2eb879266ff5cc805409fc2519b9b9887f7eec810efd46d5f8"
+    },
+    {
+      "source": "work/test-results/docs-multi-apply-0.25.1-public-zip-phase-proof-2026-10-19/same-device-cards-write-restored-events.jsonl",
+      "file": "public-tests/docs-zip/same-device-cards-write-restored-events.jsonl",
+      "bytes": 3435,
+      "originalSha256": "487929c699e77bbcee1b9d7f408900943b7ceebfbbf049013296ba8a9fe5cfbd",
+      "copiedSha256": "487929c699e77bbcee1b9d7f408900943b7ceebfbbf049013296ba8a9fe5cfbd"
+    },
+    {
+      "source": "work/test-results/docs-multi-apply-0.25.1-public-zip-phase-proof-2026-10-19/summary.json",
+      "file": "public-tests/docs-zip/summary.json",
+      "bytes": 79606,
+      "originalSha256": "fb47e6fb52f6326b334e851bf2972e61b5d4fdee845a0e7a0853b725b59df3eb",
+      "copiedSha256": "fb47e6fb52f6326b334e851bf2972e61b5d4fdee845a0e7a0853b725b59df3eb"
+    },
+    {
+      "source": "work/test-results/docs-multi-apply-0.25.1-public-zip-phase-proof-2026-10-19/two-leds-01-baseline-main.c",
+      "file": "public-tests/docs-zip/two-leds-01-baseline-main.c",
+      "bytes": 2146,
+      "originalSha256": "6a1f300560e51122998e19a6533eddeb1d3e5d24f43f0d95d80af641d248f318",
+      "copiedSha256": "6a1f300560e51122998e19a6533eddeb1d3e5d24f43f0d95d80af641d248f318"
+    },
+    {
+      "source": "work/test-results/docs-multi-apply-0.25.1-public-zip-phase-proof-2026-10-19/two-leds-01-baseline.stm32lab",
+      "file": "public-tests/docs-zip/two-leds-01-baseline.stm32lab",
+      "bytes": 3668,
+      "originalSha256": "29e39ba64366324f2242a4f75c6e93dc3084e568f8f03038952a1e44e105eac8",
+      "copiedSha256": "29e39ba64366324f2242a4f75c6e93dc3084e568f8f03038952a1e44e105eac8"
+    },
+    {
+      "source": "work/test-results/docs-multi-apply-0.25.1-public-zip-phase-proof-2026-10-19/two-leds-02-led1-HAL_GPIO_WritePin-main.c",
+      "file": "public-tests/docs-zip/two-leds-02-led1-HAL_GPIO_WritePin-main.c",
+      "bytes": 3007,
+      "originalSha256": "2b142a21fc7daec80f9e1c8295a463921878080291770868d30095e98bece584",
+      "copiedSha256": "2b142a21fc7daec80f9e1c8295a463921878080291770868d30095e98bece584"
+    },
+    {
+      "source": "work/test-results/docs-multi-apply-0.25.1-public-zip-phase-proof-2026-10-19/two-leds-02-led1-HAL_GPIO_WritePin.stm32lab",
+      "file": "public-tests/docs-zip/two-leds-02-led1-HAL_GPIO_WritePin.stm32lab",
+      "bytes": 5702,
+      "originalSha256": "ea3304dba0970c3dffe87697cb2947c28a089aa2bf08747a4be2e04626eaf208",
+      "copiedSha256": "ea3304dba0970c3dffe87697cb2947c28a089aa2bf08747a4be2e04626eaf208"
+    },
+    {
+      "source": "work/test-results/docs-multi-apply-0.25.1-public-zip-phase-proof-2026-10-19/two-leds-03-led2-HAL_GPIO_WritePin-main.c",
+      "file": "public-tests/docs-zip/two-leds-03-led2-HAL_GPIO_WritePin-main.c",
+      "bytes": 3383,
+      "originalSha256": "5ee2af4470dafbd3046fa6b87735fc958e5a6169f6789b8aba55377e8ecafc3a",
+      "copiedSha256": "5ee2af4470dafbd3046fa6b87735fc958e5a6169f6789b8aba55377e8ecafc3a"
+    },
+    {
+      "source": "work/test-results/docs-multi-apply-0.25.1-public-zip-phase-proof-2026-10-19/two-leds-03-led2-HAL_GPIO_WritePin.stm32lab",
+      "file": "public-tests/docs-zip/two-leds-03-led2-HAL_GPIO_WritePin.stm32lab",
+      "bytes": 7086,
+      "originalSha256": "9ab684e2400b3eb41c0ef35aed1c0ca13cc3f52dfd330540379428a8b2fae407",
+      "copiedSha256": "9ab684e2400b3eb41c0ef35aed1c0ca13cc3f52dfd330540379428a8b2fae407"
+    },
+    {
+      "source": "work/test-results/docs-multi-apply-0.25.1-public-zip-phase-proof-2026-10-19/two-leds-04-led1-HAL_GPIO_WritePin-main.c",
+      "file": "public-tests/docs-zip/two-leds-04-led1-HAL_GPIO_WritePin-main.c",
+      "bytes": 3383,
+      "originalSha256": "5ee2af4470dafbd3046fa6b87735fc958e5a6169f6789b8aba55377e8ecafc3a",
+      "copiedSha256": "5ee2af4470dafbd3046fa6b87735fc958e5a6169f6789b8aba55377e8ecafc3a"
+    },
+    {
+      "source": "work/test-results/docs-multi-apply-0.25.1-public-zip-phase-proof-2026-10-19/two-leds-04-led1-HAL_GPIO_WritePin.stm32lab",
+      "file": "public-tests/docs-zip/two-leds-04-led1-HAL_GPIO_WritePin.stm32lab",
+      "bytes": 7086,
+      "originalSha256": "9ab684e2400b3eb41c0ef35aed1c0ca13cc3f52dfd330540379428a8b2fae407",
+      "copiedSha256": "9ab684e2400b3eb41c0ef35aed1c0ca13cc3f52dfd330540379428a8b2fae407"
+    },
+    {
+      "source": "work/test-results/docs-multi-apply-0.25.1-public-zip-phase-proof-2026-10-19/two-leds-both-on-events.jsonl",
+      "file": "public-tests/docs-zip/two-leds-both-on-events.jsonl",
+      "bytes": 4235,
+      "originalSha256": "4b9d700758fafdfa941b3219c1c881f8a54cd0b93b0cee0d14d9b99645647a09",
+      "copiedSha256": "4b9d700758fafdfa941b3219c1c881f8a54cd0b93b0cee0d14d9b99645647a09"
+    },
+    {
+      "source": "work/test-results/docs-multi-apply-0.25.1-public-zip-phase-proof-2026-10-19/two-leds-restored.stm32lab",
+      "file": "public-tests/docs-zip/two-leds-restored.stm32lab",
+      "bytes": 7086,
+      "originalSha256": "9ab684e2400b3eb41c0ef35aed1c0ca13cc3f52dfd330540379428a8b2fae407",
+      "copiedSha256": "9ab684e2400b3eb41c0ef35aed1c0ca13cc3f52dfd330540379428a8b2fae407"
+    },
+    {
+      "source": "work/test-results/docs-multi-apply-0.25.1-public-standalone-2026-10-19/four-device-mix-01-baseline-main.c",
+      "file": "first-attempt-docs/four-device-mix-01-baseline-main.c",
+      "bytes": 2153,
+      "originalSha256": "ddcc083d6655e466321f682516b8145fe8a9c0a85f813d85c4608adf8e9d5cd0",
+      "copiedSha256": "ddcc083d6655e466321f682516b8145fe8a9c0a85f813d85c4608adf8e9d5cd0"
+    },
+    {
+      "source": "work/test-results/docs-multi-apply-0.25.1-public-standalone-2026-10-19/four-device-mix-01-baseline.stm32lab",
+      "file": "first-attempt-docs/four-device-mix-01-baseline.stm32lab",
+      "bytes": 3982,
+      "originalSha256": "80bb312bdf5705706e63378d0f821820293442f049d6592b7fcb3fc51c8713c9",
+      "copiedSha256": "80bb312bdf5705706e63378d0f821820293442f049d6592b7fcb3fc51c8713c9"
+    },
+    {
+      "source": "work/test-results/docs-multi-apply-0.25.1-public-standalone-2026-10-19/four-device-mix-02-led1-HAL_GPIO_WritePin-main.c",
+      "file": "first-attempt-docs/four-device-mix-02-led1-HAL_GPIO_WritePin-main.c",
+      "bytes": 3014,
+      "originalSha256": "49dbbadef1f0c5ae0d10e4be8166a0694b094f8f25c87ccf5f1ffc76b8916849",
+      "copiedSha256": "49dbbadef1f0c5ae0d10e4be8166a0694b094f8f25c87ccf5f1ffc76b8916849"
+    },
+    {
+      "source": "work/test-results/docs-multi-apply-0.25.1-public-standalone-2026-10-19/four-device-mix-02-led1-HAL_GPIO_WritePin.stm32lab",
+      "file": "first-attempt-docs/four-device-mix-02-led1-HAL_GPIO_WritePin.stm32lab",
+      "bytes": 6016,
+      "originalSha256": "f6286ff2003701f01b22ef3671f9f0677f22d46bce6a981a616ecdc0a043e6bb",
+      "copiedSha256": "f6286ff2003701f01b22ef3671f9f0677f22d46bce6a981a616ecdc0a043e6bb"
+    },
+    {
+      "source": "work/test-results/docs-multi-apply-0.25.1-public-standalone-2026-10-19/four-device-mix-03-pot1-all-main.c",
+      "file": "first-attempt-docs/four-device-mix-03-pot1-all-main.c",
+      "bytes": 4685,
+      "originalSha256": "0927e780701f3ae810fc61aab503183b563e28bd2727fac26685992327e4428a",
+      "copiedSha256": "0927e780701f3ae810fc61aab503183b563e28bd2727fac26685992327e4428a"
+    },
+    {
+      "source": "work/test-results/docs-multi-apply-0.25.1-public-standalone-2026-10-19/four-device-mix-03-pot1-all.stm32lab",
+      "file": "first-attempt-docs/four-device-mix-03-pot1-all.stm32lab",
+      "bytes": 8580,
+      "originalSha256": "94cf62eaa1cb5333bdb519697be90f9a3ce77d9fa7cdc8ab18ea1856fb9019d4",
+      "copiedSha256": "94cf62eaa1cb5333bdb519697be90f9a3ce77d9fa7cdc8ab18ea1856fb9019d4"
+    },
+    {
+      "source": "work/test-results/docs-multi-apply-0.25.1-public-standalone-2026-10-19/four-device-mix-04-uart1-all-main.c",
+      "file": "first-attempt-docs/four-device-mix-04-uart1-all-main.c",
+      "bytes": 6114,
+      "originalSha256": "d760ce3e39cc30bfc79d02b4dd2ea93b21e3362407b954b545d526900725d4c7",
+      "copiedSha256": "d760ce3e39cc30bfc79d02b4dd2ea93b21e3362407b954b545d526900725d4c7"
+    },
+    {
+      "source": "work/test-results/docs-multi-apply-0.25.1-public-standalone-2026-10-19/four-device-mix-04-uart1-all.stm32lab",
+      "file": "first-attempt-docs/four-device-mix-04-uart1-all.stm32lab",
+      "bytes": 11306,
+      "originalSha256": "011f6bdfbbad914ecd48a677b6065a53da63390432ada5ea0db32b9f107e4b79",
+      "copiedSha256": "011f6bdfbbad914ecd48a677b6065a53da63390432ada5ea0db32b9f107e4b79"
+    },
+    {
+      "source": "work/test-results/docs-multi-apply-0.25.1-public-standalone-2026-10-19/four-device-mix-05-servo1-all-main.c",
+      "file": "first-attempt-docs/four-device-mix-05-servo1-all-main.c",
+      "bytes": 7735,
+      "originalSha256": "35812a1dc245ce0e3fffa045effef80a8d685bb2979d0a498dfbf8c659d46d09",
+      "copiedSha256": "35812a1dc245ce0e3fffa045effef80a8d685bb2979d0a498dfbf8c659d46d09"
+    },
+    {
+      "source": "work/test-results/docs-multi-apply-0.25.1-public-standalone-2026-10-19/four-device-mix-05-servo1-all.stm32lab",
+      "file": "first-attempt-docs/four-device-mix-05-servo1-all.stm32lab",
+      "bytes": 13915,
+      "originalSha256": "4e32bcc04b146cf354dff57e68b219230282460e5557b6738d459438439ac0d7",
+      "copiedSha256": "4e32bcc04b146cf354dff57e68b219230282460e5557b6738d459438439ac0d7"
+    },
+    {
+      "source": "work/test-results/docs-multi-apply-0.25.1-public-standalone-2026-10-19/four-device-mix-06-pot1-all-main.c",
+      "file": "first-attempt-docs/four-device-mix-06-pot1-all-main.c",
+      "bytes": 7735,
+      "originalSha256": "35812a1dc245ce0e3fffa045effef80a8d685bb2979d0a498dfbf8c659d46d09",
+      "copiedSha256": "35812a1dc245ce0e3fffa045effef80a8d685bb2979d0a498dfbf8c659d46d09"
+    },
+    {
+      "source": "work/test-results/docs-multi-apply-0.25.1-public-standalone-2026-10-19/four-device-mix-06-pot1-all.stm32lab",
+      "file": "first-attempt-docs/four-device-mix-06-pot1-all.stm32lab",
+      "bytes": 13915,
+      "originalSha256": "4e32bcc04b146cf354dff57e68b219230282460e5557b6738d459438439ac0d7",
+      "copiedSha256": "4e32bcc04b146cf354dff57e68b219230282460e5557b6738d459438439ac0d7"
+    },
+    {
+      "source": "work/test-results/docs-multi-apply-0.25.1-public-standalone-2026-10-19/four-device-mix-live-stimuli-events.jsonl",
+      "file": "first-attempt-docs/four-device-mix-live-stimuli-events.jsonl",
+      "bytes": 13257,
+      "originalSha256": "268fbf80529279443c742db4911abb9b334f703716bf36c64756e0b7ad498b35",
+      "copiedSha256": "268fbf80529279443c742db4911abb9b334f703716bf36c64756e0b7ad498b35"
+    },
+    {
+      "source": "work/test-results/docs-multi-apply-0.25.1-public-standalone-2026-10-19/four-device-mix-restored.stm32lab",
+      "file": "first-attempt-docs/four-device-mix-restored.stm32lab",
+      "bytes": 13915,
+      "originalSha256": "4e32bcc04b146cf354dff57e68b219230282460e5557b6738d459438439ac0d7",
+      "copiedSha256": "4e32bcc04b146cf354dff57e68b219230282460e5557b6738d459438439ac0d7"
+    },
+    {
+      "source": "work/test-results/docs-multi-apply-0.25.1-public-standalone-2026-10-19/runtime-events.jsonl",
+      "file": "first-attempt-docs/runtime-events.jsonl",
+      "bytes": 35697,
+      "originalSha256": "5b5a0456dc09e84b679cc7834e3d45df7b546fb72933b6a411fa2b16429381f5",
+      "copiedSha256": "5b5a0456dc09e84b679cc7834e3d45df7b546fb72933b6a411fa2b16429381f5"
+    },
+    {
+      "source": "work/test-results/docs-multi-apply-0.25.1-public-standalone-2026-10-19/same-device-cards-01-baseline-main.c",
+      "file": "first-attempt-docs/same-device-cards-01-baseline-main.c",
+      "bytes": 2155,
+      "originalSha256": "722df4a8c317f14879cbac9622df19f040985dd911b05756591d28f7181201e4",
+      "copiedSha256": "722df4a8c317f14879cbac9622df19f040985dd911b05756591d28f7181201e4"
+    },
+    {
+      "source": "work/test-results/docs-multi-apply-0.25.1-public-standalone-2026-10-19/same-device-cards-01-baseline.stm32lab",
+      "file": "first-attempt-docs/same-device-cards-01-baseline.stm32lab",
+      "bytes": 3518,
+      "originalSha256": "0e383b35e9fa5c6ee4b0634fd169a9107d1bc07e83f9679dea1e225690e2fcbb",
+      "copiedSha256": "0e383b35e9fa5c6ee4b0634fd169a9107d1bc07e83f9679dea1e225690e2fcbb"
+    },
+    {
+      "source": "work/test-results/docs-multi-apply-0.25.1-public-standalone-2026-10-19/same-device-cards-02-led1-HAL_GPIO_WritePin-main.c",
+      "file": "first-attempt-docs/same-device-cards-02-led1-HAL_GPIO_WritePin-main.c",
+      "bytes": 3016,
+      "originalSha256": "095d01fce5d7756deafc6646b8f93694d5cd3044b682567dc21ee49e427f741b",
+      "copiedSha256": "095d01fce5d7756deafc6646b8f93694d5cd3044b682567dc21ee49e427f741b"
+    },
+    {
+      "source": "work/test-results/docs-multi-apply-0.25.1-public-standalone-2026-10-19/same-device-cards-02-led1-HAL_GPIO_WritePin.stm32lab",
+      "file": "first-attempt-docs/same-device-cards-02-led1-HAL_GPIO_WritePin.stm32lab",
+      "bytes": 5552,
+      "originalSha256": "2990c940f7d22ab51d34b7957f49e6475e27597783719bb5607d732c28429be3",
+      "copiedSha256": "2990c940f7d22ab51d34b7957f49e6475e27597783719bb5607d732c28429be3"
+    },
+    {
+      "source": "work/test-results/docs-multi-apply-0.25.1-public-standalone-2026-10-19/same-device-cards-03-led1-HAL_GPIO_TogglePin-main.c",
+      "file": "first-attempt-docs/same-device-cards-03-led1-HAL_GPIO_TogglePin-main.c",
+      "bytes": 3003,
+      "originalSha256": "183356997447154b5a7daf9c14026388630811127b8a79bd184aff116c7f8356",
+      "copiedSha256": "183356997447154b5a7daf9c14026388630811127b8a79bd184aff116c7f8356"
+    },
+    {
+      "source": "work/test-results/docs-multi-apply-0.25.1-public-standalone-2026-10-19/same-device-cards-03-led1-HAL_GPIO_TogglePin.stm32lab",
+      "file": "first-attempt-docs/same-device-cards-03-led1-HAL_GPIO_TogglePin.stm32lab",
+      "bytes": 5540,
+      "originalSha256": "02e852c72583d08d0d60bb95b081031fe81dcd9d1fbe0934a89be5c457b44cd7",
+      "copiedSha256": "02e852c72583d08d0d60bb95b081031fe81dcd9d1fbe0934a89be5c457b44cd7"
+    },
+    {
+      "source": "work/test-results/docs-multi-apply-0.25.1-public-standalone-2026-10-19/same-device-cards-04-failure-main.c",
+      "file": "first-attempt-docs/same-device-cards-04-failure-main.c",
+      "bytes": 3003,
+      "originalSha256": "183356997447154b5a7daf9c14026388630811127b8a79bd184aff116c7f8356",
+      "copiedSha256": "183356997447154b5a7daf9c14026388630811127b8a79bd184aff116c7f8356"
+    },
+    {
+      "source": "work/test-results/docs-multi-apply-0.25.1-public-standalone-2026-10-19/same-device-cards-04-failure.stm32lab",
+      "file": "first-attempt-docs/same-device-cards-04-failure.stm32lab",
+      "bytes": 5540,
+      "originalSha256": "02e852c72583d08d0d60bb95b081031fe81dcd9d1fbe0934a89be5c457b44cd7",
+      "copiedSha256": "02e852c72583d08d0d60bb95b081031fe81dcd9d1fbe0934a89be5c457b44cd7"
+    },
+    {
+      "source": "work/test-results/docs-multi-apply-0.25.1-public-standalone-2026-10-19/same-device-cards-failure.png",
+      "file": "first-attempt-docs/same-device-cards-failure.png",
+      "bytes": 149038,
+      "originalSha256": "bbcd0fb37d6a1f85d7dbf9918392d1b80fd9925b0ed02732b7194377df0cfa33",
+      "copiedSha256": "bbcd0fb37d6a1f85d7dbf9918392d1b80fd9925b0ed02732b7194377df0cfa33"
+    },
+    {
+      "source": "work/test-results/docs-multi-apply-0.25.1-public-standalone-2026-10-19/same-device-cards-toggle-events.jsonl",
+      "file": "first-attempt-docs/same-device-cards-toggle-events.jsonl",
+      "bytes": 3115,
+      "originalSha256": "9512c6e34f463ff0b79be585a667a91a2d8160a9dce656f5d7e2c08d8ab0f21a",
+      "copiedSha256": "9512c6e34f463ff0b79be585a667a91a2d8160a9dce656f5d7e2c08d8ab0f21a"
+    },
+    {
+      "source": "work/test-results/docs-multi-apply-0.25.1-public-standalone-2026-10-19/same-device-cards-write-first-events.jsonl",
+      "file": "first-attempt-docs/same-device-cards-write-first-events.jsonl",
+      "bytes": 3435,
+      "originalSha256": "801396bc699c2d8aa85454e7d8182af41b7cab05cee4a32fc7c91f66a7aa3b17",
+      "copiedSha256": "801396bc699c2d8aa85454e7d8182af41b7cab05cee4a32fc7c91f66a7aa3b17"
+    },
+    {
+      "source": "work/test-results/docs-multi-apply-0.25.1-public-standalone-2026-10-19/summary.json",
+      "file": "first-attempt-docs/summary.json",
+      "bytes": 66916,
+      "originalSha256": "77340c666bb0818789104a78de12a80fb4edd5e5e39aeb7a209e8678dafd6f21",
+      "copiedSha256": "77340c666bb0818789104a78de12a80fb4edd5e5e39aeb7a209e8678dafd6f21"
+    },
+    {
+      "source": "work/test-results/docs-multi-apply-0.25.1-public-standalone-2026-10-19/two-leds-01-baseline-main.c",
+      "file": "first-attempt-docs/two-leds-01-baseline-main.c",
+      "bytes": 2146,
+      "originalSha256": "6a1f300560e51122998e19a6533eddeb1d3e5d24f43f0d95d80af641d248f318",
+      "copiedSha256": "6a1f300560e51122998e19a6533eddeb1d3e5d24f43f0d95d80af641d248f318"
+    },
+    {
+      "source": "work/test-results/docs-multi-apply-0.25.1-public-standalone-2026-10-19/two-leds-01-baseline.stm32lab",
+      "file": "first-attempt-docs/two-leds-01-baseline.stm32lab",
+      "bytes": 3668,
+      "originalSha256": "29e39ba64366324f2242a4f75c6e93dc3084e568f8f03038952a1e44e105eac8",
+      "copiedSha256": "29e39ba64366324f2242a4f75c6e93dc3084e568f8f03038952a1e44e105eac8"
+    },
+    {
+      "source": "work/test-results/docs-multi-apply-0.25.1-public-standalone-2026-10-19/two-leds-02-led1-HAL_GPIO_WritePin-main.c",
+      "file": "first-attempt-docs/two-leds-02-led1-HAL_GPIO_WritePin-main.c",
+      "bytes": 3007,
+      "originalSha256": "2b142a21fc7daec80f9e1c8295a463921878080291770868d30095e98bece584",
+      "copiedSha256": "2b142a21fc7daec80f9e1c8295a463921878080291770868d30095e98bece584"
+    },
+    {
+      "source": "work/test-results/docs-multi-apply-0.25.1-public-standalone-2026-10-19/two-leds-02-led1-HAL_GPIO_WritePin.stm32lab",
+      "file": "first-attempt-docs/two-leds-02-led1-HAL_GPIO_WritePin.stm32lab",
+      "bytes": 5702,
+      "originalSha256": "ea3304dba0970c3dffe87697cb2947c28a089aa2bf08747a4be2e04626eaf208",
+      "copiedSha256": "ea3304dba0970c3dffe87697cb2947c28a089aa2bf08747a4be2e04626eaf208"
+    },
+    {
+      "source": "work/test-results/docs-multi-apply-0.25.1-public-standalone-2026-10-19/two-leds-03-led2-HAL_GPIO_WritePin-main.c",
+      "file": "first-attempt-docs/two-leds-03-led2-HAL_GPIO_WritePin-main.c",
+      "bytes": 3383,
+      "originalSha256": "5ee2af4470dafbd3046fa6b87735fc958e5a6169f6789b8aba55377e8ecafc3a",
+      "copiedSha256": "5ee2af4470dafbd3046fa6b87735fc958e5a6169f6789b8aba55377e8ecafc3a"
+    },
+    {
+      "source": "work/test-results/docs-multi-apply-0.25.1-public-standalone-2026-10-19/two-leds-03-led2-HAL_GPIO_WritePin.stm32lab",
+      "file": "first-attempt-docs/two-leds-03-led2-HAL_GPIO_WritePin.stm32lab",
+      "bytes": 7086,
+      "originalSha256": "9ab684e2400b3eb41c0ef35aed1c0ca13cc3f52dfd330540379428a8b2fae407",
+      "copiedSha256": "9ab684e2400b3eb41c0ef35aed1c0ca13cc3f52dfd330540379428a8b2fae407"
+    },
+    {
+      "source": "work/test-results/docs-multi-apply-0.25.1-public-standalone-2026-10-19/two-leds-04-led1-HAL_GPIO_WritePin-main.c",
+      "file": "first-attempt-docs/two-leds-04-led1-HAL_GPIO_WritePin-main.c",
+      "bytes": 3383,
+      "originalSha256": "5ee2af4470dafbd3046fa6b87735fc958e5a6169f6789b8aba55377e8ecafc3a",
+      "copiedSha256": "5ee2af4470dafbd3046fa6b87735fc958e5a6169f6789b8aba55377e8ecafc3a"
+    },
+    {
+      "source": "work/test-results/docs-multi-apply-0.25.1-public-standalone-2026-10-19/two-leds-04-led1-HAL_GPIO_WritePin.stm32lab",
+      "file": "first-attempt-docs/two-leds-04-led1-HAL_GPIO_WritePin.stm32lab",
+      "bytes": 7086,
+      "originalSha256": "9ab684e2400b3eb41c0ef35aed1c0ca13cc3f52dfd330540379428a8b2fae407",
+      "copiedSha256": "9ab684e2400b3eb41c0ef35aed1c0ca13cc3f52dfd330540379428a8b2fae407"
+    },
+    {
+      "source": "work/test-results/docs-multi-apply-0.25.1-public-standalone-2026-10-19/two-leds-both-on-events.jsonl",
+      "file": "first-attempt-docs/two-leds-both-on-events.jsonl",
+      "bytes": 4236,
+      "originalSha256": "cae2af9af79afa683892838dc88c00ef05b6d8aa5e7336815358ae8d08740e4f",
+      "copiedSha256": "cae2af9af79afa683892838dc88c00ef05b6d8aa5e7336815358ae8d08740e4f"
+    },
+    {
+      "source": "work/test-results/docs-multi-apply-0.25.1-public-standalone-2026-10-19/two-leds-restored.stm32lab",
+      "file": "first-attempt-docs/two-leds-restored.stm32lab",
+      "bytes": 7086,
+      "originalSha256": "9ab684e2400b3eb41c0ef35aed1c0ca13cc3f52dfd330540379428a8b2fae407",
+      "copiedSha256": "9ab684e2400b3eb41c0ef35aed1c0ca13cc3f52dfd330540379428a8b2fae407"
+    }
+  ]
+}

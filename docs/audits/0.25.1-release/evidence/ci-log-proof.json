@@ -1,0 +1,194 @@
+{
+  "passed": true,
+  "runId": 39227299473,
+  "headSha": "243ecf205354e18ed4701213c117906ab6a35080",
+  "file": "ci-logs.zip",
+  "sha256": "5a71775ca532e579c7576a90f5ef9af87352fe0f08de44ef54216dd9be06c627",
+  "bytes": 92005,
+  "zipIntegrity": {
+    "passed": true,
+    "members": 47,
+    "crcError": null
+  },
+  "counts": {
+    "unit": 406,
+    "pin": 25,
+    "docs": 3
+  },
+  "checks": [
+    {
+      "id": "unit",
+      "expected": 406,
+      "logMember": "Windows x64 portable/8_Test circuit engine and editor models.txt",
+      "stepConclusion": "success",
+      "stepUrl": "https://github.com/moonsyu/STM-Simulator/actions/runs/39227299473/job/117976592140#step:8:1",
+      "actual": 406,
+      "passed": 406,
+      "failed": 0,
+      "individualPassLines": 406,
+      "summaryLines": [
+        {
+          "line": 419,
+          "text": "2026-10-19T09:06:09.1605576Z ℹ tests 406"
+        },
+        {
+          "line": 421,
+          "text": "2026-10-19T09:06:09.1606121Z ℹ pass 406"
+        },
+        {
+          "line": 422,
+          "text": "2026-10-19T09:06:09.1606689Z ℹ fail 0"
+        }
+      ]
+    },
+    {
+      "id": "pin",
+      "expected": 25,
+      "logMember": "Windows x64 portable/28_Test pin option validation, live interrupt callbacks and analog input.txt",
+      "stepConclusion": "success",
+      "stepUrl": "https://github.com/moonsyu/STM-Simulator/actions/runs/39227299473/job/117976592140#step:28:1",
+      "actual": 25,
+      "passed": 25,
+      "failed": 0,
+      "cases": [
+        {
+          "line": 12,
+          "id": "validation-hidden-ccr-0"
+        },
+        {
+          "line": 13,
+          "id": "validation-hidden-ccr-1"
+        },
+        {
+          "line": 14,
+          "id": "validation-hidden-ccr-2"
+        },
+        {
+          "line": 15,
+          "id": "validation-label-timer-mode"
+        },
+        {
+          "line": 16,
+          "id": "validation-conflict-retains-edits"
+        },
+        {
+          "line": 17,
+          "id": "validation-empty-priority"
+        },
+        {
+          "line": 18,
+          "id": "validation-empty-prescaler"
+        },
+        {
+          "line": 19,
+          "id": "validation-empty-period"
+        },
+        {
+          "line": 20,
+          "id": "validation-empty-pulse"
+        },
+        {
+          "line": 21,
+          "id": "validation-empty-clock"
+        },
+        {
+          "line": 22,
+          "id": "validation-priority--1"
+        },
+        {
+          "line": 23,
+          "id": "validation-priority-16"
+        },
+        {
+          "line": 24,
+          "id": "validation-priority-1_5"
+        },
+        {
+          "line": 25,
+          "id": "validation-cancel-preserves-project"
+        },
+        {
+          "line": 26,
+          "id": "validation-label-pin-switch-save"
+        },
+        {
+          "line": 27,
+          "id": "validation-invalid-label-0"
+        },
+        {
+          "line": 28,
+          "id": "validation-invalid-label-1"
+        },
+        {
+          "line": 29,
+          "id": "validation-invalid-label-2"
+        },
+        {
+          "line": 30,
+          "id": "validation-generate-rejects-empty-priority"
+        },
+        {
+          "line": 31,
+          "id": "callbacks-disable-other"
+        },
+        {
+          "line": 32,
+          "id": "callbacks-disable-global"
+        },
+        {
+          "line": 33,
+          "id": "callbacks-change-priority"
+        },
+        {
+          "line": 34,
+          "id": "adc-analog-0"
+        },
+        {
+          "line": 35,
+          "id": "adc-analog-1"
+        },
+        {
+          "line": 36,
+          "id": "adc-analog-2"
+        }
+      ],
+      "scope": [
+        "validation",
+        "callbacks",
+        "adc"
+      ],
+      "groups": {
+        "validation": 19,
+        "callbacks": 3,
+        "adc": 3
+      }
+    },
+    {
+      "id": "docs",
+      "expected": 3,
+      "logMember": "Windows x64 portable/29_Test multiple Docs examples, live devices and saved projects.txt",
+      "stepConclusion": "success",
+      "stepUrl": "https://github.com/moonsyu/STM-Simulator/actions/runs/39227299473/job/117976592140#step:29:1",
+      "actual": 3,
+      "passed": 3,
+      "failed": 0,
+      "cases": [
+        {
+          "line": 11,
+          "id": "same-device-cards"
+        },
+        {
+          "line": 12,
+          "id": "two-leds"
+        },
+        {
+          "line": 13,
+          "id": "four-device-mix"
+        }
+      ]
+    }
+  ],
+  "verifiedAt": "2026-10-19T09:29:55.250188+00:00",
+  "runUrl": "https://github.com/moonsyu/STM-Simulator/actions/runs/39227299473",
+  "scope": "Original successful GitHub CI logs. Unit and CI Electron tests ran before packaging. These counts are not the separate public EXE regression counts. PIN scope is validation/callbacks/ADC only, not the full option matrix."
+}

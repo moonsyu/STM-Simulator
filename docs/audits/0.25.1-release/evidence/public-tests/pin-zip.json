@@ -1,0 +1,456 @@
+{
+  "passed": true,
+  "completeMatrix": false,
+  "requestedCompleteMatrix": false,
+  "packageVersion": "0.25.1",
+  "appVersion": "0.25.1",
+  "sourceCommit": "243ecf205354e18ed4701213c117906ab6a35080",
+  "sourceDirty": false,
+  "sourceStatus": "",
+  "sourceSha256": "6354826c8b46609e1ffa92f5cdda271434d71fc3e1611b79242a30c5360f32fb",
+  "startedAt": "2026-10-19T09:34:03.497Z",
+  "runId": "2026-10-19T09-34-03-197Z",
+  "scopes": [
+    "validation",
+    "callbacks",
+    "adc"
+  ],
+  "limit": null,
+  "cases": [
+    {
+      "id": "validation-hidden-ccr-0",
+      "settings": {
+        "value": "",
+        "requestedMode": "base"
+      },
+      "startedAt": "2026-10-19T09:34:11.819Z",
+      "passed": true,
+      "invalidHiddenFieldRemainsEditable": true,
+      "finishedAt": "2026-10-19T09:34:12.753Z"
+    },
+    {
+      "id": "validation-hidden-ccr-1",
+      "settings": {
+        "value": "1.5",
+        "requestedMode": "capture"
+      },
+      "startedAt": "2026-10-19T09:34:12.757Z",
+      "passed": true,
+      "invalidHiddenFieldRemainsEditable": true,
+      "finishedAt": "2026-10-19T09:34:13.325Z"
+    },
+    {
+      "id": "validation-hidden-ccr-2",
+      "settings": {
+        "value": "4294967296",
+        "requestedMode": "encoder"
+      },
+      "startedAt": "2026-10-19T09:34:13.327Z",
+      "passed": true,
+      "invalidHiddenFieldRemainsEditable": true,
+      "finishedAt": "2026-10-19T09:34:13.828Z"
+    },
+    {
+      "id": "validation-label-timer-mode",
+      "settings": {
+        "label": "AUDIT_LABEL",
+        "timer": "TIM2",
+        "mode": "pwm"
+      },
+      "startedAt": "2026-10-19T09:34:13.830Z",
+      "passed": true,
+      "labelPreserved": true,
+      "finishedAt": "2026-10-19T09:34:14.570Z"
+    },
+    {
+      "id": "validation-conflict-retains-edits",
+      "settings": {
+        "pin": "PA2",
+        "occupied": "PA3",
+        "label": "CONFLICT_LABEL",
+        "pull": "PULLDOWN",
+        "edge": "CHANGE",
+        "initial": 1
+      },
+      "startedAt": "2026-10-19T09:34:14.575Z",
+      "passed": true,
+      "rollbackKeepsPriorEdits": true,
+      "finishedAt": "2026-10-19T09:34:15.501Z"
+    },
+    {
+      "id": "validation-empty-priority",
+      "settings": {
+        "field": "priority",
+        "input": ""
+      },
+      "startedAt": "2026-10-19T09:34:15.503Z",
+      "passed": true,
+      "emptyRejected": true,
+      "finishedAt": "2026-10-19T09:34:16.068Z"
+    },
+    {
+      "id": "validation-empty-prescaler",
+      "settings": {
+        "field": "prescaler",
+        "input": ""
+      },
+      "startedAt": "2026-10-19T09:34:16.069Z",
+      "passed": true,
+      "emptyRejected": true,
+      "finishedAt": "2026-10-19T09:34:16.634Z"
+    },
+    {
+      "id": "validation-empty-period",
+      "settings": {
+        "field": "period",
+        "input": ""
+      },
+      "startedAt": "2026-10-19T09:34:16.636Z",
+      "passed": true,
+      "emptyRejected": true,
+      "finishedAt": "2026-10-19T09:34:17.197Z"
+    },
+    {
+      "id": "validation-empty-pulse",
+      "settings": {
+        "field": "pulse",
+        "input": ""
+      },
+      "startedAt": "2026-10-19T09:34:17.200Z",
+      "passed": true,
+      "emptyRejected": true,
+      "finishedAt": "2026-10-19T09:34:17.768Z"
+    },
+    {
+      "id": "validation-empty-clock",
+      "settings": {
+        "field": "clock",
+        "input": ""
+      },
+      "startedAt": "2026-10-19T09:34:17.771Z",
+      "passed": true,
+      "emptyRejected": true,
+      "finishedAt": "2026-10-19T09:34:18.331Z"
+    },
+    {
+      "id": "validation-priority--1",
+      "settings": {
+        "value": -1
+      },
+      "startedAt": "2026-10-19T09:34:18.333Z",
+      "passed": true,
+      "invalidPriorityRejected": true,
+      "finishedAt": "2026-10-19T09:34:18.801Z"
+    },
+    {
+      "id": "validation-priority-16",
+      "settings": {
+        "value": 16
+      },
+      "startedAt": "2026-10-19T09:34:18.803Z",
+      "passed": true,
+      "invalidPriorityRejected": true,
+      "finishedAt": "2026-10-19T09:34:19.317Z"
+    },
+    {
+      "id": "validation-priority-1_5",
+      "settings": {
+        "value": 1.5
+      },
+      "startedAt": "2026-10-19T09:34:19.319Z",
+      "passed": true,
+      "invalidPriorityRejected": true,
+      "finishedAt": "2026-10-19T09:34:19.842Z"
+    },
+    {
+      "id": "validation-cancel-preserves-project",
+      "settings": {},
+      "startedAt": "2026-10-19T09:34:19.844Z",
+      "passed": true,
+      "cancelPreservesConfigurationAndCode": true,
+      "finishedAt": "2026-10-19T09:34:20.647Z"
+    },
+    {
+      "id": "validation-label-pin-switch-save",
+      "settings": {
+        "label": "LD2_AUDIT"
+      },
+      "startedAt": "2026-10-19T09:34:20.649Z",
+      "passed": true,
+      "roundTrip": {
+        "file": "validation-label-pin-switch-save.stm32lab",
+        "sha256": "46c233c84862ddeebacf16ed25fcfcb2eac95c38224402e7bb3abb28b04637b6"
+      },
+      "generatedCodeSha256": "bb3eeeaaa5a79ad7d5ab60745b539bdf04d4ffb3c35cd6b18d916d559c4e4625",
+      "finishedAt": "2026-10-19T09:34:22.236Z"
+    },
+    {
+      "id": "validation-invalid-label-0",
+      "settings": {
+        "label": "9bad"
+      },
+      "startedAt": "2026-10-19T09:34:22.238Z",
+      "passed": true,
+      "invalidLabelRejected": true,
+      "finishedAt": "2026-10-19T09:34:22.702Z"
+    },
+    {
+      "id": "validation-invalid-label-1",
+      "settings": {
+        "label": "two words"
+      },
+      "startedAt": "2026-10-19T09:34:22.704Z",
+      "passed": true,
+      "invalidLabelRejected": true,
+      "finishedAt": "2026-10-19T09:34:23.232Z"
+    },
+    {
+      "id": "validation-invalid-label-2",
+      "settings": {
+        "label": "__proto__"
+      },
+      "startedAt": "2026-10-19T09:34:23.233Z",
+      "passed": true,
+      "invalidLabelRejected": true,
+      "finishedAt": "2026-10-19T09:34:23.740Z"
+    },
+    {
+      "id": "validation-generate-rejects-empty-priority",
+      "settings": {},
+      "startedAt": "2026-10-19T09:34:23.742Z",
+      "passed": true,
+      "invalidGenerationPreservesOriginalCode": true,
+      "finishedAt": "2026-10-19T09:34:24.389Z"
+    },
+    {
+      "id": "callbacks-disable-other",
+      "settings": {
+        "pins": [
+          "PA0",
+          "PA1",
+          "PA2"
+        ],
+        "priority": [
+          0,
+          1,
+          2
+        ],
+        "kind": "disable-other"
+      },
+      "startedAt": "2026-10-19T09:34:24.391Z",
+      "passed": true,
+      "before": [
+        "IRQ 1",
+        "IRQ 4"
+      ],
+      "after": [
+        "IRQ 2"
+      ],
+      "generatedCodeSha256": "86366a79fda6f92d069d82ab14db2caf5c4664eaee3142391f8605d4140a603b",
+      "executedCodeSha256": "e6af0d344e5de2b168f6e8363168e9895b5fac875f951a6724546d5c8aa4540b",
+      "finishedAt": "2026-10-19T09:34:26.795Z"
+    },
+    {
+      "id": "callbacks-disable-global",
+      "settings": {
+        "pins": [
+          "PA0",
+          "PA1",
+          "PA2"
+        ],
+        "priority": [
+          0,
+          1,
+          2
+        ],
+        "kind": "disable-global"
+      },
+      "startedAt": "2026-10-19T09:34:26.796Z",
+      "passed": true,
+      "before": [
+        "IRQ 1"
+      ],
+      "after": [
+        "IRQ 2",
+        "IRQ 4"
+      ],
+      "generatedCodeSha256": "d0e41aa3eef05482e6226a34e4da1e12cb9b54d8e0592cda1c11429e1618e905",
+      "executedCodeSha256": "1882a413d89fa6db8f87f431775ee6488cc61e6071bc3c7ab3e4d90ef0b9b63c",
+      "finishedAt": "2026-10-19T09:34:29.117Z"
+    },
+    {
+      "id": "callbacks-change-priority",
+      "settings": {
+        "pins": [
+          "PA0",
+          "PA1",
+          "PA2"
+        ],
+        "priority": [
+          0,
+          1,
+          2
+        ],
+        "kind": "change-priority"
+      },
+      "startedAt": "2026-10-19T09:34:29.119Z",
+      "passed": true,
+      "before": [
+        "IRQ 1",
+        "IRQ 4",
+        "IRQ 2"
+      ],
+      "after": [],
+      "generatedCodeSha256": "d0e41aa3eef05482e6226a34e4da1e12cb9b54d8e0592cda1c11429e1618e905",
+      "executedCodeSha256": "8074d35fd18eaef4f8de5f0a7d2ecfa721433dd72788c0aca7912842dfb38fb4",
+      "finishedAt": "2026-10-19T09:34:31.425Z"
+    },
+    {
+      "id": "adc-analog-0",
+      "settings": {
+        "pin": "PA0",
+        "function": "ADC1_IN0",
+        "voltage": 0.33,
+        "pull": "PULLUP"
+      },
+      "startedAt": "2026-10-19T09:34:31.426Z",
+      "passed": true,
+      "adc": 409,
+      "measuredVoltage": 0.33,
+      "generatedCodeSha256": "681e607c5011a03dd477244e97eeaa8c046ca8c83ee39f8f02bc3b43db5d9af4",
+      "executedCodeSha256": "1d1cfccf84316a7329a5d4cf87f340fe3e40b37aa8f3da02d72380241946adb0",
+      "finishedAt": "2026-10-19T09:34:32.877Z"
+    },
+    {
+      "id": "adc-analog-1",
+      "settings": {
+        "pin": "PA0",
+        "function": "ADC1_IN0",
+        "voltage": 1.65,
+        "pull": "PULLDOWN"
+      },
+      "startedAt": "2026-10-19T09:34:32.878Z",
+      "passed": true,
+      "adc": 2047,
+      "measuredVoltage": 1.65,
+      "generatedCodeSha256": "9a7d20a9c9997fcd8efe1a266a0804700e616bbcc7d5d3d4e3c705c4a6160f82",
+      "executedCodeSha256": "415f4dfd488ae5ab89d8197c49a13534faa4524d3733021cebd31a72e12dab5d",
+      "finishedAt": "2026-10-19T09:34:34.265Z"
+    },
+    {
+      "id": "adc-analog-2",
+      "settings": {
+        "pin": "PA0",
+        "function": "ADC1_IN0",
+        "voltage": 3,
+        "pull": "NOPULL"
+      },
+      "startedAt": "2026-10-19T09:34:34.266Z",
+      "passed": true,
+      "adc": 3723,
+      "measuredVoltage": 3,
+      "generatedCodeSha256": "1f6cdf0ee3a78e3edef91a4c3f120ffa7587bbe296f7e2db74fbbf8ff5b75eb0",
+      "executedCodeSha256": "50351711485106e906a6bd6d905ca7978eb5f9aa4fc9f6688ff64715bcf253c9",
+      "finishedAt": "2026-10-19T09:34:35.629Z"
+    }
+  ],
+  "functionChoices": [],
+  "pageErrors": [],
+  "execution": {
+    "mode": "portable-exe-cdp",
+    "viewportKind": "BrowserWindow content size",
+    "exeSha256": "8ab5fc812df020b4bf68b9eb8941e521be75199e0c1cc66ff1a45e08d2c58566"
+  },
+  "limitations": [
+    "Actual simulator execution; no physical STM32 hardware or ARM firmware claim.",
+    "Speed is generated VERY_HIGH and AF is derived from function; no independent Speed/AF selector exists.",
+    "Peripheral function selection coverage is distinct from peripheral electrical execution coverage.",
+    "Executed instrumentation preserves generated initialization; USER CODE 3 automatic Toggle is replaced by an idle delay to observe initial values."
+  ],
+  "hardwareOracle": {
+    "analog": "ST RM0390 Rev9 section7.3.12 p182: weak pulls disabled, digital IDR zero; external voltage remains measurable by ADC."
+  },
+  "diagnosticWarnings": [],
+  "gpioPins": [
+    "PA0",
+    "PA1",
+    "PA10",
+    "PA11",
+    "PA12",
+    "PA13",
+    "PA14",
+    "PA15",
+    "PA2",
+    "PA3",
+    "PA4",
+    "PA5",
+    "PA6",
+    "PA7",
+    "PA8",
+    "PA9",
+    "PB0",
+    "PB1",
+    "PB10",
+    "PB12",
+    "PB13",
+    "PB14",
+    "PB15",
+    "PB2",
+    "PB3",
+    "PB4",
+    "PB5",
+    "PB6",
+    "PB7",
+    "PB8",
+    "PB9",
+    "PC0",
+    "PC1",
+    "PC10",
+    "PC11",
+    "PC12",
+    "PC13",
+    "PC14",
+    "PC15",
+    "PC2",
+    "PC3",
+    "PC4",
+    "PC5",
+    "PC6",
+    "PC7",
+    "PC8",
+    "PC9",
+    "PD2",
+    "PH0",
+    "PH1"
+  ],
+  "expected": {
+    "functionChoices": 370,
+    "gpioCases": 30,
+    "gpioPinCombinations": 1500,
+    "extiEnabledCases": 288,
+    "extiEnabledPinCombinations": 2016,
+    "extiDisabledCases": 18,
+    "extiDisabledPinCombinations": 126
+  },
+  "sourceSha256After": "6354826c8b46609e1ffa92f5cdda271434d71fc3e1611b79242a30c5360f32fb",
+  "coverage": {
+    "functionChoices": 0,
+    "gpioCases": 0,
+    "extiEnabledCases": 0,
+    "extiDisabledCases": 0,
+    "validationCases": 19,
+    "callbackMutationCases": 3,
+    "adcCases": 3
+  },
+  "extiCombinationsPerIrq": {
+    "EXTI0_IRQn": 0,
+    "EXTI1_IRQn": 0,
+    "EXTI2_IRQn": 0,
+    "EXTI3_IRQn": 0,
+    "EXTI4_IRQn": 0,
+    "EXTI9_5_IRQn": 0,
+    "EXTI15_10_IRQn": 0
+  },
+  "finishedAt": "2026-10-19T09:34:35.743Z",
+  "completedCases": 25
+}

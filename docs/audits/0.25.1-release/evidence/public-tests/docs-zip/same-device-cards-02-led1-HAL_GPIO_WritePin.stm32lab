@@ -1,0 +1,133 @@
+{
+  "format": "stm32-circuit-lab",
+  "version": 2,
+  "name": "same-device-cards",
+  "code": "#include \"main.h\"\n#include <stdio.h>\n\n/* Copy this main.c into a CubeIDE STM32F446RE project with matching\n * pin / peripheral / NVIC settings and Cube-generated IRQ / MSP files.\n * Clock: HSI direct (PLL off), APB1 timer clock = 16000000 Hz.\n * printf: SWV ITM port 0 (enable SWV in the debugger). UART uses its pins.\n * With newlib-nano, enable -u _printf_float for floating-point printf. */\n\n\nvoid SystemClock_Config(void);\nvoid Error_Handler(void);\nstatic void MX_GPIO_Init(void);\n\nint auditUserKeep(void);\nunsigned int auditUserCycles = 0;\n\n/* STM DEVICE DOCS HEADERS BEGIN */\n#include <stdio.h>\n#include <math.h>\n/* STM DEVICE DOCS HEADERS END */\nint main(void) {\n/* STM DEVICE DOCS DECLARATIONS BEGIN */\n    \n/* STM DEVICE DOCS DECLARATIONS END */\n\n  HAL_Init();\n  SystemClock_Config();\n  MX_GPIO_Init();\n  /* USER CODE BEGIN 2 */\n/* STM DEVICE DOCS INIT BEGIN */\n    {\n        \n    }\n/* STM DEVICE DOCS INIT END */\n\n  printf(\"USER_KEEP_same-device-cards=%d\\n\", auditUserKeep());\n  /* USER CODE END 2 */\n  while (1) {\n    /* USER CODE BEGIN 3 */\n/* STM DEVICE DOCS STEP BEGIN */\n        {\n            HAL_GPIO_WritePin(GPIOA, GPIO_PIN_5, GPIO_PIN_SET);\n        }\n/* STM DEVICE DOCS STEP END */\n\n    auditUserCycles++;\n    HAL_Delay(137);\n    /* USER CODE END 3 */\n  }\n}\n\nvoid SystemClock_Config(void) {\n  RCC_OscInitTypeDef osc = {0};\n  RCC_ClkInitTypeDef clk = {0};\n  __HAL_RCC_PWR_CLK_ENABLE();\n  __HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE1);\n  osc.OscillatorType = RCC_OSCILLATORTYPE_HSI;\n  osc.HSIState = RCC_HSI_ON;\n  osc.HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT;\n  osc.PLL.PLLState = RCC_PLL_OFF;\n  if (HAL_RCC_OscConfig(&osc) != HAL_OK) Error_Handler();\n  clk.ClockType = RCC_CLOCKTYPE_HCLK | RCC_CLOCKTYPE_SYSCLK | RCC_CLOCKTYPE_PCLK1 | RCC_CLOCKTYPE_PCLK2;\n  clk.SYSCLKSource = RCC_SYSCLKSOURCE_HSI;\n  clk.AHBCLKDivider = RCC_SYSCLK_DIV1;\n  clk.APB1CLKDivider = RCC_HCLK_DIV1;\n  clk.APB2CLKDivider = RCC_HCLK_DIV1;\n  if (HAL_RCC_ClockConfig(&clk, FLASH_LATENCY_0) != HAL_OK) Error_Handler();\n}\n\nstatic void MX_GPIO_Init(void) {\n  GPIO_InitTypeDef GPIO_InitStruct = {0};\n  __HAL_RCC_GPIOB_CLK_ENABLE();\n  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_12, GPIO_PIN_SET);\n  GPIO_InitStruct.Pin = GPIO_PIN_12;\n  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;\n  GPIO_InitStruct.Pull = GPIO_NOPULL;\n  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;\n  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);\n\n/* STM DEVICE DOCS MX_GPIO_Init BEGIN */\n{\n\n  GPIO_InitTypeDef GPIO_InitStruct = {0};\n  __HAL_RCC_GPIOA_CLK_ENABLE();\n  HAL_GPIO_WritePin(GPIOA, GPIO_PIN_5, GPIO_PIN_RESET);\n  GPIO_InitStruct.Pin = GPIO_PIN_5;\n  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;\n  GPIO_InitStruct.Pull = GPIO_NOPULL;\n  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;\n  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);\n\n}\n/* STM DEVICE DOCS MX_GPIO_Init END */\n}\n\nint __io_putchar(int ch) {\n  ITM_SendChar(ch);\n  return ch;\n}\n\nvoid Error_Handler(void) {\n  __disable_irq();\n  while (1) { }\n}\n\nint auditUserKeep(void) { return 42; }\n",
+  "components": [
+    {
+      "id": "led1",
+      "name": "led1",
+      "type": "led",
+      "x": 620,
+      "y": 300,
+      "rotation": 0,
+      "span": 70,
+      "color": "red"
+    },
+    {
+      "id": "userRes",
+      "name": "User load",
+      "type": "resistor",
+      "x": 1000,
+      "y": 650,
+      "rotation": 0,
+      "span": 70,
+      "value": 10000
+    },
+    {
+      "id": "docsPart1",
+      "name": "R1 · Docs",
+      "type": "resistor",
+      "x": 830,
+      "y": 300,
+      "rotation": 0,
+      "span": 42,
+      "value": 330
+    }
+  ],
+  "wires": [
+    {
+      "id": "user-wire-a",
+      "from": "board:CN10:16",
+      "to": "part:userRes:a",
+      "color": "#ff0000",
+      "points": [
+        {
+          "x": 1000,
+          "y": 200
+        }
+      ]
+    },
+    {
+      "id": "user-wire-b",
+      "from": "part:userRes:b",
+      "to": "board:CN6:6",
+      "color": "#111111"
+    },
+    {
+      "id": "docsWire1",
+      "from": "board:CN6:6",
+      "to": "part:led1:b",
+      "color": "#4e647b"
+    },
+    {
+      "id": "docsWire2",
+      "from": "board:CN10:11",
+      "to": "part:docsPart1:a",
+      "color": "#23a68a"
+    },
+    {
+      "id": "docsWire3",
+      "from": "part:docsPart1:b",
+      "to": "part:led1:a",
+      "color": "#23a68a"
+    }
+  ],
+  "surfaces": {
+    "board": {
+      "hidden": false
+    },
+    "breadboard": {
+      "hidden": true
+    }
+  },
+  "mcu": {
+    "family": "STM32F446RE",
+    "pins": {
+      "PB12": {
+        "function": "GPIO_Output",
+        "pull": "NOPULL",
+        "edge": "FALLING",
+        "label": "USER_KEEP",
+        "initial": 1
+      },
+      "PA5": {
+        "function": "GPIO_Output",
+        "pull": "NOPULL",
+        "edge": "FALLING",
+        "label": "LD2",
+        "initial": 0
+      }
+    },
+    "peripherals": {},
+    "nvic": {},
+    "timerClockHz": 16000000
+  },
+  "firmware": {
+    "mode": "hal",
+    "files": []
+  },
+  "simulation": {
+    "stepMs": 1,
+    "pwmWaveform": false
+  },
+  "deviceDocs": {
+    "bindings": [
+      {
+        "key": "led1",
+        "type": "led",
+        "api": "HAL_GPIO_WritePin",
+        "mode": "hal",
+        "parts": {
+          "led1": "led1",
+          "r1": "docsPart1"
+        },
+        "pins": {
+          "PA5": "PA5"
+        },
+        "peripherals": {}
+      }
+    ],
+    "inlineChecksum": "b636e7af"
+  }
+}
