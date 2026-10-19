@@ -6,5 +6,6 @@
 *.md text eol=lf
 src/themes/jellybeans/jellybeans.vim -text
 # Audit checksums refer to the original bytes, including recorded line endings.
-docs/audits/pin-options-2026-10-19/evidence/** -text
-docs/audits/hal-docs-multi-2026-10-19/evidence/** -text
+docs/audits/pin-options-2026-10-19/evidence/** -text -diff
+docs/audits/hal-docs-multi-2026-10-19/evidence/** -text -diff
+docs/audits/0.25.1-release/evidence/** -text -diff

@@ -1,0 +1,314 @@
+{
+  "format": "stm32-circuit-lab",
+  "version": 2,
+  "name": "four-device-mix",
+  "code": "#include \"main.h\"\n#include <stdio.h>\n\n/* Copy this main.c into a CubeIDE STM32F446RE project with matching\n * pin / peripheral / NVIC settings and Cube-generated IRQ / MSP files.\n * Clock: HSI direct (PLL off), APB1 timer clock = 16000000 Hz.\n * printf: SWV ITM port 0 (enable SWV in the debugger). UART uses its pins.\n * With newlib-nano, enable -u _printf_float for floating-point printf. */\n\n\nvoid SystemClock_Config(void);\nvoid Error_Handler(void);\nstatic void MX_GPIO_Init(void);\n\nint auditUserKeep(void);\nunsigned int auditUserCycles = 0;\n\n/* STM DEVICE DOCS HEADERS BEGIN */\n#include <stdio.h>\n#include <math.h>\nADC_HandleTypeDef hadc1;\nUART_HandleTypeDef huart2;\nTIM_HandleTypeDef htim2;\n/* STM DEVICE DOCS HEADERS END */\nint main(void) {\n/* STM DEVICE DOCS DECLARATIONS BEGIN */\n    uint8_t STM_D2_rx[1];\n    uint32_t STM_D3_servoStep = 0;\n/* STM DEVICE DOCS DECLARATIONS END */\n\n  HAL_Init();\n  SystemClock_Config();\n  MX_GPIO_Init();\n  /* USER CODE BEGIN 2 */\n/* STM DEVICE DOCS INIT BEGIN */\n    {\n        \n        __HAL_RCC_ADC1_CLK_ENABLE();\n        hadc1.Instance = ADC1;\n        hadc1.Init.ClockPrescaler = ADC_CLOCK_SYNC_PCLK_DIV4;\n        hadc1.Init.Resolution = ADC_RESOLUTION_12B;\n        hadc1.Init.ScanConvMode = DISABLE;\n        hadc1.Init.ContinuousConvMode = DISABLE;\n        hadc1.Init.DiscontinuousConvMode = DISABLE;\n        hadc1.Init.ExternalTrigConvEdge = ADC_EXTERNALTRIGCONVEDGE_NONE;\n        hadc1.Init.ExternalTrigConv = ADC_SOFTWARE_START;\n        hadc1.Init.DataAlign = ADC_DATAALIGN_RIGHT;\n        hadc1.Init.NbrOfConversion = 1;\n        hadc1.Init.DMAContinuousRequests = DISABLE;\n        hadc1.Init.EOCSelection = ADC_EOC_SINGLE_CONV;\n        HAL_ADC_Init(&hadc1);\n        ADC_ChannelConfTypeDef sConfig = {0};\n        sConfig.Channel = ADC_CHANNEL_0;\n        sConfig.Rank = 1;\n        sConfig.SamplingTime = ADC_SAMPLETIME_480CYCLES;\n        HAL_ADC_ConfigChannel(&hadc1, &sConfig);\n        \n    }\n    {\n        \n        __HAL_RCC_USART2_CLK_ENABLE();\n        huart2.Instance = USART2;\n        huart2.Init.BaudRate = 9600;\n        huart2.Init.WordLength = UART_WORDLENGTH_8B;\n        huart2.Init.StopBits = UART_STOPBITS_1;\n        huart2.Init.Parity = UART_PARITY_NONE;\n        huart2.Init.Mode = UART_MODE_TX_RX;\n        huart2.Init.HwFlowCtl = UART_HWCONTROL_NONE;\n        huart2.Init.OverSampling = UART_OVERSAMPLING_16;\n        HAL_UART_Init(&huart2);\n        \n    }\n    {\n        \n        __HAL_RCC_TIM2_CLK_ENABLE();\n        htim2.Instance = TIM2;\n        htim2.Init.Prescaler = 15;\n        htim2.Init.CounterMode = TIM_COUNTERMODE_UP;\n        htim2.Init.Period = 19999;\n        htim2.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;\n        htim2.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;\n        HAL_TIM_PWM_Init(&htim2);\n        TIM_OC_InitTypeDef channel = {0};\n        channel.OCMode = TIM_OCMODE_PWM1;\n        channel.OCPolarity = TIM_OCPOLARITY_HIGH;\n        channel.Pulse = 0;\n        channel.OCFastMode = TIM_OCFAST_DISABLE;\n        HAL_TIM_PWM_ConfigChannel(&htim2, &channel, TIM_CHANNEL_1);\n        \n    }\n    {\n        \n    }\n    {\n        \n    }\n    {\n        uint8_t message[] = \"HAL UART ready\\r\\n\";\n        HAL_UART_Transmit((&huart2), message, (sizeof(message) - 1), 100);\n    }\n    {\n        TIM_OC_InitTypeDef channel = {0};\n        (channel.OCMode = TIM_OCMODE_PWM1);\n        (channel.OCPolarity = TIM_OCPOLARITY_HIGH);\n        (channel.Pulse = 1000);\n        HAL_TIM_PWM_ConfigChannel((&htim2), (&channel), TIM_CHANNEL_1);\n        HAL_TIM_PWM_Start((&htim2), TIM_CHANNEL_1);\n    }\n/* STM DEVICE DOCS INIT END */\n\n  printf(\"USER_KEEP_four-device-mix=%d\\n\", auditUserKeep());\n  /* USER CODE END 2 */\n  while (1) {\n    /* USER CODE BEGIN 3 */\n/* STM DEVICE DOCS STEP BEGIN */\n        {\n            HAL_GPIO_WritePin(GPIOA, GPIO_PIN_5, GPIO_PIN_SET);\n        }\n        {\n            ADC_ChannelConfTypeDef docsChannel = {0}; docsChannel.Channel = ADC_CHANNEL_0; docsChannel.Rank = 1; docsChannel.SamplingTime = ADC_SAMPLETIME_3CYCLES; HAL_ADC_ConfigChannel(&hadc1, &docsChannel);\n            HAL_ADC_Start((&hadc1));\n            HAL_ADC_PollForConversion((&hadc1), 10);\n            uint32_t raw = HAL_ADC_GetValue((&hadc1));\n            printf(\"ADC=%lu, voltage=%.3f V\\n\", raw, ((raw * 3.3) / 4095));\n            HAL_Delay(200);\n        }\n        {\n            if ((HAL_UART_Receive((&huart2), STM_D2_rx, 1, 10) == HAL_OK)) {\n                HAL_UART_Transmit((&huart2), STM_D2_rx, 1, 100);\n            }\n        }\n        {\n            uint32_t pulse = (1000 + (STM_D3_servoStep * 500));\n            __HAL_TIM_SET_COMPARE((&htim2), TIM_CHANNEL_1, pulse);\n            printf(\"Servo command=%lu deg pulse=%lu us\\n\", (STM_D3_servoStep * 90), pulse);\n            (STM_D3_servoStep = ((STM_D3_servoStep + 1) % 3));\n            HAL_Delay(1200);\n        }\n/* STM DEVICE DOCS STEP END */\n\n    auditUserCycles++;\n    HAL_Delay(137);\n    /* USER CODE END 3 */\n  }\n}\n\nvoid SystemClock_Config(void) {\n  RCC_OscInitTypeDef osc = {0};\n  RCC_ClkInitTypeDef clk = {0};\n  __HAL_RCC_PWR_CLK_ENABLE();\n  __HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE1);\n  osc.OscillatorType = RCC_OSCILLATORTYPE_HSI;\n  osc.HSIState = RCC_HSI_ON;\n  osc.HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT;\n  osc.PLL.PLLState = RCC_PLL_OFF;\n  if (HAL_RCC_OscConfig(&osc) != HAL_OK) Error_Handler();\n  clk.ClockType = RCC_CLOCKTYPE_HCLK | RCC_CLOCKTYPE_SYSCLK | RCC_CLOCKTYPE_PCLK1 | RCC_CLOCKTYPE_PCLK2;\n  clk.SYSCLKSource = RCC_SYSCLKSOURCE_HSI;\n  clk.AHBCLKDivider = RCC_SYSCLK_DIV1;\n  clk.APB1CLKDivider = RCC_HCLK_DIV1;\n  clk.APB2CLKDivider = RCC_HCLK_DIV1;\n  if (HAL_RCC_ClockConfig(&clk, FLASH_LATENCY_0) != HAL_OK) Error_Handler();\n}\n\nstatic void MX_GPIO_Init(void) {\n  GPIO_InitTypeDef GPIO_InitStruct = {0};\n  __HAL_RCC_GPIOB_CLK_ENABLE();\n  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_12, GPIO_PIN_SET);\n  GPIO_InitStruct.Pin = GPIO_PIN_12;\n  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;\n  GPIO_InitStruct.Pull = GPIO_NOPULL;\n  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;\n  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);\n\n/* STM DEVICE DOCS MX_GPIO_Init BEGIN */\n{\n\n  GPIO_InitTypeDef GPIO_InitStruct = {0};\n  __HAL_RCC_GPIOA_CLK_ENABLE();\n  HAL_GPIO_WritePin(GPIOA, GPIO_PIN_5, GPIO_PIN_RESET);\n  GPIO_InitStruct.Pin = GPIO_PIN_5;\n  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;\n  GPIO_InitStruct.Pull = GPIO_NOPULL;\n  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;\n  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);\n  GPIO_InitStruct.Pin = GPIO_PIN_0;\n  GPIO_InitStruct.Mode = GPIO_MODE_ANALOG;\n  GPIO_InitStruct.Pull = GPIO_NOPULL;\n  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;\n  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);\n  GPIO_InitStruct.Pin = GPIO_PIN_2;\n  GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;\n  GPIO_InitStruct.Pull = GPIO_NOPULL;\n  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;\n  GPIO_InitStruct.Alternate = GPIO_AF7_USART2;\n  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);\n  GPIO_InitStruct.Pin = GPIO_PIN_3;\n  GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;\n  GPIO_InitStruct.Pull = GPIO_NOPULL;\n  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;\n  GPIO_InitStruct.Alternate = GPIO_AF7_USART2;\n  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);\n  GPIO_InitStruct.Pin = GPIO_PIN_15;\n  GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;\n  GPIO_InitStruct.Pull = GPIO_NOPULL;\n  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;\n  GPIO_InitStruct.Alternate = GPIO_AF1_TIM2;\n  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);\n  HAL_NVIC_SetPriority(USART2_IRQn, 0, 0);\n  HAL_NVIC_EnableIRQ(USART2_IRQn);\n\n}\n/* STM DEVICE DOCS MX_GPIO_Init END */\n}\n\nint __io_putchar(int ch) {\n  ITM_SendChar(ch);\n  return ch;\n}\n\nvoid Error_Handler(void) {\n  __disable_irq();\n  while (1) { }\n}\n\nint auditUserKeep(void) { return 42; }\n",
+  "components": [
+    {
+      "id": "led1",
+      "name": "led1",
+      "type": "led",
+      "x": 620,
+      "y": 300,
+      "rotation": 0,
+      "span": 70,
+      "color": "red"
+    },
+    {
+      "id": "pot1",
+      "name": "pot1",
+      "type": "potentiometer",
+      "x": 790,
+      "y": 300,
+      "rotation": 0,
+      "value": 10000,
+      "position": 20
+    },
+    {
+      "id": "uart1",
+      "name": "uart1",
+      "type": "uart",
+      "x": 960,
+      "y": 300,
+      "rotation": 0,
+      "baud": 9600
+    },
+    {
+      "id": "servo1",
+      "name": "servo1",
+      "type": "servo",
+      "x": 1130,
+      "y": 300,
+      "rotation": 0
+    },
+    {
+      "id": "userRes",
+      "name": "User load",
+      "type": "resistor",
+      "x": 1000,
+      "y": 650,
+      "rotation": 0,
+      "span": 70,
+      "value": 10000
+    },
+    {
+      "id": "docsPart1",
+      "name": "R1 · Docs",
+      "type": "resistor",
+      "x": 830,
+      "y": 300,
+      "rotation": 0,
+      "span": 42,
+      "value": 330
+    }
+  ],
+  "wires": [
+    {
+      "id": "user-wire-a",
+      "from": "board:CN10:16",
+      "to": "part:userRes:a",
+      "color": "#ff0000",
+      "points": [
+        {
+          "x": 1000,
+          "y": 200
+        }
+      ]
+    },
+    {
+      "id": "user-wire-b",
+      "from": "part:userRes:b",
+      "to": "board:CN6:6",
+      "color": "#111111"
+    },
+    {
+      "id": "docsWire1",
+      "from": "board:CN6:6",
+      "to": "part:led1:b",
+      "color": "#4e647b"
+    },
+    {
+      "id": "docsWire2",
+      "from": "board:CN10:11",
+      "to": "part:docsPart1:a",
+      "color": "#23a68a"
+    },
+    {
+      "id": "docsWire3",
+      "from": "part:docsPart1:b",
+      "to": "part:led1:a",
+      "color": "#23a68a"
+    },
+    {
+      "id": "docsWire4",
+      "from": "board:CN6:6",
+      "to": "part:pot1:p1",
+      "color": "#4e647b"
+    },
+    {
+      "id": "docsWire5",
+      "from": "board:CN6:4",
+      "to": "part:pot1:p3",
+      "color": "#23a68a"
+    },
+    {
+      "id": "docsWire6",
+      "from": "board:CN7:28",
+      "to": "part:pot1:p2",
+      "color": "#23a68a"
+    },
+    {
+      "id": "docsWire7",
+      "from": "board:CN6:6",
+      "to": "part:uart1:p2",
+      "color": "#4e647b"
+    },
+    {
+      "id": "docsWire8",
+      "from": "board:CN6:4",
+      "to": "part:uart1:p1",
+      "color": "#23a68a"
+    },
+    {
+      "id": "docsWire9",
+      "from": "board:CN10:35",
+      "to": "part:uart1:p4",
+      "color": "#23a68a"
+    },
+    {
+      "id": "docsWire10",
+      "from": "board:CN10:37",
+      "to": "part:uart1:p3",
+      "color": "#23a68a"
+    },
+    {
+      "id": "docsWire11",
+      "from": "board:CN6:6",
+      "to": "part:servo1:p2",
+      "color": "#4e647b"
+    },
+    {
+      "id": "docsWire12",
+      "from": "board:CN6:5",
+      "to": "part:servo1:p1",
+      "color": "#23a68a"
+    },
+    {
+      "id": "docsWire13",
+      "from": "board:CN7:17",
+      "to": "part:servo1:p3",
+      "color": "#23a68a"
+    }
+  ],
+  "surfaces": {
+    "board": {
+      "hidden": false
+    },
+    "breadboard": {
+      "hidden": true
+    }
+  },
+  "mcu": {
+    "family": "STM32F446RE",
+    "pins": {
+      "PB12": {
+        "function": "GPIO_Output",
+        "pull": "NOPULL",
+        "edge": "FALLING",
+        "label": "USER_KEEP",
+        "initial": 1
+      },
+      "PA5": {
+        "function": "GPIO_Output",
+        "pull": "NOPULL",
+        "edge": "FALLING",
+        "label": "LD2",
+        "initial": 0
+      },
+      "PA0": {
+        "function": "ADC1_IN0",
+        "pull": "NOPULL",
+        "edge": "FALLING",
+        "label": "",
+        "initial": 0
+      },
+      "PA2": {
+        "function": "USART2_TX",
+        "pull": "NOPULL",
+        "edge": "FALLING",
+        "label": "",
+        "initial": 0
+      },
+      "PA3": {
+        "function": "USART2_RX",
+        "pull": "NOPULL",
+        "edge": "FALLING",
+        "label": "",
+        "initial": 0
+      },
+      "PA15": {
+        "function": "TIM2_CH1",
+        "pull": "NOPULL",
+        "edge": "CHANGE",
+        "label": "",
+        "initial": 0
+      }
+    },
+    "peripherals": {
+      "ADC1": {
+        "enabled": true
+      },
+      "USART2": {
+        "enabled": true,
+        "baud": 9600
+      },
+      "TIM2": {
+        "enabled": true,
+        "prescaler": 15,
+        "period": 19999,
+        "pulse": 0,
+        "mode": "pwm"
+      }
+    },
+    "nvic": {
+      "USART2_IRQn": {
+        "enabled": true,
+        "priority": 0
+      }
+    },
+    "timerClockHz": 16000000
+  },
+  "firmware": {
+    "mode": "hal",
+    "files": []
+  },
+  "simulation": {
+    "stepMs": 1,
+    "pwmWaveform": true
+  },
+  "deviceDocs": {
+    "bindings": [
+      {
+        "key": "led1",
+        "type": "led",
+        "api": "HAL_GPIO_WritePin",
+        "mode": "hal",
+        "parts": {
+          "led1": "led1",
+          "r1": "docsPart1"
+        },
+        "pins": {
+          "PA5": "PA5"
+        },
+        "peripherals": {}
+      },
+      {
+        "key": "pot1",
+        "type": "potentiometer",
+        "api": "all",
+        "mode": "hal",
+        "parts": {
+          "demo": "pot1"
+        },
+        "pins": {
+          "PA0": "PA0"
+        },
+        "peripherals": {
+          "ADC1": "ADC1"
+        }
+      },
+      {
+        "key": "uart1",
+        "type": "uart",
+        "api": "all",
+        "mode": "hal",
+        "parts": {
+          "demo": "uart1"
+        },
+        "pins": {
+          "PA2": "PA2",
+          "PA3": "PA3"
+        },
+        "peripherals": {
+          "USART2": "USART2"
+        }
+      },
+      {
+        "key": "servo1",
+        "type": "servo",
+        "api": "all",
+        "mode": "hal",
+        "parts": {
+          "demo": "servo1"
+        },
+        "pins": {
+          "PA5": "PA15"
+        },
+        "peripherals": {
+          "TIM2": "TIM2"
+        }
+      }
+    ],
+    "inlineChecksum": "8e7c4f74"
+  }
+}

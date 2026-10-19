@@ -1,5 +1,16 @@
 # 검증 기록
 
+## 0.25.1 PIN 설정·IRQ·Analog 수정 — 공개 배포 검증 완료
+
+2026-10-19. [상세 보고서·원본 로그](audits/0.25.1-release/REPORT.md). [Release v0.25.1](https://github.com/moonsyu/STM-Simulator/releases/tag/v0.25.1) · [Windows CI 39227299473](https://github.com/moonsyu/STM-Simulator/actions/runs/39227299473) 성공.
+
+- 로컬/CI 단위 각406개 통과. 제품 태그·빌드 `243ecf205354e18ed4701213c117906ab6a35080`, sourceDirty=false, 공개5자산·latest·ZIP 내부 EXE·버전/커밋/해시 일치.
+- 공개 단독 EXE와 ZIP 내부 EXE 각각 C 의미7조건 및 종료·재열기 최신 코드 복원 통과. 각각 PIN25개(실제 실행6회), Docs3조합(실제 실행6회)을 실제 UI·진단 JSONL·코드/배선·저장 복구로 확인했습니다.
+- 공개0.25.0→0.25.1 자동 검색·다운로드/SHA·교체·새 앱 재기동·재열기 및 코드·테마·글꼴·보드 크기·자동 업데이트 설정 보존 통과.
+- 이전0.25.0 개발 수정본의 PIN362/Docs독립7 검사와 공개0.25.1 검사를 별도 기록합니다. 모든 임의 장치 조합이나 실물 MCU 검증을 뜻하지 않습니다.
+- EXE SHA-256 `8ab5fc812df020b4bf68b9eb8941e521be75199e0c1cc66ff1a45e08d2c58566`. 후속 문서 커밋은 제품 태그와 배포 파일을 변경하지 않습니다.
+
+
 ## 0.25.0 작업 화면·장치 모델 — 공개 배포 검증 완료
 
 2026-10-19. Windows 참고 White/Dark 팔레트, System 자동 추종, 적응형 작업 공간, 접근성, 실제 장치 모델/접점 및 둥근 배선을 개선했습니다. [단계별 실패·수정·재검사 보고서](audits/tinkercad-workbench/REPORT.md).
