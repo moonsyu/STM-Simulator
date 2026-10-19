@@ -1,12 +1,17 @@
 # 검증 기록
 
-## 0.25.0 작업 화면·장치 모델 — 게시 검증 진행 중
+## 0.25.0 작업 화면·장치 모델 — 공개 배포 검증 완료
 
 2026-10-19. Windows 참고 White/Dark 팔레트, System 자동 추종, 적응형 작업 공간, 접근성, 실제 장치 모델/접점 및 둥근 배선을 개선했습니다. [단계별 실패·수정·재검사 보고서](audits/tinkercad-workbench/REPORT.md).
 
-- 로컬 단위 387개, 화면 24조합·72상태·427판정, 114종 프리뷰, 실제 ARM HAL 링크122조건을 통과했습니다.
+- 로컬 단위397개, 화면24조합·72상태·427판정, 114종 프리뷰, 실제 ARM HAL 링크122조건을 통과했습니다. 코드 테마 importer와 저장 기본 테마 교정 후 원본 C 토큰·사용자 설정 보존도 확인했습니다.
 - Electron nativeTheme 알림, HAL GPIO/USART2와 입력·RESET의 실제 진단 로그, 파일/자동 저장 연속 오류와 복구, GCC/GDB/clangd 실행을 확인했습니다.
-- 새 버전 Windows CI와 공개 EXE·ZIP·5개 자산·자동 업데이트 검증은 진행 중입니다. 이전 릴리스 검증을 새 버전의 증거로 사용하지 않습니다.
+- [Windows CI39214636630](https://github.com/moonsyu/STM-Simulator/actions/runs/39214636630) 전체 검사·빌드·[v0.25.0 게시](https://github.com/moonsyu/STM-Simulator/releases/tag/v0.25.0) 성공. 제품 커밋 `2278c2da1a6c14ec16b1629af136172ce7a1e078`, sourceDirty=false, 공개5자산·latest·태그/빌드 커밋·ZIP 내부 대조 통과.
+- 공개 `STM-Simulator.exe`는102,783,034 bytes, SHA-256 `e678a2533cd8fd7fac864b466077c9df94bca1ffe4b5bb12d43c8527319cfc35`. ZIP SHA-256 `61ad97c361c3f75f8fb55d2ba15672a83f954485fd1e0167b8ea98713caa4d1e`.
+- 내려받은 공개 EXE에서429판정·74상태(기본72+추가2)·10시나리오·114모델 통과, 대비37,062건에서 저대비0·renderer 오류0. native System과 실제 C 토큰 색도 확인했습니다. 정상 크기 Dark/White와900폭·글꼴20 두 테마 화면을 직접 검토했습니다.
+- 단독 공개 EXE·ZIP 내부 EXE 각각 의미론7조건과 즉시 종료·재열기 최신 코드 복원 통과. 공개 Docs는 `tft`·`ref_st7735_8`·`uart` 3종의 코드/배선/실제 실행 로그를 대조했으며 개발 앱114장치 Docs와 구분합니다.
+- 원본 공개0.24.0→0.25.0의 실제 자동 검색·다운로드/SHA·EXE 교체·새 main 재기동·재열기 통과. 코드·Jellybean·글꼴17·배율1.25·자동 업데이트 설정을 보존했습니다.
+- [공개 검증 집계](audits/tinkercad-workbench/evidence/public-verification.json), [화면 해시](audits/tinkercad-workbench/evidence/public-screenshots.json). CI1 실패·CI2 취소·CI3 실패와 모든 앱 검사 후 발생한 보조 manifest 저장 오류/복구는 원본 이력으로 유지합니다. 후속 문서 커밋은 제품 태그·자산을 덮어쓰지 않습니다.
 
 ## 0.24.0 캔버스 UX 1단계·공개 배포
 

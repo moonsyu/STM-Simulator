@@ -1,5 +1,7 @@
 # Tinkercad 참고 작업 화면 UI 계획
 
+2026-10-19, 0.25.0 구현과 공개 검증 완료. 아래는 원래 승인 범위이며 실제 결과는 [최종 보고서](audits/tinkercad-workbench/REPORT.md)와 [공개 집계](audits/tinkercad-workbench/evidence/public-verification.json)에 있습니다. 공개 EXE429판정·74상태·10시나리오·114모델, 대비37,062건 저대비0/renderer 오류0 및 System·실제 C 토큰을 확인했습니다. 정상 크기 Dark/White와900폭·글꼴20 두 테마 화면도 직접 검토했습니다. 실제 자동 업데이트와 저장 코드/설정 보존까지 통과했습니다.
+
 - 승인 근거: 사용자 제공 이미지와 Codex 브라우저의 Tinkercad 표현을 참고해 적용하라는 명시적 지시. 기존 IDE 정보 구조와 테마를 유지하는 개선입니다.
 - 편집 가능한 시안: `ui/mockups/src/tinkercad-workbench.html`, 검토 화면: `ui/mockups/rendered/tinkercad-workbench-*.png`.
 - 주요 화면: 기존 프로젝트/코드/시뮬레이터/터미널 도킹. 프로젝트 작업, 보조 코드 도구, 배선 팔레트는 명명된 메뉴로 묶고 파일 선택·저장 상태는 계속 노출합니다. 장치 목록의 스크롤은 하나로 정리합니다.

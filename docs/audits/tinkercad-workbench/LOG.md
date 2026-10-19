@@ -72,3 +72,14 @@
 - 검사는 합쳐진 코드 `.dock-heading`의 중앙을 우클릭했지만 이 위치는 탭/버튼 같은 interactive 자식일 수 있습니다. 해당 자식에서 패널 이동 메뉴를 열지 않는 제품의 contextmenu 가드에 따라 dialog가 열리지 않아야 하므로, 헤더 중앙을 이동 손잡이로 간주한 검사 대상이 잘못됐습니다.
 - 실제 `.dock-grab` 우클릭으로 이동 메뉴가 열리는지와 탭 우클릭으로는 차단되는지를 분리하도록 테스트를 최소 수정 중입니다. 제품 코드는 변경하지 않으며 수정 후 재검사 대기입니다. 이 실행의 실패와 이전 2차 CI의 의도한 취소를 구분해 보존합니다.
 - 수정 후 `controls-reset-ci3-recheck.log`의 전체 검사가 통과했습니다. desktop/1024/900의 실제 hit target을 기록했고 900폭 헤더 중앙은 `role=tab` 버튼, 이동 손잡이는 모두 비대화형 SVG였습니다. 탭의 우클릭/Shift+F10 차단과 손잡이 이동창, 보드 초기화·Undo/Redo·복원, F11/F10/Shift+F11/F6/F5 및 실제 변수3/6/7, 양테마/작은 창을 다시 확인했습니다. 제품 코드는 바꾸지 않았습니다.
+
+## 게시 라운드4 · 0.25.0 공개와 실행 파일 검증
+
+- 제품 커밋 `2278c2da1a6c14ec16b1629af136172ce7a1e078`의 [CI39214636630](https://github.com/moonsyu/STM-Simulator/actions/runs/39214636630)에서 전체 검사·빌드·[v0.25.0 Release](https://github.com/moonsyu/STM-Simulator/releases/tag/v0.25.0) 게시가 성공했습니다. CI1 실패·CI2 취소·CI3 실패 기록은 변경하지 않았습니다.
+- 공개 5자산과 latest, 태그/빌드 커밋, ZIP 내부 파일을 대조했습니다. `sourceDirty=false`, EXE `STM-Simulator.exe` 102,783,034 bytes, SHA-256 `e678a2533cd8fd7fac864b466077c9df94bca1ffe4b5bb12d43c8527319cfc35`, ZIP SHA-256 `61ad97c361c3f75f8fb55d2ba15672a83f954485fd1e0167b8ea98713caa4d1e`입니다.
+- 내려받은 공개 EXE의 `workbench-public-0.25.0/summary.json`에서 429판정·74상태(기본72+추가2)·10시나리오·114모델 통과, 대비37,062건에서 저대비0, renderer 오류0을 확인했습니다. 공개 appearance 검사에서도 native System과 실제 C 토큰 색을 확인했습니다.
+- 단독 공개 EXE와 ZIP 내부 EXE 각각 의미론7조건, 입력 직후 종료·재열기의 최신 코드 복원이 통과했습니다. 공개 Docs는 `tft`·`ref_st7735_8`·`uart` 3종의 코드·배선·실제 실행 로그를 확인했습니다. 개발 앱114장치 Docs 결과와 공개3종 검사를 구분합니다.
+- 공개 실행 검사 첫 집계 시점에는 자동 업데이트의 실제 다운로드·교체·재실행·설정 보존 검사가 진행 중이어서 WB-05와 전체 목표 완료를 보류했습니다. 후속 결과는 다음 기록으로 이어집니다.
+- 후속 자동 업데이트 검사도 통과했습니다. 원본 공개0.24.0 EXE의 실제 스케줄러→다운로드/SHA 검증→EXE 교체→새 main 재기동→재열기를 확인했고 코드·Jellybean·글꼴17·장치 배율1.25·자동 업데이트 설정을 유지했습니다. 공개 정상 크기 Dark/White 및 900폭·글꼴20 두 테마 화면의 직접 검토에서도 추가 문제를 찾지 못했습니다.
+- 모든 앱 검사 통과 후 보조 수집기의 `File.Replace(...,$null)`에서 .NET 빈 경로 오류가 발생했습니다. 원본8증거 SHA와 EXE 해시를 재대조하고 동일 runId의 임시 최종 manifest를 Python `os.replace`로 저장 복구한 뒤 수집기가 통과했습니다. 제품 수정·앱 재실행은 없으며 최초 실패 manifest는 별도 보존합니다.
+- [공개 검증 집계](evidence/public-verification.json)와 [공개 화면 해시](evidence/public-screenshots.json)를 저장했습니다. 최종397단위·공개429판정/74상태/10시나리오/대비37,062건·114모델, 공개5자산·EXE/ZIP 복원·공개Docs3종·자동 업데이트 근거를 갖춰 WB-05와 이번 작업 범위를 완료했습니다. 개발114장치 Docs와 공개3종 Docs 범위는 구분합니다.

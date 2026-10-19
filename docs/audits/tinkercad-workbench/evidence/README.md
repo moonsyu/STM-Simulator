@@ -1,4 +1,15 @@
-# 렌더링 검증 증거
+# 0.25.0 검증 증거
+
+## 공개 실행 파일·업데이트
+
+- [공개 검증 집계](public-verification.json): CI39214636630·v0.25.0 공개5자산·latest·태그/빌드 커밋/해시·ZIP 대조, 공개429판정·74상태·10시나리오·114모델·대비37,062건 저대비0/renderer 오류0.
+- 단독/ZIP EXE 각각 의미론7조건과 즉시 종료·재열기 복원, native System·실제 C 토큰, 공개 Docs `tft`·`ref_st7735_8`·`uart` 3종의 코드/배선/실제 실행 로그를 포함합니다. 아래 개발 앱114장치 Docs 결과와 별도 범위입니다.
+- 원본 공개0.24.0→0.25.0의 실제 스케줄러 검색·다운로드/SHA 검증·EXE 교체·새 main 재기동·재열기와 코드/Jellybean/글꼴17/장치 배율1.25/자동 업데이트 설정 보존을 확인했습니다.
+- 직접 검토한 [White](public-white.png), [Dark](public-dark.png), [900폭·글꼴20 White](public-compact-white.png). [화면 manifest](public-screenshots.json)에 원본 상대경로·EXE SHA·PNG SHA를 기록했습니다. 900폭·글꼴20 Dark도 원본 검사 화면에서 직접 확인했습니다.
+
+집계는 개인정보 검사를 통과했습니다. 모든 앱 검사 후 보조 수집기 manifest 저장에서 발생한 .NET 빈 경로 오류는 원본8증거 SHA·EXE 해시 재대조 및 같은 runId의 임시 manifest 저장 복구 후 수집기 재검증으로 마무리했습니다. 제품 수정·앱 재실행 없이 처리했으며 최초 실패 manifest는 별도 보존했습니다. 상세 이력은 [로그](../LOG.md)에 있습니다.
+
+## 로컬 모델·테마
 
 코드 영역의 [실제 토큰 색상](editor-theme-tokens.json)은 개발 Electron에서 System Dark/White를 전환하고 C 타입·함수·키워드·숫자·주석·문자열의 렌더링 색을 각각 고정 원본 테마 값과 대조한 결과입니다. `scripts/appearance-canvas-ui.cjs`로 재현할 수 있습니다. JSON/Java/Markdown/diff 전용 scope가 C에 섞이던 문제를 수정한 이후의 결과이며, 저장된 구버전 기본 테마의 재로딩과 사용자 colorscheme 보존은 `scripts/colorscheme-smoke.cjs`로 확인합니다.
 

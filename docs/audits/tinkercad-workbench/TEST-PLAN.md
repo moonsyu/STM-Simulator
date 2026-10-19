@@ -1,6 +1,6 @@
 # 실제 화면·동작 회귀 검사 계획
 
-배포 대상은 **0.25.0 예정이며 미공개**입니다. 이 계획의 로컬 검사 결과와 새 Windows CI/공개 릴리스 검증을 구분합니다. CI와 공개 검증 상태는 아직 pending입니다.
+**0.25.0 구현·게시·공개 실행 파일·자동 업데이트 검증을 완료했습니다.** 이 계획의 로컬 검사 결과와 공개 릴리스 검증은 별도 범위로 기록합니다. [공개 검증 집계](evidence/public-verification.json).
 
 - 담당: UI regression agent. 실행 스크립트: `scripts/workbench-review-check.cjs`.
 - 사용자 앱·프로필·파일을 사용하지 않습니다. 독립 Electron 프로필에서 실제 UI와 파일 입력을 사용합니다. 저장/열기 실패는 테스트 경로와 깨진 JSON으로 만들고 정상 파일 재시도까지 확인합니다.
@@ -22,16 +22,23 @@
 
 계측은 기능·좌표·초점·실제 저장 결과를 검사합니다. 수치 통과만으로 외형이 참고 이미지와 동일하다고 판단하지 않으며, 대표 장치 화면은 별도로 시각 확인합니다. 실패 원본과 수정 후 결과는 덮어쓰지 않고 검수 라운드별로 보존합니다.
 
-## 실행 결과와 남은 단계 — 2026-10-19
+## 최종 실행 결과 — 2026-10-19
 
 | 범위 | 현재 결과 | 증거/남은 조건 |
 |---|---|---|
 | UI-01~06·작은 화면·대비 | 로컬 완료:24조합·72상태·427판정 통과 | `work/test-results/workbench-review-final-layout/summary.json`, 최종 PNG. 대비36,228건 저대비0, 실제 두 로그행·타임스탬프 폰트 확인 |
 | 모델·접점 | 로컬 완료:114종 프리뷰,112모델·637접점·보드108핀·빵판400홀 통과 | `work/test-results/workbench-review-final-models/summary.json`, `model-pin-parity.json` |
 | 기능·저장·실행 로그 | 로컬 완료:Round7 성공9시나리오+Round8 저장 재검사 통과 | 각 `workbench-review-round7-functional` / `workbench-review-round8-save`의 summary 및 실제 진단 JSONL. Round7 전체 파일의 실패 상태는 보존 |
-| 전체 단위 검사 | 로컬 완료:387/387 통과 | `work/test-results/workbench-unit-release.log` |
+| 전체 단위 검사 | 로컬 완료:397/397 통과 | `work/test-results/workbench-unit-color-final.log` |
+| 코드 테마 importer | 언어별 scope·기본 저장 테마 교정·원본 C 토큰·사용자 설정 보존 통과 | 관련 단위27개, 실제 colorscheme·editor token 재검사 |
 | System/수동 테마 | 로컬 완료 | `work/test-results/appearance-native-theme.json`:native 알림3단계·수동 고정·OS 설정 미변경 |
 | 기존 UI 8개 최종 묶음 | 로컬 완료 | boards/devices/circuit-tools/editor-tools/passive-buzzer/l298n/ide/mcu-defaults 각각의 `workbench-final-*-smoke.cjs.log` |
 | 네이티브 백엔드 | 로컬 완료, 실물 실행 아님 | `work/test-results/native-ide-check.json`, hardwareRun=false |
 | 네이티브 UI | 로컬 재검사 완료 | `work/test-results/workbench-native-ui-recheck.log`, `native-ide-smoke.json`:실제 빌드·GDB·실행·터미널·clangd·오류 보호·화면 통과. 첫 timeout은 테스트 동기화 원인으로 별도 보존 |
-| Windows CI·0.25.0 Release | pending | 전체 CI 성공, 새 버전 공개5자산·커밋/해시/latest·공개 EXE/ZIP 동작/복원·자동 업데이트 확인 필요 |
+| Windows CI·0.25.0 Release | 완료 | CI39214636630 전체 성공, 공개5자산·커밋/해시/latest·ZIP 대조 |
+| 공개 UI·모델·기능 | 완료:429판정·74상태·10시나리오·114모델 | 대비37,062건에서 저대비0·renderer 오류0, native System·실제 C 토큰 통과 |
+| 공개 단독 EXE·ZIP EXE | 완료 | 각각 의미론7조건·즉시 종료/재열기 최신 코드 복원 |
+| 공개 Docs | 3종 완료 | `tft`·`ref_st7735_8`·`uart` 코드/배선/실제 실행 로그 대조. 개발 앱114장치 Docs와 별도 범위 |
+| 실제 자동 업데이트 | 완료 | 원본 공개0.24.0→0.25.0 자동 검색·다운로드/SHA·교체·새 main 재기동·재열기·코드/Jellybean/글꼴17/배율1.25/자동 설정 보존 |
+
+공개 단계의 근거는 [집계](evidence/public-verification.json), [대표 화면과 해시](evidence/public-screenshots.json)에 있습니다. CI1 실패·CI2 취소·CI3 실패 및 manifest 수집기의 저장 실패/복구는 [로그](LOG.md)에 보존했습니다. 기존 태그·자산을 덮어쓰지 않습니다.

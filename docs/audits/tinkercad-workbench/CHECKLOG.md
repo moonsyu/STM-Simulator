@@ -1,8 +1,8 @@
 # 화면·동작 검사 로그
 
-현재 배포 대상: **0.25.0 예정, 미공개**. 아래는 공개0.24.0 기준선과 개발 소스의 로컬 검사 이력입니다. 새 테마 importer의 scope 변환 결함으로 2차 CI39211377769를 게시 전에 취소했고 취소 완료를 확인했습니다. 수정과 로컬 영향 재검사는 완료됐으며, 이번 CI 종료는 검사 실패가 아닌 의도한 취소입니다. 새 버전 Windows CI와 공개 릴리스 검증은 pending이며, 과거 실패 기록은 당시 상태로 보존합니다.
+현재 배포 상태: **0.25.0 구현·공개·EXE/ZIP·자동 업데이트 검증 완료**. 아래 공개0.24.0 기준선과 개발 소스 검사, CI1 실패·CI2 취소·CI3 실패는 당시 이력으로 보존합니다. 수정 후 4차 CI39214636630의 전체 검사·빌드·Release 게시가 성공했으며 최종 결과는 [공개 검증 집계](evidence/public-verification.json)와 마지막 절에 기록합니다.
 
-후속 3차 CI39212542491은 패널 헤더 우클릭의 검사 대상 오류로 실패했고 Release는 게시되지 않았습니다. 제품 변경 없이 테스트를 최소 수정 중이며 해당 검사 재실행을 기다립니다.
+3차 CI39212542491 당시에는 패널 헤더 우클릭의 검사 대상 오류로 실패해 Release가 게시되지 않았습니다. 제품 변경 없이 실제 손잡이와 탭의 우클릭을 구분하도록 테스트를 보완했고 로컬 재검사 및 4차 CI가 통과했습니다.
 
 ## 기준 검수 — 공개0.24.0
 
@@ -63,7 +63,7 @@
 - `work/test-results/native-ide-check.json`: Windows GCC 실행, GDB 중단점·step·감시·메모리·레지스터, clangd hover/정의, C/C++ 링크/실행, ST HAL/CMSIS ARM 산출물, 빌드실패·취소 보호가 통과했습니다. `hardwareRun=false`로 실물 보드 검증과 구분합니다.
 - `work/test-results/workbench-final-native-ide-smoke.cjs.log`: 첫 네이티브 UI 검사는 빌드 성공 후 waitForFunction에서30초 timeout으로 끝났습니다. 초기화 전 지역변수의 임의값에 `6`이 포함되면 F10 완료로 잘못 판정해, 아직 작업 중인 GDB에 다음 명령을 보내던 테스트 동기화 문제였습니다. 실패 로그는 보존합니다.
 - `work/test-results/workbench-native-ui-recheck.log` 및 `native-ide-smoke.json`: 제품 변경 없이 실제 helper 정지 프레임·다음 명령 가능 상태를 기다린 뒤 `doubled=6`을 정확하게 확인하도록 테스트를 보강했습니다. 최종 네이티브 UI의 실제 GCC Debug/Release 빌드, GDB into/over/out·감시·레지스터, 실행 stdout, cmd 터미널, clangd, 컴파일 오류 이동/실패 후 이전 산출물 보호, 데스크톱/작은 화면이 모두 통과했고 renderer 오류0건입니다.
-- **게시 상태 pending:** 0.25.0 버전 게시와 새 Windows CI, 새 Release5자산·공개 해시/커밋/latest·실제 EXE/ZIP 실행/복원·자동 업데이트는 아직 완료 근거가 없습니다. 기존0.24.0 공개 검증을 새 버전의 성공으로 대체하지 않습니다.
+- **당시 게시 상태 pending:** 이 통합 전 기록 시점에는0.25.0 버전 게시와 새 Windows CI, Release5자산·공개 해시/커밋/latest·실제 EXE/ZIP 실행/복원·자동 업데이트의 완료 근거가 없었습니다. 기존0.24.0 공개 검증을 새 버전의 성공으로 대체하지 않았습니다. 최종 결과는 아래4차 CI·공개 검증 절에 기록합니다.
 
 ## 게시 전 추가 발견 — 코드 테마 scope 변환
 
@@ -78,4 +78,15 @@
 
 - [CI39212542491](https://github.com/moonsyu/STM-Simulator/actions/runs/39212542491)는 기존 HAL·카탈로그까지 통과한 뒤 `controls-reset-check.cjs:28:90`에서 코드 `.dock-heading` 중앙 우클릭 후 이동 dialog가 열리지 않아 실패했습니다. **Release 미게시** 상태를 유지합니다.
 - 동일 검사에서 Shift+F10 패널 이동·터미널 도킹·재시작 복원은 성공했습니다. 합쳐진 헤더 중앙은 탭/버튼일 수 있으며, interactive 자식 우클릭은 제품 가드가 정상적으로 차단해야 합니다. 이 실패는 이동 손잡이와 탭을 구분하지 않은 테스트 대상 오류입니다.
-- `.dock-grab` 우클릭 성공과 탭 우클릭 차단을 각각 검사하도록 최소 보완 중입니다. 제품 소스 변경은 없으며, 수정 후 재검사 결과는 아직 pending입니다. 최초 실패를 성공으로 덮어쓰지 않습니다.
+- 3차 CI 실패 시점에는 `.dock-grab` 우클릭 성공과 탭 우클릭 차단을 각각 검사하도록 최소 보완 중이었고 재검사 결과는 pending이었습니다. 제품 소스 변경은 없었으며 최초 실패를 성공으로 덮어쓰지 않습니다. 이후 결과는 다음 절에 기록합니다.
+
+## 4차 CI·공개 실행 파일 검증 — 2026-10-19
+
+- 위 3차 실패 시점의 pending은 이후 `controls-reset-ci3-recheck.log`의 실제 hit target/도킹/초기화/단축키 재검사와 [4차 CI39214636630](https://github.com/moonsyu/STM-Simulator/actions/runs/39214636630) 전체 성공으로 해소됐습니다. 최초 실패 기록은 보존합니다.
+- [v0.25.0](https://github.com/moonsyu/STM-Simulator/releases/tag/v0.25.0) 공개5자산·latest·태그/빌드 커밋·ZIP 내부 대조 통과. 커밋 `2278c2da1a6c14ec16b1629af136172ce7a1e078`, `sourceDirty=false`입니다.
+- `STM-Simulator.exe`: 102,783,034 bytes, SHA-256 `e678a2533cd8fd7fac864b466077c9df94bca1ffe4b5bb12d43c8527319cfc35`. ZIP SHA-256 `61ad97c361c3f75f8fb55d2ba15672a83f954485fd1e0167b8ea98713caa4d1e`.
+- `work/test-results/workbench-public-0.25.0/summary.json`: 429판정·74상태(기본72+추가2)·10시나리오·114모델 통과, 대비37,062건에서 저대비0·renderer 오류0. `workbench-appearance-public-0.25.0/`의 native System 및 실제 C 토큰 색도 통과했습니다.
+- 공개 단독 EXE·ZIP 내부 EXE 각각 의미론7조건과 즉시 종료·재열기의 최신 코드 복원 통과. `workbench-docs-public-0.25.0/`의 공개 Docs는 `tft`·`ref_st7735_8`·`uart` 3종의 코드·배선·실제 실행 로그를 대조했습니다. 개발114장치 Docs와 별도 범위입니다.
+- 자동 업데이트 완료: 원본 공개0.24.0→0.25.0의 실제 스케줄러 검색·다운로드·SHA 검증·EXE 교체·새 main 재기동·재열기를 통과했습니다. 코드·Jellybean·글꼴17·장치 배율1.25·자동 업데이트 설정을 보존했습니다. WB-05 및 이번 작업 범위를 완료로 판정합니다.
+- 정상 크기 Dark/White와 900폭·글꼴20 두 테마 화면을 직접 검토해 추가 문제 없음. [공개 화면](evidence/public-screenshots.json)과 [공개 검증 집계](evidence/public-verification.json)에 EXE/증거 해시를 기록했습니다.
+- 보조 수집기는 모든 앱 검사 성공 후 `File.Replace(...,$null)`의 .NET 빈 경로 오류로 최초 manifest 저장에 실패했습니다. 원본8증거 SHA·EXE 해시를 재대조하고 같은 runId의 임시 manifest를 Python `os.replace`로 저장 복구한 후 수집기 검증을 통과했습니다. 제품 수정·앱 재실행 없이 처리했고 원본 실패 manifest를 별도 보존했습니다.
