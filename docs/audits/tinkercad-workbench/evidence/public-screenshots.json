@@ -1,0 +1,23 @@
+{
+  "version": "0.25.0",
+  "commit": "2278c2da1a6c14ec16b1629af136172ce7a1e078",
+  "exeSha256": "e678a2533cd8fd7fac864b466077c9df94bca1ffe4b5bb12d43c8527319cfc35",
+  "scope": "Representative screenshots from the verified public EXE; test profile only; directly reviewed by the root agent.",
+  "screenshots": [
+    {
+      "file": "public-white.png",
+      "sourceArtifact": "work/test-results/workbench-appearance-public-0.25.0/appearance-canvas-light.png",
+      "sha256": "73e147bc03c7cb6680fef3aa44c8cdc799f7e9f86952cd9c700c2a9e681ff6d8"
+    },
+    {
+      "file": "public-dark.png",
+      "sourceArtifact": "work/test-results/workbench-appearance-public-0.25.0/appearance-canvas-dark.png",
+      "sha256": "c827c9189f181197ba7e5369aa3922009c8853450b6b0d2d9786dfae4dab0133"
+    },
+    {
+      "file": "public-compact-white.png",
+      "sourceArtifact": "work/test-results/workbench-public-0.25.0/900x560-light-font20-code.png",
+      "sha256": "550a2981a13ea01d222ff686f280b8dde0120372be852b7f822aaf65e0fd97ee"
+    }
+  ]
+}

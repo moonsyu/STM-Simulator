@@ -1,18 +1,18 @@
 # WBS
 
-## 0.25.0 예정 · Tinkercad 참고 작업 화면 · 반복 검수
+## 0.25.0 완료 · Tinkercad 참고 작업 화면 · 반복 검수
 
-0.25.0은 아직 미공개입니다. 아래 완료 표시는 해당 로컬 작업/검사 범위에만 적용하며, 새 Windows CI와 공개 릴리스 검증은 pending입니다.
+2026-10-19, 0.25.0 구현·공개·실행 파일·자동 업데이트 검증을 완료했습니다. 로컬 검사와 공개 EXE 검사 범위를 구분하고 실패·취소 이력을 보존합니다. [공개 검증 집계](audits/tinkercad-workbench/evidence/public-verification.json).
 
 | ID | 산출물 | 담당 | 의존 | 예상 | 상태 | 완료 기준 |
 |---|---|---|---|---|---|---|
 | WB-01 | 글꼴·메뉴·반응형·저장 표시 | canvas_styles/root | 사용자 참고 승인/시안 | 45분 | done | 최종24조합·72상태·427판정, timestamp/본문 크기와 실제 두 로그행·저장 표시·글꼴·작은 창 경계 통과 |
 | WB-02 | 부품 재질·접점·둥근 배선 | selection_helpers | 사용자 이미지/탭 | 45분 | done | 최종114종 프리뷰·112모델 형상/변환·637접점·보드108핀·빵판400홀 및 배선 경로/복원 통과 |
 | WB-03 | 키보드·탭 focus·실패 복구 안내 | root | 기존 UI 감사 | 45분 | done | round7 기능9조건·round8 연속 저장 실패/복구·RESET/F5·실제 GPIO/UART 로그 통과 |
-| WB-04 | 새 화면 및 기능 회귀·라운드 기록 | ui_regression | WB-01~03 | 45분 | done | 387단위·427화면 판정·최종114모델·NativeTheme·Round7 성공9시나리오+Round8 저장 통과, 실패 원본/수정 후 근거 기록 |
-| WB-05 | 통합·게시·공개 실행 확인 | root | WB-01~04 최종 수렴 후 게시 | 40분 | in_progress | 기존 UI 최종8개·네이티브 백엔드/UI 재검사 통과. 전체 CI·새 Release5자산·공개 실행/복원·자동 업데이트는 pending |
+| WB-04 | 새 화면 및 기능 회귀·라운드 기록 | ui_regression | WB-01~03 | 45분 | done | 397단위·로컬427화면 판정·114모델·NativeTheme·테마 importer/저장 호환·Round7 성공9시나리오+Round8 저장 통과, 실패 원본/수정 후 근거 기록 |
+| WB-05 | 통합·게시·공개 실행 확인 | root | WB-01~04 최종 수렴 후 게시 | 40분 | done | CI39214636630·Release5자산·공개429판정/74상태/10시나리오/114모델·대비37,062건 저대비0·단독/ZIP 실행 복원·공개Docs3종·0.24.0→0.25.0 실제 자동 업데이트 통과 |
 
-병렬 구현 승인 범위: 파일 소유 분리, 기존 UI 검사도 실제 보이는 메뉴를 여는 방식으로 갱신. WB-05의 확인된 로컬 통합 결과와 남은 CI/게시/공개 검증을 구분합니다. 근거와 남은 조건은 [검사 기록](audits/tinkercad-workbench/CHECKLOG.md), [보고서](audits/tinkercad-workbench/REPORT.md)에 기록합니다.
+병렬 구현 승인 범위: 파일 소유 분리, 기존 UI 검사도 실제 보이는 메뉴를 여는 방식으로 갱신. 로컬 통합과 공개 배포 검증을 구분하며 개발 앱114장치 Docs와 공개 EXE3종 Docs의 검사 범위를 별도로 기록합니다. 최종 근거와 CI1 실패·CI2 취소·CI3 실패 및 수집기 복구는 [검사 기록](audits/tinkercad-workbench/CHECKLOG.md), [보고서](audits/tinkercad-workbench/REPORT.md)에 보존합니다.
 
 ## 0.24.0 · 가이드 1단계
 
