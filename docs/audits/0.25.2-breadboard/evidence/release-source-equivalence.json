@@ -1,0 +1,12 @@
+{
+  "passed": true,
+  "verifiedAt": "2026-10-19T12:49:31.260682+00:00",
+  "testedApplicationCommit": "97d1aa3e787b9e7007db0869412d7b8fe44313c9",
+  "releaseCandidateCommit": "068d6a95d680a7ff4197ef8702612f216017ea74",
+  "identicalApplicationFiles": 143,
+  "changedFiles": [
+    "scripts/l298n-smoke.cjs",
+    "scripts/passive-buzzer-smoke.cjs"
+  ],
+  "reason": "Only UI regression expectations updated for breadboard routing; the previously audited application bytes are unchanged."
+}

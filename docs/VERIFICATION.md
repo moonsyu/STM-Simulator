@@ -1,5 +1,15 @@
 # 검증 기록
 
+## 0.25.2 빵판 예제 배치 — 공개 배포 검증 완료
+
+2026-10-19. [상세 보고서·원본 로그](audits/0.25.2-breadboard/REPORT.md). [Release v0.25.2](https://github.com/moonsyu/STM-Simulator/releases/tag/v0.25.2) · [전체 Windows CI 39257882264](https://github.com/moonsyu/STM-Simulator/actions/runs/39257882264) 성공.
+
+- Docs·예제 검색·새 프로젝트 템플릿의 모든 예제 부품을 빵판 위에 장착합니다. 다리와 점퍼의 구멍을 분리하고 몸체·접점을 피하며 전원 레일과 신호를 분리합니다.
+- CI 단위 411개. 라이브러리 120개 배치/연결망 대조, Docs 114장치 실제 모델 실행·손상 복구 후 재실행, 개별 단선 1,068개 복구 통과. 개발 중 1,062개 검사와 최종 제품 소스 검사는 구분합니다.
+- 초기 CI에서 발견한 배선 개수 고정 검사와 작은 화면의 크기 조절 핸들 간섭을 수정하고 실패·재검사 기록을 보존했습니다. 후속 제품 커밋 `7b4c3fb5328c0e383a8e499f6f5c1e1aac3c65d9`의 전체 CI·태그/빌드·공개5자산·해시/latest를 확인했습니다.
+- 공개 단독 EXE/ZIP 각각 C 의미7조건·종료/재열기 코드 보존, 공개 UI 6장치 Docs·실행 JSONL과 타이머 빵판 경유 통과. 공개0.25.1→0.25.2 실제 자동 업데이트와 사용자 설정 보존 통과.
+- EXE SHA-256 `85b1bbb5a387e3a8cdb71bee9263fd38fc15f37296aeda5ef52c1d2ce7baed1c`. 모델 114종 검사와 공개 UI 6종 검사를 구분하며 실물 MCU 실행 검증은 아닙니다. 후속 문서 커밋은 제품 태그와 자산을 덮어쓰지 않습니다.
+
 ## 0.25.1 PIN 설정·IRQ·Analog 수정 — 공개 배포 검증 완료
 
 2026-10-19. [상세 보고서·원본 로그](audits/0.25.1-release/REPORT.md). [Release v0.25.1](https://github.com/moonsyu/STM-Simulator/releases/tag/v0.25.1) · [Windows CI 39227299473](https://github.com/moonsyu/STM-Simulator/actions/runs/39227299473) 성공.

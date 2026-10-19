@@ -1,0 +1,211 @@
+{
+  "passed": true,
+  "runId": 39257882264,
+  "headSha": "7b4c3fb5328c0e383a8e499f6f5c1e1aac3c65d9",
+  "unitTests": 411,
+  "unitPassed": 411,
+  "unitFailed": 0,
+  "member": "Windows x64 portable/8_Test circuit engine and editor models.txt",
+  "logSha256": "28498691a01452cb989ed635373a706dab1f876fa8ce6f23d6d2bcc92cd38e30",
+  "logBytes": 93215,
+  "jobs": [
+    {
+      "id": 118077651837,
+      "name": "Windows x64 portable",
+      "conclusion": "success",
+      "steps": [
+        {
+          "name": "Set up job",
+          "conclusion": "success"
+        },
+        {
+          "name": "Check out source",
+          "conclusion": "success"
+        },
+        {
+          "name": "Set up Node.js",
+          "conclusion": "success"
+        },
+        {
+          "name": "Install locked dependencies",
+          "conclusion": "success"
+        },
+        {
+          "name": "Ensure Electron runtime is installed",
+          "conclusion": "success"
+        },
+        {
+          "name": "Reject vulnerable locked dependencies",
+          "conclusion": "success"
+        },
+        {
+          "name": "Verify release tag matches package version",
+          "conclusion": "skipped"
+        },
+        {
+          "name": "Test circuit engine and editor models",
+          "conclusion": "success"
+        },
+        {
+          "name": "Test update dialog and save-before-restart",
+          "conclusion": "success"
+        },
+        {
+          "name": "Test failed saves, workspace transitions and close recovery",
+          "conclusion": "success"
+        },
+        {
+          "name": "Test Windows EXE replacement and rollback",
+          "conclusion": "success"
+        },
+        {
+          "name": "Test device resizing, themes and IDE preferences",
+          "conclusion": "success"
+        },
+        {
+          "name": "Test edge resizing of every device and both surfaces",
+          "conclusion": "success"
+        },
+        {
+          "name": "Test every part model thumbnail and hover preview",
+          "conclusion": "success"
+        },
+        {
+          "name": "Test readable UI text in dark and light themes",
+          "conclusion": "success"
+        },
+        {
+          "name": "Test system appearance, surface movement and unlimited canvas",
+          "conclusion": "success"
+        },
+        {
+          "name": "Test canvas selection, zoom and live inspector",
+          "conclusion": "success"
+        },
+        {
+          "name": "Test workbench layouts, themes, keyboard editing and recovery",
+          "conclusion": "success"
+        },
+        {
+          "name": "Test code-only colorscheme registration",
+          "conclusion": "success"
+        },
+        {
+          "name": "Test Electron editing and HAL workflows",
+          "conclusion": "success"
+        },
+        {
+          "name": "Test catalog search, Docs, inline main.c and routed wiring",
+          "conclusion": "success"
+        },
+        {
+          "name": "Test empty canvas, single board, breadboards and inline Docs",
+          "conclusion": "success"
+        },
+        {
+          "name": "Test LED WritePin and persisted circuit diagnostics",
+          "conclusion": "success"
+        },
+        {
+          "name": "Test code reset, undo and legacy Docs preview",
+          "conclusion": "success"
+        },
+        {
+          "name": "Test compact controls, debug shortcuts and board reset",
+          "conclusion": "success"
+        },
+        {
+          "name": "Test TFT frame diagnostics and UART input through Electron",
+          "conclusion": "success"
+        },
+        {
+          "name": "Test onboard USART2 VCP and external UART wiring",
+          "conclusion": "success"
+        },
+        {
+          "name": "Test pin option validation, live interrupt callbacks and analog input",
+          "conclusion": "success"
+        },
+        {
+          "name": "Test multiple Docs examples, live devices and saved projects",
+          "conclusion": "success"
+        },
+        {
+          "name": "Test breadboard mounting, Docs and example runtime logs",
+          "conclusion": "success"
+        },
+        {
+          "name": "Upload test diagnostics on failure",
+          "conclusion": "skipped"
+        },
+        {
+          "name": "Build portable executable",
+          "conclusion": "success"
+        },
+        {
+          "name": "Verify package and prepare download",
+          "conclusion": "success"
+        },
+        {
+          "name": "Verify update helper from packaged Electron main",
+          "conclusion": "success"
+        },
+        {
+          "name": "Verify updater in the actual portable EXE",
+          "conclusion": "success"
+        },
+        {
+          "name": "Upload Windows download",
+          "conclusion": "success"
+        },
+        {
+          "name": "Add download link to build summary",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Set up Node.js",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Check out source",
+          "conclusion": "success"
+        },
+        {
+          "name": "Complete job",
+          "conclusion": "success"
+        }
+      ]
+    },
+    {
+      "id": 118088302615,
+      "name": "Publish verified release and update manifest",
+      "conclusion": "success",
+      "steps": [
+        {
+          "name": "Set up job",
+          "conclusion": "success"
+        },
+        {
+          "name": "Check out release verification tools",
+          "conclusion": "success"
+        },
+        {
+          "name": "Download this run's verified build",
+          "conclusion": "success"
+        },
+        {
+          "name": "Verify files and publish complete release",
+          "conclusion": "success"
+        },
+        {
+          "name": "Post Check out release verification tools",
+          "conclusion": "success"
+        },
+        {
+          "name": "Complete job",
+          "conclusion": "success"
+        }
+      ]
+    }
+  ]
+}

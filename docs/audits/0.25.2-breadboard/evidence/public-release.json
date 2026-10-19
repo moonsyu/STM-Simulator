@@ -1,0 +1,52 @@
+{
+  "verified": true,
+  "version": "0.25.2",
+  "release": "https://github.com/moonsyu/STM-Simulator/releases/tag/v0.25.2",
+  "tag": "v0.25.2",
+  "tagCommit": "7b4c3fb5328c0e383a8e499f6f5c1e1aac3c65d9",
+  "latest": "v0.25.2",
+  "checksums": {
+    "STM-Simulator.exe": "85b1bbb5a387e3a8cdb71bee9263fd38fc15f37296aeda5ef52c1d2ce7baed1c",
+    "STM-Simulator-0.25.2-Windows-x64.zip": "f7c1a1744c41a1ea1d062ae0fc3e2efe12dc9833a91120e26342d9bf756ed4c0"
+  },
+  "manifest": {
+    "schemaVersion": 1,
+    "version": "0.25.2",
+    "filename": "STM-Simulator.exe",
+    "bytes": 102790272,
+    "sha256": "85b1bbb5a387e3a8cdb71bee9263fd38fc15f37296aeda5ef52c1d2ce7baed1c"
+  },
+  "build": {
+    "version": "0.25.2",
+    "filename": "STM-Simulator.exe",
+    "bytes": 102790272,
+    "sha256": "85b1bbb5a387e3a8cdb71bee9263fd38fc15f37296aeda5ef52c1d2ce7baed1c",
+    "commit": "7b4c3fb5328c0e383a8e499f6f5c1e1aac3c65d9",
+    "sourceDirty": false,
+    "workflow": "https://github.com/moonsyu/STM-Simulator/actions/runs/39257882264",
+    "builtAt": "2026-10-19T13:31:37.275Z"
+  },
+  "baseExe": "D:\\codex\\project\\STM-Simulator\\work\\release-audit\\0.25.2\\STM-Simulator.exe",
+  "assets": [
+    {
+      "name": "BUILD-INFO.json",
+      "size": 367
+    },
+    {
+      "name": "SHA256.txt",
+      "size": 189
+    },
+    {
+      "name": "STM-Simulator-0.25.2-Windows-x64.zip",
+      "size": 105686077
+    },
+    {
+      "name": "STM-Simulator.exe",
+      "size": 102790272
+    },
+    {
+      "name": "update-manifest.json",
+      "size": 185
+    }
+  ]
+}

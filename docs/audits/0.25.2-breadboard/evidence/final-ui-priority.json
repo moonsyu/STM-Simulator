@@ -1,0 +1,47 @@
+{
+  "passed": true,
+  "commit": "7b4c3fb5328c0e383a8e499f6f5c1e1aac3c65d9",
+  "verifiedAt": "2026-10-19T13:15:14.376727+00:00",
+  "deviceResizeCount": 113,
+  "compactL298nViewport": {
+    "width": 1008,
+    "height": 681
+  },
+  "workbenchLog": "priority-final.log",
+  "attempts": [
+    "initial resize drag miss retained",
+    "unchanged UI rerun passed all 113",
+    "stable-coordinate harness passed all 113 plus compact L298N and full workbench"
+  ],
+  "files": [
+    "breadboard-layout/priority-final.log",
+    "breadboard-layout/resize-priority-check.log",
+    "breadboard-layout/resize-priority-recheck.log",
+    "resize-ui-check.json",
+    "l298n-electron-smoke.json",
+    "workbench-review/1024x640-dark-font13-code.png",
+    "workbench-review/1024x640-dark-font20-pinout.png",
+    "workbench-review/1024x640-dark-font20-settings.png",
+    "workbench-review/1024x640-light-font13-code.png",
+    "workbench-review/1024x640-light-font20-pinout.png",
+    "workbench-review/1024x640-light-font20-settings.png",
+    "workbench-review/1366x768-dark-font13-code.png",
+    "workbench-review/1366x768-light-font13-code.png",
+    "workbench-review/1540x1020-dark-font13-code.png",
+    "workbench-review/1540x1020-light-font13-code.png",
+    "workbench-review/900-autosave-error.png",
+    "workbench-review/900-save-error.png",
+    "workbench-review/900x560-dark-font13-code.png",
+    "workbench-review/900x560-dark-font20-code.png",
+    "workbench-review/900x560-dark-font20-pinout.png",
+    "workbench-review/900x560-dark-font20-settings.png",
+    "workbench-review/900x560-light-font13-code.png",
+    "workbench-review/900x560-light-font20-code.png",
+    "workbench-review/900x560-light-font20-pinout.png",
+    "workbench-review/900x560-light-font20-settings.png",
+    "workbench-review/model-pin-parity.json",
+    "workbench-review/rounded-wire-route.png",
+    "workbench-review/runtime-events.jsonl",
+    "workbench-review/summary.json"
+  ]
+}

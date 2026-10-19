@@ -1,0 +1,514 @@
+{
+  "version": "0.25.2",
+  "execution": {
+    "mode": "portable-exe-cdp",
+    "viewportKind": "BrowserWindow content size",
+    "exeSha256": "85b1bbb5a387e3a8cdb71bee9263fd38fc15f37296aeda5ef52c1d2ce7baed1c"
+  },
+  "profile": "D:\\codex\\project\\STM-Simulator\\work\\test-results\\breadboard-layout\\ui\\profile-pgXRmk",
+  "rows": [
+    {
+      "type": "led",
+      "applied": "적용 완료 · 부품 1개 추가 · 2개 빵판 배치 / 배선 4개 추가 / 오접속 0개 보완 / 기존 연결 0개 유지",
+      "states": 6,
+      "last": {
+        "status": "running",
+        "simulationMs": 3500,
+        "pins": {
+          "PA5": {
+            "mode": "OUTPUT",
+            "value": 3.3,
+            "openDrain": false,
+            "pull": 0
+          }
+        },
+        "parts": {
+          "selected": {
+            "voltage": 1.8471204163063295,
+            "current": 0.003926701358860789,
+            "on": true,
+            "power": 0.00725309024868957
+          },
+          "docsPart1": {
+            "voltage": 1.29581150937903,
+            "current": 0.003926701543572818,
+            "power": 0.00508826505405806
+          }
+        },
+        "fault": false,
+        "warnings": []
+      },
+      "passed": true
+    },
+    {
+      "type": "potentiometer",
+      "applied": "적용 완료 · 부품 0개 추가 · 1개 빵판 배치 / 배선 5개 추가 / 오접속 0개 보완 / 기존 연결 0개 유지",
+      "states": 2,
+      "last": {
+        "status": "running",
+        "simulationMs": 3240,
+        "pins": {
+          "PA0": {
+            "mode": "ANALOG",
+            "value": 0
+          }
+        },
+        "parts": {
+          "selected": {
+            "voltage": 3.3,
+            "current": 0.00033000008249997934,
+            "power": 0.001089000000000068,
+            "channels": {
+              "1–2": {
+                "voltage": -1.6499995875001032,
+                "current": -0.00032999991750002066,
+                "power": 0.0005444997277501022
+              },
+              "2–3": {
+                "voltage": -1.6500004124998966,
+                "current": -0.00033000008249997934,
+                "power": 0.0005445002722499658
+              }
+            }
+          }
+        },
+        "fault": false,
+        "warnings": []
+      },
+      "passed": true
+    },
+    {
+      "type": "lcd",
+      "applied": "적용 완료 · 부품 1개 추가 · 2개 빵판 배치 / 배선 25개 추가 / 오접속 0개 보완 / 기존 연결 0개 유지",
+      "states": 2,
+      "last": {
+        "status": "running",
+        "simulationMs": 3260,
+        "pins": {
+          "PB0": {
+            "mode": "OUTPUT",
+            "value": 3.3,
+            "openDrain": false,
+            "pull": 0
+          },
+          "PB1": {
+            "mode": "OUTPUT",
+            "value": 0,
+            "openDrain": false,
+            "pull": 0
+          },
+          "PB4": {
+            "mode": "OUTPUT",
+            "value": 0,
+            "openDrain": false,
+            "pull": 0
+          },
+          "PB5": {
+            "mode": "OUTPUT",
+            "value": 0,
+            "openDrain": false,
+            "pull": 0
+          },
+          "PB6": {
+            "mode": "OUTPUT",
+            "value": 3.3,
+            "openDrain": false,
+            "pull": 0
+          },
+          "PB7": {
+            "mode": "OUTPUT",
+            "value": 0,
+            "openDrain": false,
+            "pull": 0
+          }
+        },
+        "parts": {
+          "selected": {
+            "voltage": 5,
+            "current": 0.0011904761904761906,
+            "power": 0.005952380952380953,
+            "lcd": {
+              "powered": true,
+              "visible": true,
+              "lines": [
+                "STM Emulator    ",
+                "HAL 4-bit LCD   "
+              ],
+              "codes": [
+                [
+                  83,
+                  84,
+                  77,
+                  32,
+                  69,
+                  109,
+                  117,
+                  108,
+                  97,
+                  116,
+                  111,
+                  114,
+                  32,
+                  32,
+                  32,
+                  32
+                ],
+                [
+                  72,
+                  65,
+                  76,
+                  32,
+                  52,
+                  45,
+                  98,
+                  105,
+                  116,
+                  32,
+                  76,
+                  67,
+                  68,
+                  32,
+                  32,
+                  32
+                ]
+              ],
+              "cgram": {
+                "length": 64,
+                "nonzero": 0,
+                "sha256": "ca0101ae4bf3b31bd300f93f576d862c57e98cb85d8ff6db4078eea404b88a9a",
+                "first": [
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0
+                ],
+                "last": [
+                  0,
+                  0,
+                  0,
+                  0
+                ]
+              },
+              "cursor": false,
+              "blink": false,
+              "address": 77,
+              "shift": 0
+            }
+          },
+          "docsPart1": {
+            "voltage": 1.4500000390499994,
+            "current": 0.006590909268409088,
+            "power": 0.009556818696568182
+          }
+        },
+        "fault": false,
+        "warnings": []
+      },
+      "passed": true
+    },
+    {
+      "type": "ultrasonic",
+      "applied": "적용 완료 · 부품 2개 추가 · 3개 빵판 배치 / 배선 9개 추가 / 오접속 0개 보완 / 기존 연결 0개 유지",
+      "states": 3,
+      "last": {
+        "status": "running",
+        "simulationMs": 3540,
+        "pins": {
+          "PC7": {
+            "mode": "OUTPUT",
+            "value": 0,
+            "openDrain": false,
+            "pull": 0
+          },
+          "PA9": {
+            "mode": "INPUT",
+            "value": 0
+          }
+        },
+        "parts": {
+          "selected": {
+            "voltage": 0,
+            "current": 0,
+            "power": 0,
+            "powered": true
+          },
+          "docsPart1": {
+            "voltage": 0,
+            "current": 0,
+            "power": 0
+          },
+          "docsPart2": {
+            "voltage": 0,
+            "current": 0,
+            "power": 0
+          }
+        },
+        "fault": false,
+        "warnings": []
+      },
+      "passed": true
+    },
+    {
+      "type": "sevenseg",
+      "applied": "적용 완료 · 부품 8개 추가 · 9개 빵판 배치 / 배선 18개 추가 / 오접속 0개 보완 / 기존 연결 1개 유지",
+      "states": 3,
+      "last": {
+        "status": "running",
+        "simulationMs": 3240,
+        "pins": {
+          "PB0": {
+            "mode": "OUTPUT",
+            "value": 3.3,
+            "openDrain": false,
+            "pull": 0
+          },
+          "PB1": {
+            "mode": "OUTPUT",
+            "value": 0,
+            "openDrain": false,
+            "pull": 0
+          },
+          "PB2": {
+            "mode": "OUTPUT",
+            "value": 3.3,
+            "openDrain": false,
+            "pull": 0
+          },
+          "PB3": {
+            "mode": "OUTPUT",
+            "value": 3.3,
+            "openDrain": false,
+            "pull": 0
+          },
+          "PB4": {
+            "mode": "OUTPUT",
+            "value": 3.3,
+            "openDrain": false,
+            "pull": 0
+          },
+          "PB5": {
+            "mode": "OUTPUT",
+            "value": 3.3,
+            "openDrain": false,
+            "pull": 0
+          },
+          "PB6": {
+            "mode": "OUTPUT",
+            "value": 3.3,
+            "openDrain": false,
+            "pull": 0
+          },
+          "PB7": {
+            "mode": "OUTPUT",
+            "value": 0,
+            "openDrain": false,
+            "pull": 0
+          }
+        },
+        "parts": {
+          "selected": {
+            "voltage": 1.8171102638560686,
+            "current": 0.008555131928034254,
+            "power": 0.0155456180350738,
+            "on": true,
+            "channels": {
+              "e": {
+                "voltage": 1.8171102638560686,
+                "current": 0.0014258553213390424,
+                "on": true,
+                "power": 0.002590936339178967
+              },
+              "d": {
+                "voltage": 1.8171102638560686,
+                "current": 0.0014258553213390424,
+                "on": true,
+                "power": 0.002590936339178967
+              },
+              "c": {
+                "voltage": 1.8171102638560686,
+                "current": 0.0014258553213390424,
+                "on": true,
+                "power": 0.002590936339178967
+              },
+              "dp": {
+                "voltage": 0,
+                "current": 0,
+                "on": false,
+                "power": 0
+              },
+              "b": {
+                "voltage": 0,
+                "current": 0,
+                "on": false,
+                "power": 0
+              },
+              "a": {
+                "voltage": 1.8171102638560686,
+                "current": 0.0014258553213390424,
+                "on": true,
+                "power": 0.002590936339178967
+              },
+              "f": {
+                "voltage": 1.8171102638560686,
+                "current": 0.0014258553213390424,
+                "on": true,
+                "power": 0.002590936339178967
+              },
+              "g": {
+                "voltage": 1.8171102638560686,
+                "current": 0.0014258553213390424,
+                "on": true,
+                "power": 0.002590936339178967
+              }
+            }
+          },
+          "docsPart1": {
+            "voltage": 1.4258555030500655,
+            "current": 0.0014258555030500655,
+            "power": 0.0020330639155781553
+          },
+          "docsPart2": {
+            "voltage": 0,
+            "current": 0,
+            "power": 0
+          },
+          "docsPart3": {
+            "voltage": 1.4258555030500655,
+            "current": 0.0014258555030500655,
+            "power": 0.0020330639155781553
+          },
+          "docsPart4": {
+            "voltage": 1.4258555030500655,
+            "current": 0.0014258555030500655,
+            "power": 0.0020330639155781553
+          },
+          "docsPart5": {
+            "voltage": 1.4258555030500655,
+            "current": 0.0014258555030500655,
+            "power": 0.0020330639155781553
+          },
+          "docsPart6": {
+            "voltage": 1.4258555030500655,
+            "current": 0.0014258555030500655,
+            "power": 0.0020330639155781553
+          },
+          "docsPart7": {
+            "voltage": 1.4258555030500655,
+            "current": 0.0014258555030500655,
+            "power": 0.0020330639155781553
+          },
+          "docsPart8": {
+            "voltage": 0,
+            "current": 0,
+            "power": 0
+          }
+        },
+        "fault": false,
+        "warnings": []
+      },
+      "passed": true
+    },
+    {
+      "type": "ref_motor_driver_hat",
+      "applied": "적용 완료 · 부품 2개 추가 · 3개 빵판 배치 / 배선 20개 추가 / 오접속 0개 보완 / 기존 연결 15개 유지",
+      "states": 3,
+      "last": {
+        "status": "running",
+        "simulationMs": 3300,
+        "pins": {
+          "PB9": {
+            "mode": "INPUT",
+            "value": 0
+          },
+          "PB8": {
+            "mode": "INPUT",
+            "value": 0
+          }
+        },
+        "parts": {
+          "selected": {
+            "voltage": 3.3,
+            "current": 0.00033,
+            "on": false,
+            "power": 0.001089,
+            "powered": true,
+            "device": {
+              "version": 15,
+              "pointer": 14,
+              "powered": true,
+              "registers": {
+                "length": 256,
+                "nonzero": 5,
+                "sha256": "664e77c079dcc937c9674dc4b64739b2656497e0a9f23321ff74142adb86b5c6",
+                "first": [
+                  32,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  8,
+                  0,
+                  16,
+                  0,
+                  0,
+                  0,
+                  0
+                ],
+                "last": [
+                  0,
+                  0,
+                  5,
+                  0
+                ]
+              },
+              "words": [
+                0,
+                0,
+                0,
+                0
+              ],
+              "display": false
+            },
+            "visible": false
+          },
+          "docsPart1": {
+            "voltage": 8.99999999991,
+            "current": -8.999911926821369e-10,
+            "power": 8.099920734058233e-09
+          },
+          "docsPart2": {
+            "voltage": 4.319999999749442,
+            "current": 0.17999999998956007,
+            "on": true,
+            "power": 0.777599999909799,
+            "powered": true,
+            "rpm": 1079.9999996219378,
+            "angle": 300.57896795284256,
+            "direction": 1,
+            "mode": "drive"
+          }
+        },
+        "fault": false,
+        "warnings": []
+      },
+      "passed": true
+    }
+  ],
+  "errors": []
+}
