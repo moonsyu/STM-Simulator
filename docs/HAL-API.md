@@ -6,7 +6,7 @@ STM32F446RE용 **HAL API 호환 회로 모델**입니다. CubeMX/CubeIDE의 `mai
 
 1. 왼쪽 **Pinout & Configuration**에서 핀을 선택해 GPIO/EXTI 또는 주변장치 기능을 지정합니다. GPIO pull, 초기 출력, EXTI 에지, 사용자 라벨을 설정합니다. 보드 GPIO를 우클릭해 해당 핀 설정으로 이동할 수도 있습니다.
 2. UART/USART, I2C1/SPI1/ADC1/TIM2·3·4·5를 활성화합니다. UART/USART는 TX/RX를 실제 가능한 핀 중에서 자동 배정하며, 각 드롭다운으로 대체 핀을 선택합니다. 사용 중인 핀을 덮어쓰지 않고 충돌을 표시합니다. 비활성화하면 해당 TX/RX와 IRQ를 해제합니다. 나머지 주변장치는 필요한 신호 핀을 지정합니다. 같은 신호의 중복이나 같은 EXTI 번호의 포트 충돌도 표시합니다.
-3. 인터럽트는 **NVIC**에서 활성화합니다. 숫자가 작은 priority부터 대기 콜백을 전달합니다. 실제 NVIC 선점이나 subpriority는 재현하지 않습니다.
+3. 인터럽트는 **NVIC**에서 활성화합니다. 숫자가 작은 priority부터 대기 콜백을 전달하며, 콜백에서 바꾼 활성화·전역 차단·우선순위는 다음 대기 콜백부터 반영합니다. 차단된 pending은 다시 활성화할 때 처리합니다. 실제 NVIC 선점이나 subpriority는 재현하지 않습니다.
 4. **설정 적용**은 코드를 유지합니다. **설정으로 HAL 코드 생성**은 확인 후 현재 소스 묶음을 설정에 맞는 `main.c`로 교체합니다. 회로 배선은 유지하고 실행 취소로 복구할 수 있습니다.
 5. 기존 코드는 편집기 **.ioc / C 소스 가져오기**에서 함께 선택합니다. C 파일 선택에는 `main.c`가 필요합니다. .ioc만 선택하면 기존 실행 모드와 코드를 유지하고 설정만 가져옵니다.
 6. 데스크톱의 **Cube 프로젝트 폴더**는 루트 `.ioc`, `Core/Src`, `Core/Inc`를 읽습니다. `Drivers`, startup, syscalls, sysmem, system_stm32f4xx 및 HAL conf 구현은 가져오지 않습니다. 파일은 원본에 쓰지 않고 회로 프로젝트에 복사합니다.
@@ -88,6 +88,8 @@ F446RE **LQFP64** 및 보드에서 접근 가능한 핀 기준입니다. TX와 R
 | 엔코더 | `HAL_TIM_Encoder_Init/Start/Stop`, `Start_IT/Stop_IT`, `TIM_CHANNEL_ALL`; TI1/TI2/TI12, CH1=A·CH2=B, Prescaler 0, rising/direct TI/DIV1/filter 0. CNT의 증가·감소와 ARR 순환 |
 
 외부 UART 장치의 전원과 TX/RX 배선·baud, I²C 주소·전원·풀업, SPI CS·전원·배선은 기존 회로 모델로 검사합니다. UART RX 완료는 수신 바이트 도착 시간에 처리합니다. UART와 I²C/SPI timeout은 구현된 전송 시간에 기반합니다. I²C/SPI timeout이 부족하면 전송 전 HAL_TIMEOUT을 반환하는 단순 모델이며 부분 전송을 재현하지 않습니다.
+
+Analog 및 ADC 핀은 설정에 Pull 값을 보존하더라도 실제 내부 Pull을 연결하지 않습니다. 디지털 입력 읽기는 0이고, 외부 회로 전압과 ADC 측정 경로는 유지됩니다. 이는 [ST RM0390 Rev9 §7.3.12, p.182](https://www.st.com/resource/en/reference_manual/dm00135183.pdf)의 Analog 동작을 적용한 것입니다. 처음 초기화할 때는 Pinout과 코드의 일치를 검사하고, 초기화된 GPIO의 Input/Output/Analog 전환 및 Analog·ADC 핀의 Input 복귀를 지원합니다.
 
 콜백에 넘긴 버퍼 포인터는 유효기간과 범위를 검사합니다. IRQ가 꺼져 있으면 완료 이벤트를 대기하며, HAL_Delay 또는 UART blocking 호출을 인터럽트 콜백에서 사용하면 오류입니다. UART blocking API는 동시에 진행 중인 동일 방향 IT 전송이 있으면 HAL_BUSY를 반환합니다.
 

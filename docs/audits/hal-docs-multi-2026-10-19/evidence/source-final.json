@@ -1,0 +1,381 @@
+{
+  "packageVersion": "0.25.0",
+  "nodeVersion": "v24.19.0",
+  "sourceCommit": "5b74ec9586820f082249eee935b8696c2fa7167c",
+  "sourceDirty": true,
+  "sourceStatus": "M .github/workflows/build-windows.yml\n M docs/HAL-API.md\n M package.json\n M scripts/mcu-defaults-smoke.cjs\n M src/hal.js\n M src/pinout-ui.js\n M src/runtime.js\n?? docs/audits/hal-docs-multi-2026-10-19/\n?? docs/audits/pin-options-2026-10-19/\n?? scripts/docs-multi-apply-check.cjs\n?? scripts/pin-options-ui-check.cjs\n?? tests/hal-analog-mode.test.js\n?? tests/hal-nvic-dispatch.test.js",
+  "sourceSha256": "1b43991b345387c0105aac31e2b3e3eb6b11cddac11ee19b44fe1604f0363e32",
+  "startedAt": "2026-10-19T08:31:14.210Z",
+  "scope": "Independent source Node/SimulationSession, current working tree. No Electron, public EXE, physical MCU or user profile.",
+  "cases": [
+    {
+      "id": "two-servos-independent-timers",
+      "passed": true,
+      "bindings": [
+        {
+          "key": "servoA",
+          "type": "servo",
+          "api": "all",
+          "mode": "hal",
+          "parts": {
+            "demo": "servoA"
+          },
+          "pins": {
+            "PA5": "PA5"
+          },
+          "peripherals": {
+            "TIM2": "TIM2"
+          }
+        },
+        {
+          "key": "servoB",
+          "type": "servo",
+          "api": "all",
+          "mode": "hal",
+          "parts": {
+            "demo": "servoB"
+          },
+          "pins": {
+            "PA5": "PA6"
+          },
+          "peripherals": {
+            "TIM2": "TIM3"
+          }
+        }
+      ],
+      "timers": [
+        "TIM2",
+        "TIM3"
+      ],
+      "runtimeLog": "two-servos-runtime.json",
+      "observations": "two-servos-observations.json",
+      "note": "Each servo reaches all three commanded angles; their main-loop commands are staggered by sequential 1200 ms delays."
+    },
+    {
+      "id": "two-i2c-sensors-shared-bus-distinct-addresses",
+      "passed": true,
+      "bindings": [
+        {
+          "key": "sensorA",
+          "type": "sht31",
+          "api": "all",
+          "mode": "hal",
+          "parts": {
+            "demo": "sensorA"
+          },
+          "pins": {
+            "PB8": "PB8",
+            "PB9": "PB9"
+          },
+          "peripherals": {
+            "I2C1": "I2C1"
+          }
+        },
+        {
+          "key": "sensorB",
+          "type": "sht31",
+          "api": "all",
+          "mode": "hal",
+          "parts": {
+            "demo": "sensorB"
+          },
+          "pins": {
+            "PB8": "PB8",
+            "PB9": "PB9"
+          },
+          "peripherals": {
+            "I2C1": "I2C1"
+          }
+        }
+      ],
+      "addresses": [
+        68,
+        69
+      ],
+      "runtimeLog": "i2c-distinct-runtime.json",
+      "printed": [
+        {
+          "atMs": 0,
+          "text": "HAL ready"
+        },
+        {
+          "atMs": 20.50000000000005,
+          "text": "SHT31=10.0 C RH=25.0 %"
+        },
+        {
+          "atMs": 291.00000000000085,
+          "text": "SHT31=40.0 C RH=75.0 %"
+        },
+        {
+          "atMs": 561.6000000000017,
+          "text": "SHT31=10.0 C RH=25.0 %"
+        },
+        {
+          "atMs": 832.1000000000026,
+          "text": "SHT31=40.0 C RH=75.0 %"
+        },
+        {
+          "atMs": 1102.6999999999994,
+          "text": "SHT31=10.0 C RH=25.0 %"
+        },
+        {
+          "atMs": 1373.1999999999964,
+          "text": "SHT31=40.0 C RH=75.0 %"
+        },
+        {
+          "atMs": 1643.799999999993,
+          "text": "SHT31=10.0 C RH=25.0 %"
+        },
+        {
+          "atMs": 1914.2999999999897,
+          "text": "SHT31=40.0 C RH=75.0 %"
+        },
+        {
+          "atMs": 2184.8999999999864,
+          "text": "SHT31=10.0 C RH=25.0 %"
+        },
+        {
+          "atMs": 2455.3999999999864,
+          "text": "SHT31=40.0 C RH=75.0 %"
+        },
+        {
+          "atMs": 2725.9999999999864,
+          "text": "SHT31=10.0 C RH=25.0 %"
+        },
+        {
+          "atMs": 2996.4999999999864,
+          "text": "SHT31=40.0 C RH=75.0 %"
+        },
+        {
+          "atMs": 3267.0999999999867,
+          "text": "SHT31=10.0 C RH=25.0 %"
+        }
+      ]
+    },
+    {
+      "id": "duplicate-i2c-address-rejected-atomically",
+      "passed": true,
+      "error": "같은 I2C 버스에 주소 0x44 장치가 이미 있습니다. 장치 속성에서 지원하는 다른 주소를 선택하세요.",
+      "originalUnchanged": true,
+      "beforeSha256": "977eba8f4b3a00e6faa1834a2b1182ad39ac837dbbc3b03575ec6ef506ca8ccf",
+      "afterSha256": "977eba8f4b3a00e6faa1834a2b1182ad39ac837dbbc3b03575ec6ef506ca8ccf",
+      "codeSha256": "a0f2a19900af64b01b2d534269a42b56ce8ee17753e252afc23abd4f80f9ee0d",
+      "wiresSha256": "66f308896fac3bc4492f940c93a33ba2c881800d5bc7011bd7658d42efac48c7",
+      "runtimeBeforeSha256": "bf6d4db5da00d70a28620555281d04ba3eeafdea3652003ab38d68c9e4bbc271",
+      "runtimeAfterSha256": "bf6d4db5da00d70a28620555281d04ba3eeafdea3652003ab38d68c9e4bbc271",
+      "existingRuntimeUnchanged": true
+    },
+    {
+      "id": "two-uarts-distinct-instances-and-rx-tx",
+      "passed": true,
+      "bindings": [
+        {
+          "key": "uartA",
+          "type": "uart",
+          "api": "all",
+          "mode": "hal",
+          "parts": {
+            "demo": "uartA"
+          },
+          "pins": {
+            "PA2": "PA2",
+            "PA3": "PA3"
+          },
+          "peripherals": {
+            "USART2": "USART2"
+          }
+        },
+        {
+          "key": "uartB",
+          "type": "uart",
+          "api": "all",
+          "mode": "hal",
+          "parts": {
+            "demo": "uartB"
+          },
+          "pins": {
+            "PA2": "PA9",
+            "PA3": "PA10"
+          },
+          "peripherals": {
+            "USART2": "USART1"
+          }
+        }
+      ],
+      "instances": [
+        "USART2",
+        "USART1"
+      ],
+      "baud": [
+        9600,
+        115200
+      ],
+      "received": {
+        "uartA": "HAL UART ready\r\nA7",
+        "uartB": "HAL UART ready\r\nB9"
+      },
+      "runtimeLog": "two-uarts-runtime.json"
+    },
+    {
+      "id": "seventh-uart-resource-exhaustion-rejected-atomically",
+      "passed": true,
+      "instances": [
+        "USART2",
+        "USART1",
+        "USART3",
+        "UART4",
+        "UART5",
+        "USART6"
+      ],
+      "error": "사용 가능한 UART TX/RX 핀 조합이 없습니다.",
+      "originalUnchanged": true,
+      "beforeSha256": "a49b9682113bb69c79b52f77e50985d3dc5daaa9848d5a6a2dddd9bf725252b2",
+      "afterSha256": "a49b9682113bb69c79b52f77e50985d3dc5daaa9848d5a6a2dddd9bf725252b2",
+      "codeSha256": "e350f015a5a0abe84e57993880a9e5a586c40333a8ad194e93ef5e37ed2f6fd5",
+      "wiresSha256": "9ae75095bf3a1f24eb419a36c8b040d38282f28fdc660b31742ea2931da3297c",
+      "runtimeBeforeSha256": "77784fcae313877cdadb2d784982abc3ec52d66c41f12731c571ce999c452e2f",
+      "runtimeAfterSha256": "77784fcae313877cdadb2d784982abc3ec52d66c41f12731c571ce999c452e2f",
+      "existingRuntimeUnchanged": true
+    },
+    {
+      "id": "edited-docs-region-reapply-rejected-with-original-preserved",
+      "passed": true,
+      "error": "main.c의 장치 예제 영역이 직접 수정되어 있습니다. 수정 코드를 영역 밖으로 옮긴 뒤 다시 적용하세요.",
+      "originalUnchanged": true,
+      "beforeSha256": "ae6a4b63f39e7f3099daf9095ebb5f947c330dce5d3004b3f1e798f39fc4da95",
+      "afterSha256": "ae6a4b63f39e7f3099daf9095ebb5f947c330dce5d3004b3f1e798f39fc4da95",
+      "codeSha256": "fcb1b046f5aba2ba818869a064c39af59826d063e20f5aa8c87c9647c0e6ea7a",
+      "wiresSha256": "863ea92fea5c204f1041ccfe5698eb66e17c1c23b6b26b112e10f3fb8a819446",
+      "runtimeBeforeSha256": "1e8576cd5f3ba1f6dd72ef322d9ac6635d38aebe6a03ad469732349ddb026d7a",
+      "runtimeAfterSha256": "1e8576cd5f3ba1f6dd72ef322d9ac6635d38aebe6a03ad469732349ddb026d7a",
+      "existingRuntimeUnchanged": true
+    },
+    {
+      "id": "same-device-hal-card-replaces-prior-operation",
+      "passed": true,
+      "behavior": "Applying another HAL card to the same device replaces its previous managed example; it does not append another operation or binding.",
+      "results": [
+        {
+          "operation": "HAL_GPIO_WritePin",
+          "bindingCount": 1,
+          "states": [
+            {
+              "atMs": 0,
+              "on": true
+            },
+            {
+              "atMs": 20,
+              "on": true
+            },
+            {
+              "atMs": 100,
+              "on": true
+            },
+            {
+              "atMs": 200,
+              "on": true
+            },
+            {
+              "atMs": 600,
+              "on": true
+            },
+            {
+              "atMs": 1000,
+              "on": true
+            },
+            {
+              "atMs": 1200,
+              "on": true
+            }
+          ],
+          "runtimeLog": "same-card-write-runtime.json"
+        },
+        {
+          "operation": "HAL_GPIO_TogglePin",
+          "bindingCount": 1,
+          "states": [
+            {
+              "atMs": 0,
+              "on": true
+            },
+            {
+              "atMs": 20,
+              "on": false
+            },
+            {
+              "atMs": 100,
+              "on": true
+            },
+            {
+              "atMs": 200,
+              "on": true
+            },
+            {
+              "atMs": 600,
+              "on": false
+            },
+            {
+              "atMs": 1000,
+              "on": false
+            },
+            {
+              "atMs": 1200,
+              "on": false
+            }
+          ],
+          "runtimeLog": "same-card-toggle-runtime.json"
+        },
+        {
+          "operation": "HAL_GPIO_WritePin",
+          "bindingCount": 1,
+          "states": [
+            {
+              "atMs": 0,
+              "on": true
+            },
+            {
+              "atMs": 20,
+              "on": true
+            },
+            {
+              "atMs": 100,
+              "on": true
+            },
+            {
+              "atMs": 200,
+              "on": true
+            },
+            {
+              "atMs": 600,
+              "on": true
+            },
+            {
+              "atMs": 1000,
+              "on": true
+            },
+            {
+              "atMs": 1200,
+              "on": true
+            }
+          ],
+          "runtimeLog": "same-card-write-again-runtime.json"
+        }
+      ]
+    }
+  ],
+  "limitations": [
+    "Selected multi-device combinations and conflict boundaries only; not all possible combinations of 114 device types.",
+    "Docs blocks execute sequentially in main. HAL_Delay and polling can delay later blocks; successful composition does not imply concurrent scheduling.",
+    "Conflict cases prove atomic rejection of the input project and repeatable execution of the existing project; the rejected new combination is not executed.",
+    "Existing execute harness retains at most 120 printf records, 50 UART events, 30 bus traces, and milestone state frames."
+  ],
+  "summary": {
+    "total": 7,
+    "passed": 7,
+    "failed": 0
+  },
+  "sourceSha256After": "1b43991b345387c0105aac31e2b3e3eb6b11cddac11ee19b44fe1604f0363e32",
+  "sourceUnchanged": true,
+  "finishedAt": "2026-10-19T08:31:19.421Z",
+  "passed": true
+}

@@ -1,0 +1,533 @@
+{
+  "passed": true,
+  "completeMatrix": false,
+  "requestedCompleteMatrix": false,
+  "packageVersion": "0.25.0",
+  "appVersion": "0.25.0",
+  "sourceCommit": "5b74ec9586820f082249eee935b8696c2fa7167c",
+  "sourceDirty": true,
+  "sourceStatus": "M .github/workflows/build-windows.yml\n M package.json\n M scripts/mcu-defaults-smoke.cjs\n M src/hal.js\n M src/pinout-ui.js\n?? docs/audits/pin-options-2026-10-19/\n?? scripts/pin-options-ui-check.cjs\n?? tests/hal-nvic-dispatch.test.js",
+  "sourceSha256": "f4bd4860a73b43b41b5a58d6b6c75c5b257fe147b55d764b3c4ba6a628afa6a7",
+  "startedAt": "2026-10-19T07:59:08.261Z",
+  "runId": "2026-10-19T07-58-59-935Z",
+  "scopes": [
+    "validation",
+    "exti",
+    "callbacks"
+  ],
+  "limit": 2,
+  "cases": [
+    {
+      "id": "validation-hidden-ccr-0",
+      "settings": {
+        "value": "",
+        "requestedMode": "base"
+      },
+      "startedAt": "2026-10-19T07:59:17.782Z",
+      "passed": true,
+      "invalidHiddenFieldRemainsEditable": true,
+      "finishedAt": "2026-10-19T07:59:19.925Z"
+    },
+    {
+      "id": "validation-hidden-ccr-1",
+      "settings": {
+        "value": "1.5",
+        "requestedMode": "capture"
+      },
+      "startedAt": "2026-10-19T07:59:19.939Z",
+      "passed": true,
+      "invalidHiddenFieldRemainsEditable": true,
+      "finishedAt": "2026-10-19T07:59:21.831Z"
+    },
+    {
+      "id": "validation-hidden-ccr-2",
+      "settings": {
+        "value": "4294967296",
+        "requestedMode": "encoder"
+      },
+      "startedAt": "2026-10-19T07:59:21.837Z",
+      "passed": true,
+      "invalidHiddenFieldRemainsEditable": true,
+      "finishedAt": "2026-10-19T07:59:23.735Z"
+    },
+    {
+      "id": "validation-label-timer-mode",
+      "settings": {
+        "label": "AUDIT_LABEL",
+        "timer": "TIM2",
+        "mode": "pwm"
+      },
+      "startedAt": "2026-10-19T07:59:23.744Z",
+      "passed": true,
+      "labelPreserved": true,
+      "finishedAt": "2026-10-19T07:59:25.788Z"
+    },
+    {
+      "id": "validation-conflict-retains-edits",
+      "settings": {
+        "pin": "PA2",
+        "occupied": "PA3",
+        "label": "CONFLICT_LABEL",
+        "pull": "PULLDOWN",
+        "edge": "CHANGE",
+        "initial": 1
+      },
+      "startedAt": "2026-10-19T07:59:25.816Z",
+      "passed": true,
+      "rollbackKeepsPriorEdits": true,
+      "finishedAt": "2026-10-19T07:59:27.736Z"
+    },
+    {
+      "id": "validation-empty-priority",
+      "settings": {
+        "field": "priority",
+        "input": ""
+      },
+      "startedAt": "2026-10-19T07:59:27.741Z",
+      "passed": true,
+      "emptyRejected": true,
+      "finishedAt": "2026-10-19T07:59:28.720Z"
+    },
+    {
+      "id": "validation-empty-prescaler",
+      "settings": {
+        "field": "prescaler",
+        "input": ""
+      },
+      "startedAt": "2026-10-19T07:59:28.726Z",
+      "passed": true,
+      "emptyRejected": true,
+      "finishedAt": "2026-10-19T07:59:29.499Z"
+    },
+    {
+      "id": "validation-empty-period",
+      "settings": {
+        "field": "period",
+        "input": ""
+      },
+      "startedAt": "2026-10-19T07:59:29.501Z",
+      "passed": true,
+      "emptyRejected": true,
+      "finishedAt": "2026-10-19T07:59:30.258Z"
+    },
+    {
+      "id": "validation-empty-pulse",
+      "settings": {
+        "field": "pulse",
+        "input": ""
+      },
+      "startedAt": "2026-10-19T07:59:30.260Z",
+      "passed": true,
+      "emptyRejected": true,
+      "finishedAt": "2026-10-19T07:59:30.974Z"
+    },
+    {
+      "id": "validation-empty-clock",
+      "settings": {
+        "field": "clock",
+        "input": ""
+      },
+      "startedAt": "2026-10-19T07:59:30.975Z",
+      "passed": true,
+      "emptyRejected": true,
+      "finishedAt": "2026-10-19T07:59:31.755Z"
+    },
+    {
+      "id": "validation-priority--1",
+      "settings": {
+        "value": -1
+      },
+      "startedAt": "2026-10-19T07:59:31.759Z",
+      "passed": true,
+      "invalidPriorityRejected": true,
+      "finishedAt": "2026-10-19T07:59:32.326Z"
+    },
+    {
+      "id": "validation-priority-16",
+      "settings": {
+        "value": 16
+      },
+      "startedAt": "2026-10-19T07:59:32.329Z",
+      "passed": true,
+      "invalidPriorityRejected": true,
+      "finishedAt": "2026-10-19T07:59:32.983Z"
+    },
+    {
+      "id": "validation-priority-1_5",
+      "settings": {
+        "value": 1.5
+      },
+      "startedAt": "2026-10-19T07:59:32.985Z",
+      "passed": true,
+      "invalidPriorityRejected": true,
+      "finishedAt": "2026-10-19T07:59:33.607Z"
+    },
+    {
+      "id": "validation-cancel-preserves-project",
+      "settings": {},
+      "startedAt": "2026-10-19T07:59:33.609Z",
+      "passed": true,
+      "cancelPreservesConfigurationAndCode": true,
+      "finishedAt": "2026-10-19T07:59:34.558Z"
+    },
+    {
+      "id": "validation-label-pin-switch-save",
+      "settings": {
+        "label": "LD2_AUDIT"
+      },
+      "startedAt": "2026-10-19T07:59:34.560Z",
+      "passed": true,
+      "roundTrip": {
+        "file": "validation-label-pin-switch-save.stm32lab",
+        "sha256": "46c233c84862ddeebacf16ed25fcfcb2eac95c38224402e7bb3abb28b04637b6"
+      },
+      "generatedCodeSha256": "bb3eeeaaa5a79ad7d5ab60745b539bdf04d4ffb3c35cd6b18d916d559c4e4625",
+      "finishedAt": "2026-10-19T07:59:36.586Z"
+    },
+    {
+      "id": "validation-invalid-label-0",
+      "settings": {
+        "label": "9bad"
+      },
+      "startedAt": "2026-10-19T07:59:36.589Z",
+      "passed": true,
+      "invalidLabelRejected": true,
+      "finishedAt": "2026-10-19T07:59:37.135Z"
+    },
+    {
+      "id": "validation-invalid-label-1",
+      "settings": {
+        "label": "two words"
+      },
+      "startedAt": "2026-10-19T07:59:37.139Z",
+      "passed": true,
+      "invalidLabelRejected": true,
+      "finishedAt": "2026-10-19T07:59:37.733Z"
+    },
+    {
+      "id": "validation-invalid-label-2",
+      "settings": {
+        "label": "__proto__"
+      },
+      "startedAt": "2026-10-19T07:59:37.735Z",
+      "passed": true,
+      "invalidLabelRejected": true,
+      "finishedAt": "2026-10-19T07:59:38.313Z"
+    },
+    {
+      "id": "validation-generate-rejects-empty-priority",
+      "settings": {},
+      "startedAt": "2026-10-19T07:59:38.315Z",
+      "passed": true,
+      "invalidGenerationPreservesOriginalCode": true,
+      "finishedAt": "2026-10-19T07:59:39.089Z"
+    },
+    {
+      "id": "exti-enabled-CHANGE-PULLUP-1-p14",
+      "settings": {
+        "enabled": true,
+        "edge": "CHANGE",
+        "pull": "PULLUP",
+        "initial": 1,
+        "priority": 14,
+        "receivers": [
+          "PA0",
+          "PA1",
+          "PA2",
+          "PA3",
+          "PA4",
+          "PA5",
+          "PA10"
+        ],
+        "drivers": [
+          "PB0",
+          "PB1",
+          "PB2",
+          "PB3",
+          "PB4",
+          "PB5",
+          "PB6"
+        ],
+        "irq": [
+          "EXTI0_IRQn",
+          "EXTI1_IRQn",
+          "EXTI2_IRQn",
+          "EXTI3_IRQn",
+          "EXTI4_IRQn",
+          "EXTI9_5_IRQn",
+          "EXTI15_10_IRQn"
+        ]
+      },
+      "startedAt": "2026-10-19T07:59:39.091Z",
+      "passed": true,
+      "generatedCodeSha256": "fad123561d13e291194e8ef3433ac9648c99cf09ccd547397d3f25cec4109921",
+      "executedCodeSha256": "2157cf94b574a67a9e51c0d4a8cb9da547b3e66422c48d5761dfabd618c25887",
+      "runtimeEvents": 33,
+      "callbacks": [
+        "CALL 1 0",
+        "CALL 1 1",
+        "CALL 1 2",
+        "CALL 1 3",
+        "CALL 1 4",
+        "CALL 1 5",
+        "CALL 1 10",
+        "CALL 2 0",
+        "CALL 2 1",
+        "CALL 2 2",
+        "CALL 2 3",
+        "CALL 2 4",
+        "CALL 2 5",
+        "CALL 2 10",
+        "CALL 2 0",
+        "CALL 2 1",
+        "CALL 2 2",
+        "CALL 2 3",
+        "CALL 2 4",
+        "CALL 2 5",
+        "CALL 2 10"
+      ],
+      "roundTrip": null,
+      "configurationMethod": "Actual UI changes from prior verified configuration; complete requested settings asserted after generation.",
+      "finishedAt": "2026-10-19T07:59:43.759Z"
+    },
+    {
+      "id": "exti-enabled-CHANGE-PULLUP-1-p15",
+      "settings": {
+        "enabled": true,
+        "edge": "CHANGE",
+        "pull": "PULLUP",
+        "initial": 1,
+        "priority": 15,
+        "receivers": [
+          "PA0",
+          "PA1",
+          "PA2",
+          "PA3",
+          "PA4",
+          "PA5",
+          "PA10"
+        ],
+        "drivers": [
+          "PB0",
+          "PB1",
+          "PB2",
+          "PB3",
+          "PB4",
+          "PB5",
+          "PB6"
+        ],
+        "irq": [
+          "EXTI0_IRQn",
+          "EXTI1_IRQn",
+          "EXTI2_IRQn",
+          "EXTI3_IRQn",
+          "EXTI4_IRQn",
+          "EXTI9_5_IRQn",
+          "EXTI15_10_IRQn"
+        ]
+      },
+      "startedAt": "2026-10-19T07:59:43.762Z",
+      "passed": true,
+      "generatedCodeSha256": "bdba010a539c1065c0fa2955ab2d2530a5f4b21e7282966fee6127d68f6e93f4",
+      "executedCodeSha256": "88453a02fe8558900880038f011151cd5e91fd73cd8bfb47fb92f0419b8eda2e",
+      "runtimeEvents": 33,
+      "callbacks": [
+        "CALL 1 0",
+        "CALL 1 1",
+        "CALL 1 2",
+        "CALL 1 3",
+        "CALL 1 4",
+        "CALL 1 5",
+        "CALL 1 10",
+        "CALL 2 0",
+        "CALL 2 1",
+        "CALL 2 2",
+        "CALL 2 3",
+        "CALL 2 4",
+        "CALL 2 5",
+        "CALL 2 10",
+        "CALL 2 0",
+        "CALL 2 1",
+        "CALL 2 2",
+        "CALL 2 3",
+        "CALL 2 4",
+        "CALL 2 5",
+        "CALL 2 10"
+      ],
+      "roundTrip": {
+        "file": "exti-enabled-CHANGE-PULLUP-1-p15.stm32lab",
+        "sha256": "a046a54cf1902ad25fc15493f126e63cf07b6fc7df8f9976bf632d89b59a69cf"
+      },
+      "configurationMethod": "Actual UI changes from prior verified configuration; complete requested settings asserted after generation.",
+      "finishedAt": "2026-10-19T07:59:47.050Z"
+    },
+    {
+      "id": "callbacks-disable-other",
+      "settings": {
+        "pins": [
+          "PA0",
+          "PA1",
+          "PA2"
+        ],
+        "priority": [
+          0,
+          1,
+          2
+        ],
+        "kind": "disable-other"
+      },
+      "startedAt": "2026-10-19T07:59:47.053Z",
+      "passed": true,
+      "before": [
+        "IRQ 1",
+        "IRQ 4"
+      ],
+      "after": [
+        "IRQ 2"
+      ],
+      "generatedCodeSha256": "86366a79fda6f92d069d82ab14db2caf5c4664eaee3142391f8605d4140a603b",
+      "executedCodeSha256": "e6af0d344e5de2b168f6e8363168e9895b5fac875f951a6724546d5c8aa4540b",
+      "finishedAt": "2026-10-19T07:59:49.856Z"
+    },
+    {
+      "id": "callbacks-disable-global",
+      "settings": {
+        "pins": [
+          "PA0",
+          "PA1",
+          "PA2"
+        ],
+        "priority": [
+          0,
+          1,
+          2
+        ],
+        "kind": "disable-global"
+      },
+      "startedAt": "2026-10-19T07:59:49.858Z",
+      "passed": true,
+      "before": [
+        "IRQ 1"
+      ],
+      "after": [
+        "IRQ 2",
+        "IRQ 4"
+      ],
+      "generatedCodeSha256": "d0e41aa3eef05482e6226a34e4da1e12cb9b54d8e0592cda1c11429e1618e905",
+      "executedCodeSha256": "1882a413d89fa6db8f87f431775ee6488cc61e6071bc3c7ab3e4d90ef0b9b63c",
+      "finishedAt": "2026-10-19T07:59:52.716Z"
+    },
+    {
+      "id": "callbacks-change-priority",
+      "settings": {
+        "pins": [
+          "PA0",
+          "PA1",
+          "PA2"
+        ],
+        "priority": [
+          0,
+          1,
+          2
+        ],
+        "kind": "change-priority"
+      },
+      "startedAt": "2026-10-19T07:59:52.718Z",
+      "passed": true,
+      "before": [
+        "IRQ 1",
+        "IRQ 4",
+        "IRQ 2"
+      ],
+      "after": [],
+      "generatedCodeSha256": "d0e41aa3eef05482e6226a34e4da1e12cb9b54d8e0592cda1c11429e1618e905",
+      "executedCodeSha256": "8074d35fd18eaef4f8de5f0a7d2ecfa721433dd72788c0aca7912842dfb38fb4",
+      "finishedAt": "2026-10-19T07:59:55.578Z"
+    }
+  ],
+  "functionChoices": [],
+  "pageErrors": [],
+  "execution": {
+    "mode": "electron",
+    "viewportKind": "BrowserWindow content size"
+  },
+  "limitations": [
+    "Actual simulator execution; no physical STM32 hardware or ARM firmware claim.",
+    "Speed is generated VERY_HIGH and AF is derived from function; no independent Speed/AF selector exists.",
+    "Peripheral function selection coverage is distinct from peripheral electrical execution coverage.",
+    "Executed instrumentation preserves generated initialization; USER CODE 3 automatic Toggle is replaced by an idle delay to observe initial values."
+  ],
+  "diagnosticWarnings": [],
+  "gpioPins": [
+    "PA0",
+    "PA1",
+    "PA10",
+    "PA11",
+    "PA12",
+    "PA13",
+    "PA14",
+    "PA15",
+    "PA2",
+    "PA3",
+    "PA4",
+    "PA5",
+    "PA6",
+    "PA7",
+    "PA8",
+    "PA9",
+    "PB0",
+    "PB1",
+    "PB10",
+    "PB12",
+    "PB13",
+    "PB14",
+    "PB15",
+    "PB2",
+    "PB3",
+    "PB4",
+    "PB5",
+    "PB6",
+    "PB7",
+    "PB8",
+    "PB9",
+    "PC0",
+    "PC1",
+    "PC10",
+    "PC11",
+    "PC12",
+    "PC13",
+    "PC14",
+    "PC15",
+    "PC2",
+    "PC3",
+    "PC4",
+    "PC5",
+    "PC6",
+    "PC7",
+    "PC8",
+    "PC9",
+    "PD2",
+    "PH0",
+    "PH1"
+  ],
+  "expected": {
+    "functionChoices": 370,
+    "gpioCases": 30,
+    "gpioPinCombinations": 1500,
+    "extiEnabledCases": 288,
+    "extiEnabledPinCombinations": 2016,
+    "extiDisabledCases": 18,
+    "extiDisabledPinCombinations": 126
+  },
+  "sourceSha256After": "f4bd4860a73b43b41b5a58d6b6c75c5b257fe147b55d764b3c4ba6a628afa6a7",
+  "coverage": {
+    "functionChoices": 0,
+    "gpioCases": 0,
+    "extiEnabledCases": 2,
+    "extiDisabledCases": 0,
+    "validationCases": 19,
+    "callbackMutationCases": 3
+  },
+  "finishedAt": "2026-10-19T07:59:55.732Z",
+  "completedCases": 24
+}

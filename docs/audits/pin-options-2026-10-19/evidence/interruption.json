@@ -1,0 +1,6 @@
+{
+  "time": "2026-10-19T08:01:12.521Z",
+  "reason": "Requested pause before Analog hardware behavior correction; partial run preserved.",
+  "method": "window.close via CDP port read from this run isolated profile",
+  "completeMatrix": false
+}

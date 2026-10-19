@@ -56,7 +56,17 @@ export class HalAdapter {
         if(job.index===job.count){channel.rx=null;this.queue(id+'_IRQn',()=>this.callback(r,'HAL_UART_RxCpltCallback',[job.handle]),id+':rx');}}
     }
     if(!r.interruptsEnabled||r.inCallback)return;
-    const ready=this.pending.filter(j=>this.nvic.has(j.irq));this.pending=this.pending.filter(j=>!this.nvic.has(j.irq));ready.sort((a,b)=>this.nvic.get(a.irq)-this.nvic.get(b.irq));for(const job of ready)r.runCallback({host:job.callback});
+    // A callback may mask another IRQ or change its priority. Select only the
+    // next currently enabled job; masked jobs retain their pending state.
+    // New jobs queued by callbacks belong to the next poll, bounding this batch.
+    const batch=new Set(this.pending);
+    while(r.interruptsEnabled&&!r.inCallback){
+      let next;
+      for(const job of this.pending)if(batch.has(job)&&this.nvic.has(job.irq)&&(!next||this.nvic.get(job.irq)<this.nvic.get(next.irq)))next=job;
+      if(!next)break;
+      batch.delete(next);this.pending.splice(this.pending.indexOf(next),1);
+      r.runCallback({host:next.callback});
+    }
   }
   *pollCounter(name,args,r){yield .002;r.steps=0;return this.call(name,args,r);}
   invoke(name,args,r){
@@ -95,11 +105,13 @@ export class HalAdapter {
       for(const pin of this.pins(a,mask)){
         if(this.catalog.configurePin(pin,mode,this.field(init,'Alternate'),r))continue;
         const p=this.configured(pin),expected=p.function==='GPIO_Output'?1:p.function==='GPIO_Input'?0:p.function==='GPIO_EXTI'?HAL_CONSTANTS['GPIO_MODE_IT_'+(p.edge==='CHANGE'?'RISING_FALLING':p.edge)]:p.function==='Analog'||p.function.startsWith('ADC1_')?3:p.function.startsWith('I2C1_')?18:2;
-        const dynamic=this.initializedGpio.has(pin)&&['GPIO_Output','GPIO_Input'].includes(p.function)&&[0,1,17].includes(mode);
+        const dynamic=this.initializedGpio.has(pin)&&(['GPIO_Output','GPIO_Input'].includes(p.function)&&[0,1,17,3].includes(mode)||(p.function==='Analog'||p.function.startsWith('ADC1_'))&&[0,3].includes(mode));
         if(!dynamic&&(mode!==expected&&!(expected===1&&mode===17)||pull!==['NOPULL','PULLUP','PULLDOWN'].indexOf(p.pull)))throw new Error(`${pin}: HAL_GPIO_Init 모드/풀 설정과 Pinout이 다릅니다.`);
         if([2,18].includes(mode)){const serial=serialFunction(p.function),af=serial?serialAf(serial):p.function.startsWith('I2C1_')?4:p.function.startsWith('SPI1_')?5:timerAf(p.function.split('_')[0]);if(this.field(init,'Alternate')!==af)throw new Error(`${pin}: GPIO Alternate(AF) 설정을 확인하세요.`);}
         this.initializedGpio.add(pin);
         if(mode===1||mode===17){r.call('pinMode',[pin,'OUTPUT']);r.gpio[pin].openDrain=mode===17;r.gpio[pin].pull=pull;r.call('digitalWrite',[pin,this.latches.get(pin)??p.initial]);}
+        // RM0390 7.3.12: analog mode disables both weak pulls and the digital input.
+        else if(mode===3)r.setPinMode(pin,'ANALOG');
         else r.call('pinMode',[pin,pull===1?'INPUT_PULLUP':pull===2?'INPUT_PULLDOWN':'INPUT']);
         if(p.function==='GPIO_EXTI')r.interrupts.set(pin,{mode:p.edge,previous:Number(!!r.api.read(pin)),pending:false,callback:{host:()=>{const mask=1<<Number(pin.slice(2));this.extiPending|=mask;this.queue(irqForPin(pin),()=>{const handler=irqForPin(pin).replace('_IRQn','_IRQHandler');if(r.program.functions[handler])this.callback(r,handler);else this.call('HAL_GPIO_EXTI_IRQHandler',[mask],r);},pin);}}});
       }return 0;

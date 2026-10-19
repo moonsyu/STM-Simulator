@@ -105,6 +105,12 @@ jobs:
         run: node scripts/docs-audit/packaged.cjs --dev
       - name: Test onboard USART2 VCP and external UART wiring
         run: npm run test:uart:ui
+      - name: Test pin option validation, live interrupt callbacks and analog input
+        env:
+          PIN_OPTIONS_SCOPE: validation,callbacks,adc
+        run: npm run test:pin-options:ui
+      - name: Test multiple Docs examples, live devices and saved projects
+        run: npm run test:device-docs:multi:ui
       - name: Upload test diagnostics on failure
         if: failure()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
@@ -118,6 +124,17 @@ jobs:
             work/test-results/workbench-review/*.jsonl
             work/test-results/workbench-review/*.png
             work/test-results/docs-audit-*/*.json
+            work/test-results/pin-options-*/*.json
+            work/test-results/pin-options-*/*.jsonl
+            work/test-results/pin-options-*/*.png
+            work/test-results/pin-options-*/*.c
+            work/test-results/mcu-defaults-*/*.json
+            work/test-results/mcu-defaults-*/*.jsonl
+            work/test-results/mcu-defaults-*/*.png
+            work/test-results/docs-multi-apply-*/*.json
+            work/test-results/docs-multi-apply-*/*.jsonl
+            work/test-results/docs-multi-apply-*/*.png
+            work/test-results/docs-multi-apply-*/*.c
           if-no-files-found: ignore
           retention-days: 14
       - name: Build portable executable

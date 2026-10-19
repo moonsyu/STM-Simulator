@@ -1,0 +1,3387 @@
+{
+  "scope": "Source SimulationSession / generated HAL C; no Electron or user profile",
+  "checks": [
+    {
+      "name": "simultaneous EXTI priorities 0/0",
+      "expected": [
+        "1",
+        "2"
+      ],
+      "actual": [
+        "1",
+        "2"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 0/1",
+      "expected": [
+        "1",
+        "2"
+      ],
+      "actual": [
+        "1",
+        "2"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 0/2",
+      "expected": [
+        "1",
+        "2"
+      ],
+      "actual": [
+        "1",
+        "2"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 0/3",
+      "expected": [
+        "1",
+        "2"
+      ],
+      "actual": [
+        "1",
+        "2"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 0/4",
+      "expected": [
+        "1",
+        "2"
+      ],
+      "actual": [
+        "1",
+        "2"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 0/5",
+      "expected": [
+        "1",
+        "2"
+      ],
+      "actual": [
+        "1",
+        "2"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 0/6",
+      "expected": [
+        "1",
+        "2"
+      ],
+      "actual": [
+        "1",
+        "2"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 0/7",
+      "expected": [
+        "1",
+        "2"
+      ],
+      "actual": [
+        "1",
+        "2"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 0/8",
+      "expected": [
+        "1",
+        "2"
+      ],
+      "actual": [
+        "1",
+        "2"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 0/9",
+      "expected": [
+        "1",
+        "2"
+      ],
+      "actual": [
+        "1",
+        "2"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 0/10",
+      "expected": [
+        "1",
+        "2"
+      ],
+      "actual": [
+        "1",
+        "2"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 0/11",
+      "expected": [
+        "1",
+        "2"
+      ],
+      "actual": [
+        "1",
+        "2"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 0/12",
+      "expected": [
+        "1",
+        "2"
+      ],
+      "actual": [
+        "1",
+        "2"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 0/13",
+      "expected": [
+        "1",
+        "2"
+      ],
+      "actual": [
+        "1",
+        "2"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 0/14",
+      "expected": [
+        "1",
+        "2"
+      ],
+      "actual": [
+        "1",
+        "2"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 0/15",
+      "expected": [
+        "1",
+        "2"
+      ],
+      "actual": [
+        "1",
+        "2"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 1/0",
+      "expected": [
+        "2",
+        "1"
+      ],
+      "actual": [
+        "2",
+        "1"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 1/1",
+      "expected": [
+        "1",
+        "2"
+      ],
+      "actual": [
+        "1",
+        "2"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 1/2",
+      "expected": [
+        "1",
+        "2"
+      ],
+      "actual": [
+        "1",
+        "2"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 1/3",
+      "expected": [
+        "1",
+        "2"
+      ],
+      "actual": [
+        "1",
+        "2"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 1/4",
+      "expected": [
+        "1",
+        "2"
+      ],
+      "actual": [
+        "1",
+        "2"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 1/5",
+      "expected": [
+        "1",
+        "2"
+      ],
+      "actual": [
+        "1",
+        "2"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 1/6",
+      "expected": [
+        "1",
+        "2"
+      ],
+      "actual": [
+        "1",
+        "2"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 1/7",
+      "expected": [
+        "1",
+        "2"
+      ],
+      "actual": [
+        "1",
+        "2"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 1/8",
+      "expected": [
+        "1",
+        "2"
+      ],
+      "actual": [
+        "1",
+        "2"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 1/9",
+      "expected": [
+        "1",
+        "2"
+      ],
+      "actual": [
+        "1",
+        "2"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 1/10",
+      "expected": [
+        "1",
+        "2"
+      ],
+      "actual": [
+        "1",
+        "2"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 1/11",
+      "expected": [
+        "1",
+        "2"
+      ],
+      "actual": [
+        "1",
+        "2"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 1/12",
+      "expected": [
+        "1",
+        "2"
+      ],
+      "actual": [
+        "1",
+        "2"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 1/13",
+      "expected": [
+        "1",
+        "2"
+      ],
+      "actual": [
+        "1",
+        "2"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 1/14",
+      "expected": [
+        "1",
+        "2"
+      ],
+      "actual": [
+        "1",
+        "2"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 1/15",
+      "expected": [
+        "1",
+        "2"
+      ],
+      "actual": [
+        "1",
+        "2"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 2/0",
+      "expected": [
+        "2",
+        "1"
+      ],
+      "actual": [
+        "2",
+        "1"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 2/1",
+      "expected": [
+        "2",
+        "1"
+      ],
+      "actual": [
+        "2",
+        "1"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 2/2",
+      "expected": [
+        "1",
+        "2"
+      ],
+      "actual": [
+        "1",
+        "2"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 2/3",
+      "expected": [
+        "1",
+        "2"
+      ],
+      "actual": [
+        "1",
+        "2"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 2/4",
+      "expected": [
+        "1",
+        "2"
+      ],
+      "actual": [
+        "1",
+        "2"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 2/5",
+      "expected": [
+        "1",
+        "2"
+      ],
+      "actual": [
+        "1",
+        "2"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 2/6",
+      "expected": [
+        "1",
+        "2"
+      ],
+      "actual": [
+        "1",
+        "2"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 2/7",
+      "expected": [
+        "1",
+        "2"
+      ],
+      "actual": [
+        "1",
+        "2"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 2/8",
+      "expected": [
+        "1",
+        "2"
+      ],
+      "actual": [
+        "1",
+        "2"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 2/9",
+      "expected": [
+        "1",
+        "2"
+      ],
+      "actual": [
+        "1",
+        "2"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 2/10",
+      "expected": [
+        "1",
+        "2"
+      ],
+      "actual": [
+        "1",
+        "2"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 2/11",
+      "expected": [
+        "1",
+        "2"
+      ],
+      "actual": [
+        "1",
+        "2"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 2/12",
+      "expected": [
+        "1",
+        "2"
+      ],
+      "actual": [
+        "1",
+        "2"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 2/13",
+      "expected": [
+        "1",
+        "2"
+      ],
+      "actual": [
+        "1",
+        "2"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 2/14",
+      "expected": [
+        "1",
+        "2"
+      ],
+      "actual": [
+        "1",
+        "2"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 2/15",
+      "expected": [
+        "1",
+        "2"
+      ],
+      "actual": [
+        "1",
+        "2"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 3/0",
+      "expected": [
+        "2",
+        "1"
+      ],
+      "actual": [
+        "2",
+        "1"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 3/1",
+      "expected": [
+        "2",
+        "1"
+      ],
+      "actual": [
+        "2",
+        "1"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 3/2",
+      "expected": [
+        "2",
+        "1"
+      ],
+      "actual": [
+        "2",
+        "1"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 3/3",
+      "expected": [
+        "1",
+        "2"
+      ],
+      "actual": [
+        "1",
+        "2"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 3/4",
+      "expected": [
+        "1",
+        "2"
+      ],
+      "actual": [
+        "1",
+        "2"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 3/5",
+      "expected": [
+        "1",
+        "2"
+      ],
+      "actual": [
+        "1",
+        "2"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 3/6",
+      "expected": [
+        "1",
+        "2"
+      ],
+      "actual": [
+        "1",
+        "2"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 3/7",
+      "expected": [
+        "1",
+        "2"
+      ],
+      "actual": [
+        "1",
+        "2"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 3/8",
+      "expected": [
+        "1",
+        "2"
+      ],
+      "actual": [
+        "1",
+        "2"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 3/9",
+      "expected": [
+        "1",
+        "2"
+      ],
+      "actual": [
+        "1",
+        "2"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 3/10",
+      "expected": [
+        "1",
+        "2"
+      ],
+      "actual": [
+        "1",
+        "2"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 3/11",
+      "expected": [
+        "1",
+        "2"
+      ],
+      "actual": [
+        "1",
+        "2"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 3/12",
+      "expected": [
+        "1",
+        "2"
+      ],
+      "actual": [
+        "1",
+        "2"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 3/13",
+      "expected": [
+        "1",
+        "2"
+      ],
+      "actual": [
+        "1",
+        "2"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 3/14",
+      "expected": [
+        "1",
+        "2"
+      ],
+      "actual": [
+        "1",
+        "2"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 3/15",
+      "expected": [
+        "1",
+        "2"
+      ],
+      "actual": [
+        "1",
+        "2"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 4/0",
+      "expected": [
+        "2",
+        "1"
+      ],
+      "actual": [
+        "2",
+        "1"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 4/1",
+      "expected": [
+        "2",
+        "1"
+      ],
+      "actual": [
+        "2",
+        "1"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 4/2",
+      "expected": [
+        "2",
+        "1"
+      ],
+      "actual": [
+        "2",
+        "1"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 4/3",
+      "expected": [
+        "2",
+        "1"
+      ],
+      "actual": [
+        "2",
+        "1"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 4/4",
+      "expected": [
+        "1",
+        "2"
+      ],
+      "actual": [
+        "1",
+        "2"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 4/5",
+      "expected": [
+        "1",
+        "2"
+      ],
+      "actual": [
+        "1",
+        "2"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 4/6",
+      "expected": [
+        "1",
+        "2"
+      ],
+      "actual": [
+        "1",
+        "2"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 4/7",
+      "expected": [
+        "1",
+        "2"
+      ],
+      "actual": [
+        "1",
+        "2"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 4/8",
+      "expected": [
+        "1",
+        "2"
+      ],
+      "actual": [
+        "1",
+        "2"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 4/9",
+      "expected": [
+        "1",
+        "2"
+      ],
+      "actual": [
+        "1",
+        "2"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 4/10",
+      "expected": [
+        "1",
+        "2"
+      ],
+      "actual": [
+        "1",
+        "2"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 4/11",
+      "expected": [
+        "1",
+        "2"
+      ],
+      "actual": [
+        "1",
+        "2"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 4/12",
+      "expected": [
+        "1",
+        "2"
+      ],
+      "actual": [
+        "1",
+        "2"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 4/13",
+      "expected": [
+        "1",
+        "2"
+      ],
+      "actual": [
+        "1",
+        "2"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 4/14",
+      "expected": [
+        "1",
+        "2"
+      ],
+      "actual": [
+        "1",
+        "2"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 4/15",
+      "expected": [
+        "1",
+        "2"
+      ],
+      "actual": [
+        "1",
+        "2"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 5/0",
+      "expected": [
+        "2",
+        "1"
+      ],
+      "actual": [
+        "2",
+        "1"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 5/1",
+      "expected": [
+        "2",
+        "1"
+      ],
+      "actual": [
+        "2",
+        "1"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 5/2",
+      "expected": [
+        "2",
+        "1"
+      ],
+      "actual": [
+        "2",
+        "1"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 5/3",
+      "expected": [
+        "2",
+        "1"
+      ],
+      "actual": [
+        "2",
+        "1"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 5/4",
+      "expected": [
+        "2",
+        "1"
+      ],
+      "actual": [
+        "2",
+        "1"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 5/5",
+      "expected": [
+        "1",
+        "2"
+      ],
+      "actual": [
+        "1",
+        "2"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 5/6",
+      "expected": [
+        "1",
+        "2"
+      ],
+      "actual": [
+        "1",
+        "2"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 5/7",
+      "expected": [
+        "1",
+        "2"
+      ],
+      "actual": [
+        "1",
+        "2"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 5/8",
+      "expected": [
+        "1",
+        "2"
+      ],
+      "actual": [
+        "1",
+        "2"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 5/9",
+      "expected": [
+        "1",
+        "2"
+      ],
+      "actual": [
+        "1",
+        "2"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 5/10",
+      "expected": [
+        "1",
+        "2"
+      ],
+      "actual": [
+        "1",
+        "2"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 5/11",
+      "expected": [
+        "1",
+        "2"
+      ],
+      "actual": [
+        "1",
+        "2"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 5/12",
+      "expected": [
+        "1",
+        "2"
+      ],
+      "actual": [
+        "1",
+        "2"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 5/13",
+      "expected": [
+        "1",
+        "2"
+      ],
+      "actual": [
+        "1",
+        "2"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 5/14",
+      "expected": [
+        "1",
+        "2"
+      ],
+      "actual": [
+        "1",
+        "2"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 5/15",
+      "expected": [
+        "1",
+        "2"
+      ],
+      "actual": [
+        "1",
+        "2"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 6/0",
+      "expected": [
+        "2",
+        "1"
+      ],
+      "actual": [
+        "2",
+        "1"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 6/1",
+      "expected": [
+        "2",
+        "1"
+      ],
+      "actual": [
+        "2",
+        "1"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 6/2",
+      "expected": [
+        "2",
+        "1"
+      ],
+      "actual": [
+        "2",
+        "1"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 6/3",
+      "expected": [
+        "2",
+        "1"
+      ],
+      "actual": [
+        "2",
+        "1"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 6/4",
+      "expected": [
+        "2",
+        "1"
+      ],
+      "actual": [
+        "2",
+        "1"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 6/5",
+      "expected": [
+        "2",
+        "1"
+      ],
+      "actual": [
+        "2",
+        "1"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 6/6",
+      "expected": [
+        "1",
+        "2"
+      ],
+      "actual": [
+        "1",
+        "2"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 6/7",
+      "expected": [
+        "1",
+        "2"
+      ],
+      "actual": [
+        "1",
+        "2"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 6/8",
+      "expected": [
+        "1",
+        "2"
+      ],
+      "actual": [
+        "1",
+        "2"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 6/9",
+      "expected": [
+        "1",
+        "2"
+      ],
+      "actual": [
+        "1",
+        "2"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 6/10",
+      "expected": [
+        "1",
+        "2"
+      ],
+      "actual": [
+        "1",
+        "2"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 6/11",
+      "expected": [
+        "1",
+        "2"
+      ],
+      "actual": [
+        "1",
+        "2"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 6/12",
+      "expected": [
+        "1",
+        "2"
+      ],
+      "actual": [
+        "1",
+        "2"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 6/13",
+      "expected": [
+        "1",
+        "2"
+      ],
+      "actual": [
+        "1",
+        "2"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 6/14",
+      "expected": [
+        "1",
+        "2"
+      ],
+      "actual": [
+        "1",
+        "2"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 6/15",
+      "expected": [
+        "1",
+        "2"
+      ],
+      "actual": [
+        "1",
+        "2"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 7/0",
+      "expected": [
+        "2",
+        "1"
+      ],
+      "actual": [
+        "2",
+        "1"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 7/1",
+      "expected": [
+        "2",
+        "1"
+      ],
+      "actual": [
+        "2",
+        "1"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 7/2",
+      "expected": [
+        "2",
+        "1"
+      ],
+      "actual": [
+        "2",
+        "1"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 7/3",
+      "expected": [
+        "2",
+        "1"
+      ],
+      "actual": [
+        "2",
+        "1"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 7/4",
+      "expected": [
+        "2",
+        "1"
+      ],
+      "actual": [
+        "2",
+        "1"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 7/5",
+      "expected": [
+        "2",
+        "1"
+      ],
+      "actual": [
+        "2",
+        "1"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 7/6",
+      "expected": [
+        "2",
+        "1"
+      ],
+      "actual": [
+        "2",
+        "1"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 7/7",
+      "expected": [
+        "1",
+        "2"
+      ],
+      "actual": [
+        "1",
+        "2"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 7/8",
+      "expected": [
+        "1",
+        "2"
+      ],
+      "actual": [
+        "1",
+        "2"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 7/9",
+      "expected": [
+        "1",
+        "2"
+      ],
+      "actual": [
+        "1",
+        "2"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 7/10",
+      "expected": [
+        "1",
+        "2"
+      ],
+      "actual": [
+        "1",
+        "2"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 7/11",
+      "expected": [
+        "1",
+        "2"
+      ],
+      "actual": [
+        "1",
+        "2"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 7/12",
+      "expected": [
+        "1",
+        "2"
+      ],
+      "actual": [
+        "1",
+        "2"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 7/13",
+      "expected": [
+        "1",
+        "2"
+      ],
+      "actual": [
+        "1",
+        "2"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 7/14",
+      "expected": [
+        "1",
+        "2"
+      ],
+      "actual": [
+        "1",
+        "2"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 7/15",
+      "expected": [
+        "1",
+        "2"
+      ],
+      "actual": [
+        "1",
+        "2"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 8/0",
+      "expected": [
+        "2",
+        "1"
+      ],
+      "actual": [
+        "2",
+        "1"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 8/1",
+      "expected": [
+        "2",
+        "1"
+      ],
+      "actual": [
+        "2",
+        "1"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 8/2",
+      "expected": [
+        "2",
+        "1"
+      ],
+      "actual": [
+        "2",
+        "1"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 8/3",
+      "expected": [
+        "2",
+        "1"
+      ],
+      "actual": [
+        "2",
+        "1"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 8/4",
+      "expected": [
+        "2",
+        "1"
+      ],
+      "actual": [
+        "2",
+        "1"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 8/5",
+      "expected": [
+        "2",
+        "1"
+      ],
+      "actual": [
+        "2",
+        "1"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 8/6",
+      "expected": [
+        "2",
+        "1"
+      ],
+      "actual": [
+        "2",
+        "1"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 8/7",
+      "expected": [
+        "2",
+        "1"
+      ],
+      "actual": [
+        "2",
+        "1"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 8/8",
+      "expected": [
+        "1",
+        "2"
+      ],
+      "actual": [
+        "1",
+        "2"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 8/9",
+      "expected": [
+        "1",
+        "2"
+      ],
+      "actual": [
+        "1",
+        "2"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 8/10",
+      "expected": [
+        "1",
+        "2"
+      ],
+      "actual": [
+        "1",
+        "2"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 8/11",
+      "expected": [
+        "1",
+        "2"
+      ],
+      "actual": [
+        "1",
+        "2"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 8/12",
+      "expected": [
+        "1",
+        "2"
+      ],
+      "actual": [
+        "1",
+        "2"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 8/13",
+      "expected": [
+        "1",
+        "2"
+      ],
+      "actual": [
+        "1",
+        "2"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 8/14",
+      "expected": [
+        "1",
+        "2"
+      ],
+      "actual": [
+        "1",
+        "2"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 8/15",
+      "expected": [
+        "1",
+        "2"
+      ],
+      "actual": [
+        "1",
+        "2"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 9/0",
+      "expected": [
+        "2",
+        "1"
+      ],
+      "actual": [
+        "2",
+        "1"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 9/1",
+      "expected": [
+        "2",
+        "1"
+      ],
+      "actual": [
+        "2",
+        "1"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 9/2",
+      "expected": [
+        "2",
+        "1"
+      ],
+      "actual": [
+        "2",
+        "1"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 9/3",
+      "expected": [
+        "2",
+        "1"
+      ],
+      "actual": [
+        "2",
+        "1"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 9/4",
+      "expected": [
+        "2",
+        "1"
+      ],
+      "actual": [
+        "2",
+        "1"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 9/5",
+      "expected": [
+        "2",
+        "1"
+      ],
+      "actual": [
+        "2",
+        "1"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 9/6",
+      "expected": [
+        "2",
+        "1"
+      ],
+      "actual": [
+        "2",
+        "1"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 9/7",
+      "expected": [
+        "2",
+        "1"
+      ],
+      "actual": [
+        "2",
+        "1"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 9/8",
+      "expected": [
+        "2",
+        "1"
+      ],
+      "actual": [
+        "2",
+        "1"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 9/9",
+      "expected": [
+        "1",
+        "2"
+      ],
+      "actual": [
+        "1",
+        "2"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 9/10",
+      "expected": [
+        "1",
+        "2"
+      ],
+      "actual": [
+        "1",
+        "2"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 9/11",
+      "expected": [
+        "1",
+        "2"
+      ],
+      "actual": [
+        "1",
+        "2"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 9/12",
+      "expected": [
+        "1",
+        "2"
+      ],
+      "actual": [
+        "1",
+        "2"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 9/13",
+      "expected": [
+        "1",
+        "2"
+      ],
+      "actual": [
+        "1",
+        "2"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 9/14",
+      "expected": [
+        "1",
+        "2"
+      ],
+      "actual": [
+        "1",
+        "2"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 9/15",
+      "expected": [
+        "1",
+        "2"
+      ],
+      "actual": [
+        "1",
+        "2"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 10/0",
+      "expected": [
+        "2",
+        "1"
+      ],
+      "actual": [
+        "2",
+        "1"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 10/1",
+      "expected": [
+        "2",
+        "1"
+      ],
+      "actual": [
+        "2",
+        "1"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 10/2",
+      "expected": [
+        "2",
+        "1"
+      ],
+      "actual": [
+        "2",
+        "1"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 10/3",
+      "expected": [
+        "2",
+        "1"
+      ],
+      "actual": [
+        "2",
+        "1"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 10/4",
+      "expected": [
+        "2",
+        "1"
+      ],
+      "actual": [
+        "2",
+        "1"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 10/5",
+      "expected": [
+        "2",
+        "1"
+      ],
+      "actual": [
+        "2",
+        "1"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 10/6",
+      "expected": [
+        "2",
+        "1"
+      ],
+      "actual": [
+        "2",
+        "1"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 10/7",
+      "expected": [
+        "2",
+        "1"
+      ],
+      "actual": [
+        "2",
+        "1"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 10/8",
+      "expected": [
+        "2",
+        "1"
+      ],
+      "actual": [
+        "2",
+        "1"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 10/9",
+      "expected": [
+        "2",
+        "1"
+      ],
+      "actual": [
+        "2",
+        "1"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 10/10",
+      "expected": [
+        "1",
+        "2"
+      ],
+      "actual": [
+        "1",
+        "2"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 10/11",
+      "expected": [
+        "1",
+        "2"
+      ],
+      "actual": [
+        "1",
+        "2"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 10/12",
+      "expected": [
+        "1",
+        "2"
+      ],
+      "actual": [
+        "1",
+        "2"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 10/13",
+      "expected": [
+        "1",
+        "2"
+      ],
+      "actual": [
+        "1",
+        "2"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 10/14",
+      "expected": [
+        "1",
+        "2"
+      ],
+      "actual": [
+        "1",
+        "2"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 10/15",
+      "expected": [
+        "1",
+        "2"
+      ],
+      "actual": [
+        "1",
+        "2"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 11/0",
+      "expected": [
+        "2",
+        "1"
+      ],
+      "actual": [
+        "2",
+        "1"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 11/1",
+      "expected": [
+        "2",
+        "1"
+      ],
+      "actual": [
+        "2",
+        "1"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 11/2",
+      "expected": [
+        "2",
+        "1"
+      ],
+      "actual": [
+        "2",
+        "1"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 11/3",
+      "expected": [
+        "2",
+        "1"
+      ],
+      "actual": [
+        "2",
+        "1"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 11/4",
+      "expected": [
+        "2",
+        "1"
+      ],
+      "actual": [
+        "2",
+        "1"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 11/5",
+      "expected": [
+        "2",
+        "1"
+      ],
+      "actual": [
+        "2",
+        "1"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 11/6",
+      "expected": [
+        "2",
+        "1"
+      ],
+      "actual": [
+        "2",
+        "1"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 11/7",
+      "expected": [
+        "2",
+        "1"
+      ],
+      "actual": [
+        "2",
+        "1"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 11/8",
+      "expected": [
+        "2",
+        "1"
+      ],
+      "actual": [
+        "2",
+        "1"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 11/9",
+      "expected": [
+        "2",
+        "1"
+      ],
+      "actual": [
+        "2",
+        "1"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 11/10",
+      "expected": [
+        "2",
+        "1"
+      ],
+      "actual": [
+        "2",
+        "1"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 11/11",
+      "expected": [
+        "1",
+        "2"
+      ],
+      "actual": [
+        "1",
+        "2"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 11/12",
+      "expected": [
+        "1",
+        "2"
+      ],
+      "actual": [
+        "1",
+        "2"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 11/13",
+      "expected": [
+        "1",
+        "2"
+      ],
+      "actual": [
+        "1",
+        "2"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 11/14",
+      "expected": [
+        "1",
+        "2"
+      ],
+      "actual": [
+        "1",
+        "2"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 11/15",
+      "expected": [
+        "1",
+        "2"
+      ],
+      "actual": [
+        "1",
+        "2"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 12/0",
+      "expected": [
+        "2",
+        "1"
+      ],
+      "actual": [
+        "2",
+        "1"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 12/1",
+      "expected": [
+        "2",
+        "1"
+      ],
+      "actual": [
+        "2",
+        "1"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 12/2",
+      "expected": [
+        "2",
+        "1"
+      ],
+      "actual": [
+        "2",
+        "1"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 12/3",
+      "expected": [
+        "2",
+        "1"
+      ],
+      "actual": [
+        "2",
+        "1"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 12/4",
+      "expected": [
+        "2",
+        "1"
+      ],
+      "actual": [
+        "2",
+        "1"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 12/5",
+      "expected": [
+        "2",
+        "1"
+      ],
+      "actual": [
+        "2",
+        "1"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 12/6",
+      "expected": [
+        "2",
+        "1"
+      ],
+      "actual": [
+        "2",
+        "1"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 12/7",
+      "expected": [
+        "2",
+        "1"
+      ],
+      "actual": [
+        "2",
+        "1"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 12/8",
+      "expected": [
+        "2",
+        "1"
+      ],
+      "actual": [
+        "2",
+        "1"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 12/9",
+      "expected": [
+        "2",
+        "1"
+      ],
+      "actual": [
+        "2",
+        "1"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 12/10",
+      "expected": [
+        "2",
+        "1"
+      ],
+      "actual": [
+        "2",
+        "1"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 12/11",
+      "expected": [
+        "2",
+        "1"
+      ],
+      "actual": [
+        "2",
+        "1"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 12/12",
+      "expected": [
+        "1",
+        "2"
+      ],
+      "actual": [
+        "1",
+        "2"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 12/13",
+      "expected": [
+        "1",
+        "2"
+      ],
+      "actual": [
+        "1",
+        "2"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 12/14",
+      "expected": [
+        "1",
+        "2"
+      ],
+      "actual": [
+        "1",
+        "2"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 12/15",
+      "expected": [
+        "1",
+        "2"
+      ],
+      "actual": [
+        "1",
+        "2"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 13/0",
+      "expected": [
+        "2",
+        "1"
+      ],
+      "actual": [
+        "2",
+        "1"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 13/1",
+      "expected": [
+        "2",
+        "1"
+      ],
+      "actual": [
+        "2",
+        "1"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 13/2",
+      "expected": [
+        "2",
+        "1"
+      ],
+      "actual": [
+        "2",
+        "1"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 13/3",
+      "expected": [
+        "2",
+        "1"
+      ],
+      "actual": [
+        "2",
+        "1"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 13/4",
+      "expected": [
+        "2",
+        "1"
+      ],
+      "actual": [
+        "2",
+        "1"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 13/5",
+      "expected": [
+        "2",
+        "1"
+      ],
+      "actual": [
+        "2",
+        "1"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 13/6",
+      "expected": [
+        "2",
+        "1"
+      ],
+      "actual": [
+        "2",
+        "1"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 13/7",
+      "expected": [
+        "2",
+        "1"
+      ],
+      "actual": [
+        "2",
+        "1"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 13/8",
+      "expected": [
+        "2",
+        "1"
+      ],
+      "actual": [
+        "2",
+        "1"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 13/9",
+      "expected": [
+        "2",
+        "1"
+      ],
+      "actual": [
+        "2",
+        "1"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 13/10",
+      "expected": [
+        "2",
+        "1"
+      ],
+      "actual": [
+        "2",
+        "1"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 13/11",
+      "expected": [
+        "2",
+        "1"
+      ],
+      "actual": [
+        "2",
+        "1"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 13/12",
+      "expected": [
+        "2",
+        "1"
+      ],
+      "actual": [
+        "2",
+        "1"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 13/13",
+      "expected": [
+        "1",
+        "2"
+      ],
+      "actual": [
+        "1",
+        "2"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 13/14",
+      "expected": [
+        "1",
+        "2"
+      ],
+      "actual": [
+        "1",
+        "2"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 13/15",
+      "expected": [
+        "1",
+        "2"
+      ],
+      "actual": [
+        "1",
+        "2"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 14/0",
+      "expected": [
+        "2",
+        "1"
+      ],
+      "actual": [
+        "2",
+        "1"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 14/1",
+      "expected": [
+        "2",
+        "1"
+      ],
+      "actual": [
+        "2",
+        "1"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 14/2",
+      "expected": [
+        "2",
+        "1"
+      ],
+      "actual": [
+        "2",
+        "1"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 14/3",
+      "expected": [
+        "2",
+        "1"
+      ],
+      "actual": [
+        "2",
+        "1"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 14/4",
+      "expected": [
+        "2",
+        "1"
+      ],
+      "actual": [
+        "2",
+        "1"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 14/5",
+      "expected": [
+        "2",
+        "1"
+      ],
+      "actual": [
+        "2",
+        "1"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 14/6",
+      "expected": [
+        "2",
+        "1"
+      ],
+      "actual": [
+        "2",
+        "1"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 14/7",
+      "expected": [
+        "2",
+        "1"
+      ],
+      "actual": [
+        "2",
+        "1"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 14/8",
+      "expected": [
+        "2",
+        "1"
+      ],
+      "actual": [
+        "2",
+        "1"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 14/9",
+      "expected": [
+        "2",
+        "1"
+      ],
+      "actual": [
+        "2",
+        "1"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 14/10",
+      "expected": [
+        "2",
+        "1"
+      ],
+      "actual": [
+        "2",
+        "1"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 14/11",
+      "expected": [
+        "2",
+        "1"
+      ],
+      "actual": [
+        "2",
+        "1"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 14/12",
+      "expected": [
+        "2",
+        "1"
+      ],
+      "actual": [
+        "2",
+        "1"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 14/13",
+      "expected": [
+        "2",
+        "1"
+      ],
+      "actual": [
+        "2",
+        "1"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 14/14",
+      "expected": [
+        "1",
+        "2"
+      ],
+      "actual": [
+        "1",
+        "2"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 14/15",
+      "expected": [
+        "1",
+        "2"
+      ],
+      "actual": [
+        "1",
+        "2"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 15/0",
+      "expected": [
+        "2",
+        "1"
+      ],
+      "actual": [
+        "2",
+        "1"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 15/1",
+      "expected": [
+        "2",
+        "1"
+      ],
+      "actual": [
+        "2",
+        "1"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 15/2",
+      "expected": [
+        "2",
+        "1"
+      ],
+      "actual": [
+        "2",
+        "1"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 15/3",
+      "expected": [
+        "2",
+        "1"
+      ],
+      "actual": [
+        "2",
+        "1"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 15/4",
+      "expected": [
+        "2",
+        "1"
+      ],
+      "actual": [
+        "2",
+        "1"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 15/5",
+      "expected": [
+        "2",
+        "1"
+      ],
+      "actual": [
+        "2",
+        "1"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 15/6",
+      "expected": [
+        "2",
+        "1"
+      ],
+      "actual": [
+        "2",
+        "1"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 15/7",
+      "expected": [
+        "2",
+        "1"
+      ],
+      "actual": [
+        "2",
+        "1"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 15/8",
+      "expected": [
+        "2",
+        "1"
+      ],
+      "actual": [
+        "2",
+        "1"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 15/9",
+      "expected": [
+        "2",
+        "1"
+      ],
+      "actual": [
+        "2",
+        "1"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 15/10",
+      "expected": [
+        "2",
+        "1"
+      ],
+      "actual": [
+        "2",
+        "1"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 15/11",
+      "expected": [
+        "2",
+        "1"
+      ],
+      "actual": [
+        "2",
+        "1"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 15/12",
+      "expected": [
+        "2",
+        "1"
+      ],
+      "actual": [
+        "2",
+        "1"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 15/13",
+      "expected": [
+        "2",
+        "1"
+      ],
+      "actual": [
+        "2",
+        "1"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 15/14",
+      "expected": [
+        "2",
+        "1"
+      ],
+      "actual": [
+        "2",
+        "1"
+      ],
+      "passed": true
+    },
+    {
+      "name": "simultaneous EXTI priorities 15/15",
+      "expected": [
+        "1",
+        "2"
+      ],
+      "actual": [
+        "1",
+        "2"
+      ],
+      "passed": true
+    },
+    {
+      "name": "nvic mask changed in first callback stops second callback",
+      "expected": [
+        "1"
+      ],
+      "actual": [
+        "1",
+        "2"
+      ],
+      "passed": false,
+      "pending": [],
+      "globalEnabled": true
+    },
+    {
+      "name": "nvic mask resume delivers retained callback exactly once",
+      "expected": [
+        "1",
+        "2"
+      ],
+      "actual": [
+        "1",
+        "2"
+      ],
+      "passed": true
+    },
+    {
+      "name": "global mask changed in first callback stops second callback",
+      "expected": [
+        "1"
+      ],
+      "actual": [
+        "1",
+        "2"
+      ],
+      "passed": false,
+      "pending": [],
+      "globalEnabled": false
+    },
+    {
+      "name": "global mask resume delivers retained callback exactly once",
+      "expected": [
+        "1",
+        "2"
+      ],
+      "actual": [
+        "1",
+        "2"
+      ],
+      "passed": true
+    },
+    {
+      "name": "nvic mask before edges retains pending",
+      "expected": [
+        "1"
+      ],
+      "actual": [
+        "1"
+      ],
+      "passed": true
+    },
+    {
+      "name": "nvic resume before-edge mask",
+      "expected": [
+        "1",
+        "2"
+      ],
+      "actual": [
+        "1",
+        "2"
+      ],
+      "passed": true
+    },
+    {
+      "name": "global mask before edges retains pending",
+      "expected": [],
+      "actual": [],
+      "passed": true
+    },
+    {
+      "name": "global resume before-edge mask",
+      "expected": [
+        "1",
+        "2"
+      ],
+      "actual": [
+        "1",
+        "2"
+      ],
+      "passed": true
+    },
+    {
+      "name": "priority changed in callback reorders remaining pending",
+      "expected": [
+        "1",
+        "4",
+        "2"
+      ],
+      "actual": [
+        "1",
+        "2",
+        "4"
+      ],
+      "passed": false
+    },
+    {
+      "name": "EXTI RISING successive low-high-low transitions",
+      "expected": [
+        1,
+        1,
+        2,
+        2
+      ],
+      "actual": [
+        1,
+        1,
+        2,
+        2
+      ],
+      "passed": true
+    },
+    {
+      "name": "EXTI FALLING successive low-high-low transitions",
+      "expected": [
+        0,
+        1,
+        1,
+        2
+      ],
+      "actual": [
+        0,
+        1,
+        1,
+        2
+      ],
+      "passed": true
+    },
+    {
+      "name": "EXTI CHANGE successive low-high-low transitions",
+      "expected": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "actual": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "passed": true
+    },
+    {
+      "name": "GPIO input NOPULL",
+      "expected": 0,
+      "actual": 0,
+      "passed": true,
+      "voltage": null,
+      "gpio": {
+        "mode": "INPUT",
+        "value": 0
+      }
+    },
+    {
+      "name": "GPIO input PULLUP",
+      "expected": 1,
+      "actual": 1,
+      "passed": true,
+      "voltage": 3.2999868000527997,
+      "gpio": {
+        "mode": "INPUT_PULLUP",
+        "value": 0
+      }
+    },
+    {
+      "name": "GPIO input PULLDOWN",
+      "expected": 0,
+      "actual": 0,
+      "passed": true,
+      "voltage": 0,
+      "gpio": {
+        "mode": "INPUT_PULLDOWN",
+        "value": 0
+      }
+    },
+    {
+      "name": "GPIO output initial 0 NOPULL",
+      "expected": 0,
+      "actual": 0,
+      "passed": true,
+      "voltage": 0,
+      "gpio": {
+        "mode": "OUTPUT",
+        "value": 0,
+        "openDrain": false,
+        "pull": 0
+      }
+    },
+    {
+      "name": "GPIO output initial 0 PULLUP",
+      "expected": 0,
+      "actual": 0,
+      "passed": true,
+      "voltage": 0.0032967032835296566,
+      "gpio": {
+        "mode": "OUTPUT",
+        "value": 0,
+        "openDrain": false,
+        "pull": 1
+      }
+    },
+    {
+      "name": "GPIO output initial 0 PULLDOWN",
+      "expected": 0,
+      "actual": 0,
+      "passed": true,
+      "voltage": 0,
+      "gpio": {
+        "mode": "OUTPUT",
+        "value": 0,
+        "openDrain": false,
+        "pull": 2
+      }
+    },
+    {
+      "name": "GPIO output initial 1 NOPULL",
+      "expected": 1,
+      "actual": 1,
+      "passed": true,
+      "voltage": 3.2999999868,
+      "gpio": {
+        "mode": "OUTPUT",
+        "value": 3.3,
+        "openDrain": false,
+        "pull": 0
+      }
+    },
+    {
+      "name": "GPIO output initial 1 PULLUP",
+      "expected": 1,
+      "actual": 1,
+      "passed": true,
+      "voltage": 3.2999999868131864,
+      "gpio": {
+        "mode": "OUTPUT",
+        "value": 3.3,
+        "openDrain": false,
+        "pull": 1
+      }
+    },
+    {
+      "name": "GPIO output initial 1 PULLDOWN",
+      "expected": 1,
+      "actual": 1,
+      "passed": true,
+      "voltage": 3.296703283529657,
+      "gpio": {
+        "mode": "OUTPUT",
+        "value": 3.3,
+        "openDrain": false,
+        "pull": 2
+      }
+    }
+  ],
+  "findings": [
+    {
+      "name": "nvic mask changed in first callback stops second callback",
+      "expected": [
+        "1"
+      ],
+      "actual": [
+        "1",
+        "2"
+      ],
+      "passed": false,
+      "pending": [],
+      "globalEnabled": true
+    },
+    {
+      "name": "global mask changed in first callback stops second callback",
+      "expected": [
+        "1"
+      ],
+      "actual": [
+        "1",
+        "2"
+      ],
+      "passed": false,
+      "pending": [],
+      "globalEnabled": false
+    },
+    {
+      "name": "priority changed in callback reorders remaining pending",
+      "expected": [
+        "1",
+        "4",
+        "2"
+      ],
+      "actual": [
+        "1",
+        "2",
+        "4"
+      ],
+      "passed": false
+    }
+  ],
+  "summary": {
+    "total": 277,
+    "passed": 274,
+    "failed": 3
+  }
+}

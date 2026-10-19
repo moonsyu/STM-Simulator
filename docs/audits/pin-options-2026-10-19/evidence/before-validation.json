@@ -1,0 +1,4551 @@
+{
+  "passed": false,
+  "completeMatrix": false,
+  "packageVersion": "0.25.0",
+  "appVersion": "0.25.0",
+  "sourceCommit": "5b74ec9586820f082249eee935b8696c2fa7167c",
+  "sourceDirty": true,
+  "sourceStatus": "M src/hal.js\n?? docs/audits/pin-options-2026-10-19/\n?? scripts/pin-options-ui-check.cjs\n?? tests/hal-nvic-dispatch.test.js",
+  "sourceSha256": "8b12426420304c8a45404d5e1a7d66a48d22152056a0771217f7b63a23142b44",
+  "startedAt": "2026-10-19T07:52:28.577Z",
+  "runId": "2026-10-19T07-52-28-172Z",
+  "scopes": [
+    "validation"
+  ],
+  "limit": null,
+  "cases": [
+    {
+      "id": "validation-label-timer-mode",
+      "settings": {
+        "label": "AUDIT_LABEL",
+        "timer": "TIM2",
+        "mode": "pwm"
+      },
+      "startedAt": "2026-10-19T07:52:30.642Z",
+      "passed": false,
+      "error": "AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:\n+ actual - expected\n\n+ ''\n- 'AUDIT_LABEL'\n    at D:\\codex\\project\\STM-Simulator\\scripts\\pin-options-ui-check.cjs:61:279\n    at async scenario (D:\\codex\\project\\STM-Simulator\\scripts\\pin-options-ui-check.cjs:51:150)\n    at async main (D:\\codex\\project\\STM-Simulator\\scripts\\pin-options-ui-check.cjs:61:4)",
+      "console": "",
+      "observed": {
+        "pinError": "",
+        "dialogOpen": true,
+        "fields": [
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "peripheral": "USART1"
+            }
+          },
+          {
+            "id": "",
+            "value": "",
+            "dataset": {
+              "serialRoute": "USART1",
+              "role": "TX"
+            }
+          },
+          {
+            "id": "",
+            "value": "",
+            "dataset": {
+              "serialRoute": "USART1",
+              "role": "RX"
+            }
+          },
+          {
+            "id": "",
+            "value": "115200",
+            "dataset": {
+              "peripheralValue": "USART1",
+              "key": "baud"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "peripheral": "USART2"
+            }
+          },
+          {
+            "id": "",
+            "value": "",
+            "dataset": {
+              "serialRoute": "USART2",
+              "role": "TX"
+            }
+          },
+          {
+            "id": "",
+            "value": "",
+            "dataset": {
+              "serialRoute": "USART2",
+              "role": "RX"
+            }
+          },
+          {
+            "id": "",
+            "value": "115200",
+            "dataset": {
+              "peripheralValue": "USART2",
+              "key": "baud"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "peripheral": "USART3"
+            }
+          },
+          {
+            "id": "",
+            "value": "",
+            "dataset": {
+              "serialRoute": "USART3",
+              "role": "TX"
+            }
+          },
+          {
+            "id": "",
+            "value": "",
+            "dataset": {
+              "serialRoute": "USART3",
+              "role": "RX"
+            }
+          },
+          {
+            "id": "",
+            "value": "115200",
+            "dataset": {
+              "peripheralValue": "USART3",
+              "key": "baud"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "peripheral": "UART4"
+            }
+          },
+          {
+            "id": "",
+            "value": "",
+            "dataset": {
+              "serialRoute": "UART4",
+              "role": "TX"
+            }
+          },
+          {
+            "id": "",
+            "value": "",
+            "dataset": {
+              "serialRoute": "UART4",
+              "role": "RX"
+            }
+          },
+          {
+            "id": "",
+            "value": "115200",
+            "dataset": {
+              "peripheralValue": "UART4",
+              "key": "baud"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "peripheral": "UART5"
+            }
+          },
+          {
+            "id": "",
+            "value": "",
+            "dataset": {
+              "serialRoute": "UART5",
+              "role": "TX"
+            }
+          },
+          {
+            "id": "",
+            "value": "",
+            "dataset": {
+              "serialRoute": "UART5",
+              "role": "RX"
+            }
+          },
+          {
+            "id": "",
+            "value": "115200",
+            "dataset": {
+              "peripheralValue": "UART5",
+              "key": "baud"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "peripheral": "USART6"
+            }
+          },
+          {
+            "id": "",
+            "value": "",
+            "dataset": {
+              "serialRoute": "USART6",
+              "role": "TX"
+            }
+          },
+          {
+            "id": "",
+            "value": "",
+            "dataset": {
+              "serialRoute": "USART6",
+              "role": "RX"
+            }
+          },
+          {
+            "id": "",
+            "value": "115200",
+            "dataset": {
+              "peripheralValue": "USART6",
+              "key": "baud"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "peripheral": "I2C1"
+            }
+          },
+          {
+            "id": "",
+            "value": "100000",
+            "dataset": {
+              "peripheralValue": "I2C1",
+              "key": "clock"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "peripheral": "SPI1"
+            }
+          },
+          {
+            "id": "",
+            "value": "1000000",
+            "dataset": {
+              "peripheralValue": "SPI1",
+              "key": "clock"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "peripheral": "ADC1"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "peripheral": "TIM2"
+            }
+          },
+          {
+            "id": "",
+            "value": "pwm",
+            "dataset": {
+              "timerMode": "TIM2"
+            }
+          },
+          {
+            "id": "",
+            "value": "0",
+            "dataset": {
+              "peripheralValue": "TIM2",
+              "key": "prescaler"
+            }
+          },
+          {
+            "id": "",
+            "value": "4294967295",
+            "dataset": {
+              "peripheralValue": "TIM2",
+              "key": "period"
+            }
+          },
+          {
+            "id": "",
+            "value": "0",
+            "dataset": {
+              "peripheralValue": "TIM2",
+              "key": "pulse"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "peripheral": "TIM3"
+            }
+          },
+          {
+            "id": "",
+            "value": "base",
+            "dataset": {
+              "timerMode": "TIM3"
+            }
+          },
+          {
+            "id": "",
+            "value": "0",
+            "dataset": {
+              "peripheralValue": "TIM3",
+              "key": "prescaler"
+            }
+          },
+          {
+            "id": "",
+            "value": "65535",
+            "dataset": {
+              "peripheralValue": "TIM3",
+              "key": "period"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "peripheral": "TIM4"
+            }
+          },
+          {
+            "id": "",
+            "value": "base",
+            "dataset": {
+              "timerMode": "TIM4"
+            }
+          },
+          {
+            "id": "",
+            "value": "0",
+            "dataset": {
+              "peripheralValue": "TIM4",
+              "key": "prescaler"
+            }
+          },
+          {
+            "id": "",
+            "value": "65535",
+            "dataset": {
+              "peripheralValue": "TIM4",
+              "key": "period"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "peripheral": "TIM5"
+            }
+          },
+          {
+            "id": "",
+            "value": "base",
+            "dataset": {
+              "timerMode": "TIM5"
+            }
+          },
+          {
+            "id": "",
+            "value": "0",
+            "dataset": {
+              "peripheralValue": "TIM5",
+              "key": "prescaler"
+            }
+          },
+          {
+            "id": "",
+            "value": "4294967295",
+            "dataset": {
+              "peripheralValue": "TIM5",
+              "key": "period"
+            }
+          },
+          {
+            "id": "pin-function",
+            "value": "Reset",
+            "dataset": {}
+          },
+          {
+            "id": "pin-pull",
+            "value": "NOPULL",
+            "dataset": {}
+          },
+          {
+            "id": "pin-edge",
+            "value": "FALLING",
+            "dataset": {}
+          },
+          {
+            "id": "pin-level",
+            "value": "0",
+            "dataset": {}
+          },
+          {
+            "id": "pin-label",
+            "value": "",
+            "dataset": {}
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "irq": "EXTI0_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "0",
+            "dataset": {
+              "priority": "EXTI0_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "irq": "EXTI1_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "0",
+            "dataset": {
+              "priority": "EXTI1_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "irq": "EXTI2_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "0",
+            "dataset": {
+              "priority": "EXTI2_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "irq": "EXTI3_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "0",
+            "dataset": {
+              "priority": "EXTI3_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "irq": "EXTI4_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "0",
+            "dataset": {
+              "priority": "EXTI4_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "irq": "EXTI9_5_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "0",
+            "dataset": {
+              "priority": "EXTI9_5_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "irq": "EXTI15_10_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "0",
+            "dataset": {
+              "priority": "EXTI15_10_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "irq": "USART1_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "0",
+            "dataset": {
+              "priority": "USART1_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "irq": "USART2_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "0",
+            "dataset": {
+              "priority": "USART2_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "irq": "USART3_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "0",
+            "dataset": {
+              "priority": "USART3_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "irq": "UART4_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "0",
+            "dataset": {
+              "priority": "UART4_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "irq": "UART5_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "0",
+            "dataset": {
+              "priority": "UART5_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "irq": "USART6_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "0",
+            "dataset": {
+              "priority": "USART6_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "irq": "TIM2_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "0",
+            "dataset": {
+              "priority": "TIM2_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "irq": "TIM3_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "0",
+            "dataset": {
+              "priority": "TIM3_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "irq": "TIM4_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "0",
+            "dataset": {
+              "priority": "TIM4_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "irq": "TIM5_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "0",
+            "dataset": {
+              "priority": "TIM5_IRQn"
+            }
+          },
+          {
+            "id": "timer-clock",
+            "value": "16000000",
+            "dataset": {}
+          }
+        ]
+      },
+      "finishedAt": "2026-10-19T07:52:31.634Z"
+    },
+    {
+      "id": "validation-conflict-retains-edits",
+      "settings": {
+        "pin": "PA2",
+        "occupied": "PA3",
+        "label": "CONFLICT_LABEL",
+        "pull": "PULLDOWN",
+        "edge": "CHANGE",
+        "initial": 1
+      },
+      "startedAt": "2026-10-19T07:52:31.653Z",
+      "passed": false,
+      "error": "AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:\n+ actual - expected\n\n+ ''\n- 'CONFLICT_LABEL'\n    at D:\\codex\\project\\STM-Simulator\\scripts\\pin-options-ui-check.cjs:62:570\n    at async scenario (D:\\codex\\project\\STM-Simulator\\scripts\\pin-options-ui-check.cjs:51:150)\n    at async main (D:\\codex\\project\\STM-Simulator\\scripts\\pin-options-ui-check.cjs:62:4)",
+      "console": "",
+      "observed": {
+        "pinError": "USART2 RX: 사용 가능한 핀이 없습니다 (PA3).",
+        "dialogOpen": true,
+        "fields": [
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "peripheral": "USART1"
+            }
+          },
+          {
+            "id": "",
+            "value": "",
+            "dataset": {
+              "serialRoute": "USART1",
+              "role": "TX"
+            }
+          },
+          {
+            "id": "",
+            "value": "",
+            "dataset": {
+              "serialRoute": "USART1",
+              "role": "RX"
+            }
+          },
+          {
+            "id": "",
+            "value": "115200",
+            "dataset": {
+              "peripheralValue": "USART1",
+              "key": "baud"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "peripheral": "USART2"
+            }
+          },
+          {
+            "id": "",
+            "value": "",
+            "dataset": {
+              "serialRoute": "USART2",
+              "role": "TX"
+            }
+          },
+          {
+            "id": "",
+            "value": "",
+            "dataset": {
+              "serialRoute": "USART2",
+              "role": "RX"
+            }
+          },
+          {
+            "id": "",
+            "value": "115200",
+            "dataset": {
+              "peripheralValue": "USART2",
+              "key": "baud"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "peripheral": "USART3"
+            }
+          },
+          {
+            "id": "",
+            "value": "",
+            "dataset": {
+              "serialRoute": "USART3",
+              "role": "TX"
+            }
+          },
+          {
+            "id": "",
+            "value": "",
+            "dataset": {
+              "serialRoute": "USART3",
+              "role": "RX"
+            }
+          },
+          {
+            "id": "",
+            "value": "115200",
+            "dataset": {
+              "peripheralValue": "USART3",
+              "key": "baud"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "peripheral": "UART4"
+            }
+          },
+          {
+            "id": "",
+            "value": "",
+            "dataset": {
+              "serialRoute": "UART4",
+              "role": "TX"
+            }
+          },
+          {
+            "id": "",
+            "value": "",
+            "dataset": {
+              "serialRoute": "UART4",
+              "role": "RX"
+            }
+          },
+          {
+            "id": "",
+            "value": "115200",
+            "dataset": {
+              "peripheralValue": "UART4",
+              "key": "baud"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "peripheral": "UART5"
+            }
+          },
+          {
+            "id": "",
+            "value": "",
+            "dataset": {
+              "serialRoute": "UART5",
+              "role": "TX"
+            }
+          },
+          {
+            "id": "",
+            "value": "",
+            "dataset": {
+              "serialRoute": "UART5",
+              "role": "RX"
+            }
+          },
+          {
+            "id": "",
+            "value": "115200",
+            "dataset": {
+              "peripheralValue": "UART5",
+              "key": "baud"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "peripheral": "USART6"
+            }
+          },
+          {
+            "id": "",
+            "value": "",
+            "dataset": {
+              "serialRoute": "USART6",
+              "role": "TX"
+            }
+          },
+          {
+            "id": "",
+            "value": "",
+            "dataset": {
+              "serialRoute": "USART6",
+              "role": "RX"
+            }
+          },
+          {
+            "id": "",
+            "value": "115200",
+            "dataset": {
+              "peripheralValue": "USART6",
+              "key": "baud"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "peripheral": "I2C1"
+            }
+          },
+          {
+            "id": "",
+            "value": "100000",
+            "dataset": {
+              "peripheralValue": "I2C1",
+              "key": "clock"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "peripheral": "SPI1"
+            }
+          },
+          {
+            "id": "",
+            "value": "1000000",
+            "dataset": {
+              "peripheralValue": "SPI1",
+              "key": "clock"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "peripheral": "ADC1"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "peripheral": "TIM2"
+            }
+          },
+          {
+            "id": "",
+            "value": "base",
+            "dataset": {
+              "timerMode": "TIM2"
+            }
+          },
+          {
+            "id": "",
+            "value": "0",
+            "dataset": {
+              "peripheralValue": "TIM2",
+              "key": "prescaler"
+            }
+          },
+          {
+            "id": "",
+            "value": "4294967295",
+            "dataset": {
+              "peripheralValue": "TIM2",
+              "key": "period"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "peripheral": "TIM3"
+            }
+          },
+          {
+            "id": "",
+            "value": "base",
+            "dataset": {
+              "timerMode": "TIM3"
+            }
+          },
+          {
+            "id": "",
+            "value": "0",
+            "dataset": {
+              "peripheralValue": "TIM3",
+              "key": "prescaler"
+            }
+          },
+          {
+            "id": "",
+            "value": "65535",
+            "dataset": {
+              "peripheralValue": "TIM3",
+              "key": "period"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "peripheral": "TIM4"
+            }
+          },
+          {
+            "id": "",
+            "value": "base",
+            "dataset": {
+              "timerMode": "TIM4"
+            }
+          },
+          {
+            "id": "",
+            "value": "0",
+            "dataset": {
+              "peripheralValue": "TIM4",
+              "key": "prescaler"
+            }
+          },
+          {
+            "id": "",
+            "value": "65535",
+            "dataset": {
+              "peripheralValue": "TIM4",
+              "key": "period"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "peripheral": "TIM5"
+            }
+          },
+          {
+            "id": "",
+            "value": "base",
+            "dataset": {
+              "timerMode": "TIM5"
+            }
+          },
+          {
+            "id": "",
+            "value": "0",
+            "dataset": {
+              "peripheralValue": "TIM5",
+              "key": "prescaler"
+            }
+          },
+          {
+            "id": "",
+            "value": "4294967295",
+            "dataset": {
+              "peripheralValue": "TIM5",
+              "key": "period"
+            }
+          },
+          {
+            "id": "pin-function",
+            "value": "GPIO_Input",
+            "dataset": {}
+          },
+          {
+            "id": "pin-pull",
+            "value": "PULLDOWN",
+            "dataset": {}
+          },
+          {
+            "id": "pin-edge",
+            "value": "CHANGE",
+            "dataset": {}
+          },
+          {
+            "id": "pin-level",
+            "value": "1",
+            "dataset": {}
+          },
+          {
+            "id": "pin-label",
+            "value": "",
+            "dataset": {}
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "irq": "EXTI0_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "0",
+            "dataset": {
+              "priority": "EXTI0_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "irq": "EXTI1_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "0",
+            "dataset": {
+              "priority": "EXTI1_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "irq": "EXTI2_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "0",
+            "dataset": {
+              "priority": "EXTI2_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "irq": "EXTI3_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "0",
+            "dataset": {
+              "priority": "EXTI3_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "irq": "EXTI4_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "0",
+            "dataset": {
+              "priority": "EXTI4_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "irq": "EXTI9_5_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "0",
+            "dataset": {
+              "priority": "EXTI9_5_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "irq": "EXTI15_10_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "0",
+            "dataset": {
+              "priority": "EXTI15_10_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "irq": "USART1_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "0",
+            "dataset": {
+              "priority": "USART1_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "irq": "USART2_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "0",
+            "dataset": {
+              "priority": "USART2_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "irq": "USART3_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "0",
+            "dataset": {
+              "priority": "USART3_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "irq": "UART4_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "0",
+            "dataset": {
+              "priority": "UART4_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "irq": "UART5_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "0",
+            "dataset": {
+              "priority": "UART5_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "irq": "USART6_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "0",
+            "dataset": {
+              "priority": "USART6_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "irq": "TIM2_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "0",
+            "dataset": {
+              "priority": "TIM2_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "irq": "TIM3_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "0",
+            "dataset": {
+              "priority": "TIM3_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "irq": "TIM4_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "0",
+            "dataset": {
+              "priority": "TIM4_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "irq": "TIM5_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "0",
+            "dataset": {
+              "priority": "TIM5_IRQn"
+            }
+          },
+          {
+            "id": "timer-clock",
+            "value": "16000000",
+            "dataset": {}
+          }
+        ]
+      },
+      "finishedAt": "2026-10-19T07:52:32.708Z"
+    },
+    {
+      "id": "validation-empty-priority",
+      "settings": {
+        "field": "priority",
+        "input": ""
+      },
+      "startedAt": "2026-10-19T07:52:32.711Z",
+      "passed": false,
+      "error": "AssertionError [ERR_ASSERTION]: priority empty value must not silently apply\n    at D:\\codex\\project\\STM-Simulator\\scripts\\pin-options-ui-check.cjs:63:554\n    at async scenario (D:\\codex\\project\\STM-Simulator\\scripts\\pin-options-ui-check.cjs:51:150)\n    at async main (D:\\codex\\project\\STM-Simulator\\scripts\\pin-options-ui-check.cjs:63:296)",
+      "console": "0.000 s핀 설정을 적용했습니다.",
+      "observed": {
+        "pinError": "",
+        "dialogOpen": false,
+        "fields": [
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "peripheral": "USART1"
+            }
+          },
+          {
+            "id": "",
+            "value": "",
+            "dataset": {
+              "serialRoute": "USART1",
+              "role": "TX"
+            }
+          },
+          {
+            "id": "",
+            "value": "",
+            "dataset": {
+              "serialRoute": "USART1",
+              "role": "RX"
+            }
+          },
+          {
+            "id": "",
+            "value": "115200",
+            "dataset": {
+              "peripheralValue": "USART1",
+              "key": "baud"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "peripheral": "USART2"
+            }
+          },
+          {
+            "id": "",
+            "value": "",
+            "dataset": {
+              "serialRoute": "USART2",
+              "role": "TX"
+            }
+          },
+          {
+            "id": "",
+            "value": "",
+            "dataset": {
+              "serialRoute": "USART2",
+              "role": "RX"
+            }
+          },
+          {
+            "id": "",
+            "value": "115200",
+            "dataset": {
+              "peripheralValue": "USART2",
+              "key": "baud"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "peripheral": "USART3"
+            }
+          },
+          {
+            "id": "",
+            "value": "",
+            "dataset": {
+              "serialRoute": "USART3",
+              "role": "TX"
+            }
+          },
+          {
+            "id": "",
+            "value": "",
+            "dataset": {
+              "serialRoute": "USART3",
+              "role": "RX"
+            }
+          },
+          {
+            "id": "",
+            "value": "115200",
+            "dataset": {
+              "peripheralValue": "USART3",
+              "key": "baud"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "peripheral": "UART4"
+            }
+          },
+          {
+            "id": "",
+            "value": "",
+            "dataset": {
+              "serialRoute": "UART4",
+              "role": "TX"
+            }
+          },
+          {
+            "id": "",
+            "value": "",
+            "dataset": {
+              "serialRoute": "UART4",
+              "role": "RX"
+            }
+          },
+          {
+            "id": "",
+            "value": "115200",
+            "dataset": {
+              "peripheralValue": "UART4",
+              "key": "baud"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "peripheral": "UART5"
+            }
+          },
+          {
+            "id": "",
+            "value": "",
+            "dataset": {
+              "serialRoute": "UART5",
+              "role": "TX"
+            }
+          },
+          {
+            "id": "",
+            "value": "",
+            "dataset": {
+              "serialRoute": "UART5",
+              "role": "RX"
+            }
+          },
+          {
+            "id": "",
+            "value": "115200",
+            "dataset": {
+              "peripheralValue": "UART5",
+              "key": "baud"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "peripheral": "USART6"
+            }
+          },
+          {
+            "id": "",
+            "value": "",
+            "dataset": {
+              "serialRoute": "USART6",
+              "role": "TX"
+            }
+          },
+          {
+            "id": "",
+            "value": "",
+            "dataset": {
+              "serialRoute": "USART6",
+              "role": "RX"
+            }
+          },
+          {
+            "id": "",
+            "value": "115200",
+            "dataset": {
+              "peripheralValue": "USART6",
+              "key": "baud"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "peripheral": "I2C1"
+            }
+          },
+          {
+            "id": "",
+            "value": "100000",
+            "dataset": {
+              "peripheralValue": "I2C1",
+              "key": "clock"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "peripheral": "SPI1"
+            }
+          },
+          {
+            "id": "",
+            "value": "1000000",
+            "dataset": {
+              "peripheralValue": "SPI1",
+              "key": "clock"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "peripheral": "ADC1"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "peripheral": "TIM2"
+            }
+          },
+          {
+            "id": "",
+            "value": "base",
+            "dataset": {
+              "timerMode": "TIM2"
+            }
+          },
+          {
+            "id": "",
+            "value": "0",
+            "dataset": {
+              "peripheralValue": "TIM2",
+              "key": "prescaler"
+            }
+          },
+          {
+            "id": "",
+            "value": "4294967295",
+            "dataset": {
+              "peripheralValue": "TIM2",
+              "key": "period"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "peripheral": "TIM3"
+            }
+          },
+          {
+            "id": "",
+            "value": "pwm",
+            "dataset": {
+              "timerMode": "TIM3"
+            }
+          },
+          {
+            "id": "",
+            "value": "0",
+            "dataset": {
+              "peripheralValue": "TIM3",
+              "key": "prescaler"
+            }
+          },
+          {
+            "id": "",
+            "value": "65535",
+            "dataset": {
+              "peripheralValue": "TIM3",
+              "key": "period"
+            }
+          },
+          {
+            "id": "",
+            "value": "0",
+            "dataset": {
+              "peripheralValue": "TIM3",
+              "key": "pulse"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "peripheral": "TIM4"
+            }
+          },
+          {
+            "id": "",
+            "value": "base",
+            "dataset": {
+              "timerMode": "TIM4"
+            }
+          },
+          {
+            "id": "",
+            "value": "0",
+            "dataset": {
+              "peripheralValue": "TIM4",
+              "key": "prescaler"
+            }
+          },
+          {
+            "id": "",
+            "value": "65535",
+            "dataset": {
+              "peripheralValue": "TIM4",
+              "key": "period"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "peripheral": "TIM5"
+            }
+          },
+          {
+            "id": "",
+            "value": "base",
+            "dataset": {
+              "timerMode": "TIM5"
+            }
+          },
+          {
+            "id": "",
+            "value": "0",
+            "dataset": {
+              "peripheralValue": "TIM5",
+              "key": "prescaler"
+            }
+          },
+          {
+            "id": "",
+            "value": "4294967295",
+            "dataset": {
+              "peripheralValue": "TIM5",
+              "key": "period"
+            }
+          },
+          {
+            "id": "pin-function",
+            "value": "Reset",
+            "dataset": {}
+          },
+          {
+            "id": "pin-pull",
+            "value": "NOPULL",
+            "dataset": {}
+          },
+          {
+            "id": "pin-edge",
+            "value": "FALLING",
+            "dataset": {}
+          },
+          {
+            "id": "pin-level",
+            "value": "0",
+            "dataset": {}
+          },
+          {
+            "id": "pin-label",
+            "value": "",
+            "dataset": {}
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "irq": "EXTI0_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "",
+            "dataset": {
+              "priority": "EXTI0_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "irq": "EXTI1_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "0",
+            "dataset": {
+              "priority": "EXTI1_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "irq": "EXTI2_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "0",
+            "dataset": {
+              "priority": "EXTI2_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "irq": "EXTI3_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "0",
+            "dataset": {
+              "priority": "EXTI3_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "irq": "EXTI4_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "0",
+            "dataset": {
+              "priority": "EXTI4_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "irq": "EXTI9_5_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "0",
+            "dataset": {
+              "priority": "EXTI9_5_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "irq": "EXTI15_10_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "0",
+            "dataset": {
+              "priority": "EXTI15_10_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "irq": "USART1_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "0",
+            "dataset": {
+              "priority": "USART1_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "irq": "USART2_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "0",
+            "dataset": {
+              "priority": "USART2_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "irq": "USART3_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "0",
+            "dataset": {
+              "priority": "USART3_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "irq": "UART4_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "0",
+            "dataset": {
+              "priority": "UART4_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "irq": "UART5_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "0",
+            "dataset": {
+              "priority": "UART5_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "irq": "USART6_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "0",
+            "dataset": {
+              "priority": "USART6_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "irq": "TIM2_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "0",
+            "dataset": {
+              "priority": "TIM2_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "irq": "TIM3_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "0",
+            "dataset": {
+              "priority": "TIM3_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "irq": "TIM4_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "0",
+            "dataset": {
+              "priority": "TIM4_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "irq": "TIM5_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "0",
+            "dataset": {
+              "priority": "TIM5_IRQn"
+            }
+          },
+          {
+            "id": "timer-clock",
+            "value": "16000000",
+            "dataset": {}
+          }
+        ]
+      },
+      "finishedAt": "2026-10-19T07:52:33.491Z"
+    },
+    {
+      "id": "validation-empty-prescaler",
+      "settings": {
+        "field": "prescaler",
+        "input": ""
+      },
+      "startedAt": "2026-10-19T07:52:33.493Z",
+      "passed": false,
+      "error": "AssertionError [ERR_ASSERTION]: prescaler empty value must not silently apply\n    at D:\\codex\\project\\STM-Simulator\\scripts\\pin-options-ui-check.cjs:63:554\n    at async scenario (D:\\codex\\project\\STM-Simulator\\scripts\\pin-options-ui-check.cjs:51:150)\n    at async main (D:\\codex\\project\\STM-Simulator\\scripts\\pin-options-ui-check.cjs:63:296)",
+      "console": "0.000 s핀 설정을 적용했습니다.",
+      "observed": {
+        "pinError": "",
+        "dialogOpen": false,
+        "fields": [
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "peripheral": "USART1"
+            }
+          },
+          {
+            "id": "",
+            "value": "",
+            "dataset": {
+              "serialRoute": "USART1",
+              "role": "TX"
+            }
+          },
+          {
+            "id": "",
+            "value": "",
+            "dataset": {
+              "serialRoute": "USART1",
+              "role": "RX"
+            }
+          },
+          {
+            "id": "",
+            "value": "115200",
+            "dataset": {
+              "peripheralValue": "USART1",
+              "key": "baud"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "peripheral": "USART2"
+            }
+          },
+          {
+            "id": "",
+            "value": "",
+            "dataset": {
+              "serialRoute": "USART2",
+              "role": "TX"
+            }
+          },
+          {
+            "id": "",
+            "value": "",
+            "dataset": {
+              "serialRoute": "USART2",
+              "role": "RX"
+            }
+          },
+          {
+            "id": "",
+            "value": "115200",
+            "dataset": {
+              "peripheralValue": "USART2",
+              "key": "baud"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "peripheral": "USART3"
+            }
+          },
+          {
+            "id": "",
+            "value": "",
+            "dataset": {
+              "serialRoute": "USART3",
+              "role": "TX"
+            }
+          },
+          {
+            "id": "",
+            "value": "",
+            "dataset": {
+              "serialRoute": "USART3",
+              "role": "RX"
+            }
+          },
+          {
+            "id": "",
+            "value": "115200",
+            "dataset": {
+              "peripheralValue": "USART3",
+              "key": "baud"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "peripheral": "UART4"
+            }
+          },
+          {
+            "id": "",
+            "value": "",
+            "dataset": {
+              "serialRoute": "UART4",
+              "role": "TX"
+            }
+          },
+          {
+            "id": "",
+            "value": "",
+            "dataset": {
+              "serialRoute": "UART4",
+              "role": "RX"
+            }
+          },
+          {
+            "id": "",
+            "value": "115200",
+            "dataset": {
+              "peripheralValue": "UART4",
+              "key": "baud"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "peripheral": "UART5"
+            }
+          },
+          {
+            "id": "",
+            "value": "",
+            "dataset": {
+              "serialRoute": "UART5",
+              "role": "TX"
+            }
+          },
+          {
+            "id": "",
+            "value": "",
+            "dataset": {
+              "serialRoute": "UART5",
+              "role": "RX"
+            }
+          },
+          {
+            "id": "",
+            "value": "115200",
+            "dataset": {
+              "peripheralValue": "UART5",
+              "key": "baud"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "peripheral": "USART6"
+            }
+          },
+          {
+            "id": "",
+            "value": "",
+            "dataset": {
+              "serialRoute": "USART6",
+              "role": "TX"
+            }
+          },
+          {
+            "id": "",
+            "value": "",
+            "dataset": {
+              "serialRoute": "USART6",
+              "role": "RX"
+            }
+          },
+          {
+            "id": "",
+            "value": "115200",
+            "dataset": {
+              "peripheralValue": "USART6",
+              "key": "baud"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "peripheral": "I2C1"
+            }
+          },
+          {
+            "id": "",
+            "value": "100000",
+            "dataset": {
+              "peripheralValue": "I2C1",
+              "key": "clock"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "peripheral": "SPI1"
+            }
+          },
+          {
+            "id": "",
+            "value": "1000000",
+            "dataset": {
+              "peripheralValue": "SPI1",
+              "key": "clock"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "peripheral": "ADC1"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "peripheral": "TIM2"
+            }
+          },
+          {
+            "id": "",
+            "value": "base",
+            "dataset": {
+              "timerMode": "TIM2"
+            }
+          },
+          {
+            "id": "",
+            "value": "0",
+            "dataset": {
+              "peripheralValue": "TIM2",
+              "key": "prescaler"
+            }
+          },
+          {
+            "id": "",
+            "value": "4294967295",
+            "dataset": {
+              "peripheralValue": "TIM2",
+              "key": "period"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "peripheral": "TIM3"
+            }
+          },
+          {
+            "id": "",
+            "value": "pwm",
+            "dataset": {
+              "timerMode": "TIM3"
+            }
+          },
+          {
+            "id": "",
+            "value": "",
+            "dataset": {
+              "peripheralValue": "TIM3",
+              "key": "prescaler"
+            }
+          },
+          {
+            "id": "",
+            "value": "65535",
+            "dataset": {
+              "peripheralValue": "TIM3",
+              "key": "period"
+            }
+          },
+          {
+            "id": "",
+            "value": "0",
+            "dataset": {
+              "peripheralValue": "TIM3",
+              "key": "pulse"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "peripheral": "TIM4"
+            }
+          },
+          {
+            "id": "",
+            "value": "base",
+            "dataset": {
+              "timerMode": "TIM4"
+            }
+          },
+          {
+            "id": "",
+            "value": "0",
+            "dataset": {
+              "peripheralValue": "TIM4",
+              "key": "prescaler"
+            }
+          },
+          {
+            "id": "",
+            "value": "65535",
+            "dataset": {
+              "peripheralValue": "TIM4",
+              "key": "period"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "peripheral": "TIM5"
+            }
+          },
+          {
+            "id": "",
+            "value": "base",
+            "dataset": {
+              "timerMode": "TIM5"
+            }
+          },
+          {
+            "id": "",
+            "value": "0",
+            "dataset": {
+              "peripheralValue": "TIM5",
+              "key": "prescaler"
+            }
+          },
+          {
+            "id": "",
+            "value": "4294967295",
+            "dataset": {
+              "peripheralValue": "TIM5",
+              "key": "period"
+            }
+          },
+          {
+            "id": "pin-function",
+            "value": "Reset",
+            "dataset": {}
+          },
+          {
+            "id": "pin-pull",
+            "value": "NOPULL",
+            "dataset": {}
+          },
+          {
+            "id": "pin-edge",
+            "value": "FALLING",
+            "dataset": {}
+          },
+          {
+            "id": "pin-level",
+            "value": "0",
+            "dataset": {}
+          },
+          {
+            "id": "pin-label",
+            "value": "",
+            "dataset": {}
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "irq": "EXTI0_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "0",
+            "dataset": {
+              "priority": "EXTI0_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "irq": "EXTI1_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "0",
+            "dataset": {
+              "priority": "EXTI1_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "irq": "EXTI2_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "0",
+            "dataset": {
+              "priority": "EXTI2_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "irq": "EXTI3_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "0",
+            "dataset": {
+              "priority": "EXTI3_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "irq": "EXTI4_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "0",
+            "dataset": {
+              "priority": "EXTI4_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "irq": "EXTI9_5_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "0",
+            "dataset": {
+              "priority": "EXTI9_5_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "irq": "EXTI15_10_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "0",
+            "dataset": {
+              "priority": "EXTI15_10_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "irq": "USART1_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "0",
+            "dataset": {
+              "priority": "USART1_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "irq": "USART2_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "0",
+            "dataset": {
+              "priority": "USART2_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "irq": "USART3_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "0",
+            "dataset": {
+              "priority": "USART3_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "irq": "UART4_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "0",
+            "dataset": {
+              "priority": "UART4_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "irq": "UART5_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "0",
+            "dataset": {
+              "priority": "UART5_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "irq": "USART6_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "0",
+            "dataset": {
+              "priority": "USART6_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "irq": "TIM2_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "0",
+            "dataset": {
+              "priority": "TIM2_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "irq": "TIM3_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "0",
+            "dataset": {
+              "priority": "TIM3_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "irq": "TIM4_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "0",
+            "dataset": {
+              "priority": "TIM4_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "irq": "TIM5_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "0",
+            "dataset": {
+              "priority": "TIM5_IRQn"
+            }
+          },
+          {
+            "id": "timer-clock",
+            "value": "16000000",
+            "dataset": {}
+          }
+        ]
+      },
+      "finishedAt": "2026-10-19T07:52:34.253Z"
+    },
+    {
+      "id": "validation-empty-period",
+      "settings": {
+        "field": "period",
+        "input": ""
+      },
+      "startedAt": "2026-10-19T07:52:34.256Z",
+      "passed": false,
+      "error": "AssertionError [ERR_ASSERTION]: period empty value must not silently apply\n    at D:\\codex\\project\\STM-Simulator\\scripts\\pin-options-ui-check.cjs:63:554\n    at async scenario (D:\\codex\\project\\STM-Simulator\\scripts\\pin-options-ui-check.cjs:51:150)\n    at async main (D:\\codex\\project\\STM-Simulator\\scripts\\pin-options-ui-check.cjs:63:296)",
+      "console": "0.000 s핀 설정을 적용했습니다.",
+      "observed": {
+        "pinError": "",
+        "dialogOpen": false,
+        "fields": [
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "peripheral": "USART1"
+            }
+          },
+          {
+            "id": "",
+            "value": "",
+            "dataset": {
+              "serialRoute": "USART1",
+              "role": "TX"
+            }
+          },
+          {
+            "id": "",
+            "value": "",
+            "dataset": {
+              "serialRoute": "USART1",
+              "role": "RX"
+            }
+          },
+          {
+            "id": "",
+            "value": "115200",
+            "dataset": {
+              "peripheralValue": "USART1",
+              "key": "baud"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "peripheral": "USART2"
+            }
+          },
+          {
+            "id": "",
+            "value": "",
+            "dataset": {
+              "serialRoute": "USART2",
+              "role": "TX"
+            }
+          },
+          {
+            "id": "",
+            "value": "",
+            "dataset": {
+              "serialRoute": "USART2",
+              "role": "RX"
+            }
+          },
+          {
+            "id": "",
+            "value": "115200",
+            "dataset": {
+              "peripheralValue": "USART2",
+              "key": "baud"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "peripheral": "USART3"
+            }
+          },
+          {
+            "id": "",
+            "value": "",
+            "dataset": {
+              "serialRoute": "USART3",
+              "role": "TX"
+            }
+          },
+          {
+            "id": "",
+            "value": "",
+            "dataset": {
+              "serialRoute": "USART3",
+              "role": "RX"
+            }
+          },
+          {
+            "id": "",
+            "value": "115200",
+            "dataset": {
+              "peripheralValue": "USART3",
+              "key": "baud"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "peripheral": "UART4"
+            }
+          },
+          {
+            "id": "",
+            "value": "",
+            "dataset": {
+              "serialRoute": "UART4",
+              "role": "TX"
+            }
+          },
+          {
+            "id": "",
+            "value": "",
+            "dataset": {
+              "serialRoute": "UART4",
+              "role": "RX"
+            }
+          },
+          {
+            "id": "",
+            "value": "115200",
+            "dataset": {
+              "peripheralValue": "UART4",
+              "key": "baud"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "peripheral": "UART5"
+            }
+          },
+          {
+            "id": "",
+            "value": "",
+            "dataset": {
+              "serialRoute": "UART5",
+              "role": "TX"
+            }
+          },
+          {
+            "id": "",
+            "value": "",
+            "dataset": {
+              "serialRoute": "UART5",
+              "role": "RX"
+            }
+          },
+          {
+            "id": "",
+            "value": "115200",
+            "dataset": {
+              "peripheralValue": "UART5",
+              "key": "baud"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "peripheral": "USART6"
+            }
+          },
+          {
+            "id": "",
+            "value": "",
+            "dataset": {
+              "serialRoute": "USART6",
+              "role": "TX"
+            }
+          },
+          {
+            "id": "",
+            "value": "",
+            "dataset": {
+              "serialRoute": "USART6",
+              "role": "RX"
+            }
+          },
+          {
+            "id": "",
+            "value": "115200",
+            "dataset": {
+              "peripheralValue": "USART6",
+              "key": "baud"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "peripheral": "I2C1"
+            }
+          },
+          {
+            "id": "",
+            "value": "100000",
+            "dataset": {
+              "peripheralValue": "I2C1",
+              "key": "clock"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "peripheral": "SPI1"
+            }
+          },
+          {
+            "id": "",
+            "value": "1000000",
+            "dataset": {
+              "peripheralValue": "SPI1",
+              "key": "clock"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "peripheral": "ADC1"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "peripheral": "TIM2"
+            }
+          },
+          {
+            "id": "",
+            "value": "base",
+            "dataset": {
+              "timerMode": "TIM2"
+            }
+          },
+          {
+            "id": "",
+            "value": "0",
+            "dataset": {
+              "peripheralValue": "TIM2",
+              "key": "prescaler"
+            }
+          },
+          {
+            "id": "",
+            "value": "4294967295",
+            "dataset": {
+              "peripheralValue": "TIM2",
+              "key": "period"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "peripheral": "TIM3"
+            }
+          },
+          {
+            "id": "",
+            "value": "pwm",
+            "dataset": {
+              "timerMode": "TIM3"
+            }
+          },
+          {
+            "id": "",
+            "value": "0",
+            "dataset": {
+              "peripheralValue": "TIM3",
+              "key": "prescaler"
+            }
+          },
+          {
+            "id": "",
+            "value": "",
+            "dataset": {
+              "peripheralValue": "TIM3",
+              "key": "period"
+            }
+          },
+          {
+            "id": "",
+            "value": "0",
+            "dataset": {
+              "peripheralValue": "TIM3",
+              "key": "pulse"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "peripheral": "TIM4"
+            }
+          },
+          {
+            "id": "",
+            "value": "base",
+            "dataset": {
+              "timerMode": "TIM4"
+            }
+          },
+          {
+            "id": "",
+            "value": "0",
+            "dataset": {
+              "peripheralValue": "TIM4",
+              "key": "prescaler"
+            }
+          },
+          {
+            "id": "",
+            "value": "65535",
+            "dataset": {
+              "peripheralValue": "TIM4",
+              "key": "period"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "peripheral": "TIM5"
+            }
+          },
+          {
+            "id": "",
+            "value": "base",
+            "dataset": {
+              "timerMode": "TIM5"
+            }
+          },
+          {
+            "id": "",
+            "value": "0",
+            "dataset": {
+              "peripheralValue": "TIM5",
+              "key": "prescaler"
+            }
+          },
+          {
+            "id": "",
+            "value": "4294967295",
+            "dataset": {
+              "peripheralValue": "TIM5",
+              "key": "period"
+            }
+          },
+          {
+            "id": "pin-function",
+            "value": "Reset",
+            "dataset": {}
+          },
+          {
+            "id": "pin-pull",
+            "value": "NOPULL",
+            "dataset": {}
+          },
+          {
+            "id": "pin-edge",
+            "value": "FALLING",
+            "dataset": {}
+          },
+          {
+            "id": "pin-level",
+            "value": "0",
+            "dataset": {}
+          },
+          {
+            "id": "pin-label",
+            "value": "",
+            "dataset": {}
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "irq": "EXTI0_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "0",
+            "dataset": {
+              "priority": "EXTI0_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "irq": "EXTI1_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "0",
+            "dataset": {
+              "priority": "EXTI1_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "irq": "EXTI2_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "0",
+            "dataset": {
+              "priority": "EXTI2_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "irq": "EXTI3_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "0",
+            "dataset": {
+              "priority": "EXTI3_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "irq": "EXTI4_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "0",
+            "dataset": {
+              "priority": "EXTI4_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "irq": "EXTI9_5_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "0",
+            "dataset": {
+              "priority": "EXTI9_5_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "irq": "EXTI15_10_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "0",
+            "dataset": {
+              "priority": "EXTI15_10_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "irq": "USART1_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "0",
+            "dataset": {
+              "priority": "USART1_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "irq": "USART2_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "0",
+            "dataset": {
+              "priority": "USART2_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "irq": "USART3_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "0",
+            "dataset": {
+              "priority": "USART3_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "irq": "UART4_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "0",
+            "dataset": {
+              "priority": "UART4_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "irq": "UART5_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "0",
+            "dataset": {
+              "priority": "UART5_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "irq": "USART6_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "0",
+            "dataset": {
+              "priority": "USART6_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "irq": "TIM2_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "0",
+            "dataset": {
+              "priority": "TIM2_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "irq": "TIM3_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "0",
+            "dataset": {
+              "priority": "TIM3_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "irq": "TIM4_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "0",
+            "dataset": {
+              "priority": "TIM4_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "irq": "TIM5_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "0",
+            "dataset": {
+              "priority": "TIM5_IRQn"
+            }
+          },
+          {
+            "id": "timer-clock",
+            "value": "16000000",
+            "dataset": {}
+          }
+        ]
+      },
+      "finishedAt": "2026-10-19T07:52:35.043Z"
+    },
+    {
+      "id": "validation-empty-pulse",
+      "settings": {
+        "field": "pulse",
+        "input": ""
+      },
+      "startedAt": "2026-10-19T07:52:35.047Z",
+      "passed": false,
+      "error": "AssertionError [ERR_ASSERTION]: pulse empty value must not silently apply\n    at D:\\codex\\project\\STM-Simulator\\scripts\\pin-options-ui-check.cjs:63:554\n    at async scenario (D:\\codex\\project\\STM-Simulator\\scripts\\pin-options-ui-check.cjs:51:150)\n    at async main (D:\\codex\\project\\STM-Simulator\\scripts\\pin-options-ui-check.cjs:63:296)",
+      "console": "0.000 s핀 설정을 적용했습니다.",
+      "observed": {
+        "pinError": "",
+        "dialogOpen": false,
+        "fields": [
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "peripheral": "USART1"
+            }
+          },
+          {
+            "id": "",
+            "value": "",
+            "dataset": {
+              "serialRoute": "USART1",
+              "role": "TX"
+            }
+          },
+          {
+            "id": "",
+            "value": "",
+            "dataset": {
+              "serialRoute": "USART1",
+              "role": "RX"
+            }
+          },
+          {
+            "id": "",
+            "value": "115200",
+            "dataset": {
+              "peripheralValue": "USART1",
+              "key": "baud"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "peripheral": "USART2"
+            }
+          },
+          {
+            "id": "",
+            "value": "",
+            "dataset": {
+              "serialRoute": "USART2",
+              "role": "TX"
+            }
+          },
+          {
+            "id": "",
+            "value": "",
+            "dataset": {
+              "serialRoute": "USART2",
+              "role": "RX"
+            }
+          },
+          {
+            "id": "",
+            "value": "115200",
+            "dataset": {
+              "peripheralValue": "USART2",
+              "key": "baud"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "peripheral": "USART3"
+            }
+          },
+          {
+            "id": "",
+            "value": "",
+            "dataset": {
+              "serialRoute": "USART3",
+              "role": "TX"
+            }
+          },
+          {
+            "id": "",
+            "value": "",
+            "dataset": {
+              "serialRoute": "USART3",
+              "role": "RX"
+            }
+          },
+          {
+            "id": "",
+            "value": "115200",
+            "dataset": {
+              "peripheralValue": "USART3",
+              "key": "baud"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "peripheral": "UART4"
+            }
+          },
+          {
+            "id": "",
+            "value": "",
+            "dataset": {
+              "serialRoute": "UART4",
+              "role": "TX"
+            }
+          },
+          {
+            "id": "",
+            "value": "",
+            "dataset": {
+              "serialRoute": "UART4",
+              "role": "RX"
+            }
+          },
+          {
+            "id": "",
+            "value": "115200",
+            "dataset": {
+              "peripheralValue": "UART4",
+              "key": "baud"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "peripheral": "UART5"
+            }
+          },
+          {
+            "id": "",
+            "value": "",
+            "dataset": {
+              "serialRoute": "UART5",
+              "role": "TX"
+            }
+          },
+          {
+            "id": "",
+            "value": "",
+            "dataset": {
+              "serialRoute": "UART5",
+              "role": "RX"
+            }
+          },
+          {
+            "id": "",
+            "value": "115200",
+            "dataset": {
+              "peripheralValue": "UART5",
+              "key": "baud"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "peripheral": "USART6"
+            }
+          },
+          {
+            "id": "",
+            "value": "",
+            "dataset": {
+              "serialRoute": "USART6",
+              "role": "TX"
+            }
+          },
+          {
+            "id": "",
+            "value": "",
+            "dataset": {
+              "serialRoute": "USART6",
+              "role": "RX"
+            }
+          },
+          {
+            "id": "",
+            "value": "115200",
+            "dataset": {
+              "peripheralValue": "USART6",
+              "key": "baud"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "peripheral": "I2C1"
+            }
+          },
+          {
+            "id": "",
+            "value": "100000",
+            "dataset": {
+              "peripheralValue": "I2C1",
+              "key": "clock"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "peripheral": "SPI1"
+            }
+          },
+          {
+            "id": "",
+            "value": "1000000",
+            "dataset": {
+              "peripheralValue": "SPI1",
+              "key": "clock"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "peripheral": "ADC1"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "peripheral": "TIM2"
+            }
+          },
+          {
+            "id": "",
+            "value": "base",
+            "dataset": {
+              "timerMode": "TIM2"
+            }
+          },
+          {
+            "id": "",
+            "value": "0",
+            "dataset": {
+              "peripheralValue": "TIM2",
+              "key": "prescaler"
+            }
+          },
+          {
+            "id": "",
+            "value": "4294967295",
+            "dataset": {
+              "peripheralValue": "TIM2",
+              "key": "period"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "peripheral": "TIM3"
+            }
+          },
+          {
+            "id": "",
+            "value": "pwm",
+            "dataset": {
+              "timerMode": "TIM3"
+            }
+          },
+          {
+            "id": "",
+            "value": "0",
+            "dataset": {
+              "peripheralValue": "TIM3",
+              "key": "prescaler"
+            }
+          },
+          {
+            "id": "",
+            "value": "65535",
+            "dataset": {
+              "peripheralValue": "TIM3",
+              "key": "period"
+            }
+          },
+          {
+            "id": "",
+            "value": "",
+            "dataset": {
+              "peripheralValue": "TIM3",
+              "key": "pulse"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "peripheral": "TIM4"
+            }
+          },
+          {
+            "id": "",
+            "value": "base",
+            "dataset": {
+              "timerMode": "TIM4"
+            }
+          },
+          {
+            "id": "",
+            "value": "0",
+            "dataset": {
+              "peripheralValue": "TIM4",
+              "key": "prescaler"
+            }
+          },
+          {
+            "id": "",
+            "value": "65535",
+            "dataset": {
+              "peripheralValue": "TIM4",
+              "key": "period"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "peripheral": "TIM5"
+            }
+          },
+          {
+            "id": "",
+            "value": "base",
+            "dataset": {
+              "timerMode": "TIM5"
+            }
+          },
+          {
+            "id": "",
+            "value": "0",
+            "dataset": {
+              "peripheralValue": "TIM5",
+              "key": "prescaler"
+            }
+          },
+          {
+            "id": "",
+            "value": "4294967295",
+            "dataset": {
+              "peripheralValue": "TIM5",
+              "key": "period"
+            }
+          },
+          {
+            "id": "pin-function",
+            "value": "Reset",
+            "dataset": {}
+          },
+          {
+            "id": "pin-pull",
+            "value": "NOPULL",
+            "dataset": {}
+          },
+          {
+            "id": "pin-edge",
+            "value": "FALLING",
+            "dataset": {}
+          },
+          {
+            "id": "pin-level",
+            "value": "0",
+            "dataset": {}
+          },
+          {
+            "id": "pin-label",
+            "value": "",
+            "dataset": {}
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "irq": "EXTI0_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "0",
+            "dataset": {
+              "priority": "EXTI0_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "irq": "EXTI1_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "0",
+            "dataset": {
+              "priority": "EXTI1_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "irq": "EXTI2_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "0",
+            "dataset": {
+              "priority": "EXTI2_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "irq": "EXTI3_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "0",
+            "dataset": {
+              "priority": "EXTI3_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "irq": "EXTI4_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "0",
+            "dataset": {
+              "priority": "EXTI4_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "irq": "EXTI9_5_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "0",
+            "dataset": {
+              "priority": "EXTI9_5_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "irq": "EXTI15_10_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "0",
+            "dataset": {
+              "priority": "EXTI15_10_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "irq": "USART1_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "0",
+            "dataset": {
+              "priority": "USART1_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "irq": "USART2_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "0",
+            "dataset": {
+              "priority": "USART2_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "irq": "USART3_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "0",
+            "dataset": {
+              "priority": "USART3_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "irq": "UART4_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "0",
+            "dataset": {
+              "priority": "UART4_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "irq": "UART5_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "0",
+            "dataset": {
+              "priority": "UART5_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "irq": "USART6_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "0",
+            "dataset": {
+              "priority": "USART6_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "irq": "TIM2_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "0",
+            "dataset": {
+              "priority": "TIM2_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "irq": "TIM3_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "0",
+            "dataset": {
+              "priority": "TIM3_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "irq": "TIM4_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "0",
+            "dataset": {
+              "priority": "TIM4_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "irq": "TIM5_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "0",
+            "dataset": {
+              "priority": "TIM5_IRQn"
+            }
+          },
+          {
+            "id": "timer-clock",
+            "value": "16000000",
+            "dataset": {}
+          }
+        ]
+      },
+      "finishedAt": "2026-10-19T07:52:35.845Z"
+    },
+    {
+      "id": "validation-empty-clock",
+      "settings": {
+        "field": "clock",
+        "input": ""
+      },
+      "startedAt": "2026-10-19T07:52:35.848Z",
+      "passed": false,
+      "error": "AssertionError [ERR_ASSERTION]: The input did not match the regular expression /입력|비어|필수|empty|required/i. Input:\n\n'APB1 타이머 클록 범위: 1~180 MHz'\n\n    at D:\\codex\\project\\STM-Simulator\\scripts\\pin-options-ui-check.cjs:63:666\n    at async scenario (D:\\codex\\project\\STM-Simulator\\scripts\\pin-options-ui-check.cjs:51:150)\n    at async main (D:\\codex\\project\\STM-Simulator\\scripts\\pin-options-ui-check.cjs:63:296)",
+      "console": "0.000 sAPB1 타이머 클록 범위: 1~180 MHz",
+      "observed": {
+        "pinError": "APB1 타이머 클록 범위: 1~180 MHz",
+        "dialogOpen": true,
+        "fields": [
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "peripheral": "USART1"
+            }
+          },
+          {
+            "id": "",
+            "value": "",
+            "dataset": {
+              "serialRoute": "USART1",
+              "role": "TX"
+            }
+          },
+          {
+            "id": "",
+            "value": "",
+            "dataset": {
+              "serialRoute": "USART1",
+              "role": "RX"
+            }
+          },
+          {
+            "id": "",
+            "value": "115200",
+            "dataset": {
+              "peripheralValue": "USART1",
+              "key": "baud"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "peripheral": "USART2"
+            }
+          },
+          {
+            "id": "",
+            "value": "",
+            "dataset": {
+              "serialRoute": "USART2",
+              "role": "TX"
+            }
+          },
+          {
+            "id": "",
+            "value": "",
+            "dataset": {
+              "serialRoute": "USART2",
+              "role": "RX"
+            }
+          },
+          {
+            "id": "",
+            "value": "115200",
+            "dataset": {
+              "peripheralValue": "USART2",
+              "key": "baud"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "peripheral": "USART3"
+            }
+          },
+          {
+            "id": "",
+            "value": "",
+            "dataset": {
+              "serialRoute": "USART3",
+              "role": "TX"
+            }
+          },
+          {
+            "id": "",
+            "value": "",
+            "dataset": {
+              "serialRoute": "USART3",
+              "role": "RX"
+            }
+          },
+          {
+            "id": "",
+            "value": "115200",
+            "dataset": {
+              "peripheralValue": "USART3",
+              "key": "baud"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "peripheral": "UART4"
+            }
+          },
+          {
+            "id": "",
+            "value": "",
+            "dataset": {
+              "serialRoute": "UART4",
+              "role": "TX"
+            }
+          },
+          {
+            "id": "",
+            "value": "",
+            "dataset": {
+              "serialRoute": "UART4",
+              "role": "RX"
+            }
+          },
+          {
+            "id": "",
+            "value": "115200",
+            "dataset": {
+              "peripheralValue": "UART4",
+              "key": "baud"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "peripheral": "UART5"
+            }
+          },
+          {
+            "id": "",
+            "value": "",
+            "dataset": {
+              "serialRoute": "UART5",
+              "role": "TX"
+            }
+          },
+          {
+            "id": "",
+            "value": "",
+            "dataset": {
+              "serialRoute": "UART5",
+              "role": "RX"
+            }
+          },
+          {
+            "id": "",
+            "value": "115200",
+            "dataset": {
+              "peripheralValue": "UART5",
+              "key": "baud"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "peripheral": "USART6"
+            }
+          },
+          {
+            "id": "",
+            "value": "",
+            "dataset": {
+              "serialRoute": "USART6",
+              "role": "TX"
+            }
+          },
+          {
+            "id": "",
+            "value": "",
+            "dataset": {
+              "serialRoute": "USART6",
+              "role": "RX"
+            }
+          },
+          {
+            "id": "",
+            "value": "115200",
+            "dataset": {
+              "peripheralValue": "USART6",
+              "key": "baud"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "peripheral": "I2C1"
+            }
+          },
+          {
+            "id": "",
+            "value": "100000",
+            "dataset": {
+              "peripheralValue": "I2C1",
+              "key": "clock"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "peripheral": "SPI1"
+            }
+          },
+          {
+            "id": "",
+            "value": "1000000",
+            "dataset": {
+              "peripheralValue": "SPI1",
+              "key": "clock"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "peripheral": "ADC1"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "peripheral": "TIM2"
+            }
+          },
+          {
+            "id": "",
+            "value": "base",
+            "dataset": {
+              "timerMode": "TIM2"
+            }
+          },
+          {
+            "id": "",
+            "value": "0",
+            "dataset": {
+              "peripheralValue": "TIM2",
+              "key": "prescaler"
+            }
+          },
+          {
+            "id": "",
+            "value": "4294967295",
+            "dataset": {
+              "peripheralValue": "TIM2",
+              "key": "period"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "peripheral": "TIM3"
+            }
+          },
+          {
+            "id": "",
+            "value": "pwm",
+            "dataset": {
+              "timerMode": "TIM3"
+            }
+          },
+          {
+            "id": "",
+            "value": "0",
+            "dataset": {
+              "peripheralValue": "TIM3",
+              "key": "prescaler"
+            }
+          },
+          {
+            "id": "",
+            "value": "65535",
+            "dataset": {
+              "peripheralValue": "TIM3",
+              "key": "period"
+            }
+          },
+          {
+            "id": "",
+            "value": "0",
+            "dataset": {
+              "peripheralValue": "TIM3",
+              "key": "pulse"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "peripheral": "TIM4"
+            }
+          },
+          {
+            "id": "",
+            "value": "base",
+            "dataset": {
+              "timerMode": "TIM4"
+            }
+          },
+          {
+            "id": "",
+            "value": "0",
+            "dataset": {
+              "peripheralValue": "TIM4",
+              "key": "prescaler"
+            }
+          },
+          {
+            "id": "",
+            "value": "65535",
+            "dataset": {
+              "peripheralValue": "TIM4",
+              "key": "period"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "peripheral": "TIM5"
+            }
+          },
+          {
+            "id": "",
+            "value": "base",
+            "dataset": {
+              "timerMode": "TIM5"
+            }
+          },
+          {
+            "id": "",
+            "value": "0",
+            "dataset": {
+              "peripheralValue": "TIM5",
+              "key": "prescaler"
+            }
+          },
+          {
+            "id": "",
+            "value": "4294967295",
+            "dataset": {
+              "peripheralValue": "TIM5",
+              "key": "period"
+            }
+          },
+          {
+            "id": "pin-function",
+            "value": "Reset",
+            "dataset": {}
+          },
+          {
+            "id": "pin-pull",
+            "value": "NOPULL",
+            "dataset": {}
+          },
+          {
+            "id": "pin-edge",
+            "value": "FALLING",
+            "dataset": {}
+          },
+          {
+            "id": "pin-level",
+            "value": "0",
+            "dataset": {}
+          },
+          {
+            "id": "pin-label",
+            "value": "",
+            "dataset": {}
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "irq": "EXTI0_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "0",
+            "dataset": {
+              "priority": "EXTI0_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "irq": "EXTI1_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "0",
+            "dataset": {
+              "priority": "EXTI1_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "irq": "EXTI2_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "0",
+            "dataset": {
+              "priority": "EXTI2_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "irq": "EXTI3_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "0",
+            "dataset": {
+              "priority": "EXTI3_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "irq": "EXTI4_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "0",
+            "dataset": {
+              "priority": "EXTI4_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "irq": "EXTI9_5_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "0",
+            "dataset": {
+              "priority": "EXTI9_5_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "irq": "EXTI15_10_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "0",
+            "dataset": {
+              "priority": "EXTI15_10_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "irq": "USART1_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "0",
+            "dataset": {
+              "priority": "USART1_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "irq": "USART2_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "0",
+            "dataset": {
+              "priority": "USART2_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "irq": "USART3_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "0",
+            "dataset": {
+              "priority": "USART3_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "irq": "UART4_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "0",
+            "dataset": {
+              "priority": "UART4_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "irq": "UART5_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "0",
+            "dataset": {
+              "priority": "UART5_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "irq": "USART6_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "0",
+            "dataset": {
+              "priority": "USART6_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "irq": "TIM2_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "0",
+            "dataset": {
+              "priority": "TIM2_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "irq": "TIM3_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "0",
+            "dataset": {
+              "priority": "TIM3_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "irq": "TIM4_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "0",
+            "dataset": {
+              "priority": "TIM4_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "on",
+            "dataset": {
+              "irq": "TIM5_IRQn"
+            }
+          },
+          {
+            "id": "",
+            "value": "0",
+            "dataset": {
+              "priority": "TIM5_IRQn"
+            }
+          },
+          {
+            "id": "timer-clock",
+            "value": "",
+            "dataset": {}
+          }
+        ]
+      },
+      "finishedAt": "2026-10-19T07:52:36.660Z"
+    }
+  ],
+  "functionChoices": [],
+  "pageErrors": [],
+  "execution": {
+    "mode": "electron",
+    "viewportKind": "BrowserWindow content size"
+  },
+  "limitations": [
+    "Actual simulator execution; no physical STM32 hardware or ARM firmware claim.",
+    "Speed is generated VERY_HIGH and AF is derived from function; no independent Speed/AF selector exists.",
+    "Peripheral function selection coverage is distinct from peripheral electrical execution coverage.",
+    "Executed instrumentation preserves generated initialization; USER CODE 3 automatic Toggle is replaced by an idle delay to observe initial values."
+  ],
+  "gpioPins": [
+    "PA0",
+    "PA1",
+    "PA10",
+    "PA11",
+    "PA12",
+    "PA13",
+    "PA14",
+    "PA15",
+    "PA2",
+    "PA3",
+    "PA4",
+    "PA5",
+    "PA6",
+    "PA7",
+    "PA8",
+    "PA9",
+    "PB0",
+    "PB1",
+    "PB10",
+    "PB12",
+    "PB13",
+    "PB14",
+    "PB15",
+    "PB2",
+    "PB3",
+    "PB4",
+    "PB5",
+    "PB6",
+    "PB7",
+    "PB8",
+    "PB9",
+    "PC0",
+    "PC1",
+    "PC10",
+    "PC11",
+    "PC12",
+    "PC13",
+    "PC14",
+    "PC15",
+    "PC2",
+    "PC3",
+    "PC4",
+    "PC5",
+    "PC6",
+    "PC7",
+    "PC8",
+    "PC9",
+    "PD2",
+    "PH0",
+    "PH1"
+  ],
+  "expected": {
+    "functionChoices": 370,
+    "gpioCases": 30,
+    "gpioPinCombinations": 1500,
+    "extiEnabledCases": 288,
+    "extiEnabledPinCombinations": 2016,
+    "extiDisabledCases": 18,
+    "extiDisabledPinCombinations": 126
+  },
+  "sourceSha256After": "8b12426420304c8a45404d5e1a7d66a48d22152056a0771217f7b63a23142b44",
+  "error": "AssertionError [ERR_ASSERTION]: all cases passed\n    at main (D:\\codex\\project\\STM-Simulator\\scripts\\pin-options-ui-check.cjs:114:210)",
+  "finishedAt": "2026-10-19T07:52:36.806Z",
+  "completedCases": 0
+}

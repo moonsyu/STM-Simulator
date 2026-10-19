@@ -1,0 +1,728 @@
+{
+  "passed": true,
+  "scope": "Current development worktree; product source unchanged in this task; not a released EXE audit",
+  "version": "0.25.0",
+  "sourceCommit": "5b74ec9586820f082249eee935b8696c2fa7167c",
+  "sourceDirty": true,
+  "sourceSha256": "1b43991b345387c0105aac31e2b3e3eb6b11cddac11ee19b44fe1604f0363e32",
+  "sourceHashScope": "Git tracked src/, desktop/, package.json",
+  "ui": {
+    "scenarios": 3,
+    "passed": 3,
+    "snapshots": 15,
+    "runs": 6,
+    "states": 18,
+    "applies": 12,
+    "roundTrips": 3,
+    "startedAt": "2026-10-19T08:33:06.606Z",
+    "finishedAt": "2026-10-19T08:33:38.692Z",
+    "rendererErrors": 0,
+    "diagnosticWarnings": 0,
+    "runtimeErrors": 0,
+    "circuitFaults": 0,
+    "circuitWarnings": 0
+  },
+  "source": {
+    "scenarios": 7,
+    "passed": 7,
+    "startedAt": "2026-10-19T08:31:14.210Z",
+    "finishedAt": "2026-10-19T08:31:19.421Z"
+  },
+  "firstAttempt": {
+    "passed": false,
+    "passedScenarios": 2,
+    "reason": "Harness attempted to select disabled resize target during simulation; final run selects potentiometer before starting, then changes its live slider."
+  },
+  "artifacts": [
+    {
+      "entry": "ui-final/four-device-mix-01-baseline-main.c",
+      "file": "work/test-results/docs-multi-apply-0.25.0-2026-10-19T08-33-06-600Z/four-device-mix-01-baseline-main.c",
+      "bytes": 2153,
+      "sha256": "ddcc083d6655e466321f682516b8145fe8a9c0a85f813d85c4608adf8e9d5cd0"
+    },
+    {
+      "entry": "ui-final/four-device-mix-01-baseline.stm32lab",
+      "file": "work/test-results/docs-multi-apply-0.25.0-2026-10-19T08-33-06-600Z/four-device-mix-01-baseline.stm32lab",
+      "bytes": 3982,
+      "sha256": "80bb312bdf5705706e63378d0f821820293442f049d6592b7fcb3fc51c8713c9"
+    },
+    {
+      "entry": "ui-final/four-device-mix-02-led1-HAL_GPIO_WritePin-main.c",
+      "file": "work/test-results/docs-multi-apply-0.25.0-2026-10-19T08-33-06-600Z/four-device-mix-02-led1-HAL_GPIO_WritePin-main.c",
+      "bytes": 3014,
+      "sha256": "49dbbadef1f0c5ae0d10e4be8166a0694b094f8f25c87ccf5f1ffc76b8916849"
+    },
+    {
+      "entry": "ui-final/four-device-mix-02-led1-HAL_GPIO_WritePin.stm32lab",
+      "file": "work/test-results/docs-multi-apply-0.25.0-2026-10-19T08-33-06-600Z/four-device-mix-02-led1-HAL_GPIO_WritePin.stm32lab",
+      "bytes": 6016,
+      "sha256": "f6286ff2003701f01b22ef3671f9f0677f22d46bce6a981a616ecdc0a043e6bb"
+    },
+    {
+      "entry": "ui-final/four-device-mix-03-pot1-all-main.c",
+      "file": "work/test-results/docs-multi-apply-0.25.0-2026-10-19T08-33-06-600Z/four-device-mix-03-pot1-all-main.c",
+      "bytes": 4685,
+      "sha256": "0927e780701f3ae810fc61aab503183b563e28bd2727fac26685992327e4428a"
+    },
+    {
+      "entry": "ui-final/four-device-mix-03-pot1-all.stm32lab",
+      "file": "work/test-results/docs-multi-apply-0.25.0-2026-10-19T08-33-06-600Z/four-device-mix-03-pot1-all.stm32lab",
+      "bytes": 8580,
+      "sha256": "94cf62eaa1cb5333bdb519697be90f9a3ce77d9fa7cdc8ab18ea1856fb9019d4"
+    },
+    {
+      "entry": "ui-final/four-device-mix-04-uart1-all-main.c",
+      "file": "work/test-results/docs-multi-apply-0.25.0-2026-10-19T08-33-06-600Z/four-device-mix-04-uart1-all-main.c",
+      "bytes": 6114,
+      "sha256": "d760ce3e39cc30bfc79d02b4dd2ea93b21e3362407b954b545d526900725d4c7"
+    },
+    {
+      "entry": "ui-final/four-device-mix-04-uart1-all.stm32lab",
+      "file": "work/test-results/docs-multi-apply-0.25.0-2026-10-19T08-33-06-600Z/four-device-mix-04-uart1-all.stm32lab",
+      "bytes": 11306,
+      "sha256": "011f6bdfbbad914ecd48a677b6065a53da63390432ada5ea0db32b9f107e4b79"
+    },
+    {
+      "entry": "ui-final/four-device-mix-05-servo1-all-main.c",
+      "file": "work/test-results/docs-multi-apply-0.25.0-2026-10-19T08-33-06-600Z/four-device-mix-05-servo1-all-main.c",
+      "bytes": 7735,
+      "sha256": "35812a1dc245ce0e3fffa045effef80a8d685bb2979d0a498dfbf8c659d46d09"
+    },
+    {
+      "entry": "ui-final/four-device-mix-05-servo1-all.stm32lab",
+      "file": "work/test-results/docs-multi-apply-0.25.0-2026-10-19T08-33-06-600Z/four-device-mix-05-servo1-all.stm32lab",
+      "bytes": 13915,
+      "sha256": "4e32bcc04b146cf354dff57e68b219230282460e5557b6738d459438439ac0d7"
+    },
+    {
+      "entry": "ui-final/four-device-mix-06-pot1-all-main.c",
+      "file": "work/test-results/docs-multi-apply-0.25.0-2026-10-19T08-33-06-600Z/four-device-mix-06-pot1-all-main.c",
+      "bytes": 7735,
+      "sha256": "35812a1dc245ce0e3fffa045effef80a8d685bb2979d0a498dfbf8c659d46d09"
+    },
+    {
+      "entry": "ui-final/four-device-mix-06-pot1-all.stm32lab",
+      "file": "work/test-results/docs-multi-apply-0.25.0-2026-10-19T08-33-06-600Z/four-device-mix-06-pot1-all.stm32lab",
+      "bytes": 13915,
+      "sha256": "4e32bcc04b146cf354dff57e68b219230282460e5557b6738d459438439ac0d7"
+    },
+    {
+      "entry": "ui-final/four-device-mix-live-stimuli-events.jsonl",
+      "file": "work/test-results/docs-multi-apply-0.25.0-2026-10-19T08-33-06-600Z/four-device-mix-live-stimuli-events.jsonl",
+      "bytes": 14833,
+      "sha256": "c35a9581914bbeef26455bd3fd8a9e581ab5d12198cddc60591421931c9ac51a"
+    },
+    {
+      "entry": "ui-final/four-device-mix-restored.stm32lab",
+      "file": "work/test-results/docs-multi-apply-0.25.0-2026-10-19T08-33-06-600Z/four-device-mix-restored.stm32lab",
+      "bytes": 13915,
+      "sha256": "4e32bcc04b146cf354dff57e68b219230282460e5557b6738d459438439ac0d7"
+    },
+    {
+      "entry": "ui-final/runtime-events.jsonl",
+      "file": "work/test-results/docs-multi-apply-0.25.0-2026-10-19T08-33-06-600Z/runtime-events.jsonl",
+      "bytes": 50221,
+      "sha256": "6d18a6d5309be4120c2200555e6d82a3a1a6deaa4ea0123bf90dbc5336d92c00"
+    },
+    {
+      "entry": "ui-final/same-device-cards-01-baseline-main.c",
+      "file": "work/test-results/docs-multi-apply-0.25.0-2026-10-19T08-33-06-600Z/same-device-cards-01-baseline-main.c",
+      "bytes": 2155,
+      "sha256": "722df4a8c317f14879cbac9622df19f040985dd911b05756591d28f7181201e4"
+    },
+    {
+      "entry": "ui-final/same-device-cards-01-baseline.stm32lab",
+      "file": "work/test-results/docs-multi-apply-0.25.0-2026-10-19T08-33-06-600Z/same-device-cards-01-baseline.stm32lab",
+      "bytes": 3518,
+      "sha256": "0e383b35e9fa5c6ee4b0634fd169a9107d1bc07e83f9679dea1e225690e2fcbb"
+    },
+    {
+      "entry": "ui-final/same-device-cards-02-led1-HAL_GPIO_WritePin-main.c",
+      "file": "work/test-results/docs-multi-apply-0.25.0-2026-10-19T08-33-06-600Z/same-device-cards-02-led1-HAL_GPIO_WritePin-main.c",
+      "bytes": 3016,
+      "sha256": "095d01fce5d7756deafc6646b8f93694d5cd3044b682567dc21ee49e427f741b"
+    },
+    {
+      "entry": "ui-final/same-device-cards-02-led1-HAL_GPIO_WritePin.stm32lab",
+      "file": "work/test-results/docs-multi-apply-0.25.0-2026-10-19T08-33-06-600Z/same-device-cards-02-led1-HAL_GPIO_WritePin.stm32lab",
+      "bytes": 5552,
+      "sha256": "2990c940f7d22ab51d34b7957f49e6475e27597783719bb5607d732c28429be3"
+    },
+    {
+      "entry": "ui-final/same-device-cards-03-led1-HAL_GPIO_TogglePin-main.c",
+      "file": "work/test-results/docs-multi-apply-0.25.0-2026-10-19T08-33-06-600Z/same-device-cards-03-led1-HAL_GPIO_TogglePin-main.c",
+      "bytes": 3003,
+      "sha256": "183356997447154b5a7daf9c14026388630811127b8a79bd184aff116c7f8356"
+    },
+    {
+      "entry": "ui-final/same-device-cards-03-led1-HAL_GPIO_TogglePin.stm32lab",
+      "file": "work/test-results/docs-multi-apply-0.25.0-2026-10-19T08-33-06-600Z/same-device-cards-03-led1-HAL_GPIO_TogglePin.stm32lab",
+      "bytes": 5540,
+      "sha256": "02e852c72583d08d0d60bb95b081031fe81dcd9d1fbe0934a89be5c457b44cd7"
+    },
+    {
+      "entry": "ui-final/same-device-cards-04-led1-HAL_GPIO_ReadPin-main.c",
+      "file": "work/test-results/docs-multi-apply-0.25.0-2026-10-19T08-33-06-600Z/same-device-cards-04-led1-HAL_GPIO_ReadPin-main.c",
+      "bytes": 3072,
+      "sha256": "33361514c681a69ff8608abd7cfa3bae8e84b6d637a2bb9dfef87970be884ff0"
+    },
+    {
+      "entry": "ui-final/same-device-cards-04-led1-HAL_GPIO_ReadPin.stm32lab",
+      "file": "work/test-results/docs-multi-apply-0.25.0-2026-10-19T08-33-06-600Z/same-device-cards-04-led1-HAL_GPIO_ReadPin.stm32lab",
+      "bytes": 5610,
+      "sha256": "9d9375b7606028e2f9bd157598ace92738eee0a4fb6a43beb41969731a29824a"
+    },
+    {
+      "entry": "ui-final/same-device-cards-05-led1-HAL_GPIO_WritePin-main.c",
+      "file": "work/test-results/docs-multi-apply-0.25.0-2026-10-19T08-33-06-600Z/same-device-cards-05-led1-HAL_GPIO_WritePin-main.c",
+      "bytes": 3016,
+      "sha256": "095d01fce5d7756deafc6646b8f93694d5cd3044b682567dc21ee49e427f741b"
+    },
+    {
+      "entry": "ui-final/same-device-cards-05-led1-HAL_GPIO_WritePin.stm32lab",
+      "file": "work/test-results/docs-multi-apply-0.25.0-2026-10-19T08-33-06-600Z/same-device-cards-05-led1-HAL_GPIO_WritePin.stm32lab",
+      "bytes": 5552,
+      "sha256": "2990c940f7d22ab51d34b7957f49e6475e27597783719bb5607d732c28429be3"
+    },
+    {
+      "entry": "ui-final/same-device-cards-read-prerequisites-events.jsonl",
+      "file": "work/test-results/docs-multi-apply-0.25.0-2026-10-19T08-33-06-600Z/same-device-cards-read-prerequisites-events.jsonl",
+      "bytes": 8044,
+      "sha256": "d4a6c37c148715605b65c6409190461684d2e2555bd3d6d3a9f8cb5b20c980e3"
+    },
+    {
+      "entry": "ui-final/same-device-cards-restored.stm32lab",
+      "file": "work/test-results/docs-multi-apply-0.25.0-2026-10-19T08-33-06-600Z/same-device-cards-restored.stm32lab",
+      "bytes": 5552,
+      "sha256": "2990c940f7d22ab51d34b7957f49e6475e27597783719bb5607d732c28429be3"
+    },
+    {
+      "entry": "ui-final/same-device-cards-toggle-events.jsonl",
+      "file": "work/test-results/docs-multi-apply-0.25.0-2026-10-19T08-33-06-600Z/same-device-cards-toggle-events.jsonl",
+      "bytes": 3968,
+      "sha256": "0ea69a85cc67728f259f3aab5b5f58f5b7b5cd8de4fc9f48089a1340e587ace8"
+    },
+    {
+      "entry": "ui-final/same-device-cards-write-first-events.jsonl",
+      "file": "work/test-results/docs-multi-apply-0.25.0-2026-10-19T08-33-06-600Z/same-device-cards-write-first-events.jsonl",
+      "bytes": 3435,
+      "sha256": "e8dfe335095eb527cd38fe572fda7646094ec9aaa890f2e942b95fc082a7f937"
+    },
+    {
+      "entry": "ui-final/same-device-cards-write-restored-events.jsonl",
+      "file": "work/test-results/docs-multi-apply-0.25.0-2026-10-19T08-33-06-600Z/same-device-cards-write-restored-events.jsonl",
+      "bytes": 2690,
+      "sha256": "c564cd39182679c3ba343b29efecf55b82657aba73cc8c7ccafa84369f844e33"
+    },
+    {
+      "entry": "ui-final/summary.json",
+      "file": "work/test-results/docs-multi-apply-0.25.0-2026-10-19T08-33-06-600Z/summary.json",
+      "bytes": 81008,
+      "sha256": "31475de9c6c087b1de05ae9d3bef2139c7e594f379ff8a4f58b7b1766af36e4c"
+    },
+    {
+      "entry": "ui-final/two-leds-01-baseline-main.c",
+      "file": "work/test-results/docs-multi-apply-0.25.0-2026-10-19T08-33-06-600Z/two-leds-01-baseline-main.c",
+      "bytes": 2146,
+      "sha256": "6a1f300560e51122998e19a6533eddeb1d3e5d24f43f0d95d80af641d248f318"
+    },
+    {
+      "entry": "ui-final/two-leds-01-baseline.stm32lab",
+      "file": "work/test-results/docs-multi-apply-0.25.0-2026-10-19T08-33-06-600Z/two-leds-01-baseline.stm32lab",
+      "bytes": 3668,
+      "sha256": "29e39ba64366324f2242a4f75c6e93dc3084e568f8f03038952a1e44e105eac8"
+    },
+    {
+      "entry": "ui-final/two-leds-02-led1-HAL_GPIO_WritePin-main.c",
+      "file": "work/test-results/docs-multi-apply-0.25.0-2026-10-19T08-33-06-600Z/two-leds-02-led1-HAL_GPIO_WritePin-main.c",
+      "bytes": 3007,
+      "sha256": "2b142a21fc7daec80f9e1c8295a463921878080291770868d30095e98bece584"
+    },
+    {
+      "entry": "ui-final/two-leds-02-led1-HAL_GPIO_WritePin.stm32lab",
+      "file": "work/test-results/docs-multi-apply-0.25.0-2026-10-19T08-33-06-600Z/two-leds-02-led1-HAL_GPIO_WritePin.stm32lab",
+      "bytes": 5702,
+      "sha256": "ea3304dba0970c3dffe87697cb2947c28a089aa2bf08747a4be2e04626eaf208"
+    },
+    {
+      "entry": "ui-final/two-leds-03-led2-HAL_GPIO_WritePin-main.c",
+      "file": "work/test-results/docs-multi-apply-0.25.0-2026-10-19T08-33-06-600Z/two-leds-03-led2-HAL_GPIO_WritePin-main.c",
+      "bytes": 3383,
+      "sha256": "5ee2af4470dafbd3046fa6b87735fc958e5a6169f6789b8aba55377e8ecafc3a"
+    },
+    {
+      "entry": "ui-final/two-leds-03-led2-HAL_GPIO_WritePin.stm32lab",
+      "file": "work/test-results/docs-multi-apply-0.25.0-2026-10-19T08-33-06-600Z/two-leds-03-led2-HAL_GPIO_WritePin.stm32lab",
+      "bytes": 7086,
+      "sha256": "9ab684e2400b3eb41c0ef35aed1c0ca13cc3f52dfd330540379428a8b2fae407"
+    },
+    {
+      "entry": "ui-final/two-leds-04-led1-HAL_GPIO_WritePin-main.c",
+      "file": "work/test-results/docs-multi-apply-0.25.0-2026-10-19T08-33-06-600Z/two-leds-04-led1-HAL_GPIO_WritePin-main.c",
+      "bytes": 3383,
+      "sha256": "5ee2af4470dafbd3046fa6b87735fc958e5a6169f6789b8aba55377e8ecafc3a"
+    },
+    {
+      "entry": "ui-final/two-leds-04-led1-HAL_GPIO_WritePin.stm32lab",
+      "file": "work/test-results/docs-multi-apply-0.25.0-2026-10-19T08-33-06-600Z/two-leds-04-led1-HAL_GPIO_WritePin.stm32lab",
+      "bytes": 7086,
+      "sha256": "9ab684e2400b3eb41c0ef35aed1c0ca13cc3f52dfd330540379428a8b2fae407"
+    },
+    {
+      "entry": "ui-final/two-leds-both-on-events.jsonl",
+      "file": "work/test-results/docs-multi-apply-0.25.0-2026-10-19T08-33-06-600Z/two-leds-both-on-events.jsonl",
+      "bytes": 3221,
+      "sha256": "d02f86238e5d3542bfa16c1571cff1ae3ab2a20c7d267ddadbe03d21792b34ca"
+    },
+    {
+      "entry": "ui-final/two-leds-restored.stm32lab",
+      "file": "work/test-results/docs-multi-apply-0.25.0-2026-10-19T08-33-06-600Z/two-leds-restored.stm32lab",
+      "bytes": 7086,
+      "sha256": "9ab684e2400b3eb41c0ef35aed1c0ca13cc3f52dfd330540379428a8b2fae407"
+    },
+    {
+      "entry": "ui-first-attempt/four-device-mix-01-baseline-main.c",
+      "file": "work/test-results/docs-multi-apply-0.25.0-2026-10-19T08-31-51-878Z/four-device-mix-01-baseline-main.c",
+      "bytes": 2153,
+      "sha256": "ddcc083d6655e466321f682516b8145fe8a9c0a85f813d85c4608adf8e9d5cd0"
+    },
+    {
+      "entry": "ui-first-attempt/four-device-mix-01-baseline.stm32lab",
+      "file": "work/test-results/docs-multi-apply-0.25.0-2026-10-19T08-31-51-878Z/four-device-mix-01-baseline.stm32lab",
+      "bytes": 3982,
+      "sha256": "80bb312bdf5705706e63378d0f821820293442f049d6592b7fcb3fc51c8713c9"
+    },
+    {
+      "entry": "ui-first-attempt/four-device-mix-02-led1-HAL_GPIO_WritePin-main.c",
+      "file": "work/test-results/docs-multi-apply-0.25.0-2026-10-19T08-31-51-878Z/four-device-mix-02-led1-HAL_GPIO_WritePin-main.c",
+      "bytes": 3014,
+      "sha256": "49dbbadef1f0c5ae0d10e4be8166a0694b094f8f25c87ccf5f1ffc76b8916849"
+    },
+    {
+      "entry": "ui-first-attempt/four-device-mix-02-led1-HAL_GPIO_WritePin.stm32lab",
+      "file": "work/test-results/docs-multi-apply-0.25.0-2026-10-19T08-31-51-878Z/four-device-mix-02-led1-HAL_GPIO_WritePin.stm32lab",
+      "bytes": 6016,
+      "sha256": "f6286ff2003701f01b22ef3671f9f0677f22d46bce6a981a616ecdc0a043e6bb"
+    },
+    {
+      "entry": "ui-first-attempt/four-device-mix-03-pot1-all-main.c",
+      "file": "work/test-results/docs-multi-apply-0.25.0-2026-10-19T08-31-51-878Z/four-device-mix-03-pot1-all-main.c",
+      "bytes": 4685,
+      "sha256": "0927e780701f3ae810fc61aab503183b563e28bd2727fac26685992327e4428a"
+    },
+    {
+      "entry": "ui-first-attempt/four-device-mix-03-pot1-all.stm32lab",
+      "file": "work/test-results/docs-multi-apply-0.25.0-2026-10-19T08-31-51-878Z/four-device-mix-03-pot1-all.stm32lab",
+      "bytes": 8580,
+      "sha256": "94cf62eaa1cb5333bdb519697be90f9a3ce77d9fa7cdc8ab18ea1856fb9019d4"
+    },
+    {
+      "entry": "ui-first-attempt/four-device-mix-04-uart1-all-main.c",
+      "file": "work/test-results/docs-multi-apply-0.25.0-2026-10-19T08-31-51-878Z/four-device-mix-04-uart1-all-main.c",
+      "bytes": 6114,
+      "sha256": "d760ce3e39cc30bfc79d02b4dd2ea93b21e3362407b954b545d526900725d4c7"
+    },
+    {
+      "entry": "ui-first-attempt/four-device-mix-04-uart1-all.stm32lab",
+      "file": "work/test-results/docs-multi-apply-0.25.0-2026-10-19T08-31-51-878Z/four-device-mix-04-uart1-all.stm32lab",
+      "bytes": 11306,
+      "sha256": "011f6bdfbbad914ecd48a677b6065a53da63390432ada5ea0db32b9f107e4b79"
+    },
+    {
+      "entry": "ui-first-attempt/four-device-mix-05-servo1-all-main.c",
+      "file": "work/test-results/docs-multi-apply-0.25.0-2026-10-19T08-31-51-878Z/four-device-mix-05-servo1-all-main.c",
+      "bytes": 7735,
+      "sha256": "35812a1dc245ce0e3fffa045effef80a8d685bb2979d0a498dfbf8c659d46d09"
+    },
+    {
+      "entry": "ui-first-attempt/four-device-mix-05-servo1-all.stm32lab",
+      "file": "work/test-results/docs-multi-apply-0.25.0-2026-10-19T08-31-51-878Z/four-device-mix-05-servo1-all.stm32lab",
+      "bytes": 13915,
+      "sha256": "4e32bcc04b146cf354dff57e68b219230282460e5557b6738d459438439ac0d7"
+    },
+    {
+      "entry": "ui-first-attempt/four-device-mix-06-pot1-all-main.c",
+      "file": "work/test-results/docs-multi-apply-0.25.0-2026-10-19T08-31-51-878Z/four-device-mix-06-pot1-all-main.c",
+      "bytes": 7735,
+      "sha256": "35812a1dc245ce0e3fffa045effef80a8d685bb2979d0a498dfbf8c659d46d09"
+    },
+    {
+      "entry": "ui-first-attempt/four-device-mix-06-pot1-all.stm32lab",
+      "file": "work/test-results/docs-multi-apply-0.25.0-2026-10-19T08-31-51-878Z/four-device-mix-06-pot1-all.stm32lab",
+      "bytes": 13915,
+      "sha256": "4e32bcc04b146cf354dff57e68b219230282460e5557b6738d459438439ac0d7"
+    },
+    {
+      "entry": "ui-first-attempt/four-device-mix-07-failure-main.c",
+      "file": "work/test-results/docs-multi-apply-0.25.0-2026-10-19T08-31-51-878Z/four-device-mix-07-failure-main.c",
+      "bytes": 7735,
+      "sha256": "35812a1dc245ce0e3fffa045effef80a8d685bb2979d0a498dfbf8c659d46d09"
+    },
+    {
+      "entry": "ui-first-attempt/four-device-mix-07-failure.stm32lab",
+      "file": "work/test-results/docs-multi-apply-0.25.0-2026-10-19T08-31-51-878Z/four-device-mix-07-failure.stm32lab",
+      "bytes": 13915,
+      "sha256": "4e32bcc04b146cf354dff57e68b219230282460e5557b6738d459438439ac0d7"
+    },
+    {
+      "entry": "ui-first-attempt/four-device-mix-failure.png",
+      "file": "work/test-results/docs-multi-apply-0.25.0-2026-10-19T08-31-51-878Z/four-device-mix-failure.png",
+      "bytes": 142365,
+      "sha256": "8fda2e64993b97b21203948eba77667aff3b2f5099cc6196dbcbb3d5adc2d09f"
+    },
+    {
+      "entry": "ui-first-attempt/four-device-mix-restored.stm32lab",
+      "file": "work/test-results/docs-multi-apply-0.25.0-2026-10-19T08-31-51-878Z/four-device-mix-restored.stm32lab",
+      "bytes": 13915,
+      "sha256": "4e32bcc04b146cf354dff57e68b219230282460e5557b6738d459438439ac0d7"
+    },
+    {
+      "entry": "ui-first-attempt/runtime-events.jsonl",
+      "file": "work/test-results/docs-multi-apply-0.25.0-2026-10-19T08-31-51-878Z/runtime-events.jsonl",
+      "bytes": 60060,
+      "sha256": "d9ab72caea1e6c13ac92499614eb885340ec1977b0100fda4e2b0bfbd6e4db59"
+    },
+    {
+      "entry": "ui-first-attempt/same-device-cards-01-baseline-main.c",
+      "file": "work/test-results/docs-multi-apply-0.25.0-2026-10-19T08-31-51-878Z/same-device-cards-01-baseline-main.c",
+      "bytes": 2155,
+      "sha256": "722df4a8c317f14879cbac9622df19f040985dd911b05756591d28f7181201e4"
+    },
+    {
+      "entry": "ui-first-attempt/same-device-cards-01-baseline.stm32lab",
+      "file": "work/test-results/docs-multi-apply-0.25.0-2026-10-19T08-31-51-878Z/same-device-cards-01-baseline.stm32lab",
+      "bytes": 3518,
+      "sha256": "0e383b35e9fa5c6ee4b0634fd169a9107d1bc07e83f9679dea1e225690e2fcbb"
+    },
+    {
+      "entry": "ui-first-attempt/same-device-cards-02-led1-HAL_GPIO_WritePin-main.c",
+      "file": "work/test-results/docs-multi-apply-0.25.0-2026-10-19T08-31-51-878Z/same-device-cards-02-led1-HAL_GPIO_WritePin-main.c",
+      "bytes": 3016,
+      "sha256": "095d01fce5d7756deafc6646b8f93694d5cd3044b682567dc21ee49e427f741b"
+    },
+    {
+      "entry": "ui-first-attempt/same-device-cards-02-led1-HAL_GPIO_WritePin.stm32lab",
+      "file": "work/test-results/docs-multi-apply-0.25.0-2026-10-19T08-31-51-878Z/same-device-cards-02-led1-HAL_GPIO_WritePin.stm32lab",
+      "bytes": 5552,
+      "sha256": "2990c940f7d22ab51d34b7957f49e6475e27597783719bb5607d732c28429be3"
+    },
+    {
+      "entry": "ui-first-attempt/same-device-cards-03-led1-HAL_GPIO_TogglePin-main.c",
+      "file": "work/test-results/docs-multi-apply-0.25.0-2026-10-19T08-31-51-878Z/same-device-cards-03-led1-HAL_GPIO_TogglePin-main.c",
+      "bytes": 3003,
+      "sha256": "183356997447154b5a7daf9c14026388630811127b8a79bd184aff116c7f8356"
+    },
+    {
+      "entry": "ui-first-attempt/same-device-cards-03-led1-HAL_GPIO_TogglePin.stm32lab",
+      "file": "work/test-results/docs-multi-apply-0.25.0-2026-10-19T08-31-51-878Z/same-device-cards-03-led1-HAL_GPIO_TogglePin.stm32lab",
+      "bytes": 5540,
+      "sha256": "02e852c72583d08d0d60bb95b081031fe81dcd9d1fbe0934a89be5c457b44cd7"
+    },
+    {
+      "entry": "ui-first-attempt/same-device-cards-04-led1-HAL_GPIO_ReadPin-main.c",
+      "file": "work/test-results/docs-multi-apply-0.25.0-2026-10-19T08-31-51-878Z/same-device-cards-04-led1-HAL_GPIO_ReadPin-main.c",
+      "bytes": 3072,
+      "sha256": "33361514c681a69ff8608abd7cfa3bae8e84b6d637a2bb9dfef87970be884ff0"
+    },
+    {
+      "entry": "ui-first-attempt/same-device-cards-04-led1-HAL_GPIO_ReadPin.stm32lab",
+      "file": "work/test-results/docs-multi-apply-0.25.0-2026-10-19T08-31-51-878Z/same-device-cards-04-led1-HAL_GPIO_ReadPin.stm32lab",
+      "bytes": 5610,
+      "sha256": "9d9375b7606028e2f9bd157598ace92738eee0a4fb6a43beb41969731a29824a"
+    },
+    {
+      "entry": "ui-first-attempt/same-device-cards-05-led1-HAL_GPIO_WritePin-main.c",
+      "file": "work/test-results/docs-multi-apply-0.25.0-2026-10-19T08-31-51-878Z/same-device-cards-05-led1-HAL_GPIO_WritePin-main.c",
+      "bytes": 3016,
+      "sha256": "095d01fce5d7756deafc6646b8f93694d5cd3044b682567dc21ee49e427f741b"
+    },
+    {
+      "entry": "ui-first-attempt/same-device-cards-05-led1-HAL_GPIO_WritePin.stm32lab",
+      "file": "work/test-results/docs-multi-apply-0.25.0-2026-10-19T08-31-51-878Z/same-device-cards-05-led1-HAL_GPIO_WritePin.stm32lab",
+      "bytes": 5552,
+      "sha256": "2990c940f7d22ab51d34b7957f49e6475e27597783719bb5607d732c28429be3"
+    },
+    {
+      "entry": "ui-first-attempt/same-device-cards-read-prerequisites-events.jsonl",
+      "file": "work/test-results/docs-multi-apply-0.25.0-2026-10-19T08-31-51-878Z/same-device-cards-read-prerequisites-events.jsonl",
+      "bytes": 8044,
+      "sha256": "c4c6b308ef2c7fb924ce0a4a4bb91393fefcf3f89dadd5743dfa5ba2c3de673d"
+    },
+    {
+      "entry": "ui-first-attempt/same-device-cards-restored.stm32lab",
+      "file": "work/test-results/docs-multi-apply-0.25.0-2026-10-19T08-31-51-878Z/same-device-cards-restored.stm32lab",
+      "bytes": 5552,
+      "sha256": "2990c940f7d22ab51d34b7957f49e6475e27597783719bb5607d732c28429be3"
+    },
+    {
+      "entry": "ui-first-attempt/same-device-cards-toggle-events.jsonl",
+      "file": "work/test-results/docs-multi-apply-0.25.0-2026-10-19T08-31-51-878Z/same-device-cards-toggle-events.jsonl",
+      "bytes": 3222,
+      "sha256": "0018bab4f1bd067c588f724a8c8fec848fbf600c9b759b645ebdedb6900cb5a0"
+    },
+    {
+      "entry": "ui-first-attempt/same-device-cards-write-first-events.jsonl",
+      "file": "work/test-results/docs-multi-apply-0.25.0-2026-10-19T08-31-51-878Z/same-device-cards-write-first-events.jsonl",
+      "bytes": 3435,
+      "sha256": "6b6bcd31aef8e29321298e532b373a57406faba4171ae80cda8322dcc4772673"
+    },
+    {
+      "entry": "ui-first-attempt/same-device-cards-write-restored-events.jsonl",
+      "file": "work/test-results/docs-multi-apply-0.25.0-2026-10-19T08-31-51-878Z/same-device-cards-write-restored-events.jsonl",
+      "bytes": 3435,
+      "sha256": "9c8a04547433bfa1d73fea29810ab27f666296e71c63f706645cee57c85e3346"
+    },
+    {
+      "entry": "ui-first-attempt/summary.json",
+      "file": "work/test-results/docs-multi-apply-0.25.0-2026-10-19T08-31-51-878Z/summary.json",
+      "bytes": 59780,
+      "sha256": "5c2bb188dadf143930aeb4add2754d59c8556a444ad23489218893c7cc8068cc"
+    },
+    {
+      "entry": "ui-first-attempt/two-leds-01-baseline-main.c",
+      "file": "work/test-results/docs-multi-apply-0.25.0-2026-10-19T08-31-51-878Z/two-leds-01-baseline-main.c",
+      "bytes": 2146,
+      "sha256": "6a1f300560e51122998e19a6533eddeb1d3e5d24f43f0d95d80af641d248f318"
+    },
+    {
+      "entry": "ui-first-attempt/two-leds-01-baseline.stm32lab",
+      "file": "work/test-results/docs-multi-apply-0.25.0-2026-10-19T08-31-51-878Z/two-leds-01-baseline.stm32lab",
+      "bytes": 3668,
+      "sha256": "29e39ba64366324f2242a4f75c6e93dc3084e568f8f03038952a1e44e105eac8"
+    },
+    {
+      "entry": "ui-first-attempt/two-leds-02-led1-HAL_GPIO_WritePin-main.c",
+      "file": "work/test-results/docs-multi-apply-0.25.0-2026-10-19T08-31-51-878Z/two-leds-02-led1-HAL_GPIO_WritePin-main.c",
+      "bytes": 3007,
+      "sha256": "2b142a21fc7daec80f9e1c8295a463921878080291770868d30095e98bece584"
+    },
+    {
+      "entry": "ui-first-attempt/two-leds-02-led1-HAL_GPIO_WritePin.stm32lab",
+      "file": "work/test-results/docs-multi-apply-0.25.0-2026-10-19T08-31-51-878Z/two-leds-02-led1-HAL_GPIO_WritePin.stm32lab",
+      "bytes": 5702,
+      "sha256": "ea3304dba0970c3dffe87697cb2947c28a089aa2bf08747a4be2e04626eaf208"
+    },
+    {
+      "entry": "ui-first-attempt/two-leds-03-led2-HAL_GPIO_WritePin-main.c",
+      "file": "work/test-results/docs-multi-apply-0.25.0-2026-10-19T08-31-51-878Z/two-leds-03-led2-HAL_GPIO_WritePin-main.c",
+      "bytes": 3383,
+      "sha256": "5ee2af4470dafbd3046fa6b87735fc958e5a6169f6789b8aba55377e8ecafc3a"
+    },
+    {
+      "entry": "ui-first-attempt/two-leds-03-led2-HAL_GPIO_WritePin.stm32lab",
+      "file": "work/test-results/docs-multi-apply-0.25.0-2026-10-19T08-31-51-878Z/two-leds-03-led2-HAL_GPIO_WritePin.stm32lab",
+      "bytes": 7086,
+      "sha256": "9ab684e2400b3eb41c0ef35aed1c0ca13cc3f52dfd330540379428a8b2fae407"
+    },
+    {
+      "entry": "ui-first-attempt/two-leds-04-led1-HAL_GPIO_WritePin-main.c",
+      "file": "work/test-results/docs-multi-apply-0.25.0-2026-10-19T08-31-51-878Z/two-leds-04-led1-HAL_GPIO_WritePin-main.c",
+      "bytes": 3383,
+      "sha256": "5ee2af4470dafbd3046fa6b87735fc958e5a6169f6789b8aba55377e8ecafc3a"
+    },
+    {
+      "entry": "ui-first-attempt/two-leds-04-led1-HAL_GPIO_WritePin.stm32lab",
+      "file": "work/test-results/docs-multi-apply-0.25.0-2026-10-19T08-31-51-878Z/two-leds-04-led1-HAL_GPIO_WritePin.stm32lab",
+      "bytes": 7086,
+      "sha256": "9ab684e2400b3eb41c0ef35aed1c0ca13cc3f52dfd330540379428a8b2fae407"
+    },
+    {
+      "entry": "ui-first-attempt/two-leds-both-on-events.jsonl",
+      "file": "work/test-results/docs-multi-apply-0.25.0-2026-10-19T08-31-51-878Z/two-leds-both-on-events.jsonl",
+      "bytes": 3221,
+      "sha256": "d179c94e09a25a1510dc2ae3c0c1fd39c01ac53f37eecd23b71712323d584503"
+    },
+    {
+      "entry": "ui-first-attempt/two-leds-restored.stm32lab",
+      "file": "work/test-results/docs-multi-apply-0.25.0-2026-10-19T08-31-51-878Z/two-leds-restored.stm32lab",
+      "bytes": 7086,
+      "sha256": "9ab684e2400b3eb41c0ef35aed1c0ca13cc3f52dfd330540379428a8b2fae407"
+    },
+    {
+      "entry": "source/edited-region-after-project.json",
+      "file": "work/docs-multi-audit/final/edited-region-after-project.json",
+      "bytes": 4459,
+      "sha256": "324bd66f992dda9bf5ac5bbc200dfe4de102c2a2267c40bd55575fd994b9311c"
+    },
+    {
+      "entry": "source/edited-region-after-runtime.json",
+      "file": "work/docs-multi-audit/final/edited-region-after-runtime.json",
+      "bytes": 9047,
+      "sha256": "f426bc98ad5fd60eab2ac1544b9a85bd546433700df6f7b5577099aa28055173"
+    },
+    {
+      "entry": "source/edited-region-atomic.json",
+      "file": "work/docs-multi-audit/final/edited-region-atomic.json",
+      "bytes": 744,
+      "sha256": "dc43135c0307c3def62a5bf0c2d55cd050ac63cd4a11034fc02686bebcb8b5bb"
+    },
+    {
+      "entry": "source/edited-region-before-project.json",
+      "file": "work/docs-multi-audit/final/edited-region-before-project.json",
+      "bytes": 4459,
+      "sha256": "324bd66f992dda9bf5ac5bbc200dfe4de102c2a2267c40bd55575fd994b9311c"
+    },
+    {
+      "entry": "source/edited-region-before-runtime.json",
+      "file": "work/docs-multi-audit/final/edited-region-before-runtime.json",
+      "bytes": 9047,
+      "sha256": "f426bc98ad5fd60eab2ac1544b9a85bd546433700df6f7b5577099aa28055173"
+    },
+    {
+      "entry": "source/i2c-distinct-project.json",
+      "file": "work/docs-multi-audit/final/i2c-distinct-project.json",
+      "bytes": 14229,
+      "sha256": "7a774806109351a8672fd1b8100ed573589ba483e59dc06a9f2425f55cf15275"
+    },
+    {
+      "entry": "source/i2c-distinct-runtime.json",
+      "file": "work/docs-multi-audit/final/i2c-distinct-runtime.json",
+      "bytes": 21864,
+      "sha256": "1eaf528f8a01d4586a6f805897a225c7e5d3c0b3c638f2bc9f9185abe1403d9f"
+    },
+    {
+      "entry": "source/i2c-duplicate-after-project.json",
+      "file": "work/docs-multi-audit/final/i2c-duplicate-after-project.json",
+      "bytes": 9463,
+      "sha256": "2fdcfc7961023dfddb19007d050cdc19b077e18591ad07e129d6c6a444389571"
+    },
+    {
+      "entry": "source/i2c-duplicate-after-runtime.json",
+      "file": "work/docs-multi-audit/final/i2c-duplicate-after-runtime.json",
+      "bytes": 14575,
+      "sha256": "7b6b3702b640ac1d7f53c436fd3adb05dd9f1c67920c8fa65921e86645da203d"
+    },
+    {
+      "entry": "source/i2c-duplicate-atomic.json",
+      "file": "work/docs-multi-audit/final/i2c-duplicate-atomic.json",
+      "bytes": 738,
+      "sha256": "3fd0c82cde298aae4fcb6824bfb01d6a8f1f36f19c4cdcfe12fa49322c94355b"
+    },
+    {
+      "entry": "source/i2c-duplicate-before-project.json",
+      "file": "work/docs-multi-audit/final/i2c-duplicate-before-project.json",
+      "bytes": 9463,
+      "sha256": "2fdcfc7961023dfddb19007d050cdc19b077e18591ad07e129d6c6a444389571"
+    },
+    {
+      "entry": "source/i2c-duplicate-before-runtime.json",
+      "file": "work/docs-multi-audit/final/i2c-duplicate-before-runtime.json",
+      "bytes": 14575,
+      "sha256": "7b6b3702b640ac1d7f53c436fd3adb05dd9f1c67920c8fa65921e86645da203d"
+    },
+    {
+      "entry": "source/results.json",
+      "file": "work/docs-multi-audit/final/results.json",
+      "bytes": 11311,
+      "sha256": "865b4d7791da453e709b211ad8fedd2a8269598eecd1d588f89278b43b49f6db"
+    },
+    {
+      "entry": "source/same-card-toggle-project.json",
+      "file": "work/docs-multi-audit/final/same-card-toggle-project.json",
+      "bytes": 4352,
+      "sha256": "8637e07c3c608e772dd923393255ab957ec7201b660404a872cb60bb62b88e3d"
+    },
+    {
+      "entry": "source/same-card-toggle-runtime.json",
+      "file": "work/docs-multi-audit/final/same-card-toggle-runtime.json",
+      "bytes": 7553,
+      "sha256": "e1c7ef798c0dcee9e9270dc329e4815c877f82d2d9cecf4a7e10ab9b9fa3de2a"
+    },
+    {
+      "entry": "source/same-card-write-again-project.json",
+      "file": "work/docs-multi-audit/final/same-card-write-again-project.json",
+      "bytes": 4364,
+      "sha256": "fddf3c3a8498bf54ca97b02b29124269670c4ad05c4fbf63cf441ffaa4c72b6e"
+    },
+    {
+      "entry": "source/same-card-write-again-runtime.json",
+      "file": "work/docs-multi-audit/final/same-card-write-again-runtime.json",
+      "bytes": 7688,
+      "sha256": "e09d62f722294633f842d011fec53e728258b710f493cce70d83b4bc3678a6a5"
+    },
+    {
+      "entry": "source/same-card-write-project.json",
+      "file": "work/docs-multi-audit/final/same-card-write-project.json",
+      "bytes": 4364,
+      "sha256": "fddf3c3a8498bf54ca97b02b29124269670c4ad05c4fbf63cf441ffaa4c72b6e"
+    },
+    {
+      "entry": "source/same-card-write-runtime.json",
+      "file": "work/docs-multi-audit/final/same-card-write-runtime.json",
+      "bytes": 7688,
+      "sha256": "e09d62f722294633f842d011fec53e728258b710f493cce70d83b4bc3678a6a5"
+    },
+    {
+      "entry": "source/two-servos-observations.json",
+      "file": "work/docs-multi-audit/final/two-servos-observations.json",
+      "bytes": 6129,
+      "sha256": "832f738c59c61bf92d817468e598c85958dd58a88ba3cbe2f73b64de758d3d30"
+    },
+    {
+      "entry": "source/two-servos-project.json",
+      "file": "work/docs-multi-audit/final/two-servos-project.json",
+      "bytes": 8290,
+      "sha256": "d141f7502f451eb509c1edee1ddefb9c9db1b88b6db41a7933ab4039aff931ed"
+    },
+    {
+      "entry": "source/two-servos-runtime.json",
+      "file": "work/docs-multi-audit/final/two-servos-runtime.json",
+      "bytes": 27911,
+      "sha256": "ed64a095d853ace1ab72d1470203b3b6c694366989eddf6653c2c207a3a7675b"
+    },
+    {
+      "entry": "source/two-uarts-project.json",
+      "file": "work/docs-multi-audit/final/two-uarts-project.json",
+      "bytes": 8582,
+      "sha256": "34622cb1d8d5b1a00de39bcbe867377f773377ff372166bbf260e66ec68d8df8"
+    },
+    {
+      "entry": "source/two-uarts-runtime.json",
+      "file": "work/docs-multi-audit/final/two-uarts-runtime.json",
+      "bytes": 20161,
+      "sha256": "b301636776bb21d574d89640fc43933849e0dbf34e2e322d5160158ba59e4ef3"
+    },
+    {
+      "entry": "source/uart-exhausted-after-project.json",
+      "file": "work/docs-multi-audit/final/uart-exhausted-after-project.json",
+      "bytes": 20334,
+      "sha256": "2e8d36350ff50bc87c588031dc737a291837629444f782e7b18981e48f8f2825"
+    },
+    {
+      "entry": "source/uart-exhausted-after-runtime.json",
+      "file": "work/docs-multi-audit/final/uart-exhausted-after-runtime.json",
+      "bytes": 46001,
+      "sha256": "4d316db10e304ebe2e94984168dc48d403be0958b1e18a0f4da84b061216a44c"
+    },
+    {
+      "entry": "source/uart-exhausted-atomic.json",
+      "file": "work/docs-multi-audit/final/uart-exhausted-atomic.json",
+      "bytes": 663,
+      "sha256": "ccfec9a45072971467a5cc3e22f8ab85a5c982f8f1c5b18ef5ceb16362248a9f"
+    },
+    {
+      "entry": "source/uart-exhausted-before-project.json",
+      "file": "work/docs-multi-audit/final/uart-exhausted-before-project.json",
+      "bytes": 20334,
+      "sha256": "2e8d36350ff50bc87c588031dc737a291837629444f782e7b18981e48f8f2825"
+    },
+    {
+      "entry": "source/uart-exhausted-before-runtime.json",
+      "file": "work/docs-multi-audit/final/uart-exhausted-before-runtime.json",
+      "bytes": 46001,
+      "sha256": "4d316db10e304ebe2e94984168dc48d403be0958b1e18a0f4da84b061216a44c"
+    },
+    {
+      "entry": "harness/docs-multi-apply-check.cjs",
+      "file": "scripts/docs-multi-apply-check.cjs",
+      "bytes": 15955,
+      "sha256": "20220a59eb2941917385c3653dbcaf9ef221319be6763b847410271a9ed99761"
+    },
+    {
+      "entry": "harness/run-final.mjs",
+      "file": "work/docs-multi-audit/run-final.mjs",
+      "bytes": 10826,
+      "sha256": "cd1bd813a638890b1f46a3eb7c4d893d15fb7a87a0134f1cc2da1566a2605d48"
+    }
+  ]
+}

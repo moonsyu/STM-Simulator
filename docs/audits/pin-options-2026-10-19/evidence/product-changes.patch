@@ -1,0 +1,154 @@
+diff --git a/package.json b/package.json
+index 94e85e7..b183375 100644
+--- a/package.json
++++ b/package.json
+@@ -26,6 +26,7 @@
+     "test:native:ui": "node scripts/native-ide-smoke.cjs",
+     "test:arm-gdb": "node scripts/arm-gdb-check.cjs",
+     "test:mcu-defaults:ui": "node scripts/mcu-defaults-smoke.cjs",
++    "test:pin-options:ui": "node scripts/pin-options-ui-check.cjs",
+     "test:updates:ui": "node scripts/update-smoke.cjs",
+     "test:canvas-ux:ui": "node scripts/canvas-ux-check.cjs",
+     "test:workbench:ui": "node scripts/workbench-review-check.cjs",
+diff --git a/src/hal.js b/src/hal.js
+index 20c7029..7c048bf 100644
+--- a/src/hal.js
++++ b/src/hal.js
+@@ -56,7 +56,17 @@ export class HalAdapter {
+         if(job.index===job.count){channel.rx=null;this.queue(id+'_IRQn',()=>this.callback(r,'HAL_UART_RxCpltCallback',[job.handle]),id+':rx');}}
+     }
+     if(!r.interruptsEnabled||r.inCallback)return;
+-    const ready=this.pending.filter(j=>this.nvic.has(j.irq));this.pending=this.pending.filter(j=>!this.nvic.has(j.irq));ready.sort((a,b)=>this.nvic.get(a.irq)-this.nvic.get(b.irq));for(const job of ready)r.runCallback({host:job.callback});
++    // A callback may mask another IRQ or change its priority. Select only the
++    // next currently enabled job; masked jobs retain their pending state.
++    // New jobs queued by callbacks belong to the next poll, bounding this batch.
++    const batch=new Set(this.pending);
++    while(r.interruptsEnabled&&!r.inCallback){
++      let next;
++      for(const job of this.pending)if(batch.has(job)&&this.nvic.has(job.irq)&&(!next||this.nvic.get(job.irq)<this.nvic.get(next.irq)))next=job;
++      if(!next)break;
++      batch.delete(next);this.pending.splice(this.pending.indexOf(next),1);
++      r.runCallback({host:next.callback});
++    }
+   }
+   *pollCounter(name,args,r){yield .002;r.steps=0;return this.call(name,args,r);}
+   invoke(name,args,r){
+@@ -95,11 +105,13 @@ export class HalAdapter {
+       for(const pin of this.pins(a,mask)){
+         if(this.catalog.configurePin(pin,mode,this.field(init,'Alternate'),r))continue;
+         const p=this.configured(pin),expected=p.function==='GPIO_Output'?1:p.function==='GPIO_Input'?0:p.function==='GPIO_EXTI'?HAL_CONSTANTS['GPIO_MODE_IT_'+(p.edge==='CHANGE'?'RISING_FALLING':p.edge)]:p.function==='Analog'||p.function.startsWith('ADC1_')?3:p.function.startsWith('I2C1_')?18:2;
+-        const dynamic=this.initializedGpio.has(pin)&&['GPIO_Output','GPIO_Input'].includes(p.function)&&[0,1,17].includes(mode);
++        const dynamic=this.initializedGpio.has(pin)&&(['GPIO_Output','GPIO_Input'].includes(p.function)&&[0,1,17,3].includes(mode)||(p.function==='Analog'||p.function.startsWith('ADC1_'))&&[0,3].includes(mode));
+         if(!dynamic&&(mode!==expected&&!(expected===1&&mode===17)||pull!==['NOPULL','PULLUP','PULLDOWN'].indexOf(p.pull)))throw new Error(`${pin}: HAL_GPIO_Init 모드/풀 설정과 Pinout이 다릅니다.`);
+         if([2,18].includes(mode)){const serial=serialFunction(p.function),af=serial?serialAf(serial):p.function.startsWith('I2C1_')?4:p.function.startsWith('SPI1_')?5:timerAf(p.function.split('_')[0]);if(this.field(init,'Alternate')!==af)throw new Error(`${pin}: GPIO Alternate(AF) 설정을 확인하세요.`);}
+         this.initializedGpio.add(pin);
+         if(mode===1||mode===17){r.call('pinMode',[pin,'OUTPUT']);r.gpio[pin].openDrain=mode===17;r.gpio[pin].pull=pull;r.call('digitalWrite',[pin,this.latches.get(pin)??p.initial]);}
++        // RM0390 7.3.12: analog mode disables both weak pulls and the digital input.
++        else if(mode===3)r.setPinMode(pin,'ANALOG');
+         else r.call('pinMode',[pin,pull===1?'INPUT_PULLUP':pull===2?'INPUT_PULLDOWN':'INPUT']);
+         if(p.function==='GPIO_EXTI')r.interrupts.set(pin,{mode:p.edge,previous:Number(!!r.api.read(pin)),pending:false,callback:{host:()=>{const mask=1<<Number(pin.slice(2));this.extiPending|=mask;this.queue(irqForPin(pin),()=>{const handler=irqForPin(pin).replace('_IRQn','_IRQHandler');if(r.program.functions[handler])this.callback(r,handler);else this.call('HAL_GPIO_EXTI_IRQHandler',[mask],r);},pin);}}});
+       }return 0;
+diff --git a/src/pinout-ui.js b/src/pinout-ui.js
+index 43d36ad..37df606 100644
+--- a/src/pinout-ui.js
++++ b/src/pinout-ui.js
+@@ -4,6 +4,8 @@ import {GPIO_PINS} from './pins.js';
+ import {ROUTES,defaultMcu,validateMcu,configProblems,pinFunctions,irqForPin,IRQ_NAMES,generateHal} from './mcu-config.js';
+ import {SERIAL_ROUTES,isSerial,serialAf,serialFunction,assignSerialPin,setSerialEnabled} from './serial-config.js';
+ const $=id=>document.getElementById(id),esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
++const numberInput=el=>el.value.trim()===''?NaN:Number(el.value);
++const numberText=value=>Number.isFinite(value)?value:'';
+ const timerHint=(id,c)=>`${timerMax(id)===65535?'16':'32'}비트 · 초기 ARR ${timerMax(id)}${c.period===0?' · ARR=0: 카운터 정지':''}`;
+ export class PinoutPanel {
+   constructor({getProject,apply,isRunning,onError}){
+@@ -14,30 +16,36 @@ export class PinoutPanel {
+   }
+   open(pin){if(this.isRunning())return;if(GPIO_PINS.includes(pin))this.pin=pin;this.draft=structuredClone(this.getProject().mcu||defaultMcu());this.render();$('pinout-dialog').showModal();}
+   sync(){if(!$('pin-function'))return;this.draft.pins[this.pin]={function:$('pin-function').value,pull:$('pin-pull').value,edge:$('pin-edge').value,initial:Number($('pin-level').value),label:$('pin-label').value.trim()};}
+-  commit(generate){try{this.sync();const mcu=validateMcu(this.draft),code=generate?generateHal(mcu):null;this.apply({mcu,code});$('pinout-dialog').close();}catch(e){$('pinout-errors').textContent=e.message;this.onError(e.message);}}
++  commit(generate){try{this.sync();for(const el of $('pinout-dialog').querySelectorAll('input[type="number"]'))if(!Number.isFinite(numberInput(el)))throw new Error(`${el.getAttribute('aria-label')||(el.id==='timer-clock'?'APB1 타이머 입력 클록':'숫자 설정')}: 숫자를 입력하세요.`);const mcu=validateMcu(this.draft),code=generate?generateHal(mcu):null;this.apply({mcu,code});$('pinout-dialog').close();}catch(e){$('pinout-errors').textContent=e.message;this.onError(e.message);}}
+   render(){
+     const config=this.draft,p=config.pins[this.pin]||{function:'Reset',pull:'NOPULL',edge:'FALLING',label:'',initial:0};
+     $('pinout-pins').innerHTML=[...GPIO_PINS].sort((a,b)=>a.localeCompare(b,undefined,{numeric:true})).map(pin=>{const value=config.pins[pin];return `<button class="pin-tile ${pin===this.pin?'selected':''} ${value&&!['Reset','Reserved'].includes(value.function)?'enabled':''} ${value?.function==='Reserved'?'reserved':''}" data-config-pin="${pin}"><strong>${pin}</strong><small>${esc(value?.function||'Reset')}</small></button>`;}).join('');
+     $('pinout-pins').querySelectorAll('button').forEach(b=>b.onclick=()=>{this.sync();this.pin=b.dataset.configPin;this.render();});
+     $('pinout-properties').innerHTML=`<h3>${this.pin}</h3><label>용도<select id="pin-function">${pinFunctions(this.pin).map(v=>`<option ${p.function===v?'selected':''}>${v}</option>`).join('')}</select></label><label>Pull<select id="pin-pull">${['NOPULL','PULLUP','PULLDOWN'].map(v=>`<option ${p.pull===v?'selected':''}>${v}</option>`).join('')}</select></label><label>EXTI 에지<select id="pin-edge">${['FALLING','RISING','CHANGE'].map(v=>`<option ${p.edge===v?'selected':''}>${v}</option>`).join('')}</select></label><label>초기 출력<select id="pin-level"><option value="0">LOW</option><option value="1" ${p.initial?'selected':''}>HIGH</option></select></label><label>사용자 라벨<input id="pin-label" maxlength="40" value="${esc(p.label)}" placeholder="예: LD2"></label><p>GPIO_EXTI는 ${irqForPin(this.pin)}를 사용합니다. NVIC에서 활성화하세요.</p>`;
+     for(const id of ['pin-function','pin-pull','pin-edge','pin-level'])$(id).onchange=()=>{this.sync();this.render();};
+-    $('pin-function').onchange=()=>{const previous=structuredClone(this.draft);this.sync();const fn=this.draft.pins[this.pin].function,id=serialFunction(fn);try{if(id){assignSerialPin(this.draft,id,fn.endsWith('_TX')?'TX':'RX',this.pin);this.draft=setSerialEnabled(this.draft,id,true);}this.render();}catch(e){this.draft=previous;this.render();$('pinout-errors').textContent=e.message;}};
++    $('pin-function').onchange=()=>{const previousFunction=this.draft.pins[this.pin]?.function??'Reset';this.sync();const previous=structuredClone(this.draft);previous.pins[this.pin].function=previousFunction;const fn=this.draft.pins[this.pin].function,id=serialFunction(fn);try{if(id){assignSerialPin(this.draft,id,fn.endsWith('_TX')?'TX':'RX',this.pin);this.draft=setSerialEnabled(this.draft,id,true);}this.render();}catch(e){this.draft=previous;this.render();$('pinout-errors').textContent=e.message;}};
+     $('pinout-peripherals').innerHTML=Object.keys(ROUTES).map(id=>{
+       const c=config.peripherals[id]||{enabled:false},defaults=isTimer(id)?timerDefaults(id):null,fields=isSerial(id)?[['baud','Baud rate',115200]]:id==='I2C1'||id==='SPI1'?[['clock','Clock (Hz)',id==='I2C1'?100000:1000000]]:isTimer(id)?[['prescaler','Prescaler (PSC)',defaults.prescaler,65535],['period','Period (ARR)',defaults.period,timerMax(id)],...(c.mode==='pwm'?[['pulse','초기 Pulse (CCR)',defaults.pulse,timerMax(id)]]:[])]:[];
+       const routing=isSerial(id)?`<small class="serial-mode-note">Asynchronous · HAL_UART · AF${serialAf(id)}${id==='USART2'?' · 내장 ST-LINK VCP: 별도 부품 없이 하단 통신 탭 연결':''}</small>`+['TX','RX'].map(role=>{
+         const fn=id+'_'+role,current=Object.keys(config.pins).find(pin=>config.pins[pin].function===fn);
+         return `<label>${role} 핀<select data-serial-route="${id}" data-role="${role}" aria-label="${id} ${role} 핀" ${c.enabled?'':'disabled'}><option value="">선택…</option>${SERIAL_ROUTES[id][role].map(pin=>{const other=config.pins[pin]?.function,busy=other&&other!=='Reset'&&other!==fn;return `<option value="${pin}" ${pin===current?'selected':''} ${busy?'disabled':''}>${pin}${busy?' · '+esc(other)+' 사용 중':''}</option>`;}).join('')}</select></label>`;
+       }).join(''):'';
+-      return `<section class="peripheral-card"><label class="check-label"><input type="checkbox" data-peripheral="${id}" ${c.enabled?'checked':''}>${id}</label>${routing}${isTimer(id)?`<label>동작 모드<select data-timer-mode="${id}">${Object.entries(TIMER_MODES).map(([mode,label])=>`<option value="${mode}" ${(c.mode??'base')===mode?'selected':''}>${label}</option>`).join('')}</select></label>`:''}${fields.map(([key,label,value,max])=>`<label>${label}<input type="number" data-peripheral-value="${id}" data-key="${key}" aria-label="${id} ${label}" value="${c[key]??value}" min="0" ${max===undefined?'':`max="${max}"`} step="1"></label>`).join('')}${isTimer(id)?`<small class="serial-mode-note">${timerHint(id,c)}</small>`:''}</section>`;
++      return `<section class="peripheral-card"><label class="check-label"><input type="checkbox" data-peripheral="${id}" ${c.enabled?'checked':''}>${id}</label>${routing}${isTimer(id)?`<label>동작 모드<select data-timer-mode="${id}">${Object.entries(TIMER_MODES).map(([mode,label])=>`<option value="${mode}" ${(c.mode??'base')===mode?'selected':''}>${label}</option>`).join('')}</select></label>`:''}${fields.map(([key,label,value,max])=>`<label>${label}<input type="number" data-peripheral-value="${id}" data-key="${key}" aria-label="${id} ${label}" value="${numberText(c[key]??value)}" min="0" ${max===undefined?'':`max="${max}"`} step="1"></label>`).join('')}${isTimer(id)?`<small class="serial-mode-note">${timerHint(id,c)}</small>`:''}</section>`;
+     }).join('');
+     $('pinout-peripherals').querySelectorAll('[data-peripheral]').forEach(el=>el.onchange=()=>{this.sync();const id=el.dataset.peripheral;try{if(isSerial(id))this.draft=setSerialEnabled(config,id,el.checked);else config.peripherals[id]={...config.peripherals[id],enabled:el.checked};this.render();}catch(e){this.render();$('pinout-errors').textContent=e.message;}});
+     $('pinout-peripherals').querySelectorAll('[data-serial-route]').forEach(el=>el.onchange=()=>{this.sync();try{assignSerialPin(config,el.dataset.serialRoute,el.dataset.role,el.value);this.render();}catch(e){this.render();$('pinout-errors').textContent=e.message;}});
+-    $('pinout-peripherals').querySelectorAll('[data-timer-mode]').forEach(el=>el.onchange=()=>{const id=el.dataset.timerMode;config.peripherals[id]??={enabled:false};config.peripherals[id].mode=el.value;if(el.value==='encoder')config.peripherals[id].prescaler=0;this.render();});
+-    $('pinout-peripherals').querySelectorAll('[data-peripheral-value]').forEach(el=>el.onchange=()=>{const id=el.dataset.peripheralValue;config.peripherals[id]??={enabled:false};config.peripherals[id][el.dataset.key]=Number(el.value);const note=el.closest('.peripheral-card').querySelector('.serial-mode-note');if(isTimer(id)&&note)note.textContent=timerHint(id,config.peripherals[id]);});
+-    $('pinout-nvic').innerHTML=IRQ_NAMES.map(irq=>{const c=config.nvic[irq]||{enabled:false,priority:0};return `<label class="irq-row"><input type="checkbox" data-irq="${irq}" ${c.enabled?'checked':''}><span>${irq}</span><input type="number" min="0" max="15" value="${c.priority}" data-priority="${irq}" aria-label="${irq} 우선순위"></label>`;}).join('');
++    $('pinout-peripherals').querySelectorAll('[data-timer-mode]').forEach(el=>el.onchange=()=>{
++      this.sync();const id=el.dataset.timerMode,c=config.peripherals[id]??={enabled:false},pulse=c.pulse??timerDefaults(id).pulse;
++      if(c.mode==='pwm'&&el.value!=='pwm'&&(!Number.isInteger(pulse)||pulse<0||pulse>timerMax(id))){
++        el.value='pwm';$('pinout-errors').textContent=`${id} 초기 Pulse (CCR): ${Number.isFinite(pulse)?`0~${timerMax(id)} 범위의 정수를 입력하세요.`:'숫자를 입력하세요.'}`;return;
++      }
++      c.mode=el.value;if(el.value==='encoder')c.prescaler=0;this.render();
++    });
++    $('pinout-peripherals').querySelectorAll('[data-peripheral-value]').forEach(el=>el.onchange=()=>{const id=el.dataset.peripheralValue;config.peripherals[id]??={enabled:false};config.peripherals[id][el.dataset.key]=numberInput(el);const note=el.closest('.peripheral-card').querySelector('.serial-mode-note');if(isTimer(id)&&note)note.textContent=timerHint(id,config.peripherals[id]);});
++    $('pinout-nvic').innerHTML=IRQ_NAMES.map(irq=>{const c=config.nvic[irq]||{enabled:false,priority:0};return `<label class="irq-row"><input type="checkbox" data-irq="${irq}" ${c.enabled?'checked':''}><span>${irq}</span><input type="number" min="0" max="15" value="${numberText(c.priority)}" data-priority="${irq}" aria-label="${irq} 우선순위"></label>`;}).join('');
+     $('pinout-nvic').querySelectorAll('[data-irq]').forEach(el=>el.onchange=()=>{config.nvic[el.dataset.irq]={...config.nvic[el.dataset.irq],enabled:el.checked,priority:config.nvic[el.dataset.irq]?.priority??0};});
+-    $('pinout-nvic').querySelectorAll('[data-priority]').forEach(el=>el.onchange=()=>{config.nvic[el.dataset.priority]??={enabled:false};config.nvic[el.dataset.priority].priority=Number(el.value);});
+-    $('timer-clock').value=config.timerClockHz;$('timer-clock').onchange=()=>config.timerClockHz=Number($('timer-clock').value);
++    $('pinout-nvic').querySelectorAll('[data-priority]').forEach(el=>el.onchange=()=>{config.nvic[el.dataset.priority]??={enabled:false};config.nvic[el.dataset.priority].priority=numberInput(el);});
++    $('timer-clock').value=numberText(config.timerClockHz);$('timer-clock').onchange=()=>config.timerClockHz=numberInput($('timer-clock'));
+     $('pinout-errors').textContent=configProblems(config).join('\n');
+     $('pinout-summary').textContent=`${Object.values(config.pins).filter(p=>!['Reset','Reserved'].includes(p.function)).length}개 핀 활성 · ${[...new Set(Object.entries(config.peripherals).filter(([,p])=>p.enabled).map(([id])=>'HAL_'+(isSerial(id)?'UART':id.replace(/\d$/,''))))].join(' · ')||'HAL_GPIO'}`;
+   }
+diff --git a/src/runtime.js b/src/runtime.js
+index b34052e..5d454e1 100644
+--- a/src/runtime.js
++++ b/src/runtime.js
+@@ -180,6 +180,8 @@ export class Runtime {
+   }
+   *run(){yield* this.statements(this.program.globals);if(this.program.hal){yield* this.invoke('main');return;}if(this.program.functions.setup)yield* this.invoke('setup');while(true){yield* this.invoke('loop');yield 1;}}
+   pin(name){const pin=canonicalPin(name);if(!GPIO_PINS.includes(pin))throw new Error(`GPIO 핀 이름을 확인하세요: ${name}`);return pin;}
++  setPinMode(pin,mode){this.pwm.delete(pin);this.gpio[pin]={mode,value:0};this.api.changed?.(this.microTime);}
++  inputLevel(pin){return this.gpio[pin]?.mode==='ANALOG'?0:Number(!!this.api.read?.(pin));}
+   interval(value,min=1){checkedNumber(value);if(value<min||value>3600000)throw new Error(`시간 범위: ${min}~3600000 ms`);return value;}
+   output(pin,value){if(this.gpio[pin]?.mode!=='OUTPUT')throw new Error(`${pin}: pinMode(${pin}, OUTPUT)을 먼저 설정하세요.`);this.api.beforeChange?.(this.microTime);this.gpio[pin].value=value;this.api.changed?.(this.microTime);this.pollInterrupts();}
+   event(at,fn){if(this.events.length>=4096)throw new Error('예약 이벤트 한도를 넘었습니다.');this.events.push({at,fn,order:this.nextOrder++});}
+@@ -192,14 +194,14 @@ export class Runtime {
+   runCallback(callback){const previous=this.inCallback;this.inCallback=true;try{if(callback.host){callback.host();return;}const iterator=this.invoke(callback.name,callback.args||[]),r=iterator.next();if(!r.done){iterator.return();throw new Error('콜백에서 대기할 수 없습니다.');}}finally{this.inCallback=previous;}}
+   pollInterrupts(){
+     if(!this.api.read)return;
+-    for(const [pin,s]of this.interrupts){const state=Number(!!this.api.read(pin));const fired=state!==s.previous&&(s.mode==='CHANGE'||(s.mode==='RISING'&&state)||(s.mode==='FALLING'&&!state));s.previous=state;if(fired&&!s.pending){s.pending=true;}}
++    for(const [pin,s]of this.interrupts){const state=this.inputLevel(pin);const fired=state!==s.previous&&(s.mode==='CHANGE'||(s.mode==='RISING'&&state)||(s.mode==='FALLING'&&!state));s.previous=state;if(fired&&!s.pending){s.pending=true;}}
+   }
+   format(args){const [value,base]=args;if(base!==undefined&&typeof value==='number'){if(Number.isInteger(value)&&[2,8,10,16].includes(base))return Math.trunc(value).toString(base).toUpperCase();if(Number.isInteger(base)&&base>=0&&base<=8)return value.toFixed(base);}if(isPointer(value)||isArray(value)){const p=this.pointer(value);let s='';for(let i=0;i<4096;i++){const n=this.get(this.pointerCell(p,i));if(n===0)return s;s+=String.fromCharCode(integer(n));}throw new Error('문자열 종료 문자가 없습니다.');}return args.map(String).join(' ');}
+   call(name,args){
+     const [a,b,c,d,e]=args;
+     if(['pinMode','digitalWrite','digitalRead','analogRead','analogWrite','analogWriteFrequency','pulseIn','attachInterrupt','detachInterrupt','digitalPinToInterrupt'].includes(name)){
+       const pin=this.pin(a);
+-      if(name==='pinMode'){if(!['OUTPUT','INPUT','INPUT_PULLUP','INPUT_PULLDOWN'].includes(b))throw new Error('pinMode 모드가 올바르지 않습니다.');this.pwm.delete(pin);this.gpio[pin]={mode:b,value:0};this.api.changed?.(this.microTime);return 0;}
++      if(name==='pinMode'){if(!['OUTPUT','INPUT','INPUT_PULLUP','INPUT_PULLDOWN'].includes(b))throw new Error('pinMode 모드가 올바르지 않습니다.');this.setPinMode(pin,b);return 0;}
+       if(name==='digitalWrite'){this.pwm.delete(pin);this.output(pin,b?3.3:0);return 0;}
+       if(name==='analogWriteFrequency'){checkedNumber(b);if(b<1||b>2000)throw new Error('PWM 주파수 범위: 1~2000 Hz');this.pwmFrequency.set(pin,b);return 0;}
+       if(name==='analogWrite'){
+@@ -208,12 +210,12 @@ export class Runtime {
+         const period=1000/(this.pwmFrequency.get(pin)||500),state={high:true};this.pwm.set(pin,state);this.output(pin,3.3);
+         const edge=()=>{if(this.pwm.get(pin)!==state)return;state.high=!state.high;this.output(pin,state.high?3.3:0);this.event(this.microTime/1000+period*(state.high?duty:1-duty),edge);};this.event(this.microTime/1000+period*duty,edge);return 0;
+       }
+-      if(name==='digitalRead')return Number(!!this.api.read?.(pin));
++      if(name==='digitalRead')return this.inputLevel(pin);
+       if(name==='analogRead')return Math.round(Math.max(0,Math.min(3.3,this.api.voltage?.(pin)??0))/3.3*4095);
+       if(name==='digitalPinToInterrupt')return pin;
+-      if(name==='attachInterrupt'){this.callback(b);if(!['CHANGE','RISING','FALLING'].includes(c))throw new Error('인터럽트 모드는 CHANGE/RISING/FALLING입니다.');this.interrupts.set(pin,{callback:b,mode:c,previous:Number(!!this.api.read?.(pin)),pending:false});return 0;}
++      if(name==='attachInterrupt'){this.callback(b);if(!['CHANGE','RISING','FALLING'].includes(c))throw new Error('인터럽트 모드는 CHANGE/RISING/FALLING입니다.');this.interrupts.set(pin,{callback:b,mode:c,previous:this.inputLevel(pin),pending:false});return 0;}
+       if(name==='detachInterrupt'){this.interrupts.delete(pin);return 0;}
+-      if(name==='pulseIn'){const timeout=c??1e6;if(![0,1].includes(b)||!Number.isFinite(timeout)||timeout<0||timeout>1e7)throw new Error('pulseIn 인수를 확인하세요.');if(this.gpio[pin]?.mode==='OUTPUT')throw new Error('pulseIn은 입력 핀에 사용하세요.');return this.api.pulseIn?.(pin,b,timeout,this.microTime)??0;}
++      if(name==='pulseIn'){const timeout=c??1e6;if(![0,1].includes(b)||!Number.isFinite(timeout)||timeout<0||timeout>1e7)throw new Error('pulseIn 인수를 확인하세요.');if(this.gpio[pin]?.mode==='OUTPUT')throw new Error('pulseIn은 입력 핀에 사용하세요.');return this.gpio[pin]?.mode==='ANALOG'?0:this.api.pulseIn?.(pin,b,timeout,this.microTime)??0;}
+     }
+     if(name==='millis')return Math.floor(this.microTime/1000);
+     if(name==='micros')return Math.floor(this.microTime);
