@@ -4,21 +4,24 @@ async function revealUiControl(page,selector){
  const target=page.locator(selector).first();
  await target.waitFor({state:'attached'});
  for(let attempt=0;attempt<8;attempt++){
+  if(await target.isVisible())return target;
   const opener=await target.evaluate(el=>{
    const actions=[];
    for(let p=el;p;p=p.parentElement){
     if(p.tagName==='DETAILS'&&!p.open){
-     if(!p.id)throw new Error('Closed details requires a stable ID for its real opener');
-     actions.push('#'+CSS.escape(p.id)+' > summary');
+     // Docs cards are ordinary native details without IDs. Resolve their
+     // observed document position, then click the real direct summary.
+     actions.push(p.id?{selector:'#'+CSS.escape(p.id)+' > summary'}:{detailsIndex:[...document.querySelectorAll('details')].indexOf(p)});
     }else if(p.hasAttribute('popover')&&!p.matches(':popover-open')){
      if(!p.id)throw new Error('Closed popover requires a stable ID for its real opener');
-     actions.push('[aria-controls="'+CSS.escape(p.id)+'"]');
+     actions.push({selector:'[aria-controls="'+CSS.escape(p.id)+'"]'});
     }
    }
    return actions.at(-1)||null;
   });
   if(!opener){await target.waitFor({state:'visible'});return target;}
-  await page.locator(opener).click();
+  const control=opener.selector?page.locator(opener.selector):page.locator('details').nth(opener.detailsIndex).locator(':scope > summary');
+  await control.click();
   // Native details toggle dispatches in a subsequent task, before its popover
   // becomes visible. Give that real transition time before inspecting again.
   await target.waitFor({state:'visible',timeout:500}).catch(()=>{});

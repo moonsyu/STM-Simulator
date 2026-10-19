@@ -33,7 +33,18 @@ const {createHash}=require('node:crypto'),{chromium}=require('playwright'),{laun
   let next=await saved();assert.equal(next.code,expected.code);for(const key of ['components','wires','mcu','surfaces','firmware'])assert.deepEqual(next[key],p[key],key);assert.equal(next.deviceDocs,undefined);assert.equal(await page.locator('#source-file').inputValue(),'main.c');
   assertMinimal(next);assert.doesNotMatch(next.code,/\bLD2_(?:Pin|GPIO_Port)\b/);assert.equal(next.mcu.pins[pin].label,'LD2');
   await click('#undo');assert.equal((await saved()).code,p.code);await click('#redo');assert.equal((await saved()).code,expected.code);
-  const run=async(ms=200)=>{await click('#run');await page.waitForFunction(ms=>parseFloat(document.getElementById('sim-time').textContent)*1000>=ms,ms);assert.equal(await page.locator('#code-reset').isDisabled(),true);await click('#run');await page.waitForTimeout(200);return (await events()).filter(e=>e.type==='simulation.state').at(-1);};
+  const run=async(ms=200,acceptState)=>{
+   const firstEvent=(await events()).length;
+   const states=async()=>{const rows=(await events()).slice(firstEvent),start=rows.findIndex(e=>e.type==='simulation.started');return start<0?[]:rows.slice(start+1).filter(e=>e.type==='simulation.state');};
+   await click('#run');await page.waitForFunction(ms=>parseFloat(document.getElementById('sim-time').textContent)*1000>=ms,ms,{polling:25});assert.equal(await page.locator('#code-reset').isDisabled(),true);
+   let accepted;
+   if(acceptState){
+    const deadline=Date.now()+15000;let observed=[];
+    do{observed=await states();accepted=observed.find(e=>e.detail.simulationMs>=ms&&acceptState(e));if(accepted)break;await page.waitForTimeout(100);}while(Date.now()<deadline);
+    assert.ok(accepted,'Expected motor phase was not recorded in this run: '+JSON.stringify(observed.map(e=>({simulationMs:e.detail.simulationMs,parts:e.detail.parts}))));
+   }
+   await click('#run');await page.waitForTimeout(200);return accepted||(await states()).at(-1);
+  };
   const off=await run();assert.equal(off.detail.parts.selected.on,false);
   await page.selectOption('#resize-target','part:selected');await click('[data-tab="docs"]');await click('[data-docs-apply="HAL_GPIO_WritePin"]');await page.waitForFunction(()=>document.getElementById('docs-result').textContent.includes('적용 완료'));
   next=await saved();assert.deepEqual(next.components,p.components);assert.deepEqual(next.wires,p.wires);
@@ -44,7 +55,8 @@ const {createHash}=require('node:crypto'),{chromium}=require('playwright'),{laun
    const {project}=fixture(type),occupied=type==='stepper'?'PB3':'PB4';project.mcu.pins[occupied]={function:'GPIO_Output',pull:'NOPULL',edge:'FALLING',initial:0,label:'keep'};
    await page.locator('#file-input').setInputFiles({name:type+'.stm32lab',mimeType:'application/json',buffer:Buffer.from(JSON.stringify(project))});await page.waitForFunction(code=>document.getElementById('code').value===code,project.code);
    await page.selectOption('#resize-target','part:selected');await click('[data-tab="docs"]');await click('#docs-apply-all');await page.waitForFunction(()=>document.getElementById('docs-result').textContent.includes('적용 완료'));
-   const circuit=await saved(),state=await run(type==='l298n'?3500:2500);assert.notEqual(circuit.deviceDocs.bindings[0].pins[occupied][1],'B');
+   const reverseMotors=event=>{const parts=event.detail.parts,motors=Object.values(parts).filter(p=>'rpm'in p);return motors.some(p=>p.rpm>500)&&motors.some(p=>p.rpm< -500)&&parts.selected.channels?.A.mode==='reverse'&&parts.selected.channels?.B.mode==='forward';};
+   const circuit=await saved(),state=await run(type==='l298n'?3500:2500,type==='l298n'?reverseMotors:undefined);assert.notEqual(circuit.deviceDocs.bindings[0].pins[occupied][1],'B');
    if(type==='stepper'){assert.ok(state.detail.parts.selected.steps>0);assert.match(await page.locator('#console-output').textContent(),/direction=-1/);assert.match(await page.locator('#console-output').textContent(),/direction=1/);}
    else{const motors=Object.values(state.detail.parts).filter(p=>'rpm'in p);assert.ok(motors.some(p=>p.rpm>500));assert.ok(motors.some(p=>p.rpm< -500));assert.equal(state.detail.parts.selected.channels.A.mode,'reverse');assert.equal(state.detail.parts.selected.channels.B.mode,'forward');}
    remapped.push({type,circuit,state});
