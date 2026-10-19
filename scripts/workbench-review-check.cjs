@@ -1,5 +1,5 @@
 const assert=require('node:assert/strict'),fs=require('node:fs/promises'),path=require('node:path');
-const {_electron}=require(process.env.PLAYWRIGHT_MODULE||'playwright');
+const {launchWorkbenchRuntime}=require('./workbench-electron-runtime.cjs');
 const {openFixture,fillCode,chooseHal}=require('./smoke-fixture.cjs');
 const {inspectContrast}=require('./ui-contrast-check.cjs');
 const {revealUiControl,clickUiControl}=require('./workbench-ui-actions.cjs');
@@ -24,14 +24,17 @@ function measureWorkbench(){
  return {viewport:[innerWidth,innerHeight],appearance:document.documentElement.dataset.appearance,prefs:JSON.parse(localStorage.getItem('stm32lab.idePreferences.v1')),fonts,save:item(document.getElementById('save-state')),projectName:item(document.getElementById('project-name')),topControls,overlaps,consoleControls,consoleOverlaps,monitorTabs:rect(document.querySelector('.monitor-tabs')),pinTiles,pinOverlaps,pinTextClipped,documentOverflow:document.documentElement.scrollWidth>innerWidth+1||document.documentElement.scrollHeight>innerHeight+1,library:scroll(library),list:scroll(list),listVisible,editor:rect(document.querySelector('.editor-wrap')),canvas:rect(document.getElementById('circuit')),terminal,swatches:[...document.querySelectorAll('#wire-palette .swatch')].map(item)};
 }
 async function main(){
- const root=path.resolve(__dirname,'..'),out=path.resolve(root,process.env.WORKBENCH_REVIEW_OUT||'work/test-results/workbench-review');await fs.mkdir(out,{recursive:true});
+ const root=path.resolve(__dirname,'..'),portable=Boolean(process.env.LAB_PORTABLE_EXE),out=path.resolve(root,process.env.WORKBENCH_REVIEW_OUT||'work/test-results/'+(portable?'workbench-review-portable':'workbench-review'));await fs.mkdir(out,{recursive:true});
  const profile=await fs.mkdtemp(path.join(out,'profile-')),env={...process.env,CIRCUIT_LAB_SMOKE:'1',CIRCUIT_LAB_TEST_PROFILE:profile};delete env.ELECTRON_RUN_AS_NODE;
- const app=await _electron.launch({executablePath:process.env.LAB_EXE||path.join(root,'node_modules/electron/dist/electron.exe'),args:process.env.LAB_EXE?[]:[root],cwd:root,env});let page;
+ const execution={};let app,page;
  const checks=[],states=[],errors=[],scenarios=[],scenarioFilter=process.env.WORKBENCH_REVIEW_SCENARIO;
  const check=(condition,name,detail={})=>{checks.push({name,passed:!!condition,...detail});if(!condition)console.error('FAIL '+name+' '+JSON.stringify(detail));};
  const scenario=async(name,run)=>{if(scenarioFilter&&!name.includes(scenarioFilter))return;try{const detail=await run();scenarios.push({name,passed:true,...detail});console.log('PASS '+name);}catch(error){scenarios.push({name,passed:false,error:error.stack});console.error('FAIL '+name+': '+error.message);await page.keyboard.up('Space').catch(()=>{});await page.mouse.up().catch(()=>{});await page.screenshot({path:path.join(out,'failure-'+name.replace(/[^a-z0-9]+/gi,'-')+'.png')}).catch(()=>{});}};
  try{
+  app=await launchWorkbenchRuntime({root,profile,env,execution});
   page=await app.firstWindow();page.on('pageerror',error=>errors.push(error.message));await page.waitForSelector('.monaco-editor');
+  execution.version=(await page.evaluate(()=>window.appUpdates.state())).currentVersion;
+  if(portable)assert.equal(execution.version,require('../package.json').version,'Public portable version must match the checked-out release');
   const {blankProject,validateProject}=await import('../src/project.js'),{circuitFixture,blankFixture}=await import('../tests/fixtures/circuits.js');
   const {boardPin,endpointInfo,PINS}=await import('../src/pins.js'),{terminalKeys,PART_DEFS}=await import('../src/components.js');
   const {PART_LIBRARY}=await import('../src/part-library.js'),{wirePoints}=await import('../src/circuit-edit.js'),{roundedWirePath}=await import('../src/wire-path.js');
@@ -227,8 +230,8 @@ async function main(){
   }
   check(errors.length===0,'no renderer errors',{errors});
   if(scenarioFilter)check(scenarios.length>0,'requested scenario was exercised',{scenarioFilter});
-  const summary={passed:checks.every(c=>c.passed)&&scenarios.every(s=>s.passed),version:require('../package.json').version,scope:{layout:!scenarioFilter&&!process.argv.includes('--functional-only'),functional:!process.argv.includes('--layout-only'),scenarioFilter:scenarioFilter||null},checks,scenarios,states,errors};await fs.writeFile(path.join(out,'summary.json'),JSON.stringify(summary,null,2));assert.equal(summary.passed,true,'Workbench review failed; see summary.json');
- }catch(error){await fs.writeFile(path.join(out,'summary.json'),JSON.stringify({passed:false,version:require('../package.json').version,fatalError:error.stack,checks,scenarios,states,errors},null,2));if(page)await page.screenshot({path:path.join(out,'failure.png')}).catch(()=>{});throw error;}
- finally{await app.close();await fs.copyFile(path.join(profile,'diagnostics/events.jsonl'),path.join(out,'runtime-events.jsonl')).catch(error=>{if(error.code!=='ENOENT')throw error;});if(path.dirname(profile)!==out||!path.basename(profile).startsWith('profile-'))throw Error('Unsafe profile cleanup');await fs.rm(profile,{recursive:true,force:true});}
+  const summary={passed:checks.every(c=>c.passed)&&scenarios.every(s=>s.passed),version:require('../package.json').version,execution,scope:{layout:!scenarioFilter&&!process.argv.includes('--functional-only'),functional:!process.argv.includes('--layout-only'),scenarioFilter:scenarioFilter||null},checks,scenarios,states,errors};await fs.writeFile(path.join(out,'summary.json'),JSON.stringify(summary,null,2));assert.equal(summary.passed,true,'Workbench review failed; see summary.json');
+ }catch(error){await fs.writeFile(path.join(out,'summary.json'),JSON.stringify({passed:false,version:require('../package.json').version,execution,fatalError:error.stack,checks,scenarios,states,errors},null,2));if(page)await page.screenshot({path:path.join(out,'failure.png')}).catch(()=>{});throw error;}
+ finally{if(app)await app.close();await fs.copyFile(path.join(profile,'diagnostics/events.jsonl'),path.join(out,'runtime-events.jsonl')).catch(error=>{if(error.code!=='ENOENT')throw error;});if(path.dirname(profile)!==out||!path.basename(profile).startsWith('profile-'))throw Error('Unsafe profile cleanup');await fs.rm(profile,{recursive:true,force:true});}
 }
 main().catch(error=>{console.error(error);process.exitCode=1;});

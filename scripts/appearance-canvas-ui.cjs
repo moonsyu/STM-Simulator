@@ -1,6 +1,7 @@
 const {revealUiControl,clickUiControl}=require('./workbench-ui-actions.cjs');
 const assert=require('node:assert/strict'),fs=require('node:fs/promises'),path=require('node:path');
 const {openFixture,fillCode}=require('./smoke-fixture.cjs');
+const {checkEditorTheme}=require('./editor-theme-check.cjs');
 async function exercise(page,{out,resizeWindow}){
  const {blankProject}=await import('../src/project.js'),{circuitFixture}=await import('../tests/fixtures/circuits.js'),{boardPin,endpointInfo}=await import('../src/pins.js'),{surfaceOrigin}=await import('../src/geometry.js');
  const errors=[];page.on('pageerror',e=>errors.push(e.message));page.setDefaultTimeout(15000);await page.waitForSelector('.monaco-editor');
@@ -12,7 +13,9 @@ async function exercise(page,{out,resizeWindow}){
  const close=(a,b)=>assert.ok(Math.abs(a-b)<1,`${a} != ${b}`);
  await page.emulateMedia({colorScheme:'dark'});await page.waitForFunction(()=>document.documentElement.dataset.ideTheme==='dark');
  assert.equal((await state()).appearance,'system');assert.equal((await state()).code,'jellybean');assert.equal((await state()).editor,'rgb(21, 21, 21)');
+ const syntax=[await checkEditorTheme(page,'jellybean')];
  await page.emulateMedia({colorScheme:'light'});await page.waitForFunction(()=>document.documentElement.dataset.ideTheme==='light');assert.equal((await state()).code,'github-light');assert.equal((await state()).editor,'rgb(255, 255, 255)');
+ syntax.push(await checkEditorTheme(page,'github-light'));await fs.writeFile(path.join(out,'editor-theme-tokens.json'),JSON.stringify({passed:true,syntax},null,2));
  await page.click('#appearance-toggle');assert.equal((await state()).appearance,'dark');await page.emulateMedia({colorScheme:'dark'});await page.emulateMedia({colorScheme:'light'});assert.equal((await state()).mode,'dark');
  const ui=(await state()).ui;await page.click('[data-tab="settings"]');await page.selectOption('#pref-theme','github-light');assert.equal((await state()).ui,ui);assert.equal((await state()).mode,'dark');assert.equal((await state()).editor,'rgb(255, 255, 255)');
  await page.selectOption('#pref-theme','jellybean');await page.click('#appearance-system');await page.waitForFunction(()=>document.documentElement.dataset.ideTheme==='light');assert.equal((await state()).code,'github-light');
@@ -52,9 +55,9 @@ async function exercise(page,{out,resizeWindow}){
 }
 module.exports={exercise};
 async function main(){
- const {_electron}=require('playwright'),root=path.resolve(__dirname,'..'),out=path.join(root,'work/test-results');await fs.mkdir(out,{recursive:true});const profile=await fs.mkdtemp(path.join(out,'appearance-canvas-')),env={...process.env,CIRCUIT_LAB_SMOKE:'1',CIRCUIT_LAB_TEST_PROFILE:profile};delete env.ELECTRON_RUN_AS_NODE;
- const app=await _electron.launch({executablePath:path.join(root,'node_modules/electron/dist/electron.exe'),args:[root],cwd:root,env});let page;
- try{page=await app.firstWindow();const resizeWindow=(width,height)=>app.evaluate(({BrowserWindow},{width,height})=>{const w=BrowserWindow.getAllWindows()[0];w.setContentSize(width,height);w.showInactive();},{width,height});await resizeWindow(1540,1020);await exercise(page,{out,resizeWindow});
+ const {launchWorkbenchRuntime}=require('./workbench-electron-runtime.cjs'),root=path.resolve(__dirname,'..'),out=path.resolve(root,process.env.APPEARANCE_REVIEW_OUT||'work/test-results');await fs.mkdir(out,{recursive:true});const profile=await fs.mkdtemp(path.join(out,'appearance-canvas-')),env={...process.env,CIRCUIT_LAB_SMOKE:'1',CIRCUIT_LAB_TEST_PROFILE:profile},execution={};delete env.ELECTRON_RUN_AS_NODE;
+ let app,page;
+ try{app=await launchWorkbenchRuntime({root,profile,env,execution});page=await app.firstWindow();await page.waitForSelector('.monaco-editor');execution.appVersion=(await page.evaluate(()=>window.appUpdates.state())).currentVersion;assert.equal(execution.appVersion,require('../package.json').version);const resizeWindow=(width,height)=>app.evaluate(({BrowserWindow},{width,height})=>{const w=BrowserWindow.getAllWindows()[0];w.setContentSize(width,height);w.showInactive();},{width,height});await resizeWindow(1540,1020);await exercise(page,{out,resizeWindow});
   // Exercise Electron's native preference notifications without changing Windows settings.
   await page.emulateMedia({colorScheme:null});await page.click('#appearance-system');const nativeStates=[];
   for(const mode of ['dark','light','dark']){
@@ -65,9 +68,9 @@ async function main(){
   }
   await page.click('#appearance-toggle');await app.evaluate(({nativeTheme})=>{nativeTheme.themeSource='dark';});assert.equal(await page.evaluate(()=>document.documentElement.dataset.ideTheme),'light');
   await page.click('#appearance-system');await page.waitForFunction(()=>document.documentElement.dataset.ideTheme==='dark');
-  await fs.writeFile(path.join(out,'appearance-native-theme.json'),JSON.stringify({passed:true,nativeStates,manualOverridePreserved:true,windowsSettingsChanged:false},null,2));
+  await fs.writeFile(path.join(out,'appearance-native-theme.json'),JSON.stringify({passed:true,execution,nativeStates,manualOverridePreserved:true,windowsSettingsChanged:false},null,2));
   console.log('Appearance, native System theme events and unlimited canvas UI passed.');}
  catch(error){if(page)await page.screenshot({path:path.join(out,'appearance-canvas-failure.png')}).catch(()=>{});throw error;}
- finally{await app.evaluate(({nativeTheme})=>{nativeTheme.themeSource='system';}).catch(()=>{});await app.close();if(path.dirname(profile)!==out||!path.basename(profile).startsWith('appearance-canvas-'))throw Error('Invalid cleanup');await fs.rm(profile,{recursive:true,force:true});}
+ finally{if(app){await app.evaluate(({nativeTheme})=>{nativeTheme.themeSource='system';}).catch(()=>{});await app.close();}if(path.dirname(profile)!==out||!path.basename(profile).startsWith('appearance-canvas-'))throw Error('Invalid cleanup');await fs.rm(profile,{recursive:true,force:true});}
 }
 if(require.main===module)main().catch(error=>{console.error(error);process.exitCode=1;});

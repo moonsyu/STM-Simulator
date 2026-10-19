@@ -15,9 +15,9 @@ export default {
     "line": "#eaeef2",
     "search": "#bf8700",
     "keyword": "#cf222e",
-    "type": "#116329",
+    "type": "#cf222e",
     "string": "#0a3069",
-    "number": "#0a3069",
+    "number": "#0550ae",
     "comment": "#6e7781",
     "identifier": "#1f2328",
     "function": "#8250df",
@@ -35,40 +35,8 @@ export default {
         "foreground": "6e7781"
       },
       {
-        "token": "delimiter",
-        "foreground": "6e7781"
-      },
-      {
-        "token": "string",
-        "foreground": "6e7781"
-      },
-      {
-        "token": "number",
-        "foreground": "cf222e"
-      },
-      {
-        "token": "number",
-        "foreground": "cf222e"
-      },
-      {
         "token": "number",
         "foreground": "0550ae"
-      },
-      {
-        "token": "identifier",
-        "foreground": "0550ae"
-      },
-      {
-        "token": "identifier",
-        "foreground": "0550ae"
-      },
-      {
-        "token": "identifier",
-        "foreground": "0550ae"
-      },
-      {
-        "token": "identifier",
-        "foreground": "1f2328"
       },
       {
         "token": "function",
@@ -83,75 +51,12 @@ export default {
         "foreground": "cf222e"
       },
       {
-        "token": "type",
-        "foreground": "cf222e"
-      },
-      {
-        "token": "type",
-        "foreground": "1f2328"
-      },
-      {
-        "token": "type",
-        "foreground": "1f2328"
-      },
-      {
-        "token": "type",
-        "foreground": "1f2328"
-      },
-      {
         "token": "string",
         "foreground": "0a3069"
       },
       {
         "token": "identifier",
-        "foreground": "953800"
-      },
-      {
-        "token": "identifier",
         "foreground": "1f2328"
-      },
-      {
-        "token": "string",
-        "foreground": "0a3069"
-      },
-      {
-        "token": "string",
-        "foreground": "0a3069"
-      },
-      {
-        "token": "type",
-        "foreground": "116329"
-      },
-      {
-        "token": "delimiter",
-        "foreground": "953800"
-      },
-      {
-        "token": "delimiter",
-        "foreground": "82071e",
-        "background": "ffebe9"
-      },
-      {
-        "token": "delimiter",
-        "foreground": "cf222e"
-      },
-      {
-        "token": "delimiter",
-        "foreground": "116329",
-        "background": "dafbe1"
-      },
-      {
-        "token": "delimiter",
-        "foreground": "953800",
-        "background": "ffd8b5"
-      },
-      {
-        "token": "number",
-        "foreground": "0a3069"
-      },
-      {
-        "token": "string",
-        "foreground": "0a3069"
       }
     ],
     "colors": {
@@ -406,9 +311,9 @@ export default {
     "line": "#eaeef2",
     "search": "#bf8700",
     "keyword": "#cf222e",
-    "type": "#116329",
+    "type": "#cf222e",
     "string": "#0a3069",
-    "number": "#0a3069",
+    "number": "#0550ae",
     "comment": "#6e7781",
     "identifier": "#1f2328",
     "function": "#8250df",

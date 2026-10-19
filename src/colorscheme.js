@@ -53,6 +53,45 @@ function jsonComments(text){
  let out='',quoted=false,escaped=false;for(let i=0;i<text.length;i++){const c=text[i],n=text[i+1];if(quoted){out+=c;if(escaped)escaped=false;else if(c==='\\')escaped=true;else if(c==='"')quoted=false;continue;}if(c==='"'){quoted=true;out+=c;}else if(c==='/'&&n==='/'){while(i<text.length&&text[i]!=='\n')i++;out+='\n';}else if(c==='/'&&n==='*'){i+=2;while(i<text.length&&!(text[i]==='*'&&text[i+1]==='/'))i++;i++;out+=' ';}else out+=c;}
  let clean='';quoted=false;escaped=false;for(let i=0;i<out.length;i++){const c=out[i];if(quoted){clean+=c;if(escaped)escaped=false;else if(c==='\\')escaped=true;else if(c==='"')quoted=false;}else if(c==='"'){quoted=true;clean+=c;}else if(c===','&&/^\s*[}\]]/.test(out.slice(i+1))){}else clean+=c;}return clean;
 }
+// Only basic, language-neutral scopes may become a generic C/C++ token. Prefix
+// matching is reserved for explicit C/C++ scopes: JSON property names, Java
+// imports, Markdown links and diff backgrounds must never recolor all C tokens.
+const C_SCOPES=[
+ ['comment','comment',10],['comment.line','comment',20],['comment.block','comment',20],
+ ['string','string',10],['string.quoted','string',20],['string.quoted.double','string',30],['string.quoted.single','string',30],
+ ['constant','number',10],['constant.numeric','number',20],
+ ['keyword','keyword',10],['keyword.control','keyword',20],['keyword.operator','operator',20],
+ ['storage','type',20],['storage.type','type',30],['entity.name.type','type',10],['support.type','type',10],
+ ['entity.name.function','function',20],['support.function','function',10],
+ ['variable','identifier',10],['variable.other','identifier',20],['punctuation','delimiter',10]
+];
+function cTokenScope(scope){
+ if(scope==='')return {token:'',priority:0};
+ if(/\s/.test(scope))return null;
+ const language=/\.(?:c|cpp)$/.test(scope),basic=language?scope.replace(/\.(?:c|cpp)$/,''):scope;
+ const match=C_SCOPES.filter(([prefix])=>basic===prefix||language&&basic.startsWith(prefix+'.')).sort((a,b)=>b[0].length-a[0].length)[0];
+ return match?{token:match[1],priority:match[2]+(language?100:0)}:null;
+}
+function cTokenRules(entries){
+ const mapped=new Map();
+ for(const entry of entries){
+  if(!entry||!entry.settings||typeof entry.settings!=='object')throw new Error('tokenColors 설정을 확인하세요.');
+  const items=entry.scope===undefined?['']:Array.isArray(entry.scope)?entry.scope:typeof entry.scope==='string'?entry.scope.split(','):null;
+  if(!items)throw new Error('TextMate scope 형식을 확인하세요.');
+  for(const item of items){
+   if(typeof item!=='string')throw new Error('TextMate scope는 문자열이어야 합니다.');
+   const match=cTokenScope(item.trim());if(!match)continue;
+   const current=mapped.get(match.token)||{rule:{token:match.token},priorities:{}};
+   // Merge each style field independently so a specific italic/bold rule does
+   // not discard a less-specific foreground. Later equal-priority rules win.
+   for(const key of ['foreground','background','fontStyle'])if(entry.settings[key]!==undefined&&match.priority>=(current.priorities[key]??-1)){
+    current.rule[key]=entry.settings[key];current.priorities[key]=match.priority;
+   }
+   mapped.set(match.token,current);
+  }
+ }
+ return [...mapped.values()].map(value=>value.rule);
+}
 export function importColorscheme(text,filename='theme.json'){
  if(typeof text!=='string'||text.length>500000)throw new Error('Colorscheme 파일은 500 KB 이하로 선택하세요.');
  if(/\.vim$/i.test(filename))return vimColorscheme(text);
@@ -61,8 +100,7 @@ export function importColorscheme(text,filename='theme.json'){
  if(data?.version===1&&data.themes)throw new Error('IDE 설정 파일입니다. 아래의 설정 가져오기를 사용하세요.');
  if(data&&Array.isArray(data.rules))return fromEditor(validateEditorTheme({...data,inherit:data.inherit??true}),data.name||filename.replace(/\.[^.]+$/,''));
  if(!data||!Array.isArray(data.tokenColors)||data.tokenColors.length>2000||!data.colors)throw new Error('Monaco rules/colors 또는 VS Code tokenColors/colors 테마 JSON이 필요합니다.');
- const scopes=[['comment','comment'],['string','string'],['constant.numeric','number'],['constant','number'],['keyword.operator','operator'],['keyword','keyword'],['storage.type','type'],['storage','type'],['entity.name.type','type'],['support.type','type'],['entity.name.function','function'],['support.function','function'],['variable','identifier'],['punctuation','delimiter']];
- const rules=[];for(const entry of data.tokenColors){if(!entry||!entry.settings||typeof entry.settings!=='object')throw new Error('tokenColors 설정을 확인하세요.');const items=entry.scope===undefined?['']:Array.isArray(entry.scope)?entry.scope:typeof entry.scope==='string'?entry.scope.split(','):null;if(!items)throw new Error('TextMate scope 형식을 확인하세요.');for(const item of items){if(typeof item!=='string')throw new Error('TextMate scope는 문자열이어야 합니다.');const scope=item.trim();if(scope.includes(' '))continue;const token=scope===''?'':scopes.find(([prefix])=>scope===prefix||scope.startsWith(prefix+'.'))?.[1];if(token!==undefined)rules.push({token,...entry.settings});}}
+ const rules=cTokenRules(data.tokenColors);
  if(!rules.length)throw new Error('현재 C/C++ 편집기에 대응되는 구문 규칙이 없습니다.');
  const result=fromEditor(validateEditorTheme({base:data.type==='light'?'vs':'vs-dark',inherit:true,rules,colors:data.colors}),data.name||filename.replace(/\.[^.]+$/,''));result.importNote='VS Code TextMate의 기본 C/C++ 토큰을 Monaco에 매핑했습니다. 문맥별 scope·semanticTokenColors는 지원하지 않습니다.';return result;
 }

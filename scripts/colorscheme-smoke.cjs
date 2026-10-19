@@ -1,5 +1,6 @@
 const assert=require('node:assert/strict'),fs=require('node:fs/promises'),path=require('node:path');
 const {_electron}=require('playwright');
+const {checkEditorTheme}=require('./editor-theme-check.cjs');
 (async()=>{
  const root=path.resolve(__dirname,'..'),out=path.join(root,'work/test-results');await fs.mkdir(out,{recursive:true});const profile=await fs.mkdtemp(path.join(out,'colorscheme-'));
  const env={...process.env,CIRCUIT_LAB_SMOKE:'1',CIRCUIT_LAB_TEST_PROFILE:profile};delete env.ELECTRON_RUN_AS_NODE;
@@ -7,6 +8,13 @@ const {_electron}=require('playwright');
  try{
   const page=await app.firstWindow(),errors=[];page.on('pageerror',e=>errors.push(e.message));await page.waitForSelector('.monaco-editor');
   await app.evaluate(({BrowserWindow})=>{const w=BrowserWindow.getAllWindows()[0];w.setContentSize(1440,950);w.showInactive();});
+  await page.click('[data-tab="settings"]');await page.selectOption('#pref-appearance','light');await checkEditorTheme(page,'github-light');
+  // Seed the exact previously shipped preference payload, then reload through
+  // the ordinary startup path to test an existing installation's migration.
+  const legacy=JSON.parse(await fs.readFile(path.join(root,'tests/fixtures/github-light-legacy.json'),'utf8'));
+  await page.evaluate(legacy=>{const key='stm32lab.idePreferences.v1',prefs=JSON.parse(localStorage.getItem(key));prefs.themes=prefs.themes.map(theme=>theme.id==='github-light'?legacy:theme);localStorage.setItem(key,JSON.stringify(prefs));},legacy);
+  await page.reload();await page.waitForSelector('.monaco-editor');await checkEditorTheme(page,'github-light');
+  await page.click('[data-tab="settings"]');await page.selectOption('#pref-appearance','dark');await checkEditorTheme(page,'jellybean');
   await page.click('[data-tab="settings"]');await page.selectOption('#pref-appearance','dark');assert.match(await page.locator('#colorscheme-source').textContent(),/nanotech\/jellybeans.vim.*ef83bf4/);
   const prefs=()=>page.evaluate(()=>JSON.parse(localStorage.getItem('stm32lab.idePreferences.v1')));
   await page.locator('#colorscheme-file').setInputFiles(path.join(root,'src/themes/jellybeans/jellybeans.vim'));await page.waitForFunction(()=>document.getElementById('ide-settings-status').textContent==='Colorscheme 등록 및 적용 완료');
