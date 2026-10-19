@@ -68,7 +68,7 @@ test('shared-net short is removed while unrelated wire routing stays intact',()=
  const q=applyDeviceExample(p,{type:'part',id:'selected'}).project,net=wiringTopology(q);assert.notEqual(net.find(boardPin('3V3')),net.find(boardPin('GND')));assert.deepEqual(q.wires.find(w=>w.id==='safe'),p.wires[1]);
 });
 test('wire drafts retain bends only on completion; backspace and cancel do not leave electrical stubs',()=>{
- const d=new WireDraft();d.add('A',{x:20,y:30});d.add('A',{x:40,y:50});d.back();assert.match(d.path('A',{x:0,y:0},{x:100,y:50}),/L20 30/);assert.deepEqual(d.finish('A'),{points:[{x:20,y:30}]});assert.deepEqual(d.finish('B'),{});d.add('C',{x:10,y:20});d.reset();assert.equal(d.points.length,0);
+ const d=new WireDraft();d.add('A',{x:20,y:30});d.add('A',{x:40,y:50});d.back();const path=d.path('A',{x:0,y:0},{x:100,y:50});assert.match(path,/^M0 0 /);assert.match(path,/Q20 30 /);assert.match(path,/ L100 50$/);assert.deepEqual(d.finish('A'),{points:[{x:20,y:30}]});assert.deepEqual(d.finish('B'),{});d.add('C',{x:10,y:20});d.reset();assert.equal(d.points.length,0);
 });
 
 test('physical pin voltage and network diagnostics remain correct after a live recompute',async()=>{
