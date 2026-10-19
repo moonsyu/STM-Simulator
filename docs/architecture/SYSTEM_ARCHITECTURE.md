@@ -2,7 +2,7 @@
 
 Windows 사용자는 하나의 Electron 앱에서 코드·회로를 편집합니다. renderer는 로컬 정적 코드와 Monaco를 실행하고, sandbox/contextIsolation이 켜진 preload의 제한된 IPC를 통해 main 프로세스의 파일·도구·업데이트 기능을 사용합니다.
 
-[시스템·UI·저장 흐름 그림](architecture-overview.svg)에서 프로세스 경계와 배포 경로를 확인할 수 있습니다. [편집 가능한 원본](architecture-overview.cjs)은 외부 의존성 없이 SVG를 생성합니다.
+[시스템·UI·저장 흐름 그림](diagrams/rendered/architecture-overview.svg)에서 프로세스 경계와 배포 경로를 확인할 수 있습니다. [편집 가능한 원본](diagrams/src/architecture-overview.cjs)은 외부 의존성 없이 SVG를 생성합니다.
 
 - 로컬 상태: 회로 autosave, 독립 IDE 설정, 도크 배치. 명시적 저장은 .stm32lab 또는 프로젝트 폴더 트랜잭션을 사용합니다.
 - 외부 경계: 사용자 선택 프로젝트/도구, 기존 GitHub 공개 Release 업데이트. 이번 UI 개선은 새 네트워크 서비스/권한/계정 경계를 만들지 않습니다.

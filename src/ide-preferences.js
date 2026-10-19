@@ -8,7 +8,9 @@ const LEGACY_JELLYBEAN={background:'#151515',foreground:'#e8e8d3',panel:'#1f1f1f
 export const LIGHT={id:'stm-light',name:'STM Light',base:'light',colors:{background:'#fcfdfc',foreground:'#1a2b25',panel:'#f3f7f5',chrome:'#e7efec',border:'#c5d4cc',muted:'#4d6358',accent:'#126b4c',selection:'#cde7da',line:'#edf4f0',search:'#f5dc9c',keyword:'#7e4a9e',type:'#9c4526',string:'#7a5d1c',number:'#1d6587',comment:'#4f7359',identifier:'#2f526b',function:'#654480',debug:'#e8e5a7',error:'#a82c2c',warning:'#7a5710',net:'#b88210'}};
 export const BUILTIN_THEMES=[JELLYBEAN,githubLight,LIGHT];
 export const EDITOR_COLOR_LABELS={background:'코드 배경',foreground:'코드 글자',panel:'코드 팝업 배경',border:'코드 팝업 테두리',muted:'줄 번호',accent:'커서',selection:'선택 영역',line:'현재 줄',search:'검색 결과',keyword:'키워드',type:'자료형',string:'문자열',number:'숫자 / 상수',comment:'주석',identifier:'식별자',function:'함수',debug:'디버그 현재 줄',error:'코드 오류',warning:'코드 경고'};
-const DARK_UI={...LEGACY_JELLYBEAN,background:'#13171d',foreground:'#e8eef5',panel:'#1a2028',chrome:'#222933',border:'#485668',muted:'#b2becc',accent:'#8ec5ff',selection:'#2e3a4a',error:'#ff9494',warning:'#f5cf7e',string:'#b3dba0',net:'#eab949'};
+// Windows/Fluent neutral surfaces and mode-specific blue accents. Editor themes stay independent.
+const LIGHT_UI={...LIGHT.colors,background:'#ffffff',foreground:'#1a1a1a',panel:'#fafafa',chrome:'#f3f3f3',border:'#c7c7c7',muted:'#5c5c5c',accent:'#0067c0',selection:'#e5f1fb',line:'#f5f5f5',error:'#b3261e',warning:'#835000',string:'#216b2c',net:'#956500'};
+const DARK_UI={...LEGACY_JELLYBEAN,background:'#202020',foreground:'#ffffff',panel:'#272727',chrome:'#303030',border:'#555555',muted:'#c5c5c5',accent:'#60cdff',selection:'#343f46',line:'#333333',error:'#ff99a4',warning:'#f5d97e',string:'#a9d59a',net:'#eab949'};
 export const systemDark=()=>globalThis.matchMedia?.('(prefers-color-scheme: dark)').matches??true;
 export const appearanceMode=(preferences,dark=systemDark())=>preferences.appearance==='system'?(dark?'dark':'light'):preferences.appearance||'dark';
 export function defaultPreferences(){return {version:2,appearance:'system',theme:'jellybean',darkTheme:'jellybean',lightTheme:'github-light',fontSize:14,fontFamily:"Consolas, 'Malgun Gothic', monospace",lineHeight:22,uiFontSize:13,terminalFontSize:12,tabSize:4,wordWrap:false,minimap:false,lineNumbers:true,bracketColors:true,themes:structuredClone(BUILTIN_THEMES)};}
@@ -42,7 +44,7 @@ export function selectedTheme(preferences,mode=appearanceMode(preferences)){retu
 export function withEditorTheme(preferences,id){return {...preferences,theme:id,[appearanceMode(preferences)+'Theme']:id};}
 export function applyAppearance(preferences){
  const mode=appearanceMode(preferences),theme=selectedTheme(preferences,mode),root=document.documentElement;root.dataset.ideTheme=mode;root.dataset.appearance=preferences.appearance;root.dataset.colorscheme=theme.id;root.style.colorScheme=mode;
- for(const [key,color]of Object.entries(mode==='dark'?DARK_UI:LIGHT.colors))root.style.setProperty('--ide-'+key,color);
+ for(const [key,color]of Object.entries(mode==='dark'?DARK_UI:LIGHT_UI))root.style.setProperty('--ide-'+key,color);
  for(const [key,color]of Object.entries(theme.colors))root.style.setProperty('--code-'+key,color);
  root.style.setProperty('--ide-ui-size',preferences.uiFontSize+'px');root.style.setProperty('--ide-terminal-size',preferences.terminalFontSize+'px');root.style.setProperty('--ide-font',preferences.fontFamily);
 }

@@ -2,7 +2,7 @@
 
 2026-10-19 작업 화면 개선 기준. 기존 Electron/정적 ES module 구조를 유지합니다. 프레임워크나 프로세스 경계는 변경하지 않습니다.
 
-[시스템·UI·저장 흐름 그림](architecture-overview.svg)에서 모듈 의존 방향과 오류 복구 흐름을 함께 확인할 수 있습니다. [편집 가능한 원본](architecture-overview.cjs)은 외부 의존성 없이 SVG를 생성합니다.
+[시스템·UI·저장 흐름 그림](diagrams/rendered/architecture-overview.svg)에서 모듈 연결과 오류 복구 흐름을 함께 확인할 수 있습니다. [편집 가능한 원본](diagrams/src/architecture-overview.cjs)은 외부 의존성 없이 SVG를 생성합니다.
 
 | 영역 | 책임 | 의존 방향 |
 |---|---|---|

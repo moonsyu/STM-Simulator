@@ -123,3 +123,47 @@
 :is(#sim-time,#sim-current,#part-voltage,#part-current,#part-power,#part-live,#wire-voltage,#wire-connected,#endpoint-voltage,#endpoint-connected,#resize-size,#zoom-reset,#inspector .measure b,#inspector output,#inspector [data-live],#inspector input[type=number]){font-variant-numeric:tabular-nums}
 :is(#sim-time,#sim-current,#part-voltage,#part-current,#part-power,#wire-voltage,#wire-connected,#endpoint-voltage,#endpoint-connected,#resize-size,#inspector .measure b){font-family:var(--ide-font,'Cascadia Code',Consolas,monospace)}
 :is(#workspace-path,#inspector h2){min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* UI size is independent from code, code samples, terminal output and SVG artwork. */
+:root[data-workbench-ui]{--ui-small:max(11px,calc(var(--ide-ui-size,13px) * .88))}
+:root[data-workbench-ui] body :is(button,input,select,textarea,label,summary,legend,p,span,strong,small,b,output,td,th,h3,li):not(:where(svg *, .monaco-editor *,#code,#line-numbers,#line-numbers *,pre,pre *,code,code *,.theme-preview,.theme-preview *,#console-output *,#bus-events *,#uart-output *,#native-output *,#build-output *)){font-size:var(--ide-ui-size,13px)!important}
+:root[data-workbench-ui] body :is(small,.form-hint,.settings-intro,.library-hint,.hal-example-note,#part-count,#hal-example-count,.project-folder-note,.editor-position,.editor-position span,.serial-mode-note,.part-card small,.pin-tile small,.signal-badge,.stamp){font-size:var(--ui-small)!important}
+:root[data-workbench-ui] body :is(h1,h2,.settings-heading h2){font-size:calc(var(--ide-ui-size,13px) * 1.35)}
+:root[data-workbench-ui] .brand strong,:root[data-workbench-ui] .brand strong span{font-size:calc(var(--ide-ui-size,13px) * 1.15)!important}
+:root[data-workbench-ui] :is(button,summary,input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=color]),select):not(:where(.monaco-editor *)){min-height:24px;line-height:1.35}
+:root[data-workbench-ui] :is(button,summary):not(:where(.monaco-editor *)){min-width:24px}
+:root[data-workbench-ui] :is(button,summary):focus-visible{outline:2px solid var(--ide-accent);outline-offset:1px}
+:root[data-workbench-ui] :is(.workbench-menu-toggle,.library-drawer>summary){border:1px solid var(--ide-border);border-radius:4px;padding:4px 8px;background:var(--ide-chrome);color:var(--ide-foreground);font-weight:600;cursor:pointer}
+:root[data-workbench-ui] :is(.workbench-menu-toggle,.library-drawer>summary):hover{background:var(--ide-selection);filter:none}
+:root[data-workbench-ui] :is(.workbench-menu-toggle[aria-expanded=true],.library-drawer[open]>summary){border-color:var(--ide-accent);font-weight:700;background:var(--ide-selection)}
+.workbench-menu-toggle{display:inline-flex;align-items:center;justify-content:center;gap:6px;white-space:nowrap}
+.workbench-menu-toggle::after{content:'';width:6px;height:6px;border-right:1.5px solid currentColor;border-bottom:1.5px solid currentColor;transform:rotate(45deg);margin:-3px 2px 0 4px}
+:root[data-workbench-ui] .workbench-popover{inset:auto;margin:0;padding:10px;width:max-content;max-width:calc(100vw - 16px);max-height:calc(100vh - 16px);overflow:auto;background:var(--ide-panel);color:var(--ide-foreground);border:1px solid var(--ide-border);border-radius:6px;box-shadow:0 8px 24px #0003}
+.workbench-popover::backdrop{background:transparent}
+.workbench-popover:popover-open{display:flex;flex-direction:column;gap:8px}
+:root[data-workbench-ui] .workbench-popover button{background:var(--ide-chrome);border:1px solid var(--ide-border);color:var(--ide-foreground);border-radius:4px;padding:5px 8px;text-align:left}
+:root[data-workbench-ui] .workbench-popover button:hover:not(:disabled){background:var(--ide-selection);filter:none}
+:root[data-workbench-ui] .workbench-popover .layout-controls{display:flex;flex-wrap:wrap;padding-top:8px;border-top:1px solid var(--ide-border)}
+.palette-current{display:inline-block;width:16px;height:16px;background:var(--swatch);border:1px solid var(--ide-muted);border-radius:50%;flex:none}
+:root[data-workbench-ui] #wire-palette{grid-template-columns:repeat(10,24px);gap:8px;min-width:0;padding:4px;border:0}
+:root[data-workbench-ui] #wire-palette .swatch{width:24px;height:24px;padding:0;background:var(--swatch);border:1px solid var(--ide-muted);border-radius:50%;transform:none;filter:none}
+:root[data-workbench-ui] #wire-palette .swatch.active{outline:2px solid var(--ide-accent);outline-offset:2px;box-shadow:inset 0 0 0 2px var(--ide-panel)}
+:root[data-workbench-ui] #wire-palette .swatch:hover{transform:scale(1.06)}
+:root[data-workbench-ui] .settings-grid{grid-template-columns:repeat(auto-fit,minmax(min(100%,calc(var(--ide-ui-size,13px) * 14)),1fr))}
+:root[data-workbench-ui] .settings-heading{flex-wrap:wrap}
+:root[data-workbench-ui] .settings-colors{grid-template-columns:repeat(auto-fit,minmax(min(100%,calc(var(--ide-ui-size,13px) * 12)),1fr))}
+:root[data-workbench-ui] .settings-colors label{gap:8px}
+:root[data-workbench-ui] .settings-colors input{flex:none}
+:root[data-workbench-ui] #pinout-dialog{display:flex;flex-direction:column;overflow:hidden;padding:14px;max-height:94vh}
+:root[data-workbench-ui] #pinout-dialog:not([open]){display:none}
+:root[data-workbench-ui] .pinout-heading{flex:none;gap:8px}
+:root[data-workbench-ui] .pinout-layout{grid-template-columns:minmax(150px,.85fr) minmax(180px,1fr) minmax(180px,1fr);gap:12px;height:min(61vh,620px);min-height:0;flex:1;overflow:hidden}
+:root[data-workbench-ui] #pinout-pins{grid-template-columns:repeat(auto-fit,minmax(max(72px,4.8em),1fr));grid-auto-rows:minmax(calc(var(--ide-ui-size,13px) * 2.7 + 16px),max-content);align-items:start}
+:root[data-workbench-ui] .pin-tile{min-height:calc(var(--ide-ui-size,13px) * 2.7 + 16px);align-self:start}
+:root[data-workbench-ui] .pin-tile :is(strong,small){flex:none}
+:root[data-workbench-ui] .pinout-layout .irq-row{align-items:flex-start;flex-wrap:wrap}
+:root[data-workbench-ui] .pinout-layout .irq-row span{overflow-wrap:anywhere;min-width:0}
+:root[data-workbench-ui] #pinout-dialog footer{position:static;flex-wrap:wrap;flex:none;gap:8px;padding-top:8px}
+:root[data-workbench-ui] #pinout-dialog footer span{flex:1 1 100%;overflow-wrap:anywhere}
+:root[data-workbench-ui] #pinout-errors{max-height:80px;overflow:auto;margin:4px 0}
+:root[data-ide-theme] #circuit :is(text.terminal-label,.terminal-label text){fill:var(--ide-foreground);stroke:var(--ide-background);stroke-width:1.5;stroke-linejoin:round;paint-order:stroke fill;pointer-events:none}
