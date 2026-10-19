@@ -1,0 +1,116 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="1370" viewBox="0 0 1440 1370" role="img" aria-labelledby="title desc">
+<title id="title">STM Simulator 시스템·UI·저장 흐름</title><desc id="desc">검증된 Electron 프로세스 경계, 기존 UI 모듈의 의존 방향, 회로 편집과 저장 오류 처리 흐름을 보여 주는 세 패널 구조도입니다.</desc>
+<defs><marker id="arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0 0L8 4L0 8Z" fill="#356b9d"/></marker><marker id="error-arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0 0L8 4L0 8Z" fill="#a13232"/></marker></defs>
+<style>text{font-family:'Segoe UI Variable','Segoe UI','Malgun Gothic',sans-serif;fill:#202020}.body{font-size:18px}.caption{font-size:17px;fill:#515151}.heading{font-size:30px;font-weight:650}.panel-title{font-size:24px;font-weight:600}.number{font-size:23px;font-weight:700;fill:#005a9e}.node-title{font-size:20px;font-weight:650}.small{font-size:16px;fill:#515151}.panel{fill:#fff;stroke:#c7c7c7;stroke-width:1.4}.node{fill:#f5f5f5;stroke:#949494;stroke-width:1.5}.boundary{fill:#f4f8fc;stroke:#6a87a5;stroke-width:1.6;stroke-dasharray:7 5}.primary{fill:#e9f3fc;stroke:#005a9e;stroke-width:1.7}.failure{fill:#fff4f4;stroke:#a13232;stroke-width:1.5}.arrow{fill:none;stroke:#356b9d;stroke-width:2.3;stroke-linejoin:round}.arrow.error{stroke:#a13232}.divider{stroke:#d8d8d8;stroke-width:1}</style>
+<rect width="1440" height="1370" fill="#f3f3f3"/>
+<text x="28" y="43" class="heading" text-anchor="start">STM Simulator · 시스템 / UI / 저장 흐름</text>
+<text x="1412" y="42" class="caption" text-anchor="end">2026-10-19 · 저장소 구현 기준</text>
+<rect x="20" y="70" width="1400" height="385" rx="8" class="panel"/>
+<text x="44" y="108" class="number" text-anchor="start">01</text>
+<text x="92" y="108" class="panel-title" text-anchor="start">시스템 경계와 배포</text>
+<rect x="44" y="132" width="866" height="186" rx="8" class="boundary"/>
+<text x="60" y="160" class="node-title" text-anchor="start">Windows · Electron 앱</text>
+<rect x="64" y="178" width="236" height="116" rx="8" class="node"/>
+<text x="82" y="209" class="node-title" text-anchor="start">Renderer</text>
+<text x="82" y="237" class="body" text-anchor="start">편집 · 회로 / HAL 실행</text>
+<text x="82" y="262" class="body" text-anchor="start">ES module · Monaco</text>
+<rect x="355" y="178" width="180" height="116" rx="8" class="node"/>
+<text x="373" y="209" class="node-title" text-anchor="start">Preload</text>
+<text x="373" y="237" class="body" text-anchor="start">제한된 IPC</text>
+<text x="373" y="262" class="body" text-anchor="start">Node 직접 노출 없음</text>
+<rect x="590" y="178" width="294" height="116" rx="8" class="node"/>
+<text x="608" y="209" class="node-title" text-anchor="start">Main</text>
+<text x="608" y="237" class="body" text-anchor="start">파일 · 네이티브 도구</text>
+<text x="608" y="262" class="body" text-anchor="start">진단 JSONL · 업데이트</text>
+<path d="M300 236H348" class="arrow " marker-end="url(#arrow)"/>
+<path d="M535 236H583" class="arrow " marker-end="url(#arrow)"/>
+<text x="62" y="342" class="caption" text-anchor="start">renderer: contextIsolation / sandbox 활성화 · Node 직접 실행 비활성화</text>
+<rect x="1000" y="144" width="390" height="80" rx="8" class="node"/>
+<text x="1018" y="175" class="node-title" text-anchor="start">사용자 선택 로컬 자원</text>
+<text x="1018" y="203" class="body" text-anchor="start">프로젝트 파일·폴더 / 빌드·디버그 도구</text>
+<rect x="1000" y="257" width="390" height="80" rx="8" class="node"/>
+<text x="1018" y="288" class="node-title" text-anchor="start">GitHub 공개 Release</text>
+<text x="1018" y="316" class="body" text-anchor="start">기존 공개 업데이트 경로</text>
+<path d="M884 209H942V184H993" class="arrow " marker-end="url(#arrow)"/>
+<path d="M884 268H942V297H993" class="arrow " marker-end="url(#arrow)"/>
+<text x="44" y="391" class="node-title" text-anchor="start">배포</text>
+<rect x="130" y="364" width="220" height="56" rx="8" class="node"/>
+<text x="240" y="399" class="body" text-anchor="middle">Windows CI 검증</text>
+<rect x="410" y="364" width="378" height="56" rx="8" class="node"/>
+<text x="599" y="399" class="small" text-anchor="middle">EXE · ZIP · 해시 / 빌드 / 업데이트 정보</text>
+<rect x="848" y="364" width="234" height="56" rx="8" class="node"/>
+<text x="965" y="399" class="body" text-anchor="middle">GitHub Release</text>
+<rect x="1142" y="364" width="248" height="56" rx="8" class="node"/>
+<text x="1266" y="399" class="body" text-anchor="middle">앱 다운로드 / 업데이트</text>
+<path d="M350 392H402" class="arrow " marker-end="url(#arrow)"/>
+<path d="M788 392H840" class="arrow " marker-end="url(#arrow)"/>
+<path d="M1082 392H1134" class="arrow " marker-end="url(#arrow)"/>
+<text x="44" y="440" class="caption" text-anchor="start">실행 범위: 지원 C/HAL 해석과 회로 모델 + 선택 네이티브 도구. 모든 ARM 펌웨어 실행을 뜻하지 않습니다.</text>
+<rect x="20" y="477" width="1400" height="354" rx="8" class="panel"/>
+<text x="44" y="515" class="number" text-anchor="start">02</text>
+<text x="92" y="515" class="panel-title" text-anchor="start">UI 모듈과 의존 방향</text>
+<rect x="48" y="545" width="390" height="94" rx="8" class="node"/>
+<text x="66" y="576" class="node-title" text-anchor="start">workbench-ui · workspace-layout</text>
+<text x="66" y="604" class="body" text-anchor="start">실제 컨트롤 재배치 / 메뉴 / 도킹</text>
+<rect x="48" y="670" width="390" height="94" rx="8" class="node"/>
+<text x="66" y="701" class="node-title" text-anchor="start">canvas-keyboard · tab-accessibility</text>
+<text x="66" y="729" class="body" text-anchor="start">키보드 탐색 / 기존 click · ARIA 동기화</text>
+<rect x="530" y="582" width="318" height="144" rx="8" class="primary"/>
+<text x="548" y="613" class="node-title" text-anchor="start">app.js</text>
+<text x="548" y="641" class="body" text-anchor="start">프로젝트 · 선택 · Undo · 실행</text>
+<text x="548" y="666" class="body" text-anchor="start">기존 편집 콜백과 저장 예약</text>
+<text x="548" y="691" class="body" text-anchor="start">모델 / 렌더 / UI 어댑터 사용</text>
+<rect x="940" y="545" width="450" height="94" rx="8" class="node"/>
+<text x="958" y="576" class="node-title" text-anchor="start">모델 · geometry · render</text>
+<text x="958" y="604" class="body" text-anchor="start">회로 계산 / 자체 SVG · wire-path</text>
+<rect x="940" y="670" width="450" height="94" rx="8" class="node"/>
+<text x="958" y="701" class="node-title" text-anchor="start">ide-preferences · ui-feedback</text>
+<text x="958" y="729" class="body" text-anchor="start">UI / 코드 테마 분리 · 지속 오류 표시</text>
+<path d="M438 592H483V617H523" class="arrow " marker-end="url(#arrow)"/>
+<path d="M438 717H483V689H523" class="arrow " marker-end="url(#arrow)"/>
+<path d="M848 617H894V592H933" class="arrow " marker-end="url(#arrow)"/>
+<path d="M848 689H894V717H933" class="arrow " marker-end="url(#arrow)"/>
+<text x="48" y="807" class="caption" text-anchor="start">기존 DOM ID와 이벤트를 유지합니다. 프로젝트·설정 파일 형식과 사용자가 조절한 도킹 비율은 유지합니다.</text>
+<rect x="20" y="853" width="1400" height="470" rx="8" class="panel"/>
+<text x="44" y="891" class="number" text-anchor="start">03</text>
+<text x="92" y="891" class="panel-title" text-anchor="start">회로 편집 → 검증 → 저장 → 오류 복구</text>
+<text x="44" y="923" class="caption" text-anchor="start">이동·크기·배선 편집에서 같은 프로젝트 모델과 검증 경로 사용</text>
+<rect x="48" y="954" width="174" height="107" rx="8" class="node"/>
+<text x="66" y="985" class="node-title" text-anchor="start">편집 입력</text>
+<text x="66" y="1013" class="body" text-anchor="start">마우스 / 키보드</text>
+<text x="66" y="1038" class="body" text-anchor="start">현재 작업</text>
+<rect x="280" y="954" width="246" height="107" rx="8" class="node"/>
+<text x="298" y="985" class="node-title" text-anchor="start">가드 · draft 검증</text>
+<text x="298" y="1013" class="body" text-anchor="start">실행 / drag / 배선 상태</text>
+<text x="298" y="1038" class="body" text-anchor="start">validateProject</text>
+<rect x="584" y="954" width="220" height="107" rx="8" class="node"/>
+<text x="602" y="985" class="node-title" text-anchor="start">변경 반영</text>
+<text x="602" y="1013" class="body" text-anchor="start">checkpoint / Undo</text>
+<text x="602" y="1038" class="body" text-anchor="start">프로젝트 반영</text>
+<rect x="862" y="954" width="220" height="107" rx="8" class="node"/>
+<text x="880" y="985" class="node-title" text-anchor="start">자동 저장 · 렌더</text>
+<text x="880" y="1013" class="body" text-anchor="start">로컬 상태 예약</text>
+<text x="880" y="1038" class="body" text-anchor="start">현재 회로 표시</text>
+<rect x="1140" y="954" width="250" height="107" rx="8" class="node"/>
+<text x="1158" y="985" class="node-title" text-anchor="start">파일 저장</text>
+<text x="1158" y="1013" class="body" text-anchor="start">.stm32lab</text>
+<text x="1158" y="1038" class="body" text-anchor="start">프로젝트 폴더</text>
+<path d="M222 1008H272" class="arrow " marker-end="url(#arrow)"/>
+<path d="M526 1008H576" class="arrow " marker-end="url(#arrow)"/>
+<path d="M804 1008H854" class="arrow " marker-end="url(#arrow)"/>
+<path d="M1082 1008H1132" class="arrow " marker-end="url(#arrow)"/>
+<text x="1110" y="943" class="small" text-anchor="middle">사용자 저장</text>
+<rect x="280" y="1131" width="310" height="107" rx="8" class="failure"/>
+<text x="298" y="1162" class="node-title" text-anchor="start">검증 오류: 적용 중단</text>
+<text x="298" y="1190" class="body" text-anchor="start">현재 작업 유지</text>
+<text x="298" y="1215" class="body" text-anchor="start">진단 / 로그 확인</text>
+<path d="M403 1061V1123" class="arrow error" marker-end="url(#error-arrow)"/>
+<rect x="834" y="1131" width="556" height="107" rx="8" class="failure"/>
+<text x="852" y="1162" class="node-title" text-anchor="start">저장 실패: 현재 작업 유지</text>
+<text x="852" y="1190" class="body" text-anchor="start">자동 저장 / 파일 저장 오류 범위를 분리</text>
+<text x="852" y="1215" class="body" text-anchor="start">지속 알림 + 로그 → 저장 위치 확인 후 재시도</text>
+<path d="M972 1061V1123" class="arrow error" marker-end="url(#error-arrow)"/>
+<path d="M1265 1061V1123" class="arrow error" marker-end="url(#error-arrow)"/>
+<text x="44" y="1287" class="caption" text-anchor="start">성공한 재시도는 해당 오류를 해제합니다. 자동 저장 성공으로 이전 파일 저장 실패를 덮지 않습니다.</text>
+<text x="28" y="1353" class="small" text-anchor="start">편집 가능한 원본: architecture-overview.cjs · 외부 이미지 / 런타임 의존성 없음</text>
+</svg>
