@@ -73,6 +73,8 @@ jobs:
         run: npm run test:contrast:ui
       - name: Test system appearance, surface movement and unlimited canvas
         run: npm run test:appearance-canvas:ui
+      - name: Test canvas selection, zoom and live inspector
+        run: npm run test:canvas-ux:ui
       - name: Test code-only colorscheme registration
         run: npm run test:colorscheme:ui
       - name: Test Electron editing and HAL workflows
