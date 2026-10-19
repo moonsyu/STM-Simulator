@@ -127,7 +127,7 @@
 /* UI size is independent from code, code samples, terminal output and SVG artwork. */
 :root[data-workbench-ui]{--ui-small:max(11px,calc(var(--ide-ui-size,13px) * .88))}
 :root[data-workbench-ui] body :is(button,input,select,textarea,label,summary,legend,p,span,strong,small,b,output,td,th,h3,li):not(:where(svg *, .monaco-editor *,#code,#line-numbers,#line-numbers *,pre,pre *,code,code *,.theme-preview,.theme-preview *,#console-output *,#bus-events *,#uart-output *,#native-output *,#build-output *)){font-size:var(--ide-ui-size,13px)!important}
-:root[data-workbench-ui] body :is(small,.form-hint,.settings-intro,.library-hint,.hal-example-note,#part-count,#hal-example-count,.project-folder-note,.editor-position,.editor-position span,.serial-mode-note,.part-card small,.pin-tile small,.signal-badge,.stamp){font-size:var(--ui-small)!important}
+:root[data-workbench-ui] body :is(small,.form-hint,.settings-intro,.library-hint,.hal-example-note,#part-count,#hal-example-count,.project-folder-note,.editor-position,.editor-position span,.serial-mode-note,.part-card small,.pin-tile small,.signal-badge){font-size:var(--ui-small)!important}
 :root[data-workbench-ui] body :is(h1,h2,.settings-heading h2){font-size:calc(var(--ide-ui-size,13px) * 1.35)}
 :root[data-workbench-ui] .brand strong,:root[data-workbench-ui] .brand strong span{font-size:calc(var(--ide-ui-size,13px) * 1.15)!important}
 :root[data-workbench-ui] :is(button,summary,input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=color]),select):not(:where(.monaco-editor *)){min-height:24px;line-height:1.35}
