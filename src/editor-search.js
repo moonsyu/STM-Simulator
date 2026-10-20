@@ -124,5 +124,5 @@ export function setupEditorSearch({applyEdit, maxLength}) {
       event.preventDefault();event.stopPropagation();navigate(event.shiftKey ? -1 : 1);
     }
   }, true);
-  return {refresh};
+  return {refresh, open};
 }

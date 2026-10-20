@@ -4,7 +4,7 @@ import {resizeFrame,resizeFromHandle} from './resize.js';
 const $=id=>document.getElementById(id);
 export function setupResizing(o){
  const row=document.createElement('div');row.className='object-size-tools';row.innerHTML='<label for="resize-target">장치 선택</label><select id="resize-target" aria-label="크기를 바꿀 장치"></select><output id="resize-size" aria-live="polite"></output>';
- document.querySelector('.canvas-heading').after(row);
+ document.querySelector('.workspace-toolbar').append(row);
  const svg=$('circuit'),layer=document.createElementNS('http://www.w3.org/2000/svg','g');layer.id='resize-layer';layer.setAttribute('pointer-events','none');$('surface').insertBefore(layer,$('part-layer'));
  const positions={nw:[0,0],n:[.5,0],ne:[1,0],e:[1,.5],se:[1,1],s:[.5,1],sw:[0,1],w:[0,.5]};
  const labels={nw:'왼쪽 위',n:'위',ne:'오른쪽 위',e:'오른쪽',se:'오른쪽 아래',s:'아래',sw:'왼쪽 아래',w:'왼쪽'};
