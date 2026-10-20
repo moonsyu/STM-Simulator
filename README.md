@@ -1,45 +1,56 @@
 # STM Simulator
 
-STM Simulator는 **NUCLEO-F446RE 회로 시뮬레이터를 통합한 Windows 학습용 IDE**입니다. 프로젝트 생성, C/C++ 코드 작성, 실제 GCC 빌드·GDB 디버그와 빵판 회로 실습을 한 화면에서 진행합니다.
+STM Simulator는 **NUCLEO-F446RE 회로 시뮬레이터와 Cortex-M4 펌웨어 에뮬레이터를 통합한 Windows 학습용 IDE**입니다. 프로젝트 생성, C/C++ 코드 작성, 실제 GCC 빌드·GDB 디버그, 가상 빵판 회로 실습을 VS Code와 같은 한 화면에서 진행합니다.
 
-실행 대상에서 **회로 시뮬레이터**, **STM32 · ARM GCC**, **Windows · C/C++**를 선택합니다. 회로 시뮬레이터는 지원 HAL 소스를 회로 모델에 연결합니다. ARM 대상은 실제 ST HAL·CMSIS와 함께 ELF/BIN/HEX를 만들고 ST-LINK/GDB 서버로 실물 보드를 실행·디버그합니다. 컴파일된 ARM 펌웨어가 가상 빵판에서 실행되는 CPU 에뮬레이터는 포함하지 않습니다.
+## 실행 대상
+
+| 실행 대상 | 동작 | 필요한 도구 |
+|---|---|---|
+| **회로 시뮬레이터** | 컴파일 없이 HAL C 소스를 해석해 회로와 함께 바로 실행 | 없음 |
+| **펌웨어 에뮬레이터 · ARM ELF** | ARM GCC로 실제 ST HAL·CMSIS를 빌드한 ELF를 Cortex-M4(FPU·DSP 포함) 명령어 단위로 실행하고 STM32F446 주변장치를 가상 빵판에 연결 | 빌드: ARM GCC + STM32CubeF4 · 이미 만든 ELF 실행: 없음 |
+| **STM32 · ARM GCC** | 실물 보드에 ELF/BIN/HEX를 기록하고 ST-LINK·OpenOCD·GDB로 디버그 | ARM GCC, STM32CubeF4, ARM GDB, OpenOCD |
+| **Windows · C/C++** | PC용 C/C++ 프로그램 빌드·실행·디버그 | GCC, GDB |
 
 ## 주요 기능
 
-- **빈 회로에서 시작**: 새 프로젝트에는 보드·빵판이 없습니다. 부품 검색에서 NUCLEO-F446RE 한 개와 빵판 여러 개(최대 8개)를 추가합니다. MCU 코드 실행과 Pinout은 기존 단일 보드 방식이며, 기존 회로 파일의 보드·빵판은 유지합니다.
-- **배선 20색**: 기본색 10개와 파스텔 10개를 제공하며 선택한 배선에도 바로 적용합니다.
+### 작업 화면 (VS Code 스타일)
+- **활동 바와 사이드바**: 탐색기(소스 파일·회로 개요), 부품, HAL 예제, 보드·핀 설정, 실행 및 디버그, 장치 Docs, 설정.
+- **편집기 영역**: 소스 탭이 있는 Monaco 코드 편집기와 회로 시뮬레이터 그룹. 위치 바꾸기, 가로/세로 분할, 최대화, 경계선 크기 조절을 지원하고 배치를 기억합니다.
+- **하단 패널**: 문제 · 출력 · 터미널 · 직렬 모니터 · 파형 · 로직 분석기 · 빌드.
+- **속성 패널(보조 사이드바)**: 선택한 핀·배선·부품의 속성과 실시간 전압·전류, 카메라 프레임 미리보기, SD 카드 파일 목록.
+- **메뉴와 명령 팔레트**: 파일·편집·보기·실행·터미널·도움말 메뉴, Ctrl+Shift+P 명령 팔레트, Ctrl+P 파일 이동, Ctrl+B/J/Alt+B 패널 전환.
+- **상태 표시줄**: 실행 상태(실행 중에는 파란색), 실행 대상, 문제 수, 실행 시간, 최대 전류, 빌드 상태, 커서 위치, clangd.
+- **테마**: 화면은 System 기본으로 Dark/White 전환(VS Code Modern 계열, WCAG AA 대비). 코드 colorscheme는 화면과 독립(Dark: Jellybeans, White: GitHub Light Default)이며 Monaco·VS Code JSON·Vim colorscheme를 등록할 수 있습니다.
 
-- **자동 업데이트**: Windows 포터블 EXE에서 GitHub의 새 정식 버전을 자동 확인·다운로드합니다. 상단 **프로젝트 → 업데이트 → 저장 후 재시작**으로 적용하며 회로와 코드를 먼저 저장합니다. 0.15.2 이하를 사용 중이면 이 기능이 포함된 EXE를 처음 한 번 직접 받아야 합니다. [업데이트 사용법과 게시 방법](docs/UPDATES.md).
-- **이전 업데이트 실행 오류**: 0.16.1~0.17.0에서 도우미 실행 오류가 나타나면 최신 EXE를 한 번 직접 받아 실행하세요. 새 버전은 인코딩 명령줄을 중첩하는 대신 짧은 파일 실행 인자로 교체 도우미를 시작합니다.
-- **공개 자동 업데이트 검증**: v0.17.1 → v0.17.2에서 자동 감지·다운로드·해시 검증·EXE 교체·새 앱 실행과 기존 코드·설정 보존을 확인했습니다. [실행 증거](https://github.com/moonsyu/STM-Simulator/releases/download/v0.17.2/UPDATE-VERIFICATION.md).
-- **장치 크기 조절**: STM32 보드, 기본·추가 빵판과 모든 113개 부품 항목을 선택한 뒤 가장자리·모서리를 끌어 가로와 세로를 자유롭게 조절합니다. Shift로 비율 유지, 방향키로 미세 조절, 드래그 중 Esc로 취소, Ctrl+Z로 되돌리기를 지원합니다. 보드 핀·빵판 구멍·장착 부품·배선 좌표가 함께 반영되며 연결된 핀의 ID와 회로 계산은 유지됩니다.
-- **IDE 설정과 테마**: 코드 패널의 **설정** 탭 또는 Ctrl+,에서 코드/화면/터미널 글꼴, 줄 높이, 들여쓰기, 줄 바꿈, 줄 번호, 미니맵, 괄호 색상을 설정합니다. 화면은 **System**을 기본으로 운영체제 설정을 따라가며 상단 **Dark/White** 토글로 고정하거나 **System**으로 돌아갑니다. 코드 영역의 기본 테마는 Dark에서 **Jellybeans**, White에서 **GitHub Light Default**이며 화면과 독립적으로 저장합니다. 기본 들여쓰기는 **스페이스 4칸**입니다.  **Colorscheme 등록**으로 Monaco·VS Code JSON과 정적 Vim 파일을 추가·전환합니다. 테마 복사·색상 편집·삭제와 테마/전체 설정 내보내기를 지원합니다. IDE 설정은 회로 프로젝트와 별도로 저장합니다.
-- **IDE 프로젝트**: 폴더 프로젝트 생성·열기, C/C++/H 파일 추가·이름 변경·삭제·저장, 파일 탐색기와 탭. Monaco 편집기의 구문 색상·괄호·접기·기본 자동 완성·함수 정의 이동. clangd 연결 시 의미 분석 오류, 멤버 자동 완성, 호버·정의·참조·함수 인수 안내·서식 정리.
-- **실제 빌드와 디버그**: ARM/Windows GCC의 Debug·Release 컴파일·링크, ELF/BIN/HEX/MAP/EXE와 컴파일 데이터베이스, 파일·줄별 오류 이동. GDB 중단점·일시정지·계속 실행·함수 진입/복귀·한 줄 실행·스택·지역/전역 변수·감시식·레지스터·메모리. OpenOCD 자동 시작 또는 외부 GDB 서버 연결, 선택적으로 보드에 펌웨어 기록.
-- **실행과 터미널**: Windows 프로그램 실행·출력·표준 입력, 프로젝트 위치에서 명령 프롬프트 시작·명령 입력·종료. 개발 도구 경로 자동 검색·검사·저장.
-- **패널 배치**: 프로젝트·코드·시뮬레이터·터미널 모두 가로·세로 크기 조절과 위치 이동, 접기·최대화·배치 저장. 기존 코드·시뮬레이터·터미널의 고정 최소 크기 제한을 제거했습니다. [IDE 사용법과 단축키](docs/IDE.md)를 참고하세요.
-- **회로 편집**: 보드 핀 검색, 부품명·종류 검색, 세로 스크롤 부품 목록, 빵판 배선, 부품 배치·회전·속성 변경. 저항·LED·버튼·LCD·UART 터미널·메모리·센서와 추가 빵판 등 기존 35종과 조사 자료의 물리 변형 78개 지원. 배선과 구멍이 겹치면 배선 우선 선택. 시작 핀에서 바닥을 연속 클릭해 배선 꺾임점을 만들고 끝 핀에 연결. Backspace로 마지막 점 취소, **우클릭 또는 Esc**로 진행 중인 배선과 꺾임점을 모두 취소합니다. 완성된 기존 배선은 유지합니다. 보드·기본 빵판은 **몸체를 끌어 이동**하고 장착 부품과 배선 끝점이 함께 따라갑니다. **배치 공간의 고정 최대 범위는 없으며**, 빈 공간 또는 마우스 가운데 버튼으로 화면을 이동하고 휠로 확대·축소합니다. 더블클릭으로 완성된 배선 꺾임점 추가·끌어서 이동·우클릭 삭제, Shift+클릭 또는 Shift+빈 공간 드래그 다중 선택, Ctrl+A 전체 선택, Ctrl+D 즉시 복제와 Ctrl+C/V 복사, 연결망 전체 강조. 휠·핀치 줌은 커서 위치를 중심으로 합니다. 배선 인스펙터의 20색 팔레트와 HIGH/LOW/ANALOG/부유 측정 배지를 제공합니다.
-- **부품 이미지 미리보기**: 기존 검색 카드에 113개 장치의 작은 모형 이미지를 표시하고 마우스를 올리거나 키보드로 초점을 옮기면 실제 회로와 동일한 확대 모형과 핀 수를 보여줍니다. Esc로 미리보기만 닫을 수 있으며 부품 추가 방식은 유지합니다.
-- **보드 선택**: 보드명·MCU 이름 검색 및 선택. 현재 NUCLEO-F446RE 한 종류를 지원하며, 기본 상태에서 변경된 작업은 보드 초기화 전에 확인.
-- **추가 빵판**: 400홀 빵판 추가·이동·회전·삭제. 각 빵판의 행과 전원 레일을 독립적으로 계산하며 장착한 부품과 배선이 함께 이동.
-- **핀 및 주변장치 설정**: GPIO, EXTI, NVIC, UART/USART 6개, I²C1, SPI1, ADC1, TIM2·3·4·5 설정. UART/USART는 STM32F446RE에서 사용 가능한 TX/RX 핀을 선택하고 충돌을 검사.
-- **main.c 이식**: 생성 코드에 HSI PLL 클록·GPIO·주변장치 초기화와 SWV 출력 연결을 포함하고 `main.c` 저장 지원. 같은 핀·주변장치·NVIC 환경의 CubeIDE 프로젝트에 옮겨 사용. 기본 코드와 장치 Docs의 HAL·레지스터 예제를 정식 ST HAL·ARM GCC로 컴파일·링크 검증했으며, 실물 보드 실행 검증은 별도.
-- **타이머**: TIM2·5 32비트, TIM3·4 16비트 카운터와 주기 인터럽트, 독립 PWM, 입력 캡처, 직교 엔코더 TI1/TI2/TI12. 서보 50 Hz + DC 모터 1 kHz, 입력 캡처 주파수 측정, 타이머 엔코더 HAL 예제 제공.
-- **회로 오류 추적**: 회로 검사 탭에서 전원 단락·전원/GND 누락·신호 미연결·I²C 주소 중복·과전류를 확인하고 해당 핀이나 부품으로 이동.
-- **HAL 소스 실행**: `.ioc`, `main.c`, 사용자 `.c/.h` 및 Cube 프로젝트 폴더 가져오기. 핀 설정에 맞는 HAL 초기화 코드 생성. GPIO·UART 송수신·인터럽트·타이머·PWM·ADC·I²C·SPI 실행.
-- **센서·입력 부품**: TMP36·초음파 외 LDR 조도, NTC 온도, SHT31 온습도, MPU6050 가속도·자이로, PIR 움직임, 조이스틱, 로터리 인코더. 실행 중 환경·축·회전·버튼 값을 조절하고 ADC·I²C·EXTI로 확인.
-- **화면·구동 부품**: LCD·7세그먼트 외 SSD1306 OLED, ST7735 컬러 TFT, MAX7219 LED 매트릭스의 실제 수신 픽셀 표시. RC 서보, PWM DC 모터, 4상 스테퍼, COM/NO/NC 접점 릴레이 모듈.
-- **L298N 모터 드라이버**: 외부 DC 전원(6~24 V)과 별도 2핀 DC 모터를 배선하는 듀얼 H 브리지. `HAL · L298N 듀얼 DC 모터 제어` 예제에서 두 모터의 독립 PWM 속도·정역회전·제동·자유 정지를 확인합니다. VM 외부 12 V, 논리 5 V와 공통 GND를 구성하며 전원 누락·논리 레벨·과전류를 진단합니다.
-- **수동 부저**: 2핀 피에조 부저의 PWM·GPIO 사각파 주파수(20~2000 Hz)와 듀티를 표시하고 음높이를 재현. DC·0%·100% 듀티는 무음. `HAL · 수동 부저 PWM 멜로디` 예제를 선택하면 PA0(TIM2 CH1)–부저–GND 회로와 도레미파솔라시도 코드를 구성하며, 상단 **실행 도구 → 소리 켜짐**으로 들을 수 있습니다. PWM 파형은 예제에서 자동으로 켜집니다.
-- **HAL 예제 120개와 검색**: 기본 예제 40개와 조사 항목별 예제 80개를 장치명·핀 수·인터페이스·함수명으로 검색합니다. 예제마다 회로·배선·코드·핀 설정을 함께 제공합니다.
-- **80개 외형·핀 구성**: 보드·빵판과 물리 변형 78개를 구분하여 SVG 모형·접점·출처를 적용했습니다. 핀 간격과 크기는 빵판 배치를 위한 학습용 비율입니다. [모형 갤러리](docs/device-model-gallery.html), [항목별 지원 범위](docs/DEVICE-CATALOG.md).
-- **빵판 자동 배치·배선**: 예제 부품을 빵판 위에 배치하고, 다리와 점퍼를 서로 다른 구멍에 연결합니다. 부품·접점을 피해 배선을 꺾고 공간이 부족하면 빵판을 추가합니다. HAL 예제 선택, 프로젝트 템플릿, 장치 Docs에 함께 적용됩니다.
-- **장치 Docs와 main.c 삽입**: 장치 개요·배선표·HAL 함수·레지스터 예제를 확인하고 main 내부 예제 문장을 표시하고, 새 함수·파일 없이 기존 `main.c`와 초기화 함수에 직접 삽입합니다. 핀 활성화·누락 배선·오접속 보완, 사용자 코드와 정상 연결 보존, 실행 취소를 지원합니다. [사용법](docs/DEVICE-DOCS.md).
-- **실행 범위**: 조사 항목 80개의 기본 예제를 회로에서 실행합니다. DS18B20·DHT·URM09 신호 응답, CAN 내부 루프백, I2S PCM 전송, 카메라 SCCB 식별을 지원합니다. 카메라 영상, SD 파일시스템, 외부 CAN 노드의 중재까지 구현한 것은 아닙니다. 직접 레지스터 코드는 ARM 빌드 전용입니다.
+### 펌웨어 에뮬레이터
+- **Cortex-M4 코어**: ARMv7E-M Thumb/Thumb-2 전체, DSP·포화·병렬 연산, FPv4-SP 단정밀 FPU(반올림 모드·FMA·반정밀도 변환), 예외 진입/복귀·tail-chaining·NVIC 우선순위 선점·BASEPRI/PRIMASK, SysTick, DWT, ITM(SWV printf), WFI 슬립 시간 건너뛰기. QEMU와 바이트 단위로 대조 검증했습니다.
+- **STM32F446 주변장치**: RCC/FLASH/PWR/SYSCFG/EXTI, GPIOA~H, TIM1~14(PWM·입력 캡처·엔코더), USART/UART 6개(비동기·동기), I²C1~3, SPI1~4, ADC1~3, DMA1/2(일반·순환·더블 버퍼), DCMI 카메라, SDIO/SPI SD 카드(FAT32), CAN1/2, IWDG/WWDG, RTC, CRC.
+- **회로 연동**: GPIO·PWM·통신이 기존 빵판 회로와 장치 모델(LED, 버튼, LCD, OLED/TFT, 센서, 모터, 서보, 부저, 메모리 등)에 그대로 연결됩니다.
+- **디버그**: ELF의 DWARF 줄 정보로 소스 줄 중단점, 한 줄/함수 안/밖 실행, 호출 스택, 전역 변수, 레지스터, 메모리, 감시식. HardFault는 원인을 한국어로 보여 줍니다.
+- **ELF 열기**: CubeIDE 등에서 빌드한 ELF를 **파일 → 펌웨어 ELF 열기**로 바로 실행합니다.
 
-- **USART2 내장 터미널**: PA2/TX·PA3/RX 설정 후 ST-LINK VCP로 별도 부품 없이 하단 통신 탭에서 송수신합니다. 기본 UART 예제는 수신 인터럽트 에코, 외부 UART 예제는 전원·교차 배선·baud 연습용입니다.
-- **실행 결과 확인**: `printf`와 UART TX/RX 로그, 4채널 파형, CSV 내보내기, 핀 전압·부품 전류 측정, 전원 단락·과전류 경고.
-- **작업 저장 및 편집**: `.stm32lab` 파일 저장·불러오기, 자동 저장, 실행 취소·재실행. Ctrl+F로 현재 파일에서 찾기, Ctrl+R로 하나씩 또는 전체 바꾸기, 대소문자 구분과 검색 결과 이동. F5로 시뮬레이션 시작·정지·계속 실행.
+### 회로 시뮬레이터 (C 인터프리터)
+- **NVIC 선점**: `HAL_NVIC_SetPriority`·우선순위 그룹·BASEPRI/PRIMASK에 따라 높은 우선순위 인터럽트가 실행 중인 콜백을 중간에 선점합니다. 콜백 안 중단점과 ISR 표시가 있는 호출 스택을 지원합니다.
+- **HAL DMA**: UART(ReceiveToIdle 포함)·ADC 스캔·SPI·I²C·TIM PWM DMA와 메모리 간 DMA, Half/Complete 콜백, 순환 모드. Pinout에서 DMA 설정과 `MX_DMA_Init` 생성을 지원합니다.
+- **USART 동기 모드**: `HAL_USART_*`로 CK 클록을 내보내 시프트 레지스터형 장치를 구동합니다.
+- **카메라·SD 카드**: OV2640 SCCB 설정에 맞는 프레임(컬러 바·움직이는 패턴·불러온 이미지)을 DCMI DMA로 받고, SD 카드는 프로젝트에 저장되는 FAT32 이미지와 FatFs API(`f_mount`, `f_open`, `f_printf` 등)로 동작합니다.
+
+### 통신 파형과 잡음
+- **로직 분석기**: UART TX/RX, I²C SDA/SCL, SPI SCK/MOSI/MISO/NSS, USART CK, 1-Wire를 비트 단위 파형으로 표시하고 바이트·ACK/NACK·오류를 해석합니다.
+- **선로 잡음**: 비트 오류율·글리치·지터를 설정하면 수신기가 잡음 섞인 파형을 다시 샘플링해 프레이밍/패리티 오류, I²C NACK, 손상된 SPI 바이트가 실제로 발생합니다.
+
+### 회로와 코드
+- **회로 편집**: 빈 회로에서 보드 한 개와 빵판 여러 개(최대 8개)를 추가하고, 배선 20색·꺾임점·다중 선택·복제·복사/붙여넣기·무제한 배치 공간·커서 중심 확대를 사용합니다. 모든 장치는 가장자리를 끌어 크기를 조절합니다.
+- **부품 113종**: 저항·LED·버튼·LCD·OLED·TFT·LED 매트릭스·센서(TMP36, 초음파, LDR, NTC, SHT31, MPU6050, PIR 등)·서보·DC 모터·스테퍼·릴레이·L298N·수동 부저·카메라·SD 카드 등.
+- **HAL 예제 127개**: 장치명·핀 수·인터페이스·함수명으로 검색하며 회로·배선·코드·핀 설정을 한 번에 적용하고 빵판에 자동 배치·배선합니다.
+- **장치 Docs와 main.c 삽입**: 배선표, HAL 함수, 레지스터 예제를 확인하고 기존 `main.c`와 초기화 함수에 직접 삽입합니다(누락 배선·핀 보완, 사용자 코드 보존, 실행 취소).
+- **Pinout & Configuration**: GPIO, EXTI, NVIC, UART/USART 6개(동기 모드 포함), I²C1, SPI1, ADC1, TIM2~5, DMA 설정과 HAL 초기화 코드 생성. `.ioc`·`main.c`·Cube 프로젝트 폴더 가져오기.
+- **회로 검사**: 전원 단락·전원/GND 누락·신호 미연결·I²C 주소 중복·과전류를 찾아 위치로 이동합니다.
+- **IDE 프로젝트**: 폴더 프로젝트 생성·열기, C/C++/H 파일 관리, clangd 의미 분석, ARM/Windows GCC Debug·Release 빌드, GDB 디버그, Windows 명령 프롬프트 터미널.
+- **저장**: `.stm32lab` 파일과 프로젝트 폴더(저널·롤백으로 여러 파일을 원자적으로 저장), 자동 저장, 종료 직전 편집 보존, 실행 취소/재실행.
+- **자동 업데이트**: 포터블 EXE에서 GitHub Release의 새 버전을 확인·다운로드하고 해시 검증 후 교체합니다. [업데이트 사용법](docs/UPDATES.md).
+
+자세한 사용법은 [IDE 사용법](docs/IDE.md), 지원 API는 [HAL API](docs/HAL-API.md), 에뮬레이터 구조는 [펌웨어 에뮬레이터](docs/architecture/EMULATOR.md)를 참고하세요.
 
 ## 빌드 방법
 
@@ -54,29 +65,25 @@ npm run build
 npm run build:artifact
 ```
 
-- 실행 파일: `outputs/artifact/STM-Simulator.exe` (0.20.0부터 고정 파일명 사용)
-- 실행 파일과 라이선스 고지를 포함한 배포 묶음: `outputs/artifact/`
-- 빌드 중간 파일: `work/build/`, 검사 결과: `work/test-results/`
+- 실행 파일: `outputs/artifact/STM-Simulator.exe` (고정 파일명)
 - 개발 중 실행: `npm start`
-- 검증: `npm test`, `npm run test:ui`
-- LED Docs 적용·로컬 로그 검증: `node scripts/docs-writepin-check.cjs`. 오류 조사에는 [로컬 진단 파일](docs/DIAGNOSTICS.md)의 코드·핀·배선·실행 상태를 먼저 확인합니다.
-- 네이티브 IDE 검증: 개발 도구 설치 후 `npm run test:native`, `npm run test:native:ui`. ARM GDB 원격 검증은 QEMU 설치 후 `npm run test:arm-gdb` (`QEMU_ARM` 경로).
-- IDE 검증: `node --test tests/ide.test.js`, `npm run test:ide:ui`
-- L298N만 검증: `npm run test:l298n`, `npm run test:l298n:ui`
-- 수동 부저만 검증: `npm run test:passive-buzzer`, `npm run test:passive-buzzer:ui`
-- 실제 ARM 컴파일·링크 검사: ARM GCC와 STM32CubeF4 설치 후 `npm run test:main-c`. 패키지 위치가 다르면 `STM32CUBE_F4_ROOT`, 컴파일러 위치는 `ARM_GCC`로 지정.
+- 빌드 중간 파일: `work/build/`, 검사 결과: `work/test-results/`
 
-빌드 전에 이전 실행 파일과 생성 폴더를 자동 정리합니다. 앱이 실행 중이면 종료한 뒤 다시 빌드하세요.
+## 테스트
 
-`npm ci`와 `npm run build`는 편집기·워커를 로컬 파일로 묶습니다. 앱을 사용할 때 편집기를 인터넷에서 불러오지 않습니다.
+| 명령 | 내용 |
+|---|---|
+| `npm test` | 단위(회로·언어·HAL·프로젝트·Docs·설정·데스크톱), 인터프리터 확장, Cortex-M4 코어(QEMU 대조 결과), STM32F446 펌웨어 통합 테스트 |
+| `npm run test:e2e` | 실제 Electron 앱: 작업 화면·레이아웃 저장, 예제 실행·측정·디버그, 저장/종료 복구, 테마 대비, 에뮬레이터(ELF 열기·UART·로직 분석기·디버거·ARM GCC 빌드) |
+| `npm run test:toolchain` | ARM GCC와 STM32CubeF4로 모든 예제를 앱의 실제 빌드 경로로 컴파일·링크한 뒤 에뮬레이터에서 실행 (`ARM_GCC`, `STM32CUBE_F4_ROOT`, 선택 `EXAMPLES`) |
+| `npm run test:release` | Windows 전용: 패키지 앱·업데이트 도우미(잠긴 EXE 교체·롤백)·포터블 EXE |
+| `npm run build:fixtures` | 에뮬레이터 테스트용 ELF 재생성 (ARM GCC, 선택 QEMU) |
 
 ## 다운로드
 
 **[최신 실행 파일 다운로드 — GitHub Releases](https://github.com/moonsyu/STM-Simulator/releases/latest)**
 
-Releases의 **Assets**에서 `STM-Simulator-<버전>-Windows-x64.zip`을 받아 압축을 풀고 EXE를 실행하세요. 실행할 때는 Node.js 설치가 필요 없습니다. 회로 시뮬레이션은 EXE만으로 사용할 수 있습니다. **실제 빌드·GDB·clangd 기능에는 각 개발 도구와 SDK가 별도로 필요합니다.** 설정·설치 방법은 [IDE 사용법](docs/IDE.md)을 확인하세요. ZIP에는 실행 파일, 라이선스 고지와 체크섬이 포함됩니다.
-
-[GitHub Actions 빌드](https://github.com/moonsyu/STM-Simulator/actions/workflows/build-windows.yml)에서도 성공한 실행의 **Artifacts → STM-Simulator-Windows-x64**를 받을 수 있습니다. `BUILD-INFO.json`에서 빌드 커밋과 실행 링크를 확인할 수 있으며, 릴리즈는 해당 버전의 성공한 빌드 결과를 게시합니다.
+Releases의 **Assets**에서 `STM-Simulator-<버전>-Windows-x64.zip`을 받아 압축을 풀고 EXE를 실행하세요. Node.js 설치는 필요 없습니다. 회로 시뮬레이터와 ELF 에뮬레이션은 EXE만으로 사용할 수 있고, 실제 빌드·GDB·clangd 기능에는 각 개발 도구와 SDK가 필요합니다. 설치 방법은 [IDE 사용법](docs/IDE.md)을 확인하세요.
 
 ## 권리 관련 안내
 
@@ -84,4 +91,4 @@ STM Simulator는 STMicroelectronics의 공식 제품이 아닌 개인 학습 프
 
 모든 자료의 권리 관계에 대한 법률 검토가 완료된 것은 아닙니다. **저작권·상표권·라이선스 등 권리 관련 문제 또는 법적 문제가 확인되는 경우, 해당 저장소를 삭제 조치하겠습니다.** 관련 문제는 [GitHub Issues](https://github.com/moonsyu/STM-Simulator/issues)를 통해 알려 주세요.
 
-새 프로젝트는 HSI 16 MHz에서 시작합니다. TIM 활성화 초기값은 CubeMX 기준 PSC=0, TIM2/5 ARR=4,294,967,295, TIM3/4 ARR=65,535, PWM Pulse=0입니다. 기존 저장값과 예제의 84 MHz 설정은 유지됩니다. 자세한 적용 범위는 [보드 기본값](docs/MCU-DEFAULTS.md)을 참고하세요.
+새 프로젝트는 HSI 16 MHz에서 시작합니다. TIM 활성화 초기값은 CubeMX 기준 PSC=0, TIM2/5 ARR=4,294,967,295, TIM3/4 ARR=65,535, PWM Pulse=0입니다. 자세한 적용 범위는 [보드 기본값](docs/MCU-DEFAULTS.md)을 참고하세요.

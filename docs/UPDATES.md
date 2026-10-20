@@ -33,12 +33,11 @@ Windows x64 포터블 EXE는 앱 시작 8초 후, 이후 실행 중 6시간마�
 ## 개발과 검증
 
 - `node --test tests/updater.test.js`: 버전·자산·해시·동시 호출·오프라인·자동 설정·캐시 변조 검사.
-- `npm run test:updates:ui`: 실제 Electron 창의 상태·설정·재시작 전 코드/폴더 저장·오류 처리·좁은 창 검사. IPC 응답만 테스트 내에서 대체하며 실제 앱을 교체하지 않습니다.
-- `node scripts/update-apply-check.cjs`: Windows에서 실제 실행 파일 잠금을 기다려 교체·재실행하고, 잘못된 EXE의 시작 실패 시 원본 복원을 검사합니다.
-- `LAB_EXE=... node scripts/update-gui-helper-check.cjs`: 패키징된 Electron main에서 실제 도우미를 시작하고, 긴 한글·특수문자 경로와 GUI 부모 종료 뒤 교체/실행을 검사합니다. CI 게시 전에 실행합니다.
+- `node --test tests/release/update-helper.test.mjs`: Windows에서 실제 실행 파일 잠금을 기다려 교체·재실행하고, 잘못된 EXE의 시작 실패 시 원본 복원을 검사합니다.
+- `node --test tests/release/packaged.test.mjs`: 패키징된 Electron main에서 실제 도우미를 시작하고, 긴 한글·특수문자 경로와 GUI 부모 종료 뒤 교체/실행을 검사합니다. CI 게시 전에 실행합니다.
 - `npm run build` / `npm run build:artifact`: 업데이트 JS·PowerShell·UI·문서가 실제 패키지에 들어갔는지 원본과 비교합니다.
 
-공개 서버를 통한 서로 다른 두 정식 앱 버전의 실제 업그레이드는 두 버전 게시 후 `node scripts/release-update-check.cjs`로 확인합니다. 이전 공개 EXE와 해시 증거(`work/test-results/update-release-baseline.json`)를 준비하고 실행하면, 자동 확인을 켜고 이전 앱의 원본 스케줄러가 GitHub 조회·다운로드·검증을 수행하게 합니다. 수동 확인·다운로드 메서드를 호출하지 않습니다. 이어서 저장 후 재시작과 실제 파일 교체를 수행하고, 새 프로세스의 asar 버전·파일 해시·실행 유지를 확인합니다. 새 앱을 다시 열어 코드·IDE 설정·보드 크기·자동 확인 설정 보존도 검사합니다. 이 검사는 업데이트 네트워크나 main IPC를 대체하지 않습니다.
+공개 서버를 통한 서로 다른 두 정식 앱 버전의 실제 업그레이드는 두 버전 게시 후 게시된 두 EXE로 수동 확인합니다. 이전 공개 EXE와 해시 증거(`work/test-results/update-release-baseline.json`)를 준비하고 실행하면, 자동 확인을 켜고 이전 앱의 원본 스케줄러가 GitHub 조회·다운로드·검증을 수행하게 합니다. 수동 확인·다운로드 메서드를 호출하지 않습니다. 이어서 저장 후 재시작과 실제 파일 교체를 수행하고, 새 프로세스의 asar 버전·파일 해시·실행 유지를 확인합니다. 새 앱을 다시 열어 코드·IDE 설정·보드 크기·자동 확인 설정 보존도 검사합니다. 이 검사는 업데이트 네트워크나 main IPC를 대체하지 않습니다.
 
 실행 증거는 `work/test-results/release-update-proof.json`, 공개 배포 검증 증거는 릴리스 자산의 `UPDATE-VERIFICATION.json`으로 관리합니다.
 

@@ -1,8 +1,0 @@
-import test from 'node:test';
-import assert from 'node:assert/strict';
-import {basicHalExample} from '../src/basic-hal-examples.js';
-import {SimulationSession} from '../src/session.js';
-const run=kind=>{const output=[],p=basicHalExample(kind),s=new SimulationSession(p,{print:x=>output.push(x)});for(let t=0;t<=450;t++)s.tick(t);return {p,s,output};};
-test('LCD 4-bit initialization writes both expected text rows',()=>{const {s}=run('lcd');assert.deepEqual(s.result.parts.demo.lcd.lines,['STM Emulator    ','HAL 4-bit LCD   ']);});
-test('RGB has separate channel resistors and changes color; seven segment shows 0 then 1',()=>{let {p,s}=run('rgb');assert.equal(p.components.filter(c=>c.type==='resistor').length,3);assert.equal(s.result.parts.demo.channels.r.on,true);s.tick(501);assert.equal(s.result.parts.demo.channels.g.on,true);({p,s}=run('sevenseg'));assert.equal(p.components.filter(c=>c.type==='resistor').length,8);assert.equal(s.result.parts.demo.channels.a.on,true);assert.equal(s.result.parts.demo.channels.g.on,false);s.tick(501);assert.equal(s.result.parts.demo.channels.a.on,false);assert.equal(s.result.parts.demo.channels.b.on,true);});
-test('analog, diode, switch and active buzzer examples react to the circuit',()=>{assert.match(run('potentiometer').output.join(),/1.650 V/);assert.match(run('diode').output.join(),/0.70[0-9] V/);let {p,s,output}=run('slide');p.components[0].position=1;for(let t=451;t<650;t++)s.tick(t);assert.ok(output.includes('switch=0')&&output.includes('switch=1'));({s}=run('buzzer'));assert.equal(s.result.parts.demo.on,true);s.tick(501);assert.equal(s.result.parts.demo.on,false);});

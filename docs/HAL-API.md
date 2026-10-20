@@ -24,7 +24,7 @@ HAL 코드·회로 예제는 GPIO·EXTI·UART·TIM2·ADC·I²C·SPI·함수/구�
 
 생성 코드에는 GPIO/주변장치 클록 활성화, GPIO AF, UART·I²C·SPI·ADC·타이머 초기화, `Error_Handler`가 포함됩니다. 새 프로젝트는 HSI 16 MHz 직접 연결, PLL OFF, AHB/APB1/APB2 분주 1, Flash 0 wait state로 생성합니다. 다른 클록은 HSI PLL과 APB1=/2·APB2=/1을 사용합니다. PLL로 정확히 만들 수 있는 12.5~90 MHz를 지원하며 기존 84 MHz 예제는 해당 값을 명시합니다. [CubeMX 활성화 초기값](MCU-DEFAULTS.md)에 TIM의 PSC/ARR/CCR 초기값과 적용 범위를 정리했습니다. 지원하지 않는 클록은 생성 단계에서 안내합니다. SPI 목표 속도는 APB2에서 만들 수 있는 2~256 분주 중 목표 이하의 속도로 설정합니다.
 
-기본 main.c와 HAL 예제는 ARM GCC 및 STM32CubeF4의 정식 HAL·CMSIS·startup으로 컴파일·링크 검사합니다(`npm run test:main-c`). 실물 보드에서 센서·디스플레이 모듈의 세부 변형까지 시험한 것은 아닙니다. 메모리 예제는 명시된 범용 프로토콜 모델이며 특정 EEPROM 제품 드라이버를 뜻하지 않습니다.
+기본 main.c와 HAL 예제는 ARM GCC 및 STM32CubeF4의 정식 HAL·CMSIS·startup으로 컴파일·링크 검사합니다(`npm run test:toolchain` — 앱의 실제 ARM 빌드 경로로 컴파일·링크한 뒤 펌웨어 에뮬레이터에서 실행). 실물 보드에서 센서·디스플레이 모듈의 세부 변형까지 시험한 것은 아닙니다. 메모리 예제는 명시된 범용 프로토콜 모델이며 특정 EEPROM 제품 드라이버를 뜻하지 않습니다.
 
 ## 회로 편집과 오류 위치
 

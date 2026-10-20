@@ -1,4 +1,5 @@
 # STM Simulator 디자인 개선 · 기능 추가 및 구현 상세 가이드라인
+> 0.26.0에서 작업 화면을 VS Code형으로 개편하고 테스트를 `tests/` 아래로 새로 작성했습니다. 이 문서의 `scripts/*-smoke.cjs`·`*-check.cjs` 경로는 이전 버전의 기록이며, 현재 대응 검사는 `tests/e2e/appearance.e2e.test.mjs`(대비·테마), `tests/e2e/shell.e2e.test.mjs`(화면·키보드), `tests/e2e/workflow.e2e.test.mjs`(편집·실행)입니다.
 
 - **기준 버전**: `0.23.9` (`main` @ `42b2b90`, 작성일: 2026-10-19)
 - **목적**: STM Simulator의 **디자인(UI/UX) 개선**과 **신규 기능 추가·구현**을 일관된 품질과 아키텍처 원칙 아래 수행하기 위한 상세 가이드라인 및 단계별 실행 로드맵입니다.
