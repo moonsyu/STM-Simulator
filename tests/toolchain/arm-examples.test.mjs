@@ -40,6 +40,10 @@ test('every example compiles and links with ST HAL, then runs on the emulator wi
     await fs.rm(path.dirname(r.elf),{recursive:true,force:true});
    });
   }
- }finally{await fs.rm(work,{recursive:true,force:true});}
+ }finally{
+  await fs.rm(work,{recursive:true,force:true});
+  // CI turns this file into annotations so failures are readable without the raw log.
+  const out=path.join(root,'work/test-results');await fs.mkdir(out,{recursive:true});await fs.writeFile(path.join(out,'toolchain-failures.json'),JSON.stringify(failures,null,1));
+ }
  assert.deepEqual(failures,[]);
 });
