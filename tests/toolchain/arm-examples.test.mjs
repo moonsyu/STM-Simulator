@@ -38,7 +38,10 @@ test('every example compiles and links with ST HAL, then runs on the emulator wi
      // SysTick must be serviced (uwTick ≈ 1/ms). Demos with long high-priority ISRs legitimately delay it,
      // so require steady progress rather than an exact rate; a missing handler leaves it at 0-1.
      const tick=Number(String(session.runtime.evaluate('uwTick')).match(/^\d+/)?.[0]);
-     assert.ok(tick>=40,`uwTick did not advance (${tick})`);
+     // Compare with the simulated time actually reached (heavy circuits can lag behind the requested 200 ms).
+     const nowMs=session.runtime.microTime/1000;
+     assert.ok(nowMs>=5,`simulation barely advanced (${nowMs.toFixed(1)} ms)`);
+     assert.ok(tick>=nowMs*0.2,`uwTick did not advance (${tick} at ${nowMs.toFixed(1)} ms)`);
      assert.ok(!/^(Error_Handler|HardFault_Handler|Default_Handler|.*_IRQHandler_default)$/.test(top),`stuck in ${top}`);
     }catch(error){failures.push(`${id}: run · ${error.message.slice(0,300)}`);throw error;}
     await fs.rm(path.dirname(r.elf),{recursive:true,force:true});
