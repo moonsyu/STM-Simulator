@@ -73,9 +73,10 @@ for (const [name, fixture] of Object.entries(FIXTURES)) {
     const plan = await prepareBuild({ project, tools, root: work, target: 'arm', configuration: fixture.configuration || 'Debug' });
     let log = '';
     const result = await build(plan, { onOutput: t => { log += t; } }).catch(e => { console.error(log.slice(-6000)); throw e; });
-    // Macro debug info (-g3) is not used by the emulator; drop it to keep fixtures small.
+    // The emulator uses the symbol table and .debug_line only; the -g3 macro / DIE
+    // sections (~1 MB of strings per image) are dropped to keep the fixtures small.
     const objcopy = tools.armGcc.replace(/gcc(\.exe)?$/, (_, e) => 'objcopy' + (e || ''));
-    await execFile(objcopy, ['--remove-section=.debug_macro', result.elf, path.join(out, name + '.elf')]);
+    await execFile(objcopy, [...['.debug_macro', '.debug_str', '.debug_info', '.debug_abbrev', '.debug_rnglists', '.debug_loclists', '.debug_aranges', '.debug_frame', '.debug_str_offsets'].map(n => '--remove-section=' + n), result.elf, path.join(out, name + '.elf')]);
     const stored = { ...project, firmware: { mode: 'hal', files: own.filter(f => f.name !== 'main.c') } };
     await fs.writeFile(path.join(out, name + '.json'), JSON.stringify(stored, null, 1));
     const size = (await fs.stat(result.elf)).size;

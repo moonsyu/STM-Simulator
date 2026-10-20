@@ -17,12 +17,16 @@ test('성능: perf.elf MIPS 측정', (t) => {
   const m = new Machine({ semihosting: true });
   m.loadElf(elf);
   const t0 = performance.now();
+  const c0 = process.cpuUsage();
   const res = m.run(1e9);
+  const cpu = process.cpuUsage(c0);
   const ms = performance.now() - t0;
+  const cpuMs = (cpu.user + cpu.system) / 1000;
   assert.equal(res.reason, 'exit');
-  const mips = m.cpu.instructions / ms / 1000;
-  const mhz = m.cycles / ms / 1000;
-  const msg = `perf: ${m.cpu.instructions} 명령어, ${m.cycles} 사이클, ${ms.toFixed(0)} ms → ${mips.toFixed(1)} MIPS (${mhz.toFixed(1)} 에뮬레이션 MHz)`;
+  const n = m.cpu.instructions;
+  const mips = n / cpuMs / 1000; // 병렬 테스트 부하의 영향을 줄이려고 CPU 시간 기준
+  const msg = `perf: ${n} 명령어, ${m.cycles} 사이클 → ${mips.toFixed(1)} MIPS (CPU ${cpuMs.toFixed(0)} ms), ` +
+    `벽시계 ${(n / ms / 1000).toFixed(1)} MIPS, 에뮬레이션 ${(m.cycles / cpuMs / 1000).toFixed(1)} MHz`;
   t.diagnostic(msg);
   console.log(msg);
   assert.ok(mips > 5, msg);

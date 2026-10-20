@@ -194,7 +194,7 @@ describe('compile errors',()=>{
   test('pointer subtraction yields the element distance and rejects unrelated arrays',()=>{
     assert.deepEqual(halLines('int v[4]; int *p = v + 2; printf("%d\\n", (int)(p - v));'),['2']);
     assert.deepEqual(halLines('int v[4]; int *p = &v[3]; int d = p - v; printf("%d\\n", d);'),['3']);
-    assert.match(halError('int v[4]; int w[4]; int *p = v; int *q = w; int d = p - q;'),/서로 다른 배열/);
+    assert.match(halError('int main(void){int v[4]; int w[4]; int *p = v; int *q = w; int d = p - q; while(1){HAL_Delay(10);}}').error.message,/서로 다른 배열/);
   });
 });
 

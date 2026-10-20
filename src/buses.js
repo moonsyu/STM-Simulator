@@ -39,7 +39,7 @@ export class BusDevices {
     return {part:candidates[0],connected:candidates.length===1&&sda>2&&scl>2&&!this.same(this.pin(w.sda),this.pin(w.scl))};
   }
   i2cLines(){if(!this.signals)return null;const w=this.wire,id=this.i2cId||'I2C1',g={group:id,busLabel:id,protocol:'i2c',params:{clockHz:w.clock}};this.signals.define(id+'.SCL',{...g,label:'SCL',pins:[w.scl],params:{...g.params,role:'scl'}});this.signals.define(id+'.SDA',{...g,label:'SDA',pins:[w.sda],params:{...g.params,role:'sda'}});return id;}
-  i2cPhase(at,bytes,drivers,ackFn,opts={}){const id=this.i2cLines();if(!id&&!this.noise?.active)return {seen:bytes,acks:bytes.map((_,i)=>ackFn(i,bytes[i])),busError:false,endUs:at};const e=encodeI2c(at,{clockHz:this.wire.clock,bytes,drivers,ackFn,noise:this.noise,...opts});if(id){this.signals.write(id+'.SCL',e.scl);this.signals.write(id+'.SDA',e.sda);}return e;}
+  i2cPhase(at,bytes,drivers,ackFn,opts={}){const id=this.i2cLines();if(!id&&!this.noise?.active)return {seen:bytes,acks:bytes.map((_,i)=>ackFn(i,bytes[i])),busError:false,endUs:at};at=Math.max(at,opts.start===false?at:this.i2cFree??-Infinity);const e=encodeI2c(at,{clockHz:this.wire.clock,bytes,drivers,ackFn,noise:this.noise,...opts});this.i2cFree=e.endUs+5e5/this.wire.clock;if(id){this.signals.write(id+'.SCL',e.scl);this.signals.write(id+'.SDA',e.sda);}return e;}
   // One I2C transaction with bit-level recording and optional wire noise (address/data corruption, NACK, bus error).
   i2cWrite(address,bytes,runtime,at=runtime.microTime){
     const {part,connected}=this.i2cTarget(address),ack0=(i,v)=>connected&&v>>1===address&&!(v&1);

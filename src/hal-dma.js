@@ -74,7 +74,7 @@ export class HalDma{
   r.event(at/1000,()=>{if(gen!==st.gen||!st.busy||st.paused)return;for(let n=0;n<k&&st.busy&&gen===st.gen;n++){st.spec.item(st.index,r);this.advance(r,st);}if(gen===st.gen)this.schedule(r,st);});
  }
  advance(r,st){
-  st.index++;st.remaining=st.count-st.index;
+  if(!st.busy)return;st.index++;st.remaining=st.count-st.index;
   if(st.half&&st.index===st.half){st.flags|=1;if(st.it.ht&&st.spec.onHalf)this.hal.queue(st.irq,st.spec.onHalf,st.id+':ht');}
   if(st.index>=st.count){
    st.flags|=2;const done=st.spec.onComplete;
@@ -91,11 +91,11 @@ export class HalDma{
  invoke(name,args,r){
   const hal=this.hal;
   if(name==='HAL_DMA_IRQHandler'){const st=this.state(this.handle(args[0],r));return hal.drain(r,st.irq);}
-  if(name==='HAL_DMA_PollForTransfer')return this.poll(args,r);
+  if(name==='HAL_DMA_PollForTransfer')return this.pollTransfer(args,r);
   if(name==='HAL_ADC_PollForConversion'&&this.adcRuns.size)return null;
   return null;
  }
- *poll([ptr,level,timeout],r){
+ *pollTransfer([ptr,level,timeout],r){
   const h=this.handle(ptr,r),st=this.state(h),want=level===1?1:2,start=r.microTime;
   if(!st.busy&&!(st.flags&want))return 1;if(st.circular)throw new Error('순환 모드 DMA에는 HAL_DMA_PollForTransfer를 사용할 수 없습니다.');
   while(!(st.flags&want)){const left=timeout-(r.microTime-start)/1000;if(timeout!==0xffffffff&&left<=0){h.fields.ErrorCode.value|=0x20;h.fields.State.value=1;this.stop(st);return 3;}const eta=st.busy?Math.max(.001,(st.base+(want===1?st.half:st.count)*st.spec.itemUs-r.microTime)/1000):left;yield Math.min(eta,timeout===0xffffffff?eta:left);}
@@ -194,7 +194,7 @@ export class HalDma{
   const link=this.check(this.linked(r,h,'DMA_Handle',id),'ADC1',0),w=this.widths(link.h);checkRange(r,b,c*w.mem,'ADC DMA 버퍼');
   const conv=seq.map(x=>hal.adcConversionUs(x.sampling)),avg=conv.reduce((x,y)=>x+y,0)/conv.length,limit=s.continuous?Infinity:seq.length;let produced=0;
   const run={link};this.adcRuns.set(id,run);s.active=true;
-  return this.start(r,link,{count:c,itemUs:avg,item:i=>{if(produced>=limit)return;const x=seq[produced%seq.length];produced++;const v=hal.adcRead(x.channel,r);s.value=v;writeElement(r,b,w.minc?i:0,w.mem,v);},
+  return this.start(r,link,{count:c,itemUs:avg,item:i=>{if(produced>=limit){this.stop(link.st);this.adcRuns.delete(id);s.active=false;return;}const x=seq[produced%seq.length];produced++;const v=hal.adcRead(x.channel,r);s.value=v;writeElement(r,b,w.minc?i:0,w.mem,v);},
    onHalf:function*(){yield* hal.userCall(r,'HAL_ADC_ConvHalfCpltCallback',[a]);},onComplete:function*(){yield* hal.userCall(r,'HAL_ADC_ConvCpltCallback',[a]);},
    onDone:()=>{if(!link.st.circular||produced>=limit){this.stop(link.st);this.adcRuns.delete(id);s.active=false;}}});
  }
@@ -239,7 +239,7 @@ export class HalDma{
   const hal=this.hal,tm=hal.timerModel,{h}=hal.requireHandle(a,r,'TIM'),ptr=h.fields.hdma.value.cells[n].value,dh=r.get(r.pointerCell(ptr));if(dh?.type!=='DMA_HandleTypeDef')throw new Error(`${s.id}: hdma[CC${n}]에 DMA 핸들이 필요합니다.`);const st=this.state(dh);if(!st.inited||st.handle!==dh)throw new Error(`${s.id}: HAL_DMA_Init(${st.id})이 필요합니다.`);const link=this.check({h:dh,st,ptr},`${s.id}_CH${n}`,0x40),w=this.widths(dh);
   checkRange(r,buffer,count*w.mem,'PWM DMA 버퍼');const period=tm.period(s),hz=tm.hz(s)/period,itemUs=1e6/hz,fast=hz>2000,line=`${s.id}.CH${n}`,pin=ch.pin,bits=[];
   if(hal.buses.signals)hal.buses.signals.define(line,{label:`${s.id} CH${n} PWM`,pins:[pin],protocol:'gpio'});
-  tm.freeze(s,r.microTime);ch.active=true;ch.it=false;tm.syncActive(s,r);const job={st};this.timJobs.set(key,job);
+  tm.freeze(s,r.microTime);ch.active=true;ch.it=false;tm.syncActive(s,r);if(fast){r.call('pinMode',[pin,'OUTPUT']);r.call('digitalWrite',[pin,0]);}const job={st};this.timJobs.set(key,job);
   const setChannel=fn=>function*(){h.fields.Channel.value=1<<(n-1);try{yield* fn();}finally{h.fields.Channel.value=0;}};
   return this.start(r,link,{count,itemUs,item:(i)=>{ch.pulse=readElement(r,buffer,i,w.mem);const t=st.base+i*itemUs,hi=Math.min(1,ch.pulse/period);
     if(hal.buses.signals){hal.buses.signals.edge(line,t,hi>0?1:0);if(hi>0&&hi<1)hal.buses.signals.edge(line,t+hi*itemUs,0);}
