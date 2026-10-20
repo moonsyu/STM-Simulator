@@ -87,6 +87,13 @@ export class HalAdapter {
   poll(r){
     this.timerModel.observe(r);
     for(const [id,channel]of this.serials){
+      // Overrun (with the wire error model enabled): bytes arriving while nobody reads RDR are lost;
+      // the next IT/DMA reception reports HAL_UART_ERROR_ORE and is aborted like the real HAL.
+      if(this.buses.noise?.cfg.enabled&&channel.bus.uart.ready){
+        const u=channel.bus.uart,avail=u.queue.filter(x=>x.at<=r.microTime+1e-6);
+        if(!channel.rx&&!channel.rxDma&&avail.length>=2){u.queue=u.queue.filter(x=>x===avail[0]||!avail.includes(x));channel.ore=true;}
+        const job=channel.rx??channel.rxDma;if(job&&channel.ore){channel.ore=false;if(channel.rxDma)this.dma.stop(channel.rxDma.link.st);channel.rx=null;channel.rxDma=null;const h=r.get(r.pointerCell(job.handle));if(h.fields.RxState)h.fields.RxState.value=0x20;this.uartError(r,id,job.handle,8);continue;}
+      }
       if(channel.tx&&channel.tx.at<=r.microTime+1e-6){const job=channel.tx;channel.tx=null;this.queue(id+'_IRQn',()=>this.userCall(r,'HAL_UART_TxCpltCallback',[job.handle]),id+':tx');}
       if(channel.rx){const job=channel.rx;while(job.index<job.count&&channel.bus.call('Serial1.available',[],r)>0){r.set(r.pointerCell(job.buffer,job.index++),this.uartRead(channel,r));if(channel.rxError)this.uartError(r,id,job.handle,channel.rxError);}
         if(job.index===job.count){channel.rx=null;this.queue(id+'_IRQn',()=>this.userCall(r,'HAL_UART_RxCpltCallback',[job.handle]),id+':rx');}}
