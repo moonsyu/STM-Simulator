@@ -14,13 +14,14 @@ STM Simulator는 **NUCLEO-F446RE 회로 시뮬레이터와 Cortex-M4 펌웨어 �
 ## 주요 기능
 
 ### 작업 화면 (VS Code 스타일)
-- **활동 바와 사이드바**: 탐색기(소스 파일·회로 개요), 부품, HAL 예제, 보드·핀 설정, 실행 및 디버그, 장치 Docs, 설정.
+- **활동 바와 사이드바**: 탐색기(소스 파일·회로 개요), 부품, HAL 예제, 보드·핀 설정, 실행 및 디버그(실행 환경 선택 포함), 장치 Docs. 아이콘은 끌어서 순서를 바꿀 수 있습니다.
 - **편집기 영역**: 소스 탭이 있는 Monaco 코드 편집기와 회로 시뮬레이터 그룹. 위치 바꾸기, 가로/세로 분할, 최대화, 경계선 크기 조절을 지원하고 배치를 기억합니다.
 - **하단 패널**: 문제 · 출력 · 터미널 · 직렬 모니터 · 파형 · 로직 분석기 · 빌드.
 - **속성 패널(보조 사이드바)**: 선택한 핀·배선·부품의 속성과 실시간 전압·전류, 카메라 프레임 미리보기, SD 카드 파일 목록.
-- **메뉴와 명령 팔레트**: 파일·편집·보기·실행·터미널·도움말 메뉴, Ctrl+Shift+P 명령 팔레트, Ctrl+P 파일 이동, Ctrl+B/J/Alt+B 패널 전환.
+- **메뉴와 명령 팔레트**: 파일·편집·보기·실행·터미널·도움말 메뉴, Ctrl+Shift+P 명령 팔레트, Ctrl+P 파일 이동, Ctrl+B/J/Alt+B 패널 전환. 편집 메뉴에 설정과 단축키 설정이 있습니다.
+- **단축키**: Ctrl+F5 실행, F10 디버그 시작, F11 한 줄 실행, Ctrl+F2 중지가 기본이며 **편집 → 단축키 설정**에서 모두 바꿀 수 있습니다.
 - **상태 표시줄**: 실행 상태(실행 중에는 파란색), 실행 대상, 문제 수, 실행 시간, 최대 전류, 빌드 상태, 커서 위치, clangd.
-- **테마**: 화면은 System 기본으로 Dark/White 전환(VS Code Modern 계열, WCAG AA 대비). 코드 colorscheme는 화면과 독립(Dark: Jellybeans, White: GitHub Light Default)이며 Monaco·VS Code JSON·Vim colorscheme를 등록할 수 있습니다.
+- **테마**: 화면은 System 기본으로 태양/달 아이콘으로 Dark/White 전환(VS Code Modern 계열, WCAG AA 대비). 코드 colorscheme는 화면과 독립(Dark: Jellybeans, White: GitHub Light Default)이며 Monaco·VS Code JSON·Vim colorscheme를 등록할 수 있습니다.
 
 ### 펌웨어 에뮬레이터
 - **Cortex-M4 코어**: ARMv7E-M Thumb/Thumb-2 전체, DSP·포화·병렬 연산, FPv4-SP 단정밀 FPU(반올림 모드·FMA·반정밀도 변환), 예외 진입/복귀·tail-chaining·NVIC 우선순위 선점·BASEPRI/PRIMASK, SysTick, DWT, ITM(SWV printf), WFI 슬립 시간 건너뛰기. QEMU와 바이트 단위로 대조 검증했습니다.

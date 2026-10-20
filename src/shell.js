@@ -1,6 +1,7 @@
 // VS Code style workbench shell: activity bar, side bar views, editor groups,
 // bottom panel, secondary side bar, status bar, menus and command palette.
 // Existing controls keep their IDs and listeners; the shell only relocates them.
+import {loadKeybindings,saveKeybindings,createMatcher,eventKey,conflicts,DEFAULT_KEYBINDINGS,setCurrentKeybindings} from './keybindings.js';
 const $=id=>document.getElementById(id);
 const KEY='stm32lab.shellLayout.v1';
 const ICON={
@@ -17,26 +18,28 @@ const ICON={
 };
 export const icon=(name,size=20)=>`<svg viewBox="0 0 24 24" width="${size}" height="${size}" aria-hidden="true" class="icon"><path d="${ICON[name]}" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
 const VIEWS=[
- {id:'explorer',label:'탐색기',key:'Ctrl+Shift+E'},
- {id:'parts',label:'부품',key:'Ctrl+Shift+A'},
- {id:'examples',label:'HAL 예제',key:'Ctrl+Shift+X'},
- {id:'board',label:'보드 · 핀 설정',key:'Ctrl+Shift+O'},
- {id:'debug',label:'실행 및 디버그',key:'Ctrl+Shift+D'},
- {id:'docs',label:'장치 Docs',key:'Ctrl+Shift+K'}
+ {id:'explorer',label:'탐색기'},
+ {id:'parts',label:'부품'},
+ {id:'examples',label:'HAL 예제'},
+ {id:'board',label:'보드 · 핀 설정'},
+ {id:'debug',label:'실행 및 디버그'},
+ {id:'docs',label:'장치 Docs'}
 ];
-const DEFAULT={sidebar:272,aux:300,panel:240,ratio:.5,orientation:'row',swapped:false,show:{sidebar:true,aux:true,panel:true},view:'explorer',maximized:null};
+const HIDDEN_VIEWS=[{id:'settings',label:'설정'},{id:'keybindings',label:'단축키 설정'}];
+const DEFAULT={sidebar:272,aux:300,panel:240,ratio:.5,orientation:'row',swapped:false,show:{sidebar:true,aux:true,panel:true},view:'explorer',maximized:null,activityOrder:VIEWS.map(v=>v.id)};
+const validOrder=o=>Array.isArray(o)&&o.length===VIEWS.length&&VIEWS.every(v=>o.includes(v.id))?[...o]:VIEWS.map(v=>v.id);
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 function loadState(){
  try{const s=JSON.parse(localStorage.getItem(KEY));if(!s||typeof s!=='object')return structuredClone(DEFAULT);
   const n=(v,a,b,d)=>Number.isFinite(v)?clamp(v,a,b):d;
   return {sidebar:n(s.sidebar,170,640,DEFAULT.sidebar),aux:n(s.aux,200,640,DEFAULT.aux),panel:n(s.panel,90,900,DEFAULT.panel),ratio:n(s.ratio,.12,.88,DEFAULT.ratio),orientation:s.orientation==='column'?'column':'row',swapped:s.swapped===true,
-   show:{sidebar:s.show?.sidebar!==false,aux:s.show?.aux!==false,panel:s.show?.panel!==false},view:[...VIEWS.map(v=>v.id),'settings'].includes(s.view)?s.view:'explorer',maximized:null};
+   show:{sidebar:s.show?.sidebar!==false,aux:s.show?.aux!==false,panel:s.show?.panel!==false},view:[...VIEWS,...HIDDEN_VIEWS].some(v=>v.id===s.view)?s.view:'explorer',maximized:null,activityOrder:validOrder(s.activityOrder)};
  }catch{return structuredClone(DEFAULT);}
 }
 
 // Phase 1: a layout object that other modules can call before the shell is mounted.
 export function createShell(){
- const state=loadState();let mounted=false,commands=[],palette=null,monitor=null;
+ const state=loadState();let mounted=false,commands=[],palette=null,monitor=null,bindings=loadKeybindings();setCurrentKeybindings(bindings);const keyListeners=new Set();
  const root=document.documentElement;
  const save=()=>{try{localStorage.setItem(KEY,JSON.stringify({...state,maximized:null}));}catch{}};
  function apply(){
@@ -51,7 +54,7 @@ export function createShell(){
   $('sash-editor').setAttribute('aria-orientation',state.orientation==='row'?'vertical':'horizontal');$('sash-editor').className='sash '+(state.orientation==='row'?'sash-v':'sash-h');
   for(const b of document.querySelectorAll('[data-activity]'))b.setAttribute('aria-pressed',String(state.show.sidebar&&b.dataset.activity===state.view));
   for(const v of document.querySelectorAll('.sidebar-view'))v.hidden=v.dataset.view!==state.view;
-  $('sidebar-title').textContent=[...VIEWS,{id:'settings',label:'설정'}].find(v=>v.id===state.view)?.label||'';
+  $('sidebar-title').textContent=[...VIEWS,...HIDDEN_VIEWS].find(v=>v.id===state.view)?.label||'';
   for(const [id,key] of [['toggle-sidebar','sidebar'],['toggle-panel','panel'],['toggle-aux','aux']]){const b=$(id);if(b)b.setAttribute('aria-pressed',String(state.show[key]));}
   window.dispatchEvent(new Event('resize'));
  }
@@ -81,6 +84,11 @@ export function createShell(){
   setMonitor(m){monitor=m;},
   commands:()=>commands,
   register(list){commands=commands.concat(list);},
+  keyFor:id=>bindings[id]||'',
+  bindings:()=>({...bindings}),
+  setBinding(id,key){if(!(id in DEFAULT_KEYBINDINGS))return;bindings[id]=key;saveKeybindings(bindings);setCurrentKeybindings(bindings);for(const f of keyListeners)f();},
+  resetBindings(){bindings={...DEFAULT_KEYBINDINGS};saveKeybindings(bindings);setCurrentKeybindings(bindings);for(const f of keyListeners)f();},
+  onBindings(f){keyListeners.add(f);},
   openPalette(prefix=''){palette?.open(prefix);},
   reset(){Object.assign(state,structuredClone(DEFAULT));apply();save();},
   setOrientation(o){state.orientation=o==='column'?'column':'row';apply();save();},
@@ -101,8 +109,13 @@ function mountShell(layout,state,options,{apply,save,setPalette}){
  explorer.insertAdjacentHTML('beforeend','<section class="explorer-outline"><h3>회로 개요</h3><p id="explorer-circuit-summary" class="form-hint"></p><div class="explorer-links"><button type="button" data-goto-view="parts">부품 추가</button><button type="button" data-goto-view="examples">HAL 예제</button><button type="button" data-goto-view="board">핀 설정</button></div></section>');
  const debug=$('debug-panel');if(debug){debug.hidden=false;$('view-debug').append(debug);}
  const debugBar=document.createElement('div');debugBar.className='debug-toolbar';debugBar.setAttribute('role','toolbar');debugBar.setAttribute('aria-label','디버그 제어');
- for(const [cmd,label,glyph] of [['start','디버그 시작 (Ctrl+Shift+F5)','▶'],['continue','계속 (F5)','⏵'],['pause','일시정지 (F6)','⏸'],['over','한 줄 실행 (F10)','↷'],['into','함수 안으로 (F11)','↓'],['out','함수 밖으로 (Shift+F11)','↑'],['stop','정지 (Shift+F5)','■']]){const b=document.createElement('button');b.type='button';b.dataset.debug=cmd;b.title=label;b.setAttribute('aria-label',label);b.textContent=glyph;b.onclick=()=>{if(cmd==='start')$('debug-start')?.click();else if(cmd==='continue'){if($('run')?.textContent.includes('계속'))$('run').click();}else options.debugCommand?.(cmd);};debugBar.append(b);}
- $('view-debug').prepend(debugBar);
+ const DEBUG_BUTTONS=[['start','디버그 시작','▶','run.debug'],['continue','계속','⏵','run.run'],['pause','일시정지','⏸','run.pause'],['over','한 줄 실행','↷','run.over'],['into','함수 안으로','↓','run.into'],['out','함수 밖으로','↑','run.out'],['stop','정지','■','run.stop']];
+ for(const [cmd,label,glyph] of DEBUG_BUTTONS){const b=document.createElement('button');b.type='button';b.dataset.debug=cmd;b.setAttribute('aria-label',label);b.textContent=glyph;b.onclick=()=>{if(cmd==='start')$('debug-start')?.click();else if(cmd==='continue'){if($('run')?.textContent.includes('계속'))$('run').click();}else options.debugCommand?.(cmd);};debugBar.append(b);}
+ const debugTitles=()=>{for(const [cmd,label,,id] of DEBUG_BUTTONS){const k=layout.keyFor(id);debugBar.querySelector(`[data-debug="${cmd}"]`).title=k?`${label} (${k})`:label;}};debugTitles();layout.onBindings(debugTitles);
+ // The run target and build configuration live in the Run and Debug view.
+ const runConfig=document.createElement('section');runConfig.className='run-config';runConfig.innerHTML='<h3>실행 환경</h3>';
+ const targetLabel=document.querySelector('.native-target-label');if(targetLabel){[...targetLabel.childNodes].forEach(n=>{if(n.nodeType===3)n.remove();});runConfig.append(targetLabel);}if($('native-config'))runConfig.append($('native-config'));
+ $('view-debug').prepend(runConfig,debugBar);
  const docs=$('device-docs-panel');if(docs){docs.hidden=false;$('view-docs').append(docs);}
  const settings=$('ide-settings-panel');if(settings){settings.hidden=false;$('view-settings').append(settings);}
  document.querySelector('[data-monitor="debug"]')?.remove();
@@ -150,9 +163,10 @@ function mountShell(layout,state,options,{apply,save,setPalette}){
  // ---- Activity bar ----
  const bar=$('activitybar');
  const top=document.createElement('div');top.className='activity-top';const bottom=document.createElement('div');bottom.className='activity-bottom';
- for(const v of VIEWS){const b=document.createElement('button');b.type='button';b.dataset.activity=v.id;b.className='activity-item';b.innerHTML=icon(v.id,24);b.title=`${v.label} (${v.key})`;b.setAttribute('aria-label',v.label);b.onclick=()=>layout.showView(v.id,{toggle:true});top.append(b);}
- const settingsButton=document.createElement('button');settingsButton.type='button';settingsButton.dataset.activity='settings';settingsButton.className='activity-item';settingsButton.innerHTML=icon('settings',24);settingsButton.title='설정 (Ctrl+,)';settingsButton.setAttribute('aria-label','설정');settingsButton.onclick=()=>layout.showView('settings',{toggle:true});
- bottom.append(settingsButton);bar.append(top,bottom);
+ for(const id of state.activityOrder){const v=VIEWS.find(x=>x.id===id);const b=document.createElement('button');b.type='button';b.dataset.activity=v.id;b.className='activity-item';b.innerHTML=icon(v.id,24);b.setAttribute('aria-label',v.label);b.draggable=true;b.onclick=()=>layout.showView(v.id,{toggle:true});top.append(b);}
+ bar.append(top,bottom);
+ setupActivityTips(bar,id=>{const v=VIEWS.find(x=>x.id===id),k=layout.keyFor('view.'+id);return v?(k?`${v.label} (${k})`:v.label):'';});
+ setupActivityDrag(top,order=>{state.activityOrder=order;save();});
  // Explorer quick links
  explorer.addEventListener('click',e=>{const b=e.target.closest('[data-goto-view]');if(b)layout.showView(b.dataset.gotoView);});
  // ---- Title bar layout toggles ----
@@ -162,14 +176,14 @@ function mountShell(layout,state,options,{apply,save,setPalette}){
  const tPanel=button('toggle-panel','패널 표시','panel','패널 표시 / 숨기기 (Ctrl+J)');tPanel.onclick=()=>layout.toggle('panel');
  const tAux=button('toggle-aux','보조 사이드바 표시','aux','속성 패널 표시 / 숨기기 (Ctrl+Alt+B)');tAux.onclick=()=>layout.toggle('aux');
  toggles.append(tSide,tPanel,tAux);actions.insertBefore(toggles,$('save'));
- for(const id of ['new','workspace-open','open'])$(id)?.classList.add('titlebar-hidden');
+ for(const id of ['new','workspace-open','open','app-update'])$(id)?.classList.add('titlebar-hidden');
  $('auxbar-close').onclick=()=>layout.toggle('aux');
  // ---- Status bar ----
  const left=$('status-left'),right=$('status-right');
  const item=(node,cls)=>{const s=document.createElement('span');s.className='status-item'+(cls?' '+cls:'');if(node)s.append(node);return s;};
  const strip2=document.querySelector('.monitor-strip');
  const runState=strip2.firstElementChild;runState.classList.add('status-item','status-run');left.append(runState);
- const target=document.createElement('button');target.type='button';target.className='status-item status-button';target.id='status-target';target.title='실행 대상 선택';target.onclick=()=>{$('native-target')?.focus();$('native-target')?.showPicker?.();};left.append(target);
+ const target=document.createElement('button');target.type='button';target.className='status-item status-button';target.id='status-target';target.title='실행 환경 선택 (실행 및 디버그)';target.onclick=()=>{layout.showView('debug');$('native-target')?.focus();};left.append(target);
  const problems=document.createElement('button');problems.type='button';problems.className='status-item status-button';problems.id='status-problems';problems.title='문제 보기';problems.onclick=()=>layout.showPanel('issues');left.append(problems);
  for(const s of [...strip2.children]){s.classList.add('status-item');left.append(s);}
  const buildStatus=$('build-status');if(buildStatus){buildStatus.classList.add('status-item');buildStatus.previousElementSibling?.classList.contains('toolbar-divider')&&buildStatus.previousElementSibling.remove();left.append(buildStatus);}
@@ -188,6 +202,9 @@ function mountShell(layout,state,options,{apply,save,setPalette}){
  new MutationObserver(update).observe(document.querySelector('.monitor-tabs'),{subtree:true,characterData:true,childList:true});
  if($('status-led'))new MutationObserver(update).observe($('status-led'),{attributes:true});
  $('native-target')?.addEventListener('change',update);new MutationObserver(update).observe($('current-board-name'),{childList:true,characterData:true,subtree:true});update();
+ // The update button lives in the 도움말 menu; a status item appears only while an update is downloading or ready.
+ const upd=$('app-update');if(upd){const st=document.createElement('button');st.type='button';st.className='status-item status-button';st.id='status-update';st.hidden=true;st.onclick=()=>upd.click();right.prepend(st);
+  const sync=()=>{const active=upd.classList.contains('update-ready')||/다운로드/.test(upd.textContent);st.hidden=upd.hidden||!active;st.textContent='⬆ '+upd.textContent;st.title=upd.title;};new MutationObserver(sync).observe(upd,{attributes:true,childList:true,characterData:true,subtree:true});sync();}
  // ---- HAL example list ----
  setupExampleList();
  // ---- Sashes ----
@@ -199,11 +216,12 @@ function mountShell(layout,state,options,{apply,save,setPalette}){
  registerCommands(layout,options);
  buildMenus(layout);
  setPalette(setupPalette(layout,options));
- keyboard(layout);
+ keyboard(layout,options);
+ setupKeybindingsView(layout);
  $('command-palette-open').onclick=()=>layout.openPalette('>');
  // Feedback banner becomes a toast with an icon.
  $('app-feedback')?.classList.add('toast');
- // Settings: keep the legacy tab hooks working (Ctrl+, opens the settings view).
+ // Settings: keep the legacy tab hooks working (view.settings opens the settings view).
  for(const b of document.querySelectorAll('.panel-tabs [data-tab="settings"],.panel-tabs [data-tab="docs"]'))b.hidden=true;
 }
 
@@ -249,7 +267,7 @@ const click=id=>()=>{const el=$(id);if(el&&!el.disabled)el.click();};
 
 function registerCommands(layout,options){
  const key=e=>e;
- const views=VIEWS.map(v=>({id:'view.'+v.id,label:`보기: ${v.label} 열기`,keys:v.key,group:'보기',run:()=>layout.showView(v.id)}));
+ const views=VIEWS.map(v=>({id:'view.'+v.id,label:`보기: ${v.label} 열기`,group:'보기',run:()=>layout.showView(v.id)}));
  layout.register([
   {id:'file.newProject',label:'새 프로젝트',group:'파일',run:click('new')},
   {id:'file.openProject',label:'프로젝트 폴더 열기',group:'파일',run:click('workspace-open')},
@@ -268,16 +286,17 @@ function registerCommands(layout,options){
   {id:'edit.delete',label:'회로: 선택 항목 삭제',keys:'Delete',group:'편집',run:click('delete')},
   {id:'edit.codeReset',label:'코드 초기화',group:'편집',run:click('code-reset')},
   {id:'edit.boardReset',label:'보드 구성 초기화',group:'편집',run:click('board-reset')},
-  {id:'view.palette',label:'명령 팔레트',keys:'Ctrl+Shift+P',group:'보기',run:()=>layout.openPalette('>')},
-  {id:'view.quickOpen',label:'파일로 이동',keys:'Ctrl+P',group:'보기',run:()=>layout.openPalette('')},
+  {id:'view.palette',label:'명령 팔레트',group:'보기',run:()=>layout.openPalette('>')},
+  {id:'view.quickOpen',label:'파일로 이동',group:'보기',run:()=>layout.openPalette('')},
   ...views,
-  {id:'view.settings',label:'보기: 설정 열기',keys:'Ctrl+,',group:'보기',run:()=>layout.showView('settings')},
-  {id:'view.toggleSidebar',label:'기본 사이드바 표시 전환',keys:'Ctrl+B',group:'보기',run:()=>layout.toggle('sidebar')},
-  {id:'view.togglePanel',label:'패널 표시 전환',keys:'Ctrl+J',group:'보기',run:()=>layout.toggle('panel')},
-  {id:'view.toggleAux',label:'속성 패널(보조 사이드바) 표시 전환',keys:'Ctrl+Alt+B',group:'보기',run:()=>layout.toggle('aux')},
-  {id:'view.problems',label:'패널: 문제 보기',keys:'Ctrl+Shift+M',group:'보기',run:()=>layout.showPanel('issues')},
-  {id:'view.output',label:'패널: 출력 보기',keys:'Ctrl+Shift+U',group:'보기',run:()=>layout.showPanel('log')},
-  {id:'view.terminal',label:'패널: 터미널 보기',keys:'Ctrl+`',group:'보기',run:()=>layout.showPanel('native')},
+  {id:'view.settings',label:'설정 (IDE · 테마 · 글꼴)',group:'편집',run:()=>layout.showView('settings')},
+  {id:'view.keybindings',label:'단축키 설정',group:'편집',run:()=>layout.showView('keybindings')},
+  {id:'view.toggleSidebar',label:'기본 사이드바 표시 전환',group:'보기',run:()=>layout.toggle('sidebar')},
+  {id:'view.togglePanel',label:'패널 표시 전환',group:'보기',run:()=>layout.toggle('panel')},
+  {id:'view.toggleAux',label:'속성 패널(보조 사이드바) 표시 전환',group:'보기',run:()=>layout.toggle('aux')},
+  {id:'view.problems',label:'패널: 문제 보기',group:'보기',run:()=>layout.showPanel('issues')},
+  {id:'view.output',label:'패널: 출력 보기',group:'보기',run:()=>layout.showPanel('log')},
+  {id:'view.terminal',label:'패널: 터미널 보기',group:'보기',run:()=>layout.showPanel('native')},
   {id:'view.serial',label:'패널: 직렬 모니터 보기',group:'보기',run:()=>layout.showPanel('bus')},
   {id:'view.wave',label:'패널: 파형 보기',group:'보기',run:()=>layout.showPanel('wave')},
   {id:'view.logic',label:'패널: 로직 분석기 보기',group:'보기',run:()=>layout.showPanel('signals')},
@@ -287,16 +306,16 @@ function registerCommands(layout,options){
   {id:'view.maxCode',label:'편집기 최대화 / 복원',group:'보기',run:()=>layout.maximize('code')},
   {id:'view.reset',label:'레이아웃 초기화',group:'보기',run:()=>layout.reset()},
   {id:'view.theme',label:'화면 테마: Dark / White 전환',group:'보기',run:click('appearance-toggle')},
-  {id:'view.themeSystem',label:'화면 테마: 시스템 설정 따르기',group:'보기',run:click('appearance-system')},
-  {id:'run.run',label:'실행 / 계속',keys:'F5',group:'실행',run:click('run')},
-  {id:'run.debug',label:'디버그 시작',keys:'Ctrl+Shift+F5',group:'실행',run:click('debug-start')},
-  {id:'run.stop',label:'정지',keys:'Shift+F5',group:'실행',run:()=>options.debugCommand?.('stop')},
-  {id:'run.pause',label:'일시정지',keys:'F6',group:'실행',run:()=>options.debugCommand?.('pause')},
-  {id:'run.over',label:'한 줄 실행',keys:'F10',group:'실행',run:()=>options.debugCommand?.('over')},
-  {id:'run.into',label:'함수 안으로',keys:'F11',group:'실행',run:()=>options.debugCommand?.('into')},
-  {id:'run.out',label:'함수 밖으로',keys:'Shift+F11',group:'실행',run:()=>options.debugCommand?.('out')},
+  {id:'view.themeSystem',label:'화면 테마: 시스템 설정 따르기',group:'보기',run:()=>{const sel=$('pref-appearance');if(sel){sel.value='system';sel.dispatchEvent(new Event('change',{bubbles:true}));}}},
+  {id:'run.run',label:'실행 / 계속',group:'실행',run:()=>options.runCommand?.('run')},
+  {id:'run.debug',label:'디버그 시작 / 계속',group:'실행',run:()=>options.runCommand?.('debug')},
+  {id:'run.stop',label:'디버그 및 실행 중지',group:'실행',run:()=>options.debugCommand?.('stop')},
+  {id:'run.pause',label:'일시정지',group:'실행',run:()=>options.debugCommand?.('pause')},
+  {id:'run.over',label:'한 줄 실행',group:'실행',run:()=>options.debugCommand?.('over')},
+  {id:'run.into',label:'함수 안으로',group:'실행',run:()=>options.debugCommand?.('into')},
+  {id:'run.out',label:'함수 밖으로',group:'실행',run:()=>options.debugCommand?.('out')},
   {id:'run.step',label:'20 ms 한 단계 실행',group:'실행',run:click('step')},
-  {id:'run.build',label:'빌드',keys:'Ctrl+Shift+B',group:'실행',run:click('ide-build')},
+  {id:'run.build',label:'빌드',group:'실행',run:click('ide-build')},
   {id:'run.target.sim',label:'실행 대상: 회로 시뮬레이터 (C 해석)',group:'실행',run:()=>options.setTarget?.('simulator')},
   {id:'run.target.emu',label:'실행 대상: 펌웨어 에뮬레이터 (ARM ELF)',group:'실행',run:()=>options.setTarget?.('emulator')},
   {id:'run.target.arm',label:'실행 대상: STM32 · ARM GCC (실물 보드)',group:'실행',run:()=>options.setTarget?.('arm')},
@@ -309,8 +328,8 @@ function registerCommands(layout,options){
   {id:'terminal.stop',label:'터미널: 종료',group:'터미널',run:click('terminal-close')},
   {id:'terminal.clear',label:'출력 지우기',group:'터미널',run:click('clear-console')},
   {id:'help.guide',label:'사용 방법',group:'도움말',run:click('help')},
-  {id:'help.update',label:'업데이트 확인',group:'도움말',run:click('app-update')},
-  {id:'help.shortcuts',label:'키보드 단축키 보기',group:'도움말',run:()=>layout.openPalette('>')}
+  {id:'help.update',label:'업데이트 확인 · 설치',group:'도움말',run:click('app-update')},
+  {id:'help.shortcuts',label:'키보드 단축키 보기',group:'도움말',run:()=>layout.showView('keybindings')}
  ].map(key));
 }
 
@@ -318,8 +337,8 @@ function buildMenus(layout){
  const bar=$('menubar');
  const groups=['파일','편집','보기','실행','터미널','도움말'];
  const map={'파일':['file.newProject','file.openProject','file.openCircuit','-','file.save','file.exportMain','-','file.import','file.importFolder','file.addSource','-','file.openElf'],
-  '편집':['edit.undo','edit.redo','-','edit.find','edit.replace','-','edit.rotate','edit.delete','-','edit.codeReset','edit.boardReset'],
-  '보기':['view.palette','view.quickOpen','-','view.explorer','view.parts','view.examples','view.board','view.debug','view.docs','view.settings','-','view.toggleSidebar','view.togglePanel','view.toggleAux','-','view.problems','view.output','view.terminal','view.serial','view.wave','view.logic','-','view.swap','view.orientation','view.maxCircuit','view.maxCode','view.reset','-','view.theme','view.themeSystem'],
+  '편집':['edit.undo','edit.redo','-','edit.find','edit.replace','-','edit.rotate','edit.delete','-','edit.codeReset','edit.boardReset','-','view.settings','view.keybindings'],
+  '보기':['view.palette','view.quickOpen','-','view.explorer','view.parts','view.examples','view.board','view.debug','view.docs','-','view.toggleSidebar','view.togglePanel','view.toggleAux','-','view.problems','view.output','view.terminal','view.serial','view.wave','view.logic','-','view.swap','view.orientation','view.maxCircuit','view.maxCode','view.reset','-','view.theme','view.themeSystem'],
   '실행':['run.run','run.debug','run.stop','run.pause','-','run.over','run.into','run.out','run.step','-','run.build','-','run.target.sim','run.target.emu','run.target.arm','run.target.host','-','run.pinout','run.tools','run.connection','run.sound'],
   '터미널':['terminal.start','terminal.stop','terminal.clear'],
   '도움말':['help.guide','help.shortcuts','help.update']};
@@ -328,16 +347,18 @@ function buildMenus(layout){
  for(const g of groups){
   const b=document.createElement('button');b.type='button';b.className='menubar-item';b.textContent=g;b.setAttribute('aria-haspopup','menu');b.setAttribute('aria-expanded','false');
   const menu=document.createElement('div');menu.className='menu workbench-popover';menu.setAttribute('popover','auto');menu.setAttribute('role','menu');menu.setAttribute('aria-label',g);menu.id='menu-'+groups.indexOf(g);
-  for(const id of map[g]){if(id==='-'){const hr=document.createElement('div');hr.className='menu-separator';hr.setAttribute('role','separator');menu.append(hr);continue;}const c=byId.get(id);if(!c)continue;const item=document.createElement('button');item.type='button';item.className='menu-item';item.setAttribute('role','menuitem');item.dataset.command=c.id;item.innerHTML=`<span>${escapeHtml(c.label.replace(/^보기: |^패널: /,''))}</span>${c.keys?`<kbd>${escapeHtml(c.keys)}</kbd>`:''}`;item.onclick=()=>{menu.hidePopover();c.run();};menu.append(item);}
+  for(const id of map[g]){if(id==='-'){const hr=document.createElement('div');hr.className='menu-separator';hr.setAttribute('role','separator');menu.append(hr);continue;}const c=byId.get(id);if(!c)continue;const item=document.createElement('button');item.type='button';item.className='menu-item';item.setAttribute('role','menuitem');item.dataset.command=c.id;item.innerHTML=`<span>${escapeHtml(c.label.replace(/^보기: |^패널: /,''))}</span><kbd></kbd>`;item.onclick=()=>{menu.hidePopover();c.run();};menu.append(item);}
   document.body.append(menu);b.setAttribute('popovertarget',menu.id);bar.append(b);
   menu.addEventListener('toggle',e=>{b.setAttribute('aria-expanded',String(e.newState==='open'));if(e.newState==='open'){open=menu;const r=b.getBoundingClientRect();menu.style.left=r.left+'px';menu.style.top=(r.bottom+2)+'px';refreshMenu(menu);}else if(open===menu)open=null;});
   b.addEventListener('pointerenter',()=>{if(open&&open!==menu){open.hidePopover();menu.showPopover();}});
   menu.addEventListener('keydown',e=>{const items=[...menu.querySelectorAll('.menu-item:not(:disabled)')],i=items.indexOf(document.activeElement);if(e.key==='ArrowDown'||e.key==='ArrowUp'){e.preventDefault();items[(i+(e.key==='ArrowDown'?1:items.length-1))%items.length]?.focus();}if(e.key==='ArrowRight'||e.key==='ArrowLeft'){e.preventDefault();const menus=[...bar.children],j=menus.indexOf(b),next=menus[(j+(e.key==='ArrowRight'?1:menus.length-1))%menus.length];menu.hidePopover();next.click();requestAnimationFrame(()=>document.querySelector('#'+next.getAttribute('popovertarget')+' .menu-item')?.focus());}});
  }
+ // Escape closes an open menu before the circuit editor's own Escape handling sees it.
+ window.addEventListener('keydown',e=>{if(open&&e.key==='Escape'){e.preventDefault();e.stopImmediatePropagation();const b=bar.querySelector(`[popovertarget="${open.id}"]`);open.hidePopover();b?.focus();}},true);
  function refreshMenu(menu){
   // Mirror the enabled state of the controls each command clicks.
   const targets={'file.newProject':'new','file.openProject':'workspace-open','file.openCircuit':'open','file.save':'save','file.exportMain':'main-export','file.import':'firmware-import','file.importFolder':'firmware-folder','file.addSource':'source-add','edit.undo':'undo','edit.redo':'redo','edit.rotate':'rotate','edit.delete':'delete','edit.codeReset':'code-reset','edit.boardReset':'board-reset','run.debug':'debug-start','run.step':'step','run.build':'ide-build','run.tools':'native-tools','run.connection':'native-connection','run.pinout':'pinout-open','terminal.start':'terminal-start','terminal.stop':'terminal-close'};
-  for(const item of menu.querySelectorAll('[data-command]')){const id=targets[item.dataset.command];const el=id&&$(id);item.disabled=!!id&&(!el||el.disabled||(el.hidden&&!['new','workspace-open','open','native-connection','step','native-tools'].includes(id)));}
+  for(const item of menu.querySelectorAll('[data-command]')){const k=keyOf(layout,byId.get(item.dataset.command)),kbd=item.querySelector('kbd');kbd.textContent=k;kbd.hidden=!k;const id=targets[item.dataset.command];const el=id&&$(id);item.disabled=!!id&&(!el||el.disabled||(el.hidden&&!['new','workspace-open','open','native-connection','step','native-tools'].includes(id)));}
  }
 }
 
@@ -355,7 +376,7 @@ function setupPalette(layout,options){
    if(!items.length&&q)items=[{id:'hint',label:'> 를 입력하면 명령을 검색합니다',group:'',run:()=>{input.value='>'+q;compute();}}];}
   index=0;paint();
  }
- function paint(){list.innerHTML=items.map((c,i)=>`<div role="option" id="palette-item-${i}" class="palette-item ${i===index?'active':''}" aria-selected="${i===index}" data-index="${i}"><span class="palette-label">${escapeHtml(c.label)}</span><span class="palette-group">${escapeHtml(c.group||'')}</span>${c.keys?`<kbd>${escapeHtml(c.keys)}</kbd>`:''}</div>`).join('')||'<div class="palette-empty">일치하는 명령이 없습니다.</div>';input.setAttribute('aria-activedescendant',items.length?'palette-item-'+index:'');list.querySelector('.active')?.scrollIntoView({block:'nearest'});}
+ function paint(){list.innerHTML=items.map((c,i)=>`<div role="option" id="palette-item-${i}" class="palette-item ${i===index?'active':''}" aria-selected="${i===index}" data-index="${i}"><span class="palette-label">${escapeHtml(c.label)}</span><span class="palette-group">${escapeHtml(c.group||'')}</span>${keyOf(layout,c)?`<kbd>${escapeHtml(keyOf(layout,c))}</kbd>`:''}</div>`).join('')||'<div class="palette-empty">일치하는 명령이 없습니다.</div>';input.setAttribute('aria-activedescendant',items.length?'palette-item-'+index:'');list.querySelector('.active')?.scrollIntoView({block:'nearest'});}
  function run(i){const c=items[i];if(!c)return;dialog.close();setTimeout(()=>c.run(),0);}
  input.addEventListener('input',compute);
  input.addEventListener('keydown',e=>{if(e.key==='ArrowDown'||e.key==='ArrowUp'){e.preventDefault();index=(index+(e.key==='ArrowDown'?1:items.length-1))%Math.max(1,items.length);paint();}if(e.key==='Enter'){e.preventDefault();run(index);}});
@@ -364,22 +385,82 @@ function setupPalette(layout,options){
  return {open(prefix=''){if(document.querySelector('dialog[open]'))return;input.value=prefix;dialog.showModal();compute();input.focus();input.setSelectionRange(input.value.length,input.value.length);}};
 }
 
-function keyboard(layout){
+function keyboard(layout,options){
+ const match=createMatcher(()=>layout.bindings());
+ const byId=id=>layout.commands().find(c=>c.id===id);
  window.addEventListener('keydown',e=>{
-  if(e.defaultPrevented||e.isComposing)return;
-  if(document.querySelector('dialog[open]:not(#command-palette)'))return;
-  const ctrl=e.ctrlKey||e.metaKey,k=e.key.toLowerCase();
-  const hit=(fn)=>{e.preventDefault();e.stopImmediatePropagation();fn();};
-  if(ctrl&&e.shiftKey&&k==='p')return hit(()=>layout.openPalette('>'));
-  if(e.key==='F1')return hit(()=>layout.openPalette('>'));
-  if(ctrl&&!e.shiftKey&&!e.altKey&&k==='p')return hit(()=>layout.openPalette(''));
-  if(ctrl&&!e.shiftKey&&e.altKey&&k==='b')return hit(()=>layout.toggle('aux'));
-  if(ctrl&&!e.shiftKey&&!e.altKey&&k==='b')return hit(()=>layout.toggle('sidebar'));
-  if(ctrl&&!e.shiftKey&&!e.altKey&&k==='j')return hit(()=>layout.toggle('panel'));
-  if(ctrl&&!e.shiftKey&&e.key==='`')return hit(()=>layout.showPanel('native'));
-  if(ctrl&&e.shiftKey&&k==='m')return hit(()=>layout.showPanel('issues'));
-  if(ctrl&&e.shiftKey&&k==='u')return hit(()=>layout.showPanel('log'));
-  // Inside Monaco, its own Ctrl+Shift bindings (delete line, go to symbol…) win over view shortcuts.
-  if(ctrl&&e.shiftKey&&!e.altKey&&!document.activeElement?.closest('.monaco-editor')){const view=VIEWS.find(v=>v.key.toLowerCase()==='ctrl+shift+'+k);if(view)return hit(()=>layout.showView(view.id));}
+  if(e.defaultPrevented||e.isComposing||e.repeat)return;
+  if(document.querySelector('dialog[open]:not(#command-palette)')||document.activeElement?.closest('.keybinding-capture'))return;
+  const key=eventKey(e);if(!key)return;
+  // Inside Monaco, plain Ctrl+Shift+letter view shortcuts give way to the editor's own commands.
+  if(document.activeElement?.closest('.monaco-editor')&&/^Ctrl\+Shift\+[A-Z]$/.test(key)&&!['Ctrl+Shift+P','Ctrl+Shift+B'].includes(key))return;
+  if(key==='F1'){e.preventDefault();e.stopImmediatePropagation();layout.openPalette('>');return;}
+  const hit=match(e);if(!hit)return;
+  e.preventDefault();e.stopImmediatePropagation();
+  if(hit.id)byId(hit.id)?.run();
  },true);
+}
+
+const keyOf=(layout,c)=>c?(layout.keyFor(c.id)||c.keys||''):'';
+
+// Activity bar tooltips sit to the right of the icon, vertically centred (VS Code style).
+function setupActivityTips(bar,labelFor){
+ const tip=document.createElement('div');tip.className='activity-tip';tip.setAttribute('role','tooltip');tip.id='activity-tip';tip.hidden=true;document.body.append(tip);
+ let timer=null;
+ const show=b=>{const text=labelFor(b.dataset.activity);if(!text)return;tip.textContent=text;tip.hidden=false;const r=b.getBoundingClientRect();tip.style.left=(r.right+6)+'px';tip.style.top=(r.top+r.height/2-tip.offsetHeight/2)+'px';b.setAttribute('aria-describedby','activity-tip');};
+ const hide=()=>{clearTimeout(timer);tip.hidden=true;};
+ bar.addEventListener('pointerover',e=>{const b=e.target.closest('[data-activity]');if(!b)return;clearTimeout(timer);timer=setTimeout(()=>show(b),tip.hidden?350:0);});
+ bar.addEventListener('pointerout',e=>{const b=e.target.closest('[data-activity]');if(b&&!b.contains(e.relatedTarget))hide();});
+ bar.addEventListener('focusin',e=>{const b=e.target.closest('[data-activity]');if(b&&b.matches(':focus-visible'))show(b);});
+ bar.addEventListener('focusout',hide);bar.addEventListener('pointerdown',hide);bar.addEventListener('dragstart',hide);
+}
+
+// Drag-and-drop (and Alt+Arrow) reordering of the activity bar icons.
+function setupActivityDrag(top,onChange){
+ let dragged=null;
+ const order=()=>[...top.querySelectorAll('[data-activity]')].map(b=>b.dataset.activity);
+ const clear=()=>top.querySelectorAll('.drop-before,.drop-after').forEach(b=>b.classList.remove('drop-before','drop-after'));
+ top.addEventListener('dragstart',e=>{dragged=e.target.closest('[data-activity]');if(!dragged)return;e.dataTransfer.effectAllowed='move';e.dataTransfer.setData('text/plain',dragged.dataset.activity);dragged.classList.add('dragging');});
+ top.addEventListener('dragover',e=>{if(!dragged)return;const b=e.target.closest('[data-activity]');e.preventDefault();e.dataTransfer.dropEffect='move';clear();if(b&&b!==dragged){const r=b.getBoundingClientRect();b.classList.add(e.clientY<r.top+r.height/2?'drop-before':'drop-after');}});
+ top.addEventListener('dragleave',e=>{if(!top.contains(e.relatedTarget))clear();});
+ top.addEventListener('drop',e=>{if(!dragged)return;e.preventDefault();const b=e.target.closest('[data-activity]');if(b&&b!==dragged){const r=b.getBoundingClientRect();if(e.clientY<r.top+r.height/2)b.before(dragged);else b.after(dragged);}else if(!b)top.append(dragged);clear();onChange(order());});
+ top.addEventListener('dragend',()=>{dragged?.classList.remove('dragging');dragged=null;clear();});
+ top.addEventListener('keydown',e=>{const b=e.target.closest('[data-activity]');if(!b||!e.altKey||!['ArrowUp','ArrowDown'].includes(e.key))return;e.preventDefault();if(e.key==='ArrowUp'&&b.previousElementSibling)b.previousElementSibling.before(b);else if(e.key==='ArrowDown'&&b.nextElementSibling)b.nextElementSibling.after(b);b.focus();onChange(order());});
+}
+
+// Keyboard shortcut editor (편집 → 단축키 설정).
+function setupKeybindingsView(layout){
+ const view=$('view-keybindings');if(!view)return;
+ view.innerHTML='<div class="keybinding-head"><input id="keybinding-search" type="search" placeholder="명령 또는 키 검색" aria-label="단축키 검색" autocomplete="off"><button type="button" id="keybinding-reset-all" class="secondary" title="모든 단축키를 기본값으로">초기화</button></div><p class="form-hint">항목을 누른 뒤 원하는 키 조합을 입력하세요. Enter 저장 · Esc 취소 · Backspace 지우기. 두 단계 키(예: Ctrl+K Ctrl+S)도 연속으로 누르면 됩니다.</p><div id="keybinding-list" class="keybinding-list" role="list"></div>';
+ const list=view.querySelector('#keybinding-list'),search=view.querySelector('#keybinding-search');
+ const label=id=>layout.commands().find(c=>c.id===id)?.label?.replace(/^보기: /,'')||id;
+ let editing=null,captured='',chordTimer=null;
+ function render(){
+  const q=search.value.trim().toLowerCase(),b=layout.bindings();
+  const rows=Object.keys(DEFAULT_KEYBINDINGS).filter(id=>!q||label(id).toLowerCase().includes(q)||(b[id]||'').toLowerCase().includes(q)||id.includes(q));
+  list.innerHTML=rows.map(id=>{const k=b[id],changed=k!==DEFAULT_KEYBINDINGS[id],clash=conflicts(b,id,k);
+   return `<div class="keybinding-row" role="listitem" data-binding="${id}"><span class="keybinding-label" title="${escapeHtml(id)}">${escapeHtml(label(id))}${clash.length?`<small class="keybinding-conflict">충돌: ${escapeHtml(clash.map(label).join(', '))}</small>`:''}</span><button type="button" class="keybinding-key${editing===id?' keybinding-capture':''}" data-edit="${id}" aria-label="${escapeHtml(label(id))} 단축키 변경">${editing===id?escapeHtml(captured||'키 입력…'):(k?`<kbd>${escapeHtml(k)}</kbd>`:'<span class="form-hint">없음</span>')}</button>${changed?`<button type="button" class="keybinding-reset" data-reset="${id}" title="기본값 (${escapeHtml(DEFAULT_KEYBINDINGS[id])})" aria-label="${escapeHtml(label(id))} 기본값으로">↺</button>`:'<span class="keybinding-reset-spacer"></span>'}</div>`;}).join('')||'<p class="form-hint">일치하는 명령이 없습니다.</p>';
+  if(editing)list.querySelector('.keybinding-capture')?.focus();
+ }
+ const stop=()=>{editing=null;captured='';clearTimeout(chordTimer);render();};
+ list.addEventListener('click',e=>{const edit=e.target.closest('[data-edit]'),reset=e.target.closest('[data-reset]');
+  if(edit){editing=edit.dataset.edit;captured='';render();}
+  if(reset){layout.setBinding(reset.dataset.reset,DEFAULT_KEYBINDINGS[reset.dataset.reset]);render();}});
+ list.addEventListener('keydown',e=>{
+  if(!editing||!e.target.closest('.keybinding-capture'))return;
+  e.preventDefault();e.stopPropagation();
+  if(!e.ctrlKey&&!e.altKey&&!e.shiftKey){
+   if(e.key==='Escape')return stop();
+   if(e.key==='Enter'){if(captured)layout.setBinding(editing,captured);return stop();}
+   if(e.key==='Backspace'||e.key==='Delete'){layout.setBinding(editing,'');return stop();}
+  }
+  const key=eventKey(e);if(!key)return;
+  captured=captured&&!captured.includes(' ')&&chordTimer?captured+' '+key:key;
+  clearTimeout(chordTimer);chordTimer=setTimeout(()=>{chordTimer=null;},1200);
+  const btn=list.querySelector('.keybinding-capture');if(btn)btn.textContent=captured;
+ });
+ list.addEventListener('focusout',e=>{if(editing&&e.target.closest('.keybinding-capture')&&!list.contains(e.relatedTarget))setTimeout(()=>{if(editing&&!list.querySelector('.keybinding-capture:focus'))stop();},0);});
+ search.addEventListener('input',render);
+ view.querySelector('#keybinding-reset-all').onclick=()=>{layout.resetBindings();render();};
+ layout.onBindings(render);render();
 }

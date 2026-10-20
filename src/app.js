@@ -1,3 +1,4 @@
+import {keyFor,withKey} from './keybindings.js';
 import {showSurface,removeSurface} from './surfaces.js';
 import {searchHalExamples} from './hal-example-search.js';
 import {CATALOG_BY_TYPE} from './catalog-defs.js';
@@ -145,7 +146,7 @@ function refresh({preserveWires=false}={}){
  $('code').readOnly=running();$('project-name').readOnly=running();
  editorSearch.refresh();
  for(const id of ['pinout-open','firmware-mode','firmware-import','firmware-folder','firmware-check','hal-example','code-reset','board-reset'])$(id).disabled=running();
- $('run').classList.toggle('running',running()||starting);$('run').textContent=starting?'■  빌드 취소':runtime?.debug.paused?'계속 실행 (F5)':running()?'■  시뮬레이션 정지':'▶  실행 (F5)';
+ $('run').classList.toggle('running',running()||starting);$('run').textContent=starting?'■  빌드 취소':runtime?.debug.paused?withKey('계속 실행','run.run'):running()?'■  시뮬레이션 정지':withKey('▶  실행','run.run');
  $('step').disabled=status==='running';
  $('mode-label').textContent=running()?'시뮬레이션 실행 중':status==='error'?'회로 확인 필요':'회로 편집';
  $('run-status').textContent=runtime?.debug.paused?'일시정지':({running:'실행 중',paused:'한 단계 실행',stopped:'준비됨',error:'오류로 정지'})[status];
@@ -414,7 +415,7 @@ async function openElf(){
  try{if(!window.desktop?.openElf)throw new Error('ELF 열기는 데스크톱 앱에서 사용할 수 있습니다.');const opened=await window.desktop.openElf();if(!opened)return;
   if(running())stop();firmware={bytes:opened.bytes,name:opened.name,key:null,source:'file'};
   const select=$('native-target');if(select&&select.value!=='emulator'){select.value='emulator';select.dispatchEvent(new Event('change'));}
-  log(`펌웨어 ELF를 열었습니다 · ${opened.name} · ${(opened.bytes.length/1024).toFixed(1)} KB. F5로 에뮬레이터에서 실행합니다.`);
+  log(`펌웨어 ELF를 열었습니다 · ${opened.name} · ${(opened.bytes.length/1024).toFixed(1)} KB. ${keyFor('run.run')||'실행 버튼'}으로 에뮬레이터에서 실행합니다.`);
  }catch(error){log(error.message,'error');}
 }
 function debugCommand(command){
@@ -425,6 +426,17 @@ function debugCommand(command){
  if(command==='pause'){if(status==='running'){runtime.debug.enabled=true;runtime.debug.mode='into';}return;}
  if(!runtime.debug.paused)return;if(command==='out'&&runtime.depth<=1)return;
  runtime.resume(command);simTime=runtime.microTime/1000;status='running';ide?.debugView();refresh();
+}
+// Keyboard/menu entry points: run (Ctrl+F5), start debugging (F10), stop (Ctrl+F2) and the step commands.
+function runCommand(kind){
+ if(runtime?.debug.paused){$('run').click();return;}
+ if(running()||starting)return;
+ if(kind==='debug'){ide?.debug('start');return;}
+ $('run').click();
+}
+function shellDebugCommand(command){
+ if(command==='stop'&&starting){cancelStart();return;}
+ if(ide?.debug)ide.debug(command);else debugCommand(command);
 }
 $('step').onclick=()=>{if(!runtime||status==='error'){if(ide?.emulator()){void startRun({}).then(ok=>{if(ok){status='paused';refresh();}});return;}initializeRuntime();}else {try{simTime+=20;result=session.tick(simTime);recompute();}catch(e){status='error';log(e.message,'error');}}refresh();};
 setInterval(()=>{
@@ -517,7 +529,6 @@ $('help').onclick=$('api-help').onclick=()=>$('help-dialog').showModal();
 window.addEventListener('keydown',e=>{
  if(e.defaultPrevented)return;
  const editing=['INPUT','TEXTAREA','SELECT'].includes(document.activeElement.tagName)||document.activeElement.isContentEditable,modal=document.querySelector('dialog[open]');
- if(e.key==='F5'){e.preventDefault();if(!e.ctrlKey&&!e.metaKey&&!e.altKey&&!e.shiftKey&&!modal&&!e.repeat)$('run').click();return;}
  if(modal)return;
  if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='s'){e.preventDefault();save();return;}
  if(document.activeElement===$('code')&&(e.ctrlKey||e.metaKey)&&['z','y'].includes(e.key.toLowerCase())){e.preventDefault();editUndo(e.key.toLowerCase()==='y'||e.shiftKey);return;}
@@ -553,7 +564,7 @@ deviceDocs=setupDeviceDocs({getProject:()=>project,getSelection:()=>selection,is
 }});
 resizing=setupResizing({getProject:()=>project,getSelection:()=>selection,isRunning:running,canResize:()=>!drag&&!pending&&mode==='select',focus:frame=>{const b=frame.bounds,points=[[0,0],[1,0],[1,1],[0,1]].map(([x,y])=>frame.point(b.x+x*b.width,b.y+y*b.height)),xs=points.map(p=>p.x),ys=points.map(p=>p.y),left=Math.min(...xs),top=Math.min(...ys),width=Math.max(...xs)-left,height=Math.max(...ys)-top,w=Math.max(430,width*1.8,height*1.8*1120/730);view={x:left+width/2-w/2,y:top+height/2-w*730/1120/2,w,h:w*730/1120};viewUpdate();},onError:message=>log(message,'error'),select:target=>{selection=target;pending=null;mode='select';inspectTab();refresh();},preview:draft=>{clearTimeout(saveTimer);project=draft;refresh();pinSearch();},cancel:base=>{project=base;changed();pinSearch();},commit:(base,draft)=>{validateProject(draft);project=base;checkpoint();project=draft;changed();pinSearch();},resize:(target,scale)=>{if(running())return;const draft=structuredClone(project);resizeObject(draft,target,scale);validateProject(draft);checkpoint();project=draft;selection=target;changed();pinSearch();}});
 const logicAnalyzer=setupLogicAnalyzer({getSession:()=>session,getProject:()=>project,isRunning:()=>status==='running',log,onNoise:noise=>{checkpoint();project.simulation={...(project.simulation||{}),noise};autosave();}});
-layout.mount({openElf,debugCommand,find:replace=>editorSearch.open(replace),files:()=>[project.code!==undefined?'main.c':null,...(project.firmware?.files||[]).map(f=>f.name)].filter(Boolean),openFile:name=>{if(name!=='main.c'&&!project.firmware?.files.some(f=>f.name===name))return;sourceFile=name;syncEditor();layout.reveal('code');ide?.editor?.focus?.();},gotoLine:line=>ide?.editor?.goto?.(line),setTarget:value=>{const select=$('native-target');if(!select||select.disabled||![...select.options].some(o=>o.value===value))return;select.value=value;select.dispatchEvent(new Event('change'));}});layout.setMonitor(monitor);
+layout.mount({openElf,debugCommand:shellDebugCommand,runCommand,find:replace=>editorSearch.open(replace),files:()=>[project.code!==undefined?'main.c':null,...(project.firmware?.files||[]).map(f=>f.name)].filter(Boolean),openFile:name=>{if(name!=='main.c'&&!project.firmware?.files.some(f=>f.name===name))return;sourceFile=name;syncEditor();layout.reveal('code');ide?.editor?.focus?.();},gotoLine:line=>ide?.editor?.goto?.(line),setTarget:value=>{const select=$('native-target');if(!select||select.disabled||![...select.options].some(o=>o.value===value))return;select.value=value;select.dispatchEvent(new Event('change'));}});layout.setMonitor(monitor);
 setupTabAccessibility();
 canvasKeys=setupCanvasKeyboard(svg,{
  isDragging:()=>!!drag,
@@ -578,7 +589,7 @@ canvasKeys=setupCanvasKeyboard(svg,{
  removeBend:target=>{if(running()||drag||pending)return;const wire=project.wires.find(w=>w.id===target.id);if(!wire?.points?.[target.index])return;checkpoint();wire.points.splice(target.index,1);changed();},
  addBend:target=>{if(running()||drag||pending)return;const draft=structuredClone(project),wire=draft.wires.find(w=>w.id===target.id);if(!wire)return;try{const points=wirePoints(draft,wire),i=Math.max(1,Math.floor(points.length/2)),a=points[i-1],b=points[i],index=insertWirePoint(draft,wire,{x:(a.x+b.x)/2,y:(a.y+b.y)/2});validateProject(draft);checkpoint();project=draft;selection={type:'wire',id:target.id};changed();return {type:'bend',id:target.id,index};}catch(error){log(error.message,'error');}}
 });
-syncEditor();fitView();refresh();log('회로를 연결하고 시뮬레이션 시작 또는 F5를 눌러 보세요.');
+syncEditor();fitView();refresh();log(`회로를 연결하고 실행(${keyFor('run.run')}) 또는 디버그 시작(${keyFor('run.debug')})을 눌러 보세요.`);
 diagnostic('app.started',{status},true);
 setupUpdates({beforeInstall:async()=>{
  clearTimeout(saveTimer);

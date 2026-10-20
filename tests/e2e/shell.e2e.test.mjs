@@ -8,13 +8,14 @@ test('VS Code style workbench regions, views, toggles and persistence',{timeout:
   const {win}=s;
   for(const id of ['#activitybar','#sidebar','#group-code','#group-circuit','#bottom-panel','#auxbar','#statusbar','#menubar'])assert.ok(await visible(win,id),id+' visible');
   // Every activity opens its own side bar view and clicking it again collapses the side bar.
-  for(const view of ['explorer','parts','examples','board','debug','docs','settings']){
+  assert.equal(await win.locator('[data-activity="settings"]').count(),0,'settings moved to the 편집 menu');
+  for(const view of ['explorer','parts','examples','board','debug','docs']){
    await win.click(`[data-activity="${view}"]`);
    if(!await visible(win,`#view-${view}`))await win.click(`[data-activity="${view}"]`);
    assert.ok(await visible(win,`#view-${view}`),view);
    assert.equal(await win.getAttribute(`[data-activity="${view}"]`,'aria-pressed'),'true');
   }
-  await win.click('[data-activity="settings"]');
+  await win.click('[data-activity="docs"]');
   assert.equal(await win.getAttribute('#shell','data-sidebar'),'false');
   await win.keyboard.press('Control+B');assert.equal(await win.getAttribute('#shell','data-sidebar'),'true');
   await win.locator('#circuit').click({position:{x:40,y:40}});
@@ -40,6 +41,35 @@ test('VS Code style workbench regions, views, toggles and persistence',{timeout:
   await win.click('.menubar-item >> nth=2');
   assert.ok(await win.locator('.menu:popover-open .menu-item').count()>10);
   await win.keyboard.press('Escape');
+  // 편집 menu opens the settings and keyboard shortcut views.
+  await win.click('.menubar-item >> nth=1');
+  await win.click('.menu:popover-open [data-command="view.settings"]');
+  assert.ok(await visible(win,'#view-settings'));
+  await win.click('.menubar-item >> nth=1');
+  await win.click('.menu:popover-open [data-command="view.keybindings"]');
+  assert.ok(await visible(win,'#view-keybindings'));
+  // Rebind "terminal" to Ctrl+Alt+T, use it, then reset it.
+  const row='#view-keybindings [data-binding="view.terminal"]';
+  await win.click(`${row} [data-edit]`);await win.keyboard.press('Control+Alt+T');await win.keyboard.press('Enter');
+  assert.match(await win.textContent(`${row} [data-edit]`),/Ctrl\+Alt\+T/);
+  await win.click('#circuit',{position:{x:30,y:30}});
+  await win.keyboard.press('Control+J');assert.equal(await win.getAttribute('#shell','data-panel'),'false');
+  await win.keyboard.press('Control+Alt+T');assert.equal(await win.getAttribute('#shell','data-panel'),'true');
+  await win.click('.menubar-item >> nth=1');await win.click('.menu:popover-open [data-command="view.keybindings"]');
+  await win.click(`${row} [data-reset]`);assert.match(await win.textContent(`${row} [data-edit]`),/Ctrl\+`/);
+  // Activity tooltip appears to the right of the icon.
+  await win.hover('[data-activity="parts"]');
+  await win.waitForFunction(()=>!document.getElementById('activity-tip').hidden);
+  const tip=await win.locator('#activity-tip').boundingBox(),icon=await win.locator('[data-activity="parts"]').boundingBox();
+  assert.ok(tip.x>=icon.x+icon.width,'tooltip to the right');
+  assert.ok(Math.abs((tip.y+tip.height/2)-(icon.y+icon.height/2))<4,'tooltip vertically centred');
+  // Drag the docs icon to the top; the order persists.
+  await win.dragAndDrop('[data-activity="docs"]','[data-activity="explorer"]',{targetPosition:{x:20,y:4}});
+  assert.equal(await win.evaluate(()=>document.querySelector('#activitybar [data-activity]').dataset.activity),'docs');
+  assert.equal(await win.evaluate(()=>JSON.parse(localStorage.getItem('stm32lab.shellLayout.v1')).activityOrder[0]),'docs');
+  // Project name is not shown in the title bar; the update button lives in the 도움말 menu.
+  assert.equal(await visible(win,'#project-name'),false);
+  assert.equal(await visible(win,'#app-update'),false);
   // Swap and orientation change the editor area.
   await win.click('#group-swap');assert.equal(await win.getAttribute('#editor-area','data-swapped'),'true');
   assert.equal(await win.evaluate(()=>document.getElementById('editor-area').firstElementChild.id),'group-circuit');

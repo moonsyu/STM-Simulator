@@ -6,11 +6,11 @@ import {allHalExamples,applyHalExample} from './hal-examples.js';
 import {sourceFiles,changeSourceFile} from './source-files.js';
 import {inspectRuntime,watchValue} from './debug-tools.js';
 import {esc} from './render.js';
-import {debugShortcut} from './debug-shortcuts.js';
+import {withKey} from './keybindings.js';
 import {mountNativeChrome,setupNativeIde} from './native-ide-ui.js';
 const $=id=>document.getElementById(id);
 export function mountIdeChrome(){
-  const toolbar=document.createElement('nav');toolbar.className='ide-toolbar';toolbar.setAttribute('aria-label','빌드와 디버그');toolbar.innerHTML='<button id="ide-build" class="primary" title="시뮬레이터용 빌드 (Ctrl+Shift+B)">빌드</button><span class="toolbar-divider"></span><button id="debug-start" title="시작 위치에서 디버깅 (Ctrl+Shift+F5)">디버그 시작</button><span id="build-status" role="status">시뮬레이터용 빌드</span>';
+  const toolbar=document.createElement('nav');toolbar.className='ide-toolbar';toolbar.setAttribute('aria-label','빌드와 디버그');toolbar.innerHTML='<button id="ide-build" class="primary" title="시뮬레이터용 빌드">빌드</button><span class="toolbar-divider"></span><button id="debug-start" title="시작 위치에서 디버깅">디버그 시작</button><span id="build-status" role="status">시뮬레이터용 빌드</span>';
   document.querySelector('.topbar').after(toolbar);toolbar.prepend(document.querySelector('.run-tools'));
   const tree=document.createElement('section');tree.className='project-files';tree.innerHTML='<div class="project-files-title"><strong>소스 파일</strong><button id="source-add">파일 추가</button></div><nav id="file-tree" aria-label="프로젝트 파일"></nav><div class="file-tools"><button id="source-rename">이름 변경</button><button id="source-delete">삭제</button></div><div class="project-folder-note" id="workspace-path">미저장 프로젝트</div>';
   document.querySelector('.library').prepend(tree);
@@ -78,7 +78,7 @@ export function setupIde(o){
     o.debugCommand(command);
   };
   $('ide-build').onclick=doBuild;$('firmware-check').onclick=doBuild;
-  $('debug-start').onclick=()=>doDebug('start');
+  $('debug-start').onclick=()=>doDebug('start');$('debug-start').title=withKey('시작 위치에서 디버깅','run.debug');
   const fileDialog=action=>{fileAction=action;$('source-dialog-title').textContent={add:'소스 파일 추가',rename:'소스 파일 이름 변경',delete:'소스 파일 삭제'}[action];$('source-name').value=action==='add'?'user.c':o.getSource();$('source-name').readOnly=action==='delete';$('source-form-error').textContent='';$('source-dialog').showModal();};
   $('source-add').onclick=()=>fileDialog('add');$('source-rename').onclick=()=>fileDialog('rename');$('source-delete').onclick=()=>fileDialog('delete');$('source-cancel').onclick=()=>$('source-dialog').close();
   $('source-form').onsubmit=e=>{e.preventDefault();try{if(o.isRunning())throw new Error('실행을 정지한 뒤 파일을 변경하세요.');const old=o.getSource(),name=$('source-name').value.trim(),p=changeSourceFile(o.getProject(),fileAction,fileAction==='add'?name:old,name);if(p.ide){p.ide.breakpoints=p.ide.breakpoints.filter(b=>fileAction!=='delete'||b.file!==old).map(b=>fileAction==='rename'&&b.file===old?{...b,file:name}:b);}o.applySources(p,fileAction==='delete'?'main.c':name);$('source-dialog').close();sync();}catch(e){$('source-form-error').textContent=e.message;}};
@@ -88,12 +88,6 @@ export function setupIde(o){
   $('project-form').onsubmit=async e=>{e.preventDefault();$('project-create').disabled=true;try{const name=$('new-project-name').value.trim();if(!name)throw new Error('프로젝트 이름을 입력하세요.');let p=['blank','native-host'].includes($('new-project-template').value)?blankProject():applyHalExample(blankProject(),$('new-project-template').value);p.name=name;p.firmware.files.push({name:'main.h',text:'#pragma once\n#include "stm32f4xx_hal.h"\nvoid Error_Handler(void);\n'});if($('new-project-template').value==='native-host'){p.code='#include <stdio.h>\nint main(void) {\n  int value=21;\n  printf("Hello from STM Simulator: %d\\n",value*2);\n  return 0;\n}\n';p.firmware.files=[{name:'main.h',text:'#pragma once\n'}];p.ide={breakpoints:[],watches:[],native:{target:'host',configuration:'Debug'}};}p=validateProject(p);const directory=$('new-project-folder').value?await window.desktop.createWorkspace({name,text:JSON.stringify(p)}):'';o.replaceProject(p,{preserveWorkspace:!!directory});folder=directory;sync();$('project-dialog').close();select('main.c');}catch(e){$('project-form-error').textContent=e.message;}finally{$('project-create').disabled=false;}};
   $('workspace-open').disabled=!window.desktop?.openWorkspace;$('workspace-open').onclick=()=>o.requestReplace(async()=>{try{const opened=await window.desktop.openWorkspace();if(!opened)return;o.replaceProject(validateProject(JSON.parse(opened.text)),{preserveWorkspace:true});folder=opened.directory;sync();o.feedback.clear('open');}catch(e){o.log(e.message,'error');o.feedback.show('프로젝트를 열지 못했습니다. 현재 작업은 유지됩니다. 파일과 폴더를 확인해 다시 열어 주세요.','open');}});
   document.addEventListener('ide-open-source',e=>select(e.detail.file,e.detail.line));
-  window.addEventListener('keydown',e=>{
-    if(document.querySelector('dialog[open]')||e.repeat||e.isComposing)return;
-    if((e.ctrlKey||e.metaKey)&&e.shiftKey&&!e.altKey&&e.key.toLowerCase()==='b'){e.preventDefault();e.stopImmediatePropagation();doBuild();return;}
-    const command=debugShortcut(e);if(!command)return;
-    e.preventDefault();e.stopImmediatePropagation();doDebug(command);
-  },true);
   native=setupNativeIde({o,editor,select,showMonitor,points,watches,toggleBreakpoint});
-  return {sync,controls,build,editor,debugView,emulator:()=>!!native?.emulator(),buildElf:()=>native.buildElf(),nativeBusy:()=>native.busy(),breakpoints:()=>points().map(b=>`${b.file}:${b.line}`),invalidate(){built=null;sourceKey=JSON.stringify([o.getProject().firmware?.mode,sourceFiles(o.getProject())]);$('build-status').textContent='변경됨 · 빌드 필요';editor.diagnostics([]);native.queueLanguage();},reset({preserveWorkspace=false}={}){if(!preserveWorkspace)window.desktop?.clearWorkspace?.().catch(e=>o.log(e.message,'error'));folder='';built=null;lastPause='';sourceKey='';$('build-status').textContent='시뮬레이터용 빌드';editor.diagnostics([]);native.reset();sync();},async saveWorkspace(text){if(!folder)return false;await window.desktop.saveWorkspace(text);return true;}};
+  return {sync,controls,build,editor,debugView,debug:doDebug,emulator:()=>!!native?.emulator(),buildElf:()=>native.buildElf(),nativeBusy:()=>native.busy(),breakpoints:()=>points().map(b=>`${b.file}:${b.line}`),invalidate(){built=null;sourceKey=JSON.stringify([o.getProject().firmware?.mode,sourceFiles(o.getProject())]);$('build-status').textContent='변경됨 · 빌드 필요';editor.diagnostics([]);native.queueLanguage();},reset({preserveWorkspace=false}={}){if(!preserveWorkspace)window.desktop?.clearWorkspace?.().catch(e=>o.log(e.message,'error'));folder='';built=null;lastPause='';sourceKey='';$('build-status').textContent='시뮬레이터용 빌드';editor.diagnostics([]);native.reset();sync();},async saveWorkspace(text){if(!folder)return false;await window.desktop.saveWorkspace(text);return true;}};
 }

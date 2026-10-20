@@ -54,9 +54,11 @@
 :root[data-shell] .top-actions .save-button{height:24px;padding:0 10px;font-size:12px;font-weight:600;border:1px solid var(--ide-border);background:transparent;color:var(--ide-foreground)}
 :root[data-shell] .top-actions .save-button:hover{background:var(--ide-hover)}
 :root[data-shell] #app-update{height:22px;padding:0 8px;font-size:11px;border-radius:11px;border:1px solid var(--ide-border);background:transparent;color:var(--ide-muted)}
-:root[data-shell] .appearance-switch{display:flex;gap:0;border:1px solid var(--ide-border);border-radius:var(--radius);overflow:hidden;height:24px}
-:root[data-shell] .appearance-switch button{height:22px;padding:0 8px;font-size:11.5px;border-radius:0;background:transparent;color:var(--ide-foreground)}
-:root[data-shell] .appearance-switch button.active,:root[data-shell] .appearance-switch button[aria-pressed=true]{background:var(--ide-selection);color:var(--ide-selectionText)}
+:root[data-shell] .appearance-switch{display:flex;gap:0;border:0;height:24px}
+:root[data-shell] .appearance-switch .appearance-toggle{width:28px;height:24px;padding:0;display:grid;place-items:center;border:0;border-radius:var(--radius);background:transparent;color:var(--ide-foreground)}
+:root[data-shell] .appearance-switch .appearance-toggle:hover{background:var(--ide-hover)}
+:root[data-shell] .appearance-switch .appearance-toggle:focus-visible{outline:1px solid var(--ide-accent);outline-offset:-1px}
+:root[data-shell] .appearance-switch .appearance-toggle svg{pointer-events:none}
 .layout-toggles{display:flex;gap:0;margin:0 2px}
 .icon-button{width:26px;height:24px;display:inline-grid;place-items:center;color:var(--ide-muted);border-radius:var(--radius);flex:none}
 .icon-button:hover:not(:disabled){background:var(--ide-hover);color:var(--ide-foreground)}
@@ -149,6 +151,11 @@
 .sash-v{cursor:col-resize;width:4px;margin:0 -2px;min-height:0}
 .sash-h{cursor:row-resize;height:4px;margin:-2px 0;min-width:0}
 .sash:hover,.sash.active,.sash:focus-visible{background:var(--ide-accent);outline:0}
+/* A visible 1px divider between the code and circuit groups (needed in the White theme where both groups are light). */
+#sash-editor::before{content:'';position:absolute;background:var(--ide-border);pointer-events:none}
+#sash-editor.sash-v::before{top:0;bottom:0;left:50%;width:1px;transform:translateX(-50%)}
+#sash-editor.sash-h::before{left:0;right:0;top:50%;height:1px;transform:translateY(-50%)}
+#sash-editor:hover::before,#sash-editor.active::before,#sash-editor:focus-visible::before{background:transparent}
 body.resizing-workspace{user-select:none}
 body.resizing-workspace iframe,body.resizing-workspace svg{pointer-events:none}
 
@@ -354,7 +361,7 @@ dialog.command-palette::backdrop{background:transparent!important;backdrop-filte
 .menubar,.run-area,.top-actions{flex-shrink:0}
 @media (max-width:1450px){.command-hint{display:none}}
 @media (max-width:1280px){.menubar-item{padding:0 5px}:root[data-shell] .brand strong{display:none}}
-@media (max-width:1100px){:root[data-shell] #app-update{display:none}:root[data-shell] .appearance-switch #appearance-system{display:none}}
+
 /* logic analyzer */
 .la-toolbar{display:flex;flex-wrap:wrap;align-items:center;gap:10px;padding:4px 0 6px;font-size:12px}
 .la-toolbar label{display:flex;align-items:center;gap:6px;color:var(--ide-muted)}
@@ -391,3 +398,41 @@ dialog.command-palette::backdrop{background:transparent!important;backdrop-filte
 .sd-files table{width:100%;border-collapse:collapse;font:12px var(--mono)}
 .sd-files td{padding:2px 4px;border-bottom:1px solid color-mix(in srgb,var(--ide-border) 60%,transparent);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:150px}
 .sd-files button{padding:0 6px;border:1px solid var(--ide-border);background:transparent;margin-left:2px}
+
+/* Project name is not shown in the title bar (the explorer and window title carry it). */
+:root[data-shell] .project-title #project-name{display:none}
+:root[data-shell] .project-title.command-center{justify-content:center}
+
+/* Activity bar: tooltip to the right of the icon, drag-and-drop reordering. */
+.activity-tip{position:fixed;z-index:1000;max-width:260px;padding:4px 8px;border:1px solid var(--ide-border);border-radius:4px;background:var(--ide-chrome);color:var(--ide-foreground);font-size:12px;line-height:1.4;white-space:nowrap;box-shadow:0 2px 8px rgb(0 0 0/.25);pointer-events:none}
+.activity-tip::before{content:'';position:absolute;left:-5px;top:50%;width:8px;height:8px;margin-top:-4px;background:inherit;border-left:1px solid var(--ide-border);border-bottom:1px solid var(--ide-border);transform:rotate(45deg)}
+.activity-item.dragging{opacity:.4}
+.activity-item.drop-before{box-shadow:inset 0 2px 0 var(--ide-accent)}
+.activity-item.drop-after{box-shadow:inset 0 -2px 0 var(--ide-accent)}
+
+/* Run and Debug: run target and build configuration. */
+#view-debug .run-config{padding:8px 12px 10px;border-bottom:1px solid var(--ide-border);display:grid;gap:6px}
+#view-debug .run-config h3{margin:0;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:var(--ide-muted,var(--ide-foreground))}
+#view-debug .run-config .native-target-label{display:block;width:100%}
+#view-debug .run-config select{width:100%}
+#view-debug .run-config #native-config{width:100%}
+
+/* Keyboard shortcut editor. */
+#view-keybindings{display:flex;flex-direction:column;gap:6px;padding:8px 10px;min-height:0}
+#view-keybindings[hidden]{display:none}
+.keybinding-head{display:flex;gap:6px}
+.keybinding-head input{flex:1 1 auto;min-width:0}
+.keybinding-list{display:flex;flex-direction:column;overflow:auto;min-height:0}
+.keybinding-row{display:grid;grid-template-columns:minmax(0,1fr) auto 22px;align-items:center;gap:6px;padding:3px 2px;border-bottom:1px solid color-mix(in srgb,var(--ide-border) 60%,transparent)}
+.keybinding-label{font-size:12px;overflow:hidden;text-overflow:ellipsis;display:flex;flex-direction:column}
+.keybinding-conflict{color:var(--ide-warning,#c78a00);font-size:11px}
+.keybinding-key{min-width:84px;height:22px;padding:0 6px;border:1px solid transparent;border-radius:4px;background:transparent;color:var(--ide-foreground);font-size:11.5px;text-align:right;cursor:pointer}
+.keybinding-key:hover{border-color:var(--ide-border)}
+.keybinding-key.keybinding-capture{border-color:var(--ide-accent);background:var(--ide-input,var(--ide-background));text-align:center}
+.keybinding-reset{width:22px;height:22px;padding:0;border:0;background:transparent;color:var(--ide-foreground);cursor:pointer;border-radius:4px}
+.keybinding-reset:hover{background:var(--ide-hover)}
+
+/* Update lives in the 도움말 menu (and a status item when an update is ready). */
+:root[data-shell] #app-update{display:none!important}
+:root[data-shell] .status-item[hidden]{display:none!important}
+.keybinding-head button{white-space:nowrap;flex:none}

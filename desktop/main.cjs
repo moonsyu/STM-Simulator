@@ -1,4 +1,4 @@
-const {app,BrowserWindow,ipcMain,dialog,shell,nativeTheme}=require('electron');
+const {app,BrowserWindow,ipcMain,dialog,shell,nativeTheme,Menu}=require('electron');
 const fs=require('node:fs/promises');
 const path=require('node:path');
 // Keep the existing profile so renaming the app retains auto-saved circuits.
@@ -64,6 +64,9 @@ nativeHandle('terminal-open',()=>nativeIde.openTerminal(workspaceState?.director
 nativeHandle('terminal-input',text=>nativeIde.terminalInput(text));
 nativeHandle('terminal-close',()=>nativeIde.closeTerminal());
 app.whenReady().then(()=>{
+  // The default Electron menu stays active while hidden and steals F11 (full screen), Ctrl+R (reload) and Ctrl+W;
+  // the renderer owns every shortcut (편집 → 단축키 설정), so remove it.
+  Menu.setApplicationMenu(null);
   updaterReady=updater.init().catch(error=>updater.set('error',{message:'업데이트 설정을 읽지 못했습니다: '+error.message}));
   win=new BrowserWindow({icon:path.join(__dirname,'icons/stm-simulator.ico'),width:1540,height:1020,minWidth:900,minHeight:560,show:process.env.CIRCUIT_LAB_SMOKE!=='1',backgroundColor:nativeTheme.shouldUseDarkColors?'#202020':'#f3f3f3',title:'STM Simulator',webPreferences:{preload:path.join(__dirname,'preload.cjs'),contextIsolation:true,nodeIntegration:false,sandbox:true}});
   win.setMenuBarVisibility(false);

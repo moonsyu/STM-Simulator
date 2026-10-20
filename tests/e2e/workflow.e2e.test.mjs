@@ -8,7 +8,7 @@ test('example → run → measure → stop in the circuit simulator',{timeout:12
   const {win}=s;
   await applyExample(win,'5mm 단색 LED');
   assert.match(await win.evaluate(()=>document.getElementById('code').value),/HAL_GPIO/);
-  await win.keyboard.press('F5');
+  await win.keyboard.press('Control+F5');
   await win.waitForFunction(()=>document.getElementById('shell').dataset.running==='true');
   await win.waitForFunction(()=>/PA5=1/.test(document.getElementById('console-output').textContent),null,{timeout:15000});
   await win.waitForFunction(()=>/PA5=0/.test(document.getElementById('console-output').textContent),null,{timeout:15000});
@@ -16,7 +16,7 @@ test('example → run → measure → stop in the circuit simulator',{timeout:12
   // Selecting a part while running shows live measurements in the properties bar.
   await win.locator('#part-layer [data-part]').first().click();
   await win.waitForFunction(()=>/V$/.test(document.getElementById('part-voltage')?.textContent||''));
-  await win.keyboard.press('F5');
+  await win.keyboard.press('Control+F2');
   await win.waitForFunction(()=>document.getElementById('shell').dataset.running==='false');
   assert.match(await win.textContent('#run-status'),/준비됨/);
   assert.deepEqual(s.errors,[]);
@@ -58,12 +58,15 @@ test('debug view pauses at a breakpoint and shows variables',{timeout:120000},as
   await win.evaluate(l=>document.dispatchEvent(new CustomEvent('ide-open-source',{detail:{file:'main.c',line:l}})),line);
   await win.keyboard.press('F9');
   await win.click('[data-activity="debug"]');if(!await win.locator('#view-debug').isVisible())await win.click('[data-activity="debug"]');
-  await win.click('.debug-toolbar [data-debug="start"]');
+  // Default shortcuts: F10 start debugging (and continue while paused), F11 step over, Ctrl+F2 stop.
+  await win.keyboard.press('F10');
   await win.waitForFunction(()=>/일시정지/.test(document.getElementById('debug-location').textContent),null,{timeout:15000});
-  await win.click('.debug-toolbar [data-debug="continue"]');
+  await win.keyboard.press('F10');
   await win.waitForFunction(l=>new RegExp('main\\.c:'+l).test(document.getElementById('debug-location').textContent),line,{timeout:15000});
   assert.ok(await win.locator('#debug-stack .debug-frame').count()>=1);
-  await win.click('.debug-toolbar [data-debug="stop"]');
+  await win.keyboard.press('F11');
+  await win.waitForFunction(l=>/일시정지/.test(document.getElementById('debug-location').textContent)&&!new RegExp('main\\.c:'+l+'\\b').test(document.getElementById('debug-location').textContent),line,{timeout:15000});
+  await win.keyboard.press('Control+F2');
   await win.waitForFunction(()=>document.getElementById('shell').dataset.running==='false');
   assert.deepEqual(s.errors,[]);
  }finally{await s.close();}
@@ -80,15 +83,15 @@ test('camera frames appear in the properties panel and SD card files persist aft
  try{
   const {win}=s;
   await pickExample(win,'camera_tft');
-  await win.keyboard.press('F5');
+  await win.keyboard.press('Control+F5');
   await win.waitForFunction(()=>/frame \d+ shown on TFT/.test(document.getElementById('console-output').textContent),null,{timeout:30000});
   assert.ok(await selectPartWith(win,'#camera-preview'),'camera part selectable');
   await win.waitForFunction(()=>/\d+×\d+/.test(document.getElementById('camera-info').textContent),null,{timeout:15000});
-  await win.keyboard.press('F5');
+  await win.keyboard.press('Control+F2');
   await pickExample(win,'sd_logger');
-  await win.keyboard.press('F5');
+  await win.keyboard.press('Control+F5');
   await win.waitForFunction(()=>/LOG\.TXT size=\d+/.test(document.getElementById('console-output').textContent),null,{timeout:30000});
-  await win.keyboard.press('F5');
+  await win.keyboard.press('Control+F2');
   await win.waitForFunction(()=>/SD 카드에 기록된 파일을 프로젝트에 저장했습니다/.test(document.getElementById('console-output').textContent));
   assert.ok(await selectPartWith(win,'#sd-files'),'SD part selectable');
   assert.match(await win.textContent('#sd-files'),/LOG\.TXT/);
