@@ -191,8 +191,10 @@ describe('compile errors',()=>{
     assert.equal(HAL_ALIASES.BYTE,'uint8_t');assert.equal(HAL_ALIASES.DWORD,'uint32_t');
     assert.match(HAL_STRUCTS.CAN_HandleTypeDef,/Init:CAN_InitTypeDef/);
   });
-  test.todo('pointer subtraction (p - v) should yield the element distance instead of "유한한 숫자가 필요합니다."',()=>{
+  test('pointer subtraction yields the element distance and rejects unrelated arrays',()=>{
     assert.deepEqual(halLines('int v[4]; int *p = v + 2; printf("%d\\n", (int)(p - v));'),['2']);
+    assert.deepEqual(halLines('int v[4]; int *p = &v[3]; int d = p - v; printf("%d\\n", d);'),['3']);
+    assert.match(halError('int v[4]; int w[4]; int *p = v; int *q = w; int d = p - q;'),/서로 다른 배열/);
   });
 });
 

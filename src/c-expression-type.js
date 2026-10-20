@@ -17,7 +17,7 @@ export function expressionType(runtime,n){
  if(n.type==='index'){const object=of(n.object);return scalar(object.type);}
  if(n.type==='member'){
   const object=of(n.object),field=runtime.program.structs[object.type]?.find(f=>f.name===n.key);
-  if(!field)throw Error('구조체 필드가 없습니다: '+n.key);return {type:field.type,pointer:!!field.pointer};
+  if(!field)throw Error('구조체 필드가 없습니다: '+n.key);return {type:field.type,pointer:!!field.pointer,...(field.array?{array:true,length:field.size}:{})};
  }
  if(n.type==='unary'){
   const a=of(n.a);if(n.op==='&')return {type:a.type,pointer:true};if(n.op==='*')return scalar(a.type);

@@ -5,6 +5,9 @@ import {terminalKeys,TWO_PIN_TYPES,MULTI_PIN_TYPES,normalizeAngle} from './compo
 import {generateHal,defaultMcu,validateMcu} from './mcu-config.js';
 import {DEFAULT_BOARD_ID,getBoard} from './boards.js';
 import {validScale} from './geometry.js';
+import {validateNoise} from './signals.js';
+import {validCardImage,SD_SIZES} from './sdcard.js';
+import {validCameraImage,CAMERA_PATTERNS} from './camera.js';
 export function blankProject(){const mcu={...defaultMcu(),pins:{}};return {format:'stm32-circuit-lab',version:2,name:'새 회로',components:[],wires:[],surfaces:{board:{hidden:true},breadboard:{hidden:true}},mcu,firmware:{mode:'hal',files:[]},code:generateHal(mcu).replace('/* USER CODE BEGIN 2 */','/* USER CODE BEGIN 2 */\n  printf("HAL ready\\n");')};}
 // Complete example circuits explicitly include the legacy board and breadboard.
 export function exampleProject(){const p=blankProject();delete p.surfaces;return p;}
@@ -32,6 +35,8 @@ export function validateProject(data){
       if(family==='i2c'&&(!Number.isInteger(q.address)||q.address<8||q.address>119))throw new Error('I2C 주소를 확인하세요.');
       if(DEVICE_ADDRESSES[family]&&!DEVICE_ADDRESSES[family].includes(q.address))throw new Error(p.name+': 지원하지 않는 I2C 주소입니다.');
       if(family==='led'&&!['red','green','blue','yellow'].includes(q.color))throw new Error('LED 색상을 확인하세요.');
+      if(family==='sd'&&(!SD_SIZES.includes(q.sizeMB)||!validCardImage(q.cardImage)))throw new Error(p.name+': SD 카드 용량(64/128/256 MB) 또는 카드 이미지(4 MB 이하)를 확인하세요.');
+      if(family==='dcmi'&&(!CAMERA_PATTERNS.includes(q.pattern)||!validCameraImage(q.image)))throw new Error(p.name+': 카메라 패턴 또는 이미지(data URL, 1.5 MB 이하)를 확인하세요.');
     }
     if(TWO_PIN_TYPES.includes(p.type)){
       q.span=p.span??70;if(!Number.isFinite(q.span)||q.span<4||q.span>1000)throw new Error('부품 다리 간격이 올바르지 않습니다.');
@@ -86,7 +91,7 @@ export function validateProject(data){
     if(data.firmware.mode==='hal'&&!project.mcu)throw new Error('HAL 프로젝트에는 핀 설정이 필요합니다.');
     project.firmware={mode:data.firmware.mode,files};
   }
-  if(data.simulation!==undefined){const s=data.simulation;if(!s||typeof s!=='object'||![.1,.5,1,5,20].includes(s.stepMs)||typeof s.pwmWaveform!=='boolean')throw new Error('시뮬레이션 시간 설정이 올바르지 않습니다.');project.simulation={stepMs:s.stepMs,pwmWaveform:s.pwmWaveform};}
+  if(data.simulation!==undefined){const s=data.simulation;if(!s||typeof s!=='object'||![.1,.5,1,5,20].includes(s.stepMs)||typeof s.pwmWaveform!=='boolean')throw new Error('시뮬레이션 시간 설정이 올바르지 않습니다.');project.simulation={stepMs:s.stepMs,pwmWaveform:s.pwmWaveform};if(s.noise!==undefined)project.simulation.noise=validateNoise(s.noise);}
   if(data.ide!==undefined){
     const s=data.ide,names=new Set(['main.c',...(project.firmware?.files||[]).map(f=>f.name)]);
     if(!s||!Array.isArray(s.breakpoints)||s.breakpoints.length>1000||!Array.isArray(s.watches)||s.watches.length>20)throw new Error('디버그 설정을 확인하세요.');

@@ -1,0 +1,74 @@
+{
+ "format": "stm32-circuit-lab",
+ "version": 2,
+ "name": "firmware fixture",
+ "components": [
+  {
+   "id": "mem",
+   "name": "SPI1",
+   "type": "spi",
+   "x": 820,
+   "y": 260,
+   "rotation": 0
+  }
+ ],
+ "wires": [
+  {
+   "id": "w1",
+   "from": "board:CN6:4",
+   "to": "part:mem:p1",
+   "color": "#23a68a"
+  },
+  {
+   "id": "w2",
+   "from": "board:CN6:6",
+   "to": "part:mem:p2",
+   "color": "#23a68a"
+  },
+  {
+   "id": "w3",
+   "from": "board:CN10:17",
+   "to": "part:mem:p3",
+   "color": "#23a68a"
+  },
+  {
+   "id": "w4",
+   "from": "board:CN10:23",
+   "to": "part:mem:p4",
+   "color": "#23a68a"
+  },
+  {
+   "id": "w5",
+   "from": "board:CN10:21",
+   "to": "part:mem:p5",
+   "color": "#23a68a"
+  },
+  {
+   "id": "w6",
+   "from": "board:CN10:33",
+   "to": "part:mem:p6",
+   "color": "#23a68a"
+  }
+ ],
+ "mcu": {
+  "family": "STM32F446RE",
+  "pins": {},
+  "peripherals": {},
+  "nvic": {},
+  "timerClockHz": 16000000
+ },
+ "firmware": {
+  "mode": "hal",
+  "files": [
+   {
+    "name": "fixture.h",
+    "text": "/* Shared fixture helpers: HSI -> PLL 84 MHz (APB1 42 MHz, APB2 84 MHz, PLLQ 48 MHz),\n * SysTick, SWV ITM printf. Same clock tree as the app's generated main.c. */\n#pragma once\n#include \"main.h\"\n#include <stdio.h>\n#include <string.h>\n\nstatic inline void Fixture_ClockConfig(void) {\n  RCC_OscInitTypeDef osc = {0};\n  RCC_ClkInitTypeDef clk = {0};\n  __HAL_RCC_PWR_CLK_ENABLE();\n  __HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE1);\n  osc.OscillatorType = RCC_OSCILLATORTYPE_HSI;\n  osc.HSIState = RCC_HSI_ON;\n  osc.HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT;\n  osc.PLL.PLLState = RCC_PLL_ON;\n  osc.PLL.PLLSource = RCC_PLLSOURCE_HSI;\n  osc.PLL.PLLM = 16; osc.PLL.PLLN = 336; osc.PLL.PLLP = RCC_PLLP_DIV4; osc.PLL.PLLQ = 7; osc.PLL.PLLR = 2;\n  if (HAL_RCC_OscConfig(&osc) != HAL_OK) Error_Handler();\n  clk.ClockType = RCC_CLOCKTYPE_HCLK | RCC_CLOCKTYPE_SYSCLK | RCC_CLOCKTYPE_PCLK1 | RCC_CLOCKTYPE_PCLK2;\n  clk.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;\n  clk.AHBCLKDivider = RCC_SYSCLK_DIV1;\n  clk.APB1CLKDivider = RCC_HCLK_DIV2;\n  clk.APB2CLKDivider = RCC_HCLK_DIV1;\n  if (HAL_RCC_ClockConfig(&clk, FLASH_LATENCY_2) != HAL_OK) Error_Handler();\n}\n"
+   }
+  ]
+ },
+ "code": "/* USART1 synchronous master (PA8 CK, PA9 TX, PA10 RX) talking to an SPI memory.\n * USART shifts LSB first, so bytes are bit-reversed for the MSB-first device. */\n#include \"fixture.h\"\n\nUSART_HandleTypeDef husart1;\nvoid Error_Handler(void) { __disable_irq(); while (1) { } }\nint __io_putchar(int ch) { ITM_SendChar(ch); return ch; }\nvoid SysTick_Handler(void) { HAL_IncTick(); }\nstatic uint8_t rev(uint8_t b) { return (uint8_t)(__RBIT(b) >> 24); }\n\nvoid HAL_USART_MspInit(USART_HandleTypeDef *h) {\n  (void)h; GPIO_InitTypeDef g = {0};\n  __HAL_RCC_GPIOA_CLK_ENABLE(); __HAL_RCC_GPIOB_CLK_ENABLE(); __HAL_RCC_USART1_CLK_ENABLE();\n  g.Pin = GPIO_PIN_8 | GPIO_PIN_9 | GPIO_PIN_10; g.Mode = GPIO_MODE_AF_PP; g.Pull = GPIO_NOPULL; g.Speed = GPIO_SPEED_FREQ_VERY_HIGH; g.Alternate = GPIO_AF7_USART1;\n  HAL_GPIO_Init(GPIOA, &g);\n}\n\nstatic void cs(int level) { HAL_GPIO_WritePin(GPIOB, GPIO_PIN_6, level ? GPIO_PIN_SET : GPIO_PIN_RESET); }\n\nint main(void) {\n  HAL_Init();\n  Fixture_ClockConfig();\n  __HAL_RCC_GPIOB_CLK_ENABLE();\n  GPIO_InitTypeDef g = {0};\n  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_6, GPIO_PIN_SET);\n  g.Pin = GPIO_PIN_6; g.Mode = GPIO_MODE_OUTPUT_PP; g.Pull = GPIO_NOPULL; g.Speed = GPIO_SPEED_FREQ_LOW;\n  HAL_GPIO_Init(GPIOB, &g);\n  husart1.Instance = USART1; husart1.Init.BaudRate = 500000; husart1.Init.WordLength = USART_WORDLENGTH_8B; husart1.Init.StopBits = USART_STOPBITS_1;\n  husart1.Init.Parity = USART_PARITY_NONE; husart1.Init.Mode = USART_MODE_TX_RX; husart1.Init.CLKPolarity = USART_POLARITY_LOW;\n  husart1.Init.CLKPhase = USART_PHASE_1EDGE; husart1.Init.CLKLastBit = USART_LASTBIT_ENABLE;\n  if (HAL_USART_Init(&husart1) != HAL_OK) Error_Handler();\n  uint8_t write[3] = { rev(0x02), rev(0x10), rev(0x5A) };\n  cs(0); HAL_USART_Transmit(&husart1, write, 3, 100); cs(1);\n  uint8_t cmd[3] = { rev(0x03), rev(0x10), 0xFF }, answer[3] = {0};\n  __HAL_USART_CLEAR_OREFLAG(&husart1); /* drop the byte received during the write */\n  cs(0); HAL_USART_TransmitReceive(&husart1, cmd, answer, 3, 100); cs(1);\n  printf(\"sync read=0x%02X\\n\", rev(answer[2]));\n  while (1) { HAL_Delay(10); }\n}\n",
+ "simulation": {
+  "stepMs": 1,
+  "pwmWaveform": false
+ }
+}

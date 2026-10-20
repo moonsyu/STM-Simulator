@@ -1,0 +1,229 @@
+{
+ "format": "stm32-circuit-lab",
+ "version": 2,
+ "name": "새 회로",
+ "components": [
+  {
+   "id": "demo",
+   "name": "MOTOR1",
+   "type": "motor",
+   "x": 802,
+   "y": 156,
+   "rotation": 90,
+   "attachments": {
+    "p1": "bb:e:1",
+    "p2": "bb:e:2",
+    "p3": "bb:e:3",
+    "p4": "bb:e:4",
+    "p5": "bb:e:5"
+   }
+  },
+  {
+   "id": "servo2",
+   "type": "servo",
+   "name": "SERVO1",
+   "x": 886,
+   "y": 142,
+   "rotation": 90,
+   "attachments": {
+    "p1": "bb:i:1",
+    "p2": "bb:i:2",
+    "p3": "bb:i:3"
+   }
+  }
+ ],
+ "wires": [
+  {
+   "id": "w1",
+   "from": "rail:R:+:2",
+   "to": "bb:a:1",
+   "color": "#dd654c",
+   "points": [
+    {
+     "x": 932,
+     "y": 97.19999999999999
+    },
+    {
+     "x": 718,
+     "y": 97.19999999999999
+    }
+   ]
+  },
+  {
+   "id": "w2",
+   "from": "rail:L:-:2",
+   "to": "bb:a:2",
+   "color": "#4e647b",
+   "points": [
+    {
+     "x": 668,
+     "y": 142
+    }
+   ]
+  },
+  {
+   "id": "w3",
+   "from": "board:CN10:13",
+   "to": "bb:a:3",
+   "color": "#23a68a",
+   "points": [
+    {
+     "x": 444,
+     "y": 156
+    }
+   ]
+  },
+  {
+   "id": "w4",
+   "from": "board:CN10:17",
+   "to": "bb:a:4",
+   "color": "#23a68a",
+   "points": [
+    {
+     "x": 444,
+     "y": 170
+    }
+   ]
+  },
+  {
+   "id": "w5",
+   "from": "board:CN7:21",
+   "to": "bb:a:5",
+   "color": "#23a68a",
+   "points": [
+    {
+     "x": 69,
+     "y": 184
+    }
+   ]
+  },
+  {
+   "id": "servo-wire-0",
+   "from": "rail:R:+:3",
+   "to": "bb:g:1",
+   "color": "#dd654c",
+   "points": [
+    {
+     "x": 932,
+     "y": 97.19999999999999
+    },
+    {
+     "x": 830,
+     "y": 97.19999999999999
+    }
+   ]
+  },
+  {
+   "id": "servo-wire-1",
+   "from": "rail:L:-:3",
+   "to": "bb:g:2",
+   "color": "#4e647b",
+   "points": [
+    {
+     "x": 668,
+     "y": 113
+    },
+    {
+     "x": 830,
+     "y": 113
+    }
+   ]
+  },
+  {
+   "id": "servo-wire-2",
+   "from": "board:CN10:11",
+   "to": "bb:g:3",
+   "color": "#23a68a",
+   "points": [
+    {
+     "x": 830,
+     "y": 352
+    }
+   ]
+  },
+  {
+   "id": "bbPower1",
+   "from": "board:CN6:5",
+   "to": "rail:R:+:1",
+   "color": "#dd654c",
+   "points": [
+    {
+     "x": 932,
+     "y": 375
+    }
+   ]
+  },
+  {
+   "id": "bbPower2",
+   "from": "board:CN6:6",
+   "to": "rail:L:-:1",
+   "color": "#4e647b",
+   "points": [
+    {
+     "x": 132,
+     "y": 128
+    }
+   ]
+  }
+ ],
+ "mcu": {
+  "family": "STM32F446RE",
+  "pins": {
+   "PA5": {
+    "function": "TIM2_CH1",
+    "pull": "NOPULL",
+    "edge": "CHANGE",
+    "label": "",
+    "initial": 0
+   },
+   "PB6": {
+    "function": "GPIO_Output",
+    "pull": "NOPULL",
+    "edge": "CHANGE",
+    "label": "",
+    "initial": 0
+   },
+   "PB7": {
+    "function": "GPIO_Output",
+    "pull": "NOPULL",
+    "edge": "CHANGE",
+    "label": "",
+    "initial": 0
+   },
+   "PA6": {
+    "function": "TIM3_CH1",
+    "pull": "NOPULL",
+    "edge": "RISING",
+    "label": "",
+    "initial": 0
+   }
+  },
+  "peripherals": {
+   "TIM2": {
+    "enabled": true,
+    "prescaler": 83,
+    "period": 19999,
+    "pulse": 0,
+    "mode": "pwm"
+   },
+   "TIM3": {
+    "enabled": true,
+    "prescaler": 83,
+    "period": 999,
+    "pulse": 0,
+    "mode": "pwm"
+   }
+  },
+  "nvic": {},
+  "timerClockHz": 84000000
+ },
+ "firmware": {
+  "mode": "hal",
+  "files": []
+ },
+ "code": "#include \"main.h\"\n#include <stdio.h>\n\n/* Copy this main.c into a CubeIDE STM32F446RE project with matching\n * pin / peripheral / NVIC settings and Cube-generated IRQ / MSP files.\n * Clock: HSI PLL, APB1 timer clock = 84000000 Hz.\n * printf: SWV ITM port 0 (enable SWV in the debugger). UART uses its pins.\n * With newlib-nano, enable -u _printf_float for floating-point printf. */\n\nTIM_HandleTypeDef htim2;\nTIM_HandleTypeDef htim3;\n\nvoid SystemClock_Config(void);\nvoid Error_Handler(void);\nstatic void MX_GPIO_Init(void);\nstatic void MX_TIM2_Init(void);\nstatic void MX_TIM3_Init(void);\n\nuint32_t position = 0;\n\nint main(void) {\n  HAL_Init();\n  SystemClock_Config();\n  MX_GPIO_Init();\n  MX_TIM2_Init();\n  MX_TIM3_Init();\n  /* USER CODE BEGIN 2 */\n  __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_1, 1000);\n  __HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 750);\n  HAL_TIM_PWM_Start(&htim2, TIM_CHANNEL_1);\n  HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_1);\n  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_6, GPIO_PIN_SET);\n    /* USER CODE END 2 */\n  while (1) {\n    /* USER CODE BEGIN 3 */\n    __HAL_TIM_SET_COMPARE(&htim2, TIM_CHANNEL_1, 1000 + position*500);\n    printf(\"TIM2 servo=%lu deg (50 Hz), TIM3 motor=75%% (1000 Hz)\\n\", position*90);\n    position = (position+1)%3;\n    HAL_Delay(1200);\n    /* USER CODE END 3 */\n  }\n}\n\nvoid SystemClock_Config(void) {\n  RCC_OscInitTypeDef osc = {0};\n  RCC_ClkInitTypeDef clk = {0};\n  __HAL_RCC_PWR_CLK_ENABLE();\n  __HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE1);\n  osc.OscillatorType = RCC_OSCILLATORTYPE_HSI;\n  osc.HSIState = RCC_HSI_ON;\n  osc.HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT;\n  osc.PLL.PLLState = RCC_PLL_ON;\n  osc.PLL.PLLSource = RCC_PLLSOURCE_HSI;\n  osc.PLL.PLLM = 16;\n  osc.PLL.PLLN = 336;\n  osc.PLL.PLLP = RCC_PLLP_DIV4;\n  osc.PLL.PLLQ = 7;\n  if (HAL_RCC_OscConfig(&osc) != HAL_OK) Error_Handler();\n  clk.ClockType = RCC_CLOCKTYPE_HCLK | RCC_CLOCKTYPE_SYSCLK | RCC_CLOCKTYPE_PCLK1 | RCC_CLOCKTYPE_PCLK2;\n  clk.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;\n  clk.AHBCLKDivider = RCC_SYSCLK_DIV1;\n  clk.APB1CLKDivider = RCC_HCLK_DIV2;\n  clk.APB2CLKDivider = RCC_HCLK_DIV1;\n  if (HAL_RCC_ClockConfig(&clk, FLASH_LATENCY_2) != HAL_OK) Error_Handler();\n}\n\nstatic void MX_GPIO_Init(void) {\n  GPIO_InitTypeDef GPIO_InitStruct = {0};\n  __HAL_RCC_GPIOA_CLK_ENABLE();\n  __HAL_RCC_GPIOB_CLK_ENABLE();\n  GPIO_InitStruct.Pin = GPIO_PIN_5;\n  GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;\n  GPIO_InitStruct.Pull = GPIO_NOPULL;\n  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;\n  GPIO_InitStruct.Alternate = GPIO_AF1_TIM2;\n  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);\n  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_6, GPIO_PIN_RESET);\n  GPIO_InitStruct.Pin = GPIO_PIN_6;\n  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;\n  GPIO_InitStruct.Pull = GPIO_NOPULL;\n  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;\n  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);\n  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_7, GPIO_PIN_RESET);\n  GPIO_InitStruct.Pin = GPIO_PIN_7;\n  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;\n  GPIO_InitStruct.Pull = GPIO_NOPULL;\n  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;\n  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);\n  GPIO_InitStruct.Pin = GPIO_PIN_6;\n  GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;\n  GPIO_InitStruct.Pull = GPIO_NOPULL;\n  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;\n  GPIO_InitStruct.Alternate = GPIO_AF2_TIM3;\n  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);\n}\n\nstatic void MX_TIM2_Init(void) {\n  __HAL_RCC_TIM2_CLK_ENABLE();\n  htim2.Instance = TIM2;\n  htim2.Init.Prescaler = 83;\n  htim2.Init.CounterMode = TIM_COUNTERMODE_UP;\n  htim2.Init.Period = 19999;\n  htim2.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;\n  htim2.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;\n  HAL_TIM_PWM_Init(&htim2);\n  TIM_OC_InitTypeDef channel = {0};\n  channel.OCMode = TIM_OCMODE_PWM1;\n  channel.OCPolarity = TIM_OCPOLARITY_HIGH;\n  channel.Pulse = 0;\n  channel.OCFastMode = TIM_OCFAST_DISABLE;\n  HAL_TIM_PWM_ConfigChannel(&htim2, &channel, TIM_CHANNEL_1);\n}\n\nstatic void MX_TIM3_Init(void) {\n  __HAL_RCC_TIM3_CLK_ENABLE();\n  htim3.Instance = TIM3;\n  htim3.Init.Prescaler = 83;\n  htim3.Init.CounterMode = TIM_COUNTERMODE_UP;\n  htim3.Init.Period = 999;\n  htim3.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;\n  htim3.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;\n  HAL_TIM_PWM_Init(&htim3);\n  TIM_OC_InitTypeDef channel = {0};\n  channel.OCMode = TIM_OCMODE_PWM1;\n  channel.OCPolarity = TIM_OCPOLARITY_HIGH;\n  channel.Pulse = 0;\n  channel.OCFastMode = TIM_OCFAST_DISABLE;\n  HAL_TIM_PWM_ConfigChannel(&htim3, &channel, TIM_CHANNEL_1);\n}\n\nvoid HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {\n  /* 타이머 주기 인터럽트 */\n}\n\nint __io_putchar(int ch) {\n  ITM_SendChar(ch);\n  return ch;\n}\n\nvoid Error_Handler(void) {\n  __disable_irq();\n  while (1) { }\n}\n",
+ "simulation": {
+  "stepMs": 1,
+  "pwmWaveform": true
+ }
+}

@@ -1,0 +1,5 @@
+{
+  "source": "qemu-system-arm 9.2.4 -M mps2-an386 (semihosting)",
+  "exitCode": 0,
+  "output": "svc_num=0000002a\nsvc_ret=00000016\npendsv=00000001\nlog0=SP\nnest=3<5AVnab>46r\nprimask=mp4e\nbasepri=w7yMM\nfp_thread=3fff302b\nfp_isr=c2e8c534\nfp_s16=41200000\ncontrol=00000004\nfpu=88\ngroup=99X\nticks=00000001\nsystick_counts_down=00000001\ncontrol_psp=00000002\nsvc_psp=000000f6\nsp_is_psp=00000001\nipsr=00000000\nvectpending=00000014\nisrpending=00000001\ncleared=00000000\nshcsr=00000000\nend=S\n"
+}

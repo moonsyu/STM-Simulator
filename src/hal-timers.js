@@ -30,11 +30,11 @@ export class HalTimers {
     const generation=++s.generation;if(!s.baseIT||this.period(s)===1)return;
     const ms=(this.period(s)-this.counter(s,r.microTime))*1000/this.hz(s);
     const full=this.period(s)*1000/this.hz(s);if(full<.1||full>3600000)throw new Error(s.id+': 인터럽트 주기 범위 0.1~3600000 ms');
-    const fire=()=>{if(generation!==s.generation||!s.baseIT)return;this.hal.queue(s.id+'_IRQn',()=>{if(s.baseIT)this.hal.callback(r,'HAL_TIM_PeriodElapsedCallback',[s.ptr]);},s.id+':update');r.event(r.microTime/1000+full,fire);};
+    const fire=()=>{if(generation!==s.generation||!s.baseIT)return;const hal=this.hal;hal.queue(s.id+'_IRQn',function*(){if(s.baseIT)yield* hal.userCall(r,'HAL_TIM_PeriodElapsedCallback',[s.ptr]);},s.id+':update');r.event(r.microTime/1000+full,fire);};
     r.event(r.microTime/1000+Math.max(.000001,ms),fire);
   }
   channel(s,key){integer(key/4,0,3,'TIM 채널');const c=s.channels.get(key);if(!c)throw new Error(s.id+': 채널을 먼저 초기화하세요.');return c;}
-  notify(s,c,key,r){if(!c.it)return;this.hal.queue(s.id+'_IRQn',()=>{if(!c.active||s.kind==='Encoder'&&!s.encoderActive)return;const {h}=this.hal.requireHandle(s.ptr,r,'TIM');h.fields.Channel.value=1<<(key/4);try{this.hal.callback(r,'HAL_TIM_IC_CaptureCallback',[s.ptr]);}finally{h.fields.Channel.value=0;}},s.id+':capture:'+key);}
+  notify(s,c,key,r){if(!c.it)return;const hal=this.hal;hal.queue(s.id+'_IRQn',function*(){if(!c.active||s.kind==='Encoder'&&!s.encoderActive)return;const {h}=hal.requireHandle(s.ptr,r,'TIM');h.fields.Channel.value=1<<(key/4);try{yield* hal.userCall(r,'HAL_TIM_IC_CaptureCallback',[s.ptr]);}finally{h.fields.Channel.value=0;}},s.id+':capture:'+key);}
   observe(r,us=r.microTime){
     for(const s of this.states.values()){
       if(!s.active)continue;

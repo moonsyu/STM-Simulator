@@ -1,0 +1,28 @@
+{
+ "format": "stm32-circuit-lab",
+ "version": 2,
+ "name": "firmware fixture",
+ "components": [],
+ "wires": [],
+ "mcu": {
+  "family": "STM32F446RE",
+  "pins": {},
+  "peripherals": {},
+  "nvic": {},
+  "timerClockHz": 16000000
+ },
+ "firmware": {
+  "mode": "hal",
+  "files": [
+   {
+    "name": "fixture.h",
+    "text": "/* Shared fixture helpers: HSI -> PLL 84 MHz (APB1 42 MHz, APB2 84 MHz, PLLQ 48 MHz),\n * SysTick, SWV ITM printf. Same clock tree as the app's generated main.c. */\n#pragma once\n#include \"main.h\"\n#include <stdio.h>\n#include <string.h>\n\nstatic inline void Fixture_ClockConfig(void) {\n  RCC_OscInitTypeDef osc = {0};\n  RCC_ClkInitTypeDef clk = {0};\n  __HAL_RCC_PWR_CLK_ENABLE();\n  __HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE1);\n  osc.OscillatorType = RCC_OSCILLATORTYPE_HSI;\n  osc.HSIState = RCC_HSI_ON;\n  osc.HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT;\n  osc.PLL.PLLState = RCC_PLL_ON;\n  osc.PLL.PLLSource = RCC_PLLSOURCE_HSI;\n  osc.PLL.PLLM = 16; osc.PLL.PLLN = 336; osc.PLL.PLLP = RCC_PLLP_DIV4; osc.PLL.PLLQ = 7; osc.PLL.PLLR = 2;\n  if (HAL_RCC_OscConfig(&osc) != HAL_OK) Error_Handler();\n  clk.ClockType = RCC_CLOCKTYPE_HCLK | RCC_CLOCKTYPE_SYSCLK | RCC_CLOCKTYPE_PCLK1 | RCC_CLOCKTYPE_PCLK2;\n  clk.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;\n  clk.AHBCLKDivider = RCC_SYSCLK_DIV1;\n  clk.APB1CLKDivider = RCC_HCLK_DIV2;\n  clk.APB2CLKDivider = RCC_HCLK_DIV1;\n  if (HAL_RCC_ClockConfig(&clk, FLASH_LATENCY_2) != HAL_OK) Error_Handler();\n}\n"
+   }
+  ]
+ },
+ "code": "/* USART2 (ST-LINK VCP) DMA transmit + DMA receive of 5 bytes, then DMA echo. */\n#include \"fixture.h\"\n\nUART_HandleTypeDef huart2;\nDMA_HandleTypeDef hdma_usart2_tx, hdma_usart2_rx;\nstatic uint8_t rx[5];\nstatic volatile uint32_t txDone, rxDone;\n\nvoid Error_Handler(void) { __disable_irq(); while (1) { } }\nint __io_putchar(int ch) { ITM_SendChar(ch); return ch; }\nvoid SysTick_Handler(void) { HAL_IncTick(); }\nvoid DMA1_Stream6_IRQHandler(void) { HAL_DMA_IRQHandler(&hdma_usart2_tx); }\nvoid DMA1_Stream5_IRQHandler(void) { HAL_DMA_IRQHandler(&hdma_usart2_rx); }\nvoid USART2_IRQHandler(void) { HAL_UART_IRQHandler(&huart2); }\nvoid HAL_UART_TxCpltCallback(UART_HandleTypeDef *h) { (void)h; txDone++; }\nvoid HAL_UART_RxCpltCallback(UART_HandleTypeDef *h) { (void)h; rxDone++; }\n\nvoid HAL_UART_MspInit(UART_HandleTypeDef *h) {\n  GPIO_InitTypeDef g = {0};\n  __HAL_RCC_GPIOA_CLK_ENABLE(); __HAL_RCC_USART2_CLK_ENABLE(); __HAL_RCC_DMA1_CLK_ENABLE();\n  g.Pin = GPIO_PIN_2 | GPIO_PIN_3; g.Mode = GPIO_MODE_AF_PP; g.Pull = GPIO_PULLUP; g.Speed = GPIO_SPEED_FREQ_VERY_HIGH; g.Alternate = GPIO_AF7_USART2;\n  HAL_GPIO_Init(GPIOA, &g);\n  hdma_usart2_tx.Instance = DMA1_Stream6; hdma_usart2_tx.Init.Channel = DMA_CHANNEL_4; hdma_usart2_tx.Init.Direction = DMA_MEMORY_TO_PERIPH;\n  hdma_usart2_tx.Init.PeriphInc = DMA_PINC_DISABLE; hdma_usart2_tx.Init.MemInc = DMA_MINC_ENABLE;\n  hdma_usart2_tx.Init.PeriphDataAlignment = DMA_PDATAALIGN_BYTE; hdma_usart2_tx.Init.MemDataAlignment = DMA_MDATAALIGN_BYTE;\n  hdma_usart2_tx.Init.Mode = DMA_NORMAL; hdma_usart2_tx.Init.Priority = DMA_PRIORITY_LOW; hdma_usart2_tx.Init.FIFOMode = DMA_FIFOMODE_DISABLE;\n  if (HAL_DMA_Init(&hdma_usart2_tx) != HAL_OK) Error_Handler();\n  __HAL_LINKDMA(h, hdmatx, hdma_usart2_tx);\n  hdma_usart2_rx.Instance = DMA1_Stream5; hdma_usart2_rx.Init = hdma_usart2_tx.Init; hdma_usart2_rx.Init.Direction = DMA_PERIPH_TO_MEMORY;\n  if (HAL_DMA_Init(&hdma_usart2_rx) != HAL_OK) Error_Handler();\n  __HAL_LINKDMA(h, hdmarx, hdma_usart2_rx);\n  HAL_NVIC_SetPriority(DMA1_Stream5_IRQn, 1, 0); HAL_NVIC_EnableIRQ(DMA1_Stream5_IRQn);\n  HAL_NVIC_SetPriority(DMA1_Stream6_IRQn, 1, 0); HAL_NVIC_EnableIRQ(DMA1_Stream6_IRQn);\n  HAL_NVIC_SetPriority(USART2_IRQn, 2, 0); HAL_NVIC_EnableIRQ(USART2_IRQn);\n}\n\nint main(void) {\n  HAL_Init();\n  Fixture_ClockConfig();\n  huart2.Instance = USART2; huart2.Init.BaudRate = 115200; huart2.Init.WordLength = UART_WORDLENGTH_8B; huart2.Init.StopBits = UART_STOPBITS_1;\n  huart2.Init.Parity = UART_PARITY_NONE; huart2.Init.Mode = UART_MODE_TX_RX; huart2.Init.HwFlowCtl = UART_HWCONTROL_NONE; huart2.Init.OverSampling = UART_OVERSAMPLING_16;\n  if (HAL_UART_Init(&huart2) != HAL_OK) Error_Handler();\n  static uint8_t hello[] = \"DMA hello\\r\\n\";\n  HAL_UART_Transmit_DMA(&huart2, hello, sizeof(hello) - 1);\n  while (!txDone) { }\n  printf(\"tx done\\n\");\n  HAL_UART_Receive_DMA(&huart2, rx, sizeof(rx));\n  while (!rxDone) { }\n  printf(\"rx=%.5s\\n\", rx);\n  HAL_UART_Transmit_DMA(&huart2, rx, sizeof(rx));\n  while (txDone < 2) { }\n  printf(\"echo done\\n\");\n  while (1) { HAL_Delay(10); }\n}\n",
+ "simulation": {
+  "stepMs": 1,
+  "pwmWaveform": false
+ }
+}

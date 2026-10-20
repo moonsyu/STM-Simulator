@@ -1,0 +1,5 @@
+{
+  "source": "qemu-system-arm 9.2.4 -M mps2-an386 (semihosting)",
+  "exitCode": 0,
+  "output": "sw_dense=04b4dc9d\nsw_big=15ab88bd\ntb_asm=0154b6b8\nit_test=11d2b63f\nit_cond=fff7b2f9\ncbz=0000002b\nfib20=00001a6d\nack23=00000009\nfptr=4e26fad6\nqsort=824e8e54\ncond=8a755f84\n"
+}

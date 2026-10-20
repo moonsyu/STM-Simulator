@@ -1,0 +1,119 @@
+{
+ "format": "stm32-circuit-lab",
+ "version": 2,
+ "name": "새 회로",
+ "components": [
+  {
+   "id": "r1",
+   "name": "R1",
+   "type": "resistor",
+   "value": 330,
+   "x": 795,
+   "y": 128,
+   "rotation": 0,
+   "span": 42,
+   "attachA": "bb:d:1",
+   "attachB": "bb:g:1"
+  },
+  {
+   "id": "led1",
+   "name": "LED1",
+   "type": "led",
+   "color": "red",
+   "x": 872,
+   "y": 254,
+   "rotation": 90,
+   "span": 56,
+   "attachA": "bb:j:8",
+   "attachB": "bb:j:12"
+  }
+ ],
+ "wires": [
+  {
+   "id": "w1",
+   "from": "board:CN10:11",
+   "to": "bb:a:8",
+   "color": "#23a68a"
+  },
+  {
+   "id": "w2",
+   "from": "board:CN6:6",
+   "to": "rail:R:-:1",
+   "color": "#4e647b",
+   "points": [
+    {
+     "x": 946,
+     "y": 392
+    }
+   ]
+  },
+  {
+   "id": "w3",
+   "from": "rail:R:-:10",
+   "to": "bb:h:12",
+   "color": "#4e647b",
+   "points": [
+    {
+     "x": 946,
+     "y": 273.7
+    },
+    {
+     "x": 844,
+     "y": 273.7
+    }
+   ]
+  },
+  {
+   "id": "bbWire1",
+   "from": "bb:b:8",
+   "to": "bb:a:1",
+   "color": "#23a68a",
+   "points": [
+    {
+     "x": 732,
+     "y": 128
+    }
+   ]
+  },
+  {
+   "id": "bbWire2",
+   "from": "bb:j:1",
+   "to": "bb:f:8",
+   "color": "#23a68a",
+   "points": [
+    {
+     "x": 845.68,
+     "y": 128
+    },
+    {
+     "x": 845.68,
+     "y": 226
+    }
+   ]
+  }
+ ],
+ "mcu": {
+  "family": "STM32F446RE",
+  "pins": {
+   "PA5": {
+    "function": "GPIO_Output",
+    "pull": "NOPULL",
+    "edge": "FALLING",
+    "label": "LD2",
+    "initial": 0
+   }
+  },
+  "peripherals": {},
+  "nvic": {},
+  "timerClockHz": 84000000
+ },
+ "firmware": {
+  "mode": "hal",
+  "files": []
+ },
+ "code": "#include \"main.h\"\n#include <stdio.h>\n// PA5 → 330 Ω → LED → GND · 500 ms 점멸\n#include <stdio.h>\n\n/* Copy this main.c into a CubeIDE STM32F446RE project with matching\n * pin / peripheral / NVIC settings and Cube-generated IRQ / MSP files.\n * Clock: HSI PLL, APB1 timer clock = 84000000 Hz.\n * printf: SWV ITM port 0 (enable SWV in the debugger). UART uses its pins.\n * With newlib-nano, enable -u _printf_float for floating-point printf. */\n\n\nvoid SystemClock_Config(void);\nvoid Error_Handler(void);\nstatic void MX_GPIO_Init(void);\n\nint main(void) {\n  HAL_Init();\n  SystemClock_Config();\n  MX_GPIO_Init();\n  /* USER CODE BEGIN 2 */\n  /* USER CODE END 2 */\n  while (1) {\n    /* USER CODE BEGIN 3 */\n    HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_5);\n    printf(\"PA5=%u\\n\", HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_5));\n    HAL_Delay(500);\n    /* USER CODE END 3 */\n  }\n}\n\nvoid SystemClock_Config(void) {\n  RCC_OscInitTypeDef osc = {0};\n  RCC_ClkInitTypeDef clk = {0};\n  __HAL_RCC_PWR_CLK_ENABLE();\n  __HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE1);\n  osc.OscillatorType = RCC_OSCILLATORTYPE_HSI;\n  osc.HSIState = RCC_HSI_ON;\n  osc.HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT;\n  osc.PLL.PLLState = RCC_PLL_ON;\n  osc.PLL.PLLSource = RCC_PLLSOURCE_HSI;\n  osc.PLL.PLLM = 16;\n  osc.PLL.PLLN = 336;\n  osc.PLL.PLLP = RCC_PLLP_DIV4;\n  osc.PLL.PLLQ = 7;\n  if (HAL_RCC_OscConfig(&osc) != HAL_OK) Error_Handler();\n  clk.ClockType = RCC_CLOCKTYPE_HCLK | RCC_CLOCKTYPE_SYSCLK | RCC_CLOCKTYPE_PCLK1 | RCC_CLOCKTYPE_PCLK2;\n  clk.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;\n  clk.AHBCLKDivider = RCC_SYSCLK_DIV1;\n  clk.APB1CLKDivider = RCC_HCLK_DIV2;\n  clk.APB2CLKDivider = RCC_HCLK_DIV1;\n  if (HAL_RCC_ClockConfig(&clk, FLASH_LATENCY_2) != HAL_OK) Error_Handler();\n}\n\nstatic void MX_GPIO_Init(void) {\n  GPIO_InitTypeDef GPIO_InitStruct = {0};\n  __HAL_RCC_GPIOA_CLK_ENABLE();\n  HAL_GPIO_WritePin(GPIOA, GPIO_PIN_5, GPIO_PIN_RESET);\n  GPIO_InitStruct.Pin = GPIO_PIN_5;\n  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;\n  GPIO_InitStruct.Pull = GPIO_NOPULL;\n  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;\n  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);\n}\n\nint __io_putchar(int ch) {\n  ITM_SendChar(ch);\n  return ch;\n}\n\nvoid Error_Handler(void) {\n  __disable_irq();\n  while (1) { }\n}\n",
+ "simulation": {
+  "stepMs": 1,
+  "pwmWaveform": false
+ }
+}

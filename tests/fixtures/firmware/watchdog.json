@@ -1,0 +1,28 @@
+{
+ "format": "stm32-circuit-lab",
+ "version": 2,
+ "name": "firmware fixture",
+ "components": [],
+ "wires": [],
+ "mcu": {
+  "family": "STM32F446RE",
+  "pins": {},
+  "peripherals": {},
+  "nvic": {},
+  "timerClockHz": 16000000
+ },
+ "firmware": {
+  "mode": "hal",
+  "files": [
+   {
+    "name": "fixture.h",
+    "text": "/* Shared fixture helpers: HSI -> PLL 84 MHz (APB1 42 MHz, APB2 84 MHz, PLLQ 48 MHz),\n * SysTick, SWV ITM printf. Same clock tree as the app's generated main.c. */\n#pragma once\n#include \"main.h\"\n#include <stdio.h>\n#include <string.h>\n\nstatic inline void Fixture_ClockConfig(void) {\n  RCC_OscInitTypeDef osc = {0};\n  RCC_ClkInitTypeDef clk = {0};\n  __HAL_RCC_PWR_CLK_ENABLE();\n  __HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE1);\n  osc.OscillatorType = RCC_OSCILLATORTYPE_HSI;\n  osc.HSIState = RCC_HSI_ON;\n  osc.HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT;\n  osc.PLL.PLLState = RCC_PLL_ON;\n  osc.PLL.PLLSource = RCC_PLLSOURCE_HSI;\n  osc.PLL.PLLM = 16; osc.PLL.PLLN = 336; osc.PLL.PLLP = RCC_PLLP_DIV4; osc.PLL.PLLQ = 7; osc.PLL.PLLR = 2;\n  if (HAL_RCC_OscConfig(&osc) != HAL_OK) Error_Handler();\n  clk.ClockType = RCC_CLOCKTYPE_HCLK | RCC_CLOCKTYPE_SYSCLK | RCC_CLOCKTYPE_PCLK1 | RCC_CLOCKTYPE_PCLK2;\n  clk.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;\n  clk.AHBCLKDivider = RCC_SYSCLK_DIV1;\n  clk.APB1CLKDivider = RCC_HCLK_DIV2;\n  clk.APB2CLKDivider = RCC_HCLK_DIV1;\n  if (HAL_RCC_ClockConfig(&clk, FLASH_LATENCY_2) != HAL_OK) Error_Handler();\n}\n"
+   }
+  ]
+ },
+ "code": "/* IWDG: refresh three times, then stop refreshing; the watchdog resets the\n * MCU and the reset flag is reported after the reboot. */\n#include \"fixture.h\"\n\nIWDG_HandleTypeDef hiwdg;\nvoid Error_Handler(void) { __disable_irq(); while (1) { } }\nint __io_putchar(int ch) { ITM_SendChar(ch); return ch; }\nvoid SysTick_Handler(void) { HAL_IncTick(); }\n\nint main(void) {\n  HAL_Init();\n  Fixture_ClockConfig();\n  if (__HAL_RCC_GET_FLAG(RCC_FLAG_IWDGRST)) { printf(\"IWDG reset detected\\n\"); __HAL_RCC_CLEAR_RESET_FLAGS(); while (1) { HAL_Delay(10); } }\n  printf(\"boot\\n\");\n  hiwdg.Instance = IWDG; hiwdg.Init.Prescaler = IWDG_PRESCALER_4; hiwdg.Init.Reload = 400; /* (400+1)*4/32000 = 50 ms */\n  if (HAL_IWDG_Init(&hiwdg) != HAL_OK) Error_Handler();\n  for (int i = 0; i < 3; i++) { HAL_Delay(30); HAL_IWDG_Refresh(&hiwdg); printf(\"refresh %d\\n\", i); }\n  printf(\"stop refreshing\\n\");\n  while (1) { }\n}\n",
+ "simulation": {
+  "stepMs": 1,
+  "pwmWaveform": false
+ }
+}

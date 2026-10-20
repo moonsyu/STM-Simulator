@@ -1,0 +1,28 @@
+{
+ "format": "stm32-circuit-lab",
+ "version": 2,
+ "name": "firmware fixture",
+ "components": [],
+ "wires": [],
+ "mcu": {
+  "family": "STM32F446RE",
+  "pins": {},
+  "peripherals": {},
+  "nvic": {},
+  "timerClockHz": 16000000
+ },
+ "firmware": {
+  "mode": "hal",
+  "files": [
+   {
+    "name": "fixture.h",
+    "text": "/* Shared fixture helpers: HSI -> PLL 84 MHz (APB1 42 MHz, APB2 84 MHz, PLLQ 48 MHz),\n * SysTick, SWV ITM printf. Same clock tree as the app's generated main.c. */\n#pragma once\n#include \"main.h\"\n#include <stdio.h>\n#include <string.h>\n\nstatic inline void Fixture_ClockConfig(void) {\n  RCC_OscInitTypeDef osc = {0};\n  RCC_ClkInitTypeDef clk = {0};\n  __HAL_RCC_PWR_CLK_ENABLE();\n  __HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE1);\n  osc.OscillatorType = RCC_OSCILLATORTYPE_HSI;\n  osc.HSIState = RCC_HSI_ON;\n  osc.HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT;\n  osc.PLL.PLLState = RCC_PLL_ON;\n  osc.PLL.PLLSource = RCC_PLLSOURCE_HSI;\n  osc.PLL.PLLM = 16; osc.PLL.PLLN = 336; osc.PLL.PLLP = RCC_PLLP_DIV4; osc.PLL.PLLQ = 7; osc.PLL.PLLR = 2;\n  if (HAL_RCC_OscConfig(&osc) != HAL_OK) Error_Handler();\n  clk.ClockType = RCC_CLOCKTYPE_HCLK | RCC_CLOCKTYPE_SYSCLK | RCC_CLOCKTYPE_PCLK1 | RCC_CLOCKTYPE_PCLK2;\n  clk.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;\n  clk.AHBCLKDivider = RCC_SYSCLK_DIV1;\n  clk.APB1CLKDivider = RCC_HCLK_DIV2;\n  clk.APB2CLKDivider = RCC_HCLK_DIV1;\n  if (HAL_RCC_ClockConfig(&clk, FLASH_LATENCY_2) != HAL_OK) Error_Handler();\n}\n"
+   }
+  ]
+ },
+ "code": "/* DCMI snapshot of one 160x120 RGB565 frame via DMA2 Stream1 channel 1. */\n#include \"fixture.h\"\n\nDCMI_HandleTypeDef hdcmi;\nDMA_HandleTypeDef hdma_dcmi;\n#define WIDTH 160\n#define HEIGHT 120\nstatic uint32_t frame[WIDTH * HEIGHT / 2];\nstatic volatile uint32_t frames, lines, vsyncs;\n\nvoid Error_Handler(void) { __disable_irq(); while (1) { } }\nint __io_putchar(int ch) { ITM_SendChar(ch); return ch; }\nvoid SysTick_Handler(void) { HAL_IncTick(); }\nvoid DMA2_Stream1_IRQHandler(void) { HAL_DMA_IRQHandler(&hdma_dcmi); }\nvoid DCMI_IRQHandler(void) { HAL_DCMI_IRQHandler(&hdcmi); }\nvoid HAL_DCMI_FrameEventCallback(DCMI_HandleTypeDef *h) { (void)h; frames++; }\nvoid HAL_DCMI_LineEventCallback(DCMI_HandleTypeDef *h) { (void)h; lines++; }\nvoid HAL_DCMI_VsyncEventCallback(DCMI_HandleTypeDef *h) { (void)h; vsyncs++; }\n\nvoid HAL_DCMI_MspInit(DCMI_HandleTypeDef *h) {\n  GPIO_InitTypeDef g = {0};\n  __HAL_RCC_DCMI_CLK_ENABLE(); __HAL_RCC_DMA2_CLK_ENABLE();\n  __HAL_RCC_GPIOA_CLK_ENABLE(); __HAL_RCC_GPIOB_CLK_ENABLE(); __HAL_RCC_GPIOC_CLK_ENABLE();\n  g.Mode = GPIO_MODE_AF_PP; g.Pull = GPIO_PULLUP; g.Speed = GPIO_SPEED_FREQ_VERY_HIGH; g.Alternate = GPIO_AF13_DCMI;\n  g.Pin = GPIO_PIN_4 | GPIO_PIN_6; HAL_GPIO_Init(GPIOA, &g);                         /* HSYNC, PIXCLK */\n  g.Pin = GPIO_PIN_6 | GPIO_PIN_7 | GPIO_PIN_8 | GPIO_PIN_9; HAL_GPIO_Init(GPIOB, &g); /* D5, VSYNC, D6, D7 */\n  g.Pin = GPIO_PIN_6 | GPIO_PIN_7 | GPIO_PIN_8 | GPIO_PIN_9 | GPIO_PIN_11; HAL_GPIO_Init(GPIOC, &g); /* D0-D4 */\n  hdma_dcmi.Instance = DMA2_Stream1; hdma_dcmi.Init.Channel = DMA_CHANNEL_1; hdma_dcmi.Init.Direction = DMA_PERIPH_TO_MEMORY;\n  hdma_dcmi.Init.PeriphInc = DMA_PINC_DISABLE; hdma_dcmi.Init.MemInc = DMA_MINC_ENABLE;\n  hdma_dcmi.Init.PeriphDataAlignment = DMA_PDATAALIGN_WORD; hdma_dcmi.Init.MemDataAlignment = DMA_MDATAALIGN_WORD;\n  hdma_dcmi.Init.Mode = DMA_NORMAL; hdma_dcmi.Init.Priority = DMA_PRIORITY_HIGH; hdma_dcmi.Init.FIFOMode = DMA_FIFOMODE_ENABLE;\n  hdma_dcmi.Init.FIFOThreshold = DMA_FIFO_THRESHOLD_FULL; hdma_dcmi.Init.MemBurst = DMA_MBURST_SINGLE; hdma_dcmi.Init.PeriphBurst = DMA_PBURST_SINGLE;\n  if (HAL_DMA_Init(&hdma_dcmi) != HAL_OK) Error_Handler();\n  __HAL_LINKDMA(h, DMA_Handle, hdma_dcmi);\n  HAL_NVIC_SetPriority(DMA2_Stream1_IRQn, 1, 0); HAL_NVIC_EnableIRQ(DMA2_Stream1_IRQn);\n  HAL_NVIC_SetPriority(DCMI_IRQn, 2, 0); HAL_NVIC_EnableIRQ(DCMI_IRQn);\n}\n\nint main(void) {\n  HAL_Init();\n  Fixture_ClockConfig();\n  hdcmi.Instance = DCMI; hdcmi.Init.SynchroMode = DCMI_SYNCHRO_HARDWARE; hdcmi.Init.PCKPolarity = DCMI_PCKPOLARITY_RISING;\n  hdcmi.Init.VSPolarity = DCMI_VSPOLARITY_LOW; hdcmi.Init.HSPolarity = DCMI_HSPOLARITY_LOW; hdcmi.Init.CaptureRate = DCMI_CR_ALL_FRAME;\n  hdcmi.Init.ExtendedDataMode = DCMI_EXTEND_DATA_8B; hdcmi.Init.JPEGMode = DCMI_JPEG_DISABLE;\n  if (HAL_DCMI_Init(&hdcmi) != HAL_OK) Error_Handler();\n  if (HAL_DCMI_Start_DMA(&hdcmi, DCMI_MODE_SNAPSHOT, (uint32_t)frame, WIDTH * HEIGHT / 2) != HAL_OK) Error_Handler();\n  while (!frames) { }\n  uint32_t sum = 0;\n  const uint8_t *bytes = (const uint8_t *)frame;\n  for (uint32_t i = 0; i < sizeof(frame); i++) sum = sum * 31 + bytes[i];\n  printf(\"frame done lines=%lu checksum=%08lx first=%02x%02x\\n\", (unsigned long)lines, (unsigned long)sum, bytes[0], bytes[1]);\n  while (1) { HAL_Delay(10); }\n}\n",
+ "simulation": {
+  "stepMs": 1,
+  "pwmWaveform": false
+ }
+}

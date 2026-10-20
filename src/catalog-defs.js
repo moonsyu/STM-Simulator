@@ -3,7 +3,7 @@ import {DEVICE_DEFS} from './device-defs.js';
 import {L298_DEFS} from './l298n.js';
 export const catalogType=id=>'ref_'+id.replaceAll('-','_');
 export const CATALOG_BY_TYPE=Object.fromEntries(DEVICE_CATALOG.filter(v=>!['board','breadboard'].includes(v.family)).map(v=>[catalogType(v.id),v]));
-const defaults={resistor:{value:330},led:{color:'red'},button:{switch:0},potentiometer:{value:10000,position:50},slide:{position:0},capacitor:{value:100},uart:{baud:9600},rs485:{baud:9600},i2c:{address:80},temperature:{temperature:25},ultrasonic:{distance:100},dc_supply:{voltage:12}};
+const defaults={resistor:{value:330},led:{color:'red'},button:{switch:0},potentiometer:{value:10000,position:50},slide:{position:0},capacitor:{value:100},uart:{baud:9600},rs485:{baud:9600},i2c:{address:80},temperature:{temperature:25},ultrasonic:{distance:100},dc_supply:{voltage:12},sd:{sizeMB:64,cardImage:''},dcmi:{pattern:'colorbars',image:''}};
 // Map simulator-model contacts to the physical variant's contact numbers. Additional contacts
 // remain separate until their explicit tie, address, reset or signal behavior is installed.
 export const CONTACT_MAPS={
@@ -62,6 +62,6 @@ export const CATALOG_SCOPE={
  'urm09-trig-3':'한 GPIO를 출력에서 입력으로 전환하여 트리거와 거리 비례 Echo 폭을 측정합니다.',
  'can-transceiver-6':'기본 예제는 CAN1 내부 루프백입니다. 표준 ID·필터·FIFO 송수신을 검사합니다. NORMAL 모드에서는 외부 상대 노드를 모델링하지 않아 ACK 오류 32가 발생합니다.',
  'max98357a-9':'I2S2 16 kHz·16비트 스테레오 PCM 전송, SD의 채널 선택·정지, 프레임 수와 주파수를 확인합니다. 소리 버튼은 측정 주파수의 시험음을 재생하며 스피커의 전력·음향 특성은 계산하지 않습니다.',
- 'ov2640-camera':'PA8 XCLK·리셋·전원·SCCB 배선과 센서 뱅크의 PID/VER 읽기를 실행합니다. 영상 캡처와 DCMI 픽셀 출력은 포함하지 않습니다.',
- 'sd-storage-board':'SPI CMD0/8/55/41/58 초기화 및 OCR 응답을 실행합니다. 블록 데이터와 파일시스템 읽기/쓰기는 포함하지 않습니다.'
+ 'ov2640-camera':'PA8 XCLK·리셋·전원·SCCB 배선과 센서 뱅크 PID/VER 읽기, SCCB로 설정한 해상도(QQVGA/QVGA)·형식(RGB565/YUV422/JPEG 스텁)의 테스트 패턴 또는 사용자 이미지 프레임을 DCMI DMA로 버퍼에 캡처합니다. DCMI 데이터 핀 배선은 검사하지 않습니다.',
+ 'sd-storage-board':'SPI 모드(CMD0/8/55/41/58/9/10/13/16/17/18/24/25/12)와 SDIO(HAL_SD) 블록 읽기/쓰기, FatFs(f_open/f_write 등)를 프로젝트에 저장되는 FAT32 카드 이미지로 실행합니다.'
 };
