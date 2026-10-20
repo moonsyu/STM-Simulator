@@ -47,3 +47,8 @@ test('project.simulation.noise is validated, defaults are filled and old files s
  p.simulation.noise={enabled:'yes'};assert.throws(()=>validateProject(p),/noise\.enabled/);
  const api=signalsApi(new SignalRecorder(),new NoiseModel());assert.deepEqual(Object.keys(api).filter(k=>typeof api[k]==='function').sort(),['channels','clear','decode','noise','now','record','samples','setNoise']);
 });
+test('with the error model enabled, bytes arriving while no reception is armed overrun (HAL_UART_ERROR_ORE)',()=>{
+ const p=halExample('uart');p.simulation={stepMs:1,pwmWaveform:false,noise:{enabled:true,bitErrorRate:0,glitchRate:0,jitterNs:0}};
+ p.code=p.code.replace('  HAL_UART_Receive_IT(&huart2, rx, 1);','  HAL_Delay(20);\n  HAL_UART_Receive_IT(&huart2, rx, 1);')+'\nvoid HAL_UART_ErrorCallback(UART_HandleTypeDef *huart){ printf("uart error 0x%lx\\n", huart->ErrorCode); HAL_UART_Receive_IT(huart, rx, 1); }\n';
+ const {s,output}=run(validateProject(p));s.tick(1);s.inject('xyz','USART2');advance(s,40);assert.ok(output.includes('uart error 0x8'),output.join('|'));
+});
