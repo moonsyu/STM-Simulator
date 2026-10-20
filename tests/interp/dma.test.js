@@ -80,3 +80,45 @@ test('TIM PWM DMA plays a WS2812 duty sequence into a NeoPixel and finishes with
  const {s,output}=run(p);advance(s,5);assert.deepEqual(output,['sent ch=2']);assert.deepEqual(s.result.parts.demo.device.color,[0x80,0x10,0x04]);
  assert.ok(s.signals.samples('TIM3.CH2',0,1e7).length>40);
 });
+test('CubeMX multi-file layout: DMA set up in HAL_UART_MspInit (msp.c) and IRQ handlers in stm32f4xx_it.c',()=>{
+ const p=halProject({pins:{PA2:pin('USART2_TX'),PA3:pin('USART2_RX')},peripherals:{USART2:{enabled:true,baud:115200}},nvic:{USART2_IRQn:{enabled:true,priority:0}},globals:'DMA_HandleTypeDef hdma_usart2_rx;\nuint8_t rx[4];',
+  init:'  __HAL_RCC_DMA1_CLK_ENABLE();\n  HAL_NVIC_SetPriority(DMA1_Stream5_IRQn, 0, 0);\n  HAL_NVIC_EnableIRQ(DMA1_Stream5_IRQn);\n  HAL_UART_Receive_DMA(&huart2, rx, 4);',extra:'void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart){ printf("got %c%c%c%c\\n", rx[0], rx[1], rx[2], rx[3]); }'});
+ p.code=p.code.replace('#include "main.h"','#include "main.h"\n#include "stm32f4xx_it.h"');
+ p.firmware.files=[{name:'stm32f4xx_hal_msp.c',text:`#include "main.h"
+extern DMA_HandleTypeDef hdma_usart2_rx;
+void HAL_UART_MspInit(UART_HandleTypeDef* huart)
+{
+  if(huart->Instance==USART2)
+  {
+    hdma_usart2_rx.Instance = DMA1_Stream5;
+    hdma_usart2_rx.Init.Channel = DMA_CHANNEL_4;
+    hdma_usart2_rx.Init.Direction = DMA_PERIPH_TO_MEMORY;
+    hdma_usart2_rx.Init.PeriphInc = DMA_PINC_DISABLE;
+    hdma_usart2_rx.Init.MemInc = DMA_MINC_ENABLE;
+    hdma_usart2_rx.Init.PeriphDataAlignment = DMA_PDATAALIGN_BYTE;
+    hdma_usart2_rx.Init.MemDataAlignment = DMA_MDATAALIGN_BYTE;
+    hdma_usart2_rx.Init.Mode = DMA_NORMAL;
+    hdma_usart2_rx.Init.Priority = DMA_PRIORITY_LOW;
+    hdma_usart2_rx.Init.FIFOMode = DMA_FIFOMODE_DISABLE;
+    if (HAL_DMA_Init(&hdma_usart2_rx) != HAL_OK)
+    {
+      Error_Handler();
+    }
+    __HAL_LINKDMA(huart,hdmarx,hdma_usart2_rx);
+  }
+}
+`},{name:'stm32f4xx_it.c',text:`#include "main.h"
+#include "stm32f4xx_it.h"
+extern DMA_HandleTypeDef hdma_usart2_rx;
+extern UART_HandleTypeDef huart2;
+void DMA1_Stream5_IRQHandler(void)
+{
+  HAL_DMA_IRQHandler(&hdma_usart2_rx);
+}
+void USART2_IRQHandler(void)
+{
+  HAL_UART_IRQHandler(&huart2);
+}
+`}];
+ const {s,output}=run(p);s.inject('wxyz','USART2');advance(s,3);assert.deepEqual(output,['got wxyz']);
+});

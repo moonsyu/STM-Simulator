@@ -61,7 +61,13 @@ async function prepareBuild({project,tools,root,target='arm',configuration='Debu
     if(!files.some(f=>f.name==='system_stm32f4xx.c'))generated.push(path.join(device,'Source/Templates/system_stm32f4xx.c'));
     generated.push(path.join(device,'Source/Templates/gcc/startup_stm32f446xx.s'));
     const {isSerial,serialHandle}=await import('../src/serial-config.js'),{isTimer}=await import('../src/timer-config.js');
-    const env=['#include "main.h"','__attribute__((weak)) void _init(void) {}','__attribute__((weak)) void _fini(void) {}','__attribute__((weak)) int __io_putchar(int ch) { return ch; }','__attribute__((weak)) void SysTick_Handler(void) { HAL_IncTick(); }','__attribute__((weak)) int _write(int file, char *ptr, int len) { (void)file; for(int i=0;i<len;i++) __io_putchar(ptr[i]); return len; }'];
+    // Interrupt handlers must be strong: the startup file's Default_Handler aliases are weak too,
+    // and a weak-vs-weak tie leaves SysTick unhandled (HAL_Delay would hang). Skip any handler the
+    // user's sources already define so imported Cube stm32f4xx_it.c files still link.
+    const userText=[project.code,...files.map(f=>f.text||'')].join('\n');
+    const defined=name=>new RegExp(`\\b${name}\\s*\\(\\s*void\\s*\\)\\s*\\{`).test(userText);
+    const handler=(name,body)=>defined(name)?null:`void ${name}(void) { ${body} }`;
+    const env=['#include "main.h"','__attribute__((weak)) void _init(void) {}','__attribute__((weak)) void _fini(void) {}','__attribute__((weak)) int __io_putchar(int ch) { return ch; }',handler('SysTick_Handler','HAL_IncTick();'),'__attribute__((weak)) int _write(int file, char *ptr, int len) { (void)file; for(int i=0;i<len;i++) __io_putchar(ptr[i]); return len; }'];
     env.push('#include <stddef.h>','#include <stdint.h>','#include <errno.h>',`extern char end, _estack;
 __attribute__((weak)) void *_sbrk(ptrdiff_t increment) {
   static uintptr_t current;
@@ -71,8 +77,8 @@ __attribute__((weak)) void *_sbrk(ptrdiff_t increment) {
   void *previous=(void*)current; current+=increment; return previous;
 }`);
     for(const [id,p]of Object.entries(project.mcu?.peripherals||{}))if(p.enabled){if(isSerial(id))env.push(`extern UART_HandleTypeDef ${serialHandle(id)};`);if(isTimer(id))env.push(`extern TIM_HandleTypeDef htim${id.slice(3)};`);}
-    for(const [irq,p]of Object.entries(project.mcu?.nvic||{}))if(p.enabled){const id=irq.replace('_IRQn',''),body=isTimer(id)?`HAL_TIM_IRQHandler(&htim${id.slice(3)});`:isSerial(id)?`HAL_UART_IRQHandler(&${serialHandle(id)});`:Object.entries(project.mcu.pins).filter(([,p])=>p.function==='GPIO_EXTI').map(([pin])=>`HAL_GPIO_EXTI_IRQHandler(GPIO_PIN_${pin.slice(2)});`).join('');env.push(`__attribute__((weak)) void ${id}_IRQHandler(void) { ${body} }`);}
-    await fs.writeFile(path.join(directory,'__stm_environment.c'),env.join('\n'));generated.push(path.join(directory,'__stm_environment.c'));
+    for(const [irq,p]of Object.entries(project.mcu?.nvic||{}))if(p.enabled){const id=irq.replace('_IRQn',''),body=isTimer(id)?`HAL_TIM_IRQHandler(&htim${id.slice(3)});`:isSerial(id)?`HAL_UART_IRQHandler(&${serialHandle(id)});`:Object.entries(project.mcu.pins).filter(([,p])=>p.function==='GPIO_EXTI').map(([pin])=>`HAL_GPIO_EXTI_IRQHandler(GPIO_PIN_${pin.slice(2)});`).join('');env.push(handler(`${id}_IRQHandler`,body));}
+    await fs.writeFile(path.join(directory,'__stm_environment.c'),env.filter(Boolean).join('\n'));generated.push(path.join(directory,'__stm_environment.c'));
     await fs.writeFile(path.join(directory,'stm32f446re.ld'),LINKER);
     linkFlags=['-T'+path.join(directory,'stm32f446re.ld'),'-nostartfiles','--specs=nano.specs','--specs=nosys.specs','-u','_printf_float'];
   }
