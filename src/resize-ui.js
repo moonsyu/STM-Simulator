@@ -1,4 +1,5 @@
-import {BB,inverse} from './geometry.js';
+import {inverse} from './geometry.js';
+import {breadboardModel} from './pins.js';
 import {localTerminals} from './components.js';
 import {resizeFrame,resizeFromHandle} from './resize.js';
 const $=id=>document.getElementById(id);
@@ -16,7 +17,7 @@ export function setupResizing(o){
  function boundsFor(p){
   if(target.type==='surface'){const box=svg.querySelector(`[data-surface="${target.id}"]`)?.getBBox();return box&&{x:box.x,y:box.y,width:box.width,height:box.height};}
   const object=p.components.find(c=>c.id===target.id);if(!object)return null;
-  if(object.type==='breadboard')return {x:-BB.w/2,y:-BB.h/2,width:BB.w,height:BB.h};
+  if(object.type==='breadboard'){const {frame}=breadboardModel(object);return {x:-frame.w/2,y:-frame.h/2,width:frame.w,height:frame.h};}
   const box=svg.querySelector(`[data-part="${target.id}"] .part-body`)?.getBBox();if(!box)return null;
   const pins=localTerminals({...object,scale:1,scaleX:1,scaleY:1,skewX:0}),m=inverse(resizeFrame(p,target,box).matrix),rx=6*Math.hypot(m.a,m.c),ry=6*Math.hypot(m.b,m.d);
   const x=Math.min(box.x,...pins.map(t=>t.x-rx)),y=Math.min(box.y,...pins.map(t=>t.y-ry)),right=Math.max(box.x+box.width,...pins.map(t=>t.x+rx)),bottom=Math.max(box.y+box.height,...pins.map(t=>t.y+ry));return {x,y,width:Math.max(1,right-x),height:Math.max(1,bottom-y)};

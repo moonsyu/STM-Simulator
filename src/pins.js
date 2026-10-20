@@ -1,6 +1,6 @@
 import {terminalKeys,terminalLabel,nominalTerminals,attachments,rotatePoint} from './components.js';
-import {BOARD,BB,scaleXOf,scaleYOf,partVector,surfacePoint} from './geometry.js';
-export {BOARD,BB} from './geometry.js';
+import {BOARD,BB,FULL_BB,scaleXOf,scaleYOf,partVector,surfacePoint} from './geometry.js';
+export {BOARD,BB,FULL_BB} from './geometry.js';
 // MB1136, UM1724 Rev 17, Figure 24 / Tables 19 and 29.
 // Default A4/A5 solder bridges: PC1/PC0. Hardware jumper behavior is not modeled.
 export const ALIASES = Object.freeze({D0:'PA3',D1:'PA2',D2:'PA10',D3:'PB3',D4:'PB5',D5:'PB4',D6:'PB10',D7:'PA8',D8:'PA9',D9:'PC7',D10:'PB6',D11:'PA7',D12:'PA6',D13:'PA5',D14:'PB9',D15:'PB8',A0:'PA0',A1:'PA1',A2:'PA4',A3:'PB0',A4:'PC1',A5:'PC0',LED_BUILTIN:'PA5',USER_BUTTON:'PC13'});
@@ -39,12 +39,26 @@ for(const side of ['L','R'])for(const sign of ['+','-'])for(let n=1;n<=25;n++) {
   HOLES.push({id:`rail:${side}:${sign}:${n}`,label:`${side==='L'?'왼쪽':'오른쪽'} ${sign} 전원 레일 ${n}`,x,y:BB.startY+(n-1)*14+Math.floor((n-1)/5)*14,bus:`rail:${side}:${sign}`});
 }
 export const HOLE_BY_ID = new Map(HOLES.map(h=>[h.id,h]));
+// 830-point board: columns 1-63 are vertical strips (a-e top block, f-j bottom block).
+// Each of the four rail lines (top/bottom, +/-) is one continuous conductor of 50 holes in groups of 5.
+export const FULL_HOLES = [];
+for(let col=1;col<=FULL_BB.columns;col++)for(let c=0;c<10;c++){
+  const top=c<5,y=(top?FULL_BB.rows.a:FULL_BB.rows.f)+(c%5)*FULL_BB.step;
+  FULL_HOLES.push({id:`bb:${letters[c]}:${col}`,label:`${letters[c].toUpperCase()}${col}`,x:FULL_BB.left+(col-1)*FULL_BB.step,y,bus:`bb:${top?'T':'B'}:${col}`});
+}
+for(const side of ['T','B'])for(const [i,sign] of ['+','-'].entries())for(let n=1;n<=50;n++){
+  const column=3+(n-1)+Math.floor((n-1)/5);
+  FULL_HOLES.push({id:`rail:${side}:${sign}:${n}`,label:`${side==='T'?'위쪽':'아래쪽'} ${sign} 전원 레일 ${n}`,x:FULL_BB.left+(column-1)*FULL_BB.step,y:FULL_BB.rails[side][i],bus:`rail:${side}:${sign}`});
+}
+export const BREADBOARD_VARIANTS=Object.freeze({half:{frame:BB,holes:HOLES,points:400,label:'400홀'},full:{frame:FULL_BB,holes:FULL_HOLES,points:830,label:'830홀'}});
+/** Model of a breadboard component: `variant:'full'` is the 830-point board, anything else the 400-point board. */
+export const breadboardModel=part=>part?.variant==='full'?BREADBOARD_VARIANTS.full:BREADBOARD_VARIANTS.half;
 const breadboardCache=new WeakMap();
 export const breadboardPrefix=id=>`breadboard:${id}:`;
 export function breadboardHoles(part){
-  const key=[part.id,part.x,part.y,part.rotation,part.name,scaleXOf(part),scaleYOf(part),part.skewX??0].join('|'),cached=breadboardCache.get(part);
+  const key=[part.id,part.x,part.y,part.rotation,part.name,part.variant,scaleXOf(part),scaleYOf(part),part.skewX??0].join('|'),cached=breadboardCache.get(part);
   if(cached?.key===key)return cached.holes;
-  const prefix=breadboardPrefix(part.id),holes=HOLES.map(h=>{const q=partVector(part,h.x-(BB.x+BB.w/2),h.y-(BB.y+BB.h/2));return {...h,id:prefix+h.id,bus:prefix+h.bus,x:part.x+q.x,y:part.y+q.y,label:`${part.name} · ${h.label}`};});
+  const {frame,holes:local}=breadboardModel(part),prefix=breadboardPrefix(part.id),holes=local.map(h=>{const q=partVector(part,h.x-(frame.x+frame.w/2),h.y-(frame.y+frame.h/2));return {...h,id:prefix+h.id,bus:prefix+h.bus,x:part.x+q.x,y:part.y+q.y,label:`${part.name} · ${h.label}`};});
   breadboardCache.set(part,{key,holes,byId:new Map(holes.map(h=>[h.id,h]))});return holes;
 }
 export function circuitHoles(components=[],surfaces){return [...(surfaces?.breadboard?.hidden?[]:HOLES.map(h=>surfacePoint(h,'breadboard',surfaces))),...components.filter(p=>p.type==='breadboard').flatMap(breadboardHoles)];}

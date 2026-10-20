@@ -3,9 +3,13 @@ import {PINS,BOARD,BB,circuitHoles,holeInfo,endpointInfo,breadboardHoles,boardPi
 import {partVector,surfacePoint} from './geometry.js';
 import {displayModel} from './model-geometry.js';
 import {wiringTopology} from './circuit-topology.js';
+import {breadboardBounds} from './breadboards.js';
+import {layoutExample,rerouteExampleWires,recolorExampleWires} from './example-layout.js';
 import {routeExampleWire,exampleWireObstacles,segmentHitsBox} from './example-wire-route.js';
 
 const terminal=(p,key)=>`part:${p.id}:${key}`;
+// Rail used for each supply: ground on a minus rail, 3.3 V and 5 V on separate plus rails.
+export const railPrefix=(variant,signal)=>variant==='full'?(signal==='GND'?'rail:B:-:':signal==='3V3'?'rail:B:+:':'rail:T:+:'):(signal==='GND'?'rail:L:-:':signal==='3V3'?'rail:L:+:':'rail:R:+:');
 const bounds=points=>({left:Math.min(...points.map(p=>p.x)),right:Math.max(...points.map(p=>p.x)),top:Math.min(...points.map(p=>p.y)),bottom:Math.max(...points.map(p=>p.y))});
 const corners=b=>[{x:b.left,y:b.top},{x:b.right,y:b.top},{x:b.left,y:b.bottom},{x:b.right,y:b.bottom}];
 export const containsPoint=(b,p,margin=0)=>p.x>b.left-margin&&p.x<b.right+margin&&p.y>b.top-margin&&p.y<b.bottom+margin;
@@ -16,8 +20,8 @@ export function exampleBodyBounds(p){
 }
 export function exampleBreadboards(project){
  const boards=[];
- if(!project.surfaces?.breadboard?.hidden)boards.push({id:'surface',bounds:bounds(corners({left:BB.x,right:BB.x+BB.w,top:BB.y,bottom:BB.y+BB.h}).map(q=>surfacePoint(q,'breadboard',project.surfaces))),holes:circuitHoles([],project.surfaces)});
- for(const p of project.components.filter(p=>p.type==='breadboard'))boards.push({id:p.id,bounds:bounds(corners({left:-BB.w/2,right:BB.w/2,top:-BB.h/2,bottom:BB.h/2}).map(q=>{const v=partVector(p,q.x,q.y);return {x:p.x+v.x,y:p.y+v.y};})),holes:breadboardHoles(p)});
+ if(!project.surfaces?.breadboard?.hidden)boards.push({id:'surface',variant:'half',bounds:bounds(corners({left:BB.x,right:BB.x+BB.w,top:BB.y,bottom:BB.y+BB.h}).map(q=>surfacePoint(q,'breadboard',project.surfaces))),holes:circuitHoles([],project.surfaces)});
+ for(const p of project.components.filter(p=>p.type==='breadboard'))boards.push({id:p.id,variant:p.variant==='full'?'full':'half',bounds:breadboardBounds(p),holes:breadboardHoles(p)});
  return boards;
 }
 const inside=(outer,inner)=>inner.left>=outer.left+10&&inner.right<=outer.right-10&&inner.top>=outer.top+10&&inner.bottom<=outer.bottom-10;
@@ -59,6 +63,15 @@ function mountCandidate(p,board,state,maxBend){
 }
 
 export function arrangeExampleOnBreadboards(project,{partIds,preferredBoard,report}={}){
+ // A complete example is planned from its netlist: in-line series parts, nearest supply pins, nested routes.
+ if(!partIds){
+  const planned=layoutExample(project);
+  if(planned){for(const key of ['components','wires','surfaces'])project[key]=planned[key];return project;}
+  arrangeParts(project,{preferredBoard,report});return rerouteExampleWires(recolorExampleWires(project));
+ }
+ return arrangeParts(project,{partIds,preferredBoard,report});
+}
+function arrangeParts(project,{partIds,preferredBoard,report}={}){
  const selected=new Set(partIds||project.components.filter(p=>p.type!=='breadboard').map(p=>p.id)),parts=project.components.filter(p=>selected.has(p.id)&&p.type!=='breadboard');
  if(!exampleBreadboards(project).length)addBreadboard(project);
  const net=wiringTopology(project),roots=new Set(parts.flatMap(p=>terminalKeys(p).map(k=>net.find(terminal(p,k))))),groups=new Map();
@@ -144,7 +157,7 @@ export function arrangeExampleOnBreadboards(project,{partIds,preferredBoard,repo
   const atFrom=PINS.find(p=>p.id===w.from),atTo=PINS.find(p=>p.id===w.to),pin=atFrom||atTo,other=atFrom?w.to:w.from;
   if(!pin||!['GND','AGND','3V3','5V'].includes(pin.signal)||!holeInfo(other,project.components,project.surfaces)||other.includes('rail:'))continue;
   if(partIds&&!changed.has(w.id))continue;
-  const board=boards.find(b=>b.holes.some(h=>h.id===other)),signal=pin.signal==='AGND'?'GND':pin.signal,rail=signal==='GND'?'rail:L:-:':signal==='3V3'?'rail:L:+:':'rail:R:+:',key=board.id+signal;
+  const board=boards.find(b=>b.holes.some(h=>h.id===other)),signal=pin.signal==='AGND'?'GND':pin.signal,rail=railPrefix(board.variant,signal),key=board.id+signal;
   const railHole=board.holes.find(h=>h.id.includes(rail)),live=wiringTopology(project),railRoot=live.find(railHole.id);
   if(railRoot!==live.find(boardPin(signal))&&project.wires.some(v=>[v.from,v.to].some(id=>live.find(id)===railRoot)))continue;
   const candidates=board.holes.filter(h=>h.id.includes(rail)&&!wireHoles.has(h.id)&&!occupiedLegs.has(h.id)&&!bodies.some(b=>containsPoint(b,h,8)));

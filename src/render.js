@@ -2,7 +2,7 @@ import {remodelLegacyShape,updateCatalogView} from './catalog-view.js';
 import {displayModel,catalogPadPosition,packageLeadRoot} from './model-geometry.js';
 import {isSelected,wirePoints} from './circuit-edit.js';
 import {roundedWirePath} from './wire-path.js';
-import {PINS,HOLES,BB,endpointInfo,circuitHoles,breadboardPrefix} from './pins.js';
+import {PINS,HOLES,FULL_HOLES,BB,FULL_BB,endpointInfo,circuitHoles,breadboardPrefix,breadboardModel} from './pins.js';
 import {terminalKeys,terminalLabel,localTerminals,nominalTerminals,rotatePoint,attachments,PART_DEFS} from './components.js';
 import {extraShape,updateExtraSvg} from './part-render.js';
 import {scaleXOf,scaleYOf,partTransform,partVector,surfaceTransform,surfacePoint} from './geometry.js';
@@ -37,20 +37,49 @@ export function boardSvg(){
  for(const p of PINS){const morph=['CN7','CN10'].includes(p.header);s+=rect(p.x-3.4,p.y-3.4,6.8,6.8,morph?'#b69450':'#535c59',.6,'stroke="#111b1a" stroke-width=".5"')+rect(p.x-2.1,p.y-2.1,4.2,4.2,morph?'#e0c47c':'#101a19',.2);if(morph)s+=rect(p.x-1.5,p.y-1.5,1.3,1.3,'#f6e5a9',0);if(!morph)s+=text(p.x+(p.x<250?12:-12),p.y+3,p.label,8,'#3f625e',`text-anchor="${p.x<250?'start':'end'}"`);}
  return s+'</g>';
 }
-export function breadboardSvg(part=null,selected=null){
- const prefix=part?breadboardPrefix(part.id):'',attributes=part?` data-part="${part.id}" data-rotation="${part.rotation}" transform="${partTransform(part)} translate(${-BB.x-BB.w/2} ${-BB.y-BB.h/2})"`:' data-surface="breadboard"';
- let s=`<g class="breadboard ${part&&isSelected(selected,'part',part.id)?'part-selected':''}"${attributes}>${rect(BB.x,BB.y,BB.w,BB.h,'url(#plastic)',6,'stroke="#b6bbb7" filter="url(#shadow)" class="breadboard-body"')}`;
- s+=rect(BB.x+4,BB.y+4,BB.w-8,BB.h-8,'none',4,'stroke="#ffffff" stroke-width="1.5"')+rect(BB.x+57,BB.startY-13,2,438,'#d6d8d3',1)+rect(BB.x+277,BB.startY-13,2,438,'#d6d8d3',1)+rect(BB.x+157,BB.startY-12,13,436,'#c6cbc6',2)+rect(BB.x+160,BB.startY-9,6,429,'#e6e8e1',1);
- for(const [x,sign,color]of [[BB.x+12,'+','#d84c42'],[BB.x+48,'−','#377aa6'],[BB.x+290,'+','#d84c42'],[BB.x+326,'−','#377aa6']]){
-   s+=`<path d="M${x} ${BB.startY-10}V${BB.startY+425}" stroke="${color}" stroke-width="1.25"/>`+text(x,BB.startY-20,sign,14,color,'text-anchor="middle"')+text(x,BB.startY+444,sign,14,color,'text-anchor="middle"');
+const holeSvg=(h,prefix)=>rect(h.x-4,h.y-4,8,8,'#cfcbbf',.8)+`<path d="M${h.x-3.6} ${h.y+3.6}h7.2v-7.2" fill="none" stroke="#fff" stroke-width=".9"/>`+rect(h.x-2.4,h.y-2.4,4.8,4.8,'#28332f',.4,`class="hole" data-hole="${prefix+h.id}"`)+rect(h.x-1.7,h.y+1.1,3.4,.7,'#6a746d',.1,'pointer-events="none"');
+const sign=(x,y,value,size=14)=>text(x,y,value==='+'?'+':'−',size,value==='+'?'#e0322b':'#2f7fd6','text-anchor="middle" font-weight="700"');
+// Dovetail clips on the edges of the plastic body, as on real interlocking boards.
+const clip=(x,y,w,h)=>rect(x,y,w,h,'#f1ede3',2,'stroke="#c9c4b6" stroke-width=".8"');
+// 400-point half-size board: vertical, rows 1-30, a-e | channel | f-j, + / - rails on both outer sides.
+function halfBreadboardSvg(prefix){
+ let s='';
+ for(const r of [3.5,15.5,27])for(const x of [BB.x-5,BB.x+BB.w-1])s+=clip(x,BB.startY+(r-1)*14-15,6,30);
+ s+=rect(BB.x,BB.y,BB.w,BB.h,'url(#plastic)',7,'stroke="#c4bfb1" filter="url(#shadow)" class="breadboard-body"');
+ s+=rect(BB.x+4,BB.y+4,BB.w-8,BB.h-8,'none',5,'stroke="#ffffff" stroke-width="1.5"')+rect(BB.x+58,BB.y+10,1.5,BB.h-20,'#dcd7ca',.7)+rect(BB.x+282.5,BB.y+10,1.5,BB.h-20,'#dcd7ca',.7)+rect(BB.x+157,BB.y+10,13,BB.h-20,'#e3dfd3',3)+rect(BB.x+160,BB.y+13,7,BB.h-26,'#f4f1e8',2);
+ for(const [x,value]of [[BB.x+12,'+'],[BB.x+48,'-'],[BB.x+290,'+'],[BB.x+326,'-']])s+=`<path d="M${x} ${BB.startY-10}V${BB.startY+416}" stroke="${value==='+'?'#e0322b':'#2f7fd6'}" stroke-width="1.6"/>`;
+ s+=sign(BB.x+22,BB.startY-22,'+')+sign(BB.x+36,BB.startY-22,'-')+sign(BB.x+300,BB.startY-22,'+')+sign(BB.x+314,BB.startY-22,'-');
+ for(let i=0;i<10;i++)s+=text(BB.x+86+i*14+(i>=5?28:0),BB.startY-20,'abcdefghij'[i],10,'#3d443f','text-anchor="middle" font-weight="600"');
+ for(let r=1;r<=30;r++){const y=BB.startY+(r-1)*14;s+=text(BB.x+70,y+3,r,8,'#4f5751','text-anchor="end"')+text(BB.x+272,y+3,r,8,'#4f5751','text-anchor="start"');}
+ for(const h of HOLES)s+=holeSvg(h,prefix);
+ return s;
+}
+// 830-point full-size board: horizontal, columns 1-63, a-e | channel | f-j, + / - rails top and bottom.
+function fullBreadboardSvg(prefix){
+ const F=FULL_BB,x0=F.left,x1=F.left+(F.columns-1)*F.step;let s='';
+ for(const cx of [130,330,474,618,818])s+=clip(cx-18,-5,36,6)+clip(cx-18,F.h-1,36,6);
+ for(const y of [F.rows.a+28,F.rows.f+28])s+=clip(-5,y-14,6,28)+clip(F.w-1,y-14,6,28);
+ s+=rect(0,0,F.w,F.h,'url(#plastic)',7,'stroke="#c4bfb1" filter="url(#shadow)" class="breadboard-body"')+rect(4,4,F.w-8,F.h-8,'none',5,'stroke="#ffffff" stroke-width="1.5"');
+ s+=rect(10,57,F.w-20,1.5,'#dcd7ca',.7)+rect(10,F.h-59,F.w-20,1.5,'#dcd7ca',.7)+rect(10,(F.rows.a+4*F.step+F.rows.f)/2-6.5,F.w-20,13,'#e3dfd3',3)+rect(13,(F.rows.a+4*F.step+F.rows.f)/2-3.5,F.w-26,7,'#f4f1e8',2);
+ for(const [side,[plus,minus]]of Object.entries(F.rails)){
+  const red=side==='T'?plus-11:plus-11,blue=minus+11;
+  s+=`<path d="M${x0-12} ${red}H${x1+12}" stroke="#e0322b" stroke-width="1.6"/><path d="M${x0-12} ${blue}H${x1+12}" stroke="#2f7fd6" stroke-width="1.6"/>`;
+  s+=sign(18,plus+5,'+',13)+sign(18,minus+5,'-',13);
  }
- for(let i=0;i<10;i++)s+=text(BB.x+86+i*14+(i>=5?28:0),BB.startY-21,'abcdefghij'[i],9,'#53615b','text-anchor="middle"')+text(BB.x+86+i*14+(i>=5?28:0),BB.startY+431,'abcdefghij'[i],9,'#53615b','text-anchor="middle"');
- for(let r=1;r<=30;r++){const y=BB.startY+(r-1)*14;s+=text(BB.x+69,y+3,r,8,'#68736d','text-anchor="end"')+text(BB.x+285,y+3,r,8,'#68736d','text-anchor="start"');}
- for(const h of HOLES)s+=rect(h.x-4,h.y-4,8,8,'#c5cbc4',.8)+`<path d="M${h.x-3.6} ${h.y+3.6}h7.2v-7.2" fill="none" stroke="#fff" stroke-width=".9"/>`+rect(h.x-2.4,h.y-2.4,4.8,4.8,'#28332f',.4,`class="hole" data-hole="${prefix+h.id}"`)+rect(h.x-1.7,h.y+1.1,3.4,.7,'#6a746d',.1,'pointer-events="none"');
- s+=text(BB.x+BB.w/2,BB.y+BB.h-20,part?`${part.name} · 400 POINTS`:'400 POINTS  /  30 ROWS',9,'#65736c','text-anchor="middle" letter-spacing="1.2"');
+ const labels=[1,...Array.from({length:12},(_,i)=>(i+1)*5),63];
+ for(const n of labels){const x=x0+(n-1)*F.step;s+=text(x,F.rows.a-11,n,8,'#4f5751','text-anchor="middle"')+text(x,F.rows.f+4*F.step+14,n,8,'#4f5751','text-anchor="middle"');}
+ for(let i=0;i<10;i++)s+=text(24,(i<5?F.rows.a:F.rows.f)+(i%5)*F.step+3.5,'abcdefghij'[i],10,'#3d443f','text-anchor="middle" font-weight="600"');
+ for(const h of FULL_HOLES)s+=holeSvg(h,prefix);
+ return s;
+}
+export function breadboardSvg(part=null,selected=null){
+ const {frame}=breadboardModel(part),full=part?.variant==='full',prefix=part?breadboardPrefix(part.id):'',attributes=part?` data-part="${part.id}" data-rotation="${part.rotation}"${full?' data-variant="full"':''} transform="${partTransform(part)} translate(${-frame.x-frame.w/2} ${-frame.y-frame.h/2})"`:' data-surface="breadboard"';
+ let s=`<g class="breadboard ${part&&isSelected(selected,'part',part.id)?'part-selected':''}"${attributes}>`+(full?fullBreadboardSvg(prefix):halfBreadboardSvg(prefix));
+ if(full)s+=text(frame.w-14,frame.h-6,`${part.name} · 830 POINTS`,7,'#7d847d','text-anchor="end" letter-spacing="1"');
+ else s+=text(BB.x+BB.w/2,BB.y+BB.h-18,part?`${part.name} · 400 POINTS`:'400 POINTS  /  30 ROWS',8,'#7d847d','text-anchor="middle" letter-spacing="1.2"');
  return s+'</g>';
 }
-export function initSvg(svg){svg.innerHTML=`<defs><linearGradient id="pcb" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#fff"/><stop offset="1" stop-color="#edf1ef"/></linearGradient><linearGradient id="plastic" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#fffefa"/><stop offset="1" stop-color="#f0f0e9"/></linearGradient><filter id="shadow" x="-20%" y="-10%" width="145%" height="140%"><feDropShadow dx="0" dy="6" stdDeviation="5" flood-color="#536c7b" flood-opacity=".16"/></filter><filter id="led-glow" x="-100%" y="-100%" width="300%" height="300%"><feGaussianBlur stdDeviation="6"/></filter></defs><g id="surface">${boardSvg()}${breadboardSvg()}<g id="breadboard-layer"></g><g id="endpoint-layer"></g><g id="wire-layer"></g><g id="part-layer"></g><g id="net-layer" pointer-events="none"></g><g id="wire-handle-layer"></g><g id="search-layer" pointer-events="none"></g><g id="preview-layer" pointer-events="none"></g></g>`;}
+export function initSvg(svg){svg.innerHTML=`<defs><linearGradient id="pcb" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#fff"/><stop offset="1" stop-color="#edf1ef"/></linearGradient><linearGradient id="plastic" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#fbf8f0"/><stop offset="1" stop-color="#efebe0"/></linearGradient><filter id="shadow" x="-20%" y="-10%" width="145%" height="140%"><feDropShadow dx="0" dy="6" stdDeviation="5" flood-color="#536c7b" flood-opacity=".16"/></filter><filter id="led-glow" x="-100%" y="-100%" width="300%" height="300%"><feGaussianBlur stdDeviation="6"/></filter></defs><g id="surface">${boardSvg()}${breadboardSvg()}<g id="breadboard-layer"></g><g id="endpoint-layer"></g><g id="wire-layer"></g><g id="part-layer"></g><g id="net-layer" pointer-events="none"></g><g id="wire-handle-layer"></g><g id="search-layer" pointer-events="none"></g><g id="preview-layer" pointer-events="none"></g></g>`;}
 export function route(a,b){const mid=a.x+(b.x-a.x)*.47;return roundedWirePath([a,{x:mid,y:a.y},{x:mid,y:b.y},b]);}
 export function renderWires(project,selected){return project.wires.map(w=>{
   const a=endpointInfo(w.from,project.components,project.surfaces),b=endpointInfo(w.to,project.components,project.surfaces);if(!a||!b)return '';

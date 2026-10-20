@@ -7,12 +7,13 @@ const BASE_PARTS={
  led:{name:'LED',icon:'●',iconClass:'led-icon',hint:'전류에 따른 점등'},
  button:{name:'푸시 버튼',icon:'▣',iconClass:'button-icon',hint:'4핀 · 모형을 끌어 설치'},
  lcd:{name:'LCD 1602',icon:'▤',iconClass:'lcd-icon',hint:'16핀 · 문자 출력 / 배선'},
- breadboard:{name:'빵판',icon:'▦',iconClass:'breadboard-icon',hint:'400홀 · 추가 배선 공간'}
+ breadboard:{name:'빵판',icon:'▦',iconClass:'breadboard-icon',hint:'400홀 · 하프 사이즈 추가 배선 공간'},
+ breadboard_full:{name:'빵판 (풀사이즈)',icon:'▦',iconClass:'breadboard-icon',hint:'830홀 · 63열 풀사이즈 배선 공간'}
 };
 const ALIASES={
  board:'STM STM32 STM32F446RE Nucleo MCU 마이크로컨트롤러 보드',
  l298n:'l298 dual h bridge driver motor 모터 드라이버 듀얼',dc_motor:'dc motor 모터 직류',dc_supply:'power battery supply 전원 배터리 외부 전원',
- breadboard:'bread board 브레드보드 브레드 보드 빵판',resistor:'resistance',led:'light diode 발광 다이오드',button:'push switch 스위치',lcd:'display liquid crystal 디스플레이 액정',
+ breadboard:'bread board 브레드보드 브레드 보드 빵판 half 하프 400',breadboard_full:'bread board breadboard full size fullsize 830 브레드보드 브레드 보드 빵판 풀사이즈 풀 사이즈 큰빵판',resistor:'resistance',led:'light diode 발광 다이오드',button:'push switch 스위치',lcd:'display liquid crystal 디스플레이 액정',
  uart:'serial terminal 시리얼 직렬 통신',i2c:'memory 메모리 통신',spi:'memory 메모리 통신',
  potentiometer:'variable resistor 가변 저항',slide:'switch 스위치',rgb:'color 색상',capacitor:'capacitance 콘덴서 축전기',
  diode:'rectifier 정류',buzzer:'active sound speaker 소리 스피커',passive_buzzer:'passive piezo buzzer sound speaker pwm tone melody 수동 피에조 부저 소리 스피커 음계 멜로디',sevenseg:'7 segment seven segment display 디스플레이',
