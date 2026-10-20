@@ -384,3 +384,10 @@ dialog.command-palette::backdrop{background:transparent!important;backdrop-filte
 .la-frames th{text-align:left;font:600 11px var(--shell-font);color:var(--ide-muted);padding:3px 6px;border-bottom:1px solid var(--ide-border);position:sticky;top:0;background:var(--ide-background)}
 .la-frames td{padding:2px 6px;border-bottom:1px solid color-mix(in srgb,var(--ide-border) 50%,transparent)}
 .la-frames tr.error td{color:var(--ide-error)}
+.media-card canvas{display:block;width:100%;max-width:320px;image-rendering:pixelated;margin-top:8px;border:1px solid var(--ide-border);border-radius:var(--radius);background:#000;aspect-ratio:4/3}
+.media-actions,.media-row{display:flex;gap:6px;align-items:center}
+.media-row select{flex:1}
+.sd-files{margin-top:8px;max-height:200px;overflow:auto}
+.sd-files table{width:100%;border-collapse:collapse;font:12px var(--mono)}
+.sd-files td{padding:2px 4px;border-bottom:1px solid color-mix(in srgb,var(--ide-border) 60%,transparent);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:150px}
+.sd-files button{padding:0 6px;border:1px solid var(--ide-border);background:transparent;margin-left:2px}
