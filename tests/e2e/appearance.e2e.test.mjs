@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {launch,applyExample,contrast} from './harness.mjs';
 
-const SELECTORS=['.menubar-item','#sidebar-title','#project-name','#save-state','#source-tabs button','.group-tab #mode-label','.group-tab #canvas-board-name','.monitor-tabs button','.statusbar .status-item','#file-tree button','.project-folder-note','#inspector h2','#inspector p','.workspace-toolbar .tool','#hint','.log-line','.part-card strong','.part-card small','.example-item strong','#run'];
+const SELECTORS=['.menubar-item','#sidebar-title','#save-state','#source-tabs button','.group-tab #mode-label','.group-tab #canvas-board-name','.monitor-tabs button','.statusbar .status-item','#file-tree button','.project-folder-note','#inspector h2','#inspector p','.workspace-toolbar .tool','#hint','.log-line','.part-card strong','.part-card small','.example-item strong','#run'];
 async function measure(win){
  return win.evaluate(selectors=>{
   const parse=c=>{const m=c.match(/rgba?\(([^)]+)\)/);if(!m)return null;const [r,g,b,a=1]=m[1].split(/[ ,\/]+/).filter(Boolean).map(Number);return {rgb:[r,g,b],a};};
@@ -36,11 +36,19 @@ test('System appearance follows the OS and the toggle pins Dark/White',{timeout:
  const s=await launch();
  try{
   const {win}=s;
-  await win.click('#appearance-system');
+  // A fresh profile starts with the System appearance; the toggle shows a sun or moon icon.
   assert.equal(await win.evaluate(()=>document.documentElement.dataset.appearance),'system');
+  assert.equal(await win.locator('#appearance-system').count(),0);
+  assert.ok(await win.locator('#appearance-toggle svg').count()===1);
+  const mode=await win.getAttribute('#appearance-toggle','data-mode');
+  assert.equal(mode,await win.evaluate(()=>document.documentElement.dataset.ideTheme==='dark'?'dark':'light'));
   const first=await win.evaluate(()=>document.documentElement.dataset.ideTheme);
   await win.click('#appearance-toggle');
   assert.notEqual(await win.evaluate(()=>document.documentElement.dataset.ideTheme),first);
   assert.notEqual(await win.evaluate(()=>document.documentElement.dataset.appearance),'system');
+  assert.notEqual(await win.getAttribute('#appearance-toggle','data-mode'),mode);
+  // The 보기 command restores the System setting.
+  await win.keyboard.press('Control+Shift+P');await win.keyboard.type('시스템 설정 따르기');await win.keyboard.press('Enter');
+  await win.waitForFunction(()=>document.documentElement.dataset.appearance==='system');
  }finally{await s.close();}
 });

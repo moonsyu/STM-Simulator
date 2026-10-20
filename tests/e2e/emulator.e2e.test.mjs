@@ -26,13 +26,13 @@ test('an opened ELF runs on the Cortex-M4 emulator and drives the breadboard',{t
   await openFixture(s,'blink');
   assert.equal(await win.inputValue('#native-target'),'emulator');
   assert.match(await win.textContent('.statusbar'),/펌웨어 에뮬레이터/);
-  await win.keyboard.press('F5');
+  await win.keyboard.press('Control+F5');
   await win.waitForFunction(()=>/펌웨어 에뮬레이터를 시작했습니다/.test(document.getElementById('console-output').textContent));
   await win.waitForFunction(()=>document.getElementById('shell').dataset.running==='true');
   // The firmware's LED current shows up in the circuit model.
   await win.waitForFunction(()=>parseFloat(document.getElementById('sim-time').textContent)>0.5,null,{timeout:30000});
   await win.waitForFunction(()=>document.getElementById('sim-current').textContent!=='—');
-  await win.keyboard.press('F5');
+  await win.keyboard.press('Control+F2');
   await win.waitForFunction(()=>document.getElementById('shell').dataset.running==='false');
   assert.deepEqual(s.errors,[]);
  }finally{await s.close();}
@@ -43,7 +43,7 @@ test('UART firmware echoes through the serial monitor and the logic analyzer dec
  try{
   const {win}=s;
   await openFixture(s,'uart');
-  await win.keyboard.press('F5');
+  await win.keyboard.press('Control+F5');
   await win.waitForFunction(()=>document.getElementById('shell').dataset.running==='true');
   await win.waitForTimeout(1500);
   await win.click('[data-monitor="bus"]');
@@ -55,7 +55,7 @@ test('UART firmware echoes through the serial monitor and the logic analyzer dec
   await win.waitForFunction(()=>!document.getElementById('la-view').hidden,null,{timeout:20000});
   await win.waitForFunction(()=>document.querySelectorAll('#la-svg .la-trace').length>0);
   assert.ok(await win.locator('#la-frames tbody tr').count()>0,'decoded frames listed');
-  await win.keyboard.press('F5');
+  await win.keyboard.press('Control+F2');
   assert.deepEqual(s.errors,[]);
  }finally{await s.close();}
 });
@@ -92,12 +92,14 @@ test('emulator target builds the project with ARM GCC and runs it',{skip:!toolch
  try{
   const {win}=s;
   await applyExample(win,'5mm 단색 LED');
+  // The run target lives in the Run and Debug view.
+  await win.click('#status-target');assert.ok(await win.locator('#view-debug .run-config #native-target').isVisible());
   await win.selectOption('#native-target','emulator');
-  await win.keyboard.press('F5');
+  await win.keyboard.press('Control+F5');
   await win.waitForFunction(()=>/펌웨어 ELF 준비 완료/.test(document.getElementById('console-output').textContent),null,{timeout:180000});
   await win.waitForFunction(()=>/PA5=1/.test(document.getElementById('console-output').textContent),null,{timeout:30000});
   await win.waitForFunction(()=>/PA5=0/.test(document.getElementById('console-output').textContent),null,{timeout:30000});
-  await win.keyboard.press('F5');
+  await win.keyboard.press('Control+F2');
   assert.deepEqual(s.errors,[]);
  }finally{await s.close();}
 });
