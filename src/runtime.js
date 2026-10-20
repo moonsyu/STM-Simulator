@@ -183,7 +183,7 @@ export class Runtime {
     if(s.type!=='block'&&s.type!=='empty')yield* this.checkpoint(s.loc);
     if(s.type==='declare'){
       for(const d of s.declarations){if(d.external)continue;if(d.storage&&this.staticCells.has(d)){this.scope().cells[d.name]=this.staticCells.get(d);continue;}let value=d.value?yield* this.evaluate(d.value):undefined;
-        if(d.array){let values=value?.kind==='initializer'?value.values:typeof value==='string'?[...value].map(c=>c.charCodeAt(0)).concat(0):[];const length=d.size?integer(yield* this.evaluate(d.size)):values.length;if(length<1||length>this.maxArray||values.length>length)throw new Error('배열 크기 또는 초기값 개수를 확인하세요.');value=this.array(Array.from({length},(_,i)=>this.initialize(d.type,values[i])));if(d.constant)value.cells.forEach(c=>c.constant=true);}
+        if(d.array){let values=value?.kind==='initializer'?value.values:typeof value==='string'?[...value].map(c=>c.charCodeAt(0)).concat(0):[];const length=d.size?integer(yield* this.evaluate(d.size)):values.length;if(length<1||length>this.maxArray||values.length>length)throw new Error('배열 크기 또는 초기값 개수를 확인하세요.');const plain=this.program.hal&&!own(this.program.structs,d.type),zero=plain?this.coerce(d.type,0):0;value=this.array(Array.from({length},(_,i)=>plain&&values[i]===undefined?zero:this.initialize(d.type,values[i])));if(d.constant)value.cells.forEach(c=>c.constant=true);}
         else if(d.pointer){if(typeof value==='string')value=this.array([...value].map(c=>c.charCodeAt(0)).concat(0),this.globals);value=this.pointer(value??0);if(value!==0&&!isPointer(value))throw new Error('포인터 초기값을 확인하세요.');}
         else if(d.type!=='LiquidCrystal')value=this.initialize(d.type,value);
         if(d.array)value.cells.forEach(c=>c.dataType=d.type);

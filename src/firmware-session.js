@@ -374,7 +374,7 @@ export class FirmwareSession {
       if (isCallReturn(w)) { const f = elf.functionAt((w & ~1) >>> 0); if (frames.at(-1)?.name !== f?.name) push(((w & ~1) - 2) >>> 0); }
       if (frames.at(-1)?.name === 'main') break;
     }
-    return frames.map(f => ({ name: f.name, loc: f.loc }));
+    return frames.filter((f, i) => i === 0 || f.name !== frames[i - 1].name).map(f => ({ name: f.name, loc: f.loc }));
   }
   globalsList() {
     const out = [];

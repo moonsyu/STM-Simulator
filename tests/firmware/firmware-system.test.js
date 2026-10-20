@@ -100,14 +100,14 @@ test('debugger: file:line breakpoints, stepping, call stack, registers, globals 
   assert.ok(view.registers.some(r => r.name === 'pc'));
   assert.ok(view.globals.some(g => g.name === 'uwTick' || g.name === 'SystemCoreClock'), view.globals.map(g => g.name).join(','));
   assert.match(rt.evaluate('SystemCoreClock'), /^84000000 /);
-  const odrBefore = Number(/\(0x([0-9a-f]+)\)/.exec(rt.evaluate('*(uint32_t*)0x40020014'))[1], 16);
+  const odrBefore = parseInt(/\(0x([0-9a-f]+)\)/.exec(rt.evaluate('*(uint32_t*)0x40020014'))[1], 16);
   assert.equal(rt.memory(0x40020014, 4).length, 4);
   rt.resume('over');
   session.tick(session.now / 1000 + 20);
   assert.equal(rt.debug.paused, true);
   assert.equal(rt.location.line, toggle + 1);
-  const odrAfter = Number(/\(0x([0-9a-f]+)\)/.exec(rt.evaluate('*(uint32_t*)0x40020014'))[1], 16);
-  assert.equal((odrBefore ^ odrAfter) & 0x20, 0x20, 'step over executed the toggle');
+  const odrAfter = parseInt(/\(0x([0-9a-f]+)\)/.exec(rt.evaluate('*(uint32_t*)0x40020014'))[1], 16);
+  assert.equal((odrBefore ^ odrAfter) & 0x20, 0x20, `step over executed the toggle ${odrBefore} ${odrAfter} ${toggle}`);
   rt.resume('into');
   session.tick(session.now / 1000 + 20);
   assert.equal(rt.location.file, 'stm32f4xx_hal_gpio.c', 'step into enters HAL_GPIO_ReadPin');
