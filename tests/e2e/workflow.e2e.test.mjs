@@ -98,3 +98,14 @@ test('camera frames appear in the properties panel and SD card files persist aft
   assert.deepEqual(s.errors,[]);
  }finally{await s.close();}
 });
+
+test('parts view adds the 830-point full breadboard next to the 400-point one',{timeout:60000},async()=>{
+ const s=await launch();
+ try{
+  const {win}=s;
+  await win.click('[data-activity="parts"]');if(!await win.locator('#view-parts').isVisible())await win.click('[data-activity="parts"]');
+  await win.evaluate(()=>document.querySelector('[data-add="breadboard_full"]').click());
+  await win.waitForFunction(()=>/830홀/.test(document.getElementById('inspect-panel')?.textContent||''));
+  assert.deepEqual(s.errors,[]);
+ }finally{await s.close();}
+});

@@ -10,11 +10,13 @@ import {terminalKeys} from './components.js';
 const LANE=7,CLEAR=3.6,CROSS=450,BEND=5;
 const DIRS=[[1,0],[-1,0],[0,1],[0,-1]];
 
+// Binary min-heap of (priority, state, cost) kept in typed arrays to avoid per-entry garbage.
 class Heap{
- constructor(){this.items=[];}
- get size(){return this.items.length;}
- push(item){const a=this.items;a.push(item);let i=a.length-1;while(i){const p=(i-1)>>1;if(a[p][0]<=a[i][0])break;[a[p],a[i]]=[a[i],a[p]];i=p;}}
- pop(){const a=this.items,top=a[0],last=a.pop();if(a.length){a[0]=last;let i=0;for(;;){const l=2*i+1,r=l+1;let m=i;if(l<a.length&&a[l][0]<a[m][0])m=l;if(r<a.length&&a[r][0]<a[m][0])m=r;if(m===i)break;[a[m],a[i]]=[a[i],a[m]];i=m;}}return top;}
+ constructor(){this.f=new Float64Array(1024);this.g=new Float64Array(1024);this.s=new Int32Array(1024);this.size=0;}
+ grow(){const n=this.f.length*2,f=new Float64Array(n),g=new Float64Array(n),s=new Int32Array(n);f.set(this.f);g.set(this.g);s.set(this.s);this.f=f;this.g=g;this.s=s;}
+ swap(i,j){const f=this.f,g=this.g,s=this.s;let t=f[i];f[i]=f[j];f[j]=t;t=g[i];g[i]=g[j];g[j]=t;const u=s[i];s[i]=s[j];s[j]=u;}
+ push(f,state,g){if(this.size===this.f.length)this.grow();let i=this.size++;this.f[i]=f;this.s[i]=state;this.g[i]=g;while(i){const p=(i-1)>>1;if(this.f[p]<=this.f[i])break;this.swap(p,i);i=p;}}
+ pop(){const state=this.s[0],g=this.g[0],last=--this.size;if(last>0){this.f[0]=this.f[last];this.s[0]=this.s[last];this.g[0]=this.g[last];let i=0;for(;;){const l=2*i+1,r=l+1;let m=i;if(l<last&&this.f[l]<this.f[m])m=l;if(r<last&&this.f[r]<this.f[m])m=r;if(m===i)break;this.swap(m,i);i=m;}}this.top=g;return state;}
 }
 const round=v=>Math.round(v*100)/100;
 function lines(values,origin,min,max){
@@ -79,9 +81,9 @@ export function routeWires(project,wires,{bodies=[],origin={x:0,y:0},passes=2}={
   const ownEdges=new Set(ownZones.flatMap(z=>z.edges.map(([a,n])=>a+':'+n)));
   const best=new Float64Array(N*5).fill(Infinity),prev=new Int32Array(N*5).fill(-1),heap=new Heap();
   const h=n=>Math.abs(X(n)-tx)+Math.abs(Y(n)-ty);
-  best[s*5+4]=0;heap.push([h(s),s*5+4,0]);let goal=-1;
+  best[s*5+4]=0;heap.push(h(s),s*5+4,0);let goal=-1;
   while(heap.size){
-   const [,state,g]=heap.pop();if(g>best[state])continue;
+   const state=heap.pop(),g=heap.top;if(g>best[state])continue;
    const n=(state/5)|0,din=state%5;if(n===t){goal=state;break;}
    const i=n%nx,j=(n/nx)|0;
    for(let d=0;d<4;d++){
@@ -98,7 +100,7 @@ export function routeWires(project,wires,{bodies=[],origin={x:0,y:0},passes=2}={
     if(edgeBlocked[axis][edge]&&!ownEdges.has(axis+':'+edge))continue;
     if(m!==t&&(blocked[m]===1||hard[m]))continue;
     const ng=g+cost+Math.abs(xs[ii]-xs[i])+Math.abs(ys[jj]-ys[j]),ms=m*5+d;
-    if(ng<best[ms]){best[ms]=ng;prev[ms]=state;heap.push([ng+h(m),ms,ng]);}
+    if(ng<best[ms]){best[ms]=ng;prev[ms]=state;heap.push(ng+h(m),ms,ng);}
    }
   }
   for(const n of freed)blocked[n]=1;
