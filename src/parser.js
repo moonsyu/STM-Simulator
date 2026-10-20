@@ -29,7 +29,7 @@ export function compile(source,options={}) {
   }
   tokens.push({v:'<end>',line});let at=0,depth=0;
   const program={globals:[],functions:Object.create(null),structs:Object.assign(Object.create(null),options.structs||{}),hal:!!options.hal};
-  const aliases=new Map([['HAL_StatusTypeDef','int'],['GPIO_PinState','int']]),enumConstants=new Map();
+  const aliases=new Map([['HAL_StatusTypeDef','int'],['GPIO_PinState','int'],...Object.entries(options.aliases||{})]),enumConstants=new Map();
   const peek=(n=0)=>tokens[at+n]?.v??'<end>',take=()=>tokens[at++].v;
   const location=(index=at)=>options.sourceMap?.[(tokens[index]?.line??line)-1]??{file:options.filename??'main.c',line:tokens[index]?.line??line};
   const fail=(message,index=at)=>{const loc=location(index),error=new Error(`${loc.file}:${loc.line}: ${message}`);error.location=loc;throw error;};
@@ -160,7 +160,7 @@ export function compile(source,options={}) {
     if(peek()==='enum'&&(peek(1)==='{'||peek(2)==='{')){const loc=location();take();if(peek()!=='{')aliases.set(identifier(),'int');const declarations=parseEnumBody();expect(';');program.globals.push({type:'declare',declarations,loc});continue;}
     if(peek()==='struct'&&peek(2)==='{'){
       take();const name=identifier();if(Object.hasOwn(program.structs,name))fail('구조체가 중복되었습니다.');expect('{');const fields=[];
-      while(peek()!=='}'){const base=spec(),d=declarator(base);if(d.pointer||peek()==='[')fail('구조체 필드는 스칼라/구조체 값으로 선언하세요.');fields.push(d);expect(';');}
+      while(peek()!=='}'){const base=spec(),d=declarator(base);if(d.pointer)fail('구조체 필드는 스칼라/구조체/배열 값으로 선언하세요.');if(peek()==='['){take();const size=constantValue(expression()).value;expect(']');if(!Number.isInteger(size)||size<1||size>4096)fail('구조체 배열 필드 크기는 1~4096입니다.');d.array=true;d.size=size;}fields.push(d);expect(';');}
       take();expect(';');program.structs[name]=fields;continue;
     }
     if(!isType())fail('전역 변수 또는 함수 정의가 필요합니다.');

@@ -1,0 +1,5 @@
+{
+  "source": "qemu-system-arm 9.2.4 -M mps2-an386 (semihosting)",
+  "exitCode": 0,
+  "output": "addrmodes=016a3926\nexclusive=aa50bbde\nstrings=dd05e64a\n"
+}

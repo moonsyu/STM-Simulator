@@ -6,30 +6,73 @@ const own=(o,k)=>Object.hasOwn(o,k), truth=v=>!!v;
 const checkedNumber=v=>{if(typeof v!=='number'||!Number.isFinite(v))throw new Error('유한한 숫자가 필요합니다.');return v;};
 const integer=v=>Math.trunc(checkedNumber(v));
 const isArray=v=>v?.kind==='array', isPointer=v=>v?.kind==='pointer';
+const LOOP_ITERATION_US=.1;
 
 export class Runtime {
   constructor(program,api={}){
     this.program=program;this.api=api;this.gpio={};this.time=0;this.microTime=0;this.steps=0;this.depth=0;this.loopDepth=0;this.allocations=0;
     this.frames=[];this.location=null;this.finished=false;this.debug={enabled:!!api.debug,paused:false,mode:api.debug?.entry?'into':'continue',depth:0,breakpoints:new Set(api.debug?.breakpoints||[])};
     this.globals={cells:Object.create(null),alive:true};this.scopes=[this.globals];this.vars=Object.create(null);
-    this.events=[];this.nextId=1;this.nextOrder=1;this.timers=new Map();this.dmas=new Map();this.interrupts=new Map();this.interruptsEnabled=true;this.inCallback=false;this.pwm=new Map();this.pwmFrequency=new Map();
+    this.events=[];this.nextId=1;this.nextOrder=1;this.timers=new Map();this.dmas=new Map();this.interrupts=new Map();this.interruptsEnabled=true;this.atomic=0;this.pwm=new Map();this.pwmFrequency=new Map();
+    // HAL arrays may hold camera frames / SD sectors; sketches keep the original bound.
+    this.maxArray=program.hal?131072:4096;this.maxAllocations=program.hal?400000:50000;this.warnings=[];this.busyUs=0;
+    this.contexts=[{name:'main',wake:0}];this.initGlobals();
+    this.staticCells=new Map();this.iterator=this.run();this.contexts[0].iterator=this.iterator;this.idleMain=false;
+  }
+  initGlobals(){
+    const api=this.api;
     const constants={HIGH:1,LOW:0,true:1,false:0,NULL:0,OUTPUT:'OUTPUT',INPUT:'INPUT',INPUT_PULLUP:'INPUT_PULLUP',INPUT_PULLDOWN:'INPUT_PULLDOWN',CHANGE:'CHANGE',RISING:'RISING',FALLING:'FALLING',LSBFIRST:0,MSBFIRST:1,DEC:10,HEX:16,OCT:8,BIN:2,PI:Math.PI};
     for(const [key,value]of Object.entries({...constants,...api.constants,...Object.fromEntries([...GPIO_PINS,...Object.keys(ALIASES)].map(p=>[p,p]))}))this.declareCell(key,value,true);
     for(const name of ['Serial','Serial1','Wire','SPI','Timer','DMA'])this.declareCell(name,{kind:'library',name},true);
-    this.staticCells=new Map();this.iterator=this.run();this.wake=0;this.idleMain=false;
+  }
+  // Execution contexts: [0] is thread mode (main); higher entries are nested ISRs (strict LIFO).
+  get wake(){return this.contexts[0].wake;}
+  set wake(value){this.contexts[0].wake=value;}
+  get top(){return this.contexts.at(-1);}
+  get inIsr(){return this.contexts.length>1;}
+  get inCallback(){return this.atomic>0||this.contexts.length>1;}
+  warn(message){if(this.warnings.includes(message))return;this.warnings.push(message);if(this.warnings.length>50)this.warnings.shift();this.api.warn?.(message);}
+  callStack(){const marks=new Map(this.contexts.slice(1).map(c=>[c.frameBase,c.irq]));return this.frames.map((f,i)=>({name:f.name,loc:f.loc,...(marks.has(i)?{irq:marks.get(i)}:{})})).reverse();}
+  enterIsr(iterator,info={}){
+    if(this.contexts.length>40)throw new Error('인터럽트 중첩 한도를 넘었습니다.');
+    const ctx={...info,iterator,wake:this.microTime/1000,frameBase:this.frames.length};this.contexts.push(ctx);return this.stepContext(ctx);
+  }
+  stepContext(ctx){
+    const next=ctx.iterator.next();
+    if(next.done){if(ctx===this.contexts[0]){ctx.wake=Infinity;this.finished=true;}else{const i=this.contexts.lastIndexOf(ctx);if(i>0)this.contexts.splice(i,1);ctx.exit?.();}return;}
+    const v=next.value;
+    if(v?.kind==='debug-location'){
+      const d=this.debug,stop=d.breakpoints.has(`${v.loc.file}:${v.loc.line}`)||d.mode==='into'||d.mode==='over'&&v.depth<=d.depth||d.mode==='out'&&v.depth<d.depth;
+      if(stop){d.paused=true;this.time=Math.max(this.time,this.microTime/1000);return 'paused';}
+      return 'debug';
+    }
+    if(v?.kind==='preempt')return;
+    if(v?.kind==='reset'){this.restart();return 'reset';}
+    ctx.wake=Math.max(ctx.wake,this.microTime/1000)+v;
+  }
+  // NVIC_SystemReset: thread and ISR state restart; external circuit state is kept.
+  restart(){
+    for(const pin of Object.keys(this.gpio))delete this.gpio[pin];
+    this.events=[];this.timers.clear();this.dmas.clear();this.interrupts.clear();this.pwm.clear();this.pwmFrequency.clear();this.interruptsEnabled=true;this.atomic=0;this.pinPending=false;
+    this.globals={cells:Object.create(null),alive:true};this.scopes=[this.globals];this.vars=Object.create(null);this.frames=[];this.depth=0;this.loopDepth=0;this.layouts=null;
+    this.initGlobals();this.staticCells=new Map();this.finished=false;this.resetCount=(this.resetCount||0)+1;
+    this.api.reset?.(this);
+    this.iterator=this.run();this.contexts=[{name:'main',wake:this.microTime/1000,iterator:this.iterator}];this.idleMain=false;
+    this.api.changed?.(this.microTime);
   }
   budget(){if(++this.steps>30000)throw new Error('실행 한도를 넘었습니다. 반복문 안에 delay()를 넣으세요.');}
   clone(value,owner,depth=0){
+    if(value?.kind==='array'&&depth>0)return {kind:'array',cells:value.cells.map(c=>({...c,owner,value:this.clone(c.value,owner,depth+1)}))};
     if(value?.kind!=='struct')return value;
     if(depth>80)throw new Error('구조체 중첩 한도를 넘었습니다.');
-    return {kind:'struct',type:value.type,fields:Object.fromEntries(Object.entries(value.fields).map(([key,cell])=>{this.budget();if(++this.allocations>50000)throw new Error('구조체 복사 한도를 넘었습니다.');return [key,{...cell,owner,value:this.clone(cell.value,owner,depth+1)}];}))};
+    return {kind:'struct',type:value.type,fields:Object.fromEntries(Object.entries(value.fields).map(([key,cell])=>{this.budget();if(++this.allocations>this.maxAllocations)throw new Error('구조체 복사 한도를 넘었습니다.');return [key,{...cell,owner,value:this.clone(cell.value,owner,depth+1)}];}))};
   }
   scope(){return this.scopes.at(-1);}
   pushScope(){const scope={cells:Object.create(null),alive:true};this.scopes.push(scope);return scope;}
   popScope(){const scope=this.scopes.pop();scope.alive=false;}
   declareCell(name,value,constant=false){
     const scope=this.scope();if(own(scope.cells,name))throw new Error(`같은 범위에 중복된 변수: ${name}`);
-    if(++this.allocations>50000)throw new Error('한 단계의 메모리 할당 한도를 넘었습니다.');
+    if(++this.allocations>this.maxAllocations)throw new Error('한 단계의 메모리 할당 한도를 넘었습니다.');
     const cell={value:this.clone(value,scope),constant,owner:scope};scope.cells[name]=cell;
     if(scope===this.globals)Object.defineProperty(this.vars,name,{enumerable:true,configurable:true,get:()=>cell.value,set:value=>{cell.value=value;}});
     return cell;
@@ -38,7 +81,7 @@ export class Runtime {
   get(cell){if(cell.owner&&!cell.owner.alive)throw new Error('유효기간이 끝난 지역 변수를 참조했습니다.');return cell.value;}
   coerce(type,value){return this.program.hal?convert(type,value):value;}
   set(cell,value){this.get(cell);if(cell.constant)throw new Error('const 값은 변경할 수 없습니다.');cell.value=this.clone(this.coerce(cell.dataType,value),cell.owner);return cell.value;}
-  array(values,owner=this.scope()){if(values.length>4096)throw new Error('배열은 4096개 이하로 선언하세요.');this.allocations+=values.length;if(this.allocations>50000)throw new Error('한 단계의 메모리 할당 한도를 넘었습니다.');return {kind:'array',cells:values.map(value=>({value:this.clone(value,owner),owner,constant:false}))};}
+  array(values,owner=this.scope()){if(values.length>this.maxArray)throw new Error(`배열은 ${this.maxArray}개 이하로 선언하세요.`);this.allocations+=values.length;if(this.allocations>this.maxAllocations)throw new Error('한 단계의 메모리 할당 한도를 넘었습니다.');return {kind:'array',cells:values.map(value=>({value:this.clone(value,owner),owner,constant:false}))};}
   pointer(value){return isArray(value)?{kind:'pointer',array:value,index:0}:value;}
   pointerCell(p,offset=0){
     if(isArray(p))p=this.pointer(p);if(!isPointer(p))throw new Error('배열 또는 유효한 포인터가 필요합니다.');
@@ -58,6 +101,7 @@ export class Runtime {
     throw new Error('대입할 수 없는 값입니다.');
   }
   binary(op,a,b,ta,tb){
+    if(op==='-'&&(isPointer(a)||isArray(a))&&(isPointer(b)||isArray(b))){const p=this.pointer(a),q=this.pointer(b);if(p.array&&p.array===q.array)return p.index-q.index;if(!p.array&&!q.array&&p.cell===q.cell)return 0;throw new Error('서로 다른 배열을 가리키는 포인터끼리는 뺄 수 없습니다.');}
     if((isPointer(a)||isArray(a))&&['+','-'].includes(op)){const p=this.pointer(a);if(!p.array)throw new Error('포인터 산술에는 배열이 필요합니다.');const index=p.index+(op==='+'?1:-1)*integer(b);if(index<0||index>p.array.cells.length)throw new Error('포인터가 배열 범위를 벗어났습니다.');return {...p,index};}
     if(op==='+'&&(typeof a==='string'||typeof b==='string'))return String(a)+String(b);
     if(this.program.hal&&ta&&typeof a==='number'&&typeof b==='number')return arithmetic(op,a,b,ta,tb);
@@ -74,7 +118,7 @@ export class Runtime {
     if(n.type==='name'){if(own(this.program.functions,n.name))return {kind:'function',name:n.name};return this.get(this.cell(n.name));}
     if(n.type==='list'){const values=[];for(const v of n.values)values.push(yield* this.evaluate(v));return {kind:'initializer',values};}
     if(n.type==='construct'){const args=[];for(const v of n.args)args.push(yield* this.evaluate(v));if(n.name!=='LiquidCrystal')throw new Error('지원하지 않는 생성자입니다.');return this.api.construct?.(n.name,args,this)??{kind:'device',name:n.name,args};}
-    if(n.type==='cast'){const value=yield* this.evaluate(n.a);if(n.pointer){if(typeof value==='string')return this.pointer(this.array([...value].map(c=>c.charCodeAt(0)).concat(0),this.globals));return this.pointer(value);}return n.to==='String'?String(value):n.to==='bool'?Number(truth(value)):this.program.hal?this.coerce(n.to,checkedNumber(value)):['float','double'].includes(n.to)?checkedNumber(value):integer(value);}
+    if(n.type==='cast'){const value=yield* this.evaluate(n.a);if(n.pointer){if(typeof value==='string')return this.pointer(this.array([...value].map(c=>c.charCodeAt(0)).concat(0),this.globals));return this.pointer(value);}if(this.program.hal&&(isArray(value)||isPointer(value)||value?.kind==='function'))return isArray(value)?this.pointer(value):value;return n.to==='String'?String(value):n.to==='bool'?Number(truth(value)):this.program.hal?this.coerce(n.to,checkedNumber(value)):['float','double'].includes(n.to)?checkedNumber(value):integer(value);}
     if(n.type==='index'||n.type==='member')return this.get(yield* this.reference(n));
     if(n.type==='unary'){
       if(n.op==='&'){if(n.a.type==='index')return {kind:'pointer',array:(this.pointer(yield* this.evaluate(n.a.object))).array,index:integer(yield* this.evaluate(n.a.index))};return {kind:'pointer',cell:yield* this.reference(n.a)};}
@@ -89,6 +133,7 @@ export class Runtime {
       const a=yield* this.evaluate(n.a);if(n.op==='&&')return a?Number(truth(yield* this.evaluate(n.b))):0;if(n.op==='||')return a?1:Number(truth(yield* this.evaluate(n.b)));
       const b=yield* this.evaluate(n.b);return this.binary(n.op,a,b,this.program.hal?expressionType(this,n.a).type:undefined,this.program.hal?expressionType(this,n.b).type:undefined);
     }
+    if(n.type==='call'&&this.program.hal&&n.callee.type==='name'&&n.callee.name==='__HAL_LINKDMA')return yield* this.linkDma(n.args);
     if(n.type==='call'){
       const args=[];for(const a of n.args)args.push(yield* this.evaluate(a));
       if(n.callee.type==='name'){
@@ -102,24 +147,34 @@ export class Runtime {
     }
     throw new Error('표현식을 실행할 수 없습니다.');
   }
+  // __HAL_LINKDMA(handle, field, dma): (handle)->field=&dma; dma.Parent=handle.
+  *linkDma(args){
+    if(args.length!==3)throw new Error('__HAL_LINKDMA(핸들, 필드, DMA 핸들) 형식을 확인하세요.');const [h,field,dma]=args;
+    const target=field.type==='name'?{type:'member',object:h,key:field.name,pointer:true}:field.type==='index'&&field.object.type==='name'?{type:'index',object:{type:'member',object:h,key:field.object.name,pointer:true},index:field.index}:null;
+    if(!target)throw new Error('__HAL_LINKDMA의 두 번째 인수는 핸들 필드 이름입니다.');
+    const cell=yield* this.reference(target),dmaCell=yield* this.reference(dma),value=this.get(dmaCell);
+    if(value?.kind!=='struct'||value.type!=='DMA_HandleTypeDef')throw new Error('__HAL_LINKDMA: DMA_HandleTypeDef 변수가 필요합니다.');
+    this.set(cell,{kind:'pointer',cell:dmaCell});if(own(value.fields,'Parent'))value.fields.Parent.value=yield* this.evaluate(h);return 0;
+  }
   typeLayout(type,depth=0){
     if(depth>32)throw Error('구조체 중첩 한도를 넘었습니다.');
     this.layouts??=new Map();if(this.layouts.has(type))return this.layouts.get(type);
     let layout;
-    if(own(this.program.structs,type)){let size=0,alignment=1;for(const field of this.program.structs[type]){const next=this.typeLayout(field.type,depth+1);alignment=Math.max(alignment,next.alignment);size=Math.ceil(size/next.alignment)*next.alignment+next.size;}layout={size:Math.ceil(size/alignment)*alignment,alignment};}
+    if(own(this.program.structs,type)){let size=0,alignment=1;for(const field of this.program.structs[type]){const next=this.typeLayout(field.type,depth+1);alignment=Math.max(alignment,next.alignment);size=Math.ceil(size/next.alignment)*next.alignment+next.size*(field.array?field.size:1);}layout={size:Math.ceil(size/alignment)*alignment,alignment};}
     else{const size=['char','byte','bool','uint8_t','int8_t'].includes(type)?1:['short','uint16_t','int16_t'].includes(type)?2:type==='double'?8:4;layout={size,alignment:size};}
     this.layouts.set(type,layout);return layout;
   }
   typeSize(type){return this.typeLayout(type).size;}
   defaultValue(type,owner=this.scope(),depth=0){
-    this.budget();if(depth>32||++this.allocations>50000)throw new Error('구조체 메모리 한도를 넘었습니다.');
-    if(own(this.program.structs,type))return {kind:'struct',type,fields:Object.fromEntries(this.program.structs[type].map(f=>[f.name,{value:this.defaultValue(f.type,owner,depth+1),owner,constant:f.constant,dataType:f.type}]))};
+    this.budget();if(depth>32||++this.allocations>this.maxAllocations)throw new Error('구조체 메모리 한도를 넘었습니다.');
+    if(own(this.program.structs,type))return {kind:'struct',type,fields:Object.fromEntries(this.program.structs[type].map(f=>[f.name,{value:f.array?this.fieldArray(f,owner,depth):this.defaultValue(f.type,owner,depth+1),owner,constant:f.constant,dataType:f.type}]))};
     return type==='String'?'':0;
   }
+  fieldArray(f,owner,depth){const a=this.array(Array.from({length:f.size},()=>this.defaultValue(f.type,owner,depth+1)),owner);a.cells.forEach(c=>c.dataType=f.type);return a;}
   initialize(type,value,owner=this.scope()){
     if(own(this.program.structs,type)){
       if(value?.kind==='struct')return this.clone(value,owner);
-      const result=this.defaultValue(type,owner);if(value?.kind==='initializer'){const keys=Object.keys(result.fields);if(value.values.length>keys.length)throw new Error('구조체 초기값이 너무 많습니다.');if(value.values.length===1&&value.values[0]===0)return result;value.values.forEach((v,i)=>{const field=result.fields[keys[i]];field.value=this.initialize(field.dataType,v,owner);});}return result;
+      const result=this.defaultValue(type,owner);if(value?.kind==='initializer'){const keys=Object.keys(result.fields);if(value.values.length>keys.length)throw new Error('구조체 초기값이 너무 많습니다.');if(value.values.length===1&&value.values[0]===0)return result;value.values.forEach((v,i)=>{const field=result.fields[keys[i]];if(field.value?.kind==='array'){const list=v?.kind==='initializer'?v.values:typeof v==='string'?[...v].map(c=>c.charCodeAt(0)).concat(0):[v];if(list.length>field.value.cells.length)throw new Error('구조체 배열 필드 초기값이 너무 많습니다.');list.forEach((x,j)=>field.value.cells[j].value=this.coerce(field.dataType,x));return;}field.value=this.initialize(field.dataType,v,owner);});}return result;
     }
     if(value?.kind==='initializer')throw new Error('배열 또는 구조체에만 초기값 목록을 사용하세요.');return this.coerce(type,value??this.defaultValue(type,owner));
   }
@@ -128,7 +183,7 @@ export class Runtime {
     if(s.type!=='block'&&s.type!=='empty')yield* this.checkpoint(s.loc);
     if(s.type==='declare'){
       for(const d of s.declarations){if(d.external)continue;if(d.storage&&this.staticCells.has(d)){this.scope().cells[d.name]=this.staticCells.get(d);continue;}let value=d.value?yield* this.evaluate(d.value):undefined;
-        if(d.array){let values=value?.kind==='initializer'?value.values:typeof value==='string'?[...value].map(c=>c.charCodeAt(0)).concat(0):[];const length=d.size?integer(yield* this.evaluate(d.size)):values.length;if(length<1||length>4096||values.length>length)throw new Error('배열 크기 또는 초기값 개수를 확인하세요.');value=this.array(Array.from({length},(_,i)=>this.initialize(d.type,values[i])));if(d.constant)value.cells.forEach(c=>c.constant=true);}
+        if(d.array){let values=value?.kind==='initializer'?value.values:typeof value==='string'?[...value].map(c=>c.charCodeAt(0)).concat(0):[];const length=d.size?integer(yield* this.evaluate(d.size)):values.length;if(length<1||length>this.maxArray||values.length>length)throw new Error('배열 크기 또는 초기값 개수를 확인하세요.');value=this.array(Array.from({length},(_,i)=>this.initialize(d.type,values[i])));if(d.constant)value.cells.forEach(c=>c.constant=true);}
         else if(d.pointer){if(typeof value==='string')value=this.array([...value].map(c=>c.charCodeAt(0)).concat(0),this.globals);value=this.pointer(value??0);if(value!==0&&!isPointer(value))throw new Error('포인터 초기값을 확인하세요.');}
         else if(d.type!=='LiquidCrystal')value=this.initialize(d.type,value);
         if(d.array)value.cells.forEach(c=>c.dataType=d.type);
@@ -155,7 +210,9 @@ export class Runtime {
     if(['while','for','do'].includes(s.type)){
       this.loopDepth++;this.pushScope();try{
         if(s.init)yield* this.statement(s.init);let first=true;
-        while((s.type==='do'&&first)||truth(yield* this.evaluate(s.test))){if(!first)yield* this.checkpoint(s.loc);first=false;const signal=yield* this.statement(s.body);if(signal?.type==='return')return signal;if(signal?.type==='break')break;if(s.update)yield* this.evaluate(s.update);if(this.program.hal&&!this.inCallback&&this.depth===1&&(!this.api.preciseTiming||this.loopDepth===1)){this.steps=0;const idle=this.loopDepth===1&&s.type==='while'&&s.test.type==='literal'&&truth(s.test.value)&&s.body.type==='block'&&s.body.body.every(n=>n.type==='empty');this.idleMain=idle;yield idle?Infinity:.1;}this.budget();}
+        while((s.type==='do'&&first)||truth(yield* this.evaluate(s.test))){if(!first)yield* this.checkpoint(s.loc);first=false;const signal=yield* this.statement(s.body);if(signal?.type==='return')return signal;if(signal?.type==='break')break;if(s.update)yield* this.evaluate(s.update);if(this.program.hal&&!this.inCallback&&this.depth===1&&(!this.api.preciseTiming||this.loopDepth===1)){this.steps=0;const idle=this.loopDepth===1&&s.type==='while'&&s.test.type==='literal'&&truth(s.test.value)&&s.body.type==='block'&&s.body.body.every(n=>n.type==='empty');this.idleMain=idle;yield idle?Infinity:.1;}
+          // Inside an ISR a loop iteration costs CPU time, so a long loop can be preempted.
+          else if(this.program.hal&&this.inIsr&&!this.atomic){this.busyUs+=LOOP_ITERATION_US;if(this.steps>15000){const ms=Math.max(.001,this.busyUs/1000);this.busyUs=0;this.steps=0;yield ms;}}this.budget();}
       }finally{this.popScope();this.loopDepth--;}return;
     }
     if(s.type==='return')return {type:'return',value:s.value?yield* this.evaluate(s.value):0};
@@ -171,14 +228,16 @@ export class Runtime {
   }
   *checkpoint(loc){
     if(!loc)return;this.location=loc;if(this.frames.length)this.frames.at(-1).loc=loc;
-    // Peripheral callbacks execute atomically in the current cooperative model.
-    if(this.debug.enabled&&!this.inCallback&&this.depth>0)yield {kind:'debug-location',loc,depth:this.depth};
+    // Host-initiated callbacks (MspInit, sketch timers) stay atomic; HAL ISRs run in their own context.
+    if(this.atomic)return;
+    if(this.program.hal&&(this.pinPending&&this.interruptsEnabled||this.api.preempt?.(this)))yield {kind:'preempt'};
+    if(this.debug.enabled&&this.depth>0)yield {kind:'debug-location',loc,depth:this.depth};
   }
   resume(mode='continue'){
     if(!['continue','into','over','out'].includes(mode))throw new Error('디버그 명령이 올바르지 않습니다.');
     this.debug.mode=mode;this.debug.depth=this.depth;this.debug.paused=false;
   }
-  *run(){yield* this.statements(this.program.globals);if(this.program.hal){yield* this.invoke('main');return;}if(this.program.functions.setup)yield* this.invoke('setup');while(true){yield* this.invoke('loop');yield 1;}}
+  *run(){this.api.declareGlobals?.(this);yield* this.statements(this.program.globals);if(this.program.hal){yield* this.invoke('main');return;}if(this.program.functions.setup)yield* this.invoke('setup');while(true){yield* this.invoke('loop');yield 1;}}
   pin(name){const pin=canonicalPin(name);if(!GPIO_PINS.includes(pin))throw new Error(`GPIO 핀 이름을 확인하세요: ${name}`);return pin;}
   setPinMode(pin,mode){this.pwm.delete(pin);this.gpio[pin]={mode,value:0};this.api.changed?.(this.microTime);}
   inputLevel(pin){return this.gpio[pin]?.mode==='ANALOG'?0:Number(!!this.api.read?.(pin));}
@@ -191,10 +250,10 @@ export class Runtime {
     const fire=()=>{if(!timer.active)return;if(once){timer.active=false;this.timers.delete(id);}else this.event(this.microTime/1000+period,fire);this.runCallback(callback);};
     this.event(this.microTime/1000+period,fire);return id;
   }
-  runCallback(callback){const previous=this.inCallback;this.inCallback=true;try{if(callback.host){callback.host();return;}const iterator=this.invoke(callback.name,callback.args||[]),r=iterator.next();if(!r.done){iterator.return();throw new Error('콜백에서 대기할 수 없습니다.');}}finally{this.inCallback=previous;}}
+  runCallback(callback){this.atomic++;try{if(callback.host){callback.host();return;}const iterator=this.invoke(callback.name,callback.args||[]),r=iterator.next();if(!r.done){iterator.return();throw new Error('콜백에서 대기할 수 없습니다.');}}finally{this.atomic--;}}
   pollInterrupts(){
     if(!this.api.read)return;
-    for(const [pin,s]of this.interrupts){const state=this.inputLevel(pin);const fired=state!==s.previous&&(s.mode==='CHANGE'||(s.mode==='RISING'&&state)||(s.mode==='FALLING'&&!state));s.previous=state;if(fired&&!s.pending){s.pending=true;}}
+    for(const [pin,s]of this.interrupts){const state=this.inputLevel(pin);const fired=state!==s.previous&&(s.mode==='CHANGE'||(s.mode==='RISING'&&state)||(s.mode==='FALLING'&&!state));s.previous=state;if(fired&&!s.pending){s.pending=true;this.pinPending=true;}}
   }
   format(args){const [value,base]=args;if(base!==undefined&&typeof value==='number'){if(Number.isInteger(value)&&[2,8,10,16].includes(base))return Math.trunc(value).toString(base).toUpperCase();if(Number.isInteger(base)&&base>=0&&base<=8)return value.toFixed(base);}if(isPointer(value)||isArray(value)){const p=this.pointer(value);let s='';for(let i=0;i<4096;i++){const n=this.get(this.pointerCell(p,i));if(n===0)return s;s+=String.fromCharCode(integer(n));}throw new Error('문자열 종료 문자가 없습니다.');}return args.map(String).join(' ');}
   call(name,args){
@@ -249,19 +308,15 @@ export class Runtime {
   tick(target){
     if(this.debug.paused)return;
     if(!Number.isFinite(target)||target<0)throw new Error('시뮬레이션 시간이 올바르지 않습니다.');this.steps=0;this.allocations=0;let count=0;this.pollInterrupts();
-    if(this.idleMain){this.idleMain=false;this.wake=this.microTime/1000;}
+    if(this.idleMain){this.idleMain=false;this.contexts[0].wake=this.microTime/1000;}
     while(true){
       if(++count>4000)throw new Error('시간당 실행 한도를 초과했습니다. 주파수나 반복 횟수를 줄이세요.');
-      if(this.interruptsEnabled){for(const state of this.interrupts.values())if(state.pending){state.pending=false;this.runCallback(state.callback);}}
-      this.api.poll?.(this);
-      this.events.sort((a,b)=>a.at-b.at||a.order-b.order);const event=this.events[0],at=Math.min(this.wake,event?.at??Infinity);if(at>target)break;
-      this.time=at;this.microTime=Math.max(this.microTime,at*1000);this.api.advance?.(this.microTime);
-      if(event&&event.at<=this.wake){this.events.shift();event.fn();}
-      else {const next=this.iterator.next();if(next.done){this.wake=Infinity;this.finished=true;}
-        else if(next.value?.kind==='debug-location'){
-          const d=this.debug,p=next.value,stop=d.breakpoints.has(`${p.loc.file}:${p.loc.line}`)||d.mode==='into'||d.mode==='over'&&p.depth<=d.depth||d.mode==='out'&&p.depth<d.depth;
-          if(stop){d.paused=true;this.time=this.microTime/1000;return;}
-        }else this.wake=Math.max(this.wake,this.microTime/1000)+next.value;}
+      if(this.interruptsEnabled){this.pinPending=false;for(const state of this.interrupts.values())if(state.pending){state.pending=false;this.runCallback(state.callback);}}
+      this.api.poll?.(this);if(this.debug.paused)return;
+      this.events.sort((a,b)=>a.at-b.at||a.order-b.order);const ctx=this.top,event=this.events[0],at=Math.min(ctx.wake,event?.at??Infinity);if(at>target)break;
+      this.time=Math.max(this.time,at);this.microTime=Math.max(this.microTime,at*1000);this.api.advance?.(this.microTime);
+      if(event&&event.at<=ctx.wake){this.events.shift();event.fn();}
+      else{const step=this.stepContext(ctx);if(step==='paused')return;if(step==='debug')count--;}
       this.pollInterrupts();
     }
     this.time=target;this.microTime=Math.max(this.microTime,target*1000);this.api.advance?.(this.microTime);

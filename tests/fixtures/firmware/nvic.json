@@ -1,0 +1,28 @@
+{
+ "format": "stm32-circuit-lab",
+ "version": 2,
+ "name": "firmware fixture",
+ "components": [],
+ "wires": [],
+ "mcu": {
+  "family": "STM32F446RE",
+  "pins": {},
+  "peripherals": {},
+  "nvic": {},
+  "timerClockHz": 16000000
+ },
+ "firmware": {
+  "mode": "hal",
+  "files": [
+   {
+    "name": "fixture.h",
+    "text": "/* Shared fixture helpers: HSI -> PLL 84 MHz (APB1 42 MHz, APB2 84 MHz, PLLQ 48 MHz),\n * SysTick, SWV ITM printf. Same clock tree as the app's generated main.c. */\n#pragma once\n#include \"main.h\"\n#include <stdio.h>\n#include <string.h>\n\nstatic inline void Fixture_ClockConfig(void) {\n  RCC_OscInitTypeDef osc = {0};\n  RCC_ClkInitTypeDef clk = {0};\n  __HAL_RCC_PWR_CLK_ENABLE();\n  __HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE1);\n  osc.OscillatorType = RCC_OSCILLATORTYPE_HSI;\n  osc.HSIState = RCC_HSI_ON;\n  osc.HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT;\n  osc.PLL.PLLState = RCC_PLL_ON;\n  osc.PLL.PLLSource = RCC_PLLSOURCE_HSI;\n  osc.PLL.PLLM = 16; osc.PLL.PLLN = 336; osc.PLL.PLLP = RCC_PLLP_DIV4; osc.PLL.PLLQ = 7; osc.PLL.PLLR = 2;\n  if (HAL_RCC_OscConfig(&osc) != HAL_OK) Error_Handler();\n  clk.ClockType = RCC_CLOCKTYPE_HCLK | RCC_CLOCKTYPE_SYSCLK | RCC_CLOCKTYPE_PCLK1 | RCC_CLOCKTYPE_PCLK2;\n  clk.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;\n  clk.AHBCLKDivider = RCC_SYSCLK_DIV1;\n  clk.APB1CLKDivider = RCC_HCLK_DIV2;\n  clk.APB2CLKDivider = RCC_HCLK_DIV1;\n  if (HAL_RCC_ClockConfig(&clk, FLASH_LATENCY_2) != HAL_OK) Error_Handler();\n}\n"
+   }
+  ]
+ },
+ "code": "/* Interrupt preemption: TIM2 (priority 2) busy-waits 3 ms inside its ISR;\n * TIM3 (priority 0) fires 1 ms after TIM2 and must preempt it.\n * The log shows A (TIM2 enter) B (TIM3) a (TIM2 leave). */\n#include \"fixture.h\"\n\nTIM_HandleTypeDef htim2, htim3, htim5;\nstatic char log_[32];\nstatic volatile uint32_t n;\n\nvoid Error_Handler(void) { __disable_irq(); while (1) { } }\nint __io_putchar(int ch) { ITM_SendChar(ch); return ch; }\nvoid SysTick_Handler(void) { HAL_IncTick(); }\nvoid TIM2_IRQHandler(void) { HAL_TIM_IRQHandler(&htim2); }\nvoid TIM3_IRQHandler(void) { HAL_TIM_IRQHandler(&htim3); }\nstatic void mark(char c) { if (n < sizeof(log_) - 1) log_[n++] = c; }\n\nvoid HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *h) {\n  if (h->Instance == TIM2) {\n    mark('A');\n    uint32_t start = TIM5->CNT;\n    while (TIM5->CNT - start < 3000) { }\n    mark('a');\n  } else if (h->Instance == TIM3) {\n    mark('B');\n    HAL_TIM_Base_Stop_IT(&htim3);\n  }\n}\n\nstatic void timer(TIM_HandleTypeDef *h, TIM_TypeDef *inst, uint32_t psc, uint32_t arr) {\n  h->Instance = inst; h->Init.Prescaler = psc; h->Init.CounterMode = TIM_COUNTERMODE_UP; h->Init.Period = arr;\n  h->Init.ClockDivision = TIM_CLOCKDIVISION_DIV1; h->Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;\n  if (HAL_TIM_Base_Init(h) != HAL_OK) Error_Handler();\n}\n\nint main(void) {\n  HAL_Init();\n  Fixture_ClockConfig();\n  HAL_NVIC_SetPriorityGrouping(NVIC_PRIORITYGROUP_4);\n  __HAL_RCC_TIM2_CLK_ENABLE(); __HAL_RCC_TIM3_CLK_ENABLE(); __HAL_RCC_TIM5_CLK_ENABLE();\n  timer(&htim5, TIM5, 83, 0xFFFFFFFF);      /* 1 MHz free-running time base */\n  timer(&htim2, TIM2, 83, 9999);            /* 10 ms */\n  timer(&htim3, TIM3, 83, 999);             /* 1 ms */\n  HAL_NVIC_SetPriority(TIM2_IRQn, 2, 0); HAL_NVIC_EnableIRQ(TIM2_IRQn);\n  HAL_NVIC_SetPriority(TIM3_IRQn, 0, 0); HAL_NVIC_EnableIRQ(TIM3_IRQn);\n  HAL_TIM_Base_Start(&htim5);\n  __HAL_TIM_CLEAR_FLAG(&htim2, TIM_FLAG_UPDATE); __HAL_TIM_CLEAR_FLAG(&htim3, TIM_FLAG_UPDATE);\n  HAL_TIM_Base_Start_IT(&htim2);\n  while (TIM2->CNT < 9500) { }              /* TIM2 fires at 10 ms; TIM3 then 1 ms later */\n  HAL_TIM_Base_Start_IT(&htim3);\n  HAL_Delay(30);\n  HAL_TIM_Base_Stop_IT(&htim2);\n  printf(\"order=%s\\n\", log_);\n  while (1) { HAL_Delay(10); }\n}\n",
+ "simulation": {
+  "stepMs": 1,
+  "pwmWaveform": false
+ }
+}

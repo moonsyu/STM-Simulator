@@ -1,0 +1,5 @@
+{
+  "source": "qemu-system-arm 9.2.4 -M mps2-an386 (semihosting)",
+  "exitCode": 0,
+  "output": "bfi_0_1=09c6112b\nbfi_4_8=8daf4a47\nbfi_31_1=e5d7c1c6\nbfi_0_32=4bc91607\nbfi_7_20=b304256d\nbfc_3_9=97224cc4\nbfc_16_16=9fae6c1d\nubfx_0_1=35dffa57\nubfx_5_11=16b2ada3\nubfx_0_32=b67e1b9f\nubfx_31_1=0edc0519\nsbfx_0_1=6458e4e7\nsbfx_5_11=44c7f471\nsbfx_0_32=d1b3aa37\nsbfx_20_12=675b962e\nclz=9f84ead1\nrbit=d1970c37\nrev_w=46481d00\nrev16_w=f80b9ff8\nrevsh_w=1e9e008d\nsxtb_w=a3ddc084\nsxth_w=f5790f56\nuxtb_w=8f8365aa\nuxth_w=9bce04eb\nsxtb_w0=5b6ee5a5\nuxth_w0=55ac6242\nrev_n=5ec096f0\nrev16_n=efebf6cf\nrevsh_n=8ec19552\nsxtb_n=db834db2\nsxth_n=57c198b1\nuxtb_n=c0dbaf76\nuxth_n=0508e0f5\nlsl_w_r=30da642b\nror_i=207b5148\nasr_i=06a9f002\ncbits=561d026b\ntotal=e4941c47\n"
+}

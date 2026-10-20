@@ -12,18 +12,24 @@ import {BusDevices} from './buses.js';
 import {WaveRecorder} from './trace.js';
 import {compileHal} from './hal-source.js';
 import {HalAdapter,HAL_CONSTANTS} from './hal.js';
+import {SignalRecorder,NoiseModel,signalsApi,validateNoise} from './signals.js';
 
 export class SimulationSession {
-  constructor(project,{print=()=>{},trace=()=>{},uart=()=>{},channels,debug,program}={}){
-    project=physicalToModel(project);
+  constructor(project,{print=()=>{},trace=()=>{},uart=()=>{},warn,channels,debug,program,storage}={}){
+    const source=project;project=physicalToModel(project);
+    this.signalRecorder=new SignalRecorder();this.noise=new NoiseModel(project.simulation?.noise);this.recordPins=new Set();this.warnings=[];this.onStorage=storage;
+    this.signals=signalsApi(this.signalRecorder,this.noise,{now:()=>this.runtime.microTime,record:pins=>this.record(pins),onNoise:cfg=>{for(const p of new Set([source,project]))if(p.simulation)p.simulation.noise=cfg;else p.simulation={stepMs:this.stepMs,pwmWaveform:false,noise:cfg};}});
+    const warnOut=warn??(message=>trace({micros:this.runtime?.microTime??0,protocol:'경고',message}));
     this.passiveBuzzers=new PassiveBuzzers();
     this.project=project;this.pressed={};this.result=null;this.time=0;this.integrated=-1;this.stepMs=project.simulation?.stepMs??1;this.circuit=new CircuitSimulation();this.motion=new MotionDevices();this.catalogMotion=new CatalogMotion();this.singleWire=new CatalogSingleWire();this.sensors=new UltrasonicSignals();this.lcds=new Map();this.wave=new WaveRecorder(channels);this.serial=[];
-    this.buses=new BusDevices(project,()=>this.result,trace);
-    this.hal=project.firmware?.mode==='hal'?new HalAdapter(project.mcu,this.buses):null;
+    this.buses=new BusDevices(project,()=>this.result,trace);this.buses.signals=this.signalRecorder;this.buses.noise=this.noise;
+    this.hal=project.firmware?.mode==='hal'?this.createHal():null;
     this.runtime=new Runtime(program??(this.hal?compileHal(project.code,project.firmware.files):compile(project.code)),{
       debug,preciseTiming:project.components.some(p=>p.type==='catalog_singlewire'),
       constants:this.hal?HAL_CONSTANTS:undefined,
       invoke:(name,args,runtime)=>this.hal?.invoke(name,args,runtime),poll:runtime=>this.hal?.poll(runtime),
+      preempt:runtime=>this.hal?.preempt(runtime)??false,declareGlobals:runtime=>this.hal?.declareGlobals?.(runtime),
+      warn:message=>{this.warnings.push(message);if(this.warnings.length>50)this.warnings.shift();warnOut(message);},reset:runtime=>{if(this.hal){this.hal=this.createHal();this.hal.nvicModel.tick.lost=Math.floor(runtime.microTime/1000);}},
       print,uart,pwmEnabled:project.simulation?.pwmWaveform??false,
       beforeChange:us=>this.advance(us),changed:us=>this.changed(us),advance:us=>this.advance(us),
       read:pin=>digitalRead(pin,this.result),voltage:pin=>this.result?.voltage('signal:'+pin),
@@ -32,6 +38,16 @@ export class SimulationSession {
       call:(name,args,runtime)=>this.hal?.call(name,args,runtime)??this.buses.call(name,args,runtime),serialAvailable:()=>this.serial.length,serialRead:()=>this.serial.shift()??-1
     });
   }
+  createHal(){const hal=new HalAdapter(this.project.mcu,this.buses,{session:this});return hal;}
+  // GPIO pins captured as 'gpio' signal channels (logic analyzer).
+  record(pins=[]){for(const pin of pins){const id='GPIO.'+pin;this.recordPins.add(pin);this.signalRecorder.define(id,{label:pin,pins:[pin],protocol:'gpio'});}return [...this.recordPins];}
+  recordSignals(micros,result){
+    if(!result||result.fault)return;const level=id=>{const v=result.voltage(id);return v==null?null:v>1.65?1:0;};
+    for(const pin of this.recordPins){const v=level('signal:'+pin);if(v!=null)this.signalRecorder.edge('GPIO.'+pin,micros,v);}
+    for(const p of this.project.components)if(p.type==='catalog_singlewire'){const v=level(`part:${p.id}:p3`);if(v==null)continue;const id='1WIRE.'+p.id;if(!this.signalRecorder.has(id))this.signalRecorder.define(id,{label:'1-Wire '+(p.name||p.id),protocol:p.catalogVariant?.startsWith('ds18b20')?'onewire':'gpio'});this.signalRecorder.edge(id,micros,v);}
+  }
+  get camera(){return this.hal?.camera?.api;}
+  get storage(){return this.hal?.storage?.api;}
   enrich(micros){
     this.hal?.catalog.update(this.project,this.result,micros);
     this.singleWire.update(this.project,this.result,micros,this.runtime);
@@ -39,7 +55,7 @@ export class SimulationSession {
     if(!this.result||this.result.fault)return;
     this.sensors.update(this.project,this.result,micros);
     for(const p of this.project.components.filter(p=>p.type==='lcd')){if(!this.lcds.has(p.id))this.lcds.set(p.id,new LCDController());const lcd=this.lcds.get(p.id).update(p,this.result,micros);this.result.parts[p.id]={...this.result.parts[p.id],lcd};}
-    this.motion.update(this.project,this.result,micros,this.runtime,us=>this.changed(us));this.hal?.timerModel.observe(this.runtime,micros);this.buses.update(this.result);this.catalogMotion.update(this.project,this.result,micros,this.runtime);this.wave.record(micros,this.result);
+    this.motion.update(this.project,this.result,micros,this.runtime,us=>this.changed(us));this.hal?.timerModel.observe(this.runtime,micros);this.buses.update(this.result);this.catalogMotion.update(this.project,this.result,micros,this.runtime);this.wave.record(micros,this.result);this.recordSignals(micros,this.result);this.hal?.update?.(this.result,micros);
   }
   advance(micros){
     const target=micros/1000;if(target<this.integrated)return;

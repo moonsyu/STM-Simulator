@@ -14,16 +14,16 @@ export const HAL_STRUCTS={
 
   GPIO_InitTypeDef:'Pin Mode Pull Speed Alternate',
   UART_InitTypeDef:'BaudRate WordLength StopBits Parity Mode HwFlowCtl OverSampling',
-  UART_HandleTypeDef:'Instance Init:UART_InitTypeDef ErrorCode gState RxState',
+  UART_HandleTypeDef:'Instance Init:UART_InitTypeDef ErrorCode gState RxState hdmatx hdmarx RxEventType ReceptionType',
   I2C_InitTypeDef:'ClockSpeed DutyCycle OwnAddress1 AddressingMode DualAddressMode OwnAddress2 GeneralCallMode NoStretchMode',
-  I2C_HandleTypeDef:'Instance Init:I2C_InitTypeDef ErrorCode',
+  I2C_HandleTypeDef:'Instance Init:I2C_InitTypeDef ErrorCode hdmatx hdmarx State',
   SPI_InitTypeDef:'Mode Direction DataSize CLKPolarity CLKPhase NSS BaudRatePrescaler FirstBit TIMode CRCCalculation CRCPolynomial',
-  SPI_HandleTypeDef:'Instance Init:SPI_InitTypeDef ErrorCode',
+  SPI_HandleTypeDef:'Instance Init:SPI_InitTypeDef ErrorCode hdmatx hdmarx State',
   ADC_InitTypeDef:'ClockPrescaler Resolution ScanConvMode ContinuousConvMode DiscontinuousConvMode NbrOfDiscConversion ExternalTrigConvEdge ExternalTrigConv DataAlign NbrOfConversion DMAContinuousRequests EOCSelection',
-  ADC_HandleTypeDef:'Instance Init:ADC_InitTypeDef ErrorCode',
+  ADC_HandleTypeDef:'Instance Init:ADC_InitTypeDef ErrorCode DMA_Handle State',
   ADC_ChannelConfTypeDef:'Channel Rank SamplingTime Offset',
   TIM_Base_InitTypeDef:'Prescaler CounterMode Period ClockDivision RepetitionCounter AutoReloadPreload',
-  TIM_HandleTypeDef:'Instance Init:TIM_Base_InitTypeDef Channel',
+  TIM_HandleTypeDef:'Instance Init:TIM_Base_InitTypeDef Channel hdma:uint32_t[7] State',
   TIM_ClockConfigTypeDef:'ClockSource ClockPolarity ClockPrescaler ClockFilter',
   TIM_MasterConfigTypeDef:'MasterOutputTrigger MasterSlaveMode',
   TIM_IC_InitTypeDef:'ICPolarity ICSelection ICPrescaler ICFilter',
@@ -31,9 +31,26 @@ export const HAL_STRUCTS={
   TIM_OC_InitTypeDef:'OCMode Pulse OCPolarity OCNPolarity OCFastMode OCIdleState OCNIdleState',
   RCC_PLLInitTypeDef:'PLLState PLLSource PLLM PLLN PLLP PLLQ PLLR',
   RCC_OscInitTypeDef:'OscillatorType HSEState LSEState HSIState HSICalibrationValue LSIState PLL:RCC_PLLInitTypeDef',
-  RCC_ClkInitTypeDef:'ClockType SYSCLKSource AHBCLKDivider APB1CLKDivider APB2CLKDivider'
+  RCC_ClkInitTypeDef:'ClockType SYSCLKSource AHBCLKDivider APB1CLKDivider APB2CLKDivider',
+  DMA_InitTypeDef:'Channel Direction PeriphInc MemInc PeriphDataAlignment MemDataAlignment Mode Priority FIFOMode FIFOThreshold MemBurst PeriphBurst',
+  DMA_HandleTypeDef:'Instance Init:DMA_InitTypeDef Parent State ErrorCode XferCpltCallback XferHalfCpltCallback XferM1CpltCallback XferM1HalfCpltCallback XferErrorCallback XferAbortCallback',
+  USART_InitTypeDef:'BaudRate WordLength StopBits Parity Mode CLKPolarity CLKPhase CLKLastBit',
+  USART_HandleTypeDef:'Instance Init:USART_InitTypeDef hdmatx hdmarx State ErrorCode',
+  DCMI_InitTypeDef:'SynchroMode PCKPolarity VSPolarity HSPolarity CaptureRate ExtendedDataMode SyncroCode JPEGMode ByteSelectMode ByteSelectStart LineSelectMode LineSelectStart',
+  DCMI_HandleTypeDef:'Instance Init:DCMI_InitTypeDef DMA_Handle State ErrorCode XferCount XferSize XferTransferNumber pBuffPtr',
+  SD_InitTypeDef:'ClockEdge ClockBypass ClockPowerSave BusWide HardwareFlowControl ClockDiv',
+  HAL_SD_CardInfoTypeDef:'CardType CardVersion Class RelCardAdd BlockNbr BlockSize LogBlockNbr LogBlockSize',
+  SD_HandleTypeDef:'Instance Init:SD_InitTypeDef hdmatx hdmarx State ErrorCode SdCard:HAL_SD_CardInfoTypeDef Context',
+  // FatFs R0.12 object layouts as interpreter values; file state lives in the SD card model.
+  FATFS:'fs_type pdrv n_fats wflag fsi_flag id n_rootdir csize n_fatent fsize volbase fatbase dirbase database winsect free_clst last_clst',
+  FIL:'obj_id flag err fptr clust sect fsize sclust',
+  DIR:'obj_id dptr clust sect blk_ofs',
+  FILINFO:'fsize fdate ftime fattrib fname:char[13]'
 };
-const SYSTEM_HEADERS=new Set(['main.h','stm32f4xx_hal.h','stm32f4xx.h','stdint.h','stddef.h','stdbool.h','string.h','stdio.h','math.h',...['gpio','uart','tim','adc','i2c','spi','rcc','rcc_ex','cortex','pwr','pwr_ex'].map(n=>`stm32f4xx_hal_${n}.h`)]);
+export const HAL_ALIASES={FRESULT:'int',UINT:'uint32_t',BYTE:'uint8_t',WORD:'uint16_t',DWORD:'uint32_t',QWORD:'uint32_t',FSIZE_t:'uint32_t',LBA_t:'uint32_t',TCHAR:'char',DSTATUS:'uint8_t',
+  HAL_SD_CardStateTypeDef:'uint32_t',HAL_DMA_StateTypeDef:'int',HAL_UART_StateTypeDef:'int',HAL_USART_StateTypeDef:'int',HAL_DCMI_StateTypeDef:'int',HAL_SD_StateTypeDef:'int',HAL_SPI_StateTypeDef:'int',HAL_I2C_StateTypeDef:'int',
+  HAL_LockTypeDef:'int',FunctionalState:'int',FlagStatus:'int',ITStatus:'int',IRQn_Type:'int',HAL_DMA_LevelCompleteTypeDef:'int',HAL_DMA_CallbackIDTypeDef:'int',HAL_UART_RxEventTypeTypeDef:'uint32_t'};
+const SYSTEM_HEADERS=new Set(['main.h','stm32f4xx_hal.h','stm32f4xx.h','stdint.h','stddef.h','stdbool.h','string.h','stdio.h','math.h','stm32f4xx_it.h','stm32f4xx_hal_conf.h','fatfs.h','ff.h','ff_gen_drv.h','diskio.h','sd_diskio.h','user_diskio.h','bsp_driver_sd.h','fatfs_platform.h',...['gpio','uart','usart','tim','tim_ex','adc','adc_ex','i2c','spi','rcc','rcc_ex','cortex','pwr','pwr_ex','dma','dma_ex','dcmi','sd','uart_ex'].map(n=>`stm32f4xx_hal_${n}.h`)]);
 export function prepareHalSource(source,files=[],options={}){
   if(typeof source!=='string'||source.length>300000||!Array.isArray(files)||files.length>40)throw new Error('HAL 소스 크기 또는 파일 수 한도를 넘었습니다.');
   const map=new Map();let total=source.length;
@@ -79,8 +96,8 @@ export function prepareHalSource(source,files=[],options={}){
   const text=chunks.map(c=>c.text).join('\n'),sourceMap=chunks.flatMap(c=>c.locations);return options.withMap?{text,sourceMap}:text;
 }
 export function compileHal(source,files=[]){
-  const structs=Object.fromEntries(Object.entries(HAL_STRUCTS).map(([name,fields])=>[name,fields.split(' ').map(f=>{const [key,type='uint32_t']=f.split(':');return {name:key,type,constant:false};})]));
+  const structs=Object.fromEntries(Object.entries(HAL_STRUCTS).map(([name,fields])=>[name,fields.split(' ').map(f=>{const [key,spec='uint32_t']=f.split(':'),m=/^(\w+)\[(\d+)\]$/.exec(spec);return m?{name:key,type:m[1],constant:false,array:true,size:Number(m[2])}:{name:key,type:spec,constant:false};})]));
   const prepared=prepareHalSource(source,files,{withMap:true});
-  try{return compile(prepared.text,{hal:true,structs,sourceMap:prepared.sourceMap});}
+  try{return compile(prepared.text,{hal:true,structs,aliases:HAL_ALIASES,sourceMap:prepared.sourceMap});}
   catch(error){if(!error.location){const m=/^(\d+)행:/.exec(error.message);if(m){error.location=prepared.sourceMap[Number(m[1])-1];if(error.location)error.message=error.message.replace(/^\d+행:/,`${error.location.file}:${error.location.line}:`);}}throw error;}
 }

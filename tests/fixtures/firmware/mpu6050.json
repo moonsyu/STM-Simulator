@@ -1,0 +1,138 @@
+{
+ "format": "stm32-circuit-lab",
+ "version": 2,
+ "name": "새 회로",
+ "components": [
+  {
+   "id": "demo",
+   "name": "IMU1",
+   "type": "mpu6050",
+   "x": 802,
+   "y": 149,
+   "rotation": 90,
+   "address": 104,
+   "ax": 0,
+   "ay": 0,
+   "az": 1,
+   "gx": 0,
+   "gy": 0,
+   "gz": 0,
+   "attachments": {
+    "p1": "bb:e:1",
+    "p2": "bb:e:2",
+    "p3": "bb:e:3",
+    "p4": "bb:e:4"
+   }
+  }
+ ],
+ "wires": [
+  {
+   "id": "w1",
+   "from": "rail:L:+:2",
+   "to": "bb:a:1",
+   "color": "#dd654c",
+   "points": [
+    {
+     "x": 654,
+     "y": 128
+    }
+   ]
+  },
+  {
+   "id": "w2",
+   "from": "rail:L:-:2",
+   "to": "bb:a:2",
+   "color": "#4e647b",
+   "points": [
+    {
+     "x": 668,
+     "y": 142
+    }
+   ]
+  },
+  {
+   "id": "w3",
+   "from": "board:CN10:5",
+   "to": "bb:a:3",
+   "color": "#23a68a",
+   "points": [
+    {
+     "x": 444,
+     "y": 156
+    }
+   ]
+  },
+  {
+   "id": "w4",
+   "from": "board:CN10:3",
+   "to": "bb:a:4",
+   "color": "#23a68a",
+   "points": [
+    {
+     "x": 444,
+     "y": 170
+    }
+   ]
+  },
+  {
+   "id": "bbPower1",
+   "from": "board:CN6:4",
+   "to": "rail:L:+:1",
+   "color": "#dd654c",
+   "points": [
+    {
+     "x": 132,
+     "y": 128
+    }
+   ]
+  },
+  {
+   "id": "bbPower2",
+   "from": "board:CN6:6",
+   "to": "rail:L:-:1",
+   "color": "#4e647b",
+   "points": [
+    {
+     "x": 132,
+     "y": 128
+    }
+   ]
+  }
+ ],
+ "mcu": {
+  "family": "STM32F446RE",
+  "pins": {
+   "PB8": {
+    "function": "I2C1_SCL",
+    "pull": "NOPULL",
+    "edge": "CHANGE",
+    "label": "",
+    "initial": 0
+   },
+   "PB9": {
+    "function": "I2C1_SDA",
+    "pull": "NOPULL",
+    "edge": "CHANGE",
+    "label": "",
+    "initial": 0
+   }
+  },
+  "peripherals": {
+   "I2C1": {
+    "enabled": true,
+    "clock": 100000
+   }
+  },
+  "nvic": {},
+  "timerClockHz": 84000000
+ },
+ "firmware": {
+  "mode": "hal",
+  "files": []
+ },
+ "code": "#include \"main.h\"\n#include <stdio.h>\n// I2C1 PB9(SDA)/PB8(SCL), 3V3/GND · WHO_AM_I 확인, 절전 해제, ±2 g / ±250 °/s 읽기\n#include <stdio.h>\n\n/* Copy this main.c into a CubeIDE STM32F446RE project with matching\n * pin / peripheral / NVIC settings and Cube-generated IRQ / MSP files.\n * Clock: HSI PLL, APB1 timer clock = 84000000 Hz.\n * printf: SWV ITM port 0 (enable SWV in the debugger). UART uses its pins.\n * With newlib-nano, enable -u _printf_float for floating-point printf. */\n\nI2C_HandleTypeDef hi2c1;\n\nvoid SystemClock_Config(void);\nvoid Error_Handler(void);\nstatic void MX_GPIO_Init(void);\nstatic void MX_I2C1_Init(void);\n\n\nint main(void) {\n  HAL_Init();\n  SystemClock_Config();\n  MX_GPIO_Init();\n  MX_I2C1_Init();\n  /* USER CODE BEGIN 2 */\n  uint8_t identity[1] = {0}, wake[1] = {0};\n  HAL_StatusTypeDef status = HAL_I2C_Mem_Read(&hi2c1, 0x68 << 1, 0x75, I2C_MEMADD_SIZE_8BIT, identity, 1, 100);\n  printf(\"MPU6050 status=%d WHO_AM_I=0x%02X\\n\", status, identity[0]);\n  HAL_I2C_Mem_Write(&hi2c1, 0x68 << 1, 0x6B, I2C_MEMADD_SIZE_8BIT, wake, 1, 100);\n    /* USER CODE END 2 */\n  while (1) {\n    /* USER CODE BEGIN 3 */\n    uint8_t data[14] = {0};\n    if (HAL_I2C_Mem_Read(&hi2c1, 0x68 << 1, 0x3B, I2C_MEMADD_SIZE_8BIT, data, 14, 100) == HAL_OK) {\n      float ax = (int16_t)(data[0]*256+data[1]) / 16384.0;\n      float ay = (int16_t)(data[2]*256+data[3]) / 16384.0;\n      float az = (int16_t)(data[4]*256+data[5]) / 16384.0;\n      float gx = (int16_t)(data[8]*256+data[9]) / 131.0;\n      float gy = (int16_t)(data[10]*256+data[11]) / 131.0;\n      float gz = (int16_t)(data[12]*256+data[13]) / 131.0;\n      printf(\"MPU6050 g=(%.2f,%.2f,%.2f) dps=(%.1f,%.1f,%.1f)\\n\", ax,ay,az,gx,gy,gz);\n    } else printf(\"MPU6050 NACK\\n\");\n    HAL_Delay(250);\n    /* USER CODE END 3 */\n  }\n}\n\nvoid SystemClock_Config(void) {\n  RCC_OscInitTypeDef osc = {0};\n  RCC_ClkInitTypeDef clk = {0};\n  __HAL_RCC_PWR_CLK_ENABLE();\n  __HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE1);\n  osc.OscillatorType = RCC_OSCILLATORTYPE_HSI;\n  osc.HSIState = RCC_HSI_ON;\n  osc.HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT;\n  osc.PLL.PLLState = RCC_PLL_ON;\n  osc.PLL.PLLSource = RCC_PLLSOURCE_HSI;\n  osc.PLL.PLLM = 16;\n  osc.PLL.PLLN = 336;\n  osc.PLL.PLLP = RCC_PLLP_DIV4;\n  osc.PLL.PLLQ = 7;\n  if (HAL_RCC_OscConfig(&osc) != HAL_OK) Error_Handler();\n  clk.ClockType = RCC_CLOCKTYPE_HCLK | RCC_CLOCKTYPE_SYSCLK | RCC_CLOCKTYPE_PCLK1 | RCC_CLOCKTYPE_PCLK2;\n  clk.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;\n  clk.AHBCLKDivider = RCC_SYSCLK_DIV1;\n  clk.APB1CLKDivider = RCC_HCLK_DIV2;\n  clk.APB2CLKDivider = RCC_HCLK_DIV1;\n  if (HAL_RCC_ClockConfig(&clk, FLASH_LATENCY_2) != HAL_OK) Error_Handler();\n}\n\nstatic void MX_GPIO_Init(void) {\n  GPIO_InitTypeDef GPIO_InitStruct = {0};\n  __HAL_RCC_GPIOB_CLK_ENABLE();\n  GPIO_InitStruct.Pin = GPIO_PIN_8;\n  GPIO_InitStruct.Mode = GPIO_MODE_AF_OD;\n  GPIO_InitStruct.Pull = GPIO_NOPULL;\n  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;\n  GPIO_InitStruct.Alternate = GPIO_AF4_I2C1;\n  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);\n  GPIO_InitStruct.Pin = GPIO_PIN_9;\n  GPIO_InitStruct.Mode = GPIO_MODE_AF_OD;\n  GPIO_InitStruct.Pull = GPIO_NOPULL;\n  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;\n  GPIO_InitStruct.Alternate = GPIO_AF4_I2C1;\n  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);\n}\n\nstatic void MX_I2C1_Init(void) {\n  __HAL_RCC_I2C1_CLK_ENABLE();\n  hi2c1.Instance = I2C1;\n  hi2c1.Init.ClockSpeed = 100000;\n  hi2c1.Init.DutyCycle = I2C_DUTYCYCLE_2;\n  hi2c1.Init.OwnAddress1 = 0;\n  hi2c1.Init.AddressingMode = I2C_ADDRESSINGMODE_7BIT;\n  hi2c1.Init.DualAddressMode = I2C_DUALADDRESS_DISABLE;\n  hi2c1.Init.OwnAddress2 = 0;\n  hi2c1.Init.GeneralCallMode = I2C_GENERALCALL_DISABLE;\n  hi2c1.Init.NoStretchMode = I2C_NOSTRETCH_DISABLE;\n  HAL_I2C_Init(&hi2c1);\n}\n\nint __io_putchar(int ch) {\n  ITM_SendChar(ch);\n  return ch;\n}\n\nvoid Error_Handler(void) {\n  __disable_irq();\n  while (1) { }\n}\n",
+ "simulation": {
+  "stepMs": 1,
+  "pwmWaveform": false
+ }
+}

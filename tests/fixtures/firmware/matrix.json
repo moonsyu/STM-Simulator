@@ -1,0 +1,226 @@
+{
+ "format": "stm32-circuit-lab",
+ "version": 2,
+ "name": "새 회로",
+ "components": [
+  {
+   "id": "demo",
+   "name": "MAT1",
+   "type": "matrix",
+   "x": 809,
+   "y": 156,
+   "rotation": 270,
+   "attachments": {
+    "p1": "bb:i:5",
+    "p2": "bb:i:4",
+    "p3": "bb:i:3",
+    "p4": "bb:i:2",
+    "p5": "bb:i:1"
+   }
+  }
+ ],
+ "wires": [
+  {
+   "id": "w1",
+   "from": "rail:R:+:6",
+   "to": "bb:f:7",
+   "color": "#dd654c",
+   "points": [
+    {
+     "x": 932,
+     "y": 212
+    }
+   ]
+  },
+  {
+   "id": "w2",
+   "from": "rail:L:-:7",
+   "to": "bb:f:8",
+   "color": "#4e647b",
+   "points": [
+    {
+     "x": 668,
+     "y": 226
+    }
+   ]
+  },
+  {
+   "id": "w3",
+   "from": "board:CN10:17",
+   "to": "bb:f:9",
+   "color": "#23a68a",
+   "points": [
+    {
+     "x": 444,
+     "y": 240
+    }
+   ]
+  },
+  {
+   "id": "w4",
+   "from": "board:CN10:11",
+   "to": "bb:a:2",
+   "color": "#23a68a",
+   "points": [
+    {
+     "x": 444,
+     "y": 142
+    }
+   ]
+  },
+  {
+   "id": "w5",
+   "from": "board:CN10:15",
+   "to": "bb:a:1",
+   "color": "#23a68a",
+   "points": [
+    {
+     "x": 444,
+     "y": 128
+    }
+   ]
+  },
+  {
+   "id": "bbJunction1",
+   "from": "bb:j:5",
+   "to": "bb:i:7",
+   "color": "#23a68a",
+   "points": [
+    {
+     "x": 872,
+     "y": 212
+    }
+   ]
+  },
+  {
+   "id": "bbJunction2",
+   "from": "bb:j:4",
+   "to": "bb:i:8",
+   "color": "#23a68a",
+   "points": [
+    {
+     "x": 872,
+     "y": 226
+    }
+   ]
+  },
+  {
+   "id": "bbJunction3",
+   "from": "bb:j:3",
+   "to": "bb:i:9",
+   "color": "#23a68a",
+   "points": [
+    {
+     "x": 872,
+     "y": 240
+    }
+   ]
+  },
+  {
+   "id": "bbJunction4",
+   "from": "bb:j:2",
+   "to": "bb:d:2",
+   "color": "#23a68a",
+   "points": [
+    {
+     "x": 872,
+     "y": 107
+    },
+    {
+     "x": 760,
+     "y": 107
+    }
+   ]
+  },
+  {
+   "id": "bbJunction5",
+   "from": "bb:j:1",
+   "to": "bb:d:1",
+   "color": "#23a68a",
+   "points": [
+    {
+     "x": 872,
+     "y": 107
+    },
+    {
+     "x": 760,
+     "y": 107
+    }
+   ]
+  },
+  {
+   "id": "bbPower1",
+   "from": "board:CN6:5",
+   "to": "rail:R:+:1",
+   "color": "#dd654c",
+   "points": [
+    {
+     "x": 932,
+     "y": 375
+    }
+   ]
+  },
+  {
+   "id": "bbPower2",
+   "from": "board:CN6:6",
+   "to": "rail:L:-:1",
+   "color": "#4e647b",
+   "points": [
+    {
+     "x": 132,
+     "y": 128
+    }
+   ]
+  }
+ ],
+ "mcu": {
+  "family": "STM32F446RE",
+  "pins": {
+   "PA5": {
+    "function": "SPI1_SCK",
+    "pull": "NOPULL",
+    "edge": "CHANGE",
+    "label": "",
+    "initial": 0
+   },
+   "PA6": {
+    "function": "SPI1_MISO",
+    "pull": "NOPULL",
+    "edge": "CHANGE",
+    "label": "",
+    "initial": 0
+   },
+   "PA7": {
+    "function": "SPI1_MOSI",
+    "pull": "NOPULL",
+    "edge": "CHANGE",
+    "label": "",
+    "initial": 0
+   },
+   "PB6": {
+    "function": "GPIO_Output",
+    "pull": "NOPULL",
+    "edge": "CHANGE",
+    "label": "",
+    "initial": 1
+   }
+  },
+  "peripherals": {
+   "SPI1": {
+    "enabled": true,
+    "clock": 1000000
+   }
+  },
+  "nvic": {},
+  "timerClockHz": 84000000
+ },
+ "firmware": {
+  "mode": "hal",
+  "files": []
+ },
+ "code": "#include \"main.h\"\n#include <stdio.h>\n// MAX7219 레벨 변환 모듈 5V/GND, PA5(CLK)/PA7(DIN)/PB6(LOAD) · 8×8 이동 패턴\n#include <stdio.h>\n\n/* Copy this main.c into a CubeIDE STM32F446RE project with matching\n * pin / peripheral / NVIC settings and Cube-generated IRQ / MSP files.\n * Clock: HSI PLL, APB1 timer clock = 84000000 Hz.\n * printf: SWV ITM port 0 (enable SWV in the debugger). UART uses its pins.\n * With newlib-nano, enable -u _printf_float for floating-point printf. */\n\nSPI_HandleTypeDef hspi1;\n\nvoid SystemClock_Config(void);\nvoid Error_Handler(void);\nstatic void MX_GPIO_Init(void);\nstatic void MX_SPI1_Init(void);\n\nuint8_t matrixFrame = 0;\nvoid matrixWrite(uint8_t reg, uint8_t value) {\n  uint8_t data[2] = {reg,value};\n  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_6, GPIO_PIN_RESET);\n  HAL_SPI_Transmit(&hspi1, data, 2, 100);\n  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_6, GPIO_PIN_SET);\n}\n\nint main(void) {\n  HAL_Init();\n  SystemClock_Config();\n  MX_GPIO_Init();\n  MX_SPI1_Init();\n  /* USER CODE BEGIN 2 */\n  matrixWrite(9,0); matrixWrite(10,6); matrixWrite(11,7); matrixWrite(12,1);\n    /* USER CODE END 2 */\n  while (1) {\n    /* USER CODE BEGIN 3 */\n    for (int row = 0; row < 8; row++) matrixWrite(row+1, 1 << ((row+matrixFrame)%8));\n    printf(\"MAX7219 frame sent=%u\\n\", matrixFrame);\n    matrixFrame = (matrixFrame+1)%8;\n    HAL_Delay(200);\n    /* USER CODE END 3 */\n  }\n}\n\nvoid SystemClock_Config(void) {\n  RCC_OscInitTypeDef osc = {0};\n  RCC_ClkInitTypeDef clk = {0};\n  __HAL_RCC_PWR_CLK_ENABLE();\n  __HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE1);\n  osc.OscillatorType = RCC_OSCILLATORTYPE_HSI;\n  osc.HSIState = RCC_HSI_ON;\n  osc.HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT;\n  osc.PLL.PLLState = RCC_PLL_ON;\n  osc.PLL.PLLSource = RCC_PLLSOURCE_HSI;\n  osc.PLL.PLLM = 16;\n  osc.PLL.PLLN = 336;\n  osc.PLL.PLLP = RCC_PLLP_DIV4;\n  osc.PLL.PLLQ = 7;\n  if (HAL_RCC_OscConfig(&osc) != HAL_OK) Error_Handler();\n  clk.ClockType = RCC_CLOCKTYPE_HCLK | RCC_CLOCKTYPE_SYSCLK | RCC_CLOCKTYPE_PCLK1 | RCC_CLOCKTYPE_PCLK2;\n  clk.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;\n  clk.AHBCLKDivider = RCC_SYSCLK_DIV1;\n  clk.APB1CLKDivider = RCC_HCLK_DIV2;\n  clk.APB2CLKDivider = RCC_HCLK_DIV1;\n  if (HAL_RCC_ClockConfig(&clk, FLASH_LATENCY_2) != HAL_OK) Error_Handler();\n}\n\nstatic void MX_GPIO_Init(void) {\n  GPIO_InitTypeDef GPIO_InitStruct = {0};\n  __HAL_RCC_GPIOA_CLK_ENABLE();\n  __HAL_RCC_GPIOB_CLK_ENABLE();\n  GPIO_InitStruct.Pin = GPIO_PIN_5;\n  GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;\n  GPIO_InitStruct.Pull = GPIO_NOPULL;\n  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;\n  GPIO_InitStruct.Alternate = GPIO_AF5_SPI1;\n  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);\n  GPIO_InitStruct.Pin = GPIO_PIN_6;\n  GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;\n  GPIO_InitStruct.Pull = GPIO_NOPULL;\n  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;\n  GPIO_InitStruct.Alternate = GPIO_AF5_SPI1;\n  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);\n  GPIO_InitStruct.Pin = GPIO_PIN_7;\n  GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;\n  GPIO_InitStruct.Pull = GPIO_NOPULL;\n  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;\n  GPIO_InitStruct.Alternate = GPIO_AF5_SPI1;\n  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);\n  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_6, GPIO_PIN_SET);\n  GPIO_InitStruct.Pin = GPIO_PIN_6;\n  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;\n  GPIO_InitStruct.Pull = GPIO_NOPULL;\n  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;\n  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);\n}\n\nstatic void MX_SPI1_Init(void) {\n  __HAL_RCC_SPI1_CLK_ENABLE();\n  hspi1.Instance = SPI1;\n  hspi1.Init.Mode = SPI_MODE_MASTER;\n  hspi1.Init.Direction = SPI_DIRECTION_2LINES;\n  hspi1.Init.DataSize = SPI_DATASIZE_8BIT;\n  hspi1.Init.CLKPolarity = SPI_POLARITY_LOW;\n  hspi1.Init.CLKPhase = SPI_PHASE_1EDGE;\n  hspi1.Init.NSS = SPI_NSS_SOFT;\n  hspi1.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_128;\n  hspi1.Init.FirstBit = SPI_FIRSTBIT_MSB;\n  hspi1.Init.TIMode = SPI_TIMODE_DISABLE;\n  hspi1.Init.CRCCalculation = SPI_CRCCALCULATION_DISABLE;\n  hspi1.Init.CRCPolynomial = 10;\n  HAL_SPI_Init(&hspi1);\n}\n\nint __io_putchar(int ch) {\n  ITM_SendChar(ch);\n  return ch;\n}\n\nvoid Error_Handler(void) {\n  __disable_irq();\n  while (1) { }\n}\n",
+ "simulation": {
+  "stepMs": 1,
+  "pwmWaveform": false
+ }
+}
