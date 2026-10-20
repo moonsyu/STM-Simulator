@@ -21,7 +21,7 @@ export function setupPartPreviews(){
   function show(button){
     clearTimeout(openTimer);clearTimeout(closeTimer);if(!button.isConnected||button.hidden||!button.getClientRects().length||(!button.matches(':hover')&&document.activeElement!==button))return;
     const part=parts.get(button.dataset.add);if(!part)return;active?.removeAttribute('aria-describedby');active=button;
-    try{const preview=partPreview(part.type);thumbnail(button);name.textContent=part.name;image.src=preview.src;image.alt=part.name+' 장치 모형';detail.textContent=(part.type==='breadboard'?'400홀':preview.pins+'핀')+' · '+part.hint.replace(/^\d+\s*(?:핀|홀)\s*·\s*/,'');}catch{hide();return;}
+    try{const preview=partPreview(part.type);thumbnail(button);name.textContent=part.name;image.src=preview.src;image.alt=part.name+' 장치 모형';detail.textContent=(part.type==='breadboard'?'400홀':part.type==='breadboard_full'?'830홀':preview.pins+'핀')+' · '+part.hint.replace(/^\d+\s*(?:핀|홀)\s*·\s*/,'');}catch{hide();return;}
     popup.dataset.type=part.type;popup.hidden=false;popup.showPopover?.();button.setAttribute('aria-describedby',popup.id);
     const anchor=button.getBoundingClientRect(),box=popup.getBoundingClientRect(),gap=12;
     let left=anchor.right+gap;if(left+box.width>innerWidth-8)left=anchor.left-box.width-gap;

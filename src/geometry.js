@@ -1,5 +1,7 @@
 export const BOARD={x:45,y:48,w:440,h:532};
 export const BB={x:632,y:68,w:342,h:538,startY:128,step:14};
+// Full-size 830-point board in its own local frame: 63 columns, two 5-row blocks, rails top and bottom.
+export const FULL_BB={x:0,y:0,w:948,h:304,left:40,step:14,columns:63,rows:{a:78,f:176},rails:{T:[24,38],B:[266,280]}};
 export const MIN_SCALE=.001,MAX_SCALE=1000;
 export const scaleOf=value=>value?.scale??1;
 export const scaleXOf=value=>value?.scaleX??scaleOf(value);
