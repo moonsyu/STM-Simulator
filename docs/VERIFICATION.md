@@ -2,7 +2,7 @@
 
 ## 0.27.0 빵판 · 예제 배선 · Docs 제거 · 단축키
 
-2026-10-21. 검증 브랜치 `redesign`.
+2026-10-21. 검증 브랜치 `redesign` · [Windows CI 39451212214](https://github.com/moonsyu/STM-Simulator/actions/runs/39451212214) (전 단계 통과).
 
 | 검사 | 결과 |
 |---|---|
