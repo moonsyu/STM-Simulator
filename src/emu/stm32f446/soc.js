@@ -183,7 +183,7 @@ export class Stm32f446 {
   // ------------------------------------------------------------ pins / AF
   pinState(pin, state) {
     const old = this.pins.get(pin);
-    if (old && old.mode === state.mode && old.value === state.value && old.openDrain === state.openDrain && old.pull === state.pull) return;
+    if (old && old.mode === state.mode && old.value === state.value && old.openDrain === state.openDrain && old.pull === state.pull && old.pwm?.frequency === state.pwm?.frequency && old.pwm?.duty === state.pwm?.duty) return;
     this.pins.set(pin, state);
     if (state.mode === 'OUTPUT') this.signals.gpio(pin, this.nowUs(), state.openDrain && state.value > 0 ? 1 : +(state.value > 1.65));
     this.env.pinState?.(pin, state);

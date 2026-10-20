@@ -79,7 +79,7 @@ export class SdCard {
     const r1 = () => (this.spi.ready ? 0 : 1);
     s.out = [0xff]; // NCR
     if (cmd === 12) { s.read = null; s.out.push(0x00); return 0xff; } // stop byte + R1
-    if (cmd === 0) { this.reset(); this.spi.mode = true; s.out.push(0x01); return 0xff; }
+    if (cmd === 0) { this.reset(); this.spi.mode = true; this.spi.out = [0xff, 0x01]; return 0xff; }
     if (this.app) {
       this.app = false;
       if (cmd === 41) { if (--this.busyPolls <= 0) { this.spi.ready = true; this.state = 'tran'; } s.out.push(r1()); return 0xff; }

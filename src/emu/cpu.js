@@ -64,6 +64,8 @@ export class Cpu {
     scs.cpu = this;
     this.nvic.cpu = this;
     this.r = new Int32Array(16);
+    this.flash16 = bus.flash16;
+    this.tmp = new Int32Array(16); // LDM/POP 임시 버퍼
     const fb = new ArrayBuffer(32 * 4);
     this.s = new Uint32Array(fb);
     this.breakpoints = new Set();
@@ -183,14 +185,21 @@ export class Cpu {
     const bps = this.breakpoints;
     const useBp = bps.size > 0;
     let skip = ignoreBpOnce;
+    if (this.lockedUp) return STOP.LOCKUP;
     for (;;) {
       try {
+        if (this.sleeping && !nv.dirty) return STOP.SLEEP;
         while (this.cycles < endCycles) {
-          if (nv.dirty) this.checkExceptions();
-          if (this.sleeping) return STOP.SLEEP;
-          if (this.lockedUp) return STOP.LOCKUP;
-          if (useBp && !skip && bps.has(this.pc)) return STOP.BREAK;
-          skip = false;
+          // sleeping/lockedUp은 항상 nv.dirty와 함께 바뀝니다(WFI/WFE, 복귀, 폴트).
+          if (nv.dirty) {
+            this.checkExceptions();
+            if (this.sleeping) return STOP.SLEEP;
+            if (this.lockedUp) return STOP.LOCKUP;
+          }
+          if (useBp) {
+            if (!skip && bps.has(this.pc)) return STOP.BREAK;
+            skip = false;
+          }
           this.step();
           if (this.stop !== 0) {
             const s = this.stop;
@@ -234,15 +243,18 @@ export class Cpu {
   step() {
     const pc = this.pc;
     if (this.tbit === 0) throw new FaultSignal(EXC_USAGEFAULT, CFSR.INVSTATE);
-    const bus = this.bus;
-    const hw = bus.fetch16(pc);
+    const hi = pc >>> 19;
+    const inFlash = hi === 0x100 || hi === 0;
+    const f16 = this.flash16;
+    const hw = inFlash ? f16[(pc & 0x7ffff) >>> 1] : this.bus.fetch16(pc);
     this.lastPc = pc;
     this.r[15] = pc + 4;
     const itb = this.it;
     this.cycles += 1;
     this.instructions++;
     if (hw >= 0xe800) {
-      const hw2 = bus.fetch16((pc + 2) >>> 0);
+      const pc2 = (pc + 2) >>> 0;
+      const hw2 = inFlash && (pc2 & 0x7ffff) !== 0 ? f16[(pc2 & 0x7ffff) >>> 1] : this.bus.fetch16(pc2);
       this.npc = pc + 4;
       if (itb === 0 || this.cond(itb >>> 4)) this.exec32(hw, hw2);
     } else {
@@ -510,13 +522,12 @@ export class Cpu {
         let a = r[n];
         if (a & 3) throw new FaultSignal(EXC_USAGEFAULT, CFSR.UNALIGNED);
         const bus = this.bus;
-        const vals = [];
+        const vals = this.tmp;
         for (let i = 0; i < 8; i++) {
-          if (list & (1 << i)) { vals.push(bus.read32(a)); a = (a + 4) | 0; this.cycles++; }
+          if (list & (1 << i)) { vals[i] = bus.read32(a); a = (a + 4) | 0; this.cycles++; }
         }
         if (!(list & (1 << n))) r[n] = a;
-        let k = 0;
-        for (let i = 0; i < 8; i++) if (list & (1 << i)) r[i] = vals[k++];
+        for (let i = 0; i < 8; i++) if (list & (1 << i)) r[i] = vals[i];
         return;
       }
       case 26: case 27: { // B<c> / UDF / SVC
@@ -686,7 +697,7 @@ export class Cpu {
     let a = r[13];
     if (a & 3) throw new FaultSignal(EXC_USAGEFAULT, CFSR.UNALIGNED);
     const bus = this.bus;
-    const vals = new Int32Array(16);
+    const vals = this.tmp;
     for (let i = 0; i < 16; i++) {
       if (list & (1 << i)) { vals[i] = bus.read32(a); a = (a + 4) | 0; }
     }
@@ -766,7 +777,7 @@ export class Cpu {
     const bus = this.bus;
     this.cycles += cnt;
     if (L) {
-      const vals = new Int32Array(16);
+      const vals = this.tmp;
       for (let i = 0; i < 16; i++) {
         if (list & (1 << i)) { vals[i] = bus.read32(a); a = (a + 4) | 0; }
       }
@@ -1640,6 +1651,31 @@ export class Cpu {
 
   // 배정밀도 값 x(+오차 err)를 FPSCR 모드로 단정밀도 비트로 반올림
   roundF(x, err = 0) {
+    if ((this.fpscr & 0x01c00000) === 0) {
+      // 최근접 반올림, FZ 꺼짐: 빠른 경로
+      let f = Math.fround(x);
+      if (f === x) {
+        if (err === 0) return f2b(f);
+        this.fpscr |= FPSCR_IXC;
+        if (Math.abs(x) < FLT_MIN) this.fpscr |= FPSCR_UFC;
+        return f2b(f);
+      }
+      if (err !== 0 && isFinite(f)) {
+        // x가 두 float의 정확한 중간점이면 err 방향으로 결정
+        const b = f2b(f);
+        const g = b2f(((x > f) === (f > 0) ? b + 1 : b - 1) >>> 0);
+        if (x - f === g - x && (err > 0) === (g > x)) f = g;
+      }
+      this.fpscr |= FPSCR_IXC;
+      const ax = Math.abs(x);
+      if (ax >= 3.4028235677973366e38 || !isFinite(f)) this.fpscr |= FPSCR_OFC;
+      else if (ax < FLT_MIN) this.fpscr |= FPSCR_UFC;
+      return f2b(f);
+    }
+    return this.roundFSlow(x, err);
+  }
+
+  roundFSlow(x, err) {
     const mode = (this.fpscr >>> 22) & 3;
     // 정확한 값 = x + err. 부호 비교용
     const errSame = err !== 0 && (err > 0) === (x > 0);
@@ -1744,6 +1780,14 @@ export class Cpu {
 
   // FPMulAdd(addend, op1, op2)
   fma(a, b, c) {
+    if (((((a >>> 23) & 0xff) - 1) >>> 0) < 254 && ((((b >>> 23) & 0xff) - 1) >>> 0) < 254 && ((((c >>> 23) & 0xff) - 1) >>> 0) < 254) {
+      // 모두 0이 아닌 정규 수: 정확한 곱 + TwoSum
+      const x = b2f(a), p = b2f(b) * b2f(c);
+      const s = x + p;
+      if (s === 0) return ((this.fpscr >>> 22) & 3) === 2 ? 0x80000000 : 0;
+      const bb = s - x;
+      return this.roundF(s, (x - (s - bb)) + (p - bb));
+    }
     const na = isNaNb(a), nb = isNaNb(b), nc = isNaNb(c);
     a = this.fpIn(a); b = this.fpIn(b); c = this.fpIn(c);
     const y = b2f(b), z = b2f(c);

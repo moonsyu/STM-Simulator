@@ -23,6 +23,9 @@ const P6 = '00000220510000086500000865000008650000086500000865000008000000000000
 // IRQ0(0x80): r6=1, r7==1이 될 때까지 대기 후 r7++ / IRQ1(0x20): r7++ / main: r7==2면 bkpt 1
 const P7 = '000002205100000881000008810000088100000881000008810000080000000000000000000000000000000081000008000000000000000081000008810000086b0000087500000881000008810000080948802101702021417008480321016000260027022ffdd101be0126012ffdd1013770470137704700e400e000e100e0eebefde7';
 
+// ISER0=1, r7=0; cpsid i; wfi; bkpt 1; cpsie i; isb; bkpt 2; sev; wfe; bkpt 3; wfe; bkpt 4 / IRQ0: r7++
+const P8 = '0000022051000008790000087900000879000008790000087900000800000000000000000000000000000000790000080000000000000000790000087900000871000008790000087900000879000008084801210160002772b630bf01be62b6bff36f8f02be40bf20bf03be20bf04be0137704700e100e0eebefde7';
+
 function boot(code, opts = {}) {
   const m = new Machine(opts);
   m.loadBinary(hex(code), 0x08000000);
@@ -201,4 +204,29 @@ test('미매핑 명령어 페치 → 폴트, CFSR IBUSERR', () => {
   assert.equal(m.pc, 0x08000050);
   assert.equal(m.cpu.ipsr, 3);
   assert.equal(m.scs.cfsr & 0x100, 0x100);
+});
+
+test('WFI는 PRIMASK로 가려진 인터럽트에도 깨어나고, WFE는 이벤트 레지스터를 따름', () => {
+  const m = boot(P8);
+  let r = m.run(1000);
+  assert.equal(r.reason, 'cycles');
+  assert.equal(m.cpu.sleeping, true);
+  assert.equal(m.cycles, 1000, '아무 일도 없으면 예산 끝까지 빨리 감기');
+  m.nvic.setPending(0);
+  r = m.run(1000);
+  assert.equal(r.reason, 'bkpt');
+  assert.equal(r.pc, 0x0800005c);
+  assert.equal(R(m, 7), 0, 'PRIMASK=1이므로 진입하지 않음');
+  r = m.run(1000);
+  assert.equal(r.pc, 0x08000064);
+  assert.equal(R(m, 7), 1, 'CPSIE 후 진입');
+  r = m.run(1000);
+  assert.equal(r.pc, 0x0800006a, 'SEV 후 WFE는 잠들지 않음');
+  r = m.run(1000);
+  assert.equal(r.reason, 'cycles');
+  assert.equal(m.cpu.sleeping, true);
+  m.nvic.setPending(0);
+  r = m.run(1000);
+  assert.equal(r.pc, 0x0800006e);
+  assert.equal(R(m, 7), 2);
 });
