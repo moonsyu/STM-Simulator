@@ -15,6 +15,7 @@ import { Stm32f446 } from './emu/stm32f446/soc.js';
 import { UartReceiver, Line } from './emu/stm32f446/signals.js';
 import { Camera, frameToRgba } from './emu/stm32f446/dcmi.js';
 import { SdCard } from './emu/stm32f446/sdcard.js';
+import { openImage, listFiles, readFile as readCardFile, SD_DEFAULT_MB } from './sdcard.js';
 
 // Runs a compiled ARM ELF on the emulated NUCLEO-F446RE and connects its pins
 // to the same circuit engine and device models used by SimulationSession.
@@ -37,7 +38,10 @@ export class FirmwareSession {
     this.buses = new BusDevices(project, () => this.result, trace);
     this.buses.uart.baud = 115200; this.buses.clocks = new Map();
     this.dynamic = project.components.some(p => !STATIC_TYPES.has(p.type)) || project.components.some(p => p.type === 'catalog_singlewire');
-    this.sdcard = sdImage ? new SdCard(sdImage) : project.components.some(p => p.catalogVariant === 'sd-storage-board') ? new SdCard(new Uint8Array(4 * 1024 * 1024)) : null;
+    // The SD module's card is the same FAT image the interpreter uses (part.cardImage), so files persist in the project.
+    const sdPart = project.components.find(p => p.catalogVariant === 'sd-storage-board');
+    this.sdPart = sdPart; this.sdDisk = !sdImage && sdPart ? openImage(sdPart.cardImage || '', sdPart.sizeMB || SD_DEFAULT_MB) : null;
+    this.sdcard = sdImage ? new SdCard(sdImage) : this.sdDisk ? new SdCard(this.sdDisk) : null;
     this.cameraModel = camera ? (camera instanceof Camera ? camera : new Camera(camera === true ? {} : camera)) : null;
     this.itmLine = '';
     this.pwmMap = new Map(); this.pwmFrequency = new Map(); this.eventCount = 0;
@@ -147,6 +151,18 @@ export class FirmwareSession {
     return this.result;
   }
   get viewResult() { return physicalResult(this.result, this.project); }
+  // UI helpers for the SD card (same shape as the interpreter's session.storage).
+  get storage() {
+    if (!this.sdDisk) return null;
+    const self = this, image = () => self.sdDisk.encode();
+    return {
+      cards: () => [{ partId: self.sdPart.id, name: self.sdPart.name, sizeMB: self.sdDisk.sizeMB, dirty: !!self.sdcard.dirty }],
+      image: () => image(), files: () => listFiles(image()), readFile: (_id, path) => readCardFile(image(), path),
+      applyTo: project => { const target = project.components.find(q => q.id === self.sdPart.id); if (target && self.sdcard.dirty) target.cardImage = image(); return project; }
+    };
+  }
+  // Latest camera frame for UI previews.
+  cameraFrame() { const f = this.lastFrame; if (!f) return null; const rgba = this.frameRgba(); return rgba ? { width: f.width, height: f.height, format: f.format, rgba } : null; }
   // ------------------------------------------------------------ serial lines
   lineSources(pin) {
     const r = this.result, out = [];

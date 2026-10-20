@@ -4,8 +4,9 @@ const STATE = { idle: 0, ready: 1, ident: 2, stby: 3, tran: 4, data: 5, rcv: 6, 
 
 export class SdCard {
   constructor(image, { rca = 0x1234 } = {}) {
-    this.image = image instanceof Uint8Array ? image : new Uint8Array(image || 8 * 1024 * 1024);
-    this.blocks = Math.floor(this.image.length / 512);
+    // A block device ({sectors, read(n), write(n,data)}, e.g. the project's sparse FAT image) or a raw Uint8Array.
+    if (image && typeof image.read === 'function' && typeof image.write === 'function') { this.device = image; this.image = null; this.blocks = image.sectors; }
+    else { this.image = image instanceof Uint8Array ? image : new Uint8Array(image || 8 * 1024 * 1024); this.blocks = Math.floor(this.image.length / 512); }
     this.rcaValue = rca; this.reset(); this.stats = { reads: 0, writes: 0, commands: 0 };
   }
   reset() { this.state = 'idle'; this.app = false; this.rca = 0; this.busyPolls = 2; this.blockLen = 512; this.width = 1; this.eraseStart = 0; this.eraseEnd = 0; this.spi = { mode: false, cmd: [], out: [], read: null, write: null, crc: false, multi: false }; }
@@ -23,8 +24,8 @@ export class SdCard {
   csdBytes() { const w = this.csd(), b = []; for (const v of w) b.push(v >>> 24, (v >> 16) & 255, (v >> 8) & 255, v & 255); return b; }
   cidBytes() { const w = this.cid(), b = []; for (const v of w) b.push(v >>> 24, (v >> 16) & 255, (v >> 8) & 255, v & 255); return b; }
   scr() { return Uint8Array.from([0x02, 0x35, 0x80, 0x00, 0, 0, 0, 0]); } // SD 3.0, 1+4 bit bus
-  readBlock(n) { this.stats.reads++; if (n >= this.blocks) return null; return this.image.slice(n * 512, n * 512 + 512); }
-  writeBlock(n, data) { this.stats.writes++; if (n >= this.blocks) return false; this.image.set(data.subarray(0, 512), n * 512); return true; }
+  readBlock(n) { this.stats.reads++; if (n >= this.blocks) return null; return this.device ? this.device.read(n) : this.image.slice(n * 512, n * 512 + 512); }
+  writeBlock(n, data) { this.stats.writes++; if (n >= this.blocks) return false; if (this.device) { this.device.write(n, data.subarray(0, 512)); this.dirty = true; } else this.image.set(data.subarray(0, 512), n * 512); return true; }
   // SD bus command. Returns {type:'none'|'r1'|'r1b'|'r2'|'r3'|'r6'|'r7', resp:[...], data?:{dir:'read'|'write', blocks:[start,count]|bytes}}.
   command(index, arg) {
     this.stats.commands++;
@@ -56,7 +57,7 @@ export class SdCard {
       case 24: case 25: if (arg >= this.blocks) return { type: 'r1', resp: [this.status() | 0x40000000] }; this.state = 'rcv'; return { ...r1(), data: { dir: 'write', start: arg, count: index === 24 ? 1 : Infinity } };
       case 32: this.eraseStart = arg; return r1();
       case 33: this.eraseEnd = arg; return r1();
-      case 38: for (let b = this.eraseStart; b <= this.eraseEnd && b < this.blocks; b++) this.image.fill(0, b * 512, b * 512 + 512); return { type: 'r1b', resp: [this.status()] };
+      case 38: for (let b = this.eraseStart; b <= this.eraseEnd && b < this.blocks; b++) { if (this.device) { this.device.write(b, new Uint8Array(512)); this.dirty = true; } else this.image.fill(0, b * 512, b * 512 + 512); } return { type: 'r1b', resp: [this.status()] };
       case 55: this.app = true; return r1(0x20);
       case 58: return { type: 'r3', resp: [0xc0ff8000] };
       case 59: return r1();
