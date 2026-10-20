@@ -76,7 +76,7 @@ function filterParts(){
  $('part-count').textContent=`${matches.size} / ${PART_LIBRARY.length}`;$('part-no-results').hidden=matches.size>0;$('part-list').scrollTop=0;
 }
 $('part-search').addEventListener('input',filterParts);filterParts();
-function filterExamples(){const matches=searchHalExamples($('hal-example-search').value);$('hal-example').innerHTML='<option value="">'+(matches.length?`HAL 예제 선택… (${matches.length})`:'검색 결과 없음')+'</option>'+matches.map(({id,name,native})=>`<option value="${id}">${name}${native?' · ARM':''}</option>`).join('');$('hal-example-count').textContent=`${matches.length} / ${Object.keys(HAL_EXAMPLES).length}`;}
+function filterExamples(){const matches=searchHalExamples($('hal-example-search').value);$('hal-example').innerHTML='<option value="">'+(matches.length?`HAL 예제 선택… (${matches.length})`:'검색 결과 없음')+'</option>'+matches.map(({id,name,native,simOnly})=>`<option value="${id}">${name}${native?' · ARM':''}${simOnly?' · SIM':''}</option>`).join('');$('hal-example-count').textContent=`${matches.length} / ${Object.keys(HAL_EXAMPLES).length}`;}
 $('hal-example-search').oninput=filterExamples;filterExamples();
 const uartLines=new Map();
 function uid(prefix){return prefix+crypto.randomUUID().replaceAll('-','').slice(0,12);}

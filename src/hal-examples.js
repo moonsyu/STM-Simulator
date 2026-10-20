@@ -15,6 +15,8 @@ export const HAL_EXAMPLES={...CATALOG_EXAMPLES,...BASIC_EXAMPLES,...L298_EXAMPLE
 export const HAL_GUIDES={...CATALOG_GUIDES,...BASIC_GUIDES,...L298_GUIDES,...BUZZER_GUIDES,...DEVICE_GUIDES,...TIMER_GUIDES,blink:'PA5 → 330 Ω → LED → GND · 500 ms 점멸',button:'PA10 입력(PULLUP)–버튼–GND · 누르는 동안 PA5 LED 점등',exti:'보드 USER(PC13) → EXTI15_10_IRQn · 누를 때마다 PA5 LED 전환',uart:'USART2 PA2(TX)/PA3(RX), 9600 baud · 별도 부품·배선 없이 하단 통신 탭 ST-LINK VCP에서 송수신·인터럽트 에코',uart_external:'VCC→3V3, GND→GND, 장치 TX→PA3(RX), 장치 RX→PA2(TX), 9600 baud · 하단 통신 탭에서 외부 UART 장치 → USART2 선택',timer:'TIM2 100 ms 인터럽트 · PA5 → 330 Ω → LED → GND',adc:'3V3–10 kΩ–PA0–10 kΩ–GND · 약 1.65 V, ADC 2048',temperature:'TMP36 VOUT→PA0, VCC→3V3, GND · 센서 속성에서 온도 조절',samples:'PA0에 연결된 10 kΩ / 10 kΩ 분압 · HAL polling으로 8개 값을 배열에 저장',i2c:'I2C1 PB8(SCL)/PB9(SDA) · 주소 0x50 메모리, 3V3/GND와 모듈 내부 10 kΩ 풀업',spi:'SPI1 PA5(SCK)/PA6(MISO)/PA7(MOSI), PB6(CS) · 3V3/GND 메모리',language:'외부 부품 없이 printf 로그로 평균값 확인',pwm:'TIM2 CH1 PA5 → 1 kΩ / 10 µF RC 필터 → PA0 · 100 Hz, 50%; PWM 파형 자동 활성화',ultrasonic:'HC-SR04 TRIG→PC7, ECHO→1 kΩ / 2 kΩ 분압→PA9, 5V/GND · TIM2 1 MHz, 0.1 ms 폴링'};
 const pin=(fn,pull='NOPULL',label='')=>({function:fn,pull,label,edge:'FALLING',initial:0});
 // HAL_EXAMPLES keeps the historical menu; the interpreter examples (DMA/NVIC/USART/camera/SD/noise) are added here.
+// Examples that rely on simulator-provided middleware (FatFs) and do not build with the bare ST HAL.
+export const SIMULATOR_ONLY_EXAMPLES=new Set(['sd_logger']);
 export const allHalExamples=()=>({...HAL_EXAMPLES,...ADVANCED_EXAMPLES});
 export const allHalGuides=()=>({...HAL_GUIDES,...ADVANCED_GUIDES});
 export function halExample(kind){

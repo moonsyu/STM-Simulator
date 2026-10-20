@@ -11,7 +11,7 @@ const require=createRequire(import.meta.url);
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'../..');
 const {prepareBuild,build}=require(path.join(root,'desktop/native-build.cjs'));
 const {blankProject}=await import('../../src/project.js');
-const {allHalExamples,applyHalExample}=await import('../../src/hal-examples.js');
+const {allHalExamples,applyHalExample,SIMULATOR_ONLY_EXAMPLES}=await import('../../src/hal-examples.js');
 const {FirmwareSession}=await import('../../src/firmware-session.js');
 const exe=process.platform==='win32'?'.exe':'';
 const gcc=process.env.ARM_GCC||'/home/claude/tools/xpack-arm-none-eabi-gcc-14.2.1-1.1/bin/arm-none-eabi-gcc'+exe;
@@ -20,7 +20,7 @@ const exists=p=>fs.access(p).then(()=>true,()=>false);
 const available=await exists(gcc)&&await exists(path.join(cube,'Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal.h'));
 const tools={armGcc:gcc,cube,armGdb:'',hostGcc:'',hostGdb:'',clangd:'',openocd:'',buildRoot:''};
 const only=process.env.EXAMPLES?.split(',');
-const cases=[['blank',blankProject()],...Object.keys(allHalExamples()).filter(id=>!only||only.includes(id)).map(id=>[id,applyHalExample(blankProject(),id)])];
+const cases=[['blank',blankProject()],...Object.keys(allHalExamples()).filter(id=>!SIMULATOR_ONLY_EXAMPLES.has(id)&&(!only||only.includes(id))).map(id=>[id,applyHalExample(blankProject(),id)])];
 
 test('every example compiles and links with ST HAL, then runs on the emulator without faults',{skip:!available&&'ARM GCC / STM32CubeF4 not installed',timeout:3600000},async t=>{
  const work=await fs.mkdtemp(path.join(os.tmpdir(),'stm-arm-'));const failures=[];
