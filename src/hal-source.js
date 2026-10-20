@@ -9,7 +9,7 @@ export const HAL_STRUCTS={
   CAN_RxHeaderTypeDef:'StdId ExtId IDE RTR DLC Timestamp FilterMatchIndex',
   I2S_InitTypeDef:'Mode Standard DataFormat MCLKOutput AudioFreq CPOL ClockSource FullDuplexMode',
   I2S_HandleTypeDef:'Instance Init:I2S_InitTypeDef',
-  RCC_PLLI2SInitTypeDef:'PLLI2SN PLLI2SR PLLI2SQ',
+  RCC_PLLI2SInitTypeDef:'PLLI2SM PLLI2SN PLLI2SP PLLI2SR PLLI2SQ',
   RCC_PeriphCLKInitTypeDef:'PeriphClockSelection PLLI2S:RCC_PLLI2SInitTypeDef PLLI2SDivQ I2sApb1ClockSelection',
 
   GPIO_InitTypeDef:'Pin Mode Pull Speed Alternate',
