@@ -3,7 +3,7 @@ import {sourceFiles} from './source-files.js';
 const $=id=>document.getElementById(id);
 const TOOL_LABELS={armGcc:'ARM GCC · arm-none-eabi-gcc.exe',armGdb:'ARM GDB · arm-none-eabi-gdb.exe',cube:'STM32CubeF4 SDK 폴더',hostGcc:'Windows GCC · gcc.exe',hostGdb:'Windows GDB · gdb.exe',clangd:'C/C++ 언어 서버 · clangd.exe',openocd:'ST-LINK 서버 · openocd.exe',buildRoot:'빌드 작업 폴더 · 영문 경로 (선택)'};
 export function mountNativeChrome(){
- document.querySelector('.ide-toolbar').insertAdjacentHTML('afterbegin','<label class="native-target-label">실행 대상<select id="native-target" aria-label="실행 대상"><option value="simulator">회로 시뮬레이터</option><option value="arm">STM32 · ARM GCC</option><option value="host">Windows · C/C++</option></select></label><select id="native-config" aria-label="빌드 구성"><option>Debug</option><option>Release</option></select>');
+ document.querySelector('.ide-toolbar').insertAdjacentHTML('afterbegin','<label class="native-target-label">실행 대상<select id="native-target" aria-label="실행 대상"><option value="simulator">회로 시뮬레이터</option><option value="emulator">펌웨어 에뮬레이터 · ARM ELF</option><option value="arm">STM32 · ARM GCC</option><option value="host">Windows · C/C++</option></select></label><select id="native-config" aria-label="빌드 구성"><option>Debug</option><option>Release</option></select>');
  document.querySelector('.ide-toolbar').insertAdjacentHTML('beforeend','<button id="native-tools">개발 도구</button><button id="native-connection" hidden>보드 연결</button>');
  $('build-panel').insertAdjacentHTML('afterbegin','<div class="native-build-actions" id="native-build-actions" hidden><button id="native-artifacts" disabled>빌드 폴더 열기</button><span id="native-artifact-list"></span></div>');
  document.querySelector('.editor-position').insertAdjacentHTML('beforeend','<button id="language-toggle" title="clangd 의미 분석 사용">clangd 꺼짐</button>');
@@ -16,17 +16,20 @@ export function mountNativeChrome(){
 export function setupNativeIde({o,editor,select,showMonitor,points,watches,toggleBreakpoint}){
  const api=window.nativeIde;let state='idle',building=false,working=false,lastStop=null,frame=0,sequence=0,language=false,languageTimer,languageQueued=false,languageRunning=false,languageReady=false,breakpointStates=[];
  let connection={server:'openocd',endpoint:'127.0.0.1:3333',flash:false};try{connection={...connection,...JSON.parse(localStorage.getItem('stm32lab.debugConnection')||'{}')};}catch{}
- const selected=()=>$('native-target').value!=='simulator',config=()=>({target:$('native-target').value,configuration:$('native-config').value}),text=()=>JSON.stringify(o.getProject());
+ // 'emulator' builds with ARM GCC but runs the ELF in the renderer, so GDB/run flows stay off.
+ const emulator=()=>$('native-target').value==='emulator';
+ const selected=()=>!['simulator','emulator'].includes($('native-target').value),config=()=>({target:$('native-target').value,configuration:$('native-config').value}),text=()=>JSON.stringify(o.getProject());
  const busy=()=>working||building||['starting','running','paused','finishing'].includes(state);
  const append=(id,value)=>{const el=$(id);el.textContent=(el.textContent+value).slice(-350000);el.scrollTop=el.scrollHeight;};
  function report(error){o.log(error.message,'error');append('native-output',error.message+'\n');if(selected())$('build-status').textContent=error.message;}
  async function guard(task){try{return await task();}catch(e){report(e);return null;}}
  function control(){
   const native=selected(),locked=busy(),paused=state==='paused';
-  $('native-config').hidden=!native;$('native-connection').hidden=config().target!=='arm';$('native-build-actions').hidden=!native;$('native-debug-details').hidden=!native;
+  $('native-config').hidden=!native&&!emulator();$('native-connection').hidden=config().target!=='arm';$('native-build-actions').hidden=!native;$('native-debug-details').hidden=!native&&!emulator();
   document.querySelector('.firmware-tools').hidden=native&&config().target==='host';
   $('sound').hidden=$('step').hidden=native;
   $('native-target').disabled=locked||o.isSimulationRunning();$('native-config').disabled=locked;$('native-tools').disabled=locked;$('native-connection').disabled=locked;
+  if(emulator()){$('ide-build').title='ARM GCC 빌드 → 펌웨어 에뮬레이터 (Ctrl+Shift+B)';document.querySelector('.language-badge').textContent='ARM ELF · 에뮬레이터';return;}
   if(!native){$('ide-build').title='시뮬레이터용 빌드 (Ctrl+Shift+B)';return;}
   document.querySelector('.language-badge').textContent=config().target==='arm'?'ARM · STM32 HAL':'C/C++ · GCC';
   $('ide-build').title='GCC 컴파일 및 링크 (Ctrl+Shift+B)';
@@ -37,7 +40,9 @@ export function setupNativeIde({o,editor,select,showMonitor,points,watches,toggl
  }
  function lockUpdate(){o.refresh();control();}
  function renderDiagnostics(items){editor.diagnostics(items);$('build-errors').replaceChildren();for(const item of items){const button=document.createElement('button');button.className='build-error '+(item.severity||'error');button.textContent=`${item.file}:${item.line}:${item.column||1} · ${item.message}`;button.onclick=()=>select(item.file,item.line);$('build-errors').append(button);}}
- async function build(){if(!api)return report(new Error('실제 빌드는 Windows 데스크톱 앱에서 사용할 수 있습니다.'));if(busy())return;working=true;lockUpdate();$('build-output').textContent='';$('build-errors').replaceChildren();$('native-artifact-list').textContent='';$('native-artifacts').disabled=true;showMonitor('build');try{return await api.build(text(),config());}catch(e){report(e);return null;}finally{working=false;lockUpdate();}}
+ async function build(override){if(!api)return report(new Error('실제 빌드는 Windows 데스크톱 앱에서 사용할 수 있습니다.'));if(busy())return;working=true;lockUpdate();$('build-output').textContent='';$('build-errors').replaceChildren();$('native-artifact-list').textContent='';$('native-artifacts').disabled=true;showMonitor('build');try{return await api.build(text(),override||config());}catch(e){report(e);return null;}finally{working=false;lockUpdate();}}
+ // Build the ARM firmware for the in-app emulator and return the ELF bytes.
+ async function buildElf(){if(!api)throw new Error('ARM GCC 빌드는 Windows 데스크톱 앱에서 사용할 수 있습니다. 대신 파일 → 펌웨어 ELF 열기를 사용하세요.');const result=await build({target:'arm',configuration:$('native-config').value});if(!result)throw new Error('ARM GCC 빌드에 실패했습니다. 빌드 탭의 오류를 확인하세요.');return await api.elf();}
  async function command(action){
   if(!selected())return false;
   if(!api){report(new Error('실제 빌드와 디버그는 데스크톱 앱에서 사용할 수 있습니다.'));return true;}
@@ -69,7 +74,7 @@ export function setupNativeIde({o,editor,select,showMonitor,points,watches,toggl
   }catch(e){if(state==='paused'&&current===sequence)$('debug-location').textContent=e.message;}
  }
  function sync(){const value=o.getProject().ide?.native||{target:'simulator',configuration:'Debug'};$('native-target').value=value.target;$('native-config').value=value.configuration;control();queueLanguage();}
- function change(){o.getProject().ide??={breakpoints:[],watches:[]};o.getProject().ide.native=config();o.saveLocal();editor.diagnostics([]);editor.updateDebug(points(),null);$('build-status').textContent=selected()?`${config().target==='arm'?'ARM GCC':'Windows GCC'} · 빌드 준비`:'시뮬레이터용 빌드';$('new').disabled=$('open').disabled=$('workspace-open').disabled=false;o.refresh();queueLanguage();}
+ function change(){o.getProject().ide??={breakpoints:[],watches:[]};o.getProject().ide.native=config();o.saveLocal();editor.diagnostics([]);editor.updateDebug(points(),null);$('build-status').textContent=emulator()?'ARM GCC → 에뮬레이터 · 빌드 준비':selected()?`${config().target==='arm'?'ARM GCC':'Windows GCC'} · 빌드 준비`:'시뮬레이터용 빌드';$('new').disabled=$('open').disabled=$('workspace-open').disabled=false;o.refresh();queueLanguage();}
  function queueLanguage(){clearTimeout(languageTimer);if(!language||!selected())return;languageTimer=setTimeout(()=>void updateLanguage(),500);}
  async function updateLanguage(){if(!language||!selected())return;if(languageRunning){languageQueued=true;return;}languageRunning=true;try{await api.language(text(),config());languageReady=true;$('language-toggle').textContent='clangd 연결됨';}catch(e){languageReady=false;$('language-toggle').textContent='clangd 설정 필요';$('language-toggle').title=e.message;}finally{languageRunning=false;if(languageQueued){languageQueued=false;queueLanguage();}}}
  const lsp={enabled:()=>language&&languageReady&&selected(),query:(method,file,position)=>api['language-query'](method,file,position)};editor.setLanguageService(lsp);
@@ -86,7 +91,7 @@ export function setupNativeIde({o,editor,select,showMonitor,points,watches,toggl
  $('native-connection').onclick=()=>{$('native-server').value=connection.server;$('native-endpoint').value=connection.endpoint;$('native-flash').checked=connection.flash;$('native-connection-error').textContent='';$('native-connection-dialog').showModal();};
  $('native-connection-cancel').onclick=()=>$('native-connection-dialog').close();$('native-connection-form').onsubmit=e=>{e.preventDefault();const endpoint=$('native-endpoint').value.trim();if(!/^[\w.-]+:\d{1,5}$/.test(endpoint)||Number(endpoint.split(':')[1])<1||Number(endpoint.split(':')[1])>65535){$('native-connection-error').textContent='서버 주소를 host:port 형식으로 입력하세요.';return;}connection={server:$('native-server').value,endpoint,flash:$('native-flash').checked};localStorage.setItem('stm32lab.debugConnection',JSON.stringify(connection));$('native-connection-dialog').close();};
  $('language-toggle').onclick=()=>{language=!language;languageReady=false;editor.clearLanguageDiagnostics();$('language-toggle').textContent=language?'clangd 연결 중':'clangd 꺼짐';if(language){if(!selected()){language=false;$('language-toggle').textContent='ARM 또는 Windows 대상 선택';return;}queueLanguage();}else void guard(()=>api['language-stop']());};
- $('native-memory-form').onsubmit=e=>{e.preventDefault();void guard(async()=>{const memory=await api.memory($('native-memory-address').value.trim(),Number($('native-memory-count').value));$('native-memory-output').textContent=memory.map(m=>`${m.begin}\n${m.contents.match(/.{1,32}/g).map(row=>row.match(/../g).join(' ')).join('\n')}`).join('\n');});};
+ $('native-memory-form').onsubmit=e=>{e.preventDefault();const r=o.getSession()?.runtime;if(emulator()&&typeof r?.memory==='function'){try{const address=Number($('native-memory-address').value.trim()),count=Math.min(4096,Math.max(1,Number($('native-memory-count').value)||0));if(!Number.isInteger(address)||address<0)throw new Error('메모리 주소를 0x20000000 형식으로 입력하세요.');const bytes=r.memory(address,count),rows=[];for(let i=0;i<bytes.length;i+=16)rows.push('0x'+(address+i).toString(16).padStart(8,'0')+'  '+[...bytes.slice(i,i+16)].map(b=>b.toString(16).padStart(2,'0')).join(' '));$('native-memory-output').textContent=rows.join('\n');}catch(error){report(error);}return;}void guard(async()=>{const memory=await api.memory($('native-memory-address').value.trim(),Number($('native-memory-count').value));$('native-memory-output').textContent=memory.map(m=>`${m.begin}\n${m.contents.match(/.{1,32}/g).map(row=>row.match(/../g).join(' ')).join('\n')}`).join('\n');});};
  $('terminal-start').onclick=()=>guard(()=>api['terminal-open']());$('terminal-close').onclick=()=>guard(()=>api['terminal-close']());$('native-output-clear').onclick=()=>$('native-output').textContent='';
  $('native-input-form').onsubmit=e=>{e.preventDefault();const value=$('native-input').value;void guard(async()=>{if($('native-input-target').value==='program')await api.input(value+'\n');else await api['terminal-input'](value);$('native-input').value='';});};
  $('code').addEventListener('input',queueLanguage);
@@ -106,6 +111,6 @@ export function setupNativeIde({o,editor,select,showMonitor,points,watches,toggl
   if(event.type==='diagnostics'&&language&&selected())editor.languageDiagnostics(event.file,event.items);
  });
  if(!api){for(const id of ['native-tools','native-target','language-toggle','terminal-start'])$(id).disabled=true;}
- return {selected,config,busy,controls:control,sync,build,command,debugView,queueLanguage,async syncBreakpoints(){if(!['paused','running'].includes(state))return;await guard(()=>api.breakpoints(points()));},reset(){state='idle';lastStop=null;sequence++;editor.clearLanguageDiagnostics();sync();}};
+ return {selected,emulator,buildElf,config,busy,controls:control,sync,build,command,debugView,queueLanguage,async syncBreakpoints(){if(!['paused','running'].includes(state))return;await guard(()=>api.breakpoints(points()));},reset(){state='idle';lastStop=null;sequence++;editor.clearLanguageDiagnostics();sync();}};
 }
 function basename(value){return value.replaceAll('\\','/').split('/').at(-1);}

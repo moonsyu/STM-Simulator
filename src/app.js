@@ -20,6 +20,7 @@ import {PINS,BB,PIN_BY_ID,endpointInfo,searchPins,circuitHoles,holeInfo} from '.
 import {TWO_PIN_TYPES,MULTI_PIN_TYPES,WIRE_COLORS,PART_DEFS,terminalKeys,attachments,detachPart,normalizeAngle} from './components.js';
 import {findMount,applyMount,occupiedHoles} from './placement.js';
 import {SimulationSession} from './session.js';
+import {FirmwareSession} from './firmware-session.js';
 import {BuzzerAudio} from './buzzer-audio.js';
 import {Monitor} from './monitor.js';
 import {partControls,partReadouts} from './part-controls.js';
@@ -33,6 +34,7 @@ import {compileHal} from './hal-source.js';
 import {compile} from './parser.js';
 import {HAL_EXAMPLES,HAL_GUIDES,applyHalExample} from './hal-examples.js';
 import {createShell} from './shell.js';
+import {setupLogicAnalyzer} from './logic-analyzer.js';
 import {mountIdeChrome,setupIde} from './ide-ui.js';
 import {setupUpdates} from './update-ui.js';
 import {setupResizing} from './resize-ui.js';
@@ -371,8 +373,11 @@ $('pin-search').addEventListener('input',()=>{searchSelectedId=null;pinSearch();
 $('pin-search').addEventListener('keydown',e=>{if(e.key==='Enter'){const p=searchPins(e.target.value)[0];if(p)focusPin(p.id);}if(e.key==='Escape'){e.stopPropagation();e.target.value='';searchSelectedId=null;pinSearch();}});
 function recompute(){if(!runtime||!session)return;try{session.setPressed(pressed);result=session.viewResult;const warning=result.warnings.join('|');if(warning&&warning!==lastWarnings)result.warnings.forEach(w=>log(w,'error'));lastWarnings=warning;}catch(e){result=session.viewResult;status='error';log(e.message,'error');}}
 function initializeRuntime({debug=false,entry=false}={}){
- const program=ide?.build({reveal:false});if(ide&&!program){status='error';runtime=null;session=null;layout.reveal('terminal');document.querySelector('[data-monitor="build"]').click();return false;}
- try{simTime=0;pressed={};lastWarnings='';result=null;monitor.clear();uartLines.clear();session=new SimulationSession(project,{program,debug:debug?{entry,breakpoints:ide?.breakpoints()||[]}:undefined,print:s=>log(s,'serial'),uart:logUart,trace:event=>monitor.trace(event),channels:monitor.channels()});runtime=session.runtime;status='paused';pending=null;mode='select';result=session.tick(0);diagnostic('simulation.started',{debug,entry},true);log(project.firmware?.mode==='hal'?'HAL 프로그램을 시작했습니다.':'스케치를 시작했습니다.');ide?.debugView();return true;}
+ const emulate=!!ide?.emulator();
+ if(emulate&&!firmware){status='error';runtime=null;session=null;log('펌웨어 ELF가 없습니다. 빌드하거나 파일 → 펌웨어 ELF 열기를 사용하세요.','error');return false;}
+ const program=emulate?null:ide?.build({reveal:false});if(!emulate&&ide&&!program){status='error';runtime=null;session=null;layout.showPanel('build');return false;}
+ try{simTime=0;pressed={};lastWarnings='';result=null;monitor.clear();uartLines.clear();const options={debug:debug?{entry,breakpoints:ide?.breakpoints()||[]}:undefined,print:s=>log(s,'serial'),uart:logUart,trace:event=>monitor.trace(event),channels:monitor.channels()};
+  session=emulate?new FirmwareSession(project,{...options,elf:firmware.bytes}):new SimulationSession(project,{...options,program});runtime=session.runtime;status='paused';pending=null;mode='select';result=session.tick(0);diagnostic('simulation.started',{debug,entry},true);log(emulate?`펌웨어 에뮬레이터를 시작했습니다 · ${firmware.name} · Cortex-M4 명령어 실행`:project.firmware?.mode==='hal'?'HAL 프로그램을 시작했습니다.':'스케치를 시작했습니다.');ide?.debugView();return true;}
  catch(e){runtime=null;result=session?.viewResult??null;status='error';log(e.message,'error');return false;}
 }
 function recordSimulation(){if(result)diagnostic('simulation.state',{status,simulationMs:simTime,pins:runtime?.gpio||{},parts:result.parts,fault:result.fault,warnings:result.warnings});}
@@ -386,17 +391,37 @@ function resetRuntime(){
 }
 setInterval(recordSimulation,2000);
 function stop(){recordSimulation();status='stopped';runtime=null;result=null;pressed={};pending=null;$('preview-layer').innerHTML='';log('시뮬레이션을 정지했습니다.');refresh();ide?.debugView();}
-$('run').onclick=()=>{if(runtime?.debug.paused){runtime.resume();simTime=runtime.microTime/1000;status='running';ide?.debugView();refresh();}else if(running())stop();else {if(initializeRuntime({debug:!!ide?.breakpoints().length}))status=runtime.debug.paused?'paused':'running';refresh();}};
+$('run').onclick=()=>{if(runtime?.debug.paused){runtime.resume();simTime=runtime.microTime/1000;status='running';ide?.debugView();refresh();}else if(running())stop();else void startRun({debug:!!ide?.breakpoints().length});};
+// The emulator target needs a built (or opened) ELF before the session can start.
+async function startRun(options){
+ if(ide?.emulator()){try{await ensureFirmware();}catch(error){log(error.message,'error');feedback.show('펌웨어를 준비하지 못했습니다. 빌드 탭의 오류를 확인하거나 ELF 파일을 여세요.','firmware');return false;}}
+ if(running())return false;const ok=initializeRuntime(options);if(ok)status=runtime.debug.paused?'paused':'running';refresh();if(ok)ide?.debugView();return ok;
+}
+let firmware=null;
+const firmwareKey=()=>JSON.stringify([project.code,project.firmware?.files,project.mcu]);
+async function ensureFirmware(force=false){
+ if(!force&&firmware&&(firmware.source==='file'||firmware.key===firmwareKey()))return firmware;
+ log('ARM GCC로 펌웨어를 빌드합니다…');
+ const bytes=await ide.buildElf();firmware={bytes,name:'firmware.elf',key:firmwareKey(),source:'build'};feedback.clear('firmware');
+ log(`펌웨어 ELF 준비 완료 · ${(bytes.length/1024).toFixed(1)} KB`);return firmware;
+}
+async function openElf(){
+ try{if(!window.desktop?.openElf)throw new Error('ELF 열기는 데스크톱 앱에서 사용할 수 있습니다.');const opened=await window.desktop.openElf();if(!opened)return;
+  if(running())stop();firmware={bytes:opened.bytes,name:opened.name,key:null,source:'file'};
+  const select=$('native-target');if(select&&select.value!=='emulator'){select.value='emulator';select.dispatchEvent(new Event('change'));}
+  log(`펌웨어 ELF를 열었습니다 · ${opened.name} · ${(opened.bytes.length/1024).toFixed(1)} KB. F5로 에뮬레이터에서 실행합니다.`);
+ }catch(error){log(error.message,'error');}
+}
 function debugCommand(command){
  diagnostic('debug.command',{command,status,location:runtime?.location??null});
  if(command==='stop'){if(running())stop();return;}
- if(command==='start'){if(running())return;if(initializeRuntime({debug:true,entry:true})){status=runtime.debug.paused?'paused':'running';refresh();ide?.debugView();}return;}
+ if(command==='start'){if(running())return;void startRun({debug:true,entry:true});return;}
  if(!runtime)return;
  if(command==='pause'){if(status==='running'){runtime.debug.enabled=true;runtime.debug.mode='into';}return;}
  if(!runtime.debug.paused)return;if(command==='out'&&runtime.depth<=1)return;
  runtime.resume(command);simTime=runtime.microTime/1000;status='running';ide?.debugView();refresh();
 }
-$('step').onclick=()=>{if(!runtime||status==='error'){initializeRuntime();}else {try{simTime+=20;result=session.tick(simTime);recompute();}catch(e){status='error';log(e.message,'error');}}refresh();};
+$('step').onclick=()=>{if(!runtime||status==='error'){if(ide?.emulator()){void startRun({}).then(ok=>{if(ok){status='paused';refresh();}});return;}initializeRuntime();}else {try{simTime+=20;result=session.tick(simTime);recompute();}catch(e){status='error';log(e.message,'error');}}refresh();};
 setInterval(()=>{
  if(status!=='running')return;
  try{simTime+=20;result=session.tick(simTime);recompute();
@@ -424,7 +449,7 @@ function setWireColor(value){
 }
 document.querySelectorAll('[data-color]').forEach(b=>b.onclick=()=>setWireColor(b.dataset.color));
 document.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>tab(b.dataset.tab));
-function replaceProject(p,{preserveWorkspace=false}={}){if(running())stop();project=validateProject(p);feedback.clear('save');setSaveState('저장 중…','saving');selection=null;pending=null;drag=null;mode='select';pressed={};lastWarnings='';uartLines.clear();searchSelectedId=null;$('pin-search').value='';pinSearch();fitView();selection=null;pending=null;drag=null;$('preview-layer').innerHTML='';undoStack=[];redoStack=[];status='stopped';runtime=null;session=null;monitor.clear();result=null;simTime=0;dirty=false;lastCodeCheckpoint=0;sourceFile='main.c';syncEditor();ide?.reset({preserveWorkspace});autosave();refresh();log('회로를 열었습니다: '+project.name);}
+function replaceProject(p,{preserveWorkspace=false}={}){if(running())stop();firmware=null;project=validateProject(p);feedback.clear('save');setSaveState('저장 중…','saving');selection=null;pending=null;drag=null;mode='select';pressed={};lastWarnings='';uartLines.clear();searchSelectedId=null;$('pin-search').value='';pinSearch();fitView();selection=null;pending=null;drag=null;$('preview-layer').innerHTML='';undoStack=[];redoStack=[];status='stopped';runtime=null;session=null;monitor.clear();result=null;simTime=0;dirty=false;lastCodeCheckpoint=0;sourceFile='main.c';syncEditor();ide?.reset({preserveWorkspace});autosave();refresh();log('회로를 열었습니다: '+project.name);}
 function requestReplace(action){if(ide?.nativeBusy()){log('빌드·실행·디버그를 정지한 뒤 프로젝트를 변경하세요.','error');return;}if(dirty){replaceAction=action;$('replace-dialog').showModal();}else action();}
 $('replace-cancel').onclick=()=>{$('replace-dialog').close();replaceAction=null;};$('replace-confirm').onclick=()=>{$('replace-dialog').close();replaceAction?.();replaceAction=null;};
 $('hal-example').onchange=e=>{const type=e.target.value;e.target.value='';if(running()||!Object.hasOwn(HAL_EXAMPLES,type))return;checkpoint();project=applyHalExample(project,type);sourceFile='main.c';runtime=null;session=null;result=null;status='stopped';simTime=0;pressed={};selection=null;pending=null;drag=null;mode='select';lastWarnings='';$('preview-layer').innerHTML='';fitView();monitor.clear();uartLines.clear();syncEditor();changed();if(type==='uart')$('serial-target').value='USART2';else if(type==='uart_external'||CATALOG_BY_TYPE[type]?.family==='uart')$('serial-target').value='USART2:external';tab('code');log(HAL_EXAMPLES[type]+' · '+HAL_GUIDES[type]);svg.focus({preventScroll:true});};
@@ -509,7 +534,7 @@ window.addEventListener('keydown',e=>{
 });
 window.addEventListener('error',e=>log('화면 오류: '+e.message,'error'));
 document.addEventListener('ide-undo',e=>editUndo(e.detail));
-ide=setupIde({getProject:()=>project,getSource:()=>sourceFile,getSession:()=>runtime?session:null,isRunning:running,isSimulationRunning:()=>status==='running'||status==='paused',refresh,checkpoint,saveLocal:autosave,layout,log,feedback,requestReplace,replaceProject,debugCommand,
+ide=setupIde({buildFirmware:()=>ensureFirmware(true).catch(error=>log(error.message,'error')),getProject:()=>project,getSource:()=>sourceFile,getSession:()=>runtime?session:null,isRunning:running,isSimulationRunning:()=>status==='running'||status==='paused',refresh,checkpoint,saveLocal:autosave,layout,log,feedback,requestReplace,replaceProject,debugCommand,
  selectSource:name=>{if(name!=='main.c'&&!project.firmware?.files.some(f=>f.name===name))return;sourceFile=name;syncEditor();},
  applySources:(p,file)=>{checkpoint();project=validateProject(p);sourceFile=file;syncEditor();changed();ide.invalidate();}});
 setupIdeSettings({editor:ide.editor,layout,open:()=>tab('settings')});
@@ -522,7 +547,8 @@ deviceDocs=setupDeviceDocs({getProject:()=>project,getSelection:()=>selection,is
  ide.invalidate();return applied;
 }});
 resizing=setupResizing({getProject:()=>project,getSelection:()=>selection,isRunning:running,canResize:()=>!drag&&!pending&&mode==='select',focus:frame=>{const b=frame.bounds,points=[[0,0],[1,0],[1,1],[0,1]].map(([x,y])=>frame.point(b.x+x*b.width,b.y+y*b.height)),xs=points.map(p=>p.x),ys=points.map(p=>p.y),left=Math.min(...xs),top=Math.min(...ys),width=Math.max(...xs)-left,height=Math.max(...ys)-top,w=Math.max(430,width*1.8,height*1.8*1120/730);view={x:left+width/2-w/2,y:top+height/2-w*730/1120/2,w,h:w*730/1120};viewUpdate();},onError:message=>log(message,'error'),select:target=>{selection=target;pending=null;mode='select';inspectTab();refresh();},preview:draft=>{clearTimeout(saveTimer);project=draft;refresh();pinSearch();},cancel:base=>{project=base;changed();pinSearch();},commit:(base,draft)=>{validateProject(draft);project=base;checkpoint();project=draft;changed();pinSearch();},resize:(target,scale)=>{if(running())return;const draft=structuredClone(project);resizeObject(draft,target,scale);validateProject(draft);checkpoint();project=draft;selection=target;changed();pinSearch();}});
-layout.mount({debugCommand,find:replace=>editorSearch.open(replace),files:()=>[project.code!==undefined?'main.c':null,...(project.firmware?.files||[]).map(f=>f.name)].filter(Boolean),openFile:name=>{if(name!=='main.c'&&!project.firmware?.files.some(f=>f.name===name))return;sourceFile=name;syncEditor();layout.reveal('code');ide?.editor?.focus?.();},gotoLine:line=>ide?.editor?.goto?.(line),setTarget:value=>{const select=$('native-target');if(!select||select.disabled||![...select.options].some(o=>o.value===value))return;select.value=value;select.dispatchEvent(new Event('change'));}});layout.setMonitor(monitor);
+const logicAnalyzer=setupLogicAnalyzer({getSession:()=>session,getProject:()=>project,isRunning:()=>status==='running',log,onNoise:noise=>{checkpoint();project.simulation={...(project.simulation||{}),noise};autosave();}});
+layout.mount({openElf,debugCommand,find:replace=>editorSearch.open(replace),files:()=>[project.code!==undefined?'main.c':null,...(project.firmware?.files||[]).map(f=>f.name)].filter(Boolean),openFile:name=>{if(name!=='main.c'&&!project.firmware?.files.some(f=>f.name===name))return;sourceFile=name;syncEditor();layout.reveal('code');ide?.editor?.focus?.();},gotoLine:line=>ide?.editor?.goto?.(line),setTarget:value=>{const select=$('native-target');if(!select||select.disabled||![...select.options].some(o=>o.value===value))return;select.value=value;select.dispatchEvent(new Event('change'));}});layout.setMonitor(monitor);
 setupTabAccessibility();
 canvasKeys=setupCanvasKeyboard(svg,{
  isDragging:()=>!!drag,
