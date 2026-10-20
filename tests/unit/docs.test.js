@@ -1,7 +1,8 @@
 import {test,describe} from 'node:test';
 import assert from 'node:assert/strict';
 import {applyDeviceExample} from '../../src/device-assistance.js';
-import {managedRegion,stripDeviceRegions,managedChecksum,statements,selectOperation,insertDeviceCode,indentC,removeLegacyDeviceHooks} from '../../src/device-code-insertion.js';
+import {managedRegion,stripDeviceRegions,managedChecksum,statements,selectOperation,insertDeviceCode,indentC,removeLegacyDeviceHooks,docsRegions,regionBody} from '../../src/device-code-insertion.js';
+import {cFunctions} from '../../src/c-source-edit.js';
 import {DEVICE_RECIPES,API_HELP,recipeFor,primaryPart,expectedNets,deviceDocs,wiringTopology} from '../../src/device-docs-data.js';
 import {CATALOG_DEFS,CATALOG_BY_TYPE,CATALOG_TWO_PIN,catalogMap,catalogType} from '../../src/catalog-defs.js';
 import {DEVICE_CATALOG} from '../../src/device-catalog-data.js';
@@ -29,14 +30,16 @@ describe('device Docs: applying examples to main.c',()=>{
     const original=projectWith(['led']),{project,report}=applyDeviceExample(original,part('sel'));
     assert.deepEqual(project.firmware.files,[],'no extra source files');
     assert.ok(project.code.includes(USER_LINE),'user code preserved');
-    for(const name of ['HEADERS','DECLARATIONS','INIT','STEP'])assert.ok(managedRegion(project.code,name),name);
-    assert.match(managedRegion(project.code,'STEP').text,/HAL_GPIO_TogglePin\(GPIOA, GPIO_PIN_5\)/);
+    // 0.26.1: one marker pair per inserted region, tagged with <type>:<part id>.
+    const regions=docsRegions(project.code).regions,role=r=>regions.find(x=>x.tag==='led:sel'&&x.role===r);
+    assert.ok(role('LOOP')&&role('MX_GPIO_Init'));assert.match(regionBody(project.code,role('LOOP')),/HAL_GPIO_TogglePin\(GPIOA, GPIO_PIN_5\)/);
+    const gpio=cFunctions(project.code).find(f=>f.name==='MX_GPIO_Init');assert.ok(role('MX_GPIO_Init').start>gpio.open&&role('MX_GPIO_Init').end<gpio.end,'GPIO setup lives in MX_GPIO_Init');
     assert.equal(project.mcu.pins.PA5.function,'GPIO_Output');
     assert.equal(project.surfaces.board.hidden,false,'the board is shown so it can be wired');
     assert.ok(report.addedParts>=1&&report.addedWires>=1);
     const uf=wiringTopology(project),resistor=project.components.find(c=>c.type==='resistor');
     assert.ok(resistor,'series resistor added');assert.ok(['a','b'].some(k=>uf.find(`part:${resistor.id}:${k}`)===uf.find(boardPin('PA5'))),'resistor sits on the PA5 net');
-    assert.deepEqual(project.deviceDocs.bindings.map(b=>[b.key,b.type]),[['sel','led']]);assert.match(project.deviceDocs.inlineChecksum,/^[a-f0-9]{1,8}$/);
+    assert.deepEqual(project.deviceDocs.bindings.map(b=>[b.key,b.type,b.slot]),[['sel','led',0]]);assert.equal(project.deviceDocs.inlineChecksum,undefined);
     assert.equal(original.components.length,1,'input project untouched');
     assert.doesNotThrow(()=>compileHal(project.code));
   });
@@ -64,15 +67,19 @@ describe('device Docs: applying examples to main.c',()=>{
     const {project}=applyDeviceExample(p,part('sel'));assert.ok(project.wires.some(w=>w.id==='signal'));assert.equal(project.deviceDocs.bindings[0].pins.PA0,'PC0');
     const out=[];const s=new SimulationSession(project,{print:v=>out.push(v)});for(let t=0;t<=600;t+=50)s.tick(t);assert.match(out.join('\n'),/1\.65\d V/);
   });
-  test('editing the managed main.c region blocks re-apply without side effects',()=>{
-    const ready=applyDeviceExample(projectWith(['led']),part('sel')).project;
-    ready.code=ready.code.replace('/* STM DEVICE DOCS STEP BEGIN */','/* STM DEVICE DOCS STEP BEGIN */\n// personal change');
-    const text=JSON.stringify(ready);assert.throws(()=>applyDeviceExample(ready,part('sel')),/직접 수정/);assert.equal(JSON.stringify(ready),text);
+  // Changed in 0.26.1: edits inside a device's own region no longer block re-apply; re-applying
+  // replaces only that device's regions (Ctrl+Z restores), other devices' edited regions stay.
+  test('re-applying replaces only the device own (edited) regions',()=>{
+    let ready=applyDeviceExample(projectWith(['led','a'],['button','b']),part('a')).project;ready=applyDeviceExample(ready,part('b')).project;
+    ready.code=ready.code.replace(/(STM-DOCS BEGIN led:a LOOP[^\n]*\n)/,'$1  // personal change A\n').replace(/(STM-DOCS BEGIN button:b LOOP[^\n]*\n)/,'$1  // personal change B\n');
+    const again=applyDeviceExample(ready,part('a')).project;
+    assert.doesNotMatch(again.code,/personal change A/);assert.match(again.code,/personal change B/);
+    assert.equal((again.code.match(/STM-DOCS BEGIN led:a LOOP/g)||[]).length,1);
   });
-  test('two devices of one kind get distinct pins and share one STEP region',()=>{
+  test('two devices of one kind get distinct pins and their own LOOP regions',()=>{
     let p=projectWith(['rgb','one'],['rgb','two']);p=applyDeviceExample(p,part('one')).project;p=applyDeviceExample(p,part('two')).project;
     const [a,b]=p.deviceDocs.bindings;assert.equal(Object.values(a.pins).some(pin=>Object.values(b.pins).includes(pin)),false);
-    assert.equal((p.code.match(/STM DEVICE DOCS STEP BEGIN/g)||[]).length,1);assert.equal((p.code.match(/int main\(void\)/g)||[]).length,1);
+    assert.equal((p.code.match(/STM-DOCS BEGIN rgb:one LOOP/g)||[]).length,1);assert.equal((p.code.match(/STM-DOCS BEGIN rgb:two LOOP/g)||[]).length,1);assert.equal((p.code.match(/int main\(void\)/g)||[]).length,1);
     assert.ok(p.code.includes(USER_LINE));assert.deepEqual(p.firmware.files,[]);
     const s=new SimulationSession(p);for(let t=0;t<=300;t+=50)s.tick(t);assert.equal(s.result.fault,false);
   });
