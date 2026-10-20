@@ -64,8 +64,10 @@ async function prepareBuild({project,tools,root,target='arm',configuration='Debu
     // Interrupt handlers must be strong: the startup file's Default_Handler aliases are weak too,
     // and a weak-vs-weak tie leaves SysTick unhandled (HAL_Delay would hang). Skip any handler the
     // user's sources already define so imported Cube stm32f4xx_it.c files still link.
-    const userText=[project.code,...files.map(f=>f.text||'')].join('\n');
-    const defined=name=>new RegExp(`\\b${name}\\s*\\(\\s*void\\s*\\)\\s*\\{`).test(userText);
+    // Comments and `#if 0` blocks are removed first so disabled handlers don't count as definitions.
+    const stripC=text=>text.replace(/\/\*[\s\S]*?\*\//g,' ').replace(/\/\/[^\n]*/g,' ').replace(/^[ \t]*#[ \t]*if[ \t]+0\b[\s\S]*?^[ \t]*#[ \t]*endif\b/gm,' ');
+    const userText=stripC([project.code,...files.map(f=>f.text||'')].join('\n'));
+    const defined=name=>new RegExp(`\\b${name}\\s*\\(\\s*(?:void)?\\s*\\)\\s*\\{`).test(userText);
     const handler=(name,body)=>defined(name)?null:`void ${name}(void) { ${body} }`;
     const env=['#include "main.h"','__attribute__((weak)) void _init(void) {}','__attribute__((weak)) void _fini(void) {}','__attribute__((weak)) int __io_putchar(int ch) { return ch; }',handler('SysTick_Handler','HAL_IncTick();'),'__attribute__((weak)) int _write(int file, char *ptr, int len) { (void)file; for(int i=0;i<len;i++) __io_putchar(ptr[i]); return len; }'];
     env.push('#include <stddef.h>','#include <stdint.h>','#include <errno.h>',`extern char end, _estack;

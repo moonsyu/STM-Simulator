@@ -53,7 +53,7 @@ const $=id=>document.getElementById(id),svg=$('circuit');
 mountIdeChrome();const layout=createShell();let ide=null,resizing=null,deviceDocs=null,canvasKeys=null;
 const feedback=setupFeedback({showLog:()=>{layout.reveal('terminal');document.querySelector('[data-monitor="log"]').click();}});
 const wireDraft=new WireDraft();
-let project=blankProject(),mode='select',pending=null,selection=null,color='#23a68a',status='stopped',result=null,runtime=null,simTime=0,pressed={},undoStack=[],redoStack=[],dirty=false;
+let project=blankProject(),mode='select',pending=null,selection=null,color='#23a68a',status='stopped',result=null,runtime=null,simTime=0,pressed={},undoStack=[],redoStack=[],dirty=false,starting=false,startToken=0,firmware=null;
 let view={x:0,y:0,w:1120,h:730},drag=null,lastWarnings='',replaceAction=null,saveTimer,searchSelectedId=null,breadboardKey='',inspectorKey='',inspectorModel=null;
 try{const cached=localStorage.getItem('stm32lab.project.v2')||localStorage.getItem('stm32lab.project.v1');if(cached)project=validateProject(JSON.parse(cached));}catch{}
 const diagnostic=createDiagnostics(window.localDiagnostics?.record,()=>project);
@@ -145,7 +145,7 @@ function refresh({preserveWires=false}={}){
  $('code').readOnly=running();$('project-name').readOnly=running();
  editorSearch.refresh();
  for(const id of ['pinout-open','firmware-mode','firmware-import','firmware-folder','firmware-check','hal-example','code-reset','board-reset'])$(id).disabled=running();
- $('run').classList.toggle('running',running());$('run').textContent=runtime?.debug.paused?'계속 실행 (F5)':running()?'■  시뮬레이션 정지':'▶  실행 (F5)';
+ $('run').classList.toggle('running',running()||starting);$('run').textContent=starting?'■  빌드 취소':runtime?.debug.paused?'계속 실행 (F5)':running()?'■  시뮬레이션 정지':'▶  실행 (F5)';
  $('step').disabled=status==='running';
  $('mode-label').textContent=running()?'시뮬레이션 실행 중':status==='error'?'회로 확인 필요':'회로 편집';
  $('run-status').textContent=runtime?.debug.paused?'일시정지':({running:'실행 중',paused:'한 단계 실행',stopped:'준비됨',error:'오류로 정지'})[status];
@@ -394,14 +394,15 @@ function resetRuntime(){
  refresh();return initialized;
 }
 setInterval(recordSimulation,2000);
-function stop(){recordSimulation();try{const before=JSON.stringify(project.components.map(p=>p.cardImage??null));session?.storage?.applyTo?.(project);if(JSON.stringify(project.components.map(p=>p.cardImage??null))!==before){autosave();log('SD 카드에 기록된 파일을 프로젝트에 저장했습니다.');}}catch(error){log('SD 카드 저장 실패: '+error.message,'error');}status='stopped';runtime=null;result=null;pressed={};pending=null;$('preview-layer').innerHTML='';log('시뮬레이션을 정지했습니다.');refresh();ide?.debugView();}
-$('run').onclick=()=>{if(runtime?.debug.paused){runtime.resume();simTime=runtime.microTime/1000;status='running';ide?.debugView();refresh();}else if(running())stop();else void startRun({debug:!!ide?.breakpoints().length});};
+function stop(){recordSimulation();try{const before=JSON.stringify(project.components.map(p=>p.cardImage??null)),draft=structuredClone(project);session?.storage?.applyTo?.(draft);if(JSON.stringify(draft.components.map(p=>p.cardImage??null))!==before){checkpoint();project.components.forEach((p,i)=>{if(draft.components[i]?.cardImage!==undefined)p.cardImage=draft.components[i].cardImage;});autosave();log('SD 카드에 기록된 파일을 프로젝트에 저장했습니다.');}}catch(error){log('SD 카드 저장 실패: '+error.message,'error');}status='stopped';runtime=null;result=null;pressed={};pending=null;$('preview-layer').innerHTML='';log('시뮬레이션을 정지했습니다.');refresh();ide?.debugView();}
+$('run').onclick=()=>{if(runtime?.debug.paused){runtime.resume();simTime=runtime.microTime/1000;status='running';ide?.debugView();refresh();}else if(running())stop();else if(starting)cancelStart();else void startRun({debug:!!ide?.breakpoints().length});};
 // The emulator target needs a built (or opened) ELF before the session can start.
+function cancelStart(){starting=false;startToken++;window.nativeIde?.stop?.().catch(()=>{});log('펌웨어 빌드를 취소했습니다.');refresh();}
 async function startRun(options){
- if(ide?.emulator()){try{await ensureFirmware();}catch(error){log(error.message,'error');feedback.show('펌웨어를 준비하지 못했습니다. 빌드 탭의 오류를 확인하거나 ELF 파일을 여세요.','firmware');return false;}}
+ if(starting)return false;
+ if(ide?.emulator()){const token=++startToken;starting=true;refresh();try{await ensureFirmware();}catch(error){if(token===startToken){log(error.message,'error');feedback.show('펌웨어를 준비하지 못했습니다. 빌드 탭의 오류를 확인하거나 ELF 파일을 여세요.','firmware');}return false;}finally{if(token===startToken)starting=false;}if(token!==startToken)return false;}
  if(running())return false;const ok=initializeRuntime(options);if(ok)status=runtime.debug.paused?'paused':'running';refresh();if(ok)ide?.debugView();return ok;
 }
-let firmware=null;
 const firmwareKey=()=>JSON.stringify([project.code,project.firmware?.files,project.mcu]);
 async function ensureFirmware(force=false){
  if(!force&&firmware&&(firmware.source==='file'||firmware.key===firmwareKey()))return firmware;
