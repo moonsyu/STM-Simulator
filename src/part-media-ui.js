@@ -1,10 +1,12 @@
 // Inspector sections for media parts: the camera's live frame/pattern/image and the SD card's files.
 import {CAMERA_PATTERNS,validCameraImage,decodeImageAsync} from './camera.js';
+import {CATALOG_BY_TYPE} from './catalog-defs.js';
 import {SD_SIZES,SD_DEFAULT_MB,formatImage,listFiles,readFile,writeFile,deleteFile} from './sdcard.js';
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]);
 const PATTERN_LABELS={colorbars:'컬러 바',gradient:'움직이는 그라데이션',ball:'움직이는 공',image:'불러온 이미지'};
-export const isCamera=p=>p?.catalogVariant==='ov2640-camera';
-export const isSdCard=p=>p?.catalogVariant==='sd-storage-board';
+const variant=p=>p?.catalogVariant||CATALOG_BY_TYPE[p?.type]?.id;
+export const isCamera=p=>variant(p)==='ov2640-camera';
+export const isSdCard=p=>variant(p)==='sd-storage-board';
 export function mediaSection(p,running){
  if(isCamera(p))return `<div class="inspector-card media-card"><label for="camera-pattern">카메라 영상</label><select id="camera-pattern" data-live="true">${CAMERA_PATTERNS.map(v=>`<option value="${v}" ${p.pattern===v?'selected':''}>${PATTERN_LABELS[v]||v}</option>`).join('')}</select><div class="media-actions"><button type="button" class="inspector-action" id="camera-image-pick">이미지 불러오기</button><input id="camera-image-file" type="file" accept="image/png,image/jpeg,image/bmp,image/gif,image/webp" hidden></div><canvas id="camera-preview" width="160" height="120" aria-label="카메라 프레임 미리보기"></canvas><p id="camera-info" class="form-hint">${running?'수신 대기 중':'실행하면 센서가 출력하는 프레임을 표시합니다.'}</p></div>`;
  if(isSdCard(p))return `<div class="inspector-card media-card"><label for="sd-size">SD 카드 (FAT32)</label><div class="media-row"><select id="sd-size" ${running?'disabled':''}>${SD_SIZES.map(v=>`<option value="${v}" ${(p.sizeMB||SD_DEFAULT_MB)===v?'selected':''}>${v} MB</option>`).join('')}</select><button type="button" id="sd-format" class="inspector-action" ${running?'disabled':''}>포맷</button></div><div id="sd-files" class="sd-files" aria-live="polite"></div><div class="media-actions"><button type="button" class="inspector-action" id="sd-upload" ${running?'disabled':''}>파일 넣기</button><input id="sd-upload-file" type="file" hidden></div><p class="form-hint">8.3 형식 파일 이름을 사용합니다. 실행 중 펌웨어가 쓴 파일은 정지하면 프로젝트에 저장됩니다.</p></div>`;
