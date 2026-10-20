@@ -22,7 +22,7 @@ const tools={armGcc:gcc,cube,armGdb:'',hostGcc:'',hostGdb:'',clangd:'',openocd:'
 const only=process.env.EXAMPLES?.split(',');
 const cases=[['blank',blankProject()],...Object.keys(allHalExamples()).filter(id=>!SIMULATOR_ONLY_EXAMPLES.has(id)&&(!only||only.includes(id))).map(id=>[id,applyHalExample(blankProject(),id)])];
 
-test('every example compiles and links with ST HAL, then runs on the emulator without faults',{skip:!available&&'ARM GCC / STM32CubeF4 not installed',timeout:3600000},async t=>{
+test('every example compiles and links with ST HAL, then runs on the emulator without faults',{skip:!available&&!process.env.CI_REQUIRE_TOOLCHAIN&&'ARM GCC / STM32CubeF4 not installed',timeout:3600000},async t=>{
  const work=await fs.mkdtemp(path.join(os.tmpdir(),'stm-arm-'));const failures=[];
  try{
   for(const [id,project] of cases){
@@ -35,6 +35,9 @@ test('every example compiles and links with ST HAL, then runs on the emulator wi
      const session=new FirmwareSession(project,{elf,print:()=>{},uart:()=>{},trace:()=>{}});
      for(let ms=20;ms<=200;ms+=20)session.tick(ms);
      const top=session.runtime.inspect().frames[0]?.name||'';
+     // SysTick must be serviced: HAL's uwTick advances about 1 per ms of simulated time.
+     const tick=Number(String(session.runtime.evaluate('uwTick')).match(/^\d+/)?.[0]);
+     assert.ok(tick>=150,`uwTick did not advance (${tick})`);
      assert.ok(!/^(Error_Handler|HardFault_Handler|Default_Handler|.*_IRQHandler_default)$/.test(top),`stuck in ${top}`);
     }catch(error){failures.push(`${id}: run · ${error.message.slice(0,300)}`);throw error;}
     await fs.rm(path.dirname(r.elf),{recursive:true,force:true});

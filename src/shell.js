@@ -379,6 +379,7 @@ function keyboard(layout){
   if(ctrl&&!e.shiftKey&&e.key==='`')return hit(()=>layout.showPanel('native'));
   if(ctrl&&e.shiftKey&&k==='m')return hit(()=>layout.showPanel('issues'));
   if(ctrl&&e.shiftKey&&k==='u')return hit(()=>layout.showPanel('log'));
-  if(ctrl&&e.shiftKey&&!e.altKey){const view=VIEWS.find(v=>v.key.toLowerCase()==='ctrl+shift+'+k);if(view)return hit(()=>layout.showView(view.id));}
+  // Inside Monaco, its own Ctrl+Shift bindings (delete line, go to symbol…) win over view shortcuts.
+  if(ctrl&&e.shiftKey&&!e.altKey&&!document.activeElement?.closest('.monaco-editor')){const view=VIEWS.find(v=>v.key.toLowerCase()==='ctrl+shift+'+k);if(view)return hit(()=>layout.showView(view.id));}
  },true);
 }

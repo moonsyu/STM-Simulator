@@ -32,7 +32,7 @@ Windows x64 포터블 EXE는 앱 시작 8초 후, 이후 실행 중 6시간마�
 
 ## 개발과 검증
 
-- `node --test tests/updater.test.js`: 버전·자산·해시·동시 호출·오프라인·자동 설정·캐시 변조 검사.
+- `node --test tests/unit/desktop.test.js`(업데이트 부분): 버전·자산·해시·동시 호출·오프라인·자동 설정·캐시 변조 검사.
 - `node --test tests/release/update-helper.test.mjs`: Windows에서 실제 실행 파일 잠금을 기다려 교체·재실행하고, 잘못된 EXE의 시작 실패 시 원본 복원을 검사합니다.
 - `node --test tests/release/packaged.test.mjs`: 패키징된 Electron main에서 실제 도우미를 시작하고, 긴 한글·특수문자 경로와 GUI 부모 종료 뒤 교체/실행을 검사합니다. CI 게시 전에 실행합니다.
 - `npm run build` / `npm run build:artifact`: 업데이트 JS·PowerShell·UI·문서가 실제 패키지에 들어갔는지 원본과 비교합니다.

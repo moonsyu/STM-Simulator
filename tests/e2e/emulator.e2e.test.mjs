@@ -86,7 +86,7 @@ test('source breakpoints, registers and memory in the emulator debugger',{timeou
  }finally{await s.close();}
 });
 
-test('emulator target builds the project with ARM GCC and runs it',{skip:!toolchain&&'ARM GCC / STM32CubeF4 not installed',timeout:240000},async()=>{
+test('emulator target builds the project with ARM GCC and runs it',{skip:!toolchain&&!process.env.CI_REQUIRE_TOOLCHAIN&&'ARM GCC / STM32CubeF4 not installed',timeout:240000},async()=>{
  const s=await launch();
  await fs.writeFile(path.join(s.profile,'native-tools.json'),JSON.stringify({armGcc:gcc,cube,armGdb:'',hostGcc:'',hostGdb:'',clangd:'',openocd:'',buildRoot:''}));
  try{

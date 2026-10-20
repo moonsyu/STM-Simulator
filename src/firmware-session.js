@@ -332,7 +332,7 @@ export class FirmwareSession {
   finishTick() { return physicalResult(this.changed(this.now), this.project); }
   afterRun(res) {
     const rt = this.runtime, cpu = this.machine.cpu;
-    if (res.reason === 'breakpoint' || res.reason === 'bkpt') { this.pause(); return; }
+    if (res.reason === 'breakpoint' || res.reason === 'bkpt') { if (this.entryBreak !== undefined && ((res.pc ?? this.machine.cpu.pc) & ~1) === this.entryBreak) { this.machine.breakpoints.delete(this.entryBreak); this.entryBreak = undefined; } this.pause(); return; }
     if (res.reason === 'exit') { rt.finished = true; return; }
     if (res.reason === 'lockup') throw new Error('펌웨어가 멈췄습니다: ' + (this.machine.describeFault() || '코어 lockup'));
     if (cpu.lastFault && cpu.lastFault !== this.reportedFault && cpu.ipsr === 3) {
@@ -348,11 +348,14 @@ export class FirmwareSession {
     let res;
     if (mode === 'entry') {
       const main = this.elf.findSymbol('main');
-      if (main) { const addr = (main.value & ~1) >>> 0, had = m.breakpoints.has(addr); m.breakpoints.add(addr); res = m.run(2e9); if (!had) m.breakpoints.delete(addr); }
       this.started = true;
-    } else if (mode === 'over') res = m.stepOver();
-    else if (mode === 'out') res = m.stepOut();
-    else res = m.stepLine();
+      // Run to main through the normal tick loop (chunked) so start-up code never blocks the UI.
+      if (main) { const addr = (main.value & ~1) >>> 0; if (!m.breakpoints.has(addr)) { m.breakpoints.add(addr); this.entryBreak = addr; } const rt = this.runtime; rt.debug.paused = false; rt.debug.mode = 'continue'; return; }
+    } else if (mode === 'over') res = m.stepOver({ maxCycles: 40e6 });
+    else if (mode === 'out') res = m.stepOut({ maxCycles: 40e6 });
+    else res = m.stepLine({ maxCycles: 40e6 });
+    // A step that doesn't finish quickly (e.g. over a busy-wait) keeps running instead of freezing the UI.
+    if (res?.reason === 'cycles') { this.print('\n[디버그] 한 줄 실행이 길어져 계속 실행합니다. 일시정지(F6)로 멈출 수 있습니다.\n'); const rt = this.runtime; rt.debug.paused = false; rt.debug.mode = 'continue'; return; }
     if (res && !['step', 'breakpoint', 'bkpt', 'cycles'].includes(res.reason)) this.afterRun(res);
     this.runtime.debug.mode = 'continue';
     this.pause();

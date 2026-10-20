@@ -171,8 +171,8 @@
 - 도구 설정은 앱 데이터의 `native-tools.json`, GDB 서버 연결은 로컬 `stm32lab.debugConnection`, 실행 대상/구성은 회로 `ide.native`에 저장한다. 기존 문서는 기본 simulator로 열린다.
 - 외부 도구는 EXE에 포함하지 않는다. 설치 헬퍼는 `scripts/setup-native-tools.ps1`; SHA-256 및 ST SDK 커밋을 고정했다. 기본 `%LOCALAPPDATA%/STM-Simulator-Tools`는 자동 검색한다. Windows GCC/GDB는 MSYS2/PATH에서 검색한다. SDK와 GCC는 영문 경로; 사용자 프로젝트는 한글 경로 가능.
 - 빌드 작업 폴더와 언어 서버 소스 스냅샷은 앱 데이터 또는 설정한 영문 빌드 작업 폴더에 남는다. 사용자 파일과 분리하며 자동으로 재귀 삭제하지 않는다.
-- 실제 Windows GCC/GDB/clangd, ARM GCC/ST HAL, ARM GDB 원격 검증(QEMU STM32F405 Cortex-M4)을 수행했다. QEMU는 검증 도구이며 제품의 F446 에뮬레이터가 아니다. 연결된 ST-LINK는 확인되지 않아 실물 플래시·디버그는 검증하지 않았다.
-- 다음 검증 명령: `npm test`, `npm run test:ui`, `npm run test:native`, `npm run test:native:ui`, `npm run test:arm-gdb` (`QEMU_ARM` 지정 가능). 실제 도구 통합 검사는 개발 도구를 설치한 환경에서 실행한다.
+- 실제 Windows GCC/GDB/clangd, ARM GCC/ST HAL, ARM GDB 원격 검증(QEMU STM32F405 Cortex-M4)을 수행했다. QEMU는 Cortex-M4 코어의 대조 검증 도구이며, 제품의 F446 에뮬레이터는 0.26.0의 `src/emu`다. 연결된 ST-LINK는 확인되지 않아 실물 플래시·디버그는 검증하지 않았다.
+- 검증 명령은 아래 "개발과 검증"을 따른다(0.26.0에서 `test:ui`·`test:native` 계열 스크립트는 `npm run test:e2e`, `npm run test:toolchain`으로 대체).
 - IDE 구현은 0.15.0에서 추가했다. 게시할 때는 main과 릴리즈 태그, 성공한 Actions 빌드의 커밋을 일치시키고 다운로드 자산의 해시를 확인한다. 원격 게시 증거는 `work/test-results/release-proof.json`에 기록한다.
 
 ## 현재 구현

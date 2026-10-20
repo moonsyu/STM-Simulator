@@ -129,7 +129,7 @@ ipcMain.handle('firmware:open-elf',async event=>{
   if(event.sender!==win?.webContents||event.senderFrame?.parent)throw new Error('허용하지 않는 요청입니다.');
   const result=await dialog.showOpenDialog(win,{title:'펌웨어 ELF 열기',properties:['openFile'],filters:[{name:'ARM ELF 펌웨어',extensions:['elf','axf','out']}]});
   if(result.canceled)return null;const file=result.filePaths[0],stat=await fs.stat(file);if(!stat.isFile()||stat.size>16_000_000)throw new Error('16 MB 이하의 ELF 파일을 선택하세요.');
-  const data=await fs.readFile(file);if(data.readUInt32BE(0)!==0x7f454c46)throw new Error('ELF 형식의 펌웨어 파일이 아닙니다.');
+  const data=await fs.readFile(file);if(data.length<52||data.readUInt32BE(0)!==0x7f454c46)throw new Error('ELF 형식의 펌웨어 파일이 아닙니다.');
   return {name:path.basename(file),bytes:new Uint8Array(data)};
 });
 ipcMain.handle('firmware:export-main',async(_event,text)=>{

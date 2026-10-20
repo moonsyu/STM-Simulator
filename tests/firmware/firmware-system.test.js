@@ -124,7 +124,9 @@ test('debugger: file:line breakpoints, stepping, call stack, registers, globals 
 
 test('debug entry pauses at main()', () => {
   const { session } = open('blink', { debug: { entry: true, breakpoints: [] } });
+  // Start-up code runs through the normal (chunked) tick loop until the temporary main() breakpoint.
   session.tick(0);
+  for (let ms = 1; ms <= 200 && !session.runtime.debug.paused; ms++) session.tick(ms);
   assert.equal(session.runtime.debug.paused, true);
   assert.equal(session.runtime.location.file, 'main.c');
   assert.equal(session.runtime.frames[0].name, 'main');

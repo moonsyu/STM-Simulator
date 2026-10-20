@@ -50,7 +50,7 @@ const haveQemu = existsSync(QEMU);
 test('QEMU 실시간 재실행(도구가 있을 때만)', { skip: !haveQemu && 'qemu-system-arm 없음' }, () => {
   for (const name of ['alu', 'exceptions', 'faults']) {
     const r = spawnSync(QEMU, [
-      '-machine', 'mps2-an386', '-nographic', '-monitor', 'none', '-serial', 'none',
+      '-machine', 'mps2-an386', '-icount', 'shift=0', '-nographic', '-monitor', 'none', '-serial', 'none',
       '-semihosting-config', 'enable=on,target=native', '-kernel', join(fixDir, `${name}.elf`),
     ], { encoding: 'latin1', timeout: 60000 });
     const live = Buffer.from((r.stdout || '') + (r.stderr || ''), 'latin1').toString('utf8');

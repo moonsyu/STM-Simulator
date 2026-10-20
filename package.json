@@ -23,7 +23,10 @@
     "build:catalog": "node scripts/build-device-catalog.mjs && node scripts/build-model-gallery.mjs",
     "build:fixtures": "node scripts/emu/build-cpu-fixtures.mjs && node scripts/emu/build-firmware-fixtures.mjs",
     "dev:web": "node scripts/serve.cjs",
-    "postinstall": "npm run build:editor"
+    "postinstall": "npm run build:editor",
+    "test:ci": "node --test --test-reporter=spec --test-reporter-destination=stdout --test-reporter=./tests/github-reporter.mjs --test-reporter-destination=stdout \"tests/unit/*.test.js\" \"tests/interp/*.test.js\" \"tests/emu/*.test.js\" \"tests/firmware/*.test.js\"",
+    "test:e2e:ci": "node --test --test-reporter=spec --test-reporter-destination=stdout --test-reporter=./tests/github-reporter.mjs --test-reporter-destination=stdout --test-concurrency=1 \"tests/e2e/*.test.mjs\"",
+    "test:toolchain:ci": "node --test --test-reporter=spec --test-reporter-destination=stdout --test-reporter=./tests/github-reporter.mjs --test-reporter-destination=stdout --test-concurrency=1 \"tests/toolchain/*.test.mjs\""
   },
   "devDependencies": {
     "dompurify": "3.4.17",
@@ -63,7 +66,8 @@
       "docs/device-model-gallery.html",
       "docs/DEVICE-VISUAL-REFERENCES.md",
       "docs/device-reference-gallery.html",
-      "docs/device-visual-references.json"
+      "docs/device-visual-references.json",
+      "docs/architecture/EMULATOR.md"
     ],
     "win": {
       "target": "portable",
