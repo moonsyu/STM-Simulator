@@ -116,9 +116,9 @@ function mountShell(layout,state,options,{apply,save,setPalette}){
  const codeMenu=popover('code-tools-menu','코드 도구',[document.querySelector('.firmware-tools')]);
  const more=button('code-tools-menu-toggle','코드 도구','more','코드 도구 · 가져오기 · 검사 · 초기화');more.setAttribute('popovertarget','code-tools-menu');more.setAttribute('aria-haspopup','true');tabActions.append(more);anchor(codeMenu,more);
  // Bottom panel tabs: friendly labels and order.
- const tabLabels={issues:'문제',log:'출력',native:'터미널',bus:'직렬 모니터',wave:'파형',build:'빌드'};
+ const tabLabels={issues:'문제',log:'출력',native:'터미널',bus:'직렬 모니터',wave:'파형',signals:'로직 분석기',build:'빌드'};
  const strip=document.querySelector('.monitor-tabs');
- for(const name of ['issues','log','native','bus','wave','build']){const b=strip.querySelector(`[data-monitor="${name}"]`);if(b){if(!/\(\d+\)/.test(b.textContent))b.textContent=tabLabels[name];strip.append(b);}}
+ for(const name of ['issues','log','native','bus','wave','signals','build']){const b=strip.querySelector(`[data-monitor="${name}"]`);if(b){if(!/\(\d+\)/.test(b.textContent))b.textContent=tabLabels[name];strip.append(b);}}
  // Panel actions
  const panelActions=$('panel-actions');
  const maxPanel=button('panel-maximize','패널 최대화','max','패널 최대화 / 복원');maxPanel.onclick=()=>layout.maximize('panel');
@@ -256,6 +256,7 @@ function registerCommands(layout,options){
   {id:'file.openCircuit',label:'회로 파일 열기 (.stm32lab)',group:'파일',run:click('open')},
   {id:'file.save',label:'저장',keys:'Ctrl+S',group:'파일',run:click('save')},
   {id:'file.exportMain',label:'main.c 내보내기',group:'파일',run:click('main-export')},
+  {id:'file.openElf',label:'펌웨어 ELF 열기 (에뮬레이터에서 실행)',group:'파일',run:()=>options.openElf?.()},
   {id:'file.import',label:'.ioc / C 소스 가져오기',group:'파일',run:click('firmware-import')},
   {id:'file.importFolder',label:'Cube 프로젝트 폴더 가져오기',group:'파일',run:click('firmware-folder')},
   {id:'file.addSource',label:'소스 파일 추가',group:'파일',run:click('source-add')},
@@ -316,7 +317,7 @@ function registerCommands(layout,options){
 function buildMenus(layout){
  const bar=$('menubar');
  const groups=['파일','편집','보기','실행','터미널','도움말'];
- const map={'파일':['file.newProject','file.openProject','file.openCircuit','-','file.save','file.exportMain','-','file.import','file.importFolder','file.addSource'],
+ const map={'파일':['file.newProject','file.openProject','file.openCircuit','-','file.save','file.exportMain','-','file.import','file.importFolder','file.addSource','-','file.openElf'],
   '편집':['edit.undo','edit.redo','-','edit.find','edit.replace','-','edit.rotate','edit.delete','-','edit.codeReset','edit.boardReset'],
   '보기':['view.palette','view.quickOpen','-','view.explorer','view.parts','view.examples','view.board','view.debug','view.docs','view.settings','-','view.toggleSidebar','view.togglePanel','view.toggleAux','-','view.problems','view.output','view.terminal','view.serial','view.wave','view.logic','-','view.swap','view.orientation','view.maxCircuit','view.maxCode','view.reset','-','view.theme','view.themeSystem'],
   '실행':['run.run','run.debug','run.stop','run.pause','-','run.over','run.into','run.out','run.step','-','run.build','-','run.target.sim','run.target.emu','run.target.arm','run.target.host','-','run.pinout','run.tools','run.connection','run.sound'],
