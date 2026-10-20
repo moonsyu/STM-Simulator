@@ -1,5 +1,22 @@
 # 검증 기록
 
+## 0.26.0 VS Code형 작업 화면 · 펌웨어 에뮬레이터 · 테스트 재작성
+
+2026-10-20. 검증 브랜치 `redesign` · [Windows CI 39380790785](https://github.com/moonsyu/STM-Simulator/actions/runs/39380790785) (전 단계 통과).
+
+| 검사 | 결과 |
+|---|---|
+| `npm test` (unit 350 · interp 48 · emu 65 · firmware 42) | 505/505 통과 (Linux Node 22, Windows Node 24) |
+| Cortex-M4 코어 QEMU 대조 | 펌웨어 19종 출력 바이트 일치 (`tests/emu/cpu-fixtures.test.js`), 약 34~40 MIPS |
+| `npm run test:e2e` (실제 Electron) | 16/16 통과 — 작업 화면·레이아웃 저장, 예제 실행·측정·디버그, 저장 직후 편집 경고·입력 직후 종료 보존·폴더 저장 일관성, Dark/White WCAG AA, ELF 실행·UART·로직 분석기·에뮬레이터 디버거·ARM GCC 빌드 후 실행, 카메라 미리보기·SD 파일 저장 |
+| `npm run test:toolchain` | 로컬: 예제 전체(시뮬레이터 전용 sd_logger 제외)를 앱의 ARM GCC 빌드 경로로 컴파일·링크하고 에뮬레이터에서 200 ms 실행 — HardFault·Error_Handler 없음, SysTick 진행 확인. CI: 대표 11개 |
+| Windows 릴리스 검사 | 업데이트 도우미(잠긴 EXE 교체·실패 시 복원·부모 종료 후 실행), 패키지 앱 실행, 포터블 EXE 업데이터 상태 통과 |
+
+이번 검증에서 발견해 수정한 기존 결함: ARM 빌드 환경의 SysTick/IRQ 처리기 weak 충돌(`HAL_Delay` 정지), DMA 스트림 IRQ 처리기 누락(DMA 예제 정지), DCMI/SD 등 HAL 모듈 미포함, MAX98357A I2S PLLI2SM 누락, `.ioc` `S_TIMx_CHy` 가져오기, 포인터 뺄셈, 터미널 첫 프롬프트 한글 경로.
+
+한계: 실물 MCU에서의 실행 검증은 아닙니다. 에뮬레이터는 MPU 강제·DWARF 지역 변수·일부 주변장치 모드(I²C/SPI 슬레이브, ADC 다중 모드, USART LIN/IrDA 등)를 모델링하지 않으며, 84 MHz 펌웨어는 실제 속도의 약 0.6~0.7배로 실행됩니다.
+
+
 ## 0.25.2 빵판 예제 배치 — 공개 배포 검증 완료
 
 2026-10-19. [상세 보고서·원본 로그](audits/0.25.2-breadboard/REPORT.md). [Release v0.25.2](https://github.com/moonsyu/STM-Simulator/releases/tag/v0.25.2) · [전체 Windows CI 39257882264](https://github.com/moonsyu/STM-Simulator/actions/runs/39257882264) 성공.
