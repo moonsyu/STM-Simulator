@@ -69,7 +69,9 @@ export function halExample(kind){
   return configureHalCircuit(p,exampleId);
 }
 
+// Laying out a complete example is deterministic, so each one is planned once per session.
+const arranged=new Map();
 export function applyHalExample(project,kind){
-  const sample=arrangeExampleOnBreadboards(halExample(kind));
-  return {...sample,name:project.name};
+  if(!arranged.has(kind))arranged.set(kind,arrangeExampleOnBreadboards(halExample(kind)));
+  return {...structuredClone(arranged.get(kind)),name:project.name};
 }

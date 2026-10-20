@@ -17,7 +17,7 @@ import {resetBoardConfiguration} from './board-reset.js';
 import {selectedIds,isSelected,toggleSelection,wirePoints,insertWirePoint,connectedNet,copySelection,pasteSelection,moveSelection,boxSelection} from './circuit-edit.js';
 import {zoomView} from './canvas-view.js';
 import {circuitDiagnostics} from './circuit-diagnostics.js';
-import {PINS,BB,PIN_BY_ID,endpointInfo,searchPins,circuitHoles,holeInfo} from './pins.js';
+import {PINS,BB,PIN_BY_ID,endpointInfo,searchPins,circuitHoles,holeInfo,breadboardModel} from './pins.js';
 import {TWO_PIN_TYPES,MULTI_PIN_TYPES,WIRE_COLORS,PART_DEFS,terminalKeys,attachments,detachPart,normalizeAngle} from './components.js';
 import {findMount,applyMount,occupiedHoles} from './placement.js';
 import {SimulationSession} from './session.js';
@@ -26,7 +26,7 @@ import {BuzzerAudio} from './buzzer-audio.js';
 import {Monitor} from './monitor.js';
 import {partControls,partReadouts} from './part-controls.js';
 import {blankProject,validateProject,projectForBoard} from './project.js';
-import {moveBreadboard,removeBreadboard} from './breadboards.js';
+import {moveBreadboard,removeBreadboard,isBreadboardLibraryType,newBreadboardFields,breadboardBounds} from './breadboards.js';
 import {setupBoardPicker} from './board-picker.js';
 import {PinoutPanel} from './pinout-ui.js';
 import {defaultMcu} from './mcu-config.js';
@@ -228,7 +228,7 @@ function inspector(force=false){
  } else if(selection.type==='part'){
    const p=project.components.find(p=>p.id===selection.id);if(!p)return;
    if(p.type==='breadboard'){
-    el.innerHTML=`<span class="overline">BREADBOARD</span><h2 title="${esc(p.name)}">${esc(p.name)}</h2><p>400홀 · A–E / F–J 행과 전원 레일은 각각 연결됩니다. 다른 빵판과는 배선으로 연결해야 합니다.</p><div class="inspector-card"><label for="part-name">빵판 이름</label><input id="part-name" value="${esc(p.name)}" maxlength="80" ${running()?'disabled':''}></div><p>테두리를 끌어 이동하세요. 장착한 부품과 배선도 함께 이동합니다. 삭제하면 구멍에 연결된 배선과 장착 연결이 해제되며 다른 부품은 남습니다.</p><div class="measure"><span>회전 각도</span><b>${p.rotation}°</b></div><button class="inspector-action" id="inspect-open-docs">장치 Docs · 배선/예제 보기</button><button class="inspector-action" id="rotate-part" ${running()?'disabled':''}>45° 회전 (R)</button><button class="inspector-action danger" id="remove-part" ${running()?'disabled':''}>빵판 삭제</button>`;
+    el.innerHTML=`<span class="overline">BREADBOARD</span><h2 title="${esc(p.name)}">${esc(p.name)}</h2><p>${breadboardModel(p).label} · A–E / F–J 행과 전원 레일은 각각 연결됩니다. 다른 빵판과는 배선으로 연결해야 합니다.</p><div class="inspector-card"><label for="part-name">빵판 이름</label><input id="part-name" value="${esc(p.name)}" maxlength="80" ${running()?'disabled':''}></div><p>테두리를 끌어 이동하세요. 장착한 부품과 배선도 함께 이동합니다. 삭제하면 구멍에 연결된 배선과 장착 연결이 해제되며 다른 부품은 남습니다.</p><div class="measure"><span>회전 각도</span><b>${p.rotation}°</b></div><button class="inspector-action" id="inspect-open-docs">장치 Docs · 배선/예제 보기</button><button class="inspector-action" id="rotate-part" ${running()?'disabled':''}>45° 회전 (R)</button><button class="inspector-action danger" id="remove-part" ${running()?'disabled':''}>빵판 삭제</button>`;
     $('part-name').onchange=e=>{checkpoint();p.name=e.target.value.trim()||p.name;changed();};$('inspect-open-docs').onclick=()=>tab('docs');$('rotate-part').onclick=rotateSelected;$('remove-part').onclick=removeSelected;return;
    }
    const read=result?.parts[p.id],mounted=Object.keys(attachments(p)).length;
@@ -266,10 +266,10 @@ function rotateSelected(){
  else {applyMount(p,findMount(p,project.components,15,project.surfaces));changed();}
 }
 function editUndo(redo=false){if(running())return;const from=redo?redoStack:undoStack,to=redo?undoStack:redoStack;if(!from.length)return;to.push(JSON.stringify(project));project=JSON.parse(from.pop());selection=null;pending=null;syncEditor();changed();pinSearch();}
-function addPart(type,a,b,position){
+function addPart(type,a,b,position,extra={}){
  if(project.components.length>=100){log('부품은 100개까지 추가할 수 있습니다.','error');return;}
  const name=((({resistor:'R',led:'LED',button:'SW',lcd:'LCD',breadboard:'BB'})[type])||PART_DEFS[type]?.prefix)+(project.components.filter(p=>p.type===type).length+1);
- const p={id:uid('p'),type,name,x:position?.x??(a.x+b.x)/2,y:position?.y??(a.y+b.y)/2,rotation:0};
+ const p={id:uid('p'),type,name,x:position?.x??(a.x+b.x)/2,y:position?.y??(a.y+b.y)/2,rotation:0};Object.assign(p,extra);
  if(type==='resistor')p.value=330;if(type==='led')p.color='red';Object.assign(p,PART_DEFS[type]?.defaults||{});
  if(TWO_PIN_TYPES.includes(type)){p.span=a&&b?Math.hypot(b.x-a.x,b.y-a.y):70;if(a&&b){p.attachA=a.id;p.attachB=b.id;p.rotation=normalizeAngle(Math.atan2(b.y-a.y,b.x-a.x)*180/Math.PI);}}
  checkpoint();project.components.push(p);selection={type:'part',id:p.id};pending=null;mode='select';$('preview-layer').innerHTML='';inspectTab();changed();
@@ -364,8 +364,8 @@ svg.addEventListener('wheel',e=>{e.preventDefault();if(!e.deltaY)return;const st
 $('zoom-in').onclick=()=>zoom(1/1.2);$('zoom-out').onclick=()=>zoom(1.2);$('zoom-reset').onclick=fitView;
 function fitView(){
  const scaled=Object.values(project.surfaces||{}).some(s=>scaleXOf(s)!==1||scaleYOf(s)!==1||s.x!==undefined)||project.components.some(p=>scaleXOf(p)!==1||scaleYOf(p)!==1||p.skewX||p.x<0||p.y<0||p.x>1120||p.y>730)||project.wires.some(w=>w.points?.some(p=>p.x<0||p.y<0||p.x>1120||p.y>730));
- if(scaled){const boxes=[{x:0,y:0,w:1120,h:730},...project.wires.flatMap(w=>(w.points||[]).map(p=>({...p,w:0,h:0}))),...Object.entries({board:BOARD,breadboard:BB}).filter(([key])=>!project.surfaces?.[key]?.hidden).map(([name,b])=>({...surfaceOrigin(name,project.surfaces),w:b.w*scaleXOf(project.surfaces?.[name]),h:b.h*scaleYOf(project.surfaces?.[name])})),...project.components.map(p=>{const points=[[-170,-280],[170,-280],[170,280],[-170,280]].map(([x,y])=>partVector(p,x,y)),xs=points.map(v=>p.x+v.x),ys=points.map(v=>p.y+v.y);return {x:Math.min(...xs),y:Math.min(...ys),w:Math.max(...xs)-Math.min(...xs),h:Math.max(...ys)-Math.min(...ys)};})],x=Math.min(...boxes.map(b=>b.x))-20,y=Math.min(...boxes.map(b=>b.y))-20,right=Math.max(...boxes.map(b=>b.x+b.w))+20,bottom=Math.max(...boxes.map(b=>b.y+b.h))+20,w=Math.max(right-x,(bottom-y)*1120/730);view={x,y,w,h:w*730/1120};}
- else{const extra=project.components.filter(p=>p.type==='breadboard');let w=1120;if(extra.length)w=Math.max(w,...project.components.map(p=>p.x+360),...project.components.map(p=>(p.y+360)*1120/730));view={x:0,y:0,w,h:w*730/1120};}viewUpdate();
+ if(scaled){const boxes=[{x:0,y:0,w:1120,h:730},...project.wires.flatMap(w=>(w.points||[]).map(p=>({...p,w:0,h:0}))),...Object.entries({board:BOARD,breadboard:BB}).filter(([key])=>!project.surfaces?.[key]?.hidden).map(([name,b])=>({...surfaceOrigin(name,project.surfaces),w:b.w*scaleXOf(project.surfaces?.[name]),h:b.h*scaleYOf(project.surfaces?.[name])})),...project.components.map(p=>{if(p.type==='breadboard'){const b=breadboardBounds(p);return {x:b.left,y:b.top,w:b.right-b.left,h:b.bottom-b.top};}const points=[[-170,-280],[170,-280],[170,280],[-170,280]].map(([x,y])=>partVector(p,x,y)),xs=points.map(v=>p.x+v.x),ys=points.map(v=>p.y+v.y);return {x:Math.min(...xs),y:Math.min(...ys),w:Math.max(...xs)-Math.min(...xs),h:Math.max(...ys)-Math.min(...ys)};})],x=Math.min(...boxes.map(b=>b.x))-20,y=Math.min(...boxes.map(b=>b.y))-20,right=Math.max(...boxes.map(b=>b.x+b.w))+20,bottom=Math.max(...boxes.map(b=>b.y+b.h))+20,w=Math.max(right-x,(bottom-y)*1120/730);view={x,y,w,h:w*730/1120};}
+ else{const extra=project.components.filter(p=>p.type==='breadboard');let w=1120;if(extra.length)w=Math.max(w,...project.components.map(p=>p.type==='breadboard'?breadboardBounds(p).right+40:p.x+360),...project.components.map(p=>(p.type==='breadboard'?breadboardBounds(p).bottom+40:p.y+360)*1120/730));view={x:0,y:0,w,h:w*730/1120};}viewUpdate();
 }
 function pinSearch(){
  const pins=project.surfaces?.board?.hidden?[]:searchPins($('pin-search').value);
@@ -452,10 +452,9 @@ $('tool-select').onclick=()=>setMode('select');$('delete').onclick=removeSelecte
 document.querySelectorAll('[data-add]').forEach(b=>b.onclick=()=>{if(running())return;const type=b.dataset.add;if(type==='board'){
  if(project.surfaces?.board?.hidden){checkpoint();showSurface(project,'board');changed();pinSearch();}
  selection={type:'surface',id:'board'};pending=null;mode='select';inspectTab();fitView();refresh();svg.focus({preventScroll:true});return;
- }if(type==='breadboard'){
- const boards=project.components.filter(p=>p.type==='breadboard');if(boards.length>=8){log('추가 빵판은 8개까지 사용할 수 있습니다.','error');return;}
- let position;for(let i=0;i<32;i++){const x=BB.x+BB.w/2+390*((project.surfaces?.breadboard?.hidden?0:1)+i%4),y=BB.y+BB.h/2+600*Math.floor(i/4);if(!boards.some(p=>Math.abs(p.x-x)<350&&Math.abs(p.y-y)<560)){position={x,y};break;}}
- addPart(type,null,null,position);fitView();svg.focus({preventScroll:true});
+ }if(isBreadboardLibraryType(type)){
+ let f;try{f=newBreadboardFields(project,type);}catch(e){log(e.message,'error');return;}
+ addPart('breadboard',null,null,{x:f.x,y:f.y},f.variant?{variant:f.variant}:{});fitView();svg.focus({preventScroll:true});
 }else if(MULTI_PIN_TYPES.includes(type)){addPart(type,null,null,{x:view.x+view.w*.48,y:view.y+view.h*.85});svg.focus({preventScroll:true});}else setMode(type);});
 $('empty-add-board').onclick=()=>document.querySelector('[data-add="board"]')?.click();$('empty-open-parts').onclick=()=>layout.showView('parts');$('empty-open-examples').onclick=()=>layout.showView('examples');
 $('wire-palette').innerHTML=WIRE_COLORS.map(([value,name],i)=>`<button data-palette="${i<10?'basic':'pastel'}" data-color="${value}" class="swatch ${value===color?'active':''}" style="--swatch:${value}" title="${name} 배선" aria-label="${name} 배선"></button>`).join('');

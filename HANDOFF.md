@@ -1,6 +1,14 @@
 # STM Simulator — 개발 인계
 
-현재 버전: **0.26.0**. 정리일: **2026-10-20**. NUCLEO-F446RE와 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M4 에뮬레이터에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+현재 버전: **0.27.0**. 정리일: **2026-10-21**. NUCLEO-F446RE와 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M4 에뮬레이터에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+
+## 0.27.0 빵판 · 예제 배선 최적화 · Docs 제거 · 단축키 · UI 정리
+
+- **빵판**: 400홀 하프 빵판 그림을 실물 사진에 맞춰 다시 그렸다(구멍 ID·좌표 불변). 830홀 풀사이즈 빵판은 `type:'breadboard'`에 `variant:'full'`(63열 a–e/f–j, 위·아래 레일 50홀). 모델은 `pins.js`의 `BREADBOARD_VARIANTS`/`breadboardModel(part)`, 배치·경계는 `breadboards.js`(`newBreadboardFields`, `breadboardBounds`). 부품 목록 항목 `breadboard_full`.
+- **예제 배선**: `src/example-layout.js`(배치 계획)·`src/wire-router.js`(경로)로 127개 예제를 다시 배선했다. 배선 1167→684개, 교차 1475→17개, 겹침 1075→0. 넷리스트·핀·코드는 그대로이며 `tests/unit/example-wiring.test.js`가 지표(`tests/fixtures/example-wiring-baseline.json`)를 지킨다. ov2640_camera, camera_tft, motor_driver_hat, matrix_10은 기존 배치 후 경로만 다시 계산한다.
+- **장치 Docs**: 장치별 `/* STM-DOCS BEGIN <type>:<partId> <ROLE> */` 표식으로 삽입 영역을 추적한다. GPIO는 `MX_GPIO_Init`, 주변장치는 `MX_<P>_Init`(없으면 Cube 방식 생성). BareMetal 모드는 레지스터 예제를 적용한다. `removeDeviceExample`로 코드만/코드와 회로를 제거하며 다른 예제가 쓰는 설정은 유지한다. 영역 안을 수정해도 제거된다. 0.23~0.26 공용 영역은 변환한다.
+- **단축키**: `src/keybindings.js`(기본값·저장 `stm32lab.keybindings.v1`·두 단계 키). `shell.js`의 단일 캡처 리스너가 처리한다. 기본 Ctrl+F5 실행, F10 디버그 시작(멈춤 시 계속), F11 한 줄 실행, Ctrl+F2 중지. **편집 → 단축키 설정** 보기에서 변경. 숨은 Electron 기본 메뉴가 F11·Ctrl+R·Ctrl+W를 가로채므로 `Menu.setApplicationMenu(null)`.
+- **UI**: 태양/달 아이콘 하나로 Dark/White(System 기본), 설정은 편집 메뉴로 이동(활동 바 아이콘 제거), 활동 바 툴팁은 아이콘 오른쪽, 아이콘 드래그 정렬(`activityOrder` 저장), 실행 환경은 실행 및 디버그 보기 위쪽, 제목 표시줄의 프로젝트 이름·업데이트 버튼 제거(도움말 메뉴·상태 표시줄), 코드/회로 그룹 사이 1px 구분선.
 
 ## 0.26.0 VS Code형 작업 화면 · 펌웨어 에뮬레이터 · 테스트 재작성
 

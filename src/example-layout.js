@@ -12,13 +12,14 @@ import {wiringTopology} from './circuit-topology.js';
 import {routeWires} from './wire-router.js';
 
 const GND='#4e647b',POWER='#dd654c';
-const SIGNAL_COLORS=['#ebbd2b','#2786d7','#23a68a','#8064d8','#ee8735','#df68ac','#8b603e','#edf2f5','#a9d6ed','#b8dfa4','#f6c28b','#cdb4e8','#f4a6a6','#a4d8c5','#f5e6a1','#b4bbed','#edbad5','#d8c5b4'];
+const SIGNAL_COLORS=['#ebbd2b','#2786d7','#23a68a','#8064d8','#ee8735','#df68ac','#8b603e','#a9d6ed','#b8dfa4','#f6c28b','#cdb4e8','#f4a6a6','#a4d8c5','#f5e6a1','#b4bbed','#edbad5','#d8c5b4'];
 const SUPPLIES=new Set(['GND','3V3','5V','VDD','VIN','E5V','U5V','AVDD','IOREF','VBAT']);
 const SERIES_TYPES=['resistor','ref_resistor_axial_2','diode','ref_diode_axial_2','capacitor','ref_capacitor_ceramic_2'];
 const term=(p,k)=>`part:${p.id}:${k}`;
 const manhattan=(a,b)=>Math.abs(a.x-b.x)+Math.abs(a.y-b.y);
 const key=p=>Math.round(p.x*2)/2+','+Math.round(p.y*2)/2;
-const boxOf=(p)=>{const b=displayModel(p)?.bounds||{left:-30,right:30,top:-25,bottom:25},r=(p.rotation||0)*Math.PI/180,c=Math.cos(r),s=Math.sin(r);const pts=[[b.left,b.top],[b.right,b.top],[b.left,b.bottom],[b.right,b.bottom]].map(([x,y])=>({x:p.x+x*c-y*s,y:p.y+x*s+y*c}));return {left:Math.min(...pts.map(q=>q.x)),right:Math.max(...pts.map(q=>q.x)),top:Math.min(...pts.map(q=>q.y)),bottom:Math.max(...pts.map(q=>q.y))};};
+const localBounds=new WeakMap();
+const boxOf=(p,source=p)=>{let b=localBounds.get(source);if(!b){b=displayModel({...p,x:0,y:0,rotation:0})?.bounds||{left:-30,right:30,top:-25,bottom:25};localBounds.set(source,b);}const r=(p.rotation||0)*Math.PI/180,c=Math.cos(r),s=Math.sin(r);const pts=[[b.left,b.top],[b.right,b.top],[b.left,b.bottom],[b.right,b.bottom]].map(([x,y])=>({x:p.x+x*c-y*s,y:p.y+x*s+y*c}));return {left:Math.min(...pts.map(q=>q.x)),right:Math.max(...pts.map(q=>q.x)),top:Math.min(...pts.map(q=>q.y)),bottom:Math.max(...pts.map(q=>q.y))};};
 const inBox=(b,p,m=0)=>p.x>b.left-m&&p.x<b.right+m&&p.y>b.top-m&&p.y<b.bottom+m;
 const overlap=(a,b,m=0)=>a.left<b.right+m&&a.right>b.left-m&&a.top<b.bottom+m&&a.bottom>b.top-m;
 const normalize=s=>s==='AGND'?'GND':s;
@@ -41,7 +42,7 @@ function accessPins(project,signal){
 /** Plans the layout in place. Returns the project, or null when the planner gives up. */
 let lastFailure='';
 export const layoutFailure=()=>lastFailure;
-export function planExampleLayout(source,{variant='half',debug=false}={}){
+export function planExampleLayout(source,{variant='half',debug=false,halfShift=42}={}){
  lastFailure='';
  const project=structuredClone(source);
  if(project.surfaces?.board?.hidden)return null;
@@ -55,7 +56,7 @@ export function planExampleLayout(source,{variant='half',debug=false}={}){
  const mcuRight=surfacePoint({x:BOARD.x+BOARD.w,y:BOARD.y},'board',project.surfaces).x;
  let holes;
  if(variant==='half'){
-  project.surfaces={...(project.surfaces||{}),breadboard:{x:mcuRight+68,y:BB.y}};
+  project.surfaces={...(project.surfaces||{}),breadboard:{x:mcuRight+68,y:BB.y+halfShift}};
   holes=circuitHoles([],project.surfaces);
  }else{
   project.surfaces={...(project.surfaces||{}),breadboard:{hidden:true}};
@@ -66,11 +67,13 @@ export function planExampleLayout(source,{variant='half',debug=false}={}){
  const mcuBox=(()=>{const a=surfacePoint({x:BOARD.x,y:BOARD.y},'board',project.surfaces),b=surfacePoint({x:BOARD.x+BOARD.w,y:BOARD.y+BOARD.h},'board',project.surfaces);return {left:a.x,top:a.y,right:b.x,bottom:b.y};})();
  const strips=new Map(),holeAt=new Map();
  for(const h of holes){if(!strips.has(h.bus))strips.set(h.bus,{bus:h.bus,holes:[],net:null,rail:h.id.includes('rail:')});strips.get(h.bus).holes.push(h);if(!h.id.includes('rail:'))holeAt.set(key(h),h);}
- const state={used:new Set(),bodies:[],covered:new Set()};
+ const state={used:new Set(),bodies:[],covered:new Set(),leadAt:new Map()};
  const cells=new Map(),cell=p=>Math.floor(p.x/14)+':'+Math.floor(p.y/14);
  for(const h of holeAt.values()){const c=cell(h);if(!cells.has(c))cells.set(c,[]);cells.get(c).push(h);}
  const near=(p,r)=>{const out=[],n=Math.ceil(r/14);const cx=Math.floor(p.x/14),cy=Math.floor(p.y/14);for(let i=-n;i<=n;i++)for(let j=-n;j<=n;j++){const list=cells.get((cx+i)+':'+(cy+j));if(list)out.push(...list);}return out;};
- const coveredBy=box=>holes.filter(h=>inBox(box,h,2)).map(h=>h.id);
+ const allCells=new Map();for(const h of holes){const c=Math.floor(h.x/14)+':'+Math.floor(h.y/14);if(!allCells.has(c))allCells.set(c,[]);allCells.get(c).push(h);}
+ const coveredBy=box=>{const out=[];for(let i=Math.floor((box.left-2)/14);i<=Math.floor((box.right+2)/14);i++)for(let j=Math.floor((box.top-2)/14);j<=Math.floor((box.bottom+2)/14);j++)for(const h of allCells.get(i+':'+j)||[])if(inBox(box,h,2))out.push(h.id);return out;};
+ const holeById=new Map(holes.map(h=>[h.id,h]));
  const freeHoles=(strip,extraUsed=new Set(),extraCovered=new Set())=>strip.holes.filter(h=>!state.used.has(h.id)&&!state.covered.has(h.id)&&!extraUsed.has(h.id)&&!extraCovered.has(h.id));
  // Targets a lead's net wants to reach: header pins of its signals or strips of placed partners.
  const pinTargets=new Map();
@@ -84,9 +87,10 @@ export function planExampleLayout(source,{variant='half',debug=false}={}){
   const targets=[...(pinTargets.get(n)||[]),...placedStrips(n).flatMap(s=>freeHoles(s,extraUsed,extraCovered))];
   if(!targets.length)return 0;
   let best=Infinity;
+  // A body between the socket and its target forces a detour.
+  const blockers=box?[...state.bodies.map(b=>b.box),box]:state.bodies.map(b=>b.box);
   for(const h of free)for(const t of targets){let c=manhattan(h,t);
-   // A body between the socket and its target forces a detour.
-   const blockers=[...state.bodies.map(b=>b.box),box].filter(Boolean);
+   if(c-0>=best)continue;
    if(blockers.some(b=>h.y>b.top&&h.y<b.bottom&&((t.x<h.x&&b.right<=h.x&&b.right>t.x)||(t.x>h.x&&b.left>=h.x&&b.left<t.x))))c+=160;
    best=Math.min(best,c);}
   return best;
@@ -115,7 +119,7 @@ export function planExampleLayout(source,{variant='half',debug=false}={}){
 
  function evaluate(p,positioned,map){
   // map: key → hole. Returns cost or null.
-  const box=boxOf(positioned),leadHoles=Object.values(map),leadIds=new Set(leadHoles.map(h=>h.id));
+  const box=boxOf(positioned,p),leadHoles=Object.values(map),leadIds=new Set(leadHoles.map(h=>h.id));
   if(!overlap(box,bbBox)&&!inBox(bbBox,{x:(box.left+box.right)/2,y:(box.top+box.bottom)/2}))return null;
   if(box.left<bbBox.left-40||box.right>bbBox.right+40||box.top<bbBox.top-40||box.bottom>bbBox.bottom+40)return null;
   if(overlap(box,mcuBox,6)||state.bodies.some(b=>overlap(box,b.box,3)))return null;
@@ -129,11 +133,15 @@ export function planExampleLayout(source,{variant='half',debug=false}={}){
    if(nets.has(h.bus)&&nets.get(h.bus)!==n)return null;nets.set(h.bus,n);
   }
   // Every strip in use keeps a free socket for its jumper.
-  for(const s of strips.values()){
+  const affected=new Set([...nets.keys(),...[...cover].map(id=>holeById.get(id).bus)]);
+  for(const bus of affected){const s=strips.get(bus);
    const n=s.net||nets.get(s.bus);if(!n||s.rail)continue;
    const free=freeHoles(s,leadIds,cover);
-   const complete=!n.signals.size&&n.terms.every(t=>t.part===p||state.done?.has(t.part.id))&&placedStrips(n).length===0&&[...nets.values()].filter(x=>x===n).length<=1;
-   if(!free.length&&!complete)return null;
+   // Sockets this strip still needs: one for the header wire, one to join leads elsewhere.
+   const here=s.holes.filter(h=>state.leadAt.has(h.id)||leadIds.has(h.id)).length,outside=n.terms.length-here;
+   const supply=n.signals.size&&[...n.signals].every(x=>SUPPLIES.has(x));
+   const need=!n.signals.size?(outside>0?1:0):supply?1:1+(outside>0?1:0);
+   if(free.length<need)return null;
   }
   for(const [k,h]of Object.entries(map)){const n=netOf.get(term(p,k));if(n)cost+=leadCost(n,strips.get(h.bus),leadIds,cover,box,term(p,k));}
   // Keep the order of signal leads in the order of the header pins they use.
@@ -184,10 +192,10 @@ export function planExampleLayout(source,{variant='half',debug=false}={}){
   const saved={x:p.x,y:p.y,rotation:p.rotation,span:p.span,map:attachments(p)},nets=[],used=[],covered=[];
   Object.assign(p,{x:c.positioned.x,y:c.positioned.y,rotation:c.positioned.rotation});if(TWO_PIN_TYPES.includes(p.type))p.span=c.positioned.span;
   assignAttachments(p,Object.fromEntries(Object.entries(c.map).map(([k,h])=>[k,h.id])));
-  for(const [k,h]of Object.entries(c.map)){if(!state.used.has(h.id)){state.used.add(h.id);used.push(h.id);}const n=netOf.get(term(p,k)),strip=strips.get(h.bus);if(n&&!strip.net){strip.net=n;nets.push(strip);}}
+  for(const [k,h]of Object.entries(c.map)){if(!state.used.has(h.id)){state.used.add(h.id);used.push(h.id);state.leadAt.set(h.id,term(p,k));}const n=netOf.get(term(p,k)),strip=strips.get(h.bus);if(n&&!strip.net){strip.net=n;nets.push(strip);}}
   for(const id of c.cover)if(!state.covered.has(id)){state.covered.add(id);covered.push(id);}
   state.bodies.push({id:p.id,box:c.box});state.done.add(p.id);
-  return ()=>{for(const id of used)state.used.delete(id);for(const id of covered)state.covered.delete(id);for(const strip of nets)strip.net=null;state.bodies.pop();state.done.delete(p.id);
+  return ()=>{for(const id of used){state.used.delete(id);state.leadAt.delete(id);}for(const id of covered)state.covered.delete(id);for(const strip of nets)strip.net=null;state.bodies.pop();state.done.delete(p.id);
    Object.assign(p,{x:saved.x,y:saved.y,rotation:saved.rotation});if(saved.span!==undefined)p.span=saved.span;assignAttachments(p,saved.map);};
  }
  const placed=new Set();
@@ -197,7 +205,7 @@ export function planExampleLayout(source,{variant='half',debug=false}={}){
   const list=candidates(p).sort((a,b)=>a.cost-b.cost);
   if(!list.length){lastFailure='place '+p.id;return null;}
   let best=null;
-  for(const c of hosted.length?list.slice(0,40):list.slice(0,1)){
+  for(const c of hosted.length?list.slice(0,16):list.slice(0,1)){
    const undo=commit(p,c),undos=[];let total=c.cost;
    for(const sp of hosted){const options=candidates(sp.part).sort((x,y)=>x.cost-y.cost);if(!options.length){total+=400;continue;}total+=options[0].cost;undos.push(commit(sp.part,options[0]));}
    for(const u of undos.reverse())u();undo();
@@ -217,7 +225,9 @@ export function planExampleLayout(source,{variant='half',debug=false}={}){
  const pickHole=(list,target)=>list.slice().sort((a,b)=>manhattan(a,target)+blockedRay(a,target)-manhattan(b,target)-blockedRay(b,target))[0];
  const pickPin=(signal,target)=>accessPins(project,signal).filter(p=>!usedPins.has(p.id)).sort((a,b)=>manhattan(a,target)+(a.x<target.x?0:40)-manhattan(b,target)-(b.x<target.x?0:40))[0];
  const color=(n,signal)=>{if(signal==='GND')return GND;if(SUPPLIES.has(signal))return POWER;if(colorOf.has(n))return colorOf.get(n);
-  const label=n.terms.map(t=>terminalLabel(t.part,t.key)).find(l=>/^(R|G|B|RED|GREEN|BLUE)$/i.test(l));
+  // Look through an in-line resistor to the lead it drives (RGB channels keep their own colour).
+  const through=n.terms.flatMap(t=>{const sp=series.get(t.part.id);return sp&&t.key===sp.outer?[sp.host,t]:[t];});
+  const label=through.map(t=>terminalLabel(t.part,t.key)).find(l=>/^(R|G|B|RED|GREEN|BLUE)$/i.test(l));
   const c=label?{R:'#dd654c',RED:'#dd654c',G:'#23a68a',GREEN:'#23a68a',B:'#2786d7',BLUE:'#2786d7'}[label.toUpperCase()]:SIGNAL_COLORS[signalIndex++%SIGNAL_COLORS.length];colorOf.set(n,c);return c;};
  const add=(from,to,c)=>{wires.push({id:'w'+(wires.length+1),from,to,color:c});};
  const railFor=new Map();
@@ -231,44 +241,42 @@ export function planExampleLayout(source,{variant='half',debug=false}={}){
    // Rail hub: the minus rail for ground, a plus rail per supply voltage.
    const want=signals[0]==='GND'?'-':'+';
    const rails=[...strips.values()].filter(s=>s.rail&&s.bus.includes(':'+want)&&!railFor.has(s.bus)&&s.holes.some(holeFree));
-   if(!rails.length)return null;
+   if(!rails.length){lastFailure='wire1';return null;}
    const score=s=>roots.reduce((sum,r)=>{const hs=groupHoles(r);return sum+Math.min(...hs.map(h=>Math.min(...s.holes.filter(holeFree).map(q=>manhattan(h,q)))));},0)+Math.min(...s.holes.map(q=>Math.min(...accessPins(project,signals[0]).map(p=>manhattan(p,q)))))*.5;
    const rail=rails.sort((a,b)=>score(a)-score(b))[0];railFor.set(rail.bus,signals[0]);
    const c=color(n,signals[0]);
    let feed=null,bestFeed=Infinity;
    for(const pin of accessPins(project,signals[0]).filter(p=>!usedPins.has(p.id)))for(const q of rail.holes.filter(holeFree)){const d=manhattan(pin,q)+(pin.x<q.x?0:60);if(d<bestFeed){bestFeed=d;feed=[pin,q];}}
-   if(!feed)return null;usedPins.add(feed[0].id);add(feed[0].id,take(feed[1]),c);
+   if(!feed){lastFailure='wire2';return null;}usedPins.add(feed[0].id);add(feed[0].id,take(feed[1]),c);
    for(const r of roots){
     let best=null,min=Infinity;
     for(const h of groupHoles(r))for(const q of rail.holes.filter(holeFree)){const d=Math.abs(h.x-q.x)+Math.abs(h.y-q.y)*2.5+blockedRay(h,q);if(d<min){min=d;best=[h,q];}}
-    if(!best)return null;add(take(best[0]),take(best[1]),c);
+    if(!best){lastFailure='wire3';return null;}add(take(best[0]),take(best[1]),c);
    }
    continue;
   }
   const c=color(n,signals.find(s=>!SUPPLIES.has(s))||signals[0]);
-  const connected=[];// holes reachable in the tree
   const groups=roots.map(r=>({root:r,holes:groupHoles(r)}));
-  if(groups.some(g=>!g.holes.length&&roots.length+signals.length>1))return null;
+  if(groups.some(g=>!g.holes.length&&roots.length+signals.length>1)){lastFailure='wire4';return null;}
   if(!groups.length&&signals.length>=2){
    // Pins wired to each other run through one free terminal strip.
    const target=accessPins(project,signals[0])[0];
    const strip=[...strips.values()].filter(s=>!s.rail&&!s.net&&s.holes.filter(holeFree).length>=signals.length).sort((a,b)=>manhattan(a.holes[0],target)-manhattan(b.holes[0],target))[0];
-   if(!strip)return null;strip.net=n;groups.push({root:null,holes:strip.holes.filter(holeFree)});
+   if(!strip){lastFailure='wire5';return null;}strip.net=n;groups.push({root:null,holes:strip.holes.filter(holeFree)});
   }
-  const pending=[...groups];
-  // Header signals first: each signal joins the nearest group.
-  for(const s of signals){
-   if(!pending.length&&!connected.length)break;
-   let best=null,min=Infinity;
-   for(const g of (connected.length?[{holes:connected.filter(holeFree)}]:pending)){for(const h of g.holes.filter(holeFree)){const pin=pickPin(s,h);if(!pin)continue;const d=manhattan(pin,h)+blockedRay(h,pin);if(d<min){min=d;best={g,h,pin};}}}
-   if(!best)return null;usedPins.add(best.pin.id);add(best.pin.id,take(best.h),c);
-   if(pending.includes(best.g)){pending.splice(pending.indexOf(best.g),1);connected.push(...best.g.holes);}
-  }
-  if(!connected.length&&pending.length){connected.push(...pending.shift().holes);}
+  // Join the net's groups first (nearest free sockets), then bring each header signal to the
+  // nearest free socket anywhere on the joined net.
+  const pending=[...groups],connected=[];
+  if(pending.length)connected.push(...pending.shift().holes);
   while(pending.length){
    let best=null,min=Infinity;
    for(const g of pending)for(const h of g.holes.filter(holeFree))for(const q of connected.filter(holeFree)){const d=manhattan(h,q)+blockedRay(h,q)+blockedRay(q,h);if(d<min){min=d;best={g,h,q};}}
-   if(!best)return null;add(take(best.q),take(best.h),c);pending.splice(pending.indexOf(best.g),1);connected.push(...best.g.holes);
+   if(!best){lastFailure='join';return null;}add(take(best.q),take(best.h),c);pending.splice(pending.indexOf(best.g),1);connected.push(...best.g.holes);
+  }
+  for(const s of signals){
+   let best=null,min=Infinity;
+   for(const h of connected.filter(holeFree)){const pin=pickPin(s,h);if(!pin)continue;const d=manhattan(pin,h)+blockedRay(h,pin);if(d<min){min=d;best={h,pin};}}
+   if(!best){lastFailure='header '+s;if(debug){project.wires=wires;return project;}return null;}usedPins.add(best.pin.id);add(best.pin.id,take(best.h),c);
   }
  }
  project.wires=wires;
@@ -287,16 +295,32 @@ export function netSignature(project){
 }
 /** Lays out a complete example; null when neither breadboard size works without changing its netlist. */
 export function layoutExample(project){
- const intended=netSignature(project);
+ const intended=netSignature(project),options=[];
  for(const variant of ['half','full']){
   let planned=null;try{planned=planExampleLayout(project,{variant});}catch(e){lastFailure=e.message;planned=null;}
-  if(planned&&netSignature(planned)===intended)return planned;
+  if(planned&&netSignature(planned)===intended)options.push({planned,score:layoutScore(planned)});
+  // A half-size layout without crossings is comfortable; the full-size board is not tried.
+  if(variant==='half'&&options[0]&&!options[0].score.crossings)break;
  }
- return null;
+ // The 830-point board is used only when the circuit does not sit comfortably on the half-size
+ // board, i.e. it can be wired there with fewer crossings.
+ if(options.length===2){const [h,f]=options;if(f.score.crossings<h.score.crossings)return f.planned;}
+ return options[0]?.planned||null;
+}
+const segmentsOf=(project,w)=>{const a=endpointInfo(w.from,project.components,project.surfaces),b=endpointInfo(w.to,project.components,project.surfaces),pts=[a,...(w.points||[]),b];return pts.slice(1).map((q,i)=>[pts[i],q]);};
+/** Wire count, drawn length and right-angle crossings folded into one comparable number. */
+export function layoutScore(project){
+ const segs=project.wires.map(w=>segmentsOf(project,w));let length=0,crossings=0;
+ for(const list of segs)for(const [a,b]of list)length+=Math.abs(a.x-b.x)+Math.abs(a.y-b.y);
+ for(let i=0;i<segs.length;i++)for(let j=i+1;j<segs.length;j++)for(const [a,b]of segs[i])for(const [c,d]of segs[j]){
+  const h1=a.y===b.y,h2=c.y===d.y;if(h1===h2)continue;const [H,V]=h1?[[a,b],[c,d]]:[[c,d],[a,b]];
+  const x=V[0].x,y=H[0].y;if(x>Math.min(H[0].x,H[1].x)&&x<Math.max(H[0].x,H[1].x)&&y>Math.min(V[0].y,V[1].y)&&y<Math.max(V[0].y,V[1].y))crossings++;
+ }
+ return {total:length+project.wires.length*40+crossings*450,length,crossings};
 }
 /** Re-routes the existing wires of an arranged project on the lattice router; keeps the old bends on failure. */
 export function rerouteExampleWires(project){
- const bodies=project.components.filter(p=>p.type!=='breadboard').map(boxOf);
+ const bodies=project.components.filter(p=>p.type!=='breadboard').map(p=>boxOf(p));
  const origin=circuitHoles(project.components,project.surfaces).find(h=>!h.id.includes('rail:'));
  try{const routed=routeWires(project,project.wires,{bodies,origin:origin?{x:origin.x,y:origin.y}:{x:0,y:0}});for(const w of project.wires){const pts=routed.points.get(w.id);if(pts.length<=32)w.points=pts;}}catch{}
  return project;
