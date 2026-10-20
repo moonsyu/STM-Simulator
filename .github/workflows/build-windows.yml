@@ -45,7 +45,7 @@ jobs:
           $releaseVersion = (Get-Content package.json -Raw | ConvertFrom-Json).version
           if ($env:GITHUB_REF_NAME -cne "v$releaseVersion" -or $releaseVersion -notmatch '^\d+\.\d+\.\d+$') { throw 'Release tag must match the stable package version.' }
       - name: Unit, interpreter, emulator and firmware tests
-        run: npm test
+        run: npm test -- --test-reporter=spec --test-reporter-destination=stdout --test-reporter=./tests/github-reporter.mjs --test-reporter-destination=stdout
       - name: Install ARM GCC and STM32CubeF4 drivers for real firmware builds
         shell: pwsh
         run: |
@@ -62,16 +62,21 @@ jobs:
         shell: pwsh
         run: |
           $env:EXAMPLES = $env:TOOLCHAIN_EXAMPLES
-          npm run test:toolchain
+          npm run test:toolchain -- --test-reporter=spec --test-reporter-destination=stdout --test-reporter=./tests/github-reporter.mjs --test-reporter-destination=stdout
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Report firmware build failures
+        if: failure()
+        shell: pwsh
+        run: |
+          if (Test-Path work/test-results/toolchain-failures.json) { foreach ($f in (Get-Content work/test-results/toolchain-failures.json -Raw | ConvertFrom-Json)) { Write-Output "::error title=Firmware example::$($f -replace "`r?`n",' ')" } }
       - name: Electron end-to-end tests
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force work/test-results | Out-Null
-          npm run test:e2e 2>&1 | Tee-Object -FilePath work/test-results/e2e.log
+          npm run test:e2e -- --test-reporter=spec --test-reporter-destination=stdout --test-reporter=./tests/github-reporter.mjs --test-reporter-destination=stdout 2>&1 | Tee-Object -FilePath work/test-results/e2e.log
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Update helper replacement and rollback
-        run: node --test tests/release/update-helper.test.mjs
+        run: node --test --test-reporter=spec --test-reporter-destination=stdout --test-reporter=./tests/github-reporter.mjs --test-reporter-destination=stdout tests/release/update-helper.test.mjs
       - name: Upload test diagnostics on failure
         if: failure()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
@@ -88,7 +93,7 @@ jobs:
       - name: Verify package and prepare download
         run: npm run build:artifact
       - name: Verify the packaged app, its update helper and the portable EXE
-        run: node --test --test-concurrency=1 tests/release/packaged.test.mjs
+        run: node --test --test-concurrency=1 --test-reporter=spec --test-reporter-destination=stdout --test-reporter=./tests/github-reporter.mjs --test-reporter-destination=stdout tests/release/packaged.test.mjs
       - name: Upload Windows download
         id: upload
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
