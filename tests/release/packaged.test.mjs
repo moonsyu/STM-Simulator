@@ -20,8 +20,8 @@ test('packaged app opens the workbench and runs an example in the circuit simula
  try{
   const win=await app.firstWindow();await win.waitForSelector('html[data-shell="vscode"]');await win.waitForSelector('.monaco-editor');
   await win.click('[data-activity="examples"]');await win.fill('#hal-example-search','5mm 단색 LED');await win.locator('#hal-example-list [data-example]').first().click();
-  await win.keyboard.press('F5');await win.waitForFunction(()=>/PA5=1/.test(document.getElementById('console-output').textContent),null,{timeout:20000});
-  await win.keyboard.press('F5');
+  await win.keyboard.press('Control+F5');await win.waitForFunction(()=>/PA5=1/.test(document.getElementById('console-output').textContent),null,{timeout:20000});
+  await win.keyboard.press('Control+F2');
   for(const target of ['simulator','emulator','arm','host'])assert.ok(await win.locator(`#native-target option[value="${target}"]`).count(),target);
  }finally{await app.close().catch(()=>{});await temp.cleanup();}
 });
