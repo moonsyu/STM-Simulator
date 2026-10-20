@@ -1,6 +1,16 @@
 # STM Simulator — 개발 인계
 
-현재 공개 버전: **0.25.2**. 공개 EXE/ZIP·자동 업데이트 검증을 완료했습니다. 정리일: **2026-10-19**. NUCLEO-F446RE와 빵판을 연결하고 GPIO 스케치 또는 지원 HAL C 소스를 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+현재 버전: **0.26.0**. 정리일: **2026-10-20**. NUCLEO-F446RE와 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M4 에뮬레이터에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+
+## 0.26.0 VS Code형 작업 화면 · 펌웨어 에뮬레이터 · 테스트 재작성
+
+- **작업 화면**: `src/shell.js`/`src/shell.css`가 활동 바·사이드바 보기·편집기 그룹(코드/회로)·하단 패널·속성 보조 사이드바·상태 표시줄·메뉴·명령 팔레트를 구성한다. 기존 컨트롤은 ID와 리스너를 유지한 채 재배치하며 `layout.reveal/showView/showPanel/toggle/maximize` API를 제공한다. 배치는 `stm32lab.shellLayout.v1`에 저장한다. 이전 `workspace-layout.js`/`workbench-ui.js`/`layout-model.js`는 삭제했다. 화면 팔레트는 `ide-preferences.js`의 `LIGHT_UI`/`DARK_UI`(VS Code Modern 계열)이다.
+- **펌웨어 에뮬레이터**: `src/emu/`(bus·cpu·scs·elf·machine, QEMU 대조 19개 펌웨어)와 `src/emu/stm32f446/`(주변장치·soc·signals·fat), `src/firmware-session.js`(SimulationSession과 같은 인터페이스). 실행 대상 `emulator`는 `native-build.cjs`로 ARM 빌드 후 IPC `native:elf`로 ELF를 받아 실행한다. `firmware:open-elf`로 외부 ELF를 연다. 구조는 [EMULATOR.md](docs/architecture/EMULATOR.md).
+- **인터프리터 확장**: NVIC 선점(`hal-nvic.js`), HAL DMA(`hal-dma.js`), USART 동기(`hal-usart.js`), DCMI/카메라(`hal-dcmi.js`, `camera.js`), SD/FatFs(`hal-storage.js`, `sdcard.js`), 비트 단위 신호·잡음(`signals.js`), 새 예제 7개(`advanced-examples.js`, `allHalExamples()`로 등록).
+- **UI 연동**: 로직 분석기(`logic-analyzer.js`, `session.signals` 계약), 카메라 미리보기·SD 파일 목록(`part-media-ui.js`). SD 카드 이미지는 `part.cardImage`(SD1 형식)로 인터프리터와 에뮬레이터가 공유하며 정지 시 프로젝트에 저장한다.
+- **수정한 기존 결함**: ARM 빌드 환경의 SysTick/IRQ 처리기가 weak로 생성되어 시작 파일의 weak `Default_Handler`와 충돌해 `HAL_Delay`가 멈추던 문제(사용자 정의가 없을 때 strong으로 생성), MAX98357A I2S 예제의 PLLI2SM 누락, CubeMX `.ioc`의 `S_TIMx_CHy` 핀 가져오기, 포인터 뺄셈, 터미널 첫 프롬프트의 한글 경로 깨짐(작업 폴더도 상태에 표시).
+- **장치 외 점검 AUDIT-01~04**: 0.25.x 커밋 `fd53440`에서 수정되었고, 이번에 새 E2E 테스트(`tests/e2e/storage.e2e.test.mjs`)와 단위 테스트(`tests/unit/desktop.test.js`)로 다시 확인했다. [NON-DEVICE-AUDIT.md](docs/NON-DEVICE-AUDIT.md)는 해결 상태로 갱신했다.
+- **테스트 재작성**: 기존 `tests/*.test.js`와 `scripts/*-smoke.cjs`·`*-check.cjs`·감사 스크립트를 삭제하고 `tests/unit`, `tests/interp`, `tests/emu`, `tests/firmware`, `tests/e2e`, `tests/toolchain`, `tests/release`로 새로 작성했다. Node 22의 `node --test`는 디렉터리 인자를 받지 않으므로 package.json은 glob을 사용한다.
 
 ## 0.25.2 빵판 예제 배치 (공개 완료)
 
@@ -70,7 +80,7 @@
 - 기존 검색 카드와 추가 방식은 유지하고 113개 항목에 실제 장치 렌더러 기반 작은 이미지/확대 미리보기를 적용했습니다. `part-preview.js`, `part-preview-ui.js`, `part-preview.css`가 담당합니다.
 - 마우스와 키보드 초점, Esc로 미리보기만 닫기, 검색/클릭/스크롤 시 닫기, 좁은 화면 위치 보정, 실행 중 미리보기, 밝은/어두운 테마를 검사했습니다. `npm run test:part-previews:ui`를 Windows CI에 추가했습니다.
 - 장치 외 기능의 실패 경로 4건을 재현했으며 이번 범위에서는 수정하지 않았습니다. **후속 수정은 `docs/NON-DEVICE-AUDIT.md`부터 읽으세요.** 원인·코드 위치·재현 절차·우선순위·수정 방향이 있습니다. 사용자 응답에는 코드 위치를 나열하지 않습니다.
-- `scripts/audits/non-device-repro.cjs`는 알려진 결함의 재현용이며 정상 회귀 테스트가 아닙니다. CI에 넣지 않았습니다. 저장 트랜잭션/dirty flag(P1)부터 수정한 뒤 터미널 문맥/종료 자동 저장(P2)을 처리합니다.
+- 장치 외 점검 AUDIT-01~04(저장 트랜잭션·dirty 판단·터미널 문맥·종료 자동 저장)는 해결되었다. 재현 스크립트는 삭제했고 회귀 검사는 `tests/unit/desktop.test.js`와 `tests/e2e/storage.e2e.test.mjs`가 맡는다.
 - 로컬 전체 모델 269개, 실제 GCC/GDB/clangd 및 ARM HAL 링크, IDE 프로젝트·파일·검색·디버그·패널, colorscheme 등록, 업데이트 UI 검사를 통과했습니다. 실제 보드 디버깅은 미검증입니다.
 - [공개 v0.21.0](https://github.com/moonsyu/STM-Simulator/releases/tag/v0.21.0), 빌드/태그 `835ba6c7897f314fac2804aca51735a248dffeb4`, [전체 Windows CI](https://github.com/moonsyu/STM-Simulator/actions/runs/38700043749) 성공. 공개 EXE/ZIP 재다운로드·해시·커밋 문서 일치와 실제 공개 EXE의 113종 미리보기/기존 기능 검사를 통과했습니다. 최신 배포는 `outputs/artifact/STM-Simulator.exe`이며 상세 증거는 `docs/VERIFICATION.md`에 있습니다.
 
@@ -169,7 +179,7 @@
 
 - 장치 외형 조사(2026-10-14): [DEVICE-VISUAL-REFERENCES.md](docs/DEVICE-VISUAL-REFERENCES.md), [사진·핀 수 검색 자료집](docs/device-reference-gallery.html), 원본 `docs/device-visual-references.json`. 현재 부품 35종 전부를 80개 외형·핀 구성과 연결하고 MCU 내부 기능 24분류를 별도로 정리했다. 핀 수는 주요 외부 접점 기준이며 제어/부하/중복 커넥터·점퍼를 나눠 기록한다. 메모리 패키지와 7세그먼트 일부는 사진 대신 제조사 외형도를 연결한다. 사진은 원본 URL이며 앱 배포 자산에 포함하지 않는다. `node scripts/build-device-reference.mjs`로 현재 소스의 35종과 단자 일치를 확인하고 문서·HTML을 다시 생성한다. 실제 부품 추가 시 이 자료의 시뮬레이터 단순화·공통극·통신 방식 차이를 먼저 확인한다. 자료집 검증: 현재 소스 35종·단자 대조, 2/3핀 필터·LCD 4/16핀 구분·검색·표 전환·390px 모바일 표시, 사진 73항목 로드 및 제조사 도면 7항목 연결을 확인했다. 실행 증거는 `work/test-results/device-reference-check.json`과 `device-reference-*.png`다.
 
-- IDE 중심 화면에 프로젝트·코드·시뮬레이터·터미널 패널을 통합했다. 모든 패널은 1~99% 분할, 도킹 이동·접기·최대화를 지원한다. 과거 코드 300px/회로 470px/터미널 높이 제한은 없고 배치는 `stm32lab.workspaceLayout.v1`에 저장한다.
+- VS Code형 작업 화면(활동 바·사이드바·편집기 그룹·하단 패널·속성 패널·상태 표시줄·명령 팔레트). 경계선 크기 조절, 코드/회로 위치 바꾸기·분할 방향·최대화, 배치는 `stm32lab.shellLayout.v1`에 저장한다.
 - 폴더 프로젝트 생성·열기·저장, C/H 추가·이름 변경·삭제와 include 갱신, 외부 파일 변경 시 덮어쓰기 거부. 기존 `.stm32lab`과 프로필은 유지한다. 자동 복구된 프로젝트는 폴더 연결 없이 복구하므로 원래 폴더를 다시 열어야 한다.
 - Monaco 0.57.0 로컬 번들: 구문 강조·기본 완성·함수 정의 찾기·다중 커서·접기. ARM/Windows 대상에 clangd의 의미 분석·완성·호버·정의/참조·인수 안내·서식 정리를 연결한다. `npm ci`의 postinstall과 빌드에서 `src/generated/`를 생성한다. 이 폴더는 Git에 넣지 않는다.
 - 지원 소스 빌드·원본 파일 오류 위치, 중단점·일시정지·step into/over/out·변수·호출 스택·읽기 전용 감시식. 인터럽트 콜백은 우선순위 선점이 가능한 별도 실행 문맥이며 콜백 내부 중단점·호출 스택을 지원한다. 실행 대상이 ARM/Windows일 때는 실제 GCC 및 GDB를 사용한다. 사용자 사용법·한계는 [IDE 문서](docs/IDE.md).
@@ -190,7 +200,7 @@
 - 확장 14종: LDR, NTC, SHT31, MPU6050, PIR, SSD1306 OLED, ST7735 TFT, MAX7219, RC 서보, DC 모터/드라이버, 4상 스테퍼/드라이버, 릴레이, 조이스틱, 인코더. 각 HAL 예제와 전원·배선·프로토콜 조건 검사가 있다. 세부 명령 범위와 기계 모델 한계는 HAL-API 문서를 따른다.
 - Ctrl+F로 현재 소스에서 문자 그대로 검색하고 Ctrl+R로 단일/전체 치환한다. 치환은 파일 크기 제한과 프로젝트 Undo/Redo·저장을 따르며 실행 중에는 검색만 가능하다.
 - 배선 선택 시 SVG 선을 보존해 실제 더블클릭 이벤트를 유지한다. 꺾임점 크기는 화면 확대율에 맞추고 끌기는 누른 위치의 이동량을 적용한다.
-- 회로 시뮬레이터의 HAL은 지원 API를 회로에 연결하는 소스 해석 모델이다. ARM 대상의 실제 ST HAL 빌드·GDB 보드 실행과는 별개이며 ARM ELF를 가상 빵판에 연결하는 CPU 에뮬레이션은 구현하지 않았다. 세부 한계는 [HAL API](docs/HAL-API.md)를 따른다.
+- 회로 시뮬레이터의 HAL은 지원 API를 회로에 연결하는 소스 해석 모델이다. 실제 ST HAL로 빌드한 ARM ELF는 펌웨어 에뮬레이터(`src/emu`, `src/firmware-session.js`)가 Cortex-M4 명령어와 STM32F446 레지스터 단위로 실행해 같은 회로 모델에 연결한다. 세부 범위는 [HAL API](docs/HAL-API.md)와 [EMULATOR.md](docs/architecture/EMULATOR.md)를 따른다.
 
 - 배선 꺾임점 추가/드래그/삭제/자동 정렬, Shift 다중 선택과 Ctrl+C/V, 연결망 강조, 클릭 가능한 회로 진단을 제공한다. 원본 빵판을 제외하고 부품만 복사할 때도 부품 사이의 전기적 연결을 배선으로 보존한다.
 - 생성 main.c는 HSI PLL 클록과 정식 HAL 초기화를 포함하며 동일 Cube 환경으로 이식한다. `main.c 저장` IPC 및 ARM GCC/ST HAL 컴파일·링크 검사 스크립트가 있다. 실제 보드 실행은 별도이며 printf는 SWV 포트 0, nano float는 링크 옵션이 필요하다.
@@ -206,7 +216,7 @@
 |---|---|
 | `src/circuit-edit.js`, `src/circuit-diagnostics.js` | 배선 경로·복사·연결망·문제 위치 |
 | `src/timer-config.js`, `src/hal-timers.js`, `src/timer-examples.js` | 실제 타이머 AF·카운터/캡처/엔코더·HAL 회로 예제 |
-| `src/hal-generator.js`, `scripts/check-main-c.mjs` | 이식 가능한 main.c 생성·ST HAL ARM 컴파일/링크 검증 |
+| `src/hal-generator.js`, `tests/toolchain/` | 이식 가능한 main.c 생성·ST HAL ARM 빌드 후 에뮬레이터 실행 검증 |
 | `src/pins.js`, `src/components.js`, `src/placement.js` | 핀·부품·다리·별칭·구멍 장착 |
 | `src/boards.js`, `src/board-picker.js` | 보드 카탈로그·검색·초기화 확인 |
 | `src/breadboards.js` | 추가 빵판 이동·회전·삭제와 연결 보존 |
@@ -224,13 +234,16 @@
 | `src/editor-search.js` | 현재 소스 찾기·바꾸기와 검색 패널 |
 | `src/app.js`, `src/pinout-ui.js` | 편집/실행·핀 설정 |
 | `src/ide-ui.js`, `src/code-editor.js`, `src/ide.css` | IDE 도구·프로젝트 UI·Monaco 연결 |
-| `src/layout-model.js`, `src/workspace-layout.js` | 분할 트리·이동·크기·로컬 배치 |
+| `src/shell.js`, `src/shell.css` | VS Code형 작업 화면·메뉴·명령 팔레트·배치 저장 |
+| `src/logic-analyzer.js`, `src/signals.js`, `src/part-media-ui.js` | 로직 분석기·선로 잡음·카메라/SD 속성 |
+| `src/emu/`, `src/emu/stm32f446/`, `src/firmware-session.js` | Cortex-M4 에뮬레이터·STM32F446 주변장치·회로 연동 |
+| `src/hal-nvic.js`, `src/hal-dma.js`, `src/hal-usart.js`, `src/hal-dcmi.js`, `src/hal-storage.js` | 인터프리터 NVIC 선점·DMA·USART 동기·카메라·SD |
 | `src/debug-tools.js`, `src/parser.js`, `src/runtime.js`, `src/hal-source.js` | 소스 위치·실행 중단·변수·감시식 |
 | `src/source-files.js`, `desktop/workspace.cjs` | C/H 파일 편집·폴더 저장·충돌 방지 |
-| `scripts/build-editor.mjs`, `tests/ide.test.js`, `scripts/ide-smoke.cjs` | 로컬 편집기 번들·IDE 모델/UI 검증 |
+| `scripts/build-editor.mjs` | 로컬 편집기 번들 |
 | `src/render.js`, `src/part-render.js`, `src/part-controls.js` | SVG·부품 속성/측정 |
 | `desktop/` | Electron·파일/폴더 가져오기·저장 IPC |
-| `tests/`, `scripts/*-smoke.cjs` | 모델·실제 UI/EXE 검증 |
+| `tests/unit`, `tests/interp`, `tests/emu`, `tests/firmware`, `tests/e2e`, `tests/toolchain`, `tests/release` | 모델·에뮬레이터·실제 Electron UI·ARM 빌드·EXE 검증 |
 | `.github/workflows/build-windows.yml` | 모델/UI 테스트·Windows 빌드·Artifact |
 
 GPIO 변경 전 `beforeChange`로 이전 출력의 시간 구간을 적분하고, 변경 후 `changed`로 같은 시점의 회로를 다시 계산한다. 같은 시간의 재측정에서 커패시터를 다시 충전하면 안 된다.
@@ -239,7 +252,7 @@ GPIO 변경 전 `beforeChange`로 이전 출력의 시간 구간을 적분하고
 
 - appId `local.stm32.circuitlab`, 사용자 데이터 폴더 `STM32 Circuit Lab`, 확장자 `.stm32lab`, JSON format `stm32-circuit-lab`, 스키마 version 2를 유지한다.
 - 자동 저장 키 `stm32lab.project.v2`와 v1 읽기 지원은 사용자 회로 보존을 위한 현재 기능이다. 새 기본값을 이유로 기존 자동 저장 회로를 덮어쓰지 않는다.
-- `tests/fixtures/`는 모델·UI 회귀 검증용 물리 회로와 기존 사용자 파일 호환 프로그램이다. 앱에서 가져오지 않으며 EXE에 포함하지 않는다. 제공 HAL 예제는 `src/hal-examples.js`와 `src/hal-circuits.js`에서 구성한다.
+- `tests/fixtures/emu`, `tests/fixtures/firmware`는 에뮬레이터 검증용 사전 빌드 ELF와 회로다(`npm run build:fixtures`로 재생성). 앱에서 가져오지 않으며 EXE에 포함하지 않는다. 제공 HAL 예제는 `src/hal-examples.js`와 `src/hal-circuits.js`에서 구성한다.
 - `simulation`, `mcu`, `firmware`, `ide`는 선택적 필드다. `ide`는 검증된 소스 파일별 중단점과 감시식을 저장한다. main.c는 `project.code`, 보조 소스는 `firmware.files`에 저장한다.
 - 두 핀 부품의 `attachA/attachB`와 다핀 `attachments`는 헬퍼로 처리한다.
 - renderer의 contextIsolation/sandbox를 유지하고 nodeIntegration을 켜지 않는다.
@@ -253,20 +266,17 @@ Node.js 24 계열, Electron 44.2.0, electron-builder 26.15.3, Playwright 1.58.2.
 npm ci
 node node_modules/electron/install.js
 npm start
-npm test
-npm run test:ui
+npm test                 # unit + interp + emu + firmware
+npm run test:e2e         # 실제 Electron 앱
+npm run test:toolchain   # ARM_GCC, STM32CUBE_F4_ROOT 필요 (EXAMPLES로 범위 지정)
 npm run build
 npm run build:artifact
-node scripts/portable-smoke.cjs
+npm run test:release     # Windows: 패키지 앱·업데이트 도우미·포터블 EXE
 ```
 
-`npm run build`는 `scripts/clean-build.cjs`로 이전 EXE·배포 묶음·win-unpacked를 먼저 정리한다. 실행 파일이 잠겼으면 아무 파일도 지우기 전에 중단하고 앱 종료를 안내한다. `build:artifact`도 이전 생성 묶음을 안전하게 교체한다. 버전별 폴더로 옮겨 보관하지 않는다. 패키지 검사에는 Electron/Chromium/Monaco 라이선스 원문과 참고 자료 제외 검증이 포함된다. `work/build/win-unpacked`는 빌드/검증 중간 결과이며 전달 후 정리할 수 있다.
+`npm run build`는 `scripts/clean-build.cjs`로 이전 EXE·배포 묶음·win-unpacked를 먼저 정리한다. 실행 파일이 잠겼으면 아무 파일도 지우기 전에 중단하고 앱 종료를 안내한다. 패키지 검사에는 Electron/Chromium/Monaco 라이선스 원문과 참고 자료 제외 검증이 포함된다.
 
-수동 부저 전용 검증은 `npm run test:passive-buzzer`와 `npm run test:passive-buzzer:ui`다. Windows CI는 기본적으로 전체 테스트를 실행한다. 사용자가 범위를 수동 부저로 제한한 작업에서는 푸시의 최신 커밋 메시지에 `[test:passive-buzzer]`를 넣거나 수동 실행의 `test_scope=passive-buzzer`를 선택한다. 해당 실행만 전용 테스트로 제한하고 EXE 빌드·패키지 검증·업로드는 그대로 수행한다.
-
-`main` 푸시 후에는 해당 커밋의 GitHub Actions 실행 결과까지 확인한다. 로컬 테스트 성공과 원격 빌드 성공을 구분한다. 타이머 UI 검사는 벽시계 대기 대신 단계 실행으로 시뮬레이션 시각을 고정하고, 부품 선택은 `.part-body`를 클릭한다. 파일 저장·열기는 `saveProject`/`openProject` 테스트 헬퍼로 완료 로그를 기다린 뒤 검사한다. UART의 소수 baud 시각 비교에는 ms/µs 왕복 반올림 오차를 고려해야 한다. 실패한 UI 실행의 로그·스크린샷·JSON은 Actions의 `Windows-test-diagnostics`에 14일 보관한다.
-
-`LAB_EXE`로 UI smoke에 `win-unpacked/STM Simulator.exe`를 지정할 수 있다. 단일 portable EXE는 전용 `portable-smoke.cjs`로 검증한다. 현재 검증 결과와 한계는 [VERIFICATION.md](docs/VERIFICATION.md)를 확인한다.
+Windows CI는 `npm test` → ARM GCC(xPack)·ST HAL 드라이버 설치 후 대표 예제 빌드·에뮬레이터 실행 → E2E → 업데이트 도우미 → EXE 빌드·패키지 검증 순서로 실행한다. 실패한 실행의 로그는 Actions의 `Windows-test-diagnostics`에 14일 보관한다. `main` 푸시 후에는 해당 커밋의 GitHub Actions 결과까지 확인한다. E2E는 `CIRCUIT_LAB_TEST_PROFILE`로 사용자 프로필과 분리하고, 파일 대화상자는 main 프로세스의 `dialog`를 스텁한다. 현재 검증 결과와 한계는 [VERIFICATION.md](docs/VERIFICATION.md)를 확인한다.
 
 ## 권리와 모델 범위
 

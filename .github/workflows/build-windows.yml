@@ -5,14 +5,6 @@ on:
     branches: [main]
     tags: ['v*']
   workflow_dispatch:
-    inputs:
-      test_scope:
-        description: Functional test scope
-        type: choice
-        default: all
-        options:
-          - all
-          - passive-buzzer
 
 permissions:
   contents: read
@@ -25,10 +17,11 @@ jobs:
   build:
     name: Windows x64 portable
     runs-on: windows-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
     env:
-      # An explicit marker limits only this push; subsequent pushes default to all.
-      TEST_SCOPE: ${{ !startsWith(github.ref, 'refs/tags/') && (inputs.test_scope || (contains(github.event.head_commit.message, '[test:passive-buzzer]') && 'passive-buzzer')) || 'all' }}
+      ARM_GCC: ${{ github.workspace }}\.cache\toolchain\xpack-arm-none-eabi-gcc-14.2.1-1.1\bin\arm-none-eabi-gcc.exe
+      STM32CUBE_F4_ROOT: ${{ github.workspace }}\.cache\toolchain\cubef4
+      TOOLCHAIN_EXAMPLES: blank,ref_led_tht_2,ref_button_4,ref_lcd_parallel_16,ref_max98357a_9,dma_uart_echo,adc_dma_scan,nvic_preemption,usart_sync_matrix,camera_tft,sd_logger,noise_errors
     steps:
       - name: Check out source
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
@@ -51,93 +44,41 @@ jobs:
         run: |
           $releaseVersion = (Get-Content package.json -Raw | ConvertFrom-Json).version
           if ($env:GITHUB_REF_NAME -cne "v$releaseVersion" -or $releaseVersion -notmatch '^\d+\.\d+\.\d+$') { throw 'Release tag must match the stable package version.' }
-      - name: Test circuit engine and editor models
+      - name: Unit, interpreter, emulator and firmware tests
+        run: npm test
+      - name: Install ARM GCC and STM32CubeF4 drivers for real firmware builds
         shell: pwsh
         run: |
-          if ($env:TEST_SCOPE -eq 'passive-buzzer') { npm run test:passive-buzzer }
-          else { npm test }
+          $dir = '.cache/toolchain'; New-Item -ItemType Directory -Force $dir | Out-Null
+          Invoke-WebRequest 'https://github.com/xpack-dev-tools/arm-none-eabi-gcc-xpack/releases/download/v14.2.1-1.1/xpack-arm-none-eabi-gcc-14.2.1-1.1-win32-x64.zip' -OutFile "$dir/gcc.zip"
+          Expand-Archive "$dir/gcc.zip" -DestinationPath $dir
+          git clone --depth 1 https://github.com/STMicroelectronics/stm32f4xx-hal-driver.git "$dir/cubef4/Drivers/STM32F4xx_HAL_Driver"
+          git clone --depth 1 https://github.com/STMicroelectronics/cmsis-device-f4.git "$dir/cubef4/Drivers/CMSIS/Device/ST/STM32F4xx"
+          git clone --depth 1 --filter=blob:none --sparse https://github.com/ARM-software/CMSIS_5.git "$dir/cmsis5"
+          git -C "$dir/cmsis5" sparse-checkout set CMSIS/Core/Include
+          Copy-Item -Recurse "$dir/cmsis5/CMSIS/Core/Include" "$dir/cubef4/Drivers/CMSIS/Include"
+          & $env:ARM_GCC --version
+      - name: Build examples with ST HAL and run them on the emulator
+        shell: pwsh
+        run: |
+          $env:EXAMPLES = $env:TOOLCHAIN_EXAMPLES
+          npm run test:toolchain
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-      - name: Test update dialog and save-before-restart
-        run: npm run test:updates:ui
-      - name: Test failed saves, workspace transitions and close recovery
-        run: node scripts/storage-recovery-check.cjs
-      - name: Test Windows EXE replacement and rollback
-        run: node scripts/update-apply-check.cjs
-      - name: Test device resizing, themes and IDE preferences
-        run: npm run test:appearance:ui
-      - name: Test edge resizing of every device and both surfaces
-        run: npm run test:resize:ui
-      - name: Test every part model thumbnail and hover preview
-        run: npm run test:part-previews:ui
-      - name: Test readable UI text in dark and light themes
-        run: npm run test:contrast:ui
-      - name: Test system appearance, surface movement and unlimited canvas
-        run: npm run test:appearance-canvas:ui
-      - name: Test canvas selection, zoom and live inspector
-        run: npm run test:canvas-ux:ui
-      - name: Test workbench layouts, themes, keyboard editing and recovery
-        run: npm run test:workbench:ui
-      - name: Test code-only colorscheme registration
-        run: npm run test:colorscheme:ui
-      - name: Test Electron editing and HAL workflows
+      - name: Electron end-to-end tests
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force work/test-results | Out-Null
-          if ($env:TEST_SCOPE -eq 'passive-buzzer') {
-            npm run test:passive-buzzer:ui 2>&1 | Tee-Object -FilePath work/test-results/ui-tests.log
-          } else {
-            npm run test:ui 2>&1 | Tee-Object -FilePath work/test-results/ui-tests.log
-          }
+          npm run test:e2e 2>&1 | Tee-Object -FilePath work/test-results/e2e.log
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-      - name: Test catalog search, Docs, inline main.c and routed wiring
-        run: npm run test:catalog:ui
-      - name: Test empty canvas, single board, breadboards and inline Docs
-        run: npm run test:empty-workspace:ui
-      - name: Test LED WritePin and persisted circuit diagnostics
-        run: node scripts/docs-writepin-check.cjs
-      - name: Test code reset, undo and legacy Docs preview
-        run: node scripts/code-reset-check.cjs
-      - name: Test compact controls, debug shortcuts and board reset
-        run: node scripts/controls-reset-check.cjs
-      - name: Test TFT frame diagnostics and UART input through Electron
-        env:
-          DOCS_AUDIT_TYPES: tft,ref_st7735_8,uart
-        run: node scripts/docs-audit/packaged.cjs --dev
-      - name: Test onboard USART2 VCP and external UART wiring
-        run: npm run test:uart:ui
-      - name: Test pin option validation, live interrupt callbacks and analog input
-        env:
-          PIN_OPTIONS_SCOPE: validation,callbacks,adc
-        run: npm run test:pin-options:ui
-      - name: Test multiple Docs examples, live devices and saved projects
-        run: npm run test:device-docs:multi:ui
-      - name: Test breadboard mounting, Docs and example runtime logs
-        run: npm run test:examples:breadboard:ui
+      - name: Update helper replacement and rollback
+        run: node --test tests/release/update-helper.test.mjs
       - name: Upload test diagnostics on failure
         if: failure()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: Windows-test-diagnostics
           path: |
-            work/test-results/*.log
-            work/test-results/*.json
-            work/test-results/*.png
-            work/test-results/breadboard-layout/**
-            work/test-results/workbench-review/*.json
-            work/test-results/workbench-review/*.jsonl
-            work/test-results/workbench-review/*.png
-            work/test-results/docs-audit-*/*.json
-            work/test-results/pin-options-*/*.json
-            work/test-results/pin-options-*/*.jsonl
-            work/test-results/pin-options-*/*.png
-            work/test-results/pin-options-*/*.c
-            work/test-results/mcu-defaults-*/*.json
-            work/test-results/mcu-defaults-*/*.jsonl
-            work/test-results/mcu-defaults-*/*.png
-            work/test-results/docs-multi-apply-*/*.json
-            work/test-results/docs-multi-apply-*/*.jsonl
-            work/test-results/docs-multi-apply-*/*.png
-            work/test-results/docs-multi-apply-*/*.c
+            work/test-results/**
           if-no-files-found: ignore
           retention-days: 14
       - name: Build portable executable
@@ -146,14 +87,8 @@ jobs:
         run: npm run build
       - name: Verify package and prepare download
         run: npm run build:artifact
-      - name: Verify update helper from packaged Electron main
-        shell: pwsh
-        run: |
-          $env:LAB_EXE = Join-Path $PWD 'work/build/win-unpacked/STM Simulator.exe'
-          node scripts/update-gui-helper-check.cjs
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-      - name: Verify updater in the actual portable EXE
-        run: node scripts/update-portable-check.cjs
+      - name: Verify the packaged app, its update helper and the portable EXE
+        run: node --test --test-concurrency=1 tests/release/packaged.test.mjs
       - name: Upload Windows download
         id: upload
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
@@ -175,7 +110,7 @@ jobs:
 
   release:
     name: Publish verified release and update manifest
-    if: startsWith(github.ref, 'refs/tags/') || (github.event_name == 'push' && github.ref == 'refs/heads/main' && !contains(github.event.head_commit.message, '[test:passive-buzzer]'))
+    if: startsWith(github.ref, 'refs/tags/') || (github.event_name == 'push' && github.ref == 'refs/heads/main')
     needs: build
     runs-on: windows-latest
     timeout-minutes: 10
