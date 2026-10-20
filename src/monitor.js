@@ -3,9 +3,11 @@ import {waveSvg} from './trace.js';
 const $=id=>document.getElementById(id);
 export class Monitor {
   constructor(options){
-    document.querySelectorAll('[data-monitor]').forEach(button=>button.addEventListener('click',()=>{$('native-panel').hidden=button.dataset.monitor!=='native';}));
     Object.assign(this,options);this.events=[];this.view='log';this.lastPaint=0;this.dirty=true;
-    document.querySelectorAll('[data-monitor]').forEach(button=>button.onclick=()=>{this.view=button.dataset.monitor;document.querySelectorAll('[data-monitor]').forEach(b=>b.classList.toggle('active',b===button));$('console-output').hidden=this.view!=='log';$('wave-panel').hidden=this.view!=='wave';$('bus-panel').hidden=this.view!=='bus';$('issues-panel').hidden=this.view!=='issues';$('build-panel').hidden=this.view!=='build';$('debug-panel').hidden=this.view!=='debug';if(this.view==='log')$('console-output').scrollTop=$('console-output').scrollHeight;this.dirty=true;this.render();});
+    // Each bottom-panel tab owns the element `${name}-panel` (the output log is #console-output).
+    const panelOf=name=>name==='log'?$('console-output'):$(name+'-panel');
+    this.select=name=>{const button=document.querySelector(`[data-monitor="${name}"]`);if(!button)return false;this.view=name;document.querySelectorAll('[data-monitor]').forEach(b=>{b.classList.toggle('active',b===button);const panel=panelOf(b.dataset.monitor);if(panel)panel.hidden=b!==button;});if(this.view==='log')$('console-output').scrollTop=$('console-output').scrollHeight;this.dirty=true;this.render();return true;};
+    document.querySelector('.monitor-tabs').addEventListener('click',e=>{const button=e.target.closest('[data-monitor]');if(button)this.select(button.dataset.monitor);});
     ['PA5','PA10','PA0','PC13'].forEach((pin,i)=>{const select=$('channel-'+i);select.innerHTML=GPIO_PINS.map(p=>`<option ${pin===p?'selected':''}>${p}</option>`).join('');select.onchange=()=>{this.getSession()?.wave.setChannels(this.channels());this.dirty=true;this.render();};});
     $('wave-window').onchange=()=>{this.dirty=true;this.render();};
     $('wave-clear').onclick=()=>{this.getSession()?.wave.clear();this.dirty=true;this.render();};

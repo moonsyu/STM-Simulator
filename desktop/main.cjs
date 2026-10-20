@@ -58,6 +58,8 @@ nativeHandle('language',(text,config)=>nativeIde.language(text,config));
 nativeHandle('language-stop',()=>nativeIde.lsp.stop());
 nativeHandle('language-query',(method,file,position)=>nativeIde.lsp.query(method,file,position));
 nativeHandle('artifacts',async()=>{if(!nativeIde.result)throw new Error('먼저 빌드를 완료하세요.');return shell.openPath(nativeIde.result.directory);});
+// The firmware emulator runs the ELF of the latest successful ARM build inside the renderer.
+nativeHandle('elf',async()=>{const r=nativeIde.result;if(!r||r.target!=='arm'||!r.elf)throw new Error('먼저 STM32 · ARM GCC 빌드를 완료하세요.');const data=await fs.readFile(r.elf);if(data.length>16_000_000)throw new Error('ELF 파일이 너무 큽니다.');return new Uint8Array(data);});
 nativeHandle('terminal-open',()=>nativeIde.openTerminal(workspaceState?.directory));
 nativeHandle('terminal-input',text=>nativeIde.terminalInput(text));
 nativeHandle('terminal-close',()=>nativeIde.closeTerminal());
@@ -123,6 +125,13 @@ ipcMain.handle('waveform:export',async(_event,text)=>{
   if(result.canceled)return null;await fs.writeFile(result.filePath,text,'utf8');return result.filePath;
 });
 
+ipcMain.handle('firmware:open-elf',async event=>{
+  if(event.sender!==win?.webContents||event.senderFrame?.parent)throw new Error('허용하지 않는 요청입니다.');
+  const result=await dialog.showOpenDialog(win,{title:'펌웨어 ELF 열기',properties:['openFile'],filters:[{name:'ARM ELF 펌웨어',extensions:['elf','axf','out']}]});
+  if(result.canceled)return null;const file=result.filePaths[0],stat=await fs.stat(file);if(!stat.isFile()||stat.size>16_000_000)throw new Error('16 MB 이하의 ELF 파일을 선택하세요.');
+  const data=await fs.readFile(file);if(data.readUInt32BE(0)!==0x7f454c46)throw new Error('ELF 형식의 펌웨어 파일이 아닙니다.');
+  return {name:path.basename(file),bytes:new Uint8Array(data)};
+});
 ipcMain.handle('firmware:export-main',async(_event,text)=>{
   if(typeof text!=='string'||text.length>300000)throw new Error('main.c는 300,000자 이하로 저장하세요.');
   const result=await dialog.showSaveDialog(win,{title:'HAL main.c 저장',defaultPath:'main.c',filters:[{name:'C 소스',extensions:['c']}]});

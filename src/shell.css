@@ -1,0 +1,357 @@
+/* STM Simulator workbench — VS Code style shell.
+   Colours come from --ide-* tokens set by ide-preferences.js (Dark / White / System). */
+:root{--titlebar-h:35px;--statusbar-h:22px;--activity-w:48px;--tab-h:35px;--radius:4px;--shell-font:'Segoe UI Variable','Segoe UI',system-ui,'Malgun Gothic',sans-serif;--mono:var(--ide-font,Consolas,'Malgun Gothic',monospace)}
+:root[data-shell] body{background:var(--ide-background);color:var(--ide-foreground);font-family:var(--shell-font);font-size:var(--ide-ui-size,13px);overflow:hidden;height:100vh}
+:root[data-shell] .visually-hidden{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip:rect(0 0 0 0)!important;white-space:nowrap!important;border:0!important}
+:root[data-shell] ::-webkit-scrollbar{width:10px;height:10px}
+:root[data-shell] ::-webkit-scrollbar-thumb{background:color-mix(in srgb,var(--ide-muted) 35%,transparent);border:2px solid transparent;background-clip:padding-box;border-radius:6px}
+:root[data-shell] ::-webkit-scrollbar-thumb:hover{background-color:color-mix(in srgb,var(--ide-muted) 60%,transparent)}
+:root[data-shell] ::-webkit-scrollbar-corner{background:transparent}
+:root[data-shell] :focus-visible{outline:1px solid var(--ide-accent);outline-offset:-1px}
+:root[data-shell] button{border-radius:var(--radius)}
+:root[data-shell] input,:root[data-shell] select,:root[data-shell] textarea:not(.inputarea){background:var(--ide-background);color:var(--ide-foreground);border:1px solid var(--ide-input,var(--ide-border));border-radius:var(--radius)}
+:root[data-shell] input:focus,:root[data-shell] select:focus{border-color:var(--ide-accent);outline:none}
+:root[data-shell] kbd{font:11px var(--shell-font);padding:1px 5px;border-radius:3px;border:1px solid var(--ide-border);background:color-mix(in srgb,var(--ide-foreground) 6%,transparent);color:var(--ide-muted)}
+
+/* ---------- frame ---------- */
+.shell{display:grid;grid-template-rows:var(--titlebar-h) minmax(0,1fr) var(--statusbar-h);height:100vh;width:100vw;overflow:hidden}
+:root[data-shell] .app-shell{display:grid!important;grid-template-columns:var(--activity-w) var(--sidebar-width,272px) 4px minmax(0,1fr) 4px var(--aux-width,300px);height:auto!important;min-height:0;min-width:0;overflow:hidden;background:var(--ide-background)}
+.shell[data-sidebar=false] .app-shell{grid-template-columns:var(--activity-w) 0 0 minmax(0,1fr) 4px var(--aux-width,300px)}
+.shell[data-aux=false] .app-shell{grid-template-columns:var(--activity-w) var(--sidebar-width,272px) 4px minmax(0,1fr) 0 0}
+.shell[data-sidebar=false][data-aux=false] .app-shell{grid-template-columns:var(--activity-w) 0 0 minmax(0,1fr) 0 0}
+.shell[data-sidebar=false] :is(#sidebar,#sash-sidebar),.shell[data-aux=false] :is(#auxbar,#sash-aux){display:none!important}
+
+/* ---------- title bar ---------- */
+:root[data-shell] .topbar{height:var(--titlebar-h);min-height:0;display:flex;align-items:center;gap:6px;padding:0 6px 0 10px;background:var(--ide-chrome);border-bottom:1px solid var(--ide-border);box-shadow:none;position:relative;z-index:5;user-select:none}
+:root[data-shell] .brand{display:flex;align-items:center;gap:7px;min-width:0;flex:none}
+:root[data-shell] .brand strong{font-size:13px;font-weight:600;letter-spacing:-.1px;color:var(--ide-foreground)}
+:root[data-shell] .brand strong span{color:var(--ide-accent);font-weight:600}
+.brand-mark{width:18px;height:18px;fill:none;stroke:var(--ide-accent);stroke-width:1.6;stroke-linecap:round}
+.menubar{display:flex;align-items:center;gap:0;flex:none}
+.menubar-item{height:26px;padding:0 8px;font-size:12.5px;color:var(--ide-foreground);border-radius:var(--radius)}
+.menubar-item:hover,.menubar-item[aria-expanded=true]{background:var(--ide-hover)}
+:root[data-shell] .project-title.command-center{flex:1 1 auto;min-width:160px;max-width:560px;margin:0 auto;display:flex;align-items:center;gap:6px;height:24px;padding:0 4px 0 8px;border:1px solid var(--ide-border);border-radius:6px;background:color-mix(in srgb,var(--ide-background) 70%,var(--ide-chrome))}
+:root[data-shell] .project-title input{flex:1 1 auto;min-width:60px;width:auto;height:20px;border:0;background:transparent;font-size:12px;font-weight:600;text-align:center;padding:0 4px;color:var(--ide-foreground)}
+:root[data-shell] .project-title input:focus{background:var(--ide-background);outline:1px solid var(--ide-accent)}
+:root[data-shell] #save-state{flex:none;font-size:11px;color:var(--ide-muted);white-space:nowrap}
+:root[data-shell] #save-state[data-state^=error]{color:var(--ide-error)}
+.command-hint{flex:none;height:18px;padding:0 6px;font-size:11px;color:var(--ide-muted);display:flex;align-items:center;gap:6px;white-space:nowrap}
+.command-hint:hover{background:var(--ide-hover);color:var(--ide-foreground)}
+.command-hint kbd{font-size:10px;padding:0 4px}
+.run-area{display:flex;align-items:center;min-width:0;flex:0 1 auto;overflow:hidden}
+:root[data-shell] .ide-toolbar{height:auto;min-height:0;display:flex;align-items:center;gap:4px;padding:0;border:0;background:transparent!important;overflow:visible;white-space:nowrap}
+:root[data-shell] .ide-toolbar button,:root[data-shell] .ide-toolbar select{height:24px;min-height:24px;padding:0 8px;font-size:12px;font-weight:500;border:1px solid transparent;border-radius:var(--radius);background:transparent;color:var(--ide-foreground)}
+:root[data-shell] .ide-toolbar select{border-color:var(--ide-border);background:var(--ide-background);padding:0 4px;max-width:180px}
+:root[data-shell] .ide-toolbar button:hover:not(:disabled){background:var(--ide-hover)}
+:root[data-shell] .ide-toolbar .native-target-label{display:flex;align-items:center;gap:0;font-size:0}
+:root[data-shell] .ide-toolbar #run{background:var(--ide-button);color:var(--ide-onAccent,#fff);border-color:var(--ide-button);font-weight:600;padding:0 10px}
+:root[data-shell] .ide-toolbar #run.running{background:var(--ide-error);border-color:var(--ide-error)}
+:root[data-shell] .ide-toolbar #ide-build{background:transparent;color:var(--ide-foreground);border-color:var(--ide-border)}
+:root[data-shell] .ide-toolbar .toolbar-divider{width:1px;height:16px;background:var(--ide-border);margin:0 2px}
+:root[data-shell] .ide-toolbar #build-status{font-size:11px;color:var(--ide-muted);max-width:180px;overflow:hidden;text-overflow:ellipsis;padding:0 4px}
+:root[data-shell] .top-actions{display:flex;align-items:center;gap:2px;flex:none}
+:root[data-shell] .top-actions .titlebar-hidden{display:none}
+:root[data-shell] .top-actions .save-button{height:24px;padding:0 10px;font-size:12px;font-weight:600;border:1px solid var(--ide-border);background:transparent;color:var(--ide-foreground)}
+:root[data-shell] .top-actions .save-button:hover{background:var(--ide-hover)}
+:root[data-shell] #app-update{height:22px;padding:0 8px;font-size:11px;border-radius:11px;border:1px solid var(--ide-border);background:transparent;color:var(--ide-muted)}
+:root[data-shell] .appearance-switch{display:flex;gap:0;border:1px solid var(--ide-border);border-radius:var(--radius);overflow:hidden;height:24px}
+:root[data-shell] .appearance-switch button{height:22px;padding:0 8px;font-size:11.5px;border-radius:0;background:transparent;color:var(--ide-foreground)}
+:root[data-shell] .appearance-switch button.active,:root[data-shell] .appearance-switch button[aria-pressed=true]{background:var(--ide-selection);color:var(--ide-selectionText)}
+.layout-toggles{display:flex;gap:0;margin:0 2px}
+.icon-button{width:26px;height:24px;display:inline-grid;place-items:center;color:var(--ide-muted);border-radius:var(--radius);flex:none}
+.icon-button:hover:not(:disabled){background:var(--ide-hover);color:var(--ide-foreground)}
+.icon-button[aria-pressed=true]{color:var(--ide-foreground)}
+.layout-toggles .icon-button[aria-pressed=false]{opacity:.55}
+
+/* ---------- activity bar ---------- */
+.activitybar{background:var(--ide-activity);border-right:1px solid var(--ide-border);display:flex;flex-direction:column;justify-content:space-between;min-height:0;overflow:hidden}
+.activity-top,.activity-bottom{display:flex;flex-direction:column}
+.activity-item{width:var(--activity-w);height:48px;display:grid;place-items:center;color:var(--ide-muted);border-radius:0;position:relative}
+.activity-item:hover{color:var(--ide-foreground)}
+.activity-item[aria-pressed=true]{color:var(--ide-foreground)}
+.activity-item[aria-pressed=true]::before{content:'';position:absolute;left:0;top:0;bottom:0;width:2px;background:var(--ide-accent)}
+.activity-item:focus-visible{outline-offset:-2px}
+
+/* ---------- side bars ---------- */
+:root[data-shell] .sidebar,:root[data-shell] .auxbar{background:var(--ide-panel)!important;border:0;display:flex;flex-direction:column;min-width:0;min-height:0;overflow:hidden;padding:0}
+:root[data-shell] .sidebar{border-right:1px solid var(--ide-border)}
+:root[data-shell] .auxbar{border-left:1px solid var(--ide-border)}
+.sidebar-header{height:35px;min-height:35px;display:flex;align-items:center;justify-content:space-between;padding:0 8px 0 18px;flex:none}
+.sidebar-header h2{margin:0;font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--ide-foreground);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sidebar-views{flex:1;min-height:0;display:flex;flex-direction:column;overflow:hidden}
+.sidebar-view{flex:1;min-height:0;overflow:auto;padding:0 12px 12px;display:flex;flex-direction:column;gap:8px}
+.sidebar-view[hidden]{display:none!important}
+:root[data-shell] .library>*{flex-shrink:initial}
+:root[data-shell] .library-bottom{flex:none;border-top:1px solid var(--ide-border);padding:6px 12px;display:flex}
+:root[data-shell] .library-bottom button{font-size:12px;color:var(--ide-muted);padding:3px 6px}
+:root[data-shell] .library-bottom button:hover{color:var(--ide-foreground);background:var(--ide-hover)}
+.sidebar-view .section-label,.sidebar-view .part-search label,.sidebar-view .pin-search label{font-size:11px;font-weight:600;letter-spacing:.02em;color:var(--ide-muted);text-transform:none}
+.sidebar-view input[type=search]{width:100%;height:26px;padding:0 8px;font-size:12.5px}
+:root[data-shell] .part-search,:root[data-shell] .pin-search{display:flex;flex-direction:column;gap:5px;margin:0}
+:root[data-shell] .part-search label{display:flex;justify-content:space-between}
+:root[data-shell] #part-list{flex:1;min-height:120px;overflow:auto;display:flex;flex-direction:column;gap:2px;margin:0 -6px;padding:0 6px}
+:root[data-shell] .part-card{min-height:44px;margin:0;border:1px solid transparent!important;background:transparent!important;border-radius:var(--radius);padding:4px 6px;gap:8px}
+:root[data-shell] .part-card:hover{background:var(--ide-hover)!important}
+:root[data-shell] .part-card.active{background:var(--ide-selection)!important;border-color:var(--ide-accent)!important}
+:root[data-shell] .part-card strong{font-size:12.5px;font-weight:500}
+:root[data-shell] .part-card small{font-size:11px;color:var(--ide-muted)}
+:root[data-shell] .part-card b{color:var(--ide-muted);font-weight:400;font-size:16px;opacity:0;transition:opacity .1s}
+:root[data-shell] .part-card:hover b,:root[data-shell] .part-card:focus-visible b{opacity:1}
+:root[data-shell] .library-hint,:root[data-shell] .hal-example-note{font-size:11.5px;line-height:1.5;color:var(--ide-muted);margin:0}
+#hal-example-count{font-size:11px;color:var(--ide-muted)}
+.example-list{flex:1;min-height:120px;overflow:auto;display:flex;flex-direction:column;gap:1px;margin:0 -6px;padding:0 6px}
+.example-item{display:flex;flex-direction:column;align-items:flex-start;gap:1px;text-align:left;padding:5px 8px;border-radius:var(--radius);width:100%;color:var(--ide-foreground)}
+.example-item:hover,.example-item:focus-visible{background:var(--ide-hover)}
+.example-item strong{font-size:12.5px;font-weight:500}
+.example-tag{font-size:10.5px;color:var(--ide-accent);font-weight:600}
+:root[data-shell] .board-card{background:var(--ide-background)!important;border:1px solid var(--ide-border)!important;border-radius:6px;padding:8px 10px}
+:root[data-shell] .mini-chip{background:var(--ide-button);color:var(--ide-onAccent,#fff)}
+:root[data-shell] .pinout-open{width:100%;height:28px;border:1px solid var(--ide-border)!important;background:var(--ide-background)!important;border-radius:var(--radius);font-size:12.5px;margin:0}
+:root[data-shell] .pinout-open:hover{background:var(--ide-hover)!important}
+:root[data-shell] #pinout-open{background:var(--ide-button)!important;color:var(--ide-onAccent,#fff)!important;border-color:var(--ide-button)!important;font-weight:600}
+:root[data-shell] #pin-results button{width:100%;text-align:left;padding:4px 6px;border-radius:var(--radius)}
+:root[data-shell] #pin-results button:hover{background:var(--ide-hover)}
+/* explorer */
+:root[data-shell] .project-files{background:transparent!important;border:0;padding:0;margin:0 -12px;display:flex;flex-direction:column}
+:root[data-shell] .project-files-title{display:flex;align-items:center;justify-content:space-between;height:22px;padding:0 8px 0 12px;font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase}
+:root[data-shell] .project-files-title button,:root[data-shell] .file-tools button{font-size:11px;padding:1px 6px;color:var(--ide-muted);border:0;background:transparent}
+:root[data-shell] .project-files-title button:hover,:root[data-shell] .file-tools button:hover{color:var(--ide-foreground);background:var(--ide-hover)}
+:root[data-shell] #file-tree{display:flex;flex-direction:column}
+:root[data-shell] #file-tree button{display:flex;align-items:center;gap:6px;height:22px;padding:0 12px 0 22px;border:0;border-radius:0;background:transparent;font-size:13px;text-align:left;color:var(--ide-foreground);width:100%}
+:root[data-shell] #file-tree button:hover{background:var(--ide-hover)}
+:root[data-shell] #file-tree button.active{background:var(--ide-selection);color:var(--ide-selectionText);outline:1px solid color-mix(in srgb,var(--ide-accent) 50%,transparent);outline-offset:-1px}
+:root[data-shell] .file-kind{width:16px;height:14px;border:0;border-radius:2px;font-size:9px;font-weight:700;display:grid;place-items:center;background:transparent!important;color:#519aba}
+:root[data-shell] #file-tree button:has(.file-label[title$=".h"]) .file-kind,:root[data-shell] .file-kind:is([data-kind=h]){color:#a074c4}
+:root[data-shell] .file-tools{display:flex;gap:2px;padding:4px 12px}
+:root[data-shell] .project-folder-note{font-size:11px;color:var(--ide-muted);padding:2px 12px 6px;background:transparent!important;border:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.explorer-outline{border-top:1px solid var(--ide-border);margin:6px -12px 0;padding:8px 12px}
+.explorer-outline h3{margin:0 0 4px;font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase}
+.explorer-outline p{margin:0 0 8px}
+.explorer-links{display:flex;flex-wrap:wrap;gap:4px}
+.explorer-links button{font-size:11.5px;padding:3px 8px;border:1px solid var(--ide-border);background:var(--ide-background)}
+.explorer-links button:hover{background:var(--ide-hover)}
+/* debug / docs / settings views in the side bar */
+:root[data-shell] #view-debug #debug-panel,:root[data-shell] #view-docs #device-docs-panel,:root[data-shell] #view-settings #ide-settings-panel{display:block;position:static;height:auto;overflow:visible;padding:0;background:transparent!important;border:0}
+:root[data-shell] #view-debug .debug-grid{display:flex;flex-direction:column;gap:12px}
+:root[data-shell] #view-debug h3{font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;margin:6px 0 4px}
+:root[data-shell] #view-debug table{width:100%;border-collapse:collapse;font:12px var(--mono)}
+:root[data-shell] #view-debug td{padding:2px 4px;border-bottom:1px solid color-mix(in srgb,var(--ide-border) 60%,transparent);word-break:break-all}
+:root[data-shell] #view-debug td:first-child{color:var(--code-identifier,var(--ide-accent));width:42%}
+:root[data-shell] .debug-location{font-size:12px;padding:6px 8px;border-radius:var(--radius);background:color-mix(in srgb,var(--ide-accent) 10%,transparent);border:1px solid color-mix(in srgb,var(--ide-accent) 30%,transparent)}
+:root[data-shell] .debug-frame{display:block;width:100%;text-align:left;font:12px var(--mono);padding:3px 6px;border:0;background:transparent}
+:root[data-shell] .debug-frame:hover,:root[data-shell] .debug-frame.active{background:var(--ide-hover)}
+:root[data-shell] .watch-entry{display:flex;gap:4px}
+:root[data-shell] .watch-entry input{flex:1;min-width:0;height:24px;padding:0 6px}
+:root[data-shell] .watch-entry button{padding:0 8px;border:1px solid var(--ide-border)}
+
+/* ---------- sashes ---------- */
+.sash{background:transparent;position:relative;z-index:4;touch-action:none;transition:background-color .1s .25s}
+.sash-v{cursor:col-resize;width:4px;margin:0 -2px;min-height:0}
+.sash-h{cursor:row-resize;height:4px;margin:-2px 0;min-width:0}
+.sash:hover,.sash.active,.sash:focus-visible{background:var(--ide-accent);outline:0}
+body.resizing-workspace{user-select:none}
+body.resizing-workspace iframe,body.resizing-workspace svg{pointer-events:none}
+
+/* ---------- center: editor groups + panel ---------- */
+.center{display:flex;flex-direction:column;min-width:0;min-height:0;overflow:hidden}
+.editor-area{flex:1 1 auto;display:flex;min-width:0;min-height:0;overflow:hidden}
+.editor-area[data-orientation=column]{flex-direction:column}
+:root[data-shell] .editor-group{display:flex;flex-direction:column;min-width:0;min-height:0;overflow:hidden;background:var(--ide-background)!important;border:0;position:relative}
+#sash-panel{flex:none}
+:root[data-shell] .panel{flex:0 0 var(--panel-height,240px);display:flex!important;flex-direction:column;min-height:0;overflow:hidden;border-top:1px solid var(--ide-border);background:var(--ide-background)!important;height:auto!important}
+.shell[data-panel=false] :is(#bottom-panel,#sash-panel){display:none!important}
+.shell[data-maximized=code] :is(#group-circuit,#sash-editor,#bottom-panel,#sash-panel){display:none!important}
+.shell[data-maximized=circuit] :is(#group-code,#sash-editor,#bottom-panel,#sash-panel){display:none!important}
+.shell[data-maximized=panel] :is(#editor-area,#sash-panel){display:none!important}
+.shell[data-maximized=panel] #bottom-panel{flex:1 1 auto}
+.shell[data-maximized=code] #group-code,.shell[data-maximized=circuit] #group-circuit{flex:1 1 auto!important}
+/* group tab strips */
+.group-tabs{height:var(--tab-h);min-height:var(--tab-h);display:flex;align-items:stretch;background:var(--ide-chrome);border-bottom:1px solid var(--ide-border);flex:none;overflow:hidden}
+.group-actions{margin-left:auto;display:flex;align-items:center;gap:1px;padding:0 6px;flex:none}
+:root[data-shell] #source-tabs{display:flex;align-items:stretch;min-width:0;overflow-x:auto;overflow-y:hidden;scrollbar-width:none;background:transparent;border:0;padding:0;gap:0;height:auto}
+:root[data-shell] #source-tabs::-webkit-scrollbar{display:none}
+:root[data-shell] #source-tabs button{height:100%;padding:0 14px 0 12px;display:flex;align-items:center;gap:6px;border:0;border-right:1px solid var(--ide-border);border-radius:0;background:var(--ide-chrome);color:var(--ide-muted);font-size:13px;font-weight:400;white-space:nowrap;position:relative;flex:none}
+:root[data-shell] #source-tabs button::before{content:'C';font-size:10px;font-weight:700;color:#519aba}
+:root[data-shell] #source-tabs button[data-source$=".h"]::before{content:'H';color:#a074c4}
+:root[data-shell] #source-tabs button.active{background:var(--ide-background);color:var(--ide-foreground)}
+:root[data-shell] #source-tabs button.active::after{content:'';position:absolute;left:0;right:0;top:0;height:1px;background:var(--ide-accent)}
+:root[data-shell] #source-tabs button:hover:not(.active){background:color-mix(in srgb,var(--ide-chrome) 60%,var(--ide-background))}
+.group-tab{display:flex;align-items:center;gap:8px;padding:0 14px;font-size:13px;background:var(--ide-background);color:var(--ide-foreground);border-right:1px solid var(--ide-border);position:relative;white-space:nowrap;overflow:hidden;min-width:0}
+.group-tab::after{content:'';position:absolute;left:0;right:0;top:0;height:1px;background:var(--ide-accent)}
+.group-tab #canvas-board-name{color:var(--ide-muted);font-size:12px;overflow:hidden;text-overflow:ellipsis}
+.group-tab .divider-line{width:1px;height:12px;background:var(--ide-border)}
+:root[data-shell] .live-dot{width:7px;height:7px;border-radius:50%;background:var(--ide-muted);flex:none}
+.shell[data-running=true] .live-dot{background:#3fb950;box-shadow:0 0 0 3px color-mix(in srgb,#3fb950 25%,transparent)}
+/* code editor group */
+:root[data-shell] #code-panel{flex:1;min-height:0;display:flex;flex-direction:column;background:var(--ide-background)!important;border:0;padding:0;overflow:hidden}
+:root[data-shell] .editor-heading{height:22px;min-height:22px;display:flex;align-items:center;gap:6px;padding:0 12px;background:var(--ide-background)!important;border:0;font-size:12px;color:var(--ide-muted);overflow:hidden}
+:root[data-shell] .editor-heading select#source-file{height:20px;border:0;background:transparent;color:var(--ide-muted);font-size:12px;padding:0 2px;max-width:220px}
+:root[data-shell] .editor-heading select#source-file:hover{color:var(--ide-foreground)}
+:root[data-shell] .editor-heading .breadcrumbs::after{content:'STM-Simulator  ›';font-size:12px;color:var(--ide-muted)}
+:root[data-shell] .editor-wrap{flex:1;min-height:0;position:relative;border:0;border-radius:0;margin:0;padding:0;background:var(--code-background,var(--ide-background))}
+:root[data-shell] .firmware-tools{display:flex;flex-direction:column;align-items:stretch;gap:6px;padding:8px;background:transparent!important;border:0;max-height:none}
+:root[data-shell] .firmware-tools label{display:flex;flex-direction:column;gap:4px;font-size:11px;color:var(--ide-muted)}
+:root[data-shell] .firmware-tools>div{display:flex;flex-direction:column;gap:2px;margin:0}
+:root[data-shell] .firmware-tools button{text-align:left;padding:5px 10px;font-size:12.5px;border:0;background:transparent;width:100%}
+:root[data-shell] .firmware-tools button:hover:not(:disabled){background:var(--ide-selection)}
+:root[data-shell] #code-search{margin:6px 14px 0 auto;width:min(420px,calc(100% - 28px));position:absolute;right:0;top:56px;z-index:6;background:var(--ide-panel);border:1px solid var(--ide-border);border-radius:6px;box-shadow:0 4px 18px rgba(0,0,0,.28);padding:6px 8px}
+/* circuit group */
+:root[data-shell] .workspace-toolbar{height:34px;min-height:34px;display:flex;align-items:center;gap:6px;padding:0 8px;background:var(--ide-background)!important;border:0;border-bottom:1px solid var(--ide-border);box-shadow:none;border-radius:0;position:static;flex:none;overflow-x:auto;overflow-y:hidden}
+:root[data-shell] .workspace-toolbar .tool{height:24px;min-width:26px;padding:0 6px;border:0;background:transparent;color:var(--ide-foreground);border-radius:var(--radius)}
+:root[data-shell] .workspace-toolbar .tool:hover:not(:disabled){background:var(--ide-hover)}
+:root[data-shell] .workspace-toolbar .tool.active{background:var(--ide-selection)!important;color:var(--ide-selectionText)!important}
+:root[data-shell] .workbench-menu-toggle{height:24px;padding:0 8px;display:inline-flex;align-items:center;gap:6px;font-size:12px;border:1px solid var(--ide-border);background:transparent;color:var(--ide-foreground);border-radius:var(--radius);white-space:nowrap}
+:root[data-shell] .workbench-menu-toggle:hover{background:var(--ide-hover)}
+:root[data-shell] .palette-current{width:12px;height:12px;border-radius:50%;background:var(--swatch);box-shadow:0 0 0 1px var(--ide-border)}
+:root[data-shell] #canvas-container{flex:1;min-height:0;position:relative;overflow:hidden;background-color:var(--ide-background);background-image:radial-gradient(color-mix(in srgb,var(--ide-muted) 22%,transparent) 1px,transparent 1px);background-size:20px 20px;border:0;margin:0;border-radius:0}
+:root[data-shell] #circuit{width:100%;height:100%;display:block}
+:root[data-shell] .canvas-heading{display:none}
+:root[data-shell] .canvas-footer{position:absolute;left:10px;right:10px;bottom:8px;display:flex;align-items:flex-end;justify-content:space-between;gap:8px;pointer-events:none;background:transparent!important;border:0}
+:root[data-shell] #hint{pointer-events:auto;font-size:11.5px;color:var(--ide-muted);background:color-mix(in srgb,var(--ide-panel) 88%,transparent);border:1px solid var(--ide-border);border-radius:var(--radius);padding:3px 8px;max-width:70%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;backdrop-filter:blur(4px)}
+:root[data-shell] .zoom-controls{pointer-events:auto;display:flex;gap:0;background:var(--ide-panel)!important;border:1px solid var(--ide-border)!important;border-radius:var(--radius);overflow:hidden;box-shadow:none}
+:root[data-shell] .zoom-controls button{height:24px;min-width:28px;padding:0 6px;border-radius:0;font-size:12px}
+:root[data-shell] .zoom-controls button:hover{background:var(--ide-hover)}
+.canvas-empty{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;text-align:center;pointer-events:none;z-index:2}
+.canvas-empty h3{margin:0;font-size:18px;font-weight:600;color:var(--ide-foreground)}
+.canvas-empty p{margin:0 0 10px;color:var(--ide-muted);font-size:13px}
+.canvas-empty>div{display:flex;gap:6px;pointer-events:auto;flex-wrap:wrap;justify-content:center}
+.canvas-empty button{height:28px;padding:0 12px;font-size:12.5px;border:1px solid var(--ide-border);background:var(--ide-panel)}
+.canvas-empty button:hover{background:var(--ide-hover)}
+:root[data-shell] .canvas-empty .run-button{background:var(--ide-button);color:var(--ide-onAccent,#fff);border-color:var(--ide-button);font-weight:600}
+:root[data-shell] #tooltip{background:var(--ide-panel);color:var(--ide-foreground);border:1px solid var(--ide-border);box-shadow:0 2px 8px rgba(0,0,0,.25);font-size:12px}
+/* bottom panel */
+:root[data-shell] .console-header{height:35px;min-height:35px;display:flex;align-items:center;justify-content:space-between;padding:0 8px 0 10px;background:var(--ide-background)!important;border:0;flex:none;overflow:hidden}
+:root[data-shell] .monitor-tabs{display:flex;align-items:stretch;gap:2px;height:100%;overflow-x:auto;scrollbar-width:none}
+:root[data-shell] .monitor-tabs button{height:100%;padding:0 10px;font-size:11px;font-weight:500;letter-spacing:.04em;text-transform:uppercase;color:var(--ide-muted);border:0;border-radius:0;background:transparent!important;position:relative;white-space:nowrap}
+:root[data-shell] .monitor-tabs button:hover{color:var(--ide-foreground)}
+:root[data-shell] .monitor-tabs button.active{color:var(--ide-foreground)}
+:root[data-shell] .monitor-tabs button.active::after{content:'';position:absolute;left:8px;right:8px;bottom:5px;height:1px;background:var(--ide-accent)}
+.panel-actions{display:flex;align-items:center;gap:2px;flex:none}
+:root[data-shell] #clear-console{font-size:11.5px;color:var(--ide-muted);padding:2px 8px}
+:root[data-shell] #clear-console:hover{background:var(--ide-hover);color:var(--ide-foreground)}
+:root[data-shell] .panel>section,:root[data-shell] .panel>div:not(.console-header){min-height:0}
+:root[data-shell] #log-panel,:root[data-shell] #console-output{flex:1;min-height:0;overflow:auto}
+:root[data-shell] #log-panel{display:flex;flex-direction:column}
+:root[data-shell] #console-output{padding:2px 16px 8px;font:var(--ide-terminal-size,12px)/1.55 var(--mono);background:transparent!important;border:0}
+:root[data-shell] .log-line{padding:0;border:0}
+:root[data-shell] .log-line .stamp{color:var(--ide-muted);margin-right:10px;opacity:.8}
+:root[data-shell] :is(#issues-panel,#wave-panel,#bus-panel,#build-panel,#native-panel,#signals-panel){flex:1;min-height:0;overflow:auto;padding:4px 16px 8px;background:transparent!important;border:0}
+:root[data-shell] #native-panel{display:flex;flex-direction:column;gap:4px}
+:root[data-shell] #native-panel[hidden],:root[data-shell] #build-panel[hidden],:root[data-shell] #signals-panel[hidden]{display:none!important}
+:root[data-shell] #native-output{flex:1;min-height:40px;margin:0;background:transparent!important;border:0;padding:0;font:var(--ide-terminal-size,12px)/1.5 var(--mono)}
+:root[data-shell] .native-terminal-tools,:root[data-shell] #native-input-form{display:flex;align-items:center;gap:6px}
+:root[data-shell] .native-terminal-tools button,:root[data-shell] #native-input-form button{height:22px;padding:0 8px;font-size:11.5px;border:1px solid var(--ide-border);background:transparent}
+:root[data-shell] #native-input-form input{flex:1;height:24px;padding:0 8px;font-family:var(--mono)}
+:root[data-shell] #terminal-status{font-size:11.5px;color:var(--ide-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+:root[data-shell] .circuit-issue{display:flex;align-items:center;gap:8px;width:100%;text-align:left;padding:3px 6px;border:0;border-radius:var(--radius);background:transparent;font-size:12.5px}
+:root[data-shell] .circuit-issue:hover{background:var(--ide-hover)}
+:root[data-shell] .circuit-issue span{width:16px;height:16px;border-radius:50%;display:grid;place-items:center;font-size:11px;font-weight:700;flex:none;background:color-mix(in srgb,var(--ide-warning) 22%,transparent);color:var(--ide-warning)}
+:root[data-shell] .circuit-issue.error span{background:color-mix(in srgb,var(--ide-error) 22%,transparent);color:var(--ide-error)}
+:root[data-shell] .circuit-issue b{margin-left:auto;font-weight:400;font-size:11px;color:var(--ide-muted)}
+:root[data-shell] .issues-note,:root[data-shell] .issues-clear{font-size:12px;color:var(--ide-muted);margin:4px 0}
+:root[data-shell] .build-error{display:block;width:100%;text-align:left;font:12px var(--mono);padding:3px 6px;border:0;background:transparent;color:var(--ide-error)}
+:root[data-shell] .build-error:hover{background:var(--ide-hover)}
+:root[data-shell] #build-output{font:12px/1.5 var(--mono);white-space:pre-wrap;margin:0 0 6px;background:transparent!important}
+:root[data-shell] .wave-toolbar,:root[data-shell] .wave-settings,:root[data-shell] .serial-input-row{display:flex;flex-wrap:wrap;align-items:center;gap:6px;padding:4px 0;background:transparent!important;border:0}
+:root[data-shell] :is(.wave-toolbar,.wave-settings,.serial-input-row) :is(select,input:not([type=checkbox])){height:24px;padding:0 6px;font-size:12px}
+:root[data-shell] :is(.wave-toolbar,.wave-settings,.serial-input-row) button{height:24px;padding:0 10px;font-size:12px;border:1px solid var(--ide-border);background:transparent}
+:root[data-shell] .serial-input-row #serial-input{flex:1;min-width:120px;font-family:var(--mono)}
+:root[data-shell] .bus-columns{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px;background:transparent!important;border:0;min-height:0}
+:root[data-shell] #bus-events,:root[data-shell] #uart-output{font:12px/1.5 var(--mono);background:color-mix(in srgb,var(--ide-panel) 70%,transparent)!important;border:1px solid var(--ide-border);border-radius:var(--radius);padding:6px 8px;margin:0;min-height:80px;overflow:auto}
+
+/* ---------- inspector (secondary side bar) ---------- */
+:root[data-shell] #inspect-panel{flex:1;min-height:0;overflow:auto;padding:0 14px 14px;background:transparent!important;border:0;display:block}
+:root[data-shell] #inspector .overline{font-size:10.5px;font-weight:600;letter-spacing:.06em;color:var(--ide-muted)}
+:root[data-shell] #inspector h2{font-size:15px;font-weight:600;margin:2px 0 6px}
+:root[data-shell] #inspector p{font-size:12px;line-height:1.55;color:var(--ide-muted)}
+:root[data-shell] .inspector-card,:root[data-shell] .measure{background:transparent!important;border:0;border-bottom:1px solid var(--ide-border);border-radius:0;padding:8px 0;margin:0}
+:root[data-shell] .measure{display:flex;align-items:center;justify-content:space-between;font-size:12.5px}
+:root[data-shell] .measure b{font:13px var(--mono);font-weight:600}
+:root[data-shell] .inspector-card label{font-size:11.5px;color:var(--ide-muted);display:block;margin:6px 0 3px}
+:root[data-shell] .inspector-card input,:root[data-shell] .inspector-card select{width:100%;height:26px;padding:0 8px}
+:root[data-shell] .inspector-action{display:block;width:100%;height:28px;margin:6px 0 0;border:1px solid var(--ide-border)!important;background:var(--ide-background)!important;font-size:12.5px;border-radius:var(--radius)}
+:root[data-shell] .inspector-action:hover:not(:disabled){background:var(--ide-hover)!important}
+:root[data-shell] .inspector-action.danger{color:var(--ide-error);border-color:color-mix(in srgb,var(--ide-error) 45%,var(--ide-border))!important}
+:root[data-shell] .empty-inspector{background:transparent!important;border:1px dashed var(--ide-border);border-radius:6px;padding:18px 12px;text-align:center;color:var(--ide-muted);font-size:12.5px;line-height:1.6}
+
+/* ---------- status bar ---------- */
+.statusbar{display:flex;align-items:stretch;justify-content:space-between;background:var(--ide-status);color:var(--ide-muted);border-top:1px solid var(--ide-border);font-size:12px;min-width:0;overflow:hidden;user-select:none}
+.shell[data-running=true] .statusbar{background:var(--ide-statusRun);color:var(--ide-onAccent,#fff);border-top-color:var(--ide-statusRun)}
+.status-left,.status-right{display:flex;align-items:stretch;min-width:0;overflow:hidden}
+.status-left{padding-left:4px}
+.status-right{padding-right:4px;flex-shrink:1}
+.statusbar .status-item{display:flex!important;align-items:center;gap:5px;padding:0 8px;white-space:nowrap;color:inherit;font-size:12px;border:0;border-radius:0;background:transparent;height:100%;min-width:0}
+.statusbar .status-item b{font-weight:400;color:inherit}
+.statusbar .status-button:hover{background:color-mix(in srgb,currentColor 12%,transparent)}
+.statusbar #status-led{width:8px;height:8px;border-radius:50%;background:currentColor;opacity:.6;display:inline-block}
+.statusbar #status-led.running{background:#3fb950;opacity:1}
+.statusbar .language-badge{background:transparent!important;border:0;padding:0 8px;font-size:12px;color:inherit}
+.statusbar #language-toggle{font-size:12px}
+.statusbar #connection-count,.statusbar .status-current{display:none!important}
+@media (min-width:1500px){.statusbar #connection-count,.statusbar .status-current{display:flex!important}}
+
+/* ---------- popovers, menus, palette ---------- */
+:root[data-shell] .workbench-popover{margin:0;position:fixed;inset:auto;min-width:200px;max-width:min(420px,calc(100vw - 16px));max-height:calc(100vh - 60px);overflow:auto;padding:4px;background:var(--ide-panel);color:var(--ide-foreground);border:1px solid var(--ide-border);border-radius:6px;box-shadow:0 6px 24px rgba(0,0,0,.32)}
+.menu{min-width:260px!important}
+.menu-item{display:flex;align-items:center;justify-content:space-between;gap:20px;width:100%;height:26px;padding:0 10px;font-size:12.5px;text-align:left;border-radius:var(--radius);color:var(--ide-foreground)}
+.menu-item:hover:not(:disabled),.menu-item:focus-visible{background:var(--ide-button);color:var(--ide-onAccent,#fff);outline:0}
+.menu-item:hover kbd,.menu-item:focus-visible kbd{color:inherit;border-color:transparent;background:transparent}
+.menu-item kbd{border:0;background:transparent;padding:0}
+.menu-separator{height:1px;margin:4px 6px;background:var(--ide-border)}
+#execution-tools-menu button,#execution-tools-menu select{display:block;width:100%;text-align:left;height:26px;padding:0 10px;font-size:12.5px;border:0;background:transparent;margin:0}
+#execution-tools-menu button:hover:not(:disabled){background:var(--ide-selection)}
+#execution-tools-menu button[hidden]{display:none}
+dialog.command-palette{position:fixed;top:8px;margin:0 auto;width:min(600px,calc(100vw - 32px));max-height:min(480px,calc(100vh - 40px));padding:6px;border:1px solid var(--ide-border);border-radius:8px;background:var(--ide-panel);color:var(--ide-foreground);box-shadow:0 8px 32px rgba(0,0,0,.4);display:none;flex-direction:column}
+dialog.command-palette[open]{display:flex}
+dialog.command-palette::backdrop{background:transparent}
+#command-palette-input{height:28px;padding:0 10px;font-size:13px;margin-bottom:4px;border:1px solid var(--ide-accent)!important}
+#command-palette-list{overflow:auto;min-height:0}
+.palette-item{display:flex;align-items:center;gap:10px;height:24px;padding:0 10px;border-radius:var(--radius);font-size:13px;cursor:pointer}
+.palette-item.active{background:var(--ide-selection);color:var(--ide-selectionText);outline:1px solid color-mix(in srgb,var(--ide-accent) 55%,transparent);outline-offset:-1px}
+.palette-item:hover:not(.active){background:var(--ide-hover)}
+.palette-label{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.palette-group{font-size:11.5px;color:var(--ide-muted)}
+.palette-empty{padding:8px 10px;color:var(--ide-muted);font-size:12.5px}
+/* dialogs keep their own layout but adopt the neutral surfaces */
+:root[data-shell] dialog:not(.command-palette){background:var(--ide-panel);color:var(--ide-foreground);border:1px solid var(--ide-border);border-radius:8px;box-shadow:0 12px 40px rgba(0,0,0,.45)}
+:root[data-shell] dialog::backdrop{background:rgba(0,0,0,.35)}
+:root[data-shell] .run-button{background:var(--ide-button)!important;color:var(--ide-onAccent,#fff)!important;border:1px solid var(--ide-button)!important;border-radius:var(--radius)}
+/* toast notifications */
+:root[data-shell] #app-feedback.toast{position:fixed;right:14px;bottom:calc(var(--statusbar-h) + 12px);left:auto;top:auto;transform:none;z-index:50;max-width:min(460px,calc(100vw - 28px));display:flex;align-items:center;gap:8px;padding:10px 12px;background:var(--ide-panel);color:var(--ide-foreground);border:1px solid var(--ide-border);border-left:3px solid var(--ide-error);border-radius:6px;box-shadow:0 6px 24px rgba(0,0,0,.35);font-size:12.5px}
+:root[data-shell] #app-feedback.toast[hidden]{display:none}
+:root[data-shell] #app-feedback.toast button{height:24px;padding:0 8px;border:1px solid var(--ide-border);background:transparent;font-size:12px;flex:none}
+
+/* ---------- small windows ---------- */
+@media (max-width:1180px){.menubar{display:none}.command-hint kbd{display:none}:root[data-shell] .ide-toolbar #build-status{display:none}}
+@media (max-width:980px){:root[data-shell] .project-title.command-center{min-width:120px}.command-hint{display:none}.layout-toggles{display:none}}
+:root[data-shell] .editor-heading::before{content:none}
+:root[data-shell] .statusbar #language-toggle{border:0!important;background:transparent!important;color:inherit;padding:0 8px;height:100%;border-radius:0}
+:root[data-shell] .statusbar #warning-count{margin-left:0;color:inherit;font-weight:400}
+:root[data-shell] .statusbar #build-status{color:inherit;font-size:12px;max-width:260px;overflow:hidden;text-overflow:ellipsis}
+:root[data-shell] .object-size-tools{display:flex;align-items:center;gap:6px;margin-left:auto;padding:0;background:transparent;border:0;position:static;font-size:12px;color:var(--ide-muted)}
+:root[data-shell] .object-size-tools label{font-size:11.5px}
+:root[data-shell] .object-size-tools select{height:24px;max-width:180px;font-size:12px;padding:0 4px}
+:root[data-shell] .object-size-tools output{font:11.5px var(--mono);color:var(--ide-muted)}
+@media (max-width:1450px){.command-hint kbd{display:none}}
+.example-meta{display:flex;gap:4px}
+.example-tag{display:inline-block;padding:0 5px;border-radius:3px;background:color-mix(in srgb,var(--ide-accent) 14%,transparent);line-height:16px}
+.example-tag.arm{color:var(--ide-warning);background:color-mix(in srgb,var(--ide-warning) 14%,transparent)}
+dialog.command-palette::backdrop{background:transparent!important;backdrop-filter:none!important}
+.debug-toolbar{display:flex;gap:2px;padding:4px;border:1px solid var(--ide-border);border-radius:6px;background:var(--ide-background);align-self:flex-start;flex-wrap:wrap}
+.debug-toolbar button{width:28px;height:26px;display:grid;place-items:center;font-size:14px;color:var(--ide-foreground)}
+.debug-toolbar button:hover:not(:disabled){background:var(--ide-hover)}
+.debug-toolbar button[data-debug=start]{color:#3fb950}
+.debug-toolbar button[data-debug=stop]{color:var(--ide-error)}
+
+:root[data-shell] #firmware-tools button:hover:not(:disabled),:root[data-shell] #execution-tools-menu button:hover:not(:disabled){color:var(--ide-selectionText)}
+:root[data-shell] button.active{background:var(--ide-selection);color:var(--ide-selectionText)}
+:root[data-shell] :is(.monitor-tabs,#source-tabs,.panel-tabs) button.active{background:transparent;color:var(--ide-foreground)}
+:root[data-shell] #source-tabs button.active{background:var(--ide-background)}
+:root[data-shell] .swatch.active{background:var(--swatch)}
+.shell{grid-template-columns:minmax(0,1fr)}
+:root[data-shell] .topbar{overflow:hidden;min-width:0}
+:root[data-shell] .project-title.command-center{flex:1 1 160px;min-width:110px}
+.menubar,.run-area,.top-actions{flex-shrink:0}
+@media (max-width:1450px){.command-hint{display:none}}
+@media (max-width:1280px){.menubar-item{padding:0 5px}:root[data-shell] .brand strong{display:none}}
+@media (max-width:1100px){:root[data-shell] #app-update{display:none}:root[data-shell] .appearance-switch #appearance-system{display:none}}

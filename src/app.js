@@ -4,7 +4,6 @@ import {CATALOG_BY_TYPE} from './catalog-defs.js';
 import {moveSurface} from './surface-move.js';
 import {loadPreferences} from './ide-preferences.js';
 import {WireDraft} from './wire-draft.js';
-import {setupWorkbenchUi} from './workbench-ui.js';
 import {roundedWirePath} from './wire-path.js';
 import {setupFeedback} from './ui-feedback.js';
 import {setupTabAccessibility} from './tab-accessibility.js';
@@ -33,7 +32,7 @@ import {importFirmware} from './firmware-import.js';
 import {compileHal} from './hal-source.js';
 import {compile} from './parser.js';
 import {HAL_EXAMPLES,HAL_GUIDES,applyHalExample} from './hal-examples.js';
-import {setupWorkspaceLayout} from './workspace-layout.js';
+import {createShell} from './shell.js';
 import {mountIdeChrome,setupIde} from './ide-ui.js';
 import {setupUpdates} from './update-ui.js';
 import {setupResizing} from './resize-ui.js';
@@ -47,7 +46,7 @@ import {setupPartPreviews} from './part-preview-ui.js';
 import {esc,initSvg,renderWires,renderParts,renderBreadboards,renderEndpoints,route,updateSimulationSvg,renderMountPreview,renderPinSearch,updateSurfaces} from './render.js';
 
 const $=id=>document.getElementById(id),svg=$('circuit');
-mountIdeChrome();const layout=setupWorkspaceLayout();let ide=null,resizing=null,deviceDocs=null,canvasKeys=null;
+mountIdeChrome();const layout=createShell();let ide=null,resizing=null,deviceDocs=null,canvasKeys=null;
 const feedback=setupFeedback({showLog:()=>{layout.reveal('terminal');document.querySelector('[data-monitor="log"]').click();}});
 const wireDraft=new WireDraft();
 let project=blankProject(),mode='select',pending=null,selection=null,color='#23a68a',status='stopped',result=null,runtime=null,simTime=0,pressed={},undoStack=[],redoStack=[],dirty=false;
@@ -116,8 +115,10 @@ function syncEditor(){
  ide?.sync();
 }
 function lineNumbers(){ $('line-numbers').textContent=Array.from({length:$('code').value.split('\n').length},(_,i)=>i+1).join('\n'); }
-function tab(name){document.querySelectorAll('[data-tab]').forEach(b=>b.classList.toggle('active',b.dataset.tab===name));$('code-panel').hidden=name!=='code';$('inspect-panel').hidden=name!=='inspect';if($('ide-settings-panel'))$('ide-settings-panel').hidden=name!=='settings';if($('device-docs-panel'))$('device-docs-panel').hidden=name!=='docs';}
-function inspectTab(){if(!document.querySelector('[data-tab=docs].active'))tab('inspect');}
+// The shell owns where each view lives: code in the editor group, the inspector in the
+// secondary side bar, settings and device Docs in the primary side bar.
+function tab(name){if(name==='code')layout.reveal('code');else if(name==='inspect')layout.reveal('inspect');else if(['settings','docs'].includes(name))layout.showView(name);}
+function inspectTab(){layout.reveal('inspect');}
 function refresh({preserveWires=false}={}){
  const keyboardFocus=canvasKeys?.snapshot();
  deviceDocs?.refresh();
@@ -146,6 +147,8 @@ function refresh({preserveWires=false}={}){
  $('run-status').textContent=runtime?.debug.paused?'일시정지':({running:'실행 중',paused:'한 단계 실행',stopped:'준비됨',error:'오류로 정지'})[status];
  $('status-led').className=running()?'running':'';
  $('connection-count').textContent=`부품 ${project.components.length}개 · 배선 ${project.wires.length}개`;
+ $('canvas-empty').hidden=!(project.surfaces?.board?.hidden&&project.surfaces?.breadboard?.hidden&&!project.components.length)||running();
+ if($('explorer-circuit-summary'))$('explorer-circuit-summary').textContent=`${project.surfaces?.board?.hidden?'보드 없음':'NUCLEO-F446RE'} · 부품 ${project.components.filter(p=>p.type!=='breadboard').length}개 · 빵판 ${project.components.filter(p=>p.type==='breadboard').length+(project.surfaces?.breadboard?.hidden?0:1)}개 · 배선 ${project.wires.length}개`;
  $('hint').textContent=running()?'실행 중 핀을 클릭하면 전압을 측정합니다. 버튼은 누르는 동안 연결됩니다.':pending?'핀을 클릭하면 연결 · 바닥 클릭으로 꺾임점 추가 · 우클릭 / Esc: 작성 중 배선 취소':TWO_PIN_TYPES.includes(mode)?'빵판 구멍 두 곳을 선택해 다리를 꽂으세요. 빈 공간 클릭 시 자유 배치합니다.':drag?.type==='part'?'초록색 표시가 나타나면 놓아서 장착하세요. R: 45° 회전':'몸체: 이동 · 가장자리: 크기 조절 · 빈 공간 / 가운데 버튼: 화면 이동 · 배치 범위 제한 없음';
  inspector();updateReadouts();resizing?.refresh();
  ide?.controls();canvasKeys?.refresh(keyboardFocus);
@@ -198,7 +201,7 @@ function renderIssues(force=false){
  const issues=circuitDiagnostics(project,result,pressed),key=JSON.stringify(issues);if(key===issuesKey)return;issuesKey=key;
  $('circuit-issues').innerHTML=issues.length?issues.map((issue,i)=>`<button class="circuit-issue ${issue.severity}" data-issue="${i}" ${!issue.target&&running()?'disabled':''}><span>${issue.severity==='error'?'!':'·'}</span>${esc(issue.message)}<b>위치 보기 ↗</b></button>`).join(''):'<p class="issues-clear">현재 연결 검사에서 발견한 문제가 없습니다. 실행 중 전압·전류 검사도 함께 표시됩니다.</p>';
  $('circuit-issues').querySelectorAll('[data-issue]').forEach(b=>b.onclick=()=>focusIssue(issues[Number(b.dataset.issue)].target));
- document.querySelector('[data-monitor="issues"]').textContent='회로 검사'+(issues.length?` (${issues.length})`:'');
+ document.querySelector('[data-monitor="issues"]').textContent='문제'+(issues.length?` (${issues.length})`:'');
 }
 function copyCircuit(){if(!selectedIds(selection,'part').length&&!selectedIds(selection,'wire').length)return false;circuitClipboard=copySelection(project,selection);clipboardOffset=28;log(`부품 ${circuitClipboard.components.length}개와 내부 배선 ${circuitClipboard.wires.length}개를 복사했습니다.`);return true;}
 function pasteCircuit(){if(running()||!circuitClipboard)return;try{const draft=structuredClone(project),next=pasteSelection(draft,circuitClipboard,uid,clipboardOffset);validateProject(draft);checkpoint();project=draft;selection=next;clipboardOffset+=28;pending=null;mode='select';inspectTab();changed();}catch(e){log(e.message,'error');}}
@@ -412,6 +415,7 @@ document.querySelectorAll('[data-add]').forEach(b=>b.onclick=()=>{if(running())r
  let position;for(let i=0;i<32;i++){const x=BB.x+BB.w/2+390*((project.surfaces?.breadboard?.hidden?0:1)+i%4),y=BB.y+BB.h/2+600*Math.floor(i/4);if(!boards.some(p=>Math.abs(p.x-x)<350&&Math.abs(p.y-y)<560)){position={x,y};break;}}
  addPart(type,null,null,position);fitView();svg.focus({preventScroll:true});
 }else if(MULTI_PIN_TYPES.includes(type)){addPart(type,null,null,{x:view.x+view.w*.48,y:view.y+view.h*.85});svg.focus({preventScroll:true});}else setMode(type);});
+$('empty-add-board').onclick=()=>document.querySelector('[data-add="board"]')?.click();$('empty-open-parts').onclick=()=>layout.showView('parts');$('empty-open-examples').onclick=()=>layout.showView('examples');
 $('wire-palette').innerHTML=WIRE_COLORS.map(([value,name],i)=>`<button data-palette="${i<10?'basic':'pastel'}" data-color="${value}" class="swatch ${value===color?'active':''}" style="--swatch:${value}" title="${name} 배선" aria-label="${name} 배선"></button>`).join('');
 function setWireColor(value){
  color=value;document.querySelectorAll('[data-color]').forEach(s=>{s.classList.toggle('active',s.dataset.color===value);s.setAttribute('aria-pressed',String(s.dataset.color===value));});
@@ -518,7 +522,7 @@ deviceDocs=setupDeviceDocs({getProject:()=>project,getSelection:()=>selection,is
  ide.invalidate();return applied;
 }});
 resizing=setupResizing({getProject:()=>project,getSelection:()=>selection,isRunning:running,canResize:()=>!drag&&!pending&&mode==='select',focus:frame=>{const b=frame.bounds,points=[[0,0],[1,0],[1,1],[0,1]].map(([x,y])=>frame.point(b.x+x*b.width,b.y+y*b.height)),xs=points.map(p=>p.x),ys=points.map(p=>p.y),left=Math.min(...xs),top=Math.min(...ys),width=Math.max(...xs)-left,height=Math.max(...ys)-top,w=Math.max(430,width*1.8,height*1.8*1120/730);view={x:left+width/2-w/2,y:top+height/2-w*730/1120/2,w,h:w*730/1120};viewUpdate();},onError:message=>log(message,'error'),select:target=>{selection=target;pending=null;mode='select';inspectTab();refresh();},preview:draft=>{clearTimeout(saveTimer);project=draft;refresh();pinSearch();},cancel:base=>{project=base;changed();pinSearch();},commit:(base,draft)=>{validateProject(draft);project=base;checkpoint();project=draft;changed();pinSearch();},resize:(target,scale)=>{if(running())return;const draft=structuredClone(project);resizeObject(draft,target,scale);validateProject(draft);checkpoint();project=draft;selection=target;changed();pinSearch();}});
-setupWorkbenchUi();
+layout.mount({debugCommand,find:replace=>editorSearch.open(replace),files:()=>[project.code!==undefined?'main.c':null,...(project.firmware?.files||[]).map(f=>f.name)].filter(Boolean),openFile:name=>{if(name!=='main.c'&&!project.firmware?.files.some(f=>f.name===name))return;sourceFile=name;syncEditor();layout.reveal('code');ide?.editor?.focus?.();},gotoLine:line=>ide?.editor?.goto?.(line),setTarget:value=>{const select=$('native-target');if(!select||select.disabled||![...select.options].some(o=>o.value===value))return;select.value=value;select.dispatchEvent(new Event('change'));}});layout.setMonitor(monitor);
 setupTabAccessibility();
 canvasKeys=setupCanvasKeyboard(svg,{
  isDragging:()=>!!drag,
