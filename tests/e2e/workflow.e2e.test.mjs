@@ -68,3 +68,30 @@ test('debug view pauses at a breakpoint and shows variables',{timeout:120000},as
   assert.deepEqual(s.errors,[]);
  }finally{await s.close();}
 });
+
+async function pickExample(win,id){await win.evaluate(id=>{const s=document.getElementById('hal-example');if(![...s.options].some(o=>o.value===id))s.add(new Option(id,id));s.value=id;s.dispatchEvent(new Event('change'));},id);await win.waitForFunction(()=>document.querySelectorAll('#part-layer [data-part]').length>0);}
+async function selectPartWith(win,selector){
+ const ids=await win.evaluate(()=>[...new Set([...document.querySelectorAll('#part-layer [data-part]')].map(e=>e.dataset.part))]);
+ for(const id of ids){await win.locator(`#part-layer [data-part="${id}"]`).first().click({force:true});if(await win.locator(selector).count())return id;}
+ return null;
+}
+test('camera frames appear in the properties panel and SD card files persist after a run',{timeout:150000},async()=>{
+ const s=await launch();
+ try{
+  const {win}=s;
+  await pickExample(win,'camera_tft');
+  await win.keyboard.press('F5');
+  await win.waitForFunction(()=>/frame \d+ shown on TFT/.test(document.getElementById('console-output').textContent),null,{timeout:30000});
+  assert.ok(await selectPartWith(win,'#camera-preview'),'camera part selectable');
+  await win.waitForFunction(()=>/\d+×\d+/.test(document.getElementById('camera-info').textContent),null,{timeout:15000});
+  await win.keyboard.press('F5');
+  await pickExample(win,'sd_logger');
+  await win.keyboard.press('F5');
+  await win.waitForFunction(()=>/LOG\.TXT size=\d+/.test(document.getElementById('console-output').textContent),null,{timeout:30000});
+  await win.keyboard.press('F5');
+  await win.waitForFunction(()=>/SD 카드에 기록된 파일을 프로젝트에 저장했습니다/.test(document.getElementById('console-output').textContent));
+  assert.ok(await selectPartWith(win,'#sd-files'),'SD part selectable');
+  assert.match(await win.textContent('#sd-files'),/LOG\.TXT/);
+  assert.deepEqual(s.errors,[]);
+ }finally{await s.close();}
+});
