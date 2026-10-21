@@ -1,5 +1,18 @@
 # 검증 기록
 
+## 0.31.0 앱 안에서 개발 도구 설치 · 시작 시 도구 확인 — 공개 배포 검증 완료
+
+2026-10-21. 제품 커밋 `60f2e64aa56d522e9c2fdeb59e67010f07f5e862` · [Windows CI 39544511412](https://github.com/moonsyu/STM-Simulator/actions/runs/39544511412) 성공 · [Release v0.31.0](https://github.com/moonsyu/STM-Simulator/releases/tag/v0.31.0).
+
+| 검사 | 결과 |
+|---|---|
+| `npm test` (로컬) | 688개 중 685 통과(실패 2개는 로컬 심볼릭 링크 권한, CI 통과). 새 검사: 설치 계획, 해시 일치·불일치와 정리, STM32CubeF4 조립과 파일 변조 거부, 설치된 항목 건너뜀 |
+| `npm run test:e2e` (로컬) | 23 통과, 1 건너뜀. 새 검사: 시작 알림 → 설치 목록, 다시 묻지 않기 유지 |
+| 실제 다운로드 | 임시 폴더에 ARM GCC 15.2.1·STM32CubeF4(280개 파일 검증)·OpenOCD·clangd 설치 74초, 설치한 도구만으로 LED 예제 빌드, 설치 후 약 1.6 GB, 폴더 삭제 |
+| 공개 자산 | latest=v0.31.0, 태그·BUILD-INFO 커밋 일치, 5자산. EXE SHA-256 `5b6ea3aa59abda5a8c720a5ed06ece3b9c0cfb79aa8bbdd15056778815272984`(102,986,116 B, MZ)이 SHA256.txt·update-manifest·ZIP 안 EXE와 일치. ZIP SHA-256 `2d4b6a706e71ec00728381597473a81c81eaad3588f3dacd7cddb410f7315951` |
+
+한계: ST-LINK USB 드라이버는 설치하지 않으며, CubeIDE가 없는 PC에서 드라이버 없이 보드가 잡히는지는 확인하지 못했습니다.
+
 ## 0.30.1 IDE 실물 보드 실행 수정 — 공개 배포 검증 완료
 
 2026-10-21. 제품 커밋 `0a34222b4a64bc6e0ecd16847012dc7cbcc712c8` · [Windows CI 39542962621](https://github.com/moonsyu/STM-Simulator/actions/runs/39542962621) 성공 · [Release v0.30.1](https://github.com/moonsyu/STM-Simulator/releases/tag/v0.30.1).
