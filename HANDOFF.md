@@ -1,6 +1,13 @@
 # STM Simulator — 개발 인계
 
-현재 버전: **0.30.1**. 정리일: **2026-10-21**. NUCLEO-F446RE와 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M4 에뮬레이터에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+현재 버전: **0.31.0**. 정리일: **2026-10-21**. NUCLEO-F446RE와 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M4 에뮬레이터에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+
+## 0.31.0 앱 안에서 개발 도구 설치 · 시작 시 도구 확인
+
+- `desktop/tool-installer.cjs`: `installPlan(tools)`은 빠진 항목(gcc→armGcc·armGdb, cube, openocd, clangd)을 크기·출처와 함께 돌려준다. `installTools(ids)`는 `%LOCALAPPDATA%/STM-Simulator-Tools`에 설치한다(영문 경로만). 릴리스 zip은 `setup-native-tools.ps1`과 같은 고정 SHA-256, 압축 해제는 Windows `tar.exe`(bsdtar). STM32CubeF4는 Git 없이 `codeload.github.com`의 고정 커밋 소스 압축(HAL 드라이버, CMSIS 디바이스)과 `raw.githubusercontent.com`의 CMSIS Core 헤더 30개를 받아 `desktop/tool-manifest.json`의 파일별 SHA-256(280개)으로 검증하고 필요한 파일만 둔다. 실패 시 `.partial`·작업 폴더를 지운다. 매니페스트는 `node scripts/build-tool-manifest.mjs <STM32CubeF4 clone>`으로 다시 만든다.
+- `NativeIde.installPlan/installTools/cancelInstall`, IPC `native:install-plan|install-tools|install-cancel`, 진행 이벤트 `tools-install`. 설치 뒤 저장된 경로 중 없는 파일은 비우고 `detectTools`로 다시 채운다.
+- UI(`native-ide-ui.js`): 개발 도구 창 **필요한 도구 설치** → 목록·크기 → **설치 시작**/**설치 중지**. 시작 3초 뒤 실물 보드용 도구(clangd 제외)가 빠져 있으면 `#tools-notice`(설치·나중에·다시 묻지 않기, `stm32lab.toolsNotice.v1`). E2E 하네스는 `toolsNotice:true`가 아니면 이 알림을 끈다.
+- 실제 다운로드 검증: 임시 폴더에 전체 설치 74초, GCC 15.2.1·GDB 16.3·OpenOCD·clangd 23.1.0 실행 확인, 설치한 도구만으로 LED 예제 빌드, 설치 후 약 1.6 GB.
 
 ## 0.30.1 실물 보드 실행(IDE) 수정
 
