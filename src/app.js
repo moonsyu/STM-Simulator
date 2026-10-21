@@ -553,6 +553,7 @@ window.addEventListener('keydown',e=>{
 });
 window.addEventListener('error',e=>log('화면 오류: '+e.message,'error'));
 document.addEventListener('ide-undo',e=>editUndo(e.detail));
+document.addEventListener('ide-find',e=>{layout.reveal('code');editorSearch.open(e.detail);});
 ide=setupIde({buildFirmware:()=>ensureFirmware(true).catch(error=>log(error.message,'error')),getProject:()=>project,getSource:()=>sourceFile,getSession:()=>runtime?session:null,isRunning:running,isSimulationRunning:()=>status==='running'||status==='paused',refresh,checkpoint,saveLocal:autosave,layout,log,feedback,requestReplace,replaceProject,debugCommand,
  selectSource:name=>{if(name!=='main.c'&&!project.firmware?.files.some(f=>f.name===name))return;sourceFile=name;syncEditor();},
  applySources:(p,file)=>{checkpoint();project=validateProject(p);sourceFile=file;syncEditor();changed();ide.invalidate();}});

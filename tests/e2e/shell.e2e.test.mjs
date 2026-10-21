@@ -106,3 +106,19 @@ test('empty circuit guidance adds a board and opens views',{timeout:60000},async
   assert.match(await win.textContent('#explorer-circuit-summary'),/NUCLEO-F446RE/);
  }finally{await s.close();}
 });
+
+test('find keys in the code editor open the app search bar, never Monaco\'s own find widget',{timeout:60000},async()=>{
+ const s=await launch();
+ try{
+  const {win}=s;
+  await win.locator('.monaco-editor').first().click();
+  for(const key of ['Control+F','Control+H','F3','Shift+F3']){
+   await win.keyboard.press(key);
+   await win.waitForFunction(()=>!document.getElementById('code-search').hidden);
+   assert.equal(await win.locator('.find-widget.visible').count(),0,key);
+   await win.keyboard.press('Escape');
+   await win.waitForFunction(()=>document.getElementById('code-search').hidden);
+  }
+  assert.deepEqual(s.errors,[]);
+ }finally{await s.close();}
+});
