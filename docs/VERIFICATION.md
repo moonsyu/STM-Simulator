@@ -1,5 +1,18 @@
 # 검증 기록
 
+## 0.32.0 NUCLEO-F103RB 보드 (회로 시뮬레이터) — 공개 배포 검증 완료
+
+2026-10-21. 제품 커밋 `9aa3e9fd17d408026dbac004df4e93c681e3ba88` · [Windows CI 39550035526](https://github.com/moonsyu/STM-Simulator/actions/runs/39550035526) 첫 실행 성공 · [Release v0.32.0](https://github.com/moonsyu/STM-Simulator/releases/tag/v0.32.0).
+
+| 검사 | 결과 |
+|---|---|
+| `npm test` (로컬) | 697개 중 694 통과·1 건너뜀(실패 2개는 로컬 심볼릭 링크 권한, CI 통과). 새 검사: 계열 프로필, F103 코드 생성·인터프리터, 예제 이식(모든 예제를 F103RB로 실행해 F446RE 출력과 비교), F103 예제 목록 |
+| 예제 이식 | 127개 중 125개 실행, 124개 출력 동일, 1개(ADC DMA 스캔)는 F1 ADC 변환 속도 차이, DCMI·I2S 2개는 F103RB에 없어 제외 |
+| `npm run test:e2e` (로컬) | 23 통과, 1 건너뜀. 별도 화면 확인: 보드 전환(Cortex-M3 그림), Pinout(USART 3개·TIM2/3/4), 예제 125개, DMA UART 에코 실행 |
+| 공개 자산 | latest=v0.32.0, 태그·BUILD-INFO 커밋 일치, 5자산. EXE SHA-256 `f76f2f04a18f14ba42b0e3f2d9d27db0efc4d9029062973cd517349fd78b654d`(102,997,234 B, MZ)이 SHA256.txt·update-manifest·ZIP 안 EXE와 일치. ZIP SHA-256 `c86461fc3324b4bef2aad6201b2038a185206e3f9204f1837a3e74700e89a8e9` |
+
+한계: 이 버전의 F103RB는 회로 시뮬레이터만 지원하고 ARM 빌드는 막았습니다(0.33.0에서 지원).
+
 ## 0.31.0 앱 안에서 개발 도구 설치 · 시작 시 도구 확인 — 공개 배포 검증 완료
 
 2026-10-21. 제품 커밋 `60f2e64aa56d522e9c2fdeb59e67010f07f5e862` · [Windows CI 39544511412](https://github.com/moonsyu/STM-Simulator/actions/runs/39544511412) 성공 · [Release v0.31.0](https://github.com/moonsyu/STM-Simulator/releases/tag/v0.31.0).

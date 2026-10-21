@@ -1,14 +1,14 @@
 # STM Simulator
 
-STM Simulator는 **NUCLEO-F446RE 회로 시뮬레이터와 Cortex-M4 펌웨어 에뮬레이터를 통합한 Windows 학습용 IDE**입니다. 프로젝트 생성, C/C++ 코드 작성, 실제 GCC 빌드·GDB 디버그, 가상 빵판 회로 실습을 VS Code와 같은 한 화면에서 진행합니다.
+STM Simulator는 **NUCLEO-F446RE·NUCLEO-F103RB 회로 시뮬레이터와 Cortex-M 펌웨어 에뮬레이터를 통합한 Windows 학습용 IDE**입니다. 두 보드 모두 회로 시뮬레이터, 실제 ARM 빌드, 실물 보드 실행·디버그, 펌웨어 에뮬레이터를 쓸 수 있습니다. 프로젝트 생성, C/C++ 코드 작성, 실제 GCC 빌드·GDB 디버그, 가상 빵판 회로 실습을 VS Code와 같은 한 화면에서 진행합니다.
 
 ## 실행 대상
 
 | 실행 대상 | 동작 | 필요한 도구 |
 |---|---|---|
 | **회로 시뮬레이터** | 컴파일 없이 HAL C 소스를 해석해 회로와 함께 바로 실행 | 없음 |
-| **펌웨어 에뮬레이터 · ARM ELF** | ARM GCC로 실제 ST HAL·CMSIS를 빌드한 ELF를 Cortex-M4(FPU·DSP 포함) 명령어 단위로 실행하고 STM32F446 주변장치를 가상 빵판에 연결 | 빌드: ARM GCC + STM32CubeF4 · 이미 만든 ELF 실행: 없음 |
-| **STM32 · ARM GCC** | 실물 보드에 ELF/BIN/HEX를 기록하고 ST-LINK·OpenOCD·GDB로 디버그 | ARM GCC, STM32CubeF4, ARM GDB, OpenOCD |
+| **펌웨어 에뮬레이터 · ARM ELF** | ARM GCC로 실제 ST HAL·CMSIS를 빌드한 ELF를 Cortex-M4(FPU·DSP 포함) 명령어 단위로 실행하고 STM32F446 또는 STM32F103 주변장치를 가상 빵판에 연결 | 빌드: ARM GCC + STM32CubeF4(F446RE) / STM32CubeF1(F103RB) · 이미 만든 ELF 실행: 없음 |
+| **STM32 · ARM GCC** | 실물 보드에 ELF/BIN/HEX를 기록하고 ST-LINK·OpenOCD·GDB로 디버그(여러 보드를 연결하면 보드 이름으로 ST-LINK 선택) | ARM GCC, STM32CubeF4 또는 STM32CubeF1, ARM GDB, OpenOCD |
 | **Windows · C/C++** | PC용 C/C++ 프로그램 빌드·실행·디버그 | GCC, GDB |
 
 ## 주요 기능
@@ -27,6 +27,7 @@ STM Simulator는 **NUCLEO-F446RE 회로 시뮬레이터와 Cortex-M4 펌웨어 �
 ### 펌웨어 에뮬레이터
 - **Cortex-M4 코어**: ARMv7E-M Thumb/Thumb-2 전체, DSP·포화·병렬 연산, FPv4-SP 단정밀 FPU(반올림 모드·FMA·반정밀도 변환), 예외 진입/복귀·tail-chaining·NVIC 우선순위 선점·BASEPRI/PRIMASK, SysTick, DWT, ITM(SWV printf), WFI 슬립 시간 건너뛰기. QEMU와 바이트 단위로 대조 검증했습니다.
 - **STM32F446 주변장치**: RCC/FLASH/PWR/SYSCFG/EXTI, GPIOA~H, TIM1~14(PWM·입력 캡처·엔코더), USART/UART 6개(비동기·동기), I²C1~3, SPI1~4, ADC1~3, DMA1/2(일반·순환·더블 버퍼), DCMI 카메라, SDIO/SPI SD 카드(FAT32), CAN1/2, IWDG/WWDG, RTC, CRC.
+- **STM32F103 주변장치**: RCC(HSI/2·HSE PLL), FLASH, AFIO 리맵·EXTI, GPIOA~E(CRL/CRH), TIM1~4(16비트), USART1~3, I²C1/2, SPI1/2, ADC1/2(보정·온도센서), DMA1 채널 1~7, CAN1, IWDG/WWDG, CRC. F446RE용 HAL 예제는 F103RB 프로젝트에서 F1 클럭·핀 리맵·DMA 채널로 자동 이식됩니다(DCMI·I2S 예제 제외).
 - **회로 연동**: GPIO·PWM·통신이 기존 빵판 회로와 장치 모델(LED, 버튼, LCD, OLED/TFT, 센서, 모터, 서보, 부저, 메모리 등)에 그대로 연결됩니다.
 - **디버그**: ELF의 DWARF 줄 정보로 소스 줄 중단점, 한 줄/함수 안/밖 실행, 호출 스택, 전역 변수, 레지스터, 메모리, 감시식. HardFault는 원인을 한국어로 보여 줍니다.
 - **ELF 열기**: CubeIDE 등에서 빌드한 ELF를 **파일 → 펌웨어 ELF 열기**로 바로 실행합니다.
@@ -75,9 +76,9 @@ npm run build:artifact
 
 | 명령 | 내용 |
 |---|---|
-| `npm test` | 단위(회로·언어·HAL·프로젝트·Docs·설정·데스크톱), 인터프리터 확장, Cortex-M4 코어(QEMU 대조 결과), STM32F446 펌웨어 통합 테스트 |
+| `npm test` | 단위(회로·언어·HAL·프로젝트·Docs·설정·데스크톱), 인터프리터 확장, Cortex-M4 코어(QEMU 대조 결과), STM32F446·STM32F103 펌웨어 통합 테스트 |
 | `npm run test:e2e` | 실제 Electron 앱: 작업 화면·레이아웃 저장, 예제 실행·측정·디버그, 저장/종료 복구, 테마 대비, 에뮬레이터(ELF 열기·UART·로직 분석기·디버거·ARM GCC 빌드) |
-| `npm run test:toolchain` | ARM GCC와 STM32CubeF4로 모든 예제를 앱의 실제 빌드 경로로 컴파일·링크한 뒤 에뮬레이터에서 실행 (`ARM_GCC`, `STM32CUBE_F4_ROOT`, 선택 `EXAMPLES`) |
+| `npm run test:toolchain` | ARM GCC와 STM32CubeF4·STM32CubeF1로 모든 예제를 두 보드에 대해 앱의 실제 빌드 경로로 컴파일·링크한 뒤 에뮬레이터에서 실행 (`ARM_GCC`, `STM32CUBE_F4_ROOT`, `STM32CUBE_F1_ROOT`, 선택 `EXAMPLES`) |
 | `npm run test:release` | Windows 전용: 패키지 앱·업데이트 도우미(잠긴 EXE 교체·롤백)·포터블 EXE |
 | `npm run build:fixtures` | 에뮬레이터 테스트용 ELF 재생성 (ARM GCC, 선택 QEMU) |
 
@@ -87,7 +88,7 @@ npm run build:artifact
 
 Releases의 **Assets**에서 `STM-Simulator-<버전>-Windows-x64.zip`을 받아 압축을 풀고 EXE를 실행하세요. Node.js 설치는 필요 없습니다. 회로 시뮬레이터와 ELF 에뮬레이션은 EXE만으로 사용할 수 있고, 실제 빌드·GDB·clangd 기능에는 각 개발 도구와 SDK가 필요합니다. 설치 방법은 [IDE 사용법](docs/IDE.md)을 확인하세요.
 
-실물 NUCLEO-F446RE 빌드·실행에 필요한 ARM GCC·STM32CubeF4·OpenOCD는 STM32CubeIDE가 없어도 됩니다. 앱을 처음 실행하면 빠진 도구를 알려 주고, **실행 및 디버그 → 개발 도구 → 필요한 도구 설치**로 바로 받을 수 있습니다(약 365 MB, 설치 후 약 1.6 GB).
+실물 NUCLEO-F446RE·NUCLEO-F103RB 빌드·실행에 필요한 ARM GCC·STM32CubeF4/F1·OpenOCD는 STM32CubeIDE가 없어도 됩니다. 앱을 처음 실행하면 빠진 도구를 알려 주고, **실행 및 디버그 → 개발 도구 → 필요한 도구 설치**로 바로 받을 수 있습니다(약 365 MB, 설치 후 약 1.6 GB).
 
 ## 권리 관련 안내
 
@@ -95,4 +96,4 @@ STM Simulator는 STMicroelectronics의 공식 제품이 아닌 개인 학습 프
 
 모든 자료의 권리 관계에 대한 법률 검토가 완료된 것은 아닙니다. **저작권·상표권·라이선스 등 권리 관련 문제 또는 법적 문제가 확인되는 경우, 해당 저장소를 삭제 조치하겠습니다.** 관련 문제는 [GitHub Issues](https://github.com/moonsyu/STM-Simulator/issues)를 통해 알려 주세요.
 
-새 프로젝트는 HSI 16 MHz에서 시작합니다. TIM 활성화 초기값은 CubeMX 기준 PSC=0, TIM2/5 ARR=4,294,967,295, TIM3/4 ARR=65,535, PWM Pulse=0입니다. 자세한 적용 범위는 [보드 기본값](docs/MCU-DEFAULTS.md)을 참고하세요.
+새 프로젝트는 HSI 16 MHz(F446RE) 또는 8 MHz(F103RB)에서 시작합니다. TIM 활성화 초기값은 CubeMX 기준 PSC=0, TIM2/5 ARR=4,294,967,295, TIM3/4 ARR=65,535, PWM Pulse=0입니다. 자세한 적용 범위는 [보드 기본값](docs/MCU-DEFAULTS.md)을 참고하세요.
