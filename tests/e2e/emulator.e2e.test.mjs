@@ -4,7 +4,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import {launch,root,applyExample} from './harness.mjs';
 
-const fixture=name=>path.join(root,'tests/fixtures/firmware',name);
+const fixture=name=>path.join(root,'tests/fixtures',name.includes('/')?name:'firmware/'+name);
 const gcc=process.env.ARM_GCC||'/home/claude/tools/xpack-arm-none-eabi-gcc-14.2.1-1.1/bin/arm-none-eabi-gcc'+(process.platform==='win32'?'.exe':'');
 const cube=process.env.STM32CUBE_F4_ROOT||'/home/claude/tools/cubef4';
 const exists=p=>fs.access(p).then(()=>true,()=>false);
@@ -31,6 +31,23 @@ test('an opened ELF runs on the Cortex-M4 emulator and drives the breadboard',{t
   await win.waitForFunction(()=>document.getElementById('shell').dataset.running==='true');
   // The firmware's LED current shows up in the circuit model.
   await win.waitForFunction(()=>parseFloat(document.getElementById('sim-time').textContent)>0.5,null,{timeout:30000});
+  await win.waitForFunction(()=>document.getElementById('sim-current').textContent!=='—');
+  await win.keyboard.press('Control+F2');
+  await win.waitForFunction(()=>document.getElementById('shell').dataset.running==='false');
+  assert.deepEqual(s.errors,[]);
+ }finally{await s.close();}
+});
+
+test('a NUCLEO-F103RB project and its STM32CubeF1 ELF run on the STM32F103 emulator',{timeout:120000},async()=>{
+ const s=await launch();
+ try{
+  const {win}=s;
+  await openFixture(s,'firmware-f103/blink');
+  assert.equal(await win.evaluate(()=>document.querySelector('#surface > .board').dataset.board),'nucleo-f103rb');
+  await win.keyboard.press('Control+F5');
+  await win.waitForFunction(()=>/펌웨어 에뮬레이터를 시작했습니다/.test(document.getElementById('console-output').textContent));
+  await win.waitForFunction(()=>parseFloat(document.getElementById('sim-time').textContent)>0.6,null,{timeout:30000});
+  await win.waitForFunction(()=>/PA5=1[\s\S]*PA5=0/.test(document.getElementById('console-output').textContent),null,{timeout:30000});
   await win.waitForFunction(()=>document.getElementById('sim-current').textContent!=='—');
   await win.keyboard.press('Control+F2');
   await win.waitForFunction(()=>document.getElementById('shell').dataset.running==='false');
