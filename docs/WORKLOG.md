@@ -4,10 +4,13 @@
 
 ## 2026-10-21 · 실물 NUCLEO-F446RE에 예제 쓰기
 
-- 요청: LED 점멸 예제를 보드에 써서 동작 확인(기존 펌웨어 삭제 허락), 이어서 버튼으로 LED를 토글하는 예제를 빌드해 쓰기.
+- 요청: LED 점멸 예제를 보드에 써서 동작 확인(기존 펌웨어 삭제 허락), 이어서 버튼으로 LED를 토글하는 예제를 빌드해 쓰고 확인.
 - LED 점멸(`blink`): 앱의 실제 ARM 빌드 경로(`native-build.cjs`, CubeIDE GCC 13.3.1, STM32CubeF4 v1.28.3)로 빌드해 STM32_Programmer_CLI로 0x08000000에 20.58 KB를 쓰고 검증(`Download verified successfully`)한 뒤 리셋했다. 실행 중 SWD 핫플러그로 `GPIOA->ODR`(0x40020014)을 읽어 PA5(LD2)가 0→1로 바뀌는 것을 확인했다(약 470 ms 시점). 링크 경고 `_lseek`/`_read` 미구현은 newlib 기본 스텁 경고로 이 펌웨어와 무관하다.
 - 토글 주기를 더 길게 재는 도중 ST-LINK가 `DEV_USB_COMM_ERR`로 응답하지 않게 됐다. 장치는 Windows에 보이고 ST-LINK를 잡은 프로그램·서비스는 없었다. USB를 다시 꽂아야 풀린다.
 - 버튼 토글: 보드 USER 버튼(B1, PC13) EXTI로 누를 때마다 LD2(PA5)를 전환하는 `exti` 예제를 같은 경로로 빌드했다(배선 불필요). ST-LINK가 복구되면 쓰고, PC13 EXTI 설정과 버튼을 눌렀을 때 ODR 변화를 확인한다.
+- 사용자가 USB를 다시 꽂은 뒤 ST-LINK가 정상 연결됐다. `exti` 펌웨어 20.92 KB를 쓰고 검증·리셋했다.
+- 실물 확인(SWD 핫플러그, 연결 횟수를 줄여 한 세션에 묶음): `SYSCFG_EXTICR4`가 EXTI13을 GPIOC로 연결(2), `EXTI_IMR`·`EXTI_FTSR` 13번 비트 1(하강 에지), NVIC `EXTI15_10`(IRQ40) 활성, PC13 대기 레벨 1(버튼 놓음). `EXTI_SWIER`로 EXTI13을 두 번 발생시켜 실제 인터럽트 처리기가 PA5(LD2)를 0→1→0으로 바꾸고 `EXTI_PR`을 지우는 것을 확인했다. `-w32`의 "Failed to download data"는 SWIER가 처리 후 스스로 0이 되어 쓰기 후 읽기 확인이 어긋난 것이며 쓰기는 적용됐다.
+- 물리 버튼을 사람이 누르는 확인은 사용자에게 맡겼다(누를 때마다 LD2가 켜졌다 꺼짐).
 - 빌드·플래시 스크립트는 세션 scratchpad `board/build-blink.mjs`(예제 ID 인자)이며 저장소에는 넣지 않았다.
 
 ## 2026-10-21 · 0.30.0 수정 6건과 실물 보드 빌드 확인
