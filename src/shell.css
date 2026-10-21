@@ -444,3 +444,15 @@ dialog.command-palette::backdrop{background:transparent!important;backdrop-filte
 :root[data-shell] #app-update{display:none!important}
 :root[data-shell] .status-item[hidden]{display:none!important}
 .keybinding-head button{white-space:nowrap;flex:none}
+
+/* 개발 도구 → 필요한 도구 설치, and the start-up notice when real-board tools are missing. */
+.native-install{margin:10px 0 0;padding:10px 12px;border:1px solid var(--ide-border);border-radius:8px;background:color-mix(in srgb,var(--ide-foreground) 3%,transparent)}
+.native-install h3{margin:0 0 6px;font-size:13px}
+.native-install ul{list-style:none;margin:0 0 6px;padding:0;display:grid;gap:4px}
+.native-install li{display:flex;justify-content:space-between;gap:12px;font-size:12.5px}
+.native-install li small{color:var(--ide-muted);font-variant-numeric:tabular-nums;white-space:nowrap}
+#tools-notice{position:fixed;right:14px;bottom:calc(var(--statusbar-h,24px) + 12px);z-index:60;max-width:min(440px,calc(100vw - 28px));padding:12px 14px;background:var(--ide-panel);color:var(--ide-foreground);border:1px solid var(--ide-border);border-radius:10px;box-shadow:var(--shadow-pop)}
+#tools-notice p{margin:0 0 10px;font-size:12.5px;line-height:1.5}
+#tools-notice p span{display:block;color:var(--ide-muted)}
+#tools-notice div{display:flex;gap:6px;justify-content:flex-end}
+#tools-notice button{height:28px;padding:0 12px;font-size:12.5px;border:1px solid var(--ide-border);background:transparent;border-radius:6px}

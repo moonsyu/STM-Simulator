@@ -122,3 +122,29 @@ test('find keys in the code editor open the app search bar, never Monaco\'s own 
   assert.deepEqual(s.errors,[]);
  }finally{await s.close();}
 });
+
+test('start-up notice lists missing real-board tools, opens the install plan, and stays off after 다시 묻지 않기',{timeout:120000},async()=>{
+ const {mkdtemp}=await import('node:fs/promises');const {tmpdir}=await import('node:os');const path=await import('node:path');
+ // An empty tools folder and no SDK override make STM32CubeF4 missing on any machine.
+ const tools=await mkdtemp(path.join(tmpdir(),'stm-no-tools-'));
+ const s=await launch({toolsNotice:true,env:{LOCALAPPDATA:tools,STM32CUBE_F4_ROOT:''}});
+ try{
+  const {win}=s;
+  await win.waitForSelector('#tools-notice',{timeout:15000});
+  assert.match(await win.textContent('#tools-notice'),/STM32CubeF4/);
+  await win.click('#tools-notice [data-notice="install"]');
+  await win.waitForFunction(()=>document.getElementById('native-tools-dialog').open&&!document.getElementById('native-install').hidden);
+  assert.match(await win.textContent('#native-install-plan'),/STM32CubeF4 v1\.28\.3/);
+  assert.match(await win.textContent('#native-install-status'),/내려받습니다/);
+  assert.equal(await win.isVisible('#native-install-start'),true);
+  // Nothing is downloaded until 설치 시작; 닫기 hides the plan.
+  await win.click('#native-install-cancel');assert.equal(await win.isHidden('#native-install'),true);
+  await win.click('#native-tools-cancel');
+  // 다시 묻지 않기 is remembered across reloads.
+  await win.reload();await win.waitForSelector('#tools-notice',{timeout:15000});
+  await win.click('#tools-notice [data-notice="never"]');
+  await win.reload();await win.waitForTimeout(4500);
+  assert.equal(await win.locator('#tools-notice').count(),0);
+  assert.deepEqual(s.errors,[]);
+ }finally{await s.close();}
+});

@@ -5,6 +5,7 @@ const {detectTools,validateTools,probeTools,prepareBuild,build,fingerprint}=requ
 const {GdbSession}=require('./gdb-mi.cjs');
 const {LanguageServer}=require('./clangd.cjs');
 const {launch,terminate}=require('./process-tools.cjs');
+const {installPlan,installTools}=require('./tool-installer.cjs');
 // OpenOCD bundled with STM32CubeIDE is ST's fork: its scripts live in a separate plugin (…debug.openocd_*/resources/
 // openocd/st_scripts) and it reaches the ST-LINK through the DAP interface; the legacy hla interface/stlink.cfg loops there.
 async function openocdArgs(executable){
@@ -26,6 +27,18 @@ class NativeIde extends EventEmitter{
   async settings(){if(!this.tools){let saved={};try{saved=JSON.parse(await fs.readFile(path.join(this.directory,'native-tools.json'),'utf8'));}catch(e){if(e.code!=='ENOENT'&&!(e instanceof SyntaxError))throw e;}this.tools=await detectTools(validateTools(saved));}return this.tools;}
   // The file keeps what the user entered; empty entries are auto-detected (as at start-up), not left empty until a restart.
   async configure(value){if(this.busy())throw new Error('빌드·실행·디버그를 종료한 뒤 도구 설정을 변경하세요.');const saved=validateTools(value);await fs.mkdir(this.directory,{recursive:true});await fs.writeFile(path.join(this.directory,'native-tools.json'),JSON.stringify(saved,null,2));this.tools=await detectTools(saved);await this.lsp.stop();this.result=null;return this.tools;}
+  /** Missing tools for an ARM / real-board build, with download sizes (shown before anything is downloaded). */
+  async installPlan(){return installPlan(await this.settings());}
+  async installTools(ids){
+    if(this.busy()||this.installing)throw new Error('빌드·실행·디버그 또는 설치를 마친 뒤 도구를 설치하세요.');
+    this.installing=new AbortController();
+    try{await installTools(ids,{signal:this.installing.signal,onProgress:p=>this.send('tools-install',p)});}finally{this.installing=null;}
+    let saved={};try{saved=JSON.parse(await fs.readFile(path.join(this.directory,'native-tools.json'),'utf8'));}catch{}
+    // Entries the user left empty (or that point at a missing file) now resolve to the installed tools.
+    for(const [key,value]of Object.entries(saved))if(value&&!await fs.access(value).then(()=>true,()=>false))saved[key]='';
+    this.tools=await detectTools(validateTools(saved));this.result=null;return this.tools;
+  }
+  cancelInstall(){this.installing?.abort();}
   busy(){return !!this.buildController||!this.gdb.closed||!!this.runProcess;}
   async validate(text){if(typeof text!=='string'||Buffer.byteLength(text)>2000000)throw new Error('프로젝트 크기 제한을 넘었습니다.');const {validateProject}=await import('../src/project.js');return validateProject(JSON.parse(text));}
   async compile(text,config){

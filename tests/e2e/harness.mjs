@@ -6,7 +6,7 @@ import {tmpdir} from 'node:os';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 export const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'../..');
-export async function launch({profile,env={},size={width:1600,height:900}}={}){
+export async function launch({profile,env={},size={width:1600,height:900},toolsNotice=false}={}){
  const dir=profile||await mkdtemp(path.join(tmpdir(),'stm-e2e-'));
  const args=[...(process.platform==='linux'?['--no-sandbox']:[]),root];
  const app=await _electron.launch({executablePath:electronPath,args,env:{...process.env,CIRCUIT_LAB_TEST_PROFILE:dir,...env}});
@@ -16,6 +16,8 @@ export async function launch({profile,env={},size={width:1600,height:900}}={}){
  await app.evaluate(({BrowserWindow},s)=>{const w=BrowserWindow.getAllWindows()[0];w.setSize(s.width,s.height);},size);
  await win.waitForSelector('html[data-shell="vscode"]',{timeout:30000});
  await win.waitForFunction(()=>document.getElementById('status-left')?.children.length>0);
+ // The start-up 'missing tools' notice (shown 3 s after start) would cover controls; only its own test turns it on.
+ if(!toolsNotice)await win.evaluate(()=>localStorage.setItem('stm32lab.toolsNotice.v1','never'));
  return {app,win,profile:dir,errors,async close({keep=false}={}){await app.close().catch(()=>{});if(!keep&&!profile)await rm(dir,{recursive:true,force:true}).catch(()=>{});}};
 }
 export const visible=(win,selector)=>win.locator(selector).first().isVisible();
