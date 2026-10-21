@@ -14,11 +14,25 @@ export function setupResizing(o){
  const available=()=>!o.isRunning()&&o.canResize();
  $('resize-target').onchange=()=>{const [type,id]=$('resize-target').value.split(':');target={type,id};o.select(target);refresh();if(frame)o.focus(frame);};
  row.title='가장자리 드래그 · Shift: 비율 유지 · Alt+0: 선택한 장치 기본 크기';
+ // Bounds of what is actually painted in a part body (its own coordinates): glow, pin labels, readouts,
+ // hidden and transparent shapes are left out so the frame hugs the part.
+ const SKIP=/(^|\s)(led-glow|rgb-glow|terminal-label|buzzer-wave|buzzer-frequency|dc-rpm)(\s|$)/;
+ function paintedBox(body){
+  if(!body)return null;const inverse=body.getScreenCTM()?.inverse();if(!inverse)return body.getBBox();let x0=Infinity,y0=Infinity,x1=-Infinity,y1=-Infinity;
+  for(const el of body.querySelectorAll('rect,circle,ellipse,path,line,polyline,polygon,text,image,foreignObject')){
+   let hidden=false;for(let n=el;n&&n!==body;n=n.parentNode){if(SKIP.test(n.getAttribute?.('class')||'')||n.getAttribute?.('opacity')==='0'){hidden=true;break;}}if(hidden)continue;
+   const style=getComputedStyle(el),clear=v=>!v||v==='none'||v==='transparent'||/rgba\(.*,\s*0\)$/.test(v);
+   if(style.display==='none'||style.visibility==='hidden'||(clear(style.fill)&&clear(style.stroke)&&!['image','foreignObject'].includes(el.tagName)))continue;
+   const b=el.getBBox(),m=inverse.multiply(el.getScreenCTM());if(!b.width&&!b.height)continue;
+   for(const [px,py]of [[b.x,b.y],[b.x+b.width,b.y],[b.x,b.y+b.height],[b.x+b.width,b.y+b.height]]){const x=m.a*px+m.c*py+m.e,y=m.b*px+m.d*py+m.f;x0=Math.min(x0,x);y0=Math.min(y0,y);x1=Math.max(x1,x);y1=Math.max(y1,y);}
+  }
+  return x0<Infinity?{x:x0,y:y0,width:x1-x0,height:y1-y0}:body.getBBox();
+ }
  function boundsFor(p){
   if(target.type==='surface'){const box=svg.querySelector(`[data-surface="${target.id}"]`)?.getBBox();return box&&{x:box.x,y:box.y,width:box.width,height:box.height};}
   const object=p.components.find(c=>c.id===target.id);if(!object)return null;
   if(object.type==='breadboard'){const {frame}=breadboardModel(object);return {x:-frame.w/2,y:-frame.h/2,width:frame.w,height:frame.h};}
-  const box=svg.querySelector(`[data-part="${target.id}"] .part-body`)?.getBBox();if(!box)return null;
+  const box=paintedBox(svg.querySelector(`[data-part="${target.id}"] .part-body`));if(!box)return null;
   const pins=localTerminals({...object,scale:1,scaleX:1,scaleY:1,skewX:0}),m=inverse(resizeFrame(p,target,box).matrix),rx=6*Math.hypot(m.a,m.c),ry=6*Math.hypot(m.b,m.d);
   const x=Math.min(box.x,...pins.map(t=>t.x-rx)),y=Math.min(box.y,...pins.map(t=>t.y-ry)),right=Math.max(box.x+box.width,...pins.map(t=>t.x+rx)),bottom=Math.max(box.y+box.height,...pins.map(t=>t.y+ry));return {x,y,width:Math.max(1,right-x),height:Math.max(1,bottom-y)};
  }
@@ -70,8 +84,8 @@ export function setupResizing(o){
   // device's resize frame overlaps them, regardless of component order.
   $('surface').insertBefore(layer,$('part-layer'));
   frame=resizeFrame(p,target,bounds);const unit=1/Math.hypot(svg.getScreenCTM()?.a||1,svg.getScreenCTM()?.b||0),r=5*unit;
-  // Leave the body draggable and keep real terminals above the resize controls.
-  if(!active){const ux=unit/Math.hypot(frame.matrix.a,frame.matrix.b),uy=unit/Math.hypot(frame.matrix.c,frame.matrix.d),w=Math.max(bounds.width+16*ux,32*ux),h=Math.max(bounds.height+16*uy,32*uy);bounds.x-=(w-bounds.width)/2;bounds.y-=(h-bounds.height)/2;bounds.width=w;bounds.height=h;}
+  // A 3 px margin keeps the handles just off the body (still draggable) without reaching neighbouring holes.
+  if(!active){const ux=unit/Math.hypot(frame.matrix.a,frame.matrix.b),uy=unit/Math.hypot(frame.matrix.c,frame.matrix.d),w=Math.max(bounds.width+6*ux,20*ux),h=Math.max(bounds.height+6*uy,20*uy);bounds.x-=(w-bounds.width)/2;bounds.y-=(h-bounds.height)/2;bounds.width=w;bounds.height=h;}
   const b=frame.bounds,points=Object.fromEntries(Object.entries(positions).map(([key,[x,y]])=>[key,frame.point(b.x+x*b.width,b.y+y*b.height)]));
   const size={width:bodyBounds.width*Math.hypot(frame.matrix.a,frame.matrix.b),height:bodyBounds.height*Math.hypot(frame.matrix.c,frame.matrix.d)};
   $('resize-size').textContent=`${size.width.toFixed(1)} × ${size.height.toFixed(1)}`;
