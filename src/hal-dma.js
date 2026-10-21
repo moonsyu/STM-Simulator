@@ -42,7 +42,7 @@ export class HalDma{
  field(h,k){return this.hal.field(h,k);}
  state(h){const id=this.field(h,'Instance'),f1=this.hal.f1;if(!(this.hal.family?.dmaUnits??DMA_STREAMS).includes(id))throw new Error(`DMA ${f1?'채널':'스트림'} 이름을 확인하세요: ${id}`);if(!this.streams.has(id))this.streams.set(id,{id,irq:id+'_IRQn',busy:false,gen:0,flags:0,it:{tc:true,ht:true,te:true},index:0,count:0,remaining:0});const st=this.streams.get(id);return st;}
  init(ptr,r){
-  const h=this.handle(ptr,r),st=this.state(h),init=this.field(h,'Init'),get=k=>this.field(init,k),ch=get('Channel'),dir=get('Direction');
+  const h=this.handle(ptr,r),st=this.state(h),init=this.field(h,'Init'),get=k=>this.field(init,k),ch=this.hal.f1?null:get('Channel'),dir=get('Direction');
   // F1 DMA1 channels have no request selector (each request is wired to one channel) and all support memory-to-memory.
   if(!this.hal.f1&&(!Number.isInteger(ch)||ch%0x2000000||ch/0x2000000>7))throw new Error(`${st.id}: DMA_CHANNEL_0~7을 사용하세요.`);
   if(![0,0x40,0x80].includes(dir))throw new Error(`${st.id}: DMA 방향을 확인하세요.`);if(dir===0x80&&!this.hal.f1&&!st.id.startsWith('DMA2'))throw new Error('메모리→메모리 전송은 DMA2 스트림만 지원합니다.');
@@ -57,8 +57,8 @@ export class HalDma{
   const st=this.state(h);if(!st.inited||st.handle!==h)throw new Error(`${label}: HAL_DMA_Init(${st.id})이 필요합니다.`);st.ptr=ptr;return {h,st,ptr};
  }
  check(link,request,direction){
-  const {h,st}=link,init=this.field(h,'Init'),channel=this.field(init,'Channel')/0x2000000,options=(this.hal.family?.dmaRequests??DMA_REQUESTS)[request];
-  if(!options?.some(([s,c])=>s===st.id&&(c===null||c===channel)))throw new Error(`${request}: ${st.id} 채널 ${channel}은(는) 이 요청을 처리하지 않습니다. 가능한 조합: ${options.map(([s,c])=>s+(c===null?'':' CH'+c)).join(', ')}`);
+  const {h,st}=link,init=this.field(h,'Init'),channel=this.hal.f1?null:this.field(init,'Channel')/0x2000000,options=(this.hal.family?.dmaRequests??DMA_REQUESTS)[request];
+  if(!options?.some(([s,c])=>s===st.id&&(c===null||c===channel)))throw new Error(`${request}: ${st.id}${channel===null?'':' 채널 '+channel}은(는) 이 요청을 처리하지 않습니다. 가능한 조합: ${options.map(([s,c])=>s+(c===null?'':' CH'+c)).join(', ')}`);
   const dir=this.field(init,'Direction');if(direction!==undefined&&dir!==direction)throw new Error(`${request}: DMA Direction이 ${direction===0?'DMA_PERIPH_TO_MEMORY':direction===0x40?'DMA_MEMORY_TO_PERIPH':'DMA_MEMORY_TO_MEMORY'}이어야 합니다.`);
   this.hal.noticeIrq.add(st.irq);return link;
  }
