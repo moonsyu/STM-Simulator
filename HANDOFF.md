@@ -1,6 +1,13 @@
 # STM Simulator — 개발 인계
 
-현재 버전: **0.30.0**. 정리일: **2026-10-21**. NUCLEO-F446RE와 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M4 에뮬레이터에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+현재 버전: **0.30.1**. 정리일: **2026-10-21**. NUCLEO-F446RE와 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M4 에뮬레이터에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+
+## 0.30.1 실물 보드 실행(IDE) 수정
+
+- `native-ide.cjs`의 `openocdArgs`: CubeIDE 플러그인 OpenOCD(ST 빌드)는 `-s …debug.openocd_*/resources/openocd/st_scripts -f interface/stlink-dap.cfg -c "transport select dapdirect_swd" -f target/stm32f4x.cfg`, 그 밖(xPack 등)은 `interface/stlink.cfg`. ST 빌드에서 예전 hla `stlink.cfg`는 `Infinite eval recursion`으로 멈춘다.
+- `configure`(개발 도구 저장)는 파일에 입력값을 쓰고 사용 값은 `detectTools`로 채운다(이전에는 재시작 전까지 빈 SDK 경로).
+- 보드 연결의 "시작할 때 빌드한 펌웨어를 보드에 기록"은 기본 해제(기존 펌웨어 보호)로 유지한다. 처음 쓰는 순서는 IDE 문서에 적었다.
+- 실물 확인: `NativeIde`에 빈 도구 설정 저장 → 자동 감지, `run`(STM32 · ARM GCC, OpenOCD, 기록) → 빌드·플래시·실행, GDB 일시정지마다 `uwTick` 724→2908 ms, PA5 변화. 사용자 진단 로그의 실패(0.29.2 ARM GCC 미설정, 0.30.0 SDK 빈 경로)를 근거로 원인을 찾았다.
 
 ## 0.30.0 4칸 들여쓰기 · 예제/Docs 구분 · F11 연속 실행 · 찾기 창 정리 · CubeIDE 도구 감지
 
