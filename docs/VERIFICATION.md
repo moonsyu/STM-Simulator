@@ -1,5 +1,19 @@
 # 검증 기록
 
+## 0.29.0 UI 다듬기 · 기능 점검 수정 — 공개 배포 검증 완료
+
+2026-10-21. 제품 커밋 `90504af7761d3760fa43c26ca78ac8497e64e488` · [Windows CI 39524337726](https://github.com/moonsyu/STM-Simulator/actions/runs/39524337726) (빌드·릴리스 게시 모두 성공) · [Release v0.29.0](https://github.com/moonsyu/STM-Simulator/releases/tag/v0.29.0).
+
+| 검사 | 결과 |
+|---|---|
+| `npm test` (로컬 Windows, Node 24) | 676개 중 674 통과. 실패 2개는 로컬 심볼릭 링크 권한(EPERM) 한정, CI 통과 |
+| `npm run test:e2e` (로컬 실제 Electron) | 19 통과, 1 건너뜀. Dark/White WCAG AA 대비 검사 포함 |
+| 색 대비 (새 팔레트) | foreground·muted·accent·error·warning × background·panel·chrome·hover, 선택 영역, 버튼 모두 AA (최소 5.15:1) |
+| HAL 예제 127개 실행 감사 | 오류 0, `stdio.h` 중복 제거 전후 출력 동일 |
+| 공개 자산 | latest=v0.29.0, 태그·BUILD-INFO 커밋 일치, 5자산 존재. EXE SHA-256 `8f9ff1745ac078286eee79fe5dc5b55372dbc0c86b2364e747f7227a68098d28`(102,967,771 B, MZ 헤더)이 SHA256.txt·update-manifest·ZIP 안의 `STM-Simulator.exe`와 일치. ZIP SHA-256 `01b52b497dfe2e1667acf5971b37a8bf75a4ffc344563409f43133e5b3fe2221` |
+
+한계: 화면 디자인은 1600×900 창의 Dark/White 캡처로 확인했으며 작은 창 크기와 고배율 디스플레이는 따로 확인하지 않았습니다.
+
 ## 0.28.0 코드 정렬 · 예제 결과 표시 점검 — 공개 배포 검증 완료
 
 2026-10-21. 제품 커밋 `536dedd37e84a3a92e651ee3f5fecbc33a16089e` · [Windows CI 39520981687](https://github.com/moonsyu/STM-Simulator/actions/runs/39520981687) (빌드·릴리스 게시 모두 성공) · [Release v0.28.0](https://github.com/moonsyu/STM-Simulator/releases/tag/v0.28.0).
