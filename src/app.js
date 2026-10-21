@@ -21,6 +21,7 @@ import {circuitDiagnostics} from './circuit-diagnostics.js';
 import {PINS,BB,PIN_BY_ID,endpointInfo,searchPins,circuitHoles,holeInfo,breadboardModel} from './pins.js';
 import {TWO_PIN_TYPES,MULTI_PIN_TYPES,WIRE_COLORS,PART_DEFS,terminalKeys,attachments,detachPart,normalizeAngle} from './components.js';
 import {findMount,applyMount,occupiedHoles} from './placement.js';
+import {endpointBlocked} from './wire-ends.js';
 import {SimulationSession} from './session.js';
 import {FirmwareSession} from './firmware-session.js';
 import {BuzzerAudio} from './buzzer-audio.js';
@@ -284,13 +285,16 @@ function clickEndpoint(id){
  const pin=PIN_BY_ID.get(id);selection={type:'endpoint',id};
  if(running()){inspectTab();refresh();return;}
  if(pin?.signal==='NC'){log('NC 핀은 내부에 연결되지 않았습니다.');pending=null;refresh();return;}
- if(!pending){pending=id;wireDraft.reset(id);inspectTab();refresh();return;}
+ // One jumper per hole / pin, as on a real breadboard.
+ const blocked=!TWO_PIN_TYPES.includes(mode)&&pending!==id?endpointBlocked(project,id):null;
+ if(!pending){if(blocked){log(blocked);inspectTab();refresh();return;}pending=id;wireDraft.reset(id);inspectTab();refresh();return;}
  if(pending===id){pending=null;refresh();return;}
  if(TWO_PIN_TYPES.includes(mode)){
    if(id.startsWith('part:')||pending.startsWith('part:')){log('부품을 꽂으려면 보드 핀 또는 빵판 구멍을 선택하세요.');return;}
    const occupied=occupiedHoles(project.components);if(occupied.has(id)||occupied.has(pending)){log('이미 부품이 꽂힌 구멍입니다. 다른 구멍을 선택하세요.');pending=null;refresh();return;}
    addPart(mode,endpointInfo(pending,project.components,project.surfaces),endpointInfo(id,project.components,project.surfaces));return;
  }
+ if(blocked){log(blocked);return;}
  if(project.wires.length>=500){log('배선은 500개까지 추가할 수 있습니다.','error');pending=null;return;}
  if(!project.wires.some(w=>(w.from===pending&&w.to===id)||(w.to===pending&&w.from===id))){checkpoint();project.wires.push({id:uid('w'),from:pending,to:id,color,...wireDraft.finish(pending)});}
  pending=null;selection=null;$('preview-layer').innerHTML='';changed();
