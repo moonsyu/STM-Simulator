@@ -348,6 +348,20 @@ describe('native build helpers',()=>{
     assert.ok(plan.flags.includes('-mcpu=cortex-m4')&&plan.flags.includes('-DSTM32F446xx')&&plan.flags.includes('-O0'));assert.ok(plan.linkFlags.includes('--specs=nano.specs'));
     assert.ok(plan.units.some(u=>u.file.endsWith('startup_stm32f446xx.s')));assert.equal(path.basename(plan.elf),'firmware.elf');
   },'stm-build-'));
+  test('prepareBuild (arm) for an STM32F103RB project uses STM32CubeF1, Cortex-M3 flags, F103xB startup and 128K/20K memory',()=>withTempDir(async dir=>{
+    const gcc=path.join(dir,'bin','arm-none-eabi-gcc'),cubeF1=path.join(dir,'cubef1');await fs.mkdir(path.dirname(gcc));await fs.writeFile(gcc,'');
+    const inc=path.join(cubeF1,'Drivers/STM32F1xx_HAL_Driver/Inc');await fs.mkdir(inc,{recursive:true});await fs.writeFile(path.join(inc,'stm32f1xx_hal.h'),'');await fs.writeFile(path.join(inc,'stm32f1xx_hal_conf_template.h'),'/* f1 conf */');
+    const p={...blankProject('STM32F103RB'),boardId:'nucleo-f103rb'};p.mcu.dma={USART2_RX:{stream:'DMA1_Channel6',channel:0,mode:'CIRCULAR',priority:'HIGH'}};
+    // The F4 SDK alone is not enough for an F1 project.
+    await assert.rejects(nativeBuild.prepareBuild({project:p,tools:{armGcc:gcc,cube:path.join(dir,'none')},root:path.join(dir,'build')}),/STM32CubeF1/);
+    const plan=await nativeBuild.prepareBuild({project:p,tools:{armGcc:gcc,cubeF1},root:path.join(dir,'build')});
+    assert.match(await readText(path.join(plan.directory,'main.h')),/#include "stm32f1xx_hal.h"/);
+    assert.equal(await readText(path.join(plan.directory,'stm32f1xx_hal_conf.h')),'/* f1 conf */');
+    const ld=await readText(path.join(plan.directory,'stm32f103rb.ld'));assert.match(ld,/LENGTH = 128K/);assert.match(ld,/LENGTH = 20K/);
+    assert.ok(plan.flags.includes('-mcpu=cortex-m3')&&plan.flags.includes('-DSTM32F103xB')&&!plan.flags.some(f=>f.startsWith('-mfpu')));
+    assert.ok(plan.units.some(u=>u.file.endsWith('startup_stm32f103xb.s'))&&plan.units.some(u=>u.file.endsWith('stm32f1xx_hal_gpio_ex.c')));
+    assert.match(await readText(path.join(plan.directory,'__stm_environment.c')),/void DMA1_Channel6_IRQHandler\(void\) \{ HAL_DMA_IRQHandler\(&hdma_usart2_rx\); \}/);
+  },'stm-build-'));
   test('prepareBuild rejects bad targets, non-ASCII build roots, missing tools and reserved names',()=>withTempDir(async dir=>{
     const gcc=path.join(dir,'gcc');await fs.writeFile(gcc,'');const p=blankProject(),root=path.join(dir,'b');
     await assert.rejects(nativeBuild.prepareBuild({project:p,tools:{hostGcc:gcc},root:path.join(dir,'빌드'),target:'host'}),/한글/);
@@ -442,9 +456,22 @@ describe('native tools for a real NUCLEO board',()=>{
   for(const v of ['2.2.0','2.3.100']){const scripts=path.join(plugins,`com.st.stm32cube.ide.mcu.debug.openocd_${v}`,'resources','openocd','st_scripts','interface');await fs.mkdir(scripts,{recursive:true});await fs.writeFile(path.join(scripts,'stlink-dap.cfg'),'');}
   assert.deepEqual(await openocdArgs(exe),['-s',path.join(plugins,'com.st.stm32cube.ide.mcu.debug.openocd_2.3.100','resources','openocd','st_scripts'),'-f','interface/stlink-dap.cfg','-c','transport select dapdirect_swd','-f','target/stm32f4x.cfg']);
   assert.deepEqual(await openocdArgs(path.join(dir,'xpack-openocd-0.12.0-7','bin','openocd.exe')),['-f','interface/stlink.cfg','-f','target/stm32f4x.cfg']);
+  // NUCLEO-F103RB: F1 target script, and one ST-LINK picked by serial when several boards are connected.
+  assert.deepEqual(await openocdArgs(exe,{target:'stm32f1x',serial:'0668FF544949878667173544'}).then(a=>a.slice(4)),['-c','adapter serial 0668FF544949878667173544','-c','transport select dapdirect_swd','-f','target/stm32f1x.cfg']);
+  assert.deepEqual(await openocdArgs(path.join(dir,'openocd.exe'),{target:'stm32f1x'}),['-f','interface/stlink.cfg','-f','target/stm32f1x.cfg']);
  }));
+ test('the ST-LINK of the project board is chosen by board name; several unknown ones ask for the serial',async()=>{
+  const {chooseStlink}=require('../../desktop/native-ide.cjs');
+  const two=async()=>[{serial:'0668FF544949878667173544',board:'NUCLEO-F103RB'},{serial:'0672FF485775495067192757',board:'NUCLEO-F446RE'}];
+  assert.equal(await chooseStlink('NUCLEO-F103RB','',two),'0668FF544949878667173544');
+  assert.equal(await chooseStlink('NUCLEO-F446RE','',two),'0672FF485775495067192757');
+  assert.equal(await chooseStlink('NUCLEO-F446RE','ABCDEF0123',two),'ABCDEF0123');
+  assert.equal(await chooseStlink('NUCLEO-F446RE','',async()=>[{serial:'0672FF485775495067192757',board:''}]),'0672FF485775495067192757');
+  assert.equal(await chooseStlink('NUCLEO-F446RE','',async()=>[]),'');
+  await assert.rejects(chooseStlink('NUCLEO-F103RB','',async()=>[{serial:'AAAA0000',board:''},{serial:'BBBB1111',board:''}]),/ST-LINK가 2개 연결되어 있습니다.*AAAA0000, BBBB1111/);
+ });
  test('saving the tools dialog keeps the entered values in the file and auto-detects empty entries right away',()=>withTempDir(async dir=>{
-  const ide=new NativeIde(dir),entered={armGcc:'',armGdb:'',cube:'',hostGcc:'',hostGdb:'',clangd:'',openocd:'',buildRoot:''};
+  const ide=new NativeIde(dir),entered={armGcc:'',armGdb:'',cube:'',cubeF1:'',hostGcc:'',hostGdb:'',clangd:'',openocd:'',buildRoot:''};
   const tools=await ide.configure(entered);
   assert.deepEqual(JSON.parse(await readText(path.join(dir,'native-tools.json'))),entered);
   assert.deepEqual(tools,await detectTools(entered));
