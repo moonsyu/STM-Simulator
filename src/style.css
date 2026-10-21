@@ -188,6 +188,8 @@ button:hover{filter:brightness(.96)}
 .part-body:active{cursor:grabbing}
 .part-selected{filter:drop-shadow(0 0 3.5px #209d83)}
 .wire-hit{stroke:transparent;stroke-width:15;fill:none;cursor:pointer}
+/* Glow, readouts and pin labels are drawn around a part but are not part of it: clicks go to the holes below. */
+.led-glow,.rgb-glow,.terminal-label,.buzzer-wave,.buzzer-frequency,.dc-rpm{pointer-events:none}
 .wire-end{cursor:grab}.wire-end:hover circle:last-child{stroke:#fff;stroke-width:1.4}
 .wire-selected{filter:drop-shadow(0 0 3.5px #1f8975)}
 .wire-visible{fill:none;stroke-linecap:round;stroke-linejoin:round;pointer-events:none}

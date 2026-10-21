@@ -60,5 +60,7 @@ export function catalogShape(p,read,physicalPins=true){
   return `<g data-pad="${i+1}">${i===0?rect(px-3.5,py-3.5,7,7,'#d2b66c',.7,'stroke="#f2dfa4" stroke-width=".5"'):circle(px,py,3.5,'#c6ae68','stroke="#ead79e" stroke-width=".5"')}${rect(px-1.5,py-1.5,3,3,'#263d2d',.3)}<text class="terminal-label" x="${tx}" y="${ty}" text-anchor="${side?(x>0?'start':'end'):'middle'}" font-size="5" fill="#405844" pointer-events="none"><title>${esc(v.pins[i])}</title>${esc(short)}</text></g>`;
  }).join('');
  const bridges=physicalPins&&!board&&f!=='uart'&&v.pins.length>2?CATALOG_DEFS[p.type].terminals.map((_,i)=>{const pad=catalogPadPosition(p.type,i),root=packageLeadRoot(catalogBodyBounds(p.type),pad),d=`M${root.x} ${root.y}L${pad.x} ${pad.y}`;return `<path class="package-lead" data-pin="${i+1}" d="${d}" fill="none" stroke="#737d78" stroke-width="3.2"/><path d="${d}" fill="none" stroke="#d6dcd5" stroke-width="1.5"/>`;}).join(''):'';
- return `<g data-reference="${v.id}" data-model-family="${f}">${rect(-w/2-4,-h/2-6,w+8,h+12,'transparent',3,'pointer-events="all"')}${bridges}${s}</g>`;
+ // The invisible grab area matches the painted package, so nearby holes stay clickable.
+ const grab=catalogBodyBounds(p.type);
+ return `<g data-reference="${v.id}" data-model-family="${f}">${rect(grab.left,grab.top,grab.right-grab.left,grab.bottom-grab.top,'transparent',3,'pointer-events="all"')}${bridges}${s}</g>`;
 }
