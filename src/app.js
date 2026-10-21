@@ -21,7 +21,7 @@ import {circuitDiagnostics} from './circuit-diagnostics.js';
 import {PINS,BB,PIN_BY_ID,endpointInfo,searchPins,circuitHoles,holeInfo,breadboardModel} from './pins.js';
 import {TWO_PIN_TYPES,MULTI_PIN_TYPES,WIRE_COLORS,PART_DEFS,terminalKeys,attachments,detachPart,normalizeAngle} from './components.js';
 import {findMount,applyMount,occupiedHoles} from './placement.js';
-import {endpointBlocked} from './wire-ends.js';
+import {endpointBlocked,endpointAt,moveWireEnd} from './wire-ends.js';
 import {SimulationSession} from './session.js';
 import {FirmwareSession} from './firmware-session.js';
 import {BuzzerAudio} from './buzzer-audio.js';
@@ -311,6 +311,8 @@ svg.addEventListener('pointerdown',e=>{
    if((p?.type==='slide'||CATALOG_BY_TYPE[p?.type]?.family==='slide')&&!target.closest('[data-endpoint]')){checkpoint();p.position=(p.position+1)%(CATALOG_BY_TYPE[p.type]?.id.includes('dp3t')?3:2);selection={type:'part',id:p.id};inspectTab();recompute();autosave();refresh();return;}
    if(id==='USER'||p?.type==='button'||CATALOG_BY_TYPE[p?.type]?.family==='button'){pressed[id]=true;drag={type:'press',id};svg.setPointerCapture(e.pointerId);recompute();refresh();return;}
  }
+ // Dragging a wire end moves it to another hole or pin; a click without moving selects the wire as before.
+ const end=target.closest('[data-wire-end]');if(end&&!running()&&!e.shiftKey){if(pending){clickEndpoint(project.wires.find(w=>w.id===end.dataset.ownerWire)?.[end.dataset.wireEnd]);return;}drag={type:'wire-end',id:end.dataset.ownerWire,end:end.dataset.wireEnd,start:point(e),current:point(e),moved:false};svg.setPointerCapture(e.pointerId);return;}
  const handle=target.closest('[data-wire-point]');if(handle&&!running()){const id=handle.dataset.ownerWire,index=Number(handle.dataset.wirePoint);drag={type:'wire-point',id,index,start:point(e),origin:{...project.wires.find(w=>w.id===id).points[index]},moved:false};svg.setPointerCapture(e.pointerId);return;}
  if(e.shiftKey&&!running()){const wire=target.closest('[data-wire]');if(wire||part){selection=toggleSelection(selection,wire?'wire':'part',wire?.dataset.wire||part.dataset.part);pending=null;mode='select';inspectTab();refresh();return;}}
  if(part&&selection?.type==='group'&&isSelected(selection,'part',part.dataset.part)&&!running()){drag={type:'group',start:point(e),base:structuredClone(project),moved:false};svg.setPointerCapture(e.pointerId);return;}
@@ -332,6 +334,8 @@ svg.addEventListener('pointermove',e=>{
  const q=point(e);
  if(drag?.type==='marquee'){drag.current=q;const x=Math.min(drag.start.x,q.x),y=Math.min(drag.start.y,q.y),w=Math.abs(drag.start.x-q.x),h=Math.abs(drag.start.y-q.y);$('preview-layer').innerHTML=`<rect class="marquee-box" x="${x}" y="${y}" width="${w}" height="${h}" vector-effect="non-scaling-stroke"/>`;return;}
  if(drag?.type==='surface'){const dx=q.x-drag.start.x,dy=q.y-drag.start.y;if(!drag.moved&&Math.hypot(dx,dy)<=3)return;const next=structuredClone(drag.base);try{moveSurface(next,drag.id,{x:drag.origin.x+dx,y:drag.origin.y+dy});validateProject(next);clearTimeout(saveTimer);drag.moved=true;project=next;refresh();pinSearch();}catch(error){log(error.message,'error');}return;}
+ if(drag?.type==='wire-end'){drag.current=q;if(!drag.moved&&Math.hypot(q.x-drag.start.x,q.y-drag.start.y)<3)return;drag.moved=true;const w=project.wires.find(w=>w.id===drag.id),fixed=w&&endpointInfo(w[drag.end==='from'?'to':'from'],project.components,project.surfaces),target=endpointAt(project,q),info=target&&endpointInfo(target,project.components,project.surfaces),ok=target&&!endpointBlocked(project,target,{ignoreWire:drag.id})&&target!==w[drag.end==='from'?'to':'from'];
+   if(fixed)$('preview-layer').innerHTML=`<path d="${route(fixed,info&&ok?info:q)}" fill="none" stroke="${esc(w.color)}" stroke-width="2.6" stroke-dasharray="5 4" pointer-events="none"/>${info?`<circle cx="${info.x}" cy="${info.y}" r="6" fill="none" stroke="${ok?'#2f9e6f':'#d24b3e'}" stroke-width="2" vector-effect="non-scaling-stroke" pointer-events="none"/>`:''}`;return;}
  if(drag?.type==='wire-point'){const w=project.wires.find(w=>w.id===drag.id),dx=q.x-drag.start.x,dy=q.y-drag.start.y;if(!drag.moved&&Math.hypot(dx,dy)<2)return;if(!drag.moved){checkpoint();drag.moved=true;}w.points[drag.index]={x:drag.origin.x+dx,y:drag.origin.y+dy};refresh();return;}
  if(drag?.type==='group'){let dx=q.x-drag.start.x,dy=q.y-drag.start.y;if(!drag.moved&&Math.hypot(dx,dy)<=3)return;if(!drag.moved){checkpoint();drag.moved=true;}try{const next=structuredClone(drag.base);moveSelection(next,selection,dx,dy);validateProject(next);project=next;refresh();}catch{}return;}
  if(drag?.type==='part'){
@@ -359,6 +363,11 @@ svg.addEventListener('dblclick',e=>{
 });
 svg.addEventListener('contextmenu',e=>{const hit=e.target.closest('[data-wire-point]');if(!hit||running())return;e.preventDefault();checkpoint();project.wires.find(w=>w.id===hit.dataset.ownerWire).points.splice(Number(hit.dataset.wirePoint),1);changed();});
 function release(event){if(!drag)return;
+ if(drag.type==='wire-end'){const d=drag;drag=null;$('preview-layer').innerHTML='';
+  if(!d.moved||event?.type==='pointercancel'){if(!d.moved){selection={type:'wire',id:d.id};inspectTab();}refresh({preserveWires:true});return;}
+  const next=structuredClone(project);try{if(moveWireEnd(next,d.id,d.end,endpointAt(project,d.current))){validateProject(next);checkpoint();project=next;selection={type:'wire',id:d.id};log('배선 끝을 옮겼습니다.');changed();return;}}catch(error){log(error.message,'error');}
+  refresh({preserveWires:true});return;
+ }
  if(drag.type==='marquee'){
   const previous=drag.selection;
   if(event?.type==='pointercancel'||running())selection=previous;

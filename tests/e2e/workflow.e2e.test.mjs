@@ -135,3 +135,32 @@ test('Gravity RGB (WS2812) example lights the LED with the received colour and s
   assert.deepEqual(s.errors,[]);
  }finally{await s.close();}
 });
+
+test('a hole takes one jumper wire, and dragging a wire end moves it to another pin (undo restores it)',{timeout:120000},async()=>{
+ const s=await launch();
+ try{
+  const {win}=s;
+  await applyExample(win,'5mm 단색 LED');
+  const center=async selector=>{const b=await win.locator(selector).first().boundingBox();return {x:b.x+b.width/2,y:b.y+b.height/2};};
+  const end=await win.evaluate(()=>{const g=document.querySelector('#wire-layer [data-wire-end]');return {wire:g.dataset.ownerWire,end:g.dataset.wireEnd};});
+  const endSel=`#wire-layer [data-owner-wire="${end.wire}"][data-wire-end="${end.end}"]`;
+  const free='[data-endpoint="board:CN7:1"]';// PC10, unused by the example
+  // (1) Start a wire on a free pin, then try to finish it on a pin that already has a wire end.
+  let p=await center(free);await win.mouse.click(p.x,p.y);
+  p=await center(endSel);await win.mouse.click(p.x,p.y);
+  await win.waitForFunction(()=>/이미 배선이 연결된 칸/.test(document.getElementById('console-output').textContent));
+  await win.keyboard.press('Escape');
+  const wires=await win.evaluate(()=>document.querySelectorAll('#wire-layer [data-wire]').length);
+  // (2) Drag the wire end onto the free pin.
+  const from=await center(endSel),to=await center(free);
+  await win.mouse.move(from.x,from.y);await win.mouse.down();
+  await win.mouse.move((from.x+to.x)/2,(from.y+to.y)/2,{steps:5});await win.mouse.move(to.x,to.y,{steps:5});await win.mouse.up();
+  await win.waitForFunction(()=>/배선 끝을 옮겼습니다/.test(document.getElementById('console-output').textContent));
+  const moved=await center(endSel);
+  assert.ok(Math.hypot(moved.x-to.x,moved.y-to.y)<4,'the end now sits on PC10');
+  assert.equal(await win.evaluate(()=>document.querySelectorAll('#wire-layer [data-wire]').length),wires,'the wire was moved, not duplicated');
+  await win.click('#undo');
+  await win.waitForFunction(([sel,x,y])=>{const b=document.querySelector(sel).getBoundingClientRect();return Math.hypot(b.x+b.width/2-x,b.y+b.height/2-y)<4;},[endSel,from.x,from.y]);
+  assert.deepEqual(s.errors,[]);
+ }finally{await s.close();}
+});
