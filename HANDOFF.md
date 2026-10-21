@@ -1,6 +1,17 @@
 # STM Simulator — 개발 인계
 
-현재 버전: **0.31.0**. 정리일: **2026-10-21**. NUCLEO-F446RE와 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M4 에뮬레이터에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+현재 버전: **0.32.0**. 정리일: **2026-10-21**. NUCLEO-F446RE 또는 NUCLEO-F103RB와 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M4 에뮬레이터에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+
+## 0.32.0 NUCLEO-F103RB 보드 (회로 시뮬레이터)
+
+- `src/mcu-family.js`: 계열 프로필 `FAMILIES`(STM32F446RE·STM32F103RB). 핀(`gpioPins`), UART/타이머/기타 경로, 핀 배치 방식(`pinMux` 'af'|'remap'), F1 AFIO 리맵 묶음(`F1_REMAPS`, `remapFor`), JTAG 핀, DMA 단위·요청(F1 DMA1 채널 1~7 고정), IRQ 번호, 클럭 범위, HAL 접두사·define. `mcu-config.js`의 `validateMcu`·`configProblems`(F1 리맵 묶음 검사)·`pinFunctions`·`defaultMcu`가 `family`를 받는다.
+- 보드: `boards.js` 항목에 `mcuFamily`·`chip`·`core`, `projectBoard(project)`. `pins.js` `BOARD_SIGNALS`·`boardPins(boardId)`(F103RB는 CN7-29/31=PD0/PD1, CN10-18=PB11), 엔진은 `ALL_GPIO_PINS`. `validateProject`는 보드와 `mcu.family`가 다르면 거부한다.
+- 코드 생성(`hal-generator.js`): F1 분기(HSI/2×PLL, 대기 사이클, APB1≤36 MHz, ADC 분주≤14 MHz, AFIO 클럭·리맵·SWJ_NOJTAG, 입력 방향 AF 핀은 `GPIO_MODE_INPUT`, DMA 채널, ADC 보정).
+- 인터프리터(`hal.js` 등): `HalAdapter.family/f1`, F1 상수(`halConstantsFor`), AFIO 리맵 순서 검사(`checkF1Pin`), F1 ADC 변환 시간, F1 DMA(Channel 필드 없음), NVIC 번호, CAN1 리맵 2. `hal-source.js`는 계열별 구조체와 헤더.
+- 예제 이식(`src/example-port.js`): F446RE 예제를 F103RB 프로젝트에 적용하면 클럭 84→64 MHz, 빈 F1 경로로 핀 이동(배선·장착도 이동), 타이머 PSC/ARR 비례 조정, 32비트 카운터는 16비트+`(uint16_t)` 차이, DMA 스트림→채널, IRQ 이름, F4 전용 필드 제거, 생성 함수 재생성. DCMI·I2S 예제는 `f1Unavailable`로 거부하고 목록(`searchHalExamples(q, family)`)에서 뺀다. `applyHalExample`은 `보드:예제`로 캐시한다.
+- UI: 보드 그림(`boardSvg(boardId)`, 보드가 바뀌면 다시 그림), 보드 카드 칩, Pinout(계열별 핀·경로·DMA 채널·IRQ·리맵 묶음, 아래 요약), 새 프로젝트 보드 선택.
+- 아직 F1 ARM 빌드·실물 보드 실행·펌웨어 에뮬레이터는 없다. `native-build.cjs`는 F446RE가 아닌 ARM 빌드를 막는다. 다음: STM32CubeF1 HAL 설치(매니페스트), cortex-m3 빌드·링커 128K/20K, OpenOCD `stm32f1x.cfg`와 ST-LINK 시리얼 선택(두 보드 동시 연결), F1 에뮬레이터 SoC.
+- 테스트: `tests/unit/mcu-family.test.js`, `tests/interp/f103.test.js`, `tests/interp/f103-examples.test.js`(모든 예제를 F103RB로 이식·실행해 F446RE 출력과 비교, 약 50초).
 
 ## 0.31.0 앱 안에서 개발 도구 설치 · 시작 시 도구 확인
 
