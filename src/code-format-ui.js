@@ -34,15 +34,19 @@ export function setupCodeFormat({code,textarea,lsp,log}){
   const s=editor.getSelection();if(!s||s.isEmpty?.())return formatDocument();
   return apply({start:s.startLineNumber,end:s.endLineNumber});
  }
- // Typing `}` re-indents the block it closes.
- editor.onKeyUp(event=>{
-  if(applying||event.browserEvent?.key!=='}'||!loadPreferences().formatOnType||!writable())return;
+ // Typing `}` re-indents the block it closes. Monaco's onDidType (its type command) also reports
+ // IME input, where the key event says "Process" (Korean IME on Windows), and over-typing an
+ // auto-closed `}`, which changes no text.
+ function closeBlock(){
+  if(applying||!loadPreferences().formatOnType||!writable())return;
   const model=editor.getModel(),pos=editor.getPosition();if(!model||!pos)return;
   if(model.getLineContent(pos.lineNumber).charAt(pos.column-2)!=='}')return;
   const range=blockRange(model.getValue(),pos.lineNumber,pos.column);if(!range)return;
   const before=model.getLineContent(pos.lineNumber).length;
   if(apply(range)){const after=model.getLineContent(pos.lineNumber).length;editor.setPosition({lineNumber:pos.lineNumber,column:Math.max(1,pos.column+after-before)});}
- });
+ }
+ if(editor.onDidType)editor.onDidType(text=>{if(text.includes('}'))closeBlock();});
+ else editor.onKeyUp(event=>{if(event.browserEvent?.key==='}')closeBlock();});
  return {formatDocument,formatSelection,formatBlock:apply};
 }
 
