@@ -1,6 +1,15 @@
 # STM Simulator — 개발 인계
 
-현재 버전: **0.32.0**. 정리일: **2026-10-21**. NUCLEO-F446RE 또는 NUCLEO-F103RB와 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M4 에뮬레이터에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+현재 버전: **0.33.0**. 정리일: **2026-10-21**. NUCLEO-F446RE 또는 NUCLEO-F103RB와 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+
+## 0.33.0 NUCLEO-F103RB 실제 빌드 · 실물 보드 · 펌웨어 에뮬레이터
+
+- 도구: `desktop/tool-installer.cjs`에 `CUBE_F1`(STM32CubeF1 v1.8.7, `desktop/tool-manifest-f1.json` 파일별 SHA-256 201개, `%LOCALAPPDATA%/STM-Simulator-Tools/STM32CubeF1`). 매니페스트는 `node scripts/build-tool-manifest.mjs --f1 <clone>`. 도구 키 `cubeF1`(개발 도구 창 `STM32CubeF1 SDK 폴더`, 자동 감지: 설치 폴더·`~/STM32Cube/Repository/STM32Cube_FW_F1_*`·`STM32CUBE_F1_ROOT`). 시작 알림은 F103RB 프로젝트일 때만 CubeF1을 요구한다.
+- 빌드(`native-build.cjs`): `SDKS[family]`가 SDK 키·폴더·접두사·CPU 플래그(`cortex-m3`, soft float, `STM32F103xB`)·startup(`startup_stm32f103xb.s`)·링커(128K/20K)·HAL 모듈을 정한다.
+- 실물 보드(`native-ide.cjs`): OpenOCD target은 `OPENOCD_TARGETS[보드 계열]`(`stm32f1x`), `chooseStlink(보드 이름, 설정 시리얼)` — 설정 시리얼 > ST-LINK 1개 > STM32CubeProgrammer `-l st-link`의 Board Name 일치 > 오류(시리얼 목록). STM32CubeProgrammer가 없으면 PowerShell `Get-PnpDevice`로 시리얼만 얻는다. 보드 연결 창에 `ST-LINK 시리얼 (선택)`.
+- 에뮬레이터(`src/emu/stm32f103/`): `Stm32f103 extends Stm32f446`(`resetHz` 8 MHz, `build()`가 F1 주소에 배치). F1 전용 `RccF1`, `FlashF1`, `GpioPortF1`(CRL/CRH, `moder()`로 F4식 보기 제공), `Afio`(MAPR → `signalPins`, EXTICR; `soc.syscfg`로도 노출), `DmaF1`(채널 1~7, `DMA1_REQUESTS`), `AdcF1`(F4 Adc 상속), `DbgmcuF1`, `PwrF1`. USART·I2C·SPI·TIM·EXTI·CAN·CRC·IWDG·WWDG는 F4 모델 공유(IRQ 번호 동일, TIM2만 16비트로 바꿈). 메모리 버스는 F446 크기 그대로. `firmware-session.js`는 `project.mcu.family`로 SoC와 핀 목록을 고른다.
+- 테스트: `tests/firmware/firmware-f103.test.js`(고정 펌웨어 `tests/fixtures/firmware-f103/*`, `scripts/emu/build-f103-fixtures.mjs`로 다시 빌드), `tests/toolchain/arm-examples.test.mjs`가 두 보드를 모두 빌드·실행(CI는 CubeF1 고정 커밋을 받음), E2E 두 개(F103 ELF 실행, 보드 전환 후 앱에서 빌드·에뮬레이터 실행), 단위(F1 빌드 계획, OpenOCD F1·시리얼, ST-LINK 선택, 설치 매니페스트).
+- 실물 확인: NUCLEO-F103RB(ST-LINK SN `0668FF544949878667173544`)에 blink·exti를 써서 PA5 토글, RCC_CFGR(PLL x16, APB1 /2), AFIO_EXTICR4·EXTI·NVIC IRQ40, SWIER로 인터럽트 처리 확인. F446RE는 건드리지 않았다.
 
 ## 0.32.0 NUCLEO-F103RB 보드 (회로 시뮬레이터)
 
@@ -10,7 +19,7 @@
 - 인터프리터(`hal.js` 등): `HalAdapter.family/f1`, F1 상수(`halConstantsFor`), AFIO 리맵 순서 검사(`checkF1Pin`), F1 ADC 변환 시간, F1 DMA(Channel 필드 없음), NVIC 번호, CAN1 리맵 2. `hal-source.js`는 계열별 구조체와 헤더.
 - 예제 이식(`src/example-port.js`): F446RE 예제를 F103RB 프로젝트에 적용하면 클럭 84→64 MHz, 빈 F1 경로로 핀 이동(배선·장착도 이동), 타이머 PSC/ARR 비례 조정, 32비트 카운터는 16비트+`(uint16_t)` 차이, DMA 스트림→채널, IRQ 이름, F4 전용 필드 제거, 생성 함수 재생성. DCMI·I2S 예제는 `f1Unavailable`로 거부하고 목록(`searchHalExamples(q, family)`)에서 뺀다. `applyHalExample`은 `보드:예제`로 캐시한다.
 - UI: 보드 그림(`boardSvg(boardId)`, 보드가 바뀌면 다시 그림), 보드 카드 칩, Pinout(계열별 핀·경로·DMA 채널·IRQ·리맵 묶음, 아래 요약), 새 프로젝트 보드 선택.
-- 아직 F1 ARM 빌드·실물 보드 실행·펌웨어 에뮬레이터는 없다. `native-build.cjs`는 F446RE가 아닌 ARM 빌드를 막는다. 다음: STM32CubeF1 HAL 설치(매니페스트), cortex-m3 빌드·링커 128K/20K, OpenOCD `stm32f1x.cfg`와 ST-LINK 시리얼 선택(두 보드 동시 연결), F1 에뮬레이터 SoC.
+- 이 버전에서는 F1 ARM 빌드를 막았다. 0.33.0에서 ARM 빌드·실물 보드·펌웨어 에뮬레이터를 지원한다.
 - 테스트: `tests/unit/mcu-family.test.js`, `tests/interp/f103.test.js`, `tests/interp/f103-examples.test.js`(모든 예제를 F103RB로 이식·실행해 F446RE 출력과 비교, 약 50초).
 
 ## 0.31.0 앱 안에서 개발 도구 설치 · 시작 시 도구 확인
