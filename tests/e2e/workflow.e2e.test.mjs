@@ -136,7 +136,7 @@ test('Gravity RGB (WS2812) example lights the LED with the received colour and s
  }finally{await s.close();}
 });
 
-test('a hole takes one jumper wire, and dragging a wire end moves it to another pin (undo restores it)',{timeout:120000},async()=>{
+test('a hole takes one jumper wire; a wire end moves by dragging or by click-to-pick-up and click-to-place (undo restores it)',{timeout:120000},async()=>{
  const s=await launch();
  try{
   const {win}=s;
@@ -161,6 +161,16 @@ test('a hole takes one jumper wire, and dragging a wire end moves it to another 
   assert.equal(await win.evaluate(()=>document.querySelectorAll('#wire-layer [data-wire]').length),wires,'the wire was moved, not duplicated');
   await win.click('#undo');
   await win.waitForFunction(([sel,x,y])=>{const b=document.querySelector(sel).getBoundingClientRect();return Math.hypot(b.x+b.width/2-x,b.y+b.height/2-y)<4;},[endSel,from.x,from.y]);
+  // (3) Toggle move: click the end to pick it up, Esc puts it back (the wire is kept), click again and click PC10 to move it.
+  await win.mouse.click(from.x,from.y);
+  await win.waitForFunction(()=>/배선 끝을 옮길 핀/.test(document.getElementById('hint').textContent));
+  await win.keyboard.press('Escape');
+  assert.equal(await win.evaluate(()=>document.querySelectorAll('#wire-layer [data-wire]').length),wires,'Esc cancels the move without deleting the wire');
+  await win.mouse.click(from.x,from.y);await win.mouse.move(to.x,to.y,{steps:4});
+  assert.match(await win.evaluate(()=>document.getElementById('preview-layer').innerHTML),/stroke-dasharray/,'the picked-up end follows the pointer');
+  await win.mouse.click(to.x,to.y);
+  await win.waitForFunction(([sel,x,y])=>{const b=document.querySelector(sel).getBoundingClientRect();return Math.hypot(b.x+b.width/2-x,b.y+b.height/2-y)<4;},[endSel,to.x,to.y]);
+  assert.doesNotMatch(await win.evaluate(()=>document.getElementById('hint').textContent),/배선 끝을 옮길 핀/);
   assert.deepEqual(s.errors,[]);
  }finally{await s.close();}
 });

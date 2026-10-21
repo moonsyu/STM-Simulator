@@ -58,6 +58,8 @@ const $=id=>document.getElementById(id),svg=$('circuit');
 mountIdeChrome();const layout=createShell();let ide=null,resizing=null,deviceDocs=null,canvasKeys=null;
 const feedback=setupFeedback({showLog:()=>{layout.reveal('terminal');document.querySelector('[data-monitor="log"]').click();}});
 const wireDraft=new WireDraft();
+let carry=null;
+const CARRY_HINT='배선 끝을 옮길 핀 또는 빵판 구멍을 클릭하세요. 같은 끝을 다시 누르거나 Esc: 취소';
 let project=blankProject(),mode='select',pending=null,selection=null,color='#23a68a',status='stopped',result=null,runtime=null,simTime=0,pressed={},undoStack=[],redoStack=[],dirty=false,starting=false,startToken=0,firmware=null;
 let view={x:0,y:0,w:1120,h:730},drag=null,lastWarnings='',replaceAction=null,saveTimer,searchSelectedId=null,breadboardKey='',inspectorKey='',inspectorModel=null;
 try{const cached=localStorage.getItem('stm32lab.project.v2')||localStorage.getItem('stm32lab.project.v1');if(cached)project=validateProject(JSON.parse(cached));}catch{}
@@ -160,7 +162,7 @@ function refresh({preserveWires=false}={}){
  $('connection-count').textContent=`부품 ${project.components.length}개 · 배선 ${project.wires.length}개`;
  $('canvas-empty').hidden=!(project.surfaces?.board?.hidden&&project.surfaces?.breadboard?.hidden&&!project.components.length)||running();
  if($('explorer-circuit-summary'))$('explorer-circuit-summary').textContent=`${project.surfaces?.board?.hidden?'보드 없음':projectBoard(project).name} · 부품 ${project.components.filter(p=>p.type!=='breadboard').length}개 · 빵판 ${project.components.filter(p=>p.type==='breadboard').length+(project.surfaces?.breadboard?.hidden?0:1)}개 · 배선 ${project.wires.length}개`;
- $('hint').textContent=running()?'실행 중 핀을 클릭하면 전압을 측정합니다. 버튼은 누르는 동안 연결됩니다.':pending?'핀을 클릭하면 연결 · 바닥 클릭으로 꺾임점 추가 · 우클릭 / Esc: 작성 중 배선 취소':TWO_PIN_TYPES.includes(mode)?'빵판 구멍 두 곳을 선택해 다리를 꽂으세요. 빈 공간 클릭 시 자유 배치합니다.':drag?.type==='part'?'초록색 표시가 나타나면 놓아서 장착하세요. R: 45° 회전':'몸체: 이동 · 가장자리: 크기 조절 · 빈 공간 / 가운데 버튼: 화면 이동 · 배치 범위 제한 없음';
+ $('hint').textContent=running()?'실행 중 핀을 클릭하면 전압을 측정합니다. 버튼은 누르는 동안 연결됩니다.':carry?CARRY_HINT:pending?'핀을 클릭하면 연결 · 바닥 클릭으로 꺾임점 추가 · 우클릭 / Esc: 작성 중 배선 취소':TWO_PIN_TYPES.includes(mode)?'빵판 구멍 두 곳을 선택해 다리를 꽂으세요. 빈 공간 클릭 시 자유 배치합니다.':drag?.type==='part'?'초록색 표시가 나타나면 놓아서 장착하세요. R: 45° 회전':'몸체: 이동 · 가장자리: 크기 조절 · 빈 공간 / 가운데 버튼: 화면 이동 · 배치 범위 제한 없음';
  inspector();updateReadouts();resizing?.refresh();
  ide?.controls();canvasKeys?.refresh(keyboardFocus);
 }
@@ -280,6 +282,18 @@ function addPart(type,a,b,position,extra={}){
  if(TWO_PIN_TYPES.includes(type)){p.span=a&&b?Math.hypot(b.x-a.x,b.y-a.y):70;if(a&&b){p.attachA=a.id;p.attachB=b.id;p.rotation=normalizeAngle(Math.atan2(b.y-a.y,b.x-a.x)*180/Math.PI);}}
  checkpoint();project.components.push(p);selection={type:'part',id:p.id};pending=null;mode='select';$('preview-layer').innerHTML='';inspectTab();changed();
 }
+// A wire end picked up by a click (toggle move, `carry`): the next click on a pin or hole puts it there.
+function wireEndPreview(id,end,q){
+ const w=project.wires.find(w=>w.id===id),other=w?.[end==='from'?'to':'from'],fixed=w&&endpointInfo(other,project.components,project.surfaces),target=endpointAt(project,q),info=target&&endpointInfo(target,project.components,project.surfaces),ok=target&&target!==other&&!endpointBlocked(project,target,{ignoreWire:id});
+ $('preview-layer').innerHTML=fixed?`<path d="${route(fixed,info&&ok?info:q)}" fill="none" stroke="${esc(w.color)}" stroke-width="2.6" stroke-dasharray="5 4" pointer-events="none"/>${info?`<circle cx="${info.x}" cy="${info.y}" r="6" fill="none" stroke="${ok?'#2f9e6f':'#d24b3e'}" stroke-width="2" vector-effect="non-scaling-stroke" pointer-events="none"/>`:''}`:'';
+}
+// Moves the end to the endpoint at q; true when moved (errors are logged and leave the circuit unchanged).
+function dropWireEnd(id,end,q){
+ const next=structuredClone(project);
+ try{if(moveWireEnd(next,id,end,endpointAt(project,q))){validateProject(next);checkpoint();project=next;selection={type:'wire',id};log('배선 끝을 옮겼습니다.');changed();return true;}}catch(error){log(error.message,'error');}
+ return false;
+}
+function cancelCarry(){if(!carry)return false;carry=null;$('preview-layer').innerHTML='';refresh({preserveWires:true});return true;}
 function cancelWireDraft(){pending=null;wireDraft.reset();selection=null;mode='select';$('preview-layer').innerHTML='';refresh();}
 function clickEndpoint(id){
  const pin=PIN_BY_ID.get(id);selection={type:'endpoint',id};
@@ -311,7 +325,13 @@ svg.addEventListener('pointerdown',e=>{
    if((p?.type==='slide'||CATALOG_BY_TYPE[p?.type]?.family==='slide')&&!target.closest('[data-endpoint]')){checkpoint();p.position=(p.position+1)%(CATALOG_BY_TYPE[p.type]?.id.includes('dp3t')?3:2);selection={type:'part',id:p.id};inspectTab();recompute();autosave();refresh();return;}
    if(id==='USER'||p?.type==='button'||CATALOG_BY_TYPE[p?.type]?.family==='button'){pressed[id]=true;drag={type:'press',id};svg.setPointerCapture(e.pointerId);recompute();refresh();return;}
  }
- // Dragging a wire end moves it to another hole or pin; a click without moving selects the wire as before.
+ if(carry&&e.button===0){
+   const c=carry,q=point(e),hit=target.closest('[data-wire-end]');
+   if(running()||(hit&&hit.dataset.ownerWire===c.id&&hit.dataset.wireEnd===c.end)||!endpointAt(project,q)){cancelCarry();return;}
+   carry=null;if(!dropWireEnd(c.id,c.end,q)){carry=c;wireEndPreview(c.id,c.end,q);refresh({preserveWires:true});}
+   return;
+ }
+ // Dragging a wire end moves it to another hole or pin; a click without moving picks it up (toggle move).
  const end=target.closest('[data-wire-end]');if(end&&!running()&&!e.shiftKey){if(pending){clickEndpoint(project.wires.find(w=>w.id===end.dataset.ownerWire)?.[end.dataset.wireEnd]);return;}drag={type:'wire-end',id:end.dataset.ownerWire,end:end.dataset.wireEnd,start:point(e),current:point(e),moved:false};svg.setPointerCapture(e.pointerId);return;}
  const handle=target.closest('[data-wire-point]');if(handle&&!running()){const id=handle.dataset.ownerWire,index=Number(handle.dataset.wirePoint);drag={type:'wire-point',id,index,start:point(e),origin:{...project.wires.find(w=>w.id===id).points[index]},moved:false};svg.setPointerCapture(e.pointerId);return;}
  if(e.shiftKey&&!running()){const wire=target.closest('[data-wire]');if(wire||part){selection=toggleSelection(selection,wire?'wire':'part',wire?.dataset.wire||part.dataset.part);pending=null;mode='select';inspectTab();refresh();return;}}
@@ -334,8 +354,8 @@ svg.addEventListener('pointermove',e=>{
  const q=point(e);
  if(drag?.type==='marquee'){drag.current=q;const x=Math.min(drag.start.x,q.x),y=Math.min(drag.start.y,q.y),w=Math.abs(drag.start.x-q.x),h=Math.abs(drag.start.y-q.y);$('preview-layer').innerHTML=`<rect class="marquee-box" x="${x}" y="${y}" width="${w}" height="${h}" vector-effect="non-scaling-stroke"/>`;return;}
  if(drag?.type==='surface'){const dx=q.x-drag.start.x,dy=q.y-drag.start.y;if(!drag.moved&&Math.hypot(dx,dy)<=3)return;const next=structuredClone(drag.base);try{moveSurface(next,drag.id,{x:drag.origin.x+dx,y:drag.origin.y+dy});validateProject(next);clearTimeout(saveTimer);drag.moved=true;project=next;refresh();pinSearch();}catch(error){log(error.message,'error');}return;}
- if(drag?.type==='wire-end'){drag.current=q;if(!drag.moved&&Math.hypot(q.x-drag.start.x,q.y-drag.start.y)<3)return;drag.moved=true;const w=project.wires.find(w=>w.id===drag.id),fixed=w&&endpointInfo(w[drag.end==='from'?'to':'from'],project.components,project.surfaces),target=endpointAt(project,q),info=target&&endpointInfo(target,project.components,project.surfaces),ok=target&&!endpointBlocked(project,target,{ignoreWire:drag.id})&&target!==w[drag.end==='from'?'to':'from'];
-   if(fixed)$('preview-layer').innerHTML=`<path d="${route(fixed,info&&ok?info:q)}" fill="none" stroke="${esc(w.color)}" stroke-width="2.6" stroke-dasharray="5 4" pointer-events="none"/>${info?`<circle cx="${info.x}" cy="${info.y}" r="6" fill="none" stroke="${ok?'#2f9e6f':'#d24b3e'}" stroke-width="2" vector-effect="non-scaling-stroke" pointer-events="none"/>`:''}`;return;}
+ if(drag?.type==='wire-end'){drag.current=q;if(!drag.moved&&Math.hypot(q.x-drag.start.x,q.y-drag.start.y)<3)return;drag.moved=true;wireEndPreview(drag.id,drag.end,q);return;}
+ if(carry&&!drag){wireEndPreview(carry.id,carry.end,q);return;}
  if(drag?.type==='wire-point'){const w=project.wires.find(w=>w.id===drag.id),dx=q.x-drag.start.x,dy=q.y-drag.start.y;if(!drag.moved&&Math.hypot(dx,dy)<2)return;if(!drag.moved){checkpoint();drag.moved=true;}w.points[drag.index]={x:drag.origin.x+dx,y:drag.origin.y+dy};refresh();return;}
  if(drag?.type==='group'){let dx=q.x-drag.start.x,dy=q.y-drag.start.y;if(!drag.moved&&Math.hypot(dx,dy)<=3)return;if(!drag.moved){checkpoint();drag.moved=true;}try{const next=structuredClone(drag.base);moveSelection(next,selection,dx,dy);validateProject(next);project=next;refresh();}catch{}return;}
  if(drag?.type==='part'){
@@ -364,9 +384,9 @@ svg.addEventListener('dblclick',e=>{
 svg.addEventListener('contextmenu',e=>{const hit=e.target.closest('[data-wire-point]');if(!hit||running())return;e.preventDefault();checkpoint();project.wires.find(w=>w.id===hit.dataset.ownerWire).points.splice(Number(hit.dataset.wirePoint),1);changed();});
 function release(event){if(!drag)return;
  if(drag.type==='wire-end'){const d=drag;drag=null;$('preview-layer').innerHTML='';
-  if(!d.moved||event?.type==='pointercancel'){if(!d.moved){selection={type:'wire',id:d.id};inspectTab();}refresh({preserveWires:true});return;}
-  const next=structuredClone(project);try{if(moveWireEnd(next,d.id,d.end,endpointAt(project,d.current))){validateProject(next);checkpoint();project=next;selection={type:'wire',id:d.id};log('배선 끝을 옮겼습니다.');changed();return;}}catch(error){log(error.message,'error');}
-  refresh({preserveWires:true});return;
+  if(event?.type==='pointercancel'){refresh({preserveWires:true});return;}
+  if(!d.moved){carry={id:d.id,end:d.end};selection={type:'wire',id:d.id};inspectTab();refresh({preserveWires:true});wireEndPreview(d.id,d.end,d.current);return;}
+  if(!dropWireEnd(d.id,d.end,d.current))refresh({preserveWires:true});return;
  }
  if(drag.type==='marquee'){
   const previous=drag.selection;
@@ -563,6 +583,7 @@ window.addEventListener('keydown',e=>{
  if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='c'){e.preventDefault();copyCircuit();return;}
  if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='v'){e.preventDefault();pasteCircuit();return;}
  if(e.key==='Backspace'&&pending){e.preventDefault();wireDraft.sync(pending);wireDraft.back();$('preview-layer').innerHTML='';return;}
+ if(e.key==='Escape'&&cancelCarry()){e.preventDefault();return;}
  if(e.key==='Escape'){wireDraft.reset();e.preventDefault();if(!pending&&['part','wire','group','surface'].includes(selection?.type)){removeSelected();}else {pending=null;mode='select';selection=null;$('preview-layer').innerHTML='';refresh();}}
  if(e.key==='Delete'||e.key==='Backspace'){e.preventDefault();removeSelected();}
  if(e.key.toLowerCase()==='r')rotateSelected();if(e.key.toLowerCase()==='w')setMode('wire');if(e.key.toLowerCase()==='v')setMode('select');
@@ -593,7 +614,7 @@ canvasKeys=setupCanvasKeyboard(svg,{
  position:target=>endpointInfo(target.id,project.components,project.surfaces),
  reveal:(x,y)=>{const p=new DOMPoint(x,y).matrixTransform(svg.getScreenCTM().inverse());view.x=p.x-view.w/2;view.y=p.y-view.h/2;viewUpdate({preserveKeyboardFocus:false});},
  owns:(target,id)=>target?.type==='part'?id.startsWith(`part:${target.id}:`)||id.startsWith(`breadboard:${target.id}:`):target?.type==='surface'?(target.id==='board'?id.startsWith('board:'):id.startsWith('bb:')||id.startsWith('rail:')):false,
- announce:text=>{$('hint').textContent=text+' · PageUp/Down 탐색 · Enter 선택 · 방향키 이동 · P 핀 탐색';},
+ announce:text=>{$('hint').textContent=carry?CARRY_HINT:text+' · PageUp/Down 탐색 · Enter 선택 · 방향키 이동 · P 핀 탐색';},
  activate:target=>{if(drag)return;if(target.type==='endpoint'){clickEndpoint(target.id);return;}if(target.type==='button')return;selection={type:target.type==='bend'?'wire':target.type,id:target.id};pending=null;wireDraft.reset();$('preview-layer').innerHTML='';mode='select';inspectTab();refresh();},
  press:(target,down)=>{
   const part=target.type==='part'?project.components.find(p=>p.id===target.id):null,id=target.type==='button'?target.id:part?.id;
