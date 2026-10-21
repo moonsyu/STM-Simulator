@@ -174,3 +174,23 @@ test('a hole takes one jumper wire; a wire end moves by dragging or by click-to-
   assert.deepEqual(s.errors,[]);
  }finally{await s.close();}
 });
+
+test('a part is selected only on what is drawn: the LED glow and pin labels neither grab clicks nor widen the frame',{timeout:120000},async()=>{
+ const s=await launch();
+ try{
+  const {win}=s;
+  await applyExample(win,'5mm 단색 LED');
+  const lens=win.locator('#part-layer [data-part="led1"] .led-lens');let b=await lens.boundingBox();
+  await win.mouse.move(b.x+b.width/2,b.y+b.height/2);for(let i=0;i<12;i++){await win.mouse.wheel(0,-120);await win.waitForTimeout(30);}
+  b=await lens.boundingBox();const cx=b.x+b.width/2,cy=b.y+b.height/2,r=b.width/2;
+  // Inside the (dark) glow ring but outside the lens: the hole below gets the click, not the LED.
+  const under=await win.evaluate(([x,y])=>{const el=document.elementFromPoint(x,y);return {part:!!el?.closest('#part-layer [data-part="led1"]'),hole:!!el?.closest('[data-hole],[data-endpoint]')};},[cx-r*1.6,cy]);
+  assert.equal(under.part,false,'the invisible glow does not catch clicks');
+  await win.mouse.click(cx,cy);
+  await win.waitForFunction(()=>document.querySelectorAll('[data-resize-handle]').length>0);
+  const frame=await win.evaluate(()=>{const h=[...document.querySelectorAll('[data-resize-handle]')].map(e=>e.getBoundingClientRect());return {l:Math.min(...h.map(r=>r.left+r.width/2)),r:Math.max(...h.map(r=>r.right-r.width/2))};});
+  // Lens plus a small margin for the leads; the A/K labels beside the pins stay outside the frame.
+  assert.ok(frame.l>cx-r*1.6&&frame.r<cx+r*1.6,`frame ${Math.round(frame.l-cx)}..${Math.round(frame.r-cx)} around a lens of radius ${Math.round(r)}`);
+  assert.deepEqual(s.errors,[]);
+ }finally{await s.close();}
+});
