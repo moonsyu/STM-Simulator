@@ -2,6 +2,14 @@
 
 작업할 때마다 날짜순으로 맨 위에 추가합니다. 무엇을 했는지, 왜 했는지, 어떻게 검증했는지, 커밋·릴리스와 남은 사항을 적습니다. 버전별 구조 설명은 [HANDOFF.md](../HANDOFF.md), 검증 수치는 [VERIFICATION.md](VERIFICATION.md)에 있습니다.
 
+## 2026-10-21 · 0.33.1 실물 보드 실행 시 LD1이 계속 깜빡이는 문제
+
+- 요청: F446RE 코드를 STM32 · ARM GCC로 Ctrl+F5 실행하면 보드의 LD1이 계속 깜빡인다.
+- 원인: LD1은 ST-LINK 통신 LED다. 실행(Ctrl+F5)이 디버그 시작과 같은 경로(OpenOCD + GDB 연결 유지)를 써서, 펌웨어를 쓴 뒤에도 OpenOCD가 ST-LINK로 대상을 계속 폴링했다.
+- 수정: OpenOCD 자동 시작일 때 실행은 CubeIDE Run처럼 `program <elf> verify reset exit`(기록 안 함이면 `init; reset run; shutdown`)로 끝내고 디버거를 분리한다. 디버그 시작·외부 GDB 서버 연결은 그대로. `76d90b0`
+- 검증: 사용자 코드가 있는 F446RE는 덮어쓰지 않고 F103RB로 같은 `NativeIde.run` 경로를 확인했다. 기록·검증 후 OpenOCD 프로세스 0개, 디버거 없이 코어 실행(DHCSR 정지 비트 0), uwTick·HAL_Delay 시작값 증가, PA5 토글. 기록 안 함은 리셋 후 uwTick이 0부터 다시 증가. `npm test` 708개 중 705 통과·1 건너뜀(실패 2개는 로컬 심볼릭 링크 권한).
+- 남은 사항: LED가 꺼지는지는 눈으로 봐야 해 사용자 확인이 필요하다. F103RB에는 현재 blink 펌웨어가 있다.
+
 ## 2026-10-21 · 0.33.0 NUCLEO-F103RB 실제 빌드 · 실물 보드 · 펌웨어 에뮬레이터 (2·3단계)
 
 - 사용자 허락: STM32CubeF1 HAL 다운로드, 빌드한 펌웨어를 실물 F103RB에 써서 확인.
