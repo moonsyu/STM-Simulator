@@ -109,3 +109,23 @@ test('parts view adds the 830-point full breadboard next to the 400-point one',{
   assert.deepEqual(s.errors,[]);
  }finally{await s.close();}
 });
+
+test('Gravity RGB (WS2812) example lights the LED with the received colour and shows G/R/B in properties',{timeout:120000},async()=>{
+ const s=await launch();
+ try{
+  const {win}=s;
+  await pickExample(win,'ref_rgb_gravity_3');
+  await win.keyboard.press('Control+F5');
+  await win.waitForFunction(()=>/WS2812 G=0 R=64 B=0/.test(document.getElementById('console-output').textContent),null,{timeout:15000});
+  await win.locator('#part-layer [data-part="demo"]').first().click({force:true});
+  await win.waitForFunction(()=>/G\s*\d+[\s\S]*R\s*\d+[\s\S]*B\s*\d+/.test(document.getElementById('part-live')?.textContent||''),null,{timeout:15000});
+  // The lens follows the received colour: red frame first, then green.
+  const lens=()=>win.evaluate(()=>document.querySelector('#part-layer [data-part="demo"] .catalog-light')?.getAttribute('fill'));
+  await win.waitForFunction(()=>/^rgb\(0,\s*\d+,\s*0\)$/.test(document.querySelector('#part-layer [data-part="demo"] .catalog-light')?.getAttribute('fill')||''),null,{timeout:15000});
+  assert.match(await lens(),/^rgb\(0,/);
+  assert.match(await win.textContent('#part-live'),/전송 순서 G→R→B/);
+  await win.keyboard.press('Control+F2');
+  await win.waitForFunction(()=>document.getElementById('shell').dataset.running==='false');
+  assert.deepEqual(s.errors,[]);
+ }finally{await s.close();}
+});

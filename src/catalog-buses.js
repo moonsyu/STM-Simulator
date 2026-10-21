@@ -1,5 +1,6 @@
 import {LCDController} from './lcd.js';
 import {sdCardFor} from './sdcard.js';
+import {receiveWs2812} from './rgb-color.js';
 // SPI-mode SD card: CMD0/8/55/41/58 init, CMD9/10 registers, CMD13 status, CMD16 block length,
 // CMD17/18 single/multi block read, CMD24/25 single/multi block write, CMD12 stop. SDHC block addressing.
 function sdData(card,block){return [0xfe,...card.disk.read(block),0xff,0xff];}
@@ -52,6 +53,6 @@ export function readCatalogI2c(p,s,count,micros){
 }
 export function transferCatalogSpi(p,s,value){
  if(p.catalogVariant==='sd-storage-board')return transferSdSpi(p,s,value);
- if(p.catalogVariant?.startsWith('rgb-')){s.symbols+=value.toString(2).padStart(8,'0');if(s.symbols.length>=72){let grb=0;for(let i=0;i<24;i++)grb=(grb<<1)|(s.symbols.slice(i*3,i*3+3)==='110'?1:0);s.symbols='';s.color=[grb>>8&255,grb>>16&255,grb&255];s.display=s.color.some(Boolean);s.version++;}return 255;}
+ if(p.catalogVariant?.startsWith('rgb-')){s.symbols+=value.toString(2).padStart(8,'0');if(s.symbols.length>=72){let grb=0;for(let i=0;i<24;i++)grb=(grb<<1)|(s.symbols.slice(i*3,i*3+3)==='110'?1:0);s.symbols='';receiveWs2812(s,grb);s.version++;}return 255;}
  return 255;
 }

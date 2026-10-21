@@ -71,9 +71,14 @@ export function protocolExample(v){
  }
  if(['rgb-neopixel-4','rgb-neopixel-flora-4','rgb-gravity-3'].includes(id)){
   power(1,2);spi(3,0,0);p.mcu.timerClockHz=84000000;p.mcu.peripherals.SPI1.clock=2625000;
-  return finish('',`uint8_t frame[9]={0}; uint32_t grb=0x100810;
+  // SPI at 2.625 MHz sends three bits per WS2812 bit (110 = 1, 100 = 0); colours are GRB words.
+  return finish('',`uint8_t frame[9]={0}; uint32_t grb=ws2812Colors[ws2812Index%4];
  for(uint32_t bit=0;bit<24;bit++){uint32_t symbol=(grb&(1UL<<(23-bit)))?6:4;for(uint32_t b=0;b<3;b++){uint32_t offset=bit*3+b;if(symbol&(1U<<(2-b)))frame[offset/8]|=1U<<(7-offset%8);}}
- HAL_SPI_Transmit(&hspi1,frame,9,100);HAL_Delay(1);HAL_Delay(100);`);
+ HAL_SPI_Transmit(&hspi1,frame,9,100);HAL_Delay(1);
+ printf("WS2812 G=%lu R=%lu B=%lu\\n",(grb>>16)&0xFFUL,(grb>>8)&0xFFUL,grb&0xFFUL);
+ ws2812Index++;HAL_Delay(500);`,'',`/* GRB: red, green, blue, white */
+const uint32_t ws2812Colors[4]={0x004000,0x400000,0x000040,0x202020};
+uint32_t ws2812Index=0;`);
  }
  return advancedProtocolExample(v,b);
 }
