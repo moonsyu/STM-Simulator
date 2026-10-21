@@ -1,6 +1,10 @@
 # STM Simulator — 개발 인계
 
-현재 버전: **0.33.1**. 정리일: **2026-10-21**. NUCLEO-F446RE 또는 NUCLEO-F103RB와 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+현재 버전: **0.33.2**. 정리일: **2026-10-21**. NUCLEO-F446RE 또는 NUCLEO-F103RB와 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+
+## 0.33.2 실행은 항상 기록 · 다른 보드 거부
+
+- `runOnBoard`는 연결 설정과 관계없이 `program … verify reset exit`. `connection.flash`(기본 true)는 디버그 시작의 GDB `load`에만 쓴다. `chooseStlink`는 이름이 알려진 다른 종류의 보드만 있으면 오류를 낸다(보드 이름을 모르는 단일 ST-LINK는 허용).
 
 ## 0.33.1 실물 보드 실행 후 디버거 분리
 
