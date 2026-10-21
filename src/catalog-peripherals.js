@@ -8,7 +8,10 @@ export const CATALOG_HAL_CONSTANTS={CAN1:'CAN1',SPI2:'SPI2',GPIO_AF9_CAN1:9,GPIO
 export class CatalogPeripherals {
  constructor(hal){this.hal=hal;this.routes=new Map();this.can=null;this.i2s=null;this.audioClock=false;}
  configurePin(pin,mode,af,r){
-  const h=this.hal;if(h.config.pins[pin]?.function!=='Reserved'||mode!==2)return false;
+  const h=this.hal;
+  // F1: CAN1 on PB8/PB9 needs __HAL_AFIO_REMAP_CAN1_2(); RX is an input, TX an alternate-function output.
+  if(h.f1){if(h.config.pins[pin]?.function!=='Reserved'||!['PB8','PB9'].includes(pin)||!h.remaps.has('__HAL_AFIO_REMAP_CAN1_2')||!(pin==='PB8'?[0,2].includes(mode):mode===2))return false;this.routes.set(pin,9);r.call('pinMode',[pin,'INPUT']);return true;}
+  if(h.config.pins[pin]?.function!=='Reserved'||mode!==2)return false;
   if(!(af===9&&['PB8','PB9'].includes(pin)||af===5&&['PB12','PB13','PB15'].includes(pin)))return false;
   this.routes.set(pin,af);r.call('pinMode',[pin,'INPUT']);return true;
  }
