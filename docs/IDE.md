@@ -180,6 +180,8 @@ Ctrl+F는 현재 파일 찾기, Ctrl+R은 바꾸기, Ctrl+Z/Y는 프로젝트 �
 
 **개발 도구**에서 아래 실행 파일과 SDK를 선택하고 **저장 후 검사**를 누른다. PATH, MSYS2, 기본 STM32Cube 저장소와 아래 설치 스크립트의 기본 위치를 자동 검색한다. 도구 경로는 PC 설정이며 회로 파일에 넣지 않는다. 설치된 STM32CubeIDE(`C:\ST\STM32CubeIDE_*`)가 있으면 그 안의 GNU Tools for STM32(ARM GCC·GDB)와 OpenOCD도 자동으로 찾는다. 이 경우 STM32CubeF4 드라이버만 설치 스크립트로 받으면 된다.
 
+**필요한 도구 설치**(개발 도구 창): 빠진 도구만 크기·출처와 함께 보여 주고 **설치 시작**을 누르면 `%LOCALAPPDATA%\STM-Simulator-Tools`에 받는다. ARM GCC 15.2.1(GDB 포함, xPack), STM32CubeF4 v1.28.3 드라이버, OpenOCD 0.12.0(xPack), clangd 23.1.0. 릴리스 파일은 고정 SHA-256으로, STM32CubeF4는 고정 커밋의 파일마다 SHA-256으로 검증하며 Git은 필요 없다. ARM GCC를 받으면 압축을 푼 뒤 약 1.5 GB를 사용한다. 앱을 시작하고 3초 뒤 실물 보드용 도구(ARM GCC·GDB·STM32CubeF4·OpenOCD)가 빠져 있으면 알림으로 **설치·나중에·다시 묻지 않기**를 고를 수 있다. ST-LINK USB 드라이버(ST STSW-LINK009)는 별도로 설치해야 할 수 있다.
+
 | 작업 | 필요한 도구 |
 |---|---|
 | STM32F446RE 펌웨어 빌드 | `arm-none-eabi-gcc.exe`와 같은 배포판의 g++, objcopy, size; STM32CubeF4의 HAL/CMSIS |
