@@ -66,6 +66,12 @@ test('debug view pauses at a breakpoint and shows variables',{timeout:120000},as
   assert.ok(await win.locator('#debug-stack .debug-frame').count()>=1);
   await win.keyboard.press('F11');
   await win.waitForFunction(l=>/일시정지/.test(document.getElementById('debug-location').textContent)&&!new RegExp('main\\.c:'+l+'\\b').test(document.getElementById('debug-location').textContent),line,{timeout:15000});
+  // Holding F11 keeps stepping (key auto-repeat).
+  await win.evaluate(()=>{window.__stops=0;new MutationObserver(()=>{if(/일시정지/.test(document.getElementById('debug-location').textContent))window.__stops++;}).observe(document.getElementById('debug-location'),{childList:true,characterData:true,subtree:true});});
+  await win.keyboard.down('F11');
+  for(let i=0;i<10;i++){await win.waitForTimeout(80);await win.keyboard.down('F11');}
+  await win.keyboard.up('F11');
+  await win.waitForFunction(()=>window.__stops>=3,null,{timeout:10000});
   await win.keyboard.press('Control+F2');
   await win.waitForFunction(()=>document.getElementById('shell').dataset.running==='false');
   assert.deepEqual(s.errors,[]);

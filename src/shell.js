@@ -392,8 +392,15 @@ function setupPalette(layout,options){
 function keyboard(layout,options){
  const match=createMatcher(()=>layout.bindings());
  const byId=id=>layout.commands().find(c=>c.id===id);
+ // Holding a step key (F11 …) keeps stepping; a step is ignored until the previous one pauses again.
+ const REPEATABLE=['run.over','run.into','run.out','run.step'];
  window.addEventListener('keydown',e=>{
-  if(e.defaultPrevented||e.isComposing||e.repeat)return;
+  if(e.defaultPrevented||e.isComposing)return;
+  if(e.repeat){
+   const key=eventKey(e),id=key&&REPEATABLE.find(id=>layout.keyFor(id)===key);
+   if(id&&!document.querySelector('dialog[open]')){e.preventDefault();e.stopImmediatePropagation();byId(id)?.run();}
+   return;
+  }
   if(document.querySelector('dialog[open]:not(#command-palette)')||document.activeElement?.closest('.keybinding-capture'))return;
   const key=eventKey(e);if(!key)return;
   // Inside Monaco, plain Ctrl+Shift+letter view shortcuts give way to the editor's own commands.
