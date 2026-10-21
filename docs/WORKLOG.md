@@ -14,7 +14,8 @@
 - 수정한 결함: 예제 57개의 `#include <stdio.h>` 중복, 회로 키보드 안내 문구 반복, 정지 후 WS2812 속성의 잘못된 전원 경고.
 - 디자인: 표면 3단계 색과 모드별 파란 강조색(모든 조합 WCAG AA), 활동 바 둥근 선택 표시, 메뉴·팔레트·대화상자 모서리와 그림자, 하단 탭 2px 밑줄, 알약형 태그·버튼, 직렬 모니터 빈 상태 안내, 속성 패널 부품 종류 배지와 글자형 삭제 버튼.
 - 발견: 사용자가 PC를 쓰는 동안 로컬 E2E 창이 실제 키 입력(Ctrl+C)을 받아 로그에 "부품 복사"가 찍혔다. 앱 결함이 아니다. 사용자 요청으로 작업 중에는 테스트 창을 비활성으로 띄워 맨 뒤로 보내는 임시 변경(`desktop/main.cjs`, `tests/e2e/harness.mjs`)을 쓰고, 끝난 뒤 되돌렸다(커밋하지 않음).
-- 커밋: `36856bb` UI 다듬기와 기능 점검 수정, `90504af` 0.29.0 버전·HANDOFF. `main` 반영 후 [CI 39524337726](https://github.com/moonsyu/STM-Simulator/actions/runs/39524337726)에서 Release 게시 진행.
+- 커밋: `36856bb` UI 다듬기와 기능 점검 수정, `90504af` 0.29.0 버전·HANDOFF, 검증 기록 커밋. [Release v0.29.0](https://github.com/moonsyu/STM-Simulator/releases/tag/v0.29.0), [CI 39524337726](https://github.com/moonsyu/STM-Simulator/actions/runs/39524337726) 성공. latest 지정, 태그·커밋 일치, 5자산과 EXE·ZIP 해시(ZIP 안 EXE 포함) 확인.
+- 남은 사항: 작은 창 크기·고배율 디스플레이에서의 디자인은 따로 확인하지 않았다.
 
 ## 2026-10-21 · 0.28.0 코드 정렬 배포와 예제 결과 표시
 
