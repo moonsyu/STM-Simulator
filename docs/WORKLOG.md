@@ -2,6 +2,15 @@
 
 작업할 때마다 날짜순으로 맨 위에 추가합니다. 무엇을 했는지, 왜 했는지, 어떻게 검증했는지, 커밋·릴리스와 남은 사항을 적습니다. 버전별 구조 설명은 [HANDOFF.md](../HANDOFF.md), 검증 수치는 [VERIFICATION.md](VERIFICATION.md)에 있습니다.
 
+## 2026-10-21 · 0.30.1 IDE에서 실물 보드 실행이 안 되던 문제
+
+- 요청: 실행 환경을 무엇으로 해야 하는지, IDE로는 안 된다.
+- 답: 실행 환경은 **STM32 · ARM GCC**. 개발 도구가 채워져 있어야 하고, 보드 연결에서 OpenOCD 자동 시작과 "시작할 때 빌드한 펌웨어를 보드에 기록"을 체크한다.
+- 사용자 진단 로그(`%APPDATA%\STM32 Circuit Lab\diagnostics\events.jsonl`) 확인: 0.29.2에서 ARM GCC 미설정, 0.30.0에서 "STM32CubeF4 SDK 루트 폴더를 선택하세요"(SDK는 03:17에 이미 설치됨). 직후 개발 도구를 저장한 기록(04:10:58)이 있었다.
+- 원인 1: 개발 도구 저장(`configure`)이 빈 항목을 자동 감지하지 않아 재시작 전까지 비어 있었다. 원인 2: 0.30.0에서 찾게 된 CubeIDE의 OpenOCD(ST 빌드)가 스크립트 경로 없이 `interface/stlink.cfg`로 시작해 바로 실패했다(`Can't find interface/stlink.cfg`, 경로를 줘도 `Infinite eval recursion`). ST 스크립트와 `stlink-dap.cfg`·`dapdirect_swd`로 OpenOCD가 STM32F446을 찾고 GDB 포트를 여는 것을 확인했다.
+- 수정과 확인: 두 원인을 고치고, IDE의 ▶과 같은 `NativeIde.run` 경로로 빌드·OpenOCD·플래시·실행을 실물 보드에서 확인했다(`uwTick` 실시간 증가, PA5 변화). 단위 테스트 2개 추가. 확인 뒤 보드에는 버튼 토글 펌웨어를 다시 썼다.
+- 검증: `npm test` 683개 중 680 통과(실패 2개는 로컬 심볼릭 링크 권한).
+
 ## 2026-10-21 · 실물 NUCLEO-F446RE에 예제 쓰기
 
 - 요청: LED 점멸 예제를 보드에 써서 동작 확인(기존 펌웨어 삭제 허락), 이어서 버튼으로 LED를 토글하는 예제를 빌드해 쓰고 확인.
