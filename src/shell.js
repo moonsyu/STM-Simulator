@@ -281,6 +281,8 @@ function registerCommands(layout,options){
   {id:'edit.undo',label:'실행 취소',keys:'Ctrl+Z',group:'편집',run:click('undo')},
   {id:'edit.redo',label:'다시 실행',keys:'Ctrl+Y',group:'편집',run:click('redo')},
   {id:'edit.find',label:'찾기',keys:'Ctrl+F',group:'편집',run:()=>options.find?.(false)},
+  {id:'edit.format',label:'코드 정렬',group:'편집',run:()=>options.formatCode?.()},
+  {id:'edit.formatSelection',label:'선택 영역 코드 정렬',group:'편집',run:()=>options.formatSelection?.()},
   {id:'edit.replace',label:'바꾸기',keys:'Ctrl+R',group:'편집',run:()=>options.find?.(true)},
   {id:'edit.rotate',label:'회로: 선택 항목 45° 회전',keys:'R',group:'편집',run:click('rotate')},
   {id:'edit.delete',label:'회로: 선택 항목 삭제',keys:'Delete',group:'편집',run:click('delete')},
@@ -337,7 +339,7 @@ function buildMenus(layout){
  const bar=$('menubar');
  const groups=['파일','편집','보기','실행','터미널','도움말'];
  const map={'파일':['file.newProject','file.openProject','file.openCircuit','-','file.save','file.exportMain','-','file.import','file.importFolder','file.addSource','-','file.openElf'],
-  '편집':['edit.undo','edit.redo','-','edit.find','edit.replace','-','edit.rotate','edit.delete','-','edit.codeReset','edit.boardReset','-','view.settings','view.keybindings'],
+  '편집':['edit.undo','edit.redo','-','edit.find','edit.replace','-','edit.format','edit.formatSelection','-','edit.rotate','edit.delete','-','edit.codeReset','edit.boardReset','-','view.settings','view.keybindings'],
   '보기':['view.palette','view.quickOpen','-','view.explorer','view.parts','view.examples','view.board','view.debug','view.docs','-','view.toggleSidebar','view.togglePanel','view.toggleAux','-','view.problems','view.output','view.terminal','view.serial','view.wave','view.logic','-','view.swap','view.orientation','view.maxCircuit','view.maxCode','view.reset','-','view.theme','view.themeSystem'],
   '실행':['run.run','run.debug','run.stop','run.pause','-','run.over','run.into','run.out','run.step','-','run.build','-','run.target.sim','run.target.emu','run.target.arm','run.target.host','-','run.pinout','run.tools','run.connection','run.sound'],
   '터미널':['terminal.start','terminal.stop','terminal.clear'],
