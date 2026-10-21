@@ -3,6 +3,7 @@ import {timerDefaults} from './mcu-defaults.js';
 import {GPIO_PINS} from './pins.js';
 import {ROUTES,defaultMcu,validateMcu,configProblems,pinFunctions,irqForPin,IRQ_NAMES,generateHal,USART_CK_ROUTES,DMA_MODES,DMA_PRIORITIES,dmaPeripheral,dmaDirection} from './mcu-config.js';
 import {DMA_REQUESTS} from './hal-dma.js';
+import {expandC} from './c-format.js';
 import {SERIAL_ROUTES,isSerial,serialAf,serialFunction,assignSerialPin,setSerialEnabled} from './serial-config.js';
 const $=id=>document.getElementById(id),esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const numberInput=el=>el.value.trim()===''?NaN:Number(el.value);
@@ -17,7 +18,7 @@ export class PinoutPanel {
   }
   open(pin){if(this.isRunning())return;if(GPIO_PINS.includes(pin))this.pin=pin;this.draft=structuredClone(this.getProject().mcu||defaultMcu());this.render();$('pinout-dialog').showModal();}
   sync(){if(!$('pin-function'))return;this.draft.pins[this.pin]={function:$('pin-function').value,pull:$('pin-pull').value,edge:$('pin-edge').value,initial:Number($('pin-level').value),label:$('pin-label').value.trim()};}
-  commit(generate){try{this.sync();for(const el of $('pinout-dialog').querySelectorAll('input[type="number"]'))if(!Number.isFinite(numberInput(el)))throw new Error(`${el.getAttribute('aria-label')||(el.id==='timer-clock'?'APB1 타이머 입력 클록':'숫자 설정')}: 숫자를 입력하세요.`);const mcu=validateMcu(this.draft),code=generate?generateHal(mcu):null;this.apply({mcu,code});$('pinout-dialog').close();}catch(e){$('pinout-errors').textContent=e.message;this.onError(e.message);}}
+  commit(generate){try{this.sync();for(const el of $('pinout-dialog').querySelectorAll('input[type="number"]'))if(!Number.isFinite(numberInput(el)))throw new Error(`${el.getAttribute('aria-label')||(el.id==='timer-clock'?'APB1 타이머 입력 클록':'숫자 설정')}: 숫자를 입력하세요.`);const mcu=validateMcu(this.draft),code=generate?expandC(generateHal(mcu)):null;this.apply({mcu,code});$('pinout-dialog').close();}catch(e){$('pinout-errors').textContent=e.message;this.onError(e.message);}}
   // DMA requests of the enabled peripherals: stream/channel, direction, normal/circular, priority.
   dmaCard(config){
     const enabled=id=>id===null||config.peripherals[id]?.enabled,requests=Object.keys(DMA_REQUESTS).filter(r=>enabled(dmaPeripheral(r)));

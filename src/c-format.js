@@ -179,8 +179,8 @@ export function formatCode(source,{tabSize=4,range=null}={}){
  const lines=groups.map((g,index)=>{const out=formatted.slice(k,k+=g.length);return !range||(index+1>=range.start&&index+1<=range.end)?out:[original[index]];});
  return {text:lines.flat().join(eol),lines};
 }
-/** formatCode for generated examples (2-space indentation like the Cube-style generator). */
-export const expandC=(source,{tabSize=2}={})=>formatCode(source,{tabSize}).text;
+/** formatCode for code the app generates (examples, new projects, Pinout): 4-space indentation. */
+export const expandC=(source,{tabSize=4}={})=>formatCode(source,{tabSize}).text;
 
 /** Line range (1-based) of the block whose `}` sits on `line` (the last `}` before `column`, if given), or null. */
 export function blockRange(source,line,column=Infinity){

@@ -3,12 +3,13 @@ import {DEVICE_RANGES,DEVICE_ADDRESSES} from './device-defs.js';
 import {PIN_BY_ID,holeInfo} from './pins.js';
 import {terminalKeys,TWO_PIN_TYPES,MULTI_PIN_TYPES,normalizeAngle} from './components.js';
 import {generateHal,defaultMcu,validateMcu} from './mcu-config.js';
+import {expandC} from './c-format.js';
 import {DEFAULT_BOARD_ID,getBoard} from './boards.js';
 import {validScale} from './geometry.js';
 import {validateNoise} from './signals.js';
 import {validCardImage,SD_SIZES} from './sdcard.js';
 import {validCameraImage,CAMERA_PATTERNS} from './camera.js';
-export function blankProject(){const mcu={...defaultMcu(),pins:{}};return {format:'stm32-circuit-lab',version:2,name:'새 회로',components:[],wires:[],surfaces:{board:{hidden:true},breadboard:{hidden:true}},mcu,firmware:{mode:'hal',files:[]},code:generateHal(mcu).replace('/* USER CODE BEGIN 2 */','/* USER CODE BEGIN 2 */\n  printf("HAL ready\\n");')};}
+export function blankProject(){const mcu={...defaultMcu(),pins:{}};return {format:'stm32-circuit-lab',version:2,name:'새 회로',components:[],wires:[],surfaces:{board:{hidden:true},breadboard:{hidden:true}},mcu,firmware:{mode:'hal',files:[]},code:expandC(generateHal(mcu).replace('/* USER CODE BEGIN 2 */','/* USER CODE BEGIN 2 */\n  printf("HAL ready\\n");'))};}
 // Complete example circuits explicitly include the legacy board and breadboard.
 export function exampleProject(){const p=blankProject();delete p.surfaces;return p;}
 export function validateProject(data){
