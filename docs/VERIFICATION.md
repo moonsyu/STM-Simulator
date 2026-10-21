@@ -1,5 +1,15 @@
 # 검증 기록
 
+## 0.33.1 실물 보드 실행 후 디버거 분리 — 공개 배포 검증 완료
+
+2026-10-21. 제품 커밋 `206d9115f1a1c2bb18fd015df6ad3c9eb990efb0` · [Windows CI 39563744650](https://github.com/moonsyu/STM-Simulator/actions/runs/39563744650) 첫 실행 성공 · [Release v0.33.1](https://github.com/moonsyu/STM-Simulator/releases/tag/v0.33.1).
+
+| 검사 | 결과 |
+|---|---|
+| `npm test` (로컬) | 708개 중 705 통과·1 건너뜀(실패 2개는 로컬 심볼릭 링크 권한, CI 통과) |
+| 실물 보드 (F103RB) | `NativeIde.run`으로 기록·검증·리셋 후 OpenOCD 종료(프로세스 0), 디버거 없이 코어 실행, PA5 토글. 기록 안 함: 리셋 후 uwTick 0부터 증가 |
+| 공개 자산 | latest=v0.33.1, 태그·BUILD-INFO 커밋 일치, 5자산. EXE SHA-256 `4c5d6368951bd07e19e68f7db2afbfd42e6bdba727d6b1801d01aa51d545d6dd`(103,014,628 B, MZ)이 SHA256.txt·update-manifest·ZIP 안 EXE와 일치. ZIP SHA-256 `d4f79562bf1c2ae7a11ce55fd15d9f7c347e7334ac44cfb6a452a85725a275d2` |
+
 ## 0.33.0 NUCLEO-F103RB 실제 빌드 · 실물 보드 · 펌웨어 에뮬레이터 — 공개 배포 검증 완료
 
 2026-10-21. 제품 커밋 `cc0a5e6c5c1344146d31912cd95e0c9f4c35cfb6` · [Windows CI 39554634812](https://github.com/moonsyu/STM-Simulator/actions/runs/39554634812) 첫 실행 성공(CubeF1을 받아 두 보드 예제 빌드·에뮬레이터 실행 포함) · [Release v0.33.0](https://github.com/moonsyu/STM-Simulator/releases/tag/v0.33.0).

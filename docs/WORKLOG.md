@@ -8,6 +8,7 @@
 - 원인: LD1은 ST-LINK 통신 LED다. 실행(Ctrl+F5)이 디버그 시작과 같은 경로(OpenOCD + GDB 연결 유지)를 써서, 펌웨어를 쓴 뒤에도 OpenOCD가 ST-LINK로 대상을 계속 폴링했다.
 - 수정: OpenOCD 자동 시작일 때 실행은 CubeIDE Run처럼 `program <elf> verify reset exit`(기록 안 함이면 `init; reset run; shutdown`)로 끝내고 디버거를 분리한다. 디버그 시작·외부 GDB 서버 연결은 그대로. `76d90b0`
 - 검증: 사용자 코드가 있는 F446RE는 덮어쓰지 않고 F103RB로 같은 `NativeIde.run` 경로를 확인했다. 기록·검증 후 OpenOCD 프로세스 0개, 디버거 없이 코어 실행(DHCSR 정지 비트 0), uwTick·HAL_Delay 시작값 증가, PA5 토글. 기록 안 함은 리셋 후 uwTick이 0부터 다시 증가. `npm test` 708개 중 705 통과·1 건너뜀(실패 2개는 로컬 심볼릭 링크 권한).
+- 결과: [Release v0.33.1](https://github.com/moonsyu/STM-Simulator/releases/tag/v0.33.1), [CI 39563744650](https://github.com/moonsyu/STM-Simulator/actions/runs/39563744650) 첫 실행 성공(07:54 UTC). latest 지정, 태그·커밋 `206d911` 일치, 5자산과 EXE·ZIP(안의 EXE 포함) 해시 확인.
 - 남은 사항: LED가 꺼지는지는 눈으로 봐야 해 사용자 확인이 필요하다. F103RB에는 현재 blink 펌웨어가 있다.
 
 ## 2026-10-21 · 0.33.0 NUCLEO-F103RB 실제 빌드 · 실물 보드 · 펌웨어 에뮬레이터 (2·3단계)
