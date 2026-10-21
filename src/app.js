@@ -80,7 +80,7 @@ function filterParts(){
  $('part-count').textContent=`${matches.size} / ${PART_LIBRARY.length}`;$('part-no-results').hidden=matches.size>0;$('part-list').scrollTop=0;
 }
 $('part-search').addEventListener('input',filterParts);filterParts();
-function filterExamples(){const matches=searchHalExamples($('hal-example-search').value);$('hal-example').innerHTML='<option value="">'+(matches.length?`HAL 예제 선택… (${matches.length})`:'검색 결과 없음')+'</option>'+matches.map(({id,name,native,simOnly})=>`<option value="${id}">${name}${native?' · ARM':''}${simOnly?' · SIM':''}</option>`).join('');$('hal-example-count').textContent=`${matches.length} / ${Object.keys(HAL_EXAMPLES).length}`;}
+function filterExamples(){const matches=searchHalExamples($('hal-example-search').value,projectBoard(project).mcuFamily);$('hal-example').innerHTML='<option value="">'+(matches.length?`HAL 예제 선택… (${matches.length})`:'검색 결과 없음')+'</option>'+matches.map(({id,name,native,simOnly})=>`<option value="${id}">${name}${native?' · ARM':''}${simOnly?' · SIM':''}</option>`).join('');$('hal-example-count').textContent=`${matches.length} / ${Object.keys(HAL_EXAMPLES).length}`;}
 $('hal-example-search').oninput=filterExamples;filterExamples();
 const uartLines=new Map();
 function uid(prefix){return prefix+crypto.randomUUID().replaceAll('-','').slice(0,12);}
@@ -131,7 +131,7 @@ function refresh({preserveWires=false}={}){
  const keyboardFocus=canvasKeys?.snapshot();
  deviceDocs?.refresh();
  // The board drawing is static; redraw it when the project switches to another board.
- const boardGroup=svg.querySelector('#surface > .board');if(boardGroup&&boardGroup.dataset.board!==projectBoard(project).id)boardGroup.outerHTML=boardSvg(projectBoard(project).id);
+ const boardGroup=svg.querySelector('#surface > .board');if(boardGroup&&boardGroup.dataset.board!==projectBoard(project).id){boardGroup.outerHTML=boardSvg(projectBoard(project).id);filterExamples();}
  updateSurfaces(svg,project,selection);
  updateBoardPicker();if(project.surfaces?.board?.hidden)$('search-layer').innerHTML='';svg.classList.toggle('connecting',mode==='wire'||!!pending||TWO_PIN_TYPES.includes(mode));
  const boards=project.components.filter(p=>p.type==='breadboard'),nextBreadboardKey=JSON.stringify(boards.map(p=>[p,isSelected(selection,'part',p.id)]));
@@ -473,7 +473,7 @@ document.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>tab(b.dataset.t
 function replaceProject(p,{preserveWorkspace=false}={}){if(running())stop();firmware=null;project=validateProject(p);feedback.clear('save');setSaveState('저장 중…','saving');selection=null;pending=null;drag=null;mode='select';pressed={};lastWarnings='';uartLines.clear();searchSelectedId=null;$('pin-search').value='';pinSearch();fitView();selection=null;pending=null;drag=null;$('preview-layer').innerHTML='';undoStack=[];redoStack=[];status='stopped';runtime=null;session=null;monitor.clear();result=null;simTime=0;dirty=false;lastCodeCheckpoint=0;sourceFile='main.c';syncEditor();ide?.reset({preserveWorkspace});autosave();refresh();log('회로를 열었습니다: '+project.name);}
 function requestReplace(action){if(ide?.nativeBusy()){log('빌드·실행·디버그를 정지한 뒤 프로젝트를 변경하세요.','error');return;}if(dirty){replaceAction=action;$('replace-dialog').showModal();}else action();}
 $('replace-cancel').onclick=()=>{$('replace-dialog').close();replaceAction=null;};$('replace-confirm').onclick=()=>{$('replace-dialog').close();replaceAction?.();replaceAction=null;};
-$('hal-example').onchange=e=>{const type=e.target.value;e.target.value='';if(running()||!Object.hasOwn(HAL_EXAMPLES,type))return;checkpoint();project=applyHalExample(project,type);sourceFile='main.c';runtime=null;session=null;result=null;status='stopped';simTime=0;pressed={};selection=null;pending=null;drag=null;mode='select';lastWarnings='';$('preview-layer').innerHTML='';fitView();monitor.clear();uartLines.clear();syncEditor();changed();if(type==='uart')$('serial-target').value='USART2';else if(type==='uart_external'||CATALOG_BY_TYPE[type]?.family==='uart')$('serial-target').value='USART2:external';tab('code');log(HAL_EXAMPLES[type]+' · '+HAL_GUIDES[type]);svg.focus({preventScroll:true});};
+$('hal-example').onchange=e=>{const type=e.target.value;e.target.value='';if(running()||!Object.hasOwn(HAL_EXAMPLES,type))return;checkpoint();project=applyHalExample(project,type);sourceFile='main.c';runtime=null;session=null;result=null;status='stopped';simTime=0;pressed={};selection=null;pending=null;drag=null;mode='select';lastWarnings='';$('preview-layer').innerHTML='';fitView();monitor.clear();uartLines.clear();syncEditor();changed();if(type==='uart')$('serial-target').value='USART2';else if(type==='uart_external'||CATALOG_BY_TYPE[type]?.family==='uart')$('serial-target').value='USART2:external';tab('code');log(HAL_EXAMPLES[type]+' · '+(project.code.match(/^\/\/ (.+)$/m)?.[1]??HAL_GUIDES[type]));svg.focus({preventScroll:true});};
 $('new').onclick=()=>requestReplace(()=>replaceProject(blankProject()));
 $('project-name').onchange=e=>{checkpoint();project.name=e.target.value.trim()||'새 회로';changed();};
 let lastCodeCheckpoint=0,replaceCheckpoint=false;
