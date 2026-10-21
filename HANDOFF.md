@@ -1,6 +1,10 @@
 # STM Simulator — 개발 인계
 
-현재 버전: **0.34.0**. 정리일: **2026-10-21**. NUCLEO-F446RE 또는 NUCLEO-F103RB와 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+현재 버전: **0.34.1**. 정리일: **2026-10-21**. NUCLEO-F446RE 또는 NUCLEO-F103RB와 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+
+## 0.34.1 배선 끝 클릭으로 옮기기
+
+- `app.js`: 배선 끝을 움직이지 않고 클릭하면 `carry={id,end}`, 다음 `pointerdown`에서 `dropWireEnd`. `wireEndPreview`가 끌기·집기 미리보기를 함께 그린다. `CARRY_HINT`는 `refresh`와 캔버스 키보드 안내(`announce`) 모두 우선한다.
 
 ## 0.34.0 한 칸에 점퍼선 하나 · 배선 끝 옮기기
 
