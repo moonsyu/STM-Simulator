@@ -1,5 +1,19 @@
 # 검증 기록
 
+## 0.33.0 NUCLEO-F103RB 실제 빌드 · 실물 보드 · 펌웨어 에뮬레이터 — 공개 배포 검증 완료
+
+2026-10-21. 제품 커밋 `cc0a5e6c5c1344146d31912cd95e0c9f4c35cfb6` · [Windows CI 39554634812](https://github.com/moonsyu/STM-Simulator/actions/runs/39554634812) 첫 실행 성공(CubeF1을 받아 두 보드 예제 빌드·에뮬레이터 실행 포함) · [Release v0.33.0](https://github.com/moonsyu/STM-Simulator/releases/tag/v0.33.0).
+
+| 검사 | 결과 |
+|---|---|
+| `npm test` (로컬) | 708개 중 705 통과·1 건너뜀(실패 2개는 로컬 심볼릭 링크 권한, CI 통과). 새 검사: F103 에뮬레이터 8개(클럭·EXTI·UART·ADC·ADC DMA·DMA UART·PWM 리맵·I2C/SPI/캡처), F1 빌드 계획, OpenOCD F1·시리얼, ST-LINK 선택, CubeF1 매니페스트 |
+| 실제 빌드 (로컬) | STM32CubeF1로 F103RB 예제 125개+빈 프로젝트 모두 빌드 후 F1 에뮬레이터 실행 통과(126/126). 두 보드 CI 부분집합 22/22 |
+| `npm run test:e2e` (로컬, 실제 도구) | 26개 모두 통과. 새 검사: F103 ELF를 F1 에뮬레이터로 실행, 보드 전환 후 앱에서 STM32CubeF1 빌드·실행 |
+| 실물 NUCLEO-F103RB | blink: PA5 토글, RCC_CFGR PLL x16·APB1 /2. IDE 경로(`NativeIde.run`): 두 ST-LINK 중 F103RB 자동 선택·쓰기·실행. exti: EXTICR4·EXTI·NVIC IRQ40 설정, SWIER로 처리기가 PA5 토글 |
+| 공개 자산 | latest=v0.33.0, 태그·BUILD-INFO 커밋 일치, 5자산. EXE SHA-256 `2f6193e4157d86718576f19ebf76a517b895795bc5390ec848cdd8f6cba2eeb1`(103,013,388 B, MZ)이 SHA256.txt·update-manifest·ZIP 안 EXE와 일치. ZIP SHA-256 `48386217578420c4fde51be863bf6e62ec9477bd7d3dc7a9b5b3371b30e7d46a` |
+
+한계: F1 에뮬레이터는 F446 메모리 크기를 써서 128K/20K 밖 접근을 막지 않습니다. 물리 버튼 누름은 사용자 확인이 필요합니다.
+
 ## 0.32.0 NUCLEO-F103RB 보드 (회로 시뮬레이터) — 공개 배포 검증 완료
 
 2026-10-21. 제품 커밋 `9aa3e9fd17d408026dbac004df4e93c681e3ba88` · [Windows CI 39550035526](https://github.com/moonsyu/STM-Simulator/actions/runs/39550035526) 첫 실행 성공 · [Release v0.32.0](https://github.com/moonsyu/STM-Simulator/releases/tag/v0.32.0).
