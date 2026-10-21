@@ -1,6 +1,12 @@
 # STM Simulator — 개발 인계
 
-현재 버전: **0.29.1**. 정리일: **2026-10-21**. NUCLEO-F446RE와 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M4 에뮬레이터에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+현재 버전: **0.29.2**. 정리일: **2026-10-21**. NUCLEO-F446RE와 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M4 에뮬레이터에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+
+## 0.29.2 코드 정렬이 문장 줄 나눔까지
+
+- `c-format.js`: `splitStatements`(원래 줄마다 나뉜 조각 목록)와 `formatCode`(나눔 + `formatC` 들여쓰기, 원래 줄별 결과 `lines`와 `range` 지원). `expandC`는 예제용 2칸 `formatCode`. 중괄호 있는 `}` 뒤의 `else 문장;`·`else if (c) 문장;`이 같은 줄에서 끝나면 중괄호를 붙인다(`singleStatement`로 안전할 때만). 연산자 공백은 바꾸지 않는다(사용자 목표 형식).
+- `code-format-ui.js`: 코드 정렬·선택 영역·`}` 블록 모두 `formatCode`. 편집은 원래 줄마다 그 줄이 된 여러 줄로 바꿔 중단점 장식이 문장을 따라간다. `}` 뒤 커서는 그 줄이 된 마지막 줄의 같은 위치로 옮긴다. `formatProjectSources`(저장 시 정렬)는 `project.ide.breakpoints`의 줄을 새 위치로 옮긴다.
+- 검사: `tests/unit/c-format.test.js`(사용자 목표 형식 `tests/fixtures/format-compact.c`, else if 사슬, 범위, 중단점 이동), `tests/e2e/format-ime.e2e.test.mjs`(실제 앱 코드 정렬 결과와 중단점 `main.c:10`).
 
 ## 0.29.1 `}` 정렬 IME 수정 · 예제 코드 줄 정리
 
