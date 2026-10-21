@@ -1,6 +1,6 @@
 {
   "name": "stm-simulator",
-  "version": "0.28.0",
+  "version": "0.29.0",
   "description": "STM32 learning IDE with an integrated circuit simulator and Cortex-M4 firmware emulator",
   "author": "STM Simulator",
   "private": true,
