@@ -4,6 +4,7 @@ import {advance} from './helpers.js';
 import {allHalExamples,applyHalExample} from '../../src/hal-examples.js';
 import {blankProject,validateProject} from '../../src/project.js';
 import {SimulationSession} from '../../src/session.js';
+import {searchHalExamples} from '../../src/hal-example-search.js';
 
 const F4='nucleo-f446re',F1='nucleo-f103rb';
 const project=(board,id)=>validateProject(applyHalExample({...blankProject(board===F1?'STM32F103RB':undefined),boardId:board},id));
@@ -38,4 +39,9 @@ test('ported F103 examples use F1 clocks, AFIO remaps and DMA1 channels',()=>{
  assert.match(sonar.code,/htim2\.Init\.Period = 65535;/);assert.match(sonar.code,/\(uint16_t\)\(now - started\)/);
  const can=project(F1,'ref_can_transceiver_6');
  assert.match(can.code,/__HAL_AFIO_REMAP_CAN1_2\(\);/);assert.doesNotMatch(can.code,/GPIO_AF9_CAN1/);
+});
+
+test('the example list of an F103 project leaves out examples that need F4-only peripherals',()=>{
+ const f4=searchHalExamples('').map(r=>r.id),f1=searchHalExamples('','STM32F103RB').map(r=>r.id);
+ assert.deepEqual(f4.filter(id=>!f1.includes(id)).sort(),[...UNAVAILABLE].sort());
 });

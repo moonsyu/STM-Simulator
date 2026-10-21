@@ -27,7 +27,9 @@ export class PinoutPanel {
     $('pinout-apply').onclick=()=>this.commit(false);$('hal-generate').onclick=()=>{if(this.isRunning())return;this.sync();if(this.getProject().code.trim())$('hal-replace-dialog').showModal();else this.commit(true);};
     $('hal-replace-cancel').onclick=()=>$('hal-replace-dialog').close();$('hal-replace-confirm').onclick=()=>{$('hal-replace-dialog').close();this.commit(true);};
   }
-  open(pin){if(this.isRunning())return;const project=this.getProject();this.draft=structuredClone(project.mcu||defaultMcu(projectBoard(project).mcuFamily));if(familyProfile(this.draft.family).gpioPins.includes(pin))this.pin=pin;this.render();$('pinout-dialog').showModal();}
+  open(pin){if(this.isRunning())return;const project=this.getProject();this.draft=structuredClone(project.mcu||defaultMcu(projectBoard(project).mcuFamily));const fam=familyProfile(this.draft.family);if(fam.gpioPins.includes(pin))this.pin=pin;
+    $('pinout-dialog').querySelector('footer > span').textContent=`HAL GPIO · UART/USART ${Object.keys(fam.serial).length}개 · ${['I2C1','SPI1','ADC1'].filter(id=>fam.extra[id]).join(' · ').replace('I2C','I²C')} · TIM${Object.keys(fam.timers).map(t=>t.slice(3)).join('/')}`;
+    this.render();$('pinout-dialog').showModal();}
   sync(){if(!$('pin-function'))return;this.draft.pins[this.pin]={function:$('pin-function').value,pull:$('pin-pull').value,edge:$('pin-edge').value,initial:Number($('pin-level').value),label:$('pin-label').value.trim()};}
   commit(generate){try{this.sync();for(const el of $('pinout-dialog').querySelectorAll('input[type="number"]'))if(!Number.isFinite(numberInput(el)))throw new Error(`${el.getAttribute('aria-label')||(el.id==='timer-clock'?'APB1 타이머 입력 클록':'숫자 설정')}: 숫자를 입력하세요.`);const mcu=validateMcu(this.draft),code=generate?expandC(generateHal(mcu)):null;this.apply({mcu,code});$('pinout-dialog').close();}catch(e){$('pinout-errors').textContent=e.message;this.onError(e.message);}}
   // DMA requests of the enabled peripherals: stream/channel, direction, normal/circular, priority.
