@@ -20,7 +20,7 @@ const section=(code,n,text)=>code.replace(new RegExp(`/\\* USER CODE BEGIN ${n} 
 function finish(p,kind,{globals='',init='',loop='    HAL_Delay(10);',callbacks=''}){
  p.name=ADVANCED_EXAMPLES[kind];p.mcu=validateMcu(p.mcu);
  let code=generateHal(p.mcu,{minimal:true}).replace('int main(void) {',globals+'\nint main(void) {');code=section(section(code,2,init),3,loop);
- p.code='#include "main.h"\n#include <stdio.h>\n// '+ADVANCED_GUIDES[kind]+'\n'+code.replace('#include "main.h"\n','')+(callbacks?'\n'+callbacks+'\n':'');
+ p.code='#include "main.h"\n#include <stdio.h>\n// '+ADVANCED_GUIDES[kind]+'\n'+code.replace('#include "main.h"\n','').replace('#include <stdio.h>\n','')+(callbacks?'\n'+callbacks+'\n':'');
  p.firmware={mode:'hal',files:[]};return p;
 }
 const TFT_HELPERS=`void transferByte(uint8_t data) {

@@ -65,7 +65,7 @@ export function halExample(kind){
     user(2,'  HAL_TIM_Base_Start(&htim2);');
     user(3,'    uint32_t now = __HAL_TIM_GET_COUNTER(&htim2);\n    if (phase == 0) { HAL_GPIO_WritePin(GPIOC, GPIO_PIN_7, GPIO_PIN_SET); started = now; phase = 1; }\n    else if (phase == 1 && (uint32_t)(now - started) >= 10) { HAL_GPIO_WritePin(GPIOC, GPIO_PIN_7, GPIO_PIN_RESET); started = now; phase = 2; }\n    else if (phase == 2) {\n      if (HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_9) == GPIO_PIN_SET) { echoStarted = now; phase = 3; }\n      else if ((uint32_t)(now - started) >= 30000) { printf("HC-SR04 timeout\\n"); phase = 4; }\n    }\n    else if (phase == 3) {\n      if (HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_9) == GPIO_PIN_RESET) { printf("distance=%.1f cm\\n", (uint32_t)(now - echoStarted) / 58.0); phase = 4; }\n      else if ((uint32_t)(now - started) >= 30000) { printf("HC-SR04 timeout\\n"); phase = 4; }\n    }\n    else if (phase == 4 && (uint32_t)(now - started) >= 60000) phase = 0;');
   }
-  p.code='#include "main.h"\n#include <stdio.h>\n// '+HAL_GUIDES[exampleId]+'\n'+p.code.replace('#include "main.h"\n','');
+  p.code='#include "main.h"\n#include <stdio.h>\n// '+HAL_GUIDES[exampleId]+'\n'+p.code.replace('#include "main.h"\n','').replace('#include <stdio.h>\n','');
   return configureHalCircuit(p,exampleId);
 }
 
