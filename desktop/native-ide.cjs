@@ -6,15 +6,44 @@ const {GdbSession}=require('./gdb-mi.cjs');
 const {LanguageServer}=require('./clangd.cjs');
 const {launch,terminate}=require('./process-tools.cjs');
 const {installPlan,installTools}=require('./tool-installer.cjs');
+const {execute}=require('./process-tools.cjs');
+const os=require('node:os');
 // OpenOCD bundled with STM32CubeIDE is ST's fork: its scripts live in a separate plugin (…debug.openocd_*/resources/
 // openocd/st_scripts) and it reaches the ST-LINK through the DAP interface; the legacy hla interface/stlink.cfg loops there.
-async function openocdArgs(executable){
+// `target` is the OpenOCD target script of the project's MCU; `serial` picks one ST-LINK when several boards are connected.
+async function openocdArgs(executable,{target='stm32f4x',serial}={}){
+  const select=serial?['-c','adapter serial '+serial]:[];
   const m=/^(.*[\\/]plugins)[\\/][^\\/]*\.externaltools\.openocd\.[^\\/]*[\\/]/i.exec(executable||'');
   if(m)for(const name of (await fs.readdir(m[1]).catch(()=>[])).filter(n=>/\.debug\.openocd_/.test(n)).sort().reverse()){
     const scripts=path.join(m[1],name,'resources','openocd','st_scripts');
-    if(await fs.access(path.join(scripts,'interface','stlink-dap.cfg')).then(()=>true,()=>false))return ['-s',scripts,'-f','interface/stlink-dap.cfg','-c','transport select dapdirect_swd','-f','target/stm32f4x.cfg'];
+    if(await fs.access(path.join(scripts,'interface','stlink-dap.cfg')).then(()=>true,()=>false))return ['-s',scripts,'-f','interface/stlink-dap.cfg',...select,'-c','transport select dapdirect_swd','-f',`target/${target}.cfg`];
   }
-  return ['-f','interface/stlink.cfg','-f','target/stm32f4x.cfg'];
+  return ['-f','interface/stlink.cfg',...select,'-f',`target/${target}.cfg`];
+}
+const OPENOCD_TARGETS={STM32F446RE:'stm32f4x',STM32F103RB:'stm32f1x'};
+// STM32CubeProgrammer (also inside STM32CubeIDE) lists each ST-LINK with its serial number and NUCLEO board name.
+async function findProgrammer(){
+  const candidates=[path.join(process.env.ProgramFiles||'C:/Program Files','STMicroelectronics/STM32Cube/STM32CubeProgrammer/bin/STM32_Programmer_CLI.exe')];
+  for(const e of await fs.readdir('C:/ST',{withFileTypes:true}).catch(()=>[]))if(e.isDirectory()&&/^STM32CubeIDE/i.test(e.name)){
+    const plugins=path.join('C:/ST',e.name,'STM32CubeIDE','plugins');
+    for(const n of (await fs.readdir(plugins).catch(()=>[])).filter(n=>/\.cubeprogrammer\.win32_/.test(n)).sort().reverse())candidates.push(path.join(plugins,n,'tools','bin','STM32_Programmer_CLI.exe'));
+  }
+  for(const c of candidates)if(await fs.access(c).then(()=>true,()=>false))return c;return '';
+}
+/** Connected ST-LINKs as [{serial,board}] (board is '' when unknown). */
+async function listStlinks(){
+  const programmer=await findProgrammer();
+  if(programmer){const r=await execute(programmer,['-l','st-link'],{timeout:15000}).catch(()=>null);const out=r?.stdout||'';if(/ST-LINK SN/.test(out))return [...out.matchAll(/ST-LINK SN\s*:\s*(\w+)[\s\S]*?Board Name\s*:\s*([^\r\n]*)/g)].map(m=>({serial:m[1],board:m[2].trim()}));}
+  if(os.platform()!=='win32')return [];
+  const r=await execute(path.join(process.env.SystemRoot||'C:/Windows','System32/WindowsPowerShell/v1.0/powershell.exe'),['-NoProfile','-NonInteractive','-Command',"Get-PnpDevice -PresentOnly | Where-Object { $_.InstanceId -match '^USB\\\\VID_0483&PID_(374B|374E|374F|3752|3753|3748)\\\\' } | ForEach-Object { $_.InstanceId.Split('\\')[-1] }"],{timeout:15000}).catch(()=>null);
+  return (r?.stdout||'').split(/\r?\n/).map(s=>s.trim()).filter(s=>/^\w{8,}$/.test(s)).map(serial=>({serial,board:''}));
+}
+/** The ST-LINK serial for `boardName`: the one set by the user, the only one connected, or the one whose board name matches. */
+async function chooseStlink(boardName,preferred,list=listStlinks){
+  if(preferred)return preferred;
+  const links=await list();if(links.length<=1)return links[0]?.serial||'';
+  const match=links.filter(l=>l.board.toUpperCase()===boardName.toUpperCase());if(match.length===1)return match[0].serial;
+  throw new Error(`ST-LINK가 ${links.length}개 연결되어 있습니다. 보드 연결 설정에서 ${boardName}의 ST-LINK 시리얼을 지정하세요: ${links.map(l=>l.serial+(l.board?` (${l.board})`:'')).join(', ')}`);
 }
 function checkedConfig(value){if(!value||!['arm','host'].includes(value.target)||!['Debug','Release'].includes(value.configuration))throw new Error('빌드 대상과 구성을 선택하세요.');return {target:value.target,configuration:value.configuration};}
 class NativeIde extends EventEmitter{
@@ -50,15 +79,18 @@ class NativeIde extends EventEmitter{
   async startDebug({text,config,connection={},entry=true,breakpoints=[]}){
     if(this.busy())throw new Error('현재 실행을 먼저 종료하세요.');const plan=await this.ensureBuild(text,config),tools=await this.settings();
     if(entry&&config.configuration!=='Debug')throw new Error('소스 디버깅은 Debug 구성으로 빌드하세요.');
-    if(config.target==='arm'&&connection.server==='openocd')await this.startServer(tools.openocd);
+    if(config.target==='arm'&&connection.server==='openocd'){
+      const project=await this.validate(text),{projectBoard}=await import('../src/boards.js'),board=projectBoard(project);
+      await this.startServer(tools.openocd,{target:OPENOCD_TARGETS[board.mcuFamily],serial:await chooseStlink(board.name,typeof connection.serial==='string'&&/^\w{8,40}$/.test(connection.serial)?connection.serial:'')});
+    }
     try{await this.gdb.start({gdb:config.target==='arm'?tools.armGdb:tools.hostGdb,elf:plan.elf,cwd:plan.directory,target:config.target,endpoint:connection.server==='openocd'?'127.0.0.1:3333':connection.endpoint||'127.0.0.1:3333',flash:connection.flash===true,reset:connection.server==='openocd',entry,breakpoints,files:plan.files});}
     catch(e){await this.stopServer();throw e;}
     return {directory:plan.directory};
   }
-  async startServer(executable){
+  async startServer(executable,options){
     if(!executable)throw new Error('OpenOCD 경로를 설정하세요.');
     if(this.server)throw new Error('OpenOCD가 이미 실행 중입니다.');
-    const child=this.server=launch(executable,[...await openocdArgs(executable),'-c','bindto 127.0.0.1','-c','gdb_port 3333','-c','tcl_port disabled','-c','telnet_port disabled'],{});
+    const child=this.server=launch(executable,[...await openocdArgs(executable,options),'-c','bindto 127.0.0.1','-c','gdb_port 3333','-c','tcl_port disabled','-c','telnet_port disabled'],{});
     try{await new Promise((resolve,reject)=>{let log='';const timer=setTimeout(()=>reject(new Error('OpenOCD 연결 시간이 초과되었습니다. ST-LINK 연결을 확인하세요.')),15000);const done=(error)=>{clearTimeout(timer);error?reject(error):resolve();};child.once('error',done);child.once('exit',code=>{if(this.server===child)this.server=null;done(new Error('OpenOCD 종료: '+code+'\n'+log.slice(-2000)));});for(const stream of [child.stdout,child.stderr]){stream.setEncoding('utf8');stream.on('data',text=>{log=(log+text).slice(-10000);this.send('debug-output',{text});if(/Listening on port 3333 for gdb connections/.test(log))done();});}});}catch(e){await this.stopServer();throw e;}
   }
   async stopServer(){const child=this.server;this.server=null;await terminate(child);}
@@ -78,4 +110,4 @@ class NativeIde extends EventEmitter{
   async close(){await this.stop();await this.lsp.stop();await this.closeTerminal();}
   async closeTerminal(){const child=this.terminal;this.terminal=null;await terminate(child);if(!this.terminal)this.send('terminal-state',{state:'closed'});}
 }
-module.exports={NativeIde,openocdArgs};
+module.exports={NativeIde,openocdArgs,chooseStlink};
