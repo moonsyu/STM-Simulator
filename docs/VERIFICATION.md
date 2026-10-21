@@ -1,5 +1,18 @@
 # 검증 기록
 
+## 0.29.2 코드 정렬 문장 줄 나눔 · 저장 상태 경쟁 수정 — 공개 배포 검증 완료
+
+2026-10-21. 제품 커밋 `292d402bbc6b36e181e88c3fae7c4a2c93cc6583` · [Windows CI 39531566516](https://github.com/moonsyu/STM-Simulator/actions/runs/39531566516) (빌드·릴리스 게시 모두 성공) · [Release v0.29.2](https://github.com/moonsyu/STM-Simulator/releases/tag/v0.29.2). 첫 실행 [39530166635](https://github.com/moonsyu/STM-Simulator/actions/runs/39530166635)은 저장 상태 경쟁(자동 저장이 "파일 저장됨"을 덮어씀)으로 E2E 1건이 실패해 게시되지 않았고(태그 없음), 수정 후 같은 버전으로 게시했습니다.
+
+| 검사 | 결과 |
+|---|---|
+| `npm test` (로컬 Windows) | 680개 중 677 통과. 실패 2개는 로컬 심볼릭 링크 권한 한정, CI 통과 |
+| `npm run test:e2e` (로컬) | 21 통과, 1 건너뜀. 저장 테스트는 3회 연속 통과(저장 0.5초 뒤 상태 유지 검사 추가) |
+| 코드 정렬 | 사용자 목표 형식(`tests/fixtures/format-compact.c`)과 글자 단위 일치, `else if` 사슬, 범위 정렬, 중단점 이동(편집기 `main.c:10`, 저장 시 줄 재계산) |
+| 공개 자산 | latest=v0.29.2, 태그·BUILD-INFO 커밋 일치, 5자산 존재. EXE SHA-256 `4d63c5014e65277f1362e6d0fd0f61b059edfc655d52d6e2a19ca5f75adbb194`(102,967,555 B, MZ 헤더)이 SHA256.txt·update-manifest·ZIP 안의 `STM-Simulator.exe`와 일치. ZIP SHA-256 `a889b29355ee13bfdd7e5d961378e1efb62991810729e246389c5116400df5b7` |
+
+한계: 연산자 주변 공백과 포인터 `*`/`&`는 정렬하지 않습니다(사용자 목표 형식). 중괄호는 중괄호 있는 갈래 뒤 같은 줄에서 끝나는 `else` 한 문장에만 붙입니다.
+
 ## 0.29.1 `}` 정렬 IME 수정 · 예제 코드 줄 정리 · 메뉴 표시 — 공개 배포 검증 완료
 
 2026-10-21. 제품 커밋 `0173b64339a8e9a50a38b75c77b13d82416486bd` · [Windows CI 39528002946](https://github.com/moonsyu/STM-Simulator/actions/runs/39528002946) (빌드·릴리스 게시 모두 성공) · [Release v0.29.1](https://github.com/moonsyu/STM-Simulator/releases/tag/v0.29.1). 첫 실행 [39527156197](https://github.com/moonsyu/STM-Simulator/actions/runs/39527156197)은 메뉴 단축키 경쟁 상태로 E2E 1건이 실패해 게시되지 않았고(태그 없음), 수정 후 같은 버전으로 게시했습니다.
