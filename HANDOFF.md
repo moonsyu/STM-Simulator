@@ -1,6 +1,10 @@
 # STM Simulator — 개발 인계
 
-현재 버전: **0.34.1**. 정리일: **2026-10-21**. NUCLEO-F446RE 또는 NUCLEO-F103RB와 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+현재 버전: **0.34.2**. 정리일: **2026-10-21**. NUCLEO-F446RE 또는 NUCLEO-F103RB와 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+
+## 0.34.2 부품 선택 범위
+
+- 부품을 잡는 영역은 칠해진 도형과 `catalogBodyBounds` 크기의 투명 사각형뿐이다. `.led-glow`·`.rgb-glow`·`.terminal-label`·`.buzzer-*`·`.dc-rpm`은 `pointer-events:none`(style.css). `resize-ui.js` `paintedBox(body)`가 같은 요소를 빼고 테두리 범위를 잡으며 화면 여백은 3 px(최소 20 px).
 
 ## 0.34.1 배선 끝 클릭으로 옮기기
 

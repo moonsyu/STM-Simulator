@@ -1,5 +1,9 @@
 # 검증 기록
 
+## 0.34.1 배선 끝 클릭으로 옮기기 — 공개 배포 검증 완료
+
+2026-10-22. 제품 커밋 `ccf3994e4b849c19b53fe98f6ac7c286a219cc0b` · [Windows CI 39620223862](https://github.com/moonsyu/STM-Simulator/actions/runs/39620223862) 첫 실행 성공 · [Release v0.34.1](https://github.com/moonsyu/STM-Simulator/releases/tag/v0.34.1). `npm test` 711개 중 708 통과·1 건너뜀(실패 2개는 로컬 심볼릭 링크 권한), E2E 27개 중 25 통과·2 건너뜀. latest=v0.34.1, 태그·BUILD-INFO 커밋 일치, 5자산. EXE SHA-256 `7837626f986d8861756c3c7380c8c267476cd6642424269079f3b6f48eb33c1d`(103,014,939 B, MZ)이 SHA256.txt·update-manifest·ZIP 안 EXE와 일치. ZIP SHA-256 `0fc39d3e907cd7ab51f9e0c7c6c5bc25d0fc13fd9aa5cb0ec3bfdd3ab523e618`.
+
 ## 0.34.0 한 칸에 점퍼선 하나 · 배선 끝 옮기기 — 공개 배포 검증 완료
 
 2026-10-22. 제품 커밋 `7ac9f149c8d7565583aca89bc33d520bde431b03` · [Windows CI 39607305813](https://github.com/moonsyu/STM-Simulator/actions/runs/39607305813) 첫 실행 성공 · [Release v0.34.0](https://github.com/moonsyu/STM-Simulator/releases/tag/v0.34.0).
