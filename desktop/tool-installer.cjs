@@ -1,11 +1,11 @@
 // In-app installer for the tools a real-board build needs (개발 도구 → 필요한 도구 설치).
 // It mirrors scripts/setup-native-tools.ps1 without Git: release zips are checked against pinned SHA-256 values,
-// and the STM32CubeF4 subset comes from GitHub source archives at fixed commits, every kept file verified against
-// desktop/tool-manifest.json. Everything lands in %LOCALAPPDATA%/STM-Simulator-Tools, which detectTools reads.
+// and the STM32CubeF4/F1 subsets come from GitHub source archives at fixed commits, every kept file verified against
+// desktop/tool-manifest.json (F4) and tool-manifest-f1.json (F1). Everything lands in %LOCALAPPDATA%/STM-Simulator-Tools, which detectTools reads.
 const fs=require('node:fs/promises'),path=require('node:path'),os=require('node:os');
 const {createHash}=require('node:crypto');
 const {execFile}=require('node:child_process');
-const MANIFEST=require('./tool-manifest.json');
+const MANIFEST=require('./tool-manifest.json'),MANIFEST_F1=require('./tool-manifest-f1.json');
 
 const RELEASES=[
   {id:'gcc',keys:['armGcc','armGdb'],label:'ARM GCC 15.2.1 · GDB 포함 (xPack)',bytes:335571206,
@@ -18,8 +18,9 @@ const RELEASES=[
    url:'https://github.com/clangd/clangd/releases/download/23.1.0/clangd-windows-23.1.0.zip',
    sha256:'23412a240756a162e7b98a282f36aa2a23a88db5ce16a0cbc4fef7253768c810',check:'clangd_23.1.0/bin/clangd.exe'}
 ];
-const CUBE={id:'cube',keys:['cube'],label:'STM32CubeF4 v1.28.3 · HAL·CMSIS 드라이버',bytes:10*1024*1024,check:'STM32CubeF4/Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal.h'};
-const ITEMS=[RELEASES[0],CUBE,RELEASES[1],RELEASES[2]];
+const CUBE={id:'cube',keys:['cube'],label:'STM32CubeF4 v1.28.3 · HAL·CMSIS 드라이버 (NUCLEO-F446RE)',bytes:10*1024*1024,check:'STM32CubeF4/Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal.h',manifest:MANIFEST};
+const CUBE_F1={id:'cubeF1',keys:['cubeF1'],label:'STM32CubeF1 v1.8.7 · HAL·CMSIS 드라이버 (NUCLEO-F103RB)',bytes:3*1024*1024,check:'STM32CubeF1/Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal.h',manifest:MANIFEST_F1};
+const ITEMS=[RELEASES[0],CUBE,CUBE_F1,RELEASES[1],RELEASES[2]];
 
 const installRoot=()=>path.join(process.env.LOCALAPPDATA||os.homedir(),'STM-Simulator-Tools');
 const exists=p=>fs.access(p).then(()=>true,()=>false);
@@ -55,29 +56,29 @@ async function installRelease(item,root,o){
     await fs.rm(path.join(root,top),{recursive:true,force:true});await fs.rename(path.join(stage,top),path.join(root,top));
   }finally{await fs.rm(zip,{force:true});await fs.rm(stage,{recursive:true,force:true});}
 }
-async function installCube(root,o,manifest=MANIFEST){
-  const stage=await fresh(path.join(root,'STM32CubeF4.partial')),work=path.join(root,'.extract-cube');
+async function installCube(root,o,manifest=MANIFEST,item=CUBE){
+  const folder=item.check.split('/')[0],stage=await fresh(path.join(root,folder+'.partial')),work=path.join(root,'.extract-'+item.id);
   const all=manifest.sources.reduce((n,s)=>n+s.files.length,0);let done=0;
   const keep=async(source,file,bytes)=>{
-    if(sha256(bytes)!==file.sha256)throw new Error(`STM32CubeF4: ${file.path} 검증 실패 (${source.repo}@${source.commit.slice(0,7)})`);
+    if(sha256(bytes)!==file.sha256)throw new Error(`${folder}: ${file.path} 검증 실패 (${source.repo}@${source.commit.slice(0,7)})`);
     const target=path.join(stage,source.into,file.path);await fs.mkdir(path.dirname(target),{recursive:true});await fs.writeFile(target,bytes);
-    o.onProgress({id:'cube',phase:'verify',received:++done,total:all});
+    o.onProgress({id:item.id,phase:'verify',received:++done,total:all});
   };
   try{
     for(const source of manifest.sources){
       if(source.archive){
-        const zip=path.join(root,'cube-source.zip.partial');await fresh(work);
-        await download(`https://codeload.github.com/${source.repo}/zip/${source.commit}`,zip,{...o,onBytes:received=>o.onProgress({id:'cube',phase:'download',received,total:0})});
+        const zip=path.join(root,item.id+'-source.zip.partial');await fresh(work);
+        await download(`https://codeload.github.com/${source.repo}/zip/${source.commit}`,zip,{...o,onBytes:received=>o.onProgress({id:item.id,phase:'download',received,total:0})});
         await extract(zip,work);await fs.rm(zip,{force:true});
         const [top]=await fs.readdir(work);
-        for(const file of source.files)await keep(source,file,await fs.readFile(path.join(work,top,file.path)).catch(()=>{throw new Error(`STM32CubeF4: 압축 안에 ${file.path}가 없습니다.`);}));
+        for(const file of source.files)await keep(source,file,await fs.readFile(path.join(work,top,file.path)).catch(()=>{throw new Error(`${folder}: 압축 안에 ${file.path}가 없습니다.`);}));
       }else for(const file of source.files){
         const response=await o.fetchImpl(`https://raw.githubusercontent.com/${source.repo}/${source.commit}/${file.path}`,{signal:o.signal});
         if(!response.ok)throw new Error(`다운로드 실패 (${response.status}): ${file.path}`);
         await keep(source,file,Buffer.from(await response.arrayBuffer()));
       }
     }
-    await fs.rm(path.join(root,'STM32CubeF4'),{recursive:true,force:true});await fs.rename(stage,path.join(root,'STM32CubeF4'));
+    await fs.rm(path.join(root,folder),{recursive:true,force:true});await fs.rename(stage,path.join(root,folder));
   }finally{await fs.rm(stage,{recursive:true,force:true});await fs.rm(work,{recursive:true,force:true});}
 }
 
@@ -88,10 +89,10 @@ async function installTools(ids,{root=installRoot(),fetchImpl=globalThis.fetch,s
   await fs.mkdir(root,{recursive:true});const o={fetchImpl,signal,onProgress};
   for(const item of ITEMS.filter(item=>ids.includes(item.id))){
     if(await exists(path.join(root,item.check))){onProgress({id:item.id,phase:'skipped'});continue;}
-    if(item===CUBE)await installCube(root,o);else await installRelease(item,root,o);
+    if(item.manifest)await installCube(root,o,item.manifest,item);else await installRelease(item,root,o);
     onProgress({id:item.id,phase:'done'});
   }
   return root;
 }
 // installRelease/installCube take a package description so tests can use small local packages instead of the network.
-module.exports={installPlan,installTools,installRoot,installRelease,installCube,RELEASES,CUBE};
+module.exports={installPlan,installTools,installRoot,installRelease,installCube,RELEASES,CUBE,CUBE_F1};

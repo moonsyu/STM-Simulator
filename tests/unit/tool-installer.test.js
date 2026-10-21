@@ -17,10 +17,10 @@ async function zip(dir,out){execFileSync(path.join(process.env.SystemRoot||'C:/W
 const fakeFetch=routes=>async url=>{const body=routes[url];if(body===undefined)return new Response('missing',{status:404});return new Response(body,{headers:{'content-length':String(body.length)}});};
 
 test('the plan lists only missing tools, in install order, with sizes and hosts',()=>{
- const all={armGcc:'g',armGdb:'d',cube:'c',openocd:'o',clangd:'l'};
+ const all={armGcc:'g',armGdb:'d',cube:'c',cubeF1:'f',openocd:'o',clangd:'l'};
  assert.deepEqual(installPlan(all),[]);
- const plan=installPlan({...all,armGdb:'',cube:'',clangd:''});
- assert.deepEqual(plan.map(p=>p.id),['gcc','cube','clangd']);
+ const plan=installPlan({...all,armGdb:'',cube:'',cubeF1:'',clangd:''});
+ assert.deepEqual(plan.map(p=>p.id),['gcc','cube','cubeF1','clangd']);
  assert.ok(plan.every(p=>p.bytes>0&&p.label&&p.source));
  assert.equal(plan[0].source,'github.com');
 });
@@ -31,6 +31,14 @@ test('the pinned manifest covers the HAL, CMSIS device and CMSIS core files the 
   'Drivers/CMSIS/Device/ST/STM32F4xx/Include/stm32f446xx.h','Drivers/CMSIS/Device/ST/STM32F4xx/Source/Templates/system_stm32f4xx.c','Drivers/CMSIS/Device/ST/STM32F4xx/Source/Templates/gcc/startup_stm32f446xx.s','Drivers/CMSIS/Include/core_cm4.h'])
   assert.ok(paths.includes(needed),needed);
  assert.ok(manifest.sources.every(s=>/^[0-9a-f]{40}$/.test(s.commit)&&s.files.every(f=>/^[0-9a-f]{64}$/.test(f.sha256))));
+});
+
+test('the STM32CubeF1 manifest covers the files the NUCLEO-F103RB ARM build uses',()=>{
+ const f1=require('../../desktop/tool-manifest-f1.json'),paths=f1.sources.flatMap(s=>s.files.map(f=>path.posix.join(s.into,f.path)));
+ for(const needed of ['Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal.h','Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_conf_template.h','Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_hal_gpio_ex.c',
+  'Drivers/CMSIS/Device/ST/STM32F1xx/Include/stm32f103xb.h','Drivers/CMSIS/Device/ST/STM32F1xx/Source/Templates/system_stm32f1xx.c','Drivers/CMSIS/Device/ST/STM32F1xx/Source/Templates/gcc/startup_stm32f103xb.s','Drivers/CMSIS/Include/core_cm3.h'])
+  assert.ok(paths.includes(needed),needed);
+ assert.ok(f1.sources.every(s=>/^[0-9a-f]{40}$/.test(s.commit)&&s.files.every(f=>/^[0-9a-f]{64}$/.test(f.sha256))));
 });
 
 test('a release zip is installed after its SHA-256 matches, and rejected (leaving nothing behind) when it does not',{skip:!windows&&'bsdtar zip extraction is Windows-only'},()=>withTempDir(async dir=>{
