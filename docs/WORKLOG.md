@@ -2,6 +2,16 @@
 
 작업할 때마다 날짜순으로 맨 위에 추가합니다. 무엇을 했는지, 왜 했는지, 어떻게 검증했는지, 커밋·릴리스와 남은 사항을 적습니다. 버전별 구조 설명은 [HANDOFF.md](../HANDOFF.md), 검증 수치는 [VERIFICATION.md](VERIFICATION.md)에 있습니다.
 
+## 2026-10-21 · 0.33.0 NUCLEO-F103RB 실제 빌드 · 실물 보드 · 펌웨어 에뮬레이터 (2·3단계)
+
+- 사용자 허락: STM32CubeF1 HAL 다운로드, 빌드한 펌웨어를 실물 F103RB에 써서 확인.
+- 도구 설치: STM32CubeF1 v1.8.7(HAL `fee494a`, CMSIS 디바이스 `c8e9a4a`)을 고정 커밋·파일별 SHA-256 매니페스트(201개)로 설치. 앱 설치 코드로 실제 설치 7.6초. `9952a4c`
+- ARM 빌드·실물 보드: 계열별 SDK·Cortex-M3·startup·128K/20K 링커. OpenOCD `stm32f1x`, 두 ST-LINK 중 보드 이름으로 선택(STM32CubeProgrammer 목록, 없으면 PnP 시리얼·수동 입력). `e7d1dbd`
+- 실물 확인(F103RB, F446RE는 건드리지 않음): blink를 써서 PA5 0→1, RCC_CFGR=0x0038040A(PLL·x16·APB1 /2). IDE와 같은 `NativeIde.run` 경로로 보드 자동 선택·쓰기·실행(uwTick 714→2880, PA5 토글). exti를 써서 AFIO_EXTICR4=0x20, EXTI IMR·FTSR 13, NVIC IRQ40, SWIER로 인터럽트가 PA5를 토글하고 PR을 지움. 보드에는 현재 exti(버튼 토글) 펌웨어가 들어 있다.
+- 에뮬레이터: STM32F103 SoC(F1 RCC·FLASH·GPIO·AFIO·DMA1·ADC·DBGMCU, 나머지는 F446 모델 공유). `cf73058`
+- 검증: 실제 STM32CubeF1 빌드로 F103RB 예제 125개+빈 프로젝트 126개 모두 컴파일·링크 후 F1 에뮬레이터 실행 통과(sd_logger는 F4와 같이 시뮬레이터 전용). 고정 펌웨어 12개 테스트 8개, CI 부분집합 22개(두 보드). `npm test` 708개 중 705 통과·1 건너뜀(실패 2개는 로컬 심볼릭 링크 권한). E2E 26개 모두 통과(실제 도구 경로 지정, 뒤쪽·다크 임시 변경 후 되돌림): F103 ELF 실행, 보드 전환 후 앱에서 빌드·에뮬레이터 실행 포함.
+- 한계: F1 에뮬레이터는 F446 메모리 버스(512K/128K)를 써서 128K/20K 밖 접근을 오류로 막지 않는다. STM32CubeProgrammer 없이 여러 보드를 연결하면 보드 연결 창에 시리얼을 입력해야 한다. CAN 루프백 수신은 F4 에뮬레이터와 같이 인터프리터와 다르다(기존 동작).
+
 ## 2026-10-21 · 0.32.0 NUCLEO-F103RB 보드 추가 (1단계: 회로 시뮬레이터)
 
 - 요청: 연결한 NUCLEO-F103RB도 시뮬레이터에 추가하고, NUCLEO-F446RE와 같은 기능을 모두 쓸 수 있게.
