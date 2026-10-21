@@ -43,8 +43,9 @@ export class Stm32f446 {
   constructor(machine, env = {}, options = {}) {
     this.machine = machine; this.bus = machine.bus; this.env = env; this.options = { pwmWaveform: false, ...options };
     this.scheduler = new Scheduler();
-    this.clock = { sysclk: 16e6, hclk: 16e6, pclk1: 16e6, pclk2: 16e6, tim1: 16e6, tim2: 16e6, pll48: 0 };
-    this.segment = { cycle: 0, us: 0, hz: 16e6 };
+    const hz = this.resetHz;
+    this.clock = { sysclk: hz, hclk: hz, pclk1: hz, pclk2: hz, tim1: hz, tim2: hz, pll48: 0 };
+    this.segment = { cycle: 0, us: 0, hz };
     this.cycleOffset = 0;
     this.irqSources = new Map();
     this.dmaLines = new Map(); this.kickPending = false;
@@ -115,6 +116,8 @@ export class Stm32f446 {
     this.machine.onResetRequest = reason => this.prepareReset(reason);
     this.republishAll();
   }
+  // Core clock after reset (HSI).
+  get resetHz() { return 16e6; }
   peripheral(name) { return this.peripherals.get(name); }
   // ------------------------------------------------------------ time
   now() { const c = this.machine.cycles; if (c < this.cycleOffset) this.cycleOffset = 0; return c - this.cycleOffset; }
@@ -148,7 +151,7 @@ export class Stm32f446 {
     // Called first by machine.reset(): rebase time, drop pending events.
     const us = this.usBeforeReset ?? (this.segment ? this.nowUs() : 0);
     this.scheduler.clear();
-    this.segment = { cycle: 0, us, hz: 16e6 };
+    this.segment = { cycle: 0, us, hz: this.resetHz };
     if (this.machine.cycles > 0 && this.cycleOffset !== this.machine.cycles) this.cycleOffset = this.machine.cycles;
     this.usBeforeReset = undefined;
     this.irqSources.clear(); this.dmaLines.clear();

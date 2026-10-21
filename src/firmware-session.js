@@ -9,15 +9,16 @@ import { LCDController } from './lcd.js';
 import { BusDevices } from './buses.js';
 import { WaveRecorder } from './trace.js';
 import { I2C_DEVICES, SPI_DEVICES } from './device-defs.js';
-import { GPIO_PINS } from './pins.js';
+import { familyProfile } from './mcu-family.js';
 import { Machine } from './emu/machine.js';
 import { Stm32f446 } from './emu/stm32f446/soc.js';
+import { Stm32f103 } from './emu/stm32f103/soc.js';
 import { UartReceiver, Line } from './emu/stm32f446/signals.js';
 import { Camera, frameToRgba } from './emu/stm32f446/dcmi.js';
 import { SdCard } from './emu/stm32f446/sdcard.js';
 import { openImage, listFiles, readFile as readCardFile, SD_DEFAULT_MB } from './sdcard.js';
 
-// Runs a compiled ARM ELF on the emulated NUCLEO-F446RE and connects its pins
+// Runs a compiled ARM ELF on the emulated NUCLEO-F446RE / NUCLEO-F103RB (by the project's MCU family) and connects its pins
 // to the same circuit engine and device models used by SimulationSession.
 // Drop-in for SimulationSession from app.js's point of view.
 const STATIC_TYPES = new Set(['resistor', 'led', 'button', 'potentiometer', 'rgb', 'sevenseg', 'diode', 'ldr', 'ntc', 'slide', 'i2c', 'spi', 'uart', 'lcd', 'sht31', 'mpu6050', 'oled', 'tft', 'matrix', 'joystick', 'relay', 'temperature', 'buzzer', 'pir', 'catalog_i2c', 'catalog_spi', 'catalog_analog', 'catalog_switch', 'breadboard', 'catalog_can', 'catalog_i2s']);
@@ -46,7 +47,9 @@ export class FirmwareSession {
     this.itmLine = '';
     this.pwmMap = new Map(); this.pwmFrequency = new Map(); this.eventCount = 0;
     this.machine = new Machine({ swv: true });
-    this.soc = new Stm32f446(this.machine, this.env(), { pwmWaveform: project.simulation?.pwmWaveform ?? false, noise: noise ?? project.simulation?.noise, ...(clock || {}) });
+    this.pins = familyProfile(project.mcu?.family).gpioPins;
+    const Soc = project.mcu?.family === 'STM32F103RB' ? Stm32f103 : Stm32f446;
+    this.soc = new Soc(this.machine, this.env(), { pwmWaveform: project.simulation?.pwmWaveform ?? false, noise: noise ?? project.simulation?.noise, ...(clock || {}) });
     this.signals = this.signalsApi();
     this.machine.onItm = (port, byte) => this.itm(port, byte);
     this.elf = this.machine.loadElf(elf instanceof Uint8Array ? elf : new Uint8Array(elf));
@@ -80,7 +83,7 @@ export class FirmwareSession {
     const old = this.gpio[pin];
     this.gpio[pin] = state;
     if (state.pwm) { this.pwmMap.set(pin, state.pwm); this.pwmFrequency.set(pin, state.pwm.frequency); } else { this.pwmMap.delete(pin); this.pwmFrequency.delete(pin); }
-    if (!this.soc || !GPIO_PINS.includes(pin)) return;
+    if (!this.soc || !this.pins.includes(pin)) return;
     if (old && old.mode === state.mode && old.value === state.value && old.openDrain === state.openDrain && old.pull === state.pull) return;
     if (pin === 'PA8') this.updateMco();
     if (!this.connected || this.connected.has(pin) || this.wave.channels.includes(pin)) {
@@ -106,8 +109,8 @@ export class FirmwareSession {
     const roots = new Set(), count = new Map();
     for (const key of r.uf.parent.keys()) if (key.startsWith('part:')) roots.add(r.uf.find(key));
     for (const s of ['3V3', '5V', 'GND']) roots.add(r.uf.find('signal:' + s));
-    for (const p of GPIO_PINS) { const root = r.uf.find('signal:' + p); count.set(root, (count.get(root) || 0) + 1); }
-    this.connected = new Set(GPIO_PINS.filter(p => { const root = r.uf.find('signal:' + p); return roots.has(root) || count.get(root) > 1 || p === 'PC13'; }));
+    for (const p of this.pins) { const root = r.uf.find('signal:' + p); count.set(root, (count.get(root) || 0) + 1); }
+    this.connected = new Set(this.pins.filter(p => { const root = r.uf.find('signal:' + p); return roots.has(root) || count.get(root) > 1 || p === 'PC13'; }));
   }
   enrich(micros) {
     this.singleWire.update(this.project, this.result, micros, this.runtime);
