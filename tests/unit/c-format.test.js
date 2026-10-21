@@ -1,0 +1,77 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {formatC,blockRange} from '../../src/c-format.js';
+import {formatProjectSources} from '../../src/code-format-ui.js';
+import {applyHalExample,allHalExamples} from '../../src/hal-examples.js';
+import {blankProject} from '../../src/project.js';
+
+const messy=`int main(void){
+HAL_Init();
+      /* USER CODE BEGIN 2 */
+while(1){
+if(x>3)
+x=0;
+else{
+x++;
+}
+switch(x){
+case 1:
+foo(1,2 ,3);
+break;
+default:
+break;
+}
+printf("a,b=%d\\n",x);   // keep,this
+}
+}`;
+
+test('re-indents blocks, switch/case and brace-less bodies without touching strings or comments',()=>{
+ const out=formatC(messy,{tabSize:4}).split('\n');
+ assert.equal(out[0],'int main(void) {');
+ assert.equal(out[1],'    HAL_Init();');
+ assert.equal(out[2],'    /* USER CODE BEGIN 2 */');
+ assert.equal(out[3],'    while (1) {');
+ assert.equal(out[4],'        if (x>3)');
+ assert.equal(out[5],'            x=0;');
+ assert.equal(out[6],'        else {');
+ assert.equal(out[9],'        switch (x) {');
+ assert.equal(out[10],'            case 1:');
+ assert.equal(out[11],'                foo(1, 2, 3);');
+ assert.equal(out[16],'        printf("a,b=%d\\n", x);   // keep,this');
+ assert.equal(out.at(-1),'}');
+});
+
+test('keeps line count, preprocessor lines and block comment layout; is idempotent',()=>{
+ const src='#include "main.h"\n#define SQ(x) \\\n   ((x)*(x))\n/* a\n* b\n*/\nvoid f(void)\n{\nint a;\n}\n';
+ const out=formatC(src,{tabSize:2});
+ assert.equal(out.split('\n').length,src.split('\n').length);
+ assert.match(out,/#define SQ\(x\) \\\n   \(\(x\)\*\(x\)\)/);
+ assert.match(out,/\/\* a\n \* b\n \*\//);
+ assert.match(out,/\{\n  int a;\n\}/);
+ assert.equal(formatC(out,{tabSize:2}),out);
+ assert.equal(formatC(formatC(messy)),formatC(messy));
+});
+
+test('extern "C" blocks do not indent their contents; CRLF is preserved',()=>{
+ const out=formatC('extern "C" {\nint a;\n}\r\n'.replace(/\n/g,'\r\n'));
+ assert.ok(out.includes('\r\nint a;\r\n'));
+});
+
+test('range formatting rewrites only the given lines and blockRange finds the closed block',()=>{
+ const src='void f(void){\nif(a){\nb();\n}\nc();\n}';
+ assert.deepEqual(blockRange(src,4),{start:2,end:4});
+ assert.deepEqual(blockRange(src,6),{start:1,end:6});
+ const out=formatC(src,{range:{start:2,end:4}}).split('\n');
+ assert.deepEqual(out,['void f(void){','    if (a) {','        b();','    }','c();','}']);
+});
+
+test('every HAL example main.c formats idempotently without changing tokens',()=>{
+ const strip=t=>t.replace(/\s+/g,'');
+ for(const id of Object.keys(allHalExamples())){
+  const p=applyHalExample(blankProject(),id);
+  const before=p.code;formatProjectSources(p);
+  assert.equal(strip(p.code),strip(before),id);
+  assert.equal(formatC(p.code),p.code,id+' idempotent');
+  assert.equal(p.code.split('\n').length,before.split('\n').length);
+ }
+});
