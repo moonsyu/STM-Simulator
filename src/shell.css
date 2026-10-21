@@ -156,7 +156,7 @@
 .sash-h{cursor:row-resize;height:4px;margin:-2px 0;min-width:0}
 .sash:hover,.sash.active,.sash:focus-visible{background:var(--ide-accent);outline:0}
 /* A visible 1px divider between the code and circuit groups (needed in the White theme where both groups are light). */
-#sash-editor::before{content:'';position:absolute;background:var(--ide-border);pointer-events:none}
+#sash-editor::before{content:'';position:absolute;background:color-mix(in srgb,var(--ide-foreground) 30%,var(--ide-background));pointer-events:none;z-index:1}
 #sash-editor.sash-v::before{top:0;bottom:0;left:50%;width:1px;transform:translateX(-50%)}
 #sash-editor.sash-h::before{left:0;right:0;top:50%;height:1px;transform:translateY(-50%)}
 #sash-editor:hover::before,#sash-editor.active::before,#sash-editor:focus-visible::before{background:transparent}
