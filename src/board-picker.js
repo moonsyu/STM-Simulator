@@ -6,7 +6,7 @@ export function setupBoardPicker({getProject,isRunning,onSelect}){
  const $=id=>document.getElementById(id);let pending=null;
  function render(){
   const current=getProject().boardId??DEFAULT_BOARD_ID,boards=searchBoards($('board-search').value);
-  $('board-results').innerHTML=boards.length?boards.map(board=>`<button class="board-option" data-board-id="${board.id}"><span class="board-option-icon" aria-hidden="true">F4</span><span><strong>${esc(board.name)}</strong><small>${esc(board.mcu)}</small><small>${esc(board.description)}</small></span><span class="board-option-action">${board.id===current?'현재 보드<br>새로 시작':'선택'}</span></button>`).join(''):'<p class="board-empty">검색 결과가 없습니다.<br>보드명 또는 MCU 이름으로 검색해 주세요.</p>';
+  $('board-results').innerHTML=boards.length?boards.map(board=>`<button class="board-option" data-board-id="${board.id}"><span class="board-option-icon" aria-hidden="true">${esc(board.chip)}</span><span><strong>${esc(board.name)}</strong><small>${esc(board.mcu)}</small><small>${esc(board.description)}</small></span><span class="board-option-action">${board.id===current?'현재 보드<br>새로 시작':'선택'}</span></button>`).join(''):'<p class="board-empty">검색 결과가 없습니다.<br>보드명 또는 MCU 이름으로 검색해 주세요.</p>';
   $('board-results').querySelectorAll('[data-board-id]').forEach(button=>button.onclick=()=>{
    if(isRunning())return;pending=button.dataset.boardId;$('board-dialog').close();
    if(hasBoardChanges(getProject())){$('board-change-name').textContent=getBoard(pending).name;$('board-change-dialog').showModal();$('board-change-cancel').focus();}
@@ -20,5 +20,5 @@ export function setupBoardPicker({getProject,isRunning,onSelect}){
  $('board-change-confirm').onclick=apply;
  $('board-change-cancel').onclick=()=>{$('board-change-dialog').close();pending=null;$('board-open').focus();};
  $('board-change-dialog').addEventListener('cancel',()=>{pending=null;});
- return ()=>{const board=getBoard(getProject().boardId??DEFAULT_BOARD_ID);$('current-board-name').textContent=board.name;$('canvas-board-name').textContent=getProject().surfaces?.board?.hidden?'회로 배치 공간':board.name;$('board-open').disabled=isRunning();};
+ return ()=>{const board=getBoard(getProject().boardId??DEFAULT_BOARD_ID);$('current-board-name').textContent=board.name;const chip=$('board-open').querySelector('.mini-chip');if(chip)chip.textContent=board.chip;$('canvas-board-name').textContent=getProject().surfaces?.board?.hidden?'회로 배치 공간':board.name;$('board-open').disabled=isRunning();};
 }

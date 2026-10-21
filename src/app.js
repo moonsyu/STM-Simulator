@@ -27,6 +27,8 @@ import {BuzzerAudio} from './buzzer-audio.js';
 import {Monitor} from './monitor.js';
 import {partControls,partReadouts} from './part-controls.js';
 import {blankProject,validateProject,projectForBoard} from './project.js';
+import {projectBoard} from './boards.js';
+import {boardSvg} from './render.js';
 import {moveBreadboard,removeBreadboard,isBreadboardLibraryType,newBreadboardFields,breadboardBounds} from './breadboards.js';
 import {setupBoardPicker} from './board-picker.js';
 import {PinoutPanel} from './pinout-ui.js';
@@ -128,6 +130,8 @@ function inspectTab(){layout.reveal('inspect');}
 function refresh({preserveWires=false}={}){
  const keyboardFocus=canvasKeys?.snapshot();
  deviceDocs?.refresh();
+ // The board drawing is static; redraw it when the project switches to another board.
+ const boardGroup=svg.querySelector('#surface > .board');if(boardGroup&&boardGroup.dataset.board!==projectBoard(project).id)boardGroup.outerHTML=boardSvg(projectBoard(project).id);
  updateSurfaces(svg,project,selection);
  updateBoardPicker();if(project.surfaces?.board?.hidden)$('search-layer').innerHTML='';svg.classList.toggle('connecting',mode==='wire'||!!pending||TWO_PIN_TYPES.includes(mode));
  const boards=project.components.filter(p=>p.type==='breadboard'),nextBreadboardKey=JSON.stringify(boards.map(p=>[p,isSelected(selection,'part',p.id)]));
@@ -154,7 +158,7 @@ function refresh({preserveWires=false}={}){
  $('status-led').className=running()?'running':'';
  $('connection-count').textContent=`부품 ${project.components.length}개 · 배선 ${project.wires.length}개`;
  $('canvas-empty').hidden=!(project.surfaces?.board?.hidden&&project.surfaces?.breadboard?.hidden&&!project.components.length)||running();
- if($('explorer-circuit-summary'))$('explorer-circuit-summary').textContent=`${project.surfaces?.board?.hidden?'보드 없음':'NUCLEO-F446RE'} · 부품 ${project.components.filter(p=>p.type!=='breadboard').length}개 · 빵판 ${project.components.filter(p=>p.type==='breadboard').length+(project.surfaces?.breadboard?.hidden?0:1)}개 · 배선 ${project.wires.length}개`;
+ if($('explorer-circuit-summary'))$('explorer-circuit-summary').textContent=`${project.surfaces?.board?.hidden?'보드 없음':projectBoard(project).name} · 부품 ${project.components.filter(p=>p.type!=='breadboard').length}개 · 빵판 ${project.components.filter(p=>p.type==='breadboard').length+(project.surfaces?.breadboard?.hidden?0:1)}개 · 배선 ${project.wires.length}개`;
  $('hint').textContent=running()?'실행 중 핀을 클릭하면 전압을 측정합니다. 버튼은 누르는 동안 연결됩니다.':pending?'핀을 클릭하면 연결 · 바닥 클릭으로 꺾임점 추가 · 우클릭 / Esc: 작성 중 배선 취소':TWO_PIN_TYPES.includes(mode)?'빵판 구멍 두 곳을 선택해 다리를 꽂으세요. 빈 공간 클릭 시 자유 배치합니다.':drag?.type==='part'?'초록색 표시가 나타나면 놓아서 장착하세요. R: 45° 회전':'몸체: 이동 · 가장자리: 크기 조절 · 빈 공간 / 가운데 버튼: 화면 이동 · 배치 범위 제한 없음';
  inspector();updateReadouts();resizing?.refresh();
  ide?.controls();canvasKeys?.refresh(keyboardFocus);

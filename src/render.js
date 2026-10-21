@@ -2,7 +2,8 @@ import {remodelLegacyShape,updateCatalogView} from './catalog-view.js';
 import {displayModel,catalogPadPosition,packageLeadRoot} from './model-geometry.js';
 import {isSelected,wirePoints} from './circuit-edit.js';
 import {roundedWirePath} from './wire-path.js';
-import {PINS,HOLES,FULL_HOLES,BB,FULL_BB,endpointInfo,circuitHoles,breadboardPrefix,breadboardModel} from './pins.js';
+import {PINS,HOLES,FULL_HOLES,BB,FULL_BB,endpointInfo,circuitHoles,breadboardPrefix,breadboardModel,boardPins} from './pins.js';
+import {DEFAULT_BOARD_ID,getBoard} from './boards.js';
 import {terminalKeys,terminalLabel,localTerminals,nominalTerminals,rotatePoint,attachments,PART_DEFS} from './components.js';
 import {extraShape,updateExtraSvg} from './part-render.js';
 import {scaleXOf,scaleYOf,partTransform,partVector,surfaceTransform,surfacePoint} from './geometry.js';
@@ -11,8 +12,10 @@ const text=(x,y,s,size=10,color='#4a6e87',other='')=>`<text x="${x}" y="${y}" fo
 const rect=(x,y,w,h,fill,rx=0,extra='')=>`<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${rx}" fill="${fill}" ${extra}/>`;
 function chip(x,y,w,h){let pins='';for(let i=0;i<16;i++){const d=(i+1)*(w-8)/17;pins+=rect(x+4+d,y-6,2,8,'#aeb4b5')+rect(x+4+d,y+h-2,2,8,'#aeb4b5')+rect(x-6,y+4+d,8,2,'#aeb4b5')+rect(x+w-2,y+4+d,8,2,'#aeb4b5');}return pins+rect(x,y,w,h,'#292b2c',2,'stroke="#111718" stroke-width="1.5"')+rect(x+2,y+2,w-4,h-4,'none',1,'stroke="#444849" stroke-width=".7"')+`<circle cx="${x+7}" cy="${y+7}" r="2" fill="#767c7c"/>`;}
 function button(x,y,color,id,label){return `<g data-button="${id}" class="board-button">${rect(x-19,y-19,38,38,'#c7cdcc',4,'stroke="#8c999d"')}<circle cx="${x}" cy="${y}" r="14" fill="${color}" stroke="#233744" stroke-width="2"/>${[[-14,-14],[14,-14],[-14,14],[14,14]].map(([dx,dy])=>`<circle cx="${x+dx}" cy="${y+dy}" r="2.5" fill="#303b40"/>`).join('')}${text(x,y+31,label,8,'#3f6684','text-anchor="middle"')}</g>`;}
-export function boardSvg(){
- let s=`<g class="board"><path d="M59 48H471Q485 48 485 62V216H326Q315 216 315 224Q315 232 326 232H485V565Q485 580 470 580H67L45 559V232H178Q187 232 187 224Q187 216 178 216H45V63Q45 48 59 48Z" fill="url(#pcb)" stroke="#aeb5b2" stroke-width="1.3" filter="url(#shadow)"/>`;
+// Both supported boards are the MB1136 NUCLEO-64; only the MCU label and a few header signals differ.
+export function boardSvg(boardId=DEFAULT_BOARD_ID){
+ const board=getBoard(boardId)??getBoard(DEFAULT_BOARD_ID);
+ let s=`<g class="board" data-board="${board.id}"><path d="M59 48H471Q485 48 485 62V216H326Q315 216 315 224Q315 232 326 232H485V565Q485 580 470 580H67L45 559V232H178Q187 232 187 224Q187 216 178 216H45V63Q45 48 59 48Z" fill="url(#pcb)" stroke="#aeb5b2" stroke-width="1.3" filter="url(#shadow)"/>`;
  // Mini-USB shell, tongue and contact fingers in top view (NUCLEO-F446RE).
  s+=rect(302,62,7,19,'#c8cecc',1)+rect(359,62,7,19,'#c8cecc',1)+rect(305,35,58,54,'#c7cdcc',3,'stroke="#798484" stroke-width="1.5"')+rect(309,39,50,45,'#e8ebea',2,'stroke="#a1aaa8"')+rect(313,35,42,16,'#374142',2)+rect(317,38,34,8,'#111b1d',1)+rect(320,41,28,5,'#9d9e8b',1);
  for(let i=0;i<5;i++)s+=rect(322+i*5,41,2,5,'#dbbc6e',.5);
@@ -24,7 +27,7 @@ export function boardSvg(){
  s+=text(440,192,'DBG',12,'#34749c','text-anchor="middle"');
  s+=button(212,255,'#2d8bc5','USER','USER · PC13')+button(327,255,'#29333b','RESET','RESET');
  for(const [x,y]of [[111,257],[420,258],[161,563],[362,563]])s+=`<circle cx="${x}" cy="${y}" r="9" fill="#ecf1f3" stroke="#c7d1d5"/>`;
- s+=chip(219,415,77,77)+text(257.5,459,'ARM Cortex-M4',5.5,'#949c98','text-anchor="middle"');
+ s+=chip(219,415,77,77)+text(257.5,459,'ARM '+board.core,5.5,'#949c98','text-anchor="middle"');
  s+=rect(192,332,35,29,'#303d46',2)+rect(235,331,19,30,'#d5b86b',2)+rect(286,325,21,28,'#384951',2)+rect(322,338,18,15,'#ccbb89',2);
  for(let i=0;i<20;i++){const x=177+(i%5)*33,y=379+Math.floor(i/5)*9;s+=rect(x,y,12,5,i%3?'#cbbb92':'#79898a',1);}
  s+=rect(249,514,47,17,'#dce1dc',8,'stroke="#939e99"')+rect(254,517,37,11,'#eff1e9',5);
@@ -34,7 +37,7 @@ export function boardSvg(){
    const group=PINS.filter(p=>p.header===name),xs=group.map(p=>p.x),ys=group.map(p=>p.y);const x=Math.min(...xs),y=Math.min(...ys),w=Math.max(...xs)-x+14,h=Math.max(...ys)-y+14;
    s+=rect(x-7,y-7,w,h,'#242a2c',1,'stroke="#101819" stroke-width="1"')+rect(x-5.5,y-5.5,w-3,h-3,'none',.5,'stroke="#414a49" stroke-width=".7"')+text(name==='CN7'?x-3:name==='CN10'?x-2:x,y-13,name,7,'#47615e');
  }
- for(const p of PINS){const morph=['CN7','CN10'].includes(p.header);s+=rect(p.x-3.4,p.y-3.4,6.8,6.8,morph?'#b69450':'#535c59',.6,'stroke="#111b1a" stroke-width=".5"')+rect(p.x-2.1,p.y-2.1,4.2,4.2,morph?'#e0c47c':'#101a19',.2);if(morph)s+=rect(p.x-1.5,p.y-1.5,1.3,1.3,'#f6e5a9',0);if(!morph)s+=text(p.x+(p.x<250?12:-12),p.y+3,p.label,8,'#3f625e',`text-anchor="${p.x<250?'start':'end'}"`);}
+ for(const p of boardPins(board.id)){const morph=['CN7','CN10'].includes(p.header);s+=rect(p.x-3.4,p.y-3.4,6.8,6.8,morph?'#b69450':'#535c59',.6,'stroke="#111b1a" stroke-width=".5"')+rect(p.x-2.1,p.y-2.1,4.2,4.2,morph?'#e0c47c':'#101a19',.2);if(morph)s+=rect(p.x-1.5,p.y-1.5,1.3,1.3,'#f6e5a9',0);if(!morph)s+=text(p.x+(p.x<250?12:-12),p.y+3,p.label,8,'#3f625e',`text-anchor="${p.x<250?'start':'end'}"`);}
  return s+'</g>';
 }
 const holeSvg=(h,prefix)=>rect(h.x-4,h.y-4,8,8,'#cfcbbf',.8)+`<path d="M${h.x-3.6} ${h.y+3.6}h7.2v-7.2" fill="none" stroke="#fff" stroke-width=".9"/>`+rect(h.x-2.4,h.y-2.4,4.8,4.8,'#28332f',.4,`class="hole" data-hole="${prefix+h.id}"`)+rect(h.x-1.7,h.y+1.1,3.4,.7,'#6a746d',.1,'pointer-events="none"');
