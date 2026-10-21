@@ -412,7 +412,7 @@ dialog.command-palette::backdrop{background:transparent!important;backdrop-filte
 :root[data-shell] .project-title.command-center{justify-content:center}
 
 /* Activity bar: tooltip to the right of the icon, drag-and-drop reordering. */
-.activity-tip{position:fixed;z-index:1000;max-width:260px;padding:5px 9px;border:1px solid var(--ide-border);border-radius:6px;background:var(--ide-chrome);color:var(--ide-foreground);font-size:12px;line-height:1.4;white-space:nowrap;box-shadow:0 2px 8px rgb(0 0 0/.25);pointer-events:none}
+.activity-tip{position:fixed;z-index:1000;width:max-content;max-width:280px;padding:5px 9px;border:1px solid var(--ide-border);border-radius:6px;background:var(--ide-chrome);color:var(--ide-foreground);font-size:12px;line-height:1.4;white-space:normal;box-shadow:0 2px 8px rgb(0 0 0/.25);pointer-events:none}
 .activity-tip::before{content:'';position:absolute;left:-5px;top:50%;width:8px;height:8px;margin-top:-4px;background:inherit;border-left:1px solid var(--ide-border);border-bottom:1px solid var(--ide-border);transform:rotate(45deg)}
 .activity-item.dragging{opacity:.4}
 .activity-item.drop-before{box-shadow:inset 0 2px 0 var(--ide-accent)}
