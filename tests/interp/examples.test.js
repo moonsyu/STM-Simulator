@@ -30,3 +30,23 @@ test('camera, SD logger and noise examples produce frames, files and handled err
  const z=start('noise_errors');assert.equal(z.p.simulation.noise.enabled,true);advance(z.s,30);for(let i=0;i<6;i++){z.s.inject('The quick brown fox jumps over the lazy dog 0123456789','USART2');advance(z.s,z.s.runtime.time+80);}
  advance(z.s,1100,10);assert.ok(z.output.some(x=>/^UART error:( FE| PE| NE)+$/.test(x)),z.output.slice(-5).join('|'));assert.ok(z.output.some(x=>/^I2C ok=\d+ retries=\d+/.test(x)));
 });
+test('addressable RGB examples light the received colour and show G/R/B in the inspector',async()=>{
+ const {partReadouts}=await import('../../src/part-controls.js');const {lensColor,channelLevels}=await import('../../src/rgb-color.js');
+ for(const id of ['ref_rgb_neopixel_4','ref_rgb_neopixel_flora_4','ref_rgb_gravity_3']){
+  const {p,s,output}=start(id),part=p.components.find(c=>c.id==='demo');
+  assert.match(partReadouts(part,s.result),/아직 받은 색 데이터가 없습니다/);
+  advance(s,1600,5);assert.deepEqual(output.slice(0,4),['WS2812 G=0 R=64 B=0','WS2812 G=64 R=0 B=0','WS2812 G=0 R=0 B=64','WS2812 G=32 R=32 B=32'],id);
+  const d=s.result.parts.demo.device;assert.deepEqual(d.grb,[32,32,32]);assert.deepEqual(d.color,[32,32,32]);
+  const text=partReadouts(part,s.result).replace(/<[^>]+>/g,' ').replace(/\s+/g,' ');assert.match(text,/G 32 R 32 B 32/,id);assert.match(text,/#202020/);
+ }
+ assert.deepEqual(lensColor([64,0,0]),[198,0,0]);assert.equal(lensColor([0,0,0]),null);
+ assert.deepEqual(channelLevels({r:{on:true,current:.006},g:{on:false,current:0},b:{on:true,current:0}}),[255,0,0]);
+});
+test('inspector readouts of ULN2003, bare encoder, RS485 and I2C LCD examples report what the circuit does',async()=>{
+ const {partReadouts}=await import('../../src/part-controls.js');const text=(id,ms)=>{const {p,s}=start(id);advance(s,ms,5);return partReadouts(p.components.find(c=>c.id==='demo'),s.result).replace(/<[^>]+>/g,' ').replace(/\s+/g,' ');};
+ assert.match(text('ref_stepper_driver_11',30),/V\+ 5\.0 V .*IN\d → M\d ON/);
+ const enc=text('ref_encoder_bare_5',20);assert.match(enc,/A=1 B=1/);assert.doesNotMatch(enc,/전원/);
+ assert.match(text('ref_isolated_rs485',20),/통신 탭/);
+ assert.match(text('ref_lcd_i2c_4',600),/STM Emulator/);
+ assert.match(text('ref_rgb_common_cathode_4',20),/표시 색 #[0-9A-F]{6}/);
+});

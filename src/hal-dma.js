@@ -1,4 +1,5 @@
 import {readElement,writeElement,readBytes,checkRange} from './hal-memory.js';
+import {receiveWs2812} from './rgb-color.js';
 // STM32F446 DMA1/DMA2 streams and the peripheral DMA paths of the HAL interpreter.
 // Transfers take peripheral time (UART byte frames, ADC conversions, SPI/I2C clocks, timer periods)
 // and move data into / out of the user's C arrays item by item.
@@ -251,7 +252,7 @@ export class HalDma{
  // WS2812-style decoding of a fast PWM duty sequence (>50 % = 1). 24 bits GRB per LED.
  ws2812(pin,bits){
   const bus=this.hal.buses,parts=bus.project.components.filter(p=>p.catalogVariant?.startsWith('rgb-')&&bus.powered(p)&&bus.same(bus.terminal(p,5),bus.pin(pin)));
-  parts.forEach((p,k)=>{const b=bits.slice(k*24,k*24+24);if(b.length<24)return;const grb=b.reduce((v,x)=>v*2+x,0),s=bus.devices.state(p);s.color=[grb>>8&255,grb>>16&255,grb&255];s.display=s.color.some(Boolean);bus.devices.touch(s);});
+  parts.forEach((p,k)=>{const b=bits.slice(k*24,k*24+24);if(b.length<24)return;const grb=b.reduce((v,x)=>v*2+x,0),s=bus.devices.state(p);receiveWs2812(s,grb);bus.devices.touch(s);});
   this.ws2812Frames=(this.ws2812Frames||0)+1;
  }
 }

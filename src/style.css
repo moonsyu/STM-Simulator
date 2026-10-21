@@ -179,6 +179,8 @@ button:hover{filter:brightness(.96)}
 .part-controls output{display:block;font-size:11px;color:#1a2b25;text-align:right;font-variant-numeric:tabular-nums}
 .channel-readouts{display:grid;gap:4px;font-size:10.5px;color:#1a2b25}
 .channel-readouts span{display:flex;justify-content:space-between}
+.rgb-swatch{display:inline-block;width:12px;height:12px;border-radius:50%;vertical-align:-2px;border:1px solid #0003}
+.lcd-readout{margin:4px 0;padding:4px 6px;font:11px Consolas,monospace;background:#9fc36b;color:#203315;border-radius:3px;white-space:pre}
 .pin-hit{cursor:crosshair;fill:transparent;stroke:transparent;stroke-width:2}
 .pin-hit:hover,.pin-hit.pending{fill:#1eae8935;stroke:#16a17d}
 .hole.same-net{fill:#34ad8e}
