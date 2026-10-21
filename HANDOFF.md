@@ -1,6 +1,15 @@
 # STM Simulator — 개발 인계
 
-현재 버전: **0.29.2**. 정리일: **2026-10-21**. NUCLEO-F446RE와 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M4 에뮬레이터에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+현재 버전: **0.30.0**. 정리일: **2026-10-21**. NUCLEO-F446RE와 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M4 에뮬레이터에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+
+## 0.30.0 4칸 들여쓰기 · 예제/Docs 구분 · F11 연속 실행 · 찾기 창 정리 · CubeIDE 도구 감지
+
+- **4칸 들여쓰기**: 생성기(`hal-generator.js`)는 내부 문자열 치환 기준이라 2칸 그대로 두고, 사용자에게 넘기는 지점(`blankProject`, `resetMainCode`, Pinout 코드 생성, `applyHalExample`)에서 `expandC`(기본 4칸)를 거친다. 장치 Docs 삽입은 파일의 들여쓰기 단위(`indentUnit`)를 따른다.
+- **활동 바**: HAL 예제 `{ }`, 장치 Docs 책 아이콘. `VIEWS`의 `hint`를 툴팁에 붙인다(280px 줄바꿈).
+- **F11 연속 실행**: `shell.js` 단축키 처리기가 `e.repeat`를 모두 버리던 것을 단계 명령(`run.over/into/out/step`)만 허용. 멈춘 상태가 아니면 단계 요청은 기존대로 무시된다.
+- **찾기 창**: 편집기의 Ctrl+F·Ctrl+H·F3·Shift+F3·Ctrl+F3을 `ide-find` 이벤트로 앱 찾기 막대에 보낸다. Monaco 기본 찾기 위젯은 열리지 않는다.
+- **구분선**: 코드/회로 편집기 그룹 사이 선을 글자색 30% 혼합색으로(White 약 `#c2c4c8`).
+- **도구 감지**: `native-build.cjs`의 `detectTools`가 `C:/ST/STM32CubeIDE_*/STM32CubeIDE/plugins`의 GNU Tools for STM32(ARM GCC·GDB)와 OpenOCD를 찾는다. 이 PC에서는 CubeIDE 1.19.0의 GCC 13.3.1로 빈 프로젝트와 예제 126개를 모두 빌드·링크하고 에뮬레이터에서 실행했다. 실물 NUCLEO-F446RE(ST-LINK V2J48M35, STM32F446xx Rev A, 512 KB)는 STM32_Programmer_CLI 핫플러그 연결로 확인만 했고 플래시하지 않았다(사용자 선택).
 
 ## 0.29.2 코드 정렬이 문장 줄 나눔까지
 
