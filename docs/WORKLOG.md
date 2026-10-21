@@ -2,6 +2,14 @@
 
 작업할 때마다 날짜순으로 맨 위에 추가합니다. 무엇을 했는지, 왜 했는지, 어떻게 검증했는지, 커밋·릴리스와 남은 사항을 적습니다. 버전별 구조 설명은 [HANDOFF.md](../HANDOFF.md), 검증 수치는 [VERIFICATION.md](VERIFICATION.md)에 있습니다.
 
+## 2026-10-21 · 실물 NUCLEO-F446RE에 예제 쓰기
+
+- 요청: LED 점멸 예제를 보드에 써서 동작 확인(기존 펌웨어 삭제 허락), 이어서 버튼으로 LED를 토글하는 예제를 빌드해 쓰기.
+- LED 점멸(`blink`): 앱의 실제 ARM 빌드 경로(`native-build.cjs`, CubeIDE GCC 13.3.1, STM32CubeF4 v1.28.3)로 빌드해 STM32_Programmer_CLI로 0x08000000에 20.58 KB를 쓰고 검증(`Download verified successfully`)한 뒤 리셋했다. 실행 중 SWD 핫플러그로 `GPIOA->ODR`(0x40020014)을 읽어 PA5(LD2)가 0→1로 바뀌는 것을 확인했다(약 470 ms 시점). 링크 경고 `_lseek`/`_read` 미구현은 newlib 기본 스텁 경고로 이 펌웨어와 무관하다.
+- 토글 주기를 더 길게 재는 도중 ST-LINK가 `DEV_USB_COMM_ERR`로 응답하지 않게 됐다. 장치는 Windows에 보이고 ST-LINK를 잡은 프로그램·서비스는 없었다. USB를 다시 꽂아야 풀린다.
+- 버튼 토글: 보드 USER 버튼(B1, PC13) EXTI로 누를 때마다 LD2(PA5)를 전환하는 `exti` 예제를 같은 경로로 빌드했다(배선 불필요). ST-LINK가 복구되면 쓰고, PC13 EXTI 설정과 버튼을 눌렀을 때 ODR 변화를 확인한다.
+- 빌드·플래시 스크립트는 세션 scratchpad `board/build-blink.mjs`(예제 ID 인자)이며 저장소에는 넣지 않았다.
+
 ## 2026-10-21 · 0.30.0 수정 6건과 실물 보드 빌드 확인
 
 - 요청: (1) 앱이 넣는 코드가 2칸 들여쓰기 → 4칸, (2) Docs와 HAL 예제 구분, (3) 디버그 중 F11 누르고 있으면 연속 실행, (4) 이전에 남아 있던 찾기 창 제거, (5) White 모드 코드/회로 탭 구분선, (6) 연결한 실제 STM32 F446RE 보드로 빌드 테스트.
