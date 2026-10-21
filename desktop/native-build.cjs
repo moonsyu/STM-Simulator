@@ -51,6 +51,8 @@ async function prepareBuild({project,tools,root,target='arm',configuration='Debu
   if(!['arm','host'].includes(target)||!['Debug','Release'].includes(configuration))throw new Error('빌드 대상을 확인하세요.');
   const gcc=target==='arm'?tools.armGcc:tools.hostGcc;if(!gcc||!await exists(gcc))throw new Error(`${target==='arm'?'ARM':'Windows'} GCC 경로를 개발 도구 설정에서 지정하세요.`);
   if(target==='arm'&&project.firmware?.mode!=='hal')throw new Error('ARM 빌드는 HAL 프로젝트를 사용하세요.');
+  // Only the STM32F4 HAL build is wired up; an F1 project must not be compiled for the F446RE.
+  if(target==='arm'&&project.mcu?.family&&project.mcu.family!=='STM32F446RE')throw new Error(`${project.mcu.family} ARM 빌드는 아직 지원하지 않습니다. 회로 시뮬레이터에서 실행하세요.`);
   const directory=path.join(root,randomUUID());await fs.mkdir(directory,{recursive:true});
   const files=[{name:'main.c',text:project.code},...(project.firmware?.files||[])],sources=[];
   for(const f of files){if(!/^[\w.-]+\.(c|h|cpp|hpp|cc)$/.test(f.name))throw new Error('소스 파일명이 올바르지 않습니다.');await fs.writeFile(path.join(directory,f.name),f.text);if(/\.(c|cpp|cc)$/.test(f.name))sources.push(path.join(directory,f.name));}
