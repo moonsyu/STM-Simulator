@@ -1,6 +1,11 @@
 # STM Simulator — 개발 인계
 
-현재 버전: **0.29.0**. 정리일: **2026-10-21**. NUCLEO-F446RE와 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M4 에뮬레이터에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+현재 버전: **0.29.1**. 정리일: **2026-10-21**. NUCLEO-F446RE와 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M4 에뮬레이터에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+
+## 0.29.1 `}` 정렬 IME 수정 · 예제 코드 줄 정리
+
+- **`}` 입력 시 블록 정렬**: `code-format-ui.js`가 keyUp의 `key==='}'`로 감지해 Windows 한글 IME(key `Process`)에서 동작하지 않았다. Monaco `editor.onDidType`(입력 명령)으로 감지해 IME 입력과 자동 닫힌 `}` 덮어쓰기(내용 변화 없음)도 처리한다. 검사 `tests/e2e/format-ime.e2e.test.mjs`(`keyboard.insertText('}')`로 IME 입력 재현).
+- **예제 코드 정리**: `c-format.js`의 `expandC`가 `;`·블록 `{` `}`·`case …:` 뒤에서 줄을 나누고 `formatC`(2칸)로 다시 들여쓴다. 초기화 중괄호·`for` 헤더·문자열·주석·전처리기는 유지, 토큰 불변·멱등. `applyHalExample`이 main.c와 추가 C/H 파일에 적용한다. 예제 생성기(`halExample`)는 그대로 짧은 조각을 조합하므로 기존 문자열 치환은 영향이 없다. 장치 Docs 삽입 코드는 체크섬 영역이 있어 바꾸지 않았다.
 
 ## 0.29.0 UI 다듬기 · 기능 점검 수정
 
