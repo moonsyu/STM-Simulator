@@ -1,5 +1,15 @@
 # 검증 기록
 
+## 0.30.1 IDE 실물 보드 실행 수정 — 공개 배포 검증 완료
+
+2026-10-21. 제품 커밋 `0a34222b4a64bc6e0ecd16847012dc7cbcc712c8` · [Windows CI 39542962621](https://github.com/moonsyu/STM-Simulator/actions/runs/39542962621) 성공 · [Release v0.30.1](https://github.com/moonsyu/STM-Simulator/releases/tag/v0.30.1).
+
+| 검사 | 결과 |
+|---|---|
+| `npm test` (로컬) | 683개 중 680 통과(실패 2개는 로컬 심볼릭 링크 권한, CI 통과). 새 검사: CubeIDE OpenOCD 시작 인자, 도구 저장 시 빈 항목 자동 감지 |
+| 실물 보드 (IDE 경로) | `NativeIde.run`(STM32 · ARM GCC, OpenOCD 자동 시작, 기록 켬)으로 빌드·플래시·실행, GDB 일시정지마다 `uwTick` 724→1454→2182→2908, PA5 변화 |
+| 공개 자산 | latest=v0.30.1, 태그·BUILD-INFO 커밋 일치, 5자산. EXE SHA-256 `fb16754c487f59a596f5d1be2248cfcb961d841b37bfabf2c60c118b68965088`(102,968,843 B, MZ)이 SHA256.txt·update-manifest·ZIP 안 EXE와 일치. ZIP SHA-256 `d07f165d685da253da660974fce738be7ee31cd6f54f2ba7c68012bc9436b8c7` |
+
 ## 0.30.0 4칸 들여쓰기 · 예제/Docs 구분 · F11 연속 실행 · 찾기 창 · CubeIDE 도구 감지 — 공개 배포 검증 완료
 
 2026-10-21. 제품 커밋 `51b7d21f4405bc3b25fda1bf054f3c3ce8672883` · [Windows CI 39540170767](https://github.com/moonsyu/STM-Simulator/actions/runs/39540170767) (빌드·릴리스 게시 모두 성공) · [Release v0.30.0](https://github.com/moonsyu/STM-Simulator/releases/tag/v0.30.0).
