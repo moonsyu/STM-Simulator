@@ -1,5 +1,19 @@
 # 검증 기록
 
+## 0.30.0 4칸 들여쓰기 · 예제/Docs 구분 · F11 연속 실행 · 찾기 창 · CubeIDE 도구 감지 — 공개 배포 검증 완료
+
+2026-10-21. 제품 커밋 `51b7d21f4405bc3b25fda1bf054f3c3ce8672883` · [Windows CI 39540170767](https://github.com/moonsyu/STM-Simulator/actions/runs/39540170767) (빌드·릴리스 게시 모두 성공) · [Release v0.30.0](https://github.com/moonsyu/STM-Simulator/releases/tag/v0.30.0).
+
+| 검사 | 결과 |
+|---|---|
+| `npm test` (로컬 Windows) | 681개 중 678 통과. 실패 2개는 로컬 심볼릭 링크 권한 한정, CI 통과 |
+| `npm run test:e2e` (로컬) | 22 통과, 1 건너뜀. 새 검사: 찾기 키가 Monaco 찾기 위젯을 열지 않음, F11 누르고 있으면 3회 이상 단계 실행(수정 전 실패 확인) |
+| `npm run test:toolchain` (로컬, 실제 ARM) | STM32CubeIDE 1.19.0의 GNU Tools for STM32 13.3.1 + STM32CubeF4 v1.28.3(`94cae6e`)으로 빈 프로젝트와 예제 126개 128/128 컴파일·링크·에뮬레이터 실행 통과(약 25분) |
+| 실물 보드 | NUCLEO-F446RE ST-LINK V2-1(V2J48M35, COM6), STM32F446xx Rev A, 512 KB, 3.25 V. STM32_Programmer_CLI 핫플러그 연결 확인만, 플래시하지 않음 |
+| 공개 자산 | latest=v0.30.0, 태그·BUILD-INFO 커밋 일치, 5자산 존재. EXE SHA-256 `0e18f41784b4d97ea671eeef7debc30c8825bc34dca4e1e5a32ed61c1ee836fe`(102,967,801 B, MZ 헤더)이 SHA256.txt·update-manifest·ZIP 안의 `STM-Simulator.exe`와 일치. ZIP SHA-256 `fb776dd19b9f77f6bee7554a809e6eb54586f36443eafe649d3475648ed09997` |
+
+한계: 펌웨어를 실물 보드에 써서 실행하지는 않았습니다(사용자 선택). 기존 2칸 프로젝트는 자동 변환하지 않으며 코드 정렬로 4칸이 됩니다.
+
 ## 0.29.2 코드 정렬 문장 줄 나눔 · 저장 상태 경쟁 수정 — 공개 배포 검증 완료
 
 2026-10-21. 제품 커밋 `292d402bbc6b36e181e88c3fae7c4a2c93cc6583` · [Windows CI 39531566516](https://github.com/moonsyu/STM-Simulator/actions/runs/39531566516) (빌드·릴리스 게시 모두 성공) · [Release v0.29.2](https://github.com/moonsyu/STM-Simulator/releases/tag/v0.29.2). 첫 실행 [39530166635](https://github.com/moonsyu/STM-Simulator/actions/runs/39530166635)은 저장 상태 경쟁(자동 저장이 "파일 저장됨"을 덮어씀)으로 E2E 1건이 실패해 게시되지 않았고(태그 없음), 수정 후 같은 버전으로 게시했습니다.
