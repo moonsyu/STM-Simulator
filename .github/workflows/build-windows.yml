@@ -22,6 +22,7 @@ jobs:
       CI_REQUIRE_TOOLCHAIN: '1'
       ARM_GCC: ${{ github.workspace }}\.cache\toolchain\xpack-arm-none-eabi-gcc-14.2.1-1.1\bin\arm-none-eabi-gcc.exe
       STM32CUBE_F4_ROOT: ${{ github.workspace }}\.cache\toolchain\cubef4
+      STM32CUBE_F1_ROOT: ${{ github.workspace }}\.cache\toolchain\cubef1
       TOOLCHAIN_EXAMPLES: blank,ref_led_tht_2,ref_button_4,ref_lcd_parallel_16,ref_max98357a_9,dma_uart_echo,adc_dma_scan,nvic_preemption,usart_sync_matrix,camera_tft,noise_errors
     steps:
       - name: Check out source
@@ -47,7 +48,7 @@ jobs:
           if ($env:GITHUB_REF_NAME -cne "v$releaseVersion" -or $releaseVersion -notmatch '^\d+\.\d+\.\d+$') { throw 'Release tag must match the stable package version.' }
       - name: Unit, interpreter, emulator and firmware tests
         run: npm run test:ci
-      - name: Install ARM GCC and STM32CubeF4 drivers for real firmware builds
+      - name: Install ARM GCC and STM32CubeF4 / STM32CubeF1 drivers for real firmware builds
         shell: pwsh
         run: |
           $dir = '.cache/toolchain'; New-Item -ItemType Directory -Force $dir | Out-Null
@@ -58,6 +59,11 @@ jobs:
           git clone --depth 1 --branch 5.9.0 --filter=blob:none --sparse https://github.com/ARM-software/CMSIS_5.git "$dir/cmsis5"
           git -C "$dir/cmsis5" sparse-checkout set CMSIS/Core/Include
           Copy-Item -Recurse "$dir/cmsis5/CMSIS/Core/Include" "$dir/cubef4/Drivers/CMSIS/Include"
+          # STM32CubeF1 v1.8.7 drivers at the commits pinned in desktop/tool-manifest-f1.json.
+          foreach ($src in @(@('stm32f1xx-hal-driver', 'fee494a92b5ad331f92ad21f76c66a5cb83773ee', 'Drivers/STM32F1xx_HAL_Driver'), @('cmsis-device-f1', 'c8e9a4a4f16b6d2cb2a2083cbe5161025280fb22', 'Drivers/CMSIS/Device/ST/STM32F1xx'))) {
+            $to = "$dir/cubef1/$($src[2])"; git init -q $to; git -C $to fetch -q --depth 1 "https://github.com/STMicroelectronics/$($src[0]).git" $src[1]; git -C $to checkout -q FETCH_HEAD
+          }
+          Copy-Item -Recurse "$dir/cmsis5/CMSIS/Core/Include" "$dir/cubef1/Drivers/CMSIS/Include"
           & $env:ARM_GCC --version
       - name: Build examples with ST HAL and run them on the emulator
         shell: pwsh
