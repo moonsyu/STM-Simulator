@@ -79,13 +79,31 @@ class NativeIde extends EventEmitter{
   async startDebug({text,config,connection={},entry=true,breakpoints=[]}){
     if(this.busy())throw new Error('현재 실행을 먼저 종료하세요.');const plan=await this.ensureBuild(text,config),tools=await this.settings();
     if(entry&&config.configuration!=='Debug')throw new Error('소스 디버깅은 Debug 구성으로 빌드하세요.');
-    if(config.target==='arm'&&connection.server==='openocd'){
-      const project=await this.validate(text),{projectBoard}=await import('../src/boards.js'),board=projectBoard(project);
-      await this.startServer(tools.openocd,{target:OPENOCD_TARGETS[board.mcuFamily],serial:await chooseStlink(board.name,typeof connection.serial==='string'&&/^\w{8,40}$/.test(connection.serial)?connection.serial:'')});
-    }
+    if(config.target==='arm'&&connection.server==='openocd')await this.startServer(tools.openocd,await this.boardTarget(text,connection));
     try{await this.gdb.start({gdb:config.target==='arm'?tools.armGdb:tools.hostGdb,elf:plan.elf,cwd:plan.directory,target:config.target,endpoint:connection.server==='openocd'?'127.0.0.1:3333':connection.endpoint||'127.0.0.1:3333',flash:connection.flash===true,reset:connection.server==='openocd',entry,breakpoints,files:plan.files});}
     catch(e){await this.stopServer();throw e;}
     return {directory:plan.directory};
+  }
+  // OpenOCD target script and ST-LINK serial of the project's board.
+  async boardTarget(text,connection={}){
+    const project=await this.validate(text),{projectBoard}=await import('../src/boards.js'),board=projectBoard(project);
+    return {target:OPENOCD_TARGETS[board.mcuFamily],serial:await chooseStlink(board.name,typeof connection.serial==='string'&&/^\w{8,40}$/.test(connection.serial)?connection.serial:'')};
+  }
+  // Run (Ctrl+F5) on the board like CubeIDE's Run: write the ELF (when enabled), reset, and let OpenOCD exit so no
+  // debugger keeps polling the target through the ST-LINK (its COM LED LD1 stops blinking).
+  async runOnBoard({text,config,connection}){
+    if(this.busy())throw new Error('현재 실행을 먼저 종료하세요.');
+    const plan=await this.ensureBuild(text,config),tools=await this.settings();
+    if(!tools.openocd)throw new Error('OpenOCD 경로를 설정하세요.');
+    const flash=connection.flash===true,steps=flash?['-c',`program {${plan.elf.replace(/\\/g,'/')}} verify reset exit`]:['-c','init','-c','reset run','-c','shutdown'];
+    const child=this.runProcess=launch(tools.openocd,[...await openocdArgs(tools.openocd,await this.boardTarget(text,connection)),'-c','bindto 127.0.0.1','-c','gdb_port disabled','-c','tcl_port disabled','-c','telnet_port disabled',...steps],{});
+    this.send('run-state',{state:'running'});let log='';
+    try{
+      const code=await new Promise((resolve,reject)=>{child.once('error',reject);child.once('close',resolve);for(const stream of [child.stdout,child.stderr]){stream.setEncoding('utf8');stream.on('data',t=>{log=(log+t).slice(-10000);this.send('run-output',{text:t});});}});
+      if(code!==0)throw new Error(`OpenOCD ${flash?'기록':'리셋'} 실패 (종료 코드 ${code}). ST-LINK 연결을 확인하세요.\n`+log.slice(-1500));
+      this.send('run-output',{text:flash?'\n펌웨어를 보드에 기록하고 리셋했습니다. 디버거를 분리했으므로 보드가 단독으로 실행합니다.\n':'\n보드를 리셋했습니다(기록 안 함). 디버거를 분리했으므로 보드가 단독으로 실행합니다.\n'});
+      return {directory:plan.directory,flashed:flash};
+    }finally{if(this.runProcess===child)this.runProcess=null;this.send('run-state',{state:'idle'});}
   }
   async startServer(executable,options){
     if(!executable)throw new Error('OpenOCD 경로를 설정하세요.');
@@ -95,7 +113,7 @@ class NativeIde extends EventEmitter{
   }
   async stopServer(){const child=this.server;this.server=null;await terminate(child);}
   async run({text,config,connection}){
-    if(config.target==='arm')return this.startDebug({text,config,connection,entry:false});
+    if(config.target==='arm')return connection?.server==='openocd'?this.runOnBoard({text,config,connection}):this.startDebug({text,config,connection,entry:false});
     if(this.busy())throw new Error('현재 실행을 먼저 종료하세요.');const plan=await this.ensureBuild(text,config);const child=this.runProcess=launch(plan.elf,[],{cwd:plan.directory});this.send('run-state',{state:'running'});
     for(const stream of [child.stdout,child.stderr]){stream.setEncoding('utf8');stream.on('data',text=>this.send('run-output',{text}));}
     child.once('error',error=>this.send('run-output',{text:error.message+'\n'}));child.once('close',code=>{if(this.runProcess===child)this.runProcess=null;this.send('run-state',{state:'exited',code});});return {directory:plan.directory};
