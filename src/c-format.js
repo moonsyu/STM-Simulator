@@ -90,6 +90,51 @@ export function formatC(source,{tabSize=4,range=null}={}){
  return out.join(eol);
 }
 
+/**
+ * Puts each statement of compact code on its own line — after `;` outside parentheses, after a block `{`,
+ * around a block `}` (keeping `} else`, `} while`, `};`) and after `case …:` — then re-indents with formatC.
+ * Initializer braces (`= {0, 1}`), `for (;;)` headers, strings, comments and preprocessor lines are kept.
+ * Line numbers change, so this is for generated examples, not for code being edited.
+ */
+export function expandC(source,{tabSize=2}={}){
+ const eol=source.includes('\r\n')?'\r\n':'\n',out=[],state={comment:false},braces=[];// true = initializer brace
+ let paren=0,continued=false;
+ for(const raw of source.split(/\r?\n/)){
+  if(!state.comment&&(continued||raw.trim().startsWith('#'))){continued=/\\\s*$/.test(raw);out.push(raw);continue;}
+  if(!raw.trim()){out.push('');continue;}
+  let line='',statement='',pending=false;
+  const flush=()=>{if(line.trim())out.push(line.replace(/\s+$/,''));line='';};
+  for(const part of scan(raw,state)){
+   // A comment after a statement stays on its line; anything else starts the next line.
+   if(!part.code){if(pending){pending=false;if(/^\/[/*]/.test(part.text))line+=' ';else flush();}line+=part.text;statement+=part.text;continue;}
+   const t=part.text;
+   for(let i=0;i<t.length;i++){
+    const ch=t[i],init=braces.length>0&&braces[braces.length-1];
+    if(pending){if(/\s/.test(ch))continue;pending=false;flush();}
+    if(ch==='{'){
+     const inits=init||/(?:[=,(\[]|\breturn)\s*$/.test(line);braces.push(inits);line+=ch;
+     if(!inits){statement='';pending=true;}else statement+=ch;
+     continue;
+    }
+    if(ch==='}'&&braces.length){
+     braces.pop();
+     if(init){line+=ch;statement+=ch;continue;}
+     flush();line='}';statement='';
+     if(!/^\s*(?:else\b|while\b|[;,)])/.test(t.slice(i+1)))pending=true;
+     continue;
+    }
+    if(ch==='(')paren++;else if(ch===')')paren=Math.max(0,paren-1);
+    line+=ch;statement+=ch;
+    if(init||paren)continue;
+    if(ch===';'){statement='';pending=true;}
+    else if(ch===':'&&t[i+1]!==':'&&/^\s*(?:case\b|default\b)/.test(statement)){statement='';pending=true;}
+   }
+  }
+  flush();
+ }
+ return formatC(out.join(eol),{tabSize});
+}
+
 /** Line range (1-based) of the block whose `}` sits on `line` (the last `}` before `column`, if given), or null. */
 export function blockRange(source,line,column=Infinity){
  const lines=source.split(/\r?\n/),state={comment:false},opens=[];let found=null;

@@ -1,8 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {formatC,blockRange} from '../../src/c-format.js';
+import {formatC,blockRange,expandC} from '../../src/c-format.js';
 import {formatProjectSources} from '../../src/code-format-ui.js';
-import {applyHalExample,allHalExamples} from '../../src/hal-examples.js';
+import {applyHalExample,allHalExamples,halExample} from '../../src/hal-examples.js';
+const halExampleCode=id=>halExample(id).code;
 import {blankProject} from '../../src/project.js';
 
 const messy=`int main(void){
@@ -73,5 +74,48 @@ test('every HAL example main.c formats idempotently without changing tokens',()=
   assert.equal(strip(p.code),strip(before),id);
   assert.equal(formatC(p.code),p.code,id+' idempotent');
   assert.equal(p.code.split('\n').length,before.split('\n').length);
+ }
+});
+
+test('expandC puts each statement on its own line and keeps initializers, for headers, strings and comments',()=>{
+ const src='void f(uint8_t v){uint8_t b[2]={0,v}; for(int i=0;i<2;i++){g(b[i]);} if(v){h();}else{k();} /* done */\nswitch(v){case 1: a(); break; default: break;}\nprintf("x;{y}"); // a;b\n#define M(x) do{x;}while(0)\ndo{v--;}while(v);}';
+ const out=expandC(src).split('\n');
+ assert.deepEqual(out,[
+  'void f(uint8_t v) {',
+  '  uint8_t b[2]={0, v};',
+  '  for (int i=0;i<2;i++) {',
+  '    g(b[i]);',
+  '  }',
+  '  if (v) {',
+  '    h();',
+  '  } else {',
+  '    k();',
+  '  } /* done */',
+  '  switch (v) {',
+  '    case 1:',
+  '      a();',
+  '      break;',
+  '    default:',
+  '      break;',
+  '  }',
+  '  printf("x;{y}"); // a;b',
+  '#define M(x) do{x;}while(0)',
+  '  do {',
+  '    v--;',
+  '  } while (v);',
+  '}']);
+ assert.equal(expandC(expandC(src)),expandC(src));
+});
+
+test('every applied HAL example has one statement per line and the same tokens as its compact source',()=>{
+ const strip=t=>t.replace(/\s+/g,'');
+ for(const id of Object.keys(allHalExamples())){
+  const p=applyHalExample(blankProject(),id),compact=halExampleCode(id);
+  assert.equal(strip(p.code),strip(compact),id);
+  for(const line of p.code.split('\n')){
+   if(/^\s*(\/\/|\/\*|\*|#)/.test(line))continue;
+   const code=line.replace(/\/\/.*$|\/\*.*?\*\//g,'').replace(/"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'/g,'""').replace(/\bfor\s*\(.*?\)\s*/,'');
+   assert.ok(!/;\s*\S/.test(code.replace(/\{[^{}]*\}/g,'{}')),`${id}: ${line.trim()}`);
+  }
  }
 });
