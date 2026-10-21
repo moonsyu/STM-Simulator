@@ -11,6 +11,8 @@
 - 검증: `npm test` 678개 중 675 통과(실패 2개는 로컬 심볼릭 링크 권한), E2E 21개 중 20 통과·1 건너뜀.
 - 커밋: `6e53b25` `}` 정렬 IME 수정, `1728566` 예제 코드 정리, `3be9c02` 0.29.1 버전.
 - 첫 CI [39527156197](https://github.com/moonsyu/STM-Simulator/actions/runs/39527156197) 실패: E2E에서 편집 메뉴의 "코드 정렬"에 단축키가 비어 있었다. 메뉴가 단축키·위치를 `toggle` 이벤트(메뉴가 이미 보인 뒤 비동기)에서 채워서 생긴 경쟁 상태다. 사용자에게도 잠깐 빈 단축키·이전 위치로 보일 수 있었다. `beforetoggle`에서 채우도록 고치고 로컬 E2E를 두 번 연속 통과했다. Release·태그는 만들어지지 않았으므로 같은 버전 0.29.1로 다시 게시한다.
+- 결과: [Release v0.29.1](https://github.com/moonsyu/STM-Simulator/releases/tag/v0.29.1), [CI 39528002946](https://github.com/moonsyu/STM-Simulator/actions/runs/39528002946) 성공. latest 지정, 태그·커밋 `0173b64` 일치, 5자산과 EXE·ZIP 해시(ZIP 안 EXE 포함) 확인.
+- 남은 사항: 실제 한글 IME 입력은 사람이 직접 입력해 확인하지 않았다.
 
 ## 2026-10-21 · 작업 방식 지침 추가
 
