@@ -26,7 +26,7 @@ export function setupCanvasKeyboard(svg,o){
     if(restore&&!focus(restore))svg.focus({preventScroll:true});
     if(held)queueMicrotask(checkHeldFocus);
   };
-  svg.addEventListener('focusin',event=>{const target=descriptor(event.target.closest(targets));if(target)last=target;else if(event.target===svg)o.announce?.('PageUp/Down으로 객체를 탐색하세요');if(held)queueMicrotask(checkHeldFocus);});
+  svg.addEventListener('focusin',event=>{const target=descriptor(event.target.closest(targets));if(target)last=target;else if(event.target===svg)o.announce?.('회로 작업 공간');if(held)queueMicrotask(checkHeldFocus);});
   svg.addEventListener('focusout',()=>{if(held)queueMicrotask(checkHeldFocus);});
   window.addEventListener('blur',releaseHeld);
   window.addEventListener('keyup',event=>{

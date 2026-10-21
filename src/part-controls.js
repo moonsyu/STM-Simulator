@@ -6,7 +6,8 @@ import {channelLevels,hexColor} from './rgb-color.js';
 const esc=t=>String(t).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 // WS2812: the last 24-bit word received on DIN, shown in wire order (G, R, B).
 function ws2812Readouts(r){
- if(!r?.powered)return '<p>전원(5V/VCC)과 GND를 확인하세요.</p>';
+ if(!r)return '<p>실행하면 DIN으로 받은 색과 G/R/B 값이 표시됩니다.</p>';
+ if(!r.powered)return '<p>전원(5V/VCC)과 GND를 확인하세요.</p>';
  const d=r.device;if(!d?.grb)return '<p>전원 연결됨 · 아직 받은 색 데이터가 없습니다. DIN 배선과 WS2812 비트 타이밍(800 kHz)을 확인하세요.</p>';
  const [g,red,b]=d.grb;
  return `<p>받은 색 <span class="rgb-swatch" style="background:rgb(${d.color.join(',')})"></span> <b>${hexColor(d.color)}</b>${d.display?'':' · 꺼짐(0,0,0)'}</p><div class="channel-readouts"><span>G <b>${g}</b></span><span>R <b>${red}</b></span><span>B <b>${b}</b></span></div><p>수신 ${d.frames}회 · 전송 순서 G→R→B</p>`;

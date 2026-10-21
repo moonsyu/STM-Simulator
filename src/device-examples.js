@@ -230,6 +230,6 @@ void matrixWrite(uint8_t reg, uint8_t value) {
  user(2,init);user(3,loop);
  // Place helpers after generated handle declarations so this source is also valid C for Cube projects.
  p.code=p.code.replace('int main(void) {',helpers+'\nint main(void) {');
- p.code='#include "main.h"\n#include <stdio.h>\n'+(kind==='ntc'?'#include <math.h>\n':'')+'// '+DEVICE_GUIDES[kind]+'\n'+p.code.replace('#include "main.h"\n','');
+ p.code='#include "main.h"\n#include <stdio.h>\n'+(kind==='ntc'?'#include <math.h>\n':'')+'// '+DEVICE_GUIDES[kind]+'\n'+p.code.replace('#include "main.h"\n','').replace('#include <stdio.h>\n','');
  return p;
 }
