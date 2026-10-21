@@ -7,10 +7,10 @@ const KEY='stm32lab.shellLayout.v1';
 const ICON={
  explorer:'M4 3h7l2 2h7v14H4z M4 8h16',
  parts:'M7 4h10v6H7z M4 14h6v6H4z M14 14h6v6h-6z M12 10v4 M7 14v-2h10v2',
- examples:'M5 4h11l3 3v13H5z M9 9h6 M9 13h6 M9 17h4',
+ examples:'M8 4C6 4 6 5.5 6 7v2.5C6 11 5 12 4 12c1 0 2 1 2 2.5V17c0 1.5 0 3 2 3 M16 4c2 0 2 1.5 2 3v2.5c0 1.5 1 2.5 2 2.5-1 0-2 1-2 2.5V17c0 1.5 0 3-2 3',
  board:'M6 6h12v12H6z M9 3v3 M15 3v3 M9 18v3 M15 18v3 M3 9h3 M3 15h3 M18 9h3 M18 15h3 M10 10h4v4h-4z',
  debug:'M8 5l11 7-11 7z M4 4v16',
- docs:'M6 3h9l4 4v14H6z M9 10h7 M9 14h7 M9 18h5 M15 3v4h4',
+ docs:'M3 5.5C5.5 4.5 8.5 4.6 12 6.5c3.5-1.9 6.5-2 9-1V19c-2.5-1-5.5-.9-9 1-3.5-1.9-6.5-2-9-1z M12 6.5V20',
  settings:'M12 8.5a3.5 3.5 0 1 0 0 7a3.5 3.5 0 1 0 0-7z M12 2v3 M12 19v3 M2 12h3 M19 12h3 M4.9 4.9l2.1 2.1 M17 17l2.1 2.1 M4.9 19.1L7 17 M17 7l2.1-2.1',
  sidebar:'M3 4h18v16H3z M9 4v16',panel:'M3 4h18v16H3z M3 14h18',aux:'M3 4h18v16H3z M15 4v16',
  split:'M3 4h18v16H3z M12 4v16',rotate:'M4 12a8 8 0 0 1 14-5 M18 3v4h-4 M20 12a8 8 0 0 1-14 5 M6 21v-4h4',swap:'M7 7h12l-3-3 M17 17H5l3 3',max:'M4 9V4h5 M15 4h5v5 M20 15v5h-5 M9 20H4v-5',
@@ -20,10 +20,10 @@ export const icon=(name,size=20)=>`<svg viewBox="0 0 24 24" width="${size}" heig
 const VIEWS=[
  {id:'explorer',label:'탐색기'},
  {id:'parts',label:'부품'},
- {id:'examples',label:'HAL 예제'},
+ {id:'examples',label:'HAL 예제',hint:'회로·코드·핀 설정을 예제 프로젝트로 교체'},
  {id:'board',label:'보드 · 핀 설정'},
  {id:'debug',label:'실행 및 디버그'},
- {id:'docs',label:'장치 Docs'}
+ {id:'docs',label:'장치 Docs',hint:'선택한 장치의 설명과 코드를 현재 프로젝트에 추가'}
 ];
 const HIDDEN_VIEWS=[{id:'settings',label:'설정'},{id:'keybindings',label:'단축키 설정'}];
 const DEFAULT={sidebar:272,aux:300,panel:240,ratio:.5,orientation:'row',swapped:false,show:{sidebar:true,aux:true,panel:true},view:'explorer',maximized:null,activityOrder:VIEWS.map(v=>v.id)};
@@ -165,7 +165,7 @@ function mountShell(layout,state,options,{apply,save,setPalette}){
  const top=document.createElement('div');top.className='activity-top';const bottom=document.createElement('div');bottom.className='activity-bottom';
  for(const id of state.activityOrder){const v=VIEWS.find(x=>x.id===id);const b=document.createElement('button');b.type='button';b.dataset.activity=v.id;b.className='activity-item';b.innerHTML=icon(v.id,24);b.setAttribute('aria-label',v.label);b.draggable=true;b.onclick=()=>layout.showView(v.id,{toggle:true});top.append(b);}
  bar.append(top,bottom);
- setupActivityTips(bar,id=>{const v=VIEWS.find(x=>x.id===id),k=layout.keyFor('view.'+id);return v?(k?`${v.label} (${k})`:v.label):'';});
+ setupActivityTips(bar,id=>{const v=VIEWS.find(x=>x.id===id),k=layout.keyFor('view.'+id);return v?(k?`${v.label} (${k})`:v.label)+(v.hint?' · '+v.hint:''):'';});
  setupActivityDrag(top,order=>{state.activityOrder=order;save();});
  // Explorer quick links
  explorer.addEventListener('click',e=>{const b=e.target.closest('[data-goto-view]');if(b)layout.showView(b.dataset.gotoView);});
