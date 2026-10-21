@@ -54,6 +54,9 @@ test('a project folder keeps main.c and the circuit file consistent',{timeout:90
   await typeInEditor(win,'\n// saved to folder');
   await win.keyboard.press('Control+S');
   await win.waitForFunction(()=>document.getElementById('save-state').textContent.includes('파일 저장됨'));
+  // The autosave scheduled by the last keystroke must not replace the file-save status afterwards.
+  await win.waitForTimeout(500);
+  assert.match(await win.textContent('#save-state'),/파일 저장됨/);
   const dir=path.join(parent,'WsCheck');
   const files=await readdir(dir);
   assert.ok(files.includes('main.c')&&files.includes('project.stm32lab'),files.join(','));
