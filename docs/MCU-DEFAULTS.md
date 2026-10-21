@@ -1,4 +1,4 @@
-# NUCLEO-F446RE 기본 설정
+# NUCLEO-F446RE · NUCLEO-F103RB 기본 설정
 
 확인일: 2026-10-07. 대상은 NUCLEO-F446RE / STM32F446RE다. **CubeMX에서 TIM을 활성화할 때 사용하는 초기 설정**을 적용한다. 레지스터 리셋값 프리셋과는 구분한다.
 
@@ -29,6 +29,14 @@ Pinout에서 TIM을 활성화하면 위 PSC/ARR 설정을 사용한다. PWM Puls
 - USART 115200 baud, I²C 100 kHz, SPI 1 MHz 등은 해당 장치 활성화 시 사용할 HAL 초기화 설정이다. 주변장치는 기본 비활성이다.
 - 기본 생성 코드는 HSI 직접 연결·PLL OFF·APB 분주 1·Flash 0 wait state를 쓴다. 기존 사용자 클록은 지원되는 HSI PLL 계획을 사용한다. TIM 입력은 Pinout 값이며 임의 RCC C 코드에서 클록 트리를 역산하지 않는다.
 - `src/mcu-defaults.js`가 기본값의 공통 정의다. Pinout, 검증기, `.ioc` 가져오기, 코드 생성, 실행 모델을 함께 검사한다.
+
+## NUCLEO-F103RB (STM32F103RB)
+
+- 새 프로젝트 클럭은 HSI 8 MHz, 예제는 HSI/2×PLL16 = 64 MHz(4 MHz 단위, 최대 64 MHz). APB1은 36 MHz 이하라 64 MHz에서 /2, 타이머 클럭은 SYSCLK와 같다. Flash 대기는 24 MHz 이하 0, 48 MHz 이하 1, 그 위 2.
+- 타이머는 TIM2~4 모두 16비트이며 새 TIM의 ARR 기본값은 65535다.
+- ADC 클럭은 PCLK2를 `RCC_ADCPCLK2_DIV2/4/6/8`로 나눠 14 MHz 이하로 맞추고, 샘플 시간 기본값은 239.5 사이클이다. 변환 시간은 (샘플 + 12.5) 사이클이다.
+- PA15·PB3·PB4는 JTAG 핀이라 다른 용도로 쓰면 `__HAL_AFIO_REMAP_SWJ_NOJTAG()`를 넣는다. 포트 B~D의 EXTI는 AFIO 클럭이 필요하다.
+- 근거: ST [RM0008](https://www.st.com/resource/en/reference_manual/rm0008-stm32f101xx-stm32f102xx-stm32f103xx-stm32f105xx-and-stm32f107xx-advanced-armbased-32bit-mcus-stmicroelectronics.pdf)(AFIO 리맵, DMA1 요청 매핑, ADC), [STM32F103RB 데이터시트](https://www.st.com/resource/en/datasheet/stm32f103rb.pdf)(128 KB Flash, 20 KB RAM, 72 MHz 최대; HSI 기반 PLL은 64 MHz까지).
 
 ## 근거와 적용 범위
 
