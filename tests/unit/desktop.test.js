@@ -432,3 +432,21 @@ describe('GdbSession command plumbing (fake GDB process)',()=>{
     const pending=s.command('-exec-continue');s.finish(new Error('GDB 연결이 종료되었습니다.'));await assert.rejects(pending,/연결이 종료/);
   });
 });
+
+describe('native tools for a real NUCLEO board',()=>{
+ const {NativeIde,openocdArgs}=require('../../desktop/native-ide.cjs');
+ const {detectTools}=require('../../desktop/native-build.cjs');
+ test('OpenOCD from STM32CubeIDE starts with ST scripts and the ST-LINK DAP interface; other builds keep stlink.cfg',()=>withTempDir(async dir=>{
+  const plugins=path.join(dir,'STM32CubeIDE','plugins');
+  const exe=path.join(plugins,'com.st.stm32cube.ide.mcu.externaltools.openocd.win32_2.4.200','tools','bin','openocd.exe');
+  for(const v of ['2.2.0','2.3.100']){const scripts=path.join(plugins,`com.st.stm32cube.ide.mcu.debug.openocd_${v}`,'resources','openocd','st_scripts','interface');await fs.mkdir(scripts,{recursive:true});await fs.writeFile(path.join(scripts,'stlink-dap.cfg'),'');}
+  assert.deepEqual(await openocdArgs(exe),['-s',path.join(plugins,'com.st.stm32cube.ide.mcu.debug.openocd_2.3.100','resources','openocd','st_scripts'),'-f','interface/stlink-dap.cfg','-c','transport select dapdirect_swd','-f','target/stm32f4x.cfg']);
+  assert.deepEqual(await openocdArgs(path.join(dir,'xpack-openocd-0.12.0-7','bin','openocd.exe')),['-f','interface/stlink.cfg','-f','target/stm32f4x.cfg']);
+ }));
+ test('saving the tools dialog keeps the entered values in the file and auto-detects empty entries right away',()=>withTempDir(async dir=>{
+  const ide=new NativeIde(dir),entered={armGcc:'',armGdb:'',cube:'',hostGcc:'',hostGdb:'',clangd:'',openocd:'',buildRoot:''};
+  const tools=await ide.configure(entered);
+  assert.deepEqual(JSON.parse(await readText(path.join(dir,'native-tools.json'))),entered);
+  assert.deepEqual(tools,await detectTools(entered));
+ }));
+});
