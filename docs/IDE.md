@@ -211,7 +211,9 @@ GCC·binutils의 Windows 한글 경로 제한 때문에 컴파일러와 SDK는 �
 
 **STM32 · ARM GCC**는 NUCLEO-F446RE의 ST-LINK USB를 연결하고 **보드 연결**을 설정한다.
 
-1. OpenOCD 자동 시작은 `interface/stlink.cfg`와 `target/stm32f4x.cfg`를 사용하고 127.0.0.1:3333에서 GDB 연결을 받는다. USB 드라이버는 설치한 ST-LINK/OpenOCD 환경에서 준비되어 있어야 한다.
+처음 쓸 때 순서: (1) **실행 및 디버그 → 실행 환경**에서 **STM32 · ARM GCC**를 고른다. (2) **개발 도구**에서 ARM GCC·ARM GDB·STM32CubeF4·OpenOCD가 채워졌는지 확인한다(비워 두고 저장하면 바로 자동 감지한다. STM32CubeIDE가 설치돼 있으면 GCC·GDB·OpenOCD는 그 안에서 찾고, STM32CubeF4는 설치 스크립트로 받는다). (3) **보드 연결**에서 GDB 서버를 **OpenOCD 자동 시작 · ST-LINK**로 두고 **시작할 때 빌드한 펌웨어를 보드에 기록**을 체크한다. (4) 실행(Ctrl+F5) 또는 디버그 시작(F10). 기록을 체크하지 않으면 보드에 이미 들어 있는 펌웨어에 연결만 하므로 코드 변경이 보드에 반영되지 않는다.
+
+1. OpenOCD 자동 시작은 `interface/stlink.cfg`와 `target/stm32f4x.cfg`를 사용하고 127.0.0.1:3333에서 GDB 연결을 받는다. USB 드라이버는 설치한 ST-LINK/OpenOCD 환경에서 준비되어 있어야 한다. STM32CubeIDE에 들어 있는 OpenOCD(ST 빌드)를 쓰면 CubeIDE의 `st_scripts` 폴더를 `-s`로 지정하고 `interface/stlink-dap.cfg`(`transport select dapdirect_swd`)로 연결한다.
 2. 외부 GDB 서버는 `host:port`로 연결한다. 예를 들어 이미 시작한 ST-LINK GDB Server 또는 OpenOCD를 사용할 수 있다. 외부 서버가 대상을 정지·초기화한 상태여야 한다.
 3. **시작할 때 빌드한 펌웨어를 보드에 기록**은 기본 해제다. 체크하면 GDB `load`로 보드의 기존 펌웨어를 교체한다. 해제했을 때는 보드에 현재 ELF와 같은 펌웨어가 이미 있어야 소스·주소가 일치한다.
 4. **디버그 시작**은 Debug 구성을 사용하고 main에서 멈춘다. **실행**은 main 정지 없이 계속 실행한다. ARM 대상도 연결된 보드 또는 외부 GDB 대상이 있어야 실행된다.
