@@ -1,5 +1,15 @@
 # 검증 기록
 
+## 0.34.0 한 칸에 점퍼선 하나 · 배선 끝 옮기기 — 공개 배포 검증 완료
+
+2026-10-22. 제품 커밋 `7ac9f149c8d7565583aca89bc33d520bde431b03` · [Windows CI 39607305813](https://github.com/moonsyu/STM-Simulator/actions/runs/39607305813) 첫 실행 성공 · [Release v0.34.0](https://github.com/moonsyu/STM-Simulator/releases/tag/v0.34.0).
+
+| 검사 | 결과 |
+|---|---|
+| `npm test` (로컬) | 711개 중 708 통과·1 건너뜀(실패 2개는 로컬 심볼릭 링크 권한, CI 통과). 새 검사: 배선 막힘 조건·끝 이동·거부 3개 |
+| `npm run test:e2e` (로컬) | 25 통과, 2 건너뜀(실제 도구 경로 필요). 새 검사: 실제 마우스로 사용 중인 핀 거부, 배선 끝 끌어 옮기기, 실행 취소 |
+| 공개 자산 | latest=v0.34.0, 태그·BUILD-INFO 커밋 일치, 5자산. EXE SHA-256 `756e9a35693932b7178b5cf9b9a9cb1c8118ba6482f10c6bf56a399ac8b655a4`(103,015,457 B, MZ)이 SHA256.txt·update-manifest·ZIP 안 EXE와 일치. ZIP SHA-256 `68648dbb6c8b7b0299f62cb5d30fe876ad29f9558bc665244fa2e915bae67a77` |
+
 ## 0.33.2 실행은 항상 보드에 기록 · 다른 보드 거부 — 공개 배포 검증 완료
 
 2026-10-21. 제품 커밋 `46cd7f56d03760a7e09f1c50f7558c96dda6294c` · [Windows CI 39567830174](https://github.com/moonsyu/STM-Simulator/actions/runs/39567830174) 첫 실행 성공 · [Release v0.33.2](https://github.com/moonsyu/STM-Simulator/releases/tag/v0.33.2).
