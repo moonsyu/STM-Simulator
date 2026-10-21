@@ -1,4 +1,4 @@
-import {GPIO_PINS,ALIASES,canonicalPin} from './pins.js';
+import {ALL_GPIO_PINS as GPIO_PINS,ALIASES,canonicalPin} from './pins.js';
 import {convert,arithmetic} from './c-types.js';
 import {expressionType} from './c-expression-type.js';
 

@@ -1,4 +1,5 @@
 import {compile} from './parser.js';
+import {familyProfile} from './mcu-family.js';
 
 // These are interpreter value layouts, not STM32 register or ABI definitions.
 export const HAL_STRUCTS={
@@ -47,16 +48,28 @@ export const HAL_STRUCTS={
   DIR:'obj_id dptr clust sect blk_ofs',
   FILINFO:'fsize fdate ftime fattrib fname:char[13]'
 };
+// STM32F1 HAL layouts that differ from the F4 (stm32f1xx_hal_*.h); F4-only types are not declared for F1 sources.
+const F1_STRUCTS={GPIO_InitTypeDef:'Pin Mode Pull Speed',RCC_PLLInitTypeDef:'PLLState PLLSource PLLMUL',
+  RCC_OscInitTypeDef:'OscillatorType HSEState HSEPredivValue LSEState HSIState HSICalibrationValue LSIState PLL:RCC_PLLInitTypeDef',
+  RCC_PeriphCLKInitTypeDef:'PeriphClockSelection RTCClockSelection AdcClockSelection UsbClockSelection',
+  ADC_InitTypeDef:'DataAlign ScanConvMode ContinuousConvMode NbrOfConversion DiscontinuousConvMode NbrOfDiscConversion ExternalTrigConv',
+  ADC_ChannelConfTypeDef:'Channel Rank SamplingTime',DMA_InitTypeDef:'Direction PeriphInc MemInc PeriphDataAlignment MemDataAlignment Mode Priority'};
+const F4_ONLY_STRUCTS=/^(I2S_|RCC_PLLI2S|DCMI_|SD_|HAL_SD_)/;
+export function halStructs(family){
+  const f1=familyProfile(family).pinMux==='remap';
+  return f1?{...Object.fromEntries(Object.entries(HAL_STRUCTS).filter(([name])=>!F4_ONLY_STRUCTS.test(name))),...F1_STRUCTS}:HAL_STRUCTS;
+}
 export const HAL_ALIASES={FRESULT:'int',UINT:'uint32_t',BYTE:'uint8_t',WORD:'uint16_t',DWORD:'uint32_t',QWORD:'uint32_t',FSIZE_t:'uint32_t',LBA_t:'uint32_t',TCHAR:'char',DSTATUS:'uint8_t',
   HAL_SD_CardStateTypeDef:'uint32_t',HAL_DMA_StateTypeDef:'int',HAL_UART_StateTypeDef:'int',HAL_USART_StateTypeDef:'int',HAL_DCMI_StateTypeDef:'int',HAL_SD_StateTypeDef:'int',HAL_SPI_StateTypeDef:'int',HAL_I2C_StateTypeDef:'int',
   HAL_LockTypeDef:'int',FunctionalState:'int',FlagStatus:'int',ITStatus:'int',IRQn_Type:'int',HAL_DMA_LevelCompleteTypeDef:'int',HAL_DMA_CallbackIDTypeDef:'int',HAL_UART_RxEventTypeTypeDef:'uint32_t'};
-const SYSTEM_HEADERS=new Set(['main.h','stm32f4xx_hal.h','stm32f4xx.h','stdint.h','stddef.h','stdbool.h','string.h','stdio.h','math.h','stm32f4xx_it.h','stm32f4xx_hal_conf.h','fatfs.h','ff.h','ff_gen_drv.h','diskio.h','sd_diskio.h','user_diskio.h','bsp_driver_sd.h','fatfs_platform.h',...['gpio','uart','usart','tim','tim_ex','adc','adc_ex','i2c','spi','rcc','rcc_ex','cortex','pwr','pwr_ex','dma','dma_ex','dcmi','sd','uart_ex'].map(n=>`stm32f4xx_hal_${n}.h`)]);
+const systemHeaders=prefix=>new Set(['main.h',`${prefix}_hal.h`,`${prefix}.h`,'stdint.h','stddef.h','stdbool.h','string.h','stdio.h','math.h',`${prefix}_it.h`,`${prefix}_hal_conf.h`,'fatfs.h','ff.h','ff_gen_drv.h','diskio.h','sd_diskio.h','user_diskio.h','bsp_driver_sd.h','fatfs_platform.h',...['gpio','gpio_ex','uart','usart','tim','tim_ex','adc','adc_ex','i2c','spi','rcc','rcc_ex','cortex','pwr','pwr_ex','dma','dma_ex','dcmi','sd','uart_ex'].map(n=>`${prefix}_hal_${n}.h`)]);
 export function prepareHalSource(source,files=[],options={}){
   if(typeof source!=='string'||source.length>300000||!Array.isArray(files)||files.length>40)throw new Error('HAL 소스 크기 또는 파일 수 한도를 넘었습니다.');
   const map=new Map();let total=source.length;
   for(const file of files){if(!file||typeof file.name!=='string'||! /^[\w.-]+\.[ch]$/.test(file.name)||typeof file.text!=='string'||map.has(file.name))throw new Error('소스 파일 이름이 중복되거나 올바르지 않습니다.');total+=file.text.length;if(total>300000)throw new Error('HAL 소스 전체는 300 KB 이하로 선택하세요.');map.set(file.name,file.text);}
   map.set('main.c',source);
-  const definitions=new Map([['STM32F446xx','1'],['USE_HAL_DRIVER','1']]),stack=[],included=new Set();
+  const hal=familyProfile(options.family).hal,SYSTEM_HEADERS=systemHeaders(hal.prefix);
+  const definitions=new Map([[hal.define,'1'],['USE_HAL_DRIVER','1']]),stack=[],included=new Set();
   const preprocess=(text,name)=>{
     if(stack.includes(name))throw new Error(`순환 include: ${name}`);stack.push(name);const output=[],locations=[],condition=[];let active=true,inComment=false,currentLine=1;
     const append=output.push.bind(output);output.push=value=>{if(typeof value==='object'){locations.push(...value.locations);return append(value.text);}locations.push({file:name,line:currentLine});return append(value);};
@@ -95,9 +108,9 @@ export function prepareHalSource(source,files=[],options={}){
   for(const [name,text]of map)if(name.endsWith('.c')&&name!=='main.c')chunks.push(preprocess(text,name));
   const text=chunks.map(c=>c.text).join('\n'),sourceMap=chunks.flatMap(c=>c.locations);return options.withMap?{text,sourceMap}:text;
 }
-export function compileHal(source,files=[]){
-  const structs=Object.fromEntries(Object.entries(HAL_STRUCTS).map(([name,fields])=>[name,fields.split(' ').map(f=>{const [key,spec='uint32_t']=f.split(':'),m=/^(\w+)\[(\d+)\]$/.exec(spec);return m?{name:key,type:m[1],constant:false,array:true,size:Number(m[2])}:{name:key,type:spec,constant:false};})]));
-  const prepared=prepareHalSource(source,files,{withMap:true});
+export function compileHal(source,files=[],family){
+  const structs=Object.fromEntries(Object.entries(halStructs(family)).map(([name,fields])=>[name,fields.split(' ').map(f=>{const [key,spec='uint32_t']=f.split(':'),m=/^(\w+)\[(\d+)\]$/.exec(spec);return m?{name:key,type:m[1],constant:false,array:true,size:Number(m[2])}:{name:key,type:spec,constant:false};})]));
+  const prepared=prepareHalSource(source,files,{withMap:true,family});
   try{return compile(prepared.text,{hal:true,structs,aliases:HAL_ALIASES,sourceMap:prepared.sourceMap});}
   catch(error){if(!error.location){const m=/^(\d+)행:/.exec(error.message);if(m){error.location=prepared.sourceMap[Number(m[1])-1];if(error.location)error.message=error.message.replace(/^\d+행:/,`${error.location.file}:${error.location.line}:`);}}throw error;}
 }

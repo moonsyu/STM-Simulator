@@ -10,6 +10,7 @@ import {HalDma,DMA_CONSTANTS} from './hal-dma.js';
 import {HalUsart,USART_CONSTANTS} from './hal-usart.js';
 import {HalDcmi,DCMI_CONSTANTS} from './hal-dcmi.js';
 import {HalStorage,STORAGE_CONSTANTS} from './hal-storage.js';
+import {familyProfile,remapFor,irqNamesOf} from './mcu-family.js';
 
 export const HAL_CONSTANTS={...CATALOG_HAL_CONSTANTS,HAL_OK:0,HAL_ERROR:1,HAL_BUSY:2,HAL_TIMEOUT:3,HAL_MAX_DELAY:4294967295,
   GPIO_PIN_RESET:0,GPIO_PIN_SET:1,GPIO_MODE_INPUT:0,GPIO_MODE_OUTPUT_PP:1,GPIO_MODE_OUTPUT_OD:17,GPIO_MODE_AF_PP:2,GPIO_MODE_AF_OD:18,GPIO_MODE_ANALOG:3,
@@ -37,13 +38,30 @@ for(const id of [...SERIAL_IDS,'I2C1','SPI1','ADC1',...TIMER_IDS,...IRQ_NAMES])H
 for(const id of TIMER_IDS)HAL_CONSTANTS[`GPIO_AF${timerAf(id)}_${id}`]=timerAf(id);
 for(const id of SERIAL_IDS)HAL_CONSTANTS[`GPIO_AF${serialAf(id)}_${id}`]=serialAf(id);
 for(const [name,n]of [['GPIO_AF12_SDIO',12],['GPIO_AF13_DCMI',13],['GPIO_AF4_I2C1',4],['GPIO_AF5_SPI1',5],['GPIO_AF1_TIM2',1]])HAL_CONSTANTS[name]=n;
+// STM32F1 HAL names (stm32f1xx_hal_*.h). F4-only names are dropped so F1 code cannot use them by mistake.
+const F4_ONLY=/^(GPIO_AF\d+_|GPIO_SPEED_FREQ_VERY_HIGH$|GPIOH$|DMA2|DMA\d_Stream|DMA_CHANNEL_|DMA_FIFO|DMA_[MP]BURST|DMA_PFCTRL$|DMA_IT_(DME|FE)$|HAL_DMA_XFER_M1|SDIO|DCMI|HAL_SD_|SD_|RCC_PLLP_|PWR_REGULATOR|ADC_CLOCK_SYNC|ADC_RESOLUTION|ADC_EOC_|ADC_EXTERNALTRIGCONVEDGE|ADC_SAMPLETIME_\d+CYCLES$|ADC_CHANNEL_(18|VBAT)$|ADC_IRQn$|UART[45]|USART6|TIM5|I2S|PLLI2S)/;
+const F1_CONSTANTS={GPIO_SPEED_FREQ_LOW:2,GPIO_SPEED_FREQ_MEDIUM:1,GPIO_SPEED_FREQ_HIGH:3,GPIO_MODE_AF_INPUT:0,
+  RCC_PLLSOURCE_HSI_DIV2:0,RCC_PLLSOURCE_HSE:0x10000,RCC_HSE_PREDIV_DIV1:0,RCC_HSE_PREDIV_DIV2:0x20000,RCC_PERIPHCLK_RTC:1,RCC_PERIPHCLK_ADC:2,RCC_PERIPHCLK_USB:0x10,
+  RCC_ADCPCLK2_DIV2:0,RCC_ADCPCLK2_DIV4:0x4000,RCC_ADCPCLK2_DIV6:0x8000,RCC_ADCPCLK2_DIV8:0xC000,
+  ADC_SCAN_DISABLE:0,ADC_SCAN_ENABLE:0x100,ADC_SOFTWARE_START:0xE0000,ADC_DATAALIGN_LEFT:0x800,ADC_CHANNEL_TEMPSENSOR:16,ADC_CHANNEL_VREFINT:17,
+  ...Object.fromEntries(['1CYCLE_5','7CYCLES_5','13CYCLES_5','28CYCLES_5','41CYCLES_5','55CYCLES_5','71CYCLES_5','239CYCLES_5'].map((n,i)=>['ADC_SAMPLETIME_'+n,i])),
+  ...Object.fromEntries(Array.from({length:16},(_,i)=>['ADC_REGULAR_RANK_'+(i+1),i+1])),
+  ...Object.fromEntries(Array.from({length:15},(_,i)=>['RCC_PLL_MUL'+(i+2),i<<18]))};
+for(const name of [...familyProfile('STM32F103RB').dmaUnits,...irqNamesOf('STM32F103RB'),'AFIO'])F1_CONSTANTS[name]=name;
+const constantsByFamily=new Map();
+/** Constants the C source of a project may use (its family's HAL names). */
+export function halConstantsFor(family){
+  if(familyProfile(family).pinMux!=='remap')return HAL_CONSTANTS;
+  if(!constantsByFamily.has(family))constantsByFamily.set(family,{...Object.fromEntries(Object.entries(HAL_CONSTANTS).filter(([k])=>!F4_ONLY.test(k))),...F1_CONSTANTS});
+  return constantsByFamily.get(family);
+}
 
 const int=(value,min,max,label)=>{if(!Number.isInteger(value)||value<min||value>max)throw new Error(`${label}: ${min}~${max} 범위의 정수가 필요합니다.`);return value;};
 // IRQs that existed before the Pinout NVIC table grew; they still require the Pinout NVIC switch.
 const PINOUT_IRQS=new Set(['EXTI0_IRQn','EXTI1_IRQn','EXTI2_IRQn','EXTI3_IRQn','EXTI4_IRQn','EXTI9_5_IRQn','EXTI15_10_IRQn',...SERIAL_IDS.map(id=>id+'_IRQn'),...TIMER_IDS.map(id=>id+'_IRQn')]);
 const isIterator=v=>v&&typeof v.next==='function'&&typeof v[Symbol.iterator]==='function';
 export class HalAdapter {
-  constructor(config,buses,{session}={}){this.config=validateMcu(config);const errors=configProblems(this.config);if(errors.length)throw new Error(errors.join('\n'));this.buses=buses;this.nvic=new Map();this.pending=[];this.extiPending=0;this.serials=new Map();this.handles=new Map();this.timerModel=new HalTimers(this);this.adc=new Map();this.latches=new Map();this.priorities=new Map();this.initializedGpio=new Set();this.catalog=new CatalogPeripherals(this);this.nvicModel=new Nvic(this);this.subPriorities=new Map();this.noticeIrq=new Set();this.session=session;this.dma=new HalDma(this);this.usart=new HalUsart(this);this.camera=new HalDcmi(this);this.storage=new HalStorage(this);this.extensions=[this.dma,this.usart,this.camera,this.storage];}
+  constructor(config,buses,{session}={}){this.config=validateMcu(config);this.family=familyProfile(this.config.family);this.f1=this.family.pinMux==='remap';this.remaps=new Set();this.afio=false;this.adcIrq=this.f1?'ADC1_2_IRQn':'ADC_IRQn';const errors=configProblems(this.config);if(errors.length)throw new Error(errors.join('\n'));this.buses=buses;this.nvic=new Map();this.pending=[];this.extiPending=0;this.serials=new Map();this.handles=new Map();this.timerModel=new HalTimers(this);this.adc=new Map();this.latches=new Map();this.priorities=new Map();this.initializedGpio=new Set();this.catalog=new CatalogPeripherals(this);this.nvicModel=new Nvic(this);this.subPriorities=new Map();this.noticeIrq=new Set();this.session=session;this.dma=new HalDma(this);this.usart=new HalUsart(this);this.camera=new HalDcmi(this);this.storage=new HalStorage(this);this.extensions=[this.dma,this.usart,this.camera,this.storage];}
   get active(){return this.nvicModel.active;}
   uart(id){
     if(!isSerial(id))throw new Error(`지원하지 않는 UART 인스턴스: ${id}`);
@@ -63,7 +81,7 @@ export class HalAdapter {
   handle(ptr,r,type){const h=r.get(r.pointerCell(ptr));if(h?.type!==type+'_HandleTypeDef')throw new Error(`${type} 핸들 포인터가 필요합니다.`);const id=this.field(h,'Instance');if(!this.config.peripherals[id]?.enabled)throw new Error(`${id}: Pinout & Configuration에서 주변장치를 활성화하세요.`);return {h,id,init:this.field(h,'Init')};}
   requireHandle(ptr,r,type){const x=this.handle(ptr,r,type);if(this.handles.get(x.id)!==x.h)throw new Error(`${x.id}: HAL 초기화가 필요합니다.`);return x;}
   pinFor(fn){const pin=Object.keys(this.config.pins).find(p=>this.config.pins[p].function===fn);if(!pin)throw new Error(`${fn}: 핀을 지정하세요.`);return pin;}
-  pins(port,mask){if(!/^GPIO[ABCDH]$/.test(port))throw new Error('GPIO 포트를 확인하세요.');int(mask,1,65535,'GPIO 핀 마스크');return Array.from({length:16},(_,i)=>i).filter(i=>mask&(1<<i)).map(i=>'P'+port.at(-1)+i);}
+  pins(port,mask){if(!this.family.ports.some(p=>'GPIO'+p===port))throw new Error(`GPIO 포트를 확인하세요 (${this.family.ports.map(p=>'GPIO'+p).join(', ')}).`);int(mask,1,65535,'GPIO 핀 마스크');return Array.from({length:16},(_,i)=>i).filter(i=>mask&(1<<i)).map(i=>'P'+port.at(-1)+i);}
   configured(pin){const p=this.config.pins[pin];if(!p||['Reset','Reserved'].includes(p.function))throw new Error(`${pin}: Pinout에서 핀을 활성화하세요.`);return p;}
   callback(r,name,args=[]){if(r.program.functions[name])r.runCallback({name,args});}
   // User callback as a nested call of the current (ISR) context, so it may loop, delay or be preempted.
@@ -113,7 +131,8 @@ export class HalAdapter {
     }
   }
   // ADC conversion time: (sampling + 12) ADC clocks, ADCCLK = PCLK2 / prescaler (PCLK2 = configured clock).
-  adcConversionUs(sampling){const s=this.adc.get('ADC1'),cycles=[3,15,28,56,84,112,144,480][sampling??0]+12;return cycles*(s?.prescaler??4)*1e6/this.config.timerClockHz;}
+  // F1: sample time + 12.5 cycles at PCLK2 / ADC prescaler (PCLK2 = SYSCLK = timer clock here).
+  adcConversionUs(sampling){if(this.f1)return ([1.5,7.5,13.5,28.5,41.5,55.5,71.5,239.5][sampling??0]+12.5)*(this.adcDiv??2)*1e6/this.config.timerClockHz;const s=this.adc.get('ADC1'),cycles=[3,15,28,56,84,112,144,480][sampling??0]+12;return cycles*(s?.prescaler??4)*1e6/this.config.timerClockHz;}
   // Internal channels: 16 temperature sensor (25 °C), 17 VREFINT (1.21 V), 18 VBAT/4 (3.0 V).
   adcRead(channel,r){if(channel===16)return Math.round(.76/3.3*4095);if(channel===17)return Math.round(1.21/3.3*4095);if(channel===18)return Math.round(.75/3.3*4095);return r.call('analogRead',[this.pinFor('ADC1_IN'+channel)]);}
   declareGlobals(r){for(const ext of this.extensions)ext.declareGlobals?.(r);}
@@ -161,8 +180,29 @@ export class HalAdapter {
     if(this.extiPending&mask){this.extiPending&=~mask;yield* this.userCall(r,'HAL_GPIO_EXTI_Callback',[mask]);}return 0;
   }
   bytes(buffer,count,r){int(count,1,256,'전송 길이');if(typeof buffer==='string'){if(count>buffer.length+1)throw new Error('문자열 범위를 벗어난 전송');return Array.from({length:count},(_,i)=>buffer.charCodeAt(i)||0);}return Array.from({length:count},(_,i)=>int(r.get(r.pointerCell(buffer,i)),0,255,'전송 바이트'));}
+  // STM32F1 specifics: AFIO clock and remaps, JTAG release, ADC clock prescaler and calibration.
+  callF1(name,[a],r){
+    if(name==='__HAL_RCC_AFIO_CLK_ENABLE'){this.afio=true;return 0;}
+    if(/^__HAL_AFIO_REMAP_\w+$/.test(name)){if(!this.afio)throw new Error(`${name}: 먼저 __HAL_RCC_AFIO_CLK_ENABLE()로 AFIO 클록을 켜세요.`);this.remaps.add(name);return 0;}
+    if(name==='HAL_RCCEx_PeriphCLKConfig'){const cfg=r.get(r.pointerCell(a));if(this.field(cfg,'PeriphClockSelection')&2)this.adcDiv=[2,4,6,8][(this.field(cfg,'AdcClockSelection')>>14)&3];return 0;}
+    if(name==='HAL_ADCEx_Calibration_Start'){const {id}=this.requireHandle(a,r,'ADC');this.adc.get(id).calibrated=true;return 0;}
+    if(name==='HAL_RCC_GetPCLK1Freq')return this.config.timerClockHz>36000000?this.config.timerClockHz/2:this.config.timerClockHz;
+    if(['HAL_PWREx_EnableOverDrive','__HAL_PWR_VOLTAGESCALING_CONFIG','HAL_PWREx_ControlVoltageScaling','__HAL_RCC_SYSCFG_CLK_ENABLE'].includes(name))throw new Error(`${name}: STM32F103에는 없는 기능입니다.`);
+    return undefined;
+  }
+  // F1 pins: JTAG pins need SWJ_NOJTAG, remapped signals need their __HAL_AFIO_REMAP_* first, EXTI on B..D needs the AFIO clock.
+  checkF1Pin(pin,p){
+    if(this.family.jtagPins.includes(pin)&&!this.remaps.has('__HAL_AFIO_REMAP_SWJ_NOJTAG')&&!this.remaps.has('__HAL_AFIO_REMAP_SWJ_DISABLE'))throw new Error(`${pin}: 리셋 후 JTAG 핀입니다. __HAL_AFIO_REMAP_SWJ_NOJTAG()를 먼저 호출하세요 (SWD는 유지).`);
+    const id=p.function.split('_')[0],options=this.family.remaps[id];
+    if(options){
+      const assigned=Object.fromEntries(Object.entries(this.config.pins).filter(([,q])=>q.function.startsWith(id+'_')).map(([name,q])=>[q.function.slice(id.length+1),name])),option=remapFor(this.family.id,id,assigned);
+      if(option?.macro&&!this.remaps.has(option.macro))throw new Error(`${pin}: ${id} 신호가 리맵 핀에 있습니다. ${option.macro}()를 먼저 호출하세요.`);
+      const wrong=options.find(o=>o.macro&&o!==option&&this.remaps.has(o.macro));if(wrong)throw new Error(`${pin}: ${wrong.macro}()가 ${id}를 다른 핀으로 옮겼습니다. Pinout의 핀 묶음과 맞추세요.`);
+    }
+    if(p.function==='GPIO_EXTI'&&pin[1]!=='A'&&!this.afio)throw new Error(`${pin}: EXTI를 포트 ${pin[1]}에 연결하려면 __HAL_RCC_AFIO_CLK_ENABLE()가 필요합니다.`);
+  }
   call(name,args,r){
-    const [a,b,c,d,e,f,g]=args;this.runtime=r;const catalogResult=this.catalog.call(name,args,r);if(catalogResult!==undefined)return catalogResult;
+    const [a,b,c,d,e,f,g]=args;this.runtime=r;if(this.f1){const out=this.callF1(name,args,r);if(out!==undefined)return out;}const catalogResult=this.catalog.call(name,args,r);if(catalogResult!==undefined)return catalogResult;
     for(const ext of this.extensions){const out=ext.call?.(name,args,r);if(out!==undefined)return out;}
     if(name==='HAL_Init'){this.nvicModel.setGrouping(3);this.nvicModel.setPriority(SYSTICK,15,0);this.callback(r,'HAL_MspInit');return 0;}
     if(name==='HAL_GetTick')return this.nvicModel.now(r);
@@ -184,7 +224,7 @@ export class HalAdapter {
     if(name==='HAL_NVIC_GetActive'||name==='NVIC_GetActive')return Number(this.nvicModel.active.includes(a));
     if(name==='NVIC_EnableIRQ')return this.call('HAL_NVIC_EnableIRQ',[a],r);if(name==='NVIC_DisableIRQ')return this.call('HAL_NVIC_DisableIRQ',[a],r);
     if(name==='Error_Handler')throw new Error('Error_Handler(): HAL 초기화 또는 사용자 코드 오류');
-    if(/^__HAL_RCC_(GPIO[ABCDH]|SYSCFG|PWR|USART[1236]|UART[45]|I2C1|SPI1|ADC1|TIM[2345]|SDIO|DCMI|DMA[12])_CLK_ENABLE$/.test(name))return 0;
+    if(/^__HAL_RCC_(GPIO[ABCDH]|SYSCFG|PWR|USART[1236]|UART[45]|I2C1|SPI1|ADC1|TIM[2345]|SDIO|DCMI|DMA[12])_CLK_ENABLE$/.test(name)){if(this.f1&&name==='__HAL_RCC_GPIOH_CLK_ENABLE')throw new Error('STM32F103RB에는 GPIOH가 없습니다.');return 0;}
     if(['HAL_RCC_OscConfig','HAL_RCC_ClockConfig','HAL_PWREx_ControlVoltageScaling','HAL_PWREx_EnableOverDrive','__HAL_PWR_VOLTAGESCALING_CONFIG'].includes(name))return 0;
     if(name==='HAL_NVIC_SetPriority'){if(a!==SYSTICK&&!this.nvicModel.isIrq(a))throw new Error(`미지원 IRQ: ${a}`);int(b,0,15,'IRQ priority');this.nvicModel.setPriority(a,b,c??0);if(a===SYSTICK){this.nvicModel.updateTick(r);return 0;}this.priorities.set(a,b);this.subPriorities.set(a,c??0);if(this.nvic.has(a))this.nvic.set(a,b);return 0;}
     if(name==='HAL_NVIC_EnableIRQ'){if(!this.nvicModel.isIrq(a)||PINOUT_IRQS.has(a)&&!this.config.nvic[a]?.enabled)throw new Error(`${a}: NVIC 설정에서 인터럽트를 활성화하세요.`);this.nvic.set(a,this.priorities.get(a)??this.config.nvic[a]?.priority??0);return 0;}
@@ -192,11 +232,13 @@ export class HalAdapter {
     if(name==='HAL_GPIO_Init'){
       const init=r.get(r.pointerCell(b)),mask=this.field(init,'Pin'),mode=this.field(init,'Mode'),pull=this.field(init,'Pull');
       for(const pin of this.pins(a,mask)){
-        if(this.catalog.configurePin(pin,mode,this.field(init,'Alternate'),r))continue;
-        const p=this.configured(pin),expected=p.function==='GPIO_Output'?1:p.function==='GPIO_Input'?0:p.function==='GPIO_EXTI'?HAL_CONSTANTS['GPIO_MODE_IT_'+(p.edge==='CHANGE'?'RISING_FALLING':p.edge)]:p.function==='Analog'||p.function.startsWith('ADC1_')?3:p.function.startsWith('I2C1_')?18:2;
+        if(this.catalog.configurePin(pin,mode,this.f1?0:this.field(init,'Alternate'),r))continue;
+        // F1 peripheral inputs (UART RX, SPI MISO, timer capture/encoder channels) use GPIO_MODE_INPUT.
+        const p=this.configured(pin),afInput=this.f1&&(/_RX$|^SPI1_MISO$/.test(p.function)||/^TIM\d_CH\d$/.test(p.function)&&['capture','encoder'].includes(this.config.peripherals[p.function.split('_')[0]]?.mode)),expected=p.function==='GPIO_Output'?1:p.function==='GPIO_Input'||afInput?0:p.function==='GPIO_EXTI'?HAL_CONSTANTS['GPIO_MODE_IT_'+(p.edge==='CHANGE'?'RISING_FALLING':p.edge)]:p.function==='Analog'||p.function.startsWith('ADC1_')?3:p.function.startsWith('I2C1_')?18:2;
         const dynamic=this.initializedGpio.has(pin)&&(['GPIO_Output','GPIO_Input'].includes(p.function)&&[0,1,17,3].includes(mode)||(p.function==='Analog'||p.function.startsWith('ADC1_'))&&[0,3].includes(mode));
         if(!dynamic&&(mode!==expected&&!(expected===1&&mode===17)||pull!==['NOPULL','PULLUP','PULLDOWN'].indexOf(p.pull)))throw new Error(`${pin}: HAL_GPIO_Init 모드/풀 설정과 Pinout이 다릅니다.`);
-        if([2,18].includes(mode)){const serial=serialFunction(p.function)||/^(USART\d)_CK$/.exec(p.function)?.[1],af=serial?serialAf(serial):p.function.startsWith('I2C1_')?4:p.function.startsWith('SPI1_')?5:p.function.startsWith('SDIO_')?12:timerAf(p.function.split('_')[0]);if(this.field(init,'Alternate')!==af)throw new Error(`${pin}: GPIO Alternate(AF) 설정을 확인하세요.`);}
+        if(this.f1)this.checkF1Pin(pin,p);
+        if([2,18].includes(mode)&&!this.f1){const serial=serialFunction(p.function)||/^(USART\d)_CK$/.exec(p.function)?.[1],af=serial?serialAf(serial):p.function.startsWith('I2C1_')?4:p.function.startsWith('SPI1_')?5:p.function.startsWith('SDIO_')?12:timerAf(p.function.split('_')[0]);if(this.field(init,'Alternate')!==af)throw new Error(`${pin}: GPIO Alternate(AF) 설정을 확인하세요.`);}
         this.initializedGpio.add(pin);
         if(mode===1||mode===17){r.call('pinMode',[pin,'OUTPUT']);r.gpio[pin].openDrain=mode===17;r.gpio[pin].pull=pull;r.call('digitalWrite',[pin,this.latches.get(pin)??p.initial]);}
         // RM0390 7.3.12: analog mode disables both weak pulls and the digital input.
@@ -228,7 +270,8 @@ export class HalAdapter {
         if(get('Mode')!==260||get('Direction')!==0||get('DataSize')!==0||get('CLKPolarity')||get('CLKPhase')||get('FirstBit')||get('NSS')!==512||get('CRCCalculation')||get('TIMode'))throw new Error('SPI1: master, 8비트, mode 0, MSB first, software NSS를 지원합니다.');
         this.buses.call('SPI.setPins',[this.pinFor('SPI1_MOSI'),this.pinFor('SPI1_MISO'),this.pinFor('SPI1_SCK')],r);this.buses.call('SPI.begin',[],r);this.buses.call('SPI.setClock',[this.config.peripherals.SPI1.clock],r);
       }
-      if(type==='ADC'){const nbr=get('NbrOfConversion')||1;if(get('Resolution')||get('DataAlign')||get('ExternalTrigConvEdge')||!Number.isInteger(nbr)||nbr<1||nbr>16||nbr>1&&!get('ScanConvMode'))throw new Error('ADC1: 12비트, 오른쪽 정렬, 소프트웨어 시작, 스캔 시 NbrOfConversion 1~16을 지원합니다.');if(![0,0x10000,0x20000,0x30000].includes(get('ClockPrescaler')))throw new Error('ADC1: ClockPrescaler를 확인하세요.');this.adc.set(id,{active:false,channel:null,value:0,ranks:[],nbr,scan:!!get('ScanConvMode'),continuous:!!get('ContinuousConvMode'),prescaler:[2,4,6,8][get('ClockPrescaler')/0x10000]});}
+      if(type==='ADC'&&this.f1){const nbr=get('NbrOfConversion')||1,adcHz=this.config.timerClockHz/(this.adcDiv??2);if(get('DataAlign')||get('ExternalTrigConv')!==0xE0000||!Number.isInteger(nbr)||nbr<1||nbr>16||nbr>1&&!get('ScanConvMode'))throw new Error('ADC1: 오른쪽 정렬, 소프트웨어 시작(ADC_SOFTWARE_START), 스캔 시 NbrOfConversion 1~16을 지원합니다.');if(adcHz>14000000)throw new Error(`ADC1: ADC 클록 ${adcHz/1e6} MHz가 14 MHz를 넘습니다. HAL_RCCEx_PeriphCLKConfig로 RCC_ADCPCLK2_DIV6 등을 설정하세요.`);this.adc.set(id,{active:false,channel:null,value:0,ranks:[],nbr,scan:!!get('ScanConvMode'),continuous:!!get('ContinuousConvMode'),prescaler:this.adcDiv??2});}
+      if(type==='ADC'&&!this.f1){const nbr=get('NbrOfConversion')||1;if(get('Resolution')||get('DataAlign')||get('ExternalTrigConvEdge')||!Number.isInteger(nbr)||nbr<1||nbr>16||nbr>1&&!get('ScanConvMode'))throw new Error('ADC1: 12비트, 오른쪽 정렬, 소프트웨어 시작, 스캔 시 NbrOfConversion 1~16을 지원합니다.');if(![0,0x10000,0x20000,0x30000].includes(get('ClockPrescaler')))throw new Error('ADC1: ClockPrescaler를 확인하세요.');this.adc.set(id,{active:false,channel:null,value:0,ranks:[],nbr,scan:!!get('ScanConvMode'),continuous:!!get('ContinuousConvMode'),prescaler:[2,4,6,8][get('ClockPrescaler')/0x10000]});}
       if(type==='TIM')this.timerModel.init(a,r,name.split('_')[2],b);
       this.handles.set(id,h);return 0;
     }
@@ -238,11 +281,11 @@ export class HalAdapter {
     if(name==='HAL_UART_Transmit_IT'){
       const channel=this.uart(this.requireHandle(a,r,'UART').id);if(channel.tx||channel.txDma)return 2;const bytes=this.bytes(b,c,r),duration=c*10000/channel.bus.uart.baud;this.uartWrite(channel,bytes,r);channel.tx={handle:a,at:r.microTime+duration*1000};r.event(r.microTime/1000+duration,()=>{});return 0;
     }
-    if(name==='HAL_ADC_ConfigChannel'){const {id}=this.requireHandle(a,r,'ADC'),s=this.adc.get(id),cfg=r.get(r.pointerCell(b)),channel=int(this.field(cfg,'Channel'),0,18,'ADC 채널'),rank=this.field(cfg,'Rank');if(!Number.isInteger(rank)||rank<1||rank>s.nbr)throw new Error(`ADC Rank는 1~${s.nbr}(NbrOfConversion)입니다.`);if(channel<16)this.pinFor('ADC1_IN'+channel);s.ranks[rank-1]={channel,sampling:int(this.field(cfg,'SamplingTime'),0,7,'ADC SamplingTime')};if(rank===1)s.channel=channel;return 0;}
+    if(name==='HAL_ADC_ConfigChannel'){const {id}=this.requireHandle(a,r,'ADC'),s=this.adc.get(id),cfg=r.get(r.pointerCell(b)),channel=int(this.field(cfg,'Channel'),0,this.f1?17:18,'ADC 채널'),rank=this.field(cfg,'Rank');if(!Number.isInteger(rank)||rank<1||rank>s.nbr)throw new Error(`ADC Rank는 1~${s.nbr}(NbrOfConversion)입니다.`);if(channel<16)this.pinFor('ADC1_IN'+channel);s.ranks[rank-1]={channel,sampling:int(this.field(cfg,'SamplingTime'),0,7,'ADC SamplingTime')};if(rank===1)s.channel=channel;return 0;}
     if(name==='HAL_ADC_Start_IT'||name==='HAL_ADC_Stop_IT'){
       const {id}=this.requireHandle(a,r,'ADC'),s=this.adc.get(id);if(s.channel===null)throw new Error('ADC 채널 설정이 필요합니다.');s.generation=(s.generation||0)+1;if(name.endsWith('Stop_IT')){s.active=false;return 0;}
-      const gen=s.generation,hal=this;s.active=true;this.noticeIrq.add('ADC_IRQn');let k=0;
-      const convert=()=>{if(s.generation!==gen||!s.active)return;const x=s.ranks[k%s.nbr]??{channel:s.channel,sampling:0};s.value=this.adcRead(x.channel,r);k++;this.queue('ADC_IRQn',function*(){yield* hal.userCall(r,'HAL_ADC_ConvCpltCallback',[a]);},id+':eoc');if(s.continuous||k<(s.scan?s.nbr:1))r.event((r.microTime+this.adcConversionUs((s.ranks[k%s.nbr]??x).sampling))/1000,convert);else s.active=false;};
+      const gen=s.generation,hal=this;s.active=true;this.noticeIrq.add(this.adcIrq);let k=0;
+      const convert=()=>{if(s.generation!==gen||!s.active)return;const x=s.ranks[k%s.nbr]??{channel:s.channel,sampling:0};s.value=this.adcRead(x.channel,r);k++;this.queue(this.adcIrq,function*(){yield* hal.userCall(r,'HAL_ADC_ConvCpltCallback',[a]);},id+':eoc');if(s.continuous||k<(s.scan?s.nbr:1))r.event((r.microTime+this.adcConversionUs((s.ranks[k%s.nbr]??x).sampling))/1000,convert);else s.active=false;};
       r.event((r.microTime+this.adcConversionUs((s.ranks[0]??{sampling:0}).sampling))/1000,convert);return 0;
     }
     if(['HAL_ADC_Start','HAL_ADC_Stop','HAL_ADC_PollForConversion','HAL_ADC_GetValue'].includes(name)){

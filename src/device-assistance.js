@@ -137,7 +137,7 @@ export function deviceModule(binding,project,slot=slotOf(project,binding)){
   const gpio=setup({...config,peripherals:{}});
   return {declarations:'',init:'SystemCoreClockUpdate();',step:expand(step+'\nBM_delay(100);'),gpio:gpio.trim()?expand(gpio):'',functions,handles:[]};
  }
- const parsed=compileHal(sample.code),decls=parsed.globals.flatMap(g=>g.declarations),sampleHandles=decls.filter(d=>d.type.endsWith('_HandleTypeDef')),names={};
+ const parsed=compileHal(sample.code,[],sample.mcu?.family),decls=parsed.globals.flatMap(g=>g.declarations),sampleHandles=decls.filter(d=>d.type.endsWith('_HandleTypeDef')),names={};
  for(const g of decls)if(!sampleHandles.some(h=>h.name===g.name))names[g.name]=prefix+g.name;
  const example=exampleStatements(sample,binding.api,prefix),map=text=>remapCode(replaceIdentifiers(text,names),binding,sample);
  const adc=Object.keys(config.pins).find(pin=>config.pins[pin].function.startsWith('ADC1_')),channel=adc?config.pins[adc].function.slice(7):null;
@@ -237,7 +237,7 @@ export function applyDeviceExample(original,target,options={}){
  }
  installBinding(project,binding);
  const hasBare=updateTarget(project,original);
- const validated=validateProject(project);if(!hasBare)compileHal(validated.code,validated.firmware.files);return {project:validated,report,binding,file:'main.c'};
+ const validated=validateProject(project);if(!hasBare)compileHal(validated.code,validated.firmware.files,validated.mcu?.family);return {project:validated,report,binding,file:'main.c'};
 }
 // Keeps a removed device's wires when another applied example still depends on them.
 function bindingGroups(project,b){
@@ -290,6 +290,6 @@ export function removeDeviceExample(original,target,{circuit=false}={}){
  restoreConfig(project,binding,report);
  if(circuit)removeCircuit(project,binding,report);
  const hasBare=updateTarget(project,original),validated=validateProject(project);
- if(!hasBare)try{compileHal(validated.code,validated.firmware.files);}catch(error){report.warnings.push('제거 후 main.c 확인 필요: '+error.message);}
+ if(!hasBare)try{compileHal(validated.code,validated.firmware.files,validated.mcu?.family);}catch(error){report.warnings.push('제거 후 main.c 확인 필요: '+error.message);}
  return {project:validated,report,binding,file:'main.c',action:'remove'};
 }

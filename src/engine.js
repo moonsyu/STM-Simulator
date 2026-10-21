@@ -2,7 +2,7 @@ import {physicalToModel,physicalResult,physicalTopology} from './catalog-model.j
 import {catalogBranches} from './catalog-electrical.js';
 import {l298Branches,l298BranchOn,l298State} from './l298n.js';
 import {MODULE_DEVICES,I2C_DEVICES,ldrResistance,ntcResistance} from './device-defs.js';
-import {PINS, circuitHoles, GPIO_PINS, canonicalPin, boardPin} from './pins.js';
+import {boardPins, circuitHoles, ALL_GPIO_PINS, canonicalPin, boardPin} from './pins.js';
 import {terminalKeys,attachments,PART_DEFS} from './components.js';
 
 export class UnionFind {
@@ -13,7 +13,7 @@ export class UnionFind {
 export function topology(project,pressed={}) {
   const model=physicalToModel(project);if(model!==project)return physicalTopology(topology(model,pressed),model);
   const uf=new UnionFind();
-  for(const p of (project.surfaces?.board?.hidden?[]:PINS)){uf.find(p.id);if(p.signal!=='NC')uf.join(p.id,`signal:${p.signal==='AGND'?'GND':p.signal}`);}
+  for(const p of (project.surfaces?.board?.hidden?[]:boardPins(project.boardId))){uf.find(p.id);if(p.signal!=='NC')uf.join(p.id,`signal:${p.signal==='AGND'?'GND':p.signal}`);}
   for(const h of circuitHoles(project.components,project.surfaces))uf.join(h.id,h.bus);
   for(const p of project.components){
     for(const key of terminalKeys(p)){const id=`part:${p.id}:${key}`;uf.find(id);if(attachments(p)[key])uf.join(id,attachments(p)[key]);}
@@ -45,7 +45,7 @@ export function solveCircuit(project,gpio={},pressed={},transient={}){
   for(const p of ['5V','U5V'])fixed(`signal:${p}`,5);
   if(warnings.length)return {fault:true,warnings:[...new Set(warnings)],parts:{},voltage:()=>null,current:0,uf};
   const branch=(a,b,r,extra={})=>{const aa=uf.find(a),bb=uf.find(b);roots.add(aa);roots.add(bb);branches.push({a:aa,b:bb,r,...extra});};
-  for(const pin of GPIO_PINS){
+  for(const pin of ALL_GPIO_PINS){
     const g=gpio[pin]||{mode:'INPUT'};
     if(g.mode==='OUTPUT'&&!(g.openDrain&&g.value>0)){
       fixed(`drive:${pin}`,g.value??0);branch(`signal:${pin}`,`drive:${pin}`,40,{gpio:pin});
