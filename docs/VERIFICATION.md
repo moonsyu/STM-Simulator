@@ -1,5 +1,15 @@
 # 검증 기록
 
+## 0.33.2 실행은 항상 보드에 기록 · 다른 보드 거부 — 공개 배포 검증 완료
+
+2026-10-21. 제품 커밋 `46cd7f56d03760a7e09f1c50f7558c96dda6294c` · [Windows CI 39567830174](https://github.com/moonsyu/STM-Simulator/actions/runs/39567830174) 첫 실행 성공 · [Release v0.33.2](https://github.com/moonsyu/STM-Simulator/releases/tag/v0.33.2).
+
+| 검사 | 결과 |
+|---|---|
+| `npm test` (로컬) | 708개 중 705 통과·1 건너뜀(실패 2개는 로컬 심볼릭 링크 권한, CI 통과). ST-LINK 선택에 다른 종류 보드 거부 추가 |
+| 실제 앱 화면 + 실물 F446RE | 연결 설정 없음(기본값)으로 사용자 마지막 프로젝트를 열고 Ctrl+F5: Programming Finished · Verified OK, OpenOCD 종료, 코어 실행, PA5 토글 |
+| 공개 자산 | latest=v0.33.2, 태그·BUILD-INFO 커밋 일치, 5자산. EXE SHA-256 `6174099ce2841b51be4c67915f386231dec3cf2983a26b0e0a6ba4f147216973`(103,016,567 B, MZ)이 SHA256.txt·update-manifest·ZIP 안 EXE와 일치. ZIP SHA-256 `c642a2f5063a3d6a0e04934e9341a4310b68c3be5e9530aed8876f69763ee1d6` |
+
 ## 0.33.1 실물 보드 실행 후 디버거 분리 — 공개 배포 검증 완료
 
 2026-10-21. 제품 커밋 `206d9115f1a1c2bb18fd015df6ad3c9eb990efb0` · [Windows CI 39563744650](https://github.com/moonsyu/STM-Simulator/actions/runs/39563744650) 첫 실행 성공 · [Release v0.33.1](https://github.com/moonsyu/STM-Simulator/releases/tag/v0.33.1).
