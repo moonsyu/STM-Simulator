@@ -80,7 +80,7 @@ test('every HAL example main.c formats idempotently without changing tokens',()=
 
 test('expandC puts each statement on its own line and keeps initializers, for headers, strings and comments',()=>{
  const src='void f(uint8_t v){uint8_t b[2]={0,v}; for(int i=0;i<2;i++){g(b[i]);} if(v){h();}else{k();} /* done */\nswitch(v){case 1: a(); break; default: break;}\nprintf("x;{y}"); // a;b\n#define M(x) do{x;}while(0)\ndo{v--;}while(v);}';
- const out=expandC(src).split('\n');
+ const out=expandC(src,{tabSize:2}).split('\n');
  assert.deepEqual(out,[
   'void f(uint8_t v) {',
   '  uint8_t b[2]={0, v};',
@@ -156,4 +156,14 @@ test('save-time formatting moves breakpoints to the line their statement now sta
  assert.equal(formatProjectSources(p,4),true);
  assert.equal(p.code,'void f(void) {\n    a();\n    b();\n    c();\n}');
  assert.deepEqual(p.ide.breakpoints,[{file:'main.c',line:4},{file:'other.c',line:2}]);
+});
+
+test('code the app writes (new project, 코드 초기화, HAL examples) is indented with 4 spaces',async()=>{
+ const {resetMainCode}=await import('../../src/code-reset.js');
+ // Block comment interiors keep the author's layout, so only code lines and comment openers count.
+ const indents=code=>{let inside=false;return code.split('\n').filter(l=>{const was=inside;if(/\/\*/.test(l)&&!/\*\//.test(l.slice(l.lastIndexOf('/*'))))inside=true;else if(inside&&/\*\//.test(l))inside=false;return !was&&/^ +\S/.test(l);}).map(l=>l.match(/^ */)[0].length);};
+ const fourSpaced=(code,id)=>{const bad=indents(code).filter(n=>n%4);assert.deepEqual(bad,[],id);assert.ok(indents(code).includes(4),id);};
+ fourSpaced(blankProject().code,'blank');
+ fourSpaced(resetMainCode(blankProject()).code,'reset');
+ for(const id of Object.keys(allHalExamples()))fourSpaced(applyHalExample(blankProject(),id).code,id);
 });
