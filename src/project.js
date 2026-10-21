@@ -9,7 +9,7 @@ import {validScale} from './geometry.js';
 import {validateNoise} from './signals.js';
 import {validCardImage,SD_SIZES} from './sdcard.js';
 import {validCameraImage,CAMERA_PATTERNS} from './camera.js';
-export function blankProject(){const mcu={...defaultMcu(),pins:{}};return {format:'stm32-circuit-lab',version:2,name:'새 회로',components:[],wires:[],surfaces:{board:{hidden:true},breadboard:{hidden:true}},mcu,firmware:{mode:'hal',files:[]},code:expandC(generateHal(mcu).replace('/* USER CODE BEGIN 2 */','/* USER CODE BEGIN 2 */\n  printf("HAL ready\\n");'))};}
+export function blankProject(family){const mcu={...defaultMcu(family),pins:{}};return {format:'stm32-circuit-lab',version:2,name:'새 회로',components:[],wires:[],surfaces:{board:{hidden:true},breadboard:{hidden:true}},mcu,firmware:{mode:'hal',files:[]},code:expandC(generateHal(mcu).replace('/* USER CODE BEGIN 2 */','/* USER CODE BEGIN 2 */\n  printf("HAL ready\\n");'))};}
 // Complete example circuits explicitly include the legacy board and breadboard.
 export function exampleProject(){const p=blankProject();delete p.surfaces;return p;}
 export function validateProject(data){
@@ -84,7 +84,7 @@ export function validateProject(data){
       project.surfaces[key]=surface;
     }
   }
-  if(data.mcu!==undefined)project.mcu=validateMcu(data.mcu);
+  if(data.mcu!==undefined){project.mcu=validateMcu(data.mcu);const board=getBoard(data.boardId??DEFAULT_BOARD_ID);if(project.mcu.family!==board.mcuFamily)throw new Error(`${board.name} 보드에는 ${board.mcuFamily} 핀 설정이 필요합니다 (${project.mcu.family}).`);}
   if(data.firmware!==undefined){
     if(!data.firmware||!['sketch','hal'].includes(data.firmware.mode)||!Array.isArray(data.firmware.files)||data.firmware.files.length>40)throw new Error('펌웨어 소스 설정이 올바르지 않습니다.');
     const names=new Set();let size=data.code.length;
@@ -113,7 +113,7 @@ export function validateProject(data){
   }
   return project;
 }
-export function projectForBoard(id=DEFAULT_BOARD_ID){if(!getBoard(id))throw new Error('지원하지 않는 보드입니다.');return {...blankProject(),boardId:id,surfaces:{board:{hidden:false},breadboard:{hidden:true}}};}
+export function projectForBoard(id=DEFAULT_BOARD_ID){const board=getBoard(id);if(!board)throw new Error('지원하지 않는 보드입니다.');return {...blankProject(board.mcuFamily),boardId:id,surfaces:{board:{hidden:false},breadboard:{hidden:true}}};}
 // Compare document contents, not the file-save flag. Saving does not make a circuit blank.
 export function hasBoardChanges(project){
  const normalize=p=>{const q=validateProject(p);return {...q,boardId:q.boardId??DEFAULT_BOARD_ID,simulation:q.simulation??{stepMs:1,pwmWaveform:false}};};

@@ -26,8 +26,20 @@ header('CN8',Object.keys(ALIASES).filter(k=>/^A\d$/.test(k)).map(k=>[k,ALIASES[k
 header('CN5',[['D15','PB8'],['D14','PB9'],['AREF','AVDD'],'GND',...['D13','D12','D11','D10','D9','D8'].map(k=>[k,ALIASES[k]])],396,280,15,i=>10-i);
 header('CN9',['D7','D6','D5','D4','D3','D2','D1','D0'].map(k=>[k,ALIASES[k]]),396,450,15,i=>8-i);
 export const PINS = Object.freeze(headers);
+// NUCLEO-F103RB uses the same MB1136 board; UM1724 table 29 lists CN7-29/31 as PD0/PD1 (no port H on the F103)
+// and CN10-18 as PB11 (VCAP1 on the F446RE, left unconnected).
+const BOARD_SIGNALS={'nucleo-f103rb':{'board:CN7:29':'PD0','board:CN7:31':'PD1','board:CN10:18':'PB11'}};
+const boardPinCache=new Map();
+/** Header pins of a board: the F446RE layout with that board's signal differences applied. */
+export function boardPins(boardId){
+  const over=BOARD_SIGNALS[boardId];if(!over)return PINS;
+  if(!boardPinCache.has(boardId))boardPinCache.set(boardId,Object.freeze(PINS.map(p=>over[p.id]?Object.freeze({...p,label:over[p.id],signal:over[p.id]}):p)));
+  return boardPinCache.get(boardId);
+}
 export const PIN_BY_ID = new Map(PINS.map(p=>[p.id,p]));
 export const GPIO_PINS = [...new Set(PINS.map(p=>p.signal).filter(s=>/^P[A-H]\d+$/.test(s)))].sort();
+/** Every GPIO name on any supported board (pin names the C runtime and circuit engine accept). */
+export const ALL_GPIO_PINS = [...new Set([...GPIO_PINS,...Object.values(BOARD_SIGNALS).flatMap(o=>Object.values(o))])].sort();
 export const HOLES = [];
 const letters='abcdefghij';
 for(let row=1;row<=30;row++)for(let c=0;c<10;c++) {

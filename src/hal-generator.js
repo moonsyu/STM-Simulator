@@ -1,17 +1,18 @@
 import {SERIAL_IDS,isSerial,serialAf,serialHandle,serialFunction} from './serial-config.js';
 import {TIMER_IDS,isTimer,timerAf} from './timer-config.js';
 import {DEFAULT_TIMER_CLOCK_HZ} from './mcu-defaults.js';
+import {familyProfile,remapFor} from './mcu-family.js';
 // DMA handle names / link fields / data widths per request (CubeMX naming).
 const dmaHandle=request=>request==='MEMTOMEM'?'hdma_memtomem':'hdma_'+request.toLowerCase();
 const dmaLink=request=>request==='ADC1'||request==='DCMI'?'DMA_Handle':/_CH(\d)$/.test(request)?`hdma[TIM_DMA_ID_CC${/_CH(\d)$/.exec(request)[1]}]`:/_RX$/.test(request)?'hdmarx':'hdmatx';
 const dmaWidth=request=>request==='ADC1'?['HALFWORD','HALFWORD']:/^TIM\d_CH/.test(request)?['WORD','HALFWORD']:request==='DCMI'||request.startsWith('SDIO')?['WORD','WORD']:['BYTE','BYTE'];
 const dmaDir=request=>request==='MEMTOMEM'?'DMA_MEMORY_TO_MEMORY':/_RX$|^ADC1$|^DCMI$/.test(request)?'DMA_PERIPH_TO_MEMORY':'DMA_MEMORY_TO_PERIPH';
 const dmaOwner=request=>request==='MEMTOMEM'?null:request==='ADC1'||request==='DCMI'?request:request.startsWith('SDIO')?'SDIO':request.replace(/_(RX|TX|CH\d)$/,'');
-function dmaLines(name,request,d){
+function dmaLines(name,request,d,f1=false){
   const [p,m]=dmaWidth(request),set=(k,v)=>`  ${name}.Init.${k} = ${v};`;
-  return [`  ${name}.Instance = ${d.stream};`,set('Channel','DMA_CHANNEL_'+d.channel),set('Direction',dmaDir(request)),set('PeriphInc',request==='MEMTOMEM'?'DMA_PINC_ENABLE':'DMA_PINC_DISABLE'),set('MemInc','DMA_MINC_ENABLE'),
+  return [`  ${name}.Instance = ${d.stream};`,...(f1?[]:[set('Channel','DMA_CHANNEL_'+d.channel)]),set('Direction',dmaDir(request)),set('PeriphInc',request==='MEMTOMEM'?'DMA_PINC_ENABLE':'DMA_PINC_DISABLE'),set('MemInc','DMA_MINC_ENABLE'),
     set('PeriphDataAlignment','DMA_PDATAALIGN_'+p),set('MemDataAlignment','DMA_MDATAALIGN_'+m),set('Mode',d.mode==='circular'?'DMA_CIRCULAR':'DMA_NORMAL'),set('Priority','DMA_PRIORITY_'+d.priority.toUpperCase()),
-    set('FIFOMode',request.startsWith('SDIO')?'DMA_FIFOMODE_ENABLE':'DMA_FIFOMODE_DISABLE'),`  if (HAL_DMA_Init(&${name}) != HAL_OK) Error_Handler();`];
+    ...(f1?[]:[set('FIFOMode',request.startsWith('SDIO')?'DMA_FIFOMODE_ENABLE':'DMA_FIFOMODE_DISABLE')]),`  if (HAL_DMA_Init(&${name}) != HAL_OK) Error_Handler();`];
 }
 
 export function clockPlan(hz){
@@ -21,15 +22,25 @@ export function clockPlan(hz){
   for(const divider of [4,2,6,8]){const n=hz*divider/1000000;if(hz<=90000000&&Number.isInteger(n)&&n>=100&&n<=432)return {source:'PLLCLK',apb1:2,n,divider,latency:Math.ceil(hz/30000000)-1};}
   throw new Error('main.c 생성: HSI 기본 16 MHz 또는 HSI PLL로 만들 수 있는 APB1 타이머 클록(12.5~90 MHz)을 사용하세요.');
 }
+// STM32F103: SYSCLK = HSI 8 MHz, or HSI/2 × PLLMUL (2..16). APB1 ≤ 36 MHz, so above that it runs at /2 and the
+// timer clocks double back to SYSCLK: the timer clock is always SYSCLK. Flash: 0 WS ≤ 24 MHz, 1 WS ≤ 48 MHz, 2 WS above.
+export function clockPlanF1(hz){
+  const latency=hz<=24000000?0:hz<=48000000?1:2;
+  if(hz===8000000)return {source:'HSI',apb1:1,latency:0};
+  const mul=hz/4000000;
+  if(Number.isInteger(mul)&&mul>=2&&mul<=16)return {source:'PLLCLK',apb1:hz>36000000?2:1,mul,latency};
+  throw new Error('main.c 생성: STM32F103은 HSI 8 MHz 또는 HSI/2 PLL로 만들 수 있는 8~64 MHz(4 MHz 단위) 타이머 클록을 사용하세요.');
+}
 export function generateMain(config,{minimal=false}={}){
-  const clock=clockPlan(config.timerClockHz),pins=Object.entries(config.pins).filter(([,p])=>!['Reset','Reserved'].includes(p.function)),irqs=Object.entries(config.nvic).filter(([,p])=>p.enabled),gpioInit=!minimal||pins.length>0||irqs.length>0,lines=['#include "main.h"',...(minimal?[]:['#include <stdio.h>']),'',
-    '/* Copy this main.c into a CubeIDE STM32F446RE project with matching',
+  const family=familyProfile(config.family),f1=family.pinMux==='remap';
+  const clock=f1?clockPlanF1(config.timerClockHz):clockPlan(config.timerClockHz),pins=Object.entries(config.pins).filter(([,p])=>!['Reset','Reserved'].includes(p.function)),irqs=Object.entries(config.nvic).filter(([,p])=>p.enabled),gpioInit=!minimal||pins.length>0||irqs.length>0,lines=['#include "main.h"',...(minimal?[]:['#include <stdio.h>']),'',
+    `/* Copy this main.c into a CubeIDE ${family.id} project with matching`,
     ' * pin / peripheral / NVIC settings and Cube-generated IRQ / MSP files.',
     ' * Clock: '+(clock.source==='HSI'?'HSI direct (PLL off)':'HSI PLL')+', APB1 timer clock = '+config.timerClockHz+' Hz.',
     ...(minimal?[' */']:[' * printf: SWV ITM port 0 (enable SWV in the debugger). UART uses its pins.',
     ' * With newlib-nano, enable -u _printf_float for floating-point printf. */']),''];
   const sync=id=>isSerial(id)&&config.peripherals[id]?.mode==='synchronous',dma=Object.entries(config.dma||{});
-  const handles={...Object.fromEntries(SERIAL_IDS.map(id=>[id,sync(id)?['USART','husart'+id.replace(/\D/g,'')]:['UART',serialHandle(id)]])),I2C1:['I2C','hi2c1'],SPI1:['SPI','hspi1'],ADC1:['ADC','hadc1'],SDIO:['SD','hsd'],DCMI:['DCMI','hdcmi'],...Object.fromEntries(TIMER_IDS.map(id=>[id,['TIM','htim'+id.slice(3)]]))};
+  const handles={...Object.fromEntries(Object.keys(family.serial).map(id=>[id,sync(id)?['USART','husart'+id.replace(/\D/g,'')]:['UART',serialHandle(id)]])),I2C1:['I2C','hi2c1'],SPI1:['SPI','hspi1'],ADC1:['ADC','hadc1'],SDIO:['SD','hsd'],DCMI:['DCMI','hdcmi'],...Object.fromEntries(Object.keys(family.timers).map(id=>[id,['TIM','htim'+id.slice(3)]]))};
   const active=Object.entries(config.peripherals).filter(([,p])=>p.enabled),serials=active.filter(([id])=>isSerial(id)),timers=active.filter(([id])=>isTimer(id));
   for(const [id]of active){const [type,name]=handles[id];lines.push(`${type}_HandleTypeDef ${name};`);}
   for(const [request]of dma)lines.push(`DMA_HandleTypeDef ${dmaHandle(request)};`);
@@ -46,31 +57,44 @@ export function generateMain(config,{minimal=false}={}){
   const output=Object.entries(config.pins).find(([,p])=>p.function==='GPIO_Output');if(!minimal&&output)lines.push(`    HAL_GPIO_TogglePin(GPIO${output[0][1]}, GPIO_PIN_${output[0].slice(2)});`);
   lines.push(...(minimal?[]:['    HAL_Delay(500);']),'    /* USER CODE END 3 */','  }','}','',
     'void SystemClock_Config(void) {','  RCC_OscInitTypeDef osc = {0};','  RCC_ClkInitTypeDef clk = {0};',
-    '  __HAL_RCC_PWR_CLK_ENABLE();','  __HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE1);',
+    ...(f1?[]:['  __HAL_RCC_PWR_CLK_ENABLE();','  __HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE1);']),
     '  osc.OscillatorType = RCC_OSCILLATORTYPE_HSI;','  osc.HSIState = RCC_HSI_ON;','  osc.HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT;',
-    ...(clock.source==='HSI'?['  osc.PLL.PLLState = RCC_PLL_OFF;']:['  osc.PLL.PLLState = RCC_PLL_ON;','  osc.PLL.PLLSource = RCC_PLLSOURCE_HSI;','  osc.PLL.PLLM = 16;',`  osc.PLL.PLLN = ${clock.n};`,`  osc.PLL.PLLP = RCC_PLLP_DIV${clock.divider};`,'  osc.PLL.PLLQ = 7;']),
+    ...(clock.source==='HSI'?['  osc.PLL.PLLState = RCC_PLL_OFF;']:f1?['  osc.PLL.PLLState = RCC_PLL_ON;','  osc.PLL.PLLSource = RCC_PLLSOURCE_HSI_DIV2;',`  osc.PLL.PLLMUL = RCC_PLL_MUL${clock.mul};`]:['  osc.PLL.PLLState = RCC_PLL_ON;','  osc.PLL.PLLSource = RCC_PLLSOURCE_HSI;','  osc.PLL.PLLM = 16;',`  osc.PLL.PLLN = ${clock.n};`,`  osc.PLL.PLLP = RCC_PLLP_DIV${clock.divider};`,'  osc.PLL.PLLQ = 7;']),
     '  if (HAL_RCC_OscConfig(&osc) != HAL_OK) Error_Handler();',
     '  clk.ClockType = RCC_CLOCKTYPE_HCLK | RCC_CLOCKTYPE_SYSCLK | RCC_CLOCKTYPE_PCLK1 | RCC_CLOCKTYPE_PCLK2;',
     `  clk.SYSCLKSource = RCC_SYSCLKSOURCE_${clock.source};`,'  clk.AHBCLKDivider = RCC_SYSCLK_DIV1;',
     `  clk.APB1CLKDivider = RCC_HCLK_DIV${clock.apb1};`,'  clk.APB2CLKDivider = RCC_HCLK_DIV1;',
-    `  if (HAL_RCC_ClockConfig(&clk, FLASH_LATENCY_${clock.latency}) != HAL_OK) Error_Handler();`,'}');
+    `  if (HAL_RCC_ClockConfig(&clk, FLASH_LATENCY_${clock.latency}) != HAL_OK) Error_Handler();`);
+  // F1 ADC clock (PCLK2 = SYSCLK here) must stay at or below 14 MHz.
+  if(f1&&config.peripherals.ADC1?.enabled){const div=[2,4,6,8].find(n=>config.timerClockHz/n<=14000000);lines.push('  RCC_PeriphCLKInitTypeDef periph = {0};','  periph.PeriphClockSelection = RCC_PERIPHCLK_ADC;',`  periph.AdcClockSelection = RCC_ADCPCLK2_DIV${div};`,'  if (HAL_RCCEx_PeriphCLKConfig(&periph) != HAL_OK) Error_Handler();');}
+  lines.push('}');
   if(gpioInit){
   lines.push('', 'static void MX_GPIO_Init(void) {',...(!minimal||pins.length?['  GPIO_InitTypeDef GPIO_InitStruct = {0};']:[]));
   for(const port of new Set(pins.map(([pin])=>pin[1])))lines.push(`  __HAL_RCC_GPIO${port}_CLK_ENABLE();`);
+  if(f1){
+    // AFIO routes EXTI lines and remaps; PA15/PB3/PB4 are JTAG pins until JTAG is released (SWD stays on).
+    const remaps=Object.keys(family.remaps).map(id=>remapFor(family.id,id,Object.fromEntries(pins.filter(([,p])=>p.function.startsWith(id+'_')).map(([pin,p])=>[p.function.slice(id.length+1),pin])))?.macro).filter(Boolean);
+    const jtag=pins.some(([pin])=>family.jtagPins.includes(pin));
+    if(remaps.length||jtag||pins.some(([,p])=>p.function==='GPIO_EXTI'))lines.push('  __HAL_RCC_AFIO_CLK_ENABLE();');
+    if(jtag)lines.push('  __HAL_AFIO_REMAP_SWJ_NOJTAG();');
+    for(const macro of remaps)lines.push(`  ${macro}();`);
+  }
   for(const [pin,p]of pins){
     if(p.function==='GPIO_Output')lines.push(`  HAL_GPIO_WritePin(GPIO${pin[1]}, GPIO_PIN_${pin.slice(2)}, GPIO_PIN_${p.initial?'SET':'RESET'});`);
-    const mode=p.function==='GPIO_Output'?'OUTPUT_PP':p.function==='GPIO_EXTI'?`IT_${p.edge==='CHANGE'?'RISING_FALLING':p.edge}`:p.function==='Analog'||p.function.startsWith('ADC1_')?'ANALOG':p.function==='GPIO_Input'?'INPUT':p.function.startsWith('I2C1_')?'AF_OD':'AF_PP';
+    // F1 peripheral inputs (UART RX, SPI MISO, timer capture/encoder channels) are plain inputs.
+    const afInput=f1&&(/_RX$|^SPI1_MISO$/.test(p.function)||/^TIM\d_CH\d$/.test(p.function)&&['capture','encoder'].includes(config.peripherals[p.function.split('_')[0]]?.mode));
+    const mode=p.function==='GPIO_Output'?'OUTPUT_PP':p.function==='GPIO_EXTI'?`IT_${p.edge==='CHANGE'?'RISING_FALLING':p.edge}`:p.function==='Analog'||p.function.startsWith('ADC1_')?'ANALOG':p.function==='GPIO_Input'||afInput?'INPUT':p.function.startsWith('I2C1_')?'AF_OD':'AF_PP';
     lines.push(`  GPIO_InitStruct.Pin = GPIO_PIN_${pin.slice(2)};`,`  GPIO_InitStruct.Mode = GPIO_MODE_${mode};`,`  GPIO_InitStruct.Pull = GPIO_${p.pull};`);
-    if(!minimal||mode==='OUTPUT_PP'||mode.startsWith('AF_'))lines.push('  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;');
-    if(mode.startsWith('AF_')){const serial=serialFunction(p.function)||/^(USART\d)_CK$/.exec(p.function)?.[1],timer=p.function.split('_')[0],af=serial?`GPIO_AF${serialAf(serial)}_${serial}`:p.function.startsWith('I2C1_')?'GPIO_AF4_I2C1':p.function.startsWith('SPI1_')?'GPIO_AF5_SPI1':p.function.startsWith('SDIO_')?'GPIO_AF12_SDIO':`GPIO_AF${timerAf(timer)}_${timer}`;lines.push(`  GPIO_InitStruct.Alternate = ${af};`);}
+    if(!minimal||mode==='OUTPUT_PP'||mode.startsWith('AF_'))lines.push(`  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_${f1?'HIGH':'VERY_HIGH'};`);
+    if(mode.startsWith('AF_')&&!f1){const serial=serialFunction(p.function)||/^(USART\d)_CK$/.exec(p.function)?.[1],timer=p.function.split('_')[0],af=serial?`GPIO_AF${serialAf(serial)}_${serial}`:p.function.startsWith('I2C1_')?'GPIO_AF4_I2C1':p.function.startsWith('SPI1_')?'GPIO_AF5_SPI1':p.function.startsWith('SDIO_')?'GPIO_AF12_SDIO':`GPIO_AF${timerAf(timer)}_${timer}`;lines.push(`  GPIO_InitStruct.Alternate = ${af};`);}
     lines.push(`  HAL_GPIO_Init(GPIO${pin[1]}, &GPIO_InitStruct);`);
   }
-  for(const [irq,p]of irqs)if(!/^DMA\d_Stream\d_IRQn$/.test(irq))lines.push(`  HAL_NVIC_SetPriority(${irq}, ${p.priority}, 0);`,`  HAL_NVIC_EnableIRQ(${irq});`);
+  for(const [irq,p]of irqs)if(!/^DMA\d_(Stream|Channel)\d_IRQn$/.test(irq))lines.push(`  HAL_NVIC_SetPriority(${irq}, ${p.priority}, 0);`,`  HAL_NVIC_EnableIRQ(${irq});`);
   lines.push('}');
   }
   if(dma.length){
     lines.push('','static void MX_DMA_Init(void) {',...[...new Set(dma.map(([,d])=>d.stream.slice(0,4)))].sort().map(c=>`  __HAL_RCC_${c}_CLK_ENABLE();`));
-    for(const [request,d]of dma)if(request==='MEMTOMEM')lines.push(...dmaLines(dmaHandle(request),request,d));
+    for(const [request,d]of dma)if(request==='MEMTOMEM')lines.push(...dmaLines(dmaHandle(request),request,d,f1));
     for(const [,d]of dma)lines.push(`  HAL_NVIC_SetPriority(${d.stream}_IRQn, ${config.nvic[d.stream+'_IRQn']?.priority??0}, 0);`,`  HAL_NVIC_EnableIRQ(${d.stream}_IRQn);`);
     lines.push('}');
   }
@@ -82,7 +106,8 @@ export function generateMain(config,{minimal=false}={}){
     if(id==='DCMI')for(const [k,v]of Object.entries({SynchroMode:'DCMI_SYNCHRO_HARDWARE',PCKPolarity:'DCMI_PCKPOLARITY_RISING',VSPolarity:'DCMI_VSPOLARITY_LOW',HSPolarity:'DCMI_HSPOLARITY_LOW',CaptureRate:'DCMI_CR_ALL_FRAME',ExtendedDataMode:'DCMI_EXTEND_DATA_8B',JPEGMode:'DCMI_JPEG_DISABLE'}))set(k,v);
     if(id==='I2C1')for(const [k,v]of Object.entries({ClockSpeed:p.clock,DutyCycle:'I2C_DUTYCYCLE_2',OwnAddress1:0,AddressingMode:'I2C_ADDRESSINGMODE_7BIT',DualAddressMode:'I2C_DUALADDRESS_DISABLE',OwnAddress2:0,GeneralCallMode:'I2C_GENERALCALL_DISABLE',NoStretchMode:'I2C_NOSTRETCH_DISABLE'}))set(k,v);
     if(id==='SPI1')for(const [k,v]of Object.entries({Mode:'SPI_MODE_MASTER',Direction:'SPI_DIRECTION_2LINES',DataSize:'SPI_DATASIZE_8BIT',CLKPolarity:'SPI_POLARITY_LOW',CLKPhase:'SPI_PHASE_1EDGE',NSS:'SPI_NSS_SOFT',BaudRatePrescaler:'SPI_BAUDRATEPRESCALER_'+Math.min(256,2**Math.max(1,Math.ceil(Math.log2(config.timerClockHz/p.clock)))),FirstBit:'SPI_FIRSTBIT_MSB',TIMode:'SPI_TIMODE_DISABLE',CRCCalculation:'SPI_CRCCALCULATION_DISABLE',CRCPolynomial:10}))set(k,v);
-    if(id==='ADC1')for(const [k,v]of Object.entries({ClockPrescaler:'ADC_CLOCK_SYNC_PCLK_DIV4',Resolution:'ADC_RESOLUTION_12B',ScanConvMode:'DISABLE',ContinuousConvMode:'DISABLE',DiscontinuousConvMode:'DISABLE',ExternalTrigConvEdge:'ADC_EXTERNALTRIGCONVEDGE_NONE',ExternalTrigConv:'ADC_SOFTWARE_START',DataAlign:'ADC_DATAALIGN_RIGHT',NbrOfConversion:1,DMAContinuousRequests:'DISABLE',EOCSelection:'ADC_EOC_SINGLE_CONV'}))set(k,v);
+    if(id==='ADC1'&&f1)for(const [k,v]of Object.entries({ScanConvMode:'ADC_SCAN_DISABLE',ContinuousConvMode:'DISABLE',DiscontinuousConvMode:'DISABLE',ExternalTrigConv:'ADC_SOFTWARE_START',DataAlign:'ADC_DATAALIGN_RIGHT',NbrOfConversion:1}))set(k,v);
+    if(id==='ADC1'&&!f1)for(const [k,v]of Object.entries({ClockPrescaler:'ADC_CLOCK_SYNC_PCLK_DIV4',Resolution:'ADC_RESOLUTION_12B',ScanConvMode:'DISABLE',ContinuousConvMode:'DISABLE',DiscontinuousConvMode:'DISABLE',ExternalTrigConvEdge:'ADC_EXTERNALTRIGCONVEDGE_NONE',ExternalTrigConv:'ADC_SOFTWARE_START',DataAlign:'ADC_DATAALIGN_RIGHT',NbrOfConversion:1,DMAContinuousRequests:'DISABLE',EOCSelection:'ADC_EOC_SINGLE_CONV'}))set(k,v);
     if(isTimer(id))for(const [k,v]of Object.entries({Prescaler:p.prescaler,CounterMode:'TIM_COUNTERMODE_UP',Period:p.period,ClockDivision:'TIM_CLOCKDIVISION_DIV1',AutoReloadPreload:'TIM_AUTORELOAD_PRELOAD_DISABLE'}))set(k,v);
     if(isTimer(id)&&p.mode==='encoder'){
       lines.push('  TIM_Encoder_InitTypeDef encoder = {0};','  encoder.EncoderMode = TIM_ENCODERMODE_TI12;');
@@ -90,14 +115,14 @@ export function generateMain(config,{minimal=false}={}){
       lines.push(`  HAL_TIM_Encoder_Init(&${name}, &encoder);`);
     }else if(id==='SDIO')lines.push('  /* HAL_SD_Init(&hsd) is called by FatFs BSP_SD_Init() or user code. */');
     else lines.push(`  HAL_${type}${isTimer(id)?p.mode==='pwm'?'_PWM':p.mode==='capture'?'_IC':'_Base':''}_Init(&${name});`);
-    if(id==='ADC1'){const channel=Object.values(config.pins).find(p=>p.function.startsWith('ADC1_IN')).function.slice(7);lines.push('  ADC_ChannelConfTypeDef sConfig = {0};',`  sConfig.Channel = ADC_CHANNEL_${channel};`,'  sConfig.Rank = 1;','  sConfig.SamplingTime = ADC_SAMPLETIME_480CYCLES;','  HAL_ADC_ConfigChannel(&hadc1, &sConfig);');}
+    if(id==='ADC1'){const channel=Object.values(config.pins).find(p=>p.function.startsWith('ADC1_IN')).function.slice(7);lines.push('  ADC_ChannelConfTypeDef sConfig = {0};',`  sConfig.Channel = ADC_CHANNEL_${channel};`,`  sConfig.Rank = ${f1?'ADC_REGULAR_RANK_1':1};`,`  sConfig.SamplingTime = ADC_SAMPLETIME_${f1?'239CYCLES_5':'480CYCLES'};`,'  HAL_ADC_ConfigChannel(&hadc1, &sConfig);',...(f1?['  HAL_ADCEx_Calibration_Start(&hadc1);']:[]));}
     if(isTimer(id)&&['pwm','capture'].includes(p.mode)){
       lines.push(`  ${p.mode==='pwm'?'TIM_OC_InitTypeDef':'TIM_IC_InitTypeDef'} channel = {0};`);
       if(p.mode==='pwm')lines.push('  channel.OCMode = TIM_OCMODE_PWM1;','  channel.OCPolarity = TIM_OCPOLARITY_HIGH;',`  channel.Pulse = ${p.pulse};`,'  channel.OCFastMode = TIM_OCFAST_DISABLE;');
       else lines.push('  channel.ICPolarity = TIM_ICPOLARITY_RISING;','  channel.ICSelection = TIM_ICSELECTION_DIRECTTI;','  channel.ICPrescaler = TIM_ICPSC_DIV1;','  channel.ICFilter = 0;');
       for(const value of Object.values(config.pins)){const m=new RegExp('^'+id+'_CH([1-4])$').exec(value.function);if(m)lines.push(`  HAL_TIM_${p.mode==='pwm'?'PWM':'IC'}_ConfigChannel(&${name}, &channel, TIM_CHANNEL_${m[1]});`);}
     }
-    for(const [request,d]of dma)if(dmaOwner(request)===id){const h=dmaHandle(request);lines.push(...dmaLines(h,request,d),`  __HAL_LINKDMA(&${name}, ${dmaLink(request)}, ${h});`);}
+    for(const [request,d]of dma)if(dmaOwner(request)===id){const h=dmaHandle(request);lines.push(...dmaLines(h,request,d,f1),`  __HAL_LINKDMA(&${name}, ${dmaLink(request)}, ${h});`);}
     lines.push('}');
   }
   if(!minimal&&pins.some(([,p])=>p.function==='GPIO_EXTI'))lines.push('','void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {','  /* 핀 번호에 따라 인터럽트 처리를 작성하세요. */','}');

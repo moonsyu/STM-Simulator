@@ -40,11 +40,12 @@ export class HalDma{
  // ---- DMA handles ----
  handle(ptr,r){const h=r.get(r.pointerCell(ptr));if(h?.type!=='DMA_HandleTypeDef')throw new Error('DMA_HandleTypeDef 포인터가 필요합니다.');return h;}
  field(h,k){return this.hal.field(h,k);}
- state(h){const id=this.field(h,'Instance');if(!DMA_STREAMS.includes(id))throw new Error(`DMA 스트림 이름을 확인하세요: ${id}`);if(!this.streams.has(id))this.streams.set(id,{id,irq:id+'_IRQn',busy:false,gen:0,flags:0,it:{tc:true,ht:true,te:true},index:0,count:0,remaining:0});const st=this.streams.get(id);return st;}
+ state(h){const id=this.field(h,'Instance'),f1=this.hal.f1;if(!(this.hal.family?.dmaUnits??DMA_STREAMS).includes(id))throw new Error(`DMA ${f1?'채널':'스트림'} 이름을 확인하세요: ${id}`);if(!this.streams.has(id))this.streams.set(id,{id,irq:id+'_IRQn',busy:false,gen:0,flags:0,it:{tc:true,ht:true,te:true},index:0,count:0,remaining:0});const st=this.streams.get(id);return st;}
  init(ptr,r){
   const h=this.handle(ptr,r),st=this.state(h),init=this.field(h,'Init'),get=k=>this.field(init,k),ch=get('Channel'),dir=get('Direction');
-  if(!Number.isInteger(ch)||ch%0x2000000||ch/0x2000000>7)throw new Error(`${st.id}: DMA_CHANNEL_0~7을 사용하세요.`);
-  if(![0,0x40,0x80].includes(dir))throw new Error(`${st.id}: DMA 방향을 확인하세요.`);if(dir===0x80&&!st.id.startsWith('DMA2'))throw new Error('메모리→메모리 전송은 DMA2 스트림만 지원합니다.');
+  // F1 DMA1 channels have no request selector (each request is wired to one channel) and all support memory-to-memory.
+  if(!this.hal.f1&&(!Number.isInteger(ch)||ch%0x2000000||ch/0x2000000>7))throw new Error(`${st.id}: DMA_CHANNEL_0~7을 사용하세요.`);
+  if(![0,0x40,0x80].includes(dir))throw new Error(`${st.id}: DMA 방향을 확인하세요.`);if(dir===0x80&&!this.hal.f1&&!st.id.startsWith('DMA2'))throw new Error('메모리→메모리 전송은 DMA2 스트림만 지원합니다.');
   if(!(get('PeriphDataAlignment') in WIDTH)||!(get('MemDataAlignment') in MWIDTH))throw new Error(`${st.id}: DMA 데이터 정렬을 확인하세요.`);
   if(![0,0x100].includes(get('Mode')))throw new Error(`${st.id}: DMA_NORMAL 또는 DMA_CIRCULAR를 사용하세요.`);if(dir===0x80&&get('Mode'))throw new Error('메모리→메모리 전송은 순환 모드를 지원하지 않습니다.');
   if(st.busy)return 2;st.handle=h;st.ptr=ptr;st.inited=true;h.fields.State.value=1;h.fields.ErrorCode.value=0;return 0;
@@ -56,7 +57,7 @@ export class HalDma{
   const st=this.state(h);if(!st.inited||st.handle!==h)throw new Error(`${label}: HAL_DMA_Init(${st.id})이 필요합니다.`);st.ptr=ptr;return {h,st,ptr};
  }
  check(link,request,direction){
-  const {h,st}=link,init=this.field(h,'Init'),channel=this.field(init,'Channel')/0x2000000,options=DMA_REQUESTS[request];
+  const {h,st}=link,init=this.field(h,'Init'),channel=this.field(init,'Channel')/0x2000000,options=(this.hal.family?.dmaRequests??DMA_REQUESTS)[request];
   if(!options?.some(([s,c])=>s===st.id&&(c===null||c===channel)))throw new Error(`${request}: ${st.id} 채널 ${channel}은(는) 이 요청을 처리하지 않습니다. 가능한 조합: ${options.map(([s,c])=>s+(c===null?'':' CH'+c)).join(', ')}`);
   const dir=this.field(init,'Direction');if(direction!==undefined&&dir!==direction)throw new Error(`${request}: DMA Direction이 ${direction===0?'DMA_PERIPH_TO_MEMORY':direction===0x40?'DMA_MEMORY_TO_PERIPH':'DMA_MEMORY_TO_MEMORY'}이어야 합니다.`);
   this.hal.noticeIrq.add(st.irq);return link;
