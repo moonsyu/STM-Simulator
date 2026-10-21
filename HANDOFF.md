@@ -1,6 +1,10 @@
 # STM Simulator — 개발 인계
 
-현재 버전: **0.33.0**. 정리일: **2026-10-21**. NUCLEO-F446RE 또는 NUCLEO-F103RB와 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+현재 버전: **0.33.1**. 정리일: **2026-10-21**. NUCLEO-F446RE 또는 NUCLEO-F103RB와 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+
+## 0.33.1 실물 보드 실행 후 디버거 분리
+
+- `NativeIde.run`(ARM, OpenOCD 자동 시작)은 `runOnBoard`: OpenOCD 한 번 실행으로 `program … verify reset exit`(기록 안 함이면 `reset run; shutdown`) 후 종료한다. GDB를 붙이지 않으므로 ST-LINK 폴링과 LD1 깜빡임이 없다. `boardTarget(text, connection)`이 target 스크립트와 ST-LINK 시리얼을 정한다. 디버그 시작은 그대로 OpenOCD+GDB.
 
 ## 0.33.0 NUCLEO-F103RB 실제 빌드 · 실물 보드 · 펌웨어 에뮬레이터
 
