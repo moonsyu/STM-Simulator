@@ -1,7 +1,7 @@
 // Built-in C/C++ code formatter used when clangd is unavailable (circuit simulator, emulator, no tools).
-// It is deliberately conservative: it never changes the number of lines, never touches string/char
-// literals, comments or preprocessor lines, and only rewrites leading indentation plus a few
-// unambiguous spacing rules (keyword parentheses, braces, commas, semicolons in for headers).
+// formatC rewrites leading indentation plus a few unambiguous spacing rules (keyword parentheses, braces,
+// commas) and never changes the number of lines. formatCode also puts each statement on its own line.
+// Neither touches string/char literals, comments, preprocessor lines or operator spacing.
 
 const CONTROL=/^(if|for|while|switch|else\s+if)\b/;
 
@@ -90,50 +90,97 @@ export function formatC(source,{tabSize=4,range=null}={}){
  return out.join(eol);
 }
 
+const BRANCH_KEYWORD=/^\s*(?:if|for|while|switch|do|else|case|default)\b/;
+/** True when `text` (the rest of a line) is one simple statement that ends with `;` before any brace or comment. */
+function singleStatement(text){
+ if(!text.trim()||BRANCH_KEYWORD.test(text)||/^\s*[{;]/.test(text))return false;
+ let depth=0;
+ for(let i=0;i<text.length;i++){
+  const c=text[i];
+  if(c==='"'||c==="'"){i++;while(i<text.length&&text[i]!==c){if(text[i]==='\\')i++;i++;}continue;}
+  if(c==='/'&&(text[i+1]==='/'||text[i+1]==='*'))return false;
+  if(c==='(')depth++;else if(c===')')depth--;
+  else if(c==='{'||c==='}')return false;
+  else if(c===';'&&depth===0)return true;
+ }
+ return false;
+}
+
 /**
- * Puts each statement of compact code on its own line — after `;` outside parentheses, after a block `{`,
- * around a block `}` (keeping `} else`, `} while`, `};`) and after `case …:` — then re-indents with formatC.
- * Initializer braces (`= {0, 1}`), `for (;;)` headers, strings, comments and preprocessor lines are kept.
- * Line numbers change, so this is for generated examples, not for code being edited.
+ * Splits compact C into one statement per line: after `;` outside parentheses, after a block `{`, around a
+ * block `}` (keeping `} else`, `} while`, `};`) and after `case …:`. Initializer braces (`= {0, 1}`),
+ * `for (;;)` headers, strings, comments and preprocessor lines are kept. A brace-less branch that follows a
+ * braced `}` on the same line (`} else stmt;`, `} else if (c) stmt;`) gets braces so the whole chain reads
+ * the same. Returns, for every source line, the (not yet indented) lines it becomes.
  */
-export function expandC(source,{tabSize=2}={}){
- const eol=source.includes('\r\n')?'\r\n':'\n',out=[],state={comment:false},braces=[];// true = initializer brace
+export function splitStatements(source){
+ const groups=[],state={comment:false},braces=[];// 'init' | 'block' | 'added'
  let paren=0,continued=false;
  for(const raw of source.split(/\r?\n/)){
-  if(!state.comment&&(continued||raw.trim().startsWith('#'))){continued=/\\\s*$/.test(raw);out.push(raw);continue;}
-  if(!raw.trim()){out.push('');continue;}
-  let line='',statement='',pending=false;
-  const flush=()=>{if(line.trim())out.push(line.replace(/\s+$/,''));line='';};
-  for(const part of scan(raw,state)){
+  if(!state.comment&&(continued||raw.trim().startsWith('#'))){continued=/\\s*$/.test(raw);groups.push([raw]);continue;}
+  if(!raw.trim()){groups.push(['']);continue;}
+  const pieces=[],parts=scan(raw,state);
+  let line='',statement='',pending=false,chain=null,header=false;
+  const flush=()=>{if(line.trim())pieces.push(line.replace(/\s+$/,''));line='';};
+  const rest=(pi,i)=>parts[pi].text.slice(i+1)+parts.slice(pi+1).map(p=>p.text).join('');
+  const addBrace=()=>{line+=' {';braces.push('added');statement='';pending=true;chain=null;};
+  for(let pi=0;pi<parts.length;pi++){
+   const part=parts[pi];
    // A comment after a statement stays on its line; anything else starts the next line.
    if(!part.code){if(pending){pending=false;if(/^\/[/*]/.test(part.text))line+=' ';else flush();}line+=part.text;statement+=part.text;continue;}
    const t=part.text;
    for(let i=0;i<t.length;i++){
-    const ch=t[i],init=braces.length>0&&braces[braces.length-1];
+    const ch=t[i],top=braces[braces.length-1],init=top==='init';
     if(pending){if(/\s/.test(ch))continue;pending=false;flush();}
     if(ch==='{'){
-     const inits=init||/(?:[=,(\[]|\breturn)\s*$/.test(line);braces.push(inits);line+=ch;
-     if(!inits){statement='';pending=true;}else statement+=ch;
+     const kind=init||/(?:[=,(\[]|\breturn)\s*$/.test(line)?'init':'block';braces.push(kind);line+=ch;chain=null;
+     if(kind==='block'){statement='';pending=true;}else statement+=ch;
      continue;
     }
-    if(ch==='}'&&braces.length){
+    if(ch==='}'&&braces.length&&top!=='added'){
      braces.pop();
      if(init){line+=ch;statement+=ch;continue;}
      flush();line='}';statement='';
-     if(!/^\s*(?:else\b|while\b|[;,)])/.test(t.slice(i+1)))pending=true;
+     const after=rest(pi,i);
+     if(/^\s*else\b/.test(after))chain='else';
+     else if(!/^\s*(?:while\b|[;,)])/.test(after))pending=true;
      continue;
     }
     if(ch==='(')paren++;else if(ch===')')paren=Math.max(0,paren-1);
     line+=ch;statement+=ch;
+    if(chain==='else'&&/\belse$/.test(line)&&!/\w/.test(t[i+1]||'')){
+     const after=rest(pi,i);
+     if(/^\s*if\b/.test(after)){chain='if';header=false;}else if(singleStatement(after))addBrace();else chain=null;
+     continue;
+    }
+    if(chain==='if'){if(ch==='(')header=true;else if(ch===')'&&header&&paren===0){chain=null;if(singleStatement(rest(pi,i)))addBrace();}continue;}
     if(init||paren)continue;
-    if(ch===';'){statement='';pending=true;}
+    if(ch===';'){
+     statement='';
+     if(top==='added'){braces.pop();flush();line='}';if(/^\s*else\b/.test(rest(pi,i)))chain='else';else pending=true;}
+     else pending=true;
+    }
     else if(ch===':'&&t[i+1]!==':'&&/^\s*(?:case\b|default\b)/.test(statement)){statement='';pending=true;}
    }
   }
-  flush();
+  flush();groups.push(pieces);
  }
- return formatC(out.join(eol),{tabSize});
+ return groups;
 }
+
+/**
+ * Full formatting (편집 → 코드 정렬, `}` block, save): splitStatements then formatC indentation. Returns the
+ * text and, for every source line, the formatted lines it became, so the editor can apply the change line
+ * by line and keep breakpoints on their statements. With `range`, only those source lines change.
+ */
+export function formatCode(source,{tabSize=4,range=null}={}){
+ const eol=source.includes('\r\n')?'\r\n':'\n',original=source.split(/\r?\n/),groups=splitStatements(source);
+ const formatted=formatC(groups.flat().join('\n'),{tabSize}).split('\n');let k=0;
+ const lines=groups.map((g,index)=>{const out=formatted.slice(k,k+=g.length);return !range||(index+1>=range.start&&index+1<=range.end)?out:[original[index]];});
+ return {text:lines.flat().join(eol),lines};
+}
+/** formatCode for generated examples (2-space indentation like the Cube-style generator). */
+export const expandC=(source,{tabSize=2}={})=>formatCode(source,{tabSize}).text;
 
 /** Line range (1-based) of the block whose `}` sits on `line` (the last `}` before `column`, if given), or null. */
 export function blockRange(source,line,column=Infinity){

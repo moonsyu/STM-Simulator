@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {formatC,blockRange,expandC} from '../../src/c-format.js';
+import {readFileSync} from 'node:fs';
+import {formatC,blockRange,expandC,formatCode} from '../../src/c-format.js';
 import {formatProjectSources} from '../../src/code-format-ui.js';
 import {applyHalExample,allHalExamples,halExample} from '../../src/hal-examples.js';
 const halExampleCode=id=>halExample(id).code;
@@ -111,11 +112,48 @@ test('every applied HAL example has one statement per line and the same tokens a
  const strip=t=>t.replace(/\s+/g,'');
  for(const id of Object.keys(allHalExamples())){
   const p=applyHalExample(blankProject(),id),compact=halExampleCode(id);
-  assert.equal(strip(p.code),strip(compact),id);
+  assert.equal(strip(p.code).replace(/[{}]/g,''),strip(compact).replace(/[{}]/g,''),id);
   for(const line of p.code.split('\n')){
    if(/^\s*(\/\/|\/\*|\*|#)/.test(line))continue;
    const code=line.replace(/\/\/.*$|\/\*.*?\*\//g,'').replace(/"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'/g,'""').replace(/\bfor\s*\(.*?\)\s*/,'');
    assert.ok(!/;\s*\S/.test(code.replace(/\{[^{}]*\}/g,'{}')),`${id}: ${line.trim()}`);
   }
  }
+});
+
+test('formatCode splits a compact line into the target layout and braces the else branch',()=>{
+ const src=readFileSync(new URL('../fixtures/format-compact.c',import.meta.url),'utf8').replace(/\r\n/g,'\n');
+ const {text,lines}=formatCode(src,{tabSize:4});
+ assert.equal(text,[
+  'void f(void) {',
+  '    uint8_t bank[1]={1}, id[2]={0};',
+  '    if (HAL_I2C_Mem_Write(&hi2c1, 0x30<<1, 0xFF, I2C_MEMADD_SIZE_8BIT, bank, 1, 100)==HAL_OK) {',
+  '        HAL_I2C_Mem_Read(&hi2c1, 0x30<<1, 0x0A, I2C_MEMADD_SIZE_8BIT, id, 2, 100);',
+  '        printf("OV2640 sensor PID/VER=%02x %02x\\n", id[0], id[1]);',
+  '    } else {',
+  '        printf("OV2640 SCCB timeout: check XCLK/reset/power\\n");',
+  '    }',
+  '    HAL_Delay(1000);',
+  '    if (a) {',
+  '        b();',
+  '    } else if (c) {',
+  '        d();',
+  '    } else {',
+  '        e();',
+  '    }',
+  '}',
+  ''].join('\n'));
+ assert.deepEqual(lines.map(l=>l.length),[1,8,7,1,1]);
+ assert.equal(formatCode(text,{tabSize:4}).text,text);
+ // Plain one-line branches without a braced partner are left alone; a branch that continues on the next line too.
+ assert.equal(formatCode('if(x) y();\nif(a){b();} else\n c();',{tabSize:4}).text,'if (x) y();\nif (a) {\n    b();\n} else\n    c();');
+ // Only the selected source lines change.
+ assert.equal(formatCode('a();b();\nc();d();',{range:{start:2,end:2}}).text,'a();b();\nc();\nd();');
+});
+
+test('save-time formatting moves breakpoints to the line their statement now starts on',()=>{
+ const p={code:'void f(void){a();b();\nc();\n}',firmware:{files:[]},ide:{breakpoints:[{file:'main.c',line:2},{file:'other.c',line:2}]}};
+ assert.equal(formatProjectSources(p,4),true);
+ assert.equal(p.code,'void f(void) {\n    a();\n    b();\n    c();\n}');
+ assert.deepEqual(p.ide.breakpoints,[{file:'main.c',line:4},{file:'other.c',line:2}]);
 });
