@@ -10,6 +10,7 @@
 - 검증: `npm test` 680개 중 677 통과(실패 2개는 로컬 심볼릭 링크 권한), E2E 22개 중 21 통과·1 건너뜀. 테스트 창은 다크 모드·맨 뒤로 여는 임시 변경으로 돌리고 되돌렸다(스크립트: 세션 scratchpad `bgpatch.py`).
 - 커밋: `9f5cc4b` 코드 정렬 기능, `28ee2e8` 0.29.2 버전.
 - 첫 CI [39530166635](https://github.com/moonsyu/STM-Simulator/actions/runs/39530166635) 실패: `storage.e2e`에서 Ctrl+S 뒤 "파일 저장됨" 대기가 시간 초과됐다(로컬은 4/4 통과). 입력 직후 저장하면 마지막 입력이 예약한 자동 저장(200 ms 뒤)이 파일 저장과 겹쳐 상태를 "저장 중…/자동 저장됨"으로 덮어쓰는 경쟁 상태다(이번 변경과 무관한 기존 결함). 파일 저장 성공 시 대기 중인 자동 저장을 바로 기록하고 타이머를 취소하도록 고치고, 저장 0.5초 뒤에도 "파일 저장됨"인지 검사를 추가했다. Release·태그가 없으므로 같은 버전으로 다시 게시한다.
+- 결과: [Release v0.29.2](https://github.com/moonsyu/STM-Simulator/releases/tag/v0.29.2), [CI 39531566516](https://github.com/moonsyu/STM-Simulator/actions/runs/39531566516) 성공. latest 지정, 태그·커밋 `292d402` 일치, 5자산과 EXE·ZIP 해시(ZIP 안 EXE 포함) 확인.
 
 ## 2026-10-21 · 0.29.1 `}` 자동 정렬 수정과 예제 코드 정리
 
