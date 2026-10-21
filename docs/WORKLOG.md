@@ -13,7 +13,9 @@
 - (6) 보드는 ST-LINK V2-1(COM6), STM32F446xx Rev A, 512 KB, 3.25 V로 확인(핫플러그, 리셋·플래시 없음). 설치된 STM32CubeIDE 1.19.0의 GCC·GDB·OpenOCD를 앱이 찾지 못하던 감지 결함을 고쳤다(`4326ef6`). 사용자 허락으로 STM32CubeF4 v1.28.3 드라이버(49 MB, 커밋 `94cae6e` 검증)를 `%LOCALAPPDATA%\STM-Simulator-Tools\STM32CubeF4`에 받았다. 앱의 실제 ARM 빌드 경로로 빈 프로젝트와 예제 126개 모두 컴파일·링크·에뮬레이터 실행 통과(128/128, 약 25분). 플래시는 사용자 선택으로 하지 않았다.
 - 테스트 창: 다크 모드 임시 변경이 실제로는 밝은 화면이었다(앱이 자기 화면 설정으로 nativeTheme을 되돌림). `emulateMedia(dark)`를 더해 고쳤고 메모리에 기록했다. 끝난 뒤 임시 변경을 되돌렸다.
 - 검증: `npm test` 681개 중 678 통과(실패 2개는 로컬 심볼릭 링크 권한), E2E 23개 중 22 통과·1 건너뜀.
-- 문서: `911940a` IDE 문서. 릴리스 결과는 검증 기록 커밋에 추가한다.
+- 문서: `911940a` IDE 문서, `51b7d21` 0.30.0 버전.
+- 결과: [Release v0.30.0](https://github.com/moonsyu/STM-Simulator/releases/tag/v0.30.0), [CI 39540170767](https://github.com/moonsyu/STM-Simulator/actions/runs/39540170767) 첫 실행 성공. latest 지정, 태그·커밋 `51b7d21` 일치, 5자산과 EXE·ZIP 해시(ZIP 안 EXE 포함) 확인.
+- 남은 사항: 실물 보드에 플래시해 실행하는 확인은 하지 않았다(사용자 선택). 기존 2칸 프로젝트는 코드 정렬로 4칸이 된다.
 
 ## 2026-10-21 · 0.29.2 코드 정렬이 한 줄의 여러 문장을 나눔
 
