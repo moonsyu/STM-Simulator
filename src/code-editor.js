@@ -60,6 +60,10 @@ export function createCodeEditor({textarea,getFile,getFiles,onBreakpoint,onBreak
   editor.addCommand(monaco.KeyMod.CtrlCmd|monaco.KeyCode.KeyZ,()=>document.dispatchEvent(new CustomEvent('ide-undo',{detail:false})));
   editor.addCommand(monaco.KeyMod.CtrlCmd|monaco.KeyCode.KeyY,()=>document.dispatchEvent(new CustomEvent('ide-undo',{detail:true})));
   editor.addCommand(monaco.KeyMod.CtrlCmd|monaco.KeyMod.Shift|monaco.KeyCode.KeyZ,()=>document.dispatchEvent(new CustomEvent('ide-undo',{detail:true})));
+  // The app has its own find/replace bar; Monaco's find widget would open as a second, older one.
+  const find=replace=>()=>document.dispatchEvent(new CustomEvent('ide-find',{detail:replace}));
+  for(const key of [monaco.KeyMod.CtrlCmd|monaco.KeyCode.KeyF,monaco.KeyCode.F3,monaco.KeyMod.Shift|monaco.KeyCode.F3,monaco.KeyMod.CtrlCmd|monaco.KeyCode.F3])editor.addCommand(key,find(false));
+  editor.addCommand(monaco.KeyMod.CtrlCmd|monaco.KeyCode.KeyH,find(true));
   const decorations=editor.createDecorationsCollection();
   function decorate(){
     for(const [name,model] of models)monaco.editor.setModelMarkers(model,'clangd',languageMarkers.get(name)||[]);
