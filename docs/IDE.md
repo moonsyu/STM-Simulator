@@ -114,7 +114,7 @@ STM32 보드, 기본 빵판, 추가 빵판 또는 부품을 클릭하면 가장�
 - **Pinout & Configuration**은 보드의 계열을 따른다. F103RB는 USART1~3, I²C1, SPI1, ADC1, TIM2~4(16비트), DMA1 채널 1~7을 쓰고, 핀은 AF 번호가 아니라 AFIO 리맵 묶음으로 옮긴다(예: USART1 TX/RX는 PA9/PA10 또는 함께 PB6/PB7). 묶음에 맞지 않는 조합은 오류로 알려 준다.
 - **HAL 코드 생성**은 F1 HAL(`stm32f1xx_hal.h`, HSI/2×PLL 64 MHz, `__HAL_AFIO_REMAP_*`, `HAL_ADCEx_Calibration_Start`)로 만든다.
 - **HAL 예제**는 F446RE용으로 작성되어 있고, F103RB 프로젝트에서 고르면 클럭·핀·타이머 값·DMA 채널·IRQ 이름을 F1에 맞게 바꿔 적용한다. 32비트 TIM2 자유 카운터를 쓰는 예제(초음파·온습도 등)는 16비트 카운터와 `(uint16_t)` 경과 시간 계산으로 바뀐다. F103RB에 없는 DCMI 카메라·I2S 오디오 예제 2개는 목록에서 빠진다.
-- 현재 F103RB 프로젝트는 회로 시뮬레이터에서 실행한다. ARM GCC 빌드·실물 보드 실행·펌웨어 에뮬레이터는 F446RE만 지원하며, F103RB 프로젝트로 ARM 빌드를 하면 F446RE용으로 잘못 빌드하지 않도록 막는다.
+- F103RB 프로젝트도 F446RE와 같이 회로 시뮬레이터, **STM32 · ARM GCC** 빌드(STM32CubeF1, Cortex-M3, Flash 128 KB / SRAM 20 KB), 실물 보드 실행·디버그, **펌웨어 에뮬레이터**(STM32F103 모델)를 쓸 수 있다. ARM 빌드에는 개발 도구의 **STM32CubeF1 SDK 폴더**가 필요하며 **필요한 도구 설치**로 받을 수 있다.
 
 ## 보드 이동과 배치 공간
 
@@ -187,13 +187,14 @@ Ctrl+F는 현재 파일 찾기, Ctrl+R은 바꾸기, Ctrl+Z/Y는 프로젝트 �
 
 상단 **실행 대상**에서 `STM32 · ARM GCC` 또는 `Windows · C/C++`를 선택한다. 같은 프로젝트에 저장된 대상·Debug/Release 설정을 다음 실행에서도 복원한다. `.cpp`, `.cc`, `.hpp` 파일을 추가할 수 있으며 C는 C11, C++는 C++17로 각각 컴파일하고 함께 링크한다. `main.c` 이름은 유지한다. C와 C++ 사이에서 함수를 호출할 때 헤더에 `extern "C"`를 적절히 사용한다.
 
-**개발 도구**에서 아래 실행 파일과 SDK를 선택하고 **저장 후 검사**를 누른다. PATH, MSYS2, 기본 STM32Cube 저장소와 아래 설치 스크립트의 기본 위치를 자동 검색한다. 도구 경로는 PC 설정이며 회로 파일에 넣지 않는다. 설치된 STM32CubeIDE(`C:\ST\STM32CubeIDE_*`)가 있으면 그 안의 GNU Tools for STM32(ARM GCC·GDB)와 OpenOCD도 자동으로 찾는다. 이 경우 STM32CubeF4 드라이버만 설치 스크립트로 받으면 된다.
+**개발 도구**에서 아래 실행 파일과 SDK를 선택하고 **저장 후 검사**를 누른다. PATH, MSYS2, 기본 STM32Cube 저장소와 아래 설치 스크립트의 기본 위치를 자동 검색한다. 도구 경로는 PC 설정이며 회로 파일에 넣지 않는다. 설치된 STM32CubeIDE(`C:\ST\STM32CubeIDE_*`)가 있으면 그 안의 GNU Tools for STM32(ARM GCC·GDB)와 OpenOCD도 자동으로 찾는다. 이 경우 보드에 맞는 STM32Cube 드라이버(F446RE는 STM32CubeF4, F103RB는 STM32CubeF1)만 받으면 된다. 프로젝트의 보드(MCU 계열)에 따라 SDK·컴파일 옵션·startup·링커 스크립트가 정해진다.
 
-**필요한 도구 설치**(개발 도구 창): 빠진 도구만 크기·출처와 함께 보여 주고 **설치 시작**을 누르면 `%LOCALAPPDATA%\STM-Simulator-Tools`에 받는다. ARM GCC 15.2.1(GDB 포함, xPack), STM32CubeF4 v1.28.3 드라이버, OpenOCD 0.12.0(xPack), clangd 23.1.0. 릴리스 파일은 고정 SHA-256으로, STM32CubeF4는 고정 커밋의 파일마다 SHA-256으로 검증하며 Git은 필요 없다. ARM GCC를 받으면 압축을 푼 뒤 약 1.5 GB를 사용한다. 앱을 시작하고 3초 뒤 실물 보드용 도구(ARM GCC·GDB·STM32CubeF4·OpenOCD)가 빠져 있으면 알림으로 **설치·나중에·다시 묻지 않기**를 고를 수 있다. ST-LINK USB 드라이버(ST STSW-LINK009)는 별도로 설치해야 할 수 있다.
+**필요한 도구 설치**(개발 도구 창): 빠진 도구만 크기·출처와 함께 보여 주고 **설치 시작**을 누르면 `%LOCALAPPDATA%\STM-Simulator-Tools`에 받는다. ARM GCC 15.2.1(GDB 포함, xPack), STM32CubeF4 v1.28.3 드라이버(NUCLEO-F446RE), STM32CubeF1 v1.8.7 드라이버(NUCLEO-F103RB, 약 2 MB), OpenOCD 0.12.0(xPack), clangd 23.1.0. 릴리스 파일은 고정 SHA-256으로, STM32CubeF4·F1은 고정 커밋의 파일마다 SHA-256으로 검증하며 Git은 필요 없다. ARM GCC를 받으면 압축을 푼 뒤 약 1.5 GB를 사용한다. 앱을 시작하고 3초 뒤 실물 보드용 도구(ARM GCC·GDB·STM32CubeF4·OpenOCD, F103RB 프로젝트를 열었으면 STM32CubeF1도)가 빠져 있으면 알림으로 **설치·나중에·다시 묻지 않기**를 고를 수 있다. ST-LINK USB 드라이버(ST STSW-LINK009)는 별도로 설치해야 할 수 있다.
 
 | 작업 | 필요한 도구 |
 |---|---|
 | STM32F446RE 펌웨어 빌드 | `arm-none-eabi-gcc.exe`와 같은 배포판의 g++, objcopy, size; STM32CubeF4의 HAL/CMSIS |
+| STM32F103RB 펌웨어 빌드 | 같은 ARM GCC; STM32CubeF1의 HAL/CMSIS (`-mcpu=cortex-m3`, `STM32F103xB`) |
 | 실물 보드 실행·디버그 | `arm-none-eabi-gdb.exe`; OpenOCD + ST-LINK 또는 이미 실행 중인 GDB 서버 |
 | Windows C/C++ 빌드·실행·디버그 | MinGW-w64 GCC/g++/GDB (MSYS2 UCRT64 권장) |
 | C/C++ 의미 분석 | `clangd.exe`와 해당 대상의 컴파일러·SDK |
@@ -212,7 +213,7 @@ GCC·binutils의 Windows 한글 경로 제한 때문에 컴파일러와 SDK는 �
 
 - **빌드 / Ctrl+Shift+B**: 실제 컴파일러 명령·출력을 빌드 탭에 스트리밍한다. Debug는 `-g3 -O0`, Release는 `-g3 -Os`를 사용한다. 중단 버튼으로 빌드를 취소할 수 있다.
 - ARM 결과는 `firmware.elf`, `.bin`, `.hex`, `.map`, `compile_commands.json`, `build-result.json`이다. Windows 결과는 `program.exe`, `.map` 등이다. **빌드 폴더 열기**로 실제 파일을 확인한다. 매 빌드마다 새 작업 폴더를 사용하므로 실패한 결과로 이전 바이너리를 실행하지 않는다.
-- 프로젝트의 C/C++ 소스와 실제 ST HAL 드라이버, CMSIS, F446 startup을 컴파일한다. F446RE의 Flash 512 KB / SRAM 128 KB 링커 스크립트, 기본 인터럽트 연결 및 main.h를 준비한다. 프로젝트가 제공한 main.h, HAL 설정 헤더와 시스템 초기화 파일은 우선한다. 생성되는 기본 IRQ 함수는 weak 정의여서 사용자 정의로 교체할 수 있다.
+- 프로젝트의 C/C++ 소스와 실제 ST HAL 드라이버, CMSIS, 보드의 startup을 컴파일한다. F446RE는 Flash 512 KB / SRAM 128 KB, F103RB는 Flash 128 KB / SRAM 20 KB 링커 스크립트, 기본 인터럽트 연결 및 main.h를 준비한다. 프로젝트가 제공한 main.h, HAL 설정 헤더와 시스템 초기화 파일은 우선한다. 생성되는 기본 IRQ 함수는 weak 정의여서 사용자 정의로 교체할 수 있다.
 - 파일 추가·편집·빌드 설정 변경 후 실행하면 현재 소스와 일치하는 빌드를 사용한다. 링크 오류 등 줄 번호가 없는 오류는 전체 빌드 로그에서 확인한다. 빌드 결과의 경고도 표시한다.
 - 빌드 작업 폴더는 재현과 디버깅을 위해 보존한다. 사용하지 않는 작업 폴더는 실행·언어 서버 종료 후 사용자가 삭제할 수 있다.
 
@@ -220,11 +221,11 @@ GCC·binutils의 Windows 한글 경로 제한 때문에 컴파일러와 SDK는 �
 
 **Windows · C/C++**는 새 프로젝트의 `Windows C/C++ · 콘솔 프로그램` 템플릿으로 시작할 수 있다. 실행은 EXE를 별도 프로세스로 시작하고 출력과 종료 코드를 **실행 / 터미널**에 표시한다. 입력 대상에서 `실행 프로그램 stdin`을 선택해 표준 입력을 보낸다. 디버그 시작은 실제 GDB가 main에서 정지한다.
 
-**STM32 · ARM GCC**는 NUCLEO-F446RE의 ST-LINK USB를 연결하고 **보드 연결**을 설정한다.
+**STM32 · ARM GCC**는 프로젝트 보드(NUCLEO-F446RE 또는 NUCLEO-F103RB)의 ST-LINK USB를 연결하고 **보드 연결**을 설정한다.
 
-처음 쓸 때 순서: (1) **실행 및 디버그 → 실행 환경**에서 **STM32 · ARM GCC**를 고른다. (2) **개발 도구**에서 ARM GCC·ARM GDB·STM32CubeF4·OpenOCD가 채워졌는지 확인한다(비워 두고 저장하면 바로 자동 감지한다. STM32CubeIDE가 설치돼 있으면 GCC·GDB·OpenOCD는 그 안에서 찾고, STM32CubeF4는 설치 스크립트로 받는다). (3) **보드 연결**에서 GDB 서버를 **OpenOCD 자동 시작 · ST-LINK**로 두고 **시작할 때 빌드한 펌웨어를 보드에 기록**을 체크한다. (4) 실행(Ctrl+F5) 또는 디버그 시작(F10). 기록을 체크하지 않으면 보드에 이미 들어 있는 펌웨어에 연결만 하므로 코드 변경이 보드에 반영되지 않는다.
+처음 쓸 때 순서: (1) **실행 및 디버그 → 실행 환경**에서 **STM32 · ARM GCC**를 고른다. (2) **개발 도구**에서 ARM GCC·ARM GDB·보드의 STM32Cube SDK(F4 또는 F1)·OpenOCD가 채워졌는지 확인한다(비워 두고 저장하면 바로 자동 감지한다. STM32CubeIDE가 설치돼 있으면 GCC·GDB·OpenOCD는 그 안에서 찾고, SDK는 **필요한 도구 설치**로 받는다). (3) **보드 연결**에서 GDB 서버를 **OpenOCD 자동 시작 · ST-LINK**로 두고 **시작할 때 빌드한 펌웨어를 보드에 기록**을 체크한다. (4) 실행(Ctrl+F5) 또는 디버그 시작(F10). 기록을 체크하지 않으면 보드에 이미 들어 있는 펌웨어에 연결만 하므로 코드 변경이 보드에 반영되지 않는다.
 
-1. OpenOCD 자동 시작은 `interface/stlink.cfg`와 `target/stm32f4x.cfg`를 사용하고 127.0.0.1:3333에서 GDB 연결을 받는다. USB 드라이버는 설치한 ST-LINK/OpenOCD 환경에서 준비되어 있어야 한다. STM32CubeIDE에 들어 있는 OpenOCD(ST 빌드)를 쓰면 CubeIDE의 `st_scripts` 폴더를 `-s`로 지정하고 `interface/stlink-dap.cfg`(`transport select dapdirect_swd`)로 연결한다.
+1. OpenOCD 자동 시작은 `interface/stlink.cfg`와 보드의 target(`target/stm32f4x.cfg` 또는 `target/stm32f1x.cfg`)을 사용하고 127.0.0.1:3333에서 GDB 연결을 받는다. ST-LINK가 여러 개 연결되어 있으면 STM32CubeProgrammer(STM32CubeIDE에 포함)의 보드 이름으로 프로젝트 보드의 ST-LINK를 고르고(`adapter serial`), 고를 수 없으면 **보드 연결**의 **ST-LINK 시리얼**을 입력하라고 알려 준다. USB 드라이버는 설치한 ST-LINK/OpenOCD 환경에서 준비되어 있어야 한다. STM32CubeIDE에 들어 있는 OpenOCD(ST 빌드)를 쓰면 CubeIDE의 `st_scripts` 폴더를 `-s`로 지정하고 `interface/stlink-dap.cfg`(`transport select dapdirect_swd`)로 연결한다.
 2. 외부 GDB 서버는 `host:port`로 연결한다. 예를 들어 이미 시작한 ST-LINK GDB Server 또는 OpenOCD를 사용할 수 있다. 외부 서버가 대상을 정지·초기화한 상태여야 한다.
 3. **시작할 때 빌드한 펌웨어를 보드에 기록**은 기본 해제다. 체크하면 GDB `load`로 보드의 기존 펌웨어를 교체한다. 해제했을 때는 보드에 현재 ELF와 같은 펌웨어가 이미 있어야 소스·주소가 일치한다.
 4. **디버그 시작**은 Debug 구성을 사용하고 main에서 멈춘다. **실행**은 main 정지 없이 계속 실행한다. ARM 대상도 연결된 보드 또는 외부 GDB 대상이 있어야 실행된다.
@@ -246,7 +247,7 @@ ARM 또는 Windows 대상을 선택하고 편집기 아래 **clangd 꺼짐**을 
 | 실행 대상 | 동작 |
 |---|---|
 | 회로 시뮬레이터 | 컴파일하지 않고 HAL C 소스를 해석해 회로와 함께 실행합니다. NVIC 우선순위 선점, HAL DMA, USART 동기 모드, 카메라·SD 카드 모델을 지원합니다 |
-| 펌웨어 에뮬레이터 · ARM ELF | ARM GCC로 실제 ST HAL·CMSIS를 빌드한 ELF를 Cortex-M4(FPU 포함) 명령어 단위로 실행하고, STM32F446 주변장치 레지스터 모델을 빵판 회로에 연결합니다. 소스 줄 중단점, 단계 실행, 레지스터·메모리 조회를 지원합니다. CubeIDE 등에서 만든 ELF는 **파일 → 펌웨어 ELF 열기**로 바로 실행합니다 |
+| 펌웨어 에뮬레이터 · ARM ELF | ARM GCC로 실제 ST HAL·CMSIS를 빌드한 ELF를 Cortex-M 명령어 단위로 실행하고, 프로젝트 보드의 주변장치 레지스터 모델(STM32F446 또는 STM32F103: RCC·GPIO CRL/CRH·AFIO 리맵·DMA1 채널·F1 ADC)을 빵판 회로에 연결합니다. F103RB 모델은 F446과 같은 메모리 버스를 쓰므로 128 KB/20 KB를 넘는 주소 접근을 오류로 막지 않습니다. 소스 줄 중단점, 단계 실행, 레지스터·메모리 조회를 지원합니다. CubeIDE 등에서 만든 ELF는 **파일 → 펌웨어 ELF 열기**로 바로 실행합니다 |
 | STM32 · ARM GCC | 실물 NUCLEO-F446RE에 기록하고 GDB·OpenOCD로 디버그합니다 |
 | Windows · C/C++ | PC용 C/C++ 프로그램을 빌드·실행·디버그합니다 |
 

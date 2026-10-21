@@ -11,6 +11,7 @@
 - 예제: F446RE용 127개 중 125개가 F103RB에서 실행되고 124개는 출력이 F446RE와 같다. 다른 1개(ADC DMA 스캔)는 F1 ADC 변환 속도 차이로 블록 수만 다르다. DCMI 카메라·I2S 오디오 2개는 F103RB에 해당 주변장치가 없어 목록에서 빠진다. 이식 중 찾은 것: 32비트 TIM2 자유 카운터 예제 7개(16비트로 바꾸고 경과 시간을 `(uint16_t)`로), 한 줄에 여러 문장이 있는 DMA 초기화의 `Channel` 필드, CAN1 PB8/PB9(F1 리맵 2).
 - 검증: `npm test` 697개 중 694 통과·1 건너뜀(실패 2개는 기존과 같은 로컬 심볼릭 링크 권한). E2E 24개 중 23 통과·1 건너뜀(뒤쪽·다크 임시 변경으로 실행, 끝난 뒤 되돌림). 앱에서 보드를 F103RB로 바꿔 보드 그림(Cortex-M3), Pinout(STM32F103RB · LQFP64 · Cortex-M3, USART 3개·TIM2/3/4), 예제 목록 125개, DMA UART 에코 예제 실행(DMA1 Channel6/7)을 확인했다.
 - 남은 사항(2단계 이후): STM32CubeF1 HAL 다운로드(사용자 허락 필요), cortex-m3 빌드, OpenOCD에서 두 ST-LINK 중 보드 선택, 실물 F103RB 쓰기·실행 확인, F1 펌웨어 에뮬레이터.
+- 결과: [Release v0.32.0](https://github.com/moonsyu/STM-Simulator/releases/tag/v0.32.0), [CI 39550035526](https://github.com/moonsyu/STM-Simulator/actions/runs/39550035526) 첫 실행 성공. latest 지정, 태그·커밋 `9aa3e9f` 일치, 5자산과 EXE·ZIP(안의 EXE 포함) 해시 확인.
 
 ## 2026-10-21 · 0.31.0 앱 안에서 개발 도구 설치, 시작 시 확인
 
