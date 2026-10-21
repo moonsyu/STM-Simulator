@@ -1,5 +1,19 @@
 # 검증 기록
 
+## 0.28.0 코드 정렬 · 예제 결과 표시 점검 — 공개 배포 검증 완료
+
+2026-10-21. 제품 커밋 `536dedd37e84a3a92e651ee3f5fecbc33a16089e` · [Windows CI 39520981687](https://github.com/moonsyu/STM-Simulator/actions/runs/39520981687) (빌드·릴리스 게시 모두 성공) · [Release v0.28.0](https://github.com/moonsyu/STM-Simulator/releases/tag/v0.28.0).
+
+| 검사 | 결과 |
+|---|---|
+| `npm test` (로컬 Windows, Node 24) | 676개 중 674 통과. 실패 2개는 `tests/unit/desktop.test.js`의 심볼릭 링크 생성 권한(EPERM) 문제로 로컬 환경 한정이며 CI에서는 통과 |
+| `npm run test:e2e` (로컬 실제 Electron) | 19 통과, 1 건너뜀. 새 검사: `}` 입력 블록 정렬·Alt+Shift+F 정렬, Gravity RGB 렌즈 색·속성 패널 G/R/B |
+| 코드 정렬 | 모든 HAL 예제 main.c에서 토큰 불변·멱등·줄 수 보존. 구조체/배열 초기화, 중첩 중괄호 없는 본문, 괄호 연속 줄, `#ifdef` 줄 유지 확인 |
+| 예제 결과 점검 (127개, 각 3초 실행) | 오류·전기 고장 0. 출력·회로·속성 패널 중 어디에서도 결과를 볼 수 없던 예제 없음(버저는 500 ms 토글, `exti`는 USER 버튼 입력에 반응) |
+| 공개 자산 | latest=v0.28.0, 태그·BUILD-INFO 커밋 일치, 5자산 존재. EXE SHA-256 `1597e8df8dcaec6d1508eaed22b94ec44a0e9e0cb61cf2cce0f6a259e9d3dfec`(102,968,177 B, MZ 헤더)이 SHA256.txt·update-manifest·ZIP 안의 `STM-Simulator.exe`와 일치. ZIP SHA-256 `6aec401d9817e8776de4b0747da60956e4636ea0676ece13e9a5a8f724c65031` |
+
+한계: ARM GCC 빌드는 CI의 대표 예제 11개만 검사하며, 주소지정 RGB 예제는 인터프리터와 앱 E2E에서 확인했습니다. 실물 MCU·WS2812에서의 실행 검증은 아닙니다.
+
 ## 0.27.0 빵판 · 예제 배선 · Docs 제거 · 단축키
 
 2026-10-21. 검증 브랜치 `redesign` · [Windows CI 39451212214](https://github.com/moonsyu/STM-Simulator/actions/runs/39451212214) (전 단계 통과).
