@@ -29,9 +29,15 @@ async function detectTools(current={}){
     // Bounded discovery, never crawl the user's drive.
     for(const e of await fs.readdir(parent,{withFileTypes:true}).catch(()=>[]))if(e.isDirectory())armBins.push(path.join(parent,e.name,'bin'));
   }
+  // STM32CubeIDE (C:/ST/STM32CubeIDE_x.y.z) bundles GNU Tools for STM32 and OpenOCD in its plugins folder.
+  const openocdBins=[];
+  for(const e of await fs.readdir('C:/ST',{withFileTypes:true}).catch(()=>[]))if(e.isDirectory()&&/^STM32CubeIDE/i.test(e.name)){
+    const plugins=path.join('C:/ST',e.name,'STM32CubeIDE','plugins'),names=(await fs.readdir(plugins).catch(()=>[])).sort().reverse();
+    for(const n of names)if(/\.gnu-tools-for-stm32\..*\.win32_/.test(n))armBins.push(path.join(plugins,n,'tools','bin'));else if(/\.externaltools\.openocd\.win32_/.test(n))openocdBins.push(path.join(plugins,n,'tools','bin'));
+  }
   if(process.env.ARM_GCC)armBins.unshift(path.dirname(process.env.ARM_GCC));
   const hostBins=['C:/msys64/ucrt64/bin','C:/msys64/mingw64/bin'];
-  for(const [key,name,dirs]of [['armGcc','arm-none-eabi-gcc',armBins],['armGdb','arm-none-eabi-gdb',armBins],['hostGcc','gcc',hostBins],['hostGdb','gdb',hostBins],['clangd','clangd',['C:/Program Files/LLVM/bin',...hostBins]],['openocd','openocd',[]]])if(!tools[key])tools[key]=await findExecutable(name,dirs);
+  for(const [key,name,dirs]of [['armGcc','arm-none-eabi-gcc',armBins],['armGdb','arm-none-eabi-gdb',armBins],['hostGcc','gcc',hostBins],['hostGdb','gdb',hostBins],['clangd','clangd',['C:/Program Files/LLVM/bin',...hostBins]],['openocd','openocd',openocdBins]])if(!tools[key])tools[key]=await findExecutable(name,dirs);
   if(!tools.cube){const parent=path.join(os.homedir(),'STM32Cube/Repository');for(const e of (await fs.readdir(parent).catch(()=>[])).filter(n=>n.startsWith('STM32Cube_FW_F4_')).sort().reverse()){const candidate=path.join(parent,e);if(await exists(path.join(candidate,'Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal.h'))){tools.cube=candidate;break;}}if(process.env.STM32CUBE_F4_ROOT)tools.cube=process.env.STM32CUBE_F4_ROOT;}
   return tools;
 }
