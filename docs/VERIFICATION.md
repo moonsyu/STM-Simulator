@@ -1,5 +1,18 @@
 # 검증 기록
 
+## 0.29.1 `}` 정렬 IME 수정 · 예제 코드 줄 정리 · 메뉴 표시 — 공개 배포 검증 완료
+
+2026-10-21. 제품 커밋 `0173b64339a8e9a50a38b75c77b13d82416486bd` · [Windows CI 39528002946](https://github.com/moonsyu/STM-Simulator/actions/runs/39528002946) (빌드·릴리스 게시 모두 성공) · [Release v0.29.1](https://github.com/moonsyu/STM-Simulator/releases/tag/v0.29.1). 첫 실행 [39527156197](https://github.com/moonsyu/STM-Simulator/actions/runs/39527156197)은 메뉴 단축키 경쟁 상태로 E2E 1건이 실패해 게시되지 않았고(태그 없음), 수정 후 같은 버전으로 게시했습니다.
+
+| 검사 | 결과 |
+|---|---|
+| `npm test` (로컬 Windows) | 678개 중 675 통과. 실패 2개는 로컬 심볼릭 링크 권한 한정, CI 통과 |
+| `npm run test:e2e` (로컬, 두 번 연속) | 각 20 통과, 1 건너뜀. 새 검사: IME 방식 `}` 입력(`insertText`)과 자동 닫힌 `}` 덮어쓰기 |
+| 예제 코드 정리 | 127개 예제 모두 한 줄 한 문장, 원래 조각과 토큰 동일, `expandC` 멱등 |
+| 공개 자산 | latest=v0.29.1, 태그·BUILD-INFO 커밋 일치, 5자산 존재. EXE SHA-256 `0bab81c7491c08fb5f90abd93d7dd8e3c397157d37859e105f99b5429523a92a`(102,967,040 B, MZ 헤더)이 SHA256.txt·update-manifest·ZIP 안의 `STM-Simulator.exe`와 일치. ZIP SHA-256 `e71b598ce2dd57ca6aa6abdbdb625bbba5e62d56faab3f7aca81daf9899d484c` |
+
+한계: 실제 한글 IME 하드웨어 입력은 `insertText`(키 이벤트 없는 텍스트 입력)로 재현했으며 사람이 직접 입력해 확인하지는 않았습니다.
+
 ## 0.29.0 UI 다듬기 · 기능 점검 수정 — 공개 배포 검증 완료
 
 2026-10-21. 제품 커밋 `90504af7761d3760fa43c26ca78ac8497e64e488` · [Windows CI 39524337726](https://github.com/moonsyu/STM-Simulator/actions/runs/39524337726) (빌드·릴리스 게시 모두 성공) · [Release v0.29.0](https://github.com/moonsyu/STM-Simulator/releases/tag/v0.29.0).
