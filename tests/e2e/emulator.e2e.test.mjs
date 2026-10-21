@@ -120,3 +120,25 @@ test('emulator target builds the project with ARM GCC and runs it',{skip:!toolch
   assert.deepEqual(s.errors,[]);
  }finally{await s.close();}
 });
+
+const cubeF1=process.env.STM32CUBE_F1_ROOT||'/home/claude/tools/cubef1';
+const toolchainF1=await exists(gcc)&&await exists(path.join(cubeF1,'Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal.h'));
+test('after switching to NUCLEO-F103RB the emulator target builds with STM32CubeF1 and runs on the F1 emulator',{skip:!toolchainF1&&!process.env.CI_REQUIRE_TOOLCHAIN&&'ARM GCC / STM32CubeF1 not installed',timeout:240000},async()=>{
+ const s=await launch();
+ await fs.writeFile(path.join(s.profile,'native-tools.json'),JSON.stringify({armGcc:gcc,cube,cubeF1,armGdb:'',hostGcc:'',hostGdb:'',clangd:'',openocd:'',buildRoot:''}));
+ try{
+  const {win}=s;
+  await win.click('[data-activity="board"]');if(!await win.locator('#board-open').isVisible())await win.click('[data-activity="board"]');
+  await win.click('#board-open');await win.click('[data-board-id="nucleo-f103rb"]');
+  if(await win.locator('#board-change-dialog').isVisible())await win.click('#board-change-confirm');
+  await win.waitForFunction(()=>document.querySelector('#surface > .board')?.dataset.board==='nucleo-f103rb');
+  await applyExample(win,'5mm 단색 LED');
+  await win.click('#status-target');await win.selectOption('#native-target','emulator');
+  await win.keyboard.press('Control+F5');
+  await win.waitForFunction(()=>/펌웨어 ELF 준비 완료/.test(document.getElementById('console-output').textContent),null,{timeout:180000});
+  await win.waitForFunction(()=>/PA5=1/.test(document.getElementById('console-output').textContent),null,{timeout:30000});
+  await win.waitForFunction(()=>/PA5=0/.test(document.getElementById('console-output').textContent),null,{timeout:30000});
+  await win.keyboard.press('Control+F2');
+  assert.deepEqual(s.errors,[]);
+ }finally{await s.close();}
+});
