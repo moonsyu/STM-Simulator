@@ -5,6 +5,16 @@ const {detectTools,validateTools,probeTools,prepareBuild,build,fingerprint}=requ
 const {GdbSession}=require('./gdb-mi.cjs');
 const {LanguageServer}=require('./clangd.cjs');
 const {launch,terminate}=require('./process-tools.cjs');
+// OpenOCD bundled with STM32CubeIDE is ST's fork: its scripts live in a separate plugin (…debug.openocd_*/resources/
+// openocd/st_scripts) and it reaches the ST-LINK through the DAP interface; the legacy hla interface/stlink.cfg loops there.
+async function openocdArgs(executable){
+  const m=/^(.*[\\/]plugins)[\\/][^\\/]*\.externaltools\.openocd\.[^\\/]*[\\/]/i.exec(executable||'');
+  if(m)for(const name of (await fs.readdir(m[1]).catch(()=>[])).filter(n=>/\.debug\.openocd_/.test(n)).sort().reverse()){
+    const scripts=path.join(m[1],name,'resources','openocd','st_scripts');
+    if(await fs.access(path.join(scripts,'interface','stlink-dap.cfg')).then(()=>true,()=>false))return ['-s',scripts,'-f','interface/stlink-dap.cfg','-c','transport select dapdirect_swd','-f','target/stm32f4x.cfg'];
+  }
+  return ['-f','interface/stlink.cfg','-f','target/stm32f4x.cfg'];
+}
 function checkedConfig(value){if(!value||!['arm','host'].includes(value.target)||!['Debug','Release'].includes(value.configuration))throw new Error('빌드 대상과 구성을 선택하세요.');return {target:value.target,configuration:value.configuration};}
 class NativeIde extends EventEmitter{
   constructor(directory){super();this.directory=directory;this.gdb=new GdbSession();this.lsp=new LanguageServer();this.result=null;this.buildController=null;this.tools=null;this.runProcess=null;this.server=null;this.terminal=null;
@@ -14,7 +24,8 @@ class NativeIde extends EventEmitter{
   }
   send(type,data){this.emit('event',{type,...data});}
   async settings(){if(!this.tools){let saved={};try{saved=JSON.parse(await fs.readFile(path.join(this.directory,'native-tools.json'),'utf8'));}catch(e){if(e.code!=='ENOENT'&&!(e instanceof SyntaxError))throw e;}this.tools=await detectTools(validateTools(saved));}return this.tools;}
-  async configure(value){if(this.busy())throw new Error('빌드·실행·디버그를 종료한 뒤 도구 설정을 변경하세요.');this.tools=validateTools(value);await fs.mkdir(this.directory,{recursive:true});await fs.writeFile(path.join(this.directory,'native-tools.json'),JSON.stringify(this.tools,null,2));await this.lsp.stop();this.result=null;return this.tools;}
+  // The file keeps what the user entered; empty entries are auto-detected (as at start-up), not left empty until a restart.
+  async configure(value){if(this.busy())throw new Error('빌드·실행·디버그를 종료한 뒤 도구 설정을 변경하세요.');const saved=validateTools(value);await fs.mkdir(this.directory,{recursive:true});await fs.writeFile(path.join(this.directory,'native-tools.json'),JSON.stringify(saved,null,2));this.tools=await detectTools(saved);await this.lsp.stop();this.result=null;return this.tools;}
   busy(){return !!this.buildController||!this.gdb.closed||!!this.runProcess;}
   async validate(text){if(typeof text!=='string'||Buffer.byteLength(text)>2000000)throw new Error('프로젝트 크기 제한을 넘었습니다.');const {validateProject}=await import('../src/project.js');return validateProject(JSON.parse(text));}
   async compile(text,config){
@@ -34,7 +45,7 @@ class NativeIde extends EventEmitter{
   async startServer(executable){
     if(!executable)throw new Error('OpenOCD 경로를 설정하세요.');
     if(this.server)throw new Error('OpenOCD가 이미 실행 중입니다.');
-    const child=this.server=launch(executable,['-f','interface/stlink.cfg','-f','target/stm32f4x.cfg','-c','bindto 127.0.0.1','-c','gdb_port 3333','-c','tcl_port disabled','-c','telnet_port disabled'],{});
+    const child=this.server=launch(executable,[...await openocdArgs(executable),'-c','bindto 127.0.0.1','-c','gdb_port 3333','-c','tcl_port disabled','-c','telnet_port disabled'],{});
     try{await new Promise((resolve,reject)=>{let log='';const timer=setTimeout(()=>reject(new Error('OpenOCD 연결 시간이 초과되었습니다. ST-LINK 연결을 확인하세요.')),15000);const done=(error)=>{clearTimeout(timer);error?reject(error):resolve();};child.once('error',done);child.once('exit',code=>{if(this.server===child)this.server=null;done(new Error('OpenOCD 종료: '+code+'\n'+log.slice(-2000)));});for(const stream of [child.stdout,child.stderr]){stream.setEncoding('utf8');stream.on('data',text=>{log=(log+text).slice(-10000);this.send('debug-output',{text});if(/Listening on port 3333 for gdb connections/.test(log))done();});}});}catch(e){await this.stopServer();throw e;}
   }
   async stopServer(){const child=this.server;this.server=null;await terminate(child);}
@@ -54,4 +65,4 @@ class NativeIde extends EventEmitter{
   async close(){await this.stop();await this.lsp.stop();await this.closeTerminal();}
   async closeTerminal(){const child=this.terminal;this.terminal=null;await terminate(child);if(!this.terminal)this.send('terminal-state',{state:'closed'});}
 }
-module.exports={NativeIde};
+module.exports={NativeIde,openocdArgs};
