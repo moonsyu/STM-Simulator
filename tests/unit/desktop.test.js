@@ -468,6 +468,8 @@ describe('native tools for a real NUCLEO board',()=>{
   assert.equal(await chooseStlink('NUCLEO-F446RE','ABCDEF0123',two),'ABCDEF0123');
   assert.equal(await chooseStlink('NUCLEO-F446RE','',async()=>[{serial:'0672FF485775495067192757',board:''}]),'0672FF485775495067192757');
   assert.equal(await chooseStlink('NUCLEO-F446RE','',async()=>[]),'');
+  // Only another kind of board connected: never write firmware for the wrong MCU.
+  await assert.rejects(chooseStlink('NUCLEO-F103RB','',async()=>[{serial:'0672FF485775495067192757',board:'NUCLEO-F446RE'}]),/NUCLEO-F103RB가 연결되어 있지 않습니다.*NUCLEO-F446RE/);
   await assert.rejects(chooseStlink('NUCLEO-F103RB','',async()=>[{serial:'AAAA0000',board:''},{serial:'BBBB1111',board:''}]),/ST-LINK가 2개 연결되어 있습니다.*AAAA0000, BBBB1111/);
  });
  test('saving the tools dialog keeps the entered values in the file and auto-detects empty entries right away',()=>withTempDir(async dir=>{

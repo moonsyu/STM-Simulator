@@ -38,11 +38,16 @@ async function listStlinks(){
   const r=await execute(path.join(process.env.SystemRoot||'C:/Windows','System32/WindowsPowerShell/v1.0/powershell.exe'),['-NoProfile','-NonInteractive','-Command',"Get-PnpDevice -PresentOnly | Where-Object { $_.InstanceId -match '^USB\\\\VID_0483&PID_(374B|374E|374F|3752|3753|3748)\\\\' } | ForEach-Object { $_.InstanceId.Split('\\')[-1] }"],{timeout:15000}).catch(()=>null);
   return (r?.stdout||'').split(/\r?\n/).map(s=>s.trim()).filter(s=>/^\w{8,}$/.test(s)).map(serial=>({serial,board:''}));
 }
-/** The ST-LINK serial for `boardName`: the one set by the user, the only one connected, or the one whose board name matches. */
+/** The ST-LINK serial for `boardName`: the one set by the user, the one whose board name matches, or the only one
+ * connected when its board is unknown. A connected board of another kind is never chosen (it would be written with
+ * firmware for the wrong MCU). */
 async function chooseStlink(boardName,preferred,list=listStlinks){
   if(preferred)return preferred;
-  const links=await list();if(links.length<=1)return links[0]?.serial||'';
-  const match=links.filter(l=>l.board.toUpperCase()===boardName.toUpperCase());if(match.length===1)return match[0].serial;
+  const links=await list(),same=l=>l.board.toUpperCase()===boardName.toUpperCase();
+  const match=links.filter(same);if(match.length===1)return match[0].serial;
+  if(links.length===1&&!links[0].board)return links[0].serial;
+  if(!links.length)return '';
+  if(links.every(l=>l.board&&!same(l)))throw new Error(`프로젝트 보드 ${boardName}가 연결되어 있지 않습니다. 연결된 보드: ${links.map(l=>l.board).join(', ')}. 보드를 연결하거나 프로젝트 보드를 바꾸세요.`);
   throw new Error(`ST-LINK가 ${links.length}개 연결되어 있습니다. 보드 연결 설정에서 ${boardName}의 ST-LINK 시리얼을 지정하세요: ${links.map(l=>l.serial+(l.board?` (${l.board})`:'')).join(', ')}`);
 }
 function checkedConfig(value){if(!value||!['arm','host'].includes(value.target)||!['Debug','Release'].includes(value.configuration))throw new Error('빌드 대상과 구성을 선택하세요.');return {target:value.target,configuration:value.configuration};}
@@ -89,20 +94,21 @@ class NativeIde extends EventEmitter{
     const project=await this.validate(text),{projectBoard}=await import('../src/boards.js'),board=projectBoard(project);
     return {target:OPENOCD_TARGETS[board.mcuFamily],serial:await chooseStlink(board.name,typeof connection.serial==='string'&&/^\w{8,40}$/.test(connection.serial)?connection.serial:'')};
   }
-  // Run (Ctrl+F5) on the board like CubeIDE's Run: write the ELF (when enabled), reset, and let OpenOCD exit so no
-  // debugger keeps polling the target through the ST-LINK (its COM LED LD1 stops blinking).
+  // Run (Ctrl+F5) on the board like CubeIDE's Run: always write the current build, verify, reset, and let OpenOCD exit
+  // so no debugger keeps polling the target through the ST-LINK (its COM LED LD1 stops blinking).
+  // The connection's flash option only decides whether debugging (F10) loads the ELF or attaches to what is on the board.
   async runOnBoard({text,config,connection}){
     if(this.busy())throw new Error('현재 실행을 먼저 종료하세요.');
     const plan=await this.ensureBuild(text,config),tools=await this.settings();
     if(!tools.openocd)throw new Error('OpenOCD 경로를 설정하세요.');
-    const flash=connection.flash===true,steps=flash?['-c',`program {${plan.elf.replace(/\\/g,'/')}} verify reset exit`]:['-c','init','-c','reset run','-c','shutdown'];
+    const steps=['-c',`program {${plan.elf.replace(/\\/g,'/')}} verify reset exit`];
     const child=this.runProcess=launch(tools.openocd,[...await openocdArgs(tools.openocd,await this.boardTarget(text,connection)),'-c','bindto 127.0.0.1','-c','gdb_port disabled','-c','tcl_port disabled','-c','telnet_port disabled',...steps],{});
     this.send('run-state',{state:'running'});let log='';
     try{
       const code=await new Promise((resolve,reject)=>{child.once('error',reject);child.once('close',resolve);for(const stream of [child.stdout,child.stderr]){stream.setEncoding('utf8');stream.on('data',t=>{log=(log+t).slice(-10000);this.send('run-output',{text:t});});}});
-      if(code!==0)throw new Error(`OpenOCD ${flash?'기록':'리셋'} 실패 (종료 코드 ${code}). ST-LINK 연결을 확인하세요.\n`+log.slice(-1500));
-      this.send('run-output',{text:flash?'\n펌웨어를 보드에 기록하고 리셋했습니다. 디버거를 분리했으므로 보드가 단독으로 실행합니다.\n':'\n보드를 리셋했습니다(기록 안 함). 디버거를 분리했으므로 보드가 단독으로 실행합니다.\n'});
-      return {directory:plan.directory,flashed:flash};
+      if(code!==0)throw new Error(`OpenOCD 기록 실패 (종료 코드 ${code}). ST-LINK 연결을 확인하세요.\n`+log.slice(-1500));
+      this.send('run-output',{text:'\n펌웨어를 보드에 기록·검증하고 리셋했습니다. 디버거를 분리했으므로 보드가 단독으로 실행합니다.\n'});
+      return {directory:plan.directory,flashed:true};
     }finally{if(this.runProcess===child)this.runProcess=null;this.send('run-state',{state:'idle'});}
   }
   async startServer(executable,options){
