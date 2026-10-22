@@ -195,11 +195,13 @@ function mountShell(layout,state,options,{apply,save,setPalette}){
  const bell=document.createElement('button');bell.type='button';bell.className='status-item status-button';bell.id='status-notifications';bell.innerHTML=icon('bell',14);bell.title='알림';bell.setAttribute('aria-label','알림 보기');bell.onclick=()=>{const f=$('app-feedback');if(f&&f.dataset.scope)f.hidden=!f.hidden;else layout.showPanel('log');};right.append(bell);
  const update=()=>{
   const t=$('native-target');target.textContent=t?'⚙ '+(t.selectedOptions[0]?.textContent||''):'';
-  const issues=document.querySelector('[data-monitor="issues"]')?.textContent.match(/\((\d+)\)/)?.[1]||'0';problems.innerHTML=`<span aria-hidden="true">⊗</span> ${issues}`;problems.setAttribute('aria-label',`문제 ${issues}건`);
+  // Circuit issues plus the build errors/warnings listed in the 빌드 panel.
+  const issues=Number(document.querySelector('[data-monitor="issues"]')?.textContent.match(/\((\d+)\)/)?.[1]||0)+($('build-errors')?.childElementCount||0);problems.innerHTML=`<span aria-hidden="true">⊗</span> ${issues}`;problems.setAttribute('aria-label',`문제 ${issues}건`);
   const runningState=$('status-led')?.className==='running';shell.dataset.running=String(runningState);
   board.textContent=$('current-board-name')?.textContent||'NUCLEO-F446RE';
  };
  new MutationObserver(update).observe(document.querySelector('.monitor-tabs'),{subtree:true,characterData:true,childList:true});
+ if($('build-errors'))new MutationObserver(update).observe($('build-errors'),{childList:true});
  if($('status-led'))new MutationObserver(update).observe($('status-led'),{attributes:true});
  $('native-target')?.addEventListener('change',update);new MutationObserver(update).observe($('current-board-name'),{childList:true,characterData:true,subtree:true});update();
  // The update button lives in the 도움말 menu; a status item appears only while an update is downloading or ready.
