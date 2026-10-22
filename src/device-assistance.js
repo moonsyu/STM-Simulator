@@ -15,6 +15,7 @@ import {defaultMcu,validateMcu,generateHal,ROUTES,irqForPin} from './mcu-config.
 import {timerMax} from './timer-config.js';
 import {SERIAL_IDS,serialHandle} from './serial-config.js';
 import {validateProject} from './project.js';
+import {legalizeWireEnds} from './wire-ends.js';
 import {compileHal} from './hal-source.js';
 import {cFunctions,replaceIdentifiers,checksum} from './c-source-edit.js';
 import {baremetalCards} from './device-baremetal.js';
@@ -35,7 +36,9 @@ function bindParts(p,sample,target,prior,report){
   }));
   const claimed=new Set((p.deviceDocs?.bindings||[]).filter(b=>b!==prior).flatMap(b=>Object.values(b.parts)));
   const matchesValue=part=>!['resistor','capacitor'].includes(part.type)||part.value===template.value||part.type==='resistor'&&['led','rgb','sevenseg','relay','lcd'].includes(target.type)&&part.value>=template.value&&part.value<=template.value*4;
-  const candidate=p.components.find(part=>part.type===template.type&&!Object.values(map).includes(part.id)&&!claimed.has(part.id)&&matchesValue(part)&&terminalKeys(part).some(key=>{const root=uf.find(partTerminal(part.id,key));return !powerRoots.has(root)&&[...peers,...configuredPeers].some(peer=>uf.find(peer)===root);}));
+  // A part already wired to another device of the same kind (the blink LED's resistor) belongs to that circuit.
+  const kind=type=>CATALOG_BY_TYPE[type]?.family||type,foreign=part=>terminalKeys(part).some(key=>{const root=uf.find(partTerminal(part.id,key));return p.components.some(o=>o.id!==target.id&&o.id!==part.id&&kind(o.type)===kind(target.type)&&terminalKeys(o).some(k=>uf.find(partTerminal(o.id,k))===root));});
+  const candidate=p.components.find(part=>part.type===template.type&&!Object.values(map).includes(part.id)&&!claimed.has(part.id)&&matchesValue(part)&&!foreign(part)&&terminalKeys(part).some(key=>{const root=uf.find(partTerminal(part.id,key));return !powerRoots.has(root)&&[...peers,...configuredPeers].some(peer=>uf.find(peer)===root);}));
   if(candidate){map[template.id]=candidate.id;report.reused++;continue;}
   const added=structuredClone(template);added.id=newId(p,'docsPart');added.name=template.name+' · Docs';delete added.attachA;delete added.attachB;delete added.attachments;
   const anchor=p.components.find(part=>part.id===target.id);if(anchor){added.x=anchor.x+210+report.addedParts%3*125;added.y=anchor.y+Math.floor(report.addedParts/3)*125;}
@@ -223,6 +226,8 @@ export function applyDeviceExample(original,target,options={}){
  const mounted=id=>{const part=project.components.find(c=>c.id===id),map=part&&attachments(part);return !!map&&terminalKeys(part).every(key=>typeof map[key]==='string');};
  const untouched=report.addedWires+report.removedWires+report.detached===changes&&!project.components.some(c=>!beforeParts.has(c.id))&&Object.values(parts).every(mounted);
  if(!untouched)arrangeExampleOnBreadboards(project,{partIds:Object.values(parts),preferredBoard:type==='breadboard'?component?.id:undefined,report});
+ // Wires Docs added follow the editor's rules: one end per pin/hole, none on a lead that is in a breadboard hole.
+ legalizeWireEnds(project,project.wires.filter(w=>!beforeWires.has(w.id)).map(w=>w.id));
  if(component?.address!==undefined){const net=wiringTopology(project);if(project.components.some(other=>other.id!==component.id&&other.address===component.address&&net.find(busPin(other,'SDA'))===net.find(busPin(component,'SDA'))))throw new Error('같은 I2C 버스에 주소 0x'+component.address.toString(16)+' 장치가 이미 있습니다. 장치 속성에서 지원하는 다른 주소를 선택하세요.');}
  if(mode==='hal'&&api!=='all'&&!sample.code.includes(api+'('))throw new Error('이 장치의 HAL 함수 목록에서 적용할 함수를 선택하세요.');
  // Remember what Docs itself added so that removal restores only that.

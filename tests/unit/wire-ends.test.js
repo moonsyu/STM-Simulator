@@ -78,3 +78,18 @@ test('moving a selection re-seats parts that land on free holes',async()=>{
   moveSelection(p,{type:'part',id:'led1'},0,pitch*0);assert.equal(Object.keys(attachments(led)).length,0,'moving unplugs');
   mountSelection(p,{type:'part',id:'led1'});assert.deepEqual(Object.values(attachments(led)).sort(),before,'dropping on the same holes re-seats it');
 });
+
+test('Docs and paste keep one wire end per pin/hole and never wire a mounted lead; Docs leaves other circuits\' parts alone',async()=>{
+  const {applyHalExample}=await import('../../src/hal-examples.js'),{blankProject,validateProject}=await import('../../src/project.js'),{applyDeviceExample}=await import('../../src/device-assistance.js');
+  const {copySelection,pasteSelection}=await import('../../src/circuit-edit.js'),{attachments}=await import('../../src/components.js');
+  const legal=p=>{const ends=p.wires.flatMap(w=>[w.from,w.to]);assert.equal(ends.length,new Set(ends).size,'one wire end per place');
+    for(const id of ends){const m=/^part:([^:]+):(.+)$/.exec(id),c=m&&p.components.find(c=>c.id===m[1]);assert.ok(!c||!attachments(c)[m[2]],'no wire on a mounted lead '+id);}};
+  for(const type of ['resistor','ref_led_tht_2']){
+    const p=validateProject(applyHalExample(blankProject(),'blink')),r1=JSON.stringify(attachments(p.components.find(c=>c.id==='r1')));
+    p.components.push({id:'extra',type,name:'X',x:300,y:600,rotation:0,...(type==='resistor'?{value:330}:{})});
+    const {project}=applyDeviceExample(validateProject(p),{type:'part',id:'extra'},{mode:'hal',api:'all'});legal(project);
+    assert.equal(JSON.stringify(attachments(project.components.find(c=>c.id==='r1'))),r1,'the blink resistor stays where it was');
+  }
+  const hat=validateProject(applyHalExample(blankProject(),'ref_motor_driver_hat'));let n=0;
+  pasteSelection(hat,copySelection(hat,{type:'group',parts:hat.components.map(c=>c.id),wires:hat.wires.map(w=>w.id)}),prefix=>prefix+'copy'+(++n));legal(hat);
+});

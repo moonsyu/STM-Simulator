@@ -3,6 +3,7 @@ import {PINS,circuitHoles,endpointInfo,breadboardPrefix,endpoints as circuitEndp
 import {terminalKeys,attachments,assignAttachments} from './components.js';
 import {moveBreadboard} from './breadboards.js';
 import {findMount,applyMount,occupiedHoles} from './placement.js';
+import {freeEquivalent} from './wire-ends.js';
 
 export const selectedIds=(selection,type)=>selection?.type==='group'?selection[type==='part'?'parts':'wires']:selection?.type===type?[selection.id]:[];
 export const isSelected=(selection,type,id)=>selectedIds(selection,type).includes(id);
@@ -60,8 +61,13 @@ export function pasteSelection(project,clip,uid,offset=28){
   const endpoints=new Set(circuitEndpoints([...project.components,...components],project.surfaces).filter(Boolean).map(p=>p.id));for(const p of [...project.components,...components])for(const k of terminalKeys(p))endpoints.add(`part:${p.id}:${k}`);
   const candidates=clip.wires.map(w=>({...structuredClone(w),id:uid('w'),from:remap(w.from),to:remap(w.to),...(w.points?{points:w.points.map(p=>({x:p.x+offset,y:p.y+offset}))}:{})})).filter(w=>endpoints.has(w.from)&&endpoints.has(w.to));
   // One wire end or part lead per pin/hole: a pasted wire whose end is already taken (e.g. the original board pin) is left out.
-  const used=new Set(project.wires.flatMap(w=>[w.from,w.to])),leads=occupiedHoles([...project.components,...components]),wires=[];
-  for(const w of candidates){if([w.from,w.to].some(id=>used.has(id)||leads.has(id)))continue;used.add(w.from);used.add(w.to);wires.push(w);}
+  // A copied wire on a mounted lead moves to a free hole of that lead's row.
+  const used=new Set(project.wires.flatMap(w=>[w.from,w.to])),leads=occupiedHoles([...project.components,...components]),wires=[],after={...project,components:[...project.components,...components]};
+  for(const w of candidates){
+    if([w.from,w.to].some(id=>used.has(id)||leads.has(id)))continue;
+    const from=freeEquivalent(after,w.from,used,w.to),to=from&&freeEquivalent(after,w.to,new Set([...used,from]),from);if(!from||!to)continue;
+    if(from!==w.from||to!==w.to){w.from=from;w.to=to;delete w.points;}used.add(w.from);used.add(w.to);wires.push(w);
+  }
   project.components.push(...components);project.wires.push(...wires);return {type:'group',parts:components.map(p=>p.id),wires:wires.map(w=>w.id),skipped:candidates.length-wires.length};
 }
 /** Re-seat parts that now sit over free breadboard holes (as dropping a single dragged part does). */
