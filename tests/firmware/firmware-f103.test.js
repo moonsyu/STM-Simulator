@@ -106,3 +106,13 @@ test('i2c, spi and timer input capture work at the F1 peripheral addresses', () 
   const cap = open('timer_capture'); runUntil(cap.session, 300);
   assert.ok(printed(cap.log, /TIM4 capture: period=400[01] us frequency=2(49|50) Hz/), cap.log.print.join('|'));
 });
+
+test('an ELF built for the other board, a non-ARM ELF and a truncated ELF are refused with a clear message', async () => {
+  const { parseElf } = await import('../../src/emu/elf.js');
+  const f446 = JSON.parse(fs.readFileSync(path.join(DIR, '../firmware/blink.json'), 'utf8'));
+  const f103elf = fs.readFileSync(path.join(DIR, 'blink.elf'));
+  assert.throws(() => new FirmwareSession(f446, { elf: new Uint8Array(f103elf) }), /NUCLEO-F103RB\(STM32F103RB\)용입니다/);
+  const x86 = Buffer.from(f103elf); x86.writeUInt16LE(3, 18);
+  assert.throws(() => parseElf(x86), /ARM\(Cortex-M\) ELF가 아닙니다/);
+  assert.throws(() => parseElf(f103elf.subarray(0, 200)), /손상되었거나 잘렸습니다/);
+});
