@@ -92,7 +92,8 @@ ipcMain.handle('firmware:import',async(_event,folder)=>{
     for(const relative of ['','Core/Src','Core/Inc']){
       const directory=path.join(root,relative);let entries;try{entries=await fs.readdir(directory,{withFileTypes:true});}catch(error){if(error.code==='ENOENT')continue;throw error;}
       for(const entry of entries){if(!entry.isFile())continue;const ext=relative?/\.[ch]$/:/\.ioc$/;
-        if(ext.test(entry.name)&&!['syscalls.c','sysmem.c','system_stm32f4xx.c','stm32f4xx_hal_conf.h','system_stm32f1xx.c','stm32f1xx_hal_conf.h'].includes(entry.name))paths.push(path.join(directory,entry.name));}
+        // The project's *_hal_conf.h is kept: its HSE_VALUE (8 MHz ST-LINK clock on a NUCLEO) drives the ARM build; the SDK template says 25 MHz.
+        if(ext.test(entry.name)&&!['syscalls.c','sysmem.c','system_stm32f4xx.c','system_stm32f1xx.c'].includes(entry.name))paths.push(path.join(directory,entry.name));}
     }
   }
   if(!paths.length||paths.length>41)throw new Error('소스 파일 1~41개를 선택하세요.');
