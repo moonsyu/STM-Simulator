@@ -52,8 +52,11 @@ export function halExample(kind){
     p.code=p.code.replace(kind==='exti'?'  /* 핀 번호에 따라 인터럽트 처리를 작성하세요. */':'  /* 타이머 주기 인터럽트 */',kind==='exti'?'  if (GPIO_Pin == GPIO_PIN_13) { HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_5); printf("EXTI PC13\\n"); }':'  if (htim->Instance == TIM2) { HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_5); printf("TIM2 tick=%lu\\n", HAL_GetTick()); }');
   }
   if(kind==='uart'){
-    p.code='uint8_t rx[1];\n'+p.code;user(2,'  uint8_t message[] = "HAL UART ready\\r\\n";\n  HAL_UART_Transmit(&huart2, message, sizeof(message)-1, 100);\n  HAL_UART_Receive_IT(&huart2, rx, 1);');user(3,'    HAL_Delay(10);');
-    p.code=p.code.replace('  /* HAL_UART_Receive_IT() 수신 완료 */','  HAL_UART_Transmit_IT(huart, rx, 1);\n  HAL_UART_Receive_IT(huart, rx, 1);');
+    // The interrupt only queues each byte; the loop echoes them. A Transmit_IT from the callback would return BUSY
+    // (and drop the byte) while the previous echo is still being sent.
+    p.code='uint8_t rx[1];\nvolatile uint8_t echo[64];\nvolatile uint32_t echoHead = 0, echoTail = 0;\n'+p.code;user(2,'  uint8_t message[] = "HAL UART ready\\r\\n";\n  HAL_UART_Transmit(&huart2, message, sizeof(message)-1, 100);\n  HAL_UART_Receive_IT(&huart2, rx, 1);');
+    user(3,'    while (echoTail != echoHead) {\n      uint8_t c = echo[echoTail % 64];\n      echoTail++;\n      HAL_UART_Transmit(&huart2, &c, 1, 10);\n    }\n    HAL_Delay(1);');
+    p.code=p.code.replace('  /* HAL_UART_Receive_IT() 수신 완료 */','  echo[echoHead % 64] = rx[0];\n  echoHead++;\n  HAL_UART_Receive_IT(huart, rx, 1);');
   }
   if(['adc','temperature'].includes(kind))user(3,'    HAL_ADC_Start(&hadc1);\n    HAL_ADC_PollForConversion(&hadc1, 10);\n    uint32_t value = HAL_ADC_GetValue(&hadc1);\n'+(kind==='temperature'?'    float celsius = (value * 3.3 / 4095 - 0.5) * 100;\n    printf("TMP36=%.1f C\\n", celsius);':'    printf("%lu\\n", value);')+'\n    HAL_Delay(500);');
   if(kind==='samples')user(3,'    uint16_t values[8];\n    for (int i = 0; i < 8; i++) {\n      HAL_ADC_Start(&hadc1);\n      HAL_ADC_PollForConversion(&hadc1, 10);\n      values[i] = HAL_ADC_GetValue(&hadc1);\n      printf("sample[%d]=%u\\n", i, values[i]);\n      HAL_Delay(10);\n    }\n    HAL_Delay(500);');
