@@ -51,3 +51,9 @@ test('the board being edited decides header pin names: NUCLEO-F103RB has PD0/PD1
  setActiveBoard('nucleo-f446re');
  assert.equal(PIN_BY_ID.get('board:CN7:29').signal,'PH0');assert.equal(PIN_BY_ID.get('board:CN10:18').signal,'NC');assert.equal(searchPins('PB11').length,0);
 });
+
+test('the F446RE timer clock the Pinout accepts is exactly what main.c generation can build',async()=>{
+ const {familyProfile}=await import('../../src/mcu-family.js'),{clockPlan}=await import('../../src/hal-generator.js');
+ const valid=familyProfile('STM32F446RE').clock.valid;
+ for(const hz of [8e6,12e6,12.5e6,16e6,25e6,42e6,84e6,90e6,100e6,180e6,84123456]){let builds=true;try{clockPlan(hz);}catch{builds=false;}assert.equal(valid(hz),builds,`${hz/1e6} MHz`);}
+});

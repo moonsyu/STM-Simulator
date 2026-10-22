@@ -27,7 +27,9 @@ const F4={
   irqExtra:['ADC_IRQn','SPI1_IRQn','I2C1_EV_IRQn','I2C1_ER_IRQn','DCMI_IRQn','SDIO_IRQn',...F4_DMA_STREAMS.map(s=>s+'_IRQn')],
   gpioPins:GPIO_PINS,ports:['A','B','C','D','H'],
   // HSI 16 MHz without PLL; examples run the timers at 84 MHz through the PLL.
-  clock:{defaultHz:16000000,exampleHz:84000000,minHz:1000000,maxHz:180000000,label:'1~180 MHz',valid:hz=>Number.isInteger(hz)&&hz>=1000000&&hz<=180000000},
+  // HSI 16 MHz directly, or an HSI PLL value the generator can build: APB1 timer clock = HCLK <= 90 MHz (APB1 <= 45 MHz),
+  // VCO = 16/16 MHz x N (100..432) divided by 2/4/6/8 (the same rule as clockPlan in hal-generator.js).
+  clock:{defaultHz:16000000,exampleHz:84000000,minHz:12500000,maxHz:90000000,label:'16 MHz 또는 12.5~90 MHz(HSI PLL)',valid:hz=>Number.isInteger(hz)&&(hz===16000000||hz<=90000000&&[4,2,6,8].some(d=>{const n=hz*d/1000000;return Number.isInteger(n)&&n>=100&&n<=432;}))},
   hal:{prefix:'stm32f4xx',define:'STM32F446xx'}
 };
 
