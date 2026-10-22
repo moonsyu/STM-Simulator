@@ -34,7 +34,7 @@ export function advancedProtocolExample(v,b){
 void tmData(uint32_t state){HAL_GPIO_WritePin(GPIOB,GPIO_PIN_1,state?GPIO_PIN_SET:GPIO_PIN_RESET);HAL_Delay(1);}
 void tmStart(void){tmData(1);tmClock(1);tmData(0);tmClock(0);}
 void tmStop(void){tmClock(0);tmData(0);tmClock(1);tmData(1);}
-void tmByte(uint8_t value){for(uint32_t bit=0;bit<8;bit++){tmClock(0);tmData(value&1);tmClock(1);value>>=1;}tmClock(0);GPIO_InitTypeDef ack={0};ack.Pin=GPIO_PIN_1;ack.Mode=GPIO_MODE_INPUT;ack.Pull=GPIO_PULLUP;HAL_GPIO_Init(GPIOB,&ack);tmClock(1);if(HAL_GPIO_ReadPin(GPIOB,GPIO_PIN_1))printf("TM1637 NACK\\n");tmClock(0);ack.Mode=GPIO_MODE_OUTPUT_PP;HAL_GPIO_Init(GPIOB,&ack);}`);
+void tmByte(uint8_t value){for(uint32_t bit=0;bit<8;bit++){tmClock(0);tmData(value&1);tmClock(1);value>>=1;}GPIO_InitTypeDef ack={0};ack.Pin=GPIO_PIN_1;ack.Mode=GPIO_MODE_INPUT;ack.Pull=GPIO_PULLUP;HAL_GPIO_Init(GPIOB,&ack);tmClock(0);tmClock(1);if(HAL_GPIO_ReadPin(GPIOB,GPIO_PIN_1))printf("TM1637 NACK\\n");tmClock(0);ack.Mode=GPIO_MODE_OUTPUT_PP;HAL_GPIO_Init(GPIOB,&ack);}`);
  }
  if(id==='sevenseg-4digit-12'){
   const physical=[13,9,4,2,1,12,5,3,14,11,10,6];connect(7,'GND');p.components.push({id:'colon',type:'resistor',name:'Colon 1kΩ',value:1000,x:600,y:620,rotation:0,span:70});p.wires.push({id:'colon1',from:boardPin('3V3'),to:'part:colon:a',color:'#23a68a'},{id:'colon2',from:'part:colon:b',to:'part:demo:p8',color:'#23a68a'});
