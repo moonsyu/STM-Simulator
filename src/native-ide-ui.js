@@ -75,7 +75,9 @@ export function setupNativeIde({o,editor,select,showMonitor,points,watches,toggl
   }catch(e){if(state==='paused'&&current===sequence)$('debug-location').textContent=e.message;}
  }
  function sync(){const value=o.getProject().ide?.native||{target:'simulator',configuration:'Debug'};$('native-target').value=value.target;$('native-config').value=value.configuration;control();queueLanguage();}
- function change(){o.getProject().ide??={breakpoints:[],watches:[]};o.getProject().ide.native=config();o.saveLocal();editor.diagnostics([]);$('build-errors').replaceChildren();editor.updateDebug(points(),null);
+ // Results of the previous target's build (problems, ELF/map list, build folder) do not belong to the new one.
+ function clearBuild(){$('build-errors').replaceChildren();$('native-artifact-list').textContent='';$('native-artifacts').disabled=true;$('build-output').textContent='';}
+ function change(){o.getProject().ide??={breakpoints:[],watches:[]};o.getProject().ide.native=config();o.saveLocal();editor.diagnostics([]);clearBuild();editor.updateDebug(points(),null);
   // clangd serves only the ARM and Windows targets; its markers belong to the previous target's flags.
   editor.clearLanguageDiagnostics();if(language&&!selected()){language=false;languageReady=false;$('language-toggle').textContent='clangd 꺼짐';void guard(()=>api['language-stop']());}
   $('build-status').textContent=emulator()?'ARM GCC → 에뮬레이터 · 빌드 준비':selected()?`${config().target==='arm'?'ARM GCC':'Windows GCC'} · 빌드 준비`:'시뮬레이터용 빌드';$('new').disabled=$('open').disabled=$('workspace-open').disabled=false;o.refresh();queueLanguage();}
@@ -153,6 +155,6 @@ export function setupNativeIde({o,editor,select,showMonitor,points,watches,toggl
   if(event.type==='diagnostics'&&language&&selected())editor.languageDiagnostics(event.file,event.items);
  });
  if(!api){for(const id of ['native-tools','native-target','language-toggle','terminal-start'])$(id).disabled=true;}
- return {selected,emulator,buildElf,config,busy,paused:()=>selected()&&state==='paused',controls:control,sync,build,command,debugView,queueLanguage,async syncBreakpoints(){if(!['paused','running'].includes(state))return;await guard(()=>api.breakpoints(points()));},reset(){state='idle';lastStop=null;sequence++;editor.clearLanguageDiagnostics();sync();}};
+ return {selected,emulator,buildElf,config,busy,paused:()=>selected()&&state==='paused',controls:control,sync,build,command,debugView,queueLanguage,async syncBreakpoints(){if(!['paused','running'].includes(state))return;await guard(()=>api.breakpoints(points()));},reset(){state='idle';lastStop=null;sequence++;editor.clearLanguageDiagnostics();clearBuild();sync();}};
 }
 function basename(value){return value.replaceAll('\\','/').split('/').at(-1);}
