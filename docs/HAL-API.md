@@ -9,7 +9,7 @@ STM32F446RE용 **HAL API 호환 회로 모델**입니다. CubeMX/CubeIDE의 `mai
 3. 인터럽트는 **NVIC**에서 활성화합니다. Cortex-M4 NVIC처럼 4비트 우선순위를 preemption(그룹)과 sub priority로 나누어 처리합니다. 더 높은(숫자가 작은) preemption 우선순위의 인터럽트는 실행 중인 콜백을 문장 단위로 선점하고, 같거나 낮은 우선순위는 기다렸다가 우선순위→IRQ 번호 순서로 꼬리 물기(tail-chaining)합니다. 자세한 내용은 아래 **NVIC 선점과 SysTick**을 참고하세요.
 4. **설정 적용**은 코드를 유지합니다. **설정으로 HAL 코드 생성**은 확인 후 현재 소스 묶음을 설정에 맞는 `main.c`로 교체합니다. 회로 배선은 유지하고 실행 취소로 복구할 수 있습니다.
 5. 기존 코드는 편집기 **.ioc / C 소스 가져오기**에서 함께 선택합니다. C 파일 선택에는 `main.c`가 필요합니다. .ioc만 선택하면 기존 실행 모드와 코드를 유지하고 설정만 가져옵니다.
-6. 데스크톱의 **Cube 프로젝트 폴더**는 루트 `.ioc`, `Core/Src`, `Core/Inc`를 읽습니다. `Drivers`, startup, syscalls, sysmem, system_stm32f4xx 및 HAL conf 구현은 가져오지 않습니다. 파일은 원본에 쓰지 않고 회로 프로젝트에 복사합니다.
+6. 데스크톱의 **Cube 프로젝트 폴더**는 루트 `.ioc`, `Core/Src`, `Core/Inc`를 읽습니다. `Drivers`, startup, syscalls, sysmem, system_stm32f4xx/system_stm32f1xx는 가져오지 않고, 프로젝트의 `stm32f4xx_hal_conf.h`/`stm32f1xx_hal_conf.h`는 ARM 빌드 설정(HSE_VALUE 등)으로 유지합니다. conf가 없으면 SDK 템플릿에 NUCLEO의 HSE 8 MHz(`HSE_VALUE=8000000U`)를 넣어 빌드합니다. 파일은 원본에 쓰지 않고 회로 프로젝트에 복사합니다.
 7. 편집기 상단에서 `main.c`와 가져온 `.c/.h`를 전환해 수정합니다. **코드 검사**는 문법을 검사하고, 시뮬레이션 시작 시 핀·초기화·배선·지원 API를 검사합니다.
 
 HAL 코드·회로 예제는 GPIO·EXTI·UART·TIM2·ADC·I²C·SPI·함수/구조체·PWM·초음파와 확장 센서·화면·구동·입력 부품을 포함한 기본 예제 40개와 조사 항목별 80개, 총 120개입니다. 모두 HAL C를 사용하며 Serial 호출은 없습니다. 선택한 예제의 코드·MCU 설정·부품·배선·계산 설정을 함께 적용하고 회로 이름은 유지합니다. 전원과 통신/센서 배선까지 구성되며, PWM 예제는 파형 계산 설정도 적용합니다. 함수·배열 예제는 외부 부품 없이 로그로 실행합니다. 예제를 선택하는 즉시 확인 창 없이 적용하며 Ctrl+Z로 이전 작업 전체를 되돌립니다. 새 회로도 부품·배선 없이 HAL 코드로 시작합니다.

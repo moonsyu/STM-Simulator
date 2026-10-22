@@ -72,7 +72,8 @@ async function prepareBuild({project,tools,root,target='arm',configuration='Debu
     if(!cube||!await exists(path.join(hal,'Inc',p+'_hal.h')))throw new Error(`개발 도구 설정에서 ${sdk.name} SDK 루트 폴더를 선택하거나 필요한 도구 설치로 받으세요.`);
     flags.unshift(...sdk.cpu,'-DUSE_HAL_DRIVER');
     flags.push(...[path.join(hal,'Inc'),path.join(device,'Include'),core].map(p=>'-I'+p));
-    if(!files.some(f=>f.name===p+'_hal_conf.h'))await fs.copyFile(path.join(hal,'Inc',p+'_hal_conf_template.h'),path.join(directory,p+'_hal_conf.h'));
+    // Without the project's conf, the SDK template is used; its HSE_VALUE (25 MHz on F4) is not the NUCLEO's 8 MHz ST-LINK clock.
+    if(!files.some(f=>f.name===p+'_hal_conf.h')){await fs.copyFile(path.join(hal,'Inc',p+'_hal_conf_template.h'),path.join(directory,p+'_hal_conf.h'));flags.push('-DHSE_VALUE=8000000U');}
     if(!files.some(f=>f.name==='main.h'))await fs.writeFile(path.join(directory,'main.h'),`#pragma once\n#include "${p}_hal.h"\nvoid Error_Handler(void);\n`);
     // Pinout labels: CubeMX writes LABEL_Pin / LABEL_GPIO_Port into main.h; -D gives them to every source, also with a user main.h (same text, so no redefinition warning).
     for(const [pin,q]of Object.entries(project.mcu?.pins||{}))if(q.label)flags.push(`-D${q.label}_Pin=GPIO_PIN_${pin.slice(2)}`,`-D${q.label}_GPIO_Port=GPIO${pin[1]}`);
