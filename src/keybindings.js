@@ -17,7 +17,9 @@ export function eventKey(event){
 }
 export function validBinding(text){return typeof text==='string'&&text.length<=40&&/^((Ctrl\+)?(Alt\+)?(Shift\+)?([^\s+]+|\+)|[^ ]+ [^ ]+)$/.test(text);}
 // Keys the app keeps for itself (editor, circuit and the fixed commands); a binding may not take them.
-export const FIXED_KEYS={F9:'중단점',F1:'명령 팔레트',F3:'다음 찾기','Ctrl+S':'저장','Ctrl+Z':'되돌리기','Ctrl+Y':'다시 실행','Ctrl+Shift+Z':'다시 실행','Ctrl+F':'찾기','Ctrl+R':'바꾸기','Ctrl+H':'바꾸기','Ctrl+A':'모두 선택','Ctrl+C':'복사','Ctrl+V':'붙여넣기','Ctrl+X':'잘라내기','Ctrl+D':'복제'};
+export const FIXED_KEYS={F9:'중단점',F1:'명령 팔레트',F3:'다음 찾기','Ctrl+S':'저장','Ctrl+Z':'되돌리기','Ctrl+Y':'다시 실행','Ctrl+Shift+Z':'다시 실행','Ctrl+F':'찾기','Ctrl+R':'바꾸기','Ctrl+H':'바꾸기','Ctrl+A':'모두 선택','Ctrl+C':'복사','Ctrl+V':'붙여넣기','Ctrl+X':'잘라내기','Ctrl+D':'복제',
+ 'Shift+F3':'이전 찾기','Ctrl+F3':'선택 찾기',F2:'이름 바꾸기',F12:'정의로 이동','Shift+F12':'참조 찾기','Ctrl+Space':'자동 완성','Ctrl+Shift+Space':'매개변수 힌트','Ctrl+/':'주석 전환',
+ 'Ctrl+Home':'파일 처음','Ctrl+End':'파일 끝','Ctrl+Left':'단어 이동','Ctrl+Right':'단어 이동','Ctrl+Up':'스크롤','Ctrl+Down':'스크롤','Ctrl+Backspace':'단어 지우기','Ctrl+Delete':'단어 지우기'};
 // Why a key cannot be bound ('' when it can): a plain or Shift-only key would swallow typing in every text field.
 export function bindingProblem(text){
  const first=String(text||'').split(' ')[0];if(!first)return '';
@@ -39,7 +41,8 @@ let current=null;
 export function setCurrentKeybindings(bindings){current={...bindings};}
 export function keyFor(id){return (current||=loadKeybindings())[id]||'';}
 export function withKey(label,id){const k=keyFor(id);return k?`${label} (${k})`:label;}
-export function conflicts(bindings,id,key){return key?Object.entries(bindings).filter(([other,k])=>other!==id&&k===key).map(([other])=>other):[];}
+// A key also clashes with a chord it starts (Ctrl+K vs Ctrl+K Ctrl+S): the single key would always win.
+export function conflicts(bindings,id,key){return key?Object.entries(bindings).filter(([other,k])=>other!==id&&k&&(k===key||k.startsWith(key+' ')||key.startsWith(k+' '))).map(([other])=>other):[];}
 // Matches single keys and two-step chords ("Ctrl+K Ctrl+S").
 export function createMatcher(getBindings){
  let pending=null,timer=null;
