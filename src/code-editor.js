@@ -41,15 +41,15 @@ export function createCodeEditor({textarea,getFile,getFiles,onBreakpoint,onBreak
   });
   const models=new Map(),states=new Map();let active='',syncing=false,breakpoints=[],current=null,diagnostics=[],languageService=null;const languageMarkers=new Map();
   const nativeValue=Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype,'value'),nativeSelect=textarea.setSelectionRange.bind(textarea);
-  // Undo/redo and other outside changes replace only the differing middle of the text, so the cursor
-  // lands at the change instead of jumping to the top (setValue resets the selection and scroll).
+  // Undo/redo and other outside changes: setValue resets the selection and scroll, so the cursor is put
+  // back at the end of the changed text instead of the top. (Editing the model in place instead would
+  // leave Monaco's type handlers, such as format-on-type for `}`, out of step with the text.)
   function replaceChanged(model,value){
     const old=model.getValue();let start=0,end=0;
     while(start<old.length&&start<value.length&&old[start]===value[start])start++;
     while(end<old.length-start&&end<value.length-start&&old[old.length-1-end]===value[value.length-1-end])end++;
-    const from=model.getPositionAt(start),to=model.getPositionAt(old.length-end),text=value.slice(start,value.length-end);
-    model.pushEditOperations([],[{range:new monaco.Range(from.lineNumber,from.column,to.lineNumber,to.column),text}],()=>null);
-    const at=model.getPositionAt(start+text.length);editor.setPosition(at);editor.revealPositionInCenterIfOutsideViewport(at);
+    editor.setValue(value);
+    const at=model.getPositionAt(value.length-end);editor.setPosition(at);editor.revealPositionInCenterIfOutsideViewport(at);
   }
   function sync(value){
     const name=getFile();syncing=true;
