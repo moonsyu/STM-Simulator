@@ -7,6 +7,8 @@ import {CATALOG_BY_TYPE} from './catalog-defs.js';
 import {registerSetup,REGISTER_HELPERS} from './device-register-setup.js';
 import {managedChecksum,managedRegion,stripDeviceRegions,removeLegacyDeviceHooks,docsTag,docsRegions,installDeviceRegions,removeDeviceRegions,moduleNeeds,cutLoose} from './device-code-insertion.js';
 import {recipeFor,primaryPart,expectedNets,wiringTopology,DEVICE_RECIPES} from './device-docs-data.js';
+import {familyProfile,routesOf} from './mcu-family.js';
+import {projectBoard} from './boards.js';
 import {PINS,PIN_BY_ID,GPIO_PINS,boardPin,endpointInfo} from './pins.js';
 import {terminalKeys,terminalLabel,attachments,assignAttachments} from './components.js';
 import {defaultMcu,validateMcu,generateHal,ROUTES,irqForPin} from './mcu-config.js';
@@ -45,14 +47,16 @@ function bindParts(p,sample,target,prior,report){
  }return map;
 }
 function allocatePins(p,sample,parts,prior){
- const config=structuredClone(p.mcu||defaultMcu()),map={},peripherals={},assigned=new Set(),owned=new Set(Object.values(prior?.pins||{})),uf=wiringTopology(p);
+ const config=structuredClone(p.mcu||defaultMcu(projectBoard(p).mcuFamily)),map={},peripherals={},assigned=new Set(),owned=new Set(Object.values(prior?.pins||{})),uf=wiringTopology(p);
+ // Pins, routes, timers and UARTs of the project's MCU (NUCLEO-F103RB: AFIO remap routes, TIM2-4, USART1-3).
+ const family=familyProfile(config.family),ROUTES=routesOf(config.family),GPIO_PINS=family.gpioPins,timerMax=family.timerMax,SERIAL_IDS=Object.keys(family.serial),TIMERS=Object.keys(family.timers);
  const partIds=new Set(Object.values(parts)),otherTerminals=p.components.filter(c=>!partIds.has(c.id)&&c.type!=='breadboard').flatMap(c=>terminalKeys(c).map(key=>partTerminal(c.id,key)));
  const fixed=sample.ide?.native?.target==='arm'||/HAL_(CAN_Init|I2S_Init|RCC_MCOConfig)/.test(sample.code)||/HAL_GPIO_WritePin\(GPIO[A-H],\s*1U\s*<</.test(sample.code);
  const free=pin=>!assigned.has(pin)&&(!config.pins[pin]||config.pins[pin].function==='Reset'||owned.has(pin))&&!otherTerminals.some(id=>uf.find(id)===uf.find(boardPin(pin)));
  for(const [id,setting]of Object.entries(sample.mcu.peripherals)){
   const currentRoutes=Object.entries(config.pins).filter(([,v])=>v.function.startsWith(id+'_')),connectedOwned=pin=>p.components.filter(part=>partIds.has(part.id)).some(part=>terminalKeys(part).some(key=>uf.find(partTerminal(part.id,key))===uf.find(boardPin(pin))));
   const reusable=currentRoutes.length>0&&currentRoutes.every(([pin])=>connectedOwned(pin)&&!otherTerminals.some(term=>uf.find(term)===uf.find(boardPin(pin))))&&Object.entries(setting).every(([k,v])=>k==='prescaler'?(config.peripherals[id]?.prescaler===Math.max(0,Math.round((v+1)*config.timerClockHz/sample.mcu.timerClockHz)-1)):config.peripherals[id]?.[k]===v);
-  let next=id;if(/^TIM/.test(id)&&!Object.values(prior?.peripherals||{}).includes(id)&&config.peripherals[id]?.enabled&&!reusable){next=['TIM2','TIM3','TIM4','TIM5'].find(t=>!config.peripherals[t]?.enabled&&setting.period<=timerMax(t)&&Object.entries(sample.mcu.pins).filter(([,v])=>v.function.startsWith(id+'_')).every(([,v])=>(ROUTES[t][v.function.split('_')[1]]||[]).some(free)));if(!next)throw new Error('이 예제에 사용할 빈 타이머/채널이 없습니다. Pinout에서 사용하지 않는 타이머를 비활성화하세요.');}
+  let next=id;if(/^TIM/.test(id)&&!Object.values(prior?.peripherals||{}).includes(id)&&config.peripherals[id]?.enabled&&!reusable){next=TIMERS.find(t=>!config.peripherals[t]?.enabled&&setting.period<=timerMax(t)&&Object.entries(sample.mcu.pins).filter(([,v])=>v.function.startsWith(id+'_')).every(([,v])=>(ROUTES[t][v.function.split('_')[1]]||[]).some(free)));if(!next)throw new Error('이 예제에 사용할 빈 타이머/채널이 없습니다. Pinout에서 사용하지 않는 타이머를 비활성화하세요.');}
   if(SERIAL_IDS.includes(id)&&config.peripherals[id]?.enabled&&!reusable&&!prior?.peripherals[id]){next=SERIAL_IDS.find(serial=>!config.peripherals[serial]?.enabled&&Object.values(ROUTES[serial]).every(pins=>pins.some(free)));if(!next)throw new Error('사용 가능한 UART TX/RX 핀 조합이 없습니다.');}
   next=prior?.peripherals?.[id]||next;peripherals[id]=next;
   if(!/^TIM/.test(id)&&config.peripherals[next]?.enabled&&Object.entries(setting).some(([k,v])=>k!=='enabled'&&config.peripherals[next][k]!==undefined&&config.peripherals[next][k]!==v))throw new Error(next+'가 다른 통신 설정으로 사용 중입니다. 동일한 설정으로 맞춘 뒤 다시 적용하세요.');
@@ -63,7 +67,7 @@ function allocatePins(p,sample,parts,prior){
  for(const [old,cfg]of entries){const fn=cfg.function,periph=fn.split('_')[0],role=fn.slice(periph.length+1);let candidates;
   if(fn.startsWith('ADC1_'))candidates=Object.values(ROUTES.ADC1).flat();else if(ROUTES[periph])candidates=ROUTES[peripherals[periph]||periph][role];else candidates=GPIO_PINS.filter(pin=>!['PA13','PA14','PH0','PH1','PC14','PC15'].includes(pin));
   if(fixed)candidates=[old];
-  const shared=ROUTES[periph]&&!['ADC1','TIM2','TIM3','TIM4','TIM5'].includes(periph)?Object.keys(config.pins).find(pin=>config.pins[pin].function===(peripherals[periph]||periph)+'_'+role):null;
+  const shared=ROUTES[periph]&&!['ADC1',...TIMERS].includes(periph)?Object.keys(config.pins).find(pin=>config.pins[pin].function===(peripherals[periph]||periph)+'_'+role):null;
   const expected=expectedNets(sample).find(net=>net.some(id=>PIN_BY_ID.get(id)?.signal===old))||[],contacts=expected.filter(id=>id.startsWith('part:')).map(id=>partTerminal(parts[id.split(':')[1]],id.split(':')[2]));
   const preferred=prior?.pins?.[old]||old,alreadyConnected=pin=>!assigned.has(pin)&&(config.pins[pin]?.function===fn||fn.startsWith('ADC1_')&&config.pins[pin]?.function.startsWith('ADC1_'))&&config.pins[pin]?.pull===cfg.pull&&!otherTerminals.some(id=>uf.find(id)===uf.find(boardPin(pin)))&&contacts.some(id=>uf.find(id)===uf.find(boardPin(pin)));
   const existingPins=candidates.filter(pin=>contacts.some(id=>uf.find(id)===uf.find(boardPin(pin))));
@@ -117,7 +121,7 @@ function ownConfig(project,binding){
  const {dma,...rest}=structuredClone(project.mcu);return {...rest,pins,peripherals,nvic};
 }
 function bindingSample(binding,project){
- const sample=recipeFor(binding.type),template=primaryPart(sample,binding.type),selected=project.components.find(p=>p.id===binding.parts[template?.id]);
+ const sample=recipeFor(binding.type,projectBoard(project).id),template=primaryPart(sample,binding.type),selected=project.components.find(p=>p.id===binding.parts[template?.id]);
  if(template?.address!==undefined&&selected?.address!==undefined&&template.address!==selected.address)sample.code=sample.code.replace(new RegExp('0x'+template.address.toString(16)+'(?=\\s*<<\\s*1)','gi'),'0x'+selected.address.toString(16));
  if(template?.address!==undefined&&selected?.address!==undefined)template.address=selected.address;
  return sample;
@@ -141,12 +145,15 @@ export function deviceModule(binding,project,slot=slotOf(project,binding)){
  for(const g of decls)if(!sampleHandles.some(h=>h.name===g.name))names[g.name]=prefix+g.name;
  const example=exampleStatements(sample,binding.api,prefix),map=text=>remapCode(replaceIdentifiers(text,names),binding,sample);
  const adc=Object.keys(config.pins).find(pin=>config.pins[pin].function.startsWith('ADC1_')),channel=adc?config.pins[adc].function.slice(7):null;
- const adcSelect=adc?`ADC_ChannelConfTypeDef docsChannel = {0}; docsChannel.Channel = ADC_CHANNEL_${channel}; docsChannel.Rank = 1; docsChannel.SamplingTime = ADC_SAMPLETIME_3CYCLES; HAL_ADC_ConfigChannel(&hadc1, &docsChannel);\n`:'';
+ const adcSelect=adc?`ADC_ChannelConfTypeDef docsChannel = {0}; docsChannel.Channel = ADC_CHANNEL_${channel}; docsChannel.Rank = 1; docsChannel.SamplingTime = ${config.family==='STM32F103RB'?'ADC_SAMPLETIME_239CYCLES_5':'ADC_SAMPLETIME_3CYCLES'}; HAL_ADC_ConfigChannel(&hadc1, &docsChannel);\n`:'';
  const generated=Object.keys(config.pins).length||Object.keys(config.peripherals).length?generateHal(config):'',fns=cFunctions(generated);
+ // F1: the ADC clock (PCLK2 / ADCPRE <= 14 MHz) is set in the generated SystemClock_Config, which Docs does not replace;
+ // a Docs-created MX_ADC1_Init sets it first.
+ const adcClock=(/^[ \t]*RCC_PeriphCLKInitTypeDef[\s\S]*?HAL_RCCEx_PeriphCLKConfig[^\n]*\n/m.exec(fns.find(f=>f.name==='SystemClock_Config')?.body||'')||[''])[0];
  const handles=new Map();for(const m of generated.matchAll(/^(\w+_HandleTypeDef)\s+(\w+)\s*;/gm))handles.set(m[2],{type:m[1],name:m[2]});
  for(const h of sampleHandles){const name=remapCode(h.name,binding,sample);if(!handles.has(name))handles.set(name,{type:h.type,name});}
  return {declarations:map(example.globals),init:map(example.init),step:adcSelect+map(example.step),gpio:fns.find(f=>f.name==='MX_GPIO_Init')?.body||'',
-  functions:fns.filter(f=>/^MX_\w+_Init$/.test(f.name)&&f.name!=='MX_GPIO_Init').map(f=>({name:f.name,body:f.body})),handles:[...handles.values()]};
+  functions:fns.filter(f=>/^MX_\w+_Init$/.test(f.name)&&f.name!=='MX_GPIO_Init').map(f=>({name:f.name,body:f.name==='MX_ADC1_Init'?adcClock+f.body:f.body})),handles:[...handles.values()]};
 }
 const othersOf=(project,binding)=>()=>project.deviceDocs.bindings.filter(b=>b!==binding).map(b=>{try{return {tag:docsTag(b),needs:moduleNeeds(deviceModule(b,project))};}catch{return {tag:docsTag(b),needs:new Set()};}});
 function installBinding(project,binding){project.code=installDeviceRegions(project.code,docsTag(binding),deviceModule(binding,project),othersOf(project,binding));}
@@ -201,7 +208,7 @@ export function applyDeviceExample(original,target,options={}){
  const component=target.type==='part'?project.components.find(p=>p.id===target.id):null,type=component?.type||(target.id==='board'?'board':target.id==='breadboard'?'breadboard':null);if(!type||!DEVICE_RECIPES[type])throw new Error('장치 또는 보드/빵판을 먼저 선택하세요.');
  if(!['hal','baremetal'].includes(mode))throw new Error('예제 모드를 확인하세요.');
  showSurface(project,'board');
- const sample=recipeFor(type);if(sample.mcu.timerClockHz!==project.mcu.timerClockHz&&/^ref_rgb_(neopixel|gravity)/.test(type)){if(Object.keys(project.mcu.pins).length||project.deviceDocs?.bindings.length)throw new Error('이 장치의 비트 타이밍에는 '+sample.mcu.timerClockHz+' Hz 클록이 필요합니다. Pinout의 클록을 맞춰 주세요.');project.mcu.timerClockHz=sample.mcu.timerClockHz;project.code=project.code.replace(cFunctions(project.code).find(f=>f.name==='SystemClock_Config')?.text||'__no_clock__',cFunctions(generateHal(project.mcu)).find(f=>f.name==='SystemClock_Config')?.text||'');}
+ const sample=recipeFor(type,projectBoard(project).id);if(sample.mcu.timerClockHz!==project.mcu.timerClockHz&&/^ref_rgb_(neopixel|gravity)/.test(type)){if(Object.keys(project.mcu.pins).length||project.deviceDocs?.bindings.length)throw new Error('이 장치의 비트 타이밍에는 '+sample.mcu.timerClockHz+' Hz 클록이 필요합니다. Pinout의 클록을 맞춰 주세요.');project.mcu.timerClockHz=sample.mcu.timerClockHz;project.code=project.code.replace(cFunctions(project.code).find(f=>f.name==='SystemClock_Config')?.text||'__no_clock__',cFunctions(generateHal(project.mcu)).find(f=>f.name==='SystemClock_Config')?.text||'');}
  const busPin=(p,label)=>partTerminal(p.id,terminalKeys(p).find(k=>terminalLabel(p,k)===label));
  const key=component?.id||'surface_'+type;project.deviceDocs??={bindings:[]};
  if(['uart','rs485'].includes(CATALOG_BY_TYPE[type]?.family||type)&&component?.baud)sample.mcu.peripherals.USART2.baud=component.baud;
@@ -241,7 +248,7 @@ export function applyDeviceExample(original,target,options={}){
 }
 // Keeps a removed device's wires when another applied example still depends on them.
 function bindingGroups(project,b){
- const sample=recipeFor(b.type),convert=id=>{if(PIN_BY_ID.has(id)){const name=PIN_BY_ID.get(id).signal;return boardPin(b.pins[name]||name);}const [,part,key]=id.split(':');return b.parts[part]?partTerminal(b.parts[part],key):null;};
+ const sample=recipeFor(b.type,projectBoard(project).id),convert=id=>{if(PIN_BY_ID.has(id)){const name=PIN_BY_ID.get(id).signal;return boardPin(b.pins[name]||name);}const [,part,key]=id.split(':');return b.parts[part]?partTerminal(b.parts[part],key):null;};
  return expectedNets(sample).map(net=>[...new Set(net.map(convert).filter(Boolean))]).filter(g=>g.length>1&&g.every(id=>!id.startsWith('part:')||project.components.some(p=>p.id===id.split(':')[1])));
 }
 function removeCircuit(project,binding,report){
