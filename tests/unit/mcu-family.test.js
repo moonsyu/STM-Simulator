@@ -57,3 +57,15 @@ test('the F446RE timer clock the Pinout accepts is exactly what main.c generatio
  const valid=familyProfile('STM32F446RE').clock.valid;
  for(const hz of [8e6,12e6,12.5e6,16e6,25e6,42e6,84e6,90e6,100e6,180e6,84123456]){let builds=true;try{clockPlan(hz);}catch{builds=false;}assert.equal(valid(hz),builds,`${hz/1e6} MHz`);}
 });
+
+test('F1 USART enable picks a whole AFIO remap group and keeps the one the user picked',async()=>{
+ const {setSerialEnabled,assignSerialPin}=await import('../../src/serial-config.js');
+ const f=familyProfile(F1),c=defaultMcu(F1);c.pins.PA9=pin('GPIO_Output');
+ const on=setSerialEnabled(c,'USART1',true,f.serial,f.remaps.USART1);
+ assert.equal(on.pins.PB6.function,'USART1_TX');assert.equal(on.pins.PB7.function,'USART1_RX','RX follows the TX remap, not PA10');
+ const picked=defaultMcu(F1);assignSerialPin(picked,'USART1','TX','PB6',f.serial);
+ const kept=setSerialEnabled(picked,'USART1',true,f.serial,f.remaps.USART1);
+ assert.equal(kept.pins.PB6.function,'USART1_TX');assert.equal(kept.pins.PB7.function,'USART1_RX');assert.notEqual(kept.pins.PA9?.function,'USART1_TX');
+ const full=defaultMcu(F1);full.pins.PA9=pin('GPIO_Output');full.pins.PB7=pin('GPIO_Output');
+ assert.throws(()=>setSerialEnabled(full,'USART1',true,f.serial,f.remaps.USART1),/TX\/RX 핀 묶음/);
+});
