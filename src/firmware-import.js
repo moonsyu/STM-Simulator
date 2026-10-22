@@ -1,5 +1,6 @@
 import {importIoc,defaultMcu} from './mcu-config.js';
 import {validateProject} from './project.js';
+import {projectBoard,boardForFamily} from './boards.js';
 
 export function importFirmware(project,files){
   if(!Array.isArray(files)||files.length>41||!files.length)throw new Error('.ioc 및 .c/.h 파일을 선택하세요.');
@@ -7,8 +8,13 @@ export function importFirmware(project,files){
   for(const file of files){if(!file||typeof file.name!=='string'||! /^[\w.-]+\.(ioc|c|h)$/.test(file.name)||typeof file.text!=='string'||names.has(file.name))throw new Error('파일 이름, 확장자 또는 중복을 확인하세요.');names.add(file.name);size+=file.text.length;}
   if(size>800000)throw new Error('가져올 파일은 합계 800 KB 이하로 선택하세요.');
   const iocs=files.filter(f=>f.name.endsWith('.ioc'));if(iocs.length>1)throw new Error('.ioc 파일은 하나만 선택하세요.');
-  if(iocs.length){const imported=importIoc(iocs[0].text);next.mcu=imported.config;warnings.push(...imported.warnings);}
-  next.mcu??=defaultMcu();
+  const board=projectBoard(project);
+  if(iocs.length){
+    const imported=importIoc(iocs[0].text);
+    if(imported.config.family!==board.mcuFamily)throw new Error(`이 .ioc는 ${imported.config.family}용입니다. 현재 보드는 ${board.name}이니 ${boardForFamily(imported.config.family)?.name??imported.config.family} 보드로 새 프로젝트를 만든 뒤 가져오세요.`);
+    next.mcu=imported.config;warnings.push(...imported.warnings);
+  }
+  next.mcu??=defaultMcu(board.mcuFamily);
   const sourceFiles=files.filter(f=>/\.[ch]$/.test(f.name));
   if(sourceFiles.length){
     const main=sourceFiles.find(f=>f.name==='main.c');

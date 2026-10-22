@@ -83,29 +83,60 @@ export function configProblems(config){
   for(const [request,d]of Object.entries(config.dma||{})){const id=dmaPeripheral(request);if(id&&!config.peripherals[id]?.enabled)errors.push(`${request} DMA: ${id} 주변장치를 활성화하세요.`);if(id&&isTimer(id)&&config.peripherals[id].mode!=='pwm')errors.push(`${request} DMA: ${id}를 PWM 모드로 설정하세요.`);}
   return errors;
 }
+// CubeMX keeps parameter expressions as typed ("84-1", "1000*2"): + - * / and parentheses on integers only.
+export function evalIocNumber(raw){
+  const text=String(raw).trim();if(!/^[\d\s+\-*/()]+$/.test(text))return null;let i=0;
+  const skip=()=>{while(text[i]===' ')i++;},atom=()=>{skip();if(text[i]==='('){i++;const v=sum();skip();if(text[i++]!==')')throw 0;return v;}if(text[i]==='-'){i++;return -atom();}const m=/^\d+/.exec(text.slice(i));if(!m)throw 0;i+=m[0].length;return Number(m[0]);};
+  const product=()=>{let v=atom();for(skip();text[i]==='*'||text[i]==='/';skip()){const op=text[i++],r=atom();v=op==='*'?v*r:v/r;}return v;},sum=()=>{let v=product();for(skip();text[i]==='+'||text[i]==='-';skip()){const op=text[i++],r=product();v=op==='+'?v+r:v-r;}return v;};
+  try{const v=sum();skip();return i===text.length&&Number.isInteger(v)?v:null;}catch{return null;}
+}
 export function importIoc(text){
   if(typeof text!=='string'||text.length>500000)throw new Error('.ioc 파일은 500 KB 이하로 선택하세요.');
   const values=Object.fromEntries(text.split(/\r?\n/).filter(l=>l&&!l.startsWith('#')&&l.includes('=')).map(l=>[l.slice(0,l.indexOf('=')),l.slice(l.indexOf('=')+1).replaceAll('\\:',':')]));
-  const mcuName=values['Mcu.Name']||values['Mcu.CPN']||'',family=/^STM32F446R/.test(mcuName)?'STM32F446RE':/^STM32F103R[8B]/.test(mcuName)?'STM32F103RB':null;
+  // CubeMX writes package ranges in Mcu.Name (STM32F103R(8-B)Tx); Mcu.CPN/UserName hold the exact part.
+  const familyOf=name=>/^STM32F446R/.test(name)?'STM32F446RE':/^STM32F103R(?:[8B]|\([^)]*B[^)]*\))/.test(name)?'STM32F103RB':null;
+  const family=['Mcu.Name','Mcu.CPN','Mcu.UserName'].map(k=>familyOf(values[k]||'')).find(Boolean);
   if(!family)throw new Error('STM32F446RE 또는 STM32F103RB 설정만 지원합니다.');
   const config=defaultMcu(family),f=familyProfile(family),routes=routesOf(family);config.pins={};const warnings=[];
+  const number=(raw,fallback)=>{if(raw===undefined)return fallback;const n=evalIocNumber(raw);if(n===null){warnings.push(`${raw}: 숫자로 읽을 수 없어 기본값 ${fallback}을 사용합니다.`);return fallback;}return n;};
   for(const [key,signal]of Object.entries(values)){
     const m=/^(P[A-H]\d+)(?:-[^.]+)?\.Signal$/.exec(key);if(!m)continue;const pin=m[1],base=key.slice(0,-7);
     if(!f.gpioPins.includes(pin)){warnings.push(`${pin}: 보드에서 접근할 수 없는 핀`);continue;}
-    let fn=signal==='GPIO_Output'?'GPIO_Output':signal==='GPIO_Input'?'GPIO_Input':signal.startsWith('GPXTI')?'GPIO_EXTI':/^S_TIM\d+_CH\d$/.test(signal)?signal.slice(2):signal;
+    // ADCx_INn: a channel shared by ADC1/2/3; the model uses ADC1.
+    let fn=signal==='GPIO_Output'?'GPIO_Output':signal==='GPIO_Input'?'GPIO_Input':signal.startsWith('GPXTI')?'GPIO_EXTI':/^S_TIM\d+_CH\d$/.test(signal)?signal.slice(2):/^ADC(?:x|\d+)_IN\d+$/.test(signal)?'ADC1_'+signal.split('_')[1]:signal;
     if(!pinFunctions(pin,family).includes(fn)){fn='Reserved';if(!/^(SYS_|RCC_)/.test(signal))warnings.push(`${pin}: ${signal} 실행 모델 미지원`);}
     const pull=(values[base+'.GPIO_PuPd']||'GPIO_NOPULL').replace('GPIO_','');
-    const edge=(values[base+'.GPIO_ModeDefaultEXTI']||'').includes('RISING_FALLING')?'CHANGE':(values[base+'.GPIO_ModeDefaultEXTI']||'').includes('RISING')?'RISING':'FALLING';
-    config.pins[pin]={function:fn,pull,edge,label:values[base+'.GPIO_Label']||'',initial:values[base+'.PinState']==='GPIO_PIN_SET'?1:0};
+    // CubeMX omits GPIO_ModeDefaultEXTI for its default, rising edge.
+    const extiMode=values[base+'.GPIO_ModeDefaultEXTI']||(fn==='GPIO_EXTI'?'GPIO_MODE_IT_RISING':''),edge=extiMode.includes('RISING_FALLING')?'CHANGE':extiMode.includes('RISING')?'RISING':'FALLING';
+    // Board templates label pins like "B1 [Blue PushButton]"; the C name is the first word.
+    const rawLabel=values[base+'.GPIO_Label']||'',label=rawLabel.split(/[\s[]/)[0];
+    if(label&&(!/^[A-Za-z_]\w{0,39}$/.test(label)||['__proto__','constructor','prototype'].includes(label)))warnings.push(`${pin}: 라벨 "${rawLabel}"은 C 이름으로 쓸 수 없어 비웠습니다.`);
+    config.pins[pin]={function:fn,pull,edge,label:/^[A-Za-z_]\w{0,39}$/.test(label)&&!['__proto__','constructor','prototype'].includes(label)?label:'',initial:values[base+'.PinState']==='GPIO_PIN_SET'?1:0};
   }
   for(const id of Object.keys(routes)){
     const enabled=Object.values(config.pins).some(p=>p.function.startsWith(id+'_'))||Object.entries(values).some(([k,v])=>/^Mcu.IP\d+$/.test(k)&&v===id);
     if(enabled)config.peripherals[id]={enabled:true};
   }
-  for(const id of Object.keys(f.serial))if(config.peripherals[id])config.peripherals[id].baud=Number(values[id+'.BaudRate']||115200);
-  if(config.peripherals.I2C1)config.peripherals.I2C1.clock=Number(values['I2C1.ClockSpeed']||100000);
-  for(const id of Object.keys(f.timers))if(config.peripherals[id]){const p=config.peripherals[id],defaults=timerDefaults(id,family);p.prescaler=Number(values[id+'.Prescaler']??defaults.prescaler);p.period=Number(values[id+'.Period']??defaults.period);const settings=Object.entries(values).filter(([k])=>k.startsWith(id+'.')).map(([,v])=>v).join(' ');p.mode=/Encoder|ENCODER/.test(settings)?'encoder':/PWM/.test(settings)?'pwm':/INPUTCAPTURE|Input_Capture|IC_CHANNEL/.test(settings)?'capture':'base';}
-  config.timerClockHz=Number(values['RCC.APB1TimFreq_Value']??f.clock.defaultHz);
+  for(const id of Object.keys(f.serial))if(config.peripherals[id]){
+    const p=config.peripherals[id];p.baud=number(values[id+'.BaudRate'],115200);
+    // A pin carrying USARTx_CK means CubeMX's synchronous mode.
+    if(Object.values(config.pins).some(q=>q.function===id+'_CK'))Object.assign(p,{mode:'synchronous',cpol:values[id+'.CLKPolarity']==='USART_POLARITY_HIGH'?1:0,cpha:values[id+'.CLKPhase']==='USART_PHASE_2EDGE'?1:0,lastBit:values[id+'.CLKLastBit']==='USART_LASTBIT_ENABLE'?1:0});
+  }
+  if(config.peripherals.I2C1)config.peripherals.I2C1.clock=number(values['I2C1.ClockSpeed'],100000);
+  // SPI1 speed: CubeMX stores the computed rate ("5.25 MBits/s") next to the prescaler.
+  if(config.peripherals.SPI1){const m=/^([\d.]+)\s*([KM]?)Bits\/s/i.exec(values['SPI1.CalculateBaudRate']||'');if(m)config.peripherals.SPI1.clock=Math.min(20000000,Math.max(1000,Math.round(Number(m[1])*({K:1e3,M:1e6}[m[2].toUpperCase()]??1))));}
+  for(const id of Object.keys(f.timers))if(config.peripherals[id]){const p=config.peripherals[id],defaults=timerDefaults(id,family);p.prescaler=number(values[id+'.Prescaler'],defaults.prescaler);p.period=number(values[id+'.Period'],defaults.period);const settings=Object.entries(values).filter(([k])=>k.startsWith(id+'.')).map(([,v])=>v).join(' ');p.mode=/Encoder|ENCODER/.test(settings)?'encoder':/PWM/.test(settings)?'pwm':/INPUTCAPTURE|Input_Capture|IC_CHANNEL/.test(settings)?'capture':'base';}
+  config.timerClockHz=number(values['RCC.APB1TimFreq_Value'],f.clock.defaultHz);
+  // HSE/other PLL setups (F103 at 72 MHz) cannot be rebuilt from HSI: keep the nearest clock the generator can make.
+  if(!f.clock.valid(config.timerClockHz)){const wanted=config.timerClockHz,hz=f.clock.valid(Math.min(f.clock.maxHz,Math.round(wanted/4e6)*4e6))?Math.min(f.clock.maxHz,Math.round(wanted/4e6)*4e6):f.clock.exampleHz;warnings.push(`APB1 타이머 클록 ${wanted/1e6} MHz는 HSI로 만들 수 없어 ${hz/1e6} MHz로 바꿨습니다 (${f.clock.label}). 타이머 Prescaler/Period를 확인하세요.`);config.timerClockHz=hz;}
+  // DMA: Dma.<request>.<n>.Instance/Channel/Mode/Priority; a request this model cannot route is reported, not dropped silently.
+  const requests=dmaRequestsOf(family),dma={};
+  for(const [key,request]of Object.entries(values)){
+    if(!/^Dma\.Request\d+$/.test(key))continue;const base=Object.keys(values).find(k=>new RegExp(`^Dma\\.${request}\\.\\d+\\.Instance$`).test(k))?.slice(0,-9);
+    const q=base&&{stream:values[base+'.Instance'],channel:Number(/\d+$/.exec(values[base+'.Channel']||'')?.[0]??0),mode:values[base+'.Mode']==='DMA_CIRCULAR'?'circular':'normal',priority:(values[base+'.Priority']||'DMA_PRIORITY_LOW').replace('DMA_PRIORITY_','').toLowerCase()};
+    try{if(!requests[request]||!q)throw new Error();validateMcu({...defaultMcu(family),dma:{...dma,[request]:q}});dma[request]=q;}catch{warnings.push(`${request} DMA: 실행 모델에서 같은 설정을 쓸 수 없어 가져오지 않았습니다.`);}
+  }
+  if(Object.keys(dma).length)config.dma=dma;
   for(const irq of irqNamesOf(family)){const raw=values['NVIC.'+irq];if(raw){const [enabled,priority]=raw.split(':');config.nvic[irq]={enabled:enabled==='true',priority:Number(priority)};}}
   for(const [key,v]of Object.entries(values))if(/^Mcu.IP\d+$/.test(key)&&!Object.hasOwn(routes,v)&&!['GPIO','RCC','NVIC','SYS','NUCLEO-F446RE','NUCLEO-F103RB'].includes(v))warnings.push(`${v}: 실행 모델 미지원`);
   const clean=validateMcu(config);return {config:clean,warnings:[...new Set([...warnings,...configProblems(clean)])]};
