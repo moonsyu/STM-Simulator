@@ -57,6 +57,8 @@ export function validateMcu(value){
 export function configProblems(config){
   const errors=[],signals=new Map(),exti=new Map(),labels=new Set();
   for(const [pin,p]of Object.entries(config.pins)){
+    // PA13/PA14 carry SWD: reconfiguring them cuts the ST-LINK off the running board.
+    if(['PA13','PA14'].includes(pin)&&!['Reset','Reserved'].includes(p.function))errors.push(`${pin}: SWD 디버그 핀(${pin==='PA13'?'SWDIO':'SWCLK'})이라 다른 기능으로 쓸 수 없습니다. 보드 쓰기와 디버깅이 끊깁니다.`);
     if(p.label){if(labels.has(p.label))errors.push(`사용자 라벨 중복: ${p.label}`);labels.add(p.label);}
     if(p.function==='GPIO_EXTI'){const n=pin.slice(2);if(exti.has(n))errors.push(`EXTI${n}: ${exti.get(n)}와 ${pin} 충돌`);exti.set(n,pin);}
     if(!MODES.includes(p.function)){if(signals.has(p.function))errors.push(`${p.function}: 핀을 하나만 지정하세요.`);signals.set(p.function,pin);}
