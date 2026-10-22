@@ -217,7 +217,7 @@ GCC·binutils의 Windows 한글 경로 제한 때문에 컴파일러와 SDK는 �
 
 - **빌드 / Ctrl+Shift+B**: 실제 컴파일러 명령·출력을 빌드 탭에 스트리밍한다. Debug는 `-g3 -O0`, Release는 `-g3 -Os`를 사용한다. 중단 버튼으로 빌드를 취소할 수 있다.
 - ARM 결과는 `firmware.elf`, `.bin`, `.hex`, `.map`, `compile_commands.json`, `build-result.json`이다. Windows 결과는 `program.exe`, `.map` 등이다. **빌드 폴더 열기**로 실제 파일을 확인한다. 매 빌드마다 새 작업 폴더를 사용하므로 실패한 결과로 이전 바이너리를 실행하지 않는다.
-- 프로젝트의 C/C++ 소스와 실제 ST HAL 드라이버, CMSIS, 보드의 startup을 컴파일한다. F446RE는 Flash 512 KB / SRAM 128 KB, F103RB는 Flash 128 KB / SRAM 20 KB 링커 스크립트, 기본 인터럽트 연결 및 main.h를 준비한다. 프로젝트가 제공한 main.h, HAL 설정 헤더와 시스템 초기화 파일은 우선한다. 생성되는 기본 IRQ 함수는 weak 정의여서 사용자 정의로 교체할 수 있다.
+- 프로젝트의 C/C++ 소스와 실제 ST HAL 드라이버, CMSIS, 보드의 startup을 컴파일한다. F446RE는 Flash 512 KB / SRAM 128 KB, F103RB는 Flash 128 KB / SRAM 20 KB 링커 스크립트, 기본 인터럽트 연결 및 main.h를 준비한다. 프로젝트가 제공한 main.h, HAL 설정 헤더와 시스템 초기화 파일은 우선한다. 기본 IRQ 함수는 프로젝트 소스에 같은 이름의 함수가 없을 때만 생성하므로(`#if 0` 안의 정의는 제외) 사용자 정의로 교체할 수 있다.
 - 파일 추가·편집·빌드 설정 변경 후 실행하면 현재 소스와 일치하는 빌드를 사용한다. 링크 오류 등 줄 번호가 없는 오류는 전체 빌드 로그에서 확인한다. 빌드 결과의 경고도 표시한다.
 - 빌드 작업 폴더는 재현과 디버깅을 위해 보존한다. 사용하지 않는 작업 폴더는 실행·언어 서버 종료 후 사용자가 삭제할 수 있다.
 
@@ -252,11 +252,12 @@ ARM 또는 Windows 대상을 선택하고 편집기 아래 **clangd 꺼짐**을 
 |---|---|
 | 회로 시뮬레이터 | 컴파일하지 않고 HAL C 소스를 해석해 회로와 함께 실행합니다. NVIC 우선순위 선점, HAL DMA, USART 동기 모드, 카메라·SD 카드 모델을 지원합니다 |
 | 펌웨어 에뮬레이터 · ARM ELF | ARM GCC로 실제 ST HAL·CMSIS를 빌드한 ELF를 Cortex-M 명령어 단위로 실행하고, 프로젝트 보드의 주변장치 레지스터 모델(STM32F446 또는 STM32F103: RCC·GPIO CRL/CRH·AFIO 리맵·DMA1 채널·F1 ADC)을 빵판 회로에 연결합니다. F103RB 모델은 F446과 같은 메모리 버스를 쓰므로 128 KB/20 KB를 넘는 주소 접근을 오류로 막지 않습니다. 소스 줄 중단점, 단계 실행, 레지스터·메모리 조회를 지원합니다. CubeIDE 등에서 만든 ELF는 **파일 → 펌웨어 ELF 열기**로 바로 실행합니다 |
-| STM32 · ARM GCC | 실물 NUCLEO-F446RE에 기록하고 GDB·OpenOCD로 디버그합니다 |
+| STM32 · ARM GCC | 실물 NUCLEO-F446RE/NUCLEO-F103RB에 기록하고 GDB·OpenOCD로 디버그합니다 |
 | Windows · C/C++ | PC용 C/C++ 프로그램을 빌드·실행·디버그합니다 |
 
-- 앱 EXE 자체, 회로 시뮬레이터, 이미 만든 ELF의 에뮬레이터 실행에는 개발 도구가 필요 없습니다. 에뮬레이터용 빌드와 실물 보드·Windows 대상은 ARM GCC, STM32CubeF4 등 해당 도구가 필요합니다.
-- 범용 Visual Studio의 모든 언어·확장·Git UI·임의 CMake 프로젝트·프로파일러를 복제한 제품은 아닙니다. 네이티브 프로젝트는 F446RE HAL 또는 평면 C/C++ 소스(최대 40개 보조 파일)입니다.
+- 앱 EXE 자체, 회로 시뮬레이터, 이미 만든 ELF의 에뮬레이터 실행에는 개발 도구가 필요 없습니다. 에뮬레이터용 빌드와 실물 보드·Windows 대상은 ARM GCC, STM32CubeF4/STM32CubeF1 등 해당 도구가 필요합니다.
+- 범용 Visual Studio의 모든 언어·확장·Git UI·임의 CMake 프로젝트·프로파일러를 복제한 제품은 아닙니다. 네이티브 프로젝트는 F446RE/F103RB HAL 또는 평면 C/C++ 소스(최대 40개 보조 파일)입니다.
+- 회로 시뮬레이터(HAL 해석 실행)는 `GPIOA`·`LD2_GPIO_Port` 같은 포트를 HAL 함수 인수로 바로 쓸 때만 지원합니다. `GPIO_TypeDef *port = GPIOA;`처럼 포트를 변수에 담는 코드는 펌웨어 에뮬레이터나 실물 보드 대상으로 실행하세요.
 
 ## 로직 분석기와 선로 잡음
 

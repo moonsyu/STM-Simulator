@@ -83,7 +83,17 @@ async function prepareBuild({project,tools,root,target='arm',configuration='Debu
     // and a weak-vs-weak tie leaves SysTick unhandled (HAL_Delay would hang). Skip any handler the
     // user's sources already define so imported Cube stm32f4xx_it.c files still link.
     // Comments and `#if 0` blocks are removed first so disabled handlers don't count as definitions.
-    const stripC=text=>text.replace(/\/\*[\s\S]*?\*\//g,' ').replace(/\/\/[^\n]*/g,' ').replace(/^[ \t]*#[ \t]*if[ \t]+0\b[\s\S]*?^[ \t]*#[ \t]*endif\b/gm,' ');
+    // Lines inside `#if 0` (up to its #else/#elif/#endif, nesting followed) do not define anything; `#if 1 … #else` drops the
+    // #else part. Other conditions are kept, both branches.
+    const liveLines=text=>{const stack=[];return text.split('\n').filter(line=>{
+      const d=/^[ \t]*#[ \t]*(if|ifdef|ifndef|elif|else|endif)\b(.*)$/.exec(line),live=()=>stack.every(s=>s.live);
+      if(!d)return live();
+      if(['if','ifdef','ifndef'].includes(d[1])){const c=d[1]==='if'?d[2].trim():'';stack.push({known:c==='0'||c==='1',live:c!=='0',taken:c==='1'});return false;}
+      const top=stack.at(-1);if(!top)return false;
+      if(d[1]==='endif')stack.pop();else if(top.known)top.live=!top.taken&&!top.live,top.taken=top.taken||top.live;else top.live=true;
+      return false;
+    }).join('\n');};
+    const stripC=text=>liveLines(text.replace(/\/\*[\s\S]*?\*\//g,' ').replace(/\/\/[^\n]*/g,' '));
     const userText=stripC([project.code,...files.map(f=>f.text||'')].join('\n'));
     const defined=name=>new RegExp(`\\b${name}\\s*\\(\\s*(?:void)?\\s*\\)\\s*\\{`).test(userText);
     const handler=(name,body)=>defined(name)?null:`void ${name}(void) { ${body} }`;
