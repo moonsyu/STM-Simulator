@@ -36,8 +36,8 @@ function bindParts(p,sample,target,prior,report){
   }));
   const claimed=new Set((p.deviceDocs?.bindings||[]).filter(b=>b!==prior).flatMap(b=>Object.values(b.parts)));
   const matchesValue=part=>!['resistor','capacitor'].includes(part.type)||part.value===template.value||part.type==='resistor'&&['led','rgb','sevenseg','relay','lcd'].includes(target.type)&&part.value>=template.value&&part.value<=template.value*4;
-  // A part already wired to another device of the same kind (the blink LED's resistor) belongs to that circuit.
-  const kind=type=>CATALOG_BY_TYPE[type]?.family||type,foreign=part=>terminalKeys(part).some(key=>{const root=uf.find(partTerminal(part.id,key));return p.components.some(o=>o.id!==target.id&&o.id!==part.id&&kind(o.type)===kind(target.type)&&terminalKeys(o).some(k=>uf.find(partTerminal(o.id,k))===root));});
+  // Any signal (non-power) net shared with a part outside this device means the part serves that other circuit.
+  const foreign=part=>terminalKeys(part).some(key=>{const root=uf.find(partTerminal(part.id,key));return !powerRoots.has(root)&&p.components.some(o=>o.id!==target.id&&o.id!==part.id&&o.type!=='breadboard'&&!Object.values(map).includes(o.id)&&terminalKeys(o).some(k=>uf.find(partTerminal(o.id,k))===root));});
   const candidate=p.components.find(part=>part.type===template.type&&!Object.values(map).includes(part.id)&&!claimed.has(part.id)&&matchesValue(part)&&!foreign(part)&&terminalKeys(part).some(key=>{const root=uf.find(partTerminal(part.id,key));return !powerRoots.has(root)&&[...peers,...configuredPeers].some(peer=>uf.find(peer)===root);}));
   if(candidate){map[template.id]=candidate.id;report.reused++;continue;}
   const added=structuredClone(template);added.id=newId(p,'docsPart');added.name=template.name+' · Docs';delete added.attachA;delete added.attachB;delete added.attachments;
