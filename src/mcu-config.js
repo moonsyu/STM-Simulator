@@ -29,7 +29,8 @@ export function validateMcu(value){
   if(!f.clock.valid(out.timerClockHz))throw new Error(`APB1 타이머 클록 범위: ${f.clock.label}`);
   for(const [pin,p] of Object.entries(value.pins)){
     if(!f.gpioPins.includes(pin)||!p||!pinFunctions(pin,f.id).includes(p.function))throw new Error(`${pin}: ${f.id}에서 지원하지 않는 핀 기능입니다.`);
-    if(!['NOPULL','PULLUP','PULLDOWN'].includes(p.pull)||!['RISING','FALLING','CHANGE'].includes(p.edge)||![0,1].includes(p.initial)||typeof p.label!=='string'||(p.label&&!/^[A-Za-z_]\w{0,39}$/.test(p.label))||['__proto__','constructor','prototype'].includes(p.label))throw new Error(`${pin}: GPIO 설정이 올바르지 않습니다.`);
+    if(typeof p.label!=='string'||(p.label&&!/^[A-Za-z_]\w{0,39}$/.test(p.label))||['__proto__','constructor','prototype'].includes(p.label))throw new Error(`${pin}: 라벨은 영문자나 _로 시작하는 C 이름(영문·숫자·_ 40자 이내)으로 쓰세요.`);
+    if(!['NOPULL','PULLUP','PULLDOWN'].includes(p.pull)||!['RISING','FALLING','CHANGE'].includes(p.edge)||![0,1].includes(p.initial))throw new Error(`${pin}: GPIO 설정이 올바르지 않습니다.`);
     out.pins[pin]={function:p.function,pull:p.pull,edge:p.edge,label:p.label,initial:p.initial};
   }
   for(const [id,p]of Object.entries(value.peripherals)){
@@ -51,7 +52,7 @@ export function validateMcu(value){
     }
   }
   const irqs=irqNamesOf(f.id);
-  for(const [irq,p]of Object.entries(value.nvic)){if(!irqs.includes(irq)||!p||typeof p.enabled!=='boolean'||!Number.isInteger(p.priority)||p.priority<0||p.priority>15)throw new Error('NVIC 설정을 확인하세요.');out.nvic[irq]={enabled:p.enabled,priority:p.priority};}
+  for(const [irq,p]of Object.entries(value.nvic)){if(!irqs.includes(irq))throw new Error(`${irq}: ${f.id}에 없는 인터럽트입니다.`);if(!p||typeof p.enabled!=='boolean'||!Number.isInteger(p.priority)||p.priority<0||p.priority>15)throw new Error(`${irq}: NVIC 우선순위는 0~15 정수로 설정하세요.`);out.nvic[irq]={enabled:p.enabled,priority:p.priority};}
   return out;
 }
 export function configProblems(config){
@@ -68,6 +69,8 @@ export function configProblems(config){
   for(const [id,p]of Object.entries(config.peripherals))if(p.enabled){
     const required=isSerial(id)?['TX','RX',...(p.mode==='synchronous'?['CK']:[])]:id==='I2C1'?['SCL','SDA']:id==='SPI1'?['SCK','MISO','MOSI']:id==='SDIO'?['D0','CK','CMD']:[];
     for(const role of required)if(!signals.has(`${id}_${role}`))errors.push(`${id}: ${role} 핀을 활성화하세요.`);
+    // F446/F103 I2C1 (not FMPI2C) runs standard or fast mode only.
+    if(id==='I2C1'&&p.clock>400000)errors.push('I2C1: 클록은 400 kHz(Fast mode) 이하로 설정하세요.');
     if(isTimer(id)&&p.mode==='encoder')for(const ch of ['CH1','CH2'])if(!signals.has(id+'_'+ch))errors.push(id+': 엔코더 '+ch+' 핀을 활성화하세요.');
     // The encoder model counts every edge (TIM_ENCODERMODE_TI1/TI2/TI12 with Prescaler 0), as the interpreter does.
     if(isTimer(id)&&p.enabled&&p.mode==='encoder'&&p.prescaler)errors.push(id+': 엔코더 모드는 Prescaler 0을 사용하세요.');
