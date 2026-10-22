@@ -1,5 +1,18 @@
 # 검증 기록
 
+## 1.0.0 전체 기능 점검 (실물 보드 연동 제외) — 공개 배포 검증 완료
+
+2026-10-22. 제품 커밋 `cbd345f0cae9fe3f1e599692861e0bfaa982900d` · [Windows CI 39741156371](https://github.com/moonsyu/STM-Simulator/actions/runs/39741156371) 첫 실행 성공 · [Release v1.0.0](https://github.com/moonsyu/STM-Simulator/releases/tag/v1.0.0)
+
+| 검사 | 결과 |
+|---|---|
+| 기능 감사 | 영역별 8회차. 확인 결함 1차 48 → 2차 35 → 3차 24 → 4차 7 → 5차 4 → 6차 1 → 7차 1 → 8차 "결함 없음". 실물 보드 쓰기·OpenOCD·ST-LINK는 쓰지 않음 |
+| `npm test` (로컬) | 735개 중 733 통과(실패 2개는 로컬 심볼릭 링크 권한, CI 통과) |
+| `npm run test:e2e` (로컬) | 28 통과, 2 건너뜀(실제 도구 경로 필요) |
+| 실제 ARM GCC 툴체인 | 254/254: F446RE 128·F103RB 126 예제를 ST HAL로 빌드해 에뮬레이터에서 오류 없이 실행. HSE_VALUE 수정 뒤 부분 집합 24/24 |
+| 장치 Docs 적용 | F446RE 233/236, F103RB 231/233 실행 성공(나머지는 SPI 클록·핀·타이머 충돌을 구체적으로 알리는 거부). 예제·Docs 1823건·붙여넣기에서 한 칸 한 배선·꽂힌 다리 규칙 위반 0건 |
+| 공개 자산 | latest=v1.0.0, 태그·BUILD-INFO 커밋 `cbd345f` 일치, 5자산(STM-Simulator.exe, ZIP, SHA256.txt, BUILD-INFO.json, update-manifest.json). EXE SHA-256 `0c1f45a7058d925ef2053c02ad958bebe0baf8847b81c8bc55189f5c816009be`(102,888,040 B, MZ)이 SHA256.txt·update-manifest·BUILD-INFO·ZIP 안의 STM-Simulator.exe와 일치. ZIP SHA-256 `e2c870c9dba40f34e9f32d0286a31c0aa1c40fe5854745922ff08dc22cf40dfa` |
+
 ## 0.34.4 직렬 모니터 안내 · 고급 예제 printf — 공개 배포 검증 완료
 
 2026-10-22. 제품 커밋 `eb33829f862513d6faf952be470fb31d30e440bf` · [Windows CI 39706596260](https://github.com/moonsyu/STM-Simulator/actions/runs/39706596260) 성공 · [Release v0.34.4](https://github.com/moonsyu/STM-Simulator/releases/tag/v0.34.4). `npm test` 712개 중 709 통과·1 건너뜀(실패 2개는 로컬 심볼릭 링크 권한), E2E 30개 중 28 통과·2 건너뜀, 실제 ARM 빌드·에뮬레이터 부분 집합 15/15(두 보드), `npm audit` 0건. latest=v0.34.4, 태그·BUILD-INFO 커밋 일치, 5자산. EXE SHA-256 `dc37abea778a56b07f542cf1fc4db17a893bbf90378646776f15591546217b73`(102,868,722 B, MZ)이 SHA256.txt·update-manifest·ZIP 안 EXE와 일치. ZIP SHA-256 `dae92300f3119a830e43266ad7d5c2c2c3ae4299c8c76aac11cf74435bc69879`.
