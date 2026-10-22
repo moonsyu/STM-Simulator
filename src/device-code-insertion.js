@@ -151,10 +151,15 @@ function gpioBody(source,body){
  const declared=fn&&/\bGPIO_InitTypeDef\s+GPIO_InitStruct\b/.test(maskC(fn.body));
  return declared||!/\bGPIO_InitStruct\b/.test(stripped)?stripped:'{\nGPIO_InitTypeDef GPIO_InitStruct = {0};\n'+stripped+'\n}';
 }
+// The existing function already calls the peripheral's HAL_<X>_Init(&handle) that the Docs body would add.
+function initialises(source,fn,body){const call=/\bHAL_\w+_Init\s*\(\s*&\s*\w+\b/.exec(maskC(body));return !!call&&maskC(source.slice(fn.start,fn.end)).replace(/\s+/g,'').includes(call[0].replace(/\s+/g,''));}
 function installFunction(source,tag,f){
  const current=docsRegions(source).regions.find(r=>r.role===f.name);if(current&&current.tag!==tag)return source;
  const definition=`static void ${f.name}(void) {\n${f.body.trim()}\n}`,find=()=>cFunctions(source).find(x=>x.name===f.name);let fn=find();
  if(current){const isDefinition=!fn||fn.start>=current.start&&fn.end<=current.end;source=replaceRegion(source,current,isDefinition?definition:f.body);}
+ // An MX_<PERIPH>_Init already in the file (from the Pinout or the example) already initialises the peripheral:
+ // adding the Docs body inside it would declare its locals twice (sConfig, channel, …) and initialise twice.
+ else if(fn&&initialises(source,fn,f.body))return hasCall(source,f.name)?source:insertRegion(source,tag,f.name+'_CALL',f.name+'();');
  else source=fn?insertRegion(source,tag,f.name,f.body,functionEndAnchor(f.name)):insertRegion(source,tag,f.name,definition);
  const regions=docsRegions(source).regions,own=regions.find(r=>r.role===f.name);fn=find();
  const created=own&&fn&&fn.start>=own.start&&fn.end<=own.end;
@@ -177,8 +182,10 @@ export function installDeviceRegions(source,tag,module,others=()=>[]){
  const need=moduleNeeds(module);let heirs=null;
  for(let r;(r=docsRegions(source).regions.find(r=>r.tag===tag&&!PER_DEVICE_ROLES.has(r.role)&&!need.has(r.role)));)source=release(source,r,heirs??=others()).source;
  source=setRegion(source,tag,'DECL',module.declarations||'');
- source=setRegion(source,tag,'INIT',scoped(module.init||''));
- source=setRegion(source,tag,'LOOP',scoped(module.step||''));
+ // Code the program already has outside Docs regions (e.g. the device's own HAL example) is not added a second time.
+ const present=text=>!!text.trim()&&!!looseFind(withoutDocsRegions(source),text);
+ source=setRegion(source,tag,'INIT',present(module.init||'')?'':scoped(module.init||''));
+ source=setRegion(source,tag,'LOOP',present(module.step||'')?'':scoped(module.step||''));
  if((module.gpio||'').replace(GPIO_DECL,'').trim()){source=ensureGpioInit(source);source=setRegion(source,tag,'MX_GPIO_Init',gpioBody(source,module.gpio),functionEndAnchor('MX_GPIO_Init'));}
  else source=setRegion(source,tag,'MX_GPIO_Init','');
  source=sharedRegion(source,tag,'HEADERS',outside=>DOCS_INCLUDES.filter(line=>!outside.includes(line.slice(9))).join('\n'));
