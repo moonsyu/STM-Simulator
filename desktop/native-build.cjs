@@ -72,7 +72,9 @@ async function prepareBuild({project,tools,root,target='arm',configuration='Debu
     flags.unshift(...sdk.cpu,'-DUSE_HAL_DRIVER');
     flags.push(...[path.join(hal,'Inc'),path.join(device,'Include'),core].map(p=>'-I'+p));
     if(!files.some(f=>f.name===p+'_hal_conf.h'))await fs.copyFile(path.join(hal,'Inc',p+'_hal_conf_template.h'),path.join(directory,p+'_hal_conf.h'));
-    if(!files.some(f=>f.name==='main.h'))await fs.writeFile(path.join(directory,'main.h'),`#pragma once\n#include "${p}_hal.h"\nvoid Error_Handler(void);\n`+Object.entries(project.mcu?.pins||{}).filter(([,p])=>p.label).map(([pin,p])=>`#define ${p.label}_Pin GPIO_PIN_${pin.slice(2)}\n#define ${p.label}_GPIO_Port GPIO${pin[1]}\n`).join(''));
+    if(!files.some(f=>f.name==='main.h'))await fs.writeFile(path.join(directory,'main.h'),`#pragma once\n#include "${p}_hal.h"\nvoid Error_Handler(void);\n`);
+    // Pinout labels: CubeMX writes LABEL_Pin / LABEL_GPIO_Port into main.h; -D gives them to every source, also with a user main.h (same text, so no redefinition warning).
+    for(const [pin,q]of Object.entries(project.mcu?.pins||{}))if(q.label)flags.push(`-D${q.label}_Pin=GPIO_PIN_${pin.slice(2)}`,`-D${q.label}_GPIO_Port=GPIO${pin[1]}`);
     generated=sdk.modules.map(n=>path.join(hal,'Src',`${p}_${n}.c`));
     if(!files.some(f=>f.name===`system_${p}.c`))generated.push(path.join(device,'Source/Templates',`system_${p}.c`));
     generated.push(path.join(device,'Source/Templates/gcc',sdk.startup));
