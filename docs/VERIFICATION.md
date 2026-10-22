@@ -1,5 +1,17 @@
 # 검증 기록
 
+## 0.34.2 부품 선택·이동 범위 · Electron 44.5.1 — 공개 배포 검증 완료
+
+2026-10-22. 제품 커밋 `c20534a12ae9de82c8cd0320e90d68d351aec453` · [Windows CI 39697056505](https://github.com/moonsyu/STM-Simulator/actions/runs/39697056505) 성공(첫 실행 39695698010은 npm audit의 새 Electron 권고로 실패, 태그·Release 없음) · [Release v0.34.2](https://github.com/moonsyu/STM-Simulator/releases/tag/v0.34.2).
+
+| 검사 | 결과 |
+|---|---|
+| `npm test` (로컬) | 711개 중 708 통과·1 건너뜀(실패 2개는 로컬 심볼릭 링크 권한, CI 통과) |
+| `npm run test:e2e` (로컬, Electron 44.5.1) | 26 통과, 2 건너뜀(실제 도구 경로 필요). 새 검사: LED 빛 번짐 자리 클릭은 아래 구멍으로, 선택 테두리는 렌즈 가까이 |
+| 클릭 범위 측정 | HAL 예제 부품 236개: 몸체 밖에서 부품을 잡는 면적 최대 4.25배 → 0.57배(보이는 다리 선) |
+| `npm audit` | 0건 |
+| 공개 자산 | latest=v0.34.2, 태그·BUILD-INFO 커밋 일치, 5자산. EXE SHA-256 `25468b978a693d39f9b4c4f9f54d8c8d67d0f60c7c53a43c74f6617ef8f56f7d`(102,868,704 B, MZ)이 SHA256.txt·update-manifest·ZIP 안 EXE와 일치. ZIP SHA-256 `82e62a84c6e0aef59f2c23b53c89e943d36bba5515144e0c4efcb620e1b70ce9` |
+
 ## 0.34.1 배선 끝 클릭으로 옮기기 — 공개 배포 검증 완료
 
 2026-10-22. 제품 커밋 `ccf3994e4b849c19b53fe98f6ac7c286a219cc0b` · [Windows CI 39620223862](https://github.com/moonsyu/STM-Simulator/actions/runs/39620223862) 첫 실행 성공 · [Release v0.34.1](https://github.com/moonsyu/STM-Simulator/releases/tag/v0.34.1). `npm test` 711개 중 708 통과·1 건너뜀(실패 2개는 로컬 심볼릭 링크 권한), E2E 27개 중 25 통과·2 건너뜀. latest=v0.34.1, 태그·BUILD-INFO 커밋 일치, 5자산. EXE SHA-256 `7837626f986d8861756c3c7380c8c267476cd6642424269079f3b6f48eb33c1d`(103,014,939 B, MZ)이 SHA256.txt·update-manifest·ZIP 안 EXE와 일치. ZIP SHA-256 `0fc39d3e907cd7ab51f9e0c7c6c5bc25d0fc13fd9aa5cb0ec3bfdd3ab523e618`.
