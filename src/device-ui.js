@@ -26,7 +26,7 @@ export function deviceReadouts(p,r){
  if(p.type==='joystick')detail=`X ${value(r.x)} V · Y ${value(r.y)} V · 버튼 ${r.pressed?'누름':'놓음'}`;
  if(p.type==='encoder')detail=`A=${r.a??1} B=${r.b??1} · 남은 전이 ${r.pending??0}`;
  if(['oled','tft','matrix'].includes(p.type))detail=r.visible?'수신한 화면 데이터 표시 중':'디스플레이 초기화 / 화면 켜기 명령을 확인하세요.';
- if(['sht31','mpu6050'].includes(p.type))detail='HAL 측정값은 하단 로그, 전송 내역은 통신 탭에서 확인하세요.';
+ if(['sht31','mpu6050'].includes(p.type))detail='HAL 측정값은 하단 로그, 전송 내역은 직렬 모니터 탭에서 확인하세요.';
  return `<p>${power}</p><p>${detail}</p>`;
 }
 const text=(y,value,cls='')=>`<text class="${cls}" y="${y}" text-anchor="middle" font-size="9" fill="#def0e7">${value}</text>`;

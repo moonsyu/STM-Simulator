@@ -25,7 +25,7 @@
 
 `analogWriteFrequency(pin, hz)`는 1~2000 Hz, 기본 500 Hz입니다. **파형 탭 → PWM 파형으로 계산**을 켜면 GPIO가 시간별 HIGH/LOW로 바뀌고 실제 회로 해석에 반영됩니다. 끄면 평균 전압을 사용합니다. 설정은 실행 전에 바꾸세요.
 
-`Serial.begin`, `Serial.print/println/write`, `Serial.available/read`는 배선 없는 USB 콘솔 모델입니다. 하단 통신 탭의 **USB 콘솔 → Serial**로 입력합니다. `Serial.print`는 현재 로그 항목 단위로 표시되며 네이티브 Arduino 터미널의 줄 편집 동작 전체를 재현하지 않습니다.
+`Serial.begin`, `Serial.print/println/write`, `Serial.available/read`는 배선 없는 USB 콘솔 모델입니다. 하단 직렬 모니터 탭의 **USB 콘솔 → Serial**로 입력합니다. `Serial.print`는 현재 로그 항목 단위로 표시되며 네이티브 Arduino 터미널의 줄 편집 동작 전체를 재현하지 않습니다.
 
 ## LCD 1602
 
@@ -64,7 +64,7 @@ VSS=GND, VDD=5 V, VO=GND로 연결하고 RS/E/데이터 핀을 배선하세요. 
 - `Serial1.setPins(rx, tx)`: 사용자 핀 지정. `begin` 전에 호출하세요.
 - `Serial1.begin(baud)`: 300~2,000,000 baud. 부품의 속성과 같아야 합니다.
 - `Serial1.print/println/write`, `Serial1.available/read`, `Serial1.end`.
-- 하단 통신 탭 **UART 터미널 → Serial1**에서 문자를 입력합니다. 터미널 수신 창에서 보드가 보낸 내용도 봅니다.
+- 하단 직렬 모니터 탭 **UART 터미널 → Serial1**에서 문자를 입력합니다. 터미널 수신 창에서 보드가 보낸 내용도 봅니다.
 - TX와 RX를 직접 연결하면 loopback이 됩니다.
 
 8N1의 바이트당 10비트 시간을 수신 큐에 적용합니다. 터미널 송신 내역과 통신 이벤트는 트랜잭션 단위로 표시합니다. 선상의 start/data/stop 각 비트, parity/framing 오류·노이즈는 모델링하지 않습니다. 버퍼는 최대 4096바이트입니다.

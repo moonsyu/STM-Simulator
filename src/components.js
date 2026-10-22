@@ -8,7 +8,7 @@ export const MULTI_PIN_TYPES=[...Object.keys(CATALOG_DEFS).filter(t=>!CATALOG_TW
 export const PART_DEFS={
  ...CATALOG_DEFS,
  ...DEVICE_DEFS,...L298_DEFS,
- uart:{name:'외부 UART 터미널',prefix:'UART',icon:'↔',hint:'4핀 · 외부 장치 배선 연습',defaults:{baud:9600},labels:['VCC','GND','TX','RX'],help:'외부 UART 장치 연결을 연습하는 선택 부품입니다. VCC→3V3, GND→GND, TX→보드 RX(PA3), RX→보드 TX(PA2)로 교차 배선하고 코드와 부품의 baud를 맞추세요. 하단 통신 탭에서 외부 UART 장치 → USART2를 선택합니다. 기본 USART2 통신은 이 부품 없이 내장 ST-LINK VCP로 가능합니다.'},
+ uart:{name:'외부 UART 터미널',prefix:'UART',icon:'↔',hint:'4핀 · 외부 장치 배선 연습',defaults:{baud:9600},labels:['VCC','GND','TX','RX'],help:'외부 UART 장치 연결을 연습하는 선택 부품입니다. VCC→3V3, GND→GND, TX→보드 RX(PA3), RX→보드 TX(PA2)로 교차 배선하고 코드와 부품의 baud를 맞추세요. 하단 직렬 모니터 탭에서 외부 UART 장치 → USART2를 선택합니다. 기본 USART2 통신은 이 부품 없이 내장 ST-LINK VCP로 가능합니다.'},
  i2c:{name:'I²C 메모리',prefix:'I2C',icon:'▦',hint:'4핀 · 주소 / 256 B',defaults:{address:80},labels:['VCC','GND','SDA','SCL'],help:'256바이트 범용 메모리 모델입니다. 3.3 V, GND, SDA(PB9), SCL(PB8)를 연결하세요. 모듈에 10 kΩ 풀업을 포함합니다. 첫 전송 바이트가 메모리 위치이고 이후 바이트가 데이터입니다.'},
  spi:{name:'SPI 메모리',prefix:'SPI',icon:'⇄',hint:'6핀 · CS / 256 B',defaults:{},labels:['VCC','GND','CS','SCK','MOSI','MISO'],help:'256바이트 범용 메모리 모델입니다. CS LOW 상태에서 명령 0x02(쓰기) 또는 0x03(읽기), 1바이트 주소, 데이터를 전송합니다. 기본 핀은 SCK PA5, MOSI PA7, MISO PA6입니다. CS는 별도로 GPIO로 제어하세요.'},
  potentiometer:{name:'가변저항',prefix:'VR',icon:'◉',hint:'3핀 · 저항 / 위치 조절',defaults:{value:10000,position:50},labels:['1','2 · WIPER','3'],help:'1–3은 전체 저항, 2는 가변 접점입니다. 1을 GND, 3을 3.3 V, 2를 ADC에 연결하면 조절 위치에 따라 전압이 바뀝니다.'},

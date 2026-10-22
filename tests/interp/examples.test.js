@@ -46,7 +46,7 @@ test('inspector readouts of ULN2003, bare encoder, RS485 and I2C LCD examples re
  const {partReadouts}=await import('../../src/part-controls.js');const text=(id,ms)=>{const {p,s}=start(id);advance(s,ms,5);return partReadouts(p.components.find(c=>c.id==='demo'),s.result).replace(/<[^>]+>/g,' ').replace(/\s+/g,' ');};
  assert.match(text('ref_stepper_driver_11',30),/V\+ 5\.0 V .*IN\d → M\d ON/);
  const enc=text('ref_encoder_bare_5',20);assert.match(enc,/A=1 B=1/);assert.doesNotMatch(enc,/전원/);
- assert.match(text('ref_isolated_rs485',20),/통신 탭/);
+ assert.match(text('ref_isolated_rs485',20),/직렬 모니터 탭/);
  assert.match(text('ref_lcd_i2c_4',600),/STM Emulator/);
  assert.match(text('ref_rgb_common_cathode_4',20),/표시 색 #[0-9A-F]{6}/);
 });

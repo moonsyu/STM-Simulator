@@ -8,7 +8,7 @@ import {EXAMPLE_TIMER_CLOCK_HZ} from './mcu-defaults.js';
 export const ADVANCED_EXAMPLES={dma_uart_echo:'HAL · DMA UART 에코 (ReceiveToIdle)',adc_dma_scan:'HAL · ADC DMA 2채널 스캔',nvic_preemption:'HAL · NVIC 선점 우선순위 데모',
  usart_sync_matrix:'HAL · USART 동기 모드 → MAX7219 시프트 레지스터',camera_tft:'HAL · 카메라 캡처 → TFT 표시 (DCMI DMA)',sd_logger:'HAL · SD 카드 데이터 로거 (FatFs)',noise_errors:'HAL · 통신 노이즈와 오류 처리'};
 export const ADVANCED_GUIDES={
- dma_uart_echo:'USART2 PA2/PA3 115200 baud, RX DMA1 Stream5 순환 + IDLE 감지, TX DMA1 Stream6 · 하단 통신 탭(ST-LINK VCP)에서 보낸 문자열을 DMA로 에코 · HAL_UARTEx_RxEventCallback',
+ dma_uart_echo:'USART2 PA2/PA3 115200 baud, RX DMA1 Stream5 순환 + IDLE 감지, TX DMA1 Stream6 · 실행 후 하단 직렬 모니터 탭(ST-LINK VCP → USART2)에 문자열을 입력해 보내면 같은 문자열이 오른쪽 수신 창에 돌아오고, 출력에 RX event·TX DMA done이 찍힘 · HAL_UARTEx_RxEventCallback',
  adc_dma_scan:'조이스틱 X→PA0(IN0), Y→PA1(IN1) · ADC1 스캔 2채널 연속 변환, DMA2 Stream0 순환 · HAL_ADC_ConvHalfCpltCallback/ConvCpltCallback으로 평균 계산',
  nvic_preemption:'PA5 LED, USER 버튼 PC13 EXTI(우선순위 0) · TIM2 주기 인터럽트(우선순위 3)의 긴 반복을 버튼 인터럽트가 중간에 선점 · SysTick 우선순위 확인',
  usart_sync_matrix:'USART2 동기: CK PA4 → CLK, TX PA2 → DIN, PB6 → LOAD · 5V/GND · LSB 우선 USART를 비트 반전해 MSB 우선 MAX7219에 전송, CPOL/CPHA/LastBit 실습',
