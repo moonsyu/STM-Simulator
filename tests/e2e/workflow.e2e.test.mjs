@@ -219,3 +219,20 @@ test('a part lead never shares a hole with a jumper wire end',{timeout:120000},a
   assert.deepEqual(s.errors,[]);
  }finally{await s.close();}
 });
+
+test('DMA UART echo: the example opens the serial monitor and text sent there comes back over USART2',{timeout:120000},async()=>{
+ const s=await launch();
+ try{
+  const {win}=s;
+  await win.evaluate(()=>{const e=document.getElementById('hal-example');e.value='dma_uart_echo';e.dispatchEvent(new Event('change'));});
+  await win.waitForFunction(()=>/직렬 모니터 탭/.test(document.getElementById('console-output').textContent));
+  assert.ok(await win.locator('#serial-input').isVisible(),'the serial monitor is shown');
+  await win.keyboard.press('Control+F5');
+  await win.waitForFunction(()=>/DMA UART echo ready/.test(document.getElementById('console-output').textContent),null,{timeout:15000});
+  await win.fill('#serial-input','hello');await win.click('#serial-send');
+  await win.waitForFunction(()=>/RX event: 6 bytes/.test(document.getElementById('console-output').textContent),null,{timeout:15000});
+  await win.waitForFunction(()=>/hello/.test(document.getElementById('bus-panel')?.innerText||document.body.innerText),null,{timeout:15000});
+  await win.keyboard.press('Control+F2');
+  assert.deepEqual(s.errors,[]);
+ }finally{await s.close();}
+});
