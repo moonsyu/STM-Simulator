@@ -298,7 +298,7 @@
 - 외형: 일반 서보와 비슷하지만 위치 전압 피드백 선이 하나 더 있음. [사진](https://cdn-shop.adafruit.com/970x728/1449-05.jpg)
 - 주요 핀: 4접점 — VCC, GND, PWM, FEEDBACK
 - 연결 방식: TIM PWM + ADC
-- 구분점: 추가 선은 두 번째 PWM 입력이 아닙니다. 현재 앱은 피드백 출력이 없는 3선형입니다.
+- 구분점: 추가 선은 두 번째 PWM 입력이 아닙니다. 위치 피드백 선은 각도에 비례한 전압(0~180° → 0~3.3 V)을 냅니다.
 - 근거: [Analog Feedback Micro Servo - Plastic Gear : Adafruit Industries, Unique & fun DIY electronics and kits](https://www.adafruit.com/product/1449)
 
 ### DC 모터 · 2핀

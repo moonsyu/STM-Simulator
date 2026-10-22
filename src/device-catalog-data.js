@@ -706,7 +706,7 @@ export const DEVICE_CATALOG = [
     ],
     "interface": "TIM PWM + ADC",
     "appearance": "일반 서보와 비슷하지만 위치 전압 피드백 선이 하나 더 있음.",
-    "notes": "추가 선은 두 번째 PWM 입력이 아닙니다. 현재 앱은 피드백 출력이 없는 3선형입니다.",
+    "notes": "추가 선은 두 번째 PWM 입력이 아닙니다. 위치 피드백 선은 각도에 비례한 전압(0~180° → 0~3.3 V)을 냅니다.",
     "additional_contacts": "",
     "source_ids": [
       "servo4"

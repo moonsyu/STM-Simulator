@@ -1,5 +1,5 @@
 import {catalogTies} from './catalog-topology.js';
-import {attachments as contacts,assignAttachments} from './components.js';
+import {attachments as contacts,assignAttachments,terminalKeys} from './components.js';
 import {CATALOG_BY_TYPE,catalogMap} from './catalog-defs.js';
 export const CUSTOM_MODELS={
  'can-transceiver-6':['catalog_can',0,[1,2,3,4,5,6]],'max98357a-9':['catalog_i2s',0,[1,2,3,4,5,6,7,8,9]],'ov2640-camera':['catalog_i2c',0x30,[1,2,4,3,17,18,8]],
@@ -30,6 +30,8 @@ export function physicalToModel(project){
   // A two-contact physical switch still maps to the four-leg button model.
   // Use the model's storage convention, not the physical contact map's names.
   assignAttachments(model,attachments);if(Object.hasOwn(map,'a'))model.span=p.span??70;
+  // A physical pin the legacy model has no terminal for (servo position-feedback p4) still joins its hole.
+  const keys=terminalKeys(model),extra=Object.keys(attachments).filter(k=>!keys.includes(k));if(extra.length)model.electricalPins=[...keys,...extra];
   components.push(model);
  }
  const convert=id=>replacements.get(id)||id;

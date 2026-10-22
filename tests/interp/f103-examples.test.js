@@ -45,3 +45,8 @@ test('the example list of an F103 project leaves out examples that need F4-only 
  const f4=searchHalExamples('').map(r=>r.id),f1=searchHalExamples('','STM32F103RB').map(r=>r.id);
  assert.deepEqual(f4.filter(id=>!f1.includes(id)).sort(),[...UNAVAILABLE].sort());
 });
+
+test('the servo position-feedback wire follows the commanded angle (ADC reads it)',()=>{
+ const out=run(project(F4,'ref_servo_feedback_4'),3000).out.filter(l=>/^Feedback=/.test(l)).map(l=>Number(l.match(/[\d.]+/)[0]));
+ assert.ok(out.length>=3,out.join(','));assert.ok(Math.abs(out[0]-1.65)<0.05&&Math.abs(out[1])<0.05,out.join(','));
+});
