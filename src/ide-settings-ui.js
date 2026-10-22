@@ -11,7 +11,8 @@ export function setupIdeSettings({editor,layout,open}){
  document.querySelector('.editor-panel').append(panel);button.onclick=open;
  function apply(){applyAppearance(preferences);editor.preferences(preferences);const dark=appearanceMode(preferences)==='dark',toggle=$('appearance-toggle');toggle.innerHTML=dark?MOON:SUN;toggle.dataset.mode=dark?'dark':'light';toggle.setAttribute('aria-checked',String(dark));const text=`${dark?'Dark':'White'} 모드${preferences.appearance==='system'?' (시스템 설정)':''} · 눌러서 ${dark?'White':'Dark'} 모드로 전환`;toggle.title=text;toggle.setAttribute('aria-label',text);}
  function save(next){const validated=validatePreferences(next);localStorage.setItem(PREFERENCES_KEY,JSON.stringify(validated));preferences=validated;apply();$('ide-settings-error').textContent='';$('ide-settings-status').textContent='저장됨';}
- function guard(action){try{action();}catch(error){$('ide-settings-error').textContent=error.message;$('ide-settings-status').textContent='저장하지 못함';}}
+ // A rejected value is not kept in the form: the fields show the saved preferences again, with the reason.
+ function guard(action){try{action();}catch(error){paint();$('ide-settings-error').textContent=error.message;$('ide-settings-status').textContent='저장하지 못함';}}
  function paint(){
   $('pref-appearance').value=preferences.appearance;
   for(const key of ['fontSize','lineHeight','fontFamily','uiFontSize','terminalFontSize','tabSize'])$('pref-'+key).value=preferences[key];
