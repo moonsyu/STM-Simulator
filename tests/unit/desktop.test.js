@@ -371,8 +371,11 @@ describe('native build helpers',()=>{
     Object.assign(p.mcu.pins,{PA2:pin('USART2_TX'),PA3:pin('USART2_RX'),PA4:pin('USART2_CK'),PB8:pin('I2C1_SCL'),PB9:pin('I2C1_SDA'),PA0:pin('GPIO_EXTI'),PC13:pin('GPIO_EXTI'),PA1:pin('ADC1_IN1')});
     Object.assign(p.mcu.peripherals,{USART2:{enabled:true,baud:115200,mode:'synchronous'},I2C1:{enabled:true,clock:100000},ADC1:{enabled:true}});
     for(const irq of ['USART2_IRQn','I2C1_EV_IRQn','I2C1_ER_IRQn','ADC_IRQn','EXTI0_IRQn','EXTI15_10_IRQn','TIM3_IRQn','USART1_IRQn'])p.mcu.nvic[irq]={enabled:true,priority:1};
+    // The #else branch of #if 0 defines SysTick_Handler; a handler inside #if 0 (with a nested #ifdef) does not count.
+    p.code+='\n#if 0\nvoid SysTick_Handler(void){}\n#else\nvoid SysTick_Handler(void){HAL_IncTick();}\n#endif\n#if 0\n#ifdef X\n#endif\nvoid EXTI0_IRQHandler(void){}\n#endif\n';
     const env=await readText(path.join((await nativeBuild.prepareBuild({project:p,tools:{armGcc:gcc,cube},root:path.join(dir,'build')})).directory,'__stm_environment.c'));
-    assert.match(env,/extern USART_HandleTypeDef husart2;/);assert.doesNotMatch(env,/huart2/);
+    assert.match(env,/extern USART_HandleTypeDef husart2;/);
+    assert.doesNotMatch(env,/void SysTick_Handler/);assert.doesNotMatch(env,/huart2/);
     assert.match(env,/void USART2_IRQHandler\(void\) \{ HAL_USART_IRQHandler\(&husart2\); \}/);
     assert.match(env,/void I2C1_EV_IRQHandler\(void\) \{ HAL_I2C_EV_IRQHandler\(&hi2c1\); \}/);assert.match(env,/void I2C1_ER_IRQHandler\(void\) \{ HAL_I2C_ER_IRQHandler\(&hi2c1\); \}/);
     assert.match(env,/void ADC_IRQHandler\(void\) \{ HAL_ADC_IRQHandler\(&hadc1\); \}/);
