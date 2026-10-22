@@ -86,6 +86,7 @@ export function configProblems(config){
     const assigned=Object.fromEntries(Object.entries(config.pins).filter(([,p])=>p.function.startsWith(id+'_')).map(([pin,p])=>[p.function.slice(id.length+1),pin]));
     if(Object.keys(assigned).length&&!remapFor(family.id,id,assigned))errors.push(`${id}: ${Object.entries(assigned).map(([s,pin])=>`${s}=${pin}`).join(', ')} 조합은 ${family.id}에서 쓸 수 없습니다. 함께 옮겨지는 핀 묶음: ${family.remaps[id].map(o=>Object.entries(o.pins).map(([s,pin])=>`${s} ${pin}`).join('/')).join(' 또는 ')}`);
   }
+  for(const [irq,n]of Object.entries(config.nvic||{})){const id=irq.replace(/_IRQn$/,'');if(n.enabled&&(isSerial(id)||isTimer(id))&&!config.peripherals[id]?.enabled)errors.push(`${irq}: ${id} 주변장치를 활성화하거나 인터럽트를 끄세요.`);}
   for(const [request,d]of Object.entries(config.dma||{})){const id=dmaPeripheral(request);if(id&&!config.peripherals[id]?.enabled)errors.push(`${request} DMA: ${id} 주변장치를 활성화하세요.`);if(id&&isTimer(id)&&config.peripherals[id].mode!=='pwm')errors.push(`${request} DMA: ${id}를 PWM 모드로 설정하세요.`);}
   return errors;
 }
