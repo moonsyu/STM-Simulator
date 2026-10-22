@@ -31,6 +31,8 @@ export class PinoutPanel {
     $('hal-replace-cancel').onclick=()=>$('hal-replace-dialog').close();$('hal-replace-confirm').onclick=()=>{$('hal-replace-dialog').close();this.commit(true);};
   }
   open(pin){if(this.isRunning())return;const project=this.getProject();this.draft=structuredClone(project.mcu||defaultMcu(projectBoard(project).mcuFamily));const fam=familyProfile(this.draft.family);if(fam.gpioPins.includes(pin))this.pin=pin;
+    // A pin chosen on the other board (PH1 on F446RE, PB11 on F103RB) does not exist here.
+    else if(!fam.gpioPins.includes(this.pin))this.pin=fam.gpioPins.includes('PA5')?'PA5':fam.gpioPins[0];
     $('pinout-dialog').querySelector('footer > span').textContent=`HAL GPIO · UART/USART ${Object.keys(fam.serial).length}개 · ${['I2C1','SPI1','ADC1'].filter(id=>fam.extra[id]).join(' · ').replace('I2C','I²C')} · TIM${Object.keys(fam.timers).map(t=>t.slice(3)).join('/')}`;
     this.render();$('pinout-dialog').showModal();}
   sync(){if(!$('pin-function'))return;this.draft.pins[this.pin]={function:$('pin-function').value,pull:$('pin-pull').value,edge:$('pin-edge').value,initial:Number($('pin-level').value),label:$('pin-label').value.trim()};}
