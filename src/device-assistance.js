@@ -211,6 +211,7 @@ export function applyDeviceExample(original,target,options={}){
  if(project.firmware?.mode!=='hal')throw new Error('현재 프로젝트를 STM32 HAL 실행 환경으로 전환한 뒤 적용하세요.');
  const component=target.type==='part'?project.components.find(p=>p.id===target.id):null,type=component?.type||(target.id==='board'?'board':target.id==='breadboard'?'breadboard':null);if(!type||!DEVICE_RECIPES[type])throw new Error('장치 또는 보드/빵판을 먼저 선택하세요.');
  if(!['hal','baremetal'].includes(mode))throw new Error('예제 모드를 확인하세요.');
+ if(mode==='baremetal'&&projectBoard(project).mcuFamily!=='STM32F446RE')throw new Error('레지스터 예제는 NUCLEO-F446RE(STM32F4 레지스터)용입니다. NUCLEO-F103RB에서는 HAL 예제를 사용하세요.');
  showSurface(project,'board');
  const sample=recipeFor(type,projectBoard(project).id);if(sample.mcu.timerClockHz!==project.mcu.timerClockHz&&/^ref_rgb_(neopixel|gravity)/.test(type)){if(Object.keys(project.mcu.pins).length||project.deviceDocs?.bindings.length)throw new Error('이 장치의 비트 타이밍에는 '+sample.mcu.timerClockHz+' Hz 클록이 필요합니다. Pinout의 클록을 맞춰 주세요.');project.mcu.timerClockHz=sample.mcu.timerClockHz;project.code=project.code.replace(cFunctions(project.code).find(f=>f.name==='SystemClock_Config')?.text||'__no_clock__',cFunctions(generateHal(project.mcu)).find(f=>f.name==='SystemClock_Config')?.text||'');}
  const busPin=(p,label)=>partTerminal(p.id,terminalKeys(p).find(k=>terminalLabel(p,k)===label));
