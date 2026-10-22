@@ -113,10 +113,14 @@ export function setupEditorSearch({applyEdit, maxLength}) {
   code.addEventListener('select', () => refresh());
   document.addEventListener('keydown', event => {
     if (event.isComposing || document.querySelector('dialog[open]')) return;
-    const inside = $('code-panel').contains(event.target);
-    if (!inside) return;
-    if ((event.ctrlKey || event.metaKey) && !event.altKey && !event.shiftKey && ['f','r'].includes(event.key.toLowerCase())) {
-      event.preventDefault();event.stopPropagation();open(event.key.toLowerCase() === 'r');return;
+    const inside = $('code-panel').contains(event.target), findKey = (event.ctrlKey || event.metaKey) && !event.altKey && !event.shiftKey && ['f','r','h'].includes(event.key.toLowerCase());
+    // Outside the code panel (circuit, sidebars) Ctrl+F/R/H still open the code search, except in other text fields.
+    if (!inside) {
+      if (findKey && !event.target.closest?.('input, textarea, select, [contenteditable="true"]')) {event.preventDefault();event.stopPropagation();document.dispatchEvent(new CustomEvent('ide-find', {detail:event.key.toLowerCase() !== 'f'}));}
+      return;
+    }
+    if (findKey) {
+      event.preventDefault();event.stopPropagation();open(event.key.toLowerCase() !== 'f');return;
     }
     if (panel.hidden) return;
     if (event.key === 'Escape') {event.preventDefault();event.stopPropagation();close();}
