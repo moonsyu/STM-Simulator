@@ -14,6 +14,7 @@ import {compileHal} from './hal-source.js';
 import {HalAdapter,halConstantsFor} from './hal.js';
 import {SignalRecorder,NoiseModel,signalsApi,validateNoise} from './signals.js';
 
+const definedLabel=(project,label)=>[project.code||'',...(project.firmware?.files||[]).map(f=>f.text||'')].some(text=>new RegExp(`^[ \\t]*#[ \\t]*define[ \\t]+${label}_(?:Pin|GPIO_Port)\\b`,'m').test(text));
 export class SimulationSession {
   constructor(project,{print=()=>{},trace=()=>{},uart=()=>{},warn,channels,debug,program,storage}={}){
     const source=project;project=physicalToModel(project);
@@ -26,8 +27,9 @@ export class SimulationSession {
     this.hal=project.firmware?.mode==='hal'?this.createHal():null;
     this.runtime=new Runtime(program??(this.hal?compileHal(project.code,project.firmware.files,project.mcu?.family):compile(project.code)),{
       debug,preciseTiming:project.components.some(p=>p.type==='catalog_singlewire'),
-      // Pinout labels give CubeMX-style LABEL_Pin / LABEL_GPIO_Port names, as main.h does in an ARM build.
-      constants:this.hal?{...halConstantsFor(project.mcu?.family),...Object.fromEntries(Object.entries(project.mcu?.pins||{}).filter(([,p])=>p.label).flatMap(([pin,p])=>[[p.label+'_Pin',1<<Number(pin.slice(2))],[p.label+'_GPIO_Port','GPIO'+pin[1]]]))}:undefined,
+      // Pinout labels give CubeMX-style LABEL_Pin / LABEL_GPIO_Port names, as main.h does in an ARM build,
+      // unless the sources (an imported CubeMX main.h) already #define them.
+      constants:this.hal?{...halConstantsFor(project.mcu?.family),...Object.fromEntries(Object.entries(project.mcu?.pins||{}).filter(([,p])=>p.label&&!definedLabel(project,p.label)).flatMap(([pin,p])=>[[p.label+'_Pin',1<<Number(pin.slice(2))],[p.label+'_GPIO_Port','GPIO'+pin[1]]]))}:undefined,
       invoke:(name,args,runtime)=>this.hal?.invoke(name,args,runtime),poll:runtime=>this.hal?.poll(runtime),
       preempt:runtime=>this.hal?.preempt(runtime)??false,declareGlobals:runtime=>this.hal?.declareGlobals?.(runtime),
       warn:message=>{this.warnings.push(message);if(this.warnings.length>50)this.warnings.shift();warnOut(message);},reset:runtime=>{if(this.hal){this.hal=this.createHal();this.hal.nvicModel.tick.lost=Math.floor(runtime.microTime/1000);}},
