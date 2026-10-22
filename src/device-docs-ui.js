@@ -3,15 +3,16 @@ import {inlineStatements} from './c-inline.js';
 import {REGISTER_HELPERS} from './device-register-setup.js';
 import {CATALOG_BY_TYPE} from './catalog-defs.js';
 import {deviceDocs} from './device-docs-data.js';
+import {projectBoard} from './boards.js';
 import {baremetalCards} from './device-baremetal.js';
 const esc=value=>String(value).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;');
 export function setupDeviceDocs({getProject,getSelection,isRunning,open,apply,showSource}){
  const tab=document.createElement('button');tab.dataset.tab='docs';tab.textContent='장치 Docs';tab.onclick=open;document.querySelector('.panel-tabs').append(tab);
  const panel=document.createElement('section');panel.id='device-docs-panel';panel.hidden=true;document.querySelector('.editor-panel').append(panel);let last='',activeMode='hal',message='',lastKey=null;
- function target(){const selected=getSelection(),p=getProject();if(selected?.type==='part'){const part=p.components.find(p=>p.id===selected.id);if(part)return {type:part.type,name:part.name,target:selected,key:part.id};}if(selected?.type==='surface')return {type:selected.id==='board'?'board':'breadboard',name:selected.id==='board'?'NUCLEO-F446RE':'기본 빵판',target:selected,key:'surface_'+selected.id};return null;}
+ function target(){const selected=getSelection(),p=getProject();if(selected?.type==='part'){const part=p.components.find(p=>p.id===selected.id);if(part)return {type:part.type,name:part.name,target:selected,key:part.id};}if(selected?.type==='surface')return {type:selected.id==='board'?'board':'breadboard',name:selected.id==='board'?projectBoard(p).name:'기본 빵판',target:selected,key:'surface_'+selected.id};return null;}
  function refresh(force=false){const item=target(),state=JSON.stringify([item,getProject().deviceDocs,getProject().mcu,getProject().components.find(p=>p.id===item?.target.id),isRunning()]);if(!force&&state===last)return;last=state;
   if(!item){panel.innerHTML='<div class="docs-empty"><h2>장치 Docs</h2><p>회로에서 부품·STM 보드·빵판을 선택하세요.</p><p>장치 개요, 핀 연결, HAL·레지스터 예제를 확인하고 현재 프로젝트에 적용할 수 있습니다.</p></div>';return;}
-  const docs=deviceDocs(item.type),binding=getProject().deviceDocs?.bindings.find(b=>b.key===item.key);if(item.key!==lastKey){lastKey=item.key;message='';if(binding)activeMode=binding.mode==='baremetal'?'baremetal':'hal';}
+  const docs=deviceDocs(item.type,projectBoard(getProject()).id),binding=getProject().deviceDocs?.bindings.find(b=>b.key===item.key);if(item.key!==lastKey){lastKey=item.key;message='';if(binding)activeMode=binding.mode==='baremetal'?'baremetal':'hal';}
   const config=binding?{...getProject().mcu,pins:Object.fromEntries(Object.values(binding.pins).filter(pin=>getProject().mcu.pins[pin]).map(pin=>[pin,getProject().mcu.pins[pin]])),peripherals:Object.fromEntries(Object.values(binding.peripherals).filter(id=>getProject().mcu.peripherals[id]).map(id=>[id,getProject().mcu.peripherals[id]]))}:docs.sample.mcu;
   const variant=CATALOG_BY_TYPE[item.type],selectedPart=getProject().components.find(p=>p.id===item.target.id);if(selectedPart?.address!==undefined){const template=docs.sample.components.find(p=>p.type===item.type);if(template)template.address=selectedPart.address;}
   const bare=baremetalCards(config,item.type,docs.sample),cards=activeMode==='hal'?docs.functions:bare;
