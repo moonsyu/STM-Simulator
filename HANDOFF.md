@@ -1,6 +1,10 @@
 # STM Simulator — 개발 인계
 
-현재 버전: **0.34.2**. 정리일: **2026-10-21**. NUCLEO-F446RE 또는 NUCLEO-F103RB와 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+현재 버전: **0.34.3**. 정리일: **2026-10-21**. NUCLEO-F446RE 또는 NUCLEO-F103RB와 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+
+## 0.34.3 부품 다리와 배선 끝은 다른 구멍
+
+- `placement.js` `wiredHoles(wires)`, `findMount(p,components,radius,surfaces,wires)`가 배선 끝 구멍을 제외한다(앱의 장착 호출은 `project.wires`를 넘긴다). `clickEndpoint`는 2핀 부품 배치에서 배선 끝 구멍을 거부한다.
 
 ## 0.34.2 부품 선택 범위
 
