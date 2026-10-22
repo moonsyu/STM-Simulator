@@ -62,7 +62,8 @@ let carry=null;
 const CARRY_HINT='배선 끝을 옮길 핀 또는 빵판 구멍을 클릭하세요. 같은 끝을 다시 누르거나 Esc: 취소';
 let project=blankProject(),mode='select',pending=null,selection=null,color='#23a68a',status='stopped',result=null,runtime=null,simTime=0,pressed={},undoStack=[],redoStack=[],dirty=false,starting=false,startToken=0,firmware=null;
 let view={x:0,y:0,w:1120,h:730},drag=null,lastWarnings='',replaceAction=null,saveTimer,searchSelectedId=null,breadboardKey='',inspectorKey='',inspectorModel=null;
-try{const cached=localStorage.getItem('stm32lab.project.v2')||localStorage.getItem('stm32lab.project.v1');if(cached)project=validateProject(JSON.parse(cached));}catch{}
+// A saved project that no longer validates is kept aside (not overwritten by the blank one) and reported once the log exists.
+let restoreError='';try{const cached=localStorage.getItem('stm32lab.project.v2')||localStorage.getItem('stm32lab.project.v1');if(cached)try{project=validateProject(JSON.parse(cached));}catch(e){restoreError=e.message;localStorage.setItem('stm32lab.project.recovery',cached);}}catch{}
 const diagnostic=createDiagnostics(window.localDiagnostics?.record,()=>project);
 initSvg(svg);
 let session=null,audioEnabled=false,audioContext,buzzerAudio;
@@ -249,9 +250,11 @@ function inspector(force=false){
    if($('part-value'))$('part-value').onchange=e=>{const n=Number(e.target.value);if(!Number.isFinite(n)||n<1||n>1e7){log('저항 범위: 1 Ω~10 MΩ','error');inspector(true);updateReadouts();return;}checkpoint();p.value=n;changed();};
    if($('part-color'))$('part-color').onchange=e=>{checkpoint();p.color=e.target.value;changed();};
    if($('part-live'))$('part-live').innerHTML=partReadouts(p,result);
-   el.querySelectorAll('[data-part-prop]').forEach(input=>{input.oninput=()=>{if(running()&&input.dataset.live!=='true')return;const key=input.dataset.partProp,n=key==='color'?input.value:Number(input.value);if(key==='color'){if(!['red','green','blue','yellow'].includes(n))return;checkpoint();p.color=n;changed();return;}if(!Number.isFinite(n)||(input.min!==undefined&&input.min!==''&&n<Number(input.min))||(input.max!==undefined&&input.max!==''&&n>Number(input.max)))return;if((['switch','motion'].includes(key)||p.type==='encoder'&&key==='position')&&!Number.isInteger(n))return;if(!input.dataset.checkpoint){checkpoint();input.dataset.checkpoint='1';}p[key]=n;if($('output-'+key))$('output-'+key).textContent=input.type==='range'?n:'';autosave();if(running())recompute();updateSimulationSvg(svg,project,result,pressed);updateReadouts();};input.onchange=()=>{delete input.dataset.checkpoint;
+   el.querySelectorAll('[data-part-prop]').forEach(input=>{input.oninput=()=>{if(running()&&input.dataset.live!=='true')return;const key=input.dataset.partProp,n=key==='color'?input.value:Number(input.value);if(key==='color'){if(!['red','green','blue','yellow'].includes(n))return;checkpoint();p.color=n;changed();return;}if(!Number.isFinite(n)||(input.min!==undefined&&input.min!==''&&n<Number(input.min))||(input.max!==undefined&&input.max!==''&&n>Number(input.max)))return;if((['switch','motion'].includes(key)||p.type==='encoder'&&key==='position')&&!Number.isInteger(n))return;
+    // Only values the project loader accepts are stored (an I²C address of 80.5 would make the saved project unloadable).
+    try{validateProject({...project,components:project.components.map(c=>c===p?{...p,[key]:n}:c)});}catch{return;}if(!input.dataset.checkpoint){checkpoint();input.dataset.checkpoint='1';}p[key]=n;if($('output-'+key))$('output-'+key).textContent=input.type==='range'?n:'';autosave();if(running())recompute();updateSimulationSvg(svg,project,result,pressed);updateReadouts();};input.onchange=()=>{delete input.dataset.checkpoint;
     // A value outside the allowed range is not applied: show the stored value again and say the range.
-    const key=input.dataset.partProp;if(key!=='color'&&String(p[key]??'')!==input.value&&input.type!=='range'){const range=input.min!==''&&input.max!==''?` (${input.min}~${input.max})`:'';log(`${input.closest('label')?.firstChild?.textContent?.trim()||key}: 허용 범위${range}의 값을 입력하세요.`,'error');input.value=p[key]??'';}};});
+    const key=input.dataset.partProp;if(key!=='color'&&String(p[key]??'')!==input.value&&input.type!=='range'){const range=input.min!==''&&input.max!==''?` (${input.min}~${input.max})`:'';log(`${(input.labels?.[0]??input.closest('label'))?.firstChild?.textContent?.trim()||key}: 허용 범위${range}의 값을 입력하세요${['address','baud'].includes(key)?' (정수)':''}.`,'error');input.value=p[key]??'';}};});
    $('inspect-open-docs').onclick=()=>tab('docs');$('remove-part').onclick=removeSelected;$('rotate-part').onclick=rotateSelected;
    bindMedia(p,{running:running(),checkpoint,changed,getSession:()=>session,log});
  } else if(selection.type==='wire'){
@@ -613,6 +616,7 @@ ide=setupIde({buildFirmware:()=>ensureFirmware(true).catch(error=>log(error.mess
 // Button titles show the current shortcuts as soon as a binding changes.
 layout.onBindings(()=>{$('debug-start').title=withKey('시작 위치에서 디버깅','run.debug');refresh();ide.controls();});
 setupIdeSettings({editor:ide.editor,layout,open:()=>tab('settings')});
+if(restoreError)log(`저장된 프로젝트를 열지 못해 새 회로로 시작합니다 (${restoreError}). 이전 내용은 브라우저 저장소 stm32lab.project.recovery에 보관했습니다.`,'error');
 deviceDocs=setupDeviceDocs({getProject:()=>project,getSelection:()=>selection,isRunning:running,open:()=>tab('docs'),showSource:file=>{sourceFile=file;syncEditor();tab('code');},apply:(target,options)=>{
  if(running())throw new Error('실행을 정지한 뒤 적용하세요.');
  let applied;try{applied=applyDeviceExample(project,target,options);}catch(error){diagnostic('docs.failed',{target,options,message:error.message},true);throw error;}
