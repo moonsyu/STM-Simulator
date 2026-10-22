@@ -11,7 +11,7 @@ import {configureHalCircuit} from './hal-circuits.js';
 import {EXAMPLE_TIMER_CLOCK_HZ} from './mcu-defaults.js';
 import {expandC} from './c-format.js';
 import {getBoard,projectBoard} from './boards.js';
-import {F1_FAMILY,portExampleToF1} from './example-port.js';
+import {F1_FAMILY,portExampleToF1,portMcu} from './example-port.js';
 import {ADVANCED_EXAMPLES,ADVANCED_GUIDES,advancedExample} from './advanced-examples.js';
 
 export const HAL_EXAMPLES={...CATALOG_EXAMPLES,...BASIC_EXAMPLES,...L298_EXAMPLES,...BUZZER_EXAMPLES,...DEVICE_EXAMPLES,...TIMER_EXAMPLES,blink:'HAL · GPIO LED',button:'HAL · GPIO 버튼 입력',exti:'HAL · USER 버튼 EXTI',uart:'HAL · USART2 내장 터미널 (ST-LINK VCP)',uart_external:'HAL · 외부 UART 장치 배선 연습',timer:'HAL · TIM2 주기 인터럽트',adc:'HAL · ADC 입력',temperature:'HAL · TMP36 온도',samples:'HAL · ADC 배열 샘플링',i2c:'HAL · I²C 메모리',spi:'HAL · SPI 메모리',language:'HAL · 함수·배열·구조체',pwm:'HAL · TIM2 PWM',ultrasonic:'HAL · 초음파 거리 측정'};
@@ -80,6 +80,14 @@ function tidyExampleSource(p){
 }
 /** An example for a board: written for the NUCLEO-F446RE and ported to the STM32F103RB for a NUCLEO-F103RB. */
 export function halExampleFor(kind,boardId){const p=halExample(kind);return getBoard(boardId)?.mcuFamily===F1_FAMILY?portExampleToF1(p):p;}
+// One-line guide of an example on a board: the code's first comment unless it only repeats the device name,
+// with signals the F103 port moved (TIM2_CH1 PA5 → PA0) shown at their new pins.
+export function halGuideFor(kind,boardId){
+  const name=allHalExamples()[kind]??'',p=halExampleFor(kind,boardId),comment=p.code.match(/^\/\/ (.+)$/m)?.[1];
+  const guide=comment&&comment!==name.replace(/^HAL · /,'')?comment:allHalGuides()[kind]??comment??'';
+  if(getBoard(boardId)?.mcuFamily!==F1_FAMILY)return guide;
+  const {moved}=portMcu(halExample(kind).mcu);return guide.replace(/\bP[A-H]\d+\b/g,pin=>moved[pin]??pin);
+}
 // Laying out a complete example is deterministic, so each one is planned once per session and board.
 const arranged=new Map();
 export function applyHalExample(project,kind){
