@@ -27,6 +27,9 @@ export class PinoutPanel {
   constructor({getProject,apply,isRunning,onError}){
     Object.assign(this,{getProject,apply,isRunning,onError});this.pin='PA5';
     $('pinout-open').onclick=()=>this.open();$('pinout-close').onclick=()=>$('pinout-dialog').close();
+    // NVIC, numeric fields and pin properties re-render nothing: refresh the problem list (this bubbling listener runs after their own onchange).
+    $('pinout-dialog').addEventListener('change',e=>{if(!e.target.matches('[data-irq],[data-priority],[data-peripheral-value],#timer-clock,#pin-label,#pin-pull,#pin-edge,#pin-level'))return;
+      if(e.target.matches('#pin-label,#pin-pull,#pin-edge,#pin-level'))this.sync();try{$('pinout-errors').textContent=configProblems(this.draft).join('\n');}catch{}});
     $('pinout-apply').onclick=()=>this.commit(false);$('hal-generate').onclick=()=>{if(this.isRunning())return;this.sync();if(this.getProject().code.trim())$('hal-replace-dialog').showModal();else this.commit(true);};
     $('hal-replace-cancel').onclick=()=>$('hal-replace-dialog').close();$('hal-replace-confirm').onclick=()=>{$('hal-replace-dialog').close();this.commit(true);};
   }
