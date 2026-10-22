@@ -184,7 +184,7 @@ function mountShell(layout,state,options,{apply,save,setPalette}){
  const strip2=document.querySelector('.monitor-strip');
  const runState=strip2.firstElementChild;runState.classList.add('status-item','status-run');left.append(runState);
  const target=document.createElement('button');target.type='button';target.className='status-item status-button';target.id='status-target';target.title='실행 환경 선택 (실행 및 디버그)';target.onclick=()=>{layout.showView('debug');$('native-target')?.focus();};left.append(target);
- const problems=document.createElement('button');problems.type='button';problems.className='status-item status-button';problems.id='status-problems';problems.title='문제 보기';problems.onclick=()=>layout.showPanel('issues');left.append(problems);
+ const problems=document.createElement('button');problems.type='button';problems.className='status-item status-button';problems.id='status-problems';problems.title='문제 보기';problems.onclick=()=>{const circuit=/\(\d+\)/.test(document.querySelector('[data-monitor="issues"]')?.textContent||'');layout.showPanel(!circuit&&$('build-errors')?.childElementCount?'build':'issues');};left.append(problems);
  for(const s of [...strip2.children]){s.classList.add('status-item');left.append(s);}
  const buildStatus=$('build-status');if(buildStatus){buildStatus.classList.add('status-item');buildStatus.previousElementSibling?.classList.contains('toolbar-divider')&&buildStatus.previousElementSibling.remove();left.append(buildStatus);}
  strip2.remove();
