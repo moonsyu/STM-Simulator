@@ -75,7 +75,10 @@ export function setupNativeIde({o,editor,select,showMonitor,points,watches,toggl
   }catch(e){if(state==='paused'&&current===sequence)$('debug-location').textContent=e.message;}
  }
  function sync(){const value=o.getProject().ide?.native||{target:'simulator',configuration:'Debug'};$('native-target').value=value.target;$('native-config').value=value.configuration;control();queueLanguage();}
- function change(){o.getProject().ide??={breakpoints:[],watches:[]};o.getProject().ide.native=config();o.saveLocal();editor.diagnostics([]);editor.updateDebug(points(),null);$('build-status').textContent=emulator()?'ARM GCC → 에뮬레이터 · 빌드 준비':selected()?`${config().target==='arm'?'ARM GCC':'Windows GCC'} · 빌드 준비`:'시뮬레이터용 빌드';$('new').disabled=$('open').disabled=$('workspace-open').disabled=false;o.refresh();queueLanguage();}
+ function change(){o.getProject().ide??={breakpoints:[],watches:[]};o.getProject().ide.native=config();o.saveLocal();editor.diagnostics([]);$('build-errors').replaceChildren();editor.updateDebug(points(),null);
+  // clangd serves only the ARM and Windows targets; its markers belong to the previous target's flags.
+  editor.clearLanguageDiagnostics();if(language&&!selected()){language=false;languageReady=false;$('language-toggle').textContent='clangd 꺼짐';void guard(()=>api['language-stop']());}
+  $('build-status').textContent=emulator()?'ARM GCC → 에뮬레이터 · 빌드 준비':selected()?`${config().target==='arm'?'ARM GCC':'Windows GCC'} · 빌드 준비`:'시뮬레이터용 빌드';$('new').disabled=$('open').disabled=$('workspace-open').disabled=false;o.refresh();queueLanguage();}
  function queueLanguage(){clearTimeout(languageTimer);if(!language||!selected())return;languageTimer=setTimeout(()=>void updateLanguage(),500);}
  async function updateLanguage(){if(!language||!selected())return;if(languageRunning){languageQueued=true;return;}languageRunning=true;try{await api.language(text(),config());languageReady=true;$('language-toggle').textContent='clangd 연결됨';}catch(e){languageReady=false;$('language-toggle').textContent='clangd 설정 필요';$('language-toggle').title=e.message;}finally{languageRunning=false;if(languageQueued){languageQueued=false;queueLanguage();}}}
  const lsp={enabled:()=>language&&languageReady&&selected(),query:(method,file,position)=>api['language-query'](method,file,position)};editor.setLanguageService(lsp);
