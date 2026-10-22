@@ -106,6 +106,8 @@ __attribute__((weak)) void *_sbrk(ptrdiff_t increment) {
     const extiPins=(lo,hi)=>Object.entries(project.mcu?.pins||{}).filter(([pin,q])=>q.function==='GPIO_EXTI'&&Number(pin.slice(2))>=lo&&Number(pin.slice(2))<=hi).map(([pin])=>`HAL_GPIO_EXTI_IRQHandler(GPIO_PIN_${pin.slice(2)});`).join('');
     const peripheralHandler=(type,handle,call)=>peripherals[handle.id]?.enabled?{extern:`extern ${type}_HandleTypeDef ${handle.name};`,body:`${call}(&${handle.name});`}:{body:''};
     const irqBody=id=>{
+      // A timer/UART interrupt left on for a disabled peripheral has no handle to serve.
+      if((isTimer(id)||isSerial(id))&&!peripherals[id]?.enabled)return {body:''};
       if(isTimer(id))return {body:`HAL_TIM_IRQHandler(&htim${id.slice(3)});`};
       if(isSerial(id))return {body:sync(id)?`HAL_USART_IRQHandler(&${usartHandle(id)});`:`HAL_UART_IRQHandler(&${serialHandle(id)});`};
       const exti=/^EXTI(\d+)(?:_(\d+))?$/.exec(id);if(exti){const a=Number(exti[1]),b=exti[2]===undefined?a:Number(exti[2]);return {body:extiPins(Math.min(a,b),Math.max(a,b))};}
