@@ -194,3 +194,28 @@ test('a part is selected only on what is drawn: the LED glow and pin labels neit
   assert.deepEqual(s.errors,[]);
  }finally{await s.close();}
 });
+
+test('a part lead never shares a hole with a jumper wire end',{timeout:120000},async()=>{
+ const s=await launch();
+ try{
+  const {win}=s;
+  await applyExample(win,'5mm 단색 LED');
+  // A breadboard hole that holds a wire end.
+  const hole=await win.evaluate(()=>{for(const g of document.querySelectorAll('#wire-layer [data-wire-end]')){const c=g.querySelector('circle').getBoundingClientRect();const x=c.x+c.width/2,y=c.y+c.height/2;const under=document.elementsFromPoint(x,y).find(el=>el.closest('[data-hole]'));if(under)return {x,y,id:under.closest('[data-hole]').dataset.hole};}return null;});
+  assert.ok(hole,'the example has a wire in a breadboard hole');
+  await win.click('[data-activity="parts"]');if(!await win.locator('#view-parts').isVisible())await win.click('[data-activity="parts"]');
+  await win.fill('#part-search','저항');await win.locator('#part-list [data-add="resistor"]').click();
+  const parts=await win.evaluate(()=>document.querySelectorAll('#part-layer [data-part]').length);
+  await win.mouse.click(hole.x,hole.y);
+  await win.waitForFunction(()=>/점퍼선이 꽂힌 구멍/.test(document.getElementById('console-output').textContent));
+  assert.equal(await win.evaluate(()=>document.querySelectorAll('#part-layer [data-part]').length),parts,'no resistor was placed');
+  await win.keyboard.press('Escape');
+  // Dragging the LED onto that hole: when released, no lead sits in the wired hole.
+  const led=win.locator('#part-layer [data-part="led1"] .part-body');const b=await led.boundingBox();
+  await win.mouse.move(b.x+b.width/2,b.y+b.height/2);await win.mouse.down();await win.mouse.move(hole.x,hole.y,{steps:8});await win.mouse.up();
+  await win.waitForTimeout(300);
+  const leadHoles=await win.evaluate(()=>[...document.querySelectorAll('#part-layer [data-part="led1"] .part-contact')].map(c=>{const r=c.getBoundingClientRect();const el=document.elementsFromPoint(r.x+r.width/2,r.y+r.height/2).find(e=>e.closest('[data-hole]'));return el?.closest('[data-hole]').dataset.hole||null;}));
+  assert.ok(!leadHoles.includes(hole.id),`LED leads ${leadHoles} must not use ${hole.id}`);
+  assert.deepEqual(s.errors,[]);
+ }finally{await s.close();}
+});

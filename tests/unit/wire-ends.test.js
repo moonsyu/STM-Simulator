@@ -40,3 +40,16 @@ test('moving a wire end onto a used hole, a part lead or its own other end is re
   assert.throws(()=>moveWireEnd(p,a.id,'from',null),/핀 또는 빵판 구멍 위/);
   assert.equal(a.from,from);
 });
+
+test('a part is never mounted with a lead in a hole that holds a jumper wire end',async()=>{
+  const {findMount,wiredHoles}=await import('../../src/placement.js');
+  const p=example(),led=p.components.find(c=>c.id==='led1'),holes=Object.values(attachments(led));
+  // Without wires in the way the LED goes back into its own holes.
+  const free=findMount(led,p.components,15,p.surfaces,[]);
+  assert.deepEqual(Object.values(free.attachments).sort(),[...holes].sort());
+  // A wire end in one of those holes: the lead must not use it.
+  const wires=[{id:'x',from:holes[0],to:boardPin('PC10'),color:'#000'}];
+  assert.ok(wiredHoles(wires).has(holes[0]));
+  const mount=findMount(led,p.components,15,p.surfaces,wires);
+  assert.ok(!mount||!Object.values(mount.attachments).includes(holes[0]),'lead and wire share a hole');
+});
