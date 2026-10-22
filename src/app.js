@@ -427,7 +427,7 @@ function initializeRuntime({debug=false,entry=false}={}){
  if(emulate&&!firmware){status='error';runtime=null;session=null;log('펌웨어 ELF가 없습니다. 빌드하거나 파일 → 펌웨어 ELF 열기를 사용하세요.','error');return false;}
  const program=emulate?null:ide?.build({reveal:false});if(!emulate&&ide&&!program){status='error';runtime=null;session=null;layout.showPanel('build');return false;}
  try{simTime=0;pressed={};lastWarnings='';result=null;monitor.clear();uartLines.clear();const options={debug:debug?{entry,breakpoints:ide?.breakpoints()||[]}:undefined,print:s=>log(s,'serial'),uart:logUart,trace:event=>monitor.trace(event),channels:monitor.channels()};
-  session=emulate?new FirmwareSession(project,{...options,elf:firmware.bytes}):new SimulationSession(project,{...options,program});runtime=session.runtime;status='paused';pending=null;mode='select';result=session.tick(0);for(const p of project.components)if(isCamera(p))void applyCameraImage(p,session);diagnostic('simulation.started',{debug,entry},true);log(emulate?`펌웨어 에뮬레이터를 시작했습니다 · ${firmware.name} · Cortex-M4 명령어 실행`:project.firmware?.mode==='hal'?'HAL 프로그램을 시작했습니다.':'스케치를 시작했습니다.');ide?.debugView();return true;}
+  session=emulate?new FirmwareSession(project,{...options,elf:firmware.bytes}):new SimulationSession(project,{...options,program});runtime=session.runtime;status='paused';pending=null;mode='select';result=session.tick(0);for(const p of project.components)if(isCamera(p))void applyCameraImage(p,session);diagnostic('simulation.started',{debug,entry},true);log(emulate?`펌웨어 에뮬레이터를 시작했습니다 · ${firmware.name} · ${projectBoard(project).mcu} (${projectBoard(project).core}) 명령어 실행`:project.firmware?.mode==='hal'?'HAL 프로그램을 시작했습니다.':'스케치를 시작했습니다.');ide?.debugView();return true;}
  catch(e){runtime=null;result=session?.viewResult??null;status='error';log(e.message,'error');return false;}
 }
 function recordSimulation(){if(result)diagnostic('simulation.state',{status,simulationMs:simTime,pins:runtime?.gpio||{},parts:result.parts,fault:result.fault,warnings:result.warnings});}
@@ -449,7 +449,8 @@ async function startRun(options){
  if(ide?.emulator()){const token=++startToken;starting=true;refresh();try{await ensureFirmware();}catch(error){if(token===startToken){log(error.message,'error');feedback.show('펌웨어를 준비하지 못했습니다. 빌드 탭의 오류를 확인하거나 ELF 파일을 여세요.','firmware');}return false;}finally{if(token===startToken)starting=false;}if(token!==startToken)return false;}
  if(running())return false;const ok=initializeRuntime(options);if(ok)status=runtime.debug.paused?'paused':'running';refresh();if(ok)ide?.debugView();return ok;
 }
-const firmwareKey=()=>JSON.stringify([project.code,project.firmware?.files,project.mcu]);
+// The build configuration (Debug -O0 / Release -Os) is part of what the cached ELF was built from.
+const firmwareKey=()=>JSON.stringify([project.code,project.firmware?.files,project.mcu,$('native-config')?.value]);
 async function ensureFirmware(force=false){
  if(!force&&firmware&&(firmware.source==='file'||firmware.key===firmwareKey()))return firmware;
  log('ARM GCC로 펌웨어를 빌드합니다…');
@@ -474,7 +475,8 @@ function debugCommand(command){
 }
 // Keyboard/menu entry points: run (Ctrl+F5), start debugging (F10), stop (Ctrl+F2) and the step commands.
 function runCommand(kind){
- if(runtime?.debug.paused){$('run').click();return;}
+ // Paused in the simulator, emulator or a GDB session: Ctrl+F5 and F10 both continue.
+ if(runtime?.debug.paused||ide?.nativePaused?.()){$('run').click();return;}
  if(running()||starting)return;
  if(kind==='debug'){ide?.debug('start');return;}
  $('run').click();

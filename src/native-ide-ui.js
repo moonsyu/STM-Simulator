@@ -148,6 +148,6 @@ export function setupNativeIde({o,editor,select,showMonitor,points,watches,toggl
   if(event.type==='diagnostics'&&language&&selected())editor.languageDiagnostics(event.file,event.items);
  });
  if(!api){for(const id of ['native-tools','native-target','language-toggle','terminal-start'])$(id).disabled=true;}
- return {selected,emulator,buildElf,config,busy,controls:control,sync,build,command,debugView,queueLanguage,async syncBreakpoints(){if(!['paused','running'].includes(state))return;await guard(()=>api.breakpoints(points()));},reset(){state='idle';lastStop=null;sequence++;editor.clearLanguageDiagnostics();sync();}};
+ return {selected,emulator,buildElf,config,busy,paused:()=>selected()&&state==='paused',controls:control,sync,build,command,debugView,queueLanguage,async syncBreakpoints(){if(!['paused','running'].includes(state))return;await guard(()=>api.breakpoints(points()));},reset(){state='idle';lastStop=null;sequence++;editor.clearLanguageDiagnostics();sync();}};
 }
 function basename(value){return value.replaceAll('\\','/').split('/').at(-1);}
