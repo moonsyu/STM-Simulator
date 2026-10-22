@@ -60,10 +60,13 @@ export function configProblems(config){
   for(const [pin,p]of Object.entries(config.pins)){
     // PA13/PA14 carry SWD: reconfiguring them cuts the ST-LINK off the running board.
     if(['PA13','PA14'].includes(pin)&&!['Reset','Reserved'].includes(p.function))errors.push(`${pin}: SWD 디버그 핀(${pin==='PA13'?'SWDIO':'SWCLK'})이라 다른 기능으로 쓸 수 없습니다. 보드 쓰기와 디버깅이 끊깁니다.`);
+    // LABEL_Pin / LABEL_GPIO_Port become macros: a HAL name (GPIO_Pin of HAL_GPIO_EXTI_Callback) or HAL/CMSIS prefix would break the headers.
+    if(p.label&&(/^(GPIO|HAL|RCC|NVIC|EXTI|SYSCFG|AFIO|PWR|FLASH|IS|USE|STM32\w*)$/i.test(p.label)||/^(__|HAL_|GPIO_|RCC_|LL_|IS_)/i.test(p.label)))errors.push(`${pin}: 라벨 ${p.label}은 HAL 이름과 겹칩니다 (${p.label}_Pin 매크로). 다른 이름을 쓰세요.`);
     if(p.label){if(labels.has(p.label))errors.push(`사용자 라벨 중복: ${p.label}`);labels.add(p.label);}
     if(p.function==='GPIO_EXTI'){const n=pin.slice(2);if(exti.has(n))errors.push(`EXTI${n}: ${exti.get(n)}와 ${pin} 충돌`);exti.set(n,pin);}
     if(!MODES.includes(p.function)){if(signals.has(p.function))errors.push(`${p.function}: 핀을 하나만 지정하세요.`);signals.set(p.function,pin);}
     const serial=serialFunction(p.function)||/^(USART\d)_CK$/.exec(p.function)?.[1];if(serial&&!config.peripherals[serial]?.enabled)errors.push(`${pin}: ${serial} 주변장치를 활성화하세요.`);
+    const owner=p.function.split('_')[0];if(!serial&&!MODES.includes(p.function)&&routesOf(config.family)[owner]&&!config.peripherals[owner]?.enabled)errors.push(`${pin}: ${owner} 주변장치를 활성화하세요.`);
     if(/_CK$/.test(p.function)&&serial&&config.peripherals[serial]?.mode!=='synchronous')errors.push(`${pin}: ${serial} 동기(Synchronous) 모드에서만 CK 핀을 사용합니다.`);
   }
   for(const [id,p]of Object.entries(config.peripherals))if(p.enabled){

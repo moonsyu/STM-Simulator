@@ -26,9 +26,11 @@ export function setSerialEnabled(config,id,enabled,routes=SERIAL_ROUTES,remaps=n
   const next=structuredClone(config);
   if(enabled){
     const usable=(pin,role)=>!next.pins[pin]||next.pins[pin].function==='Reset'||next.pins[pin].function===id+'_'+role;
-    // Keep the group of pins already assigned (a TX or RX the user picked), else the first fully free group.
+    // Keep the group of pins already assigned (a TX or RX the user picked; refused when its partner is busy), else the first fully free group.
     const current=role=>Object.keys(next.pins).find(pin=>next.pins[pin].function===id+'_'+role),fits=o=>['TX','RX'].every(role=>o.pins[role]&&usable(o.pins[role],role));
-    const group=remaps&&(remaps.find(o=>fits(o)&&['TX','RX'].some(role=>current(role)&&o.pins[role]===current(role)))||remaps.find(fits));
+    const picked=remaps?.find(o=>['TX','RX'].some(role=>current(role)&&o.pins[role]===current(role)));
+    if(picked&&!fits(picked)){const busy=['TX','RX'].map(role=>picked.pins[role]).find((pin,i)=>!usable(pin,['TX','RX'][i]));throw new Error(`${busy}: ${next.pins[busy].function}에서 사용 중이라 ${id} TX/RX 묶음(${picked.pins.TX}/${picked.pins.RX})을 쓸 수 없습니다. 먼저 해제하거나 다른 묶음을 고르세요.`);}
+    const group=remaps&&(picked||remaps.find(fits));
     if(remaps&&!group)throw new Error(`${id}: 함께 옮겨지는 TX/RX 핀 묶음 중 비어 있는 것이 없습니다 (${remaps.map(o=>o.pins.TX+'/'+o.pins.RX).join(', ')}).`);
     if(group){for(const role of ['TX','RX'])assignSerialPin(next,id,role,group.pins[role],routes);return next;}
     for(const role of ['TX','RX']){
