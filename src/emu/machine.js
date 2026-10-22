@@ -330,6 +330,9 @@ export class Machine {
       if (!L || !L.isStmt || L.address !== cpu.pc) continue;
       if (over && (cpu.ipsr !== ipsr0 || (cpu.r[13] >>> 0) < sp0)) continue;
       if (start && L.line === start.line && L.file === start.file && (cpu.r[13] >>> 0) === sp0) continue;
+      // Stepping into a call: skip the prologue (the function's own declaration line) like GDB, so the
+      // stop is on the first body line with the frame already set up (step over then stays in the function).
+      if (!over && this.elf.functionAt && this.elf.functionAt(cpu.pc)?.start === cpu.pc) continue;
       return this._result('step');
     }
     return this._result('cycles');

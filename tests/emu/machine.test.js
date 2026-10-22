@@ -92,6 +92,10 @@ test('stepOver는 호출을 건너뛰고 stepLine(into)은 들어감', () => {
   r = m.stepLine();
   assert.equal(r.reason, 'step');
   assert.equal(m.elf.functionAt(m.pc).name, 'add3');
+  // Like GDB: the prologue is skipped, so stepping in stops on the first body line and step over stays inside.
+  assert.equal(lineAt(m).line, lineOf('ADD3_FIRST'));
+  m.stepOver();
+  assert.equal(lineAt(m).line, lineOf('ADD3_SECOND'));
 });
 
 test('stepOver는 함수 끝에서 호출자 줄로', () => {
