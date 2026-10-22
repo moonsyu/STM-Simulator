@@ -167,3 +167,17 @@ test('code the app writes (new project, 코드 초기화, HAL examples) is inden
  fourSpaced(resetMainCode(blankProject()).code,'reset');
  for(const id of Object.keys(allHalExamples()))fourSpaced(applyHalExample(blankProject(),id).code,id);
 });
+
+test('formatCode keeps macro continuations with trailing spaces, `case N: {` blocks and `} T;` declarations',async()=>{
+  const {formatCode}=await import('../../src/c-format.js'),out=s=>{const r=formatCode(s);return typeof r==='string'?r:r.text;};
+  assert.equal(out('#define M(x) \\  \n  do { a(x); b(x); } while (0)\nint y;\n'),'#define M(x) \\\n  do { a(x); b(x); } while (0)\nint y;\n');
+  assert.match(out('void f(int v){\nswitch(v){\ncase 2: {\nv++;\nbreak;\n}\n}\n}\n'),/ {8}case 2: \{\n {12}v\+\+;\n {12}break;\n {8}\}/);
+  assert.match(out('typedef struct {\nint a;\n} T;\nstruct {\nint b;\n} g, h;\n'),/\} T;\n[\s\S]*\} g, h;/);
+  assert.match(out('void k(void){if(a){b();} x = 1;}\n'),/\}\n {4}x = 1;/,'an ordinary statement after } still starts its own line');
+});
+test('a key that starts another binding\'s chord is reported as a conflict',async()=>{
+  const {conflicts,DEFAULT_KEYBINDINGS,bindingProblem}=await import('../../src/keybindings.js');
+  assert.ok(conflicts({...DEFAULT_KEYBINDINGS,'view.problems':'Ctrl+K'},'view.problems','Ctrl+K').includes('view.keybindings'));
+  assert.ok(conflicts({...DEFAULT_KEYBINDINGS,'view.output':'Ctrl+B Ctrl+Q'},'view.output','Ctrl+B Ctrl+Q').includes('view.toggleSidebar'));
+  for(const key of ['Shift+F3','F12','Ctrl+Space','Ctrl+/'])assert.ok(bindingProblem(key),key);
+});

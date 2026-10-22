@@ -117,7 +117,7 @@ export function splitStatements(source){
  const groups=[],state={comment:false},braces=[];// 'init' | 'block' | 'added'
  let paren=0,continued=false;
  for(const raw of source.split(/\r?\n/)){
-  if(!state.comment&&(continued||raw.trim().startsWith('#'))){continued=/\\s*$/.test(raw);groups.push([raw]);continue;}
+  if(!state.comment&&(continued||raw.trim().startsWith('#'))){continued=/\\\s*$/.test(raw);groups.push([raw]);continue;}
   if(!raw.trim()){groups.push(['']);continue;}
   const pieces=[],parts=scan(raw,state);
   let line='',statement='',pending=false,chain=null,header=false;
@@ -143,7 +143,8 @@ export function splitStatements(source){
      flush();line='}';statement='';
      const after=rest(pi,i);
      if(/^\s*else\b/.test(after))chain='else';
-     else if(!/^\s*(?:while\b|[;,)])/.test(after))pending=true;
+     // `} T;` / `} g, h;` of a typedef or variable declaration keeps its name on the brace line.
+     else if(!/^\s*(?:while\b|[;,)]|[A-Za-z_]\w*\s*(?:[;,]|$))/.test(after))pending=true;
      continue;
     }
     if(ch==='(')paren++;else if(ch===')')paren=Math.max(0,paren-1);
@@ -160,7 +161,8 @@ export function splitStatements(source){
      if(top==='added'){braces.pop();flush();line='}';if(/^\s*else\b/.test(rest(pi,i)))chain='else';else pending=true;}
      else pending=true;
     }
-    else if(ch===':'&&t[i+1]!==':'&&/^\s*(?:case\b|default\b)/.test(statement)){statement='';pending=true;}
+    // `case N: {` keeps its block brace on the label line.
+    else if(ch===':'&&t[i+1]!==':'&&/^\s*(?:case\b|default\b)/.test(statement)){statement='';if(!/^\s*\{/.test(rest(pi,i)))pending=true;}
    }
   }
   flush();groups.push(pieces);
