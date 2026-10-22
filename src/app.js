@@ -653,9 +653,10 @@ canvasKeys=setupCanvasKeyboard(svg,{
  move:(target,dx,dy)=>{if(running()||drag||pending)return;let draft=structuredClone(project);try{if(target.type==='bend'){const point=draft.wires.find(w=>w.id===target.id)?.points?.[target.index];if(!point)return;point.x+=dx;point.y+=dy;}else if(target.type==='surface'){const origin=surfaceOrigin(target.id,draft.surfaces);moveSurface(draft,target.id,{x:origin.x+dx,y:origin.y+dy});}else if(target.type==='part'){
    // A step that lands in the same holes (e.g. across the breadboard's centre gap) is retried 2x and 3x farther.
    const holes=d=>JSON.stringify(selectedIds(target,'part').map(id=>attachments(d.components.find(c=>c.id===id)||{})));const before=holes(project);
-   // The part must also stay on its line: a remount that slides sideways into another row is not this move.
+   // A mounted part must also stay on its line: a remount that slides sideways into another row is not this move
+   // (a free part snapping into its first holes may shift slightly).
    const centre=d=>{const c=d.components.find(c=>c.id===selectedIds(target,'part')[0]);return c?{x:c.x,y:c.y}:{x:0,y:0};},from=centre(project),straight=d=>{const to=centre(d);return dx?Math.abs(to.y-from.y)<1:Math.abs(to.x-from.x)<1;};
-   let found=false;for(let k=1;k<=3;k++){draft=structuredClone(project);moveSelection(draft,target,dx*k,dy*k);mountSelection(draft,target);if(before==='[]'||k===1&&!holes(draft).includes('"')||holes(draft).includes('"')&&holes(draft)!==before&&straight(draft)){found=true;break;}}
+   let found=false;for(let k=1;k<=3;k++){draft=structuredClone(project);moveSelection(draft,target,dx*k,dy*k);mountSelection(draft,target);if(before==='[]'||k===1&&!holes(draft).includes('"')||holes(draft).includes('"')&&holes(draft)!==before&&(!before.includes('"')||straight(draft))){found=true;break;}}
    if(!found){log('그 방향에는 부품을 꽂을 빈 구멍이 없습니다.','error');return;}
   }else return;validateProject(draft);checkpoint();project=draft;selection={type:target.type==='bend'?'wire':target.type,id:target.id};changed();pinSearch();}catch(error){log(error.message,'error');}},
  removeBend:target=>{if(running()||drag||pending)return;const wire=project.wires.find(w=>w.id===target.id);if(!wire?.points?.[target.index])return;checkpoint();wire.points.splice(target.index,1);changed();},
