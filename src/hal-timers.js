@@ -59,6 +59,8 @@ export class HalTimers {
     if(c.active&&period>1){
       // Full-width 32-bit ARR gives a valid period of several minutes.
       // The sketch API's 1 Hz lower bound must not reject an initialized HAL timer.
+      // The circuit simulator models PWM up to 2 kHz; ARM builds on the emulator or board have no such limit.
+      if(hz>2000)throw new Error(`${s.id} ${pin}: 회로 시뮬레이터의 PWM은 2000 Hz까지입니다 (현재 ${Math.round(hz)} Hz). Prescaler/Period를 키우거나 펌웨어 에뮬레이터로 실행하세요.`);
       if(hz<1)r.pwmFrequency.set(pin,hz);else r.call('analogWriteFrequency',[pin,hz]);
       r.call('analogWrite',[pin,Math.min(1,c.pulse/period)*255]);
     }
