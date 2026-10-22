@@ -6,17 +6,19 @@ export function segmentHitsBox(a,b,r){
  if(a.y===b.y)return a.y>r.top&&a.y<r.bottom&&Math.max(a.x,b.x)>r.left&&Math.min(a.x,b.x)<r.right;
  let low=0,high=1;for(const [start,end,min,max]of [[a.x,b.x,r.left,r.right],[a.y,b.y,r.top,r.bottom]]){const delta=end-start;if(Math.abs(delta)<1e-10){if(start<=min||start>=max)return false;continue;}const t1=(min-start)/delta,t2=(max-start)/delta;low=Math.max(low,Math.min(t1,t2));high=Math.min(high,Math.max(t1,t2));if(low>=high)return false;}return low<high;
 }
-export function exampleWireObstacles(project,wire,bodies){
+export function exampleWireObstacles(project,wire,bodies,terminals=true){
  const a=endpointInfo(wire.from,project.components,project.surfaces),b=endpointInfo(wire.to,project.components,project.surfaces);
- const boxes=bodies.map(r=>({left:r.left-6,right:r.right+6,top:r.top-6,bottom:r.bottom+6}));
- for(const p of project.components)for(const key of terminalKeys(p)){
+ // A wire end in a body's 6 px margin keeps the bare body as obstacle; one under the body ignores it (else no route can leave that hole).
+ const inside=(r,m)=>[a,b].some(p=>p&&p.x>r.left-m&&p.x<r.right+m&&p.y>r.top-m&&p.y<r.bottom+m);
+ const boxes=bodies.filter(r=>!inside(r,0)).map(r=>{const m=inside(r,6)?0:6;return {left:r.left-m,right:r.right+m,top:r.top-m,bottom:r.bottom+m};});
+ if(terminals)for(const p of project.components)for(const key of terminalKeys(p)){
   const q=endpointInfo(`part:${p.id}:${key}`,project.components,project.surfaces);if(!q||Math.hypot(q.x-a.x,q.y-a.y)<.01||Math.hypot(q.x-b.x,q.y-b.y)<.01)continue;
   boxes.push({left:q.x-4,right:q.x+4,top:q.y-4,bottom:q.y+4});
  }
  return boxes;
 }
-export function routeExampleWire(project,wire,bodies){
- const a=endpointInfo(wire.from,project.components,project.surfaces),b=endpointInfo(wire.to,project.components,project.surfaces),boxes=exampleWireObstacles(project,wire,bodies);
+export function routeExampleWire(project,wire,bodies,terminals=true){
+ const a=endpointInfo(wire.from,project.components,project.surfaces),b=endpointInfo(wire.to,project.components,project.surfaces),boxes=exampleWireObstacles(project,wire,bodies,terminals);
  const clear=(p,q)=>!boxes.some(r=>segmentHitsBox(p,q,r)),routes=[];
  const add=points=>{if(points.every((p,i)=>!i||clear(points[i-1],p)))routes.push(points);};
  add([a,{x:a.x,y:b.y},b]);add([a,{x:b.x,y:a.y},b]);
@@ -33,7 +35,8 @@ export function routeExampleWire(project,wire,bodies){
   const x=id%xs.length,y=Math.floor(id/xs.length),p={x:xs[x],y:ys[y]};
   for(const [xx,yy]of [[x-1,y],[x+1,y],[x,y-1],[x,y+1]]){if(xx<0||xx>=xs.length||yy<0||yy>=ys.length)continue;const n=key(xx,yy),q={x:xs[xx],y:ys[yy]};if(done.has(n)||!clear(p,q))continue;const cost=dist.get(id)+Math.abs(p.x-q.x)+Math.abs(p.y-q.y);if(cost<(dist.get(n)??Infinity)){dist.set(n,cost);prev.set(n,id);queue.push(n);}}
  }
- if(!dist.has(end))throw new Error('부품을 가리지 않는 예제 배선 경로를 찾지 못했습니다.');
+ // A lead boxed in by neighbouring pins (relay, 7-segment rows) may pass between pins, never through a body.
+ if(!dist.has(end)){if(terminals)return routeExampleWire(project,wire,bodies,false);throw new Error('부품을 가리지 않는 예제 배선 경로를 찾지 못했습니다.');}
  const path=[];for(let id=end;id!==undefined;id=prev.get(id))path.unshift({x:xs[id%xs.length],y:ys[Math.floor(id/xs.length)]});
  const simple=path.filter((p,i)=>!i||i===path.length-1||(p.x!==path[i-1].x||p.x!==path[i+1].x)&&(p.y!==path[i-1].y||p.y!==path[i+1].y));
  if(simple.length>34)throw new Error('예제 배선 경로가 너무 복잡합니다. 빵판 주변에 여유 공간을 확보해 주세요.');
