@@ -218,8 +218,11 @@ export function applyDeviceExample(original,target,options={}){
  const prior=project.deviceDocs.bindings.find(b=>b.key===key);
  const beforeParts=new Set(project.components.map(p=>p.id)),beforeWires=new Set(project.wires.map(w=>w.id)),beforeMcu=structuredClone(project.mcu);
  const parts=bindParts(project,sample,{id:component?.id,type},prior,report),allocation=allocatePins(project,sample,parts,prior);
- repairWiring(project,sample,parts,allocation.pins,report);project.mcu=allocation.config;
- arrangeExampleOnBreadboards(project,{partIds:Object.values(parts),preferredBoard:type==='breadboard'?component?.id:undefined,report});
+ const changes=report.addedWires+report.removedWires+report.detached;repairWiring(project,sample,parts,allocation.pins,report);project.mcu=allocation.config;
+ // A device whose parts are all on the breadboard and already wired as the example needs keeps its layout.
+ const mounted=id=>{const part=project.components.find(c=>c.id===id),map=part&&attachments(part);return !!map&&terminalKeys(part).every(key=>typeof map[key]==='string');};
+ const untouched=report.addedWires+report.removedWires+report.detached===changes&&!project.components.some(c=>!beforeParts.has(c.id))&&Object.values(parts).every(mounted);
+ if(!untouched)arrangeExampleOnBreadboards(project,{partIds:Object.values(parts),preferredBoard:type==='breadboard'?component?.id:undefined,report});
  if(component?.address!==undefined){const net=wiringTopology(project);if(project.components.some(other=>other.id!==component.id&&other.address===component.address&&net.find(busPin(other,'SDA'))===net.find(busPin(component,'SDA'))))throw new Error('같은 I2C 버스에 주소 0x'+component.address.toString(16)+' 장치가 이미 있습니다. 장치 속성에서 지원하는 다른 주소를 선택하세요.');}
  if(mode==='hal'&&api!=='all'&&!sample.code.includes(api+'('))throw new Error('이 장치의 HAL 함수 목록에서 적용할 함수를 선택하세요.');
  // Remember what Docs itself added so that removal restores only that.
