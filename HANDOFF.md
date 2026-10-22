@@ -1,6 +1,17 @@
 # STM Simulator — 개발 인계
 
-현재 버전: **0.34.4**. 정리일: **2026-10-21**. NUCLEO-F446RE 또는 NUCLEO-F103RB와 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+현재 버전: **1.0.0**. 정리일: **2026-10-22**. NUCLEO-F446RE 또는 NUCLEO-F103RB와 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+
+## 1.0.0 전체 기능 점검 (실물 보드 연동 제외)
+
+- 6회차 감사로 찾은 결함을 고친 버전이다. 세부 목록은 docs/WORKLOG.md 1.0.0 항목.
+- 단축키: `keybindings.js` `bindingProblem`(글자·Shift+글자 키와 `FIXED_KEYS`는 지정 불가), `conflicts`는 두 단계 키 앞부분도 충돌로 본다. 편집기 안의 Ctrl+Shift+글자는 기본값일 때만 Monaco에 양보한다. 도움말·팔레트 버튼의 키는 `[data-binding-key]`를 `keyFor`로 채운다.
+- 편집기 `replaceChanged`는 `setValue` 후 바뀐 끝 위치에 커서를 둔다(모델 직접 편집은 `}` 블록 정렬을 깨뜨린다).
+- Pinout: `serial-config.js` `setSerialEnabled(config,id,on,routes,remaps)`는 F1 리맵 묶음 단위로 고르고 짝 핀이 바쁘면 거부한다. `configProblems`는 꺼진 주변장치의 핀·NVIC, HAL 이름과 겹치는 라벨, SWD 핀, I2C 400 kHz 초과를 알린다. 라벨 매크로는 시뮬레이터 상수(`session.js`, 소스에 #define이 있으면 생략)와 ARM `-D` 플래그로 준다.
+- `.ioc`: `evalIocNumber`(사칙·16진수), HSE·다른 PLL 클록은 경고 후 HSI로 만들 수 있는 값, DMA·동기 USART·SPI 속도·Pulse를 읽는다. Cube 폴더 가져오기는 `system_stm32*.c`·syscalls·sysmem만 빼고 `*_hal_conf.h`는 유지한다.
+- Docs: `bindParts`의 `foreign`은 다른 장치와 신호선을 공유하는 부품을 재사용하지 않는다. 이미 예제대로 배선된 장치는 배치를 건드리지 않고, Docs가 추가한 배선은 `wire-ends.js` `legalizeWireEnds`로 한 칸 한 배선 규칙을 지킨다. F103에서는 Bare-metal 모드를 막는다.
+- ARM 빌드: `irqBody`는 IRQ마다 해당 HAL 처리기(꺼진 주변장치는 빈 함수), 사용자 핸들러 판단은 `liveLines`(`#if 0/1`, `#else`, 중첩). SDK 소스는 `-Wall -Wextra` 없이, 링크 오류는 `diagnosticsFrom`이 목록으로.
+- 에뮬레이터: `callStack`은 BL 대상과 예외 프레임(EXC_RETURN)으로 실제 호출만, `declaredType`이 소스 선언으로 부호·float·배열을 표시한다.
 
 ## 0.34.4 직렬 모니터 안내 · 고급 예제 printf
 
