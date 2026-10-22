@@ -41,10 +41,20 @@ export function createCodeEditor({textarea,getFile,getFiles,onBreakpoint,onBreak
   });
   const models=new Map(),states=new Map();let active='',syncing=false,breakpoints=[],current=null,diagnostics=[],languageService=null;const languageMarkers=new Map();
   const nativeValue=Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype,'value'),nativeSelect=textarea.setSelectionRange.bind(textarea);
+  // Undo/redo and other outside changes replace only the differing middle of the text, so the cursor
+  // lands at the change instead of jumping to the top (setValue resets the selection and scroll).
+  function replaceChanged(model,value){
+    const old=model.getValue();let start=0,end=0;
+    while(start<old.length&&start<value.length&&old[start]===value[start])start++;
+    while(end<old.length-start&&end<value.length-start&&old[old.length-1-end]===value[value.length-1-end])end++;
+    const from=model.getPositionAt(start),to=model.getPositionAt(old.length-end),text=value.slice(start,value.length-end);
+    model.pushEditOperations([],[{range:new monaco.Range(from.lineNumber,from.column,to.lineNumber,to.column),text}],()=>null);
+    const at=model.getPositionAt(start+text.length);editor.setPosition(at);editor.revealPositionInCenterIfOutsideViewport(at);
+  }
   function sync(value){
     const name=getFile();syncing=true;
     if(active!==name){if(active)states.set(active,editor.saveViewState());let model=models.get(name);if(!model){model=monaco.editor.createModel(value,'cpp',monaco.Uri.parse('inmemory://stm/'+encodeURIComponent(name)));models.set(name,model);}active=name;editor.setModel(model);if(model.getValue()!==value)model.setValue(value);editor.restoreViewState(states.get(name));}
-    else if(editor.getValue()!==value)editor.setValue(value);
+    else if(editor.getValue()!==value)replaceChanged(editor.getModel(),value);
     editor.getModel()?.updateOptions({tabSize:preferredTabSize,insertSpaces:true});
     nativeValue.set.call(textarea,value);syncing=false;decorate();
   }
