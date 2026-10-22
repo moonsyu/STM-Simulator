@@ -42,3 +42,12 @@ test('F1 alternate functions follow AFIO remap groups: signals move together',()
  assert.throws(()=>validateMcu({...base,pins:{PH0:pin('GPIO_Output')}}),/PH0/);
  assert.throws(()=>validateMcu({...base,peripherals:{SDIO:{enabled:true}}}),/SDIO: STM32F103RB에서 지원하지 않는/);
 });
+
+test('the board being edited decides header pin names: NUCLEO-F103RB has PD0/PD1 and PB11, switching back restores PH0',async()=>{
+ const {setActiveBoard,PIN_BY_ID,searchPins,endpointInfo}=await import('../../src/pins.js');
+ setActiveBoard('nucleo-f103rb');
+ assert.equal(PIN_BY_ID.get('board:CN7:29').signal,'PD0');assert.equal(PIN_BY_ID.get('board:CN10:18').signal,'PB11');
+ assert.match(endpointInfo('board:CN10:18').label,/PB11/);assert.equal(searchPins('PB11')[0]?.id,'board:CN10:18');
+ setActiveBoard('nucleo-f446re');
+ assert.equal(PIN_BY_ID.get('board:CN7:29').signal,'PH0');assert.equal(PIN_BY_ID.get('board:CN10:18').signal,'NC');assert.equal(searchPins('PB11').length,0);
+});

@@ -18,7 +18,7 @@ import {resetBoardConfiguration} from './board-reset.js';
 import {selectedIds,isSelected,toggleSelection,wirePoints,insertWirePoint,connectedNet,copySelection,pasteSelection,moveSelection,boxSelection} from './circuit-edit.js';
 import {zoomView} from './canvas-view.js';
 import {circuitDiagnostics} from './circuit-diagnostics.js';
-import {PINS,BB,PIN_BY_ID,endpointInfo,searchPins,circuitHoles,holeInfo,breadboardModel} from './pins.js';
+import {PINS,BB,PIN_BY_ID,endpointInfo,searchPins,circuitHoles,holeInfo,breadboardModel,setActiveBoard} from './pins.js';
 import {TWO_PIN_TYPES,MULTI_PIN_TYPES,WIRE_COLORS,PART_DEFS,terminalKeys,attachments,detachPart,normalizeAngle} from './components.js';
 import {findMount,applyMount,occupiedHoles,wiredHoles} from './placement.js';
 import {endpointBlocked,endpointAt,moveWireEnd} from './wire-ends.js';
@@ -131,6 +131,7 @@ function lineNumbers(){ $('line-numbers').textContent=Array.from({length:$('code
 function tab(name){if(name==='code')layout.reveal('code');else if(name==='inspect')layout.reveal('inspect');else if(['settings','docs'].includes(name))layout.showView(name);}
 function inspectTab(){layout.reveal('inspect');}
 function refresh({preserveWires=false}={}){
+ setActiveBoard(projectBoard(project).id);
  const keyboardFocus=canvasKeys?.snapshot();
  deviceDocs?.refresh();
  // The board drawing is static; redraw it when the project switches to another board.

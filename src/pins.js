@@ -37,6 +37,9 @@ export function boardPins(boardId){
   return boardPinCache.get(boardId);
 }
 export const PIN_BY_ID = new Map(PINS.map(p=>[p.id,p]));
+// Header pins of the board being edited: labels, the NC check and pin search follow it (NUCLEO-F103RB: PD0/PD1, PB11).
+let activePins=PINS;
+export function setActiveBoard(boardId){const pins=boardPins(boardId);if(pins===activePins)return;activePins=pins;for(const p of pins)PIN_BY_ID.set(p.id,p);}
 export const GPIO_PINS = [...new Set(PINS.map(p=>p.signal).filter(s=>/^P[A-H]\d+$/.test(s)))].sort();
 /** Every GPIO name on any supported board (pin names the C runtime and circuit engine accept). */
 export const ALL_GPIO_PINS = [...new Set([...GPIO_PINS,...Object.values(BOARD_SIGNALS).flatMap(o=>Object.values(o))])].sort();
@@ -89,4 +92,4 @@ export function endpointInfo(id,components=[],surfaces) {
 export function endpoints(components,surfaces) {return [...(surfaces?.board?.hidden?[]:PINS.map(p=>surfacePoint(p,'board',surfaces))),...circuitHoles(components,surfaces),...components.flatMap(p=>terminalKeys(p).map(t=>endpointInfo(`part:${p.id}:${t}`,components,surfaces)))];}
 export function boardPin(name) {const p=PINS.find(p=>p.label===name&&['CN5','CN6','CN8','CN9'].includes(p.header))||PINS.find(p=>p.signal===canonicalPin(name));return p?.id;}
 export const normalizePinQuery=q=>String(q).toUpperCase().replace(/\s+/g,'');
-export function searchPins(query){const q=normalizePinQuery(query);if(!q)return [];const exact=PINS.filter(p=>p.signal===q||p.label===q||`${p.header}-${p.number}`===q);return exact.length?exact:PINS.filter(p=>p.signal.startsWith(q)||p.label.startsWith(q));}
+export function searchPins(query){const q=normalizePinQuery(query);if(!q)return [];const exact=activePins.filter(p=>p.signal===q||p.label===q||`${p.header}-${p.number}`===q);return exact.length?exact:activePins.filter(p=>p.signal.startsWith(q)||p.label.startsWith(q));}
