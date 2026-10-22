@@ -362,6 +362,20 @@ describe('native build helpers',()=>{
     assert.ok(plan.units.some(u=>u.file.endsWith('startup_stm32f103xb.s'))&&plan.units.some(u=>u.file.endsWith('stm32f1xx_hal_gpio_ex.c')));
     assert.match(await readText(path.join(plan.directory,'__stm_environment.c')),/void DMA1_Channel6_IRQHandler\(void\) \{ HAL_DMA_IRQHandler\(&hdma_usart2_rx\); \}/);
   },'stm-build-'));
+  test('prepareBuild (arm) wires each enabled interrupt to its own HAL handler (sync USART, I2C, ADC, EXTI lines)',()=>withTempDir(async dir=>{
+    const gcc=path.join(dir,'bin','arm-none-eabi-gcc'),cube=path.join(dir,'cube');await fs.mkdir(path.dirname(gcc));await fs.writeFile(gcc,'');
+    const inc=path.join(cube,'Drivers/STM32F4xx_HAL_Driver/Inc');await fs.mkdir(inc,{recursive:true});await fs.writeFile(path.join(inc,'stm32f4xx_hal.h'),'');await fs.writeFile(path.join(inc,'stm32f4xx_hal_conf_template.h'),'');
+    const p=blankProject(),pin=fn=>({function:fn,pull:'NOPULL',edge:'FALLING',label:'',initial:0});
+    Object.assign(p.mcu.pins,{PA2:pin('USART2_TX'),PA3:pin('USART2_RX'),PA4:pin('USART2_CK'),PB8:pin('I2C1_SCL'),PB9:pin('I2C1_SDA'),PA0:pin('GPIO_EXTI'),PC13:pin('GPIO_EXTI'),PA1:pin('ADC1_IN1')});
+    Object.assign(p.mcu.peripherals,{USART2:{enabled:true,baud:115200,mode:'synchronous'},I2C1:{enabled:true,clock:100000},ADC1:{enabled:true}});
+    for(const irq of ['USART2_IRQn','I2C1_EV_IRQn','I2C1_ER_IRQn','ADC_IRQn','EXTI0_IRQn','EXTI15_10_IRQn'])p.mcu.nvic[irq]={enabled:true,priority:1};
+    const env=await readText(path.join((await nativeBuild.prepareBuild({project:p,tools:{armGcc:gcc,cube},root:path.join(dir,'build')})).directory,'__stm_environment.c'));
+    assert.match(env,/extern USART_HandleTypeDef husart2;/);assert.doesNotMatch(env,/huart2/);
+    assert.match(env,/void USART2_IRQHandler\(void\) \{ HAL_USART_IRQHandler\(&husart2\); \}/);
+    assert.match(env,/void I2C1_EV_IRQHandler\(void\) \{ HAL_I2C_EV_IRQHandler\(&hi2c1\); \}/);assert.match(env,/void I2C1_ER_IRQHandler\(void\) \{ HAL_I2C_ER_IRQHandler\(&hi2c1\); \}/);
+    assert.match(env,/void ADC_IRQHandler\(void\) \{ HAL_ADC_IRQHandler\(&hadc1\); \}/);
+    assert.match(env,/void EXTI0_IRQHandler\(void\) \{ HAL_GPIO_EXTI_IRQHandler\(GPIO_PIN_0\); \}/);assert.match(env,/void EXTI15_10_IRQHandler\(void\) \{ HAL_GPIO_EXTI_IRQHandler\(GPIO_PIN_13\); \}/);
+  },'stm-build-'));
   test('prepareBuild rejects bad targets, non-ASCII build roots, missing tools and reserved names',()=>withTempDir(async dir=>{
     const gcc=path.join(dir,'gcc');await fs.writeFile(gcc,'');const p=blankProject(),root=path.join(dir,'b');
     await assert.rejects(nativeBuild.prepareBuild({project:p,tools:{hostGcc:gcc},root:path.join(dir,'빌드'),target:'host'}),/한글/);
