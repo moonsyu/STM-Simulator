@@ -155,6 +155,7 @@ function refresh({preserveWires=false}={}){
  editorSearch.refresh();
  for(const id of ['pinout-open','firmware-mode','firmware-import','firmware-folder','firmware-check','hal-example','code-reset','board-reset'])$(id).disabled=running();
  $('run').classList.toggle('running',running()||starting);$('run').textContent=starting?'■  빌드 취소':runtime?.debug.paused?withKey('계속 실행','run.run'):running()?'■  시뮬레이션 정지':withKey('▶  실행','run.run');
+ const runKey=keyFor('run.run');$('run').title=withKey('실행 / 정지','run.run');if(runKey)$('run').setAttribute('aria-keyshortcuts',runKey);else $('run').removeAttribute('aria-keyshortcuts');
  $('step').disabled=status==='running';
  $('mode-label').textContent=running()?'시뮬레이션 실행 중':status==='error'?'회로 확인 필요':'회로 편집';
  $('run-status').textContent=runtime?.debug.paused?'일시정지':({running:'실행 중',paused:'한 단계 실행',stopped:'준비됨',error:'오류로 정지'})[status];
@@ -563,7 +564,7 @@ async function save(){if(loadPreferences().formatOnSave&&!running()){const next=
   // A pending autosave from the last keystroke would replace "파일 저장됨" moments later; store it now instead.
   if(saveTimer){clearTimeout(saveTimer);saveTimer=null;try{localStorage.setItem('stm32lab.project.v2',JSON.stringify(project));}catch{}}
   feedback.clear('save');setSaveState('파일 저장됨','saved');log('회로 파일을 저장했습니다.');}catch(e){setSaveState('파일 저장 실패','error-file');log('저장 실패: '+e.message,'error');feedback.show('파일 저장에 실패했습니다. 저장 위치와 권한을 확인한 뒤 다시 저장해 주세요.','save');}}
-$('main-export').onclick=async()=>{try{if(project.firmware?.mode!=='hal')throw new Error('HAL main.c를 선택하세요.');if($('native-target').value==='simulator')compileHal(project.code,project.firmware.files);if(window.desktop?.exportMain){if(!await window.desktop.exportMain(project.code))return;}else{const url=URL.createObjectURL(new Blob([project.code],{type:'text/plain;charset=utf-8'})),a=document.createElement('a');a.href=url;a.download='main.c';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}log('main.c를 저장했습니다. 실제 프로젝트의 핀·주변장치·NVIC 설정을 동일하게 구성하세요.');}catch(e){log(e.message,'error');}};
+$('main-export').onclick=async()=>{try{if(project.firmware?.mode!=='hal')throw new Error('HAL main.c를 선택하세요.');if($('native-target').value==='simulator')compileHal(project.code,project.firmware.files,project.mcu?.family);if(window.desktop?.exportMain){if(!await window.desktop.exportMain(project.code))return;}else{const url=URL.createObjectURL(new Blob([project.code],{type:'text/plain;charset=utf-8'})),a=document.createElement('a');a.href=url;a.download='main.c';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}log('main.c를 저장했습니다. 실제 프로젝트의 핀·주변장치·NVIC 설정을 동일하게 구성하세요.');}catch(e){log(e.message,'error');}};
 $('save').onclick=save;
 async function open(){try{if(window.desktop){const data=await window.desktop.open();if(data!=null){replaceProject(validateProject(JSON.parse(data)));feedback.clear('open');}}else $('file-input').click();}catch(e){log('불러오기 실패: '+e.message,'error');feedback.show('회로 파일을 열지 못했습니다. 현재 작업은 유지됩니다. 올바른 회로 파일을 선택해 주세요.','open');}}
 $('open').onclick=()=>requestReplace(open);
