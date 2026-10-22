@@ -310,10 +310,12 @@ describe('native build helpers',()=>{
     for(const bad of [{armGcc:'gcc'},{armGcc:'./gcc'},{armGcc:abs+'\n--evil'},{armGcc:abs+'\0'},{armGcc:5},{armGcc:'/'+'x'.repeat(2048)}])assert.throws(()=>nativeBuild.validateTools(bad),/절대 경로/);
     assert.throws(()=>nativeBuild.validateTools(null),/개발 도구/);
   });
-  test('detectTools keeps explicitly configured paths',async()=>{
-    const tools=await nativeBuild.detectTools({armGcc:'/custom/arm-none-eabi-gcc',buildRoot:'/tmp/b',bogus:'x'});
-    assert.deepEqual(Object.keys(tools).sort(),[...nativeBuild.TOOL_KEYS].sort());assert.equal(tools.armGcc,'/custom/arm-none-eabi-gcc');assert.equal(tools.buildRoot,'/tmp/b');
-  });
+  test('detectTools keeps configured paths that exist and detects again those that do not',()=>withTempDir(async dir=>{
+    const gcc=path.join(dir,'arm-none-eabi-gcc');await fs.writeFile(gcc,'');
+    const tools=await nativeBuild.detectTools({armGcc:gcc,clangd:path.join(dir,'missing','clangd.exe'),buildRoot:'/tmp/b',bogus:'x'});
+    assert.deepEqual(Object.keys(tools).sort(),[...nativeBuild.TOOL_KEYS].sort());assert.equal(tools.armGcc,gcc);assert.equal(tools.buildRoot,'/tmp/b');
+    assert.notEqual(tools.clangd,path.join(dir,'missing','clangd.exe'),'a missing path is not kept');
+  },'stm-detect-'));
   test('diagnosticsFrom parses GCC messages',()=>{
     const out='C:/w/main.c:12:5: error: expected \';\' before \'}\' token\nuser.c:3:1: warning: unused variable \'x\'\nmain.c:4:2: note: declared here\nmain.c:1:10: fatal error: foo.h: No such file\nlinker noise';
     assert.deepEqual(nativeBuild.diagnosticsFrom(out).map(d=>[d.file,d.line,d.column,d.severity]),[['main.c',12,5,'error'],['user.c',3,1,'warning'],['main.c',4,2,'info'],['main.c',1,10,'error']]);
