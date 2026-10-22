@@ -1,6 +1,11 @@
 # STM Simulator — 개발 인계
 
-현재 버전: **0.34.3**. 정리일: **2026-10-21**. NUCLEO-F446RE 또는 NUCLEO-F103RB와 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+현재 버전: **0.34.4**. 정리일: **2026-10-21**. NUCLEO-F446RE 또는 NUCLEO-F103RB와 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+
+## 0.34.4 직렬 모니터 안내 · 고급 예제 printf
+
+- 하단 UART 탭의 이름은 "직렬 모니터"(shell.js `bus`)다. 안내 문구에 옛 이름 "통신 탭"을 쓰지 않는다. 예제 안내에 "직렬 모니터 탭"이 있으면 적용할 때 `layout.showPanel('bus')`.
+- `advanced-examples.js` `finish`는 printf를 쓰는 고급 예제에 `__io_putchar`(ITM)를 붙인다(최소 생성 코드에는 없음).
 
 ## 0.34.3 부품 다리와 배선 끝은 다른 구멍
 
