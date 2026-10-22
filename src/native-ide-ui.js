@@ -143,7 +143,9 @@ export function setupNativeIde({o,editor,select,showMonitor,points,watches,toggl
   if(event.type==='debug-state'){state=event.state==='exited'?'finishing':event.state;lastStop=event;frame=0;if(state==='paused'){showMonitor('debug');if(event.frame?.line)select(basename(event.frame.file||event.frame.fullname||'main.c'),Number(event.frame.line));}lockUpdate();void debugView();}
   if(event.type==='breakpoints')breakpointStates=event.points;
   if(event.type==='tools-install'){progress[event.id]=event.phase==='download'?`받는 중 ${MB(event.received)}${event.total?' / '+MB(event.total):''}`:event.phase==='extract'?'압축 해제 중':event.phase==='verify'?`파일 검증 ${event.received}/${event.total}`:event.phase==='skipped'?'이미 설치됨':'설치 완료';renderPlan();}
-  if(event.type==='run-state'){state=event.state;lockUpdate();if(event.state==='exited'&&event.code!==undefined)append('native-output',`\n프로그램 종료 · 코드 ${event.code}\n`);}
+  if(event.type==='run-state'){state=event.state;lockUpdate();
+   // A running Windows program takes the input line; the terminal gets it back when the program ends.
+   if($('native-target').value==='host')$('native-input-target').value=event.state==='running'?'program':'terminal';if(event.state==='exited'&&event.code!==undefined)append('native-output',`\n프로그램 종료 · 코드 ${event.code}\n`);}
   if(event.type==='terminal-state'){$('terminal-start').disabled=event.state==='running';$('terminal-close').disabled=event.state!=='running';$('terminal-status').textContent=event.state==='running'?`명령 프롬프트 실행 중 · ${event.cwd||'앱 기본 폴더'}`:'터미널 종료';$('terminal-status').title=event.cwd||'';}
   if(event.type==='diagnostics'&&language&&selected())editor.languageDiagnostics(event.file,event.items);
  });
