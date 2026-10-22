@@ -14,6 +14,7 @@
   - 네이티브·에뮬레이터: IRQ마다 해당 HAL 처리기, 꺼진 주변장치 IRQ는 빈 처리기, `#if 0/#else` 판단, SDK 경고 제외, 링크 오류 목록 표시, 대상·보드 전환 시 빌드 결과·clangd 초기화, 에뮬레이터 step into 프롤로그, 호출 스택(BL 대상·예외 프레임), 감시식·전역의 선언 타입(부호·float·배열), 메모리 0xFFFFFFFF 한도, 손상·다른 보드 ELF 거부, GDB 일시정지 중 실행 키, 개발 도구 경로 재검색, stdin 대상 자동 전환, 빌드 중 직렬 전송 안내.
 - 문서로 정한 범위: 회로 시뮬레이터는 GPIO 포트를 변수에 담는 코드를 지원하지 않고(펌웨어 에뮬레이터·실물 보드에서 실행), NUCLEO-F103RB의 Bare-metal(F4 레지스터) 예제는 막는다.
 - 검증: `npm test` 733 통과(실패 2개는 로컬 심볼릭 링크 권한, CI 통과), 실제 ARM GCC 툴체인 254/254(F446RE 128·F103RB 126 빌드 후 에뮬레이터 실행), E2E 28 통과·2 건너뜀(실제 도구 경로 필요), Docs 적용 F446RE 233/236·F103RB 231/233(나머지는 설정 충돌을 구체적으로 알리는 거부), 회로 규칙 위반 0건(예제·Docs 1823건·붙여넣기).
+- 결과: [Release v1.0.0](https://github.com/moonsyu/STM-Simulator/releases/tag/v1.0.0), [CI 39741156371](https://github.com/moonsyu/STM-Simulator/actions/runs/39741156371) 첫 실행 성공. latest 지정, 태그·커밋 `cbd345f` 일치, 5자산과 EXE·ZIP 안 EXE·매니페스트 해시 일치.
 
 ## 2026-10-22 · 0.34.4 DMA UART 예제 출력이 안 보이던 문제
 
