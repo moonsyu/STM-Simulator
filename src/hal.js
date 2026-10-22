@@ -192,6 +192,7 @@ export class HalAdapter {
   }
   // F1 pins: JTAG pins need SWJ_NOJTAG, remapped signals need their __HAL_AFIO_REMAP_* first, EXTI on B..D needs the AFIO clock.
   checkF1Pin(pin,p){
+    if(['PD0','PD1'].includes(pin)&&!this.remaps.has('__HAL_AFIO_REMAP_PD01_ENABLE'))throw new Error(`${pin}: 리셋 후 OSC_IN/OSC_OUT 핀입니다. __HAL_AFIO_REMAP_PD01_ENABLE()을 먼저 호출하세요.`);
     if(this.family.jtagPins.includes(pin)&&!this.remaps.has('__HAL_AFIO_REMAP_SWJ_NOJTAG')&&!this.remaps.has('__HAL_AFIO_REMAP_SWJ_DISABLE'))throw new Error(`${pin}: 리셋 후 JTAG 핀입니다. __HAL_AFIO_REMAP_SWJ_NOJTAG()를 먼저 호출하세요 (SWD는 유지).`);
     const id=p.function.split('_')[0],options=this.family.remaps[id];
     if(options){
