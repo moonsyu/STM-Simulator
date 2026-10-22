@@ -67,7 +67,9 @@ const diagnostic=createDiagnostics(window.localDiagnostics?.record,()=>project);
 initSvg(svg);
 let session=null,audioEnabled=false,audioContext,buzzerAudio;
 const monitor=new Monitor({getSession:()=>session,isRunning:()=>running(),onSettings:settings=>{if(running())return;checkpoint();project.simulation=settings;autosave();},onError:message=>log(message,'error')});
-let sourceFile='main.c',circuitClipboard=null,clipboardOffset=28,issuesStamp=0,issuesKey='';
+// The open source tab survives a relaunch (syncEditor falls back to main.c when the file is gone).
+const SOURCE_KEY='stm32lab.sourceFile.v1';
+let sourceFile=(()=>{try{return localStorage.getItem(SOURCE_KEY)||'main.c';}catch{return 'main.c';}})(),circuitClipboard=null,clipboardOffset=28,issuesStamp=0,issuesKey='';
 const pinout=new PinoutPanel({getProject:()=>project,isRunning:running,onError:message=>log(message,'error'),apply:({mcu,code})=>{checkpoint();project.mcu=mcu;if(code!==null){project.code=code;project.firmware={mode:'hal',files:[]};sourceFile='main.c';}syncEditor();changed();log(code===null?'핀 설정을 적용했습니다.':'설정에 맞는 HAL main.c를 생성했습니다.');}});
 const updateBoardPicker=setupBoardPicker({getProject:()=>project,isRunning:running,onSelect:id=>{sourceFile='main.c';replaceProject(projectForBoard(id));log('선택한 보드의 기본 회로로 시작합니다.');}});
 const editorSearch=setupEditorSearch({applyEdit:replaceCodeText,maxLength:()=>{
@@ -113,7 +115,7 @@ function changed(){autosave();refresh();}
 function setMode(m){if(running()){log('편집하려면 시뮬레이션을 먼저 정지하세요.');return;}mode=m;pending=null;selection=null;$('preview-layer').innerHTML='';refresh();}
 function syncEditor(){
  lastCodeCheckpoint=0;
- $('project-name').value=project.name;const files=project.firmware?.files||[],hal=project.firmware?.mode==='hal';if(!files.some(f=>f.name===sourceFile))sourceFile='main.c';
+ $('project-name').value=project.name;const files=project.firmware?.files||[],hal=project.firmware?.mode==='hal';if(!files.some(f=>f.name===sourceFile))sourceFile='main.c';try{localStorage.setItem(SOURCE_KEY,sourceFile);}catch{}
  $('source-file').innerHTML=`<option value="main.c">${hal?'main.c':'main.ino'}</option>`+files.map(f=>`<option value="${esc(f.name)}">${esc(f.name)}</option>`).join('');$('source-file').value=sourceFile;
  $('code').value=sourceFile==='main.c'?project.code:files.find(f=>f.name===sourceFile).text;$('firmware-mode').value=hal?'hal':'sketch';
  document.querySelector('.language-badge').textContent=hal?'STM32 HAL':'GPIO 스케치';lineNumbers();monitor.settings(project.simulation);
