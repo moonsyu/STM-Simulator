@@ -439,14 +439,28 @@ export class FirmwareSession {
     }
     return out.sort((a, b) => a.name.localeCompare(b.name));
   }
-  elementSize(name) {
+  // The ELF has no type info: a global's C type (and whether it is an array) comes from its declaration in the sources.
+  declaredType(name) {
     const sources = [this.project.code || '', ...(this.project.firmware?.files || []).map(f => f.text || '')].join('\n');
-    const type = new RegExp(`\\b(u?int(?:8|16|32|64)_t|(?:unsigned\\s+|signed\\s+)?(?:char|short|int|long)|float|double)\\s+(?:\\w+\\s*(?:\\[[^\\]]*\\])?\\s*(?:=[^,;]*)?,\\s*)*${name}\\s*\\[`).exec(sources)?.[1];
-    if (!type) return null;
-    return /64|double/.test(type) ? 8 : /8_t|char/.test(type) ? 1 : /16|short/.test(type) ? 2 : 4;
+    const m = new RegExp(`\\b(u?int(?:8|16|32|64)_t|(?:unsigned\\s+|signed\\s+)?(?:char|short|int|long)|unsigned|float|double)\\s+(?:\\w+\\s*(?:\\[[^\\]]*\\])?\\s*(?:=[^,;]*)?,\\s*)*${name}\\s*(\\[)?`).exec(sources);
+    if (!m) return null;
+    const type = m[1], size = /64|double/.test(type) ? 8 : /8_t|char/.test(type) ? 1 : /16|short/.test(type) ? 2 : 4;
+    return { size, array: !!m[2], float: /float|double/.test(type), signed: !/^u|unsigned/.test(type) && type !== 'char' /* char is unsigned on ARM */ };
+  }
+  elementSize(name) { return this.declaredType(name)?.size ?? null; }
+  // One value of `type` (from declaredType) read at `addr`, as the C program sees it.
+  formatValue(addr, type) {
+    const m = this.machine, size = type.size;
+    if (size === 8) { const bytes = m.readMemory(addr, 8); if (type.float) return String(new Float64Array(new Uint8Array(bytes).buffer)[0]); const n = [...bytes].reduceRight((v, b) => v * 256n + BigInt(b), 0n); return String(type.signed ? BigInt.asIntN(64, n) : n); }
+    const v = m.bus.peek(addr, size, { allowSideEffects: false });
+    if (v == null) return '읽을 수 없음';
+    if (type.float) return String(new Float32Array(new Uint32Array([v]).buffer)[0]);
+    return String(type.signed ? (size === 4 ? v | 0 : v >= 1 << (size * 8 - 1) ? v - (1 << (size * 8)) : v) : v >>> 0);
   }
   formatSymbol(s) {
-    const size = s.size, m = this.machine;
+    const size = s.size, m = this.machine, type = this.declaredType(s.name);
+    if (type && (type.array || size !== type.size) && size % type.size === 0) { const n = size / type.size, shown = Math.min(n, 16); return '{' + Array.from({ length: shown }, (_, i) => this.formatValue(s.value + i * type.size, type)).join(', ') + (n > shown ? ', …' : '') + '}'; }
+    if (type && size === type.size) { const text = this.formatValue(s.value, type); if (type.float) return text; const raw = m.bus.peek(s.value, size, { allowSideEffects: false }) ?? 0; return `${text} (0x${(raw >>> 0).toString(16)})`; }
     if ([1, 2, 4].includes(size)) { const v = m.bus.peek(s.value, size, { allowSideEffects: false }) ?? 0, signed = size === 4 ? v | 0 : v >= 1 << (size * 8 - 1) ? v - (1 << (size * 8)) : v; return `${v >>> 0} (${signed}, ${'0x' + (v >>> 0).toString(16)})`; }
     const bytes = m.readMemory(s.value, Math.min(size, 16));
     return '[' + [...bytes].map(b => b.toString(16).padStart(2, '0')).join(' ') + (size > 16 ? ' …' : '') + ']';
@@ -477,8 +491,7 @@ export class FirmwareSession {
       // The ELF has no type info: the element size comes from the array's declaration in the project sources.
       const total = sym.size, i = Number(idx[2]), elem = this.elementSize(idx[1]) ?? ([4, 2, 1].find(e => total % e === 0) ?? 1);
       if (i * elem + elem > total) throw new Error(`${idx[1]}의 범위를 벗어난 인덱스입니다 (요소 ${total / elem}개).`);
-      if (elem === 8) return String([...m.readMemory(sym.value + i * 8, 8)].reduceRight((n, b) => n * 256n + BigInt(b), 0n));
-      const v = m.bus.peek(sym.value + i * elem, elem, { allowSideEffects: false }); return String(v);
+      return this.formatValue(sym.value + i * elem, this.declaredType(idx[1]) ?? { size: elem, signed: false, float: false });
     }
     if (sym) return this.formatSymbol(sym);
     throw new Error('알 수 없는 식: ' + text);
