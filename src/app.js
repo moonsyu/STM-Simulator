@@ -614,7 +614,9 @@ ide=setupIde({buildFirmware:()=>ensureFirmware(true).catch(error=>log(error.mess
  selectSource:name=>{if(name!=='main.c'&&!project.firmware?.files.some(f=>f.name===name))return;sourceFile=name;syncEditor();},
  applySources:(p,file)=>{checkpoint();project=validateProject(p);sourceFile=file;syncEditor();changed();ide.invalidate();}});
 // Button titles show the current shortcuts as soon as a binding changes.
-layout.onBindings(()=>{$('debug-start').title=withKey('시작 위치에서 디버깅','run.debug');refresh();ide.controls();});
+// Help text and the palette button show the user's keys too.
+const bindingTexts=()=>{for(const el of document.querySelectorAll('[data-binding-key]'))el.textContent=keyFor(el.dataset.bindingKey)||'(키 없음)';$('command-palette-open').title=withKey('명령 팔레트','view.palette');};bindingTexts();
+layout.onBindings(()=>{$('debug-start').title=withKey('시작 위치에서 디버깅','run.debug');refresh();ide.controls();bindingTexts();});
 setupIdeSettings({editor:ide.editor,layout,open:()=>tab('settings')});
 if(restoreError)log(`저장된 프로젝트를 열지 못해 새 회로로 시작합니다 (${restoreError}). 이전 내용은 브라우저 저장소 stm32lab.project.recovery에 보관했습니다.`,'error');
 deviceDocs=setupDeviceDocs({getProject:()=>project,getSelection:()=>selection,isRunning:running,open:()=>tab('docs'),showSource:file=>{sourceFile=file;syncEditor();tab('code');},apply:(target,options)=>{
