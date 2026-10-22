@@ -205,7 +205,7 @@ void matrixWrite(uint8_t reg, uint8_t value) {
     HAL_Delay(8);`;
  }
  if(kind==='relay')loop=`    HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_5);
-    printf("Relay command=%u (NO powers LED)\\n", HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_5));
+    printf("Relay command=%u (LED %s)\\n", HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_5), HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_5) ? "on via NO" : "off");
     HAL_Delay(1000);`;
  if(kind==='joystick'){
   helpers=`uint32_t readAxis(uint32_t channel) {
