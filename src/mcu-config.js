@@ -91,8 +91,8 @@ export function configProblems(config){
 }
 // CubeMX keeps parameter expressions as typed ("84-1", "1000*2"): + - * / and parentheses on integers only.
 export function evalIocNumber(raw){
-  const text=String(raw).trim();if(!/^[\d\s+\-*/()]+$/.test(text))return null;let i=0;
-  const skip=()=>{while(text[i]===' ')i++;},atom=()=>{skip();if(text[i]==='('){i++;const v=sum();skip();if(text[i++]!==')')throw 0;return v;}if(text[i]==='-'){i++;return -atom();}const m=/^\d+/.exec(text.slice(i));if(!m)throw 0;i+=m[0].length;return Number(m[0]);};
+  const text=String(raw).trim();if(!/^[\dxXa-fA-F\s+\-*/()]+$/.test(text))return null;let i=0;
+  const skip=()=>{while(text[i]===' ')i++;},atom=()=>{skip();if(text[i]==='('){i++;const v=sum();skip();if(text[i++]!==')')throw 0;return v;}if(text[i]==='-'){i++;return -atom();}const m=/^0[xX][\da-fA-F]+|^\d+/.exec(text.slice(i));if(!m)throw 0;i+=m[0].length;return Number(m[0]);};
   const product=()=>{let v=atom();for(skip();text[i]==='*'||text[i]==='/';skip()){const op=text[i++],r=atom();v=op==='*'?v*r:v/r;}return v;},sum=()=>{let v=product();for(skip();text[i]==='+'||text[i]==='-';skip()){const op=text[i++],r=product();v=op==='+'?v+r:v-r;}return v;};
   try{const v=sum();skip();return i===text.length&&Number.isInteger(v)?v:null;}catch{return null;}
 }
@@ -109,7 +109,7 @@ export function importIoc(text){
     const m=/^(P[A-H]\d+)(?:-[^.]+)?\.Signal$/.exec(key);if(!m)continue;const pin=m[1],base=key.slice(0,-7);
     if(!f.gpioPins.includes(pin)){warnings.push(`${pin}: 보드에서 접근할 수 없는 핀`);continue;}
     // ADCx_INn: a channel shared by ADC1/2/3; the model uses ADC1.
-    let fn=signal==='GPIO_Output'?'GPIO_Output':signal==='GPIO_Input'?'GPIO_Input':signal.startsWith('GPXTI')?'GPIO_EXTI':/^S_TIM\d+_CH\d$/.test(signal)?signal.slice(2):/^ADC(?:x|\d+)_IN\d+$/.test(signal)?'ADC1_'+signal.split('_')[1]:signal;
+    let fn=signal==='GPIO_Analog'?'Analog':signal==='GPIO_Output'?'GPIO_Output':signal==='GPIO_Input'?'GPIO_Input':signal.startsWith('GPXTI')?'GPIO_EXTI':/^S_TIM\d+_CH\d$/.test(signal)?signal.slice(2):/^ADC(?:x|\d+)_IN\d+$/.test(signal)?'ADC1_'+signal.split('_')[1]:signal;
     if(!pinFunctions(pin,family).includes(fn)){fn='Reserved';if(!/^(SYS_|RCC_)/.test(signal))warnings.push(`${pin}: ${signal} 실행 모델 미지원`);}
     const pull=(values[base+'.GPIO_PuPd']||'GPIO_NOPULL').replace('GPIO_','');
     // CubeMX omits GPIO_ModeDefaultEXTI for its default, rising edge.
@@ -131,7 +131,7 @@ export function importIoc(text){
   if(config.peripherals.I2C1)config.peripherals.I2C1.clock=number(values['I2C1.ClockSpeed'],100000);
   // SPI1 speed: CubeMX stores the computed rate ("5.25 MBits/s") next to the prescaler.
   if(config.peripherals.SPI1){const m=/^([\d.]+)\s*([KM]?)Bits\/s/i.exec(values['SPI1.CalculateBaudRate']||'');if(m)config.peripherals.SPI1.clock=Math.min(20000000,Math.max(1000,Math.round(Number(m[1])*({K:1e3,M:1e6}[m[2].toUpperCase()]??1))));}
-  for(const id of Object.keys(f.timers))if(config.peripherals[id]){const p=config.peripherals[id],defaults=timerDefaults(id,family);p.prescaler=number(values[id+'.Prescaler'],defaults.prescaler);p.period=number(values[id+'.Period'],defaults.period);const settings=Object.entries(values).filter(([k])=>k.startsWith(id+'.')).map(([,v])=>v).join(' ');p.mode=/Encoder|ENCODER/.test(settings)?'encoder':/PWM/.test(settings)?'pwm':/INPUTCAPTURE|Input_Capture|IC_CHANNEL/.test(settings)?'capture':'base';}
+  for(const id of Object.keys(f.timers))if(config.peripherals[id]){const p=config.peripherals[id],defaults=timerDefaults(id,family);p.prescaler=number(values[id+'.Prescaler'],defaults.prescaler);p.period=number(values[id+'.Period'],defaults.period);const pulse=Object.keys(values).find(k=>k.startsWith(id+'.Pulse'));if(pulse)p.pulse=number(values[pulse],defaults.pulse);const settings=Object.entries(values).filter(([k])=>k.startsWith(id+'.')).map(([,v])=>v).join(' ');p.mode=/Encoder|ENCODER/.test(settings)?'encoder':/PWM/.test(settings)?'pwm':/INPUTCAPTURE|Input_Capture|IC_CHANNEL/.test(settings)?'capture':'base';}
   config.timerClockHz=number(values['RCC.APB1TimFreq_Value'],f.clock.defaultHz);
   // HSE/other PLL setups (F103 at 72 MHz) cannot be rebuilt from HSI: keep the nearest clock the generator can make.
   if(!f.clock.valid(config.timerClockHz)){const wanted=config.timerClockHz,hz=f.clock.valid(Math.min(f.clock.maxHz,Math.round(wanted/4e6)*4e6))?Math.min(f.clock.maxHz,Math.round(wanted/4e6)*4e6):f.clock.exampleHz;warnings.push(`APB1 타이머 클록 ${wanted/1e6} MHz는 HSI로 만들 수 없어 ${hz/1e6} MHz로 바꿨습니다 (${f.clock.label}). 타이머 Prescaler/Period를 확인하세요.`);config.timerClockHz=hz;}
