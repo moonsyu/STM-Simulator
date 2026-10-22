@@ -59,7 +59,8 @@ function allocatePins(p,sample,parts,prior){
   let next=id;if(/^TIM/.test(id)&&!Object.values(prior?.peripherals||{}).includes(id)&&config.peripherals[id]?.enabled&&!reusable){next=TIMERS.find(t=>!config.peripherals[t]?.enabled&&setting.period<=timerMax(t)&&Object.entries(sample.mcu.pins).filter(([,v])=>v.function.startsWith(id+'_')).every(([,v])=>(ROUTES[t][v.function.split('_')[1]]||[]).some(free)));if(!next)throw new Error('이 예제에 사용할 빈 타이머/채널이 없습니다. Pinout에서 사용하지 않는 타이머를 비활성화하세요.');}
   if(SERIAL_IDS.includes(id)&&config.peripherals[id]?.enabled&&!reusable&&!prior?.peripherals[id]){next=SERIAL_IDS.find(serial=>!config.peripherals[serial]?.enabled&&Object.values(ROUTES[serial]).every(pins=>pins.some(free)));if(!next)throw new Error('사용 가능한 UART TX/RX 핀 조합이 없습니다.');}
   next=prior?.peripherals?.[id]||next;peripherals[id]=next;
-  if(!/^TIM/.test(id)&&config.peripherals[next]?.enabled&&Object.entries(setting).some(([k,v])=>k!=='enabled'&&config.peripherals[next][k]!==undefined&&config.peripherals[next][k]!==v))throw new Error(next+'가 다른 통신 설정으로 사용 중입니다. 동일한 설정으로 맞춘 뒤 다시 적용하세요.');
+  const differs=/^TIM/.test(id)||!config.peripherals[next]?.enabled?[]:Object.entries(setting).filter(([k,v])=>k!=='enabled'&&config.peripherals[next][k]!==undefined&&config.peripherals[next][k]!==v);
+  if(differs.length)throw new Error(`${next}가 다른 통신 설정으로 사용 중입니다 (${differs.map(([k,v])=>`${k} 현재 ${config.peripherals[next][k]}, 예제 ${v}`).join(', ')}). Pinout에서 같은 값으로 맞춘 뒤 다시 적용하세요.`);
   config.peripherals[next]={...setting};if(/^TIM/.test(id))config.peripherals[next].prescaler=Math.max(0,Math.round((setting.prescaler+1)*config.timerClockHz/sample.mcu.timerClockHz)-1);
  }
  // Alternate functions are allocated before general GPIO so their scarce routes stay available.
