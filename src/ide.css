@@ -166,7 +166,7 @@
 #native-memory-form{display:flex;gap:5px}
 #native-memory-address{width:130px}
 #native-memory-count{width:70px}
-#native-memory-output{white-space:pre-wrap;font-size:11.5px}
+#native-memory-output{white-space:pre;overflow-x:auto;font-size:11.5px}
 #update-dialog,#dock-move-dialog{width:min(490px,92vw);max-height:88vh;overflow:auto;padding:22px 24px}
 #update-dialog h2,#dock-move-dialog h2{margin-top:0;font-size:18px}
 #dock-move-dialog label{display:block;font-size:11.5px;font-weight:500;margin:10px 0 5px}
