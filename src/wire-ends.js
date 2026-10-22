@@ -29,3 +29,31 @@ export function moveWireEnd(project,wireId,end,id){
   const blocked=endpointBlocked(project,id,{ignoreWire:w.id});if(blocked)throw new Error(blocked);
   w[end]=id;return true;
 }
+
+// A free endpoint on the same net as `id` for a new wire end: `id` itself when free, else another hole of the same
+// breadboard strip (a mounted lead's own row, or the row a taken board pin is wired to) or another header pin with the
+// same signal. `taken` holds the wire ends already used; null when the net has no free place.
+export function freeEquivalent(project,id,taken,avoid){
+  const all=endpoints(project.components,project.surfaces).filter(Boolean),byId=new Map(all.map(e=>[e.id,e])),occupied=occupiedHoles(project.components);
+  const leadHole=end=>{const m=/^part:([^:]+):(.+)$/.exec(end),part=m&&project.components.find(c=>c.id===m[1]);return part&&attachments(part)[m[2]]||null;};
+  const free=end=>end!==avoid&&!taken.has(end)&&!occupied.has(end)&&!leadHole(end);
+  if(free(id))return id;
+  const here=byId.get(leadHole(id)||id);if(!here)return null;
+  let bus=here.bus;
+  if(!bus&&here.signal&&here.signal!=='NC'){
+    const same=all.find(e=>e.signal===here.signal&&free(e.id));if(same)return same.id;
+    const peer=project.wires.find(w=>w.from===id||w.to===id),other=peer&&(peer.from===id?peer.to:peer.from);bus=other&&byId.get(leadHole(other)||other)?.bus;
+  }
+  if(!bus)return null;
+  return all.filter(e=>e.bus===bus&&free(e.id)).sort((a,b)=>Math.hypot(a.x-here.x,a.y-here.y)-Math.hypot(b.x-here.x,b.y-here.y))[0]?.id??null;
+}
+/** Moves ends of the wires `wireIds` that share a pin/hole or sit on a mounted lead to free places of the same net. */
+export function legalizeWireEnds(project,wireIds){
+  const ids=new Set(wireIds),taken=new Set(project.wires.filter(w=>!ids.has(w.id)).flatMap(w=>[w.from,w.to]));let moved=0;
+  for(const w of project.wires.filter(w=>ids.has(w.id)))for(const end of ['from','to']){
+    const place=freeEquivalent(project,w[end],taken,w[end==='from'?'to':'from']);
+    if(place&&place!==w[end]){w[end]=place;delete w.points;moved++;}
+    taken.add(place??w[end]);
+  }
+  return moved;
+}
