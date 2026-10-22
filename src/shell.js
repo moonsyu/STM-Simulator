@@ -405,8 +405,10 @@ function keyboard(layout,options){
   }
   if(document.querySelector('dialog[open]:not(#command-palette)')||document.activeElement?.closest('.keybinding-capture'))return;
   const key=eventKey(e);if(!key)return;
-  // Inside Monaco, plain Ctrl+Shift+letter view shortcuts give way to the editor's own commands.
-  if(document.activeElement?.closest('.monaco-editor')&&/^Ctrl\+Shift\+[A-Z]$/.test(key)&&!['Ctrl+Shift+P','Ctrl+Shift+B'].includes(key))return;
+  // Inside Monaco, the default Ctrl+Shift+letter view shortcuts give way to the editor's own commands;
+  // a key the user bound on purpose still runs its command.
+  const bound=Object.entries(layout.bindings()).find(([,k])=>k===key)?.[0];
+  if(document.activeElement?.closest('.monaco-editor')&&/^Ctrl\+Shift\+[A-Z]$/.test(key)&&!['Ctrl+Shift+P','Ctrl+Shift+B'].includes(key)&&(!bound||DEFAULT_KEYBINDINGS[bound]===key))return;
   if(key==='F1'){e.preventDefault();e.stopImmediatePropagation();layout.openPalette('>');return;}
   const hit=match(e);if(!hit)return;
   e.preventDefault();e.stopImmediatePropagation();
