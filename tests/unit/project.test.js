@@ -333,3 +333,19 @@ describe('.ioc and firmware import',()=>{
     assert.throws(()=>importFirmware(original,[{name:'main.c',text:'x'.repeat(800001)}]),/800 KB/);
   });
 });
+
+test('importIoc reads ST board templates: F103 package names, labels with notes, ADCx, default EXTI edge, expressions, HSE clocks, sync USART, SPI rate and DMA',async()=>{
+  const {importIoc,evalIocNumber}=await import('../../src/mcu-config.js');
+  assert.equal(evalIocNumber('84-1'),83);assert.equal(evalIocNumber('(1000*2)-1'),1999);assert.equal(evalIocNumber('abc'),null);
+  const f1=importIoc(['Mcu.Name=STM32F103R(8-B)Tx','Mcu.CPN=STM32F103RBT6','PC13-TAMPER-RTC.Signal=GPXTI13','PC13-TAMPER-RTC.GPIO_Label=B1 [Blue PushButton]','PA0-WKUP.Signal=ADCx_IN0','Mcu.IP0=ADC1','Mcu.IP1=TIM2','PA1.Signal=S_TIM2_CH2','TIM2.Prescaler=64-1','TIM2.Period=1000-1','TIM2.IPParameters=Channel-PWM Generation2 CH2','RCC.APB1TimFreq_Value=72000000'].join('\n'));
+  assert.equal(f1.config.family,'STM32F103RB');assert.deepEqual([f1.config.pins.PC13.label,f1.config.pins.PC13.edge],['B1','RISING']);
+  assert.equal(f1.config.pins.PA0.function,'ADC1_IN0');assert.deepEqual([f1.config.peripherals.TIM2.prescaler,f1.config.peripherals.TIM2.period],[63,999]);
+  assert.equal(f1.config.timerClockHz,64000000);assert.ok(f1.warnings.some(w=>/72 MHz는 HSI로/.test(w)));
+  const f4=importIoc(['Mcu.Name=STM32F446RETx','Mcu.IP0=USART1','PA8.Signal=USART1_CK','PA9.Signal=USART1_TX','PA10.Signal=USART1_RX','USART1.CLKPolarity=USART_POLARITY_HIGH','Mcu.IP1=SPI1','PA5.Signal=SPI1_SCK','PA6.Signal=SPI1_MISO','PA7.Signal=SPI1_MOSI','SPI1.CalculateBaudRate=5.25 MBits/s','Mcu.IP2=USART2','PA2.Signal=USART2_TX','PA3.Signal=USART2_RX','Dma.Request0=USART2_RX','Dma.USART2_RX.0.Instance=DMA1_Stream5','Dma.USART2_RX.0.Channel=DMA_CHANNEL_4','Dma.USART2_RX.0.Mode=DMA_CIRCULAR','Dma.USART2_RX.0.Priority=DMA_PRIORITY_HIGH'].join('\n'));
+  assert.deepEqual([f4.config.peripherals.USART1.mode,f4.config.peripherals.USART1.cpol],['synchronous',1]);assert.equal(f4.config.peripherals.SPI1.clock,5250000);
+  assert.deepEqual(f4.config.dma.USART2_RX,{stream:'DMA1_Stream5',channel:4,mode:'circular',priority:'high'});
+});
+test('importFirmware names the board an .ioc of the other MCU needs',async()=>{
+  const {importFirmware}=await import('../../src/firmware-import.js');
+  assert.throws(()=>importFirmware(blankProject(),[{name:'f1.ioc',text:'Mcu.Name=STM32F103R(8-B)Tx'}]),/NUCLEO-F103RB 보드로 새 프로젝트/);
+});
