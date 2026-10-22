@@ -75,6 +75,8 @@ export function generateMain(config,{minimal=false}={}){
     // AFIO routes EXTI lines and remaps; PA15/PB3/PB4 are JTAG pins until JTAG is released (SWD stays on).
     const remaps=Object.keys(family.remaps).map(id=>remapFor(family.id,id,Object.fromEntries(pins.filter(([,p])=>p.function.startsWith(id+'_')).map(([pin,p])=>[p.function.slice(id.length+1),pin])))?.macro).filter(Boolean);
     const jtag=pins.some(([pin])=>family.jtagPins.includes(pin));
+    // PD0/PD1 are OSC_IN/OSC_OUT until PD01 remap (RM0008 9.3.2).
+    if(pins.some(([pin])=>pin==='PD0'||pin==='PD1'))remaps.push('__HAL_AFIO_REMAP_PD01_ENABLE');
     if(remaps.length||jtag||pins.some(([,p])=>p.function==='GPIO_EXTI'))lines.push('  __HAL_RCC_AFIO_CLK_ENABLE();');
     if(jtag)lines.push('  __HAL_AFIO_REMAP_SWJ_NOJTAG();');
     for(const macro of remaps)lines.push(`  ${macro}();`);
