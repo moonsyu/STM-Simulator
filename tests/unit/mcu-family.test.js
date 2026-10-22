@@ -76,3 +76,14 @@ test('F1 PD0/PD1 GPIO gets the PD01 remap; SWD pins PA13/PA14 cannot be reconfig
  assert.match(generateHal(c),/__HAL_RCC_AFIO_CLK_ENABLE\(\);[\s\S]*__HAL_AFIO_REMAP_PD01_ENABLE\(\);[\s\S]*GPIO_PIN_0/);
  for(const family of [F1,'STM32F446RE']){const d=defaultMcu(family);d.pins.PA13=pin('GPIO_Output');assert.ok(configProblems(d).some(e=>/PA13: SWD/.test(e)),family);}
 });
+
+test('round 2 Pinout checks: HAL-name labels, disabled peripheral pins, busy F1 remap partner, label macros in the interpreter',async()=>{
+ const {setSerialEnabled,assignSerialPin}=await import('../../src/serial-config.js');
+ const c=defaultMcu('STM32F446RE');c.pins.PC13={...pin('GPIO_EXTI'),label:'GPIO'};assert.ok(configProblems(c).some(e=>/라벨 GPIO은 HAL 이름과/.test(e)));
+ const i2c=defaultMcu('STM32F446RE');i2c.pins.PB6=pin('I2C1_SCL');i2c.pins.PB7=pin('I2C1_SDA');assert.ok(configProblems(i2c).some(e=>/PB6: I2C1 주변장치를 활성화/.test(e)));
+ const f=familyProfile(F1),busy=defaultMcu(F1);busy.pins.PB7=pin('GPIO_Output');assignSerialPin(busy,'USART1','TX','PB6',f.serial);
+ assert.throws(()=>setSerialEnabled(busy,'USART1',true,f.serial,f.remaps.USART1),/PB7: GPIO_Output에서 사용 중이라 USART1 TX\/RX 묶음\(PB6\/PB7\)/);
+ const {blankProject,validateProject}=await import('../../src/project.js'),{SimulationSession}=await import('../../src/session.js'),{generateHal}=await import('../../src/mcu-config.js');
+ const p=blankProject();p.mcu.pins.PA5={...pin('GPIO_Output'),label:'LD2'};p.code=generateHal(p.mcu).replace('/* USER CODE BEGIN 3 */','/* USER CODE BEGIN 3 */HAL_GPIO_TogglePin(LD2_GPIO_Port, LD2_Pin);HAL_Delay(5);');
+ const s=new SimulationSession(validateProject(p),{print:()=>{}});s.tick(0);for(let t=1;t<6;t++)s.tick(t*5);
+});

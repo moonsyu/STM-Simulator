@@ -1,7 +1,7 @@
 import {isTimer,timerMax,TIMER_MODES} from './timer-config.js';
 import {timerDefaults} from './mcu-defaults.js';
 import {GPIO_PINS} from './pins.js';
-import {ROUTES,defaultMcu,validateMcu,configProblems,pinFunctions,irqForPin,IRQ_NAMES,generateHal,USART_CK_ROUTES,DMA_MODES,DMA_PRIORITIES,dmaPeripheral,dmaDirection} from './mcu-config.js';
+import {MODES,ROUTES,defaultMcu,validateMcu,configProblems,pinFunctions,irqForPin,IRQ_NAMES,generateHal,USART_CK_ROUTES,DMA_MODES,DMA_PRIORITIES,dmaPeripheral,dmaDirection} from './mcu-config.js';
 import {DMA_REQUESTS} from './hal-dma.js';
 import {expandC} from './c-format.js';
 import {isSerial,serialAf,serialFunction,assignSerialPin,setSerialEnabled} from './serial-config.js';
@@ -53,7 +53,10 @@ export class PinoutPanel {
     $('pinout-pins').querySelectorAll('button').forEach(b=>b.onclick=()=>{this.sync();this.pin=b.dataset.configPin;this.render();});
     $('pinout-properties').innerHTML=`<h3>${this.pin}</h3><label>용도<select id="pin-function">${pinFunctions(this.pin,config.family).map(v=>`<option ${p.function===v?'selected':''}>${v}</option>`).join('')}</select></label><label>Pull<select id="pin-pull">${['NOPULL','PULLUP','PULLDOWN'].map(v=>`<option ${p.pull===v?'selected':''}>${v}</option>`).join('')}</select></label><label>EXTI 에지<select id="pin-edge">${['FALLING','RISING','CHANGE'].map(v=>`<option ${p.edge===v?'selected':''}>${v}</option>`).join('')}</select></label><label>초기 출력<select id="pin-level"><option value="0">LOW</option><option value="1" ${p.initial?'selected':''}>HIGH</option></select></label><label>사용자 라벨<input id="pin-label" maxlength="40" value="${esc(p.label)}" placeholder="예: LD2"></label><p>GPIO_EXTI는 ${irqForPin(this.pin)}를 사용합니다. NVIC에서 활성화하세요.</p>`;
     for(const id of ['pin-function','pin-pull','pin-edge','pin-level'])$(id).onchange=()=>{this.sync();this.render();};
-    $('pin-function').onchange=()=>{const previousFunction=this.draft.pins[this.pin]?.function??'Reset';this.sync();const previous=structuredClone(this.draft);previous.pins[this.pin].function=previousFunction;const fn=this.draft.pins[this.pin].function,id=serialFunction(fn);try{if(id){assignSerialPin(this.draft,id,fn.endsWith('_TX')?'TX':'RX',this.pin,fam.serial);alignSerialRemap(this.draft,id,this.pin);this.draft=setSerialEnabled(this.draft,id,true,fam.serial,fam.remaps?.[id]);}this.render();}catch(e){this.draft=previous;this.render();$('pinout-errors').textContent=e.message;}};
+    $('pin-function').onchange=()=>{const previousFunction=this.draft.pins[this.pin]?.function??'Reset';this.sync();const previous=structuredClone(this.draft);previous.pins[this.pin].function=previousFunction;const fn=this.draft.pins[this.pin].function,id=serialFunction(fn);try{if(id){assignSerialPin(this.draft,id,fn.endsWith('_TX')?'TX':'RX',this.pin,fam.serial);alignSerialRemap(this.draft,id,this.pin);this.draft=setSerialEnabled(this.draft,id,true,fam.serial,fam.remaps?.[id]);}
+      // Choosing a peripheral signal for a pin turns that peripheral on, as the serial pins already do.
+      else{const owner=fn.split('_')[0];if(!MODES.includes(fn)&&routesOf(this.draft.family)[owner]&&!this.draft.peripherals[owner]?.enabled)this.draft.peripherals[owner]={...this.draft.peripherals[owner],enabled:true};}
+      this.render();}catch(e){this.draft=previous;this.render();$('pinout-errors').textContent=e.message;}};
     $('pinout-peripherals').innerHTML=Object.keys(routesOf(config.family)).map(id=>{
       const c=config.peripherals[id]||{enabled:false},defaults=isTimer(id)?timerDefaults(id,config.family):null,timerMax=id=>fam.timerMax(id),fields=isSerial(id)?[['baud','Baud rate',115200]]:id==='I2C1'||id==='SPI1'?[['clock','Clock (Hz)',id==='I2C1'?100000:1000000]]:isTimer(id)?[['prescaler','Prescaler (PSC)',defaults.prescaler,65535],['period','Period (ARR)',defaults.period,timerMax(id)],...(c.mode==='pwm'?[['pulse','초기 Pulse (CCR)',defaults.pulse,timerMax(id)]]:[])]:[];
       const syncMode=c.mode==='synchronous',ck=fam.usartCk[id],ckFn=id+'_CK',ckPin=Object.keys(config.pins).find(pin=>config.pins[pin].function===ckFn);
