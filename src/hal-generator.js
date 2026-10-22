@@ -59,7 +59,7 @@ export function generateMain(config,{minimal=false}={}){
     'void SystemClock_Config(void) {','  RCC_OscInitTypeDef osc = {0};','  RCC_ClkInitTypeDef clk = {0};',
     ...(f1?[]:['  __HAL_RCC_PWR_CLK_ENABLE();','  __HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE1);']),
     '  osc.OscillatorType = RCC_OSCILLATORTYPE_HSI;','  osc.HSIState = RCC_HSI_ON;','  osc.HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT;',
-    ...(clock.source==='HSI'?['  osc.PLL.PLLState = RCC_PLL_OFF;']:f1?['  osc.PLL.PLLState = RCC_PLL_ON;','  osc.PLL.PLLSource = RCC_PLLSOURCE_HSI_DIV2;',`  osc.PLL.PLLMUL = RCC_PLL_MUL${clock.mul};`]:['  osc.PLL.PLLState = RCC_PLL_ON;','  osc.PLL.PLLSource = RCC_PLLSOURCE_HSI;','  osc.PLL.PLLM = 16;',`  osc.PLL.PLLN = ${clock.n};`,`  osc.PLL.PLLP = RCC_PLLP_DIV${clock.divider};`,'  osc.PLL.PLLQ = 7;']),
+    ...(clock.source==='HSI'?['  osc.PLL.PLLState = RCC_PLL_OFF;']:f1?['  osc.PLL.PLLState = RCC_PLL_ON;','  osc.PLL.PLLSource = RCC_PLLSOURCE_HSI_DIV2;',`  osc.PLL.PLLMUL = RCC_PLL_MUL${clock.mul};`]:['  osc.PLL.PLLState = RCC_PLL_ON;','  osc.PLL.PLLSource = RCC_PLLSOURCE_HSI;','  osc.PLL.PLLM = 16;',`  osc.PLL.PLLN = ${clock.n};`,`  osc.PLL.PLLP = RCC_PLLP_DIV${clock.divider};`,'  osc.PLL.PLLQ = 7;','  osc.PLL.PLLR = 2;']),
     '  if (HAL_RCC_OscConfig(&osc) != HAL_OK) Error_Handler();',
     '  clk.ClockType = RCC_CLOCKTYPE_HCLK | RCC_CLOCKTYPE_SYSCLK | RCC_CLOCKTYPE_PCLK1 | RCC_CLOCKTYPE_PCLK2;',
     `  clk.SYSCLKSource = RCC_SYSCLKSOURCE_${clock.source};`,'  clk.AHBCLKDivider = RCC_SYSCLK_DIV1;',
