@@ -61,7 +61,11 @@ export function setupIde(o){
     const r=o.getSession()?.runtime,paused=!!r?.debug.paused;editor.updateDebug(points(),paused?r.location:null);controls();
     $('debug-breakpoints').innerHTML=points().map(b=>`<button class="debug-frame" data-breakpoint="${esc(b.file)}:${b.line}">${esc(b.file)}:${b.line} · 해제</button>`).join('')||'<span>설정된 중단점 없음</span>';
     for(const el of $('debug-breakpoints').querySelectorAll('button'))el.onclick=()=>{const [file,line]=el.dataset.breakpoint.split(':');toggleBreakpoint(file,Number(line));};
-    if(!paused){lastPause='';$('debug-location').textContent=o.isRunning()?'실행 중 — 일시정지하면 변수와 호출 스택을 표시합니다.':'디버그 시작 또는 F9로 중단점을 설정하세요.';for(const id of ['debug-locals','debug-globals','debug-stack','watch-values'])$(id).replaceChildren();return;}
+    if(!paused){lastPause='';$('debug-location').textContent=o.isRunning()?'실행 중 — 일시정지하면 변수와 호출 스택을 표시합니다.':'디버그 시작 또는 F9로 중단점을 설정하세요.';for(const id of ['debug-locals','debug-globals','debug-stack'])$(id).replaceChildren();
+      // Saved watches stay listed (and removable) while not paused; values appear at the next pause.
+      $('watch-values').innerHTML=watches().map((expression,index)=>`<div class="watch-row"><button title="감시식 제거" data-remove-watch="${index}">${esc(expression)}</button><div>일시정지하면 값을 표시합니다</div></div>`).join('');
+      for(const el of document.querySelectorAll('[data-remove-watch]'))el.onclick=()=>{o.checkpoint();settings().watches.splice(Number(el.dataset.removeWatch),1);o.saveLocal();debugView();};
+      return;}
     // The firmware emulator's runtime exposes its own inspector (symbols, registers).
     const pauseKey=`${r.microTime}:${r.location?.file}:${r.location?.line}:${r.depth}`;if(pauseKey!==lastPause)stackFrame=0;
     const state=typeof r.inspect==='function'?r.inspect():inspectRuntime(r,stackFrame),key=pauseKey;
@@ -72,7 +76,7 @@ export function setupIde(o){
     if(state.registers){$('native-debug-details').hidden=false;$('native-registers').innerHTML=state.registers.map(x=>`<tr><td>${esc(x.name)}</td><td>${esc(x.value)}</td></tr>`).join('');}
     $('debug-stack').innerHTML=state.frames.map((f,i)=>`<button class="debug-frame${i===stackFrame?' active':''}" data-stack-index="${i}" data-stack-file="${esc(f.loc?.file||'main.c')}" data-line="${f.loc?.line||1}">${esc(f.name)}() · ${esc(f.loc?.file||'main.c')}:${f.loc?.line||1}</button>`).join('');
     for(const el of $('debug-stack').querySelectorAll('button'))el.onclick=()=>{stackFrame=Number(el.dataset.stackIndex);select(el.dataset.stackFile,Number(el.dataset.line));debugView();};
-    $('watch-values').innerHTML=watches().map((expression,index)=>{let value;try{value=typeof r.memory==='function'?r.evaluate(expression):watchValue(r,expression);}catch(e){value=e.message;}return `<div class="watch-row"><button title="감시식 제거" data-remove-watch="${index}">${esc(expression)}</button><div>${esc(value)}</div></div>`;}).join('');
+    $('watch-values').innerHTML=watches().map((expression,index)=>{let value;try{value=typeof r.memory==='function'?r.evaluate(expression):watchValue(r,expression,stackFrame);}catch(e){value=e.message;}return `<div class="watch-row"><button title="감시식 제거" data-remove-watch="${index}">${esc(expression)}</button><div>${esc(value)}</div></div>`;}).join('');
     for(const el of document.querySelectorAll('[data-remove-watch]'))el.onclick=()=>{o.checkpoint();settings().watches.splice(Number(el.dataset.removeWatch),1);o.saveLocal();debugView();};
   }
   $('watch-form').onsubmit=e=>{e.preventDefault();const text=$('watch-expression').value.trim();if(!text||watches().includes(text)||watches().length>=20)return;o.checkpoint();settings().watches.push(text);$('watch-expression').value='';o.saveLocal();debugView();};

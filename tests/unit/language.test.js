@@ -287,3 +287,10 @@ describe('debugger',()=>{
     const s={kind:'struct',fields:{}};s.fields.self={value:s};assert.equal(displayValue(s),'{self: …}');
   });
 });
+
+test('watch expressions evaluate in the selected call-stack frame',()=>{
+  const r=new Runtime(compile('int add(int x) {\n  int s=x+1;\n  return s;\n}\nvoid loop(){\n  int y=5;\n  y=add(y);\n  delay(10);\n}'),{debug:{entry:true}});r.tick(0);
+  for(let i=0;i<4&&r.frames.at(-1)?.name!=='add';i++){r.resume('into');r.tick(r.microTime/1000+100);}
+  assert.equal(r.frames.at(-1).name,'add');assert.equal(watchValue(r,'x'),'5');
+  assert.equal(watchValue(r,'y',1),'5','caller frame');assert.throws(()=>watchValue(r,'y'),/정의되지/);assert.equal(watchValue(r,'x'),'5','scopes restored');
+});
