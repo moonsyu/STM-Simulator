@@ -83,11 +83,12 @@ function tidyExampleSource(p){
 }
 /** An example for a board: written for the NUCLEO-F446RE and ported to the STM32F103RB for a NUCLEO-F103RB. */
 export function halExampleFor(kind,boardId){const p=halExample(kind);return getBoard(boardId)?.mcuFamily===F1_FAMILY?portExampleToF1(p):p;}
-// One-line guide of an example on a board: the code's first comment unless it only repeats the device name,
+// One-line guide of an example on a board: the code's first comment when it is a wiring line (not just the device
+// name or a calculation note), else the guide table;
 // with signals the F103 port moved (TIM2_CH1 PA5 → PA0) shown at their new pins.
 export function halGuideFor(kind,boardId){
   const name=allHalExamples()[kind]??'',p=halExampleFor(kind,boardId),comment=p.code.match(/^\/\/ (.+)$/m)?.[1];
-  const guide=comment&&comment!==name.replace(/^HAL · /,'')?comment:allHalGuides()[kind]??comment??'';
+  const guide=comment&&comment!==name.replace(/^HAL · /,'')&&(comment.includes('→')||!allHalGuides()[kind])?comment:allHalGuides()[kind]??comment??'';
   if(getBoard(boardId)?.mcuFamily!==F1_FAMILY)return guide;
   const {moved}=portMcu(halExample(kind).mcu);return guide.replace(/\bP[A-H]\d+\b/g,pin=>moved[pin]??pin);
 }
