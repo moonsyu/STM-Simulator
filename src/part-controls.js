@@ -33,14 +33,14 @@ export function partReadouts(p,result){
   if(variant.id==='lcd-i2c-4')return r?.powered?`<p>전원 연결됨 · ${r.lcd?.visible?'문자 표시 중':'초기화 명령 대기'}</p>${r.lcd?.visible?`<pre class="lcd-readout">${esc(r.lcd.lines.join(String.fromCharCode(10)))}</pre>`:''}`:'<p>전원과 GND를 확인하세요.</p>';
   if(variant.id==='motor-driver-hat')return '<p>'+(r?.powered?'전원 연결됨 · PWM 출력은 연결된 모터의 회전수와 방향으로 확인하세요.':'전원과 GND를 확인하세요.')+'</p>';
   if(variant.id==='encoder-bare-5')return `<p>A=${r?.a??1} B=${r?.b??1} · 버튼 ${r?.pressed?'누름':'놓음'}</p><p>속성의 회전 위치를 바꾸면 A/B 변화가 실행 로그에 표시됩니다.</p>`;
-  if(variant.id==='isolated-rs485')return '<p>'+(r?.powered?'전원 연결됨':'전원과 GND를 확인하세요.')+'</p><p>송수신 내용은 하단 통신 탭에서 확인할 수 있습니다.</p>';
+  if(variant.id==='isolated-rs485')return '<p>'+(r?.powered?'전원 연결됨':'전원과 GND를 확인하세요.')+'</p><p>송수신 내용은 하단 직렬 모니터 탭에서 확인할 수 있습니다.</p>';
   if(variant.id==='stepper-driver-11'&&result){const v=n=>result.voltage(`part:${p.id}:p${n}`)??0,gnd=v(6),supply=v(5)-gnd,inputs=[1,2,3,4].map(n=>v(n)-gnd>=2);return `<p>${supply>=4.5?`V+ <b>${supply.toFixed(1)} V</b>`:'V+(5 V)와 GND를 확인하세요.'}</p><div class="channel-readouts">${inputs.map((on,i)=>`<span>IN${i+1} → M${i+1} <b>${on?'ON':'OFF'}</b></span>`).join('')}</div>`;}
   if(['ads1115-10','mcp4725-6','ds3231-8'].includes(variant.id))return '<p>'+(r?.powered?'전원 연결됨 · 측정값은 실행 로그에서 확인하세요.':'전원과 GND를 확인하세요.')+'</p>';const map=catalogMap(p.type);return partReadouts({...p,type:variant.family},result&&map?{...result,voltage:id=>result.voltage(id.replace(new RegExp('^part:'+p.id+':(.*)$'),(_,key)=>'part:'+p.id+':'+(map[key]||key)))}:result);}
  const read=result?.parts[p.id];if(!read)return '';
  const l298=l298Readouts(p,read);if(l298)return l298;
  const device=deviceReadouts(p,read);if(device)return device;
  if(p.type==='lcd')return `<p>${read.lcd?.powered?'LCD 전원 연결됨':'LCD 5 V 전원을 확인하세요.'} · ${read.lcd?.visible?'문자 표시 중':'디스플레이 초기화·VO 연결을 확인하세요.'}</p>`;
- if(['uart','i2c','spi'].includes(p.type))return `<p>${read.powered?'전원 연결됨':'전원과 GND를 확인하세요.'}</p>${p.type==='uart'?'<p>송수신 내용은 하단 통신 탭에서 확인할 수 있습니다.</p>':`<p>메모리 0x10: ${read.memory?.[16]??0}</p>`}`;
+ if(['uart','i2c','spi'].includes(p.type))return `<p>${read.powered?'전원 연결됨':'전원과 GND를 확인하세요.'}</p>${p.type==='uart'?'<p>송수신 내용은 하단 직렬 모니터 탭에서 확인할 수 있습니다.</p>':`<p>메모리 0x10: ${read.memory?.[16]??0}</p>`}`;
  if(p.type==='potentiometer'){const v=result.voltage(`part:${p.id}:p2`),base=result.voltage(`part:${p.id}:p1`);return `<p>가변 접점 전압 (1 기준): <b>${v!=null&&base!=null?(v-base).toFixed(3)+' V':'—'}</b></p>`;}
  if(['temperature','ultrasonic'].includes(p.type))return `<p>${read.powered?'전원 연결됨':'전원 전압 또는 배선을 확인하세요.'}${p.type==='temperature'&&read.powered?` · 출력 ${read.voltage.toFixed(3)} V`:''}</p>`;
  if(read.channels){const levels=p.type==='rgb'?channelLevels(read.channels):null;return `${levels?`<p>표시 색 <span class="rgb-swatch" style="background:rgb(${levels.join(',')})"></span> <b>${hexColor(levels)}</b></p>`:''}<div class="channel-readouts">${Object.entries(read.channels).map(([key,value])=>`<span>${key.toUpperCase()} <b>${levels?levels['rgb'.indexOf(key)]+' · ':''}${(value.current*1000).toFixed(2)} mA</b></span>`).join('')}</div>`;}
