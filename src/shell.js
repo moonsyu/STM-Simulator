@@ -196,7 +196,7 @@ function mountShell(layout,state,options,{apply,save,setPalette}){
  const update=()=>{
   const t=$('native-target');target.textContent=t?'⚙ '+(t.selectedOptions[0]?.textContent||''):'';
   // Circuit issues plus the build errors/warnings listed in the 빌드 panel.
-  const issues=Number(document.querySelector('[data-monitor="issues"]')?.textContent.match(/\((\d+)\)/)?.[1]||0)+($('build-errors')?.childElementCount||0);problems.innerHTML=`<span aria-hidden="true">⊗</span> ${issues}`;problems.setAttribute('aria-label',`문제 ${issues}건`);
+  const issues=Number(document.querySelector('[data-monitor="issues"]')?.textContent.match(/\((\d+)\)/)?.[1]||0)+($('build-errors')?.querySelectorAll('.build-error:not(.note):not(.info)').length||0);problems.innerHTML=`<span aria-hidden="true">⊗</span> ${issues}`;problems.setAttribute('aria-label',`문제 ${issues}건`);
   const runningState=$('status-led')?.className==='running';shell.dataset.running=String(runningState);
   board.textContent=$('current-board-name')?.textContent||'NUCLEO-F446RE';
  };
