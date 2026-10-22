@@ -392,14 +392,40 @@ export class FirmwareSession {
   callStack() {
     const m = this.machine, elf = this.elf, lt = elf.lineTable, frames = [];
     const push = (pc) => { const f = elf.functionAt(pc), l = lt.addrToLine(pc); if (!f) return false; if (frames.length && frames.at(-1).name === f.name && frames.at(-1).pc === pc) return false; frames.push({ name: f.name, pc, loc: l ? { file: basename(l.file), line: l.line } : null }); return true; };
-    push(m.pc);
-    const isCallReturn = a => { if (!(a & 1)) return false; const ra = (a & ~1) >>> 0; if (!elf.functionAt(ra)) return false; const h1 = m.bus.peek(ra - 4, 2), h2 = m.bus.peek(ra - 2, 2), h0 = m.bus.peek(ra - 2, 2); return ((h1 & 0xf800) === 0xf000 && (h2 & 0xd000) === 0xd000) || (h0 & 0xff87) === 0x4780; };
-    const lr = m.cpu.r[14] >>> 0;
-    if (isCallReturn(lr)) push((lr & ~1) - 2);
+    const peek = (a, n) => m.bus.peek(a >>> 0, n, { allowSideEffects: false });
+    // A stack word is a return address only if the instruction before it is a call to the frame found so far:
+    // BL is decoded and must target that function; BLX <reg> (function pointers) cannot be checked.
+    const callTarget = ra => {
+      const h1 = peek(ra - 4, 2), h2 = peek(ra - 2, 2);
+      if (h1 != null && h2 != null && (h1 & 0xf800) === 0xf000 && (h2 & 0xd000) === 0xd000) {
+        const S = (h1 >> 10) & 1, I1 = 1 - (((h2 >> 13) & 1) ^ S), I2 = 1 - (((h2 >> 11) & 1) ^ S);
+        let off = (S << 24) | (I1 << 23) | (I2 << 22) | ((h1 & 0x3ff) << 12) | ((h2 & 0x7ff) << 1); if (S) off -= 1 << 25;
+        return { kind: 'bl', target: (ra + off) >>> 0 };
+      }
+      return h2 != null && (h2 & 0xff87) === 0x4780 ? { kind: 'blx' } : null;
+    };
+    const returnsInto = (w, callee) => {
+      if (!(w & 1)) return false; const ra = (w & ~1) >>> 0; if (!elf.functionAt(ra)) return false;
+      const call = callTarget(ra); if (!call) return false;
+      return call.kind === 'blx' || !callee || elf.functionAt(call.target)?.name === callee;
+    };
+    const isExcReturn = w => (w >>> 0) >= 0xffffffe0;
     let sp = m.cpu.r[13] >>> 0;
+    // An exception frame (r0-r3, r12, lr, pc, xpsr; 26 words with FP state) sits where EXC_RETURN was pushed.
+    const exception = (frame, exc) => {
+      const pc = peek(frame + 24, 4), lr = peek(frame + 20, 4), xpsr = peek(frame + 28, 4);
+      if (pc == null) return frame;
+      push(pc & ~1); if (returnsInto(lr, frames.at(-1)?.name)) push(((lr & ~1) - 2) >>> 0);
+      return frame + ((exc & 0x10) ? 32 : 104) + ((xpsr >>> 9) & 1) * 4;
+    };
+    push(m.pc);
+    const lr = m.cpu.r[14] >>> 0;
+    if (isExcReturn(lr)) sp = exception(sp, lr);
+    else if (returnsInto(lr, frames.at(-1)?.name)) push(((lr & ~1) - 2) >>> 0);
     for (let i = 0; i < 512 && frames.length < 16; i++, sp += 4) {
-      const w = m.bus.peek(sp, 4, { allowSideEffects: false }); if (w == null) break;
-      if (isCallReturn(w)) { const f = elf.functionAt((w & ~1) >>> 0); if (frames.at(-1)?.name !== f?.name) push(((w & ~1) - 2) >>> 0); }
+      const w = peek(sp, 4); if (w == null) break;
+      if (isExcReturn(w)) { sp = exception(sp + 4, w) - 4; continue; }
+      if (returnsInto(w, frames.at(-1)?.name)) { const f = elf.functionAt((w & ~1) >>> 0); if (frames.at(-1)?.name !== f?.name) push(((w & ~1) - 2) >>> 0); }
       if (frames.at(-1)?.name === 'main') break;
     }
     return frames.filter((f, i) => i === 0 || f.name !== frames[i - 1].name).map(f => ({ name: f.name, loc: f.loc }));
@@ -412,6 +438,12 @@ export class FirmwareSession {
       if (out.length >= 200) break;
     }
     return out.sort((a, b) => a.name.localeCompare(b.name));
+  }
+  elementSize(name) {
+    const sources = [this.project.code || '', ...(this.project.firmware?.files || []).map(f => f.text || '')].join('\n');
+    const type = new RegExp(`\\b(u?int(?:8|16|32|64)_t|(?:unsigned\\s+|signed\\s+)?(?:char|short|int|long)|float|double)\\s+(?:\\w+\\s*(?:\\[[^\\]]*\\])?\\s*(?:=[^,;]*)?,\\s*)*${name}\\s*\\[`).exec(sources)?.[1];
+    if (!type) return null;
+    return /64|double/.test(type) ? 8 : /8_t|char/.test(type) ? 1 : /16|short/.test(type) ? 2 : 4;
   }
   formatSymbol(s) {
     const size = s.size, m = this.machine;
@@ -441,7 +473,13 @@ export class FirmwareSession {
     const idx = /^(\w+)\s*\[\s*(\d+)\s*\]$/.exec(text);
     const sym = this.elf.findSymbol(idx ? idx[1] : text.replace(/^&/, ''));
     if (sym && text.startsWith('&')) return hex(sym.value);
-    if (sym && idx) { const total = sym.size, i = Number(idx[2]), elem = [1, 2, 4].find(e => total % e === 0 && total / e > i) ?? 1; const v = m.bus.peek(sym.value + i * elem, elem, { allowSideEffects: false }); return String(v); }
+    if (sym && idx) {
+      // The ELF has no type info: the element size comes from the array's declaration in the project sources.
+      const total = sym.size, i = Number(idx[2]), elem = this.elementSize(idx[1]) ?? ([4, 2, 1].find(e => total % e === 0) ?? 1);
+      if (i * elem + elem > total) throw new Error(`${idx[1]}의 범위를 벗어난 인덱스입니다 (요소 ${total / elem}개).`);
+      if (elem === 8) return String([...m.readMemory(sym.value + i * 8, 8)].reduceRight((n, b) => n * 256n + BigInt(b), 0n));
+      const v = m.bus.peek(sym.value + i * elem, elem, { allowSideEffects: false }); return String(v);
+    }
     if (sym) return this.formatSymbol(sym);
     throw new Error('알 수 없는 식: ' + text);
   }
