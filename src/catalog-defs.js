@@ -62,6 +62,6 @@ export const CATALOG_SCOPE={
  'urm09-trig-3':'한 GPIO를 출력에서 입력으로 전환하여 트리거와 거리 비례 Echo 폭을 측정합니다.',
  'can-transceiver-6':'기본 예제는 CAN1 내부 루프백입니다. 표준 ID·필터·FIFO 송수신을 검사합니다. NORMAL 모드에서는 외부 상대 노드를 모델링하지 않아 ACK 오류 32가 발생합니다.',
  'max98357a-9':'I2S2 16 kHz·16비트 스테레오 PCM 전송, SD의 채널 선택·정지, 프레임 수와 주파수를 확인합니다. 소리 버튼은 측정 주파수의 시험음을 재생하며 스피커의 전력·음향 특성은 계산하지 않습니다.',
- 'ov2640-camera':'PA8 XCLK·리셋·전원·SCCB 배선과 센서 뱅크 PID/VER 읽기, SCCB로 설정한 해상도(QQVGA/QVGA)·형식(RGB565/YUV422/JPEG 스텁)의 테스트 패턴 또는 사용자 이미지 프레임을 DCMI DMA로 버퍼에 캡처합니다. DCMI 데이터 핀 배선은 검사하지 않습니다.',
+ 'ov2640-camera':'PA8 XCLK·리셋·전원·SCCB 배선과 센서 뱅크 PID/VER 읽기, SCCB로 해상도(QQVGA/QVGA)·형식(RGB565/YUV422/JPEG 스텁)을 설정합니다. DCMI 데이터 핀 배선은 검사하지 않으며, 프레임 캡처(DCMI DMA)는 NUCLEO-F446RE의 카메라 예제에서 다룹니다.',
  'sd-storage-board':'SPI 모드(CMD0/8/55/41/58/9/10/13/16/17/18/24/25/12)와 SDIO(HAL_SD) 블록 읽기/쓰기, FatFs(f_open/f_write 등)를 프로젝트에 저장되는 FAT32 카드 이미지로 실행합니다.'
 };
