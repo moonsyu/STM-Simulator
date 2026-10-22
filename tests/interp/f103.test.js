@@ -39,3 +39,17 @@ test('an F1 project cannot carry an F4 pin configuration (board and MCU must mat
  const p=projectForBoard('nucleo-f103rb');p.mcu=defaultMcu('STM32F446RE');
  assert.throws(()=>validateProject(p),/NUCLEO-F103RB 보드에는 STM32F103RB 핀 설정이 필요합니다/);
 });
+
+test('all STM32F103 timers are 16-bit in the interpreter (TIM2 included)',()=>{
+ const run=value=>{
+  const p=projectForBoard('nucleo-f103rb'),c=defaultMcu('STM32F103RB');c.timerClockHz=64000000;
+  c.peripherals={TIM2:{enabled:true,mode:'base',prescaler:63,period:999}};p.mcu=c;
+  p.code=generateHal(c).replace('    HAL_Delay(500);',`    __HAL_TIM_SET_AUTORELOAD(&htim2, ${value});
+    printf("arr=%lu\\n", __HAL_TIM_GET_AUTORELOAD(&htim2));
+    HAL_Delay(500);`);
+  const output=[],s=new SimulationSession(validateProject(p),{print:x=>output.push(x)});
+  try{s.tick(0);advance(s,100,10);}catch(e){return e.message;}return s.result?.fault||output.join('|');
+ };
+ assert.match(run(65535),/arr=65535/);
+ assert.match(run(100000),/ARR|범위/);
+});
