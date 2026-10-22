@@ -21,6 +21,8 @@ function finish(p,kind,{globals='',init='',loop='    HAL_Delay(10);',callbacks='
  p.name=ADVANCED_EXAMPLES[kind];p.mcu=validateMcu(p.mcu);
  let code=generateHal(p.mcu,{minimal:true}).replace('int main(void) {',globals+'\nint main(void) {');code=section(section(code,2,init),3,loop);
  p.code='#include "main.h"\n#include <stdio.h>\n// '+ADVANCED_GUIDES[kind]+'\n'+code.replace('#include "main.h"\n','').replace('#include <stdio.h>\n','')+(callbacks?'\n'+callbacks+'\n':'');
+ // printf goes to SWV ITM port 0 on the board and the firmware emulator, as in the generated examples.
+ if(/\bprintf\(/.test(p.code)&&!/__io_putchar/.test(p.code))p.code+='\nint __io_putchar(int ch) {\n    ITM_SendChar(ch);\n    return ch;\n}\n';
  p.firmware={mode:'hal',files:[]};return p;
 }
 const TFT_HELPERS=`void transferByte(uint8_t data) {
