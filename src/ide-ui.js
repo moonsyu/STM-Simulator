@@ -41,7 +41,7 @@ export function setupIde(o){
     $('file-tree').innerHTML=files.map(f=>`<button data-source="${esc(f.name)}" class="${f.name===active?'active':''}" title="${esc(f.name)}"><span class="file-kind">${f.name.endsWith('.h')?'H':'C'}</span><span class="file-label">${esc(f.name)}</span></button>`).join('');
     $('source-tabs').innerHTML=files.map(f=>`<button data-source="${esc(f.name)}" class="${f.name===active?'active':''}">${esc(f.name)}</button>`).join('');
     for(const el of document.querySelectorAll('[data-source]'))el.onclick=()=>select(el.dataset.source);
-    const wp=folder||'미저장 프로젝트';$('workspace-path').textContent=wp;$('workspace-path').title=wp;editor.reset();if(!native?.selected())editor.updateDebug(points(),o.getSession()?.runtime?.debug.paused?o.getSession().runtime.location:null);native?.sync();controls();
+    const wp=folder||'미저장 프로젝트';$('workspace-path').textContent=wp;$('workspace-path').title=wp;editor.reset();if(!native?.selected())editor.updateDebug(points(),o.getSession()?.runtime?.debug.paused?o.getSession().runtime.location:null);native?.sync();controls();if(!o.isRunning())debugView();
     if(focusSource&&focusContainer)[...$(focusContainer).querySelectorAll('[data-source]')].find(el=>el.dataset.source===focusSource)?.focus({preventScroll:true});
   }
   function controls(){const running=o.isRunning(),r=o.getSession()?.runtime,paused=!!r?.debug.paused;
@@ -54,6 +54,7 @@ export function setupIde(o){
     try{const p=o.getProject(),program=p.firmware?.mode==='hal'?compileHal(p.code,p.firmware.files,p.mcu?.family):compile(p.code);built=program;$('build-status').textContent='빌드 통과';$('build-output').textContent=`빌드 성공 · ${sourceFiles(p).length}개 파일 · ${Object.keys(program.functions).length}개 함수\n시뮬레이터 실행 프로그램을 준비했습니다. 전원·배선·HAL 설정은 실행 시 검사합니다.`;return program;}
     catch(e){built=null;$('build-status').textContent='빌드 실패';$('build-output').textContent='빌드 실패 — 아래 항목을 누르면 오류 위치로 이동합니다.';const m=/^(?:(.+?):)?(\d+)(?:행)?:/.exec(e.message),loc=e.location||{file:m?.[1]||'main.c',line:Number(m?.[2]||1)},d={...loc,message:e.message};editor.diagnostics([d]);const b=document.createElement('button');b.className='build-error';b.textContent=e.message;b.onclick=()=>select(loc.file,loc.line);$('build-errors').append(b);return null;}
   }
+  let stackFrame=0;
   function debugView(){
     if(native?.selected())return native.debugView();
     const r=o.getSession()?.runtime,paused=!!r?.debug.paused;editor.updateDebug(points(),paused?r.location:null);controls();
@@ -61,15 +62,16 @@ export function setupIde(o){
     for(const el of $('debug-breakpoints').querySelectorAll('button'))el.onclick=()=>{const [file,line]=el.dataset.breakpoint.split(':');toggleBreakpoint(file,Number(line));};
     if(!paused){lastPause='';$('debug-location').textContent=o.isRunning()?'실행 중 — 일시정지하면 변수와 호출 스택을 표시합니다.':'디버그 시작 또는 F9로 중단점을 설정하세요.';for(const id of ['debug-locals','debug-globals','debug-stack','watch-values'])$(id).replaceChildren();return;}
     // The firmware emulator's runtime exposes its own inspector (symbols, registers).
-    const state=typeof r.inspect==='function'?r.inspect():inspectRuntime(r),key=`${r.microTime}:${state.location.file}:${state.location.line}:${r.depth}`;
+    const pauseKey=`${r.microTime}:${r.location?.file}:${r.location?.line}:${r.depth}`;if(pauseKey!==lastPause)stackFrame=0;
+    const state=typeof r.inspect==='function'?r.inspect():inspectRuntime(r,stackFrame),key=pauseKey;
     $('debug-location').textContent=`일시정지 · ${state.location.file}:${state.location.line} · ${(r.microTime/1000).toFixed(3)} ms`;
     if(lastPause!==key){lastPause=key;select(state.location.file,state.location.line);showMonitor('debug');}
     const table=rows=>rows.map(row=>`<tr><td title="${esc(row.type)}">${esc(row.name)}</td><td>${esc(row.value)}</td></tr>`).join('')||'<tr><td>없음</td></tr>';
     $('debug-locals').innerHTML=table(state.locals);$('debug-globals').innerHTML=table(state.globals);
     if(state.registers){$('native-debug-details').hidden=false;$('native-registers').innerHTML=state.registers.map(x=>`<tr><td>${esc(x.name)}</td><td>${esc(x.value)}</td></tr>`).join('');}
-    $('debug-stack').innerHTML=state.frames.map(f=>`<button class="debug-frame" data-stack-file="${esc(f.loc?.file||'main.c')}" data-line="${f.loc?.line||1}">${esc(f.name)}() · ${esc(f.loc?.file||'main.c')}:${f.loc?.line||1}</button>`).join('');
-    for(const el of $('debug-stack').querySelectorAll('button'))el.onclick=()=>select(el.dataset.stackFile,Number(el.dataset.line));
-    $('watch-values').innerHTML=watches().map((expression,index)=>{let value;try{value=typeof r.evaluate==='function'?r.evaluate(expression):watchValue(r,expression);}catch(e){value=e.message;}return `<div class="watch-row"><button title="감시식 제거" data-remove-watch="${index}">${esc(expression)}</button><div>${esc(value)}</div></div>`;}).join('');
+    $('debug-stack').innerHTML=state.frames.map((f,i)=>`<button class="debug-frame${i===stackFrame?' active':''}" data-stack-index="${i}" data-stack-file="${esc(f.loc?.file||'main.c')}" data-line="${f.loc?.line||1}">${esc(f.name)}() · ${esc(f.loc?.file||'main.c')}:${f.loc?.line||1}</button>`).join('');
+    for(const el of $('debug-stack').querySelectorAll('button'))el.onclick=()=>{stackFrame=Number(el.dataset.stackIndex);select(el.dataset.stackFile,Number(el.dataset.line));debugView();};
+    $('watch-values').innerHTML=watches().map((expression,index)=>{let value;try{value=typeof r.memory==='function'?r.evaluate(expression):watchValue(r,expression);}catch(e){value=e.message;}return `<div class="watch-row"><button title="감시식 제거" data-remove-watch="${index}">${esc(expression)}</button><div>${esc(value)}</div></div>`;}).join('');
     for(const el of document.querySelectorAll('[data-remove-watch]'))el.onclick=()=>{o.checkpoint();settings().watches.splice(Number(el.dataset.removeWatch),1);o.saveLocal();debugView();};
   }
   $('watch-form').onsubmit=e=>{e.preventDefault();const text=$('watch-expression').value.trim();if(!text||watches().includes(text)||watches().length>=20)return;o.checkpoint();settings().watches.push(text);$('watch-expression').value='';o.saveLocal();debugView();};
