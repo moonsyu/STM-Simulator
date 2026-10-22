@@ -1,11 +1,15 @@
 // Jumper wire ends: one wire per hole, pin or part terminal (as on a real breadboard), and moving an existing end.
 import {endpoints} from './pins.js';
 import {occupiedHoles} from './placement.js';
+import {attachments} from './components.js';
 
 /** Why `id` cannot take a new wire end (null when it can). `ignoreWire` is the wire being moved. */
 export function endpointBlocked(project,id,{ignoreWire}={}){
   if(project.wires.some(w=>w.id!==ignoreWire&&(w.from===id||w.to===id)))return '이미 배선이 연결된 칸입니다. 한 칸에는 점퍼선 하나만 꽂을 수 있습니다. 빵판의 같은 줄 다른 구멍을 사용하세요.';
   if(occupiedHoles(project.components).has(id))return '이미 부품 다리가 꽂힌 구멍입니다. 빵판의 같은 줄 다른 구멍을 사용하세요.';
+  // A lead pushed into a hole fills that hole: wire to another hole of the same row instead.
+  const lead=/^part:([^:]+):(.+)$/.exec(id),part=lead&&project.components.find(c=>c.id===lead[1]);
+  if(part&&attachments(part)[lead[2]])return '부품 다리가 빵판 구멍에 꽂혀 있습니다. 같은 줄의 다른 구멍에 배선하세요.';
   return null;
 }
 
