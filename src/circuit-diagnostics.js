@@ -10,7 +10,9 @@ export function circuitDiagnostics(project,result=null,pressed={}){
   const linked=new Set();for(const w of project.wires){linked.add(uf.find(w.from));linked.add(uf.find(w.to));}
   for(const p of project.components)for(const key of terminalKeys(p)){
     const id=`part:${p.id}:${key}`,label=terminalLabel(p,key),root=uf.find(id),other=project.components.some(q=>q.id!==p.id&&terminalKeys(q).some(k=>uf.find(`part:${q.id}:${k}`)===root))||PINS.some(pin=>pin.signal!=='NC'&&uf.find(pin.id)===root);
-    if(['VCC','VM','VDD','VSS','GND','5V'].includes(label)&&!measured.fault){const v=measured.voltage(id),ground=['VSS','GND'].includes(label);if(v==null||(!ground&&v<.5)||ground&&Math.abs(v)>.3)add('power:'+id,`${p.name}: ${label} ${v==null?'전원 기준이 없습니다':ground?'공통 GND가 올바르지 않습니다':'공급 전압이 부족합니다'}. 전원까지 이어지는 배선을 확인하세요.`,{type:'endpoint',id});}
+    // L298 VSS is its 5 V logic supply (not ground); a motor HAT makes its own 5 V from VIN, so its 5V pin may stay open.
+    const l298=/l298/i.test(p.type)||/l298/i.test(p.catalogVariant||''),supply=['VCC','VM','VDD','VSS','GND','5V'].includes(label)&&!(label==='5V'&&/motor[-_]driver[-_]hat/.test(p.type+(p.catalogVariant||'')));
+    if(supply&&!measured.fault){const v=measured.voltage(id),ground=label==='GND'||label==='VSS'&&!l298;if(v==null||(!ground&&v<.5)||ground&&Math.abs(v)>.3)add('power:'+id,`${p.name}: ${label} ${v==null?'전원 기준이 없습니다':ground?'공통 GND가 올바르지 않습니다':'공급 전압이 부족합니다'}. 전원까지 이어지는 배선을 확인하세요.`,{type:'endpoint',id});}
     if(['SDA','SCL','SCK','MOSI','MISO','TX','RX','PWM','TRIG','ECHO','ENA','ENB','IN1','IN2','IN3','IN4'].includes(label)&&!other&&!linked.has(root))add('open:'+id,`${p.name}: ${label} 신호 핀이 연결되지 않았습니다.`,{type:'endpoint',id});
   }
   for(const p of project.components.filter(p=>p.type==='l298n')){
