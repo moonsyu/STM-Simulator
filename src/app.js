@@ -610,6 +610,8 @@ document.addEventListener('ide-find',e=>{layout.reveal('code');editorSearch.open
 ide=setupIde({buildFirmware:()=>ensureFirmware(true).catch(error=>log(error.message,'error')),getProject:()=>project,getSource:()=>sourceFile,getSession:()=>runtime?session:null,isRunning:running,isSimulationRunning:()=>status==='running'||status==='paused',refresh,checkpoint,saveLocal:autosave,layout,log,feedback,requestReplace,replaceProject,debugCommand,
  selectSource:name=>{if(name!=='main.c'&&!project.firmware?.files.some(f=>f.name===name))return;sourceFile=name;syncEditor();},
  applySources:(p,file)=>{checkpoint();project=validateProject(p);sourceFile=file;syncEditor();changed();ide.invalidate();}});
+// Button titles show the current shortcuts as soon as a binding changes.
+layout.onBindings(()=>{$('debug-start').title=withKey('시작 위치에서 디버깅','run.debug');refresh();ide.controls();});
 setupIdeSettings({editor:ide.editor,layout,open:()=>tab('settings')});
 deviceDocs=setupDeviceDocs({getProject:()=>project,getSelection:()=>selection,isRunning:running,open:()=>tab('docs'),showSource:file=>{sourceFile=file;syncEditor();tab('code');},apply:(target,options)=>{
  if(running())throw new Error('실행을 정지한 뒤 적용하세요.');
