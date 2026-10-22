@@ -129,7 +129,7 @@ class NativeIde extends EventEmitter{
   async openTerminal(cwd){if(this.terminal)return;const command=path.join(process.env.SystemRoot||'C:/Windows','System32/cmd.exe');const directory=cwd||this.directory;
     // Switch the code page before cmd prints its first prompt so Korean paths are not garbled.
     const child=this.terminal=launch(command,['/D','/Q','/K','chcp 65001>nul'],{cwd:directory});this.terminalDirectory=directory;for(const stream of [child.stdout,child.stderr]){stream.setEncoding('utf8');stream.on('data',text=>this.send('terminal-output',{text}));}child.once('error',error=>this.send('terminal-output',{text:error.message}));child.once('close',()=>{if(this.terminal===child){this.terminal=null;this.send('terminal-state',{state:'closed'});}});this.send('terminal-state',{state:'running',cwd:directory});}
-  terminalInput(text){if(!this.terminal)throw new Error('터미널을 먼저 시작하세요.');if(typeof text!=='string'||text.length>8192)throw new Error('명령이 너무 깁니다.');this.terminal.stdin.write(text+'\r\n');}
+  terminalInput(text){if(!this.terminal)throw new Error('터미널이 시작되지 않았습니다. Windows 명령은 터미널을 시작한 뒤 입력하고, 실행 중인 시뮬레이터·보드의 UART로 보낼 문자는 직렬 모니터 탭에 입력하세요.');if(typeof text!=='string'||text.length>8192)throw new Error('명령이 너무 깁니다.');this.terminal.stdin.write(text+'\r\n');}
   async stop(){this.buildController?.abort();await this.gdb.stop();await this.stopServer();const child=this.runProcess;this.runProcess=null;await terminate(child);this.send('run-state',{state:'exited'});}
   async close(){await this.stop();await this.lsp.stop();await this.closeTerminal();}
   async closeTerminal(){const child=this.terminal;this.terminal=null;await terminate(child);if(!this.terminal)this.send('terminal-state',{state:'closed'});}
