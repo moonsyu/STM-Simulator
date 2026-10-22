@@ -116,7 +116,7 @@ export function setupEditorSearch({applyEdit, maxLength}) {
     const inside = $('code-panel').contains(event.target), findKey = (event.ctrlKey || event.metaKey) && !event.altKey && !event.shiftKey && ['f','r','h'].includes(event.key.toLowerCase());
     // Outside the code panel (circuit, sidebars) Ctrl+F/R/H still open the code search, except in other text fields.
     if (!inside) {
-      if (findKey && !event.target.closest?.('input, textarea, select, [contenteditable="true"]')) {event.preventDefault();event.stopPropagation();document.dispatchEvent(new CustomEvent('ide-find', {detail:event.key.toLowerCase() !== 'f'}));}
+      if (findKey && !event.target.closest?.('input, textarea, select, [contenteditable="true"], .keybinding-capture')) {event.preventDefault();event.stopPropagation();document.dispatchEvent(new CustomEvent('ide-find', {detail:event.key.toLowerCase() !== 'f'}));}
       return;
     }
     if (findKey) {
