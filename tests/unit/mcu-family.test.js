@@ -69,3 +69,10 @@ test('F1 USART enable picks a whole AFIO remap group and keeps the one the user 
  const full=defaultMcu(F1);full.pins.PA9=pin('GPIO_Output');full.pins.PB7=pin('GPIO_Output');
  assert.throws(()=>setSerialEnabled(full,'USART1',true,f.serial,f.remaps.USART1),/TX\/RX 핀 묶음/);
 });
+
+test('F1 PD0/PD1 GPIO gets the PD01 remap; SWD pins PA13/PA14 cannot be reconfigured',async()=>{
+ const {generateHal}=await import('../../src/mcu-config.js');
+ const c=defaultMcu(F1);c.pins.PD0=pin('GPIO_Output');
+ assert.match(generateHal(c),/__HAL_RCC_AFIO_CLK_ENABLE\(\);[\s\S]*__HAL_AFIO_REMAP_PD01_ENABLE\(\);[\s\S]*GPIO_PIN_0/);
+ for(const family of [F1,'STM32F446RE']){const d=defaultMcu(family);d.pins.PA13=pin('GPIO_Output');assert.ok(configProblems(d).some(e=>/PA13: SWD/.test(e)),family);}
+});
