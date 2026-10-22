@@ -376,7 +376,7 @@ function setupPalette(layout,options){
  const score=(text,query)=>{if(!query)return 1;text=text.toLowerCase();query=query.toLowerCase();if(text.includes(query))return 100-text.indexOf(query);let t=0,s=0;for(const ch of query){const i=text.indexOf(ch,t);if(i<0)return 0;s+=i===t?3:1;t=i+1;}return s;};
  function compute(){
   const value=input.value;
-  if(value.startsWith('>')){const q=value.slice(1).trim();items=layout.commands().map(c=>({...c,score:score(c.group+' '+c.label,q)})).filter(c=>c.score>0).sort((a,b)=>b.score-a.score).slice(0,60);}
+  if(value.startsWith('>')){const q=value.slice(1).trim();items=layout.commands().map(c=>({...c,score:score(c.group+' '+c.label,q)})).filter(c=>c.score>0).sort((a,b)=>b.score-a.score);}
   else{const q=value.trim();const files=options.files?.()||[];items=files.map(name=>({id:'file:'+name,label:name,group:'파일로 이동',score:score(name,q),run:()=>options.openFile?.(name)})).filter(c=>c.score>0).sort((a,b)=>b.score-a.score);
    if(q.startsWith(':')){const line=Number(q.slice(1));items=Number.isInteger(line)&&line>0?[{id:'line',label:`${line}행으로 이동`,group:'현재 파일',run:()=>options.gotoLine?.(line)}]:[{id:'hint',label:q.length>1?'줄 번호는 1 이상의 정수로 입력하세요 (예: :25)':'이동할 줄 번호를 입력하세요 (예: :25)',group:'현재 파일',run:()=>{input.value=':';compute();}}];}
    if(!items.length&&q)items=[{id:'hint',label:'> 를 입력하면 명령을 검색합니다',group:'',run:()=>{input.value='>'+q;compute();}}];}
