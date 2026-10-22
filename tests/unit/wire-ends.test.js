@@ -93,3 +93,17 @@ test('Docs and paste keep one wire end per pin/hole and never wire a mounted lea
   const hat=validateProject(applyHalExample(blankProject(),'ref_motor_driver_hat'));let n=0;
   pasteSelection(hat,copySelection(hat,{type:'group',parts:hat.components.map(c=>c.id),wires:hat.wires.map(w=>w.id)}),prefix=>prefix+'copy'+(++n));legal(hat);
 });
+
+test('Docs reuses no part of another device\'s circuit and refuses F4 register examples on the F103',async()=>{
+  const {applyHalExample}=await import('../../src/hal-examples.js'),{blankProject,validateProject}=await import('../../src/project.js'),{applyDeviceExample,removeDeviceExample}=await import('../../src/device-assistance.js'),{attachments}=await import('../../src/components.js');
+  for(const [example,type] of [['rgb','led'],['button','button'],['pwm','ref_hcsr04_4']]){
+    const p=validateProject(applyHalExample(blankProject(),example)),before=JSON.stringify(p.components.map(c=>[c.id,attachments(c)]));
+    p.components.push({id:'extra',type,name:'X',x:300,y:640,rotation:0,...(type==='led'?{color:'red'}:{})});
+    const {project,report}=applyDeviceExample(validateProject(p),{type:'part',id:'extra'},{mode:'hal',api:'all'});
+    assert.equal(report.reused,0,example);
+    const removed=removeDeviceExample(project,{type:'part',id:'extra'},{circuit:true}).project;
+    assert.equal(JSON.stringify(removed.components.filter(c=>c.id!=='extra'&&JSON.parse(before).some(([id])=>id===c.id)).map(c=>[c.id,attachments(c)])),before,example+': the example circuit is untouched');
+  }
+  const f1=validateProject(applyHalExample({...blankProject('STM32F103RB'),boardId:'nucleo-f103rb'},'blink'));
+  assert.throws(()=>applyDeviceExample(f1,{type:'part',id:'led1'},{mode:'baremetal',api:'all'}),/NUCLEO-F446RE/);
+});
