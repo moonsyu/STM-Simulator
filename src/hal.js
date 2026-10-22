@@ -203,6 +203,8 @@ export class HalAdapter {
     if(p.function==='GPIO_EXTI'&&pin[1]!=='A'&&!this.afio)throw new Error(`${pin}: EXTI를 포트 ${pin[1]}에 연결하려면 __HAL_RCC_AFIO_CLK_ENABLE()가 필요합니다.`);
   }
   call(name,args,r){
+    // UNUSED(x) (stm32*xx_hal_def.h) only silences a compiler warning.
+    if(name==='UNUSED')return 0;
     const [a,b,c,d,e,f,g]=args;this.runtime=r;if(this.f1){const out=this.callF1(name,args,r);if(out!==undefined)return out;}const catalogResult=this.catalog.call(name,args,r);if(catalogResult!==undefined)return catalogResult;
     for(const ext of this.extensions){const out=ext.call?.(name,args,r);if(out!==undefined)return out;}
     if(name==='HAL_Init'){this.nvicModel.setGrouping(3);this.nvicModel.setPriority(SYSTICK,15,0);this.callback(r,'HAL_MspInit');return 0;}

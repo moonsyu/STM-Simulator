@@ -69,7 +69,7 @@ export function generateMain(config,{minimal=false}={}){
   if(f1&&config.peripherals.ADC1?.enabled){const div=[2,4,6,8].find(n=>config.timerClockHz/n<=14000000);lines.push('  RCC_PeriphCLKInitTypeDef periph = {0};','  periph.PeriphClockSelection = RCC_PERIPHCLK_ADC;',`  periph.AdcClockSelection = RCC_ADCPCLK2_DIV${div};`,'  if (HAL_RCCEx_PeriphCLKConfig(&periph) != HAL_OK) Error_Handler();');}
   lines.push('}');
   if(gpioInit){
-  lines.push('', 'static void MX_GPIO_Init(void) {',...(!minimal||pins.length?['  GPIO_InitTypeDef GPIO_InitStruct = {0};']:[]));
+  lines.push('', 'static void MX_GPIO_Init(void) {',...(pins.length?['  GPIO_InitTypeDef GPIO_InitStruct = {0};']:[]));
   for(const port of new Set(pins.map(([pin])=>pin[1])))lines.push(`  __HAL_RCC_GPIO${port}_CLK_ENABLE();`);
   if(f1){
     // AFIO routes EXTI lines and remaps; PA15/PB3/PB4 are JTAG pins until JTAG is released (SWD stays on).
@@ -127,10 +127,10 @@ export function generateMain(config,{minimal=false}={}){
     for(const [request,d]of dma)if(dmaOwner(request)===id){const h=dmaHandle(request);lines.push(...dmaLines(h,request,d,f1),`  __HAL_LINKDMA(&${name}, ${dmaLink(request)}, ${h});`);}
     lines.push('}');
   }
-  if(!minimal&&pins.some(([,p])=>p.function==='GPIO_EXTI'))lines.push('','void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {','  /* 핀 번호에 따라 인터럽트 처리를 작성하세요. */','}');
-  if(!minimal&&serials.length)lines.push('','void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart) {','  /* HAL_UART_Receive_IT() 수신 완료 */','}');
-  if(!minimal&&timers.length)lines.push('','void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {','  /* 타이머 주기 인터럽트 */','}');
-  if(!minimal&&timers.some(([,p])=>p.mode==='capture'))lines.push('','void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim) {','  /* Read HAL_TIM_ReadCapturedValue(htim, TIM_CHANNEL_1). */','}');
+  if(!minimal&&pins.some(([,p])=>p.function==='GPIO_EXTI'))lines.push('','void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {','  UNUSED(GPIO_Pin);','  /* 핀 번호에 따라 인터럽트 처리를 작성하세요. */','}');
+  if(!minimal&&serials.length)lines.push('','void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart) {','  UNUSED(huart);','  /* HAL_UART_Receive_IT() 수신 완료 */','}');
+  if(!minimal&&timers.length)lines.push('','void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {','  UNUSED(htim);','  /* 타이머 주기 인터럽트 */','}');
+  if(!minimal&&timers.some(([,p])=>p.mode==='capture'))lines.push('','void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim) {','  UNUSED(htim);','  /* Read HAL_TIM_ReadCapturedValue(htim, TIM_CHANNEL_1). */','}');
   if(!minimal)lines.push('','int __io_putchar(int ch) {','  ITM_SendChar(ch);','  return ch;','}');
   lines.push('','void Error_Handler(void) {','  __disable_irq();','  while (1) { }','}');
   return lines.join('\n')+'\n';
