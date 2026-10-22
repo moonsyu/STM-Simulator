@@ -15,10 +15,19 @@ export function eventKey(event){
  if(event.code==='Backquote')name='`';else if(event.code==='Comma')name=',';else if(/^Key[A-Z]$/.test(event.code))name=event.code.slice(3);else if(/^Digit\d$/.test(event.code))name=event.code.slice(5);
  return [(event.ctrlKey||event.metaKey)&&'Ctrl',event.altKey&&'Alt',event.shiftKey&&'Shift',name].filter(Boolean).join('+');
 }
-export function validBinding(text){return typeof text==='string'&&text.length<=40&&/^((Ctrl\+)?(Alt\+)?(Shift\+)?[^\s+]+|[^ ]+ [^ ]+)$/.test(text);}
+export function validBinding(text){return typeof text==='string'&&text.length<=40&&/^((Ctrl\+)?(Alt\+)?(Shift\+)?([^\s+]+|\+)|[^ ]+ [^ ]+)$/.test(text);}
+// Keys the app keeps for itself (editor, circuit and the fixed commands); a binding may not take them.
+export const FIXED_KEYS={F9:'중단점',F1:'명령 팔레트',F3:'다음 찾기','Ctrl+S':'저장','Ctrl+Z':'되돌리기','Ctrl+Y':'다시 실행','Ctrl+Shift+Z':'다시 실행','Ctrl+F':'찾기','Ctrl+R':'바꾸기','Ctrl+H':'바꾸기','Ctrl+A':'모두 선택','Ctrl+C':'복사','Ctrl+V':'붙여넣기','Ctrl+X':'잘라내기','Ctrl+D':'복제'};
+// Why a key cannot be bound ('' when it can): a plain or Shift-only key would swallow typing in every text field.
+export function bindingProblem(text){
+ const first=String(text||'').split(' ')[0];if(!first)return '';
+ if(!/^(Ctrl|Alt)\+/.test(first)&&!/^(Shift\+)?F\d{1,2}$/.test(first))return `${text}: 글자 입력과 겹칩니다. Ctrl·Alt 조합이나 F 키를 쓰세요.`;
+ if(FIXED_KEYS[first])return `${first}는 ${FIXED_KEYS[first]}에 쓰는 고정 키입니다.`;
+ return '';
+}
 export function loadKeybindings(storage=globalThis.localStorage){
  const out={...DEFAULT_KEYBINDINGS};
- try{const saved=JSON.parse(storage?.getItem(KEYBINDINGS_KEY)||'{}');for(const [id,key] of Object.entries(saved))if(id in DEFAULT_KEYBINDINGS&&(key===''||validBinding(key)))out[id]=key;}catch{}
+ try{const saved=JSON.parse(storage?.getItem(KEYBINDINGS_KEY)||'{}');for(const [id,key] of Object.entries(saved))if(id in DEFAULT_KEYBINDINGS&&(key===''||validBinding(key)&&!bindingProblem(key)))out[id]=key;}catch{}
  return out;
 }
 export function saveKeybindings(bindings,storage=globalThis.localStorage){

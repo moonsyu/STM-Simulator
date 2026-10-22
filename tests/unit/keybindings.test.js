@@ -45,3 +45,11 @@ test('conflicts and chord matching',()=>{
  assert.deepEqual(match(ev('s',{ctrl:true})),{id:'view.keybindings'});
  assert.equal(match(ev('F5',{code:'F5'})),null);
 });
+
+test('bindings refuse plain letters and fixed keys; a "+" key binding survives a reload',async()=>{
+  const {bindingProblem}=await import('../../src/keybindings.js');
+  assert.match(bindingProblem('E'),/글자 입력/);assert.match(bindingProblem('Shift+E'),/글자 입력/);assert.match(bindingProblem('F9'),/중단점/);assert.match(bindingProblem('Ctrl+S'),/저장/);
+  assert.equal(bindingProblem('Ctrl+F9'),'');assert.equal(bindingProblem('Ctrl+K E'),'');for(const key of Object.values(DEFAULT_KEYBINDINGS))assert.equal(bindingProblem(key),'',key);
+  const s=store();s.setItem(KEYBINDINGS_KEY,JSON.stringify({'view.togglePanel':'Ctrl+Shift++','view.problems':'E'}));const b=loadKeybindings(s);
+  assert.equal(b['view.togglePanel'],'Ctrl+Shift++');assert.equal(b['view.problems'],DEFAULT_KEYBINDINGS['view.problems']);
+});

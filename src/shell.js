@@ -1,7 +1,7 @@
 // VS Code style workbench shell: activity bar, side bar views, editor groups,
 // bottom panel, secondary side bar, status bar, menus and command palette.
 // Existing controls keep their IDs and listeners; the shell only relocates them.
-import {loadKeybindings,saveKeybindings,createMatcher,eventKey,conflicts,DEFAULT_KEYBINDINGS,setCurrentKeybindings} from './keybindings.js';
+import {loadKeybindings,saveKeybindings,createMatcher,eventKey,conflicts,bindingProblem,DEFAULT_KEYBINDINGS,setCurrentKeybindings} from './keybindings.js';
 const $=id=>document.getElementById(id);
 const KEY='stm32lab.shellLayout.v1';
 const ICON={
@@ -464,7 +464,7 @@ function setupKeybindingsView(layout){
   e.preventDefault();e.stopPropagation();
   if(!e.ctrlKey&&!e.altKey&&!e.shiftKey){
    if(e.key==='Escape')return stop();
-   if(e.key==='Enter'){if(captured)layout.setBinding(editing,captured);return stop();}
+   if(e.key==='Enter'){const problem=bindingProblem(captured);if(problem){captured='';const btn=list.querySelector('.keybinding-capture');if(btn)btn.textContent=problem;return;}if(captured)layout.setBinding(editing,captured);return stop();}
    if(e.key==='Backspace'||e.key==='Delete'){layout.setBinding(editing,'');return stop();}
   }
   const key=eventKey(e);if(!key)return;
