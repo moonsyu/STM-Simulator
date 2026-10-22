@@ -1,5 +1,9 @@
 # 검증 기록
 
+## 0.34.4 직렬 모니터 안내 · 고급 예제 printf — 공개 배포 검증 완료
+
+2026-10-22. 제품 커밋 `eb33829f862513d6faf952be470fb31d30e440bf` · [Windows CI 39706596260](https://github.com/moonsyu/STM-Simulator/actions/runs/39706596260) 성공 · [Release v0.34.4](https://github.com/moonsyu/STM-Simulator/releases/tag/v0.34.4). `npm test` 712개 중 709 통과·1 건너뜀(실패 2개는 로컬 심볼릭 링크 권한), E2E 30개 중 28 통과·2 건너뜀, 실제 ARM 빌드·에뮬레이터 부분 집합 15/15(두 보드), `npm audit` 0건. latest=v0.34.4, 태그·BUILD-INFO 커밋 일치, 5자산. EXE SHA-256 `dc37abea778a56b07f542cf1fc4db17a893bbf90378646776f15591546217b73`(102,868,722 B, MZ)이 SHA256.txt·update-manifest·ZIP 안 EXE와 일치. ZIP SHA-256 `dae92300f3119a830e43266ad7d5c2c2c3ae4299c8c76aac11cf74435bc69879`.
+
 ## 0.34.3 부품 다리와 점퍼선 끝은 다른 구멍 — 공개 배포 검증 완료
 
 2026-10-22. 제품 커밋 `297cca43e9a277e0d3a09a9b76ce8cb4100c1d76` · [Windows CI 39701839063](https://github.com/moonsyu/STM-Simulator/actions/runs/39701839063) 성공 · [Release v0.34.3](https://github.com/moonsyu/STM-Simulator/releases/tag/v0.34.3). `npm test` 712개 중 709 통과·1 건너뜀(실패 2개는 로컬 심볼릭 링크 권한), E2E 29개 중 27 통과·2 건너뜀, `npm audit` 0건. latest=v0.34.3, 태그·BUILD-INFO 커밋 일치, 5자산. EXE SHA-256 `b111cce0bfeb3235e27238291f18d91c66d38e5a81e6f0df1341e7959651ff39`(102,869,716 B, MZ)이 SHA256.txt·update-manifest·ZIP 안 EXE와 일치. ZIP SHA-256 `98a49cfbeca7ab97630a24ee43db99d3175581795d81293554104a65ee0651d1`.
