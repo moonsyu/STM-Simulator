@@ -342,7 +342,7 @@ describe('native build helpers',()=>{
     const p=blankProject();p.mcu.pins.PA5={function:'GPIO_Output',pull:'NOPULL',edge:'FALLING',label:'LD2',initial:0};p.mcu.pins.PC13={function:'GPIO_EXTI',pull:'NOPULL',edge:'FALLING',label:'',initial:0};
     p.mcu.nvic.EXTI15_10_IRQn={enabled:true,priority:0};p.mcu.peripherals.USART2={enabled:true,baud:115200};p.mcu.nvic.USART2_IRQn={enabled:true,priority:1};
     const plan=await nativeBuild.prepareBuild({project:p,tools:{armGcc:gcc,cube},root:path.join(dir,'build')});
-    const mainH=await readText(path.join(plan.directory,'main.h'));assert.match(mainH,/#define LD2_Pin GPIO_PIN_5/);assert.match(mainH,/#define LD2_GPIO_Port GPIOA/);
+    assert.match(await readText(path.join(plan.directory,'main.h')),/void Error_Handler/);assert.ok(plan.flags.includes('-DLD2_Pin=GPIO_PIN_5')&&plan.flags.includes('-DLD2_GPIO_Port=GPIOA'),'labels reach every source, also with a user main.h');
     const env=await readText(path.join(plan.directory,'__stm_environment.c'));
     assert.match(env,/void EXTI15_10_IRQHandler\(void\) \{ HAL_GPIO_EXTI_IRQHandler\(GPIO_PIN_13\); \}/);assert.match(env,/void USART2_IRQHandler\(void\) \{ HAL_UART_IRQHandler\(&huart2\); \}/);
     assert.match(await readText(path.join(plan.directory,'stm32f446re.ld')),/FLASH \(rx\) : ORIGIN = 0x08000000, LENGTH = 512K/);
