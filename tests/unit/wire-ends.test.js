@@ -53,3 +53,28 @@ test('a part is never mounted with a lead in a hole that holds a jumper wire end
   const mount=findMount(led,p.components,15,p.surfaces,wires);
   assert.ok(!mount||!Object.values(mount.attachments).includes(holes[0]),'lead and wire share a hole');
 });
+
+test('pasting a copy never stacks a second wire on a used pin and keeps part names unique',async()=>{
+  const {copySelection,pasteSelection}=await import('../../src/circuit-edit.js');
+  const p=example(),w=p.wires[0];let n=0;const uid=prefix=>prefix+'x'+(++n);
+  const clip=copySelection(p,{type:'wire',id:w.id});
+  const result=pasteSelection(p,clip,uid);
+  assert.equal(result.skipped,1);assert.equal(p.wires.filter(x=>x.from===w.from||x.to===w.from).length,1);
+  const led=p.components.find(c=>c.id==='led1'),parts={type:'part',id:'led1'};
+  pasteSelection(p,copySelection(p,parts),uid);pasteSelection(p,copySelection(p,parts),uid);
+  const names=p.components.map(c=>c.name);assert.equal(new Set(names).size,names.length,names.join(','));
+  assert.ok(led);
+});
+
+test('a wire cannot end on the lead of a part pushed into a breadboard hole',()=>{
+  const p=example(),led=p.components.find(c=>c.id==='led1'),key=Object.keys(attachments(led))[0];
+  assert.match(endpointBlocked(p,`part:led1:${key}`),/부품 다리가 빵판 구멍에 꽂혀/);
+});
+
+test('moving a selection re-seats parts that land on free holes',async()=>{
+  const {moveSelection,mountSelection}=await import('../../src/circuit-edit.js');
+  const p=example(),led=p.components.find(c=>c.id==='led1'),before=Object.values(attachments(led)).sort();
+  const pitch=Math.abs(endpointInfo('bb:a:2',p.components,p.surfaces).y-endpointInfo('bb:a:1',p.components,p.surfaces).y)||14;
+  moveSelection(p,{type:'part',id:'led1'},0,pitch*0);assert.equal(Object.keys(attachments(led)).length,0,'moving unplugs');
+  mountSelection(p,{type:'part',id:'led1'});assert.deepEqual(Object.values(attachments(led)).sort(),before,'dropping on the same holes re-seats it');
+});

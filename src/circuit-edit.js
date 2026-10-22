@@ -2,6 +2,7 @@ import {topology} from './engine.js';
 import {PINS,circuitHoles,endpointInfo,breadboardPrefix,endpoints as circuitEndpoints} from './pins.js';
 import {terminalKeys,attachments,assignAttachments} from './components.js';
 import {moveBreadboard} from './breadboards.js';
+import {findMount,applyMount,occupiedHoles} from './placement.js';
 
 export const selectedIds=(selection,type)=>selection?.type==='group'?selection[type==='part'?'parts':'wires']:selection?.type===type?[selection.id]:[];
 export const isSelected=(selection,type,id)=>selectedIds(selection,type).includes(id);
@@ -49,15 +50,23 @@ export function copySelection(project,selection){
   for(const terminals of groups.values()){const from=terminals[0];for(const to of terminals.slice(1))if(internal.find(from)!==internal.find(to)){wires.push({id:'copy-net-'+wires.length,from,to,color:'#23a68a'});internal.join(from,to);}}
   return {components,wires};
 }
+const uniqueName=(name,taken)=>{if(!taken.has(name))return name;let n=2;while(taken.has(`${name} ${n}`))n++;return `${name} ${n}`;};
 export function pasteSelection(project,clip,uid,offset=28){
   if(project.components.length+clip.components.length>100||project.wires.length+clip.wires.length>500)throw new Error('부품 100개, 배선 500개 한도를 넘습니다.');
   if(project.components.filter(p=>p.type==='breadboard').length+clip.components.filter(p=>p.type==='breadboard').length>8)throw new Error('추가 빵판은 8개까지 지원합니다.');
-  const ids=new Map(clip.components.map(p=>[p.id,uid('p')]));
+  const ids=new Map(clip.components.map(p=>[p.id,uid('p')])),taken=new Set(project.components.map(p=>p.name));
   const remap=id=>{if(id.startsWith('part:')){const [,part,key]=id.split(':');return ids.has(part)?`part:${ids.get(part)}:${key}`:id;}for(const p of clip.components)if(p.type==='breadboard'&&id.startsWith(breadboardPrefix(p.id)))return breadboardPrefix(ids.get(p.id))+id.slice(breadboardPrefix(p.id).length);return id;};
-  const components=clip.components.map(p=>{const q=structuredClone(p);q.id=ids.get(p.id);q.name=p.name.slice(0,77)+' 복사';q.x+=offset;q.y+=offset;if(!Number.isFinite(q.x)||!Number.isFinite(q.y))throw new Error('복사할 위치가 올바르지 않습니다.');assignAttachments(q,Object.fromEntries(Object.entries(attachments(q)).filter(([,id])=>remap(id)!==id).map(([key,id])=>[key,remap(id)])));return q;});
+  const components=clip.components.map(p=>{const q=structuredClone(p);q.id=ids.get(p.id);q.name=uniqueName(p.name.slice(0,72)+' 복사',taken);taken.add(q.name);q.x+=offset;q.y+=offset;if(!Number.isFinite(q.x)||!Number.isFinite(q.y))throw new Error('복사할 위치가 올바르지 않습니다.');assignAttachments(q,Object.fromEntries(Object.entries(attachments(q)).filter(([,id])=>remap(id)!==id).map(([key,id])=>[key,remap(id)])));return q;});
   const endpoints=new Set(circuitEndpoints([...project.components,...components],project.surfaces).filter(Boolean).map(p=>p.id));for(const p of [...project.components,...components])for(const k of terminalKeys(p))endpoints.add(`part:${p.id}:${k}`);
-  const wires=clip.wires.map(w=>({...structuredClone(w),id:uid('w'),from:remap(w.from),to:remap(w.to),...(w.points?{points:w.points.map(p=>({x:p.x+offset,y:p.y+offset}))}:{})})).filter(w=>endpoints.has(w.from)&&endpoints.has(w.to));
-  project.components.push(...components);project.wires.push(...wires);return {type:'group',parts:components.map(p=>p.id),wires:wires.map(w=>w.id)};
+  const candidates=clip.wires.map(w=>({...structuredClone(w),id:uid('w'),from:remap(w.from),to:remap(w.to),...(w.points?{points:w.points.map(p=>({x:p.x+offset,y:p.y+offset}))}:{})})).filter(w=>endpoints.has(w.from)&&endpoints.has(w.to));
+  // One wire end or part lead per pin/hole: a pasted wire whose end is already taken (e.g. the original board pin) is left out.
+  const used=new Set(project.wires.flatMap(w=>[w.from,w.to])),leads=occupiedHoles([...project.components,...components]),wires=[];
+  for(const w of candidates){if([w.from,w.to].some(id=>used.has(id)||leads.has(id)))continue;used.add(w.from);used.add(w.to);wires.push(w);}
+  project.components.push(...components);project.wires.push(...wires);return {type:'group',parts:components.map(p=>p.id),wires:wires.map(w=>w.id),skipped:candidates.length-wires.length};
+}
+/** Re-seat parts that now sit over free breadboard holes (as dropping a single dragged part does). */
+export function mountSelection(project,selection){
+  for(const id of selectedIds(selection,'part')){const p=project.components.find(c=>c.id===id);if(p&&p.type!=='breadboard'&&!Object.keys(attachments(p)).length)applyMount(p,findMount(p,project.components,15,project.surfaces,project.wires));}
 }
 export function moveSelection(project,selection,dx,dy){
   const wanted=new Set(selectedIds(selection,'part')),moved=new Set();
