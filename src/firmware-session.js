@@ -23,6 +23,7 @@ import { openImage, listFiles, readFile as readCardFile, SD_DEFAULT_MB } from '.
 // Drop-in for SimulationSession from app.js's point of view.
 const STATIC_TYPES = new Set(['resistor', 'led', 'button', 'potentiometer', 'rgb', 'sevenseg', 'diode', 'ldr', 'ntc', 'slide', 'i2c', 'spi', 'uart', 'lcd', 'sht31', 'mpu6050', 'oled', 'tft', 'matrix', 'joystick', 'relay', 'temperature', 'buzzer', 'pir', 'catalog_i2c', 'catalog_spi', 'catalog_analog', 'catalog_switch', 'breadboard', 'catalog_can', 'catalog_i2s']);
 const WALL_BUDGET_MS = 28;
+const VECTOR_TABLE_BYTES = { STM32F446RE: 452, STM32F103RB: 268 }, BOARD_OF = { STM32F446RE: 'NUCLEO-F446RE', STM32F103RB: 'NUCLEO-F103RB' };
 const basename = f => String(f || '').split(/[\\/]/).pop();
 const hex = v => '0x' + (v >>> 0).toString(16).toUpperCase().padStart(8, '0');
 const reverse8 = b => { let r = 0; for (let i = 0; i < 8; i++) r |= ((b >> i) & 1) << (7 - i); return r; };
@@ -53,6 +54,11 @@ export class FirmwareSession {
     this.signals = this.signalsApi();
     this.machine.onItm = (port, byte) => this.itm(port, byte);
     this.elf = this.machine.loadElf(elf instanceof Uint8Array ? elf : new Uint8Array(elf));
+    // The vector table size tells the STM32 startup file the ELF was linked with; an ELF for the other board would
+    // fault at the first peripheral access with no hint, so say which board it is for.
+    const vectors = this.elf.sectionByName?.('.isr_vector')?.size, family = project.mcu?.family ?? 'STM32F446RE';
+    const owner = Object.entries(VECTOR_TABLE_BYTES).find(([, size]) => size === vectors)?.[0];
+    if (owner && owner !== family) throw new Error(`이 ELF는 ${BOARD_OF[owner]}(${owner})용입니다. 프로젝트 보드를 ${BOARD_OF[owner]}로 바꾸거나 ${BOARD_OF[family] ?? family}용으로 빌드한 ELF를 여세요.`);
     this.receivers = this.listeners();
     this.runtime = this.createRuntime(debug);
   }

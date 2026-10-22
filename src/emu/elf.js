@@ -106,6 +106,10 @@ class Reader {
 }
 
 export function parseElf(input) {
+  try { return parseElfChecked(input); }
+  catch (e) { if (e instanceof RangeError) throw new Error('ELF 파일이 손상되었거나 잘렸습니다. 다시 빌드하거나 원본 파일을 여세요.'); throw e; }
+}
+function parseElfChecked(input) {
   const bytes = toBytes(input);
   if (bytes.length < 52 || bytes[0] !== 0x7f || bytes[1] !== 0x45 || bytes[2] !== 0x4c || bytes[3] !== 0x46) {
     throw new Error('ELF 파일이 아닙니다');
@@ -120,6 +124,10 @@ export function parseElf(input) {
     type: u16(16), machine: u16(18), version: u32(20), entry: u32(24), phoff: u32(28), shoff: u32(32),
     flags: u32(36), ehsize: u16(40), phentsize: u16(42), phnum: u16(44), shentsize: u16(46), shnum: u16(48), shstrndx: u16(50),
   };
+  if (header.machine !== 40) throw new Error(`ARM(Cortex-M) ELF가 아닙니다 (e_machine ${header.machine}). STM32용 arm-none-eabi-gcc로 빌드한 ELF를 여세요.`);
+  if (header.phoff + header.phnum * header.phentsize > bytes.length || header.shoff + header.shnum * header.shentsize > bytes.length) {
+    throw new Error('ELF 파일이 손상되었거나 잘렸습니다. 다시 빌드하거나 원본 파일을 여세요.');
+  }
 
   const segments = [];
   for (let i = 0; i < header.phnum; i++) {
