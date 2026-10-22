@@ -1,4 +1,4 @@
-import {isTimer,timerMax} from './timer-config.js';
+import {isTimer,timerMax as f4TimerMax} from './timer-config.js';
 const integer=(n,min,max,label)=>{if(!Number.isInteger(n)||n<min||n>max)throw new Error(`${label}: ${min}~${max} 범위를 확인하세요.`);return n;};
 const wrap=(n,period)=>((n%period)+period)%period;
 const quadrature=[0,-1,1,0,1,0,0,-1,-1,0,0,1,0,1,-1,0];
@@ -6,10 +6,12 @@ const quadrature=[0,-1,1,0,1,0,0,-1,-1,0,0,1,0,1,-1,0];
 // One counter per peripheral; capture / PWM channels share that counter.
 export class HalTimers {
   constructor(hal){this.hal=hal;this.states=new Map();}
+  // Counter width of the project's MCU (all F1 timers are 16-bit; F4 TIM2/TIM5 are 32-bit).
+  max(id){return this.hal.family?.timerMax?this.hal.family.timerMax(id):f4TimerMax(id);}
   init(ptr,r,kind,encoder){
     const h=this.hal,{id,init}=h.handle(ptr,r,'TIM'),get=k=>h.field(init,k),p=h.config.peripherals[id];
     if(!isTimer(id)||get('CounterMode')||get('ClockDivision'))throw new Error(`${id}: 내부 클록, up counter, DIV1을 사용하세요.`);
-    integer(get('Prescaler'),0,65535,id+' Prescaler');integer(get('Period'),0,timerMax(id),id+' ARR');
+    integer(get('Prescaler'),0,65535,id+' Prescaler');integer(get('Period'),0,this.max(id),id+' ARR');
     if(get('Prescaler')!==p.prescaler||get('Period')!==p.period)throw new Error(`${id}: 소스와 Pinout의 Prescaler/Period가 다릅니다.`);
     if(this.states.get(id)?.active)throw new Error(id+': 타이머를 정지한 뒤 초기화하세요.');
     const s={id,ptr,init,kind,value:0,at:r.microTime,active:false,base:false,baseIT:false,generation:0,channels:new Map(),down:false};
@@ -71,10 +73,10 @@ export class HalTimers {
     if(name==='HAL_TIM_MspPostInit'||name==='HAL_TIM_IRQHandler')return 0;
     if(name==='__HAL_TIM_GET_COUNTER')return this.counter(s,r.microTime);
     if(name==='__HAL_TIM_IS_TIM_COUNTING_DOWN')return Number(s.down);
-    if(name==='__HAL_TIM_SET_COUNTER'){s.value=integer(b,0,timerMax(s.id),'TIM counter');s.at=r.microTime;this.schedule(s,r);return 0;}
+    if(name==='__HAL_TIM_SET_COUNTER'){s.value=integer(b,0,this.max(s.id),'TIM counter');s.at=r.microTime;this.schedule(s,r);return 0;}
     if(name==='__HAL_TIM_GET_AUTORELOAD')return this.period(s)-1;
     if(name==='__HAL_TIM_SET_AUTORELOAD'||name==='__HAL_TIM_SET_PRESCALER'){
-      this.freeze(s,r.microTime);const key=name.endsWith('AUTORELOAD')?'Period':'Prescaler';s.init.fields[key].value=integer(b,0,key==='Period'?timerMax(s.id):65535,key);if(this.period(s)>1)s.value%=this.period(s);this.schedule(s,r);for(const ch of s.channels.values())if(ch.kind==='PWM')this.pwm(s,ch,r);return 0;
+      this.freeze(s,r.microTime);const key=name.endsWith('AUTORELOAD')?'Period':'Prescaler';s.init.fields[key].value=integer(b,0,key==='Period'?this.max(s.id):65535,key);if(this.period(s)>1)s.value%=this.period(s);this.schedule(s,r);for(const ch of s.channels.values())if(ch.kind==='PWM')this.pwm(s,ch,r);return 0;
     }
     if(/^HAL_TIM_Base_(Start|Stop)(_IT)?$/.test(name)){
       if(s.kind==='Encoder')throw new Error(s.id+': 엔코더 Start/Stop을 사용하세요.');
@@ -84,7 +86,7 @@ export class HalTimers {
     if(name==='HAL_TIM_PWM_ConfigChannel'){
       if(s.kind==='Encoder')throw new Error('엔코더와 PWM은 같은 타이머를 공유할 수 없습니다.');
       integer(c/4,0,3,'TIM 채널');const cfg=r.get(r.pointerCell(b));if(h.field(cfg,'OCMode')!==96||h.field(cfg,'OCPolarity'))throw new Error('PWM1 active high만 지원합니다.');
-      s.channels.set(c,{kind:'PWM',pulse:integer(h.field(cfg,'Pulse'),0,timerMax(s.id),'PWM compare'),active:false,pin:h.pinFor(s.id+'_CH'+(c/4+1))});return 0;
+      s.channels.set(c,{kind:'PWM',pulse:integer(h.field(cfg,'Pulse'),0,this.max(s.id),'PWM compare'),active:false,pin:h.pinFor(s.id+'_CH'+(c/4+1))});return 0;
     }
     if(name==='HAL_TIM_IC_ConfigChannel'){
       if(s.kind==='Encoder')throw new Error('엔코더와 입력 캡처는 같은 타이머를 공유할 수 없습니다.');
@@ -97,7 +99,7 @@ export class HalTimers {
       if(name==='HAL_TIM_ReadCapturedValue')return ch.captured??ch.pulse;
       if(name==='__HAL_TIM_GET_COMPARE')return ch.pulse??ch.captured;
       if(name==='__HAL_TIM_SET_CAPTUREPOLARITY'){if(![0,2,10].includes(c)||ch.kind!=='IC')throw new Error('입력 캡처 polarity를 확인하세요.');ch.polarity=c;return 0;}
-      if(name==='__HAL_TIM_SET_COMPARE'){if(ch.kind!=='PWM')throw new Error('PWM 채널이 필요합니다.');ch.pulse=integer(c,0,timerMax(s.id),'PWM compare');}
+      if(name==='__HAL_TIM_SET_COMPARE'){if(ch.kind!=='PWM')throw new Error('PWM 채널이 필요합니다.');ch.pulse=integer(c,0,this.max(s.id),'PWM compare');}
       else {
         if(!name.includes('_'+ch.kind+'_'))throw new Error('타이머 채널 모드가 다릅니다.');
         if(ch.kind==='PWM'&&name.endsWith('_IT'))throw new Error('PWM 완료 인터럽트는 지원하지 않습니다.');
