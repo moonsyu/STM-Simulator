@@ -125,7 +125,8 @@ __attribute__((weak)) void *_sbrk(ptrdiff_t increment) {
     linkFlags=['-T'+path.join(directory,sdk.ld),'-nostartfiles','--specs=nano.specs','--specs=nosys.specs','-u','_printf_float'];
   }
   const cpp=gcc.replace(/gcc(\.exe)?$/,(_,ext)=>'g++'+(ext||''));
-  const units=[...sources,...generated].map((file,index)=>{const isCpp=/\.(cpp|cc)$/.test(file),compiler=isCpp?cpp:gcc;return {directory,file,arguments:[compiler,...flags.filter(f=>!isCpp||f!=='-Werror=implicit-function-declaration'),isCpp?'-std=c++17':'-std=c11','-c',file,'-o',path.join(directory,`unit-${index}.o`)]};});
+  // ST SDK sources (outside the build folder) are not the user's code: their warnings would only fill the 빌드 panel.
+  const units=[...sources,...generated].map((file,index)=>{const isCpp=/\.(cpp|cc)$/.test(file),compiler=isCpp?cpp:gcc,sdk=!path.resolve(file).startsWith(path.resolve(directory));return {directory,file,arguments:[compiler,...flags.filter(f=>(!isCpp||f!=='-Werror=implicit-function-declaration')&&!(sdk&&['-Wall','-Wextra'].includes(f))),isCpp?'-std=c++17':'-std=c11','-c',file,'-o',path.join(directory,`unit-${index}.o`)]};});
   await fs.writeFile(path.join(directory,'compile_commands.json'),JSON.stringify(units,null,2));
   return {directory,units,gcc,linker:sources.some(f=>/\.(cpp|cc)$/.test(f))?cpp:gcc,flags,linkFlags,target,configuration,elf:path.join(directory,target==='arm'?'firmware.elf':'program.exe'),files:files.map(f=>f.name)};
 }
