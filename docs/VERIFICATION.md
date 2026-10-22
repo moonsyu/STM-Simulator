@@ -1,5 +1,9 @@
 # 검증 기록
 
+## 0.34.3 부품 다리와 점퍼선 끝은 다른 구멍 — 공개 배포 검증 완료
+
+2026-10-22. 제품 커밋 `297cca43e9a277e0d3a09a9b76ce8cb4100c1d76` · [Windows CI 39701839063](https://github.com/moonsyu/STM-Simulator/actions/runs/39701839063) 성공 · [Release v0.34.3](https://github.com/moonsyu/STM-Simulator/releases/tag/v0.34.3). `npm test` 712개 중 709 통과·1 건너뜀(실패 2개는 로컬 심볼릭 링크 권한), E2E 29개 중 27 통과·2 건너뜀, `npm audit` 0건. latest=v0.34.3, 태그·BUILD-INFO 커밋 일치, 5자산. EXE SHA-256 `b111cce0bfeb3235e27238291f18d91c66d38e5a81e6f0df1341e7959651ff39`(102,869,716 B, MZ)이 SHA256.txt·update-manifest·ZIP 안 EXE와 일치. ZIP SHA-256 `98a49cfbeca7ab97630a24ee43db99d3175581795d81293554104a65ee0651d1`.
+
 ## 0.34.2 부품 선택·이동 범위 · Electron 44.5.1 — 공개 배포 검증 완료
 
 2026-10-22. 제품 커밋 `c20534a12ae9de82c8cd0320e90d68d351aec453` · [Windows CI 39697056505](https://github.com/moonsyu/STM-Simulator/actions/runs/39697056505) 성공(첫 실행 39695698010은 npm audit의 새 Electron 권고로 실패, 태그·Release 없음) · [Release v0.34.2](https://github.com/moonsyu/STM-Simulator/releases/tag/v0.34.2).
