@@ -208,13 +208,13 @@ describe('updater: versions, URLs and release metadata',()=>{
 });
 
 describe('PortableUpdater (local fixtures, no network)',()=>{
-  async function setup(dir,{payload=exeBytes(),version='0.25.2',enabled=true,corrupt=false}={}){
+  async function setup(dir,{payload=exeBytes(),version='0.25.2',enabled=true,corrupt=false,now=Date.now}={}){
     const target=path.join(dir,'app','STM-Simulator.exe');await fs.mkdir(path.dirname(target));await fs.writeFile(target,exeBytes(16));
     const calls={read:[],download:0,apply:[]},rel=release('0.30.0',{size:payload.length});
     const read=async url=>{calls.read.push(url);if(url.endsWith('/latest'))return rel;return manifestFor(updater.releaseInfo(rel,version),payload);};
     const download=async(info,file,{onProgress})=>{calls.download++;const data=corrupt?Buffer.from(payload).fill(1,2):payload;await fs.writeFile(file,data);onProgress(data.length);};
     const apply=async job=>{calls.apply.push(job);};
-    const u=new updater.PortableUpdater({version,directory:path.join(dir,'updates'),target,enabled,read,download,apply});
+    const u=new updater.PortableUpdater({version,directory:path.join(dir,'updates'),target,enabled,read,download,apply,now});
     return {u,calls,target};
   }
   test('disabled (dev) builds never contact the server',()=>withTempDir(async dir=>{
@@ -230,6 +230,20 @@ describe('PortableUpdater (local fixtures, no network)',()=>{
     assert.equal(await u.install(),true);assert.equal(calls.apply.length,1);assert.equal(calls.apply[0].target,target);assert.equal(calls.apply[0].info.sha256,sha(exeBytes()));
     assert.deepEqual(states.slice(0,3),['checking','available','downloading']);
     assert.equal((await u.check()).phase,'installing','no re-check while installing');u.close();
+  },'stm-upd-'));
+  test('while the app is in use: focusing the window checks again once 10 minutes have passed',()=>withTempDir(async dir=>{
+    let clock=1_000_000;const {u,calls}=await setup(dir,{version:'0.30.0',now:()=>clock});await fs.mkdir(u.directory,{recursive:true});
+    assert.equal(u.wake(),true,'the first focus checks');await u.pending;assert.equal(calls.read.length,1);assert.equal(u.state.phase,'current');
+    clock+=9*60*1000;assert.equal(u.wake(),false,'not again within 10 minutes');
+    clock+=2*60*1000;assert.equal(u.wake(),true);await u.pending;assert.equal(calls.read.length,2);
+    await u.configure(false);clock+=60*60*1000;assert.equal(u.wake(),false,'off when automatic checks are off');
+    u.close();
+  },'stm-upd-'));
+  test('a failed background check keeps a found update; a manual check reports the error',()=>withTempDir(async dir=>{
+    const {u}=await setup(dir);await fs.mkdir(u.directory,{recursive:true});
+    assert.equal((await u.check()).phase,'available');u.read=async()=>{throw new Error('getaddrinfo ENOTFOUND');};
+    const s=await u.check(true);assert.equal(s.phase,'available');assert.match(s.message,/확인하지 못했습니다.*ENOTFOUND/);assert.equal(s.latestVersion,'0.30.0');
+    assert.equal((await u.check()).phase,'error');u.close();
   },'stm-upd-'));
   test('automatic check downloads in the background but does not install',()=>withTempDir(async dir=>{
     const {u,calls}=await setup(dir);await fs.mkdir(u.directory,{recursive:true});

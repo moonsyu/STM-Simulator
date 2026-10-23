@@ -104,9 +104,12 @@ async function launchHelper({directory,source,target,info,pid=process.pid}){
   }
   await fs.writeFile(cancel,'cancel').catch(()=>{});throw new Error('업데이트 도우미 준비 시간이 초과되었습니다. 앱은 종료하지 않았습니다.');
 }
+// While the app runs it looks again every 30 minutes, and when the window comes back to the front (or the PC wakes)
+// once 10 minutes have passed since the last look.
+const CHECK_INTERVAL=30*60*1000,WAKE_INTERVAL=10*60*1000;
 class PortableUpdater extends EventEmitter{
-  constructor({version,directory,target,enabled=false,read=readJson,download=downloadFile,apply=launchHelper}){
-    super();this.version=version;this.directory=directory;this.target=target;this.enabled=enabled;this.read=read;this.transfer=download;this.apply=apply;this.automatic=true;this.info=null;this.pending=null;this.timer=null;this.controller=null;this.closed=false;
+  constructor({version,directory,target,enabled=false,read=readJson,download=downloadFile,apply=launchHelper,now=Date.now}){
+    super();this.now=now;this.lastCheck=0;this.version=version;this.directory=directory;this.target=target;this.enabled=enabled;this.read=read;this.transfer=download;this.apply=apply;this.automatic=true;this.info=null;this.pending=null;this.timer=null;this.controller=null;this.closed=false;
     this.state={phase:enabled?'idle':'unsupported',currentVersion:version,automatic:true,message:enabled?'새 버전을 자동으로 확인합니다.':'자동 업데이트는 Windows 포터블 배포 EXE에서 사용할 수 있습니다.'};
   }
   snapshot(){return {...this.state,automatic:this.automatic};}
@@ -117,7 +120,12 @@ class PortableUpdater extends EventEmitter{
     try{const result=JSON.parse((await fs.readFile(path.join(this.directory,'last-result.json'),'utf8')).replace(/^\uFEFF/,''));if(result.ok===false)this.set('error',{message:'이전 업데이트를 적용하지 못했습니다. 파일 권한과 EXE 폴더의 백업 파일을 확인하세요.'});await fs.unlink(path.join(this.directory,'last-result.json'));}catch{}
     this.schedule(8000);return this.snapshot();
   }
-  schedule(delay=6*60*60*1000){clearTimeout(this.timer);if(this.closed||!this.enabled||!this.automatic)return;this.timer=setTimeout(()=>{void this.check(true).finally(()=>this.schedule());},delay);this.timer.unref?.();}
+  schedule(delay=CHECK_INTERVAL){clearTimeout(this.timer);if(this.closed||!this.enabled||!this.automatic)return;this.timer=setTimeout(()=>{void this.check(true).finally(()=>this.schedule());},delay);this.timer.unref?.();}
+  /** The window was focused or the PC resumed: check now if the last check is old enough. */
+  wake(){
+    if(this.closed||!this.enabled||!this.automatic||this.pending||this.now()-this.lastCheck<WAKE_INTERVAL)return false;
+    void this.check(true).finally(()=>this.schedule());return true;
+  }
   async configure(automatic){
     if(typeof automatic!=='boolean')throw new Error('업데이트 설정이 올바르지 않습니다.');
     await fs.writeFile(path.join(this.directory,'settings.json'),JSON.stringify({automatic}));this.automatic=automatic;this.schedule(1000);this.emit('state',this.snapshot());return this.snapshot();
@@ -129,7 +137,7 @@ class PortableUpdater extends EventEmitter{
     this.pending=this.doCheck(auto).finally(()=>{this.pending=null;});return this.pending;
   }
   async doCheck(auto){
-    this.controller=new AbortController();const signal=this.controller.signal;
+    this.controller=new AbortController();const signal=this.controller.signal,before=this.state;this.lastCheck=this.now();
     try{
       this.set('checking',{message:'GitHub에서 새 버전을 확인하고 있습니다.',progress:0});
       const info=releaseInfo(await this.read(LATEST,{signal}),this.version);
@@ -138,7 +146,12 @@ class PortableUpdater extends EventEmitter{
       this.set('available',{latestVersion:info.version,message:`새 버전 ${info.version}을 사용할 수 있습니다.`});
       if(auto&&this.automatic)return await this.doDownload(signal);
       return this.snapshot();
-    }catch(error){if(this.closed)return this.snapshot();return this.set('error',{message:error.message});}
+    }catch(error){
+      if(this.closed)return this.snapshot();
+      // A background check that fails (offline, rate limit) keeps what was already known; it tries again later.
+      if(auto&&['idle','current','available'].includes(before.phase))return this.set(before.phase,{message:`업데이트를 확인하지 못했습니다(${error.message}). 잠시 후 다시 확인합니다.`});
+      return this.set('error',{message:error.message});
+    }
   }
   download(){
     if(this.pending)return this.pending;

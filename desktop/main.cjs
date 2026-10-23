@@ -1,4 +1,4 @@
-const {app,BrowserWindow,ipcMain,dialog,shell,nativeTheme,Menu}=require('electron');
+const {app,BrowserWindow,ipcMain,dialog,shell,nativeTheme,Menu,powerMonitor}=require('electron');
 const fs=require('node:fs/promises');
 const path=require('node:path');
 // Keep the existing profile so renaming the app retains auto-saved circuits.
@@ -72,6 +72,8 @@ app.whenReady().then(()=>{
   // the renderer owns every shortcut (편집 → 단축키 설정), so remove it.
   Menu.setApplicationMenu(null);
   updaterReady=updater.init().catch(error=>updater.set('error',{message:'업데이트 설정을 읽지 못했습니다: '+error.message}));
+  // New releases are also noticed while the IDE is in use: when any of its windows comes to the front or the PC wakes.
+  app.on('browser-window-focus',()=>updater.wake());powerMonitor.on('resume',()=>updater.wake());
   win=new BrowserWindow({icon:path.join(__dirname,'icons/stm-simulator.ico'),width:1540,height:1020,minWidth:900,minHeight:560,show:process.env.CIRCUIT_LAB_SMOKE!=='1',backgroundColor:nativeTheme.shouldUseDarkColors?'#202020':'#f3f3f3',title:'STM Simulator',webPreferences:{preload:path.join(__dirname,'preload.cjs'),contextIsolation:true,nodeIntegration:false,sandbox:true}});
   win.setMenuBarVisibility(false);
   // Only the renderer's own panel windows (popout.js: a blank page named stm-unit-<panel>) may open; the panel DOM is moved into it.
