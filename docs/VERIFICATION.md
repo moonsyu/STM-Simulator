@@ -1,5 +1,15 @@
 # 검증 기록
 
+## 1.1.1 좁은 사이드바 글자 · HAL 예제 배치 미리보기 — 공개 배포 검증 완료
+
+2026-10-23. 제품 커밋 `5422803c605c5b8465fb051e06f016a02656db29` · [Windows CI 39917526408](https://github.com/moonsyu/STM-Simulator/actions/runs/39917526408) 첫 실행 성공 · [Release v1.1.1](https://github.com/moonsyu/STM-Simulator/releases/tag/v1.1.1)
+
+| 검사 | 결과 |
+|---|---|
+| `npm test` (로컬) | 733 통과(실패 2개는 로컬 심볼릭 링크 권한, CI 통과) |
+| `npm run test:e2e` (로컬) | 30 통과, 2 건너뜀. 127개 HAL 예제 모두 마우스를 올리면 배치 미리보기 표시 |
+| 공개 자산 | latest=v1.1.1, 태그·BUILD-INFO 커밋 `5422803` 일치, 5자산. EXE SHA-256 `532698414a6ba62b0b9fc2ed982453f5a474b0f3fbf52e1f299641de58b28a24`(102,895,283 B)이 SHA256.txt·update-manifest·ZIP 안의 STM-Simulator.exe와 일치. ZIP SHA-256 `2502383a352f13af2891768205fbde088695f7656b40205ab531b6e068f8bffe` |
+
 ## 1.1.0 제목 표시줄 · 설정 창 · 패널 옮기기/분리 · 보드 선택 · 시작 테마 — 공개 배포 검증 완료
 
 2026-10-23. 제품 커밋 `feb9e6633862690c90c4f350a469a0fdc2255f8b` · [Windows CI 39884746789](https://github.com/moonsyu/STM-Simulator/actions/runs/39884746789) 첫 실행 성공 · [Release v1.1.0](https://github.com/moonsyu/STM-Simulator/releases/tag/v1.1.0)
