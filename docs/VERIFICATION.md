@@ -1,5 +1,16 @@
 # 검증 기록
 
+## 1.2.0 부품 바로 배치 · 데이터시트 크기와 이름 — 공개 배포 검증 완료
+
+2026-10-23. 제품 커밋 `53974187772511ba29fde4dbb63933720f935b5e` · [Windows CI 39922878249](https://github.com/moonsyu/STM-Simulator/actions/runs/39922878249) 성공 · [Release v1.2.0](https://github.com/moonsyu/STM-Simulator/releases/tag/v1.2.0). 첫 실행(`dd8cfc3`, CI 39921155730)은 패키지 검증이 삭제한 `src/resize-ui.js`를 찾다 실패했고, Release·태그는 만들어지지 않았다.
+
+| 검사 | 결과 |
+|---|---|
+| `npm test` (로컬) | 737 통과(실패 2개는 로컬 심볼릭 링크 권한, CI 통과). 새 `part-datasheets.test.js` 포함 |
+| `npm run test:e2e` (로컬) | 30 통과, 2 건너뜀 |
+| 예제 배선 | 127개 예제, 전체 길이 232,216(1.1.1 231,750), 교차 23, 겹침 0 |
+| 공개 자산 | latest=v1.2.0, 태그·BUILD-INFO 커밋 `5397418` 일치, 5자산. EXE SHA-256 `b7b9495289dd9b36c890ab5b75a7fe515d51bd20bf31abbfaaef9bbbf26000b1`(102,897,052 B, MZ)이 SHA256.txt·update-manifest·ZIP 안의 STM-Simulator.exe와 일치. ZIP SHA-256 `45ca8bf0766970ea83eb0cbefc5290613e246683f576a7af72a31a6ff2e344a8` |
+
 ## 1.1.1 좁은 사이드바 글자 · HAL 예제 배치 미리보기 — 공개 배포 검증 완료
 
 2026-10-23. 제품 커밋 `5422803c605c5b8465fb051e06f016a02656db29` · [Windows CI 39917526408](https://github.com/moonsyu/STM-Simulator/actions/runs/39917526408) 첫 실행 성공 · [Release v1.1.1](https://github.com/moonsyu/STM-Simulator/releases/tag/v1.1.1)
