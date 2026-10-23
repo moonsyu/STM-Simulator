@@ -1,6 +1,14 @@
 # STM Simulator — 개발 인계
 
-현재 버전: **1.1.1**. 정리일: **2026-10-23**. NUCLEO-F446RE 또는 NUCLEO-F103RB와 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+현재 버전: **1.2.0**. 정리일: **2026-10-23**. NUCLEO-F446RE 또는 NUCLEO-F103RB와 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+
+## 1.2.0 부품 바로 배치 · 데이터시트 크기와 이름
+
+- 부품 카드 클릭은 `app.js` `freeSpot()` 위치에 바로 `addPart`한다. 2핀 부품의 구멍 두 개 선택 모드(`TWO_PIN_TYPES` 분기)와 크기 조절(`resize-ui.js`, 조절점·Alt+0)은 삭제했다. `src/resize.js`는 테스트가 쓰므로 남겼다.
+- `src/part-datasheets.js` `PART_DATASHEETS[catalog id]`: model·manufacturer·name·size{w,h,d mm}·datasheet·confidence. 조사 결과를 합쳐 만든 파일이며 신뢰도 low의 크기는 넣지 않았다. `UNITS_PER_MM=14/2.54`.
+- 크기는 화면 전용이다. `model-geometry.js` `datasheetScale(referenceType)`·`displayModel(p,{datasheet})`이 `scaleX/scaleY/dx/dy`를 돌려주고 `modelTransform`·`modelPoint`로 그린다. 단자(`localTerminals`)는 바뀌지 않는다. 한쪽 핀 모듈은 핀 쪽 가장자리를 고정(dx/dy)한다. 기존 기본 부품(resistor, led…)은 `datasheetIdOf`로 같은 패키지의 데이터시트를 쓴다.
+- 예제 배치(`example-layout.js`)는 부품끼리·보드와의 겹침에 데이터시트 크기(`box`)를, 막히는 구멍·여유 구멍·배선 경로에 그림 크기 발자국(`foot`, `datasheet:false`)을 쓴다. 자기 다리가 놓인 구멍은 본체에 덮여도 된다. 예비 배치(`example-breadboard.js` `exampleBodyBounds`)는 발자국을 쓴다. 교차 허용: 4자리 7세그 11, L298N IC 2, L298P 3.
+- 이름: `catalogName(v)`(catalog-defs)가 데이터시트 이름을 `CATALOG_DEFS`·카탈로그 예제에 쓴다. 미리보기(`part-preview-ui.js`)는 `.part-preview-model`에 `datasheetLine(id)`(모델 · 제조사 · W×H×D mm)를 표시한다.
 
 ## 1.1.1 HAL 예제 배치 미리보기
 
