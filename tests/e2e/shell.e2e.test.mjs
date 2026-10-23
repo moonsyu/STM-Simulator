@@ -30,7 +30,7 @@ test('VS Code style workbench regions, views, toggles and persistence',{timeout:
   await win.keyboard.type('로직 분석기');
   assert.match(await win.textContent('#command-palette-list'),/로직 분석기/);
   await win.keyboard.press('Escape');
-  await win.keyboard.press('Control+Shift+P');await win.keyboard.type('회로 최대화');await win.keyboard.press('Enter');
+  await win.click('#circuit-maximize');
   await win.waitForFunction(()=>document.getElementById('shell').dataset.maximized==='circuit');
   assert.equal(await visible(win,'#group-code'),false);
   await win.click('#circuit-maximize');
@@ -41,22 +41,24 @@ test('VS Code style workbench regions, views, toggles and persistence',{timeout:
   await win.click('.menubar-item >> nth=2');
   assert.ok(await win.locator('.menu:popover-open .menu-item').count()>10);
   await win.keyboard.press('Escape');
-  // 편집 menu opens the settings and keyboard shortcut views.
+  // 편집 → 설정 opens one floating window; its 단축키 tab holds the keybindings (also Ctrl+K Ctrl+S).
   await win.click('.menubar-item >> nth=1');
   await win.click('.menu:popover-open [data-command="view.settings"]');
-  assert.ok(await visible(win,'#view-settings'));
-  await win.click('.menubar-item >> nth=1');
-  await win.click('.menu:popover-open [data-command="view.keybindings"]');
-  assert.ok(await visible(win,'#view-keybindings'));
+  assert.ok(await visible(win,'#settings-dialog #ide-settings-panel'));
+  await win.click('[data-settings-tab="keys"]');
+  assert.ok(await visible(win,'#settings-dialog #view-keybindings'));
   // Rebind "terminal" to Ctrl+Alt+T, use it, then reset it.
   const row='#view-keybindings [data-binding="view.terminal"]';
   await win.click(`${row} [data-edit]`);await win.keyboard.press('Control+Alt+T');await win.keyboard.press('Enter');
   assert.match(await win.textContent(`${row} [data-edit]`),/Ctrl\+Alt\+T/);
+  await win.click('#settings-dialog-close');
   await win.click('#circuit',{position:{x:30,y:30}});
   await win.keyboard.press('Control+J');assert.equal(await win.getAttribute('#shell','data-panel'),'false');
   await win.keyboard.press('Control+Alt+T');assert.equal(await win.getAttribute('#shell','data-panel'),'true');
-  await win.click('.menubar-item >> nth=1');await win.click('.menu:popover-open [data-command="view.keybindings"]');
+  await win.keyboard.press('Control+K');await win.keyboard.press('Control+S');
+  assert.ok(await visible(win,'#settings-dialog #view-keybindings'));
   await win.click(`${row} [data-reset]`);assert.match(await win.textContent(`${row} [data-edit]`),/Ctrl\+`/);
+  await win.click('#settings-dialog-close');
   // Activity tooltip appears to the right of the icon.
   await win.hover('[data-activity="parts"]');
   await win.waitForFunction(()=>!document.getElementById('activity-tip').hidden);
@@ -67,13 +69,16 @@ test('VS Code style workbench regions, views, toggles and persistence',{timeout:
   await win.dragAndDrop('[data-activity="docs"]','[data-activity="explorer"]',{targetPosition:{x:20,y:4}});
   assert.equal(await win.evaluate(()=>document.querySelector('#activitybar [data-activity]').dataset.activity),'docs');
   assert.equal(await win.evaluate(()=>JSON.parse(localStorage.getItem('stm32lab.shellLayout.v1')).activityOrder[0]),'docs');
-  // Project name is not shown in the title bar; the update button lives in the 도움말 menu.
-  assert.equal(await visible(win,'#project-name'),false);
-  assert.equal(await visible(win,'#app-update'),false);
-  // Swap and orientation change the editor area.
-  await win.click('#group-swap');assert.equal(await win.getAttribute('#editor-area','data-swapped'),'true');
-  assert.equal(await win.evaluate(()=>document.getElementById('editor-area').firstElementChild.id),'group-circuit');
-  await win.click('#group-orientation');assert.equal(await win.getAttribute('#editor-area','data-orientation'),'column');
+  // Title bar: name and menus, a command search box without text, run; the project name is in the explorer and the
+  // update button appears only when there is an update.
+  assert.ok(await visible(win,'.brand strong'));assert.equal(await win.textContent('#command-palette-open'),'');
+  await win.click('[data-activity="explorer"]');if(!await visible(win,'#view-explorer'))await win.click('[data-activity="explorer"]');
+  assert.ok(await visible(win,'#view-explorer #project-name'));assert.equal(await visible(win,'#app-update'),false);
+  for(const id of ['ide-build','debug-start','tool-select'])assert.equal(await visible(win,'#'+id),false,id);
+  // A panel's grip dragged onto another region swaps the two (a synthetic drop: Playwright cannot drive HTML5 drag in Electron).
+  const drop=(unit,region)=>win.evaluate(([unit,region])=>{const dt=new DataTransfer(),grip=document.querySelector(`[data-unit="${unit}"] .dock-grip`),target=document.getElementById(region);grip.dispatchEvent(new DragEvent('dragstart',{dataTransfer:dt,bubbles:true}));target.dispatchEvent(new DragEvent('dragover',{dataTransfer:dt,bubbles:true,cancelable:true}));target.dispatchEvent(new DragEvent('drop',{dataTransfer:dt,bubbles:true,cancelable:true}));grip.dispatchEvent(new DragEvent('dragend',{dataTransfer:dt,bubbles:true}));},[unit,region]);
+  const unitIn=region=>win.evaluate(r=>document.getElementById(r).querySelector(':scope>.dock-unit')?.dataset.unit,region);
+  await drop('code','auxbar');assert.equal(await unitIn('auxbar'),'code');assert.equal(await unitIn('group-code'),'aux');
   // Sash drag changes the side bar width.
   const before=(await win.locator('#sidebar').boundingBox()).width;
   const sash=await win.locator('#sash-sidebar').boundingBox();
@@ -84,11 +89,11 @@ test('VS Code style workbench regions, views, toggles and persistence',{timeout:
   // Layout persists across restarts.
   const again=await launch({profile:s.profile});
   try{
-   assert.equal(await again.win.getAttribute('#editor-area','data-orientation'),'column');
-   assert.equal(await again.win.getAttribute('#editor-area','data-swapped'),'true');
+   assert.equal(await again.win.evaluate(()=>document.getElementById('auxbar').querySelector(':scope>.dock-unit').dataset.unit),'code');
    const width=(await again.win.locator('#sidebar').boundingBox()).width;assert.ok(Math.abs(width-after)<3);
-   await again.win.keyboard.press('Control+Shift+P');await again.win.keyboard.type('레이아웃 초기화');await again.win.keyboard.press('Enter');
-   await again.win.waitForFunction(()=>document.getElementById('editor-area').dataset.orientation==='row');
+   await again.win.click('.menubar-item >> nth=1');await again.win.click('.menu:popover-open [data-command="view.settings"]');
+   await again.win.click('[data-settings-tab="layout"]');await again.win.click('#settings-layout-reset');
+   await again.win.waitForFunction(()=>document.getElementById('auxbar').querySelector(':scope>.dock-unit').dataset.unit==='aux');
    assert.deepEqual(again.errors,[]);
   }finally{await again.close();}
   assert.deepEqual(s.errors,[]);
@@ -145,6 +150,23 @@ test('start-up notice lists missing real-board tools, opens the install plan, an
   await win.click('#tools-notice [data-notice="never"]');
   await win.reload();await win.waitForTimeout(4500);
   assert.equal(await win.locator('#tools-notice').count(),0);
+  assert.deepEqual(s.errors,[]);
+ }finally{await s.close();}
+});
+
+test('a panel opens in its own window, keeps working there and comes back when the window closes',{timeout:90000},async()=>{
+ const s=await launch();
+ try{
+  const {app,win}=s;
+  const opened=app.waitForEvent('window');await win.click('[data-unit="code"] .dock-popout');const child=await opened;
+  await child.waitForSelector('.monaco-editor');
+  assert.equal(await win.evaluate(()=>!!document.querySelector('#group-code .dock-placeholder')),true,'placeholder in the old place');
+  // The editor in the other window still edits the project, and the app finds its elements.
+  await child.locator('.monaco-editor .view-lines').first().click();await child.keyboard.type('// POPOUT');
+  await win.waitForFunction(()=>document.getElementById('code').value.includes('// POPOUT'));
+  await child.close();
+  await win.waitForFunction(()=>document.getElementById('group-code').querySelector(':scope>.dock-unit')?.dataset.unit==='code');
+  assert.equal(await win.evaluate(()=>!!document.querySelector('#group-code .dock-placeholder')),false);
   assert.deepEqual(s.errors,[]);
  }finally{await s.close();}
 });

@@ -47,8 +47,9 @@ test('System appearance follows the OS and the toggle pins Dark/White',{timeout:
   assert.notEqual(await win.evaluate(()=>document.documentElement.dataset.ideTheme),first);
   assert.notEqual(await win.evaluate(()=>document.documentElement.dataset.appearance),'system');
   assert.notEqual(await win.getAttribute('#appearance-toggle','data-mode'),mode);
-  // The 보기 command restores the System setting.
-  await win.keyboard.press('Control+Shift+P');await win.keyboard.type('시스템 설정 따르기');await win.keyboard.press('Enter');
-  await win.waitForFunction(()=>document.documentElement.dataset.appearance==='system');
+  // The next start follows the Windows theme again.
+  await s.close({keep:true});
+  const again=await launch({profile:s.profile});
+  try{await again.win.waitForFunction(()=>document.documentElement.dataset.appearance==='system');}finally{await again.close();}
  }finally{await s.close();}
 });
