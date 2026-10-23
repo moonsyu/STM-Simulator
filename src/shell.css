@@ -505,3 +505,8 @@ body.dock-dragging .dock-unit{pointer-events:none}
 :is(.sidebar-header,.console-header,.group-tabs)>.dock-grip+*{margin-right:auto}
 :is(.sidebar-header,.console-header)>.dock-grip{margin-left:-4px}
 :root[data-shell] .dock-unit.library,:root[data-shell] .dock-unit.console{padding:0;margin:0;border:0;background:transparent;height:100%;min-height:0}
+/* Narrow side bar: board view buttons stay on one line and end in an ellipsis (the full text is in the title). */
+:root[data-shell] .pinout-open,:root[data-shell] .explorer-links button{height:auto;min-height:28px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;max-width:100%}
+:root[data-shell] .board-card>span:last-child{min-width:0;overflow:hidden}
+:root[data-shell] .board-card :is(strong,small){white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+:root[data-shell] .explorer-links{display:flex;flex-wrap:wrap;gap:4px}
