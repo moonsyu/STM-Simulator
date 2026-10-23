@@ -151,14 +151,14 @@ function refresh({preserveWires=false}={}){
  renderConnections();renderIssues(true);
  $('builtin-led').setAttribute('fill',result&&result.voltage('signal:PA5')>1.8?'#64e66b':'#89a486');
  $('builtin-led').style.filter=result&&result.voltage('signal:PA5')>1.8?'drop-shadow(0 0 5px #59dc65)':'';
- $('tool-select').classList.toggle('active',mode==='select');
+ $('tool-select')?.classList.toggle('active',mode==='select');
  document.querySelectorAll('[data-add]').forEach(b=>{b.classList.toggle('active',mode===b.dataset.add);b.disabled=running();if(b.dataset.add==='board')b.querySelector('b').textContent=project.surfaces?.board?.hidden?'+':'✓';});
  $('undo').disabled=running()||!undoStack.length;$('redo').disabled=running()||!redoStack.length;$('delete').disabled=running()||!['part','wire','group','surface'].includes(selection?.type);
  $('rotate').disabled=running()||selection?.type!=='part';
  $('code').readOnly=running();$('project-name').readOnly=running();
  editorSearch.refresh();
  for(const id of ['pinout-open','firmware-mode','firmware-import','firmware-folder','firmware-check','hal-example','code-reset','board-reset'])$(id).disabled=running();
- $('run').classList.toggle('running',running()||starting);$('run').textContent=starting?'■  빌드 취소':runtime?.debug.paused?withKey('계속 실행','run.run'):running()?'■  시뮬레이션 정지':withKey('▶  실행','run.run');
+ $('run').classList.toggle('running',running()||starting);$('run').textContent=starting?'■  빌드 취소':runtime?.debug.paused?'⏵ 계속':running()?'■ 정지':'▶ 실행';
  const runKey=keyFor('run.run');$('run').title=withKey('실행 / 정지','run.run');if(runKey)$('run').setAttribute('aria-keyshortcuts',runKey);else $('run').removeAttribute('aria-keyshortcuts');
  $('step').disabled=status==='running';
  $('mode-label').textContent=running()?'시뮬레이션 실행 중':status==='error'?'회로 확인 필요':'회로 편집';
@@ -501,7 +501,7 @@ setInterval(()=>{
    if(status==='error')refresh();
  }catch(e){result=session?.viewResult??result;status='error';log(e.message,'error');refresh();}
 },20);
-$('tool-select').onclick=()=>setMode('select');$('delete').onclick=removeSelected;$('rotate').onclick=rotateSelected;$('undo').onclick=()=>editUndo();$('redo').onclick=()=>editUndo(true);
+if($('tool-select'))$('tool-select').onclick=()=>setMode('select');$('delete').onclick=removeSelected;$('rotate').onclick=rotateSelected;$('undo').onclick=()=>editUndo();$('redo').onclick=()=>editUndo(true);
 document.querySelectorAll('[data-add]').forEach(b=>b.onclick=()=>{if(running())return;const type=b.dataset.add;if(type==='board'){
  if(project.surfaces?.board?.hidden){checkpoint();showSurface(project,'board');changed();pinSearch();}
  selection={type:'surface',id:'board'};pending=null;mode='select';inspectTab();fitView();refresh();svg.focus({preventScroll:true});return;
