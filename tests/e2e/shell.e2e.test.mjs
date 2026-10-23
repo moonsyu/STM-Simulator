@@ -170,3 +170,19 @@ test('a panel opens in its own window, keeps working there and comes back when t
   assert.deepEqual(s.errors,[]);
  }finally{await s.close();}
 });
+
+test('hovering a HAL example shows a preview of its part layout',{timeout:60000},async()=>{
+ const s=await launch();
+ try{
+  const {win}=s;
+  await win.click('[data-activity="examples"]');if(!await visible(win,'#view-examples'))await win.click('[data-activity="examples"]');
+  await win.fill('#hal-example-search','GPIO LED');
+  await win.hover('#hal-example-list [data-example="blink"]');
+  await win.waitForFunction(()=>!document.getElementById('example-layout-preview').hidden);
+  assert.equal(await win.textContent('#example-layout-preview .part-preview-name'),'GPIO LED');
+  // The preview draws the example's own circuit: the board, a breadboard and its parts and wires.
+  assert.ok(await win.evaluate(()=>{const svg=document.querySelector('#example-layout-preview svg');return !!svg&&svg.querySelectorAll('[data-part]').length>=2&&svg.querySelectorAll('path').length>0&&!svg.querySelector('#part-layer');}));
+  await win.mouse.move(900,600);await win.waitForFunction(()=>document.getElementById('example-layout-preview').hidden);
+  assert.deepEqual(s.errors,[]);
+ }finally{await s.close();}
+});
