@@ -208,7 +208,7 @@ function mountShell(layout,state,options,{apply,save,setPalette,setSettings}){
  new MutationObserver(update).observe(document.querySelector('.monitor-tabs'),{subtree:true,characterData:true,childList:true});
  if($('build-errors'))new MutationObserver(update).observe($('build-errors'),{childList:true});
  if($('status-led'))new MutationObserver(update).observe($('status-led'),{attributes:true});
- $('native-target')?.addEventListener('change',update);new MutationObserver(update).observe($('current-board-name'),{childList:true,characterData:true,subtree:true});update();
+ $('native-target')?.addEventListener('change',update);$('native-target')?.addEventListener('boards',update);new MutationObserver(update).observe($('current-board-name'),{childList:true,characterData:true,subtree:true});update();
  // ---- HAL example list ----
  setupExampleList();
  // ---- Sashes ----
@@ -336,9 +336,9 @@ function registerCommands(layout,options){
   {id:'run.out',label:'함수 밖으로',keywords:'디버그 debug step',group:'실행',run:()=>options.debugCommand?.('out')},
   {id:'run.step',label:'20 ms 한 단계 실행',group:'실행',run:click('step')},
   {id:'run.build',label:'빌드',group:'실행',run:click('ide-build')},
-  {id:'run.target.sim',label:'실행 대상: 회로 시뮬레이터 (C 해석)',group:'실행',run:()=>options.setTarget?.('simulator')},
+  {id:'run.target.sim',label:'실행 대상: 시뮬레이터 (C 해석)',group:'실행',run:()=>options.setTarget?.('simulator')},
   {id:'run.target.emu',label:'실행 대상: 펌웨어 에뮬레이터 (ARM ELF)',group:'실행',run:()=>options.setTarget?.('emulator')},
-  {id:'run.target.arm',label:'실행 대상: STM32 · ARM GCC (실물 보드)',group:'실행',run:()=>options.setTarget?.('arm')},
+  {id:'run.target.arm',label:'실행 대상: 연결된 보드 (ARM GCC)',group:'실행',run:()=>options.setTarget?.('arm')},
   {id:'run.target.host',label:'실행 대상: Windows · C/C++',group:'실행',run:()=>options.setTarget?.('host')},
   {id:'run.tools',label:'개발 도구 설정',group:'편집',run:click('native-tools')},
   {id:'run.pinout',label:'Pinout & Configuration 열기',group:'실행',run:click('pinout-open')},
