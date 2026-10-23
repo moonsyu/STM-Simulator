@@ -20,8 +20,8 @@ import {selectedIds,isSelected,toggleSelection,wirePoints,insertWirePoint,connec
 import {zoomView} from './canvas-view.js';
 import {circuitDiagnostics} from './circuit-diagnostics.js';
 import {PINS,BB,PIN_BY_ID,endpointInfo,searchPins,circuitHoles,holeInfo,breadboardModel,setActiveBoard} from './pins.js';
-import {TWO_PIN_TYPES,MULTI_PIN_TYPES,WIRE_COLORS,PART_DEFS,terminalKeys,attachments,detachPart,normalizeAngle} from './components.js';
-import {findMount,applyMount,occupiedHoles,wiredHoles} from './placement.js';
+import {TWO_PIN_TYPES,WIRE_COLORS,PART_DEFS,terminalKeys,attachments,detachPart,normalizeAngle} from './components.js';
+import {findMount,applyMount,occupiedHoles} from './placement.js';
 import {endpointBlocked,endpointAt,moveWireEnd} from './wire-ends.js';
 import {SimulationSession} from './session.js';
 import {FirmwareSession} from './firmware-session.js';
@@ -45,7 +45,6 @@ import {setupLogicAnalyzer} from './logic-analyzer.js';
 import {mediaSection,bindMedia,paintMedia,applyCameraImage,isCamera} from './part-media-ui.js';
 import {mountIdeChrome,setupIde} from './ide-ui.js';
 import {setupUpdates} from './update-ui.js';
-import {setupResizing} from './resize-ui.js';
 import {setupIdeSettings} from './ide-settings-ui.js';
 import {resizeObject} from './resize.js';
 import {BOARD,scaleXOf,scaleYOf,surfaceOrigin,partVector} from './geometry.js';
@@ -57,7 +56,7 @@ import {setupExamplePreviews} from './example-preview-ui.js';
 import {esc,initSvg,renderWires,renderParts,renderBreadboards,renderEndpoints,route,updateSimulationSvg,renderMountPreview,renderPinSearch,updateSurfaces} from './render.js';
 
 const $=id=>document.getElementById(id),svg=$('circuit');
-mountIdeChrome();const layout=createShell();let ide=null,resizing=null,deviceDocs=null,canvasKeys=null;
+mountIdeChrome();const layout=createShell();let ide=null,deviceDocs=null,canvasKeys=null;
 const feedback=setupFeedback({showLog:()=>{layout.reveal('terminal');document.querySelector('[data-monitor="log"]').click();}});
 const wireDraft=new WireDraft();
 let carry=null;
@@ -142,7 +141,7 @@ function refresh({preserveWires=false}={}){
  // The board drawing is static; redraw it when the project switches to another board.
  const boardGroup=svg.querySelector('#surface > .board');if(boardGroup&&boardGroup.dataset.board!==projectBoard(project).id){boardGroup.outerHTML=boardSvg(projectBoard(project).id);filterExamples();}
  updateSurfaces(svg,project,selection);
- updateBoardPicker();if(project.surfaces?.board?.hidden)$('search-layer').innerHTML='';svg.classList.toggle('connecting',mode==='wire'||!!pending||TWO_PIN_TYPES.includes(mode));
+ updateBoardPicker();if(project.surfaces?.board?.hidden)$('search-layer').innerHTML='';svg.classList.toggle('connecting',mode==='wire'||!!pending);
  const boards=project.components.filter(p=>p.type==='breadboard'),nextBreadboardKey=JSON.stringify(boards.map(p=>[p,isSelected(selection,'part',p.id)]));
  if(nextBreadboardKey!==breadboardKey){$('breadboard-layer').innerHTML=renderBreadboards(project,selection);breadboardKey=nextBreadboardKey;}
  if(!preserveWires)$('wire-layer').innerHTML=renderWires(project,selection);
@@ -169,8 +168,8 @@ function refresh({preserveWires=false}={}){
  $('connection-count').textContent=`부품 ${project.components.length}개 · 배선 ${project.wires.length}개`;
  $('empty-add-board').textContent=projectBoard(project).name+' 추가';$('canvas-empty').hidden=!(project.surfaces?.board?.hidden&&project.surfaces?.breadboard?.hidden&&!project.components.length)||running();
  if($('explorer-circuit-summary'))$('explorer-circuit-summary').textContent=`${project.surfaces?.board?.hidden?'보드 없음':projectBoard(project).name} · 부품 ${project.components.filter(p=>p.type!=='breadboard').length}개 · 빵판 ${project.components.filter(p=>p.type==='breadboard').length+(project.surfaces?.breadboard?.hidden?0:1)}개 · 배선 ${project.wires.length}개`;
- $('hint').textContent=running()?'실행 중 핀을 클릭하면 전압을 측정합니다. 버튼은 누르는 동안 연결됩니다.':carry?CARRY_HINT:pending?'핀을 클릭하면 연결 · 바닥 클릭으로 꺾임점 추가 · 우클릭 / Esc: 작성 중 배선 취소':TWO_PIN_TYPES.includes(mode)?'빵판 구멍 두 곳을 선택해 다리를 꽂으세요. 빈 공간 클릭 시 자유 배치합니다.':drag?.type==='part'?'초록색 표시가 나타나면 놓아서 장착하세요. R: 45° 회전':'몸체: 이동 · 가장자리: 크기 조절 · 빈 공간 / 가운데 버튼: 화면 이동 · 배치 범위 제한 없음';
- inspector();updateReadouts();resizing?.refresh();
+ $('hint').textContent=running()?'실행 중 핀을 클릭하면 전압을 측정합니다. 버튼은 누르는 동안 연결됩니다.':carry?CARRY_HINT:pending?'핀을 클릭하면 연결 · 바닥 클릭으로 꺾임점 추가 · 우클릭 / Esc: 작성 중 배선 취소':drag?.type==='part'?'초록색 표시가 나타나면 놓아서 장착하세요. R: 45° 회전':'부품을 끌어 빵판에 꽂기 · 빈 공간 / 가운데 버튼: 화면 이동 · 배치 범위 제한 없음';
+ inspector();updateReadouts();
  ide?.controls();canvasKeys?.refresh(keyboardFocus);
 }
 function updateAudio(){buzzerAudio?.update(project,result,audioEnabled,status==='running');}
@@ -310,24 +309,17 @@ function clickEndpoint(id){
  const pin=PIN_BY_ID.get(id);selection={type:'endpoint',id};
  if(running()){inspectTab();refresh();return;}
  if(pin?.signal==='NC'){log('NC 핀은 내부에 연결되지 않았습니다.');pending=null;refresh();return;}
- // A part lead cannot go into a hole that already holds a jumper wire end (and the reverse below).
- if(TWO_PIN_TYPES.includes(mode)&&pending!==id&&wiredHoles(project.wires).has(id)){log('점퍼선이 꽂힌 구멍입니다. 부품 다리는 같은 줄의 다른 구멍에 꽂으세요.');refresh();return;}
  // One jumper per hole / pin, as on a real breadboard.
- const blocked=!TWO_PIN_TYPES.includes(mode)&&pending!==id?endpointBlocked(project,id):null;
+ const blocked=pending!==id?endpointBlocked(project,id):null;
  if(!pending){if(blocked){log(blocked);inspectTab();refresh();return;}pending=id;wireDraft.reset(id);inspectTab();refresh();return;}
  if(pending===id){pending=null;refresh();return;}
- if(TWO_PIN_TYPES.includes(mode)){
-   if(id.startsWith('part:')||pending.startsWith('part:')){log('부품을 꽂으려면 보드 핀 또는 빵판 구멍을 선택하세요.');return;}
-   const occupied=occupiedHoles(project.components);if(occupied.has(id)||occupied.has(pending)){log('이미 부품이 꽂힌 구멍입니다. 다른 구멍을 선택하세요.');pending=null;refresh();return;}
-   addPart(mode,endpointInfo(pending,project.components,project.surfaces),endpointInfo(id,project.components,project.surfaces));return;
- }
  if(blocked){log(blocked);return;}
  if(project.wires.length>=500){log('배선은 500개까지 추가할 수 있습니다.','error');pending=null;return;}
  if(!project.wires.some(w=>(w.from===pending&&w.to===id)||(w.to===pending&&w.from===id))){checkpoint();project.wires.push({id:uid('w'),from:pending,to:id,color,...wireDraft.finish(pending)});}
  pending=null;selection=null;$('preview-layer').innerHTML='';changed();
 }
 function point(e){const p=svg.createSVGPoint();p.x=e.clientX;p.y=e.clientY;return p.matrixTransform(svg.getScreenCTM().inverse());}
-function viewUpdate({preserveKeyboardFocus=true}={}){const focused=preserveKeyboardFocus?canvasKeys?.snapshot():null;svg.setAttribute('viewBox',`${view.x} ${view.y} ${view.w} ${view.h}`);$('zoom-reset').textContent=Math.round(1120/view.w*100)+'%';renderConnections();resizing?.refresh();if(focused?.type==='bend')canvasKeys.refresh(focused);}
+function viewUpdate({preserveKeyboardFocus=true}={}){const focused=preserveKeyboardFocus?canvasKeys?.snapshot():null;svg.setAttribute('viewBox',`${view.x} ${view.y} ${view.w} ${view.h}`);$('zoom-reset').textContent=Math.round(1120/view.w*100)+'%';renderConnections();if(focused?.type==='bend')canvasKeys.refresh(focused);}
 svg.addEventListener('pointerdown',e=>{
  if(e.button!==0&&e.button!==1)return;svg.focus({preventScroll:true});
  if(e.button===1){drag={type:'pan',clientX:e.clientX,clientY:e.clientY,x:view.x,y:view.y};e.preventDefault();svg.setPointerCapture(e.pointerId);return;}
@@ -345,7 +337,7 @@ svg.addEventListener('pointerdown',e=>{
    return;
  }
  // Dragging a wire end moves it to another hole or pin; a click without moving picks it up (toggle move).
- const end=target.closest('[data-wire-end]');if(end&&!running()&&!e.shiftKey){if(pending||TWO_PIN_TYPES.includes(mode)){clickEndpoint(project.wires.find(w=>w.id===end.dataset.ownerWire)?.[end.dataset.wireEnd]);return;}drag={type:'wire-end',id:end.dataset.ownerWire,end:end.dataset.wireEnd,start:point(e),current:point(e),moved:false};svg.setPointerCapture(e.pointerId);return;}
+ const end=target.closest('[data-wire-end]');if(end&&!running()&&!e.shiftKey){if(pending){clickEndpoint(project.wires.find(w=>w.id===end.dataset.ownerWire)?.[end.dataset.wireEnd]);return;}drag={type:'wire-end',id:end.dataset.ownerWire,end:end.dataset.wireEnd,start:point(e),current:point(e),moved:false};svg.setPointerCapture(e.pointerId);return;}
  const handle=target.closest('[data-wire-point]');if(handle&&!running()){const id=handle.dataset.ownerWire,index=Number(handle.dataset.wirePoint);drag={type:'wire-point',id,index,start:point(e),origin:{...project.wires.find(w=>w.id===id).points[index]},moved:false};svg.setPointerCapture(e.pointerId);return;}
  if(e.shiftKey&&!running()){const wire=target.closest('[data-wire]');if(wire||part){selection=toggleSelection(selection,wire?'wire':'part',wire?.dataset.wire||part.dataset.part);pending=null;mode='select';inspectTab();refresh();return;}}
  if(part&&selection?.type==='group'&&isSelected(selection,'part',part.dataset.part)&&!running()){drag={type:'group',start:point(e),base:structuredClone(project),moved:false};svg.setPointerCapture(e.pointerId);return;}
@@ -360,7 +352,6 @@ svg.addEventListener('pointerdown',e=>{
  }
  const q=point(e);
  if(e.shiftKey&&!running()&&mode==='select'&&!pending){drag={type:'marquee',start:q,current:q,additive:true,selection:structuredClone(selection)};e.preventDefault();svg.setPointerCapture(e.pointerId);return;}
- if(!running()&&TWO_PIN_TYPES.includes(mode)){addPart(mode,null,null,{x:q.x,y:q.y});return;}
  if(pending&&!running()&&e.button===0){try{wireDraft.add(pending,q);$('hint').textContent='꺾임점 추가 · 다음 바닥 또는 연결할 핀을 클릭하세요. Backspace: 마지막 점 취소 / Esc: 배선 취소';}catch(error){log(error.message,'error');}return;}
  selection=null;drag={type:'pan',clientX:e.clientX,clientY:e.clientY,x:view.x,y:view.y};svg.setPointerCapture(e.pointerId);refresh();
 });
@@ -510,7 +501,14 @@ document.querySelectorAll('[data-add]').forEach(b=>b.onclick=()=>{if(running())r
  }if(isBreadboardLibraryType(type)){
  let f;try{f=newBreadboardFields(project,type);}catch(e){log(e.message,'error');return;}
  addPart('breadboard',null,null,{x:f.x,y:f.y},f.variant?{variant:f.variant}:{});fitView();svg.focus({preventScroll:true});
-}else if(MULTI_PIN_TYPES.includes(type)){addPart(type,null,null,{x:view.x+view.w*.48,y:view.y+view.h*.85});svg.focus({preventScroll:true});}else setMode(type);});
+}else{addPart(type,null,null,freeSpot());svg.focus({preventScroll:true});}});
+// Every part is placed at once in the middle of the visible workspace (the next free spot when parts already sit there);
+// it is then dragged onto the breadboard.
+function freeSpot(){
+ const centre={x:view.x+view.w*.5,y:view.y+view.h*.5},step=42;
+ for(let ring=0;ring<8;ring++)for(let k=0;k<Math.max(1,ring*8);k++){const a=ring?k/(ring*8)*Math.PI*2:0,q={x:centre.x+Math.cos(a)*ring*step,y:centre.y+Math.sin(a)*ring*step};if(!project.components.some(p=>p.type!=='breadboard'&&Math.hypot(p.x-q.x,p.y-q.y)<step))return q;}
+ return centre;
+}
 $('empty-add-board').onclick=()=>document.querySelector('[data-add="board"]')?.click();$('empty-open-parts').onclick=()=>layout.showView('parts');$('empty-open-examples').onclick=()=>layout.showView('examples');
 $('wire-palette').innerHTML=WIRE_COLORS.map(([value,name],i)=>`<button data-palette="${i<10?'basic':'pastel'}" data-color="${value}" class="swatch ${value===color?'active':''}" style="--swatch:${value}" title="${name} 배선" aria-label="${name} 배선"></button>`).join('');
 function setWireColor(value){
@@ -629,7 +627,6 @@ deviceDocs=setupDeviceDocs({getProject:()=>project,getSelection:()=>selection,is
  if(applied.action!=='remove'&&(applied.binding.type==='uart'||CATALOG_BY_TYPE[applied.binding.type]?.family==='uart')){const id=applied.binding.peripherals.USART2;$('serial-target').value=id==='USART2'?'USART2:external':id;}
  ide.invalidate();return applied;
 }});
-resizing=setupResizing({getProject:()=>project,getSelection:()=>selection,isRunning:running,canResize:()=>!drag&&!pending&&mode==='select',focus:frame=>{const b=frame.bounds,points=[[0,0],[1,0],[1,1],[0,1]].map(([x,y])=>frame.point(b.x+x*b.width,b.y+y*b.height)),xs=points.map(p=>p.x),ys=points.map(p=>p.y),left=Math.min(...xs),top=Math.min(...ys),width=Math.max(...xs)-left,height=Math.max(...ys)-top,w=Math.max(430,width*1.8,height*1.8*1120/730);view={x:left+width/2-w/2,y:top+height/2-w*730/1120/2,w,h:w*730/1120};viewUpdate();},onError:message=>log(message,'error'),select:target=>{selection=target;pending=null;mode='select';inspectTab();refresh();},preview:draft=>{clearTimeout(saveTimer);project=draft;refresh();pinSearch();},cancel:base=>{project=base;changed();pinSearch();},commit:(base,draft)=>{validateProject(draft);project=base;checkpoint();project=draft;changed();pinSearch();},resize:(target,scale)=>{if(running())return;const draft=structuredClone(project);resizeObject(draft,target,scale);validateProject(draft);checkpoint();project=draft;selection=target;changed();pinSearch();}});
 const logicAnalyzer=setupLogicAnalyzer({getSession:()=>session,getProject:()=>project,isRunning:()=>status==='running',log,onNoise:noise=>{checkpoint();project.simulation={...(project.simulation||{}),noise};autosave();}});
 layout.mount({openElf,debugCommand:shellDebugCommand,runCommand,formatCode:()=>{layout.reveal('code');lastCodeCheckpoint=0;void ide?.format?.();},formatSelection:()=>{layout.reveal('code');lastCodeCheckpoint=0;ide?.formatSelection?.();},find:replace=>editorSearch.open(replace),files:()=>[project.code!==undefined?'main.c':null,...(project.firmware?.files||[]).map(f=>f.name)].filter(Boolean),openFile:name=>{if(name!=='main.c'&&!project.firmware?.files.some(f=>f.name===name))return;sourceFile=name;syncEditor();layout.reveal('code');ide?.editor?.focus?.();},gotoLine:line=>ide?.editor?.goto?.(line),setTarget:value=>{const select=$('native-target');if(!select||select.disabled||![...select.options].some(o=>o.value===value))return;select.value=value;select.dispatchEvent(new Event('change'));}});layout.setMonitor(monitor);
 setupTabAccessibility();

@@ -18,9 +18,8 @@ test('Docs: apply HAL, edit inside the region, remove, undo, then apply the Bare
   await win.click('[data-activity="parts"]');if(!await win.locator('#view-parts').isVisible())await win.click('[data-activity="parts"]');
   await win.fill('#part-search','빵판');await win.locator('#part-list [data-add="breadboard"]').click();
   await win.waitForFunction(()=>document.querySelectorAll('[data-hole]').length>100);
+  // Clicking a part card places the part in the workspace at once.
   await win.fill('#part-search','LED');await win.locator('#part-list [data-add="led"]').click();
-  const holes=win.locator('[data-hole]'),n=await holes.count();
-  await holes.nth(Math.floor(n/2)).click({force:true});await holes.nth(Math.floor(n/2)+3).click({force:true});
   await win.waitForFunction(()=>document.querySelectorAll('#part-layer [data-part]').length>=1);
   await openDocs(win);
   await win.waitForFunction(()=>/LED/.test(document.querySelector('#device-docs-panel .docs-header h2')?.textContent||''));
