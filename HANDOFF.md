@@ -1,6 +1,14 @@
 # STM Simulator — 개발 인계
 
-현재 버전: **1.0.0**. 정리일: **2026-10-22**. NUCLEO-F446RE 또는 NUCLEO-F103RB와 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+현재 버전: **1.1.0**. 정리일: **2026-10-23**. NUCLEO-F446RE 또는 NUCLEO-F103RB와 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+
+## 1.1.0 제목 표시줄 · 설정 창 · 패널 옮기기/분리 · 보드 선택
+
+- 제목 표시줄: 이름+메뉴, `#command-palette-open`(돋보기 칸), `#run`, `#app-update`(available/downloading/ready에서만), 테마, 패널 전환, 저장. `#ide-build`·`#debug-start`·`#step`·`#native-tools`·`#native-connection`은 `#hidden-controls`에 두고 메뉴·팔레트가 클릭한다. `#project-name`은 탐색기, `#save-state`는 상태 표시줄.
+- 설정 창: `shell.js` `setupSettingsDialog`. `layout.openSettings(tab)`, `showView('settings'|'keybindings')`도 이 창을 연다.
+- 실행 대상: `native-ide.cjs` `listBoards()`(IPC `native:boards`). `native-ide-ui.js`는 보드마다 `value="arm"`, `data-serial` 옵션을 만들고 고른 시리얼을 `stm32lab.debugConnection.serial`에 둔다. `chooseStlink`는 고른 보드가 다른 종류면 거부한다.
+- 패널: `DOCK_REGIONS`·`DOCK_UNITS`, `state.dock`(영역→단위). `showUnit`·`regionOf`가 표시·최대화를 단위 위치로 바꾼다. 분리 창은 `popout.js`로, app.js의 첫 import여야 한다(document 조회·activeElement·keydown 리스너를 분리 창과 공유). main은 `stm-unit-*` 이름의 빈 창만 연다.
+- 시작 테마: `ide-settings-ui.js`가 시작 시 appearance를 `system`으로 되돌린다.
 
 ## 1.0.0 전체 기능 점검 (실물 보드 연동 제외)
 
