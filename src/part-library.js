@@ -1,5 +1,6 @@
 import {CATALOG_BY_TYPE} from './catalog-defs.js';
 import {PART_DEFS} from './components.js';
+import {PART_DATASHEETS} from './part-datasheets.js';
 
 const BASE_PARTS={
  board:{name:'NUCLEO-64 보드',icon:'64',hint:'현재 선택한 보드(F446RE/F103RB) · 1개'},
@@ -23,7 +24,7 @@ const ALIASES={
 const normalize=value=>String(value).normalize('NFKC').toLowerCase().replace(/[\s_-]+/g,'');
 export const PART_LIBRARY=Object.entries({...BASE_PARTS,...PART_DEFS}).map(([type,def])=>({
  type,name:def.name,icon:def.icon,iconClass:def.iconClass||'extra-icon',hint:def.hint,
- searchText:normalize([type,def.name,def.hint,def.prefix||'',ALIASES[type]||'',CATALOG_BY_TYPE[type]?.id||'',CATALOG_BY_TYPE[type]?.pins.join(' ')||''].join(' '))
+ searchText:normalize([type,def.name,def.hint,def.prefix||'',ALIASES[type]||'',CATALOG_BY_TYPE[type]?.id||'',CATALOG_BY_TYPE[type]?.name||'',PART_DATASHEETS[CATALOG_BY_TYPE[type]?.id]?.model||'',CATALOG_BY_TYPE[type]?.pins.join(' ')||''].join(' '))
 }));
 export function searchParts(query){
  const text=normalize(query);

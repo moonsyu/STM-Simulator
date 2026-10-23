@@ -1,6 +1,9 @@
 import {DEVICE_CATALOG} from './device-catalog-data.js';
 import {DEVICE_DEFS} from './device-defs.js';
 import {L298_DEFS} from './l298n.js';
+import {PART_DATASHEETS} from './part-datasheets.js';
+// The datasheet name of a catalog part (the catalog's own name when no datasheet was found).
+export const catalogName=v=>PART_DATASHEETS[v.id]?.name??v.name;
 export const catalogType=id=>'ref_'+id.replaceAll('-','_');
 export const CATALOG_BY_TYPE=Object.fromEntries(DEVICE_CATALOG.filter(v=>!['board','breadboard'].includes(v.family)).map(v=>[catalogType(v.id),v]));
 const defaults={resistor:{value:330},led:{color:'red'},button:{switch:0},potentiometer:{value:10000,position:50},slide:{position:0},capacitor:{value:100},uart:{baud:9600},rs485:{baud:9600},i2c:{address:80},temperature:{temperature:25},ultrasonic:{distance:100},dc_supply:{voltage:12},sd:{sizeMB:64,cardImage:''},dcmi:{pattern:'colorbars',image:''}};
@@ -51,7 +54,7 @@ export function catalogGeometry(v){
  return {body,terminals,pinY:body.height/2+14};
 }
 export const CATALOG_TWO_PIN=Object.keys(CATALOG_BY_TYPE).filter(type=>CATALOG_BY_TYPE[type].pins.length===2);
-export const CATALOG_DEFS=Object.fromEntries(Object.entries(CATALOG_BY_TYPE).map(([type,v])=>[type,{name:v.name,prefix:v.id.split('-')[0].toUpperCase(),icon:'▦',hint:`${v.pin_count??'조립'}핀 · ${v.interface}`,labels:v.pins,defaults:{...(defaults[v.family]||{}),...(DEVICE_DEFS[v.family]?.defaults||L298_DEFS[v.family]?.defaults||{}),...(['dht11','dht22'].includes(v.family)?{temperature:25,humidity:50}:{}),...(v.family==='slide'?{position:0}:{})},help:v.appearance+' '+v.notes,...catalogGeometry(v)}]));
+export const CATALOG_DEFS=Object.fromEntries(Object.entries(CATALOG_BY_TYPE).map(([type,v])=>[type,{name:catalogName(v),prefix:v.id.split('-')[0].toUpperCase(),icon:'▦',hint:`${v.pin_count??'조립'}핀 · ${v.interface}`,labels:v.pins,defaults:{...(defaults[v.family]||{}),...(DEVICE_DEFS[v.family]?.defaults||L298_DEFS[v.family]?.defaults||{}),...(['dht11','dht22'].includes(v.family)?{temperature:25,humidity:50}:{}),...(v.family==='slide'?{position:0}:{})},help:v.appearance+' '+v.notes,...catalogGeometry(v)}]));
 
 // The same scope notes appear beside the example and its device-specific Docs.
 export const CATALOG_SCOPE={

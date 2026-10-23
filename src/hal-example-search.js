@@ -1,5 +1,6 @@
 import {allHalExamples,halExample,halExampleFor,halGuideFor,SIMULATOR_ONLY_EXAMPLES} from './hal-examples.js';
 import {CATALOG_BY_TYPE} from './catalog-defs.js';
+import {PART_DATASHEETS} from './part-datasheets.js';
 import {f1Unavailable} from './example-port.js';
 const normalize=s=>String(s).normalize('NFKC').toLowerCase().replace(/[\s_-]+/g,'');
 // Comments (USER CODE markers, the printf retarget note) would make every example match words like "uart".
@@ -11,7 +12,7 @@ const shownName=(name,family)=>family==='STM32F103RB'?name.replace('NUCLEO-F446R
 // Search text of an example on one board: its own (ported) code, pins and guide, built when first searched.
 function textOf(row,family){
  const board=BOARD_OF[family]??'nucleo-f446re',key=board+':'+row.id;
- if(!texts.has(key)){const ref=CATALOG_BY_TYPE[row.id],sample=halExampleFor(row.id,board);texts.set(key,normalize([family==='STM32F103RB'?row.id.replace('f446re','f103rb'):row.id,shownName(row.name,family),halGuideFor(row.id,board),ref?.pin_count+'핀',ref?.pins.join(' '),codeOnly(sample.code)].join(' ')));}
+ if(!texts.has(key)){const ref=CATALOG_BY_TYPE[row.id],sample=halExampleFor(row.id,board);texts.set(key,normalize([family==='STM32F103RB'?row.id.replace('f446re','f103rb'):row.id,shownName(row.name,family),ref?.name||'',PART_DATASHEETS[ref?.id]?.model||'',halGuideFor(row.id,board),ref?.pin_count+'핀',ref?.pins.join(' '),codeOnly(sample.code)].join(' ')));}
  return texts.get(key);
 }
 /** Examples matching every word of the query; `family` 'STM32F103RB' leaves out those needing F4-only peripherals. */

@@ -1,12 +1,12 @@
 import {DEVICE_CATALOG} from './device-catalog-data.js';
-import {CATALOG_BY_TYPE,CATALOG_DEFS,catalogMap,catalogType,CATALOG_SCOPE} from './catalog-defs.js';
+import {CATALOG_BY_TYPE,CATALOG_DEFS,catalogMap,catalogName,catalogType,CATALOG_SCOPE} from './catalog-defs.js';
 import {attachments,assignAttachments} from './components.js';
 import {cFunctions} from './c-source-edit.js';
 import {boardPin} from './pins.js';
 import {exampleProject} from './project.js';
 import {defaultMcu,generateHal,validateMcu} from './mcu-config.js';
 import {protocolExample} from './catalog-protocol-examples.js';
-export const CATALOG_EXAMPLES=Object.fromEntries(DEVICE_CATALOG.map(v=>[catalogType(v.id),'HAL · '+v.name]));
+export const CATALOG_EXAMPLES=Object.fromEntries(DEVICE_CATALOG.map(v=>[catalogType(v.id),'HAL · '+catalogName(v)]));
 export const CATALOG_GUIDES=Object.fromEntries(DEVICE_CATALOG.map(v=>[catalogType(v.id),v.interface+' · '+v.pins.join(' / ')+' · '+v.appearance+' '+(CATALOG_SCOPE[v.id]||'')]));
 const familyRecipe={uart:'uart_external',board:'blink',breadboard:'blink',resistor:'adc',led:'blink',button:'button',capacitor:'pwm',dc_motor:'l298n',dc_supply:'l298n',encoder:'timer_encoder'};
 export function catalogExample(type,baseFactory){
@@ -15,8 +15,8 @@ export function catalogExample(type,baseFactory){
  if(!map&&!['board','breadboard'].includes(v.family))return protocolExample(v);
  const p=baseFactory(familyRecipe[v.family]||v.family);p.name=CATALOG_EXAMPLES[type];
  if(['board','breadboard'].includes(v.family))return p;
- const part=p.components.find(c=>c.type===v.family);if(!part)throw new Error('예제의 주 장치가 없습니다: '+v.name);
- const old=part.id,mounts=attachments(part);part.type=type;part.name=v.name;for(const [key,value]of Object.entries(CATALOG_DEFS[type].defaults))if(part[key]===undefined)part[key]=value;
+ const part=p.components.find(c=>c.type===v.family);if(!part)throw new Error('예제의 주 장치가 없습니다: '+catalogName(v));
+ const old=part.id,mounts=attachments(part);part.type=type;part.name=catalogName(v);for(const [key,value]of Object.entries(CATALOG_DEFS[type].defaults))if(part[key]===undefined)part[key]=value;
  const mappedMounts={},mountWires=[];
  for(const [key,hole]of Object.entries(mounts)){
   const contact=map[key];
@@ -45,11 +45,11 @@ export function catalogExample(type,baseFactory){
   if(v.family==='sevenseg')for(const w of p.wires)if(w.to===`part:${old}:p8`&&w.from===boardPin('GND'))w.from=boardPin('3V3');
   p.code=p.code.replace(/GPIO_PIN_SET|GPIO_PIN_RESET/g,t=>t==='GPIO_PIN_SET'?'GPIO_PIN_RESET':'GPIO_PIN_SET');
  }
- p.code='// '+v.name+'\n// '+v.pins.map((pin,i)=>`${i+1}: ${pin}`).join(', ')+'\n'+p.code;
+ p.code='// '+catalogName(v)+'\n// '+v.pins.map((pin,i)=>`${i+1}: ${pin}`).join(', ')+'\n'+p.code;
  return p;
 }
 export function makeCatalogProject(v){
- const p=exampleProject(),type=catalogType(v.id),def=CATALOG_DEFS[type];p.name=CATALOG_EXAMPLES[type];p.mcu={...defaultMcu(),pins:{},peripherals:{},nvic:{}};p.components=[{id:'demo',type,name:v.name,x:790,y:340,rotation:0,...def.defaults}];p.simulation={stepMs:1,pwmWaveform:false};
+ const p=exampleProject(),type=catalogType(v.id),def=CATALOG_DEFS[type];p.name=CATALOG_EXAMPLES[type];p.mcu={...defaultMcu(),pins:{},peripherals:{},nvic:{}};p.components=[{id:'demo',type,name:catalogName(v),x:790,y:340,rotation:0,...def.defaults}];p.simulation={stepMs:1,pwmWaveform:false};
  const pin=(signal,fn='GPIO_Output',pull='NOPULL',initial=0)=>p.mcu.pins[signal]={function:fn,pull,initial,label:'',edge:'CHANGE'};
  const connect=(n,signal)=>{if(!n)return;p.wires.push({id:'w'+(p.wires.length+1),from:boardPin(signal),to:'part:demo:p'+n,color:signal==='GND'?'#4e647b':'#23a68a'});};
  const find=label=>v.pins.indexOf(label)+1;
