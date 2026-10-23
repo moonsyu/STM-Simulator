@@ -35,12 +35,10 @@ test('parts view adds a resistor between two breadboard holes and undo removes i
   const count=()=>win.evaluate(()=>document.querySelectorAll('#part-layer [data-part]').length);
   const before=await count();
   await win.fill('#part-search','저항');
+  // One click on the card places the part (no hole picking); a second one goes to the next free spot.
   await win.locator('#part-list [data-add="resistor"]').click();
-  const holes=win.locator('[data-hole]');
-  const n=await holes.count();assert.ok(n>100,'holes rendered');
-  await holes.nth(Math.floor(n/2)).click({force:true});
-  await holes.nth(Math.floor(n/2)+3).click({force:true});
   await win.waitForFunction(b=>document.querySelectorAll('#part-layer [data-part]').length>b,before);
+  assert.equal(await win.evaluate(()=>document.getElementById('circuit').classList.contains('connecting')),false,'no hole-picking mode');
   assert.match(await win.textContent('#inspector'),/RESISTOR|저항/);
   await win.click('#undo');
   await win.waitForFunction(b=>document.querySelectorAll('#part-layer [data-part]').length===b,before);
@@ -186,11 +184,10 @@ test('a part is selected only on what is drawn: the LED glow and pin labels neit
   // Inside the (dark) glow ring but outside the lens: the hole below gets the click, not the LED.
   const under=await win.evaluate(([x,y])=>{const el=document.elementFromPoint(x,y);return {part:!!el?.closest('#part-layer [data-part="led1"]'),hole:!!el?.closest('[data-hole],[data-endpoint]')};},[cx-r*1.6,cy]);
   assert.equal(under.part,false,'the invisible glow does not catch clicks');
+  // The lens itself selects the LED; parts have no size handles (sizes come from their datasheets).
   await win.mouse.click(cx,cy);
-  await win.waitForFunction(()=>document.querySelectorAll('[data-resize-handle]').length>0);
-  const frame=await win.evaluate(()=>{const h=[...document.querySelectorAll('[data-resize-handle]')].map(e=>e.getBoundingClientRect());return {l:Math.min(...h.map(r=>r.left+r.width/2)),r:Math.max(...h.map(r=>r.right-r.width/2))};});
-  // Lens plus a small margin for the leads; the A/K labels beside the pins stay outside the frame.
-  assert.ok(frame.l>cx-r*1.6&&frame.r<cx+r*1.6,`frame ${Math.round(frame.l-cx)}..${Math.round(frame.r-cx)} around a lens of radius ${Math.round(r)}`);
+  await win.waitForFunction(()=>document.querySelector('#part-layer [data-part="led1"]')?.classList.contains('part-selected'));
+  assert.equal(await win.evaluate(()=>document.querySelectorAll('[data-resize-handle]').length),0);
   assert.deepEqual(s.errors,[]);
  }finally{await s.close();}
 });
@@ -203,13 +200,6 @@ test('a part lead never shares a hole with a jumper wire end',{timeout:120000},a
   // A breadboard hole that holds a wire end.
   const hole=await win.evaluate(()=>{for(const g of document.querySelectorAll('#wire-layer [data-wire-end]')){const c=g.querySelector('circle').getBoundingClientRect();const x=c.x+c.width/2,y=c.y+c.height/2;const under=document.elementsFromPoint(x,y).find(el=>el.closest('[data-hole]'));if(under)return {x,y,id:under.closest('[data-hole]').dataset.hole};}return null;});
   assert.ok(hole,'the example has a wire in a breadboard hole');
-  await win.click('[data-activity="parts"]');if(!await win.locator('#view-parts').isVisible())await win.click('[data-activity="parts"]');
-  await win.fill('#part-search','저항');await win.locator('#part-list [data-add="resistor"]').click();
-  const parts=await win.evaluate(()=>document.querySelectorAll('#part-layer [data-part]').length);
-  await win.mouse.click(hole.x,hole.y);
-  await win.waitForFunction(()=>/점퍼선이 꽂힌 구멍/.test(document.getElementById('console-output').textContent));
-  assert.equal(await win.evaluate(()=>document.querySelectorAll('#part-layer [data-part]').length),parts,'no resistor was placed');
-  await win.keyboard.press('Escape');
   // Dragging the LED onto that hole: when released, no lead sits in the wired hole.
   const led=win.locator('#part-layer [data-part="led1"] .part-body');const b=await led.boundingBox();
   await win.mouse.move(b.x+b.width/2,b.y+b.height/2);await win.mouse.down();await win.mouse.move(hole.x,hole.y,{steps:8});await win.mouse.up();
