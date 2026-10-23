@@ -1,12 +1,14 @@
 import {PART_LIBRARY} from './part-library.js';
 import {partPreview} from './part-preview.js';
+import {datasheetIdOf} from './model-geometry.js';
+import {datasheetLine} from './part-datasheets.js';
 
 export function setupPartPreviews(){
   const list=document.getElementById('part-list'),parts=new Map(PART_LIBRARY.map(part=>[part.type,part]));
   const popup=document.createElement('aside');popup.id='part-model-preview';popup.popover='manual';popup.hidden=true;popup.setAttribute('role','tooltip');
-  popup.innerHTML='<strong class="part-preview-name"></strong><div class="part-preview-image"><img alt=""></div><p class="part-preview-detail"></p>';
+  popup.innerHTML='<strong class="part-preview-name"></strong><div class="part-preview-image"><img alt=""></div><p class="part-preview-model"></p><p class="part-preview-detail"></p>';
   document.body.append(popup);
-  const name=popup.querySelector('strong'),image=popup.querySelector('img'),detail=popup.querySelector('p');
+  const name=popup.querySelector('strong'),image=popup.querySelector('img'),detail=popup.querySelector('.part-preview-detail'),model=popup.querySelector('.part-preview-model');
   let active=null,openTimer,closeTimer;
   function thumbnail(button){
     const img=button.querySelector('.part-thumbnail');if(!img||img.hasAttribute('src'))return;
@@ -21,7 +23,7 @@ export function setupPartPreviews(){
   function show(button){
     clearTimeout(openTimer);clearTimeout(closeTimer);if(!button.isConnected||button.hidden||!button.getClientRects().length||(!button.matches(':hover')&&document.activeElement!==button))return;
     const part=parts.get(button.dataset.add);if(!part)return;active?.removeAttribute('aria-describedby');active=button;
-    try{const preview=partPreview(part.type);thumbnail(button);name.textContent=part.name;image.src=preview.src;image.alt=part.name+' 장치 모형';detail.textContent=(part.type==='breadboard'?'400홀':part.type==='breadboard_full'?'830홀':preview.pins+'핀')+' · '+part.hint.replace(/^\d+\s*(?:핀|홀)\s*·\s*/,'');}catch{hide();return;}
+    try{const preview=partPreview(part.type);thumbnail(button);name.textContent=part.name;image.src=preview.src;image.alt=part.name+' 장치 모형';model.textContent=datasheetLine(datasheetIdOf(part.type));model.hidden=!model.textContent;detail.textContent=(part.type==='breadboard'?'400홀':part.type==='breadboard_full'?'830홀':preview.pins+'핀')+' · '+part.hint.replace(/^\d+\s*(?:핀|홀)\s*·\s*/,'');}catch{hide();return;}
     popup.dataset.type=part.type;popup.hidden=false;popup.showPopover?.();button.setAttribute('aria-describedby',popup.id);
     const anchor=button.getBoundingClientRect(),box=popup.getBoundingClientRect(),gap=12;
     let left=anchor.right+gap;if(left+box.width>innerWidth-8)left=anchor.left-box.width-gap;
