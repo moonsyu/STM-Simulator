@@ -1,6 +1,10 @@
 # STM Simulator — 개발 인계
 
-현재 버전: **1.2.0**. 정리일: **2026-10-23**. NUCLEO-F446RE 또는 NUCLEO-F103RB와 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+현재 버전: **1.2.1**. 정리일: **2026-10-23**. NUCLEO-F446RE 또는 NUCLEO-F103RB와 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+
+## 1.2.1 사용 중 업데이트 감지
+
+- `PortableUpdater`: `CHECK_INTERVAL` 30분, `WAKE_INTERVAL` 10분, `lastCheck`·`now` 주입. 자동(백그라운드) 확인이 실패하면 `idle/current/available` 상태를 유지하고 메시지만 바꾼다. 수동 확인 실패는 `error`.
 
 ## 1.2.0 부품 바로 배치 · 데이터시트 크기와 이름
 
@@ -283,7 +287,7 @@
 
 ## 0.16.0 포터블 자동 업데이트
 
-- `desktop/updater.cjs`: 고정 GitHub 공개 저장소의 정식 릴리스, 버전·업로드 완료·SHA-256 매니페스트 검증, 자동 확인/다운로드, 진행률, 설정 저장. 기본 시작 8초 후/6시간 간격. 다운로드 완료 후 사용자가 재시작을 선택한다.
+- `desktop/updater.cjs`: 고정 GitHub 공개 저장소의 정식 릴리스, 버전·업로드 완료·SHA-256 매니페스트 검증, 자동 확인/다운로드, 진행률, 설정 저장. 시작 8초 후, 실행 중 30분 간격, 창 포커스(`browser-window-focus`)·절전 해제(`powerMonitor` resume) 때 `wake()`로 10분 경과 시 확인. 다운로드 완료 후 사용자가 재시작을 선택한다.
 - `desktop/apply-update.ps1`: 별도 숨김 프로세스가 현재 앱 종료와 포터블 EXE 잠금 해제를 기다려 원본 백업/원자적 교체/재실행. 시작 실패 시 복원 시도. 준비 확인을 받아야 앱을 종료한다. `detached:true` PowerShell은 연결 끊긴 Windows 세션에서 명령을 실행하지 않고 종료하며, 일반 자식은 부모 종료 시 함께 종료되는 현상이 재현되어 `Start-Process -WindowStyle Hidden` 부트스트랩으로 독립 실행한다.
 - `src/update-ui.js`: 상태·자동 확인 설정·수동 확인/다운로드·저장 후 재시작. `src/app.js`는 설치 요청 직전 현재 회로/전체 코드를 동기식 자동 저장하고 열린 폴더에도 저장한다. 실패 시 앱을 닫지 않는다. 기존 사용자 프로필을 유지한다.
 - `build:artifact`가 `update-manifest.json`을 실제 EXE에서 생성한다. CI는 `main`에서 빌드만 수행하고 `v<package.version>` 태그에서 검증된 같은 실행의 산출물로 초안 릴리스를 만든 뒤 모든 파일을 업로드하고 공개한다. 기존 릴리스는 덮어쓰지 않는다.
