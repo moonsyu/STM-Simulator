@@ -1,6 +1,10 @@
 # STM Simulator — 개발 인계
 
-현재 버전: **1.1.0**. 정리일: **2026-10-23**. NUCLEO-F446RE 또는 NUCLEO-F103RB와 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+현재 버전: **1.1.1**. 정리일: **2026-10-23**. NUCLEO-F446RE 또는 NUCLEO-F103RB와 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+
+## 1.1.1 HAL 예제 배치 미리보기
+
+- `example-preview-ui.js` `setupExamplePreviews({getBoardId})`: `#hal-example-list [data-example]` 위에 `#example-layout-preview` 팝오버. `applyHalExample`로 만든 예제 회로를 `initSvg`·`renderBreadboards`·`renderWires`·`renderParts`·`updateSurfaces`로 그리고 getBBox로 viewBox를 맞춘 뒤 레이어 id를 지운다(작업 공간 id와 겹치지 않게). 목록 스크롤은 열린 미리보기만 닫는다.
 
 ## 1.1.0 제목 표시줄 · 설정 창 · 패널 옮기기/분리 · 보드 선택
 
