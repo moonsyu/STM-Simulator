@@ -167,7 +167,7 @@ function refresh({preserveWires=false}={}){
  $('run-status').textContent=runtime?.debug.paused?'일시정지':({running:'실행 중',paused:'한 단계 실행',stopped:'준비됨',error:'오류로 정지'})[status];
  $('status-led').className=running()?'running':'';
  $('connection-count').textContent=`부품 ${project.components.length}개 · 배선 ${project.wires.length}개`;
- $('canvas-empty').hidden=!(project.surfaces?.board?.hidden&&project.surfaces?.breadboard?.hidden&&!project.components.length)||running();
+ $('empty-add-board').textContent=projectBoard(project).name+' 추가';$('canvas-empty').hidden=!(project.surfaces?.board?.hidden&&project.surfaces?.breadboard?.hidden&&!project.components.length)||running();
  if($('explorer-circuit-summary'))$('explorer-circuit-summary').textContent=`${project.surfaces?.board?.hidden?'보드 없음':projectBoard(project).name} · 부품 ${project.components.filter(p=>p.type!=='breadboard').length}개 · 빵판 ${project.components.filter(p=>p.type==='breadboard').length+(project.surfaces?.breadboard?.hidden?0:1)}개 · 배선 ${project.wires.length}개`;
  $('hint').textContent=running()?'실행 중 핀을 클릭하면 전압을 측정합니다. 버튼은 누르는 동안 연결됩니다.':carry?CARRY_HINT:pending?'핀을 클릭하면 연결 · 바닥 클릭으로 꺾임점 추가 · 우클릭 / Esc: 작성 중 배선 취소':TWO_PIN_TYPES.includes(mode)?'빵판 구멍 두 곳을 선택해 다리를 꽂으세요. 빈 공간 클릭 시 자유 배치합니다.':drag?.type==='part'?'초록색 표시가 나타나면 놓아서 장착하세요. R: 45° 회전':'몸체: 이동 · 가장자리: 크기 조절 · 빈 공간 / 가운데 버튼: 화면 이동 · 배치 범위 제한 없음';
  inspector();updateReadouts();resizing?.refresh();
