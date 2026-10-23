@@ -337,8 +337,6 @@ dialog.command-palette::backdrop{background:transparent}
 :root[data-shell] #app-feedback.toast button{height:24px;padding:0 8px;border:1px solid var(--ide-border);background:transparent;font-size:12px;flex:none}
 
 /* ---------- small windows ---------- */
-@media (max-width:1180px){.menubar{display:none}.command-hint kbd{display:none}:root[data-shell] .ide-toolbar #build-status{display:none}}
-@media (max-width:980px){:root[data-shell] .project-title.command-center{min-width:120px}.command-hint{display:none}.layout-toggles{display:none}}
 :root[data-shell] .editor-heading::before{content:none}
 :root[data-shell] .statusbar #language-toggle{border:0!important;background:transparent!important;color:inherit;padding:0 8px;height:100%;border-radius:0}
 :root[data-shell] .statusbar #warning-count{margin-left:0;color:inherit;font-weight:400}
@@ -347,7 +345,6 @@ dialog.command-palette::backdrop{background:transparent}
 :root[data-shell] .object-size-tools label{font-size:11.5px}
 :root[data-shell] .object-size-tools select{height:24px;max-width:180px;font-size:12px;padding:0 4px}
 :root[data-shell] .object-size-tools output{font:11.5px var(--mono);color:var(--ide-muted)}
-@media (max-width:1450px){.command-hint kbd{display:none}}
 .example-meta{display:flex;gap:4px}
 .example-tag{display:inline-block;padding:0 6px;border-radius:999px;font-size:10px;letter-spacing:.02em;background:color-mix(in srgb,var(--ide-accent) 11%,transparent);line-height:16px}
 .example-tag.arm{color:var(--ide-warning);background:color-mix(in srgb,var(--ide-warning) 14%,transparent)}
@@ -365,10 +362,7 @@ dialog.command-palette::backdrop{background:transparent!important;backdrop-filte
 :root[data-shell] .swatch.active{background:var(--swatch)}
 .shell{grid-template-columns:minmax(0,1fr)}
 :root[data-shell] .topbar{overflow:hidden;min-width:0}
-:root[data-shell] .project-title.command-center{flex:1 1 160px;min-width:110px}
 .menubar,.run-area,.top-actions{flex-shrink:0}
-@media (max-width:1450px){.command-hint{display:none}}
-@media (max-width:1280px){.menubar-item{padding:0 5px}:root[data-shell] .brand strong{display:none}}
 
 /* logic analyzer */
 .la-toolbar{display:flex;flex-wrap:wrap;align-items:center;gap:10px;padding:4px 0 6px;font-size:12px}
@@ -407,9 +401,6 @@ dialog.command-palette::backdrop{background:transparent!important;backdrop-filte
 .sd-files td{padding:2px 4px;border-bottom:1px solid color-mix(in srgb,var(--ide-border) 60%,transparent);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:150px}
 .sd-files button{padding:0 6px;border:1px solid var(--ide-border);background:transparent;margin-left:2px}
 
-/* Project name is not shown in the title bar (the explorer and window title carry it). */
-:root[data-shell] .project-title #project-name{display:none}
-:root[data-shell] .project-title.command-center{justify-content:center}
 
 /* Activity bar: tooltip to the right of the icon, drag-and-drop reordering. */
 .activity-tip{position:fixed;z-index:1000;width:max-content;max-width:280px;padding:5px 9px;border:1px solid var(--ide-border);border-radius:6px;background:var(--ide-chrome);color:var(--ide-foreground);font-size:12px;line-height:1.4;white-space:normal;box-shadow:0 2px 8px rgb(0 0 0/.25);pointer-events:none}
@@ -456,3 +447,45 @@ dialog.command-palette::backdrop{background:transparent!important;backdrop-filte
 #tools-notice p span{display:block;color:var(--ide-muted)}
 #tools-notice div{display:flex;gap:6px;justify-content:flex-end}
 #tools-notice button{height:28px;padding:0 12px;font-size:12.5px;border:1px solid var(--ide-border);background:transparent;border-radius:6px}
+
+/* ---------- title bar: name and menus always visible, compact command search ---------- */
+:root[data-shell] .topbar{gap:4px}
+:root[data-shell] .topbar .brand,:root[data-shell] .menubar{flex:none}
+:root[data-shell] .command-center{flex:0 1 220px;min-width:34px;height:24px;margin:0 auto;display:flex;align-items:center;justify-content:center;padding:0;border:1px solid var(--ide-border);border-radius:7px;background:color-mix(in srgb,var(--ide-background) 70%,var(--ide-chrome));color:var(--ide-muted);cursor:pointer}
+:root[data-shell] .command-center:hover{background:var(--ide-hover);color:var(--ide-foreground)}
+:root[data-shell] .command-center:focus-visible{outline:1px solid var(--ide-accent);outline-offset:-1px}
+:root[data-shell] .command-center svg{pointer-events:none}
+@media (max-width:1100px){.menubar-item{padding:0 6px}}
+@media (max-width:860px){:root[data-shell] .brand strong span{display:none}.menubar-item{padding:0 4px;font-size:12px}.layout-toggles{display:none}}
+/* Update: a small accent pill left of the theme switch, only while a new version exists. */
+:root[data-shell] #app-update{height:22px;padding:0 10px;font-size:11.5px;font-weight:600;border-radius:11px;border:1px solid color-mix(in srgb,var(--ide-accent) 55%,transparent);background:color-mix(in srgb,var(--ide-accent) 14%,transparent);color:var(--ide-accent);display:inline-flex;align-items:center;gap:5px}
+:root[data-shell] #app-update::before{content:'';width:6px;height:6px;border-radius:50%;background:currentColor}
+:root[data-shell] #app-update:hover{background:color-mix(in srgb,var(--ide-accent) 24%,transparent)}
+:root[data-shell] #app-update.update-ready{background:var(--ide-button);border-color:var(--ide-button);color:var(--ide-onAccent,#fff)}
+:root[data-shell] #app-update[hidden]{display:none}
+/* Project name at the top of the explorer; save state in the status bar. */
+.explorer-project{display:flex;flex-direction:column;gap:3px;padding:8px 12px 10px;border-bottom:1px solid var(--ide-border);font-size:11px;color:var(--ide-muted)}
+.explorer-project input{height:26px;padding:0 8px;border:1px solid var(--ide-border);border-radius:var(--radius-sm);background:var(--ide-background);color:var(--ide-foreground);font-size:12.5px;font-weight:600}
+:root[data-shell] .statusbar #save-state{font-size:12px;color:inherit}
+:root[data-shell] .statusbar #save-state[data-state^=error]{color:var(--ide-error)}
+/* Buzzer sound switch in the circuit toolbar. */
+:root[data-shell] .workspace-toolbar .sound-toggle{height:26px;padding:0 9px;font-size:12px;border:1px solid var(--ide-border);border-radius:var(--radius);background:transparent;color:var(--ide-foreground)}
+:root[data-shell] .workspace-toolbar .sound-toggle[aria-pressed=true]{background:var(--ide-selection);color:var(--ide-selectionText);border-color:var(--ide-accent)}
+/* 편집 → 설정 floating window. */
+.settings-dialog{width:min(880px,calc(100vw - 48px));height:min(640px,calc(100vh - 64px));padding:0;border:1px solid var(--ide-border);border-radius:10px;background:var(--ide-chrome);color:var(--ide-foreground);box-shadow:var(--shadow-pop);overflow:hidden}
+.settings-dialog[open]{display:flex;flex-direction:column}
+.settings-dialog::backdrop{background:rgb(0 0 0/.28)}
+.settings-dialog-head{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1px solid var(--ide-border)}
+.settings-dialog-head h2{margin:0;font-size:15px}
+.settings-dialog-head .dialog-close{position:static;width:28px;height:28px}
+.settings-dialog-body{flex:1;min-height:0;display:grid;grid-template-columns:150px minmax(0,1fr)}
+.settings-dialog-tabs{display:flex;flex-direction:column;gap:2px;padding:10px 8px;border-right:1px solid var(--ide-border)}
+.settings-dialog-tabs button{height:30px;padding:0 10px;text-align:left;font-size:12.5px;border:0;border-radius:var(--radius);background:transparent;color:var(--ide-foreground)}
+.settings-dialog-tabs button:hover{background:var(--ide-hover)}
+.settings-dialog-tabs button[aria-selected=true]{background:var(--ide-selection);color:var(--ide-selectionText);font-weight:600}
+.settings-dialog-panes{min-height:0;overflow:auto;padding:12px 16px;background:var(--ide-background)}
+.settings-dialog-panes [data-settings-pane] h3{margin:4px 0 8px;font-size:14px}
+.settings-dialog-panes #view-keybindings{display:block}
+.settings-dialog-panes button.run-button,#settings-layout-reset{height:28px;padding:0 12px;border:1px solid var(--ide-border);border-radius:var(--radius);font-size:12.5px}
+/* Narrow windows: the status bar keeps run state, target, problems and position. */
+@media (max-width:1000px){.statusbar .status-time,.statusbar #warning-count,.statusbar #connection-count,.statusbar #build-status,.statusbar .language-badge{display:none!important}}

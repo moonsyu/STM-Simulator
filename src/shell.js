@@ -33,13 +33,13 @@ function loadState(){
  try{const s=JSON.parse(localStorage.getItem(KEY));if(!s||typeof s!=='object')return structuredClone(DEFAULT);
   const n=(v,a,b,d)=>Number.isFinite(v)?clamp(v,a,b):d;
   return {sidebar:n(s.sidebar,170,640,DEFAULT.sidebar),aux:n(s.aux,200,640,DEFAULT.aux),panel:n(s.panel,90,900,DEFAULT.panel),ratio:n(s.ratio,.12,.88,DEFAULT.ratio),orientation:s.orientation==='column'?'column':'row',swapped:s.swapped===true,
-   show:{sidebar:s.show?.sidebar!==false,aux:s.show?.aux!==false,panel:s.show?.panel!==false},view:[...VIEWS,...HIDDEN_VIEWS].some(v=>v.id===s.view)?s.view:'explorer',maximized:null,activityOrder:validOrder(s.activityOrder)};
+   show:{sidebar:s.show?.sidebar!==false,aux:s.show?.aux!==false,panel:s.show?.panel!==false},view:VIEWS.some(v=>v.id===s.view)?s.view:'explorer',maximized:null,activityOrder:validOrder(s.activityOrder)};
  }catch{return structuredClone(DEFAULT);}
 }
 
 // Phase 1: a layout object that other modules can call before the shell is mounted.
 export function createShell(){
- const state=loadState();let mounted=false,commands=[],palette=null,monitor=null,bindings=loadKeybindings();setCurrentKeybindings(bindings);const keyListeners=new Set();
+ const state=loadState();let mounted=false,commands=[],palette=null,monitor=null,settingsDialog=null,bindings=loadKeybindings();setCurrentKeybindings(bindings);const keyListeners=new Set();
  const root=document.documentElement;
  const save=()=>{try{localStorage.setItem(KEY,JSON.stringify({...state,maximized:null}));}catch{}};
  function apply(){
@@ -59,6 +59,8 @@ export function createShell(){
   window.dispatchEvent(new Event('resize'));
  }
  function showView(view,{toggle=false}={}){
+  // Settings and keybindings open in their own floating window.
+  if(view==='settings'||view==='keybindings'){settingsDialog?.open(view==='keybindings'?'keys':'general');return;}
   if(toggle&&state.view===view&&state.show.sidebar){state.show.sidebar=false;}
   else{state.view=view;state.show.sidebar=true;}
   if(state.maximized&&state.maximized!=='panel')state.maximized=null;apply();save();
@@ -90,10 +92,11 @@ export function createShell(){
   resetBindings(){bindings={...DEFAULT_KEYBINDINGS};saveKeybindings(bindings);setCurrentKeybindings(bindings);for(const f of keyListeners)f();},
   onBindings(f){keyListeners.add(f);},
   openPalette(prefix=''){palette?.open(prefix);},
+  openSettings(tab){settingsDialog?.open(tab);},
   reset(){Object.assign(state,structuredClone(DEFAULT));apply();save();},
   setOrientation(o){state.orientation=o==='column'?'column':'row';apply();save();},
   swap(){state.swapped=!state.swapped;apply();save();},
-  mount(options){if(mounted)return;mounted=true;mountShell(api,state,options,{apply,save,setPalette:p=>palette=p});apply();},
+  mount(options){if(mounted)return;mounted=true;mountShell(api,state,{...options,openSettings:tab=>settingsDialog?.open(tab)},{apply,save,setPalette:p=>palette=p,setSettings:d=>settingsDialog=d});apply();},
   get mounted(){return mounted;}
  };
  return api;
@@ -101,11 +104,14 @@ export function createShell(){
 
 function button(id,label,iconName,title){const b=document.createElement('button');b.type='button';if(id)b.id=id;b.className='icon-button';b.innerHTML=icon(iconName,16);b.title=title||label;b.setAttribute('aria-label',label);return b;}
 
-function mountShell(layout,state,options,{apply,save,setPalette}){
+function mountShell(layout,state,options,{apply,save,setPalette,setSettings}){
  const shell=$('shell');
  document.documentElement.setAttribute('data-shell','vscode');
  // ---- Relocate controls mounted by the IDE, Docs and settings modules ----
- const explorer=$('view-explorer');const files=document.querySelector('.project-files');if(files)explorer.append(files);
+ const explorer=$('view-explorer');
+ // The project name is edited at the top of the explorer (the title bar keeps only the command search).
+ const project=document.createElement('label');project.className='explorer-project';project.innerHTML='<span>프로젝트</span>';project.append($('project-name'));explorer.append(project);
+ const files=document.querySelector('.project-files');if(files)explorer.append(files);
  explorer.insertAdjacentHTML('beforeend','<section class="explorer-outline"><h3>회로 개요</h3><p id="explorer-circuit-summary" class="form-hint"></p><div class="explorer-links"><button type="button" data-goto-view="parts">부품 추가</button><button type="button" data-goto-view="examples">HAL 예제</button><button type="button" data-goto-view="board">핀 설정</button></div></section>');
  const debug=$('debug-panel');if(debug){debug.hidden=false;$('view-debug').append(debug);}
  const debugBar=document.createElement('div');debugBar.className='debug-toolbar';debugBar.setAttribute('role','toolbar');debugBar.setAttribute('aria-label','디버그 제어');
@@ -117,10 +123,12 @@ function mountShell(layout,state,options,{apply,save,setPalette}){
  const targetLabel=document.querySelector('.native-target-label');if(targetLabel){[...targetLabel.childNodes].forEach(n=>{if(n.nodeType===3)n.remove();});runConfig.append(targetLabel);}if($('native-config'))runConfig.append($('native-config'));
  $('view-debug').prepend(runConfig,debugBar);
  const docs=$('device-docs-panel');if(docs){docs.hidden=false;$('view-docs').append(docs);}
- const settings=$('ide-settings-panel');if(settings){settings.hidden=false;$('view-settings').append(settings);}
  document.querySelector('[data-monitor="debug"]')?.remove();
  const runArea=$('run-area'),toolbar=document.querySelector('.ide-toolbar');if(toolbar)runArea.append(toolbar);
  if($('debug-start'))$('debug-start').textContent='디버그';
+ // Build, debug and the run tools are reached from the 실행 menu, the palette and the Run and Debug view, not the title bar.
+ const holder=document.createElement('div');holder.id='hidden-controls';holder.hidden=true;document.body.append(holder);
+ for(const id of ['ide-build','debug-start','step','native-tools','native-connection'])if($(id))holder.append($(id));
  // Source tabs become the editor group's tab strip.
  const group=$('group-code'),tabs=$('source-tabs');
  const tabRow=document.createElement('div');tabRow.className='group-tabs';const tabActions=document.createElement('div');tabActions.className='group-actions';tabActions.id='code-actions';
@@ -139,10 +147,8 @@ function mountShell(layout,state,options,{apply,save,setPalette}){
  panelActions.append(maxPanel,closePanel);
  // Circuit group actions
  const circuitActions=$('circuit-actions');
- const swap=button('group-swap','코드와 회로 위치 바꾸기','swap');swap.onclick=()=>layout.swap();
- const orient=button('group-orientation','가로 / 세로 분할 전환','rotate');orient.onclick=()=>layout.setOrientation(state.orientation==='row'?'column':'row');
  const maxCircuit=button('circuit-maximize','회로 최대화','max','회로 최대화 / 복원');maxCircuit.onclick=()=>layout.maximize('circuit');
- circuitActions.append(swap,orient,maxCircuit);
+ circuitActions.append(maxCircuit);
  const maxCode=button('code-maximize','편집기 최대화','max','편집기 최대화 / 복원');maxCode.onclick=()=>layout.maximize('code');tabActions.prepend(maxCode);
  // Wire colour palette behind a compact menu
  const palette=$('wire-palette'),wtool=document.querySelector('.workspace-toolbar');
@@ -152,14 +158,10 @@ function mountShell(layout,state,options,{apply,save,setPalette}){
  const updateChip=()=>{const sel=palette.querySelector('.active');paletteButton.querySelector('.palette-current').style.setProperty('--swatch',sel?.dataset.color||'#23a68a');paletteButton.title=sel?.title||'배선 색상 선택';};
  new MutationObserver(updateChip).observe(palette,{subtree:true,attributes:true,attributeFilter:['class'],childList:true});updateChip();
  palette.addEventListener('click',e=>{if(e.target.closest('[data-color]'))paletteMenu.hidePopover();});
- // Run toolbar extras (sound / step / tools) behind "…"
+ // The buzzer sound switch belongs to the circuit, next to the wire colours.
+ const sound=$('sound');if(sound){sound.classList.add('sound-toggle');paletteButton.after(sound);}
  const run=document.querySelector('.run-tools');
- if(toolbar&&run){
-  const runMore=popover('execution-tools-menu','실행 도구',[$('sound'),$('step'),$('native-tools'),$('native-connection')]);
-  const t=document.createElement('button');t.type='button';t.id='execution-tools-menu-toggle';t.className='workbench-menu-toggle';t.textContent='실행 도구';t.setAttribute('popovertarget','execution-tools-menu');toolbar.append(t);anchor(runMore,t);
-  runMore.addEventListener('click',e=>{if(e.target.closest('button'))runMore.hidePopover();});
-  toolbar.insertBefore($('run'),toolbar.querySelector('#ide-build'));run.remove();
- }
+ if(toolbar&&run){toolbar.prepend($('run'));run.remove();}
  // ---- Activity bar ----
  const bar=$('activitybar');
  const top=document.createElement('div');top.className='activity-top';const bottom=document.createElement('div');bottom.className='activity-bottom';
@@ -176,7 +178,9 @@ function mountShell(layout,state,options,{apply,save,setPalette}){
  const tPanel=button('toggle-panel','패널 표시','panel','패널 표시 / 숨기기 (Ctrl+J)');tPanel.onclick=()=>layout.toggle('panel');
  const tAux=button('toggle-aux','보조 사이드바 표시','aux','속성 패널 표시 / 숨기기 (Ctrl+Alt+B)');tAux.onclick=()=>layout.toggle('aux');
  toggles.append(tSide,tPanel,tAux);actions.insertBefore(toggles,$('save'));
- for(const id of ['new','workspace-open','open','app-update'])$(id)?.classList.add('titlebar-hidden');
+ for(const id of ['new','workspace-open','open'])$(id)?.classList.add('titlebar-hidden');
+ // Update appears left of the theme switch, and only while a new version is available.
+ const appearance=actions.querySelector('.appearance-switch');if($('app-update'))actions.insertBefore($('app-update'),appearance||$('save'));
  $('auxbar-close').onclick=()=>layout.toggle('aux');
  // ---- Status bar ----
  const left=$('status-left'),right=$('status-right');
@@ -186,6 +190,7 @@ function mountShell(layout,state,options,{apply,save,setPalette}){
  const target=document.createElement('button');target.type='button';target.className='status-item status-button';target.id='status-target';target.title='실행 환경 선택 (실행 및 디버그)';target.onclick=()=>{layout.showView('debug');$('native-target')?.focus();};left.append(target);
  const problems=document.createElement('button');problems.type='button';problems.className='status-item status-button';problems.id='status-problems';problems.title='문제 보기';problems.onclick=()=>{const circuit=/\(\d+\)/.test(document.querySelector('[data-monitor="issues"]')?.textContent||'');layout.showPanel(!circuit&&$('build-errors')?.childElementCount?'build':'issues');};left.append(problems);
  for(const s of [...strip2.children]){s.classList.add('status-item');left.append(s);}
+ const saveState=$('save-state');if(saveState){saveState.classList.add('status-item');left.append(saveState);}
  const buildStatus=$('build-status');if(buildStatus){buildStatus.classList.add('status-item');buildStatus.previousElementSibling?.classList.contains('toolbar-divider')&&buildStatus.previousElementSibling.remove();left.append(buildStatus);}
  strip2.remove();
  const position=document.querySelector('.editor-position');
@@ -204,9 +209,6 @@ function mountShell(layout,state,options,{apply,save,setPalette}){
  if($('build-errors'))new MutationObserver(update).observe($('build-errors'),{childList:true});
  if($('status-led'))new MutationObserver(update).observe($('status-led'),{attributes:true});
  $('native-target')?.addEventListener('change',update);new MutationObserver(update).observe($('current-board-name'),{childList:true,characterData:true,subtree:true});update();
- // The update button lives in the 도움말 menu; a status item appears only while an update is downloading or ready.
- const upd=$('app-update');if(upd){const st=document.createElement('button');st.type='button';st.className='status-item status-button';st.id='status-update';st.hidden=true;st.onclick=()=>upd.click();right.prepend(st);
-  const sync=()=>{const active=upd.classList.contains('update-ready')||/다운로드/.test(upd.textContent);st.hidden=upd.hidden||!active;st.textContent='⬆ '+upd.textContent;st.title=upd.title;};new MutationObserver(sync).observe(upd,{attributes:true,childList:true,characterData:true,subtree:true});sync();}
  // ---- HAL example list ----
  setupExampleList();
  // ---- Sashes ----
@@ -220,11 +222,31 @@ function mountShell(layout,state,options,{apply,save,setPalette}){
  setPalette(setupPalette(layout,options));
  keyboard(layout,options);
  setupKeybindingsView(layout);
+ setSettings(setupSettingsDialog(layout));
  $('command-palette-open').onclick=()=>layout.openPalette('>');
  // Feedback banner becomes a toast with an icon.
  $('app-feedback')?.classList.add('toast');
  // Settings: keep the legacy tab hooks working (view.settings opens the settings view).
  for(const b of document.querySelectorAll('.panel-tabs [data-tab="settings"],.panel-tabs [data-tab="docs"]'))b.hidden=true;
+}
+
+// 편집 → 설정: one floating window with the screen/editor settings, keybindings, updates and the layout reset.
+function setupSettingsDialog(layout){
+ const dialog=document.createElement('dialog');dialog.id='settings-dialog';dialog.className='settings-dialog';dialog.setAttribute('aria-labelledby','settings-dialog-title');
+ const TABS=[['general','화면 · 편집기'],['keys','단축키'],['update','업데이트'],['layout','레이아웃']];
+ dialog.innerHTML=`<header class="settings-dialog-head"><h2 id="settings-dialog-title">설정</h2><button type="button" class="dialog-close" id="settings-dialog-close" aria-label="설정 닫기">×</button></header><div class="settings-dialog-body"><nav class="settings-dialog-tabs" role="tablist" aria-label="설정 종류">${TABS.map(([id,label])=>`<button type="button" role="tab" data-settings-tab="${id}" aria-controls="settings-pane-${id}">${label}</button>`).join('')}</nav><div class="settings-dialog-panes">${TABS.map(([id])=>`<section id="settings-pane-${id}" role="tabpanel" data-settings-pane="${id}" hidden></section>`).join('')}</div></div>`;
+ document.body.append(dialog);
+ const general=$('ide-settings-panel');if(general){general.hidden=false;dialog.querySelector('#settings-pane-general').append(general);}
+ const keys=$('view-keybindings');if(keys){keys.hidden=false;keys.classList.remove('sidebar-view');dialog.querySelector('#settings-pane-keys').append(keys);}
+ dialog.querySelector('#settings-pane-update').innerHTML='<h3>업데이트</h3><p class="form-hint">새 버전이 있으면 제목 표시줄의 테마 버튼 왼쪽에 업데이트 버튼이 나타납니다. 자동 확인·다운로드 설정과 수동 확인은 아래에서 합니다.</p><button type="button" id="settings-update-open" class="run-button">업데이트 확인 · 설정 열기</button>';
+ dialog.querySelector('#settings-pane-layout').innerHTML='<h3>레이아웃</h3><p class="form-hint">패널 탭을 끌어 다른 영역에 놓거나 ⧉ 버튼으로 새 창에 띄울 수 있습니다. 처음 배치로 되돌리려면 아래 버튼을 누르세요.</p><button type="button" id="settings-layout-reset">레이아웃 초기화</button>';
+ dialog.querySelector('#settings-update-open').onclick=()=>{dialog.close();$('app-update')?.click();};
+ dialog.querySelector('#settings-layout-reset').onclick=()=>{layout.reset();dialog.close();};
+ dialog.querySelector('#settings-dialog-close').onclick=()=>dialog.close();
+ dialog.addEventListener('click',e=>{if(e.target===dialog)dialog.close();});
+ const select=id=>{for(const b of dialog.querySelectorAll('[data-settings-tab]')){const on=b.dataset.settingsTab===id;b.setAttribute('aria-selected',String(on));b.tabIndex=on?0:-1;}for(const p of dialog.querySelectorAll('[data-settings-pane]'))p.hidden=p.dataset.settingsPane!==id;};
+ dialog.querySelector('.settings-dialog-tabs').addEventListener('click',e=>{const b=e.target.closest('[data-settings-tab]');if(b)select(b.dataset.settingsTab);});
+ return {open(tab='general'){select(TABS.some(([id])=>id===tab)?tab:'general');if(!dialog.open)dialog.showModal();dialog.querySelector(`[data-settings-tab="${tab}"]`)?.focus();}};
 }
 
 function popover(id,label,nodes){
@@ -293,8 +315,8 @@ function registerCommands(layout,options){
   {id:'view.palette',label:'명령 팔레트',group:'보기',run:()=>layout.openPalette('>')},
   {id:'view.quickOpen',label:'파일로 이동',group:'보기',run:()=>layout.openPalette('')},
   ...views,
-  {id:'view.settings',label:'설정 (IDE · 테마 · 글꼴)',group:'편집',run:()=>layout.showView('settings')},
-  {id:'view.keybindings',label:'단축키 설정',group:'편집',run:()=>layout.showView('keybindings')},
+  {id:'view.settings',label:'설정 (화면 · 테마 · 글꼴 · 단축키)',group:'편집',run:()=>options.openSettings?.('general')},
+  {id:'view.keybindings',label:'설정: 단축키',keywords:'키보드 단축키 보기 keybindings shortcuts',group:'편집',run:()=>options.openSettings?.('keys')},
   {id:'view.toggleSidebar',label:'기본 사이드바 표시 전환',group:'보기',run:()=>layout.toggle('sidebar')},
   {id:'view.togglePanel',label:'패널 표시 전환',group:'보기',run:()=>layout.toggle('panel')},
   {id:'view.toggleAux',label:'속성 패널(보조 사이드바) 표시 전환',group:'보기',run:()=>layout.toggle('aux')},
@@ -304,36 +326,27 @@ function registerCommands(layout,options){
   {id:'view.serial',label:'패널: 직렬 모니터 보기',group:'보기',run:()=>layout.showPanel('bus')},
   {id:'view.wave',label:'패널: 파형 보기',group:'보기',run:()=>layout.showPanel('wave')},
   {id:'view.logic',label:'패널: 로직 분석기 보기',group:'보기',run:()=>layout.showPanel('signals')},
-  {id:'view.swap',label:'편집기 배치: 코드와 회로 위치 바꾸기',group:'보기',run:()=>layout.swap()},
-  {id:'view.orientation',label:'편집기 배치: 가로 / 세로 분할 전환',group:'보기',run:()=>layout.setOrientation(layout.state().orientation==='row'?'column':'row')},
-  {id:'view.maxCircuit',label:'회로 최대화 / 복원',group:'보기',run:()=>layout.maximize('circuit')},
-  {id:'view.maxCode',label:'편집기 최대화 / 복원',group:'보기',run:()=>layout.maximize('code')},
-  {id:'view.reset',label:'레이아웃 초기화',group:'보기',run:()=>layout.reset()},
   {id:'view.theme',label:'화면 테마: Dark / White 전환',group:'보기',run:click('appearance-toggle')},
-  {id:'view.themeSystem',label:'화면 테마: 시스템 설정 따르기',group:'보기',run:()=>{const sel=$('pref-appearance');if(sel){sel.value='system';sel.dispatchEvent(new Event('change',{bubbles:true}));}}},
   {id:'run.run',label:'실행 / 계속',group:'실행',run:()=>options.runCommand?.('run')},
   {id:'run.debug',label:'디버그 시작 / 계속',group:'실행',run:()=>options.runCommand?.('debug')},
-  {id:'run.stop',label:'디버그 및 실행 중지',group:'실행',run:()=>options.debugCommand?.('stop')},
-  {id:'run.pause',label:'일시정지',group:'실행',run:()=>options.debugCommand?.('pause')},
-  {id:'run.over',label:'한 줄 실행',group:'실행',run:()=>options.debugCommand?.('over')},
-  {id:'run.into',label:'함수 안으로',group:'실행',run:()=>options.debugCommand?.('into')},
-  {id:'run.out',label:'함수 밖으로',group:'실행',run:()=>options.debugCommand?.('out')},
+  {id:'run.stop',label:'디버그 및 실행 중지',keywords:'debug stop',group:'실행',run:()=>options.debugCommand?.('stop')},
+  {id:'run.pause',label:'일시정지',keywords:'디버그 debug step',group:'실행',run:()=>options.debugCommand?.('pause')},
+  {id:'run.over',label:'한 줄 실행',keywords:'디버그 debug step',group:'실행',run:()=>options.debugCommand?.('over')},
+  {id:'run.into',label:'함수 안으로',keywords:'디버그 debug step',group:'실행',run:()=>options.debugCommand?.('into')},
+  {id:'run.out',label:'함수 밖으로',keywords:'디버그 debug step',group:'실행',run:()=>options.debugCommand?.('out')},
   {id:'run.step',label:'20 ms 한 단계 실행',group:'실행',run:click('step')},
   {id:'run.build',label:'빌드',group:'실행',run:click('ide-build')},
   {id:'run.target.sim',label:'실행 대상: 회로 시뮬레이터 (C 해석)',group:'실행',run:()=>options.setTarget?.('simulator')},
   {id:'run.target.emu',label:'실행 대상: 펌웨어 에뮬레이터 (ARM ELF)',group:'실행',run:()=>options.setTarget?.('emulator')},
   {id:'run.target.arm',label:'실행 대상: STM32 · ARM GCC (실물 보드)',group:'실행',run:()=>options.setTarget?.('arm')},
   {id:'run.target.host',label:'실행 대상: Windows · C/C++',group:'실행',run:()=>options.setTarget?.('host')},
-  {id:'run.tools',label:'개발 도구 설정',group:'실행',run:click('native-tools')},
-  {id:'run.connection',label:'보드 연결 설정',group:'실행',run:click('native-connection')},
-  {id:'run.sound',label:'부저 소리 켜기 / 끄기',group:'실행',run:click('sound')},
+  {id:'run.tools',label:'개발 도구 설정',group:'편집',run:click('native-tools')},
   {id:'run.pinout',label:'Pinout & Configuration 열기',group:'실행',run:click('pinout-open')},
   {id:'terminal.start',label:'터미널: 시작',group:'터미널',run:()=>{layout.showPanel('native');click('terminal-start')();}},
   {id:'terminal.stop',label:'터미널: 종료',group:'터미널',run:click('terminal-close')},
   {id:'terminal.clear',label:'출력 지우기',group:'터미널',run:click('clear-console')},
   {id:'help.guide',label:'사용 방법',group:'도움말',run:click('help')},
-  {id:'help.update',label:'업데이트 확인 · 설치',group:'도움말',run:click('app-update')},
-  {id:'help.shortcuts',label:'키보드 단축키 보기',group:'도움말',run:()=>layout.showView('keybindings')}
+  {id:'help.update',label:'업데이트 확인 · 설치',group:'도움말',run:()=>options.openSettings?.('update')}
  ].map(key));
 }
 
@@ -341,11 +354,11 @@ function buildMenus(layout){
  const bar=$('menubar');
  const groups=['파일','편집','보기','실행','터미널','도움말'];
  const map={'파일':['file.newProject','file.openProject','file.openCircuit','-','file.save','file.exportMain','-','file.import','file.importFolder','file.addSource','-','file.openElf'],
-  '편집':['edit.undo','edit.redo','-','edit.find','edit.replace','-','edit.format','edit.formatSelection','-','edit.rotate','edit.delete','-','edit.codeReset','edit.boardReset','-','view.settings','view.keybindings'],
-  '보기':['view.palette','view.quickOpen','-','view.explorer','view.parts','view.examples','view.board','view.debug','view.docs','-','view.toggleSidebar','view.togglePanel','view.toggleAux','-','view.problems','view.output','view.terminal','view.serial','view.wave','view.logic','-','view.swap','view.orientation','view.maxCircuit','view.maxCode','view.reset','-','view.theme','view.themeSystem'],
-  '실행':['run.run','run.debug','run.stop','run.pause','-','run.over','run.into','run.out','run.step','-','run.build','-','run.target.sim','run.target.emu','run.target.arm','run.target.host','-','run.pinout','run.tools','run.connection','run.sound'],
+  '편집':['edit.undo','edit.redo','-','edit.find','edit.replace','-','edit.format','edit.formatSelection','-','edit.rotate','edit.delete','-','edit.codeReset','edit.boardReset','-','view.settings','run.tools'],
+  '보기':['view.palette','view.quickOpen','-','view.explorer','view.parts','view.examples','view.board','view.debug','view.docs','-','view.toggleSidebar','view.togglePanel','view.toggleAux','-','view.problems','view.output','view.terminal','view.serial','view.wave','view.logic'],
+  '실행':['run.run','run.debug','run.stop','run.pause','-','run.over','run.into','run.out','run.step','-','run.build','-','run.target.sim','run.target.emu','run.target.arm','run.target.host','-','run.pinout'],
   '터미널':['terminal.start','terminal.stop','terminal.clear'],
-  '도움말':['help.guide','help.shortcuts','help.update']};
+  '도움말':['help.guide']};
  const byId=new Map(layout.commands().map(c=>[c.id,c]));
  let open=null;
  for(const g of groups){
@@ -363,8 +376,8 @@ function buildMenus(layout){
  window.addEventListener('keydown',e=>{if(open&&e.key==='Escape'){e.preventDefault();e.stopImmediatePropagation();const b=bar.querySelector(`[popovertarget="${open.id}"]`);open.hidePopover();b?.focus();}},true);
  function refreshMenu(menu){
   // Mirror the enabled state of the controls each command clicks.
-  const targets={'file.newProject':'new','file.openProject':'workspace-open','file.openCircuit':'open','file.save':'save','file.exportMain':'main-export','file.import':'firmware-import','file.importFolder':'firmware-folder','file.addSource':'source-add','edit.undo':'undo','edit.redo':'redo','edit.rotate':'rotate','edit.delete':'delete','edit.codeReset':'code-reset','edit.boardReset':'board-reset','run.debug':'debug-start','run.step':'step','run.build':'ide-build','run.tools':'native-tools','run.connection':'native-connection','run.pinout':'pinout-open','terminal.start':'terminal-start','terminal.stop':'terminal-close'};
-  for(const item of menu.querySelectorAll('[data-command]')){const k=keyOf(layout,byId.get(item.dataset.command)),kbd=item.querySelector('kbd');kbd.textContent=k;kbd.hidden=!k;const id=targets[item.dataset.command];const el=id&&$(id);item.disabled=!!id&&(!el||el.disabled||(el.hidden&&!['new','workspace-open','open','native-connection','step','native-tools'].includes(id)));}
+  const targets={'file.newProject':'new','file.openProject':'workspace-open','file.openCircuit':'open','file.save':'save','file.exportMain':'main-export','file.import':'firmware-import','file.importFolder':'firmware-folder','file.addSource':'source-add','edit.undo':'undo','edit.redo':'redo','edit.rotate':'rotate','edit.delete':'delete','edit.codeReset':'code-reset','edit.boardReset':'board-reset','run.debug':'debug-start','run.step':'step','run.build':'ide-build','run.tools':'native-tools','run.pinout':'pinout-open','terminal.start':'terminal-start','terminal.stop':'terminal-close'};
+  for(const item of menu.querySelectorAll('[data-command]')){const k=keyOf(layout,byId.get(item.dataset.command)),kbd=item.querySelector('kbd');kbd.textContent=k;kbd.hidden=!k;const id=targets[item.dataset.command];const el=id&&$(id);item.disabled=!!id&&(!el||el.disabled||(el.hidden&&!['new','workspace-open','open','step','native-tools'].includes(id)));}
  }
 }
 
@@ -376,7 +389,7 @@ function setupPalette(layout,options){
  const score=(text,query)=>{if(!query)return 1;text=text.toLowerCase();query=query.toLowerCase();if(text.includes(query))return 100-text.indexOf(query);let t=0,s=0;for(const ch of query){const i=text.indexOf(ch,t);if(i<0)return 0;s+=i===t?3:1;t=i+1;}return s;};
  function compute(){
   const value=input.value;
-  if(value.startsWith('>')){const q=value.slice(1).trim();items=layout.commands().map(c=>({...c,score:score(c.group+' '+c.label,q)})).filter(c=>c.score>0).sort((a,b)=>b.score-a.score);}
+  if(value.startsWith('>')){const q=value.slice(1).trim();items=layout.commands().map(c=>({...c,score:score(c.group+' '+c.label+' '+(c.keywords||''),q)})).filter(c=>c.score>0).sort((a,b)=>b.score-a.score);}
   else{const q=value.trim();const files=options.files?.()||[];items=files.map(name=>({id:'file:'+name,label:name,group:'파일로 이동',score:score(name,q),run:()=>options.openFile?.(name)})).filter(c=>c.score>0).sort((a,b)=>b.score-a.score);
    if(q.startsWith(':')){const line=Number(q.slice(1));items=Number.isInteger(line)&&line>0?[{id:'line',label:`${line}행으로 이동`,group:'현재 파일',run:()=>options.gotoLine?.(line)}]:[{id:'hint',label:q.length>1?'줄 번호는 1 이상의 정수로 입력하세요 (예: :25)':'이동할 줄 번호를 입력하세요 (예: :25)',group:'현재 파일',run:()=>{input.value=':';compute();}}];}
    if(!items.length&&q)items=[{id:'hint',label:'> 를 입력하면 명령을 검색합니다',group:'',run:()=>{input.value='>'+q;compute();}}];}

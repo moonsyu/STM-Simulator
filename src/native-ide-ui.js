@@ -35,7 +35,7 @@ export function setupNativeIde({o,editor,select,showMonitor,points,watches,toggl
   document.querySelector('.language-badge').textContent=config().target==='arm'?'ARM · STM32 HAL':'C/C++ · GCC';
   $('ide-build').title=withKey('GCC 컴파일 및 링크','run.build');
   $('code').readOnly=locked;for(const id of ['source-add','ide-build','debug-start','new','open','workspace-open','source-rename','source-delete'])$(id).disabled=locked||(['source-rename','source-delete'].includes(id)&&o.getSource()==='main.c');
-  $('run').disabled=building||working;$('run').textContent=paused?withKey('계속 실행','run.run'):locked?'■ 실행 정지':withKey('▶ 실행','run.run');$('step').disabled=true;
+  $('run').disabled=building||working;$('run').textContent=paused?'⏵ 계속':locked?'■ 실행 정지':'▶ 실행';$('step').disabled=true;
   $('run-status').textContent=building?'컴파일 중':({idle:'준비됨',starting:'디버거 연결 중',running:'실행 중',paused:'일시정지',exited:'실행 종료'})[state]||state;
   $('mode-label').textContent=config().target==='arm'?'STM32 보드 실행':'Windows 프로그램 실행';
  }
