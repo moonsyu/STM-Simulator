@@ -38,12 +38,27 @@ async function listStlinks(){
   const r=await execute(path.join(process.env.SystemRoot||'C:/Windows','System32/WindowsPowerShell/v1.0/powershell.exe'),['-NoProfile','-NonInteractive','-Command',"Get-PnpDevice -PresentOnly | Where-Object { $_.InstanceId -match '^USB\\\\VID_0483&PID_(374B|374E|374F|3752|3753|3748)\\\\' } | ForEach-Object { $_.InstanceId.Split('\\')[-1] }"],{timeout:15000}).catch(()=>null);
   return (r?.stdout||'').split(/\r?\n/).map(s=>s.trim()).filter(s=>/^\w{8,}$/.test(s)).map(serial=>({serial,board:''}));
 }
+// ST-LINK virtual COM ports: "STMicroelectronics STLink Virtual COM Port (COM5)", whose parent USB device id ends with the ST-LINK serial.
+async function stlinkPorts(){
+  if(os.platform()!=='win32')return new Map();
+  const script="Get-PnpDevice -PresentOnly -Class Ports | Where-Object { $_.InstanceId -match 'VID_0483' } | ForEach-Object { $p=(Get-PnpDeviceProperty -InstanceId $_.InstanceId -KeyName DEVPKEY_Device_Parent -ErrorAction SilentlyContinue).Data; $_.FriendlyName + '|' + $p }";
+  const r=await execute(path.join(process.env.SystemRoot||'C:/Windows','System32/WindowsPowerShell/v1.0/powershell.exe'),['-NoProfile','-NonInteractive','-Command',script],{timeout:15000}).catch(()=>null);
+  const ports=new Map();
+  for(const line of (r?.stdout||'').split(/\r?\n/)){const [name,parent='']=line.split('|'),port=/\((COM\d+)\)/.exec(name||'')?.[1],serial=parent.trim().split('\\').pop();if(port&&/^\w{8,}$/.test(serial))ports.set(serial,port);}
+  return ports;
+}
+/** Connected NUCLEO boards for the run target list: [{serial,board,port}] (board/port '' when unknown). */
+async function listBoards(){
+  const [links,ports]=await Promise.all([listStlinks().catch(()=>[]),stlinkPorts().catch(()=>new Map())]);
+  return links.map(l=>({serial:l.serial,board:l.board,port:ports.get(l.serial)||''}));
+}
 /** The ST-LINK serial for `boardName`: the one set by the user, the one whose board name matches, or the only one
  * connected when its board is unknown. A connected board of another kind is never chosen (it would be written with
  * firmware for the wrong MCU). */
 async function chooseStlink(boardName,preferred,list=listStlinks){
-  if(preferred)return preferred;
   const links=await list(),same=l=>l.board.toUpperCase()===boardName.toUpperCase();
+  // A board picked in the run target list is used, unless it is known to be another kind of board.
+  if(preferred){const picked=links.find(l=>l.serial===preferred);if(picked?.board&&!same(picked))throw new Error(`선택한 보드 ${picked.board}는 프로젝트 보드 ${boardName}와 다릅니다. 같은 보드를 고르거나 프로젝트 보드를 바꾸세요.`);return preferred;}
   const match=links.filter(same);if(match.length===1)return match[0].serial;
   if(links.length===1&&!links[0].board)return links[0].serial;
   if(!links.length)return '';
@@ -138,4 +153,4 @@ class NativeIde extends EventEmitter{
   async close(){await this.stop();await this.lsp.stop();await this.closeTerminal();}
   async closeTerminal(){const child=this.terminal;this.terminal=null;await terminate(child);if(!this.terminal)this.send('terminal-state',{state:'closed'});}
 }
-module.exports={NativeIde,openocdArgs,chooseStlink};
+module.exports={NativeIde,openocdArgs,chooseStlink,listBoards};

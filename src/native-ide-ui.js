@@ -4,7 +4,7 @@ import {sourceFiles} from './source-files.js';
 const $=id=>document.getElementById(id);
 const TOOL_LABELS={armGcc:'ARM GCC · arm-none-eabi-gcc.exe',armGdb:'ARM GDB · arm-none-eabi-gdb.exe',cube:'STM32CubeF4 SDK 폴더 · NUCLEO-F446RE',cubeF1:'STM32CubeF1 SDK 폴더 · NUCLEO-F103RB',hostGcc:'Windows GCC · gcc.exe',hostGdb:'Windows GDB · gdb.exe',clangd:'C/C++ 언어 서버 · clangd.exe',openocd:'ST-LINK 서버 · openocd.exe',buildRoot:'빌드 작업 폴더 · 영문 경로 (선택)'};
 export function mountNativeChrome(){
- document.querySelector('.ide-toolbar').insertAdjacentHTML('afterbegin','<label class="native-target-label">실행 대상<select id="native-target" aria-label="실행 대상"><option value="simulator">회로 시뮬레이터</option><option value="emulator">펌웨어 에뮬레이터 · ARM ELF</option><option value="arm">STM32 · ARM GCC</option><option value="host">Windows · C/C++</option></select></label><select id="native-config" aria-label="빌드 구성"><option>Debug</option><option>Release</option></select>');
+ document.querySelector('.ide-toolbar').insertAdjacentHTML('afterbegin','<label class="native-target-label">실행 대상<select id="native-target" aria-label="실행 대상"><option value="simulator">시뮬레이터</option><option value="emulator">펌웨어 에뮬레이터</option><option value="arm" data-board-placeholder>실물 보드 (연결 안 됨)</option><option value="host">Windows · C/C++</option></select></label><select id="native-config" aria-label="빌드 구성"><option>Debug</option><option>Release</option></select>');
  document.querySelector('.ide-toolbar').insertAdjacentHTML('beforeend','<button id="native-tools">개발 도구</button><button id="native-connection" hidden>보드 연결</button>');
  $('build-panel').insertAdjacentHTML('afterbegin','<div class="native-build-actions" id="native-build-actions" hidden><button id="native-artifacts" disabled>빌드 폴더 열기</button><span id="native-artifact-list"></span></div>');
  document.querySelector('.editor-position').insertAdjacentHTML('beforeend','<button id="language-toggle" title="clangd 의미 분석 사용">clangd 꺼짐</button>');
@@ -74,17 +74,31 @@ export function setupNativeIde({o,editor,select,showMonitor,points,watches,toggl
    $('watch-values').innerHTML=rows.map((r,index)=>`<div class="watch-row"><button data-native-watch="${index}" title="감시식 제거">${esc(r.expression)}</button><div>${esc(r.value)}</div></div>`).join('');for(const el of $('watch-values').querySelectorAll('button'))el.onclick=()=>{o.checkpoint();o.getProject().ide.watches.splice(Number(el.dataset.nativeWatch),1);o.saveLocal();void debugView();};
   }catch(e){if(state==='paused'&&current===sequence)$('debug-location').textContent=e.message;}
  }
- function sync(){const value=o.getProject().ide?.native||{target:'simulator',configuration:'Debug'};$('native-target').value=value.target;$('native-config').value=value.configuration;control();queueLanguage();}
+ function sync(){const value=o.getProject().ide?.native||{target:'simulator',configuration:'Debug'};$('native-target').value=value.target;selectBoard();$('native-config').value=value.configuration;control();queueLanguage();}
  // Results of the previous target's build (problems, ELF/map list, build folder) do not belong to the new one.
  function clearBuild(){$('build-errors').replaceChildren();$('native-artifact-list').textContent='';$('native-artifacts').disabled=true;$('build-output').textContent='';}
- function change(){o.getProject().ide??={breakpoints:[],watches:[]};o.getProject().ide.native=config();o.saveLocal();editor.diagnostics([]);clearBuild();editor.updateDebug(points(),null);
+ // Each connected NUCLEO is its own run target: "NUCLEO-F446RE (COM5)". The pick is the ST-LINK serial OpenOCD uses.
+ let boards=[],boardsAt=0;
+ function selectBoard(){const select=$('native-target');if(select.value!=='arm')return;const option=[...select.options].find(o=>o.value==='arm'&&o.dataset.serial&&o.dataset.serial===connection.serial)||[...select.options].find(o=>o.value==='arm');if(option)option.selected=true;}
+ function renderBoards(){
+  const select=$('native-target'),wasArm=select.value==='arm',anchor=[...select.options].find(o=>o.value==='host');
+  for(const o of [...select.options])if(o.value==='arm')o.remove();
+  const options=boards.length?boards.map(b=>{const o=new Option(`${b.board||'ST-LINK'} (${b.port||b.serial.slice(-8)})`,'arm');o.dataset.serial=b.serial;o.title=`ST-LINK ${b.serial}`;return o;}):[Object.assign(new Option('실물 보드 (연결 안 됨)','arm'),{title:'NUCLEO 보드를 USB로 연결하면 이름과 포트가 표시됩니다.'})];
+  for(const o of options)select.insertBefore(o,anchor);
+  if(wasArm){select.value='arm';selectBoard();}
+  select.dispatchEvent(new Event('boards'));
+ }
+ async function refreshBoards(force=false){if(!api?.boards||(!force&&Date.now()-boardsAt<3000))return;boardsAt=Date.now();try{boards=await api.boards()||[];}catch{boards=[];}renderBoards();}
+ function pickBoard(){const option=$('native-target').selectedOptions[0];if(option?.value!=='arm')return;connection={...connection,serial:option.dataset.serial||''};try{localStorage.setItem('stm32lab.debugConnection',JSON.stringify(connection));}catch{}}
+ function change(){pickBoard();o.getProject().ide??={breakpoints:[],watches:[]};o.getProject().ide.native=config();o.saveLocal();editor.diagnostics([]);clearBuild();editor.updateDebug(points(),null);
   // clangd serves only the ARM and Windows targets; its markers belong to the previous target's flags.
   editor.clearLanguageDiagnostics();if(language&&!selected()){language=false;languageReady=false;$('language-toggle').textContent='clangd 꺼짐';void guard(()=>api['language-stop']());}
   $('build-status').textContent=emulator()?'ARM GCC → 에뮬레이터 · 빌드 준비':selected()?`${config().target==='arm'?'ARM GCC':'Windows GCC'} · 빌드 준비`:'시뮬레이터용 빌드';$('new').disabled=$('open').disabled=$('workspace-open').disabled=false;o.refresh();queueLanguage();}
  function queueLanguage(){clearTimeout(languageTimer);if(!language||!selected())return;languageTimer=setTimeout(()=>void updateLanguage(),500);}
  async function updateLanguage(){if(!language||!selected())return;if(languageRunning){languageQueued=true;return;}languageRunning=true;try{await api.language(text(),config());languageReady=true;$('language-toggle').textContent='clangd 연결됨';}catch(e){languageReady=false;$('language-toggle').textContent='clangd 설정 필요';$('language-toggle').title=e.message;}finally{languageRunning=false;if(languageQueued){languageQueued=false;queueLanguage();}}}
  const lsp={enabled:()=>language&&languageReady&&selected(),query:(method,file,position)=>api['language-query'](method,file,position)};editor.setLanguageService(lsp);
- $('native-target').onchange=change;$('native-config').onchange=change;
+ $('native-target').onchange=change;
+ for(const ev of ['focus','pointerdown'])$('native-target').addEventListener(ev,()=>void refreshBoards());window.addEventListener('focus',()=>void refreshBoards());void refreshBoards(true);$('native-config').onchange=change;
  $('run').addEventListener('click',e=>{if(selected()){e.preventDefault();e.stopImmediatePropagation();void command('run');}},true);
  $('native-artifacts').onclick=()=>guard(()=>api.artifacts());
  async function openTools(install=false){const tools=await api.settings();for(const key of Object.keys(TOOL_LABELS))$('tool-'+key).value=tools[key]||'';$('native-tools-error').textContent='';if(!installing)$('native-install').hidden=true;$('native-tools-dialog').showModal();if(install)await showInstall();}

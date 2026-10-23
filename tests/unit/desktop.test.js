@@ -486,6 +486,7 @@ describe('native tools for a real NUCLEO board',()=>{
   assert.equal(await chooseStlink('NUCLEO-F103RB','',two),'0668FF544949878667173544');
   assert.equal(await chooseStlink('NUCLEO-F446RE','',two),'0672FF485775495067192757');
   assert.equal(await chooseStlink('NUCLEO-F446RE','ABCDEF0123',two),'ABCDEF0123');
+  await assert.rejects(chooseStlink('NUCLEO-F446RE','0668FF544949878667173544',two),/선택한 보드 NUCLEO-F103RB는 프로젝트 보드 NUCLEO-F446RE와 다릅니다/);
   assert.equal(await chooseStlink('NUCLEO-F446RE','',async()=>[{serial:'0672FF485775495067192757',board:''}]),'0672FF485775495067192757');
   assert.equal(await chooseStlink('NUCLEO-F446RE','',async()=>[]),'');
   // Only another kind of board connected: never write firmware for the wrong MCU.
