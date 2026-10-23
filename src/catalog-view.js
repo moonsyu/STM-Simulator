@@ -1,14 +1,14 @@
 import {CATALOG_BY_TYPE} from './catalog-defs.js';
 import {updateDeviceSvg} from './device-ui.js';
 import {catalogShape} from './catalog-render.js';
-import {displayModel} from './model-geometry.js';
+import {displayModel,modelTransform} from './model-geometry.js';
 import {channelLevels,glowOpacity,lensColor} from './rgb-color.js';
 export function remodelLegacyShape(p,shape,result){
  const model=displayModel(p);if(!model)return shape;
- if(CATALOG_BY_TYPE[p.type])return model.scale===1?shape:`<g transform="scale(${model.scale})">${shape}</g>`;
+ if(CATALOG_BY_TYPE[p.type])return model.scaleX===1&&model.scaleY===1&&!model.dx&&!model.dy?shape:`<g transform="${modelTransform(model)}">${shape}</g>`;
  const ref=catalogShape({...p,type:model.referenceType},result?.parts[p.id],false);
  // Silkscreen/header labels are rendered by the existing physical terminal layer.
- return `<g class="remodeled-device" transform="scale(${model.scale})">${ref}</g>`;
+ return `<g class="remodeled-device" transform="${modelTransform(model)}">${ref}</g>`;
 }
 export function updateCatalogView(g,p,r,pressed=false,lcdRender=null){
  const v=CATALOG_BY_TYPE[p.type],family=v?.family||p.type;

@@ -12,11 +12,12 @@ import {wiringMetrics,netlist,unmountedLeads} from './helpers/wiring-metrics.js'
 const BASELINE=JSON.parse(readFileSync(new URL('../fixtures/example-wiring-baseline.json',import.meta.url),'utf8'));
 // Crossings that remain because a part's lead order is fixed by its package and is the
 // reverse of the header pins the example uses (seven-segment and L298 pinouts), or because
-// a large module (motor driver HAT) is mounted with bent leads by the general arranger.
+// a large module (motor driver HAT) is mounted with bent leads by the general arranger, or because a package
+// drawn at its datasheet size (four-digit display, L298 chips) leaves less room for the resistors around it.
 // Pins and code are kept; each entry is the maximum number of crossing wire pairs.
 const CROSSING_ALLOWLIST={
- ref_motor_driver_hat:4,ref_l298n_module_13:4,ref_l298n_bare_15:1,ref_l298p_bare_20:1,
- ref_sevenseg_common_anode_10:1,ref_sevenseg_4digit_12:6
+ ref_motor_driver_hat:4,ref_l298n_module_13:4,ref_l298n_bare_15:2,ref_l298p_bare_20:3,
+ ref_sevenseg_common_anode_10:1,ref_sevenseg_4digit_12:11
 };
 const kinds=Object.keys(allHalExamples());
 const results=new Map();
