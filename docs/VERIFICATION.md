@@ -1,5 +1,16 @@
 # 검증 기록
 
+## 1.1.0 제목 표시줄 · 설정 창 · 패널 옮기기/분리 · 보드 선택 · 시작 테마 — 공개 배포 검증 완료
+
+2026-10-23. 제품 커밋 `feb9e6633862690c90c4f350a469a0fdc2255f8b` · [Windows CI 39884746789](https://github.com/moonsyu/STM-Simulator/actions/runs/39884746789) 첫 실행 성공 · [Release v1.1.0](https://github.com/moonsyu/STM-Simulator/releases/tag/v1.1.0)
+
+| 검사 | 결과 |
+|---|---|
+| `npm test` (로컬) | 733 통과(실패 2개는 로컬 심볼릭 링크 권한, CI 통과) |
+| `npm run test:e2e` (로컬) | 29 통과, 2 건너뜀(실제 도구 경로 필요). 새 검사: 설정 창·단축키 탭, 패널 이동·유지·레이아웃 초기화, 분리 창에서 편집 후 되돌리기, 시작 시 Windows 테마 |
+| 보드 선택 | 가짜 보드 응답으로 "NUCLEO-F446RE (COM5)" 목록·선택 저장 확인(실물 미연결) |
+| 공개 자산 | latest=v1.1.0, 태그·BUILD-INFO 커밋 `feb9e66` 일치, 5자산. EXE SHA-256 `f2066ba2bc1a898b0053eaef811d7f9f33d70f3f619437f5e6fa825c989f3d54`(102,893,381 B, MZ)이 SHA256.txt·update-manifest·ZIP 안의 STM-Simulator.exe와 일치. ZIP SHA-256 `8c1403fd4ea62bf7887da70212da310c598b99ad8c2044bebc0b58d7ce568390` |
+
 ## 1.0.0 전체 기능 점검 (실물 보드 연동 제외) — 공개 배포 검증 완료
 
 2026-10-22. 제품 커밋 `cbd345f0cae9fe3f1e599692861e0bfaa982900d` · [Windows CI 39741156371](https://github.com/moonsyu/STM-Simulator/actions/runs/39741156371) 첫 실행 성공 · [Release v1.0.0](https://github.com/moonsyu/STM-Simulator/releases/tag/v1.0.0)
