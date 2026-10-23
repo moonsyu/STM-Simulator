@@ -5,3 +5,8 @@
 .part-preview-image{height:min(230px,44vh);margin:8px 0;background:#edf3ef;border:1px solid #d5e2db;border-radius:6px;display:grid;place-items:center;padding:10px}
 .part-preview-image img{display:block;width:100%;height:100%;min-height:0;object-fit:contain}
 .part-preview-detail{margin:0;font-size:11px;line-height:1.55;color:var(--ide-foreground,#1a2b25);overflow-wrap:anywhere}
+#example-layout-preview{position:fixed;inset:auto;margin:0;padding:12px;width:min(420px,calc(100vw - 16px));max-height:calc(100vh - 16px);overflow:hidden;border:1px solid var(--ide-border,#c5d4cc);border-radius:8px;background:var(--ide-chrome,#e7efec);color:var(--ide-foreground,#1a2b25);box-shadow:0 12px 32px #00000038;z-index:1000}
+#example-layout-preview[hidden]{display:none}
+.example-preview-image{height:min(260px,46vh);margin:8px 0;background:#edf3ef;border:1px solid #d5e2db;border-radius:6px;padding:6px;display:grid;place-items:center}
+:root[data-ide-theme=dark] .example-preview-image{background:#2a2f2d;border-color:#3a403d}
+.example-preview-svg{display:block;width:100%;height:100%;pointer-events:none}
