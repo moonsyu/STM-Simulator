@@ -1,3 +1,4 @@
+import './popout.js'; // must run before the modules below register listeners and look up elements
 import {formatProjectSources} from './code-format-ui.js';
 import {keyFor,withKey} from './keybindings.js';
 import {showSurface,removeSurface} from './surfaces.js';

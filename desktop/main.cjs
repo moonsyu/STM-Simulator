@@ -74,7 +74,9 @@ app.whenReady().then(()=>{
   updaterReady=updater.init().catch(error=>updater.set('error',{message:'업데이트 설정을 읽지 못했습니다: '+error.message}));
   win=new BrowserWindow({icon:path.join(__dirname,'icons/stm-simulator.ico'),width:1540,height:1020,minWidth:900,minHeight:560,show:process.env.CIRCUIT_LAB_SMOKE!=='1',backgroundColor:nativeTheme.shouldUseDarkColors?'#202020':'#f3f3f3',title:'STM Simulator',webPreferences:{preload:path.join(__dirname,'preload.cjs'),contextIsolation:true,nodeIntegration:false,sandbox:true}});
   win.setMenuBarVisibility(false);
-  win.webContents.setWindowOpenHandler(()=>({action:'deny'}));
+  // Only the renderer's own panel windows (popout.js: a blank page named stm-unit-<panel>) may open; the panel DOM is moved into it.
+  win.webContents.setWindowOpenHandler(({url,frameName})=>(url===''||url==='about:blank')&&/^stm-unit-\w+$/.test(frameName)?{action:'allow',overrideBrowserWindowOptions:{icon:path.join(__dirname,'icons/stm-simulator.ico'),autoHideMenuBar:true,minWidth:320,minHeight:240,backgroundColor:nativeTheme.shouldUseDarkColors?'#202020':'#f3f3f3',webPreferences:{sandbox:true,contextIsolation:true,nodeIntegration:false}}}:{action:'deny'});
+  win.webContents.on('did-create-window',child=>{child.setMenu(null);child.webContents.on('will-navigate',e=>e.preventDefault());child.webContents.setWindowOpenHandler(()=>({action:'deny'}));});
   win.webContents.on('will-navigate',e=>e.preventDefault());
   win.loadFile(path.join(__dirname,'../index.html'));
 });

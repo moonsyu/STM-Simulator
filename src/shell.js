@@ -1,6 +1,7 @@
 // VS Code style workbench shell: activity bar, side bar views, editor groups,
 // bottom panel, secondary side bar, status bar, menus and command palette.
 // Existing controls keep their IDs and listeners; the shell only relocates them.
+import {openUnitWindow} from './popout.js';
 import {loadKeybindings,saveKeybindings,createMatcher,eventKey,conflicts,bindingProblem,DEFAULT_KEYBINDINGS,setCurrentKeybindings} from './keybindings.js';
 const $=id=>document.getElementById(id);
 const KEY='stm32lab.shellLayout.v1';
@@ -14,7 +15,7 @@ const ICON={
  settings:'M12 8.5a3.5 3.5 0 1 0 0 7a3.5 3.5 0 1 0 0-7z M12 2v3 M12 19v3 M2 12h3 M19 12h3 M4.9 4.9l2.1 2.1 M17 17l2.1 2.1 M4.9 19.1L7 17 M17 7l2.1-2.1',
  sidebar:'M3 4h18v16H3z M9 4v16',panel:'M3 4h18v16H3z M3 14h18',aux:'M3 4h18v16H3z M15 4v16',
  split:'M3 4h18v16H3z M12 4v16',rotate:'M4 12a8 8 0 0 1 14-5 M18 3v4h-4 M20 12a8 8 0 0 1-14 5 M6 21v-4h4',swap:'M7 7h12l-3-3 M17 17H5l3 3',max:'M4 9V4h5 M15 4h5v5 M20 15v5h-5 M9 20H4v-5',
- close:'M6 6l12 12 M18 6L6 18',more:'M6 12h.01 M12 12h.01 M18 12h.01',bell:'M6 16V11a6 6 0 0 1 12 0v5l2 2H4z M10 20h4'
+ close:'M6 6l12 12 M18 6L6 18',popout:'M14 4h6v6 M20 4l-8 8 M18 14v6H4V6h6',more:'M6 12h.01 M12 12h.01 M18 12h.01',bell:'M6 16V11a6 6 0 0 1 12 0v5l2 2H4z M10 20h4'
 };
 export const icon=(name,size=20)=>`<svg viewBox="0 0 24 24" width="${size}" height="${size}" aria-hidden="true" class="icon"><path d="${ICON[name]}" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
 const VIEWS=[
@@ -26,20 +27,24 @@ const VIEWS=[
  {id:'docs',label:'장치 Docs',hint:'선택한 장치의 설명과 코드를 현재 프로젝트에 추가'}
 ];
 const HIDDEN_VIEWS=[{id:'settings',label:'설정'},{id:'keybindings',label:'단축키 설정'}];
-const DEFAULT={sidebar:272,aux:300,panel:240,ratio:.5,orientation:'row',swapped:false,show:{sidebar:true,aux:true,panel:true},view:'explorer',maximized:null,activityOrder:VIEWS.map(v=>v.id)};
+// Dock: five regions of the window and the unit each one shows. A unit's header grip is dragged onto another region to swap them.
+export const DOCK_REGIONS=['sidebar','group-code','group-circuit','bottom-panel','auxbar'];
+const DOCK_HOME={sidebar:'sidebar','group-code':'code','group-circuit':'circuit','bottom-panel':'panel',auxbar:'aux'};
+const DEFAULT={sidebar:272,aux:300,panel:240,ratio:.5,orientation:'row',swapped:false,show:{sidebar:true,aux:true,panel:true},view:'explorer',maximized:null,activityOrder:VIEWS.map(v=>v.id),dock:{...DOCK_HOME}};
+const validDock=d=>d&&typeof d==='object'&&DOCK_REGIONS.every(r=>Object.values(DOCK_HOME).includes(d[r]))&&new Set(DOCK_REGIONS.map(r=>d[r])).size===DOCK_REGIONS.length?Object.fromEntries(DOCK_REGIONS.map(r=>[r,d[r]])):{...DOCK_HOME};
 const validOrder=o=>Array.isArray(o)&&o.length===VIEWS.length&&VIEWS.every(v=>o.includes(v.id))?[...o]:VIEWS.map(v=>v.id);
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 function loadState(){
  try{const s=JSON.parse(localStorage.getItem(KEY));if(!s||typeof s!=='object')return structuredClone(DEFAULT);
   const n=(v,a,b,d)=>Number.isFinite(v)?clamp(v,a,b):d;
   return {sidebar:n(s.sidebar,170,640,DEFAULT.sidebar),aux:n(s.aux,200,640,DEFAULT.aux),panel:n(s.panel,90,900,DEFAULT.panel),ratio:n(s.ratio,.12,.88,DEFAULT.ratio),orientation:s.orientation==='column'?'column':'row',swapped:s.swapped===true,
-   show:{sidebar:s.show?.sidebar!==false,aux:s.show?.aux!==false,panel:s.show?.panel!==false},view:VIEWS.some(v=>v.id===s.view)?s.view:'explorer',maximized:null,activityOrder:validOrder(s.activityOrder)};
+   show:{sidebar:s.show?.sidebar!==false,aux:s.show?.aux!==false,panel:s.show?.panel!==false},view:VIEWS.some(v=>v.id===s.view)?s.view:'explorer',maximized:null,activityOrder:validOrder(s.activityOrder),dock:validDock(s.dock)};
  }catch{return structuredClone(DEFAULT);}
 }
 
 // Phase 1: a layout object that other modules can call before the shell is mounted.
 export function createShell(){
- const state=loadState();let mounted=false,commands=[],palette=null,monitor=null,settingsDialog=null,bindings=loadKeybindings();setCurrentKeybindings(bindings);const keyListeners=new Set();
+ const state=loadState();let mounted=false,commands=[],palette=null,monitor=null,settingsDialog=null,dockApply=null,bindings=loadKeybindings();setCurrentKeybindings(bindings);const keyListeners=new Set();
  const root=document.documentElement;
  const save=()=>{try{localStorage.setItem(KEY,JSON.stringify({...state,maximized:null}));}catch{}};
  function apply(){
@@ -58,29 +63,37 @@ export function createShell(){
   for(const [id,key] of [['toggle-sidebar','sidebar'],['toggle-panel','panel'],['toggle-aux','aux']]){const b=$(id);if(b)b.setAttribute('aria-pressed',String(state.show[key]));}
   window.dispatchEvent(new Event('resize'));
  }
+ const regionOf=unit=>DOCK_REGIONS.find(r=>state.dock[r]===unit);
+ // Make the region holding `unit` visible (its show flag, and no other region maximized over it).
+ function showUnit(unit){
+  const region=regionOf(unit),flag={sidebar:'sidebar','bottom-panel':'panel',auxbar:'aux'}[region];if(flag)state.show[flag]=true;
+  const key={'group-code':'code','group-circuit':'circuit','bottom-panel':'panel'}[region];if(state.maximized&&state.maximized!==key)state.maximized=null;
+ }
  function showView(view,{toggle=false}={}){
   // Settings and keybindings open in their own floating window.
   if(view==='settings'||view==='keybindings'){settingsDialog?.open(view==='keybindings'?'keys':'general');return;}
-  if(toggle&&state.view===view&&state.show.sidebar){state.show.sidebar=false;}
-  else{state.view=view;state.show.sidebar=true;}
+  // The activity bar hides the side bar only while the side bar unit is in the left region.
+  if(toggle&&state.view===view&&state.show.sidebar&&regionOf('sidebar')==='sidebar'){state.show.sidebar=false;}
+  else{state.view=view;showUnit('sidebar');}
   if(state.maximized&&state.maximized!=='panel')state.maximized=null;apply();save();
   if(state.show.sidebar&&!toggle){const view=document.querySelector(`.sidebar-view[data-view="${state.view}"]`);view?.querySelector('input,button,select,[tabindex="0"]')?.focus?.({preventScroll:true});}
  }
- function showPanel(tab){state.show.panel=true;if(state.maximized&&state.maximized!=='panel')state.maximized=null;apply();save();if(tab&&monitor)monitor.select(tab);else if(tab)document.querySelector(`[data-monitor="${tab}"]`)?.click();}
+ function showPanel(tab){showUnit('panel');apply();save();if(tab&&monitor)monitor.select(tab);else if(tab)document.querySelector(`[data-monitor="${tab}"]`)?.click();}
  let auxClosedByUser=false;
  function toggle(key){state.show[key]=!state.show[key];if(key==='aux')auxClosedByUser=!state.show.aux;if(!state.show.panel&&state.maximized==='panel')state.maximized=null;apply();save();}
  function reveal(id){
   // Compatible with the previous dock API: project | code | simulator | terminal.
-  if(id==='project'){state.show.sidebar=true;if(!['explorer','parts','examples','board'].includes(state.view))state.view='explorer';}
-  if(id==='terminal'){state.show.panel=true;}
-  if(id==='inspect'){if(auxClosedByUser&&!state.show.aux)return;state.show.aux=true;}
-  if(['code','simulator'].includes(id)&&state.maximized&&state.maximized!==(id==='code'?'code':'circuit'))state.maximized=null;
-  if(id==='terminal'&&state.maximized&&state.maximized!=='panel')state.maximized=null;
+  if(id==='project'){showUnit('sidebar');if(!['explorer','parts','examples','board'].includes(state.view))state.view='explorer';}
+  if(id==='terminal')showUnit('panel');
+  if(id==='inspect'){if(auxClosedByUser&&regionOf('aux')==='auxbar'&&!state.show.aux)return;showUnit('aux');}
+  if(id==='code')showUnit('code');
+  if(id==='simulator')showUnit('circuit');
   apply();save();
  }
- function maximize(id){const target={code:'code',simulator:'circuit',circuit:'circuit',terminal:'panel',panel:'panel'}[id]||null;state.maximized=state.maximized===target?null:target;if(target==='panel')state.show.panel=true;apply();}
+ // Maximize works on the center region that holds the unit (code, circuit or panel may have been moved).
+ function maximize(id){const unit={code:'code',simulator:'circuit',circuit:'circuit',terminal:'panel',panel:'panel'}[id],target={'group-code':'code','group-circuit':'circuit','bottom-panel':'panel'}[regionOf(unit)]||null;if(!target)return;state.maximized=state.maximized===target?null:target;if(target==='panel')state.show.panel=true;apply();}
  const api={
-  reveal,maximize,showView,showPanel,toggle,
+  reveal,maximize,showView,showPanel,toggle,regionOf,
   snapshot:()=>structuredClone(state),
   state:()=>state,
   setMonitor(m){monitor=m;},
@@ -93,7 +106,9 @@ export function createShell(){
   onBindings(f){keyListeners.add(f);},
   openPalette(prefix=''){palette?.open(prefix);},
   openSettings(tab){settingsDialog?.open(tab);},
-  reset(){Object.assign(state,structuredClone(DEFAULT));apply();save();},
+  reset(){Object.assign(state,structuredClone(DEFAULT));dockApply?.();apply();save();},
+  setDock(dock){state.dock=validDock(dock);dockApply?.();apply();save();},
+  onDock(f){dockApply=f;},
   setOrientation(o){state.orientation=o==='column'?'column':'row';apply();save();},
   swap(){state.swapped=!state.swapped;apply();save();},
   mount(options){if(mounted)return;mounted=true;mountShell(api,state,{...options,openSettings:tab=>settingsDialog?.open(tab)},{apply,save,setPalette:p=>palette=p,setSettings:d=>settingsDialog=d});apply();},
@@ -223,11 +238,51 @@ function mountShell(layout,state,options,{apply,save,setPalette,setSettings}){
  keyboard(layout,options);
  setupKeybindingsView(layout);
  setSettings(setupSettingsDialog(layout));
+ setupDock(layout,state,save);
  $('command-palette-open').onclick=()=>layout.openPalette('>');
  // Feedback banner becomes a toast with an icon.
  $('app-feedback')?.classList.add('toast');
  // Settings: keep the legacy tab hooks working (view.settings opens the settings view).
  for(const b of document.querySelectorAll('.panel-tabs [data-tab="settings"],.panel-tabs [data-tab="docs"]'))b.hidden=true;
+}
+
+const DOCK_UNITS={
+ sidebar:{label:'탐색기',header:'#sidebar > .sidebar-header',classes:['library']},
+ code:{label:'코드',header:'#group-code > .group-tabs',classes:['editor-panel']},
+ circuit:{label:'회로',header:'#group-circuit > .group-tabs',classes:['workbench']},
+ panel:{label:'출력 · 터미널',header:'#bottom-panel > .console-header',classes:['console']},
+ aux:{label:'속성',header:'#auxbar > .sidebar-header',classes:[]}
+};
+// Each region's content becomes a movable unit (wrapper with the content's classes); the grip in its header drags it
+// onto another region, where the two units swap. ⧉ opens the unit in its own window (popout.js).
+function setupDock(layout,state,save){
+ const units={},home=Object.fromEntries(Object.entries(DOCK_HOME).map(([r,u])=>[u,r]));
+ for(const [id,u] of Object.entries(DOCK_UNITS)){
+  const region=$(home[id]),header=document.querySelector(u.header),wrap=document.createElement('div');
+  wrap.className='dock-unit';wrap.dataset.unit=id;wrap.append(...region.childNodes);for(const c of u.classes){region.classList.remove(c);wrap.classList.add(c);}region.append(wrap);units[id]=wrap;
+  const grip=document.createElement('span');grip.className='dock-grip';grip.draggable=true;grip.title=`${u.label}: 끌어서 다른 영역으로 옮기기`;grip.setAttribute('aria-label',grip.title);grip.innerHTML='<svg viewBox="0 0 10 16" width="8" height="14" aria-hidden="true"><g fill="currentColor"><circle cx="2.5" cy="3" r="1.3"/><circle cx="7.5" cy="3" r="1.3"/><circle cx="2.5" cy="8" r="1.3"/><circle cx="7.5" cy="8" r="1.3"/><circle cx="2.5" cy="13" r="1.3"/><circle cx="7.5" cy="13" r="1.3"/></g></svg>';
+  header?.prepend(grip);
+  const out=button('',`${u.label} 새 창으로 분리`,'popout',`${u.label}: 새 창으로 분리`);out.classList.add('dock-popout');out.onclick=()=>popoutUnit(id);
+  (header?.querySelector('.sidebar-actions,.group-actions,.panel-actions')||header)?.append(out);
+  grip.addEventListener('dragstart',e=>{e.dataTransfer.setData('text/x-stm-unit',id);e.dataTransfer.effectAllowed='move';document.body.classList.add('dock-dragging');});
+  grip.addEventListener('dragend',()=>{document.body.classList.remove('dock-dragging');for(const r of DOCK_REGIONS)$(r).classList.remove('dock-target');});
+ }
+ for(const r of DOCK_REGIONS){
+  const region=$(r);
+  region.addEventListener('dragover',e=>{if(!e.dataTransfer.types.includes('text/x-stm-unit'))return;e.preventDefault();e.dataTransfer.dropEffect='move';region.classList.add('dock-target');});
+  region.addEventListener('dragleave',e=>{if(!region.contains(e.relatedTarget))region.classList.remove('dock-target');});
+  region.addEventListener('drop',e=>{const unit=e.dataTransfer.getData('text/x-stm-unit');region.classList.remove('dock-target');document.body.classList.remove('dock-dragging');if(!units[unit])return;e.preventDefault();
+   const from=layout.regionOf(unit);if(from===r)return;const dock={...state.dock,[r]:unit,[from]:state.dock[r]};layout.setDock(dock);});
+ }
+ const popped=new Map();
+ function place(){for(const r of DOCK_REGIONS){const unit=state.dock[r],region=$(r);region.querySelector(':scope > .dock-placeholder')?.remove();if(popped.has(unit)){const ph=document.createElement('div');ph.className='dock-placeholder';ph.innerHTML=`<p>${DOCK_UNITS[unit].label}은(는) 새 창에서 표시 중입니다.</p><button type="button">여기로 되돌리기</button>`;ph.querySelector('button').onclick=()=>popped.get(unit)?.close();region.append(ph);}else if(units[unit].parentElement!==region)region.append(units[unit]);}window.dispatchEvent(new Event('resize'));}
+ function popoutUnit(id){
+  if(popped.has(id)){popped.get(id).focus();return;}
+  const win=openUnitWindow(id,DOCK_UNITS[id].label,units[id],()=>{popped.delete(id);place();});
+  if(!win)return;popped.set(id,win);place();
+ }
+ layout.onDock(place);place();
+ window.addEventListener('beforeunload',()=>{for(const w of popped.values())w.close();});
 }
 
 // 편집 → 설정: one floating window with the screen/editor settings, keybindings, updates and the layout reset.
