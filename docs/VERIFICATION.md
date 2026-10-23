@@ -1,5 +1,15 @@
 # 검증 기록
 
+## 1.2.1 IDE 사용 중 업데이트 감지 — 공개 배포 검증 완료
+
+2026-10-23. 제품 커밋 `41815914926611502bfa20038c31f2cc8bef921a` · [Windows CI 39928683255](https://github.com/moonsyu/STM-Simulator/actions/runs/39928683255) 첫 실행 성공 · [Release v1.2.1](https://github.com/moonsyu/STM-Simulator/releases/tag/v1.2.1)
+
+| 검사 | 결과 |
+|---|---|
+| `npm test` (로컬) | 739 통과(실패 2개는 로컬 심볼릭 링크 권한, CI 통과). 새 검사: 포커스 시 10분 간격 확인·자동 확인 끔, 백그라운드 확인 실패 시 찾은 업데이트 유지 |
+| `npm run test:e2e` (로컬) | 30 통과, 2 건너뜀 |
+| 공개 자산 | latest=v1.2.1, 태그·BUILD-INFO 커밋 `4181591` 일치, 5자산. EXE SHA-256 `c574efaef0e93e42084be5f1343e33036614e62cfa80bb154a0b1bcf6426f9de`(102,896,769 B, MZ)이 SHA256.txt·update-manifest·ZIP 안의 STM-Simulator.exe와 일치. ZIP SHA-256 `376e431a7902407bcaddc6669348a79b39f3c1ce8e3dab4782fb917aaf441343` |
+
 ## 1.2.0 부품 바로 배치 · 데이터시트 크기와 이름 — 공개 배포 검증 완료
 
 2026-10-23. 제품 커밋 `53974187772511ba29fde4dbb63933720f935b5e` · [Windows CI 39922878249](https://github.com/moonsyu/STM-Simulator/actions/runs/39922878249) 성공 · [Release v1.2.0](https://github.com/moonsyu/STM-Simulator/releases/tag/v1.2.0). 첫 실행(`dd8cfc3`, CI 39921155730)은 패키지 검증이 삭제한 `src/resize-ui.js`를 찾다 실패했고, Release·태그는 만들어지지 않았다.
