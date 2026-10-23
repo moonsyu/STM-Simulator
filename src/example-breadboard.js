@@ -14,8 +14,9 @@ const bounds=points=>({left:Math.min(...points.map(p=>p.x)),right:Math.max(...po
 const corners=b=>[{x:b.left,y:b.top},{x:b.right,y:b.top},{x:b.left,y:b.bottom},{x:b.right,y:b.bottom}];
 export const containsPoint=(b,p,margin=0)=>p.x>b.left-margin&&p.x<b.right+margin&&p.y>b.top-margin&&p.y<b.bottom+margin;
 export const overlapBounds=(a,b,margin=0)=>a.left<b.right+margin&&a.right>b.left-margin&&a.top<b.bottom+margin&&a.bottom>b.top-margin;
+// The footprint of a part (its package at drawing size): the holes it blocks on the breadboard.
 export function exampleBodyBounds(p){
- const b=displayModel(p)?.bounds||{left:-30,right:30,top:-25,bottom:25};
+ const b=displayModel(p,{datasheet:false})?.bounds||{left:-30,right:30,top:-25,bottom:25};
  return bounds(corners(b).map(q=>{const v=partVector(p,q.x,q.y);return {x:p.x+v.x,y:p.y+v.y};}));
 }
 export function exampleBreadboards(project){

@@ -53,6 +53,7 @@ import {SERIAL_IDS} from './serial-config.js';
 import {PART_LIBRARY,searchParts} from './part-library.js';
 import {setupPartPreviews} from './part-preview-ui.js';
 import {setupExamplePreviews} from './example-preview-ui.js';
+import {displayModel} from './model-geometry.js';
 import {esc,initSvg,renderWires,renderParts,renderBreadboards,renderEndpoints,route,updateSimulationSvg,renderMountPreview,renderPinSearch,updateSurfaces} from './render.js';
 
 const $=id=>document.getElementById(id),svg=$('circuit');
@@ -501,12 +502,14 @@ document.querySelectorAll('[data-add]').forEach(b=>b.onclick=()=>{if(running())r
  }if(isBreadboardLibraryType(type)){
  let f;try{f=newBreadboardFields(project,type);}catch(e){log(e.message,'error');return;}
  addPart('breadboard',null,null,{x:f.x,y:f.y},f.variant?{variant:f.variant}:{});fitView();svg.focus({preventScroll:true});
-}else{addPart(type,null,null,freeSpot());svg.focus({preventScroll:true});}});
-// Every part is placed at once in the middle of the visible workspace (the next free spot when parts already sit there);
-// it is then dragged onto the breadboard.
-function freeSpot(){
- const centre={x:view.x+view.w*.5,y:view.y+view.h*.5},step=42;
- for(let ring=0;ring<8;ring++)for(let k=0;k<Math.max(1,ring*8);k++){const a=ring?k/(ring*8)*Math.PI*2:0,q={x:centre.x+Math.cos(a)*ring*step,y:centre.y+Math.sin(a)*ring*step};if(!project.components.some(p=>p.type!=='breadboard'&&Math.hypot(p.x-q.x,p.y-q.y)<step))return q;}
+}else{addPart(type,null,null,freeSpot(type));svg.focus({preventScroll:true});}});
+// Every part is placed at once in the middle of the visible workspace (the next free spot, clear of the parts already
+// there at their datasheet size); it is then dragged onto the breadboard.
+function freeSpot(type){
+ const radius=p=>{const b=displayModel(p)?.bounds;return b?Math.hypot(b.right-b.left,b.bottom-b.top)/2:30;};
+ const centre={x:view.x+view.w*.5,y:view.y+view.h*.5},own=radius({type,x:0,y:0,rotation:0}),step=Math.max(42,own);
+ const others=project.components.filter(p=>p.type!=='breadboard').map(p=>({x:p.x,y:p.y,r:radius(p)}));
+ for(let ring=0;ring<12;ring++)for(let k=0;k<Math.max(1,ring*8);k++){const a=ring?k/(ring*8)*Math.PI*2:0,q={x:centre.x+Math.cos(a)*ring*step,y:centre.y+Math.sin(a)*ring*step};if(!others.some(o=>Math.hypot(o.x-q.x,o.y-q.y)<o.r+own+6))return q;}
  return centre;
 }
 $('empty-add-board').onclick=()=>document.querySelector('[data-add="board"]')?.click();$('empty-open-parts').onclick=()=>layout.showView('parts');$('empty-open-examples').onclick=()=>layout.showView('examples');

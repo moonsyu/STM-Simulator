@@ -1,5 +1,6 @@
 import {CATALOG_BY_TYPE,CATALOG_DEFS,catalogType} from './catalog-defs.js';
 import {localTerminals} from './components.js';
+import {PART_DATASHEETS,UNITS_PER_MM} from './part-datasheets.js';
 
 const legacy={resistor:'resistor-axial-2',led:'led-tht-2',button:'button-4',ldr:'ldr-bare-2',ntc:'ntc-bare-2',sht31:'sht31-grove-4',mpu6050:'mpu6050-8',pir:'pir-3',potentiometer:'pot-bare-3',slide:'slide-spdt-3',rgb:'rgb-common-cathode-4',capacitor:'capacitor-ceramic-2',diode:'diode-axial-2',buzzer:'buzzer-active-2',passive_buzzer:'buzzer-passive-2',temperature:'tmp36-to92-3',ultrasonic:'hcsr04-4',dc_motor:'dc-motor-2',dc_supply:'dc-supply-2',relay:'relay-module-6',joystick:'joystick-module-5',encoder:'encoder-module-5',lcd:'lcd-parallel-16',oled:'oled-i2c-4',tft:'st7735-8',matrix:'matrix-10',sevenseg:'sevenseg-common-cathode-10',stepper:'stepper-bipolar-4',motor:'motor-driver-hat',l298n:'l298n-module-13',servo:'servo-3',uart:'uart-cable-4',i2c:'i2c-eeprom-8',spi:'spi-eeprom-8'};
 const box=(left,top,right,bottom)=>({left,top,right,bottom});
@@ -46,13 +47,35 @@ export function packageLeadRoot(bounds,point){
  const distance=Math.hypot(dx/rx,dy/ry),ratio=distance>1?1/distance:1;
  return {x:x+dx*ratio,y:y+dy*ratio};
 }
-export function displayModel(p){
- const referenceType=CATALOG_BY_TYPE[p.type]?p.type:legacy[p.type]?catalogType(legacy[p.type]):null;if(!referenceType)return null;
- const bounds=catalogBodyBounds(referenceType),terms=localTerminals({...p,scale:1,scaleX:1,scaleY:1,skewX:0});
- let scale=CATALOG_BY_TYPE[p.type]?1:['led','rgb','button','temperature','potentiometer'].includes(p.type)?.65:['resistor','diode','capacitor'].includes(p.type)?.7:.8;
- if(terms.length===2&&terms.every(t=>t.y===0)){
-  const left=Math.abs(Math.min(...terms.map(t=>t.x))),right=Math.max(...terms.map(t=>t.x));
-  scale=Math.min(scale,Math.max(.01,left-4)/Math.abs(bounds.left),Math.max(.01,right-4)/bounds.right);
- }else if(!CATALOG_BY_TYPE[p.type]&&terms.every(t=>t.y>0))scale=Math.min(scale,Math.max(1,Math.min(...terms.map(t=>t.y))-8)/bounds.bottom);
- return {referenceType,scale,bounds:box(bounds.left*scale,bounds.top*scale,bounds.right*scale,bounds.bottom*scale)};
+// Body scale that makes the drawn package the size its datasheet gives (1 mm = 14/2.54 units, the breadboard pitch).
+// The longer datasheet side goes along the drawing's longer side (a square drawing keeps the datasheet's width and
+// height, e.g. an upright seven-segment digit); a drawing whose proportions differ a lot is not stretched more than
+// 1.4:1 (circles stay round enough).
+/** Catalog id whose datasheet describes a part type (a basic part uses the package it is drawn as). */
+export const datasheetIdOf=type=>CATALOG_BY_TYPE[type]?.id??legacy[type]??null;
+export function datasheetScale(referenceType){
+ const v=CATALOG_BY_TYPE[referenceType],size=v&&PART_DATASHEETS[v.id]?.size;if(!size?.w||!size?.h)return null;
+ const b=catalogBodyBounds(referenceType),w=b.right-b.left,h=b.bottom-b.top,long=Math.max(size.w,size.h)*UNITS_PER_MM,short=Math.min(size.w,size.h)*UNITS_PER_MM;
+ let x,y;if(Math.max(w,h)/Math.min(w,h)<1.1){x=size.w*UNITS_PER_MM/w;y=size.h*UNITS_PER_MM/h;}else{x=(w>=h?long:short)/w;y=(w>=h?short:long)/h;}
+ const limit=1.4,ratio=x/y;if(ratio>limit||ratio<1/limit){const mean=Math.sqrt(x*y),r=ratio>1?Math.sqrt(limit):1/Math.sqrt(limit);x=mean*r;y=mean/r;}
+ return {x,y};
 }
+// datasheet:false gives the package at its drawing size: the footprint on the breadboard of a module raised on its header.
+export function displayModel(p,{datasheet=true}={}){
+ const referenceType=CATALOG_BY_TYPE[p.type]?p.type:legacy[p.type]?catalogType(legacy[p.type]):null;if(!referenceType)return null;
+ const bounds=catalogBodyBounds(referenceType),terms=localTerminals({...p,scale:1,scaleX:1,scaleY:1,skewX:0}),sheet=datasheet?datasheetScale(referenceType):null;
+ let sx=sheet?.x??(CATALOG_BY_TYPE[p.type]?1:['led','rgb','button','temperature','potentiometer'].includes(p.type)?.65:['resistor','diode','capacitor'].includes(p.type)?.7:.8),sy=sheet?.y??sx;
+ // A two-lead part's body still fits between its leads.
+ if(terms.length===2&&terms.every(t=>t.y===0)){
+  const left=Math.abs(Math.min(...terms.map(t=>t.x))),right=Math.max(...terms.map(t=>t.x)),fit=Math.min(1,Math.max(.01,left-4)/Math.abs(bounds.left*sx),Math.max(.01,right-4)/(bounds.right*sx));sx*=fit;sy*=fit;
+ }else if(!CATALOG_BY_TYPE[p.type]&&terms.every(t=>t.y>0)){const fit=Math.min(1,Math.max(1,Math.min(...terms.map(t=>t.y))-8)/(bounds.bottom*sy));sx*=fit;sy*=fit;}
+ // Pins on one side only (a module's header): that edge of the datasheet-sized package stays where the pins are.
+ let dx=0,dy=0;
+ if(!sheet);else if(terms.length&&terms.every(t=>t.y>0))dy=bounds.bottom*(1-sy);else if(terms.length&&terms.every(t=>t.y<0))dy=bounds.top*(1-sy);
+ else if(terms.length&&terms.every(t=>t.x>0))dx=bounds.right*(1-sx);else if(terms.length&&terms.every(t=>t.x<0))dx=bounds.left*(1-sx);
+ return {referenceType,scale:sx,scaleX:sx,scaleY:sy,dx,dy,bounds:box(bounds.left*sx+dx,bounds.top*sy+dy,bounds.right*sx+dx,bounds.bottom*sy+dy)};
+}
+/** SVG transform of a model's body: its datasheet scale and the shift that keeps the pin edge in place. */
+export const modelTransform=m=>`translate(${m.dx} ${m.dy}) scale(${m.scaleX} ${m.scaleY})`;
+/** A point of the unscaled package drawing in the displayed (datasheet-sized) body. */
+export const modelPoint=(m,q)=>({x:q.x*m.scaleX+m.dx,y:q.y*m.scaleY+m.dy});
