@@ -16,7 +16,7 @@ export function updateCatalogView(g,p,r,pressed=false,lcdRender=null){
  const addressable=family==='rgb'&&!r?.channels,received=addressable?r?.device?.color:null;
  const light=g.querySelector('.catalog-light');if(light){const channels=r?.channels,color=addressable?received&&lensColor(received):channels?channelLevels(channels):null;light.setAttribute('fill',color?`rgb(${color.join(',')})`:r?.on&&!addressable?({red:'#f05a4b',green:'#65c668',blue:'#53a8f7',yellow:'#f4c941'}[p.color]||'#ff7055'):'#94a2a4');
   // On a photo the lens shows through until it lights.
-  if(light.hasAttribute('data-art'))light.setAttribute('fill-opacity',color||(r?.on&&!addressable)?'.62':'0');}
+  if(light.hasAttribute('data-art'))light.setAttribute('fill-opacity',color||(r?.on&&!addressable)?'.88':'0');}
  const cap=g.querySelector('.switch-cap');cap?.setAttribute('fill',pressed?'#16a583':'#30363a');if(cap?.hasAttribute('data-art'))cap.setAttribute('fill-opacity',pressed?'.55':'0');
  g.querySelector('.art-relay-led')?.setAttribute('fill-opacity',r?.on?'.95':'0');
  updateDeviceSvg(g,{...p,type:family},r);
