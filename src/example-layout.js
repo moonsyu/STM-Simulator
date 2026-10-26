@@ -4,7 +4,7 @@
 // several strips share a supply), each net gets one colour, and wires are routed on
 // nested orthogonal paths by the lattice router. Returns null when the circuit cannot be
 // laid out this way; the caller then keeps the general arranger.
-import {attachments,assignAttachments,nominalTerminals,terminalKeys,terminalLabel,TWO_PIN_TYPES} from './components.js';
+import {attachments,assignAttachments,nominalTerminals,terminalKeys,terminalLabel,TWO_PIN_TYPES,fixedLeadSpan} from './components.js';
 import {PINS,BOARD,BB,circuitHoles,holeInfo,endpointInfo,breadboardHoles} from './pins.js';
 import {surfacePoint} from './geometry.js';
 import {displayModel} from './model-geometry.js';
@@ -161,7 +161,7 @@ export function planExampleLayout(source,{variant='half',debug=false,halfShift=4
   const out=[];
   if(TWO_PIN_TYPES.includes(p.type)){
    const [ka,kb]=terminalKeys(p),body=displayModel({...p,x:0,y:0,rotation:0})?.bounds||{left:-15,right:15},len=body.right-body.left;
-   const minSpan=len+6,maxSpan=Math.max(minSpan+28,Math.min(112,(p.span||70)+42));
+   const fixed=fixedLeadSpan(p),minSpan=fixed??len+6,maxSpan=fixed??Math.max(minSpan+28,Math.min(112,(p.span||70)+42));
    const s=series.get(p.id),hostStrip=s?strips.get(holeInfo(attachments(s.host.part)[s.host.key],project.components,project.surfaces)?.bus):null;
    const firsts=s?freeHoles(hostStrip):[...holeAt.values()].filter(h=>!state.used.has(h.id)&&!state.covered.has(h.id));
    for(const h1 of firsts)for(const h2 of holeAt.values()){

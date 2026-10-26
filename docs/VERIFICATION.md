@@ -1,5 +1,9 @@
 # 검증 기록
 
+## 1.3.1 LED 색별 사진 — 공개 배포 검증 완료
+
+2026-10-27. 제품 커밋 `4a12805960aa81f5bcdf4ba1df21c4398ad58eb3` · [Windows CI 40411298266](https://github.com/moonsyu/STM-Simulator/actions/runs/40411298266) · [Release v1.3.1](https://github.com/moonsyu/STM-Simulator/releases/tag/v1.3.1). `npm test` 744 통과(로컬 권한 2 제외), workflow·docs E2E 11 통과. latest=v1.3.1, 태그·BUILD-INFO 커밋 `4a12805` 일치, 5자산. EXE SHA-256 `e3206602f99682a4b7141e5be63a94c96c2e5f7d9bc4573ec19afe4068bb2747`(105,188,045 B, MZ)이 SHA256.txt·update-manifest·ZIP 안의 STM-Simulator.exe와 일치. ZIP SHA-256 `ca03bcc079766f8916b14f9101ee6ab5047aeed595b78f75f5ba98b904aa6d20`.
+
 ## 1.3.0 실제 크기 보드·빵판 · 부품 사진 · 시작 보드 F103RB — 공개 배포 검증 완료
 
 2026-10-27. 제품 커밋 `69dfd29708430816f3875dbd0cfb49d16a4f9999` · [Windows CI 40347506426](https://github.com/moonsyu/STM-Simulator/actions/runs/40347506426) · [Release v1.3.0](https://github.com/moonsyu/STM-Simulator/releases/tag/v1.3.0)

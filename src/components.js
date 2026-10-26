@@ -1,8 +1,10 @@
-import {CATALOG_DEFS,CATALOG_TWO_PIN} from './catalog-defs.js';
+import {CATALOG_DEFS,CATALOG_TWO_PIN,CATALOG_BY_TYPE} from './catalog-defs.js';
 import {L298_DEFS} from './l298n.js';
 import {DEVICE_DEFS} from './device-defs.js';
 import {scaleXOf,scaleYOf} from './geometry.js';
 // Geometry shared by rendering, hit testing, mounting and project validation.
+// A 5 mm LED stands on its two legs two holes apart (lead, free hole, lead: three holes), under its lens.
+export const fixedLeadSpan=p=>p?.type==='led'||CATALOG_BY_TYPE[p?.type]?.family==='led'?28:null;
 export const TWO_PIN_TYPES=[...CATALOG_TWO_PIN,'resistor','led','capacitor','diode','buzzer','passive_buzzer','ldr','ntc','dc_motor','dc_supply'];
 export const MULTI_PIN_TYPES=[...Object.keys(CATALOG_DEFS).filter(t=>!CATALOG_TWO_PIN.includes(t)),'l298n','button','lcd','potentiometer','slide','rgb','sevenseg','temperature','ultrasonic','uart','i2c','spi',...Object.keys(DEVICE_DEFS).filter(t=>!['ldr','ntc'].includes(t))];
 export const PART_DEFS={
