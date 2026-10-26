@@ -1,6 +1,10 @@
 # STM Simulator — 개발 인계
 
-현재 버전: **1.3.0**. 정리일: **2026-10-23**. NUCLEO-F446RE 또는 NUCLEO-F103RB와 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+현재 버전: **1.3.1**. 정리일: **2026-10-23**. NUCLEO-F446RE 또는 NUCLEO-F103RB와 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+
+## 1.3.1 LED 색별 사진
+
+- `part-images.js`에 `led-tht-2:green|blue|yellow`(색 변형 키 `<id>:<색>`). `part-art.js` `partImageKey(p)`가 `p.color`에 맞는 사진을 고르고(없으면 기본), 기본 `led`도 `led-tht-2`로 그려지므로 같은 규칙을 탄다.
 
 ## 1.3.0 실제 크기 보드·빵판 · 부품 사진 · 시작 보드 F103RB
 
