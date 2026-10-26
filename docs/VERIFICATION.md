@@ -1,5 +1,16 @@
 # 검증 기록
 
+## 1.2.4 실측 크기 · 이름/모델명 — 공개 배포 검증 완료
+
+2026-10-26. 제품 커밋 `d844f1a4f9c5707b257e23e46d978b387e2e66f6` · [Windows CI 40297082512](https://github.com/moonsyu/STM-Simulator/actions/runs/40297082512) · [Release v1.2.4](https://github.com/moonsyu/STM-Simulator/releases/tag/v1.2.4)
+
+| 검사 | 결과 |
+|---|---|
+| 실측 크기 | 78종 모두 그린 크기가 데이터시트 W×H와 0.05 mm 이내(`part-datasheets.test.js`) |
+| `npm test` (로컬) | 739 통과(실패 2개는 로컬 심볼릭 링크 권한, CI 통과) |
+| `npm run test:e2e` (로컬) | 30 통과, 2 건너뜀 |
+| 공개 자산 | latest=v1.2.4(릴리스 페이지 이동 확인), 태그(`git ls-remote`)·BUILD-INFO 커밋 `d844f1a` 일치, 5자산. EXE SHA-256 `a18f47120bb3f31396548f9ca4e6930b050e089eae6efc5834ecb6b7efe326a6`(103,174,723 B, MZ)이 SHA256.txt·update-manifest·ZIP 안의 STM-Simulator.exe와 일치. ZIP SHA-256 `7489d5b63a97b7498df0d3f7f107620650c289b08c4ca787548012c114d98d35`. GitHub API 호출 한도가 다 되어 CI 상태는 공개 Release 게시(성공 후에만 게시됨)로 확인 |
+
 ## 1.2.3 도움말 → 버전 정보 — 공개 배포 검증 완료
 
 2026-10-26. 제품 커밋 `c64a8fadecf80dad4c57cac5eebc5bee567e6688` · [Windows CI 40293421217](https://github.com/moonsyu/STM-Simulator/actions/runs/40293421217) 첫 실행 성공 · [Release v1.2.3](https://github.com/moonsyu/STM-Simulator/releases/tag/v1.2.3)
