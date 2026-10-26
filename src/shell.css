@@ -431,8 +431,6 @@ dialog.command-palette::backdrop{background:transparent!important;backdrop-filte
 .keybinding-reset{width:22px;height:22px;padding:0;border:0;background:transparent;color:var(--ide-foreground);cursor:pointer;border-radius:4px}
 .keybinding-reset:hover{background:var(--ide-hover)}
 
-/* Update lives in the 도움말 menu (and a status item when an update is ready). */
-:root[data-shell] #app-update{display:none!important}
 :root[data-shell] .status-item[hidden]{display:none!important}
 .keybinding-head button{white-space:nowrap;flex:none}
 
