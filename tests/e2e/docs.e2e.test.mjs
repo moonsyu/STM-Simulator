@@ -10,11 +10,19 @@ async function openDocs(win){
  await win.waitForSelector('#docs-apply-all');
 }
 
+// New circuits start on NUCLEO-F103RB; tests of F446RE-only examples (DCMI camera, register Docs) switch first.
+async function useF446(win){
+ await win.evaluate(()=>document.getElementById('board-open').click());await win.click('#board-results [data-board-id="nucleo-f446re"]');
+ if(await win.locator('#board-change-dialog').isVisible())await win.click('#board-change-confirm');
+ await win.waitForFunction(()=>/F446RE/.test(document.getElementById('current-board-name').textContent));
+}
 test('Docs: apply HAL, edit inside the region, remove, undo, then apply the BareMetal example',{timeout:180000},async()=>{
  const s=await launch();
  try{
   const {win}=s;
-  await win.click('#empty-add-board');
+  await useF446(win);
+  // Choosing the board starts its default circuit with the board already placed.
+  if(await win.locator('#empty-add-board').isVisible())await win.click('#empty-add-board');
   await win.click('[data-activity="parts"]');if(!await win.locator('#view-parts').isVisible())await win.click('[data-activity="parts"]');
   await win.fill('#part-search','빵판');await win.locator('#part-list [data-add="breadboard"]').click();
   await win.waitForFunction(()=>document.querySelectorAll('[data-hole]').length>100);
