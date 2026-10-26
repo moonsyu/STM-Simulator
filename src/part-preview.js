@@ -1,5 +1,6 @@
 import {PART_DEFS,terminalKeys} from './components.js';
 import {initSvg,renderParts,renderBreadboards,boardSvg,updateSimulationSvg} from './render.js';
+import {partImageData} from './part-art.js';
 
 const cache=new Map();
 let drawing,definitions;
@@ -18,6 +19,8 @@ export function partPreview(type){
   drawing.innerHTML=definitions+`<g>${type==='board'?boardSvg():board?renderBreadboards(project,null):renderParts(project,null,null,{})}</g>`;
   updateSimulationSvg(drawing,project,null,{});
   const model=drawing.querySelector(':scope > g');model.querySelectorAll('.pin-hit').forEach(node=>node.remove());
+  // A standalone SVG image cannot load blob URLs: embed the part photo itself.
+  model.querySelectorAll('image[data-part-image]').forEach(node=>node.setAttribute('href',partImageData(node.dataset.partImage)));
   if(!board)model.querySelectorAll(':scope > [data-part] > text').forEach(node=>node.remove());
   const box=model.getBBox(),padding=8,viewBox=[box.x-padding,box.y-padding,Math.max(1,box.width)+padding*2,Math.max(1,box.height)+padding*2].join(' ');
   const svg=`<svg xmlns="http://www.w3.org/2000/svg" viewBox="${viewBox}" width="${Math.max(1,box.width)+padding*2}" height="${Math.max(1,box.height)+padding*2}">${definitions}${model.outerHTML}</svg>`;

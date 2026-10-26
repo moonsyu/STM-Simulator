@@ -12,3 +12,5 @@
 .example-preview-image{height:min(260px,46vh);margin:8px 0;background:#edf3ef;border:1px solid #d5e2db;border-radius:6px;padding:6px;display:grid;place-items:center}
 :root[data-ide-theme=dark] .example-preview-image{background:#2a2f2d;border-color:#3a403d}
 .example-preview-svg{display:block;width:100%;height:100%;pointer-events:none}
+/* Part photos (part-art.js): characters on a blue backlit LCD are light. */
+[data-art] .catalog-display text,[data-art] .catalog-display rect{fill:#e8f0ff}
