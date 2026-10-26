@@ -30,7 +30,7 @@
   },
   "devDependencies": {
     "dompurify": "3.4.17",
-    "electron": "44.5.1",
+    "electron": "44.9.3",
     "electron-builder": "26.15.3",
     "esbuild": "0.28.2",
     "monaco-editor": "0.57.0",
