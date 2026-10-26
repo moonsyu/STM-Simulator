@@ -401,6 +401,7 @@ function registerCommands(layout,options){
   {id:'terminal.stop',label:'터미널: 종료',group:'터미널',run:click('terminal-close')},
   {id:'terminal.clear',label:'출력 지우기',group:'터미널',run:click('clear-console')},
   {id:'help.guide',label:'사용 방법',group:'도움말',run:click('help')},
+  {id:'help.about',label:'버전 정보 · 업데이트 상태',group:'도움말',run:click('app-update')},
   {id:'help.update',label:'업데이트 확인 · 설치',group:'도움말',run:()=>options.openSettings?.('update')}
  ].map(key));
 }
@@ -413,7 +414,7 @@ function buildMenus(layout){
   '보기':['view.palette','view.quickOpen','-','view.explorer','view.parts','view.examples','view.board','view.debug','view.docs','-','view.toggleSidebar','view.togglePanel','view.toggleAux','-','view.problems','view.output','view.terminal','view.serial','view.wave','view.logic'],
   '실행':['run.run','run.debug','run.stop','run.pause','-','run.over','run.into','run.out','run.step','-','run.build','-','run.target.sim','run.target.emu','run.target.arm','run.target.host','-','run.pinout'],
   '터미널':['terminal.start','terminal.stop','terminal.clear'],
-  '도움말':['help.guide']};
+  '도움말':['help.guide','-','help.about']};
  const byId=new Map(layout.commands().map(c=>[c.id,c]));
  let open=null;
  for(const g of groups){

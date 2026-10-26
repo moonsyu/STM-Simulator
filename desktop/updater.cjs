@@ -139,7 +139,7 @@ class PortableUpdater extends EventEmitter{
   async doCheck(auto){
     this.controller=new AbortController();const signal=this.controller.signal,before=this.state;this.lastCheck=this.now();
     try{
-      this.set('checking',{message:'GitHub에서 새 버전을 확인하고 있습니다.',progress:0});
+      this.set('checking',{message:'GitHub에서 새 버전을 확인하고 있습니다.',progress:0,checkedAt:new Date(this.lastCheck).toISOString()});
       const info=releaseInfo(await this.read(LATEST,{signal}),this.version);
       if(!info){this.info=null;return this.set('current',{message:'최신 버전을 사용하고 있습니다.',latestVersion:null});}
       this.info=validateManifest(await this.read(info.manifestUrl,{signal}),info);
