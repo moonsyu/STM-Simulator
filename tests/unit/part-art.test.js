@@ -47,3 +47,11 @@ test('the shape is the photo plus its run-time overlays, drawn in real coordinat
  const oled=partArtShape({id:'o',type:catalogType('oled-i2c-4'),x:0,y:0,rotation:0},null);assert.match(oled,/class="device-screen" width="128" height="64"/);
  const slide=partArtShape({id:'w',type:catalogType('slide-dp3t-8'),x:0,y:0,rotation:0,position:2},null);assert.match(slide,/class="catalog-slide-thumb" data-start="0"/);
 });
+
+test('an LED shows the photo of the colour chosen in its properties',()=>{
+ for(const type of [catalogType('led-tht-2'),'led'])for(const color of ['red','green','blue','yellow']){
+  const shape=type==='led'?catalogShape({id:'l',type:catalogType('led-tht-2'),x:0,y:0,rotation:0,color},null,false):catalogShape({id:'l',type,x:0,y:0,rotation:0,color},null);
+  assert.match(shape,new RegExp(`data-part-image="led-tht-2${color==='red'?'':':'+color}"`),`${type} ${color}`);
+ }
+ for(const color of ['green','blue','yellow'])assert.ok(PART_IMAGES['led-tht-2:'+color],color);
+});
