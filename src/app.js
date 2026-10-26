@@ -20,7 +20,7 @@ import {selectedIds,isSelected,toggleSelection,wirePoints,insertWirePoint,connec
 import {zoomView} from './canvas-view.js';
 import {circuitDiagnostics} from './circuit-diagnostics.js';
 import {PINS,BB,PIN_BY_ID,endpointInfo,searchPins,circuitHoles,holeInfo,breadboardModel,setActiveBoard} from './pins.js';
-import {TWO_PIN_TYPES,WIRE_COLORS,PART_DEFS,terminalKeys,attachments,detachPart,normalizeAngle} from './components.js';
+import {TWO_PIN_TYPES,fixedLeadSpan,WIRE_COLORS,PART_DEFS,terminalKeys,attachments,detachPart,normalizeAngle} from './components.js';
 import {findMount,applyMount,occupiedHoles} from './placement.js';
 import {endpointBlocked,endpointAt,moveWireEnd} from './wire-ends.js';
 import {SimulationSession} from './session.js';
@@ -290,7 +290,7 @@ function addPart(type,a,b,position,extra={}){
  const prefix=(({resistor:'R',led:'LED',button:'SW',lcd:'LCD',breadboard:'BB'})[type])||PART_DEFS[type]?.prefix,names=new Set(project.components.map(p=>p.name));let number=project.components.filter(p=>p.type===type).length+1;while(names.has(prefix+number))number++;const name=prefix+number;
  const p={id:uid('p'),type,name,x:position?.x??(a.x+b.x)/2,y:position?.y??(a.y+b.y)/2,rotation:0};Object.assign(p,extra);
  if(type==='resistor')p.value=330;if(type==='led')p.color='red';Object.assign(p,PART_DEFS[type]?.defaults||{});
- if(TWO_PIN_TYPES.includes(type)){p.span=a&&b?Math.hypot(b.x-a.x,b.y-a.y):70;if(a&&b){p.attachA=a.id;p.attachB=b.id;p.rotation=normalizeAngle(Math.atan2(b.y-a.y,b.x-a.x)*180/Math.PI);}}
+ if(TWO_PIN_TYPES.includes(type)){p.span=a&&b?Math.hypot(b.x-a.x,b.y-a.y):fixedLeadSpan(p)??70;if(a&&b){p.attachA=a.id;p.attachB=b.id;p.rotation=normalizeAngle(Math.atan2(b.y-a.y,b.x-a.x)*180/Math.PI);}}
  checkpoint();project.components.push(p);selection={type:'part',id:p.id};pending=null;mode='select';$('preview-layer').innerHTML='';inspectTab();changed();
 }
 // A wire end picked up by a click (toggle move, `carry`): the next click on a pin or hole puts it there.
