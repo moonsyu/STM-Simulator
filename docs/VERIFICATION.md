@@ -1,5 +1,17 @@
 # 검증 기록
 
+## 1.2.2 업데이트 버튼 표시 · Electron 44.9.3 — 공개 배포 검증 완료
+
+2026-10-26. 제품 커밋 `c40011c5fa66249c5235fa10f6b3a6a9f2aff3eb` · [Windows CI 40266369365](https://github.com/moonsyu/STM-Simulator/actions/runs/40266369365) 성공 · [Release v1.2.2](https://github.com/moonsyu/STM-Simulator/releases/tag/v1.2.2). 첫 실행(`574438e`, CI 40265774599)은 새 보안 권고로 `npm audit` 단계에서 실패했고 Release·태그는 만들어지지 않았다.
+
+| 검사 | 결과 |
+|---|---|
+| `npm audit --audit-level=low` | 0건 (Electron 44.5.1 → 44.9.3, undici 6.29.1/7.30.1, fast-uri 3.1.9) |
+| `npm test` (로컬) | 739 통과(실패 2개는 로컬 심볼릭 링크 권한, CI 통과) |
+| `npm run test:e2e` (로컬) | 30 통과, 2 건너뜀. 새 검사: 업데이트 버튼이 표시되면 테마 버튼 왼쪽에 보임 |
+| 로컬 패키지 | `npm run build`·`build:artifact` 검증 통과 |
+| 공개 자산 | latest=v1.2.2, 태그·BUILD-INFO 커밋 `c40011c` 일치, 5자산. EXE SHA-256 `fb25ff68e6576856b8e1d3b354ba8d428baef104c6ebff422177868851181b6e`(103,174,548 B, MZ)이 SHA256.txt·update-manifest·ZIP 안의 STM-Simulator.exe와 일치. ZIP SHA-256 `6533819180b6ab4ee2fbbe5d3ea0dc9cd63fc99e7d24685739f68f0918295c8b` |
+
 ## 1.2.1 IDE 사용 중 업데이트 감지 — 공개 배포 검증 완료
 
 2026-10-23. 제품 커밋 `41815914926611502bfa20038c31f2cc8bef921a` · [Windows CI 39928683255](https://github.com/moonsyu/STM-Simulator/actions/runs/39928683255) 첫 실행 성공 · [Release v1.2.1](https://github.com/moonsyu/STM-Simulator/releases/tag/v1.2.1)
