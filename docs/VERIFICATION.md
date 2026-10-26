@@ -1,5 +1,17 @@
 # 검증 기록
 
+## 1.3.0 실제 크기 보드·빵판 · 부품 사진 · 시작 보드 F103RB — 공개 배포 검증 완료
+
+2026-10-27. 제품 커밋 `69dfd29708430816f3875dbd0cfb49d16a4f9999` · [Windows CI 40347506426](https://github.com/moonsyu/STM-Simulator/actions/runs/40347506426) · [Release v1.3.0](https://github.com/moonsyu/STM-Simulator/releases/tag/v1.3.0)
+
+| 검사 | 결과 |
+|---|---|
+| `npm test` (로컬) | 743 통과(실패 2개는 로컬 심볼릭 링크 권한, CI 통과). 새 `part-art.test.js`: 78종 사진(WebP)·비율 유지·외곽 안 맞춤·패드가 핀 줄과 일직선 |
+| `npm run test:e2e` (로컬) | 30 통과, 2 건너뜀 |
+| 예제 배선 | 127개, 전체 길이 242,624, 교차 33, 겹침 0 |
+| 로컬 패키지 | `npm run build`·`build:artifact` 검증 통과 |
+| 공개 자산 | latest=v1.3.0(릴리스 페이지 이동), 태그(`git ls-remote`)·BUILD-INFO 커밋 `69dfd29` 일치, 5자산. EXE SHA-256 `2d2a445d146b83f9ece7a0479a01b6e832f3fca9a2b0fc3e98c2e8ee081bf9cb`(105,114,726 B, MZ)이 SHA256.txt·update-manifest·ZIP 안의 STM-Simulator.exe와 일치. ZIP SHA-256 `4b4f507dfa27f95d4b122687c498ed6565be218f382c81dbc3020d37728abb9d` |
+
 ## 1.2.4 실측 크기 · 이름/모델명 — 공개 배포 검증 완료
 
 2026-10-26. 제품 커밋 `d844f1a4f9c5707b257e23e46d978b387e2e66f6` · [Windows CI 40297082512](https://github.com/moonsyu/STM-Simulator/actions/runs/40297082512) · [Release v1.2.4](https://github.com/moonsyu/STM-Simulator/releases/tag/v1.2.4)
