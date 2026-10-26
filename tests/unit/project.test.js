@@ -164,6 +164,11 @@ describe('code and board reset',()=>{
     assert.deepEqual(r.components,[]);assert.deepEqual(r.wires,[]);assert.deepEqual(r.mcu.pins,{});assert.deepEqual(r.surfaces,blankProject().surfaces);
     assert.equal(r.code,p.code);assert.equal(r.firmware.files.length,1);assert.equal(p.components.length,2,'input untouched');
   });
+  test('resetBoardConfiguration keeps the board: an F103RB project resets to F1 pin defaults',()=>{
+    const p=projectForBoard('nucleo-f103rb');p.components=ledCircuit().components;p.wires=ledCircuit().wires;
+    const r=resetBoardConfiguration(p);
+    assert.equal(r.boardId,'nucleo-f103rb');assert.equal(r.mcu.family,'STM32F103RB');assert.deepEqual(r.components,[]);assert.deepEqual(r.wires,[]);
+  });
 });
 
 describe('source files',()=>{
