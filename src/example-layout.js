@@ -8,6 +8,7 @@ import {attachments,assignAttachments,nominalTerminals,terminalKeys,terminalLabe
 import {PINS,BOARD,BB,circuitHoles,holeInfo,endpointInfo,breadboardHoles} from './pins.js';
 import {surfacePoint} from './geometry.js';
 import {displayModel} from './model-geometry.js';
+import {CATALOG_BY_TYPE} from './catalog-defs.js';
 import {wiringTopology} from './circuit-topology.js';
 import {routeWires} from './wire-router.js';
 
@@ -124,7 +125,10 @@ export function planExampleLayout(source,{variant='half',debug=false,halfShift=4
   const box=boxOf(positioned,p),foot=boxOf(positioned,p,true),leadHoles=Object.values(map),leadIds=new Set(leadHoles.map(h=>h.id));
   if(!overlap(foot,bbBox)&&!inBox(bbBox,{x:(foot.left+foot.right)/2,y:(foot.top+foot.bottom)/2}))return null;
   if(foot.left<bbBox.left-40||foot.right>bbBox.right+40||foot.top<bbBox.top-40||foot.bottom>bbBox.bottom+40)return null;
-  if(overlap(box,mcuBox,6)||state.bodies.some(b=>overlap(box,b.box,3)))return null;
+  // Two-lead off-board parts (battery holder, DC motor) lie beside the breadboard on their wires, so only their
+  // footprint has to stay clear; every other package keeps its real (datasheet) outline clear of the others.
+  const solid=terminalKeys(p).length===2&&/^(dc_supply|dc_motor)$/.test(CATALOG_BY_TYPE[p.type]?.family??p.type)?foot:box;
+  if(overlap(solid,mcuBox,6)||state.bodies.some(b=>overlap(solid,b.solid??b.box,3)))return null;
   // A package may sit over its own leads (a tactile switch, a module on its header); every other hole under its footprint is covered.
   const cover=new Set(coveredBy(foot).filter(id=>!leadIds.has(id)));
   for(const id of state.used)if(cover.has(id))return null;
@@ -151,7 +155,7 @@ export function planExampleLayout(source,{variant='half',debug=false,halfShift=4
   const sig=Object.entries(map).map(([k,h])=>{const n=netOf.get(term(p,k)),t=n?(pinTargets.get(n)||[]).filter(q=>![...n.signals].every(s=>SUPPLIES.has(s))):[];return t.length?{h,y:Math.min(...t.map(q=>q.y))}:null;}).filter(Boolean);
   for(let i=0;i<sig.length;i++)for(let j=i+1;j<sig.length;j++)if((sig[i].h.y-sig[j].h.y)*(sig[i].y-sig[j].y)<0)cost+=40;
   cost+=cover.size*.5;
-  return {cost,box,foot,cover};
+  return {cost,box,foot,solid,cover};
  }
  function candidates(p){
   const out=[];
@@ -197,7 +201,7 @@ export function planExampleLayout(source,{variant='half',debug=false,halfShift=4
   assignAttachments(p,Object.fromEntries(Object.entries(c.map).map(([k,h])=>[k,h.id])));
   for(const [k,h]of Object.entries(c.map)){if(!state.used.has(h.id)){state.used.add(h.id);used.push(h.id);state.leadAt.set(h.id,term(p,k));}const n=netOf.get(term(p,k)),strip=strips.get(h.bus);if(n&&!strip.net){strip.net=n;nets.push(strip);}}
   for(const id of c.cover)if(!state.covered.has(id)){state.covered.add(id);covered.push(id);}
-  state.bodies.push({id:p.id,box:c.box,foot:c.foot});state.done.add(p.id);
+  state.bodies.push({id:p.id,box:c.box,foot:c.foot,solid:c.solid});state.done.add(p.id);
   return ()=>{for(const id of used){state.used.delete(id);state.leadAt.delete(id);}for(const id of covered)state.covered.delete(id);for(const strip of nets)strip.net=null;state.bodies.pop();state.done.delete(p.id);
    Object.assign(p,{x:saved.x,y:saved.y,rotation:saved.rotation});if(saved.span!==undefined)p.span=saved.span;assignAttachments(p,saved.map);};
  }

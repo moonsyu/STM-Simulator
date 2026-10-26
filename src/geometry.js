@@ -1,7 +1,11 @@
-export const BOARD={x:45,y:48,w:440,h:532};
-export const BB={x:632,y:68,w:342,h:538,startY:128,step:14};
-// Full-size 830-point board in its own local frame: 63 columns, two 5-row blocks, rails top and bottom.
-export const FULL_BB={x:0,y:0,w:948,h:304,left:40,step:14,columns:63,rows:{a:78,f:176},rails:{T:[24,38],B:[266,280]}};
+// Everything is drawn at real size: the 2.54 mm pin and hole pitch is 14 units (1 mm = 14/2.54 units).
+// NUCLEO-64 (MB1136): 70 × 82.5 mm (UM1724 Figure 5).
+export const BOARD={x:45,y:48,w:385.83,h:454.72};
+// 400-point half-size board (BusBoard BB400 class): 54.3 × 84 mm, 30 rows.
+export const BB={x:644.5,y:99.5,w:301,h:463,startY:128,step:14};
+// Full-size 830-point board (BusBoard BB830: 165.1 × 54.6 mm) in its own local frame: 63 columns, two 5-row blocks,
+// rails top and bottom.
+export const FULL_BB={x:0,y:0,w:910,h:301,left:21,step:14,columns:63,rows:{a:76.5,f:174.5},rails:{T:[22.5,36.5],B:[264.5,278.5]}};
 export const MIN_SCALE=.001,MAX_SCALE=1000;
 export const scaleOf=value=>value?.scale??1;
 export const scaleXOf=value=>value?.scaleX??scaleOf(value);

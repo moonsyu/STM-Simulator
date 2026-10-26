@@ -140,11 +140,11 @@ describe('I2C, SPI and displays',()=>{
     assert.equal(session.result.parts.demo.memory[0x10],42);
   });
   test('I2C to a wrong address NACKs (HAL_ERROR)',()=>{
-    const p=applyHalExample(blankProject(),'i2c');p.components[0].address=81;const out=[];const s=new SimulationSession(p,{print:v=>out.push(v)});run(s,50);
+    const p=applyHalExample(blankProject(),'i2c');p.components.find(c=>c.type==='i2c').address=81;const out=[];const s=new SimulationSession(p,{print:v=>out.push(v)});run(s,50);
     assert.match(out[0],/write=1 read=1/);
   });
   test('I2C memory without power does not respond',()=>{
-    const p=applyHalExample(blankProject(),'i2c');delete p.components[0].attachments.p1;const out=[];const s=new SimulationSession(p,{print:v=>out.push(v)});run(s,50);
+    const p=applyHalExample(blankProject(),'i2c');delete p.components.find(c=>c.type==='i2c').attachments.p1;const out=[];const s=new SimulationSession(p,{print:v=>out.push(v)});run(s,50);
     assert.doesNotMatch(out[0],/write=0 read=0/);
   });
   test('SPI memory round-trip under chip select',()=>{
