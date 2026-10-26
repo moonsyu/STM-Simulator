@@ -47,26 +47,25 @@ export function packageLeadRoot(bounds,point){
  const distance=Math.hypot(dx/rx,dy/ry),ratio=distance>1?1/distance:1;
  return {x:x+dx*ratio,y:y+dy*ratio};
 }
-// Body scale that makes the drawn package the size its datasheet gives (1 mm = 14/2.54 units, the breadboard pitch).
-// The longer datasheet side goes along the drawing's longer side (a square drawing keeps the datasheet's width and
-// height, e.g. an upright seven-segment digit); a drawing whose proportions differ a lot is not stretched more than
-// 1.4:1 (circles stay round enough).
+// Body scale that makes the drawn package exactly the size its datasheet gives (1 mm = 14/2.54 units, the breadboard
+// pitch), so every part has its real size next to the breadboard. The longer datasheet side goes along the drawing's
+// longer side; a square drawing, or a size marked xy, keeps the datasheet's width and height as they are.
 /** Catalog id whose datasheet describes a part type (a basic part uses the package it is drawn as). */
 export const datasheetIdOf=type=>CATALOG_BY_TYPE[type]?.id??legacy[type]??null;
 export function datasheetScale(referenceType){
  const v=CATALOG_BY_TYPE[referenceType],size=v&&PART_DATASHEETS[v.id]?.size;if(!size?.w||!size?.h)return null;
  const b=catalogBodyBounds(referenceType),w=b.right-b.left,h=b.bottom-b.top,long=Math.max(size.w,size.h)*UNITS_PER_MM,short=Math.min(size.w,size.h)*UNITS_PER_MM;
- let x,y;if(Math.max(w,h)/Math.min(w,h)<1.1){x=size.w*UNITS_PER_MM/w;y=size.h*UNITS_PER_MM/h;}else{x=(w>=h?long:short)/w;y=(w>=h?short:long)/h;}
- const limit=1.4,ratio=x/y;if(ratio>limit||ratio<1/limit){const mean=Math.sqrt(x*y),r=ratio>1?Math.sqrt(limit):1/Math.sqrt(limit);x=mean*r;y=mean/r;}
- return {x,y};
+ if(size.xy||Math.max(w,h)/Math.min(w,h)<1.1)return {x:size.w*UNITS_PER_MM/w,y:size.h*UNITS_PER_MM/h};
+ return {x:(w>=h?long:short)/w,y:(w>=h?short:long)/h};
 }
 // datasheet:false gives the package at its drawing size: the footprint on the breadboard of a module raised on its header.
 export function displayModel(p,{datasheet=true}={}){
  const referenceType=CATALOG_BY_TYPE[p.type]?p.type:legacy[p.type]?catalogType(legacy[p.type]):null;if(!referenceType)return null;
  const bounds=catalogBodyBounds(referenceType),terms=localTerminals({...p,scale:1,scaleX:1,scaleY:1,skewX:0}),sheet=datasheet?datasheetScale(referenceType):null;
  let sx=sheet?.x??(CATALOG_BY_TYPE[p.type]?1:['led','rgb','button','temperature','potentiometer'].includes(p.type)?.65:['resistor','diode','capacitor'].includes(p.type)?.7:.8),sy=sheet?.y??sx;
- // A two-lead part's body still fits between its leads.
- if(terms.length===2&&terms.every(t=>t.y===0)){
+ // Without a datasheet size, a two-lead part's body still fits between its leads (a datasheet-sized body keeps its
+ // real size: radial parts and off-board parts such as a battery holder sit over their leads).
+ if(sheet);else if(terms.length===2&&terms.every(t=>t.y===0)){
   const left=Math.abs(Math.min(...terms.map(t=>t.x))),right=Math.max(...terms.map(t=>t.x)),fit=Math.min(1,Math.max(.01,left-4)/Math.abs(bounds.left*sx),Math.max(.01,right-4)/(bounds.right*sx));sx*=fit;sy*=fit;
  }else if(!CATALOG_BY_TYPE[p.type]&&terms.every(t=>t.y>0)){const fit=Math.min(1,Math.max(1,Math.min(...terms.map(t=>t.y))-8)/(bounds.bottom*sy));sx*=fit;sy*=fit;}
  // Pins on one side only (a module's header): that edge of the datasheet-sized package stays where the pins are.
