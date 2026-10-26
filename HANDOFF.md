@@ -1,6 +1,10 @@
 # STM Simulator — 개발 인계
 
-현재 버전: **1.3.1**. 정리일: **2026-10-23**. NUCLEO-F446RE 또는 NUCLEO-F103RB와 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+현재 버전: **1.3.2**. 정리일: **2026-10-23**. NUCLEO-F446RE 또는 NUCLEO-F103RB와 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+
+## 1.3.2 LED 3칸
+
+- `components.js` `fixedLeadSpan(p)`: LED(`led`, family led)는 다리 간격 28(2피치, 3칸). `addPart` 기본 span과 `example-layout.js` 2핀 후보(min=max=28)에 쓴다. 기존 저장 파일의 LED span은 그대로.
 
 ## 1.3.1 LED 색별 사진
 
