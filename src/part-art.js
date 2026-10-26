@@ -35,9 +35,11 @@ export function partImageUrl(id){
  return urls.get(id);
 }
 
+/** Photo of a part: the colour variant of an LED that has one (its colour property), otherwise the part's own. */
+export function partImageKey(p){const id=CATALOG_BY_TYPE[p.type].id,key=p.color&&p.color!=='red'?id+':'+p.color:id;return PART_IMAGES[key]?key:id;}
 /** The photo's rectangle in real part coordinates: the datasheet outline with the photo fitted in its middle. */
-export function photoRect(type,model=displayModel({type,x:0,y:0,rotation:0})){
- const img=PART_IMAGES[CATALOG_BY_TYPE[type].id],b=model.bounds,W=b.right-b.left,H=b.bottom-b.top,a=img.w/img.h;
+export function photoRect(type,model=displayModel({type,x:0,y:0,rotation:0}),key=CATALOG_BY_TYPE[type].id){
+ const img=PART_IMAGES[key],b=model.bounds,W=b.right-b.left,H=b.bottom-b.top,a=img.w/img.h;
  const w=a>W/H?W:H*a,h=a>W/H?W/a:H;return {x:(b.left+b.right-w)/2,y:(b.top+b.bottom-h)/2,w,h};
 }
 /** Pad of a pin (real part coordinates): just inside the outline edge next to the pin, at the pin's own position. */
@@ -56,10 +58,10 @@ const esc=s=>String(s).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll
 const SEGMENTS=[[-9,-20,18,3],[10,-17,3,15],[10,3,3,15],[-9,18,18,3],[-13,3,3,15],[-13,-17,3,15],[-9,-1,18,3],[13,19,3,3]];
 
 export function partArtShape(p,read,physicalPins=true,model=null){
- const v=CATALOG_BY_TYPE[p.type],id=v.id,f=v.family,a=ART[id]||{},m=model??displayModel({...p,x:0,y:0,rotation:0}),R=photoRect(p.type,m),b=m.bounds;
+ const v=CATALOG_BY_TYPE[p.type],id=v.id,f=v.family,a=ART[id]||{},m=model??displayModel({...p,x:0,y:0,rotation:0}),key=partImageKey(p),R=photoRect(p.type,m,key),b=m.bounds;
  const P=(u,w)=>({x:R.x+u*R.w,y:R.y+w*R.h}),L=k=>k*R.w;
  let s=`<rect x="${b.left}" y="${b.top}" width="${b.right-b.left}" height="${b.bottom-b.top}" fill="transparent" pointer-events="all"/>`;
- s+=`<image class="part-photo" data-part-image="${id}" href="${partImageUrl(id)}" x="${R.x}" y="${R.y}" width="${R.w}" height="${R.h}" preserveAspectRatio="none" pointer-events="none"/>`;
+ s+=`<image class="part-photo" data-part-image="${key}" href="${partImageUrl(key)}" x="${R.x}" y="${R.y}" width="${R.w}" height="${R.h}" preserveAspectRatio="none" pointer-events="none"/>`;
  if(a.light){const q=P(a.light[0],a.light[1]),r=L(a.light[2]);s+=`<circle class="${f==='led'?'led-glow':'rgb-glow'}" cx="${q.x}" cy="${q.y}" r="${r*2.2}" fill="#f16f52" opacity="0" filter="url(#led-glow)" pointer-events="none"/><circle class="catalog-light" data-art="" cx="${q.x}" cy="${q.y}" r="${r}" fill="#94a2a4" fill-opacity="0" pointer-events="none"/>`;}
  if(a.cap){const q=P(a.cap[0],a.cap[1]);s+=`<circle class="switch-cap" data-art="" cx="${q.x}" cy="${q.y}" r="${L(a.cap[2])}" fill="#30363a" fill-opacity="0"/>`;}
  if(a.lcd){const [x0,y0,x1,y1]=a.lcd,p0=P(x0,y0),p1=P(x1,y1),kx=(p1.x-p0.x)/200,ky=(p1.y-p0.y)/46;s+=`<g transform="translate(${(p0.x+p1.x)/2} ${(p0.y+p1.y)/2+3*ky}) scale(${kx} ${ky})" pointer-events="none"><g class="catalog-display"><text x="0" y="-3" text-anchor="middle" font-family="Consolas,monospace" font-size="12">${esc(read?.text||'')}</text></g></g>`;}
