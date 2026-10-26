@@ -72,8 +72,15 @@ export function displayModel(p,{datasheet=true}={}){
  let dx=0,dy=0;
  if(!sheet);else if(terms.length&&terms.every(t=>t.y>0))dy=bounds.bottom*(1-sy);else if(terms.length&&terms.every(t=>t.y<0))dy=bounds.top*(1-sy);
  else if(terms.length&&terms.every(t=>t.x>0))dx=bounds.right*(1-sx);else if(terms.length&&terms.every(t=>t.x<0))dx=bounds.left*(1-sx);
+ // Pins on one side stand out of the package by at most LEAD_GAP: the body moves up to its pins.
+ if(sheet&&terms.length){
+  const gap=terms.every(t=>t.y>0)?Math.min(...terms.map(t=>t.y))-(bounds.bottom*sy+dy):terms.every(t=>t.y<0)?(bounds.top*sy+dy)-Math.max(...terms.map(t=>t.y)):terms.every(t=>t.x>0)?Math.min(...terms.map(t=>t.x))-(bounds.right*sx+dx):terms.every(t=>t.x<0)?(bounds.left*sx+dx)-Math.max(...terms.map(t=>t.x)):0;
+  if(gap>LEAD_GAP){const k=gap-LEAD_GAP;if(terms.every(t=>t.y>0))dy+=k;else if(terms.every(t=>t.y<0))dy-=k;else if(terms.every(t=>t.x>0))dx+=k;else dx-=k;}
+ }
  return {referenceType,scale:sx,scaleX:sx,scaleY:sy,dx,dy,bounds:box(bounds.left*sx+dx,bounds.top*sy+dy,bounds.right*sx+dx,bounds.bottom*sy+dy)};
 }
+/** Longest visible lead between a package edge and its pin: two thirds of an OLED module's header lead (14). */
+export const LEAD_GAP=14*2/3;
 /** SVG transform of a model's body: its datasheet scale and the shift that keeps the pin edge in place. */
 export const modelTransform=m=>`translate(${m.dx} ${m.dy}) scale(${m.scaleX} ${m.scaleY})`;
 /** A point of the unscaled package drawing in the displayed (datasheet-sized) body. */

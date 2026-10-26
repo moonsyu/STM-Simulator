@@ -56,10 +56,11 @@ test('an LED shows the photo of the colour chosen in its properties',()=>{
  for(const color of ['green','blue','yellow'])assert.ok(PART_IMAGES['led-tht-2:'+color],color);
 });
 
-test('a 5 mm LED takes three holes: its legs are two holes apart under the lens',async()=>{
+test('two-lead parts stand on short legs: an LED takes three holes, a resistor four',async()=>{
  const {fixedLeadSpan}=await import('../../src/components.js');
  assert.equal(fixedLeadSpan({type:'led'}),28);assert.equal(fixedLeadSpan({type:catalogType('led-tht-2')}),28);
- assert.equal(fixedLeadSpan({type:'resistor'}),null);
+ assert.equal(fixedLeadSpan({type:'resistor'}),42);assert.equal(fixedLeadSpan({type:catalogType('capacitor-ceramic-2')}),28);
+ assert.equal(fixedLeadSpan({type:'dc_supply'}),null,'off-board parts keep their spacing');
  const {applyHalExample}=await import('../../src/hal-examples.js'),{blankProject}=await import('../../src/project.js');
  const led=applyHalExample(blankProject(),'blink').components.find(p=>p.type==='led');
  if(led)assert.equal(led.span,28,'example layouts use the same spacing');

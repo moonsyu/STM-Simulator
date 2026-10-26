@@ -1,7 +1,7 @@
 import {DEVICE_CATALOG} from './device-catalog-data.js';
 import {DEVICE_DEFS} from './device-defs.js';
 import {L298_DEFS} from './l298n.js';
-import {PART_DATASHEETS} from './part-datasheets.js';
+import {PART_DATASHEETS,UNITS_PER_MM} from './part-datasheets.js';
 // The datasheet name of a catalog part (the catalog's own name when no datasheet was found).
 export const catalogName=v=>PART_DATASHEETS[v.id]?.name??v.name;
 export const catalogType=id=>'ref_'+id.replaceAll('-','_');
@@ -32,14 +32,18 @@ export function catalogGeometry(v){
  let body={width:Math.max(56,n*14+12),height:56},terminals=[];
  const row=(count,y,start=0)=>Array.from({length:count},(_,i)=>[(i-(count-1)/2)*14+start,y]);
  const dip=(count,h=56)=>[...row(Math.ceil(count/2),h/2+14),...row(Math.floor(count/2),-h/2-14).reverse()];
+ // Two pin rows on either side of a small package sit just outside its real (datasheet) width, on the 2.54 mm grid:
+ // DIP-8 rows 7.62 mm apart, SOT-23 rows one pitch apart, as the parts plug into a breadboard.
+ const size=PART_DATASHEETS[id]?.size,rowHalf=size?Math.ceil((Math.min(size.w,size.h)*UNITS_PER_MM/2+2)/7)*7:null;
  if(n===2){body={width:64,height:46};terminals=[[-35,0],[35,0]];}
- else if(id==='button-4'){body={width:42,height:28};terminals=[[-28,-14],[28,-14],[-28,14],[28,14]];}
- else if(id==='i2c-eeprom-5'){body={width:42,height:28};terminals=[[-14,28],[0,28],[14,28],[14,-28],[-14,-28]];}
- else if(/eeprom-8|l298p-bare-20/.test(id)){body={width:n/2*14+14,height:42};terminals=dip(n,42);}
+ // 6 × 6 mm tactile switch: its four pins at the corners, two holes apart each way.
+ else if(id==='button-4'){body={width:42,height:28};terminals=[[-14,-14],[14,-14],[-14,14],[14,14]];}
+ else if(id==='i2c-eeprom-5'){const r=rowHalf??28;body={width:42,height:28};terminals=[[-14,r],[0,r],[14,r],[14,-r],[-14,-r]];}
+ else if(/eeprom-8|l298p-bare-20/.test(id)){body={width:n/2*14+14,height:42};terminals=dip(n,rowHalf?2*(rowHalf-14):42);}
  else if(id==='ov2640-camera'){body={width:140,height:98};terminals=Array.from({length:18},(_,i)=>[(Math.floor(i/2)-4)*14,56+(i%2)*14]);}
  else if(id==='motor-driver-hat'){body={width:294,height:168};terminals=[...row(5,98,-98),...row(3,-98,-98).slice(0,1),[-42,-98],[-28,-98],[28,-98],[42,-98],[-84,-98],...Array.from({length:40},(_,i)=>[(Math.floor(i/2)-9.5)*14,49+(i%2)*14])];}
  else if(id==='matrix-10'){body={width:112,height:112};terminals=[...Array.from({length:5},(_,i)=>[-70,(i-2)*14]),...Array.from({length:5},(_,i)=>[70,(i-2)*14])];}
- else if(id.startsWith('slide-dp')){body={width:n/2*14+14,height:28};terminals=[...row(n/2,-28),...row(n/2,28)];}
+ else if(id.startsWith('slide-dp')){const r=rowHalf??28;body={width:n/2*14+14,height:28};terminals=[...row(n/2,-r),...row(n/2,r)];}
  else if(f==='sevenseg'&&n>=10){body={width:n>=12?168:70,height:70};terminals=dip(n,70);}
  else if(id==='l298n-module-13'){body={width:140,height:112};terminals=[...row(3,-70),...row(6,70),[-84,-14],[-84,0],[84,-14],[84,0]];}
  else if(id==='relay-module-6'){body={width:98,height:70};terminals=[[-63,-14],[-63,0],[-63,14],[63,-14],[63,0],[63,14]];}

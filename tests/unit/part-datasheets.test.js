@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import {DEVICE_CATALOG} from '../../src/device-catalog-data.js';
 import {CATALOG_BY_TYPE,CATALOG_DEFS,catalogType} from '../../src/catalog-defs.js';
 import {PART_DATASHEETS,UNITS_PER_MM,datasheetLine} from '../../src/part-datasheets.js';
-import {displayModel,datasheetIdOf} from '../../src/model-geometry.js';
+import {displayModel,datasheetIdOf,LEAD_GAP} from '../../src/model-geometry.js';
 import {localTerminals} from '../../src/components.js';
 
 const parts=DEVICE_CATALOG.filter(v=>!['board','breadboard'].includes(v.family));
@@ -29,9 +29,10 @@ test('every package is drawn at exactly its datasheet size on the breadboard sca
  }
 });
 
-test('a one-sided header keeps its pins at the package edge; pin positions never change',()=>{
+test('a one-sided header stands LEAD_GAP below the package edge; pin positions never change',()=>{
  const type=catalogType('hcsr04-4'),p={type,x:0,y:0,rotation:0},m=displayModel(p),plain=displayModel(p,{datasheet:false});
- assert.equal(m.bounds.bottom,plain.bounds.bottom,'the header edge stays put');
+ const pinY=Math.min(...localTerminals(p).map(t=>t.y));
+ assert.ok(Math.abs(pinY-m.bounds.bottom-LEAD_GAP)<1e-9,'the leads are two thirds of the header lead of the vector model');
  assert.ok(m.bounds.top<plain.bounds.top,'the larger body grows away from the pins');
  assert.deepEqual(localTerminals(p),localTerminals({...p}),'terminals are not scaled');
  assert.equal(plain.scaleX,1);

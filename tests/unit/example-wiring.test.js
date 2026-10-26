@@ -18,12 +18,14 @@ const BASELINE=JSON.parse(readFileSync(new URL('../fixtures/example-wiring-basel
 // Pins and code are kept; each entry is the maximum number of crossing wire pairs.
 const CROSSING_ALLOWLIST={
  ref_motor_driver_hat:4,ref_l298n_module_13:7,ref_l298n_bare_15:2,ref_l298p_bare_20:3,
- ref_sevenseg_common_anode_10:1,ref_sevenseg_4digit_12:11,
+ ref_sevenseg_common_anode_10:5,ref_sevenseg_4digit_12:11,
  l298n:4,ref_dc_motor_2:4,ref_dc_supply_2:4,ref_stepper_bipolar_4:2,
  // The real NUCLEO-64 header positions (UM1724): the Arduino CN5 rows sit 0.4 pitch off the morpho rows and the
  // board is narrower, so a few short I²C/SPI/control runs cross once or twice on the way to the breadboard.
  ref_sht31_grove_4:1,ref_encoder_module_5:1,ref_spi_eeprom_8:2,ref_urm09_i2c_4:1,ref_can_transceiver_6:1,
- ref_slide_dp3t_8:1,slide:1,oled:1,matrix:1,servo:1,motor:1,timer_encoder:1,spi:3,camera_tft:2
+ ref_slide_dp3t_8:1,slide:1,oled:1,matrix:1,servo:1,motor:1,timer_encoder:1,spi:3,camera_tft:2,
+ // Two-lead parts stand on short legs (LED/capacitor 2 pitches, resistor 3): less room to pass beside them.
+ ref_capacitor_ceramic_2:1,ref_capacitor_electrolytic_2:1,ref_sevenseg_common_cathode_10:3,sevenseg:1,pwm:1
 };
 const kinds=Object.keys(allHalExamples());
 const results=new Map();
