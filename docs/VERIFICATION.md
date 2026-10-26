@@ -1,5 +1,15 @@
 # 검증 기록
 
+## 1.2.3 도움말 → 버전 정보 — 공개 배포 검증 완료
+
+2026-10-26. 제품 커밋 `c64a8fadecf80dad4c57cac5eebc5bee567e6688` · [Windows CI 40293421217](https://github.com/moonsyu/STM-Simulator/actions/runs/40293421217) 첫 실행 성공 · [Release v1.2.3](https://github.com/moonsyu/STM-Simulator/releases/tag/v1.2.3)
+
+| 검사 | 결과 |
+|---|---|
+| `npm test` (로컬) | 739 통과(실패 2개는 로컬 심볼릭 링크 권한, CI 통과) |
+| `npm run test:e2e` (로컬) | 30 통과, 2 건너뜀. 새 검사: 도움말 메뉴의 `(v버전)` 표시, 버전 정보 창의 현재 버전·상태·마지막 확인 |
+| 공개 자산 | latest=v1.2.3, 태그·BUILD-INFO 커밋 `c64a8fa` 일치, 5자산. EXE SHA-256 `01bf233132cc97bcf2d6c41800bd5d0f1ddc5f4f6d3c70acfa622f5e76cee089`(103,174,598 B, MZ)이 SHA256.txt·update-manifest·ZIP 안의 STM-Simulator.exe와 일치. ZIP SHA-256 `180c494b5f1775eb252ba5939c3424336ba9eacee0adc919db89ecf30e84712f` |
+
 ## 1.2.2 업데이트 버튼 표시 · Electron 44.9.3 — 공개 배포 검증 완료
 
 2026-10-26. 제품 커밋 `c40011c5fa66249c5235fa10f6b3a6a9f2aff3eb` · [Windows CI 40266369365](https://github.com/moonsyu/STM-Simulator/actions/runs/40266369365) 성공 · [Release v1.2.2](https://github.com/moonsyu/STM-Simulator/releases/tag/v1.2.2). 첫 실행(`574438e`, CI 40265774599)은 새 보안 권고로 `npm audit` 단계에서 실패했고 Release·태그는 만들어지지 않았다.
