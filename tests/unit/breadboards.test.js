@@ -21,10 +21,14 @@ const buses=holes=>{const m=new Map();for(const h of holes){if(!m.has(h.bus))m.s
 describe('400-point half-size breadboard',()=>{
   test('keeps its hole ids, positions and buses',()=>{
     assert.equal(HOLES.length,400);assert.equal(breadboardModel(null).points,400);
-    // Saved projects reference these ids and positions; they must never move.
-    assert.deepEqual([HOLE_BY_ID.get('bb:a:1').x,HOLE_BY_ID.get('bb:a:1').y],[BB.x+86,BB.startY]);
-    assert.deepEqual([HOLE_BY_ID.get('bb:j:30').x,HOLE_BY_ID.get('bb:j:30').y],[BB.x+86+9*14+28,BB.startY+29*14]);
-    assert.deepEqual([HOLE_BY_ID.get('rail:R:-:25').x,HOLE_BY_ID.get('rail:R:-:25').y],[BB.x+314,BB.startY+28*14]);
+    // Saved projects reference these ids and positions: the terminal strips never move (a1 stays at 718, 128).
+    // The frame and the power rails follow a real BB400 (54.3 × 84 mm): rails 2 pitches outside columns a and j.
+    assert.deepEqual([HOLE_BY_ID.get('bb:a:1').x,HOLE_BY_ID.get('bb:a:1').y],[718,128]);
+    assert.deepEqual([HOLE_BY_ID.get('bb:a:1').x,HOLE_BY_ID.get('bb:a:1').y],[BB.x+73.5,BB.startY]);
+    assert.deepEqual([HOLE_BY_ID.get('bb:j:30').x,HOLE_BY_ID.get('bb:j:30').y],[BB.x+73.5+9*14+28,BB.startY+29*14]);
+    assert.deepEqual([HOLE_BY_ID.get('rail:R:-:25').x,HOLE_BY_ID.get('rail:R:-:25').y],[BB.x+281.5,BB.startY+28*14]);
+    assert.equal(HOLE_BY_ID.get('bb:a:1').x-HOLE_BY_ID.get('rail:L:-:1').x,40);assert.equal(HOLE_BY_ID.get('rail:R:+:1').x-HOLE_BY_ID.get('bb:j:1').x,40);
+    assert.deepEqual([BB.w,BB.h],[301,463]);
     assert.equal(HOLE_BY_ID.get('rail:L:+:6').y-HOLE_BY_ID.get('rail:L:+:5').y,28,'rail holes come in groups of five');
   });
   test('rows a-e and f-j are separate strips; each rail is one conductor',()=>{

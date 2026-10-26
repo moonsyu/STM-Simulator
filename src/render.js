@@ -2,7 +2,7 @@ import {remodelLegacyShape,updateCatalogView} from './catalog-view.js';
 import {displayModel,catalogPadPosition,packageLeadRoot,modelPoint} from './model-geometry.js';
 import {isSelected,wirePoints} from './circuit-edit.js';
 import {roundedWirePath} from './wire-path.js';
-import {PINS,HOLES,FULL_HOLES,BB,FULL_BB,endpointInfo,circuitHoles,breadboardPrefix,breadboardModel,boardPins} from './pins.js';
+import {PINS,HOLES,FULL_HOLES,BOARD,BB,FULL_BB,endpointInfo,circuitHoles,breadboardPrefix,breadboardModel,boardPins} from './pins.js';
 import {DEFAULT_BOARD_ID,getBoard} from './boards.js';
 import {terminalKeys,terminalLabel,localTerminals,nominalTerminals,rotatePoint,attachments,PART_DEFS} from './components.js';
 import {extraShape,updateExtraSvg} from './part-render.js';
@@ -15,7 +15,10 @@ function button(x,y,color,id,label){return `<g data-button="${id}" class="board-
 // Both supported boards are the MB1136 NUCLEO-64; only the MCU label and a few header signals differ.
 export function boardSvg(boardId=DEFAULT_BOARD_ID){
  const board=getBoard(boardId)??getBoard(DEFAULT_BOARD_ID);
- let s=`<g class="board" data-board="${board.id}"><path d="M59 48H471Q485 48 485 62V216H326Q315 216 315 224Q315 232 326 232H485V565Q485 580 470 580H67L45 559V232H178Q187 232 187 224Q187 216 178 216H45V63Q45 48 59 48Z" fill="url(#pcb)" stroke="#aeb5b2" stroke-width="1.3" filter="url(#shadow)"/>`;
+ // The board art was drawn on a 440 × 532 frame; it is scaled onto the real 70 × 82.5 mm outline (BOARD). Headers and
+// pins below are placed at their exact positions (pins.js), not scaled with the art.
+ const kx=BOARD.w/440,ky=BOARD.h/532;
+ let s=`<g class="board" data-board="${board.id}"><g class="board-art" transform="matrix(${kx} 0 0 ${ky} ${BOARD.x*(1-kx)} ${BOARD.y*(1-ky)})"><path d="M59 48H471Q485 48 485 62V216H326Q315 216 315 224Q315 232 326 232H485V565Q485 580 470 580H67L45 559V232H178Q187 232 187 224Q187 216 178 216H45V63Q45 48 59 48Z" fill="url(#pcb)" stroke="#aeb5b2" stroke-width="1.3" filter="url(#shadow)"/>`;
  // Mini-USB shell, tongue and contact fingers in top view (NUCLEO-F446RE).
  s+=rect(302,62,7,19,'#c8cecc',1)+rect(359,62,7,19,'#c8cecc',1)+rect(305,35,58,54,'#c7cdcc',3,'stroke="#798484" stroke-width="1.5"')+rect(309,39,50,45,'#e8ebea',2,'stroke="#a1aaa8"')+rect(313,35,42,16,'#374142',2)+rect(317,38,34,8,'#111b1d',1)+rect(320,41,28,5,'#9d9e8b',1);
  for(let i=0;i<5;i++)s+=rect(322+i*5,41,2,5,'#dbbc6e',.5);
@@ -32,6 +35,7 @@ export function boardSvg(boardId=DEFAULT_BOARD_ID){
  for(let i=0;i<20;i++){const x=177+(i%5)*33,y=379+Math.floor(i/5)*9;s+=rect(x,y,12,5,i%3?'#cbbb92':'#79898a',1);}
  s+=rect(249,514,47,17,'#dce1dc',8,'stroke="#939e99"')+rect(254,517,37,11,'#eff1e9',5);
  s+=`<circle id="builtin-led" cx="294" cy="354" r="5" fill="#89a486" stroke="#6c886b"/>`+text(305,357,'LD2 · PA5',7);
+ s+='</g>';
  // Header wells are computed from the exact same pin list as interaction and simulation.
  for(const name of ['CN7','CN10','CN6','CN8','CN5','CN9']){
    const group=PINS.filter(p=>p.header===name),xs=group.map(p=>p.x),ys=group.map(p=>p.y);const x=Math.min(...xs),y=Math.min(...ys),w=Math.max(...xs)-x+14,h=Math.max(...ys)-y+14;
@@ -49,29 +53,29 @@ function halfBreadboardSvg(prefix){
  let s='';
  for(const r of [3.5,15.5,27])for(const x of [BB.x-5,BB.x+BB.w-1])s+=clip(x,BB.startY+(r-1)*14-15,6,30);
  s+=rect(BB.x,BB.y,BB.w,BB.h,'url(#plastic)',7,'stroke="#c4bfb1" filter="url(#shadow)" class="breadboard-body"');
- s+=rect(BB.x+4,BB.y+4,BB.w-8,BB.h-8,'none',5,'stroke="#ffffff" stroke-width="1.5"')+rect(BB.x+58,BB.y+10,1.5,BB.h-20,'#dcd7ca',.7)+rect(BB.x+282.5,BB.y+10,1.5,BB.h-20,'#dcd7ca',.7)+rect(BB.x+157,BB.y+10,13,BB.h-20,'#e3dfd3',3)+rect(BB.x+160,BB.y+13,7,BB.h-26,'#f4f1e8',2);
- for(const [x,value]of [[BB.x+12,'+'],[BB.x+48,'-'],[BB.x+290,'+'],[BB.x+326,'-']])s+=`<path d="M${x} ${BB.startY-10}V${BB.startY+416}" stroke="${value==='+'?'#e0322b':'#2f7fd6'}" stroke-width="1.6"/>`;
- s+=sign(BB.x+22,BB.startY-22,'+')+sign(BB.x+36,BB.startY-22,'-')+sign(BB.x+300,BB.startY-22,'+')+sign(BB.x+314,BB.startY-22,'-');
- for(let i=0;i<10;i++)s+=text(BB.x+86+i*14+(i>=5?28:0),BB.startY-20,'abcdefghij'[i],10,'#3d443f','text-anchor="middle" font-weight="600"');
- for(let r=1;r<=30;r++){const y=BB.startY+(r-1)*14;s+=text(BB.x+70,y+3,r,8,'#4f5751','text-anchor="end"')+text(BB.x+272,y+3,r,8,'#4f5751','text-anchor="start"');}
+ s+=rect(BB.x+4,BB.y+4,BB.w-8,BB.h-8,'none',5,'stroke="#ffffff" stroke-width="1.5"')+rect(BB.x+52.75,BB.y+10,1.5,BB.h-20,'#dcd7ca',.7)+rect(BB.x+246.75,BB.y+10,1.5,BB.h-20,'#dcd7ca',.7)+rect(BB.x+144,BB.y+10,13,BB.h-20,'#e3dfd3',3)+rect(BB.x+147,BB.y+13,7,BB.h-26,'#f4f1e8',2);
+ for(const [x,value]of [[BB.x+9.5,'+'],[BB.x+43.5,'-'],[BB.x+257.5,'+'],[BB.x+291.5,'-']])s+=`<path d="M${x} ${BB.startY-10}V${BB.startY+416}" stroke="${value==='+'?'#e0322b':'#2f7fd6'}" stroke-width="1.6"/>`;
+ s+=sign(BB.x+19.5,BB.startY-14,'+')+sign(BB.x+33.5,BB.startY-14,'-')+sign(BB.x+267.5,BB.startY-14,'+')+sign(BB.x+281.5,BB.startY-14,'-');
+ for(let i=0;i<10;i++)s+=text(BB.x+73.5+i*14+(i>=5?28:0),BB.startY-14,'abcdefghij'[i],10,'#3d443f','text-anchor="middle" font-weight="600"');
+ for(let r=1;r<=30;r++){const y=BB.startY+(r-1)*14;s+=text(BB.x+60,y+3,r,8,'#4f5751','text-anchor="end"')+text(BB.x+241,y+3,r,8,'#4f5751','text-anchor="start"');}
  for(const h of HOLES)s+=holeSvg(h,prefix);
  return s;
 }
 // 830-point full-size board: horizontal, columns 1-63, a-e | channel | f-j, + / - rails top and bottom.
 function fullBreadboardSvg(prefix){
  const F=FULL_BB,x0=F.left,x1=F.left+(F.columns-1)*F.step;let s='';
- for(const cx of [130,330,474,618,818])s+=clip(cx-18,-5,36,6)+clip(cx-18,F.h-1,36,6);
+ for(const cx of [111,311,455,599,799])s+=clip(cx-18,-5,36,6)+clip(cx-18,F.h-1,36,6);
  for(const y of [F.rows.a+28,F.rows.f+28])s+=clip(-5,y-14,6,28)+clip(F.w-1,y-14,6,28);
  s+=rect(0,0,F.w,F.h,'url(#plastic)',7,'stroke="#c4bfb1" filter="url(#shadow)" class="breadboard-body"')+rect(4,4,F.w-8,F.h-8,'none',5,'stroke="#ffffff" stroke-width="1.5"');
- s+=rect(10,57,F.w-20,1.5,'#dcd7ca',.7)+rect(10,F.h-59,F.w-20,1.5,'#dcd7ca',.7)+rect(10,(F.rows.a+4*F.step+F.rows.f)/2-6.5,F.w-20,13,'#e3dfd3',3)+rect(13,(F.rows.a+4*F.step+F.rows.f)/2-3.5,F.w-26,7,'#f4f1e8',2);
+ s+=rect(10,F.rails.T[1]+19,F.w-20,1.5,'#dcd7ca',.7)+rect(10,F.rails.B[0]-21,F.w-20,1.5,'#dcd7ca',.7)+rect(10,(F.rows.a+4*F.step+F.rows.f)/2-6.5,F.w-20,13,'#e3dfd3',3)+rect(13,(F.rows.a+4*F.step+F.rows.f)/2-3.5,F.w-26,7,'#f4f1e8',2);
  for(const [side,[plus,minus]]of Object.entries(F.rails)){
   const red=side==='T'?plus-11:plus-11,blue=minus+11;
   s+=`<path d="M${x0-12} ${red}H${x1+12}" stroke="#e0322b" stroke-width="1.6"/><path d="M${x0-12} ${blue}H${x1+12}" stroke="#2f7fd6" stroke-width="1.6"/>`;
-  s+=sign(18,plus+5,'+',13)+sign(18,minus+5,'-',13);
+  s+=sign(x0+12,plus+5,'+',13)+sign(x0+12,minus+5,'-',13);
  }
  const labels=[1,...Array.from({length:12},(_,i)=>(i+1)*5),63];
  for(const n of labels){const x=x0+(n-1)*F.step;s+=text(x,F.rows.a-11,n,8,'#4f5751','text-anchor="middle"')+text(x,F.rows.f+4*F.step+14,n,8,'#4f5751','text-anchor="middle"');}
- for(let i=0;i<10;i++)s+=text(24,(i<5?F.rows.a:F.rows.f)+(i%5)*F.step+3.5,'abcdefghij'[i],10,'#3d443f','text-anchor="middle" font-weight="600"');
+ for(let i=0;i<10;i++)s+=text(x0-11,(i<5?F.rows.a:F.rows.f)+(i%5)*F.step+3.5,'abcdefghij'[i],10,'#3d443f','text-anchor="middle" font-weight="600"');
  for(const h of FULL_HOLES)s+=holeSvg(h,prefix);
  return s;
 }
@@ -79,7 +83,7 @@ export function breadboardSvg(part=null,selected=null){
  const {frame}=breadboardModel(part),full=part?.variant==='full',prefix=part?breadboardPrefix(part.id):'',attributes=part?` data-part="${part.id}" data-rotation="${part.rotation}"${full?' data-variant="full"':''} transform="${partTransform(part)} translate(${-frame.x-frame.w/2} ${-frame.y-frame.h/2})"`:' data-surface="breadboard"';
  let s=`<g class="breadboard ${part&&isSelected(selected,'part',part.id)?'part-selected':''}"${attributes}>`+(full?fullBreadboardSvg(prefix):halfBreadboardSvg(prefix));
  if(full)s+=text(frame.w-14,frame.h-6,`${part.name} · 830 POINTS`,7,'#7d847d','text-anchor="end" letter-spacing="1"');
- else s+=text(BB.x+BB.w/2,BB.y+BB.h-18,part?`${part.name} · 400 POINTS`:'400 POINTS  /  30 ROWS',8,'#7d847d','text-anchor="middle" letter-spacing="1.2"');
+ else s+=text(BB.x+BB.w/2,BB.y+BB.h-8,part?`${part.name} · 400 POINTS`:'400 POINTS  /  30 ROWS',8,'#7d847d','text-anchor="middle" letter-spacing="1.2"');
  return s+'</g>';
 }
 export function initSvg(svg){svg.innerHTML=`<defs><linearGradient id="pcb" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#fff"/><stop offset="1" stop-color="#edf1ef"/></linearGradient><linearGradient id="plastic" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#fbf8f0"/><stop offset="1" stop-color="#efebe0"/></linearGradient><filter id="shadow" x="-20%" y="-10%" width="145%" height="140%"><feDropShadow dx="0" dy="6" stdDeviation="5" flood-color="#536c7b" flood-opacity=".16"/></filter><filter id="led-glow" x="-100%" y="-100%" width="300%" height="300%"><feGaussianBlur stdDeviation="6"/></filter></defs><g id="surface">${boardSvg()}${breadboardSvg()}<g id="breadboard-layer"></g><g id="endpoint-layer"></g><g id="wire-layer"></g><g id="part-layer"></g><g id="net-layer" pointer-events="none"></g><g id="wire-handle-layer"></g><g id="search-layer" pointer-events="none"></g><g id="preview-layer" pointer-events="none"></g></g>`;}

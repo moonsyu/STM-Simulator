@@ -26,6 +26,13 @@ function lines(values,origin,min,max){
  return [...new Set(out)].sort((a,b)=>a-b);
 }
 const segmentDistance=(p,a,b)=>{const dx=b.x-a.x,dy=b.y-a.y,l=dx*dx+dy*dy,t=l?Math.max(0,Math.min(1,((p.x-a.x)*dx+(p.y-a.y)*dy)/l)):0;return Math.hypot(a.x+t*dx-p.x,a.y+t*dy-p.y);};
+// Lanes through the middle of the gaps between neighbouring header pins. On the real board the Arduino CN5 rows sit
+// 0.4 pitch off the morpho rows, so the only way between them is a narrow channel the half-pitch lattice can miss.
+function gapLanes(values){
+ const s=[...new Set(values.map(round))].sort((a,b)=>a-b),out=[];
+ for(let i=1;i<s.length;i++){const gap=s[i]-s[i-1];if(gap>=2*CLEAR+.4&&gap<=28)out.push(round((s[i]+s[i-1])/2));}
+ return out;
+}
 const lowerBound=(arr,v)=>{let lo=0,hi=arr.length;while(lo<hi){const m=(lo+hi)>>1;if(arr[m]<v)lo=m+1;else hi=m;}return lo;};
 
 /**
@@ -44,7 +51,7 @@ export function routeWires(project,wires,{bodies=[],origin={x:0,y:0},passes=2}={
  const boxes=bodies.map(b=>({left:b.left-3,right:b.right+3,top:b.top-3,bottom:b.bottom+3}));
  const all=[...pts,...boxes.flatMap(b=>[{x:b.left,y:b.top},{x:b.right,y:b.bottom}])];
  const minX=Math.min(...all.map(p=>p.x))-70,maxX=Math.max(...all.map(p=>p.x))+70,minY=Math.min(...all.map(p=>p.y))-70,maxY=Math.max(...all.map(p=>p.y))+70;
- const xs=lines(pts.map(p=>p.x),origin.x,minX,maxX),ys=lines(pts.map(p=>p.y),origin.y,minY,maxY),nx=xs.length,ny=ys.length,N=nx*ny;
+ const xs=lines([...pts.map(p=>p.x),...gapLanes(pins.map(p=>p.x))],origin.x,minX,maxX),ys=lines([...pts.map(p=>p.y),...gapLanes(pins.map(p=>p.y))],origin.y,minY,maxY),nx=xs.length,ny=ys.length,N=nx*ny;
  const node=(i,j)=>j*nx+i,X=n=>xs[n%nx],Y=n=>ys[Math.floor(n/nx)];
  const nodeOf=p=>{const i=xs.indexOf(round(p.x)),j=ys.indexOf(round(p.y));return i<0||j<0?-1:node(i,j);};
  // Static obstacles: bodies, and the neighbourhood of every pin, lead and fixed wire end.
