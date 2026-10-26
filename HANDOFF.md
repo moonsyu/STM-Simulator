@@ -1,6 +1,14 @@
 # STM Simulator — 개발 인계
 
-현재 버전: **1.2.4**. 정리일: **2026-10-23**. NUCLEO-F446RE 또는 NUCLEO-F103RB와 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+현재 버전: **1.3.0**. 정리일: **2026-10-23**. NUCLEO-F446RE 또는 NUCLEO-F103RB와 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+
+## 1.3.0 실제 크기 보드·빵판 · 부품 사진 · 시작 보드 F103RB
+
+- 단위: 2.54 mm = 14 (1 mm = 14/2.54). `geometry.js` `BOARD` 70×82.5 mm, `BB`(400홀) 301×463(54.3×84 mm, x 644.5·y 99.5 — a1 구멍은 718,128 그대로), `FULL_BB` 910×301(BB830). 400홀 전원 레일은 a/j에서 40(2피치+여백) 바깥.
+- `pins.js` 헤더: UM1724 Figure 5의 mm 좌표(`hx(mm)`), 피치 14. CN5는 morpho 줄보다 0.4피치 아래. `boardSvg`는 예전 440×532 그림을 `board-art` 그룹 행렬로 실측 외곽에 맞추고 헤더·핀은 정확한 좌표에 따로 그린다.
+- `wire-router.js` `gapLanes`: 이웃한 헤더 핀 사이(간격 7.6~28) 가운데에 배선 통로를 추가(CN5와 CN10 사이 좁은 통로). `example-layout.js`: 배터리 홀더·DC 모터(2선 외부 부품)는 겹침 검사에 발자국만 쓴다(`solid`).
+- 부품 사진: `part-images.js`(생성 파일, WebP base64, 512px 이하) + `part-art.js`(`ART` 겹침 보정값 u/v/r, `photoRect`, `artPadPosition`, `partArtShape`). `catalogShape`가 사진 부품이면 `partArtShape`를 돌려준다. 실제 좌표로 그리기 위해 모델 변환의 역행렬 그룹 안에 둔다. 작업 공간은 blob URL, `part-preview.js`는 독립 SVG 이미지라 data URI로 바꾼다. 사진 생성 절차·프롬프트는 작업 로그 참고(Figma `generate_image`, gpt-image-2.5, 파일 hc8dpVxaUtC6oklGHsbdpC).
+- 시작 보드: `boards.js` `START_BOARD_ID='nucleo-f103rb'`, `project.js` `startProject()`. `DEFAULT_BOARD_ID`(F446RE)는 보드 기록 없는 예전 파일용으로 유지.
 
 ## 1.2.4 실측 크기 · 이름/모델명
 
