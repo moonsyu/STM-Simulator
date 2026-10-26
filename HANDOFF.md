@@ -1,6 +1,11 @@
 # STM Simulator — 개발 인계
 
-현재 버전: **1.2.3**. 정리일: **2026-10-23**. NUCLEO-F446RE 또는 NUCLEO-F103RB와 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+현재 버전: **1.2.4**. 정리일: **2026-10-23**. NUCLEO-F446RE 또는 NUCLEO-F103RB와 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+
+## 1.2.4 실측 크기 · 이름/모델명
+
+- `PART_DATASHEETS[id]`: `name`(일반 이름, 예 "NTC 온도 센서")·`model`(데이터시트 모델, 예 "KY-013")·manufacturer·size(모든 78종; 조사에 없던 5종은 `confidence:'typical'`, `size.xy`는 그림 가로·세로에 그대로)·datasheet. `datasheetLine(id)`=모델명만.
+- `datasheetScale`은 비율 제한 없이 정확히 W×H mm. 데이터시트 크기가 있으면 2핀 다리 사이 맞춤 축소도 하지 않는다(배터리 홀더 70 mm, DC 모터 27.5 mm). 교차 허용 추가: l298n·ref_dc_motor_2·ref_dc_supply_2 4, ref_l298n_module_13 7, ref_stepper_bipolar_4 2.
 
 ## 1.2.3 도움말 → 버전 정보
 
