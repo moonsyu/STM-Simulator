@@ -28,7 +28,7 @@ import {FirmwareSession} from './firmware-session.js';
 import {BuzzerAudio} from './buzzer-audio.js';
 import {Monitor} from './monitor.js';
 import {partControls,partReadouts} from './part-controls.js';
-import {blankProject,validateProject,projectForBoard} from './project.js';
+import {blankProject,startProject,validateProject,projectForBoard} from './project.js';
 import {projectBoard} from './boards.js';
 import {boardSvg} from './render.js';
 import {moveBreadboard,removeBreadboard,isBreadboardLibraryType,newBreadboardFields,breadboardBounds} from './breadboards.js';
@@ -62,7 +62,7 @@ const feedback=setupFeedback({showLog:()=>{layout.reveal('terminal');document.qu
 const wireDraft=new WireDraft();
 let carry=null;
 const CARRY_HINT='배선 끝을 옮길 핀 또는 빵판 구멍을 클릭하세요. 같은 끝을 다시 누르거나 Esc: 취소';
-let project=blankProject(),mode='select',pending=null,selection=null,color='#23a68a',status='stopped',result=null,runtime=null,simTime=0,pressed={},undoStack=[],redoStack=[],dirty=false,starting=false,startToken=0,firmware=null;
+let project=startProject(),mode='select',pending=null,selection=null,color='#23a68a',status='stopped',result=null,runtime=null,simTime=0,pressed={},undoStack=[],redoStack=[],dirty=false,starting=false,startToken=0,firmware=null;
 let view={x:0,y:0,w:1120,h:730},drag=null,lastWarnings='',replaceAction=null,saveTimer,searchSelectedId=null,breadboardKey='',inspectorKey='',inspectorModel=null;
 // A saved project that no longer validates is kept aside (not overwritten by the blank one) and reported once the log exists.
 let restoreError='';try{const cached=localStorage.getItem('stm32lab.project.v2')||localStorage.getItem('stm32lab.project.v1');if(cached)try{project=validateProject(JSON.parse(cached));}catch(e){restoreError=e.message;localStorage.setItem('stm32lab.project.recovery',cached);}}catch{}
@@ -527,7 +527,7 @@ $('replace-cancel').onclick=()=>{$('replace-dialog').close();replaceAction=null;
 $('hal-example').onchange=e=>{const type=e.target.value;e.target.value='';if(running()||!Object.hasOwn(HAL_EXAMPLES,type))return;checkpoint();project=applyHalExample(project,type);sourceFile='main.c';runtime=null;session=null;result=null;status='stopped';simTime=0;pressed={};selection=null;pending=null;drag=null;mode='select';lastWarnings='';$('preview-layer').innerHTML='';fitView();monitor.clear();uartLines.clear();syncEditor();changed();if(type==='uart')$('serial-target').value='USART2';else if(type==='uart_external'||CATALOG_BY_TYPE[type]?.family==='uart')$('serial-target').value='USART2:external';tab('code');const guide=halGuideFor(type,projectBoard(project).id);log(HAL_EXAMPLES[type]+' · '+guide);
  // Examples driven from the serial monitor open it, so text is typed there (not into the Windows terminal).
  if(/직렬 모니터 탭/.test(guide))layout.showPanel('bus');svg.focus({preventScroll:true});};
-$('new').onclick=()=>requestReplace(()=>replaceProject(blankProject()));
+$('new').onclick=()=>requestReplace(()=>replaceProject(startProject()));
 $('project-name').onchange=e=>{checkpoint();project.name=e.target.value.trim()||'새 회로';changed();};
 let lastCodeCheckpoint=0,replaceCheckpoint=false;
 function replaceCodeText(edit){

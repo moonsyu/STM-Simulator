@@ -4,7 +4,7 @@ import {PIN_BY_ID,holeInfo} from './pins.js';
 import {terminalKeys,TWO_PIN_TYPES,MULTI_PIN_TYPES,normalizeAngle} from './components.js';
 import {generateHal,defaultMcu,validateMcu} from './mcu-config.js';
 import {expandC} from './c-format.js';
-import {DEFAULT_BOARD_ID,getBoard} from './boards.js';
+import {DEFAULT_BOARD_ID,START_BOARD_ID,getBoard} from './boards.js';
 import {validScale} from './geometry.js';
 import {validateNoise} from './signals.js';
 import {validCardImage,SD_SIZES} from './sdcard.js';
@@ -113,10 +113,12 @@ export function validateProject(data){
   }
   return project;
 }
+/** An empty circuit on the start board (NUCLEO-F103RB); the board itself is added from the empty-circuit guide. */
+export function startProject(){const board=getBoard(START_BOARD_ID);return {...blankProject(board.mcuFamily),boardId:board.id};}
 export function projectForBoard(id=DEFAULT_BOARD_ID){const board=getBoard(id);if(!board)throw new Error('지원하지 않는 보드입니다.');return {...blankProject(board.mcuFamily),boardId:id,surfaces:{board:{hidden:false},breadboard:{hidden:true}}};}
 // Compare document contents, not the file-save flag. Saving does not make a circuit blank.
 export function hasBoardChanges(project){
  const normalize=p=>{const q=validateProject(p);return {...q,boardId:q.boardId??DEFAULT_BOARD_ID,simulation:q.simulation??{stepMs:1,pwmWaveform:false}};};
  const stable=value=>Array.isArray(value)?value.map(stable):value&&typeof value==='object'?Object.fromEntries(Object.keys(value).sort().map(key=>[key,stable(value[key])])):value;
- const current=JSON.stringify(stable(normalize(project)));return [blankProject(),projectForBoard(project.boardId??DEFAULT_BOARD_ID)].every(base=>current!==JSON.stringify(stable(normalize(base))));
+ const current=JSON.stringify(stable(normalize(project)));return [blankProject(),startProject(),projectForBoard(project.boardId??DEFAULT_BOARD_ID)].every(base=>current!==JSON.stringify(stable(normalize(base))));
 }

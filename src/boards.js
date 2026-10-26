@@ -8,5 +8,7 @@ const normalize=value=>String(value).normalize('NFKC').toLowerCase().replace(/[\
 export const getBoard=id=>BOARD_CATALOG.find(board=>board.id===id);
 /** The board of a project (projects saved before board selection are NUCLEO-F446RE). */
 export const projectBoard=project=>getBoard(project?.boardId??DEFAULT_BOARD_ID);
+/** The board a new circuit or project starts with (first launch, 새 회로, the new-project dialog). */
+export const START_BOARD_ID='nucleo-f103rb';
 export const boardForFamily=family=>BOARD_CATALOG.find(board=>board.mcuFamily===family);
 export function searchBoards(query){const text=normalize(query);return BOARD_CATALOG.filter(board=>normalize([board.name,board.mcu,board.family,board.description].join(' ')).includes(text));}
