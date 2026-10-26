@@ -77,6 +77,13 @@ test('VS Code style workbench regions, views, toggles and persistence',{timeout:
   // When the updater reports a new version (update-ui.js unhides the button), it shows left of the theme toggle.
   const shown=await win.evaluate(()=>{const b=document.getElementById('app-update');b.hidden=false;b.textContent='업데이트 적용';const r=b.getBoundingClientRect(),t=document.querySelector('.appearance-switch')?.getBoundingClientRect();const out={display:getComputedStyle(b).display,width:r.width,left:t?r.right<=t.left+1:true};b.hidden=true;return out;});
   assert.notEqual(shown.display,'none');assert.ok(shown.width>40&&shown.left,JSON.stringify(shown));
+  // 도움말 → 버전 정보 shows the running version in the menu and opens the version / update status window.
+  const version=JSON.parse(await import('node:fs').then(fs=>fs.readFileSync(new URL('../../package.json',import.meta.url),'utf8'))).version;
+  await win.locator('.menubar-item',{hasText:'도움말'}).click();
+  assert.match(await win.locator('[data-command="help.about"]').innerText(),new RegExp('버전 정보.*\\(v'+version.replaceAll('.','\\.')+'\\)'));
+  await win.locator('[data-command="help.about"]').click();await win.waitForSelector('#update-dialog[open]');
+  assert.equal(await win.textContent('#update-current'),version);assert.ok((await win.textContent('#update-phase')).length>0);assert.ok((await win.textContent('#update-checked')).length>0);
+  await win.click('#update-close');
   for(const id of ['ide-build','debug-start','tool-select'])assert.equal(await visible(win,'#'+id),false,id);
   // A panel's grip dragged onto another region swaps the two (a synthetic drop: Playwright cannot drive HTML5 drag in Electron).
   const drop=(unit,region)=>win.evaluate(([unit,region])=>{const dt=new DataTransfer(),grip=document.querySelector(`[data-unit="${unit}"] .dock-grip`),target=document.getElementById(region);grip.dispatchEvent(new DragEvent('dragstart',{dataTransfer:dt,bubbles:true}));target.dispatchEvent(new DragEvent('dragover',{dataTransfer:dt,bubbles:true,cancelable:true}));target.dispatchEvent(new DragEvent('drop',{dataTransfer:dt,bubbles:true,cancelable:true}));grip.dispatchEvent(new DragEvent('dragend',{dataTransfer:dt,bubbles:true}));},[unit,region]);

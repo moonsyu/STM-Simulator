@@ -234,6 +234,7 @@ describe('PortableUpdater (local fixtures, no network)',()=>{
   test('while the app is in use: focusing the window checks again once 10 minutes have passed',()=>withTempDir(async dir=>{
     let clock=1_000_000;const {u,calls}=await setup(dir,{version:'0.30.0',now:()=>clock});await fs.mkdir(u.directory,{recursive:true});
     assert.equal(u.wake(),true,'the first focus checks');await u.pending;assert.equal(calls.read.length,1);assert.equal(u.state.phase,'current');
+    assert.equal(u.snapshot().checkedAt,new Date(1_000_000).toISOString(),'the last check time is shown in 버전 정보');
     clock+=9*60*1000;assert.equal(u.wake(),false,'not again within 10 minutes');
     clock+=2*60*1000;assert.equal(u.wake(),true);await u.pending;assert.equal(calls.read.length,2);
     await u.configure(false);clock+=60*60*1000;assert.equal(u.wake(),false,'off when automatic checks are off');
