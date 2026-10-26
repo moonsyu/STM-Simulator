@@ -10,7 +10,7 @@ import {displayModel} from './model-geometry.js';
 const ART={
  'led-tht-2':{light:[.5,.52,.4]},'rgb-common-anode-4':{light:[.5,.52,.4]},'rgb-neopixel-4':{light:[.5,.52,.4]},
  'rgb-common-cathode-4':{light:[.22,.43,.12]},'rgb-neopixel-flora-4':{light:[.5,.5,.12]},'rgb-gravity-3':{light:[.37,.47,.07]},
- 'button-2':{cap:[.5,.52,.4]},'button-4':{cap:[.5,.5,.36]},'button-module-3':{cap:[.47,.56,.13]},
+ 'button-2':{cap:[.5,.52,.4]},'button-4':{cap:[.5,.5,.25]},'button-module-3':{cap:[.47,.56,.13]},
  'lcd-parallel-16':{lcd:[.08,.21,.92,.72]},'lcd-i2c-4':{lcd:[.08,.23,.92,.7]},
  'oled-i2c-4':{screen:[.03,.15,.97,.87]},'oled-configurable-7':{screen:[.03,.15,.97,.75]},'oled-configurable-8':{screen:[.03,.13,.97,.72]},
  'st7735-8':{screen:[.06,.05,.94,.6]},'matrix-10':{screen:[.14,.02,.75,.98]},
