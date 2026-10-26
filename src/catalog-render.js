@@ -1,5 +1,6 @@
 import {CATALOG_BY_TYPE,CATALOG_DEFS} from './catalog-defs.js';
 import {catalogHasBoard,catalogBodyBounds,catalogPadPosition,packageLeadRoot} from './model-geometry.js';
+import {hasPartArt,partArtShape} from './part-art.js';
 const esc=s=>String(s).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('"','&quot;');
 const rect=(x,y,w,h,fill,rx=2,extra='')=>`<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${rx}" fill="${fill}" ${extra}/>`;
 const circle=(x,y,r,fill,extra='')=>`<circle cx="${x}" cy="${y}" r="${r}" fill="${fill}" ${extra}/>`;
@@ -8,8 +9,10 @@ function chip(x,y,w=28,h=20){return `<g transform="translate(${x} ${y})">`+Array
 function screws(x,y,n){return Array.from({length:n},(_,i)=>rect(x+i*15,y,15,18,'#256f9b',1,'stroke="#194d6f" stroke-width=".7"')+rect(x+2+i*15,y+2,11,11,'#3f91b9',1)+circle(x+7.5+i*15,y+7.5,4.6,'#8b9690')+circle(x+7.5+i*15,y+7.5,3.7,'#d6dbd2')+`<path d="M${x+5+i*15} ${y+5}l5 5" stroke="#606c65" stroke-width="1.2"/>`+rect(x+4+i*15,y+14,7,3,'#263b3b',.4)).join('');}
 function pcb(w,h,color='#235f51'){return rect(-w/2,-h/2,w,h,color,3,'stroke="#143e30" stroke-width="1.2"')+rect(-w/2+2,-h/2+2,w-4,h-4,'none',2,'stroke="#ffffff22" stroke-width=".7"')+Array.from({length:4},(_,i)=>`<path d="M${-w/2+12} ${-h/2+13+i*4}h${w/4+i*4}v${h/3}h18" fill="none" stroke="#76ae7433" stroke-width=".8"/>`).join('')+[-1,1].flatMap(x=>[-1,1].map(y=>circle(x*(w/2-6),y*(h/2-6),3.5,'#baa165','stroke="#ecd9a3" stroke-width=".6"')+circle(x*(w/2-6),y*(h/2-6),1.8,'#253e30'))).join('');}
 function resistorBands(value){const colors=['#202420','#70472c','#b63d2f','#db7e2c','#e4c84a','#347149','#3675aa','#795791','#858c85','#f1f0dc'];const resistance=Number(value);if(!(resistance>0)||!Number.isFinite(resistance))return [colors[0],colors[0],colors[0],'#b99d4c'];const [significand,power]=resistance.toExponential(1).split('e'),digits=Math.round(Number(significand)*10),exponent=Number(power)-1;return [colors[Math.floor(digits/10)],colors[digits%10],exponent===-1?'#b99d4c':exponent<0?'#bac1b8':colors[Math.min(9,exponent)],'#b99d4c'];}
-export function catalogShape(p,read,physicalPins=true){
- const v=CATALOG_BY_TYPE[p.type];if(!v)return '';const {width:w,height:h}=CATALOG_DEFS[p.type].body,f=v.family,id=v.id;
+// `model`: the display model the caller wraps the shape in (a basic part drawn as a catalog package has its own).
+export function catalogShape(p,read,physicalPins=true,model=null){
+ const v=CATALOG_BY_TYPE[p.type];if(!v)return '';
+ if(hasPartArt(p.type))return partArtShape(p,read,physicalPins,model);const {width:w,height:h}=CATALOG_DEFS[p.type].body,f=v.family,id=v.id;
  let s='',board=catalogHasBoard(p.type);
  if(board)s=pcb(w,h,id==='l298n-module-13'?'#9d4239':/grove|tft|oled|dht|storage|can-|hcsr/.test(id)?'#256b8a':/KY-|module|breakout|flora|gravity/.test(v.name+id)?'#2e4940':'#327149');
  if(f==='resistor')s='<path d="M-25 -5Q-25 -10 -20 -10H-13L-9 -8H9L13 -10H20Q25 -10 25 -5V5Q25 10 20 10H13L9 8H-9L-13 10H-20Q-25 10 -25 5Z" fill="#d4b985" stroke="#90764d" stroke-width=".8"/>'+[-17,-8,2,16].map((x,i)=>rect(x,i===1||i===2?-8:-9,3.5,i===1||i===2?16:18,resistorBands(p.value??330)[i],.4)).join('')+'<path d="M-20 -6H-13M-4 -5H-2M9 -5H12M21 -5V4" stroke="#fff4cf" stroke-width="1.2" opacity=".6"/>';
