@@ -1,6 +1,10 @@
 # STM Simulator — 개발 인계
 
-현재 버전: **1.2.2**. 정리일: **2026-10-23**. NUCLEO-F446RE 또는 NUCLEO-F103RB와 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+현재 버전: **1.2.3**. 정리일: **2026-10-23**. NUCLEO-F446RE 또는 NUCLEO-F103RB와 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+
+## 1.2.3 도움말 → 버전 정보
+
+- `shell.js` 명령 `help.about`(도움말 메뉴)이 `#app-update`를 눌러 업데이트 창을 연다. `update-ui.js`는 창을 "버전 정보 · 업데이트"로 바꿔 `.update-facts`(현재/최신 버전, 상태 `PHASES`, 마지막 확인)를 그리고, 메뉴 항목 글자에 `(v현재 → v새 버전)`을 넣는다. `updater.cjs` 상태에 `checkedAt`(확인 시작 시각) 추가.
 
 ## 1.2.2 업데이트 버튼 표시
 
