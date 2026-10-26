@@ -1,6 +1,12 @@
 # STM Simulator — 개발 인계
 
-현재 버전: **1.3.2**. 정리일: **2026-10-23**. NUCLEO-F446RE 또는 NUCLEO-F103RB와 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+현재 버전: **1.3.3**. 정리일: **2026-10-23**. NUCLEO-F446RE 또는 NUCLEO-F103RB와 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+
+## 1.3.3 짧은 다리 · LED 옅은 렌즈 · 6 mm 버튼 · 보드 초기화 수정
+
+- `components.js` `LEAD_SPANS`/`fixedLeadSpan`: led·ldr·ntc·capacitor·button(2핀) 28, resistor·diode·buzzer 42. `model-geometry.js` `LEAD_GAP=14·2/3`: 한쪽 핀 부품은 데이터시트 몸체를 핀 쪽으로 옮겨 가장자리–핀 간격 ≤ LEAD_GAP. `catalog-defs.js` `rowHalf`: 양쪽 핀 줄(DIP-8, SOT-23-5, L298P, 슬라이드 DPDT/DP3T)은 실제 몸체 폭 바로 바깥 격자.
+- 버튼: `button-4`·기본 `button` 단자 ±14(2×2피치 모서리), 크기 6×6 mm(B3F-1000형), 사진 새로 생성. LED 사진 4색을 옅은(꺼진) 렌즈로 다시 생성, 켜짐 겹침 불투명도 .88.
+- `board-reset.js`: 프로젝트 보드의 MCU 계열 기본값으로 초기화(F103RB에서 F446RE 기본값 때문에 실패하던 버그).
 
 ## 1.3.2 LED 3칸
 
