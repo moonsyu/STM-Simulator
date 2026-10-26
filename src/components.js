@@ -3,8 +3,12 @@ import {L298_DEFS} from './l298n.js';
 import {DEVICE_DEFS} from './device-defs.js';
 import {scaleXOf,scaleYOf} from './geometry.js';
 // Geometry shared by rendering, hit testing, mounting and project validation.
-// A 5 mm LED stands on its two legs two holes apart (lead, free hole, lead: three holes), under its lens.
-export const fixedLeadSpan=p=>p?.type==='led'||CATALOG_BY_TYPE[p?.type]?.family==='led'?28:null;
+// Lead spacing of the small two-lead parts: legs bent close to the body as on a real breadboard. Radial parts
+// (LED, LDR, NTC, capacitors, 2-pin button) stand on legs two holes apart (lead, free hole, lead: three holes);
+// axial resistors and diodes and the 12 mm buzzers take three pitches (four holes). Off-board parts (DC motor,
+// battery holder) keep their own spacing.
+const LEAD_SPANS={led:28,ldr:28,ntc:28,capacitor:28,button:28,resistor:42,diode:42,buzzer:42,passive_buzzer:42};
+export const fixedLeadSpan=p=>LEAD_SPANS[CATALOG_BY_TYPE[p?.type]?.family??p?.type]??null;
 export const TWO_PIN_TYPES=[...CATALOG_TWO_PIN,'resistor','led','capacitor','diode','buzzer','passive_buzzer','ldr','ntc','dc_motor','dc_supply'];
 export const MULTI_PIN_TYPES=[...Object.keys(CATALOG_DEFS).filter(t=>!CATALOG_TWO_PIN.includes(t)),'l298n','button','lcd','potentiometer','slide','rgb','sevenseg','temperature','ultrasonic','uart','i2c','spi',...Object.keys(DEVICE_DEFS).filter(t=>!['ldr','ntc'].includes(t))];
 export const PART_DEFS={
@@ -44,7 +48,7 @@ export function terminalLabel(p,key){
 }
 function rawTerminals(p){
  if(p.type==='breadboard')return [];
- if(p.type==='button')return [{key:'a',x:-21,y:-14},{key:'b',x:21,y:-14},{key:'c',x:-21,y:14},{key:'d',x:21,y:14}];
+ if(p.type==='button')return [{key:'a',x:-14,y:-14},{key:'b',x:14,y:-14},{key:'c',x:-14,y:14},{key:'d',x:14,y:14}];
  if(p.type==='lcd')return LCD_LABELS.map((_,i)=>({key:'p'+(i+1),x:(i-7.5)*14,y:44}));
  if(CATALOG_TWO_PIN.includes(p.type))return [{key:'p1',x:-(p.span??70)/2,y:0},{key:'p2',x:(p.span??70)/2,y:0}];
  if(PART_DEFS[p.type]?.terminals)return PART_DEFS[p.type].terminals.map(([x,y],i)=>({key:'p'+(i+1),x,y}));

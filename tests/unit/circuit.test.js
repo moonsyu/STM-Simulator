@@ -287,8 +287,8 @@ describe('placement',()=>{
     assert.equal(applyMount(resistor(),null),false);
   });
   test('multi-pin parts mount onto an extra breadboard',()=>{
-    const board=extraBoard('bb1'),hole=breadboardHoles(board).find(h=>h.id.endsWith(':bb:e:10'));
-    const button={id:'b1',name:'SW',type:'button',x:hole.x+21,y:hole.y+14,rotation:0};
+    const board=extraBoard('bb1'),hole=breadboardHoles(board).find(h=>h.id.endsWith(':bb:c:10'));
+    const button={id:'b1',name:'SW',type:'button',x:hole.x+14,y:hole.y+14,rotation:0};
     const mount=findMount(button,[board]);assert.ok(mount);assert.equal(Object.keys(mount.attachments).length,4);
     assert.ok(Object.values(mount.attachments).every(id=>id.startsWith(breadboardPrefix('bb1'))));
   });
