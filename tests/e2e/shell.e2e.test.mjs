@@ -118,7 +118,8 @@ test('empty circuit guidance adds a board and opens views',{timeout:60000},async
   await win.click('#empty-open-parts');assert.ok(await visible(win,'#view-parts'));
   await win.click('#empty-add-board');
   await win.waitForFunction(()=>document.getElementById('canvas-empty').hidden);
-  assert.match(await win.textContent('#explorer-circuit-summary'),/NUCLEO-F446RE/);
+  // New circuits start on NUCLEO-F103RB.
+  assert.match(await win.textContent('#explorer-circuit-summary'),/NUCLEO-F103RB/);
  }finally{await s.close();}
 });
 

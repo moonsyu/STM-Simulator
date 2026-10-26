@@ -76,6 +76,12 @@ test('debug view pauses at a breakpoint and shows variables',{timeout:120000},as
  }finally{await s.close();}
 });
 
+// New circuits start on NUCLEO-F103RB; tests of F446RE-only examples (DCMI camera, register Docs) switch first.
+async function useF446(win){
+ await win.evaluate(()=>document.getElementById('board-open').click());await win.click('#board-results [data-board-id="nucleo-f446re"]');
+ if(await win.locator('#board-change-dialog').isVisible())await win.click('#board-change-confirm');
+ await win.waitForFunction(()=>/F446RE/.test(document.getElementById('current-board-name').textContent));
+}
 async function pickExample(win,id){await win.evaluate(id=>{const s=document.getElementById('hal-example');if(![...s.options].some(o=>o.value===id))s.add(new Option(id,id));s.value=id;s.dispatchEvent(new Event('change'));},id);await win.waitForFunction(()=>document.querySelectorAll('#part-layer [data-part]').length>0);}
 async function selectPartWith(win,selector){
  const ids=await win.evaluate(()=>[...new Set([...document.querySelectorAll('#part-layer [data-part]')].map(e=>e.dataset.part))]);
@@ -86,6 +92,7 @@ test('camera frames appear in the properties panel and SD card files persist aft
  const s=await launch();
  try{
   const {win}=s;
+  await useF446(win);
   await pickExample(win,'camera_tft');
   await win.keyboard.press('Control+F5');
   await win.waitForFunction(()=>/frame \d+ shown on TFT/.test(document.getElementById('console-output').textContent),null,{timeout:30000});
@@ -178,7 +185,7 @@ test('a part is selected only on what is drawn: the LED glow and pin labels neit
  try{
   const {win}=s;
   await applyExample(win,'5mm 단색 LED');
-  const lens=win.locator('#part-layer [data-part="led1"] .led-lens');let b=await lens.boundingBox();
+  const lens=win.locator('#part-layer [data-part="led1"] .catalog-light');let b=await lens.boundingBox();
   await win.mouse.move(b.x+b.width/2,b.y+b.height/2);for(let i=0;i<12;i++){await win.mouse.wheel(0,-120);await win.waitForTimeout(30);}
   b=await lens.boundingBox();const cx=b.x+b.width/2,cy=b.y+b.height/2,r=b.width/2;
   // Inside the (dark) glow ring but outside the lens: the hole below gets the click, not the LED.
