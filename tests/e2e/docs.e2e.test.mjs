@@ -27,7 +27,7 @@ test('Docs: apply HAL, edit inside the region, remove, undo, then apply the Bare
   await win.fill('#part-search','빵판');await win.locator('#part-list [data-add="breadboard"]').click();
   await win.waitForFunction(()=>document.querySelectorAll('[data-hole]').length>100);
   // Clicking a part card places the part in the workspace at once.
-  await win.fill('#part-search','LED');await win.locator('#part-list [data-add="led"]').click();
+  await win.fill('#part-search','LED');await win.locator('#part-list [data-add="ref_led_tht_2"]').click();
   await win.waitForFunction(()=>document.querySelectorAll('#part-layer [data-part]').length>=1);
   await openDocs(win);
   await win.waitForFunction(()=>/LED/.test(document.querySelector('#device-docs-panel .docs-header h2')?.textContent||''));
@@ -37,12 +37,12 @@ test('Docs: apply HAL, edit inside the region, remove, undo, then apply the Bare
   await win.click('#docs-apply-all');
   await win.waitForFunction(()=>/적용 완료/.test(document.getElementById('docs-result').textContent));
   let text=await code(win);
-  assert.match(text,/STM-DOCS BEGIN led:\w+ LOOP[\s\S]*HAL_GPIO_TogglePin\(GPIOA, GPIO_PIN_5\)[\s\S]*STM-DOCS END led:\w+ LOOP/);
-  assert.match(text.split('static void MX_GPIO_Init(void) {')[1],/STM-DOCS BEGIN led:\w+ MX_GPIO_Init[\s\S]*HAL_GPIO_Init\(GPIOA/);
+  assert.match(text,/STM-DOCS BEGIN ref_led_tht_2:\w+ LOOP[\s\S]*HAL_GPIO_TogglePin\(GPIOA, GPIO_PIN_5\)[\s\S]*STM-DOCS END ref_led_tht_2:\w+ LOOP/);
+  assert.match(text.split('static void MX_GPIO_Init(void) {')[1],/STM-DOCS BEGIN ref_led_tht_2:\w+ MX_GPIO_Init[\s\S]*HAL_GPIO_Init\(GPIOA/);
   assert.ok(await win.locator('#docs-remove-code').isVisible()&&await win.locator('#docs-remove-all').isVisible(),'remove choices shown');
 
   // 2. The learner edits inside the inserted region; removal still finds it by markers.
-  await editCode(win,c=>c.replace(/(STM-DOCS BEGIN led:\w+ LOOP[^\n]*\n)/,'$1    int mine = 1; /* 내가 고친 줄 */\n').replace(/HAL_Delay\(500\);(\s*\/\* STM-DOCS END led)/,'HAL_Delay(250);$1'));
+  await editCode(win,c=>c.replace(/(STM-DOCS BEGIN ref_led_tht_2:\w+ LOOP[^\n]*\n)/,'$1    int mine = 1; /* 내가 고친 줄 */\n').replace(/HAL_Delay\(500\);(\s*\/\* STM-DOCS END ref_led_tht_2)/,'HAL_Delay(250);$1'));
   assert.match(await code(win),/내가 고친 줄/);
   await win.click('#docs-remove-all');
   await win.waitForFunction(()=>/제거 완료/.test(document.getElementById('docs-result').textContent));
@@ -54,10 +54,10 @@ test('Docs: apply HAL, edit inside the region, remove, undo, then apply the Bare
   // 3. Ctrl+Z restores the removed (edited) example in one step.
   await win.click('#undo');
   await win.waitForFunction(()=>/내가 고친 줄/.test(document.getElementById('code').value));
-  assert.match(await code(win),/STM-DOCS BEGIN led:\w+ LOOP/);
+  assert.match(await code(win),/STM-DOCS BEGIN ref_led_tht_2:\w+ LOOP/);
 
   // 4. BareMetal tab: "apply" inserts direct register code instead of HAL calls.
-  const led=/STM-DOCS BEGIN led:(\w+) LOOP/.exec(await code(win))[1];
+  const led=/STM-DOCS BEGIN ref_led_tht_2:(\w+) LOOP/.exec(await code(win))[1];
   await win.locator(`#part-layer [data-part="${led}"]`).first().click({force:true});
   await openDocs(win);
   await win.click('[data-docs-mode="baremetal"]');
@@ -65,10 +65,10 @@ test('Docs: apply HAL, edit inside the region, remove, undo, then apply the Bare
   await win.click('#docs-apply-all');
   await win.waitForFunction(()=>/레지스터 예제/.test(document.getElementById('docs-result').textContent));
   text=await code(win);
-  assert.match(text,/STM-DOCS BEGIN led:\w+ LOOP[\s\S]*GPIOA->BSRR[\s\S]*STM-DOCS END led:\w+ LOOP/);
+  assert.match(text,/STM-DOCS BEGIN ref_led_tht_2:\w+ LOOP[\s\S]*GPIOA->BSRR[\s\S]*STM-DOCS END ref_led_tht_2:\w+ LOOP/);
   assert.match(text,/RCC->AHB1ENR\s*\|=\s*RCC_AHB1ENR_GPIOAEN/);
   assert.doesNotMatch(text,/HAL_GPIO_TogglePin|내가 고친 줄/);
-  assert.equal((text.match(/STM-DOCS BEGIN led:\w+ LOOP/g)||[]).length,1,'re-apply replaced the region');
+  assert.equal((text.match(/STM-DOCS BEGIN ref_led_tht_2:\w+ LOOP/g)||[]).length,1,'re-apply replaced the region');
   assert.match(await win.textContent('#device-docs-panel .docs-applied'),/Bare-metal/);
   assert.deepEqual(s.errors,[]);
  }finally{await s.close();}

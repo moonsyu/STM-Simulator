@@ -1,4 +1,4 @@
-import {CATALOG_EXAMPLES,CATALOG_GUIDES,catalogExample} from './catalog-examples.js';
+import {CATALOG_EXAMPLES,CATALOG_GUIDES,catalogExample,physicalExample} from './catalog-examples.js';
 import {arrangeExampleOnBreadboards} from './example-breadboard.js';
 import {L298_EXAMPLES,L298_GUIDES,l298Example} from './l298n-example.js';
 import {BASIC_EXAMPLES,BASIC_GUIDES,basicHalExample} from './basic-hal-examples.js';
@@ -81,8 +81,8 @@ function tidyExampleSource(p){
   for(const file of p.firmware?.files||[])if(/\.(c|h)$/i.test(file.name))file.text=expandC(file.text);
   return p;
 }
-/** An example for a board: written for the NUCLEO-F446RE and ported to the STM32F103RB for a NUCLEO-F103RB. */
-export function halExampleFor(kind,boardId){const p=halExample(kind);return getBoard(boardId)?.mcuFamily===F1_FAMILY?portExampleToF1(p):p;}
+/** An example for a board, built from the real parts: written for the NUCLEO-F446RE and ported to the STM32F103RB for a NUCLEO-F103RB. */
+export function halExampleFor(kind,boardId,keep=null){const p=physicalExample(halExample(kind),keep);return getBoard(boardId)?.mcuFamily===F1_FAMILY?portExampleToF1(p):p;}
 // One-line guide of an example on a board: the code's first comment when it is a wiring line (not just the device
 // name or a calculation note), else the guide table;
 // with signals the F103 port moved (TIM2_CH1 PA5 → PA0) shown at their new pins.

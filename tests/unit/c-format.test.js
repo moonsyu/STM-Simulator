@@ -4,7 +4,8 @@ import {readFileSync} from 'node:fs';
 import {formatC,blockRange,expandC,formatCode} from '../../src/c-format.js';
 import {formatProjectSources} from '../../src/code-format-ui.js';
 import {applyHalExample,allHalExamples,halExample} from '../../src/hal-examples.js';
-const halExampleCode=id=>halExample(id).code;
+import {physicalExample} from '../../src/catalog-examples.js';
+const halExampleCode=id=>physicalExample(halExample(id)).code;
 import {blankProject} from '../../src/project.js';
 
 const messy=`int main(void){

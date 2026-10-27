@@ -106,7 +106,7 @@ describe('timers and PWM',()=>{
   test('multiple timers drive a servo and a DC motor',()=>{
     const {session,out}=start('timer_multi');run(session,300);
     assert.match(out[0],/TIM2 servo=0 deg \(50 Hz\), TIM3 motor=75% \(1000 Hz\)/);
-    assert.equal(session.result.parts.servo2.pulse,1000);assert.ok(session.result.parts.demo.rpm>0);
+    assert.equal(session.result.parts.servo2.pulse,1000);assert.ok(session.result.parts.demoMotor.rpm>0,'the DC motor on the L298N turns');
   });
   test('ultrasonic echo timing measured with a free-running timer',()=>{
     const {session,out}=start('ultrasonic');run(session,200);assert.ok(out.length>0);assert.ok(out.every(l=>l==='distance=100.0 cm'),out.join('|'));
@@ -119,13 +119,13 @@ describe('ADC',()=>{
     for(const line of out)assert.ok(Math.abs(Number(line)-2048)<=2,line);
   });
   test('potentiometer position changes the converted value',()=>{
-    const {session,out}=start('potentiometer');run(session,300);assert.match(out.at(-1),/^ADC=204[78], voltage=1\.65\d V$/);
-    session.project.components.find(c=>c.type==='potentiometer').position=25;run(session,900);
+    const {session,out,project}=start('potentiometer');run(session,300);assert.match(out.at(-1),/^ADC=204[78], voltage=1\.65\d V$/);
+    project.components.find(c=>c.type==='ref_pot_bare_3').position=25;run(session,900);
     assert.match(out.at(-1),/^ADC=102[34], voltage=0\.82\d V$/);
   });
   test('TMP36 temperature conversion',()=>{
-    const {session,out}=start('temperature');run(session,600);assert.equal(out[0],'TMP36=25.0 C');
-    session.project.components[0].temperature=60;run(session,1600);assert.equal(out.at(-1),'TMP36=60.0 C');
+    const {session,out,project}=start('temperature');run(session,600);assert.equal(out[0],'TMP36=25.0 C');
+    project.components.find(c=>c.type==='ref_tmp36_to92_3').temperature=60;run(session,1600);assert.equal(out.at(-1),'TMP36=60.0 C');
   });
   test('sampling into an array prints eight samples',()=>{
     const {session,out}=start('samples');run(session,200);
@@ -140,16 +140,16 @@ describe('I2C, SPI and displays',()=>{
     assert.equal(session.result.parts.demo.memory[0x10],42);
   });
   test('I2C to a wrong address NACKs (HAL_ERROR)',()=>{
-    const p=applyHalExample(blankProject(),'i2c');p.components.find(c=>c.type==='i2c').address=81;const out=[];const s=new SimulationSession(p,{print:v=>out.push(v)});run(s,50);
+    const p=applyHalExample(blankProject(),'i2c');p.components.find(c=>c.type==='ref_i2c_eeprom_8').address=81;const out=[];const s=new SimulationSession(p,{print:v=>out.push(v)});run(s,50);
     assert.match(out[0],/write=1 read=1/);
   });
   test('I2C memory without power does not respond',()=>{
-    const p=applyHalExample(blankProject(),'i2c');delete p.components.find(c=>c.type==='i2c').attachments.p1;const out=[];const s=new SimulationSession(p,{print:v=>out.push(v)});run(s,50);
+    const p=applyHalExample(blankProject(),'i2c');delete p.components.find(c=>c.type==='ref_i2c_eeprom_8').attachments.p8;const out=[];const s=new SimulationSession(p,{print:v=>out.push(v)});run(s,50);
     assert.doesNotMatch(out[0],/write=0 read=0/);
   });
   test('SPI memory round-trip under chip select',()=>{
-    const {session,out,trace}=start('spi');run(session,50);assert.deepEqual(out,['42']);assert.equal(trace[0],'TX 02 · RX 00');
-    const p=applyHalExample(blankProject(),'spi');delete p.components[0].attachments.p3;const o2=[];run(new SimulationSession(p,{print:v=>o2.push(v)}),50);
+    const {session,out,trace}=start('spi');run(session,50);assert.deepEqual(out,['42']);assert.deepEqual(trace.slice(0,2),['TX 06 · RX 00','TX 02 · RX 00'],'write enable, then write');
+    const p=applyHalExample(blankProject(),'spi');delete p.components.find(c=>c.type==='ref_spi_eeprom_8').attachments.p1;const o2=[];run(new SimulationSession(p,{print:v=>o2.push(v)}),50);
     assert.deepEqual(o2,['255'],'unconnected CS: MISO floats high');
   });
   test('LCD 1602 in 4-bit mode shows text',()=>{

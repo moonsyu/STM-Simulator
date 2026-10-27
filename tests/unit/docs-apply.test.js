@@ -86,7 +86,7 @@ describe('Docs remove',()=>{
     const {project,report}=removeDeviceExample(applied,part('sel'));
     assert.equal(project.code,withoutDefaultDelay(original.code));assert.deepEqual(report.missing,[]);assert.ok(report.removed>=2);
     assert.deepEqual(project.mcu.pins,{});assert.deepEqual(project.deviceDocs.bindings,[]);
-    assert.ok(project.components.some(c=>c.type==='resistor'),'code-only removal keeps the circuit');assert.doesNotThrow(()=>compileHal(project.code));
+    assert.ok(project.components.some(c=>c.type==='ref_resistor_axial_2'),'code-only removal keeps the circuit');assert.doesNotThrow(()=>compileHal(project.code));
   });
   test('remove with circuit deletes the parts and wires Docs added, keeps the selected part',()=>{
     const original=projectWith(['led'],['button','other']);original.surfaces.board.hidden=false;original.wires=[{id:'userWire',from:'part:other:a',to:boardPin('GND'),color:'#123456'}];

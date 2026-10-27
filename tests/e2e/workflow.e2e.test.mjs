@@ -36,7 +36,7 @@ test('parts view adds a resistor between two breadboard holes and undo removes i
   const before=await count();
   await win.fill('#part-search','저항');
   // One click on the card places the part (no hole picking); a second one goes to the next free spot.
-  await win.locator('#part-list [data-add="resistor"]').click();
+  await win.locator('#part-list [data-add="ref_resistor_axial_2"]').click();
   await win.waitForFunction(b=>document.querySelectorAll('#part-layer [data-part]').length>b,before);
   assert.equal(await win.evaluate(()=>document.getElementById('circuit').classList.contains('connecting')),false,'no hole-picking mode');
   assert.match(await win.textContent('#inspector'),/RESISTOR|저항/);

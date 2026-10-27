@@ -1,6 +1,7 @@
 import {CATALOG_BY_TYPE} from './catalog-defs.js';
-import {PART_DEFS} from './components.js';
+import {PART_DEFS,terminalKeys} from './components.js';
 import {PART_DATASHEETS} from './part-datasheets.js';
+import {physicalTypeOf} from './model-geometry.js';
 
 const BASE_PARTS={
  board:{name:'NUCLEO-64 보드',icon:'64',hint:'현재 선택한 보드(F446RE/F103RB) · 1개'},
@@ -22,10 +23,19 @@ const ALIASES={
  temperature:'sensor temperature 온도 센서',ultrasonic:'sensor distance 거리 센서 초음파'
 };
 const normalize=value=>String(value).normalize('NFKC').toLowerCase().replace(/[\s_-]+/g,'');
-export const PART_LIBRARY=Object.entries({...BASE_PARTS,...PART_DEFS}).map(([type,def])=>({
+// A basic part drawn as a catalog part with the same pins is that physical part: the list shows only the catalog part
+// (the basic type still opens in saved circuits). Basic parts with fewer pins than the real part stay as simplified models.
+export const MERGED_PARTS=Object.fromEntries(Object.keys({...BASE_PARTS,...PART_DEFS}).map(type=>[type,physicalTypeOf(type)])
+ .filter(([type,ref])=>ref&&!CATALOG_BY_TYPE[type]&&CATALOG_BY_TYPE[ref].pins.length===terminalKeys({type}).length));
+const twins=Object.entries(MERGED_PARTS).reduce((m,[type,ref])=>({...m,[ref]:[...(m[ref]||[]),type]}),{});
+const words=(type,def)=>[type,def.name,def.hint,def.prefix||'',ALIASES[type]||''];
+/** Every part type with its card (basic parts merged into catalog parts included, for saved circuits and docs). */
+export const ALL_PARTS=Object.entries({...BASE_PARTS,...PART_DEFS}).map(([type,def])=>({
  type,name:def.name,icon:def.icon,iconClass:def.iconClass||'extra-icon',hint:def.hint,
- searchText:normalize([type,def.name,def.hint,def.prefix||'',ALIASES[type]||'',CATALOG_BY_TYPE[type]?.id||'',CATALOG_BY_TYPE[type]?.name||'',PART_DATASHEETS[CATALOG_BY_TYPE[type]?.id]?.model||'',CATALOG_BY_TYPE[type]?.pins.join(' ')||''].join(' '))
+ searchText:normalize([...words(type,def),...(twins[type]||[]).flatMap(t=>words(t,{...BASE_PARTS,...PART_DEFS}[t])),CATALOG_BY_TYPE[type]?.id||'',CATALOG_BY_TYPE[type]?.name||'',PART_DATASHEETS[CATALOG_BY_TYPE[type]?.id]?.model||'',CATALOG_BY_TYPE[type]?.pins.join(' ')||''].join(' '))
 }));
+/** The parts list: one card per real part. */
+export const PART_LIBRARY=ALL_PARTS.filter(part=>!MERGED_PARTS[part.type]);
 export function searchParts(query){
  const text=normalize(query);
  return PART_LIBRARY.filter(part=>part.searchText.includes(text));
