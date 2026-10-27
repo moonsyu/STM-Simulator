@@ -186,7 +186,7 @@ export const DEVICE_CATALOG = [
     ],
     "interface": "GPIO 병렬",
     "appearance": "긴 문자 LCD와 한 줄 16개 패드·헤더.",
-    "notes": "4비트 모드로 사용해도 물리 핀은 16개입니다. 현재 앱은 이 형태입니다.",
+    "notes": "4비트 모드로 사용해도 물리 핀은 16개입니다.",
     "additional_contacts": "",
     "source_ids": [
       "lcd16"
@@ -399,7 +399,7 @@ export const DEVICE_CATALOG = [
     ],
     "interface": "I²C",
     "appearance": "작은 센서 칩과 Grove 4핀 소켓.",
-    "notes": "현재 4신호 모델과 인터페이스가 대응합니다. 커넥터 배치·기구는 앱 그림과 다릅니다.",
+    "notes": "Grove 커넥터의 VCC·GND·SDA·SCL 4신호로 I²C 통신합니다.",
     "additional_contacts": "",
     "source_ids": [
       "sht31four"
@@ -466,8 +466,8 @@ export const DEVICE_CATALOG = [
       "INT"
     ],
     "interface": "I²C",
-    "appearance": "MCU와 작은 레귤레이터, 장착홀, 한 줄 8핀 헤더.",
-    "notes": "앱은 VCC/GND/SDA/SCL 네 단자만 표현합니다. 보조 I²C·주소·인터럽트 핀은 표현되지 않습니다.",
+    "appearance": "센서 칩과 작은 레귤레이터, 장착홀, 한 줄 8핀 헤더.",
+    "notes": "VCC·GND·SCL·SDA로 I²C 통신합니다. AD0를 GND에 연결하면 주소 0x68입니다. 보조 I²C(XDA·XCL)와 INT는 시뮬레이션하지 않습니다.",
     "additional_contacts": "",
     "source_ids": [
       "mpu8"
@@ -617,7 +617,7 @@ export const DEVICE_CATALOG = [
     ],
     "interface": "SPI",
     "appearance": "컬러 표시창과 8핀 케이블 인터페이스.",
-    "notes": "앱 7핀 모델에는 BL 백라이트 제어 단자가 없습니다. 실제 모듈의 화면 원점·컨트롤러도 확인해야 합니다.",
+    "notes": "BL은 백라이트 단자로, 예제는 3V3에 연결합니다. 실제 모듈의 화면 원점·컨트롤러도 확인해야 합니다.",
     "additional_contacts": "",
     "source_ids": [
       "tft8"
@@ -651,7 +651,7 @@ export const DEVICE_CATALOG = [
     ],
     "interface": "직렬/SPI 유사",
     "appearance": "큰 8×8 LED 블록 뒤에 드라이버 PCB와 양쪽 5핀 헤더.",
-    "notes": "앱의 5핀은 입력 측만 모델링합니다. 체인 출력 다섯 접점은 별도입니다.",
+    "notes": "왼쪽 입력 5핀으로 구동합니다. 오른쪽 출력 쪽 VCC·GND·CS·CLK는 입력과 내부 연결되고, 다음 모듈로 이어지는 DOUT은 시뮬레이션하지 않습니다.",
     "additional_contacts": "",
     "source_ids": [
       "matrix"
@@ -732,7 +732,7 @@ export const DEVICE_CATALOG = [
     ],
     "interface": "외부 드라이버",
     "appearance": "금속 원통, 회전축, 두 전원 단자.",
-    "notes": "앱의 별도 DC 모터 및 모터+브리지 통합 부품의 모터 외형 참고입니다.",
+    "notes": "두 단자에 모터 드라이버 출력(L298N OUT1/OUT2 등)을 연결합니다. 전압 방향에 따라 정회전·역회전합니다.",
     "additional_contacts": "",
     "source_ids": [
       "dc2"
@@ -806,8 +806,8 @@ export const DEVICE_CATALOG = [
       "PI40:GPIO21"
     ],
     "interface": "모터 드라이버",
-    "appearance": "모터는 2단자이고 별도 드라이버 보드에 제어·전원·출력이 모임.",
-    "notes": "현재 motor의 VM/GND/PWM/IN1/IN2 5핀 통합 모델과 정확히 일치하는 실물 제품으로 간주하지 않습니다. 사진은 드라이버 HAT 예시입니다.",
+    "appearance": "PCA9685 PWM 칩과 TB6612FNG 드라이버, 모터 나사 단자, 40핀 헤더가 있는 HAT 보드.",
+    "notes": "40핀 헤더의 SDA·SCL(I²C)로 PCA9685를 제어하고, 모터는 A1/A2·B1/B2 단자, 모터 전원은 VIN/PGND에 연결합니다. 간이 부품 'DC 모터 + H 브리지'와 핀 구성이 다릅니다.",
     "additional_contacts": "HAT 연결 수는 해당 보드 회로도 기준; 앱의 추상 5핀과 별도",
     "source_ids": [
       "motor"
@@ -899,7 +899,7 @@ export const DEVICE_CATALOG = [
     ],
     "interface": "4상 논리 입력",
     "appearance": "드라이버 칩, 상태 LED, 모터 소켓이 있는 PCB.",
-    "notes": "앱의 6핀은 제어4+전원2만 표현합니다. 모터 소켓의 5접점은 별도로 셉니다.",
+    "notes": "제어 입력 4핀(IN1~IN4), 전원 2핀, 모터 소켓 5접점입니다. 모터 소켓에 28BYJ-48 같은 5선 유니폴라 모터를 연결합니다.",
     "additional_contacts": "",
     "source_ids": [
       "step5"
@@ -1079,7 +1079,7 @@ export const DEVICE_CATALOG = [
     ],
     "interface": "전원",
     "appearance": "배터리 홀더와 양·음극 2선.",
-    "notes": "외형 참고는 AA 홀더입니다. 이 제품이 앱의 기본 12V 전원이라는 뜻은 아닙니다.",
+    "notes": "AA 4개는 약 6 V입니다. 전압 속성(6~24 V)을 바꾸면 모터용 외부 직류 전원으로 씁니다.",
     "additional_contacts": "",
     "source_ids": [
       "dc_supply"
@@ -1107,7 +1107,7 @@ export const DEVICE_CATALOG = [
     ],
     "interface": "UART",
     "appearance": "USB 플러그와 끝이 갈라진 4선 케이블.",
-    "notes": "출처의 전원 선은 USB 5V입니다. 앱의 3.3V 전원 터미널과 전원 전압이 다릅니다.",
+    "notes": "전원 선은 USB 5V입니다. TXD는 보드 RX, RXD는 보드 TX에 엇갈려 연결합니다.",
     "additional_contacts": "",
     "source_ids": [
       "uart4"
@@ -1169,7 +1169,7 @@ export const DEVICE_CATALOG = [
     ],
     "interface": "I²C",
     "appearance": "검은 DIP8 패키지와 방향을 나타내는 홈.",
-    "notes": "이 24LC02B의 1~3번은 NC입니다. 24LC256 같은 다른 EEPROM의 주소 핀 설명을 그대로 적용하면 안 됩니다. 앱 4핀 메모리는 칩의 부가 핀을 단순화한 범용 모델입니다.",
+    "notes": "이 24LC02B의 1~3번은 NC입니다. 24LC256 같은 다른 EEPROM의 주소 핀 설명을 그대로 적용하면 안 됩니다. WP를 GND에 연결해야 쓸 수 있습니다.",
     "additional_contacts": "",
     "source_ids": [
       "i2c8"
@@ -1230,7 +1230,7 @@ export const DEVICE_CATALOG = [
     ],
     "interface": "SPI",
     "appearance": "DIP8/SOIC8 패키지와 방향 표시.",
-    "notes": "앱 6핀 모델은 WP/HOLD를 노출하지 않습니다. 실제 칩 연결 시에는 이 부가 핀의 고정 상태가 필요합니다.",
+    "notes": "WP와 HOLD는 3V3에 연결해 고정합니다. 쓰기 전에 WREN(0x06) 명령을 보냅니다.",
     "additional_contacts": "",
     "source_ids": [
       "spi8"
@@ -1339,7 +1339,7 @@ export const DEVICE_CATALOG = [
     ],
     "interface": "PWM×3",
     "appearance": "단색 LED와 비슷한 렌즈에 다리 네 개.",
-    "notes": "앱은 공통 음극입니다. 공통 양극형은 공통 전원 연결과 논리가 반대입니다.",
+    "notes": "공통 양극을 3V3에 연결하고 R·G·B를 LOW로 내리면 켜집니다. 공통 음극형과 논리가 반대입니다.",
     "additional_contacts": "",
     "source_ids": [
       "rgbca"
@@ -1367,7 +1367,7 @@ export const DEVICE_CATALOG = [
     ],
     "interface": "PWM×3",
     "appearance": "4리드 RGB LED를 작은 PCB와 저항에 실장한 형태.",
-    "notes": "앱의 나형 LED와 PCB 외형은 다릅니다. 공통 음극과 세 색 입력을 비교하는 자료입니다.",
+    "notes": "공통 음극을 GND에, R·G·B를 각각 출력 핀에 연결하며 HIGH일 때 켜집니다.",
     "additional_contacts": "",
     "source_ids": [
       "rgbcc"
@@ -1702,7 +1702,7 @@ export const DEVICE_CATALOG = [
     ],
     "interface": "GPIO/PWM",
     "appearance": "공통 음극형과 유사한 단일 숫자 패키지.",
-    "notes": "생김새·핀 수가 같아도 공통극이 반대입니다. 사진 대신 제조사 외형도·회로도를 연결했습니다.",
+    "notes": "생김새·핀 수가 같아도 공통극이 반대입니다. 공통 양극을 3V3에 연결하고 세그먼트를 LOW로 내리면 켜집니다.",
     "additional_contacts": "",
     "source_ids": [
       "sevenca"
@@ -1740,7 +1740,7 @@ export const DEVICE_CATALOG = [
     ],
     "interface": "GPIO 멀티플렉싱",
     "appearance": "숫자 네 자리가 하나의 긴 패키지에 있음.",
-    "notes": "기존 조사에서 12핀으로 분류했으나 원본 제품이 연결한 BL-Q56C-43 도면은 콜론 접점 포함 14핀입니다. 참조 ID는 기존 파일 호환을 위해 유지합니다.",
+    "notes": "자리 선택 4핀, 세그먼트 8핀, 콜론 2핀으로 모두 14핀입니다(BL-Q56C-43 도면).",
     "additional_contacts": "",
     "source_ids": [
       "sevenraw",
@@ -1827,7 +1827,7 @@ export const DEVICE_CATALOG = [
     ],
     "interface": "1-Wire",
     "appearance": "TMP36과 비슷한 TO-92 패키지.",
-    "notes": "동일한 3핀 외형이어도 TMP36과 핀 기능·통신 방식이 다릅니다. 앱은 TMP36 전달식을 사용합니다.",
+    "notes": "동일한 3핀 외형이어도 TMP36과 핀 기능·통신 방식이 다릅니다. DQ 한 선으로 1-Wire 통신해 온도를 읽습니다.",
     "additional_contacts": "",
     "source_ids": [
       "ds18b20"
@@ -1909,7 +1909,7 @@ export const DEVICE_CATALOG = [
     ],
     "interface": "GPIO 양방향",
     "appearance": "초음파 소자와 3핀 Gravity 커넥터.",
-    "notes": "Trig/Echo 공유 한 신호를 쓰므로 앱의 분리 4핀 HC-SR04와 다르게 구현해야 합니다.",
+    "notes": "Trig와 Echo가 한 신호선을 함께 씁니다. GPIO를 출력으로 트리거한 뒤 입력으로 바꿔 Echo 폭을 잽니다.",
     "additional_contacts": "",
     "source_ids": [
       "ultrasonic3"
