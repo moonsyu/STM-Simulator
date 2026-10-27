@@ -1,5 +1,9 @@
 # 검증 기록
 
+## 1.4.2 나사 단자·커넥터 직접 배선 — 공개 배포 검증 완료
+
+2026-10-27. 제품 커밋 `373c1c7b89647fb099911db7b458f32b78e1a787` · [Windows CI 40454210495](https://github.com/moonsyu/STM-Simulator/actions/runs/40454210495) · [Release v1.4.2](https://github.com/moonsyu/STM-Simulator/releases/tag/v1.4.2). `npm test` 748 통과(로컬 권한 2 제외), E2E 30 통과·2 건너뜀. latest=v1.4.2, 태그·BUILD-INFO 커밋 `373c1c7` 일치, 5자산. EXE SHA-256 `64a65f9372f3a28c32fa0cfbc6e1b60731adfc187131248b9a436a12ca939134`(105,225,806 B)이 SHA256.txt·update-manifest·ZIP 안의 STM-Simulator.exe와 일치. ZIP SHA-256 `47f4e6a3e9274a3e8850be7a102b15a928e4f4cceb0b9b6216fcab351a56c25d`.
+
 ## 1.4.1 모듈 핀을 사진의 단자 자리로 — 공개 배포 검증 완료
 
 2026-10-27. 제품 커밋 `907f6934069089d8e462d202057a7362080f69a3` · [Windows CI 40450446966](https://github.com/moonsyu/STM-Simulator/actions/runs/40450446966) · [Release v1.4.1](https://github.com/moonsyu/STM-Simulator/releases/tag/v1.4.1). `npm test` 747 통과(로컬 권한 2 제외), E2E 30 통과·2 건너뜀. latest=v1.4.1, 태그·BUILD-INFO 커밋 `907f693` 일치, 5자산. EXE SHA-256 `4fa9e35432a3c5eb1709da5c43ac4876d354bf1a9c0076e5c5dfec08368f5990`(105,226,473 B)이 SHA256.txt·update-manifest·ZIP 안의 STM-Simulator.exe와 일치. ZIP SHA-256 `d6996f8655a06454957ec010973725dcee45fe7bfe215a1571b1dc54e8fd513a`.
