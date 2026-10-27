@@ -29,6 +29,28 @@ export const CONTACT_MAPS={
  'tmp36-to92-3':[1,2,3],'hcsr04-4':[1,2,3,4]
 };
 export function catalogMap(type){const v=CATALOG_BY_TYPE[type],m=CONTACT_MAPS[v?.id];return Array.isArray(m)?Object.fromEntries(m.map((n,i)=>['p'+(i+1),'p'+n])):m?Object.fromEntries(Object.entries(m).map(([k,n])=>[k,'p'+n])):null;}
+// Modules standing on pins under their own contacts (screw terminals, connectors, header holes in the photo):
+// each pin on the 2.54 mm grid nearest its contact, groups (a header, a terminal block) keeping their pitch; contacts the
+// photo does not show stand in a row just below the board. Measured on the photos (part-art.js PADS).
+export const ON_CONTACT_PINS={
+ 'l298n-module-13':[[-73,102],[-45,102],[-17,102],[11,102],[25,102],[39,102],[53,102],[67,102],[81,102],[-115,4],[-115,32],[109,4],[109,32]],
+ 'motor-driver-hat':[[-31,92],[-17,92],[-3,92],[11,92],[25,92],[109,22],[-157,22],[-143,22],[-115,22],[-101,22],[151,22],[-129,-62],[-129,-48],[-115,-62],[-115,-48],[-101,-62],[-101,-48],[-87,-62],[-87,-48],[-73,-62],[-73,-48],[-59,-62],[-59,-48],[-45,-62],[-45,-48],[-31,-62],[-31,-48],[-17,-62],[-17,-48],[-3,-62],[-3,-48],[11,-62],[11,-48],[25,-62],[25,-48],[39,-62],[39,-48],[53,-62],[53,-48],[67,-62],[67,-48],[81,-62],[81,-48],[95,-62],[95,-48],[109,-62],[109,-48],[123,-62],[123,-48],[137,-62],[137,-48]],
+ 'relay-module-6':[[137,-8],[137,20],[137,6],[-87,-8],[-87,-36],[-87,20]],
+ 'matrix-10':[[-125,-32],[-125,-18],[-125,-4],[-125,10],[-125,24],[127,-32],[127,-18],[127,-4],[127,10],[127,24]],
+ 'max98357a-9':[[-39,66],[-25,66],[-11,66],[3,66],[17,66],[31,66],[45,66],[45,-18],[17,-18]],
+ 'can-transceiver-6':[[-19,46],[-5,46],[9,46],[23,46],[65,-10],[65,4]],
+ 'isolated-rs485':[[94,-51],[94,-37],[94,-23],[94,-65],[94,33],[94,47],[-102,-23],[-102,5],[-4,117],[10,117]],
+ 'sht31-grove-4':[[-79,-24],[-79,18],[-79,4],[-79,-10]],
+ 'pot-module-3':[[79,-14],[79,14],[79,0]],
+ 'rgb-gravity-3':[[74,-19],[74,9],[74,-5]],
+ 'sevenseg-tm1637-4':[[109,-25],[109,-11],[109,17],[109,3]],
+ 'rgb-neopixel-flora-4':[[18,-20],[32,8],[-24,8],[-24,-20]],
+ 'stepper-driver-11':[[-41,105],[-27,105],[-13,105],[1,105],[15,105],[29,105],[-55,35],[-41,35],[-27,35],[-13,35],[1,35]],
+ 'oled-configurable-8':[[-49,78],[-35,78],[-21,78],[-7,78],[7,78],[21,78],[35,78],[49,78]],
+ 'urm09-trig-3':[[-15,35],[-1,35],[13,35]],
+ 'urm09-i2c-4':[[-21,33],[21,33],[7,33],[-7,33]],
+ 'mcp4725-6':[[-55,-16],[-55,-2],[-27,54],[-13,54],[1,54],[15,54]],
+};
 export function catalogGeometry(v){
  const n=v.pins.length,id=v.id,f=v.family;
  let body={width:Math.max(56,n*14+12),height:56},terminals=[];
@@ -43,29 +65,17 @@ export function catalogGeometry(v){
  else if(id==='i2c-eeprom-5'){const r=rowHalf??28;body={width:42,height:28};terminals=[[-14,r],[0,r],[14,r],[14,-r],[-14,-r]];}
  else if(/eeprom-8|l298p-bare-20/.test(id)){body={width:n/2*14+14,height:42};terminals=dip(n,rowHalf?2*(rowHalf-14):42);}
  else if(id==='ov2640-camera'){body={width:140,height:98};terminals=Array.from({length:18},(_,i)=>[(Math.floor(i/2)-4)*14,56+(i%2)*14]);}
- else if(id==='motor-driver-hat'){body={width:294,height:168};terminals=[...row(5,98,-21),[119,98],[-147,98],[-133,98],[-105,98],[-91,98],[147,98],...Array.from({length:40},(_,i)=>[(Math.floor(i/2)-9.5)*14,-63+(i%2)*14])];}
- else if(id==='matrix-10'){body={width:112,height:112};terminals=[...[-182,-168,-154,-140,-126],...[182,168,154,140,126]].map(x=>[x,98]);}
  else if(id.startsWith('slide-dp')){const r=rowHalf??28;body={width:n/2*14+14,height:28};terminals=[...row(n/2,-r),...row(n/2,r)];}
  else if(f==='sevenseg'&&n>=10){body={width:n>=12?168:70,height:70};terminals=dip(n,70);}
- else if(id==='l298n-module-13'){body={width:140,height:112};terminals=[[-84,126],[-56,126],[-28,126],...row(6,126,49),[-98,126],[-112,126],[98,126],[112,126]];}
- // Modules whose contacts are on several edges (screw terminals, side connectors) stand on one row of pins along their
- // bottom edge, as on a breadboard; each lead starts at its contact in the photo (part-art.js PADS), so the pins under a
- // terminal block or header follow its order and the leads do not cross.
- else if(id==='relay-module-6'){body={width:98,height:70};terminals=[[112,70],[140,70],[126,70],[-84,70],[-70,70],[-98,70]];}
- else if(id==='stepper-driver-11'){body={width:126,height:84};terminals=[...row(4,-98,-7),[42,98],[56,98],...row(5,98,-28)];}
- // A side connector: one column of pins beside it, in the order printed on the board.
- else if(id==='sht31-grove-4')terminals=[[-126,-28],[-126,14],[-126,0],[-126,-14]];
- else if(id==='pot-module-3')terminals=[[98,-14],[98,14],[98,0]];
- else if(id==='rgb-gravity-3')terminals=[[91,-21],[91,7],[91,-7]];
- else if(id==='sevenseg-tm1637-4')terminals=[[126,-28],[126,-14],[126,14],[126,0]];
+ // A probe's three wires leave its cable end.
  else if(id==='ds18b20-probe-3')terminals=[[91,-14],[91,0],[91,14]];
- else if(id==='rgb-neopixel-flora-4')terminals=[[21,42],[35,42],[-35,42],[-21,42]];
- else if(id==='can-transceiver-6')terminals=[[-35,42],[-21,42],[-7,42],[7,42],[77,42],[63,42]];
- else if(id==='isolated-rs485')terminals=[[154,112],[140,112],[126,112],[168,112],[112,112],[98,112],[-70,112],[-84,112],[-42,112],[-28,112]];
- else if(id==='max98357a-9')terminals=[...row(7,56,-21),[49,56],[35,56]];
- else if(id==='urm09-i2c-4'){body={width:126,height:56};terminals=[[-21,42],[21,42],[7,42],[-7,42]];}
  // PEC11: the A/C/B contacts on one side, the push switch's two on the other.
  else if(id==='encoder-bare-5')terminals=[...row(3,42),[-14,-42],[14,-42]];
+ // Modules on pins under their own contacts (ON_CONTACT_PINS): only the package drawing size is set here.
+ else if(ON_CONTACT_PINS[id]){
+  body=({'motor-driver-hat':{width:294,height:168},'matrix-10':{width:112,height:112},'l298n-module-13':{width:140,height:112},'relay-module-6':{width:98,height:70},'stepper-driver-11':{width:126,height:84},'urm09-i2c-4':{width:126,height:56}})[id]??body;
+  terminals=ON_CONTACT_PINS[id];
+ }
  else {
   if(['lcd','oled','tft','sevenseg'].includes(f))body={width:f==='lcd'?242:144,height:f==='tft'?182:84};
   if(['servo','dc_motor','stepper'].includes(f))body={width:100,height:84};
