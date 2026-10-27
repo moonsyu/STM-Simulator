@@ -29,10 +29,12 @@ const CROSSING_ALLOWLIST={
  ref_capacitor_ceramic_2:1,ref_capacitor_electrolytic_2:1,ref_sevenseg_common_cathode_10:3,sevenseg:3,pwm:1,
  // Examples built from the real parts (1.4.0): module pins moved under their photo's terminals, the TFT's backlight pin
  // and the matrix's second header are wired too.
- ref_matrix_10:1,ref_motor_driver_hat:5,camera_tft:10,timer_multi:1
+ ref_matrix_10:1,ref_motor_driver_hat:5,camera_tft:10,timer_multi:1,
+ // Modules wired directly at their screw terminals and connectors (1.4.2): the wires leave the module's own contacts.
+ ref_relay_module_6:1,relay:1,ref_stepper_bipolar_4:5,ref_l298p_bare_20:10
 };
 // Examples whose simplified part became two real parts (driver board + motor, with the motor supply) need more wires.
-const WIRE_ALLOWANCE={stepper:4,timer_multi:3,motor:3,
+const WIRE_ALLOWANCE={stepper:8,timer_multi:3,motor:3,
  // The real 8-pin TFT (backlight wired) leaves no planned room for the 18-pin camera: the general arranger mounts it.
  camera_tft:8};
 const kinds=Object.keys(allHalExamples());
@@ -64,8 +66,25 @@ describe('example wiring',()=>{
   t.diagnostic(`examples ${kinds.length}: wires ${BASELINE.total.wires}→${total.wires}, length ${BASELINE.total.length}→${total.length}, crossings ${BASELINE.total.crossings}→${total.crossings}, overlaps ${BASELINE.total.overlaps}→${total.overlaps}`);
   assert.equal(Object.keys(BASELINE.examples).length,kinds.length,'baseline covers every example');
   assert.ok(total.wires<=BASELINE.total.wires*.7,'at least 30% fewer wires');
-  assert.ok(total.length<=BASELINE.total.length*.6,'at least 40% less wire length');
+  // Modules wired directly from the board header (L298N, HAT, connector modules) need longer wires than leads on the
+  // breadboard (1.4.2).
+  assert.ok(total.length<=BASELINE.total.length*.64,'at least 36% less wire length');
   assert.ok(total.crossings<=BASELINE.total.crossings*.05,'crossings almost eliminated');
   assert.equal(total.overlaps,0);
  });
+});
+
+test('screw terminals and connectors are wired directly, never plugged into the breadboard',async()=>{
+ const {wiredKeys,pluggedKeys,attachments}=await import('../../src/components.js'),{findMount}=await import('../../src/placement.js');
+ const {exampleBreadboards,exampleBodyBounds,overlapBounds}=await import('../../src/example-breadboard.js');
+ const {project}=measure('l298n'),driver=project.components.find(c=>c.type==='ref_l298n_module_13');
+ // The L298N module stands beside the breadboards; each of its 13 contacts has its own wire.
+ assert.deepEqual(attachments(driver),{});assert.equal(pluggedKeys(driver).length,0);
+ assert.ok(exampleBreadboards(project).every(b=>!overlapBounds(exampleBodyBounds(driver),b.bounds)),'module off the breadboard');
+ for(const k of wiredKeys(driver))assert.equal(project.wires.filter(w=>[w.from,w.to].includes(`part:${driver.id}:${k}`)).length,1,k);
+ // A relay module plugs its VCC/IN/GND header in; its NO/COM/NC screw terminal is wired.
+ const relay=measure('relay').project.components.find(c=>c.type==='ref_relay_module_6');
+ assert.deepEqual(Object.keys(attachments(relay)).sort(),['p1','p2','p3']);assert.deepEqual(wiredKeys(relay),['p4','p5','p6']);
+ // Dropped on a breadboard, a module with only wired contacts is not mounted.
+ assert.equal(findMount({...driver,attachments:undefined},project.components,15,project.surfaces,project.wires),null);
 });
