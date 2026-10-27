@@ -1,6 +1,14 @@
 # STM Simulator — 개발 인계
 
-현재 버전: **1.3.3**. 정리일: **2026-10-23**. NUCLEO-F446RE 또는 NUCLEO-F103RB와 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+현재 버전: **1.4.0**. 정리일: **2026-10-23**. NUCLEO-F446RE 또는 NUCLEO-F103RB와 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+
+## 1.4.0 부품 설명 · 중복 부품 정리 · 실물 부품 예제 · 사진 단자에 맞춘 핀
+
+- 설명: `part-datasheets.js` L298N 세 종의 이름·모델(모듈 / Multiwatt15 / PowerSO20), DS18B20 두 종, Grove SHT31, WS2812 모듈 구분. `device-catalog-data.js`의 "앱은 …" 식 옛 설명(간이 모델 기준) 20곳을 실물 부품 기준으로 고침.
+- 목록: `part-library.js` `MERGED_PARTS`(간이 부품 → 핀 구성이 같은 실물 부품, 27종)는 `PART_LIBRARY`에서 빠지고 검색어는 실물 카드로 합쳐짐. `ALL_PARTS`는 문서·저장 회로용 전체. 핀이 적은 간이 7종은 `hint`에 실물 핀 수.
+- 예제: `catalog-examples.js` `physicalExample`(간이 부품 → `becomePhysical`, motor/stepper → `splitPhysical`), `halExampleFor`가 적용. Docs는 선택한 부품 종류는 그대로 둔다(`keep`). `model-geometry.js` `LEGACY_PHYSICAL`은 `catalog-defs.js`로 이동, `physicalTypeOf`.
+- 핀: `part-art.js` `PADS`(사진에서 잰 단자 위치 u/v) — `artPadPosition`이 다리 시작점으로 씀, 한 줄이 몸체보다 넓으면(1.27 mm IC) 가장자리에 고르게 펼침. `catalog-defs.js` L298N·릴레이·매트릭스·ULN2003·HAT·RS485·MAX98357A·CAN·URM09 I²C·Grove/옆 커넥터 모듈·PEC11 핀 재배치(단자 순서대로, 다리가 엇갈리지 않게). 간이 부품은 한 줄 핀이면 실물 위치(`components.js` `physicalPins`). DC 모터는 `dy`로 뒤쪽 단자 위에 서고 다리 4피치(`LEAD_SPANS`).
+- 사진(Figma 6장): L298N 모듈(IN1~IN4 헤더), 8×8 매트릭스(양쪽 5핀), 1.3인치 OLED(8핀 라벨), 24LC02B DIP, SOT-23-5, URM09 Trig. DC 모터 사진은 단자가 아래로 오게 회전.
 
 ## 1.3.3 짧은 다리 · LED 옅은 렌즈 · 6 mm 버튼 · 보드 초기화 수정
 
