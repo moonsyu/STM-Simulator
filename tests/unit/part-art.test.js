@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import {DEVICE_CATALOG} from '../../src/device-catalog-data.js';
 import {catalogType,CATALOG_DEFS} from '../../src/catalog-defs.js';
 import {PART_IMAGES} from '../../src/part-images.js';
-import {hasPartArt,photoRect,artPadPosition,partArtShape} from '../../src/part-art.js';
+import {hasPartArt,hasArtPads,photoRect,artPadPosition,partArtShape} from '../../src/part-art.js';
 import {displayModel} from '../../src/model-geometry.js';
 import {catalogShape} from '../../src/catalog-render.js';
 
@@ -31,10 +31,11 @@ test('the photo keeps its proportions and fits inside the datasheet outline',()=
 test('pads stay on the 2.54 mm pin grid of the part',()=>{
  for(const v of parts){
   const type=catalogType(v.id),terms=CATALOG_DEFS[type].terminals,b=displayModel({type,x:0,y:0,rotation:0}).bounds;
+  if(hasArtPads(type))continue;
   terms.forEach(([x,y],i)=>{const pad=artPadPosition(type,i);if(!pad.outside)return;
    // A pad sits straight in line with its pin (same x for a header along an edge, same y on a side), except where
-   // the pin lies beyond the end of a package smaller than its pin row (SOT-23).
-   const beyond=x<b.left+3.5||x>b.right-3.5;
+   // the pin row is wider than the package (SOT-23, 1.27 mm pitch ICs): those pads spread along its edge in order.
+   const row=terms.filter(t=>t[1]===y),beyond=row.some(t=>t[0]<b.left+3.5||t[0]>b.right-3.5);
    assert.ok(Math.abs(pad.x-x)<1e-6||Math.abs(pad.y-y)<1e-6||beyond,`${v.id} pin ${i+1}`);});
  }
 });
@@ -60,8 +61,22 @@ test('two-lead parts stand on short legs: an LED takes three holes, a resistor f
  const {fixedLeadSpan}=await import('../../src/components.js');
  assert.equal(fixedLeadSpan({type:'led'}),28);assert.equal(fixedLeadSpan({type:catalogType('led-tht-2')}),28);
  assert.equal(fixedLeadSpan({type:'resistor'}),42);assert.equal(fixedLeadSpan({type:catalogType('capacitor-ceramic-2')}),28);
- assert.equal(fixedLeadSpan({type:'dc_supply'}),null,'off-board parts keep their spacing');
+ assert.equal(fixedLeadSpan({type:'dc_supply'}),null,'a battery holder keeps its spacing');assert.equal(fixedLeadSpan({type:'dc_motor'}),56,'a DC motor on its two end tabs');
  const {applyHalExample}=await import('../../src/hal-examples.js'),{blankProject}=await import('../../src/project.js');
  const led=applyHalExample(blankProject(),'blink').components.find(p=>p.type==='led');
  if(led)assert.equal(led.span,28,'example layouts use the same spacing');
+});
+
+test('leads of modules start at the contacts printed in their photos, in order, without crossing',()=>{
+ const type=catalogType('l298n-module-13'),m=displayModel({type,x:0,y:0,rotation:0}),R=photoRect(type,m),pads=CATALOG_DEFS[type].terminals.map((_,i)=>artPadPosition(type,i,m));
+ const u=i=>(pads[i].x-R.x)/R.w,v=i=>(pads[i].y-R.y)/R.h;
+ // VM/GND/5V on the front screw terminal, ENA…ENB on the six-pin header, OUT1/2 left and OUT3/4 right.
+ assert.ok([0,1,2].every(i=>v(i)>.85&&u(i)<.45)&&[3,4,5,6,7,8].every(i=>v(i)>.85&&u(i)>.5));
+ assert.ok(u(9)<.1&&u(10)<.1&&u(11)>.9&&u(12)>.9&&v(9)<v(10)&&v(11)<v(12));
+ for(const id of ['l298n-module-13','relay-module-6','matrix-10','isolated-rs485','oled-configurable-8','urm09-trig-3']){
+  const t=catalogType(id),mm=displayModel({type:t,x:0,y:0,rotation:0}),terms=CATALOG_DEFS[t].terminals,ps=terms.map((_,i)=>artPadPosition(t,i,mm));
+  const cross=(a,b,c,d)=>{const s=(p,q,r)=>Math.sign((q.x-p.x)*(r.y-p.y)-(q.y-p.y)*(r.x-p.x));return s(a,b,c)*s(a,b,d)<0&&s(c,d,a)*s(c,d,b)<0;};
+  for(let i=0;i<terms.length;i++)for(let j=i+1;j<terms.length;j++)
+   assert.ok(!cross(ps[i],{x:terms[i][0],y:terms[i][1]},ps[j],{x:terms[j][0],y:terms[j][1]}),`${id}: leads ${i+1} and ${j+1} cross`);
+ }
 });

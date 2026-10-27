@@ -1,6 +1,6 @@
 import {remodelLegacyShape,updateCatalogView} from './catalog-view.js';
 import {displayModel,catalogPadPosition,packageLeadRoot,modelPoint} from './model-geometry.js';
-import {hasPartArt,artPadPosition} from './part-art.js';
+import {hasPartArt,hasArtPads,artPadPosition,legacyPadPosition} from './part-art.js';
 import {isSelected,wirePoints} from './circuit-edit.js';
 import {roundedWirePath} from './wire-path.js';
 import {PINS,HOLES,FULL_HOLES,BOARD,BB,FULL_BB,endpointInfo,circuitHoles,breadboardPrefix,breadboardModel,boardPins} from './pins.js';
@@ -118,7 +118,7 @@ export function renderParts(project,selected,result,pressed){const parts=project
  const model=displayModel(p);
  const leads=terms.map((t,i)=>{const end=endpointInfo(`part:${p.id}:${t.key}`,project.components,project.surfaces);let root;
    if(p.type==='uart'&&model)root=partVector(p,t.x*model.scaleX+model.dx,model.bounds.bottom);
-   else if(model){const start=p.type.startsWith('ref_')&&terms.length>2?(hasPartArt(p.type)?artPadPosition(p.type,i,model):modelPoint(model,catalogPadPosition(p.type,i))):packageLeadRoot(model.bounds,t);root=partVector(p,start.x,start.y);}
+   else if(model){const start=p.type.startsWith('ref_')&&(terms.length>2||hasArtPads(p.type))?(hasPartArt(p.type)?artPadPosition(p.type,i,model):modelPoint(model,catalogPadPosition(p.type,i))):legacyPadPosition(p.type,i,model)??packageLeadRoot(model.bounds,t);root=partVector(p,start.x,start.y);}
    else if(p.type.startsWith('ref_')){const b=PART_DEFS[p.type].body;root=partVector(p,Math.max(-b.width/2,Math.min(b.width/2,t.x)),Math.max(-b.height/2,Math.min(b.height/2,t.y)));}
    else if(p.type==='button')root=partVector(p,Math.sign(t.x)*14,Math.sign(t.y)*9);
    else if(p.type==='lcd')root=partVector(p,t.x*.8,33.6);

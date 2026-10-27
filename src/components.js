@@ -1,13 +1,13 @@
-import {CATALOG_DEFS,CATALOG_TWO_PIN,CATALOG_BY_TYPE} from './catalog-defs.js';
+import {CATALOG_DEFS,CATALOG_TWO_PIN,CATALOG_BY_TYPE,CONTACT_MAPS,LEGACY_PHYSICAL,catalogType} from './catalog-defs.js';
 import {L298_DEFS} from './l298n.js';
 import {DEVICE_DEFS} from './device-defs.js';
 import {scaleXOf,scaleYOf} from './geometry.js';
 // Geometry shared by rendering, hit testing, mounting and project validation.
 // Lead spacing of the small two-lead parts: legs bent close to the body as on a real breadboard. Radial parts
 // (LED, LDR, NTC, capacitors, 2-pin button) stand on legs two holes apart (lead, free hole, lead: three holes);
-// axial resistors and diodes and the 12 mm buzzers take three pitches (four holes). Off-board parts (DC motor,
-// battery holder) keep their own spacing.
-const LEAD_SPANS={led:28,ldr:28,ntc:28,capacitor:28,button:28,resistor:42,diode:42,buzzer:42,passive_buzzer:42};
+// axial resistors and diodes and the 12 mm buzzers take three pitches (four holes). A DC motor stands on the two tabs
+// at its end (four pitches apart); a battery holder keeps its own spacing.
+const LEAD_SPANS={led:28,ldr:28,ntc:28,capacitor:28,button:28,resistor:42,diode:42,buzzer:42,passive_buzzer:42,dc_motor:56};
 export const fixedLeadSpan=p=>LEAD_SPANS[CATALOG_BY_TYPE[p?.type]?.family??p?.type]??null;
 export const TWO_PIN_TYPES=[...CATALOG_TWO_PIN,'resistor','led','capacitor','diode','buzzer','passive_buzzer','ldr','ntc','dc_motor','dc_supply'];
 export const MULTI_PIN_TYPES=[...Object.keys(CATALOG_DEFS).filter(t=>!CATALOG_TWO_PIN.includes(t)),'l298n','button','lcd','potentiometer','slide','rgb','sevenseg','temperature','ultrasonic','uart','i2c','spi',...Object.keys(DEVICE_DEFS).filter(t=>!['ldr','ntc'].includes(t))];
@@ -15,8 +15,8 @@ export const PART_DEFS={
  ...CATALOG_DEFS,
  ...DEVICE_DEFS,...L298_DEFS,
  uart:{name:'외부 UART 터미널',prefix:'UART',icon:'↔',hint:'4핀 · 외부 장치 배선 연습',defaults:{baud:9600},labels:['VCC','GND','TX','RX'],help:'외부 UART 장치 연결을 연습하는 선택 부품입니다. VCC→3V3, GND→GND, TX→보드 RX(PA3), RX→보드 TX(PA2)로 교차 배선하고 코드와 부품의 baud를 맞추세요. 하단 직렬 모니터 탭에서 외부 UART 장치 → USART2를 선택합니다. 기본 USART2 통신은 이 부품 없이 내장 ST-LINK VCP로 가능합니다.'},
- i2c:{name:'I²C 메모리',prefix:'I2C',icon:'▦',hint:'4핀 · 주소 / 256 B',defaults:{address:80},labels:['VCC','GND','SDA','SCL'],help:'256바이트 범용 메모리 모델입니다. 3.3 V, GND, SDA(PB9), SCL(PB8)를 연결하세요. 모듈에 10 kΩ 풀업을 포함합니다. 첫 전송 바이트가 메모리 위치이고 이후 바이트가 데이터입니다.'},
- spi:{name:'SPI 메모리',prefix:'SPI',icon:'⇄',hint:'6핀 · CS / 256 B',defaults:{},labels:['VCC','GND','CS','SCK','MOSI','MISO'],help:'256바이트 범용 메모리 모델입니다. CS LOW 상태에서 명령 0x02(쓰기) 또는 0x03(읽기), 1바이트 주소, 데이터를 전송합니다. 기본 핀은 SCK PA5, MOSI PA7, MISO PA6입니다. CS는 별도로 GPIO로 제어하세요.'},
+ i2c:{name:'I²C 메모리',prefix:'I2C',icon:'▦',hint:'4핀 · 실물 8핀 EEPROM 중 VCC·GND·SDA·SCL만 쓰는 간이 모델 · 주소 / 256 B',defaults:{address:80},labels:['VCC','GND','SDA','SCL'],help:'256바이트 범용 메모리 모델입니다. 3.3 V, GND, SDA(PB9), SCL(PB8)를 연결하세요. 모듈에 10 kΩ 풀업을 포함합니다. 첫 전송 바이트가 메모리 위치이고 이후 바이트가 데이터입니다.'},
+ spi:{name:'SPI 메모리',prefix:'SPI',icon:'⇄',hint:'6핀 · 실물 8핀 EEPROM 중 WP·HOLD를 뺀 간이 모델 · CS / 256 B',defaults:{},labels:['VCC','GND','CS','SCK','MOSI','MISO'],help:'256바이트 범용 메모리 모델입니다. CS LOW 상태에서 명령 0x02(쓰기) 또는 0x03(읽기), 1바이트 주소, 데이터를 전송합니다. 기본 핀은 SCK PA5, MOSI PA7, MISO PA6입니다. CS는 별도로 GPIO로 제어하세요.'},
  potentiometer:{name:'가변저항',prefix:'VR',icon:'◉',hint:'3핀 · 저항 / 위치 조절',defaults:{value:10000,position:50},labels:['1','2 · WIPER','3'],help:'1–3은 전체 저항, 2는 가변 접점입니다. 1을 GND, 3을 3.3 V, 2를 ADC에 연결하면 조절 위치에 따라 전압이 바뀝니다.'},
  slide:{name:'슬라이드 스위치',prefix:'SW',icon:'▣',hint:'3핀 · 연결 방향 유지',defaults:{position:0},labels:['A','COM','B'],help:'COM을 A 또는 B에 연결하는 SPDT 스위치입니다. 실행 중 몸체를 클릭하거나 속성에서 연결 방향을 바꿀 수 있습니다.'},
  rgb:{name:'RGB LED',prefix:'RGB',icon:'◉',hint:'4핀 · 공통 음극',defaults:{},labels:['R (+)','K (−)','G (+)','B (+)'],help:'공통 음극 K를 GND에 연결하세요. R·G·B에는 각각 직렬 저항이 필요하며 채널 전류에 따라 혼합색을 표시합니다.'},
@@ -51,10 +51,18 @@ function rawTerminals(p){
  if(p.type==='button')return [{key:'a',x:-14,y:-14},{key:'b',x:14,y:-14},{key:'c',x:-14,y:14},{key:'d',x:14,y:14}];
  if(p.type==='lcd')return LCD_LABELS.map((_,i)=>({key:'p'+(i+1),x:(i-7.5)*14,y:44}));
  if(CATALOG_TWO_PIN.includes(p.type))return [{key:'p1',x:-(p.span??70)/2,y:0},{key:'p2',x:(p.span??70)/2,y:0}];
+ // A basic part with a pin map to its real part has its pins where that part's pins are.
+ const real=physicalPins(p.type);if(real)return real.map(([x,y],i)=>({key:'p'+(i+1),x,y}));
  if(PART_DEFS[p.type]?.terminals)return PART_DEFS[p.type].terminals.map(([x,y],i)=>({key:'p'+(i+1),x,y}));
  if(p.type==='sevenseg')return terminalKeys(p).map((key,i)=>({key,x:i<5?(i-2)*14:(7-i)*14,y:i<5?35:-35}));
  if(PART_DEFS[p.type]?.labels){const keys=terminalKeys(p);return keys.map((key,i)=>({key,x:(i-(keys.length-1)/2)*14,y:PART_DEFS[p.type].pinY??(p.type==='ultrasonic'?32:28)}));}
  const half=(p.span??70)/2;return [{key:'a',x:-half,y:0},{key:'b',x:half,y:0}];
+}
+/** Pin positions of a basic multi-pin part taken from the real part it is drawn as, when the pins it uses stand in one
+ * row (null otherwise: a basic part on two pin rows of a DIP keeps its own row). */
+export function physicalPins(type){
+ const id=LEGACY_PHYSICAL[type],map=id&&CONTACT_MAPS[id];if(!Array.isArray(map)||CATALOG_BY_TYPE[type])return null;
+ const pins=map.map(n=>CATALOG_DEFS[catalogType(id)].terminals[n-1]);return pins.every(t=>t[1]===pins[0][1])?pins:null;
 }
 export function rotatePoint(x,y,angle){const r=angle*Math.PI/180;return {x:x*Math.cos(r)-y*Math.sin(r),y:x*Math.sin(r)+y*Math.cos(r)};}
 export function localTerminals(p){const x=scaleXOf(p),y=scaleYOf(p),k=Math.tan((p.skewX??0)*Math.PI/180);return rawTerminals(p).map(t=>({...t,x:t.x*x+t.y*y*k,y:t.y*y}));}

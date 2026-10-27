@@ -1,8 +1,8 @@
-import {CATALOG_BY_TYPE,CATALOG_DEFS,catalogType} from './catalog-defs.js';
+import {CATALOG_BY_TYPE,CATALOG_DEFS,LEGACY_PHYSICAL,catalogType} from './catalog-defs.js';
 import {localTerminals} from './components.js';
 import {PART_DATASHEETS,UNITS_PER_MM} from './part-datasheets.js';
 
-const legacy={resistor:'resistor-axial-2',led:'led-tht-2',button:'button-4',ldr:'ldr-bare-2',ntc:'ntc-bare-2',sht31:'sht31-grove-4',mpu6050:'mpu6050-8',pir:'pir-3',potentiometer:'pot-bare-3',slide:'slide-spdt-3',rgb:'rgb-common-cathode-4',capacitor:'capacitor-ceramic-2',diode:'diode-axial-2',buzzer:'buzzer-active-2',passive_buzzer:'buzzer-passive-2',temperature:'tmp36-to92-3',ultrasonic:'hcsr04-4',dc_motor:'dc-motor-2',dc_supply:'dc-supply-2',relay:'relay-module-6',joystick:'joystick-module-5',encoder:'encoder-module-5',lcd:'lcd-parallel-16',oled:'oled-i2c-4',tft:'st7735-8',matrix:'matrix-10',sevenseg:'sevenseg-common-cathode-10',stepper:'stepper-bipolar-4',motor:'motor-driver-hat',l298n:'l298n-module-13',servo:'servo-3',uart:'uart-cable-4',i2c:'i2c-eeprom-8',spi:'spi-eeprom-8'};
+const legacy=LEGACY_PHYSICAL;
 const box=(left,top,right,bottom)=>({left,top,right,bottom});
 
 export function catalogHasBoard(type){
@@ -52,6 +52,8 @@ export function packageLeadRoot(bounds,point){
 // longer side; a square drawing, or a size marked xy, keeps the datasheet's width and height as they are.
 /** Catalog id whose datasheet describes a part type (a basic part uses the package it is drawn as). */
 export const datasheetIdOf=type=>CATALOG_BY_TYPE[type]?.id??legacy[type]??null;
+/** Catalog (physical) part type a basic part is drawn as, or null. */
+export const physicalTypeOf=type=>legacy[type]?catalogType(legacy[type]):null;
 export function datasheetScale(referenceType){
  const v=CATALOG_BY_TYPE[referenceType],size=v&&PART_DATASHEETS[v.id]?.size;if(!size?.w||!size?.h)return null;
  const b=catalogBodyBounds(referenceType),w=b.right-b.left,h=b.bottom-b.top,long=Math.max(size.w,size.h)*UNITS_PER_MM,short=Math.min(size.w,size.h)*UNITS_PER_MM;
@@ -72,8 +74,10 @@ export function displayModel(p,{datasheet=true}={}){
  let dx=0,dy=0;
  if(!sheet);else if(terms.length&&terms.every(t=>t.y>0))dy=bounds.bottom*(1-sy);else if(terms.length&&terms.every(t=>t.y<0))dy=bounds.top*(1-sy);
  else if(terms.length&&terms.every(t=>t.x>0))dx=bounds.right*(1-sx);else if(terms.length&&terms.every(t=>t.x<0))dx=bounds.left*(1-sx);
+ // A DC motor stands over its two leads, which leave it at the end with its tabs (also its drawing-size footprint).
+ if(terms.length===2&&CATALOG_BY_TYPE[referenceType].family==='dc_motor')dy=-LEAD_GAP-bounds.bottom*sy;
  // Pins on one side stand out of the package by at most LEAD_GAP: the body moves up to its pins.
- if(sheet&&terms.length){
+ else if(sheet&&terms.length){
   const gap=terms.every(t=>t.y>0)?Math.min(...terms.map(t=>t.y))-(bounds.bottom*sy+dy):terms.every(t=>t.y<0)?(bounds.top*sy+dy)-Math.max(...terms.map(t=>t.y)):terms.every(t=>t.x>0)?Math.min(...terms.map(t=>t.x))-(bounds.right*sx+dx):terms.every(t=>t.x<0)?(bounds.left*sx+dx)-Math.max(...terms.map(t=>t.x)):0;
   if(gap>LEAD_GAP){const k=gap-LEAD_GAP;if(terms.every(t=>t.y>0))dy+=k;else if(terms.every(t=>t.y<0))dy-=k;else if(terms.every(t=>t.x>0))dx+=k;else dx-=k;}
  }
