@@ -1,9 +1,11 @@
-import {CATALOG_BY_TYPE,CATALOG_DEFS,LEGACY_PHYSICAL,catalogType} from './catalog-defs.js';
+import {CATALOG_BY_TYPE,CATALOG_DEFS,LEGACY_PHYSICAL,ON_CONTACT_PINS,catalogType} from './catalog-defs.js';
 import {localTerminals} from './components.js';
 import {PART_DATASHEETS,UNITS_PER_MM} from './part-datasheets.js';
 
 const legacy=LEGACY_PHYSICAL;
 const box=(left,top,right,bottom)=>({left,top,right,bottom});
+// Modules whose pins stand under their contacts in the photo (catalog-defs.js ON_CONTACT_PINS), not along one edge.
+const ON_CONTACTS=new Set(Object.keys(ON_CONTACT_PINS));
 
 export function catalogHasBoard(type){
  const {family:f,id}=CATALOG_BY_TYPE[type];
@@ -72,10 +74,12 @@ export function displayModel(p,{datasheet=true}={}){
  }else if(!CATALOG_BY_TYPE[p.type]&&terms.every(t=>t.y>0)){const fit=Math.min(1,Math.max(1,Math.min(...terms.map(t=>t.y))-8)/(bounds.bottom*sy));sx*=fit;sy*=fit;}
  // Pins on one side only (a module's header): that edge of the datasheet-sized package stays where the pins are.
  let dx=0,dy=0;
- if(!sheet);else if(terms.length&&terms.every(t=>t.y>0))dy=bounds.bottom*(1-sy);else if(terms.length&&terms.every(t=>t.y<0))dy=bounds.top*(1-sy);
+ // A module standing on pins under its own contacts (ON_CONTACTS) stays centred over them.
+ const under=sheet&&p.type===referenceType&&ON_CONTACTS.has(CATALOG_BY_TYPE[p.type].id);
+ if(!sheet||under);else if(terms.length&&terms.every(t=>t.y>0))dy=bounds.bottom*(1-sy);else if(terms.length&&terms.every(t=>t.y<0))dy=bounds.top*(1-sy);
  else if(terms.length&&terms.every(t=>t.x>0))dx=bounds.right*(1-sx);else if(terms.length&&terms.every(t=>t.x<0))dx=bounds.left*(1-sx);
  // A DC motor stands over its two leads, which leave it at the end with its tabs (also its drawing-size footprint).
- if(terms.length===2&&CATALOG_BY_TYPE[referenceType].family==='dc_motor')dy=-LEAD_GAP-bounds.bottom*sy;
+ if(under);else if(terms.length===2&&CATALOG_BY_TYPE[referenceType].family==='dc_motor')dy=-LEAD_GAP-bounds.bottom*sy;
  // Pins on one side stand out of the package by at most LEAD_GAP: the body moves up to its pins.
  else if(sheet&&terms.length){
   const gap=terms.every(t=>t.y>0)?Math.min(...terms.map(t=>t.y))-(bounds.bottom*sy+dy):terms.every(t=>t.y<0)?(bounds.top*sy+dy)-Math.max(...terms.map(t=>t.y)):terms.every(t=>t.x>0)?Math.min(...terms.map(t=>t.x))-(bounds.right*sx+dx):terms.every(t=>t.x<0)?(bounds.left*sx+dx)-Math.max(...terms.map(t=>t.x)):0;

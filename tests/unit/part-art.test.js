@@ -4,6 +4,7 @@ import assert from 'node:assert/strict';
 import {DEVICE_CATALOG} from '../../src/device-catalog-data.js';
 import {catalogType,CATALOG_DEFS} from '../../src/catalog-defs.js';
 import {PART_IMAGES} from '../../src/part-images.js';
+import {ON_CONTACT_PINS} from '../../src/catalog-defs.js';
 import {hasPartArt,hasArtPads,photoRect,artPadPosition,partArtShape} from '../../src/part-art.js';
 import {displayModel} from '../../src/model-geometry.js';
 import {catalogShape} from '../../src/catalog-render.js';
@@ -70,7 +71,15 @@ test('two-lead parts stand on short legs: an LED takes three holes, a resistor f
 test('leads of modules start at the contacts printed in their photos, in order, without crossing',()=>{
  const type=catalogType('l298n-module-13'),m=displayModel({type,x:0,y:0,rotation:0}),R=photoRect(type,m),pads=CATALOG_DEFS[type].terminals.map((_,i)=>artPadPosition(type,i,m));
  const u=i=>(pads[i].x-R.x)/R.w,v=i=>(pads[i].y-R.y)/R.h;
- // VM/GND/5V on the front screw terminal, ENA…ENB on the six-pin header, OUT1/2 left and OUT3/4 right.
+ // The L298N module's pins stand under the board at its contacts: VM/GND/5V on the front screw terminal, ENA…ENB on
+ // the six-pin header, OUT1/2 left and OUT3/4 right.
+ // Every module on its own contacts has each pin within half a pitch-and-a-bit of the contact measured on its photo.
+ for(const [id,pins] of Object.entries(ON_CONTACT_PINS)){
+  const t=catalogType(id),mm=displayModel({type:t,x:0,y:0,rotation:0}),bb=mm.bounds;
+  pins.forEach(([x,y],i)=>{const pad=artPadPosition(t,i,mm),inside=x>bb.left&&x<bb.right&&y>bb.top&&y<bb.bottom;
+   if(inside)assert.ok(Math.hypot(pad.x-x,pad.y-y)<=18,`${id} pin ${i+1}: ${Math.hypot(pad.x-x,pad.y-y).toFixed(1)} from its contact`);});
+  assert.ok(pins.every(([x,y])=>pins.every(([x2,y2])=>Number.isInteger((x-x2)/14)&&Number.isInteger((y-y2)/14))),`${id} pins on one 2.54 mm grid`);
+ }
  assert.ok([0,1,2].every(i=>v(i)>.85&&u(i)<.45)&&[3,4,5,6,7,8].every(i=>v(i)>.85&&u(i)>.5));
  assert.ok(u(9)<.1&&u(10)<.1&&u(11)>.9&&u(12)>.9&&v(9)<v(10)&&v(11)<v(12));
  for(const id of ['l298n-module-13','relay-module-6','matrix-10','isolated-rs485','oled-configurable-8','urm09-trig-3']){

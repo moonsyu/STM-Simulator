@@ -28,7 +28,7 @@ const ART={
 // side connectors, header holes and wire ends measured on each photo.
 const col=(u,...v)=>v.map(y=>[u,y]),row=(v,...u)=>u.map(x=>[x,v]);
 const PADS={
- 'l298n-module-13':[...row(.9,.155,.27,.385),...row(.94,.535,.6,.665,.73,.795,.86),[.02,.53],[.02,.63],[.98,.53],[.98,.63]],
+ 'l298n-module-13':[[.16,.905],[.285,.905],[.4,.905],...row(.93,.535,.6,.665,.73,.795,.86),[.04,.54],[.04,.645],[.94,.54],[.94,.645]],
  'relay-module-6':[[.91,.4],[.91,.65],[.91,.52],[.155,.43],[.155,.2],[.155,.65]],
  'matrix-10':[...col(.03,.32,.4,.48,.56,.64),...col(.97,.32,.4,.48,.56,.64)],
  'sht31-grove-4':col(.14,.225,.71,.55,.39),'pot-module-3':col(.96,.38,.62,.5),'rgb-gravity-3':col(.95,.36,.55,.455),
@@ -38,10 +38,11 @@ const PADS={
  'isolated-rs485':[...col(.87,.255,.31,.37,.2,.69,.75),[.12,.39],[.12,.55]],
  'max98357a-9':[null,null,null,null,null,null,null,[.88,.31],[.7,.31]],
  'stepper-driver-11':[null,null,null,null,null,null,...row(.7,.19,.27,.345,.425,.5)],
- 'motor-driver-hat':[null,null,null,null,null,[.81,.69],...row(.69,.065,.115,.18,.225),[.905,.69]],
+ 'motor-driver-hat':[null,null,null,null,null,[.81,.69],...row(.69,.065,.115,.18,.225),[.905,.69],...Array.from({length:40},(_,i)=>[.095+Math.floor(i/2)*.83/19,i%2?.155:.085])],
  'oled-configurable-8':row(.93,.17,.265,.36,.455,.55,.645,.74,.835),
  'urm09-trig-3':row(.82,.445,.495,.55),'urm09-i2c-4':[[.435,.8],[.565,.8],[.52,.8],[.475,.8]],
- 'dc-motor-2':row(.96,.155,.855)
+ 'dc-motor-2':row(.96,.155,.855),
+ 'mcp4725-6':[[.105,.33],[.105,.53]]
 };
 /** True when a catalog part type is drawn from its photo. */
 export const hasPartArt=type=>!!PART_IMAGES[CATALOG_BY_TYPE[type]?.id];
