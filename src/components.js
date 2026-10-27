@@ -1,4 +1,4 @@
-import {CATALOG_DEFS,CATALOG_TWO_PIN,CATALOG_BY_TYPE,CONTACT_MAPS,LEGACY_PHYSICAL,catalogType} from './catalog-defs.js';
+import {CATALOG_DEFS,CATALOG_TWO_PIN,CATALOG_BY_TYPE,CONTACT_MAPS,LEGACY_PHYSICAL,catalogType,isWiredContact} from './catalog-defs.js';
 import {L298_DEFS} from './l298n.js';
 import {DEVICE_DEFS} from './device-defs.js';
 import {scaleXOf,scaleYOf} from './geometry.js';
@@ -58,6 +58,10 @@ function rawTerminals(p){
  if(PART_DEFS[p.type]?.labels){const keys=terminalKeys(p);return keys.map((key,i)=>({key,x:(i-(keys.length-1)/2)*14,y:PART_DEFS[p.type].pinY??(p.type==='ultrasonic'?32:28)}));}
  const half=(p.span??70)/2;return [{key:'a',x:-half,y:0},{key:'b',x:half,y:0}];
 }
+/** Terminal keys of a part's contacts that are wired directly (screw terminals, connectors), never put into a breadboard hole. */
+export function wiredKeys(p){const v=CATALOG_BY_TYPE[p?.type];return v?terminalKeys(p).filter((k,i)=>isWiredContact(v.id,i)):[];}
+/** Terminal keys that plug into breadboard holes. */
+export const pluggedKeys=p=>{const wired=wiredKeys(p);return terminalKeys(p).filter(k=>!wired.includes(k));};
 /** Pin positions of a basic multi-pin part taken from the real part it is drawn as, when the pins it uses stand in one
  * row (null otherwise: a basic part on two pin rows of a DIP keeps its own row). */
 export function physicalPins(type){

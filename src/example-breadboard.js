@@ -1,4 +1,4 @@
-import {attachments,assignAttachments,nominalTerminals,terminalKeys} from './components.js';
+import {attachments,assignAttachments,nominalTerminals,terminalKeys,wiredKeys,pluggedKeys} from './components.js';
 import {PINS,BOARD,BB,circuitHoles,holeInfo,endpointInfo,breadboardHoles,boardPin} from './pins.js';
 import {partVector,surfacePoint} from './geometry.js';
 import {displayModel} from './model-geometry.js';
@@ -6,6 +6,7 @@ import {wiringTopology} from './circuit-topology.js';
 import {breadboardBounds} from './breadboards.js';
 import {layoutExample,rerouteExampleWires,recolorExampleWires} from './example-layout.js';
 import {routeExampleWire,exampleWireObstacles,segmentHitsBox} from './example-wire-route.js';
+import {routeWires} from './wire-router.js';
 
 const terminal=(p,key)=>`part:${p.id}:${key}`;
 // Rail used for each supply: ground on a minus rail, 3.3 V and 5 V on separate plus rails.
@@ -66,11 +67,126 @@ function mountCandidate(p,board,state,maxBend){
 export function arrangeExampleOnBreadboards(project,{partIds,preferredBoard,report}={}){
  // A complete example is planned from its netlist: in-line series parts, nearest supply pins, nested routes.
  if(!partIds){
+  // Modules wired only through their own terminals stay out of the breadboard plan and are wired to it afterwards.
+  const off=takeOffBoard(project);
   const planned=layoutExample(project);
-  if(planned){for(const key of ['components','wires','surfaces'])project[key]=planned[key];return project;}
-  arrangeParts(project,{preferredBoard,report});return rerouteExampleWires(recolorExampleWires(project));
+  if(planned){for(const key of ['components','wires','surfaces'])project[key]=planned[key];return wireOffBoard(wireDirectContacts(project),off);}
+  arrangeParts(project,{preferredBoard,report});return wireOffBoard(wireDirectContacts(rerouteExampleWires(recolorExampleWires(project))),off);
  }
- return arrangeParts(project,{partIds,preferredBoard,report});
+ return wireDirectContacts(arrangeParts(project,{partIds,preferredBoard,report}),partIds,report);
+}
+// Modules whose contacts are all wired directly (L298N, HAT, JST-connector modules): taken out of the project with the
+// wires that end on them; for each used contact the other ends of its net are remembered.
+function takeOffBoard(project){
+ const off=project.components.filter(p=>p.type!=='breadboard'&&wiredKeys(p).length&&!pluggedKeys(p).length);
+ if(!off.length)return null;
+ const uf=wiringTopology(project),isOff=id=>off.some(p=>id.startsWith(`part:${p.id}:`));
+ const ends=[...PINS.filter(p=>p.signal!=='NC').map(p=>p.id),...project.components.filter(p=>p.type!=='breadboard'&&!off.includes(p)).flatMap(p=>terminalKeys(p).map(k=>terminal(p,k)))];
+ // One entry per net: the module contacts on it and the other ends (board pins, terminals of parts that stay).
+ const nets=new Map();
+ for(const p of off)for(const key of terminalKeys(p)){const root=uf.find(terminal(p,key));if(!nets.has(root))nets.set(root,{contacts:[],others:ends.filter(e=>uf.find(e)===root)});nets.get(root).contacts.push(terminal(p,key));}
+ const peers=[...nets.values()].filter(n=>n.contacts.length+n.others.length>1);
+ project.components=project.components.filter(p=>!off.includes(p));project.wires=project.wires.filter(w=>!isOff(w.from)&&!isOff(w.to));
+ return {parts:off,peers};
+}
+// Puts the modules taken off back beside the breadboards and wires each used contact directly to its net: a free hole
+// of a strip on that net, or else a free header pin of the board on it.
+function wireOffBoard(project,off){
+ if(!off)return project;
+ const boxes=[...exampleBreadboards(project).map(b=>b.bounds),...(!project.surfaces?.board?.hidden?[mcuBounds(project)]:[]),...project.components.filter(p=>p.type!=='breadboard').map(exampleBodyBounds)];
+ // Each module goes right of everything or below everything, whichever is nearer to the ends it is wired to.
+ const at=id=>endpointInfo(id,project.components,project.surfaces);
+ for(const p of off.parts){
+  p.rotation=0;assignAttachments(p,{});const b=displayModel({...p,x:0,y:0})?.bounds||{left:-30,right:30,top:-25,bottom:25},w=b.right-b.left,h=b.bottom-b.top;
+  const ends=off.peers.filter(x=>x.contacts.some(c=>c.startsWith(`part:${p.id}:`))).flatMap(x=>x.others).map(at).filter(Boolean),cx=ends.length?ends.reduce((s,q)=>s+q.x,0)/ends.length:0,cy=ends.length?ends.reduce((s,q)=>s+q.y,0)/ends.length:0;
+  const right=Math.max(...boxes.map(o=>o.right))+48,bottom=Math.max(...boxes.map(o=>o.bottom))+48,top=Math.min(...boxes.map(o=>o.top)),left=Math.min(...boxes.map(o=>o.left));
+  const options=[{x:right,y:Math.max(top,cy-h/2)},{x:Math.max(left,cx-w/2),y:bottom}].map(o=>({...o,d:Math.hypot(o.x+w/2-cx,o.y+h/2-cy)}));
+  const best=options.sort((a,c)=>a.d-c.d)[0];p.x=best.x-b.left;p.y=best.y-b.top;project.components.push(p);boxes.push(exampleBodyBounds(p));
+ }
+ const legs=new Set(project.components.flatMap(p=>Object.values(attachments(p)))),wireEnds=new Set(project.wires.flatMap(w=>[w.from,w.to]));
+ const bodies=project.components.filter(p=>p.type!=='breadboard').map(exampleBodyBounds),holes=circuitHoles(project.components,project.surfaces);
+ const net=wiringTopology(project),added=[],color=signal=>signal==='GND'?'#4e647b':/^(3V3|5V|VIN|E5V)$/.test(signal)?'#dd654c':null;
+ // A free end on a net (a breadboard hole of its strips, else a free header pin of the board), nearest to a point.
+ const freeEnd=(roots,at)=>{
+  const near=list=>list.sort((a,b)=>Math.hypot(a.x-at.x,a.y-at.y)-Math.hypot(b.x-at.x,b.y-at.y))[0];
+  const hole=near(holes.filter(h=>roots.has(net.find(h.id))&&!legs.has(h.id)&&!wireEnds.has(h.id)&&!bodies.some(b=>containsPoint(b,h,4))));
+  return hole?.id??near(project.surfaces?.board?.hidden?[]:PINS.filter(q=>roots.has(net.find(q.id))&&!wireEnds.has(q.id)).map(q=>({...q,...endpointInfo(q.id,project.components,project.surfaces)})))?.id;
+ };
+ const connect=(from,to,roots)=>{
+  const signal=PINS.find(q=>roots.has(net.find(q.id)))?.signal,same=project.wires.find(w=>roots.has(net.find(w.from)));
+  const w={id:nextId(project,'direct'),from,to,color:color(signal)||same?.color||SIGNAL_COLORS[added.length%SIGNAL_COLORS.length]};
+  project.wires.push(w);added.push(w);wireEnds.add(from);wireEnds.add(to);net.join(from,to);
+ };
+ // A net whose header pins are all taken gets a breadboard strip as its hub: the wire from one of its header pins is
+ // led through an empty strip, which then has free holes for more wires.
+ const hub=root=>{
+  const w=project.wires.find(w=>[w.from,w.to].some(e=>PINS.some(q=>q.id===e)&&net.find(e)===root));if(!w)return null;
+  const strip=[...new Set(holes.filter(h=>h.id.includes('bb:')).map(h=>h.bus))].map(bus=>holes.filter(h=>h.bus===bus)).find(list=>list.every(h=>!legs.has(h.id)&&!wireEnds.has(h.id)&&!bodies.some(b=>containsPoint(b,h,4)))&&list.length>=3);
+  if(!strip)return null;
+  const end=PINS.some(q=>q.id===w.from)?'to':'from',other=w[end];w[end]=strip[0].id;delete w.points;
+  connect(strip[1].id,other,new Set([root]));wireEnds.add(strip[0].id);if(!added.includes(w))added.push(w);return strip[2].id;
+ };
+ for(const {contacts,others} of off.peers){
+  const at=id=>endpointInfo(id,project.components,project.surfaces),roots=[...new Set(others.map(e=>net.find(e)))];
+  // A net only between modules off the board (an L298N output and its motor): contact to contact.
+  // Contacts tied inside a module (a HAT's header pins and its power pins) count once; each joins the chain with a free one.
+  if(!roots.length){
+   const chain=[];for(const id of contacts)if(!chain.some(c=>net.find(c)===net.find(id)))chain.push(contacts.find(c=>net.find(c)===net.find(id)&&!wireEnds.has(c))??id);
+   for(let i=1;i<chain.length;i++)if(net.find(chain[i-1])!==net.find(chain[i]))connect(chain[i-1],chain[i],new Set([net.find(chain[i])]));continue;
+  }
+  // Parts of the net that were joined only through a module are joined on the breadboard first.
+  for(const root of roots.slice(1)){
+   if(net.find(root)===net.find(roots[0]))continue;
+   const to=freeEnd(new Set([net.find(root)]),at(others[0]))??hub(net.find(root)),from=to&&(freeEnd(new Set([net.find(roots[0])]),at(to))??hub(net.find(roots[0])));
+   if(from&&to)connect(from,to,new Set([net.find(root),net.find(roots[0])]));
+  }
+  // Each contact then gets its own wire to a free end of the net.
+  for(const id of contacts){
+   const root=net.find(roots[0]);if(net.find(id)===root)continue;
+   const to=freeEnd(new Set([root]),at(id))??hub(root);if(to)connect(id,to,new Set([root]));
+  }
+ }
+ const origin=holes.find(h=>!h.id.includes('rail:'));
+ // All wires are routed again together, so the new ones run beside the planned ones rather than over them.
+ if(added.length)rerouteExampleWires(project);
+ return project;
+}
+const SIGNAL_COLORS=['#ebbd2b','#2786d7','#23a68a','#8064d8','#ee8735','#df68ac','#8b603e'];
+// Contacts that cannot go into a breadboard (screw terminals, JST connectors, sockets) are wired directly: each one gets a
+// wire from the contact to a free hole of the strip it was planned on. A module with only such contacts moves off the
+// breadboards, beside them, and is wired from there.
+function wireDirectContacts(project,partIds,report){
+ const parts=project.components.filter(p=>p.type!=='breadboard'&&(!partIds||partIds.includes(p.id))&&wiredKeys(p).length);
+ if(!parts.length)return project;
+ const boxesOf=except=>[...exampleBreadboards(project).map(b=>b.bounds),...(!project.surfaces?.board?.hidden?[mcuBounds(project)]:[]),...project.components.filter(p=>p.type!=='breadboard'&&p!==except).map(exampleBodyBounds)];
+ const offBoard=[],ends=[];
+ for(const p of parts){
+  const map=attachments(p);
+  for(const key of wiredKeys(p))if(map[key]){ends.push({p,key,hole:map[key]});delete map[key];}
+  assignAttachments(p,map);
+  if(!pluggedKeys(p).length){
+   // Beside everything else: right of the breadboards, from their top edge down.
+   p.rotation=0;const b=displayModel({...p,x:0,y:0})?.bounds||{left:-30,right:30,top:-25,bottom:25},others=boxesOf(p);
+   p.x=Math.max(...others.map(o=>o.right))+48-b.left;
+   const placed=offBoard.map(exampleBodyBounds),top=placed.length?Math.max(...placed.map(o=>o.bottom))+36-b.top:Math.min(...exampleBreadboards(project).map(o=>o.bounds.top))-b.top;
+   p.y=top;offBoard.push(p);
+  }
+ }
+ const legs=new Set(project.components.flatMap(p=>Object.values(attachments(p)))),wireHoles=new Set(project.wires.flatMap(w=>[w.from,w.to]));
+ const bodies=project.components.filter(p=>p.type!=='breadboard').map(exampleBodyBounds),holes=circuitHoles(project.components,project.surfaces);
+ // Contacts the example does not use (spare header pins) get no wire.
+ const net=wiringTopology(project),added=[],used=[...project.wires.flatMap(w=>[w.from,w.to]),...legs];
+ for(const {p,key,hole} of ends){
+  if(!used.some(id=>net.find(id)===net.find(hole)))continue;
+  const h=holeInfo(hole,project.components,project.surfaces),contact=endpointInfo(terminal(p,key),project.components,project.surfaces);
+  const free=holes.filter(q=>q.bus===h.bus&&!legs.has(q.id)&&!wireHoles.has(q.id)&&!bodies.some(b=>containsPoint(b,q,4))).sort((a,b)=>Math.hypot(a.x-contact.x,a.y-contact.y)-Math.hypot(b.x-contact.x,b.y-contact.y));
+  const to=free[0]?.id??hole;wireHoles.add(to);
+  const same=project.wires.find(w=>[w.from,w.to].some(id=>net.find(id)===net.find(hole)));
+  const w={id:nextId(project,'direct'),from:terminal(p,key),to,color:same?.color||'#23a68a'};project.wires.push(w);added.push(w);if(report)report.addedWires=(report.addedWires||0)+1;
+ }
+ const origin=holes.find(h=>!h.id.includes('rail:'));
+ try{const routed=routeWires(project,added,{bodies,origin:origin?{x:origin.x,y:origin.y}:{x:0,y:0}});for(const w of added){const pts=routed.points.get(w.id);if(pts?.length<=32)w.points=pts;}}catch{}
+ return project;
 }
 function arrangeParts(project,{partIds,preferredBoard,report}={}){
  const selected=new Set(partIds||project.components.filter(p=>p.type!=='breadboard').map(p=>p.id)),parts=project.components.filter(p=>selected.has(p.id)&&p.type!=='breadboard');

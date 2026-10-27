@@ -35,10 +35,11 @@ const PADS={
  'sevenseg-tm1637-4':col(.97,.3,.41,.63,.52),'ds18b20-probe-3':col(.99,.5,.5,.5),
  'rgb-neopixel-flora-4':[[.76,.2],[.87,.67],[.13,.67],[.24,.2]],
  'can-transceiver-6':[null,null,null,null,[.82,.27],[.82,.62]],
- 'isolated-rs485':[...col(.87,.255,.31,.37,.2,.69,.75),[.12,.39],[.12,.55]],
+ 'isolated-rs485':[...col(.87,.255,.31,.37,.2,.69,.75),[.12,.39],[.12,.55],[.45,.97],[.55,.97]],
  'max98357a-9':[null,null,null,null,null,null,null,[.88,.31],[.7,.31]],
  'stepper-driver-11':[null,null,null,null,null,null,...row(.7,.19,.27,.345,.425,.5)],
- 'motor-driver-hat':[null,null,null,null,null,[.81,.69],...row(.69,.065,.115,.18,.225),[.905,.69],...Array.from({length:40},(_,i)=>[.095+Math.floor(i/2)*.83/19,i%2?.155:.085])],
+ // 5V/3V3/GND/SDA/SCL are the 40-pin header's pins 2, 1, 6, 3 and 5.
+ 'motor-driver-hat':[...[1,0,5,2,4].map(i=>[.095+Math.floor(i/2)*.83/19,i%2?.155:.085]),[.81,.69],...row(.69,.065,.115,.18,.225),[.905,.69],...Array.from({length:40},(_,i)=>[.095+Math.floor(i/2)*.83/19,i%2?.155:.085])],
  'oled-configurable-8':row(.93,.17,.265,.36,.455,.55,.645,.74,.835),
  'urm09-trig-3':row(.82,.445,.495,.55),'urm09-i2c-4':[[.435,.8],[.565,.8],[.52,.8],[.475,.8]],
  'dc-motor-2':row(.96,.155,.855),

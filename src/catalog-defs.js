@@ -29,28 +29,33 @@ export const CONTACT_MAPS={
  'tmp36-to92-3':[1,2,3],'hcsr04-4':[1,2,3,4]
 };
 export function catalogMap(type){const v=CATALOG_BY_TYPE[type],m=CONTACT_MAPS[v?.id];return Array.isArray(m)?Object.fromEntries(m.map((n,i)=>['p'+(i+1),'p'+n])):m?Object.fromEntries(Object.entries(m).map(([k,n])=>[k,'p'+n])):null;}
-// Modules standing on pins under their own contacts (screw terminals, connectors, header holes in the photo):
-// each pin on the 2.54 mm grid nearest its contact, groups (a header, a terminal block) keeping their pitch; contacts the
-// photo does not show stand in a row just below the board. Measured on the photos (part-art.js PADS).
+// Modules standing on their own contacts (screw terminals, connectors, header holes in the photo; measured in
+// part-art.js PADS). Pins that plug into the breadboard sit on the 2.54 mm grid nearest their contact, a header keeping
+// its pitch, and contacts the photo does not show stand in a row just below the board. Contacts that cannot go into a
+// breadboard (WIRED_CONTACTS: screw terminals, JST connectors, sockets; a DC motor's tabs and a battery holder's wires)
+// stay exactly at the contact and are wired directly.
 export const ON_CONTACT_PINS={
- 'l298n-module-13':[[-73,102],[-45,102],[-17,102],[11,102],[25,102],[39,102],[53,102],[67,102],[81,102],[-115,4],[-115,32],[109,4],[109,32]],
- 'motor-driver-hat':[[-31,92],[-17,92],[-3,92],[11,92],[25,92],[109,22],[-157,22],[-143,22],[-115,22],[-101,22],[151,22],[-129,-62],[-129,-48],[-115,-62],[-115,-48],[-101,-62],[-101,-48],[-87,-62],[-87,-48],[-73,-62],[-73,-48],[-59,-62],[-59,-48],[-45,-62],[-45,-48],[-31,-62],[-31,-48],[-17,-62],[-17,-48],[-3,-62],[-3,-48],[11,-62],[11,-48],[25,-62],[25,-48],[39,-62],[39,-48],[53,-62],[53,-48],[67,-62],[67,-48],[81,-62],[81,-48],[95,-62],[95,-48],[109,-62],[109,-48],[123,-62],[123,-48],[137,-62],[137,-48]],
- 'relay-module-6':[[137,-8],[137,20],[137,6],[-87,-8],[-87,-36],[-87,20]],
+ 'l298n-module-13':[[-80,96],[-50.5,96],[-23.5,96],[8,102],[23.5,102],[39,102],[54,102],[69.5,102],[84.5,102],[-108,9.5],[-108,34.5],[103.5,9.5],[103.5,34.5]],
+ 'motor-driver-hat':[[-145,-52],[-145,-62.5],[-114,-52],[-129.5,-62.5],[-114,-62.5],[111,28.5],[-156,28.5],[-138,28.5],[-114.5,28.5],[-98.5,28.5],[145,28.5],[-145,-62.5],[-145,-52],[-129.5,-62.5],[-129.5,-52],[-114,-62.5],[-114,-52],[-98,-62.5],[-98,-52],[-82.5,-62.5],[-82.5,-52],[-67,-62.5],[-67,-52],[-51,-62.5],[-51,-52],[-35.5,-62.5],[-35.5,-52],[-20,-62.5],[-20,-52],[-4,-62.5],[-4,-52],[11.5,-62.5],[11.5,-52],[27,-62.5],[27,-52],[42.5,-62.5],[42.5,-52],[58.5,-62.5],[58.5,-52],[74,-62.5],[74,-52],[89.5,-62.5],[89.5,-52],[105.5,-62.5],[105.5,-52],[121,-62.5],[121,-52],[136.5,-62.5],[136.5,-52],[152.5,-62.5],[152.5,-52]],
+ 'relay-module-6':[[137,-8],[137,20],[137,6],[-87.5,-7.5],[-87.5,-33],[-87.5,16.5]],
  'matrix-10':[[-125,-32],[-125,-18],[-125,-4],[-125,10],[-125,24],[127,-32],[127,-18],[127,-4],[127,10],[127,24]],
- 'max98357a-9':[[-39,66],[-25,66],[-11,66],[3,66],[17,66],[31,66],[45,66],[45,-18],[17,-18]],
- 'can-transceiver-6':[[-19,46],[-5,46],[9,46],[23,46],[65,-10],[65,4]],
- 'isolated-rs485':[[94,-51],[94,-37],[94,-23],[94,-65],[94,33],[94,47],[-102,-23],[-102,5],[-4,117],[10,117]],
- 'sht31-grove-4':[[-79,-24],[-79,18],[-79,4],[-79,-10]],
- 'pot-module-3':[[79,-14],[79,14],[79,0]],
- 'rgb-gravity-3':[[74,-19],[74,9],[74,-5]],
- 'sevenseg-tm1637-4':[[109,-25],[109,-11],[109,17],[109,3]],
+ 'max98357a-9':[[-39,66],[-25,66],[-11,66],[3,66],[17,66],[31,66],[45,66],[40.5,-18.5],[21.5,-18.5]],
+ 'can-transceiver-6':[[-19,46],[-5,46],[9,46],[23,46],[65.5,-14],[65.5,7.5]],
+ 'isolated-rs485':[[94,-50],[94,-38.5],[94,-26.5],[94,-61],[94,38.5],[94,51],[-96.5,-22.5],[-96.5,10],[-12.5,96],[12.5,96]],
+ 'sht31-grove-4':[[-79.5,-23.5],[-79.5,18],[-79.5,4],[-79.5,-9.5]],
+ 'pot-module-3':[[78.5,-14],[78.5,14],[78.5,0]],
+ 'rgb-gravity-3':[[74,-17],[74,6],[74,-5.5]],
+ 'sevenseg-tm1637-4':[[109,-21],[109,-9.5],[109,14],[109,2]],
  'rgb-neopixel-flora-4':[[18,-20],[32,8],[-24,8],[-24,-20]],
- 'stepper-driver-11':[[-41,105],[-27,105],[-13,105],[1,105],[15,105],[29,105],[-55,35],[-41,35],[-27,35],[-13,35],[1,35]],
+ 'stepper-driver-11':[[-41,105],[-27,105],[-13,105],[1,105],[15,105],[29,105],[-54.5,35.5],[-40.5,35.5],[-27.5,35.5],[-13,35.5],[0,35.5]],
  'oled-configurable-8':[[-49,78],[-35,78],[-21,78],[-7,78],[7,78],[21,78],[35,78],[49,78]],
- 'urm09-trig-3':[[-15,35],[-1,35],[13,35]],
- 'urm09-i2c-4':[[-21,33],[21,33],[7,33],[-7,33]],
+ 'urm09-trig-3':[[-14,35],[-1.5,35],[13,35]],
+ 'urm09-i2c-4':[[-17,33],[17,33],[5,33],[-6.5,33]],
  'mcp4725-6':[[-55,-16],[-55,-2],[-27,54],[-13,54],[1,54],[15,54]],
 };
+export const WIRED_CONTACTS={'dc-motor-2':'all','dc-supply-2':'all','l298n-module-13':'all','motor-driver-hat':'all','isolated-rs485':'all','sht31-grove-4':'all','pot-module-3':'all','rgb-gravity-3':'all','sevenseg-tm1637-4':'all','urm09-trig-3':'all','urm09-i2c-4':'all','relay-module-6':[3, 4, 5],'can-transceiver-6':[4, 5],'max98357a-9':[7, 8],'stepper-driver-11':[6, 7, 8, 9, 10]};
+/** True when pin `index` (0-based) of a catalog part is wired directly instead of plugged into the breadboard. */
+export const isWiredContact=(id,index)=>{const w=WIRED_CONTACTS[id];return w==='all'||!!w?.includes(index);};
 export function catalogGeometry(v){
  const n=v.pins.length,id=v.id,f=v.family;
  let body={width:Math.max(56,n*14+12),height:56},terminals=[];

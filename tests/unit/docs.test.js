@@ -10,7 +10,7 @@ import {catalogShape} from '../../src/catalog-render.js';
 import {catalogBodyBounds} from '../../src/model-geometry.js';
 import {ALL_PARTS,MERGED_PARTS,PART_LIBRARY,searchParts} from '../../src/part-library.js';
 import {searchHalExamples} from '../../src/hal-example-search.js';
-import {PART_DEFS,terminalKeys,localTerminals,nominalTerminals} from '../../src/components.js';
+import {pluggedKeys,PART_DEFS,terminalKeys,localTerminals,nominalTerminals} from '../../src/components.js';
 import {blankProject,validateProject} from '../../src/project.js';
 import {SimulationSession} from '../../src/session.js';
 import {boardPin} from '../../src/pins.js';
@@ -191,7 +191,8 @@ describe('device catalog',()=>{
       if(!(def.body?.width>0&&def.body?.height>0))problems.push(type+': body');
       if(!keys.length||terms.length!==keys.length)problems.push(`${type}: ${keys.length} keys vs ${terms.length} terminals`);
       if(terms.some(t=>!Number.isFinite(t.x)||!Number.isFinite(t.y)))problems.push(type+': non-finite terminal');
-      if(new Set(terms.map(t=>`${t.x},${t.y}`)).size!==terms.length)problems.push(type+': overlapping terminals');
+      // Pins plugged into holes never share a point; a HAT's power/I²C pins are wired at the header contacts they are tied to.
+      const plugged=terms.filter(t=>pluggedKeys(p).includes(t.key));if(new Set(plugged.map(t=>`${t.x},${t.y}`)).size!==plugged.length)problems.push(type+': overlapping terminals');
       if(ref.pins.length!==ref.pin_count)problems.push(type+': pin_count mismatch');
       const b=catalogBodyBounds(type);if(![b.left,b.top,b.right,b.bottom].every(Number.isFinite)||b.right<=b.left||b.bottom<=b.top)problems.push(type+': bounds');
     }

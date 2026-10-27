@@ -10,7 +10,7 @@ import {recipeFor,primaryPart,expectedNets,wiringTopology,DEVICE_RECIPES} from '
 import {familyProfile,routesOf} from './mcu-family.js';
 import {projectBoard} from './boards.js';
 import {PINS,PIN_BY_ID,GPIO_PINS,boardPin,endpointInfo} from './pins.js';
-import {terminalKeys,terminalLabel,attachments,assignAttachments} from './components.js';
+import {terminalKeys,terminalLabel,attachments,assignAttachments,pluggedKeys} from './components.js';
 import {defaultMcu,validateMcu,generateHal,ROUTES,irqForPin} from './mcu-config.js';
 import {timerMax} from './timer-config.js';
 import {SERIAL_IDS,serialHandle} from './serial-config.js';
@@ -224,7 +224,7 @@ export function applyDeviceExample(original,target,options={}){
  const parts=bindParts(project,sample,{id:component?.id,type},prior,report),allocation=allocatePins(project,sample,parts,prior);
  const changes=report.addedWires+report.removedWires+report.detached;repairWiring(project,sample,parts,allocation.pins,report);project.mcu=allocation.config;
  // A device whose parts are all on the breadboard and already wired as the example needs keeps its layout.
- const mounted=id=>{const part=project.components.find(c=>c.id===id),map=part&&attachments(part);return !!map&&terminalKeys(part).every(key=>typeof map[key]==='string');};
+ const mounted=id=>{const part=project.components.find(c=>c.id===id),map=part&&attachments(part);return !!map&&pluggedKeys(part).every(key=>typeof map[key]==='string');};
  const untouched=report.addedWires+report.removedWires+report.detached===changes&&!project.components.some(c=>!beforeParts.has(c.id))&&Object.values(parts).every(mounted);
  if(!untouched)arrangeExampleOnBreadboards(project,{partIds:Object.values(parts),preferredBoard:type==='breadboard'?component?.id:undefined,report});
  // Wires Docs added follow the editor's rules: one end per pin/hole, none on a lead that is in a breadboard hole.

@@ -1,7 +1,7 @@
 // Geometry and netlist metrics for arranged example circuits.
 // Used by tests/unit/example-wiring.test.js and by the baseline snapshot script.
 import {PINS,holeInfo} from '../../../src/pins.js';
-import {terminalKeys,attachments} from '../../../src/components.js';
+import {pluggedKeys,terminalKeys,attachments} from '../../../src/components.js';
 import {wiringTopology} from '../../../src/circuit-topology.js';
 import {wirePoints} from '../../../src/circuit-edit.js';
 
@@ -50,7 +50,7 @@ export function netlist(project){
  for(const id of netEndpoints(project)){const r=uf.find(id);if(!groups.has(r))groups.set(r,[]);groups.get(r).push(id);}
  return [...groups.values()].filter(g=>g.length>1).map(g=>g.sort().join(',')).sort();
 }
-/** Terminals of non-breadboard parts that are not seated in a breadboard hole. */
+/** Terminals of non-breadboard parts that are not seated in a breadboard hole (contacts wired directly excluded). */
 export function unmountedLeads(project){
- const out=[];for(const p of project.components){if(p.type==='breadboard')continue;const map=attachments(p);for(const k of terminalKeys(p))if(!map[k]||!holeInfo(map[k],project.components,project.surfaces))out.push(`${p.id}:${k}`);}return out;
+ const out=[];for(const p of project.components){if(p.type==='breadboard')continue;const map=attachments(p);for(const k of pluggedKeys(p))if(!map[k]||!holeInfo(map[k],project.components,project.surfaces))out.push(`${p.id}:${k}`);}return out;
 }

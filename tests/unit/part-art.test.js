@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import {DEVICE_CATALOG} from '../../src/device-catalog-data.js';
 import {catalogType,CATALOG_DEFS} from '../../src/catalog-defs.js';
 import {PART_IMAGES} from '../../src/part-images.js';
-import {ON_CONTACT_PINS} from '../../src/catalog-defs.js';
+import {ON_CONTACT_PINS,isWiredContact} from '../../src/catalog-defs.js';
 import {hasPartArt,hasArtPads,photoRect,artPadPosition,partArtShape} from '../../src/part-art.js';
 import {displayModel} from '../../src/model-geometry.js';
 import {catalogShape} from '../../src/catalog-render.js';
@@ -77,8 +77,11 @@ test('leads of modules start at the contacts printed in their photos, in order, 
  for(const [id,pins] of Object.entries(ON_CONTACT_PINS)){
   const t=catalogType(id),mm=displayModel({type:t,x:0,y:0,rotation:0}),bb=mm.bounds;
   pins.forEach(([x,y],i)=>{const pad=artPadPosition(t,i,mm),inside=x>bb.left&&x<bb.right&&y>bb.top&&y<bb.bottom;
-   if(inside)assert.ok(Math.hypot(pad.x-x,pad.y-y)<=18,`${id} pin ${i+1}: ${Math.hypot(pad.x-x,pad.y-y).toFixed(1)} from its contact`);});
-  assert.ok(pins.every(([x,y])=>pins.every(([x2,y2])=>Number.isInteger((x-x2)/14)&&Number.isInteger((y-y2)/14))),`${id} pins on one 2.54 mm grid`);
+   if(isWiredContact(id,i))assert.ok(Math.hypot(pad.x-x,pad.y-y)<=1,`${id} pin ${i+1}: a wired contact stays at its terminal`);
+   else if(inside)assert.ok(Math.hypot(pad.x-x,pad.y-y)<=18,`${id} pin ${i+1}: ${Math.hypot(pad.x-x,pad.y-y).toFixed(1)} from its contact`);});
+  // Pins that plug into the breadboard share one 2.54 mm grid.
+  const plugged=pins.filter((_,i)=>!isWiredContact(id,i));
+  assert.ok(plugged.every(([x,y])=>plugged.every(([x2,y2])=>Number.isInteger((x-x2)/14)&&Number.isInteger((y-y2)/14))),`${id} pins on one 2.54 mm grid`);
  }
  assert.ok([0,1,2].every(i=>v(i)>.85&&u(i)<.45)&&[3,4,5,6,7,8].every(i=>v(i)>.85&&u(i)>.5));
  assert.ok(u(9)<.1&&u(10)<.1&&u(11)>.9&&u(12)>.9&&v(9)<v(10)&&v(11)<v(12));

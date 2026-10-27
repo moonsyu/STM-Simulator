@@ -4,7 +4,7 @@
 // several strips share a supply), each net gets one colour, and wires are routed on
 // nested orthogonal paths by the lattice router. Returns null when the circuit cannot be
 // laid out this way; the caller then keeps the general arranger.
-import {attachments,assignAttachments,nominalTerminals,terminalKeys,terminalLabel,TWO_PIN_TYPES,fixedLeadSpan} from './components.js';
+import {attachments,assignAttachments,nominalTerminals,terminalKeys,terminalLabel,TWO_PIN_TYPES,fixedLeadSpan,wiredKeys} from './components.js';
 import {PINS,BOARD,BB,circuitHoles,holeInfo,endpointInfo,breadboardHoles} from './pins.js';
 import {surfacePoint} from './geometry.js';
 import {displayModel} from './model-geometry.js';
@@ -327,7 +327,8 @@ export function layoutScore(project){
 }
 /** Re-routes the existing wires of an arranged project on the lattice router; keeps the old bends on failure. */
 export function rerouteExampleWires(project){
- const bodies=project.components.filter(p=>p.type!=='breadboard').map(p=>boxOf(p,p,true));
+ // Wires end on the terminals of a module wired directly, on top of it: such a module is no obstacle.
+ const bodies=project.components.filter(p=>p.type!=='breadboard'&&!wiredKeys(p).length).map(p=>boxOf(p,p,true));
  const origin=circuitHoles(project.components,project.surfaces).find(h=>!h.id.includes('rail:'));
  try{const routed=routeWires(project,project.wires,{bodies,origin:origin?{x:origin.x,y:origin.y}:{x:0,y:0}});for(const w of project.wires){const pts=routed.points.get(w.id);if(pts.length<=32)w.points=pts;}}catch{}
  return project;
