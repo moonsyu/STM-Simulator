@@ -8,7 +8,7 @@ import {CATALOG_DEFS,CATALOG_BY_TYPE,CATALOG_TWO_PIN,catalogMap,catalogType} fro
 import {DEVICE_CATALOG} from '../../src/device-catalog-data.js';
 import {catalogShape} from '../../src/catalog-render.js';
 import {catalogBodyBounds} from '../../src/model-geometry.js';
-import {PART_LIBRARY,searchParts} from '../../src/part-library.js';
+import {ALL_PARTS,MERGED_PARTS,PART_LIBRARY,searchParts} from '../../src/part-library.js';
 import {searchHalExamples} from '../../src/hal-example-search.js';
 import {PART_DEFS,terminalKeys,localTerminals,nominalTerminals} from '../../src/components.js';
 import {blankProject,validateProject} from '../../src/project.js';
@@ -37,8 +37,8 @@ describe('device Docs: applying examples to main.c',()=>{
     assert.equal(project.mcu.pins.PA5.function,'GPIO_Output');
     assert.equal(project.surfaces.board.hidden,false,'the board is shown so it can be wired');
     assert.ok(report.addedParts>=1&&report.addedWires>=1);
-    const uf=wiringTopology(project),resistor=project.components.find(c=>c.type==='resistor');
-    assert.ok(resistor,'series resistor added');assert.ok(['a','b'].some(k=>uf.find(`part:${resistor.id}:${k}`)===uf.find(boardPin('PA5'))),'resistor sits on the PA5 net');
+    const uf=wiringTopology(project),resistor=project.components.find(c=>c.type==='ref_resistor_axial_2');
+    assert.ok(resistor,'series resistor (the real part) added');assert.ok(['p1','p2'].some(k=>uf.find(`part:${resistor.id}:${k}`)===uf.find(boardPin('PA5'))),'resistor sits on the PA5 net');
     assert.deepEqual(project.deviceDocs.bindings.map(b=>[b.key,b.type,b.slot]),[['sel','led',0]]);assert.equal(project.deviceDocs.inlineChecksum,undefined);
     assert.equal(original.components.length,1,'input project untouched');
     assert.doesNotThrow(()=>compileHal(project.code));
@@ -221,12 +221,15 @@ describe('device catalog',()=>{
 describe('part and example search',()=>{
   test('PART_LIBRARY includes base parts, devices and catalog parts with unique types',()=>{
     const types=PART_LIBRARY.map(p=>p.type);assert.equal(new Set(types).size,types.length);
-    for(const t of ['board','breadboard','resistor','led','lcd','servo','ref_led_tht_2'])assert.ok(types.includes(t),t);
+    for(const t of ['board','breadboard','ref_resistor_axial_2','ref_led_tht_2','ref_lcd_parallel_16','ref_servo_3','mpu6050'])assert.ok(types.includes(t),t);
+    // A basic part with the same pins as its real part is listed once, as the real part; it still opens in saved circuits.
+    for(const t of ['resistor','led','lcd','servo','l298n'])assert.ok(!types.includes(t)&&ALL_PARTS.some(p=>p.type===t),t);
+    assert.equal(Object.keys(MERGED_PARTS).length,27);
     assert.ok(PART_LIBRARY.every(p=>p.name&&p.searchText));
   });
   test('searchParts matches English, Korean aliases and ignores case/spaces/dashes',()=>{
     const has=(q,type)=>assert.ok(searchParts(q).some(p=>p.type===type),`${q} -> ${type}`);
-    has('LED','led');has('빵판','breadboard');has('bread board','breadboard');has('가변 저항','potentiometer');has('SERVO','servo');has('dual-h-bridge','l298n');has('ultra sonic','ultrasonic');
+    has('LED','ref_led_tht_2');has('빵판','breadboard');has('bread board','breadboard');has('가변 저항','ref_pot_bare_3');has('SERVO','ref_servo_3');has('dual-h-bridge','ref_l298n_module_13');has('ultra sonic','ref_hcsr04_4');
     assert.deepEqual(searchParts('zzzz-no-such-part'),[]);assert.equal(searchParts('').length,PART_LIBRARY.length);
   });
   test('searchHalExamples finds examples by id, title, guide and code; all words must match',()=>{
