@@ -5,6 +5,8 @@ import {PART_DATASHEETS,UNITS_PER_MM} from './part-datasheets.js';
 // The datasheet name of a catalog part (the catalog's own name when no datasheet was found).
 export const catalogName=v=>PART_DATASHEETS[v.id]?.name??v.name;
 export const catalogType=id=>'ref_'+id.replaceAll('-','_');
+/** Catalog id of the real part each basic (simplified) part type is drawn as. */
+export const LEGACY_PHYSICAL={resistor:'resistor-axial-2',led:'led-tht-2',button:'button-4',ldr:'ldr-bare-2',ntc:'ntc-bare-2',sht31:'sht31-grove-4',mpu6050:'mpu6050-8',pir:'pir-3',potentiometer:'pot-bare-3',slide:'slide-spdt-3',rgb:'rgb-common-cathode-4',capacitor:'capacitor-ceramic-2',diode:'diode-axial-2',buzzer:'buzzer-active-2',passive_buzzer:'buzzer-passive-2',temperature:'tmp36-to92-3',ultrasonic:'hcsr04-4',dc_motor:'dc-motor-2',dc_supply:'dc-supply-2',relay:'relay-module-6',joystick:'joystick-module-5',encoder:'encoder-module-5',lcd:'lcd-parallel-16',oled:'oled-i2c-4',tft:'st7735-8',matrix:'matrix-10',sevenseg:'sevenseg-common-cathode-10',stepper:'stepper-bipolar-4',motor:'motor-driver-hat',l298n:'l298n-module-13',servo:'servo-3',uart:'uart-cable-4',i2c:'i2c-eeprom-8',spi:'spi-eeprom-8'};
 export const CATALOG_BY_TYPE=Object.fromEntries(DEVICE_CATALOG.filter(v=>!['board','breadboard'].includes(v.family)).map(v=>[catalogType(v.id),v]));
 const defaults={resistor:{value:330},led:{color:'red'},button:{switch:0},potentiometer:{value:10000,position:50},slide:{position:0},capacitor:{value:100},uart:{baud:9600},rs485:{baud:9600},i2c:{address:80},temperature:{temperature:25},ultrasonic:{distance:100},dc_supply:{voltage:12},sd:{sizeMB:64,cardImage:''},dcmi:{pattern:'colorbars',image:''}};
 // Map simulator-model contacts to the physical variant's contact numbers. Additional contacts
@@ -41,13 +43,29 @@ export function catalogGeometry(v){
  else if(id==='i2c-eeprom-5'){const r=rowHalf??28;body={width:42,height:28};terminals=[[-14,r],[0,r],[14,r],[14,-r],[-14,-r]];}
  else if(/eeprom-8|l298p-bare-20/.test(id)){body={width:n/2*14+14,height:42};terminals=dip(n,rowHalf?2*(rowHalf-14):42);}
  else if(id==='ov2640-camera'){body={width:140,height:98};terminals=Array.from({length:18},(_,i)=>[(Math.floor(i/2)-4)*14,56+(i%2)*14]);}
- else if(id==='motor-driver-hat'){body={width:294,height:168};terminals=[...row(5,98,-98),...row(3,-98,-98).slice(0,1),[-42,-98],[-28,-98],[28,-98],[42,-98],[-84,-98],...Array.from({length:40},(_,i)=>[(Math.floor(i/2)-9.5)*14,49+(i%2)*14])];}
- else if(id==='matrix-10'){body={width:112,height:112};terminals=[...Array.from({length:5},(_,i)=>[-70,(i-2)*14]),...Array.from({length:5},(_,i)=>[70,(i-2)*14])];}
+ else if(id==='motor-driver-hat'){body={width:294,height:168};terminals=[...row(5,98,-21),[119,98],[-147,98],[-133,98],[-105,98],[-91,98],[147,98],...Array.from({length:40},(_,i)=>[(Math.floor(i/2)-9.5)*14,-63+(i%2)*14])];}
+ else if(id==='matrix-10'){body={width:112,height:112};terminals=[...[-182,-168,-154,-140,-126],...[182,168,154,140,126]].map(x=>[x,98]);}
  else if(id.startsWith('slide-dp')){const r=rowHalf??28;body={width:n/2*14+14,height:28};terminals=[...row(n/2,-r),...row(n/2,r)];}
  else if(f==='sevenseg'&&n>=10){body={width:n>=12?168:70,height:70};terminals=dip(n,70);}
- else if(id==='l298n-module-13'){body={width:140,height:112};terminals=[...row(3,-70),...row(6,70),[-84,-14],[-84,0],[84,-14],[84,0]];}
- else if(id==='relay-module-6'){body={width:98,height:70};terminals=[[-63,-14],[-63,0],[-63,14],[63,-14],[63,0],[63,14]];}
- else if(id==='stepper-driver-11'){body={width:126,height:84};terminals=[...row(4,56,-28),[49,56],[63,56],...row(5,-56)];}
+ else if(id==='l298n-module-13'){body={width:140,height:112};terminals=[[-84,126],[-56,126],[-28,126],...row(6,126,49),[-98,126],[-112,126],[98,126],[112,126]];}
+ // Modules whose contacts are on several edges (screw terminals, side connectors) stand on one row of pins along their
+ // bottom edge, as on a breadboard; each lead starts at its contact in the photo (part-art.js PADS), so the pins under a
+ // terminal block or header follow its order and the leads do not cross.
+ else if(id==='relay-module-6'){body={width:98,height:70};terminals=[[112,70],[140,70],[126,70],[-84,70],[-70,70],[-98,70]];}
+ else if(id==='stepper-driver-11'){body={width:126,height:84};terminals=[...row(4,-98,-7),[42,98],[56,98],...row(5,98,-28)];}
+ // A side connector: one column of pins beside it, in the order printed on the board.
+ else if(id==='sht31-grove-4')terminals=[[-126,-28],[-126,14],[-126,0],[-126,-14]];
+ else if(id==='pot-module-3')terminals=[[98,-14],[98,14],[98,0]];
+ else if(id==='rgb-gravity-3')terminals=[[91,-21],[91,7],[91,-7]];
+ else if(id==='sevenseg-tm1637-4')terminals=[[126,-28],[126,-14],[126,14],[126,0]];
+ else if(id==='ds18b20-probe-3')terminals=[[91,-14],[91,0],[91,14]];
+ else if(id==='rgb-neopixel-flora-4')terminals=[[21,42],[35,42],[-35,42],[-21,42]];
+ else if(id==='can-transceiver-6')terminals=[[-35,42],[-21,42],[-7,42],[7,42],[77,42],[63,42]];
+ else if(id==='isolated-rs485')terminals=[[154,112],[140,112],[126,112],[168,112],[112,112],[98,112],[-70,112],[-84,112],[-42,112],[-28,112]];
+ else if(id==='max98357a-9')terminals=[...row(7,56,-21),[49,56],[35,56]];
+ else if(id==='urm09-i2c-4'){body={width:126,height:56};terminals=[[-21,42],[21,42],[7,42],[-7,42]];}
+ // PEC11: the A/C/B contacts on one side, the push switch's two on the other.
+ else if(id==='encoder-bare-5')terminals=[...row(3,42),[-14,-42],[14,-42]];
  else {
   if(['lcd','oled','tft','sevenseg'].includes(f))body={width:f==='lcd'?242:144,height:f==='tft'?182:84};
   if(['servo','dc_motor','stepper'].includes(f))body={width:100,height:84};

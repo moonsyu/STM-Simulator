@@ -5,6 +5,7 @@ import {test,describe} from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {allHalExamples,applyHalExample,halExample} from '../../src/hal-examples.js';
+import {physicalExample} from '../../src/catalog-examples.js';
 import {blankProject,validateProject} from '../../src/project.js';
 import {circuitDiagnostics} from '../../src/circuit-diagnostics.js';
 import {wiringMetrics,netlist,unmountedLeads} from './helpers/wiring-metrics.js';
@@ -25,13 +26,20 @@ const CROSSING_ALLOWLIST={
  ref_sht31_grove_4:1,ref_encoder_module_5:1,ref_spi_eeprom_8:2,ref_urm09_i2c_4:1,ref_can_transceiver_6:1,
  ref_slide_dp3t_8:1,slide:1,oled:1,matrix:1,servo:1,motor:1,timer_encoder:1,spi:3,camera_tft:2,
  // Two-lead parts stand on short legs (LED/capacitor 2 pitches, resistor 3): less room to pass beside them.
- ref_capacitor_ceramic_2:1,ref_capacitor_electrolytic_2:1,ref_sevenseg_common_cathode_10:3,sevenseg:1,pwm:1
+ ref_capacitor_ceramic_2:1,ref_capacitor_electrolytic_2:1,ref_sevenseg_common_cathode_10:3,sevenseg:3,pwm:1,
+ // Examples built from the real parts (1.4.0): module pins moved under their photo's terminals, the TFT's backlight pin
+ // and the matrix's second header are wired too.
+ ref_matrix_10:1,ref_motor_driver_hat:5,camera_tft:10,timer_multi:1
 };
+// Examples whose simplified part became two real parts (driver board + motor, with the motor supply) need more wires.
+const WIRE_ALLOWANCE={stepper:4,timer_multi:3,motor:3,
+ // The real 8-pin TFT (backlight wired) leaves no planned room for the 18-pin camera: the general arranger mounts it.
+ camera_tft:8};
 const kinds=Object.keys(allHalExamples());
 const results=new Map();
 function measure(kind){
  if(!results.has(kind)){
-  const intended=netlist(halExample(kind)),project=applyHalExample(blankProject(),kind);
+  const intended=netlist(physicalExample(halExample(kind))),project=applyHalExample(blankProject(),kind);
   results.set(kind,{project,intended,metrics:wiringMetrics(project)});
  }
  return results.get(kind);
@@ -47,7 +55,7 @@ describe('example wiring',()=>{
   assert.deepEqual(metrics.overlaps,[],'no two wires run on top of each other');
   assert.ok(metrics.crossings.length<=(CROSSING_ALLOWLIST[kind]??0),`${metrics.crossings.length} crossings: ${JSON.stringify(metrics.crossings)}`);
   const [wires,,crossings]=BASELINE.examples[kind];
-  assert.ok(metrics.wires<=wires,`wires ${metrics.wires} > baseline ${wires}`);
+  assert.ok(metrics.wires<=wires+(WIRE_ALLOWANCE[kind]??0),`wires ${metrics.wires} > baseline ${wires}`);
   assert.ok(metrics.crossings.length<=Math.max(crossings,CROSSING_ALLOWLIST[kind]??0),`crossings ${metrics.crossings.length} > baseline ${crossings}`);
  });
  test('totals improve on the 39e1bf3 baseline',t=>{

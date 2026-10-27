@@ -4,7 +4,7 @@
 // leads stay at the exact 2.54 mm pin positions; the parts that change while running get overlays measured on each
 // photo (u/v: 0-1 across the fitted photo, r: fraction of its width).
 import {PART_IMAGES} from './part-images.js';
-import {CATALOG_BY_TYPE,CATALOG_DEFS} from './catalog-defs.js';
+import {CATALOG_BY_TYPE,CATALOG_DEFS,CONTACT_MAPS,LEGACY_PHYSICAL,catalogType} from './catalog-defs.js';
 import {displayModel} from './model-geometry.js';
 
 const ART={
@@ -12,9 +12,9 @@ const ART={
  'rgb-common-cathode-4':{light:[.22,.43,.12]},'rgb-neopixel-flora-4':{light:[.5,.5,.12]},'rgb-gravity-3':{light:[.37,.47,.07]},
  'button-2':{cap:[.5,.52,.4]},'button-4':{cap:[.5,.5,.25]},'button-module-3':{cap:[.47,.56,.13]},
  'lcd-parallel-16':{lcd:[.08,.21,.92,.72]},'lcd-i2c-4':{lcd:[.08,.23,.92,.7]},
- 'oled-i2c-4':{screen:[.03,.15,.97,.87]},'oled-configurable-7':{screen:[.03,.15,.97,.75]},'oled-configurable-8':{screen:[.03,.13,.97,.72]},
- 'st7735-8':{screen:[.06,.05,.94,.6]},'matrix-10':{screen:[.14,.02,.75,.98]},
- 'servo-3':{rotor:[.68,.5,.3]},'servo-feedback-4':{rotor:[.7,.38,.3]},'dc-motor-2':{rotor:[.06,.5,.12]},
+ 'oled-i2c-4':{screen:[.03,.15,.97,.87]},'oled-configurable-7':{screen:[.03,.15,.97,.75]},'oled-configurable-8':{screen:[.04,.11,.96,.67]},
+ 'st7735-8':{screen:[.06,.05,.94,.6]},'matrix-10':{screen:[.095,.02,.72,.96]},
+ 'servo-3':{rotor:[.68,.5,.3]},'servo-feedback-4':{rotor:[.7,.38,.3]},'dc-motor-2':{rotor:[.5,.07,.2]},
  'stepper-bipolar-4':{rotor:[.5,.5,.18]},'stepper-unipolar-5':{rotor:[.58,.17,.08]},
  'pot-bare-3':{knob:[.5,.45,.3]},'pot-module-3':{knob:[.48,.53,.25]},
  'joystick-module-5':{stick:[.5,.5,.3]},'encoder-bare-5':{stick:[.5,.49,.22]},'encoder-module-5':{stick:[.52,.47,.1]},
@@ -23,6 +23,25 @@ const ART={
  'sevenseg-4digit-12':{digits:[[.04,.1,.25,.9],[.25,.1,.46,.9],[.54,.1,.75,.9],[.75,.1,.96,.9]]},
  'sevenseg-tm1637-4':{digits:[[.07,.2,.23,.75],[.24,.2,.4,.75],[.47,.2,.63,.75],[.65,.2,.81,.75]]},
  'relay-module-6':{relayLed:[.8,.17,.025]}
+};
+// Where each lead leaves the part in its photo (u/v by pin, null: the package edge next to the pin): screw terminals,
+// side connectors, header holes and wire ends measured on each photo.
+const col=(u,...v)=>v.map(y=>[u,y]),row=(v,...u)=>u.map(x=>[x,v]);
+const PADS={
+ 'l298n-module-13':[...row(.9,.155,.27,.385),...row(.94,.535,.6,.665,.73,.795,.86),[.02,.53],[.02,.63],[.98,.53],[.98,.63]],
+ 'relay-module-6':[[.91,.4],[.91,.65],[.91,.52],[.155,.43],[.155,.2],[.155,.65]],
+ 'matrix-10':[...col(.03,.32,.4,.48,.56,.64),...col(.97,.32,.4,.48,.56,.64)],
+ 'sht31-grove-4':col(.14,.225,.71,.55,.39),'pot-module-3':col(.96,.38,.62,.5),'rgb-gravity-3':col(.95,.36,.55,.455),
+ 'sevenseg-tm1637-4':col(.97,.3,.41,.63,.52),'ds18b20-probe-3':col(.99,.5,.5,.5),
+ 'rgb-neopixel-flora-4':[[.76,.2],[.87,.67],[.13,.67],[.24,.2]],
+ 'can-transceiver-6':[null,null,null,null,[.82,.27],[.82,.62]],
+ 'isolated-rs485':[...col(.87,.255,.31,.37,.2,.69,.75),[.12,.39],[.12,.55]],
+ 'max98357a-9':[null,null,null,null,null,null,null,[.88,.31],[.7,.31]],
+ 'stepper-driver-11':[null,null,null,null,null,null,...row(.7,.19,.27,.345,.425,.5)],
+ 'motor-driver-hat':[null,null,null,null,null,[.81,.69],...row(.69,.065,.115,.18,.225),[.905,.69]],
+ 'oled-configurable-8':row(.93,.17,.265,.36,.455,.55,.645,.74,.835),
+ 'urm09-trig-3':row(.82,.445,.495,.55),'urm09-i2c-4':[[.435,.8],[.565,.8],[.52,.8],[.475,.8]],
+ 'dc-motor-2':row(.96,.155,.855)
 };
 /** True when a catalog part type is drawn from its photo. */
 export const hasPartArt=type=>!!PART_IMAGES[CATALOG_BY_TYPE[type]?.id];
@@ -42,14 +61,28 @@ export function photoRect(type,model=displayModel({type,x:0,y:0,rotation:0}),key
  const img=PART_IMAGES[key],b=model.bounds,W=b.right-b.left,H=b.bottom-b.top,a=img.w/img.h;
  const w=a>W/H?W:H*a,h=a>W/H?W/a:H;return {x:(b.left+b.right-w)/2,y:(b.top+b.bottom-h)/2,w,h};
 }
-/** Pad of a pin (real part coordinates): just inside the outline edge next to the pin, at the pin's own position. */
+/** Pad of pin `index` of a basic part drawn from its real part's photo (that real pin's pad), or null. */
+export function legacyPadPosition(type,index,model){
+ const id=LEGACY_PHYSICAL[type],map=id&&CONTACT_MAPS[id];
+ return Array.isArray(map)&&PART_IMAGES[id]&&model?artPadPosition(catalogType(id),map[index]-1,model):null;
+}
+/** True when a part's leads start at contacts measured on its photo. */
+export const hasArtPads=type=>!!PADS[CATALOG_BY_TYPE[type]?.id];
+/** Pad of a pin (real part coordinates): its contact in the photo when measured, otherwise just inside the outline edge
+ * next to the pin, at the pin's own position. Pins on one edge spread wider than the package (a 1.27 mm pitch IC on
+ * the 2.54 mm grid) leave it evenly along that edge, in their order. */
 export function artPadPosition(type,index,model=displayModel({type,x:0,y:0,rotation:0})){
- const [x,y]=CATALOG_DEFS[type].terminals[index],b=model.bounds,inset=7;
- const clamp=(v,lo,hi)=>lo>hi?(lo+hi)/2:Math.max(lo,Math.min(hi,v));
- if(y>=b.bottom)return {x:clamp(x,b.left+3.5,b.right-3.5),y:b.bottom-inset,outside:true};
- if(y<=b.top)return {x:clamp(x,b.left+3.5,b.right-3.5),y:b.top+inset,outside:true};
- if(x<=b.left)return {x:b.left+inset,y:clamp(y,b.top+inset,b.bottom-inset),outside:true};
- if(x>=b.right)return {x:b.right-inset,y:clamp(y,b.top+inset,b.bottom-inset),outside:true};
+ const pad=PADS[CATALOG_BY_TYPE[type].id]?.[index];
+ if(pad){const R=photoRect(type,model);return {x:R.x+pad[0]*R.w,y:R.y+pad[1]*R.h,outside:true};}
+ const terms=CATALOG_DEFS[type].terminals,[x,y]=terms[index],b=model.bounds,inset=Math.min(7,(b.bottom-b.top)/4,(b.right-b.left)/4);
+ const along=(v,others,lo,hi)=>{
+  const min=Math.min(...others),max=Math.max(...others);if(lo>hi)return (lo+hi)/2;if(min>=lo&&max<=hi)return v;
+  const k=max>min?Math.min(1,(hi-lo)/(max-min)):0,mid=Math.max(lo,Math.min(hi,(min+max)/2));return Math.max(lo,Math.min(hi,mid+(v-(min+max)/2)*k));
+ };
+ if(y>=b.bottom)return {x:along(x,terms.filter(t=>t[1]>=b.bottom).map(t=>t[0]),b.left+3.5,b.right-3.5),y:b.bottom-inset,outside:true};
+ if(y<=b.top)return {x:along(x,terms.filter(t=>t[1]<=b.top).map(t=>t[0]),b.left+3.5,b.right-3.5),y:b.top+inset,outside:true};
+ if(x<=b.left)return {x:b.left+inset,y:along(y,terms.filter(t=>t[0]<=b.left).map(t=>t[1]),b.top+inset,b.bottom-inset),outside:true};
+ if(x>=b.right)return {x:b.right-inset,y:along(y,terms.filter(t=>t[0]>=b.right).map(t=>t[1]),b.top+inset,b.bottom-inset),outside:true};
  return {x,y,outside:false};
 }
 
