@@ -1,5 +1,9 @@
 # 검증 기록
 
+## 1.3.3 짧은 다리 · LED 옅은 렌즈 · 6 mm 버튼 · 보드 초기화 수정 — 공개 배포 검증 완료
+
+2026-10-27. 제품 커밋 `75c12a224ef982460badb723027b971824f27e83` · [Windows CI 40422853429](https://github.com/moonsyu/STM-Simulator/actions/runs/40422853429) · [Release v1.3.3](https://github.com/moonsyu/STM-Simulator/releases/tag/v1.3.3). `npm test` 746 통과(로컬 권한 2 제외), E2E 30 통과·2 건너뜀. latest=v1.3.3, 태그·BUILD-INFO 커밋 `75c12a2` 일치, 5자산. EXE SHA-256 `c1da11756aae97cca741e473daf6aabeca270ac1d2eda0c623dfd641c9ff8a7c`(105,213,450 B, MZ)이 SHA256.txt·update-manifest·ZIP 안의 STM-Simulator.exe와 일치. ZIP SHA-256 `3a0bf067a37eba7b08f2267b4df67de8761aa8d494c2afd4feaf93a200bdc795`.
+
 ## 1.3.2 LED 3칸 — 공개 배포 검증 완료
 
 2026-10-27. 제품 커밋 `e8df2838c94b4d8f26b1e7a0c1723c3c939aa780` · [Windows CI 40413600270](https://github.com/moonsyu/STM-Simulator/actions/runs/40413600270) · [Release v1.3.2](https://github.com/moonsyu/STM-Simulator/releases/tag/v1.3.2). `npm test` 745 통과(로컬 권한 2 제외), E2E 30 통과·2 건너뜀. latest=v1.3.2, 태그·BUILD-INFO 커밋 `e8df283` 일치, 5자산. EXE SHA-256 `7d4fabcf49b36d1a733041db4a2e4962fa8e74db0cedae69ffcd32f3d501d761`(105,189,818 B, MZ)이 SHA256.txt·update-manifest·ZIP 안의 STM-Simulator.exe와 일치. ZIP SHA-256 `10dc1d2a3ed4272133ad5f82523bce3bcc6a87cc3b73167c319e67e1292fc2b2`.
