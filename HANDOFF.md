@@ -1,6 +1,13 @@
 # STM Simulator — 개발 인계
 
-현재 버전: **1.4.1**. 정리일: **2026-10-23**. NUCLEO-F446RE 또는 NUCLEO-F103RB와 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+현재 버전: **1.4.2**. 정리일: **2026-10-23**. NUCLEO-F446RE 또는 NUCLEO-F103RB와 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+
+## 1.4.2 나사 단자·커넥터는 직접 배선
+
+- `catalog-defs.js` `WIRED_CONTACTS`/`isWiredContact`: 빵판에 꽂을 수 없는 단자(나사 단자, JST 커넥터, 모터 소켓, DC 모터·배터리 홀더). 이 핀은 사진의 단자 위치 그대로(격자에 맞추지 않음). `components.js` `wiredKeys`/`pluggedKeys`.
+- `placement.js` `findMount`: 직접 배선 단자는 구멍을 찾지 않고, 그런 단자만 있는 모듈은 장착하지 않음. 단자 클릭으로 배선(기존 part-pin 끝점).
+- `example-breadboard.js`: 예제 전체 배치에서 직접 배선 모듈은 `takeOffBoard`로 빼고 계획한 뒤 `wireOffBoard`가 빵판 옆(오른쪽 또는 아래, 연결 끝에 가까운 쪽)에 두고 각 단자를 그 넷의 빈 구멍·빈 보드 핀에 배선(필요하면 빈 줄을 허브로, 모듈끼리는 단자–단자). 헤더 핀도 있는 모듈의 단자는 `wireDirectContacts`가 같은 줄의 빈 구멍으로 배선. 그 뒤 전체 배선을 다시 경로 계산(`rerouteExampleWires`, 직접 배선 모듈은 장애물에서 제외).
+- 예제 배선 검사: 직접 배선 단자는 '빵판에 꽂힘' 검사에서 제외, 교차 허용치·전체 길이 기준(.64) 조정.
 
 ## 1.4.1 모듈 핀을 사진의 단자 자리로
 
