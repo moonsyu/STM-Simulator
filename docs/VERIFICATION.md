@@ -1,5 +1,9 @@
 # 검증 기록
 
+## 1.6.0 ESP32 스케치 실행 — 공개 배포 검증 완료
+
+2026-10-28. 제품 커밋 `c161e4b0ebd0dbad7cf41edb404cb3fae5e6a165` · [Windows CI 40626563602](https://github.com/moonsyu/STM-Simulator/actions/runs/40626563602) · [Release v1.6.0](https://github.com/moonsyu/STM-Simulator/releases/tag/v1.6.0). `npm test` 769 통과(로컬 권한 2 제외), E2E 34 통과·2 건너뜀. latest=v1.6.0, 태그·BUILD-INFO 커밋 `c161e4b` 일치(sourceDirty false), 5자산. EXE SHA-256 `cb7dfe9140a63718eefcab813058e3258f71d6ab4e1ca095c1f1e167a55ebc08`(105,268,130 B)이 SHA256.txt·update-manifest·ZIP 안의 STM-Simulator.exe와 일치. ZIP SHA-256 `2e8a95e0613ae7619689ee11503f5be03c384015bc2d9796cbf91c0f42ef9ab6`.
+
 ## 1.5.0 ESP32·라즈베리파이 보드 · 고정 실행 · 강의 실습 예제 — 공개 배포 검증 완료
 
 2026-10-28. 제품 커밋 `f837b65cfbb0cb41c52957c7d3e489f9638e6563` · [Windows CI 40625048107](https://github.com/moonsyu/STM-Simulator/actions/runs/40625048107) · [Release v1.5.0](https://github.com/moonsyu/STM-Simulator/releases/tag/v1.5.0). `npm test` 766 통과(로컬 권한 2 제외), E2E 33 통과·2 건너뜀. latest=v1.5.0, 태그·BUILD-INFO 커밋 `f837b65` 일치(sourceDirty false), 5자산. EXE SHA-256 `4bbaa4bbe77dc7f941a8b9c3d84e5666eb63c4dbcd21340834fd85883b260386`(105,267,515 B)이 SHA256.txt·update-manifest·ZIP 안의 STM-Simulator.exe와 일치. ZIP SHA-256 `2f1566a0fe2e75c7a49f6143dec01d7b18d774eac4303cd108fea1fffb62b000`.
