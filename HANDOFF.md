@@ -1,6 +1,14 @@
 # STM Simulator — 개발 인계
 
-현재 버전: **1.7.0**. 정리일: **2026-10-28**. NUCLEO-F446RE 또는 NUCLEO-F103RB와 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+현재 버전: **1.8.0**. 정리일: **2026-10-28**. NUCLEO-F446RE 또는 NUCLEO-F103RB와 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+
+## 1.8.0 강의 예제 정리 · 강의 과제 · PWM LED 밝기 · 예제 분류
+
+- PWM LED 밝기: PWM 출력은 GPIO 상태에 `pwm: {duty, frequency}`를 달고 `value`는 평균 전압이다(에뮬레이터 `timer.js`가 쓰던 형식을 `runtime.js` `analogWrite`·`output(pin,value,pwm)`, ESP32 `ledcWrite`, 고정 실행 `ctx.pwm`도 쓴다). `engine.js` `solveCircuit`은 평균 전압으로 한 번 풀고(모터·RC·ADC용), 회로에 LED가 있고 듀티가 0~1 사이인 PWM 핀이 있으면 핀마다 HIGH·LOW로 두 번 더 풀어 LED(단색·RGB 채널·7세그먼트) 전류를 `lo + duty × (hi − lo)`로 바꾼다(`solveOnce`가 기존 본문, `transient.pwmPhase`로 재귀 방지). 결과에 `hasLed`, LED 읽기에 `led: true`. 표시: `rgb-color.js` `ledLevel(read)`(0.12~1, √(I/6 mA))·`mixColor`, `catalog-view.js`·`catalog-render.js`·`render.js`가 렌즈 색과 빛 번짐을 밝기에 맞춘다.
+- `lecture-examples.js`: 예제마다 `kind`('실습'/'과제')·`boards`(['rpi'] / ['esp32'] / ['stm32','esp32']), `EXAMPLE_BOARDS`. 이름은 무엇을 하는지만(코드 RPI-02·라즈베리파이5·GPIO 목록 없음), 코드·교재 쪽수는 검색어와 안내 줄에만. 강의 과제 8개: 라즈베리파이와AI Day1 도전 1~6, 리눅스커널프로그래밍 Day3 도전 2·3(회로 있는 것만; 답안 코드는 앱 자체 작성).
+- 배선: 라즈베리파이는 90° 돌려 빵판 왼쪽(`rpiProject`), 핀 2k−1·2k = 빵판 k+1번 줄(`rpiRow`). `rpiWire`는 핀 옆 반 줄 틈(홀수 핀 아래, 짝수 핀 위)으로 곧게, 필요하면 `turnX`에서 다른 줄 틈으로. `jumper`(반 줄 틈으로 레일까지), `railAt`(400홀 레일 구멍: 6줄마다 빈 자리), `switchRows`(스위치·GND·10 kΩ 풀업), `groundBridge`(− 레일을 30번 줄 아래로). ESP32는 9~27번 줄(USB 쪽 29·30번 줄 비움), LED는 30번 줄. FW-09 I²C 선은 빵판 위로 돌아 오른쪽에서 ESP32 핀으로(핀 순서 때문에 교차 1곳). IOT-01은 830홀 22~40열, 레일 구멍이 없는 열을 피하고 바깥 레일은 `outer`로 안쪽 레일 구멍 사이를 지난다(교차 4곳, 모듈 몸체가 다른 부품을 가리지 않게 배치). `pos`는 `endpointInfo`(보드 핀 포함).
+- 고정 실행 입력: 시나리오 `input: true`, `start`가 `{line(ctx,text)}`를 돌려주면 `FixedRunDriver.receive(text)`가 줄마다 `> 줄`을 출력하고 넘긴다(`acceptsInput`). `monitor.js`: 직렬 모니터 대상이 `board:<id>`이고 그 드라이버가 입력을 받으면 전송 단추를 켜고 `receive`로 보낸다(`boardDriver`).
+- 예제 목록: `app.js` `filterExamples`가 `<select id="hal-example">`에 보드별 `<optgroup>`(Raspberry Pi · STM32 · ESP32, 여러 보드 예제는 묶음마다)을 만들고, `shell.js`가 묶음 제목과 항목을 그린다. 보드 단추 `[data-example-board]`(전체·rpi·stm32·esp32, `localStorage` `stm-simulator.example-board`). 활동 바·안내의 "HAL 예제"는 "예제"로.
 
 ## 1.7.0 STM32 보드 여러 개
 
