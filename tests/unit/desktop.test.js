@@ -14,6 +14,7 @@ const updater=require('../../desktop/updater.cjs');
 const {Diagnostics}=require('../../desktop/diagnostics.cjs');
 const nativeBuild=require('../../desktop/native-build.cjs');
 const {GdbSession,parseRecord,quote}=require('../../desktop/gdb-mi.cjs');
+const esp32Build=require('../../desktop/esp32-build.cjs');
 const fsp=require('node:fs/promises');
 assert.equal(fsp,fs,'CommonJS and ESM share the fs/promises module object, so patches reach the desktop code');
 
@@ -515,9 +516,48 @@ describe('native tools for a real NUCLEO board',()=>{
   await assert.rejects(chooseStlink('NUCLEO-F103RB','',async()=>[{serial:'AAAA0000',board:''},{serial:'BBBB1111',board:''}]),/ST-LINK가 2개 연결되어 있습니다.*AAAA0000, BBBB1111/);
  });
  test('saving the tools dialog keeps the entered values in the file and auto-detects empty entries right away',()=>withTempDir(async dir=>{
-  const ide=new NativeIde(dir),entered={armGcc:'',armGdb:'',cube:'',cubeF1:'',hostGcc:'',hostGdb:'',clangd:'',openocd:'',buildRoot:''};
+  const ide=new NativeIde(dir),entered={armGcc:'',armGdb:'',cube:'',cubeF1:'',hostGcc:'',hostGdb:'',clangd:'',openocd:'',arduinoCli:'',buildRoot:''};
   const tools=await ide.configure(entered);
   assert.deepEqual(JSON.parse(await readText(path.join(dir,'native-tools.json'))),entered);
   assert.deepEqual(tools,await detectTools(entered));
  }));
+});
+
+describe('ESP32 build and upload (Arduino CLI)',()=>{
+ const espProject=(code='void setup(){Serial.begin(9600);}\nvoid loop(){}\n')=>{const p=blankProject();p.components.push({id:'esp1',type:'devboard',model:'esp32-devkit-wroom32',name:'ESP32-1',x:600,y:300,rotation:0,code});return JSON.stringify(p);};
+ test('the baud rate of the serial monitor follows Serial.begin',()=>{
+  assert.equal(esp32Build.sketchBaud('void setup(){ Serial.begin( 9600 ); }'),9600);
+  assert.equal(esp32Build.sketchBaud('void setup(){}'),115200);
+  assert.equal(esp32Build.sketchBaud('Serial.begin(12345);'),115200);
+ });
+ test('compile and upload failures say what to do',()=>{
+  assert.match(esp32Build.compileHint('sketch.ino:1:10: fatal error: DHT.h: No such file or directory'),/"DHT sensor library".*라이브러리 관리/);
+  assert.match(esp32Build.compileHint('fatal error: Foo.h: No such file or directory'),/Foo\.h를 찾을 수 없습니다/);
+  assert.match(esp32Build.compileHint("Error during build: Platform 'esp32:esp32' not found"),/esp32 by Espressif/);
+  assert.equal(esp32Build.compileHint('sketch.ino:3:1: error: expected'),'');
+  assert.match(esp32Build.uploadHint('A fatal error occurred: Failed to connect to ESP32: Wrong boot mode detected (0x13)!'),/BOOT 버튼/);
+  assert.match(esp32Build.uploadHint('could not open port COM4: PermissionError(13, \'Access is denied.\')'),/다른 프로그램이 쓰고/);
+  assert.equal(esp32Build.uploadHint('Hard resetting via RTS pin...'),'');
+ });
+ test('upload and monitor commands use the picked COM port only',async()=>{
+  const result={fqbn:esp32Build.FQBN,out:'C:/b/build',sketch:'C:/b/sketch'};
+  const upload=await esp32Build.uploadArgs(result,'COM4');assert.deepEqual(upload.slice(upload.indexOf('upload')),['upload','--fqbn','esp32:esp32:esp32','-p','COM4','--input-dir','C:/b/build','C:/b/sketch']);
+  const monitor=await esp32Build.monitorArgs('COM12',9600);assert.deepEqual(monitor.slice(monitor.indexOf('monitor')),['monitor','-p','COM12','--config','baudrate=9600','--quiet']);
+  for(const port of ['','COM','\\\\.\\COM4','COM4 & calc','/dev/ttyUSB0'])await assert.rejects(esp32Build.uploadArgs(result,port),/COM 포트/);
+ });
+ test('a missing Arduino CLI is named before anything is written',()=>withTempDir(async dir=>{
+  await assert.rejects(esp32Build.compileSketch({cli:'',code:'void setup(){}',root:dir}),/Arduino CLI가 필요합니다/);
+  assert.deepEqual(await fs.readdir(dir),[]);
+ }));
+ test('only an ESP32 board of the circuit is built or uploaded',()=>withTempDir(async dir=>{
+  const {NativeIde}=require('../../desktop/native-ide.cjs'),ide=new NativeIde(dir);
+  const part=await ide.esp32Part(espProject('void setup(){}\nvoid loop(){}\n'),'esp1');assert.equal(part.name,'ESP32-1');
+  await assert.rejects(ide.esp32Part(espProject(),'missing'),/ESP32 보드가 없습니다/);
+  await assert.rejects(ide.esp32Part(JSON.stringify(blankProject()),'esp1'),/ESP32 보드가 없습니다/);
+  await assert.rejects(ide.runSketch({text:espProject(),board:'esp1',port:'COM4;'}),/COM 포트/);
+ }));
+ test('the ESP32 run target is kept in the project',()=>{
+  const p=blankProject();p.ide={breakpoints:[],watches:[],native:{target:'esp32',configuration:'Debug'}};
+  return import('../../src/project.js').then(({validateProject})=>assert.equal(validateProject(p).ide.native.target,'esp32'));
+ });
 });
