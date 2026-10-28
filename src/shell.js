@@ -21,7 +21,7 @@ export const icon=(name,size=20)=>`<svg viewBox="0 0 24 24" width="${size}" heig
 const VIEWS=[
  {id:'explorer',label:'탐색기'},
  {id:'parts',label:'부품'},
- {id:'examples',label:'HAL 예제',hint:'회로·코드·핀 설정을 예제 프로젝트로 교체'},
+ {id:'examples',label:'예제',hint:'회로·코드·핀 설정을 예제 프로젝트로 교체'},
  {id:'board',label:'보드 · 핀 설정'},
  {id:'debug',label:'실행 및 디버그'},
  {id:'docs',label:'장치 Docs',hint:'선택한 장치의 설명과 코드를 현재 프로젝트에 추가'}
@@ -127,7 +127,7 @@ function mountShell(layout,state,options,{apply,save,setPalette,setSettings}){
  // The project name is edited at the top of the explorer (the title bar keeps only the command search).
  const project=document.createElement('label');project.className='explorer-project';project.innerHTML='<span>프로젝트</span>';project.append($('project-name'));explorer.append(project);
  const files=document.querySelector('.project-files');if(files)explorer.append(files);
- explorer.insertAdjacentHTML('beforeend','<section class="explorer-outline"><h3>회로 개요</h3><p id="explorer-circuit-summary" class="form-hint"></p><div class="explorer-links"><button type="button" data-goto-view="parts">부품 추가</button><button type="button" data-goto-view="examples">HAL 예제</button><button type="button" data-goto-view="board">핀 설정</button></div></section>');
+ explorer.insertAdjacentHTML('beforeend','<section class="explorer-outline"><h3>회로 개요</h3><p id="explorer-circuit-summary" class="form-hint"></p><div class="explorer-links"><button type="button" data-goto-view="parts">부품 추가</button><button type="button" data-goto-view="examples">예제</button><button type="button" data-goto-view="board">핀 설정</button></div></section>');
  const debug=$('debug-panel');if(debug){debug.hidden=false;$('view-debug').append(debug);}
  const debugBar=document.createElement('div');debugBar.className='debug-toolbar';debugBar.setAttribute('role','toolbar');debugBar.setAttribute('aria-label','디버그 제어');
  const DEBUG_BUTTONS=[['start','디버그 시작','▶','run.debug'],['continue','계속','⏵','run.run'],['pause','일시정지','⏸','run.pause'],['over','한 줄 실행','↷','run.over'],['into','함수 안으로','↓','run.into'],['out','함수 밖으로','↑','run.out'],['stop','정지','■','run.stop']];
@@ -333,8 +333,10 @@ function ratioSash(el,state,apply,save){
 function setupExampleList(){
  const select=$('hal-example'),list=$('hal-example-list');if(!select||!list)return;
  const render=()=>{
-  const options=[...select.options].filter(o=>o.value);
-  list.innerHTML=options.length?options.map(o=>{let text=o.textContent;const sim=/ · SIM$/.test(text);text=text.replace(/ · SIM$/,'');const arm=/ · ARM$/.test(text);text=text.replace(/ · ARM$/,'');const parts=text.split(' · ');const kind=parts.length>1?parts.shift():'';const name=parts.join(' · ');return `<button type="button" role="option" class="example-item" data-example="${o.value}"><strong>${escapeHtml(name)}</strong><span class="example-meta">${kind?`<span class="example-tag">${escapeHtml(kind)}</span>`:''}${arm?'<span class="example-tag arm">ARM 빌드</span>':''}${sim?'<span class="example-tag arm" title="FatFs를 시뮬레이터가 제공하므로 회로 시뮬레이터 대상에서 실행합니다">시뮬레이터 전용</span>':''}</span></button>`;}).join(''):'<p class="form-hint">검색 결과가 없습니다.</p>';
+  // Board groups (<optgroup>) become headings; an option listed in two groups appears under both.
+  const item=o=>{let text=o.textContent;const sim=/ · SIM$/.test(text);text=text.replace(/ · SIM$/,'');const arm=/ · ARM$/.test(text);text=text.replace(/ · ARM$/,'');const parts=text.split(' · ');const kind=parts.length>1?parts.shift():'';const name=parts.join(' · ');return `<button type="button" role="option" class="example-item" data-example="${o.value}"><strong>${escapeHtml(name)}</strong><span class="example-meta">${kind?`<span class="example-tag">${escapeHtml(kind)}</span>`:''}${arm?'<span class="example-tag arm">ARM 빌드</span>':''}${sim?'<span class="example-tag arm" title="FatFs를 시뮬레이터가 제공하므로 회로 시뮬레이터 대상에서 실행합니다">시뮬레이터 전용</span>':''}</span></button>`;};
+  const groups=[...select.querySelectorAll('optgroup')];
+  list.innerHTML=groups.length?groups.map(g=>`<p class="example-group" role="presentation">${escapeHtml(g.label)} <span>${g.children.length}</span></p>`+[...g.children].map(item).join('')).join(''):'<p class="form-hint">검색 결과가 없습니다.</p>';
  };
  new MutationObserver(render).observe(select,{childList:true});render();
  list.addEventListener('click',e=>{const b=e.target.closest('[data-example]');if(!b||select.disabled)return;select.value=b.dataset.example;select.dispatchEvent(new Event('change',{bubbles:true}));});
