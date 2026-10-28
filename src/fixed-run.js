@@ -14,7 +14,8 @@ export class FixedRunDriver{
   const ctx=this.ctx={
    time:()=>this.time,
    output:(pin,value)=>{this.pins[pin]={mode:'OUTPUT',value:value?VCC:0};},
-   pwm:(pin,duty)=>{const d=Math.max(0,Math.min(1,duty));this.pins[pin]={mode:'OUTPUT',value:VCC*d};},
+   // PWM as its average voltage plus the duty (an LED lights with the duty of its high phase, see solveCircuit).
+   pwm:(pin,duty,frequency=500)=>{const d=Math.max(0,Math.min(1,duty));this.pins[pin]={mode:'OUTPUT',value:VCC*d,...(d>0&&d<1?{pwm:{duty:d,frequency}}:{})};},
    // `handler(ctx, level)` runs on each change of the input; with `{level:true}` also for the first level read (a
    // program that polls the pin, not one waiting for an edge).
    input:(pin,pull=null,handler=null,{level=false}={})=>{this.pins[pin]={mode:pull==='up'?'INPUT_PULLUP':pull==='down'?'INPUT_PULLDOWN':'INPUT'};if(handler)this.handlers.set(pin,{handler,level});},
@@ -33,13 +34,20 @@ export class FixedRunDriver{
  }
  voltage(pin){return this.result?.voltage?.(`signal:${this.part.id}.${pin}`)??null;}
  advance(time){
-  if(!this.started){this.started=true;this.time=Math.min(this.time,time);this.scenario.start?.(this.ctx);}
+  if(!this.started){this.started=true;this.time=Math.min(this.time,time);this.lineHandler=this.scenario.start?.(this.ctx)?.line??null;}
   // Timers due up to `time` run in order; a timer callback may schedule more (`every` re-arms itself).
   for(let guard=0;guard<10000;guard++){
    const next=this.timers.reduce((a,t)=>!a||t.at<a.at?t:a,null);if(!next||next.at>time)break;
    this.time=next.at;if(next.period)next.at+=next.period;else this.timers.splice(this.timers.indexOf(next),1);next.fn(this.ctx);
   }
   this.time=Math.max(this.time,time);
+ }
+ // Serial monitor text for a scenario that reads lines (`input: true`, its start returns {line(ctx, text)}).
+ get acceptsInput(){return !!this.scenario.input;}
+ receive(text){
+  if(!this.scenario.input)return 0;
+  for(const line of String(text).split(/\r?\n/)){if(!line)continue;this.print('> '+line);this.lineHandler?.(this.ctx,line);}
+  return String(text).length;
  }
  gpio(){const out={};for(const [pin,state]of Object.entries(this.pins))out[`${this.part.id}.${pin}`]=state;return out;}
  // I2C slave of a scenario: {address, sda, scl} with onI2cReceive(ctx, bytes) / onI2cRequest(ctx, count) → bytes.
