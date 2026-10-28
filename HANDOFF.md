@@ -1,6 +1,16 @@
 # STM Simulator — 개발 인계
 
-현재 버전: **1.6.0**. 정리일: **2026-10-23**. NUCLEO-F446RE 또는 NUCLEO-F103RB와 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+현재 버전: **1.7.0**. 정리일: **2026-10-28**. NUCLEO-F446RE 또는 NUCLEO-F103RB와 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+
+## 1.7.0 STM32 보드 여러 개
+
+- `devboards.js`: 보드 카탈로그의 두 NUCLEO를 `devboard` 모델(`nucleo-f446re`·`nucleo-f103rb`, kind `stm32`)로 추가. 핀은 `boardPins`를 보드 가운데 기준으로(첫 사용 때 계산, pins.js와 순환 import), 키 `CN7:1`, GPIO·NRST·BOOT0 등은 `signal:<id>.<신호>`, 공급 핀(`STM32_COMMON`: 3V3·5V·GND·VDD·AVDD·IOREF·U5V)은 주 보드와 같은 넷, AGND→GND, NC는 넷 없음. 렌더는 `render.js` `boardSvg(boardId,{prefix})`(버튼 `<id>.USER`/`<id>.RESET`, LD2 `.stm32-led`).
+- `stm32-boards.js`: 다른 STM32 보드는 프로젝트 하나의 소프트웨어(`code`·`mcu`·`firmware`·`ide` 중단점/감시식·`deviceDocs`·`stlink`)를 부품에 저장. `swapStm32(project,id)`가 그 보드와 주 보드(surfaces.board)의 소프트웨어·이름·ST-LINK·자리(중심↔원점, 크기 배율)를 맞바꾸고 끝점 `board:` ↔ `devboard:<id>:`를 바꿔 적음(배선·부품 장착·catalogTies). 편집 = 주 보드로 바꾸기라 Pinout·HAL 생성·빌드·디버그·실물 기록 코드는 그대로 쓴다. `stm32View`(복사본에 swap)가 각 보드의 빌드·실행 기준, `viewMapper(id)`가 두 시점의 이름을 바꾸는 자기역함수(`signal:PA5`↔`signal:<id>.PA5`, `drive:` 동일, 공급 넷은 그대로). `promoteStm32`: 주 보드 삭제 시 다음 보드가 주 보드.
+- 실행: `Stm32Driver`는 보드 시점의 `SimulationSession` 또는 `FirmwareSession`(ELF)을 회로 드라이버로 돌린다. 세션의 `circuit`을 `ViewCircuit`으로 바꿔 공유 회로를 이름만 바꿔 보게 하고, 시간 단계·출력 변화마다 주 세션의 `circuit.hold`로 모든 보드의 현재 출력을 넣어 다시 푼다(`fresh`, 자기 GPIO가 같으면 재사용). 부품 소유(`ownedParts`): 보드 핀에서 공급 넷을 빼고 신호 넷·부품을 따라 닿는 부품 중 다른 STM32 핀에서 닿지 않는 것 — 그 부품의 장치 상태(OLED·모터 등)는 `decorate`가 그 보드 세션 값으로 덮는다(`SimulationSession`/`FirmwareSession.enrich` 끝). `connectStm32Drivers(session)`: 드라이버에 주 세션 연결, 보드 간 UART(`BusDevices` `peers` 훅, `hal.uart`가 USART 버스에 전달; 같은 넷의 활성 RX·같은 baud에 바이트 전달, 에뮬레이터는 제외). `reset()`은 그 보드 세션만 새로 만든다.
+- `engine.js`: STM32 보드 USER 버튼(`<id>.PC13` 4.7 kΩ 풀업, `pressed['<id>.USER']`). `fixed-run.js` `createBoardDrivers`는 STM32 보드 제외.
+- `project.js`: STM32 보드 부품은 미니 프로젝트로 `validateProject`(코드·mcu·firmware·ide·deviceDocs), 회전 0, ST-LINK 시리얼, STM32 보드 3개(주 보드 포함 4개) 제한. `surfaces.board.name`·`stlink` 추가.
+- `app.js`: 보드 추가(빈 HAL 프로젝트), 속성(이름·ST-LINK·**이 보드 편집**), 편집기 파일 목록 `stm32:<id>`, 주 보드 제목 `STM32-n · 편집 중`, 실행 보드 선택, 보드 RESET/USER, 에뮬레이터 보드별 ELF(`ensureBoardFirmware`, `ide.buildElf(text)`), IDE 훅 `stm32Runs`(보드별 프로젝트 JSON·시리얼). `circuit-edit.js` 붙여넣기 이름·개수.
+- 실물: `native-ide.cjs` `assignStlinks`(지정 시리얼 확인·종류 일치·미확인 1개, 중복 금지)와 `runOnBoards`(시리얼 먼저 정한 뒤 보드마다 `compile` → `program`), IPC `native:run-boards`. 실물 실행 대상에서 STM32가 2개 이상이면 `native-ide-ui.js`가 이 경로로 실행. GDB 디버그는 편집 중인 보드만.
 
 ## 1.6.0 ESP32 스케치 실행
 
