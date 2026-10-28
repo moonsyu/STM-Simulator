@@ -242,7 +242,8 @@ export class Runtime {
   setPinMode(pin,mode){this.pwm.delete(pin);this.gpio[pin]={mode,value:0};this.api.changed?.(this.microTime);}
   inputLevel(pin){return this.gpio[pin]?.mode==='ANALOG'?0:Number(!!this.api.read?.(pin));}
   interval(value,min=1){checkedNumber(value);if(value<min||value>3600000)throw new Error(`시간 범위: ${min}~3600000 ms`);return value;}
-  output(pin,value){if(this.gpio[pin]?.mode!=='OUTPUT')throw new Error(`${pin}: pinMode(${pin}, OUTPUT)을 먼저 설정하세요.`);this.api.beforeChange?.(this.microTime);this.gpio[pin].value=value;this.api.changed?.(this.microTime);this.pollInterrupts();}
+  // `pwm` ({duty, frequency}) marks an averaged PWM output: `value` is its average voltage (see solveCircuit).
+  output(pin,value,pwm=null){if(this.gpio[pin]?.mode!=='OUTPUT')throw new Error(`${pin}: pinMode(${pin}, OUTPUT)을 먼저 설정하세요.`);this.api.beforeChange?.(this.microTime);this.gpio[pin].value=value;if(pwm)this.gpio[pin].pwm=pwm;else delete this.gpio[pin].pwm;this.api.changed?.(this.microTime);this.pollInterrupts();}
   event(at,fn){if(this.events.length>=4096)throw new Error('예약 이벤트 한도를 넘었습니다.');this.events.push({at,fn,order:this.nextOrder++});}
   timer(period,callback,once=false){
     if(this.timers.size>=32)throw new Error('타이머는 32개까지 사용할 수 있습니다.');this.interval(period);this.callback(callback);
@@ -265,7 +266,7 @@ export class Runtime {
       if(name==='analogWriteFrequency'){checkedNumber(b);if(b<1||b>2000)throw new Error('PWM 주파수 범위: 1~2000 Hz');this.pwmFrequency.set(pin,b);return 0;}
       if(name==='analogWrite'){
         const duty=Math.max(0,Math.min(255,checkedNumber(b)))/255;this.pwm.delete(pin);
-        if(!this.api.pwmEnabled||duty===0||duty===1){this.output(pin,3.3*duty);return 0;}
+        if(!this.api.pwmEnabled||duty===0||duty===1){this.output(pin,3.3*duty,duty>0&&duty<1?{duty,frequency:this.pwmFrequency.get(pin)||500}:null);return 0;}
         const period=1000/(this.pwmFrequency.get(pin)||500),state={high:true};this.pwm.set(pin,state);this.output(pin,3.3);
         const edge=()=>{if(this.pwm.get(pin)!==state)return;state.high=!state.high;this.output(pin,state.high?3.3:0);this.event(this.microTime/1000+period*(state.high?duty:1-duty),edge);};this.event(this.microTime/1000+period*duty,edge);return 0;
       }

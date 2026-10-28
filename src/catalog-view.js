@@ -2,7 +2,7 @@ import {CATALOG_BY_TYPE} from './catalog-defs.js';
 import {updateDeviceSvg} from './device-ui.js';
 import {catalogShape} from './catalog-render.js';
 import {displayModel,modelTransform} from './model-geometry.js';
-import {channelLevels,glowOpacity,lensColor} from './rgb-color.js';
+import {channelLevels,glowOpacity,lensColor,ledLevel,mixColor} from './rgb-color.js';
 export function remodelLegacyShape(p,shape,result){
  const model=displayModel(p);if(!model)return shape;
  if(CATALOG_BY_TYPE[p.type])return model.scaleX===1&&model.scaleY===1&&!model.dx&&!model.dy?shape:`<g transform="${modelTransform(model)}">${shape}</g>`;
@@ -14,9 +14,11 @@ export function updateCatalogView(g,p,r,pressed=false,lcdRender=null){
  const v=CATALOG_BY_TYPE[p.type],family=v?.family||p.type;
  // Addressable RGB (WS2812) lights only with a received colour; analog RGB follows its channel currents.
  const addressable=family==='rgb'&&!r?.channels,received=addressable?r?.device?.color:null;
- const light=g.querySelector('.catalog-light');if(light){const channels=r?.channels,color=addressable?received&&lensColor(received):channels?channelLevels(channels):null;light.setAttribute('fill',color?`rgb(${color.join(',')})`:r?.on&&!addressable?({red:'#f05a4b',green:'#65c668',blue:'#53a8f7',yellow:'#f4c941'}[p.color]||'#ff7055'):'#94a2a4');
+ // A single-colour LED dims with its current (PWM duty), from the unlit lens colour to its full colour.
+ const level=family==='led'?ledLevel(r):r?.on?1:0;
+ const light=g.querySelector('.catalog-light');if(light){const channels=r?.channels,color=addressable?received&&lensColor(received):channels?channelLevels(channels):null,art=light.hasAttribute('data-art'),full={red:'#f05a4b',green:'#65c668',blue:'#53a8f7',yellow:'#f4c941'}[p.color]||'#ff7055';light.setAttribute('fill',color?`rgb(${color.join(',')})`:level&&!addressable?(art?full:mixColor('#94a2a4',full,.35+.65*level)):'#94a2a4');
   // On a photo the lens shows through until it lights.
-  if(light.hasAttribute('data-art'))light.setAttribute('fill-opacity',color||(r?.on&&!addressable)?'.88':'0');}
+  if(art)light.setAttribute('fill-opacity',color?'.88':level&&!addressable?String(+(.88*(.3+.7*level)).toFixed(3)):'0');}
  const cap=g.querySelector('.switch-cap');cap?.setAttribute('fill',pressed?'#16a583':'#30363a');if(cap?.hasAttribute('data-art'))cap.setAttribute('fill-opacity',pressed?'.55':'0');
  g.querySelector('.art-relay-led')?.setAttribute('fill-opacity',r?.on?'.95':'0');
  updateDeviceSvg(g,{...p,type:family},r);
@@ -26,7 +28,7 @@ export function updateCatalogView(g,p,r,pressed=false,lcdRender=null){
  if(family==='dc_motor')g.querySelector('.device-rotor')?.setAttribute('transform',`rotate(${r?.angle??0} 0 -7)`);
  g.querySelector('.pot-knob')?.setAttribute('transform',`rotate(${(p.position??50)*2.7-135} 0 -5)`);
  const thumb=g.querySelector('.catalog-slide-thumb');if(thumb)thumb.setAttribute('transform',`translate(${Number(thumb.dataset.start)+(p.position??0)*Number(thumb.dataset.step)} 0)`);
- const glow=g.querySelector('.led-glow, .rgb-glow');if(glow){glow.setAttribute('opacity',addressable?String(glowOpacity(received)):r?.on?'.32':'0');glow.setAttribute('fill',light?.getAttribute('fill')||'#f16f52');}
+ const glow=g.querySelector('.led-glow, .rgb-glow');if(glow){glow.setAttribute('opacity',addressable?String(glowOpacity(received)):String(+(.32*level).toFixed(3)));glow.setAttribute('fill',light?.getAttribute('fill')||'#f16f52');}
  const display=g.querySelector('.catalog-display');if(display&&family==='lcd'&&lcdRender){display.innerHTML=lcdRender(r?.lcd);return;}if(display){const lines=r?.lcd?.lines;if(lines){display.innerHTML='';for(let i=0;i<2;i++){const text=document.createElementNS('http://www.w3.org/2000/svg','text');text.setAttribute('class','lcd-line');text.setAttribute('data-row',String(i));text.setAttribute('xml:space','preserve');text.setAttribute('x','-96');text.setAttribute('y',String(-5+i*19));text.setAttribute('font-family','Consolas,monospace');text.setAttribute('font-size','12');text.setAttribute('fill','#293e1b');text.textContent=r.lcd.visible===false?'':lines[i];display.append(text);}}
 
  }

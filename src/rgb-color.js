@@ -6,6 +6,10 @@ export function receiveWs2812(s,grb){
 }
 /** Approximate 0–255 brightness of each analog RGB channel from its current (6 mA ≈ full). */
 export const channelLevels=channels=>['r','g','b'].map(k=>channels?.[k]?.on?Math.round(255*Math.min(1,Math.sqrt(Math.max(0,channels[k].current)/.006))):0);
+/** Visible 0–1 level of a single-colour LED from its (PWM-averaged) current, on the same scale as the RGB channels. */
+export const ledLevel=read=>read?.on?Math.max(.12,Math.min(1,Math.sqrt(Math.max(0,read.current)/.006))):0;
+/** `#rrggbb` between two `#rrggbb` colours (t = 0 → a, 1 → b). */
+export const mixColor=(a,b,t)=>'#'+[1,3,5].map(i=>Math.round(parseInt(a.slice(i,i+2),16)*(1-t)+parseInt(b.slice(i,i+2),16)*t).toString(16).padStart(2,'0')).join('');
 /** Lens colour for a received [R,G,B]: the same hue, kept bright enough to see for small WS2812 values. Null when black. */
 export function lensColor(color){
  const max=Math.max(...color);if(!(max>0))return null;

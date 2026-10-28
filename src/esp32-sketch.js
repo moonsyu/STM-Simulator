@@ -35,7 +35,7 @@ export class SketchDriver{
   if(name==='ledcAttachPin'){const pin=runtime.pin(args[0]),ch=this.ledc.get('ch'+args[1]);if(!ch)throw new Error('ledcSetup으로 채널을 먼저 설정하세요.');ch.pins.push(pin);runtime.setPinMode(pin,'OUTPUT');return 0;}
   if(name==='ledcWrite'){
    const channel=this.ledc.get('ch'+args[0]),pins=channel?channel.pins:[runtime.pin(args[0])],bits=(channel??this.ledc.get(pins[0]))?.bits??8,duty=Math.max(0,Math.min(1,Number(args[1])/((1<<bits)-1)));
-   for(const pin of pins){if(runtime.gpio[pin]?.mode!=='OUTPUT')runtime.setPinMode(pin,'OUTPUT');runtime.output(pin,3.3*duty);}return 1;
+   for(const pin of pins){if(runtime.gpio[pin]?.mode!=='OUTPUT')runtime.setPinMode(pin,'OUTPUT');runtime.output(pin,3.3*duty,duty>0&&duty<1?{duty,frequency:5000}:null);}return 1;
   }
   // Wire as an I2C slave: Wire.begin(address), onReceive / onRequest callbacks, available / read / write.
   const w=this.wire;
