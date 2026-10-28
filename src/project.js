@@ -10,6 +10,17 @@ import {validateNoise} from './signals.js';
 import {validCardImage,SD_SIZES} from './sdcard.js';
 import {validCameraImage,CAMERA_PATTERNS} from './camera.js';
 import {DEVBOARD_MODELS,MAX_DEVBOARDS,devboardPinInfo} from './devboards.js';
+const stlinkSerial=(value,name)=>{if(value===undefined)return {};if(typeof value!=='string'||!/^\w{8,40}$/.test(value))throw new Error(name+': ST-LINK 시리얼을 확인하세요.');return {stlink:value};};
+// The fields of an STM32 board component checked as the project it becomes when edited (code, mcu, firmware …).
+function stm32Software(p,version){
+  if(p.rotation!==0)throw new Error(p.name+': STM32 보드는 회전하지 않습니다.');
+  const own=validateProject({format:'stm32-circuit-lab',version,name:'board',code:p.code,components:[],wires:[],boardId:p.model,mcu:p.mcu,firmware:p.firmware,...(p.ide!==undefined?{ide:p.ide}:{}),...(p.deviceDocs!==undefined?{deviceDocs:p.deviceDocs}:{})});
+  const out={model:p.model,code:own.code,...stlinkSerial(p.stlink,p.name)};
+  for(const key of ['mcu','firmware','deviceDocs'])if(own[key]!==undefined)out[key]=own[key];
+  if(own.ide)out.ide={breakpoints:own.ide.breakpoints,watches:own.ide.watches};
+  for(const key of ['scale','scaleX','scaleY'])if(p[key]!==undefined)out[key]=validScale(p[key]);
+  return out;
+}
 export function blankProject(family){const mcu={...defaultMcu(family),pins:{}};return {format:'stm32-circuit-lab',version:2,name:'새 회로',components:[],wires:[],surfaces:{board:{hidden:true},breadboard:{hidden:true}},mcu,firmware:{mode:'hal',files:[]},code:expandC(generateHal(mcu).replace('/* USER CODE BEGIN 2 */','/* USER CODE BEGIN 2 */\n  printf("HAL ready\\n");'))};}
 // Complete example circuits explicitly include the legacy board and breadboard.
 export function exampleProject(){const p=blankProject();delete p.surfaces;return p;}
@@ -21,6 +32,7 @@ export function validateProject(data){
   if(data.boardId!==undefined&&!getBoard(data.boardId))throw new Error('지원하지 않는 보드입니다.');
   if(data.components.filter(p=>p?.type==='breadboard').length>8)throw new Error('추가 빵판은 8개까지 지원합니다.');
   if(data.components.filter(p=>p?.type==='devboard').length>MAX_DEVBOARDS)throw new Error(`보드는 ${MAX_DEVBOARDS}개까지 추가할 수 있습니다.`);
+  if(data.components.filter(p=>p?.type==='devboard'&&DEVBOARD_MODELS[p.model]?.kind==='stm32').length>3)throw new Error('STM32 보드는 한 회로에 4개까지 놓을 수 있습니다.');
   const base=id=>(data.surfaces?.board?.hidden!==true&&PIN_BY_ID.has(id))||!!holeInfo(id,data.components,data.surfaces)||!!devboardPinInfo(id,data.components);
   const components=data.components.map(p=>{
     if(!safeId(p.id)||ids.has(p.id))throw new Error('부품 ID가 중복되거나 올바르지 않습니다.');ids.add(p.id);
@@ -31,6 +43,8 @@ export function validateProject(data){
     // ESP32 / Raspberry Pi boards keep their own program text and, for lecture examples, the fixed-run scenario id.
     if(p.type==='devboard'){
       if(!Object.hasOwn(DEVBOARD_MODELS,p.model))throw new Error(p.name+': 지원하지 않는 보드입니다.');
+      // Another STM32 board keeps the software of a whole project: main.c, pin settings, sources, Docs, debug points.
+      if(DEVBOARD_MODELS[p.model].kind==='stm32')return {...q,...stm32Software(p,data.version)};
       if(typeof p.code!=='string'||p.code.length>100000)throw new Error(p.name+': 보드 코드는 100 KB 이하의 텍스트여야 합니다.');
       if(p.scenario!==undefined&&!safeId(p.scenario))throw new Error(p.name+': 실행 시나리오 정보를 확인하세요.');
       // An ESP32 board plugged into a breadboard: header pin key → hole.
@@ -93,6 +107,8 @@ export function validateProject(data){
       const source=data.surfaces[key];if(!source||typeof source!=='object'||Array.isArray(source))throw new Error('보드 크기 설정을 확인하세요.');
       const surface={};if(source.hidden!==undefined){if(typeof source.hidden!=='boolean')throw new Error('장치 표시 설정을 확인하세요.');surface.hidden=source.hidden;}for(const field of ['scale','scaleX','scaleY'])if(source[field]!==undefined)surface[field]=validScale(source[field]);
       for(const field of ['x','y'])if(source[field]!==undefined){if(!Number.isFinite(source[field]))throw new Error('보드 위치를 확인하세요.');surface[field]=source[field];}
+      // The main STM32 board's name (STM32-1) and ST-LINK serial, kept with it when another board is edited.
+      if(key==='board'){if(source.name!==undefined){if(typeof source.name!=='string'||!source.name.trim()||source.name.length>80)throw new Error('보드 이름을 확인하세요.');surface.name=source.name;}Object.assign(surface,stlinkSerial(source.stlink,'보드'));}
       project.surfaces[key]=surface;
     }
   }

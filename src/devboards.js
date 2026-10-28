@@ -1,4 +1,6 @@
-import {partVector,partTransform} from './geometry.js';
+import {partVector,partTransform,BOARD} from './geometry.js';
+import {boardPins} from './pins.js';
+import {BOARD_CATALOG} from './boards.js';
 
 // Development boards placed next to the STM32 board (component type 'devboard'): ESP32 38-pin boards and the
 // Raspberry Pi 5. Drawn at real size like everything else (2.54 mm = 14 units), centred on the component position.
@@ -35,23 +37,46 @@ function rpiPins(){
   const notes=Number.isInteger(gpio)?[...(RPI_FUNCTIONS[gpio]?[{text:RPI_FUNCTIONS[gpio],warn:gpio<2}]:[]),{text:'3.3 V 전용 — 5 V를 넣으면 고장',warn:true}]:[];
   return {key:'P'+n,label:`${n}번 ${signal}`,signal,number:n,x:(32.5+(col-9.5)*2.54-42.5)*MM,y:((n%2?4.77:2.23)-28)*MM,notes};});
 }
-export const DEVBOARD_MODELS=Object.freeze({
+export const DEVBOARD_MODELS={
  'esp32-nodemcu-32s':Object.freeze({id:'esp32-nodemcu-32s',name:'NodeMCU-32S (ESP-32S)',short:'ESP32',kind:'esp32',chip:'ESP32',module:'ESP-32S',description:'Ai-Thinker ESP-32S 모듈 · 38핀 · 3.3 V · 강의 보드(NODEMCU ESP-32S V1.1)',w:28*MM,h:54*MM,file:'sketch.ino',language:'cpp',pins:Object.freeze(esp32Pins('nodemcu')),builtinLed:'GPIO2'}),
  'esp32-devkit-wroom32':Object.freeze({id:'esp32-devkit-wroom32',name:'ESP32 DevKit 38핀 (ESP32-WROOM-32)',short:'ESP32',kind:'esp32',chip:'ESP32',module:'ESP32-WROOM-32',description:'Espressif ESP32-WROOM-32 모듈 · 38핀 · 3.3 V · 핀 배열은 DevKitC V4 기준(실물 대조 필요)',w:28*MM,h:54*MM,file:'sketch.ino',language:'cpp',pins:Object.freeze(esp32Pins('devkit')),builtinLed:'GPIO2',unverified:'핀 배열 확인 필요 · DevKitC V4 배열과 표기로 그렸습니다.'}),
  'rpi5':Object.freeze({id:'rpi5',name:'Raspberry Pi 5',short:'RPI',kind:'rpi',chip:'BCM2712',description:'40핀 GPIO 헤더 · 3.3 V 로직 · 아날로그 입력 없음',w:85*MM,h:56*MM,file:'main.py',language:'python',pins:Object.freeze(rpiPins()),pullups:Object.freeze({GPIO2:1800,GPIO3:1800})})
-});
+};
+// More STM32 boards (NUCLEO-64): the same header pins as the main board, centred on the component position. Each one
+// keeps its own main.c, pin settings and sources; editing one swaps it with the main board (stm32-boards.js).
+const STM32_NOTES={PA5:'LD2 사용자 LED (보드 내장)',PC13:'B1 USER 버튼 (보드 내장, 누르면 LOW)',PA2:'USART2 TX — ST-LINK 가상 COM 포트',PA3:'USART2 RX — ST-LINK 가상 COM 포트',PA13:'SWDIO — ST-LINK 디버그 연결',PA14:'SWCLK — ST-LINK 디버그 연결'};
+function stm32Pins(boardId){
+ const cx=BOARD.x+BOARD.w/2,cy=BOARD.y+BOARD.h/2;
+ return boardPins(boardId).map(p=>({key:`${p.header}:${p.number}`,label:`${p.header}-${p.number} ${p.label}`,signal:p.signal==='AGND'?'GND':p.signal,header:p.header,number:p.number,x:p.x-cx,y:p.y-cy,notes:STM32_NOTES[p.signal]?[{text:STM32_NOTES[p.signal],warn:['PA13','PA14'].includes(p.signal)}]:p.signal==='NC'?[{text:'연결 없음'}]:[]}));
+}
+for(const board of BOARD_CATALOG){
+ let pins;
+ // Pins are computed on first use: pins.js imports this module, so the header list is not ready while it loads.
+ DEVBOARD_MODELS[board.id]=Object.freeze({id:board.id,name:board.name,short:'STM32',kind:'stm32',chip:board.mcu,mcuFamily:board.mcuFamily,description:`${board.mcu} · ${board.core} · 코드·핀 설정·소스를 보드마다 따로 저장`,w:BOARD.w,h:BOARD.h,file:'main.c',language:'c',get pins(){return pins??=Object.freeze(stm32Pins(board.id));},builtinLed:'PA5'});
+}
+Object.freeze(DEVBOARD_MODELS);
 export const DEVBOARD_IDS=Object.keys(DEVBOARD_MODELS);
 export const devboardModel=part=>DEVBOARD_MODELS[part?.model];
 export const MAX_DEVBOARDS=8;
 export const POWER_SIGNALS=Object.freeze({'3V3':'signal:3V3','5V':'signal:5V',GND:'signal:GND'});
 /** The net a board pin belongs to: its own GPIO net, a common power net, or null (EN). */
-export function devboardNet(part,pin){if(POWER_SIGNALS[pin.signal])return POWER_SIGNALS[pin.signal];return /^GPIO\d+$/.test(pin.signal)?`signal:${part.id}.${pin.signal}`:null;}
+export function devboardNet(part,pin){
+ if(POWER_SIGNALS[pin.signal])return POWER_SIGNALS[pin.signal];
+ // STM32 boards: the board supply pins are the main board's 3.3 V / 5 V nets, every other pin (GPIO, NRST, BOOT0, E5V …)
+ // is the board's own net, as `<signal>` is on the main board.
+ if(devboardModel(part)?.kind==='stm32')return pin.signal==='NC'?null:STM32_COMMON.has(pin.signal)?`signal:${pin.signal}`:`signal:${part.id}.${pin.signal}`;
+ return /^GPIO\d+$/.test(pin.signal)?`signal:${part.id}.${pin.signal}`:null;
+}
+/** Main-board nets every STM32 board shares (fixed supplies); the rest of a board's signals are its own. */
+export const STM32_COMMON=new Set(['3V3','5V','GND','VDD','AVDD','IOREF','U5V']);
 const cache=new WeakMap();
+// A board's placement: rotation, and the size of an STM32 board that was the (resized) main board.
+const frame=part=>({rotation:part.rotation,scale:part.scale,scaleX:part.scaleX,scaleY:part.scaleY});
 /** Pins of a board component in circuit coordinates (`id` is the wire endpoint). */
 export function devboardPins(part){
  const model=devboardModel(part);if(!model)return [];
- const key=[part.id,part.model,part.x,part.y,part.rotation,part.name].join('|'),cached=cache.get(part);if(cached?.key===key)return cached.pins;
- const prefix=devboardPrefix(part.id),pins=model.pins.map(p=>{const q=partVector({rotation:part.rotation},p.x,p.y);return {...p,id:prefix+p.key,x:part.x+q.x,y:part.y+q.y,board:part.id,label:`${part.name} · ${p.label}${p.signal!==p.label&&!p.label.endsWith(p.signal)?' / '+p.signal:''}`};});
+ const key=[part.id,part.model,part.x,part.y,part.rotation,part.name,part.scale,part.scaleX,part.scaleY].join('|'),cached=cache.get(part);if(cached?.key===key)return cached.pins;
+ const prefix=devboardPrefix(part.id),pins=model.pins.map(p=>{const q=partVector(frame(part),p.x,p.y);return {...p,id:prefix+p.key,x:part.x+q.x,y:part.y+q.y,board:part.id,label:`${part.name} · ${p.label}${p.signal!==p.label&&!p.label.endsWith(p.signal)?' / '+p.signal:''}`};});
  cache.set(part,{key,pins,byId:new Map(pins.map(p=>[p.id,p]))});return pins;
 }
 export function devboardPinInfo(id,components=[]){
@@ -59,7 +84,7 @@ export function devboardPinInfo(id,components=[]){
  if(!part)return null;devboardPins(part);return cache.get(part).byId.get(id)||null;
 }
 export function devboardBounds(part){
- const model=devboardModel(part),pts=[[-1,-1],[1,-1],[-1,1],[1,1]].map(([sx,sy])=>{const v=partVector({rotation:part.rotation},sx*model.w/2,sy*model.h/2);return {x:part.x+v.x,y:part.y+v.y};});
+ const model=devboardModel(part),pts=[[-1,-1],[1,-1],[-1,1],[1,1]].map(([sx,sy])=>{const v=partVector(frame(part),sx*model.w/2,sy*model.h/2);return {x:part.x+v.x,y:part.y+v.y};});
  return {left:Math.min(...pts.map(p=>p.x)),right:Math.max(...pts.map(p=>p.x)),top:Math.min(...pts.map(p=>p.y)),bottom:Math.max(...pts.map(p=>p.y))};
 }
 export const DEVBOARD_TEMPLATES=Object.freeze({
@@ -77,9 +102,9 @@ export function newDevboardFields(project,modelId,right=430){
 /** Editor key of a board's program: `board/<id>/<file>` (never a firmware file name, which cannot contain '/'). */
 export const boardFileKey=part=>`board/${part.id}/${devboardModel(part)?.file??'code.txt'}`;
 export const isBoardFile=key=>typeof key==='string'&&key.startsWith('board/');
-export const boardForFile=(project,key)=>isBoardFile(key)?project.components.find(p=>p.type==='devboard'&&boardFileKey(p)===key)??null:null;
+export const boardForFile=(project,key)=>isBoardFile(key)?project.components.find(p=>p.type==='devboard'&&devboardModel(p)?.kind!=='stm32'&&boardFileKey(p)===key)??null:null;
 /** Program files of the boards for the editor's file list: key, label `ESP32-1 · sketch.ino`, text. */
-export function boardSourceFiles(project){return project.components.filter(p=>p.type==='devboard'&&devboardModel(p)).map(p=>({name:boardFileKey(p),label:`${p.name} · ${devboardModel(p).file}`,text:p.code,part:p}));}
+export function boardSourceFiles(project){return project.components.filter(p=>p.type==='devboard'&&devboardModel(p)&&devboardModel(p).kind!=='stm32').map(p=>({name:boardFileKey(p),label:`${p.name} · ${devboardModel(p).file}`,text:p.code,part:p}));}
 export function removeDevboard(project,id){
  const prefix=devboardPrefix(id);project.wires=project.wires.filter(w=>![w.from,w.to].some(e=>e.startsWith(prefix)));project.components=project.components.filter(p=>p.id!==id);
 }
@@ -122,6 +147,8 @@ export function devboardSvg(part,selected=false){
 /** On-board LEDs follow the board's GPIO (ESP32 GPIO2) and power. */
 export function updateDevboardSvg(svg,project,result,running){
  for(const p of project.components){if(p.type!=='devboard')continue;const g=svg.querySelector(`[data-part="${p.id}"]`);if(!g)continue;const model=devboardModel(p);
+  // STM32 boards: LD2 on the board's PA5, as on the main board.
+  const ld2=g.querySelector('.stm32-led');if(ld2){const on=!!result&&!result.fault&&(result.voltage(`signal:${p.id}.PA5`)??0)>1.8;ld2.setAttribute('fill',on?'#64e66b':'#89a486');ld2.style.filter=on?'drop-shadow(0 0 5px #59dc65)':'';continue;}
   g.querySelector('.devboard-power-led')?.setAttribute('fill',running?'#ff4d4d':'#7a2525');
   const led=g.querySelector('.devboard-led');if(led&&model.builtinLed){const on=!!result&&!result.fault&&(result.voltage(`signal:${p.id}.${model.builtinLed}`)??0)>2;led.setAttribute('fill',on?'#4da3ff':'#21384f');led.style.filter=on?'drop-shadow(0 0 4px #4da3ff)':'';}
  }

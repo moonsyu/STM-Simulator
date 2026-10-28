@@ -50,6 +50,7 @@ nativeHandle('choose-tool',async key=>{if(!TOOL_KEYS.includes(key))throw new Err
 nativeHandle('build',(text,config)=>nativeIde.compile(text,config));
 nativeHandle('boards',()=>listBoards());
 nativeHandle('run',data=>nativeIde.run(data));
+nativeHandle('run-boards',data=>nativeIde.runOnBoards(data));
 nativeHandle('debug',data=>nativeIde.startDebug(data));
 nativeHandle('stop',()=>nativeIde.stop());
 nativeHandle('action',action=>nativeIde.gdb.action(action));

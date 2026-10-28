@@ -14,7 +14,7 @@ function esp32Pin(model,value){
 }
 export class SketchDriver{
  constructor(part,{log=()=>{},project}={}){
-  const model=devboardModel(part);this.part=part;this.project=project;this.result=null;this.output='';
+  const model=devboardModel(part);this.part=part;this.project=project;this.result=null;this.output='';this.outputLabel='스케치 출력';
   this.print=text=>{this.output=(this.output+text).slice(-8000);for(const line of String(text).split('\n').filter(Boolean))log(line);};
   this.wire={address:null,receive:null,request:null,rx:[],tx:[]};this.ledc=new Map();
   let program;try{program=compile(part.code,{esp32:true});}catch(error){throw new Error(`${part.name} · ${devboardModel(part).file}: ${error.message}`);}

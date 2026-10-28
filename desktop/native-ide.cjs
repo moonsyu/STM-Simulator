@@ -65,6 +65,25 @@ async function chooseStlink(boardName,preferred,list=listStlinks){
   if(links.every(l=>l.board&&!same(l)))throw new Error(`프로젝트 보드 ${boardName}가 연결되어 있지 않습니다. 연결된 보드: ${links.map(l=>l.board).join(', ')}. 보드를 연결하거나 프로젝트 보드를 바꾸세요.`);
   throw new Error(`ST-LINK가 ${links.length}개 연결되어 있습니다. 보드 연결 설정에서 ${boardName}의 ST-LINK 시리얼을 지정하세요: ${links.map(l=>l.serial+(l.board?` (${l.board})`:'')).join(', ')}`);
 }
+/** ST-LINK serials of several boards ([{name, boardName, serial}] → serials, same order): a set serial is kept (and
+ * checked against the board kind), the rest take the one unused ST-LINK of their kind, or the only unused one whose
+ * board is unknown. Two boards never share one ST-LINK. */
+async function assignStlinks(items,list=listStlinks){
+  const links=await list(),used=new Set(),out=[],same=(l,item)=>l.board.toUpperCase()===item.boardName.toUpperCase();
+  for(const item of items)if(item.serial){
+    if(used.has(item.serial))throw new Error(`${item.name}와 다른 보드에 같은 ST-LINK ${item.serial}가 지정되어 있습니다. 보드마다 다른 ST-LINK를 고르세요.`);
+    const picked=links.find(l=>l.serial===item.serial);if(picked?.board&&!same(picked,item))throw new Error(`${item.name}: 지정한 ST-LINK ${item.serial}는 ${picked.board}에 연결되어 있습니다 (이 보드는 ${item.boardName}).`);
+    used.add(item.serial);
+  }
+  for(const item of items){
+    if(item.serial){out.push(item.serial);continue;}
+    const free=links.filter(l=>!used.has(l.serial)),match=free.filter(l=>same(l,item)),unknown=free.filter(l=>!l.board);
+    const serial=match.length===1?match[0].serial:!match.length&&unknown.length===1?unknown[0].serial:null;
+    if(!serial)throw new Error(!free.length?`${item.name}(${item.boardName})에 쓸 ST-LINK가 없습니다. 보드를 모두 USB로 연결하세요 (연결됨: ${links.length}개).`:`${item.name}(${item.boardName})의 ST-LINK를 정할 수 없습니다. 보드 속성의 "실물 기록 ST-LINK"에서 고르세요: ${free.map(l=>l.serial+(l.board?` (${l.board})`:'')).join(', ')}`);
+    used.add(serial);out.push(serial);
+  }
+  return out;
+}
 function checkedConfig(value){if(!value||!['arm','host'].includes(value.target)||!['Debug','Release'].includes(value.configuration))throw new Error('빌드 대상과 구성을 선택하세요.');return {target:value.target,configuration:value.configuration};}
 class NativeIde extends EventEmitter{
   constructor(directory){super();this.directory=directory;this.gdb=new GdbSession();this.lsp=new LanguageServer();this.result=null;this.buildController=null;this.tools=null;this.runProcess=null;this.server=null;this.terminal=null;
@@ -114,17 +133,40 @@ class NativeIde extends EventEmitter{
   // The connection's flash option only decides whether debugging (F10) loads the ELF or attaches to what is on the board.
   async runOnBoard({text,config,connection}){
     if(this.busy())throw new Error('현재 실행을 먼저 종료하세요.');
-    const plan=await this.ensureBuild(text,config),tools=await this.settings();
-    if(!tools.openocd)throw new Error('OpenOCD 경로를 설정하세요.');
+    const plan=await this.ensureBuild(text,config);
+    this.send('run-state',{state:'running'});
+    try{await this.program(plan,await this.boardTarget(text,connection));this.send('run-output',{text:'\n펌웨어를 보드에 기록·검증하고 리셋했습니다. 디버거를 분리했으므로 보드가 단독으로 실행합니다.\n'});return {directory:plan.directory,flashed:true};}
+    finally{this.send('run-state',{state:'idle'});}
+  }
+  // OpenOCD `program … verify reset exit` of a built ELF through one ST-LINK.
+  async program(plan,target){
+    const tools=await this.settings();if(!tools.openocd)throw new Error('OpenOCD 경로를 설정하세요.');
     const steps=['-c',`program {${plan.elf.replace(/\\/g,'/')}} verify reset exit`];
-    const child=this.runProcess=launch(tools.openocd,[...await openocdArgs(tools.openocd,await this.boardTarget(text,connection)),'-c','bindto 127.0.0.1','-c','gdb_port disabled','-c','tcl_port disabled','-c','telnet_port disabled',...steps],{});
-    this.send('run-state',{state:'running'});let log='';
+    const child=this.runProcess=launch(tools.openocd,[...await openocdArgs(tools.openocd,target),'-c','bindto 127.0.0.1','-c','gdb_port disabled','-c','tcl_port disabled','-c','telnet_port disabled',...steps],{});let log='';
     try{
       const code=await new Promise((resolve,reject)=>{child.once('error',reject);child.once('close',resolve);for(const stream of [child.stdout,child.stderr]){stream.setEncoding('utf8');stream.on('data',t=>{log=(log+t).slice(-10000);this.send('run-output',{text:t});});}});
       if(code!==0)throw new Error(`OpenOCD 기록 실패 (종료 코드 ${code}). ST-LINK 연결을 확인하세요.\n`+log.slice(-1500));
-      this.send('run-output',{text:'\n펌웨어를 보드에 기록·검증하고 리셋했습니다. 디버거를 분리했으므로 보드가 단독으로 실행합니다.\n'});
-      return {directory:plan.directory,flashed:true};
-    }finally{if(this.runProcess===child)this.runProcess=null;this.send('run-state',{state:'idle'});}
+    }finally{if(this.runProcess===child)this.runProcess=null;}
+  }
+  // Every STM32 board of the circuit: built from its own view of the project and written through its own ST-LINK,
+  // one after another (the ST-LINK of each is checked before anything is built or written).
+  async runOnBoards({boards,config,connection={}}){
+    if(this.busy())throw new Error('현재 실행을 먼저 종료하세요.');
+    if(!Array.isArray(boards)||!boards.length||boards.length>4)throw new Error('기록할 STM32 보드를 확인하세요.');
+    const {projectBoard}=await import('../src/boards.js'),items=[];
+    for(const b of boards){if(typeof b?.name!=='string'||b.name.length>80)throw new Error('보드 이름을 확인하세요.');const project=await this.validate(b.text),board=projectBoard(project);items.push({name:b.name,text:b.text,board,boardName:board.name,serial:typeof b.serial==='string'&&/^\w{8,40}$/.test(b.serial)?b.serial:''});}
+    const serials=await assignStlinks(items);
+    this.send('run-state',{state:'running'});
+    try{
+      for(const [i,item]of items.entries()){
+        this.send('run-output',{text:`\n[${item.name}] ${item.boardName} · ST-LINK ${serials[i]} · 빌드\n`});
+        const plan=await this.compile(item.text,config);
+        this.send('run-output',{text:`[${item.name}] 기록·검증·리셋\n`});
+        await this.program(plan,{target:OPENOCD_TARGETS[item.board.mcuFamily],serial:serials[i]});
+      }
+      this.send('run-output',{text:`\n보드 ${items.length}개에 펌웨어를 기록했습니다: ${items.map(b=>b.name).join(', ')}. 디버거를 분리했으므로 보드가 각자 실행합니다.\n`});
+      return {flashed:items.length};
+    }finally{this.send('run-state',{state:'idle'});}
   }
   async startServer(executable,options){
     if(!executable)throw new Error('OpenOCD 경로를 설정하세요.');
@@ -153,4 +195,4 @@ class NativeIde extends EventEmitter{
   async close(){await this.stop();await this.lsp.stop();await this.closeTerminal();}
   async closeTerminal(){const child=this.terminal;this.terminal=null;await terminate(child);if(!this.terminal)this.send('terminal-state',{state:'closed'});}
 }
-module.exports={NativeIde,openocdArgs,chooseStlink,listBoards};
+module.exports={NativeIde,openocdArgs,chooseStlink,assignStlinks,listBoards};

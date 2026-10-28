@@ -33,6 +33,7 @@ import {projectBoard} from './boards.js';
 import {boardSvg} from './render.js';
 import {moveBreadboard,removeBreadboard,isBreadboardLibraryType,newBreadboardFields,breadboardBounds} from './breadboards.js';
 import {DEVBOARD_MODELS,devboardModel,devboardBounds,devboardPinInfo,newDevboardFields,removeDevboard,boardFileKey,boardForFile,isBoardFile} from './devboards.js';
+import {isStm32Board,stm32Boards,mainBoardName,newStm32Fields,swapStm32,promoteStm32,createStm32Drivers,connectStm32Drivers,stm32View} from './stm32-boards.js';
 import {createBoardDrivers} from './fixed-run.js';
 import {searchLectureExamples,applyLectureExample,lectureExample,lectureGuide,LECTURE_PREFIX} from './lecture-examples.js';
 import {setupBoardPicker} from './board-picker.js';
@@ -122,11 +123,12 @@ function changed(){autosave();refresh();}
 function setMode(m){if(running()){log('편집하려면 시뮬레이션을 먼저 정지하세요.');return;}mode=m;pending=null;selection=null;$('preview-layer').innerHTML='';refresh();}
 function syncEditor(){
  lastCodeCheckpoint=0;
- $('project-name').value=project.name;const files=project.firmware?.files||[],hal=project.firmware?.mode==='hal',boards=project.components.filter(p=>p.type==='devboard'&&devboardModel(p));if(!files.some(f=>f.name===sourceFile)&&!boardForFile(project,sourceFile))sourceFile='main.c';try{localStorage.setItem(SOURCE_KEY,sourceFile);}catch{}
- $('source-file').innerHTML=`<option value="main.c">${hal?'main.c':'main.ino'}</option>`+files.map(f=>`<option value="${esc(f.name)}">${esc(f.name)}</option>`).join('')+boards.map(p=>`<option value="${esc(boardFileKey(p))}">${esc(p.name)} · ${esc(devboardModel(p).file)}</option>`).join('');$('source-file').value=sourceFile;
+ $('project-name').value=project.name;const files=project.firmware?.files||[],hal=project.firmware?.mode==='hal',boards=project.components.filter(p=>p.type==='devboard'&&devboardModel(p)&&!isStm32Board(p)),others=stm32Boards(project);if(!files.some(f=>f.name===sourceFile)&&!boardForFile(project,sourceFile))sourceFile='main.c';try{localStorage.setItem(SOURCE_KEY,sourceFile);}catch{}
+ // Other STM32 boards are edited by making them the board being edited (stm32:<id> swaps it with the main board).
+ $('source-file').innerHTML=`<option value="main.c">${others.length?esc(mainBoardName(project))+' · ':''}${hal?'main.c':'main.ino'}</option>`+files.map(f=>`<option value="${esc(f.name)}">${esc(f.name)}</option>`).join('')+boards.map(p=>`<option value="${esc(boardFileKey(p))}">${esc(p.name)} · ${esc(devboardModel(p).file)}</option>`).join('')+others.map(p=>`<option value="stm32:${esc(p.id)}">${esc(p.name)} · main.c (이 보드 편집)</option>`).join('');$('source-file').value=sourceFile;
  const board=boardForFile(project,sourceFile),fixedBoard=board&&devboardModel(board).kind!=='esp32';$('code').readOnly=running()||!!fixedBoard;
  $('code').value=board?board.code:sourceFile==='main.c'?project.code:files.find(f=>f.name===sourceFile).text;$('firmware-mode').value=hal?'hal':'sketch';
- document.querySelector('.language-badge').textContent=board?(fixedBoard?`${board.name} · Raspberry Pi · 고정 실행`:`${board.name} · ESP32 스케치`):hal?'STM32 HAL':'GPIO 스케치';lineNumbers();monitor.settings(project.simulation);
+ document.querySelector('.language-badge').textContent=board?(fixedBoard?`${board.name} · Raspberry Pi · 고정 실행`:`${board.name} · ESP32 스케치`):(others.length?mainBoardName(project)+' · ':'')+(hal?'STM32 HAL':'GPIO 스케치');lineNumbers();monitor.settings(project.simulation);
  document.querySelector('.code-note code').textContent=hal?'HAL_GPIO_Init · WritePin · ReadPin · TogglePin\nHAL_UART_Transmit · Receive_IT\nHAL_GPIO_EXTI_Callback\nHAL_TIM_Base_Start_IT · HAL_ADC_GetValue\nHAL_I2C_Mem_Read · HAL_SPI_Transmit\nprintf("value=%lu\\n", value)':'pinMode · digitalWrite · digitalRead\nanalogRead · analogWrite · delay\nLiquidCrystal · Serial1 · Wire · SPI\nTimer · attachInterrupt · DMA';
  document.querySelector('.code-note p').textContent=hal?'main(void)와 지원 HAL API를 회로에 연결합니다. 전체 HAL 드라이버·ELF/BIN 실행은 지원하지 않습니다.':'GPIO 스케치 문법의 일부를 실행합니다. ELF/BIN 펌웨어 로더는 포함되지 않습니다.';
  const selectedSerial=$('serial-target').value,serials=hal?SERIAL_IDS.filter(id=>project.mcu?.peripherals[id]?.enabled):[],serialKey=hal?serials.join(','):'sketch',keepSerial=$('serial-target').dataset.channels===serialKey;
@@ -150,11 +152,11 @@ function refresh({preserveWires=false}={}){
  deviceDocs?.refresh();
  // The board drawing is static; redraw it when the project switches to another board.
  const boardGroup=svg.querySelector('#surface > .board');if(boardGroup&&boardGroup.dataset.board!==projectBoard(project).id){boardGroup.outerHTML=boardSvg(projectBoard(project).id);filterExamples();}
- updateSurfaces(svg,project,selection);
+ updateSurfaces(svg,project,selection);boardTitle();
  updateBoardPicker();if(project.surfaces?.board?.hidden)$('search-layer').innerHTML='';svg.classList.toggle('connecting',mode==='wire'||!!pending);
  const boards=project.components.filter(p=>p.type==='breadboard'),nextBreadboardKey=JSON.stringify(boards.map(p=>[p,isSelected(selection,'part',p.id)]));
  if(nextBreadboardKey!==breadboardKey){$('breadboard-layer').innerHTML=renderBreadboards(project,selection);breadboardKey=nextBreadboardKey;}
- const devboards=project.components.filter(p=>p.type==='devboard'),nextDevboardKey=JSON.stringify(devboards.map(p=>[p.id,p.model,p.name,p.x,p.y,p.rotation,isSelected(selection,'part',p.id)]));
+ const devboards=project.components.filter(p=>p.type==='devboard'),nextDevboardKey=JSON.stringify(devboards.map(p=>[p.id,p.model,p.name,p.x,p.y,p.rotation,p.scale,p.scaleX,p.scaleY,isSelected(selection,'part',p.id)]));
  if(nextDevboardKey!==devboardKey){$('devboard-layer').innerHTML=renderDevboards(project,selection);devboardKey=nextDevboardKey;updateRunScope();}
  if(!preserveWires)$('wire-layer').innerHTML=renderWires(project,selection);
  else $('wire-layer').querySelectorAll('[data-wire]').forEach(el=>el.classList.toggle('wire-selected',isSelected(selection,'wire',el.dataset.wire)));
@@ -179,10 +181,17 @@ function refresh({preserveWires=false}={}){
  $('status-led').className=running()?'running':'';
  $('connection-count').textContent=`부품 ${project.components.length}개 · 배선 ${project.wires.length}개`;
  $('empty-add-board').textContent=projectBoard(project).name+' 추가';$('canvas-empty').hidden=!(project.surfaces?.board?.hidden&&project.surfaces?.breadboard?.hidden&&!project.components.length)||running();
- if($('explorer-circuit-summary'))$('explorer-circuit-summary').textContent=`${project.surfaces?.board?.hidden?'보드 없음':projectBoard(project).name} · 부품 ${project.components.filter(p=>!['breadboard','devboard'].includes(p.type)).length}개 · 빵판 ${project.components.filter(p=>p.type==='breadboard').length+(project.surfaces?.breadboard?.hidden?0:1)}개${devboards.length?` · 다른 보드 ${devboards.length}개`:''} · 배선 ${project.wires.length}개`;
+ if($('explorer-circuit-summary'))$('explorer-circuit-summary').textContent=`${project.surfaces?.board?.hidden?'보드 없음':stm32Boards(project).length?`STM32 ${stm32Boards(project).length+1}개 (편집: ${mainBoardName(project)})`:projectBoard(project).name} · 부품 ${project.components.filter(p=>!['breadboard','devboard'].includes(p.type)).length}개 · 빵판 ${project.components.filter(p=>p.type==='breadboard').length+(project.surfaces?.breadboard?.hidden?0:1)}개${devboards.length?` · 다른 보드 ${devboards.length}개`:''} · 배선 ${project.wires.length}개`;
  $('hint').textContent=running()?'실행 중 핀을 클릭하면 전압을 측정합니다. 버튼은 누르는 동안 연결됩니다.':carry?CARRY_HINT:pending?'핀을 클릭하면 연결 · 바닥 클릭으로 꺾임점 추가 · 우클릭 / Esc: 작성 중 배선 취소':drag?.type==='part'?'초록색 표시가 나타나면 놓아서 장착하세요. R: 45° 회전':'부품을 끌어 빵판에 꽂기 · 빈 공간 / 가운데 버튼: 화면 이동 · 배치 범위 제한 없음';
  inspector();updateReadouts();
  ide?.controls();canvasKeys?.refresh(keyboardFocus);
+}
+// With more STM32 boards the main board shows its name and that it is the one being edited.
+function boardTitle(){
+ const group=svg.querySelector('#surface > .board');if(!group)return;let title=group.querySelector('.board-title');
+ if(!stm32Boards(project).length){title?.remove();return;}
+ if(!title){group.insertAdjacentHTML('beforeend',`<text class="board-title devboard-name" x="${BOARD.x+BOARD.w/2}" y="${BOARD.y-10}" font-size="12" fill="#2b7a5f" text-anchor="middle" font-weight="700"></text>`);title=group.querySelector('.board-title');}
+ title.textContent=`${mainBoardName(project)} · 편집 중`;
 }
 function updateAudio(){buzzerAudio?.update(project,result,audioEnabled,status==='running');}
 $('sound').onclick=async()=>{audioEnabled=!audioEnabled;if(audioEnabled&&!audioContext){audioContext=new AudioContext();buzzerAudio=new BuzzerAudio(audioContext);}if(audioEnabled)await audioContext.resume();$('sound').textContent=audioEnabled?'소리 켜짐':'소리 꺼짐';$('sound').setAttribute('aria-pressed',String(audioEnabled));updateAudio();};
@@ -237,6 +246,13 @@ function renderIssues(force=false){
 }
 function copyCircuit(){if(!selectedIds(selection,'part').length&&!selectedIds(selection,'wire').length)return false;circuitClipboard=copySelection(project,selection);clipboardOffset=28;log(`부품 ${circuitClipboard.components.length}개와 내부 배선 ${circuitClipboard.wires.length}개를 복사했습니다.`);return true;}
 function pasteCircuit(){if(running()||!circuitClipboard)return;try{const draft=structuredClone(project),{skipped,...next}=pasteSelection(draft,circuitClipboard,uid,clipboardOffset);validateProject(draft);checkpoint();project=draft;selection=next;if(skipped)log(`이미 배선이나 부품 다리가 있는 핀·구멍에 닿는 배선 ${skipped}개는 붙여 넣지 않았습니다.`);clipboardOffset+=28;pending=null;mode='select';inspectTab();changed();}catch(e){log(e.message,'error');}}
+// The ST-LINK a board is written through when the circuit runs on real boards (connected boards, or one typed in).
+function stlinkField(serial,dis){
+ const boards=ide?.connectedBoards?.()||[],options=[['','자동 (보드 종류로 찾기)'],...boards.map(b=>[b.serial,`${b.board||'ST-LINK'} · ${b.serial}${b.port?` (${b.port})`:''}`])];
+ if(serial&&!boards.some(b=>b.serial===serial))options.push([serial,`${serial} (연결 안 됨)`]);
+ return `<label for="board-stlink">실물 기록 ST-LINK</label><select id="board-stlink" ${dis}>${options.map(([v,l])=>`<option value="${esc(v)}" ${v===(serial||'')?'selected':''}>${esc(l)}</option>`).join('')}</select>`;
+}
+function bindStlink(apply){const el=$('board-stlink');if(el)el.onchange=e=>apply(e.target.value);}
 function inspector(force=false){
  const el=$('inspector'),selected=selection?.type==='part'?project.components.find(p=>p.id===selection.id):selection?.type==='wire'?project.wires.find(w=>w.id===selection.id):selection?.type==='endpoint'?endpointInfo(selection.id,project.components,project.surfaces):null;
  const key=JSON.stringify([selection,selected,running()]);
@@ -245,6 +261,13 @@ function inspector(force=false){
  if(!selection){el.innerHTML='<span class="overline">CIRCUIT INSPECTOR</span><h2>회로 살펴보기</h2><div class="empty-inspector">핀, 배선 또는 부품을 선택하세요.<br>실행 중 전압과 전류를 확인할 수 있습니다.</div>';return;}
  if(selection.type==='group'){el.innerHTML=`<span class="overline">MULTIPLE SELECTION</span><h2>여러 항목 선택</h2><p>부품 ${selection.parts.length}개 · 배선 ${selection.wires.length}개</p><p>Shift+클릭 또는 Shift+빈 공간 드래그로 선택을 추가합니다. Ctrl+A: 전체 선택 · Ctrl+D: 복제 · Ctrl+C/V: 복사/붙여넣기 · Esc: 선택 삭제.</p><button id="copy-group" class="inspector-action">선택 복사</button><button id="remove-group" class="inspector-action danger" ${running()?'disabled':''}>선택 삭제</button>`;$('copy-group').onclick=copyCircuit;$('remove-group').onclick=removeSelected;return;}
  if(selection.type==='surface'){
+   if(selection.id==='board'&&stm32Boards(project).length){
+    const dis=running()?'disabled':'';
+    el.innerHTML=`<span class="overline">STM32 · 편집 중</span><h2 title="${esc(mainBoardName(project))}">${esc(mainBoardName(project))}</h2><p>${esc(projectBoard(project).name)} · 지금 편집기·핀 설정·빌드·디버그가 이 보드를 대상으로 합니다.</p><div class="inspector-card"><label for="part-name">보드 이름</label><input id="part-name" value="${esc(mainBoardName(project))}" maxlength="40" ${dis}>${stlinkField(project.surfaces.board.stlink,dis)}</div><p>실행하면 회로의 STM32 보드가 모두 함께 실행됩니다. 실물 보드 실행은 보드마다 빌드해 각자의 ST-LINK에 차례로 기록합니다.</p><button class="inspector-action" id="inspect-open-docs">장치 Docs · 배선/예제 보기</button>`;
+    $('inspect-open-docs').onclick=()=>tab('docs');
+    $('part-name').onchange=e=>{const name=e.target.value.trim();if(!name||project.components.some(c=>c.name===name)){log('보드 이름이 비었거나 다른 부품·보드 이름과 같습니다.','error');inspector(true);return;}checkpoint();project.surfaces.board.name=name;syncEditor();changed();};
+    bindStlink(value=>{checkpoint();if(value)project.surfaces.board.stlink=value;else delete project.surfaces.board.stlink;changed();});return;
+   }
    el.innerHTML=`<h2>${selection.id==='board'?'STM32 보드':'기본 빵판'}</h2><p>몸체를 끌어 이동하고, 가장자리와 모서리를 끌어 가로·세로 크기를 조절하세요. Shift를 누르면 비율을 유지하고, 드래그 중 Esc를 누르면 취소합니다. 연결된 핀·배선과 장착 부품도 함께 이동합니다.</p><button class="inspector-action" id="inspect-open-docs">장치 Docs · 배선/예제 보기</button>`;
    $('inspect-open-docs').onclick=()=>tab('docs');
  } else if(selection.type==='endpoint'){
@@ -256,6 +279,13 @@ function inspector(force=false){
    if(p.type==='breadboard'){
     el.innerHTML=`<span class="overline">BREADBOARD</span><h2 title="${esc(p.name)}">${esc(p.name)}</h2><p>${breadboardModel(p).label} · A–E / F–J 행과 전원 레일은 각각 연결됩니다. 다른 빵판과는 배선으로 연결해야 합니다.</p><div class="inspector-card"><label for="part-name">빵판 이름</label><input id="part-name" value="${esc(p.name)}" maxlength="80" ${running()?'disabled':''}></div><p>테두리를 끌어 이동하세요. 장착한 부품과 배선도 함께 이동합니다. 삭제하면 구멍에 연결된 배선과 장착 연결이 해제되며 다른 부품은 남습니다.</p><div class="measure"><span>회전 각도</span><b>${p.rotation}°</b></div><button class="inspector-action" id="inspect-open-docs">장치 Docs · 배선/예제 보기</button><button class="inspector-action" id="rotate-part" ${running()?'disabled':''}>45° 회전 (R)</button><button class="inspector-action danger" id="remove-part" ${running()?'disabled':''}>빵판 삭제</button>`;
     $('part-name').onchange=e=>{checkpoint();p.name=e.target.value.trim()||p.name;changed();};$('inspect-open-docs').onclick=()=>tab('docs');$('rotate-part').onclick=rotateSelected;$('remove-part').onclick=removeSelected;return;
+   }
+   if(isStm32Board(p)){
+    const model=devboardModel(p),dis=running()?'disabled':'';
+    el.innerHTML=`<span class="overline">STM32</span><h2 title="${esc(p.name)}">${esc(p.name)}</h2><p>${esc(model.name)} · ${esc(model.description)}</p><div class="inspector-card"><label for="part-name">보드 이름</label><input id="part-name" value="${esc(p.name)}" maxlength="40" ${dis}>${stlinkField(p.stlink,dis)}</div><div class="measure"><span>코드</span><b>main.c · ${p.firmware?.mode==='hal'?'HAL':'스케치'}${p.firmware?.files?.length?` · 소스 ${p.firmware.files.length+1}개`:''}</b></div><p>이 보드의 main.c·핀 설정·소스는 보드에 따로 저장됩니다. 편집하면 이 보드가 편집 대상이 되고, 지금 편집 중인 ${esc(mainBoardName(project))}는 이 자리에 그대로 남습니다.</p><button class="inspector-action" id="edit-board" ${dis}>이 보드 편집 · 코드와 핀 설정</button><button class="inspector-action" id="inspect-open-docs">장치 Docs · 핀 표</button><button class="inspector-action danger" id="remove-part" ${dis}>보드 삭제</button>`;
+    $('part-name').onchange=e=>{const name=e.target.value.trim();if(!name||name===mainBoardName(project)||project.components.some(c=>c!==p&&c.name===name)){log('보드 이름이 비었거나 다른 부품·보드 이름과 같습니다.','error');inspector(true);return;}checkpoint();p.name=name;syncEditor();changed();};
+    $('edit-board').onclick=()=>{if(editBoard(p.id))tab('code');};$('inspect-open-docs').onclick=()=>tab('docs');$('remove-part').onclick=removeSelected;
+    bindStlink(value=>{checkpoint();if(value)p.stlink=value;else delete p.stlink;changed();});return;
    }
    if(p.type==='devboard'){
     const model=devboardModel(p),dis=running()?'disabled':'';
@@ -286,7 +316,8 @@ function inspector(force=false){
 }
 function removeSelected(){
  if(running()||!selection)return;
- if(selection.type==='surface'){checkpoint();removeSurface(project,selection.id);searchSelectedId=null;pinSearch();}
+ if(selection.type==='surface'&&selection.id==='board'&&stm32Boards(project).length){checkpoint();const gone=mainBoardName(project);promoteStm32(project);firmware=null;sourceFile='main.c';syncEditor();log(`${gone}를 삭제했습니다. 이제 ${mainBoardName(project)}를 편집합니다.`);searchSelectedId=null;pinSearch();}
+ else if(selection.type==='surface'){checkpoint();removeSurface(project,selection.id);searchSelectedId=null;pinSearch();}
  else if(selection.type==='group'){checkpoint();const parts=new Set(selection.parts),wires=new Set(selection.wires);for(const id of parts){const type=project.components.find(p=>p.id===id)?.type;if(type==='breadboard')removeBreadboard(project,id);if(type==='devboard')removeDevboard(project,id);}project.components=project.components.filter(p=>!parts.has(p.id));project.wires=project.wires.filter(w=>!wires.has(w.id)&&![w.from,w.to].some(id=>id.startsWith('part:')&&parts.has(id.split(':')[1])));}
  else if(selection.type==='part'){checkpoint();const type=project.components.find(p=>p.id===selection.id)?.type;if(type==='breadboard')removeBreadboard(project,selection.id);else if(type==='devboard'){if(boardForFile(project,sourceFile)?.id===selection.id)sourceFile='main.c';removeDevboard(project,selection.id);syncEditor();}else {project.components=project.components.filter(p=>p.id!==selection.id);project.wires=project.wires.filter(w=>![w.from,w.to].some(id=>id.startsWith(`part:${selection.id}:`)));}}
  else if(selection.type==='wire'){checkpoint();project.wires=project.wires.filter(w=>w.id!==selection.id);}else return;
@@ -297,6 +328,7 @@ function rotateSelected(){
  const p=project.components.find(p=>p.id===selection.id);if(!p)return;
  if(!drag?.moved)checkpoint();
  if(p.type==='breadboard'){moveBreadboard(project,p.id,{x:p.x,y:p.y,rotation:p.rotation+45});if(drag?.type==='part')drag.moved=true;changed();return;}
+ if(isStm32Board(p)){log('STM32 보드는 회전하지 않습니다. 편집할 때 주 보드와 자리를 바꾸기 때문입니다.');return;}
  // Boards turn in 90° steps; an ESP32 then plugs in again where its pins meet free holes.
  if(p.type==='devboard'){detachPart(p);p.rotation=normalizeAngle(p.rotation+90);if(drag?.type==='part'){drag.moved=true;refresh();$('preview-layer').innerHTML=renderMountPreview(findMount(p,project.components,15,project.surfaces,project.wires));}else{applyMount(p,findMount(p,project.components,15,project.surfaces,project.wires));changed();}return;}
  detachPart(p);p.rotation=normalizeAngle(p.rotation+45);
@@ -346,9 +378,10 @@ svg.addEventListener('pointerdown',e=>{
  const target=e.target,part=target.closest('[data-part]'),onboard=target.closest('[data-button]');
  if(running()&&(onboard||part)){
    if(onboard?.dataset.button==='RESET'){resetRuntime();return;}
+   if(onboard?.dataset.button.endsWith('.RESET')){resetBoard(onboard.dataset.button.slice(0,-6));return;}
    const id=onboard?.dataset.button||part?.dataset.part,p=project.components.find(p=>p.id===id);
    if((p?.type==='slide'||CATALOG_BY_TYPE[p?.type]?.family==='slide')&&!target.closest('[data-endpoint]')){checkpoint();p.position=(p.position+1)%(CATALOG_BY_TYPE[p.type]?.id.includes('dp3t')?3:2);selection={type:'part',id:p.id};inspectTab();recompute();autosave();refresh();return;}
-   if(id==='USER'||p?.type==='button'||CATALOG_BY_TYPE[p?.type]?.family==='button'){pressed[id]=true;drag={type:'press',id};svg.setPointerCapture(e.pointerId);recompute();refresh();return;}
+   if(id==='USER'||id.endsWith('.USER')||p?.type==='button'||CATALOG_BY_TYPE[p?.type]?.family==='button'){pressed[id]=true;drag={type:'press',id};svg.setPointerCapture(e.pointerId);recompute();refresh();return;}
  }
  if(carry&&e.button===0){
    const c=carry,q=point(e),hit=target.closest('[data-wire-end]');
@@ -448,7 +481,7 @@ const boardOnlyRun=()=>project.components.some(p=>p.type==='devboard')&&(!!proje
 function updateRunScope(){
  const select=$('run-scope');if(!select)return;const boards=project.components.filter(p=>p.type==='devboard'),value=runScope();
  select.closest('label').hidden=!boards.length;
- select.innerHTML='<option value="all">전체 보드</option><option value="stm32">STM32만</option>'+boards.map(p=>`<option value="${esc(p.id)}">${esc(p.name)}만</option>`).join('');select.value=value;select.disabled=running();
+ select.innerHTML=`<option value="all">전체 보드</option><option value="stm32">${stm32Boards(project).length?esc(mainBoardName(project)):'STM32'}만</option>`+boards.map(p=>`<option value="${esc(p.id)}">${esc(p.name)}만</option>`).join('');select.value=value;select.disabled=running();
 }
 function initializeRuntime({debug=false,entry=false}={}){
  const scope=runScope(),boardOnly=boardOnlyRun(),emulate=!boardOnly&&!!ide?.emulator();
@@ -457,9 +490,10 @@ function initializeRuntime({debug=false,entry=false}={}){
  try{simTime=0;pressed={};lastWarnings='';result=null;monitor.clear();uartLines.clear();const options={debug:debug?{entry,breakpoints:ide?.breakpoints()||[]}:undefined,print:s=>log(s,'serial'),uart:logUart,trace:event=>monitor.trace(event),channels:monitor.channels()};
   session=emulate?new FirmwareSession(project,{...options,elf:firmware.bytes}):new SimulationSession(boardOnly?{...project,code:BOARD_ONLY_PROGRAM,firmware:{mode:'sketch',files:[]}}:project,{...options,program});runtime=session.runtime;status='paused';pending=null;mode='select';// The start line comes before what the program prints in its first tick.
   log(boardOnly?'다른 보드만 실행합니다. STM32 코드는 실행하지 않습니다.':emulate?`펌웨어 에뮬레이터를 시작했습니다 · ${firmware.name} · ${projectBoard(project).mcu} (${projectBoard(project).core}) 명령어 실행`:project.firmware?.mode==='hal'?'HAL 프로그램을 시작했습니다.':'스케치를 시작했습니다.');
-  session.circuit.drivers=scope==='stm32'?[]:createBoardDrivers(project,{log:s=>log(s,'serial'),scope});session.buses.boards=()=>session.circuit.drivers;result=session.tick(0);for(const p of project.components)if(isCamera(p))void applyCameraImage(p,session);diagnostic('simulation.started',{debug,entry},true);ide?.debugView();return true;}
+  session.circuit.drivers=scope==='stm32'?[]:[...createBoardDrivers(project,{log:s=>log(s,'serial'),scope}),...createStm32Drivers(project,{scope,emulate:!!ide?.emulator(),elfs:boardElfs,log:s=>log(s,'serial'),trace:event=>monitor.trace(event)})];connectStm32Drivers(session);session.buses.boards=()=>session.circuit.drivers;result=session.tick(0);for(const p of project.components)if(isCamera(p))void applyCameraImage(p,session);diagnostic('simulation.started',{debug,entry},true);ide?.debugView();return true;}
  catch(e){runtime=null;result=session?.viewResult??null;status='error';log(e.message,'error');return false;}
 }
+function resetBoard(id){const driver=session?.circuit?.drivers?.find(d=>d.part.id===id);if(!driver?.reset)return;try{driver.reset();log(`[${driver.part.name}] RESET · 프로그램을 처음부터 다시 실행합니다.`,'serial');}catch(e){status='error';log(e.message,'error');}refresh();}
 function recordSimulation(){if(result)diagnostic('simulation.state',{status,simulationMs:simTime,pins:runtime?.gpio||{},parts:result.parts,fault:result.fault,warnings:result.warnings});}
 function resetRuntime(){
  if(!runtime||!session||!['running','paused'].includes(status))return false;
@@ -476,7 +510,7 @@ $('run').onclick=()=>{if(runtime?.debug.paused){runtime.resume();simTime=runtime
 function cancelStart(){starting=false;startToken++;window.nativeIde?.stop?.().catch(()=>{});log('펌웨어 빌드를 취소했습니다.');refresh();}
 async function startRun(options){
  if(starting)return false;
- if(ide?.emulator()&&!boardOnlyRun()){const token=++startToken;starting=true;refresh();try{await ensureFirmware();}catch(error){if(token===startToken){log(error.message,'error');feedback.show('펌웨어를 준비하지 못했습니다. 빌드 탭의 오류를 확인하거나 ELF 파일을 여세요.','firmware');}return false;}finally{if(token===startToken)starting=false;}if(token!==startToken)return false;}
+ if(ide?.emulator()&&(!boardOnlyRun()||runStm32().length)){const token=++startToken;starting=true;refresh();try{if(!boardOnlyRun())await ensureFirmware();await ensureBoardFirmware();}catch(error){if(token===startToken){log(error.message,'error');feedback.show('펌웨어를 준비하지 못했습니다. 빌드 탭의 오류를 확인하거나 ELF 파일을 여세요.','firmware');}return false;}finally{if(token===startToken)starting=false;}if(token!==startToken)return false;}
  if(running())return false;const ok=initializeRuntime(options);if(ok)status=runtime.debug.paused?'paused':'running';refresh();if(ok)ide?.debugView();return ok;
 }
 // The build configuration (Debug -O0 / Release -Os) is part of what the cached ELF was built from.
@@ -486,6 +520,15 @@ async function ensureFirmware(force=false){
  log('ARM GCC로 펌웨어를 빌드합니다…');
  const bytes=await ide.buildElf();firmware={bytes,name:'firmware.elf',key:firmwareKey(),source:'build'};feedback.clear('firmware');
  log(`펌웨어 ELF 준비 완료 · ${(bytes.length/1024).toFixed(1)} KB`);return firmware;
+}
+// Other STM32 boards that run this time, and their ELFs for the emulator (built from each board's own view).
+const runStm32=()=>{const scope=runScope();return scope==='stm32'?[]:stm32Boards(project).filter(p=>scope==='all'||scope===p.id);};
+let boardElfs={},boardElfKeys={};
+async function ensureBoardFirmware(){
+ for(const p of runStm32()){
+  const text=JSON.stringify(stm32View(project,p.id)),key=JSON.stringify([text,$('native-config')?.value]);if(boardElfs[p.id]&&boardElfKeys[p.id]===key)continue;
+  log(`[${p.name}] ARM GCC로 펌웨어를 빌드합니다…`);boardElfs[p.id]=await ide.buildElf(text);boardElfKeys[p.id]=key;log(`[${p.name}] 펌웨어 ELF 준비 완료 · ${(boardElfs[p.id].length/1024).toFixed(1)} KB`);
+ }
 }
 async function openElf(){
  try{if(!window.desktop?.openElf)throw new Error('ELF 열기는 데스크톱 앱에서 사용할 수 있습니다.');const opened=await window.desktop.openElf();if(!opened)return;
@@ -546,11 +589,11 @@ function addDevboard(modelId){
  if(running())return;if(project.components.length>=100){log('부품은 100개까지 추가할 수 있습니다.','error');return;}
  const surfaceRight=key=>project.surfaces?.[key]?.hidden?0:surfaceOrigin(key,project.surfaces).x+(key==='board'?BOARD:BB).w*scaleXOf(project.surfaces?.[key]);
  const right=Math.max(surfaceRight('board'),surfaceRight('breadboard'),...project.components.map(p=>p.type==='breadboard'?breadboardBounds(p).right:p.type==='devboard'?devboardBounds(p).right:p.x+40));
- let fields;try{fields=newDevboardFields(project,modelId,right);}catch(e){log(e.message,'error');return;}
- checkpoint();const p={id:uid('b'),...fields};project.components.push(p);selection={type:'part',id:p.id};pending=null;mode='select';inspectTab();changed();fitView();
- log(`${p.name}: ${DEVBOARD_MODELS[modelId].name}를 추가했습니다. ${DEVBOARD_MODELS[modelId].kind==='esp32'?'sketch.ino를 실행합니다.':'강의 예제가 아닌 라즈베리파이는 코드를 실행하지 않고 전압만 계산합니다.'}`);
+ let fields;try{fields=DEVBOARD_MODELS[modelId].kind==='stm32'?newStm32Fields(project,modelId,right):newDevboardFields(project,modelId,right);}catch(e){log(e.message,'error');return;}
+ checkpoint();const p={id:uid('b'),...fields};project.components.push(p);selection={type:'part',id:p.id};pending=null;mode='select';inspectTab();syncEditor();changed();fitView();
+ log(`${p.name}: ${DEVBOARD_MODELS[modelId].name}를 추가했습니다. ${({esp32:'sketch.ino를 실행합니다.',stm32:'빈 HAL main.c로 시작합니다. 속성의 "이 보드 편집"으로 코드와 핀 설정을 바꿉니다.'})[DEVBOARD_MODELS[modelId].kind]??'강의 예제가 아닌 라즈베리파이는 코드를 실행하지 않고 전압만 계산합니다.'}`);
 }
-$('devboard-options').innerHTML=Object.values(DEVBOARD_MODELS).map(m=>`<button class="board-option devboard-option" data-devboard-add="${m.id}"><span class="board-option-icon" aria-hidden="true">${m.kind==='rpi'?'Pi':'32'}</span><span><strong>${esc(m.name)}</strong><small>${esc(m.description)}</small></span><span class="board-option-action">추가</span></button>`).join('');
+$('devboard-options').innerHTML=Object.values(DEVBOARD_MODELS).map(m=>`<button class="board-option devboard-option" data-devboard-add="${m.id}"><span class="board-option-icon" aria-hidden="true">${({rpi:'Pi',stm32:'ST'})[m.kind]??'32'}</span><span><strong>${esc(m.name)}</strong><small>${esc(m.description)}</small></span><span class="board-option-action">추가</span></button>`).join('');
 $('devboard-options').querySelectorAll('[data-devboard-add]').forEach(b=>b.onclick=()=>addDevboard(b.dataset.devboardAdd));
 $('empty-add-board').onclick=()=>document.querySelector('[data-add="board"]')?.click();$('empty-open-parts').onclick=()=>layout.showView('parts');$('empty-open-examples').onclick=()=>layout.showView('examples');
 $('wire-palette').innerHTML=WIRE_COLORS.map(([value,name],i)=>`<button data-palette="${i<10?'basic':'pastel'}" data-color="${value}" class="swatch ${value===color?'active':''}" style="--swatch:${value}" title="${name} 배선" aria-label="${name} 배선"></button>`).join('');
@@ -586,7 +629,15 @@ function replaceCodeText(edit){
  finally{replaceCheckpoint=false;}
 }
 $('code').addEventListener('input',()=>{const board=boardForFile(project,sourceFile);if(isBoardFile(sourceFile)&&devboardModel(board??{})?.kind!=='esp32')return;if(replaceCheckpoint||Date.now()-lastCodeCheckpoint>1000){checkpoint();lastCodeCheckpoint=Date.now();}dirty=true;if(board)board.code=$('code').value;else if(sourceFile==='main.c')project.code=$('code').value;else project.firmware.files.find(f=>f.name===sourceFile).text=$('code').value;lineNumbers();autosave();ide?.invalidate();$('undo').disabled=false;$('redo').disabled=true;});
-$('source-file').onchange=e=>{sourceFile=e.target.value;syncEditor();};
+$('source-file').onchange=e=>{if(e.target.value.startsWith('stm32:')){if(!editBoard(e.target.value.slice(6)))syncEditor();return;}sourceFile=e.target.value;syncEditor();};
+/** Edit another STM32 board: it becomes the main board (code, pin settings, sources, build, debug and flashing). */
+function editBoard(id){
+ const part=project.components.find(p=>p.id===id);if(!isStm32Board(part))return false;
+ if(running()){log('편집할 STM32 보드를 바꾸려면 실행을 먼저 정지하세요.','error');return false;}
+ checkpoint();const name=part.name;swapStm32(project,id);firmware=null;sourceFile='main.c';selection={type:'surface',id:'board'};pending=null;
+ syncEditor();changed();pinSearch();ide?.invalidate?.();
+ log(`${name} 보드를 편집합니다. 코드·핀 설정·빌드·디버그가 이 보드를 대상으로 하고, 다른 보드의 코드는 보드마다 저장되어 있습니다.`);return true;
+}
 $('board-reset').onclick=()=>{if(running())return;$('board-reset-error').textContent='';$('board-reset-dialog').showModal();};
 $('board-reset-cancel').onclick=()=>$('board-reset-dialog').close();
 $('board-reset-confirm').onclick=()=>{
@@ -660,6 +711,7 @@ window.addEventListener('error',e=>log('화면 오류: '+e.message,'error'));
 document.addEventListener('ide-undo',e=>editUndo(e.detail));
 document.addEventListener('ide-find',e=>{layout.reveal('code');editorSearch.open(e.detail);});
 ide=setupIde({buildFirmware:()=>ensureFirmware(true).catch(error=>log(error.message,'error')),getProject:()=>project,getSource:()=>sourceFile,getSession:()=>runtime?session:null,isRunning:running,isSimulationRunning:()=>status==='running'||status==='paused',refresh,checkpoint,saveLocal:autosave,layout,log,feedback,requestReplace,replaceProject,debugCommand,
+ stm32Runs:()=>[{name:mainBoardName(project),text:JSON.stringify(project),serial:project.surfaces?.board?.stlink||'',main:true},...stm32Boards(project).map(p=>({name:p.name,text:JSON.stringify(stm32View(project,p.id)),serial:p.stlink||''}))],editBoard,
  selectSource:name=>{if(name!=='main.c'&&!project.firmware?.files.some(f=>f.name===name)&&!boardForFile(project,name))return;sourceFile=name;syncEditor();},
  applySources:(p,file)=>{checkpoint();project=validateProject(p);sourceFile=file;syncEditor();changed();ide.invalidate();}});
 // Button titles show the current shortcuts as soon as a binding changes.
@@ -692,11 +744,11 @@ canvasKeys=setupCanvasKeyboard(svg,{
  press:(target,down)=>{
   const part=target.type==='part'?project.components.find(p=>p.id===target.id):null,id=target.type==='button'?target.id:part?.id;
   if(!id)return false;
-  const family=CATALOG_BY_TYPE[part?.type]?.family,button=id==='USER'||part?.type==='button'||family==='button',slide=part?.type==='slide'||family==='slide',reset=id==='RESET';
+  const family=CATALOG_BY_TYPE[part?.type]?.family,button=id==='USER'||id.endsWith('.USER')||part?.type==='button'||family==='button',slide=part?.type==='slide'||family==='slide',reset=id==='RESET'||id.endsWith('.RESET');
   if(!button&&!slide&&!reset)return false;
   if(!down){if(button&&pressed[id]){delete pressed[id];if(runtime)recompute();refresh();}return true;}
   if(drag||!runtime||!['running','paused'].includes(status))return false;
-  if(reset){resetRuntime();return true;}
+  if(reset){if(id.endsWith('.RESET'))resetBoard(id.slice(0,-6));else resetRuntime();return true;}
   if(slide){checkpoint();part.position=(part.position+1)%(CATALOG_BY_TYPE[part.type]?.id.includes('dp3t')?3:2);autosave();}else pressed[id]=true;
   recompute();refresh();return true;
  },

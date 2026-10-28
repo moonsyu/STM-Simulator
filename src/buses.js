@@ -86,8 +86,10 @@ export class BusDevices {
         const devices=this.project.components.filter(p=>p.type==='uart'&&this.powered(p)&&this.same(this.pin(u.tx),this.terminal(p,4))&&p.baud===u.baud);
         const wire=bytes.map((value,i)=>this.uartTx(value,at+i*1e7/u.baud));
         if(this.hasVcp())this.vcpOutput=((this.vcpOutput||'')+String.fromCharCode(...wire)).slice(-512);
-        for(const value of wire){at+=1e7/u.baud;if(loopback)u.queue.push({at,value});for(const p of devices)this.received.set(p.id,((this.received.get(p.id)||'')+String.fromCharCode(value)).slice(-512));}
-        u.lastTx=at;this.report(runtime,'UART',`TX ${bytes.length} B · ${u.baud} baud${loopback?' · loopback':''}${this.hasVcp()?' · ST-LINK VCP':''}${devices.length?' · external terminal':''}`);return bytes.length;
+        const frames=[];for(const value of wire){at+=1e7/u.baud;frames.push({at,value});if(loopback)u.queue.push({at,value});for(const p of devices)this.received.set(p.id,((this.received.get(p.id)||'')+String.fromCharCode(value)).slice(-512));}
+        // Another STM32 board whose UART RX is wired to this TX receives the bytes (stm32-boards.js linkUarts).
+        const peers=this.peers?.(this,frames)||0;
+        u.lastTx=at;this.report(runtime,'UART',`TX ${bytes.length} B · ${u.baud} baud${loopback?' · loopback':''}${this.hasVcp()?' · ST-LINK VCP':''}${devices.length?' · external terminal':''}${peers?` · 다른 STM32 보드 ${peers}개`:''}`);return bytes.length;
       }
       if(name==='Serial1.end'){u.ready=false;u.queue=[];return 0;}
     }

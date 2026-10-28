@@ -34,7 +34,7 @@ export class Monitor {
       $('bus-events').replaceChildren(...this.events.slice(-60).map(event=>{const row=document.createElement('div');row.textContent=`${(event.micros/1000).toFixed(3)} ms  ${event.protocol}  ${event.message}`;return row;}));$('bus-events').scrollTop=$('bus-events').scrollHeight;
       // ESP32 / Raspberry Pi boards: what the board program prints (fixed run; input is not sent to them).
       const board=$('serial-target').value.startsWith('board:')?session?.circuit?.drivers?.find(d=>d.part.id===$('serial-target').value.slice(6)):null;
-      if($('serial-target').value.startsWith('board:'))$('uart-output').textContent=board?`${board.part.name} · Serial (USB) · 고정 실행 출력
+      if($('serial-target').value.startsWith('board:'))$('uart-output').textContent=board?`${board.part.name} · Serial (USB) · ${board.outputLabel??'고정 실행 출력'}
 ${board.output??''}`:'이 보드는 이번 실행에 포함되지 않았습니다.';
       else $('uart-output').textContent=session?($('serial-target').value==='USART2'?`ST-LINK VCP · USART2 · ${session.buses.uart.baud} baud\n${session.buses.vcpOutput||''}`:[...session.buses.received.entries()].map(([id,text])=>`${session.project.components.find(p=>p.id===id)?.name}: ${text}`).join('\n')):'';
     }
