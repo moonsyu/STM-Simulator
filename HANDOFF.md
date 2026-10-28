@@ -1,6 +1,16 @@
 # STM Simulator — 개발 인계
 
-현재 버전: **1.4.2**. 정리일: **2026-10-23**. NUCLEO-F446RE 또는 NUCLEO-F103RB와 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+현재 버전: **1.5.0**. 정리일: **2026-10-23**. NUCLEO-F446RE 또는 NUCLEO-F103RB와 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+
+## 1.5.0 ESP32·라즈베리파이 보드 · 고정 실행 · 강의 실습 예제
+
+- `devboards.js`: 부품 종류 `devboard`(모델 `esp32-nodemcu-32s`, `esp32-devkit-wroom32`, `rpi5`). 핀 끝점 `devboard:<id>:<key>`(ESP32 `L1~L19`/`R1~R19`, 라즈베리파이 `P1~P40`), GPIO 넷 `signal:<id>.<GPIO>`, 3V3/5V/GND는 공통 넷. 핀 설명(`notes`), 보드 그림(`devboardSvg`), 내장 LED 갱신, 보드 코드 편집기 키 `board/<id>/<file>`.
+- `engine.js`: 토폴로지에 보드 핀, `<id>.<GPIO>` 키의 GPIO 구동, 라즈베리파이 GPIO2/3 1.8 kΩ 풀업. `CircuitSimulation.drivers`: 다른 보드 프로그램이 회로 시간에 맞춰 GPIO를 더하고 결과를 읽음(두 세션 공통).
+- ESP32는 `components.js` `rawTerminals`가 헤더 핀을 장착 단자로 내줘 `findMount`/`applyMount`로 빵판에 꽂힘(`attachments`). 라즈베리파이는 단자 없음(배선만). `terminalKeys`는 보드에서 빈 배열(part 끝점 없음).
+- `fixed-run.js`: `defineScenario`, `FixedRunDriver`(타이머 `every`/`after`, `output`/`pwm`/`input`, 입력 변화 처리, `partVoltage`/`wiredTo`, I²C 슬레이브 `i2cSlave`/`onI2cReceive`/`onI2cRequest`, 출력 버퍼), `IdleDriver`, `createBoardDrivers(project,{scope})`. `buses.js` `i2cTarget`이 같은 SDA/SCL 넷의 보드 슬레이브를 찾음(`session.buses.boards`).
+- `lecture-examples.js`: 강의 회로도 10개(RPI-01~05, KER-01~02, FW-08, IOT-01, FW-09)와 시나리오. 예제 목록 값 `lecture:<id>`, `applyLectureExample`. 보드 코드는 앱 자체 예시(강의 코드는 저작권 표시가 있어 넣지 않음).
+- `app.js`: 보드 추가(보드 보기), 이동·90° 회전·삭제·복사, 속성·Docs, 편집기 탭(읽기 전용), 실행 보드 선택(`run-scope`), STM32 보드 없는 회로는 빈 스케치로 다른 보드만 실행, 직렬 모니터 `board:<id>`.
+- 저장 형식 version 2 그대로, `devboard` 부품 추가(이전 버전에서는 열리지 않음).
 
 ## 1.4.2 나사 단자·커넥터는 직접 배선
 
