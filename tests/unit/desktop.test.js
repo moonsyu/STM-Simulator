@@ -538,6 +538,8 @@ describe('ESP32 build and upload (Arduino CLI)',()=>{
   assert.match(esp32Build.uploadHint('A fatal error occurred: Failed to connect to ESP32: Wrong boot mode detected (0x13)!'),/BOOT 버튼/);
   assert.match(esp32Build.uploadHint('could not open port COM4: PermissionError(13, \'Access is denied.\')'),/다른 프로그램이 쓰고/);
   assert.equal(esp32Build.uploadHint('Hard resetting via RTS pin...'),'');
+  assert.match(esp32Build.monitorHint('rst:0x1 (POWERON_RESET),boot:0x3 (DOWNLOAD_BOOT(UART0/UART1/SDIO_REI_REO_V2))\nwaiting for download\n'),/EN\(RST\)/);
+  assert.equal(esp32Build.monitorHint('boot:0x13 (SPI_FAST_FLASH_BOOT)\nLED ON\n'),'');
  });
  test('upload and monitor commands use the picked COM port only',async()=>{
   const result={fqbn:esp32Build.FQBN,out:'C:/b/build',sketch:'C:/b/sketch'};
