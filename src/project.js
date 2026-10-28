@@ -9,6 +9,7 @@ import {validScale} from './geometry.js';
 import {validateNoise} from './signals.js';
 import {validCardImage,SD_SIZES} from './sdcard.js';
 import {validCameraImage,CAMERA_PATTERNS} from './camera.js';
+import {DEVBOARD_MODELS,MAX_DEVBOARDS,devboardPinInfo} from './devboards.js';
 export function blankProject(family){const mcu={...defaultMcu(family),pins:{}};return {format:'stm32-circuit-lab',version:2,name:'새 회로',components:[],wires:[],surfaces:{board:{hidden:true},breadboard:{hidden:true}},mcu,firmware:{mode:'hal',files:[]},code:expandC(generateHal(mcu).replace('/* USER CODE BEGIN 2 */','/* USER CODE BEGIN 2 */\n  printf("HAL ready\\n");'))};}
 // Complete example circuits explicitly include the legacy board and breadboard.
 export function exampleProject(){const p=blankProject();delete p.surfaces;return p;}
@@ -19,13 +20,24 @@ export function validateProject(data){
   const ids=new Set(),safeId=s=>typeof s==='string'&&/^[A-Za-z0-9_-]{1,64}$/.test(s);
   if(data.boardId!==undefined&&!getBoard(data.boardId))throw new Error('지원하지 않는 보드입니다.');
   if(data.components.filter(p=>p?.type==='breadboard').length>8)throw new Error('추가 빵판은 8개까지 지원합니다.');
-  const base=id=>(data.surfaces?.board?.hidden!==true&&PIN_BY_ID.has(id))||!!holeInfo(id,data.components,data.surfaces);
+  if(data.components.filter(p=>p?.type==='devboard').length>MAX_DEVBOARDS)throw new Error(`보드는 ${MAX_DEVBOARDS}개까지 추가할 수 있습니다.`);
+  const base=id=>(data.surfaces?.board?.hidden!==true&&PIN_BY_ID.has(id))||!!holeInfo(id,data.components,data.surfaces)||!!devboardPinInfo(id,data.components);
   const components=data.components.map(p=>{
     if(!safeId(p.id)||ids.has(p.id))throw new Error('부품 ID가 중복되거나 올바르지 않습니다.');ids.add(p.id);
-    if(![...TWO_PIN_TYPES,...MULTI_PIN_TYPES,'breadboard'].includes(p.type)||typeof p.name!=='string'||p.name.length>80)throw new Error('지원하지 않는 부품입니다.');
+    if(![...TWO_PIN_TYPES,...MULTI_PIN_TYPES,'breadboard','devboard'].includes(p.type)||typeof p.name!=='string'||p.name.length>80)throw new Error('지원하지 않는 부품입니다.');
     if(!Number.isFinite(p.x)||!Number.isFinite(p.y)||!Number.isFinite(p.rotation)||(data.version===1?![0,1].includes(p.rotation):p.rotation<0||p.rotation>=360))throw new Error('부품 좌표 또는 회전 각도가 올바르지 않습니다.');
     const q={id:p.id,name:p.name,type:p.type,x:p.x,y:p.y,rotation:data.version===1?p.rotation*90:p.rotation};
     if(p.type==='breadboard'&&p.variant!==undefined){if(p.variant!=='full')throw new Error('지원하지 않는 빵판 종류입니다.');q.variant='full';}
+    // ESP32 / Raspberry Pi boards keep their own program text and, for lecture examples, the fixed-run scenario id.
+    if(p.type==='devboard'){
+      if(!Object.hasOwn(DEVBOARD_MODELS,p.model))throw new Error(p.name+': 지원하지 않는 보드입니다.');
+      if(typeof p.code!=='string'||p.code.length>100000)throw new Error(p.name+': 보드 코드는 100 KB 이하의 텍스트여야 합니다.');
+      if(p.scenario!==undefined&&!safeId(p.scenario))throw new Error(p.name+': 실행 시나리오 정보를 확인하세요.');
+      // An ESP32 board plugged into a breadboard: header pin key → hole.
+      const keys=new Set(DEVBOARD_MODELS[p.model].kind==='esp32'?DEVBOARD_MODELS[p.model].pins.map(pin=>pin.key):[]),used=new Set(),attached={};
+      for(const [key,id]of Object.entries(p.attachments||{})){if(!keys.has(key)||used.has(id)||!holeInfo(id,data.components,data.surfaces))throw new Error(p.name+': 보드 핀의 빵판 연결 정보를 확인하세요.');used.add(id);attached[key]=id;}
+      return {...q,model:p.model,code:p.code,...(p.scenario!==undefined?{scenario:p.scenario}:{}),...(Object.keys(attached).length?{attachments:attached}:{})};
+    }
     if(p.scale!==undefined)q.scale=validScale(p.scale);
     for(const key of ['scaleX','scaleY'])if(p[key]!==undefined)q[key]=validScale(p[key]);
     if(p.skewX!==undefined){if(!Number.isFinite(p.skewX)||Math.abs(p.skewX)>=90)throw new Error('장치 변형 정보를 확인하세요.');q.skewX=p.skewX;}

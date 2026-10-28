@@ -1,5 +1,6 @@
 import {terminalKeys,terminalLabel,nominalTerminals,attachments,rotatePoint} from './components.js';
 import {BOARD,BB,FULL_BB,scaleXOf,scaleYOf,partVector,surfacePoint} from './geometry.js';
+import {devboardPins,devboardPinInfo} from './devboards.js';
 export {BOARD,BB,FULL_BB} from './geometry.js';
 // MB1136, UM1724 Rev 17, Figure 24 / Tables 19 and 29.
 // Default A4/A5 solder bridges: PC1/PC0. Hardware jumper behavior is not modeled.
@@ -90,11 +91,12 @@ export function holeInfo(id,components=[],surfaces){
 export function endpointInfo(id,components=[],surfaces) {
   if(PIN_BY_ID.has(id)&&!surfaces?.board?.hidden) {const p=surfacePoint(PIN_BY_ID.get(id),'board',surfaces);return {...p,label:`${p.header}-${p.number} · ${p.label}${p.signal!==p.label?' / '+p.signal:''}`};}
   const hole=holeInfo(id,components,surfaces);if(hole)return hole;
+  const board=devboardPinInfo(id,components);if(board)return board;
   const m=/^part:([^:]+):([a-d]|p\d+)$/.exec(id);
   if(m){const p=components.find(c=>c.id===m[1]);if(p&&terminalKeys(p).includes(m[2])){const t=nominalTerminals(p).find(t=>t.key===m[2]),anchor=attachments(p)[m[2]],point=anchor?endpointInfo(anchor,components,surfaces):null;return {id,x:point?.x??t.x,y:point?.y??t.y,label:`${p.name} ${terminalLabel(p,m[2])}`};}}
   return null;
 }
-export function endpoints(components,surfaces) {return [...(surfaces?.board?.hidden?[]:PINS.map(p=>surfacePoint(p,'board',surfaces))),...circuitHoles(components,surfaces),...components.flatMap(p=>terminalKeys(p).map(t=>endpointInfo(`part:${p.id}:${t}`,components,surfaces)))];}
+export function endpoints(components,surfaces) {return [...(surfaces?.board?.hidden?[]:PINS.map(p=>surfacePoint(p,'board',surfaces))),...circuitHoles(components,surfaces),...components.filter(p=>p.type==='devboard').flatMap(devboardPins),...components.flatMap(p=>terminalKeys(p).map(t=>endpointInfo(`part:${p.id}:${t}`,components,surfaces)))];}
 export function boardPin(name) {const p=PINS.find(p=>p.label===name&&['CN5','CN6','CN8','CN9'].includes(p.header))||PINS.find(p=>p.signal===canonicalPin(name));return p?.id;}
 export const normalizePinQuery=q=>String(q).toUpperCase().replace(/\s+/g,'');
 export function searchPins(query){const q=normalizePinQuery(query);if(!q)return [];const exact=activePins.filter(p=>p.signal===q||p.label===q||`${p.header}-${p.number}`===q);return exact.length?exact:activePins.filter(p=>p.signal.startsWith(q)||p.label.startsWith(q));}

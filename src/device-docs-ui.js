@@ -5,12 +5,16 @@ import {CATALOG_BY_TYPE} from './catalog-defs.js';
 import {deviceDocs} from './device-docs-data.js';
 import {projectBoard} from './boards.js';
 import {baremetalCards} from './device-baremetal.js';
+import {devboardModel} from './devboards.js';
 const esc=value=>String(value).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;');
 export function setupDeviceDocs({getProject,getSelection,isRunning,open,apply,showSource}){
  const tab=document.createElement('button');tab.dataset.tab='docs';tab.textContent='장치 Docs';tab.onclick=open;document.querySelector('.panel-tabs').append(tab);
  const panel=document.createElement('section');panel.id='device-docs-panel';panel.hidden=true;document.querySelector('.editor-panel').append(panel);let last='',activeMode='hal',message='',lastKey=null;
  function target(){const selected=getSelection(),p=getProject();if(selected?.type==='part'){const part=p.components.find(p=>p.id===selected.id);if(part)return {type:part.type,name:part.name,target:selected,key:part.id};}if(selected?.type==='surface')return {type:selected.id==='board'?'board':'breadboard',name:selected.id==='board'?projectBoard(p).name:'기본 빵판',target:selected,key:'surface_'+selected.id};return null;}
  function refresh(force=false){const item=target(),state=JSON.stringify([item,getProject().deviceDocs,getProject().mcu,getProject().components.find(p=>p.id===item?.target.id),isRunning()]);if(!force&&state===last)return;last=state;
+  // ESP32 / Raspberry Pi boards: their pin header with functions and cautions (they have no HAL examples to apply).
+  const board=item?.type==='devboard'&&getProject().components.find(p=>p.id===item.target.id),boardModel=board&&devboardModel(board);
+  if(boardModel){panel.innerHTML=`<div class="docs-head"><span class="overline">DEVICE DOCS</span><h2>${esc(board.name)}</h2><p>${esc(boardModel.name)} · ${esc(boardModel.description)}</p>${boardModel.unverified?`<p class="pin-check">⚠ ${esc(boardModel.unverified)}</p>`:''}</div><p>${board.scenario?'강의 예제의 고정 실행 보드입니다. 코드를 빌드·실행하지 않고 예제 시나리오대로 핀이 바뀝니다.':'강의 예제가 아닌 보드는 코드를 실행하지 않습니다. 배선과 전압만 확인할 수 있습니다.'}</p><table class="docs-board-pins"><thead><tr><th>핀</th><th>신호</th><th>기능 · 주의</th></tr></thead><tbody>${boardModel.pins.map(p=>`<tr><td>${esc(p.label)}</td><td>${esc(p.signal)}</td><td>${p.notes.map(n=>`<span class="${n.warn?'warn':''}">${n.warn?'⚠ ':''}${esc(n.text)}</span>`).join('<br>')}</td></tr>`).join('')}</tbody></table>`;return;}
   if(!item){panel.innerHTML='<div class="docs-empty"><h2>장치 Docs</h2><p>회로에서 부품·STM 보드·빵판을 선택하세요.</p><p>장치 개요, 핀 연결, HAL·레지스터 예제를 확인하고 현재 프로젝트에 적용할 수 있습니다.</p></div>';return;}
   const docs=deviceDocs(item.type,projectBoard(getProject()).id),binding=getProject().deviceDocs?.bindings.find(b=>b.key===item.key);if(item.key!==lastKey){lastKey=item.key;message='';if(binding)activeMode=binding.mode==='baremetal'?'baremetal':'hal';}
   const config=binding?{...getProject().mcu,pins:Object.fromEntries(Object.values(binding.pins).filter(pin=>getProject().mcu.pins[pin]).map(pin=>[pin,getProject().mcu.pins[pin]])),peripherals:Object.fromEntries(Object.values(binding.peripherals).filter(id=>getProject().mcu.peripherals[id]).map(id=>[id,getProject().mcu.peripherals[id]]))}:docs.sample.mcu;

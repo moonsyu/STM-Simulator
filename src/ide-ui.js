@@ -7,6 +7,7 @@ import {searchHalExamples} from './hal-example-search.js';
 import {BOARD_CATALOG,DEFAULT_BOARD_ID,START_BOARD_ID,getBoard} from './boards.js';
 import {familyProfile} from './mcu-family.js';
 import {sourceFiles,changeSourceFile} from './source-files.js';
+import {boardSourceFiles,isBoardFile} from './devboards.js';
 import {inspectRuntime,watchValue} from './debug-tools.js';
 import {esc} from './render.js';
 import {withKey} from './keybindings.js';
@@ -35,12 +36,14 @@ export function setupIde(o){
   function select(file,line,column){o.selectSource(file);o.layout.reveal('code');document.querySelector('[data-tab="code"]').click();if(line)editor.goto(line,column);}
   // The debug view lives in the side bar; every other monitor is a bottom-panel tab.
   function showMonitor(name){if(name==='debug'){o.layout.showView('debug');return;}o.layout.showPanel(name);}
-  function toggleBreakpoint(file,line){if(!Number.isInteger(line)||line<1)return;o.checkpoint();const p=settings(),i=p.breakpoints.findIndex(b=>b.file===file&&b.line===line);if(i<0)p.breakpoints.push({file,line});else p.breakpoints.splice(i,1);const r=o.getSession()?.runtime;if(r)r.debug.breakpoints=new Set(points().map(b=>`${b.file}:${b.line}`));o.saveLocal();native?.syncBreakpoints();debugView();}
+  function toggleBreakpoint(file,line){if(!Number.isInteger(line)||line<1||isBoardFile(file))return;o.checkpoint();const p=settings(),i=p.breakpoints.findIndex(b=>b.file===file&&b.line===line);if(i<0)p.breakpoints.push({file,line});else p.breakpoints.splice(i,1);const r=o.getSession()?.runtime;if(r)r.debug.breakpoints=new Set(points().map(b=>`${b.file}:${b.line}`));o.saveLocal();native?.syncBreakpoints();debugView();}
   function sync(){
     const focused=document.activeElement?.closest('[data-source]'),focusSource=focused?.dataset.source,focusContainer=focused?.parentElement.id;
     const files=sourceFiles(o.getProject()),active=o.getSource(),key=JSON.stringify([o.getProject().firmware?.mode,files]);if(sourceKey&&sourceKey!==key){built=null;$('build-status').textContent='변경됨 · 빌드 필요';editor.diagnostics([]);}sourceKey=key;
-    $('file-tree').innerHTML=files.map(f=>`<button data-source="${esc(f.name)}" class="${f.name===active?'active':''}" title="${esc(f.name)}"><span class="file-kind">${f.name.endsWith('.h')?'H':'C'}</span><span class="file-label">${esc(f.name)}</span></button>`).join('');
-    $('source-tabs').innerHTML=files.map(f=>`<button data-source="${esc(f.name)}" class="${f.name===active?'active':''}">${esc(f.name)}</button>`).join('');
+    // Other boards' programs follow the STM32 sources, labelled with the board name.
+    const boards=boardSourceFiles(o.getProject());
+    $('file-tree').innerHTML=files.map(f=>`<button data-source="${esc(f.name)}" class="${f.name===active?'active':''}" title="${esc(f.name)}"><span class="file-kind">${f.name.endsWith('.h')?'H':'C'}</span><span class="file-label">${esc(f.name)}</span></button>`).join('')+boards.map(f=>`<button data-source="${esc(f.name)}" class="${f.name===active?'active':''}" title="${esc(f.label)}"><span class="file-kind">${f.name.endsWith('.py')?'PY':'INO'}</span><span class="file-label">${esc(f.label)}</span></button>`).join('');
+    $('source-tabs').innerHTML=[...files.map(f=>({name:f.name,label:f.name})),...boards].map(f=>`<button data-source="${esc(f.name)}" class="${f.name===active?'active':''}">${esc(f.label)}</button>`).join('');
     for(const el of document.querySelectorAll('[data-source]'))el.onclick=()=>select(el.dataset.source);
     const wp=folder||'미저장 프로젝트';$('workspace-path').textContent=wp;$('workspace-path').title=wp;editor.reset();if(!native?.selected())editor.updateDebug(points(),o.getSession()?.runtime?.debug.paused?o.getSession().runtime.location:null);native?.sync();controls();if(!o.isRunning())debugView();
     if(focusSource&&focusContainer)[...$(focusContainer).querySelectorAll('[data-source]')].find(el=>el.dataset.source===focusSource)?.focus({preventScroll:true});
@@ -48,7 +51,7 @@ export function setupIde(o){
   function controls(){const running=o.isRunning(),r=o.getSession()?.runtime,paused=!!r?.debug.paused;
     native?.controls();if(native?.selected())return;
     for(const id of ['source-add','source-rename','source-delete','ide-build','debug-start'])$(id).disabled=running;
-    for(const id of ['source-rename','source-delete'])$(id).disabled=running||o.getSource()==='main.c';
+    for(const id of ['source-rename','source-delete'])$(id).disabled=running||o.getSource()==='main.c'||isBoardFile(o.getSource());
   }
   function build({reveal=true}={}){
     if(o.isRunning())return null;editor.diagnostics([]);$('build-errors').replaceChildren();if(reveal)showMonitor('build');

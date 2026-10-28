@@ -3,17 +3,18 @@
 import {applyHalExample,halGuideFor} from './hal-examples.js';
 import {blankProject} from './project.js';
 import {getBoard} from './boards.js';
-import {initSvg,boardSvg,renderBreadboards,renderWires,renderParts,updateSurfaces} from './render.js';
+import {initSvg,boardSvg,renderBreadboards,renderDevboards,renderWires,renderParts,updateSurfaces} from './render.js';
+import {applyLectureExample,lectureGuide,LECTURE_PREFIX} from './lecture-examples.js';
 
 const NS='http://www.w3.org/2000/svg';
 const cache=new Map();
 // The example's circuit as a standalone <svg> (cached per board and example).
 function exampleSvg(id,boardId){
  const key=boardId+':'+id;if(cache.has(key))return cache.get(key).cloneNode(true);
- const board=getBoard(boardId),project=applyHalExample({...blankProject(board.mcuFamily),boardId},id);
+ const board=getBoard(boardId),project=id.startsWith(LECTURE_PREFIX)?applyLectureExample(id.slice(LECTURE_PREFIX.length)).project:applyHalExample({...blankProject(board.mcuFamily),boardId},id);
  const svg=document.createElementNS(NS,'svg');svg.setAttribute('class','example-preview-svg');svg.setAttribute('aria-hidden','true');
  initSvg(svg);svg.querySelector('#surface > .board').outerHTML=boardSvg(boardId);
- svg.querySelector('#breadboard-layer').innerHTML=renderBreadboards(project,null);
+ svg.querySelector('#breadboard-layer').innerHTML=renderBreadboards(project,null);svg.querySelector('#devboard-layer').innerHTML=renderDevboards(project,null);
  svg.querySelector('#wire-layer').innerHTML=renderWires(project,null);
  svg.querySelector('#part-layer').innerHTML=renderParts(project,null,null,{});
  updateSurfaces(svg,project,null);
@@ -43,7 +44,7 @@ export function setupExamplePreviews({getBoardId}){
   let svg;try{svg=exampleSvg(id,boardId);}catch{hide();return;}
   active?.removeAttribute('aria-describedby');active=item;
   name.textContent=item.querySelector('strong')?.textContent||id;image.replaceChildren(svg);
-  try{detail.textContent=halGuideFor(id,boardId);}catch{detail.textContent='';}
+  try{detail.textContent=id.startsWith(LECTURE_PREFIX)?lectureGuide(id.slice(LECTURE_PREFIX.length)):halGuideFor(id,boardId);}catch{detail.textContent='';}
   // A popover lives in the document of the list (the list may be in a panel window).
   if(popup.ownerDocument!==item.ownerDocument)item.ownerDocument.body.append(popup);
   popup.hidden=false;popup.showPopover?.();item.setAttribute('aria-describedby',popup.id);

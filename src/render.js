@@ -8,6 +8,7 @@ import {DEFAULT_BOARD_ID,getBoard} from './boards.js';
 import {terminalKeys,terminalLabel,localTerminals,nominalTerminals,rotatePoint,attachments,PART_DEFS} from './components.js';
 import {extraShape,updateExtraSvg} from './part-render.js';
 import {scaleXOf,scaleYOf,partTransform,partVector,surfaceTransform,surfacePoint} from './geometry.js';
+import {devboardPins,devboardSvg,updateDevboardSvg} from './devboards.js';
 export const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const text=(x,y,s,size=10,color='#4a6e87',other='')=>`<text x="${x}" y="${y}" font-size="${size}" fill="${color}" ${other}>${esc(s)}</text>`;
 const rect=(x,y,w,h,fill,rx=0,extra='')=>`<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${rx}" fill="${fill}" ${extra}/>`;
@@ -87,7 +88,7 @@ export function breadboardSvg(part=null,selected=null){
  else s+=text(BB.x+BB.w/2,BB.y+BB.h-8,part?`${part.name} · 400 POINTS`:'400 POINTS  /  30 ROWS',8,'#7d847d','text-anchor="middle" letter-spacing="1.2"');
  return s+'</g>';
 }
-export function initSvg(svg){svg.innerHTML=`<defs><linearGradient id="pcb" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#fff"/><stop offset="1" stop-color="#edf1ef"/></linearGradient><linearGradient id="plastic" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#fbf8f0"/><stop offset="1" stop-color="#efebe0"/></linearGradient><filter id="shadow" x="-20%" y="-10%" width="145%" height="140%"><feDropShadow dx="0" dy="6" stdDeviation="5" flood-color="#536c7b" flood-opacity=".16"/></filter><filter id="led-glow" x="-100%" y="-100%" width="300%" height="300%"><feGaussianBlur stdDeviation="6"/></filter></defs><g id="surface">${boardSvg()}${breadboardSvg()}<g id="breadboard-layer"></g><g id="endpoint-layer"></g><g id="wire-layer"></g><g id="part-layer"></g><g id="net-layer" pointer-events="none"></g><g id="wire-handle-layer"></g><g id="search-layer" pointer-events="none"></g><g id="preview-layer" pointer-events="none"></g></g>`;}
+export function initSvg(svg){svg.innerHTML=`<defs><linearGradient id="pcb" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#fff"/><stop offset="1" stop-color="#edf1ef"/></linearGradient><linearGradient id="plastic" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#fbf8f0"/><stop offset="1" stop-color="#efebe0"/></linearGradient><filter id="shadow" x="-20%" y="-10%" width="145%" height="140%"><feDropShadow dx="0" dy="6" stdDeviation="5" flood-color="#536c7b" flood-opacity=".16"/></filter><filter id="led-glow" x="-100%" y="-100%" width="300%" height="300%"><feGaussianBlur stdDeviation="6"/></filter></defs><g id="surface">${boardSvg()}${breadboardSvg()}<g id="breadboard-layer"></g><g id="devboard-layer"></g><g id="endpoint-layer"></g><g id="wire-layer"></g><g id="part-layer"></g><g id="net-layer" pointer-events="none"></g><g id="wire-handle-layer"></g><g id="search-layer" pointer-events="none"></g><g id="preview-layer" pointer-events="none"></g></g>`;}
 export function route(a,b){const mid=a.x+(b.x-a.x)*.47;return roundedWirePath([a,{x:mid,y:a.y},{x:mid,y:b.y},b]);}
 export function renderWires(project,selected){return project.wires.map(w=>{
   const a=endpointInfo(w.from,project.components,project.surfaces),b=endpointInfo(w.to,project.components,project.surfaces);if(!a||!b)return '';
@@ -95,8 +96,9 @@ export function renderWires(project,selected){return project.wires.map(w=>{
 }).join('');}
 export const LED_COLORS={red:'#f05a4b',green:'#65c668',blue:'#53a8f7',yellow:'#f4c941'};
 export function renderBreadboards(project,selected){return project.components.filter(p=>p.type==='breadboard').map(p=>breadboardSvg(p,selected)).join('');}
+export function renderDevboards(project,selected){return project.components.filter(p=>p.type==='devboard').map(p=>devboardSvg(p,isSelected(selected,'part',p.id))).join('');}
 export function updateSurfaces(svg,project,selected){for(const [key,selector]of [['board','.board'],['breadboard','[data-surface="breadboard"]']]){const group=svg.querySelector(selector);group.style.display=project.surfaces?.[key]?.hidden?'none':'';group.dataset.surface=key;group.setAttribute('transform',surfaceTransform(key,project.surfaces));group.classList.toggle('part-selected',selected?.type==='surface'&&selected.id===key);}}
-export function renderParts(project,selected,result,pressed){const parts=project.components.filter(p=>p.type!=='breadboard'),ordered=[...parts.filter(p=>selected?.id!==p.id),...parts.filter(p=>selected?.id===p.id)];return ordered.map(p=>{
+export function renderParts(project,selected,result,pressed){const parts=project.components.filter(p=>!['breadboard','devboard'].includes(p.type)),ordered=[...parts.filter(p=>selected?.id!==p.id),...parts.filter(p=>selected?.id===p.id)];return ordered.map(p=>{
  const x=p.x,y=p.y,angle=p.rotation,scale=Math.max(scaleXOf(p),scaleYOf(p)),terms=localTerminals({...p,scale:1,scaleX:1,scaleY:1,skewX:0}),nominal=nominalTerminals(p),half=Math.min(18,Math.max(4,(p.span??70)/2-4));
  let shape=extraShape(p,result);
  if(p.type==='resistor')shape=rect(-half,-7,half*2,14,'#ddc394',4,'stroke="#9f895f"')+[-.6,-.2,.25,.7].map((v,i)=>rect(v*half,-7,Math.min(3,half/5),14,['#c26839','#bf6638','#805139','#d7b543'][i])).join('');
@@ -141,7 +143,7 @@ export function renderParts(project,selected,result,pressed){const parts=project
  const hits=terminalKeys(p).map(key=>{const e=endpointInfo(`part:${p.id}:${key}`,project.components,project.surfaces);return `<circle cx="${e.x}" cy="${e.y}" r="5.5" data-endpoint="${e.id}" class="pin-hit part-pin"/>`;}).join('');
  return `<g data-part="${p.id}" data-rotation="${angle}" data-scale="${scale}" data-mounted="${Object.keys(attachments(p)).length}" class="${isSelected(selected,'part',p.id)?'part-selected':''}">${leads}<g class="part-body" transform="${partTransform(p)}">${shape}</g>${contacts}${text(x,labelY,label,9,'#496477','text-anchor="middle" pointer-events="none"')}${hits}</g>`;
 }).join('');}
-export function renderEndpoints(project,pending){return [...(project.surfaces?.board?.hidden?[]:PINS.map(p=>surfacePoint(p,'board',project.surfaces))),...circuitHoles(project.components,project.surfaces)].map(e=>`<circle cx="${e.x}" cy="${e.y}" r="6.5" data-endpoint="${e.id}" class="pin-hit ${pending===e.id?'pending':''}"/>`).join('');}
+export function renderEndpoints(project,pending){return [...(project.surfaces?.board?.hidden?[]:PINS.map(p=>surfacePoint(p,'board',project.surfaces))),...circuitHoles(project.components,project.surfaces),...project.components.filter(p=>p.type==='devboard').flatMap(devboardPins)].map(e=>`<circle cx="${e.x}" cy="${e.y}" r="6.5" data-endpoint="${e.id}" class="pin-hit ${pending===e.id?'pending':''}"/>`).join('');}
 export function renderMountPreview(mount){return mount?mount.points.map(h=>`<circle cx="${h.x}" cy="${h.y}" r="6" fill="#24b78b44" stroke="#159b73" stroke-width="1.6"/>`).join(''):'';}
 export function renderPinSearch(pins,selectedId=null,surfaces){return [...pins.filter(p=>p.id!==selectedId),...pins.filter(p=>p.id===selectedId)].map(raw=>{const p=surfacePoint(raw,'board',surfaces);
  const selected=p.id===selectedId,x=p.x<260?p.x+24:p.x-154;
@@ -154,6 +156,7 @@ export function updateSimulationSvg(svg,project,result,pressed){
    if(p.type==='led'){const on=!result?.fault&&result?.parts[p.id]?.on;g.querySelector('.led-lens')?.setAttribute('fill',on?LED_COLORS[p.color]:'#704b4c');g.querySelector('.led-glow')?.setAttribute('opacity',on?'.6':'0');}
    if(p.type==='button')g.querySelector('.switch-cap')?.setAttribute('fill',pressed[p.id]?'#168775':'#354857');
  }
+ updateDevboardSvg(svg,project,result,!!result);
  const on=result&&!result.fault&&result.voltage('signal:PA5')>1.8,led=svg.querySelector('#builtin-led');if(led){led.setAttribute('fill',on?'#64e66b':'#89a486');led.style.filter=on?'drop-shadow(0 0 5px #59dc65)':'';}
 }
 export function lcdContent(lcd){
