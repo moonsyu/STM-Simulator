@@ -59,3 +59,17 @@ test('FW-09: the STM32 sends I2C commands and the ESP32 fixed-run slave switches
   assert.deepEqual(s.errors,[]);
  }finally{await s.close();}
 });
+
+test('an ESP32 sketch is edited and run: the board follows the changed code',{timeout:120000},async()=>{
+ const s=await launch();
+ try{
+  const {win}=s;await applyLecture(win,'FW-08');
+  assert.equal(await win.evaluate(()=>document.getElementById('code').readOnly),false);
+  await win.evaluate(()=>{const code=document.getElementById('code');code.value=code.value.replace('Serial.println("LED ON");','Serial.println("켜짐");');code.dispatchEvent(new Event('input',{bubbles:true}));});
+  await win.keyboard.press('Control+F5');
+  await win.waitForFunction(()=>/\[ESP32-1\] 켜짐/.test(document.getElementById('console-output').textContent),null,{timeout:20000});
+  assert.match(await logText(win),/\[ESP32-1\] 스케치를 실행합니다/);
+  await win.keyboard.press('Control+F2');
+  assert.deepEqual(s.errors,[]);
+ }finally{await s.close();}
+});

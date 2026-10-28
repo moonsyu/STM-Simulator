@@ -10,8 +10,9 @@ import {halExampleFor} from './hal-examples.js';
 
 // SSAFY embedded-track lecture circuits on ESP32 and Raspberry Pi boards (the lecture schematics site lists the board
 // pins and parts of each). The same board pins, parts and connections are built here on this app's breadboards; hole
-// positions follow this app's layout. Board programs are this app's own short examples of what each lab does; the
-// boards run them as fixed-run scenarios (fixed-run.js), the STM32 in FW-09 runs its HAL code for real.
+// positions follow this app's layout. Board programs are this app's own short examples of what each lab does: ESP32
+// sketches run in the interpreter (esp32-sketch.js), Raspberry Pi programs as fixed-run scenarios (fixed-run.js), and
+// the STM32 in FW-09 runs its HAL code.
 const COLORS={red:'#e53935',black:'#263238',yellow:'#f6c026',green:'#2e9d4f',blue:'#1e88e5',orange:'#fb8c00',gray:'#8d8d8d',sky:'#4fc3f7',purple:'#8e44ad'};
 const hole=(letter,row)=>`bb:${letter}:${row}`,rail=(side,sign,n)=>`rail:${side}:${sign}:${n}`;
 const fullHole=(bb,letter,col)=>`${breadboardPrefix(bb)}bb:${letter}:${col}`,fullRail=(bb,side,sign,n)=>`${breadboardPrefix(bb)}rail:${side}:${sign}:${n}`;
@@ -53,13 +54,6 @@ defineScenario('lecture-rpi-button',{title:'GPIO27 Tact 스위치',start(ctx){ct
 defineScenario('lecture-rpi-two-buttons',{title:'내부·외부 풀업 스위치 두 개',start(ctx){ctx.input('GPIO27','up',(c,level)=>{if(!level)c.log('GPIO27 눌림');});ctx.input('GPIO22',null,(c,level)=>{if(!level)c.log('GPIO22 눌림');});}});
 defineScenario('lecture-kernel-led',{title:'커널 타이머 LED',start(ctx){let on=false;ctx.output('GPIO20',0);ctx.log('led_driver: 모듈을 적재했습니다 (GPIO20)');ctx.every(1000,c=>{on=!on;c.output('GPIO20',on);c.log(`led_driver: LED ${on?'ON':'OFF'}`);});}});
 defineScenario('lecture-kernel-button',{title:'커널 인터럽트 스위치·LED',start(ctx){ctx.output('GPIO20',0);ctx.log('button_driver: 모듈을 적재했습니다 (스위치 GPIO2, LED GPIO20)');ctx.input('GPIO2',null,(c,level)=>{c.output('GPIO20',!level);c.log(`button_driver: ${level?'released':'pressed'}`);});}});
-defineScenario('lecture-esp32-blink',{title:'GPIO2 LED 깜빡임',start(ctx){let on=true;ctx.output('GPIO2',1);ctx.log('LED ON');ctx.every(500,c=>{on=!on;c.output('GPIO2',on);c.log(on?'LED ON':'LED OFF');});}});
-defineScenario('lecture-esp32-io',{title:'LED·스위치·가변저항·DHT11',start(ctx){
- ctx.output('GPIO17',0);ctx.input('GPIO18',null,(c,level)=>{c.output('GPIO17',!level);c.log(level?'스위치 떼어짐 → LED OFF':'스위치 눌림 → LED ON');},{level:true});
- ctx.every(1000,c=>{const v=c.voltage('GPIO36'),dht=c.part('DHT11');const raw=v==null?0:Math.round(Math.max(0,Math.min(3.3,v))/3.3*4095);c.log(`가변저항 ${raw} (${(raw*3.3/4095).toFixed(2)} V)`);
-  const ok=dht&&(c.partVoltage('DHT11','p1')??0)-(c.partVoltage('DHT11','p2')??0)>3&&c.wiredTo('GPIO13','DHT11','p3');c.log(ok?`온도 ${Number(dht.temperature).toFixed(1)} C, 습도 ${Math.round(dht.humidity)} %`:'DHT11 응답 없음 (전원·DATA 배선 확인)');});
-}});
-defineScenario('lecture-esp32-i2c-slave',{title:'I2C 슬레이브 0x08 · LED',i2cSlave:{address:0x08,sda:'GPIO21',scl:'GPIO22'},start(ctx){ctx.output('GPIO2',0);ctx.log('I2C 슬레이브 주소 0x08로 대기합니다 (SDA GPIO21, SCL GPIO22).');},onI2cReceive(ctx,bytes){for(const value of bytes){ctx.output('GPIO2',value);ctx.log(`I2C 수신 ${value} → LED ${value?'ON':'OFF'}`);}}});
 
 // --- Circuits -----------------------------------------------------------------------------------------------------
 const RPI={x:330,y:270};
@@ -88,15 +82,15 @@ function ker02(){const p=rpiProject('KER-02 커널 드라이버 Tact 스위치(G
  wire(p,rpiPin('rpi',38),hole('a',17),'yellow');ledRow(p,17,{rid:'R2'});return p;}
 
 // ESP32 on the 400-point breadboard: left header in column b, right header in column i, rows 11–29.
-function esp32OnBreadboard(p,{scenario,code}){const id='esp32',model='esp32-nodemcu-32s',q=devboard(p,{id,model,name:'ESP32-1',scenario,code});return plugged(p,q,'L1',hole('b',11));}
-function fw08(){const p=base();p.name='FW-08 ESP32 보드 LED — GPIO2';esp32OnBreadboard(p,{scenario:'lecture-esp32-blink',code:INO_BLINK});
+function esp32OnBreadboard(p,{code}){const id='esp32',model='esp32-nodemcu-32s',q=devboard(p,{id,model,name:'ESP32-1',code});return plugged(p,q,'L1',hole('b',11));}
+function fw08(){const p=base();p.name='FW-08 ESP32 보드 LED — GPIO2';esp32OnBreadboard(p,{code:INO_BLINK});
  wire(p,hole('a',11),rail('L','+',10),'red');wire(p,hole('j',11),rail('R','-',10),'black');wire(p,hole('j',25),hole('c',2),'yellow');ledRow(p,2);return p;}
 
 // ESP32 across an 830-point breadboard (rotated 270°: right header in row b, left header in row i, columns 41–59).
 function iot01(){
  const p=base({breadboard:false});p.name='IOT-01 ESP32 보드 입출력 종합 — LED·Tact 스위치·가변저항10k·DHT11';
  p.components.push({id:'bb1',type:'breadboard',name:'BB1',variant:'full',x:560,y:330,rotation:0});const bb='bb1',H=(l,c)=>fullHole(bb,l,c),R=(s,sign,n)=>fullRail(bb,s,sign,n);
- const model='esp32-nodemcu-32s',q=devboard(p,{id:'esp32',model,name:'ESP32-1',scenario:'lecture-esp32-io',code:INO_IO,rotation:270});plugged(p,q,'L1',H('i',41));
+ const model='esp32-nodemcu-32s',q=devboard(p,{id:'esp32',model,name:'ESP32-1',code:INO_IO,rotation:270});plugged(p,q,'L1',H('i',41));
  const top=signal=>q.attachments[esp32Pin(model,signal)];// the hole a header pin sits in
  wire(p,H('j',41),R('T','+',1),'red');wire(p,H('a',41),R('T','-',39),'black');wire(p,R('T','+',2),R('B','+',2),'red');wire(p,R('T','-',3),R('B','-',3),'black');
  // LED on GPIO17 across the channel at column 6, 220 Ω to the bottom − rail.
@@ -113,11 +107,11 @@ function iot01(){
 }
 
 // STM32 (I2C master, HAL code runs) and ESP32 (I2C slave 0x08, fixed run) on one breadboard.
-const FW09_MAIN='  uint8_t command = 1;\n  printf("STM32 I2C 마스터 · ESP32 주소 0x08\\n");\n    /* USER CODE END 2 */\n  while (1) {\n    /* USER CODE BEGIN 3 */\n    HAL_StatusTypeDef status = HAL_I2C_Master_Transmit(&hi2c1, 0x08 << 1, &command, 1, 100);\n    printf("ESP32에 %u 보냄 (status=%d)\\n", command, status);\n    command = !command;\n    HAL_Delay(1000);\n    /* USER CODE END 3 */';
+const FW09_MAIN='  uint8_t command = 1;\n  HAL_Delay(100);  /* ESP32가 부팅해 슬레이브로 대기할 때까지 */\n  printf("STM32 I2C 마스터 · ESP32 주소 0x08\\n");\n    /* USER CODE END 2 */\n  while (1) {\n    /* USER CODE BEGIN 3 */\n    HAL_StatusTypeDef status = HAL_I2C_Master_Transmit(&hi2c1, 0x08 << 1, &command, 1, 100);\n    printf("ESP32에 %u 보냄 (status=%d)\\n", command, status);\n    command = !command;\n    HAL_Delay(1000);\n    /* USER CODE END 3 */';
 function fw09(){
  const e=halExampleFor('i2c','nucleo-f103rb'),p=base({stm32:true});p.name='FW-09 STM32 보드·ESP32 보드 I2C 통신 + LED';p.mcu=e.mcu;p.firmware=e.firmware;
  p.code=e.code.replace(/\/\* USER CODE BEGIN 2 \*\/[\s\S]*?\/\* USER CODE END 3 \*\//,'/* USER CODE BEGIN 2 */\n'+FW09_MAIN).replace(/^\/\/ I2C1 PB8.*$/m,'// FW-09 · I2C1 PB8(SCL)/PB9(SDA) 마스터 → ESP32 슬레이브 0x08, ESP32 쪽 10 kΩ 풀업');
- const model='esp32-nodemcu-32s',q=esp32OnBreadboard(p,{scenario:'lecture-esp32-i2c-slave',code:INO_I2C}),at=signal=>q.attachments[esp32Pin(model,signal)].replace(':i:',':j:');
+ const model='esp32-nodemcu-32s',q=esp32OnBreadboard(p,{code:INO_I2C}),at=signal=>q.attachments[esp32Pin(model,signal)].replace(':i:',':j:');
  wire(p,hole('a',11),rail('L','+',10),'red');wire(p,hole('j',11),rail('R','-',10),'black');wire(p,'board:CN6:4',rail('L','+',2),'red');wire(p,'board:CN6:6',rail('R','-',4),'black');wire(p,rail('L','+',25),rail('R','+',25),'red');
  wire(p,'board:CN5:10',at('GPIO22'),'green');wire(p,'board:CN5:9',at('GPIO21'),'orange');
  twoPin(p,{id:'R1',type:'resistor-axial-2',name:'R1',props:{value:10000}},hole('h',13),rail('R','+',12));twoPin(p,{id:'R2',type:'resistor-axial-2',name:'R2',props:{value:10000}},hole('h',16),rail('R','+',15));
@@ -139,7 +133,7 @@ export const LECTURE_EXAMPLES=Object.freeze([
 export const lectureExample=id=>LECTURE_EXAMPLES.find(e=>e.id===id);
 /** Example list values of lecture examples (`lecture:<id>`), next to the HAL example ids. */
 export const LECTURE_PREFIX='lecture:';
-export function lectureGuide(id){const e=lectureExample(id);if(!e)return '';const fw09=e.id==='lecture-fw-09';return `${e.ref} · ${fw09?'STM32는 HAL 코드를 실제로 실행하고 ESP32는 고정 실행(I2C 슬레이브 0x08)으로 응답합니다.':'보드 코드는 빌드·실행하지 않는 고정 실행입니다. 예제 시나리오대로 핀이 바뀌고 배선이 틀리면 동작하지 않습니다.'}`;}
+export function lectureGuide(id){const e=lectureExample(id);if(!e)return '';const fw09=e.id==='lecture-fw-09';const esp32=['lecture-fw-08','lecture-iot-01'].includes(e.id);return `${e.ref} · ${fw09?'STM32 HAL 코드와 ESP32 스케치(I2C 슬레이브 0x08)를 함께 실행합니다.':esp32?'ESP32 스케치를 실행합니다. 코드를 고치면 동작도 바뀝니다.':'라즈베리파이 코드는 빌드·실행하지 않는 고정 실행입니다. 예제 시나리오대로 핀이 바뀌고 배선이 틀리면 동작하지 않습니다.'}`;}
 const normalize=value=>String(value).normalize('NFKC').toLowerCase().replace(/[\s_·—-]+/g,'');
 export function searchLectureExamples(query){const q=normalize(query);return LECTURE_EXAMPLES.filter(e=>!q||normalize([e.code,e.title,e.ref,'강의 실습 esp32 라즈베리파이 raspberry pi'].join(' ')).includes(q));}
 /** The lecture example as a new project (the editor opens the board program). */

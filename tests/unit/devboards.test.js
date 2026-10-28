@@ -10,6 +10,7 @@ import {DEVBOARD_MODELS,devboardPins,devboardPinInfo,devboardNet,newDevboardFiel
 import {defineScenario,createBoardDrivers,FixedRunDriver} from '../../src/fixed-run.js';
 import {LECTURE_EXAMPLES,applyLectureExample,searchLectureExamples} from '../../src/lecture-examples.js';
 import {SimulationSession} from '../../src/session.js';
+import {SketchDriver} from '../../src/esp32-sketch.js';
 
 const board=(model,extra={})=>({id:'b1',type:'devboard',model,name:'B1',x:400,y:300,rotation:0,code:'',...extra});
 const project=(...components)=>{const p=startProject();p.components.push(...components);return p;};
@@ -97,10 +98,10 @@ describe('fixed run',()=>{
   r=sim.solve(p,{},{},150);assert.ok(r.voltage('signal:b1.GPIO17')>3);r=sim.solve(p,{},{},260);assert.ok(Math.abs(r.voltage('signal:b1.GPIO18')-1.65)<.01);
   assert.deepEqual(logs,['[B1] 고정 실행 시작 · test-fixed','[B1] LED 1','[B1] LED 0']);
  });
- test('a board without a scenario stays idle; scope runs one board only',()=>{
-  const p=validateProject(project(board('rpi5'),{...board('esp32-nodemcu-32s'),id:'b2',name:'B2',scenario:'lecture-esp32-blink'})),logs=[];
-  const all=createBoardDrivers(p,{log:s=>logs.push(s)});assert.equal(all.length,2);assert.match(logs[0],/실행하지 않습니다/);
-  assert.deepEqual(createBoardDrivers(p,{scope:'b2'}).map(d=>d.part.id),['b2']);assert.ok(all[1] instanceof FixedRunDriver);
+ test('a Raspberry Pi without a scenario stays idle, an ESP32 runs its sketch; scope runs one board only',()=>{
+  const p=validateProject(project(board('rpi5'),{...board('rpi5'),id:'b3',name:'B3',scenario:'lecture-rpi-blink'},{...board('esp32-nodemcu-32s'),id:'b2',name:'B2',code:'void setup(){}\nvoid loop(){}'})),logs=[];
+  const all=createBoardDrivers(p,{log:s=>logs.push(s)});assert.equal(all.length,3);assert.match(logs[0],/실행하지 않습니다/);
+  assert.deepEqual(createBoardDrivers(p,{scope:'b2'}).map(d=>d.part.id),['b2']);assert.ok(all[1] instanceof FixedRunDriver);assert.ok(all[2] instanceof SketchDriver);
  });
 });
 
@@ -121,8 +122,9 @@ describe('lecture examples',()=>{
   const two=run('lecture-rpi-05',[0,[10,{SW2:true}],[20,{SW2:true}]]);assert.ok(two.logs.includes('[RPI-1] GPIO22 눌림'));assert.ok(!two.logs.includes('[RPI-1] GPIO27 눌림'));
   const ker=run('lecture-ker-02',[0,[10,{SW1:true}],[20,{SW1:true}]]);assert.equal(ker.r.parts.LED1.on,true);assert.ok(ker.logs.includes('[RPI-1] button_driver: pressed'));
  });
- test('ESP32 IOT-01: switch lights the LED, the pot reads mid-scale, DHT11 reports its settings',()=>{
-  const io=run('lecture-iot-01',[0,1100,[1200,{SW1:true}],[1300,{SW1:true}]]);assert.ok(io.logs.includes('[ESP32-1] 스위치 떼어짐 → LED OFF'),'the polled switch is reported at start');assert.equal(io.r.parts.LED1.on,true);
+ test('ESP32 IOT-01 sketch: switch lights the LED, the pot reads mid-scale, DHT11 reports its settings',()=>{
+  // The sketch polls the switch once per loop (delay 1000 ms).
+  const io=run('lecture-iot-01',[0,1,1100,2100,[2200,{SW1:true}],[3100,{SW1:true}]]);assert.equal(io.r.parts.LED1.on,true);
   assert.ok(io.logs.includes('[ESP32-1] 가변저항 2047 (1.65 V)'));assert.ok(io.logs.includes('[ESP32-1] 온도 25.0 C, 습도 50 %'));
  });
  test('FW-09: the STM32 HAL code writes 1 / 0 over I2C and the ESP32 slave switches its LED',()=>{
@@ -131,5 +133,23 @@ describe('lecture examples',()=>{
   let r=session.tick(0);for(let t=20;t<=1500;t+=20)r=session.tick(t);
   assert.ok(out.some(s=>/ESP32에 1 보냄 \(status=0\)/.test(s)),out.join('|'));assert.ok(out.some(s=>/ESP32에 0 보냄 \(status=0\)/.test(s)));
   assert.ok(logs.includes('[ESP32-1] I2C 수신 1 → LED ON'));assert.ok(logs.includes('[ESP32-1] I2C 수신 0 → LED OFF'));
+ });
+});
+
+describe('ESP32 sketches',()=>{
+ const sketch=(code,extra=[])=>{const p=validateProject(project({...board('esp32-nodemcu-32s'),code},...extra)),logs=[],sim=new CircuitSimulation();sim.drivers=createBoardDrivers(p,{log:s=>logs.push(s)});return {p,sim,logs,driver:sim.drivers[0]};};
+ test('GPIO numbers, digitalWrite / delay, Serial and the on-board GPIO2',()=>{
+  const {p,sim,logs}=sketch('const int LED = 2;\nvoid setup(){ Serial.begin(115200); pinMode(LED, OUTPUT); }\nvoid loop(){ digitalWrite(LED, HIGH); Serial.println("on"); delay(100); digitalWrite(LED, LOW); Serial.printf("off %d\\n", 7); delay(100); }');
+  let r;for(let t=0;t<=50;t++)r=sim.solve(p,{},{},t);assert.ok(r.voltage('signal:b1.GPIO2')>3);for(let t=51;t<=150;t++)r=sim.solve(p,{},{},t);assert.equal(r.voltage('signal:b1.GPIO2'),0);
+  assert.deepEqual(logs.slice(1,3),['[B1] on','[B1] off 7']);
+ });
+ test('analogRead is 12-bit, ledcWrite sets the PWM average, digitalRead reads a pull-up',()=>{
+  const {p,sim,driver}=sketch('int raw = -1;\nvoid setup(){ ledcAttach(4, 5000, 8); ledcWrite(4, 51); pinMode(5, INPUT_PULLUP); }\nvoid loop(){ raw = analogRead(36); delay(10); }');
+  p.wires.push({id:'w1',from:'devboard:b1:L3',to:'devboard:b1:L1',color:'#ff0000'});let r;for(let t=0;t<=30;t++)r=sim.solve(p,{},{},t);
+  assert.equal(driver.runtime.get(driver.runtime.cell('raw')),4095);assert.ok(Math.abs(r.voltage('signal:b1.GPIO4')-.66)<.01);assert.ok(r.voltage('signal:b1.GPIO5')>3);
+ });
+ test('compile errors name the board and file; flash pins and missing pins are refused',()=>{
+  assert.throws(()=>createBoardDrivers(validateProject(project({...board('esp32-nodemcu-32s'),code:'void setup( {'}))),/B1 · sketch\.ino/);
+  const {p,sim}=sketch('void setup(){ pinMode(6, OUTPUT); }\nvoid loop(){}');assert.throws(()=>{for(let t=0;t<3;t++)sim.solve(p,{},{},t);},/플래시/);
  });
 });

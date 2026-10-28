@@ -1,4 +1,5 @@
 import {devboardModel} from './devboards.js';
+import {SketchDriver} from './esp32-sketch.js';
 
 // Fixed run: ESP32 / Raspberry Pi boards from the lecture examples do not execute their code. Each example has a
 // scenario that reproduces what its code does: output pins over time, reactions to inputs and the lines the program
@@ -62,6 +63,8 @@ export function createBoardDrivers(project,{log=()=>{},scope='all'}={}){
   if(part.type!=='devboard'||!devboardModel(part))continue;
   if(scope!=='all'&&scope!==part.id)continue;
   const scenario=part.scenario&&FIXED_RUN_SCENARIOS.get(part.scenario),say=text=>log(`[${part.name}] ${text}`);
+  // ESP32 boards run their sketch; Raspberry Pi boards their lecture scenario (fixed run).
+  if(devboardModel(part).kind==='esp32'){say(`스케치를 실행합니다 · ${devboardModel(part).file}`);drivers.push(new SketchDriver(part,{log:say,project}));continue;}
   if(scenario){say(`고정 실행 시작 · ${scenario.title||part.scenario}`);drivers.push(new FixedRunDriver(part,scenario,{log:say,project}));}
   else{say('고정 실행 예제가 아닌 보드라 코드를 실행하지 않습니다. 배선과 전압만 확인할 수 있습니다.');drivers.push(new IdleDriver(part));}
  }

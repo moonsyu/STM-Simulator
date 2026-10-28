@@ -15,6 +15,8 @@ export function formatPrintf(args,r){
     const value=args[index++];let output;
     if(length&&['s','c'].includes(kind))throw new Error('printf 와이드 문자는 지원하지 않습니다.');
     if(kind==='s'){output=string(value);if(precision!==null)output=output.slice(0,precision);}
+    // %f of NaN / ±Infinity prints nan / inf as C does (e.g. a DHT read that failed).
+    else if(kind==='f'&&typeof value==='number'&&!Number.isFinite(value))output=Number.isNaN(value)?'nan':value>0?'inf':'-inf';
     else{
       if(typeof value!=='number'||!Number.isFinite(value))throw new Error('printf 숫자 형식에는 유한한 숫자가 필요합니다.');
       const bits=length==='hh'?8:length==='h'?16:32,unsigned=bits===8?value&255:bits===16?value&65535:value>>>0,signed=bits===8?(value<<24)>>24:bits===16?(value<<16)>>16:value|0;
