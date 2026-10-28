@@ -3,10 +3,14 @@ import {numberLiteral,arithmetic,convert,promote,commonType} from './c-types.js'
 const TYPES = new Set(['void','int','bool','float','double','long','short','char','byte','String','unsigned','signed','uint8_t','uint16_t','uint32_t','int8_t','int16_t','int32_t','size_t','LiquidCrystal']);
 const QUALIFIERS = new Set(['const','volatile','static']);
 const INCLUDES = new Set(['Arduino.h','LiquidCrystal.h','Wire.h','SPI.h','stdint.h','math.h']);
+// ESP32 sketches (`compile(code,{esp32:true})`) also take the DHT sensor library and its class.
+const ESP32_INCLUDES = new Set([...INCLUDES,'DHT.h','DHT_U.h','Adafruit_Sensor.h']);
+const CONSTRUCTED = new Set(['LiquidCrystal','DHT']);
 const OPS = {'=':1,'+=':1,'-=':1,'*=':1,'/=':1,'%=':1,'&=':1,'|=':1,'^=':1,'<<=':1,'>>=':1,'||':3,'&&':4,'|':5,'^':6,'&':7,'==':8,'!=':8,'<':9,'>':9,'<=':9,'>=':9,'<<':10,'>>':10,'+':11,'-':11,'*':12,'/':12,'%':12};
 const ASSIGN = new Set(['=','+=','-=','*=','/=','%=','&=','|=','^=','<<=','>>=']);
 
 export function compile(source,options={}) {
+  const types=options.esp32?new Set([...TYPES,'DHT']):TYPES,includes=options.esp32?ESP32_INCLUDES:INCLUDES;
   if(typeof source!=='string'||source.length>(options.hal?300000:50000))throw new Error('코드 크기 한도를 넘었습니다.');
   const tokens=[]; let pos=0,line=1;
   while(pos<source.length){
@@ -18,7 +22,7 @@ export function compile(source,options={}) {
       const directive=tail.split(/\r?\n/,1)[0];
       const inc=/^#\s*include\s*[<"]([^>"]+)[>"]\s*$/.exec(directive);
       const def=/^#\s*define\s+([A-Za-z_]\w*)\s+(.+)$/.exec(directive);
-      if(inc){if(!INCLUDES.has(inc[1]))throw new Error(`${line}행: 지원하지 않는 라이브러리 ${inc[1]}`);pos+=directive.length;continue;}
+      if(inc){if(!includes.has(inc[1]))throw new Error(`${line}행: 지원하지 않는 라이브러리 ${inc[1]}`);pos+=directive.length;continue;}
       if(def){let value=def[2],quoted=false,escaped=false;for(let i=0;i<value.length;i++){const ch=value[i];if(escaped){escaped=false;continue;}if(ch==='\\'&&quoted){escaped=true;continue;}if(ch==='"')quoted=!quoted;if(!quoted&&ch==='/'&&value[i+1]==='/'){value=value.slice(0,i);break;}}const trimmed=value.trim(),isStr=/^"(?:\\.|[^"\\\r\n])*"$/.test(trimmed),isFlt=!isStr&&!(/^0[xXbB]/.test(trimmed))&&/(?:\d+\.\d*|\.\d+)(?:[eE][+-]?\d+)?[fF]?|\d+[eE][+-]?\d+[fF]?|\d+[fF]$/.test(trimmed);source=source.slice(0,pos)+`const ${isStr?'char *':isFlt?'double':'int'} ${def[1]} = ${value};`+tail.slice(directive.length);continue;}
       throw new Error(`${line}행: 지원하지 않는 전처리 지시문입니다.`);
     }
@@ -35,7 +39,7 @@ export function compile(source,options={}) {
   const fail=(message,index=at)=>{const loc=location(index),error=new Error(`${loc.file}:${loc.line}: ${message}`);error.location=loc;throw error;};
   const expect=value=>{if(peek()!==value)fail(`'${value}'가 필요합니다. 현재 '${peek()}'`);take();};
   const identifier=()=>{if(!/^[A-Za-z_]\w*$/.test(peek()))fail('이름이 필요합니다.');const name=take();if(['__proto__','prototype','constructor'].includes(name))fail('사용할 수 없는 이름입니다.');return name;};
-  const isType=()=>TYPES.has(peek())||aliases.has(peek())||QUALIFIERS.has(peek())||['struct','enum','extern'].includes(peek())||Object.hasOwn(program.structs,peek());
+  const isType=()=>types.has(peek())||aliases.has(peek())||QUALIFIERS.has(peek())||['struct','enum','extern'].includes(peek())||Object.hasOwn(program.structs,peek());
   function constantValue(n){
     if(n.type==='literal'&&typeof n.value==='number'&&Number.isInteger(n.value))return {value:n.value,type:n.numericType||'int'};
     if(n.type==='name'&&enumConstants.has(n.name))return enumConstants.get(n.name);
@@ -82,7 +86,7 @@ export function compile(source,options={}) {
     do{
       if(peek()==='['){take();d.array=true;if(peek()!==']')d.size=expression();expect(']');if(peek()==='[')fail('다차원 배열은 지원하지 않습니다.');}
       if(peek()==='='){take();d.value=initializer();}
-      else if(d.type==='LiquidCrystal'&&peek()==='('){d.value={type:'construct',name:d.type,args:argumentsList()};}
+      else if(CONSTRUCTED.has(d.type)&&peek()==='('){d.value={type:'construct',name:d.type,args:argumentsList()};}
       declarations.push(d);if(d.constant&&d.value&&!d.pointer&&!d.array){try{enumConstants.set(d.name,constantValue(d.value));}catch{}}
       if(peek()!==',')break;take();d=declarator(base);
     }while(true);
@@ -92,7 +96,7 @@ export function compile(source,options={}) {
   function castAhead(){
     let i=0;while(['const','volatile'].includes(peek(i)))i++;
     if(peek(i)==='struct'||peek(i)==='enum'){i++;if(!/^[A-Za-z_]\w*$/.test(peek(i)))return false;i++;}
-    else if(TYPES.has(peek(i))||aliases.has(peek(i))||Object.hasOwn(program.structs,peek(i))){i++;while(['long','short','int','unsigned','signed','char','double'].includes(peek(i)))i++;}
+    else if(types.has(peek(i))||aliases.has(peek(i))||Object.hasOwn(program.structs,peek(i))){i++;while(['long','short','int','unsigned','signed','char','double'].includes(peek(i)))i++;}
     else return false;
     if(peek(i)==='*')i++;return peek(i)===')';
   }
@@ -165,7 +169,7 @@ export function compile(source,options={}) {
     }
     if(!isType())fail('전역 변수 또는 함수 정의가 필요합니다.');
     const loc=location(),base=spec(),d=declarator(base);
-    if(peek()==='('&&base.type!=='LiquidCrystal'){
+    if(peek()==='('&&!CONSTRUCTED.has(base.type)){
       take();const params=[];if(peek()==='void'&&peek(1)===')')take();
       else if(peek()!==')')do{const p=declarator(spec());if(peek()==='['){take();expect(']');p.pointer=true;}params.push(p);if(peek()!==',')break;take();}while(true);
       expect(')');if(peek()===';'){take();continue;}

@@ -124,9 +124,9 @@ function syncEditor(){
  lastCodeCheckpoint=0;
  $('project-name').value=project.name;const files=project.firmware?.files||[],hal=project.firmware?.mode==='hal',boards=project.components.filter(p=>p.type==='devboard'&&devboardModel(p));if(!files.some(f=>f.name===sourceFile)&&!boardForFile(project,sourceFile))sourceFile='main.c';try{localStorage.setItem(SOURCE_KEY,sourceFile);}catch{}
  $('source-file').innerHTML=`<option value="main.c">${hal?'main.c':'main.ino'}</option>`+files.map(f=>`<option value="${esc(f.name)}">${esc(f.name)}</option>`).join('')+boards.map(p=>`<option value="${esc(boardFileKey(p))}">${esc(p.name)} · ${esc(devboardModel(p).file)}</option>`).join('');$('source-file').value=sourceFile;
- const board=boardForFile(project,sourceFile);$('code').readOnly=running()||!!board;
+ const board=boardForFile(project,sourceFile),fixedBoard=board&&devboardModel(board).kind!=='esp32';$('code').readOnly=running()||!!fixedBoard;
  $('code').value=board?board.code:sourceFile==='main.c'?project.code:files.find(f=>f.name===sourceFile).text;$('firmware-mode').value=hal?'hal':'sketch';
- document.querySelector('.language-badge').textContent=board?`${board.name} · ${devboardModel(board).kind==='rpi'?'Raspberry Pi':'ESP32'} · 고정 실행`:hal?'STM32 HAL':'GPIO 스케치';lineNumbers();monitor.settings(project.simulation);
+ document.querySelector('.language-badge').textContent=board?(fixedBoard?`${board.name} · Raspberry Pi · 고정 실행`:`${board.name} · ESP32 스케치`):hal?'STM32 HAL':'GPIO 스케치';lineNumbers();monitor.settings(project.simulation);
  document.querySelector('.code-note code').textContent=hal?'HAL_GPIO_Init · WritePin · ReadPin · TogglePin\nHAL_UART_Transmit · Receive_IT\nHAL_GPIO_EXTI_Callback\nHAL_TIM_Base_Start_IT · HAL_ADC_GetValue\nHAL_I2C_Mem_Read · HAL_SPI_Transmit\nprintf("value=%lu\\n", value)':'pinMode · digitalWrite · digitalRead\nanalogRead · analogWrite · delay\nLiquidCrystal · Serial1 · Wire · SPI\nTimer · attachInterrupt · DMA';
  document.querySelector('.code-note p').textContent=hal?'main(void)와 지원 HAL API를 회로에 연결합니다. 전체 HAL 드라이버·ELF/BIN 실행은 지원하지 않습니다.':'GPIO 스케치 문법의 일부를 실행합니다. ELF/BIN 펌웨어 로더는 포함되지 않습니다.';
  const selectedSerial=$('serial-target').value,serials=hal?SERIAL_IDS.filter(id=>project.mcu?.peripherals[id]?.enabled):[],serialKey=hal?serials.join(','):'sketch',keepSerial=$('serial-target').dataset.channels===serialKey;
@@ -134,7 +134,8 @@ function syncEditor(){
 // Other boards' program output has its own entries (read only).
  $('serial-target').insertAdjacentHTML('beforeend',project.components.filter(p=>p.type==='devboard').map(p=>`<option value="board:${esc(p.id)}">${esc(p.name)} · Serial (USB 출력)</option>`).join(''));
  $('serial-target').value=keepSerial&&[...$('serial-target').options].some(o=>o.value===selectedSerial)?selectedSerial:serials.includes('USART2')?'USART2':serials[0]??(boards.length&&project.surfaces?.board?.hidden?`board:${boards[0].id}`:hal?'':'Serial1');$('serial-target').dataset.channels=serialKey;$('serial-target').disabled=hal&&!serials.length&&!boards.length;
- if(board){document.querySelector('.code-note code').textContent=board.scenario?'강의 예제 시나리오대로 핀이 바뀝니다.':'예제가 아닌 보드는 실행하지 않습니다.';document.querySelector('.code-note p').textContent='이 보드의 코드는 빌드·실행하지 않는 고정 실행 코드입니다. 코드를 고쳐도 동작은 바뀌지 않아 읽기 전용으로 표시합니다.';}
+ if(fixedBoard){document.querySelector('.code-note code').textContent=board.scenario?'강의 예제 시나리오대로 핀이 바뀝니다.':'예제가 아닌 보드는 실행하지 않습니다.';document.querySelector('.code-note p').textContent='라즈베리파이 코드는 빌드·실행하지 않는 고정 실행 코드입니다. 코드를 고쳐도 동작은 바뀌지 않아 읽기 전용으로 표시합니다.';}
+ else if(board){document.querySelector('.code-note code').textContent='pinMode · digitalWrite · digitalRead\nanalogRead(0~4095) · ledcAttach · ledcWrite\nSerial.printf · DHT · Wire 슬레이브\ndelay · millis · attachInterrupt';document.querySelector('.code-note p').textContent='ESP32 스케치는 실행할 때 해석해 STM32와 같은 회로에서 동작합니다. 핀은 GPIO 번호(2 = GPIO2)로 씁니다. Wi-Fi·Bluetooth와 그 밖의 라이브러리는 지원하지 않습니다.';}
  editorSearch.refresh({sourceChanged:true});
  ide?.sync();
 }
@@ -167,7 +168,7 @@ function refresh({preserveWires=false}={}){
  document.querySelectorAll('[data-add]').forEach(b=>{b.classList.toggle('active',mode===b.dataset.add);b.disabled=running();if(b.dataset.add==='board')b.querySelector('b').textContent=project.surfaces?.board?.hidden?'+':'✓';});
  $('undo').disabled=running()||!undoStack.length;$('redo').disabled=running()||!redoStack.length;$('delete').disabled=running()||!['part','wire','group','surface'].includes(selection?.type);
  $('rotate').disabled=running()||selection?.type!=='part';
- $('code').readOnly=running()||isBoardFile(sourceFile);$('project-name').readOnly=running();
+ $('code').readOnly=running()||(isBoardFile(sourceFile)&&devboardModel(boardForFile(project,sourceFile)??{})?.kind!=='esp32');$('project-name').readOnly=running();
  editorSearch.refresh();
  for(const id of ['pinout-open','firmware-mode','firmware-import','firmware-folder','firmware-check','hal-example','code-reset','board-reset'])$(id).disabled=running();if($('run-scope'))$('run-scope').disabled=running();document.querySelectorAll('[data-devboard-add]').forEach(b=>b.disabled=running());
  $('run').classList.toggle('running',running()||starting);$('run').textContent=starting?'■  빌드 취소':runtime?.debug.paused?'⏵ 계속':running()?'■ 정지':'▶ 실행';
@@ -258,7 +259,7 @@ function inspector(force=false){
    }
    if(p.type==='devboard'){
     const model=devboardModel(p),dis=running()?'disabled':'';
-    el.innerHTML=`<span class="overline">${model.kind==='rpi'?'RASPBERRY PI':'ESP32'}</span><h2 title="${esc(p.name)}">${esc(p.name)}</h2><p>${esc(model.name)} · ${esc(model.description)}</p>${model.unverified?`<p class="pin-check">⚠ ${esc(model.unverified)}</p>`:''}<div class="inspector-card"><label for="part-name">보드 이름</label><input id="part-name" value="${esc(p.name)}" maxlength="40" ${dis}></div><div class="measure"><span>실행 방식</span><b>${p.scenario?'고정 실행 · 강의 예제':'실행 안 함'}</b></div><p>${p.scenario?'코드를 빌드·실행하지 않고 예제 시나리오대로 핀이 바뀝니다. 배선이 틀리면 실제처럼 동작하지 않습니다.':'예제에서 불러온 보드만 고정 실행합니다. 이 보드의 핀은 입력 상태로 두고 전압만 계산합니다.'}</p><button class="inspector-action" id="open-board-code">${esc(model.file)} 열기</button><div class="measure"><span>회전 각도</span><b>${p.rotation}°</b></div><button class="inspector-action" id="rotate-part" ${dis}>90° 회전 (R)</button><button class="inspector-action danger" id="remove-part" ${dis}>보드 삭제</button>`;
+    el.innerHTML=`<span class="overline">${model.kind==='rpi'?'RASPBERRY PI':'ESP32'}</span><h2 title="${esc(p.name)}">${esc(p.name)}</h2><p>${esc(model.name)} · ${esc(model.description)}</p>${model.unverified?`<p class="pin-check">⚠ ${esc(model.unverified)}</p>`:''}<div class="inspector-card"><label for="part-name">보드 이름</label><input id="part-name" value="${esc(p.name)}" maxlength="40" ${dis}></div><div class="measure"><span>실행 방식</span><b>${model.kind==='esp32'?'스케치 실행':p.scenario?'고정 실행 · 강의 예제':'실행 안 함'}</b></div><p>${model.kind==='esp32'?'sketch.ino를 실행할 때 해석해 STM32와 같은 회로·시간축에서 동작합니다.':p.scenario?'코드를 빌드·실행하지 않고 예제 시나리오대로 핀이 바뀝니다. 배선이 틀리면 실제처럼 동작하지 않습니다.':'강의 예제에서 불러온 라즈베리파이만 고정 실행합니다. 이 보드의 핀은 입력 상태로 두고 전압만 계산합니다.'}</p><button class="inspector-action" id="open-board-code">${esc(model.file)} 열기</button><div class="measure"><span>회전 각도</span><b>${p.rotation}°</b></div><button class="inspector-action" id="rotate-part" ${dis}>90° 회전 (R)</button><button class="inspector-action danger" id="remove-part" ${dis}>보드 삭제</button>`;
     $('part-name').onchange=e=>{const name=e.target.value.trim();if(!name||project.components.some(c=>c!==p&&c.name===name)){log('보드 이름이 비었거나 다른 부품·보드 이름과 같습니다.','error');inspector(true);return;}checkpoint();p.name=name;syncEditor();changed();};
     $('open-board-code').onclick=()=>{sourceFile=boardFileKey(p);syncEditor();tab('code');};$('rotate-part').onclick=rotateSelected;$('remove-part').onclick=removeSelected;return;
    }
@@ -547,7 +548,7 @@ function addDevboard(modelId){
  const right=Math.max(surfaceRight('board'),surfaceRight('breadboard'),...project.components.map(p=>p.type==='breadboard'?breadboardBounds(p).right:p.type==='devboard'?devboardBounds(p).right:p.x+40));
  let fields;try{fields=newDevboardFields(project,modelId,right);}catch(e){log(e.message,'error');return;}
  checkpoint();const p={id:uid('b'),...fields};project.components.push(p);selection={type:'part',id:p.id};pending=null;mode='select';inspectTab();changed();fitView();
- log(`${p.name}: ${DEVBOARD_MODELS[modelId].name}를 추가했습니다. 강의 예제가 아닌 보드는 코드를 실행하지 않고 전압만 계산합니다.`);
+ log(`${p.name}: ${DEVBOARD_MODELS[modelId].name}를 추가했습니다. ${DEVBOARD_MODELS[modelId].kind==='esp32'?'sketch.ino를 실행합니다.':'강의 예제가 아닌 라즈베리파이는 코드를 실행하지 않고 전압만 계산합니다.'}`);
 }
 $('devboard-options').innerHTML=Object.values(DEVBOARD_MODELS).map(m=>`<button class="board-option devboard-option" data-devboard-add="${m.id}"><span class="board-option-icon" aria-hidden="true">${m.kind==='rpi'?'Pi':'32'}</span><span><strong>${esc(m.name)}</strong><small>${esc(m.description)}</small></span><span class="board-option-action">추가</span></button>`).join('');
 $('devboard-options').querySelectorAll('[data-devboard-add]').forEach(b=>b.onclick=()=>addDevboard(b.dataset.devboardAdd));
@@ -584,7 +585,7 @@ function replaceCodeText(edit){
  try{code.setRangeText(edit.text,edit.start,edit.end,'end');code.dispatchEvent(new Event('input',{bubbles:true}));}
  finally{replaceCheckpoint=false;}
 }
-$('code').addEventListener('input',()=>{if(isBoardFile(sourceFile))return;if(replaceCheckpoint||Date.now()-lastCodeCheckpoint>1000){checkpoint();lastCodeCheckpoint=Date.now();}dirty=true;if(sourceFile==='main.c')project.code=$('code').value;else project.firmware.files.find(f=>f.name===sourceFile).text=$('code').value;lineNumbers();autosave();ide?.invalidate();$('undo').disabled=false;$('redo').disabled=true;});
+$('code').addEventListener('input',()=>{const board=boardForFile(project,sourceFile);if(isBoardFile(sourceFile)&&devboardModel(board??{})?.kind!=='esp32')return;if(replaceCheckpoint||Date.now()-lastCodeCheckpoint>1000){checkpoint();lastCodeCheckpoint=Date.now();}dirty=true;if(board)board.code=$('code').value;else if(sourceFile==='main.c')project.code=$('code').value;else project.firmware.files.find(f=>f.name===sourceFile).text=$('code').value;lineNumbers();autosave();ide?.invalidate();$('undo').disabled=false;$('redo').disabled=true;});
 $('source-file').onchange=e=>{sourceFile=e.target.value;syncEditor();};
 $('board-reset').onclick=()=>{if(running())return;$('board-reset-error').textContent='';$('board-reset-dialog').showModal();};
 $('board-reset-cancel').onclick=()=>$('board-reset-dialog').close();
