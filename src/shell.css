@@ -348,6 +348,12 @@ dialog.command-palette::backdrop{background:transparent}
 :root[data-shell] .object-size-tools select{height:24px;max-width:180px;font-size:12px;padding:0 4px}
 :root[data-shell] .object-size-tools output{font:11.5px var(--mono);color:var(--ide-muted)}
 .example-meta{display:flex;gap:4px}
+.example-boards{display:flex;flex-wrap:wrap;gap:4px;margin:2px 0 6px}
+.example-boards button{padding:2px 9px;border-radius:999px;font-size:11px;line-height:18px;color:var(--ide-muted);border:1px solid var(--ide-border);background:transparent}
+.example-boards button:hover{color:var(--ide-foreground);background:var(--ide-hover)}
+.example-boards button[aria-pressed="true"]{color:var(--ide-accent);border-color:color-mix(in srgb,var(--ide-accent) 55%,transparent);background:color-mix(in srgb,var(--ide-accent) 11%,transparent);font-weight:600}
+.example-group{position:sticky;top:0;z-index:1;margin:6px -6px 2px;padding:4px 16px;font-size:10.5px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--ide-muted);background:var(--ide-panel)}
+.example-group span{font-weight:500;margin-left:4px;opacity:.8}
 .example-tag{display:inline-block;padding:0 6px;border-radius:999px;font-size:10px;letter-spacing:.02em;background:color-mix(in srgb,var(--ide-accent) 11%,transparent);line-height:16px}
 .example-tag.arm{color:var(--ide-warning);background:color-mix(in srgb,var(--ide-warning) 14%,transparent)}
 dialog.command-palette::backdrop{background:transparent!important;backdrop-filter:none!important}
