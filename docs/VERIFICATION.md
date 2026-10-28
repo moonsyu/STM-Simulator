@@ -1,5 +1,9 @@
 # 검증 기록
 
+## 1.9.0 ESP32 실물 빌드·업로드 — 공개 배포 검증 완료
+
+2026-10-28. 제품 커밋 `ac0811f33e7ed8ce9d151ba0bc4f0f635bb602e0` · [Windows CI 40699084907](https://github.com/moonsyu/STM-Simulator/actions/runs/40699084907) · [Release v1.9.0](https://github.com/moonsyu/STM-Simulator/releases/tag/v1.9.0). 실물 ESP32 DevKit WROOM-32(CP210x COM4): 앱 실행 대상에 `ESP32 (COM4)` 표시, FW-08 Arduino CLI 빌드 성공, 업로드는 보드가 자동으로 다운로드 모드에 들어가지 않아 BOOT 안내와 함께 실패(BOOT 버튼 업로드는 미확인), 직렬 모니터 부팅 출력 수신. 예제 ESP32 스케치 실제 컴파일 FW-08·FW-09·템플릿 성공, IOT-01은 DHT sensor library 없음 안내. `npm test` 796 통과(로컬 권한 2 제외), E2E 37 통과·2 건너뜀. latest=v1.9.0, BUILD-INFO 커밋 `ac0811f` 일치(sourceDirty false), 5자산. EXE SHA-256 `3b4abca6c434bd97378a6899cb8233b6dce0745be3e7dd6b94a6cddcd250cb66`(105,289,366 B, MZ)이 SHA256.txt·update-manifest·ZIP 안의 STM-Simulator.exe와 일치. ZIP SHA-256 `3cf3bb84adbe365cfe4fa865630ca7b3ab6e826a97136b4313b5d89c41116a9c`.
+
 ## 1.8.1 실물 보드 확인 · 디버그 시작 상태 · 빌드 경고 — 공개 배포 검증 완료
 
 2026-10-28. 제품 커밋 `19730c9192e1c7d2ca2723a9b25b9f78afcceadd` · [Windows CI 40668107370](https://github.com/moonsyu/STM-Simulator/actions/runs/40668107370) · [Release v1.8.1](https://github.com/moonsyu/STM-Simulator/releases/tag/v1.8.1). 실물: NUCLEO-F103RB·F446RE 빌드·기록·실행(USART2 인사·에코), 두 보드 동시 기록, GDB 디버그, 앱 화면 Ctrl+F5. 이 PC 도구로 HAL 예제 254/254 실제 빌드 + 에뮬레이터, 에뮬레이터 E2E 6/6. `npm test` 790 통과(로컬 권한 2 제외). latest=v1.8.1, 태그·BUILD-INFO 커밋 `19730c9` 일치(sourceDirty false), 5자산. EXE SHA-256 `381bbbae5bd62b346b1055f7e0d37891f5c7213075fa2d511cea728170d90159`(105,284,294 B, MZ)이 SHA256.txt·update-manifest·ZIP 안의 STM-Simulator.exe와 일치. ZIP SHA-256 `8f46f434611880e70b78373f46fe709c8de7f698933cd9f5ee7ed6ada683badb`.
