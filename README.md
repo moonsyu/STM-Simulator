@@ -52,7 +52,7 @@ STM Simulator는 **NUCLEO-F446RE·NUCLEO-F103RB 회로 시뮬레이터와 Cortex
 - **IDE 프로젝트**: 폴더 프로젝트 생성·열기, C/C++/H 파일 관리, clangd 의미 분석, ARM/Windows GCC Debug·Release 빌드, GDB 디버그, Windows 명령 프롬프트 터미널.
 - **저장**: `.stm32lab` 파일과 프로젝트 폴더(저널·롤백으로 여러 파일을 원자적으로 저장), 자동 저장, 종료 직전 편집 보존, 실행 취소/재실행.
 - **STM32 보드 여러 개**: NUCLEO-F446RE·F103RB를 한 회로에 4개까지 놓고 보드마다 `main.c`·핀 설정·소스를 따로 둡니다. 편집할 보드를 고르면 편집기·Pinout·빌드·디버그가 그 보드를 대상으로 하고, 실행 한 번에 모든 보드가 같은 회로에서 함께 동작합니다(GPIO·EXTI, 보드 간 UART, 펌웨어 에뮬레이터). 실물 보드는 보드마다 빌드해 각자의 ST-LINK에 차례로 기록합니다. [사용법](docs/IDE.md#stm32-보드-여러-개).
-- **ESP32·라즈베리파이 보드와 강의 실습 예제**: STM32 옆에 NodeMCU-32S(ESP-32S)·ESP32 DevKit(WROOM-32)·Raspberry Pi 5를 놓고 배선합니다. ESP32는 빵판에 꽂힙니다. ESP32 스케치(`setup`/`loop`, GPIO 번호, ADC·LEDC PWM·Serial.printf·DHT·Wire 슬레이브)는 해석 실행하고, 라즈베리파이는 강의 예제의 **고정 실행**(예제 시나리오대로 핀·출력 재현)으로 STM32와 같은 시간축에서 동작합니다. 강의 회로도 10개(라즈베리파이·커널 드라이버·ESP32·STM32↔ESP32 I²C)를 예제로 불러올 수 있습니다. [사용법](docs/IDE.md#esp32라즈베리파이-보드와-강의-실습-예제)
+- **ESP32·라즈베리파이 보드와 강의 실습 예제**: STM32 옆에 NodeMCU-32S(ESP-32S)·ESP32 DevKit(WROOM-32)·Raspberry Pi 5를 놓고 배선합니다. ESP32는 빵판에 꽂힙니다. ESP32 스케치(`setup`/`loop`, GPIO 번호, ADC·LEDC PWM·Serial.printf·DHT·Wire 슬레이브)는 해석 실행하고, 라즈베리파이는 강의 예제의 **고정 실행**(예제 시나리오대로 핀·출력 재현)으로 STM32와 같은 시간축에서 동작합니다. 강의 회로도 10개와 회로가 있는 강의 과제 8개를 예제로 불러올 수 있고, 예제 목록은 Raspberry Pi · STM32 · ESP32로 나뉩니다. [사용법](docs/IDE.md#esp32라즈베리파이-보드와-강의-실습-예제)
 - **자동 업데이트**: 포터블 EXE에서 GitHub Release의 새 버전을 확인·다운로드하고 해시 검증 후 교체합니다. [업데이트 사용법](docs/UPDATES.md).
 
 자세한 사용법은 [IDE 사용법](docs/IDE.md), 지원 API는 [HAL API](docs/HAL-API.md), 에뮬레이터 구조는 [펌웨어 에뮬레이터](docs/architecture/EMULATOR.md)를 참고하세요.
