@@ -47,6 +47,8 @@ class GdbSession extends EventEmitter {
       const pending=this.pending.get(record.token);if(pending){clearTimeout(pending.timer);this.pending.delete(record.token);if(record.class==='error')pending.reject(new Error(record.msg||'GDB 오류'));else pending.resolve(record);}
     }else if(record.type==='*'){
       if(record.class==='running'){this.state='running';this.emit('state',{state:'running'});}
+      // A board halted while GDB connects (before the program is started) is not a pause the user asked for.
+      else if(record.class==='stopped'&&this.state==='starting'&&!record.reason)return;
       else if(record.class==='stopped'){this.state=record.reason?.startsWith('exited')?'exited':'paused';this.emit('state',{state:this.state,reason:record.reason,frame:record.frame,exitCode:record['exit-code']});}
     }else if(record.text)this.emit('output',record.text);
   }
