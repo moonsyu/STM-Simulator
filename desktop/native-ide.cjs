@@ -7,6 +7,7 @@ const {LanguageServer}=require('./clangd.cjs');
 const {launch,terminate}=require('./process-tools.cjs');
 const {installPlan,installTools}=require('./tool-installer.cjs');
 const {execute}=require('./process-tools.cjs');
+const esp32=require('./esp32-build.cjs');
 const os=require('node:os');
 // OpenOCD bundled with STM32CubeIDE is ST's fork: its scripts live in a separate plugin (…debug.openocd_*/resources/
 // openocd/st_scripts) and it reaches the ST-LINK through the DAP interface; the legacy hla interface/stlink.cfg loops there.
@@ -86,7 +87,7 @@ async function assignStlinks(items,list=listStlinks){
 }
 function checkedConfig(value){if(!value||!['arm','host'].includes(value.target)||!['Debug','Release'].includes(value.configuration))throw new Error('빌드 대상과 구성을 선택하세요.');return {target:value.target,configuration:value.configuration};}
 class NativeIde extends EventEmitter{
-  constructor(directory){super();this.directory=directory;this.gdb=new GdbSession();this.lsp=new LanguageServer();this.result=null;this.buildController=null;this.tools=null;this.runProcess=null;this.server=null;this.terminal=null;
+  constructor(directory){super();this.directory=directory;this.gdb=new GdbSession();this.lsp=new LanguageServer();this.result=null;this.buildController=null;this.tools=null;this.runProcess=null;this.server=null;this.terminal=null;this.stops=0;
     this.gdb.on('output',text=>this.send('debug-output',{text}));this.gdb.on('state',state=>{this.send('debug-state',state);if(state.state==='idle')void this.stopServer();if(state.state==='exited')void this.gdb.stop();});
     this.gdb.on('breakpoints',points=>this.send('breakpoints',{points}));
     this.lsp.on('diagnostics',data=>this.send('diagnostics',data));this.lsp.on('status',data=>this.send('language-state',data));this.lsp.on('log',text=>this.send('language-log',{text}));
@@ -181,7 +182,48 @@ class NativeIde extends EventEmitter{
     for(const stream of [child.stdout,child.stderr]){stream.setEncoding('utf8');stream.on('data',text=>this.send('run-output',{text}));}
     child.once('error',error=>this.send('run-output',{text:error.message+'\n'}));child.once('close',code=>{if(this.runProcess===child)this.runProcess=null;this.send('run-state',{state:'exited',code});});return {directory:plan.directory};
   }
-  input(text){if(typeof text!=='string'||text.length>8192)throw new Error('입력이 너무 큽니다.');if(!this.runProcess)throw new Error('실행 중인 Windows 프로그램이 없습니다.');this.runProcess.stdin.write(text);}
+  // The ESP32 board of the circuit (its sketch.ino) that a build or upload uses.
+  async esp32Part(text,id){
+    const project=await this.validate(text),{devboardModel}=await import('../src/devboards.js');
+    const part=project.components.find(p=>p.type==='devboard'&&p.id===id);
+    if(!part||devboardModel(part)?.kind!=='esp32')throw new Error('회로에 ESP32 보드가 없습니다. 부품에서 ESP32 보드를 추가하고 sketch.ino를 작성하세요.');
+    return part;
+  }
+  /** Compile the sketch of one ESP32 board with Arduino CLI (Ctrl+B with an ESP32 run target). */
+  async buildSketch({text,board}){
+    if(this.busy())throw new Error('현재 작업을 정지한 뒤 빌드하세요.');const part=await this.esp32Part(text,board),tools=await this.settings();
+    this.result=null;this.buildController=new AbortController();this.send('build-state',{state:'building'});
+    try{
+      const result=await esp32.compileSketch({cli:tools.arduinoCli,code:part.code,root:path.join(tools.buildRoot||this.directory,'esp32-builds'),signal:this.buildController.signal,onOutput:text=>this.send('build-output',{text})});
+      this.result={...result,board:part.name};this.send('build-state',{state:'succeeded',result:this.result});return this.result;
+    }catch(error){this.send('build-state',{state:'failed',message:error.message,diagnostics:error.diagnostics||[]});throw error;}finally{this.buildController=null;}
+  }
+  // Run (Ctrl+F5) on an ESP32 board: build, upload through its COM port, then show what the board prints (the serial
+  // monitor stays open until the run is stopped; input lines go to the board).
+  async runSketch({text,board,port}){
+    if(this.busy())throw new Error('현재 실행을 먼저 종료하세요.');esp32.checkedPort(port);
+    const result=await this.buildSketch({text,board}),cli=(await this.settings()).arduinoCli;
+    this.send('run-state',{state:'running'});
+    try{
+      this.send('run-output',{text:`\n[${result.board}] ${port}에 업로드합니다. "Connecting..."이 계속되면 보드의 BOOT 버튼을 누른 채로 기다리세요.\n`});
+      let log='';const stops=this.stops;const code=await this.track(launch(cli,await esp32.uploadArgs(result,port),{}),text=>{log=(log+text).slice(-20000);});
+      if(this.stops!==stops)throw new Error('업로드를 중지했습니다.');
+      if(code!==0){const hint=esp32.uploadHint(log);throw new Error(`ESP32 업로드 실패 (종료 코드 ${code}).${hint?' '+hint:''}`);}
+      this.send('run-output',{text:`\n업로드를 마쳤습니다. ${port} 직렬 출력 · ${result.baud} bps (실행 정지로 닫습니다)\n`});
+    }catch(error){this.send('run-state',{state:'idle'});throw error;}
+    const monitor=this.runProcess=launch(cli,await esp32.monitorArgs(port,result.baud),{});
+    for(const stream of [monitor.stdout,monitor.stderr]){stream.setEncoding('utf8');stream.on('data',text=>this.send('run-output',{text}));}
+    monitor.once('error',error=>this.send('run-output',{text:error.message+'\n'}));
+    monitor.once('close',()=>{if(this.runProcess===monitor){this.runProcess=null;this.send('run-output',{text:`\n${port} 직렬 모니터를 닫았습니다.\n`});this.send('run-state',{state:'exited'});}});
+    return {directory:result.directory,uploaded:true,port,baud:result.baud};
+  }
+  // A child process that is the current run (stopped by 실행 정지): its output is shown, the exit code returned.
+  async track(child,onText=()=>{}){
+    this.runProcess=child;
+    try{return await new Promise((resolve,reject)=>{child.once('error',reject);child.once('close',resolve);for(const stream of [child.stdout,child.stderr]){stream.setEncoding('utf8');stream.on('data',t=>{onText(t);this.send('run-output',{text:t});});}});}
+    finally{if(this.runProcess===child)this.runProcess=null;}
+  }
+  input(text){if(typeof text!=='string'||text.length>8192)throw new Error('입력이 너무 큽니다.');if(!this.runProcess)throw new Error('실행 중인 Windows 프로그램이나 ESP32 직렬 모니터가 없습니다.');this.runProcess.stdin.write(text);}
   async language(text,config){config=checkedConfig(config);const project=await this.validate(text),tools=await this.settings();if(!tools.clangd)throw new Error('clangd 경로를 개발 도구 설정에서 지정하세요.');const key=createHash('sha256').update(JSON.stringify([config,project.firmware?.files.map(f=>f.name),project.mcu])).digest('hex');const files=[{name:'main.c',text:project.code},...(project.firmware?.files||[])];if(this.languageKey===key&&!this.lsp.closed){await this.lsp.update(files);return {state:'ready'};}await this.lsp.stop();const plan=await prepareBuild({project,tools,root:path.join(tools.buildRoot||this.directory,'language-workspaces'),...config});await this.lsp.start(tools.clangd,plan,files);this.languageKey=key;return {state:'ready'};}
   async openTerminal(cwd){if(this.terminal)return;const command=path.join(process.env.SystemRoot||'C:/Windows','System32/cmd.exe');const directory=cwd||this.directory;
     // Switch the code page before cmd prints its first prompt so Korean paths are not garbled.
@@ -191,8 +233,8 @@ class NativeIde extends EventEmitter{
     // with non-ASCII text (Korean paths, echo 가나다) goes through a one-line batch file run with `call`.
     if(/[^\x00-\x7f]/.test(text)){const file=path.join(os.tmpdir(),`stm-terminal-${process.pid}-${(this.terminalLine=(this.terminalLine||0)+1)%8}.cmd`);require('node:fs').writeFileSync(file,text+'\r\n','utf8');this.terminal.stdin.write(`call "${file}"\r\n`);return;}
     this.terminal.stdin.write(text+'\r\n');}
-  async stop(){this.buildController?.abort();await this.gdb.stop();await this.stopServer();const child=this.runProcess;this.runProcess=null;await terminate(child);this.send('run-state',{state:'exited'});}
+  async stop(){this.stops++;this.buildController?.abort();await this.gdb.stop();await this.stopServer();const child=this.runProcess;this.runProcess=null;await terminate(child);this.send('run-state',{state:'exited'});}
   async close(){await this.stop();await this.lsp.stop();await this.closeTerminal();}
   async closeTerminal(){const child=this.terminal;this.terminal=null;await terminate(child);if(!this.terminal)this.send('terminal-state',{state:'closed'});}
 }
-module.exports={NativeIde,openocdArgs,chooseStlink,assignStlinks,listBoards};
+module.exports={NativeIde,openocdArgs,chooseStlink,assignStlinks,listBoards,listEsp32Ports:esp32.listEsp32Ports};

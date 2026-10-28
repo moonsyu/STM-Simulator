@@ -105,3 +105,19 @@ test('an ESP32 sketch is edited and run: the board follows the changed code',{ti
   assert.deepEqual(s.errors,[]);
  }finally{await s.close();}
 });
+
+test('the ESP32 run target builds the board sketch with Arduino CLI; debugging is not offered',{timeout:120000},async()=>{
+ const s=await launch();
+ try{
+  const {win}=s;await applyLecture(win,'FW-08');
+  await win.click('#status-target');await win.selectOption('#native-target','esp32');
+  assert.match(await win.textContent('.language-badge'),/ESP32-1 · Arduino CLI/);
+  assert.equal(await win.locator('#native-config').isVisible(),false);
+  assert.match(await win.textContent('#build-status'),/Arduino CLI → ESP32/);
+  await win.keyboard.press('F10');
+  await win.waitForFunction(()=>/ESP32 보드는 디버그를 지원하지 않습니다/.test(document.getElementById('console-output').textContent));
+  // The target is saved with the project like the other run targets.
+  await win.waitForFunction(()=>{try{return JSON.parse(localStorage.getItem('stm32lab.project.v2')).ide.native.target==='esp32';}catch{return false;}},null,{timeout:10000});
+  assert.deepEqual(s.errors,[]);
+ }finally{await s.close();}
+});
