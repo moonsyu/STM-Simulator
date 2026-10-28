@@ -60,7 +60,8 @@ export class IdleDriver{constructor(part){this.part=part;}advance(){}gpio(){retu
 export function createBoardDrivers(project,{log=()=>{},scope='all'}={}){
  const drivers=[];
  for(const part of project.components){
-  if(part.type!=='devboard'||!devboardModel(part))continue;
+  // STM32 boards run as their own simulator / emulator sessions (stm32-boards.js).
+  if(part.type!=='devboard'||!devboardModel(part)||devboardModel(part).kind==='stm32')continue;
   if(scope!=='all'&&scope!==part.id)continue;
   const scenario=part.scenario&&FIXED_RUN_SCENARIOS.get(part.scenario),say=text=>log(`[${part.name}] ${text}`);
   // ESP32 boards run their sketch; Raspberry Pi boards their lecture scenario (fixed run).

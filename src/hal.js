@@ -65,7 +65,7 @@ export class HalAdapter {
   get active(){return this.nvicModel.active;}
   uart(id){
     if(!isSerial(id))throw new Error(`지원하지 않는 UART 인스턴스: ${id}`);
-    if(!this.serials.has(id)){const bus=id==='USART2'?this.buses:new BusDevices(this.buses.project,this.buses.getResult,this.buses.trace);bus.uart.instance=id;bus.received=this.buses.received;bus.signals=this.buses.signals;bus.noise=this.buses.noise;this.serials.set(id,{bus,rx:null,tx:null});}
+    if(!this.serials.has(id)){const bus=id==='USART2'?this.buses:new BusDevices(this.buses.project,this.buses.getResult,this.buses.trace);bus.uart.instance=id;bus.received=this.buses.received;bus.signals=this.buses.signals;bus.noise=this.buses.noise;if(bus!==this.buses)bus.peers=(...a)=>this.buses.peers?.(...a);this.serials.set(id,{bus,rx:null,tx:null});}
     return this.serials.get(id);
   }
   uartWrite(channel,bytes,r){const before=channel.bus.uart.queue.length;channel.bus.call('Serial1.write',[r.array(bytes),bytes.length],r);r.api.uart?.({instance:channel.bus.uart.instance,direction:'TX',bytes,micros:r.microTime});for(const byte of channel.bus.uart.queue.slice(before))r.event(byte.at/1000,()=>{});}

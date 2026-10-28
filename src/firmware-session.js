@@ -127,6 +127,7 @@ export class FirmwareSession {
     this.motion.update(this.project, this.result, micros, this.runtime, us => this.changed(us));
     this.buses.update(this.result); this.catalogMotion.update(this.project, this.result, micros, this.runtime); this.wave.record(micros, this.result);
     for (const p of this.project.components) if (p.type === 'catalog_singlewire' && p.catalogState) this.singleWireDrive(p);
+    for (const d of this.circuit.drivers) d.decorate?.(this.result);
   }
   singleWireDrive() { /* catalog single-wire devices pull the line through catalogState; the engine reads it */ }
   solve(next) {

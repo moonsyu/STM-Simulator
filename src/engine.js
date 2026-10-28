@@ -61,6 +61,8 @@ export function solveCircuit(project,gpio={},pressed={},transient={}){
   branch('signal:PC13','signal:3V3',4700);
   if(pressed.USER)branch('signal:PC13','signal:GND',1);
   for(const p of project.components)if(p.type==='devboard')for(const [pin,r]of Object.entries(devboardModel(p)?.pullups||{}))branch(`signal:${p.id}.${pin}`,'signal:3V3',r);
+  // Other STM32 boards have the same USER button (`<id>.USER` while pressed).
+  for(const p of project.components)if(p.type==='devboard'&&devboardModel(p)?.kind==='stm32'){branch(`signal:${p.id}.PC13`,'signal:3V3',4700);if(pressed[p.id+'.USER'])branch(`signal:${p.id}.PC13`,'signal:GND',1);}
   for(const p of project.components){
     const a=`part:${p.id}:a`,b=`part:${p.id}:b`,pin=n=>`part:${p.id}:p${n}`;
     catalogBranches(p,uf,branch,pressed);

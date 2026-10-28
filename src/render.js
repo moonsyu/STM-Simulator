@@ -7,20 +7,20 @@ import {PINS,HOLES,FULL_HOLES,BOARD,BB,FULL_BB,endpointInfo,circuitHoles,breadbo
 import {DEFAULT_BOARD_ID,getBoard} from './boards.js';
 import {terminalKeys,terminalLabel,localTerminals,nominalTerminals,rotatePoint,attachments,PART_DEFS} from './components.js';
 import {extraShape,updateExtraSvg} from './part-render.js';
-import {scaleXOf,scaleYOf,partTransform,partVector,surfaceTransform,surfacePoint} from './geometry.js';
-import {devboardPins,devboardSvg,updateDevboardSvg} from './devboards.js';
+import {scaleXOf,scaleYOf,partTransform,partVector,surfaceTransform,surfacePoint,scaleTransform} from './geometry.js';
+import {devboardPins,devboardSvg,updateDevboardSvg,devboardModel} from './devboards.js';
 export const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const text=(x,y,s,size=10,color='#4a6e87',other='')=>`<text x="${x}" y="${y}" font-size="${size}" fill="${color}" ${other}>${esc(s)}</text>`;
 const rect=(x,y,w,h,fill,rx=0,extra='')=>`<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${rx}" fill="${fill}" ${extra}/>`;
 function chip(x,y,w,h){let pins='';for(let i=0;i<16;i++){const d=(i+1)*(w-8)/17;pins+=rect(x+4+d,y-6,2,8,'#aeb4b5')+rect(x+4+d,y+h-2,2,8,'#aeb4b5')+rect(x-6,y+4+d,8,2,'#aeb4b5')+rect(x+w-2,y+4+d,8,2,'#aeb4b5');}return pins+rect(x,y,w,h,'#292b2c',2,'stroke="#111718" stroke-width="1.5"')+rect(x+2,y+2,w-4,h-4,'none',1,'stroke="#444849" stroke-width=".7"')+`<circle cx="${x+7}" cy="${y+7}" r="2" fill="#767c7c"/>`;}
 function button(x,y,color,id,label){return `<g data-button="${id}" class="board-button">${rect(x-19,y-19,38,38,'#c7cdcc',4,'stroke="#8c999d"')}<circle cx="${x}" cy="${y}" r="14" fill="${color}" stroke="#233744" stroke-width="2"/>${[[-14,-14],[14,-14],[-14,14],[14,14]].map(([dx,dy])=>`<circle cx="${x+dx}" cy="${y+dy}" r="2.5" fill="#303b40"/>`).join('')}${text(x,y+31,label,8,'#3f6684','text-anchor="middle"')}</g>`;}
 // Both supported boards are the MB1136 NUCLEO-64; only the MCU label and a few header signals differ.
-export function boardSvg(boardId=DEFAULT_BOARD_ID){
+export function boardSvg(boardId=DEFAULT_BOARD_ID,{prefix=''}={}){
  const board=getBoard(boardId)??getBoard(DEFAULT_BOARD_ID);
  // The board art was drawn on a 440 × 532 frame; it is scaled onto the real 70 × 82.5 mm outline (BOARD). Headers and
 // pins below are placed at their exact positions (pins.js), not scaled with the art.
  const kx=BOARD.w/440,ky=BOARD.h/532;
- let s=`<g class="board" data-board="${board.id}"><g class="board-art" transform="matrix(${kx} 0 0 ${ky} ${BOARD.x*(1-kx)} ${BOARD.y*(1-ky)})"><path d="M59 48H471Q485 48 485 62V216H326Q315 216 315 224Q315 232 326 232H485V565Q485 580 470 580H67L45 559V232H178Q187 232 187 224Q187 216 178 216H45V63Q45 48 59 48Z" fill="url(#pcb)" stroke="#aeb5b2" stroke-width="1.3" filter="url(#shadow)"/>`;
+ let s=`<g class="${prefix?'stm32-board':'board'}" data-board="${board.id}"><g class="board-art" transform="matrix(${kx} 0 0 ${ky} ${BOARD.x*(1-kx)} ${BOARD.y*(1-ky)})"><path d="M59 48H471Q485 48 485 62V216H326Q315 216 315 224Q315 232 326 232H485V565Q485 580 470 580H67L45 559V232H178Q187 232 187 224Q187 216 178 216H45V63Q45 48 59 48Z" fill="url(#pcb)" stroke="#aeb5b2" stroke-width="1.3" filter="url(#shadow)"/>`;
  // Mini-USB shell, tongue and contact fingers in top view (NUCLEO-F446RE).
  s+=rect(302,62,7,19,'#c8cecc',1)+rect(359,62,7,19,'#c8cecc',1)+rect(305,35,58,54,'#c7cdcc',3,'stroke="#798484" stroke-width="1.5"')+rect(309,39,50,45,'#e8ebea',2,'stroke="#a1aaa8"')+rect(313,35,42,16,'#374142',2)+rect(317,38,34,8,'#111b1d',1)+rect(320,41,28,5,'#9d9e8b',1);
  for(let i=0;i<5;i++)s+=rect(322+i*5,41,2,5,'#dbbc6e',.5);
@@ -30,13 +30,13 @@ export function boardSvg(boardId=DEFAULT_BOARD_ID){
  for(let i=0;i<6;i++)s+=rect(80,105+i*14,5,5,'#c9ad62',1);
  for(let i=0;i<34;i++){const x=306+(i%9)*16,y=121+Math.floor(i/9)*22;s+=rect(x,y,8,13,i%4?'#cbbd95':'#677379',1)+rect(x,y,8,2,'#c4ccd0')+rect(x,y+11,8,2,'#c4ccd0');}
  s+=text(440,192,'DBG',12,'#34749c','text-anchor="middle"');
- s+=button(212,255,'#2d8bc5','USER','USER · PC13')+button(327,255,'#29333b','RESET','RESET');
+ s+=button(212,255,'#2d8bc5',prefix+'USER','USER · PC13')+button(327,255,'#29333b',prefix+'RESET','RESET');
  for(const [x,y]of [[111,257],[420,258],[161,563],[362,563]])s+=`<circle cx="${x}" cy="${y}" r="9" fill="#ecf1f3" stroke="#c7d1d5"/>`;
  s+=chip(219,415,77,77)+text(257.5,459,'ARM '+board.core,5.5,'#949c98','text-anchor="middle"');
  s+=rect(192,332,35,29,'#303d46',2)+rect(235,331,19,30,'#d5b86b',2)+rect(286,325,21,28,'#384951',2)+rect(322,338,18,15,'#ccbb89',2);
  for(let i=0;i<20;i++){const x=177+(i%5)*33,y=379+Math.floor(i/5)*9;s+=rect(x,y,12,5,i%3?'#cbbb92':'#79898a',1);}
  s+=rect(249,514,47,17,'#dce1dc',8,'stroke="#939e99"')+rect(254,517,37,11,'#eff1e9',5);
- s+=`<circle id="builtin-led" cx="294" cy="354" r="5" fill="#89a486" stroke="#6c886b"/>`+text(305,357,'LD2 · PA5',7);
+ s+=`<circle ${prefix?'class="stm32-led"':'id="builtin-led"'} cx="294" cy="354" r="5" fill="#89a486" stroke="#6c886b"/>`+text(305,357,'LD2 · PA5',7);
  s+='</g>';
  // Header wells are computed from the exact same pin list as interaction and simulation.
  for(const name of ['CN7','CN10','CN6','CN8','CN5','CN9']){
@@ -96,7 +96,12 @@ export function renderWires(project,selected){return project.wires.map(w=>{
 }).join('');}
 export const LED_COLORS={red:'#f05a4b',green:'#65c668',blue:'#53a8f7',yellow:'#f4c941'};
 export function renderBreadboards(project,selected){return project.components.filter(p=>p.type==='breadboard').map(p=>breadboardSvg(p,selected)).join('');}
-export function renderDevboards(project,selected){return project.components.filter(p=>p.type==='devboard').map(p=>devboardSvg(p,isSelected(selected,'part',p.id))).join('');}
+// Other STM32 boards: the main board's drawing (buttons `<id>.USER` / `<id>.RESET`, LD2) centred on the component.
+function stm32DevboardSvg(p,selected){
+ const cx=BOARD.x+BOARD.w/2,cy=BOARD.y+BOARD.h/2;
+ return `<g class="devboard ${selected?'part-selected':''}" data-part="${p.id}" data-rotation="0" data-devboard="${p.model}" transform="translate(${p.x} ${p.y}) ${scaleTransform(p)} translate(${-cx} ${-cy})">${boardSvg(p.model,{prefix:p.id+'.'})}${text(cx,BOARD.y-10,p.name,12,'#496477','text-anchor="middle" font-weight="700" class="devboard-name"')}</g>`;
+}
+export function renderDevboards(project,selected){return project.components.filter(p=>p.type==='devboard').map(p=>devboardModel(p)?.kind==='stm32'?stm32DevboardSvg(p,isSelected(selected,'part',p.id)):devboardSvg(p,isSelected(selected,'part',p.id))).join('');}
 export function updateSurfaces(svg,project,selected){for(const [key,selector]of [['board','.board'],['breadboard','[data-surface="breadboard"]']]){const group=svg.querySelector(selector);group.style.display=project.surfaces?.[key]?.hidden?'none':'';group.dataset.surface=key;group.setAttribute('transform',surfaceTransform(key,project.surfaces));group.classList.toggle('part-selected',selected?.type==='surface'&&selected.id===key);}}
 export function renderParts(project,selected,result,pressed){const parts=project.components.filter(p=>!['breadboard','devboard'].includes(p.type)),ordered=[...parts.filter(p=>selected?.id!==p.id),...parts.filter(p=>selected?.id===p.id)];return ordered.map(p=>{
  const x=p.x,y=p.y,angle=p.rotation,scale=Math.max(scaleXOf(p),scaleYOf(p)),terms=localTerminals({...p,scale:1,scaleX:1,scaleY:1,skewX:0}),nominal=nominalTerminals(p),half=Math.min(18,Math.max(4,(p.span??70)/2-4));

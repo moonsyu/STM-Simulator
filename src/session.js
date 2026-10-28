@@ -59,6 +59,8 @@ export class SimulationSession {
     this.sensors.update(this.project,this.result,micros);
     for(const p of this.project.components.filter(p=>p.type==='lcd')){if(!this.lcds.has(p.id))this.lcds.set(p.id,new LCDController());const lcd=this.lcds.get(p.id).update(p,this.result,micros);this.result.parts[p.id]={...this.result.parts[p.id],lcd};}
     this.motion.update(this.project,this.result,micros,this.runtime,us=>this.changed(us));this.hal?.timerModel.observe(this.runtime,micros);this.buses.update(this.result);this.catalogMotion.update(this.project,this.result,micros,this.runtime);this.wave.record(micros,this.result);this.recordSignals(micros,this.result);this.hal?.update?.(this.result,micros);
+    // Parts another STM32 board drives show that board's device state.
+    for(const d of this.circuit.drivers)d.decorate?.(this.result);
   }
   advance(micros){
     const target=micros/1000;if(target<this.integrated)return;

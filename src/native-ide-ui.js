@@ -41,9 +41,9 @@ export function setupNativeIde({o,editor,select,showMonitor,points,watches,toggl
  }
  function lockUpdate(){o.refresh();control();}
  function renderDiagnostics(items){editor.diagnostics(items);$('build-errors').replaceChildren();for(const item of items){const button=document.createElement('button');button.className='build-error '+(item.severity||'error');button.textContent=`${item.file}:${item.line}:${item.column||1} · ${item.message}`;button.onclick=()=>select(item.file,item.line,item.column);$('build-errors').append(button);}}
- async function build(override){if(!api)return report(new Error('실제 빌드는 Windows 데스크톱 앱에서 사용할 수 있습니다.'));if(busy())return;working=true;lockUpdate();$('build-output').textContent='';$('build-errors').replaceChildren();$('native-artifact-list').textContent='';$('native-artifacts').disabled=true;showMonitor('build');try{return await api.build(text(),override||config());}catch(e){report(e);return null;}finally{working=false;lockUpdate();}}
- // Build the ARM firmware for the in-app emulator and return the ELF bytes.
- async function buildElf(){if(!api)throw new Error('ARM GCC 빌드는 Windows 데스크톱 앱에서 사용할 수 있습니다. 대신 파일 → 펌웨어 ELF 열기를 사용하세요.');const result=await build({target:'arm',configuration:$('native-config').value});if(!result)throw new Error('ARM GCC 빌드에 실패했습니다. 빌드 탭의 오류를 확인하세요.');return await api.elf();}
+ async function build(override,source=text()){if(!api)return report(new Error('실제 빌드는 Windows 데스크톱 앱에서 사용할 수 있습니다.'));if(busy())return;working=true;lockUpdate();$('build-output').textContent='';$('build-errors').replaceChildren();$('native-artifact-list').textContent='';$('native-artifacts').disabled=true;showMonitor('build');try{return await api.build(source,override||config());}catch(e){report(e);return null;}finally{working=false;lockUpdate();}}
+ // Build the ARM firmware for the in-app emulator and return the ELF bytes (`source`: another STM32 board's view).
+ async function buildElf(source){if(!api)throw new Error('ARM GCC 빌드는 Windows 데스크톱 앱에서 사용할 수 있습니다. 대신 파일 → 펌웨어 ELF 열기를 사용하세요.');const result=await build({target:'arm',configuration:$('native-config').value},source??text());if(!result)throw new Error('ARM GCC 빌드에 실패했습니다. 빌드 탭의 오류를 확인하세요.');return await api.elf();}
  async function command(action){
   if(!selected())return false;
   if(!api){report(new Error('실제 빌드와 디버그는 데스크톱 앱에서 사용할 수 있습니다.'));return true;}
@@ -51,9 +51,13 @@ export function setupNativeIde({o,editor,select,showMonitor,points,watches,toggl
   if(action==='stop'){await guard(()=>api.stop());state='idle';building=false;working=false;lastStop=null;editor.updateDebug(points(),null);lockUpdate();return true;}
   if(working)return true;working=true;lockUpdate();
   try{
-   if(action==='start'){state='starting';showMonitor('debug');await api.debug({text:text(),config:config(),connection,entry:true,breakpoints:points()});}
+   if(action==='start'){state='starting';showMonitor('debug');if((o.stm32Runs?.()||[]).length>1)append('native-output',`디버그는 편집 중인 ${o.stm32Runs()[0].name}에만 연결합니다. 다른 STM32 보드는 실행(${'Ctrl+F5'})으로 기록하세요.\n`);await api.debug({text:text(),config:config(),connection,entry:true,breakpoints:points()});}
    else if(action==='run'){
-    if(state==='paused')await api.action('continue');else if(state==='running'){await api.stop();state='idle';}else {state='starting';showMonitor('native');await api.run({text:text(),config:config(),connection});}
+    if(state==='paused')await api.action('continue');else if(state==='running'){await api.stop();state='idle';}
+    else {state='starting';showMonitor('native');const boards=o.stm32Runs?.()||[];
+     // More STM32 boards: each is built from its own sources and written through its own ST-LINK, one after another.
+     if(config().target==='arm'&&connection.server==='openocd'&&boards.length>1)await api['run-boards']({boards:boards.map(b=>({name:b.name,text:b.text,serial:b.serial||(b.main?connection.serial||'':'')})),config:config(),connection});
+     else await api.run({text:text(),config:config(),connection});}
    }else await api.action(action);
   }catch(e){if(action==='start'||action==='run')state='idle';report(e);}finally{working=false;lockUpdate();}return true;
  }
@@ -169,6 +173,6 @@ export function setupNativeIde({o,editor,select,showMonitor,points,watches,toggl
   if(event.type==='diagnostics'&&language&&selected())editor.languageDiagnostics(event.file,event.items);
  });
  if(!api){for(const id of ['native-tools','native-target','language-toggle','terminal-start'])$(id).disabled=true;}
- return {selected,emulator,buildElf,config,busy,paused:()=>selected()&&state==='paused',controls:control,sync,build,command,debugView,queueLanguage,async syncBreakpoints(){if(!['paused','running'].includes(state))return;await guard(()=>api.breakpoints(points()));},reset(){state='idle';lastStop=null;sequence++;editor.clearLanguageDiagnostics();clearBuild();sync();}};
+ return {selected,emulator,buildElf,config,busy,boards:()=>boards,paused:()=>selected()&&state==='paused',controls:control,sync,build,command,debugView,queueLanguage,async syncBreakpoints(){if(!['paused','running'].includes(state))return;await guard(()=>api.breakpoints(points()));},reset(){state='idle';lastStop=null;sequence++;editor.clearLanguageDiagnostics();clearBuild();sync();}};
 }
 function basename(value){return value.replaceAll('\\','/').split('/').at(-1);}
