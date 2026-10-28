@@ -1,6 +1,13 @@
 # STM Simulator — 개발 인계
 
-현재 버전: **1.8.1**. 정리일: **2026-10-28**. NUCLEO-F446RE 또는 NUCLEO-F103RB와 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+현재 버전: **1.9.0**. 정리일: **2026-10-28**. NUCLEO-F446RE 또는 NUCLEO-F103RB와 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+
+## 1.9.0 ESP32 실물 빌드·업로드
+
+- `desktop/esp32-build.cjs`(새 파일): Arduino CLI 찾기(`%LOCALAPPDATA%\Programs\Arduino IDE\resources\app\lib\backend\resources\arduino-cli.exe`, Program Files, PATH), ESP32 포트 목록(`Get-PnpDevice -Class Ports`, VID 10C4·1A86·0403·303A → `{port,name}`), `compileSketch`(코드 해시 폴더 `esp32-builds/<hash>/sketch/sketch.ino` → `--output-dir build`, `sketch.ino.bin`이 있으면 재사용), `uploadArgs`/`monitorArgs`(COM 포트만 허용), `sketchBaud`(`Serial.begin` 값, 없으면 115200), 실패 안내 `compileHint`(빠진 헤더 → 라이브러리 이름, esp32 코어 없음)·`uploadHint`(Wrong boot mode·Failed to connect·No serial data → BOOT 버튼, 포트 사용 중, 포트 없음). `~/.arduinoIDE/arduino-cli.yaml`이 있으면 `--config-file`로 넘겨 Arduino IDE와 같은 코어·라이브러리를 쓴다. FQBN은 두 ESP32 모델 모두 `esp32:esp32:esp32`.
+- `native-build.cjs`: 도구 키 `arduinoCli`(자동 검색, 검사는 `arduino-cli version`). `native-ide.cjs`: `esp32Part`(회로의 ESP32 보드만), `buildSketch`(빌드 상태·출력·문제 이벤트는 GCC와 같은 형식, `result.target='esp32'`), `runSketch`(빌드 → 업로드(`track`으로 실행 정지 가능, `stops` 카운터로 중지와 실패 구분) → `arduino-cli monitor`를 `runProcess`로 열어 두고 `input`으로 보드에 보냄). IPC `esp32-ports`·`esp32-build`·`esp32-run`.
+- `native-ide-ui.js`: 실행 대상에 `ESP32 (COMn)`(값 `esp32`, `data-port`, 연결 안 되면 `ESP32 보드 (연결 안 됨)`), 고른 포트는 `stm32lab.debugConnection.esp32Port`. ESP32 대상은 빌드 구성·레지스터 창·펌웨어 도구를 숨기고, 디버그 명령은 안내만 한다. clangd는 `arm`/`host` 대상만(`gcc()`). 문제 목록의 `sketch.ino`는 그 보드 파일(`board/<id>/sketch.ino`)로 바꾼다. `project.js`가 `ide.native.target` `esp32`를 받는다.
+- 실물 확인(2026-10-28, ESP32 DevKit WROOM-32, CP210x COM4): 앱에서 COM4 대상 표시, FW-08 스케치 빌드 성공, 업로드는 이 보드가 자동 리셋으로 다운로드 모드에 들어가지 않아 BOOT 안내와 함께 실패(esptool 사용자 리셋 순서 2가지도 같음). 예제 ESP32 스케치 빌드: FW-08·FW-09·새 보드 템플릿 성공, IOT-01은 DHT sensor library가 없어 안내대로 실패. 직렬 모니터(`arduino-cli monitor`)는 같은 보드에서 부팅 출력 수신 확인.
 
 ## 1.8.1 실물 보드 확인 · 디버그 시작 상태 · 빌드 경고
 

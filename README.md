@@ -9,6 +9,7 @@ STM Simulator는 **NUCLEO-F446RE·NUCLEO-F103RB 회로 시뮬레이터와 Cortex
 | **회로 시뮬레이터** | 컴파일 없이 HAL C 소스를 해석해 회로와 함께 바로 실행 | 없음 |
 | **펌웨어 에뮬레이터 · ARM ELF** | ARM GCC로 실제 ST HAL·CMSIS를 빌드한 ELF를 Cortex-M4(FPU·DSP 포함) 명령어 단위로 실행하고 STM32F446 또는 STM32F103 주변장치를 가상 빵판에 연결 | 빌드: ARM GCC + STM32CubeF4(F446RE) / STM32CubeF1(F103RB) · 이미 만든 ELF 실행: 없음 |
 | **STM32 · ARM GCC** | 실물 보드에 ELF/BIN/HEX를 기록하고 ST-LINK·OpenOCD·GDB로 디버그(여러 보드를 연결하면 보드 이름으로 ST-LINK 선택) | ARM GCC, STM32CubeF4 또는 STM32CubeF1, ARM GDB, OpenOCD |
+| **ESP32 (COMn)** | 회로의 ESP32 스케치를 실물 ESP32에 빌드·업로드하고 직렬 출력 확인 | Arduino IDE 2(Arduino CLI) + esp32 보드 패키지 |
 | **Windows · C/C++** | PC용 C/C++ 프로그램 빌드·실행·디버그 | GCC, GDB |
 
 ## 주요 기능
@@ -52,7 +53,7 @@ STM Simulator는 **NUCLEO-F446RE·NUCLEO-F103RB 회로 시뮬레이터와 Cortex
 - **IDE 프로젝트**: 폴더 프로젝트 생성·열기, C/C++/H 파일 관리, clangd 의미 분석, ARM/Windows GCC Debug·Release 빌드, GDB 디버그, Windows 명령 프롬프트 터미널.
 - **저장**: `.stm32lab` 파일과 프로젝트 폴더(저널·롤백으로 여러 파일을 원자적으로 저장), 자동 저장, 종료 직전 편집 보존, 실행 취소/재실행.
 - **STM32 보드 여러 개**: NUCLEO-F446RE·F103RB를 한 회로에 4개까지 놓고 보드마다 `main.c`·핀 설정·소스를 따로 둡니다. 편집할 보드를 고르면 편집기·Pinout·빌드·디버그가 그 보드를 대상으로 하고, 실행 한 번에 모든 보드가 같은 회로에서 함께 동작합니다(GPIO·EXTI, 보드 간 UART, 펌웨어 에뮬레이터). 실물 보드는 보드마다 빌드해 각자의 ST-LINK에 차례로 기록합니다. [사용법](docs/IDE.md#stm32-보드-여러-개).
-- **ESP32·라즈베리파이 보드와 강의 실습 예제**: STM32 옆에 NodeMCU-32S(ESP-32S)·ESP32 DevKit(WROOM-32)·Raspberry Pi 5를 놓고 배선합니다. ESP32는 빵판에 꽂힙니다. ESP32 스케치(`setup`/`loop`, GPIO 번호, ADC·LEDC PWM·Serial.printf·DHT·Wire 슬레이브)는 해석 실행하고, 라즈베리파이는 강의 예제의 **고정 실행**(예제 시나리오대로 핀·출력 재현)으로 STM32와 같은 시간축에서 동작합니다. 강의 회로도 10개와 회로가 있는 강의 과제 8개를 예제로 불러올 수 있고, 예제 목록은 Raspberry Pi · STM32 · ESP32로 나뉩니다. [사용법](docs/IDE.md#esp32라즈베리파이-보드와-강의-실습-예제)
+- **ESP32·라즈베리파이 보드와 강의 실습 예제**: STM32 옆에 NodeMCU-32S(ESP-32S)·ESP32 DevKit(WROOM-32)·Raspberry Pi 5를 놓고 배선합니다. ESP32는 빵판에 꽂힙니다. ESP32 스케치(`setup`/`loop`, GPIO 번호, ADC·LEDC PWM·Serial.printf·DHT·Wire 슬레이브)는 해석 실행하고, 라즈베리파이는 강의 예제의 **고정 실행**(예제 시나리오대로 핀·출력 재현)으로 STM32와 같은 시간축에서 동작합니다. 연결한 실물 ESP32에는 같은 스케치를 Arduino CLI로 빌드·업로드합니다. 강의 회로도 10개와 회로가 있는 강의 과제 8개를 예제로 불러올 수 있고, 예제 목록은 Raspberry Pi · STM32 · ESP32로 나뉩니다. [사용법](docs/IDE.md#esp32라즈베리파이-보드와-강의-실습-예제)
 - **자동 업데이트**: 포터블 EXE에서 GitHub Release의 새 버전을 확인·다운로드하고 해시 검증 후 교체합니다. [업데이트 사용법](docs/UPDATES.md).
 
 자세한 사용법은 [IDE 사용법](docs/IDE.md), 지원 API는 [HAL API](docs/HAL-API.md), 에뮬레이터 구조는 [펌웨어 에뮬레이터](docs/architecture/EMULATOR.md)를 참고하세요.
