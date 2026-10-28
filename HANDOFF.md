@@ -1,6 +1,11 @@
 # STM Simulator — 개발 인계
 
-현재 버전: **1.9.0**. 정리일: **2026-10-28**. NUCLEO-F446RE 또는 NUCLEO-F103RB와 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+현재 버전: **1.9.1**. 정리일: **2026-10-29**. NUCLEO-F446RE 또는 NUCLEO-F103RB와 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+
+## 1.9.1 ESP32 BOOT 버튼 업로드 확인 · 다운로드 모드 재부팅 안내
+
+- 실물 확인(2026-10-29, ESP32 DevKit WROOM-32, COM4): BOOT 버튼을 누른 채 `runSketch` → esptool 연결(ESP32-D0WD-V3) → 쓰기·해시 검증 → RTS 리셋 → 직렬 모니터. 리셋 순간에도 BOOT가 눌려 있어 보드가 `boot:0x3 … waiting for download`로 다시 다운로드 대기에 들어갔고, BOOT를 뗀 뒤 리셋하자 `boot:0x13`으로 부팅해 `LED ON`/`LED OFF`를 0.5초마다 출력했다.
+- `esp32-build.cjs` `monitorHint`: 직렬 출력에 `waiting for download`가 오면 BOOT를 떼고 EN(RST)을 누르라는 안내. `native-ide.cjs` `runSketch`의 모니터가 마지막 200자를 보고 한 번만 보낸다. 업로드 전 안내에 "Writing"이 나오면 손을 떼라는 문구 추가.
 
 ## 1.9.0 ESP32 실물 빌드·업로드
 
