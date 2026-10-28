@@ -38,8 +38,27 @@ function gaussian(A,b){
   }
   const x=new Float64Array(n);for(let i=n-1;i>=0;i--){let s=b[i];for(let j=i+1;j<n;j++)s-=A[i][j]*x[j];x[i]=s/A[i][i];}return x;
 }
+// PWM outputs (`pwm: {duty}`) are solved at their average voltage, which suits motors, filters and ADC reads. An LED
+// only conducts above its forward voltage, so its current is the average of the PWM high and low phases instead: for
+// each PWM pin the circuit is also solved with that pin high and low, and the LED current follows that pin's duty.
 export function solveCircuit(project,gpio={},pressed={},transient={}){
-  const model=physicalToModel(project);if(model!==project)return physicalResult(solveCircuit(model,gpio,pressed,transient),model);
+  const result=solveOnce(project,gpio,pressed,transient);
+  if(result.fault||!result.hasLed||transient.pwmPhase)return result;
+  const pwm=Object.entries(gpio).filter(([,g])=>g?.mode==='OUTPUT'&&g.pwm&&g.pwm.duty>0&&g.pwm.duty<1);if(!pwm.length)return result;
+  const phase={...transient,pwmPhase:true},reads=[];
+  for(const [id,read]of Object.entries(result.parts)){if(read.led)reads.push([read,id,null]);for(const [ch,c]of Object.entries(read.channels??{}))if(c.led)reads.push([c,id,ch]);}
+  const current=(r,id,ch)=>{const part=r.fault?null:r.parts[id];return (ch?part?.channels?.[ch]:part)?.current??0;};
+  const change=reads.map(()=>0);
+  for(const [pin,g]of pwm){
+    const high=solveOnce(project,{...gpio,[pin]:{...g,value:g.value/g.pwm.duty,pwm:undefined}},pressed,phase),low=solveOnce(project,{...gpio,[pin]:{...g,value:0,pwm:undefined}},pressed,phase);
+    reads.forEach(([read,id,ch],i)=>{const hi=current(high,id,ch),lo=current(low,id,ch);change[i]+=lo+g.pwm.duty*(hi-lo)-read.current;});
+  }
+  reads.forEach(([read],i)=>{read.current=Math.max(0,read.current+change[i]);read.on=read.current>0.00008;});
+  for(const read of Object.values(result.parts))if(read.channels&&!read.led){const channels=Object.values(read.channels);read.on=channels.some(c=>c.on);if(channels.every(c=>c.led))read.current=channels.reduce((a,c)=>a+c.current,0);}
+  return result;
+}
+function solveOnce(project,gpio={},pressed={},transient={}){
+  const model=physicalToModel(project);if(model!==project)return physicalResult(solveOnce(model,gpio,pressed,transient),model);
   const uf=topology(project,pressed),known=new Map(),warnings=[],diagnostics=[],branches=[],roots=new Set();
   const warn=(message,target)=>{warnings.push(message);diagnostics.push({message,target});};
   const fixed=(id,v)=>{const r=uf.find(id);if(known.has(r)&&Math.abs(known.get(r)-v)>0.01)warnings.push('전원 단락: 서로 다른 전압의 전원 또는 GND가 직접 연결되었습니다.');else known.set(r,v);roots.add(r);};
@@ -128,7 +147,7 @@ export function solveCircuit(project,gpio={},pressed={},transient={}){
   for(const b of branches){
     const supply=b.sensor?(volt.get(b.sensor.supply)??0)-(volt.get(b.sensor.ground)??0):0,powered=!b.sensor||(supply>=b.sensor.min&&supply<=b.sensor.max);
     const dv=volt.get(b.a)-volt.get(b.b),relayOn=b.relay?((volt.get(b.relay.supply)-volt.get(b.relay.ground)>=4.5&&volt.get(b.relay.supply)-volt.get(b.relay.ground)<=5.5&&volt.get(b.relay.input)-volt.get(b.relay.ground)>=2)===b.relay.normallyOpen):true,i=!l298BranchOn(b,volt,uf)||!powered||!relayOn?0:b.diode?Math.max(0,(dv-b.vf)/b.r):(dv-(b.emf??0))/b.r;
-    const read={voltage:dv,current:i,on:b.buzzer?dv>=2:b.led&&i>0.00008,power:Math.abs(dv*i),...(b.sensor?{powered}: {})};
+    const read={voltage:dv,current:i,on:b.buzzer?dv>=2:b.led&&i>0.00008,power:Math.abs(dv*i),...(b.sensor?{powered}: {}),...(b.led?{led:true}:{})};
     if(b.id){
       if(b.channel){const total=parts[b.id]??={voltage:0,current:0,power:0,on:false,channels:{}};total.channels[b.channel]=read;total.voltage=Math.max(total.voltage,dv);total.current=b.pot?Math.max(total.current,Math.abs(i)):total.current+i;total.power+=read.power;total.on||=read.on;}
       else parts[b.id]=read;
@@ -150,7 +169,7 @@ export function solveCircuit(project,gpio={},pressed={},transient={}){
     if(p.type==='capacitor'){const va=voltage(`part:${p.id}:a`),vb=voltage(`part:${p.id}:b`);capacitors[p.id]=va!=null&&vb!=null?va-vb:transient.capacitors?.[p.id]??0;if(!parts[p.id])parts[p.id]={voltage:capacitors[p.id],current:0,power:0,on:false};}
     if(p.type==='potentiometer')parts[p.id].voltage=(voltage(`part:${p.id}:p3`)??0)-(voltage(`part:${p.id}:p1`)??0);
   }
-  return {fault:!converged,diagnostics,warnings:[...new Set(warnings)],parts,current:maxCurrent,uf,capacitors,voltage};
+  return {fault:!converged,diagnostics,warnings:[...new Set(warnings)],parts,current:maxCurrent,uf,capacitors,voltage,hasLed:branches.some(b=>b.led)};
 }
 // A read at the same simulation time must not advance capacitor charge again.
 export class CircuitSimulation{

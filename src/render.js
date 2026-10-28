@@ -9,6 +9,7 @@ import {terminalKeys,terminalLabel,localTerminals,nominalTerminals,rotatePoint,a
 import {extraShape,updateExtraSvg} from './part-render.js';
 import {scaleXOf,scaleYOf,partTransform,partVector,surfaceTransform,surfacePoint,scaleTransform} from './geometry.js';
 import {devboardPins,devboardSvg,updateDevboardSvg,devboardModel} from './devboards.js';
+import {ledLevel,mixColor} from './rgb-color.js';
 export const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const text=(x,y,s,size=10,color='#4a6e87',other='')=>`<text x="${x}" y="${y}" font-size="${size}" fill="${color}" ${other}>${esc(s)}</text>`;
 const rect=(x,y,w,h,fill,rx=0,extra='')=>`<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${rx}" fill="${fill}" ${extra}/>`;
@@ -158,7 +159,7 @@ export function updateSimulationSvg(svg,project,result,pressed){
  for(const p of project.components){const g=svg.querySelector(`[data-part="${p.id}"]`);if(!g)continue;
    if(p.type==='lcd'&&g.querySelector('.lcd-content'))g.querySelector('.lcd-content').innerHTML=lcdContent(result?.fault?null:result?.parts[p.id]?.lcd);
    updateExtraSvg(g,p,result?.fault?null:result?.parts[p.id]);updateCatalogView(g,p,result?.fault?null:result?.parts[p.id],!!pressed[p.id],lcdContent);
-   if(p.type==='led'){const on=!result?.fault&&result?.parts[p.id]?.on;g.querySelector('.led-lens')?.setAttribute('fill',on?LED_COLORS[p.color]:'#704b4c');g.querySelector('.led-glow')?.setAttribute('opacity',on?'.6':'0');}
+   if(p.type==='led'){const level=result?.fault?0:ledLevel(result?.parts[p.id]);g.querySelector('.led-lens')?.setAttribute('fill',level?mixColor('#704b4c',LED_COLORS[p.color],.35+.65*level):'#704b4c');g.querySelector('.led-glow')?.setAttribute('opacity',String(+(.6*level).toFixed(3)));}
    if(p.type==='button')g.querySelector('.switch-cap')?.setAttribute('fill',pressed[p.id]?'#168775':'#354857');
  }
  updateDevboardSvg(svg,project,result,!!result);

@@ -159,6 +159,19 @@ describe('solveCircuit: LEDs and resistors',()=>{
     close(r.parts.led1.current,(3.3-1.8)/(330+40+12));close(r.parts.r1.current,r.parts.led1.current,1e-9,'series current');
     assert.deepEqual(r.warnings,[]);
   });
+  test('a PWM output lights an LED for its duty: the average of the high and low phases, not the average voltage',()=>{
+    const full=(3.3-1.8)/(330+40+12),pwm=duty=>solveCircuit(ledCircuit(),{PA5:{mode:'OUTPUT',value:3.3*duty,pwm:{duty,frequency:500}}});
+    for(const duty of [.1,.3,.5,.8]){const r=pwm(duty);assert.equal(r.parts.led1.on,true,String(duty));close(r.parts.led1.current,full*duty,1e-6,String(duty));}
+    // Without the PWM mark the same average voltage stays below the forward voltage (an analog output).
+    assert.equal(solveCircuit(ledCircuit(),{PA5:{mode:'OUTPUT',value:3.3*.3}}).parts.led1.on,false);
+    // Pin voltage readings keep the average.
+    close(pwm(.5).voltage('signal:PA5'),1.65,.01);
+  });
+  test('LED brightness level follows the current (dim for low PWM duty)',async()=>{
+    const {ledLevel,mixColor}=await import('../../src/rgb-color.js');
+    assert.equal(ledLevel({on:false,current:0}),0);assert.ok(ledLevel({on:true,current:.0005})<ledLevel({on:true,current:.003}));assert.equal(ledLevel({on:true,current:.01}),1);
+    assert.equal(mixColor('#000000','#ffffff',.5),'#808080');
+  });
   test('forward voltage depends on LED colour',()=>{
     for(const [color,vf] of [['red',1.8],['green',2.1],['yellow',2.0],['blue',2.8]]){
       const r=solveCircuit(ledCircuit({color}),HIGH);close(r.parts.led1.current,(3.3-vf)/(382),1e-6,color);
