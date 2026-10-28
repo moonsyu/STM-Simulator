@@ -11,7 +11,7 @@
 - 검증:
   - 실물: BOOT를 뗀 뒤 RTS로 리셋하자 `boot:0x13 (SPI_FAST_FLASH_BOOT)`으로 부팅해 업로드한 스케치가 `LED ON`/`LED OFF`를 0.5초마다 출력했다.
   - `node --test tests/unit/desktop.test.js` 66개 중 64개 통과(로컬 symlink 권한 2개 제외, `monitorHint` 검사 추가).
-- 커밋·릴리스: `612d66a`(다운로드 모드 재부팅 안내), 1.9.1 문서·버전 커밋. Release v1.9.1.
+- 커밋·릴리스: `612d66a`(다운로드 모드 재부팅 안내), `aff737c`(1.9.1 문서·버전). Windows CI 40787566446 성공, Release v1.9.1 공개 다운로드 확인(latest, 태그·BUILD-INFO 커밋, EXE·ZIP 해시, ZIP 안 STM-Simulator.exe).
 - 남은 사항: 새 안내 문구는 단위 검사로만 확인했다(실물에서 다시 보려면 BOOT를 누른 채 업로드해야 한다). IOT-01은 DHT sensor library 설치가 필요하다.
 
 ## 2026-10-28 · 1.9.0 ESP32 실물 빌드·업로드

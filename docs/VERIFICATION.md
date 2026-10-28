@@ -1,5 +1,9 @@
 # 검증 기록
 
+## 1.9.1 ESP32 BOOT 버튼 업로드 확인 · 다운로드 모드 재부팅 안내 — 공개 배포 검증 완료
+
+2026-10-29. 제품 커밋 `aff737cdb897596540f5bea4d62c3bc9fddbdd1c` · [Windows CI 40787566446](https://github.com/moonsyu/STM-Simulator/actions/runs/40787566446) · [Release v1.9.1](https://github.com/moonsyu/STM-Simulator/releases/tag/v1.9.1). 실물 ESP32 DevKit WROOM-32(COM4): BOOT를 누른 채 `runSketch` 업로드 성공(ESP32-D0WD-V3, 쓰기·해시 검증), BOOT를 뗀 뒤 리셋하면 `boot:0x13`으로 부팅해 `LED ON`/`LED OFF` 출력. 리셋 때 BOOT가 눌려 있으면 `waiting for download` → 새 안내(단위 검사). `tests/unit/desktop.test.js` 64 통과(로컬 권한 2 제외). latest=v1.9.1, 태그·BUILD-INFO 커밋 `aff737c` 일치(sourceDirty false), 5자산. EXE SHA-256 `11a4565f7f823f02411ab6e98f49c055253493b9b21482eba866b419d6ab059e`(105,290,730 B, MZ)이 SHA256.txt·update-manifest·ZIP 안의 STM-Simulator.exe와 일치. ZIP SHA-256 `937b323b2d5164421c956b4f569f7b1d8a6c1d7714adc87fe4ff33b3573facf6`.
+
 ## 1.9.0 ESP32 실물 빌드·업로드 — 공개 배포 검증 완료
 
 2026-10-28. 제품 커밋 `ac0811f33e7ed8ce9d151ba0bc4f0f635bb602e0` · [Windows CI 40699084907](https://github.com/moonsyu/STM-Simulator/actions/runs/40699084907) · [Release v1.9.0](https://github.com/moonsyu/STM-Simulator/releases/tag/v1.9.0). 실물 ESP32 DevKit WROOM-32(CP210x COM4): 앱 실행 대상에 `ESP32 (COM4)` 표시, FW-08 Arduino CLI 빌드 성공, 업로드는 보드가 자동으로 다운로드 모드에 들어가지 않아 BOOT 안내와 함께 실패(BOOT 버튼 업로드는 미확인), 직렬 모니터 부팅 출력 수신. 예제 ESP32 스케치 실제 컴파일 FW-08·FW-09·템플릿 성공, IOT-01은 DHT sensor library 없음 안내. `npm test` 796 통과(로컬 권한 2 제외), E2E 37 통과·2 건너뜀. latest=v1.9.0, BUILD-INFO 커밋 `ac0811f` 일치(sourceDirty false), 5자산. EXE SHA-256 `3b4abca6c434bd97378a6899cb8233b6dce0745be3e7dd6b94a6cddcd250cb66`(105,289,366 B, MZ)이 SHA256.txt·update-manifest·ZIP 안의 STM-Simulator.exe와 일치. ZIP SHA-256 `3cf3bb84adbe365cfe4fa865630ca7b3ab6e826a97136b4313b5d89c41116a9c`.
