@@ -47,6 +47,8 @@ function uploadHint(log){
   if(/does not exist|FileNotFoundError|could not find port/i.test(log))return '포트를 찾을 수 없습니다. ESP32 보드가 USB로 연결되어 있는지 확인하세요.';
   return '';
 }
+/** What the board printing its ROM boot message means: held in download mode (BOOT still pressed at the reset). */
+function monitorHint(text){return /waiting for download/.test(text)?'ESP32가 다운로드 모드로 다시 부팅했습니다(boot:0x3). BOOT 버튼에서 손을 뗀 뒤 보드의 EN(RST) 버튼을 한 번 누르면 업로드한 스케치가 실행됩니다.':'';}
 const quote=a=>/\s/.test(a)?JSON.stringify(a):a;
 /** Compile a sketch into a folder named by its code: a sketch that was already built is not compiled again. */
 async function compileSketch({cli,code,root,fqbn=FQBN,signal,onOutput=()=>{}}){
@@ -64,4 +66,4 @@ async function compileSketch({cli,code,root,fqbn=FQBN,signal,onOutput=()=>{}}){
 }
 const uploadArgs=async(result,port)=>[...await cliConfig(),'upload','--fqbn',result.fqbn,'-p',checkedPort(port),'--input-dir',result.out,result.sketch];
 const monitorArgs=async(port,baud)=>[...await cliConfig(),'monitor','-p',checkedPort(port),'--config','baudrate='+baud,'--quiet'];
-module.exports={FQBN,ESP_VIDS,findArduinoCli,listEsp32Ports,sketchBaud,compileHint,uploadHint,compileSketch,uploadArgs,monitorArgs,checkedPort};
+module.exports={FQBN,ESP_VIDS,findArduinoCli,listEsp32Ports,sketchBaud,compileHint,uploadHint,monitorHint,compileSketch,uploadArgs,monitorArgs,checkedPort};

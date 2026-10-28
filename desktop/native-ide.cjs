@@ -205,14 +205,15 @@ class NativeIde extends EventEmitter{
     const result=await this.buildSketch({text,board}),cli=(await this.settings()).arduinoCli;
     this.send('run-state',{state:'running'});
     try{
-      this.send('run-output',{text:`\n[${result.board}] ${port}에 업로드합니다. "Connecting..."이 계속되면 보드의 BOOT 버튼을 누른 채로 기다리세요.\n`});
+      this.send('run-output',{text:`\n[${result.board}] ${port}에 업로드합니다. "Connecting..."이 계속되면 보드의 BOOT 버튼을 누른 채로 기다리고, "Writing"이 나오면 손을 떼세요.\n`});
       let log='';const stops=this.stops;const code=await this.track(launch(cli,await esp32.uploadArgs(result,port),{}),text=>{log=(log+text).slice(-20000);});
       if(this.stops!==stops)throw new Error('업로드를 중지했습니다.');
       if(code!==0){const hint=esp32.uploadHint(log);throw new Error(`ESP32 업로드 실패 (종료 코드 ${code}).${hint?' '+hint:''}`);}
       this.send('run-output',{text:`\n업로드를 마쳤습니다. ${port} 직렬 출력 · ${result.baud} bps (실행 정지로 닫습니다)\n`});
     }catch(error){this.send('run-state',{state:'idle'});throw error;}
     const monitor=this.runProcess=launch(cli,await esp32.monitorArgs(port,result.baud),{});
-    for(const stream of [monitor.stdout,monitor.stderr]){stream.setEncoding('utf8');stream.on('data',text=>this.send('run-output',{text}));}
+    let seen='',hinted=false;
+    for(const stream of [monitor.stdout,monitor.stderr]){stream.setEncoding('utf8');stream.on('data',text=>{this.send('run-output',{text});if(hinted)return;seen=(seen+text).slice(-200);const hint=esp32.monitorHint(seen);if(hint){hinted=true;this.send('run-output',{text:`\n${hint}\n`});}});}
     monitor.once('error',error=>this.send('run-output',{text:error.message+'\n'}));
     monitor.once('close',()=>{if(this.runProcess===monitor){this.runProcess=null;this.send('run-output',{text:`\n${port} 직렬 모니터를 닫았습니다.\n`});this.send('run-state',{state:'exited'});}});
     return {directory:result.directory,uploaded:true,port,baud:result.baud};
