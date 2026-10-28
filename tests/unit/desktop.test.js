@@ -458,6 +458,12 @@ describe('GdbSession command plumbing (fake GDB process)',()=>{
     s.receive('*stopped,reason="exited-normally"');assert.equal(s.state,'exited');
     assert.deepEqual(events.map(e=>e.state??e.output),['running','paused','console text\n','not mi at all\n','exited']);
   });
+  test('the halt while connecting to a board is not reported as a pause (no "??" frame before main)',()=>{
+    const {s}=fakeSession(),events=[];s.on('state',e=>events.push(e.state));s.state='starting';
+    s.receive('*stopped,frame={addr="0x08000ab4",func="??"}');assert.equal(s.state,'starting');
+    s.receive('*running,thread-id="all"');s.receive('*stopped,reason="breakpoint-hit",frame={func="main",line="22"}');
+    assert.deepEqual(events,['running','paused']);
+  });
   test('stepping requires a paused target; unknown actions are rejected',async()=>{
     const {s,sent}=fakeSession();await s.action('over');assert.equal(sent[0],'1-exec-next\n');
     s.state='running';await assert.rejects(s.action('into'),/일시정지/);await s.action('pause');assert.equal(sent[1],'2-exec-interrupt --all\n');
