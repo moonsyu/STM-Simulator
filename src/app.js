@@ -32,6 +32,9 @@ import {blankProject,startProject,validateProject,projectForBoard} from './proje
 import {projectBoard} from './boards.js';
 import {boardSvg} from './render.js';
 import {moveBreadboard,removeBreadboard,isBreadboardLibraryType,newBreadboardFields,breadboardBounds} from './breadboards.js';
+import {DEVBOARD_MODELS,devboardModel,devboardBounds,devboardPinInfo,newDevboardFields,removeDevboard,boardFileKey,boardForFile,isBoardFile} from './devboards.js';
+import {createBoardDrivers} from './fixed-run.js';
+import {searchLectureExamples,applyLectureExample,lectureExample,lectureGuide,LECTURE_PREFIX} from './lecture-examples.js';
 import {setupBoardPicker} from './board-picker.js';
 import {PinoutPanel} from './pinout-ui.js';
 import {defaultMcu} from './mcu-config.js';
@@ -54,7 +57,7 @@ import {PART_LIBRARY,searchParts} from './part-library.js';
 import {setupPartPreviews} from './part-preview-ui.js';
 import {setupExamplePreviews} from './example-preview-ui.js';
 import {displayModel} from './model-geometry.js';
-import {esc,initSvg,renderWires,renderParts,renderBreadboards,renderEndpoints,route,updateSimulationSvg,renderMountPreview,renderPinSearch,updateSurfaces} from './render.js';
+import {esc,initSvg,renderWires,renderParts,renderBreadboards,renderDevboards,renderEndpoints,route,updateSimulationSvg,renderMountPreview,renderPinSearch,updateSurfaces} from './render.js';
 
 const $=id=>document.getElementById(id),svg=$('circuit');
 mountIdeChrome();const layout=createShell();let ide=null,deviceDocs=null,canvasKeys=null;
@@ -63,7 +66,7 @@ const wireDraft=new WireDraft();
 let carry=null;
 const CARRY_HINT='배선 끝을 옮길 핀 또는 빵판 구멍을 클릭하세요. 같은 끝을 다시 누르거나 Esc: 취소';
 let project=startProject(),mode='select',pending=null,selection=null,color='#23a68a',status='stopped',result=null,runtime=null,simTime=0,pressed={},undoStack=[],redoStack=[],dirty=false,starting=false,startToken=0,firmware=null;
-let view={x:0,y:0,w:1120,h:730},drag=null,lastWarnings='',replaceAction=null,saveTimer,searchSelectedId=null,breadboardKey='',inspectorKey='',inspectorModel=null;
+let view={x:0,y:0,w:1120,h:730},drag=null,lastWarnings='',replaceAction=null,saveTimer,searchSelectedId=null,breadboardKey='',devboardKey='',inspectorKey='',inspectorModel=null;
 // A saved project that no longer validates is kept aside (not overwritten by the blank one) and reported once the log exists.
 let restoreError='';try{const cached=localStorage.getItem('stm32lab.project.v2')||localStorage.getItem('stm32lab.project.v1');if(cached)try{project=validateProject(JSON.parse(cached));}catch(e){restoreError=e.message;localStorage.setItem('stm32lab.project.recovery',cached);}}catch{}
 const diagnostic=createDiagnostics(window.localDiagnostics?.record,()=>project);
@@ -88,7 +91,8 @@ function filterParts(){
  $('part-count').textContent=`${matches.size} / ${PART_LIBRARY.length}`;$('part-no-results').hidden=matches.size>0;$('part-list').scrollTop=0;
 }
 $('part-search').addEventListener('input',filterParts);filterParts();
-function filterExamples(){const matches=searchHalExamples($('hal-example-search').value,projectBoard(project).mcuFamily);$('hal-example').innerHTML='<option value="">'+(matches.length?`HAL 예제 선택… (${matches.length})`:'검색 결과 없음')+'</option>'+matches.map(({id,name,native,simOnly})=>`<option value="${id}">${name}${native?' · ARM':''}${simOnly?' · SIM':''}</option>`).join('');$('hal-example-count').textContent=`${matches.length} / ${Object.keys(HAL_EXAMPLES).length}`;}
+// Lecture circuits (ESP32 / Raspberry Pi) come first in the example list: value `lecture:<id>`, tag 강의 실습.
+function filterExamples(){const query=$('hal-example-search').value,matches=searchHalExamples(query,projectBoard(project).mcuFamily),lectures=searchLectureExamples(query),total=matches.length+lectures.length;$('hal-example').innerHTML='<option value="">'+(total?`HAL 예제 선택… (${total})`:'검색 결과 없음')+'</option>'+lectures.map(e=>`<option value="${LECTURE_PREFIX}${e.id}">강의 실습 · ${esc(e.code)} ${esc(e.title)}</option>`).join('')+matches.map(({id,name,native,simOnly})=>`<option value="${id}">${name}${native?' · ARM':''}${simOnly?' · SIM':''}</option>`).join('');$('hal-example-count').textContent=`${total} / ${Object.keys(HAL_EXAMPLES).length+searchLectureExamples('').length}`;}
 $('hal-example-search').oninput=filterExamples;filterExamples();
 const uartLines=new Map();
 function uid(prefix){return prefix+crypto.randomUUID().replaceAll('-','').slice(0,12);}
@@ -118,15 +122,19 @@ function changed(){autosave();refresh();}
 function setMode(m){if(running()){log('편집하려면 시뮬레이션을 먼저 정지하세요.');return;}mode=m;pending=null;selection=null;$('preview-layer').innerHTML='';refresh();}
 function syncEditor(){
  lastCodeCheckpoint=0;
- $('project-name').value=project.name;const files=project.firmware?.files||[],hal=project.firmware?.mode==='hal';if(!files.some(f=>f.name===sourceFile))sourceFile='main.c';try{localStorage.setItem(SOURCE_KEY,sourceFile);}catch{}
- $('source-file').innerHTML=`<option value="main.c">${hal?'main.c':'main.ino'}</option>`+files.map(f=>`<option value="${esc(f.name)}">${esc(f.name)}</option>`).join('');$('source-file').value=sourceFile;
- $('code').value=sourceFile==='main.c'?project.code:files.find(f=>f.name===sourceFile).text;$('firmware-mode').value=hal?'hal':'sketch';
- document.querySelector('.language-badge').textContent=hal?'STM32 HAL':'GPIO 스케치';lineNumbers();monitor.settings(project.simulation);
+ $('project-name').value=project.name;const files=project.firmware?.files||[],hal=project.firmware?.mode==='hal',boards=project.components.filter(p=>p.type==='devboard'&&devboardModel(p));if(!files.some(f=>f.name===sourceFile)&&!boardForFile(project,sourceFile))sourceFile='main.c';try{localStorage.setItem(SOURCE_KEY,sourceFile);}catch{}
+ $('source-file').innerHTML=`<option value="main.c">${hal?'main.c':'main.ino'}</option>`+files.map(f=>`<option value="${esc(f.name)}">${esc(f.name)}</option>`).join('')+boards.map(p=>`<option value="${esc(boardFileKey(p))}">${esc(p.name)} · ${esc(devboardModel(p).file)}</option>`).join('');$('source-file').value=sourceFile;
+ const board=boardForFile(project,sourceFile);$('code').readOnly=running()||!!board;
+ $('code').value=board?board.code:sourceFile==='main.c'?project.code:files.find(f=>f.name===sourceFile).text;$('firmware-mode').value=hal?'hal':'sketch';
+ document.querySelector('.language-badge').textContent=board?`${board.name} · ${devboardModel(board).kind==='rpi'?'Raspberry Pi':'ESP32'} · 고정 실행`:hal?'STM32 HAL':'GPIO 스케치';lineNumbers();monitor.settings(project.simulation);
  document.querySelector('.code-note code').textContent=hal?'HAL_GPIO_Init · WritePin · ReadPin · TogglePin\nHAL_UART_Transmit · Receive_IT\nHAL_GPIO_EXTI_Callback\nHAL_TIM_Base_Start_IT · HAL_ADC_GetValue\nHAL_I2C_Mem_Read · HAL_SPI_Transmit\nprintf("value=%lu\\n", value)':'pinMode · digitalWrite · digitalRead\nanalogRead · analogWrite · delay\nLiquidCrystal · Serial1 · Wire · SPI\nTimer · attachInterrupt · DMA';
  document.querySelector('.code-note p').textContent=hal?'main(void)와 지원 HAL API를 회로에 연결합니다. 전체 HAL 드라이버·ELF/BIN 실행은 지원하지 않습니다.':'GPIO 스케치 문법의 일부를 실행합니다. ELF/BIN 펌웨어 로더는 포함되지 않습니다.';
  const selectedSerial=$('serial-target').value,serials=hal?SERIAL_IDS.filter(id=>project.mcu?.peripherals[id]?.enabled):[],serialKey=hal?serials.join(','):'sketch',keepSerial=$('serial-target').dataset.channels===serialKey;
  $('serial-target').innerHTML=hal?(serials.length?serials.map(id=>id==='USART2'?'<option value="USART2">ST-LINK VCP → USART2 (내장)</option><option value="USART2:external">외부 UART 장치 → USART2</option>':`<option value="${id}">외부 UART 장치 → ${id}</option>`).join(''):'<option value="">UART 핀을 활성화하세요</option>'):'<option value="Serial1">외부 UART 장치 → Serial1</option><option value="Serial">USB 콘솔 → Serial</option>';
- $('serial-target').value=keepSerial&&[...$('serial-target').options].some(o=>o.value===selectedSerial)?selectedSerial:serials.includes('USART2')?'USART2':serials[0]??(hal?'':'Serial1');$('serial-target').dataset.channels=serialKey;$('serial-target').disabled=hal&&!serials.length;
+// Other boards' program output has its own entries (read only).
+ $('serial-target').insertAdjacentHTML('beforeend',project.components.filter(p=>p.type==='devboard').map(p=>`<option value="board:${esc(p.id)}">${esc(p.name)} · Serial (USB 출력)</option>`).join(''));
+ $('serial-target').value=keepSerial&&[...$('serial-target').options].some(o=>o.value===selectedSerial)?selectedSerial:serials.includes('USART2')?'USART2':serials[0]??(boards.length&&project.surfaces?.board?.hidden?`board:${boards[0].id}`:hal?'':'Serial1');$('serial-target').dataset.channels=serialKey;$('serial-target').disabled=hal&&!serials.length&&!boards.length;
+ if(board){document.querySelector('.code-note code').textContent=board.scenario?'강의 예제 시나리오대로 핀이 바뀝니다.':'예제가 아닌 보드는 실행하지 않습니다.';document.querySelector('.code-note p').textContent='이 보드의 코드는 빌드·실행하지 않는 고정 실행 코드입니다. 코드를 고쳐도 동작은 바뀌지 않아 읽기 전용으로 표시합니다.';}
  editorSearch.refresh({sourceChanged:true});
  ide?.sync();
 }
@@ -145,6 +153,8 @@ function refresh({preserveWires=false}={}){
  updateBoardPicker();if(project.surfaces?.board?.hidden)$('search-layer').innerHTML='';svg.classList.toggle('connecting',mode==='wire'||!!pending);
  const boards=project.components.filter(p=>p.type==='breadboard'),nextBreadboardKey=JSON.stringify(boards.map(p=>[p,isSelected(selection,'part',p.id)]));
  if(nextBreadboardKey!==breadboardKey){$('breadboard-layer').innerHTML=renderBreadboards(project,selection);breadboardKey=nextBreadboardKey;}
+ const devboards=project.components.filter(p=>p.type==='devboard'),nextDevboardKey=JSON.stringify(devboards.map(p=>[p.id,p.model,p.name,p.x,p.y,p.rotation,isSelected(selection,'part',p.id)]));
+ if(nextDevboardKey!==devboardKey){$('devboard-layer').innerHTML=renderDevboards(project,selection);devboardKey=nextDevboardKey;updateRunScope();}
  if(!preserveWires)$('wire-layer').innerHTML=renderWires(project,selection);
  else $('wire-layer').querySelectorAll('[data-wire]').forEach(el=>el.classList.toggle('wire-selected',isSelected(selection,'wire',el.dataset.wire)));
  $('part-layer').innerHTML=renderParts(project,selection,result,pressed);
@@ -157,9 +167,9 @@ function refresh({preserveWires=false}={}){
  document.querySelectorAll('[data-add]').forEach(b=>{b.classList.toggle('active',mode===b.dataset.add);b.disabled=running();if(b.dataset.add==='board')b.querySelector('b').textContent=project.surfaces?.board?.hidden?'+':'✓';});
  $('undo').disabled=running()||!undoStack.length;$('redo').disabled=running()||!redoStack.length;$('delete').disabled=running()||!['part','wire','group','surface'].includes(selection?.type);
  $('rotate').disabled=running()||selection?.type!=='part';
- $('code').readOnly=running();$('project-name').readOnly=running();
+ $('code').readOnly=running()||isBoardFile(sourceFile);$('project-name').readOnly=running();
  editorSearch.refresh();
- for(const id of ['pinout-open','firmware-mode','firmware-import','firmware-folder','firmware-check','hal-example','code-reset','board-reset'])$(id).disabled=running();
+ for(const id of ['pinout-open','firmware-mode','firmware-import','firmware-folder','firmware-check','hal-example','code-reset','board-reset'])$(id).disabled=running();if($('run-scope'))$('run-scope').disabled=running();document.querySelectorAll('[data-devboard-add]').forEach(b=>b.disabled=running());
  $('run').classList.toggle('running',running()||starting);$('run').textContent=starting?'■  빌드 취소':runtime?.debug.paused?'⏵ 계속':running()?'■ 정지':'▶ 실행';
  const runKey=keyFor('run.run');$('run').title=withKey('실행 / 정지','run.run');if(runKey)$('run').setAttribute('aria-keyshortcuts',runKey);else $('run').removeAttribute('aria-keyshortcuts');
  $('step').disabled=status==='running';
@@ -168,7 +178,7 @@ function refresh({preserveWires=false}={}){
  $('status-led').className=running()?'running':'';
  $('connection-count').textContent=`부품 ${project.components.length}개 · 배선 ${project.wires.length}개`;
  $('empty-add-board').textContent=projectBoard(project).name+' 추가';$('canvas-empty').hidden=!(project.surfaces?.board?.hidden&&project.surfaces?.breadboard?.hidden&&!project.components.length)||running();
- if($('explorer-circuit-summary'))$('explorer-circuit-summary').textContent=`${project.surfaces?.board?.hidden?'보드 없음':projectBoard(project).name} · 부품 ${project.components.filter(p=>p.type!=='breadboard').length}개 · 빵판 ${project.components.filter(p=>p.type==='breadboard').length+(project.surfaces?.breadboard?.hidden?0:1)}개 · 배선 ${project.wires.length}개`;
+ if($('explorer-circuit-summary'))$('explorer-circuit-summary').textContent=`${project.surfaces?.board?.hidden?'보드 없음':projectBoard(project).name} · 부품 ${project.components.filter(p=>!['breadboard','devboard'].includes(p.type)).length}개 · 빵판 ${project.components.filter(p=>p.type==='breadboard').length+(project.surfaces?.breadboard?.hidden?0:1)}개${devboards.length?` · 다른 보드 ${devboards.length}개`:''} · 배선 ${project.wires.length}개`;
  $('hint').textContent=running()?'실행 중 핀을 클릭하면 전압을 측정합니다. 버튼은 누르는 동안 연결됩니다.':carry?CARRY_HINT:pending?'핀을 클릭하면 연결 · 바닥 클릭으로 꺾임점 추가 · 우클릭 / Esc: 작성 중 배선 취소':drag?.type==='part'?'초록색 표시가 나타나면 놓아서 장착하세요. R: 45° 회전':'부품을 끌어 빵판에 꽂기 · 빈 공간 / 가운데 버튼: 화면 이동 · 배치 범위 제한 없음';
  inspector();updateReadouts();
  ide?.controls();canvasKeys?.refresh(keyboardFocus);
@@ -237,14 +247,20 @@ function inspector(force=false){
    el.innerHTML=`<h2>${selection.id==='board'?'STM32 보드':'기본 빵판'}</h2><p>몸체를 끌어 이동하고, 가장자리와 모서리를 끌어 가로·세로 크기를 조절하세요. Shift를 누르면 비율을 유지하고, 드래그 중 Esc를 누르면 취소합니다. 연결된 핀·배선과 장착 부품도 함께 이동합니다.</p><button class="inspector-action" id="inspect-open-docs">장치 Docs · 배선/예제 보기</button>`;
    $('inspect-open-docs').onclick=()=>tab('docs');
  } else if(selection.type==='endpoint'){
-   const e=endpointInfo(selection.id,project.components,project.surfaces),pin=PIN_BY_ID.get(selection.id);
+   const e=endpointInfo(selection.id,project.components,project.surfaces),pin=PIN_BY_ID.get(selection.id),boardPin=devboardPinInfo(selection.id,project.components);
    const connected=connectedNet(project,selection.id,pressed).endpoints.length;
-   el.innerHTML=`<span class="overline">CONNECTION POINT</span><h2 title="${esc(e?.label||selection.id)}">${esc(e?.label||selection.id)}</h2><p>${pin?esc(pin.signal==='NC'?'연결되지 않은 NC 핀':`신호: ${pin.signal}`):'빵판의 실제 연결 그룹을 기준으로 계산합니다.'}</p><div class="measure"><span>전압 · GND 기준</span><span class="measure-value"><b id="endpoint-voltage">—</b><span id="endpoint-signal" class="signal-badge" data-signal="idle">미측정</span></span></div><div class="measure"><span>연결된 핀 / 구멍</span><b id="endpoint-connected">${connected}</b></div><p>${running()?'전압이 표시되지 않으면 부유 상태이거나 전원에 연결되지 않은 노드입니다.':'시뮬레이션을 실행하면 연결점의 전압을 확인할 수 있습니다.'}</p>`;
+   el.innerHTML=`<span class="overline">CONNECTION POINT</span><h2 title="${esc(e?.label||selection.id)}">${esc(e?.label||selection.id)}</h2><p>${pin?esc(pin.signal==='NC'?'연결되지 않은 NC 핀':`신호: ${pin.signal}`):boardPin?esc(`신호: ${boardPin.signal}`):'빵판의 실제 연결 그룹을 기준으로 계산합니다.'}</p>${boardPin?.notes?.length?`<ul class="pin-notes">${boardPin.notes.map(n=>`<li class="${n.warn?'warn':''}">${n.warn?'⚠ ':''}${esc(n.text)}</li>`).join('')}</ul>`:''}<div class="measure"><span>전압 · GND 기준</span><span class="measure-value"><b id="endpoint-voltage">—</b><span id="endpoint-signal" class="signal-badge" data-signal="idle">미측정</span></span></div><div class="measure"><span>연결된 핀 / 구멍</span><b id="endpoint-connected">${connected}</b></div><p>${running()?'전압이 표시되지 않으면 부유 상태이거나 전원에 연결되지 않은 노드입니다.':'시뮬레이션을 실행하면 연결점의 전압을 확인할 수 있습니다.'}</p>`;
  } else if(selection.type==='part'){
    const p=project.components.find(p=>p.id===selection.id);if(!p)return;
    if(p.type==='breadboard'){
     el.innerHTML=`<span class="overline">BREADBOARD</span><h2 title="${esc(p.name)}">${esc(p.name)}</h2><p>${breadboardModel(p).label} · A–E / F–J 행과 전원 레일은 각각 연결됩니다. 다른 빵판과는 배선으로 연결해야 합니다.</p><div class="inspector-card"><label for="part-name">빵판 이름</label><input id="part-name" value="${esc(p.name)}" maxlength="80" ${running()?'disabled':''}></div><p>테두리를 끌어 이동하세요. 장착한 부품과 배선도 함께 이동합니다. 삭제하면 구멍에 연결된 배선과 장착 연결이 해제되며 다른 부품은 남습니다.</p><div class="measure"><span>회전 각도</span><b>${p.rotation}°</b></div><button class="inspector-action" id="inspect-open-docs">장치 Docs · 배선/예제 보기</button><button class="inspector-action" id="rotate-part" ${running()?'disabled':''}>45° 회전 (R)</button><button class="inspector-action danger" id="remove-part" ${running()?'disabled':''}>빵판 삭제</button>`;
     $('part-name').onchange=e=>{checkpoint();p.name=e.target.value.trim()||p.name;changed();};$('inspect-open-docs').onclick=()=>tab('docs');$('rotate-part').onclick=rotateSelected;$('remove-part').onclick=removeSelected;return;
+   }
+   if(p.type==='devboard'){
+    const model=devboardModel(p),dis=running()?'disabled':'';
+    el.innerHTML=`<span class="overline">${model.kind==='rpi'?'RASPBERRY PI':'ESP32'}</span><h2 title="${esc(p.name)}">${esc(p.name)}</h2><p>${esc(model.name)} · ${esc(model.description)}</p>${model.unverified?`<p class="pin-check">⚠ ${esc(model.unverified)}</p>`:''}<div class="inspector-card"><label for="part-name">보드 이름</label><input id="part-name" value="${esc(p.name)}" maxlength="40" ${dis}></div><div class="measure"><span>실행 방식</span><b>${p.scenario?'고정 실행 · 강의 예제':'실행 안 함'}</b></div><p>${p.scenario?'코드를 빌드·실행하지 않고 예제 시나리오대로 핀이 바뀝니다. 배선이 틀리면 실제처럼 동작하지 않습니다.':'예제에서 불러온 보드만 고정 실행합니다. 이 보드의 핀은 입력 상태로 두고 전압만 계산합니다.'}</p><button class="inspector-action" id="open-board-code">${esc(model.file)} 열기</button><div class="measure"><span>회전 각도</span><b>${p.rotation}°</b></div><button class="inspector-action" id="rotate-part" ${dis}>90° 회전 (R)</button><button class="inspector-action danger" id="remove-part" ${dis}>보드 삭제</button>`;
+    $('part-name').onchange=e=>{const name=e.target.value.trim();if(!name||project.components.some(c=>c!==p&&c.name===name)){log('보드 이름이 비었거나 다른 부품·보드 이름과 같습니다.','error');inspector(true);return;}checkpoint();p.name=name;syncEditor();changed();};
+    $('open-board-code').onclick=()=>{sourceFile=boardFileKey(p);syncEditor();tab('code');};$('rotate-part').onclick=rotateSelected;$('remove-part').onclick=removeSelected;return;
    }
    const read=result?.parts[p.id],mounted=Object.keys(attachments(p)).length;
    el.innerHTML=`<span class="overline" title="${esc(p.type)}">${esc(CATALOG_BY_TYPE[p.type]?.interface||p.type.toUpperCase())}</span><h2 title="${esc(p.name)}">${esc(p.name)}</h2><p>${mounted?`${mounted} / ${terminalKeys(p).length}개 다리 장착`:'자유 배치 · 끌어서 빵판에 놓으세요.'}</p><div class="inspector-card"><label for="part-name">부품 이름</label><input id="part-name" value="${esc(p.name)}" maxlength="80" ${running()?'disabled':''}>${p.type==='resistor'?`<label for="part-value">저항 (Ω)</label><input id="part-value" type="number" value="${p.value}" min="1" max="10000000" ${running()?'disabled':''}>`:''}${p.type==='led'?`<label for="part-color">LED 색상</label><select id="part-color" ${running()?'disabled':''}>${[['red','빨강'],['green','초록'],['blue','파랑'],['yellow','노랑']].map(([v,l])=>`<option value="${v}" ${p.color===v?'selected':''}>${l}</option>`).join('')}</select>`:''}</div>${partControls(p,running())}${mediaSection(p,running())}<div class="measure"><span>부품 전압</span><b id="part-voltage">${read?read.voltage.toFixed(3)+' V':'—'}</b></div><div class="measure"><span>전류</span><b id="part-current">${read?(read.current*1000).toFixed(3)+' mA':'—'}</b></div>${p.type==='resistor'?`<div class="measure"><span>소비 전력</span><b id="part-power">${read?(read.power*1000).toFixed(2)+' mW':'—'}</b></div>`:''}${p.type==='button'?'<p>실행 중 버튼 몸체를 누르고 계시면 연결되고 손을 떼면 끊어집니다. A1–A2, B1–B2는 항상 연결되며, 누르면 양쪽이 연결됩니다.</p>':''}${p.type==='lcd'?'<p>LCD 1602의 4/8비트 명령·문자 출력을 지원합니다. VDD 5 V, VSS·R/W·VO를 GND에 연결하고 RS/E/DATA 핀을 배선하세요. 기존 스케치의 LiquidCrystal API를 사용할 수 있습니다.</p>':''}<div class="measure"><span>회전 각도</span><b>${Number(p.rotation.toFixed(1))}°</b></div><button class="inspector-action" id="inspect-open-docs">장치 Docs · 배선/예제 보기</button><button class="inspector-action" id="rotate-part" ${running()?'disabled':''}>45° 회전 (R)</button><button class="inspector-action danger" id="remove-part" ${running()?'disabled':''}>부품 삭제</button>`;
@@ -270,8 +286,8 @@ function inspector(force=false){
 function removeSelected(){
  if(running()||!selection)return;
  if(selection.type==='surface'){checkpoint();removeSurface(project,selection.id);searchSelectedId=null;pinSearch();}
- else if(selection.type==='group'){checkpoint();const parts=new Set(selection.parts),wires=new Set(selection.wires);for(const id of parts)if(project.components.find(p=>p.id===id)?.type==='breadboard')removeBreadboard(project,id);project.components=project.components.filter(p=>!parts.has(p.id));project.wires=project.wires.filter(w=>!wires.has(w.id)&&![w.from,w.to].some(id=>id.startsWith('part:')&&parts.has(id.split(':')[1])));}
- else if(selection.type==='part'){checkpoint();if(project.components.find(p=>p.id===selection.id)?.type==='breadboard')removeBreadboard(project,selection.id);else {project.components=project.components.filter(p=>p.id!==selection.id);project.wires=project.wires.filter(w=>![w.from,w.to].some(id=>id.startsWith(`part:${selection.id}:`)));}}
+ else if(selection.type==='group'){checkpoint();const parts=new Set(selection.parts),wires=new Set(selection.wires);for(const id of parts){const type=project.components.find(p=>p.id===id)?.type;if(type==='breadboard')removeBreadboard(project,id);if(type==='devboard')removeDevboard(project,id);}project.components=project.components.filter(p=>!parts.has(p.id));project.wires=project.wires.filter(w=>!wires.has(w.id)&&![w.from,w.to].some(id=>id.startsWith('part:')&&parts.has(id.split(':')[1])));}
+ else if(selection.type==='part'){checkpoint();const type=project.components.find(p=>p.id===selection.id)?.type;if(type==='breadboard')removeBreadboard(project,selection.id);else if(type==='devboard'){if(boardForFile(project,sourceFile)?.id===selection.id)sourceFile='main.c';removeDevboard(project,selection.id);syncEditor();}else {project.components=project.components.filter(p=>p.id!==selection.id);project.wires=project.wires.filter(w=>![w.from,w.to].some(id=>id.startsWith(`part:${selection.id}:`)));}}
  else if(selection.type==='wire'){checkpoint();project.wires=project.wires.filter(w=>w.id!==selection.id);}else return;
  selection=null;pending=null;drag=null;$('preview-layer').innerHTML='';changed();
 }
@@ -280,6 +296,8 @@ function rotateSelected(){
  const p=project.components.find(p=>p.id===selection.id);if(!p)return;
  if(!drag?.moved)checkpoint();
  if(p.type==='breadboard'){moveBreadboard(project,p.id,{x:p.x,y:p.y,rotation:p.rotation+45});if(drag?.type==='part')drag.moved=true;changed();return;}
+ // Boards turn in 90° steps; an ESP32 then plugs in again where its pins meet free holes.
+ if(p.type==='devboard'){detachPart(p);p.rotation=normalizeAngle(p.rotation+90);if(drag?.type==='part'){drag.moved=true;refresh();$('preview-layer').innerHTML=renderMountPreview(findMount(p,project.components,15,project.surfaces,project.wires));}else{applyMount(p,findMount(p,project.components,15,project.surfaces,project.wires));changed();}return;}
  detachPart(p);p.rotation=normalizeAngle(p.rotation+45);
  if(drag?.type==='part'){drag.moved=true;refresh();$('preview-layer').innerHTML=renderMountPreview(findMount(p,project.components,15,project.surfaces,project.wires));}
  else {applyMount(p,findMount(p,project.components,15,project.surfaces,project.wires));changed();}
@@ -399,7 +417,7 @@ function release(event){if(!drag)return;
   if(event?.type==='pointercancel'||running())selection=previous;
   else {const found=boxSelection(project,{minX:drag.start.x,minY:drag.start.y,maxX:drag.current.x,maxY:drag.current.y});selection={type:'group',parts:[...new Set([...selectedIds(previous,'part'),...found.parts])],wires:[...new Set([...selectedIds(previous,'wire'),...found.wires])]};if(!selection.parts.length&&!selection.wires.length)selection=null;}
   drag=null;$('preview-layer').innerHTML='';if(selection)inspectTab();refresh();return;
- }if(drag.type==='surface'){const next=project;project=drag.base;if(drag.moved&&event?.type!=='pointercancel'){checkpoint();project=next;}if(drag.moved)autosave();drag=null;refresh();pinSearch();return;}if(drag?.type==='group'&&drag.moved&&event?.type!=='pointercancel'){mountSelection(project,selection);refresh();}if(['wire-point','group'].includes(drag?.type)&&drag.moved)autosave();if(drag?.type==='press'){pressed[drag.id]=false;recompute();refresh();}if(drag?.type==='part'&&drag.moved){const p=project.components.find(p=>p.id===drag.id);if(p?.type==='breadboard')log(p.name+': 빵판과 장착 부품을 이동했습니다.');else if(p){const mounted=applyMount(p,findMount(p,project.components,15,project.surfaces,project.wires));log(mounted?`${p.name}: ${terminalKeys(p).length}개 다리를 빵판에 장착했습니다.`:`${p.name}: 자유 배치 상태입니다. 모든 다리가 구멍에 맞을 때 장착됩니다.`);}autosave();}drag=null;$('preview-layer').innerHTML='';refresh();}
+ }if(drag.type==='surface'){const next=project;project=drag.base;if(drag.moved&&event?.type!=='pointercancel'){checkpoint();project=next;}if(drag.moved)autosave();drag=null;refresh();pinSearch();return;}if(drag?.type==='group'&&drag.moved&&event?.type!=='pointercancel'){mountSelection(project,selection);refresh();}if(['wire-point','group'].includes(drag?.type)&&drag.moved)autosave();if(drag?.type==='press'){pressed[drag.id]=false;recompute();refresh();}if(drag?.type==='part'&&drag.moved){const p=project.components.find(p=>p.id===drag.id);if(p?.type==='breadboard')log(p.name+': 빵판과 장착 부품을 이동했습니다.');else if(p?.type==='devboard'){const mounted=applyMount(p,findMount(p,project.components,15,project.surfaces,project.wires));log(mounted?`${p.name}: ${Object.keys(attachments(p)).length}개 핀을 빵판에 꽂았습니다.`:`${p.name}: 보드를 옮겼습니다. 보드 핀에 연결된 배선도 함께 따라갑니다.`);}else if(p){const mounted=applyMount(p,findMount(p,project.components,15,project.surfaces,project.wires));log(mounted?`${p.name}: ${terminalKeys(p).length}개 다리를 빵판에 장착했습니다.`:`${p.name}: 자유 배치 상태입니다. 모든 다리가 구멍에 맞을 때 장착됩니다.`);}autosave();}drag=null;$('preview-layer').innerHTML='';refresh();}
 svg.addEventListener('pointerup',release);svg.addEventListener('pointercancel',release);window.addEventListener('blur',()=>{if(['surface','marquee'].includes(drag?.type))release({type:'pointercancel'});if(Object.values(pressed).some(Boolean)){pressed={};recompute();refresh();}});
 window.addEventListener('keydown',e=>{if(e.key==='Escape'&&['surface','marquee'].includes(drag?.type)){e.preventDefault();e.stopImmediatePropagation();release({type:'pointercancel'});}},true);
 svg.addEventListener('pointerleave',()=>{$('tooltip').hidden=true;});
@@ -421,13 +439,24 @@ function focusPin(id){const p=endpointInfo(id,project.components,project.surface
 $('pin-search').addEventListener('input',()=>{searchSelectedId=null;pinSearch();});
 $('pin-search').addEventListener('keydown',e=>{if(e.key==='Enter'){const p=searchPins(e.target.value)[0];if(p)focusPin(p.id);}if(e.key==='Escape'){e.stopPropagation();e.target.value='';searchSelectedId=null;pinSearch();}});
 function recompute(){if(!runtime||!session)return;try{session.setPressed(pressed);result=session.viewResult;const warning=result.warnings.join('|');if(warning&&warning!==lastWarnings)result.warnings.forEach(w=>log(w,'error'));lastWarnings=warning;}catch(e){result=session.viewResult;status='error';log(e.message,'error');}}
+// ESP32 / Raspberry Pi boards run with the STM32 by default. Choosing one board (or a circuit without the STM32 board)
+// runs only the boards' fixed-run scenarios; the STM32 then runs an empty program so its pins stay inputs.
+const BOARD_ONLY_PROGRAM='void setup() {}\nvoid loop() { delay(1000); }';
+const runScope=()=>{const value=$('run-scope')?.value||'all';return value==='all'||value==='stm32'||project.components.some(p=>p.type==='devboard'&&p.id===value)?value:'all';};
+const boardOnlyRun=()=>project.components.some(p=>p.type==='devboard')&&(!!project.surfaces?.board?.hidden||!['all','stm32'].includes(runScope()));
+function updateRunScope(){
+ const select=$('run-scope');if(!select)return;const boards=project.components.filter(p=>p.type==='devboard'),value=runScope();
+ select.closest('label').hidden=!boards.length;
+ select.innerHTML='<option value="all">전체 보드</option><option value="stm32">STM32만</option>'+boards.map(p=>`<option value="${esc(p.id)}">${esc(p.name)}만</option>`).join('');select.value=value;select.disabled=running();
+}
 function initializeRuntime({debug=false,entry=false}={}){
- const emulate=!!ide?.emulator();
+ const scope=runScope(),boardOnly=boardOnlyRun(),emulate=!boardOnly&&!!ide?.emulator();
  if(emulate&&!firmware){status='error';runtime=null;session=null;log('펌웨어 ELF가 없습니다. 빌드하거나 파일 → 펌웨어 ELF 열기를 사용하세요.','error');return false;}
- const program=emulate?null:ide?.build({reveal:false});if(!emulate&&ide&&!program){status='error';runtime=null;session=null;layout.showPanel('build');return false;}
+ const program=boardOnly?compile(BOARD_ONLY_PROGRAM):emulate?null:ide?.build({reveal:false});if(!boardOnly&&!emulate&&ide&&!program){status='error';runtime=null;session=null;layout.showPanel('build');return false;}
  try{simTime=0;pressed={};lastWarnings='';result=null;monitor.clear();uartLines.clear();const options={debug:debug?{entry,breakpoints:ide?.breakpoints()||[]}:undefined,print:s=>log(s,'serial'),uart:logUart,trace:event=>monitor.trace(event),channels:monitor.channels()};
-  session=emulate?new FirmwareSession(project,{...options,elf:firmware.bytes}):new SimulationSession(project,{...options,program});runtime=session.runtime;status='paused';pending=null;mode='select';// The start line comes before what the program prints in its first tick.
-  log(emulate?`펌웨어 에뮬레이터를 시작했습니다 · ${firmware.name} · ${projectBoard(project).mcu} (${projectBoard(project).core}) 명령어 실행`:project.firmware?.mode==='hal'?'HAL 프로그램을 시작했습니다.':'스케치를 시작했습니다.');result=session.tick(0);for(const p of project.components)if(isCamera(p))void applyCameraImage(p,session);diagnostic('simulation.started',{debug,entry},true);ide?.debugView();return true;}
+  session=emulate?new FirmwareSession(project,{...options,elf:firmware.bytes}):new SimulationSession(boardOnly?{...project,code:BOARD_ONLY_PROGRAM,firmware:{mode:'sketch',files:[]}}:project,{...options,program});runtime=session.runtime;status='paused';pending=null;mode='select';// The start line comes before what the program prints in its first tick.
+  log(boardOnly?'다른 보드만 실행합니다. STM32 코드는 실행하지 않습니다.':emulate?`펌웨어 에뮬레이터를 시작했습니다 · ${firmware.name} · ${projectBoard(project).mcu} (${projectBoard(project).core}) 명령어 실행`:project.firmware?.mode==='hal'?'HAL 프로그램을 시작했습니다.':'스케치를 시작했습니다.');
+  session.circuit.drivers=scope==='stm32'?[]:createBoardDrivers(project,{log:s=>log(s,'serial'),scope});session.buses.boards=()=>session.circuit.drivers;result=session.tick(0);for(const p of project.components)if(isCamera(p))void applyCameraImage(p,session);diagnostic('simulation.started',{debug,entry},true);ide?.debugView();return true;}
  catch(e){runtime=null;result=session?.viewResult??null;status='error';log(e.message,'error');return false;}
 }
 function recordSimulation(){if(result)diagnostic('simulation.state',{status,simulationMs:simTime,pins:runtime?.gpio||{},parts:result.parts,fault:result.fault,warnings:result.warnings});}
@@ -446,7 +475,7 @@ $('run').onclick=()=>{if(runtime?.debug.paused){runtime.resume();simTime=runtime
 function cancelStart(){starting=false;startToken++;window.nativeIde?.stop?.().catch(()=>{});log('펌웨어 빌드를 취소했습니다.');refresh();}
 async function startRun(options){
  if(starting)return false;
- if(ide?.emulator()){const token=++startToken;starting=true;refresh();try{await ensureFirmware();}catch(error){if(token===startToken){log(error.message,'error');feedback.show('펌웨어를 준비하지 못했습니다. 빌드 탭의 오류를 확인하거나 ELF 파일을 여세요.','firmware');}return false;}finally{if(token===startToken)starting=false;}if(token!==startToken)return false;}
+ if(ide?.emulator()&&!boardOnlyRun()){const token=++startToken;starting=true;refresh();try{await ensureFirmware();}catch(error){if(token===startToken){log(error.message,'error');feedback.show('펌웨어를 준비하지 못했습니다. 빌드 탭의 오류를 확인하거나 ELF 파일을 여세요.','firmware');}return false;}finally{if(token===startToken)starting=false;}if(token!==startToken)return false;}
  if(running())return false;const ok=initializeRuntime(options);if(ok)status=runtime.debug.paused?'paused':'running';refresh();if(ok)ide?.debugView();return ok;
 }
 // The build configuration (Debug -O0 / Release -Os) is part of what the cached ELF was built from.
@@ -512,6 +541,16 @@ function freeSpot(type){
  for(let ring=0;ring<12;ring++)for(let k=0;k<Math.max(1,ring*8);k++){const a=ring?k/(ring*8)*Math.PI*2:0,q={x:centre.x+Math.cos(a)*ring*step,y:centre.y+Math.sin(a)*ring*step};if(!others.some(o=>Math.hypot(o.x-q.x,o.y-q.y)<o.r+own+6))return q;}
  return centre;
 }
+function addDevboard(modelId){
+ if(running())return;if(project.components.length>=100){log('부품은 100개까지 추가할 수 있습니다.','error');return;}
+ const surfaceRight=key=>project.surfaces?.[key]?.hidden?0:surfaceOrigin(key,project.surfaces).x+(key==='board'?BOARD:BB).w*scaleXOf(project.surfaces?.[key]);
+ const right=Math.max(surfaceRight('board'),surfaceRight('breadboard'),...project.components.map(p=>p.type==='breadboard'?breadboardBounds(p).right:p.type==='devboard'?devboardBounds(p).right:p.x+40));
+ let fields;try{fields=newDevboardFields(project,modelId,right);}catch(e){log(e.message,'error');return;}
+ checkpoint();const p={id:uid('b'),...fields};project.components.push(p);selection={type:'part',id:p.id};pending=null;mode='select';inspectTab();changed();fitView();
+ log(`${p.name}: ${DEVBOARD_MODELS[modelId].name}를 추가했습니다. 강의 예제가 아닌 보드는 코드를 실행하지 않고 전압만 계산합니다.`);
+}
+$('devboard-options').innerHTML=Object.values(DEVBOARD_MODELS).map(m=>`<button class="board-option devboard-option" data-devboard-add="${m.id}"><span class="board-option-icon" aria-hidden="true">${m.kind==='rpi'?'Pi':'32'}</span><span><strong>${esc(m.name)}</strong><small>${esc(m.description)}</small></span><span class="board-option-action">추가</span></button>`).join('');
+$('devboard-options').querySelectorAll('[data-devboard-add]').forEach(b=>b.onclick=()=>addDevboard(b.dataset.devboardAdd));
 $('empty-add-board').onclick=()=>document.querySelector('[data-add="board"]')?.click();$('empty-open-parts').onclick=()=>layout.showView('parts');$('empty-open-examples').onclick=()=>layout.showView('examples');
 $('wire-palette').innerHTML=WIRE_COLORS.map(([value,name],i)=>`<button data-palette="${i<10?'basic':'pastel'}" data-color="${value}" class="swatch ${value===color?'active':''}" style="--swatch:${value}" title="${name} 배선" aria-label="${name} 배선"></button>`).join('');
 function setWireColor(value){
@@ -524,9 +563,15 @@ document.querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>tab(b.dataset.t
 function replaceProject(p,{preserveWorkspace=false}={}){if(running())stop();firmware=null;project=validateProject(p);feedback.clear('save');setSaveState('저장 중…','saving');selection=null;pending=null;drag=null;mode='select';pressed={};lastWarnings='';uartLines.clear();searchSelectedId=null;$('pin-search').value='';pinSearch();fitView();selection=null;pending=null;drag=null;$('preview-layer').innerHTML='';undoStack=[];redoStack=[];status='stopped';runtime=null;session=null;monitor.clear();result=null;simTime=0;dirty=false;lastCodeCheckpoint=0;sourceFile='main.c';syncEditor();ide?.reset({preserveWorkspace});autosave();refresh();log('회로를 열었습니다: '+project.name);}
 function requestReplace(action){if(ide?.nativeBusy()){log('빌드·실행·디버그를 정지한 뒤 프로젝트를 변경하세요.','error');return;}if(dirty){replaceAction=action;$('replace-dialog').showModal();}else action();}
 $('replace-cancel').onclick=()=>{$('replace-dialog').close();replaceAction=null;};$('replace-confirm').onclick=()=>{$('replace-dialog').close();replaceAction?.();replaceAction=null;};
-$('hal-example').onchange=e=>{const type=e.target.value;e.target.value='';if(running()||!Object.hasOwn(HAL_EXAMPLES,type))return;checkpoint();project=applyHalExample(project,type);sourceFile='main.c';runtime=null;session=null;result=null;status='stopped';simTime=0;pressed={};selection=null;pending=null;drag=null;mode='select';lastWarnings='';$('preview-layer').innerHTML='';fitView();monitor.clear();uartLines.clear();syncEditor();changed();if(type==='uart')$('serial-target').value='USART2';else if(type==='uart_external'||CATALOG_BY_TYPE[type]?.family==='uart')$('serial-target').value='USART2:external';tab('code');const guide=halGuideFor(type,projectBoard(project).id);log(HAL_EXAMPLES[type]+' · '+guide);
+$('hal-example').onchange=e=>{const type=e.target.value;e.target.value='';if(type.startsWith(LECTURE_PREFIX)){if(!running())applyLecture(type.slice(LECTURE_PREFIX.length));return;}if(running()||!Object.hasOwn(HAL_EXAMPLES,type))return;checkpoint();project=applyHalExample(project,type);sourceFile='main.c';runtime=null;session=null;result=null;status='stopped';simTime=0;pressed={};selection=null;pending=null;drag=null;mode='select';lastWarnings='';$('preview-layer').innerHTML='';fitView();monitor.clear();uartLines.clear();syncEditor();changed();if(type==='uart')$('serial-target').value='USART2';else if(type==='uart_external'||CATALOG_BY_TYPE[type]?.family==='uart')$('serial-target').value='USART2:external';tab('code');const guide=halGuideFor(type,projectBoard(project).id);log(HAL_EXAMPLES[type]+' · '+guide);
  // Examples driven from the serial monitor open it, so text is typed there (not into the Windows terminal).
  if(/직렬 모니터 탭/.test(guide))layout.showPanel('bus');svg.focus({preventScroll:true});};
+// A lecture example replaces the circuit (Ctrl+Z restores it) and opens the board program.
+function applyLecture(id){
+ try{const applied=applyLectureExample(id);checkpoint();project=applied.project;sourceFile=applied.file;runtime=null;session=null;result=null;status='stopped';simTime=0;pressed={};selection=null;pending=null;drag=null;mode='select';lastWarnings='';$('preview-layer').innerHTML='';fitView();monitor.clear();uartLines.clear();syncEditor();changed();tab('code');
+  log(`${lectureExample(id).code} ${lectureExample(id).title} · ${lectureGuide(id)}`);svg.focus({preventScroll:true});}
+ catch(error){log(error.message,'error');}
+}
 $('new').onclick=()=>requestReplace(()=>replaceProject(startProject()));
 $('project-name').onchange=e=>{checkpoint();project.name=e.target.value.trim()||'새 회로';changed();};
 let lastCodeCheckpoint=0,replaceCheckpoint=false;
@@ -539,7 +584,7 @@ function replaceCodeText(edit){
  try{code.setRangeText(edit.text,edit.start,edit.end,'end');code.dispatchEvent(new Event('input',{bubbles:true}));}
  finally{replaceCheckpoint=false;}
 }
-$('code').addEventListener('input',()=>{if(replaceCheckpoint||Date.now()-lastCodeCheckpoint>1000){checkpoint();lastCodeCheckpoint=Date.now();}dirty=true;if(sourceFile==='main.c')project.code=$('code').value;else project.firmware.files.find(f=>f.name===sourceFile).text=$('code').value;lineNumbers();autosave();ide?.invalidate();$('undo').disabled=false;$('redo').disabled=true;});
+$('code').addEventListener('input',()=>{if(isBoardFile(sourceFile))return;if(replaceCheckpoint||Date.now()-lastCodeCheckpoint>1000){checkpoint();lastCodeCheckpoint=Date.now();}dirty=true;if(sourceFile==='main.c')project.code=$('code').value;else project.firmware.files.find(f=>f.name===sourceFile).text=$('code').value;lineNumbers();autosave();ide?.invalidate();$('undo').disabled=false;$('redo').disabled=true;});
 $('source-file').onchange=e=>{sourceFile=e.target.value;syncEditor();};
 $('board-reset').onclick=()=>{if(running())return;$('board-reset-error').textContent='';$('board-reset-dialog').showModal();};
 $('board-reset-cancel').onclick=()=>$('board-reset-dialog').close();
@@ -614,7 +659,7 @@ window.addEventListener('error',e=>log('화면 오류: '+e.message,'error'));
 document.addEventListener('ide-undo',e=>editUndo(e.detail));
 document.addEventListener('ide-find',e=>{layout.reveal('code');editorSearch.open(e.detail);});
 ide=setupIde({buildFirmware:()=>ensureFirmware(true).catch(error=>log(error.message,'error')),getProject:()=>project,getSource:()=>sourceFile,getSession:()=>runtime?session:null,isRunning:running,isSimulationRunning:()=>status==='running'||status==='paused',refresh,checkpoint,saveLocal:autosave,layout,log,feedback,requestReplace,replaceProject,debugCommand,
- selectSource:name=>{if(name!=='main.c'&&!project.firmware?.files.some(f=>f.name===name))return;sourceFile=name;syncEditor();},
+ selectSource:name=>{if(name!=='main.c'&&!project.firmware?.files.some(f=>f.name===name)&&!boardForFile(project,name))return;sourceFile=name;syncEditor();},
  applySources:(p,file)=>{checkpoint();project=validateProject(p);sourceFile=file;syncEditor();changed();ide.invalidate();}});
 // Button titles show the current shortcuts as soon as a binding changes.
 // Help text and the palette button show the user's keys too.
@@ -632,6 +677,8 @@ deviceDocs=setupDeviceDocs({getProject:()=>project,getSelection:()=>selection,is
 }});
 const logicAnalyzer=setupLogicAnalyzer({getSession:()=>session,getProject:()=>project,isRunning:()=>status==='running',log,onNoise:noise=>{checkpoint();project.simulation={...(project.simulation||{}),noise};autosave();}});
 layout.mount({openElf,debugCommand:shellDebugCommand,runCommand,formatCode:()=>{layout.reveal('code');lastCodeCheckpoint=0;void ide?.format?.();},formatSelection:()=>{layout.reveal('code');lastCodeCheckpoint=0;ide?.formatSelection?.();},find:replace=>editorSearch.open(replace),files:()=>[project.code!==undefined?'main.c':null,...(project.firmware?.files||[]).map(f=>f.name)].filter(Boolean),openFile:name=>{if(name!=='main.c'&&!project.firmware?.files.some(f=>f.name===name))return;sourceFile=name;syncEditor();layout.reveal('code');ide?.editor?.focus?.();},gotoLine:line=>ide?.editor?.goto?.(line),setTarget:value=>{const select=$('native-target');if(!select||select.disabled||![...select.options].some(o=>o.value===value))return;select.value=value;select.dispatchEvent(new Event('change'));}});layout.setMonitor(monitor);
+// Which boards a run starts (shown in Run and Debug once the circuit has an ESP32 or Raspberry Pi board).
+(document.querySelector('#view-debug .run-config')||document.querySelector('.ide-toolbar'))?.insertAdjacentHTML('beforeend','<label class="run-scope-label" hidden><span>실행 보드</span><select id="run-scope" aria-label="실행할 보드"></select></label>');updateRunScope();
 setupTabAccessibility();
 canvasKeys=setupCanvasKeyboard(svg,{
  isDragging:()=>!!drag,

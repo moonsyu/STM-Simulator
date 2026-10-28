@@ -36,6 +36,9 @@ export class BusDevices {
   i2cTarget(address){
     const w=this.wire,candidates=this.project.components.filter(p=>['i2c',...I2C_DEVICES].includes(p.type)&&p.address===address&&this.powered(p)&&this.same(this.terminal(p,3),this.pin(w.sda))&&this.same(this.terminal(p,4),this.pin(w.scl)));
     const result=this.result(),sda=result?.voltage(this.pin(w.sda)),scl=result?.voltage(this.pin(w.scl));
+    // A fixed-run board answering as an I2C slave on the same SDA/SCL nets (STM32 ↔ ESP32 lecture example).
+    const board=!candidates.length&&this.boards?.().find(d=>{const s=d.i2cSlave?.();return s?.address===address&&this.same(`signal:${d.part.id}.${s.sda}`,this.pin(w.sda))&&this.same(`signal:${d.part.id}.${s.scl}`,this.pin(w.scl));});
+    if(board)return {part:{type:'board',driver:board},connected:sda>2&&scl>2&&!this.same(this.pin(w.sda),this.pin(w.scl))};
     return {part:candidates[0],connected:candidates.length===1&&sda>2&&scl>2&&!this.same(this.pin(w.sda),this.pin(w.scl))};
   }
   i2cLines(){if(!this.signals)return null;const w=this.wire,id=this.i2cId||'I2C1',g={group:id,busLabel:id,protocol:'i2c',params:{clockHz:w.clock}};this.signals.define(id+'.SCL',{...g,label:'SCL',pins:[w.scl],params:{...g.params,role:'scl'}});this.signals.define(id+'.SDA',{...g,label:'SDA',pins:[w.sda],params:{...g.params,role:'sda'}});return id;}
@@ -47,14 +50,14 @@ export class BusDevices {
     if(head.busError)return {ok:false,busError:true,nack:false};if(!head.acks[0])return {ok:false,nack:true};
     let ready=connected;const data=this.i2cPhase(head.endUs,bytes,bytes.map(()=>'master'),()=>ready,{start:false});
     const received=data.seen.slice(0,data.acks.length);
-    if(received.length){if(part.type==='i2c'){const m=this.memory(part);m.address=received[0];for(const value of received.slice(1)){m.data[m.address]=value;m.address=(m.address+1)&255;}}else ready=this.devices.writeI2c(part,received,runtime.microTime,this.result());}
+    if(received.length){if(part.type==='board')ready=part.driver.i2cReceive(received)!==false;else if(part.type==='i2c'){const m=this.memory(part);m.address=received[0];for(const value of received.slice(1)){m.data[m.address]=value;m.address=(m.address+1)&255;}}else ready=this.devices.writeI2c(part,received,runtime.microTime,this.result());}
     const ok=ready&&!data.busError&&data.acks.length===bytes.length&&data.acks.every(Boolean);return {ok,busError:data.busError,nack:!ok&&!data.busError,written:received.length};
   }
   i2cRead(address,count,runtime,at=runtime.microTime){
     const {part,connected}=this.i2cTarget(address),ack0=(i,v)=>connected&&v>>1===address&&!!(v&1);
     const head=this.i2cPhase(at,[(address<<1)|1],['master'],ack0,{stop:!count});
     if(head.busError||!head.acks[0])return {ok:false,data:[],busError:head.busError,nack:!head.busError};
-    let bytes=[];if(part.type==='i2c'){const m=this.memory(part);for(let i=0;i<count;i++){bytes.push(m.data[m.address]);m.address=(m.address+1)&255;}}else{bytes=this.devices.readI2c(part,count,runtime.microTime);if(bytes===null)return {ok:false,data:[],nack:true};}
+    let bytes=[];if(part.type==='board')bytes=part.driver.i2cRequest(count);else if(part.type==='i2c'){const m=this.memory(part);for(let i=0;i<count;i++){bytes.push(m.data[m.address]);m.address=(m.address+1)&255;}}else{bytes=this.devices.readI2c(part,count,runtime.microTime);if(bytes===null)return {ok:false,data:[],nack:true};}
     const data=this.i2cPhase(head.endUs,bytes,bytes.map(()=>'slave'),i=>i<count-1,{start:false});
     return {ok:!data.busError,data:data.busError?[]:data.seen,busError:data.busError};
   }

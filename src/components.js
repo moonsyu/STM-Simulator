@@ -2,6 +2,7 @@ import {CATALOG_DEFS,CATALOG_TWO_PIN,CATALOG_BY_TYPE,CONTACT_MAPS,LEGACY_PHYSICA
 import {L298_DEFS} from './l298n.js';
 import {DEVICE_DEFS} from './device-defs.js';
 import {scaleXOf,scaleYOf} from './geometry.js';
+import {DEVBOARD_MODELS} from './devboards.js';
 // Geometry shared by rendering, hit testing, mounting and project validation.
 // Lead spacing of the small two-lead parts: legs bent close to the body as on a real breadboard. Radial parts
 // (LED, LDR, NTC, capacitors, 2-pin button) stand on legs two holes apart (lead, free hole, lead: three holes);
@@ -38,7 +39,7 @@ export const WIRE_COLORS=[
   ['#b4bbed','파스텔 파랑'],['#cdb4e8','파스텔 보라'],['#edbad5','파스텔 분홍'],['#d8c5b4','파스텔 베이지']
 ];
 export const normalizeAngle=n=>((n%360)+360)%360;
-export function terminalKeys(p){if(p.electricalPins)return p.electricalPins;return p.type==='breadboard'?[]:p.type==='button'?['a','b','c','d']:p.type==='lcd'?LCD_LABELS.map((_,i)=>'p'+(i+1)):PART_DEFS[p.type]?.labels?PART_DEFS[p.type].labels.map((_,i)=>'p'+(i+1)):['a','b'];}
+export function terminalKeys(p){if(p.electricalPins)return p.electricalPins;return ['breadboard','devboard'].includes(p.type)?[]:p.type==='button'?['a','b','c','d']:p.type==='lcd'?LCD_LABELS.map((_,i)=>'p'+(i+1)):PART_DEFS[p.type]?.labels?PART_DEFS[p.type].labels.map((_,i)=>'p'+(i+1)):['a','b'];}
 export function attachments(p){return TWO_PIN_TYPES.includes(p.type)?{...(p.attachA?{[CATALOG_TWO_PIN.includes(p.type)?'p1':'a']:p.attachA}:{}),...(p.attachB?{[CATALOG_TWO_PIN.includes(p.type)?'p2':'b']:p.attachB}:{})}:p.attachments||{};}
 export function terminalLabel(p,key){
  if(p.type==='lcd')return `${Number(key.slice(1))} · ${LCD_LABELS[Number(key.slice(1))-1]}`;
@@ -48,6 +49,8 @@ export function terminalLabel(p,key){
 }
 function rawTerminals(p){
  if(p.type==='breadboard')return [];
+ // An ESP32 board plugs into a breadboard with its header pins; a Raspberry Pi header takes jumper wires only.
+ if(p.type==='devboard'){const model=DEVBOARD_MODELS[p.model];return model?.kind==='esp32'?model.pins.map(pin=>({key:pin.key,x:pin.x,y:pin.y})):[];}
  if(p.type==='button')return [{key:'a',x:-14,y:-14},{key:'b',x:14,y:-14},{key:'c',x:-14,y:14},{key:'d',x:14,y:14}];
  if(p.type==='lcd')return LCD_LABELS.map((_,i)=>({key:'p'+(i+1),x:(i-7.5)*14,y:44}));
  if(CATALOG_TWO_PIN.includes(p.type))return [{key:'p1',x:-(p.span??70)/2,y:0},{key:'p2',x:(p.span??70)/2,y:0}];

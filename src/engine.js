@@ -4,6 +4,7 @@ import {l298Branches,l298BranchOn,l298State} from './l298n.js';
 import {MODULE_DEVICES,I2C_DEVICES,ldrResistance,ntcResistance} from './device-defs.js';
 import {boardPins, circuitHoles, ALL_GPIO_PINS, canonicalPin, boardPin} from './pins.js';
 import {terminalKeys,attachments,PART_DEFS} from './components.js';
+import {devboardPins,devboardNet,devboardModel} from './devboards.js';
 
 export class UnionFind {
   constructor(){this.parent=new Map();}
@@ -15,6 +16,8 @@ export function topology(project,pressed={}) {
   const uf=new UnionFind();
   for(const p of (project.surfaces?.board?.hidden?[]:boardPins(project.boardId))){uf.find(p.id);if(p.signal!=='NC')uf.join(p.id,`signal:${p.signal==='AGND'?'GND':p.signal}`);}
   for(const h of circuitHoles(project.components,project.surfaces))uf.join(h.id,h.bus);
+  // Other boards (ESP32, Raspberry Pi): each GPIO is its own net, power pins join the common rails.
+  for(const p of project.components)if(p.type==='devboard')for(const pin of devboardPins(p)){uf.find(pin.id);const net=devboardNet(p,pin);if(net)uf.join(pin.id,net);const hole=p.attachments?.[pin.key];if(hole)uf.join(pin.id,hole);}
   for(const p of project.components){
     for(const key of terminalKeys(p)){const id=`part:${p.id}:${key}`;uf.find(id);if(attachments(p)[key])uf.join(id,attachments(p)[key]);}
     if(p.type==='button'){uf.join(`part:${p.id}:a`,`part:${p.id}:c`);uf.join(`part:${p.id}:b`,`part:${p.id}:d`);if(pressed[p.id])uf.join(`part:${p.id}:a`,`part:${p.id}:b`);}
@@ -45,7 +48,8 @@ export function solveCircuit(project,gpio={},pressed={},transient={}){
   for(const p of ['5V','U5V'])fixed(`signal:${p}`,5);
   if(warnings.length)return {fault:true,warnings:[...new Set(warnings)],parts:{},voltage:()=>null,current:0,uf};
   const branch=(a,b,r,extra={})=>{const aa=uf.find(a),bb=uf.find(b);roots.add(aa);roots.add(bb);branches.push({a:aa,b:bb,r,...extra});};
-  for(const pin of ALL_GPIO_PINS){
+  // Board GPIOs other than the STM32's are keyed `<board id>.<GPIO>` (fixed-run and sketch boards).
+  for(const pin of [...ALL_GPIO_PINS,...Object.keys(gpio).filter(k=>k.includes('.'))]){
     const g=gpio[pin]||{mode:'INPUT'};
     if(g.mode==='OUTPUT'&&!(g.openDrain&&g.value>0)){
       fixed(`drive:${pin}`,g.value??0);branch(`signal:${pin}`,`drive:${pin}`,40,{gpio:pin});
@@ -56,6 +60,7 @@ export function solveCircuit(project,gpio={},pressed={},transient={}){
   // The on-board USER button is active LOW with a modeled pull-up.
   branch('signal:PC13','signal:3V3',4700);
   if(pressed.USER)branch('signal:PC13','signal:GND',1);
+  for(const p of project.components)if(p.type==='devboard')for(const [pin,r]of Object.entries(devboardModel(p)?.pullups||{}))branch(`signal:${p.id}.${pin}`,'signal:3V3',r);
   for(const p of project.components){
     const a=`part:${p.id}:a`,b=`part:${p.id}:b`,pin=n=>`part:${p.id}:p${n}`;
     catalogBranches(p,uf,branch,pressed);
@@ -129,7 +134,7 @@ export function solveCircuit(project,gpio={},pressed={},transient={}){
     if(b.driver&&Math.abs(i)>2)warn(`${project.components.find(p=>p.id===b.driver).name}: L298N 출력 전류 2 A 초과. 단락·부하를 확인하세요.`,{type:'part',id:b.driver});
     if(b.supply&&Math.abs(i)>2)warn(`${b.supply}: 외부 전원 전류 2 A 초과. 단락·부하를 확인하세요.`,{type:'part',id:b.id});
     if(b.contact&&Math.abs(i)>1)warn(b.contact+': 접점 전류 1 A 초과. 부하와 전원 배선을 확인하세요.',{type:'part',id:b.contactId});
-    if(b.gpio&&Math.abs(i)>0.02)warn(`${b.gpio}: GPIO 전류 ${(Math.abs(i)*1000).toFixed(1)} mA. 저항과 배선을 확인하세요.`,{type:'endpoint',id:boardPin(b.gpio)});
+    if(b.gpio&&Math.abs(i)>0.02)warn(`${gpioName(project,b.gpio)}: GPIO 전류 ${(Math.abs(i)*1000).toFixed(1)} mA. 저항과 배선을 확인하세요.`,{type:'endpoint',id:gpioEndpoint(project,b.gpio)});
     if(b.led&&i>0.02)warn(`${project.components.find(p=>p.id===b.id)?.name}${b.channel?' '+b.channel:''}: LED 전류 ${(i*1000).toFixed(1)} mA. 직렬 저항을 늘리세요.`,{type:'part',id:b.id});
     if(b.id)maxCurrent=Math.max(maxCurrent,Math.abs(i));
   }
@@ -147,12 +152,18 @@ export function solveCircuit(project,gpio={},pressed={},transient={}){
 }
 // A read at the same simulation time must not advance capacitor charge again.
 export class CircuitSimulation{
- constructor(){this.time=null;this.base={};this.latest={};this.dt=1e-6;}
+ constructor(){this.time=null;this.base={};this.latest={};this.dt=1e-6;this.drivers=[];}
+ // Programs of the other boards (fixed-run scenarios, ESP32 sketches) advance with circuit time (ms), add their
+ // `<board>.<GPIO>` states and read their inputs from each solved step.
+ withBoards(gpio,time){if(!this.drivers.length)return gpio;const out={...gpio};for(const d of this.drivers){if(time!==undefined)d.advance(time);Object.assign(out,d.gpio());}return out;}
  solve(project,gpio,pressed,time,echoHigh={},deviceSignals={}){
    if(this.time!==null&&time>this.time){this.base={...this.latest};this.dt=(time-this.time)/1000;}
-   this.time=time;const result=solveCircuit(project,gpio,pressed,{dt:this.dt,capacitors:this.base,echoHigh,deviceSignals});
-   if(!result.fault)this.latest=result.capacitors;return result;
+   this.time=time;const result=solveCircuit(project,this.withBoards(gpio,time),pressed,{dt:this.dt,capacitors:this.base,echoHigh,deviceSignals});
+   if(!result.fault){this.latest=result.capacitors;for(const d of this.drivers)d.observe?.(result,time);}return result;
  }
- hold(project,gpio,pressed,echoHigh={},deviceSignals={}){return solveCircuit(project,gpio,pressed,{dt:1e-9,capacitors:this.latest,echoHigh,deviceSignals});}
+ hold(project,gpio,pressed,echoHigh={},deviceSignals={}){return solveCircuit(project,this.withBoards(gpio),pressed,{dt:1e-9,capacitors:this.latest,echoHigh,deviceSignals});}
 }
+// `<board id>.<GPIO>` pins of other boards: the board name and its header pin for messages and issue links.
+function gpioName(project,pin){const [id,gpio]=pin.split('.');if(!gpio)return pin;return `${project.components.find(p=>p.id===id)?.name??id} ${gpio}`;}
+function gpioEndpoint(project,pin){const [id,gpio]=pin.split('.');if(!gpio)return boardPin(pin);const part=project.components.find(p=>p.id===id);return part&&devboardPins(part).find(p=>p.signal===gpio)?.id;}
 export function digitalRead(pin,result){const v=result?.voltage(`signal:${canonicalPin(pin)}`);return v!=null&&v>=1.65?1:0;}

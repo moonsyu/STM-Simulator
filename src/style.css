@@ -298,3 +298,19 @@ dialog h1{font-size:21px;margin:8px 0 18px;letter-spacing:-.5px}
 @media(max-width:1350px){.app-shell{grid-template-columns:180px minmax(470px,1fr) 8px var(--editor-width,440px)}.library{padding:8px}.brand{min-width:160px}.workspace-toolbar{padding:4px 8px;gap:5px}.wire-palette{padding:0 8px;gap:4px;min-width:150px}.tool{padding:4px 5px}.tool span{display:none}.run-tools{gap:5px}.run-button{padding:5px 10px}.monitor-strip{gap:10px;font-size:9.5px}.project-title span{display:none}}
 @media(max-height:850px){.section-label{margin-top:6px}.part-card{padding:5px 7px}.code-note{padding:10px 12px}.console{height:240px;min-height:240px}#wave-svg svg{height:135px}.bus-columns{height:145px}.library-hint{font-size:9px}.help-grid p{font-size:10.5px}#code-panel.searching .code-note{display:none}}
 @media(max-height:760px){.aside-heading{padding-bottom:6px}.board-card{padding:6px 8px}.library{padding-top:6px}.pin-search{margin-top:6px}.section-label{margin-top:6px}.part-search{margin-top:6px}.hal-example-note{line-height:1.35}.library-hint{display:none}}
+
+/* ESP32 / Raspberry Pi boards: picker in the board view, run scope, pin notes. */
+.devboard-add{margin-top:14px;display:grid;gap:7px}
+.devboard-add h3{margin:0;font-size:11px;font-weight:600;color:var(--ide-muted,#4d6358)}
+.devboard-add p{margin:0;font-size:11px;line-height:1.5;color:var(--ide-muted,#4d6358)}
+#devboard-options{display:grid;gap:6px}
+.devboard-option{padding:9px 10px}
+.devboard-option .board-option-icon{min-width:36px;height:36px;font-size:13px}
+.run-scope-label{display:grid;gap:3px;font-size:11px;color:var(--ide-muted,#4d6358)}
+.run-scope-label select{width:100%}
+.pin-notes{margin:6px 0;padding-left:18px;font-size:11.5px;line-height:1.55}
+.pin-notes li.warn,.pin-check{color:var(--ide-warning,#9a5b00)}
+.devboard{cursor:grab}
+.docs-board-pins{width:100%;border-collapse:collapse;font-size:11.5px}
+.docs-board-pins th,.docs-board-pins td{text-align:left;padding:4px 6px;border-bottom:1px solid var(--ide-border,#d8e2dd);vertical-align:top}
+.docs-board-pins .warn{color:var(--ide-warning,#9a5b00)}

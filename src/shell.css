@@ -184,6 +184,8 @@ body.resizing-workspace iframe,body.resizing-workspace svg{pointer-events:none}
 :root[data-shell] #source-tabs button{height:100%;padding:0 14px 0 12px;display:flex;align-items:center;gap:6px;border:0;border-right:1px solid var(--ide-border);border-radius:0;background:var(--ide-chrome);color:var(--ide-muted);font-size:13px;font-weight:400;white-space:nowrap;position:relative;flex:none}
 :root[data-shell] #source-tabs button::before{content:'C';font-size:10px;font-weight:700;color:#519aba}
 :root[data-shell] #source-tabs button[data-source$=".h"]::before{content:'H';color:#a074c4}
+:root[data-shell] #source-tabs button[data-source$=".ino"]::before{content:'INO';color:#00979d}
+:root[data-shell] #source-tabs button[data-source$=".py"]::before{content:'PY';color:#3d7ab3}
 :root[data-shell] #source-tabs button.active{background:var(--ide-background);color:var(--ide-foreground)}
 :root[data-shell] #source-tabs button.active::after{content:'';position:absolute;left:0;right:0;top:0;height:1px;background:var(--ide-accent)}
 :root[data-shell] #source-tabs button:hover:not(.active){background:color-mix(in srgb,var(--ide-chrome) 60%,var(--ide-background))}

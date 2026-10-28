@@ -2,6 +2,7 @@ import * as monaco from 'monaco-editor/editor/editor.api.js';
 import 'monaco-editor/features/register.all.js';
 import 'monaco-editor/editor/contrib/semanticTokens/browser/documentSemanticTokens.js';
 import 'monaco-editor/languages/definitions/cpp/register.js';
+import 'monaco-editor/languages/definitions/python/register.js';
 import {loadPreferences,selectedTheme} from './ide-preferences.js';
 import {editorTheme} from './colorscheme.js';
 
@@ -53,7 +54,7 @@ export function createCodeEditor({textarea,getFile,getFiles,onBreakpoint,onBreak
   }
   function sync(value){
     const name=getFile();syncing=true;
-    if(active!==name){if(active)states.set(active,editor.saveViewState());let model=models.get(name);if(!model){model=monaco.editor.createModel(value,'cpp',monaco.Uri.parse('inmemory://stm/'+encodeURIComponent(name)));models.set(name,model);}active=name;editor.setModel(model);if(model.getValue()!==value)model.setValue(value);editor.restoreViewState(states.get(name));}
+    if(active!==name){if(active)states.set(active,editor.saveViewState());let model=models.get(name);if(!model){model=monaco.editor.createModel(value,name.endsWith('.py')?'python':'cpp',monaco.Uri.parse('inmemory://stm/'+encodeURIComponent(name)));models.set(name,model);}active=name;editor.setModel(model);if(model.getValue()!==value)model.setValue(value);editor.restoreViewState(states.get(name));}
     else if(editor.getValue()!==value)replaceChanged(editor.getModel(),value);
     editor.getModel()?.updateOptions({tabSize:preferredTabSize,insertSpaces:true});
     nativeValue.set.call(textarea,value);syncing=false;decorate();
