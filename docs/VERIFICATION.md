@@ -1,5 +1,9 @@
 # 검증 기록
 
+## 1.8.0 강의 예제 정리·과제·PWM LED 밝기·예제 분류 — 공개 배포 검증 완료
+
+2026-10-28. 제품 커밋 `ab104cdfaae9db90e694357aad85af17fdb9d91e` · [Windows CI 40658246506](https://github.com/moonsyu/STM-Simulator/actions/runs/40658246506) · [Release v1.8.0](https://github.com/moonsyu/STM-Simulator/releases/tag/v1.8.0). `npm test` 789 통과(로컬 권한 2 제외), E2E 36 통과·2 건너뜀. latest=v1.8.0, 태그·BUILD-INFO 커밋 `ab104cd` 일치(sourceDirty false), 5자산. EXE SHA-256 `ab340057227205e342a75c79b062e3f10cf04efa430db5f25269f84871df77c8`(105,285,069 B, MZ)이 SHA256.txt·update-manifest·ZIP 안의 STM-Simulator.exe와 일치. ZIP SHA-256 `558ce7356843a0958572e5a8bbd23d20d92d3b2c05f336a84ff0bbd58ee9a348`.
+
 ## 1.7.0 STM32 보드 여러 개 — 공개 배포 검증 완료
 
 2026-10-28. 제품 커밋 `575d5b97ae4a338b8f0771a2624b591c1a3bd5ea` · [Windows CI 40640636808](https://github.com/moonsyu/STM-Simulator/actions/runs/40640636808) · [Release v1.7.0](https://github.com/moonsyu/STM-Simulator/releases/tag/v1.7.0). `npm test` 782 통과(로컬 권한 2 제외), E2E 35 통과·2 건너뜀. latest=v1.7.0, 태그·BUILD-INFO 커밋 `575d5b9` 일치(sourceDirty false), 5자산. EXE SHA-256 `b73ccb00b688844b83f1acc7805af1194a7ecbf6f680c1cb02304b21512ccdb2`(105,277,927 B, MZ)이 SHA256.txt·update-manifest·ZIP 안의 STM-Simulator.exe와 일치. ZIP SHA-256 `5a788aad33d71e3eccbf3cb9c3c8a4005330e19e58ec1b3703e19c20725ddd4a`. 실물 보드 여러 개에 차례로 기록하는 것은 실물로 확인하지 않았다(ST-LINK 배정은 단위 검사).
