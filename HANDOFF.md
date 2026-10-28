@@ -1,6 +1,13 @@
 # STM Simulator — 개발 인계
 
-현재 버전: **1.5.0**. 정리일: **2026-10-23**. NUCLEO-F446RE 또는 NUCLEO-F103RB와 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+현재 버전: **1.6.0**. 정리일: **2026-10-23**. NUCLEO-F446RE 또는 NUCLEO-F103RB와 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+
+## 1.6.0 ESP32 스케치 실행
+
+- `esp32-sketch.js` `SketchDriver`: ESP32 보드의 `sketch.ino`를 기존 C 해석기(`Runtime`)로 실행하는 회로 드라이버. 핀 번호 → `GPIO<n>`(`api.pin`, GPIO6~11·없는 핀은 오류), `analogRead` 12비트, `ledcAttach`/`ledcWrite`(2.x `ledcSetup`/`ledcAttachPin`), `Serial.printf`(`formatPrintf`), DHT(`DHT dht(pin,DHT11)`: 배선·전원이 맞는 DHT11/22 모듈 값, 아니면 NaN), `Wire` 슬레이브(`i2cSlave`/`i2cReceive`/`i2cRequest` → `onReceive`/`onRequest` 콜백). 첫 회로 해석 뒤 시작.
+- `parser.js` `compile(code,{esp32:true})`: DHT 헤더·`DHT` 생성자 선언. `runtime.js`: `api.pin`, `api.constructs`. `hal-stdio.js`: `%f`의 NaN/Inf는 nan/inf.
+- `fixed-run.js` `createBoardDrivers`: ESP32는 `SketchDriver`, 라즈베리파이는 시나리오/대기. 강의 ESP32 예제 3개는 시나리오 대신 스케치 실행(FW-09 STM32 코드는 `HAL_Delay(100)` 뒤 전송).
+- 편집기: ESP32 스케치는 편집 가능(라즈베리파이 코드만 읽기 전용), 컴파일 오류는 실행 시작 때 `ESP32-1 · sketch.ino: n행` 형식.
 
 ## 1.5.0 ESP32·라즈베리파이 보드 · 고정 실행 · 강의 실습 예제
 
