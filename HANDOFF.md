@@ -1,6 +1,14 @@
 # STM Simulator — 개발 인계
 
-현재 버전: **1.8.0**. 정리일: **2026-10-28**. NUCLEO-F446RE 또는 NUCLEO-F103RB와 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+현재 버전: **1.8.1**. 정리일: **2026-10-28**. NUCLEO-F446RE 또는 NUCLEO-F103RB와 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+
+## 1.8.1 실물 보드 확인 · 디버그 시작 상태 · 빌드 경고
+
+- 실물 보드 확인(2026-10-28, NUCLEO-F103RB·NUCLEO-F446RE 두 대 연결): Node에서 `NativeIde`로 빌드 → OpenOCD 기록·검증 → ST-LINK 가상 COM에서 USART2 인사·에코 확인, `runOnBoards`로 두 보드 차례 기록(보드별 ST-LINK 자동 배정, 각자 실행), GDB 디버그(main 진입·중단점·`evaluate`·한 줄 실행·계속·일시정지), 앱 화면에서 실행 대상 실물 보드 → Ctrl+F5. 확인 스크립트는 저장소에 넣지 않았다(실물 보드 필요).
+- `gdb-mi.cjs`: 시작 중(`state==='starting'`) OpenOCD가 보드를 멈춘 채 연결할 때 오는 이유 없는 `*stopped`(frame `??`)는 알리지 않는다. 전에는 디버그 시작 직후 "일시정지 ??"가 잠깐 보였다.
+- `native-build.cjs`: `__stm_environment.c`에 newlib 시스템 함수 약한 정의(`_read`→`__io_getchar`, `_close`, `_fstat`, `_isatty`, `_lseek`, `_getpid`, `_kill`). nosys 스텁의 "not implemented" 링커 경고 7줄이 모든 ARM 빌드에 찍혔다.
+- 이 PC 도구로 `tests/toolchain/arm-examples.test.mjs`(HAL 예제 전체 실제 빌드 + 에뮬레이터)를 돌리는 법: `ARM_GCC`=STM32CubeIDE의 `arm-none-eabi-gcc.exe`, `STM32CUBE_F4_ROOT`/`STM32CUBE_F1_ROOT`=`%LOCALAPPDATA%\STM-Simulator-Tools\STM32CubeF4`/`F1`. 같은 변수로 E2E 에뮬레이터 검사 2개도 건너뛰지 않는다.
+- ESP32: 앱에는 실물 빌드·업로드가 없다(스케치는 해석 실행). 이 PC에는 Arduino IDE 2의 `arduino-cli`(1.5.1)와 esp32 코어 3.3.2가 있어 `arduino-cli compile --fqbn esp32:esp32:esp32`는 된다. 연결된 WROOM 보드(COM4, CP210x)는 자동 리셋 후 다운로드 모드에 들어가지 않아(`Wrong boot mode detected (0x13)`) 업로드할 때 BOOT 버튼을 눌러야 한다.
 
 ## 1.8.0 강의 예제 정리 · 강의 과제 · PWM LED 밝기 · 예제 분류
 
