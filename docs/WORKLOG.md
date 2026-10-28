@@ -17,6 +17,7 @@
   - 모든 ARM 빌드 출력에 "_close/_fstat/_read … is not implemented and will always fail" 링커 경고 7줄이 찍혔다. STM32CubeIDE의 `syscalls.c`처럼 newlib 시스템 함수를 약한 정의로 넣어 경고를 없앴다(`native-build.cjs`, `_read`는 `__io_getchar()` 사용).
 - ESP32: 앱에는 ESP32 실물 빌드·업로드 기능이 없다(스케치는 해석 실행). 이 PC의 Arduino IDE 2 `arduino-cli`와 esp32 코어 3.3.2로 강의 예제 스케치를 컴파일하는 것까지는 확인했다(약 2분). 업로드는 보드가 자동 리셋 뒤 다운로드 모드에 들어가지 않아 "Wrong boot mode detected (0x13)"로 실패했다. 리셋 지연을 늘려도 같았고, 업로드할 때 BOOT 버튼을 눌러야 하는 보드로 보인다.
 - 검증: `npm test` 793개 중 790개 통과(로컬 권한 2개 제외, 시작 중 정지 검사 추가), 위 실물 확인, 도구 체인 254/254, 에뮬레이터 E2E 6/6.
+- 커밋·릴리스: `7fa3a9f`(디버그 시작 상태), `0f40983`(빌드 경고), `19730c9`(1.8.1 문서·버전). Windows CI 40668107370 성공, Release v1.8.1 공개 다운로드 확인(latest, 태그 커밋, EXE·ZIP 해시, ZIP 안 STM-Simulator.exe).
 - 남은 사항: ESP32 실물 빌드·업로드를 앱에 넣을지(arduino-cli 사용, BOOT 버튼 안내 필요). 실물 확인 스크립트는 보드가 있어야 해서 저장소에 넣지 않았다.
 
 ## 2026-10-28 · 1.8.0 강의 예제 정리 · 강의 과제 · PWM LED 밝기 · 예제 분류

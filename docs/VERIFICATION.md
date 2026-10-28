@@ -1,5 +1,9 @@
 # 검증 기록
 
+## 1.8.1 실물 보드 확인 · 디버그 시작 상태 · 빌드 경고 — 공개 배포 검증 완료
+
+2026-10-28. 제품 커밋 `19730c9192e1c7d2ca2723a9b25b9f78afcceadd` · [Windows CI 40668107370](https://github.com/moonsyu/STM-Simulator/actions/runs/40668107370) · [Release v1.8.1](https://github.com/moonsyu/STM-Simulator/releases/tag/v1.8.1). 실물: NUCLEO-F103RB·F446RE 빌드·기록·실행(USART2 인사·에코), 두 보드 동시 기록, GDB 디버그, 앱 화면 Ctrl+F5. 이 PC 도구로 HAL 예제 254/254 실제 빌드 + 에뮬레이터, 에뮬레이터 E2E 6/6. `npm test` 790 통과(로컬 권한 2 제외). latest=v1.8.1, 태그·BUILD-INFO 커밋 `19730c9` 일치(sourceDirty false), 5자산. EXE SHA-256 `381bbbae5bd62b346b1055f7e0d37891f5c7213075fa2d511cea728170d90159`(105,284,294 B, MZ)이 SHA256.txt·update-manifest·ZIP 안의 STM-Simulator.exe와 일치. ZIP SHA-256 `8f46f434611880e70b78373f46fe709c8de7f698933cd9f5ee7ed6ada683badb`.
+
 ## 1.8.0 강의 예제 정리·과제·PWM LED 밝기·예제 분류 — 공개 배포 검증 완료
 
 2026-10-28. 제품 커밋 `ab104cdfaae9db90e694357aad85af17fdb9d91e` · [Windows CI 40658246506](https://github.com/moonsyu/STM-Simulator/actions/runs/40658246506) · [Release v1.8.0](https://github.com/moonsyu/STM-Simulator/releases/tag/v1.8.0). `npm test` 789 통과(로컬 권한 2 제외), E2E 36 통과·2 건너뜀. latest=v1.8.0, 태그·BUILD-INFO 커밋 `ab104cd` 일치(sourceDirty false), 5자산. EXE SHA-256 `ab340057227205e342a75c79b062e3f10cf04efa430db5f25269f84871df77c8`(105,285,069 B, MZ)이 SHA256.txt·update-manifest·ZIP 안의 STM-Simulator.exe와 일치. ZIP SHA-256 `558ce7356843a0958572e5a8bbd23d20d92d3b2c05f336a84ff0bbd58ee9a348`.
