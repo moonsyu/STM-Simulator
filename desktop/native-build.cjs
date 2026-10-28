@@ -108,6 +108,16 @@ __attribute__((weak)) void *_sbrk(ptrdiff_t increment) {
   if((increment>0 && (uintptr_t)increment>limit-current) || (increment<0 && (uintptr_t)(-(increment+1))+1>current-base)) { errno=ENOMEM; return (void*)-1; }
   void *previous=(void*)current; current+=increment; return previous;
 }`);
+    // The remaining newlib system calls, as STM32CubeIDE's syscalls.c has them (weak: a project's own syscalls.c wins).
+    // Without them newlib's nosys stubs link in and every build warns "_close is not implemented".
+    env.push('#include <sys/stat.h>',`__attribute__((weak)) int __io_getchar(void) { return -1; }
+__attribute__((weak)) int _read(int file, char *ptr, int len) { (void)file; int i=0; for(;i<len;i++){ int c=__io_getchar(); if(c<0) break; ptr[i]=(char)c; } return i; }
+__attribute__((weak)) int _close(int file) { (void)file; return -1; }
+__attribute__((weak)) int _fstat(int file, struct stat *st) { (void)file; st->st_mode=S_IFCHR; return 0; }
+__attribute__((weak)) int _isatty(int file) { (void)file; return 1; }
+__attribute__((weak)) int _lseek(int file, int ptr, int dir) { (void)file; (void)ptr; (void)dir; return 0; }
+__attribute__((weak)) int _getpid(void) { return 1; }
+__attribute__((weak)) int _kill(int pid, int sig) { (void)pid; (void)sig; errno=EINVAL; return -1; }`);
     // A synchronous USART uses a USART_HandleTypeDef named husartN (as the generated main.c does).
     const peripherals=project.mcu?.peripherals||{},sync=id=>peripherals[id]?.mode==='synchronous',usartHandle=id=>sync(id)?'husart'+id.replace(/\D/g,''):serialHandle(id);
     for(const [id,p]of Object.entries(peripherals))if(p.enabled){if(isSerial(id))env.push(sync(id)?`extern USART_HandleTypeDef ${usartHandle(id)};`:`extern UART_HandleTypeDef ${serialHandle(id)};`);if(isTimer(id))env.push(`extern TIM_HandleTypeDef htim${id.slice(3)};`);}
