@@ -7,6 +7,7 @@
 - `app.js` 캔버스 `pointermove`: 배선·배선 끝이 핀이나 구멍을 덮어도 `elementsFromPoint`로 그 아래 `[data-endpoint]`를 찾아 툴팁과 같은 넷 표시를 한다(클릭과 같은 방식). 전에는 `e.target`만 봐서 배선이 연결된 핀에는 정지 중 툴팁이 없고, 실행 중에는 `점퍼선` 전압만 나왔다. 이제 핀이 없는 배선 구간만 `점퍼선` 툴팁을 쓴다.
 - `devboards.js` `RPI_FUNCTIONS`: GPIO19 설명을 `PCM FS · PWM0`으로(`pinctrl-rp1.c` 기준). GPIO13의 `PWM1`은 공식 문서 표기와 같아 유지. 40핀 배열은 공식 그림·pinout.xyz와 불일치 0개.
 - 같은 원인이 남은 곳: `app.js` 첫 `contextmenu`(STM32 핀 우클릭 → 핀 설정)는 `e.target`만 봐서 배선이 있는 핀에서 열리지 않는다.
+- `package.json` `overrides`: 권고 GHSA-g3hv-75wg-m249·GHSA-3g3m-2fjr-6pw4 때문에 `minimatch` 11.0.3, `@electron/asar` 4.3.1(그 아래 `glob` 14.0.3), `@electron/universal` 3.0.6으로 고정. 모두 빌드 도구이고 앱에는 포함되지 않는다. `electron-builder`가 이 버전들을 직접 쓰게 되면 뺀다.
 
 ## 1.9.1 ESP32 BOOT 버튼 업로드 확인 · 다운로드 모드 재부팅 안내
 

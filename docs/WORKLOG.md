@@ -2,6 +2,20 @@
 
 작업할 때마다 날짜순으로 맨 위에 추가합니다. 무엇을 했는지, 왜 했는지, 어떻게 검증했는지, 커밋·릴리스와 남은 사항을 적습니다. 버전별 구조 설명은 [HANDOFF.md](../HANDOFF.md), 검증 수치는 [VERIFICATION.md](VERIFICATION.md)에 있습니다.
 
+## 2026-11-02 · 1.9.2 CI 의존성 보안 검사 실패 해결
+
+- 요청: 1.9.2 Release 게시(앞의 요청을 이어서).
+- 한 것과 이유:
+  - 첫 CI(`b3dc7b0`, 41371711706)는 `npm audit` 단계에서 멈췄다. 10-30에 새로 공개된 권고 GHSA-g3hv-75wg-m249(minimatch 11.0.1 미만, 중간)와 GHSA-3g3m-2fjr-6pw4(glob 9~14.0.1, 중간) 때문이다. 태그와 Release는 만들어지지 않았으므로 같은 버전으로 다시 게시한다.
+  - minimatch의 3·5·9·10 버전대에는 패치가 없고 `electron-builder` 26.18.0도 해결하지 못한다. `minimatch`만 11로 강제하면 `@electron/asar` 3과 `dir-compare`가 쓰는 `default` export가 없어 깨진다. 그래서 CI 기준은 낮추지 않고 `overrides`로 `@electron/asar` 4.3.1(그 아래 `glob` 14.0.3), `@electron/universal` 3.0.6, `minimatch` 11.0.3을 지정했다. `dir-compare`는 트리에서 빠진다. 모두 빌드 도구이고 앱에는 포함되지 않는다.
+- 검증(임시 복제본, Node 24.22.1, 레지스트리에서 받은 npm 11.6.2):
+  - `npm ci` 후 `npm audit --audit-level=low` 취약점 0개.
+  - `npm run build`로 `STM-Simulator.exe` 생성, `npm run build:artifact` 패키지 검증 통과.
+  - `tests/e2e/devboards.e2e.test.mjs` 7개 통과. 앞에서 CI로 미룬 툴팁 E2E도 실제 Electron과 마우스로 통과했다.
+  - `npm test` 799개 중 796개 통과, 1개 건너뜀, 실패 2개는 기존 로컬 symlink 권한(`EPERM`) 문제다.
+- 커밋·릴리스: 의존성 변경과 이 기록을 함께 커밋. CI·Release 결과는 `VERIFICATION.md`에 기록한다.
+- 남은 사항: `electron-builder`가 이 버전들을 직접 쓰게 되면 `overrides`를 뺀다. macOS 범용 빌드 경로의 `@electron/universal` 3은 이 프로젝트가 쓰지 않아 실행해 보지 않았다.
+
 ## 2026-11-02 · 1.9.2 배선이 연결된 핀의 GPIO 번호 표시
 
 - 요청: 케이블이 연결된 핀에서 GPIO 번호가 표시되지 않는 버그를 고치고, 커밋·푸시하고 Release를 올릴 것.
