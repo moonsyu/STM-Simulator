@@ -1,5 +1,9 @@
 # 검증 기록
 
+## 1.10.0 블루투스·Wi-Fi 모듈 · 보드 간 통신 예제 — 공개 배포 검증 완료
+
+2026-11-02. 제품 커밋 `9bae2a038fb578a31a4a3736a23dcc0c4816bd79` · [Windows CI 41394150711](https://github.com/moonsyu/STM-Simulator/actions/runs/41394150711) · [Release v1.10.0](https://github.com/moonsyu/STM-Simulator/releases/tag/v1.10.0). 로컬(임시 복제본): `npm test` 818개 중 815 통과, 1 건너뜀, 실패 2는 로컬 symlink 권한. E2E(devboards·docs·stm32-boards) 11 통과. 통신은 시뮬레이터 모델 기준이며 실물 HC-05·HC-06·ESP-01로 시험하지 않았다. CI에서 예제 전체와 BT-01·BT-02·WF-01의 각 STM32 보드 코드를 ST HAL로 빌드해 에뮬레이터에서 실행했다. latest=v1.10.0, 태그·BUILD-INFO 커밋 `9bae2a0` 일치(sourceDirty false), 5자산. EXE SHA-256 `3fd91d7fbd674312e3227619f54d14f267c94b50d6d55399a0999b23a7f976ca`(105,377,218 B, MZ)이 SHA256.txt·update-manifest·ZIP 안의 STM-Simulator.exe와 일치. ZIP SHA-256 `ab82800aeb37ad4981e12ad828490c1bfc683fdd4a103970f4c9237e0e36154d`.
+
 ## 1.9.2 배선이 연결된 핀의 GPIO 툴팁 · GPIO19 설명 — 공개 배포 검증 완료
 
 2026-11-02. 제품 커밋 `0abe726791ac8a689916cfbb6092b672b75c2343` · [Windows CI 41390167913](https://github.com/moonsyu/STM-Simulator/actions/runs/41390167913) · [Release v1.9.2](https://github.com/moonsyu/STM-Simulator/releases/tag/v1.9.2). 첫 CI 41371711706(`b3dc7b0`)은 새 보안 권고로 `npm audit`에서 멈췄고 태그·Release는 만들어지지 않았다(작업 로그 참고). latest=v1.9.2, 태그·BUILD-INFO 커밋 `0abe726` 일치(sourceDirty false), 5자산. EXE SHA-256 `7d97e372569cba34beb46033a32eb2b06a3317b2aa4bc0516d564822a24c3490`(105,290,980 B, MZ)이 SHA256.txt·update-manifest·ZIP 안의 STM-Simulator.exe와 일치. ZIP SHA-256 `4ce9e89dbb197b8a01a3abf5e9334b64d33743092ab10db0f18ce3c83e6a8085`.
