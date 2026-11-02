@@ -30,7 +30,7 @@ function esp32Pins(silkscreen){
 }
 // Raspberry Pi 40-pin header (physical pin → signal); odd pins on the inner row, even pins along the board edge.
 const RPI_HEADER=['3V3','5V','GPIO2','5V','GPIO3','GND','GPIO4','GPIO14','GND','GPIO15','GPIO17','GPIO18','GPIO27','GND','GPIO22','GPIO23','3V3','GPIO24','GPIO10','GND','GPIO9','GPIO25','GPIO11','GPIO8','GND','GPIO7','GPIO0','GPIO1','GPIO5','GND','GPIO6','GPIO12','GPIO13','GND','GPIO19','GPIO16','GPIO26','GPIO20','GND','GPIO21'];
-const RPI_FUNCTIONS={2:'I2C1 SDA · 보드에 1.8 kΩ 풀업(3.3 V)',3:'I2C1 SCL · 보드에 1.8 kΩ 풀업(3.3 V)',4:'GPCLK0',14:'UART0 TX',15:'UART0 RX',18:'PCM CLK · PWM0',12:'PWM0',13:'PWM1',19:'PCM FS · PWM1',20:'PCM DIN',21:'PCM DOUT',10:'SPI0 MOSI',9:'SPI0 MISO',11:'SPI0 SCLK',8:'SPI0 CE0',7:'SPI0 CE1',0:'ID_SD — HAT EEPROM 전용',1:'ID_SC — HAT EEPROM 전용'};
+const RPI_FUNCTIONS={2:'I2C1 SDA · 보드에 1.8 kΩ 풀업(3.3 V)',3:'I2C1 SCL · 보드에 1.8 kΩ 풀업(3.3 V)',4:'GPCLK0',14:'UART0 TX',15:'UART0 RX',18:'PCM CLK · PWM0',12:'PWM0',13:'PWM1',19:'PCM FS · PWM0',20:'PCM DIN',21:'PCM DOUT',10:'SPI0 MOSI',9:'SPI0 MISO',11:'SPI0 SCLK',8:'SPI0 CE0',7:'SPI0 CE1',0:'ID_SD — HAT EEPROM 전용',1:'ID_SC — HAT EEPROM 전용'};
 function rpiPins(){
  // Raspberry Pi mechanical drawing (85 × 56 mm): header centred 32.5 mm from the left edge, rows 3.5 ± 1.27 mm.
  return RPI_HEADER.map((signal,i)=>{const n=i+1,col=Math.floor(i/2),gpio=Number(/^GPIO(\d+)$/.exec(signal)?.[1]);
