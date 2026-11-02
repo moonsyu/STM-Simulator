@@ -34,6 +34,22 @@ test('ESP32 and Raspberry Pi boards are added, inspected, documented and removed
  }finally{await s.close();}
 });
 
+test('a pin with a wire on it still shows its GPIO in the tooltip',{timeout:120000},async()=>{
+ const s=await launch();
+ try{
+  const {win}=s;await openBoardView(win);
+  await win.click('[data-devboard-add="rpi5"]');await win.click('#zoom-reset');
+  const center=async key=>{const b=await win.locator(`[data-endpoint$=":${key}"]`).boundingBox();return {x:b.x+b.width/2,y:b.y+b.height/2};};
+  const tooltip=async key=>{const p=await center(key);await win.mouse.move(p.x,p.y);return win.evaluate(()=>{const tip=document.getElementById('tooltip');return tip.hidden?'':tip.textContent;});};
+  assert.match(await tooltip('P40'),/40번 GPIO21/,'a free pin');
+  for(const key of ['P3','P11']){const p=await center(key);await win.mouse.click(p.x,p.y);}
+  await win.waitForFunction(()=>document.querySelectorAll('#wire-layer [data-wire]').length===1);
+  assert.match(await tooltip('P3'),/3번 GPIO2/,'the wire start');
+  assert.match(await tooltip('P11'),/11번 GPIO17/,'the wire end');
+  assert.deepEqual(s.errors,[]);
+ }finally{await s.close();}
+});
+
 test('a Raspberry Pi lecture example runs as a fixed run and shows its output in the serial monitor',{timeout:120000},async()=>{
  const s=await launch();
  try{

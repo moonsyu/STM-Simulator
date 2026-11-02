@@ -437,7 +437,8 @@ svg.addEventListener('pointermove',e=>{
  }
  if(drag?.type==='pan'){const box=svg.getBoundingClientRect();view.x=drag.x-(e.clientX-drag.clientX)*view.w/box.width;view.y=drag.y-(e.clientY-drag.clientY)*view.h/box.height;viewUpdate();return;}
  if(pending){const a=endpointInfo(pending,project.components,project.surfaces);$('preview-layer').innerHTML=`<path d="${wireDraft.points.length?wireDraft.path(pending,a,q):route(a,q)}" fill="none" stroke="${color}" stroke-width="2" stroke-dasharray="5 5" pointer-events="none"/>`;}
- const hit=e.target.closest('[data-endpoint]'),wireHit=e.target.closest('[data-wire]');
+ // A wire or wire end on a pin or hole does not hide it: the tooltip names the pin under the pointer, as a click does.
+ const wireHit=e.target.closest('[data-wire]'),hit=e.target.closest('[data-endpoint]')??(wireHit?document.elementsFromPoint(e.clientX,e.clientY).find(el=>el.matches?.('[data-endpoint]')):null);
  document.querySelectorAll('.same-net').forEach(el=>el.classList.remove('same-net'));
  if(hit){const id=hit.dataset.endpoint,info=endpointInfo(id,project.components,project.surfaces),v=result?.voltage(id),hole=holeInfo(id,project.components,project.surfaces);if(hole)for(const h of circuitHoles(project.components,project.surfaces))if(h.bus===hole.bus)svg.querySelector(`[data-hole="${h.id}"]`)?.classList.add('same-net');
    $('tooltip').textContent=info.label+(result?`\n${Number.isFinite(v)?v.toFixed(3)+' V · ':''}${signalState(v).label}`:'');const box=$('canvas-container').getBoundingClientRect();$('tooltip').style.left=Math.min(e.clientX-box.left+12,box.width-220)+'px';$('tooltip').style.top=Math.max(0,e.clientY-box.top-47)+'px';$('tooltip').hidden=false;
