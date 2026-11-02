@@ -11,11 +11,11 @@
   - 모델: 보드와 모듈은 실제 UART로 연결하고(넷·baud 검사), 공중 구간은 메시지 단위로 모델링했다. HC-06의 시간 간격 명령, HC-05의 두 AT 모드, ESP-01의 에코·AP·스테이션·TCP/UDP·`+IPD`를 문서대로 만들었다. 인터프리터·펌웨어 에뮬레이터·ESP32 스케치에서 모두 동작한다.
   - 예제: 부품별 한 보드 예제 3개, 보드 간 예제 3개(STM32↔STM32 블루투스, STM32↔ESP32 블루투스, STM32↔STM32 Wi-Fi TCP). ESP32 예제를 위해 스케치에 `Serial2`를 넣었다.
 - 검증(임시 복제본, Node 24.22.1, npm 11.6.2):
-  - 단위·해석기·에뮬레이터·펌웨어 테스트: 결과는 아래 숫자. 실패 2개는 기존 로컬 symlink 권한(`EPERM`) 문제다.
-  - 실제 Electron E2E: BT-01·WF-01 실행과 출력·속성 패널 상태 확인. 스크린샷으로 BT-01·BT-02·WF-01의 회로와 사진을 눈으로 확인했다.
+  - `npm test` 818개 중 815개 통과, 1개 건너뜀, 실패 2개는 기존 로컬 symlink 권한(`EPERM`) 문제다.
+  - 실제 Electron E2E(devboards·docs·stm32-boards) 11개 통과: BT-01·WF-01 실행과 출력·속성 패널 상태 확인. 스크린샷으로 BT-01·BT-02·WF-01의 회로와 사진을 눈으로 확인했다.
   - 펌웨어 에뮬레이터: 미리 빌드한 uart ELF의 USART2가 HC-06에 닿고 모듈이 보낸 바이트가 펌웨어에 들어오는 것을 확인했다.
-  - ARM GCC 빌드는 이 PC에 도구가 없어 CI에서 처음 실행된다. 실물 모듈 확인은 하지 않았다.
-- 커밋·릴리스: 기능과 1.10.0 문서·버전을 나눠 커밋. CI·Release 결과는 `VERIFICATION.md`에 기록한다.
+  - ARM GCC 빌드와 두 보드 예제의 ST HAL 링크·에뮬레이터 실행은 이 PC에 도구가 없어 Windows CI에서 확인했다. 실물 모듈 확인은 하지 않았다.
+- 커밋·릴리스: 기능(`15e7b5d`)과 1.10.0 문서·버전(`9bae2a0`)을 나눠 커밋. [Windows CI 41394150711](https://github.com/moonsyu/STM-Simulator/actions/runs/41394150711) 성공, [Release v1.10.0](https://github.com/moonsyu/STM-Simulator/releases/tag/v1.10.0) 게시. 공개 다운로드 검증은 `VERIFICATION.md`에 있다.
 - 남은 사항: 공중 구간은 거리·잡음·손실이 없는 모델이다. 공유기·PC·스마트폰 상대, ESP-01 패스스루·SSL, ESP32 자체 Wi-Fi·Bluetooth, 라즈베리파이의 모듈 사용은 없다. 모형·참고 갤러리와 `DEVICE-VISUAL-REFERENCES.md`에는 새 3종이 없다(재생성 스크립트 불일치, HANDOFF 참고).
 
 ## 2026-11-02 · 1.9.2 CI 의존성 보안 검사 실패 해결
