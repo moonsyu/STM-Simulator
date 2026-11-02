@@ -4,7 +4,8 @@ import {formatPrintf} from './hal-stdio.js';
 import {devboardModel} from './devboards.js';
 
 // ESP32 boards run their Arduino sketch (setup / loop) in the same C interpreter as STM32 sketches, with ESP32 pin
-// numbers (2 → GPIO2), 12-bit analogRead, LEDC PWM, Serial.printf, the DHT library and Wire as an I2C slave.
+// numbers (2 → GPIO2), 12-bit analogRead, LEDC PWM, Serial.printf, the DHT library, Wire as an I2C slave and Serial2
+// (GPIO16 RX / GPIO17 TX) as far as the wireless modules on it go.
 // The program runs as a circuit driver: it advances with circuit time and reads its inputs from the last solved step.
 const DIGITAL_ONLY=new Set([6,7,8,9,10,11]);
 function esp32Pin(model,value){
@@ -16,10 +17,10 @@ export class SketchDriver{
  constructor(part,{log=()=>{},project}={}){
   const model=devboardModel(part);this.part=part;this.project=project;this.result=null;this.output='';this.outputLabel='스케치 출력';
   this.print=text=>{this.output=(this.output+text).slice(-8000);for(const line of String(text).split('\n').filter(Boolean))log(line);};
-  this.wire={address:null,receive:null,request:null,rx:[],tx:[]};this.ledc=new Map();
+  this.wire={address:null,receive:null,request:null,rx:[],tx:[]};this.ledc=new Map();this.serial2={ready:false,baud:9600,rx:'GPIO16',tx:'GPIO17',queue:[],lastTx:0};
   let program;try{program=compile(part.code,{esp32:true});}catch(error){throw new Error(`${part.name} · ${devboardModel(part).file}: ${error.message}`);}
   this.runtime=new Runtime(program,{
-   pin:value=>esp32Pin(model,value),constants:{DHT11:11,DHT22:22,LED_BUILTIN:2},constructs:['DHT'],
+   pin:value=>esp32Pin(model,value),constants:{DHT11:11,DHT22:22,LED_BUILTIN:2,SERIAL_8N1:0x800001c},constructs:['DHT'],
    print:text=>this.print(String(text)+'\n'),read:pin=>this.level(pin),voltage:pin=>this.voltage(pin),
    construct:(name,args)=>({kind:'device',name,args}),deviceCall:(device,method,args)=>this.device(device,method,args),
    call:(name,args,runtime)=>this.call(name,args,runtime)
@@ -29,6 +30,7 @@ export class SketchDriver{
  level(pin){const v=this.voltage(pin);return v!=null&&v>=1.65?1:0;}
  call(name,args,runtime){
   if(name==='Serial.printf'){this.print(formatPrintf(args,runtime));return 0;}
+  if(name.startsWith('Serial2.'))return this.serial2Call(name.slice(8),args,runtime);
   // LEDC PWM (ESP32 Arduino core 3.x ledcAttach/ledcWrite and 2.x ledcSetup/ledcAttachPin by channel).
   if(name==='ledcAttach'){const pin=runtime.pin(args[0]);this.ledc.set(pin,{bits:args[2]??8});runtime.setPinMode(pin,'OUTPUT');return 1;}
   if(name==='ledcSetup'){this.ledc.set('ch'+args[0],{bits:args[2]??8,pins:[]});return args[1];}
@@ -46,6 +48,25 @@ export class SketchDriver{
   if(name==='Wire.read')return w.rx.length?w.rx.shift():-1;
   if(name==='Wire.write'){w.tx.push(Number(args[0])&255);return 1;}
   return undefined;
+ }
+ serial2Call(method,args,runtime){
+  const u=this.serial2;
+  if(method==='begin'){if(!Number.isInteger(args[0])||args[0]<300||args[0]>2000000)throw new Error('UART 속도 범위: 300~2000000 baud');u.baud=args[0];if(args.length>2){u.rx=runtime.pin(args[2]);u.tx=runtime.pin(args[3]);}u.ready=true;runtime.setPinMode(u.rx,'INPUT');runtime.setPinMode(u.tx,'OUTPUT');runtime.output(u.tx,3.3,null);return 0;}
+  if(!u.ready)throw new Error('Serial2.begin(baud)를 먼저 호출하세요.');
+  const ready=()=>u.queue.filter(x=>x.at<=runtime.microTime+1e-6);
+  if(method==='available')return ready().length;
+  if(method==='read'){const i=u.queue.findIndex(x=>x.at<=runtime.microTime+1e-6);return i<0?-1:u.queue.splice(i,1)[0].value;}
+  if(method==='flush')return 0;
+  if(!['print','println','write'].includes(method))throw new Error(`Serial2.${method}은 지원하지 않습니다.`);
+  const text=method==='write'&&typeof args[0]==='number'?String.fromCharCode(args[0]&255):runtime.format(args)+(method==='println'?'\r\n':'');
+  const bit=1e7/u.baud;let t=Math.max(runtime.microTime,u.lastTx);const frames=[...text].map(c=>({value:c.charCodeAt(0)&255,at:t+=bit}));u.lastTx=t;
+  const uf=this.result?.uf;this.wireless?.transmit(frames,u.baud,id=>!!uf&&uf.find(`part:${id}:p4`)===uf.find(`signal:${this.part.id}.${u.tx}`));
+  return frames.length;
+ }
+ joinWireless(hub){hub.addPort(this.part.id,this);}
+ wirelessRx(module,frames,baud){
+  const u=this.serial2,uf=this.result?.uf;if(!u.ready||!uf||u.baud!==baud||uf.find(`part:${module.id}:p3`)!==uf.find(`signal:${this.part.id}.${u.rx}`))return;
+  for(const f of frames){u.queue.push({at:f.at,value:f.value});this.runtime.event(f.at/1000,()=>{});}
  }
  device(device,method,args){
   if(device.name!=='DHT')throw new Error('지원하지 않는 장치입니다.');

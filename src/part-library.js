@@ -20,6 +20,7 @@ const ALIASES={
  potentiometer:'variable resistor 가변 저항',slide:'switch 스위치',rgb:'color 색상',capacitor:'capacitance 콘덴서 축전기',
  diode:'rectifier 정류',buzzer:'active sound speaker 소리 스피커',passive_buzzer:'passive piezo buzzer sound speaker pwm tone melody 수동 피에조 부저 소리 스피커 음계 멜로디',sevenseg:'7 segment seven segment display 디스플레이',
  ldr:'light photoresistor sensor 조도 광저항 빛',ntc:'thermistor sensor 온도 서미스터',sht31:'humidity temperature sensor 온습도',mpu6050:'accelerometer gyroscope sensor 가속도 자이로 자세',pir:'motion sensor 인체 움직임',oled:'display screen 디스플레이 화면',tft:'display screen color 디스플레이 화면 컬러',matrix:'display screen led matrix 디스플레이 화면 도트',servo:'actuator motor 서보 구동',motor:'actuator dc motor h bridge 구동 모터',stepper:'actuator step motor 스텝 구동',relay:'actuator switch 릴레이 구동',joystick:'input game stick 입력',encoder:'rotary input quadrature 입력 회전',
+ ref_hc05_bluetooth_6:'bluetooth wireless serial 블루투스 무선 통신 마스터 슬레이브',ref_hc06_bluetooth_4:'bluetooth wireless serial 블루투스 무선 통신 슬레이브',ref_esp01_wifi_8:'wifi wi-fi wireless esp8266 tcp udp 와이파이 무선 통신',
  temperature:'sensor temperature 온도 센서',ultrasonic:'sensor distance 거리 센서 초음파'
 };
 const normalize=value=>String(value).normalize('NFKC').toLowerCase().replace(/[\s_-]+/g,'');

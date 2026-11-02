@@ -1,4 +1,4 @@
-{"total":{"wires":1167,"length":486217,"crossings":1475,"overlaps":1075},"examples":{"ref_nucleo_f446re":[5,1860,1,1],
+{"total":{"wires":1181,"length":493080,"crossings":1476,"overlaps":1075},"examples":{"ref_nucleo_f446re":[5,1860,1,1],
 "ref_resistor_axial_2":[7,3062,2,3],
 "ref_led_tht_2":[5,1872,1,1],
 "ref_button_2":[13,3613,11,7],
@@ -124,4 +124,7 @@
 "usart_sync_matrix":[12,4856,13,7],
 "camera_tft":[16,6123,12,11],
 "sd_logger":[9,3984,12,12],
-"noise_errors":[10,3089,4,8]}}
+"noise_errors":[10,3089,4,8],
+"ref_hc05_bluetooth_6":[5,2390,0,0],
+"ref_hc06_bluetooth_4":[4,1365,0,0],
+"ref_esp01_wifi_8":[5,3108,1,0]}}

@@ -1,6 +1,9 @@
 // Builds every HAL example with the app's real ARM GCC pipeline (desktop/native-build.cjs) and runs the ELF on the
 // firmware emulator: for NUCLEO-F446RE (STM32CubeF4, Cortex-M4) and, ported, for NUCLEO-F103RB (STM32CubeF1,
 // Cortex-M3). Each board is skipped when ARM GCC or its STM32Cube drivers are absent.
+import {applyLectureExample} from '../../src/lecture-examples.js';
+import {WIRELESS_EXAMPLES} from '../../src/wireless-examples.js';
+import {stm32Boards,stm32View} from '../../src/stm32-boards.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
@@ -22,6 +25,10 @@ const cubeF1=process.env.STM32CUBE_F1_ROOT||'/home/claude/tools/cubef1';
 const exists=p=>fs.access(p).then(()=>true,()=>false);
 const hasGcc=await exists(gcc);
 const tools={armGcc:gcc,cube,cubeF1,armGdb:'',hostGcc:'',hostGdb:'',clangd:'',openocd:'',buildRoot:''};
+// Every STM32 board of the examples that talk over the air, each seen as the main board.
+function wirelessBoards(){
+ return WIRELESS_EXAMPLES.flatMap(e=>{const {project}=applyLectureExample(e.id);return [[e.code,project],...stm32Boards(project).map(b=>[`${e.code} ${b.name}`,stm32View(project,b.id)])];});
+}
 const only=process.env.EXAMPLES?.split(',');
 const ids=Object.keys(allHalExamples()).filter(id=>!SIMULATOR_ONLY_EXAMPLES.has(id)&&(!only||only.includes(id)));
 const f1Ids=new Set(searchHalExamples('','STM32F103RB').map(r=>r.id));
@@ -30,7 +37,7 @@ const BOARDS=[
  {name:'NUCLEO-F446RE',sdk:'STM32CubeF4',available:hasGcc&&await exists(path.join(cube,'Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal.h')),
   cases:()=>[['blank',blankProject()],...ids.map(id=>[id,applyHalExample(blankProject(),id)])]},
  {name:'NUCLEO-F103RB',sdk:'STM32CubeF1',available:hasGcc&&await exists(path.join(cubeF1,'Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal.h')),
-  cases:()=>[['blank',f1()],...ids.filter(id=>f1Ids.has(id)).map(id=>[id,applyHalExample(f1(),id)])]},
+  cases:()=>[['blank',f1()],...ids.filter(id=>f1Ids.has(id)).map(id=>[id,applyHalExample(f1(),id)]),...wirelessBoards()]},
 ];
 const failures=[];
 

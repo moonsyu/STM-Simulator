@@ -21,6 +21,7 @@ export function updateCatalogView(g,p,r,pressed=false,lcdRender=null){
   if(art)light.setAttribute('fill-opacity',color?'.88':level&&!addressable?String(+(.88*(.3+.7*level)).toFixed(3)):'0');}
  const cap=g.querySelector('.switch-cap');cap?.setAttribute('fill',pressed?'#16a583':'#30363a');if(cap?.hasAttribute('data-art'))cap.setAttribute('fill-opacity',pressed?'.55':'0');
  g.querySelector('.art-relay-led')?.setAttribute('fill-opacity',r?.on?'.95':'0');
+ g.querySelector('.art-wireless-led')?.setAttribute('fill-opacity',r?.led?'.95':'0');
  updateDeviceSvg(g,{...p,type:family},r);
  g.querySelectorAll('[data-segment]').forEach(el=>{const digit=Number(el.dataset.digit??0),bit=el.dataset.segment==='dp'?7:'abcdefg'.indexOf(el.dataset.segment),on=r?.digits?!!(r.digits[digit]&(1<<bit)):r?.channels?.[el.dataset.segment]?.on;el.setAttribute('fill',on?(p.type==='sevenseg'?'#ff594b':'#fa6655'):'#434c4f');if(el.hasAttribute('data-art'))el.setAttribute('fill-opacity',on?'.95':'0');});
  g.querySelector('.buzzer-wave')?.setAttribute('opacity',r?.on?'1':'0');const frequency=g.querySelector('.buzzer-frequency');if(frequency)frequency.textContent=r?.on?Math.round(r.frequency)+' Hz':'무음';

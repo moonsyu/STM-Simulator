@@ -2368,6 +2368,80 @@
       ],
       "visual_source_id": "slide-js",
       "pin_order": "신호 구성 목록입니다. 실제 좌우·상하 순서는 출처의 해당 모델 도면과 실크를 확인하세요."
+    },
+    {
+      "id": "hc05-bluetooth-6",
+      "family": "bluetooth",
+      "name": "HC-05 블루투스 모듈 6핀",
+      "pin_count": 6,
+      "pins": [
+        "EN",
+        "VCC",
+        "GND",
+        "TXD",
+        "RXD",
+        "STATE"
+      ],
+      "interface": "UART · Bluetooth 2.0 SPP",
+      "appearance": "파란 기판 위 초록 코어 모듈, 끝에 안테나 패턴, 버튼과 상태 LED, 6핀 헤더.",
+      "notes": "마스터·슬레이브를 AT 명령으로 정합니다. 통신 9600 baud, EN을 HIGH로 두고 전원을 넣으면 AT 모드 38400 baud입니다. VCC 3.3~6 V, RXD는 3.3 V 로직입니다. 마스터와 슬레이브의 PIN이 같아야 연결됩니다.",
+      "additional_contacts": "",
+      "source_ids": [
+        "hc_manual",
+        "hc05_importer",
+        "hc05_azdelivery"
+      ],
+      "visual_source_id": "hc05_importer",
+      "pin_order": "실크 인쇄 순서는 제조사마다 다를 수 있습니다. 단자 이름을 실물 실크와 대조해 연결하세요."
+    },
+    {
+      "id": "hc06-bluetooth-4",
+      "family": "bluetooth",
+      "name": "HC-06 블루투스 모듈 4핀",
+      "pin_count": 4,
+      "pins": [
+        "VCC",
+        "GND",
+        "TXD",
+        "RXD"
+      ],
+      "interface": "UART · Bluetooth 2.0 SPP",
+      "appearance": "초록 기판 위 코어 모듈, 끝에 안테나 패턴, 상태 LED, 4핀 헤더.",
+      "notes": "슬레이브 전용입니다. 페어링 전에는 AT 명령을 받습니다. 명령에 CR/LF를 붙이지 않고 1초에 한 번 이하로 보냅니다. 기본 9600 baud, PIN 1234입니다.",
+      "additional_contacts": "KEY·STATE까지 나온 6핀 보드도 있습니다. 이 모델은 4핀 보드입니다.",
+      "source_ids": [
+        "hc_manual",
+        "hc06_components101"
+      ],
+      "visual_source_id": "hc06_components101",
+      "pin_order": "실크 인쇄 순서는 제조사마다 다를 수 있습니다. 단자 이름을 실물 실크와 대조해 연결하세요."
+    },
+    {
+      "id": "esp01-wifi-8",
+      "family": "wifi",
+      "name": "ESP-01 Wi-Fi 모듈 (ESP8266)",
+      "pin_count": 8,
+      "pins": [
+        "GND",
+        "GPIO2",
+        "GPIO0",
+        "RXD",
+        "VCC",
+        "RST",
+        "CH_PD",
+        "TXD"
+      ],
+      "interface": "UART · Wi-Fi 802.11 b/g/n · AT 펌웨어",
+      "appearance": "검은 기판, 끝에 지그재그 안테나 패턴, ESP8266 칩과 플래시, 2×4 헤더.",
+      "notes": "VCC는 3.0~3.6 V 전용이고 5 V를 넣으면 고장납니다. CH_PD를 3.3 V에 연결해야 켜집니다. AT 펌웨어로 AP·스테이션·TCP/UDP를 사용합니다. 2×4 헤더라 빵판에 바로 꽂지 못해 점퍼선으로 연결합니다.",
+      "additional_contacts": "",
+      "source_ids": [
+        "esp01_aithinker",
+        "esp_at_tcp",
+        "esp_at_wifi"
+      ],
+      "visual_source_id": "esp01_aithinker",
+      "pin_order": "실크 인쇄 순서는 제조사마다 다를 수 있습니다. 단자 이름을 실물 실크와 대조해 연결하세요."
     }
   ],
   "internal_peripherals": [
@@ -5347,6 +5421,48 @@
     "sevenraw-pinout": {
       "title": "Adafruit linked BL-Q56C-43 pinout, page 3",
       "url": "https://cdn-shop.adafruit.com/datasheets/BL-Q56C-43.pdf"
+    },
+    "hc_manual": {
+      "id": "hc_manual",
+      "title": "HC Serial Bluetooth Products User Instructional Manual",
+      "url": "https://components101.com/sites/default/files/component_datasheet/HC06%20Bluetooth%20Module%20Datasheet.pdf",
+      "image_url": null
+    },
+    "hc05_importer": {
+      "id": "hc05_importer",
+      "title": "HC-05 Bluetooth modul datasheet (Eclipsera, verze 2.1)",
+      "url": "https://www.kondik.cz/user/related_files/datasheet_hc-05.pdf",
+      "image_url": null
+    },
+    "hc05_azdelivery": {
+      "id": "hc05_azdelivery",
+      "title": "HC-05 Bluetooth RF-Transceiver-Modul Datenblatt (AZ-Delivery)",
+      "url": "https://cdn.shopify.com/s/files/1/1509/1638/files/HC-05_Bluetooth_Transceiver_Datenblatt_AZ-Delivery_Vertriebs_GmbH.pdf",
+      "image_url": null
+    },
+    "hc06_components101": {
+      "id": "hc06_components101",
+      "title": "HC-06 Bluetooth Module Pinout, Datasheet (Components101)",
+      "url": "https://components101.com/wireless/hc-06-bluetooth-module-pinout-datasheet",
+      "image_url": null
+    },
+    "esp01_aithinker": {
+      "id": "esp01_aithinker",
+      "title": "ESP-01 WiFi Module datasheet (Ai-Thinker)",
+      "url": "https://academy.cba.mit.edu/classes/networking_communications/ESP8266/esp01.pdf",
+      "image_url": null
+    },
+    "esp_at_tcp": {
+      "id": "esp_at_tcp",
+      "title": "ESP-AT TCP/IP AT Commands (Espressif, ESP8266 v2.2.0.0)",
+      "url": "https://docs.espressif.com/projects/esp-at/en/release-v2.2.0.0_esp8266/AT_Command_Set/TCP-IP_AT_Commands.html",
+      "image_url": null
+    },
+    "esp_at_wifi": {
+      "id": "esp_at_wifi",
+      "title": "ESP-AT Wi-Fi AT Commands (Espressif, ESP8266 v2.2.0.0)",
+      "url": "https://docs.espressif.com/projects/esp-at/en/release-v2.2.0.0_esp8266/AT_Command_Set/Wi-Fi_AT_Commands.html",
+      "image_url": null
     }
   }
 }

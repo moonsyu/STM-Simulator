@@ -1,5 +1,6 @@
 import {boardPin} from './pins.js';
 import {makeCatalogProject} from './catalog-examples.js';
+import {WIRELESS_CATALOG,wirelessCatalogExample} from './wireless-examples.js';
 const analogRead=`HAL_ADC_Start(&hadc1);
  if (HAL_ADC_PollForConversion(&hadc1, 20) == HAL_OK) {
   uint32_t raw = HAL_ADC_GetValue(&hadc1);
@@ -10,6 +11,7 @@ const tx=(address,buffer,count)=>`HAL_I2C_Master_Transmit(&hi2c1, ${address} << 
 const rx=(address,buffer,count)=>`HAL_I2C_Master_Receive(&hi2c1, ${address} << 1, ${buffer}, ${count}, 100)`;
 export function protocolExample(v){
  const b=makeCatalogProject(v),{p,pin,connect,power,i2c,spi,adc,finish}=b,id=v.id;
+ if(WIRELESS_CATALOG.has(id))return wirelessCatalogExample(id,b);
  if(['ldr-module-3','ntc-module-3','ldr-comparator-4'].includes(id)){
   power(id.includes('comparator')?1:2,id.includes('comparator')?2:3);adc(id.includes('comparator')?3:1);
   if(id.includes('comparator')){pin('PA10','GPIO_Input');connect(4,'PA10');}

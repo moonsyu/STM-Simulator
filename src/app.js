@@ -100,7 +100,7 @@ function filterExamples(){
  const query=$('hal-example-search').value,matches=searchHalExamples(query,projectBoard(project).mcuFamily),lectures=searchLectureExamples(query);
  if(!EXAMPLE_BOARDS.some(b=>b.id===exampleBoard))exampleBoard='all';
  document.querySelectorAll('[data-example-board]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.exampleBoard===exampleBoard)));
- const lectureOption=e=>`<option value="${LECTURE_PREFIX}${e.id}">${esc(e.kind==='과제'?'강의 과제':'강의 실습')} · ${esc(e.title)}</option>`;
+ const lectureOption=e=>`<option value="${LECTURE_PREFIX}${e.id}">${esc(e.how?'보드 간 통신':e.kind==='과제'?'강의 과제':'강의 실습')} · ${esc(e.title)}</option>`;
  const groups=EXAMPLE_BOARDS.filter(b=>exampleBoard==='all'||b.id===exampleBoard).map(b=>{const own=lectures.filter(e=>e.boards.includes(b.id)),hal=b.id==='stm32'?matches:[];return {b,count:own.length+hal.length,html:own.map(lectureOption).join('')+hal.map(({id,name,native,simOnly})=>`<option value="${id}">${name}${native?' · ARM':''}${simOnly?' · SIM':''}</option>`).join('')};}).filter(g=>g.count);
  const total=new Set(groups.flatMap(g=>[...g.html.matchAll(/value="([^"]+)"/g)].map(m=>m[1]))).size;
  $('hal-example').innerHTML='<option value="">'+(total?`예제 선택… (${total})`:'검색 결과 없음')+'</option>'+groups.map(g=>`<optgroup label="${esc(g.b.label)}" data-count="${g.count}">${g.html}</optgroup>`).join('');

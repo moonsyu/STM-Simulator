@@ -1,4 +1,5 @@
 // UART / USART / I²C / SPI firmware fixtures connected to the existing device models.
+import { PINS } from '../../src/pins.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { open, runUntil, printed, vcpText } from './helpers.mjs';
@@ -115,4 +116,19 @@ test('sd_spi: SPI-mode SD card answers CMD0/8/55/41/58', () => {
   const { session, log } = open('sd_spi');
   runUntil(session, 400);
   assert.ok(printed(log, /SD OCR=c0ff8000/i), log.print.join('|'));
+});
+
+test('uart: a real USART2 reaches an HC-06 on its pins, and what the module sends reaches the firmware', () => {
+  const { session, log } = open('uart', {}, p => {
+    p.components.push({ id: 'bt', type: 'ref_hc06_bluetooth_4', name: 'HC-06', x: 800, y: 300, rotation: 0, baud: 9600, btPin: '1234' });
+    for (const [i, from, to] of [[1, 'board:CN6:5', 'p1'], [2, 'board:CN6:6', 'p2'], [3, 'part:bt:p3', 'PA3'], [4, 'board:CN10:35', 'p4']]) p.wires.push({ id: 'bt' + i, from, to: to.startsWith('P') ? PINS.find(q => q.signal === to).id : 'part:bt:' + to, color: '#23a68a' });
+    p.wires.find(w => w.id === 'bt4').from = PINS.find(q => q.signal === 'PA2').id;
+  });
+  runUntil(session, 60);
+  const hub = session.wireless, module = hub.all()[0];
+  assert.equal(module.powered, true);
+  assert.ok(module.input.length > 0, 'the firmware output arrived at RXD');
+  hub.emit(module, [...'h'].map(c => c.charCodeAt(0)), session.now);
+  runUntil(session, 90);
+  assert.ok(log.uart.some(e => e.instance === 'USART2' && e.direction === 'RX' && e.bytes.includes(104)), JSON.stringify(log.uart.filter(e => e.direction === 'RX')));
 });

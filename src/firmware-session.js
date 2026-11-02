@@ -1,3 +1,4 @@
+import { WirelessHub } from './wireless.js';
 import { CatalogSingleWire } from './catalog-singlewire.js';
 import { CatalogMotion } from './catalog-motion.js';
 import { physicalToModel, physicalResult } from './catalog-model.js';
@@ -38,7 +39,7 @@ export class FirmwareSession {
     this.sensors = new UltrasonicSignals(); this.lcds = new Map(); this.passiveBuzzers = new PassiveBuzzers(); this.wave = new WaveRecorder(channels);
     this.serial = []; this.gpio = {}; this.dirty = true; this.solves = 0; this.solveBudget = 4000; this.realtimeRatio = 1; this.resets = [];
     this.buses = new BusDevices(project, () => this.result, trace);
-    this.buses.uart.baud = 115200; this.buses.clocks = new Map();
+    this.buses.uart.baud = 115200; this.buses.clocks = new Map(); new WirelessHub(this);
     this.dynamic = project.components.some(p => !STATIC_TYPES.has(p.type)) || project.components.some(p => p.type === 'catalog_singlewire');
     // The SD module's card is the same FAT image the interpreter uses (part.cardImage), so files persist in the project.
     const sdPart = project.components.find(p => p.catalogVariant === 'sd-storage-board');
@@ -125,7 +126,7 @@ export class FirmwareSession {
     this.sensors.update(this.project, this.result, micros);
     for (const p of this.project.components.filter(p => p.type === 'lcd')) { if (!this.lcds.has(p.id)) this.lcds.set(p.id, new LCDController()); const lcd = this.lcds.get(p.id).update(p, this.result, micros); this.result.parts[p.id] = { ...this.result.parts[p.id], lcd }; }
     this.motion.update(this.project, this.result, micros, this.runtime, us => this.changed(us));
-    this.buses.update(this.result); this.catalogMotion.update(this.project, this.result, micros, this.runtime); this.wave.record(micros, this.result);
+    this.buses.update(this.result); this.catalogMotion.update(this.project, this.result, micros, this.runtime); this.wave.record(micros, this.result); this.wireless.advance(micros, this.result, this);
     for (const p of this.project.components) if (p.type === 'catalog_singlewire' && p.catalogState) this.singleWireDrive(p);
     for (const d of this.circuit.drivers) d.decorate?.(this.result);
   }
@@ -203,7 +204,20 @@ export class FirmwareSession {
         onFrame: f => { if (!f.framingError) this.buses.received.set(p.id, ((this.buses.received.get(p.id) || '') + String.fromCharCode(f.value & 0xff)).slice(-512)); },
       }));
     }
+    // A wireless module's RXD reads the pins on its net; what it answers goes out on a line of its own (wirelessRx).
+    for (const p of this.project.components.filter(p => p.type === 'wireless')) {
+      list.push(new UartReceiver(sig, this.soc, {
+        sources: () => { const r = this.result; if (!r?.uf || !this.wireless.module(p).powered) return []; const root = r.uf.find(`part:${p.id}:p4`), out = []; for (const [name, line] of sig.lines) if (line.protocol === 'uart' && /^P[A-H]\d+$/.test(name) && r.uf.find('signal:' + name) === root) out.push(line); return out; },
+        config: () => ({ baud: this.wireless.module(p).uartBaud, dataBits: 8, parity: 'none', stopBits: 1 }),
+        onFrame: f => { if (!f.framingError) this.wireless.transmit([{ value: f.value & 0xff, at: this.now }], this.wireless.module(p).uartBaud, id => id === p.id); },
+      }));
+    }
     return list;
+  }
+  wirelessRx(module, frames, baud) {
+    const sig = this.soc.signals, id = 'uart:' + module.id, line = sig.line(id); line.protocol = 'uart';
+    sig.channel(id, `${module.name} TX`, 'uart', [{ id, label: `${module.name} TXD`, role: 'tx' }]);
+    for (const f of frames) sig.uartFrame(line, Math.max(f.at - 1e7 / baud, this.now, line.end), f.value, { baud, dataBits: 8, stopBits: 1 });
   }
   inject(text, target = 'Serial1') {
     const bytes = [...String(text)].slice(0, 256).map(c => c.charCodeAt(0) & 255);

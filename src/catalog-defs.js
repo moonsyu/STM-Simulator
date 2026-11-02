@@ -2,6 +2,7 @@ import {DEVICE_CATALOG} from './device-catalog-data.js';
 import {DEVICE_DEFS} from './device-defs.js';
 import {L298_DEFS} from './l298n.js';
 import {PART_DATASHEETS,UNITS_PER_MM} from './part-datasheets.js';
+import {WIRELESS_DEFAULTS} from './wireless.js';
 // The datasheet name of a catalog part (the catalog's own name when no datasheet was found).
 export const catalogName=v=>PART_DATASHEETS[v.id]?.name??v.name;
 export const catalogType=id=>'ref_'+id.replaceAll('-','_');
@@ -52,8 +53,10 @@ export const ON_CONTACT_PINS={
  'urm09-trig-3':[[-14,35],[-1.5,35],[13,35]],
  'urm09-i2c-4':[[-17,33],[17,33],[5,33],[-6.5,33]],
  'mcp4725-6':[[-55,-16],[-55,-2],[-27,54],[-13,54],[1,54],[15,54]],
+ // ESP-01: 2 × 4 header (table order 1-4 on the upper row, 5-8 back along the lower one).
+ 'esp01-wifi-8':[[-20,45],[-7,45],[6.5,45],[20,45],[20,58],[6.5,58],[-7,58],[-20,58]],
 };
-export const WIRED_CONTACTS={'dc-motor-2':'all','dc-supply-2':'all','l298n-module-13':'all','motor-driver-hat':'all','isolated-rs485':'all','sht31-grove-4':'all','pot-module-3':'all','rgb-gravity-3':'all','sevenseg-tm1637-4':'all','urm09-trig-3':'all','urm09-i2c-4':'all','relay-module-6':[3, 4, 5],'can-transceiver-6':[4, 5],'max98357a-9':[7, 8],'stepper-driver-11':[6, 7, 8, 9, 10]};
+export const WIRED_CONTACTS={'dc-motor-2':'all','dc-supply-2':'all','l298n-module-13':'all','motor-driver-hat':'all','isolated-rs485':'all','sht31-grove-4':'all','pot-module-3':'all','rgb-gravity-3':'all','sevenseg-tm1637-4':'all','urm09-trig-3':'all','urm09-i2c-4':'all','esp01-wifi-8':'all','relay-module-6':[3, 4, 5],'can-transceiver-6':[4, 5],'max98357a-9':[7, 8],'stepper-driver-11':[6, 7, 8, 9, 10]};
 /** True when pin `index` (0-based) of a catalog part is wired directly instead of plugged into the breadboard. */
 export const isWiredContact=(id,index)=>{const w=WIRED_CONTACTS[id];return w==='all'||!!w?.includes(index);};
 export function catalogGeometry(v){
@@ -91,7 +94,7 @@ export function catalogGeometry(v){
  return {body,terminals,pinY:body.height/2+14};
 }
 export const CATALOG_TWO_PIN=Object.keys(CATALOG_BY_TYPE).filter(type=>CATALOG_BY_TYPE[type].pins.length===2);
-export const CATALOG_DEFS=Object.fromEntries(Object.entries(CATALOG_BY_TYPE).map(([type,v])=>[type,{name:catalogName(v),prefix:v.id.split('-')[0].toUpperCase(),icon:'▦',hint:`${v.pin_count??'조립'}핀 · ${v.interface}`,labels:v.pins,defaults:{...(defaults[v.family]||{}),...(DEVICE_DEFS[v.family]?.defaults||L298_DEFS[v.family]?.defaults||{}),...(['dht11','dht22'].includes(v.family)?{temperature:25,humidity:50}:{}),...(v.family==='slide'?{position:0}:{})},help:v.appearance+' '+v.notes,...catalogGeometry(v)}]));
+export const CATALOG_DEFS=Object.fromEntries(Object.entries(CATALOG_BY_TYPE).map(([type,v])=>[type,{name:catalogName(v),prefix:v.id.split('-')[0].toUpperCase(),icon:'▦',hint:`${v.pin_count??'조립'}핀 · ${v.interface}`,labels:v.pins,defaults:{...(defaults[v.family]||{}),...(DEVICE_DEFS[v.family]?.defaults||L298_DEFS[v.family]?.defaults||{}),...(['dht11','dht22'].includes(v.family)?{temperature:25,humidity:50}:{}),...(v.family==='slide'?{position:0}:{}),...WIRELESS_DEFAULTS[v.id]},help:v.appearance+' '+v.notes,...catalogGeometry(v)}]));
 
 // The same scope notes appear beside the example and its device-specific Docs.
 export const CATALOG_SCOPE={

@@ -1,0 +1,299 @@
+// Wireless UART modules: HC-05 / HC-06 Bluetooth SPP and the ESP-01 with ESP8266 AT firmware. A board talks to its module
+// over a real UART (same net, same baud); what crosses the air is modelled at message level, with no radio physics.
+// Facts come from the HC Serial Bluetooth manual, the HC-05 importer datasheet, the Ai-Thinker ESP-01 datasheet and the
+// Espressif ESP8266 AT command reference (docs/device-visual-references.json lists them).
+//
+// Model terminals of every module: p1 VCC, p2 GND, p3 TXD, p4 RXD, then p5 EN / CH_PD, p6 STATE / RST.
+const LINE='\r\n';
+const AIR_US={bluetooth:20000,wifi:5000};
+const PAIR_US=1500000,JOIN_US=1500000,BOOT_US=300000,TCP_US=50000;
+// HC-06: "the command of HC-06 end or not is determined by the time interval" and at most one command per second.
+const HC06_GAP_US=500000;
+const HC06_BAUDS={1:1200,2:2400,3:4800,4:9600,5:19200,6:38400,7:57600,8:115200,9:230400,A:460800,B:921600,C:1382400};
+const BT_ADDRESSES=[['98d3','31','f5a1b2'],['98d3','31','f5a1b3'],['98d3','31','f5a1b4'],['98d3','31','f5a1b5']];
+export const WIRELESS_DEFAULTS={
+ 'hc05-bluetooth-6':{baud:9600,role:'slave',btPin:'1234'},
+ 'hc06-bluetooth-4':{baud:9600,btPin:'1234'},
+ 'esp01-wifi-8':{baud:115200}
+};
+export const WIRELESS_BAUDS=[1200,2400,4800,9600,19200,38400,57600,115200];
+const high=v=>v!=null&&v>=2;
+
+class Module{
+ constructor(hub,part){this.hub=hub;this.part=part;this.id=part.id;this.name=part.name||part.id;this.baud=part.baud;this.powered=false;this.txFree=0;this.input='';}
+ say(text,at){this.hub.emit(this,[...text].map(c=>c.charCodeAt(0)&255),at);}
+ volts(result){const v=result.voltage(`part:${this.id}:p1`),g=result.voltage(`part:${this.id}:p2`);return v==null||g==null||g>=.1?0:v-g;}
+ pin(result,n){return result.voltage(`part:${this.id}:p${n}`);}
+ get uartBaud(){return this.baud;}
+}
+
+// ---------------------------------------------------------------- Bluetooth
+class Bluetooth extends Module{
+ constructor(hub,part,index){
+  super(hub,part);this.hc05=part.catalogVariant==='hc05-bluetooth-6';this.kind='bluetooth';
+  this.role=this.hc05?part.role??'slave':'slave';this.btPin=String(part.btPin??'1234');this.btName=this.hc05?'HC-05':'HC-06';this.cmode=1;this.bind='';
+  this.address=BT_ADDRESSES[index%BT_ADDRESSES.length];this.peer=null;this.at=false;this.at38400=false;this.pairAt=null;this.lastByte=0;
+ }
+ get addressText(){return this.address.join(':');}
+ get uartBaud(){return this.hc05&&this.at&&this.at38400?38400:this.baud;}
+ // Slaves wait; only a master searches. Both ends need the same PIN (manual: master + slave, "the password must be correct").
+ get searching(){return this.powered&&this.hc05&&this.role==='master'&&!this.peer&&!this.at38400&&!this.at;}
+ get discoverable(){return this.powered&&this.role==='slave'&&!this.peer&&!this.at38400;}
+ matches(slave){return slave.btPin===this.btPin&&(this.cmode===1||this.bind===slave.address.join(','));}
+ update(us,result){
+  const volts=this.volts(result),on=volts>=3.3&&volts<=6;
+  if(on&&!this.powered&&this.hc05)this.at38400=high(this.pin(result,5));
+  if(!on&&this.powered)this.disconnect(us,'전원 꺼짐');
+  this.powered=on;if(!on){this.at=false;this.pairAt=null;this.input='';return;}
+  if(this.hc05){const at=high(this.pin(result,5));if(at!==this.at){this.at=at;this.input='';if(!at)this.at38400=false;}}
+  if(!this.hc05&&this.input&&us-this.lastByte>=HC06_GAP_US){const line=this.input;this.input='';if(!this.peer)this.hc06Command(line,us);}
+  if(this.searching){
+   const slave=this.hub.bluetooth().find(m=>m!==this&&m.discoverable&&this.matches(m));
+   if(!slave)this.pairAt=null;else if(this.pairAt==null)this.pairAt=us+PAIR_US;else if(us>=this.pairAt){this.pairAt=null;this.peer=slave;slave.peer=this;this.hub.note('Bluetooth',us,`${this.name} ↔ ${slave.name} 연결`);}
+  }else this.pairAt=null;
+ }
+ disconnect(us,why){const peer=this.peer;if(!peer)return;this.peer=null;peer.peer=null;this.hub.note('Bluetooth',us,`${this.name} ↔ ${peer.name} 연결 끊김 · ${why}`);}
+ receive(frames){
+  for(const {value,at}of frames){
+   if(this.hc05&&this.at){this.input+=String.fromCharCode(value);if(this.input.endsWith(LINE)){const line=this.input.slice(0,-2);this.input='';this.hc05Command(line,at);}else if(this.input.length>128)this.input='';continue;}
+   if(this.peer){this.hub.emit(this.peer,[value],at+AIR_US.bluetooth);continue;}
+   // Before pairing an HC-06 reads AT commands; a master or slave HC-05 in communication mode drops what it cannot send.
+   if(!this.hc05){this.input=(this.input+String.fromCharCode(value)).slice(-64);this.lastByte=at;}
+  }
+  if(this.peer&&frames.length&&!(this.hc05&&this.at))this.hub.note('Bluetooth',frames.at(-1).at,`${this.name} → ${this.peer.name} ${frames.length} B`);
+ }
+ // No terminator; the reply follows at once (the module has no OK for anything else).
+ hc06Command(line,us){
+  const reply=text=>this.say(text,us),m=/^AT(?:\+(VERSION|NAME|PIN|BAUD)(.*))?$/.exec(line);if(!m)return;
+  if(!m[1])return reply('OK');
+  if(m[1]==='VERSION')return reply('OKlinvorV1.8');
+  if(m[1]==='NAME'){if(m[2].length<1||m[2].length>20)return;this.btName=m[2];return reply('OKsetname');}
+  if(m[1]==='PIN'){if(!/^\d{4}$/.test(m[2]))return;this.btPin=m[2];return reply('OKsetPIN');}
+  const baud=HC06_BAUDS[m[2]];if(!baud)return;reply('OK'+baud);this.baud=baud;
+ }
+ hc05Command(line,at){
+  const ok=(...lines)=>this.say(lines.map(l=>l+LINE).join('')+'OK'+LINE,at),error=code=>this.say(`ERROR:(${code})${LINE}`,at);
+  const m=/^AT(?:\+([A-Z]+)(\?|=(.*))?)?$/i.exec(line.trim());if(!m)return error(0);
+  const cmd=(m[1]||'').toUpperCase(),query=m[2]==='?',value=m[3];
+  if(!cmd)return ok();
+  if(cmd==='RESET'||cmd==='ORGL'){
+   if(cmd==='ORGL'){Object.assign(this,{role:'slave',btPin:'1234',btName:'HC-05',cmode:1,bind:'',baud:38400});}
+   ok();this.disconnect(at,'모듈 재시작');return;
+  }
+  if(cmd==='VERSION'&&query)return ok('+VERSION:2.0-20100601');
+  if(cmd==='ADDR'&&query)return ok('+ADDR:'+this.addressText);
+  if(cmd==='STATE'&&query)return ok('+STATE:'+(this.peer?'CONNECTED':this.pairAt!=null?'PAIRING':this.at38400?'INITIALIZED':'PAIRABLE'));
+  if(cmd==='NAME'){if(query)return ok('+NAME:'+this.btName);if(!value||value.length>32)return error(4);this.btName=value;return ok();}
+  if(cmd==='PSWD'){if(query)return ok('+PSWD:'+this.btPin);const pin=value?.replace(/"/g,'');if(!/^\d{4}$/.test(pin||''))return error(5);this.btPin=pin;return ok();}
+  if(cmd==='ROLE'){if(query)return ok('+ROLE:'+(this.role==='master'?1:0));if(!['0','1'].includes(value))return error(6);this.role=value==='1'?'master':'slave';return ok();}
+  if(cmd==='CMODE'){if(query)return ok('+CMODE:'+this.cmode);if(!['0','1'].includes(value))return error(6);this.cmode=Number(value);return ok();}
+  if(cmd==='BIND'){if(query)return ok('+BIND:'+(this.bind||'0:0:0').replace(/,/g,':'));if(!/^[0-9a-f]{1,4},[0-9a-f]{1,2},[0-9a-f]{1,6}$/i.test(value||''))return error(6);this.bind=value.toLowerCase();return ok();}
+  if(cmd==='UART'){
+   if(query)return ok(`+UART:${this.baud},0,0`);
+   const [baud,stop,parity]=(value||'').split(',').map(Number);if(!WIRELESS_BAUDS.includes(baud)||stop!==0||parity!==0)return error(7);
+   ok();this.baud=baud;return;
+  }
+  return error(0);
+ }
+ status(){
+  const name=this.hc05?(this.role==='master'?'마스터':'슬레이브'):'슬레이브';
+  if(!this.powered)return '전원과 GND를 확인하세요. (VCC 3.3~6 V)';
+  if(this.hc05&&this.at)return `AT 명령 모드 · ${this.uartBaud} baud · ${name}${this.peer?` · ${this.peer.name}와 연결 유지`:''}`;
+  if(this.peer)return `연결됨 · ${this.peer.name} · ${this.uartBaud} baud · ${name}`;
+  return `연결 대기 · ${this.uartBaud} baud · ${name}${this.pairAt!=null?' · 상대를 찾아 페어링 중':this.searching?' · PIN이 같은 슬레이브를 찾는 중':''}`;
+ }
+}
+
+// ---------------------------------------------------------------- Wi-Fi (ESP8266 AT firmware)
+const q=s=>`"${s}"`;
+class Wifi extends Module{
+ constructor(hub,part,index){
+  super(hub,part);this.kind='wifi';this.index=index;this.apMac=`1a:fe:34:00:00:${(index*2+1).toString(16).padStart(2,'0')}`;this.staMac=`18:fe:34:00:00:${(index*2+1).toString(16).padStart(2,'0')}`;
+  this.reset();
+ }
+ reset(){this.enabled=false;this.bootAt=null;this.echo=true;this.mode=1;this.ap=null;this.joined=null;this.ip=null;this.mux=0;this.server=null;this.links=[];this.sending=null;this.input='';this.clients=0;}
+ update(us,result){
+  const volts=this.volts(result),inRange=volts>=3&&volts<=3.6;
+  if(volts>3.6&&!this.overvolted){this.overvolted=true;this.hub.note('Wi-Fi',us,`${this.name}: VCC ${volts.toFixed(1)} V · ESP-01은 3.0~3.6 V 전용입니다. 3.3 V에 연결하세요.`);}
+  if(volts<=3.6)this.overvolted=false;
+  this.powered=inRange;
+  // CH_PD is active high with no pull-up on the module; RST idles high and resets when pulled low.
+  const rst=this.pin(result,6),on=inRange&&high(this.pin(result,5))&&!(rst!=null&&rst<.8);
+  if(on&&!this.enabled&&this.bootAt==null)this.bootAt=us+BOOT_US;
+  if(!on&&(this.enabled||this.bootAt!=null))this.powerDown(us);
+  if(this.bootAt!=null&&us>=this.bootAt){this.bootAt=null;this.enabled=true;this.say('ready'+LINE,us);}
+ }
+ powerDown(us){for(const l of [...this.links])this.dropLink(l,us,false);this.reset();this.baud=this.part.baud;this.hub.wifi().filter(m=>m.joined===this).forEach(m=>{m.joined=null;m.ip=null;if(m.enabled)m.say('WIFI DISCONNECT'+LINE,us);for(const l of [...m.links])m.dropLink(l,us,false);});}
+ receive(frames){
+  if(!this.enabled)return;
+  for(const {value,at}of frames){
+   if(this.sending){this.sending.data.push(value);if(this.sending.data.length>=this.sending.length){const s=this.sending;this.sending=null;this.finishSend(s,at);}continue;}
+   if(this.echo)this.say(String.fromCharCode(value),at);
+   this.input+=String.fromCharCode(value);
+   if(this.input.endsWith(LINE)){const line=this.input.slice(0,-2);this.input='';this.command(line,at);}else if(this.input.length>256)this.input='';
+  }
+ }
+ ok(at,...lines){this.say(lines.map(l=>l+LINE).join('')+LINE+'OK'+LINE,at);}
+ error(at,why){if(why)this.hub.note('Wi-Fi',at,`${this.name}: ${why}`);this.say('ERROR'+LINE,at);}
+ args(text){return [...String(text??'').matchAll(/"([^"]*)"|([^,]+)/g)].map(m=>m[1]??m[2]);}
+ command(raw,at){
+  const line=raw.trim();
+  if(line==='AT')return this.ok(at);
+  if(line==='ATE0'){this.echo=false;return this.ok(at);}
+  if(line==='ATE1'){this.echo=true;return this.ok(at);}
+  const m=/^AT\+([A-Z_]+)(\?|=(.*))?$/.exec(line);if(!m)return this.error(at,line?`지원하지 않는 AT 명령: ${line}`:'');
+  const cmd=m[1],query=m[2]==='?',a=this.args(m[3]);
+  switch(cmd){
+   case 'RST':this.ok(at);this.powerDown(at);this.bootAt=at+BOOT_US;return;
+   case 'GMR':return this.ok(at,'AT version:2.2.0.0(simulated)','SDK version:v3.4','compile time:simulated','Bin version:2.2.0(1MB)');
+   case 'UART_CUR':case 'UART_DEF':{const baud=Number(a[0]);if(!WIRELESS_BAUDS.includes(baud))return this.error(at,`지원하지 않는 속도: ${a[0]}`);this.ok(at);this.baud=baud;return;}
+   case 'CWMODE':case 'CWMODE_CUR':case 'CWMODE_DEF':{if(query)return this.ok(at,'+CWMODE:'+this.mode);const mode=Number(a[0]);if(![0,1,2,3].includes(mode))return this.error(at);this.mode=mode;if(!(mode&2))this.ap=null;return this.ok(at);}
+   case 'CWSAP':case 'CWSAP_CUR':case 'CWSAP_DEF':{
+    if(query)return this.ap?this.ok(at,`+CWSAP:${q(this.ap.ssid)},${q(this.ap.pwd)},${this.ap.channel},${this.ap.ecn},4,0`):this.error(at);
+    if(!(this.mode&2))return this.error(at,'AT+CWSAP는 AT+CWMODE=2 또는 3에서만 됩니다.');
+    const [ssid,pwd,channel,ecn]=a,e=Number(ecn);if(!ssid||![0,2,3,4].includes(e)||e&&(pwd.length<8||pwd.length>64))return this.error(at,'AT+CWSAP 값 오류 · 암호는 8~64자, ecn은 0/2/3/4입니다.');
+    this.ap={ssid,pwd:e?pwd:'',channel:Number(channel)||1,ecn:e};return this.ok(at);
+   }
+   case 'CWLAP':return this.ok(at,...this.hub.wifi().filter(w=>w!==this&&w.enabled&&w.ap).map((w,i)=>`+CWLAP:(${w.ap.ecn},${q(w.ap.ssid)},${-40-i*5},${q(w.apMac)},${w.ap.channel})`));
+   case 'CWJAP':case 'CWJAP_CUR':case 'CWJAP_DEF':{
+    if(query)return this.joined?this.ok(at,`+CWJAP:${q(this.joined.ap.ssid)},${q(this.joined.apMac)},${this.joined.ap.channel},-40`):this.ok(at,'No AP');
+    if(!(this.mode&1))return this.error(at,'AT+CWJAP는 AT+CWMODE=1 또는 3에서만 됩니다.');
+    const [ssid,pwd='']=a;this.hub.after(at+JOIN_US,us=>this.join(ssid,pwd,us));return;
+   }
+   case 'CWQAP':this.leave(at);return this.ok(at);
+   case 'CIFSR':return this.ok(at,...(this.ap?[`+CIFSR:APIP,${q('192.168.4.1')}`,`+CIFSR:APMAC,${q(this.apMac)}`]:[]),...(this.mode&1?[`+CIFSR:STAIP,${q(this.ip??'0.0.0.0')}`,`+CIFSR:STAMAC,${q(this.staMac)}`]:[]));
+   case 'CIPMUX':{if(query)return this.ok(at,'+CIPMUX:'+this.mux);if(this.links.length)return this.error(at,'연결이 열려 있으면 AT+CIPMUX를 바꿀 수 없습니다.');if(this.server)return this.error(at,'서버가 열려 있으면 AT+CIPMUX를 바꿀 수 없습니다.');const mux=Number(a[0]);if(![0,1].includes(mux))return this.error(at);this.mux=mux;return this.ok(at);}
+   case 'CIPMODE':{if(query)return this.ok(at,'+CIPMODE:0');return a[0]==='0'?this.ok(at):this.error(at,'패스스루(AT+CIPMODE=1)는 지원하지 않습니다.');}
+   case 'CIPSERVER':{
+    if(!this.mux)return this.error(at,'AT+CIPSERVER는 AT+CIPMUX=1 다음에 사용합니다.');
+    if(a[0]==='0'){this.server=null;return this.ok(at);}
+    if(a[0]!=='1')return this.error(at);this.server={port:Number(a[1]??333)};return this.ok(at);
+   }
+   case 'CIPSTART':return this.connect(a,at);
+   case 'CIPSTATUS':return this.ok(at,`STATUS:${this.links.length?3:this.ip||this.ap?2:5}`,...this.links.map(l=>`+CIPSTATUS:${l.id},${q(l.type)},${q(l.host)},${l.port},${l.localPort},${l.server?1:0}`));
+   case 'CIPSEND':return this.beginSend(a,at);
+   case 'CIPCLOSE':{const id=this.mux?Number(a[0]):0;const link=this.links.find(l=>l.id===id);if(!link)return this.error(at);this.dropLink(link,at,true);return this.ok(at);}
+   default:return this.error(at,`지원하지 않는 AT 명령: AT+${cmd}`);
+  }
+ }
+ join(ssid,pwd,us){
+  if(!this.enabled)return;
+  const host=this.hub.wifi().find(w=>w!==this&&w.enabled&&w.ap?.ssid===ssid);
+  if(!host)return this.say(`+CWJAP:3${LINE}${LINE}ERROR${LINE}`,us);
+  if(host.ap.ecn&&host.ap.pwd!==pwd)return this.say(`+CWJAP:2${LINE}${LINE}ERROR${LINE}`,us);
+  this.leave(us);this.joined=host;this.ip=`192.168.4.${++host.clients+1}`;this.hub.note('Wi-Fi',us,`${this.name} → ${host.name} AP ${q(ssid)} 접속 · ${this.ip}`);
+  this.say(`WIFI CONNECTED${LINE}WIFI GOT IP${LINE}${LINE}OK${LINE}`,us);
+ }
+ leave(us){if(!this.joined)return;this.joined=null;this.ip=null;for(const l of [...this.links])this.dropLink(l,us,true);}
+ // The module answering on an address of this module's network: the AP at .1, stations at their leased address.
+ resolve(host){
+  const net=this.joined??(this.ap?this:null);if(!net)return null;
+  if(host==='192.168.4.1')return net===this?null:net;
+  return this.hub.wifi().find(w=>w!==this&&w.joined===net&&w.ip===host)??null;
+ }
+ freeId(){for(let id=0;id<5;id++)if(!this.links.some(l=>l.id===id))return id;return -1;}
+ connect(a,at){
+  const args=this.mux?a.slice(1):a,id=this.mux?Number(a[0]):0,[type,host,portText,localText]=args,port=Number(portText);
+  if(!['TCP','UDP'].includes(type))return this.error(at,`지원하지 않는 연결 종류: ${type}`);
+  if(!Number.isInteger(id)||id<0||id>4||!Number.isInteger(port))return this.error(at);
+  if(this.links.some(l=>l.id===id)){this.say('ALREADY CONNECTED'+LINE+LINE+'ERROR'+LINE,at);return;}
+  if(!this.ip&&!this.ap)return this.error(at,'AP에 접속한 다음(AT+CWJAP) 또는 AP를 연 다음(AT+CWSAP) 연결하세요.');
+  const remote=this.resolve(host);
+  if(type==='UDP'){
+   const link={id,type,host,port,localPort:Number(localText)||1024+this.freeId(),remote:null,server:false};this.links.push(link);
+   this.say((this.mux?`${id},`:'')+'CONNECT'+LINE+LINE+'OK'+LINE,at);return;
+  }
+  if(!remote?.server||remote.server.port!==port)return this.hub.after(at+TCP_US,us=>this.say(`ERROR${LINE}CLOSED${LINE}`,us));
+  const peerId=remote.freeId();if(peerId<0)return this.error(at,'상대 모듈의 연결 수가 가득 찼습니다.');
+  const local={id,type,host,port,localPort:49152+id,server:false},other={id:peerId,type,host:this.ip??'192.168.4.1',port:local.localPort,localPort:port,server:true,remote:this};
+  local.remote=remote;local.peerLink=other;other.peerLink=local;this.links.push(local);remote.links.push(other);
+  this.hub.after(at+TCP_US,us=>{this.say((this.mux?`${id},`:'')+'CONNECT'+LINE+LINE+'OK'+LINE,us);remote.say(`${peerId},CONNECT${LINE}`,us);this.hub.note('Wi-Fi',us,`${this.name} → ${remote.name} TCP ${host}:${port}`);});
+ }
+ beginSend(a,at){
+  const id=this.mux?Number(a[0]):0,length=Number(a[this.mux?1:0]),link=this.links.find(l=>l.id===id);
+  if(!link||!Number.isInteger(length)||length<1||length>2048)return this.error(at,link?'AT+CIPSEND 길이는 1~2048입니다.':'먼저 AT+CIPSTART로 연결하세요.');
+  this.sending={link,length,data:[]};this.say(`OK${LINE}> `,at);
+ }
+ finishSend({link,data},at){
+  this.say(`${LINE}Recv ${data.length} bytes${LINE}${LINE}SEND OK${LINE}`,at);
+  const target=link.type==='TCP'?link.remote:this.resolve(link.host),arrive=at+AIR_US.wifi;
+  if(link.type==='TCP'){if(target?.links.includes(link.peerLink))target.deliver(link.peerLink,data,arrive);this.hub.note('Wi-Fi',at,`${this.name} → ${target?.name??'?'} TCP ${data.length} B`);return;}
+  const peer=target?.links.find(l=>l.type==='UDP'&&l.localPort===link.port);if(peer)target.deliver(peer,data,arrive);
+  this.hub.note('Wi-Fi',at,`${this.name} → ${target?.name??link.host} UDP ${data.length} B${peer?'':' · 받는 포트 없음'}`);
+ }
+ deliver(link,data,at){if(!this.enabled)return;this.hub.emit(this,[...`${LINE}+IPD,${this.mux?link.id+',':''}${data.length}:`].map(c=>c.charCodeAt(0)),at);this.hub.emit(this,data,at);}
+ dropLink(link,us,notify){
+  const i=this.links.indexOf(link);if(i<0)return;this.links.splice(i,1);if(notify)this.say(`${this.mux?link.id+',':''}CLOSED${LINE}`,us);
+  const other=link.peerLink,peer=link.remote;if(other&&peer){const k=peer.links.indexOf(other);if(k>=0){peer.links.splice(k,1);if(peer.enabled)peer.say(`${peer.mux?other.id+',':''}CLOSED${LINE}`,us);}}
+ }
+ status(){
+  if(!this.powered)return '전원과 GND를 확인하세요. (VCC 3.0~3.6 V 전용)';
+  if(!this.enabled)return this.bootAt!=null?'부팅 중':'CH_PD를 3.3 V에 연결하세요.';
+  const roles=[this.ap&&`AP ${q(this.ap.ssid)}`,this.joined&&`${q(this.joined.ap.ssid)} 접속 · ${this.ip}`,this.server&&`TCP 서버 ${this.server.port}`].filter(Boolean);
+  return `${this.uartBaud} baud · ${roles.join(' · ')||'AT 명령 대기'}${this.links.length?` · 연결 ${this.links.length}개`:''}`;
+ }
+}
+
+// ---------------------------------------------------------------- the air between the modules of a run
+/**
+ * One per run, shared by every board session of the circuit. `primary` is the main board's session: its solved circuit
+ * powers the modules. Each board joins as a port that receives what a module sends on its TXD.
+ */
+export class WirelessHub{
+ constructor(primary){this.primary=primary;this.modules=new Map();this.ports=new Map();this.timers=[];this.now=0;this.addPort('main',primary);}
+ addPort(key,session){this.ports.set(key,session);session.wireless=this;if(session.buses)session.buses.wireless=this;}
+ parts(){return this.primary.project.components.filter(p=>p.type==='wireless');}
+ module(part){
+  let m=this.modules.get(part.id);if(m)return m;
+  const index=this.parts().findIndex(p=>p.id===part.id);m=part.catalogVariant==='esp01-wifi-8'?new Wifi(this,part,index):new Bluetooth(this,part,index);this.modules.set(part.id,m);return m;
+ }
+ all(){return this.parts().map(p=>this.module(p));}
+ bluetooth(){return this.all().filter(m=>m.kind==='bluetooth');}
+ wifi(){return this.all().filter(m=>m.kind==='wifi');}
+ after(at,fn){this.timers.push({at,fn});}
+ note(protocol,micros,message){this.primary.buses?.trace?.({micros,protocol,message});}
+ /** Bytes on a UART TX line, delivered to the modules whose RXD is on that net (`wired(partId)`). */
+ transmit(frames,baud,wired,report=()=>{}){
+  let count=0;
+  for(const m of this.all()){
+   if(!wired(m.id)||!m.powered)continue;
+   if(m.uartBaud!==baud){report(`RX 무시 · ${m.name}은 ${m.uartBaud} baud인데 보낸 쪽은 ${baud} baud`);continue;}
+   m.receive(frames);count++;
+  }
+  return count;
+ }
+ /** A module's TXD: every board whose enabled UART RX is on that net receives the bytes. */
+ emit(module,bytes,at){
+  if(!bytes.length)return;
+  const baud=module.uartBaud,bit=1e7/baud;let t=Math.max(at,module.txFree);
+  const frames=bytes.map(value=>({value,at:t+=bit}));module.txFree=t;
+  for(const session of this.ports.values())session.wirelessRx?.(module,frames,baud);
+ }
+ /** Advances with the main board's circuit. */
+ advance(micros,result,source){
+  if(source!==this.primary||!result||result.fault)return;
+  this.now=micros;
+  for(const m of this.all())m.update(micros,result);
+  for(let guard=0;guard<256;guard++){const i=this.timers.findIndex(t=>t.at<=micros);if(i<0)break;this.timers.splice(i,1)[0].fn(micros);}
+  for(const p of this.parts()){const m=this.module(p);p.linked=!!m.peer;result.parts[p.id]={...result.parts[p.id],voltage:(result.voltage(`part:${p.id}:p1`)??0)-(result.voltage(`part:${p.id}:p2`)??0),current:0,power:0,powered:m.powered,on:m.powered,status:m.status(),led:this.led(m,micros)};}
+ }
+ // Status LED: double flash when paired, once in 2 s in AT mode at 38400, fast while waiting (HC-05 importer datasheet).
+ led(m,micros){
+  if(!m.powered)return false;
+  if(m.kind==='wifi')return true;
+  const t=micros/1000;
+  if(m.peer)return t%1000<80||(t%1000>=200&&t%1000<280);
+  if(m.hc05&&m.at&&m.at38400)return t%2000<120;
+  return t%500<250;
+ }
+}
+/** The interpreter's receive side: bytes reach the UARTs of a board whose RX shares the module's TXD net. */
+export function deliverToBuses(session,module,frames,baud){
+ const buses=session.hal?[...session.hal.serials.values()].map(c=>c.bus):[session.buses];
+ for(const bus of buses){
+  const u=bus.uart;if(!u.ready||!bus.same(bus.pin(u.rx),`part:${module.id}:p3`))continue;
+  if(u.baud!==baud){bus.report(session.runtime,'UART',`RX 무시 · ${module.name}은 ${baud} baud인데 받는 쪽은 ${u.baud} baud`);continue;}
+  if(u.queue.length+frames.length>4096)throw new Error('UART 수신 버퍼가 가득 찼습니다.');
+  for(const f of frames){u.queue.push({at:f.at,value:f.value});session.runtime.event(f.at/1000,()=>{});}
+ }
+}
