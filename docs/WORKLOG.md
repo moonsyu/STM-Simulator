@@ -2,6 +2,14 @@
 
 작업할 때마다 날짜순으로 맨 위에 추가합니다. 무엇을 했는지, 왜 했는지, 어떻게 검증했는지, 커밋·릴리스와 남은 사항을 적습니다. 버전별 구조 설명은 [HANDOFF.md](../HANDOFF.md), 검증 수치는 [VERIFICATION.md](VERIFICATION.md)에 있습니다.
 
+## 2026-11-02 · Raspberry Pi 5 GPIO19 설명 수정
+
+- 요청: 핀 맵 대조에서 나온 GPIO19 설명을 고칠 것.
+- 한 것과 이유: `src/devboards.js` `RPI_FUNCTIONS`의 GPIO19 설명을 `PCM FS · PWM1`에서 `PCM FS · PWM0`으로 고쳤다. `pinctrl-rp1.c`(rpi-6.6.y)에서 GPIO19의 PWM 기능이 `pwm0`이기 때문이다. GPIO13의 `PWM1`은 공식 문서 표기와 같아 그대로 뒀다.
+- 검증: 저장소 검색에서 이 문구를 쓰는 테스트는 없었다. Node가 이 PC의 PATH에 없어 테스트와 앱 실행은 하지 못했다.
+- 커밋·릴리스: 이 수정과 기록을 함께 로컬 커밋, 버전 변경 없음. `gh`가 없어 GitHub 인증 계정을 확인하지 못해 푸시하지 않았다.
+- 남은 사항: 푸시와 저장소 `user.email` 수정. 앱에 반영하려면 다음 버전 Release가 필요하다.
+
 ## 2026-11-02 · Raspberry Pi 5 핀 맵 공식 자료 대조
 
 - 요청: 웹에서 찾은 라즈베리파이 핀 맵과 프로젝트에 구현된 핀 맵이 같은지 확인할 것.
