@@ -1,5 +1,9 @@
 # 검증 기록
 
+## 1.9.2 배선이 연결된 핀의 GPIO 툴팁 · GPIO19 설명 — 공개 배포 검증 완료
+
+2026-11-02. 제품 커밋 `0abe726791ac8a689916cfbb6092b672b75c2343` · [Windows CI 41390167913](https://github.com/moonsyu/STM-Simulator/actions/runs/41390167913) · [Release v1.9.2](https://github.com/moonsyu/STM-Simulator/releases/tag/v1.9.2). 첫 CI 41371711706(`b3dc7b0`)은 새 보안 권고로 `npm audit`에서 멈췄고 태그·Release는 만들어지지 않았다(작업 로그 참고). latest=v1.9.2, 태그·BUILD-INFO 커밋 `0abe726` 일치(sourceDirty false), 5자산. EXE SHA-256 `7d97e372569cba34beb46033a32eb2b06a3317b2aa4bc0516d564822a24c3490`(105,290,980 B, MZ)이 SHA256.txt·update-manifest·ZIP 안의 STM-Simulator.exe와 일치. ZIP SHA-256 `4ce9e89dbb197b8a01a3abf5e9334b64d33743092ab10db0f18ce3c83e6a8085`.
+
 ## 1.9.1 ESP32 BOOT 버튼 업로드 확인 · 다운로드 모드 재부팅 안내 — 공개 배포 검증 완료
 
 2026-10-29. 제품 커밋 `aff737cdb897596540f5bea4d62c3bc9fddbdd1c` · [Windows CI 40787566446](https://github.com/moonsyu/STM-Simulator/actions/runs/40787566446) · [Release v1.9.1](https://github.com/moonsyu/STM-Simulator/releases/tag/v1.9.1). 실물 ESP32 DevKit WROOM-32(COM4): BOOT를 누른 채 `runSketch` 업로드 성공(ESP32-D0WD-V3, 쓰기·해시 검증), BOOT를 뗀 뒤 리셋하면 `boot:0x13`으로 부팅해 `LED ON`/`LED OFF` 출력. 리셋 때 BOOT가 눌려 있으면 `waiting for download` → 새 안내(단위 검사). `tests/unit/desktop.test.js` 64 통과(로컬 권한 2 제외). latest=v1.9.1, 태그·BUILD-INFO 커밋 `aff737c` 일치(sourceDirty false), 5자산. EXE SHA-256 `11a4565f7f823f02411ab6e98f49c055253493b9b21482eba866b419d6ab059e`(105,290,730 B, MZ)이 SHA256.txt·update-manifest·ZIP 안의 STM-Simulator.exe와 일치. ZIP SHA-256 `937b323b2d5164421c956b4f569f7b1d8a6c1d7714adc87fe4ff33b3573facf6`.
