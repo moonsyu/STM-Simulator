@@ -22,7 +22,8 @@ const ART={
  'sevenseg-common-cathode-10':{digits:[[.14,.1,.88,.86]]},'sevenseg-common-anode-10':{digits:[[.14,.1,.88,.86]]},
  'sevenseg-4digit-12':{digits:[[.04,.1,.25,.9],[.25,.1,.46,.9],[.54,.1,.75,.9],[.75,.1,.96,.9]]},
  'sevenseg-tm1637-4':{digits:[[.07,.2,.23,.75],[.24,.2,.4,.75],[.47,.2,.63,.75],[.65,.2,.81,.75]]},
- 'relay-module-6':{relayLed:[.8,.17,.025]}
+ 'relay-module-6':{relayLed:[.8,.17,.025]},
+ 'hc05-bluetooth-6':{statusLed:[.572,.694,.04]},'hc06-bluetooth-4':{statusLed:[.173,.697,.04]},'esp01-wifi-8':{statusLed:[.873,.32,.028]}
 };
 // Where each lead leaves the part in its photo (u/v by pin, null: the package edge next to the pin): screw terminals,
 // side connectors, header holes and wire ends measured on each photo.
@@ -43,7 +44,9 @@ const PADS={
  'oled-configurable-8':row(.93,.17,.265,.36,.455,.55,.645,.74,.835),
  'urm09-trig-3':row(.82,.445,.495,.55),'urm09-i2c-4':[[.435,.8],[.565,.8],[.52,.8],[.475,.8]],
  'dc-motor-2':row(.96,.155,.855),
- 'mcp4725-6':[[.105,.33],[.105,.53]]
+ 'mcp4725-6':[[.105,.33],[.105,.53]],
+ 'hc05-bluetooth-6':row(.953,.131,.278,.425,.569,.717,.861),'hc06-bluetooth-4':row(.943,.22,.403,.592,.775),
+ 'esp01-wifi-8':[...row(.826,.239,.413,.585,.758),...row(.92,.758,.585,.411,.239)]
 };
 /** True when a catalog part type is drawn from its photo. */
 export const hasPartArt=type=>!!PART_IMAGES[CATALOG_BY_TYPE[type]?.id];
@@ -113,6 +116,7 @@ export function partArtShape(p,read,physicalPins=true,model=null){
  if(a.slot){const [x0,y0,x1,y1]=a.slot,p0=P(x0,y0),p1=P(x1,y1),W=p1.x-p0.x,H=p1.y-p0.y,max=id.includes('dp3t')?2:1,tw=W*.42,step=(W-tw)/max;
   s+=`<rect x="${p0.x}" y="${p0.y}" width="${W}" height="${H}" rx="1" fill="#161b1e"/><g class="catalog-slide-thumb" data-start="0" data-step="${step}" transform="translate(${(p.position??0)*step} 0)"><rect x="${p0.x}" y="${p0.y+H*.06}" width="${tw}" height="${H*.88}" rx="1.5" fill="#2b3236" stroke="#0e1214" stroke-width=".6"/>${Array.from({length:5},(_,i)=>`<path d="M${p0.x+tw*(.18+i*.16)} ${p0.y+H*.18}V${p0.y+H*.82}" stroke="#4a545a" stroke-width="${Math.max(.6,tw*.04)}"/>`).join('')}</g>`;}
  if(a.relayLed){const q=P(a.relayLed[0],a.relayLed[1]);s+=`<circle class="art-relay-led" cx="${q.x}" cy="${q.y}" r="${L(a.relayLed[2])*1.6}" fill="#ff4a3d" fill-opacity="0" filter="url(#led-glow)" pointer-events="none"/>`;}
+ if(a.statusLed){const q=P(a.statusLed[0],a.statusLed[1]);s+=`<circle class="art-wireless-led" cx="${q.x}" cy="${q.y}" r="${L(a.statusLed[2])}" fill="#ff4a3d" fill-opacity="0" filter="url(#led-glow)" pointer-events="none"/>`;}
  if(['buzzer','passive_buzzer'].includes(f)){const x=R.x+R.w+3,y=R.y+R.h/2;s+=`<path class="buzzer-wave" d="M${x} ${y-8}Q${x+8} ${y} ${x} ${y+8}M${x+6} ${y-13}Q${x+18} ${y} ${x+6} ${y+13}" stroke="#23a78a" fill="none" stroke-width="2" opacity="0" pointer-events="none"/>`;}
  if(f==='passive_buzzer')s+=`<text class="buzzer-frequency" x="${R.x+R.w/2}" y="${R.y-4}" text-anchor="middle" fill="#495c61" font-size="8">PWM</text>`;
  if(['uart','i2c','spi','motor','l298n','relay'].includes(f)&&!id.includes('eeprom')&&!id.includes('bare'))s+=`<circle class="device-power bus-power${f==='l298n'?' l298-power':''}" cx="${R.x+L(.04)}" cy="${R.y+L(.04)}" r="2.2" fill="#586d4d" stroke="#c3c9a3" stroke-width=".6" pointer-events="none"/>`;

@@ -133,7 +133,8 @@ export class Stm32Driver{
   else{this.session.result=this.view();this.session.runtime.pollInterrupts();}
  }
  /** The board's RESET button: its program starts again; the circuit keeps running. */
- reset(){this.session=this.create();this.session.circuit=new ViewCircuit(this);if(this.emulate)this.session.dynamic=true;this.enriched=null;this.cache=null;this.session.result=this.view();}
+ reset(){this.session=this.create();this.session.circuit=new ViewCircuit(this);if(this.emulate)this.session.dynamic=true;this.enriched=null;this.cache=null;this.session.result=this.view();if(this.hub)this.joinWireless(this.hub);}
+ joinWireless(hub){this.hub=hub;hub.addPort(this.part.id,this.session);}
  /**
   * Parts this board drives: reached from its pins through signal nets and other parts (an L298N on its pins and the
   * motor on the L298N outputs), not through the shared supplies, and not reached from another STM32 board's pins.
@@ -156,6 +157,8 @@ export class Stm32Driver{
  */
 export function connectStm32Drivers(session){
  for(const d of session.circuit.drivers)if(d instanceof Stm32Driver)d.host=session;
+ // Wireless modules: every board of the run shares the main board's air.
+ for(const d of session.circuit.drivers)d.joinWireless?.(session.wireless);
  const drivers=session.circuit.drivers.filter(d=>d instanceof Stm32Driver&&!d.emulate);if(!drivers.length)return;
  const boards=[{name:'main',map:id=>id,session:()=>session},...drivers.map(d=>({name:d.part.name,map:d.map,session:()=>d.session}))];
  const buses=s=>s.hal?[...s.hal.serials.values()].map(c=>c.bus):[s.buses];

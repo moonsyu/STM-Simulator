@@ -7,6 +7,7 @@ import {DEVBOARD_MODELS,devboardPins,boardFileKey} from './devboards.js';
 import {defineScenario} from './fixed-run.js';
 import {startProject,validateProject} from './project.js';
 import {halExampleFor} from './hal-examples.js';
+import {WIRELESS_EXAMPLES} from './wireless-examples.js';
 
 // SSAFY embedded-track lecture circuits on ESP32 and Raspberry Pi boards (the lecture schematics site lists the board
 // pins and parts of each), and the lecture's hands-on assignments that use a circuit. The same board pins, parts and
@@ -260,13 +261,14 @@ export const LECTURE_EXAMPLES=Object.freeze([
  {id:'assignment-ker-3',code:'KER 도전 3',kind:'과제',boards:RPI,title:'라즈베리파이 커널 타이머 LED 2개',ref:'리눅스커널프로그래밍 Day3 p.104',build:asgKernelTimers},
  {id:'lecture-fw-09',code:'FW-09',kind:'실습',boards:['stm32','esp32'],title:'STM32·ESP32 I2C 통신',ref:'임베디드Firmware Day4 p.63~84',build:fw09},
  {id:'lecture-fw-08',code:'FW-08',kind:'실습',boards:ESP32,title:'ESP32 LED 깜빡이기',ref:'임베디드Firmware Day4 p.55·56 · 임베디드AIoT Day4 p.90',build:fw08},
- {id:'lecture-iot-01',code:'IOT-01',kind:'실습',boards:ESP32,title:'ESP32 LED·스위치·가변저항·DHT11',ref:'임베디드AIoT Day1 p.53·54',build:iot01}
+ {id:'lecture-iot-01',code:'IOT-01',kind:'실습',boards:ESP32,title:'ESP32 LED·스위치·가변저항·DHT11',ref:'임베디드AIoT Day1 p.53·54',build:iot01},
+ ...WIRELESS_EXAMPLES
 ]);
 export const lectureExample=id=>LECTURE_EXAMPLES.find(e=>e.id===id);
 /** Example list values of lecture examples (`lecture:<id>`), next to the HAL example ids. */
 export const LECTURE_PREFIX='lecture:';
 export function lectureGuide(id){
- const e=lectureExample(id);if(!e)return '';
+ const e=lectureExample(id);if(!e)return '';if(e.how)return `보드 간 통신 · ${e.ref} · ${e.how}`;
  const how=e.id==='lecture-fw-09'?'STM32 HAL 코드와 ESP32 스케치(I2C 슬레이브 0x08)를 함께 실행합니다.':e.boards.includes('esp32')?'ESP32 스케치를 실행합니다. 코드를 고치면 동작도 바뀝니다.':'라즈베리파이 코드는 빌드·실행하지 않는 고정 실행입니다. 예제 시나리오대로 핀이 바뀌고 배선이 틀리면 동작하지 않습니다.';
  const input=e.build===asgLedShell||e.build===asgDimmerShell||e.build===asgKernelPwm?' 직렬 모니터에서 RPI-1을 고르고 숫자를 보내 입력합니다.':'';
  return `${e.kind==='과제'?'강의 과제':'강의 실습'} · ${e.ref} · ${how}${input}`;

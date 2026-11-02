@@ -89,7 +89,8 @@ export class BusDevices {
         const frames=[];for(const value of wire){at+=1e7/u.baud;frames.push({at,value});if(loopback)u.queue.push({at,value});for(const p of devices)this.received.set(p.id,((this.received.get(p.id)||'')+String.fromCharCode(value)).slice(-512));}
         // Another STM32 board whose UART RX is wired to this TX receives the bytes (stm32-boards.js linkUarts).
         const peers=this.peers?.(this,frames)||0;
-        u.lastTx=at;this.report(runtime,'UART',`TX ${bytes.length} B · ${u.baud} baud${loopback?' · loopback':''}${this.hasVcp()?' · ST-LINK VCP':''}${devices.length?' · external terminal':''}${peers?` · 다른 STM32 보드 ${peers}개`:''}`);return bytes.length;
+        const air=this.wireless?.transmit(frames,u.baud,id=>this.same(this.pin(u.tx),`part:${id}:p4`),message=>this.report(runtime,'UART',message))||0;
+        u.lastTx=at;this.report(runtime,'UART',`TX ${bytes.length} B · ${u.baud} baud${loopback?' · loopback':''}${this.hasVcp()?' · ST-LINK VCP':''}${devices.length?' · external terminal':''}${peers?` · 다른 STM32 보드 ${peers}개`:''}${air?` · 무선 모듈 ${air}개`:''}`);return bytes.length;
       }
       if(name==='Serial1.end'){u.ready=false;u.queue=[];return 0;}
     }

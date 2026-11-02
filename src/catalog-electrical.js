@@ -1,7 +1,9 @@
 // Additional catalog device branches use the same net solver as legacy parts.
 export function catalogBranches(p,uf,branch,pressed){
  const pin=n=>`part:${p.id}:p${n}`,sensor=(s,g,min=2.7,max=5.5)=>({supply:uf.find(pin(s)),ground:uf.find(pin(g)),min,max});
- if(['catalog_can','catalog_i2s'].includes(p.type))branch(pin(1),pin(2),10000,{id:p.id});
+ if(['catalog_can','catalog_i2s','wireless'].includes(p.type))branch(pin(1),pin(2),10000,{id:p.id});
+ // HC-05 STATE: low before pairing, high once paired.
+ if(p.catalogVariant==='hc05-bluetooth-6')branch(pin(6),pin(2),100,{sensor:{supply:uf.find(pin(1)),ground:uf.find(pin(2)),min:3.3,max:6},emf:p.linked?3.3:0});
  if(p.type==='catalog_i2s'){branch(pin(7),pin(1),1000000);branch(pin(7),pin(2),100000);}
  if(p.type==='catalog_singlewire'){branch(pin(1),pin(2),10000,{id:p.id});if(p.catalogVariant==='urm09-trig-3')branch(pin(3),pin(2),100000);if(p.catalogState.low)branch(pin(3),pin(2),30);if(p.catalogState.high)branch(pin(3),pin(2),40,{emf:3.3});}
  if(p.type==='catalog_tm1637'){branch(pin(1),pin(2),10000,{id:p.id});for(const n of [3,4])branch(pin(n),pin(1),10000);if(p.catalogState.ack)branch(pin(4),pin(2),20);}

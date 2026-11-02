@@ -31,7 +31,9 @@ const CROSSING_ALLOWLIST={
  // and the matrix's second header are wired too.
  ref_matrix_10:1,ref_motor_driver_hat:5,camera_tft:10,timer_multi:1,
  // Modules wired directly at their screw terminals and connectors (1.4.2): the wires leave the module's own contacts.
- ref_relay_module_6:1,relay:1,ref_stepper_bipolar_4:5,ref_l298p_bare_20:10
+ ref_relay_module_6:1,relay:1,ref_stepper_bipolar_4:5,ref_l298p_bare_20:10,
+ // The ESP-01 stands on a 2 × 4 header: the second row is reached past the first.
+ ref_esp01_wifi_8:1
 };
 // Examples whose simplified part became two real parts (driver board + motor, with the motor supply) need more wires.
 const WIRE_ALLOWANCE={stepper:8,timer_multi:3,motor:3,

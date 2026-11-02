@@ -13,6 +13,7 @@ import {WaveRecorder} from './trace.js';
 import {compileHal} from './hal-source.js';
 import {HalAdapter,halConstantsFor} from './hal.js';
 import {SignalRecorder,NoiseModel,signalsApi,validateNoise} from './signals.js';
+import {WirelessHub,deliverToBuses} from './wireless.js';
 
 const definedLabel=(project,label)=>[project.code||'',...(project.firmware?.files||[]).map(f=>f.text||'')].some(text=>new RegExp(`^[ \\t]*#[ \\t]*define[ \\t]+${label}_(?:Pin|GPIO_Port)\\b`,'m').test(text));
 export class SimulationSession {
@@ -23,7 +24,7 @@ export class SimulationSession {
     const warnOut=warn??(message=>trace({micros:this.runtime?.microTime??0,protocol:'경고',message}));
     this.passiveBuzzers=new PassiveBuzzers();
     this.project=project;this.pressed={};this.result=null;this.time=0;this.integrated=-1;this.stepMs=project.simulation?.stepMs??1;this.circuit=new CircuitSimulation();this.motion=new MotionDevices();this.catalogMotion=new CatalogMotion();this.singleWire=new CatalogSingleWire();this.sensors=new UltrasonicSignals();this.lcds=new Map();this.wave=new WaveRecorder(channels);this.serial=[];
-    this.buses=new BusDevices(project,()=>this.result,trace);this.buses.signals=this.signalRecorder;this.buses.noise=this.noise;
+    this.buses=new BusDevices(project,()=>this.result,trace);this.buses.signals=this.signalRecorder;this.buses.noise=this.noise;new WirelessHub(this);
     this.hal=project.firmware?.mode==='hal'?this.createHal():null;
     this.runtime=new Runtime(program??(this.hal?compileHal(project.code,project.firmware.files,project.mcu?.family):compile(project.code)),{
       debug,preciseTiming:project.components.some(p=>p.type==='catalog_singlewire'),
@@ -41,6 +42,7 @@ export class SimulationSession {
       call:(name,args,runtime)=>this.hal?.call(name,args,runtime)??this.buses.call(name,args,runtime),serialAvailable:()=>this.serial.length,serialRead:()=>this.serial.shift()??-1
     });
   }
+  wirelessRx(module,frames,baud){deliverToBuses(this,module,frames,baud);}
   createHal(){const hal=new HalAdapter(this.project.mcu,this.buses,{session:this});return hal;}
   // GPIO pins captured as 'gpio' signal channels (logic analyzer).
   record(pins=[]){for(const pin of pins){const id='GPIO.'+pin;this.recordPins.add(pin);this.signalRecorder.define(id,{label:pin,pins:[pin],protocol:'gpio'});}return [...this.recordPins];}
@@ -58,7 +60,7 @@ export class SimulationSession {
     if(!this.result||this.result.fault)return;
     this.sensors.update(this.project,this.result,micros);
     for(const p of this.project.components.filter(p=>p.type==='lcd')){if(!this.lcds.has(p.id))this.lcds.set(p.id,new LCDController());const lcd=this.lcds.get(p.id).update(p,this.result,micros);this.result.parts[p.id]={...this.result.parts[p.id],lcd};}
-    this.motion.update(this.project,this.result,micros,this.runtime,us=>this.changed(us));this.hal?.timerModel.observe(this.runtime,micros);this.buses.update(this.result);this.catalogMotion.update(this.project,this.result,micros,this.runtime);this.wave.record(micros,this.result);this.recordSignals(micros,this.result);this.hal?.update?.(this.result,micros);
+    this.motion.update(this.project,this.result,micros,this.runtime,us=>this.changed(us));this.hal?.timerModel.observe(this.runtime,micros);this.buses.update(this.result);this.catalogMotion.update(this.project,this.result,micros,this.runtime);this.wave.record(micros,this.result);this.recordSignals(micros,this.result);this.hal?.update?.(this.result,micros);this.wireless.advance(micros,this.result,this);
     // Parts another STM32 board drives show that board's device state.
     for(const d of this.circuit.drivers)d.decorate?.(this.result);
   }

@@ -8,7 +8,7 @@ async function openExamples(win){await win.click('[data-activity="examples"]');i
 // Searches by lecture code (kept for search, not shown) and applies the first lecture example found.
 async function applyLecture(win,code){
  await openExamples(win);await win.fill('#hal-example-search',code);const item=win.locator('#hal-example-list [data-example^="lecture:"]').first(),title=await item.locator('strong').textContent();await item.click();
- await win.waitForFunction(t=>document.getElementById('console-output').textContent.includes(t+' · 강의'),title);
+ await win.waitForFunction(t=>document.getElementById('console-output').textContent.includes(t+' · '),title);
 }
 
 test('ESP32 and Raspberry Pi boards are added, inspected, documented and removed',{timeout:120000},async()=>{
@@ -74,7 +74,7 @@ test('examples are grouped by board; a shell assignment reads serial monitor inp
   // FW-09 uses an STM32 and an ESP32: listed in both groups.
   assert.equal(await win.locator('#hal-example-list [data-example="lecture:lecture-fw-09"]').count(),2);
   assert.ok(!/RPI-0|KER-0|라즈베리파이5/.test(await win.textContent('#hal-example-list')));
-  await win.click('[data-example-board="esp32"]');assert.deepEqual(await groups(),['ESP32']);assert.equal(await win.locator('#hal-example-list [data-example]').count(),3);
+  await win.click('[data-example-board="esp32"]');assert.deepEqual(await groups(),['ESP32']);assert.equal(await win.locator('#hal-example-list [data-example]').count(),4);
   await win.click('[data-example-board="rpi"]');assert.deepEqual(await groups(),['Raspberry Pi']);assert.equal(await win.locator('#hal-example-list [data-example]').count(),15);
   await win.click('[data-example-board="all"]');
   // LED 제어 쉘: the serial monitor sends lines to the Raspberry Pi program.
@@ -103,6 +103,33 @@ test('FW-09: the STM32 sends I2C commands and the ESP32 fixed-run slave switches
   await win.keyboard.press('Control+F5');
   await win.waitForFunction(()=>/\[ESP32-1\] I2C 수신 0 → LED OFF/.test(document.getElementById('console-output').textContent),null,{timeout:30000});
   assert.match(await logText(win),/ESP32에 1 보냄 \(status=0\)/);
+  await win.keyboard.press('Control+F2');
+  assert.deepEqual(s.errors,[]);
+ }finally{await s.close();}
+});
+
+test('BT-01: two boards pair their Bluetooth modules and exchange commands; the module shows its link',{timeout:120000},async()=>{
+ const s=await launch();
+ try{
+  const {win}=s;await applyLecture(win,'BT-01');
+  assert.equal(await win.evaluate(()=>document.querySelectorAll('[data-part-image="hc05-bluetooth-6"],[data-part-image="hc06-bluetooth-4"]').length),2);
+  await win.keyboard.press('Control+F5');
+  await win.waitForFunction(()=>/answer: ACK ON/.test(document.getElementById('console-output').textContent),null,{timeout:30000});
+  assert.match(await logText(win),/HC-05 paired/);assert.match(await logText(win),/\[STM32-2\] got: LED ON/);
+  await win.locator('[data-part="hc05"]').click({force:true});
+  await win.waitForFunction(()=>/연결됨 · HC-06/.test(document.getElementById('inspector').textContent));
+  await win.keyboard.press('Control+F2');
+  assert.deepEqual(s.errors,[]);
+ }finally{await s.close();}
+});
+
+test('WF-01: a station joins the other ESP-01 access point and sends commands over TCP',{timeout:120000},async()=>{
+ const s=await launch();
+ try{
+  const {win}=s;await applyLecture(win,'WF-01');
+  await win.keyboard.press('Control+F5');
+  await win.waitForFunction(()=>/answer: ACK/.test(document.getElementById('console-output').textContent),null,{timeout:40000});
+  assert.match(await logText(win),/WIFI GOT IP/);assert.match(await logText(win),/\[STM32-2\] got: LED ON/);
   await win.keyboard.press('Control+F2');
   assert.deepEqual(s.errors,[]);
  }finally{await s.close();}

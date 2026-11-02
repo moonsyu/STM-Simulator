@@ -16,7 +16,9 @@ export const CUSTOM_MODELS={
  'sevenseg-4digit-12':['catalog_digits',0,[13,9,4,2,1,12,5,3,14,11,10,6,7,8]],
  'stepper-bipolar-4':['catalog_stepper',0,[1,2,3,4]],'stepper-unipolar-5':['catalog_stepper',0,[1,2,3,4,5]],
  'stepper-driver-11':['catalog_uln',0,Array.from({length:11},(_,i)=>i+1)],'isolated-rs485':['uart',0,[4,3,2,1]],
- 'encoder-bare-5':['catalog_encoder',0,[1,2,3,4,5]]
+ 'encoder-bare-5':['catalog_encoder',0,[1,2,3,4,5]],
+ // Model terminals: VCC, GND, TXD, RXD, EN / CH_PD, STATE / RST (wireless.js).
+ 'hc05-bluetooth-6':['wireless',0,[2,3,4,5,1,6]],'hc06-bluetooth-4':['wireless',0,[1,2,3,4]],'esp01-wifi-8':['wireless',0,[5,1,8,4,7,6,3,2]]
 };
 export function physicalToModel(project){
  if(project.catalogModel||!project.components.some(p=>CATALOG_BY_TYPE[p.type]))return project;
