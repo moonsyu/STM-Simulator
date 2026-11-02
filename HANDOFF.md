@@ -1,6 +1,12 @@
 # STM Simulator — 개발 인계
 
-현재 버전: **1.9.1**. 정리일: **2026-10-29**. NUCLEO-F446RE 또는 NUCLEO-F103RB와 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+현재 버전: **1.9.2**. 정리일: **2026-11-02**. NUCLEO-F446RE 또는 NUCLEO-F103RB와 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+
+## 1.9.2 배선이 연결된 핀의 GPIO 툴팁 · GPIO19 설명
+
+- `app.js` 캔버스 `pointermove`: 배선·배선 끝이 핀이나 구멍을 덮어도 `elementsFromPoint`로 그 아래 `[data-endpoint]`를 찾아 툴팁과 같은 넷 표시를 한다(클릭과 같은 방식). 전에는 `e.target`만 봐서 배선이 연결된 핀에는 정지 중 툴팁이 없고, 실행 중에는 `점퍼선` 전압만 나왔다. 이제 핀이 없는 배선 구간만 `점퍼선` 툴팁을 쓴다.
+- `devboards.js` `RPI_FUNCTIONS`: GPIO19 설명을 `PCM FS · PWM0`으로(`pinctrl-rp1.c` 기준). GPIO13의 `PWM1`은 공식 문서 표기와 같아 유지. 40핀 배열은 공식 그림·pinout.xyz와 불일치 0개.
+- 같은 원인이 남은 곳: `app.js` 첫 `contextmenu`(STM32 핀 우클릭 → 핀 설정)는 `e.target`만 봐서 배선이 있는 핀에서 열리지 않는다.
 
 ## 1.9.1 ESP32 BOOT 버튼 업로드 확인 · 다운로드 모드 재부팅 안내
 
