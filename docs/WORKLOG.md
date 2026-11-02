@@ -13,7 +13,7 @@
   - `npm run build`로 `STM-Simulator.exe` 생성, `npm run build:artifact` 패키지 검증 통과.
   - `tests/e2e/devboards.e2e.test.mjs` 7개 통과. 앞에서 CI로 미룬 툴팁 E2E도 실제 Electron과 마우스로 통과했다.
   - `npm test` 799개 중 796개 통과, 1개 건너뜀, 실패 2개는 기존 로컬 symlink 권한(`EPERM`) 문제다.
-- 커밋·릴리스: 의존성 변경과 이 기록을 함께 커밋. CI·Release 결과는 `VERIFICATION.md`에 기록한다.
+- 커밋·릴리스: 의존성 변경과 이 기록을 함께 커밋(`0abe726`). [Windows CI 41390167913](https://github.com/moonsyu/STM-Simulator/actions/runs/41390167913) 성공, [Release v1.9.2](https://github.com/moonsyu/STM-Simulator/releases/tag/v1.9.2) 게시. 공개 다운로드 검증은 `VERIFICATION.md`에 있다.
 - 남은 사항: `electron-builder`가 이 버전들을 직접 쓰게 되면 `overrides`를 뺀다. macOS 범용 빌드 경로의 `@electron/universal` 3은 이 프로젝트가 쓰지 않아 실행해 보지 않았다.
 
 ## 2026-11-02 · 1.9.2 배선이 연결된 핀의 GPIO 번호 표시
