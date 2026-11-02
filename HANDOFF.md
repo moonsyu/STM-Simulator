@@ -1,6 +1,16 @@
 # STM Simulator — 개발 인계
 
-현재 버전: **1.9.2**. 정리일: **2026-11-02**. NUCLEO-F446RE 또는 NUCLEO-F103RB와 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+현재 버전: **1.10.0**. 정리일: **2026-11-02**. NUCLEO-F446RE 또는 NUCLEO-F103RB와 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+
+## 1.10.0 블루투스·Wi-Fi 모듈 · 보드 간 통신 예제
+
+- 부품 3종 `hc05-bluetooth-6`, `hc06-bluetooth-4`, `esp01-wifi-8`(family `bluetooth`/`wifi`, 모델 타입 `wireless`). 단자 이름·크기·전압·AT 명령은 HC 매뉴얼, HC-05 수입사 데이터시트, Ai-Thinker ESP-01 데이터시트, Espressif ESP8266 AT 문서 기준(`docs/device-visual-references.json`의 출처). 사진은 Figma `generate_image`(파일 `R1mFMptxf9KRlARPYceERP`)로 만들어 배경 제거·WebP 512px로 `part-images.js`에 넣었고, 구멍·LED 위치는 사진에서 재서 `part-art.js` `PADS`·`statusLed`에 뒀다.
+- `wireless.js`: 모듈(`Bluetooth`, `Wifi`)과 한 실행에 하나인 `WirelessHub`. 모델 단자는 p1 VCC, p2 GND, p3 TXD, p4 RXD, p5 EN/CH_PD, p6 STATE/RST(`catalog-model.js` `CUSTOM_MODELS`). 허브의 `primary`(주 보드 세션)가 회로를 풀 때마다 `advance`로 전원·EN·페어링·타이머를 처리한다. 다른 보드는 포트로 합류한다(`connectStm32Drivers` → `joinWireless`).
+- 들어오는 쪽: 인터프리터 `buses.js` `Serial1.write`(HAL UART 포함) → `hub.transmit`, 에뮬레이터 `firmware-session.js` `listeners`의 `UartReceiver`, ESP32 `esp32-sketch.js` `serial2Call`. 나가는 쪽: `hub.emit` → 각 세션의 `wirelessRx`(인터프리터는 UART 큐, 에뮬레이터는 `uart:<id>` 선로, ESP32는 Serial2 큐). 넷과 baud가 맞아야 전달된다.
+- STATE는 `catalog-electrical.js`에서 `p.linked`로 구동한다. 상태 문구와 LED는 `result.parts[id].status/led`.
+- 인터프리터에 `strcmp`·`strncmp` 추가(`runtime.js`), 라이브러리 이름 `Serial2` 추가.
+- 예제: `wireless-examples.js`. 한 보드 예제는 `catalog-protocol-examples.js`에서 부르고, 보드 간 예제 3개(`BT-01`, `BT-02`, `WF-01`)는 `LECTURE_EXAMPLES` 뒤에 붙는다. `how`가 있으면 `보드 간 통신`으로 표시한다. 각 보드 코드는 `tests/toolchain/arm-examples.test.mjs`에서 실제 HAL로 빌드한다.
+- `device-catalog-data.js`는 3종만 추가했다. `scripts/build-device-catalog.mjs`를 돌리면 손으로 고친 기존 문구가 JSON의 옛 문구로 되돌아가고, `build-device-reference.mjs`는 부품 수 검사에서 멈추며, `build-model-gallery.mjs`도 갤러리를 크게 바꾼다. 셋 다 1.10.0 이전부터의 불일치라 이번에 고치지 않았다.
 
 ## 1.9.2 배선이 연결된 핀의 GPIO 툴팁 · GPIO19 설명
 
@@ -486,6 +496,7 @@
 | `src/hal-source.js`, `src/hal.js`, `src/hal-stdio.js`, `src/firmware-import.js` | HAL 소스/전처리·호환 API·printf·가져오기 |
 | `src/session.js`, `src/engine.js` | 실행기/회로 연결·DC/RC 계산 |
 | `src/lcd.js`, `src/buses.js`, `src/sensors.js` | 부품·버스 모델 |
+| `src/wireless.js`, `src/wireless-examples.js` | HC-05·HC-06·ESP-01 모델·허브와 예제 |
 | `src/device-defs.js`, `src/device-buses.js`, `src/device-motion.js` | 확장 센서·화면·구동·입력 모델과 핀 구성 |
 | `src/device-examples.js`, `src/device-ui.js` | 확장 14종 HAL 회로/코드, 속성·실시간 픽셀/회전 표시 |
 | `src/passive-buzzer.js`, `src/passive-buzzer-example.js`, `src/buzzer-audio.js` | 수동 부저 파형 측정·HAL 멜로디·부저별 음향 |
