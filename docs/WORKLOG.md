@@ -6,7 +6,8 @@
 
 - 요청: 커밋, 푸시, Release 업데이트까지 진행.
 - 한 것과 이유: 남은 변경은 없었고 같은 버전에서는 기존 Release가 유지되므로(지침) 1.11.1로 올렸다. 정정된 이력에서 다시 빌드해 Release의 BUILD-INFO 커밋도 naver 작성자 커밋이 되고, 트리 비교로 바꾼 Release 검증 스크립트가 함께 배포된다. 기능 변경은 없다.
-- 커밋·릴리스: 이 문서·버전 커밋. CI와 공개 다운로드 확인은 VERIFICATION.md에 적는다.
+- 커밋·릴리스: `fbfaa0b`(1.11.1 문서·버전). [Windows CI 41582690804](https://github.com/moonsyu/STM-Simulator/actions/runs/41582690804) 성공, [Release v1.11.1](https://github.com/moonsyu/STM-Simulator/releases/tag/v1.11.1) 공개 다운로드 확인: latest, 태그·BUILD-INFO 커밋 `fbfaa0b`(naver 작성자), EXE SHA-256 `1ef9210c…10e4`가 SHA256.txt·매니페스트·ZIP 안 EXE와 같음.
+- 남은 사항: 없음.
 
 ## 2026-11-03 · 커밋 작성자 전체 정정
 

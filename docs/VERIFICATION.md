@@ -1,5 +1,9 @@
 # 검증 기록
 
+## 1.11.1 커밋 작성자 정정 뒤 다시 게시 — 공개 배포 검증 완료
+
+2026-11-03. 제품 커밋 `fbfaa0b2c6b064850ee5b449a124e0b6c8f5c376`(작성자·커미터 `moonsyu <anstn0104@naver.com>`) · [Windows CI 41582690804](https://github.com/moonsyu/STM-Simulator/actions/runs/41582690804) · [Release v1.11.1](https://github.com/moonsyu/STM-Simulator/releases/tag/v1.11.1). 기능 변경 없음(1.11.0과 같은 앱 코드, Release 검증 스크립트·문서만 변경). CI는 Windows 빌드와 Release 게시·검증 모두 성공. 공개 다운로드: latest v1.11.1, 태그·BUILD-INFO 커밋 일치, sourceDirty false, `STM-Simulator.exe` SHA-256 `1ef9210cb6dc23b5de60fd8a374e2d38695b3bf9d25b2413c6c8257297c610e4`(115,406,602 B, MZ)가 SHA256.txt·update-manifest.json·ZIP 안 EXE와 같음, ZIP SHA-256 `116d271fe23741afd1d8474fd6d051f323b858363b31fd9a9422a280006a05ce`. 이력 정정 뒤 기존 v1.11.0 Release 검증도 [CI 41576913739](https://github.com/moonsyu/STM-Simulator/actions/runs/41576913739)에서 트리 비교로 통과했다.
+
 ## 1.11.0 보드 간 유선 통신 · 무선 확장 · 업데이트 점검 반영 — 공개 배포 검증 완료
 
 2026-11-03. 제품 커밋 `f091c744462f05cc4dae202212f135626c86b910` · [Windows CI 41566899457](https://github.com/moonsyu/STM-Simulator/actions/runs/41566899457) · [Release v1.11.0](https://github.com/moonsyu/STM-Simulator/releases/tag/v1.11.0). 로컬(임시 복제본, Node 24.22.1, Electron 45.2.1): `npm test` 843개 중 842개 통과·1개 건너뜀, E2E 45개 중 43개 통과·2개 건너뜀(ARM GCC 필요), `npm audit` 0건. CI는 전체 검사와 ARM GCC 빌드(WIRE-01·WIRE-02 두 보드 포함)를 통과했다. 공개 다운로드: latest v1.11.0, 태그·BUILD-INFO 커밋 일치, sourceDirty false, `STM-Simulator.exe` SHA-256 `97e782d2ce7849e63a01f2b1e3dfd3d34846f71fa9bb2d53875d08e4ee27a066`(115,401,831 B, MZ)가 SHA256.txt·update-manifest.json·ZIP 안 EXE와 같음, ZIP SHA-256 `8889f4ee87ff6e840a70635ffe492b1e40af82ad9474a0d970c93db257c968cf`. 확인하지 못한 것: ESP32 무선 스케치의 실제 esp32 코어 빌드(이 PC에 Arduino CLI 없음), 실물 모듈·실물 보드 두 대.
