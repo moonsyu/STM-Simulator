@@ -106,9 +106,10 @@
 :root[data-shell] .library-hint,:root[data-shell] .hal-example-note{font-size:11.5px;line-height:1.5;color:var(--ide-muted);margin:0}
 #hal-example-count{font-size:11px;color:var(--ide-muted)}
 .example-list{flex:1;min-height:120px;overflow:auto;display:flex;flex-direction:column;gap:1px;margin:0 -6px;padding:0 6px}
-.example-item{display:flex;flex-direction:column;align-items:flex-start;gap:3px;text-align:left;padding:6px 10px;border-radius:var(--radius);width:100%;color:var(--ide-foreground);transition:background-color .1s var(--ease)}
+/* One line per example: the name takes the room left by its tags and ends in … when it does not fit (full name in the tooltip). */
+.example-item{display:flex;flex-direction:row;align-items:center;gap:8px;text-align:left;padding:6px 10px;border-radius:var(--radius);width:100%;color:var(--ide-foreground);transition:background-color .1s var(--ease)}
 .example-item:hover,.example-item:focus-visible{background:var(--ide-hover)}
-.example-item strong{font-size:12.5px;font-weight:500}
+.example-item strong{font-size:12.5px;font-weight:500;flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .example-tag{font-size:10.5px;color:var(--ide-accent);font-weight:600}
 :root[data-shell] .board-card{background:var(--ide-background)!important;border:1px solid var(--ide-border)!important;border-radius:6px;padding:8px 10px}
 :root[data-shell] .mini-chip{background:var(--ide-button);color:var(--ide-onAccent,#fff)}
@@ -347,14 +348,15 @@ dialog.command-palette::backdrop{background:transparent}
 :root[data-shell] .object-size-tools label{font-size:11.5px}
 :root[data-shell] .object-size-tools select{height:24px;max-width:180px;font-size:12px;padding:0 4px}
 :root[data-shell] .object-size-tools output{font:11.5px var(--mono);color:var(--ide-muted)}
-.example-meta{display:flex;gap:4px}
+.example-meta{display:flex;gap:4px;flex:none}
+.example-meta:empty{display:none}
 .example-boards{display:flex;flex-wrap:wrap;gap:4px;margin:2px 0 6px}
 .example-boards button{padding:2px 9px;border-radius:999px;font-size:11px;line-height:18px;color:var(--ide-muted);border:1px solid var(--ide-border);background:transparent}
 .example-boards button:hover{color:var(--ide-foreground);background:var(--ide-hover)}
 .example-boards button[aria-pressed="true"]{color:var(--ide-accent);border-color:color-mix(in srgb,var(--ide-accent) 55%,transparent);background:color-mix(in srgb,var(--ide-accent) 11%,transparent);font-weight:600}
 .example-group{position:sticky;top:0;z-index:1;margin:6px -6px 2px;padding:4px 16px;font-size:10.5px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--ide-muted);background:var(--ide-panel)}
 .example-group span{font-weight:500;margin-left:4px;opacity:.8}
-.example-tag{display:inline-block;padding:0 6px;border-radius:999px;font-size:10px;letter-spacing:.02em;background:color-mix(in srgb,var(--ide-accent) 11%,transparent);line-height:16px}
+.example-tag{display:inline-block;white-space:nowrap;padding:0 6px;border-radius:999px;font-size:10px;letter-spacing:.02em;background:color-mix(in srgb,var(--ide-accent) 11%,transparent);line-height:16px}
 .example-tag.arm{color:var(--ide-warning);background:color-mix(in srgb,var(--ide-warning) 14%,transparent)}
 dialog.command-palette::backdrop{background:transparent!important;backdrop-filter:none!important}
 .debug-toolbar{display:flex;gap:2px;padding:3px;border:1px solid var(--ide-border);border-radius:8px;background:var(--ide-background);align-self:flex-start;flex-wrap:wrap}
