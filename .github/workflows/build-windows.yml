@@ -79,7 +79,7 @@ jobs:
           $index = 'https://espressif.github.io/arduino-esp32/package_esp32_index.json'
           & $env:ARDUINO_CLI core update-index --additional-urls $index
           & $env:ARDUINO_CLI core install esp32:esp32@3.3.12 --additional-urls $index
-          & $env:ARDUINO_CLI lib install 'DHT sensor library@1.4.6' 'Adafruit Unified Sensor@1.1.15'
+          & $env:ARDUINO_CLI lib install 'DHT sensor library@1.4.6' 'Adafruit Unified Sensor@1.1.15' 'PubSubClient@2.8'
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           & $env:ARDUINO_CLI version
       - name: Build examples with ST HAL and run them on the emulator

@@ -139,7 +139,7 @@ test('examples are grouped by board; a shell assignment reads serial monitor inp
   // FW-09 uses an STM32 and an ESP32: listed in both groups.
   assert.equal(await win.locator('#hal-example-list [data-example="lecture:lecture-fw-09"]').count(),2);
   assert.ok(!/RPI-0|KER-0|라즈베리파이5/.test(await win.textContent('#hal-example-list')));
-  await win.click('[data-example-board="esp32"]');assert.deepEqual(await groups(),['ESP32']);assert.equal(await win.locator('#hal-example-list [data-example]').count(),6);
+  await win.click('[data-example-board="esp32"]');assert.deepEqual(await groups(),['ESP32']);assert.equal(await win.locator('#hal-example-list [data-example]').count(),7);
   await win.click('[data-example-board="rpi"]');assert.deepEqual(await groups(),['Raspberry Pi']);assert.equal(await win.locator('#hal-example-list [data-example]').count(),15);
   await win.click('[data-example-board="all"]');
   // LED 제어 쉘: the serial monitor sends lines to the Raspberry Pi program.

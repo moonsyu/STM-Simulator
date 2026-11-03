@@ -6,7 +6,8 @@ import {Esp32Bluetooth,Esp32Wifi} from './wireless.js';
 
 // ESP32 boards run their Arduino sketch (setup / loop) in the same C interpreter as STM32 sketches, with ESP32 pin
 // numbers (2 → GPIO2), 12-bit analogRead, LEDC PWM, Serial.printf, the DHT library, Wire as an I2C slave and Serial2
-// (GPIO16 RX / GPIO17 TX) as far as the wireless modules on it go, BluetoothSerial and WiFi (WiFiServer / WiFiClient).
+// (GPIO16 RX / GPIO17 TX) as far as the wireless modules on it go, BluetoothSerial and WiFi (WiFiServer / WiFiClient),
+// HTTPClient and PubSubClient (MQTT) towards the internet hosts behind the router (wireless.js INTERNET).
 // The program runs as a circuit driver: it advances with circuit time and reads its inputs from the last solved step.
 const DIGITAL_ONLY=new Set([6,7,8,9,10,11]);
 function esp32Pin(model,value){
@@ -21,7 +22,7 @@ export class SketchDriver{
   this.wire={address:null,receive:null,request:null,rx:[],tx:[]};this.ledc=new Map();this.serial2={ready:false,baud:9600,rx:'GPIO16',tx:'GPIO17',queue:[],lastTx:0};this.serialIn=[];
   let program;try{program=compile(part.code,{esp32:true});}catch(error){throw new Error(`${part.name} · ${devboardModel(part).file}: ${error.message}`);}
   this.runtime=new Runtime(program,{
-   pin:value=>esp32Pin(model,value),constants:{DHT11:11,DHT22:22,LED_BUILTIN:2,SERIAL_8N1:0x800001c,WL_IDLE_STATUS:0,WL_CONNECTED:3,WL_DISCONNECTED:6,WIFI_STA:1,WIFI_AP:2,WIFI_AP_STA:3},constructs:['DHT','BluetoothSerial','WiFiServer','WiFiClient'],
+   pin:value=>esp32Pin(model,value),constants:{DHT11:11,DHT22:22,LED_BUILTIN:2,SERIAL_8N1:0x800001c,WL_IDLE_STATUS:0,WL_CONNECTED:3,WL_DISCONNECTED:6,WIFI_STA:1,WIFI_AP:2,WIFI_AP_STA:3},constructs:['DHT','BluetoothSerial','WiFiServer','WiFiClient','HTTPClient','PubSubClient'],
    print:text=>this.print(String(text)+'\n'),read:pin=>this.level(pin),voltage:pin=>this.voltage(pin),serialAvailable:()=>this.serialIn.length,serialRead:()=>this.serialIn.shift()??-1,
    construct:(name,args)=>({kind:'device',name,args}),deviceCall:(device,method,args)=>this.device(device,method,args),
    call:(name,args,runtime)=>this.call(name,args,runtime)
@@ -115,6 +116,52 @@ export class SketchDriver{
   if(['print','println','write'].includes(method)){if(!open)return 0;const bytes=this.bytesOf(method,args);this.wifi.transfer(link,bytes,at);return bytes.length;}
   throw new Error(`WiFiClient.${method}은 지원하지 않습니다.`);
  }
+ // The internet is behind the router: the board must have joined STM-Router with WiFi.begin.
+ online(){return this.wifi?.joined===this.hub.router;}
+ // HTTPClient: begin(url), GET(), POST(body), getString(), end(). The request waits for the answer like the real
+ // library (the program's time moves on by the round trip).
+ httpCall(device,method,args){
+  const r=this.runtime;
+  if(method==='begin'){const url=String(r.format([args[0]]));const m=/^http:\/\/([^/:]+)(?::(\d+))?(\/.*)?$/.exec(url);if(!m)throw new Error(`HTTPClient: http:// 주소를 쓰세요 (${url}). https는 지원하지 않습니다.`);device.url={host:m[1],port:Number(m[2]??80),path:m[3]??'/'};device.body='';return 1;}
+  if(method==='end'||method==='setTimeout'||method==='addHeader')return 0;
+  if(method==='getString')return device.body??'';
+  if(method==='GET'||method==='POST'){
+   if(!device.url)throw new Error('http.begin(주소)를 먼저 호출하세요.');
+   if(!this.online())return -1;
+   const host=this.hub.internetHost(device.url.host);if(!host?.request||device.url.port!==host.port)return -1;
+   const res=host.request(method,device.url.path,method==='POST'?String(r.format([args[0]])):'',r.microTime);r.microTime+=40000;device.body=res.body;return res.status;
+  }
+  throw new Error(`HTTPClient.${method}은 지원하지 않습니다.`);
+ }
+ // PubSubClient: setServer, setCallback(function(char *topic, byte *payload, unsigned int length)), connect,
+ // connected, publish, subscribe, unsubscribe, loop (delivers what arrived), state.
+ mqttCall(device,method,args){
+  const r=this.runtime,s=device.mqtt??={server:null,callback:null,on:false,inbox:[],subs:[]};
+  if(method==='setServer'){s.server={host:String(r.format([args[0]])),port:args[1]??1883};return 0;}
+  if(method==='setCallback'){s.callback=r.callback(args[0]);return 0;}
+  if(method==='connected')return s.on&&this.online()?1:0;
+  if(method==='state')return s.on?0:-2;
+  if(method==='connect'){
+   const broker=s.server&&this.hub.internetHost(s.server.host);
+   if(!this.online()||broker!==this.hub.broker||s.server.port!==broker.port){s.on=false;return 0;}
+   if(!s.sub){s.sub={subs:s.subs,send:(topic,payload,at)=>s.inbox.push({topic,payload,at:at+40000})};broker.attached.push(s.sub);}
+   s.on=true;s.id=String(r.format([args[0]??'esp32']));broker.log(`${s.id} 접속`);r.microTime+=40000;return 1;
+  }
+  if(!s.on)return 0;
+  if(method==='subscribe'){const f=String(r.format([args[0]]));if(!s.subs.includes(f))s.subs.push(f);this.hub.broker.log(`${s.id} 구독 ${f}`);return 1;}
+  if(method==='unsubscribe'){const f=String(r.format([args[0]]));s.subs.splice(s.subs.indexOf(f)>>>0,1);return 1;}
+  if(method==='publish'){this.hub.broker.publish(String(r.format([args[0]])),[...new TextEncoder().encode(String(r.format([args[1]])))],r.microTime,s.id);return 1;}
+  if(method==='loop'){
+   const now=r.microTime+1e-6;
+   for(let i=0;i<s.inbox.length;){
+    const m=s.inbox[i];if(m.at>now){i++;continue;}s.inbox.splice(i,1);
+    if(s.callback)r.runCallback({...s.callback,args:[m.topic,r.pointer(r.array([...m.payload,0],r.globals)),m.payload.length]});
+   }
+   return 1;
+  }
+  if(method==='disconnect'){s.on=false;return 0;}
+  throw new Error(`PubSubClient.${method}은 지원하지 않습니다.`);
+ }
  joinWireless(hub){hub.addPort(this.part.id,this);}
  wirelessRx(module,frames,baud){
   const u=this.serial2,uf=this.result?.uf;if(!u.ready||!uf||u.baud!==baud||uf.find(`part:${module.id}:p3`)!==uf.find(`signal:${this.part.id}.${u.rx}`))return;
@@ -124,6 +171,8 @@ export class SketchDriver{
   if(device.name==='BluetoothSerial')return this.bluetoothCall(method,args);
   if(device.name==='WiFiServer')return this.serverCall(device,method);
   if(device.name==='WiFiClient')return this.clientCall(device,method,args);
+  if(device.name==='HTTPClient')return this.httpCall(device,method,args);
+  if(device.name==='PubSubClient')return this.mqttCall(device,method,args);
   if(device.name!=='DHT')throw new Error('지원하지 않는 장치입니다.');
   if(method==='begin')return 0;
   // The DHT11 / DHT22 module wired to this pin and powered: its temperature / humidity settings, otherwise NaN.

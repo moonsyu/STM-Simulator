@@ -4,11 +4,11 @@ const TYPES = new Set(['void','int','bool','float','double','long','short','char
 const QUALIFIERS = new Set(['const','volatile','static']);
 const INCLUDES = new Set(['Arduino.h','LiquidCrystal.h','Wire.h','SPI.h','stdint.h','math.h']);
 // ESP32 sketches (`compile(code,{esp32:true})`) also take the DHT sensor library and its class.
-const ESP32_INCLUDES = new Set([...INCLUDES,'DHT.h','DHT_U.h','Adafruit_Sensor.h','WiFi.h','WiFiClient.h','WiFiServer.h','BluetoothSerial.h']);
-const ESP32_CLASSES = ['DHT','BluetoothSerial','WiFiServer','WiFiClient'];
+const ESP32_INCLUDES = new Set([...INCLUDES,'DHT.h','DHT_U.h','Adafruit_Sensor.h','WiFi.h','WiFiClient.h','WiFiServer.h','BluetoothSerial.h','HTTPClient.h','PubSubClient.h']);
+const ESP32_CLASSES = ['DHT','BluetoothSerial','WiFiServer','WiFiClient','HTTPClient','PubSubClient'];
 const CONSTRUCTED = new Set(['LiquidCrystal',...ESP32_CLASSES]);
 // `WiFiClient client;` starts empty; these need no constructor arguments.
-const BARE_CONSTRUCTED = new Set(['BluetoothSerial','WiFiClient']);
+const BARE_CONSTRUCTED = new Set(['BluetoothSerial','WiFiClient','HTTPClient','PubSubClient']);
 const OPS = {'=':1,'+=':1,'-=':1,'*=':1,'/=':1,'%=':1,'&=':1,'|=':1,'^=':1,'<<=':1,'>>=':1,'||':3,'&&':4,'|':5,'^':6,'&':7,'==':8,'!=':8,'<':9,'>':9,'<=':9,'>=':9,'<<':10,'>>':10,'+':11,'-':11,'*':12,'/':12,'%':12};
 const ASSIGN = new Set(['=','+=','-=','*=','/=','%=','&=','|=','^=','<<=','>>=']);
 

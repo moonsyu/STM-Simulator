@@ -258,11 +258,17 @@ STM32 보드 옆에 **ESP32**와 **Raspberry Pi 5** 보드를 함께 놓을 수 
 - **스마트폰 → 모듈 이름**: 슬레이브로 쓰는 HC-05·HC-06 또는 `BluetoothSerial`을 시작한 ESP32와 처음 보낼 때 페어링하고(1.5초), 양쪽으로 글자를 주고받는다. 이미 다른 모듈과 연결된 모듈이나 마스터는 거부한다.
 - **공유기의 PC**(`192.168.1.100:8080`): ESP-01·ESP32가 AP `STM-Router`(암호 `stm32-router`)에 접속하면 `192.168.1.x` 주소를 받고, `AT+CIPSTART="TCP","192.168.1.100",8080`처럼 PC에 연결한다. 보낸 내용이 모니터에 보인다. 모듈이 TCP 서버를 열어 두었으면 PC가 먼저 보낼 때 그 서버로 접속한다.
 
+**인터넷**(1.12.0): 공유기 `STM-Router`에 접속한 모듈·ESP32는 공유기 너머의 두 서버에 TCP로 연결한다(응답은 20 ms 더 늦다).
+
+- **MQTT 브로커** `broker.stm-lab.test`(203.0.113.10:1883, MQTT 3.1.1): CONNECT·PUBLISH(QoS 0·1)·SUBSCRIBE(`+`·`#`)·UNSUBSCRIBE·PINGREQ·DISCONNECT. 직렬 모니터 대상 **인터넷 MQTT 브로커**에서 `토픽 메시지`(예: `stm/led 1`)를 보내 발행하고, 오가는 메시지를 본다.
+- **웹 서버** `api.stm-lab.test`(203.0.113.20:80, HTTP/1.1, 응답 뒤 연결을 닫음): `GET /`, `GET /time`(실행 시작 후 초), `GET /led?state=on|off`, `POST /data`(본문 저장). 요청은 직렬 모니터 대상 **인터넷 웹 서버 기록**에 남는다.
+- ESP-01은 `AT+CIPDOMAIN="api.stm-lab.test"`로 주소를 찾고 `AT+CIPSTART="TCP","api.stm-lab.test",80`처럼 이름으로 연결한다. ESP32 스케치는 `HTTPClient`(`begin("http://…")`·`GET`·`POST`·`getString`·`end`)와 `PubSubClient`(`setServer`·`setCallback`·`connect`·`connected`·`subscribe`·`publish`·`loop`)를 쓴다. 예제 `ESP32 인터넷 MQTT·웹 통신`. https·TLS와 그 밖의 라이브러리는 지원하지 않는다.
+
 **ESP-01 패스스루.** `AT+CIPMUX=0`에서 `AT+CIPMODE=1` 다음 인수 없는 `AT+CIPSEND`로 들어간다. 그 뒤로 보내는 내용은 20 ms 동안 조용해지면 나가고, 받는 내용에는 `+IPD`가 붙지 않는다. `+++`만 보내면 끝나고 AT 명령으로 돌아온다.
 
 **ESP32 자체 무선.** 스케치에서 `BluetoothSerial`(`begin`·`available`·`read`·`print`·`println`·`write`·`connected`)과 `WiFi`(`mode`·`softAP`·`begin`·`status`·`disconnect`·`localIP`·`softAPIP`), `WiFiServer`(`begin`·`available`), `WiFiClient`(`connect`·`connected`·`available`·`read`·`print`·`println`·`write`·`stop`)를 쓸 수 있다. 예제 `ESP32·ESP32 Wi-Fi 통신`, `ESP32 스마트폰 블루투스 통신`. 코드는 실물 Arduino 코어로도 빌드되는 형태다.
 
-**한계.** 메시지 단위 모델이라 거리·전파 세기·잡음은 계산하지 않고, 지연은 고정값에 재전송 시간을 더한 값이다(블루투스 20 ms, Wi-Fi 5 ms). 인터넷 쪽 상대(도메인 이름, MQTT·HTTP 서버)는 없다. 마스터 HC-05는 스마트폰에 연결하지 않는다. ESP-01의 SSL과 그 밖의 AT 명령은 `ERROR`로 답하고 통신 로그에 이유를 남긴다. AT로 바꾼 설정은 그 실행 동안만 유지되고 다음 실행에는 속성 패널 값으로 시작한다. 라즈베리파이 코드에서의 모듈 사용은 지원하지 않는다.
+**한계.** 메시지 단위 모델이라 거리·전파 세기·잡음은 계산하지 않고, 지연은 고정값에 재전송 시간을 더한 값이다(블루투스 20 ms, Wi-Fi 5 ms). 인터넷 쪽에는 아래 두 서버만 있고, 그 밖의 도메인은 찾지 못한다. 마스터 HC-05는 스마트폰에 연결하지 않는다. ESP-01의 SSL과 그 밖의 AT 명령은 `ERROR`로 답하고 통신 로그에 이유를 남긴다. AT로 바꾼 설정은 그 실행 동안만 유지되고 다음 실행에는 속성 패널 값으로 시작한다. 라즈베리파이 코드에서의 모듈 사용은 지원하지 않는다.
 
 ## 패널 크기와 위치
 

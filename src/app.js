@@ -33,7 +33,7 @@ import {projectBoard} from './boards.js';
 import {boardSvg} from './render.js';
 import {moveBreadboard,removeBreadboard,isBreadboardLibraryType,newBreadboardFields,breadboardBounds} from './breadboards.js';
 import {DEVBOARD_MODELS,devboardModel,devboardBounds,newDevboardFields,removeDevboard,boardFileKey,boardForFile,isBoardFile} from './devboards.js';
-import {PC} from './wireless.js';
+import {PC,INTERNET} from './wireless.js';
 import {isKernelSource} from './rpi-python.js';
 import {isStm32Board,stm32Boards,mainBoardName,newStm32Fields,swapStm32,promoteStm32,createStm32Drivers,connectStm32Drivers,stm32View} from './stm32-boards.js';
 import {createBoardDrivers} from './fixed-run.js';
@@ -450,7 +450,7 @@ function initializeRuntime({debug=false,entry=false}={}){
 // Peers outside the circuit, for the serial monitor: a phone per Bluetooth module or ESP32, the PC on the router.
 function outsideTargets(p){
  const bluetooth=p.components.filter(c=>c.type==='wireless'&&c.catalogVariant!=='esp01-wifi-8').map(c=>[c.id,c.name]),esp32=p.components.filter(c=>c.type==='devboard'&&devboardModel(c)?.kind==='esp32'),wifi=esp32.length||p.components.some(c=>c.type==='wireless'&&c.catalogVariant==='esp01-wifi-8');
- return [...bluetooth,...esp32.map(c=>['esp32bt:'+c.id,c.name+' Bluetooth'])].map(([id,name])=>`<option value="outside:phone:${esc(id)}">스마트폰 → ${esc(name)}</option>`).join('')+(wifi?`<option value="outside:pc">공유기의 PC (${PC.ip}:${PC.port})</option>`:'');
+ return [...bluetooth,...esp32.map(c=>['esp32bt:'+c.id,c.name+' Bluetooth'])].map(([id,name])=>`<option value="outside:phone:${esc(id)}">스마트폰 → ${esc(name)}</option>`).join('')+(wifi?`<option value="outside:pc">공유기의 PC (${PC.ip}:${PC.port})</option><option value="outside:broker">인터넷 MQTT 브로커 (${INTERNET.broker.name})</option><option value="outside:web">인터넷 웹 서버 기록 (${INTERNET.web.name})</option>`:'');
 }
 function resetBoard(id){const driver=session?.circuit?.drivers?.find(d=>d.part.id===id);if(!driver?.reset)return;try{driver.reset();log(`[${driver.part.name}] RESET · 프로그램을 처음부터 다시 실행합니다.`,'serial');}catch(e){status='error';log(e.message,'error');}refresh();}
 function recordSimulation(){if(result)diagnostic('simulation.state',{status,simulationMs:simTime,pins:runtime?.gpio||{},parts:result.parts,fault:result.fault,warnings:result.warnings});}

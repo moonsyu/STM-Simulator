@@ -1,6 +1,7 @@
 // Wireless UART modules: HC-05 / HC-06 Bluetooth SPP and the ESP-01 with ESP8266 AT firmware. A board talks to its module
 // over a real UART (same net, same baud); what crosses the air is modelled at message level: no radio physics, only a
-// loss rate set on the module. Outside the circuit there are a phone (Bluetooth) and a router with a PC on it (Wi-Fi).
+// loss rate set on the module. Outside the circuit there are a phone (Bluetooth), a router with a PC on it (Wi-Fi), and
+// behind the router an MQTT broker and a web server (broker.stm-lab.test, api.stm-lab.test).
 // ESP32 sketches join the same air with BluetoothSerial and WiFi (Esp32Bluetooth, Esp32Wifi).
 // Facts come from the HC Serial Bluetooth manual, the HC-05 importer datasheet, the Ai-Thinker ESP-01 datasheet and the
 // Espressif ESP8266 AT command reference (docs/device-visual-references.json lists them).
@@ -14,6 +15,9 @@ const HC06_GAP_US=500000;
 // Link-layer retries of what may not get lost (Bluetooth, TCP); UDP is just gone. ESP8266 transparent mode sends after this much quiet.
 const RETRIES=7,THROUGH_QUIET_US=20000,THROUGH_MAX=2048;
 export const ROUTER={ssid:'STM-Router',pwd:'stm32-router',ip:'192.168.1.1'},PC={ip:'192.168.1.100',port:8080};
+// The internet behind the router (documentation addresses, RFC 5737): it answers a little later than the local network.
+export const INTERNET={broker:{name:'broker.stm-lab.test',ip:'203.0.113.10',port:1883},web:{name:'api.stm-lab.test',ip:'203.0.113.20',port:80}};
+const INTERNET_US=20000;
 const HC06_BAUDS={1:1200,2:2400,3:4800,4:9600,5:19200,6:38400,7:57600,8:115200,9:230400,A:460800,B:921600,C:1382400};
 const BT_ADDRESSES=[['98d3','31','f5a1b2'],['98d3','31','f5a1b3'],['98d3','31','f5a1b4'],['98d3','31','f5a1b5']];
 export const WIRELESS_DEFAULTS={
@@ -176,6 +180,7 @@ class Wifi extends Module{
     if(a[0]!=='1')return this.error(at);this.server={port:Number(a[1]??333)};return this.ok(at);
    }
    case 'CIPSTART':return this.connect(a,at);
+   case 'CIPDOMAIN':{const h=this.joined===this.hub.router&&this.hub.internetHost(a[0]);return h?this.ok(at,`+CIPDOMAIN:${h.ip}`):this.error(at,`이름을 찾을 수 없습니다: ${a[0]} (공유기 STM-Router에 접속해야 인터넷 이름을 찾습니다)`);}
    case 'CIPSTATUS':return this.ok(at,`STATUS:${this.links.length?3:this.ip||this.ap?2:5}`,...this.links.map(l=>`+CIPSTATUS:${l.id},${q(l.type)},${q(l.host)},${l.port},${l.localPort},${l.server?1:0}`));
    case 'CIPSEND':return this.beginSend(a,at);
    case 'CIPCLOSE':{const id=this.mux?Number(a[0]):0;const link=this.links.find(l=>l.id===id);if(!link)return this.error(at);this.dropLink(link,at,true);return this.ok(at);}
@@ -194,7 +199,7 @@ class Wifi extends Module{
  // The module answering on an address of this module's network: the AP at .1, stations at their leased address.
  resolve(host){
   const net=this.joined??(this.ap?this:null);if(!net)return null;
-  if(net===this.hub.router&&host===PC.ip)return this.hub.pc;
+  if(net===this.hub.router){if(host===PC.ip)return this.hub.pc;const out=this.hub.internetHost(host);if(out)return out;}
   if(host==='192.168.4.1')return net===this?null:net;
   return this.hub.wifi().find(w=>w!==this&&w.joined===net&&w.ip===host)??null;
  }
@@ -210,7 +215,7 @@ class Wifi extends Module{
    const link={id,type,host,port,localPort:Number(localText)||1024+this.freeId(),remote:null,server:false};this.links.push(link);
    this.say((this.mux?`${id},`:'')+'CONNECT'+LINE+LINE+'OK'+LINE,at);return;
   }
-  if(!remote?.server||remote.server.port!==port)return this.hub.after(at+TCP_US,us=>this.say(`ERROR${LINE}CLOSED${LINE}`,us));
+  if(!(remote?.accepts?remote.accepts(port):remote?.server?.port===port))return this.hub.after(at+TCP_US,us=>this.say(`ERROR${LINE}CLOSED${LINE}`,us));
   const peerId=remote.freeId();if(peerId<0)return this.error(at,'상대 모듈의 연결 수가 가득 찼습니다.');
   const local={id,type,host,port,localPort:49152+id,server:false},other={id:peerId,type,host:this.ip??'192.168.4.1',port:local.localPort,localPort:port,server:true,remote:this};
   local.remote=remote;local.peerLink=other;other.peerLink=local;this.links.push(local);remote.links.push(other);
@@ -281,6 +286,81 @@ class Pc extends Outside{
  }
 }
 
+// A host on the internet: TCP on its ports; what it answers goes back over the link the module opened.
+class Host extends Outside{
+ constructor(hub,{name,ip,port}){super(name);this.hub=hub;this.domain=name;this.ip=ip;this.port=port;this.enabled=true;this.links=[];this.buffers=new Map();}
+ accepts(port){return port===this.port;}
+ freeId(){return this.links.length;}
+ say(){}
+ log(text){this.output=(this.output+text+'\n').slice(-4000);}
+ reply(link,bytes,at){const delay=this.hub.air(link.remote,AIR_US.wifi+INTERNET_US,true);if(delay!=null&&link.remote.links.includes(link.peerLink))link.remote.deliver(link.peerLink,bytes,at+delay);}
+ close(link,at){this.hub.after(at+INTERNET_US,us=>{if(link.remote.links.includes(link.peerLink))link.remote.dropLink(link.peerLink,us,true);});}
+ deliver(link,data,at){const buf=[...(this.buffers.get(link)??[]),...data];this.buffers.set(link,this.receive(link,buf,at));}
+}
+const utf8=text=>[...new TextEncoder().encode(text)],text=bytes=>new TextDecoder().decode(new Uint8Array(bytes));
+// HTTP/1.1 with Connection: close. GET / (a greeting), /time (seconds since the run started), /led?state=on|off;
+// POST /data stores the body. The requests show in the serial monitor's "웹 서버" target.
+class WebServer extends Host{
+ constructor(hub){super(hub,INTERNET.web);this.led='off';this.data=[];}
+ receive(link,buf,at){
+  const raw=text(buf),end=raw.indexOf('\r\n\r\n');if(end<0)return buf;
+  const head=raw.slice(0,end),length=Number(/content-length:\s*(\d+)/i.exec(head)?.[1]??0),body=raw.slice(end+4);
+  if(new TextEncoder().encode(body).length<length)return buf;
+  const [method,target='/']=head.split('\r\n')[0].split(' '),url=new URL(target,'http://'+this.domain);
+  let status=200,type='application/json; charset=utf-8',content;
+  if(method==='GET'&&url.pathname==='/')content=JSON.stringify({message:'STM Lab 웹 서버입니다.',paths:['/time','/led?state=on','POST /data']}),type='application/json; charset=utf-8';
+  else if(method==='GET'&&url.pathname==='/time')content=JSON.stringify({seconds:Math.round(this.hub.now/1e3)/1e3});
+  else if(method==='GET'&&url.pathname==='/led'){const s=url.searchParams.get('state');if(s==='on'||s==='off')this.led=s;content=JSON.stringify({led:this.led});}
+  else if(method==='POST'&&url.pathname==='/data'){this.data.push(body);content=JSON.stringify({received:body,count:this.data.length});}
+  else{status=404;content=JSON.stringify({error:'없는 경로입니다.'});}
+  this.log(`${method} ${url.pathname}${url.search} → ${status}${method==='POST'?' · '+body:''}`);
+  this.hub.note('Wi-Fi',at,`${this.domain}: ${method} ${url.pathname} → ${status}`);
+  const bytes=utf8(content);
+  this.reply(link,utf8(`HTTP/1.1 ${status} ${status===200?'OK':'Not Found'}\r\nContent-Type: ${type}\r\nContent-Length: ${bytes.length}\r\nConnection: close\r\n\r\n`).concat(bytes),at);
+  this.close(link,at);
+  return [];
+ }
+ /** A request made without a link (ESP32 HTTPClient): status and body. */
+ request(method,path,body,at){
+  const out=[];const fake={remote:{links:[0],deliver:(l,bytes)=>out.push(...bytes),dropLink(){}},peerLink:0};
+  this.receive(fake,utf8(`${method} ${path} HTTP/1.1\r\nHost: ${this.domain}\r\nContent-Length: ${utf8(body??'').length}\r\n\r\n${body??''}`),at);
+  const raw=text(out),split=raw.indexOf('\r\n\r\n');return {status:Number(raw.split(' ')[1]),body:raw.slice(split+4)};
+ }
+}
+// MQTT 3.1.1 (QoS 0, QoS 1 acknowledged): CONNECT, PUBLISH, SUBSCRIBE / UNSUBSCRIBE with + and # filters, PINGREQ,
+// DISCONNECT. Network clients and ESP32 PubSubClient objects (`attach`) share the topics; the serial monitor's
+// "MQTT 브로커" target publishes "topic message" lines and shows what passes through.
+export const topicMatches=(filter,topic)=>{const f=filter.split('/'),t=topic.split('/');for(let i=0;i<f.length;i++){if(f[i]==='#')return true;if(i>=t.length||(f[i]!=='+'&&f[i]!==t[i]))return false;}return f.length===t.length;};
+class Broker extends Host{
+ constructor(hub){super(hub,INTERNET.broker);this.clients=new Map();}
+ receive(link,buf,at){
+  for(;;){
+   if(buf.length<2)return buf;
+   let len=0,mult=1,i=1;for(;i<5&&i<buf.length;i++){len+=(buf[i]&127)*mult;mult*=128;if(!(buf[i]&128))break;}
+   if(i>=buf.length||buf.length<i+1+len)return buf;
+   const type=buf[0]>>4,flags=buf[0]&15,body=buf.slice(i+1,i+1+len);buf=buf.slice(i+1+len);
+   this.packet(link,type,flags,body,at);
+  }
+ }
+ packet(link,type,flags,body,at){
+  const client=this.clients.get(link)??{subs:[],id:'?'};this.clients.set(link,client);
+  const str16=(b,o)=>{const n=(b[o]<<8)|b[o+1];return [text(b.slice(o+2,o+2+n)),o+2+n];};
+  if(type===1){const [,o1]=str16(body,0),idAt=o1+4;client.id=str16(body,idAt)[0];this.log(`${client.id} 접속`);this.reply(link,[0x20,2,0,0],at);return;}
+  if(type===3){const [topic,o]=str16(body,0),qos=(flags>>1)&3,payload=body.slice(o+(qos?2:0));if(qos===1)this.reply(link,[0x40,2,body[o],body[o+1]],at);this.publish(topic,payload,at,client.id);return;}
+  if(type===8){const pid=body.slice(0,2),granted=[];let o=2;while(o<body.length){const [f,n]=str16(body,o);client.subs.push(f);granted.push(0);o=n+1;this.log(`${client.id} 구독 ${f}`);}this.reply(link,[0x90,2+granted.length,...pid,...granted],at);return;}
+  if(type===10){let o=2;while(o<body.length){const [f,n]=str16(body,o);client.subs=client.subs.filter(s=>s!==f);o=n;}this.reply(link,[0xb0,2,body[0],body[1]],at);return;}
+  if(type===12){this.reply(link,[0xd0,0],at);return;}
+  if(type===14){this.clients.delete(link);this.log(`${client.id} 끊음`);}
+ }
+ subscribers(){return [...[...this.clients].map(([link,c])=>({subs:c.subs,send:(topic,payload,at)=>this.reply(link,mqttPublish(topic,payload),at)})),...this.attached];}
+ publish(topic,payload,at,from='모니터'){
+  this.log(`${from} → ${topic}: ${text(payload)}`);this.hub.note('Wi-Fi',at,`MQTT ${topic}: ${text(payload).slice(0,40)}`);
+  for(const s of this.subscribers())if(s.subs.some(f=>topicMatches(f,topic)))s.send(topic,payload,at);
+ }
+ get attached(){return this._attached??=[];}
+}
+function mqttPublish(topic,payload){const t=utf8(topic),len=2+t.length+payload.length,head=[0x30];let x=len;do{let b=x%128;x=Math.floor(x/128);if(x)b|=128;head.push(b);}while(x);return [...head,t.length>>8,t.length&255,...t,...payload];}
+
 // ---------------------------------------------------------------- an ESP32's own radio (BluetoothSerial, WiFi)
 export class Esp32Bluetooth extends Bluetooth{
  constructor(hub,board,name){
@@ -317,6 +397,7 @@ export class WirelessHub{
  constructor(primary){
   this.primary=primary;this.modules=new Map();this.ports=new Map();this.timers=[];this.now=0;this.radios=[];this.seed=0x2545f491;
   this.router={name:'공유기',enabled:true,ap:{ssid:ROUTER.ssid,pwd:ROUTER.pwd,channel:6,ecn:3},apMac:'c8:3a:35:00:00:01',clients:0,subnet:'192.168.1'};this.pc=new Pc(this);this.phone=new Phone();
+  this.broker=new Broker(this);this.web=new WebServer(this);
   this.addPort('main',primary);
  }
  addPort(key,session){this.ports.set(key,session);session.wireless=this;if(session.buses)session.buses.wireless=this;}
@@ -335,9 +416,12 @@ export class WirelessHub{
   return delay;
  }
  // The serial monitor's side of the outside world (`phone:<module id>`, `pc`).
+ internetHost(name){return [this.broker,this.web].find(h=>h.domain===name||h.ip===name)??null;}
  outsideInput(target,text,at){
   const bytes=[...new TextEncoder().encode(text)];
   if(target==='pc')return this.pc.send(bytes,at);
+  if(target==='web')throw new Error('웹 서버에는 직접 보낼 수 없습니다. 보드가 요청을 보내면 여기에 기록됩니다.');
+  if(target==='broker'){let n=0;for(const line of String(text).split(/\r?\n/)){const m=/^\s*(\S+)\s+(.*)$/.exec(line);if(!line.trim())continue;if(!m)throw new Error('"토픽 메시지" 형식으로 보내세요. 예: stm/led 1');this.broker.publish(m[1],[...new TextEncoder().encode(m[2])],at);n+=line.length;}return n;}
   const m=this.all().find(x=>x.id===target.slice(6)&&x.kind==='bluetooth');if(!m?.powered)return 0;
   if(m.peer&&m.peer!==this.phone)throw new Error(`${m.name}은 ${m.peer.name}와 연결되어 있습니다.`);
   if(m.hc05&&m.role==='master')throw new Error(`${m.name}은 마스터입니다. 스마트폰은 슬레이브에 연결합니다.`);
@@ -346,7 +430,7 @@ export class WirelessHub{
   for(const value of bytes){const delay=this.air(m,AIR_US.bluetooth,true);if(delay==null)continue;if(m.take)m.take([value],start+delay);else this.emit(m,[value],start+delay);}
   return bytes.length;
  }
- outsideOutput(target){return target==='pc'?this.pc.output:this.phone.output;}
+ outsideOutput(target){return target==='pc'?this.pc.output:target==='broker'?this.broker.output:target==='web'?this.web.output:this.phone.output;}
  bluetooth(){return this.all().filter(m=>m.kind==='bluetooth');}
  wifi(){return this.all().filter(m=>m.kind==='wifi');}
  after(at,fn){this.timers.push({at,fn});}
