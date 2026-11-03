@@ -23,7 +23,7 @@ export class Runtime {
     const api=this.api;
     const constants={HIGH:1,LOW:0,true:1,false:0,NULL:0,OUTPUT:'OUTPUT',INPUT:'INPUT',INPUT_PULLUP:'INPUT_PULLUP',INPUT_PULLDOWN:'INPUT_PULLDOWN',CHANGE:'CHANGE',RISING:'RISING',FALLING:'FALLING',LSBFIRST:0,MSBFIRST:1,DEC:10,HEX:16,OCT:8,BIN:2,PI:Math.PI};
     for(const [key,value]of Object.entries({...constants,...api.constants,...Object.fromEntries([...GPIO_PINS,...Object.keys(ALIASES)].map(p=>[p,p]))}))this.declareCell(key,value,true);
-    for(const name of ['Serial','Serial1','Serial2','Wire','SPI','Timer','DMA'])this.declareCell(name,{kind:'library',name},true);
+    for(const name of ['Serial','Serial1','Serial2','Wire','SPI','Timer','DMA',...(this.api.constructs?.includes('WiFiServer')?['WiFi']:[])])this.declareCell(name,{kind:'library',name},true);
   }
   // Execution contexts: [0] is thread mode (main); higher entries are nested ISRs (strict LIFO).
   get wake(){return this.contexts[0].wake;}

@@ -17,7 +17,7 @@ const number=(key,label,value,min,max,live=false,type='number')=>`<label for="ex
 // Saved in the module's flash on a real part; AT commands change them for the current run.
 const choice=(key,label,value,options)=>`<label>${label}</label><select data-part-prop="${key}" data-value-type="${typeof value==='number'?'number':'string'}">${options.map(([v,text])=>`<option value="${v}" ${v===value?'selected':''}>${text}</option>`).join('')}</select>`;
 function wirelessControls(p,variant){
- const baud=choice('baud','통신 속도 (baud)',p.baud,WIRELESS_BAUDS.map(b=>[b,String(b)]));
+ const baud=choice('baud','통신 속도 (baud)',p.baud,WIRELESS_BAUDS.map(b=>[b,String(b)]))+number('airLoss','패킷 손실 (%)',p.airLoss??0,0,100);
  if(variant.family==='wifi')return baud;
  return (variant.id==='hc05-bluetooth-6'?choice('role','역할 (AT+ROLE)',p.role,[['slave','슬레이브'],['master','마스터']]):'')+baud+`<label for="extra-btPin">PIN (4자리)</label><input id="extra-btPin" data-part-prop="btPin" data-value-type="string" maxlength="4" value="${esc(p.btPin)}">`;
 }

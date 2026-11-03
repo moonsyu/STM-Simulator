@@ -2,10 +2,11 @@ import {compile} from './parser.js';
 import {Runtime} from './runtime.js';
 import {formatPrintf} from './hal-stdio.js';
 import {devboardModel} from './devboards.js';
+import {Esp32Bluetooth,Esp32Wifi} from './wireless.js';
 
 // ESP32 boards run their Arduino sketch (setup / loop) in the same C interpreter as STM32 sketches, with ESP32 pin
 // numbers (2 → GPIO2), 12-bit analogRead, LEDC PWM, Serial.printf, the DHT library, Wire as an I2C slave and Serial2
-// (GPIO16 RX / GPIO17 TX) as far as the wireless modules on it go.
+// (GPIO16 RX / GPIO17 TX) as far as the wireless modules on it go, BluetoothSerial and WiFi (WiFiServer / WiFiClient).
 // The program runs as a circuit driver: it advances with circuit time and reads its inputs from the last solved step.
 const DIGITAL_ONLY=new Set([6,7,8,9,10,11]);
 function esp32Pin(model,value){
@@ -20,7 +21,7 @@ export class SketchDriver{
   this.wire={address:null,receive:null,request:null,rx:[],tx:[]};this.ledc=new Map();this.serial2={ready:false,baud:9600,rx:'GPIO16',tx:'GPIO17',queue:[],lastTx:0};this.serialIn=[];
   let program;try{program=compile(part.code,{esp32:true});}catch(error){throw new Error(`${part.name} · ${devboardModel(part).file}: ${error.message}`);}
   this.runtime=new Runtime(program,{
-   pin:value=>esp32Pin(model,value),constants:{DHT11:11,DHT22:22,LED_BUILTIN:2,SERIAL_8N1:0x800001c},constructs:['DHT'],
+   pin:value=>esp32Pin(model,value),constants:{DHT11:11,DHT22:22,LED_BUILTIN:2,SERIAL_8N1:0x800001c,WL_IDLE_STATUS:0,WL_CONNECTED:3,WL_DISCONNECTED:6,WIFI_STA:1,WIFI_AP:2,WIFI_AP_STA:3},constructs:['DHT','BluetoothSerial','WiFiServer','WiFiClient'],
    print:text=>this.print(String(text)+'\n'),read:pin=>this.level(pin),voltage:pin=>this.voltage(pin),serialAvailable:()=>this.serialIn.length,serialRead:()=>this.serialIn.shift()??-1,
    construct:(name,args)=>({kind:'device',name,args}),deviceCall:(device,method,args)=>this.device(device,method,args),
    call:(name,args,runtime)=>this.call(name,args,runtime)
@@ -31,6 +32,7 @@ export class SketchDriver{
  call(name,args,runtime){
   if(name==='Serial.printf'){this.print(formatPrintf(args,runtime));return 0;}
   if(name.startsWith('Serial2.'))return this.serial2Call(name.slice(8),args,runtime);
+  if(name.startsWith('WiFi.'))return this.wifiCall(name.slice(5),args,runtime);
   // LEDC PWM (ESP32 Arduino core 3.x ledcAttach/ledcWrite and 2.x ledcSetup/ledcAttachPin by channel).
   if(name==='ledcAttach'){const pin=runtime.pin(args[0]);this.ledc.set(pin,{bits:args[2]??8});runtime.setPinMode(pin,'OUTPUT');return 1;}
   if(name==='ledcSetup'){this.ledc.set('ch'+args[0],{bits:args[2]??8,pins:[]});return args[1];}
@@ -66,12 +68,62 @@ export class SketchDriver{
  // What the serial monitor sends arrives on Serial, like text from the USB port.
  get acceptsInput(){return true;}
  receive(text){const bytes=new TextEncoder().encode(text);this.serialIn.push(...bytes);return bytes.length;}
+ // ---- the board's own radio, on the air of the run
+ get hub(){if(!this.wireless)throw new Error('무선 통신은 회로 실행 중에만 쓸 수 있습니다.');return this.wireless;}
+ bytesOf(method,args){
+  if(method==='write'&&typeof args[0]==='number')return [args[0]&255];
+  return [...new TextEncoder().encode(this.runtime.format(args)+(method==='println'?'\r\n':''))];
+ }
+ ready(queue){const now=this.runtime.microTime+1e-6;return queue.filter(x=>x.at<=now);}
+ take(queue){const i=queue.findIndex(x=>x.at<=this.runtime.microTime+1e-6);return i<0?-1:queue.splice(i,1)[0].value;}
+ bluetoothCall(method,args){
+  if(method==='begin'){this.bt??=this.hub.addRadio(new Esp32Bluetooth(this.hub,this.part,typeof args[0]==='string'?args[0]:''));return 1;}
+  if(!this.bt)throw new Error('SerialBT.begin()을 먼저 호출하세요.');
+  if(method==='connected'||method==='hasClient')return this.bt.peer?1:0;
+  if(method==='available')return this.ready(this.bt.rx).length;
+  if(method==='read')return this.take(this.bt.rx);
+  if(method==='flush'||method==='end')return 0;
+  if(['print','println','write'].includes(method))return this.bt.send(this.bytesOf(method,args),this.runtime.microTime);
+  throw new Error(`BluetoothSerial.${method}은 지원하지 않습니다.`);
+ }
+ wifiCall(method,args,runtime){
+  this.wifi??=this.hub.addRadio(new Esp32Wifi(this.hub,this.part));const w=this.wifi,at=runtime.microTime;
+  if(method==='mode'){w.mode=args[0];return 1;}
+  if(method==='begin'){w.begin(runtime.format([args[0]]),args.length>1?runtime.format([args[1]]):'',at);return 0;}
+  if(method==='softAP'){w.softAP(runtime.format([args[0]]),args.length>1?runtime.format([args[1]]):'',at);return 1;}
+  if(method==='status')return w.ip?3:6;
+  if(method==='disconnect'){w.leave(at);return 1;}
+  if(method==='localIP')return w.ip??'0.0.0.0';
+  if(method==='softAPIP')return w.ap?'192.168.4.1':'0.0.0.0';
+  throw new Error(`WiFi.${method}은 지원하지 않습니다.`);
+ }
+ serverCall(device,method){
+  this.wifi??=this.hub.addRadio(new Esp32Wifi(this.hub,this.part));
+  if(method==='begin'){this.wifi.server={port:device.args[0]??80};return 0;}
+  if(method==='available'||method==='accept'){const link=this.wifi.links.find(l=>l.server&&!l.accepted);if(!link)return 0;link.accepted=true;return {kind:'device',name:'WiFiClient',args:[],link};}
+  throw new Error(`WiFiServer.${method}은 지원하지 않습니다.`);
+ }
+ clientCall(device,method,args){
+  const at=this.runtime.microTime;
+  if(method==='connect'){this.wifi??=this.hub.addRadio(new Esp32Wifi(this.hub,this.part));device.link=this.wifi.client(this.runtime.format([args[0]]),args[1],at);return device.link?1:0;}
+  const link=device.link,open=!!link&&!!this.wifi?.links.includes(link);
+  if(method==='connected')return open||(link?.rx?.length??0)>0?1:0;
+  if(method==='available')return link?.rx?this.ready(link.rx).length:0;
+  if(method==='read')return link?.rx?this.take(link.rx):-1;
+  if(method==='flush')return 0;
+  if(method==='stop'){if(open)this.wifi.dropLink(link,at,true);return 0;}
+  if(['print','println','write'].includes(method)){if(!open)return 0;const bytes=this.bytesOf(method,args);this.wifi.transfer(link,bytes,at);return bytes.length;}
+  throw new Error(`WiFiClient.${method}은 지원하지 않습니다.`);
+ }
  joinWireless(hub){hub.addPort(this.part.id,this);}
  wirelessRx(module,frames,baud){
   const u=this.serial2,uf=this.result?.uf;if(!u.ready||!uf||u.baud!==baud||uf.find(`part:${module.id}:p3`)!==uf.find(`signal:${this.part.id}.${u.rx}`))return;
   for(const f of frames){u.queue.push({at:f.at,value:f.value});this.runtime.event(f.at/1000,()=>{});}
  }
  device(device,method,args){
+  if(device.name==='BluetoothSerial')return this.bluetoothCall(method,args);
+  if(device.name==='WiFiServer')return this.serverCall(device,method);
+  if(device.name==='WiFiClient')return this.clientCall(device,method,args);
   if(device.name!=='DHT')throw new Error('지원하지 않는 장치입니다.');
   if(method==='begin')return 0;
   // The DHT11 / DHT22 module wired to this pin and powered: its temperature / humidity settings, otherwise NaN.

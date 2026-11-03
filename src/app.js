@@ -33,6 +33,7 @@ import {projectBoard} from './boards.js';
 import {boardSvg} from './render.js';
 import {moveBreadboard,removeBreadboard,isBreadboardLibraryType,newBreadboardFields,breadboardBounds} from './breadboards.js';
 import {DEVBOARD_MODELS,devboardModel,devboardBounds,devboardPinInfo,newDevboardFields,removeDevboard,boardFileKey,boardForFile,isBoardFile} from './devboards.js';
+import {PC} from './wireless.js';
 import {isStm32Board,stm32Boards,mainBoardName,newStm32Fields,swapStm32,promoteStm32,createStm32Drivers,connectStm32Drivers,stm32View} from './stm32-boards.js';
 import {createBoardDrivers} from './fixed-run.js';
 import {searchLectureExamples,applyLectureExample,lectureExample,lectureGuide,LECTURE_PREFIX,EXAMPLE_BOARDS} from './lecture-examples.js';
@@ -147,7 +148,7 @@ function syncEditor(){
  const selectedSerial=$('serial-target').value,serials=hal?SERIAL_IDS.filter(id=>project.mcu?.peripherals[id]?.enabled):[],serialKey=hal?serials.join(','):'sketch',keepSerial=$('serial-target').dataset.channels===serialKey;
  $('serial-target').innerHTML=hal?(serials.length?serials.map(id=>id==='USART2'?'<option value="USART2">ST-LINK VCP → USART2 (내장)</option><option value="USART2:external">외부 UART 장치 → USART2</option>':`<option value="${id}">외부 UART 장치 → ${id}</option>`).join(''):'<option value="">UART 핀을 활성화하세요</option>'):'<option value="Serial1">외부 UART 장치 → Serial1</option><option value="Serial">USB 콘솔 → Serial</option>';
 // Other boards' program output has its own entries (read only).
- $('serial-target').insertAdjacentHTML('beforeend',project.components.filter(p=>p.type==='devboard').map(p=>`<option value="board:${esc(p.id)}">${esc(p.name)} · Serial (USB)</option>`).join(''));
+ $('serial-target').insertAdjacentHTML('beforeend',project.components.filter(p=>p.type==='devboard').map(p=>`<option value="board:${esc(p.id)}">${esc(p.name)} · Serial (USB)</option>`).join('')+outsideTargets(project));
  $('serial-target').value=keepSerial&&[...$('serial-target').options].some(o=>o.value===selectedSerial)?selectedSerial:serials.includes('USART2')?'USART2':serials[0]??(boards.length&&project.surfaces?.board?.hidden?`board:${boards[0].id}`:hal?'':'Serial1');$('serial-target').dataset.channels=serialKey;$('serial-target').disabled=hal&&!serials.length&&!boards.length;
  if(fixedBoard){document.querySelector('.code-note code').textContent=board.scenario?'강의 예제 시나리오대로 핀이 바뀝니다.':'예제가 아닌 보드는 실행하지 않습니다.';document.querySelector('.code-note p').textContent='라즈베리파이 코드는 빌드·실행하지 않는 고정 실행 코드입니다. 코드를 고쳐도 동작은 바뀌지 않아 읽기 전용으로 표시합니다.';}
  else if(board){document.querySelector('.code-note code').textContent='pinMode · digitalWrite · digitalRead\nanalogRead(0~4095) · ledcAttach · ledcWrite\nSerial.printf · DHT · Wire 슬레이브\ndelay · millis · attachInterrupt';document.querySelector('.code-note p').textContent='ESP32 스케치는 실행할 때 해석해 STM32와 같은 회로에서 동작합니다. 핀은 GPIO 번호(2 = GPIO2)로 씁니다. Wi-Fi·Bluetooth와 그 밖의 라이브러리는 지원하지 않습니다.';}
@@ -506,6 +507,11 @@ function initializeRuntime({debug=false,entry=false}={}){
   log(boardOnly?'다른 보드만 실행합니다. STM32 코드는 실행하지 않습니다.':emulate?`펌웨어 에뮬레이터를 시작했습니다 · ${firmware.name} · ${projectBoard(project).mcu} (${projectBoard(project).core}) 명령어 실행`:project.firmware?.mode==='hal'?'HAL 프로그램을 시작했습니다.':'스케치를 시작했습니다.');
   session.circuit.drivers=scope==='stm32'?[]:[...createBoardDrivers(project,{log:s=>log(s,'serial'),scope}),...createStm32Drivers(project,{scope,emulate:!!ide?.emulator(),elfs:boardElfs,log:s=>log(s,'serial'),trace:event=>monitor.trace(event)})];session.buses.boards=()=>session.circuit.drivers;connectStm32Drivers(session);result=session.tick(0);for(const p of project.components)if(isCamera(p))void applyCameraImage(p,session);diagnostic('simulation.started',{debug,entry},true);ide?.debugView();return true;}
  catch(e){runtime=null;result=session?.viewResult??null;status='error';log(e.message,'error');return false;}
+}
+// Peers outside the circuit, for the serial monitor: a phone per Bluetooth module or ESP32, the PC on the router.
+function outsideTargets(p){
+ const bluetooth=p.components.filter(c=>c.type==='wireless'&&c.catalogVariant!=='esp01-wifi-8').map(c=>[c.id,c.name]),esp32=p.components.filter(c=>c.type==='devboard'&&devboardModel(c)?.kind==='esp32'),wifi=esp32.length||p.components.some(c=>c.type==='wireless'&&c.catalogVariant==='esp01-wifi-8');
+ return [...bluetooth,...esp32.map(c=>['esp32bt:'+c.id,c.name+' Bluetooth'])].map(([id,name])=>`<option value="outside:phone:${esc(id)}">스마트폰 → ${esc(name)}</option>`).join('')+(wifi?`<option value="outside:pc">공유기의 PC (${PC.ip}:${PC.port})</option>`:'');
 }
 function resetBoard(id){const driver=session?.circuit?.drivers?.find(d=>d.part.id===id);if(!driver?.reset)return;try{driver.reset();log(`[${driver.part.name}] RESET · 프로그램을 처음부터 다시 실행합니다.`,'serial');}catch(e){status='error';log(e.message,'error');}refresh();}
 function recordSimulation(){if(result)diagnostic('simulation.state',{status,simulationMs:simTime,pins:runtime?.gpio||{},parts:result.parts,fault:result.fault,warnings:result.warnings});}
