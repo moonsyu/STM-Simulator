@@ -8,6 +8,8 @@ import {blankProject} from '../../src/project.js';
 import {withTempDir,patched,readText,exists} from './helpers/tmp.js';
 
 const require=createRequire(import.meta.url);
+// Creating a symlink needs a Windows privilege that CI has and many local accounts do not.
+const trySymlink=(target,link)=>fs.symlink(target,link).then(()=>true,error=>{if(error.code==='EPERM')return false;throw error;});
 const workspace=require('../../desktop/workspace.cjs');
 const transaction=require('../../desktop/workspace-transaction.cjs');
 const updater=require('../../desktop/updater.cjs');
@@ -61,7 +63,7 @@ describe('workspace folders',()=>{
     await fs.mkdir(path.join(parent,'other'));await fs.writeFile(path.join(parent,'other','stm-project.json'),JSON.stringify({format:'x',document:'project.stm32lab'}));
     await assert.rejects(workspace.openWorkspace(path.join(parent,'other')),/프로젝트 폴더가 아닙니다/);
     await fs.rename(path.join(state.directory,'old.c'),path.join(parent,'old.c'));await assert.rejects(workspace.openWorkspace(state.directory),/old\.c 소스 파일이 없습니다/);
-    await fs.symlink(path.join(parent,'old.c'),path.join(state.directory,'old.c'));await assert.rejects(workspace.openWorkspace(state.directory),/일반 파일/);
+    if(await trySymlink(path.join(parent,'old.c'),path.join(state.directory,'old.c')))await assert.rejects(workspace.openWorkspace(state.directory),/일반 파일/);
   }));
   test('save writes the complete new file set and removes deleted sources',()=>withWorkspace(async(p,state)=>{
     const n=newProject(p);await workspace.saveWorkspace(state,JSON.stringify(n));await assertNewState(n,state.directory);
@@ -204,7 +206,7 @@ describe('updater: versions, URLs and release metadata',()=>{
     await assert.rejects(updater.verifyFile(file,{...info,bytes:63}),/크기/);
     await assert.rejects(updater.verifyFile(file,{...info,sha256:sha('x')}),/검증에 실패/);
     const noMz=Buffer.from(bytes);noMz.write('ZM',0);await fs.writeFile(file,noMz);await assert.rejects(updater.verifyFile(file,{bytes:noMz.length,sha256:sha(noMz)}),/검증에 실패/);
-    await fs.symlink(path.join(dir,'missing'),path.join(dir,'link.exe'));await assert.rejects(updater.verifyFile(path.join(dir,'link.exe'),info));
+    if(await trySymlink(path.join(dir,'missing'),path.join(dir,'link.exe')))await assert.rejects(updater.verifyFile(path.join(dir,'link.exe'),info));
   },'stm-upd-'));
 });
 
