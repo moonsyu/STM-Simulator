@@ -11,6 +11,25 @@ export class UnionFind {
   find(x){if(!this.parent.has(x))this.parent.set(x,x);const p=this.parent.get(x);if(p!==x)this.parent.set(x,this.find(p));return this.parent.get(x);}
   join(a,b){this.parent.set(this.find(a),this.find(b));}
 }
+// The nets change only when the circuit does: wires, where parts sit, switch positions and pressed buttons. A run
+// solves the same circuit many times a step (every STM32 board solves it again for its own outputs), so the physical
+// nets are kept per project object until that structure changes. (The physical model is made again each time: its
+// copied part settings must follow edits.)
+const NETS=new WeakMap();
+function structureKey(project,pressed){
+ let key=`${project.boardId}|${project.surfaces?.board?.hidden?1:0}${project.surfaces?.breadboard?.hidden?1:0}|${project.components.length}|${project.wires.length}|`;
+ for(const w of project.wires)key+=w.from+'>'+w.to+';';
+ for(const p of project.components){key+=p.id+':'+p.type+':'+(p.catalogVariant??'')+':'+(p.position??'')+':'+(p.model??'');const a=p.attachments;if(a)for(const k in a)key+=k+'='+a[k]+',';key+=';';}
+ for(const k in pressed)if(pressed[k])key+='!'+k;
+ for(const [a,b]of project.catalogTies||[])key+=a+'~'+b;
+ return key;
+}
+function cached(store,project,pressed,build){
+ if(!project||typeof project!=='object')return build();
+ const key=structureKey(project,pressed),hit=store.get(project);
+ if(hit?.key===key)return hit.value;
+ const value=build();store.set(project,{key,value});return value;
+}
 export function topology(project,pressed={}) {
   const model=physicalToModel(project);if(model!==project)return physicalTopology(topology(model,pressed),model);
   const uf=new UnionFind();
@@ -57,9 +76,10 @@ export function solveCircuit(project,gpio={},pressed={},transient={}){
   for(const read of Object.values(result.parts))if(read.channels&&!read.led){const channels=Object.values(read.channels);read.on=channels.some(c=>c.on);if(channels.every(c=>c.led))read.current=channels.reduce((a,c)=>a+c.current,0);}
   return result;
 }
-function solveOnce(project,gpio={},pressed={},transient={}){
-  const model=physicalToModel(project);if(model!==project)return physicalResult(solveOnce(model,gpio,pressed,transient),model);
-  const uf=topology(project,pressed),known=new Map(),warnings=[],diagnostics=[],branches=[],roots=new Set();
+// `owner`: the project the caller passed (the physical model is new on every call, the cached nets belong to it).
+function solveOnce(project,gpio={},pressed={},transient={},owner=project){
+  const model=physicalToModel(project);if(model!==project)return physicalResult(solveOnce(model,gpio,pressed,transient,project),model);
+  const uf=cached(NETS,owner,pressed,()=>topology(project,pressed)),known=new Map(),warnings=[],diagnostics=[],branches=[],roots=new Set();
   const warn=(message,target)=>{warnings.push(message);diagnostics.push({message,target});};
   const fixed=(id,v)=>{const r=uf.find(id);if(known.has(r)&&Math.abs(known.get(r)-v)>0.01)warnings.push('전원 단락: 서로 다른 전압의 전원 또는 GND가 직접 연결되었습니다.');else known.set(r,v);roots.add(r);};
   fixed('signal:GND',0);
