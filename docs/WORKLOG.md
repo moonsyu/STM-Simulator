@@ -23,6 +23,7 @@
   - 실제 Electron E2E 45개 중 43개 통과, 2개 건너뜀(ARM GCC 필요), 실패 0. 추가: 핀 우클릭, SPI 두 보드 실행·로직 분석기 보드 선택·다른 보드 직렬 입력, 스마트폰 → ESP32 BluetoothSerial. app.js 분리 직후 실행이 시작되지 않는 회귀(정리 스크립트가 `...createBoardDrivers` 사용을 놓쳐 import를 지움)를 이 검사로 찾아 고쳤다.
   - 핀 우클릭 E2E는 수정 전 코드에서 실패하고 수정 후 통과하는 것을 확인했다.
   - ESP32 무선 예제 스케치는 이 PC에 Arduino CLI가 없어 실제 esp32 코어로 빌드하지 못했다. STM32 예제는 CI가 ST HAL로 빌드한다.
+- 커밋·릴리스: 기능별 13개(`7d7e83c`~`6e79672`)와 1.11.0 문서·버전(`f091c74`). [Windows CI 41566899457](https://github.com/moonsyu/STM-Simulator/actions/runs/41566899457) 성공(유선 예제 두 보드의 ST HAL 빌드 포함). [Release v1.11.0](https://github.com/moonsyu/STM-Simulator/releases/tag/v1.11.0) 공개 다운로드 확인: latest, 태그·BUILD-INFO 커밋 `f091c74`, sourceDirty false, EXE SHA-256 `97e782d2…a066`(115,401,831 B, MZ)가 SHA256.txt·매니페스트·ZIP 안 EXE와 같음, ZIP `8889f4ee…68cf`.
 - 남은 사항: 실행 파일 서명(요청에서 제외). 에뮬레이터의 보드 간 I²C·SPI(슬레이브 모델 없음). app.js의 나머지 분리. 실물 모듈·실물 보드 두 대 연결 확인 없음.
 
 ## 2026-11-03 · 업데이트 후보 점검

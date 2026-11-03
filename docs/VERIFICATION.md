@@ -1,5 +1,9 @@
 # 검증 기록
 
+## 1.11.0 보드 간 유선 통신 · 무선 확장 · 업데이트 점검 반영 — 공개 배포 검증 완료
+
+2026-11-03. 제품 커밋 `f091c744462f05cc4dae202212f135626c86b910` · [Windows CI 41566899457](https://github.com/moonsyu/STM-Simulator/actions/runs/41566899457) · [Release v1.11.0](https://github.com/moonsyu/STM-Simulator/releases/tag/v1.11.0). 로컬(임시 복제본, Node 24.22.1, Electron 45.2.1): `npm test` 843개 중 842개 통과·1개 건너뜀, E2E 45개 중 43개 통과·2개 건너뜀(ARM GCC 필요), `npm audit` 0건. CI는 전체 검사와 ARM GCC 빌드(WIRE-01·WIRE-02 두 보드 포함)를 통과했다. 공개 다운로드: latest v1.11.0, 태그·BUILD-INFO 커밋 일치, sourceDirty false, `STM-Simulator.exe` SHA-256 `97e782d2ce7849e63a01f2b1e3dfd3d34846f71fa9bb2d53875d08e4ee27a066`(115,401,831 B, MZ)가 SHA256.txt·update-manifest.json·ZIP 안 EXE와 같음, ZIP SHA-256 `8889f4ee87ff6e840a70635ffe492b1e40af82ad9474a0d970c93db257c968cf`. 확인하지 못한 것: ESP32 무선 스케치의 실제 esp32 코어 빌드(이 PC에 Arduino CLI 없음), 실물 모듈·실물 보드 두 대.
+
 ## 1.10.0 블루투스·Wi-Fi 모듈 · 보드 간 통신 예제 — 공개 배포 검증 완료
 
 2026-11-02. 제품 커밋 `9bae2a038fb578a31a4a3736a23dcc0c4816bd79` · [Windows CI 41394150711](https://github.com/moonsyu/STM-Simulator/actions/runs/41394150711) · [Release v1.10.0](https://github.com/moonsyu/STM-Simulator/releases/tag/v1.10.0). 로컬(임시 복제본): `npm test` 818개 중 815 통과, 1 건너뜀, 실패 2는 로컬 symlink 권한. E2E(devboards·docs·stm32-boards) 11 통과. 통신은 시뮬레이터 모델 기준이며 실물 HC-05·HC-06·ESP-01로 시험하지 않았다. CI에서 예제 전체와 BT-01·BT-02·WF-01의 각 STM32 보드 코드를 ST HAL로 빌드해 에뮬레이터에서 실행했다. latest=v1.10.0, 태그·BUILD-INFO 커밋 `9bae2a0` 일치(sourceDirty false), 5자산. EXE SHA-256 `3fd91d7fbd674312e3227619f54d14f267c94b50d6d55399a0999b23a7f976ca`(105,377,218 B, MZ)이 SHA256.txt·update-manifest·ZIP 안의 STM-Simulator.exe와 일치. ZIP SHA-256 `ab82800aeb37ad4981e12ad828490c1bfc683fdd4a103970f4c9237e0e36154d`.
