@@ -164,7 +164,13 @@ export function connectStm32Drivers(session){
  for(const d of session.circuit.drivers)d.joinWireless?.(session.wireless);
  linkFirmwareUarts(session);
  const drivers=session.circuit.drivers.filter(d=>d instanceof Stm32Driver&&!d.emulate);if(!drivers.length)return;
- const boards=[{name:'main',map:id=>id,session:()=>session},...drivers.map(d=>({name:d.part.name,map:d.map,session:()=>d.session}))];
+ const boards=[{name:'main',map:id=>id,session:()=>session},...drivers.map(d=>({name:d.part.name,id:d.part.id,map:d.map,session:()=>d.session}))];
+ const others=session.circuit.drivers.filter(d=>!(d instanceof Stm32Driver));
+ // A board as seen from another one: the main board's pins are `<viewer id>.PA5` there (viewMapper).
+ const port=(viewer,board)=>{
+  const hal=()=>board.session().hal,r=()=>board.session().runtime;
+  return {part:{id:board.id??viewer.id},i2cSlave:()=>hal()?.i2cSlaveInfo(),i2cReceive:bytes=>hal().i2cSlaveReceive(bytes,r()),i2cRequest:count=>hal().i2cSlaveRequest(count,r()),spiSlave:()=>hal()?.spiSlaveInfo(),spiExchange:value=>hal().spiSlaveExchange(value,r())};
+ };
  const buses=s=>s.hal?[...s.hal.serials.values()].map(c=>c.bus):[s.buses];
  for(const from of boards){
   const deliver=(bus,frames)=>{
@@ -177,7 +183,8 @@ export function connectStm32Drivers(session){
    return count;
   };
   // Every UART of the board shares the board's hook (hal.uart copies it to the USART buses it creates).
-  const attach=()=>{from.session().buses.peers=deliver;};attach();from.attach=attach;
+  const ports=[...others,...boards.filter(b=>b!==from).map(b=>port(from,b))];
+  const attach=()=>{const {buses}=from.session();buses.peers=deliver;buses.boards=()=>ports;};attach();from.attach=attach;
  }
  for(const d of drivers){const reset=d.reset.bind(d),board=boards.find(b=>b.name===d.part.name);d.reset=()=>{reset();board.attach();};}
 }

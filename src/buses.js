@@ -36,7 +36,7 @@ export class BusDevices {
   i2cTarget(address){
     const w=this.wire,candidates=this.project.components.filter(p=>['i2c',...I2C_DEVICES].includes(p.type)&&p.address===address&&this.powered(p)&&this.same(this.terminal(p,3),this.pin(w.sda))&&this.same(this.terminal(p,4),this.pin(w.scl)));
     const result=this.result(),sda=result?.voltage(this.pin(w.sda)),scl=result?.voltage(this.pin(w.scl));
-    // A fixed-run board answering as an I2C slave on the same SDA/SCL nets (STM32 ↔ ESP32 lecture example).
+    // Another board answering as an I2C slave on the same SDA/SCL nets (a fixed run, an ESP32 sketch or another STM32).
     const board=!candidates.length&&this.boards?.().find(d=>{const s=d.i2cSlave?.();return s?.address===address&&this.same(`signal:${d.part.id}.${s.sda}`,this.pin(w.sda))&&this.same(`signal:${d.part.id}.${s.scl}`,this.pin(w.scl));});
     if(board)return {part:{type:'board',driver:board},connected:sda>2&&scl>2&&!this.same(this.pin(w.sda),this.pin(w.scl))};
     return {part:candidates[0],connected:candidates.length===1&&sda>2&&scl>2&&!this.same(this.pin(w.sda),this.pin(w.scl))};
@@ -124,6 +124,8 @@ export class BusDevices {
   }
   spiRespond(value,runtime){
       const s=this.spi;{
+      const board=this.boards?.().find(d=>{const q=d.spiSlave?.();return q&&this.same(`signal:${d.part.id}.${q.mosi}`,this.pin(s.mosi))&&this.same(`signal:${d.part.id}.${q.miso}`,this.pin(s.miso))&&this.same(`signal:${d.part.id}.${q.sck}`,this.pin(s.sck));});
+      if(board)return board.spiExchange(value);
       const active=this.project.components.filter(p=>['spi',...SPI_DEVICES].includes(p.type)&&this.powered(p)&&(p.catalogVariant?.startsWith('rgb-')||this.same(this.terminal(p,4),this.pin(s.sck)))&&this.same(this.terminal(p,5),this.pin(s.mosi))&&(p.type!=='spi'||this.same(this.terminal(p,6),this.pin(s.miso)))&&(p.catalogVariant?.startsWith('rgb-')||this.result()?.voltage(this.terminal(p,3))!=null&&this.result()?.voltage(this.terminal(p,3))<.8));
       if(active.length>1)throw new Error('SPI CS가 동시에 활성화되었습니다.');
       let answer=this.same(this.pin(s.mosi),this.pin(s.miso))?value:255;
