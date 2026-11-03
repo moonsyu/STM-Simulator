@@ -3,7 +3,9 @@ import { IRQ } from './tables.js';
 
 // SPI1..4 (RM0390 section 26): master full duplex / receive-only, 8/16-bit
 // frames at PCLK/2^(BR+1), CPOL/CPHA, LSB first, hardware NSS output,
-// TXE/RXNE/BSY/OVR/MODF flags, interrupts and DMA. I2S master transmit
+// TXE/RXNE/BSY/OVR/MODF flags, interrupts and DMA. Slave mode (software NSS) for
+// another emulated board's master: each byte it clocks lands in DR (OVR when the
+// program has not read the last one) and takes the byte the program wrote. I2S master transmit
 // (SPI2/SPI3 I2SMOD) produces audio samples for a connected I2S amplifier.
 const CR1 = 0x00, CR2 = 0x04, SR = 0x08, DR = 0x0c, CRCPR = 0x10, RXCRCR = 0x14, TXCRCR = 0x18, I2SCFGR = 0x1c, I2SPR = 0x20;
 const APB2 = new Set(['SPI1', 'SPI4']);
@@ -112,6 +114,14 @@ export class Spi extends Peripheral {
       else this.clearBits(SR, 0x80);
       this.updateIrq(); this.dmaLines();
     });
+  }
+  slaveSelected() { const c = this.get(CR1); return !this.i2s() && !this.master() && this.enabled() && !!bit(c, 9) && !bit(c, 8); }
+  slaveExchange(byte) {
+    const out = this.txBuf ?? this.lastTx ?? 0;
+    if (this.txBuf != null) { this.lastTx = this.txBuf; this.txBuf = null; this.setBits(SR, 2); }
+    if (bit(this.get(SR), 0)) this.setBits(SR, 1 << 6); else { this.rxBuf = byte & 0xff; this.setBits(SR, 1); }
+    this.stats.frames++; this.updateIrq(); this.dmaLines();
+    return out & 0xff;
   }
   config() { const c = this.get(CR1); return { cpol: bit(c, 1), cpha: bit(c, 0), lsbFirst: !!bit(c, 7), hz: this.sckHz(), pins: this.pins() }; }
   exchange(byte, cfg) {

@@ -162,7 +162,7 @@ export function connectStm32Drivers(session){
  for(const d of session.circuit.drivers)if(d instanceof Stm32Driver)d.host=session;
  // Wireless modules: every board of the run shares the main board's air.
  for(const d of session.circuit.drivers)d.joinWireless?.(session.wireless);
- linkFirmwareUarts(session);
+ linkFirmwareBoards(session);
  const drivers=session.circuit.drivers.filter(d=>d instanceof Stm32Driver&&!d.emulate);if(!drivers.length)return;
  const boards=[{name:'main',map:id=>id,session:()=>session},...drivers.map(d=>({name:d.part.name,id:d.part.id,map:d.map,session:()=>d.session}))];
  const others=session.circuit.drivers.filter(d=>!(d instanceof Stm32Driver));
@@ -188,11 +188,18 @@ export function connectStm32Drivers(session){
  }
  for(const d of drivers){const reset=d.reset.bind(d),board=boards.find(b=>b.name===d.part.name);d.reset=()=>{reset();board.attach();};}
 }
-/** The emulator's side of board-to-board UART: each board decodes what its pins send at the settings of the USART listening on that net. */
-function linkFirmwareUarts(session){
+/**
+ * The emulator's side of board-to-board buses: each board decodes what its pins send at the settings of the USART
+ * listening on that net, and its I2C / SPI masters reach the slaves of the other boards (FirmwareSession.boardPeers).
+ */
+function linkFirmwareBoards(session){
  const drivers=session.circuit.drivers.filter(d=>d instanceof Stm32Driver&&d.emulate);if(!drivers.length||!session.soc)return;
  const boards=[{key:'main',map:id=>id,session:()=>session},...drivers.map(d=>({key:d.part.id,map:d.map,session:()=>d.session}))];
- const link=from=>{for(const to of boards)if(to!==from)for(const usart of Object.keys(to.session().soc.usarts))from.session().linkPeerUart(usart,from.key,to.session,id=>from.map(to.map(id)));};
+ const link=from=>{
+  const others=boards.filter(to=>to!==from);
+  for(const to of others)for(const usart of Object.keys(to.session().soc.usarts))from.session().linkPeerUart(usart,from.key,to.session,id=>from.map(to.map(id)));
+  from.session().boardPeers=others.map(to=>({session:to.session,view:id=>from.map(to.map(id))}));
+ };
  boards.forEach(link);
  for(const d of drivers){const reset=d.reset.bind(d),board=boards.find(b=>b.key===d.part.id);d.reset=()=>{reset();link(board);};}
 }

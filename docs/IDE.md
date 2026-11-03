@@ -159,13 +159,13 @@ Vim은 `highlight ... guifg=#RRGGBB guibg=#RRGGBB gui=...`, `highlight link`, �
 - **실물 보드**: 실행 대상이 실물 보드일 때 실행(Ctrl+F5)하면 보드마다 그 보드의 소스로 빌드해 각자의 ST-LINK에 차례로 기록·검증·리셋한다. ST-LINK는 보드 속성의 **실물 기록 ST-LINK**에서 고른다. **자동**이면 연결된 ST-LINK 중 보드 종류가 같은 것을 쓰고, 같은 종류 보드가 두 개 이상이면 고르라고 알려 준다. 한 ST-LINK를 두 보드에 지정할 수 없다. 디버그(F10, GDB)는 편집 중인 보드 하나에만 연결한다.
 - **삭제**: 편집 중인 보드(주 보드)를 지우면 다음 STM32 보드가 편집 중인 보드가 된다.
 
-**보드끼리 유선 통신**(1.11.0): UART는 시뮬레이터와 에뮬레이터 모두, I²C·SPI는 시뮬레이터(HAL 해석 실행)에서 된다. 슬레이브 쪽은 `hi2c1.Init.OwnAddress1`에 주소를 넣고 `HAL_I2C_Slave_Receive`·`HAL_I2C_Slave_Transmit`(`_IT`와 `HAL_I2C_SlaveRxCpltCallback`·`HAL_I2C_SlaveTxCpltCallback`도 가능)을, SPI는 `hspi1.Init.Mode = SPI_MODE_SLAVE`로 초기화해 `HAL_SPI_Receive`·`HAL_SPI_Transmit`·`HAL_SPI_TransmitReceive`(또는 `_IT`)를 쓴다. 넷이 같아야 하고 I²C는 풀업이 필요하다(F103의 I²C 핀은 내부 풀업이 없어 실물도 외부 저항이 필요하다). 슬레이브가 처음 듣기 전에 보내면 NACK이다. 호출 사이에 도착한 바이트는 다음 호출이 받는다(I²C 클럭 늘이기, SPI 시프트 레지스터 해당). 예제 `STM32·STM32 I²C 통신`, `STM32·STM32 SPI 통신`.
+**보드끼리 유선 통신**(1.11.0, 에뮬레이터 I²C·SPI는 1.12.0): UART·I²C·SPI 모두 시뮬레이터(HAL 해석 실행)와 펌웨어 에뮬레이터에서 된다. 에뮬레이터에서는 다른 보드의 I2C·SPI 주변장치가 실제 레지스터 동작(OAR1 주소, ADDR·TRA·RxNE·TxE·STOPF·AF, SPI 슬레이브의 RXNE·TXE·OVR)으로 응답하고, 슬레이브가 DR을 채우기 전의 읽기는 SCL을 늘인 것처럼 기다린다(최대 1초). 슬레이브 쪽은 `hi2c1.Init.OwnAddress1`에 주소를 넣고 `HAL_I2C_Slave_Receive`·`HAL_I2C_Slave_Transmit`(`_IT`와 `HAL_I2C_SlaveRxCpltCallback`·`HAL_I2C_SlaveTxCpltCallback`도 가능)을, SPI는 `hspi1.Init.Mode = SPI_MODE_SLAVE`로 초기화해 `HAL_SPI_Receive`·`HAL_SPI_Transmit`·`HAL_SPI_TransmitReceive`(또는 `_IT`)를 쓴다. 넷이 같아야 하고 I²C는 풀업이 필요하다(F103의 I²C 핀은 내부 풀업이 없어 실물도 외부 저항이 필요하다). 슬레이브가 처음 듣기 전에 보내면 NACK이다. 호출 사이에 도착한 바이트는 다음 호출이 받는다(I²C 클럭 늘이기, SPI 시프트 레지스터 해당). 예제 `STM32·STM32 I²C 통신`, `STM32·STM32 SPI 통신`.
 
 **직렬 모니터**: 다른 STM32 보드는 대상을 그 보드로 고르면 보낸 글자가 USART2로 들어간다. **로직 분석기**: 보드가 둘 이상이면 **보드** 목록에서 고른 보드의 파형과 디코딩이 보인다.
 
 **폴더 프로젝트**: 다른 보드의 코드도 `board-<부품 id>-main.c`처럼 `main.c` 옆에 저장하고 열 때 읽는다. 1.11.0 전에 저장한 폴더는 그대로 열리고 다음 저장 때 파일이 생긴다.
 
-한계: STM32 에뮬레이터는 I²C·SPI 슬레이브 모델이 없어 에뮬레이터 실행에서는 보드끼리 I²C·SPI가 되지 않는다. SPI 슬레이브의 NSS는 소프트웨어 방식만 있어 항상 선택 상태다. 보드 프로그램은 회로 시간 단계(화면 갱신 단위)만큼 어긋나 돌므로 마스터는 슬레이브가 다음 호출을 할 시간을 두어야 한다. HAL 예제를 적용하면 회로 전체가 예제 회로로 바뀌어 다른 보드도 빠진다(실행 취소로 복구). 보드를 하나 더 실행할 때마다 시뮬레이션 계산이 그만큼 늘어난다. 1.7.0에서 저장한 여러 STM32 보드 회로는 이전 버전에서 열리지 않는다.
+한계: SPI 슬레이브의 NSS는 소프트웨어 방식만 있어 항상 선택 상태다. 보드 프로그램은 회로 시간 단계(화면 갱신 단위)만큼 어긋나 돌므로 마스터는 슬레이브가 다음 호출을 할 시간을 두어야 한다. HAL 예제를 적용하면 회로 전체가 예제 회로로 바뀌어 다른 보드도 빠진다(실행 취소로 복구). 보드를 하나 더 실행할 때마다 시뮬레이션 계산이 그만큼 늘어난다. 1.7.0에서 저장한 여러 STM32 보드 회로는 이전 버전에서 열리지 않는다.
 
 ## ESP32·라즈베리파이 보드와 강의 실습 예제
 

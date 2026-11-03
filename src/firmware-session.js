@@ -215,6 +215,31 @@ export class FirmwareSession {
     }
     return list;
   }
+  // ------------------------------------------------------------ other emulated boards (stm32-boards.js linkFirmwareBoards)
+  // `boardPeers`: [{session: () => FirmwareSession, view: name on that board -> name here}].
+  same(a, b) { const r = this.result; return !!r?.uf && r.uf.find(a) === r.uf.find(b); }
+  peerI2c(name, address, pins) {
+    for (const peer of this.boardPeers ?? []) {
+      const other = peer.session();
+      for (const i2c of Object.values(other.soc.i2cs ?? {})) {
+        if (!i2c.slaveListens?.(address)) continue;
+        const p = i2c.pins();
+        if (p.sda && p.scl && this.same(peer.view('signal:' + p.sda), 'signal:' + pins.sda) && this.same(peer.view('signal:' + p.scl), 'signal:' + pins.scl)) return i2c;
+      }
+    }
+    return null;
+  }
+  peerSpi(pins) {
+    for (const peer of this.boardPeers ?? []) {
+      const other = peer.session();
+      for (const spi of Object.values(other.soc.spis ?? {})) {
+        if (!spi.slaveSelected?.()) continue;
+        const p = spi.pins();
+        if (p.sck && p.mosi && p.miso && this.same(peer.view('signal:' + p.sck), 'signal:' + pins.sck) && this.same(peer.view('signal:' + p.mosi), 'signal:' + pins.mosi) && this.same(peer.view('signal:' + p.miso), 'signal:' + (pins.miso || pins.mosi))) return spi;
+      }
+    }
+    return null;
+  }
   // Another emulated STM32 board (`target()`, its pins named by `view` here) has this USART listening on a net of this board's pins.
   linkPeerUart(usart, key, target, view) {
     const sig = this.soc.signals, settings = () => { const u = target().soc.usarts[usart], b = u.baud(); return b && u.rxEnabled() && u.rxPins()[0] ? { baud: b, dataBits: u.frameBits(), parity: u.parity(), stopBits: u.stopBits() } : null; };
@@ -287,6 +312,9 @@ export class FirmwareSession {
         const sda = r?.voltage('signal:' + pins.sda), scl = r?.voltage('signal:' + pins.scl);
         const candidates = session.project.components.filter(p => ['i2c', ...I2C_DEVICES].includes(p.type) && p.address === a && buses.powered(p) && buses.same(buses.terminal(p, 3), buses.pin(pins.sda)) && buses.same(buses.terminal(p, 4), buses.pin(pins.scl)));
         part = candidates.length === 1 && sda > 2 && scl > 2 ? candidates[0] : null;
+        // Another emulated STM32 board listening on its own address on the same SDA/SCL nets.
+        const peer = !candidates.length && sda > 2 && scl > 2 && session.peerI2c(name, a, pins);
+        if (peer) { part = { type: 'board', slave: peer }; report(`0x${a.toString(16)} ${read ? 'READ' : 'WRITE'} · ACK (다른 보드)`); return peer.slaveAddress(read); }
         if (!part) { report(`0x${a.toString(16)} ${read ? 'READ' : 'WRITE'} · NACK`); return false; }
         if (!read) return true;
         if (part.type === 'i2c') { const m = buses.memory(part); reader = () => { const v = m.data[m.address]; m.address = (m.address + 1) & 255; return v; }; }
@@ -296,11 +324,11 @@ export class FirmwareSession {
         report(`0x${a.toString(16)} READ · ACK`);
         return true;
       },
-      write(byte) { if (!part) return false; writing.push(byte & 0xff); return true; },
-      read() { return reader ? reader() & 0xff : 0xff; },
-      nack() {},
-      restart() { commit(); },
-      stop() { commit(); part = null; reader = null; },
+      write(byte) { if (!part) return false; if (part.slave) return part.slave.slaveWrite(byte & 0xff); writing.push(byte & 0xff); return true; },
+      read() { if (part?.slave) return part.slave.slaveRead(); return reader ? reader() & 0xff : 0xff; },
+      nack() { part?.slave?.slaveNack(); },
+      restart() { if (part?.slave) { part.slave.slaveStop(); part = null; return; } commit(); },
+      stop() { if (part?.slave) { part.slave.slaveStop(); part = null; return; } commit(); part = null; reader = null; },
     };
   }
   spiTransfer(name, pins, byte, cfg = {}) {
@@ -317,6 +345,8 @@ export class FirmwareSession {
         if (this.sdSelected) { this.sdcard.deselect(); this.sdSelected = false; }
       }
     }
+    const slave = this.peerSpi(pins);
+    if (slave) return slave.slaveExchange(byte);
     buses.spi = { mosi: pins.mosi, miso: pins.miso || pins.mosi, sck: pins.sck, clock: Math.round(cfg.hz || 1e6), ready: true };
     const fake = { microTime: this.now, pin: p => p, api: {} };
     try { return buses.call('SPI.transfer', [byte], fake) & 0xff; }

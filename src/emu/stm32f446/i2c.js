@@ -6,7 +6,10 @@ import { IRQ } from './tables.js';
 // deferred STOP/RESTART after the byte in progress, interrupts and DMA (LAST).
 // Devices are reached through soc.i2cBus(name) (session adapter over the
 // existing transaction-level device models).
-const CR1 = 0x00, CR2 = 0x04, DR = 0x10, SR1 = 0x14, SR2 = 0x18, CCR = 0x1c, TRISE = 0x20;
+// Slave mode, for another emulated board's master: own address OAR1 with ACK set,
+// ADDR/TRA, RxNE (bytes the program has not read yet wait, like a stretched clock),
+// TxE (the master's read waits for the program to write DR), STOPF and AF.
+const CR1 = 0x00, CR2 = 0x04, OAR1 = 0x08, DR = 0x10, SR1 = 0x14, SR2 = 0x18, CCR = 0x1c, TRISE = 0x20;
 
 export class I2c extends Peripheral {
   constructor(soc, name) { super(soc, name); this.reset(); }
@@ -17,6 +20,7 @@ export class I2c extends Peripheral {
     this.state = 'idle'; this.shifting = false; this.txHold = null; this.rxShift = null;
     this.sr1Read = false; this.pendingStart = false; this.pendingStop = false; this.transmitter = false;
     this.device = null; this.prevAck = 1; this.lastAck = 1; this.t = 0; this.log = [];
+    this.slaveState = null; this.held = []; this.stopSeen = false;
   }
   pclk() { return this.soc.clock.pclk1; }
   sclHz() {
@@ -33,7 +37,7 @@ export class I2c extends Peripheral {
     if (off === SR1) { this.sr1Read = true; return this.get(SR1); }
     if (off === SR2) {
       const v = this.get(SR2);
-      if (this.sr1Read && bit(this.get(SR1), 1)) { this.clearBits(SR1, 2); this.addrCleared(); }
+      if (this.sr1Read && bit(this.get(SR1), 1)) { this.clearBits(SR1, 2); if (this.slaveState) this.slaveAddrCleared(); else this.addrCleared(); }
       this.sr1Read = false;
       return v;
     }
@@ -54,6 +58,7 @@ export class I2c extends Peripheral {
       case CR1: {
         if (bit(v, 15)) { this.reset(); this.set(CR1, 0x8000); return; }
         this.set(CR1, v);
+        if (this.sr1Read && bit(this.get(SR1), 4)) { this.clearBits(SR1, 1 << 4); this.sr1Read = false; } // STOPF: SR1 read, then CR1 write
         if (!bit(v, 0)) { this.abortAll(); this.set(SR1, 0); this.set(SR2, 0); this.set(CR1, v & ~0x300); break; }
         if (bit(v, 8) && !bit(old, 8)) this.requestStart();
         if (bit(v, 9) && !bit(old, 9)) this.requestStop();
@@ -105,6 +110,7 @@ export class I2c extends Peripheral {
   }
   writeDr(byte) {
     this.set(DR, byte);
+    if (this.slaveState === 'tx') { if (this.sr1Read && bit(this.get(SR1), 2)) this.clearBits(SR1, 4); this.sr1Read = false; this.clearBits(SR1, 0x80); return; }
     const sr1 = this.get(SR1);
     if (this.state === 'address' && bit(sr1, 0)) { // SB cleared by SR1 read + DR write
       if (this.sr1Read) this.clearBits(SR1, 1);
@@ -156,7 +162,14 @@ export class I2c extends Peripheral {
   receiveNext() {
     if (this.state !== 'rx' || this.shifting || this.pendingStop || this.pendingStart) return;
     this.shifting = true;
+    this.readByte();
+  }
+  readByte() {
     let byte = this.device ? this.device.read() : 0xff;
+    // A slave board stretching SCL: the byte is still in progress (a STOP waits for it); ask again a bit later,
+    // and give up after a second like a stuck bus.
+    if (byte == null) { this.stretch = (this.stretch ?? 0) + 1; if (this.stretch * this.bitUs() < 1e6) { this.after(1, () => this.readByte()); return; } byte = 0xff; }
+    this.stretch = 0;
     byte = this.corrupt(byte);
     this.after(9, () => {
       this.shifting = false;
@@ -174,6 +187,7 @@ export class I2c extends Peripheral {
     });
   }
   afterDrRead() {
+    if (this.slaveState === 'rx') { if (this.held.length) { this.set(DR, this.held.shift()); this.setBits(SR1, 1 << 6); } else if (this.stopSeen) this.slaveRxDone(); return; }
     if (this.state === 'rx' && this.rxShift != null) {
       this.set(DR, this.rxShift); this.rxShift = null; this.setBits(SR1, 1 << 6); this.clearBits(SR1, 4);
       if (this.lastAck) this.receiveNext();
@@ -183,6 +197,36 @@ export class I2c extends Peripheral {
     if (this.pendingStart) { this.clearBits(SR1, 0x84); this.generateStart(); return; }
     if (this.pendingStop) { this.generateStop(); }
   }
+  // ------------------------------------------------------------ slave side (soc.i2cPeers on the master's board)
+  slaveListens(addr) { return !this.slaveState && this.enabled() && !!bit(this.get(CR1), 10) && this.state === 'idle' && ((this.get(OAR1) >> 1) & 0x7f) === addr && !bit(this.get(OAR1), 15); }
+  slaveAddress(read) {
+    this.slaveState = read ? 'tx-addr' : 'rx-addr'; this.held = []; this.stopSeen = false;
+    this.setBits(SR1, 2); this.setBits(SR2, read ? 6 : 2); if (!read) this.clearBits(SR2, 4);
+    this.update(); return true;
+  }
+  slaveAddrCleared() {
+    if (this.slaveState === 'tx-addr') { this.slaveState = 'tx'; this.setBits(SR1, 0x80); }
+    else if (this.slaveState === 'rx-addr') { this.slaveState = 'rx'; if (this.held.length) { this.set(DR, this.held.shift()); this.setBits(SR1, 1 << 6); } else if (this.stopSeen) this.slaveRxDone(); }
+  }
+  slaveWrite(byte) {
+    if (!this.slaveState?.startsWith('rx')) return false;
+    if (this.slaveState === 'rx' && !bit(this.get(SR1), 6)) { this.set(DR, byte); this.setBits(SR1, 1 << 6); }
+    else if (this.held.length < 256) this.held.push(byte); else return false;
+    this.update(); return !!bit(this.get(CR1), 10);
+  }
+  // null: the program has not written DR yet; the master keeps the clock low and asks again.
+  slaveRead() {
+    if (this.slaveState !== 'tx' || bit(this.get(SR1), 7)) return null;
+    const byte = this.get(DR); this.setBits(SR1, 0x80); this.update(); return byte;
+  }
+  slaveNack() { if (this.slaveState === 'tx') { this.setBits(SR1, 1 << 10); this.update(); } }
+  // The master may finish before this board's program has read everything: STOPF comes once it has.
+  slaveStop() {
+    if (!this.slaveState) return;
+    if (this.slaveState.startsWith('rx')) { this.stopSeen = true; if (this.slaveState === 'rx' && !this.held.length && !bit(this.get(SR1), 6)) this.slaveRxDone(); return; }
+    this.slaveState = null; this.clearBits(SR2, 6); this.clearBits(SR1, 0x80); this.update();
+  }
+  slaveRxDone() { this.slaveState = null; this.stopSeen = false; this.setBits(SR1, 1 << 4); this.clearBits(SR2, 6); this.update(); }
   corrupt(byte) { let b = byte; for (let i = 0; i < 8; i++) if (this.soc.signals.flip() || this.soc.signals.glitch()) b ^= 1 << i; return b; }
   // ------------------------------------------------------------ waveforms
   wave(kind, value, ack, fromDevice) {
