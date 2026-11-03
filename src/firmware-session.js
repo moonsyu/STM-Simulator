@@ -184,6 +184,7 @@ export class FirmwareSession {
       if (/^P[A-H]\d+$/.test(name)) endpoint = 'signal:' + name;
       else if (name.startsWith('uart:')) endpoint = `part:${name.slice(5)}:p3`;
       else if (name === 'vcp') { if (pin === 'PA3') out.push(line); continue; }
+      else if (name.startsWith('peer:')) { if (line.rx === pin) out.push(line); continue; }
       if (endpoint && root && r.uf.find(endpoint) === root) out.push(line);
     }
     return out;
@@ -213,6 +214,20 @@ export class FirmwareSession {
       }));
     }
     return list;
+  }
+  // Another emulated STM32 board (`target()`, its pins named by `view` here) has this USART listening on a net of this board's pins.
+  linkPeerUart(usart, key, target, view) {
+    const sig = this.soc.signals, settings = () => { const u = target().soc.usarts[usart], b = u.baud(); return b && u.rxEnabled() && u.rxPins()[0] ? { baud: b, dataBits: u.frameBits(), parity: u.parity(), stopBits: u.stopBits() } : null; };
+    this.receivers.push(new UartReceiver(sig, this.soc, {
+      sources: () => { const r = this.result, rx = target().soc.usarts[usart].rxPins()[0]; if (!r?.uf || !rx || !settings()) return []; const root = r.uf.find(view('signal:' + rx)), out = []; for (const [name, line] of sig.lines) if (line.protocol === 'uart' && /^P[A-H]\d+$/.test(name) && r.uf.find('signal:' + name) === root) out.push(line); return out; },
+      config: settings,
+      onFrame: f => { if (!f.framingError) target().peerFrame(usart, key, f.value, settings()); },
+    }));
+  }
+  peerFrame(usart, key, value, cfg) {
+    const sig = this.soc.signals, id = `peer:${key}:${usart}`, rx = this.soc.usarts[usart].rxPins()[0], line = sig.line(id); line.protocol = 'uart'; line.rx = rx;
+    sig.channel(id, `다른 보드 → ${usart} RX`, 'uart', [{ id, label: `다른 보드 TX → ${rx}`, role: 'tx' }]);
+    sig.uartFrame(line, Math.max(this.now, line.end), value, cfg);
   }
   wirelessRx(module, frames, baud) {
     const sig = this.soc.signals, id = 'uart:' + module.id, line = sig.line(id); line.protocol = 'uart';

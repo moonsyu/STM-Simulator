@@ -162,6 +162,7 @@ export function connectStm32Drivers(session){
  for(const d of session.circuit.drivers)if(d instanceof Stm32Driver)d.host=session;
  // Wireless modules: every board of the run shares the main board's air.
  for(const d of session.circuit.drivers)d.joinWireless?.(session.wireless);
+ linkFirmwareUarts(session);
  const drivers=session.circuit.drivers.filter(d=>d instanceof Stm32Driver&&!d.emulate);if(!drivers.length)return;
  const boards=[{name:'main',map:id=>id,session:()=>session},...drivers.map(d=>({name:d.part.name,map:d.map,session:()=>d.session}))];
  const buses=s=>s.hal?[...s.hal.serials.values()].map(c=>c.bus):[s.buses];
@@ -179,6 +180,14 @@ export function connectStm32Drivers(session){
   const attach=()=>{from.session().buses.peers=deliver;};attach();from.attach=attach;
  }
  for(const d of drivers){const reset=d.reset.bind(d),board=boards.find(b=>b.name===d.part.name);d.reset=()=>{reset();board.attach();};}
+}
+/** The emulator's side of board-to-board UART: each board decodes what its pins send at the settings of the USART listening on that net. */
+function linkFirmwareUarts(session){
+ const drivers=session.circuit.drivers.filter(d=>d instanceof Stm32Driver&&d.emulate);if(!drivers.length||!session.soc)return;
+ const boards=[{key:'main',map:id=>id,session:()=>session},...drivers.map(d=>({key:d.part.id,map:d.map,session:()=>d.session}))];
+ const link=from=>{for(const to of boards)if(to!==from)for(const usart of Object.keys(to.session().soc.usarts))from.session().linkPeerUart(usart,from.key,to.session,id=>from.map(to.map(id)));};
+ boards.forEach(link);
+ for(const d of drivers){const reset=d.reset.bind(d),board=boards.find(b=>b.key===d.part.id);d.reset=()=>{reset();link(board);};}
 }
 /** Drivers of the STM32 boards that run this time (`scope`: 'all' or one board id), keyed ELFs for the emulator. */
 export function createStm32Drivers(project,{scope='all',emulate=false,elfs={},log=()=>{},trace=()=>{}}={}){
