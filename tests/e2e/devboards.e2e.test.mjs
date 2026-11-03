@@ -72,6 +72,20 @@ test('boards on SPI wires: the logic analyzer lists each board and the monitor r
  }finally{await s.close();}
 });
 
+test('the serial monitor reaches a phone on an ESP32 running BluetoothSerial',{timeout:120000},async()=>{
+ const s=await launch();
+ try{
+  const {win}=s;await applyLecture(win,'BT-03');await win.keyboard.press('Control+F5');
+  await win.click('[data-monitor="bus"]');await win.selectOption('#serial-target','outside:phone:esp32bt:esp1');
+  await win.waitForFunction(()=>!document.getElementById('serial-send').disabled);
+  await win.waitForTimeout(500);await win.fill('#serial-input','1');await win.click('#serial-send');
+  assert.equal(await win.evaluate(()=>document.getElementById('serial-feedback').textContent),'');
+  await win.waitForFunction(()=>/LED ON/.test(document.getElementById('uart-output').textContent),null,{timeout:30000});
+  await win.keyboard.press('Control+F2');
+  assert.deepEqual(s.errors,[]);
+ }finally{await s.close();}
+});
+
 test('a pin with a wire on it still shows its GPIO in the tooltip',{timeout:120000},async()=>{
  const s=await launch();
  try{
@@ -112,7 +126,7 @@ test('examples are grouped by board; a shell assignment reads serial monitor inp
   // FW-09 uses an STM32 and an ESP32: listed in both groups.
   assert.equal(await win.locator('#hal-example-list [data-example="lecture:lecture-fw-09"]').count(),2);
   assert.ok(!/RPI-0|KER-0|라즈베리파이5/.test(await win.textContent('#hal-example-list')));
-  await win.click('[data-example-board="esp32"]');assert.deepEqual(await groups(),['ESP32']);assert.equal(await win.locator('#hal-example-list [data-example]').count(),4);
+  await win.click('[data-example-board="esp32"]');assert.deepEqual(await groups(),['ESP32']);assert.equal(await win.locator('#hal-example-list [data-example]').count(),6);
   await win.click('[data-example-board="rpi"]');assert.deepEqual(await groups(),['Raspberry Pi']);assert.equal(await win.locator('#hal-example-list [data-example]').count(),15);
   await win.click('[data-example-board="all"]');
   // LED 제어 쉘: the serial monitor sends lines to the Raspberry Pi program.

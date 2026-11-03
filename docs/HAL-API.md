@@ -12,6 +12,8 @@ STM32F446RE·STM32F103RB용 **HAL API 호환 회로 모델**입니다. CubeMX/Cu
 6. 데스크톱의 **Cube 프로젝트 폴더**는 루트 `.ioc`, `Core/Src`, `Core/Inc`를 읽습니다. `Drivers`, startup, syscalls, sysmem, system_stm32f4xx/system_stm32f1xx는 가져오지 않고, 프로젝트의 `stm32f4xx_hal_conf.h`/`stm32f1xx_hal_conf.h`는 ARM 빌드 설정(HSE_VALUE 등)으로 유지합니다. conf가 없으면 SDK 템플릿에 NUCLEO의 HSE 8 MHz(`HSE_VALUE=8000000U`)를 넣어 빌드합니다. 파일은 원본에 쓰지 않고 회로 프로젝트에 복사합니다.
 7. 편집기 상단에서 `main.c`와 가져온 `.c/.h`를 전환해 수정합니다. **코드 검사**는 문법을 검사하고, 시뮬레이션 시작 시 핀·초기화·배선·지원 API를 검사합니다.
 
+슬레이브 HAL 함수(`HAL_I2C_Slave_*`, `SPI_MODE_SLAVE`의 `HAL_SPI_*`)는 다른 STM32 보드가 마스터일 때 동작합니다([IDE 사용법](IDE.md)의 보드끼리 유선 통신).
+
 HAL 코드·회로 예제는 GPIO·EXTI·UART·TIM2·ADC·I²C·SPI·함수/구조체·PWM·초음파와 확장 센서·화면·구동·입력 부품을 포함한 기본 예제와 조사 항목별 예제, 무선 모듈 예제를 합쳐 총 130개입니다. 모두 HAL C를 사용하며 Serial 호출은 없습니다. 선택한 예제의 코드·MCU 설정·부품·배선·계산 설정을 함께 적용하고 회로 이름은 유지합니다. 전원과 통신/센서 배선까지 구성되며, PWM 예제는 파형 계산 설정도 적용합니다. 함수·배열 예제는 외부 부품 없이 로그로 실행합니다. 예제를 선택하는 즉시 확인 창 없이 적용하며 Ctrl+Z로 이전 작업 전체를 되돌립니다. 새 회로도 부품·배선 없이 HAL 코드로 시작합니다.
 
 기본 UART 예제는 USART2 PA2(TX)/PA3(RX), 9600 baud이며 외부 부품·배선이 필요 없습니다. 실행 후 하단 **통신 → ST-LINK VCP → USART2 (내장)**에서 문자를 보내면 수신 인터럽트로 에코합니다. 외부 장치 예제는 별도로 제공하며 **외부 UART 장치 → USART2**를 선택하고 전원·공통 GND·TX/RX 교차 배선·baud를 맞춰야 합니다. ADC 배열 예제는 8회 polling으로 값을 저장합니다. DMA 스캔은 **HAL · ADC DMA 2채널 스캔** 예제를 사용하세요. 초음파 예제는 TIM2 1 MHz 카운터와 GPIO ECHO 폴링을 사용하며 0.1 ms 협력 실행 해상도의 측정 모델입니다. 입력 캡처는 별도 TIM4 예제로 제공하며 CPU 명령 타이밍은 재현하지 않습니다.

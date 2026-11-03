@@ -27,7 +27,7 @@ const hasGcc=await exists(gcc);
 const tools={armGcc:gcc,cube,cubeF1,armGdb:'',hostGcc:'',hostGdb:'',clangd:'',openocd:'',buildRoot:''};
 // Every STM32 board of the examples that talk over the air, each seen as the main board.
 function wirelessBoards(){
- return WIRELESS_EXAMPLES.flatMap(e=>{const {project}=applyLectureExample(e.id);return [[e.code,project],...stm32Boards(project).map(b=>[`${e.code} ${b.name}`,stm32View(project,b.id)])];});
+ return WIRELESS_EXAMPLES.filter(e=>e.boards.includes('stm32')).flatMap(e=>{const {project}=applyLectureExample(e.id);return [[e.code,project],...stm32Boards(project).map(b=>[`${e.code} ${b.name}`,stm32View(project,b.id)])];});
 }
 const only=process.env.EXAMPLES?.split(',');
 const ids=Object.keys(allHalExamples()).filter(id=>!SIMULATOR_ONLY_EXAMPLES.has(id)&&(!only||only.includes(id)));
