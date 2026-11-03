@@ -2,6 +2,13 @@
 
 작업할 때마다 날짜순으로 맨 위에 추가합니다. 무엇을 했는지, 왜 했는지, 어떻게 검증했는지, 커밋·릴리스와 남은 사항을 적습니다. 버전별 구조 설명은 [HANDOFF.md](../HANDOFF.md), 검증 수치는 [VERIFICATION.md](VERIFICATION.md)에 있습니다.
 
+## 2026-11-03 · 커밋 작성자 전체 정정
+
+- 요청: 지금까지의 커밋을 모두 moonsyu로, PC 기본값인 `anstn0104@naver.com`으로 바꾸고 푸시. 커밋 내역은 유지하고 커밋한 사람만 바꿀 것.
+- 한 것과 이유: 이력 451개 모두 이름은 moonsyu였고 메일은 noreply 425개·naver 26개였다. "moonsyu and claude"로 보인 것은 메시지 끝의 `Co-Authored-By: Claude`(331개)와 `Claude-Session`(25개) 줄 때문이라 이 줄만 지웠다. `git filter-branch`로 작성자·커미터를 바꾸고 태그 78개와 `redesign`을 같은 트리의 새 커밋으로 옮겼다. 앞으로도 이렇게 커밋하도록 AGENTS.md·GIT-IDENTITY.md를 고쳤다.
+- 검증: 커밋 수 451개 그대로, 모든 커밋의 트리·작성 시각·커밋 시각·제목이 순서대로 같음, 지운 두 종류 줄을 빼면 메시지가 같음, 작성자·커미터는 모두 `moonsyu <anstn0104@naver.com>`, 모든 태그가 새 `main` 위에 있음. 이전 이력은 로컬 `backup/before-identity-rewrite` 브랜치와 번들로 보관했다(푸시하지 않음).
+- 남은 사항: 이전에 복제한 저장소는 새로 받아야 한다. 배포된 Release 파일의 BUILD-INFO 커밋은 이전 SHA다(대응표 참고).
+
 ## 2026-11-03 · 1.11.0 업데이트 후보 반영(서명 제외)
 
 - 요청: 업데이트 후보 목록을 1순위부터 진행하되 15번(실행 파일 서명)은 제외할 것. 도중에 Git 이메일을 무엇으로 바꾸는지 질문(사용자 메일은 `anstn0104@naver.com`).
