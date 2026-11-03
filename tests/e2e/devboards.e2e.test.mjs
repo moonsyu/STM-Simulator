@@ -86,6 +86,18 @@ test('the serial monitor reaches a phone on an ESP32 running BluetoothSerial',{t
  }finally{await s.close();}
 });
 
+test('a value typed in the part inspector is kept',{timeout:120000},async()=>{
+ const s=await launch();
+ try{
+  const {win}=s;await applyLecture(win,'BT-01');
+  const select=()=>win.locator('#part-layer [data-part="hc06"]').click({force:true});
+  await select();await win.fill('#extra-airLoss','30');await win.locator('#extra-airLoss').dispatchEvent('change');
+  await win.locator('#part-layer [data-part="hc05"]').click({force:true});await select();
+  assert.equal(await win.inputValue('#extra-airLoss'),'30');
+  assert.deepEqual(s.errors,[]);
+ }finally{await s.close();}
+});
+
 test('a pin with a wire on it still shows its GPIO in the tooltip',{timeout:120000},async()=>{
  const s=await launch();
  try{
