@@ -24,13 +24,15 @@ foreach ($asset in $release.assets) {
 $info = Get-Content (Join-Path $directory 'BUILD-INFO.json') -Raw | ConvertFrom-Json
 $manifest = Get-Content (Join-Path $directory 'update-manifest.json') -Raw | ConvertFrom-Json
 $commit = (Read-GitHub "repos/$env:GH_REPO/commits/$Tag").sha
-if ($info.commit -cne $commit -or ($ExpectedCommit -and $ExpectedCommit -cne $commit)) { throw 'Build and release tag commits differ' }
+if ($ExpectedCommit -and $ExpectedCommit -cne $commit) { throw 'Build and release tag commits differ' }
+# After an author correction (docs/GIT-IDENTITY.md) the tag points to a new commit with the same files as the build's.
+if ($info.commit -cne $commit -and (Read-GitHub "repos/$env:GH_REPO/git/commits/$($info.commit)").tree.sha -cne (Read-GitHub "repos/$env:GH_REPO/git/commits/$commit").tree.sha) { throw 'Build and release tag commits differ' }
 if ($info.sourceDirty -cne $false) { throw 'Release must identify committed build inputs' }
 if ($info.workflow -notmatch ('^https://github.com/' + [regex]::Escape($env:GH_REPO) + '/actions/runs/(\d+)$')) { throw 'Missing CI build provenance' }
 $runId = $Matches[1]
 $run = Read-GitHub "repos/$env:GH_REPO/actions/runs/$runId"
 $jobs = Read-GitHub "repos/$env:GH_REPO/actions/runs/$runId/jobs"
-if ($run.head_sha -cne $commit -or -not @($jobs.jobs | Where-Object { $_.name -eq 'Windows x64 portable' -and $_.conclusion -eq 'success' }).Count) { throw 'Build provenance does not identify a successful Windows build' }
+if ($run.head_sha -cne $info.commit -or -not @($jobs.jobs | Where-Object { $_.name -eq 'Windows x64 portable' -and $_.conclusion -eq 'success' }).Count) { throw 'Build provenance does not identify a successful Windows build' }
 $hash = (Get-FileHash -LiteralPath (Join-Path $directory $exe) -Algorithm SHA256).Hash.ToLowerInvariant()
 $zipHash = (Get-FileHash -LiteralPath (Join-Path $directory $zipName) -Algorithm SHA256).Hash.ToLowerInvariant()
 foreach ($meta in @($info, $manifest)) {
