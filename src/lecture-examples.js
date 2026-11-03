@@ -269,7 +269,7 @@ export const lectureExample=id=>LECTURE_EXAMPLES.find(e=>e.id===id);
 export const LECTURE_PREFIX='lecture:';
 export function lectureGuide(id){
  const e=lectureExample(id);if(!e)return '';if(e.how)return `보드 간 통신 · ${e.ref} · ${e.how}`;
- const how=e.id==='lecture-fw-09'?'STM32 HAL 코드와 ESP32 스케치(I2C 슬레이브 0x08)를 함께 실행합니다.':e.boards.includes('esp32')?'ESP32 스케치를 실행합니다. 코드를 고치면 동작도 바뀝니다.':'라즈베리파이 코드는 빌드·실행하지 않는 고정 실행입니다. 예제 시나리오대로 핀이 바뀌고 배선이 틀리면 동작하지 않습니다.';
+ const how=e.id==='lecture-fw-09'?'STM32 HAL 코드와 ESP32 스케치(I2C 슬레이브 0x08)를 함께 실행합니다.':e.boards.includes('esp32')?'ESP32 스케치를 실행합니다. 코드를 고치면 동작도 바뀝니다.':/^KER/.test(e.code)?'리눅스 커널 모듈은 실행하지 않는 고정 실행입니다. 예제 시나리오대로 핀이 바뀌고 배선이 틀리면 동작하지 않습니다.':'라즈베리파이 main.py를 Python으로 실행합니다. 코드를 고치면 동작도 바뀝니다.';
  const input=e.build===asgLedShell||e.build===asgDimmerShell||e.build===asgKernelPwm?' 직렬 모니터에서 RPI-1을 고르고 숫자를 보내 입력합니다.':'';
  return `${e.kind==='과제'?'강의 과제':'강의 실습'} · ${e.ref} · ${how}${input}`;
 }

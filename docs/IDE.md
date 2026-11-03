@@ -183,7 +183,9 @@ STM32 보드 옆에 **ESP32**와 **Raspberry Pi 5** 보드를 함께 놓을 수 
 
 **ESP32 스케치 실행**(1.6.0): ESP32 보드의 `sketch.ino`를 실행할 때 STM32 스케치와 같은 C 해석기로 실행한다. `setup()`/`loop()`, 핀은 GPIO 번호(`pinMode(2, OUTPUT)` = GPIO2), `digitalWrite`·`digitalRead`·`analogRead`(12비트 0~4095)·`delay`·`millis`·`attachInterrupt`, `ledcAttach`/`ledcWrite`(2.x의 `ledcSetup`/`ledcAttachPin`도 가능, 평균 전압으로 계산), `Serial.begin`/`print`/`println`/`printf`, DHT 라이브러리(`#include <DHT.h>`, `DHT dht(13, DHT11)`, `begin`/`readTemperature`/`readHumidity`: 그 핀에 배선되고 전원이 들어간 DHT11/DHT22 모듈의 설정값, 아니면 nan), `Wire` I²C 슬레이브(`Wire.begin(주소)`, `onReceive`/`onRequest`, `available`/`read`/`write`, SDA GPIO21·SCL GPIO22)를 지원한다. GPIO6~11(내장 플래시)과 없는 핀 번호는 오류로 멈춘다. 컴파일 오류는 `ESP32-1 · sketch.ino: 3행: …`처럼 보드와 파일을 붙여 실행 전에 보여 준다. Wi-Fi·Bluetooth·MQTT와 그 밖의 라이브러리는 지원하지 않는다.
 
-**고정 실행**(라즈베리파이): 강의 예제에서 불러온 라즈베리파이는 그 예제의 시나리오대로 핀을 바꾸고(LED 깜빡임, PWM 밝기, 스위치 입력에 따른 동작, 직렬 모니터 입력에 따른 동작) 코드가 출력할 내용을 로그와 직렬 모니터에 보여 준다. 핀 상태는 STM32와 같은 회로 계산에 들어가서, 배선이 틀리면 실제처럼 LED가 켜지지 않는다. 강의 예제가 아닌 라즈베리파이는 코드를 실행하지 않고 핀을 입력 상태로 둔 채 전압만 계산한다.
+**라즈베리파이 main.py 실행**(1.12.0): 라즈베리파이의 `main.py`는 앱의 Python 해석기로 STM32와 같은 회로·시간축에서 실행한다. 코드를 고치면 동작도 바뀐다. 쓸 수 있는 것: 대입·`if/elif/else`·`while`·`for … in`·`break/continue/pass`·`def`(`global`, 기본값 인수)·`lambda`·`try/except/finally`·`raise`·f-string(서식 `.1f`·`.0%`·`5d` 등)·리스트·튜플·딕셔너리·리스트 내포, `print`·`input`(직렬 모니터에서 보낸 줄)·`int`·`float`·`str`·`len`·`range`·`min`·`max`·`round`·`sum`·`abs` 등. 라이브러리: gpiozero `LED`·`PWMLED`·`Button`(`when_pressed`/`when_released`, `pull_up`, `active_state`)·`LEDBoard`, `RPi.GPIO`(`setmode` BCM/BOARD, `setup`, `output`, `input`, `PWM`, `cleanup`), `time.sleep`·`perf_counter`·`time`, `signal.pause`, `sys.exit`. 문장마다 2 µs가 걸려서 `perf_counter()`로 기다리는 반복도 시간이 흐르고, 1 ms보다 빠르게 켜고 끄는 핀(소프트웨어 PWM)은 그 평균 듀티로 LED 밝기가 계산된다. 오류는 `RPI-1 · main.py n행: ValueError: …` 형식으로 실행 로그에 나온다. 그 밖의 모듈(`numpy` 등)·클래스 정의·스레드는 지원하지 않는다.
+
+**고정 실행**(라즈베리파이 커널 모듈): 강의 예제의 리눅스 커널 모듈(C)은 실행하지 않고 그 예제의 시나리오대로 핀을 바꾼다. 아래는 이 방식의 설명이다. 강의 예제에서 불러온 라즈베리파이는 그 예제의 시나리오대로 핀을 바꾸고(LED 깜빡임, PWM 밝기, 스위치 입력에 따른 동작, 직렬 모니터 입력에 따른 동작) 코드가 출력할 내용을 로그와 직렬 모니터에 보여 준다. 핀 상태는 STM32와 같은 회로 계산에 들어가서, 배선이 틀리면 실제처럼 LED가 켜지지 않는다. 강의 예제가 아닌 라즈베리파이는 코드를 실행하지 않고 핀을 입력 상태로 둔 채 전압만 계산한다.
 
 - **실행**: 실행(Ctrl+F5) 한 번에 STM32와 다른 보드가 같은 시간축에서 함께 시작한다. 디버그 중 일시정지하면 다른 보드도 함께 멈춘다.
 - **실행 보드**: 회로에 다른 보드가 있으면 **실행 및 디버그**의 실행 환경에 **실행 보드**(전체 보드 / STM32만 / 보드 하나만)가 나온다. STM32 보드가 없는 회로나 다른 보드 하나만 고르면 STM32 코드는 실행하지 않는다.
@@ -224,7 +226,7 @@ STM32 보드 옆에 **ESP32**와 **Raspberry Pi 5** 보드를 함께 놓을 수 
 
 강의 과제는 교재의 "도전" 중 회로가 있는 것만 넣었다. 출력만 하는 커널 드라이버 과제, 조사·문서 과제, 카메라·OpenCV·PyTorch·YOLO 과제, Sense HAT 과제는 회로 예제가 아니라서 넣지 않았다. 임베디드Firmware·임베디드AIoT 교재는 이 PC에 없어 그 과제는 넣지 않았다.
 
-한계: 라즈베리파이 코드는 실행하지 않는다(고정 실행). ESP32 스케치는 회로 시뮬레이터에서 해석 실행하고, 실물 보드에는 **ESP32 (COMn)** 실행 대상으로 Arduino CLI 빌드·업로드한다(1.9.0, 디버그 없음). 로직 분석기에는 다른 보드의 핀이 나오지 않는다. 1.5.0의 회로 파일을 이전 버전에서 열면 다른 보드를 알 수 없어 열리지 않는다.
+한계: 라즈베리파이의 리눅스 커널 모듈(C)은 실행하지 않는다(고정 실행). ESP32 스케치는 회로 시뮬레이터에서 해석 실행하고, 실물 보드에는 **ESP32 (COMn)** 실행 대상으로 Arduino CLI 빌드·업로드한다(1.9.0, 디버그 없음). 로직 분석기에는 다른 보드의 핀이 나오지 않는다. 1.5.0의 회로 파일을 이전 버전에서 열면 다른 보드를 알 수 없어 열리지 않는다.
 
 ## 블루투스·Wi-Fi 모듈과 보드 간 통신
 

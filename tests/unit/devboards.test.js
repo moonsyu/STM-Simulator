@@ -147,8 +147,9 @@ describe('lecture examples',()=>{
   const blink=run('assignment-rpi-1',[0,100]),off=run('assignment-rpi-1',[0,600]);for(const id of ['LED1','LED2','LED3']){assert.equal(blink.r.parts[id].on,true,id);assert.equal(off.r.parts[id].on,false,id);}
   const button=run('assignment-rpi-4',[0,10,[20,{SW1:true}],[30,{SW1:true}]]);for(const id of ['LED1','LED2','LED3'])assert.equal(button.r.parts[id].on,true,id);
   assert.equal(run('assignment-rpi-4',[0,10,20]).r.parts.LED1.on,false);
-  const tree=run('assignment-rpi-6',[0,100]),flip=run('assignment-rpi-6',[0,600]);assert.deepEqual(['LED1','LED2','LED3','LED4','LED5'].map(id=>tree.r.parts[id].on),[false,true,false,true,false]);assert.deepEqual(['LED1','LED2','LED3','LED4','LED5'].map(id=>flip.r.parts[id].on),[true,false,true,false,true]);
-  const two=run('assignment-rpi-6',[0,[10,{SW1:true}],[20,{SW1:true}],30,600]);assert.ok(two.logs.includes('[RPI-1] 모드 2'));assert.deepEqual(['LED1','LED2','LED3','LED4','LED5'].map(id=>two.r.parts[id].on),[true,true,true,true,true]);
+  // main.py runs: the first pass sets on = True, so the odd LEDs light first.
+  const tree=run('assignment-rpi-6',[0,100]),flip=run('assignment-rpi-6',[0,600]);assert.deepEqual(['LED1','LED2','LED3','LED4','LED5'].map(id=>tree.r.parts[id].on),[true,false,true,false,true]);assert.deepEqual(['LED1','LED2','LED3','LED4','LED5'].map(id=>flip.r.parts[id].on),[false,true,false,true,false]);
+  const two=run('assignment-rpi-6',[0,[10,{SW1:true}],[20,{SW1:true}],30,600]);assert.ok(two.logs.includes('[RPI-1] 모드 2'));assert.equal(new Set(['LED1','LED2','LED3','LED4','LED5'].map(id=>two.r.parts[id].on)).size,1,'mode 2 drives all five together');
  });
  test('assignments: shell programs read serial monitor lines',()=>{
   const shell=(id,lines,step=10)=>{const {project:p}=applyLectureExample(id),logs=[],sim=new CircuitSimulation();sim.drivers=createBoardDrivers(p,{log:s=>logs.push(s)});let t=0,r=sim.solve(p,{},{},t);

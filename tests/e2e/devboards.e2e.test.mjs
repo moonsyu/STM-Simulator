@@ -26,7 +26,8 @@ test('ESP32 and Raspberry Pi boards are added, inspected, documented and removed
   await win.locator('#devboard-layer [data-devboard="rpi5"]').click({position:{x:60,y:120},force:true});
   assert.match(await win.textContent('#inspector'),/RPI-1/);
   await win.click('#open-board-code');await win.waitForFunction(()=>document.querySelector('.language-badge').textContent.includes('RPI-1'));
-  assert.equal(await win.evaluate(()=>document.getElementById('code').readOnly),true);
+  // A Raspberry Pi main.py runs as Python, so it can be edited.
+  assert.equal(await win.evaluate(()=>document.getElementById('code').readOnly),false);
   await win.click('[data-activity="docs"]');assert.match(await win.textContent('#device-docs-panel'),/GPIO17/);
   await win.locator('#devboard-layer [data-devboard="rpi5"]').click({position:{x:60,y:120},force:true});await win.click('#remove-part');
   assert.equal(await win.evaluate(()=>document.querySelectorAll('#devboard-layer [data-devboard]').length),1);

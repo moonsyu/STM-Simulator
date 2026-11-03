@@ -9,6 +9,7 @@ import {devboardModel,devboardPinInfo,boardFileKey} from './devboards.js';
 import {isStm32Board,stm32Boards,mainBoardName} from './stm32-boards.js';
 import {mediaSection,bindMedia} from './part-media-ui.js';
 import {esc,updateSimulationSvg} from './render.js';
+import {hasPythonCode} from './rpi-python.js';
 
 const $=id=>document.getElementById(id);
 /**
@@ -61,7 +62,7 @@ function inspector(force=false){
    }
    if(p.type==='devboard'){
     const model=devboardModel(p),dis=running()?'disabled':'';
-    el.innerHTML=`<span class="overline">${model.kind==='rpi'?'RASPBERRY PI':'ESP32'}</span><h2 title="${esc(p.name)}">${esc(p.name)}</h2><p>${esc(model.name)} · ${esc(model.description)}</p>${model.unverified?`<p class="pin-check">⚠ ${esc(model.unverified)}</p>`:''}<div class="inspector-card"><label for="part-name">보드 이름</label><input id="part-name" value="${esc(p.name)}" maxlength="40" ${dis}></div><div class="measure"><span>실행 방식</span><b>${model.kind==='esp32'?'스케치 실행':p.scenario?'고정 실행 · 강의 예제':'실행 안 함'}</b></div><p>${model.kind==='esp32'?'sketch.ino를 실행할 때 해석해 STM32와 같은 회로·시간축에서 동작합니다.':p.scenario?'코드를 빌드·실행하지 않고 예제 시나리오대로 핀이 바뀝니다. 배선이 틀리면 실제처럼 동작하지 않습니다.':'강의 예제에서 불러온 라즈베리파이만 고정 실행합니다. 이 보드의 핀은 입력 상태로 두고 전압만 계산합니다.'}</p><button class="inspector-action" id="open-board-code">${esc(model.file)} 열기</button><div class="measure"><span>회전 각도</span><b>${p.rotation}°</b></div><button class="inspector-action" id="rotate-part" ${dis}>90° 회전 (R)</button><button class="inspector-action danger" id="remove-part" ${dis}>보드 삭제</button>`;
+    el.innerHTML=`<span class="overline">${model.kind==='rpi'?'RASPBERRY PI':'ESP32'}</span><h2 title="${esc(p.name)}">${esc(p.name)}</h2><p>${esc(model.name)} · ${esc(model.description)}</p>${model.unverified?`<p class="pin-check">⚠ ${esc(model.unverified)}</p>`:''}<div class="inspector-card"><label for="part-name">보드 이름</label><input id="part-name" value="${esc(p.name)}" maxlength="40" ${dis}></div><div class="measure"><span>실행 방식</span><b>${model.kind==='esp32'?'스케치 실행':hasPythonCode(p.code)?'main.py 실행 (Python)':p.scenario?'고정 실행 · 커널 모듈':'실행 안 함'}</b></div><p>${model.kind==='esp32'?'sketch.ino를 실행할 때 해석해 STM32와 같은 회로·시간축에서 동작합니다.':hasPythonCode(p.code)?'main.py를 Python으로 해석해 STM32와 같은 회로·시간축에서 실행합니다(gpiozero·RPi.GPIO). 코드를 고치면 동작도 바뀝니다.':p.scenario?'코드를 빌드·실행하지 않고 예제 시나리오대로 핀이 바뀝니다. 배선이 틀리면 실제처럼 동작하지 않습니다.':'강의 예제에서 불러온 라즈베리파이만 고정 실행합니다. 이 보드의 핀은 입력 상태로 두고 전압만 계산합니다.'}</p><button class="inspector-action" id="open-board-code">${esc(model.file)} 열기</button><div class="measure"><span>회전 각도</span><b>${p.rotation}°</b></div><button class="inspector-action" id="rotate-part" ${dis}>90° 회전 (R)</button><button class="inspector-action danger" id="remove-part" ${dis}>보드 삭제</button>`;
     $('part-name').onchange=e=>{const name=e.target.value.trim();if(!name||app.project.components.some(c=>c!==p&&c.name===name)){log('보드 이름이 비었거나 다른 부품·보드 이름과 같습니다.','error');inspector(true);return;}checkpoint();p.name=name;syncEditor();changed();};
     $('open-board-code').onclick=()=>{app.sourceFile=boardFileKey(p);syncEditor();tab('code');};$('rotate-part').onclick=rotateSelected;$('remove-part').onclick=removeSelected;return;
    }
