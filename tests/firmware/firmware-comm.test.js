@@ -2,7 +2,8 @@
 import { PINS } from '../../src/pins.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { open, runUntil, printed, vcpText } from './helpers.mjs';
+import { open, runUntil, printed, vcpText, elf } from './helpers.mjs';
+import { newStm32Fields, createStm32Drivers, connectStm32Drivers } from '../../src/stm32-boards.js';
 
 test('uart: USART2 ST-LINK VCP output and interrupt-driven echo of injected bytes', () => {
   const { session, log } = open('uart');
@@ -131,4 +132,22 @@ test('uart: a real USART2 reaches an HC-06 on its pins, and what the module send
   hub.emit(module, [...'h'].map(c => c.charCodeAt(0)), session.now);
   runUntil(session, 90);
   assert.ok(log.uart.some(e => e.instance === 'USART2' && e.direction === 'RX' && e.bytes.includes(104)), JSON.stringify(log.uart.filter(e => e.direction === 'RX')));
+});
+
+test('uart: one emulated board\'s USART reaches the USART of another on the wired pins', () => {
+  const on = (board, signal) => PINS.find(q => q.signal === signal).id.replace('board:', board);
+  const run = wires => {
+    const { session } = open('uart', {}, p => {
+      p.components.push({ id: 'b2', ...newStm32Fields(p, 'nucleo-f446re', 430), mcu: structuredClone(p.mcu), code: p.code, firmware: structuredClone(p.firmware) });
+      p.wires.push(...wires);
+    });
+    session.circuit.drivers = createStm32Drivers(session.project, { emulate: true, elfs: { b2: elf('uart') } });
+    connectStm32Drivers(session);
+    runUntil(session, 120);
+    return { main: session.soc.usarts.USART2.stats.rx, other: session.circuit.drivers[0].session.soc.usarts.USART2.stats.rx };
+  };
+  const crossed = run([{ id: 'x1', from: on('board:', 'PA2'), to: on('devboard:b2:', 'PA3'), color: '#000' }, { id: 'x2', from: on('devboard:b2:', 'PA2'), to: on('board:', 'PA3'), color: '#000' }]);
+  assert.ok(crossed.other > 0, JSON.stringify(crossed));
+  assert.ok(crossed.main > 0, JSON.stringify(crossed));
+  assert.deepEqual(run([]), { main: 0, other: 0 }, 'nothing crosses without the wires');
 });
