@@ -61,7 +61,7 @@ const int=(value,min,max,label)=>{if(!Number.isInteger(value)||value<min||value>
 const PINOUT_IRQS=new Set(['EXTI0_IRQn','EXTI1_IRQn','EXTI2_IRQn','EXTI3_IRQn','EXTI4_IRQn','EXTI9_5_IRQn','EXTI15_10_IRQn',...SERIAL_IDS.map(id=>id+'_IRQn'),...TIMER_IDS.map(id=>id+'_IRQn')]);
 const isIterator=v=>v&&typeof v.next==='function'&&typeof v[Symbol.iterator]==='function';
 export class HalAdapter {
-  constructor(config,buses,{session}={}){this.config=validateMcu(config);this.family=familyProfile(this.config.family);this.f1=this.family.pinMux==='remap';this.remaps=new Set();this.afio=false;this.adcIrq=this.f1?'ADC1_2_IRQn':'ADC_IRQn';const errors=configProblems(this.config);if(errors.length)throw new Error(errors.join('\n'));this.buses=buses;this.nvic=new Map();this.pending=[];this.extiPending=0;this.serials=new Map();this.handles=new Map();this.timerModel=new HalTimers(this);this.adc=new Map();this.latches=new Map();this.priorities=new Map();this.initializedGpio=new Set();this.catalog=new CatalogPeripherals(this);this.nvicModel=new Nvic(this);this.subPriorities=new Map();this.noticeIrq=new Set();this.session=session;this.dma=new HalDma(this);this.usart=new HalUsart(this);this.camera=new HalDcmi(this);this.storage=new HalStorage(this);this.extensions=[this.dma,this.usart,this.camera,this.storage];}
+  constructor(config,buses,{session}={}){this.config=validateMcu(config);this.family=familyProfile(this.config.family);this.f1=this.family.pinMux==='remap';this.remaps=new Set();this.afio=false;this.adcIrq=this.f1?'ADC1_2_IRQn':'ADC_IRQn';this.slave={i2cRx:null,i2cTx:null,spiJob:null,i2cOn:false,i2cHeld:[],spiHeld:[]};const errors=configProblems(this.config);if(errors.length)throw new Error(errors.join('\n'));this.buses=buses;this.nvic=new Map();this.pending=[];this.extiPending=0;this.serials=new Map();this.handles=new Map();this.timerModel=new HalTimers(this);this.adc=new Map();this.latches=new Map();this.priorities=new Map();this.initializedGpio=new Set();this.catalog=new CatalogPeripherals(this);this.nvicModel=new Nvic(this);this.subPriorities=new Map();this.noticeIrq=new Set();this.session=session;this.dma=new HalDma(this);this.usart=new HalUsart(this);this.camera=new HalDcmi(this);this.storage=new HalStorage(this);this.extensions=[this.dma,this.usart,this.camera,this.storage];}
   get active(){return this.nvicModel.active;}
   uart(id){
     if(!isSerial(id))throw new Error(`지원하지 않는 UART 인스턴스: ${id}`);
@@ -147,12 +147,55 @@ export class HalAdapter {
     if(name==='NVIC_SystemReset'||name==='HAL_NVIC_SystemReset')return (function*(){r.warn('[NVIC] 시스템 리셋: 프로그램을 처음부터 다시 실행합니다.');yield {kind:'reset'};})();
     for(const ext of this.extensions){const it=ext.invoke?.(name,args,r);if(it)return it;}
     if(name==='__HAL_TIM_GET_COUNTER'&&this.buses.project.components.some(p=>p.type==='catalog_singlewire'))return this.pollCounter(name,args,r);
-    if(name==='HAL_Delay'||name==='HAL_UART_Transmit'||name==='HAL_UART_Receive')return this.blocking(name,args,r);
+    if(name==='HAL_Delay'||name==='HAL_UART_Transmit'||name==='HAL_UART_Receive'||name==='HAL_I2C_Slave_Receive'||name==='HAL_I2C_Slave_Transmit'||this.spiSlaveMode&&['HAL_SPI_Transmit','HAL_SPI_Receive','HAL_SPI_TransmitReceive'].includes(name))return this.blocking(name,args,r);
     return null;
+  }
+  // ---- this board as the I2C / SPI slave of another STM32 board (stm32-boards.js connects the buses).
+  armSlave(name,[ptr,first,second,third],r,interrupt){
+    const i2c=name.includes('I2C'),both=name.startsWith('HAL_SPI_TransmitReceive');this.requireHandle(ptr,r,i2c?'I2C':'SPI');
+    if(i2c&&!this.i2cOwn)throw new Error('I2C1: 슬레이브로 쓰려면 hi2c1.Init.OwnAddress1에 주소(7비트 주소 << 1)를 넣으세요.');
+    if(!i2c&&!this.spiSlaveMode)throw new Error(`${name}: 이 시뮬레이터의 SPI 인터럽트 전송은 슬레이브(SPI_MODE_SLAVE)에서만 지원합니다.`);
+    const receive=name.includes('Receive'),transmit=name.includes('Transmit'),count=int(both?third:second,1,256,'전송 길이'),rx=both?second:receive?first:null;
+    const job={handle:ptr,count,index:0,rx,tx:transmit?this.bytes(first,count,r):null,interrupt,done:false,irq:i2c?'I2C1_EV_IRQn':'SPI1_IRQn',callback:i2c?(receive?'HAL_I2C_SlaveRxCpltCallback':'HAL_I2C_SlaveTxCpltCallback'):both?'HAL_SPI_TxRxCpltCallback':receive?'HAL_SPI_RxCpltCallback':'HAL_SPI_TxCpltCallback'};
+    if(rx!=null)r.pointerCell(rx,count-1);
+    const slot=i2c?(receive?'i2cRx':'i2cTx'):'spiJob';if(this.slave[slot])return null;job.slot=slot;this.slave[slot]=job;if(interrupt)this.noticeIrq.add(job.irq);
+    if(i2c)this.slave.i2cOn=true;
+    // What arrived between two calls: the bus waited (I2C clock stretching) or the shift register took it (SPI).
+    const held=this.slave[i2c?'i2cHeld':'spiHeld'];
+    if(rx!=null)while(held.length&&!job.done){const value=held.shift();r.set(r.pointerCell(rx,job.index),value);if(++job.index===count)this.finishSlave(job,r);}
+    return job;
+  }
+  dropSlave(job){if(this.slave[job.slot]===job)this.slave[job.slot]=null;}
+  finishSlave(job,r){
+    job.done=true;this.dropSlave(job);if(!job.interrupt)return;
+    this.queue(job.irq,()=>this.userCall(r,job.callback,[job.handle]),`${job.irq}:${job.slot}`);r.event(r.microTime/1000,()=>{});
+  }
+  i2cSlaveInfo(){return this.i2cOwn&&this.handles.has('I2C1')?{address:this.i2cOwn,sda:this.pinFor('I2C1_SDA'),scl:this.pinFor('I2C1_SCL')}:null;}
+  // false is a NACK: the program has not listened yet, or the master sent more than was asked for.
+  i2cSlaveReceive(bytes,r){
+    const job=this.slave.i2cRx;if(!job){if(!this.slave.i2cOn||this.slave.i2cTx||this.slave.i2cHeld.length+bytes.length>256)return false;this.slave.i2cHeld.push(...bytes);return true;}
+    for(const value of bytes){if(job.index>=job.count)return false;r.set(r.pointerCell(job.rx,job.index++),value);}
+    if(job.index===job.count)this.finishSlave(job,r);return true;
+  }
+  i2cSlaveRequest(count,r){
+    const job=this.slave.i2cTx,out=[];while(out.length<count)out.push(job&&job.index<job.count?job.tx[job.index++]:0xff);
+    if(job&&job.index===job.count)this.finishSlave(job,r);return out;
+  }
+  spiSlaveInfo(){const s=this.buses.spi;return this.spiSlaveMode?{mosi:s.mosi,miso:s.miso,sck:s.sck}:null;}
+  spiSlaveExchange(value,r){
+    const job=this.slave.spiJob;if(!job){if(this.slave.spiHeld.length<256)this.slave.spiHeld.push(value);return 0xff;}
+    const out=job.tx?job.tx[job.index]:0xff;if(job.rx!=null)r.set(r.pointerCell(job.rx,job.index),value);
+    if(++job.index===job.count)this.finishSlave(job,r);return out;
   }
   *blocking(name,args,r){
     if(r.atomic)throw new Error(`${name}: 인터럽트 콜백에서 대기할 수 없습니다.`);
     if(name==='HAL_Delay'){if(args.length!==1)throw new Error('HAL_Delay(ms) 형식을 확인하세요.');int(args[0],0,3600000,'HAL_Delay');yield* this.delay(r,args[0]);return 0;}
+    if(/I2C_Slave|HAL_SPI_/.test(name)){
+      const both=name==='HAL_SPI_TransmitReceive',timeout=int(args[both?4:3],0,4294967295,'대기 시간'),job=this.armSlave(name,args,r,false),start=r.microTime/1000;
+      if(!job)return 2;
+      while(!job.done){const remaining=timeout-(r.microTime/1000-start);if(remaining<=1e-9){this.dropSlave(job);return 3;}yield Math.min(1,remaining);}
+      return 0;
+    }
     const [ptr,buffer,count,timeout]=args,{id}=this.requireHandle(ptr,r,'UART'),channel=this.uart(id);int(count,1,256,'UART 길이');int(timeout,0,4294967295,'UART timeout');const start=r.microTime/1000;
     if(name==='HAL_UART_Transmit'){
       if(channel.tx)return 2;const bytes=this.bytes(buffer,count,r),duration=count*10000/channel.bus.uart.baud;
@@ -267,17 +310,22 @@ export class HalAdapter {
       }
       if(type==='I2C'){
         if(get('AddressingMode')!==16384||get('ClockSpeed')!==this.config.peripherals.I2C1.clock||get('DualAddressMode')||get('GeneralCallMode'))throw new Error('I2C1: 7비트 주소와 Pinout의 속도를 사용하세요.');
+        this.i2cOwn=(get('OwnAddress1')||0)>>1;
         this.buses.call('Wire.begin',[this.pinFor('I2C1_SDA'),this.pinFor('I2C1_SCL')],r);this.buses.call('Wire.setClock',[get('ClockSpeed')],r);
       }
       if(type==='SPI'){
-        if(get('Mode')!==260||get('Direction')!==0||get('DataSize')!==0||get('CLKPolarity')||get('CLKPhase')||get('FirstBit')||get('NSS')!==512||get('CRCCalculation')||get('TIMode'))throw new Error('SPI1: master, 8비트, mode 0, MSB first, software NSS를 지원합니다.');
-        this.buses.call('SPI.setPins',[this.pinFor('SPI1_MOSI'),this.pinFor('SPI1_MISO'),this.pinFor('SPI1_SCK')],r);this.buses.call('SPI.begin',[],r);this.buses.call('SPI.setClock',[this.config.peripherals.SPI1.clock],r);
+        if(![260,0].includes(get('Mode'))||get('Direction')!==0||get('DataSize')!==0||get('CLKPolarity')||get('CLKPhase')||get('FirstBit')||get('NSS')!==512||get('CRCCalculation')||get('TIMode'))throw new Error('SPI1: master 또는 slave, 8비트, mode 0, MSB first, software NSS를 지원합니다.');
+        this.buses.call('SPI.setPins',[this.pinFor('SPI1_MOSI'),this.pinFor('SPI1_MISO'),this.pinFor('SPI1_SCK')],r);this.spiSlaveMode=get('Mode')===0;
+        // A slave leaves SCK and MOSI to the master; it drives only MISO.
+        if(this.spiSlaveMode)this.buses.beginPins(r,[this.buses.spi.miso],[this.buses.spi.mosi,this.buses.spi.sck]);
+        else{this.buses.call('SPI.begin',[],r);this.buses.call('SPI.setClock',[this.config.peripherals.SPI1.clock],r);}
       }
       if(type==='ADC'&&this.f1){const nbr=get('NbrOfConversion')||1,adcHz=this.config.timerClockHz/(this.adcDiv??2);if(get('DataAlign')||get('ExternalTrigConv')!==0xE0000||!Number.isInteger(nbr)||nbr<1||nbr>16||nbr>1&&get('ScanConvMode')!==0x100)throw new Error('ADC1: 오른쪽 정렬, 소프트웨어 시작(ADC_SOFTWARE_START), 스캔 시 ADC_SCAN_ENABLE과 NbrOfConversion 1~16을 지원합니다.');if(adcHz>14000000)throw new Error(`ADC1: ADC 클록 ${adcHz/1e6} MHz가 14 MHz를 넘습니다. HAL_RCCEx_PeriphCLKConfig로 RCC_ADCPCLK2_DIV6 등을 설정하세요.`);this.adc.set(id,{active:false,channel:null,value:0,ranks:[],nbr,scan:get('ScanConvMode')===0x100,continuous:!!get('ContinuousConvMode'),prescaler:this.adcDiv??2});}
       if(type==='ADC'&&!this.f1){const nbr=get('NbrOfConversion')||1;if(get('Resolution')||get('DataAlign')||get('ExternalTrigConvEdge')||!Number.isInteger(nbr)||nbr<1||nbr>16||nbr>1&&!get('ScanConvMode'))throw new Error('ADC1: 12비트, 오른쪽 정렬, 소프트웨어 시작, 스캔 시 NbrOfConversion 1~16을 지원합니다.');if(![0,0x10000,0x20000,0x30000].includes(get('ClockPrescaler')))throw new Error('ADC1: ClockPrescaler를 확인하세요.');this.adc.set(id,{active:false,channel:null,value:0,ranks:[],nbr,scan:!!get('ScanConvMode'),continuous:!!get('ContinuousConvMode'),prescaler:[2,4,6,8][get('ClockPrescaler')/0x10000]});}
       if(type==='TIM')this.timerModel.init(a,r,name.split('_')[2],b);
       this.handles.set(id,h);return 0;
     }
+    if(['HAL_I2C_Slave_Receive_IT','HAL_I2C_Slave_Transmit_IT','HAL_SPI_Receive_IT','HAL_SPI_Transmit_IT','HAL_SPI_TransmitReceive_IT'].includes(name))return this.armSlave(name,args,r,true)?0:2;
     if(name==='HAL_UART_Receive_IT'){
       const channel=this.uart(this.requireHandle(a,r,'UART').id);if(channel.rx||channel.rxDma)return 2;int(c,1,256,'UART 수신 길이');r.pointerCell(b,c-1);channel.rx={handle:a,buffer:b,count:c,index:0};return 0;
     }

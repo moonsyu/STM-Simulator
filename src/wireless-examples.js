@@ -292,8 +292,48 @@ export function wifiStm32(){
  hook('esp1','ESP-01 접속',0,mainPin,['board:CN6:4','board:CN7:16']);hook('esp2','ESP-01 AP',SECOND_DX,stm32Pin('stm2'),['devboard:stm2:CN6:4','devboard:stm2:CN7:16']);
  return p;
 }
+// ---------------------------------------------------------------- two boards on wires: I²C and SPI
+const VCP=UART.replace(/huart1/g,'huart2');
+const TOP_RAIL=70;
+function wiredProgram({bus,slave,globals,step}){
+ // The master waits for the slave to start listening; a slave that is not ready does not answer.
+ const init=slave?'':'  HAL_Delay(100);';
+ const pins={PA2:pinConfig('USART2_TX'),PA3:pinConfig('USART2_RX'),...(bus==='i2c'?{PB8:pinConfig('I2C1_SCL'),PB9:pinConfig('I2C1_SDA'),...(slave?{PA5:pinConfig('GPIO_Output')}:{})}:{PA5:pinConfig('SPI1_SCK'),PA6:pinConfig('SPI1_MISO'),PA7:pinConfig('SPI1_MOSI')})};
+ const peripherals={USART2:{enabled:true,baud:115200},...(bus==='i2c'?{I2C1:{enabled:true,clock:100000}}:{SPI1:{enabled:true,clock:1000000}})};
+ const mcu=validateMcu({...defaultMcu('STM32F103RB'),pins,peripherals,nvic:{}});
+ let code=generateHal(mcu).replace(/^ *uint8_t message\[\] = "HAL ready\\r\\n";\r?\n/m,'').replace(/^ *HAL_UART_Transmit\(&huart2, message, sizeof\(message\)-1, 100\);\r?\n/m,'').replace('int main(void)',VCP+globals+'\nint main(void)').replace('/* USER CODE BEGIN 2 */','/* USER CODE BEGIN 2 */\n'+init).replace(/(\/\* USER CODE BEGIN 3 \*\/)[\s\S]*?(\/\* USER CODE END 3 \*\/)/,(_,a,b)=>a+'\n'+step+'\n'+b);
+ if(slave&&bus==='i2c')code=code.replace('hi2c1.Init.OwnAddress1 = 0;','hi2c1.Init.OwnAddress1 = 0x20 << 1;');
+ if(slave&&bus==='spi')code=code.replace('hspi1.Init.Mode = SPI_MODE_MASTER;','hspi1.Init.Mode = SPI_MODE_SLAVE;');
+ return {mcu,code};
+}
+// From a pin of the main board's CN10, over the top of the other board, to the same pin there.
+function overBoard(p,signal,color,k){
+ const from=mainPin(signal),to=stm32Pin('stm2')(signal),a=at(p,from),b=at(p,to),left=447+k*15,right=SECOND_DX+447+k*15,y=TOP_RAIL-k*7;
+ wire(p,from,to,color,[{x:left,y:a.y},{x:left,y},{x:right,y},{x:right,y:b.y}]);
+}
+function sharedGround(p,k){overBoard(p,'GND',COLORS.ground,k);}
+export function i2cStm32(){
+ const p=circuit('STM32·STM32 I²C 통신');
+ setMain(p,wiredProgram({bus:'i2c',slave:false,globals:'uint8_t cmd = 0, ack = 0;',step:'  cmd = !cmd;\n  if (HAL_I2C_Master_Transmit(&hi2c1, 0x20 << 1, &cmd, 1, 100) == HAL_OK) {\n    uartSend(cmd ? "sent ON\\r\\n" : "sent OFF\\r\\n");\n    HAL_Delay(50);\n    if (HAL_I2C_Master_Receive(&hi2c1, 0x20 << 1, &ack, 1, 100) == HAL_OK && ack == cmd + 0x10) uartSend("ack\\r\\n");\n  } else {\n    uartSend("no answer\\r\\n");\n  }\n  HAL_Delay(500);'}));
+ secondBoard(p,wiredProgram({bus:'i2c',slave:true,globals:'uint8_t cmd = 0, ack = 0;',step:'  if (HAL_I2C_Slave_Receive(&hi2c1, &cmd, 1, 100) == HAL_OK) {\n    HAL_GPIO_WritePin(GPIOA, GPIO_PIN_5, cmd ? GPIO_PIN_SET : GPIO_PIN_RESET);\n    ack = cmd + 0x10;\n    HAL_I2C_Slave_Transmit(&hi2c1, &ack, 1, 100);\n  }'}));
+ overBoard(p,'PB8',COLORS.tx,0);overBoard(p,'PB9',COLORS.rx,1);sharedGround(p,2);
+ // The bus idles high through pull-ups; the other board's CN6 / CN7 3V3 pins are the nearest supply.
+ const pull=(id,y,signal,supply,lead,rail,offset)=>{p.components.push({id,type:'resistor',name:'4.7 kΩ',value:4700,x:640,y,rotation:0,span:70});lane(p,PINS.find(q=>q.signal===signal&&q.id.startsWith('board:CN5:')).id,'part:'+id+':a',COLORS.control,lead);lane(p,'part:'+id+':b',supply,COLORS.power,rail,offset==null?undefined:at(p,supply).y+offset);};
+ // CN6-4 is level with CN7-16: its wire comes in half a row above.
+ pull('r1',230,'PB8','devboard:stm2:CN6:4',540,700,-7);pull('r2',290,'PB9','devboard:stm2:CN7:16',555,715);
+ return p;
+}
+export function spiStm32(){
+ const p=circuit('STM32·STM32 SPI 통신');
+ setMain(p,wiredProgram({bus:'spi',slave:false,globals:'uint8_t tx = 0, rx = 0;',step:'  tx = tx + 1;\n  if (HAL_SPI_TransmitReceive(&hspi1, &tx, &rx, 1, 100) == HAL_OK) {\n    uartSend(tx > 1 && rx == tx - 1 ? "slave answered\\r\\n" : "first byte\\r\\n");\n  }\n  HAL_Delay(200);'}));
+ secondBoard(p,wiredProgram({bus:'spi',slave:true,globals:'uint8_t tx = 0xFF, rx = 0;',step:'  if (HAL_SPI_TransmitReceive(&hspi1, &tx, &rx, 1, 100) == HAL_OK) {\n    tx = rx;\n    uartSend("byte in\\r\\n");\n  }'}));
+ overBoard(p,'PA5',COLORS.control,0);overBoard(p,'PA6',COLORS.rx,1);overBoard(p,'PA7',COLORS.tx,2);sharedGround(p,3);
+ return p;
+}
 export const WIRELESS_EXAMPLES=Object.freeze([
  {id:'wireless-bt-stm32',code:'BT-01',kind:'통신',boards:['stm32'],title:'STM32·STM32 블루투스 통신',ref:'HC-05 마스터 · HC-06 슬레이브',how:'STM32-1이 1초마다 보낸 LED 명령을 STM32-2가 받아 LD2를 켜고 끄고 답합니다. 실물은 HC-05를 AT+ROLE=1로 먼저 설정해야 합니다.',build:bluetoothStm32},
  {id:'wireless-bt-esp32',code:'BT-02',kind:'통신',boards:['stm32','esp32'],title:'STM32·ESP32 블루투스 통신',ref:'HC-05 마스터 · ESP32 Serial2 · HC-06 슬레이브',how:'STM32가 1초마다 보낸 LED 명령을 ESP32가 받아 파란 LED를 켜고 끄고 답합니다. 실물은 HC-05를 AT+ROLE=1로 먼저 설정해야 합니다.',build:bluetoothEsp32},
- {id:'wireless-wifi-stm32',code:'WF-01',kind:'통신',boards:['stm32'],title:'STM32·STM32 Wi-Fi 통신',ref:'ESP-01 AP · TCP 서버 · AT 명령',how:'STM32-2의 ESP-01이 AP와 TCP 서버를 열고, STM32-1의 ESP-01이 접속해 1초마다 LED 명령을 보냅니다.',build:wifiStm32}
+ {id:'wireless-wifi-stm32',code:'WF-01',kind:'통신',boards:['stm32'],title:'STM32·STM32 Wi-Fi 통신',ref:'ESP-01 AP · TCP 서버 · AT 명령',how:'STM32-2의 ESP-01이 AP와 TCP 서버를 열고, STM32-1의 ESP-01이 접속해 1초마다 LED 명령을 보냅니다.',build:wifiStm32},
+ {id:'wired-i2c-stm32',code:'WIRE-01',kind:'통신',boards:['stm32'],title:'STM32·STM32 I²C 통신',ref:'I2C1 마스터 · 슬레이브 주소 0x20 · 4.7 kΩ 풀업',how:'STM32-1이 0.5초마다 보낸 명령으로 STM32-2가 LD2를 켜고 끄고 답합니다. 각 보드의 직렬 모니터에서 확인하세요.',build:i2cStm32},
+ {id:'wired-spi-stm32',code:'WIRE-02',kind:'통신',boards:['stm32'],title:'STM32·STM32 SPI 통신',ref:'SPI1 마스터 · 슬레이브 · SCK·MISO·MOSI',how:'STM32-1이 0.2초마다 보낸 바이트를 STM32-2가 받아 다음 전송 때 돌려줍니다. 각 보드의 직렬 모니터에서 확인하세요.',build:spiStm32}
 ]);

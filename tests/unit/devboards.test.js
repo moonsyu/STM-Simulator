@@ -110,7 +110,7 @@ describe('lecture examples',()=>{
  // Steps are times (ms) or [time, pressed buttons].
  const run=(id,steps)=>{const {project:p}=applyLectureExample(id),logs=[],sim=new CircuitSimulation();sim.drivers=createBoardDrivers(p,{log:s=>logs.push(s)});let r;for(const step of steps){const [t,pressed={}]=Array.isArray(step)?step:[step];r=sim.solve(p,{},pressed,t);}return {p,r,logs};};
  test('all circuits build, validate and use each pin or hole once',()=>{
-  assert.equal(LECTURE_EXAMPLES.length,21);assert.deepEqual(searchLectureExamples('IOT-01').map(e=>e.code),['IOT-01']);assert.equal(searchLectureExamples('라즈베리파이').length,15);
+  assert.equal(LECTURE_EXAMPLES.length,23);assert.deepEqual(searchLectureExamples('IOT-01').map(e=>e.code),['IOT-01']);assert.equal(searchLectureExamples('라즈베리파이').length,15);
   assert.equal(searchLectureExamples('과제').length,8);
   for(const e of LECTURE_EXAMPLES){const {project:p,file}=applyLectureExample(e.id);assert.ok(p.components.some(c=>c.type==='devboard'),e.code);
    const used=[...p.wires.flatMap(w=>[w.from,w.to]),...p.components.flatMap(c=>Object.values(attachments(c)))];assert.equal(new Set(used).size,used.length,e.code+': one endpoint per pin/hole');
@@ -121,12 +121,12 @@ describe('lecture examples',()=>{
  test('examples are listed under every kind of board they use',()=>{
   assert.deepEqual(EXAMPLE_BOARDS.map(b=>b.id),['rpi','stm32','esp32']);
   const under=id=>LECTURE_EXAMPLES.filter(e=>e.boards.includes(id)).map(e=>e.code);
-  assert.equal(under('rpi').length,15);assert.deepEqual(under('stm32'),['FW-09','BT-01','BT-02','WF-01']);assert.deepEqual(under('esp32'),['FW-09','FW-08','IOT-01','BT-02']);
+  assert.equal(under('rpi').length,15);assert.deepEqual(under('stm32'),['FW-09','BT-01','BT-02','WF-01','WIRE-01','WIRE-02']);assert.deepEqual(under('esp32'),['FW-09','FW-08','IOT-01','BT-02']);
   for(const e of LECTURE_EXAMPLES){const {project:p}=applyLectureExample(e.id),kinds=new Set(p.components.filter(c=>c.type==='devboard').map(c=>devboardModel(c).kind));if(!p.surfaces.board?.hidden)kinds.add('stm32');assert.deepEqual([...kinds].sort(),[...e.boards].sort(),e.code);}
  });
  test('wiring: Raspberry Pi wires run straight between the holes; ESP32 boards keep only unavoidable crossings',()=>{
   for(const e of LECTURE_EXAMPLES){const m=wiringMetrics(applyLectureExample(e.id).project);
-   assert.deepEqual(m.overlaps,[],e.code);assert.ok(m.crossings.length<=(({'FW-09':1,'IOT-01':4,'BT-01':4,'BT-02':3,'WF-01':14})[e.code]??0),`${e.code}: ${JSON.stringify(m.crossings)}`);}
+   assert.deepEqual(m.overlaps,[],e.code);assert.ok(m.crossings.length<=(({'FW-09':1,'IOT-01':4,'BT-01':4,'BT-02':3,'WF-01':14,'WIRE-01':12,'WIRE-02':12})[e.code]??0),`${e.code}: ${JSON.stringify(m.crossings)}`);}
   // The Raspberry Pi stands beside the breadboard (turned 90°): no wire is longer than the way across one half.
   for(const e of LECTURE_EXAMPLES.filter(e=>e.boards.includes('rpi')))assert.ok(wiringMetrics(applyLectureExample(e.id).project).length<1400,e.code);
  });
