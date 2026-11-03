@@ -17,6 +17,7 @@
   - 성능: 회로 연결 구조를 재사용해 보드 4개 회로를 약 8배 빠르게 했다.
   - 구조: 공통 함수 파일 `common.js`, app.js를 9개 기능 모듈과 상태 객체로 분리(구문 분석 기반 자동 이동). 분리 직후에는 정적 검사·번들 검사·E2E로 확인했다.
 - 검증(임시 복제본, Node 24.22.1, Electron 45.2.1): `npm test` 863개 중 862개 통과·1개 건너뜀, ESLint 오류 0, E2E 46개 중 44개 통과·2개 건너뜀(F4 도구 필요), 실제 ST HAL로 빌드한 WIRE-01·02 두 보드 에뮬레이터 실행 통과. CI는 아래.
+- 커밋·릴리스: 기능별 커밋 16개와 1.12.0 문서·버전(`d01ae2a`). 중간 CI 41593218310은 E2E 2개가 고치기 전 코드로 돌아 실패했고(이미 고친 항목), [Windows CI 41596047403](https://github.com/moonsyu/STM-Simulator/actions/runs/41596047403)이 전체 성공했다. [Release v1.12.0](https://github.com/moonsyu/STM-Simulator/releases/tag/v1.12.0) 공개 다운로드 확인: latest, 태그·BUILD-INFO 커밋 `d01ae2a`, EXE SHA-256 `470f2113…9f79`가 SHA256.txt·매니페스트·ZIP 안 EXE와 같음, ZIP에 LICENSE 포함.
 - 남은 사항: `redesign` 브랜치 삭제와 저장소 설명(사용자 조치 필요). 실물 확인(요청에서 제외).
 
 ## 2026-11-03 · 추가 개선 사항 점검

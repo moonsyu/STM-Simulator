@@ -1,5 +1,9 @@
 # 검증 기록
 
+## 1.12.0 정적 검사 · ESP32 실제 빌드 · 에뮬레이터 I²C/SPI · 라즈베리파이 Python · 인터넷 · 성능 · 구조 정리 — 공개 배포 검증 완료
+
+2026-11-03. 제품 커밋 `d01ae2a9d7aa05c6abf228add8d0a0749b00e27c` · [Windows CI 41596047403](https://github.com/moonsyu/STM-Simulator/actions/runs/41596047403) · [Release v1.12.0](https://github.com/moonsyu/STM-Simulator/releases/tag/v1.12.0). 로컬(임시 복제본, Node 24.22.1, Electron 45.2.1): `npm test` 863개 중 862개 통과·1개 건너뜀, ESLint 오류 0, E2E 46개 중 44개 통과·2개 건너뜀(F4 도구 필요), 이 PC의 ARM GCC·STM32CubeF1로 빌드한 WIRE-01·02 두 보드 에뮬레이터 실행 통과. CI: 정적 검사, 단위 검사, ST HAL 예제 빌드·에뮬레이터 실행(보드 간 I²C·SPI 포함), Arduino CLI 1.5.1·esp32 3.3.12로 예제 ESP32 스케치 8개 빌드, E2E, 패키징·Release 검증 모두 성공. 공개 다운로드: latest v1.12.0, 태그·BUILD-INFO 커밋 일치(작성자 naver), sourceDirty false, `STM-Simulator.exe` SHA-256 `470f2113cb20e28b0d77d43e262405a0b6035a56c0f8b350aef5168d0b599f79`(115,432,299 B, MZ)가 SHA256.txt·update-manifest.json·ZIP 안 EXE와 같음, ZIP SHA-256 `2a06d81ad66588c5bdaf78545db6fd81bc0dd188cd6f9fed5e38b36f1a21a489`, ZIP에 LICENSE 포함.
+
 ## 1.11.1 커밋 작성자 정정 뒤 다시 게시 — 공개 배포 검증 완료
 
 2026-11-03. 제품 커밋 `fbfaa0b2c6b064850ee5b449a124e0b6c8f5c376`(작성자·커미터 `moonsyu <anstn0104@naver.com>`) · [Windows CI 41582690804](https://github.com/moonsyu/STM-Simulator/actions/runs/41582690804) · [Release v1.11.1](https://github.com/moonsyu/STM-Simulator/releases/tag/v1.11.1). 기능 변경 없음(1.11.0과 같은 앱 코드, Release 검증 스크립트·문서만 변경). CI는 Windows 빌드와 Release 게시·검증 모두 성공. 공개 다운로드: latest v1.11.1, 태그·BUILD-INFO 커밋 일치, sourceDirty false, `STM-Simulator.exe` SHA-256 `1ef9210cb6dc23b5de60fd8a374e2d38695b3bf9d25b2413c6c8257297c610e4`(115,406,602 B, MZ)가 SHA256.txt·update-manifest.json·ZIP 안 EXE와 같음, ZIP SHA-256 `116d271fe23741afd1d8474fd6d051f323b858363b31fd9a9422a280006a05ce`. 이력 정정 뒤 기존 v1.11.0 Release 검증도 [CI 41576913739](https://github.com/moonsyu/STM-Simulator/actions/runs/41576913739)에서 트리 비교로 통과했다.
