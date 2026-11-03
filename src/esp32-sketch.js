@@ -17,11 +17,11 @@ export class SketchDriver{
  constructor(part,{log=()=>{},project}={}){
   const model=devboardModel(part);this.part=part;this.project=project;this.result=null;this.output='';this.outputLabel='스케치 출력';
   this.print=text=>{this.output=(this.output+text).slice(-8000);for(const line of String(text).split('\n').filter(Boolean))log(line);};
-  this.wire={address:null,receive:null,request:null,rx:[],tx:[]};this.ledc=new Map();this.serial2={ready:false,baud:9600,rx:'GPIO16',tx:'GPIO17',queue:[],lastTx:0};
+  this.wire={address:null,receive:null,request:null,rx:[],tx:[]};this.ledc=new Map();this.serial2={ready:false,baud:9600,rx:'GPIO16',tx:'GPIO17',queue:[],lastTx:0};this.serialIn=[];
   let program;try{program=compile(part.code,{esp32:true});}catch(error){throw new Error(`${part.name} · ${devboardModel(part).file}: ${error.message}`);}
   this.runtime=new Runtime(program,{
    pin:value=>esp32Pin(model,value),constants:{DHT11:11,DHT22:22,LED_BUILTIN:2,SERIAL_8N1:0x800001c},constructs:['DHT'],
-   print:text=>this.print(String(text)+'\n'),read:pin=>this.level(pin),voltage:pin=>this.voltage(pin),
+   print:text=>this.print(String(text)+'\n'),read:pin=>this.level(pin),voltage:pin=>this.voltage(pin),serialAvailable:()=>this.serialIn.length,serialRead:()=>this.serialIn.shift()??-1,
    construct:(name,args)=>({kind:'device',name,args}),deviceCall:(device,method,args)=>this.device(device,method,args),
    call:(name,args,runtime)=>this.call(name,args,runtime)
   });
@@ -63,6 +63,9 @@ export class SketchDriver{
   const uf=this.result?.uf;this.wireless?.transmit(frames,u.baud,id=>!!uf&&uf.find(`part:${id}:p4`)===uf.find(`signal:${this.part.id}.${u.tx}`));
   return frames.length;
  }
+ // What the serial monitor sends arrives on Serial, like text from the USB port.
+ get acceptsInput(){return true;}
+ receive(text){const bytes=new TextEncoder().encode(text);this.serialIn.push(...bytes);return bytes.length;}
  joinWireless(hub){hub.addPort(this.part.id,this);}
  wirelessRx(module,frames,baud){
   const u=this.serial2,uf=this.result?.uf;if(!u.ready||!uf||u.baud!==baud||uf.find(`part:${module.id}:p3`)!==uf.find(`signal:${this.part.id}.${u.rx}`))return;
