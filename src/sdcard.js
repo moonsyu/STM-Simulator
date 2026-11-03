@@ -2,6 +2,8 @@
 // and a compact project encoding: 'SD1:<sizeMB>:<base64 of [u32 sector][zero-RLE 512 B]...>'.
 // UI helpers: formatImage, listFiles, readFile, writeFile, deleteFile operate on the encoded string.
 export const SD_SIZES=[64,128,256],SD_DEFAULT_MB=64,SD_IMAGE_LIMIT=4*1024*1024;
+// Node (tests) has no btoa before 16; Buffer is only reached there.
+/* global Buffer */
 const B64=typeof btoa==='function'?{enc:s=>btoa(s),dec:s=>atob(s)}:{enc:s=>Buffer.from(s,'binary').toString('base64'),dec:s=>Buffer.from(s,'base64').toString('binary')};
 export class SparseDisk{
  constructor(sizeMB=SD_DEFAULT_MB){if(!SD_SIZES.includes(sizeMB))throw new Error(`SD 카드 용량은 ${SD_SIZES.join('/')} MB 중에서 선택하세요.`);this.sizeMB=sizeMB;this.sectors=sizeMB*2048;this.map=new Map();this.version=0;}

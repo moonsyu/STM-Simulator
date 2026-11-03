@@ -19,6 +19,7 @@
     "build": "npm run build:editor && node scripts/clean-build.cjs && electron-builder --win portable --x64 --publish never",
     "build:artifact": "node scripts/prepare-artifact.cjs",
     "build:editor": "node scripts/build-editor.mjs",
+    "lint": "eslint .",
     "build:icon": "electron scripts/prepare-icon.cjs",
     "build:catalog": "node scripts/build-device-catalog.mjs && node scripts/build-device-reference.mjs && node scripts/build-model-gallery.mjs",
     "build:fixtures": "node scripts/emu/build-cpu-fixtures.mjs && node scripts/emu/build-firmware-fixtures.mjs",
@@ -29,10 +30,13 @@
     "test:toolchain:ci": "node --test --test-reporter=spec --test-reporter-destination=stdout --test-reporter=./tests/github-reporter.mjs --test-reporter-destination=stdout --test-concurrency=1 \"tests/toolchain/*.test.mjs\""
   },
   "devDependencies": {
+    "@eslint/js": "10.0.1",
     "dompurify": "3.4.17",
     "electron": "45.2.1",
     "electron-builder": "26.18.0",
     "esbuild": "0.28.2",
+    "eslint": "10.13.0",
+    "globals": "17.13.0",
     "monaco-editor": "0.57.0",
     "playwright": "1.64.1"
   },

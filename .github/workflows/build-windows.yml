@@ -46,6 +46,8 @@ jobs:
         run: |
           $releaseVersion = (Get-Content package.json -Raw | ConvertFrom-Json).version
           if ($env:GITHUB_REF_NAME -cne "v$releaseVersion" -or $releaseVersion -notmatch '^\d+\.\d+\.\d+$') { throw 'Release tag must match the stable package version.' }
+      - name: Static checks (undefined names, duplicate keys, unreachable code)
+        run: npm run lint
       - name: Unit, interpreter, emulator and firmware tests
         run: npm run test:ci
       - name: Install ARM GCC and STM32CubeF4 / STM32CubeF1 drivers for real firmware builds
