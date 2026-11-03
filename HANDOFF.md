@@ -1,6 +1,15 @@
 # STM Simulator — 개발 인계
 
-현재 버전: **1.10.0**. 정리일: **2026-11-02**. NUCLEO-F446RE 또는 NUCLEO-F103RB와 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+현재 버전: **1.11.0**. 정리일: **2026-11-03**. NUCLEO-F446RE 또는 NUCLEO-F103RB와 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+
+## 1.11.0 보드 간 유선 통신 · 무선 확장 · 업데이트 점검 반영
+
+- 보드 간 I²C·SPI(인터프리터): `hal.js`의 `armSlave`·`finishSlave`와 `i2cSlaveInfo/Receive/Request`·`spiSlaveInfo/Exchange`. 슬레이브 함수(`HAL_I2C_Slave_*`, `SPI_MODE_SLAVE`의 `HAL_SPI_*`, 각 `_IT`와 완료 콜백). I²C 주소는 `Init.OwnAddress1`(HAL_I2C_Init 때 `i2cOwn`). 호출 사이에 온 바이트는 `slave.i2cHeld`/`spiHeld`에 두었다가 다음 호출이 받는다(첫 호출 전 I²C는 NACK). `stm32-boards.js` `connectStm32Drivers`의 `port(viewer,board)`가 각 보드의 `buses.boards`에 다른 보드를 그 시점의 이름(`<viewer id>.PB8`)으로 넣고, `buses.js` `i2cTarget`·`spiRespond`가 넷이 같은 슬레이브를 찾는다. 예제 WIRE-01(I²C, 4.7 kΩ 풀업)·WIRE-02(SPI)는 `wireless-examples.js` `wiredProgram`.
+- 에뮬레이터 보드 간 UART: `stm32-boards.js` `linkFirmwareUarts` → `FirmwareSession.linkPeerUart`(보내는 쪽 핀을 받는 USART 설정으로 디코딩) → `peerFrame`(받는 쪽 선 `peer:<보드>:<USART>`, `lineSources`가 RX 핀으로 연결).
+- 직렬 입력: `SketchDriver.receive`(`Serial.available/read`), `Stm32Driver.receive`(그 보드 세션의 USART2 `inject`). 로직 분석기 `#la-board`(드라이버 세션의 `signals`). 폴더 프로젝트는 `desktop/workspace.cjs` `boardSources`가 `board-<id>-main.c`·`board-<id>-sketch.ino` 등을 쓰고 읽는다(없으면 `.stm32lab` 값 유지).
+- 무선(`wireless.js`): 모듈 속성 `airLoss`(%)와 `hub.air`(고정 시드 xorshift, 블루투스·TCP는 7회까지 재전송 지연, UDP는 손실), ESP-01 `AT+CIPMODE=1` 패스스루(`through`·20 ms 조용하면 전송·`+++`로 끝), 회로 밖 상대 `hub.router`(`STM-Router`/`stm32-router`, 192.168.1.x)·`hub.pc`(192.168.1.100:8080)·`hub.phone`, 직렬 모니터 대상 `outside:pc`·`outside:phone:<모듈 id>`(`outsideInput`/`outsideOutput`). ESP32 스케치의 `BluetoothSerial`·`WiFi`·`WiFiServer`·`WiFiClient`는 `Esp32Bluetooth`·`Esp32Wifi`(허브의 `radios`)로 같은 공중에 들어간다. 예제 WF-02·BT-03.
+- 앱 구조: 속성 패널을 `src/inspector.js` `setupInspector(app)`로 분리(app.js 110 KB → 94 KB). 앱 상태는 getter, 동작은 함수로 넘긴다. 나머지(캔버스 포인터 처리·실행 시작·편집기 동기화)는 상태 변수를 직접 바꿔 그대로 두었다.
+- 정리: 배선된 STM32 핀 우클릭(`app.js` 첫 `contextmenu`, `elementsFromPoint`), 문서 수치, 생성 스크립트 3개가 다시 맞음(`device-visual-references.json`이 원본, `tests/unit/device-catalog-source.test.js`), `.github/workflows/weekly-check.yml`(주간 `npm audit`·전체 예제 ST HAL 빌드)·`.github/dependabot.yml`, 권한 없는 PC의 심볼릭 링크 검사 생략, Electron 45.2.1·electron-builder 26.18.0·Playwright 1.64.1.
 
 ## 1.10.0 블루투스·Wi-Fi 모듈 · 보드 간 통신 예제
 
@@ -10,13 +19,13 @@
 - STATE는 `catalog-electrical.js`에서 `p.linked`로 구동한다. 상태 문구와 LED는 `result.parts[id].status/led`.
 - 인터프리터에 `strcmp`·`strncmp` 추가(`runtime.js`), 라이브러리 이름 `Serial2` 추가.
 - 예제: `wireless-examples.js`. 한 보드 예제는 `catalog-protocol-examples.js`에서 부르고, 보드 간 예제 3개(`BT-01`, `BT-02`, `WF-01`)는 `LECTURE_EXAMPLES` 뒤에 붙는다. `how`가 있으면 `보드 간 통신`으로 표시한다. 각 보드 코드는 `tests/toolchain/arm-examples.test.mjs`에서 실제 HAL로 빌드한다.
-- `device-catalog-data.js`는 3종만 추가했다. `scripts/build-device-catalog.mjs`를 돌리면 손으로 고친 기존 문구가 JSON의 옛 문구로 되돌아가고, `build-device-reference.mjs`는 부품 수 검사에서 멈추며, `build-model-gallery.mjs`도 갤러리를 크게 바꾼다. 셋 다 1.10.0 이전부터의 불일치라 이번에 고치지 않았다.
+- `device-catalog-data.js`는 3종만 추가했다. 생성 스크립트 불일치는 1.11.0에서 고쳤다(`npm run build:catalog`).
 
 ## 1.9.2 배선이 연결된 핀의 GPIO 툴팁 · GPIO19 설명
 
 - `app.js` 캔버스 `pointermove`: 배선·배선 끝이 핀이나 구멍을 덮어도 `elementsFromPoint`로 그 아래 `[data-endpoint]`를 찾아 툴팁과 같은 넷 표시를 한다(클릭과 같은 방식). 전에는 `e.target`만 봐서 배선이 연결된 핀에는 정지 중 툴팁이 없고, 실행 중에는 `점퍼선` 전압만 나왔다. 이제 핀이 없는 배선 구간만 `점퍼선` 툴팁을 쓴다.
 - `devboards.js` `RPI_FUNCTIONS`: GPIO19 설명을 `PCM FS · PWM0`으로(`pinctrl-rp1.c` 기준). GPIO13의 `PWM1`은 공식 문서 표기와 같아 유지. 40핀 배열은 공식 그림·pinout.xyz와 불일치 0개.
-- 같은 원인이 남은 곳: `app.js` 첫 `contextmenu`(STM32 핀 우클릭 → 핀 설정)는 `e.target`만 봐서 배선이 있는 핀에서 열리지 않는다.
+- 같은 원인이던 `app.js` 첫 `contextmenu`(STM32 핀 우클릭 → 핀 설정)는 1.11.0에서 고쳤다.
 - `package.json` `overrides`: 권고 GHSA-g3hv-75wg-m249·GHSA-3g3m-2fjr-6pw4 때문에 `minimatch` 11.0.3, `@electron/asar` 4.3.1(그 아래 `glob` 14.0.3), `@electron/universal` 3.0.6으로 고정. 모두 빌드 도구이고 앱에는 포함되지 않는다. `electron-builder`가 이 버전들을 직접 쓰게 되면 뺀다.
 
 ## 1.9.1 ESP32 BOOT 버튼 업로드 확인 · 다운로드 모드 재부팅 안내
