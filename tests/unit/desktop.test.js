@@ -65,6 +65,19 @@ describe('workspace folders',()=>{
     await fs.rename(path.join(state.directory,'old.c'),path.join(parent,'old.c'));await assert.rejects(workspace.openWorkspace(state.directory),/old\.c 소스 파일이 없습니다/);
     if(await trySymlink(path.join(parent,'old.c'),path.join(state.directory,'old.c')))await assert.rejects(workspace.openWorkspace(state.directory),/일반 파일/);
   }));
+  test('other boards\' code is saved beside main.c and read back; an older folder without those files still opens',()=>withTempDir(async parent=>{
+    const {newStm32Fields}=await import('../../src/stm32-boards.js'),{projectForBoard}=await import('../../src/project.js');
+    const p=projectForBoard('nucleo-f103rb');p.components.push({id:'stm2',...newStm32Fields(p,'nucleo-f103rb',430),code:'int second(void){return 2;}'},{id:'esp',type:'devboard',model:'esp32-nodemcu-32s',name:'ESP32-1',x:0,y:0,rotation:0,code:'void setup(){}\nvoid loop(){}'});
+    const {directory}=await workspace.createWorkspace(parent,'boards',JSON.stringify(p));
+    assert.equal(await readText(path.join(directory,'board-stm2-main.c')),'int second(void){return 2;}');
+    assert.equal(await readText(path.join(directory,'board-esp-sketch.ino')),'void setup(){}\nvoid loop(){}');
+    await fs.writeFile(path.join(directory,'board-stm2-main.c'),'int second(void){return 3;}');
+    const opened=await workspace.openWorkspace(directory),again=JSON.parse(opened.text);
+    assert.equal(again.components.find(c=>c.id==='stm2').code,'int second(void){return 3;}');
+    await fs.rm(path.join(directory,'board-esp-sketch.ino'));
+    const old=await workspace.openWorkspace(directory);assert.match(JSON.parse(old.text).components.find(c=>c.id==='esp').code,/void setup/);
+    await workspace.saveWorkspace(old.state,old.text);assert.equal(await exists(path.join(directory,'board-esp-sketch.ino')),true,'the next save adds the file');
+  },'stm-ws-'));
   test('save writes the complete new file set and removes deleted sources',()=>withWorkspace(async(p,state)=>{
     const n=newProject(p);await workspace.saveWorkspace(state,JSON.stringify(n));await assertNewState(n,state.directory);
     assert.equal(state.hashes.get('new.c'),sha('int new_value = 2;'));assert.equal(state.hashes.has('old.c'),false);
