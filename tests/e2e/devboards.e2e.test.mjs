@@ -49,6 +49,29 @@ test('right-clicking an STM32 pin opens its pin settings, with or without a wire
  }finally{await s.close();}
 });
 
+test('boards on SPI wires: the logic analyzer lists each board and the monitor reaches the other board',{timeout:180000},async()=>{
+ const s=await launch();
+ try{
+  const {win}=s;await applyLecture(win,'WIRE-02');await win.keyboard.press('Control+F5');
+  await win.waitForFunction(()=>/\[STM32-2\] \[USART2 TX\] byte in/.test(document.getElementById('console-output').textContent),null,{timeout:60000});
+  await win.waitForFunction(()=>/slave answered/.test(document.getElementById('console-output').textContent)||/slave answered/.test(document.getElementById('uart-output').textContent),null,{timeout:60000}).catch(()=>{});
+  // The other board's own recorder: the analyzer's board list appears only with more than one STM32 board.
+  await win.click('[data-monitor="signals"]');
+  await win.waitForFunction(()=>!document.getElementById('la-board').parentElement.hidden&&document.getElementById('la-board').options.length===2);
+  assert.deepEqual(await win.evaluate(()=>[...document.getElementById('la-board').options].map(o=>o.textContent)),['주 보드','STM32-2']);
+  await win.waitForFunction(()=>document.getElementById('la-svg').textContent.includes('SCK'),null,{timeout:30000});
+  await win.selectOption('#la-board','stm2');await win.waitForFunction(()=>document.getElementById('la-board').value==='stm2');
+  // Text sent from the monitor goes to the other board's USART2.
+  await win.click('[data-monitor="bus"]');await win.selectOption('#serial-target','board:stm2');
+  await win.waitForFunction(()=>!document.getElementById('serial-send').disabled);
+  await win.fill('#serial-input','x');await win.click('#serial-send');
+  assert.equal(await win.evaluate(()=>document.getElementById('serial-feedback').textContent),'');
+  assert.equal(await win.evaluate(()=>document.getElementById('serial-input').value),'');
+  await win.keyboard.press('Control+F2');
+  assert.deepEqual(s.errors,[]);
+ }finally{await s.close();}
+});
+
 test('a pin with a wire on it still shows its GPIO in the tooltip',{timeout:120000},async()=>{
  const s=await launch();
  try{
