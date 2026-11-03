@@ -1,3 +1,5 @@
+import {$} from './common.js';
+
 // Literal searches retain UTF-16 offsets used by textarea selections.
 export function findMatches(text, query, caseSensitive = true) {
   if (!query) return [];
@@ -20,7 +22,6 @@ export function replacementEdit(text, matches, replacement, maxLength) {
 }
 
 export function setupEditorSearch({applyEdit, maxLength}) {
-  const $ = id => document.getElementById(id);
   const code = $('code'), panel = $('code-search'), query = $('code-find'), replacement = $('code-replacement');
   const count = $('code-find-count'), message = $('code-search-message'), sensitive = $('code-find-case');
   let matches = [], current = -1;

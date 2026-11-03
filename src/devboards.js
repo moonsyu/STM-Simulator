@@ -1,6 +1,7 @@
 import {partVector,partTransform,BOARD} from './geometry.js';
 import {boardPins} from './pins.js';
 import {BOARD_CATALOG} from './boards.js';
+import {esc} from './common.js';
 
 // Development boards placed next to the STM32 board (component type 'devboard'): ESP32 38-pin boards and the
 // Raspberry Pi 5. Drawn at real size like everything else (2.54 mm = 14 units), centred on the component position.
@@ -109,7 +110,6 @@ export function removeDevboard(project,id){
  const prefix=devboardPrefix(id);project.wires=project.wires.filter(w=>![w.from,w.to].some(e=>e.startsWith(prefix)));project.components=project.components.filter(p=>p.id!==id);
 }
 
-const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const rect=(x,y,w,h,fill,rx=0,extra='')=>`<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${rx}" fill="${fill}" ${extra}/>`;
 const text=(x,y,s,size,color,extra='')=>`<text x="${x}" y="${y}" font-size="${size}" fill="${color}" ${extra}>${esc(s)}</text>`;
 function esp32Art(model){

@@ -6,6 +6,7 @@
 import {PART_IMAGES} from './part-images.js';
 import {CATALOG_BY_TYPE,CATALOG_DEFS,CONTACT_MAPS,LEGACY_PHYSICAL,catalogType} from './catalog-defs.js';
 import {displayModel} from './model-geometry.js';
+import {esc} from './common.js';
 
 const ART={
  'led-tht-2':{light:[.5,.52,.4]},'rgb-common-anode-4':{light:[.5,.52,.4]},'rgb-neopixel-4':{light:[.5,.52,.4]},
@@ -91,7 +92,6 @@ export function artPadPosition(type,index,model=displayModel({type,x:0,y:0,rotat
  return {x,y,outside:false};
 }
 
-const esc=s=>String(s).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('"','&quot;');
 // A seven-segment digit template (the vector model's layout): a b c d e f g dp, local box x -13..16, y -20..22.
 const SEGMENTS=[[-9,-20,18,3],[10,-17,3,15],[10,3,3,15],[-9,18,18,3],[-13,3,3,15],[-13,-17,3,15],[-9,-1,18,3],[13,19,3,3]];
 

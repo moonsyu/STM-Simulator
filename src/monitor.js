@@ -1,6 +1,6 @@
 import {GPIO_PINS} from './pins.js';
 import {waveSvg} from './trace.js';
-const $=id=>document.getElementById(id);
+import {$} from './common.js';
 export class Monitor {
   constructor(options){
     Object.assign(this,options);this.events=[];this.view='log';this.lastPaint=0;this.dirty=true;

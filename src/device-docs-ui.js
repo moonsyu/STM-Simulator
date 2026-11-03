@@ -6,7 +6,7 @@ import {deviceDocs} from './device-docs-data.js';
 import {projectBoard} from './boards.js';
 import {baremetalCards} from './device-baremetal.js';
 import {devboardModel} from './devboards.js';
-const esc=value=>String(value).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;');
+import {esc} from './common.js';
 export function setupDeviceDocs({getProject,getSelection,isRunning,open,apply,showSource}){
  const tab=document.createElement('button');tab.dataset.tab='docs';tab.textContent='장치 Docs';tab.onclick=open;document.querySelector('.panel-tabs').append(tab);
  const panel=document.createElement('section');panel.id='device-docs-panel';panel.hidden=true;document.querySelector('.editor-panel').append(panel);let last='',activeMode='hal',message='',lastKey=null;

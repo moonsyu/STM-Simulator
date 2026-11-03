@@ -2,7 +2,7 @@
 import {CAMERA_PATTERNS,validCameraImage,decodeImageAsync} from './camera.js';
 import {CATALOG_BY_TYPE} from './catalog-defs.js';
 import {SD_SIZES,SD_DEFAULT_MB,formatImage,listFiles,readFile,writeFile,deleteFile} from './sdcard.js';
-const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]);
+import {$,esc} from './common.js';
 const PATTERN_LABELS={colorbars:'컬러 바',gradient:'움직이는 그라데이션',ball:'움직이는 공',image:'불러온 이미지'};
 const variant=p=>p?.catalogVariant||CATALOG_BY_TYPE[p?.type]?.id;
 export const isCamera=p=>variant(p)==='ov2640-camera';
@@ -14,7 +14,6 @@ export function mediaSection(p,running){
 }
 // Binds handlers after the inspector HTML is rendered.
 export function bindMedia(p,{running,checkpoint,changed,getSession,log}){
- const $=id=>document.getElementById(id);
  if(isCamera(p)){
   $('camera-pattern').onchange=e=>{checkpoint();p.pattern=e.target.value;changed();const s=getSession();if(s?.camera?.setPattern)s.camera.setPattern(p.id,p.pattern);};
   $('camera-image-pick').onclick=()=>$('camera-image-file').click();

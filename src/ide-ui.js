@@ -13,7 +13,7 @@ import {esc} from './render.js';
 import {withKey} from './keybindings.js';
 import {setupCodeFormat} from './code-format-ui.js';
 import {mountNativeChrome,setupNativeIde} from './native-ide-ui.js';
-const $=id=>document.getElementById(id);
+import {$} from './common.js';
 export function mountIdeChrome(){
   const toolbar=document.createElement('nav');toolbar.className='ide-toolbar';toolbar.setAttribute('aria-label','빌드와 디버그');toolbar.innerHTML='<button id="ide-build" class="primary" title="시뮬레이터용 빌드">빌드</button><span class="toolbar-divider"></span><button id="debug-start" title="시작 위치에서 디버깅">디버그 시작</button><span id="build-status" role="status">시뮬레이터용 빌드</span>';
   document.querySelector('.topbar').after(toolbar);toolbar.prepend(document.querySelector('.run-tools'));

@@ -1,6 +1,6 @@
 import {importColorscheme} from './colorscheme.js';
 import {PREFERENCES_KEY,defaultPreferences,loadPreferences,validatePreferences,selectedTheme,applyAppearance,EDITOR_COLOR_LABELS as COLOR_LABELS,BUILTIN_THEMES,appearanceMode,withEditorTheme} from './ide-preferences.js';
-const $=id=>document.getElementById(id);
+import {$} from './common.js';
 const SUN='<svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"><circle cx="8" cy="8" r="3"/><path d="M8 1.5v1.6M8 12.9v1.6M1.5 8h1.6M12.9 8h1.6M3.4 3.4l1.1 1.1M11.5 11.5l1.1 1.1M3.4 12.6l1.1-1.1M11.5 4.5l1.1-1.1"/></svg>';
 const MOON='<svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"><path d="M13.6 10.1A6 6 0 0 1 5.9 2.4a6 6 0 1 0 7.7 7.7Z"/></svg>';
 export function setupIdeSettings({editor,layout,open}){

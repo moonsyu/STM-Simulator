@@ -2,7 +2,7 @@ import {CATALOG_BY_TYPE,CATALOG_DEFS} from './catalog-defs.js';
 import {catalogHasBoard,catalogBodyBounds,catalogPadPosition,packageLeadRoot} from './model-geometry.js';
 import {hasPartArt,partArtShape} from './part-art.js';
 import {ledLevel} from './rgb-color.js';
-const esc=s=>String(s).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('"','&quot;');
+import {esc} from './common.js';
 const rect=(x,y,w,h,fill,rx=2,extra='')=>`<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${rx}" fill="${fill}" ${extra}/>`;
 const circle=(x,y,r,fill,extra='')=>`<circle cx="${x}" cy="${y}" r="${r}" fill="${fill}" ${extra}/>`;
 const label=(x,y,t,size=7,color='#ecece4')=>`<text x="${x}" y="${y}" text-anchor="middle" font-family="Consolas,monospace" font-size="${size}" fill="${color}">${esc(t)}</text>`;

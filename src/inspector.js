@@ -10,8 +10,8 @@ import {isStm32Board,stm32Boards,mainBoardName} from './stm32-boards.js';
 import {mediaSection,bindMedia} from './part-media-ui.js';
 import {esc,updateSimulationSvg} from './render.js';
 import {hasPythonCode} from './rpi-python.js';
+import {$} from './common.js';
 
-const $=id=>document.getElementById(id);
 /**
  * The right side bar's circuit inspector: what is selected, its values and its controls.
  * `app` is the rest of the application: its current state and the actions on it.

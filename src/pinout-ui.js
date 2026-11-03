@@ -8,6 +8,7 @@ import {isSerial,serialAf,serialFunction,assignSerialPin,setSerialEnabled} from 
 import {familyProfile,routesOf,irqNamesOf} from './mcu-family.js';
 import {dmaRequestsOf} from './mcu-config.js';
 import {projectBoard} from './boards.js';
+import {$,esc} from './common.js';
 // F1: TX and RX of a USART move together with its AFIO remap, so choosing one moves the other to the same group.
 function alignSerialRemap(config,id,pin){
   const option=familyProfile(config.family).remaps?.[id]?.find(o=>Object.values(o.pins).includes(pin));if(!option)return;
@@ -19,7 +20,6 @@ function alignSerialRemap(config,id,pin){
     else if(!current&&free)config.pins[target]={function:fn,pull:'NOPULL',edge:'FALLING',initial:0,label:''};
   }
 }
-const $=id=>document.getElementById(id),esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const numberInput=el=>el.value.trim()===''?NaN:Number(el.value);
 const numberText=value=>Number.isFinite(value)?value:'';
 const timerHint=(id,c,max=timerMax(id))=>`${max===65535?'16':'32'}비트 · 초기 ARR ${max}${c.period===0?' · ARR=0: 카운터 정지':''}`;

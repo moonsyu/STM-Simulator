@@ -4,7 +4,7 @@ import {l298Readouts} from './l298n-ui.js';
 import {deviceControls,deviceReadouts} from './device-ui.js';
 import {PART_DEFS} from './components.js';
 import {channelLevels,hexColor} from './rgb-color.js';
-const esc=t=>String(t).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+import {esc} from './common.js';
 // WS2812: the last 24-bit word received on DIN, shown in wire order (G, R, B).
 function ws2812Readouts(r){
  if(!r)return '<p>실행하면 DIN으로 받은 색과 G/R/B 값이 표시됩니다.</p>';

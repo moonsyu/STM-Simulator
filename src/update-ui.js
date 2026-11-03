@@ -1,4 +1,4 @@
-const $=id=>document.getElementById(id);
+import {$} from './common.js';
 export function setupUpdates({beforeInstall}){
  const api=window.appUpdates,button=$('app-update');
  button.hidden=true;if(!api)return;

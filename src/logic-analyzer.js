@@ -1,9 +1,8 @@
+import {$,esc} from './common.js';
 // Bottom-panel logic analyzer: bit-level UART / I2C / SPI / USART sync / 1-Wire
 // waveforms with protocol decoding and a configurable line-noise model.
 // Works with both the C interpreter session and the firmware emulator session
 // through the shared session.signals contract (channels / samples / decode / noise).
-const $=id=>document.getElementById(id);
-const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]);
 const WINDOWS=[[0.2,'200 µs'],[1,'1 ms'],[5,'5 ms'],[20,'20 ms'],[100,'100 ms'],[1000,'1 s']];
 const ROW=34,LABEL=118;
 export function setupLogicAnalyzer({getSession,getProject,isRunning,onNoise,log}){

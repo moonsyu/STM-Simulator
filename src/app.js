@@ -63,8 +63,9 @@ import {setupExamplePreviews} from './example-preview-ui.js';
 import {displayModel} from './model-geometry.js';
 import {esc,initSvg,renderWires,renderParts,renderBreadboards,renderDevboards,renderEndpoints,route,updateSimulationSvg,renderMountPreview,renderPinSearch,updateSurfaces} from './render.js';
 import {setupInspector} from './inspector.js';
+import {$} from './common.js';
 
-const $=id=>document.getElementById(id),svg=$('circuit');
+const svg=$('circuit');
 mountIdeChrome();const layout=createShell();let ide=null,deviceDocs=null,canvasKeys=null;
 const feedback=setupFeedback({showLog:()=>{layout.reveal('terminal');document.querySelector('[data-monitor="log"]').click();}});
 const wireDraft=new WireDraft();

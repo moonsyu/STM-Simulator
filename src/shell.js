@@ -3,7 +3,7 @@
 // Existing controls keep their IDs and listeners; the shell only relocates them.
 import {openUnitWindow} from './popout.js';
 import {loadKeybindings,saveKeybindings,createMatcher,eventKey,conflicts,bindingProblem,DEFAULT_KEYBINDINGS,setCurrentKeybindings} from './keybindings.js';
-const $=id=>document.getElementById(id);
+import {$,clamp} from './common.js';
 const KEY='stm32lab.shellLayout.v1';
 const ICON={
  explorer:'M4 3h7l2 2h7v14H4z M4 8h16',
@@ -33,7 +33,6 @@ const DOCK_HOME={sidebar:'sidebar','group-code':'code','group-circuit':'circuit'
 const DEFAULT={sidebar:272,aux:300,panel:240,ratio:.5,orientation:'row',swapped:false,show:{sidebar:true,aux:true,panel:true},view:'explorer',maximized:null,activityOrder:VIEWS.map(v=>v.id),dock:{...DOCK_HOME}};
 const validDock=d=>d&&typeof d==='object'&&DOCK_REGIONS.every(r=>Object.values(DOCK_HOME).includes(d[r]))&&new Set(DOCK_REGIONS.map(r=>d[r])).size===DOCK_REGIONS.length?Object.fromEntries(DOCK_REGIONS.map(r=>[r,d[r]])):{...DOCK_HOME};
 const validOrder=o=>Array.isArray(o)&&o.length===VIEWS.length&&VIEWS.every(v=>o.includes(v.id))?[...o]:VIEWS.map(v=>v.id);
-const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 function loadState(){
  try{const s=JSON.parse(localStorage.getItem(KEY));if(!s||typeof s!=='object')return structuredClone(DEFAULT);
   const n=(v,a,b,d)=>Number.isFinite(v)?clamp(v,a,b):d;

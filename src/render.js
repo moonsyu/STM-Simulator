@@ -10,7 +10,8 @@ import {extraShape,updateExtraSvg} from './part-render.js';
 import {scaleXOf,scaleYOf,partTransform,partVector,surfaceTransform,surfacePoint,scaleTransform} from './geometry.js';
 import {devboardPins,devboardSvg,updateDevboardSvg,devboardModel} from './devboards.js';
 import {ledLevel,mixColor} from './rgb-color.js';
-export const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+import {esc} from './common.js';
+export {esc} from './common.js';
 const text=(x,y,s,size=10,color='#4a6e87',other='')=>`<text x="${x}" y="${y}" font-size="${size}" fill="${color}" ${other}>${esc(s)}</text>`;
 const rect=(x,y,w,h,fill,rx=0,extra='')=>`<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${rx}" fill="${fill}" ${extra}/>`;
 function chip(x,y,w,h){let pins='';for(let i=0;i<16;i++){const d=(i+1)*(w-8)/17;pins+=rect(x+4+d,y-6,2,8,'#aeb4b5')+rect(x+4+d,y+h-2,2,8,'#aeb4b5')+rect(x-6,y+4+d,8,2,'#aeb4b5')+rect(x+w-2,y+4+d,8,2,'#aeb4b5');}return pins+rect(x,y,w,h,'#292b2c',2,'stroke="#111718" stroke-width="1.5"')+rect(x+2,y+2,w-4,h-4,'none',1,'stroke="#444849" stroke-width=".7"')+`<circle cx="${x+7}" cy="${y+7}" r="2" fill="#767c7c"/>`;}

@@ -1,9 +1,10 @@
 import {DEFAULT_BOARD_ID,getBoard,searchBoards} from './boards.js';
 import {hasBoardChanges} from './project.js';
 import {esc} from './render.js';
+import {$} from './common.js';
 
 export function setupBoardPicker({getProject,isRunning,onSelect}){
- const $=id=>document.getElementById(id);let pending=null;
+ let pending=null;
  function render(){
   const current=getProject().boardId??DEFAULT_BOARD_ID,boards=searchBoards($('board-search').value);
   $('board-results').innerHTML=boards.length?boards.map(board=>`<button class="board-option" data-board-id="${board.id}"><span class="board-option-icon" aria-hidden="true">${esc(board.chip)}</span><span><strong>${esc(board.name)}</strong><small>${esc(board.mcu)}</small><small>${esc(board.description)}</small></span><span class="board-option-action">${board.id===current?'현재 보드<br>새로 시작':'선택'}</span></button>`).join(''):'<p class="board-empty">검색 결과가 없습니다.<br>보드명 또는 MCU 이름으로 검색해 주세요.</p>';
