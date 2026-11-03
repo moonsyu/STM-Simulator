@@ -3,11 +3,13 @@ import {endpointInfo,breadboardPrefix,BB} from './pins.js';
 import {localTerminals} from './components.js';
 import {partVector} from './geometry.js';
 import {findMount,applyMount} from './placement.js';
-import {DEVBOARD_MODELS,devboardPins,boardFileKey} from './devboards.js';
+import {DEVBOARD_MODELS,devboardPins,boardFileKey,devboardModel} from './devboards.js';
 import {defineScenario} from './fixed-run.js';
 import {startProject,validateProject} from './project.js';
 import {halExampleFor} from './hal-examples.js';
 import {WIRELESS_EXAMPLES} from './wireless-examples.js';
+import {reindentC} from './c-format.js';
+import {isKernelSource} from './rpi-python.js';
 
 // SSAFY embedded-track lecture circuits on ESP32 and Raspberry Pi boards (the lecture schematics site lists the board
 // pins and parts of each), and the lecture's hands-on assignments that use a circuit. The same board pins, parts and
@@ -277,8 +279,19 @@ const normalize=value=>String(value).normalize('NFKC').toLowerCase().replace(/[\
 const BOARD_WORDS={rpi:'라즈베리파이 raspberry pi rpi',stm32:'stm32 nucleo',esp32:'esp32'};
 export function searchLectureExamples(query){const q=normalize(query);return LECTURE_EXAMPLES.filter(e=>!q||normalize([e.code,e.title,e.ref,e.kind,'강의',...e.boards.map(b=>BOARD_WORDS[b])].join(' ')).includes(q));}
 /** The lecture example as a new project (the editor opens the board program). */
+// The C of an example (STM32 main.c and sources, ESP32 sketches, kernel modules) is indented by 4 spaces like the HAL
+// examples; Python keeps its own indentation.
+function indentExampleCode(project){
+ const c=text=>typeof text==='string'?reindentC(text):text;
+ project.code=c(project.code);for(const f of project.firmware?.files||[])if(/\.(c|h|cpp)$/i.test(f.name))f.text=c(f.text);
+ for(const part of project.components.filter(p=>p.type==='devboard')){
+  if(devboardModel(part)?.kind==='rpi'&&!isKernelSource(part.code))continue;
+  part.code=c(part.code);for(const f of part.firmware?.files||[])if(/\.(c|h|cpp)$/i.test(f.name))f.text=c(f.text);
+ }
+ return project;
+}
 export function applyLectureExample(id){
  const example=lectureExample(id);if(!example)throw new Error('강의 예제를 찾을 수 없습니다.');
- const project=validateProject(example.build()),board=project.components.find(p=>p.type==='devboard');
+ const project=indentExampleCode(validateProject(example.build())),board=project.components.find(p=>p.type==='devboard');
  return {project,file:board&&!example.boards.includes('stm32')?boardFileKey(board):'main.c'};
 }

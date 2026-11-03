@@ -183,6 +183,12 @@ export function formatCode(source,{tabSize=4,range=null}={}){
 }
 /** formatCode for code the app generates (examples, new projects, Pinout): 4-space indentation. */
 export const expandC=(source,{tabSize=4}={})=>formatCode(source,{tabSize}).text;
+/** Only the leading indentation of each line, as formatC computes it; the rest of every line stays as written. */
+export function reindentC(source,{tabSize=4}={}){
+ const before=String(source).split('\n'),after=formatC(source,{tabSize}).split('\n');
+ if(after.length!==before.length)return source;
+ return before.map((line,i)=>line.trim()?/^\s*/.exec(after[i])[0]+line.trimStart():line).join('\n');
+}
 
 /** Line range (1-based) of the block whose `}` sits on `line` (the last `}` before `column`, if given), or null. */
 export function blockRange(source,line,column=Infinity){
