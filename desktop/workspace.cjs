@@ -8,7 +8,18 @@ async function filesFor(text){
   const {validateProject}=await import('../src/project.js');const project=validateProject(JSON.parse(text));
   const files=new Map([['project.stm32lab',JSON.stringify(project,null,2)+'\n'],['main.c',project.code]]);
   for(const f of project.firmware?.files||[]){if(!safeName(f.name))throw new Error('Windows에서 사용할 수 없는 소스 파일명입니다.');files.set(f.name,f.text);}
+  for(const [name,source]of await boardSources(project)){if(!safeName(name)||files.has(name))throw new Error(`${name}: 다른 보드의 소스 파일명을 쓸 수 없습니다.`);files.set(name,source.get());}
   return files;
+}
+// The other boards' code sits beside main.c as board-<part id>-<file>.
+async function boardSources(project){
+  const {devboardModel}=await import('../src/devboards.js'),out=new Map();
+  for(const part of project.components.filter(p=>p.type==='devboard'&&typeof p.code==='string')){
+    const stm32=devboardModel(part)?.kind==='stm32',prefix=`board-${part.id}-`;
+    out.set(prefix+(stm32?'main.c':devboardModel(part)?.file??'code.txt'),{get:()=>part.code,set:text=>{part.code=text;}});
+    if(stm32)for(const f of part.firmware?.files||[])out.set(prefix+f.name,{get:()=>f.text,set:text=>{f.text=text;}});
+  }
+  return out;
 }
 async function snapshot(directory,names){const hashes=new Map();for(const name of names){try{const stat=await fs.lstat(path.join(directory,name));if(stat.isSymbolicLink()||!stat.isFile())throw new Error(`${name}: 일반 파일만 프로젝트 소스로 사용할 수 있습니다.`);hashes.set(name,hash(await fs.readFile(path.join(directory,name))));}catch(e){if(e.code!=='ENOENT')throw e;hashes.set(name,null);}}return hashes;}
 async function createWorkspace(parent,name,text){
@@ -25,7 +36,11 @@ async function readWorkspace(directory){
   await transaction.recover(directory);
   const stat=await fs.stat(path.join(directory,'project.stm32lab'));if(stat.size>2000000)throw new Error('프로젝트 크기 제한을 넘었습니다.');
   const text=await fs.readFile(path.join(directory,'project.stm32lab'),'utf8'),files=await filesFor(text),hashes=await snapshot(directory,files.keys()),project=JSON.parse(text);
-  for(const name of files.keys()){if(name==='project.stm32lab')continue;if(hashes.get(name)===null)throw new Error(`${name} 소스 파일이 없습니다.`);const stat=await fs.stat(path.join(directory,name));if(stat.size>1200000)throw new Error('소스 파일 크기 제한을 넘었습니다.');const value=await fs.readFile(path.join(directory,name),'utf8');if(name==='main.c')project.code=value;else project.firmware.files.find(f=>f.name===name).text=value;}
+  const boards=await boardSources(project);
+  for(const name of files.keys()){if(name==='project.stm32lab')continue;
+    // Folders saved before 1.11.0 keep the other boards' code only in project.stm32lab.
+    if(hashes.get(name)===null&&boards.has(name))continue;
+    if(hashes.get(name)===null)throw new Error(`${name} 소스 파일이 없습니다.`);const stat=await fs.stat(path.join(directory,name));if(stat.size>1200000)throw new Error('소스 파일 크기 제한을 넘었습니다.');const value=await fs.readFile(path.join(directory,name),'utf8');if(name==='main.c')project.code=value;else if(boards.has(name))boards.get(name).set(value);else project.firmware.files.find(f=>f.name===name).text=value;}
   const updated=JSON.stringify(project);await filesFor(updated);return {text:updated,state:{directory,hashes}};
 }
 async function writeWorkspace(state,text){
