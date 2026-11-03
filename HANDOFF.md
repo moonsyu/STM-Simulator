@@ -530,7 +530,7 @@ GPIO 변경 전 `beforeChange`로 이전 출력의 시간 구간을 적분하고
 
 ## 개발과 검증
 
-Node.js 24 계열, Electron 44.2.0, electron-builder 26.15.3, Playwright 1.58.2. 의존성은 lockfile을 따른다.
+Node.js 24 계열, Electron 45.2.1, electron-builder 26.18.0, Playwright 1.64.1. 의존성은 lockfile을 따른다.
 
 ```powershell
 npm ci
