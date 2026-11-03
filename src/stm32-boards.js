@@ -135,6 +135,9 @@ export class Stm32Driver{
  /** The board's RESET button: its program starts again; the circuit keeps running. */
  reset(){this.session=this.create();this.session.circuit=new ViewCircuit(this);if(this.emulate)this.session.dynamic=true;this.enriched=null;this.cache=null;this.session.result=this.view();if(this.hub)this.joinWireless(this.hub);}
  joinWireless(hub){this.hub=hub;hub.addPort(this.part.id,this.session);}
+ // The serial monitor reaches this board's USART2 through its ST-LINK, like the main board's.
+ get acceptsInput(){return true;}
+ receive(text){return this.session.inject(text,'USART2');}
  /**
   * Parts this board drives: reached from its pins through signal nets and other parts (an L298N on its pins and the
   * motor on the L298N outputs), not through the shared supplies, and not reached from another STM32 board's pins.
