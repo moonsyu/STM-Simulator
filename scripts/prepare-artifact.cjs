@@ -91,7 +91,7 @@ const {cleanArtifactOutput} = require('./clean-build.cjs');
   for (const file of ['LICENSE.electron.txt', 'LICENSES.chromium.html']) {
     await fs.copyFile(path.join(unpacked, file), path.join(output, file));
   }
-  for (const file of ['README.md', 'THIRD_PARTY_NOTICES.md']) {
+  for (const file of ['README.md', 'LICENSE', 'THIRD_PARTY_NOTICES.md']) {
     await fs.copyFile(path.join(root, file), path.join(output, file));
   }
   for (const file of ['MONACO-LICENSE.txt', 'MONACO-NOTICES.txt','DOMPURIFY-LICENSE.txt']) await fs.copyFile(path.join(root, 'src/generated', file), path.join(output, file));

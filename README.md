@@ -95,6 +95,10 @@ Releases의 **Assets**에서 `STM-Simulator-<버전>-Windows-x64.zip`을 받아 
 
 실물 NUCLEO-F446RE·NUCLEO-F103RB 빌드·실행에 필요한 ARM GCC·STM32CubeF4/F1·OpenOCD는 STM32CubeIDE가 없어도 됩니다. 앱을 처음 실행하면 빠진 도구를 알려 주고, **실행 및 디버그 → 개발 도구 → 필요한 도구 설치**로 바로 받을 수 있습니다(약 365 MB, 설치 후 약 1.6 GB).
 
+## 라이선스
+
+STM Simulator의 소스 코드와 문서는 [MIT 라이선스](LICENSE)로 공개합니다. 사용·복제·수정·배포·판매가 자유롭고, 저작권 표시와 라이선스 문구만 함께 두면 됩니다. 함께 배포하는 Electron·Monaco·DOMPurify 등은 각자의 라이선스를 따르며 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)에 적었습니다.
+
 ## 권리 관련 안내
 
 STM Simulator는 STMicroelectronics의 공식 제품이 아닌 개인 학습 프로젝트이며, ST의 후원·승인·제휴를 주장하지 않습니다. STM32, NUCLEO 등 제품명과 상표의 권리는 각 권리자에게 있습니다.

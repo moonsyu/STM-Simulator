@@ -8,11 +8,11 @@ Reference photographs, supplied pin-map images, generated reference illustration
 
 LiquidCrystal, Wire, SPI, and Arduino-style API names describe the compatible portions of the educational sketch interface. The parser, interpreter, LCD controller and communication models are independently implemented in this repository. Arduino library implementations and STM32 firmware are not linked or bundled. The supported subset and references are recorded in `docs/SKETCH-API.md`.
 
-## Electron 44.2.0
+## Electron 45.2.1
 
 Electron is used under the MIT license. The original Electron license is retained as `LICENSE.electron.txt` in the packaged runtime and download bundle. Electron's Chromium and other bundled components have their own notices, retained in the unmodified `LICENSES.chromium.html` file. The portable EXE includes these runtime files in its payload; the download bundle also exposes them for reading.
 
-Source: [Electron v44.2.0](https://github.com/electron/electron/tree/v44.2.0).
+Source: [Electron v45.2.1](https://github.com/electron/electron/tree/v45.2.1).
 
 ```text
 Copyright (c) Electron contributors
