@@ -1,6 +1,17 @@
 # STM Simulator — 개발 인계
 
-현재 버전: **1.11.1**. 정리일: **2026-11-03**. NUCLEO-F446RE 또는 NUCLEO-F103RB와 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+현재 버전: **1.12.0**. 정리일: **2026-11-03**. NUCLEO-F446RE 또는 NUCLEO-F103RB와 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+
+## 1.12.0 정적 검사 · ESP32 실제 빌드 · 에뮬레이터 I²C/SPI · 라즈베리파이 Python · 인터넷 · 성능 · 구조 정리
+
+- 정적 검사: `eslint.config.js`(no-undef·중복 키·도달 못 하는 코드 등 실행을 깨는 실수만), `npm run lint`, CI 단계. 처음 돌렸을 때 1.11.0 분리에서 생긴 `inspector.js`의 `...project`(정의 안 됨)를 찾았다: 속성 패널의 부품 값이 `try/catch`에 묻혀 반영되지 않던 문제(1.11.0·1.11.1)를 고쳤다.
+- CI: `tests/toolchain/esp32-sketches.test.mjs`가 예제의 ESP32 스케치를 Arduino CLI 1.5.1·esp32 3.3.12(+DHT·Adafruit Unified Sensor·PubSubClient)로 빌드한다(`ARDUINO_CLI`, `CI_REQUIRE_ESP32`). 주간 워크플로는 사용자 요청으로 지웠다(Dependabot은 유지).
+- 에뮬레이터 보드 간 I²C·SPI: `emu/stm32f446/i2c.js` 슬레이브(OAR1, ADDR/TRA, RxNE와 `held`, TxE를 기다리는 마스터 읽기(`readByte` 재시도, 최대 1초), STOPF는 프로그램이 다 읽은 뒤, AF), `spi.js` `slaveExchange`(소프트웨어 NSS). `FirmwareSession.peerI2c/peerSpi`가 `boardPeers`(`stm32-boards.js` `linkFirmwareBoards`)에서 같은 넷의 슬레이브를 찾는다. `tests/toolchain/board-links.test.mjs`가 WIRE-01·02를 실제 ST HAL로 빌드해 두 보드를 함께 돌린다.
+- 라즈베리파이 `src/rpi-python.js`: 들여쓰기 토크나이저·파서·제너레이터 실행기(`PythonProgram`, 문장당 2 µs, `{wait}`/`{input}`/`{pause}`), `PythonDriver`(gpiozero LED·PWMLED·Button·LEDBoard, RPi.GPIO, 버튼 콜백은 `observe`의 에지에서, 1 ms 창에서 4번 넘게 바뀐 핀은 평균 듀티의 PWM). `fixed-run.js`는 코드가 있는 main.py면 Python, 커널 모듈(C)은 시나리오. 편집기에서 main.py 편집 가능.
+- 인터넷(`wireless.js`): `INTERNET` 브로커(MQTT 3.1.1)·웹 서버(HTTP/1.1) `Host`, `resolve`·`AT+CIPDOMAIN`, 직렬 모니터 `outside:broker`·`outside:web`. ESP32 `HTTPClient`·`PubSubClient`(`esp32-sketch.js` `httpCall`·`mqttCall`). 예제 WF-03.
+- 성능: `engine.js`가 연결 구조(UnionFind)를 프로젝트 객체마다 구조 키(배선·장착·스위치·눌림)로 재사용한다(물리 모델은 매번 새로). 보드 4개 3초 실행 1656 ms → 208 ms.
+- 구조: `src/common.js`(`$`·`esc`·`clamp`, 18개 파일의 사본 대체). app.js는 시작 연결만(28 KB) 남기고 기능별 모듈 `app-core`·`app-view`·`app-canvas`·`app-circuit`·`app-editor`·`app-examples`·`app-files`·`app-run`·`app-keyboard`로 나눴다. 상태는 `app-state.js`의 `state` 객체 하나(이전의 모듈 `let` 43개), 긴 인라인 이벤트 처리는 `onSvgPointerdown` 같은 이름 있는 함수. 나눌 때 ESLint의 espree·eslint-scope로 참조를 찾아 옮겼다.
+- 저장소: MIT `LICENSE`(배포 묶음에도 포함), `package.json` license·author. `redesign` 브랜치 삭제는 권한 확인에서 막혀 남아 있다. GitHub 저장소 설명은 웹에서 바꿔야 한다.
 
 ## 1.11.1 커밋 작성자 정정 뒤 다시 게시
 
@@ -504,6 +515,8 @@
 | `src/hal-generator.js`, `tests/toolchain/` | 이식 가능한 main.c 생성·ST HAL ARM 빌드 후 에뮬레이터 실행 검증 |
 | `src/pins.js`, `src/components.js`, `src/placement.js` | 핀·부품·다리·별칭·구멍 장착 |
 | `src/boards.js`, `src/board-picker.js` | 보드 카탈로그·검색·초기화 확인 |
+| `src/app.js`, `src/app-*.js`, `src/app-state.js`, `src/common.js` | 시작 연결, 기능별 모듈, 공유 상태, 공통 함수 |
+| `src/rpi-python.js` | 라즈베리파이 main.py Python 해석기·보드 드라이버 |
 | `src/breadboards.js` | 추가 빵판 이동·회전·삭제와 연결 보존 |
 | `src/part-library.js` | 전체 부품 카탈로그·한글/영문 검색 |
 | `src/project.js`, `src/hal-examples.js`, `src/hal-circuits.js` | 빈 HAL 프로젝트·파일 검증·HAL 예제 코드/회로 |

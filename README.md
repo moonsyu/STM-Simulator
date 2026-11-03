@@ -47,7 +47,7 @@ STM Simulator는 **NUCLEO-F446RE·NUCLEO-F103RB 회로 시뮬레이터와 Cortex
 - **회로 편집**: 빈 회로에서 보드 한 개와 빵판 여러 개(최대 8개)를 추가하고, 배선 20색·꺾임점·다중 선택·복제·복사/붙여넣기·무제한 배치 공간·커서 중심 확대를 사용합니다.
 - **부품 116종(보드 제외)**: 저항·LED·버튼·LCD·OLED·TFT·LED 매트릭스·센서(TMP36, 초음파, LDR, NTC, SHT31, MPU6050, PIR 등)·서보·DC 모터·스테퍼·릴레이·L298N·수동 부저·카메라·SD 카드·블루투스(HC-05, HC-06)·Wi-Fi(ESP-01) 등.
 - **HAL 예제 130개**: 장치명·핀 수·인터페이스·함수명으로 검색하며 회로·배선·코드·핀 설정을 한 번에 적용하고 빵판에 자동 배치·배선합니다.
-- **보드 간 유선 통신**: STM32 보드끼리 UART·I²C·SPI(슬레이브 HAL 함수 포함)로 주고받습니다.
+- **보드 간 유선 통신**: STM32 보드끼리 UART·I²C·SPI(슬레이브 HAL 함수 포함)로 주고받습니다. 회로 시뮬레이터와 펌웨어 에뮬레이터(실제 ST HAL 펌웨어) 모두 됩니다.
 - **보드 간 무선 통신**: HC-05·HC-06 블루투스와 ESP-01 Wi-Fi 모듈, ESP32 자체 BluetoothSerial·WiFi로 패킷 손실·패스스루까지, 회로 밖의 스마트폰·공유기 PC와도 통신합니다. 모듈은 UART로 연결해 STM32·ESP32 보드끼리 AT 명령·페어링·TCP로 통신합니다. 바로 실행되는 보드 간 예제 3개가 있습니다.
 - **장치 Docs와 main.c 삽입**: 배선표, HAL 함수, 레지스터 예제를 확인하고 기존 `main.c`와 초기화 함수에 직접 삽입합니다(누락 배선·핀 보완, 사용자 코드 보존, 실행 취소).
 - **Pinout & Configuration**: GPIO, EXTI, NVIC, UART/USART 6개(동기 모드 포함), I²C1, SPI1, ADC1, TIM2~5, DMA 설정과 HAL 초기화 코드 생성. `.ioc`·`main.c`·Cube 프로젝트 폴더 가져오기.
@@ -55,6 +55,8 @@ STM Simulator는 **NUCLEO-F446RE·NUCLEO-F103RB 회로 시뮬레이터와 Cortex
 - **IDE 프로젝트**: 폴더 프로젝트 생성·열기, C/C++/H 파일 관리, clangd 의미 분석, ARM/Windows GCC Debug·Release 빌드, GDB 디버그, Windows 명령 프롬프트 터미널.
 - **저장**: `.stm32lab` 파일과 프로젝트 폴더(저널·롤백으로 여러 파일을 원자적으로 저장), 자동 저장, 종료 직전 편집 보존, 실행 취소/재실행.
 - **STM32 보드 여러 개**: NUCLEO-F446RE·F103RB를 한 회로에 4개까지 놓고 보드마다 `main.c`·핀 설정·소스를 따로 둡니다. 편집할 보드를 고르면 편집기·Pinout·빌드·디버그가 그 보드를 대상으로 하고, 실행 한 번에 모든 보드가 같은 회로에서 함께 동작합니다(GPIO·EXTI, 보드 간 UART, 펌웨어 에뮬레이터). 실물 보드는 보드마다 빌드해 각자의 ST-LINK에 차례로 기록합니다. [사용법](docs/IDE.md#stm32-보드-여러-개).
+- **라즈베리파이 main.py 실행**: gpiozero·RPi.GPIO를 쓰는 Python 코드를 앱의 Python 해석기로 STM32와 같은 회로·시간축에서 실행합니다.
+- **인터넷 쪽 서버**: 공유기 너머의 MQTT 브로커와 웹 서버에 ESP-01(AT 명령)과 ESP32(HTTPClient·PubSubClient)가 접속합니다.
 - **ESP32·라즈베리파이 보드와 강의 실습 예제**: STM32 옆에 NodeMCU-32S(ESP-32S)·ESP32 DevKit(WROOM-32)·Raspberry Pi 5를 놓고 배선합니다. ESP32는 빵판에 꽂힙니다. ESP32 스케치(`setup`/`loop`, GPIO 번호, ADC·LEDC PWM·Serial.printf·DHT·Wire 슬레이브)는 해석 실행하고, 라즈베리파이는 강의 예제의 **고정 실행**(예제 시나리오대로 핀·출력 재현)으로 STM32와 같은 시간축에서 동작합니다. 연결한 실물 ESP32에는 같은 스케치를 Arduino CLI로 빌드·업로드합니다. 강의 회로도 10개와 회로가 있는 강의 과제 8개를 예제로 불러올 수 있고, 예제 목록은 Raspberry Pi · STM32 · ESP32로 나뉩니다. [사용법](docs/IDE.md#esp32라즈베리파이-보드와-강의-실습-예제)
 - **자동 업데이트**: 포터블 EXE에서 GitHub Release의 새 버전을 확인·다운로드하고 해시 검증 후 교체합니다. [업데이트 사용법](docs/UPDATES.md).
 
