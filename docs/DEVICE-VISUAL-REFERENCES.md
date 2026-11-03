@@ -1,6 +1,6 @@
 # STM32 장치 외형과 핀 구성 자료집
 
-확인일: 2026-10-14. 기준 소스: `a24bc19`. 기존 학습 부품 라이브러리 **35종 전체**, 외형·핀 구성 **80항목**, MCU 내부 주변장치 **24분류**를 연결한다.
+확인일: 2026-10-14. 기준 소스: `a24bc19`. 기존 학습 부품 라이브러리 **35종 전체**, 외형·핀 구성 **83항목**, MCU 내부 주변장치 **24분류**를 연결한다.
 
 [사진과 핀 수로 찾아보기](device-reference-gallery.html) · [구조화된 원본 목록](device-visual-references.json)
 
@@ -120,7 +120,7 @@
 - 외형: 긴 문자 LCD와 한 줄 16개 패드·헤더. [사진](https://cdn-shop.adafruit.com/970x728/181-06.jpg)
 - 주요 핀: 16접점 — VSS, VDD, VO, RS, R/W, E, D0, D1, D2, D3, D4, D5, D6, D7, A, K
 - 연결 방식: GPIO 병렬
-- 구분점: 4비트 모드로 사용해도 물리 핀은 16개입니다. 현재 앱은 이 형태입니다.
+- 구분점: 4비트 모드로 사용해도 물리 핀은 16개입니다.
 - 근거: [Standard LCD 16x2 + extras [white on blue] : Adafruit Industries, Unique & fun DIY electronics and kits](https://www.adafruit.com/product/181)
 
 <a id="lcd-i2c-4"></a>
@@ -197,7 +197,7 @@
 - 외형: 작은 센서 칩과 Grove 4핀 소켓. [사진](https://files.seeedstudio.com/wiki/Grove-TempAndHumi_Sensor-SHT31/img/main_new.jpg)
 - 주요 핀: 4접점 — VCC, GND, SDA, SCL
 - 연결 방식: I²C
-- 구분점: 현재 4신호 모델과 인터페이스가 대응합니다. 커넥터 배치·기구는 앱 그림과 다릅니다.
+- 구분점: Grove 커넥터의 VCC·GND·SDA·SCL 4신호로 I²C 통신합니다.
 - 근거: [Grove - Temp and Humi Sensor(SHT31)  /  Seeed Studio Wiki](https://wiki.seeedstudio.com/Grove-TempAndHumi_Sensor-SHT31/)
 
 <a id="sht31-breakout-7"></a>
@@ -215,10 +215,10 @@
 <a id="mpu6050-8"></a>
 #### SEN-MPU6050 8핀
 
-- 외형: MCU와 작은 레귤레이터, 장착홀, 한 줄 8핀 헤더. [사진](https://www.joy-it.net/files/files/Produkte/SEN-MPU6050/SEN-MPU6050_1.png)
+- 외형: 센서 칩과 작은 레귤레이터, 장착홀, 한 줄 8핀 헤더. [사진](https://www.joy-it.net/files/files/Produkte/SEN-MPU6050/SEN-MPU6050_1.png)
 - 주요 핀: 8접점 — VCC, GND, SCL, SDA, XDA, XCL, AD0, INT
 - 연결 방식: I²C
-- 구분점: 앱은 VCC/GND/SDA/SCL 네 단자만 표현합니다. 보조 I²C·주소·인터럽트 핀은 표현되지 않습니다.
+- 구분점: VCC·GND·SCL·SDA로 I²C 통신합니다. AD0를 GND에 연결하면 주소 0x68입니다. 보조 I²C(XDA·XCL)와 INT는 시뮬레이션하지 않습니다.
 - 근거: [Motion sensor MPU6050 (Gyroscope)  /  Joy-IT](https://www.joy-it.net/en/products/SEN-MPU6050)
 
 ### PIR 움직임 센서
@@ -268,7 +268,7 @@
 - 외형: 컬러 표시창과 8핀 케이블 인터페이스. [사진](https://www.waveshare.com/w/upload/a/ae/1.8inch-LCD-Module-1.jpg)
 - 주요 핀: 8접점 — VCC, GND, DIN, CLK, CS, DC, RST, BL
 - 연결 방식: SPI
-- 구분점: 앱 7핀 모델에는 BL 백라이트 제어 단자가 없습니다. 실제 모듈의 화면 원점·컨트롤러도 확인해야 합니다.
+- 구분점: BL은 백라이트 단자로, 예제는 3V3에 연결합니다. 실제 모듈의 화면 원점·컨트롤러도 확인해야 합니다.
 - 근거: [1.8inch LCD Module - Waveshare Wiki](https://www.waveshare.com/wiki/1.8inch_LCD_Module)
 
 ### LED 매트릭스 · MAX7219
@@ -279,7 +279,7 @@
 - 외형: 큰 8×8 LED 블록 뒤에 드라이버 PCB와 양쪽 5핀 헤더. [사진](https://docs.sunfounder.com/projects/raphael-kit/en/latest/_images/max7219_module.jpg)
 - 주요 핀: 10접점 — VCC-IN, GND-IN, DIN, CS/LOAD-IN, CLK-IN, VCC-OUT, GND-OUT, DOUT, CS/LOAD-OUT, CLK-OUT
 - 연결 방식: 직렬/SPI 유사
-- 구분점: 앱의 5핀은 입력 측만 모델링합니다. 체인 출력 다섯 접점은 별도입니다.
+- 구분점: 왼쪽 입력 5핀으로 구동합니다. 오른쪽 출력 쪽 VCC·GND·CS·CLK는 입력과 내부 연결되고, 다음 모듈로 이어지는 DOUT은 시뮬레이션하지 않습니다.
 - 근거: [LED Matrix Module — SunFounder Ulimate Raphael Kit for Raspberry Pi  documentation](https://docs.sunfounder.com/projects/raphael-kit/en/latest/_shared/component/cpn_max7219_module.html)
 
 ### RC 서보 모터
@@ -309,7 +309,7 @@
 - 외형: 금속 원통, 회전축, 두 전원 단자. [사진](https://cdn-shop.adafruit.com/970x728/711-06.jpg)
 - 주요 핀: 2접점 — M+, M-
 - 연결 방식: 외부 드라이버
-- 구분점: 앱의 별도 DC 모터 및 모터+브리지 통합 부품의 모터 외형 참고입니다.
+- 구분점: 두 단자에 모터 드라이버 출력(L298N OUT1/OUT2 등)을 연결합니다. 전압 방향에 따라 정회전·역회전합니다.
 - 근거: [DC Toy / Hobby Motor - 130 Size : Adafruit Industries, Unique & fun DIY electronics and kits](https://www.adafruit.com/product/711)
 
 ### DC 모터 + H 브리지
@@ -317,11 +317,11 @@
 <a id="motor-driver-hat"></a>
 #### PCA9685 / TB6612 모터 Driver HAT
 
-- 외형: 모터는 2단자이고 별도 드라이버 보드에 제어·전원·출력이 모임. [사진](https://www.waveshare.com/w/upload/9/9e/Motor-Driver-HAT-intro.JPG)
+- 외형: PCA9685 PWM 칩과 TB6612FNG 드라이버, 모터 나사 단자, 40핀 헤더가 있는 HAT 보드. [사진](https://www.waveshare.com/w/upload/9/9e/Motor-Driver-HAT-intro.JPG)
 - 주요 핀: 51접점 — 5V, 3V3, GND, SDA, SCL, VIN, A1, A2, B1, B2, PGND, PI1:3V3, PI2:5V, PI3:SDA, PI4:5V, PI5:SCL, PI6:GND, PI7:GPIO4, PI8:TXD, PI9:GND, PI10:RXD, PI11:GPIO17, PI12:GPIO18, PI13:GPIO27, PI14:GND, PI15:GPIO22, PI16:GPIO23, PI17:3V3, PI18:GPIO24, PI19:MOSI, PI20:GND, PI21:MISO, PI22:GPIO25, PI23:SCLK, PI24:CE0, PI25:GND, PI26:CE1, PI27:ID_SD, PI28:ID_SC, PI29:GPIO5, PI30:GND, PI31:GPIO6, PI32:GPIO12, PI33:GPIO13, PI34:GND, PI35:GPIO19, PI36:GPIO16, PI37:GPIO26, PI38:GPIO20, PI39:GND, PI40:GPIO21
 - 연결 방식: 모터 드라이버
 - 별도 접점: HAT 연결 수는 해당 보드 회로도 기준; 앱의 추상 5핀과 별도
-- 구분점: 현재 motor의 VM/GND/PWM/IN1/IN2 5핀 통합 모델과 정확히 일치하는 실물 제품으로 간주하지 않습니다. 사진은 드라이버 HAT 예시입니다.
+- 구분점: 40핀 헤더의 SDA·SCL(I²C)로 PCA9685를 제어하고, 모터는 A1/A2·B1/B2 단자, 모터 전원은 VIN/PGND에 연결합니다. 간이 부품 'DC 모터 + H 브리지'와 핀 구성이 다릅니다.
 - 근거: [Motor Driver HAT - Waveshare Wiki](https://www.waveshare.com/wiki/Motor_Driver_HAT)
 
 ### 스테퍼 모터 + 드라이버
@@ -350,7 +350,7 @@
 - 외형: 드라이버 칩, 상태 LED, 모터 소켓이 있는 PCB. [사진](https://www.joy-it.net/files/files/Produkte/SBC-Moto1/SBC-Moto1_01.png)
 - 주요 핀: 11접점 — IN1, IN2, IN3, IN4, V+, GND, M-COM, M1, M2, M3, M4
 - 연결 방식: 4상 논리 입력
-- 구분점: 앱의 6핀은 제어4+전원2만 표현합니다. 모터 소켓의 5접점은 별도로 셉니다.
+- 구분점: 제어 입력 4핀(IN1~IN4), 전원 2핀, 모터 소켓 5접점입니다. 모터 소켓에 28BYJ-48 같은 5선 유니폴라 모터를 연결합니다.
 - 근거: [Moto1 Stepper motor controller  /  Joy-IT](https://www.joy-it.net/en/products/SBC-Moto1)
 
 ### 릴레이 모듈
@@ -432,7 +432,7 @@
 - 외형: 배터리 홀더와 양·음극 2선. [사진](https://cdn-shop.adafruit.com/970x728/830-07.jpg)
 - 주요 핀: 2접점 — +, -
 - 연결 방식: 전원
-- 구분점: 외형 참고는 AA 홀더입니다. 이 제품이 앱의 기본 12V 전원이라는 뜻은 아닙니다.
+- 구분점: AA 4개는 약 6 V입니다. 전압 속성(6~24 V)을 바꾸면 모터용 외부 직류 전원으로 씁니다.
 - 근거: [4 x AA Battery Holder with On/Off Switch : Adafruit Industries, Unique & fun DIY electronics and kits](https://www.adafruit.com/product/830)
 
 ### UART 터미널
@@ -443,7 +443,7 @@
 - 외형: USB 플러그와 끝이 갈라진 4선 케이블. [사진](https://cdn-shop.adafruit.com/970x728/954-02.jpg)
 - 주요 핀: 4접점 — USB-5V, GND, TXD, RXD
 - 연결 방식: UART
-- 구분점: 출처의 전원 선은 USB 5V입니다. 앱의 3.3V 전원 터미널과 전원 전압이 다릅니다.
+- 구분점: 전원 선은 USB 5V입니다. TXD는 보드 RX, RXD는 보드 TX에 엇갈려 연결합니다.
 - 근거: [USB to TTL Serial Cable - Debug / Console Cable for Raspberry Pi : Adafruit Industries, Unique & fun DIY electronics and kits](https://www.adafruit.com/product/954)
 
 <a id="uart-cable-6"></a>
@@ -463,7 +463,7 @@
 - 외형: 검은 DIP8 패키지와 방향을 나타내는 홈. [사진](https://product.hstatic.net/200000551749/product/24_7f79743fbdb945058afcb92c43f4f153_grande.png)
 - 주요 핀: 8접점 — NC1, NC2, NC3, VSS, SDA, SCL, WP, VCC
 - 연결 방식: I²C
-- 구분점: 이 24LC02B의 1~3번은 NC입니다. 24LC256 같은 다른 EEPROM의 주소 핀 설명을 그대로 적용하면 안 됩니다. 앱 4핀 메모리는 칩의 부가 핀을 단순화한 범용 모델입니다.
+- 구분점: 이 24LC02B의 1~3번은 NC입니다. 24LC256 같은 다른 EEPROM의 주소 핀 설명을 그대로 적용하면 안 됩니다. WP를 GND에 연결해야 쓸 수 있습니다.
 - 근거: [Microchip 24AA02/24LC02B 데이터시트](https://ww1.microchip.com/downloads/en/devicedoc/21709j.pdf)
 
 <a id="i2c-eeprom-5"></a>
@@ -483,7 +483,7 @@
 - 외형: DIP8/SOIC8 패키지와 방향 표시. [외형도 원문](https://ww1.microchip.com/downloads/en/DeviceDoc/21833G.pdf)
 - 주요 핀: 8접점 — CS, SO, WP, VSS, SI, SCK, HOLD, VCC
 - 연결 방식: SPI
-- 구분점: 앱 6핀 모델은 WP/HOLD를 노출하지 않습니다. 실제 칩 연결 시에는 이 부가 핀의 고정 상태가 필요합니다.
+- 구분점: WP와 HOLD는 3V3에 연결해 고정합니다. 쓰기 전에 WREN(0x06) 명령을 보냅니다.
 - 근거: [Microchip 25AA020A/25LC020A 데이터시트](https://ww1.microchip.com/downloads/en/DeviceDoc/21833G.pdf)
 
 ### 가변저항
@@ -545,7 +545,7 @@
 - 외형: 단색 LED와 비슷한 렌즈에 다리 네 개. [사진](https://cdn-shop.adafruit.com/970x728/159-02.jpg)
 - 주요 핀: 4접점 — R, COMMON-A, G, B
 - 연결 방식: PWM×3
-- 구분점: 앱은 공통 음극입니다. 공통 양극형은 공통 전원 연결과 논리가 반대입니다.
+- 구분점: 공통 양극을 3V3에 연결하고 R·G·B를 LOW로 내리면 켜집니다. 공통 음극형과 논리가 반대입니다.
 - 근거: [Diffused RGB (tri-color) LED [Common Anode] : Adafruit Industries, Unique & fun DIY electronics and kits](https://www.adafruit.com/product/159)
 
 <a id="rgb-common-cathode-4"></a>
@@ -554,7 +554,7 @@
 - 외형: 4리드 RGB LED를 작은 PCB와 저항에 실장한 형태. [사진](https://sensorkit.joy-it.net/files/files/sensors/KY-016/KY-016.png)
 - 주요 핀: 4접점 — R, G, B, COMMON-K
 - 연결 방식: PWM×3
-- 구분점: 앱의 나형 LED와 PCB 외형은 다릅니다. 공통 음극과 세 색 입력을 비교하는 자료입니다.
+- 구분점: 공통 음극을 GND에, R·G·B를 각각 출력 핀에 연결하며 HIGH일 때 켜집니다.
 - 근거: [KY-016 RGB 5mm LED - SensorKit](https://sensorkit.joy-it.net/en/sensors/ky-016)
 
 <a id="rgb-neopixel-4"></a>
@@ -672,7 +672,7 @@
 - 외형: 공통 음극형과 유사한 단일 숫자 패키지. [외형도 원문](https://www.kingbrightusa.com/images/catalog/spec/sa56-11ewa.pdf)
 - 주요 핀: 10접점 — e, d, A1, c, dp, b, a, A2, f, g
 - 연결 방식: GPIO/PWM
-- 구분점: 생김새·핀 수가 같아도 공통극이 반대입니다. 사진 대신 제조사 외형도·회로도를 연결했습니다.
+- 구분점: 생김새·핀 수가 같아도 공통극이 반대입니다. 공통 양극을 3V3에 연결하고 세그먼트를 LOW로 내리면 켜집니다.
 - 근거: [Kingbright SA56-11EWA 데이터시트](https://www.kingbrightusa.com/images/catalog/spec/sa56-11ewa.pdf)
 
 <a id="sevenseg-4digit-12"></a>
@@ -681,7 +681,7 @@
 - 외형: 숫자 네 자리가 하나의 긴 패키지에 있음. [사진](https://cdn-shop.adafruit.com/970x728/813-06.jpg)
 - 주요 핀: 14접점 — e, d, dp, c, g, DIG4, COLON-K, COLON-A, b, DIG3, DIG2, f, a, DIG1
 - 연결 방식: GPIO 멀티플렉싱
-- 구분점: 기존 조사에서 12핀으로 분류했으나 원본 제품이 연결한 BL-Q56C-43 도면은 콜론 접점 포함 14핀입니다. 참조 ID는 기존 파일 호환을 위해 유지합니다.
+- 구분점: 자리 선택 4핀, 세그먼트 8핀, 콜론 2핀으로 모두 14핀입니다(BL-Q56C-43 도면).
 - 근거: [Green 7-segment clock display - 0.56 digit height : Adafruit Industries, Unique & fun DIY electronics and kits](https://www.adafruit.com/product/813) · [Adafruit linked BL-Q56C-43 pinout, page 3](https://cdn-shop.adafruit.com/datasheets/BL-Q56C-43.pdf)
 
 <a id="sevenseg-tm1637-4"></a>
@@ -710,7 +710,7 @@
 - 외형: TMP36과 비슷한 TO-92 패키지. [사진](https://cdn-shop.adafruit.com/970x728/374-01.jpg)
 - 주요 핀: 3접점 — GND, DQ, VDD
 - 연결 방식: 1-Wire
-- 구분점: 동일한 3핀 외형이어도 TMP36과 핀 기능·통신 방식이 다릅니다. 앱은 TMP36 전달식을 사용합니다.
+- 구분점: 동일한 3핀 외형이어도 TMP36과 핀 기능·통신 방식이 다릅니다. DQ 한 선으로 1-Wire 통신해 온도를 읽습니다.
 - 근거: [DS18B20 Digital temperature sensor + extras : Adafruit Industries, Unique & fun DIY electronics and kits](https://www.adafruit.com/product/374)
 
 <a id="ds18b20-probe-3"></a>
@@ -738,7 +738,7 @@
 - 외형: 초음파 소자와 3핀 Gravity 커넥터. [사진](https://dfimg.dfrobot.com/enshop/image/data/SEN0388/SEN0388_251022 (1)_1200x630.jpg.webp)
 - 주요 핀: 3접점 — GND, VCC, TRIG-ECHO
 - 연결 방식: GPIO 양방향
-- 구분점: Trig/Echo 공유 한 신호를 쓰므로 앱의 분리 4핀 HC-SR04와 다르게 구현해야 합니다.
+- 구분점: Trig와 Echo가 한 신호선을 함께 씁니다. GPIO를 출력으로 트리거한 뒤 입력으로 바꿔 Echo 폭을 잽니다.
 - 근거: [Gravity: URM09 Ultrasonic Distance Sensor (2～500cm, Trig)  /  DFRobot Wiki](https://wiki.dfrobot.com/sen0388/)
 
 <a id="urm09-i2c-4"></a>
@@ -863,6 +863,38 @@
 - 연결 방식: 단선 전용
 - 구분점: 나형 DHT22의 4핀과 구분합니다. SHT31의 I²C 통신과도 다릅니다.
 - 근거: [DHT22 Temperature-Humidity Sensor - Waveshare Wiki](https://www.waveshare.com/wiki/DHT22_Temperature-Humidity_Sensor)
+
+### bluetooth
+
+<a id="hc05-bluetooth-6"></a>
+#### HC-05 블루투스 모듈 6핀
+
+- 외형: 파란 기판 위 초록 코어 모듈, 끝에 안테나 패턴, 버튼과 상태 LED, 6핀 헤더. [외형도 원문](https://www.kondik.cz/user/related_files/datasheet_hc-05.pdf)
+- 주요 핀: 6접점 — EN, VCC, GND, TXD, RXD, STATE
+- 연결 방식: UART · Bluetooth 2.0 SPP
+- 구분점: 마스터·슬레이브를 AT 명령으로 정합니다. 통신 9600 baud, EN을 HIGH로 두고 전원을 넣으면 AT 모드 38400 baud입니다. VCC 3.3~6 V, RXD는 3.3 V 로직입니다. 마스터와 슬레이브의 PIN이 같아야 연결됩니다.
+- 근거: [HC Serial Bluetooth Products User Instructional Manual](https://components101.com/sites/default/files/component_datasheet/HC06%20Bluetooth%20Module%20Datasheet.pdf) · [HC-05 Bluetooth modul datasheet (Eclipsera, verze 2.1)](https://www.kondik.cz/user/related_files/datasheet_hc-05.pdf) · [HC-05 Bluetooth RF-Transceiver-Modul Datenblatt (AZ-Delivery)](https://cdn.shopify.com/s/files/1/1509/1638/files/HC-05_Bluetooth_Transceiver_Datenblatt_AZ-Delivery_Vertriebs_GmbH.pdf)
+
+<a id="hc06-bluetooth-4"></a>
+#### HC-06 블루투스 모듈 4핀
+
+- 외형: 초록 기판 위 코어 모듈, 끝에 안테나 패턴, 상태 LED, 4핀 헤더. [외형도 원문](https://components101.com/wireless/hc-06-bluetooth-module-pinout-datasheet)
+- 주요 핀: 4접점 — VCC, GND, TXD, RXD
+- 연결 방식: UART · Bluetooth 2.0 SPP
+- 별도 접점: KEY·STATE까지 나온 6핀 보드도 있습니다. 이 모델은 4핀 보드입니다.
+- 구분점: 슬레이브 전용입니다. 페어링 전에는 AT 명령을 받습니다. 명령에 CR/LF를 붙이지 않고 1초에 한 번 이하로 보냅니다. 기본 9600 baud, PIN 1234입니다.
+- 근거: [HC Serial Bluetooth Products User Instructional Manual](https://components101.com/sites/default/files/component_datasheet/HC06%20Bluetooth%20Module%20Datasheet.pdf) · [HC-06 Bluetooth Module Pinout, Datasheet (Components101)](https://components101.com/wireless/hc-06-bluetooth-module-pinout-datasheet)
+
+### wifi
+
+<a id="esp01-wifi-8"></a>
+#### ESP-01 Wi-Fi 모듈 (ESP8266)
+
+- 외형: 검은 기판, 끝에 지그재그 안테나 패턴, ESP8266 칩과 플래시, 2×4 헤더. [외형도 원문](https://academy.cba.mit.edu/classes/networking_communications/ESP8266/esp01.pdf)
+- 주요 핀: 8접점 — GND, GPIO2, GPIO0, RXD, VCC, RST, CH_PD, TXD
+- 연결 방식: UART · Wi-Fi 802.11 b/g/n · AT 펌웨어
+- 구분점: VCC는 3.0~3.6 V 전용이고 5 V를 넣으면 고장납니다. CH_PD를 3.3 V에 연결해야 켜집니다. AT 펌웨어로 AP·스테이션·TCP/UDP를 사용합니다. 2×4 헤더라 빵판에 바로 꽂지 못해 점퍼선으로 연결합니다.
+- 근거: [ESP-01 WiFi Module datasheet (Ai-Thinker)](https://academy.cba.mit.edu/classes/networking_communications/ESP8266/esp01.pdf) · [ESP-AT TCP/IP AT Commands (Espressif, ESP8266 v2.2.0.0)](https://docs.espressif.com/projects/esp-at/en/release-v2.2.0.0_esp8266/AT_Command_Set/TCP-IP_AT_Commands.html) · [ESP-AT Wi-Fi AT Commands (Espressif, ESP8266 v2.2.0.0)](https://docs.espressif.com/projects/esp-at/en/release-v2.2.0.0_esp8266/AT_Command_Set/Wi-Fi_AT_Commands.html)
 
 ## MCU 내부 주변장치와 외부 부품의 관계
 
