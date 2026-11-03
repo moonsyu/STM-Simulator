@@ -115,11 +115,11 @@ test('a pin with a wire on it still shows its GPIO in the tooltip',{timeout:1200
  }finally{await s.close();}
 });
 
-test('a Raspberry Pi lecture example runs as a fixed run and shows its output in the serial monitor',{timeout:120000},async()=>{
+test('a Raspberry Pi lecture example runs its main.py and shows its output in the serial monitor',{timeout:120000},async()=>{
  const s=await launch();
  try{
   const {win}=s;await applyLecture(win,'RPI-02');
-  assert.equal(await win.evaluate(()=>document.querySelector('.language-badge').textContent),'RPI-1 · Raspberry Pi · 고정 실행');
+  assert.equal(await win.evaluate(()=>document.querySelector('.language-badge').textContent),'RPI-1 · Raspberry Pi · Python');
   await win.keyboard.press('Control+F5');
   await win.waitForFunction(()=>/\[RPI-1\] LED OFF/.test(document.getElementById('console-output').textContent),null,{timeout:20000});
   assert.match(await logText(win),/다른 보드만 실행합니다/);

@@ -655,7 +655,8 @@ export class PythonDriver{
    if(step.done){this.flush();this.say('main.py가 끝났습니다.');this.ended=true;return;}
    const r=step.value;
    if(r.wait)this.waitUntil=program.host.now()+r.wait;
-   else if(r.input)this.blocked='input';
+   // The prompt of input() has no line end: it shows in the log while the program waits.
+   else if(r.input){this.blocked='input';this.flush();}
    else if(r.pause)this.blocked='pause';
   }
   this.time=Math.max(this.time,time);
