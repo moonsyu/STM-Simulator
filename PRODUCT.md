@@ -10,7 +10,7 @@ Electron 기반 Windows 데스크톱 앱입니다. 네트워크 없이 로컬에
 
 ## Product Purpose
 
-STM32 학습 프로젝트를 생성하고 C/H C/C++ 코드를 작성·컴파일·디버그·실행하면서 NUCLEO-F446RE와 빵판 회로의 동작을 함께 확인합니다. VS Code형 IDE를 기본 작업 화면으로 두고 회로 시뮬레이터와 펌웨어 에뮬레이터를 통합합니다.
+STM32 학습 프로젝트를 생성하고 C/H C/C++ 코드를 작성·컴파일·디버그·실행하면서 NUCLEO-F446RE·NUCLEO-F103RB와 ESP32·라즈베리파이 보드, 빵판 회로의 동작을 함께 확인합니다. VS Code형 IDE를 기본 작업 화면으로 두고 회로 시뮬레이터와 펌웨어 에뮬레이터를 통합합니다.
 
 ## Operating Context
 
@@ -18,7 +18,7 @@ STM32 학습 프로젝트를 생성하고 C/H C/C++ 코드를 작성·컴파일�
 
 ## Capabilities and Constraints
 
-기존 HAL/C 소스 인터프리터와 전기 회로 모델을 확장합니다. ARM GCC / ST HAL·CMSIS로 펌웨어를 빌드하고 GDB·OpenOCD 또는 외부 GDB 서버로 실물 보드를 디버그합니다. Windows GCC·GDB 실행 대상, clangd 의미 분석, 명령 터미널을 제공합니다. 컴파일된 ARM 펌웨어는 내장 Cortex-M4·STM32F446 에뮬레이터로 가상 빵판에서 실행합니다. 기존 `.stm32lab` 회로, 자동 저장, 부품·배선 편집을 보존합니다.
+기존 HAL/C 소스 인터프리터와 전기 회로 모델을 확장합니다. ARM GCC / ST HAL·CMSIS로 펌웨어를 빌드하고 GDB·OpenOCD 또는 외부 GDB 서버로 실물 보드를 디버그합니다. Windows GCC·GDB 실행 대상, clangd 의미 분석, 명령 터미널을 제공합니다. 컴파일된 ARM 펌웨어는 내장 Cortex-M 에뮬레이터(STM32F446·STM32F103)로 가상 빵판에서 실행합니다. 기존 `.stm32lab` 회로, 자동 저장, 부품·배선 편집을 보존합니다.
 
 ## Brand Commitments
 
