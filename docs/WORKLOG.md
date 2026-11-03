@@ -2,11 +2,18 @@
 
 작업할 때마다 날짜순으로 맨 위에 추가합니다. 무엇을 했는지, 왜 했는지, 어떻게 검증했는지, 커밋·릴리스와 남은 사항을 적습니다. 버전별 구조 설명은 [HANDOFF.md](../HANDOFF.md), 검증 수치는 [VERIFICATION.md](VERIFICATION.md)에 있습니다.
 
+## 2026-11-03 · 1.11.1 정정된 이력으로 다시 게시
+
+- 요청: 커밋, 푸시, Release 업데이트까지 진행.
+- 한 것과 이유: 남은 변경은 없었고 같은 버전에서는 기존 Release가 유지되므로(지침) 1.11.1로 올렸다. 정정된 이력에서 다시 빌드해 Release의 BUILD-INFO 커밋도 naver 작성자 커밋이 되고, 트리 비교로 바꾼 Release 검증 스크립트가 함께 배포된다. 기능 변경은 없다.
+- 커밋·릴리스: 이 문서·버전 커밋. CI와 공개 다운로드 확인은 VERIFICATION.md에 적는다.
+
 ## 2026-11-03 · 커밋 작성자 전체 정정
 
 - 요청: 지금까지의 커밋을 모두 moonsyu로, PC 기본값인 `anstn0104@naver.com`으로 바꾸고 푸시. 커밋 내역은 유지하고 커밋한 사람만 바꿀 것.
 - 한 것과 이유: 이력 451개 모두 이름은 moonsyu였고 메일은 noreply 425개·naver 26개였다. "moonsyu and claude"로 보인 것은 메시지 끝의 `Co-Authored-By: Claude`(331개)와 `Claude-Session`(25개) 줄 때문이라 이 줄만 지웠다. `git filter-branch`로 작성자·커미터를 바꾸고 태그 78개와 `redesign`을 같은 트리의 새 커밋으로 옮겼다. 앞으로도 이렇게 커밋하도록 AGENTS.md·GIT-IDENTITY.md를 고쳤다.
 - 검증: 커밋 수 451개 그대로, 모든 커밋의 트리·작성 시각·커밋 시각·제목이 순서대로 같음, 지운 두 종류 줄을 빼면 메시지가 같음, 작성자·커미터는 모두 `moonsyu <anstn0104@naver.com>`, 모든 태그가 새 `main` 위에 있음. 이전 이력은 로컬 `backup/before-identity-rewrite` 브랜치와 번들로 보관했다(푸시하지 않음).
+- 커밋·푸시: `main`(`5112e5d`)과 `redesign`을 강제 푸시했다. 태그 강제 푸시는 처음에 권한 확인에서 막혀 사용자 확인을 받은 뒤 78개를 한 번에 올렸다(태그별 CI 실행 없음). GitHub에서 태그 78개가 모두 새 커밋을 가리키고, v0.13.0·v1.0.0·v1.11.0 커밋의 작성자가 naver이며 공동 작성자 줄이 없음을 확인했다. Release 검증 스크립트를 트리 비교로 고친 뒤 [CI 41576913739](https://github.com/moonsyu/STM-Simulator/actions/runs/41576913739)가 빌드와 기존 v1.11.0 Release 검증까지 성공했다.
 - 남은 사항: 이전에 복제한 저장소는 새로 받아야 한다. 배포된 Release 파일의 BUILD-INFO 커밋은 이전 SHA다(대응표 참고).
 
 ## 2026-11-03 · 1.11.0 업데이트 후보 반영(서명 제외)

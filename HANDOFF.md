@@ -1,6 +1,13 @@
 # STM Simulator — 개발 인계
 
-현재 버전: **1.11.0**. 정리일: **2026-11-03**. NUCLEO-F446RE 또는 NUCLEO-F103RB와 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+현재 버전: **1.11.1**. 정리일: **2026-11-03**. NUCLEO-F446RE 또는 NUCLEO-F103RB와 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+
+## 1.11.1 커밋 작성자 정정 뒤 다시 게시
+
+- 저장소 이력 전체(커밋 451개, 태그 78개, `redesign`)의 작성자·커미터를 `moonsyu <anstn0104@naver.com>`으로 바꾸고 `Co-Authored-By: Claude`·`Claude-Session` 줄을 지웠다(`docs/GIT-IDENTITY.md`, 대응표 `docs/commit-identity-map-2026-11-03.json`). 기능 변경은 없다.
+- `scripts/verify-release.ps1`: Release의 BUILD-INFO 커밋과 태그 커밋이 다르면 두 커밋의 트리를 비교해 같을 때만 통과한다(작성자 정정으로 SHA만 바뀐 기존 Release). 빌드 출처 확인은 BUILD-INFO 커밋의 CI 실행으로 한다.
+- 1.11.0 이전 Release 파일의 BUILD-INFO에는 정정 전 SHA가 남는다. 1.11.1부터는 정정된 이력의 커밋이다.
+- 커밋 규칙: 작성자는 이 PC 기본값(naver), 메시지에 다른 작성자 줄을 넣지 않는다(AGENTS.md).
 
 ## 1.11.0 보드 간 유선 통신 · 무선 확장 · 업데이트 점검 반영
 
