@@ -1,6 +1,12 @@
 # STM Simulator — 개발 인계
 
-현재 버전: **1.12.0**. 정리일: **2026-11-03**. NUCLEO-F446RE 또는 NUCLEO-F103RB와 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+현재 버전: **1.12.1**. 정리일: **2026-11-03**. NUCLEO-F446RE 또는 NUCLEO-F103RB와 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+
+## 1.12.1 예제 목록 한 줄 · 예제 코드 4칸 들여쓰기
+
+- 예제 목록(`shell.js` 항목, `shell.css` `.example-item`): 이름과 분류 태그를 한 줄에 놓는다. 긴 이름은 말줄임(…)으로 줄이고 `title`에 전체 이름을 둔다.
+- 예제 코드: `c-format.js` `reindentC`가 formatC의 줄별 들여쓰기만 가져와 나머지 글자는 그대로 둔다. `lecture-examples.js` `indentExampleCode`가 강의·보드 간 통신 예제의 C(STM32 main.c·소스, ESP32 스케치, 커널 모듈)에 적용한다. Python과 HAL 예제(이미 expandC로 4칸)는 그대로다.
+- ESLint 10.14.0(Dependabot PR #4와 같은 변경을 직접 커밋).
 
 ## 1.12.0 정적 검사 · ESP32 실제 빌드 · 에뮬레이터 I²C/SPI · 라즈베리파이 Python · 인터넷 · 성능 · 구조 정리
 
