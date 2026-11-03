@@ -34,6 +34,21 @@ test('ESP32 and Raspberry Pi boards are added, inspected, documented and removed
  }finally{await s.close();}
 });
 
+test('right-clicking an STM32 pin opens its pin settings, with or without a wire on it',{timeout:120000},async()=>{
+ const s=await launch();
+ try{
+  const {win}=s;await win.click('#empty-add-board');await win.click('#zoom-reset');
+  const center=async id=>{const b=await win.locator(`[data-endpoint="${id}"]`).boundingBox();return {x:b.x+b.width/2,y:b.y+b.height/2};};
+  const pins=['board:CN7:1','board:CN7:2'];// PC10, PC11
+  const rightClick=async id=>{const p=await center(id);await win.mouse.click(p.x,p.y,{button:'right'});assert.equal(await win.evaluate(()=>document.getElementById('pinout-dialog').open),true,id);await win.click('#pinout-close');};
+  await rightClick(pins[0]);
+  for(const id of pins){const p=await center(id);await win.mouse.click(p.x,p.y);}
+  await win.waitForFunction(()=>document.querySelectorAll('#wire-layer [data-wire]').length===1);
+  await rightClick(pins[0]);await rightClick(pins[1]);
+  assert.deepEqual(s.errors,[]);
+ }finally{await s.close();}
+});
+
 test('a pin with a wire on it still shows its GPIO in the tooltip',{timeout:120000},async()=>{
  const s=await launch();
  try{

@@ -83,7 +83,7 @@ const editorSearch=setupEditorSearch({applyEdit:replaceCodeText,maxLength:()=>{
  const otherFiles=(project.firmware?.files||[]).filter(f=>f.name!==sourceFile).reduce((n,f)=>n+f.text.length,0);
  return sourceFile==='main.c'?300000-otherFiles:300000-project.code.length-otherFiles;
 }});
-svg.addEventListener('contextmenu',e=>{if(pending&&!running()){e.preventDefault();e.stopImmediatePropagation();cancelWireDraft();return;}const id=e.target.closest('[data-endpoint]')?.dataset.endpoint,p=PIN_BY_ID.get(id);if(p&&/^P[A-H]\d+$/.test(p.signal)){e.preventDefault();pinout.open(p.signal);}});
+svg.addEventListener('contextmenu',e=>{if(pending&&!running()){e.preventDefault();e.stopImmediatePropagation();cancelWireDraft();return;}if(e.target.closest('[data-wire-point]'))return;const id=(e.target.closest('[data-endpoint]')??(e.target.closest('[data-wire]')?document.elementsFromPoint(e.clientX,e.clientY).find(el=>el.matches?.('[data-endpoint]')):null))?.dataset.endpoint,p=PIN_BY_ID.get(id);if(p&&/^P[A-H]\d+$/.test(p.signal)){e.preventDefault();pinout.open(p.signal);}});
 $('part-list').innerHTML=PART_LIBRARY.map(part=>`<button class="part-card" data-add="${part.type}"><span class="part-icon ${part.iconClass}">${part.icon}</span><span><strong title="${esc(part.name)}">${esc(part.name)}</strong><small title="${esc(part.hint)}">${esc(part.hint)}</small></span><b>+</b></button>`).join('')+'<p id="part-no-results" hidden>검색 결과가 없습니다.<br>다른 이름으로 검색해 주세요.</p>';
 setupPartPreviews();setupExamplePreviews({getBoardId:()=>projectBoard(project).id});
 function filterParts(){
