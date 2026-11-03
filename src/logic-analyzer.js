@@ -10,11 +10,18 @@ export function setupLogicAnalyzer({getSession,getProject,isRunning,onNoise,log}
  const tabs=document.querySelector('.monitor-tabs');
  const tab=document.createElement('button');tab.dataset.monitor='signals';tab.textContent='로직 분석기';tabs.querySelector('[data-monitor="wave"]')?.after(tab)??tabs.append(tab);
  const panel=document.createElement('section');panel.id='signals-panel';panel.hidden=true;
- panel.innerHTML=`<div class="la-toolbar"><label>시간 범위 <select id="la-window">${WINDOWS.map(([v,l])=>`<option value="${v}" ${v===5?'selected':''}>${l}</option>`).join('')}</select></label><label class="la-check"><input type="checkbox" id="la-follow" checked> 실시간 따라가기</label><label class="la-check"><input type="checkbox" id="la-decode" checked> 프로토콜 해석</label><button id="la-fit" type="button">처음으로</button><span class="la-spacer"></span><details id="la-noise"><summary>선로 잡음</summary><div class="la-noise-body"><label class="la-check"><input type="checkbox" id="la-noise-enabled"> 잡음 적용</label><label>비트 오류율 <input id="la-ber" type="number" min="0" max="0.5" step="0.0001" value="0"></label><label>글리치 확률 <input id="la-glitch" type="number" min="0" max="0.5" step="0.0001" value="0"></label><label>지터 (ns) <input id="la-jitter" type="number" min="0" max="100000" step="10" value="0"></label><button id="la-noise-apply" type="button">적용</button><p class="form-hint">수신기는 잡음이 섞인 선로 파형을 다시 샘플링합니다. 프레이밍·패리티 오류와 I²C NACK을 직접 확인할 수 있습니다.</p></div></details></div><div id="la-empty" class="la-empty">시뮬레이션을 실행하면 UART · I²C · SPI · USART 동기 · 1-Wire 선로 파형과 해석 결과가 표시됩니다.</div><div id="la-view" class="la-view" hidden><svg id="la-svg" role="img" aria-label="로직 분석기 파형"></svg></div><div id="la-frames" class="la-frames" aria-live="polite"></div>`;
+ panel.innerHTML=`<div class="la-toolbar"><label hidden>보드 <select id="la-board"></select></label><label>시간 범위 <select id="la-window">${WINDOWS.map(([v,l])=>`<option value="${v}" ${v===5?'selected':''}>${l}</option>`).join('')}</select></label><label class="la-check"><input type="checkbox" id="la-follow" checked> 실시간 따라가기</label><label class="la-check"><input type="checkbox" id="la-decode" checked> 프로토콜 해석</label><button id="la-fit" type="button">처음으로</button><span class="la-spacer"></span><details id="la-noise"><summary>선로 잡음</summary><div class="la-noise-body"><label class="la-check"><input type="checkbox" id="la-noise-enabled"> 잡음 적용</label><label>비트 오류율 <input id="la-ber" type="number" min="0" max="0.5" step="0.0001" value="0"></label><label>글리치 확률 <input id="la-glitch" type="number" min="0" max="0.5" step="0.0001" value="0"></label><label>지터 (ns) <input id="la-jitter" type="number" min="0" max="100000" step="10" value="0"></label><button id="la-noise-apply" type="button">적용</button><p class="form-hint">수신기는 잡음이 섞인 선로 파형을 다시 샘플링합니다. 프레이밍·패리티 오류와 I²C NACK을 직접 확인할 수 있습니다.</p></div></details></div><div id="la-empty" class="la-empty">시뮬레이션을 실행하면 UART · I²C · SPI · USART 동기 · 1-Wire 선로 파형과 해석 결과가 표시됩니다.</div><div id="la-view" class="la-view" hidden><svg id="la-svg" role="img" aria-label="로직 분석기 파형"></svg></div><div id="la-frames" class="la-frames" aria-live="polite"></div>`;
  document.getElementById('bottom-panel').append(panel);
  let offset=null,last=0,drag=null,rafPending=false;
  const windowUs=()=>Number($('la-window').value)*1000;
- const signals=()=>getSession()?.signals||null;
+ // Every STM32 board of the run has its own recorder; the list shows only when there is more than one.
+ const boardDrivers=()=>getSession()?.circuit?.drivers?.filter(d=>d.session?.signals)??[];
+ const signals=()=>{const id=$('la-board').value,other=id&&boardDrivers().find(d=>d.part.id===id);return (other?other.session:getSession())?.signals||null;};
+ function syncBoards(){
+  const boards=boardDrivers(),select=$('la-board'),key=boards.map(d=>d.part.id+d.part.name).join();
+  select.parentElement.hidden=!boards.length;if(select.dataset.boards===key)return;
+  const keep=select.value;select.dataset.boards=key;select.innerHTML=`<option value="">주 보드</option>${boards.map(d=>`<option value="${esc(d.part.id)}">${esc(d.part.name)}</option>`).join('')}`;select.value=boards.some(d=>d.part.id===keep)?keep:'';
+ }
  function syncNoise(){const s=signals(),cfg=s?.noise?.()||getProject()?.simulation?.noise||{};$('la-noise-enabled').checked=!!cfg.enabled;$('la-ber').value=cfg.bitErrorRate??0;$('la-glitch').value=cfg.glitchRate??0;$('la-jitter').value=cfg.jitterNs??0;}
  $('la-noise-apply').onclick=()=>{
   const cfg={enabled:$('la-noise-enabled').checked,bitErrorRate:Number($('la-ber').value),glitchRate:Number($('la-glitch').value),jitterNs:Number($('la-jitter').value)};
@@ -23,6 +30,7 @@ export function setupLogicAnalyzer({getSession,getProject,isRunning,onNoise,log}
    const applied=signals()?.setNoise?.(cfg)??cfg;onNoise?.(applied);log?.(applied.enabled?`선로 잡음을 적용했습니다 · BER ${applied.bitErrorRate} · 글리치 ${applied.glitchRate} · 지터 ${applied.jitterNs} ns`:'선로 잡음을 껐습니다.');
   }catch(error){log?.(error.message,'error');}
  };
+ $('la-board').onchange=()=>{offset=null;$('la-follow').checked=true;syncNoise();paint(true);};
  $('la-window').onchange=()=>paint(true);$('la-decode').onchange=()=>paint(true);$('la-follow').onchange=()=>{if($('la-follow').checked)offset=null;paint(true);};
  $('la-fit').onclick=()=>{$('la-follow').checked=false;offset=0;paint(true);};
  const svgEl=$('la-svg');
@@ -31,7 +39,7 @@ export function setupLogicAnalyzer({getSession,getProject,isRunning,onNoise,log}
  svgEl.addEventListener('pointermove',e=>{if(!drag)return;const w=svgEl.clientWidth-LABEL;offset=Math.max(0,drag.start-(e.clientX-drag.x)/Math.max(1,w)*windowUs());paint(true);});
  svgEl.addEventListener('pointerup',()=>{drag=null;});
  function paint(force=false){
-  if(panel.hidden)return;const now=performance.now();if(!force&&now-last<100)return;last=now;
+  if(panel.hidden)return;const now=performance.now();if(!force&&now-last<100)return;last=now;syncBoards();
   const s=signals();let channels=[];try{channels=s?.channels?.()||[];}catch{channels=[];}
   $('la-empty').hidden=channels.length>0;$('la-view').hidden=!channels.length;
   if(!channels.length){$('la-frames').replaceChildren();return;}
