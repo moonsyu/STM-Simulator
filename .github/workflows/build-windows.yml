@@ -20,6 +20,8 @@ jobs:
     timeout-minutes: 45
     env:
       CI_REQUIRE_TOOLCHAIN: '1'
+      CI_REQUIRE_ESP32: '1'
+      ARDUINO_CLI: ${{ github.workspace }}\.cache\arduino\arduino-cli.exe
       ARM_GCC: ${{ github.workspace }}\.cache\toolchain\xpack-arm-none-eabi-gcc-14.2.1-1.1\bin\arm-none-eabi-gcc.exe
       STM32CUBE_F4_ROOT: ${{ github.workspace }}\.cache\toolchain\cubef4
       STM32CUBE_F1_ROOT: ${{ github.workspace }}\.cache\toolchain\cubef1
@@ -67,6 +69,19 @@ jobs:
           }
           Copy-Item -Recurse "$dir/cmsis5/CMSIS/Core/Include" "$dir/cubef1/Drivers/CMSIS/Include"
           & $env:ARM_GCC --version
+      - name: Install Arduino CLI and the esp32 core for the example sketches
+        shell: pwsh
+        run: |
+          $dir = '.cache/arduino'; New-Item -ItemType Directory -Force $dir | Out-Null
+          Invoke-WebRequest 'https://github.com/arduino/arduino-cli/releases/download/v1.5.1/arduino-cli_1.5.1_Windows_64bit.zip' -OutFile "$dir/cli.zip"
+          if ((Get-FileHash "$dir/cli.zip" -Algorithm SHA256).Hash -ne 'FABE42E0EB04D00E776A66178299FF95A46C623DBC260F997E58FD514853DD40') { throw 'arduino-cli download checksum differs' }
+          Expand-Archive "$dir/cli.zip" -DestinationPath $dir
+          $index = 'https://espressif.github.io/arduino-esp32/package_esp32_index.json'
+          & $env:ARDUINO_CLI core update-index --additional-urls $index
+          & $env:ARDUINO_CLI core install esp32:esp32@3.3.12 --additional-urls $index
+          & $env:ARDUINO_CLI lib install 'DHT sensor library@1.4.6' 'Adafruit Unified Sensor@1.1.15'
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          & $env:ARDUINO_CLI version
       - name: Build examples with ST HAL and run them on the emulator
         shell: pwsh
         run: |
