@@ -1,5 +1,9 @@
 # 검증 기록
 
+## 1.12.2 보드 기록 실패 안내 — 공개 배포 검증 완료
+
+2026-11-04. 제품 커밋 `42dc86b9eb7d9beb06ca03a8e4bd97b92d56da79` · [Windows CI 41748524331](https://github.com/moonsyu/STM-Simulator/actions/runs/41748524331) · [Release v1.12.2](https://github.com/moonsyu/STM-Simulator/releases/tag/v1.12.2). 로컬: 이 PC의 드라이버 없는 ST-LINK로 OpenOCD 오류를 재현해 안내가 붙는 것을 확인, ESLint 0건, `npm test` 865개 중 864개 통과·1개 건너뜀. CI 전체 성공. 공개 다운로드: 태그·BUILD-INFO 커밋 일치, sourceDirty false, `STM-Simulator.exe` SHA-256 `a350752c3776f32d5d592c309f2f7e8599a359e507333b7267ff68aa98835d0d`(115,432,470 B, MZ)가 SHA256.txt·update-manifest.json·ZIP 안 EXE와 같음, ZIP SHA-256 `18a3b176980f004a10246cff57891710131f74578cd6e9c820c3c19673760b8f`, 그 시점 latest v1.12.2.
+
 ## 1.12.1 예제 목록 한 줄 · 예제 코드 4칸 · ESLint 10.14.0 — 공개 배포 검증 완료
 
 2026-11-04. 제품 커밋 `6d6314d3a567ba3993e8c0f0bb33d17eb9e86961` · [Windows CI 41604986513](https://github.com/moonsyu/STM-Simulator/actions/runs/41604986513) · [Release v1.12.1](https://github.com/moonsyu/STM-Simulator/releases/tag/v1.12.1). 로컬: ESLint 0건, `npm test` 863개 중 862개 통과·1개 건너뜀, E2E 46개 중 44개 통과·2개 건너뜀. CI 전체 성공. 공개 다운로드: latest v1.12.1, 태그·BUILD-INFO 커밋 일치, sourceDirty false, `STM-Simulator.exe` SHA-256 `d6f700034da6489d56759e50a647a3f64118179eb08caef2495006c2768d6985`(115,431,793 B, MZ)가 SHA256.txt·update-manifest.json·ZIP 안 EXE와 같음, ZIP SHA-256 `2eeb4b779fce58a95f0d4a2291c1a64dad1d7757fd677feb314487584c14eeb1`. Dependabot PR #4는 같은 변경이 main에 들어가 자동으로 닫혔다.
