@@ -14,18 +14,13 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  build:
-    name: Windows x64 portable
+  # The checks run as parallel jobs; the release job publishes only when every one of them passed.
+  checks:
+    name: Static checks and unit tests
     runs-on: windows-latest
-    timeout-minutes: 45
+    timeout-minutes: 20
     env:
-      CI_REQUIRE_TOOLCHAIN: '1'
-      CI_REQUIRE_ESP32: '1'
-      ARDUINO_CLI: ${{ github.workspace }}\.cache\arduino\arduino-cli.exe
-      ARM_GCC: ${{ github.workspace }}\.cache\toolchain\xpack-arm-none-eabi-gcc-14.2.1-1.1\bin\arm-none-eabi-gcc.exe
-      STM32CUBE_F4_ROOT: ${{ github.workspace }}\.cache\toolchain\cubef4
-      STM32CUBE_F1_ROOT: ${{ github.workspace }}\.cache\toolchain\cubef1
-      TOOLCHAIN_EXAMPLES: blank,ref_led_tht_2,ref_button_4,ref_lcd_parallel_16,ref_max98357a_9,dma_uart_echo,adc_dma_scan,nvic_preemption,usart_sync_matrix,camera_tft,noise_errors
+      ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
     steps:
       - name: Check out source
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
@@ -38,8 +33,6 @@ jobs:
           cache: npm
       - name: Install locked dependencies
         run: npm ci
-      - name: Ensure Electron runtime is installed
-        run: node node_modules/electron/install.js
       - name: Reject vulnerable locked dependencies
         run: npm audit --audit-level=low
       - name: Verify release tag matches package version
@@ -52,64 +45,179 @@ jobs:
         run: npm run lint
       - name: Unit, interpreter, emulator and firmware tests
         run: npm run test:ci
-      - name: Install ARM GCC and STM32CubeF4 / STM32CubeF1 drivers for real firmware builds
+      - name: Update helper replacement and rollback
+        run: node --test --test-reporter=spec --test-reporter-destination=stdout --test-reporter=./tests/github-reporter.mjs --test-reporter-destination=stdout tests/release/update-helper.test.mjs
+
+  firmware:
+    name: ST HAL examples on ARM GCC and the emulator
+    runs-on: windows-latest
+    timeout-minutes: 30
+    env:
+      ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
+      CI_REQUIRE_TOOLCHAIN: '1'
+      ARM_GCC: ${{ github.workspace }}\.cache\toolchain\xpack-arm-none-eabi-gcc-14.2.1-1.1\bin\arm-none-eabi-gcc.exe
+      STM32CUBE_F4_ROOT: ${{ github.workspace }}\.cache\toolchain\cubef4
+      STM32CUBE_F1_ROOT: ${{ github.workspace }}\.cache\toolchain\cubef1
+      EXAMPLES: blank,ref_led_tht_2,ref_button_4,ref_lcd_parallel_16,ref_max98357a_9,dma_uart_echo,adc_dma_scan,nvic_preemption,usart_sync_matrix,camera_tft,noise_errors
+    steps:
+      - name: Check out source
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - name: Set up Node.js
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: '24'
+          cache: npm
+      - name: Install locked dependencies
+        run: npm ci
+      - name: Install ARM GCC and STM32CubeF4 / STM32CubeF1 drivers
+        uses: ./.github/actions/arm-toolchain
+      - name: Build examples with ST HAL and run them on the emulator
+        run: node --test --test-reporter=spec --test-reporter-destination=stdout --test-reporter=./tests/github-reporter.mjs --test-reporter-destination=stdout --test-concurrency=1 tests/toolchain/arm-examples.test.mjs tests/toolchain/board-links.test.mjs
+      - name: Report firmware build failures
+        if: failure()
         shell: pwsh
         run: |
-          $dir = '.cache/toolchain'; New-Item -ItemType Directory -Force $dir | Out-Null
-          Invoke-WebRequest 'https://github.com/xpack-dev-tools/arm-none-eabi-gcc-xpack/releases/download/v14.2.1-1.1/xpack-arm-none-eabi-gcc-14.2.1-1.1-win32-x64.zip' -OutFile "$dir/gcc.zip"
-          Expand-Archive "$dir/gcc.zip" -DestinationPath $dir
-          git clone --depth 1 --branch v1.8.5 https://github.com/STMicroelectronics/stm32f4xx-hal-driver.git "$dir/cubef4/Drivers/STM32F4xx_HAL_Driver"
-          git clone --depth 1 --branch v2.6.9 https://github.com/STMicroelectronics/cmsis-device-f4.git "$dir/cubef4/Drivers/CMSIS/Device/ST/STM32F4xx"
-          git clone --depth 1 --branch 5.9.0 --filter=blob:none --sparse https://github.com/ARM-software/CMSIS_5.git "$dir/cmsis5"
-          git -C "$dir/cmsis5" sparse-checkout set CMSIS/Core/Include
-          Copy-Item -Recurse "$dir/cmsis5/CMSIS/Core/Include" "$dir/cubef4/Drivers/CMSIS/Include"
-          # STM32CubeF1 v1.8.7 drivers at the commits pinned in desktop/tool-manifest-f1.json.
-          foreach ($src in @(@('stm32f1xx-hal-driver', 'fee494a92b5ad331f92ad21f76c66a5cb83773ee', 'Drivers/STM32F1xx_HAL_Driver'), @('cmsis-device-f1', 'c8e9a4a4f16b6d2cb2a2083cbe5161025280fb22', 'Drivers/CMSIS/Device/ST/STM32F1xx'))) {
-            $to = "$dir/cubef1/$($src[2])"; git init -q $to; git -C $to fetch -q --depth 1 "https://github.com/STMicroelectronics/$($src[0]).git" $src[1]; git -C $to checkout -q FETCH_HEAD
-          }
-          Copy-Item -Recurse "$dir/cmsis5/CMSIS/Core/Include" "$dir/cubef1/Drivers/CMSIS/Include"
-          & $env:ARM_GCC --version
+          if (Test-Path work/test-results/toolchain-failures.json) { foreach ($f in (Get-Content work/test-results/toolchain-failures.json -Raw | ConvertFrom-Json)) { Write-Output "::error title=Firmware example::$($f -replace "`r?`n",' ')" } }
+      - name: Upload test diagnostics on failure
+        if: failure()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: Windows-test-diagnostics-firmware
+          path: work/test-results/**
+          if-no-files-found: ignore
+          retention-days: 14
+
+  esp32:
+    name: ESP32 example sketches on Arduino CLI
+    runs-on: windows-latest
+    timeout-minutes: 30
+    env:
+      ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
+      CI_REQUIRE_ESP32: '1'
+      ARDUINO_CLI: ${{ github.workspace }}\.cache\arduino\arduino-cli.exe
+      # Everything Arduino CLI downloads stays under .cache/arduino, which is cached between runs.
+      ARDUINO_DIRECTORIES_DATA: ${{ github.workspace }}\.cache\arduino\data
+      ARDUINO_DIRECTORIES_DOWNLOADS: ${{ github.workspace }}\.cache\arduino\staging
+      ARDUINO_DIRECTORIES_USER: ${{ github.workspace }}\.cache\arduino\user
+    steps:
+      - name: Check out source
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - name: Set up Node.js
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: '24'
+          cache: npm
+      - name: Install locked dependencies
+        run: npm ci
+      - name: Restore Arduino CLI, the esp32 core and libraries
+        id: arduino-cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: .cache/arduino
+          key: arduino-cli-1.5.1-esp32-3.3.12-dht-1.4.6-unified-1.1.15-pubsub-2.8-${{ runner.os }}
       - name: Install Arduino CLI and the esp32 core for the example sketches
+        if: steps.arduino-cache.outputs.cache-hit != 'true'
         shell: pwsh
         run: |
           $dir = '.cache/arduino'; New-Item -ItemType Directory -Force $dir | Out-Null
           Invoke-WebRequest 'https://github.com/arduino/arduino-cli/releases/download/v1.5.1/arduino-cli_1.5.1_Windows_64bit.zip' -OutFile "$dir/cli.zip"
           if ((Get-FileHash "$dir/cli.zip" -Algorithm SHA256).Hash -ne 'FABE42E0EB04D00E776A66178299FF95A46C623DBC260F997E58FD514853DD40') { throw 'arduino-cli download checksum differs' }
           Expand-Archive "$dir/cli.zip" -DestinationPath $dir
+          Remove-Item "$dir/cli.zip"
           $index = 'https://espressif.github.io/arduino-esp32/package_esp32_index.json'
           & $env:ARDUINO_CLI core update-index --additional-urls $index
           & $env:ARDUINO_CLI core install esp32:esp32@3.3.12 --additional-urls $index
           & $env:ARDUINO_CLI lib install 'DHT sensor library@1.4.6' 'Adafruit Unified Sensor@1.1.15' 'PubSubClient@2.8'
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          & $env:ARDUINO_CLI version
-      - name: Build examples with ST HAL and run them on the emulator
+          # Downloaded archives are not needed once installed; the cache keeps the installed core only.
+          Remove-Item -Recurse -Force $env:ARDUINO_DIRECTORIES_DOWNLOADS -ErrorAction SilentlyContinue
+      - name: Show Arduino CLI version
+        run: '& $env:ARDUINO_CLI version'
         shell: pwsh
-        run: |
-          $env:EXAMPLES = $env:TOOLCHAIN_EXAMPLES
-          npm run test:toolchain:ci
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-      - name: Report firmware build failures
-        if: failure()
-        shell: pwsh
-        run: |
-          if (Test-Path work/test-results/toolchain-failures.json) { foreach ($f in (Get-Content work/test-results/toolchain-failures.json -Raw | ConvertFrom-Json)) { Write-Output "::error title=Firmware example::$($f -replace "`r?`n",' ')" } }
-      - name: Electron end-to-end tests
+      - name: Build the example ESP32 sketches
+        run: node --test --test-reporter=spec --test-reporter-destination=stdout --test-reporter=./tests/github-reporter.mjs --test-reporter-destination=stdout --test-concurrency=1 tests/toolchain/esp32-sketches.test.mjs
+
+  e2e:
+    name: Electron end-to-end tests ${{ matrix.shard }}/2
+    runs-on: windows-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2]
+    env:
+      CI_REQUIRE_TOOLCHAIN: '1'
+      ARM_GCC: ${{ github.workspace }}\.cache\toolchain\xpack-arm-none-eabi-gcc-14.2.1-1.1\bin\arm-none-eabi-gcc.exe
+      STM32CUBE_F4_ROOT: ${{ github.workspace }}\.cache\toolchain\cubef4
+      STM32CUBE_F1_ROOT: ${{ github.workspace }}\.cache\toolchain\cubef1
+    steps:
+      - name: Check out source
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - name: Set up Node.js
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: '24'
+          cache: npm
+      - name: Restore the Electron download
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~\AppData\Local\electron\Cache
+          key: electron-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+      - name: Install locked dependencies
+        run: npm ci
+      - name: Ensure Electron runtime is installed
+        run: node node_modules/electron/install.js
+      - name: Install ARM GCC and STM32CubeF4 / STM32CubeF1 drivers
+        uses: ./.github/actions/arm-toolchain
+      - name: Electron end-to-end tests (half of the files)
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force work/test-results | Out-Null
-          npm run test:e2e:ci 2>&1 | Tee-Object -FilePath work/test-results/e2e.log
+          # Two groups of about equal running time (measured); group 2 takes every file not in group 1, new ones included.
+          $first = 'devboards','shell','help','docs','format','format-ime','appearance','stm32-boards' | ForEach-Object { "tests/e2e/$_.e2e.test.mjs" }
+          $all = Get-ChildItem tests/e2e/*.test.mjs | ForEach-Object { "tests/e2e/$($_.Name)" }
+          $files = if ('${{ matrix.shard }}' -eq '1') { $first } else { $all | Where-Object { $_ -notin $first } }
+          "E2E group ${{ matrix.shard }}: $($files -join ', ')"
+          node --test --test-reporter=spec --test-reporter-destination=stdout --test-reporter=./tests/github-reporter.mjs --test-reporter-destination=stdout --test-concurrency=1 @files 2>&1 | Tee-Object -FilePath work/test-results/e2e.log
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-      - name: Update helper replacement and rollback
-        run: node --test --test-reporter=spec --test-reporter-destination=stdout --test-reporter=./tests/github-reporter.mjs --test-reporter-destination=stdout tests/release/update-helper.test.mjs
       - name: Upload test diagnostics on failure
         if: failure()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
-          name: Windows-test-diagnostics
-          path: |
-            work/test-results/**
+          name: Windows-test-diagnostics-e2e-${{ matrix.shard }}
+          path: work/test-results/**
           if-no-files-found: ignore
           retention-days: 14
+
+  package:
+    name: Windows x64 portable
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - name: Check out source
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - name: Set up Node.js
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: '24'
+          cache: npm
+      - name: Restore the Electron download
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~\AppData\Local\electron\Cache
+          key: electron-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+      - name: Install locked dependencies
+        run: npm ci
+      - name: Ensure Electron runtime is installed
+        run: node node_modules/electron/install.js
       - name: Build portable executable
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: 'false'
@@ -140,7 +248,7 @@ jobs:
   release:
     name: Publish verified release and update manifest
     if: startsWith(github.ref, 'refs/tags/') || (github.event_name == 'push' && github.ref == 'refs/heads/main')
-    needs: build
+    needs: [checks, firmware, esp32, e2e, package]
     runs-on: windows-latest
     timeout-minutes: 10
     concurrency:

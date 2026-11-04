@@ -1,0 +1,22 @@
+name: ARM GCC and STM32Cube drivers
+description: Installs xPack ARM GCC 14.2.1 and the STM32CubeF4 / STM32CubeF1 HAL and CMSIS drivers under .cache/toolchain (ARM_GCC, STM32CUBE_F4_ROOT and STM32CUBE_F1_ROOT point there).
+runs:
+  using: composite
+  steps:
+    - name: Install ARM GCC and STM32CubeF4 / STM32CubeF1 drivers
+      shell: pwsh
+      run: |
+        $dir = '.cache/toolchain'; New-Item -ItemType Directory -Force $dir | Out-Null
+        Invoke-WebRequest 'https://github.com/xpack-dev-tools/arm-none-eabi-gcc-xpack/releases/download/v14.2.1-1.1/xpack-arm-none-eabi-gcc-14.2.1-1.1-win32-x64.zip' -OutFile "$dir/gcc.zip"
+        Expand-Archive "$dir/gcc.zip" -DestinationPath $dir
+        git clone --depth 1 --branch v1.8.5 https://github.com/STMicroelectronics/stm32f4xx-hal-driver.git "$dir/cubef4/Drivers/STM32F4xx_HAL_Driver"
+        git clone --depth 1 --branch v2.6.9 https://github.com/STMicroelectronics/cmsis-device-f4.git "$dir/cubef4/Drivers/CMSIS/Device/ST/STM32F4xx"
+        git clone --depth 1 --branch 5.9.0 --filter=blob:none --sparse https://github.com/ARM-software/CMSIS_5.git "$dir/cmsis5"
+        git -C "$dir/cmsis5" sparse-checkout set CMSIS/Core/Include
+        Copy-Item -Recurse "$dir/cmsis5/CMSIS/Core/Include" "$dir/cubef4/Drivers/CMSIS/Include"
+        # STM32CubeF1 v1.8.7 drivers at the commits pinned in desktop/tool-manifest-f1.json.
+        foreach ($src in @(@('stm32f1xx-hal-driver', 'fee494a92b5ad331f92ad21f76c66a5cb83773ee', 'Drivers/STM32F1xx_HAL_Driver'), @('cmsis-device-f1', 'c8e9a4a4f16b6d2cb2a2083cbe5161025280fb22', 'Drivers/CMSIS/Device/ST/STM32F1xx'))) {
+          $to = "$dir/cubef1/$($src[2])"; git init -q $to; git -C $to fetch -q --depth 1 "https://github.com/STMicroelectronics/$($src[0]).git" $src[1]; git -C $to checkout -q FETCH_HEAD
+        }
+        Copy-Item -Recurse "$dir/cmsis5/CMSIS/Core/Include" "$dir/cubef1/Drivers/CMSIS/Include"
+        & $env:ARM_GCC --version

@@ -48,7 +48,7 @@ test('the single portable EXE starts with the updater enabled for its version',{
  const {launch,terminate}=require(path.join(root,'desktop/process-tools.cjs'));
  const temp=await specialTemp('update-portable');
  const port=await new Promise(resolve=>{const s=net.createServer();s.listen(0,'127.0.0.1',()=>{const p=s.address().port;s.close(()=>resolve(p));});});
- const env={...process.env,CIRCUIT_LAB_SMOKE:'0',CIRCUIT_LAB_TEST_PROFILE:path.join(temp.dir,'profile')};delete env.ELECTRON_RUN_AS_NODE;
+ const env={...process.env,CIRCUIT_LAB_SMOKE:'0',CIRCUIT_LAB_TEST_BACKGROUND:'1',CIRCUIT_LAB_TEST_PROFILE:path.join(temp.dir,'profile')};delete env.ELECTRON_RUN_AS_NODE;
  const child=launch(portable,[`--remote-debugging-port=${port}`,'--remote-debugging-address=127.0.0.1'],{env});let browser;
  try{
   let ready=false;for(let i=0;i<300&&!ready;i++){try{ready=(await fetch(`http://127.0.0.1:${port}/json/version`)).ok;}catch{}if(!ready)await wait(200);}assert.ok(ready,'portable app did not start');
