@@ -1,6 +1,10 @@
 # STM Simulator — 개발 인계
 
-현재 버전: **1.13.0**. 정리일: **2026-11-03**. NUCLEO-F446RE 또는 NUCLEO-F103RB와 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+현재 버전: **1.13.1**. 정리일: **2026-11-03**. NUCLEO-F446RE 또는 NUCLEO-F103RB와 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+
+## 1.13.1 자동 완성 목록 색 대비
+
+- `colorscheme.js` `widgetColors(c)`: 자동 완성(`editorSuggestWidget.*`)·툴팁(`editorHoverWidget.*`)·`editorWidget.*` 색을 테마에서 대비를 계산해 정한다. Vim 구성표의 Pmenu 회색 위에 Monaco 기본 파란 일치 글자와 흐린 설명 글자가 묻혔다. 글자 7:1 이상(못 맞추는 회색 표면이면 편집기 배경 사용), 일치 글자·선택 줄 4.5:1 이상. `editorTheme`가 항상 덮어쓴다.
 
 ## 1.13.0 NUCLEO-64 회로도(MB1136 C-04) 기본 연결 반영
 
