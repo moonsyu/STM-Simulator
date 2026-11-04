@@ -1,6 +1,10 @@
 # STM Simulator — 개발 인계
 
-현재 버전: **1.12.1**. 정리일: **2026-11-03**. NUCLEO-F446RE 또는 NUCLEO-F103RB와 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+현재 버전: **1.12.2**. 정리일: **2026-11-03**. NUCLEO-F446RE 또는 NUCLEO-F103RB와 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+
+## 1.12.2 보드 기록 실패 안내
+
+- `desktop/native-ide.cjs` `openocdHint(log)`: OpenOCD 출력에서 원인을 찾아 할 일을 붙인다(`OPENOCD_HINTS`, 구체적인 것부터: `LIBUSB_ERROR_NOT_FOUND` 드라이버 없음, `ACCESS`·`BUSY` 다른 프로그램이 사용 중, 3333 포트 사용 중, 대상 전압 0, MCU 연결 실패, `open failed` ST-LINK 없음). `program`(실행 기록)과 `startServer`(디버그 시작) 두 경로 모두 메시지 첫 줄에 넣는다. 드라이버 설치는 앱이 하지 않는다.
 
 ## 1.12.1 예제 목록 한 줄 · 예제 코드 4칸 들여쓰기
 
