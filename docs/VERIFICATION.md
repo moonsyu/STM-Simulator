@@ -1,5 +1,9 @@
 # 검증 기록
 
+## 1.14.2 닫힌 실행 대상 메뉴 표시 — 게시 확인(API)
+
+2026-11-04. 태그·빌드 커밋 `14ffe78cd6c595202217428cbd3f9935f602200f` · [Windows CI 41793294755](https://github.com/moonsyu/STM-Simulator/actions/runs/41793294755) 성공(7분) · [Release v1.14.2](https://github.com/moonsyu/STM-Simulator/releases/tag/v1.14.2). 로컬: 단위 880개 중 879개 통과·1개 건너뜀, ESLint 0건, E2E 52개 중 50개 통과·2개 건너뜀(다른 창 뒤에 띄운 다크 모드 창), 패키지 검사 3개 통과(npm으로 빌드). GitHub API로 latest v1.14.2와 자산 5개 확인(다운로드 없음).
+
 ## 1.14.1 실행 대상 메뉴 더블클릭 · 병렬 CI 첫 실행 — 게시 확인(API)
 
 2026-11-04. 태그·빌드 커밋 `5abb219bac29e151972c138108fb731c31402d85` · [Windows CI 41784815352](https://github.com/moonsyu/STM-Simulator/actions/runs/41784815352) 성공 · [Release v1.14.1](https://github.com/moonsyu/STM-Simulator/releases/tag/v1.14.1). 병렬 CI 첫 실행이 9분에 끝났다(이전 구조 약 32분): 정적 검사·단위 3분, 포터블 패키징 4분, ST HAL 예제 4분, ESP32 스케치 7분(캐시가 비어 처음 설치), E2E 묶음 6분·8분, 게시 1분. 로컬: 패키지 검사 3개 통과(npm으로 빌드, 창 숨김), help E2E 통과. GitHub API로 latest v1.14.1과 자산 5개 확인(다운로드 없음).
