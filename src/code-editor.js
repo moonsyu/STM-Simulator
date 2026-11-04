@@ -65,7 +65,7 @@ export function createCodeEditor({textarea,getFile,getFiles,onBreakpoint,onBreak
   textarea.addEventListener('input',()=>{if(!syncing)sync(nativeValue.get.call(textarea));});
   editor.onDidChangeModelContent(()=>{if(syncing)return;const moved=breakpoints.filter(b=>b.file===active).map((b,i)=>({...b,line:decorations.getRange(i)?.startLineNumber||b.line}));nativeValue.set.call(textarea,editor.getValue());textarea.dispatchEvent(new Event('input',{bubbles:true}));if(moved.some((b,i)=>b.line!==breakpoints.filter(p=>p.file===active)[i]?.line))onBreakpointsMoved?.(active,moved);});
   editor.onDidChangeCursorSelection(e=>{const m=editor.getModel();nativeSelect(m.getOffsetAt(e.selection.getStartPosition()),m.getOffsetAt(e.selection.getEndPosition()));onPosition?.(editor.getPosition());});
-  new MutationObserver(()=>editor.updateOptions({readOnly:textarea.readOnly})).observe(textarea,{attributes:true,attributeFilter:['readonly']});
+  new MutationObserver(()=>editor.updateOptions({readOnly:textarea.readOnly,readOnlyMessage:{value:textarea.dataset.readOnlyMessage||'이 파일은 읽기 전용입니다.'}})).observe(textarea,{attributes:true,attributeFilter:['readonly','data-read-only-message']});
   editor.onMouseDown(e=>{if(e.target.type===monaco.editor.MouseTargetType.GUTTER_GLYPH_MARGIN&&e.target.position)onBreakpoint(active,e.target.position.lineNumber);});
   editor.addCommand(monaco.KeyCode.F9,()=>onBreakpoint(active,editor.getPosition().lineNumber));
   editor.addCommand(monaco.KeyMod.CtrlCmd|monaco.KeyCode.KeyZ,()=>document.dispatchEvent(new CustomEvent('ide-undo',{detail:false})));
