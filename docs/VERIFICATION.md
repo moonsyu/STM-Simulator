@@ -1,5 +1,9 @@
 # 검증 기록
 
+## 1.13.2 시뮬레이터 sprintf·snprintf · 빌드 실패 첫 오류 — 공개 배포 검증 완료
+
+2026-11-04. 제품 커밋 `322ac0f1525645c19fa730994a7a9cb2b583cde7` · [Windows CI 41766819500](https://github.com/moonsyu/STM-Simulator/actions/runs/41766819500) · [Release v1.13.2](https://github.com/moonsyu/STM-Simulator/releases/tag/v1.13.2). 로컬: `npm test` 880개 중 879개 통과·1개 건너뜀, ESLint 0건, 이 PC의 ARM GCC로 빌드 실패 메시지 확인. CI 전체 성공. 공개 다운로드: latest v1.13.2(자산 5개), 태그·BUILD-INFO 커밋 일치, sourceDirty false, `STM-Simulator.exe` SHA-256 `25faec39e908b6d4c13e84ed2ee7578c4f155abe744b9573b076be92bc59c2a7`(115,489,909 B, MZ)가 SHA256.txt·update-manifest.json·ZIP 안 EXE와 같음, ZIP SHA-256 `72c8a7fb5cc5797a962cd4ffc3c212712c68d3b910a4ccb46473bb50a808a5cb`.
+
 ## 1.13.1 자동 완성 목록 색 대비 — 공개 배포 검증 완료
 
 2026-11-04. 태그·빌드 커밋 `504cef1fede7badc32731bc0ef0f522188801e14`(제품 수정 `1037d3d`, 1.13.0 검증 기록 포함) · [Windows CI 41762728719](https://github.com/moonsyu/STM-Simulator/actions/runs/41762728719) · [Release v1.13.1](https://github.com/moonsyu/STM-Simulator/releases/tag/v1.13.1). 로컬: `npm test` 877개 중 876개 통과·1개 건너뜀, 화면 밖 다크 창에서 자동 완성 목록 캡처 확인. CI 전체 성공. 공개 다운로드: latest v1.13.1(자산 5개), 태그·BUILD-INFO 커밋 일치, sourceDirty false, `STM-Simulator.exe` SHA-256 `06652c55e80c8ad3dc62b9bc7c54b6817ceb383f4b5b2192f42df4948ee51e93`(115,437,302 B, MZ)가 SHA256.txt·update-manifest.json·ZIP 안 EXE와 같음, ZIP SHA-256 `f11ad4b9689b5d9cc48806643cde87258435d9a4201acd044462aed3c6bf5243`.

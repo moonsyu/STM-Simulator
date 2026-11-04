@@ -1,6 +1,12 @@
 # STM Simulator — 개발 인계
 
-현재 버전: **1.13.2**. 정리일: **2026-11-03**. NUCLEO-F446RE 또는 NUCLEO-F103RB와 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+현재 버전: **1.14.0**. 정리일: **2026-11-03**. NUCLEO-F446RE 또는 NUCLEO-F103RB와 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+
+## 1.14.0 시뮬레이터를 ARM GCC 빌드로
+
+- `native-ide-ui.js`: 시뮬레이터 엔진 `stm32lab.simEngine`(localStorage, 기본 `gcc`, `interpreter`). `gccSimulation()` = 실행 대상 시뮬레이터 · 엔진 gcc · 데스크톱 · HAL 프로젝트 · FatFs 헤더 없음. 이때 `emulator()`가 참이 되어 빌드(`buildElf`), 실행(FirmwareSession), 다른 STM32 보드(에뮬레이터 드라이버), 디버그, 메모리 보기가 모두 펌웨어 에뮬레이터 경로를 탄다. `#sim-engine` 선택은 실행 환경(`shell.js`가 run-config로 옮김)에 있다.
+- `ensureSimTools()`: 실행 전에 `install-plan`에서 ARM GCC와 보드의 Cube SDK(`cube`/`cubeF1`)만 보고, 없으면 `#sim-tools-dialog`(설치하고 실행 · 내장 해석기로 실행 · 취소). 설치는 기존 `install-tools`와 진행 표시(`renderPlan`)를 함께 쓴다. `app-run.js` `startRun`이 부른다(`cancel`이면 실행 안 함).
+- E2E 하네스는 `simEngine` 기본 `interpreter`(도구 없는 CI·빠른 실행), `sim-gcc.e2e.test.mjs`가 gcc 엔진(도구 있으면 실제 빌드, 없는 PC는 `LOCALAPPDATA`를 빈 폴더로 바꿔 설치 창 확인).
 
 ## 1.13.2 시뮬레이터 sprintf·snprintf · 빌드 실패 첫 오류
 
