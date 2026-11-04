@@ -7,6 +7,11 @@
 - `pins.js` `OPEN_BRIDGES`: 배송 상태에서 열린 솔더 브리지 뒤의 헤더 핀(CN9-1/2·CN10-35/37 = PA3/PA2, SB62/SB63 · CN7-25/27 = PC14/PC15, SB49/SB48 · CN7-29 = PH0/PD0, SB55)은 `signal:'NC'`이고 `mcu`·`bridge`를 가진다. 두 보드 모두(`boardPins`가 F103 신호를 바꾼 뒤 적용). `GPIO_PINS`는 `mcu`도 포함해 PA2/PA3(VCP) 등 MCU 핀 이름은 그대로 쓴다. `boardPin()`은 이 핀을 돌려주지 않는다(`boardPin('PA2')`·`boardPin('D0')`은 `undefined`). `bridgeNote(pin)`이 툴팁·핀 클릭 안내·다른 STM32 보드 핀 설명에 쓰인다.
 - `engine.js` `onboard()`: B1(4.7 kΩ 풀업, 누르면 R29 100 Ω으로 GND), LD2(PA5→GND, 다이오드 2.1 V·510 Ω). 주 보드와 다른 STM32 보드(`<id>.PA5`) 모두.
 - 예제: 외부 UART 장치는 USART1 PA9/PA10(`uart_external`, UART 케이블 4·6선, 절연 RS485, 장치 Docs의 UART 계열), USART 동기 MAX7219는 USART1 CK PA8·TX PA9. `uart`·`dma_uart_echo`·`noise_errors`는 배선 없이 VCP라 USART2 그대로. 장치 Docs 핀 배정(`device-assistance.js`)은 부품에 배선되는 핀을 헤더가 있는 핀에서만 고른다. 직렬 모니터에서 `외부 UART 장치 → USART2` 항목을 없앴다.
+- 실행 대상 ▾ 메뉴(`native-ide-ui.js`)는 `popover='manual'`로 직접 연다/닫는다: ▾, 바깥 `pointerdown`, Esc, 창 `blur`·`resize`. 페이지 밖 클릭(다른 창, 창 테두리)은 요소에 닿지 않아 브라우저 light dismiss로는 닫히지 않았다. `adoptNewBoard`는 새로 연결된 NUCLEO를 종류와 관계없이 고르고(같은 종류 우선), 종류가 다르면 로그로 보드 변경을 안내한다.
+- HAL 코드 다시 생성(`pinout-ui.js` `commit(true)`)은 `keepUserCode(이전 코드, 새 코드, 이전 설정의 생성 코드)`(`c-source-edit.js`): 같은 이름의 USER CODE 구간 내용을 옮기고, 새 코드에 없는 구간은 `#if 0`으로 구간 4에 보관, 이전 설정의 생성 결과와 같은(손대지 않은) 구간은 새 기본값. 생성기(`hal-generator.js`)는 `Includes`·`PV`·`0`·`4`와 콜백 본문 구간을 추가로 만든다.
+- 도움말 → 업데이트 로그: `update-log-data.js`(버전·태그 날짜·사용자용 항목, 새 버전마다 맨 위에 추가), `update-log.js`(정렬·검색·5개 페이지), `update-log-ui.js`(떠 있는 창, 제목으로 이동). 단위 테스트가 package 버전이 맨 위에 있는지 확인한다.
+- 실행 중 예제 선택: 시뮬레이션은 정지하고 적용(`readyForExample`, 예제 목록은 실행 중에도 사용 가능), 빌드·보드 실행·디버그 중에는 안내만. 실행 중 읽기 전용 편집기는 Monaco `readOnlyMessage`로 정지하라고 알린다(`#code` `data-read-only-message`).
+- E2E는 화면을 가리지 않는다: 하네스가 `CIRCUIT_LAB_TEST_BACKGROUND=1`을 주면(테스트 프로필일 때만) `main.cjs`가 창과 패널 창을 숨긴 채 렌더링하고(`backgroundThrottling:false`) 다크 테마로 띄운다. 창을 보려면 `E2E_SHOW=1`.
 - 테스트: D13 LED 전류는 LD2와 같은 노드로 계산(`withLd2`), RC·오픈 드레인은 D12. 펌웨어 픽스처 `uart_external`(USART1, 이 PC의 GCC 15.2.1·STM32CubeF4로 빌드) 추가, HC-06·보드 간 UART 시험은 이 픽스처로.
 
 ## 1.12.3 실행 대상 메뉴 · 실물 보드 자동 선택 · Release 기본
