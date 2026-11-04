@@ -60,7 +60,7 @@ function allocatePins(p,sample,parts,prior){
   const currentRoutes=Object.entries(config.pins).filter(([,v])=>v.function.startsWith(id+'_')),connectedOwned=pin=>p.components.filter(part=>partIds.has(part.id)).some(part=>terminalKeys(part).some(key=>uf.find(partTerminal(part.id,key))===uf.find(boardPin(pin))));
   const reusable=currentRoutes.length>0&&currentRoutes.every(([pin])=>connectedOwned(pin)&&!otherTerminals.some(term=>uf.find(term)===uf.find(boardPin(pin))))&&Object.entries(setting).every(([k,v])=>k==='prescaler'?(config.peripherals[id]?.prescaler===Math.max(0,Math.round((v+1)*config.timerClockHz/sample.mcu.timerClockHz)-1)):config.peripherals[id]?.[k]===v);
   let next=id;if(/^TIM/.test(id)&&!Object.values(prior?.peripherals||{}).includes(id)&&config.peripherals[id]?.enabled&&!reusable){next=TIMERS.find(t=>!config.peripherals[t]?.enabled&&setting.period<=timerMax(t)&&Object.entries(sample.mcu.pins).filter(([,v])=>v.function.startsWith(id+'_')).every(([,v])=>(ROUTES[t][v.function.split('_')[1]]||[]).some(free)));if(!next)throw new Error('이 예제에 사용할 빈 타이머/채널이 없습니다. Pinout에서 사용하지 않는 타이머를 비활성화하세요.');}
-  if(SERIAL_IDS.includes(id)&&config.peripherals[id]?.enabled&&!reusable&&!prior?.peripherals[id]){next=SERIAL_IDS.find(serial=>!config.peripherals[serial]?.enabled&&Object.values(ROUTES[serial]).every(pins=>pins.some(free)));if(!next)throw new Error('사용 가능한 UART TX/RX 핀 조합이 없습니다.');}
+  if(SERIAL_IDS.includes(id)&&config.peripherals[id]?.enabled&&!reusable&&!prior?.peripherals[id]){next=SERIAL_IDS.find(serial=>!config.peripherals[serial]?.enabled&&Object.values(ROUTES[serial]).every(pins=>pins.some(pin=>free(pin)&&boardPin(pin))));if(!next)throw new Error('사용 가능한 UART TX/RX 핀 조합이 없습니다.');}
   next=prior?.peripherals?.[id]||next;peripherals[id]=next;
   const differs=/^TIM/.test(id)||!config.peripherals[next]?.enabled?[]:Object.entries(setting).filter(([k,v])=>k!=='enabled'&&config.peripherals[next][k]!==undefined&&config.peripherals[next][k]!==v);
   if(differs.length)throw new Error(`${next}가 다른 통신 설정으로 사용 중입니다 (${differs.map(([k,v])=>`${k} 현재 ${config.peripherals[next][k]}, 예제 ${v}`).join(', ')}). Pinout에서 같은 값으로 맞춘 뒤 다시 적용하세요.`);
@@ -73,6 +73,8 @@ function allocatePins(p,sample,parts,prior){
   if(fixed)candidates=[old];
   const shared=ROUTES[periph]&&!['ADC1',...TIMERS].includes(periph)?Object.keys(config.pins).find(pin=>config.pins[pin].function===(peripherals[periph]||periph)+'_'+role):null;
   const expected=expectedNets(sample).find(net=>net.some(id=>PIN_BY_ID.get(id)?.signal===old))||[],contacts=expected.filter(id=>id.startsWith('part:')).map(id=>partTerminal(parts[id.split(':')[1]],id.split(':')[2]));
+  // A pin wired to a part needs a header pin (PA2/PA3, PC14/PC15 and PH0 sit behind open solder bridges).
+  if(contacts.length&&!fixed)candidates=candidates.filter(pin=>boardPin(pin));
   const preferred=prior?.pins?.[old]||old,alreadyConnected=pin=>!assigned.has(pin)&&(config.pins[pin]?.function===fn||fn.startsWith('ADC1_')&&config.pins[pin]?.function.startsWith('ADC1_'))&&config.pins[pin]?.pull===cfg.pull&&!otherTerminals.some(id=>uf.find(id)===uf.find(boardPin(pin)))&&contacts.some(id=>uf.find(id)===uf.find(boardPin(pin)));
   const existingPins=candidates.filter(pin=>contacts.some(id=>uf.find(id)===uf.find(boardPin(pin))));
   let chosen=(!fixed&&shared)||[...(prior?[preferred]:[]),...existingPins,preferred,...candidates].find(pin=>candidates.includes(pin)&&(free(pin)||alreadyConnected(pin)));

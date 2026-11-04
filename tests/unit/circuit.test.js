@@ -15,6 +15,9 @@ import {validateProject} from '../../src/project.js';
 import {boardProject,emptyWorkspace,ledCircuit,buttonCircuit,dividerCircuit,wire,close,BLACK,RED} from './helpers/circuit.js';
 
 const HIGH={PA5:{mode:'OUTPUT',value:3.3}},LOW={PA5:{mode:'OUTPUT',value:0}};
+// An LED of forward voltage `vf` behind `ohms` on D13 shares the GPIO node (40 Ω drive) with the board's LD2
+// (green, 2.1 V, R31 510 Ω): the node voltage of the two conducting branches, then the LED's current.
+const withLd2=(vf,ohms)=>{const g=[1/40,1/510,1/ohms],v=(3.3*g[0]+2.1*g[1]+vf*g[2])/(g[0]+g[1]+g[2]);return (v-vf)/ohms;};
 const uid=(()=>{let n=0;return prefix=>`${prefix}new${++n}`;})();
 const extraBoard=(id='bb1',extra={})=>({id,type:'breadboard',name:id.toUpperCase(),x:1400,y:400,rotation:0,...extra});
 
@@ -112,7 +115,7 @@ describe('extra breadboards',()=>{
     p.components=[extraBoard('bb1'),{id:'r1',name:'R1',type:'resistor',value:330,x:0,y:0,rotation:0,span:42,attachA:q+'bb:e:3',attachB:q+'bb:f:3'},{id:'led1',name:'LED1',type:'led',color:'green',x:0,y:0,rotation:0,span:42,attachA:q+'bb:j:3',attachB:q+'rail:R:-:2'}];
     p.wires=[wire('w1',boardPin('D13'),q+'bb:a:3'),wire('w2',boardPin('GND'),q+'rail:R:-:20',BLACK)];
     assert.doesNotThrow(()=>validateProject(p));
-    const r=solveCircuit(p,HIGH);assert.equal(r.parts.led1.on,true);close(r.parts.led1.current,(3.3-2.1)/(330+40+12));
+    const r=solveCircuit(p,HIGH);assert.equal(r.parts.led1.on,true);close(r.parts.led1.current,withLd2(2.1,330+12));
   });
   test('validateProject rejects more than eight extra breadboards and dangling board holes',()=>{
     const p=boardProject();p.components=Array.from({length:9},(_,i)=>extraBoard('bb'+i,{x:i*500}));
@@ -154,13 +157,13 @@ describe('topology',()=>{
 });
 
 describe('solveCircuit: LEDs and resistors',()=>{
-  test('LED current follows (Vout - Vf) / (R + Rgpio + Rled)',()=>{
+  test('LED current follows (Vout - Vf) / (R + Rgpio + Rled), with LD2 sharing the D13 node',()=>{
     const r=solveCircuit(ledCircuit(),HIGH);assert.equal(r.fault,false);assert.equal(r.parts.led1.on,true);
-    close(r.parts.led1.current,(3.3-1.8)/(330+40+12));close(r.parts.r1.current,r.parts.led1.current,1e-9,'series current');
+    close(r.parts.led1.current,withLd2(1.8,330+12));close(r.parts.r1.current,r.parts.led1.current,1e-9,'series current');
     assert.deepEqual(r.warnings,[]);
   });
   test('a PWM output lights an LED for its duty: the average of the high and low phases, not the average voltage',()=>{
-    const full=(3.3-1.8)/(330+40+12),pwm=duty=>solveCircuit(ledCircuit(),{PA5:{mode:'OUTPUT',value:3.3*duty,pwm:{duty,frequency:500}}});
+    const full=withLd2(1.8,330+12),pwm=duty=>solveCircuit(ledCircuit(),{PA5:{mode:'OUTPUT',value:3.3*duty,pwm:{duty,frequency:500}}});
     for(const duty of [.1,.3,.5,.8]){const r=pwm(duty);assert.equal(r.parts.led1.on,true,String(duty));close(r.parts.led1.current,full*duty,1e-6,String(duty));}
     // Without the PWM mark the same average voltage stays below the forward voltage (an analog output).
     assert.equal(solveCircuit(ledCircuit(),{PA5:{mode:'OUTPUT',value:3.3*.3}}).parts.led1.on,false);
@@ -174,7 +177,7 @@ describe('solveCircuit: LEDs and resistors',()=>{
   });
   test('forward voltage depends on LED colour',()=>{
     for(const [color,vf] of [['red',1.8],['green',2.1],['yellow',2.0],['blue',2.8]]){
-      const r=solveCircuit(ledCircuit({color}),HIGH);close(r.parts.led1.current,(3.3-vf)/(382),1e-6,color);
+      const r=solveCircuit(ledCircuit({color}),HIGH);close(r.parts.led1.current,withLd2(vf,342),1e-6,color);
     }
   });
   test('LED is dark when the GPIO is LOW, unconfigured, reversed or the resistor is missing',()=>{
@@ -232,9 +235,11 @@ describe('solveCircuit: shorts, floating nodes and pulls',()=>{
   });
   test('open-drain output released HIGH floats instead of driving',()=>{
     const p=boardProject();p.components=[{id:'r1',name:'R1',type:'resistor',value:10000,x:0,y:0,rotation:0,span:42}];
-    p.wires=[wire('w1',boardPin('3V3'),'part:r1:a',RED),wire('w2','part:r1:b',boardPin('D13'))];
-    close(solveCircuit(p,{PA5:{mode:'OUTPUT',value:3.3,openDrain:true}}).voltage(boardPin('D13')),3.3,1e-3,'external pull-up');
-    assert.ok(solveCircuit(p,{PA5:{mode:'OUTPUT',value:0,openDrain:true}}).voltage(boardPin('D13'))<0.02);
+    p.wires=[wire('w1',boardPin('3V3'),'part:r1:a',RED),wire('w2','part:r1:b',boardPin('D12'))];
+    close(solveCircuit(p,{PA6:{mode:'OUTPUT',value:3.3,openDrain:true}}).voltage(boardPin('D12')),3.3,1e-3,'external pull-up');
+    assert.ok(solveCircuit(p,{PA6:{mode:'OUTPUT',value:0,openDrain:true}}).voltage(boardPin('D12'))<0.02);
+    // On D13 the board's LD2 holds a released open-drain line near its forward voltage, as on the NUCLEO.
+    p.wires[1]=wire('w2','part:r1:b',boardPin('D13'));const ld2=solveCircuit(p,{PA5:{mode:'OUTPUT',value:3.3,openDrain:true}}).voltage(boardPin('D13'));assert.ok(ld2>2.1&&ld2<2.3,String(ld2));
   });
   test('an unconnected input floats (null) and reads LOW; pulls define the level',()=>{
     const p=boardProject();
@@ -246,6 +251,19 @@ describe('solveCircuit: shorts, floating nodes and pulls',()=>{
   test('an isolated sub-circuit has no ground reference',()=>{
     const p=boardProject();p.components=[{id:'r1',name:'R1',type:'resistor',value:100,x:0,y:0,rotation:0,span:42,attachA:'bb:a:1',attachB:'bb:a:5'}];
     const r=solveCircuit(p);assert.equal(r.voltage('bb:a:1'),null);assert.equal(r.voltage('bb:a:5'),null);close(r.parts.r1.current,0);
+  });
+  test('the on-board LD2 and B1 follow the MB1136 schematic: LD2 on PA5 through R31 510 Ω, B1 pulls PC13 through R29 100 Ω',()=>{
+    const r=solveCircuit(boardProject(),HIGH),v=r.voltage('signal:PA5');close((3.3-v)/40,(v-2.1)/510,1e-9,'LD2 current');assert.ok(v>3.2&&v<3.25,String(v));
+    close(solveCircuit(boardProject(),{PA5:{mode:'INPUT'}}).voltage('signal:PA5'),0,1e-6,'LD2 pulls an undriven PA5 low');
+    close(solveCircuit(boardProject(),{},{USER:true}).voltage('signal:PC13'),3.3*100/4800,1e-6,'R30 4.7 kΩ against R29 100 Ω');
+  });
+  test('header pins behind open solder bridges reach no MCU pin: D0/D1, PC14/PC15, PH0',()=>{
+    const p=boardProject(),gpio={PA2:{mode:'OUTPUT',value:3.3},PA3:{mode:'OUTPUT',value:3.3},PC14:{mode:'OUTPUT',value:3.3},PH0:{mode:'OUTPUT',value:3.3}};
+    p.components=[{id:'r1',name:'R1',type:'resistor',value:1000,x:0,y:0,rotation:0,span:42}];
+    for(const id of ['board:CN9:1','board:CN9:2','board:CN10:35','board:CN10:37','board:CN7:25','board:CN7:27','board:CN7:29']){
+      p.wires=[wire('w1',id,'part:r1:a'),wire('w2','part:r1:b',boardPin('GND'),BLACK)];const r=solveCircuit(p,gpio);close(r.parts.r1.current,0,1e-9,id);
+    }
+    assert.equal(boardPin('D0'),undefined);assert.equal(boardPin('PC14'),undefined);assert.equal(boardPin('PH1'),'board:CN7:31');
   });
   test('pull-up button reads HIGH released and LOW pressed; USER button is active low',()=>{
     const p=buttonCircuit(),gpio={PA10:{mode:'INPUT_PULLUP'}};
@@ -260,8 +278,10 @@ describe('solveCircuit: shorts, floating nodes and pulls',()=>{
 });
 
 describe('CircuitSimulation (capacitor transient)',()=>{
+  // D12 (PA6): no on-board load beside the RC.
+  const HIGH={PA6:{mode:'OUTPUT',value:3.3}},LOW={PA6:{mode:'OUTPUT',value:0}};
   const rc=()=>{const p=boardProject();p.components=[{id:'r1',name:'R1',type:'resistor',value:1000,x:0,y:0,rotation:0,span:42},{id:'c1',name:'C1',type:'capacitor',value:100,x:0,y:0,rotation:0,span:42}];
-    p.wires=[wire('w1',boardPin('D13'),'part:r1:a'),wire('w2','part:r1:b','part:c1:a'),wire('w3','part:c1:b',boardPin('GND'),BLACK)];return p;};
+    p.wires=[wire('w1',boardPin('D12'),'part:r1:a'),wire('w2','part:r1:b','part:c1:a'),wire('w3','part:c1:b',boardPin('GND'),BLACK)];return p;};
   test('RC charging follows the time constant and repeated reads do not advance charge',()=>{
     const sim=new CircuitSimulation(),p=rc();
     for(let t=0;t<=100;t++)sim.solve(p,HIGH,{},t);

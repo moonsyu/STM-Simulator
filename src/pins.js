@@ -3,7 +3,7 @@ import {BOARD,BB,FULL_BB,scaleXOf,scaleYOf,partVector,surfacePoint} from './geom
 import {devboardPins,devboardPinInfo} from './devboards.js';
 export {BOARD,BB,FULL_BB} from './geometry.js';
 // MB1136, UM1724 Rev 17, Figure 24 / Tables 19 and 29.
-// Default A4/A5 solder bridges: PC1/PC0. Hardware jumper behavior is not modeled.
+// Solder bridges as delivered: A4/A5 on PC1/PC0, and the open bridges below (OPEN_BRIDGES). Changing them is not modeled.
 export const ALIASES = Object.freeze({D0:'PA3',D1:'PA2',D2:'PA10',D3:'PB3',D4:'PB5',D5:'PB4',D6:'PB10',D7:'PA8',D8:'PA9',D9:'PC7',D10:'PB6',D11:'PA7',D12:'PA6',D13:'PA5',D14:'PB9',D15:'PB8',A0:'PA0',A1:'PA1',A2:'PA4',A3:'PB0',A4:'PC1',A5:'PC0',LED_BUILTIN:'PA5',USER_BUTTON:'PC13'});
 export const canonicalPin = p => ALIASES[p] || p;
 const headers = [];
@@ -31,7 +31,15 @@ header('CN6',['NC','IOREF',['RESET','NRST'],'3V3','5V','GND','GND','VIN'],hx(10.
 header('CN8',Object.keys(ALIASES).filter(k=>/^A\d$/.test(k)).map(k=>[k,ALIASES[k]]),hx(10.87),top+13*14,14);
 header('CN5',[['D15','PB8'],['D14','PB9'],['AREF','AVDD'],'GND',...['D13','D12','D11','D10','D9','D8'].map(k=>[k,ALIASES[k]])],hx(59.13),top+.4*14,14,i=>10-i);
 header('CN9',['D7','D6','D5','D4','D3','D2','D1','D0'].map(k=>[k,ALIASES[k]]),hx(59.13),top+11*14,14,i=>8-i);
-export const PINS = Object.freeze(headers);
+// Solder bridges open as delivered (MB1136 C-04 schematic, sheets 3 and 5): these header pins do not reach the MCU.
+// PA2/PA3 go only to the ST-LINK virtual COM port (SB62/SB63), PC14/PC15 to the 32.768 kHz crystal X2 (SB48/SB49),
+// and PH0 (PD0 on the F103) takes the ST-LINK 8 MHz MCO (SB55, closed only on L4 boards). The pin keeps its label and
+// is `NC`; `mcu` names the MCU pin behind the open bridge.
+export const OPEN_BRIDGES=Object.freeze({'board:CN9:1':'SB62','board:CN10:37':'SB62','board:CN9:2':'SB63','board:CN10:35':'SB63','board:CN7:25':'SB49','board:CN7:27':'SB48','board:CN7:29':'SB55'});
+const bridged=p=>OPEN_BRIDGES[p.id]?Object.freeze({...p,signal:'NC',mcu:p.signal,bridge:OPEN_BRIDGES[p.id]}):p;
+export const PINS = Object.freeze(headers.map(bridged));
+/** What a header pin behind an open solder bridge is, for tooltips and the pin's notes. */
+export const bridgeNote=p=>p?.bridge?`${p.bridge} 열림(기본) — ${p.mcu}에 연결되지 않음${['PA2','PA3'].includes(p.mcu)?' (ST-LINK 가상 COM 포트 전용)':['PC14','PC15'].includes(p.mcu)?' (32.768 kHz 수정 X2)':' (ST-LINK 8 MHz MCO 입력)'}`:'';
 // NUCLEO-F103RB uses the same MB1136 board; UM1724 table 29 lists CN7-29/31 as PD0/PD1 (no port H on the F103)
 // and CN10-18 as PB11 (VCAP1 on the F446RE, left unconnected).
 const BOARD_SIGNALS={'nucleo-f103rb':{'board:CN7:29':'PD0','board:CN7:31':'PD1','board:CN10:18':'PB11'}};
@@ -39,14 +47,15 @@ const boardPinCache=new Map();
 /** Header pins of a board: the F446RE layout with that board's signal differences applied. */
 export function boardPins(boardId){
   const over=BOARD_SIGNALS[boardId];if(!over)return PINS;
-  if(!boardPinCache.has(boardId))boardPinCache.set(boardId,Object.freeze(PINS.map(p=>over[p.id]?Object.freeze({...p,label:over[p.id],signal:over[p.id]}):p)));
+  if(!boardPinCache.has(boardId))boardPinCache.set(boardId,Object.freeze(headers.map(p=>bridged(over[p.id]?{...p,label:over[p.id],signal:over[p.id]}:p))));
   return boardPinCache.get(boardId);
 }
 export const PIN_BY_ID = new Map(PINS.map(p=>[p.id,p]));
 // Header pins of the board being edited: labels, the NC check and pin search follow it (NUCLEO-F103RB: PD0/PD1, PB11).
 let activePins=PINS;
 export function setActiveBoard(boardId){const pins=boardPins(boardId);if(pins===activePins)return;activePins=pins;for(const p of pins)PIN_BY_ID.set(p.id,p);}
-export const GPIO_PINS = [...new Set(PINS.map(p=>p.signal).filter(s=>/^P[A-H]\d+$/.test(s)))].sort();
+// MCU pins, including those behind an open solder bridge (the program still uses PA2/PA3 for the VCP).
+export const GPIO_PINS = [...new Set(PINS.map(p=>p.mcu??p.signal).filter(s=>/^P[A-H]\d+$/.test(s)))].sort();
 /** Every GPIO name on any supported board (pin names the C runtime and circuit engine accept). */
 export const ALL_GPIO_PINS = [...new Set([...GPIO_PINS,...Object.values(BOARD_SIGNALS).flatMap(o=>Object.values(o))])].sort();
 export const HOLES = [];
@@ -89,7 +98,7 @@ export function holeInfo(id,components=[],surfaces){
   if(!part)return null;breadboardHoles(part);return breadboardCache.get(part).byId.get(id)||null;
 }
 export function endpointInfo(id,components=[],surfaces) {
-  if(PIN_BY_ID.has(id)&&!surfaces?.board?.hidden) {const p=surfacePoint(PIN_BY_ID.get(id),'board',surfaces);return {...p,label:`${p.header}-${p.number} · ${p.label}${p.signal!==p.label?' / '+p.signal:''}`};}
+  if(PIN_BY_ID.has(id)&&!surfaces?.board?.hidden) {const p=surfacePoint(PIN_BY_ID.get(id),'board',surfaces);return {...p,label:`${p.header}-${p.number} · ${p.label}${p.bridge?' · '+bridgeNote(p):p.signal!==p.label?' / '+p.signal:''}`};}
   const hole=holeInfo(id,components,surfaces);if(hole)return hole;
   const board=devboardPinInfo(id,components);if(board)return board;
   const m=/^part:([^:]+):([a-d]|p\d+)$/.exec(id);
@@ -97,6 +106,7 @@ export function endpointInfo(id,components=[],surfaces) {
   return null;
 }
 export function endpoints(components,surfaces) {return [...(surfaces?.board?.hidden?[]:PINS.map(p=>surfacePoint(p,'board',surfaces))),...circuitHoles(components,surfaces),...components.filter(p=>p.type==='devboard').flatMap(devboardPins),...components.flatMap(p=>terminalKeys(p).map(t=>endpointInfo(`part:${p.id}:${t}`,components,surfaces)))];}
-export function boardPin(name) {const p=PINS.find(p=>p.label===name&&['CN5','CN6','CN8','CN9'].includes(p.header))||PINS.find(p=>p.signal===canonicalPin(name));return p?.id;}
+// A header pin wired to `name` (D0/D1, PA2/PA3, PC14/PC15 and PH0 have none: their solder bridges are open).
+export function boardPin(name) {const p=PINS.find(p=>p.label===name&&p.signal!=='NC'&&['CN5','CN6','CN8','CN9'].includes(p.header))||PINS.find(p=>p.signal===canonicalPin(name));return p?.id;}
 export const normalizePinQuery=q=>String(q).toUpperCase().replace(/\s+/g,'');
 export function searchPins(query){const q=normalizePinQuery(query);if(!q)return [];const exact=activePins.filter(p=>p.signal===q||p.label===q||`${p.header}-${p.number}`===q);return exact.length?exact:activePins.filter(p=>p.signal.startsWith(q)||p.label.startsWith(q));}

@@ -1,5 +1,5 @@
 import {partVector,partTransform,BOARD} from './geometry.js';
-import {boardPins} from './pins.js';
+import {boardPins,bridgeNote} from './pins.js';
 import {BOARD_CATALOG} from './boards.js';
 import {esc} from './common.js';
 
@@ -48,7 +48,7 @@ export const DEVBOARD_MODELS={
 const STM32_NOTES={PA5:'LD2 사용자 LED (보드 내장)',PC13:'B1 USER 버튼 (보드 내장, 누르면 LOW)',PA2:'USART2 TX — ST-LINK 가상 COM 포트',PA3:'USART2 RX — ST-LINK 가상 COM 포트',PA13:'SWDIO — ST-LINK 디버그 연결',PA14:'SWCLK — ST-LINK 디버그 연결'};
 function stm32Pins(boardId){
  const cx=BOARD.x+BOARD.w/2,cy=BOARD.y+BOARD.h/2;
- return boardPins(boardId).map(p=>({key:`${p.header}:${p.number}`,label:`${p.header}-${p.number} ${p.label}`,signal:p.signal==='AGND'?'GND':p.signal,header:p.header,number:p.number,x:p.x-cx,y:p.y-cy,notes:STM32_NOTES[p.signal]?[{text:STM32_NOTES[p.signal],warn:['PA13','PA14'].includes(p.signal)}]:p.signal==='NC'?[{text:'연결 없음'}]:[]}));
+ return boardPins(boardId).map(p=>({key:`${p.header}:${p.number}`,label:`${p.header}-${p.number} ${p.label}`,signal:p.signal==='AGND'?'GND':p.signal,header:p.header,number:p.number,x:p.x-cx,y:p.y-cy,notes:STM32_NOTES[p.signal]?[{text:STM32_NOTES[p.signal],warn:['PA13','PA14'].includes(p.signal)}]:p.bridge?[{text:bridgeNote(p),warn:true}]:p.signal==='NC'?[{text:'연결 없음'}]:[]}));
 }
 for(const board of BOARD_CATALOG){
  let pins;

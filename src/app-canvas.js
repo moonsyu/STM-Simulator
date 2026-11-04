@@ -11,7 +11,7 @@ import {boxSelection,selectedIds,mountSelection,insertWirePoint,moveSelection,to
 import {$} from './common.js';
 import {attachments,terminalKeys,detachPart} from './components.js';
 import {scaleXOf,scaleYOf,BOARD,surfaceOrigin,partVector} from './geometry.js';
-import {endpointInfo,PIN_BY_ID,BB,searchPins,holeInfo,circuitHoles} from './pins.js';
+import {endpointInfo,PIN_BY_ID,BB,searchPins,holeInfo,circuitHoles,bridgeNote} from './pins.js';
 import {applyMount,findMount} from './placement.js';
 import {validateProject} from './project.js';
 import {route,esc,renderPinSearch,renderMountPreview} from './render.js';
@@ -34,7 +34,7 @@ export function cancelWireDraft(){state.pending=null;wireDraft.reset();state.sel
 export function clickEndpoint(id){
  const pin=PIN_BY_ID.get(id);state.selection={type:'endpoint',id};
  if(running()){inspectTab();refresh();return;}
- if(pin?.signal==='NC'){log('NC 핀은 내부에 연결되지 않았습니다.');state.pending=null;refresh();return;}
+ if(pin?.signal==='NC'){log(pin.bridge?`${pin.header}-${pin.number} ${pin.label}: ${bridgeNote(pin)}. 솔더 브리지를 닫지 않으면 헤더에서 쓸 수 없습니다.`:'NC 핀은 내부에 연결되지 않았습니다.');state.pending=null;refresh();return;}
  // One jumper per hole / pin, as on a real breadboard.
  const blocked=state.pending!==id?endpointBlocked(state.project,id):null;
  if(!state.pending){if(blocked){log(blocked);inspectTab();refresh();return;}state.pending=id;wireDraft.reset(id);inspectTab();refresh();return;}

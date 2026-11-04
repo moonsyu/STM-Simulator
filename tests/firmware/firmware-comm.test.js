@@ -135,6 +135,11 @@ test('uart: a real USART1 reaches an HC-06 on its pins, and what the module send
   assert.ok(log.uart.some(e => e.instance === 'USART1' && e.direction === 'RX' && e.bytes.includes(104)), JSON.stringify(log.uart.filter(e => e.direction === 'RX')));
 });
 
+test('uart: PA2/PA3 have no header pin (SB62/SB63 open), so D0/D1 do not reach USART2', () => {
+  for (const id of ['board:CN9:1', 'board:CN9:2', 'board:CN10:35', 'board:CN10:37']) assert.equal(PINS.find(q => q.id === id).signal, 'NC', id);
+  assert.equal(boardPin('PA2'), undefined); assert.equal(boardPin('D0'), undefined);
+});
+
 test('uart: one emulated board\'s USART reaches the USART of another on the wired pins', () => {
   const on = (board, signal) => boardPin(signal).replace('board:', board);
   const run = wires => {

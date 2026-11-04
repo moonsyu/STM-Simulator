@@ -32,7 +32,7 @@ describe('STM32 boards: pins and project',()=>{
   const pins=devboardPins(part),main=boardPins('nucleo-f103rb');
   for(const pin of main){const q=pins.find(p=>p.id===`devboard:b2:${pin.header}:${pin.number}`);assert.ok(Math.abs(q.x-pin.x)<1e-9&&Math.abs(q.y-pin.y)<1e-9,pin.id);}
   const net=key=>devboardNet(part,pins.find(p=>p.key===key));
-  assert.equal(net('CN10:11'),'signal:b2.PA5');assert.equal(net('CN7:29'),'signal:b2.PD0');assert.equal(net('CN7:16'),'signal:3V3');
+  assert.equal(net('CN10:11'),'signal:b2.PA5');assert.equal(net('CN7:29'),null,'SB55 open');assert.equal(net('CN7:31'),'signal:b2.PD1');assert.equal(net('CN7:16'),'signal:3V3');
   assert.equal(net('CN10:32'),'signal:GND','AGND joins GND');assert.equal(net('CN7:14'),'signal:b2.NRST');assert.equal(net('CN7:9'),null,'NC');assert.equal(net('CN7:5'),'signal:VDD');
   assert.match(endpointInfo('devboard:b2:CN10:11',[part]).label,/STM32-2 · CN10-11 PA5/);
  });

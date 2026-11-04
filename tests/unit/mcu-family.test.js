@@ -44,12 +44,13 @@ test('F1 alternate functions follow AFIO remap groups: signals move together',()
 });
 
 test('the board being edited decides header pin names: NUCLEO-F103RB has PD0/PD1 and PB11, switching back restores PH0',async()=>{
+ // CN7-29 (PH0 / PD0) is behind SB55, open as delivered: the pin is NC and names the MCU pin behind it.
  const {setActiveBoard,PIN_BY_ID,searchPins,endpointInfo}=await import('../../src/pins.js');
  setActiveBoard('nucleo-f103rb');
- assert.equal(PIN_BY_ID.get('board:CN7:29').signal,'PD0');assert.equal(PIN_BY_ID.get('board:CN10:18').signal,'PB11');
+ assert.equal(PIN_BY_ID.get('board:CN7:29').mcu,'PD0');assert.equal(PIN_BY_ID.get('board:CN7:29').signal,'NC');assert.equal(PIN_BY_ID.get('board:CN7:31').signal,'PD1');assert.equal(PIN_BY_ID.get('board:CN10:18').signal,'PB11');
  assert.match(endpointInfo('board:CN10:18').label,/PB11/);assert.equal(searchPins('PB11')[0]?.id,'board:CN10:18');
  setActiveBoard('nucleo-f446re');
- assert.equal(PIN_BY_ID.get('board:CN7:29').signal,'PH0');assert.equal(PIN_BY_ID.get('board:CN10:18').signal,'NC');assert.equal(searchPins('PB11').length,0);
+ assert.equal(PIN_BY_ID.get('board:CN7:29').mcu,'PH0');assert.equal(PIN_BY_ID.get('board:CN7:29').bridge,'SB55');assert.equal(PIN_BY_ID.get('board:CN7:31').signal,'PH1');assert.equal(PIN_BY_ID.get('board:CN10:18').signal,'NC');assert.equal(searchPins('PB11').length,0);
 });
 
 test('the F446RE timer clock the Pinout accepts is exactly what main.c generation can build',async()=>{

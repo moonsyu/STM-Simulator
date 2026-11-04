@@ -96,12 +96,13 @@ function solveOnce(project,gpio={},pressed={},transient={},owner=project){
     else if(g.mode==='INPUT_PULLDOWN')branch(`signal:${pin}`,'signal:GND',40000);
     if(g.mode==='OUTPUT'&&g.pull)branch(`signal:${pin}`,g.pull===1?'signal:3V3':'signal:GND',40000);
   }
-  // The on-board USER button is active LOW with a modeled pull-up.
-  branch('signal:PC13','signal:3V3',4700);
-  if(pressed.USER)branch('signal:PC13','signal:GND',1);
+  // The on-board parts of the NUCLEO-64 (MB1136 C-04 sheets 3 and 5): B1 USER pulls PC13 LOW through R29 100 Ω against
+  // R30 4.7 kΩ (C15 is not modeled), and the green LD2 loads PA5 through R31 510 Ω (SB21 closed).
+  const onboard=(prefix,userPressed)=>{branch(prefix+'PC13','signal:3V3',4700);if(userPressed)branch(prefix+'PC13','signal:GND',100);branch(prefix+'PA5','signal:GND',510,{diode:true,vf:2.1});};
+  onboard('signal:',pressed.USER);
   for(const p of project.components)if(p.type==='devboard')for(const [pin,r]of Object.entries(devboardModel(p)?.pullups||{}))branch(`signal:${p.id}.${pin}`,'signal:3V3',r);
-  // Other STM32 boards have the same USER button (`<id>.USER` while pressed).
-  for(const p of project.components)if(p.type==='devboard'&&devboardModel(p)?.kind==='stm32'){branch(`signal:${p.id}.PC13`,'signal:3V3',4700);if(pressed[p.id+'.USER'])branch(`signal:${p.id}.PC13`,'signal:GND',1);}
+  // Other STM32 boards have the same B1 and LD2 (`<id>.USER` while pressed).
+  for(const p of project.components)if(p.type==='devboard'&&devboardModel(p)?.kind==='stm32')onboard(`signal:${p.id}.`,pressed[p.id+'.USER']);
   for(const p of project.components){
     const a=`part:${p.id}:a`,b=`part:${p.id}:b`,pin=n=>`part:${p.id}:p${n}`;
     catalogBranches(p,uf,branch,pressed);
