@@ -2,6 +2,13 @@
 
 작업할 때마다 날짜순으로 맨 위에 추가합니다. 무엇을 했는지, 왜 했는지, 어떻게 검증했는지, 커밋·릴리스와 남은 사항을 적습니다. 버전별 구조 설명은 [HANDOFF.md](../HANDOFF.md), 검증 수치는 [VERIFICATION.md](VERIFICATION.md)에 있습니다.
 
+## 2026-11-04 · 실물 보드 실행 실패 원인 확인
+
+- 요청: 실물 보드(NUCLEO-F103RB)를 연결하고 5mm LED 예제를 실행했는데 빌드가 안 된다.
+- 확인: 앱 진단 기록(`%APPDATA%/STM32 Circuit Lab/diagnostics/events.jsonl`)과 빌드 폴더를 보았다. ARM 빌드는 성공해 `firmware.elf`가 만들어졌고, 실패한 것은 보드 기록 단계의 OpenOCD였다(`libusb_open() failed with LIBUSB_ERROR_NOT_FOUND`, `open failed`). 장치 관리자 정보에서 ST-LINK(SN 0668FF544949878667173544)의 `ST-Link Debug` 인터페이스가 드라이버 없이 오류 상태였다(가상 COM3·저장 장치는 정상). ST-LINK USB 드라이버가 없어 OpenOCD가 디버그 인터페이스를 열지 못한 것이다. ST-LINK를 잡고 있는 다른 프로그램은 없었다.
+- 1.12.1 Release 공개 다운로드도 이때 확인했다(VERIFICATION.md).
+- 남은 사항: 드라이버 설치는 관리자 권한이 필요해 사용자가 해야 한다(ST STSW-LINK009 또는 STM32CubeProgrammer 설치). 앱이 이 오류를 원문 그대로만 보여 주는 점은 안내로 바꿀 수 있다.
+
 ## 2026-11-03 · 1.12.1 예제 목록 한 줄 · 예제 코드 4칸 · ESLint 10.14.0
 
 - 요청: (1) Dependabot PR #4(ESLint 10.14.0) 검증 후 반영. (2) 예제 목록의 항목이 이름과 태그 2줄로 나오는 것을 한 줄로(STM32·ESP32 묶음 모두). (3) 예제 코드 들여쓰기를 4칸으로만 바꾸고 나머지는 건드리지 말 것.
