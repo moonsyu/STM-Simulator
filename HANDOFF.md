@@ -1,6 +1,13 @@
 # STM Simulator — 개발 인계
 
-현재 버전: **1.12.3**. 정리일: **2026-11-03**. NUCLEO-F446RE 또는 NUCLEO-F103RB와 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+현재 버전: **1.13.0**. 정리일: **2026-11-03**. NUCLEO-F446RE 또는 NUCLEO-F103RB와 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+
+## 1.13.0 NUCLEO-64 회로도(MB1136 C-04) 기본 연결 반영
+
+- `pins.js` `OPEN_BRIDGES`: 배송 상태에서 열린 솔더 브리지 뒤의 헤더 핀(CN9-1/2·CN10-35/37 = PA3/PA2, SB62/SB63 · CN7-25/27 = PC14/PC15, SB49/SB48 · CN7-29 = PH0/PD0, SB55)은 `signal:'NC'`이고 `mcu`·`bridge`를 가진다. 두 보드 모두(`boardPins`가 F103 신호를 바꾼 뒤 적용). `GPIO_PINS`는 `mcu`도 포함해 PA2/PA3(VCP) 등 MCU 핀 이름은 그대로 쓴다. `boardPin()`은 이 핀을 돌려주지 않는다(`boardPin('PA2')`·`boardPin('D0')`은 `undefined`). `bridgeNote(pin)`이 툴팁·핀 클릭 안내·다른 STM32 보드 핀 설명에 쓰인다.
+- `engine.js` `onboard()`: B1(4.7 kΩ 풀업, 누르면 R29 100 Ω으로 GND), LD2(PA5→GND, 다이오드 2.1 V·510 Ω). 주 보드와 다른 STM32 보드(`<id>.PA5`) 모두.
+- 예제: 외부 UART 장치는 USART1 PA9/PA10(`uart_external`, UART 케이블 4·6선, 절연 RS485, 장치 Docs의 UART 계열), USART 동기 MAX7219는 USART1 CK PA8·TX PA9. `uart`·`dma_uart_echo`·`noise_errors`는 배선 없이 VCP라 USART2 그대로. 장치 Docs 핀 배정(`device-assistance.js`)은 부품에 배선되는 핀을 헤더가 있는 핀에서만 고른다. 직렬 모니터에서 `외부 UART 장치 → USART2` 항목을 없앴다.
+- 테스트: D13 LED 전류는 LD2와 같은 노드로 계산(`withLd2`), RC·오픈 드레인은 D12. 펌웨어 픽스처 `uart_external`(USART1, 이 PC의 GCC 15.2.1·STM32CubeF4로 빌드) 추가, HC-06·보드 간 UART 시험은 이 픽스처로.
 
 ## 1.12.3 실행 대상 메뉴 · 실물 보드 자동 선택 · Release 기본
 
@@ -248,7 +255,7 @@
 ## 0.32.0 NUCLEO-F103RB 보드 (회로 시뮬레이터)
 
 - `src/mcu-family.js`: 계열 프로필 `FAMILIES`(STM32F446RE·STM32F103RB). 핀(`gpioPins`), UART/타이머/기타 경로, 핀 배치 방식(`pinMux` 'af'|'remap'), F1 AFIO 리맵 묶음(`F1_REMAPS`, `remapFor`), JTAG 핀, DMA 단위·요청(F1 DMA1 채널 1~7 고정), IRQ 번호, 클럭 범위, HAL 접두사·define. `mcu-config.js`의 `validateMcu`·`configProblems`(F1 리맵 묶음 검사)·`pinFunctions`·`defaultMcu`가 `family`를 받는다.
-- 보드: `boards.js` 항목에 `mcuFamily`·`chip`·`core`, `projectBoard(project)`. `pins.js` `BOARD_SIGNALS`·`boardPins(boardId)`(F103RB는 CN7-29/31=PD0/PD1, CN10-18=PB11), 엔진은 `ALL_GPIO_PINS`. `validateProject`는 보드와 `mcu.family`가 다르면 거부한다.
+- 보드: `boards.js` 항목에 `mcuFamily`·`chip`·`core`, `projectBoard(project)`. `pins.js` `BOARD_SIGNALS`·`boardPins(boardId)`(F103RB는 CN7-29/31=PD0/PD1, CN10-18=PB11, 열린 솔더 브리지는 `OPEN_BRIDGES`), 엔진은 `ALL_GPIO_PINS`. `validateProject`는 보드와 `mcu.family`가 다르면 거부한다.
 - 코드 생성(`hal-generator.js`): F1 분기(HSI/2×PLL, 대기 사이클, APB1≤36 MHz, ADC 분주≤14 MHz, AFIO 클럭·리맵·SWJ_NOJTAG, 입력 방향 AF 핀은 `GPIO_MODE_INPUT`, DMA 채널, ADC 보정).
 - 인터프리터(`hal.js` 등): `HalAdapter.family/f1`, F1 상수(`halConstantsFor`), AFIO 리맵 순서 검사(`checkF1Pin`), F1 ADC 변환 시간, F1 DMA(Channel 필드 없음), NVIC 번호, CAN1 리맵 2. `hal-source.js`는 계열별 구조체와 헤더.
 - 예제 이식(`src/example-port.js`): F446RE 예제를 F103RB 프로젝트에 적용하면 클럭 84→64 MHz, 빈 F1 경로로 핀 이동(배선·장착도 이동), 타이머 PSC/ARR 비례 조정, 32비트 카운터는 16비트+`(uint16_t)` 차이, DMA 스트림→채널, IRQ 이름, F4 전용 필드 제거, 생성 함수 재생성. DCMI·I2S 예제는 `f1Unavailable`로 거부하고 목록(`searchHalExamples(q, family)`)에서 뺀다. `applyHalExample`은 `보드:예제`로 캐시한다.
@@ -414,7 +421,7 @@
 - `hal-example-search.js`: 이름·핀 수·인터페이스·실제 HAL API 검색. `wire-draft.js`: 바닥 연속 클릭 경유점, Backspace·Esc, 완료 시에만 연결 생성.
 - 80개 조사 항목의 기본 예제는 회로 모델에서 실행합니다. 단선 센서는 GPIO 에지/응답, CAN은 내부 루프백, I2S는 PCM 전송, 카메라는 SCCB ID까지입니다. 카메라/SD 등 예제 범위는 `docs/DEVICE-DOCS.md`, `docs/DEVICE-CATALOG.md`에 명시합니다. 80개 모두가 완전한 주변장치 에뮬레이션이라는 주장을 해서는 안 됩니다.
 - 검증: 전체 모델 260/260, 조사 80개 원본/삽입 HAL 160건 ARM 컴파일·링크, 패키지 카탈로그 UI, 단일 포터블 EXE 실행 모두 통과했습니다. `npm test`, `npm run test:catalog:ui`, `npm run test:catalog:arm`, `node scripts/portable-smoke.cjs`로 재검사합니다. ARM 검사에는 ARM GCC·STM32CubeF4가 필요합니다. 정확한 파일 해시와 한계는 `docs/VERIFICATION.md`에 있습니다.
-- USART2 PA2/PA3는 HAL 초기화 후 내장 ST-LINK VCP로 하단 통신 탭에서 바로 송수신합니다. 기본 UART 예제는 부품 0개/배선 0개이며 `uart_external`과 UART 부품 Docs/4·6핀 변형은 외부 배선 연습용입니다. 외부 입력 경로는 내장 VCP로 우회하지 않습니다.
+- USART2 PA2/PA3는 HAL 초기화 후 내장 ST-LINK VCP로 하단 통신 탭에서 바로 송수신합니다. 기본 UART 예제는 부품 0개/배선 0개이며 `uart_external`과 UART 부품 Docs/4·6핀 변형은 USART1 PA9/PA10 외부 배선 연습용입니다(PA2/PA3는 SB62/SB63이 열려 헤더에 없음). 외부 입력 경로는 내장 VCP로 우회하지 않습니다.
 - USART2 변경 검증: 전체 모델 260/260, UART/Docs 레지스터 예제 실제 ARM 링크 12건, 내장/외부 UART UI 통과.
 - 사용자 요청에 따라 앞으로 버전 상승은 Release 게시까지 포함합니다. `AGENTS.md`와 `docs/UPDATES.md`의 게시 절차를 따릅니다. 0.18.0 보충 게시와 0.19.0 main CI 자동 게시가 완료됐습니다. 0.19.0 빌드 커밋은 `23708264e9c77671630466b3abb1d0f4b0f996e5`, CI는 `38667438539`입니다. 두 공개 버전의 EXE/ZIP 재다운로드·해시 대조와 최신 공개 EXE 실행을 통과했습니다.
 - 공개 0.17.2 → 0.19.0 자동 업데이트 시험은 GitHub 비인증 API 요청 한도로 완료하지 못했습니다. 다운로드·교체 성공으로 보고하지 않습니다. API 한도 회복 후 재검사할 때 `scripts/release-update-check.cjs`를 사용하며 상세 증거는 `docs/VERIFICATION.md`에 있습니다.

@@ -1,5 +1,9 @@
 # 검증 기록
 
+## 1.12.3 실행 대상 메뉴 · 실물 보드 자동 선택 · Release 기본 — 공개 배포 검증 완료
+
+2026-11-04. 제품 커밋 `e8cd91e`, 태그·빌드 커밋 `5cef82d561a6573c57eb85d0d8516bafed0581ae`(1.12.2 검증 기록 포함) · [Windows CI 41751584447](https://github.com/moonsyu/STM-Simulator/actions/runs/41751584447) · [Release v1.12.3](https://github.com/moonsyu/STM-Simulator/releases/tag/v1.12.3). 로컬: ESLint 0건, `npm test` 865개 중 864개 통과·1개 건너뜀, E2E 47개 중 45개 통과·2개 건너뜀. CI 전체 성공(Windows 빌드, Release 게시·검증). 공개 다운로드: latest v1.12.3(자산 5개), 태그·BUILD-INFO 커밋 일치, sourceDirty false, `STM-Simulator.exe` SHA-256 `92471fd742cec3c7c31237fbd6ef7ff60b42c90e6ee35903cef7e0de5cb5597e`(115,445,872 B, MZ)가 SHA256.txt·update-manifest.json·ZIP 안 EXE와 같음, ZIP SHA-256 `d3486b8b9c445a0869f428cdfff23d45a95d270bfb87fd92b5427e00df415f81`.
+
 ## 1.12.2 보드 기록 실패 안내 — 공개 배포 검증 완료
 
 2026-11-04. 제품 커밋 `42dc86b9eb7d9beb06ca03a8e4bd97b92d56da79` · [Windows CI 41748524331](https://github.com/moonsyu/STM-Simulator/actions/runs/41748524331) · [Release v1.12.2](https://github.com/moonsyu/STM-Simulator/releases/tag/v1.12.2). 로컬: 이 PC의 드라이버 없는 ST-LINK로 OpenOCD 오류를 재현해 안내가 붙는 것을 확인, ESLint 0건, `npm test` 865개 중 864개 통과·1개 건너뜀. CI 전체 성공. 공개 다운로드: 태그·BUILD-INFO 커밋 일치, sourceDirty false, `STM-Simulator.exe` SHA-256 `a350752c3776f32d5d592c309f2f7e8599a359e507333b7267ff68aa98835d0d`(115,432,470 B, MZ)가 SHA256.txt·update-manifest.json·ZIP 안 EXE와 같음, ZIP SHA-256 `18a3b176980f004a10246cff57891710131f74578cd6e9c820c3c19673760b8f`, 그 시점 latest v1.12.2.

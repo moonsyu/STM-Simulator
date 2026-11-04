@@ -125,6 +125,17 @@ Vim은 `highlight ... guifg=#RRGGBB guibg=#RRGGBB gui=...`, `highlight link`, �
 
 활동 바 **보드/핀 설정**의 보드 카드나 새 프로젝트 창의 **보드**에서 NUCLEO-F446RE(STM32F446RE, Cortex-M4)와 NUCLEO-F103RB(STM32F103RB, Cortex-M3)를 고른다. 두 보드는 같은 NUCLEO-64(MB1136) 기판이며 그림의 MCU 표기와 CN7-29/31(F446RE PH0/PH1, F103RB PD0/PD1), CN10-18(F103RB PB11)만 다르다.
 
+**보드 기본 연결(1.13.0)**: 헤더 핀은 MB1136 회로도 C-04의 배송 상태 솔더 브리지를 따른다. 다음 핀은 솔더 브리지가 열려 있어 MCU에 연결되지 않으며(NC), 핀을 누르면 이유가 표시되고 배선할 수 없다.
+
+| 헤더 핀 | MCU 핀 | 솔더 브리지 | 실제 연결 |
+|---|---|---|---|
+| CN9-1 D0, CN10-37 | PA3 | SB62 열림 | ST-LINK 가상 COM 포트(USART2 RX) 전용 |
+| CN9-2 D1, CN10-35 | PA2 | SB63 열림 | ST-LINK 가상 COM 포트(USART2 TX) 전용 |
+| CN7-25, CN7-27 | PC14, PC15 | SB49, SB48 열림 | 32.768 kHz 수정 X2 |
+| CN7-29 | PH0(F103RB PD0) | SB55 열림 | ST-LINK 8 MHz MCO 입력 |
+
+그래서 외부 UART 장치는 USART1 **PA9(TX, D8)·PA10(RX, D2)**에 연결한다. 보드의 **LD2**(초록 LED, R31 510 Ω)는 PA5(D13)에 실제 부하로 걸려 D13의 전압과 전류 계산에 포함되고, **B1 USER**는 R30 4.7 kΩ 풀업과 R29 100 Ω을 거쳐 PC13을 LOW로 만든다(C15 100 nF는 계산하지 않음). 솔더 브리지를 바꾼 보드는 재현하지 않는다.
+
 - **Pinout & Configuration**은 보드의 계열을 따른다. F103RB는 USART1~3, I²C1, SPI1, ADC1, TIM2~4(16비트), DMA1 채널 1~7을 쓰고, 핀은 AF 번호가 아니라 AFIO 리맵 묶음으로 옮긴다(예: USART1 TX/RX는 PA9/PA10 또는 함께 PB6/PB7). 묶음에 맞지 않는 조합은 오류로 알려 준다.
 - **HAL 코드 생성**은 F1 HAL(`stm32f1xx_hal.h`, HSI/2×PLL 64 MHz, `__HAL_AFIO_REMAP_*`, `HAL_ADCEx_Calibration_Start`)로 만든다.
 - **HAL 예제**는 F446RE용으로 작성되어 있고, F103RB 프로젝트에서 고르면 클럭·핀·타이머 값·DMA 채널·IRQ 이름을 F1에 맞게 바꿔 적용한다. 32비트 TIM2 자유 카운터를 쓰는 예제(초음파·온습도 등)는 16비트 카운터와 `(uint16_t)` 경과 시간 계산으로 바뀐다. F103RB에 없는 DCMI 카메라·I2S 오디오 예제 2개는 목록에서 빠진다.
