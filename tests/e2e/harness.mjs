@@ -5,8 +5,13 @@ import {mkdtemp,rm} from 'node:fs/promises';
 import {tmpdir} from 'node:os';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
+import {execFile} from 'node:child_process';
 export const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'../..');
-// Windows stay hidden and dark (CIRCUIT_LAB_TEST_BACKGROUND) so a run does not cover the screen; E2E_SHOW=1 shows them.
+// The test window is dark and sits behind the user's windows: the app starts it hidden (CIRCUIT_LAB_TEST_BACKGROUND),
+// the harness puts it at the bottom of the z-order and shows it without focus, so it really renders but never covers the
+// screen. E2E_SHOW=1 shows it in front instead; CI only shows it.
+const sendToBack=hwnd=>new Promise(resolve=>execFile('powershell.exe',['-NoProfile','-NonInteractive','-Command',
+ `Add-Type -Namespace E2E -Name Z -MemberDefinition '[DllImport("user32.dll")] public static extern bool SetWindowPos(System.IntPtr h, System.IntPtr after, int x, int y, int cx, int cy, uint flags);'; [void][E2E.Z]::SetWindowPos([System.IntPtr]${hwnd}, [System.IntPtr]1, 0, 0, 0, 0, 0x13)`],{windowsHide:true},()=>resolve()));
 export async function launch({profile,env={},size={width:1600,height:900},toolsNotice=false,simEngine='interpreter'}={}){
  const dir=profile||await mkdtemp(path.join(tmpdir(),'stm-e2e-'));
  const args=[...(process.platform==='linux'?['--no-sandbox']:[]),root];
@@ -15,6 +20,12 @@ export async function launch({profile,env={},size={width:1600,height:900},toolsN
  win.on('pageerror',error=>errors.push(error.message));
  win.on('console',message=>{if(message.type()==='error')errors.push(message.text());});
  await app.evaluate(({BrowserWindow},s)=>{const w=BrowserWindow.getAllWindows()[0];w.setSize(s.width,s.height);},size);
+ if(process.env.E2E_SHOW!=='1'){
+  // HWND_BOTTOM with SWP_NOSIZE | SWP_NOMOVE | SWP_NOACTIVATE while hidden, then shown without activation.
+  const hwnd=await app.evaluate(({BrowserWindow})=>BrowserWindow.getAllWindows()[0].getNativeWindowHandle().readBigUInt64LE().toString());
+  if(process.platform==='win32'&&!process.env.CI)await sendToBack(hwnd);
+  await app.evaluate(({BrowserWindow})=>BrowserWindow.getAllWindows()[0].showInactive());
+ }
  await win.waitForSelector('html[data-shell="vscode"]',{timeout:30000});
  await win.waitForFunction(()=>document.getElementById('status-left')?.children.length>0);
  // The start-up 'missing tools' notice (shown 3 s after start) would cover controls; only its own test turns it on.
