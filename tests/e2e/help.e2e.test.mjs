@@ -44,6 +44,12 @@ test('the run target menu closes on its button, on a click elsewhere, on Esc and
   await win.click('#run-target-toggle');await win.keyboard.press('Escape');assert.equal(await open(),false,'Esc closes it');
   await win.click('#run-target-toggle');await app.evaluate(({BrowserWindow})=>BrowserWindow.getAllWindows()[0].webContents.executeJavaScript('dispatchEvent(new Event("blur"))'));
   assert.equal(await open(),false,'another window taking the focus closes it');
+  // A double click on ▾ (a quick second press or a chattering mouse) toggles once: its second click used to reopen the
+  // menu the first one closed. Sent through Electron's input path like a real mouse.
+  const b=await win.locator('#run-target-toggle').boundingBox(),x=Math.round(b.x+b.width/2),y=Math.round(b.y+b.height/2);
+  const double=()=>app.evaluate(({BrowserWindow},[x,y])=>{const w=BrowserWindow.getAllWindows()[0].webContents;w.sendInputEvent({type:'mouseMove',x,y});for(const n of [1,2]){w.sendInputEvent({type:'mouseDown',x,y,button:'left',clickCount:n});w.sendInputEvent({type:'mouseUp',x,y,button:'left',clickCount:n});}},[x,y]);
+  await double();await win.waitForFunction(()=>document.getElementById('run-target-menu').matches(':popover-open'));
+  await double();await win.waitForFunction(()=>!document.getElementById('run-target-menu').matches(':popover-open'));
   assert.deepEqual(s.errors,[]);
  }finally{await s.close();}
 });

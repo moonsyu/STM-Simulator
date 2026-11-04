@@ -149,7 +149,9 @@ export function setupNativeIde({o,editor,select,showMonitor,points,watches,toggl
  // Opened and closed here rather than by the browser's light dismiss: a click outside the page (another window, the window
  // frame, the desktop) reaches no element, so the menu also closes when the window loses focus or changes size.
  const menuOpen=()=>runMenu.matches(':popover-open'),closeMenu=()=>{if(menuOpen())runMenu.hidePopover();};
- runToggle.onclick=()=>{if(menuOpen())closeMenu();else runMenu.showPopover();};
+ // The second click of a double click (a quick second press, or a mouse that chatters) would reopen the menu its first
+ // click closed, so the menu looked as if ▾ could not close it: only the first click counts (keyboard clicks have detail 0).
+ runToggle.onclick=e=>{if(e.detail>1)return;if(menuOpen())closeMenu();else runMenu.showPopover();};
  runMenu.addEventListener('toggle',e=>runToggle.setAttribute('aria-expanded',String(e.newState==='open')));
  document.addEventListener('pointerdown',e=>{if(menuOpen()&&!runMenu.contains(e.target)&&!runToggle.contains(e.target))closeMenu();},true);
  addEventListener('keydown',e=>{if(e.key==='Escape'&&menuOpen()){e.preventDefault();e.stopImmediatePropagation();closeMenu();runToggle.focus();}},true);
