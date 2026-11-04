@@ -16,9 +16,11 @@ const exists=p=>fs.access(p).then(()=>true,()=>false);
 test('packaged app opens the workbench and runs an example in the circuit simulator',{skip:!windows&&'Windows only',timeout:180000},async t=>{
  if(!await exists(unpacked)){if(process.env.CI)assert.fail('packaged app missing: '+unpacked);return t.skip('run npm run build first');}
  const temp=await specialTemp('packaged');
- const app=await _electron.launch({executablePath:unpacked,args:[],env:{...process.env,CIRCUIT_LAB_TEST_PROFILE:path.join(temp.dir,'profile')}});
+ const app=await _electron.launch({executablePath:unpacked,args:[],env:{...process.env,CIRCUIT_LAB_TEST_BACKGROUND:'1',CIRCUIT_LAB_TEST_PROFILE:path.join(temp.dir,'profile')}});
  try{
   const win=await app.firstWindow();await win.waitForSelector('html[data-shell="vscode"]');await win.waitForSelector('.monaco-editor');
+  // The built-in interpreter: the simulator's default ARM GCC engine would build first (or offer to install the tools).
+  await win.evaluate(()=>localStorage.setItem('stm32lab.simEngine','interpreter'));
   await win.click('[data-activity="examples"]');await win.fill('#hal-example-search','5mm 단색 LED');await win.locator('#hal-example-list [data-example]').first().click();
   await win.keyboard.press('Control+F5');await win.waitForFunction(()=>/PA5=1/.test(document.getElementById('console-output').textContent),null,{timeout:20000});
   await win.keyboard.press('Control+F2');
