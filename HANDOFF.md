@@ -30,7 +30,7 @@
 - HAL 코드 다시 생성(`pinout-ui.js` `commit(true)`)은 `keepUserCode(이전 코드, 새 코드, 이전 설정의 생성 코드)`(`c-source-edit.js`): 같은 이름의 USER CODE 구간 내용을 옮기고, 새 코드에 없는 구간은 `#if 0`으로 구간 4에 보관, 이전 설정의 생성 결과와 같은(손대지 않은) 구간은 새 기본값. 생성기(`hal-generator.js`)는 `Includes`·`PV`·`0`·`4`와 콜백 본문 구간을 추가로 만든다.
 - 도움말 → 업데이트 로그: `update-log-data.js`(버전·태그 날짜·사용자용 항목, 새 버전마다 맨 위에 추가), `update-log.js`(정렬·검색·5개 페이지), `update-log-ui.js`(떠 있는 창, 제목으로 이동). 단위 테스트가 package 버전이 맨 위에 있는지 확인한다.
 - 실행 중 예제 선택: 시뮬레이션은 정지하고 적용(`readyForExample`, 예제 목록은 실행 중에도 사용 가능), 빌드·보드 실행·디버그 중에는 안내만. 실행 중 읽기 전용 편집기는 Monaco `readOnlyMessage`로 정지하라고 알린다(`#code` `data-read-only-message`).
-- E2E는 화면을 가리지 않는다: 하네스가 `CIRCUIT_LAB_TEST_BACKGROUND=1`을 주면(테스트 프로필일 때만) `main.cjs`가 창과 패널 창을 숨긴 채 렌더링하고(`backgroundThrottling:false`) 다크 테마로 띄운다. 창을 보려면 `E2E_SHOW=1`.
+- E2E는 화면을 가리지 않는다: 하네스가 `CIRCUIT_LAB_TEST_BACKGROUND=1`을 주면(테스트 프로필일 때만) `main.cjs`가 창을 숨긴 채 다크 테마로 시작하고(`backgroundThrottling:false`), 하네스가 그 창을 z-order 맨 아래로 보낸 뒤 `showInactive()`로 보인다(실제로 그려지지만 사용자의 창 뒤, 포커스 없음. CI는 보이기만 한다). 앞에 띄우려면 `E2E_SHOW=1`.
 - 테스트: D13 LED 전류는 LD2와 같은 노드로 계산(`withLd2`), RC·오픈 드레인은 D12. 펌웨어 픽스처 `uart_external`(USART1, 이 PC의 GCC 15.2.1·STM32CubeF4로 빌드) 추가, HC-06·보드 간 UART 시험은 이 픽스처로.
 
 ## 1.12.3 실행 대상 메뉴 · 실물 보드 자동 선택 · Release 기본
