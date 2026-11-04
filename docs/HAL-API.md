@@ -7,12 +7,13 @@ STM32F446RE·STM32F103RB용 **HAL API 호환 회로 모델**입니다. CubeMX/Cu
 ## 사용 순서
 
 1. 왼쪽 **Pinout & Configuration**에서 핀을 선택해 GPIO/EXTI 또는 주변장치 기능을 지정합니다. GPIO pull, 초기 출력, EXTI 에지, 사용자 라벨을 설정합니다. 보드 GPIO를 우클릭해 해당 핀 설정으로 이동할 수도 있습니다.
-2. UART/USART, I2C1/SPI1/ADC1/TIM2·3·4·5를 활성화합니다. UART/USART는 TX/RX를 실제 가능한 핀 중에서 자동 배정하며, 각 드롭다운으로 대체 핀을 선택합니다. 사용 중인 핀을 덮어쓰지 않고 충돌을 표시합니다. 비활성화하면 해당 TX/RX와 IRQ를 해제합니다. 나머지 주변장치는 필요한 신호 핀을 지정합니다. 같은 신호의 중복이나 같은 EXTI 번호의 포트 충돌도 표시합니다.
+2. UART/USART, I2C1/SPI1/ADC1/TIM2·3·4·5를 활성화합니다. UART/USART는 TX/RX를 실제 가능한 핀 중에서 자동 배정하며, 각 드롭다운으로 대체 핀을 선택합니다. 사용 중인 핀을 덮어쓰지 않고 충돌을 표시합니다. 켜면 전역 인터럽트(`USART2_IRQn` 등)도 NVIC에서 함께 켜지고(다시 끌 수 있음), 비활성화하면 해당 TX/RX와 IRQ를 해제합니다. 나머지 주변장치는 필요한 신호 핀을 지정합니다. 같은 신호의 중복이나 같은 EXTI 번호의 포트 충돌도 표시합니다.
 3. 인터럽트는 **NVIC**에서 활성화합니다. Cortex-M4 NVIC처럼 4비트 우선순위를 preemption(그룹)과 sub priority로 나누어 처리합니다. 더 높은(숫자가 작은) preemption 우선순위의 인터럽트는 실행 중인 콜백을 문장 단위로 선점하고, 같거나 낮은 우선순위는 기다렸다가 우선순위→IRQ 번호 순서로 꼬리 물기(tail-chaining)합니다. 자세한 내용은 아래 **NVIC 선점과 SysTick**을 참고하세요.
-4. **설정 적용**은 코드를 유지합니다. **설정으로 HAL 코드 생성**은 확인 후 현재 소스 묶음을 설정에 맞는 `main.c`로 교체합니다. 회로 배선은 유지하고 실행 취소로 복구할 수 있습니다.
-5. 기존 코드는 편집기 **.ioc / C 소스 가져오기**에서 함께 선택합니다. C 파일 선택에는 `main.c`가 필요합니다. .ioc만 선택하면 기존 실행 모드와 코드를 유지하고 설정만 가져옵니다.
-6. 데스크톱의 **Cube 프로젝트 폴더**는 루트 `.ioc`, `Core/Src`, `Core/Inc`를 읽습니다. `Drivers`, startup, syscalls, sysmem, system_stm32f4xx/system_stm32f1xx는 가져오지 않고, 프로젝트의 `stm32f4xx_hal_conf.h`/`stm32f1xx_hal_conf.h`는 ARM 빌드 설정(HSE_VALUE 등)으로 유지합니다. conf가 없으면 SDK 템플릿에 NUCLEO의 HSE 8 MHz(`HSE_VALUE=8000000U`)를 넣어 빌드합니다. 파일은 원본에 쓰지 않고 회로 프로젝트에 복사합니다.
-7. 편집기 상단에서 `main.c`와 가져온 `.c/.h`를 전환해 수정합니다. **코드 검사**는 문법을 검사하고, 시뮬레이션 시작 시 핀·초기화·배선·지원 API를 검사합니다.
+4. HAL 코드 생성은 켜진 인터럽트의 IRQ 핸들러(`USART2_IRQHandler`가 `HAL_UART_IRQHandler(&huart2)`를 호출하는 식)를 CubeMX의 `stm32f4xx_it.c`처럼 `main.c`에 씁니다. 같은 핸들러를 USER CODE 구간이나 다른 소스 파일에 직접 썼다면 그것을 쓰고 생성하지 않습니다.
+5. **설정 적용**은 코드를 유지합니다. **설정으로 HAL 코드 생성**은 확인 후 현재 소스 묶음을 설정에 맞는 `main.c`로 교체합니다. 회로 배선은 유지하고 실행 취소로 복구할 수 있습니다.
+6. 기존 코드는 편집기 **.ioc / C 소스 가져오기**에서 함께 선택합니다. C 파일 선택에는 `main.c`가 필요합니다. .ioc만 선택하면 기존 실행 모드와 코드를 유지하고 설정만 가져옵니다.
+7. 데스크톱의 **Cube 프로젝트 폴더**는 루트 `.ioc`, `Core/Src`, `Core/Inc`를 읽습니다. `Drivers`, startup, syscalls, sysmem, system_stm32f4xx/system_stm32f1xx는 가져오지 않고, 프로젝트의 `stm32f4xx_hal_conf.h`/`stm32f1xx_hal_conf.h`는 ARM 빌드 설정(HSE_VALUE 등)으로 유지합니다. conf가 없으면 SDK 템플릿에 NUCLEO의 HSE 8 MHz(`HSE_VALUE=8000000U`)를 넣어 빌드합니다. 파일은 원본에 쓰지 않고 회로 프로젝트에 복사합니다.
+8. 편집기 상단에서 `main.c`와 가져온 `.c/.h`를 전환해 수정합니다. **코드 검사**는 문법을 검사하고, 시뮬레이션 시작 시 핀·초기화·배선·지원 API를 검사합니다.
 
 슬레이브 HAL 함수(`HAL_I2C_Slave_*`, `SPI_MODE_SLAVE`의 `HAL_SPI_*`)는 다른 STM32 보드가 마스터일 때 동작합니다([IDE 사용법](IDE.md)의 보드끼리 유선 통신).
 

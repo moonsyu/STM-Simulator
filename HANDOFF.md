@@ -1,6 +1,12 @@
 # STM Simulator — 개발 인계
 
-현재 버전: **1.14.2**. 정리일: **2026-11-03**. NUCLEO-F446RE 또는 NUCLEO-F103RB와 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+현재 버전: **1.15.0**. 정리일: **2026-11-03**. NUCLEO-F446RE 또는 NUCLEO-F103RB와 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+
+## 1.15.0 UART 인터럽트와 IRQ 핸들러 자동 작성
+
+- `serial-config.js` `assignSerialPin`: 꺼져 있던 UART/USART를 켜면 `nvic[id+'_IRQn']`도 켠다(우선순위 0, 기존 값 유지). CubeMX는 NVIC Settings에서 따로 켜야 하지만, 이 앱에서는 `HAL_UART_Receive_IT`가 바로 동작하도록 함께 켠다. UART가 켜진 채로 NVIC만 끄면 그대로 꺼져 있다.
+- `src/irq-handlers.js` `irqHandlers(mcu)`: DMA 스트림과 켜진 NVIC 줄마다 CubeMX `stm32xxxx_it.c`의 핸들러 본문(`HAL_UART_IRQHandler(&huart2)` 등)을 만든다. GCC 빌드(`native-build.cjs`의 `__stm_environment.c`)와 `hal-generator.js`가 같이 쓴다. 생성 main.c(minimal 아님)에는 인터프리터가 실행하는 종류(UART/USART·TIM·EXTI·DMA·DCMI·SDIO)를 `/* USER CODE BEGIN USART2_IRQn 0 */`·`1` 구간과 함께 쓴다. I2C·SPI·ADC 핸들러는 GCC 빌드의 환경 파일에만 들어간다.
+- `c-source-edit.js` `dropShadowedHandlers(source,others)`: Pinout 코드 생성 때 USER CODE 구간이나 다른 소스 파일(가져온 `stm32f4xx_it.c` 등)에 사용자가 쓴 핸들러가 있으면 생성 핸들러를 뺀다(1.14.2 이전처럼 USER CODE 4에 직접 쓴 `USART2_IRQHandler`가 두 번 정의되지 않음).
 
 ## 1.14.2 닫힌 실행 대상 메뉴가 계속 그려지던 문제
 

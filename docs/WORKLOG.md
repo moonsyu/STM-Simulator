@@ -2,6 +2,15 @@
 
 작업할 때마다 날짜순으로 맨 위에 추가합니다. 무엇을 했는지, 왜 했는지, 어떻게 검증했는지, 커밋·릴리스와 남은 사항을 적습니다. 버전별 구조 설명은 [HANDOFF.md](../HANDOFF.md), 검증 수치는 [VERIFICATION.md](VERIFICATION.md)에 있습니다.
 
+## 2026-11-04 · 1.15.0 USART2를 켜면 IRQ 핸들러가 main.c에 들어가도록
+
+- 요청: USART2를 활성화해도 `USART2_IRQHandler`(USER CODE 4에 직접 쓰던 `HAL_UART_IRQHandler(&huart2)` 호출)가 자동으로 들어가지 않는다. 확인 후 수정.
+- 원인: (1) Pinout에서 UART를 켜도 NVIC의 `USART2_IRQn`은 꺼진 채였다(CubeMX처럼 NVIC Settings에서 따로 켜야 했다). (2) NVIC를 켜도 핸들러는 GCC 빌드의 숨은 환경 파일(`__stm_environment.c`)에만 만들어져 main.c에는 보이지 않았다. 인터프리터는 핸들러 없이 콜백을 바로 불러서 차이가 드러나지 않았다.
+- 한 것: UART/USART를 켜면 전역 인터럽트도 함께 켠다(NVIC에서 다시 끌 수 있음). 핸들러 본문 규칙을 `src/irq-handlers.js`로 옮겨 GCC 빌드와 main.c 생성기가 같이 쓰고, 생성 main.c에 CubeMX `stm32xxxx_it.c` 모양의 핸들러(UART/USART·TIM·EXTI·DMA·DCMI·SDIO, `USER CODE BEGIN USART2_IRQn 0/1` 구간 포함)를 쓴다. 이미 USER CODE 구간이나 다른 소스 파일에 직접 쓴 핸들러가 있으면 생성 핸들러를 빼서 두 번 정의되지 않게 했다.
+- 검증: 단위 시험 2개 추가(UART를 켜면 NVIC·핸들러 생성, F446RE·F103RB / 직접 쓴 핸들러가 있으면 하나만 남음). E2E 추가: Pinout에서 USART2를 켜고 코드 생성 → 핸들러 1개 → ARM GCC 빌드 시뮬레이터에서 `HAL_UART_Receive_IT`로 터미널 입력 `x`를 받아 `got x` 출력 → USER CODE 4에 직접 핸들러를 쓰고 다시 생성해도 1개. 단위 882개 중 881개 통과·1개 건너뜀, ESLint 0건, E2E 53개 중 51개 통과·2개 건너뜀(CI 도구 경로가 필요한 에뮬레이터 시험), 모든 HAL 예제 ARM GCC 빌드·에뮬레이터 실행(toolchain), 로컬 패키지 검사 3개 통과. 기능 검사는 다른 창 뒤에 띄운 다크 모드 창으로 했다. 빌드 산출물은 지웠다.
+- 기타: 의존성 복제본의 node_modules 파일 대부분이 지워져 있어(임시 폴더 정리로 보임) `npm ci`로 다시 받고 Electron은 로컬 캐시에서 복원했다.
+- 남은 사항: 이미 USART2가 켜져 있던 프로젝트는 NVIC를 자동으로 바꾸지 않는다. NVIC에서 `USART2_IRQn`을 켜고 코드를 다시 생성하면 핸들러가 들어간다.
+
 ## 2026-11-04 · 1.14.2 닫힌 실행 대상 메뉴가 계속 보이던 문제
 
 - 요청: 드롭다운 오류가 그대로다(1.14.1 사용 중). 증상을 여쭈니 ▾를 다시 눌러도, 메뉴 밖을 눌러도 닫히지 않는다.
