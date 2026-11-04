@@ -1,5 +1,9 @@
 # 검증 기록
 
+## 1.14.1 실행 대상 메뉴 더블클릭 · 병렬 CI 첫 실행 — 게시 확인(API)
+
+2026-11-04. 태그·빌드 커밋 `5abb219bac29e151972c138108fb731c31402d85` · [Windows CI 41784815352](https://github.com/moonsyu/STM-Simulator/actions/runs/41784815352) 성공 · [Release v1.14.1](https://github.com/moonsyu/STM-Simulator/releases/tag/v1.14.1). 병렬 CI 첫 실행이 9분에 끝났다(이전 구조 약 32분): 정적 검사·단위 3분, 포터블 패키징 4분, ST HAL 예제 4분, ESP32 스케치 7분(캐시가 비어 처음 설치), E2E 묶음 6분·8분, 게시 1분. 로컬: 패키지 검사 3개 통과(npm으로 빌드, 창 숨김), help E2E 통과. GitHub API로 latest v1.14.1과 자산 5개 확인(다운로드 없음).
+
 ## 1.14.0 시뮬레이터 ARM GCC 빌드 — 게시 확인(API)
 
 2026-11-04. 태그·빌드 커밋 `b744bdab2ca8efa5da16eb477a275e11d4fa2dd8` · [Windows CI 41774956368](https://github.com/moonsyu/STM-Simulator/actions/runs/41774956368) 성공(빌드·Release 게시) · [Release v1.14.0](https://github.com/moonsyu/STM-Simulator/releases/tag/v1.14.0). 첫 CI 41771623731은 패키지 검사에서 실패해 게시되지 않았다(태그 없음). 사용자 지시로 게시된 파일은 내려받지 않고 GitHub API로 latest v1.14.0과 자산 5개(EXE, ZIP, SHA256.txt, BUILD-INFO.json, update-manifest.json)만 확인했다. 파일 검사는 CI의 패키지 검사와 게시 단계 검증이 했다.
