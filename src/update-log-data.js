@@ -1,5 +1,6 @@
 // User-facing update log shown in 도움말 → 업데이트 로그: one entry per released version (date = the release tag's commit date).
 export const UPDATE_LOG=Object.freeze([
+ {version:'1.14.2',date:'2026-11-04',items:['실행 버튼 옆 ▾ 실행 대상 메뉴가 닫힌 뒤에도 화면에 남아 있던 문제 수정(▾를 다시 누르거나 바깥을 눌러도 그대로 보이던 증상)']},
  {version:'1.14.1',date:'2026-11-04',items:['실행 버튼 옆 ▾ 실행 대상 메뉴를 빠르게 두 번 누르면 닫히지 않고 다시 열리던 문제 수정']},
  {version:'1.14.0',date:'2026-11-04',items:['시뮬레이터가 실물 보드와 같은 ARM GCC로 빌드해 회로에서 실행: 모든 #include와 C 라이브러리 함수 사용 가능','ARM GCC·STM32Cube SDK가 없으면 시뮬레이터 실행 때 설치 창을 띄우고, 설치 후 바로 실행','실행 및 디버그에서 시뮬레이터 실행 방식(ARM GCC 빌드 / 내장 해석기) 선택','아두이노식 스케치와 FatFs(SD) 프로그램은 내장 해석기로 실행']},
  {version:'1.13.2',date:'2026-11-04',items:['시뮬레이터에서 sprintf·snprintf 지원(UART로 보낼 문자열 만들기)','시뮬레이터에서 strcpy·strncpy·strcat·memset·memcpy·memmove·memcmp 지원','ARM GCC 빌드 실패 메시지에 첫 컴파일 오류(파일:줄과 내용) 표시']},

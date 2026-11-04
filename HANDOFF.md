@@ -1,6 +1,11 @@
 # STM Simulator — 개발 인계
 
-현재 버전: **1.14.1**. 정리일: **2026-11-03**. NUCLEO-F446RE 또는 NUCLEO-F103RB와 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+현재 버전: **1.14.2**. 정리일: **2026-11-03**. NUCLEO-F446RE 또는 NUCLEO-F103RB와 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+
+## 1.14.2 닫힌 실행 대상 메뉴가 계속 그려지던 문제
+
+- `shell.css`: `.run-target-menu{display:grid}`가 닫힌 팝오버의 기본 `display:none`을 덮어써, 메뉴가 닫힌 뒤(`:popover-open` 아님)에도 화면에 그려졌다(1.12.3부터). 표시는 `.run-target-menu:popover-open{display:grid}`로만 준다. 팝오버 요소에 `display`를 줄 때는 항상 `:popover-open`에 건다.
+- E2E: 닫힌 메뉴의 크기가 0인지, 앱의 모든 닫힌 `[popover]`가 `display:none`인지 확인한다. 그전 시험은 `:popover-open` 상태만 봐서 놓쳤다.
 
 ## 1.14.1 실행 대상 메뉴 더블클릭
 
