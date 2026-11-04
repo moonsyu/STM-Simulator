@@ -6,10 +6,11 @@ import {tmpdir} from 'node:os';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 export const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'../..');
+// Windows stay hidden and dark (CIRCUIT_LAB_TEST_BACKGROUND) so a run does not cover the screen; E2E_SHOW=1 shows them.
 export async function launch({profile,env={},size={width:1600,height:900},toolsNotice=false}={}){
  const dir=profile||await mkdtemp(path.join(tmpdir(),'stm-e2e-'));
  const args=[...(process.platform==='linux'?['--no-sandbox']:[]),root];
- const app=await _electron.launch({executablePath:electronPath,args,env:{...process.env,CIRCUIT_LAB_TEST_PROFILE:dir,CIRCUIT_LAB_TEST_BOARDS:'[]',...env}});
+ const app=await _electron.launch({executablePath:electronPath,args,colorScheme:'dark',env:{...process.env,CIRCUIT_LAB_TEST_PROFILE:dir,CIRCUIT_LAB_TEST_BOARDS:'[]',CIRCUIT_LAB_TEST_BACKGROUND:process.env.E2E_SHOW==='1'?'0':'1',...env}});
  const win=await app.firstWindow();const errors=[];
  win.on('pageerror',error=>errors.push(error.message));
  win.on('console',message=>{if(message.type()==='error')errors.push(message.text());});

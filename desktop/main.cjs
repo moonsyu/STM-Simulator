@@ -79,10 +79,14 @@ app.whenReady().then(()=>{
   updaterReady=updater.init().catch(error=>updater.set('error',{message:'업데이트 설정을 읽지 못했습니다: '+error.message}));
   // New releases are also noticed while the IDE is in use: when any of its windows comes to the front or the PC wakes.
   app.on('browser-window-focus',()=>updater.wake());powerMonitor.on('resume',()=>updater.wake());
-  win=new BrowserWindow({icon:path.join(__dirname,'icons/stm-simulator.ico'),width:1540,height:1020,minWidth:900,minHeight:560,show:process.env.CIRCUIT_LAB_SMOKE!=='1',backgroundColor:nativeTheme.shouldUseDarkColors?'#202020':'#f3f3f3',title:'STM Simulator',webPreferences:{preload:path.join(__dirname,'preload.cjs'),contextIsolation:true,nodeIntegration:false,sandbox:true}});
+  // E2E in the background (test profile and CIRCUIT_LAB_TEST_BACKGROUND=1): windows stay hidden but keep rendering, in the
+  // dark theme, so a test run does not take over the screen.
+  const testBackground=!!process.env.CIRCUIT_LAB_TEST_PROFILE&&process.env.CIRCUIT_LAB_TEST_BACKGROUND==='1';
+  if(testBackground)nativeTheme.themeSource='dark';
+  win=new BrowserWindow({icon:path.join(__dirname,'icons/stm-simulator.ico'),width:1540,height:1020,minWidth:900,minHeight:560,show:process.env.CIRCUIT_LAB_SMOKE!=='1'&&!testBackground,backgroundColor:nativeTheme.shouldUseDarkColors?'#202020':'#f3f3f3',title:'STM Simulator',webPreferences:{preload:path.join(__dirname,'preload.cjs'),contextIsolation:true,nodeIntegration:false,sandbox:true,backgroundThrottling:!testBackground}});
   win.setMenuBarVisibility(false);
   // Only the renderer's own panel windows (popout.js: a blank page named stm-unit-<panel>) may open; the panel DOM is moved into it.
-  win.webContents.setWindowOpenHandler(({url,frameName})=>(url===''||url==='about:blank')&&/^stm-unit-\w+$/.test(frameName)?{action:'allow',overrideBrowserWindowOptions:{icon:path.join(__dirname,'icons/stm-simulator.ico'),autoHideMenuBar:true,minWidth:320,minHeight:240,backgroundColor:nativeTheme.shouldUseDarkColors?'#202020':'#f3f3f3',webPreferences:{sandbox:true,contextIsolation:true,nodeIntegration:false}}}:{action:'deny'});
+  win.webContents.setWindowOpenHandler(({url,frameName})=>(url===''||url==='about:blank')&&/^stm-unit-\w+$/.test(frameName)?{action:'allow',overrideBrowserWindowOptions:{icon:path.join(__dirname,'icons/stm-simulator.ico'),show:!testBackground,autoHideMenuBar:true,minWidth:320,minHeight:240,backgroundColor:nativeTheme.shouldUseDarkColors?'#202020':'#f3f3f3',webPreferences:{sandbox:true,contextIsolation:true,nodeIntegration:false}}}:{action:'deny'});
   win.webContents.on('did-create-window',child=>{child.setMenu(null);child.webContents.on('will-navigate',e=>e.preventDefault());child.webContents.setWindowOpenHandler(()=>({action:'deny'}));});
   win.webContents.on('will-navigate',e=>e.preventDefault());
   win.loadFile(path.join(__dirname,'../index.html'));
