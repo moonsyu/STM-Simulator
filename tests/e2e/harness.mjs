@@ -9,7 +9,7 @@ export const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'../
 export async function launch({profile,env={},size={width:1600,height:900},toolsNotice=false}={}){
  const dir=profile||await mkdtemp(path.join(tmpdir(),'stm-e2e-'));
  const args=[...(process.platform==='linux'?['--no-sandbox']:[]),root];
- const app=await _electron.launch({executablePath:electronPath,args,env:{...process.env,CIRCUIT_LAB_TEST_PROFILE:dir,...env}});
+ const app=await _electron.launch({executablePath:electronPath,args,env:{...process.env,CIRCUIT_LAB_TEST_PROFILE:dir,CIRCUIT_LAB_TEST_BOARDS:'[]',...env}});
  const win=await app.firstWindow();const errors=[];
  win.on('pageerror',error=>errors.push(error.message));
  win.on('console',message=>{if(message.type()==='error')errors.push(message.text());});

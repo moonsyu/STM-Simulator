@@ -175,7 +175,8 @@ function mountShell(layout,state,options,{apply,save,setPalette,setSettings}){
  // The buzzer sound switch belongs to the circuit, next to the wire colours.
  const sound=$('sound');if(sound){sound.classList.add('sound-toggle');paletteButton.after(sound);}
  const run=document.querySelector('.run-tools');
- if(toolbar&&run){toolbar.prepend($('run'));run.remove();}
+ // The run target menu (native-ide-ui.js) stays beside the run button.
+ if(toolbar&&run){toolbar.prepend($('run'));const target=$('run-target-toggle');if(target)$('run').after(target);run.remove();}
  // ---- Activity bar ----
  const bar=$('activitybar');
  const top=document.createElement('div');top.className='activity-top';const bottom=document.createElement('div');bottom.className='activity-bottom';

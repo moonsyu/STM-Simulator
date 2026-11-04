@@ -99,6 +99,25 @@ test('a value typed in the part inspector is kept',{timeout:120000},async()=>{
  }finally{await s.close();}
 });
 
+test('a connected NUCLEO becomes the run target, the run button lists the targets, and builds default to Release',{timeout:120000},async()=>{
+ const s=await launch({env:{CIRCUIT_LAB_TEST_BOARDS:JSON.stringify([{serial:'TEST0001F103',board:'NUCLEO-F103RB',port:'COM9'}])}});
+ try{
+  const {win}=s;
+  await win.waitForFunction(()=>document.getElementById('native-target').value==='arm',null,{timeout:15000});
+  assert.equal(await win.evaluate(()=>document.getElementById('native-target').selectedOptions[0].dataset.serial),'TEST0001F103');
+  assert.match(await logText(win),/실물 보드 NUCLEO-F103RB \(COM9\)가 연결되어 실행 대상을 실물 보드로 바꿨습니다/);
+  assert.equal(await win.evaluate(()=>document.getElementById('native-config').value),'Release');
+  // ▾ beside the title bar's run button: the same targets, the current one checked; choosing one changes the target.
+  await win.click('#run-target-toggle');await win.waitForSelector('#run-target-menu:popover-open');
+  const items=await win.evaluate(()=>[...document.querySelectorAll('#run-target-menu [role=menuitemradio]')].map(b=>[b.textContent,b.getAttribute('aria-checked')]));
+  assert.deepEqual(items.find(([,c])=>c==='true'),['NUCLEO-F103RB (COM9)','true']);assert.ok(items.some(([t])=>t==='시뮬레이터'));
+  await win.locator('#run-target-menu [role=menuitemradio]',{hasText:'시뮬레이터'}).click();
+  assert.equal(await win.evaluate(()=>document.getElementById('native-target').value),'simulator');
+  assert.match(await win.getAttribute('#run-target-toggle','title'),/실행 대상: 시뮬레이터/);
+  assert.deepEqual(s.errors,[]);
+ }finally{await s.close();}
+});
+
 test('a pin with a wire on it still shows its GPIO in the tooltip',{timeout:120000},async()=>{
  const s=await launch();
  try{

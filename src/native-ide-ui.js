@@ -3,6 +3,7 @@ import {esc} from './render.js';
 import {sourceFiles} from './source-files.js';
 import {devboardModel,boardForFile,boardFileKey} from './devboards.js';
 import {$} from './common.js';
+import {projectBoard} from './boards.js';
 const TOOL_LABELS={armGcc:'ARM GCC · arm-none-eabi-gcc.exe',armGdb:'ARM GDB · arm-none-eabi-gdb.exe',cube:'STM32CubeF4 SDK 폴더 · NUCLEO-F446RE',cubeF1:'STM32CubeF1 SDK 폴더 · NUCLEO-F103RB',hostGcc:'Windows GCC · gcc.exe',hostGdb:'Windows GDB · gdb.exe',clangd:'C/C++ 언어 서버 · clangd.exe',openocd:'ST-LINK 서버 · openocd.exe',arduinoCli:'ESP32 빌드·업로드 · arduino-cli.exe (Arduino IDE 2에 포함)',buildRoot:'빌드 작업 폴더 · 영문 경로 (선택)'};
 export function mountNativeChrome(){
  document.querySelector('.ide-toolbar').insertAdjacentHTML('afterbegin','<label class="native-target-label">실행 대상<select id="native-target" aria-label="실행 대상"><option value="simulator">시뮬레이터</option><option value="emulator">펌웨어 에뮬레이터</option><option value="arm" data-board-placeholder>실물 보드 (연결 안 됨)</option><option value="esp32">ESP32 보드 (연결 안 됨)</option><option value="host">Windows · C/C++</option></select></label><select id="native-config" aria-label="빌드 구성"><option>Release</option><option>Debug</option></select>');
@@ -35,7 +36,7 @@ export function setupNativeIde({o,editor,select,showMonitor,points,watches,toggl
   $('native-config').hidden=!native&&!emulator()||esp32();$('native-connection').hidden=config().target!=='arm';$('native-build-actions').hidden=!native;$('native-debug-details').hidden=!native&&!emulator()||esp32();
   document.querySelector('.firmware-tools').hidden=native&&['host','esp32'].includes(config().target);
   $('sound').hidden=$('step').hidden=native;
-  $('native-target').disabled=locked||o.isSimulationRunning();$('native-config').disabled=locked;$('native-tools').disabled=locked;$('native-connection').disabled=locked;
+  $('native-target').disabled=locked||o.isSimulationRunning();if($('run-target-toggle'))$('run-target-toggle').disabled=$('native-target').disabled;$('native-config').disabled=locked;$('native-tools').disabled=locked;$('native-connection').disabled=locked;
   if(emulator()){$('ide-build').title=withKey('ARM GCC 빌드 → 펌웨어 에뮬레이터','run.build');document.querySelector('.language-badge').textContent='ARM ELF · 에뮬레이터';return;}
   if(!native){$('ide-build').title=withKey('시뮬레이터용 빌드','run.build');return;}
   document.querySelector('.language-badge').textContent=esp32()?`${esp32Board()?.name||'ESP32'} · Arduino CLI`:config().target==='arm'?'ARM · STM32 HAL':'C/C++ · GCC';
@@ -101,7 +102,19 @@ export function setupNativeIde({o,editor,select,showMonitor,points,watches,toggl
   const esp=espPorts.length?espPorts.map(p=>{const o=new Option(`ESP32 (${p.port})`,'esp32');o.dataset.port=p.port;o.title=`${p.name} · 업로드할 때 "Connecting..."이 계속되면 BOOT 버튼을 누르세요.`;return o;}):[Object.assign(new Option('ESP32 보드 (연결 안 됨)','esp32'),{title:'ESP32 보드를 USB로 연결하면 COM 포트가 표시됩니다.'})];
   for(const o of [...options,...esp])select.insertBefore(o,anchor);
   if(['arm','esp32'].includes(was)){select.value=was;selectBoard();}
-  select.dispatchEvent(new Event('boards'));
+  adoptNewBoard();
+  select.dispatchEvent(new Event('boards'));renderRunTargets();
+ }
+ // A NUCLEO that was not connected before (or at start-up) and is the project's kind of board becomes the run target,
+ // unless something is running. Choosing another target afterwards sticks until a board is plugged in again.
+ let knownSerials=null;
+ function adoptNewBoard(){
+  const fresh=boards.filter(b=>!knownSerials?.has(b.serial));knownSerials=new Set(boards.map(b=>b.serial));
+  if(!fresh.length||$('native-target').disabled||config().target==='arm')return;
+  const want=projectBoard(o.getProject())?.name?.toUpperCase(),board=fresh.find(b=>b.board?.toUpperCase()===want)??(boards.length===1&&!boards[0].board?boards[0]:null);
+  if(!board)return;
+  const option=[...$('native-target').options].find(x=>x.value==='arm'&&x.dataset.serial===board.serial);if(!option)return;
+  option.selected=true;change();o.log(`실물 보드 ${board.board||'ST-LINK'}${board.port?` (${board.port})`:''}가 연결되어 실행 대상을 실물 보드로 바꿨습니다. 시뮬레이터는 실행 대상에서 다시 고를 수 있습니다.`);
  }
  async function refreshBoards(force=false){if(!api?.boards||(!force&&Date.now()-boardsAt<3000))return;boardsAt=Date.now();[boards,espPorts]=await Promise.all([api.boards().catch(()=>[]),api['esp32-ports']?.().catch(()=>[])??[]]);boards??=[];espPorts??=[];renderBoards();}
  function pickBoard(){const option=$('native-target').selectedOptions[0];if(!['arm','esp32'].includes(option?.value))return;connection=option.value==='arm'?{...connection,serial:option.dataset.serial||''}:{...connection,esp32Port:option.dataset.port||''};try{localStorage.setItem('stm32lab.debugConnection',JSON.stringify(connection));}catch{}}
@@ -113,6 +126,17 @@ export function setupNativeIde({o,editor,select,showMonitor,points,watches,toggl
  async function updateLanguage(){if(!language||!gcc())return;if(languageRunning){languageQueued=true;return;}languageRunning=true;try{await api.language(text(),config());languageReady=true;$('language-toggle').textContent='clangd 연결됨';}catch(e){languageReady=false;$('language-toggle').textContent='clangd 설정 필요';$('language-toggle').title=e.message;}finally{languageRunning=false;if(languageQueued){languageQueued=false;queueLanguage();}}}
  const lsp={enabled:()=>language&&languageReady&&gcc(),query:(method,file,position)=>api['language-query'](method,file,position)};editor.setLanguageService(lsp);
  $('native-target').onchange=change;
+ // The title bar's run button carries the run target too: ▾ next to it lists the same targets as the select.
+ const runToggle=document.createElement('button');runToggle.type='button';runToggle.id='run-target-toggle';runToggle.className='run-target-toggle';runToggle.textContent='▾';runToggle.setAttribute('aria-haspopup','menu');runToggle.setAttribute('popovertarget','run-target-menu');
+ const runMenu=document.createElement('div');runMenu.id='run-target-menu';runMenu.className='workbench-popover run-target-menu';runMenu.setAttribute('popover','auto');runMenu.setAttribute('role','menu');runMenu.setAttribute('aria-label','실행 대상');document.body.append(runMenu);
+ $('run').after(runToggle);
+ function renderRunTargets(){
+  const select=$('native-target'),current=select.selectedOptions[0];
+  runToggle.title=runToggle.ariaLabel=`실행 대상: ${current?.textContent??''} (바꾸기)`;runToggle.disabled=select.disabled;
+  runMenu.replaceChildren(...[...select.options].map((option,i)=>{const b=document.createElement('button');b.type='button';b.setAttribute('role','menuitemradio');b.setAttribute('aria-checked',String(option===current));b.dataset.index=i;b.textContent=option.textContent;b.title=option.title||'';b.disabled=option.disabled;b.onclick=()=>{select.selectedIndex=i;change();renderRunTargets();runMenu.hidePopover();};return b;}));
+ }
+ runMenu.addEventListener('toggle',e=>{if(e.newState!=='open')return;renderRunTargets();const a=runToggle.getBoundingClientRect(),r=runMenu.getBoundingClientRect();runMenu.style.left=Math.max(8,Math.min(a.right-r.width,innerWidth-r.width-8))+'px';runMenu.style.top=(a.bottom+4)+'px';void refreshBoards().then(renderRunTargets);});
+ $('native-target').addEventListener('change',renderRunTargets);
  for(const ev of ['focus','pointerdown'])$('native-target').addEventListener(ev,()=>void refreshBoards());window.addEventListener('focus',()=>void refreshBoards());void refreshBoards(true);$('native-config').onchange=change;
  $('run').addEventListener('click',e=>{if(selected()){e.preventDefault();e.stopImmediatePropagation();void command('run');}},true);
  $('native-artifacts').onclick=()=>guard(()=>api.artifacts());
