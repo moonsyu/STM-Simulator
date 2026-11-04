@@ -339,6 +339,17 @@ Ctrl+F는 현재 파일 찾기, Ctrl+R은 바꾸기, Ctrl+Z/Y는 프로젝트 �
 
 **필요한 도구 설치**(개발 도구 창): 빠진 도구만 크기·출처와 함께 보여 주고 **설치 시작**을 누르면 `%LOCALAPPDATA%\STM-Simulator-Tools`에 받는다. ARM GCC 15.2.1(GDB 포함, xPack), STM32CubeF4 v1.28.3 드라이버(NUCLEO-F446RE), STM32CubeF1 v1.8.7 드라이버(NUCLEO-F103RB, 약 2 MB), OpenOCD 0.12.0(xPack), clangd 23.1.0. 릴리스 파일은 고정 SHA-256으로, STM32CubeF4·F1은 고정 커밋의 파일마다 SHA-256으로 검증하며 Git은 필요 없다. ARM GCC를 받으면 압축을 푼 뒤 약 1.5 GB를 사용한다. 앱을 시작하고 3초 뒤 실물 보드용 도구(ARM GCC·GDB·STM32CubeF4·OpenOCD, F103RB 프로젝트를 열었으면 STM32CubeF1도)가 빠져 있으면 알림으로 **설치·나중에·다시 묻지 않기**를 고를 수 있다. ST-LINK USB 드라이버(ST STSW-LINK009)는 별도로 설치해야 할 수 있다.
 
+**보드에 기록하지 못할 때**(1.12.2): 빌드가 끝난 뒤 OpenOCD가 실패하면 출력 원문 앞에 원인과 할 일을 붙여 보여 준다.
+
+| OpenOCD 출력 | 뜻과 할 일 |
+|---|---|
+| `LIBUSB_ERROR_NOT_FOUND` | ST-LINK USB 드라이버가 없다. 장치 관리자의 "ST-Link Debug"가 오류로 보이면 ST-LINK USB 드라이버(STSW-LINK009)나 STM32CubeProgrammer를 관리자 권한으로 설치하고 USB를 다시 연결한다. 앱은 드라이버를 설치하지 않는다. |
+| `LIBUSB_ERROR_ACCESS`·`BUSY` | STM32CubeIDE·STM32CubeProgrammer·다른 디버그 세션이 ST-LINK를 쓰고 있다. 그 프로그램을 닫는다. |
+| `Address already in use` | 디버그 포트 3333을 다른 GDB 서버가 쓰고 있다. |
+| `Target voltage`가 0 V | 보드 MCU에 전원이 없다. JP5·JP6 점퍼를 확인한다. |
+| `unable to connect to the target` | 프로그램이 SWD 핀(PA13·PA14)을 바꾸었거나 저전력 상태다. RESET을 누른 채 실행하고 기록이 시작되면 뗀다. |
+| `open failed`만 있을 때 | ST-LINK를 찾지 못했다. 데이터 케이블과 CN2 점퍼를 확인한다. |
+
 | 작업 | 필요한 도구 |
 |---|---|
 | STM32F446RE 펌웨어 빌드 | `arm-none-eabi-gcc.exe`와 같은 배포판의 g++, objcopy, size; STM32CubeF4의 HAL/CMSIS |

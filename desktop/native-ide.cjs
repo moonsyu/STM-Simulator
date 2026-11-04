@@ -146,7 +146,7 @@ class NativeIde extends EventEmitter{
     const child=this.runProcess=launch(tools.openocd,[...await openocdArgs(tools.openocd,target),'-c','bindto 127.0.0.1','-c','gdb_port disabled','-c','tcl_port disabled','-c','telnet_port disabled',...steps],{});let log='';
     try{
       const code=await new Promise((resolve,reject)=>{child.once('error',reject);child.once('close',resolve);for(const stream of [child.stdout,child.stderr]){stream.setEncoding('utf8');stream.on('data',t=>{log=(log+t).slice(-10000);this.send('run-output',{text:t});});}});
-      if(code!==0)throw new Error(`OpenOCD 기록 실패 (종료 코드 ${code}). ST-LINK 연결을 확인하세요.\n`+log.slice(-1500));
+      if(code!==0)throw new Error(`OpenOCD 기록 실패 (종료 코드 ${code}). ${openocdHint(log)??'ST-LINK 연결을 확인하세요.'}\n`+log.slice(-1500));
     }finally{if(this.runProcess===child)this.runProcess=null;}
   }
   // Every STM32 board of the circuit: built from its own view of the project and written through its own ST-LINK,
@@ -173,7 +173,7 @@ class NativeIde extends EventEmitter{
     if(!executable)throw new Error('OpenOCD 경로를 설정하세요.');
     if(this.server)throw new Error('OpenOCD가 이미 실행 중입니다.');
     const child=this.server=launch(executable,[...await openocdArgs(executable,options),'-c','bindto 127.0.0.1','-c','gdb_port 3333','-c','tcl_port disabled','-c','telnet_port disabled'],{});
-    try{await new Promise((resolve,reject)=>{let log='';const timer=setTimeout(()=>reject(new Error('OpenOCD 연결 시간이 초과되었습니다. ST-LINK 연결을 확인하세요.')),15000);const done=(error)=>{clearTimeout(timer);error?reject(error):resolve();};child.once('error',done);child.once('exit',code=>{if(this.server===child)this.server=null;done(new Error('OpenOCD 종료: '+code+'\n'+log.slice(-2000)));});for(const stream of [child.stdout,child.stderr]){stream.setEncoding('utf8');stream.on('data',text=>{log=(log+text).slice(-10000);this.send('debug-output',{text});if(/Listening on port 3333 for gdb connections/.test(log))done();});}});}catch(e){await this.stopServer();throw e;}
+    try{await new Promise((resolve,reject)=>{let log='';const timer=setTimeout(()=>reject(new Error('OpenOCD 연결 시간이 초과되었습니다. ST-LINK 연결을 확인하세요.')),15000);const done=(error)=>{clearTimeout(timer);error?reject(error):resolve();};child.once('error',done);child.once('exit',code=>{if(this.server===child)this.server=null;const hint=openocdHint(log);done(new Error('OpenOCD 종료: '+code+(hint?' · '+hint:'')+'\n'+log.slice(-2000)));});for(const stream of [child.stdout,child.stderr]){stream.setEncoding('utf8');stream.on('data',text=>{log=(log+text).slice(-10000);this.send('debug-output',{text});if(/Listening on port 3333 for gdb connections/.test(log))done();});}});}catch(e){await this.stopServer();throw e;}
   }
   async stopServer(){const child=this.server;this.server=null;await terminate(child);}
   async run({text,config,connection}){
@@ -238,4 +238,14 @@ class NativeIde extends EventEmitter{
   async close(){await this.stop();await this.lsp.stop();await this.closeTerminal();}
   async closeTerminal(){const child=this.terminal;this.terminal=null;await terminate(child);if(!this.terminal)this.send('terminal-state',{state:'closed'});}
 }
-module.exports={NativeIde,openocdArgs,chooseStlink,assignStlinks,listBoards,listEsp32Ports:esp32.listEsp32Ports};
+// What an OpenOCD failure means for the person at the board, from the lines it printed (most specific first).
+const OPENOCD_HINTS=[
+ [/LIBUSB_ERROR_NOT_FOUND|libusb_open\(\) failed with LIBUSB_ERROR_NOT_SUPPORTED/,'ST-LINK USB 드라이버가 설치되어 있지 않습니다. 장치 관리자의 "ST-Link Debug"가 오류(드라이버 없음)로 보이면 ST의 ST-LINK USB 드라이버(STSW-LINK009) 또는 STM32CubeProgrammer를 관리자 권한으로 설치하고, 보드 USB를 뺐다가 다시 연결하세요.'],
+ [/LIBUSB_ERROR_ACCESS|LIBUSB_ERROR_BUSY/,'다른 프로그램(STM32CubeIDE, STM32CubeProgrammer, 다른 OpenOCD·디버그 세션)이 ST-LINK를 쓰고 있습니다. 그 프로그램을 닫고 다시 실행하세요.'],
+ [/Couldn't bind|Address already in use|address already in use/,'디버그 포트(3333)를 다른 OpenOCD나 GDB 서버가 쓰고 있습니다. 그 프로그램을 닫고 다시 실행하세요.'],
+ [/[Tt]arget voltage may be too low|[Tt]arget voltage: 0\./,'ST-LINK는 연결됐지만 보드 MCU에 전원이 없습니다. 보드의 전원 점퍼(JP5)와 IDD 점퍼(JP6)를 확인하세요.'],
+ [/init mode failed|unable to connect to the target|Error connecting DP|Cannot identify target|UNEXPECTED idcode/i,'ST-LINK는 찾았지만 MCU에 연결하지 못했습니다. 프로그램이 SWD 핀(PA13·PA14)을 다른 용도로 바꾸었거나 저전력 모드일 수 있습니다. 보드의 RESET 버튼을 누른 채 실행하고, 기록이 시작되면 버튼을 떼세요.'],
+ [/[Nn]o ST-?LINK|open failed|unable to open ST-?LINK/i,'ST-LINK를 찾지 못했습니다. 데이터 전송이 되는 USB 케이블인지, 보드의 ST-LINK 점퍼(CN2 두 개)가 끼워져 있는지 확인하고 다시 연결하세요.']
+];
+function openocdHint(log){return OPENOCD_HINTS.find(([pattern])=>pattern.test(String(log??'')))?.[1]??null;}
+module.exports={openocdHint,NativeIde,openocdArgs,chooseStlink,assignStlinks,listBoards,listEsp32Ports:esp32.listEsp32Ports};
