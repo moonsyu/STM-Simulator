@@ -2,6 +2,13 @@
 
 작업할 때마다 날짜순으로 맨 위에 추가합니다. 무엇을 했는지, 왜 했는지, 어떻게 검증했는지, 커밋·릴리스와 남은 사항을 적습니다. 버전별 구조 설명은 [HANDOFF.md](../HANDOFF.md), 검증 수치는 [VERIFICATION.md](VERIFICATION.md)에 있습니다.
 
+## 2026-11-04 · 1.13.2 시뮬레이터 sprintf·snprintf · 빌드 실패 첫 오류
+
+- 질문·요청: include 처리 방식(시뮬레이터·ARM 빌드·자동 완성, 실제 CubeIDE와 비교)을 설명한 뒤, 사용자의 UART 코드에서 "지원하지 않는 함수: snprintf"와 "컴파일 또는 링크 실패 (종료 코드 1)"가 그 때문인지 확인 요청.
+- 확인: 시뮬레이터는 newlib 대신 직접 구현한 C 함수만 지원하고 `snprintf`·`sprintf`가 없었다(전처리기 문제가 아니라 라이브러리 함수 누락). ARM GCC 빌드는 같은 코드(`snprintf` 포함)가 12:10에 정상 빌드됐고(앱 빌드 폴더의 firmware.elf, build-result.json), 실패는 12:04의 이전 코드 한 번이었다. 로그에 이유가 남지 않아 그때 코드는 알 수 없다. `<stdio.h>` 없이 `snprintf`를 쓰면 이 빌드는 `-Werror=implicit-function-declaration`으로 실패한다.
+- 한 것: 시뮬레이터에 `sprintf`/`snprintf`와 `strcpy`·`strncpy`·`strcat`·`memset`·`memcpy`·`memmove`·`memcmp` 추가. ARM 빌드 실패 메시지에 첫 컴파일 오류를 붙였다.
+- 검증: 사용자 프로젝트(진단 폴더의 최근 프로젝트 사본, NUCLEO-F103RB)를 읽기만 해서 시뮬레이터로 실행해 B1을 누르면 `uart_1`~ 이 직렬 모니터로 나옴. 새 해석기 시험 3개(UART 카운터, 자르기·반환값·문자열 복사, 버퍼 넘침 오류), 이 PC의 ARM GCC 15.2.1로 `<stdio.h>` 없는 `snprintf` 빌드 → `… · main.c:23: implicit declaration of function 'snprintf'` 메시지 확인. 전체 880개 중 879개 통과·1개 건너뜀, ESLint 0건.
+
 ## 2026-11-04 · 1.13.1 자동 완성 목록 색 대비
 
 - 요청: 코드 자동 완성 목록 글씨가 안 보임(다크 테마, 캡처 첨부).

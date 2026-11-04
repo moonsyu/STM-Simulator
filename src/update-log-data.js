@@ -1,5 +1,6 @@
 // User-facing update log shown in 도움말 → 업데이트 로그: one entry per released version (date = the release tag's commit date).
 export const UPDATE_LOG=Object.freeze([
+ {version:'1.13.2',date:'2026-11-04',items:['시뮬레이터에서 sprintf·snprintf 지원(UART로 보낼 문자열 만들기)','시뮬레이터에서 strcpy·strncpy·strcat·memset·memcpy·memmove·memcmp 지원','ARM GCC 빌드 실패 메시지에 첫 컴파일 오류(파일:줄과 내용) 표시']},
  {version:'1.13.1',date:'2026-11-04',items:['코드 자동 완성 목록의 글자가 회색 배경에 묻혀 보이지 않던 문제 수정','모든 테마에서 자동 완성·툴팁의 글자, 일치 글자, 선택한 줄이 잘 보이도록 색 대비 보장']},
  {version:'1.13.0',date:'2026-11-04',items:['NUCLEO-64 회로도(MB1136 C-04)의 기본 솔더 브리지 반영: D0/D1·PC14/PC15·PH0 헤더 핀은 연결 안 됨으로 표시','PA5에 LD2 부하, B1 버튼에 R29 저항 반영','외부 UART 장치 예제를 USART1(PA9/PA10)로 옮기고 장치 Docs 자동 배선은 헤더가 없는 핀 제외','실물 보드를 연결하면 프로젝트 보드와 종류가 달라도 실행 대상이 그 보드로 바뀌고, 종류가 다르면 보드를 바꾸라고 안내','핀 설정에서 HAL 코드를 다시 생성해도 USER CODE BEGIN~END 사이의 코드 유지','도움말 → 업데이트 로그 창 추가(검색, 최신순, 5개씩 페이지)','실행 버튼 옆 ▾ 실행 대상 메뉴가 버튼·바깥 클릭·Esc·다른 창 전환 때 닫히도록 수정','실행 중에 다른 예제를 고르면 실행을 정지하고 적용, 실행 중 코드를 고치려 하면 정지하라고 안내']},
  {version:'1.12.3',date:'2026-11-04',items:['실행 버튼 옆 ▾ 메뉴에서 실행 대상 선택','프로젝트 보드와 같은 종류의 NUCLEO를 연결하면 실행 대상을 실물 보드로 자동 선택','빌드 구성 기본값을 Release로 변경','디버그 시작은 선택과 관계없이 Debug 빌드로 실행']},

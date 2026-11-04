@@ -1,6 +1,11 @@
 # STM Simulator — 개발 인계
 
-현재 버전: **1.13.1**. 정리일: **2026-11-03**. NUCLEO-F446RE 또는 NUCLEO-F103RB와 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+현재 버전: **1.13.2**. 정리일: **2026-11-03**. NUCLEO-F446RE 또는 NUCLEO-F103RB와 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+
+## 1.13.2 시뮬레이터 sprintf·snprintf · 빌드 실패 첫 오류
+
+- `hal-stdio.js` `stringCall`: `sprintf`/`snprintf`(형식은 `formatPrintf`, `snprintf`는 size-1자와 0을 쓰고 전체 길이 반환), `strcpy`·`strncpy`·`strcat`·`memset`·`memcpy`·`memmove`·`memcmp`. 버퍼 쓰기는 `pointerCell`이라 배열 끝을 넘으면 오류. `hal.js`가 `strlen` 다음에 부른다. 시뮬레이터는 newlib 대신 이 목록만 지원한다.
+- `native-build.cjs` `run`: 실패 메시지에 첫 `error` 진단(`파일:줄: 내용`)을 붙인다. 출력 탭만 보던 "종료 코드 1"의 이유가 로그 첫 줄에 보인다.
 
 ## 1.13.1 자동 완성 목록 색 대비
 
