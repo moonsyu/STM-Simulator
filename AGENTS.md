@@ -7,7 +7,7 @@
 - 모든 작업을 `docs/WORKLOG.md` 맨 위에 날짜순으로 기록합니다: 요청, 한 일과 이유, 검증, 커밋·릴리스, 남은 사항.
 - 기능 확인(E2E, 앱을 띄워 보는 확인, 화면 캡처)은 다크 모드로, 다른 창 뒤에서 실행해 사용자의 PC 사용을 방해하지 않습니다(2026-11-04 사용자 지시). E2E 하네스 기본값(창 숨김 `CIRCUIT_LAB_TEST_BACKGROUND=1`, `colorScheme:'dark'`)을 그대로 쓰고, 화면 캡처가 필요하면 창을 화면 밖 좌표에 `showInactive()`로 띄워 포커스를 가져오지 않습니다. 창을 앞에 띄워야 하는 확인은 사용자에게 먼저 묻습니다.
 - 진행 중인 `main` CI는 같은 브랜치에 새로 푸시하면 취소되므로, Release를 기다리는 동안에는 `main`에 푸시하지 않습니다.
-- Release에는 검증된 Windows EXE, ZIP, SHA256.txt, BUILD-INFO.json, update-manifest.json을 포함합니다. 공개 다운로드의 버전·커밋·해시와 최신 릴리스 선택을 확인한 뒤 완료로 보고합니다.
+- Release에는 검증된 Windows EXE, ZIP, SHA256.txt, BUILD-INFO.json, update-manifest.json을 포함합니다. 게시된 Release 파일을 이 PC에 내려받아 검증하지 않습니다(2026-11-04 사용자 지시, PC 용량). 패키지 검사는 CI가 하므로, CI의 패키징·Release 게시 단계 성공과 GitHub Release(최신 릴리스 선택, 자산 5개)를 API로만 확인한 뒤 완료로 보고합니다. 다른 이유로 내려받은 파일은 확인이 끝나면 바로 지웁니다.
 - 이후 릴리스의 실행 파일명은 버전에 관계없이 `STM-Simulator.exe`로 고정합니다. 빌드 산출물·ZIP 내부 실행 파일·업데이트 매니페스트·체크섬·다운로드 안내를 같은 이름으로 유지합니다.
 - 기존 릴리스나 태그를 다른 코드로 덮어쓰지 않습니다. 실패한 개발 태그와 정상 배포된 후속 버전을 구분합니다.
 - `main`의 새 package 버전은 Windows CI 전체 검사와 빌드 성공 후 자동으로 Release를 게시합니다. 버전이 같은 후속 문서 변경은 기존 Release를 유지합니다.
