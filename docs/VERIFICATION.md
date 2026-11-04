@@ -1,5 +1,10 @@
 # 검증 기록
 
+## 1.15.0 UART 인터럽트와 IRQ 핸들러 자동 작성 — 게시 확인(API)
+
+2026-11-04. 태그·빌드 커밋 `cc22f0d5b058a5b76758c598c7c8a764852ae145` · [Windows CI 41810410084](https://github.com/moonsyu/STM-Simulator/actions/runs/41810410084) · [Release v1.15.0](https://github.com/moonsyu/STM-Simulator/releases/tag/v1.15.0). 로컬: 단위 882개 중 881개 통과·1개 건너뜀, ESLint 0건, E2E 53개 중 51개 통과·2개 건너뜀(다른 창 뒤에 띄운 다크 모드 창), 모든 HAL 예제 ARM GCC 빌드·에뮬레이터 실행 269개 통과(F446RE·F103RB), 패키지 검사 3개 통과(npm으로 빌드).
+CI 1차: 검사·빌드 작업은 모두 성공했지만 게시 단계에서 `gh release upload`가 5개 중 SHA256.txt를 올리지 않은 채 종료 코드 0으로 끝나 Release가 자산 4개로 공개됐고, 이어진 `verify-release.ps1`이 "Release asset set differs"로 실패했다. 조치: GitHub가 자산마다 기록한 SHA-256(`digest`)으로 CI와 같은 형식의 SHA256.txt를 만들고(EXE 해시가 update-manifest.json의 sha256·크기와 일치함을 확인), 같은 Release에 올렸다(코드·다른 자산은 그대로). 실패한 게시 작업만 다시 실행(2차)해 `verify-release.ps1`이 공개 다운로드·체크섬·ZIP 내부 EXE까지 확인하고 성공했다. GitHub API로 latest v1.15.0과 자산 5개 확인(이 PC에는 다운로드 없음).
+
 ## 1.14.2 닫힌 실행 대상 메뉴 표시 — 게시 확인(API)
 
 2026-11-04. 태그·빌드 커밋 `14ffe78cd6c595202217428cbd3f9935f602200f` · [Windows CI 41793294755](https://github.com/moonsyu/STM-Simulator/actions/runs/41793294755) 성공(7분) · [Release v1.14.2](https://github.com/moonsyu/STM-Simulator/releases/tag/v1.14.2). 로컬: 단위 880개 중 879개 통과·1개 건너뜀, ESLint 0건, E2E 52개 중 50개 통과·2개 건너뜀(다른 창 뒤에 띄운 다크 모드 창), 패키지 검사 3개 통과(npm으로 빌드). GitHub API로 latest v1.14.2와 자산 5개 확인(다운로드 없음).
