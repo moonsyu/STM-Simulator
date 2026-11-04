@@ -104,10 +104,26 @@ export function importColorscheme(text,filename='theme.json'){
  if(!rules.length)throw new Error('현재 C/C++ 편집기에 대응되는 구문 규칙이 없습니다.');
  const result=fromEditor(validateEditorTheme({base:data.type==='light'?'vs':'vs-dark',inherit:true,rules,colors:data.colors}),data.name||filename.replace(/\.[^.]+$/,''));result.importNote='VS Code TextMate의 기본 C/C++ 토큰을 Monaco에 매핑했습니다. 문맥별 scope·semanticTokenColors는 지원하지 않습니다.';return result;
 }
+// WCAG contrast of two #rrggbb colours, and the more readable of a colour and black/white on a background.
+const luminance=color=>{const v=[1,3,5].map(i=>parseInt(color.slice(i,i+2),16)/255).map(x=>x<=.03928?x/12.92:((x+.055)/1.055)**2.4);return .2126*v[0]+.7152*v[1]+.0722*v[2];};
+export const contrast=(a,b)=>{const [x,y]=[luminance(a),luminance(b)].sort((p,q)=>q-p);return (x+.05)/(y+.05);};
+const readable=(color,background,min=7)=>contrast(color,background)>=min?color:contrast('#ffffff',background)>=contrast('#000000',background)?'#ffffff':'#000000';
+/** Suggestion list and hover colours from the theme, readable whatever the scheme's popup (Vim Pmenu) colours are: the
+ * list uses the editor widget surface (or the editor background when that is a mid grey) and text, the matched letters the accent (or text) and the selected row the
+ * selection colour with text that stays readable on it. */
+export function widgetColors(c){
+ // A popup surface on which no text reaches 7:1 (a mid grey) gives way to the editor background.
+ const surface=[c.panel,c.background].find(s=>s&&contrast(readable(c.foreground,s),s)>=7)??c.background,text=readable(c.foreground,surface),row=c.selection,rowText=readable(text,row);
+ const match=[c.accent,c.function,c.keyword].find(color=>color&&contrast(color,surface)>=4.5)??text,rowMatch=contrast(match,row)>=4.5?match:rowText;
+ return {'editorWidget.background':surface,'editorWidget.foreground':text,'editorSuggestWidget.background':surface,'editorSuggestWidget.foreground':text,'editorSuggestWidget.border':c.border,
+  'editorSuggestWidget.selectedBackground':row,'editorSuggestWidget.selectedForeground':rowText,'editorSuggestWidget.selectedIconForeground':rowText,'editorSuggestWidget.highlightForeground':match,'editorSuggestWidget.focusHighlightForeground':rowMatch,
+  'editorHoverWidget.background':surface,'editorHoverWidget.foreground':text,'editorHoverWidget.border':c.border,'list.hoverBackground':row,'list.hoverForeground':rowText};
+}
 export function editorTheme(theme){
  const c=theme.colors,original=theme.originalColors||{},result=theme.editor?structuredClone(theme.editor):{base:theme.base==='dark'?'vs-dark':'vs',inherit:true,rules:[],colors:{}};result.base=theme.base==='dark'?'vs-dark':'vs';
  for(const token of ['keyword','type','string','number','comment','identifier','function'])if(!theme.editor||c[token]!==original[token]){result.rules=result.rules.filter(r=>r.token!==token);result.rules.push({token,foreground:c[token].slice(1),fontStyle:theme.editor?.rules.findLast(r=>r.token===token)?.fontStyle||''});}
  for(const [key,id]of Object.entries(UI))if(!theme.editor||c[key]!==original[key])result.colors[id]=c[key];
  if(!theme.editor){result.rules.push({token:'keyword.directive',foreground:c.type.slice(1)},{token:'delimiter',foreground:c.muted.slice(1)});result.colors['editorGutter.background']=c.background;}
+ Object.assign(result.colors,widgetColors(c));
  return result;
 }
