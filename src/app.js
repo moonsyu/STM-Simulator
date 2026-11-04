@@ -31,6 +31,7 @@ import {compile} from './parser.js';
 import {allHalExamples,allHalGuides} from './hal-examples.js';
 export const HAL_EXAMPLES=allHalExamples(),HAL_GUIDES=allHalGuides();
 import {createShell} from './shell.js';
+import {setupUpdateLog} from './update-log-ui.js';
 import {setupLogicAnalyzer} from './logic-analyzer.js';
 import {mountIdeChrome,setupIde} from './ide-ui.js';
 import {setupUpdates} from './update-ui.js';
@@ -192,7 +193,8 @@ state.deviceDocs=setupDeviceDocs({getProject:()=>state.project,getSelection:()=>
  state.ide.invalidate();return applied;
 }});
 const logicAnalyzer=setupLogicAnalyzer({getSession:()=>state.session,getProject:()=>state.project,isRunning:()=>state.status==='running',log,onNoise:noise=>{checkpoint();state.project.simulation={...(state.project.simulation||{}),noise};autosave();}});
-layout.mount({openElf,debugCommand:shellDebugCommand,runCommand,formatCode:()=>{layout.reveal('code');state.lastCodeCheckpoint=0;void state.ide?.format?.();},formatSelection:()=>{layout.reveal('code');state.lastCodeCheckpoint=0;state.ide?.formatSelection?.();},find:replace=>editorSearch.open(replace),files:()=>[state.project.code!==undefined?'main.c':null,...(state.project.firmware?.files||[]).map(f=>f.name)].filter(Boolean),openFile:name=>{if(name!=='main.c'&&!state.project.firmware?.files.some(f=>f.name===name))return;state.sourceFile=name;syncEditor();layout.reveal('code');state.ide?.editor?.focus?.();},gotoLine:line=>state.ide?.editor?.goto?.(line),setTarget:value=>{const select=$('native-target');if(!select||select.disabled||![...select.options].some(o=>o.value===value))return;select.value=value;select.dispatchEvent(new Event('change'));}});layout.setMonitor(monitor);
+const updateLog=setupUpdateLog();
+layout.mount({openUpdateLog:updateLog.open,openElf,debugCommand:shellDebugCommand,runCommand,formatCode:()=>{layout.reveal('code');state.lastCodeCheckpoint=0;void state.ide?.format?.();},formatSelection:()=>{layout.reveal('code');state.lastCodeCheckpoint=0;state.ide?.formatSelection?.();},find:replace=>editorSearch.open(replace),files:()=>[state.project.code!==undefined?'main.c':null,...(state.project.firmware?.files||[]).map(f=>f.name)].filter(Boolean),openFile:name=>{if(name!=='main.c'&&!state.project.firmware?.files.some(f=>f.name===name))return;state.sourceFile=name;syncEditor();layout.reveal('code');state.ide?.editor?.focus?.();},gotoLine:line=>state.ide?.editor?.goto?.(line),setTarget:value=>{const select=$('native-target');if(!select||select.disabled||![...select.options].some(o=>o.value===value))return;select.value=value;select.dispatchEvent(new Event('change'));}});layout.setMonitor(monitor);
 // Which boards a run starts (shown in Run and Debug once the circuit has an ESP32 or Raspberry Pi board).
 (document.querySelector('#view-debug .run-config')||document.querySelector('.ide-toolbar'))?.insertAdjacentHTML('beforeend','<label class="run-scope-label" hidden><span>실행 보드</span><select id="run-scope" aria-label="실행할 보드"></select></label>');updateRunScope();
 setupTabAccessibility();

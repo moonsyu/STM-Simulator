@@ -525,3 +525,31 @@ body.dock-dragging .dock-unit{pointer-events:none}
 :root[data-shell] .board-card>span:last-child{min-width:0;overflow:hidden}
 :root[data-shell] .board-card :is(strong,small){white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 :root[data-shell] .explorer-links{display:flex;flex-wrap:wrap;gap:4px}
+
+/* 도움말 → 업데이트 로그: a floating window (update-log-ui.js). */
+.update-log-window{position:fixed;z-index:60;display:flex;flex-direction:column;width:min(560px,calc(100vw - 16px));height:min(620px,calc(100vh - 16px));background:var(--ide-panel,var(--ide-background));color:var(--ide-foreground);border:1px solid var(--ide-border);border-radius:8px;box-shadow:0 12px 32px rgba(0,0,0,.35);overflow:hidden}
+.update-log-window[hidden]{display:none}
+.update-log-title{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 10px 8px 14px;background:var(--ide-chrome,var(--ide-background));border-bottom:1px solid var(--ide-border);cursor:move;user-select:none;touch-action:none}
+.update-log-title h2{margin:0;font-size:14px;font-weight:600}
+.update-log-title button{background:transparent;border:0;color:var(--ide-foreground);font-size:18px;line-height:1;padding:2px 8px;border-radius:4px;cursor:pointer}
+.update-log-title button:hover{background:var(--ide-hover)}
+.update-log-search{display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid var(--ide-border)}
+.update-log-search input{flex:1;min-width:0;padding:6px 8px;background:var(--ide-input,var(--ide-background));color:var(--ide-foreground);border:1px solid var(--ide-border);border-radius:4px}
+.update-log-search input:focus{outline:1px solid var(--ide-accent);border-color:var(--ide-accent)}
+.update-log-search span{color:var(--ide-muted);font-size:12px;white-space:nowrap}
+.update-log-list{flex:1;overflow:auto;padding:4px 14px}
+.update-entry{padding:12px 0;border-bottom:1px solid var(--ide-border)}
+.update-entry:last-child{border-bottom:0}
+.update-entry header{display:flex;align-items:baseline;gap:18px;margin-bottom:10px;font-weight:600}
+.update-entry time{color:var(--ide-muted);font-variant-numeric:tabular-nums}
+.update-version{color:var(--ide-accent)}
+.update-entry ul{margin:0;padding-left:18px;display:grid;gap:4px}
+.update-entry li{line-height:1.45}
+.update-log-window mark{background:color-mix(in srgb,var(--ide-warning,#d7ba7d) 45%,transparent);color:inherit;border-radius:2px}
+.update-log-empty{color:var(--ide-muted);text-align:center;padding:24px 0}
+.update-log-pages{display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:4px;padding:8px 10px;border-top:1px solid var(--ide-border)}
+.update-log-pages button{min-width:30px;padding:4px 8px;background:transparent;color:var(--ide-foreground);border:1px solid var(--ide-border);border-radius:4px;cursor:pointer}
+.update-log-pages button:hover:not(:disabled){background:var(--ide-hover)}
+.update-log-pages button:disabled{opacity:.45;cursor:default}
+.update-log-pages button.current{background:var(--ide-button,var(--ide-accent));border-color:var(--ide-button,var(--ide-accent));color:var(--ide-onAccent,#fff)}
+.update-log-gap{color:var(--ide-muted);padding:0 2px}
