@@ -40,6 +40,12 @@ test('the run target menu closes on its button, on a click elsewhere, on Esc and
   const {win,app}=s,open=()=>win.evaluate(()=>document.getElementById('run-target-menu').matches(':popover-open'));
   await win.click('#run-target-toggle');assert.equal(await open(),true);await win.waitForFunction(()=>document.getElementById('run-target-toggle').getAttribute('aria-expanded')==='true');
   await win.click('#run-target-toggle');assert.equal(await open(),false,'its button closes it');
+  // Closed means not drawn: an author display value on the menu kept the closed popover on screen (1.12.3–1.14.1).
+  const drawn=()=>win.evaluate(()=>{const m=document.getElementById('run-target-menu'),r=m.getBoundingClientRect();return r.width>0&&r.height>0;});
+  assert.equal(await drawn(),false,'the closed menu is not drawn');
+  // Every closed popover of the app (title bar menus, previews, this menu) is hidden.
+  for(const n of [0,1,2,3,4,5]){await win.click(`.menubar-item >> nth=${n}`);await win.keyboard.press('Escape');}
+  assert.deepEqual(await win.evaluate(()=>[...document.querySelectorAll('[popover]')].filter(p=>!p.matches(':popover-open')&&getComputedStyle(p).display!=='none').map(p=>p.id||p.className)),[]);
   await win.click('#run-target-toggle');await win.click('#statusbar');assert.equal(await open(),false,'a click elsewhere closes it');
   await win.click('#run-target-toggle');await win.keyboard.press('Escape');assert.equal(await open(),false,'Esc closes it');
   await win.click('#run-target-toggle');await app.evaluate(({BrowserWindow})=>BrowserWindow.getAllWindows()[0].webContents.executeJavaScript('dispatchEvent(new Event("blur"))'));

@@ -50,7 +50,9 @@
 /* ▾ beside the run button: the run target menu. */
 :root[data-shell] .ide-toolbar #run-target-toggle{background:var(--ide-button);color:var(--ide-onAccent,#fff);border-color:var(--ide-button);padding:0 6px;margin-left:-4px;border-left:1px solid color-mix(in srgb,var(--ide-onAccent,#fff) 35%,transparent)}
 :root[data-shell] .ide-toolbar #run-target-toggle:hover:not(:disabled){background:color-mix(in srgb,var(--ide-button) 88%,#000)}
-.run-target-menu{display:grid;gap:2px;padding:4px;min-width:200px}
+/* display only while open: an author display value would override the hidden state of a closed popover. */
+.run-target-menu{gap:2px;padding:4px;min-width:200px}
+.run-target-menu:popover-open{display:grid}
 .run-target-menu button{text-align:left;padding:5px 10px 5px 24px;border-radius:var(--radius);position:relative;color:var(--ide-foreground)}
 .run-target-menu button:hover:not(:disabled),.run-target-menu button:focus-visible{background:var(--ide-hover)}
 .run-target-menu button[aria-checked="true"]::before{content:'✓';position:absolute;left:8px}
