@@ -1,6 +1,10 @@
 # STM Simulator — 개발 인계
 
-현재 버전: **1.14.0**. 정리일: **2026-11-03**. NUCLEO-F446RE 또는 NUCLEO-F103RB와 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+현재 버전: **1.14.1**. 정리일: **2026-11-03**. NUCLEO-F446RE 또는 NUCLEO-F103RB와 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+
+## 1.14.1 실행 대상 메뉴 더블클릭
+
+- `native-ide-ui.js` `runToggle.onclick`: `e.detail>1`(더블클릭의 둘째 클릭)은 무시한다. 첫 클릭이 닫은 메뉴를 둘째 클릭이 다시 열어, 빠르게 두 번 누르거나 마우스가 두 번 인식되면 ▾로 닫히지 않는 것처럼 보였다. 키보드 클릭은 detail 0. E2E는 Electron `sendInputEvent`(실제 마우스와 같은 입력 경로)로 더블클릭을 보낸다.
 
 ## 1.14.0 시뮬레이터를 ARM GCC 빌드로
 
