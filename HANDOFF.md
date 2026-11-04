@@ -1,6 +1,12 @@
 # STM Simulator — 개발 인계
 
-현재 버전: **1.12.2**. 정리일: **2026-11-03**. NUCLEO-F446RE 또는 NUCLEO-F103RB와 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+현재 버전: **1.12.3**. 정리일: **2026-11-03**. NUCLEO-F446RE 또는 NUCLEO-F103RB와 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+
+## 1.12.3 실행 대상 메뉴 · 실물 보드 자동 선택 · Release 기본
+
+- `native-ide-ui.js`: 제목 표시줄 실행 버튼 옆 `#run-target-toggle`(▾)과 `#run-target-menu`(popover, `menuitemradio`)가 `#native-target`의 옵션을 그대로 보여 주고 고르면 `change()`. 셸이 실행 버튼을 옮길 때 이 단추도 함께 옮긴다(`shell.js`). `adoptNewBoard`: 앞서 없던 ST-LINK 시리얼 중 프로젝트 보드와 이름이 같은 NUCLEO(또는 이름 모를 보드 하나)가 보이면 대상이 `arm`이 아니고 실행 중이 아닐 때 그 보드로 바꾸고 로그에 알린다.
+- 빌드 구성 기본값 Release(`sync`, 옵션 순서). 디버그 시작(`start`)은 항상 `configuration:'Debug'`로 요청한다(main 진입 디버그가 Debug 빌드를 요구).
+- 테스트: 테스트 프로필이면 `CIRCUIT_LAB_TEST_BOARDS`(JSON)가 보드 목록이 된다(`main.cjs`, 하네스 기본 `[]`). 테스트 PC에 꽂힌 NUCLEO가 E2E를 바꾸지 않는다.
 
 ## 1.12.2 보드 기록 실패 안내
 
