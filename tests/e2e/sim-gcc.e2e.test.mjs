@@ -61,3 +61,33 @@ test('without ARM GCC the simulator offers to install it; cancel stops, the inte
   assert.deepEqual(s.errors,[]);
  }finally{await s.close();await fs.rm(empty,{recursive:true,force:true});}
 });
+
+test('turning USART2 on in Pinout writes USART2_IRQHandler into main.c; HAL_UART_Receive_IT then receives on the ARM GCC build',{skip:!toolchain&&!process.env.CI_REQUIRE_TOOLCHAIN&&'ARM GCC / STM32CubeF4 not installed',timeout:300000},async()=>{
+ const s=await launch({simEngine:'gcc'});
+ await fs.writeFile(path.join(s.profile,'native-tools.json'),JSON.stringify({armGcc:gcc,cube,armGdb:'',hostGcc:'',hostGdb:'',clangd:'',openocd:'',buildRoot:''}));
+ try{
+  const {win}=s,handlers=()=>win.evaluate(()=>(document.getElementById('code').value.match(/void USART2_IRQHandler\s*\(/g)||[]).length);
+  const generate=async()=>{
+   await win.evaluate(()=>document.getElementById('hal-generate').click());
+   if(await win.evaluate(()=>document.getElementById('hal-replace-dialog').open))await win.click('#hal-replace-confirm');
+   await win.waitForFunction(()=>!document.getElementById('pinout-dialog').open);
+  };
+  await win.evaluate(()=>document.getElementById('pinout-open').click());await win.waitForSelector('#pinout-dialog[open]');
+  await win.locator('[data-peripheral="USART2"]').check();
+  assert.equal(await win.locator('[data-irq="USART2_IRQn"]').isChecked(),true,'its global interrupt is turned on with it');
+  await generate();
+  assert.equal(await handlers(),1);assert.match(await win.evaluate(()=>document.getElementById('code').value),/USART2_IRQHandler\(void\)\s*\{[\s\S]*?HAL_UART_IRQHandler\(&huart2\);/);
+  await setCode(win,c=>c.replace('/* USER CODE BEGIN PV */','/* USER CODE BEGIN PV */\nuint8_t rx;').replace('/* USER CODE BEGIN 2 */','/* USER CODE BEGIN 2 */\n  HAL_UART_Receive_IT(&huart2, &rx, 1);').replace('/* HAL_UART_Receive_IT() 수신 완료 */','printf("got %c\\n", rx);\n  HAL_UART_Receive_IT(huart, &rx, 1);'));
+  await win.keyboard.press('Control+F5');
+  await win.waitForFunction(()=>/시뮬레이터\(ARM GCC 빌드\)를 시작했습니다/.test(document.getElementById('console-output').textContent),null,{timeout:240000});
+  await win.click('[data-monitor="bus"]');await win.selectOption('#serial-target','USART2');await win.waitForFunction(()=>!document.getElementById('serial-send').disabled);
+  await win.fill('#serial-input','x');await win.click('#serial-send');
+  await win.waitForFunction(()=>/got x/.test(document.getElementById('console-output').textContent),null,{timeout:30000});
+  await win.keyboard.press('Control+F2');await win.waitForFunction(()=>/실행/.test(document.getElementById('run').textContent));
+  // A handler written by hand in USER CODE 4 (as before this version) replaces the generated one on the next generation.
+  await setCode(win,c=>c.replace('/* USER CODE END 4 */','void USART2_IRQHandler(void) {\n    HAL_UART_IRQHandler(&huart2);\n}\n/* USER CODE END 4 */'));
+  await win.evaluate(()=>document.getElementById('pinout-open').click());await win.waitForSelector('#pinout-dialog[open]');await generate();
+  assert.equal(await handlers(),1,'defined once');assert.doesNotMatch(await win.evaluate(()=>document.getElementById('code').value),/USER CODE BEGIN USART2_IRQn 0/,'the hand-written one is kept');
+  assert.deepEqual(s.errors,[]);
+ }finally{await s.close();}
+});

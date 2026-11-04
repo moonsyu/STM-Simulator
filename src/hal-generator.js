@@ -2,8 +2,8 @@ import {SERIAL_IDS,isSerial,serialAf,serialHandle,serialFunction} from './serial
 import {TIMER_IDS,isTimer,timerAf} from './timer-config.js';
 import {DEFAULT_TIMER_CLOCK_HZ} from './mcu-defaults.js';
 import {familyProfile,remapFor} from './mcu-family.js';
+import {dmaHandle,irqHandlers,handlerText} from './irq-handlers.js';
 // DMA handle names / link fields / data widths per request (CubeMX naming).
-const dmaHandle=request=>request==='MEMTOMEM'?'hdma_memtomem':'hdma_'+request.toLowerCase();
 const dmaLink=request=>request==='ADC1'||request==='DCMI'?'DMA_Handle':/_CH(\d)$/.test(request)?`hdma[TIM_DMA_ID_CC${/_CH(\d)$/.exec(request)[1]}]`:/_RX$/.test(request)?'hdmarx':'hdmatx';
 const dmaWidth=request=>request==='ADC1'?['HALFWORD','HALFWORD']:/^TIM\d_CH/.test(request)?['WORD','HALFWORD']:request==='DCMI'||request.startsWith('SDIO')?['WORD','WORD']:['BYTE','BYTE'];
 const dmaDir=request=>request==='MEMTOMEM'?'DMA_MEMORY_TO_MEMORY':/_RX$|^ADC1$|^DCMI$/.test(request)?'DMA_PERIPH_TO_MEMORY':'DMA_MEMORY_TO_PERIPH';
@@ -127,6 +127,8 @@ export function generateMain(config,{minimal=false}={}){
     for(const [request,d]of dma)if(dmaOwner(request)===id){const h=dmaHandle(request);lines.push(...dmaLines(h,request,d,f1),`  __HAL_LINKDMA(&${name}, ${dmaLink(request)}, ${h});`);}
     lines.push('}');
   }
+  // Interrupt handlers (CubeMX writes them into stm32xxxx_it.c): enabling USART2 with its NVIC line gives USART2_IRQHandler here.
+  if(!minimal)for(const h of irqHandlers(config))if(h.shown&&h.body)lines.push('',...handlerText(h));
   if(!minimal&&pins.some(([,p])=>p.function==='GPIO_EXTI'))lines.push('','void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {','  UNUSED(GPIO_Pin);','  /* USER CODE BEGIN EXTI_Callback */','  /* 핀 번호에 따라 인터럽트 처리를 작성하세요. */','  /* USER CODE END EXTI_Callback */','}');
   if(!minimal&&serials.length)lines.push('','void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart) {','  UNUSED(huart);','  /* USER CODE BEGIN UART_RxCplt */','  /* HAL_UART_Receive_IT() 수신 완료 */','  /* USER CODE END UART_RxCplt */','}');
   if(!minimal&&timers.length)lines.push('','void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {','  UNUSED(htim);','  /* USER CODE BEGIN TIM_PeriodElapsed */','  /* 타이머 주기 인터럽트 */','  /* USER CODE END TIM_PeriodElapsed */','}');

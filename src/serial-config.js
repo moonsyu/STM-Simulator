@@ -18,7 +18,11 @@ export function assignSerialPin(config,id,role,pin,routes=SERIAL_ROUTES){
   if(previous&&previous.function!=='Reset'&&previous.function!==fn)throw new Error(`${pin}: ${previous.function}에서 사용 중입니다. 먼저 해제하거나 다른 핀을 선택하세요.`);
   for(const [name,p]of Object.entries(config.pins))if(name!==pin&&p.function===fn)config.pins[name]={...p,function:'Reset',label:''};
   config.pins[pin]={function:fn,pull:previous?.pull??'NOPULL',edge:'FALLING',initial:0,label:previous?.label??''};
+  const wasOn=config.peripherals[id]?.enabled;
   config.peripherals[id]={...config.peripherals[id],enabled:true,baud:config.peripherals[id]?.baud??115200};
+  // Turning a UART on also turns on its global interrupt (CubeMX leaves that to NVIC Settings), so HAL_UART_Receive_IT
+  // works and main.c gets USARTx_IRQHandler. NVIC Settings can turn it off again; it stays off while the UART stays on.
+  if(!wasOn)(config.nvic??={})[id+'_IRQn']={priority:0,...config.nvic[id+'_IRQn'],enabled:true};
 }
 // remaps (F1 AFIO): TX/RX move together, so a whole free remap option is chosen instead of the first free pin per role.
 export function setSerialEnabled(config,id,enabled,routes=SERIAL_ROUTES,remaps=null){

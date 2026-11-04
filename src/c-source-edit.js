@@ -38,4 +38,14 @@ export function keepUserCode(previous,generated,previousDefault=''){
  }
  return out;
 }
+// A handler the user wrote (in a user section, like USART2_IRQHandler in USER CODE 4, or in another source such as an
+// imported stm32f4xx_it.c) replaces the generated one, which would otherwise be defined twice.
+export function dropShadowedHandlers(source,others=[]){
+ const names=text=>{try{return cFunctions(text||'');}catch{return [];}};
+ const spans=[...source.matchAll(USER_SECTION)].map(m=>[m.index,m.index+m[0].length]),inUser=at=>spans.some(([a,b])=>at>=a&&at<b);
+ const handlers=names(source).filter(f=>/^\w+_(IRQ)?Handler$/.test(f.name)),elsewhere=new Set(others.flatMap(t=>names(t).map(f=>f.name)));
+ const user=new Set(handlers.filter(f=>inUser(f.start)).map(f=>f.name));
+ for(const f of handlers.filter(f=>!inUser(f.start)&&(user.has(f.name)||elsewhere.has(f.name))).sort((a,b)=>b.start-a.start))source=source.slice(0,f.start).replace(/\n\n$/,'\n')+source.slice(f.end).replace(/^\n/,'');
+ return source;
+}
 export function checksum(text){let h=2166136261;for(let i=0;i<text.length;i++)h=Math.imul(h^text.charCodeAt(i),16777619);return (h>>>0).toString(16);}

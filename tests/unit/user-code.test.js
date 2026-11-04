@@ -34,3 +34,32 @@ test('code outside the sections follows the new settings, and a source without s
  assert.equal(after,generate(gpioMcu()));
  const twice=keepUserCode(keepUserCode(generate(uartMcu()),generate(gpioMcu())),generate(gpioMcu()));assert.equal((twice.match(/#if 0/g)||[]).length,(keepUserCode(generate(uartMcu()),generate(gpioMcu())).match(/#if 0/g)||[]).length,'kept code is not copied again');
 });
+
+test('turning USART2 on turns its NVIC line on, and main.c gets USART2_IRQHandler like the CubeMX stm32xxxx_it.c',async()=>{
+ const {setSerialEnabled}=await import('../../src/serial-config.js');
+ for(const family of ['STM32F446RE','STM32F103RB']){
+  const on=setSerialEnabled(defaultMcu(family),'USART2',true);assert.deepEqual(on.nvic.USART2_IRQn,{priority:0,enabled:true},family);
+  const code=generate(validateMcu(on));
+  assert.match(code,/void USART2_IRQHandler\(void\)\s*\{\s*\/\* USER CODE BEGIN USART2_IRQn 0 \*\/\s*\/\* USER CODE END USART2_IRQn 0 \*\/\s*HAL_UART_IRQHandler\(&huart2\);/,family);
+  assert.match(code,/HAL_NVIC_EnableIRQ\(USART2_IRQn\);/);
+  // NVIC Settings can turn it off again; then there is no handler, as in CubeMX.
+  on.nvic.USART2_IRQn.enabled=false;const off=setSerialEnabled(on,'USART2',true);assert.equal(off.nvic.USART2_IRQn.enabled,false,'stays off while USART2 stays on');
+  assert.doesNotMatch(generate(validateMcu(off)),/USART2_IRQHandler/);
+ }
+ // Timers, EXTI lines and DMA streams get theirs too; the minimal skeleton has none.
+ const m=defaultMcu();m.pins={PC13:pin('GPIO_EXTI')};m.nvic.EXTI15_10_IRQn={enabled:true,priority:0};
+ const exti=generate(validateMcu(m));assert.match(exti,/void EXTI15_10_IRQHandler\(void\)[\s\S]*?HAL_GPIO_EXTI_IRQHandler\(GPIO_PIN_13\);/);
+ assert.doesNotMatch(expandC(generateHal(validateMcu(m),{minimal:true})),/IRQHandler/);
+});
+
+test('a handler the user wrote (in USER CODE 4 or another source) replaces the generated one instead of defining it twice',async()=>{
+ const {dropShadowedHandlers}=await import('../../src/c-source-edit.js');
+ const own='void USART2_IRQHandler(void) {\n    HAL_UART_IRQHandler(&huart2);\n}\n';
+ const before=generate(gpioMcu()).replace('/* USER CODE END 4 */',own+'/* USER CODE END 4 */');
+ const after=dropShadowedHandlers(keepUserCode(before,generate(uartMcu()),generate(gpioMcu())));
+ assert.equal((after.match(/void USART2_IRQHandler/g)||[]).length,1);assert.match(section(after,'4'),/void USART2_IRQHandler/);assert.doesNotMatch(after,/USER CODE BEGIN USART2_IRQn 0/);
+ assert.match(after,/\}\n\nvoid HAL_UART_RxCpltCallback/,'the surrounding code keeps its layout');
+ const imported=dropShadowedHandlers(generate(uartMcu()),['#include "main.h"\nextern UART_HandleTypeDef huart2;\n'+own]);
+ assert.doesNotMatch(imported,/USART2_IRQHandler/);
+ assert.equal(dropShadowedHandlers(generate(uartMcu())),generate(uartMcu()),'nothing to drop');
+});
