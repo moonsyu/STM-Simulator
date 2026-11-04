@@ -76,6 +76,7 @@ F446RE **LQFP64** 및 보드에서 접근 가능한 핀 기준입니다. TX와 R
 |---|---|
 | 기본 | `HAL_Init`, `HAL_Delay`, `HAL_GetTick`, `HAL_InitTick`, `__disable_irq`, `__enable_irq`, `__set/__get_PRIMASK`, `__set/__get_BASEPRI`, `__get_IPSR`, `NVIC_SystemReset`/`HAL_NVIC_SystemReset` |
 | 로그 | `<stdio.h>`의 `printf`, `puts`; 지원 형식과 한도는 아래 참고 |
+| 문자열 | `sprintf`, `snprintf`(printf와 같은 형식, 버퍼 크기만큼 자르고 전체 길이를 돌려줌), `<string.h>`의 `strlen`, `strcmp`, `strncmp`, `strcpy`, `strncpy`, `strcat`, `memset`, `memcpy`, `memmove`, `memcmp`(1.13.2). 버퍼 끝을 넘겨 쓰면 오류로 멈춥니다 |
 | GPIO | `HAL_GPIO_Init/DeInit`, `WritePin`, `ReadPin`, `TogglePin`; INPUT/OUTPUT_PP/ANALOG/AF_PP/AF_OD, EXTI rising/falling/both. AF는 해당 UART/USART/I2C1/SPI1/TIM2·3·4·5 기능에 한정 |
 | EXTI/NVIC | `HAL_NVIC_SetPriorityGrouping/GetPriorityGrouping/SetPriority/GetPriority/EnableIRQ/DisableIRQ/SetPendingIRQ/GetPendingIRQ/ClearPendingIRQ/GetActive`, CMSIS `NVIC_*`, `HAL_GPIO_EXTI_IRQHandler`, `HAL_GPIO_EXTI_GenerateSWIT`, `HAL_GPIO_EXTI_Callback(uint16_t)`; EXTI0~4, EXTI9_5, EXTI15_10, USART/TIM/ADC/SPI1/I2C1/DMA 스트림/DCMI/SDIO IRQ |
 | UART/USART 6개 | `HAL_UART_Init`, blocking `Transmit/Receive`, `Transmit_IT/Receive_IT`, `Transmit_DMA/Receive_DMA`, `HAL_UARTEx_ReceiveToIdle_DMA`, `DMAStop/DMAPause/DMAResume`, `Abort/AbortReceive/AbortTransmit`, `IRQHandler`, `RxCpltCallback/TxCpltCallback/RxHalfCpltCallback/TxHalfCpltCallback/ErrorCallback`, `HAL_UARTEx_RxEventCallback`; 비동기 8N1, TX/RX, HW flow 없음, oversampling 16. 포트마다 독립 버퍼·busy 상태·NVIC. 오류 코드 `HAL_UART_ERROR_PE/NE/FE/ORE` |

@@ -1,4 +1,22 @@
 // Bounded C printf formatting for the simulator's debug log; no host evaluation.
+/** Writes text and its terminating 0 into a char buffer (each cell checked against the array, as C would overrun it). */
+export function writeCString(r,buffer,text){for(let i=0;i<text.length;i++)r.set(r.pointerCell(buffer,i),text.charCodeAt(i)&255);r.set(r.pointerCell(buffer,text.length),0);}
+const bytesOf=(r,buffer,count)=>Array.from({length:count},(_,i)=>r.get(r.pointerCell(buffer,i)));
+const count=(value,name)=>{if(!Number.isInteger(value)||value<0||value>65536)throw new Error(`${name} 길이 범위: 0~65536`);return value;};
+/** sprintf / snprintf and the <string.h> copies on char/byte buffers; undefined for other names. */
+export function stringCall(name,args,r){
+ const [a,b,c]=args;
+ if(name==='sprintf'){const text=formatPrintf(args.slice(1),r);writeCString(r,a,text);return text.length;}
+ // snprintf writes at most size-1 characters and the 0, and returns the length the whole text would have.
+ if(name==='snprintf'){const size=count(b,'snprintf'),text=formatPrintf(args.slice(2),r);if(size)writeCString(r,a,text.slice(0,size-1));return text.length;}
+ if(name==='strcpy'){writeCString(r,a,r.format([b]));return a;}
+ if(name==='strncpy'){const n=count(c,'strncpy'),text=r.format([b]).slice(0,n);for(let i=0;i<n;i++)r.set(r.pointerCell(a,i),i<text.length?text.charCodeAt(i)&255:0);return a;}
+ if(name==='strcat'){const head=r.format([a]);writeCString(r,a,head+r.format([b]));return a;}
+ if(name==='memset'){const n=count(c,'memset');for(let i=0;i<n;i++)r.set(r.pointerCell(a,i),b&255);return a;}
+ if(name==='memcpy'||name==='memmove'){const n=count(c,name),bytes=bytesOf(r,b,n);bytes.forEach((v,i)=>r.set(r.pointerCell(a,i),v));return a;}
+ if(name==='memcmp'){const n=count(c,'memcmp'),x=bytesOf(r,a,n),y=bytesOf(r,b,n);for(let i=0;i<n;i++)if((x[i]&255)!==(y[i]&255))return (x[i]&255)-(y[i]&255);return 0;}
+ return undefined;
+}
 export function formatPrintf(args,r){
   if(!args.length||args.length>33)throw new Error('printf 인수는 형식 문자열과 값 32개까지 지원합니다.');
   const string=value=>{if(typeof value!=='string'&&!['array','pointer'].includes(value?.kind))throw new Error('printf 문자열 또는 유효한 문자 포인터가 필요합니다.');return r.format([value]);};

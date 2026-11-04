@@ -4,7 +4,7 @@ import {HalTimers} from './hal-timers.js';
 import {validateMcu,configProblems,irqForPin,IRQ_NAMES} from './mcu-config.js';
 import {BusDevices} from './buses.js';
 import {SERIAL_IDS,isSerial,serialAf,serialFunction} from './serial-config.js';
-import {formatPrintf} from './hal-stdio.js';
+import {formatPrintf,stringCall} from './hal-stdio.js';
 import {Nvic,NVIC_CONSTANTS,IRQ_NUMBERS,SYSTICK} from './hal-nvic.js';
 import {HalDma,DMA_CONSTANTS} from './hal-dma.js';
 import {HalUsart,USART_CONSTANTS} from './hal-usart.js';
@@ -355,6 +355,7 @@ export class HalAdapter {
       this.requireHandle(a,r,'SPI');const both=name==='HAL_SPI_TransmitReceive',receive=name!=='HAL_SPI_Transmit',count=both?d:c;int(count,1,256,'SPI 길이');const timeout=int(both?e:d,0,4294967295,'SPI timeout');const rx=both?c:b;if(receive)r.pointerCell(rx,count-1);const bytes=name==='HAL_SPI_Receive'?Array(count).fill(255):this.bytes(b,count,r);if(count*8000/this.buses.spi.clock>timeout){r.microTime+=timeout*1000;return 3;}bytes.forEach((value,i)=>{const result=this.buses.call('SPI.transfer',[value],r);if(receive)r.set(r.pointerCell(rx,i),result);});return 0;
     }
     if(name==='strlen'){const str=r.format([a]);return str.length;}
+    const text=stringCall(name,args,r);if(text!==undefined)return text;
     if(name==='printf'){const text=formatPrintf(args,r);if(text)r.api.print(text.replace(/\r?\n$/,''));return text.length;}
     if(name==='puts'){if(args.length!==1)throw new Error('puts는 문자열 하나가 필요합니다.');const text=r.format([a]);if(text.length>4096)throw new Error('puts 출력 한도는 4096자입니다.');r.api.print(text);return text.length+1;}
     if(name.startsWith('HAL_')||name.startsWith('__HAL_'))throw new Error(`지원하지 않는 HAL API: ${name}`);
