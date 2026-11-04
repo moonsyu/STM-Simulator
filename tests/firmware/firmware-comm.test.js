@@ -1,5 +1,5 @@
 // UART / USART / I²C / SPI firmware fixtures connected to the existing device models.
-import { PINS } from '../../src/pins.js';
+import { PINS, boardPin } from '../../src/pins.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { open, runUntil, printed, vcpText, elf } from './helpers.mjs';
@@ -119,11 +119,12 @@ test('sd_spi: SPI-mode SD card answers CMD0/8/55/41/58', () => {
   assert.ok(printed(log, /SD OCR=c0ff8000/i), log.print.join('|'));
 });
 
-test('uart: a real USART2 reaches an HC-06 on its pins, and what the module sends reaches the firmware', () => {
-  const { session, log } = open('uart', {}, p => {
+test('uart: a real USART1 reaches an HC-06 on its pins, and what the module sends reaches the firmware', () => {
+  const { session, log } = open('uart_external', {}, p => {
+    // The example's UART terminal makes way for the HC-06 on the same USART1 pins (D8 TX, D2 RX).
+    p.components = p.components.filter(c => c.id !== 'demo'); p.wires = p.wires.filter(w => !/part:demo:/.test(w.from + w.to));
     p.components.push({ id: 'bt', type: 'ref_hc06_bluetooth_4', name: 'HC-06', x: 800, y: 300, rotation: 0, baud: 9600, btPin: '1234' });
-    for (const [i, from, to] of [[1, 'board:CN6:5', 'p1'], [2, 'board:CN6:6', 'p2'], [3, 'part:bt:p3', 'PA3'], [4, 'board:CN10:35', 'p4']]) p.wires.push({ id: 'bt' + i, from, to: to.startsWith('P') ? PINS.find(q => q.signal === to).id : 'part:bt:' + to, color: '#23a68a' });
-    p.wires.find(w => w.id === 'bt4').from = PINS.find(q => q.signal === 'PA2').id;
+    for (const [i, from, to] of [[1, 'board:CN6:5', 'p1'], [2, 'board:CN6:6', 'p2'], [3, 'part:bt:p3', 'PA10'], [4, 'PA9', 'p4']]) p.wires.push({ id: 'bt' + i, from: from.startsWith('P') ? boardPin(from) : from, to: to.startsWith('P') ? boardPin(to) : 'part:bt:' + to, color: '#23a68a' });
   });
   runUntil(session, 60);
   const hub = session.wireless, module = hub.all()[0];
@@ -131,22 +132,23 @@ test('uart: a real USART2 reaches an HC-06 on its pins, and what the module send
   assert.ok(module.input.length > 0, 'the firmware output arrived at RXD');
   hub.emit(module, [...'h'].map(c => c.charCodeAt(0)), session.now);
   runUntil(session, 90);
-  assert.ok(log.uart.some(e => e.instance === 'USART2' && e.direction === 'RX' && e.bytes.includes(104)), JSON.stringify(log.uart.filter(e => e.direction === 'RX')));
+  assert.ok(log.uart.some(e => e.instance === 'USART1' && e.direction === 'RX' && e.bytes.includes(104)), JSON.stringify(log.uart.filter(e => e.direction === 'RX')));
 });
 
 test('uart: one emulated board\'s USART reaches the USART of another on the wired pins', () => {
-  const on = (board, signal) => PINS.find(q => q.signal === signal).id.replace('board:', board);
+  const on = (board, signal) => boardPin(signal).replace('board:', board);
   const run = wires => {
-    const { session } = open('uart', {}, p => {
+    const { session } = open('uart_external', {}, p => {
+      p.components = p.components.filter(c => c.id !== 'demo'); p.wires = p.wires.filter(w => !/part:demo:/.test(w.from + w.to));
       p.components.push({ id: 'b2', ...newStm32Fields(p, 'nucleo-f446re', 430), mcu: structuredClone(p.mcu), code: p.code, firmware: structuredClone(p.firmware) });
       p.wires.push(...wires);
     });
-    session.circuit.drivers = createStm32Drivers(session.project, { emulate: true, elfs: { b2: elf('uart') } });
+    session.circuit.drivers = createStm32Drivers(session.project, { emulate: true, elfs: { b2: elf('uart_external') } });
     connectStm32Drivers(session);
     runUntil(session, 120);
-    return { main: session.soc.usarts.USART2.stats.rx, other: session.circuit.drivers[0].session.soc.usarts.USART2.stats.rx };
+    return { main: session.soc.usarts.USART1.stats.rx, other: session.circuit.drivers[0].session.soc.usarts.USART1.stats.rx };
   };
-  const crossed = run([{ id: 'x1', from: on('board:', 'PA2'), to: on('devboard:b2:', 'PA3'), color: '#000' }, { id: 'x2', from: on('devboard:b2:', 'PA2'), to: on('board:', 'PA3'), color: '#000' }]);
+  const crossed = run([{ id: 'x1', from: on('board:', 'PA9'), to: on('devboard:b2:', 'PA10'), color: '#000' }, { id: 'x2', from: on('devboard:b2:', 'PA9'), to: on('board:', 'PA10'), color: '#000' }]);
   assert.ok(crossed.other > 0, JSON.stringify(crossed));
   assert.ok(crossed.main > 0, JSON.stringify(crossed));
   assert.deepEqual(run([]), { main: 0, other: 0 }, 'nothing crosses without the wires');

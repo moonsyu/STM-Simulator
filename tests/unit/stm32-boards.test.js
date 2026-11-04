@@ -111,12 +111,13 @@ describe('STM32 boards: running together',()=>{
   }
  });
  test('UART between boards: STM32-2 TX → main board RX at the same baud; the main board echoes it',()=>{
-  const main=halExampleFor('uart','nucleo-f103rb'),other=halExampleFor('uart','nucleo-f446re'),p=projectForBoard('nucleo-f103rb');
+  // USART1 on the headers (D8 TX = CN10-21, D2 RX = CN10-33); USART2's PA2/PA3 reach only the ST-LINK VCP.
+  const main=halExampleFor('uart_external','nucleo-f103rb'),other=halExampleFor('uart_external','nucleo-f446re'),p=projectForBoard('nucleo-f103rb');
   Object.assign(p,{code:main.code,mcu:main.mcu,firmware:main.firmware});p.components.push({id:'b2',...newStm32Fields(p,'nucleo-f446re',430),code:other.code,mcu:other.mcu,firmware:other.firmware});
-  p.wires.push(wire('w1','devboard:b2:CN10:35','board:CN10:37'));
+  p.wires.push(wire('w1','devboard:b2:CN10:21','board:CN10:33'));
   const echo=project=>{const tx=[],out=[],session=new SimulationSession(project,{uart:e=>{if(e.direction==='TX')tx.push(String.fromCharCode(...e.bytes));}});session.circuit.drivers=createStm32Drivers(project,{log:t=>out.push(t)});connectStm32Drivers(session);for(let t=0;t<=400;t+=50)session.tick(t);return {tx:tx.join(''),out};};
-  const {tx,out}=echo(p);assert.equal(tx,'HAL UART ready\r\nHAL UART ready\r\n','own message, then the echo of STM32-2');assert.ok(out.includes('[STM32-2] [USART2 TX] HAL UART ready'),out.join('|'));
-  const slow=structuredClone(p),b2=slow.components[0];b2.mcu.peripherals.USART2.baud=115200;b2.code=b2.code.replace('BaudRate = 9600','BaudRate = 115200');assert.equal(echo(slow).tx,'HAL UART ready\r\n','another baud rate is not received');
+  const {tx,out}=echo(p);assert.equal(tx,'HAL UART ready\r\nHAL UART ready\r\n','own message, then the echo of STM32-2');assert.ok(out.includes('[STM32-2] [USART1 TX] HAL UART ready'),out.join('|'));
+  const slow=structuredClone(p),b2=slow.components[0];b2.mcu.peripherals.USART1.baud=115200;b2.code=b2.code.replace('BaudRate = 9600','BaudRate = 115200');assert.equal(echo(slow).tx,'HAL UART ready\r\n','another baud rate is not received');
   const apart=structuredClone(p);apart.wires=[];assert.equal(echo(apart).tx,'HAL UART ready\r\n','not wired');
  });
  test('RESET restarts one board; a compile error names the board',()=>{

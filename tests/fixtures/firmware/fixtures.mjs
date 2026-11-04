@@ -16,6 +16,7 @@ export const FIXTURES = {
   blink: { project: example('blink') },
   exti: { project: example('exti') },
   uart: { project: example('uart') },
+  uart_external: { project: example('uart_external') },
   adc: { project: example('adc') },
   pwm: { project: example('pwm') },
   i2c: { project: example('i2c') },

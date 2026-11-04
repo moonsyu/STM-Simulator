@@ -11,7 +11,7 @@ export const ADVANCED_GUIDES={
  dma_uart_echo:'USART2 PA2/PA3 115200 baud, RX DMA1 Stream5 순환 + IDLE 감지, TX DMA1 Stream6 · 실행 후 하단 직렬 모니터 탭(ST-LINK VCP → USART2)에 문자열을 입력해 보내면 같은 문자열이 오른쪽 수신 창에 돌아오고, 출력에 RX event·TX DMA done이 찍힘 · HAL_UARTEx_RxEventCallback',
  adc_dma_scan:'조이스틱 X→PA0(IN0), Y→PA1(IN1) · ADC1 스캔 2채널 연속 변환, DMA2 Stream0 순환 · HAL_ADC_ConvHalfCpltCallback/ConvCpltCallback으로 평균 계산',
  nvic_preemption:'PA5 LED, USER 버튼 PC13 EXTI(우선순위 0) · TIM2 주기 인터럽트(우선순위 3)의 긴 반복을 버튼 인터럽트가 중간에 선점 · SysTick 우선순위 확인',
- usart_sync_matrix:'USART2 동기: CK PA4 → CLK, TX PA2 → DIN, PB6 → LOAD · 5V/GND · LSB 우선 USART를 비트 반전해 MSB 우선 MAX7219에 전송, CPOL/CPHA/LastBit 실습',
+ usart_sync_matrix:'USART1 동기: CK PA8(D7) → CLK, TX PA9(D8) → DIN, PB6 → LOAD · 5V/GND · LSB 우선 USART를 비트 반전해 MSB 우선 MAX7219에 전송, CPOL/CPHA/LastBit 실습',
  camera_tft:'OV2640: 3V3/GND, SCCB PB8/PB9, RESET PC8, PWDN PC6, XCLK PA8(MCO) · ST7735: PA5/PA7 SPI, PB6 CS, PB7 DC, PC7 RST · DCMI DMA 스냅샷(QQVGA RGB565) → SPI DMA로 화면 표시',
  sd_logger:'Micro SD 보드: 3V3/GND, PA5 CLK, PA7 CMD(MOSI), PA6 D0(MISO), PB6 D3(CS) · FatFs f_mount/f_open/f_printf/f_gets로 LOG.TXT 기록 · 카드 이미지는 프로젝트에 저장',
  noise_errors:'project.simulation.noise 활성 · USART2 수신 오류(FE/PE/NE) HAL_UART_ErrorCallback, I²C 메모리(0x50) NACK 재시도 · 신호 분석기에서 깨진 비트 확인'};
@@ -95,16 +95,16 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
 }`});
  }
  if(kind==='usart_sync_matrix'){
-  const p=deviceExample('matrix');p.wires.find(w=>w.to==='part:demo:p4').from=boardPin('PA4');p.wires.find(w=>w.to==='part:demo:p5').from=boardPin('PA2');p.mcu.timerClockHz=EXAMPLE_TIMER_CLOCK_HZ;
-  p.mcu.pins={PA2:pin('USART2_TX'),PA3:pin('USART2_RX'),PA4:pin('USART2_CK'),PB6:pin('GPIO_Output',{initial:1})};p.mcu.peripherals={USART2:{enabled:true,baud:100000,mode:'synchronous',cpol:0,cpha:0,lastBit:1}};p.mcu.nvic={};
+  const p=deviceExample('matrix');p.wires.find(w=>w.to==='part:demo:p4').from=boardPin('PA8');p.wires.find(w=>w.to==='part:demo:p5').from=boardPin('PA9');p.mcu.timerClockHz=EXAMPLE_TIMER_CLOCK_HZ;
+  p.mcu.pins={PA9:pin('USART1_TX'),PA10:pin('USART1_RX'),PA8:pin('USART1_CK'),PB6:pin('GPIO_Output',{initial:1})};p.mcu.peripherals={USART1:{enabled:true,baud:100000,mode:'synchronous',cpol:0,cpha:0,lastBit:1}};p.mcu.nvic={};
   return finish(p,kind,{globals:`uint32_t matrixFrame = 0;
 uint8_t reverse8(uint8_t v) { uint8_t r = 0; for (int i = 0; i < 8; i++) { r = (r << 1) | (v & 1); v >>= 1; } return r; }
 void matrixWrite(uint8_t reg, uint8_t value) {
   uint8_t frame[2] = {reverse8(reg), reverse8(value)};  /* USART: LSB first, MAX7219: MSB first */
   HAL_GPIO_WritePin(GPIOB, GPIO_PIN_6, GPIO_PIN_RESET);
-  HAL_USART_Transmit(&husart2, frame, 2, 10);
+  HAL_USART_Transmit(&husart1, frame, 2, 10);
   HAL_GPIO_WritePin(GPIOB, GPIO_PIN_6, GPIO_PIN_SET);   /* LOAD rising edge latches 16 bits */
-}`,init:'  matrixWrite(12,1); matrixWrite(11,7); matrixWrite(10,4); matrixWrite(9,0);\n  printf("USART2 synchronous: CK=PA4 100 kHz, CPOL=0 CPHA=0 LastBit=1\\n");',
+}`,init:'  matrixWrite(12,1); matrixWrite(11,7); matrixWrite(10,4); matrixWrite(9,0);\n  printf("USART1 synchronous: CK=PA8 100 kHz, CPOL=0 CPHA=0 LastBit=1\\n");',
    loop:'    for (int row = 0; row < 8; row++) matrixWrite(row + 1, 0x81 | (1 << ((row + matrixFrame) % 8)));\n    matrixFrame = (matrixFrame + 1) % 8;\n    HAL_Delay(200);'});
  }
  if(kind==='camera_tft'){

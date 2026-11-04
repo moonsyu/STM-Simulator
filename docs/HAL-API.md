@@ -51,9 +51,9 @@ TIM2·3·4·5는 독립 PSC/ARR/채널/NVIC 상태를 가지며 동일 APB1 입�
 
 USART2 PA2/TX·PA3/RX를 활성화하고 `HAL_UART_Init()`을 실행하면 하단 **통신 → ST-LINK VCP → USART2 (내장)**에서 별도 부품 없이 송수신합니다. 수신하려면 코드에서 `HAL_UART_Receive()` 또는 `HAL_UART_Receive_IT()`를 호출해야 합니다. 기본 UART 예제는 수신 인터럽트를 활성화하고 받은 바이트를 에코합니다.
 
-**외부 UART 장치 → USART2**를 선택하면 기존 UART 부품이나 4/6핀 케이블의 전원·교차 배선·baud를 검사합니다. 연결 실패를 VCP로 우회하지 않습니다. 외부 예제와 장치 Docs 적용 시 이 경로를 선택하며, 다른 UART 포트는 외부 장치가 필요합니다.
+외부 UART 장치(UART 부품, 4/6핀 케이블, RS485·블루투스 모듈)는 **USART1 PA9(TX, D8)·PA10(RX, D2)**에 연결하고 **외부 UART 장치 → USART1**을 선택합니다. 이때 전원·교차 배선·baud를 검사하며, 연결 실패를 VCP로 우회하지 않습니다. 외부 예제와 장치 Docs 적용도 USART1을 씁니다(1.13.0). MB1136 회로도(C-04)대로 SB62/SB63이 기본으로 열려 있어 PA2/PA3는 Arduino D0/D1(CN9-1/2)과 모포 CN10-35/37에 연결되지 않으므로, 시뮬레이터에서도 이 헤더 핀은 NC로 두고 USART2는 ST-LINK VCP 전용입니다.
 
-NUCLEO-F446RE 기본 연결은 [ST UM1724 7.10절](https://www.st.com/resource/en/user_manual/um1724-.pdf#page=26)을 참고했습니다. 시뮬레이터 VCP는 펌웨어의 baud를 따라가며 Windows COM 포트·USB 드라이버가 필요 없습니다. 입력·출력 경로를 가상으로 선택하며 솔더 브리지 전환이나 두 송신기의 전기적 충돌은 재현하지 않습니다. 실물 보드에서 USART2 외부 헤더를 사용할 때는 UM1724의 SB13/SB14 및 SB62/SB63 설정도 확인해야 합니다.
+NUCLEO-F446RE 기본 연결은 [ST UM1724 7.10절](https://www.st.com/resource/en/user_manual/um1724-.pdf#page=26)을 참고했습니다. 시뮬레이터 VCP는 펌웨어의 baud를 따라가며 Windows COM 포트·USB 드라이버가 필요 없습니다. 입력·출력 경로를 가상으로 선택하며 솔더 브리지 전환이나 두 송신기의 전기적 충돌은 재현하지 않습니다. 실물 보드에서 USART2를 D0/D1로 쓰려면 SB13/SB14를 열고 SB62/SB63을 닫아야 합니다(UM1724). 시뮬레이터는 배송 상태의 솔더 브리지만 재현합니다.
 
 ## UART/USART 핀맵
 

@@ -1,0 +1,147 @@
+{
+ "format": "stm32-circuit-lab",
+ "version": 2,
+ "name": "새 회로",
+ "components": [
+  {
+   "id": "demo",
+   "name": "UART1",
+   "type": "ref_uart_cable_4",
+   "x": 642.3299999999999,
+   "y": 359,
+   "rotation": 90,
+   "baud": 9600,
+   "attachments": {
+    "p1": "bb:c:13",
+    "p2": "bb:c:14",
+    "p3": "bb:c:15",
+    "p4": "bb:c:16"
+   }
+  }
+ ],
+ "wires": [
+  {
+   "id": "w1",
+   "from": "board:CN10:20",
+   "to": "bb:a:14",
+   "color": "#4e647b",
+   "points": [
+    {
+     "x": 572.33,
+     "y": 348.94
+    }
+   ]
+  },
+  {
+   "id": "w2",
+   "from": "board:CN6:5",
+   "to": "bb:a:13",
+   "color": "#dd654c",
+   "points": [
+    {
+     "x": 390.33,
+     "y": 334.94
+    },
+    {
+     "x": 390.33,
+     "y": 453.94
+    },
+    {
+     "x": 586.33,
+     "y": 453.94
+    },
+    {
+     "x": 586.33,
+     "y": 338
+    }
+   ]
+  },
+  {
+   "id": "w3",
+   "from": "board:CN10:21",
+   "to": "bb:a:16",
+   "color": "#ebbd2b",
+   "points": [
+    {
+     "x": 398.97,
+     "y": 369.94
+    },
+    {
+     "x": 565.33,
+     "y": 369.94
+    },
+    {
+     "x": 565.33,
+     "y": 380
+    }
+   ]
+  },
+  {
+   "id": "w4",
+   "from": "board:CN10:33",
+   "to": "bb:a:15",
+   "color": "#2786d7",
+   "points": [
+    {
+     "x": 398.97,
+     "y": 439.94
+    },
+    {
+     "x": 579.33,
+     "y": 439.94
+    },
+    {
+     "x": 579.33,
+     "y": 366
+    }
+   ]
+  }
+ ],
+ "mcu": {
+  "family": "STM32F446RE",
+  "pins": {
+   "PA9": {
+    "function": "USART1_TX",
+    "pull": "NOPULL",
+    "edge": "FALLING",
+    "label": "",
+    "initial": 0
+   },
+   "PA10": {
+    "function": "USART1_RX",
+    "pull": "NOPULL",
+    "edge": "FALLING",
+    "label": "",
+    "initial": 0
+   }
+  },
+  "peripherals": {
+   "USART1": {
+    "enabled": true,
+    "baud": 9600
+   }
+  },
+  "nvic": {
+   "USART1_IRQn": {
+    "enabled": true,
+    "priority": 0
+   }
+  },
+  "timerClockHz": 84000000
+ },
+ "firmware": {
+  "mode": "hal",
+  "files": []
+ },
+ "code": "#include \"main.h\"\n#include <stdio.h>\n// VCC→3V3, GND→GND, 장치 TX→PA10(D2, USART1 RX), 장치 RX→PA9(D8, USART1 TX), 9600 baud · 하단 직렬 모니터 탭에서 외부 UART 장치 → USART1 선택 · PA2/PA3(D1/D0)은 보드 기본 상태(SB62/SB63 열림)에서 ST-LINK 가상 COM 전용\nuint8_t rx[1];\nvolatile uint8_t echo[64];\nvolatile uint32_t echoHead = 0, echoTail = 0;\n\n/* Copy this main.c into a CubeIDE STM32F446RE project with matching\n * pin / peripheral / NVIC settings and Cube-generated IRQ / MSP files.\n * Clock: HSI PLL, APB1 timer clock = 84000000 Hz.\n * printf: SWV ITM port 0 (enable SWV in the debugger). UART uses its pins.\n * With newlib-nano, enable -u _printf_float for floating-point printf. */\n\nUART_HandleTypeDef huart1;\n\nvoid SystemClock_Config(void);\nvoid Error_Handler(void);\nstatic void MX_GPIO_Init(void);\nstatic void MX_USART1_UART_Init(void);\n\nint main(void) {\n    HAL_Init();\n    SystemClock_Config();\n    MX_GPIO_Init();\n    MX_USART1_UART_Init();\n    /* USER CODE BEGIN 2 */\n    uint8_t message[] = \"HAL UART ready\\r\\n\";\n    HAL_UART_Transmit(&huart1, message, sizeof(message)-1, 100);\n    HAL_UART_Receive_IT(&huart1, rx, 1);\n    /* USER CODE END 2 */\n    while (1) {\n        /* USER CODE BEGIN 3 */\n        while (echoTail != echoHead) {\n            uint8_t c = echo[echoTail % 64];\n            echoTail++;\n            HAL_UART_Transmit(&huart1, &c, 1, 10);\n        }\n        HAL_Delay(1);\n        /* USER CODE END 3 */\n    }\n}\n\nvoid SystemClock_Config(void) {\n    RCC_OscInitTypeDef osc = {0};\n    RCC_ClkInitTypeDef clk = {0};\n    __HAL_RCC_PWR_CLK_ENABLE();\n    __HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE1);\n    osc.OscillatorType = RCC_OSCILLATORTYPE_HSI;\n    osc.HSIState = RCC_HSI_ON;\n    osc.HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT;\n    osc.PLL.PLLState = RCC_PLL_ON;\n    osc.PLL.PLLSource = RCC_PLLSOURCE_HSI;\n    osc.PLL.PLLM = 16;\n    osc.PLL.PLLN = 336;\n    osc.PLL.PLLP = RCC_PLLP_DIV4;\n    osc.PLL.PLLQ = 7;\n    osc.PLL.PLLR = 2;\n    if (HAL_RCC_OscConfig(&osc) != HAL_OK) Error_Handler();\n    clk.ClockType = RCC_CLOCKTYPE_HCLK | RCC_CLOCKTYPE_SYSCLK | RCC_CLOCKTYPE_PCLK1 | RCC_CLOCKTYPE_PCLK2;\n    clk.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;\n    clk.AHBCLKDivider = RCC_SYSCLK_DIV1;\n    clk.APB1CLKDivider = RCC_HCLK_DIV2;\n    clk.APB2CLKDivider = RCC_HCLK_DIV1;\n    if (HAL_RCC_ClockConfig(&clk, FLASH_LATENCY_2) != HAL_OK) Error_Handler();\n}\n\nstatic void MX_GPIO_Init(void) {\n    GPIO_InitTypeDef GPIO_InitStruct = {0};\n    __HAL_RCC_GPIOA_CLK_ENABLE();\n    GPIO_InitStruct.Pin = GPIO_PIN_9;\n    GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;\n    GPIO_InitStruct.Pull = GPIO_NOPULL;\n    GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;\n    GPIO_InitStruct.Alternate = GPIO_AF7_USART1;\n    HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);\n    GPIO_InitStruct.Pin = GPIO_PIN_10;\n    GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;\n    GPIO_InitStruct.Pull = GPIO_NOPULL;\n    GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;\n    GPIO_InitStruct.Alternate = GPIO_AF7_USART1;\n    HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);\n    HAL_NVIC_SetPriority(USART1_IRQn, 0, 0);\n    HAL_NVIC_EnableIRQ(USART1_IRQn);\n}\n\nstatic void MX_USART1_UART_Init(void) {\n    __HAL_RCC_USART1_CLK_ENABLE();\n    huart1.Instance = USART1;\n    huart1.Init.BaudRate = 9600;\n    huart1.Init.WordLength = UART_WORDLENGTH_8B;\n    huart1.Init.StopBits = UART_STOPBITS_1;\n    huart1.Init.Parity = UART_PARITY_NONE;\n    huart1.Init.Mode = UART_MODE_TX_RX;\n    huart1.Init.HwFlowCtl = UART_HWCONTROL_NONE;\n    huart1.Init.OverSampling = UART_OVERSAMPLING_16;\n    HAL_UART_Init(&huart1);\n}\n\nvoid HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart) {\n    UNUSED(huart);\n    echo[echoHead % 64] = rx[0];\n    echoHead++;\n    HAL_UART_Receive_IT(huart, rx, 1);\n}\n\nint __io_putchar(int ch) {\n    ITM_SendChar(ch);\n    return ch;\n}\n\nvoid Error_Handler(void) {\n    __disable_irq();\n    while (1) {\n    }\n}\n",
+ "simulation": {
+  "stepMs": 1,
+  "pwmWaveform": false
+ },
+ "surfaces": {
+  "breadboard": {
+   "x": 498.83,
+   "y": 141.5
+  }
+ }
+}

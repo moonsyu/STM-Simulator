@@ -15,7 +15,7 @@ import {F1_FAMILY,portExampleToF1,portMcu} from './example-port.js';
 import {ADVANCED_EXAMPLES,ADVANCED_GUIDES,advancedExample} from './advanced-examples.js';
 
 export const HAL_EXAMPLES={...CATALOG_EXAMPLES,...BASIC_EXAMPLES,...L298_EXAMPLES,...BUZZER_EXAMPLES,...DEVICE_EXAMPLES,...TIMER_EXAMPLES,blink:'HAL · GPIO LED',button:'HAL · GPIO 버튼 입력',exti:'HAL · USER 버튼 EXTI',uart:'HAL · USART2 내장 터미널 (ST-LINK VCP)',uart_external:'HAL · 외부 UART 장치 배선 연습',timer:'HAL · TIM2 주기 인터럽트',adc:'HAL · ADC 입력',temperature:'HAL · TMP36 온도',samples:'HAL · ADC 배열 샘플링',i2c:'HAL · I²C 메모리',spi:'HAL · SPI 메모리',language:'HAL · 함수·배열·구조체',pwm:'HAL · TIM2 PWM',ultrasonic:'HAL · 초음파 거리 측정'};
-export const HAL_GUIDES={...CATALOG_GUIDES,...BASIC_GUIDES,...L298_GUIDES,...BUZZER_GUIDES,...DEVICE_GUIDES,...TIMER_GUIDES,blink:'PA5 → 330 Ω → LED → GND · 500 ms 점멸',button:'PA10 입력(PULLUP)–버튼–GND · 누르는 동안 PA5 LED 점등',exti:'보드 USER(PC13) → EXTI15_10_IRQn · 누를 때마다 PA5 LED 전환',uart:'USART2 PA2(TX)/PA3(RX), 9600 baud · 별도 부품·배선 없이 하단 직렬 모니터 탭 ST-LINK VCP에서 송수신·인터럽트 에코',uart_external:'VCC→3V3, GND→GND, 장치 TX→PA3(RX), 장치 RX→PA2(TX), 9600 baud · 하단 직렬 모니터 탭에서 외부 UART 장치 → USART2 선택',timer:'TIM2 100 ms 인터럽트 · PA5 → 330 Ω → LED → GND',adc:'3V3–10 kΩ–PA0–10 kΩ–GND · 약 1.65 V, ADC 2048',temperature:'TMP36 VOUT→PA0, VCC→3V3, GND · 센서 속성에서 온도 조절',samples:'PA0에 연결된 10 kΩ / 10 kΩ 분압 · HAL polling으로 8개 값을 배열에 저장',i2c:'I2C1 PB8(SCL)/PB9(SDA) · 주소 0x50 메모리, 3V3/GND와 모듈 내부 10 kΩ 풀업',spi:'SPI1 PA5(SCK)/PA6(MISO)/PA7(MOSI), PB6(CS) · 3V3/GND 메모리',language:'외부 부품 없이 printf 로그로 평균값 확인',pwm:'TIM2 CH1 PA5 → 1 kΩ / 10 µF RC 필터 → PA0 · 100 Hz, 50%; PWM 파형 자동 활성화',ultrasonic:'HC-SR04 TRIG→PC7, ECHO→1 kΩ / 2 kΩ 분압→PA9, 5V/GND · TIM2 1 MHz, 0.1 ms 폴링'};
+export const HAL_GUIDES={...CATALOG_GUIDES,...BASIC_GUIDES,...L298_GUIDES,...BUZZER_GUIDES,...DEVICE_GUIDES,...TIMER_GUIDES,blink:'PA5 → 330 Ω → LED → GND · 500 ms 점멸',button:'PA10 입력(PULLUP)–버튼–GND · 누르는 동안 PA5 LED 점등',exti:'보드 USER(PC13) → EXTI15_10_IRQn · 누를 때마다 PA5 LED 전환',uart:'USART2 PA2(TX)/PA3(RX), 9600 baud · 별도 부품·배선 없이 하단 직렬 모니터 탭 ST-LINK VCP에서 송수신·인터럽트 에코',uart_external:'VCC→3V3, GND→GND, 장치 TX→PA10(D2, USART1 RX), 장치 RX→PA9(D8, USART1 TX), 9600 baud · 하단 직렬 모니터 탭에서 외부 UART 장치 → USART1 선택 · PA2/PA3(D1/D0)은 보드 기본 상태(SB62/SB63 열림)에서 ST-LINK 가상 COM 전용',timer:'TIM2 100 ms 인터럽트 · PA5 → 330 Ω → LED → GND',adc:'3V3–10 kΩ–PA0–10 kΩ–GND · 약 1.65 V, ADC 2048',temperature:'TMP36 VOUT→PA0, VCC→3V3, GND · 센서 속성에서 온도 조절',samples:'PA0에 연결된 10 kΩ / 10 kΩ 분압 · HAL polling으로 8개 값을 배열에 저장',i2c:'I2C1 PB8(SCL)/PB9(SDA) · 주소 0x50 메모리, 3V3/GND와 모듈 내부 10 kΩ 풀업',spi:'SPI1 PA5(SCK)/PA6(MISO)/PA7(MOSI), PB6(CS) · 3V3/GND 메모리',language:'외부 부품 없이 printf 로그로 평균값 확인',pwm:'TIM2 CH1 PA5 → 1 kΩ / 10 µF RC 필터 → PA0 · 100 Hz, 50%; PWM 파형 자동 활성화',ultrasonic:'HC-SR04 TRIG→PC7, ECHO→1 kΩ / 2 kΩ 분압→PA9, 5V/GND · TIM2 1 MHz, 0.1 ms 폴링'};
 const pin=(fn,pull='NOPULL',label='')=>({function:fn,pull,label,edge:'FALLING',initial:0});
 // HAL_EXAMPLES keeps the historical menu; the interpreter examples (DMA/NVIC/USART/camera/SD/noise) are added here.
 // Examples that rely on simulator-provided middleware (FatFs) and do not build with the bare ST HAL.
@@ -36,7 +36,9 @@ export function halExample(kind){
   const m=p.mcu;
   if(kind==='exti'){m.pins.PC13=pin('GPIO_EXTI','PULLUP','B1');m.nvic.EXTI15_10_IRQn={enabled:true,priority:0};}
   if(kind==='button')m.pins.PA10=pin('GPIO_Input','PULLUP','BUTTON');
-  if(kind==='uart'){m.pins.PA2=pin('USART2_TX');m.pins.PA3=pin('USART2_RX');m.peripherals.USART2={enabled:true,baud:9600};m.nvic.USART2_IRQn={enabled:true,priority:0};}
+  // An external UART device uses USART1 (D8/D2): PA2/PA3 reach only the ST-LINK VCP while SB62/SB63 are open.
+  const usart=exampleId==='uart_external'?{id:'USART1',tx:'PA9',rx:'PA10'}:{id:'USART2',tx:'PA2',rx:'PA3'},handle='huart'+usart.id.slice(-1);
+  if(kind==='uart'){m.pins[usart.tx]=pin(usart.id+'_TX');m.pins[usart.rx]=pin(usart.id+'_RX');m.peripherals[usart.id]={enabled:true,baud:9600};m.nvic[usart.id+'_IRQn']={enabled:true,priority:0};}
   if(kind==='timer'){m.peripherals.TIM2={enabled:true,prescaler:8399,period:999};m.nvic.TIM2_IRQn={enabled:true,priority:0};}
   if(['adc','temperature','samples'].includes(kind)){m.pins.PA0=pin('ADC1_IN0');m.peripherals.ADC1={enabled:true};}
   if(kind==='i2c'){m.pins.PB8=pin('I2C1_SCL');m.pins.PB9=pin('I2C1_SDA');m.peripherals.I2C1={enabled:true,clock:100000};}
@@ -54,8 +56,8 @@ export function halExample(kind){
   if(kind==='uart'){
     // The interrupt only queues each byte; the loop echoes them. A Transmit_IT from the callback would return BUSY
     // (and drop the byte) while the previous echo is still being sent.
-    p.code='uint8_t rx[1];\nvolatile uint8_t echo[64];\nvolatile uint32_t echoHead = 0, echoTail = 0;\n'+p.code;user(2,'  uint8_t message[] = "HAL UART ready\\r\\n";\n  HAL_UART_Transmit(&huart2, message, sizeof(message)-1, 100);\n  HAL_UART_Receive_IT(&huart2, rx, 1);');
-    user(3,'    while (echoTail != echoHead) {\n      uint8_t c = echo[echoTail % 64];\n      echoTail++;\n      HAL_UART_Transmit(&huart2, &c, 1, 10);\n    }\n    HAL_Delay(1);');
+    p.code='uint8_t rx[1];\nvolatile uint8_t echo[64];\nvolatile uint32_t echoHead = 0, echoTail = 0;\n'+p.code;user(2,'  uint8_t message[] = "HAL UART ready\\r\\n";\n  HAL_UART_Transmit(&'+handle+', message, sizeof(message)-1, 100);\n  HAL_UART_Receive_IT(&'+handle+', rx, 1);');
+    user(3,'    while (echoTail != echoHead) {\n      uint8_t c = echo[echoTail % 64];\n      echoTail++;\n      HAL_UART_Transmit(&'+handle+', &c, 1, 10);\n    }\n    HAL_Delay(1);');
     p.code=p.code.replace('  /* HAL_UART_Receive_IT() 수신 완료 */','  echo[echoHead % 64] = rx[0];\n  echoHead++;\n  HAL_UART_Receive_IT(huart, rx, 1);');
   }
   if(['adc','temperature'].includes(kind))user(3,'    HAL_ADC_Start(&hadc1);\n    HAL_ADC_PollForConversion(&hadc1, 10);\n    uint32_t value = HAL_ADC_GetValue(&hadc1);\n'+(kind==='temperature'?'    float celsius = (value * 3.3 / 4095 - 0.5) * 100;\n    printf("TMP36=%.1f C\\n", celsius);':'    printf("%lu\\n", value);')+'\n    HAL_Delay(500);');

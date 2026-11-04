@@ -216,7 +216,7 @@ export function applyDeviceExample(original,target,options={}){
  const sample=recipeFor(type,projectBoard(project).id);if(sample.mcu.timerClockHz!==project.mcu.timerClockHz&&/^ref_rgb_(neopixel|gravity)/.test(type)){if(Object.keys(project.mcu.pins).length||project.deviceDocs?.bindings.length)throw new Error('이 장치의 비트 타이밍에는 '+sample.mcu.timerClockHz+' Hz 클록이 필요합니다. Pinout의 클록을 맞춰 주세요.');project.mcu.timerClockHz=sample.mcu.timerClockHz;project.code=project.code.replace(cFunctions(project.code).find(f=>f.name==='SystemClock_Config')?.text||'__no_clock__',cFunctions(generateHal(project.mcu)).find(f=>f.name==='SystemClock_Config')?.text||'');}
  const busPin=(p,label)=>partTerminal(p.id,terminalKeys(p).find(k=>terminalLabel(p,k)===label));
  const key=component?.id||'surface_'+type;project.deviceDocs??={bindings:[]};
- if(['uart','rs485'].includes(CATALOG_BY_TYPE[type]?.family||type)&&component?.baud)sample.mcu.peripherals.USART2.baud=component.baud;
+ if(['uart','rs485'].includes(CATALOG_BY_TYPE[type]?.family||type)&&component?.baud)sample.mcu.peripherals.USART1.baud=component.baud;
  cleanOldFiles(project);
  project.deviceDocs.bindings.forEach((b,i)=>{b.slot??=i;});
  const prior=project.deviceDocs.bindings.find(b=>b.key===key);

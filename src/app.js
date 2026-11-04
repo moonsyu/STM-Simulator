@@ -188,7 +188,7 @@ state.deviceDocs=setupDeviceDocs({getProject:()=>state.project,getSelection:()=>
  let applied;try{applied=applyDeviceExample(state.project,target,options);}catch(error){diagnostic('docs.failed',{target,options,message:error.message},true);throw error;}
  checkpoint();state.project=applied.project;state.sourceFile=applied.file;state.runtime=null;state.session=null;state.status='stopped';syncEditor();changed();fitView();
  diagnostic('docs.applied',{target,binding:applied.binding,report:applied.report},true);
- if(applied.action!=='remove'&&(applied.binding.type==='uart'||CATALOG_BY_TYPE[applied.binding.type]?.family==='uart')){const id=applied.binding.peripherals.USART2;$('serial-target').value=id==='USART2'?'USART2:external':id;}
+ if(applied.action!=='remove'&&(applied.binding.type==='uart'||CATALOG_BY_TYPE[applied.binding.type]?.family==='uart')){const id=applied.binding.peripherals.USART1;$('serial-target').value=id==='USART2'?'USART2:external':id;}
  state.ide.invalidate();return applied;
 }});
 const logicAnalyzer=setupLogicAnalyzer({getSession:()=>state.session,getProject:()=>state.project,isRunning:()=>state.status==='running',log,onNoise:noise=>{checkpoint();state.project.simulation={...(state.project.simulation||{}),noise};autosave();}});

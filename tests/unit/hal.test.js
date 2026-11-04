@@ -85,9 +85,9 @@ describe('UART',()=>{
   test('external UART example only accepts input when powered, wired and baud-matched',()=>{
     const {session}=start('uart_external');run(session,30);
     assert.match(session.buses.received.get('demo'),/HAL UART ready/);
-    assert.equal(session.inject('ext','USART2:external'),3);run(session,60);assert.match(session.buses.received.get('demo'),/ext$/);
+    assert.equal(session.inject('ext','USART1'),3);run(session,60);assert.match(session.buses.received.get('demo'),/ext$/);
     const bad=applyHalExample(blankProject(),'uart_external');bad.components[0].baud=115200;
-    const s=new SimulationSession(bad);run(s,30);assert.equal(s.inject('bad','USART2:external'),0);
+    const s=new SimulationSession(bad);run(s,30);assert.equal(s.inject('bad','USART1'),0);
   });
 });
 

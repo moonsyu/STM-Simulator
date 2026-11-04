@@ -30,7 +30,7 @@ export function configureHalCircuit(project,kind){
     applyMount(part,findMount(part));project.components.push(part);
     const terminal=n=>'part:demo:p'+n;
     power(terminal(1),kind==='ultrasonic'?'5V':'3V3');power(terminal(kind==='temperature'?3:kind==='ultrasonic'?4:2),'GND');
-    if(kind==='uart'){wire(terminal(3),boardPin('PA3'),'#8064d8');wire(boardPin('PA2'),terminal(4));}
+    if(kind==='uart'){wire(terminal(3),boardPin('PA10'),'#8064d8');wire(boardPin('PA9'),terminal(4));}
     if(kind==='i2c'){wire(boardPin('PB9'),terminal(3),'#8064d8');wire(boardPin('PB8'),terminal(4));}
     if(kind==='spi')for(const [n,pin]of [[3,'PB6'],[4,'PA5'],[5,'PA7'],[6,'PA6']])wire(boardPin(pin),terminal(n));
     if(kind==='temperature')wire(terminal(2),boardPin('PA0'),'#8064d8');

@@ -54,8 +54,8 @@ void tmByte(uint8_t value){for(uint32_t bit=0;bit<8;bit++){tmClock(0);tmData(val
   return finish('',`uint8_t phases[4]={${bipolar?'5,6,10,9':'1,2,4,8'}};for(uint32_t phase=0;phase<4;phase++){for(uint32_t n=0;n<4;n++)HAL_GPIO_WritePin(GPIOB,1U<<(n+3),(phases[phase]&(1U<<n))?GPIO_PIN_SET:GPIO_PIN_RESET);HAL_Delay(8);}`);
  }
  if(id==='isolated-rs485'){
-  power(4,3);pin('PA2','USART2_TX');pin('PA3','USART2_RX');p.mcu.peripherals.USART2={enabled:true,baud:9600};connect(1,'PA2');connect(2,'PA3');
-  return finish('',`uint8_t bytes[5]={'S','T','M','\\r','\\n'};HAL_UART_Transmit(&huart2,bytes,5,100);HAL_Delay(500);`);
+  power(4,3);pin('PA9','USART1_TX');pin('PA10','USART1_RX');p.mcu.peripherals.USART1={enabled:true,baud:9600};connect(1,'PA9');connect(2,'PA10');
+  return finish('',`uint8_t bytes[5]={'S','T','M','\\r','\\n'};HAL_UART_Transmit(&huart1,bytes,5,100);HAL_Delay(500);`);
  }
  if(id==='sd-storage-board'){
   power(1,8);spi(6,7,5,2);pin('PC7','GPIO_Input','PULLUP');connect(9,'PC7');p.mcu.peripherals.SPI1.clock=250000;
