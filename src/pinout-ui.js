@@ -4,6 +4,9 @@ import {GPIO_PINS} from './pins.js';
 import {MODES,ROUTES,defaultMcu,validateMcu,configProblems,pinFunctions,irqForPin,IRQ_NAMES,generateHal,USART_CK_ROUTES,DMA_MODES,DMA_PRIORITIES,dmaPeripheral,dmaDirection} from './mcu-config.js';
 import {DMA_REQUESTS} from './hal-dma.js';
 import {expandC} from './c-format.js';
+import {keepUserCode} from './c-source-edit.js';
+// What the project's current settings generate: sections still equal to it were never edited.
+const previousDefault=mcu=>{try{return expandC(generateHal(mcu));}catch{return '';}};
 import {isSerial,serialAf,serialFunction,assignSerialPin,setSerialEnabled} from './serial-config.js';
 import {familyProfile,routesOf,irqNamesOf} from './mcu-family.js';
 import {dmaRequestsOf} from './mcu-config.js';
@@ -39,7 +42,7 @@ export class PinoutPanel {
     $('pinout-dialog').querySelector('footer > span').textContent=`HAL GPIO · UART/USART ${Object.keys(fam.serial).length}개 · ${['I2C1','SPI1','ADC1'].filter(id=>fam.extra[id]).join(' · ').replace('I2C','I²C')} · TIM${Object.keys(fam.timers).map(t=>t.slice(3)).join('/')}`;
     this.render();$('pinout-dialog').showModal();}
   sync(){if(!$('pin-function'))return;this.draft.pins[this.pin]={function:$('pin-function').value,pull:$('pin-pull').value,edge:$('pin-edge').value,initial:Number($('pin-level').value),label:$('pin-label').value.trim()};}
-  commit(generate){try{this.sync();for(const el of $('pinout-dialog').querySelectorAll('input[type="number"]'))if(!Number.isFinite(numberInput(el)))throw new Error(`${el.getAttribute('aria-label')||(el.id==='timer-clock'?'APB1 타이머 입력 클록':'숫자 설정')}: 숫자를 입력하세요.`);const mcu=validateMcu(this.draft),code=generate?expandC(generateHal(mcu)):null;this.apply({mcu,code});$('pinout-dialog').close();}catch(e){$('pinout-errors').textContent=e.message;this.onError(e.message);}}
+  commit(generate){try{this.sync();for(const el of $('pinout-dialog').querySelectorAll('input[type="number"]'))if(!Number.isFinite(numberInput(el)))throw new Error(`${el.getAttribute('aria-label')||(el.id==='timer-clock'?'APB1 타이머 입력 클록':'숫자 설정')}: 숫자를 입력하세요.`);const mcu=validateMcu(this.draft),code=generate?keepUserCode(this.getProject().code,expandC(generateHal(mcu)),previousDefault(this.getProject().mcu)):null;this.apply({mcu,code});$('pinout-dialog').close();}catch(e){$('pinout-errors').textContent=e.message;this.onError(e.message);}}
   // DMA requests of the enabled peripherals: stream/channel, direction, normal/circular, priority.
   dmaCard(config){
     const requestsOf=dmaRequestsOf(config.family),f1=familyProfile(config.family).pinMux==='remap',enabled=id=>id===null||config.peripherals[id]?.enabled,requests=Object.keys(requestsOf).filter(r=>enabled(dmaPeripheral(r)));

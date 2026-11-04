@@ -33,7 +33,7 @@ export function clockPlanF1(hz){
 }
 export function generateMain(config,{minimal=false}={}){
   const family=familyProfile(config.family),f1=family.pinMux==='remap';
-  const clock=f1?clockPlanF1(config.timerClockHz):clockPlan(config.timerClockHz),pins=Object.entries(config.pins).filter(([,p])=>!['Reset','Reserved'].includes(p.function)),irqs=Object.entries(config.nvic).filter(([,p])=>p.enabled),gpioInit=!minimal||pins.length>0||irqs.length>0,lines=['#include "main.h"',...(minimal?[]:['#include <stdio.h>']),'',
+  const clock=f1?clockPlanF1(config.timerClockHz):clockPlan(config.timerClockHz),pins=Object.entries(config.pins).filter(([,p])=>!['Reset','Reserved'].includes(p.function)),irqs=Object.entries(config.nvic).filter(([,p])=>p.enabled),gpioInit=!minimal||pins.length>0||irqs.length>0,lines=['#include "main.h"',...(minimal?[]:['#include <stdio.h>']),'/* USER CODE BEGIN Includes */','/* USER CODE END Includes */','',
     `/* Copy this main.c into a CubeIDE ${family.id} project with matching`,
     ' * pin / peripheral / NVIC settings and Cube-generated IRQ / MSP files.',
     ' * Clock: '+(clock.source==='HSI'?'HSI direct (PLL off)':'HSI PLL')+', APB1 timer clock = '+config.timerClockHz+' Hz.',
@@ -45,7 +45,7 @@ export function generateMain(config,{minimal=false}={}){
   for(const [id]of active){const [type,name]=handles[id];lines.push(`${type}_HandleTypeDef ${name};`);}
   for(const [request]of dma)lines.push(`DMA_HandleTypeDef ${dmaHandle(request)};`);
   const initName=id=>id==='SDIO'?'MX_SDIO_SD_Init':`MX_${id}${isSerial(id)&&!sync(id)?'_UART':''}_Init`;
-  lines.push('','void SystemClock_Config(void);','void Error_Handler(void);',...(gpioInit?['static void MX_GPIO_Init(void);']:[]),...(dma.length?['static void MX_DMA_Init(void);']:[]),...active.map(([id])=>`static void ${initName(id)}(void);`),'',
+  lines.push('/* USER CODE BEGIN PV */','/* USER CODE END PV */','','void SystemClock_Config(void);','void Error_Handler(void);',...(gpioInit?['static void MX_GPIO_Init(void);']:[]),...(dma.length?['static void MX_DMA_Init(void);']:[]),...active.map(([id])=>`static void ${initName(id)}(void);`),'','/* USER CODE BEGIN 0 */','/* USER CODE END 0 */','',
     'int main(void) {','  HAL_Init();','  SystemClock_Config();',...(gpioInit?['  MX_GPIO_Init();']:[]),...(dma.length?['  MX_DMA_Init();']:[]),...active.map(([id])=>`  ${initName(id)}();`),'  /* USER CODE BEGIN 2 */');
   if(!minimal)for(const [id,p]of timers){const h=handles[id][1];
     if(p.mode==='encoder')lines.push(`  HAL_TIM_Encoder_Start(&${h}, TIM_CHANNEL_ALL);`);
@@ -127,11 +127,11 @@ export function generateMain(config,{minimal=false}={}){
     for(const [request,d]of dma)if(dmaOwner(request)===id){const h=dmaHandle(request);lines.push(...dmaLines(h,request,d,f1),`  __HAL_LINKDMA(&${name}, ${dmaLink(request)}, ${h});`);}
     lines.push('}');
   }
-  if(!minimal&&pins.some(([,p])=>p.function==='GPIO_EXTI'))lines.push('','void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {','  UNUSED(GPIO_Pin);','  /* 핀 번호에 따라 인터럽트 처리를 작성하세요. */','}');
-  if(!minimal&&serials.length)lines.push('','void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart) {','  UNUSED(huart);','  /* HAL_UART_Receive_IT() 수신 완료 */','}');
-  if(!minimal&&timers.length)lines.push('','void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {','  UNUSED(htim);','  /* 타이머 주기 인터럽트 */','}');
-  if(!minimal&&timers.some(([,p])=>p.mode==='capture'))lines.push('','void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim) {','  UNUSED(htim);','  /* Read HAL_TIM_ReadCapturedValue(htim, TIM_CHANNEL_1). */','}');
+  if(!minimal&&pins.some(([,p])=>p.function==='GPIO_EXTI'))lines.push('','void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {','  UNUSED(GPIO_Pin);','  /* USER CODE BEGIN EXTI_Callback */','  /* 핀 번호에 따라 인터럽트 처리를 작성하세요. */','  /* USER CODE END EXTI_Callback */','}');
+  if(!minimal&&serials.length)lines.push('','void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart) {','  UNUSED(huart);','  /* USER CODE BEGIN UART_RxCplt */','  /* HAL_UART_Receive_IT() 수신 완료 */','  /* USER CODE END UART_RxCplt */','}');
+  if(!minimal&&timers.length)lines.push('','void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {','  UNUSED(htim);','  /* USER CODE BEGIN TIM_PeriodElapsed */','  /* 타이머 주기 인터럽트 */','  /* USER CODE END TIM_PeriodElapsed */','}');
+  if(!minimal&&timers.some(([,p])=>p.mode==='capture'))lines.push('','void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim) {','  UNUSED(htim);','  /* USER CODE BEGIN TIM_IC_Capture */','  /* Read HAL_TIM_ReadCapturedValue(htim, TIM_CHANNEL_1). */','  /* USER CODE END TIM_IC_Capture */','}');
   if(!minimal)lines.push('','int __io_putchar(int ch) {','  ITM_SendChar(ch);','  return ch;','}');
-  lines.push('','void Error_Handler(void) {','  __disable_irq();','  while (1) { }','}');
+  lines.push('','/* USER CODE BEGIN 4 */','/* USER CODE END 4 */','','void Error_Handler(void) {','  __disable_irq();','  while (1) { }','}');
   return lines.join('\n')+'\n';
 }

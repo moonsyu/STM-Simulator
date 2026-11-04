@@ -20,4 +20,22 @@ export function insertMainHooks(source){
  return '#include "stm_device_docs.h"\n'+source;
 }
 export function replaceIdentifiers(source,mapping){return source.replace(/\/\*[\s\S]*?\*\/|\/\/[^\n]*|"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|\b[A-Za-z_]\w*\b/g,token=>mapping[token]||token);}
+// Regenerating main.c the CubeMX way: the text of every `/* USER CODE BEGIN x */ … /* USER CODE END x */` section of the
+// previous source replaces that section of the new one. A section the new source no longer has (a callback of a peripheral
+// that was turned off) is kept under #if 0 at the end of section 4, so no user code is lost. `previousDefault`, the source
+// the previous settings generate, marks sections the user never changed: those take the new generated text (the "HAL ready"
+// message of a UART that was turned off is not kept).
+const USER_SECTION=/(\/\* USER CODE BEGIN (.+?) \*\/)([\s\S]*?)(\/\* USER CODE END \2 \*\/)/g;
+export function keepUserCode(previous,generated,previousDefault=''){
+ const flat=text=>text.replace(/\s+/g,' ').trim(),untouched=new Map();for(const m of String(previousDefault).matchAll(USER_SECTION))if(!untouched.has(m[2]))untouched.set(m[2],flat(m[3]));
+ const old=new Map();for(const m of String(previous||'').matchAll(USER_SECTION))if(!old.has(m[2])&&untouched.get(m[2])!==flat(m[3]))old.set(m[2],m[3]);
+ const used=new Set();
+ let out=generated.replace(USER_SECTION,(all,begin,tag,body,end)=>{if(!old.has(tag)||used.has(tag))return all;used.add(tag);return begin+old.get(tag)+end;});
+ const orphans=[...old].filter(([tag,body])=>!used.has(tag)&&body.trim());
+ if(orphans.length){
+  const kept=orphans.map(([tag,body])=>`/* USER CODE ${tag}: 새 코드에 이 구간이 없어 보관합니다. */\n#if 0\n${body.replace(/^\s*\n|\s+$/g,'')}\n#endif\n`).join('');
+  const at=out.lastIndexOf('/* USER CODE END 4 */');out=at>=0?out.slice(0,at)+kept+out.slice(at):out+'\n'+kept;
+ }
+ return out;
+}
 export function checksum(text){let h=2166136261;for(let i=0;i<text.length;i++)h=Math.imul(h^text.charCodeAt(i),16777619);return (h>>>0).toString(16);}
