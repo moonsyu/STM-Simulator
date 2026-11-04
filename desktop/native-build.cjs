@@ -156,7 +156,7 @@ __attribute__((weak)) int _kill(int pid, int sig) { (void)pid; (void)sig; errno=
 }
 async function build(plan,{signal,onOutput=()=>{}}={}){
   let output='';const write=text=>{output=(output+text).slice(-2000000);onOutput(text);};
-  async function run(exe,args){write(`> ${path.basename(exe)} ${args.map(a=>/\s/.test(a)?JSON.stringify(a):a).join(' ')}\n`);const r=await execute(exe,args,{cwd:plan.directory,signal,onOutput:write});if(r.code!==0){const error=new Error(`컴파일 또는 링크 실패 (종료 코드 ${r.code})`);error.diagnostics=diagnosticsFrom(output);throw error;}return r;}
+  async function run(exe,args){write(`> ${path.basename(exe)} ${args.map(a=>/\s/.test(a)?JSON.stringify(a):a).join(' ')}\n`);const r=await execute(exe,args,{cwd:plan.directory,signal,onOutput:write});if(r.code!==0){const diagnostics=diagnosticsFrom(output),first=diagnostics.find(d=>d.severity==='error');const error=new Error(`컴파일 또는 링크 실패 (종료 코드 ${r.code})${first?` · ${first.file}:${first.line}: ${first.message}`:''}`);error.diagnostics=diagnostics;throw error;}return r;}
   const version=await run(plan.gcc,['--version']);
   for(const unit of plan.units)await run(unit.arguments[0],unit.arguments.slice(1));
   const map=path.join(plan.directory,plan.target==='arm'?'firmware.map':'program.map');
