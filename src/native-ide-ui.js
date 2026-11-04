@@ -5,7 +5,7 @@ import {devboardModel,boardForFile,boardFileKey} from './devboards.js';
 import {$} from './common.js';
 const TOOL_LABELS={armGcc:'ARM GCC · arm-none-eabi-gcc.exe',armGdb:'ARM GDB · arm-none-eabi-gdb.exe',cube:'STM32CubeF4 SDK 폴더 · NUCLEO-F446RE',cubeF1:'STM32CubeF1 SDK 폴더 · NUCLEO-F103RB',hostGcc:'Windows GCC · gcc.exe',hostGdb:'Windows GDB · gdb.exe',clangd:'C/C++ 언어 서버 · clangd.exe',openocd:'ST-LINK 서버 · openocd.exe',arduinoCli:'ESP32 빌드·업로드 · arduino-cli.exe (Arduino IDE 2에 포함)',buildRoot:'빌드 작업 폴더 · 영문 경로 (선택)'};
 export function mountNativeChrome(){
- document.querySelector('.ide-toolbar').insertAdjacentHTML('afterbegin','<label class="native-target-label">실행 대상<select id="native-target" aria-label="실행 대상"><option value="simulator">시뮬레이터</option><option value="emulator">펌웨어 에뮬레이터</option><option value="arm" data-board-placeholder>실물 보드 (연결 안 됨)</option><option value="esp32">ESP32 보드 (연결 안 됨)</option><option value="host">Windows · C/C++</option></select></label><select id="native-config" aria-label="빌드 구성"><option>Debug</option><option>Release</option></select>');
+ document.querySelector('.ide-toolbar').insertAdjacentHTML('afterbegin','<label class="native-target-label">실행 대상<select id="native-target" aria-label="실행 대상"><option value="simulator">시뮬레이터</option><option value="emulator">펌웨어 에뮬레이터</option><option value="arm" data-board-placeholder>실물 보드 (연결 안 됨)</option><option value="esp32">ESP32 보드 (연결 안 됨)</option><option value="host">Windows · C/C++</option></select></label><select id="native-config" aria-label="빌드 구성"><option>Release</option><option>Debug</option></select>');
  document.querySelector('.ide-toolbar').insertAdjacentHTML('beforeend','<button id="native-tools">개발 도구</button><button id="native-connection" hidden>보드 연결</button>');
  $('build-panel').insertAdjacentHTML('afterbegin','<div class="native-build-actions" id="native-build-actions" hidden><button id="native-artifacts" disabled>빌드 폴더 열기</button><span id="native-artifact-list"></span></div>');
  document.querySelector('.editor-position').insertAdjacentHTML('beforeend','<button id="language-toggle" title="clangd 의미 분석 사용">clangd 꺼짐</button>');
@@ -58,7 +58,7 @@ export function setupNativeIde({o,editor,select,showMonitor,points,watches,toggl
   if(action==='stop'){await guard(()=>api.stop());state='idle';building=false;working=false;lastStop=null;editor.updateDebug(points(),null);lockUpdate();return true;}
   if(working)return true;working=true;lockUpdate();
   try{
-   if(action==='start'){state='starting';showMonitor('debug');if((o.stm32Runs?.()||[]).length>1)append('native-output',`디버그는 편집 중인 ${o.stm32Runs()[0].name}에만 연결합니다. 다른 STM32 보드는 실행(${'Ctrl+F5'})으로 기록하세요.\n`);await api.debug({text:text(),config:config(),connection,entry:true,breakpoints:points()});}
+   if(action==='start'){state='starting';showMonitor('debug');if((o.stm32Runs?.()||[]).length>1)append('native-output',`디버그는 편집 중인 ${o.stm32Runs()[0].name}에만 연결합니다. 다른 STM32 보드는 실행(${'Ctrl+F5'})으로 기록하세요.\n`);await api.debug({text:text(),config:{...config(),configuration:'Debug'},connection,entry:true,breakpoints:points()});}
    else if(action==='run'){
     if(state==='paused')await api.action('continue');else if(state==='running'){await api.stop();state='idle';}
     else {state='starting';showMonitor('native');const boards=o.stm32Runs?.()||[];
@@ -86,7 +86,8 @@ export function setupNativeIde({o,editor,select,showMonitor,points,watches,toggl
    $('watch-values').innerHTML=rows.map((r,index)=>`<div class="watch-row"><button data-native-watch="${index}" title="감시식 제거">${esc(r.expression)}</button><div>${esc(r.value)}</div></div>`).join('');for(const el of $('watch-values').querySelectorAll('button'))el.onclick=()=>{o.checkpoint();o.getProject().ide.watches.splice(Number(el.dataset.nativeWatch),1);o.saveLocal();void debugView();};
   }catch(e){if(state==='paused'&&current===sequence)$('debug-location').textContent=e.message;}
  }
- function sync(){const value=o.getProject().ide?.native||{target:'simulator',configuration:'Debug'};$('native-target').value=value.target;selectBoard();$('native-config').value=value.configuration;control();queueLanguage();}
+ // A project without its own setting builds Release; debugging always builds Debug (see 'start').
+ function sync(){const value=o.getProject().ide?.native||{target:'simulator',configuration:'Release'};$('native-target').value=value.target;selectBoard();$('native-config').value=value.configuration;control();queueLanguage();}
  // Results of the previous target's build (problems, ELF/map list, build folder) do not belong to the new one.
  function clearBuild(){$('build-errors').replaceChildren();$('native-artifact-list').textContent='';$('native-artifacts').disabled=true;$('build-output').textContent='';}
  // Each connected NUCLEO is its own run target: "NUCLEO-F446RE (COM5)". The pick is the ST-LINK serial OpenOCD uses.

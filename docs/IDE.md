@@ -388,7 +388,7 @@ GCC·binutils의 Windows 한글 경로 제한 때문에 컴파일러와 SDK는 �
 1. OpenOCD 자동 시작은 `interface/stlink.cfg`와 보드의 target(`target/stm32f4x.cfg` 또는 `target/stm32f1x.cfg`)을 사용하고 127.0.0.1:3333에서 GDB 연결을 받는다. ST-LINK가 여러 개 연결되어 있으면 STM32CubeProgrammer(STM32CubeIDE에 포함)의 보드 이름으로 프로젝트 보드의 ST-LINK를 고르고(`adapter serial`), 고를 수 없으면 **보드 연결**의 **ST-LINK 시리얼**을 입력하라고 알려 준다. USB 드라이버는 설치한 ST-LINK/OpenOCD 환경에서 준비되어 있어야 한다. STM32CubeIDE에 들어 있는 OpenOCD(ST 빌드)를 쓰면 CubeIDE의 `st_scripts` 폴더를 `-s`로 지정하고 `interface/stlink-dap.cfg`(`transport select dapdirect_swd`)로 연결한다.
 2. 외부 GDB 서버는 `host:port`로 연결한다. 예를 들어 이미 시작한 ST-LINK GDB Server 또는 OpenOCD를 사용할 수 있다. 외부 서버가 대상을 정지·초기화한 상태여야 한다.
 3. **디버그 시작(F10) 때 빌드한 펌웨어를 보드에 기록**은 기본 켜짐이다. 켜면 GDB `load`로 보드의 기존 펌웨어를 교체한다. 끄면 보드에 현재 ELF와 같은 펌웨어가 이미 있어야 소스·주소가 일치한다.
-4. **디버그 시작**은 Debug 구성을 사용하고 main에서 멈춘다. **실행**(Ctrl+F5)은 OpenOCD 자동 시작일 때 CubeIDE의 Run처럼 새 빌드를 항상 기록·검증하고 리셋한 뒤 OpenOCD를 끝내 디버거를 분리한다. 보드는 단독으로 실행하며, 디버거가 계속 붙어 있지 않으므로 ST-LINK 통신 LED(LD1)가 계속 깜빡이지 않는다. 변수·중단점이 필요하면 **디버그 시작**을 쓴다. 외부 GDB 서버 연결에서는 GDB로 연결한 채 실행한다. ARM 대상도 연결된 보드 또는 외부 GDB 대상이 있어야 실행된다.
+4. **디버그 시작**은 선택한 빌드 구성과 관계없이 Debug 구성으로 빌드하고 main에서 멈춘다. 빌드 구성의 기본값은 Release다(1.12.3). **실행**(Ctrl+F5)은 OpenOCD 자동 시작일 때 CubeIDE의 Run처럼 새 빌드를 항상 기록·검증하고 리셋한 뒤 OpenOCD를 끝내 디버거를 분리한다. 보드는 단독으로 실행하며, 디버거가 계속 붙어 있지 않으므로 ST-LINK 통신 LED(LD1)가 계속 깜빡이지 않는다. 변수·중단점이 필요하면 **디버그 시작**을 쓴다. 외부 GDB 서버 연결에서는 GDB로 연결한 채 실행한다. ARM 대상도 연결된 보드 또는 외부 GDB 대상이 있어야 실행된다.
 
 **newlib 시스템 함수**: ARM 빌드는 STM32CubeIDE의 `syscalls.c`처럼 `_read`·`_close`·`_fstat`·`_isatty`·`_lseek`·`_getpid`·`_kill`을 약한 정의(weak)로 넣는다(`_read`는 `__io_getchar()`를 부른다). 그래서 빌드마다 나오던 "_close is not implemented" 링커 경고가 없고, 프로젝트에 직접 만든 `syscalls.c`가 있으면 그쪽이 쓰인다.
 
