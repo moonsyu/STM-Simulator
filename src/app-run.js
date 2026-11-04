@@ -28,7 +28,7 @@ export function initializeRuntime({debug=false,entry=false}={}){
  const program=boardOnly?compile(BOARD_ONLY_PROGRAM):emulate?null:state.ide?.build({reveal:false});if(!boardOnly&&!emulate&&state.ide&&!program){state.status='error';state.runtime=null;state.session=null;layout.showPanel('build');return false;}
  try{state.simTime=0;state.pressed={};state.lastWarnings='';state.result=null;monitor.clear();uartLines.clear();const options={debug:debug?{entry,breakpoints:state.ide?.breakpoints()||[]}:undefined,print:s=>log(s,'serial'),uart:logUart,trace:event=>monitor.trace(event),channels:monitor.channels()};
   state.session=emulate?new FirmwareSession(state.project,{...options,elf:state.firmware.bytes}):new SimulationSession(boardOnly?{...state.project,code:BOARD_ONLY_PROGRAM,firmware:{mode:'sketch',files:[]}}:state.project,{...options,program});state.runtime=state.session.runtime;state.status='paused';state.pending=null;state.mode='select';// The start line comes before what the program prints in its first tick.
-  log(boardOnly?'다른 보드만 실행합니다. STM32 코드는 실행하지 않습니다.':emulate?`펌웨어 에뮬레이터를 시작했습니다 · ${state.firmware.name} · ${projectBoard(state.project).mcu} (${projectBoard(state.project).core}) 명령어 실행`:state.project.firmware?.mode==='hal'?'HAL 프로그램을 시작했습니다.':'스케치를 시작했습니다.');
+  log(boardOnly?'다른 보드만 실행합니다. STM32 코드는 실행하지 않습니다.':emulate?`${state.ide?.gccSimulation?.()?'시뮬레이터(ARM GCC 빌드)를 시작했습니다':'펌웨어 에뮬레이터를 시작했습니다'} · ${state.firmware.name} · ${projectBoard(state.project).mcu} (${projectBoard(state.project).core}) 명령어 실행`:state.project.firmware?.mode==='hal'?'HAL 프로그램을 시작했습니다.':'스케치를 시작했습니다.');
   state.session.circuit.drivers=scope==='stm32'?[]:[...createBoardDrivers(state.project,{log:s=>log(s,'serial'),scope}),...createStm32Drivers(state.project,{scope,emulate:!!state.ide?.emulator(),elfs:state.boardElfs,log:s=>log(s,'serial'),trace:event=>monitor.trace(event)})];state.session.buses.boards=()=>state.session.circuit.drivers;connectStm32Drivers(state.session);state.result=state.session.tick(0);for(const p of state.project.components)if(isCamera(p))void applyCameraImage(p,state.session);diagnostic('simulation.started',{debug,entry},true);state.ide?.debugView();return true;}
  catch(e){state.runtime=null;state.result=state.session?.viewResult??null;state.status='error';log(e.message,'error');return false;}
 }
@@ -52,6 +52,9 @@ export function stop(){recordSimulation();try{const before=JSON.stringify(state.
 export function cancelStart(){state.starting=false;state.startToken++;window.nativeIde?.stop?.().catch(()=>{});log('펌웨어 빌드를 취소했습니다.');refresh();}
 export async function startRun(options){
  if(state.starting)return false;
+ // The simulator builds with ARM GCC like the real board: missing tools are installed first (or the run falls back to
+ // the built-in interpreter, or is cancelled).
+ if(state.ide?.gccSimulation?.()&&!running()){state.starting=true;refresh();let tools;try{tools=await state.ide.ensureSimTools();}catch(error){log(error.message,'error');tools='cancel';}finally{state.starting=false;refresh();}if(tools==='cancel')return false;}
  if(state.ide?.emulator()&&(!boardOnlyRun()||runStm32().length)){const token=++state.startToken;state.starting=true;refresh();try{if(!boardOnlyRun())await ensureFirmware();await ensureBoardFirmware();}catch(error){if(token===state.startToken){log(error.message,'error');feedback.show('펌웨어를 준비하지 못했습니다. 빌드 탭의 오류를 확인하거나 ELF 파일을 여세요.','firmware');}return false;}finally{if(token===state.startToken)state.starting=false;}if(token!==state.startToken)return false;}
  if(running())return false;const ok=initializeRuntime(options);if(ok)state.status=state.runtime.debug.paused?'paused':'running';refresh();if(ok)state.ide?.debugView();return ok;
 }

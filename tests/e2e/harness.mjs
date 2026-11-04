@@ -7,7 +7,7 @@ import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 export const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'../..');
 // Windows stay hidden and dark (CIRCUIT_LAB_TEST_BACKGROUND) so a run does not cover the screen; E2E_SHOW=1 shows them.
-export async function launch({profile,env={},size={width:1600,height:900},toolsNotice=false}={}){
+export async function launch({profile,env={},size={width:1600,height:900},toolsNotice=false,simEngine='interpreter'}={}){
  const dir=profile||await mkdtemp(path.join(tmpdir(),'stm-e2e-'));
  const args=[...(process.platform==='linux'?['--no-sandbox']:[]),root];
  const app=await _electron.launch({executablePath:electronPath,args,colorScheme:'dark',env:{...process.env,CIRCUIT_LAB_TEST_PROFILE:dir,CIRCUIT_LAB_TEST_BOARDS:'[]',CIRCUIT_LAB_TEST_BACKGROUND:process.env.E2E_SHOW==='1'?'0':'1',...env}});
@@ -19,6 +19,8 @@ export async function launch({profile,env={},size={width:1600,height:900},toolsN
  await win.waitForFunction(()=>document.getElementById('status-left')?.children.length>0);
  // The start-up 'missing tools' notice (shown 3 s after start) would cover controls; only its own test turns it on.
  if(!toolsNotice)await win.evaluate(()=>localStorage.setItem('stm32lab.toolsNotice.v1','never'));
+ // The simulator engine: tests use the built-in interpreter (fast, no tools) unless they ask for ARM GCC.
+ await win.evaluate(engine=>{localStorage.setItem('stm32lab.simEngine',engine);},simEngine);
  return {app,win,profile:dir,errors,async close({keep=false}={}){await app.close().catch(()=>{});if(!keep&&!profile)await rm(dir,{recursive:true,force:true}).catch(()=>{});}};
 }
 export const visible=(win,selector)=>win.locator(selector).first().isVisible();

@@ -6,13 +6,14 @@ import {$} from './common.js';
 import {projectBoard} from './boards.js';
 const TOOL_LABELS={armGcc:'ARM GCC · arm-none-eabi-gcc.exe',armGdb:'ARM GDB · arm-none-eabi-gdb.exe',cube:'STM32CubeF4 SDK 폴더 · NUCLEO-F446RE',cubeF1:'STM32CubeF1 SDK 폴더 · NUCLEO-F103RB',hostGcc:'Windows GCC · gcc.exe',hostGdb:'Windows GDB · gdb.exe',clangd:'C/C++ 언어 서버 · clangd.exe',openocd:'ST-LINK 서버 · openocd.exe',arduinoCli:'ESP32 빌드·업로드 · arduino-cli.exe (Arduino IDE 2에 포함)',buildRoot:'빌드 작업 폴더 · 영문 경로 (선택)'};
 export function mountNativeChrome(){
- document.querySelector('.ide-toolbar').insertAdjacentHTML('afterbegin','<label class="native-target-label">실행 대상<select id="native-target" aria-label="실행 대상"><option value="simulator">시뮬레이터</option><option value="emulator">펌웨어 에뮬레이터</option><option value="arm" data-board-placeholder>실물 보드 (연결 안 됨)</option><option value="esp32">ESP32 보드 (연결 안 됨)</option><option value="host">Windows · C/C++</option></select></label><select id="native-config" aria-label="빌드 구성"><option>Release</option><option>Debug</option></select>');
+ document.querySelector('.ide-toolbar').insertAdjacentHTML('afterbegin','<label class="native-target-label">실행 대상<select id="native-target" aria-label="실행 대상"><option value="simulator">시뮬레이터</option><option value="emulator">펌웨어 에뮬레이터</option><option value="arm" data-board-placeholder>실물 보드 (연결 안 됨)</option><option value="esp32">ESP32 보드 (연결 안 됨)</option><option value="host">Windows · C/C++</option></select></label><select id="native-config" aria-label="빌드 구성"><option>Release</option><option>Debug</option></select><select id="sim-engine" aria-label="시뮬레이터 실행 방식" title="ARM GCC 빌드: 실물 보드와 같은 컴파일러·헤더·C 라이브러리로 빌드해 회로에서 실행 · 내장 해석기: 빠르지만 지원하는 헤더와 함수만"><option value="gcc">ARM GCC 빌드</option><option value="interpreter">내장 해석기</option></select>');
  document.querySelector('.ide-toolbar').insertAdjacentHTML('beforeend','<button id="native-tools">개발 도구</button><button id="native-connection" hidden>보드 연결</button>');
  $('build-panel').insertAdjacentHTML('afterbegin','<div class="native-build-actions" id="native-build-actions" hidden><button id="native-artifacts" disabled>빌드 폴더 열기</button><span id="native-artifact-list"></span></div>');
  document.querySelector('.editor-position').insertAdjacentHTML('beforeend','<button id="language-toggle" title="clangd 의미 분석 사용">clangd 꺼짐</button>');
  document.querySelector('.monitor-tabs').insertAdjacentHTML('beforeend','<button data-monitor="native">터미널</button>');
  document.querySelector('.console').insertAdjacentHTML('beforeend','<section id="native-panel" hidden><div class="native-terminal-tools"><button id="terminal-start">터미널 시작</button><button id="terminal-close" disabled>터미널 종료</button><button id="native-output-clear">화면 지우기</button><span id="terminal-status">Windows 명령 프롬프트</span></div><pre id="native-output" aria-label="실행 및 터미널 출력" tabindex="0"></pre><form id="native-input-form"><select id="native-input-target" aria-label="입력 대상"><option value="terminal">터미널 명령</option><option value="program">실행 프로그램 stdin · ESP32 직렬</option></select><input id="native-input" aria-label="명령 또는 프로그램 입력" autocomplete="off" placeholder="명령을 입력하고 Enter"><button>보내기</button></form></section>');
  $('debug-panel').insertAdjacentHTML('beforeend','<details id="native-debug-details" hidden><summary>CPU 레지스터 · 메모리</summary><div class="native-inspection"><section><h3>레지스터</h3><table><tbody id="native-registers"></tbody></table></section><section><h3>메모리</h3><form id="native-memory-form"><input id="native-memory-address" value="0x20000000" aria-label="메모리 주소"><input id="native-memory-count" type="number" value="128" min="1" max="4096" aria-label="읽을 바이트 수"><button>읽기</button></form><pre id="native-memory-output"></pre></section></div></details>');
+ document.body.insertAdjacentHTML('beforeend',`<dialog id="sim-tools-dialog" aria-labelledby="sim-tools-title"><div class="ide-form"><h2 id="sim-tools-title">시뮬레이터 실행 도구 설치</h2><p class="form-hint">시뮬레이터는 실물 보드와 같은 ARM GCC로 빌드해 회로에서 실행합니다. 그래서 실물처럼 모든 헤더(<code>#include</code>)와 C 라이브러리 함수를 쓸 수 있습니다. 이 PC에는 아래 도구가 없어 설치가 필요합니다.</p><div class="native-install"><ul id="sim-tools-plan"></ul><p id="sim-tools-status" class="form-hint" role="status"></p></div><p class="form-hint">설치 위치: %LOCALAPPDATA%\\STM-Simulator-Tools · 고정된 버전을 받아 SHA-256으로 검증합니다. 설치하지 않으면 내장 C 해석기로 실행합니다(지원하는 헤더와 함수만). 실행 및 디버그의 시뮬레이터 실행 방식에서 언제든 바꿀 수 있습니다.</p><div class="dialog-actions"><button type="button" id="sim-tools-cancel">취소</button><button type="button" id="sim-tools-interpreter">내장 해석기로 실행</button><button type="button" id="sim-tools-install" class="run-button">설치하고 실행</button></div></div></dialog>`);
  document.body.insertAdjacentHTML('beforeend',`<dialog id="native-tools-dialog" aria-labelledby="native-tools-title"><form id="native-tools-form" class="ide-form"><h2 id="native-tools-title">개발 도구 설정</h2><p class="form-hint">ARM 빌드에는 ARM GCC와 보드에 맞는 STM32Cube SDK(F446RE는 STM32CubeF4, F103RB는 STM32CubeF1)가 필요합니다. 실제 보드 디버깅에는 ARM GDB와 ST-LINK 서버를 연결하세요. ESP32 보드는 Arduino CLI와 Arduino IDE 보드 매니저의 esp32 패키지로 빌드·업로드합니다. Windows C/C++는 GCC·GDB, 의미 분석은 clangd를 사용합니다.</p><div class="native-tool-paths">${Object.entries(TOOL_LABELS).map(([key,label])=>`<label>${label}<div class="folder-field"><input id="tool-${key}" autocomplete="off"><button type="button" data-tool-pick="${key}">찾기</button></div><span id="tool-result-${key}" class="form-hint"></span></label>`).join('')}</div><section id="native-install" class="native-install" hidden aria-labelledby="native-install-title"><h3 id="native-install-title">필요한 도구 설치</h3><ul id="native-install-plan"></ul><p id="native-install-status" class="form-hint" role="status"></p><p class="form-hint">설치 위치: %LOCALAPPDATA%\\STM-Simulator-Tools · 고정된 버전을 받아 SHA-256으로 검증합니다. ARM GCC를 받으면 압축을 푼 뒤 약 1.5 GB를 사용합니다. ST-LINK USB 드라이버(ST STSW-LINK009)는 별도로 설치해야 할 수 있습니다.</p><div class="dialog-actions"><button type="button" id="native-install-cancel">취소</button><button type="button" id="native-install-start" class="run-button">설치 시작</button></div></section><p id="native-tools-error" class="form-error" role="alert"></p><div class="dialog-actions"><button type="button" id="native-tools-install">필요한 도구 설치</button><button type="button" id="native-tools-detect">자동 검색</button><button type="button" id="native-tools-probe">저장 후 검사</button><button type="button" id="native-tools-cancel">닫기</button><button class="run-button">저장</button></div></form></dialog><dialog id="native-connection-dialog" aria-labelledby="native-connection-title"><form id="native-connection-form" class="ide-form"><h2 id="native-connection-title">STM32 디버그 연결</h2><label>GDB 서버<select id="native-server"><option value="openocd">OpenOCD 자동 시작 · ST-LINK</option><option value="remote">실행 중인 GDB 서버에 연결</option></select></label><label>서버 주소<input id="native-endpoint" value="127.0.0.1:3333" spellcheck="false"></label><label>ST-LINK 시리얼 (선택)<input id="native-serial" placeholder="여러 보드를 연결했을 때만" spellcheck="false" autocomplete="off"></label><label class="native-check"><input id="native-flash" type="checkbox">디버그 시작(F10) 때 빌드한 펌웨어를 보드에 기록</label><p class="form-hint">프로젝트 보드(NUCLEO-F446RE 또는 NUCLEO-F103RB)의 ST-LINK를 USB로 연결하세요. 여러 보드가 연결되어 있으면 보드 이름으로 ST-LINK를 고르고, 고를 수 없으면 시리얼을 물어봅니다. 실행(Ctrl+F5)은 항상 새 빌드를 보드에 기록·검증하고 리셋한 뒤 디버거를 분리합니다. 기록 옵션은 디버그 시작에만 적용되며, 끄면 보드에 이미 있는 펌웨어에 연결만 합니다. 외부 서버 연결은 서버에서 보드를 먼저 정지시켜 주세요.</p><p id="native-connection-error" class="form-error" role="alert"></p><div class="dialog-actions"><button type="button" id="native-connection-cancel">취소</button><button class="run-button">적용</button></div></form></dialog>`);
  $('new-project-template').insertAdjacentHTML('beforeend','<option value="native-host">Windows C/C++ · 콘솔 프로그램</option>');
 }
@@ -20,7 +21,13 @@ export function setupNativeIde({o,editor,select,showMonitor,points,watches,toggl
  const api=window.nativeIde;let state='idle',building=false,working=false,lastStop=null,frame=0,sequence=0,language=false,languageTimer,languageQueued=false,languageRunning=false,languageReady=false,breakpointStates=[];
  let connection={server:'openocd',endpoint:'127.0.0.1:3333',flash:true};try{connection={...connection,...JSON.parse(localStorage.getItem('stm32lab.debugConnection')||'{}')};}catch{}
  // 'emulator' builds with ARM GCC but runs the ELF in the renderer, so GDB/run flows stay off.
- const emulator=()=>$('native-target').value==='emulator';
+ // Simulator engine 'gcc' (the default): a HAL program is built with the board's ARM GCC like a real-board build (every
+ // header and C library function) and runs on the firmware emulator in the circuit. 'interpreter' is the built-in C
+ // interpreter; it also runs sketches and FatFs programs (the installed tools have no FatFs).
+ const ENGINE_KEY='stm32lab.simEngine',FATFS=/#\s*include\s*[<"](?:ff|fatfs|ff_gen_drv|diskio|sd_diskio|user_diskio|bsp_driver_sd|fatfs_platform)\.h[>"]/;
+ const engine=()=>{try{return localStorage.getItem(ENGINE_KEY)==='interpreter'?'interpreter':'gcc';}catch{return 'gcc';}},setEngine=value=>{try{localStorage.setItem(ENGINE_KEY,value);}catch{}};
+ function gccSimulation(){if(!api||$('native-target').value!=='simulator'||engine()!=='gcc')return false;const p=o.getProject();return p.firmware?.mode==='hal'&&![p.code||'',...(p.firmware.files||[]).map(f=>f.text)].some(text=>FATFS.test(text));}
+ const emulator=()=>$('native-target').value==='emulator'||gccSimulation();
  const selected=()=>!['simulator','emulator'].includes($('native-target').value),config=()=>({target:$('native-target').value,configuration:$('native-config').value}),text=()=>JSON.stringify(o.getProject());
  const busy=()=>working||building||['starting','running','paused','finishing'].includes(state);
  // ESP32 run target: the sketch.ino of the ESP32 board being edited (or the circuit's first ESP32 board) is compiled
@@ -33,6 +40,7 @@ export function setupNativeIde({o,editor,select,showMonitor,points,watches,toggl
  async function guard(task){try{return await task();}catch(e){report(e);return null;}}
  function control(){
   const native=selected(),locked=busy(),paused=state==='paused';
+  $('sim-engine').hidden=!api||$('native-target').value!=='simulator';$('sim-engine').value=engine();$('sim-engine').disabled=locked||o.isSimulationRunning();
   $('native-config').hidden=!native&&!emulator()||esp32();$('native-connection').hidden=config().target!=='arm';$('native-build-actions').hidden=!native;$('native-debug-details').hidden=!native&&!emulator()||esp32();
   document.querySelector('.firmware-tools').hidden=native&&['host','esp32'].includes(config().target);
   $('sound').hidden=$('step').hidden=native;
@@ -122,11 +130,12 @@ export function setupNativeIde({o,editor,select,showMonitor,points,watches,toggl
  function change(){pickBoard();o.getProject().ide??={breakpoints:[],watches:[]};o.getProject().ide.native=config();o.saveLocal();editor.diagnostics([]);clearBuild();editor.updateDebug(points(),null);
   // clangd serves only the ARM and Windows targets; its markers belong to the previous target's flags.
   editor.clearLanguageDiagnostics();if(language&&!gcc()){language=false;languageReady=false;$('language-toggle').textContent='clangd 꺼짐';void guard(()=>api['language-stop']());}
-  $('build-status').textContent=emulator()?'ARM GCC → 에뮬레이터 · 빌드 준비':esp32()?'Arduino CLI → ESP32 · 빌드 준비':selected()?`${config().target==='arm'?'ARM GCC':'Windows GCC'} · 빌드 준비`:'시뮬레이터용 빌드';$('new').disabled=$('open').disabled=$('workspace-open').disabled=false;o.refresh();queueLanguage();}
+  $('build-status').textContent=gccSimulation()?'ARM GCC → 시뮬레이터 · 빌드 준비':emulator()?'ARM GCC → 에뮬레이터 · 빌드 준비':esp32()?'Arduino CLI → ESP32 · 빌드 준비':selected()?`${config().target==='arm'?'ARM GCC':'Windows GCC'} · 빌드 준비`:'시뮬레이터용 빌드';$('new').disabled=$('open').disabled=$('workspace-open').disabled=false;o.refresh();queueLanguage();}
  function queueLanguage(){clearTimeout(languageTimer);if(!language||!gcc())return;languageTimer=setTimeout(()=>void updateLanguage(),500);}
  async function updateLanguage(){if(!language||!gcc())return;if(languageRunning){languageQueued=true;return;}languageRunning=true;try{await api.language(text(),config());languageReady=true;$('language-toggle').textContent='clangd 연결됨';}catch(e){languageReady=false;$('language-toggle').textContent='clangd 설정 필요';$('language-toggle').title=e.message;}finally{languageRunning=false;if(languageQueued){languageQueued=false;queueLanguage();}}}
  const lsp={enabled:()=>language&&languageReady&&gcc(),query:(method,file,position)=>api['language-query'](method,file,position)};editor.setLanguageService(lsp);
  $('native-target').onchange=change;
+ $('sim-engine').onchange=()=>{setEngine($('sim-engine').value);change();o.log($('sim-engine').value==='gcc'?'시뮬레이터는 ARM GCC로 빌드해 실행합니다(실물 보드와 같은 헤더·C 라이브러리).':'시뮬레이터는 내장 C 해석기로 실행합니다(지원하는 헤더와 함수만).');};
  // The title bar's run button carries the run target too: ▾ next to it lists the same targets as the select.
  const runToggle=document.createElement('button');runToggle.type='button';runToggle.id='run-target-toggle';runToggle.className='run-target-toggle';runToggle.textContent='▾';runToggle.setAttribute('aria-haspopup','menu');runToggle.setAttribute('aria-controls','run-target-menu');runToggle.setAttribute('aria-expanded','false');
  const runMenu=document.createElement('div');runMenu.id='run-target-menu';runMenu.className='workbench-popover run-target-menu';runMenu.setAttribute('popover','manual');runMenu.setAttribute('role','menu');runMenu.setAttribute('aria-label','실행 대상');document.body.append(runMenu);
@@ -154,7 +163,27 @@ export function setupNativeIde({o,editor,select,showMonitor,points,watches,toggl
  // 필요한 도구 설치: lists what is missing with download sizes first, downloads only after 설치 시작.
  const MB=n=>(n/1048576).toFixed(n<10485760?1:0)+' MB';
  let plan=[],installing=false;const progress={};
- const renderPlan=()=>{$('native-install-plan').innerHTML=plan.map(i=>`<li data-install="${i.id}"><span>${i.label}</span><small>${progress[i.id]||'약 '+MB(i.bytes)+' · '+i.source}</small></li>`).join('');};
+ const renderPlan=()=>{const html=plan.map(i=>`<li data-install="${i.id}"><span>${i.label}</span><small>${progress[i.id]||'약 '+MB(i.bytes)+' · '+i.source}</small></li>`).join('');$('native-install-plan').innerHTML=html;$('sim-tools-plan').innerHTML=html;};
+ // Before a simulator run with ARM GCC: the compiler and the board's STM32Cube SDK must be installed. Missing ones are
+ // offered for installation (the run goes on afterwards), or the run uses the built-in interpreter from now on.
+ // Resolves 'ready', 'interpreter' or 'cancel'.
+ async function ensureSimTools(){
+  const sdk=o.getProject().mcu?.family==='STM32F103RB'?'cubeF1':'cube',need=(await api['install-plan']()).filter(i=>i.id==='gcc'||i.id===sdk);
+  if(!need.length)return 'ready';
+  plan=need;for(const key of Object.keys(progress))delete progress[key];renderPlan();
+  const dialog=$('sim-tools-dialog'),buttons=['sim-tools-install','sim-tools-interpreter'].map($);
+  $('sim-tools-status').textContent=`${need.length}개 · 약 ${MB(need.reduce((n,i)=>n+i.bytes,0))}를 내려받습니다.`;buttons.forEach(b=>b.disabled=false);$('sim-tools-cancel').textContent='취소';
+  return new Promise(resolve=>{
+   const finish=value=>{dialog.close();resolve(value);};
+   $('sim-tools-install').onclick=()=>guard(async()=>{installing=true;buttons.forEach(b=>b.disabled=true);$('sim-tools-cancel').textContent='설치 중지';$('sim-tools-status').textContent='설치 중입니다. 끝나면 바로 실행합니다.';
+    try{await api['install-tools'](need.map(i=>i.id));o.log('시뮬레이터용 ARM GCC와 STM32Cube SDK를 설치했습니다.');finish('ready');}
+    catch(error){buttons.forEach(b=>b.disabled=false);$('sim-tools-status').textContent='설치하지 못했습니다: '+error.message;}finally{installing=false;$('sim-tools-cancel').textContent='취소';}});
+   $('sim-tools-interpreter').onclick=()=>{setEngine('interpreter');change();o.log('시뮬레이터는 내장 C 해석기로 실행합니다. 실행 및 디버그의 시뮬레이터 실행 방식에서 ARM GCC 빌드로 다시 바꿀 수 있습니다.');finish('interpreter');};
+   $('sim-tools-cancel').onclick=()=>{if(installing)void guard(()=>api['install-cancel']());else finish('cancel');};
+   dialog.oncancel=e=>{e.preventDefault();if(!installing)finish('cancel');};
+   dialog.showModal();$('sim-tools-install').focus();
+  });
+ }
  async function showInstall(){
   plan=await api['install-plan']();for(const key of Object.keys(progress))delete progress[key];
   $('native-install').hidden=false;$('native-install-cancel').textContent='닫기';$('native-install-start').hidden=!plan.length;$('native-install-start').disabled=false;renderPlan();
@@ -217,6 +246,6 @@ export function setupNativeIde({o,editor,select,showMonitor,points,watches,toggl
   if(event.type==='diagnostics'&&language&&gcc())editor.languageDiagnostics(event.file,event.items);
  });
  if(!api){for(const id of ['native-tools','native-target','language-toggle','terminal-start'])$(id).disabled=true;}
- return {selected,emulator,buildElf,config,busy,boards:()=>boards,paused:()=>selected()&&state==='paused',controls:control,sync,build,command,debugView,queueLanguage,async syncBreakpoints(){if(!['paused','running'].includes(state))return;await guard(()=>api.breakpoints(points()));},reset(){state='idle';lastStop=null;sequence++;editor.clearLanguageDiagnostics();clearBuild();sync();}};
+ return {selected,emulator,gccSimulation,ensureSimTools:()=>api?ensureSimTools():Promise.resolve('interpreter'),buildElf,config,busy,boards:()=>boards,paused:()=>selected()&&state==='paused',controls:control,sync,build,command,debugView,queueLanguage,async syncBreakpoints(){if(!['paused','running'].includes(state))return;await guard(()=>api.breakpoints(points()));},reset(){state='idle';lastStop=null;sequence++;editor.clearLanguageDiagnostics();clearBuild();sync();}};
 }
 function basename(value){return value.replaceAll('\\','/').split('/').at(-1);}

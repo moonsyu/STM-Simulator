@@ -134,7 +134,7 @@ function mountShell(layout,state,options,{apply,save,setPalette,setSettings}){
  const debugTitles=()=>{for(const [cmd,label,,id] of DEBUG_BUTTONS){const k=layout.keyFor(id);debugBar.querySelector(`[data-debug="${cmd}"]`).title=k?`${label} (${k})`:label;}};debugTitles();layout.onBindings(debugTitles);
  // The run target and build configuration live in the Run and Debug view.
  const runConfig=document.createElement('section');runConfig.className='run-config';runConfig.innerHTML='<h3>실행 환경</h3>';
- const targetLabel=document.querySelector('.native-target-label');if(targetLabel){[...targetLabel.childNodes].forEach(n=>{if(n.nodeType===3)n.remove();});runConfig.append(targetLabel);}if($('native-config'))runConfig.append($('native-config'));
+ const targetLabel=document.querySelector('.native-target-label');if(targetLabel){[...targetLabel.childNodes].forEach(n=>{if(n.nodeType===3)n.remove();});runConfig.append(targetLabel);}if($('native-config'))runConfig.append($('native-config'));if($('sim-engine'))runConfig.append($('sim-engine'));
  $('view-debug').prepend(runConfig,debugBar);
  const docs=$('device-docs-panel');if(docs){docs.hidden=false;$('view-docs').append(docs);}
  document.querySelector('[data-monitor="debug"]')?.remove();
