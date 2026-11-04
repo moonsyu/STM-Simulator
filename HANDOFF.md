@@ -586,7 +586,8 @@
 | `src/render.js`, `src/part-render.js`, `src/part-controls.js` | SVG·부품 속성/측정 |
 | `desktop/` | Electron·파일/폴더 가져오기·저장 IPC |
 | `tests/unit`, `tests/interp`, `tests/emu`, `tests/firmware`, `tests/e2e`, `tests/toolchain`, `tests/release` | 모델·에뮬레이터·실제 Electron UI·ARM 빌드·EXE 검증 |
-| `.github/workflows/build-windows.yml` | 모델/UI 테스트·Windows 빌드·Artifact |
+| `.github/workflows/build-windows.yml` | 병렬 작업: checks(정적 검사·단위·업데이트 도우미), firmware(ST HAL 예제 ARM 빌드·에뮬레이터), esp32(Arduino CLI 스케치, `.cache/arduino` 캐시), e2e 2묶음(측정한 시간으로 나눈 파일 목록, 2묶음은 나머지 전부), package(포터블 EXE·패키지 검사·Artifact) → 모두 통과하면 release |
+| `.github/actions/arm-toolchain` | ARM GCC 14.2.1과 STM32CubeF4/F1 드라이버 설치(firmware, e2e가 함께 씀) |
 
 GPIO 변경 전 `beforeChange`로 이전 출력의 시간 구간을 적분하고, 변경 후 `changed`로 같은 시점의 회로를 다시 계산한다. 같은 시간의 재측정에서 커패시터를 다시 충전하면 안 된다.
 
