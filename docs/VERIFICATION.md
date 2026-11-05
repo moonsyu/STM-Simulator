@@ -1,5 +1,9 @@
 # 검증 기록
 
+## 1.19.0 변수 그래프 (STM Studio 방식) — 게시 확인(API)
+
+2026-11-05. 태그·빌드 커밋 `d2f7b0f0dd2f288d395f0fd40c266724ad316257` · [Windows CI 41998317827](https://github.com/moonsyu/STM-Simulator/actions/runs/41998317827) 성공 · [Release v1.19.0](https://github.com/moonsyu/STM-Simulator/releases/tag/v1.19.0) latest, draft/prerelease 아님, 자산 5개(BUILD-INFO.json, SHA256.txt, STM-Simulator-1.19.0-Windows-x64.zip, STM-Simulator.exe 115,468,584 B, update-manifest.json). 파일은 내려받지 않고 API로만 확인했다. 푸시 전 로컬 패키지 검사 3개 통과(산출물 삭제). 로컬 검사: 단위·해석기·에뮬레이터 903개 중 902개 통과·1개 건너뜀, E2E 60개 중 59개 통과·1개 건너뜀(새 `variable-graph.e2e` 2개: 해석 실행 카운터, adc_dma ELF), ESLint 0건. 다크 모드 화면 캡처로 그래프가 패널 높이에 맞게 보이는지 확인했다.
+
 ## 1.18.3 보드 구성 초기화가 main.c도 초기화 — 게시 확인(API)
 
 2026-11-05. 태그·빌드 커밋 `853bf22ed26d3b861b680f3ef47bc32d5d9c1f6c` · [Windows CI 41995236579](https://github.com/moonsyu/STM-Simulator/actions/runs/41995236579) 성공 · [Release v1.18.3](https://github.com/moonsyu/STM-Simulator/releases/tag/v1.18.3) latest, draft/prerelease 아님, 자산 5개(BUILD-INFO.json, SHA256.txt, STM-Simulator-1.18.3-Windows-x64.zip, STM-Simulator.exe 115,465,947 B, update-manifest.json). 파일은 내려받지 않고 API로만 확인했다. 푸시 전 로컬 패키지 검사 3개 통과(산출물 삭제). 로컬 검사: 단위·해석기·에뮬레이터 896개 중 895개 통과·1개 건너뜀, E2E 58개 중 57개 통과·1개 건너뜀(새 `board-reset.e2e`), ESLint 0건.
