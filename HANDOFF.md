@@ -1,6 +1,12 @@
 # STM Simulator — 개발 인계
 
-현재 버전: **1.17.1**. 정리일: **2026-11-03**. NUCLEO-F446RE 또는 NUCLEO-F103RB와 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+현재 버전: **1.18.0**. 정리일: **2026-11-03**. NUCLEO-F446RE 또는 NUCLEO-F103RB와 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+
+## 1.18.0 System Core › SYS (Serial Wire · SysTick)
+
+- `pinout-ui.js`: System Core 카드의 NVIC 버튼 아래 `#sys-debug`(CubeMX Debug 모드 5가지 중 Serial Wire만 선택 가능), `#sys-timebase`(SysTick, 그 MCU의 TIMx는 비활성). 설정 값은 저장하지 않는다(보드가 SWD 고정, HAL 시간 SysTick 고정: 1.16.0의 `tickPriority`가 Time base 우선순위).
+- PA13/PA14가 Reset·Reserved이면 `sysSignal`로 `SYS_JTMS-SWDIO`/`SYS_JTCK-SWCLK` 타일(`.pin-tile.sys`), 핀 메뉴는 그 신호 하나와 안내만, 핀 설정은 읽기 전용 신호와 설명(동기화 대상 아님). 다른 기능 지정은 기존 `configProblems`가 막는다.
+- 남은 것: TIMx Timebase(HAL_InitTick를 TIM으로 바꾸는 생성 코드와 해석기·에뮬레이터 지원), Trace Asynchronous(PB3 SWO)·JTAG 모드. F103RB의 `__HAL_AFIO_REMAP_SWJ_NOJTAG()`는 여전히 PA15/PB3/PB4를 쓸 때만 생성한다(CubeMX는 Serial Wire면 HAL_MspInit에 항상 씀).
 
 ## 1.17.1 빌드 파일 읽기 전용 보기 (Core · Startup)
 

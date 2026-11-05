@@ -2,6 +2,12 @@
 
 작업할 때마다 날짜순으로 맨 위에 추가합니다. 무엇을 했는지, 왜 했는지, 어떻게 검증했는지, 커밋·릴리스와 남은 사항을 적습니다. 버전별 구조 설명은 [HANDOFF.md](../HANDOFF.md), 검증 수치는 [VERIFICATION.md](VERIFICATION.md)에 있습니다.
 
+## 2026-11-05 · 1.18.0 System Core › SYS (Debug Serial Wire · Timebase SysTick)
+
+- 요청: 수업 자료의 CubeMX System Core › SYS(Debug: Serial Wire, Timebase Source: SysTick)가 어디 있는지 물으셨고, 없다고 답하자 추가를 요청하셨다.
+- 한 것: Pinout System Core 카드에 SYS 설정을 넣었다(Debug Serial Wire, Timebase SysTick. 다른 모드는 보이지만 고를 수 없음). PA13·PA14 타일·핀 메뉴·핀 설정을 CubeMX처럼 SYS 신호로 보여 준다. 동작(SWD 핀 잠금, SysTick 시간)은 원래 같았다.
+- 검증: Pinout E2E에 SYS 값, PA13/PA14 표시, 잠긴 핀 메뉴 확인을 추가해 통과. 다크 모드 화면 캡처로 확인했다. 단위·해석기·에뮬레이터 893개 중 892개 통과·1개 건너뜀, E2E 55개 중 54개 통과·1개 건너뜀, ESLint 0건, 로컬 패키지 검사 3개 통과(산출물 삭제). 생성 코드는 바뀌지 않아 toolchain 검사는 생략했다.
+
 ## 2026-11-05 · 1.17.1 빌드 파일(it.c·syscalls.c·sysmem.c·system·startup) 읽기 전용 보기
 
 - 요청: CubeIDE의 stm32f1xx_it.c, syscalls.c, sysmem.c, system_stm32f1xx.c도 열리는지 물으셨고, 열리지 않는 셋을 읽기 전용으로 보이게, startup 파일도 넣어 달라고 하셨다.
