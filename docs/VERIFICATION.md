@@ -1,5 +1,9 @@
 # 검증 기록
 
+## 1.18.3 보드 구성 초기화가 main.c도 초기화 — 게시 확인(API)
+
+2026-11-05. 태그·빌드 커밋 `853bf22ed26d3b861b680f3ef47bc32d5d9c1f6c` · [Windows CI 41995236579](https://github.com/moonsyu/STM-Simulator/actions/runs/41995236579) 성공 · [Release v1.18.3](https://github.com/moonsyu/STM-Simulator/releases/tag/v1.18.3) latest, draft/prerelease 아님, 자산 5개(BUILD-INFO.json, SHA256.txt, STM-Simulator-1.18.3-Windows-x64.zip, STM-Simulator.exe 115,465,947 B, update-manifest.json). 파일은 내려받지 않고 API로만 확인했다. 푸시 전 로컬 패키지 검사 3개 통과(산출물 삭제). 로컬 검사: 단위·해석기·에뮬레이터 896개 중 895개 통과·1개 건너뜀, E2E 58개 중 57개 통과·1개 건너뜀(새 `board-reset.e2e`), ESLint 0건.
+
 ## 1.18.2 SDK 이름 자동완성 — 게시 확인(API)
 
 2026-11-05. 태그·빌드 커밋 `06dee04deca5ca049b4e1c7756cc0a36cbddfb0f` · [Windows CI 41975694054](https://github.com/moonsyu/STM-Simulator/actions/runs/41975694054) 성공(약 5분, 작업 7개 모두 성공) · [Release v1.18.2](https://github.com/moonsyu/STM-Simulator/releases/tag/v1.18.2) latest, draft/prerelease 아님, 자산 5개(BUILD-INFO.json, SHA256.txt, STM-Simulator-1.18.2-Windows-x64.zip, STM-Simulator.exe 115,511,505 B, update-manifest.json). 파일은 내려받지 않고 API로만 확인했다. 푸시 전 로컬 패키지 검사 3개 통과(산출물 삭제). 로컬 검사: 단위·해석기·에뮬레이터 893개 중 892개 통과·1개 건너뜀, E2E 57개 중 56개 통과·1개 건너뜀, ESLint 0건.
