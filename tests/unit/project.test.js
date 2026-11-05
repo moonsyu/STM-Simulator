@@ -158,16 +158,20 @@ describe('code and board reset',()=>{
     const s=blankProject();s.firmware.mode='sketch';assert.equal(resetMainCode(s).code,'void setup() {\n}\n\nvoid loop() {\n}\n');
     const h=blankProject();h.ide={breakpoints:[],watches:[],native:{target:'host',configuration:'Debug'}};assert.equal(resetMainCode(h).code,'int main(void) {\n    return 0;\n}\n');
   });
-  test('resetBoardConfiguration clears circuit and pins but keeps code and files',()=>{
-    const p=ledCircuit();p.mcu.pins.PA5=pin('GPIO_Output');p.code='int main(void){return 0;}';p.firmware={mode:'hal',files:[{name:'a.c',text:''}]};
+  test('resetBoardConfiguration clears circuit and pins, resets main.c to the code of the default settings, keeps other files',()=>{
+    const p=ledCircuit();p.mcu.pins.PA5=pin('GPIO_Output');p.code='int main(void){return 0;}';p.firmware={mode:'hal',files:[{name:'a.c',text:'int a;'}]};
+    p.ide={breakpoints:[{file:'main.c',line:3},{file:'a.c',line:1}],watches:[]};
     const r=resetBoardConfiguration(p);
     assert.deepEqual(r.components,[]);assert.deepEqual(r.wires,[]);assert.deepEqual(r.mcu.pins,{});assert.deepEqual(r.surfaces,blankProject().surfaces);
-    assert.equal(r.code,p.code);assert.equal(r.firmware.files.length,1);assert.equal(p.components.length,2,'input untouched');
+    assert.equal(r.code,resetMainCode(blankProject()).code,'main.c as after 코드 초기화');assert.doesNotMatch(r.code,/GPIO_PIN_5/);
+    assert.deepEqual(r.firmware.files,[{name:'a.c',text:'int a;'}]);assert.deepEqual(r.ide.breakpoints.map(b=>b.file),['a.c'],'main.c breakpoints go with its code');
+    assert.equal(p.components.length,2,'input untouched');assert.equal(p.code,'int main(void){return 0;}');
   });
-  test('resetBoardConfiguration keeps the board: an F103RB project resets to F1 pin defaults',()=>{
-    const p=projectForBoard('nucleo-f103rb');p.components=ledCircuit().components;p.wires=ledCircuit().wires;
+  test('resetBoardConfiguration keeps the board: an F103RB project resets to F1 pin defaults and F1 main.c',()=>{
+    const p=projectForBoard('nucleo-f103rb');p.components=ledCircuit().components;p.wires=ledCircuit().wires;p.code='int main(void){for(;;);}';
     const r=resetBoardConfiguration(p);
     assert.equal(r.boardId,'nucleo-f103rb');assert.equal(r.mcu.family,'STM32F103RB');assert.deepEqual(r.components,[]);assert.deepEqual(r.wires,[]);
+    assert.equal(r.code,resetMainCode(projectForBoard('nucleo-f103rb')).code);assert.match(r.code,/STM32F103RB/);
   });
 });
 

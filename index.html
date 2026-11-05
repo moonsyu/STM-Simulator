@@ -34,7 +34,7 @@
    <section class="sidebar-view" data-view="board" id="view-board" aria-label="보드와 핀" hidden>
     <button id="board-open" class="board-card" aria-haspopup="dialog" title="보드 검색 및 선택"><span class="mini-chip">F4</span><span><strong id="current-board-name">NUCLEO-F446RE</strong><small>보드 검색 · 선택</small></span></button>
     <button id="pinout-open" class="pinout-open" title="Pinout &amp; Configuration (핀·주변장치·클록 설정)">Pinout &amp; Configuration</button>
-    <button id="board-reset" class="pinout-open" title="코드를 유지하고 회로와 보드 설정을 초기화합니다">보드 구성 초기화</button>
+    <button id="board-reset" class="pinout-open" title="회로·보드 설정과 main.c를 초기화합니다">보드 구성 초기화</button>
     <div class="pin-search"><label for="pin-search">보드 핀 검색</label><input id="pin-search" type="search" placeholder="PC 13, PA 8, D13…" autocomplete="off" spellcheck="false"><div id="pin-results" aria-live="polite"></div></div>
     <div class="devboard-add"><h3>다른 보드 추가</h3><p>STM32·ESP32·라즈베리파이 보드를 옆에 놓고 배선합니다. STM32 보드는 보드마다 코드·핀 설정을 따로 두고 함께 실행합니다. 강의 예제로 불러온 라즈베리파이는 고정 실행으로 동작합니다.</p><div id="devboard-options"></div></div>
    </section>
@@ -89,7 +89,7 @@ HAL_Delay(500);</pre></div><p class="help-limits">지원 HAL API와 장치별 �
 <dialog id="hal-replace-dialog"><h2>HAL 초기화 코드를 생성할까요?</h2><p>현재 코드를 설정에 맞는 main.c로 다시 생성합니다. <code>USER CODE BEGIN</code>~<code>END</code> 사이의 코드는 그대로 옮기고(새 코드에 없는 구간은 <code>#if 0</code>로 감싸 맨 아래에 보관), 그 밖의 코드는 새로 만듭니다. 기존 회로는 유지하며 Ctrl+Z로 되돌릴 수 있습니다.</p><div class="dialog-actions"><button id="hal-replace-cancel">취소</button><button id="hal-replace-confirm" class="run-button">코드 생성</button></div></dialog>
 
 
-<dialog id="board-reset-dialog" aria-labelledby="board-reset-title" aria-describedby="board-reset-description"><h2 id="board-reset-title">보드 구성을 초기화할까요?</h2><p id="board-reset-description">배치한 보드·빵판·부품과 배선을 제거하고 핀·주변장치 설정을 기본 상태로 되돌립니다. 코드와 다른 소스 파일은 유지합니다. Ctrl+Z로 되돌릴 수 있습니다.</p><p id="board-reset-error" role="alert"></p><div class="dialog-actions"><button id="board-reset-cancel" autofocus>취소</button><button id="board-reset-confirm" class="run-button">보드 구성 초기화</button></div></dialog>
+<dialog id="board-reset-dialog" aria-labelledby="board-reset-title" aria-describedby="board-reset-description"><h2 id="board-reset-title">보드 구성을 초기화할까요?</h2><p id="board-reset-description">배치한 보드·빵판·부품과 배선을 제거하고 핀·주변장치 설정을 기본 상태로 되돌립니다. main.c도 기본 설정의 초기 코드로 되돌립니다. 직접 추가한 다른 소스 파일은 유지합니다. Ctrl+Z로 되돌릴 수 있습니다.</p><p id="board-reset-error" role="alert"></p><div class="dialog-actions"><button id="board-reset-cancel" autofocus>취소</button><button id="board-reset-confirm" class="run-button">보드 구성 초기화</button></div></dialog>
 <input id="firmware-files" type="file" accept=".ioc,.c,.h" multiple hidden>
 <input id="file-input" type="file" accept=".stm32lab,.json" hidden>
 <script type="module" src="./src/app.js"></script>

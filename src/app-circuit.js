@@ -76,11 +76,11 @@ export function setWireColor(value){
 export function onBoardResetConfirmClick(){
  try{
   if(running())throw new Error('빌드·실행·디버그를 정지한 뒤 초기화하세요.');
-  const removedParts=state.project.components.length,removedWires=state.project.wires.length,next=resetBoardConfiguration(state.project);
-  checkpoint();state.project=next;state.runtime=null;state.session=null;state.result=null;state.status='stopped';state.simTime=0;state.pressed={};state.selection=null;state.pending=null;state.mode='select';state.searchSelectedId=null;
+  const removedParts=state.project.components.length,removedWires=state.project.wires.length,beforeLength=state.project.code.length,next=resetBoardConfiguration(state.project);
+  checkpoint();state.project=next;state.sourceFile='main.c';state.firmware=null;state.runtime=null;state.session=null;state.result=null;state.status='stopped';state.simTime=0;state.pressed={};state.selection=null;state.pending=null;state.mode='select';state.searchSelectedId=null;
   wireDraft.reset();$('preview-layer').innerHTML='';$('search-layer').innerHTML='';$('pin-search').value='';monitor.clear();uartLines.clear();
   syncEditor();pinSearch();changed();state.ide?.invalidate();fitView();
-  diagnostic('board.reset',{removedParts,removedWires,preservedCode:true},true);
-  $('board-reset-dialog').close();log('보드 구성을 초기화했습니다. 코드와 다른 소스 파일은 유지됩니다. Ctrl+Z로 되돌릴 수 있습니다.');
+  diagnostic('board.reset',{removedParts,removedWires,resetCode:true,beforeLength,afterLength:state.project.code.length},true);
+  $('board-reset-dialog').close();log('보드 구성과 main.c를 초기화했습니다. 다른 소스 파일은 유지됩니다. Ctrl+Z로 되돌릴 수 있습니다.');
  }catch(error){$('board-reset-error').textContent=error.message;}
 }
