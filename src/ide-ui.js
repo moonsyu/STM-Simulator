@@ -14,12 +14,16 @@ import {withKey} from './keybindings.js';
 import {setupCodeFormat} from './code-format-ui.js';
 import {mountNativeChrome,setupNativeIde} from './native-ide-ui.js';
 import {$} from './common.js';
+import {outlineLabel} from './c-symbols.js';
 export function mountIdeChrome(){
   const toolbar=document.createElement('nav');toolbar.className='ide-toolbar';toolbar.setAttribute('aria-label','빌드와 디버그');toolbar.innerHTML='<button id="ide-build" class="primary" title="시뮬레이터용 빌드">빌드</button><span class="toolbar-divider"></span><button id="debug-start" title="시작 위치에서 디버깅">디버그 시작</button><span id="build-status" role="status">시뮬레이터용 빌드</span>';
   document.querySelector('.topbar').after(toolbar);toolbar.prepend(document.querySelector('.run-tools'));
   const tree=document.createElement('section');tree.className='project-files';tree.innerHTML='<div class="project-files-title"><strong>소스 파일</strong><button id="source-add">파일 추가</button></div><nav id="file-tree" aria-label="프로젝트 파일"></nav><div class="file-tools"><button id="source-rename">이름 변경</button><button id="source-delete">삭제</button></div><div class="project-folder-note" id="workspace-path">미저장 프로젝트</div>';
   document.querySelector('.library').prepend(tree);
+  // CubeIDE's Outline: the structure of the file on screen (project or SDK); the file tree keeps the project files only.
+  const outline=document.createElement('section');outline.className='project-files outline-view';outline.innerHTML='<div class="project-files-title"><strong>코드 개요 (Outline)</strong><span id="outline-file"></span></div><input id="outline-filter" type="search" placeholder="개요 검색" aria-label="코드 개요 검색"><nav id="outline-list" aria-label="코드 개요"></nav>';tree.after(outline);
   const tabs=document.createElement('nav');tabs.className='source-tabs';tabs.id='source-tabs';tabs.setAttribute('aria-label','열린 소스');$('code-panel').prepend(tabs);
+  const sourcePath=document.createElement('div');sourcePath.id='source-path';sourcePath.className='source-path';sourcePath.hidden=true;tabs.after(sourcePath);
   const position=document.createElement('div');position.className='editor-position';position.innerHTML='<span id="cursor-position">줄 1, 열 1</span><span>UTF-8 · C/H · F9 중단점</span>';document.querySelector('.editor-wrap').after(position);
   document.querySelector('.monitor-tabs').insertAdjacentHTML('beforeend','<button data-monitor="build">빌드</button>');
   document.querySelector('.console').insertAdjacentHTML('beforeend','<section id="build-panel" hidden><div id="build-output">빌드하면 지원 문법을 검사하고 실행 프로그램을 준비합니다. ARM ELF/BIN 생성은 포함하지 않습니다.</div><div id="build-errors"></div></section><section id="debug-panel" hidden><div class="debug-location" id="debug-location">디버그 시작 또는 중단점을 설정한 뒤 실행하세요.</div><div class="debug-grid"><section><h3>지역 변수</h3><table><tbody id="debug-locals"></tbody></table><h3 style="margin-top:14px">전역 변수</h3><table><tbody id="debug-globals"></tbody></table></section><section><h3>감시식</h3><form class="watch-entry" id="watch-form"><input id="watch-expression" aria-label="감시식" placeholder="count 또는 values[0]" maxlength="250"><button>추가</button></form><div id="watch-values"></div></section><section><h3>호출 스택</h3><div id="debug-stack"></div><h3 style="margin-top:14px">중단점</h3><div id="debug-breakpoints"></div></section></div></section>');
@@ -28,12 +32,14 @@ export function mountIdeChrome(){
   document.body.insertAdjacentHTML('beforeend',`<dialog id="project-dialog" aria-labelledby="project-dialog-title"><form id="project-form" class="ide-form"><h2 id="project-dialog-title">새 STM32 프로젝트</h2><label>프로젝트 이름<input id="new-project-name" value="MyProject" maxlength="80" required autocomplete="off"></label><label>보드<select id="new-project-board">${BOARD_CATALOG.map(b=>`<option value="${b.id}"${b.id===START_BOARD_ID?' selected':''}>${b.name} · ${b.mcu}</option>`).join('')}</select></label><label>시작 템플릿<select id="new-project-template"><option value="blank">빈 HAL 프로젝트</option>${Object.entries(allHalExamples()).map(([k,v])=>`<option value="${k}">${esc(v)}</option>`).join('')}</select></label><label>저장할 상위 폴더<div class="folder-field"><input id="new-project-folder" readonly placeholder="선택하지 않으면 미저장 프로젝트"><button type="button" id="project-folder-choose">폴더 선택</button></div></label><p class="form-hint">프로젝트 폴더에는 회로·핀 설정과 main.c, 보조 C/H 소스를 함께 저장합니다. 기존 폴더는 덮어쓰지 않습니다.</p><p id="project-form-error" class="form-error" role="alert"></p><div class="dialog-actions"><button type="button" id="project-cancel">취소</button><button class="run-button" id="project-create">프로젝트 생성</button></div></form></dialog><dialog id="source-dialog" aria-labelledby="source-dialog-title"><form id="source-form" class="ide-form"><h2 id="source-dialog-title">소스 파일 추가</h2><label>파일 이름<input id="source-name" placeholder="user.c 또는 user.h" maxlength="76" required autocomplete="off"></label><p id="source-form-error" class="form-error" role="alert"></p><div class="dialog-actions"><button type="button" id="source-cancel">취소</button><button class="run-button">적용</button></div></form></dialog>`);
   mountNativeChrome();
 }
+// Outline marks and names (CubeIDE Outline icons: include, macro, typedef, enum, variable, function, prototype).
+const OUTLINE_KIND={include:['#','include'],macro:['M','매크로'],typedef:['T','typedef'],enum:['E','enum 상수'],variable:['V','전역 변수'],function:['F','함수'],declaration:['D','함수 선언']};
 export function setupIde(o){
   let folder='',fileAction='add',lastPause='',built=null,sourceKey='',native=null;
   const points=()=>o.getProject().ide?.breakpoints||[],watches=()=>o.getProject().ide?.watches||[];
   const settings=()=>o.getProject().ide??=( {breakpoints:[],watches:[]} );
-  const editor=createCodeEditor({textarea:$('code'),getFile:o.getSource,getFiles:()=>sourceFiles(o.getProject()),onBreakpoint:toggleBreakpoint,onBreakpointsMoved:(file,moved)=>{const unique=[...new Map(moved.map(b=>[b.line,b])).values()];settings().breakpoints=[...points().filter(b=>b.file!==file),...unique];o.saveLocal();debugView();},onPosition:p=>{$('cursor-position').textContent=`줄 ${p?.lineNumber||1}, 열 ${p?.column||1}`;}});
-  function select(file,line,column){o.selectSource(file);o.layout.reveal('code');document.querySelector('[data-tab="code"]').click();if(line)editor.goto(line,column);}
+  const editor=createCodeEditor({textarea:$('code'),getFile:o.getSource,getFiles:()=>sourceFiles(o.getProject()),onBreakpoint:toggleBreakpoint,onBreakpointsMoved:(file,moved)=>{const unique=[...new Map(moved.map(b=>[b.line,b])).values()];settings().breakpoints=[...points().filter(b=>b.file!==file),...unique];o.saveLocal();debugView();},onPosition:p=>{$('cursor-position').textContent=`줄 ${p?.lineNumber||1}, 열 ${p?.column||1}`;},getFamily:()=>o.getProject().mcu?.family||'STM32F446RE',onExternal:()=>tabsView()});
+  function select(file,line,column){editor.showProject();o.selectSource(file);o.layout.reveal('code');document.querySelector('[data-tab="code"]').click();if(line)editor.goto(line,column);}
   // The debug view lives in the side bar; every other monitor is a bottom-panel tab.
   function showMonitor(name){if(name==='debug'){o.layout.showView('debug');return;}o.layout.showPanel(name);}
   function toggleBreakpoint(file,line){if(!Number.isInteger(line)||line<1||isBoardFile(file))return;o.checkpoint();const p=settings(),i=p.breakpoints.findIndex(b=>b.file===file&&b.line===line);if(i<0)p.breakpoints.push({file,line});else p.breakpoints.splice(i,1);const r=o.getSession()?.runtime;if(r)r.debug.breakpoints=new Set(points().map(b=>`${b.file}:${b.line}`));o.saveLocal();native?.syncBreakpoints();debugView();}
@@ -43,11 +49,33 @@ export function setupIde(o){
     // Other boards' programs follow the STM32 sources, labelled with the board name.
     const boards=boardSourceFiles(o.getProject());
     $('file-tree').innerHTML=files.map(f=>`<button data-source="${esc(f.name)}" class="${f.name===active?'active':''}" title="${esc(f.name)}"><span class="file-kind">${f.name.endsWith('.h')?'H':'C'}</span><span class="file-label">${esc(f.name)}</span></button>`).join('')+boards.map(f=>`<button data-source="${esc(f.name)}" class="${f.name===active?'active':''}" title="${esc(f.label)}"><span class="file-kind">${f.name.endsWith('.py')?'PY':'INO'}</span><span class="file-label">${esc(f.label)}</span></button>`).join('');
-    $('source-tabs').innerHTML=[...files.map(f=>({name:f.name,label:f.name})),...boards].map(f=>`<button data-source="${esc(f.name)}" class="${f.name===active?'active':''}">${esc(f.label)}</button>`).join('');
-    for(const el of document.querySelectorAll('[data-source]'))el.onclick=()=>select(el.dataset.source);
+    for(const el of $('file-tree').querySelectorAll('[data-source]'))el.onclick=()=>select(el.dataset.source);tabsView();
     const wp=folder||'미저장 프로젝트';$('workspace-path').textContent=wp;$('workspace-path').title=wp;editor.reset();if(!native?.selected())editor.updateDebug(points(),o.getSession()?.runtime?.debug.paused?o.getSession().runtime.location:null);native?.sync();controls();if(!o.isRunning())debugView();
     if(focusSource&&focusContainer)[...$(focusContainer).querySelectorAll('[data-source]')].find(el=>el.dataset.source===focusSource)?.focus({preventScroll:true});
   }
+  // Open tabs: project files, other boards' programs, then SDK files opened by go to definition (read only, ×).
+  function tabsView(){
+    const files=sourceFiles(o.getProject()),boards=boardSourceFiles(o.getProject()),active=o.getSource(),ext=editor.externalFile(),base=f=>f.split('/').at(-1);
+    $('source-tabs').innerHTML=[...files.map(f=>({name:f.name,label:f.name})),...boards].map(f=>`<button data-source="${esc(f.name)}" class="${!ext&&f.name===active?'active':''}">${esc(f.label)}</button>`).join('')
+      +editor.externalFiles().map(f=>`<span class="source-tab-sdk${ext?.file===f.file?' active':''}"><button data-sdk-file="${esc(f.file)}" title="${esc(f.sdk+' › '+f.file)} · 읽기 전용">${esc(base(f.file))}</button><button class="source-tab-close" data-sdk-close="${esc(f.file)}" aria-label="${esc(base(f.file))} 닫기" title="닫기">×</button></span>`).join('');
+    for(const el of $('source-tabs').querySelectorAll('[data-source]'))el.onclick=()=>select(el.dataset.source);
+    for(const el of $('source-tabs').querySelectorAll('[data-sdk-file]'))el.onclick=()=>editor.showExternal(el.dataset.sdkFile);
+    for(const el of $('source-tabs').querySelectorAll('[data-sdk-close]'))el.onclick=e=>{e.stopPropagation();editor.closeExternal(el.dataset.sdkClose);};
+    // Where the file lives in the SDK (CubeIDE shows it in the title bar), like the Drivers folder of a Cube project.
+    $('source-path').hidden=!ext;$('code-panel').classList.toggle('sdk-open',!!ext);$('source-path').innerHTML=ext?`<span>${esc(ext.sdk)}</span>${ext.file.split('/').map(p=>`<span>${esc(p)}</span>`).join('')}<em>읽기 전용 · Alt+← 돌아가기</em>`:'';
+    outlineView();
+  }
+  let outlineTimer;
+  function outlineView(){
+    const ext=editor.externalFile(),q=$('outline-filter').value.trim().toLowerCase(),items=editor.outline().filter(s=>!q||s.name.toLowerCase().includes(q)),shown=items.slice(0,600);
+    $('outline-file').textContent=ext?ext.file.split('/').at(-1):o.getSource();
+    $('outline-list').innerHTML=shown.map(s=>`<button data-outline-line="${s.line}" data-outline-column="${s.column}" class="outline-${s.kind}" title="${esc(OUTLINE_KIND[s.kind]?.[1]||s.kind)} · ${s.line}행"><span class="outline-kind">${OUTLINE_KIND[s.kind]?.[0]||'?'}</span><span class="outline-label">${esc(outlineLabel(s))}</span></button>`).join('')
+      +(items.length>shown.length?`<p class="outline-more">외 ${items.length-shown.length}개 · 검색으로 좁히세요</p>`:items.length?'':'<p class="outline-more">항목 없음</p>');
+    for(const el of $('outline-list').querySelectorAll('[data-outline-line]'))el.onclick=()=>{o.layout.reveal('code');editor.goto(Number(el.dataset.outlineLine),Number(el.dataset.outlineColumn));};
+  }
+  $('outline-filter').oninput=outlineView;
+  editor.onContent(()=>{clearTimeout(outlineTimer);outlineTimer=setTimeout(outlineView,400);});
+  document.addEventListener('ide-notice',e=>o.log(e.detail,'error'));
   function controls(){const running=o.isRunning(),r=o.getSession()?.runtime,paused=!!r?.debug.paused;
     native?.controls();if(native?.selected())return;
     for(const id of ['source-add','source-rename','source-delete','ide-build','debug-start'])$(id).disabled=running;

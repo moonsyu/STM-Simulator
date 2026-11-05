@@ -126,6 +126,8 @@ function mountShell(layout,state,options,{apply,save,setPalette,setSettings}){
  // The project name is edited at the top of the explorer (the title bar keeps only the command search).
  const project=document.createElement('label');project.className='explorer-project';project.innerHTML='<span>프로젝트</span>';project.append($('project-name'));explorer.append(project);
  const files=document.querySelector('.project-files');if(files)explorer.append(files);
+ // The code Outline follows the source files (CubeIDE shows it beside the Project Explorer).
+ const outline=document.querySelector('.outline-view');if(outline)explorer.append(outline);
  explorer.insertAdjacentHTML('beforeend','<section class="explorer-outline"><h3>회로 개요</h3><p id="explorer-circuit-summary" class="form-hint"></p><div class="explorer-links"><button type="button" data-goto-view="parts">부품 추가</button><button type="button" data-goto-view="examples">예제</button><button type="button" data-goto-view="board">핀 설정</button></div></section>');
  const debug=$('debug-panel');if(debug){debug.hidden=false;$('view-debug').append(debug);}
  const debugBar=document.createElement('div');debugBar.className='debug-toolbar';debugBar.setAttribute('role','toolbar');debugBar.setAttribute('aria-label','디버그 제어');

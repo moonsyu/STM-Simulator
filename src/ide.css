@@ -257,3 +257,23 @@
 :root[data-workbench-ui] #code-panel.searching .editor-wrap{min-height:0}
 :root[data-workbench-ui] #project-actions #app-update{display:block;letter-spacing:0}
 @media(max-width:1050px){:root[data-workbench-ui] .topbar{gap:5px 8px}:root[data-workbench-ui] .project-title{flex-basis:150px;min-width:150px}}
+/* 1.17.0 Go to definition: read-only SDK tabs, their SDK path and the Outline view. */
+.source-tab-sdk{display:inline-flex;align-items:stretch;flex:none;border-radius:5px 5px 0 0}
+.source-tabs .source-tab-sdk button{font-style:italic}
+.source-tabs .source-tab-sdk .source-tab-close{padding:4px 6px;font-style:normal;opacity:.7}
+.source-tabs .source-tab-sdk .source-tab-close:hover{opacity:1}
+.source-tabs .source-tab-sdk.active button:first-child{background:#fcfdfc;border-color:var(--ide-border);border-bottom-color:var(--ide-accent);font-weight:600}
+.source-path{display:flex;flex-wrap:wrap;align-items:center;gap:0 4px;padding:3px 10px;font:11px Consolas,monospace;border-bottom:1px solid var(--ide-border);color:var(--ide-muted,#4d6358)}
+.source-path[hidden]{display:none}
+.source-path span+span::before{content:'›';margin-right:4px;opacity:.6}
+.source-path em{margin-left:auto;font-style:normal;opacity:.8}
+.outline-view #outline-filter{margin:2px 12px 4px;padding:3px 6px;font-size:12px;width:calc(100% - 24px)}
+#outline-list{display:flex;flex-direction:column;max-height:38vh;overflow:auto}
+#outline-list button{display:flex;align-items:center;gap:6px;min-height:20px;padding:0 12px 0 18px;border:0;background:transparent;text-align:left;font:12px Consolas,monospace;width:100%}
+#outline-list button:hover{background:var(--ide-hover,#e7efec)}
+#outline-list .outline-label{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.outline-kind{flex:none;width:14px;text-align:center;font-weight:700;font-size:10px}
+.outline-function .outline-kind{color:#2e8b57}.outline-declaration .outline-kind{color:#5f8a73}.outline-macro .outline-kind{color:#7b5ea7}.outline-variable .outline-kind{color:#2b6cb0}.outline-typedef .outline-kind,.outline-enum .outline-kind{color:#b7791f}.outline-include .outline-kind{color:#718096}
+.outline-more{margin:2px 18px;font-size:11px;opacity:.75}
+#outline-file{font-weight:500;text-transform:none;letter-spacing:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:50%}
+#code-panel.sdk-open .editor-heading{display:none}

@@ -48,6 +48,9 @@ nativeHandle('install-tools',ids=>nativeIde.installTools(ids));
 nativeHandle('install-cancel',()=>nativeIde.cancelInstall());
 nativeHandle('choose-tool',async key=>{if(!TOOL_KEYS.includes(key))throw new Error('지원하지 않는 도구입니다.');const folder=['cube','cubeF1','buildRoot'].includes(key);const r=await dialog.showOpenDialog(win,{title:{cube:'STM32CubeF4 SDK 폴더 선택',cubeF1:'STM32CubeF1 SDK 폴더 선택',buildRoot:'빌드 작업 폴더 선택'}[key]||'개발 도구 실행 파일 선택',properties:[folder?'openDirectory':'openFile'],...(folder?{}:{filters:[{name:'실행 파일',extensions:['exe']}]})});return r.canceled?null:r.filePaths[0];});
 nativeHandle('build',(text,config)=>nativeIde.compile(text,config));
+nativeHandle('sdk-definition',(family,name)=>nativeIde.sdkDefinition(family,name));
+nativeHandle('sdk-file',(family,file)=>nativeIde.sdkFile(family,file));
+nativeHandle('sdk-relative',(family,absolute)=>nativeIde.sdkRelative(family,absolute));
 // Tests (a test profile) give the connected boards themselves, so a NUCLEO on the test machine changes nothing.
 nativeHandle('boards',()=>process.env.CIRCUIT_LAB_TEST_PROFILE&&process.env.CIRCUIT_LAB_TEST_BOARDS?JSON.parse(process.env.CIRCUIT_LAB_TEST_BOARDS):listBoards());
 nativeHandle('run',data=>nativeIde.run(data));

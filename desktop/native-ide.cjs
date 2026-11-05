@@ -4,6 +4,7 @@ const {EventEmitter}=require('node:events');
 const {detectTools,validateTools,probeTools,prepareBuild,build,fingerprint}=require('./native-build.cjs');
 const {GdbSession}=require('./gdb-mi.cjs');
 const {LanguageServer}=require('./clangd.cjs');
+const {SdkIndex}=require('./sdk-index.cjs');
 const {launch,terminate}=require('./process-tools.cjs');
 const {installPlan,installTools}=require('./tool-installer.cjs');
 const {execute}=require('./process-tools.cjs');
@@ -87,7 +88,7 @@ async function assignStlinks(items,list=listStlinks){
 }
 function checkedConfig(value){if(!value||!['arm','host'].includes(value.target)||!['Debug','Release'].includes(value.configuration))throw new Error('빌드 대상과 구성을 선택하세요.');return {target:value.target,configuration:value.configuration};}
 class NativeIde extends EventEmitter{
-  constructor(directory){super();this.directory=directory;this.gdb=new GdbSession();this.lsp=new LanguageServer();this.result=null;this.buildController=null;this.tools=null;this.runProcess=null;this.server=null;this.terminal=null;this.stops=0;
+  constructor(directory){super();this.directory=directory;this.gdb=new GdbSession();this.lsp=new LanguageServer();this.sdk=new SdkIndex();this.result=null;this.buildController=null;this.tools=null;this.runProcess=null;this.server=null;this.terminal=null;this.stops=0;
     this.gdb.on('output',text=>this.send('debug-output',{text}));this.gdb.on('state',state=>{this.send('debug-state',state);if(state.state==='idle')void this.stopServer();if(state.state==='exited')void this.gdb.stop();});
     this.gdb.on('breakpoints',points=>this.send('breakpoints',{points}));
     this.lsp.on('diagnostics',data=>this.send('diagnostics',data));this.lsp.on('status',data=>this.send('language-state',data));this.lsp.on('log',text=>this.send('language-log',{text}));
@@ -225,6 +226,10 @@ class NativeIde extends EventEmitter{
     finally{if(this.runProcess===child)this.runProcess=null;}
   }
   input(text){if(typeof text!=='string'||text.length>8192)throw new Error('입력이 너무 큽니다.');if(!this.runProcess)throw new Error('실행 중인 Windows 프로그램이나 ESP32 직렬 모니터가 없습니다.');this.runProcess.stdin.write(text);}
+  // Go to definition into the STM32Cube SDK (HAL driver / CMSIS) of the project's MCU; the files open read only.
+  async sdkDefinition(family,name){return this.sdk.definition(family,await this.settings(),name);}
+  async sdkFile(family,file){return this.sdk.file(family,await this.settings(),file);}
+  async sdkRelative(family,absolute){return typeof absolute==='string'?this.sdk.relative(family,await this.settings(),absolute):null;}
   async language(text,config){config=checkedConfig(config);const project=await this.validate(text),tools=await this.settings();if(!tools.clangd)throw new Error('clangd 경로를 개발 도구 설정에서 지정하세요.');const key=createHash('sha256').update(JSON.stringify([config,project.firmware?.files.map(f=>f.name),project.mcu])).digest('hex');const files=[{name:'main.c',text:project.code},...(project.firmware?.files||[])];if(this.languageKey===key&&!this.lsp.closed){await this.lsp.update(files);return {state:'ready'};}await this.lsp.stop();const plan=await prepareBuild({project,tools,root:path.join(tools.buildRoot||this.directory,'language-workspaces'),...config});await this.lsp.start(tools.clangd,plan,files);this.languageKey=key;return {state:'ready'};}
   async openTerminal(cwd){if(this.terminal)return;const command=path.join(process.env.SystemRoot||'C:/Windows','System32/cmd.exe');const directory=cwd||this.directory;
     // Switch the code page before cmd prints its first prompt so Korean paths are not garbled.

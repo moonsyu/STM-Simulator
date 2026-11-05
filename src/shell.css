@@ -555,3 +555,9 @@ body.dock-dragging .dock-unit{pointer-events:none}
 .update-log-pages button:disabled{opacity:.45;cursor:default}
 .update-log-pages button.current{background:var(--ide-button,var(--ide-accent));border-color:var(--ide-button,var(--ide-accent));color:var(--ide-onAccent,#fff)}
 .update-log-gap{color:var(--ide-muted);padding:0 2px}
+:root[data-shell] #source-tabs .source-tab-close::before{content:none}
+:root[data-shell] #source-tabs .source-tab-sdk.active button:first-child::after{content:'';position:absolute;left:0;right:0;top:0;height:1px;background:var(--ide-accent)}
+:root[data-shell] #source-tabs .source-tab-sdk button:first-child{position:relative}
+/* An SDK file on screen: its path bar replaces the project breadcrumb / file select. */
+:root[data-shell] #code-panel.sdk-open .editor-heading{display:none}
+:root[data-shell] .outline-view{margin-top:6px}
