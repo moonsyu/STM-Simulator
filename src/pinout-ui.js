@@ -19,6 +19,10 @@ const PULL_NAMES={NOPULL:'No pull-up and no pull-down',PULLUP:'Pull-up',PULLDOWN
 const EDGE_NAMES={RISING:'External Interrupt Mode with Rising edge trigger detection',FALLING:'External Interrupt Mode with Falling edge trigger detection',CHANGE:'External Interrupt Mode with Rising/Falling edge trigger detection'};
 const MODE_NAMES={OUTPUT_PP:'Output Push Pull',OUTPUT_OD:'Output Open Drain',INPUT:'Input mode',ANALOG:'Analog mode',AF_PP:'Alternate Function Push Pull',AF_OD:'Alternate Function Open Drain'};
 const RESET_PIN={function:'Reset',pull:'NOPULL',edge:'RISING',label:'',initial:0};
+// System Core › SYS: the NUCLEO's ST-LINK talks SWD, so Debug is Serial Wire (PA13/PA14) and the HAL time base is SysTick.
+const SYS_PINS={PA13:'SYS_JTMS-SWDIO',PA14:'SYS_JTCK-SWCLK'};
+const sysSignal=(config,pin)=>SYS_PINS[pin]&&['Reset','Reserved',undefined].includes(config.pins[pin]?.function)?SYS_PINS[pin]:null;
+const DEBUG_MODES=['No Debug','Trace Asynchronous Sw','JTAG (4 pins)','JTAG (5 pins)','Serial Wire'];
 // F1: TX and RX of a USART move together with its AFIO remap, so choosing one moves the other to the same group.
 function alignSerialRemap(config,id,pin){
   const option=familyProfile(config.family).remaps?.[id]?.find(o=>Object.values(o.pins).includes(pin));if(!option)return;
@@ -87,12 +91,14 @@ export class PinoutPanel {
     }catch(e){this.draft=before;this.render();$('pinout-errors').textContent=e.message;}
   }
   openMenu(pin){
-    const menu=$('pin-menu'),tile=$('pinout-pins').querySelector(`[data-config-pin="${pin}"]`),current=this.draft.pins[pin]?.function??'Reset';
+    const menu=$('pin-menu'),tile=$('pinout-pins').querySelector(`[data-config-pin="${pin}"]`),current=this.draft.pins[pin]?.function??'Reset',sys=sysSignal(this.draft,pin);
     // CubeMX order: Reset_State, the peripheral signals (A→Z), then GPIO_Input / Output / Analog / EXTIn.
     const all=pinFunctions(pin,this.draft.family),gpio=['GPIO_Input','GPIO_Output','Analog','GPIO_EXTI'];
     const options=[...(current==='Reserved'?['Reserved']:[]),'Reset',...all.filter(fn=>!MODES.includes(fn)).sort(),...gpio.filter(fn=>all.includes(fn))];
-    menu.innerHTML=`<div class="pin-menu-title">${pin}</div>`+options.map(fn=>`<button type="button" role="menuitemradio" aria-checked="${fn===current}" data-pin-signal="${fn}" class="${fn===current?'current':''}">${esc(signalName(fn,pin))}</button>`).join('');
-    menu.querySelectorAll('[data-pin-signal]').forEach(b=>b.onclick=()=>{this.closeMenu();this.choose(pin,b.dataset.pinSignal);});
+    // A Serial Wire pin keeps its SYS signal (CubeMX shows it in green and locked).
+    if(sys)menu.innerHTML=`<div class="pin-menu-title">${pin}</div><button type="button" role="menuitemradio" aria-checked="true" class="current" data-sys-signal>${sys}</button><p class="pin-menu-note">System Core › SYS · Debug: Serial Wire 핀이라 바꿀 수 없습니다.</p>`;
+    else menu.innerHTML=`<div class="pin-menu-title">${pin}</div>`+options.map(fn=>`<button type="button" role="menuitemradio" aria-checked="${fn===current}" data-pin-signal="${fn}" class="${fn===current?'current':''}">${esc(signalName(fn,pin))}</button>`).join('');
+    menu.querySelectorAll('[data-pin-signal]').forEach(b=>b.onclick=()=>{this.closeMenu();this.choose(pin,b.dataset.pinSignal);});menu.querySelector('[data-sys-signal]')?.addEventListener('click',()=>this.closeMenu(true));
     menu.hidden=false;menu.dataset.pin=pin;
     const r=tile?.getBoundingClientRect(),h=menu.offsetHeight,w=menu.offsetWidth;
     if(r){menu.style.left=Math.max(4,Math.min(innerWidth-w-4,r.left))+'px';menu.style.top=(r.bottom+h+4<innerHeight?r.bottom+2:Math.max(4,r.top-h-2))+'px';}
@@ -139,14 +145,17 @@ export class PinoutPanel {
   render(){
     const config=this.draft,p=config.pins[this.pin]||RESET_PIN,fam=familyProfile(config.family),f1=fam.pinMux==='remap';
     document.querySelector('.pinout-heading .eyebrow').textContent=`${fam.id} · LQFP64 · ${fam.core}`;$('timer-clock').title=`APB1 타이머 클록: ${fam.clock.label}`;$('timer-clock').min=fam.clock.minHz;$('timer-clock').max=fam.clock.maxHz;$('timer-clock-hint').textContent=`새 프로젝트: HSI ${fam.clock.defaultHz/1e6} MHz · PLL OFF · AHB/APB 분주 1 · 설정 범위 ${fam.clock.label}. 예제와 저장된 설정은 각 프로젝트 값을 사용합니다.`;
-    $('pinout-pins').innerHTML=[...fam.gpioPins].sort((a,b)=>a.localeCompare(b,undefined,{numeric:true})).map(pin=>{const value=config.pins[pin];return `<button class="pin-tile ${pin===this.pin?'selected':''} ${value&&!['Reset','Reserved'].includes(value.function)?'enabled':''} ${value?.function==='Reserved'?'reserved':''}" data-config-pin="${pin}" aria-haspopup="menu" title="${pin}: 눌러서 신호 선택"><strong>${pin}</strong><small>${esc(value?.label||signalName(value?.function||'Reset',pin))}</small>${value?.label?`<small class="pin-signal">${esc(signalName(value.function,pin))}</small>`:''}</button>`;}).join('');
+    $('pinout-pins').innerHTML=[...fam.gpioPins].sort((a,b)=>a.localeCompare(b,undefined,{numeric:true})).map(pin=>{const value=config.pins[pin],sys=sysSignal(config,pin);if(sys)return `<button class="pin-tile enabled sys ${pin===this.pin?'selected':''}" data-config-pin="${pin}" aria-haspopup="menu" title="${pin}: ${sys} (Serial Wire 디버그, 잠김)"><strong>${pin}</strong><small>${sys}</small></button>`;return `<button class="pin-tile ${pin===this.pin?'selected':''} ${value&&!['Reset','Reserved'].includes(value.function)?'enabled':''} ${value?.function==='Reserved'?'reserved':''}" data-config-pin="${pin}" aria-haspopup="menu" title="${pin}: 눌러서 신호 선택"><strong>${pin}</strong><small>${esc(value?.label||signalName(value?.function||'Reset',pin))}</small>${value?.label?`<small class="pin-signal">${esc(signalName(value.function,pin))}</small>`:''}</button>`;}).join('');
     // CubeMX: clicking a pin selects it and opens the list of its signals.
     $('pinout-pins').querySelectorAll('button').forEach(b=>b.onclick=()=>{const pin=b.dataset.configPin,again=!$('pin-menu').hidden&&$('pin-menu').dataset.pin===pin;this.sync();this.pin=pin;if(this.side!=='pin')this.showSide('pin');this.render();if(!again)this.openMenu(pin);});
     // CubeMX GPIO configuration of the selected pin: only the fields its mode has.
     const mode=p.function==='Reset'||p.function==='Reserved'?null:gpioMode(p,config,f1),select=(id,label,options,value)=>`<label>${label}<select id="${id}">${Object.entries(options).map(([v,name])=>`<option value="${v}" ${String(value)===v?'selected':''}>${esc(name)}</option>`).join('')}</select></label>`;
     const speed=p.speed??defaultSpeed(p.function,f1),exti=p.function==='GPIO_EXTI'?irqForPin(this.pin):null;
-    $('pinout-properties').dataset.pin=this.pin;
-    $('pinout-properties').innerHTML=`<h3>${this.pin} Configuration</h3><label>신호<select id="pin-function">${pinFunctions(this.pin,config.family).filter(v=>v!=='Reserved'||p.function==='Reserved').map(v=>`<option value="${v}" ${p.function===v?'selected':''}>${esc(signalName(v,this.pin))}</option>`).join('')}</select></label>`
+    const sys=sysSignal(config,this.pin);
+    // Serial Wire pins: nothing to set (sync() leaves them alone).
+    $('pinout-properties').dataset.pin=sys?'':this.pin;
+    if(sys)$('pinout-properties').innerHTML=`<h3>${this.pin} Configuration</h3><label>신호<input value="${sys}" readonly></label><p>System Core › SYS의 Debug: Serial Wire가 쓰는 핀입니다(ST-LINK ${this.pin==='PA13'?'SWDIO':'SWCLK'}). 다른 기능으로 바꾸면 보드 쓰기와 디버깅이 끊기므로 바꿀 수 없습니다.</p>`;
+    else $('pinout-properties').innerHTML=`<h3>${this.pin} Configuration</h3><label>신호<select id="pin-function">${pinFunctions(this.pin,config.family).filter(v=>v!=='Reserved'||p.function==='Reserved').map(v=>`<option value="${v}" ${p.function===v?'selected':''}>${esc(signalName(v,this.pin))}</option>`).join('')}</select></label>`
       +(p.function==='GPIO_Output'?select('pin-level','GPIO output level',{0:'Low',1:'High'},p.initial):'')
       +(p.function==='GPIO_Output'?select('pin-otype','GPIO mode',{PP:MODE_NAMES.OUTPUT_PP,OD:MODE_NAMES.OUTPUT_OD},p.outputType??'PP'):exti?select('pin-edge','GPIO mode',EDGE_NAMES,p.edge):mode?`<label>GPIO mode<input value="${MODE_NAMES[mode]}" readonly></label>`:'')
       +(mode&&mode!=='ANALOG'?select('pin-pull','GPIO Pull-up/Pull-down',PULL_NAMES,p.pull):'')
@@ -155,9 +164,10 @@ export class PinoutPanel {
       +(exti?`<div class="card-nvic"><strong>NVIC</strong>${this.irqRow(config,exti,{card:true})}</div>`:'')
       +(mode?'':'<p>핀을 눌러 나오는 목록이나 위의 신호에서 용도를 고르세요.</p>');
     for(const id of ['pin-pull','pin-edge','pin-level','pin-speed','pin-otype'])if($(id))$(id).onchange=()=>{this.sync();this.render();};
-    $('pin-function').onchange=()=>this.choose(this.pin,$('pin-function').value);
+    if($('pin-function'))$('pin-function').onchange=()=>this.choose(this.pin,$('pin-function').value);
     if(exti)this.bindIrqRows($('pinout-properties'),{card:true});
-    const system=`<section class="peripheral-card system-card"><strong>System Core</strong><button type="button" class="nvic-open" data-open-nvic>NVIC<small></small></button></section>`;
+    const timebases=['SysTick',...Object.keys(fam.timers)];
+    const system=`<section class="peripheral-card system-card"><strong>System Core</strong><button type="button" class="nvic-open" data-open-nvic>NVIC<small></small></button><div class="sys-settings"><strong>SYS</strong><label>Debug<select id="sys-debug" aria-describedby="sys-note">${DEBUG_MODES.map(m=>`<option ${m==='Serial Wire'?'selected':'disabled'}>${m}</option>`).join('')}</select></label><label>Timebase Source<select id="sys-timebase" aria-describedby="sys-note">${timebases.map(t=>`<option ${t==='SysTick'?'selected':'disabled'}>${t}</option>`).join('')}</select></label><small id="sys-note" class="serial-mode-note">NUCLEO의 ST-LINK가 SWD로 연결되어 Serial Wire(PA13 SWDIO · PA14 SWCLK)로 고정됩니다. HAL 시간은 SysTick이며 우선순위는 NVIC의 Time base 줄에서 바꿉니다.</small></div></section>`;
     $('pinout-peripherals').innerHTML=system+Object.keys(routesOf(config.family)).map(id=>{
       const c=config.peripherals[id]||{enabled:false},defaults=isTimer(id)?timerDefaults(id,config.family):null,timerMax=id=>fam.timerMax(id),fields=isSerial(id)?[['baud','Baud rate',115200]]:id==='I2C1'||id==='SPI1'?[['clock','Clock (Hz)',id==='I2C1'?100000:1000000]]:isTimer(id)?[['prescaler','Prescaler (PSC)',defaults.prescaler,65535],['period','Period (ARR)',defaults.period,timerMax(id)],...(c.mode==='pwm'?[['pulse','초기 Pulse (CCR)',defaults.pulse,timerMax(id)]]:[])]:[];
       const syncMode=c.mode==='synchronous',ck=fam.usartCk[id],ckFn=id+'_CK',ckPin=Object.keys(config.pins).find(pin=>config.pins[pin].function===ckFn);

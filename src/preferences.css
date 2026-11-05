@@ -184,3 +184,5 @@
 :root[data-ide-theme] .source-path{background:var(--ide-panel);color:var(--ide-muted);border-color:var(--ide-border)}
 :root[data-ide-theme] #outline-list button{color:var(--ide-foreground)}
 :root[data-ide-theme] #outline-list button:hover{background:var(--ide-hover)}
+:root[data-ide-theme] .sys-settings{border-color:var(--ide-border)}
+:root[data-ide-theme] .pin-tile.sys{background:var(--ide-selection);border-color:var(--ide-accent);color:var(--ide-foreground)}

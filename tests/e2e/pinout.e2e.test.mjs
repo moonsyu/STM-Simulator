@@ -9,6 +9,12 @@ test('pin click menu, GPIO speed / open drain, EXTI NVIC and the NVIC tab reach 
  try{
   const {win}=s,code=()=>win.evaluate(()=>document.getElementById('code').value);
   await win.evaluate(()=>document.getElementById('pinout-open').click());await win.waitForSelector('#pinout-dialog[open]');
+  // System Core › SYS: Serial Wire debug and the SysTick time base (fixed on the NUCLEO), PA13/PA14 shown as SYS pins.
+  assert.equal(await win.inputValue('#sys-debug'),'Serial Wire');assert.equal(await win.inputValue('#sys-timebase'),'SysTick');
+  assert.match(await win.textContent('[data-config-pin="PA13"]'),/SYS_JTMS-SWDIO/);assert.match(await win.textContent('[data-config-pin="PA14"]'),/SYS_JTCK-SWCLK/);
+  await win.click('[data-config-pin="PA13"]');await win.waitForSelector('#pin-menu:not([hidden])');
+  assert.equal(await win.locator('#pin-menu [data-pin-signal]').count(),0,'a Serial Wire pin offers no other signal');assert.match(await win.textContent('#pin-menu'),/SYS_JTMS-SWDIO/);
+  assert.match(await win.textContent('#pinout-properties'),/Serial Wire/);await win.keyboard.press('Escape');
   // Clicking a pin opens its signal list (CubeMX names); Esc closes the menu, not the dialog.
   await win.click('[data-config-pin="PA5"]');await win.waitForSelector('#pin-menu:not([hidden])');
   const signals=await win.$$eval('#pin-menu [data-pin-signal]',b=>b.map(x=>x.textContent));

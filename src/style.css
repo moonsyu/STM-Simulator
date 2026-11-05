@@ -340,3 +340,8 @@ dialog h1{font-size:21px;margin:8px 0 18px;letter-spacing:-.5px}
 .pin-menu button.current{background:#cde7da;font-weight:700}
 .pinout-side-tabs button[aria-selected="true"]{box-shadow:inset 0 -2px 0 #126b4c}
 .pinout-layout .irq-row input:disabled{opacity:.5}
+/* 1.18.0 System Core › SYS and the Serial Wire pins. */
+.sys-settings{margin-top:8px;padding-top:6px;border-top:1px dashed #c5d4cc}
+.sys-settings>strong{display:block;font-size:11px}
+.pin-tile.sys{background:#cde7da;border-color:#126b4c}
+.pin-menu-note{margin:4px 8px;font-size:10.5px;opacity:.75;max-width:200px}
