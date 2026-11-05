@@ -51,6 +51,13 @@ test('cSymbols finds what CubeIDE\'s Outline lists, with lines; comments and str
  assert.deepEqual(pickDefinitions(s.filter(x=>x.name==='MX_GPIO_Init')).map(x=>x.kind),['function']);
 });
 
+test('a declaration of several names gives one symbol per name with the shared type (not the last name only)',()=>{
+ const s=cSymbols('volatile uint32_t halfCount, fullCount;\nint a = 1, *b = 0, c[2] = {1, 2};\nint f(int x, int y);\nvoid g(void) { int local, other; }\n');
+ assert.deepEqual(s.filter(x=>x.kind==='variable').map(x=>[outlineLabel(x),x.line]),[['halfCount : uint32_t',1],['fullCount : uint32_t',1],['a : int',2],['b : int *',2],['c[2] : int',2]]);
+ assert.equal(outlineLabel(s.find(x=>x.name==='f')),'f(int x, int y) : int','parameters are not declarators');
+ assert.equal(s.some(x=>x.name==='local'||x.name==='other'),false);
+});
+
 test('extern "C" blocks and multi-line macros in headers do not hide declarations',()=>{
  const h='#ifdef __cplusplus\nextern "C" {\n#endif\n#define __HAL_LOCK(h) do{ if((h)->Lock == HAL_LOCKED) \\\n  { return HAL_BUSY; } \\\n }while (0U)\ntypedef struct __UART_HandleTypeDef\n{\n  int Lock;\n} UART_HandleTypeDef;\nHAL_StatusTypeDef HAL_UART_Init(UART_HandleTypeDef *huart);\nvoid HAL_UART_IRQHandler(UART_HandleTypeDef *huart);\n#ifdef __cplusplus\n}\n#endif\n';
  const s=cSymbols(h);

@@ -50,12 +50,27 @@ export function cSymbols(source){
       else{
         const decl=t.split('=')[0],fn=/([A-Za-z_]\w*)\s*\([^()]*(\([^()]*\)[^()]*)*\)\s*$/.exec(decl);
         if(fn&&t===decl)add(fn[1],'declaration',at(fn[1]),code.slice(stmt,i));
-        else{const m=/([A-Za-z_]\w*)\s*(\[[^\]]*\]\s*)*$/.exec(decl);if(m&&/[\s*]/.test(decl.trim()))add(m[1],/^extern\b/.test(t)?'declaration':'variable',stmt+s.split('=')[0].lastIndexOf(m[1]),code.slice(stmt,i).split('=')[0]);}
+        else{
+          // One symbol per declarator: `uint32_t a, *b = 0, c[2] = {1, 2};` declares a, b and c with the same type.
+          const kind=/^extern\b/.test(t)?'declaration':'variable';let type=null,offset=0;
+          for(const part of splitDeclarators(s)){
+            const d=part.split('=')[0],m=/([A-Za-z_]\w*)\s*(\[[^\]]*\]\s*)*$/.exec(d);
+            if(m&&type===null&&!/[\s*]/.test(d.trim()))break;
+            if(m){if(type===null)type=d.slice(0,m.index).replace(/[\s*]*$/,'');add(m[1],kind,stmt+offset+m.index,offset?type+' '+d.trim():d);}
+            offset+=part.length+1;
+          }
+        }
       }
       stmt=i+1;
     }
   }
   return out.sort((a,b)=>a.line-b.line||a.column-b.column);
+}
+// A declaration split at its top-level commas (not those inside initializer braces, brackets or parentheses).
+function splitDeclarators(text){
+  const parts=[];let depth=0,start=0;
+  for(let i=0;i<text.length;i++){const c=text[i];if('([{'.includes(c))depth++;else if(')]}'.includes(c))depth--;else if(c===','&&depth===0){parts.push(text.slice(start,i));start=i+1;}}
+  return [...parts,text.slice(start)];
 }
 // Outline text as CubeIDE shows it: name(params) : return type, variable : type.
 const STORAGE=/\b(static|extern|inline|__weak|__STATIC_INLINE|__STATIC_FORCEINLINE|__INLINE|__NO_RETURN|__IO|const|volatile)\b|__attribute__\s*\(\(.*?\)\)/g;
