@@ -1,6 +1,10 @@
 # STM Simulator — 개발 인계
 
-현재 버전: **1.18.1**. 정리일: **2026-11-03**. NUCLEO-F446RE 또는 NUCLEO-F103RB와 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+현재 버전: **1.18.2**. 정리일: **2026-11-03**. NUCLEO-F446RE 또는 NUCLEO-F103RB와 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+
+## 1.18.2 자동완성에 SDK 이름
+
+- clangd가 꺼져 있을 때의 자동완성은 `code-editor.js`의 짧은 API 목록과 프로젝트 단어뿐이라 `HAL_TIM_Base_Start`, `HAL_TIM_Base_Stop_IT` 같은 함수가 나오지 않았다. `SdkIndex.names(family,tools,prefix)`(IPC `native:sdk-names`)가 정의 색인의 이름을 대소문자 구분 없이 접두어로 찾아(정렬 목록 이분 탐색, 함수 → 매크로 → enum → typedef → 변수 순, 150개) 돌려주고, 완성 제공자는 `incomplete`로 표시해 글자를 더 칠 때 다시 묻는다. 두 글자부터 찾는다.
 
 ## 1.18.1 패널 글자 복사 · 실행 때 빌드 탭으로 바꾸지 않음
 
