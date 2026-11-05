@@ -1,6 +1,14 @@
 # STM Simulator — 개발 인계
 
-현재 버전: **1.16.0**. 정리일: **2026-11-03**. NUCLEO-F446RE 또는 NUCLEO-F103RB와 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+현재 버전: **1.17.0**. 정리일: **2026-11-03**. NUCLEO-F446RE 또는 NUCLEO-F103RB와 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+
+## 1.17.0 정의로 이동(Ctrl+클릭·F12)과 코드 개요(Outline)
+
+- `src/c-symbols.js` `cSymbols(text)`: 주석·문자열·전처리 줄을 가린 텍스트 스캔으로 include, 매크로, typedef(struct/enum/함수 포인터), enum 상수, 전역 변수, 함수 정의·선언을 줄·열과 함께 찾는다. `extern "C" {}`는 깊이로 세지 않는다. `outlineLabel`은 CubeIDE Outline 형식(`name(params) : ret`, `var : type`), `pickDefinitions`는 정의 > 매크로 > typedef > enum > 변수 > 선언 순으로 고른다(전처리 분기는 모두 후보).
+- `desktop/sdk-index.cjs` `SdkIndex`: 프로젝트 MCU의 STM32Cube SDK(개발 도구의 `cube`/`cubeF1` 경로)에서 HAL 드라이버 Inc/Src, CMSIS Device(칩 헤더·system), CMSIS Core 헤더를 처음 요청 때 색인한다(경로별 캐시). IPC `native:sdk-definition`(이름→정의 목록), `native:sdk-file`(색인된 파일만 읽기), `native:sdk-relative`(clangd 결과 경로→색인 경로).
+- `code-editor.js`: 정의 제공자가 프로젝트 파일을 먼저 보고(정의·매크로·변수 등, 프로젝트의 프로토타입만 있으면 SDK 우선), 없으면 SDK를 찾는다. SDK 파일은 `inmemory://sdk/<경로>` 모델로 열고 편집기를 읽기 전용으로 바꾼다(`external`). 그동안 textarea는 프로젝트 파일 그대로이고 `sync`는 프로젝트 모델만 갱신한다. 중단점·장식·찾기 막대는 SDK 파일에서 쓰지 않는다(Ctrl+F는 Monaco 찾기). Alt+←/→는 이동 기록. clangd가 켜져 있으면 clangd의 SDK 경로 결과도 같은 탭으로 연다.
+- `ide-ui.js`: 탭에 SDK 파일(기울임, ×), `#source-path`에 SDK 경로(프로젝트 경로 줄 대신), 탐색기 소스 파일 아래 `코드 개요 (Outline)`. 파일 목록은 프로젝트 파일만이다.
+- SDK가 없으면 정의가 프로젝트 파일에서만 찾아지고, 출력에 "STM32CubeF1 SDK가 없어 HAL 원본을 열 수 없습니다…"가 한 번 나온다.
 
 ## 1.16.0 CubeMX식 NVIC·GPIO·핀 클릭 메뉴
 

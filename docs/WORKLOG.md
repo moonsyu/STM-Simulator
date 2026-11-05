@@ -2,6 +2,23 @@
 
 작업할 때마다 날짜순으로 맨 위에 추가합니다. 무엇을 했는지, 왜 했는지, 어떻게 검증했는지, 커밋·릴리스와 남은 사항을 적습니다. 버전별 구조 설명은 [HANDOFF.md](../HANDOFF.md), 검증 수치는 [VERIFICATION.md](VERIFICATION.md)에 있습니다.
 
+## 2026-11-05 · 1.17.0 정의로 이동(Ctrl+클릭·F12)과 코드 개요(Outline)
+
+- 요청: CubeIDE처럼 main.c의 IRQ 같은 함수를 Ctrl+클릭하면 관련 함수 정의로 이동하게. 기본 파일 구조(main.c만 보이는 목록)는 유지하고 구조를 볼 수 있게. 필요하면 켜 둔 CubeIDE를 직접 확인.
+- 확인: 사용자가 켜 둔 CubeIDE 창을 보았다(Computer use).
+  - 정의 파일(`Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_hal_rcc.c`)은 새 탭으로 열리고, 창 제목에 그 경로가 나온다.
+  - 오른쪽 Outline에 파일의 include·매크로·변수·함수가 `name(params) : type` 형식으로 나온다. main.c에서는 `huart2 : UART_HandleTypeDef`, `main(void) : int` 등이다.
+  - 처음에 도구가 CubeIDE를 하나 더 실행하려 해 Workspace 잠금 창이 떴고, 그 창만 취소했다. 사용자의 CubeIDE는 그대로였다.
+- 한 것:
+  - **정의 찾기:** `src/c-symbols.js`(C 소스 심볼 스캐너)와 `desktop/sdk-index.cjs`(보드에 맞는 STM32CubeF4/F1 SDK의 HAL·CMSIS 색인, IPC 3개)를 만들었다.
+  - **편집기:** 프로젝트 → SDK 순으로 정의를 찾고, SDK 파일은 읽기 전용 탭으로 연다. 편집기 위에 SDK 경로를 보여 주고, Alt+←/→로 이동 기록을 오가며, 탭의 ×로 닫는다. clangd 결과의 SDK 경로도 같은 탭으로 연다.
+  - **탐색기:** 소스 파일 아래에 코드 개요(Outline)를 넣었다. 파일 목록은 프로젝트 파일만 그대로다.
+- 검증:
+  - 단위·해석기·에뮬레이터 891개 중 890개 통과, 1개 건너뜀. 새 시험은 `tests/unit/c-symbols.test.js`(SDK 색인은 실제 CubeF1/F4로 확인)와 `tests/e2e/definition.e2e.test.mjs`.
+  - E2E: 전체 실행에서 Ctrl+클릭 단계가 두 번 시간 초과됐다. 실제 사용처럼 Ctrl을 누른 채 이름 위에 마우스를 올린 뒤 누르도록 시험을 고쳤고, 고친 뒤 전체 E2E 55개 중 54개 통과, 1개 건너뜀, 실패 0이다. ESLint 0건, 로컬 패키지 검사 3개 통과(산출물 삭제).
+  - 다크 모드 화면 캡처를 보고 세 가지를 고쳤다: × 앞의 파일 아이콘, SDK 파일에서 프로젝트 경로 줄 숨김, Outline을 소스 파일 아래로.
+- 기타: 사용자 요청으로 중간에 일시중지했다가 이어서 진행했다.
+
 ## 2026-11-05 · 1.16.0 CubeMX식 NVIC·GPIO·핀 클릭 메뉴
 
 - 요청: NVIC·GPIO부터 CubeMX처럼, NVIC를 더 쉽게 켤 수 있게(안 보임), 핀 클릭 메뉴도 CubeMX처럼. 이번 작업은 푸시하지 말고 앱을 실행해 두어 사용자가 확인.
