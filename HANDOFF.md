@@ -1,6 +1,12 @@
 # STM Simulator — 개발 인계
 
-현재 버전: **1.18.0**. 정리일: **2026-11-03**. NUCLEO-F446RE 또는 NUCLEO-F103RB와 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+현재 버전: **1.18.1**. 정리일: **2026-11-03**. NUCLEO-F446RE 또는 NUCLEO-F103RB와 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+
+## 1.18.1 패널 글자 복사 · 실행 때 빌드 탭으로 바꾸지 않음
+
+- `app-keyboard.js`: 창 전체 Ctrl+C는 회로 복사였고 항상 `preventDefault`라 패널 글자를 복사할 수 없었다. 문서에 접히지 않은 글자 선택이 있으면 Ctrl+C를 브라우저에 맡긴다. 선택이 하단 패널 안에 있으면 Ctrl+A는 그 패널(탭 패널) 글자를 선택한다.
+- `desktop/main.cjs`: 모든 webContents의 `context-menu`에서 선택한 글자는 복사, 입력 칸은 잘라내기·복사·붙여넣기·모두 선택 메뉴를 띄운다(회로·Monaco처럼 자체 메뉴가 있는 곳은 이벤트를 막아 뜨지 않음).
+- `native-ide-ui.js` `build(override,source,{reveal})`: 실행의 ARM 빌드(`buildElf`)는 `reveal:false`라 하단 패널을 바꾸지 않는다. `app-run.js`: 해석기 코드 검사 실패 시 빌드 탭을 열지 않고 출력에 오류 내용을 남긴다(편집기 밑줄은 그대로).
 
 ## 1.18.0 System Core › SYS (Serial Wire · SysTick)
 
