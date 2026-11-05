@@ -2,6 +2,12 @@
 
 작업할 때마다 날짜순으로 맨 위에 추가합니다. 무엇을 했는지, 왜 했는지, 어떻게 검증했는지, 커밋·릴리스와 남은 사항을 적습니다. 버전별 구조 설명은 [HANDOFF.md](../HANDOFF.md), 검증 수치는 [VERIFICATION.md](VERIFICATION.md)에 있습니다.
 
+## 2026-11-05 · 1.17.1 빌드 파일(it.c·syscalls.c·sysmem.c·system·startup) 읽기 전용 보기
+
+- 요청: CubeIDE의 stm32f1xx_it.c, syscalls.c, sysmem.c, system_stm32f1xx.c도 열리는지 물으셨고, 열리지 않는 셋을 읽기 전용으로 보이게, startup 파일도 넣어 달라고 하셨다.
+- 한 것: ARM 빌드가 넣는 코드(`__stm_environment.c`)를 `src/build-environment.js`로 옮겨 빌드와 편집기가 같은 코드를 쓰게 하고, CubeIDE 이름의 세 파일로 나눠 보여 준다. 탐색기 소스 파일 아래 접힌 "Core · Startup" 묶음에서 이 셋과 SDK의 system·startup 파일을 읽기 전용 탭으로 연다. 소스 파일 목록은 그대로다. 정의 찾기도 이 파일들로 간다(SysTick_Handler, _sbrk 등).
+- 검증: 단위 시험 추가(`tests/unit/build-environment.test.js`), 정의 이동 E2E에 Core · Startup 열기·경로·Outline·startup 내용 확인을 추가해 통과. 빌드가 넣는 코드를 옮겼으므로 ARM GCC 예제 빌드·에뮬레이터 실행(toolchain) 273개 중 272개 통과·1개 건너뜀으로 빌드가 그대로임을 확인했다. 단위·해석기·에뮬레이터 893개 중 892개 통과·1개 건너뜀, E2E 55개 중 54개 통과·1개 건너뜀, ESLint 0건, 로컬 패키지 검사 3개 통과(산출물 삭제). 다크 모드 화면 캡처를 보고 묶음을 이름 변경·삭제 버튼 아래로 옮겼다.
+
 ## 2026-11-05 · 1.17.0 정의로 이동(Ctrl+클릭·F12)과 코드 개요(Outline)
 
 - 요청: CubeIDE처럼 main.c의 IRQ 같은 함수를 Ctrl+클릭하면 관련 함수 정의로 이동하게. 기본 파일 구조(main.c만 보이는 목록)는 유지하고 구조를 볼 수 있게. 필요하면 켜 둔 CubeIDE를 직접 확인.

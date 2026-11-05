@@ -1,6 +1,12 @@
 # STM Simulator — 개발 인계
 
-현재 버전: **1.17.0**. 정리일: **2026-11-03**. NUCLEO-F446RE 또는 NUCLEO-F103RB와 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+현재 버전: **1.17.1**. 정리일: **2026-11-03**. NUCLEO-F446RE 또는 NUCLEO-F103RB와 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+
+## 1.17.1 빌드 파일 읽기 전용 보기 (Core · Startup)
+
+- `src/build-environment.js` `buildEnvironment(project)`: ARM 빌드가 프로젝트 소스에 더하는 코드(인터럽트 핸들러·newlib 시스템 호출·힙)를 한 곳에서 만든다. `text`는 `native-build.cjs`가 `__stm_environment.c`로 쓰는 내용이고, `files`는 같은 코드를 CubeIDE 이름(`Core/Src/stm32xxxx_it.c`, `syscalls.c`, `sysmem.c`)으로 나눈 읽기 전용 보기다. 프로젝트 소스에 있는 핸들러는 빌드에서 빠지고 it.c 보기에 "프로젝트 소스에 있어 만들지 않는 핸들러" 목록으로 나온다(이전의 `native-build.cjs` 안 코드와 같은 규칙).
+- 탐색기 소스 파일 아래 `<details id="build-files">`(기본 접힘): 위 세 파일과 SDK의 `system_<prefix>.c`(프로젝트에 없을 때), `Source/Templates/gcc/startup_*.s`. 누르면 읽기 전용 탭으로 열린다. 생성 파일 탭은 `inmemory://gen/...` 모델이고 경로 줄은 `STM Simulator 빌드 › Core › Src …`, 프로젝트가 바뀌면 `refreshGenerated()`로 내용이 따라간다. 정의 찾기는 프로젝트 → 빌드 파일 → SDK 순이다. SDK 색인은 startup `.s`도 열 수 있게 목록에 넣고 심볼은 읽지 않는다.
+- CubeIDE의 startup은 `startup_stm32f103rbtx.s`처럼 CubeIDE가 만든 파일이지만, 이 앱의 빌드는 SDK의 `startup_stm32f103xb.s`/`startup_stm32f446xx.s`를 쓰므로 그 이름으로 보여 준다.
 
 ## 1.17.0 정의로 이동(Ctrl+클릭·F12)과 코드 개요(Outline)
 

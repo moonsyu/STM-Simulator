@@ -88,6 +88,7 @@ CubeIDE처럼 편집기에서 함수·매크로·타입·변수 이름을 **Ctrl
 - 탐색기의 **소스 파일** 목록은 그대로 프로젝트 파일만 보인다(CubeIDE의 Drivers 폴더는 펼치지 않는다). 프로젝트 파일 탭을 누르면 원래 파일로 돌아간다.
 - **Alt+←**는 이동하기 전 위치로, **Alt+→**는 다시 앞으로 간다(CubeIDE Back/Forward).
 - **코드 개요 (Outline)**: 탐색기 소스 파일 아래에 지금 보고 있는 파일의 include, 매크로(M), typedef(T), enum 상수(E), 전역 변수(V), 함수(F), 함수 선언(D)을 CubeIDE Outline처럼 `HAL_UART_IRQHandler(UART_HandleTypeDef *huart) : void`, `huart2 : UART_HandleTypeDef` 형식으로 보여 준다. 누르면 그 줄로 가고 위 칸에서 이름으로 거른다. 항목이 많으면 600개까지 보이고 나머지는 검색으로 좁힌다.
+- **Core · Startup (1.17.1)**: 탐색기 소스 파일 아래의 접힌 묶음을 펼치면 ARM 빌드에 함께 들어가는 파일이 CubeIDE 이름으로 보인다. `stm32f1xx_it.c`(F446RE는 `stm32f4xx_it.c`, SysTick·켜진 인터럽트 핸들러), `syscalls.c`(printf/scanf용 `_write`·`_read` 등), `sysmem.c`(malloc용 `_sbrk`)는 빌드가 실제로 넣는 코드이고, `system_stm32f1xx.c`와 `startup_stm32f103xb.s`(F446RE는 `startup_stm32f446xx.s`)는 SDK 원본이다. 모두 읽기 전용 탭으로 열리며 소스 파일 목록에는 추가되지 않는다. main.c에 직접 쓴 핸들러는 it.c에 만들지 않고 그 목록을 맨 위에 적는다. CubeIDE의 startup 파일 이름(`startup_stm32f103rbtx.s`)과 다른 것은 이 앱이 SDK의 startup을 쓰기 때문이다.
 - SDK는 **실행 및 디버그 → 개발 도구 → 필요한 도구 설치**로 받는 STM32CubeF4/F1 폴더(또는 개발 도구 설정의 SDK 경로)를 쓴다. 없으면 프로젝트 파일 안의 정의로만 이동하고 출력에 안내가 나온다. 정의는 전처리기 없이 찾으므로 `#if`로 갈린 여러 정의가 있으면 목록으로 고른다.
 
 ## 코드 정렬
