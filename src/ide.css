@@ -277,3 +277,13 @@
 .outline-more{margin:2px 18px;font-size:11px;opacity:.75}
 #outline-file{font-weight:500;text-transform:none;letter-spacing:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:50%}
 #code-panel.sdk-open .editor-heading{display:none}
+/* 1.17.1 Core · Startup: the files the ARM build uses besides the project's sources (read only, closed by default). */
+.build-files{margin:2px 0 4px}
+.build-files[hidden]{display:none}
+.build-files summary{cursor:pointer;padding:2px 12px;font-size:12px;user-select:none}
+.build-files summary small{opacity:.7;margin-left:4px;font-size:10.5px}
+#build-file-list{display:flex;flex-direction:column}
+#build-file-list button{display:flex;align-items:center;gap:6px;min-height:22px;padding:0 12px 0 22px;border:0;background:transparent;text-align:left;font-size:12.5px;font-style:italic;width:100%}
+#build-file-list button small{margin-left:auto;font-style:normal;opacity:.6;font-size:10.5px}
+#build-file-list button:hover{background:var(--ide-hover,#e7efec)}
+#build-file-list button.active{background:var(--ide-selection,#cde7da)}

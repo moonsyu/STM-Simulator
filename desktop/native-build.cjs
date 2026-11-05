@@ -82,51 +82,10 @@ async function prepareBuild({project,tools,root,target='arm',configuration='Debu
     generated=sdk.modules.map(n=>path.join(hal,'Src',`${p}_${n}.c`));
     if(!files.some(f=>f.name===`system_${p}.c`))generated.push(path.join(device,'Source/Templates',`system_${p}.c`));
     generated.push(path.join(device,'Source/Templates/gcc',sdk.startup));
-    const {isSerial,serialHandle}=await import('../src/serial-config.js'),{isTimer}=await import('../src/timer-config.js');
-    // Interrupt handlers must be strong: the startup file's Default_Handler aliases are weak too,
-    // and a weak-vs-weak tie leaves SysTick unhandled (HAL_Delay would hang). Skip any handler the
-    // user's sources already define so imported Cube stm32f4xx_it.c files still link.
-    // Comments and `#if 0` blocks are removed first so disabled handlers don't count as definitions.
-    // Lines inside `#if 0` (up to its #else/#elif/#endif, nesting followed) do not define anything; `#if 1 … #else` drops the
-    // #else part. Other conditions are kept, both branches.
-    const liveLines=text=>{const stack=[];return text.split('\n').filter(line=>{
-      const d=/^[ \t]*#[ \t]*(if|ifdef|ifndef|elif|else|endif)\b(.*)$/.exec(line),live=()=>stack.every(s=>s.live);
-      if(!d)return live();
-      if(['if','ifdef','ifndef'].includes(d[1])){const c=d[1]==='if'?d[2].trim():'';stack.push({known:c==='0'||c==='1',live:c!=='0',taken:c==='1'});return false;}
-      const top=stack.at(-1);if(!top)return false;
-      if(d[1]==='endif')stack.pop();else if(top.known)top.live=!top.taken&&!top.live,top.taken=top.taken||top.live;else top.live=true;
-      return false;
-    }).join('\n');};
-    const stripC=text=>liveLines(text.replace(/\/\*[\s\S]*?\*\//g,' ').replace(/\/\/[^\n]*/g,' '));
-    const userText=stripC([project.code,...files.map(f=>f.text||'')].join('\n'));
-    const defined=name=>new RegExp(`\\b${name}\\s*\\(\\s*(?:void)?\\s*\\)\\s*\\{`).test(userText);
-    const handler=(name,body)=>defined(name)?null:`void ${name}(void) { ${body} }`;
-    const env=['#include "main.h"','__attribute__((weak)) void _init(void) {}','__attribute__((weak)) void _fini(void) {}','__attribute__((weak)) int __io_putchar(int ch) { return ch; }',handler('SysTick_Handler','HAL_IncTick();'),'__attribute__((weak)) int _write(int file, char *ptr, int len) { (void)file; for(int i=0;i<len;i++) __io_putchar(ptr[i]); return len; }'];
-    env.push('#include <stddef.h>','#include <stdint.h>','#include <errno.h>',`extern char end, _estack;
-__attribute__((weak)) void *_sbrk(ptrdiff_t increment) {
-  static uintptr_t current;
-  const uintptr_t base=(uintptr_t)&end, limit=(uintptr_t)&_estack-0x1000;
-  if(!current) current=base;
-  if((increment>0 && (uintptr_t)increment>limit-current) || (increment<0 && (uintptr_t)(-(increment+1))+1>current-base)) { errno=ENOMEM; return (void*)-1; }
-  void *previous=(void*)current; current+=increment; return previous;
-}`);
-    // The remaining newlib system calls, as STM32CubeIDE's syscalls.c has them (weak: a project's own syscalls.c wins).
-    // Without them newlib's nosys stubs link in and every build warns "_close is not implemented".
-    env.push('#include <sys/stat.h>',`__attribute__((weak)) int __io_getchar(void) { return -1; }
-__attribute__((weak)) int _read(int file, char *ptr, int len) { (void)file; int i=0; for(;i<len;i++){ int c=__io_getchar(); if(c<0) break; ptr[i]=(char)c; } return i; }
-__attribute__((weak)) int _close(int file) { (void)file; return -1; }
-__attribute__((weak)) int _fstat(int file, struct stat *st) { (void)file; st->st_mode=S_IFCHR; return 0; }
-__attribute__((weak)) int _isatty(int file) { (void)file; return 1; }
-__attribute__((weak)) int _lseek(int file, int ptr, int dir) { (void)file; (void)ptr; (void)dir; return 0; }
-__attribute__((weak)) int _getpid(void) { return 1; }
-__attribute__((weak)) int _kill(int pid, int sig) { (void)pid; (void)sig; errno=EINVAL; return -1; }`);
-    // A synchronous USART uses a USART_HandleTypeDef named husartN (as the generated main.c does).
-    const peripherals=project.mcu?.peripherals||{},sync=id=>peripherals[id]?.mode==='synchronous',usartHandle=id=>sync(id)?'husart'+id.replace(/\D/g,''):serialHandle(id);
-    for(const [id,p]of Object.entries(peripherals))if(p.enabled){if(isSerial(id))env.push(sync(id)?`extern USART_HandleTypeDef ${usartHandle(id)};`:`extern UART_HandleTypeDef ${serialHandle(id)};`);if(isTimer(id))env.push(`extern TIM_HandleTypeDef htim${id.slice(3)};`);}
-    // DMA streams and every enabled NVIC line get the handler CubeMX writes into stm32xxxx_it.c, unless a source defines it.
-    const {irqHandlers}=await import('../src/irq-handlers.js');
-    for(const h of irqHandlers(project.mcu)){const text=handler(h.name,h.body);if(!text)continue;if(h.extern)env.push(h.extern);env.push(text);}
-    await fs.writeFile(path.join(directory,'__stm_environment.c'),env.filter(Boolean).join('\n'));generated.push(path.join(directory,'__stm_environment.c'));
+    // Handlers, system calls and heap the build adds (CubeIDE's stm32xxxx_it.c / syscalls.c / sysmem.c), shared with the
+    // editor's read-only views of them (src/build-environment.js).
+    const {buildEnvironment}=await import('../src/build-environment.js');
+    await fs.writeFile(path.join(directory,'__stm_environment.c'),buildEnvironment(project).text);generated.push(path.join(directory,'__stm_environment.c'));
     await fs.writeFile(path.join(directory,sdk.ld),linker(sdk));
     linkFlags=['-T'+path.join(directory,sdk.ld),'-nostartfiles','--specs=nano.specs','--specs=nosys.specs','-u','_printf_float'];
   }

@@ -561,3 +561,6 @@ body.dock-dragging .dock-unit{pointer-events:none}
 /* An SDK file on screen: its path bar replaces the project breadcrumb / file select. */
 :root[data-shell] #code-panel.sdk-open .editor-heading{display:none}
 :root[data-shell] .outline-view{margin-top:6px}
+:root[data-shell] .build-files summary{color:var(--ide-muted)}
+:root[data-shell] #build-file-list button{color:var(--ide-foreground)}
+:root[data-shell] #build-file-list button.active{color:var(--ide-selectionText)}

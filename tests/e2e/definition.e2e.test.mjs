@@ -49,6 +49,20 @@ test('F12 and Ctrl+click on HAL calls open the SDK source read only; Outline, Al
   // A project tab brings main.c back; × closes an SDK tab.
   await win.click('#source-tabs [data-source="main.c"]');assert.equal(await win.evaluate(()=>document.getElementById('source-path').hidden),true);
   await win.click('[data-sdk-close$="_hal_uart.c"]');assert.equal(await win.locator('[data-sdk-file$="_hal_uart.c"]').count(),0);
+  // Core · Startup (closed by default): what the ARM build adds, read only, in CubeIDE's file names.
+  assert.equal(await win.evaluate(()=>document.getElementById('build-files').open),false);
+  await win.click('[data-activity="explorer"]');if(!await win.locator('#build-files summary').isVisible())await win.click('[data-activity="explorer"]');
+  await win.click('#build-files summary');
+  const rows=await win.$$eval('#build-file-list [data-build-file]',b=>b.map(x=>x.textContent));
+  for(const name of [/_it\.c/,/syscalls\.c/,/sysmem\.c/,/system_stm32f[14]xx\.c/,/startup_stm32f(103xb|446xx)\.s/])assert.ok(rows.some(r=>name.test(r)),String(name));
+  await win.click('#build-file-list [data-build-file$="_it.c"]');await win.waitForSelector('[data-sdk-file$="_it.c"]');
+  assert.match(await win.textContent('#source-path'),/STM Simulator 빌드.*Core.*Src.*_it\.c/);
+  await win.waitForFunction(()=>/SysTick_Handler/.test(document.querySelector('#group-code .monaco-editor .view-lines').textContent));
+  assert.match(await win.textContent('#outline-list'),/SysTick_Handler\(void\) : void/);
+  await win.click('#build-file-list [data-build-file$=".s"]');await win.waitForSelector('[data-sdk-file$=".s"]');
+  await win.waitForFunction(()=>/Reset_Handler/.test(document.querySelector('#group-code .monaco-editor .view-lines').textContent),null,{timeout:10000});
+  assert.match(await win.textContent('#source-path'),/STM32Cube.*Templates.*gcc.*startup_stm32f/);
+  const files=await win.$$eval('#file-tree [data-source]',b=>b.map(x=>x.dataset.source));assert.deepEqual(files,tree,'the project file list is unchanged');
   assert.equal(await code(),before,'main.c is unchanged');
   assert.deepEqual(s.errors,[]);
  }finally{await s.close();}

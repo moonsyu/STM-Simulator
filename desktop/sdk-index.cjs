@@ -3,15 +3,15 @@
 const fs=require('node:fs/promises');
 const path=require('node:path');
 const LAYOUT={
-  STM32F446RE:{key:'cube',name:'STM32CubeF4',hal:'STM32F4xx_HAL_Driver',device:'STM32F4xx',prefix:'stm32f4xx',chip:'stm32f446xx.h',core:'core_cm4.h'},
-  STM32F103RB:{key:'cubeF1',name:'STM32CubeF1',hal:'STM32F1xx_HAL_Driver',device:'STM32F1xx',prefix:'stm32f1xx',chip:'stm32f103xb.h',core:'core_cm3.h'}
+  STM32F446RE:{key:'cube',name:'STM32CubeF4',hal:'STM32F4xx_HAL_Driver',device:'STM32F4xx',prefix:'stm32f4xx',chip:'stm32f446xx.h',core:'core_cm4.h',startup:'startup_stm32f446xx.s'},
+  STM32F103RB:{key:'cubeF1',name:'STM32CubeF1',hal:'STM32F1xx_HAL_Driver',device:'STM32F1xx',prefix:'stm32f1xx',chip:'stm32f103xb.h',core:'core_cm3.h',startup:'startup_stm32f103xb.s'}
 };
 const NAME=/^[A-Za-z_]\w{0,127}$/;
 async function listFiles(root,l){
   const dir=rel=>fs.readdir(path.join(root,rel)).then(names=>names.map(n=>rel+'/'+n),()=>[]);
   const hal=`Drivers/${l.hal}`,device=`Drivers/CMSIS/Device/ST/${l.device}`;
   const files=[...(await dir(hal+'/Inc')).filter(f=>f.endsWith('.h')),...(await dir(hal+'/Src')).filter(f=>f.endsWith('.c')&&!/_template\.c$/.test(f)),
-    `${device}/Include/${l.prefix}.h`,`${device}/Include/${l.chip}`,`${device}/Include/system_${l.prefix}.h`,`${device}/Source/Templates/system_${l.prefix}.c`,
+    `${device}/Include/${l.prefix}.h`,`${device}/Include/${l.chip}`,`${device}/Include/system_${l.prefix}.h`,`${device}/Source/Templates/system_${l.prefix}.c`,`${device}/Source/Templates/gcc/${l.startup}`,
     ...[l.core,'cmsis_gcc.h','cmsis_compiler.h','cmsis_version.h','mpu_armv7.h'].map(f=>'Drivers/CMSIS/Include/'+f)];
   const out=[];for(const f of files)if(await fs.stat(path.join(root,f)).then(s=>s.isFile(),()=>false))out.push(f);return out;
 }
@@ -23,7 +23,7 @@ class SdkIndex {
     const promise=(async()=>{
       const {cSymbols}=await import('../src/c-symbols.js'),files=await listFiles(root,this.layout(family)),symbols=new Map();
       if(!files.length)throw new Error('SDK 폴더에 HAL 드라이버가 없습니다.');
-      for(const file of files){const text=await fs.readFile(path.join(root,file),'utf8');for(const s of cSymbols(text))if(s.kind!=='include'){let list=symbols.get(s.name);if(!list)symbols.set(s.name,list=[]);list.push({file,line:s.line,column:s.column,kind:s.kind,detail:s.detail});}}
+      for(const file of files){if(file.endsWith('.s'))continue;const text=await fs.readFile(path.join(root,file),'utf8');for(const s of cSymbols(text))if(s.kind!=='include'){let list=symbols.get(s.name);if(!list)symbols.set(s.name,list=[]);list.push({file,line:s.line,column:s.column,kind:s.kind,detail:s.detail});}}
       return {files:new Set(files),symbols};
     })();
     this.cache.set(key,promise);promise.catch(()=>this.cache.delete(key));return promise;
