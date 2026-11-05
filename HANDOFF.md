@@ -1,6 +1,10 @@
 # STM Simulator — 개발 인계
 
-현재 버전: **1.18.2**. 정리일: **2026-11-03**. NUCLEO-F446RE 또는 NUCLEO-F103RB와 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+현재 버전: **1.18.3**. 정리일: **2026-11-03**. NUCLEO-F446RE 또는 NUCLEO-F103RB와 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+
+## 1.18.3 보드 구성 초기화가 main.c도 초기화
+
+- `resetBoardConfiguration`(board-reset.js)이 회로·MCU 설정을 보드 기본값으로 비운 뒤 `resetMainCode`를 적용해 main.c를 기본 설정의 최소 HAL 코드로 바꾼다(main.c 중단점·Docs 기록도 지움). 보조 소스 파일은 유지한다. 전에는 코드를 보존해 핀을 지운 뒤에도 옛 예제 코드(`MX_GPIO_Init`, `HAL_GPIO_TogglePin`)가 남았다. 확인창·메뉴 툴팁·로그 문구를 맞추고 `tests/e2e/board-reset.e2e.test.mjs`를 추가했다.
 
 ## 1.18.2 자동완성에 SDK 이름
 
