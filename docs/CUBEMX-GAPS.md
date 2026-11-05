@@ -143,6 +143,48 @@ CubeMX를 화면 없이(`-q` 스크립트) 실행해 실제 생성 코드를 받
 - **오른쪽:** Pinout view / System view 전환, LQFP64 칩 그림(핀마다 이름 칸, 설정된 핀은 색 표시), 확대·축소·회전·검색 도구.
 - **앱과 비교:** 앱의 NVIC는 Pinout 창 오른쪽 열 아래의 목록 하나로, 우선순위 숫자 하나만 있다. Priority Group, Sub Priority, 시스템 예외 행(SysTick 등), 검색·정렬, Code generation 탭이 없다(A1 NVIC 행).
 
+### A11. CubeMX 직접 조작 확인 (2026-11-05, Computer use, STM32F103RBTx)
+
+사용자가 켜 둔 CubeMX 6.18의 MCU Selector 프로젝트에서 화면을 직접 눌러 확인했다. 확인하려고 바꾼 USART2·PA5 설정은 원래대로 되돌렸다. 저장과 코드 생성은 하지 않았다.
+
+- **NVIC Priority Group:** 기본값은 4비트 preemption(그룹 4)이다.
+- **NVIC Code generation 탭:** IRQ마다 네 열이 있다.
+  - Select for init sequence ordering
+  - Generate Enable in Init
+  - Generate IRQ handler: 기본 체크
+  - Call HAL handler: SysTick에서 체크됨
+- **Interrupt unmasking ordering table:** "인터럽트 초기화 코드를 모든 주변장치 초기화 뒤로 옮김" 순서 표가 있다.
+- **USART2:**
+  - **Mode 목록:** Disable, Asynchronous, Synchronous, Single Wire (Half-Duplex), Multiprocessor Communication, IrDA, LIN, SmartCard, SmartCard with Card Clock. Hardware Flow Control(RS232) 선택이 따로 있다.
+  - **Asynchronous를 고르면** 탭이 생긴다: Reset Configuration 단추와 User Constants·NVIC Settings·DMA Settings·GPIO Settings·Parameter Settings.
+  - **Parameter Settings:** Basic(Baud 115200, Word Length 8 Bits, Parity None, Stop Bits 1), Advanced(Data Direction Receive and Transmit, Over Sampling 16).
+  - **NVIC Settings:** "USART2 global interrupt" 한 줄이 Add·Preemption·Sub Priority 열과 함께 나오고, **기본은 꺼져 있다**. 그래서 앱의 1.15.0 자동 켜기는 CubeMX와 다르다(A8).
+  - **GPIO Settings:** PA2 USART2_TX(Alternate Function Push Pull, 속도 High), PA3 USART2_RX(Input mode, No pull).
+  - **DMA Settings:** Add/Delete로 요청을 더하는 빈 표(DMA Request·Channel·Direction·Priority).
+- **TIM2 Mode:** Slave Mode, Trigger Source, Clock Source, Channel1~4, Combined Channels, Use ETR as Clearing Source, XOR activation, One Pulse Mode.
+- **핀 클릭 메뉴(PA5):** Reset_State, ADC1_IN5, ADC2_IN5, SPI1_SCK, GPIO_Input, GPIO_Output, GPIO_Analog, EVENTOUT, GPIO_EXTI5. 고른 신호 이름은 칩 그림의 핀 옆에 표시된다.
+- **GPIO 설정:** Group By Peripherals 보기와 주변장치별 탭(GPIO·USART)이 있고, 표의 열은 Pin Name, Signal, Output level, Mode, Pull, Maximum output speed, User Label, Modified다. 핀을 고르면 아래에 상세 설정이 나오고 여러 핀을 함께 고를 수 있다.
+  - **GPIO_Output 기본값:** Output level Low, Output Push Pull, No pull, **Maximum output speed Low**. 앱은 VERY_HIGH(F1은 HIGH)로 고정이라 다르다.
+- **Clock Configuration (F103, MCU Selector 기본):**
+  - 기본은 HSI 8 MHz를 바로 SYSCLK로 쓰고 모든 분주가 /1이다. 앱의 F103 새 프로젝트와 같다.
+  - 화면 구성:
+    - RTC Clock Mux(HSE/128·LSE·LSI 40 kHz), To IWDG
+    - PLL Source Mux(HSI/2, HSE /1·/2)와 PLLMul, USB Prescaler
+    - System Clock Mux와 Enable CSS
+    - AHB·APB1(36 MHz max 표시)·APB2·ADC 분주, Cortex System timer 분주
+    - MCO source Mux(PLLCLK/2·HSI·HSE·SYSCLK)
+  - 위쪽 도구: 되돌리기·다시 하기, Resolve Clock Issues, 확대·축소, 검색. 주파수 칸에 값을 바로 넣을 수 있다.
+- **Project Manager:**
+  - **Project:** Project Name·Location, Application Structure(Advanced/Basic), Do not generate the main(), Toolchain/IDE(기본 EWARM), Min Version, Generate Under Root.
+  - **Project의 나머지 설정:** Linker Settings(Heap 0x200, Stack 0x400), Thread-safe Settings, Firmware Package(STM32Cube FW_F1 V1.8.7, 기본 위치 `STM32Cube/Repository`).
+  - **Code Generator:** 라이브러리 복사 방식 3가지, 주변장치별 `.c/.h` 분리, 재생성 시 백업, Keep User Code(기본 켬), 쓰지 않는 생성 파일 삭제(기본 켬), 빈 핀을 Analog로, Full Assert, 생성 전후 실행할 사용자 명령, 템플릿 설정.
+  - **Advanced Settings:**
+    - Driver Selector: 주변장치마다 HAL/LL
+    - Generated Function Calls 표: Rank 순서, Do Not Generate Function Call, Visibility(Static)
+    - Register CallBack: 주변장치마다 ENABLE/DISABLE
+- **Tools 탭:** Compare Projects, PCC(소비 전력 계산), CAD.
+- **Middleware and Software Packs (F103):** FATFS, FREERTOS, USB_DEVICE(USB를 켜야 선택 가능).
+
 ## B. 보드 시뮬레이터 쪽 (실물과 같은지)
 
 에뮬레이터의 Cortex-M4 코어는 QEMU와 대조했고, GPIO·EXTI·RCC·TIM·USART·I2C·SPI·ADC·DMA·CAN·IWDG/WWDG·CRC·SDIO·DCMI는 레지스터 단위 모델입니다.
