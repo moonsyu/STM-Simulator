@@ -64,6 +64,13 @@ test('F12 and Ctrl+click on HAL calls open the SDK source read only; Outline, Al
   assert.match(await win.textContent('#source-path'),/STM32Cube.*Templates.*gcc.*startup_stm32f/);
   const files=await win.$$eval('#file-tree [data-source]',b=>b.map(x=>x.dataset.source));assert.deepEqual(files,tree,'the project file list is unchanged');
   assert.equal(await code(),before,'main.c is unchanged');
+  // Completion offers every HAL name of the SDK: HAL_TIM_Base_Start / _Start_IT / _Stop_IT are in no built-in list
+  // nor in this main.c.
+  await win.click('#source-tabs [data-source="main.c"]');
+  await win.evaluate(()=>{const c=document.getElementById('code'),i=c.value.indexOf('/* USER CODE BEGIN 2 */')+'/* USER CODE BEGIN 2 */'.length;c.setSelectionRange(i,i);c.focus();});
+  await win.keyboard.press('Enter');await win.keyboard.type('HAL_TIM_Base_St');await win.keyboard.press('Control+Space');
+  await win.waitForFunction(()=>{const rows=[...document.querySelectorAll('#group-code .suggest-widget .monaco-list-row')].map(r=>r.getAttribute('aria-label')||r.textContent);return ['HAL_TIM_Base_Start','HAL_TIM_Base_Start_IT','HAL_TIM_Base_Stop_IT'].every(n=>rows.some(r=>new RegExp('^'+n+'\\b').test(r)));},null,{timeout:15000});
+  await win.keyboard.press('Escape');
   assert.deepEqual(s.errors,[]);
  }finally{await s.close();}
 });

@@ -5,7 +5,7 @@ import 'monaco-editor/languages/definitions/cpp/register.js';
 import 'monaco-editor/languages/definitions/python/register.js';
 import {loadPreferences,selectedTheme} from './ide-preferences.js';
 import {editorTheme} from './colorscheme.js';
-import {cSymbols,pickDefinitions,KIND_RANK} from './c-symbols.js';
+import {cSymbols,pickDefinitions,KIND_RANK,outlineLabel} from './c-symbols.js';
 
 globalThis.MonacoEnvironment={getWorker:()=>new Worker(new URL('./editor.worker.js',import.meta.url),{name:'stm-editor'})};
 const API={HAL_GPIO_WritePin:'HAL_GPIO_WritePin(GPIOx, GPIO_Pin, PinState)',HAL_GPIO_ReadPin:'HAL_GPIO_ReadPin(GPIOx, GPIO_Pin)',HAL_GPIO_TogglePin:'HAL_GPIO_TogglePin(GPIOx, GPIO_Pin)',HAL_Delay:'HAL_Delay(milliseconds)',HAL_GetTick:'HAL_GetTick()',HAL_UART_Transmit:'HAL_UART_Transmit(&huart, data, size, timeout)',HAL_ADC_GetValue:'HAL_ADC_GetValue(&hadc)',HAL_TIM_PWM_Start:'HAL_TIM_PWM_Start(&htim, channel)',printf:'printf("format", values)',pinMode:'pinMode(pin, OUTPUT)',digitalWrite:'digitalWrite(pin, HIGH)',digitalRead:'digitalRead(pin)',analogRead:'analogRead(pin)',delay:'delay(milliseconds)'};
@@ -91,7 +91,18 @@ export function createCodeEditor({textarea,getFile,getFiles,onBreakpoint,onBreak
     if(current?.file===active)ds.push({range:new monaco.Range(current.line,1,current.line,1),options:{isWholeLine:true,className:'debug-current-line',glyphMarginClassName:'debug-current-glyph'}});
     decorations.set(ds);for(const [file,model]of models)monaco.editor.setModelMarkers(model,'stm-build',diagnostics.filter(d=>d.file===file).map(d=>({severity:d.severity==='warning'?monaco.MarkerSeverity.Warning:d.severity==='info'?monaco.MarkerSeverity.Info:monaco.MarkerSeverity.Error,message:d.message,startLineNumber:d.line,startColumn:d.column||1,endLineNumber:d.line,endColumn:Math.max(2,model.getLineMaxColumn(Math.min(d.line,model.getLineCount())))})));
   }
-  monaco.languages.registerCompletionItemProvider('cpp',{provideCompletionItems(model,position){if(languageService?.enabled())return {suggestions:[]};const word=model.getWordUntilPosition(position),range={startLineNumber:position.lineNumber,endLineNumber:position.lineNumber,startColumn:word.startColumn,endColumn:word.endColumn},words=new Set(getFiles().flatMap(f=>f.text.match(/\b[A-Za-z_]\w*\b/g)||[]));return {suggestions:[...Object.keys(API),...words].filter((w,i,a)=>a.indexOf(w)===i).slice(0,1500).map(word=>({label:word,kind:API[word]?monaco.languages.CompletionItemKind.Function:monaco.languages.CompletionItemKind.Text,insertText:word,detail:API[word]||'프로젝트의 식별자',range}))};}});
+  // Completion without clangd (CubeIDE content assist): the built-in HAL list, the project's own words and every name
+  // of the board's STM32Cube SDK (HAL driver, CMSIS) starting with what was typed. incomplete: Monaco asks again as
+  // the prefix grows, since the SDK part depends on it.
+  const KINDS={function:'Function',declaration:'Function',macro:'Constant',enum:'EnumMember',typedef:'Struct',variable:'Variable'};
+  const sdkNames=new Map();
+  const sdkComplete=prefix=>{if(!sdk?.['sdk-names']||prefix.length<2)return Promise.resolve([]);const key=getFamily()+':'+prefix.toLowerCase();if(!sdkNames.has(key)){if(sdkNames.size>200)sdkNames.clear();sdkNames.set(key,sdk['sdk-names'](getFamily(),prefix).catch(()=>{sdkNames.delete(key);return [];}));}return sdkNames.get(key);};
+  monaco.languages.registerCompletionItemProvider('cpp',{async provideCompletionItems(model,position){if(languageService?.enabled())return {suggestions:[]};const word=model.getWordUntilPosition(position),range={startLineNumber:position.lineNumber,endLineNumber:position.lineNumber,startColumn:word.startColumn,endColumn:word.endColumn},words=new Set(getFiles().flatMap(f=>f.text.match(/\b[A-Za-z_]\w*\b/g)||[]));
+    const fromSdk=await sdkComplete(word.word),seen=new Set(),out=[];
+    for(const d of fromSdk){seen.add(d.name);out.push({label:d.name,kind:monaco.languages.CompletionItemKind[KINDS[d.kind]||'Text'],insertText:d.name,detail:outlineLabel(d),range,sortText:'1'+d.name});}
+    for(const w of Object.keys(API))if(!seen.has(w)){seen.add(w);out.push({label:w,kind:monaco.languages.CompletionItemKind.Function,insertText:w,detail:API[w],range,sortText:'1'+w});}
+    for(const w of words)if(!seen.has(w)&&out.length<1500){seen.add(w);out.push({label:w,kind:monaco.languages.CompletionItemKind.Text,insertText:w,detail:'프로젝트의 식별자',range,sortText:'2'+w});}
+    return {suggestions:out,incomplete:word.word.length>=2&&fromSdk.length>0};}});
   monaco.languages.registerHoverProvider('cpp',{provideHover(model,position){if(languageService?.enabled())return null;const w=model.getWordAtPosition(position);return w&&API[w.word]?{contents:[{value:'```c\n'+API[w.word]+';\n```'},{value:'STM Simulator에서 지원하는 API입니다. 상세 범위는 HAL API 문서를 확인하세요.'}]}:null;}});
   // Go to definition (Ctrl+click, F12, Alt+F12 peek) as in CubeIDE: the project's own files first, then the
   // STM32Cube SDK (HAL driver, CMSIS) of the project's MCU, opened as a read-only tab.

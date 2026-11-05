@@ -24,7 +24,9 @@ class SdkIndex {
       const {cSymbols}=await import('../src/c-symbols.js'),files=await listFiles(root,this.layout(family)),symbols=new Map();
       if(!files.length)throw new Error('SDK 폴더에 HAL 드라이버가 없습니다.');
       for(const file of files){if(file.endsWith('.s'))continue;const text=await fs.readFile(path.join(root,file),'utf8');for(const s of cSymbols(text))if(s.kind!=='include'){let list=symbols.get(s.name);if(!list)symbols.set(s.name,list=[]);list.push({file,line:s.line,column:s.column,kind:s.kind,detail:s.detail});}}
-      return {files:new Set(files),symbols};
+      // Names sorted case-insensitively for completion by prefix (binary search), each with its best definition.
+      const names=[...symbols.keys()].sort((a,b)=>a.toLowerCase()<b.toLowerCase()?-1:a.toLowerCase()>b.toLowerCase()?1:a<b?-1:1);
+      return {files:new Set(files),symbols,names,lower:names.map(n=>n.toLowerCase())};
     })();
     this.cache.set(key,promise);promise.catch(()=>this.cache.delete(key));return promise;
   }
@@ -32,6 +34,16 @@ class SdkIndex {
   async definition(family,tools,name){
     if(typeof name!=='string'||!NAME.test(name))return [];const {pickDefinitions}=await import('../src/c-symbols.js'),index=await this.build(family,this.root(family,tools));
     return pickDefinitions(index.symbols.get(name)).slice(0,20);
+  }
+  // Completion (CubeIDE content assist): SDK names starting with the typed prefix, case-insensitive, functions and
+  // macros first; each with its kind and declaration text.
+  async names(family,tools,prefix,limit=150){
+    if(typeof prefix!=='string'||!/^[A-Za-z_]\w{1,63}$/.test(prefix))return [];
+    const {pickDefinitions}=await import('../src/c-symbols.js'),index=await this.build(family,this.root(family,tools)),p=prefix.toLowerCase(),out=[];
+    let lo=0,hi=index.lower.length;while(lo<hi){const mid=(lo+hi)>>1;if(index.lower[mid]<p)lo=mid+1;else hi=mid;}
+    for(let i=lo;i<index.lower.length&&index.lower[i].startsWith(p)&&out.length<limit*4;i++){const name=index.names[i],d=pickDefinitions(index.symbols.get(name))[0];if(d)out.push({name,kind:d.kind,detail:d.detail});}
+    const rank={function:0,declaration:0,macro:1,enum:2,typedef:3,variable:4};
+    return out.sort((a,b)=>(rank[a.kind]??5)-(rank[b.kind]??5)||(a.name.startsWith(prefix)?0:1)-(b.name.startsWith(prefix)?0:1)||a.name.localeCompare(b.name)).slice(0,limit);
   }
   async file(family,tools,file){
     const root=this.root(family,tools),index=await this.build(family,root);

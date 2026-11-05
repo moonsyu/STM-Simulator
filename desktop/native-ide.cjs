@@ -228,6 +228,7 @@ class NativeIde extends EventEmitter{
   input(text){if(typeof text!=='string'||text.length>8192)throw new Error('입력이 너무 큽니다.');if(!this.runProcess)throw new Error('실행 중인 Windows 프로그램이나 ESP32 직렬 모니터가 없습니다.');this.runProcess.stdin.write(text);}
   // Go to definition into the STM32Cube SDK (HAL driver / CMSIS) of the project's MCU; the files open read only.
   async sdkDefinition(family,name){return this.sdk.definition(family,await this.settings(),name);}
+  async sdkNames(family,prefix){return this.sdk.names(family,await this.settings(),prefix);}
   async sdkFile(family,file){return this.sdk.file(family,await this.settings(),file);}
   async sdkRelative(family,absolute){return typeof absolute==='string'?this.sdk.relative(family,await this.settings(),absolute):null;}
   async language(text,config){config=checkedConfig(config);const project=await this.validate(text),tools=await this.settings();if(!tools.clangd)throw new Error('clangd 경로를 개발 도구 설정에서 지정하세요.');const key=createHash('sha256').update(JSON.stringify([config,project.firmware?.files.map(f=>f.name),project.mcu])).digest('hex');const files=[{name:'main.c',text:project.code},...(project.firmware?.files||[])];if(this.languageKey===key&&!this.lsp.closed){await this.lsp.update(files);return {state:'ready'};}await this.lsp.stop();const plan=await prepareBuild({project,tools,root:path.join(tools.buildRoot||this.directory,'language-workspaces'),...config});await this.lsp.start(tools.clangd,plan,files);this.languageKey=key;return {state:'ready'};}

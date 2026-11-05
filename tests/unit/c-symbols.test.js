@@ -73,6 +73,10 @@ test('the SDK index resolves HAL functions, types, IRQ numbers and macros to the
  assert.deepEqual(await one('STM32F103RB','no_such_symbol_xyz'),[]);assert.deepEqual(await one('STM32F103RB','bad name'),[]);
  const file=await index.file('STM32F103RB',tools,irq[0].file);assert.equal(file.sdk,'STM32CubeF1');
  const line=file.text.split(/\r?\n/)[irq[0].line-1];assert.match(line,/HAL_UART_IRQHandler/);
+ // Completion by prefix (case-insensitive), functions first.
+ const names=(await index.names('STM32F103RB',tools,'hal_tim_base_st')).map(n=>n.name);
+ for(const n of ['HAL_TIM_Base_Start','HAL_TIM_Base_Start_IT','HAL_TIM_Base_Stop','HAL_TIM_Base_Stop_IT'])assert.ok(names.includes(n),n);
+ assert.equal((await index.names('STM32F103RB',tools,'HAL_TIM_Base_Stop_IT'))[0].kind,'function');assert.deepEqual(await index.names('STM32F103RB',tools,'H'),[],'two letters at least');
  await assert.rejects(index.file('STM32F103RB',tools,'../../../Windows/win.ini'),/색인에 없는/);
  await assert.rejects(index.definition('STM32F103RB',{cube:cubeF4},'HAL_Init'),/STM32CubeF1 SDK가 없어/);
 });
