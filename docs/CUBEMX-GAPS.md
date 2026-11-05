@@ -22,8 +22,8 @@
 
 | 항목 | 현재 | CubeMX | 크기 | 중요도 |
 |---|---|---|---|---|
-| NVIC | Pinout 오른쪽 열 아래 IRQ 목록, 우선순위 숫자 하나. 모델이 있는 주변장치 IRQ만 표시(`mcu-family.js`) | System Core → NVIC 표와 주변장치별 **NVIC Settings** 탭. Priority Group(0~4), Preemption·Sub Priority, SysTick·Fault 줄 | S~M | 상 |
-| GPIO | 출력은 항상 Push-Pull, 속도는 VERY_HIGH(F1은 HIGH) 고정(`hal-generator.js:88-90`). AF 핀에 pull·속도 설정 없음. EXTI Event 모드 없음 | Output type(PP/OD), Speed, AF 핀 Pull, Event 모드, User Label | S~M | 상 |
+| NVIC | **1.16.0 반영:** NVIC 탭(Priority Group·Preemption·Sub·시스템 예외·Time base·검색·사용 가능한 인터럽트), 주변장치 카드 NVIC Settings, EXTI 핀 인터럽트 줄. Code generation 탭은 남음. 이전:  Pinout 오른쪽 열 아래 IRQ 목록, 우선순위 숫자 하나. 모델이 있는 주변장치 IRQ만 표시(`mcu-family.js`) | System Core → NVIC 표와 주변장치별 **NVIC Settings** 탭. Priority Group(0~4), Preemption·Sub Priority, SysTick·Fault 줄 | S~M | 상 |
+| GPIO | **1.16.0 반영:** GPIO mode(Push Pull/Open Drain), Pull, Maximum output speed(CubeMX 기본값). Event 모드는 남음. 이전:  출력은 항상 Push-Pull, 속도는 VERY_HIGH(F1은 HIGH) 고정(`hal-generator.js:88-90`). AF 핀에 pull·속도 설정 없음. EXTI Event 모드 없음 | Output type(PP/OD), Speed, AF 핀 Pull, Event 모드, User Label | S~M | 상 |
 | UART/USART | baud만 설정. 8N1·TX_RX·Oversampling 16 고정 | Word length, Parity, Stop bits, Direction, Oversampling, Half-duplex, RTS/CTS 등 | S~M | 상 |
 | SPI | Master·Full-duplex·8비트·Mode 0·Soft NSS 고정, 속도만(`hal-generator.js:110`) | Slave, Half-duplex/RX-only, HW NSS, CPOL/CPHA, 16비트, LSB first, CRC | S~M | 상 |
 | ADC | 생성 코드는 채널 하나, 소프트웨어 시작·단일 변환·고정 샘플링(`hal-generator.js:111-112`) | Scan(Rank), Continuous, 외부 트리거(TIM TRGO), Injected, Watchdog, 해상도, TempSens·Vrefint·Vbat | M | 상 |
@@ -99,14 +99,14 @@
 
 ### A8. 일부러 CubeMX와 다르게 만든 부분 (유지 여부 결정 필요)
 
-- **UART NVIC 자동 켜기:** UART를 켜면 NVIC 전역 인터럽트도 켜집니다(1.15.0, `serial-config.js:23-25`).
+- ~~**UART NVIC 자동 켜기:**~~ 1.16.0에서 CubeMX처럼 꺼진 채 시작하도록 되돌림. UART를 켜면 NVIC 전역 인터럽트도 켜집니다(1.15.0, `serial-config.js:23-25`).
 - **주변장치 자동 켜기:** 핀에 주변장치 신호를 고르면 그 주변장치가 켜집니다(`pinout-ui.js:67`).
 - **클럭:** 항상 HSI로 둡니다. ST-LINK MCO나 HSE 점퍼 상태에 흔들리지 않게 하려는 것입니다.
 - **생성 main.c의 예시 코드:** CubeMX에는 없는 코드가 들어갑니다(`hal-generator.js:50-58,132-136`).
   - "HAL ready" UART 송신, 첫 출력 핀 토글 + `HAL_Delay(500)`, `HAL_TIM_*_Start`
   - 빈 콜백, ITM으로 보내는 `__io_putchar`
 - **IRQ 핸들러 위치:** `_it.c`가 아니라 main.c에 씁니다.
-- **EXTI 기본 에지:** FALLING입니다. CubeMX 기본값은 RISING입니다(`mcu-config.js:116`).
+- ~~**EXTI 기본 에지:**~~ 1.16.0에서 새 EXTI 핀은 RISING(CubeMX)으로 시작. 이전: FALLING입니다. CubeMX 기본값은 RISING입니다(`mcu-config.js:116`).
 - **NVIC 우선순위:** Group 4를 가정한 Preemption 값입니다.
 - **F1 SWJ 리맵:** `__HAL_AFIO_REMAP_SWJ_NOJTAG()`를 PA15/PB3/PB4를 쓸 때만 넣습니다. CubeMX는 Serial Wire를 고르면 `HAL_MspInit`에 넣습니다.
 
@@ -235,7 +235,7 @@ CubeMX를 화면 없이(`-q` 스크립트) 실행해 실제 생성 코드를 받
 
 ## C. 우선순위 제안
 
-1. **NVIC를 CubeMX처럼:** Priority Group·Sub Priority, 주변장치별 NVIC 탭, SysTick 줄을 넣습니다. GPIO의 Output type·Speed와 AF 핀 Pull도 함께 넣습니다(S~M).
+1. **(1.16.0 로컬 구현) NVIC를 CubeMX처럼:** Priority Group·Sub Priority, 주변장치별 NVIC 탭, SysTick 줄을 넣습니다. GPIO의 Output type·Speed와 AF 핀 Pull도 함께 넣습니다(S~M).
 2. **기존 주변장치 설정 채우기:** UART 형식, SPI 모드, ADC 다채널·트리거, TIM 채널별 Pulse·OC·One Pulse(M). 에뮬레이터가 이미 지원하므로 UI와 생성만 만들면 됩니다.
 3. **클럭 트리 화면:** HSE Bypass·PLL·분주, 180/72 MHz(L).
 4. **주변장치 추가:** TIM1·TIM6/7, IWDG/WWDG, I2C2·SPI2, RTC(F103 에뮬레이터 포함), DAC(F446 에뮬레이터 포함)(M).

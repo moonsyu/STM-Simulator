@@ -2,6 +2,27 @@
 
 작업할 때마다 날짜순으로 맨 위에 추가합니다. 무엇을 했는지, 왜 했는지, 어떻게 검증했는지, 커밋·릴리스와 남은 사항을 적습니다. 버전별 구조 설명은 [HANDOFF.md](../HANDOFF.md), 검증 수치는 [VERIFICATION.md](VERIFICATION.md)에 있습니다.
 
+## 2026-11-05 · 1.16.0(로컬) CubeMX식 NVIC·GPIO·핀 클릭 메뉴
+
+- 요청: NVIC·GPIO부터 CubeMX처럼, NVIC를 더 쉽게 켤 수 있게(안 보임), 핀 클릭 메뉴도 CubeMX처럼. 이번 작업은 푸시하지 말고 앱을 실행해 두어 사용자가 확인.
+- 한 것:
+  - **NVIC:** 오른쪽 열에 핀 설정 / NVIC 탭을 두었다. NVIC 탭은 Priority Group, Preemption·Sub Priority, 시스템 예외 줄, Time base(SysTick) 우선순위, 검색, 사용 가능/켜진/모든 인터럽트 보기를 제공한다. 왼쪽 맨 위 System Core 카드에 NVIC 버튼을 두었다. 주변장치 카드마다 NVIC Settings를 넣었고, EXTI 핀 설정에 그 라인의 인터럽트 줄을 넣었다.
+  - **UART 인터럽트:** CubeMX처럼 UART를 켜도 꺼진 채 시작한다(1.15.0 자동 켜기 제거). CubeMX 화면에서 USART2 global interrupt 기본값이 꺼져 있음을 직접 확인했다.
+  - **GPIO:** 핀 설정을 CubeMX 항목으로 바꿨다: GPIO output level, GPIO mode(Push Pull/Open Drain), Pull, Maximum output speed, User Label. 기본 속도는 CubeMX DB(`GPIO_Speed` 기본 Low, 통신 핀 High-speed 기본)와 CubeMX 화면(F103 USART TX High, 출력 Low)에 맞췄다. Speed는 출력·AF에만 쓴다. 새 EXTI 핀은 Rising edge로 시작한다.
+  - **핀 클릭 메뉴:** 핀을 누르면 CubeMX 신호 목록이 메뉴로 나온다(Reset_State·GPIO_Input·GPIO_Output·GPIO_Analog·GPIO_EXTIn·주변장치 신호, ↑/↓·Esc).
+  - **생성 코드:** 그룹이 4가 아니면 `HAL_NVIC_SetPriorityGrouping`, SysTick 우선순위가 15가 아니면 `HAL_InitTick(n)`을 `HAL_Init()` 바로 뒤에 넣는다. `HAL_NVIC_SetPriority`에는 sub 값을 쓴다.
+  - **.ioc 가져오기:** GPIO 속도·Open Drain, NVIC sub·Priority Group·SysTick 우선순위를 읽는다. 해석기는 Pinout이 Open Drain이면 OUTPUT_OD를 요구한다.
+- 이유: 최종 목표(CubeMX + CubeIDE + 보드 시뮬레이터)에 맞춰 CubeMX와 같은 결과·화면을 기본으로 한다.
+- 검증:
+  - 단위·해석기·에뮬레이터·펌웨어 시험 888개 중 887개 통과, 1개 건너뜀. 새 시험: `tests/unit/nvic-gpio.test.js`, `tests/interp/nvic-gpio.test.js`.
+  - ESLint 0건.
+  - E2E(`tests/e2e/pinout.e2e.test.mjs` 추가, sim-gcc·devboards)는 아래에 기록한다.
+- 커밋: 로컬 커밋만 하고 푸시·Release는 하지 않았다(사용자 확인 대기).
+- 남은 사항:
+  - NVIC Code generation 탭(IRQ별 핸들러 생성·HAL 핸들러 호출 선택)
+  - EXTI Event 모드
+  - SysTick 외 시스템 예외 우선순위 편집
+
 ## 2026-11-05 · CubeMX · 보드 시뮬레이터 차이 조사
 
 - 요청: 최종 목표(CubeMX + CubeIDE + STM 보드 시뮬레이터, 보드는 F446RE·F103RB만)에 맞춰 무엇을 고치고 구현할지 확인. CubeIDE 쪽(편집·빌드·디버그)은 현재 기능 유지.

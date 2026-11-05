@@ -13,7 +13,8 @@
 | CNT / 초기 PWM Pulse | 0 / CCR=0 |
 | 카운트 방향 / CKD / ARR preload | Up / DIV1 / Disable |
 | 주변장치 / NVIC | 비활성, 우선순위 입력 초기값 0 |
-| GPIO | 사용자 기능 미할당 |
+| GPIO | 사용자 기능 미할당. 새 EXTI 핀은 Rising edge, 출력은 Push Pull·Low, 통신 핀(USART/SPI/I2C/SDIO)은 Very High(F103RB High), TIM 채널 Low (CubeMX GPIO 기본값, 1.16.0) |
+| NVIC | Priority Group 4(4비트 preemption), Time base(SysTick) 15, Sub 0 (CubeMX/HAL 기본값) |
 
 Pinout에서 TIM을 활성화하면 위 PSC/ARR 설정을 사용한다. PWM Pulse는 0으로 시작하며 `초기 Pulse (CCR)`에서 설정한다. 현재 생성기는 한 TIM의 활성 PWM 채널들에 같은 초기 Pulse를 사용한다. 서로 다른 듀티는 소스의 `__HAL_TIM_SET_COMPARE()`로 설정한다.
 

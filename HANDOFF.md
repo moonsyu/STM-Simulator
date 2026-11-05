@@ -1,6 +1,16 @@
 # STM Simulator — 개발 인계
 
-현재 버전: **1.15.0**. 정리일: **2026-11-03**. NUCLEO-F446RE 또는 NUCLEO-F103RB와 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+현재 버전: **1.16.0**(로컬, 미게시). 정리일: **2026-11-03**. NUCLEO-F446RE 또는 NUCLEO-F103RB와 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+
+## 1.16.0 CubeMX식 NVIC·GPIO·핀 클릭 메뉴 (로컬, 사용자 확인 대기)
+
+- `src/nvic-config.js`: CubeMX NVIC 이름(`irqLabel`), 주변장치별 IRQ(`peripheralIrqs`), "사용 가능한 인터럽트"(`irqAvailable`), 사용 중 DMA 스트림 강제 켜짐(`dmaForced`), 그룹별 범위 검사(`nvicProblems`). MCU 설정에 선택 필드 `nvicGroup`(0~4, 4면 저장 안 함), `tickPriority`(0~15, 15면 저장 안 함), `nvic[irq].sub`(0이면 저장 안 함)를 추가했다.
+- 생성 코드: 그룹이 4가 아니면 `HAL_Init()` 바로 뒤에 `HAL_NVIC_SetPriorityGrouping(NVIC_PRIORITYGROUP_n)`, SysTick 우선순위가 15가 아니면 `HAL_InitTick(n)`(CubeMX는 HAL_MspInit·TICK_INT_PRIORITY에 쓴다). `HAL_NVIC_SetPriority(irq, pre, sub)`.
+- `src/gpio-config.js`: `gpioMode`(생성기·Pinout 공용), CubeMX 기본 속도(`defaultSpeed`: 출력·TIM 채널 Low, 통신 Very High, F1 High), 신호 이름(`signalName`: Reset_State, GPIO_Analog, GPIO_EXTIn). 핀 선택 필드 `speed`, `outputType`(PP/OD). Speed는 출력과 AF에만 쓴다(입력·EXTI에는 쓰지 않음). 이전 Docs 코드 제거는 `generateMain(...,{legacyGpio:true})`로 옛 규칙과 맞춘다.
+- Pinout UI(`pinout-ui.js`): 핀 타일을 누르면 `#pin-menu`(CubeMX 신호 목록, ↑/↓·Esc). 함수 변경은 `choose(pin,fn)` 한 곳에서 한다. 오른쪽 열은 핀 설정 / NVIC 탭(`#pinout-tab-*`), 왼쪽 맨 위 System Core 카드의 NVIC 버튼, 주변장치 카드의 NVIC Settings(`data-card-irq`), EXTI 핀 설정의 인터럽트 줄. 핀 설정은 기능별 CubeMX 항목만 보인다.
+- `serial-config.js`: UART를 켜도 NVIC를 켜지 않는다(CubeMX와 같음, 1.15.0 동작 제거). 해석기: Pinout이 Open Drain이면 `GPIO_MODE_OUTPUT_OD`를 요구한다.
+- 새 EXTI 핀의 기본 에지는 CubeMX처럼 RISING. `.ioc` 가져오기는 `GPIO_Speed`, `GPIO_ModeDefaultOutputPP`(OD), `NVIC.<irq>` 서브 우선순위, `NVIC.PriorityGroup`, `NVIC.SysTick_IRQn`을 읽는다.
+- 남은 것: NVIC Code generation 탭(IRQ별 핸들러 생성·HAL 핸들러 호출 선택), EXTI Event 모드, 시스템 예외(SysTick 외) 우선순위 편집.
 
 ## 1.15.0 UART 인터럽트와 IRQ 핸들러 자동 작성
 
