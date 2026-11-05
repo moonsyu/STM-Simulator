@@ -110,6 +110,21 @@
 - **NVIC 우선순위:** Group 4를 가정한 Preemption 값입니다.
 - **F1 SWJ 리맵:** `__HAL_AFIO_REMAP_SWJ_NOJTAG()`를 PA15/PB3/PB4를 쓸 때만 넣습니다. CubeMX는 Serial Wire를 고르면 `HAL_MspInit`에 넣습니다.
 
+### A9. 새 프로젝트 기본값: CubeMX Board Selector와 비교
+
+CubeMX가 NUCLEO 보드를 고를 때 쓰는 기본 설정 파일(`db/plugins/boardmanager/boards/A42_Nucleo_NUCLEO-F446RE_STM32F446RE_Board*.ioc`, `A10_Nucleo_NUCLEO-F103RB_STM32F103RB_Board*.ioc`)과 앱의 새 프로젝트(`docs/MCU-DEFAULTS.md`)를 비교했다.
+
+| 항목 | CubeMX Board Selector (NUCLEO) | 앱 새 프로젝트 |
+|---|---|---|
+| F446 클럭 | HSI → PLL(N=336, P=/4) 84 MHz, APB1 /2(42 MHz, TIM 84 MHz), APB2 /1, Flash latency 2 | HSI 16 MHz, PLL OFF, 분주 1, latency 0 |
+| F103 클럭 | HSI/2 × PLL16 = 64 MHz, APB1 /2(32 MHz, TIM 64 MHz) | HSI 8 MHz(예제는 64 MHz) |
+| 핀 | PA5 `LD2 [Green Led]` 출력, PC13 `B1 [Blue PushButton]` EXTI 하강, PA2/PA3 USART2(Asynchronous), PA13/PA14 Serial Wire, PB3 SWO, PC14/PC15 LSE, PH0/PH1(F1은 PD0/PD1) HSE | 할당 없음 |
+| NVIC | SysTick·Fault 줄 표시. Priority Group 4(F103 파일), "모든 주변장치 기본 모드로 초기화" 파일은 SysTick 켜짐 | Priority Group 선택 없음, SysTick 줄 없음 |
+
+앱의 새 프로젝트는 CubeMX의 **MCU Selector**(칩만 고른 상태: HSI 16 MHz, 핀 없음)와 같고, **Board Selector**(NUCLEO 보드 기본값)와는 다르다. 앱은 NUCLEO 보드를 전제로 하므로 Board Selector 기본값을 따를지 결정이 필요하다.
+
+CubeMX를 화면 없이(`-q` 스크립트) 실행해 실제 생성 코드를 받으려 했으나, 이 PC의 `STM32Cube/Repository`에 펌웨어 패키지(STM32Cube_FW_F4/F1)가 없어 보드 설정을 읽은 뒤 진행하지 않았다(생성에는 패키지가 필요).
+
 ## B. 보드 시뮬레이터 쪽 (실물과 같은지)
 
 에뮬레이터의 Cortex-M4 코어는 QEMU와 대조했고, GPIO·EXTI·RCC·TIM·USART·I2C·SPI·ADC·DMA·CAN·IWDG/WWDG·CRC·SDIO·DCMI는 레지스터 단위 모델입니다.

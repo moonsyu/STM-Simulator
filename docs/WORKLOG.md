@@ -7,7 +7,8 @@
 - 요청: 최종 목표(CubeMX + CubeIDE + STM 보드 시뮬레이터, 보드는 F446RE·F103RB만)에 맞춰 무엇을 고치고 구현할지 확인. CubeIDE 쪽(편집·빌드·디버그)은 현재 기능 유지.
 - 한 것: 이 PC의 CubeMX 데이터베이스(MCU·IP 모드·클럭 트리 XML)와 앱의 Pinout·코드 생성을 대조하고, 에뮬레이터·해석기를 실제 RM0390/RM0008 주변장치와 대조했다. 결과와 우선순위를 [CUBEMX-GAPS.md](CUBEMX-GAPS.md)에 정리했다. NVIC는 Pinout 오른쪽 열 아래에 이미 있지만, CubeMX처럼 주변장치별 NVIC 탭·Priority Group이 없어 찾기 어렵다는 점도 넣었다.
 - 검증: 주요 근거(`hal-generator.js`의 GPIO·SPI·ADC 고정값, `mcu-family.js` 주변장치 목록, F446 DAC·F103 RTC 미매핑, 빌드 모듈 목록)를 소스에서 직접 확인했다. 코드 변경 없음.
-- 남은 사항: 생성 main.c의 예시 코드(HAL ready 송신·LED 토글 등)를 CubeMX처럼 뺄지, 어느 항목부터 할지 결정 필요.
+- 추가 확인(CubeMX 직접): CubeMX의 NUCLEO 보드 기본 설정 파일을 읽어 앱 새 프로젝트와 비교했다(CUBEMX-GAPS.md A9). 앱은 CubeMX MCU Selector 기본값(HSI 16 MHz, 핀 없음)과 같고 Board Selector 기본값(84/64 MHz PLL, LD2·B1·USART2·SWD 핀)과 다르다. CubeMX를 화면 없이 실행해 생성 코드를 받으려 했으나 펌웨어 패키지가 없어 진행되지 않았고, 띄운 CubeMX 프로세스는 직접 종료했다(사용자가 켜 둔 CubeMX 창은 그대로). 이 세션에는 화면 조작(Computer use) 도구가 없어 CubeMX 화면 배치는 보지 못했다.
+- 남은 사항: 생성 main.c의 예시 코드(HAL ready 송신·LED 토글 등)를 CubeMX처럼 뺄지, 새 프로젝트를 Board Selector 기본값으로 할지, 어느 항목부터 할지 결정 필요.
 
 ## 2026-11-04 · 1.15.0 USART2를 켜면 IRQ 핸들러가 main.c에 들어가도록
 
