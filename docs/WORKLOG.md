@@ -7,6 +7,7 @@
 - 요청: CubeIDE의 stm32f1xx_it.c, syscalls.c, sysmem.c, system_stm32f1xx.c도 열리는지 물으셨고, 열리지 않는 셋을 읽기 전용으로 보이게, startup 파일도 넣어 달라고 하셨다.
 - 한 것: ARM 빌드가 넣는 코드(`__stm_environment.c`)를 `src/build-environment.js`로 옮겨 빌드와 편집기가 같은 코드를 쓰게 하고, CubeIDE 이름의 세 파일로 나눠 보여 준다. 탐색기 소스 파일 아래 접힌 "Core · Startup" 묶음에서 이 셋과 SDK의 system·startup 파일을 읽기 전용 탭으로 연다. 소스 파일 목록은 그대로다. 정의 찾기도 이 파일들로 간다(SysTick_Handler, _sbrk 등).
 - 검증: 단위 시험 추가(`tests/unit/build-environment.test.js`), 정의 이동 E2E에 Core · Startup 열기·경로·Outline·startup 내용 확인을 추가해 통과. 빌드가 넣는 코드를 옮겼으므로 ARM GCC 예제 빌드·에뮬레이터 실행(toolchain) 273개 중 272개 통과·1개 건너뜀으로 빌드가 그대로임을 확인했다. 단위·해석기·에뮬레이터 893개 중 892개 통과·1개 건너뜀, E2E 55개 중 54개 통과·1개 건너뜀, ESLint 0건, 로컬 패키지 검사 3개 통과(산출물 삭제). 다크 모드 화면 캡처를 보고 묶음을 이름 변경·삭제 버튼 아래로 옮겼다.
+- 커밋·게시: 006e74f 69a75d8 푸시. CI 41965602109 성공, Release v1.17.1 latest·자산 5개(API 확인).
 
 ## 2026-11-05 · 1.17.0 정의로 이동(Ctrl+클릭·F12)과 코드 개요(Outline)
 
