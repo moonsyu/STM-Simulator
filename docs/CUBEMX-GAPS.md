@@ -125,6 +125,24 @@ CubeMX가 NUCLEO 보드를 고를 때 쓰는 기본 설정 파일(`db/plugins/bo
 
 CubeMX를 화면 없이(`-q` 스크립트) 실행해 실제 생성 코드를 받으려 했으나, 이 PC의 `STM32Cube/Repository`에 펌웨어 패키지(STM32Cube_FW_F4/F1)가 없어 보드 설정을 읽은 뒤 진행하지 않았다(생성에는 패키지가 필요).
 
+### A10. CubeMX 화면 확인 (NVIC, STM32F103RBTx)
+
+사용자가 띄워 둔 CubeMX 창(MCU Selector로 만든 STM32F103RBTx 프로젝트)을 포커스 없이 창만 캡처해 확인했다.
+
+- **상단 탭:** Pinout & Configuration · Clock Configuration · Project Manager · Tools. Pinout & Configuration 아래에 Software Packs·Pinout 메뉴가 있고, 오른쪽 위에 **GENERATE CODE**가 있다.
+- **왼쪽 분류 트리:** Categories / A->Z 전환과 검색 칸이 있다.
+  - 분류: System Core(DMA·GPIO·IWDG·NVIC·RCC·SYS·WWDG), Analog, Timers, Connectivity, Computing, Middleware and Software Packs.
+  - 설정한 항목에는 초록 체크가 붙는다.
+- **가운데 NVIC 화면:** Mode와 Configuration 영역으로 나뉘고, Configuration에 **NVIC**·**Code generation** 탭이 있다.
+  - **NVIC 탭의 위쪽 도구:** Priority Group 선택, Preemption·Sub Priority 정렬, 이름 정렬, 검색, 표시 범위(available interrupts), Force DMA channels.
+  - **NVIC 탭의 표:** 열은 Add(켜기), Preemption Priority, Sub Priority다.
+    - 고정 행: NMI, Hard fault, Memory management, Prefetch fault(BusFault), Undefined instruction(UsageFault), SVC, Debug monitor, PendSV, **Time base: System tick timer(우선순위 15)**.
+    - 켜고 끌 수 있는 행: PVD(EXTI16), Flash, RCC.
+    - 맨 아래에서 고른 행의 Preemption·Sub Priority를 바꾼다.
+  - **Code generation 탭:** IRQ 핸들러 생성 여부와 HAL 핸들러 호출 여부를 IRQ마다 정한다. 앱의 1.15.0 핸들러 생성은 이 선택 없이 켜진 IRQ마다 만든다.
+- **오른쪽:** Pinout view / System view 전환, LQFP64 칩 그림(핀마다 이름 칸, 설정된 핀은 색 표시), 확대·축소·회전·검색 도구.
+- **앱과 비교:** 앱의 NVIC는 Pinout 창 오른쪽 열 아래의 목록 하나로, 우선순위 숫자 하나만 있다. Priority Group, Sub Priority, 시스템 예외 행(SysTick 등), 검색·정렬, Code generation 탭이 없다(A1 NVIC 행).
+
 ## B. 보드 시뮬레이터 쪽 (실물과 같은지)
 
 에뮬레이터의 Cortex-M4 코어는 QEMU와 대조했고, GPIO·EXTI·RCC·TIM·USART·I2C·SPI·ADC·DMA·CAN·IWDG/WWDG·CRC·SDIO·DCMI는 레지스터 단위 모델입니다.
