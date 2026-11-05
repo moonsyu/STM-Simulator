@@ -17,11 +17,27 @@ export function inspectRuntime(runtime,frame=0){
 }
 // `frame` (0 = innermost) evaluates in a caller's scopes, as the selected call-stack row shows them.
 export function watchValue(runtime,text,frame=0){
+  const selected=[...runtime.frames].reverse()[frame];
+  return displayValue(readExpression(runtime,watchExpression(text),frame&&selected?.scopes?selected.scopes:null));
+}
+/** A watch expression parsed once: reads only (names, operators, [], ., ->, casts), no assignment or call. */
+export function watchExpression(text){
   if(!text.trim()||text.length>250)throw new Error('감시식은 1~250자로 입력하세요.');
   const p=compile(`void loop(){ ${text}; }`),body=p.functions.loop.body.body;
   if(body.length!==1||body[0].type!=='expression')throw new Error('값을 읽는 표현식만 사용할 수 있습니다.');
   const check=n=>{if(!n||!['literal','name','binary','unary','index','member','conditional','cast'].includes(n.type)||['++','--'].includes(n.op))throw new Error('감시식에서 대입·함수 호출은 사용할 수 없습니다.');for(const [k,v] of Object.entries(n))if(v&&typeof v==='object'&&k!=='loc')check(v);};
-  check(body[0].expr);const steps=runtime.steps,allocations=runtime.allocations,scopes=runtime.scopes,selected=[...runtime.frames].reverse()[frame];
-  if(frame&&selected?.scopes)runtime.scopes=selected.scopes;
-  try{const result=runtime.evaluate(body[0].expr).next();if(!result.done)throw new Error('평가를 완료할 수 없습니다.');return displayValue(result.value);}finally{runtime.steps=steps;runtime.allocations=allocations;runtime.scopes=scopes;}
+  check(body[0].expr);return body[0].expr;
+}
+/** The value of a parsed watch expression in `scopes` (default: where the program is), without changing the run. */
+export function readExpression(runtime,expr,scopes=null){
+  const steps=runtime.steps,allocations=runtime.allocations,saved=runtime.scopes;
+  if(scopes)runtime.scopes=scopes;
+  try{const result=runtime.evaluate(expr).next();if(!result.done)throw new Error('평가를 완료할 수 없습니다.');return result.value;}finally{runtime.steps=steps;runtime.allocations=allocations;runtime.scopes=saved;}
+}
+/** A C scalar as a number for plotting (null for arrays, structs and pointers). */
+export function numericValue(value){
+  if(typeof value==='number')return Number.isFinite(value)?value:null;
+  if(typeof value==='bigint')return Number(value);
+  if(typeof value==='boolean')return +value;
+  return null;
 }

@@ -153,9 +153,9 @@ function mountShell(layout,state,options,{apply,save,setPalette,setSettings}){
  const codeMenu=popover('code-tools-menu','코드 도구',[document.querySelector('.firmware-tools')]);
  const more=button('code-tools-menu-toggle','코드 도구','more','코드 도구 · 가져오기 · 검사 · 초기화');more.setAttribute('popovertarget','code-tools-menu');more.setAttribute('aria-haspopup','true');tabActions.append(more);anchor(codeMenu,more);
  // Bottom panel tabs: friendly labels and order.
- const tabLabels={issues:'문제',log:'출력',native:'터미널',bus:'직렬 모니터',wave:'파형',signals:'로직 분석기',build:'빌드'};
+ const tabLabels={issues:'문제',log:'출력',native:'터미널',bus:'직렬 모니터',wave:'파형',vars:'변수 그래프',signals:'로직 분석기',build:'빌드'};
  const strip=document.querySelector('.monitor-tabs');
- for(const name of ['issues','log','native','bus','wave','signals','build']){const b=strip.querySelector(`[data-monitor="${name}"]`);if(b){if(!/\(\d+\)/.test(b.textContent))b.textContent=tabLabels[name];strip.append(b);}}
+ for(const name of ['issues','log','native','bus','wave','vars','signals','build']){const b=strip.querySelector(`[data-monitor="${name}"]`);if(b){if(!/\(\d+\)/.test(b.textContent))b.textContent=tabLabels[name];strip.append(b);}}
  // Panel actions
  const panelActions=$('panel-actions');
  const maxPanel=button('panel-maximize','패널 최대화','max','패널 최대화 / 복원');maxPanel.onclick=()=>layout.maximize('panel');
@@ -385,6 +385,7 @@ function registerCommands(layout,options){
   {id:'view.serial',label:'패널: 직렬 모니터 보기',group:'보기',run:()=>layout.showPanel('bus')},
   {id:'view.wave',label:'패널: 파형 보기',group:'보기',run:()=>layout.showPanel('wave')},
   {id:'view.logic',label:'패널: 로직 분석기 보기',group:'보기',run:()=>layout.showPanel('signals')},
+  {id:'view.variables',label:'패널: 변수 그래프 보기',group:'보기',run:()=>layout.showPanel('vars')},
   {id:'view.theme',label:'화면 테마: Dark / White 전환',group:'보기',run:click('appearance-toggle')},
   {id:'run.run',label:'실행 / 계속',group:'실행',run:()=>options.runCommand?.('run')},
   {id:'run.debug',label:'디버그 시작 / 계속',group:'실행',run:()=>options.runCommand?.('debug')},

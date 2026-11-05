@@ -54,7 +54,7 @@ export function swapStm32(project,id){
  project.surfaces??={};project.surfaces.board??={};
  const surface=project.surfaces.board,origin=surfaceOrigin('board',project.surfaces),sx=scaleXOf(surface),sy=scaleYOf(surface),px=scaleXOf(part),py=scaleYOf(part);
  const main={model:project.boardId??DEFAULT_BOARD_ID,name:mainBoardName(project),code:project.code,mcu:project.mcu,firmware:project.firmware,deviceDocs:project.deviceDocs,stlink:surface.stlink,
-  ide:project.ide?{breakpoints:project.ide.breakpoints,watches:project.ide.watches}:undefined,scale:Object.fromEntries(SCALE_FIELDS.map(k=>[k,surface[k]]))};
+  ide:project.ide?{breakpoints:project.ide.breakpoints,watches:project.ide.watches,...(project.ide.plots?{plots:project.ide.plots}:{})}:undefined,scale:Object.fromEntries(SCALE_FIELDS.map(k=>[k,surface[k]]))};
  project.boardId=part.model;project.code=part.code;setField(project,'mcu',part.mcu);setField(project,'firmware',part.firmware);setField(project,'deviceDocs',part.deviceDocs);
  // Breakpoints and watches belong to a board's sources; the run target (ide.native) belongs to the IDE.
  if(part.ide||project.ide)project.ide={...(project.ide?.native?{native:project.ide.native}:{}),breakpoints:part.ide?.breakpoints??[],watches:part.ide?.watches??[]};

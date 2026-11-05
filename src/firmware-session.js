@@ -9,6 +9,7 @@ import { UltrasonicSignals } from './sensors.js';
 import { LCDController } from './lcd.js';
 import { BusDevices } from './buses.js';
 import { WaveRecorder } from './trace.js';
+import { VariableRecorder } from './variable-graph.js';
 import { I2C_DEVICES, SPI_DEVICES } from './device-defs.js';
 import { familyProfile } from './mcu-family.js';
 import { Machine } from './emu/machine.js';
@@ -37,6 +38,7 @@ export class FirmwareSession {
     this.pressed = {}; this.result = null; this.time = 0; this.integrated = -1; this.stepMs = project.simulation?.stepMs ?? 1;
     this.circuit = new CircuitSimulation(); this.motion = new MotionDevices(); this.catalogMotion = new CatalogMotion(); this.singleWire = new CatalogSingleWire();
     this.sensors = new UltrasonicSignals(); this.lcds = new Map(); this.passiveBuzzers = new PassiveBuzzers(); this.wave = new WaveRecorder(channels);
+    this.vars = new VariableRecorder(project.ide?.plots || []); this.typeCache = new Map();
     this.serial = []; this.gpio = {}; this.dirty = true; this.solves = 0; this.solveBudget = 4000; this.realtimeRatio = 1; this.resets = [];
     this.buses = new BusDevices(project, () => this.result, trace);
     this.buses.uart.baud = 115200; this.buses.clocks = new Map(); new WirelessHub(this);
@@ -126,7 +128,7 @@ export class FirmwareSession {
     this.sensors.update(this.project, this.result, micros);
     for (const p of this.project.components.filter(p => p.type === 'lcd')) { if (!this.lcds.has(p.id)) this.lcds.set(p.id, new LCDController()); const lcd = this.lcds.get(p.id).update(p, this.result, micros); this.result.parts[p.id] = { ...this.result.parts[p.id], lcd }; }
     this.motion.update(this.project, this.result, micros, this.runtime, us => this.changed(us));
-    this.buses.update(this.result); this.catalogMotion.update(this.project, this.result, micros, this.runtime); this.wave.record(micros, this.result); this.wireless.advance(micros, this.result, this);
+    this.buses.update(this.result); this.catalogMotion.update(this.project, this.result, micros, this.runtime); this.wave.record(micros, this.result); this.vars.record(micros, name => this.readVariable(name)); this.wireless.advance(micros, this.result, this);
     for (const p of this.project.components) if (p.type === 'catalog_singlewire' && p.catalogState) this.singleWireDrive(p);
     for (const d of this.circuit.drivers) d.decorate?.(this.result);
   }
@@ -500,7 +502,18 @@ export class FirmwareSession {
     return out.sort((a, b) => a.name.localeCompare(b.name));
   }
   // The ELF has no type info: a global's C type (and whether it is an array) comes from its declaration in the sources.
+  // A global as one number for the variable graph (hex text such as &x or a register is read as hex).
+  readVariable(name) {
+    const text = String(this.evaluate(name)).trim();
+    if (/^0x[0-9a-f]+$/i.test(text)) return parseInt(text, 16);
+    if (!/^[-+]?(\d|\.\d|inf|nan)/i.test(text)) throw new Error('숫자 하나로 읽을 수 없는 값입니다(배열은 [0]처럼 요소를 고르세요).');
+    return Number.parseFloat(text);
+  }
   declaredType(name) {
+    if (this.typeCache?.has(name)) return this.typeCache.get(name);
+    const type = this.scanDeclaredType(name); this.typeCache?.set(name, type); return type;
+  }
+  scanDeclaredType(name) {
     const sources = [this.project.code || '', ...(this.project.firmware?.files || []).map(f => f.text || '')].join('\n');
     const m = new RegExp(`\\b(u?int(?:8|16|32|64)_t|(?:unsigned\\s+|signed\\s+)?(?:char|short|int|long)|unsigned|float|double)\\s+(?:\\w+\\s*(?:\\[[^\\]]*\\])?\\s*(?:=[^,;]*)?,\\s*)*${name}\\s*(\\[)?`).exec(sources);
     if (!m) return null;

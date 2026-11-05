@@ -17,7 +17,7 @@ function stm32Software(p,version){
   const own=validateProject({format:'stm32-circuit-lab',version,name:'board',code:p.code,components:[],wires:[],boardId:p.model,mcu:p.mcu,firmware:p.firmware,...(p.ide!==undefined?{ide:p.ide}:{}),...(p.deviceDocs!==undefined?{deviceDocs:p.deviceDocs}:{})});
   const out={model:p.model,code:own.code,...stlinkSerial(p.stlink,p.name)};
   for(const key of ['mcu','firmware','deviceDocs'])if(own[key]!==undefined)out[key]=own[key];
-  if(own.ide)out.ide={breakpoints:own.ide.breakpoints,watches:own.ide.watches};
+  if(own.ide)out.ide={breakpoints:own.ide.breakpoints,watches:own.ide.watches,...(own.ide.plots?{plots:own.ide.plots}:{})};
   for(const key of ['scale','scaleX','scaleY'])if(p[key]!==undefined)out[key]=validScale(p[key]);
   return out;
 }
@@ -127,6 +127,7 @@ export function validateProject(data){
     if(!s||!Array.isArray(s.breakpoints)||s.breakpoints.length>1000||!Array.isArray(s.watches)||s.watches.length>20)throw new Error('디버그 설정을 확인하세요.');
     if(s.breakpoints.some(b=>!b||!names.has(b.file)||!Number.isInteger(b.line)||b.line<1||b.line>50000)||s.watches.some(w=>typeof w!=='string'||!w.trim()||w.length>250))throw new Error('중단점 또는 감시식이 올바르지 않습니다.');
     project.ide={breakpoints:s.breakpoints.map(b=>({file:b.file,line:b.line})),watches:[...s.watches]};
+    if(s.plots!==undefined){if(!Array.isArray(s.plots)||s.plots.length>8||s.plots.some(w=>typeof w!=='string'||!w.trim()||w.length>250)||new Set(s.plots).size!==s.plots.length)throw new Error('변수 그래프 목록이 올바르지 않습니다.');project.ide.plots=[...s.plots];}
     if(s.native!==undefined){const n=s.native;if(!n||!['simulator','emulator','arm','esp32','host'].includes(n.target)||!['Debug','Release'].includes(n.configuration))throw new Error('IDE 실행 대상 설정을 확인하세요.');project.ide.native={target:n.target,configuration:n.configuration};}
   }
   if(data.deviceDocs!==undefined){

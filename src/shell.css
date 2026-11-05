@@ -258,9 +258,9 @@ body.resizing-workspace iframe,body.resizing-workspace svg{pointer-events:none}
 :root[data-shell] #console-output{padding:2px 16px 8px;font:var(--ide-terminal-size,12px)/1.55 var(--mono);background:transparent!important;border:0}
 :root[data-shell] .log-line{padding:0;border:0}
 :root[data-shell] .log-line .stamp{color:var(--ide-muted);margin-right:10px;opacity:.8}
-:root[data-shell] :is(#issues-panel,#wave-panel,#bus-panel,#build-panel,#native-panel,#signals-panel){flex:1;min-height:0;overflow:auto;padding:4px 16px 8px;background:transparent!important;border:0}
+:root[data-shell] :is(#issues-panel,#wave-panel,#bus-panel,#build-panel,#native-panel,#signals-panel,#vars-panel){flex:1;min-height:0;overflow:auto;padding:4px 16px 8px;background:transparent!important;border:0}
 :root[data-shell] #native-panel{display:flex;flex-direction:column;gap:4px}
-:root[data-shell] #native-panel[hidden],:root[data-shell] #build-panel[hidden],:root[data-shell] #signals-panel[hidden]{display:none!important}
+:root[data-shell] #native-panel[hidden],:root[data-shell] #build-panel[hidden],:root[data-shell] #signals-panel[hidden],:root[data-shell] #vars-panel[hidden]{display:none!important}
 :root[data-shell] #native-output{flex:1;min-height:40px;margin:0;background:transparent!important;border:0;padding:0;font:var(--ide-terminal-size,12px)/1.5 var(--mono)}
 :root[data-shell] .native-terminal-tools,:root[data-shell] #native-input-form{display:flex;align-items:center;gap:6px}
 :root[data-shell] .native-terminal-tools button,:root[data-shell] #native-input-form button{height:22px;padding:0 8px;font-size:11.5px;border:1px solid var(--ide-border);background:transparent}
@@ -383,6 +383,31 @@ dialog.command-palette::backdrop{background:transparent!important;backdrop-filte
 :root[data-shell] .topbar{overflow:hidden;min-width:0}
 .menubar,.run-area,.top-actions{flex-shrink:0}
 
+/* variable graph (STM Studio style) */
+#vars-panel[hidden]{display:none!important}
+.vg-toolbar{display:flex;flex-wrap:wrap;align-items:center;gap:10px;padding:4px 0 6px;font-size:12px}
+.vg-toolbar label{display:flex;align-items:center;gap:6px;color:var(--ide-muted)}
+.vg-toolbar select,.vg-toolbar input{height:24px;font-size:12px;padding:0 6px}
+.vg-toolbar input{width:240px;font-family:var(--mono)}
+.vg-toolbar button{height:24px;padding:0 10px;font-size:12px;border:1px solid var(--ide-border);background:transparent}
+.vg-legend{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px}
+.vg-legend:empty{display:none}
+.vg-chip{display:inline-flex;align-items:center;gap:6px;height:24px;padding:0 4px 0 8px;border:1px solid var(--ide-border);border-radius:var(--radius);font-size:12px}
+.vg-chip i{width:10px;height:10px;border-radius:2px;flex:none}
+.vg-chip code{font:12px var(--mono);color:var(--ide-foreground)}
+.vg-chip b{font:600 12px var(--mono);color:var(--ide-foreground);min-width:3ch}
+.vg-chip.error b{color:var(--ide-error)}
+.vg-chip button{width:20px;height:20px;padding:0;border:0;background:transparent;color:var(--ide-muted);line-height:1}
+.vg-chip button:hover{color:var(--ide-foreground)}
+.vg-view{overflow:hidden;border:1px solid var(--ide-border);border-radius:var(--radius);background:color-mix(in srgb,var(--ide-panel) 60%,var(--ide-background))}
+.vg-view[hidden]{display:none}
+.vg-svg{display:block;max-width:100%}
+.vg-svg .vg-plot{fill:transparent}
+.vg-svg .vg-grid{stroke:color-mix(in srgb,var(--ide-border) 80%,transparent);stroke-width:1;stroke-dasharray:3 3}
+.vg-svg .vg-tick{font:10px var(--mono);fill:var(--ide-muted)}
+.vg-svg .vg-axis{font:11px var(--shell-font);fill:var(--ide-muted)}
+.vg-svg .vg-line{fill:none;stroke-width:1.6;stroke-linejoin:round}
+.vg-error{margin:6px 8px;font-size:12px;color:var(--ide-error)}
 /* logic analyzer */
 .la-toolbar{display:flex;flex-wrap:wrap;align-items:center;gap:10px;padding:4px 0 6px;font-size:12px}
 .la-toolbar label{display:flex;align-items:center;gap:6px;color:var(--ide-muted)}
