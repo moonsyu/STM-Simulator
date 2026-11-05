@@ -75,6 +75,12 @@ nativeHandle('elf',async()=>{const r=nativeIde.result;if(!r||r.target!=='arm'||!
 nativeHandle('terminal-open',()=>nativeIde.openTerminal(workspaceState?.directory));
 nativeHandle('terminal-input',text=>nativeIde.terminalInput(text));
 nativeHandle('terminal-close',()=>nativeIde.closeTerminal());
+// Right-click on selected text (문제·출력·터미널 panels, any window) or in a text field: Electron shows no menu by
+// default. Places with their own menu (the circuit, Monaco) prevent the event, so this does not open there.
+app.on('web-contents-created',(_event,contents)=>contents.on('context-menu',(_e,params)=>{
+  const f=params.editFlags||{},items=params.isEditable?[{role:'cut',label:'잘라내기',enabled:!!f.canCut},{role:'copy',label:'복사',enabled:!!f.canCopy},{role:'paste',label:'붙여넣기',enabled:!!f.canPaste},{type:'separator'},{role:'selectAll',label:'모두 선택'}]:params.selectionText?.trim()?[{role:'copy',label:'복사'}]:[];
+  if(items.length)Menu.buildFromTemplate(items).popup({window:BrowserWindow.fromWebContents(contents)||undefined});
+}));
 app.whenReady().then(()=>{
   // The default Electron menu stays active while hidden and steals F11 (full screen), Ctrl+R (reload) and Ctrl+W;
   // the renderer owns every shortcut (편집 → 단축키 설정), so remove it.
