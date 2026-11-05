@@ -167,3 +167,16 @@
 :root[data-workbench-ui] #pinout-dialog footer span{flex:1 1 100%;overflow-wrap:anywhere}
 :root[data-workbench-ui] #pinout-errors{max-height:80px;overflow:auto;margin:4px 0}
 :root[data-ide-theme] #circuit :is(text.terminal-label,.terminal-label text){fill:var(--ide-foreground);stroke:var(--ide-background);stroke-width:1.5;stroke-linejoin:round;paint-order:stroke fill;pointer-events:none}
+:root[data-ide-theme] .pinout-side-tabs{border-color:var(--ide-border)}
+:root[data-ide-theme] .pinout-side-tabs button{color:var(--ide-muted)}
+:root[data-ide-theme] .pinout-side-tabs button[aria-selected="true"]{background:var(--ide-panel);border-color:var(--ide-border);color:var(--ide-foreground)}
+:root[data-ide-theme] :is(.pinout-layout .irq-row.irq-head,.pinout-layout .irq-row.system .irq-name){color:var(--ide-muted);border-color:var(--ide-border)}
+:root[data-ide-theme] .card-nvic{border-color:var(--ide-border)}
+:root[data-ide-theme] .system-card .nvic-open{background:var(--ide-selection);border-color:var(--ide-accent);color:var(--ide-foreground)}
+:root[data-ide-theme] .pin-menu{background:var(--ide-panel);border-color:var(--ide-border);color:var(--ide-foreground)}
+:root[data-ide-theme] .pin-menu-title{border-color:var(--ide-border)}
+:root[data-ide-theme] .pin-menu button{color:var(--ide-foreground)}
+:root[data-ide-theme] :is(.pin-menu button:hover,.pin-menu button:focus-visible){background:var(--ide-hover)}
+:root[data-ide-theme] .pin-menu button.current{background:var(--ide-selection)}
+:root[data-workbench-ui] .pinout-layout .irq-row{display:grid;grid-template-columns:minmax(0,1fr) 44px 44px;align-items:center;flex-wrap:nowrap}
+:root[data-ide-theme] .pinout-side-tabs button[aria-selected="true"]{box-shadow:inset 0 -2px 0 var(--ide-accent)}

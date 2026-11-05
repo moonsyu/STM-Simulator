@@ -35,10 +35,12 @@ test('code outside the sections follows the new settings, and a source without s
  const twice=keepUserCode(keepUserCode(generate(uartMcu()),generate(gpioMcu())),generate(gpioMcu()));assert.equal((twice.match(/#if 0/g)||[]).length,(keepUserCode(generate(uartMcu()),generate(gpioMcu())).match(/#if 0/g)||[]).length,'kept code is not copied again');
 });
 
-test('turning USART2 on turns its NVIC line on, and main.c gets USART2_IRQHandler like the CubeMX stm32xxxx_it.c',async()=>{
+test('as in CubeMX, USART2 global interrupt stays off until NVIC Settings turns it on; then main.c gets USART2_IRQHandler like stm32xxxx_it.c',async()=>{
  const {setSerialEnabled}=await import('../../src/serial-config.js');
  for(const family of ['STM32F446RE','STM32F103RB']){
-  const on=setSerialEnabled(defaultMcu(family),'USART2',true);assert.deepEqual(on.nvic.USART2_IRQn,{priority:0,enabled:true},family);
+  const on=setSerialEnabled(defaultMcu(family),'USART2',true);assert.equal(on.nvic.USART2_IRQn,undefined,family);
+  assert.doesNotMatch(generate(validateMcu(on)),/USART2_IRQHandler/);
+  on.nvic.USART2_IRQn={enabled:true,priority:0};
   const code=generate(validateMcu(on));
   assert.match(code,/void USART2_IRQHandler\(void\)\s*\{\s*\/\* USER CODE BEGIN USART2_IRQn 0 \*\/\s*\/\* USER CODE END USART2_IRQn 0 \*\/\s*HAL_UART_IRQHandler\(&huart2\);/,family);
   assert.match(code,/HAL_NVIC_EnableIRQ\(USART2_IRQn\);/);

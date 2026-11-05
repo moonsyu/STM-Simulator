@@ -62,7 +62,7 @@ test('without ARM GCC the simulator offers to install it; cancel stops, the inte
  }finally{await s.close();await fs.rm(empty,{recursive:true,force:true});}
 });
 
-test('turning USART2 on in Pinout writes USART2_IRQHandler into main.c; HAL_UART_Receive_IT then receives on the ARM GCC build',{skip:!toolchain&&!process.env.CI_REQUIRE_TOOLCHAIN&&'ARM GCC / STM32CubeF4 not installed',timeout:300000},async()=>{
+test('USART2 global interrupt turned on in its NVIC Settings writes USART2_IRQHandler into main.c; HAL_UART_Receive_IT then receives on the ARM GCC build',{skip:!toolchain&&!process.env.CI_REQUIRE_TOOLCHAIN&&'ARM GCC / STM32CubeF4 not installed',timeout:300000},async()=>{
  const s=await launch({simEngine:'gcc'});
  await fs.writeFile(path.join(s.profile,'native-tools.json'),JSON.stringify({armGcc:gcc,cube,armGdb:'',hostGcc:'',hostGdb:'',clangd:'',openocd:'',buildRoot:''}));
  try{
@@ -74,7 +74,10 @@ test('turning USART2 on in Pinout writes USART2_IRQHandler into main.c; HAL_UART
   };
   await win.evaluate(()=>document.getElementById('pinout-open').click());await win.waitForSelector('#pinout-dialog[open]');
   await win.locator('[data-peripheral="USART2"]').check();
-  assert.equal(await win.locator('[data-irq="USART2_IRQn"]').isChecked(),true,'its global interrupt is turned on with it');
+  // As in CubeMX the interrupt starts off; the USART2 card's NVIC Settings turns it on, and the NVIC tab shows the same line.
+  assert.equal(await win.locator('[data-card-irq="USART2_IRQn"]').isChecked(),false);
+  await win.locator('[data-card-irq="USART2_IRQn"]').check();
+  await win.click('#pinout-tab-nvic');assert.equal(await win.locator('#pinout-nvic [data-irq="USART2_IRQn"]').isChecked(),true);
   await generate();
   assert.equal(await handlers(),1);assert.match(await win.evaluate(()=>document.getElementById('code').value),/USART2_IRQHandler\(void\)\s*\{[\s\S]*?HAL_UART_IRQHandler\(&huart2\);/);
   await setCode(win,c=>c.replace('/* USER CODE BEGIN PV */','/* USER CODE BEGIN PV */\nuint8_t rx;').replace('/* USER CODE BEGIN 2 */','/* USER CODE BEGIN 2 */\n  HAL_UART_Receive_IT(&huart2, &rx, 1);').replace('/* HAL_UART_Receive_IT() 수신 완료 */','printf("got %c\\n", rx);\n  HAL_UART_Receive_IT(huart, &rx, 1);'));

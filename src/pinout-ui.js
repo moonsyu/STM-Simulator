@@ -12,6 +12,13 @@ import {familyProfile,routesOf,irqNamesOf} from './mcu-family.js';
 import {dmaRequestsOf} from './mcu-config.js';
 import {projectBoard} from './boards.js';
 import {$,esc} from './common.js';
+import {IRQ_NUMBERS} from './hal-nvic.js';
+import {SYSTEM_IRQS,irqLabel,peripheralIrqs,irqAvailable,dmaForced,nvicGroup,tickPriority,priorityLimits,NVIC_GROUP_DEFAULT} from './nvic-config.js';
+import {speedsOf,SPEED_NAMES,defaultSpeed,gpioMode,hasSpeed,signalName} from './gpio-config.js';
+const PULL_NAMES={NOPULL:'No pull-up and no pull-down',PULLUP:'Pull-up',PULLDOWN:'Pull-down'};
+const EDGE_NAMES={RISING:'External Interrupt Mode with Rising edge trigger detection',FALLING:'External Interrupt Mode with Falling edge trigger detection',CHANGE:'External Interrupt Mode with Rising/Falling edge trigger detection'};
+const MODE_NAMES={OUTPUT_PP:'Output Push Pull',OUTPUT_OD:'Output Open Drain',INPUT:'Input mode',ANALOG:'Analog mode',AF_PP:'Alternate Function Push Pull',AF_OD:'Alternate Function Open Drain'};
+const RESET_PIN={function:'Reset',pull:'NOPULL',edge:'RISING',label:'',initial:0};
 // F1: TX and RX of a USART move together with its AFIO remap, so choosing one moves the other to the same group.
 function alignSerialRemap(config,id,pin){
   const option=familyProfile(config.family).remaps?.[id]?.find(o=>Object.values(o.pins).includes(pin));if(!option)return;
@@ -31,8 +38,21 @@ export class PinoutPanel {
     Object.assign(this,{getProject,apply,isRunning,onError});this.pin='PA5';
     $('pinout-open').onclick=()=>this.open();$('pinout-close').onclick=()=>$('pinout-dialog').close();
     // NVIC, numeric fields and pin properties re-render nothing: refresh the problem list (this bubbling listener runs after their own onchange).
-    $('pinout-dialog').addEventListener('change',e=>{if(!e.target.matches('[data-irq],[data-priority],[data-peripheral-value],#timer-clock,#pin-label,#pin-pull,#pin-edge,#pin-level'))return;
-      if(e.target.matches('#pin-label,#pin-pull,#pin-edge,#pin-level'))this.sync();try{$('pinout-errors').textContent=configProblems(this.draft).join('\n');}catch{}});
+    $('pinout-dialog').addEventListener('change',e=>{if(!e.target.matches('[data-irq],[data-priority],[data-sub],[data-peripheral-value],#timer-clock,#pin-label,#pin-pull,#pin-edge,#pin-level,#pin-speed,#pin-otype'))return;
+      if(e.target.matches('#pin-label,#pin-pull,#pin-edge,#pin-level,#pin-speed,#pin-otype'))this.sync();try{$('pinout-errors').textContent=configProblems(this.draft).join('\n');}catch{}});
+    // Right column: pin settings or the NVIC table (CubeMX System Core > NVIC).
+    $('pinout-dialog').querySelectorAll('[data-side-tab]').forEach(b=>b.onclick=()=>this.showSide(b.dataset.sideTab));
+    $('nvic-show').onchange=()=>this.renderNvic();$('nvic-search').oninput=()=>this.renderNvic();
+    // A new group narrows the ranges: priorities above them (the time base's 15 too) become the new maximum.
+    $('nvic-group').onchange=()=>{const d=this.draft;d.nvicGroup=Number($('nvic-group').value);const lim=priorityLimits(d.nvicGroup);
+      for(const n of Object.values(d.nvic)){n.priority=Math.min(n.priority,lim.preempt);if(n.sub!==undefined){n.sub=Math.min(n.sub,lim.sub);if(!n.sub)delete n.sub;}}
+      if(tickPriority(d)>lim.preempt)d.tickPriority=lim.preempt;this.render();};
+    // The pin click menu (CubeMX): Esc or a click elsewhere closes it, not the dialog.
+    $('pin-menu').addEventListener('keydown',e=>{if(e.key==='Escape'){e.preventDefault();e.stopPropagation();this.closeMenu(true);}
+      if(['ArrowDown','ArrowUp'].includes(e.key)){e.preventDefault();const items=[...$('pin-menu').querySelectorAll('button')],i=items.indexOf(document.activeElement);items[(i+(e.key==='ArrowDown'?1:-1)+items.length)%items.length]?.focus();}});
+    $('pinout-dialog').addEventListener('pointerdown',e=>{if(!$('pin-menu').hidden&&!e.target.closest('#pin-menu,[data-config-pin]'))this.closeMenu();});
+    $('pinout-dialog').addEventListener('cancel',e=>{if(!$('pin-menu').hidden){e.preventDefault();this.closeMenu(true);}});
+    $('pinout-dialog').addEventListener('close',()=>this.closeMenu());
     $('pinout-apply').onclick=()=>this.commit(false);$('hal-generate').onclick=()=>{if(this.isRunning())return;this.sync();if(this.getProject().code.trim())$('hal-replace-dialog').showModal();else this.commit(true);};
     $('hal-replace-cancel').onclick=()=>$('hal-replace-dialog').close();$('hal-replace-confirm').onclick=()=>{$('hal-replace-dialog').close();this.commit(true);};
   }
@@ -40,8 +60,70 @@ export class PinoutPanel {
     // A pin chosen on the other board (PH1 on F446RE, PB11 on F103RB) does not exist here.
     else if(!fam.gpioPins.includes(this.pin))this.pin=fam.gpioPins.includes('PA5')?'PA5':fam.gpioPins[0];
     $('pinout-dialog').querySelector('footer > span').textContent=`HAL GPIO · UART/USART ${Object.keys(fam.serial).length}개 · ${['I2C1','SPI1','ADC1'].filter(id=>fam.extra[id]).join(' · ').replace('I2C','I²C')} · TIM${Object.keys(fam.timers).map(t=>t.slice(3)).join('/')}`;
-    this.render();$('pinout-dialog').showModal();}
-  sync(){if(!$('pin-function'))return;this.draft.pins[this.pin]={function:$('pin-function').value,pull:$('pin-pull').value,edge:$('pin-edge').value,initial:Number($('pin-level').value),label:$('pin-label').value.trim()};}
+    this.side='pin';this.render();$('pinout-dialog').showModal();}
+  // The fields shown for the selected pin; its function only changes through choose() (pin menu or the signal list).
+  sync(){
+    if(!$('pinout-properties').dataset.pin)return;const pin=$('pinout-properties').dataset.pin,old=this.draft.pins[pin]||RESET_PIN,f1=familyProfile(this.draft.family).pinMux==='remap';
+    const next={function:old.function,pull:$('pin-pull')?.value??old.pull,edge:$('pin-edge')?.value??old.edge,initial:$('pin-level')?Number($('pin-level').value):old.initial,label:$('pin-label')?.value.trim()??old.label};
+    const speed=$('pin-speed')?.value;if(speed&&(speed!==defaultSpeed(old.function,f1)||old.speed))next.speed=speed;
+    const type=$('pin-otype')?.value;if(type==='OD'||type==='PP'&&old.outputType)next.outputType=type;
+    this.draft.pins[pin]=next;
+  }
+  refreshProblems(){try{$('pinout-errors').textContent=configProblems(this.draft).join('\n');}catch(e){$('pinout-errors').textContent=e.message;}}
+  showSide(side){this.side=side;for(const b of $('pinout-dialog').querySelectorAll('[data-side-tab]'))b.setAttribute('aria-selected',String(b.dataset.sideTab===side));$('pinout-pin-panel').hidden=side!=='pin';$('pinout-nvic-panel').hidden=side!=='nvic';if(side==='nvic')this.renderNvic();}
+  // A pin's new function (CubeMX pin menu): serial pins bring their peripheral and partner pins, a peripheral signal
+  // turns its peripheral on, EXTI starts with CubeMX's rising edge.
+  choose(pin,fn){
+    this.sync();const before=structuredClone(this.draft),fam=familyProfile(this.draft.family),old=this.draft.pins[pin]||RESET_PIN;this.pin=pin;
+    const next={...old,function:fn};if(fn!==old.function){delete next.speed;delete next.outputType;if(fn==='GPIO_EXTI')next.edge='RISING';}
+    this.draft.pins[pin]=next;const id=serialFunction(fn);
+    try{
+      if(id){assignSerialPin(this.draft,id,fn.endsWith('_TX')?'TX':'RX',pin,fam.serial);alignSerialRemap(this.draft,id,pin);this.draft=setSerialEnabled(this.draft,id,true,fam.serial,fam.remaps?.[id]);}
+      // A CK pin means synchronous mode: the USART is turned on with its TX/RX (the CK's remap group on F1).
+      else if(/^USART\d_CK$/.test(fn)){const usart=fn.slice(0,-3);this.draft.peripherals[usart]={...this.draft.peripherals[usart],enabled:true,mode:'synchronous'};alignSerialRemap(this.draft,usart,pin);this.draft=setSerialEnabled(this.draft,usart,true,fam.serial,fam.remaps?.[usart]);}
+      // Choosing a peripheral signal for a pin turns that peripheral on, as the serial pins already do.
+      else{const owner=fn.split('_')[0];if(!MODES.includes(fn)&&routesOf(this.draft.family)[owner]&&!this.draft.peripherals[owner]?.enabled)this.draft.peripherals[owner]={...this.draft.peripherals[owner],enabled:true};}
+      this.render();
+    }catch(e){this.draft=before;this.render();$('pinout-errors').textContent=e.message;}
+  }
+  openMenu(pin){
+    const menu=$('pin-menu'),tile=$('pinout-pins').querySelector(`[data-config-pin="${pin}"]`),current=this.draft.pins[pin]?.function??'Reset';
+    // CubeMX order: Reset_State, the peripheral signals (A→Z), then GPIO_Input / Output / Analog / EXTIn.
+    const all=pinFunctions(pin,this.draft.family),gpio=['GPIO_Input','GPIO_Output','Analog','GPIO_EXTI'];
+    const options=[...(current==='Reserved'?['Reserved']:[]),'Reset',...all.filter(fn=>!MODES.includes(fn)).sort(),...gpio.filter(fn=>all.includes(fn))];
+    menu.innerHTML=`<div class="pin-menu-title">${pin}</div>`+options.map(fn=>`<button type="button" role="menuitemradio" aria-checked="${fn===current}" data-pin-signal="${fn}" class="${fn===current?'current':''}">${esc(signalName(fn,pin))}</button>`).join('');
+    menu.querySelectorAll('[data-pin-signal]').forEach(b=>b.onclick=()=>{this.closeMenu();this.choose(pin,b.dataset.pinSignal);});
+    menu.hidden=false;menu.dataset.pin=pin;
+    const r=tile?.getBoundingClientRect(),h=menu.offsetHeight,w=menu.offsetWidth;
+    if(r){menu.style.left=Math.max(4,Math.min(innerWidth-w-4,r.left))+'px';menu.style.top=(r.bottom+h+4<innerHeight?r.bottom+2:Math.max(4,r.top-h-2))+'px';}
+    (menu.querySelector('.current')||menu.querySelector('button'))?.focus();
+  }
+  closeMenu(focusTile=false){const menu=$('pin-menu');if(menu.hidden)return;const pin=menu.dataset.pin;menu.hidden=true;if(focusTile)$('pinout-pins').querySelector(`[data-config-pin="${pin}"]`)?.focus();}
+  // One NVIC row (the table and a peripheral's NVIC Settings use the same config entry).
+  irqRow(config,irq,{card=false}={}){
+    const n=config.nvic[irq]||{enabled:false,priority:0},forced=dmaForced(config,irq),lim=priorityLimits(nvicGroup(config)),k=card?'card-':'';
+    return `<div class="irq-row" role="row"><label class="irq-name" role="cell"><input type="checkbox" data-${k}irq="${irq}" ${n.enabled||forced?'checked':''} ${forced?'disabled title="사용 중인 DMA 스트림의 인터럽트는 항상 켜집니다 (CubeMX Force DMA channels Interrupts)."':''}><span title="${irq}">${esc(irqLabel(irq))}</span></label><input type="number" role="cell" min="0" max="${lim.preempt}" value="${numberText(n.priority)}" data-${k}priority="${irq}" aria-label="${irq} Preemption Priority"><input type="number" role="cell" min="0" max="${lim.sub}" value="${numberText(n.sub??0)}" data-${k}sub="${irq}" aria-label="${irq} Sub Priority" ${lim.sub?'':'disabled'}></div>`;
+  }
+  bindIrqRows(root,{card=false}={}){
+    const k=card?'card':'',on=(name,fn)=>root.querySelectorAll(`[data-${card?'card-':''}${name}]`).forEach(el=>el.onchange=()=>{fn(el.dataset[k?k+name[0].toUpperCase()+name.slice(1):name],el);card?this.render():(this.updateNvicCount(),this.refreshProblems());});
+    const entry=irq=>this.draft.nvic[irq]??={enabled:dmaForced(this.draft,irq),priority:0};
+    on('irq',(irq,el)=>{entry(irq).enabled=el.checked;});
+    on('priority',(irq,el)=>{entry(irq).priority=numberInput(el);});
+    on('sub',(irq,el)=>{const v=numberInput(el);if(v)entry(irq).sub=v;else delete entry(irq).sub;});
+  }
+  updateNvicCount(){const config=this.draft,on=Object.entries(config.nvic).filter(([irq,n])=>n.enabled||dmaForced(config,irq)).length;$('pinout-nvic-count').textContent=on?`(${on})`:'';const open=$('pinout-peripherals').querySelector('[data-open-nvic] small');if(open)open.textContent=`켜진 인터럽트 ${on}개 · Priority Group ${nvicGroup(config)}`;}
+  renderNvic(){
+    const config=this.draft,fam=familyProfile(config.family),numbers=fam.irqNumbers??IRQ_NUMBERS,lim=priorityLimits(nvicGroup(config)),show=$('nvic-show').value,q=$('nvic-search').value.trim().toLowerCase();
+    $('nvic-group').innerHTML=[0,1,2,3,4].map(g=>`<option value="${g}" ${nvicGroup(config)===g?'selected':''}>${g} bits for pre-emption priority ${4-g} bits for subpriority</option>`).join('');
+    $('nvic-group-hint').textContent=`NVIC_PRIORITYGROUP_${nvicGroup(config)} · Preemption 0~${lim.preempt}, Sub 0~${lim.sub}${nvicGroup(config)===NVIC_GROUP_DEFAULT?' (HAL 기본값)':''}`;
+    const match=(irq,label)=>!q||irq.toLowerCase().includes(q)||label.toLowerCase().includes(q);
+    const irqs=irqNamesOf(config.family).filter(irq=>(show==='all'||show==='enabled'&&(config.nvic[irq]?.enabled||dmaForced(config,irq))||show==='available'&&(irqAvailable(config,irq)||dmaForced(config,irq)))&&match(irq,irqLabel(irq))).sort((a,b)=>(numbers[a]??99)-(numbers[b]??99));
+    const system=SYSTEM_IRQS.filter(([irq,label])=>match(irq,label)).map(([irq,label])=>irq==='SysTick_IRQn'?`<div class="irq-row system" role="row"><label class="irq-name" role="cell"><input type="checkbox" checked disabled><span title="${irq}">${label}</span></label><input type="number" role="cell" id="nvic-tick" min="0" max="${lim.preempt}" value="${tickPriority(config)}" aria-label="SysTick_IRQn Preemption Priority"><input type="number" role="cell" value="0" disabled aria-label="SysTick_IRQn Sub Priority"></div>`:`<div class="irq-row system" role="row"><label class="irq-name" role="cell"><input type="checkbox" checked disabled><span title="${irq}">${label}</span></label><input type="number" role="cell" value="0" disabled aria-label="${irq} Preemption Priority"><input type="number" role="cell" value="0" disabled aria-label="${irq} Sub Priority"></div>`).join('');
+    $('pinout-nvic').innerHTML=`<div class="irq-row irq-head" role="row"><span role="columnheader">NVIC Interrupt Table · Enabled</span><span role="columnheader" title="Preemption Priority">Pre.</span><span role="columnheader" title="Sub Priority">Sub</span></div>${system}${irqs.map(irq=>this.irqRow(config,irq)).join('')}${irqs.length?'':`<p class="pinout-hint">${show==='available'?'켜진 주변장치·EXTI 핀·DMA가 없습니다. 주변장치를 켜거나 "모든 인터럽트"를 고르세요.':'맞는 인터럽트가 없습니다.'}</p>`}`;
+    this.bindIrqRows($('pinout-nvic'));
+    $('nvic-tick')&&($('nvic-tick').onchange=()=>{const v=numberInput($('nvic-tick'));config.tickPriority=v;this.refreshProblems();});
+    this.updateNvicCount();
+  }
   commit(generate){try{this.sync();for(const el of $('pinout-dialog').querySelectorAll('input[type="number"]'))if(!Number.isFinite(numberInput(el)))throw new Error(`${el.getAttribute('aria-label')||(el.id==='timer-clock'?'APB1 타이머 입력 클록':'숫자 설정')}: 숫자를 입력하세요.`);const mcu=validateMcu(this.draft),project=this.getProject(),code=generate?dropShadowedHandlers(keepUserCode(project.code,expandC(generateHal(mcu)),previousDefault(project.mcu)),(project.firmware?.files||[]).map(f=>f.text)):null;this.apply({mcu,code});$('pinout-dialog').close();}catch(e){$('pinout-errors').textContent=e.message;this.onError(e.message);}}
   // DMA requests of the enabled peripherals: stream/channel, direction, normal/circular, priority.
   dmaCard(config){
@@ -55,19 +137,28 @@ export class PinoutPanel {
     root.querySelectorAll('[data-dma-field]').forEach(el=>el.onchange=()=>{const d=config.dma[el.dataset.dmaField];if(el.dataset.key==='route'){const [stream,channel]=el.value.split(':');d.stream=stream;d.channel=Number(channel);}else d[el.dataset.key]=el.value;$('pinout-errors').textContent=(()=>{try{validateMcu(config);return configProblems(config).join('\n');}catch(e){return e.message;}})();});
   }
   render(){
-    const config=this.draft,p=config.pins[this.pin]||{function:'Reset',pull:'NOPULL',edge:'FALLING',label:'',initial:0},fam=familyProfile(config.family),f1=fam.pinMux==='remap';
+    const config=this.draft,p=config.pins[this.pin]||RESET_PIN,fam=familyProfile(config.family),f1=fam.pinMux==='remap';
     document.querySelector('.pinout-heading .eyebrow').textContent=`${fam.id} · LQFP64 · ${fam.core}`;$('timer-clock').title=`APB1 타이머 클록: ${fam.clock.label}`;$('timer-clock').min=fam.clock.minHz;$('timer-clock').max=fam.clock.maxHz;$('timer-clock-hint').textContent=`새 프로젝트: HSI ${fam.clock.defaultHz/1e6} MHz · PLL OFF · AHB/APB 분주 1 · 설정 범위 ${fam.clock.label}. 예제와 저장된 설정은 각 프로젝트 값을 사용합니다.`;
-    $('pinout-pins').innerHTML=[...fam.gpioPins].sort((a,b)=>a.localeCompare(b,undefined,{numeric:true})).map(pin=>{const value=config.pins[pin];return `<button class="pin-tile ${pin===this.pin?'selected':''} ${value&&!['Reset','Reserved'].includes(value.function)?'enabled':''} ${value?.function==='Reserved'?'reserved':''}" data-config-pin="${pin}"><strong>${pin}</strong><small>${esc(value?.function||'Reset')}</small></button>`;}).join('');
-    $('pinout-pins').querySelectorAll('button').forEach(b=>b.onclick=()=>{this.sync();this.pin=b.dataset.configPin;this.render();});
-    $('pinout-properties').innerHTML=`<h3>${this.pin}</h3><label>용도<select id="pin-function">${pinFunctions(this.pin,config.family).map(v=>`<option ${p.function===v?'selected':''}>${v}</option>`).join('')}</select></label><label>Pull<select id="pin-pull">${['NOPULL','PULLUP','PULLDOWN'].map(v=>`<option ${p.pull===v?'selected':''}>${v}</option>`).join('')}</select></label><label>EXTI 에지<select id="pin-edge">${['FALLING','RISING','CHANGE'].map(v=>`<option ${p.edge===v?'selected':''}>${v}</option>`).join('')}</select></label><label>초기 출력<select id="pin-level"><option value="0">LOW</option><option value="1" ${p.initial?'selected':''}>HIGH</option></select></label><label>사용자 라벨<input id="pin-label" maxlength="40" value="${esc(p.label)}" placeholder="예: LD2"></label><p>GPIO_EXTI는 ${irqForPin(this.pin)}를 사용합니다. NVIC에서 활성화하세요.</p>`;
-    for(const id of ['pin-function','pin-pull','pin-edge','pin-level'])$(id).onchange=()=>{this.sync();this.render();};
-    $('pin-function').onchange=()=>{const previousFunction=this.draft.pins[this.pin]?.function??'Reset';this.sync();const previous=structuredClone(this.draft);previous.pins[this.pin].function=previousFunction;const fn=this.draft.pins[this.pin].function,id=serialFunction(fn);try{if(id){assignSerialPin(this.draft,id,fn.endsWith('_TX')?'TX':'RX',this.pin,fam.serial);alignSerialRemap(this.draft,id,this.pin);this.draft=setSerialEnabled(this.draft,id,true,fam.serial,fam.remaps?.[id]);}
-      // A CK pin means synchronous mode: the USART is turned on with its TX/RX (the CK's remap group on F1).
-      else if(/^USART\d_CK$/.test(fn)){const usart=fn.slice(0,-3);this.draft.peripherals[usart]={...this.draft.peripherals[usart],enabled:true,mode:'synchronous'};alignSerialRemap(this.draft,usart,this.pin);this.draft=setSerialEnabled(this.draft,usart,true,fam.serial,fam.remaps?.[usart]);}
-      // Choosing a peripheral signal for a pin turns that peripheral on, as the serial pins already do.
-      else{const owner=fn.split('_')[0];if(!MODES.includes(fn)&&routesOf(this.draft.family)[owner]&&!this.draft.peripherals[owner]?.enabled)this.draft.peripherals[owner]={...this.draft.peripherals[owner],enabled:true};}
-      this.render();}catch(e){this.draft=previous;this.render();$('pinout-errors').textContent=e.message;}};
-    $('pinout-peripherals').innerHTML=Object.keys(routesOf(config.family)).map(id=>{
+    $('pinout-pins').innerHTML=[...fam.gpioPins].sort((a,b)=>a.localeCompare(b,undefined,{numeric:true})).map(pin=>{const value=config.pins[pin];return `<button class="pin-tile ${pin===this.pin?'selected':''} ${value&&!['Reset','Reserved'].includes(value.function)?'enabled':''} ${value?.function==='Reserved'?'reserved':''}" data-config-pin="${pin}" aria-haspopup="menu" title="${pin}: 눌러서 신호 선택"><strong>${pin}</strong><small>${esc(value?.label||signalName(value?.function||'Reset',pin))}</small>${value?.label?`<small class="pin-signal">${esc(signalName(value.function,pin))}</small>`:''}</button>`;}).join('');
+    // CubeMX: clicking a pin selects it and opens the list of its signals.
+    $('pinout-pins').querySelectorAll('button').forEach(b=>b.onclick=()=>{const pin=b.dataset.configPin,again=!$('pin-menu').hidden&&$('pin-menu').dataset.pin===pin;this.sync();this.pin=pin;if(this.side!=='pin')this.showSide('pin');this.render();if(!again)this.openMenu(pin);});
+    // CubeMX GPIO configuration of the selected pin: only the fields its mode has.
+    const mode=p.function==='Reset'||p.function==='Reserved'?null:gpioMode(p,config,f1),select=(id,label,options,value)=>`<label>${label}<select id="${id}">${Object.entries(options).map(([v,name])=>`<option value="${v}" ${String(value)===v?'selected':''}>${esc(name)}</option>`).join('')}</select></label>`;
+    const speed=p.speed??defaultSpeed(p.function,f1),exti=p.function==='GPIO_EXTI'?irqForPin(this.pin):null;
+    $('pinout-properties').dataset.pin=this.pin;
+    $('pinout-properties').innerHTML=`<h3>${this.pin} Configuration</h3><label>신호<select id="pin-function">${pinFunctions(this.pin,config.family).filter(v=>v!=='Reserved'||p.function==='Reserved').map(v=>`<option value="${v}" ${p.function===v?'selected':''}>${esc(signalName(v,this.pin))}</option>`).join('')}</select></label>`
+      +(p.function==='GPIO_Output'?select('pin-level','GPIO output level',{0:'Low',1:'High'},p.initial):'')
+      +(p.function==='GPIO_Output'?select('pin-otype','GPIO mode',{PP:MODE_NAMES.OUTPUT_PP,OD:MODE_NAMES.OUTPUT_OD},p.outputType??'PP'):exti?select('pin-edge','GPIO mode',EDGE_NAMES,p.edge):mode?`<label>GPIO mode<input value="${MODE_NAMES[mode]}" readonly></label>`:'')
+      +(mode&&mode!=='ANALOG'?select('pin-pull','GPIO Pull-up/Pull-down',PULL_NAMES,p.pull):'')
+      +(mode&&hasSpeed(mode)?select('pin-speed','Maximum output speed',Object.fromEntries(speedsOf(f1).map(s=>[s,SPEED_NAMES[s]])),speed):'')
+      +(p.function==='Reserved'?'':`<label>User Label<input id="pin-label" maxlength="40" value="${esc(p.label)}" placeholder="예: LD2"></label>`)
+      +(exti?`<div class="card-nvic"><strong>NVIC</strong>${this.irqRow(config,exti,{card:true})}</div>`:'')
+      +(mode?'':'<p>핀을 눌러 나오는 목록이나 위의 신호에서 용도를 고르세요.</p>');
+    for(const id of ['pin-pull','pin-edge','pin-level','pin-speed','pin-otype'])if($(id))$(id).onchange=()=>{this.sync();this.render();};
+    $('pin-function').onchange=()=>this.choose(this.pin,$('pin-function').value);
+    if(exti)this.bindIrqRows($('pinout-properties'),{card:true});
+    const system=`<section class="peripheral-card system-card"><strong>System Core</strong><button type="button" class="nvic-open" data-open-nvic>NVIC<small></small></button></section>`;
+    $('pinout-peripherals').innerHTML=system+Object.keys(routesOf(config.family)).map(id=>{
       const c=config.peripherals[id]||{enabled:false},defaults=isTimer(id)?timerDefaults(id,config.family):null,timerMax=id=>fam.timerMax(id),fields=isSerial(id)?[['baud','Baud rate',115200]]:id==='I2C1'||id==='SPI1'?[['clock','Clock (Hz)',id==='I2C1'?100000:1000000]]:isTimer(id)?[['prescaler','Prescaler (PSC)',defaults.prescaler,65535],['period','Period (ARR)',defaults.period,timerMax(id)],...(c.mode==='pwm'?[['pulse','초기 Pulse (CCR)',defaults.pulse,timerMax(id)]]:[])]:[];
       const syncMode=c.mode==='synchronous',ck=fam.usartCk[id],ckFn=id+'_CK',ckPin=Object.keys(config.pins).find(pin=>config.pins[pin].function===ckFn);
       const syncUi=ck?`<label>모드<select data-serial-mode="${id}" aria-label="${id} 모드" ${c.enabled?'':'disabled'}><option value="asynchronous">Asynchronous (HAL_UART)</option><option value="synchronous" ${syncMode?'selected':''}>Synchronous (HAL_USART)</option></select></label>`+(syncMode?`<label>CK 핀<select data-serial-ck="${id}" aria-label="${id} CK 핀"><option value="">선택…</option>${ck.map(pin=>{const other=config.pins[pin]?.function,busy=other&&other!=='Reset'&&other!==ckFn;return `<option value="${pin}" ${pin===ckPin?'selected':''} ${busy?'disabled':''}>${pin}${busy?' · '+esc(other)+' 사용 중':''}</option>`;}).join('')}</select></label>`+[['cpol','CPOL',['LOW','HIGH']],['cpha','CPHA',['1EDGE','2EDGE']],['lastBit','Last bit clock',['DISABLE','ENABLE']]].map(([key,label,names])=>`<label>${label}<select data-usart-param="${id}" data-key="${key}" aria-label="${id} ${label}">${names.map((n,v)=>`<option value="${v}" ${(c[key]??0)===v?'selected':''}>${n}</option>`).join('')}</select></label>`).join(''):''):'';
@@ -75,9 +166,10 @@ export class PinoutPanel {
         const fn=id+'_'+role,current=Object.keys(config.pins).find(pin=>config.pins[pin].function===fn);
         return `<label>${role} 핀<select data-serial-route="${id}" data-role="${role}" aria-label="${id} ${role} 핀" ${c.enabled?'':'disabled'}><option value="">선택…</option>${fam.serial[id][role].map(pin=>{const other=config.pins[pin]?.function,busy=other&&other!=='Reset'&&other!==fn;return `<option value="${pin}" ${pin===current?'selected':''} ${busy?'disabled':''}>${pin}${busy?' · '+esc(other)+' 사용 중':''}</option>`;}).join('')}</select></label>`;
       }).join(''):'';
-      return `<section class="peripheral-card"><label class="check-label"><input type="checkbox" data-peripheral="${id}" ${c.enabled?'checked':''}>${id}</label>${routing}${isTimer(id)?`<label>동작 모드<select data-timer-mode="${id}">${Object.entries(TIMER_MODES).map(([mode,label])=>`<option value="${mode}" ${(c.mode??'base')===mode?'selected':''}>${label}</option>`).join('')}</select></label>`:''}${fields.map(([key,label,value,max])=>`<label>${label}<input type="number" data-peripheral-value="${id}" data-key="${key}" aria-label="${id} ${label}" value="${numberText(c[key]??value)}" min="0" ${max===undefined?'':`max="${max}"`} step="1"></label>`).join('')}${isTimer(id)?`<small class="serial-mode-note">${timerHint(id,c,fam.timerMax(id))}</small>`:''}</section>`;
+      return `<section class="peripheral-card"><label class="check-label"><input type="checkbox" data-peripheral="${id}" ${c.enabled?'checked':''}>${id}</label>${routing}${isTimer(id)?`<label>동작 모드<select data-timer-mode="${id}">${Object.entries(TIMER_MODES).map(([mode,label])=>`<option value="${mode}" ${(c.mode??'base')===mode?'selected':''}>${label}</option>`).join('')}</select></label>`:''}${fields.map(([key,label,value,max])=>`<label>${label}<input type="number" data-peripheral-value="${id}" data-key="${key}" aria-label="${id} ${label}" value="${numberText(c[key]??value)}" min="0" ${max===undefined?'':`max="${max}"`} step="1"></label>`).join('')}${isTimer(id)?`<small class="serial-mode-note">${timerHint(id,c,fam.timerMax(id))}</small>`:''}${c.enabled&&peripheralIrqs(config.family,id).length?`<div class="card-nvic"><strong>NVIC Settings</strong>${peripheralIrqs(config.family,id).map(irq=>this.irqRow(config,irq,{card:true})).join('')}</div>`:''}</section>`;
     }).join('')+this.dmaCard(config);
-    this.bindDma(config);
+    this.bindDma(config);this.bindIrqRows($('pinout-peripherals'),{card:true});
+    $('pinout-peripherals').querySelector('[data-open-nvic]').onclick=()=>this.showSide('nvic');
     $('pinout-peripherals').querySelectorAll('[data-serial-mode]').forEach(el=>el.onchange=()=>{this.sync();const id=el.dataset.serialMode,c=config.peripherals[id]??={enabled:true};if(el.value==='synchronous'){c.mode='synchronous';c.cpol??=0;c.cpha??=0;c.lastBit??=0;const tx=Object.keys(config.pins).find(p=>config.pins[p].function===id+'_TX'),group=fam.remaps?.[id]?.find(o=>o.pins.TX===tx&&o.pins.CK),pin=[...(group?[group.pins.CK]:[]),...fam.usartCk[id]].find(p=>!config.pins[p]||config.pins[p].function==='Reset');if(pin)config.pins[pin]={function:id+'_CK',pull:'NOPULL',edge:'FALLING',initial:0,label:''};}else{delete c.mode;delete c.cpol;delete c.cpha;delete c.lastBit;for(const [pin,p]of Object.entries(config.pins))if(p.function===id+'_CK')config.pins[pin]={...p,function:'Reset',label:''};}this.render();});
     $('pinout-peripherals').querySelectorAll('[data-serial-ck]').forEach(el=>el.onchange=()=>{this.sync();const id=el.dataset.serialCk;for(const [pin,p]of Object.entries(config.pins))if(p.function===id+'_CK')config.pins[pin]={...p,function:'Reset',label:''};if(el.value)config.pins[el.value]={function:id+'_CK',pull:'NOPULL',edge:'FALLING',initial:0,label:''};this.render();});
     $('pinout-peripherals').querySelectorAll('[data-usart-param]').forEach(el=>el.onchange=()=>{config.peripherals[el.dataset.usartParam][el.dataset.key]=Number(el.value);});
@@ -91,9 +183,7 @@ export class PinoutPanel {
       c.mode=el.value;if(el.value==='encoder')c.prescaler=0;this.render();
     });
     $('pinout-peripherals').querySelectorAll('[data-peripheral-value]').forEach(el=>el.onchange=()=>{const id=el.dataset.peripheralValue;config.peripherals[id]??={enabled:false};config.peripherals[id][el.dataset.key]=numberInput(el);const note=el.closest('.peripheral-card').querySelector('.serial-mode-note');if(isTimer(id)&&note)note.textContent=timerHint(id,config.peripherals[id],fam.timerMax(id));});
-    $('pinout-nvic').innerHTML=irqNamesOf(config.family).map(irq=>{const c=config.nvic[irq]||{enabled:false,priority:0};return `<label class="irq-row"><input type="checkbox" data-irq="${irq}" ${c.enabled?'checked':''}><span>${irq}</span><input type="number" min="0" max="15" value="${numberText(c.priority)}" data-priority="${irq}" aria-label="${irq} 우선순위"></label>`;}).join('');
-    $('pinout-nvic').querySelectorAll('[data-irq]').forEach(el=>el.onchange=()=>{config.nvic[el.dataset.irq]={...config.nvic[el.dataset.irq],enabled:el.checked,priority:config.nvic[el.dataset.irq]?.priority??0};});
-    $('pinout-nvic').querySelectorAll('[data-priority]').forEach(el=>el.onchange=()=>{config.nvic[el.dataset.priority]??={enabled:false};config.nvic[el.dataset.priority].priority=numberInput(el);});
+    this.renderNvic();this.showSide(this.side??'pin');
     $('timer-clock').value=numberText(config.timerClockHz);$('timer-clock').onchange=()=>config.timerClockHz=numberInput($('timer-clock'));
     $('pinout-errors').textContent=configProblems(config).join('\n');
     $('pinout-summary').textContent=`${Object.values(config.pins).filter(p=>!['Reset','Reserved'].includes(p.function)).length}개 핀 활성 · ${[...new Set(Object.entries(config.peripherals).filter(([,p])=>p.enabled).map(([id])=>'HAL_'+(isSerial(id)?'UART':id.replace(/\d$/,''))))].join(' · ')||'HAL_GPIO'}`;

@@ -314,3 +314,29 @@ dialog h1{font-size:21px;margin:8px 0 18px;letter-spacing:-.5px}
 .docs-board-pins{width:100%;border-collapse:collapse;font-size:11.5px}
 .docs-board-pins th,.docs-board-pins td{text-align:left;padding:4px 6px;border-bottom:1px solid var(--ide-border,#d8e2dd);vertical-align:top}
 .docs-board-pins .warn{color:var(--ide-warning,#9a5b00)}
+/* 1.16.0 CubeMX-style Pinout: right column tabs (pin settings / NVIC), NVIC table, NVIC Settings in cards, pin menu. */
+.pinout-side-tabs{display:flex;gap:4px;margin:0 0 8px;border-bottom:1px solid #c5d4cc}
+.pinout-side-tabs button{flex:1;padding:6px 8px;border:1px solid transparent;border-bottom:none;border-radius:6px 6px 0 0;background:transparent;font-size:12px;font-weight:700;color:#4d6358}
+.pinout-side-tabs button[aria-selected="true"]{background:#e7efec;border-color:#c5d4cc;color:#1a2b25}
+.nvic-count{font-weight:600}
+.nvic-tools{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+#pinout-nvic{display:flex;flex-direction:column;gap:2px;margin-top:4px}
+.pinout-layout .irq-row{display:grid;grid-template-columns:minmax(0,1fr) 44px 44px;gap:4px;align-items:center;font-size:10.5px}
+.pinout-layout .irq-row .irq-name{display:flex;align-items:flex-start;gap:5px;margin:2px 0;font-weight:500}
+.pinout-layout .irq-row .irq-name span{overflow-wrap:anywhere;min-width:0}
+.pinout-layout .irq-row input[type=number]{width:100%;padding:3px 4px;margin:0}
+.pinout-layout .irq-row.irq-head{font-weight:700;font-size:10px;color:#4d6358;border-bottom:1px solid #c5d4cc;padding-bottom:3px}
+.pinout-layout .irq-row.system .irq-name{color:#4d6358}
+.card-nvic{margin-top:6px;padding-top:5px;border-top:1px dashed #c5d4cc}
+.card-nvic>strong{display:block;font-size:10.5px;margin-bottom:2px}
+.system-card .nvic-open{display:flex;flex-direction:column;align-items:flex-start;width:100%;margin-top:5px;padding:6px 8px;border:1px solid #126b4c;border-radius:6px;background:#cde7da;font-weight:700;font-size:12px;text-align:left}
+.system-card .nvic-open small{font-weight:500;font-size:10px}
+.pin-tile .pin-signal{opacity:.75}
+.pin-menu{position:fixed;z-index:10;min-width:150px;max-height:min(60vh,420px);overflow:auto;padding:4px;border:1px solid #c5d4cc;border-radius:6px;background:#fcfdfc;box-shadow:0 6px 18px rgba(0,0,0,.22)}
+.pin-menu[hidden]{display:none}
+.pin-menu-title{padding:4px 8px;font:700 11px Consolas,monospace;border-bottom:1px solid #c5d4cc;margin-bottom:2px}
+.pin-menu button{display:block;width:100%;padding:4px 8px;border:none;border-radius:4px;background:transparent;text-align:left;font:12px Consolas,monospace;color:#1a2b25}
+.pin-menu button:hover,.pin-menu button:focus-visible{background:#e7efec;outline:none}
+.pin-menu button.current{background:#cde7da;font-weight:700}
+.pinout-side-tabs button[aria-selected="true"]{box-shadow:inset 0 -2px 0 #126b4c}
+.pinout-layout .irq-row input:disabled{opacity:.5}

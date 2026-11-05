@@ -5,6 +5,8 @@ import {SERIAL_ROUTES,SERIAL_IDS,isSerial,serialFunction} from './serial-config.
 import {DEFAULT_TIMER_CLOCK_HZ,timerDefaults} from './mcu-defaults.js';
 import {DMA_REQUESTS} from './hal-dma.js';
 import {familyProfile,routesOf,irqNamesOf,remapFor,DEFAULT_FAMILY,FAMILIES} from './mcu-family.js';
+import {nvicProblems,NVIC_GROUP_DEFAULT,TICK_PRIORITY_DEFAULT} from './nvic-config.js';
+import {speedsOf,SPEED_NAMES} from './gpio-config.js';
 // Synchronous USART clock outputs on F446RE LQFP64 (DS10693 table 11): AF7 USART1/2/3, AF8 USART6.
 export const USART_CK_ROUTES=familyProfile(DEFAULT_FAMILY).usartCk;
 export const usartCkRoutesOf=family=>familyProfile(family).usartCk;
@@ -32,6 +34,9 @@ export function validateMcu(value){
     if(typeof p.label!=='string'||(p.label&&!/^[A-Za-z_]\w{0,39}$/.test(p.label))||['__proto__','constructor','prototype'].includes(p.label))throw new Error(`${pin}: 라벨은 영문자나 _로 시작하는 C 이름(영문·숫자·_ 40자 이내)으로 쓰세요.`);
     if(!['NOPULL','PULLUP','PULLDOWN'].includes(p.pull)||!['RISING','FALLING','CHANGE'].includes(p.edge)||![0,1].includes(p.initial))throw new Error(`${pin}: GPIO 설정이 올바르지 않습니다.`);
     out.pins[pin]={function:p.function,pull:p.pull,edge:p.edge,label:p.label,initial:p.initial};
+    // Optional CubeMX GPIO fields: maximum output speed and push-pull / open-drain output.
+    if(p.speed!==undefined){if(!speedsOf(f.pinMux==='remap').includes(p.speed))throw new Error(`${pin}: 최대 출력 속도는 ${speedsOf(f.pinMux==='remap').map(s=>SPEED_NAMES[s]).join(' / ')} 중에서 고르세요.`);out.pins[pin].speed=p.speed;}
+    if(p.outputType!==undefined){if(!['PP','OD'].includes(p.outputType))throw new Error(`${pin}: GPIO 출력 방식은 Push Pull 또는 Open Drain입니다.`);out.pins[pin].outputType=p.outputType;}
   }
   for(const [id,p]of Object.entries(value.peripherals)){
     if(!Object.hasOwn(routes,id)||!p||typeof p.enabled!=='boolean')throw new Error(`${id}: ${f.id}에서 지원하지 않는 주변장치입니다.`);
@@ -52,7 +57,11 @@ export function validateMcu(value){
     }
   }
   const irqs=irqNamesOf(f.id);
-  for(const [irq,p]of Object.entries(value.nvic)){if(!irqs.includes(irq))throw new Error(`${irq}: ${f.id}에 없는 인터럽트입니다.`);if(!p||typeof p.enabled!=='boolean'||!Number.isInteger(p.priority)||p.priority<0||p.priority>15)throw new Error(`${irq}: NVIC 우선순위는 0~15 정수로 설정하세요.`);out.nvic[irq]={enabled:p.enabled,priority:p.priority};}
+  const priority=v=>Number.isInteger(v)&&v>=0&&v<=15;
+  for(const [irq,p]of Object.entries(value.nvic)){if(!irqs.includes(irq))throw new Error(`${irq}: ${f.id}에 없는 인터럽트입니다.`);if(!p||typeof p.enabled!=='boolean'||!priority(p.priority)||p.sub!==undefined&&!priority(p.sub))throw new Error(`${irq}: NVIC 우선순위는 0~15 정수로 설정하세요.`);out.nvic[irq]={enabled:p.enabled,priority:p.priority};if(p.sub)out.nvic[irq].sub=p.sub;}
+  // CubeMX NVIC Priority Group (NVIC_PRIORITYGROUP_0..4, HAL default 4) and the time base priority (TICK_INT_PRIORITY).
+  if(value.nvicGroup!==undefined){if(![0,1,2,3,4].includes(value.nvicGroup))throw new Error('NVIC Priority Group은 0~4입니다.');if(value.nvicGroup!==NVIC_GROUP_DEFAULT)out.nvicGroup=value.nvicGroup;}
+  if(value.tickPriority!==undefined){if(!priority(value.tickPriority))throw new Error('SysTick(Time base) 우선순위는 0~15 정수로 설정하세요.');if(value.tickPriority!==TICK_PRIORITY_DEFAULT)out.tickPriority=value.tickPriority;}
   return out;
 }
 export function configProblems(config){
@@ -88,6 +97,7 @@ export function configProblems(config){
   }
   for(const [irq,n]of Object.entries(config.nvic||{})){const id=irq.replace(/_IRQn$/,'');if(n.enabled&&(isSerial(id)||isTimer(id))&&!config.peripherals[id]?.enabled)errors.push(`${irq}: ${id} 주변장치를 활성화하거나 인터럽트를 끄세요.`);}
   for(const [request,d]of Object.entries(config.dma||{})){const id=dmaPeripheral(request);if(id&&!config.peripherals[id]?.enabled)errors.push(`${request} DMA: ${id} 주변장치를 활성화하세요.`);if(id&&isTimer(id)&&config.peripherals[id].mode!=='pwm')errors.push(`${request} DMA: ${id}를 PWM 모드로 설정하세요.`);}
+  errors.push(...nvicProblems(config));
   return errors;
 }
 // CubeMX keeps parameter expressions as typed ("84-1", "1000*2"): + - * / and parentheses on integers only.
@@ -119,6 +129,10 @@ export function importIoc(text){
     const rawLabel=values[base+'.GPIO_Label']||'',label=rawLabel.split(/[\s[]/)[0];
     if(label&&(!/^[A-Za-z_]\w{0,39}$/.test(label)||['__proto__','constructor','prototype'].includes(label)))warnings.push(`${pin}: 라벨 "${rawLabel}"은 C 이름으로 쓸 수 없어 비웠습니다.`);
     config.pins[pin]={function:fn,pull,edge,label:/^[A-Za-z_]\w{0,39}$/.test(label)&&!['__proto__','constructor','prototype'].includes(label)?label:'',initial:values[base+'.PinState']==='GPIO_PIN_SET'?1:0};
+    // GPIO_Speed (absent = CubeMX default) and an open-drain output (GPIO_ModeDefaultOutputPP).
+    const speed=/^GPIO_SPEED_FREQ_(LOW|MEDIUM|HIGH|VERY_HIGH)$/.exec(values[base+'.GPIO_Speed']||'')?.[1];
+    if(speed&&speedsOf(f.pinMux==='remap').includes(speed)&&fn!=='Reserved')config.pins[pin].speed=speed;
+    if(fn==='GPIO_Output'&&values[base+'.GPIO_ModeDefaultOutputPP']==='GPIO_MODE_OUTPUT_OD')config.pins[pin].outputType='OD';
   }
   for(const id of Object.keys(routes)){
     const enabled=Object.values(config.pins).some(p=>p.function.startsWith(id+'_'))||Object.entries(values).some(([k,v])=>/^Mcu.IP\d+$/.test(k)&&v===id);
@@ -144,7 +158,10 @@ export function importIoc(text){
     try{if(!requests[request]||!q)throw new Error();validateMcu({...defaultMcu(family),dma:{...dma,[request]:q}});dma[request]=q;}catch{warnings.push(`${request} DMA: 실행 모델에서 같은 설정을 쓸 수 없어 가져오지 않았습니다.`);}
   }
   if(Object.keys(dma).length)config.dma=dma;
-  for(const irq of irqNamesOf(family)){const raw=values['NVIC.'+irq];if(raw){const [enabled,priority]=raw.split(':');config.nvic[irq]={enabled:enabled==='true',priority:Number(priority)};}}
+  // NVIC.<irq>=enabled:preemption:sub:…; NVIC.PriorityGroup; the time base priority is TICK_INT_PRIORITY.
+  for(const irq of irqNamesOf(family)){const raw=values['NVIC.'+irq];if(raw){const [enabled,priority,sub]=raw.split(':');config.nvic[irq]={enabled:enabled==='true',priority:Number(priority)};if(Number(sub))config.nvic[irq].sub=Number(sub);}}
+  const group=/^NVIC_PRIORITYGROUP_([0-4])$/.exec(values['NVIC.PriorityGroup']||'');if(group)config.nvicGroup=Number(group[1]);
+  const tick=values['NVIC.SysTick_IRQn']?.split(':');if(tick&&Number.isInteger(Number(tick[1])))config.tickPriority=Number(tick[1]);
   for(const [key,v]of Object.entries(values))if(/^Mcu.IP\d+$/.test(key)&&!Object.hasOwn(routes,v)&&!['GPIO','RCC','NVIC','SYS','NUCLEO-F446RE','NUCLEO-F103RB'].includes(v))warnings.push(`${v}: 실행 모델 미지원`);
   const clean=validateMcu(config);return {config:clean,warnings:[...new Set([...warnings,...configProblems(clean)])]};
 }

@@ -3,6 +3,8 @@ import {TIMER_IDS,isTimer,timerAf} from './timer-config.js';
 import {DEFAULT_TIMER_CLOCK_HZ} from './mcu-defaults.js';
 import {familyProfile,remapFor} from './mcu-family.js';
 import {dmaHandle,irqHandlers,handlerText} from './irq-handlers.js';
+import {nvicGroup,tickPriority,NVIC_GROUP_DEFAULT,TICK_PRIORITY_DEFAULT} from './nvic-config.js';
+import {gpioMode,hasSpeed,pinSpeed} from './gpio-config.js';
 // DMA handle names / link fields / data widths per request (CubeMX naming).
 const dmaLink=request=>request==='ADC1'||request==='DCMI'?'DMA_Handle':/_CH(\d)$/.test(request)?`hdma[TIM_DMA_ID_CC${/_CH(\d)$/.exec(request)[1]}]`:/_RX$/.test(request)?'hdmarx':'hdmatx';
 const dmaWidth=request=>request==='ADC1'?['HALFWORD','HALFWORD']:/^TIM\d_CH/.test(request)?['WORD','HALFWORD']:request==='DCMI'||request.startsWith('SDIO')?['WORD','WORD']:['BYTE','BYTE'];
@@ -15,6 +17,9 @@ function dmaLines(name,request,d,f1=false){
     ...(f1?[]:[set('FIFOMode',request.startsWith('SDIO')?'DMA_FIFOMODE_ENABLE':'DMA_FIFOMODE_DISABLE')]),`  if (HAL_DMA_Init(&${name}) != HAL_OK) Error_Handler();`];
 }
 
+// CubeMX sets these in HAL_MspInit (priority group) and stm32xxxx_hal_conf.h (TICK_INT_PRIORITY); a single main.c sets
+// them right after HAL_Init(). HAL_InitTick() keeps the priority when SystemClock_Config() reconfigures SysTick.
+const nvicInit=config=>[...(nvicGroup(config)!==NVIC_GROUP_DEFAULT?[`  HAL_NVIC_SetPriorityGrouping(NVIC_PRIORITYGROUP_${nvicGroup(config)});`]:[]),...(tickPriority(config)!==TICK_PRIORITY_DEFAULT?[`  HAL_InitTick(${tickPriority(config)});`]:[])];
 export function clockPlan(hz){
   if(hz===DEFAULT_TIMER_CLOCK_HZ)return {source:'HSI',apb1:1,latency:0};
   // HSI removes any dependency on the Nucleo ST-LINK MCO / HSE jumper.
@@ -31,7 +36,7 @@ export function clockPlanF1(hz){
   if(Number.isInteger(mul)&&mul>=2&&mul<=16)return {source:'PLLCLK',apb1:hz>36000000?2:1,mul,latency};
   throw new Error('main.c 생성: STM32F103은 HSI 8 MHz 또는 HSI/2 PLL로 만들 수 있는 8~64 MHz(4 MHz 단위) 타이머 클록을 사용하세요.');
 }
-export function generateMain(config,{minimal=false}={}){
+export function generateMain(config,{minimal=false,legacyGpio=false}={}){
   const family=familyProfile(config.family),f1=family.pinMux==='remap';
   const clock=f1?clockPlanF1(config.timerClockHz):clockPlan(config.timerClockHz),pins=Object.entries(config.pins).filter(([,p])=>!['Reset','Reserved'].includes(p.function)),irqs=Object.entries(config.nvic).filter(([,p])=>p.enabled),gpioInit=!minimal||pins.length>0||irqs.length>0,lines=['#include "main.h"',...(minimal?[]:['#include <stdio.h>']),'/* USER CODE BEGIN Includes */','/* USER CODE END Includes */','',
     `/* Copy this main.c into a CubeIDE ${family.id} project with matching`,
@@ -46,7 +51,7 @@ export function generateMain(config,{minimal=false}={}){
   for(const [request]of dma)lines.push(`DMA_HandleTypeDef ${dmaHandle(request)};`);
   const initName=id=>id==='SDIO'?'MX_SDIO_SD_Init':`MX_${id}${isSerial(id)&&!sync(id)?'_UART':''}_Init`;
   lines.push('/* USER CODE BEGIN PV */','/* USER CODE END PV */','','void SystemClock_Config(void);','void Error_Handler(void);',...(gpioInit?['static void MX_GPIO_Init(void);']:[]),...(dma.length?['static void MX_DMA_Init(void);']:[]),...active.map(([id])=>`static void ${initName(id)}(void);`),'','/* USER CODE BEGIN 0 */','/* USER CODE END 0 */','',
-    'int main(void) {','  HAL_Init();','  SystemClock_Config();',...(gpioInit?['  MX_GPIO_Init();']:[]),...(dma.length?['  MX_DMA_Init();']:[]),...active.map(([id])=>`  ${initName(id)}();`),'  /* USER CODE BEGIN 2 */');
+    'int main(void) {','  HAL_Init();',...nvicInit(config),'  SystemClock_Config();',...(gpioInit?['  MX_GPIO_Init();']:[]),...(dma.length?['  MX_DMA_Init();']:[]),...active.map(([id])=>`  ${initName(id)}();`),'  /* USER CODE BEGIN 2 */');
   if(!minimal)for(const [id,p]of timers){const h=handles[id][1];
     if(p.mode==='encoder')lines.push(`  HAL_TIM_Encoder_Start(&${h}, TIM_CHANNEL_ALL);`);
     else if(['pwm','capture'].includes(p.mode)){for(const value of Object.values(config.pins)){const match=new RegExp('^'+id+'_CH([1-4])$').exec(value.function);if(match)lines.push(`  HAL_TIM_${p.mode==='pwm'?'PWM_Start':'IC_Start'+(config.nvic[id+'_IRQn']?.enabled?'_IT':'')}(&${h}, TIM_CHANNEL_${match[1]});`);}}
@@ -83,21 +88,20 @@ export function generateMain(config,{minimal=false}={}){
   }
   for(const [pin,p]of pins){
     if(p.function==='GPIO_Output')lines.push(`  HAL_GPIO_WritePin(GPIO${pin[1]}, GPIO_PIN_${pin.slice(2)}, GPIO_PIN_${p.initial?'SET':'RESET'});`);
-    // F1 peripheral inputs (UART RX, SPI MISO, timer capture/encoder channels) are plain inputs.
-    const afInput=f1&&(/_RX$|^SPI1_MISO$/.test(p.function)||/^TIM\d_CH\d$/.test(p.function)&&['capture','encoder'].includes(config.peripherals[p.function.split('_')[0]]?.mode));
-    const mode=p.function==='GPIO_Output'?'OUTPUT_PP':p.function==='GPIO_EXTI'?`IT_${p.edge==='CHANGE'?'RISING_FALLING':p.edge}`:p.function==='Analog'||p.function.startsWith('ADC1_')?'ANALOG':p.function==='GPIO_Input'||afInput?'INPUT':p.function.startsWith('I2C1_')?'AF_OD':'AF_PP';
+    const mode=gpioMode(p,config,f1);
     lines.push(`  GPIO_InitStruct.Pin = GPIO_PIN_${pin.slice(2)};`,`  GPIO_InitStruct.Mode = GPIO_MODE_${mode};`,`  GPIO_InitStruct.Pull = GPIO_${p.pull};`);
-    if(!minimal||mode==='OUTPUT_PP'||mode.startsWith('AF_'))lines.push(`  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_${f1?'HIGH':'VERY_HIGH'};`);
+    // legacyGpio: the pre-1.16 rule (one fixed speed, also on inputs) that removing old Docs code has to match.
+    if(legacyGpio?!minimal||mode==='OUTPUT_PP'||mode.startsWith('AF_'):hasSpeed(mode))lines.push(`  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_${legacyGpio?f1?'HIGH':'VERY_HIGH':pinSpeed(p,f1)};`);
     if(mode.startsWith('AF_')&&!f1){const serial=serialFunction(p.function)||/^(USART\d)_CK$/.exec(p.function)?.[1],timer=p.function.split('_')[0],af=serial?`GPIO_AF${serialAf(serial)}_${serial}`:p.function.startsWith('I2C1_')?'GPIO_AF4_I2C1':p.function.startsWith('SPI1_')?'GPIO_AF5_SPI1':p.function.startsWith('SDIO_')?'GPIO_AF12_SDIO':`GPIO_AF${timerAf(timer)}_${timer}`;lines.push(`  GPIO_InitStruct.Alternate = ${af};`);}
     lines.push(`  HAL_GPIO_Init(GPIO${pin[1]}, &GPIO_InitStruct);`);
   }
-  for(const [irq,p]of irqs)if(!/^DMA\d_(Stream|Channel)\d_IRQn$/.test(irq))lines.push(`  HAL_NVIC_SetPriority(${irq}, ${p.priority}, 0);`,`  HAL_NVIC_EnableIRQ(${irq});`);
+  for(const [irq,p]of irqs)if(!/^DMA\d_(Stream|Channel)\d_IRQn$/.test(irq))lines.push(`  HAL_NVIC_SetPriority(${irq}, ${p.priority}, ${p.sub??0});`,`  HAL_NVIC_EnableIRQ(${irq});`);
   lines.push('}');
   }
   if(dma.length){
     lines.push('','static void MX_DMA_Init(void) {',...[...new Set(dma.map(([,d])=>d.stream.slice(0,4)))].sort().map(c=>`  __HAL_RCC_${c}_CLK_ENABLE();`));
     for(const [request,d]of dma)if(request==='MEMTOMEM')lines.push(...dmaLines(dmaHandle(request),request,d,f1));
-    for(const [,d]of dma)lines.push(`  HAL_NVIC_SetPriority(${d.stream}_IRQn, ${config.nvic[d.stream+'_IRQn']?.priority??0}, 0);`,`  HAL_NVIC_EnableIRQ(${d.stream}_IRQn);`);
+    for(const [,d]of dma)lines.push(`  HAL_NVIC_SetPriority(${d.stream}_IRQn, ${config.nvic[d.stream+'_IRQn']?.priority??0}, ${config.nvic[d.stream+'_IRQn']?.sub??0});`,`  HAL_NVIC_EnableIRQ(${d.stream}_IRQn);`);
     lines.push('}');
   }
   for(const [id,p]of active){const [type,name]=handles[id];lines.push('',`static void ${initName(id)}(void) {`,`  __HAL_RCC_${id}_CLK_ENABLE();`,`  ${name}.Instance = ${id};`);

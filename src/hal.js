@@ -280,7 +280,7 @@ export class HalAdapter {
       for(const pin of this.pins(a,mask)){
         if(this.catalog.configurePin(pin,mode,this.f1?0:this.field(init,'Alternate'),r))continue;
         // F1 peripheral inputs (UART RX, SPI MISO, timer capture/encoder channels) use GPIO_MODE_INPUT.
-        const p=this.configured(pin),afInput=this.f1&&(/_RX$|^SPI1_MISO$/.test(p.function)||/^TIM\d_CH\d$/.test(p.function)&&['capture','encoder'].includes(this.config.peripherals[p.function.split('_')[0]]?.mode)),expected=p.function==='GPIO_Output'?1:p.function==='GPIO_Input'||afInput?0:p.function==='GPIO_EXTI'?HAL_CONSTANTS['GPIO_MODE_IT_'+(p.edge==='CHANGE'?'RISING_FALLING':p.edge)]:p.function==='Analog'||p.function.startsWith('ADC1_')?3:p.function.startsWith('I2C1_')?18:2;
+        const p=this.configured(pin),afInput=this.f1&&(/_RX$|^SPI1_MISO$/.test(p.function)||/^TIM\d_CH\d$/.test(p.function)&&['capture','encoder'].includes(this.config.peripherals[p.function.split('_')[0]]?.mode)),expected=p.function==='GPIO_Output'?(p.outputType==='OD'?17:1):p.function==='GPIO_Input'||afInput?0:p.function==='GPIO_EXTI'?HAL_CONSTANTS['GPIO_MODE_IT_'+(p.edge==='CHANGE'?'RISING_FALLING':p.edge)]:p.function==='Analog'||p.function.startsWith('ADC1_')?3:p.function.startsWith('I2C1_')?18:2;
         const dynamic=this.initializedGpio.has(pin)&&(['GPIO_Output','GPIO_Input'].includes(p.function)&&[0,1,17,3].includes(mode)||(p.function==='Analog'||p.function.startsWith('ADC1_'))&&[0,3].includes(mode));
         if(!dynamic&&(mode!==expected&&!(expected===1&&mode===17)||pull!==['NOPULL','PULLUP','PULLDOWN'].indexOf(p.pull)))throw new Error(`${pin}: HAL_GPIO_Init 모드/풀 설정과 Pinout이 다릅니다.`);
         if(this.f1)this.checkF1Pin(pin,p);

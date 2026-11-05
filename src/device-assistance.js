@@ -170,7 +170,7 @@ function legacyTexts(binding,project,slot){
  if(binding.mode==='baremetal'){const sample=bindingSample(binding,project),config=ownConfig(project,binding),expand=registerExpand('STM_D'+slot+'_'),card=registerCards(config,binding,sample)[0];texts.push(['INIT','{\n'+expand(registerSetup(config))+'\n}'],['LOOP','{\n'+expand(card.code+'\nBM_delay(100);')+'\n}']);}
  else texts.push(['DECL',m.declarations],['INIT','{\n'+m.init+'\n}'],['LOOP','{\n'+m.step+'\n}']);
  // GPIO setup was generated for all devices together; remove this device's per-pin blocks.
- for(const [pin,c]of Object.entries(ownConfig(project,binding).pins)){try{const body=cFunctions(generateHal({...ownConfig(project,binding),pins:{[pin]:c},peripherals:{},nvic:{}})).find(f=>f.name==='MX_GPIO_Init')?.body||'';texts.push(['MX_GPIO_Init '+pin,body.replace(/^\s*GPIO_InitTypeDef[^\n]*\n/m,'').replace(/^\s*__HAL_RCC_GPIO\w_CLK_ENABLE\(\);\s*$/gm,'')]);}catch{}}
+ for(const [pin,c]of Object.entries(ownConfig(project,binding).pins)){try{const body=cFunctions(generateHal({...ownConfig(project,binding),pins:{[pin]:c},peripherals:{},nvic:{}},{legacyGpio:true})).find(f=>f.name==='MX_GPIO_Init')?.body||'';texts.push(['MX_GPIO_Init '+pin,body.replace(/^\s*GPIO_InitTypeDef[^\n]*\n/m,'').replace(/^\s*__HAL_RCC_GPIO\w_CLK_ENABLE\(\);\s*$/gm,'')]);}catch{}}
  return texts.filter(([,t])=>t.replace(/[{}\s]/g,''));
 }
 function removeLegacyCode(project,binding,report){
