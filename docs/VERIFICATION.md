@@ -1,5 +1,9 @@
 # 검증 기록
 
+## 1.16.0 CubeMX식 NVIC·GPIO·핀 클릭 메뉴 — 게시 확인(API)
+
+2026-11-05. 태그·빌드 커밋 `96c0a87aff263e6a919603e275f3c25e1c0fa991` · [Windows CI 41954088996](https://github.com/moonsyu/STM-Simulator/actions/runs/41954088996) 성공(약 7분, 작업 7개 모두 성공: Windows x64 portable, 정적 검사·단위, E2E 1/2·2/2, ESP32 스케치, ST HAL 예제 ARM GCC·에뮬레이터, Release 게시) · [Release v1.16.0](https://github.com/moonsyu/STM-Simulator/releases/tag/v1.16.0) latest, draft/prerelease 아님, 자산 5개(BUILD-INFO.json, SHA256.txt, STM-Simulator-1.16.0-Windows-x64.zip, STM-Simulator.exe 115,458,587 B, update-manifest.json). 파일은 내려받지 않고 API로만 확인했다. 푸시 전 로컬 패키지 검사(`tests/release/packaged.test.mjs`) 3개 통과, 빌드 산출물은 지웠다. 로컬 검사: 단위·해석기·에뮬레이터·펌웨어 888개 중 887개 통과·1개 건너뜀, E2E 51개 통과·3개 건너뜀, ESLint 0건.
+
 ## 1.15.0 UART 인터럽트와 IRQ 핸들러 자동 작성 — 게시 확인(API)
 
 2026-11-04. 태그·빌드 커밋 `cc22f0d5b058a5b76758c598c7c8a764852ae145` · [Windows CI 41810410084](https://github.com/moonsyu/STM-Simulator/actions/runs/41810410084) · [Release v1.15.0](https://github.com/moonsyu/STM-Simulator/releases/tag/v1.15.0). 로컬: 단위 882개 중 881개 통과·1개 건너뜀, ESLint 0건, E2E 53개 중 51개 통과·2개 건너뜀(다른 창 뒤에 띄운 다크 모드 창), 모든 HAL 예제 ARM GCC 빌드·에뮬레이터 실행 269개 통과(F446RE·F103RB), 패키지 검사 3개 통과(npm으로 빌드).

@@ -1,8 +1,8 @@
 # STM Simulator — 개발 인계
 
-현재 버전: **1.16.0**(로컬, 미게시). 정리일: **2026-11-03**. NUCLEO-F446RE 또는 NUCLEO-F103RB와 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+현재 버전: **1.16.0**. 정리일: **2026-11-03**. NUCLEO-F446RE 또는 NUCLEO-F103RB와 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
 
-## 1.16.0 CubeMX식 NVIC·GPIO·핀 클릭 메뉴 (로컬, 사용자 확인 대기)
+## 1.16.0 CubeMX식 NVIC·GPIO·핀 클릭 메뉴
 
 - `src/nvic-config.js`: CubeMX NVIC 이름(`irqLabel`), 주변장치별 IRQ(`peripheralIrqs`), "사용 가능한 인터럽트"(`irqAvailable`), 사용 중 DMA 스트림 강제 켜짐(`dmaForced`), 그룹별 범위 검사(`nvicProblems`). MCU 설정에 선택 필드 `nvicGroup`(0~4, 4면 저장 안 함), `tickPriority`(0~15, 15면 저장 안 함), `nvic[irq].sub`(0이면 저장 안 함)를 추가했다.
 - 생성 코드: 그룹이 4가 아니면 `HAL_Init()` 바로 뒤에 `HAL_NVIC_SetPriorityGrouping(NVIC_PRIORITYGROUP_n)`, SysTick 우선순위가 15가 아니면 `HAL_InitTick(n)`(CubeMX는 HAL_MspInit·TICK_INT_PRIORITY에 쓴다). `HAL_NVIC_SetPriority(irq, pre, sub)`.
