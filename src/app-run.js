@@ -2,7 +2,7 @@
 import {log,running,logUart,checkpoint,autosave} from './app-core.js';
 import {state} from './app-state.js';
 import {refresh} from './app-view.js';
-import {runScope,boardOnlyRun,BOARD_ONLY_PROGRAM,layout,monitor,uartLines,diagnostic,runStm32,feedback,firmwareKey} from './app.js';
+import {runScope,boardOnlyRun,BOARD_ONLY_PROGRAM,monitor,uartLines,diagnostic,runStm32,feedback,firmwareKey} from './app.js';
 import {projectBoard} from './boards.js';
 import {$} from './common.js';
 import {devboardModel} from './devboards.js';
@@ -25,7 +25,7 @@ export function updateRunScope(){
 export function initializeRuntime({debug=false,entry=false}={}){
  const scope=runScope(),boardOnly=boardOnlyRun(),emulate=!boardOnly&&!!state.ide?.emulator();
  if(emulate&&!state.firmware){state.status='error';state.runtime=null;state.session=null;log('펌웨어 ELF가 없습니다. 빌드하거나 파일 → 펌웨어 ELF 열기를 사용하세요.','error');return false;}
- const program=boardOnly?compile(BOARD_ONLY_PROGRAM):emulate?null:state.ide?.build({reveal:false});if(!boardOnly&&!emulate&&state.ide&&!program){state.status='error';state.runtime=null;state.session=null;layout.showPanel('build');return false;}
+ const program=boardOnly?compile(BOARD_ONLY_PROGRAM):emulate?null:state.ide?.build({reveal:false});if(!boardOnly&&!emulate&&state.ide&&!program){state.status='error';state.runtime=null;state.session=null;log(`코드 검사에 실패해 실행하지 않았습니다: ${$('build-errors').textContent.trim()||'빌드 탭을 확인하세요.'} (편집기의 빨간 밑줄 위치)`,'error');return false;}
  try{state.simTime=0;state.pressed={};state.lastWarnings='';state.result=null;monitor.clear();uartLines.clear();const options={debug:debug?{entry,breakpoints:state.ide?.breakpoints()||[]}:undefined,print:s=>log(s,'serial'),uart:logUart,trace:event=>monitor.trace(event),channels:monitor.channels()};
   state.session=emulate?new FirmwareSession(state.project,{...options,elf:state.firmware.bytes}):new SimulationSession(boardOnly?{...state.project,code:BOARD_ONLY_PROGRAM,firmware:{mode:'sketch',files:[]}}:state.project,{...options,program});state.runtime=state.session.runtime;state.status='paused';state.pending=null;state.mode='select';// The start line comes before what the program prints in its first tick.
   log(boardOnly?'다른 보드만 실행합니다. STM32 코드는 실행하지 않습니다.':emulate?`${state.ide?.gccSimulation?.()?'시뮬레이터(ARM GCC 빌드)를 시작했습니다':'펌웨어 에뮬레이터를 시작했습니다'} · ${state.firmware.name} · ${projectBoard(state.project).mcu} (${projectBoard(state.project).core}) 명령어 실행`:state.project.firmware?.mode==='hal'?'HAL 프로그램을 시작했습니다.':'스케치를 시작했습니다.');

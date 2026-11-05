@@ -29,8 +29,11 @@ test('the simulator builds with ARM GCC: <stdlib.h>, <ctype.h> and snprintf work
   // Headers and functions the built-in interpreter does not have.
   await setCode(win,c=>c.replace('#include <stdio.h>','#include <stdio.h>\n#include <stdlib.h>\n#include <ctype.h>').replace('/* USER CODE BEGIN 2 */','/* USER CODE BEGIN 2 */\n  char text[16];\n  snprintf(text, sizeof(text), "n=%d %c", atoi("42") + 1, toupper(\'a\'));\n  printf("%s\\n", text);'));
   assert.equal(await win.evaluate(()=>document.getElementById('sim-engine').value),'gcc');
+  await win.click('[data-monitor="log"]');
   await win.keyboard.press('Control+F5');
   await win.waitForFunction(()=>/시뮬레이터\(ARM GCC 빌드\)를 시작했습니다/.test(document.getElementById('console-output').textContent),null,{timeout:240000});
+  // The ARM build of a run does not take the bottom panel to 빌드 (Ctrl+Shift+B / 빌드 still shows it).
+  assert.equal(await win.evaluate(()=>document.getElementById('build-panel').hidden),true,'the 출력 tab stays');
   await win.waitForFunction(()=>/n=43 A/.test(document.getElementById('console-output').textContent),null,{timeout:30000});
   await win.waitForFunction(()=>/HAL UART ready/.test(document.getElementById('console-output').textContent),null,{timeout:30000});
   await win.keyboard.press('Control+F2');
