@@ -16,7 +16,9 @@
 - 검증:
   - 단위·해석기·에뮬레이터·펌웨어 시험 888개 중 887개 통과, 1개 건너뜀. 새 시험: `tests/unit/nvic-gpio.test.js`, `tests/interp/nvic-gpio.test.js`.
   - ESLint 0건.
-  - E2E(`tests/e2e/pinout.e2e.test.mjs` 추가, sim-gcc·devboards)는 아래에 기록한다.
+  - E2E 13개 파일(새 `tests/e2e/pinout.e2e.test.mjs` 포함): 51개 통과, 3개 건너뜀(CI 도구 경로가 필요한 시험 등), 실패 0. 처음에는 Pinout E2E가 실패했다. Priority Group을 2로 바꾸면 SysTick 기본값 15가 범위(0~3)를 넘었기 때문이다. 그룹을 바꿀 때 범위를 넘는 우선순위를 새 최댓값으로 맞추도록 고쳤다.
+  - 화면 확인: 다크 모드 앱을 다른 창 뒤에 띄워 캡처했다. 확인 뒤 다음을 고쳤다: 핀 메뉴를 CubeMX 순서로, NVIC 표 머리글 겹침, 선택된 탭 표시, 비활성 칸 흐리게.
+  - 앱 실행: 사용자 확인용으로 의존성 복제본에서 `electron .`으로 실행해 두었다.
 - 커밋: 로컬 커밋만 하고 푸시·Release는 하지 않았다(사용자 확인 대기).
 - 남은 사항:
   - NVIC Code generation 탭(IRQ별 핸들러 생성·HAL 핸들러 호출 선택)
