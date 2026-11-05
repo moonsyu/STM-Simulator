@@ -17,7 +17,7 @@ STM Simulator는 **NUCLEO-F446RE·NUCLEO-F103RB 회로 시뮬레이터와 Cortex
 ### 작업 화면 (VS Code 스타일)
 - **활동 바와 사이드바**: 탐색기(소스 파일·회로 개요), 부품, HAL 예제, 보드·핀 설정, 실행 및 디버그(실행 환경 선택 포함), 장치 Docs. 아이콘은 끌어서 순서를 바꿀 수 있습니다.
 - **편집기 영역**: 소스 탭이 있는 Monaco 코드 편집기와 회로 시뮬레이터 그룹. 위치 바꾸기, 가로/세로 분할, 최대화, 경계선 크기 조절을 지원하고 배치를 기억합니다.
-- **하단 패널**: 문제 · 출력 · 터미널 · 직렬 모니터 · 파형 · 로직 분석기 · 빌드.
+- **하단 패널**: 문제 · 출력 · 터미널 · 직렬 모니터 · 파형 · 변수 그래프 · 로직 분석기 · 빌드.
 - **속성 패널(보조 사이드바)**: 선택한 핀·배선·부품의 속성과 실시간 전압·전류, 카메라 프레임 미리보기, SD 카드 파일 목록.
 - **메뉴와 명령 팔레트**: 파일·편집·보기·실행·터미널·도움말 메뉴, Ctrl+Shift+P 명령 팔레트, Ctrl+P 파일 이동, Ctrl+B/J/Alt+B 패널 전환. 편집 메뉴에 설정과 단축키 설정이 있습니다.
 - **코드 정렬**: 편집 → 코드 정렬(Alt+Shift+F). clangd가 없어도 내장 정렬기로 동작하고, `}`를 입력하면 그 블록을 바로 정렬합니다. 저장 시 자동 정렬도 설정할 수 있습니다.
@@ -38,6 +38,9 @@ STM Simulator는 **NUCLEO-F446RE·NUCLEO-F103RB 회로 시뮬레이터와 Cortex
 - **HAL DMA**: UART(ReceiveToIdle 포함)·ADC 스캔·SPI·I²C·TIM PWM DMA와 메모리 간 DMA, Half/Complete 콜백, 순환 모드. Pinout에서 DMA 설정과 `MX_DMA_Init` 생성을 지원합니다.
 - **USART 동기 모드**: `HAL_USART_*`로 CK 클록을 내보내 시프트 레지스터형 장치를 구동합니다.
 - **카메라·SD 카드**: OV2640 SCCB 설정에 맞는 프레임(컬러 바·움직이는 패턴·불러온 이미지)을 DCMI DMA로 받고, SD 카드는 프로젝트에 저장되는 FAT32 이미지와 FatFs API(`f_mount`, `f_open`, `f_printf` 등)로 동작합니다.
+
+### 변수 그래프 (STM Studio 방식)
+- **변수 그래프**: 전역 변수(`value`, `adc[0]`, `s.x`, `value * 2` 같은 식)를 실행 중 샘플 간격(1~100 ms)마다 읽어 시간에 따른 꺾은선으로 그립니다. 해석 실행과 ARM GCC 빌드(ELF 에뮬레이터) 모두 동작하므로 ST-LINK와 실물 보드 없이 STM Studio·STM32CubeMonitor 실습을 할 수 있고, CSV로 저장합니다.
 
 ### 통신 파형과 잡음
 - **로직 분석기**: UART TX/RX, I²C SDA/SCL, SPI SCK/MOSI/MISO/NSS, USART CK, 1-Wire를 비트 단위 파형으로 표시하고 바이트·ACK/NACK·오류를 해석합니다.

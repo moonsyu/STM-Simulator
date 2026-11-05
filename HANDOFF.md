@@ -1,6 +1,12 @@
 # STM Simulator — 개발 인계
 
-현재 버전: **1.18.3**. 정리일: **2026-11-03**. NUCLEO-F446RE 또는 NUCLEO-F103RB와 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+현재 버전: **1.19.0**. 정리일: **2026-11-03**. NUCLEO-F446RE 또는 NUCLEO-F103RB와 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+
+## 1.19.0 변수 그래프 (STM Studio 방식)
+
+- `src/variable-graph.js`: `VariableRecorder`(변수 목록 8개까지, 시뮬레이션 시간 샘플 간격, 변수마다 점·지금 값·읽기 오류, 2만 점 순환, CSV)와 `variableChart`(SVG 꺾은선·네모 표시·눈금). `src/variable-graph-ui.js`: 하단 `변수 그래프` 탭(`data-monitor="vars"`, `#vars-panel`), 전역 변수 제안(`cSymbols`), 목록은 `project.ide.plots`(검증: 문자열 8개 이하·중복 없음, 보드별 ide에도 복사).
+- 두 세션 모두 `enrich(micros)`에서 `vars.record(micros, name => readVariable(name))`를 부른다. `SimulationSession.readVariable`은 `watchExpression`(감시식 파서, 캐시)으로 만든 식을 전역 범위에서 `readExpression`으로 읽고 `numericValue`로 숫자만 받는다. `FirmwareSession.readVariable`은 기존 `evaluate`(ELF 심볼 + 소스 선언 타입, 부작용 없는 `bus.peek`)의 결과를 숫자로 바꾸며, `declaredType`은 이름별로 캐시한다.
+- `c-symbols.js`: `uint32_t a, b;`처럼 한 선언의 여러 이름을 각각 변수로 낸다(전에는 마지막 이름만, 타입 글자가 깨졌다). 코드 개요와 변수 제안에 반영된다.
 
 ## 1.18.3 보드 구성 초기화가 main.c도 초기화
 

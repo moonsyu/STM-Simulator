@@ -1,5 +1,6 @@
 // User-facing update log shown in 도움말 → 업데이트 로그: one entry per released version (date = the release tag's commit date).
 export const UPDATE_LOG=Object.freeze([
+ {version:'1.19.0',date:'2026-11-05',items:['하단 패널에 변수 그래프 탭(STM Studio 방식): 전역 변수(value, adc[0], s.x, value * 2 등)를 8개까지 골라 실행 중 1~100 ms 간격으로 읽어 시간에 따른 꺾은선으로 표시. 지금 값, 시간 범위 1~60 s, CSV 저장, 목록은 프로젝트에 저장','해석 실행과 ARM GCC 빌드(ELF 에뮬레이터) 모두 지원해 ST-LINK·실물 보드 없이 STM Studio 실습 가능','코드 개요에서 uint32_t a, b;처럼 한 줄에 여러 변수를 선언하면 마지막 이름만 잘못된 타입으로 보이던 문제 수정']},
  {version:'1.18.3',date:'2026-11-05',items:['보드 구성 초기화(편집 메뉴)가 회로·핀 설정과 함께 main.c도 기본 설정의 초기 코드로 되돌림. 직접 추가한 다른 소스 파일은 유지하고, Ctrl+Z 한 번으로 회로·설정·코드가 함께 돌아옴']},
  {version:'1.18.2',date:'2026-11-05',items:['자동완성에 보드 STM32Cube SDK의 모든 HAL·CMSIS 이름(함수·매크로·타입·enum)이 나옴. 예: HAL_TIM_Base_Start, HAL_TIM_Base_Start_IT, HAL_TIM_Base_Stop_IT처럼 기본 목록과 main.c에 없던 함수도 두 글자부터 대소문자 구분 없이 제안하고, 옆에 선언(인자·반환형)을 보여 줌']},
  {version:'1.18.1',date:'2026-11-05',items:['문제·출력 등 하단 패널에서 끌어 선택한 글자를 Ctrl+C로 복사하지 못하던 문제 수정(회로의 부품 복사가 Ctrl+C를 가져가던 원인). 글자를 선택하지 않았을 때 Ctrl+C는 그대로 회로 복사','패널 글자 위에서 Ctrl+A는 그 패널의 글자를 모두 선택, 선택한 글자나 입력 칸에서 오른쪽 클릭하면 복사(입력 칸은 잘라내기·붙여넣기·모두 선택) 메뉴','실행(Ctrl+F5) 때 하단 패널이 빌드 탭으로 자동으로 바뀌지 않음. ARM GCC 빌드는 뒤에서 하고, 코드 검사 실패는 출력에 이유를 남김(빌드 명령·Ctrl+Shift+B는 그대로 빌드 탭을 엶)']},
