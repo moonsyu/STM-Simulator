@@ -1,6 +1,6 @@
 # FPB-RA6E1 추가 계획
 
-작성 2026-11-06. 상태: **1.20.0에서 1·2단계와 4단계 일부(Pins 설정·예제) 구현**. 0단계 결정: 목표를 STM + Renesas RA로 넓힘, 실행은 에뮬레이터 전용(STM 시뮬레이터의 기본 경로와 같은 ARM GCC 빌드, 해석기 없음), 설정 화면은 앱 안에서 RASC처럼, 실물 보드(J-Link)까지 진행(사용자, 2026-11-06). 다운로드 승인: FSP, 하드웨어 매뉴얼, 회로도, 예제·poppler, J-Link. 회로도 Design Package는 MyRenesas 로그인이 필요해 받지 못했다(보드 그림은 Quick Start Guide 그림과 Arduino Uno R3 규격 기준). 하드웨어 매뉴얼 Rev.1.40(2026-04)은 정정 문서 내용(Table 1.16)이 반영된 판이다.
+작성 2026-11-06. 상태: **1.20.0에서 1·2단계, 1.22.0에서 3·4단계(SCI·GPT·AGT·ADC12·IIC, Pins·Clocks·Stacks) 구현**. 남은 것: 5·6단계. 0단계 결정: 목표를 STM + Renesas RA로 넓힘, 실행은 에뮬레이터 전용(STM 시뮬레이터의 기본 경로와 같은 ARM GCC 빌드, 해석기 없음), 설정 화면은 앱 안에서 RASC처럼, 실물 보드(J-Link)까지 진행(사용자, 2026-11-06). 다운로드 승인: FSP, 하드웨어 매뉴얼, 회로도, 예제·poppler, J-Link. 회로도 Design Package는 MyRenesas 로그인이 필요해 받지 못했다(보드 그림은 Quick Start Guide 그림과 Arduino Uno R3 규격 기준). 하드웨어 매뉴얼 Rev.1.40(2026-04)은 정정 문서 내용(Table 1.16)이 반영된 판이다.
 
 앱의 지금 목표는 "CubeMX + CubeIDE + STM 보드 시뮬레이터"이고 보드는 NUCLEO-F446RE·NUCLEO-F103RB다. FPB-RA6E1은 Renesas 보드라 MCU·SDK·설정 도구가 모두 달라서, F103RB를 더할 때(0.32.0·0.33.0, F4 모델을 대부분 공유)와 달리 **새 플랫폼을 하나 더 만드는 규모**다. 이 문서는 확인한 사실, 지금 앱과의 차이, 단계별 계획, 미확인 사항을 정리한다.
 
@@ -64,14 +64,20 @@
 - 보드 그림(55 × 95 mm, Arduino 헤더, LED1·LED2·S1·S2·J9)과 회로 핀(Arduino·Pmod 매핑, I2C 풀업) — 회로 엔진은 핀 이름만 바뀌면 그대로 쓴다.
 - 완료 기준: FSP blinky가 LED1·LED2를 깜빡이고, S1(P205 IRQ1) 인터럽트가 LED를 바꾼다. `tests/fixtures/firmware-ra6e1/`(고정 ELF)과 펌웨어 시험, E2E.
 
-### 3단계 — 주변장치 (UART·타이머·ADC·I2C)
+### 3단계 — 주변장치 (UART·타이머·ADC·I2C) — 완료 (1.22.0)
+
+결과: SCI UART(`sci.js`), GPT 톱니파 PWM·주기(`gpt.js`), AGT(`agt.js`), ADC12 단위 0(`adc.js`), IIC 마스터(`iic.js`). 입력 캡처·SPI·DTC/DMAC는 하지 않았다. 직렬 모니터는 SCI 채널로 UART 부품에 보낸다. 로직 분석기에는 SCI TXD가 그려지고 GPT·IIC 파형은 아직 없다(GPT는 평균 PWM으로 회로에 반영).
+
 
 - SCI(UART 모드, SCI9 = D0/D1, SCI0 = Pmod1), GPT(주기·PWM·입력 캡처), AGT, ADC12(A0~A5), IIC0(P400/P401), 필요하면 SPI·DTC/DMAC.
 - 직렬 모니터: 실물처럼 D0/D1에 USB-UART 부품을 연결해 송수신(내장 VCP 없음).
 - 로직 분석기·파형·변수 그래프는 에뮬레이터 공통 경로라 그대로 동작해야 한다(확인).
 - 완료 기준: FSP 예제(UART echo, GPT PWM으로 LED 밝기, ADC로 가변저항, I2C 센서)가 회로와 함께 동작.
 
-### 4단계 — 앱 안 FSP 설정(RASC식)
+### 4단계 — 앱 안 FSP 설정(RASC식) — 완료 (1.22.0)
+
+결과: RA Configuration 대화상자의 Pins·Clocks·Stacks 탭. Interrupts(IELSR)는 RASC처럼 사용하는 인스턴스 순서로 자동 할당한다(별도 탭 없음). 예제 7개(LED·IRQ·UART·GPT·ADC·AGT·I2C).
+
 
 - Pins(포트·PFS 기능), Clocks(HOCO/PLL 분주), Stacks(모듈 추가와 속성), Interrupts(IELSR 할당)를 앱 화면으로 만들고 `ra_gen`·`ra_cfg`를 생성한다(CubeMX식 Pinout과 별도 화면).
 - 새 RA 프로젝트 템플릿(`hal_entry.c`), 예제 목록(보드 LED·버튼·UART·PWM·ADC·I2C).

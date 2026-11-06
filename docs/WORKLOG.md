@@ -2,6 +2,15 @@
 
 작업할 때마다 날짜순으로 맨 위에 추가합니다. 무엇을 했는지, 왜 했는지, 어떻게 검증했는지, 커밋·릴리스와 남은 사항을 적습니다. 버전별 구조 설명은 [HANDOFF.md](../HANDOFF.md), 검증 수치는 [VERIFICATION.md](VERIFICATION.md)에 있습니다.
 
+## 2026-11-06 · 1.22.0 FPB-RA6E1 3·4단계: 주변장치(SCI·GPT·AGT·ADC12·IIC)와 Clocks·Stacks (기능 목록 2번)
+
+- 요청: 기능 목록의 미구현 기능 구현(이어서 진행, 중간 일시정지 2번 후 재개). FPB-RA6E1 계획의 3단계(주변장치)와 4단계(앱 안 설정) 나머지.
+- 자료: 하드웨어 매뉴얼 Table 1.16을 poppler로 그림으로 렌더해 GTIOC·AGT·IIC·AN 핀을 확인했다(텍스트 추출은 GPT/ADC 열이 다른 행에 붙어 쓰지 않음). PSEL은 Table 19.6(GTIOC = 00011b, AGT = 00001b, IIC = 00111b)과 FSP `r_ioport.h`. 레지스터·흐름은 FSP 6.6.0 `r_sci_uart`·`r_gpt`·`r_agt`·`r_adc`·`r_iic_master` 원본과 장치 헤더, ELC 이벤트 번호는 `bsp_elc.h`.
+- 한 것(기능마다 커밋): SCI UART(beb09d3), GPT PWM·주기(3530d60), 장치 Docs의 FSP 프로젝트 오류 수정(d32a335 — 가변저항을 선택하면 STM32 HAL 예제를 만들다 "PA0: STM32F446RE에서 지원하지 않는 핀 기능" 화면 오류), ADC12(bd0271e), AGT·클록 한계(7e4d27c), Clocks·Stacks 탭(5365154), IIC 마스터(c00205d). 각 주변장치는 설정 검증 → RASC 방식 인스턴스 생성 → 에뮬레이터 모델 → FSP 예제(고정 ELF) → 단위·펌웨어·E2E 시험 순서로 만들었다. 보드 LED가 PWM 평균 전압만큼 흐리게 보이게 했다.
+- 맞춘 것: SCI가 `soc.usarts`에 없어 `inject`가 0을 돌려줌 → 등록. 예제 문자열의 `\r\n`이 템플릿 리터럴에서 실제 줄바꿈이 됨 → 이스케이프. E2E에서 가변저항이 보드 밑에 있어 선택되지 않음 → 위치 이동, 부품 몸체 클릭.
+- 검증: 단위·해석기·에뮬레이터 925개 중 924개 통과·1개 건너뜀, RA 툴체인 2개(예제 7개 경고 0·실행), RA E2E 7개 통과, ESLint 0건. 펌웨어 시험으로 UART 115200 bps 프레임 시간·에코, GPT 듀티 10 % 단계·100 % 강제·500 ms 주기 콜백, ADC 가변저항 위치별 값, AGT LOCO 250 ms·PCLKB 1 ms, IIC 쓰기·반복 시작 읽기·마지막 바이트 NACK·없는 주소 중단을 확인했다. 다크 모드 화면 캡처로 UART 직렬 모니터·Clocks 탭을 확인했다.
+- 남은 사항: 5단계(FSP 원본 정의 이동·자동완성), 6단계(J-Link 실물 보드), 로직 분석기의 GPT·IIC 파형, SPI·DTC.
+
 ## 2026-11-06 · 1.21.0 ADC1 Continuous Conversion Mode (기능 목록 1번)
 
 - 요청: 기능 목록(docs/FEATURES.md)에 구현한 기능을 체크하고 미구현 기능을 구현. 1번은 다른 세션이 쓴 [ADC 연속 변환 계획](ADC-CONTINUOUS-PLAN.md)(HAL_ADC_Start 한 번 + GetValue 반복이 단일 변환이라 값이 고정, Pinout에 연속 변환 설정이 없음)대로 진행했다.

@@ -1,6 +1,19 @@
 # STM Simulator — 개발 인계
 
-현재 버전: **1.21.0**. 정리일: **2026-11-06**. NUCLEO-F446RE·NUCLEO-F103RB 또는 Renesas FPB-RA6E1(1.20.0, FSP·에뮬레이터 전용)과 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+현재 버전: **1.22.0**. 정리일: **2026-11-06**. NUCLEO-F446RE·NUCLEO-F103RB 또는 Renesas FPB-RA6E1(1.20.0, FSP·에뮬레이터 전용)과 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+
+## 1.22.0 FPB-RA6E1 주변장치(SCI·GPT·AGT·ADC12·IIC)와 Clocks·Stacks 설정
+
+[RA6E1-PLAN.md](docs/RA6E1-PLAN.md) 3·4단계. 주변장치마다 설정 검증(`ra-config.js`) → RASC 방식 인스턴스 생성(`ra-generator.js`, `hal_data`·`vector_data`·`r_*_cfg.h`) → 에뮬레이터 모델(`src/emu/ra6e1/`) → FSP 예제(`ra-examples.js`, 고정 ELF `tests/fixtures/firmware-ra6e1/`)로 이어진다.
+- 핀 기능 `Peripheral`(`signal`): `RA_PERIPHERAL_PINS`(하드웨어 매뉴얼 Table 1.16을 PDF 그림으로 확인, 텍스트 추출은 GPT/ADC 열이 어긋나 쓰지 않음)와 PSEL(`raPsel`: SCI0/2/4 = 4, SCI1/3/9 = 5, GTIOC = 3 `IOPORT_PERIPHERAL_GPT1`, IIC = 7). 핀 설정 워드는 IIC만 DRIVE_MID, 나머지 DRIVE_HIGH.
+- SCI UART(`sci.js`, `g_uartN`, `sciBaudSetting`: 115200 @ PCLKA 100 MHz → ABCS·BGDM, BRR 108, 0.45 %): TXI는 TDR → 시프트 전송 때, TEI는 TEND, RXI/ERI는 `UartReceiver`. `soc.usarts.SCIn`이라 UART 부품·`session.inject(text,'SCI9')`·직렬 모니터가 STM과 같은 경로로 쓴다(보드에 VCP 없음).
+- GPT(`gpt.js`, `g_timerN`, `raGptCounts`: 16비트 GPT4~7은 분주 선택): 톱니파 PWM·주기, GTSTR/GTSTP/GTCLR 공유, GTCCRC/E·GTPBR 버퍼는 주기 끝 전송(CCRSWT 즉시), GTIOA/B 레벨·OADTY 0/100 %·정지 레벨, 핀은 평균 PWM 전압과 듀티/주파수. 주기 끝 이벤트는 ICU가 연결했거나 버퍼가 기다릴 때만 예약한다. 보드 LED(`render.js` `ledShade`)는 PWM 평균 전압만큼 흐리게 보인다.
+- ADC12(`adc.js`, `g_adc0`, AN000~AN008·AN012·AN013, VREFH0 3.3 V): 단일 스캔은 채널당 1 µs 뒤 ADDRn 저장·ADST 해제·ADC0_SCAN_END, 연속 스캔은 읽을 때 값을 읽는다. 분해능·정렬.
+- AGT(`agt.js`, `g_agtN`, `raAgtCounts`: PCLKB /1·/2·/8 또는 LOCO /1~/128): 16비트 하강 계수, TCSTF(FSP가 기다림), 언더플로 AGTn_INT.
+- IIC(`iic.js`, `g_i2c_masterN`, `raIicClock`: 50 % 듀티·상승/하강 120 ns): START/TDRE(TXI) → 주소·데이터 → TEND(TEI) → STOP(ERI), 수신은 더미 읽기·ACKBT, NACKF. 장치는 STM과 같은 `session.i2cBus` 어댑터(I²C 메모리·센서 부품).
+- RA Configuration 대화상자(`ra-pinout-ui.js`): Pins(위 주변장치 신호와 채널 설정, Analog 핀의 ADC0), Clocks(HOCO·PLL·분주, `RA_CLOCK_LIMITS` ICLK 200·PCLKA 100·PCLKB 50·PCLKC 50·PCLKD 100·FCLK 4~50 MHz와 비율 검증), Stacks(생성될 인스턴스 목록, 핀 없는 AGT·주기 GPT 추가·삭제). IELSR 할당은 RASC처럼 자동(`raVectors`).
+- 장치 Docs: FSP 프로젝트에서는 STM32 HAL 예제를 만들지 않고 안내만 보인다(부품 선택 시 STM 핀 설정 오류가 나던 문제).
+- 아직: 로직 분석기에 IIC·GPT 파형(SCI TXD는 그림), DTC/DMAC, SPI, GPT 입력 캡처.
 
 ## 1.21.0 ADC1 Continuous Conversion Mode
 
