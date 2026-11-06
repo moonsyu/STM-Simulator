@@ -260,7 +260,7 @@ test('FPB-RA6E1 I²C example: P400/P401 as IIC0 SCL/SDA with g_i2c_master0; runn
  }finally{await s.close();}
 });
 
-test('FPB-RA6E1 FSP sources: F12 on R_IOPORT_PinWrite opens r_ioport.c read only from the Renesas FSP folder; completion offers R_SCI_UART_* names',{skip:!toolchain&&!process.env.CI_REQUIRE_TOOLCHAIN&&'Renesas FSP not installed',timeout:180000},async()=>{
+test('FPB-RA6E1 FSP sources: F12 on R_IOPORT_PinWrite opens r_ioport.c read only from the Renesas FSP folder; completion offers R_SCI_UART_* names from the FSP index',{skip:!toolchain&&!process.env.CI_REQUIRE_TOOLCHAIN&&'Renesas FSP not installed',timeout:180000},async()=>{
  const s=await launch();
  await fs.writeFile(path.join(s.profile,'native-tools.json'),JSON.stringify({armGcc:gcc,fsp,armGdb:'',cube:'',cubeF1:'',hostGcc:'',hostGdb:'',clangd:'',openocd:'',buildRoot:''}));
  try{
@@ -280,10 +280,11 @@ test('FPB-RA6E1 FSP sources: F12 on R_IOPORT_PinWrite opens r_ioport.c read only
   await win.waitForFunction(()=>/fsp_err_t\s*R_IOPORT_PinWrite/.test(document.querySelector('#group-code .monaco-editor .view-lines').textContent.replace(/ /g,' ')),null,{timeout:10000});
   await win.keyboard.type('zz');assert.equal(await code(),before,'read only');
   await win.keyboard.press('Alt+ArrowLeft');await win.waitForFunction(()=>document.getElementById('source-path').hidden);
-  // Completion from the FSP index: R_SCI_UART_Open / Write / Read are not in hal_entry.c.
+  // Completion from the FSP index: R_SCI_UART_Open / Read / Close are not in hal_entry.c (the list shows the first rows).
+  await win.click('#source-tabs [data-source="main.c"]');
   await win.evaluate(()=>{const c=document.getElementById('code'),i=c.value.indexOf('void hal_entry(void)\n{')+'void hal_entry(void)\n{'.length;c.setSelectionRange(i,i);c.focus();});
   await win.keyboard.press('Enter');await win.keyboard.type('R_SCI_UART_');await win.keyboard.press('Control+Space');
-  await win.waitForFunction(()=>{const rows=[...document.querySelectorAll('#group-code .suggest-widget .monaco-list-row')].map(r=>r.getAttribute('aria-label')||r.textContent);return ['R_SCI_UART_Open','R_SCI_UART_Read','R_SCI_UART_Write'].every(n=>rows.some(r=>new RegExp('^'+n+'\b').test(r)));},null,{timeout:15000});
+  await win.waitForFunction(()=>{const rows=[...document.querySelectorAll('#group-code .suggest-widget .monaco-list-row')].map(r=>r.getAttribute('aria-label')||r.textContent);return ['R_SCI_UART_Open','R_SCI_UART_Read','R_SCI_UART_Close'].every(n=>rows.some(r=>new RegExp('^'+n+'\\b').test(r)));},null,{timeout:15000});
   await win.keyboard.press('Escape');
   assert.deepEqual(s.errors,[]);
  }finally{await s.close();}
