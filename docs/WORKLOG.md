@@ -2,6 +2,27 @@
 
 작업할 때마다 날짜순으로 맨 위에 추가합니다. 무엇을 했는지, 왜 했는지, 어떻게 검증했는지, 커밋·릴리스와 남은 사항을 적습니다. 버전별 구조 설명은 [HANDOFF.md](../HANDOFF.md), 검증 수치는 [VERIFICATION.md](VERIFICATION.md)에 있습니다.
 
+## 2026-11-06 · 1.26.0 기능 목록 3번: Clock Configuration(클록 트리), ADC1 Sampling Time
+
+- 요청: "아직 구현 안된 내용 있어?"에 3번 남은 항목을 답한 뒤 "3번 진행". 목록 순서대로 클록 트리(ADC Prescaler 포함) → ADC1 Sampling Time → TIM Output Compare·Counter mode → TIM6/7·RTC·DAC 순으로 한다. 이번 버전은 앞의 둘이다.
+- 한 것과 이유:
+  - 클록 트리(d53e6a7, [CLOCK-TREE-PLAN.md](CLOCK-TREE-PLAN.md)): 지금까지 클록 설정은 APB1 타이머 클록 숫자 하나였다. 그래서 HSE를 쓸 수 없고 F446 90 MHz·F103 64 MHz가 끝이었으며, CubeMX `.ioc`의 72·180 MHz 설정은 가져오면 바뀌었다. Pinout에 Clock 탭을 두고 원본(HSI/HSE)·PLL·AHB/APB·ADC 분주를 고르면 각 클록과 한계 오류가 바로 보이게 했다. 한계·기본값은 이 PC의 CubeMX 6.18 DB(RCC Modes XML, 보드 .ioc)에서 가져왔다. HSE는 NUCLEO의 ST-LINK MCO 8 MHz(BYPASS)로 고정했다. 트리를 켜지 않은 프로젝트는 예전과 같은 코드를 생성한다.
+  - ADC1 Sampling Time(54e33d9): 지금까지 F446 480·F103 239.5 Cycles로 고정이었다. 실물 안내문처럼 CubeMX에서 고른 값을 쓰도록 Pinout ADC1 카드에서 고르고, 한 번 변환 시간을 보여 준다. 앱 기본값은 지금까지 생성하던 가장 긴 시간으로 두어 기존 프로젝트의 동작이 바뀌지 않는다. `.ioc`에 값이 없으면 CubeMX 기본(가장 짧은 시간)이다.
+- 검증(의존성을 설치한 임시 복제본, 창은 다른 창 뒤·다크 모드):
+  - 단위 760개 통과, ESLint 0건.
+  - 툴체인 clock-tree(F446 HSE 180 MHz Over-drive·F103 HSE 72 MHz를 실제 HAL로 빌드, 에뮬레이터 SystemCoreClock·PCLK·UART 115200)와 adc-sampling(SMPR2 값, 변환 시간 비) 통과.
+  - 전체 E2E 81개 중 80개 통과·1개 건너뜀, 펌웨어 64개 통과, 툴체인 283개 중 282개 통과·1개 건너뜀(ESP32 스케치, 로컬에 ARDUINO_CLI 없음 — CI에서 확인).
+  - 패키지 검사(`npm run build` + `build:artifact`, `tests/release/packaged.test.mjs`) 3개 통과. STM-Simulator.exe 115,547,415바이트, SHA-256 `947a1ede…20f10`. 산출물(work/build, dist, outputs)은 지웠다.
+- 맞춘 것:
+  - `.ioc`에 주파수 값(Freq_Value)만 있고 설정 키가 없을 때 트리로 읽던 것 → 설정 키가 있을 때만 읽는다.
+  - 180 MHz에서 에뮬레이터 한 tick이 실제 시간 예산에 걸려 시뮬레이션 시간이 느리게 가, 툴체인 시험의 UART 출력이 모자랐다 → 정해진 시뮬레이션 시간까지 tick을 반복한다.
+  - Clock 탭 프리셋 버튼이 글자처럼 보였다 → 버튼 모양 CSS.
+- 커밋·릴리스: d53e6a7(클록 트리), 54e33d9(Sampling Time), 문서·버전 커밋. CI·Release 확인은 VERIFICATION.md와 이 항목에 이어 적는다.
+- 남은 사항:
+  - 3번의 TIM Output Compare·Counter mode, TIM6/7·RTC·DAC 등.
+  - 클록 트리에서 하지 않은 것: LSE·LSI·RTC 클록, MCO 출력, PLLI2S·PLLSAI, PLLR SYSCLK, F1 USB 분주, CSS. 화면은 CubeMX 그림 대신 표.
+  - 1.25.0에서 남은 핀 구조 표 데이터시트 원문 대조, STM Studio 자체 확인은 그대로다.
+
 ## 2026-11-06 · 1.25.0 기능 목록 2·4~8번: FPB-RA6E1 실물 확인, DWARF 4, 입력 중 자동완성, printf float, it.c 핸들러 중복, 핀 과전압
 
 - 요청: "2번 승인할게 설치해 … 4 ~ 7번 진행해"(SEGGER J-Link 설치·약관 동의 승인), 진행 중 "실물 보드 확인 끝나면 8번 부터 진행해". 두 번 일시정지 뒤 재개. 순서: 실물 확인 → 8 → 7 → 4 → 6 → 5.

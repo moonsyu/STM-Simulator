@@ -1,6 +1,38 @@
 # STM Simulator — 개발 인계
 
-현재 버전: **1.25.0**. 정리일: **2026-11-06**. NUCLEO-F446RE·NUCLEO-F103RB 또는 Renesas FPB-RA6E1(1.20.0, FSP·에뮬레이터 전용)과 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+현재 버전: **1.26.0**. 정리일: **2026-11-06**. NUCLEO-F446RE·NUCLEO-F103RB 또는 Renesas FPB-RA6E1(1.20.0, FSP·에뮬레이터 전용)과 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+
+## 1.26.0 Clock Configuration(클록 트리) · ADC1 Sampling Time
+
+[FEATURES.md](docs/FEATURES.md) 3번, [CLOCK-TREE-PLAN.md](docs/CLOCK-TREE-PLAN.md).
+- 모델(`src/clock-tree.js`): 선택 항목 `mcu.clock`.
+  - F446: `sysclkSource` HSI/HSE/PLLCLK, `pllSource`, `pllM/N/P/Q`.
+  - F103: `pllSource`(HSI = HSI/2), `hsePrediv`, `pllMul`.
+  - 공통: `ahb`, `apb1`, `apb2`, `adcPrescaler`.
+  - `clockFrequencies`는 APB 분주가 1이 아니면 타이머 클록을 ×2로 계산한다.
+  - `clockTreeProblems`의 한계는 CubeMX 6.18 DB 값이다(F446 VCO 입력 0.95~2.1, VCO 100~432, PLLCLK 24~180, APB1 45, APB2 90, ADC 36 MHz / F103 72·36·72, ADC 14 MHz).
+  - `flashLatency`, `needsOverDrive`(HCLK > 168 MHz)도 여기서 계산한다.
+  - HSE는 ST-LINK MCO 8 MHz BYPASS로 고정했다.
+- 호환:
+  - `clock`이 없으면 예전과 같다(`timerClockHz`, `clockPlan`/`clockPlanF1`, 생성 코드도 그대로).
+  - `clock`이 있으면 `validateMcu`가 `timerClockHz`를 APB1 타이머 클록으로 맞춘다. 범위 검사(`f.clock.valid`)는 건너뛴다.
+  - `treeFromTimerHz`는 예전 값이 뜻하는 HSI 트리다. Clock 탭을 켤 때 시작값으로 쓴다.
+- 생성(`hal-generator.js` `treeClockLines`): 쓰는 발진기만 OscillatorType에 넣는다. HSE는 `RCC_HSE_BYPASS`(F1은 `HSEPredivValue`), PLLR = 2, Over-drive, latency, ADC `ClockPrescaler`(F4)·`AdcClockSelection`(F1)을 쓴다. 머리 주석에 각 클록이 들어간다.
+- .ioc(`clockTreeFromIoc`): 설정 키(SYSCLKSource, PLLSourceVirtual, PLLM/N/P/Q, PLLMUL, HSEDivPLL, *CLKDivider, ADC1.ClockPrescaler, ADCPresc)가 있을 때만 트리를 읽는다. 생략된 키는 CubeMX 기본값(PLLM 16, PLLN 192, PLLP 2, PLLQ 2, PLLMUL 2)이다. 예전 값과 클록이 같으면(CubeMX 보드 기본 84 MHz HSI PLL 등) 트리를 두지 않는다.
+- Pinout Clock 탭(`src/clock-ui.js`, `index.html` `#pinout-clock-panel`, `pinout-ui.js` `renderClock`/`syncTimerClock`):
+  - 클록 트리 켜기·끄기, 프리셋(`CLOCK_PRESETS`: 보드 기본, 최대), 원본·PLL·분주 선택이 있다.
+  - 주파수 표에 한계를 넘은 줄이 `clock-over`로 표시된다. 같은 오류가 `#pinout-errors`에도 나온다.
+  - 트리를 쓰면 APB1 타이머 입력 클록 칸은 비활성이다.
+- 해석기: `Hal.clocks`. `HAL_RCC_GetPCLK1Freq`, 타이머(TIM1/8/9/10/11은 APB2 타이머 클록), DMA HCLK, F1 ADC 시간이 트리 값을 쓴다.
+- ADC1 Sampling Time(`mcu-config.js` `ADC_SAMPLING`, `adcSamplingMacro`, `peripherals.ADC1.samplingTime`):
+  - 앱 기본값은 예전처럼 가장 긴 시간(480 / 239.5)이고 저장하지 않는다. CubeMX 기본은 가장 짧은 시간이다.
+  - .ioc `ADC1.SamplingTime-0\#ChannelRegularConversion`을 읽고, 없으면 CubeMX 기본으로 둔다.
+  - Pinout 카드는 한 번 변환 시간(샘플 + 12 / 12.5 클록 ÷ ADC 클록)을 보여 준다.
+- 시험:
+  - 단위: `tests/unit/{clock-tree,adc-sampling}.test.js`
+  - 툴체인(CI firmware 단계): `tests/toolchain/{clock-tree,adc-sampling}.test.mjs` — 에뮬레이터 SystemCoreClock·PCLK, UART 115200, SMPR2·변환 시간
+  - E2E: `tests/e2e/{clock-tree,adc-sampling}.e2e.test.mjs`
+  - 180 MHz에서 에뮬레이터는 한 tick의 실제 시간 예산에 걸려 시뮬레이션 시간이 실시간보다 느리다. 시험은 정해진 시뮬레이션 시간까지 tick을 반복한다.
 
 ## 1.25.0 printf float 설정 · it.c 핸들러 중복 안내 · 핀 과전압 · 입력 중 자동완성 · DWARF 4 · FPB-RA6E1 실물 확인
 

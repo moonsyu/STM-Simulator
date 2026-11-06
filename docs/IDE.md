@@ -57,6 +57,27 @@ White/Dark는 VS Code Modern 계열의 중성 표면과 파란 강조색을 사�
 
 저장 직후 또는 저장 중에 다시 편집한 내용은 미저장으로 유지한다. 정상 창 종료 직전에는 자동 저장 대기 중인 최신 초안을 기록한다. 초안 기록에 실패하고 미저장 내용이 있으면 창을 닫지 않는다. 새 프로젝트나 다른 폴더로 이동하면 터미널도 이전 폴더 문맥을 해제한다. 정상 종료의 초안 복원은 강제 전원 차단이나 디스크 고장을 보장하는 기능이 아니다.
 
+## Pinout의 Clock 탭 (1.26.0, CubeMX Clock Configuration)
+
+Pinout & Configuration 오른쪽의 **Clock** 탭에서 CubeMX Clock Configuration처럼 클록을 정한다.
+
+1. **클록 트리 사용**을 켠다. 지금 프로젝트의 APB1 타이머 클록에 맞는 HSI 설정으로 시작한다.
+2. 원본과 PLL을 고른다.
+   - **System Clock Mux**: HSI / HSE / PLLCLK.
+   - **PLL Source**: F103RB는 HSI/2 또는 HSE.
+   - F446RE는 PLLM·PLLN·PLLP·PLLQ, F103RB는 HSE Prediv·PLLMul을 정한다.
+3. **AHB·APB1·APB2·ADC Prescaler**를 고른다.
+4. 아래 표에서 SYSCLK, HCLK, APB1/APB2와 그 타이머 클록, ADC 클록, Flash latency를 확인한다. 한계를 넘은 값은 빨간 줄로 표시되고, 아래 오류에도 이유가 나온다.
+
+- **HSE**는 NUCLEO의 ST-LINK가 주는 8 MHz(BYPASS)다. 보드 X3에는 기본으로 수정이 없다.
+- 버튼:
+  - **NUCLEO 보드 기본**: CubeMX의 보드 기본값. F446RE는 HSI PLL 84 MHz, F103RB는 HSI/2 PLL 64 MHz.
+  - **최대**: F446RE HSE PLL 180 MHz(APB1 45, APB2 90 MHz, Over-drive), F103RB HSE PLL 72 MHz.
+- 트리를 쓰면 생성 코드의 `SystemClock_Config`와 ADC 분주가 이 설정을 따른다. 핀 설정 탭의 **APB1 타이머 입력 클록** 칸은 계산값만 보여 준다. 끄면 예전처럼 그 칸 하나(HSI)로 정한다.
+- `.ioc`를 가져오면 CubeMX의 클록 설정(HSE, 72 MHz, 180 MHz 포함)이 그대로 들어온다.
+- 180 MHz처럼 빠른 클록은 에뮬레이터가 실시간보다 느리게 실행될 수 있다(상태 표시의 실시간 비율).
+- **ADC1 Sampling Time**(ADC1 카드): Rank 1의 샘플링 시간을 고른다. 아래에 한 번 변환에 걸리는 시간이 보인다. 앱 기본값은 가장 긴 시간(F446RE 480, F103RB 239.5 Cycles)이다. CubeMX 기본은 가장 짧은 시간이다.
+
 ## Pinout의 USART · SPI 설정 (1.23.0)
 
 - **USART(비동기) Parameter Settings**: Word Length(8/9비트, 패리티 포함), Parity(None/Even/Odd), Stop Bits(1/2), Data Direction(송수신/송신만/수신만), Over Sampling(16/8 — F103RB는 16만). 생성 코드의 `huartN.Init`과 .ioc 가져오기에 반영된다. ARM GCC 시뮬레이터(기본)에서 그대로 동작하고, 내장 해석기는 8N1만 지원한다. 직렬 모니터의 ST-LINK VCP는 같은 형식으로 받는다(실물 PC 터미널을 같은 형식으로 맞춘 것과 같다). 외부 UART 부품은 8N1이다.

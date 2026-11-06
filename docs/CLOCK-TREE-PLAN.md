@@ -1,6 +1,6 @@
 # 클록 트리(Clock Configuration) 구현 계획
 
-작성 2026-11-06. [기능 목록](FEATURES.md) 3번(CubeMX와 다른 점 메우기)의 첫 남은 항목. 근거는 이 PC의 CubeMX 6.18 데이터베이스(`%LOCALAPPDATA%\Programs\STM32CubeMX\db`)다.
+작성 2026-11-06. 상태: **1.26.0에서 구현**(1~7). [기능 목록](FEATURES.md) 3번(CubeMX와 다른 점 메우기)의 첫 남은 항목. 근거는 이 PC의 CubeMX 6.18 데이터베이스(`%LOCALAPPDATA%\Programs\STM32CubeMX\db`)다.
 - 한계: `mcu/IP/RCC-STM32F446-rcc_v1_0_Modes.xml`, `RCC-STM32F102_rcc_v1_0_Modes.xml`(F103도 이 파일)
 - 보드 기본값: `plugins/boardmanager/boards/A42_…F446RE_Board.ioc`, `A10_…F103RB_Board.ioc`
 
