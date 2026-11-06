@@ -2,6 +2,16 @@
 
 작업할 때마다 날짜순으로 맨 위에 추가합니다. 무엇을 했는지, 왜 했는지, 어떻게 검증했는지, 커밋·릴리스와 남은 사항을 적습니다. 버전별 구조 설명은 [HANDOFF.md](../HANDOFF.md), 검증 수치는 [VERIFICATION.md](VERIFICATION.md)에 있습니다.
 
+## 2026-11-06 · ADC HAL 함수 자동완성 제보 조사 (기능 목록 7번)
+
+- 요청: `HAL_ADC_Start`·`Stop`·`Start_IT`·`Stop_IT`, `HAL_ADC_ConvCpltCallback` 등이 자동완성되지 않는다. 이 세션은 목록 작성 역할이라 원인만 찾고 고치지 않았다.
+- 확인:
+  - SDK 색인(`desktop/sdk-index.cjs` `names`)을 node로 직접 불렀다. F103RB·F446RE 모두 `HAL_ADC_St` 24개, `HAL_ADC_Conv` 4개로 이름이 다 나왔다.
+  - 사용자 앱(1.23.0)의 프로젝트는 대상이 `arm`(실물 보드)이고 도구 설정에 clangd가 있다. 코드는 USER CODE 0에 `HAL_ADC_ConvCpltCallback`, USER CODE 3에 `HAL_ADC_Start_IT`.
+  - 임시 복제본(1.24.1)에서 E2E를 돌렸다(창은 다른 창 뒤, 다크 모드). 시뮬레이터 대상은 clangd 경로와 관계없이 SDK 이름이 나오지만, 친 단어 자체가 Text 항목으로 맨 위에 선택됐다. 실물 대상 + clangd 연결에서는 입력 중 목록이 비거나 엉뚱했고, Ctrl+Space를 눌러야 바르게 나왔다.
+- 원인(코드): clangd 제공자가 `isIncomplete`를 넘기지 않는다(`code-editor.js`). 문서 동기화는 500 ms 지연된다(`native-ide-ui.js` `queueLanguage`). 앱 자체 제공자는 커서의 미완성 단어도 식별자 후보에 넣는다.
+- 한 것: `docs/FEATURES.md` 7번 추가. 확인용 E2E는 임시 복제본에만 두고 지웠다.
+
 ## 2026-11-06 · 실물 CubeIDE 안내문 대조로 구현할 기능 추가 (기능 목록 4~6번)
 
 - 요청: 이 세션은 구현할 기능을 찾아 목록에 적는 역할이다. 가변저항 ADC를 실물 NUCLEO-F103RB·CubeIDE에서 돌리는 안내문을 보고 앱에 없는 것을 찾는다. 안내문 항목: printf 실수 출력 설정, it.c 핸들러 중복, .ioc 설정, 하드웨어 연결, 터미널.
