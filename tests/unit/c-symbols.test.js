@@ -87,3 +87,18 @@ test('the SDK index resolves HAL functions, types, IRQ numbers and macros to the
  await assert.rejects(index.file('STM32F103RB',tools,'../../../Windows/win.ini'),/색인에 없는/);
  await assert.rejects(index.definition('STM32F103RB',{cube:cubeF4},'HAL_Init'),/STM32CubeF1 SDK가 없어/);
 });
+
+const fspRoot=process.env.FSP_ROOT||path.join(local,'FSP'),fsp=await has(path.join(fspRoot,'ra/fsp/src/r_ioport/r_ioport.c'));
+test('FPB-RA6E1: the SDK index resolves FSP APIs, instances, enums and device types to the Renesas FSP folder',{skip:!fsp&&'Renesas FSP not installed'},async()=>{
+ const index=new SdkIndex(),tools={fsp:fspRoot},one=async name=>(await index.definition('R7FA6E10F',tools,name));
+ assert.deepEqual((await one('R_IOPORT_PinWrite')).map(d=>[d.file,d.kind]),[['ra/fsp/src/r_ioport/r_ioport.c','function']]);
+ assert.equal((await one('R_SCI_UART_Open'))[0].file,'ra/fsp/src/r_sci_uart/r_sci_uart.c');
+ assert.equal((await one('uart_callback_args_t'))[0].file,'ra/fsp/inc/api/r_uart_api.h');
+ assert.equal((await one('BSP_IO_LEVEL_HIGH'))[0].kind,'enum');
+ assert.equal((await one('R_GPT0_Type'))[0].file,'ra/fsp/src/bsp/cmsis/Device/RENESAS/Include/R7FA6E10F.h');
+ assert.deepEqual((await one('__NOP')).map(d=>d.file),['Drivers/CMSIS/Include/cmsis_gcc.h'],'GCC CMSIS only');
+ const names=(await index.names('R7FA6E10F',tools,'r_iic_master_')).map(n=>n.name);
+ for(const n of ['R_IIC_MASTER_Open','R_IIC_MASTER_Read','R_IIC_MASTER_Write'])assert.ok(names.includes(n),n);
+ const file=await index.file('R7FA6E10F',tools,'ra/fsp/src/r_ioport/r_ioport.c');assert.equal(file.sdk,'Renesas FSP');
+ await assert.rejects(index.definition('R7FA6E10F',{},'R_IOPORT_Open'),/Renesas FSP SDK가 없어/);
+});

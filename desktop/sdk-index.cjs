@@ -1,13 +1,21 @@
 // Index of the STM32Cube SDK sources a project builds with (HAL driver, CMSIS device and core headers): the
 // definitions that Ctrl+click / F12 in main.c jumps to, as CubeIDE does into its Drivers folder. Read only.
+// FPB-RA6E1: the Renesas FSP folder the app installs (ra/fsp inc·src, BSP, CMSIS device and core, ra6e1_fpb board),
+// indexed whole, as e² studio opens ra/fsp from hal_entry.c.
 const fs=require('node:fs/promises');
 const path=require('node:path');
 const LAYOUT={
   STM32F446RE:{key:'cube',name:'STM32CubeF4',hal:'STM32F4xx_HAL_Driver',device:'STM32F4xx',prefix:'stm32f4xx',chip:'stm32f446xx.h',core:'core_cm4.h',startup:'startup_stm32f446xx.s'},
-  STM32F103RB:{key:'cubeF1',name:'STM32CubeF1',hal:'STM32F1xx_HAL_Driver',device:'STM32F1xx',prefix:'stm32f1xx',chip:'stm32f103xb.h',core:'core_cm3.h',startup:'startup_stm32f103xb.s'}
+  STM32F103RB:{key:'cubeF1',name:'STM32CubeF1',hal:'STM32F1xx_HAL_Driver',device:'STM32F1xx',prefix:'stm32f1xx',chip:'stm32f103xb.h',core:'core_cm3.h',startup:'startup_stm32f103xb.s'},
+  R7FA6E10F:{key:'fsp',name:'Renesas FSP',walk:['ra','Drivers/CMSIS/Include']}
 };
 const NAME=/^[A-Za-z_]\w{0,127}$/;
+async function walk(root,rel,out){
+  for(const e of await fs.readdir(path.join(root,rel),{withFileTypes:true}).catch(()=>[])){const p=rel+'/'+e.name;if(e.isDirectory())await walk(root,p,out);else if(/\.[ch]$/.test(e.name)&&!/^cmsis_(armcc|armclang|iccarm|tiarmclang)/.test(e.name))out.push(p);} // GCC builds: cmsis_gcc.h only
+  return out;
+}
 async function listFiles(root,l){
+  if(l.walk){const out=[];for(const d of l.walk)await walk(root,d,out);return out.sort();}
   const dir=rel=>fs.readdir(path.join(root,rel)).then(names=>names.map(n=>rel+'/'+n),()=>[]);
   const hal=`Drivers/${l.hal}`,device=`Drivers/CMSIS/Device/ST/${l.device}`;
   const files=[...(await dir(hal+'/Inc')).filter(f=>f.endsWith('.h')),...(await dir(hal+'/Src')).filter(f=>f.endsWith('.c')&&!/_template\.c$/.test(f)),

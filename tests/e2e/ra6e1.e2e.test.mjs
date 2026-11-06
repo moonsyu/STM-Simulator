@@ -259,3 +259,32 @@ test('FPB-RA6E1 I²C example: P400/P401 as IIC0 SCL/SDA with g_i2c_master0; runn
   assert.deepEqual(s.errors,[]);
  }finally{await s.close();}
 });
+
+test('FPB-RA6E1 FSP sources: F12 on R_IOPORT_PinWrite opens r_ioport.c read only from the Renesas FSP folder; completion offers R_SCI_UART_* names',{skip:!toolchain&&!process.env.CI_REQUIRE_TOOLCHAIN&&'Renesas FSP not installed',timeout:180000},async()=>{
+ const s=await launch();
+ await fs.writeFile(path.join(s.profile,'native-tools.json'),JSON.stringify({armGcc:gcc,fsp,armGdb:'',cube:'',cubeF1:'',hostGcc:'',hostGdb:'',clangd:'',openocd:'',buildRoot:''}));
+ try{
+  const {win}=s,code=()=>win.evaluate(()=>document.getElementById('code').value);
+  await win.click('[data-activity="board"]');if(!await win.locator('#board-open').isVisible())await win.click('[data-activity="board"]');
+  await win.click('#board-open');await win.click('[data-board-id="fpb-ra6e1"]');
+  if(await win.locator('#board-change-dialog').isVisible())await win.click('#board-change-confirm');
+  await win.waitForFunction(()=>document.querySelector('#surface > .board')?.dataset.board==='fpb-ra6e1');
+  await win.click('[data-activity="examples"]');if(!await win.locator('#view-examples').isVisible())await win.click('[data-activity="examples"]');
+  await win.fill('#hal-example-search','LED1 깜빡이기');await win.locator('#hal-example-list [data-example]').first().click();
+  await win.waitForFunction(()=>/R_IOPORT_PinWrite\(&g_ioport_ctrl, LED1/.test(document.getElementById('code').value));
+  const before=await code();
+  await win.evaluate(()=>{const c=document.getElementById('code'),i=c.value.indexOf('R_IOPORT_PinWrite(&g_ioport_ctrl, LED1')+3;c.setSelectionRange(i,i);c.focus();});
+  await win.keyboard.press('F12');
+  await win.waitForSelector('[data-sdk-file$="r_ioport.c"]',{timeout:30000});
+  assert.match(await win.textContent('#source-path'),/Renesas FSP.*ra.*fsp.*src.*r_ioport.*r_ioport\.c/);
+  await win.waitForFunction(()=>/fsp_err_t\s*R_IOPORT_PinWrite/.test(document.querySelector('#group-code .monaco-editor .view-lines').textContent.replace(/ /g,' ')),null,{timeout:10000});
+  await win.keyboard.type('zz');assert.equal(await code(),before,'read only');
+  await win.keyboard.press('Alt+ArrowLeft');await win.waitForFunction(()=>document.getElementById('source-path').hidden);
+  // Completion from the FSP index: R_SCI_UART_Open / Write / Read are not in hal_entry.c.
+  await win.evaluate(()=>{const c=document.getElementById('code'),i=c.value.indexOf('void hal_entry(void)\n{')+'void hal_entry(void)\n{'.length;c.setSelectionRange(i,i);c.focus();});
+  await win.keyboard.press('Enter');await win.keyboard.type('R_SCI_UART_');await win.keyboard.press('Control+Space');
+  await win.waitForFunction(()=>{const rows=[...document.querySelectorAll('#group-code .suggest-widget .monaco-list-row')].map(r=>r.getAttribute('aria-label')||r.textContent);return ['R_SCI_UART_Open','R_SCI_UART_Read','R_SCI_UART_Write'].every(n=>rows.some(r=>new RegExp('^'+n+'\b').test(r)));},null,{timeout:15000});
+  await win.keyboard.press('Escape');
+  assert.deepEqual(s.errors,[]);
+ }finally{await s.close();}
+});
