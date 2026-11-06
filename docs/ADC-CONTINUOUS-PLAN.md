@@ -1,6 +1,6 @@
 # ADC 실행 중 값 반영 · 연속 변환 수정 계획
 
-작성 2026-11-06. 상태: **계획(구현 전)**.
+작성 2026-11-06. 상태: **완료 (1.21.0)** — 3절의 1·2·3(안내)·4·5를 구현했다. 시험: `tests/unit/adc-continuous.test.js`, `tests/toolchain/adc-continuous.test.mjs`(두 보드 ARM GCC + 에뮬레이터), `tests/e2e/adc-continuous.e2e.test.mjs`.
 
 ## 1. 보고된 현상
 

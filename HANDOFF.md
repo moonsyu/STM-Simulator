@@ -1,6 +1,11 @@
 # STM Simulator — 개발 인계
 
-현재 버전: **1.20.0**. 정리일: **2026-11-06**. NUCLEO-F446RE·NUCLEO-F103RB 또는 Renesas FPB-RA6E1(1.20.0, FSP·에뮬레이터 전용)과 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+현재 버전: **1.21.0**. 정리일: **2026-11-06**. NUCLEO-F446RE·NUCLEO-F103RB 또는 Renesas FPB-RA6E1(1.20.0, FSP·에뮬레이터 전용)과 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+
+## 1.21.0 ADC1 Continuous Conversion Mode
+
+- `mcu-config.js`: `peripherals.ADC1.continuous`(켜면 true만 저장), `.ioc`의 `ADC1.ContinuousConvMode=ENABLE` 가져오기. `pinout-ui.js` ADC1 카드에 CubeMX 이름의 Disabled/Enabled 선택과 설명. `hal-generator.js` 두 계열 모두 `ContinuousConvMode = ENABLE/DISABLE`.
+- 해석기(`hal.js`): 연속 모드·비스캔이면 `HAL_ADC_GetValue`·`PollForConversion` 때 최신 입력을 읽는다. 단일 모드에서 Start 없이 GetValue를 반복하는데 입력이 40 LSB 넘게 바뀌면 경고 한 번(`r.warn`). 에뮬레이터는 레지스터 모델(CONT)이 원래 연속 변환을 따른다(두 보드 빌드 시험으로 확인).
 
 ## 1.20.0 Renesas FPB-RA6E1 (RA6E1 · FSP · 에뮬레이터)
 

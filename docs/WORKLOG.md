@@ -2,6 +2,13 @@
 
 작업할 때마다 날짜순으로 맨 위에 추가합니다. 무엇을 했는지, 왜 했는지, 어떻게 검증했는지, 커밋·릴리스와 남은 사항을 적습니다. 버전별 구조 설명은 [HANDOFF.md](../HANDOFF.md), 검증 수치는 [VERIFICATION.md](VERIFICATION.md)에 있습니다.
 
+## 2026-11-06 · 1.21.0 ADC1 Continuous Conversion Mode (기능 목록 1번)
+
+- 요청: 기능 목록(docs/FEATURES.md)에 구현한 기능을 체크하고 미구현 기능을 구현. 1번은 다른 세션이 쓴 [ADC 연속 변환 계획](ADC-CONTINUOUS-PLAN.md)(HAL_ADC_Start 한 번 + GetValue 반복이 단일 변환이라 값이 고정, Pinout에 연속 변환 설정이 없음)대로 진행했다.
+- 한 것: Pinout ADC1에 Continuous Conversion Mode(Disabled/Enabled), 설정 검증·저장·.ioc 가져오기, 생성 코드 `ContinuousConvMode`, 해석기 연속 변환 값 반영과 단일 모드 안내 경고. 에뮬레이터는 레지스터 모델이 원래 지원(확인만).
+- 검증: 단위(설정·생성·.ioc·해석기 연속/단일), 툴체인(F446RE·F103RB ARM GCC 빌드 + 에뮬레이터에서 연속은 접점 90 %에서 3500 초과, 단일은 처음 값 유지; CI firmware 단계에 추가), E2E(Pinout에서 켜기 → Start 한 번 코드 → 실행 중 속성 패널로 접점 이동 → 출력 2047→36xx).
+- 1.20.0 게시 확인도 함께 기록했다.
+
 ## 2026-11-06 · 1.20.0 Renesas FPB-RA6E1 (1·2단계 + Pins 설정·예제)
 
 - 요청: "현재 구조에 맞춰서 르네사스 보드 구현해"(에뮬레이터 전용 = STM 시뮬레이터의 기본 경로와 같은 ARM GCC 빌드). 계획 4·5·6단계가 작업 목록에서 빠졌다는 지적에 0~6단계 전체로 목록을 고쳤다. 다운로드 승인: FSP 소스, 하드웨어 매뉴얼, 회로도, 예제·poppler, J-Link(보드 있음). 중간에 일시정지 후 재개.
@@ -9,6 +16,7 @@
 - 한 것: RA6E1 프로필·검증(`ra-config.js`), RASC 방식 생성기(`ra-generator.js`), RA 빌드(`desktop/ra-build.cjs`, `native-build.cjs` 도구 키 `fsp`), FSP 설치 항목·매니페스트(211개 파일 SHA-256, 재시도), RA6E1 에뮬레이터(`src/emu/ra6e1/` RaBus·SoC: CGC·PORT/PFS·ICU/IELSR·FCACHE·RTC, CPU MSPLIM/PSPLIM·분기 사이클 설정), FirmwareSession RA 경로, 보드 헤더·크기 전환·엔진 온보드 부품, 보드 그림, RA Pins 대화상자, 탐색기 ra_gen·ra_cfg, FSP 예제 패널, STM 전용 기능 막기(진단·Pinout·코드 초기화·두 번째 STM32 보드). CI 툴체인 액션이 앱 설치기로 FSP를 받는다.
 - 맞춘 것: FSP 시작 코드가 FCACHEIV·RTC RCR2.RESET 자동 해제를 기다려 멈춤 → 모델링. C 런타임 초기화가 스택을 지워 HardFault → 주 스택·힙 섹션 분리. R_BSP_SoftwareDelay가 625 ms로 늘어남(분기 3사이클) → RA는 FSP 보정값(루프 4사이클)에 맞게 분기 추가 사이클 1, STM은 그대로 2. 이제 LED1이 500.0 ms마다 토글.
 - 검증: 단위(ra6e1: 핀·IRQ·검증·생성 파일·보드 핀·프로젝트), 펌웨어(고정 ELF: 200 MHz·1 s 주기·S1 IRQ1로 LED2 토글·교차 ELF 거부), 툴체인(예제 경고 0·실행, 오류 위치 main.c), E2E 2개(보드 선택→예제 패널→Ctrl+F5→LED1 깜빡임·S1로 LED2, Pins 대화상자→ra_gen 확인). 단위·해석기·에뮬레이터 911개 중 910개 통과·1개 건너뜀(핀 개수 시험은 보드 추가에 맞게 고침), RA 툴체인 2개 통과, E2E 62개 중 61개 통과·1개 건너뜀, ESLint 0건. 다크 모드 화면 캡처로 보드 그림 확인.
+- 게시: 929ee2e ccb2a20 911cb71 aab1840 e93f30d 6c26147 dfacf6f 9fb884e 푸시. CI 42145714843 성공, Release v1.20.0 latest·자산 5개(API 확인).
 - 남은 사항: 3단계(SCI UART·GPT·AGT·ADC·IIC), 4단계 나머지(Clocks·Stacks 화면), 5단계(FSP 원본 정의 이동·자동완성), 6단계(J-Link 실물 보드). 회로도를 받으면 보드 그림의 부품 위치를 맞춘다.
 
 ## 2026-11-06 · 구현할 기능 목록 파일

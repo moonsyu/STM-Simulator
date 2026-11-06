@@ -26,7 +26,7 @@
 | GPIO | **1.16.0 반영:** GPIO mode(Push Pull/Open Drain), Pull, Maximum output speed(CubeMX 기본값). Event 모드는 남음. 이전:  출력은 항상 Push-Pull, 속도는 VERY_HIGH(F1은 HIGH) 고정(`hal-generator.js:88-90`). AF 핀에 pull·속도 설정 없음. EXTI Event 모드 없음 | Output type(PP/OD), Speed, AF 핀 Pull, Event 모드, User Label | S~M | 상 |
 | UART/USART | baud만 설정. 8N1·TX_RX·Oversampling 16 고정 | Word length, Parity, Stop bits, Direction, Oversampling, Half-duplex, RTS/CTS 등 | S~M | 상 |
 | SPI | Master·Full-duplex·8비트·Mode 0·Soft NSS 고정, 속도만(`hal-generator.js:110`) | Slave, Half-duplex/RX-only, HW NSS, CPOL/CPHA, 16비트, LSB first, CRC | S~M | 상 |
-| ADC | 생성 코드는 채널 하나, 소프트웨어 시작·단일 변환·고정 샘플링(`hal-generator.js:111-112`) | Scan(Rank), Continuous, 외부 트리거(TIM TRGO), Injected, Watchdog, 해상도, TempSens·Vrefint·Vbat | M | 상 |
+| ADC | 생성 코드는 채널 하나, 소프트웨어 시작·고정 샘플링(`hal-generator.js`). **Continuous Conversion Mode는 1.21.0에서 지원**(Pinout ADC1, 생성 코드, .ioc 가져오기, 두 실행 엔진) | Scan(Rank), 외부 트리거(TIM TRGO), Injected, Watchdog, 해상도, TempSens·Vrefint·Vbat | M | 상 |
 | TIM | Base·PWM·Capture·Encoder, Up 카운트만. 한 타이머의 PWM 채널이 Pulse 하나를 공유 | Output Compare, One Pulse, PWM Input, 채널별 Pulse·극성, Counter mode, ARR preload, ETR·Slave·Trigger, TRGO, IC 필터 | M~L | 상 |
 | I2C | 클럭만 | 주소 방식(7/10비트), Own address, Slave, SMBus | S | 중 |
 | DMA | 요청별 폭·증가 고정. FIFO·Burst 없음. TIMx_UP·DAC·SPI2/3 등 요청 없음 | 요청마다 Data width, Increment, FIFO·Threshold·Burst | S~M | 중 |
