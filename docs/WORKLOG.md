@@ -2,6 +2,12 @@
 
 작업할 때마다 날짜순으로 맨 위에 추가합니다. 무엇을 했는지, 왜 했는지, 어떻게 검증했는지, 커밋·릴리스와 남은 사항을 적습니다. 버전별 구조 설명은 [HANDOFF.md](../HANDOFF.md), 검증 수치는 [VERIFICATION.md](VERIFICATION.md)에 있습니다.
 
+## 2026-11-06 · 기능 목록 8번: STM Studio에서 ELF를 못 읽는 문제
+
+- 요청: STM Studio에 앱이 빌드한 firmware.elf를 넣으면 `Dwarf Error: wrong version in compilation unit header (is 5, should be 2, 3, or 4)`가 난다. 구현 세션에서 처리하도록 목록에만 작성.
+- 확인: ARM 빌드 플래그가 `-g3`뿐이라 GCC 15 기본인 DWARF 5가 되고, STM Studio의 GDB는 DWARF 2~4만 읽는다. `-gdwarf-4`로 해결되며 앱의 에뮬레이터·변수 그래프·GDB·clangd에는 영향이 없음을 코드로 확인했다.
+- 한 것: [FEATURES.md](FEATURES.md) 8번으로 적었다. 코드는 바꾸지 않았다.
+
 ## 2026-11-06 · ADC HAL 함수 자동완성 제보 조사 (기능 목록 7번)
 
 - 요청: `HAL_ADC_Start`·`Stop`·`Start_IT`·`Stop_IT`, `HAL_ADC_ConvCpltCallback` 등이 자동완성되지 않는다. 이 세션은 목록 작성 역할이라 원인만 찾고 고치지 않았다.
