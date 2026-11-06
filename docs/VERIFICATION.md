@@ -1,5 +1,9 @@
 # 검증 기록
 
+## 1.20.0 Renesas FPB-RA6E1 — 게시 확인(API)
+
+2026-11-06. 태그·빌드 커밋 `9fb884ea2ccab7e3b05435aeeebc33b0eba82977` · [Windows CI 42145714843](https://github.com/moonsyu/STM-Simulator/actions/runs/42145714843) 성공(툴체인 액션이 앱 설치기로 FSP를 받고 RA 빌드 시험 포함) · [Release v1.20.0](https://github.com/moonsyu/STM-Simulator/releases/tag/v1.20.0) latest, draft/prerelease 아님, 자산 5개(BUILD-INFO.json, SHA256.txt, STM-Simulator-1.20.0-Windows-x64.zip, STM-Simulator.exe 115,506,868 B, update-manifest.json). 파일은 내려받지 않고 API로만 확인했다. 푸시 전 로컬 패키지 검사 3개 통과(산출물 삭제). 로컬 검사: 단위·해석기·에뮬레이터 911개 중 910개 통과·1개 건너뜀, RA 툴체인 2개 통과, E2E 62개 중 61개 통과·1개 건너뜀, ESLint 0건.
+
 ## 1.19.0 변수 그래프 (STM Studio 방식) — 게시 확인(API)
 
 2026-11-05. 태그·빌드 커밋 `d2f7b0f0dd2f288d395f0fd40c266724ad316257` · [Windows CI 41998317827](https://github.com/moonsyu/STM-Simulator/actions/runs/41998317827) 성공 · [Release v1.19.0](https://github.com/moonsyu/STM-Simulator/releases/tag/v1.19.0) latest, draft/prerelease 아님, 자산 5개(BUILD-INFO.json, SHA256.txt, STM-Simulator-1.19.0-Windows-x64.zip, STM-Simulator.exe 115,468,584 B, update-manifest.json). 파일은 내려받지 않고 API로만 확인했다. 푸시 전 로컬 패키지 검사 3개 통과(산출물 삭제). 로컬 검사: 단위·해석기·에뮬레이터 903개 중 902개 통과·1개 건너뜀, E2E 60개 중 59개 통과·1개 건너뜀(새 `variable-graph.e2e` 2개: 해석 실행 카운터, adc_dma ELF), ESLint 0건. 다크 모드 화면 캡처로 그래프가 패널 높이에 맞게 보이는지 확인했다.
