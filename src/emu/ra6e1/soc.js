@@ -11,7 +11,8 @@ import { Sci } from './sci.js';
 import { Gpt } from './gpt.js';
 import { Adc12 } from './adc.js';
 import { Agt } from './agt.js';
-import { RA_PERIPHERAL_PINS, RA_SCI_CHANNELS, RA_GPT_CHANNELS, RA_AGT_CHANNELS, raPsel } from '../../ra-config.js';
+import { Iic } from './iic.js';
+import { RA_PERIPHERAL_PINS, RA_SCI_CHANNELS, RA_GPT_CHANNELS, RA_AGT_CHANNELS, RA_IIC_CHANNELS, raPsel } from '../../ra-config.js';
 
 export { RaBus };
 export const RA_BASES = {
@@ -252,6 +253,8 @@ export class Ra6e1 {
     this.gpts = {};
     for (const ch of RA_GPT_CHANNELS) this.timers['GPT' + ch] = this.gpts[ch] = new Gpt(this, ch);
     this.adc0 = new Adc12(this); this.adcs = [this.adc0];
+    this.iics = {};
+    for (const ch of RA_IIC_CHANNELS) this.iics[ch] = new Iic(this, ch);
     this.agts = {};
     for (const ch of RA_AGT_CHANNELS) this.timers['AGT' + ch] = this.agts[ch] = new Agt(this, ch);
     const devices = [
@@ -271,6 +274,7 @@ export class Ra6e1 {
       ...RA_GPT_CHANNELS.map(ch => [0x40169000 + ch * 0x100, 0x100, this.gpts[ch]]),
       [0x40170000, 0x200, this.adc0],
       ...RA_AGT_CHANNELS.map(ch => [0x400e8000 + ch * 0x100, 0x100, this.agts[ch]]),
+      ...RA_IIC_CHANNELS.map(ch => [0x4009f000 + ch * 0x100, 0x100, this.iics[ch]]),
       [RA_BASES.CACHE, 0x400, plain('CACHE', 0x400)],
       // RTC: RCR2.RESET (bit 1) clears itself once the reset is done; START (bit 0) reads back what was written
       // (BSP R_BSP_Init_RTC waits on both after the sub-clock starts).
@@ -362,6 +366,7 @@ export class Ra6e1 {
     const signal = this.signalOf(pin, psel); if (!signal) return null;
     const sci = /^SCI(\d)_(TXD|RXD)$/.exec(signal); if (sci) return this.scis[sci[1]]?.output(sci[2]) ?? null;
     const gpt = /^GPT(\d)_(GTIOC[AB])$/.exec(signal); if (gpt) return this.gpts[gpt[1]]?.output(gpt[2]) ?? null;
+    const iic = /^IIC(\d)_(SCL|SDA)$/.exec(signal); if (iic) return this.iics[iic[1]]?.output() ?? null;
     return null;
   }
   peripheralChanged(name) { for (const signal of Object.keys(RA_PERIPHERAL_PINS)) if (signal.startsWith(name + '_')) for (const pin of this.routedPins(signal)) { const port = Number(pin.slice(1, -2)), bit = Number(pin.slice(-2)); this.ports.publish(port, 1 << bit); } }
@@ -370,4 +375,5 @@ export class Ra6e1 {
   gptControl(mask, op) { for (const [ch, t] of Object.entries(this.gpts)) if (mask & (1 << ch)) { if (op === 'start') t.start(); else if (op === 'stop') t.stop(); else t.setCount(0); } }
   lineSources(pin) { return this.env.lineSources ? this.env.lineSources(pin) : []; }
   uartEvent(e) { this.env.uartEvent?.(e); }
+  i2cBus(name, pins) { return this.env.i2cBus?.(name, pins) ?? null; }
 }

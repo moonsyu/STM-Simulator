@@ -3,7 +3,7 @@
 // linker init tables) and script (linker scripts). The user's code is src/hal_entry.c; the app builds these with the
 // FSP sources (BSP + r_* drivers) and ARM GCC, then runs the ELF on the RA6E1 emulator.
 // Formats follow RASC output for FSP 5.x/6.x (only what the FPB-RA6E1 configurations here need).
-import {raFamily,raPinName,raPortBit,RA_IRQ_PINS,raPsel,RA_PSEL_NAMES,RA_SCI_CHANNELS,RA_GPT_CHANNELS,RA_ADC_CHANNELS,RA_AGT_CHANNELS,raGptCounts,raAgtCounts,raClockHz} from './ra-config.js';
+import {raFamily,raPinName,raPortBit,RA_IRQ_PINS,raPsel,RA_PSEL_NAMES,RA_SCI_CHANNELS,RA_GPT_CHANNELS,RA_ADC_CHANNELS,RA_AGT_CHANNELS,RA_IIC_CHANNELS,raGptCounts,raAgtCounts,raIicClock,raClockHz} from './ra-config.js';
 
 const HEADER=kind=>`/* generated ${kind} - do not edit */\n`;
 const hex=(n,w=8)=>'0x'+(n>>>0).toString(16).toUpperCase().padStart(w,'0');
@@ -16,7 +16,7 @@ export function pinCfgWord(pin){
  else if(p.function==='GPIO_Input'){parts.push('IOPORT_CFG_PORT_DIRECTION_INPUT');if(p.pull==='PULLUP')parts.push('IOPORT_CFG_PULLUP_ENABLE');}
  else if(p.function==='IRQ'){parts.push('IOPORT_CFG_IRQ_ENABLE','IOPORT_CFG_PORT_DIRECTION_INPUT');if(p.pull==='PULLUP')parts.push('IOPORT_CFG_PULLUP_ENABLE');}
  else if(p.function==='Analog')parts.push('IOPORT_CFG_ANALOG_ENABLE');
- else if(p.function==='Peripheral'){parts.push('IOPORT_CFG_DRIVE_HIGH','IOPORT_CFG_PERIPHERAL_PIN',RA_PSEL_NAMES[raPsel(p.signal)]);if(p.pull==='PULLUP')parts.push('IOPORT_CFG_PULLUP_ENABLE');if(p.outputType==='NMOS')parts.push('IOPORT_CFG_NMOS_ENABLE');if(p.drive==='MID')parts.push('IOPORT_CFG_DRIVE_MID');}
+ else if(p.function==='Peripheral'){parts.push(/^IIC/.test(p.signal)?'IOPORT_CFG_DRIVE_MID':'IOPORT_CFG_DRIVE_HIGH','IOPORT_CFG_PERIPHERAL_PIN',RA_PSEL_NAMES[raPsel(p.signal)]);if(p.pull==='PULLUP')parts.push('IOPORT_CFG_PULLUP_ENABLE');if(p.outputType==='NMOS')parts.push('IOPORT_CFG_NMOS_ENABLE');if(p.drive==='MID')parts.push('IOPORT_CFG_DRIVE_MID');}
  else throw new Error(`${pin?.name||'핀'}: 지원하지 않는 핀 기능입니다.`);
  return `((uint32_t) ${parts.map(x=>`(uint32_t) ${x}`).join(' | ')})`;
 }
@@ -142,6 +142,48 @@ const timer_instance_t ${t.name} =
     .p_cfg         = &${t.name}_cfg,
     .p_api         = &g_timer_on_agt
 };`;
+// I2C master instances (r_iic_master), g_i2c_masterN; completion and errors come through the callback.
+const iicsOf=mcu=>RA_IIC_CHANNELS.filter(ch=>mcu.peripherals?.['IIC'+ch]?.enabled).map(ch=>{const p=mcu.peripherals['IIC'+ch];return {channel:ch,name:`g_i2c_master${ch}`,rate:p.rate||'STANDARD',slave:p.slave??0x50,callback:p.callback||`i2c_master${ch}_callback`,priority:p.priority??12,clock:raIicClock(raClockHz(mcu,'pclkb'),p.rate||'STANDARD')};});
+const iicDecl=t=>`/* I2C Master on IIC Instance. */
+extern const i2c_master_instance_t ${t.name};
+/** Access the I2C Master instance using these structures when calling API functions directly (::p_api is not used). */
+extern iic_master_instance_ctrl_t ${t.name}_ctrl;
+extern const i2c_master_cfg_t ${t.name}_cfg;
+#ifndef ${t.callback}
+void ${t.callback}(i2c_master_callback_args_t * p_args);
+#endif`;
+function iicInstance(t){
+ const v=k=>`#if defined(VECTOR_NUMBER_IIC${t.channel}_${k})\n    .${k.toLowerCase()}_irq             = VECTOR_NUMBER_IIC${t.channel}_${k},\n#else\n    .${k.toLowerCase()}_irq             = FSP_INVALID_VECTOR,\n#endif`,c=t.clock;
+ return `iic_master_instance_ctrl_t ${t.name}_ctrl;
+const iic_master_extended_cfg_t ${t.name}_extend =
+{
+    .timeout_mode             = IIC_MASTER_TIMEOUT_MODE_SHORT,
+    .timeout_scl_low          = IIC_MASTER_TIMEOUT_SCL_LOW_ENABLED,
+    .smbus_operation          = 0,
+    /* Actual calculated bitrate: ${Math.round(c.actual)}. Actual calculated duty cycle: ${Math.round(c.duty)}%. */ .clock_settings.brl_value = ${c.brl}, .clock_settings.brh_value = ${c.brh}, .clock_settings.cks_value = ${c.cks}, .clock_settings.sddl_value = 0, .clock_settings.dlcs_value = 0,
+};
+const i2c_master_cfg_t ${t.name}_cfg =
+{
+    .channel             = ${t.channel},
+    .rate                = I2C_MASTER_RATE_${t.rate},
+    .slave               = 0x${t.slave.toString(16).padStart(2,'0')},
+    .addr_mode           = I2C_MASTER_ADDR_MODE_7BIT,
+    .p_transfer_tx       = NULL,
+    .p_transfer_rx       = NULL,
+    .p_callback          = ${t.callback},
+    .p_context           = NULL,
+${['RXI','TXI','TEI','ERI'].map(v).join('\n')}
+    .ipl                 = (${t.priority}),
+    .p_extend            = &${t.name}_extend,
+};
+/* Instance structure to use this module. */
+const i2c_master_instance_t ${t.name} =
+{
+    .p_ctrl        = &${t.name}_ctrl,
+    .p_cfg         = &${t.name}_cfg,
+    .p_api         = &g_i2c_master_on_iic
+};`;
+}
 const UNIT_TEXT={Hz:'Hz',kHz:'kHz',s:'seconds',ms:'milliseconds',us:'microseconds'};
 const hexCount=n=>"0x"+n.toString(16);
 const gptDecl=t=>`/** Timer on GPT Instance. */
@@ -216,6 +258,7 @@ export function raVectors(mcu){
  for(const u of uartsOf(mcu))for(const [kind,label]of [['RXI','Receive data full'],['TXI','Transmit data empty'],['TEI','Transmit end'],['ERI','Receive error']])list.push({isr:`sci_uart_${kind.toLowerCase()}_isr`,event:`SCI${u.channel}_${kind}`,label:`SCI${u.channel} ${kind} (${label})`,vector:`SCI${u.channel}_${kind}`});
  for(const irq of irqsOf(mcu))list.push({isr:'r_icu_isr',event:`ICU_IRQ${irq.channel}`,label:`ICU IRQ${irq.channel} (External pin interrupt ${irq.channel})`,vector:`ICU_IRQ${irq.channel}`});
  const adc=adcOf(mcu);if(adc?.callback)list.push({isr:'adc_scan_end_isr',event:'ADC0_SCAN_END',label:'ADC0 SCAN END (End of A/D scanning operation)',vector:'ADC0_SCAN_END'});
+ for(const t of iicsOf(mcu))for(const [kind,label]of [['RXI','Receive data full'],['TXI','Transmit data empty'],['TEI','Transmit end'],['ERI','Transfer error']])list.push({isr:`iic_master_${kind.toLowerCase()}_isr`,event:`IIC${t.channel}_${kind}`,label:`IIC${t.channel} ${kind} (${label})`,vector:`IIC${t.channel}_${kind}`});
  for(const t of agtsOf(mcu))if(t.callback)list.push({isr:'agt_int_isr',event:`AGT${t.channel}_INT`,label:`AGT${t.channel} INT (AGT interrupt)`,vector:`AGT${t.channel}_INT`});
  for(const t of gptsOf(mcu))if(t.callback)list.push({isr:'gpt_counter_overflow_isr',event:`GPT${t.channel}_COUNTER_OVERFLOW`,label:`GPT${t.channel} COUNTER OVERFLOW (Overflow)`,vector:`GPT${t.channel}_COUNTER_OVERFLOW`});
  return list.map((v,i)=>({...v,index:i}));
@@ -481,7 +524,7 @@ ${vectors.map(v=>`    [${v.index}] = BSP_PRV_VECT_ENUM(EVENT_${v.event},GROUP${v
 }
 
 function halDataH(mcu){
- const irqs=irqsOf(mcu),uarts=uartsOf(mcu),includes=(irqs.length?'#include "r_icu.h"\n#include "r_external_irq_api.h"\n':'')+(uarts.length?'#include "r_sci_uart.h"\n#include "r_uart_api.h"\n':'')+(gptsOf(mcu).length?'#include "r_gpt.h"\n#include "r_timer_api.h"\n':'')+(adcOf(mcu)?'#include "r_adc.h"\n#include "r_adc_api.h"\n':'')+(agtsOf(mcu).length?'#include "r_agt.h"\n'+(gptsOf(mcu).length?'':'#include "r_timer_api.h"\n'):'');
+ const irqs=irqsOf(mcu),uarts=uartsOf(mcu),includes=(irqs.length?'#include "r_icu.h"\n#include "r_external_irq_api.h"\n':'')+(uarts.length?'#include "r_sci_uart.h"\n#include "r_uart_api.h"\n':'')+(gptsOf(mcu).length?'#include "r_gpt.h"\n#include "r_timer_api.h"\n':'')+(adcOf(mcu)?'#include "r_adc.h"\n#include "r_adc_api.h"\n':'')+(iicsOf(mcu).length?'#include "r_iic_master.h"\n#include "r_i2c_master_api.h"\n':'')+(agtsOf(mcu).length?'#include "r_agt.h"\n'+(gptsOf(mcu).length?'':'#include "r_timer_api.h"\n'):'');
  const decls=irqs.map(i=>`/** External IRQ on ICU Instance. */
 extern const external_irq_instance_t ${i.name};
 /** Access the ICU instance using these structures when calling API functions directly (::p_api is not used). */
@@ -497,7 +540,7 @@ extern const uart_cfg_t ${u.name}_cfg;
 extern const sci_uart_extended_cfg_t ${u.name}_cfg_extend;
 #ifndef ${u.callback}
 void ${u.callback}(uart_callback_args_t * p_args);
-#endif`)).concat(gptsOf(mcu).map(gptDecl)).concat(adcOf(mcu)?[adcDecl(adcOf(mcu))]:[]).concat(agtsOf(mcu).map(agtDecl)).join('\n');
+#endif`)).concat(gptsOf(mcu).map(gptDecl)).concat(adcOf(mcu)?[adcDecl(adcOf(mcu))]:[]).concat(agtsOf(mcu).map(agtDecl)).concat(iicsOf(mcu).map(iicDecl)).join('\n');
  return HEADER('HAL header file')+`#ifndef HAL_DATA_H_
 #define HAL_DATA_H_
 #include <stdint.h>
@@ -589,7 +632,7 @@ const uart_instance_t ${u.name} =
     .p_ctrl        = &${u.name}_ctrl,
     .p_cfg         = &${u.name}_cfg,
     .p_api         = &g_uart_on_sci
-};`;})).concat(gptsOf(mcu).map(gptInstance)).concat(adcOf(mcu)?[adcInstance(adcOf(mcu))]:[]).concat(agtsOf(mcu).map(agtInstance)).join('\n');
+};`;})).concat(gptsOf(mcu).map(gptInstance)).concat(adcOf(mcu)?[adcInstance(adcOf(mcu))]:[]).concat(agtsOf(mcu).map(agtInstance)).concat(iicsOf(mcu).map(iicInstance)).join('\n');
  return HEADER('HAL source file')+`#include "hal_data.h"
 ${body}${body?'\n':''}void g_hal_init(void) {
 g_common_init();
@@ -783,6 +826,7 @@ export function generateRaFiles(mcu,{board}={}){
   cfg('bsp/board_cfg.h',HEADER('configuration header file')+`#ifndef BOARD_CFG_H_\n#define BOARD_CFG_H_\n#include "${board?.fspBoard?'board.h':'bsp_api.h'}"\n#endif /* BOARD_CFG_H_ */\n`),
   cfg('r_ioport_cfg.h',moduleCfg('r_ioport_cfg.h','R_IOPORT_CFG_H_',['#define IOPORT_CFG_PARAM_CHECKING_ENABLE (BSP_CFG_PARAM_CHECKING_ENABLE)'])),
   cfg('r_icu_cfg.h',moduleCfg('r_icu_cfg.h','R_ICU_CFG_H_',['#define ICU_CFG_PARAM_CHECKING_ENABLE (BSP_CFG_PARAM_CHECKING_ENABLE)'])),
+  cfg('r_iic_master_cfg.h',moduleCfg('r_iic_master_cfg.h','R_IIC_MASTER_CFG_H_',['#define IIC_MASTER_CFG_PARAM_CHECKING_ENABLE (BSP_CFG_PARAM_CHECKING_ENABLE)','#define IIC_MASTER_CFG_DTC_ENABLE (0)','#define IIC_MASTER_CFG_ADDR_MODE_10_BIT_ENABLE (0)'])),
   cfg('r_agt_cfg.h',moduleCfg('r_agt_cfg.h','R_AGT_CFG_H_',['#define AGT_CFG_PARAM_CHECKING_ENABLE (BSP_CFG_PARAM_CHECKING_ENABLE)','#define AGT_CFG_OUTPUT_SUPPORT_ENABLE (0)','#define AGT_CFG_INPUT_SUPPORT_ENABLE (0)'])),
   cfg('r_adc_cfg.h',moduleCfg('r_adc_cfg.h','R_ADC_CFG_H_',['#define ADC_CFG_PARAM_CHECKING_ENABLE (BSP_CFG_PARAM_CHECKING_ENABLE)'])),
   cfg('r_gpt_cfg.h',moduleCfg('r_gpt_cfg.h','R_GPT_CFG_H_',['#define GPT_CFG_PARAM_CHECKING_ENABLE (BSP_CFG_PARAM_CHECKING_ENABLE)','#define GPT_CFG_OUTPUT_SUPPORT_ENABLE (1)','#define GPT_CFG_WRITE_PROTECT_ENABLE (0)','#define GPT_CFG_GPTCLK_BYPASS (0)'])),

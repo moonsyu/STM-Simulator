@@ -241,3 +241,45 @@ test('RA6E1 AGT model: TCSTF follows TSTART, the counter counts down from the re
  a.write(0x08,0xd1,1);assert.equal(a.read(0x08,1)&0x20,0,'flag cleared by writing 0');
  a.write(0x08,0xf0,1);assert.equal(a.read(0x08,1)&3,0,'stopped');
 });
+
+test('IIC: SCL/SDA pins (PSEL IIC), rate and slave settings, RASC bit-rate registers, g_i2c_masterN and its four vectors',async()=>{
+ const {RA_PERIPHERAL_PINS,raPsel,raIicClock}=await import('../../src/ra-config.js');
+ assert.deepEqual(RA_PERIPHERAL_PINS.IIC0_SCL,['P400','P408']);assert.equal(raPsel('IIC0_SDA'),7);
+ assert.deepEqual(raIicClock(50e6,'STANDARD'),{cks:3,brh:29,brl:30,actual:raIicClock(50e6,'STANDARD').actual,duty:raIicClock(50e6,'STANDARD').duty});
+ assert.ok(Math.abs(raIicClock(50e6,'STANDARD').actual-100000)<1&&Math.abs(raIicClock(50e6,'FAST').actual-400000)<5000);
+ const iic=()=>{const m=raDefaultMcu();m.pins.P400={function:'Peripheral',signal:'IIC0_SCL'};m.pins.P401={function:'Peripheral',signal:'IIC0_SDA'};m.peripherals={IIC0:{enabled:true,rate:'FAST',slave:0x3c}};return m;};
+ const v=validateRaMcu(iic());assert.deepEqual(v.peripherals.IIC0,{enabled:true,rate:'FAST',slave:0x3c,callback:'i2c_master0_callback',priority:12});
+ assert.throws(()=>validateRaMcu({...iic(),pins:{...iic().pins,P401:{function:'GPIO_Input'}}}),/SCL과 SDA/);
+ assert.throws(()=>validateRaMcu({...iic(),peripherals:{IIC0:{enabled:true,slave:0x80}}}),/7비트/);
+ assert.throws(()=>validateRaMcu({...raDefaultMcu(),peripherals:{IIC1:{enabled:false,rate:'FASTPLUS'}}}),/Standard/);
+ const files=generateRaFiles(v,{board:'FPB-RA6E1'}),c=files['ra_gen/hal_data.c'];
+ assert.ok(c.includes('.rate                = I2C_MASTER_RATE_FAST,')&&c.includes('.slave               = 0x3c,')&&c.includes('.p_api         = &g_i2c_master_on_iic'));
+ assert.ok(c.includes('.clock_settings.brl_value = 28, .clock_settings.brh_value = 27, .clock_settings.cks_value = 1,'));
+ assert.ok(files['ra_gen/hal_data.h'].includes('void i2c_master0_callback(i2c_master_callback_args_t * p_args);'));
+ for(const k of ['rxi','txi','tei','eri'])assert.ok(files['ra_gen/vector_data.c'].includes(`= iic_master_${k}_isr,`),k);
+ assert.ok(files['ra_gen/pin_data.c'].includes('IOPORT_CFG_DRIVE_MID | (uint32_t) IOPORT_CFG_PERIPHERAL_PIN | (uint32_t) IOPORT_PERIPHERAL_IIC)'));
+ assert.ok(files['ra_cfg/fsp_cfg/r_iic_master_cfg.h'].includes('IIC_MASTER_CFG_DTC_ENABLE (0)'));
+});
+
+test('RA6E1 RIIC model: START → TDRE/TXI, address and data bytes to the device, TEND/TEI, STOP flag/ERI; receive with ACKBT',async()=>{
+ const {Iic,IIC_EVENT_BASE}=await import('../../src/emu/ra6e1/iic.js');
+ let now=0;const queue=[],events=[],bus=[];
+ const device={address:(a,r)=>{bus.push(['A',a,r]);return a===0x50;},write:b=>{bus.push(['W',b]);return true;},read:()=>{bus.push(['R']);return 0x5a;},nack:()=>bus.push(['N']),stop:()=>bus.push(['P']),restart:()=>bus.push(['S'])};
+ const soc={clock:{pclkb:50e6},nowUs:()=>now,sync(){},icu:{raise:e=>events.push(e-IIC_EVENT_BASE[0])},after:(us,fn)=>{const e={t:now+us,fn,cancel(){e.dead=true;}};queue.push(e);return e;},i2cBus:()=>device,routedPins:s=>[s.endsWith('SCL')?'P400':'P401']};
+ const run=()=>{for(;;){const e=queue.filter(x=>!x.dead&&!x.done).sort((a,b)=>a.t-b.t)[0];if(!e)return;e.done=true;now=e.t;e.fn();}};
+ const t=new Iic(soc,0);
+ t.write(0x02,0x30,1);t.write(0x11,0xe0|29,1);t.write(0x10,0xe0|30,1);t.write(0x07,0xbf,1); // CKS 3, 100 kHz, all interrupts but TEIE
+ t.write(0x01,0x02,1);run(); // ST
+ assert.equal(t.read(0x01,1)&0xe0,0xe0,'BBSY MST TRS');assert.deepEqual([...events].sort(),[1,3],'START (ERI) and TDRE (TXI)');
+ t.write(0x12,0xa0,1);t.write(0x12,0x10,1); // address 0x50 W, then one data byte buffered
+ t.write(0x07,0xff,1);run();
+ assert.deepEqual(bus,[['A',0x50,false],['W',0x10]]);assert.ok(t.read(0x09,1)&0x40,'TEND');assert.ok(events.includes(2),'TEI');
+ t.write(0x01,0x08,1);run();assert.ok(t.read(0x09,1)&0x08,'STOP');assert.equal(t.read(0x01,1)&0x80,0,'bus free');assert.deepEqual(bus.at(-1),['P']);
+ // Read one byte from 0x50: dummy read, ACKBT = 1 for the last byte, then SP.
+ bus.length=0;t.write(0x09,0,1);t.write(0x01,0x02,1);run();t.write(0x12,0xa1,1);run();
+ assert.ok(t.read(0x09,1)&0x20,'RDRF after the address (dummy)');
+ t.write(0x04,0x18,1);assert.equal(t.read(0x13,1),0xff,'dummy');run();
+ assert.deepEqual(bus,[['A',0x50,true],['R'],['N']]);t.write(0x01,0x08,1);assert.equal(t.read(0x13,1),0x5a);run();assert.deepEqual(bus.at(-1),['P']);
+ // A NACK on the address sets NACKF.
+ t.write(0x09,0,1);t.write(0x01,0x02,1);run();t.write(0x12,0xa2,1);run();assert.ok(t.read(0x09,1)&0x10,'NACKF');assert.ok(t.read(0x04,1)&0x04,'ACKBR');
+});

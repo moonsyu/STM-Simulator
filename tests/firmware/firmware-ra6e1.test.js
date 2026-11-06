@@ -102,3 +102,18 @@ test('ra_agt_tick: AGT0 (LOCO, 250 ms) toggles LED1 from agt0_callback; AGT1 (PC
  assert.ok(edges.slice(1).every((t,i)=>Math.abs(t-edges[i]-250)<=20),'LED1 every 250 ms: '+edges);
  assert.ok(session.gpio.P407.value>1.65,'LED2 after 2000 ticks');
 });
+
+test('ra_iic_memory: IIC0 (P400 SCL / P401 SDA, 100 kHz) writes the I²C memory at 0x50, reads back with a repeated start; 0x51 NACKs',()=>{
+ const {session,log}=open(fixture('ra_iic_memory'));
+ runUntil(session,100);
+ const bus=session.soc.iics[0].log;
+ assert.deepEqual(bus.map(e=>e.type==='address'?`A${e.addr.toString(16)}${e.read?'R':'W'}${e.ack?'+':'-'}`:e.type==='write'?`W${e.byte.toString(16)}`:e.type==='read'?`R${e.byte.toString(16)}${e.ack?'+':'-'}`:e.type),
+  ['start','A50W+','W10','W52','W41','W36','W45','stop','start','A50W+','W10','restart','A50R+','R52+','R41+','R36+','R45-','stop','start','A51R-','stop']);
+ // Nine SCL periods a byte at 100 kHz (CKS 3, ICBRH 29, ICBRL 30 from PCLKB 50 MHz).
+ assert.ok(Math.abs(bus[2].us-bus[1].us-90)<1,'byte time '+(bus[2].us-bus[1].us));
+ assert.equal(session.readVariable('matched'),1,'RX_COMPLETE with the bytes written');
+ assert.equal(session.readVariable('nack_seen'),1,'ABORTED after the NACK');
+ assert.ok(session.gpio.P407.value>1.65,'LED2 on');
+ assert.equal(session.gpio.P400.openDrain,true);
+ assert.ok(log.trace.some(t=>/IIC0 · 0x50 WRITE 5 B · ACK/.test(t.message)));
+});

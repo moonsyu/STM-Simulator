@@ -1,0 +1,98 @@
+{
+ "format": "stm32-circuit-lab",
+ "version": 2,
+ "name": "ra_iic_memory",
+ "code": "#include \"hal_data.h\"\n\nFSP_CPP_HEADER\nvoid R_BSP_WarmStart(bsp_warm_start_event_t event);\nFSP_CPP_FOOTER\n\nstatic volatile i2c_master_event_t i2c_event = I2C_MASTER_EVENT_ABORTED;\nstatic volatile bool i2c_done = false;\nvolatile uint32_t matched = 0;\nvolatile uint32_t nack_seen = 0;\nuint8_t readback[4];\n\n/* r_iic_master reports the end of every transfer here. */\nvoid i2c_master0_callback(i2c_master_callback_args_t *p_args)\n{\n    i2c_event = p_args->event;\n    i2c_done = true;\n}\n\nstatic i2c_master_event_t wait_i2c(void)\n{\n    while (!i2c_done)\n    {\n    }\n    i2c_done = false;\n    return i2c_event;\n}\n\nvoid hal_entry(void)\n{\n    static uint8_t write_data[] = { 0x10, 'R', 'A', '6', 'E' };\n    static uint8_t offset = 0x10;\n\n    R_IIC_MASTER_Open(&g_i2c_master0_ctrl, &g_i2c_master0_cfg);\n\n    /* Write 4 bytes at 0x10, then set the address again (repeated start) and read them back. */\n    R_IIC_MASTER_Write(&g_i2c_master0_ctrl, write_data, sizeof(write_data), false);\n    wait_i2c();\n    R_IIC_MASTER_Write(&g_i2c_master0_ctrl, &offset, 1, true);\n    wait_i2c();\n    R_IIC_MASTER_Read(&g_i2c_master0_ctrl, readback, sizeof(readback), false);\n    if (I2C_MASTER_EVENT_RX_COMPLETE == wait_i2c())\n    {\n        matched = (readback[0] == 'R') && (readback[1] == 'A') && (readback[2] == '6') && (readback[3] == 'E');\n    }\n    R_IOPORT_PinWrite(&g_ioport_ctrl, LED2, matched ? BSP_IO_LEVEL_HIGH : BSP_IO_LEVEL_LOW);\n\n    /* Nothing answers at 0x51: the address byte gets a NACK and the transfer is aborted. */\n    R_IIC_MASTER_SlaveAddressSet(&g_i2c_master0_ctrl, 0x51, I2C_MASTER_ADDR_MODE_7BIT);\n    R_IIC_MASTER_Read(&g_i2c_master0_ctrl, readback, 1, false);\n    nack_seen = (I2C_MASTER_EVENT_ABORTED == wait_i2c());\n\n    while (1)\n    {\n        R_IOPORT_PinWrite(&g_ioport_ctrl, LED1, BSP_IO_LEVEL_HIGH);\n        R_BSP_SoftwareDelay(500, BSP_DELAY_UNITS_MILLISECONDS);\n        R_IOPORT_PinWrite(&g_ioport_ctrl, LED1, BSP_IO_LEVEL_LOW);\n        R_BSP_SoftwareDelay(500, BSP_DELAY_UNITS_MILLISECONDS);\n    }\n}\n\nvoid R_BSP_WarmStart(bsp_warm_start_event_t event)\n{\n    if (BSP_WARM_START_POST_C == event)\n    {\n        /* C runtime environment and system clocks are setup. */\n\n        /* Configure pins. */\n        R_IOPORT_Open (&IOPORT_CFG_CTRL, &IOPORT_CFG_NAME);\n    }\n}\n",
+ "components": [
+  {
+   "id": "mem",
+   "name": "I2C1",
+   "type": "i2c",
+   "x": 520,
+   "y": 200,
+   "rotation": 0,
+   "address": 80
+  }
+ ],
+ "wires": [
+  {
+   "id": "w_vcc",
+   "from": "part:mem:p1",
+   "to": "board:J2:4",
+   "color": "#e5484d"
+  },
+  {
+   "id": "w_gnd",
+   "from": "part:mem:p2",
+   "to": "board:J2:6",
+   "color": "#3a3a3a"
+  },
+  {
+   "id": "w_sda",
+   "from": "part:mem:p3",
+   "to": "board:J1:9",
+   "color": "#30a46c"
+  },
+  {
+   "id": "w_scl",
+   "from": "part:mem:p4",
+   "to": "board:J1:10",
+   "color": "#f5c518"
+  }
+ ],
+ "boardId": "fpb-ra6e1",
+ "surfaces": {
+  "board": {
+   "hidden": false
+  },
+  "breadboard": {
+   "hidden": true
+  }
+ },
+ "mcu": {
+  "family": "R7FA6E10F",
+  "pins": {
+   "P408": {
+    "function": "GPIO_Output",
+    "label": "LED1",
+    "initial": 0,
+    "drive": "LOW"
+   },
+   "P407": {
+    "function": "GPIO_Output",
+    "label": "LED2",
+    "initial": 0,
+    "drive": "LOW"
+   },
+   "P205": {
+    "function": "IRQ",
+    "label": "SW1",
+    "pull": "PULLUP",
+    "edge": "FALLING",
+    "priority": 12,
+    "callback": "external_irq1_callback"
+   },
+   "P400": {
+    "function": "Peripheral",
+    "signal": "IIC0_SCL"
+   },
+   "P401": {
+    "function": "Peripheral",
+    "signal": "IIC0_SDA"
+   }
+  },
+  "peripherals": {
+   "IIC0": {
+    "enabled": true,
+    "rate": "STANDARD",
+    "slave": 80,
+    "callback": "i2c_master0_callback",
+    "priority": 12
+   }
+  }
+ },
+ "firmware": {
+  "mode": "fsp",
+  "files": []
+ }
+}

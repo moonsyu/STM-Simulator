@@ -238,5 +238,68 @@ void hal_entry(void)
     }
 }
 `+WARM_START});
-RA_EXAMPLES.push(UART_EXAMPLE,GPT_EXAMPLE,ADC_EXAMPLE,AGT_EXAMPLE);
+// IIC0 master on Arduino SDA/SCL (P401/P400, the board's 2.2 kΩ pull-ups) with the 256-byte I²C memory part at 0x50:
+// write 4 bytes at 0x10, read them back with a repeated start, then try 0x51 where nothing answers (NACK → aborted).
+const IIC_EXAMPLE=Object.freeze({id:'ra_iic_memory',name:'I²C 메모리 쓰기·읽기 (R_IIC_MASTER_Open · Write · Read · 콜백)',tags:['I2C','IIC','EEPROM','memory'],
+ mcu:()=>{const m=raDefaultMcu();m.pins.P400={function:'Peripheral',signal:'IIC0_SCL'};m.pins.P401={function:'Peripheral',signal:'IIC0_SDA'};m.peripherals={IIC0:{enabled:true,rate:'STANDARD',slave:0x50,callback:'i2c_master0_callback',priority:12}};return m;},
+ circuit:()=>({components:[{id:'mem',type:'i2c',name:'I2C1',x:520,y:200,rotation:0,address:0x50}],wires:[
+  {id:'w_vcc',from:'part:mem:p1',to:'board:J2:4',color:'#e5484d'},{id:'w_gnd',from:'part:mem:p2',to:'board:J2:6',color:'#3a3a3a'},
+  {id:'w_sda',from:'part:mem:p3',to:'board:J1:9',color:'#30a46c'},{id:'w_scl',from:'part:mem:p4',to:'board:J1:10',color:'#f5c518'}]}),
+ code:HEAD+`
+static volatile i2c_master_event_t i2c_event = I2C_MASTER_EVENT_ABORTED;
+static volatile bool i2c_done = false;
+volatile uint32_t matched = 0;
+volatile uint32_t nack_seen = 0;
+uint8_t readback[4];
+
+/* r_iic_master reports the end of every transfer here. */
+void i2c_master0_callback(i2c_master_callback_args_t *p_args)
+{
+    i2c_event = p_args->event;
+    i2c_done = true;
+}
+
+static i2c_master_event_t wait_i2c(void)
+{
+    while (!i2c_done)
+    {
+    }
+    i2c_done = false;
+    return i2c_event;
+}
+
+void hal_entry(void)
+{
+    static uint8_t write_data[] = { 0x10, 'R', 'A', '6', 'E' };
+    static uint8_t offset = 0x10;
+
+    R_IIC_MASTER_Open(&g_i2c_master0_ctrl, &g_i2c_master0_cfg);
+
+    /* Write 4 bytes at 0x10, then set the address again (repeated start) and read them back. */
+    R_IIC_MASTER_Write(&g_i2c_master0_ctrl, write_data, sizeof(write_data), false);
+    wait_i2c();
+    R_IIC_MASTER_Write(&g_i2c_master0_ctrl, &offset, 1, true);
+    wait_i2c();
+    R_IIC_MASTER_Read(&g_i2c_master0_ctrl, readback, sizeof(readback), false);
+    if (I2C_MASTER_EVENT_RX_COMPLETE == wait_i2c())
+    {
+        matched = (readback[0] == 'R') && (readback[1] == 'A') && (readback[2] == '6') && (readback[3] == 'E');
+    }
+    R_IOPORT_PinWrite(&g_ioport_ctrl, LED2, matched ? BSP_IO_LEVEL_HIGH : BSP_IO_LEVEL_LOW);
+
+    /* Nothing answers at 0x51: the address byte gets a NACK and the transfer is aborted. */
+    R_IIC_MASTER_SlaveAddressSet(&g_i2c_master0_ctrl, 0x51, I2C_MASTER_ADDR_MODE_7BIT);
+    R_IIC_MASTER_Read(&g_i2c_master0_ctrl, readback, 1, false);
+    nack_seen = (I2C_MASTER_EVENT_ABORTED == wait_i2c());
+
+    while (1)
+    {
+        R_IOPORT_PinWrite(&g_ioport_ctrl, LED1, BSP_IO_LEVEL_HIGH);
+        R_BSP_SoftwareDelay(500, BSP_DELAY_UNITS_MILLISECONDS);
+        R_IOPORT_PinWrite(&g_ioport_ctrl, LED1, BSP_IO_LEVEL_LOW);
+        R_BSP_SoftwareDelay(500, BSP_DELAY_UNITS_MILLISECONDS);
+    }
+}
+`+WARM_START});
+RA_EXAMPLES.push(UART_EXAMPLE,GPT_EXAMPLE,ADC_EXAMPLE,AGT_EXAMPLE,IIC_EXAMPLE);
 Object.freeze(RA_EXAMPLES);

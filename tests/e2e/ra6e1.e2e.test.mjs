@@ -228,3 +228,34 @@ test('FPB-RA6E1 Clocks and Stacks tabs with the AGT example: g_agt0 on LOCO, add
   assert.deepEqual(s.errors,[]);
  }finally{await s.close();}
 });
+
+test('FPB-RA6E1 I²C example: P400/P401 as IIC0 SCL/SDA with g_i2c_master0; running writes and reads back the I²C memory part (LED2 on)',{skip:!toolchain&&!process.env.CI_REQUIRE_TOOLCHAIN&&'ARM GCC / Renesas FSP not installed',timeout:240000},async()=>{
+ const s=await launch();
+ await fs.writeFile(path.join(s.profile,'native-tools.json'),JSON.stringify({armGcc:gcc,fsp,armGdb:'',cube:'',cubeF1:'',hostGcc:'',hostGdb:'',clangd:'',openocd:'',buildRoot:''}));
+ try{
+  const {win}=s;
+  await win.click('[data-activity="board"]');if(!await win.locator('#board-open').isVisible())await win.click('[data-activity="board"]');
+  await win.click('#board-open');await win.click('[data-board-id="fpb-ra6e1"]');
+  if(await win.locator('#board-change-dialog').isVisible())await win.click('#board-change-confirm');
+  await win.waitForFunction(()=>document.querySelector('#surface > .board')?.dataset.board==='fpb-ra6e1');
+  await win.click('[data-activity="examples"]');if(!await win.locator('#view-examples').isVisible())await win.click('[data-activity="examples"]');
+  await win.fill('#hal-example-search','I²C 메모리');await win.locator('#hal-example-list [data-example]').first().click();
+  await win.waitForFunction(()=>/R_IIC_MASTER_Read\(&g_i2c_master0_ctrl/.test(document.getElementById('code').value));
+  await win.waitForSelector('#part-layer [data-part="mem"]');
+  await win.click('[data-activity="board"]');if(!await win.locator('#pinout-open').isVisible())await win.click('[data-activity="board"]');
+  await win.click('#pinout-open');await win.waitForSelector('#ra-pinout-dialog[open]');
+  await win.click('[data-ra-pin="P401"]');
+  assert.equal(await win.inputValue('[data-ra="signal"]'),'IIC0_SDA');
+  assert.match(await win.textContent('#ra-pin-props'),/g_i2c_master0 \(r_iic_master · IIC0\)[\s\S]*ICBRH 29 · ICBRL 30 → 100000 bps/);
+  await win.fill('[data-ra-iic="slave"]','0x90');await win.locator('[data-ra-iic="slave"]').dispatchEvent('change');
+  assert.match(await win.textContent('#ra-pinout-error'),/7비트/);
+  await win.click('#ra-pinout-close');
+  await win.keyboard.press('Control+F5');
+  await win.waitForFunction(()=>/시뮬레이터\(ARM GCC 빌드\)를 시작했습니다/.test(document.getElementById('console-output').textContent),null,{timeout:180000})
+   .catch(async error=>{throw new Error(`${error.message}\n출력: ${(await win.textContent('#console-output')).slice(-1500)}\n빌드: ${(await win.textContent('#build-errors').catch(()=>'')).slice(-800)}`);});
+  await win.waitForFunction(()=>document.getElementById('board-led-LED2')?.getAttribute('fill')==='#64e66b',null,{timeout:30000});
+  await win.keyboard.press('Control+F2');
+  await win.waitForFunction(()=>document.getElementById('shell').dataset.running==='false');
+  assert.deepEqual(s.errors,[]);
+ }finally{await s.close();}
+});

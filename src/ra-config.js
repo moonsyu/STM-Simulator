@@ -109,6 +109,8 @@ export function validateRaMcu(mcu){
    const gpt=/^GPT(\d)$/.exec(id);
    if(gpt){out.peripherals[id]=validateGpt(id,Number(gpt[1]),p,fam,mcu.clock,signals);continue;}
    if(id==='ADC0'){out.peripherals[id]=validateAdc(p,out.pins);continue;}
+   const iic=/^IIC(\d)$/.exec(id);
+   if(iic){out.peripherals[id]=validateIic(id,Number(iic[1]),p,fam,mcu.clock,signals);continue;}
    const agt=/^AGT(\d)$/.exec(id);
    if(agt){out.peripherals[id]=validateAgt(id,Number(agt[1]),p,fam,mcu.clock);continue;}
    const sci=/^SCI(\d)$/.exec(id);if(!sci||!RA_SCI_CHANNELS.includes(Number(sci[1]))||!p||typeof p.enabled!=='boolean')throw new Error(`${id}: 지원하지 않는 주변장치입니다.`);
@@ -140,20 +142,31 @@ export function validateRaMcu(mcu){
 }
 
 // Peripheral pin functions (Table 1.16, LQFP100) with the PmnPFS.PSEL value that selects them (FSP r_ioport.h
-// IOPORT_PERIPHERAL_*): SCI0/2/4 = 4, SCI1/3/9 = 5, GPT GTIOCnA/B = 3 (IOPORT_PERIPHERAL_GPT1, every channel).
+// IOPORT_PERIPHERAL_*): SCI0/2/4 = 4, SCI1/3/9 = 5, GPT GTIOCnA/B = 3 (IOPORT_PERIPHERAL_GPT1, every channel),
+// IIC SCLn/SDAn = 7 (IOPORT_PERIPHERAL_IIC).
 export const RA_PERIPHERAL_PINS=Object.freeze({
  SCI0_TXD:['P101','P411'],SCI0_RXD:['P100','P410'],SCI1_TXD:['P213'],SCI1_RXD:['P212','P708'],
  SCI2_TXD:['P302','P112'],SCI2_RXD:['P301','P113'],SCI3_TXD:['P409'],SCI3_RXD:['P408'],
  SCI4_TXD:['P207','P205'],SCI4_RXD:['P206'],SCI9_TXD:['P109','P602'],SCI9_RXD:['P110','P601'],
  GPT1_GTIOCA:['P105','P109','P405'],GPT1_GTIOCB:['P104','P110','P406'],GPT2_GTIOCA:['P103','P113'],GPT2_GTIOCB:['P102','P114'],
  GPT4_GTIOCA:['P205','P302','P115'],GPT4_GTIOCB:['P301','P608'],GPT5_GTIOCA:['P101','P609'],GPT5_GTIOCB:['P100','P610'],
- GPT6_GTIOCA:['P400','P407','P601'],GPT6_GTIOCB:['P401','P408','P600'],GPT7_GTIOCA:['P304'],GPT7_GTIOCB:['P303','P602']
+ GPT6_GTIOCA:['P400','P407','P601'],GPT6_GTIOCB:['P401','P408','P600'],GPT7_GTIOCA:['P304'],GPT7_GTIOCB:['P303','P602'],
+ IIC0_SCL:['P400','P408'],IIC0_SDA:['P401','P407'],IIC1_SCL:['P205'],IIC1_SDA:['P206']
 });
 export const RA_SCI_CHANNELS=Object.freeze([0,1,2,3,4,9]);
 // GPT (Table 1.16 GTIOCnA/B, PSEL 00011b on every port): GPT1/2 are 32-bit, GPT4-7 16-bit (BSP_PERIPHERAL_GPT_CHANNEL_MASK 0xF6).
 // ADC12 unit 0 analog inputs (Table 1.16 ADC12 column; BSP_FEATURE_ADC_UNIT_0_CHANNELS_MASK 0x31FF).
 export const RA_ADC_CHANNELS=Object.freeze({P000:0,P001:1,P002:2,P003:3,P004:4,P005:5,P006:6,P007:7,P008:8,P014:12,P015:13});
 export const RA_GPT_CHANNELS=Object.freeze([1,2,4,5,6,7]);
+// IIC0/1 (RIIC, BSP_PERIPHERAL_IIC_CHANNEL_MASK 0x3; Fast-mode Plus on IIC0 only).
+export const RA_IIC_CHANNELS=Object.freeze([0,1]);
+export const RA_IIC_RATES=Object.freeze({STANDARD:100000,FAST:400000,FASTPLUS:1000000});
+/** RIIC bit-rate settings (ICMR1.CKS, ICBRH, ICBRL) for a rate, 50 % duty with 120 ns rise and fall, as RASC computes them. */
+export function raIicClock(pclkb,rate){
+ const hz=RA_IIC_RATES[rate]??rate;
+ for(let cks=0;cks<8;cks++){const ref=pclkb/2**cks,counts=Math.round((1/hz-240e-9)*ref)-2;if(counts<=62&&counts>=2){const brl=Math.ceil(counts/2),brh=counts-brl;return {cks,brh,brl,actual:1/((brh+brl+2)/ref+240e-9),duty:(brh+1)/(brh+brl+2)*100};}}
+ throw new Error(`I²C ${hz} Hz: PCLKB ${pclkb/1e6} MHz로 만들 수 없는 속도입니다.`);
+}
 // AGT0-5 (16-bit, BSP_PERIPHERAL_AGT_CHANNEL_MASK 0x3F): periodic timers counting PCLKB /1, /2, /8 or LOCO (32.768 kHz) /1-/128.
 export const RA_AGT_CHANNELS=Object.freeze([0,1,2,3,4,5]);
 const LOCO_HZ=32768;
@@ -187,6 +200,17 @@ function validateAdc(p,pins){
  if(q.enabled&&!Object.entries(pins).some(([pin,x])=>x.function==='Analog'&&RA_ADC_CHANNELS[pin]!=null))throw new Error('ADC0: 아날로그 입력 핀(AN000~AN008, AN012, AN013)을 Analog로 정하세요.');
  return q;
 }
+function validateIic(id,ch,p,fam,clock,signals){
+ if(!RA_IIC_CHANNELS.includes(ch)||!p||typeof p.enabled!=='boolean')throw new Error(`${id}: 지원하지 않는 주변장치입니다.`);
+ const q={enabled:p.enabled,rate:p.rate??'STANDARD',slave:p.slave??0x50,callback:p.callback??`i2c_master${ch}_callback`,priority:p.priority??12};
+ if(!Object.hasOwn(RA_IIC_RATES,q.rate)||q.rate==='FASTPLUS'&&ch!==0)throw new Error(`${id}: 속도는 Standard(100 kHz)·Fast(400 kHz)${ch===0?'·Fast-mode Plus(1 MHz)':''}입니다.`);
+ if(!Number.isInteger(q.slave)||q.slave<0||q.slave>0x7f)throw new Error(`${id}: 슬레이브 주소는 7비트(0x00~0x7F)입니다.`);
+ if(typeof q.callback!=='string'||!C_NAME.test(q.callback))throw new Error(`${id}: 콜백 이름은 C 식별자로 쓰세요(r_iic_master는 콜백으로 완료를 알립니다).`);
+ if(!Number.isInteger(q.priority)||q.priority<0||q.priority>15)throw new Error(`${id}: 인터럽트 우선순위는 0~15입니다.`);
+ raIicClock(raClockHz({family:fam.id,clock},'pclkb'),q.rate);
+ if(q.enabled&&(!signals.has(id+'_SCL')||!signals.has(id+'_SDA')))throw new Error(`${id}: SCL과 SDA 핀을 모두 정하세요.`);
+ return q;
+}
 function validateAgt(id,ch,p,fam,clock){
  if(!RA_AGT_CHANNELS.includes(ch)||!p||typeof p.enabled!=='boolean')throw new Error(`${id}: 지원하지 않는 주변장치입니다.`);
  const q={enabled:p.enabled,period:p.period??100,unit:p.unit??'ms',callback:p.callback??`agt${ch}_callback`,priority:p.priority??12};
@@ -212,6 +236,7 @@ function validateGpt(id,ch,p,fam,clock,signals){
 export function raPsel(signal){
  const sci=/^SCI(\d)_/.exec(signal);if(sci)return [0,2,4].includes(Number(sci[1]))?4:5;
  if(/^GPT\d_GTIOC[AB]$/.test(signal))return 3;
+ if(/^IIC\d_(SCL|SDA)$/.test(signal))return 7;
  throw new Error(`${signal}: 지원하지 않는 주변장치 신호입니다.`);
 }
-export const RA_PSEL_NAMES=Object.freeze({3:'IOPORT_PERIPHERAL_GPT1',4:'IOPORT_PERIPHERAL_SCI0_2_4_6_8',5:'IOPORT_PERIPHERAL_SCI1_3_5_7_9'});
+export const RA_PSEL_NAMES=Object.freeze({3:'IOPORT_PERIPHERAL_GPT1',7:'IOPORT_PERIPHERAL_IIC',4:'IOPORT_PERIPHERAL_SCI0_2_4_6_8',5:'IOPORT_PERIPHERAL_SCI1_3_5_7_9'});
