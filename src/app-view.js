@@ -38,8 +38,8 @@ export function refresh({preserveWires=false}={}){
  updateSimulationSvg(svg,state.project,state.result,state.pressed);
  $('endpoint-layer').innerHTML=renderEndpoints(state.project,state.pending);
  renderConnections();renderIssues(true);
- $('builtin-led').setAttribute('fill',state.result&&state.result.voltage('signal:PA5')>1.8?'#64e66b':'#89a486');
- $('builtin-led').style.filter=state.result&&state.result.voltage('signal:PA5')>1.8?'drop-shadow(0 0 5px #59dc65)':'';
+ // On-board LEDs: LD2 (PA5) on the NUCLEO boards, LED1 (P408) / LED2 (P407) on the FPB-RA6E1.
+ for(const [id,pin]of [['builtin-led','PA5'],['board-led-LED1','P408'],['board-led-LED2','P407']]){const el=document.getElementById(id);if(!el)continue;const on=!!state.result&&state.result.voltage('signal:'+pin)>1.8;el.setAttribute('fill',on?'#64e66b':'#89a486');el.style.filter=on?'drop-shadow(0 0 5px #59dc65)':'';}
  $('tool-select')?.classList.toggle('active',state.mode==='select');
  document.querySelectorAll('[data-add]').forEach(b=>{b.classList.toggle('active',state.mode===b.dataset.add);b.disabled=running();if(b.dataset.add==='board')b.querySelector('b').textContent=state.project.surfaces?.board?.hidden?'+':'✓';});
  $('undo').disabled=running()||!state.undoStack.length;$('redo').disabled=running()||!state.redoStack.length;$('delete').disabled=running()||!['part','wire','group','surface'].includes(state.selection?.type);

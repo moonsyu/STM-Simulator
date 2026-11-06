@@ -1,6 +1,7 @@
 import {terminalKeys,terminalLabel,nominalTerminals,attachments,rotatePoint} from './components.js';
 import {BOARD,BB,FULL_BB,scaleXOf,scaleYOf,partVector,surfacePoint} from './geometry.js';
 import {devboardPins,devboardPinInfo} from './devboards.js';
+import {RA6E1_PORTS} from './ra-config.js';
 export {BOARD,BB,FULL_BB} from './geometry.js';
 // MB1136, UM1724 Rev 17, Figure 24 / Tables 19 and 29.
 // Solder bridges as delivered: A4/A5 on PC1/PC0, and the open bridges below (OPEN_BRIDGES). Changing them is not modeled.
@@ -37,7 +38,23 @@ header('CN9',['D7','D6','D5','D4','D3','D2','D1','D0'].map(k=>[k,ALIASES[k]]),hx
 // is `NC`; `mcu` names the MCU pin behind the open bridge.
 export const OPEN_BRIDGES=Object.freeze({'board:CN9:1':'SB62','board:CN10:37':'SB62','board:CN9:2':'SB63','board:CN10:35':'SB63','board:CN7:25':'SB49','board:CN7:27':'SB48','board:CN7:29':'SB55'});
 const bridged=p=>OPEN_BRIDGES[p.id]?Object.freeze({...p,signal:'NC',mcu:p.signal,bridge:OPEN_BRIDGES[p.id]}):p;
-export const PINS = Object.freeze(headers.map(bridged));
+const NUCLEO_PINS = Object.freeze(headers.map(bridged));
+// FPB-RA6E1 (R20UT4960EG0100 Table 7, Quick Start Guide Figure 2), drawn upright with the USB at the bottom on its real
+// 55 x 95 mm outline: power J2 and analog J6 on the left, digital J5 (D0-D7) and J1 (D8-D15) on the right, at the Arduino
+// Uno R3 spacing (rows 48.26 mm apart, 160 mil between D7 and D8). Positions are mm from the board's top-left corner.
+const FPB_PINS=(()=>{
+  const out=[],add=(name,x,rows)=>rows.forEach(([number,label,signal,y])=>out.push(Object.freeze({id:`board:${name}:${number}`,header:name,number,label,signal:signal??label,x:BOARD.x+x*MM,y:BOARD.y+y*MM})));
+  const p=2.54,left=3.3,right=left+48.26,d0=63.2;
+  add('J2',left,[[1,'NC','NC'],[2,'IOREF','3V3'],[3,'RESET','RESET'],[4,'3V3','3V3'],[5,'5V','5V'],[6,'GND','GND'],[7,'GND','GND'],[8,'VIN','NC']].map((r,i)=>[...r,d0-2*p-p*(7-i)]));
+  add('J6',left,[['A0','P000'],['A1','P001'],['A2','P002'],['A3','P003'],['A4','P004'],['A5','P008']].map((r,i)=>[i+1,...r,d0-p*(5-i)]));
+  add('J5',right,[['D0','P110'],['D1','P109'],['D2','P409'],['D3','P104'],['D4','P107'],['D5','P105'],['D6','P303'],['D7','P113']].map((r,i)=>[i+1,...r,d0-p*i]));
+  add('J1',right,[['D8','P402'],['D9','P302'],['D10','P103'],['D11','P101'],['D12','P100'],['D13','P102'],['GND','GND'],['AREF','AREF'],['D14','P401'],['D15','P400']].map((r,i)=>[i+1,...r,d0-7*p-4.064-p*i]));
+  return Object.freeze(out);
+})();
+// The board outline (BOARD.w/h) of each board; the active board's is applied by setActiveBoard.
+const BOARD_SIZES={'fpb-ra6e1':{w:55*MM,h:95*MM}},NUCLEO_SIZE={w:BOARD.w,h:BOARD.h};
+// The active board's header pins (modules that import PINS see the board being edited).
+export const PINS = [...NUCLEO_PINS];
 /** What a header pin behind an open solder bridge is, for tooltips and the pin's notes. */
 export const bridgeNote=p=>p?.bridge?`${p.bridge} 열림(기본) — ${p.mcu}에 연결되지 않음${['PA2','PA3'].includes(p.mcu)?' (ST-LINK 가상 COM 포트 전용)':['PC14','PC15'].includes(p.mcu)?' (32.768 kHz 수정 X2)':' (ST-LINK 8 MHz MCO 입력)'}`:'';
 // NUCLEO-F103RB uses the same MB1136 board; UM1724 table 29 lists CN7-29/31 as PD0/PD1 (no port H on the F103)
@@ -46,18 +63,26 @@ const BOARD_SIGNALS={'nucleo-f103rb':{'board:CN7:29':'PD0','board:CN7:31':'PD1',
 const boardPinCache=new Map();
 /** Header pins of a board: the F446RE layout with that board's signal differences applied. */
 export function boardPins(boardId){
-  const over=BOARD_SIGNALS[boardId];if(!over)return PINS;
+  if(boardId==='fpb-ra6e1')return FPB_PINS;
+  const over=BOARD_SIGNALS[boardId];if(!over)return NUCLEO_PINS;
   if(!boardPinCache.has(boardId))boardPinCache.set(boardId,Object.freeze(headers.map(p=>bridged(over[p.id]?{...p,label:over[p.id],signal:over[p.id]}:p))));
   return boardPinCache.get(boardId);
 }
-export const PIN_BY_ID = new Map(PINS.map(p=>[p.id,p]));
+// Every board's pins (ids differ between NUCLEO and FPB layouts; NUCLEO variants are overwritten by setActiveBoard).
+export const PIN_BY_ID = new Map([...FPB_PINS,...NUCLEO_PINS].map(p=>[p.id,p]));
 // Header pins of the board being edited: labels, the NC check and pin search follow it (NUCLEO-F103RB: PD0/PD1, PB11).
-let activePins=PINS;
-export function setActiveBoard(boardId){const pins=boardPins(boardId);if(pins===activePins)return;activePins=pins;for(const p of pins)PIN_BY_ID.set(p.id,p);}
+let activePins=NUCLEO_PINS;
+export function setActiveBoard(boardId){
+  const pins=boardPins(boardId);if(pins===activePins)return;activePins=pins;for(const p of pins)PIN_BY_ID.set(p.id,p);
+  PINS.splice(0,PINS.length,...pins);Object.assign(BOARD,BOARD_SIZES[boardId]??NUCLEO_SIZE);
+  GPIO_PINS.splice(0,GPIO_PINS.length,...gpioOf(pins));
+}
+export const boardSize=boardId=>BOARD_SIZES[boardId]??NUCLEO_SIZE;
 // MCU pins, including those behind an open solder bridge (the program still uses PA2/PA3 for the VCP).
-export const GPIO_PINS = [...new Set(PINS.map(p=>p.mcu??p.signal).filter(s=>/^P[A-H]\d+$/.test(s)))].sort();
+const gpioOf=pins=>[...new Set(pins.map(p=>p.mcu??p.signal).filter(s=>/^P[A-H]\d+$|^P\d{3}$/.test(s)))].sort();
+export const GPIO_PINS = gpioOf(NUCLEO_PINS);
 /** Every GPIO name on any supported board (pin names the C runtime and circuit engine accept). */
-export const ALL_GPIO_PINS = [...new Set([...GPIO_PINS,...Object.values(BOARD_SIGNALS).flatMap(o=>Object.values(o))])].sort();
+export const ALL_GPIO_PINS = [...new Set([...GPIO_PINS,...Object.values(BOARD_SIGNALS).flatMap(o=>Object.values(o)),...RA6E1_PORTS])].sort();
 export const HOLES = [];
 const letters='abcdefghij';
 for(let row=1;row<=30;row++)for(let c=0;c<10;c++) {

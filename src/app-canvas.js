@@ -112,7 +112,7 @@ export function onSvgPointerdown(e){
    if(onboard?.dataset.button.endsWith('.RESET')){resetBoard(onboard.dataset.button.slice(0,-6));return;}
    const id=onboard?.dataset.button||part?.dataset.part,p=state.project.components.find(p=>p.id===id);
    if((p?.type==='slide'||CATALOG_BY_TYPE[p?.type]?.family==='slide')&&!target.closest('[data-endpoint]')){checkpoint();p.position=(p.position+1)%(CATALOG_BY_TYPE[p.type]?.id.includes('dp3t')?3:2);state.selection={type:'part',id:p.id};inspectTab();recompute();autosave();refresh();return;}
-   if(id==='USER'||id.endsWith('.USER')||p?.type==='button'||CATALOG_BY_TYPE[p?.type]?.family==='button'){state.pressed[id]=true;state.drag={type:'press',id};svg.setPointerCapture(e.pointerId);recompute();refresh();return;}
+   if(id==='USER'||id==='SW1'||id.endsWith('.USER')||p?.type==='button'||CATALOG_BY_TYPE[p?.type]?.family==='button'){state.pressed[id]=true;state.drag={type:'press',id};svg.setPointerCapture(e.pointerId);recompute();refresh();return;}
  }
  if(state.carry&&e.button===0){
    const c=state.carry,q=point(e),hit=target.closest('[data-wire-end]');

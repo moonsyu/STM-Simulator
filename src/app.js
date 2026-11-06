@@ -33,6 +33,7 @@ export const HAL_EXAMPLES=allHalExamples(),HAL_GUIDES=allHalGuides();
 import {createShell} from './shell.js';
 import {setupUpdateLog} from './update-log-ui.js';
 import {setupLogicAnalyzer} from './logic-analyzer.js';
+import {RaPinoutPanel} from './ra-pinout-ui.js';
 import {setupVariableGraph} from './variable-graph-ui.js';
 import {mountIdeChrome,setupIde} from './ide-ui.js';
 import {setupUpdates} from './update-ui.js';
@@ -75,6 +76,7 @@ export const monitor=new Monitor({getSession:()=>state.session,isRunning:()=>run
 export const SOURCE_KEY='stm32lab.sourceFile.v1';
 state.sourceFile=(()=>{try{return localStorage.getItem(SOURCE_KEY)||'main.c';}catch{return 'main.c';}})();state.circuitClipboard=null;state.clipboardOffset=28;state.issuesStamp=0;state.issuesKey='';
 export const pinout=new PinoutPanel({getProject:()=>state.project,isRunning:running,onError:message=>log(message,'error'),apply:({mcu,code})=>{checkpoint();state.project.mcu=mcu;if(code!==null){state.project.code=code;state.project.firmware={mode:'hal',files:[]};state.sourceFile='main.c';}syncEditor();changed();log(code===null?'핀 설정을 적용했습니다.':'설정에 맞는 HAL main.c를 생성했습니다.');}});
+pinout.ra=new RaPinoutPanel({getProject:()=>state.project,isRunning:running,onError:message=>log(message,'error'),apply:({mcu})=>{checkpoint();state.project.mcu=mcu;changed();state.ide?.invalidate?.();log('핀 설정을 적용했습니다. 다음 빌드의 ra_gen·bsp_pin_cfg.h에 반영됩니다.');}});
 export const updateBoardPicker=setupBoardPicker({getProject:()=>state.project,isRunning:running,onSelect:id=>{state.sourceFile='main.c';replaceProject(projectForBoard(id));log('선택한 보드의 기본 회로로 시작합니다.');}});
 export const editorSearch=setupEditorSearch({applyEdit:replaceCodeText,maxLength:()=>{
  const otherFiles=(state.project.firmware?.files||[]).filter(f=>f.name!==state.sourceFile).reduce((n,f)=>n+f.text.length,0);
@@ -154,7 +156,7 @@ $('source-file').onchange=e=>{if(e.target.value.startsWith('stm32:')){if(!editBo
 $('board-reset').onclick=()=>{if(running())return;$('board-reset-error').textContent='';$('board-reset-dialog').showModal();};
 $('board-reset-cancel').onclick=()=>$('board-reset-dialog').close();
 $('board-reset-confirm').onclick=onBoardResetConfirmClick;
-$('code-reset').onclick=()=>{if(running())return;$('code-reset-error').textContent='';$('code-reset-file').textContent=state.project.firmware?.mode==='hal'?'main.c':'main.ino';$('code-reset-dialog').showModal();};
+$('code-reset').onclick=()=>{if(running())return;$('code-reset-error').textContent='';$('code-reset-file').textContent=({hal:'main.c',fsp:'hal_entry.c'})[state.project.firmware?.mode]??'main.ino';$('code-reset-dialog').showModal();};
 $('code-reset-cancel').onclick=()=>$('code-reset-dialog').close();
 $('code-reset-confirm').onclick=onCodeResetConfirmClick;
 $('firmware-mode').onchange=e=>{if(running())return;checkpoint();state.project.firmware={mode:e.target.value,files:state.project.firmware?.files||[]};if(e.target.value==='hal')state.project.mcu??=defaultMcu(projectBoard(state.project).mcuFamily);syncEditor();changed();};

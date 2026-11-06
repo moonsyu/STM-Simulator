@@ -1,8 +1,10 @@
 export const DEFAULT_BOARD_ID='nucleo-f446re';
-// `mcuFamily` selects the MCU profile in mcu-family.js; both boards are the MB1136 NUCLEO-64 layout.
+// `mcuFamily` selects the MCU profile: mcu-family.js for the STM32 boards (both the MB1136 NUCLEO-64 layout), ra-config.js
+// for the Renesas RA boards (`vendor: 'renesas'`, FSP projects, emulator only).
 export const BOARD_CATALOG=Object.freeze([
  Object.freeze({id:DEFAULT_BOARD_ID,name:'NUCLEO-F446RE',mcu:'STM32F446RE',mcuFamily:'STM32F446RE',family:'STM32F4',chip:'F4',core:'Cortex-M4',description:'Cortex-M4 · 180 MHz · 512 KB · 3.3 V · Arduino / Morpho'}),
- Object.freeze({id:'nucleo-f103rb',name:'NUCLEO-F103RB',mcu:'STM32F103RB',mcuFamily:'STM32F103RB',family:'STM32F1',chip:'F1',core:'Cortex-M3',description:'Cortex-M3 · 72 MHz · 128 KB · 3.3 V · Arduino / Morpho'})
+ Object.freeze({id:'nucleo-f103rb',name:'NUCLEO-F103RB',mcu:'STM32F103RB',mcuFamily:'STM32F103RB',family:'STM32F1',chip:'F1',core:'Cortex-M3',description:'Cortex-M3 · 72 MHz · 128 KB · 3.3 V · Arduino / Morpho'}),
+ Object.freeze({id:'fpb-ra6e1',name:'FPB-RA6E1',mcu:'R7FA6E10F2CFP',mcuFamily:'R7FA6E10F',family:'RA6E1',chip:'RA6E1',core:'Cortex-M33',vendor:'renesas',description:'Renesas RA6E1 · Cortex-M33 · 200 MHz · 1 MB · 3.3 V · Arduino / Pmod'})
 ]);
 const normalize=value=>String(value).normalize('NFKC').toLowerCase().replace(/[\s_-]+/g,'');
 export const getBoard=id=>BOARD_CATALOG.find(board=>board.id===id);

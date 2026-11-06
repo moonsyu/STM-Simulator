@@ -19,6 +19,7 @@ function button(x,y,color,id,label){return `<g data-button="${id}" class="board-
 // Both supported boards are the MB1136 NUCLEO-64; only the MCU label and a few header signals differ.
 export function boardSvg(boardId=DEFAULT_BOARD_ID,{prefix=''}={}){
  const board=getBoard(boardId)??getBoard(DEFAULT_BOARD_ID);
+ if(board.id==='fpb-ra6e1')return fpbBoardSvg(board,prefix);
  // The board art was drawn on a 440 × 532 frame; it is scaled onto the real 70 × 82.5 mm outline (BOARD). Headers and
 // pins below are placed at their exact positions (pins.js), not scaled with the art.
  const kx=BOARD.w/440,ky=BOARD.h/532;
@@ -42,10 +43,46 @@ export function boardSvg(boardId=DEFAULT_BOARD_ID,{prefix=''}={}){
  s+='</g>';
  // Header wells are computed from the exact same pin list as interaction and simulation.
  for(const name of ['CN7','CN10','CN6','CN8','CN5','CN9']){
-   const group=PINS.filter(p=>p.header===name),xs=group.map(p=>p.x),ys=group.map(p=>p.y);const x=Math.min(...xs),y=Math.min(...ys),w=Math.max(...xs)-x+14,h=Math.max(...ys)-y+14;
+   const group=boardPins(board.id).filter(p=>p.header===name),xs=group.map(p=>p.x),ys=group.map(p=>p.y);const x=Math.min(...xs),y=Math.min(...ys),w=Math.max(...xs)-x+14,h=Math.max(...ys)-y+14;
    s+=rect(x-7,y-7,w,h,'#242a2c',1,'stroke="#101819" stroke-width="1"')+rect(x-5.5,y-5.5,w-3,h-3,'none',.5,'stroke="#414a49" stroke-width=".7"')+text(name==='CN7'?x-3:name==='CN10'?x-2:x,y-13,name,7,'#47615e');
  }
  for(const p of boardPins(board.id)){const morph=['CN7','CN10'].includes(p.header);s+=rect(p.x-3.4,p.y-3.4,6.8,6.8,morph?'#b69450':'#535c59',.6,'stroke="#111b1a" stroke-width=".5"')+rect(p.x-2.1,p.y-2.1,4.2,4.2,morph?'#e0c47c':'#101a19',.2);if(morph)s+=rect(p.x-1.5,p.y-1.5,1.3,1.3,'#f6e5a9',0);if(!morph)s+=text(p.x+(p.x<250?12:-12),p.y+3,p.label,8,'#3f625e',`text-anchor="${p.x<250?'start':'end'}"`);}
+ return s+'</g>';
+}
+
+// FPB-RA6E1 (Renesas, 55 x 95 mm), upright with the USB at the bottom as in its Quick Start Guide Figure 2: blue PCB,
+// RA6E1 LQFP100 at 45°, SEGGER J-Link OB, the Arduino headers (J1/J2/J5/J6, fitted), the unfitted J3/J4 breakout rows
+// and Pmod 1/2 footprints, S1 (SW1, P205) and S2 (RESET), LED1 (P408) and LED2 (P407).
+function fpbBoardSvg(board,prefix){
+ const MM=14/2.54,X=mm=>BOARD.x+mm*MM,Y=mm=>BOARD.y+mm*MM,W=55*MM,H=95*MM;
+ let s=`<g class="${prefix?'stm32-board':'board'}" data-board="${board.id}">`;
+ s+=rect(BOARD.x,BOARD.y,W,H,'#1d5aa6',10,'stroke="#123d73" stroke-width="2" filter="url(#shadow)" class="board-pcb"');
+ s+=rect(BOARD.x+5,BOARD.y+5,W-10,H-10,'none',7,'stroke="#3f7cc4" stroke-width="1"');
+ for(const [x,y]of [[2.6,2.6],[52.4,2.6],[2.6,92.4],[52.4,92.4]])s+=`<circle cx="${X(x)}" cy="${Y(y)}" r="8" fill="#e8edf2" stroke="#9fb4cc"/>`;
+ // Pmod 1 / Pmod 2 footprints (not fitted) along the top edge.
+ for(const [x,label]of [[6,'PMOD1'],[34,'PMOD2']]){for(let i=0;i<12;i++)s+=`<circle cx="${X(x+(i%6)*2.54)}" cy="${Y(4+Math.floor(i/6)*2.54)}" r="3.2" fill="#d9c27a" stroke="#8c7738"/>`;s+=text(X(x),Y(10.4),label,7,'#cfe0f5');}
+ // J3 / J4 MCU breakout through-holes (2 x 25, not fitted) inside the Arduino rows.
+ for(const x0 of [7.6,44.2])for(let i=0;i<50;i++)s+=`<circle cx="${X(x0+(i%2)*2.54)}" cy="${Y(14+Math.floor(i/2)*2.54)}" r="2.6" fill="#c9b56e" stroke="#7d6a30" stroke-width=".6"/>`;
+ s+=text(X(7.2),Y(13),'J3',6.5,'#cfe0f5')+text(X(44),Y(13),'J4',6.5,'#cfe0f5');
+ // RA6E1 (R7FA6E10F2CFP, LQFP100 14 x 14 mm) at 45°.
+ const cx=X(26.5),cy=Y(36),half=7*MM;
+ s+=`<g transform="rotate(45 ${cx} ${cy})">`;for(let i=0;i<25;i++){const d=-half+(i+.5)*(2*half/25);s+=rect(cx+d-1,cy-half-6,2,6,'#c3c9cc')+rect(cx+d-1,cy+half,2,6,'#c3c9cc')+rect(cx-half-6,cy+d-1,6,2,'#c3c9cc')+rect(cx+half,cy+d-1,6,2,'#c3c9cc');}
+ s+=rect(cx-half,cy-half,2*half,2*half,'#222628',3,'stroke="#0d1011" stroke-width="1.5"')+`<circle cx="${cx-half+9}" cy="${cy-half+9}" r="3" fill="#3a4044"/>`+'</g>';
+ s+=text(cx,cy-4,'RA6E1',8,'#c9d0d4','text-anchor="middle"')+text(cx,cy+8,'Cortex-M33',5.5,'#8f979b','text-anchor="middle"');
+ s+=text(X(19),Y(52.5),'FPB-RA6E1',13,'#e7f0fb','font-weight="600"')+text(X(19),Y(55.8),'RTK7FPA6E1S00001BE',5.5,'#bcd2ee')+text(X(19),Y(60.5),'RENESAS',12,'#ffffff','font-weight="700" letter-spacing="1"');
+ // SEGGER J-Link OB and the micro-B USB J9 (debug / power).
+ s+=rect(X(30),Y(70),9*MM,9*MM,'#26292b',2,'stroke="#0d1011"')+text(X(34.5),Y(80.8),'SEGGER J-Link OB',5,'#cfe0f5','text-anchor="middle"');
+ s+=rect(X(38),Y(86),10*MM,8.4*MM,'#c7cdcc',2,'stroke="#7e8b8a" stroke-width="1.2"')+rect(X(39.2),Y(87.2),7.6*MM,5*MM,'#353e40',1.5)+text(X(43),Y(85.2),'J9 USB · DEBUG/POWER',5,'#cfe0f5','text-anchor="middle"');
+ s+=`<circle cx="${X(36)}" cy="${Y(84)}" r="3.2" fill="#d8a420" stroke="#8d6a10"/>`;
+ // S2 (RESET) and S1 (user switch, P205), LED1 (P408) and LED2 (P407).
+ s+=button(X(9),Y(88),'#3d86c8',prefix+'SW1','S1 · P205')+button(X(18.5),Y(88),'#3d86c8',prefix+'RESET','S2 RESET');
+ for(const [id,y,pin]of [['LED1',68.6,'P408'],['LED2',71.6,'P407']])s+=rect(X(1.8),Y(y)-4,9,8,'#e6ece8',1.5,'stroke="#8fa19a"')+`<circle ${prefix?`class="stm32-led" data-led="${id}"`:`id="board-led-${id}"`} cx="${X(1.8)+4.5}" cy="${Y(y)}" r="3.4" fill="#89a486" stroke="#6c886b"/>`+text(X(4),Y(y)+2.5,`${id} · ${pin}`,6,'#e7f0fb');
+ // Arduino Uno R3 headers (fitted): wells, pins and labels from the same pin list as wiring and simulation.
+ for(const name of ['J1','J2','J5','J6']){
+  const group=boardPins(board.id).filter(p=>p.header===name),xs=group.map(p=>p.x),ys=group.map(p=>p.y),x=Math.min(...xs),y=Math.min(...ys),w=Math.max(...xs)-x+14,h=Math.max(...ys)-y+14;
+  s+=rect(x-7,y-7,w,h,'#1b1f21',1,'stroke="#0b0f10" stroke-width="1"')+text(x-6,y-10,name,6.5,'#cfe0f5');
+ }
+ for(const p of boardPins(board.id)){const leftSide=p.x<BOARD.x+W/2;s+=rect(p.x-3.4,p.y-3.4,6.8,6.8,'#4c5457',.6,'stroke="#0b0f10" stroke-width=".5"')+rect(p.x-2.1,p.y-2.1,4.2,4.2,'#0d1314',.2)+text(p.x+(leftSide?9:-9),p.y+2.6,p.signal!==p.label&&/^P\d/.test(p.signal)?`${p.label} ${p.signal}`:p.label,6.5,'#e7f0fb',`text-anchor="${leftSide?'start':'end'}"`);}
  return s+'</g>';
 }
 const holeSvg=(h,prefix)=>rect(h.x-4,h.y-4,8,8,'#cfcbbf',.8)+`<path d="M${h.x-3.6} ${h.y+3.6}h7.2v-7.2" fill="none" stroke="#fff" stroke-width=".9"/>`+rect(h.x-2.4,h.y-2.4,4.8,4.8,'#28332f',.4,`class="hole" data-hole="${prefix+h.id}"`)+rect(h.x-1.7,h.y+1.1,3.4,.7,'#6a746d',.1,'pointer-events="none"');
@@ -164,7 +201,7 @@ export function updateSimulationSvg(svg,project,result,pressed){
    if(p.type==='button')g.querySelector('.switch-cap')?.setAttribute('fill',pressed[p.id]?'#168775':'#354857');
  }
  updateDevboardSvg(svg,project,result,!!result);
- const on=result&&!result.fault&&result.voltage('signal:PA5')>1.8,led=svg.querySelector('#builtin-led');if(led){led.setAttribute('fill',on?'#64e66b':'#89a486');led.style.filter=on?'drop-shadow(0 0 5px #59dc65)':'';}
+ for(const [id,pin]of [['#builtin-led','PA5'],['#board-led-LED1','P408'],['#board-led-LED2','P407']]){const on=result&&!result.fault&&result.voltage('signal:'+pin)>1.8,led=svg.querySelector(id);if(led){led.setAttribute('fill',on?'#64e66b':'#89a486');led.style.filter=on?'drop-shadow(0 0 5px #59dc65)':'';}}
 }
 export function lcdContent(lcd){
  if(!lcd?.visible)return text(0,-9,lcd?.powered?'LCD · INITIALIZE':'LCD 1602',12,'#687440','text-anchor="middle"')+text(0,7,lcd?.powered?'RS / E / DATA / VO':'5 V POWER',8,'#687440','text-anchor="middle"');

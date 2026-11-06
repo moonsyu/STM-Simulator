@@ -15,6 +15,8 @@ import { familyProfile } from './mcu-family.js';
 import { Machine } from './emu/machine.js';
 import { Stm32f446 } from './emu/stm32f446/soc.js';
 import { Stm32f103 } from './emu/stm32f103/soc.js';
+import { Ra6e1, RaBus } from './emu/ra6e1/soc.js';
+import { isRaFamily, RA6E1_PORTS, RA_IRQ_PINS, FPB_RA6E1 } from './ra-config.js';
 import { UartReceiver, Line } from './emu/stm32f446/signals.js';
 import { Camera, frameToRgba } from './emu/stm32f446/dcmi.js';
 import { SdCard } from './emu/stm32f446/sdcard.js';
@@ -50,15 +52,23 @@ export class FirmwareSession {
     this.cameraModel = camera ? (camera instanceof Camera ? camera : new Camera(camera === true ? {} : camera)) : null;
     this.itmLine = '';
     this.pwmMap = new Map(); this.pwmFrequency = new Map(); this.eventCount = 0;
-    this.machine = new Machine({ swv: true });
-    this.pins = familyProfile(project.mcu?.family).gpioPins;
-    const Soc = project.mcu?.family === 'STM32F103RB' ? Stm32f103 : Stm32f446;
-    this.soc = new Soc(this.machine, this.env(), { pwmWaveform: project.simulation?.pwmWaveform ?? false, noise: noise ?? project.simulation?.noise, ...(clock || {}) });
+    // A Renesas RA project runs on the RA6E1 model (its own memory map, FSP-compiled ELF); the STM32 boards on theirs.
+    this.ra = isRaFamily(project.mcu?.family);
+    this.machine = new Machine({ swv: true, ...(this.ra ? { bus: new RaBus() } : {}) });
+    this.pins = this.ra ? [...RA6E1_PORTS] : familyProfile(project.mcu?.family).gpioPins;
+    // Pins wired to parts on the board itself (switch, LEDs, I2C pull-ups) are always solved with the circuit.
+    this.boardPins = new Set(this.ra ? [FPB_RA6E1.userSwitch, ...Object.values(FPB_RA6E1.leds), ...Object.keys(FPB_RA6E1.pullups)] : ['PC13']);
+    const Soc = this.ra ? Ra6e1 : project.mcu?.family === 'STM32F103RB' ? Stm32f103 : Stm32f446;
+    this.soc = new Soc(this.machine, this.env(), { pwmWaveform: project.simulation?.pwmWaveform ?? false, noise: noise ?? project.simulation?.noise, irqPins: RA_IRQ_PINS, ...(clock || {}) });
     this.signals = this.signalsApi();
     this.machine.onItm = (port, byte) => this.itm(port, byte);
     this.elf = this.machine.loadElf(elf instanceof Uint8Array ? elf : new Uint8Array(elf));
     // The vector table size tells the STM32 startup file the ELF was linked with; an ELF for the other board would
     // fault at the first peripheral access with no hint, so say which board it is for.
+    // An FSP ELF (RA) has __flash_vectors$$ and no .isr_vector; an STM32 ELF the other way round.
+    const fspElf = !!this.elf.sectionByName?.('__flash_vectors$$') || !!this.elf.findSymbol?.('g_bsp_pin_cfg');
+    if (this.ra && !fspElf) throw new Error('이 ELF는 FPB-RA6E1(Renesas FSP)용이 아닙니다. 이 보드의 프로젝트를 ARM GCC로 빌드한 ELF를 여세요.');
+    if (!this.ra && fspElf) throw new Error('이 ELF는 FPB-RA6E1(Renesas FSP)용입니다. 프로젝트 보드를 FPB-RA6E1로 바꾸거나 STM32 보드용으로 빌드한 ELF를 여세요.');
     const vectors = this.elf.sectionByName?.('.isr_vector')?.size, family = project.mcu?.family ?? 'STM32F446RE';
     const owner = Object.entries(VECTOR_TABLE_BYTES).find(([, size]) => size === vectors)?.[0];
     if (owner && owner !== family) throw new Error(`이 ELF는 ${BOARD_OF[owner]}(${owner})용입니다. 프로젝트 보드를 ${BOARD_OF[owner]}로 바꾸거나 ${BOARD_OF[family] ?? family}용으로 빌드한 ELF를 여세요.`);
@@ -101,7 +111,7 @@ export class FirmwareSession {
     }
   }
   updateMco() {
-    if (!this.soc) return;
+    if (!this.soc?.rcc) return;
     const routed = this.soc.routedPins('MCO1').includes('PA8') && this.soc.rcc.mcoHz;
     if (routed) this.buses.clocks.set('PA8', this.soc.rcc.mcoHz); else this.buses.clocks.delete('PA8');
   }
@@ -119,7 +129,7 @@ export class FirmwareSession {
     for (const key of r.uf.parent.keys()) if (key.startsWith('part:')) roots.add(r.uf.find(key));
     for (const s of ['3V3', '5V', 'GND']) roots.add(r.uf.find('signal:' + s));
     for (const p of this.pins) { const root = r.uf.find('signal:' + p); count.set(root, (count.get(root) || 0) + 1); }
-    this.connected = new Set(this.pins.filter(p => { const root = r.uf.find('signal:' + p); return roots.has(root) || count.get(root) > 1 || p === 'PC13'; }));
+    this.connected = new Set(this.pins.filter(p => { const root = r.uf.find('signal:' + p); return roots.has(root) || count.get(root) > 1 || this.boardPins.has(p); }));
   }
   enrich(micros) {
     this.singleWire.update(this.project, this.result, micros, this.runtime);
@@ -194,8 +204,8 @@ export class FirmwareSession {
   listeners() {
     const list = [];
     const sig = this.soc.signals;
-    // ST-LINK VCP receives PA2 at the USART2 configuration.
-    list.push(new UartReceiver(sig, this.soc, {
+    // ST-LINK VCP receives PA2 at the USART2 configuration (the FPB-RA6E1's J-Link OB has no virtual COM port).
+    if (!this.ra) list.push(new UartReceiver(sig, this.soc, {
       sources: () => { const l = sig.lines.get('PA2'); return l ? [l] : []; },
       config: () => { const u = this.soc.usarts.USART2, b = u.baud(); return b && u.txEnabled() ? { baud: b, dataBits: u.frameBits(), parity: u.parity(), stopBits: u.stopBits() } : null; },
       onFrame: f => { const v = f.value & 0xff; this.buses.vcpOutput = ((this.buses.vcpOutput || '') + String.fromCharCode(v)).slice(-512); this.buses.uart.baud = Math.round(this.soc.usarts.USART2.baud()); this.buses.uart.ready = true; this.buses.uart.instance = 'USART2'; },

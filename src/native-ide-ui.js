@@ -4,7 +4,7 @@ import {sourceFiles} from './source-files.js';
 import {devboardModel,boardForFile,boardFileKey} from './devboards.js';
 import {$} from './common.js';
 import {projectBoard} from './boards.js';
-const TOOL_LABELS={armGcc:'ARM GCC · arm-none-eabi-gcc.exe',armGdb:'ARM GDB · arm-none-eabi-gdb.exe',cube:'STM32CubeF4 SDK 폴더 · NUCLEO-F446RE',cubeF1:'STM32CubeF1 SDK 폴더 · NUCLEO-F103RB',hostGcc:'Windows GCC · gcc.exe',hostGdb:'Windows GDB · gdb.exe',clangd:'C/C++ 언어 서버 · clangd.exe',openocd:'ST-LINK 서버 · openocd.exe',arduinoCli:'ESP32 빌드·업로드 · arduino-cli.exe (Arduino IDE 2에 포함)',buildRoot:'빌드 작업 폴더 · 영문 경로 (선택)'};
+const TOOL_LABELS={armGcc:'ARM GCC · arm-none-eabi-gcc.exe',armGdb:'ARM GDB · arm-none-eabi-gdb.exe',cube:'STM32CubeF4 SDK 폴더 · NUCLEO-F446RE',cubeF1:'STM32CubeF1 SDK 폴더 · NUCLEO-F103RB',fsp:'Renesas FSP 폴더 · FPB-RA6E1',hostGcc:'Windows GCC · gcc.exe',hostGdb:'Windows GDB · gdb.exe',clangd:'C/C++ 언어 서버 · clangd.exe',openocd:'ST-LINK 서버 · openocd.exe',arduinoCli:'ESP32 빌드·업로드 · arduino-cli.exe (Arduino IDE 2에 포함)',buildRoot:'빌드 작업 폴더 · 영문 경로 (선택)'};
 export function mountNativeChrome(){
  document.querySelector('.ide-toolbar').insertAdjacentHTML('afterbegin','<label class="native-target-label">실행 대상<select id="native-target" aria-label="실행 대상"><option value="simulator">시뮬레이터</option><option value="emulator">펌웨어 에뮬레이터</option><option value="arm" data-board-placeholder>실물 보드 (연결 안 됨)</option><option value="esp32">ESP32 보드 (연결 안 됨)</option><option value="host">Windows · C/C++</option></select></label><select id="native-config" aria-label="빌드 구성"><option>Release</option><option>Debug</option></select><select id="sim-engine" aria-label="시뮬레이터 실행 방식" title="ARM GCC 빌드: 실물 보드와 같은 컴파일러·헤더·C 라이브러리로 빌드해 회로에서 실행 · 내장 해석기: 빠르지만 지원하는 헤더와 함수만"><option value="gcc">ARM GCC 빌드</option><option value="interpreter">내장 해석기</option></select>');
  document.querySelector('.ide-toolbar').insertAdjacentHTML('beforeend','<button id="native-tools">개발 도구</button><button id="native-connection" hidden>보드 연결</button>');
@@ -26,7 +26,9 @@ export function setupNativeIde({o,editor,select,showMonitor,points,watches,toggl
  // interpreter; it also runs sketches and FatFs programs (the installed tools have no FatFs).
  const ENGINE_KEY='stm32lab.simEngine',FATFS=/#\s*include\s*[<"](?:ff|fatfs|ff_gen_drv|diskio|sd_diskio|user_diskio|bsp_driver_sd|fatfs_platform)\.h[>"]/;
  const engine=()=>{try{return localStorage.getItem(ENGINE_KEY)==='interpreter'?'interpreter':'gcc';}catch{return 'gcc';}},setEngine=value=>{try{localStorage.setItem(ENGINE_KEY,value);}catch{}};
- function gccSimulation(){if(!api||$('native-target').value!=='simulator'||engine()!=='gcc')return false;const p=o.getProject();return p.firmware?.mode==='hal'&&![p.code||'',...(p.firmware.files||[]).map(f=>f.text)].some(text=>FATFS.test(text));}
+ // An FSP project (Renesas RA) always runs as an ARM GCC build on the emulator: there is no interpreter for FSP.
+ const fspProject=()=>o.getProject().firmware?.mode==='fsp';
+ function gccSimulation(){if(!api||$('native-target').value!=='simulator')return false;if(fspProject())return true;if(engine()!=='gcc')return false;const p=o.getProject();return p.firmware?.mode==='hal'&&![p.code||'',...(p.firmware.files||[]).map(f=>f.text)].some(text=>FATFS.test(text));}
  const emulator=()=>$('native-target').value==='emulator'||gccSimulation();
  const selected=()=>!['simulator','emulator'].includes($('native-target').value),config=()=>({target:$('native-target').value,configuration:$('native-config').value}),text=()=>JSON.stringify(o.getProject());
  const busy=()=>working||building||['starting','running','paused','finishing'].includes(state);
@@ -40,7 +42,7 @@ export function setupNativeIde({o,editor,select,showMonitor,points,watches,toggl
  async function guard(task){try{return await task();}catch(e){report(e);return null;}}
  function control(){
   const native=selected(),locked=busy(),paused=state==='paused';
-  $('sim-engine').hidden=!api||$('native-target').value!=='simulator';$('sim-engine').value=engine();$('sim-engine').disabled=locked||o.isSimulationRunning();
+  $('sim-engine').hidden=!api||$('native-target').value!=='simulator'||fspProject();$('sim-engine').value=engine();$('sim-engine').disabled=locked||o.isSimulationRunning();
   $('native-config').hidden=!native&&!emulator()||esp32();$('native-connection').hidden=config().target!=='arm';$('native-build-actions').hidden=!native;$('native-debug-details').hidden=!native&&!emulator()||esp32();
   document.querySelector('.firmware-tools').hidden=native&&['host','esp32'].includes(config().target);
   $('sound').hidden=$('step').hidden=native;
@@ -170,15 +172,17 @@ export function setupNativeIde({o,editor,select,showMonitor,points,watches,toggl
  // offered for installation (the run goes on afterwards), or the run uses the built-in interpreter from now on.
  // Resolves 'ready', 'interpreter' or 'cancel'.
  async function ensureSimTools(){
-  const sdk=o.getProject().mcu?.family==='STM32F103RB'?'cubeF1':'cube',need=(await api['install-plan']()).filter(i=>i.id==='gcc'||i.id===sdk);
+  const family=o.getProject().mcu?.family,sdk=fspProject()?'fsp':family==='STM32F103RB'?'cubeF1':'cube',need=(await api['install-plan']()).filter(i=>i.id==='gcc'||i.id===sdk);
   if(!need.length)return 'ready';
   plan=need;for(const key of Object.keys(progress))delete progress[key];renderPlan();
   const dialog=$('sim-tools-dialog'),buttons=['sim-tools-install','sim-tools-interpreter'].map($);
+  // FSP projects have no built-in interpreter to fall back to.
+  $('sim-tools-interpreter').hidden=fspProject();
   $('sim-tools-status').textContent=`${need.length}개 · 약 ${MB(need.reduce((n,i)=>n+i.bytes,0))}를 내려받습니다.`;buttons.forEach(b=>b.disabled=false);$('sim-tools-cancel').textContent='취소';
   return new Promise(resolve=>{
    const finish=value=>{dialog.close();resolve(value);};
    $('sim-tools-install').onclick=()=>guard(async()=>{installing=true;buttons.forEach(b=>b.disabled=true);$('sim-tools-cancel').textContent='설치 중지';$('sim-tools-status').textContent='설치 중입니다. 끝나면 바로 실행합니다.';
-    try{await api['install-tools'](need.map(i=>i.id));o.log('시뮬레이터용 ARM GCC와 STM32Cube SDK를 설치했습니다.');finish('ready');}
+    try{await api['install-tools'](need.map(i=>i.id));o.log(sdk==='fsp'?'시뮬레이터용 ARM GCC와 Renesas FSP를 설치했습니다.':'시뮬레이터용 ARM GCC와 STM32Cube SDK를 설치했습니다.');finish('ready');}
     catch(error){buttons.forEach(b=>b.disabled=false);$('sim-tools-status').textContent='설치하지 못했습니다: '+error.message;}finally{installing=false;$('sim-tools-cancel').textContent='취소';}});
    $('sim-tools-interpreter').onclick=()=>{setEngine('interpreter');change();o.log('시뮬레이터는 내장 C 해석기로 실행합니다. 실행 및 디버그의 시뮬레이터 실행 방식에서 ARM GCC 빌드로 다시 바꿀 수 있습니다.');finish('interpreter');};
    $('sim-tools-cancel').onclick=()=>{if(installing)void guard(()=>api['install-cancel']());else finish('cancel');};
@@ -207,9 +211,9 @@ export function setupNativeIde({o,editor,select,showMonitor,points,watches,toggl
  async function startupCheck(){
   let choice='';try{choice=localStorage.getItem(NOTICE_KEY)||'';}catch{}
   if(choice==='never'||document.getElementById('tools-notice'))return;
-  // STM32CubeF1 matters only once an F103RB project is open.
+  // STM32CubeF1 matters only once an F103RB project is open, Renesas FSP once an RA project is.
   let family='';try{family=JSON.parse(text()).mcu?.family||'';}catch{}
-  const missing=(await api['install-plan']()).filter(i=>i.id!=='clangd'&&(i.id!=='cubeF1'||family==='STM32F103RB'));if(!missing.length)return;
+  const ra=family==='R7FA6E10F',missing=(await api['install-plan']()).filter(i=>i.id!=='clangd'&&(i.id!=='cubeF1'||family==='STM32F103RB')&&(i.id!=='fsp'||ra)&&!(ra&&['cube','cubeF1','openocd'].includes(i.id)));if(!missing.length)return;
   const box=document.createElement('section');box.id='tools-notice';box.setAttribute('role','status');
   box.innerHTML=`<p><strong>실물 보드 빌드에 필요한 도구가 없습니다.</strong><span>${missing.map(i=>i.label.split(' · ')[0]).join(', ')} · 회로 시뮬레이터는 도구 없이 사용할 수 있습니다.</span></p><div><button type="button" class="run-button" data-notice="install">설치</button><button type="button" data-notice="later">나중에</button><button type="button" data-notice="never">다시 묻지 않기</button></div>`;
   box.onclick=e=>{const action=e.target.closest('[data-notice]')?.dataset.notice;if(!action)return;box.remove();if(action==='never')try{localStorage.setItem(NOTICE_KEY,'never');}catch{}if(action==='install')void guard(()=>openTools(true));};

@@ -1,0 +1,58 @@
+import {$,esc} from './common.js';
+import {RA6E1_PORTS,RA_IRQ_PINS,RA_RESERVED,FPB_RA6E1,validateRaMcu,raDefaultMcu} from './ra-config.js';
+// Pin settings of a Renesas RA project (FPB-RA6E1), as the RA Smart Configurator's Pins tab sets them: per port pin the
+// mode (output / input / IRQ / analog), the symbolic name RASC writes into bsp_pin_cfg.h, output level and drive, the
+// pull-up, and for IRQ pins the trigger, priority and callback that the generated g_external_irqN instance uses.
+const MODES=[['','사용 안 함'],['GPIO_Output','Output (출력)'],['GPIO_Input','Input (입력)'],['IRQ','IRQ (외부 인터럽트)'],['Analog','Analog (아날로그)']];
+const ARDUINO_OF=Object.fromEntries(Object.entries(FPB_RA6E1.arduino).map(([k,v])=>[v,k]));
+const NOTES={P408:'LED1 (녹색, 보드 내장)',P407:'LED2 (녹색, 보드 내장)',P205:'S1 사용자 스위치 (보드 내장, 누르면 LOW)',P400:'Arduino SCL · 2.2 kΩ 풀업 (보드)',P401:'Arduino SDA · 2.2 kΩ 풀업 (보드)'};
+
+export class RaPinoutPanel {
+ constructor({getProject,apply,isRunning,onError}){
+  Object.assign(this,{getProject,apply,isRunning,onError});this.pin='P408';
+  document.body.insertAdjacentHTML('beforeend',`<dialog id="ra-pinout-dialog" class="ra-pinout" aria-labelledby="ra-pinout-title"><div class="ra-pinout-head"><h2 id="ra-pinout-title">FPB-RA6E1 · Pins</h2><span class="form-hint">R7FA6E10F2CFP · LQFP100 · RA Smart Configurator의 Pins 탭과 같은 설정입니다. 적용하면 다음 빌드의 ra_gen(pin_data.c, hal_data.c, vector_data.c)과 bsp_pin_cfg.h에 반영됩니다.</span></div>
+<div class="ra-pinout-body"><div id="ra-pin-grid" class="ra-pin-grid" role="listbox" aria-label="핀 목록"></div><section id="ra-pin-props" class="ra-pin-props" aria-live="polite"></section></div>
+<p id="ra-pinout-error" class="form-error" role="alert"></p><div class="dialog-actions"><button type="button" id="ra-pinout-reset">보드 기본값</button><button type="button" id="ra-pinout-close">닫기</button><button type="button" id="ra-pinout-apply" class="run-button">적용</button></div></dialog>`);
+  $('ra-pinout-close').onclick=()=>$('ra-pinout-dialog').close();
+  $('ra-pinout-apply').onclick=()=>this.commit();
+  $('ra-pinout-reset').onclick=()=>{this.draft=raDefaultMcu(this.draft.family);this.render();};
+  $('ra-pin-grid').onclick=e=>{const b=e.target.closest('[data-ra-pin]');if(b){this.pin=b.dataset.raPin;this.render();}};
+  $('ra-pin-props').addEventListener('change',e=>this.change(e.target));
+ }
+ open(pin){
+  if(this.isRunning())return;const project=this.getProject();
+  this.draft=structuredClone(project.mcu);if(pin&&RA6E1_PORTS.includes(pin))this.pin=pin;
+  $('ra-pinout-error').textContent='';this.render();$('ra-pinout-dialog').showModal();
+ }
+ render(){
+  const pins=this.draft.pins;
+  $('ra-pin-grid').innerHTML=RA6E1_PORTS.map(pin=>{const p=pins[pin],locked=RA_RESERVED[pin];return `<button type="button" role="option" data-ra-pin="${pin}" class="ra-pin ${p?'mode-'+p.function:''} ${locked?'locked':''} ${pin===this.pin?'active':''}" aria-selected="${pin===this.pin}" title="${esc([pin,ARDUINO_OF[pin]&&'Arduino '+ARDUINO_OF[pin],NOTES[pin],locked,p?.label].filter(Boolean).join(' · '))}"><b>${pin}</b><small>${esc(p?.label||ARDUINO_OF[pin]||(locked?'잠김':''))}</small></button>`;}).join('');
+  const pin=this.pin,p=pins[pin],locked=RA_RESERVED[pin],irq=RA_IRQ_PINS[pin];
+  const option=(value,label,cur)=>`<option value="${value}" ${value===cur?'selected':''}>${label}</option>`;
+  const modes=MODES.filter(([m])=>m!=='IRQ'||irq!=null).map(([m,l])=>option(m,m==='IRQ'?`IRQ${irq} (외부 인터럽트)`:l,p?.function||'')).join('');
+  let html=`<h3>${pin}${ARDUINO_OF[pin]?` · Arduino ${ARDUINO_OF[pin]}`:''}</h3>${NOTES[pin]?`<p class="form-hint">${NOTES[pin]}</p>`:''}`;
+  if(locked&&!['P212','P213','P200'].includes(pin))html+=`<p class="form-hint">${esc(locked)} — 보드가 쓰는 핀이라 바꿀 수 없습니다.</p>`;
+  else{
+   html+=`<label>Mode<select data-ra="function">${modes}</select></label>`;
+   if(p){
+    html+=`<label>Symbolic Name<input data-ra="label" value="${esc(p.label||'')}" placeholder="예: LED1" spellcheck="false"></label>`;
+    if(p.function==='GPIO_Output')html+=`<label>Output Data (초기값)<select data-ra="initial">${option('0','Low',String(p.initial??0))}${option('1','High',String(p.initial??0))}</select></label><label>Drive Capacity<select data-ra="drive">${['LOW','MID','HIGH'].map(d=>option(d,{LOW:'Low',MID:'Middle',HIGH:'High'}[d],p.drive||'LOW')).join('')}</select></label><label>Output type<select data-ra="outputType">${option('CMOS','CMOS',p.outputType||'CMOS')}${option('NMOS','n-ch open drain',p.outputType||'CMOS')}</select></label>`;
+    if(['GPIO_Input','IRQ'].includes(p.function))html+=`<label>Pull-up<select data-ra="pull">${option('NONE','None',p.pull||'NONE')}${option('PULLUP','Input pull-up',p.pull||'NONE')}</select></label>`;
+    if(p.function==='IRQ')html+=`<fieldset><legend>g_external_irq${irq} (r_icu)</legend><label>Trigger<select data-ra="edge">${[['FALLING','Falling'],['RISING','Rising'],['BOTH','Both Edges'],['LOW','Low Level']].map(([v,l])=>option(v,l,p.edge||'FALLING')).join('')}</select></label><label>Priority<select data-ra="priority">${Array.from({length:16},(_,i)=>option(String(i),`Priority ${i}${i===0?' (highest)':i===15?' (lowest)':''}`,String(p.priority??12))).join('')}</select></label><label>Callback<input data-ra="callback" value="${esc(p.callback||`external_irq${irq}_callback`)}" spellcheck="false"></label><p class="form-hint">hal_entry()에서 R_ICU_ExternalIrqOpen(&amp;g_external_irq${irq}_ctrl, &amp;g_external_irq${irq}_cfg)과 R_ICU_ExternalIrqEnable(&amp;g_external_irq${irq}_ctrl)을 부르면 콜백이 호출됩니다.</p></fieldset>`;
+    if(p.label)html+=`<p class="form-hint">bsp_pin_cfg.h: <code>#define ${esc(p.label)} (BSP_IO_PORT_${pin.slice(1,2).padStart(2,'0')}_PIN_${pin.slice(2)})</code></p>`;
+   }
+  }
+  $('ra-pin-props').innerHTML=html;
+ }
+ change(el){
+  const key=el.dataset.ra;if(!key)return;const pin=this.pin,pins=this.draft.pins;
+  if(key==='function'){if(!el.value)delete pins[pin];else{const old=pins[pin]||{};pins[pin]={function:el.value,...(old.label?{label:old.label}:{})};if(el.value==='IRQ')Object.assign(pins[pin],{edge:'FALLING',pull:'PULLUP',priority:12,callback:`external_irq${RA_IRQ_PINS[pin]}_callback`});if(el.value==='GPIO_Output')Object.assign(pins[pin],{initial:0,drive:'LOW'});if(el.value==='GPIO_Input')pins[pin].pull='NONE';}}
+  else{const p=pins[pin];if(!p)return;let v=el.value.trim();if(['initial','priority'].includes(key))v=Number(v);if(key==='label'&&!v)delete p.label;else if(key==='outputType'&&v==='CMOS')delete p.outputType;else p[key]=v;}
+  $('ra-pinout-error').textContent='';try{validateRaMcu(this.draft);}catch(error){$('ra-pinout-error').textContent=error.message;}
+  this.render();
+ }
+ commit(){
+  try{const mcu=validateRaMcu(this.draft);this.apply({mcu});$('ra-pinout-dialog').close();}
+  catch(error){$('ra-pinout-error').textContent=error.message;this.onError?.(error.message);}
+ }
+}

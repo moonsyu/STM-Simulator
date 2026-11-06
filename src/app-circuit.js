@@ -62,6 +62,8 @@ export function freeSpot(type){
 }
 export function addDevboard(modelId){
  if(running())return;if(state.project.components.length>=100){log('부품은 100개까지 추가할 수 있습니다.','error');return;}
+ // A second STM32 board swaps with the main board when edited; a Renesas RA main board cannot swap with it.
+ if(DEVBOARD_MODELS[modelId]?.kind==='stm32'&&state.project.firmware?.mode==='fsp'){log('FPB-RA6E1 회로에는 STM32 보드를 함께 놓을 수 없습니다. ESP32·라즈베리파이 보드는 추가할 수 있습니다.','error');return;}
  const surfaceRight=key=>state.project.surfaces?.[key]?.hidden?0:surfaceOrigin(key,state.project.surfaces).x+(key==='board'?BOARD:BB).w*scaleXOf(state.project.surfaces?.[key]);
  const right=Math.max(surfaceRight('board'),surfaceRight('breadboard'),...state.project.components.map(p=>p.type==='breadboard'?breadboardBounds(p).right:p.type==='devboard'?devboardBounds(p).right:p.x+40));
  let fields;try{fields=DEVBOARD_MODELS[modelId].kind==='stm32'?newStm32Fields(state.project,modelId,right):newDevboardFields(state.project,modelId,right);}catch(e){log(e.message,'error');return;}

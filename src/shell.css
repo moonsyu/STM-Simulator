@@ -589,3 +589,23 @@ body.dock-dragging .dock-unit{pointer-events:none}
 :root[data-shell] .build-files summary{color:var(--ide-muted)}
 :root[data-shell] #build-file-list button{color:var(--ide-foreground)}
 :root[data-shell] #build-file-list button.active{color:var(--ide-selectionText)}
+/* Renesas RA Pins dialog (ra-pinout-ui.js) */
+#ra-pinout-dialog{width:min(980px,94vw);max-height:90vh;padding:16px 18px}
+.ra-pinout-head h2{margin:0 0 4px;font-size:16px}
+.ra-pinout-body{display:grid;grid-template-columns:1fr 300px;gap:14px;margin-top:10px;min-height:0}
+.ra-pin-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(64px,1fr));gap:5px;max-height:62vh;overflow:auto;padding-right:4px}
+.ra-pin{display:flex;flex-direction:column;align-items:flex-start;gap:1px;padding:4px 6px;border:1px solid var(--ide-border);border-radius:var(--radius-sm);background:transparent;color:var(--ide-foreground);font-size:11px;text-align:left;min-height:38px}
+.ra-pin b{font:600 11.5px var(--mono)}
+.ra-pin small{color:var(--ide-muted);font-size:10px;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ra-pin.active{outline:2px solid var(--ide-accent);outline-offset:-1px}
+.ra-pin.locked{opacity:.55}
+.ra-pin.mode-GPIO_Output{background:color-mix(in srgb,#3fb950 22%,transparent)}
+.ra-pin.mode-GPIO_Input{background:color-mix(in srgb,#4f8cff 22%,transparent)}
+.ra-pin.mode-IRQ{background:color-mix(in srgb,#d2a8ff 26%,transparent)}
+.ra-pin.mode-Analog{background:color-mix(in srgb,#e3b341 24%,transparent)}
+.ra-pin-props{display:flex;flex-direction:column;gap:8px;font-size:12px;border-left:1px solid var(--ide-border);padding-left:14px}
+.ra-pin-props h3{margin:0;font-size:14px}
+.ra-pin-props label{display:flex;flex-direction:column;gap:3px;color:var(--ide-muted)}
+.ra-pin-props select,.ra-pin-props input{height:26px;font-size:12px}
+.ra-pin-props fieldset{border:1px solid var(--ide-border);border-radius:var(--radius);padding:6px 8px;display:flex;flex-direction:column;gap:6px}
+.ra-pin-props code{font:11px var(--mono)}

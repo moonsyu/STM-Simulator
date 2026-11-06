@@ -99,7 +99,10 @@ function solveOnce(project,gpio={},pressed={},transient={},owner=project){
   // The on-board parts of the NUCLEO-64 (MB1136 C-04 sheets 3 and 5): B1 USER pulls PC13 LOW through R29 100 Ω against
   // R30 4.7 kΩ (C15 is not modeled), and the green LD2 loads PA5 through R31 510 Ω (SB21 closed).
   const onboard=(prefix,userPressed)=>{branch(prefix+'PC13','signal:3V3',4700);if(userPressed)branch(prefix+'PC13','signal:GND',100);branch(prefix+'PA5','signal:GND',510,{diode:true,vf:2.1});};
-  onboard('signal:',pressed.USER);
+  // FPB-RA6E1 (R20UT4960EG0100 Tables 2, 8, 9): S1 shorts P205 to GND (no pull-up on the board: FSP's template turns the
+  // internal one on), green LED1/LED2 on P408/P407 to GND, and the 2.2 kΩ I2C pull-ups R1/R2 on P400/P401 (E7/E8 closed).
+  if(project.boardId==='fpb-ra6e1'){if(pressed.SW1)branch('signal:P205','signal:GND',100);for(const pin of ['P408','P407'])branch('signal:'+pin,'signal:GND',1000,{diode:true,vf:2.1});for(const pin of ['P400','P401'])branch('signal:'+pin,'signal:3V3',2200);}
+  else onboard('signal:',pressed.USER);
   for(const p of project.components)if(p.type==='devboard')for(const [pin,r]of Object.entries(devboardModel(p)?.pullups||{}))branch(`signal:${p.id}.${pin}`,'signal:3V3',r);
   // Other STM32 boards have the same B1 and LD2 (`<id>.USER` while pressed).
   for(const p of project.components)if(p.type==='devboard'&&devboardModel(p)?.kind==='stm32')onboard(`signal:${p.id}.`,pressed[p.id+'.USER']);

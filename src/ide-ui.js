@@ -16,10 +16,11 @@ import {mountNativeChrome,setupNativeIde} from './native-ide-ui.js';
 import {$} from './common.js';
 import {outlineLabel} from './c-symbols.js';
 import {buildEnvironment,prefixOf,startupOf} from './build-environment.js';
+import {generateRaFiles} from './ra-generator.js';
 export function mountIdeChrome(){
   const toolbar=document.createElement('nav');toolbar.className='ide-toolbar';toolbar.setAttribute('aria-label','빌드와 디버그');toolbar.innerHTML='<button id="ide-build" class="primary" title="시뮬레이터용 빌드">빌드</button><span class="toolbar-divider"></span><button id="debug-start" title="시작 위치에서 디버깅">디버그 시작</button><span id="build-status" role="status">시뮬레이터용 빌드</span>';
   document.querySelector('.topbar').after(toolbar);toolbar.prepend(document.querySelector('.run-tools'));
-  const tree=document.createElement('section');tree.className='project-files';tree.innerHTML='<div class="project-files-title"><strong>소스 파일</strong><button id="source-add">파일 추가</button></div><nav id="file-tree" aria-label="프로젝트 파일"></nav><div class="file-tools"><button id="source-rename">이름 변경</button><button id="source-delete">삭제</button></div><details id="build-files" class="build-files" hidden><summary>Core · Startup <small>빌드에 들어가는 파일 · 읽기 전용</small></summary><nav id="build-file-list" aria-label="빌드 파일"></nav></details><div class="project-folder-note" id="workspace-path">미저장 프로젝트</div>';
+  const tree=document.createElement('section');tree.className='project-files';tree.innerHTML='<div class="project-files-title"><strong>소스 파일</strong><button id="source-add">파일 추가</button></div><nav id="file-tree" aria-label="프로젝트 파일"></nav><div class="file-tools"><button id="source-rename">이름 변경</button><button id="source-delete">삭제</button></div><details id="build-files" class="build-files" hidden><summary><span id="build-files-title">Core · Startup</span> <small>빌드에 들어가는 파일 · 읽기 전용</small></summary><nav id="build-file-list" aria-label="빌드 파일"></nav></details><div class="project-folder-note" id="workspace-path">미저장 프로젝트</div>';
   document.querySelector('.library').prepend(tree);
   // CubeIDE's Outline: the structure of the file on screen (project or SDK); the file tree keeps the project files only.
   const outline=document.createElement('section');outline.className='project-files outline-view';outline.innerHTML='<div class="project-files-title"><strong>코드 개요 (Outline)</strong><span id="outline-file"></span></div><input id="outline-filter" type="search" placeholder="개요 검색" aria-label="코드 개요 검색"><nav id="outline-list" aria-label="코드 개요"></nav>';tree.after(outline);
@@ -44,21 +45,25 @@ export function setupIde(o){
   // The debug view lives in the side bar; every other monitor is a bottom-panel tab.
   function showMonitor(name){if(name==='debug'){o.layout.showView('debug');return;}o.layout.showPanel(name);}
   function toggleBreakpoint(file,line){if(!Number.isInteger(line)||line<1||isBoardFile(file))return;o.checkpoint();const p=settings(),i=p.breakpoints.findIndex(b=>b.file===file&&b.line===line);if(i<0)p.breakpoints.push({file,line});else p.breakpoints.splice(i,1);const r=o.getSession()?.runtime;if(r)r.debug.breakpoints=new Set(points().map(b=>`${b.file}:${b.line}`));o.saveLocal();native?.syncBreakpoints();debugView();}
+  // An FSP project's main source is e² studio's src/hal_entry.c (stored as the project's main file).
+  const shown=name=>name==='main.c'&&o.getProject().firmware?.mode==='fsp'?'hal_entry.c':name;
   function sync(){
     const focused=document.activeElement?.closest('[data-source]'),focusSource=focused?.dataset.source,focusContainer=focused?.parentElement.id;
     const files=sourceFiles(o.getProject()),active=o.getSource(),key=JSON.stringify([o.getProject().firmware?.mode,files]);if(sourceKey&&sourceKey!==key){built=null;$('build-status').textContent='변경됨 · 빌드 필요';editor.diagnostics([]);}sourceKey=key;
     // Other boards' programs follow the STM32 sources, labelled with the board name.
     const boards=boardSourceFiles(o.getProject());
-    $('file-tree').innerHTML=files.map(f=>`<button data-source="${esc(f.name)}" class="${f.name===active?'active':''}" title="${esc(f.name)}"><span class="file-kind">${f.name.endsWith('.h')?'H':'C'}</span><span class="file-label">${esc(f.name)}</span></button>`).join('')+boards.map(f=>`<button data-source="${esc(f.name)}" class="${f.name===active?'active':''}" title="${esc(f.label)}"><span class="file-kind">${f.name.endsWith('.py')?'PY':'INO'}</span><span class="file-label">${esc(f.label)}</span></button>`).join('');
+    $('file-tree').innerHTML=files.map(f=>`<button data-source="${esc(f.name)}" class="${f.name===active?'active':''}" title="${esc(shown(f.name))}"><span class="file-kind">${f.name.endsWith('.h')?'H':'C'}</span><span class="file-label">${esc(shown(f.name))}</span></button>`).join('')+boards.map(f=>`<button data-source="${esc(f.name)}" class="${f.name===active?'active':''}" title="${esc(f.label)}"><span class="file-kind">${f.name.endsWith('.py')?'PY':'INO'}</span><span class="file-label">${esc(f.label)}</span></button>`).join('');
     for(const el of $('file-tree').querySelectorAll('[data-source]'))el.onclick=()=>select(el.dataset.source);editor.refreshGenerated();tabsView();
     const wp=folder||'미저장 프로젝트';$('workspace-path').textContent=wp;$('workspace-path').title=wp;editor.reset();if(!native?.selected())editor.updateDebug(points(),o.getSession()?.runtime?.debug.paused?o.getSession().runtime.location:null);native?.sync();controls();if(!o.isRunning())debugView();
     if(focusSource&&focusContainer)[...$(focusContainer).querySelectorAll('[data-source]')].find(el=>el.dataset.source===focusSource)?.focus({preventScroll:true});
   }
   // CubeIDE's Core/Src and Startup files the ARM build uses besides the project's own sources (read only): the added
   // handlers / system calls / heap, and the SDK's system and startup files (unless the project has its own).
-  function generatedFiles(){const p=o.getProject();return p.firmware?.mode==='hal'&&p.mcu?buildEnvironment(p).files:[];}
+  // What the build adds: the STM32 environment (it.c, syscalls.c, sysmem.c) or, for an FSP project, the RASC-style files.
+  function generatedFiles(){const p=o.getProject();if(p.firmware?.mode==='fsp'&&p.mcu){try{return Object.entries(generateRaFiles(p.mcu,{board:{fspBoard:true}})).map(([file,text])=>({file,text}));}catch{return [];}}return p.firmware?.mode==='hal'&&p.mcu?buildEnvironment(p).files:[];}
   function buildFilesView(){
-    const p=o.getProject(),hal=p.firmware?.mode==='hal'&&!!p.mcu;$('build-files').hidden=!hal;if(!hal){$('build-file-list').innerHTML='';return;}
+    const p=o.getProject(),hal=p.firmware?.mode==='hal'&&!!p.mcu,fsp=p.firmware?.mode==='fsp'&&!!p.mcu;$('build-files').hidden=!hal&&!fsp;$('build-files-title').textContent=fsp?'ra_gen · ra_cfg':'Core · Startup';if(!hal&&!fsp){$('build-file-list').innerHTML='';return;}
+    if(fsp){const ext=editor.externalFile()?.file;$('build-file-list').innerHTML=generatedFiles().map(g=>`<button data-build-file="${esc(g.file)}" data-build-kind="gen" class="${ext===g.file?'active':''}" title="RA Smart Configurator 방식으로 앱이 만드는 FSP 파일 · 읽기 전용"><span class="file-kind">${/\.ld$/.test(g.file)?'L':/\.h$/.test(g.file)?'H':'C'}</span><span class="file-label">${esc(g.file.split('/').at(-1))}</span><small>${esc(g.file.split('/').slice(0,-1).join('/'))}</small></button>`).join('');for(const el of $('build-file-list').querySelectorAll('[data-build-file]'))el.onclick=()=>{o.layout.reveal('code');document.querySelector('[data-tab="code"]')?.click();editor.openGenerated(el.dataset.buildFile);};return;}
     const prefix=prefixOf(p.mcu.family),device='Drivers/CMSIS/Device/ST/'+prefix.toUpperCase().replace('XX','xx'),own=new Set(sourceFiles(p).map(f=>f.name)),ext=editor.externalFile()?.file;
     const rows=[...generatedFiles().map(g=>({kind:'gen',file:g.file,label:g.file})),...(own.has(`system_${prefix}.c`)?[]:[{kind:'sdk',file:`${device}/Source/Templates/system_${prefix}.c`,label:`Core/Src/system_${prefix}.c`}]),{kind:'sdk',file:`${device}/Source/Templates/gcc/${startupOf(p.mcu.family)}`,label:`Core/Startup/${startupOf(p.mcu.family)}`}];
     $('build-file-list').innerHTML=rows.map(r=>`<button data-build-file="${esc(r.file)}" data-build-kind="${r.kind}" class="${ext===r.file?'active':''}" title="${esc(r.kind==='gen'?'STM Simulator가 빌드에 넣는 코드':'STM32Cube SDK '+r.file)} · 읽기 전용"><span class="file-kind">${r.label.endsWith('.s')?'S':'C'}</span><span class="file-label">${esc(r.label.split('/').at(-1))}</span><small>${esc(r.label.split('/').slice(0,-1).join('/'))}</small></button>`).join('');
@@ -67,7 +72,7 @@ export function setupIde(o){
   // Open tabs: project files, other boards' programs, then SDK files opened by go to definition (read only, ×).
   function tabsView(){
     const files=sourceFiles(o.getProject()),boards=boardSourceFiles(o.getProject()),active=o.getSource(),ext=editor.externalFile(),base=f=>f.split('/').at(-1);
-    $('source-tabs').innerHTML=[...files.map(f=>({name:f.name,label:f.name})),...boards].map(f=>`<button data-source="${esc(f.name)}" class="${!ext&&f.name===active?'active':''}">${esc(f.label)}</button>`).join('')
+    $('source-tabs').innerHTML=[...files.map(f=>({name:f.name,label:shown(f.name)})),...boards].map(f=>`<button data-source="${esc(f.name)}" class="${!ext&&f.name===active?'active':''}">${esc(f.label)}</button>`).join('')
       +editor.externalFiles().map(f=>`<span class="source-tab-sdk${ext?.file===f.file?' active':''}"><button data-sdk-file="${esc(f.file)}" title="${esc(f.sdk+' › '+f.file)} · 읽기 전용">${esc(base(f.file))}</button><button class="source-tab-close" data-sdk-close="${esc(f.file)}" aria-label="${esc(base(f.file))} 닫기" title="닫기">×</button></span>`).join('');
     for(const el of $('source-tabs').querySelectorAll('[data-source]'))el.onclick=()=>select(el.dataset.source);
     for(const el of $('source-tabs').querySelectorAll('[data-sdk-file]'))el.onclick=()=>editor.showExternal(el.dataset.sdkFile);

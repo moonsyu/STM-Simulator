@@ -50,7 +50,8 @@ function stm32Pins(boardId){
  const cx=BOARD.x+BOARD.w/2,cy=BOARD.y+BOARD.h/2;
  return boardPins(boardId).map(p=>({key:`${p.header}:${p.number}`,label:`${p.header}-${p.number} ${p.label}`,signal:p.signal==='AGND'?'GND':p.signal,header:p.header,number:p.number,x:p.x-cx,y:p.y-cy,notes:STM32_NOTES[p.signal]?[{text:STM32_NOTES[p.signal],warn:['PA13','PA14'].includes(p.signal)}]:p.bridge?[{text:bridgeNote(p),warn:true}]:p.signal==='NC'?[{text:'연결 없음'}]:[]}));
 }
-for(const board of BOARD_CATALOG){
+// Renesas RA boards are main boards only (not added as a second board of a circuit).
+for(const board of BOARD_CATALOG.filter(b=>b.vendor!=='renesas')){
  let pins;
  // Pins are computed on first use: pins.js imports this module, so the header list is not ready while it loads.
  DEVBOARD_MODELS[board.id]=Object.freeze({id:board.id,name:board.name,short:'STM32',kind:'stm32',chip:board.mcu,mcuFamily:board.mcuFamily,description:`${board.mcu} · ${board.core} · 코드·핀 설정·소스를 보드마다 따로 저장`,w:BOARD.w,h:BOARD.h,file:'main.c',language:'c',get pins(){return pins??=Object.freeze(stm32Pins(board.id));},builtinLed:'PA5'});
