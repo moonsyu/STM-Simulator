@@ -69,7 +69,7 @@ export class Timer extends Peripheral {
   updatePositions() { return this.center() ? [this.arr, 2 * this.arr] : [this.L()]; }
   matchPositions(ch) {
     const c = this.ccr[ch];
-    if (this.center()) return c > this.arr ? [] : c === 0 ? [2 * this.arr] : [c, 2 * this.arr - c];
+    if (this.center()) return c > this.arr ? [] : c === 0 ? [2 * this.arr] : c === this.arr ? [this.arr] : [c, 2 * this.arr - c];
     if (c > this.arr) return [];
     return [this.dirDown() ? (this.arr - c === 0 ? this.L() : this.arr - c) : (c === 0 ? this.L() : c)];
   }
@@ -282,7 +282,8 @@ export class Timer extends Peripheral {
       return { level: eff >= .5 ? 1 : 0, value: 3.3 * eff, pwm: { duty: eff, frequency: this.pwmFrequency() } };
     }
     if (this.ocMode(ch) === 3 && !waveform && bit(this.get(CR1), 0) && this.matchPositions(ch).length) {
-      return { level: 1, value: 1.65, pwm: { duty: .5, frequency: this.pwmFrequency() / 2 } };
+      // One toggle per match: center-aligned mode matches twice per cycle (up and down) unless CCR is 0 or ARR.
+      return { level: 1, value: 1.65, pwm: { duty: .5, frequency: this.pwmFrequency() * this.matchPositions(ch).length / 2 } };
     }
     let ref = this.refValue(ch);
     if (duty !== null && !bit(this.get(CR1), 0)) ref = this.refValue(ch);
@@ -291,10 +292,13 @@ export class Timer extends Peripheral {
   }
   refreshOutputs() {
     for (let ch = 0; ch < this.info.channels; ch++) {
-      const next = [this.outputState(ch, false), this.info.advanced ? this.outputState(ch, true) : null];
+      const tag = (o, comp) => o && Object.assign(o, { oc: this.outputCompare(ch), on: !!this.outputEnabled(ch, comp) });
+      const next = [tag(this.outputState(ch, false), false), this.info.advanced ? tag(this.outputState(ch, true), true) : null];
       const prev = this.outputs[ch];
       this.outputs[ch] = next;
-      const same = (a, b) => (!a && !b) || (a && b && a.level === b.level && a.value === b.value);
+      // Also when the channel output is switched on/off (CCxE) or between compare and capture (CCxS): the pin may have been
+      // published while the timer was unclocked (MX_GPIO_Init before the timer clock), and the level alone would not change.
+      const same = (a, b) => (!a && !b) || (a && b && a.level === b.level && a.value === b.value && a.on === b.on && a.oc === b.oc);
       if (!prev || !same(prev[0], next[0])) this.soc.afChanged(`${this.name}_CH${ch + 1}`);
       if (this.info.advanced && (!prev || !same(prev[1], next[1]))) this.soc.afChanged(`${this.name}_CH${ch + 1}N`);
     }
