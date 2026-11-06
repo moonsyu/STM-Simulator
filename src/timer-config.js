@@ -9,4 +9,4 @@ export const TIMER_IDS=Object.keys(TIMER_ROUTES);
 export const isTimer=id=>Object.hasOwn(TIMER_ROUTES,id);
 export const timerAf=id=>id==='TIM2'?1:2;
 export const timerMax=id=>['TIM2','TIM5'].includes(id)?4294967295:65535;
-export const TIMER_MODES={base:'내부 클록 / 주기',pwm:'PWM 출력',capture:'입력 캡처',encoder:'엔코더 A/B'};
+export const TIMER_MODES={base:'내부 클록 / 주기',pwm:'PWM 출력',oc:'출력 비교 (Output Compare)',capture:'입력 캡처',encoder:'엔코더 A/B'};

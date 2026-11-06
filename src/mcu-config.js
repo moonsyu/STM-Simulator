@@ -37,6 +37,11 @@ export function defaultMcu(family=DEFAULT_FAMILY){const f=familyProfile(family);
 export const SPI_PARAMS=Object.freeze({cpol:['LOW','HIGH'],cpha:['1EDGE','2EDGE'],dataSize:[8,16],firstBit:['MSB','LSB']});
 /** PWM channel settings: CH Polarity and PWM mode (the first value is CubeMX's default). */
 export const TIM_CHANNEL_PARAMS=Object.freeze({polarity:['HIGH','LOW'],ocMode:['PWM1','PWM2']});
+/** Output Compare CHn modes (CubeMX OCMode_n; Frozen = TIMING is its default). */
+export const TIM_OC_MODES=Object.freeze(['TIMING','ACTIVE','INACTIVE','TOGGLE','FORCED_ACTIVE','FORCED_INACTIVE']);
+export const timChannelParams=mode=>mode==='oc'?{...TIM_CHANNEL_PARAMS,ocMode:TIM_OC_MODES}:TIM_CHANNEL_PARAMS;
+/** Counter Settings › Counter Mode (CubeMX CounterMode; Up is its default). */
+export const TIM_COUNTER_MODES=Object.freeze(['UP','DOWN','CENTERALIGNED1','CENTERALIGNED2','CENTERALIGNED3']);
 export const UART_PARAMS=Object.freeze({wordLength:[8,9],parity:['NONE','EVEN','ODD'],stopBits:[1,2],direction:['TX_RX','TX','RX'],overSampling:[16,8]});
 export function validateMcu(value){
   if(!value||!Object.hasOwn(FAMILIES,value.family)||!value.pins||!value.peripherals||!value.nvic)throw new Error(`MCU 핀 설정이 필요합니다 (${Object.keys(FAMILIES).join(' / ')}).`);
@@ -59,7 +64,12 @@ export function validateMcu(value){
     if(!Object.hasOwn(routes,id)||!p||typeof p.enabled!=='boolean')throw new Error(`${id}: ${f.id}에서 지원하지 않는 주변장치입니다.`);
     const q={enabled:p.enabled},defaults=isTimer(id)?timerDefaults(id,f.id):null;
     for(const [key,def,min,max]of isSerial(id)?[['baud',115200,300,2000000]]:id==='I2C1'?[['clock',100000,1000,1000000]]:id==='SPI1'?[['clock',1000000,1000,20000000]]:isTimer(id)?[['prescaler',defaults.prescaler,0,65535],['period',defaults.period,0,f.timerMax(id)],['pulse',defaults.pulse,0,f.timerMax(id)]]:[]){q[key]=p[key]??def;if(!Number.isInteger(q[key])||q[key]<min||q[key]>max)throw new Error(`${id}.${key}: 범위를 확인하세요.`);}
-    if(isTimer(id)){q.mode=p.mode??defaults.mode;if(!['base','pwm','capture','encoder'].includes(q.mode))throw new Error(id+': 타이머 모드를 확인하세요.');}
+    if(isTimer(id)){q.mode=p.mode??defaults.mode;if(!['base','pwm','oc','capture','encoder'].includes(q.mode))throw new Error(id+': 타이머 모드를 확인하세요.');}
+    // Counter Mode: only a non-Up value is kept; the encoder sets the direction itself.
+    if(isTimer(id)&&p.counterMode!==undefined){
+     if(!TIM_COUNTER_MODES.includes(p.counterMode))throw new Error(`${id}.counterMode: ${TIM_COUNTER_MODES.join(' / ')} 중에서 고르세요.`);
+     if(p.counterMode!=='UP'){if(q.mode==='encoder')throw new Error(id+': 엔코더 모드에서는 Counter Mode를 Up으로 두세요.');q.counterMode=p.counterMode;}
+    }
     // PWM Generation CHn (CubeMX): each channel's Pulse, CH Polarity and PWM mode; only what differs from the timer's
     // Pulse / High / PWM1 is kept.
     if(isTimer(id)&&p.channels!==undefined){
@@ -69,7 +79,7 @@ export function validateMcu(value){
       if(!/^CH[1-4]$/.test(ch)||!c||typeof c!=='object')throw new Error(`${id}.${ch}: 채널 설정을 확인하세요.`);
       const out={};
       if(c.pulse!==undefined){if(!Number.isInteger(c.pulse)||c.pulse<0||c.pulse>f.timerMax(id))throw new Error(`${id}.${ch}.pulse: 범위를 확인하세요.`);if(c.pulse!==q.pulse)out.pulse=c.pulse;}
-      for(const [key,values]of Object.entries(TIM_CHANNEL_PARAMS)){if(c[key]===undefined)continue;if(!values.includes(c[key]))throw new Error(`${id}.${ch}.${key}: ${values.join(' / ')} 중에서 고르세요.`);if(c[key]!==values[0])out[key]=c[key];}
+      for(const [key,values]of Object.entries(timChannelParams(q.mode))){if(c[key]===undefined)continue;if(!values.includes(c[key]))throw new Error(`${id}.${ch}.${key}: ${values.join(' / ')} 중에서 고르세요.`);if(c[key]!==values[0])out[key]=c[key];}
       if(Object.keys(out).length)channels[ch]=out;
      }
      if(Object.keys(channels).length)q.channels=channels;
@@ -133,7 +143,7 @@ export function configProblems(config){
     if(isTimer(id)&&p.mode==='encoder')for(const ch of ['CH1','CH2'])if(!signals.has(id+'_'+ch))errors.push(id+': 엔코더 '+ch+' 핀을 활성화하세요.');
     // The encoder model counts every edge (TIM_ENCODERMODE_TI1/TI2/TI12 with Prescaler 0), as the interpreter does.
     if(isTimer(id)&&p.enabled&&p.mode==='encoder'&&p.prescaler)errors.push(id+': 엔코더 모드는 Prescaler 0을 사용하세요.');
-    if(isTimer(id)&&['pwm','capture'].includes(p.mode)&&![...signals.keys()].some(k=>k.startsWith(id+'_CH')))errors.push(id+': 채널 핀을 활성화하세요.');
+    if(isTimer(id)&&['pwm','oc','capture'].includes(p.mode)&&![...signals.keys()].some(k=>k.startsWith(id+'_CH')))errors.push(id+': 채널 핀을 활성화하세요.');
     if(id==='ADC1'&&![...signals.keys()].some(k=>k.startsWith('ADC1_IN')))errors.push('ADC1: 입력 채널을 활성화하세요.');
   }
   // F1: every signal of a peripheral must sit on one AFIO remap option (default or remapped pins together).
@@ -202,15 +212,20 @@ export function importIoc(text){
   // SPI1 speed: CubeMX stores the computed rate ("5.25 MBits/s") next to the prescaler.
   if(config.peripherals.SPI1){const s=config.peripherals.SPI1;if(/HIGH/.test(values['SPI1.CLKPolarity']||''))s.cpol='HIGH';if(/2EDGE/.test(values['SPI1.CLKPhase']||''))s.cpha='2EDGE';if(/16BIT/.test(values['SPI1.DataSize']||''))s.dataSize=16;if(/LSB/.test(values['SPI1.FirstBit']||''))s.firstBit='LSB';}
   if(config.peripherals.SPI1){const m=/^([\d.]+)\s*([KM]?)Bits\/s/i.exec(values['SPI1.CalculateBaudRate']||'');if(m)config.peripherals.SPI1.clock=Math.min(20000000,Math.max(1000,Math.round(Number(m[1])*({K:1e3,M:1e6}[m[2].toUpperCase()]??1))));}
-  for(const id of Object.keys(f.timers))if(config.peripherals[id]){const p=config.peripherals[id],defaults=timerDefaults(id,family);p.prescaler=number(values[id+'.Prescaler'],defaults.prescaler);p.period=number(values[id+'.Period'],defaults.period);const pulse=Object.keys(values).find(k=>k.startsWith(id+'.Pulse'));if(pulse)p.pulse=number(values[pulse],defaults.pulse);const settings=Object.entries(values).filter(([k])=>k.startsWith(id+'.')).map(([,v])=>v).join(' ');p.mode=/Encoder|ENCODER/.test(settings)?'encoder':/PWM/.test(settings)?'pwm':/INPUTCAPTURE|Input_Capture|IC_CHANNEL/.test(settings)?'capture':'base';}
-  // Per-channel PWM settings: "TIM2.Pulse-PWM Generation1 CH1", "TIM2.OCPolarity_1", "TIM2.OCMode_PWM-PWM Generation1 CH1".
-  for(const id of Object.keys(f.timers))if(config.peripherals[id]?.mode==='pwm'){
-   const p=config.peripherals[id],ch={};const at=n=>ch['CH'+n]??={};
+  for(const id of Object.keys(f.timers))if(config.peripherals[id]){const p=config.peripherals[id],defaults=timerDefaults(id,family);p.prescaler=number(values[id+'.Prescaler'],defaults.prescaler);p.period=number(values[id+'.Period'],defaults.period);const pulse=Object.keys(values).find(k=>k.startsWith(id+'.Pulse'));if(pulse)p.pulse=number(values[pulse],defaults.pulse);const settings=Object.entries(values).filter(([k])=>k.startsWith(id+'.')).map(([,v])=>v).join(' ');p.mode=/Encoder|ENCODER/.test(settings)?'encoder':/PWM/.test(settings)?'pwm':/Output Compare\d CH\d/.test(settings)?'oc':/INPUTCAPTURE|Input_Capture|IC_CHANNEL/.test(settings)?'capture':'base';
+    const counter=/TIM_COUNTERMODE_(\w+)/.exec(values[id+'.CounterMode']||'')?.[1];if(counter&&counter!=='UP'&&TIM_COUNTER_MODES.includes(counter)&&p.mode!=='encoder')p.counterMode=counter;}
+  // Per-channel settings: PWM "TIM2.Pulse-PWM Generation1 CH1", "TIM2.OCPolarity_1", "TIM2.OCMode_PWM-PWM Generation1 CH1";
+  // Output Compare "TIM2.Pulse-Output Compare1 CH1", "TIM2.OCMode_1" (TIM_OCMODE_TIMING when missing, as CubeMX).
+  for(const id of Object.keys(f.timers))if(['pwm','oc'].includes(config.peripherals[id]?.mode)){
+   const p=config.peripherals[id],oc=p.mode==='oc',ch={},name=oc?'Output Compare':'PWM Generation';const at=n=>ch['CH'+n]??={};
    for(const [k,v]of Object.entries(values)){
-    let m=new RegExp('^'+id+'\\.Pulse-PWM Generation(\\d) CH\\d$').exec(k);if(m){at(m[1]).pulse=number(v,p.pulse);continue;}
-    m=new RegExp('^'+id+'\\.OCPolarity_(\\d)$').exec(k);if(m&&/LOW/.test(v)){at(m[1]).polarity='LOW';continue;}
-    m=new RegExp('^'+id+'\\.OCMode_PWM-PWM Generation(\\d) CH\\d$').exec(k);if(m&&/PWM2/.test(v))at(m[1]).ocMode='PWM2';
+    let m=new RegExp('^'+id+'\\.Pulse-'+name+'(\\d) CH\\d$').exec(k);if(m){at(m[1]).pulse=number(v,p.pulse);continue;}
+    m=new RegExp('^'+id+'\\.OCPolarity_(\\d)(?:-.*)?$').exec(k);if(m&&/LOW/.test(v)){at(m[1]).polarity='LOW';continue;}
+    m=new RegExp('^'+id+'\\.OCMode_PWM-PWM Generation(\\d) CH\\d$').exec(k);if(!oc&&m&&/PWM2/.test(v)){at(m[1]).ocMode='PWM2';continue;}
+    m=new RegExp('^'+id+'\\.OCMode_(\\d)(?:-.*)?$').exec(k);const mode=/TIM_OCMODE_(\w+)/.exec(v)?.[1];if(oc&&m&&mode!=='TIMING'&&TIM_OC_MODES.includes(mode))at(m[1]).ocMode=mode;
    }
+   for(const c of Object.values(ch))if(c.pulse===p.pulse)delete c.pulse;
+   for(const [n,c]of Object.entries(ch))if(!Object.keys(c).length)delete ch[n];
    if(Object.keys(ch).length)p.channels=ch;
   }
   config.timerClockHz=number(values['RCC.APB1TimFreq_Value'],f.clock.defaultHz);

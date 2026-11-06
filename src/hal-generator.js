@@ -78,7 +78,7 @@ export function generateMain(config,{minimal=false,legacyGpio=false}={}){
     'int main(void) {','  HAL_Init();',...nvicInit(config),'  SystemClock_Config();',...(gpioInit?['  MX_GPIO_Init();']:[]),...(dma.length?['  MX_DMA_Init();']:[]),...active.map(([id])=>`  ${initName(id)}();`),'  /* USER CODE BEGIN 2 */');
   if(!minimal)for(const [id,p]of timers){const h=handles[id][1];
     if(p.mode==='encoder')lines.push(`  HAL_TIM_Encoder_Start(&${h}, TIM_CHANNEL_ALL);`);
-    else if(['pwm','capture'].includes(p.mode)){for(const value of Object.values(config.pins)){const match=new RegExp('^'+id+'_CH([1-4])$').exec(value.function);if(match)lines.push(`  HAL_TIM_${p.mode==='pwm'?'PWM_Start':'IC_Start'+(config.nvic[id+'_IRQn']?.enabled?'_IT':'')}(&${h}, TIM_CHANNEL_${match[1]});`);}}
+    else if(['pwm','oc','capture'].includes(p.mode)){for(const value of Object.values(config.pins)){const match=new RegExp('^'+id+'_CH([1-4])$').exec(value.function);if(match)lines.push(`  HAL_TIM_${p.mode==='pwm'?'PWM_Start':(p.mode==='oc'?'OC':'IC')+'_Start'+(config.nvic[id+'_IRQn']?.enabled?'_IT':'')}(&${h}, TIM_CHANNEL_${match[1]});`);}}
     else if(config.nvic[id+'_IRQn']?.enabled)lines.push(`  HAL_TIM_Base_Start_IT(&${h});`);
   }
   if(!minimal&&serials.some(([id])=>!sync(id))){lines.push('  uint8_t message[] = "HAL ready\\r\\n";');for(const [id]of serials)if(!sync(id))lines.push(`  HAL_UART_Transmit(&${serialHandle(id)}, message, sizeof(message)-1, 100);`);}
@@ -139,21 +139,22 @@ export function generateMain(config,{minimal=false,legacyGpio=false}={}){
     if(id==='SPI1')for(const [k,v]of Object.entries({Mode:'SPI_MODE_MASTER',Direction:'SPI_DIRECTION_2LINES',DataSize:`SPI_DATASIZE_${p.dataSize??8}BIT`,CLKPolarity:`SPI_POLARITY_${p.cpol??'LOW'}`,CLKPhase:`SPI_PHASE_${p.cpha??'1EDGE'}`,NSS:'SPI_NSS_SOFT',BaudRatePrescaler:'SPI_BAUDRATEPRESCALER_'+Math.min(256,2**Math.max(1,Math.ceil(Math.log2(config.timerClockHz/p.clock)))),FirstBit:`SPI_FIRSTBIT_${p.firstBit??'MSB'}`,TIMode:'SPI_TIMODE_DISABLE',CRCCalculation:'SPI_CRCCALCULATION_DISABLE',CRCPolynomial:10}))set(k,v);
     if(id==='ADC1'&&f1)for(const [k,v]of Object.entries({ScanConvMode:'ADC_SCAN_DISABLE',ContinuousConvMode:p.continuous?'ENABLE':'DISABLE',DiscontinuousConvMode:'DISABLE',ExternalTrigConv:'ADC_SOFTWARE_START',DataAlign:'ADC_DATAALIGN_RIGHT',NbrOfConversion:1}))set(k,v);
     if(id==='ADC1'&&!f1)for(const [k,v]of Object.entries({ClockPrescaler:`ADC_CLOCK_SYNC_PCLK_DIV${config.clock?.adcPrescaler??4}`,Resolution:'ADC_RESOLUTION_12B',ScanConvMode:'DISABLE',ContinuousConvMode:p.continuous?'ENABLE':'DISABLE',DiscontinuousConvMode:'DISABLE',ExternalTrigConvEdge:'ADC_EXTERNALTRIGCONVEDGE_NONE',ExternalTrigConv:'ADC_SOFTWARE_START',DataAlign:'ADC_DATAALIGN_RIGHT',NbrOfConversion:1,DMAContinuousRequests:'DISABLE',EOCSelection:'ADC_EOC_SINGLE_CONV'}))set(k,v);
-    if(isTimer(id))for(const [k,v]of Object.entries({Prescaler:p.prescaler,CounterMode:'TIM_COUNTERMODE_UP',Period:p.period,ClockDivision:'TIM_CLOCKDIVISION_DIV1',AutoReloadPreload:'TIM_AUTORELOAD_PRELOAD_DISABLE'}))set(k,v);
+    if(isTimer(id))for(const [k,v]of Object.entries({Prescaler:p.prescaler,CounterMode:`TIM_COUNTERMODE_${p.counterMode??'UP'}`,Period:p.period,ClockDivision:'TIM_CLOCKDIVISION_DIV1',AutoReloadPreload:'TIM_AUTORELOAD_PRELOAD_DISABLE'}))set(k,v);
     if(isTimer(id)&&p.mode==='encoder'){
       lines.push('  TIM_Encoder_InitTypeDef encoder = {0};','  encoder.EncoderMode = TIM_ENCODERMODE_TI12;');
       for(const n of [1,2])lines.push(`  encoder.IC${n}Polarity = TIM_ICPOLARITY_RISING;`,`  encoder.IC${n}Selection = TIM_ICSELECTION_DIRECTTI;`,`  encoder.IC${n}Prescaler = TIM_ICPSC_DIV1;`,`  encoder.IC${n}Filter = 0;`);
       lines.push(`  HAL_TIM_Encoder_Init(&${name}, &encoder);`);
     }else if(id==='SDIO')lines.push('  /* HAL_SD_Init(&hsd) is called by FatFs BSP_SD_Init() or user code. */');
-    else lines.push(`  HAL_${type}${isTimer(id)?p.mode==='pwm'?'_PWM':p.mode==='capture'?'_IC':'_Base':''}_Init(&${name});`);
+    else lines.push(`  HAL_${type}${isTimer(id)?p.mode==='pwm'?'_PWM':p.mode==='oc'?'_OC':p.mode==='capture'?'_IC':'_Base':''}_Init(&${name});`);
     if(id==='ADC1'){const channel=Object.values(config.pins).find(p=>p.function.startsWith('ADC1_IN')).function.slice(7);lines.push('  ADC_ChannelConfTypeDef sConfig = {0};',`  sConfig.Channel = ADC_CHANNEL_${channel};`,`  sConfig.Rank = ${f1?'ADC_REGULAR_RANK_1':1};`,`  sConfig.SamplingTime = ${adcSamplingMacro(adcSamplingOf(config))};`,'  HAL_ADC_ConfigChannel(&hadc1, &sConfig);',...(f1?['  HAL_ADCEx_Calibration_Start(&hadc1);']:[]));}
-    if(isTimer(id)&&['pwm','capture'].includes(p.mode)){
-      lines.push(`  ${p.mode==='pwm'?'TIM_OC_InitTypeDef':'TIM_IC_InitTypeDef'} channel = {0};`);
-      if(p.mode==='pwm')lines.push('  channel.OCMode = TIM_OCMODE_PWM1;','  channel.OCPolarity = TIM_OCPOLARITY_HIGH;',`  channel.Pulse = ${p.pulse};`,'  channel.OCFastMode = TIM_OCFAST_DISABLE;');
+    if(isTimer(id)&&['pwm','oc','capture'].includes(p.mode)){
+      const out=p.mode!=='capture',kind=p.mode==='pwm'?'PWM':p.mode==='oc'?'OC':'IC',ocDefault=p.mode==='oc'?'TIMING':'PWM1';
+      lines.push(`  ${out?'TIM_OC_InitTypeDef':'TIM_IC_InitTypeDef'} channel = {0};`);
+      if(out)lines.push(`  channel.OCMode = TIM_OCMODE_${ocDefault};`,'  channel.OCPolarity = TIM_OCPOLARITY_HIGH;',`  channel.Pulse = ${p.pulse};`,'  channel.OCFastMode = TIM_OCFAST_DISABLE;');
       else lines.push('  channel.ICPolarity = TIM_ICPOLARITY_RISING;','  channel.ICSelection = TIM_ICSELECTION_DIRECTTI;','  channel.ICPrescaler = TIM_ICPSC_DIV1;','  channel.ICFilter = 0;');
-      // Channels with their own Pulse / polarity / PWM mode set the shared structure again before their ConfigChannel.
-      const own=p.mode==='pwm'&&p.channels&&Object.keys(p.channels).length;
-      for(const value of Object.values(config.pins)){const m=new RegExp('^'+id+'_CH([1-4])$').exec(value.function);if(!m)continue;if(own){const c=p.channels['CH'+m[1]]||{};lines.push(`  channel.OCMode = TIM_OCMODE_${c.ocMode??'PWM1'};`,`  channel.OCPolarity = TIM_OCPOLARITY_${c.polarity??'HIGH'};`,`  channel.Pulse = ${c.pulse??p.pulse};`);}lines.push(`  HAL_TIM_${p.mode==='pwm'?'PWM':'IC'}_ConfigChannel(&${name}, &channel, TIM_CHANNEL_${m[1]});`);}
+      // Channels with their own Pulse / polarity / mode set the shared structure again before their ConfigChannel.
+      const own=out&&p.channels&&Object.keys(p.channels).length;
+      for(const value of Object.values(config.pins)){const m=new RegExp('^'+id+'_CH([1-4])$').exec(value.function);if(!m)continue;if(own){const c=p.channels['CH'+m[1]]||{};lines.push(`  channel.OCMode = TIM_OCMODE_${c.ocMode??ocDefault};`,`  channel.OCPolarity = TIM_OCPOLARITY_${c.polarity??'HIGH'};`,`  channel.Pulse = ${c.pulse??p.pulse};`);}lines.push(`  HAL_TIM_${kind}_ConfigChannel(&${name}, &channel, TIM_CHANNEL_${m[1]});`);}
     }
     for(const [request,d]of dma)if(dmaOwner(request)===id){const h=dmaHandle(request);lines.push(...dmaLines(h,request,d,f1),`  __HAL_LINKDMA(&${name}, ${dmaLink(request)}, ${h});`);}
     lines.push('}');
@@ -163,6 +164,7 @@ export function generateMain(config,{minimal=false,legacyGpio=false}={}){
   if(!minimal&&pins.some(([,p])=>p.function==='GPIO_EXTI'))lines.push('','void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {','  UNUSED(GPIO_Pin);','  /* USER CODE BEGIN EXTI_Callback */','  /* 핀 번호에 따라 인터럽트 처리를 작성하세요. */','  /* USER CODE END EXTI_Callback */','}');
   if(!minimal&&serials.length)lines.push('','void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart) {','  UNUSED(huart);','  /* USER CODE BEGIN UART_RxCplt */','  /* HAL_UART_Receive_IT() 수신 완료 */','  /* USER CODE END UART_RxCplt */','}');
   if(!minimal&&timers.length)lines.push('','void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {','  UNUSED(htim);','  /* USER CODE BEGIN TIM_PeriodElapsed */','  /* 타이머 주기 인터럽트 */','  /* USER CODE END TIM_PeriodElapsed */','}');
+  if(!minimal&&timers.some(([id,p])=>p.mode==='oc'&&config.nvic[id+'_IRQn']?.enabled))lines.push('','void HAL_TIM_OC_DelayElapsedCallback(TIM_HandleTypeDef *htim) {','  UNUSED(htim);','  /* USER CODE BEGIN TIM_OC_DelayElapsed */','  /* 출력 비교 일치(CCR) 인터럽트 */','  /* USER CODE END TIM_OC_DelayElapsed */','}');
   if(!minimal&&timers.some(([,p])=>p.mode==='capture'))lines.push('','void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim) {','  UNUSED(htim);','  /* USER CODE BEGIN TIM_IC_Capture */','  /* Read HAL_TIM_ReadCapturedValue(htim, TIM_CHANNEL_1). */','  /* USER CODE END TIM_IC_Capture */','}');
   if(!minimal)lines.push('','int __io_putchar(int ch) {','  ITM_SendChar(ch);','  return ch;','}');
   lines.push('','/* USER CODE BEGIN 4 */','/* USER CODE END 4 */','','void Error_Handler(void) {','  __disable_irq();','  while (1) { }','}');
