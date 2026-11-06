@@ -118,3 +118,37 @@ test('FPB-RA6E1 SCI9 UART example: the USB-TTL part on D0/D1 shows the hello lin
   assert.deepEqual(s.errors,[]);
  }finally{await s.close();}
 });
+
+test('FPB-RA6E1 GPT example: Pins shows P408 as GTIOC6B with g_timer6 (1 kHz PWM); running dims LED1 and GPT1 toggles LED2',{skip:!toolchain&&!process.env.CI_REQUIRE_TOOLCHAIN&&'ARM GCC / Renesas FSP not installed',timeout:240000},async()=>{
+ const s=await launch();
+ await fs.writeFile(path.join(s.profile,'native-tools.json'),JSON.stringify({armGcc:gcc,fsp,armGdb:'',cube:'',cubeF1:'',hostGcc:'',hostGdb:'',clangd:'',openocd:'',buildRoot:''}));
+ try{
+  const {win}=s;
+  await win.click('[data-activity="board"]');if(!await win.locator('#board-open').isVisible())await win.click('[data-activity="board"]');
+  await win.click('#board-open');await win.click('[data-board-id="fpb-ra6e1"]');
+  if(await win.locator('#board-change-dialog').isVisible())await win.click('#board-change-confirm');
+  await win.waitForFunction(()=>document.querySelector('#surface > .board')?.dataset.board==='fpb-ra6e1');
+  await win.click('[data-activity="examples"]');if(!await win.locator('#view-examples').isVisible())await win.click('[data-activity="examples"]');
+  await win.fill('#hal-example-search','GPT PWM');await win.locator('#hal-example-list [data-example]').first().click();
+  await win.waitForFunction(()=>/R_GPT_DutyCycleSet\(&g_timer6_ctrl/.test(document.getElementById('code').value));
+  await win.click('[data-activity="board"]');if(!await win.locator('#pinout-open').isVisible())await win.click('[data-activity="board"]');
+  await win.click('#pinout-open');await win.waitForSelector('#ra-pinout-dialog[open]');
+  await win.click('[data-ra-pin="P408"]');
+  assert.equal(await win.inputValue('[data-ra="signal"]'),'GPT6_GTIOCB');
+  assert.match(await win.textContent('#ra-pin-props'),/g_timer6 \(r_gpt · GPT6\)[\s\S]*PCLKD 100 MHz \/ 2 → 50000 counts/);
+  // Changing the period shows the new counts; 0.1 Hz does not fit the 16-bit GPT6 and says so.
+  await win.fill('[data-ra-gpt="period"]','0.1');await win.selectOption('[data-ra-gpt="unit"]','Hz');
+  assert.match(await win.textContent('#ra-pinout-error'),/주기가 너무 깁니다/);
+  await win.click('#ra-pinout-close');
+  await win.keyboard.press('Control+F5');
+  await win.waitForFunction(()=>/시뮬레이터\(ARM GCC 빌드\)를 시작했습니다/.test(document.getElementById('console-output').textContent),null,{timeout:180000})
+   .catch(async error=>{throw new Error(`${error.message}\n출력: ${(await win.textContent('#console-output')).slice(-1500)}\n빌드: ${(await win.textContent('#build-errors').catch(()=>'')).slice(-800)}`);});
+  // LED1 passes through dimmed shades (neither the off nor the full-on colour) while the duty climbs.
+  await win.waitForFunction(()=>{const f=document.getElementById('board-led-LED1')?.getAttribute('fill');return f&&f!=='#89a486'&&f!=='#64e66b';},null,{timeout:30000});
+  await shot(win,'ra6e1-gpt.png');
+  await win.waitForFunction(()=>document.getElementById('board-led-LED2')?.getAttribute('fill')==='#64e66b',null,{timeout:30000});
+  await win.keyboard.press('Control+F2');
+  await win.waitForFunction(()=>document.getElementById('shell').dataset.running==='false');
+  assert.deepEqual(s.errors,[]);
+ }finally{await s.close();}
+});

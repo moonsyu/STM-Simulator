@@ -122,5 +122,46 @@ void hal_entry(void)
     }
 }
 `+WARM_START});
-RA_EXAMPLES.push(UART_EXAMPLE);
+// GPT6 saw-wave PWM on LED1 (P408 = GTIOC6B) and GPT1 as a 500 ms periodic timer whose cycle-end callback toggles LED2.
+const GPT_EXAMPLE=Object.freeze({id:'ra_gpt_pwm',name:'GPT PWM으로 LED1 밝기 · 주기 인터럽트로 LED2 (R_GPT_Open · DutyCycleSet · 콜백)',tags:['GPT','PWM','timer','interrupt','LED'],
+ mcu:()=>{const m=raDefaultMcu();m.pins.P408={function:'Peripheral',signal:'GPT6_GTIOCB',label:'LED1'};m.peripherals={GPT6:{enabled:true,mode:'PWM',period:1,unit:'kHz',duty:0},GPT1:{enabled:true,mode:'PERIODIC',period:500,unit:'ms',callback:'gpt1_callback',priority:12}};return m;},
+ code:HEAD+`
+volatile uint32_t ticks = 0;
+volatile uint32_t duty_percent = 0;
+
+/* GPT1 cycle end, every 500 ms: LED2 toggles. */
+void gpt1_callback(timer_callback_args_t *p_args)
+{
+    if (TIMER_EVENT_CYCLE_END == p_args->event)
+    {
+        ticks++;
+        R_IOPORT_PinWrite(&g_ioport_ctrl, LED2, (ticks & 1U) ? BSP_IO_LEVEL_HIGH : BSP_IO_LEVEL_LOW);
+    }
+}
+
+void hal_entry(void)
+{
+    timer_info_t info;
+
+    /* g_timer6: 1 kHz PWM on GTIOC6B (LED1). */
+    R_GPT_Open(&g_timer6_ctrl, &g_timer6_cfg);
+    R_GPT_Start(&g_timer6_ctrl);
+    R_GPT_InfoGet(&g_timer6_ctrl, &info);
+
+    /* g_timer1: 500 ms periodic, gpt1_callback on every cycle end. */
+    R_GPT_Open(&g_timer1_ctrl, &g_timer1_cfg);
+    R_GPT_Start(&g_timer1_ctrl);
+
+    /* LED1 brightens from 0 to 100 % in steps of 10 % every 100 ms, then starts over. */
+    while (1)
+    {
+        for (duty_percent = 0; duty_percent <= 100; duty_percent += 10)
+        {
+            R_GPT_DutyCycleSet(&g_timer6_ctrl, info.period_counts / 100 * duty_percent, GPT_IO_PIN_GTIOCB);
+            R_BSP_SoftwareDelay(100, BSP_DELAY_UNITS_MILLISECONDS);
+        }
+    }
+}
+`+WARM_START});
+RA_EXAMPLES.push(UART_EXAMPLE,GPT_EXAMPLE);
 Object.freeze(RA_EXAMPLES);

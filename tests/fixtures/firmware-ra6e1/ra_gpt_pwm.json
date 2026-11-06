@@ -1,0 +1,65 @@
+{
+ "format": "stm32-circuit-lab",
+ "version": 2,
+ "name": "ra_gpt_pwm",
+ "code": "#include \"hal_data.h\"\n\nFSP_CPP_HEADER\nvoid R_BSP_WarmStart(bsp_warm_start_event_t event);\nFSP_CPP_FOOTER\n\nvolatile uint32_t ticks = 0;\nvolatile uint32_t duty_percent = 0;\n\n/* GPT1 cycle end, every 500 ms: LED2 toggles. */\nvoid gpt1_callback(timer_callback_args_t *p_args)\n{\n    if (TIMER_EVENT_CYCLE_END == p_args->event)\n    {\n        ticks++;\n        R_IOPORT_PinWrite(&g_ioport_ctrl, LED2, (ticks & 1U) ? BSP_IO_LEVEL_HIGH : BSP_IO_LEVEL_LOW);\n    }\n}\n\nvoid hal_entry(void)\n{\n    timer_info_t info;\n\n    /* g_timer6: 1 kHz PWM on GTIOC6B (LED1). */\n    R_GPT_Open(&g_timer6_ctrl, &g_timer6_cfg);\n    R_GPT_Start(&g_timer6_ctrl);\n    R_GPT_InfoGet(&g_timer6_ctrl, &info);\n\n    /* g_timer1: 500 ms periodic, gpt1_callback on every cycle end. */\n    R_GPT_Open(&g_timer1_ctrl, &g_timer1_cfg);\n    R_GPT_Start(&g_timer1_ctrl);\n\n    /* LED1 brightens from 0 to 100 % in steps of 10 % every 100 ms, then starts over. */\n    while (1)\n    {\n        for (duty_percent = 0; duty_percent <= 100; duty_percent += 10)\n        {\n            R_GPT_DutyCycleSet(&g_timer6_ctrl, info.period_counts / 100 * duty_percent, GPT_IO_PIN_GTIOCB);\n            R_BSP_SoftwareDelay(100, BSP_DELAY_UNITS_MILLISECONDS);\n        }\n    }\n}\n\nvoid R_BSP_WarmStart(bsp_warm_start_event_t event)\n{\n    if (BSP_WARM_START_POST_C == event)\n    {\n        /* C runtime environment and system clocks are setup. */\n\n        /* Configure pins. */\n        R_IOPORT_Open (&IOPORT_CFG_CTRL, &IOPORT_CFG_NAME);\n    }\n}\n",
+ "components": [],
+ "wires": [],
+ "boardId": "fpb-ra6e1",
+ "surfaces": {
+  "board": {
+   "hidden": false
+  },
+  "breadboard": {
+   "hidden": true
+  }
+ },
+ "mcu": {
+  "family": "R7FA6E10F",
+  "pins": {
+   "P408": {
+    "function": "Peripheral",
+    "label": "LED1",
+    "signal": "GPT6_GTIOCB"
+   },
+   "P407": {
+    "function": "GPIO_Output",
+    "label": "LED2",
+    "initial": 0,
+    "drive": "LOW"
+   },
+   "P205": {
+    "function": "IRQ",
+    "label": "SW1",
+    "pull": "PULLUP",
+    "edge": "FALLING",
+    "priority": 12,
+    "callback": "external_irq1_callback"
+   }
+  },
+  "peripherals": {
+   "GPT6": {
+    "enabled": true,
+    "mode": "PWM",
+    "period": 1,
+    "unit": "kHz",
+    "duty": 0,
+    "callback": "",
+    "priority": 12
+   },
+   "GPT1": {
+    "enabled": true,
+    "mode": "PERIODIC",
+    "period": 500,
+    "unit": "ms",
+    "duty": 50,
+    "callback": "gpt1_callback",
+    "priority": 12
+   }
+  }
+ },
+ "firmware": {
+  "mode": "fsp",
+  "files": []
+ }
+}

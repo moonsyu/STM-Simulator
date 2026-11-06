@@ -8,7 +8,8 @@ import { BusFaultSignal } from '../bus.js';
 import { Signals } from '../stm32f446/signals.js';
 import { RaBus } from './bus.js';
 import { Sci } from './sci.js';
-import { RA_PERIPHERAL_PINS, RA_SCI_CHANNELS, raPsel } from '../../ra-config.js';
+import { Gpt } from './gpt.js';
+import { RA_PERIPHERAL_PINS, RA_SCI_CHANNELS, RA_GPT_CHANNELS, raPsel } from '../../ra-config.js';
 
 export { RaBus };
 export const RA_BASES = {
@@ -164,7 +165,7 @@ class Ports {
   state(port, n) {
     const c = this.cfg(port, n), input = { mode: c.pcr ? 'INPUT_PULLUP' : 'INPUT', value: 0 };
     if (c.asel) return { mode: 'ANALOG', value: 0 };
-    if (c.pmr) { const out = this.soc.peripheralOutput?.(this.pin(port, n), c.psel); return out ? { mode: 'OUTPUT', value: out.level ? 3.3 : 0, openDrain: !!(c.ncodr || out.openDrain), pull: c.pcr, ...(out.pwm ? { pwm: out.pwm } : {}) } : input; }
+    if (c.pmr) { const out = this.soc.peripheralOutput?.(this.pin(port, n), c.psel); return out ? { mode: 'OUTPUT', value: out.value ?? (out.level ? 3.3 : 0), openDrain: !!(c.ncodr || out.openDrain), pull: c.pcr, ...(out.pwm ? { pwm: out.pwm } : {}) } : input; }
     if (c.pdr) return { mode: 'OUTPUT', value: c.podr ? 3.3 : 0, openDrain: !!c.ncodr, pull: c.pcr };
     return input;
   }
@@ -205,6 +206,8 @@ class Icu extends RegisterFile {
   }
   ielsr(n) { return this.get(0x300 + n * 4, 4); }
   updateLine(n) { this.soc.irqNumber(n, 'ICU', !!(this.ielsr(n) & 0x10000)); }
+  /** Whether an IELSR slot selects `event` (a peripheral schedules what only an interrupt would observe). */
+  linked(event) { for (let n = 0; n < 96; n++) if ((this.ielsr(n) & 0x1ff) === event) return true; return false; }
   // An ELC event: set IR in every slot linked to it.
   raise(event) {
     for (let n = 0; n < 96; n++) { const v = this.ielsr(n); if ((v & 0x1ff) === event) { this.put(0x300 + n * 4, v | 0x10000, 4); this.updateLine(n); } }
@@ -244,6 +247,8 @@ export class Ra6e1 {
     const plain = (name, size, reset) => new RegisterFile(this, name, size, { reset });
     this.scis = {};
     for (const ch of RA_SCI_CHANNELS) this.usarts['SCI' + ch] = this.scis[ch] = new Sci(this, ch); // usarts: the session's UART parts and inject()
+    this.gpts = {};
+    for (const ch of RA_GPT_CHANNELS) this.timers['GPT' + ch] = this.gpts[ch] = new Gpt(this, ch);
     const devices = [
       [RA_BASES.SYSTEM, 0x700, this.system],
       [RA_BASES.PORT, 0x1000, this.ports],
@@ -258,6 +263,7 @@ export class Ra6e1 {
       [RA_BASES.DEBUG, 0x400, plain('DEBUG', 0x400)],
       [RA_BASES.ELC, 0x400, plain('ELC', 0x400)],
       ...RA_SCI_CHANNELS.map(ch => [0x40118000 + ch * 0x100, 0x100, this.scis[ch]]),
+      ...RA_GPT_CHANNELS.map(ch => [0x40169000 + ch * 0x100, 0x100, this.gpts[ch]]),
       [RA_BASES.CACHE, 0x400, plain('CACHE', 0x400)],
       // RTC: RCR2.RESET (bit 1) clears itself once the reset is done; START (bit 0) reads back what was written
       // (BSP R_BSP_Init_RTC waits on both after the sub-clock starts).
@@ -348,9 +354,13 @@ export class Ra6e1 {
   peripheralOutput(pin, psel) {
     const signal = this.signalOf(pin, psel); if (!signal) return null;
     const sci = /^SCI(\d)_(TXD|RXD)$/.exec(signal); if (sci) return this.scis[sci[1]]?.output(sci[2]) ?? null;
+    const gpt = /^GPT(\d)_(GTIOC[AB])$/.exec(signal); if (gpt) return this.gpts[gpt[1]]?.output(gpt[2]) ?? null;
     return null;
   }
-  peripheralChanged(name) { for (const role of ['TXD', 'RXD']) for (const pin of this.routedPins(`${name}_${role}`)) { const port = Number(pin.slice(1, -2)), bit = Number(pin.slice(-2)); this.ports.publish(port, 1 << bit); } }
+  peripheralChanged(name) { for (const signal of Object.keys(RA_PERIPHERAL_PINS)) if (signal.startsWith(name + '_')) for (const pin of this.routedPins(signal)) { const port = Number(pin.slice(1, -2)), bit = Number(pin.slice(-2)); this.ports.publish(port, 1 << bit); } }
+  // GTSTR / GTSTP / GTCLR are shared by every channel: bit n acts on GPTn.
+  gptRunning() { let m = 0; for (const [ch, t] of Object.entries(this.gpts)) if (t.running) m |= 1 << ch; return m >>> 0; }
+  gptControl(mask, op) { for (const [ch, t] of Object.entries(this.gpts)) if (mask & (1 << ch)) { if (op === 'start') t.start(); else if (op === 'stop') t.stop(); else t.setCount(0); } }
   lineSources(pin) { return this.env.lineSources ? this.env.lineSources(pin) : []; }
   uartEvent(e) { this.env.uartEvent?.(e); }
 }

@@ -57,3 +57,19 @@ test('ra_uart_echo: SCI9 (P109 TXD / P110 RXD, 115200) says hello to the UART pa
  assert.ok(session.buses.received.get('term').endsWith('Hi'),'echoed back');
  assert.ok(session.gpio.P407.value<1,'LED2 toggled twice');
 });
+
+test('ra_gpt_pwm: GPT6 PWM (1 kHz, GTIOC6B) dims LED1 in 10 % steps; GPT1 (500 ms periodic) toggles LED2 from its callback',()=>{
+ const {session}=open(fixture('ra_gpt_pwm'));
+ const steps=[];let last=-1;
+ runUntil(session,1250,{onTick:t=>{const k=Math.floor((t-50)/100);if(k!==last&&t>=50){last=k;steps.push([session.readVariable('duty_percent'),session.gpio.P408?.pwm?.duty??(session.gpio.P408.value>1.65?1:0)]);}}});
+ const g6=session.soc.gpts[6],g1=session.soc.gpts[1];
+ assert.equal(g6.hz(),50e6,'PCLKD 100 MHz / 2 (RASC picks the divider for 50 000 counts in 16 bits)');assert.equal(g6.period(),50000);
+ assert.equal(g1.period(),50e6,'GPT1 is 32-bit: 500 ms at 100 MHz without a divider');
+ for(const [duty,out]of steps)if(duty>0&&duty<100)assert.ok(Math.abs(out-duty/100)<1e-9,JSON.stringify(steps));
+ assert.ok(steps.some(([d,o])=>d===100&&o===1),'100 %: GTUDDTYC OBDTY forces the output high');
+ assert.equal(session.gpio.P408.pwm?.frequency??1000,1000);
+ assert.equal(session.readVariable('ticks'),2,'cycle ends at 500 and 1000 ms');
+ assert.ok(session.gpio.P407.value<1,'LED2 toggled twice');
+ // The board LED's net follows the averaged PWM level.
+ const v=session.result.voltage('signal:P408');assert.ok(v>=0&&v<3.31);
+});

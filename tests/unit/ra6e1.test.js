@@ -123,3 +123,49 @@ test('RA6E1 SCI model: baud from SMR/BRR/SEMR, TXI on the TDR → shift transfer
  sci.received({value:0x5a});assert.equal(events.at(-1),0x1b6+0);assert.equal(sci.read(0x05,1),0x5a);
  assert.equal(sci.peek(0x04)&0x40,0,'RDRF cleared by reading RDR');
 });
+
+test('GPT: GTIOC pins, mode/period/duty settings and RASC counts, g_timerN, r_gpt_cfg.h and the overflow vector',async()=>{
+ const {RA_PERIPHERAL_PINS,raPsel,raGptCounts}=await import('../../src/ra-config.js');
+ assert.deepEqual(RA_PERIPHERAL_PINS.GPT6_GTIOCB,['P401','P408','P600']);assert.equal(raPsel('GPT6_GTIOCB'),3);
+ assert.deepEqual(raGptCounts(100e6,6,1,'kHz',25),{div:1,counts:50000,duty:12500,hz:1000});
+ assert.equal(raGptCounts(100e6,1,500,'ms').div,0,'32-bit GPT1');
+ assert.throws(()=>raGptCounts(100e6,6,0.01,'Hz'),/너무 깁니다/);assert.throws(()=>raGptCounts(100e6,6,100,'MHz'),/너무 짧습니다/);
+ const pwm=()=>{const m=raDefaultMcu();m.pins.P408={function:'Peripheral',signal:'GPT6_GTIOCB',label:'LED1'};m.peripherals={GPT6:{enabled:true,period:1,unit:'kHz',duty:25},GPT1:{enabled:true,mode:'PERIODIC',period:500,unit:'ms',callback:'gpt1_callback'}};return m;};
+ const v=validateRaMcu(pwm());
+ assert.deepEqual(v.peripherals.GPT6,{enabled:true,mode:'PWM',period:1,unit:'kHz',duty:25,callback:'',priority:12});
+ assert.throws(()=>validateRaMcu({...pwm(),pins:raDefaultMcu().pins}),/PWM 출력 핀/);
+ assert.throws(()=>validateRaMcu({...pwm(),peripherals:{GPT6:{enabled:true,duty:120}}}),/0~100/);
+ assert.throws(()=>validateRaMcu({...pwm(),peripherals:{GPT3:{enabled:false}}}),/지원하지 않는/);
+ assert.throws(()=>validateRaMcu({...pwm(),peripherals:{GPT6:{enabled:true,mode:'CAPTURE'}}}),/PWM 또는 Periodic/);
+ const files=generateRaFiles(v,{board:'FPB-RA6E1'}),c=files['ra_gen/hal_data.c'],h=files['ra_gen/hal_data.h'];
+ assert.ok(h.includes('#include "r_gpt.h"')&&h.includes('extern const timer_instance_t g_timer6;')&&h.includes('void gpt1_callback(timer_callback_args_t * p_args);'));
+ assert.ok(c.includes('.mode                = TIMER_MODE_PWM,')&&c.includes('.period_counts = (uint32_t) 0xc350, .duty_cycle_counts = 0x30d4, .source_div = (timer_source_div_t) 1,'));
+ assert.ok(c.includes('.gtiocb = { .output_enabled = true, .stop_level = GPT_PIN_LEVEL_LOW },')&&c.includes('.gtioca = { .output_enabled = false,'));
+ assert.ok(c.includes('.mode                = TIMER_MODE_PERIODIC,')&&c.includes('.p_callback          = gpt1_callback,')&&c.includes('.p_api         = &g_timer_on_gpt'));
+ assert.ok(files['ra_gen/vector_data.c'].includes('= gpt_counter_overflow_isr, /* GPT1 COUNTER OVERFLOW'),'only the timer with a callback gets the vector');
+ assert.ok(!files['ra_gen/vector_data.c'].includes('GPT6'));
+ assert.ok(files['ra_cfg/fsp_cfg/r_gpt_cfg.h'].includes('#define GPT_CFG_OUTPUT_SUPPORT_ENABLE (1)'));
+ assert.ok(files['ra_gen/pin_data.c'].includes('IOPORT_CFG_PERIPHERAL_PIN | (uint32_t) IOPORT_PERIPHERAL_GPT1)'));
+});
+
+test('RA6E1 GPT model: GTSTR start, GTCNT, buffer transfer at the cycle end, PWM output levels, overflow event',async()=>{
+ const {Gpt}=await import('../../src/emu/ra6e1/gpt.js');
+ let now=0;const timers=[],events=[],changes=[];
+ const soc={clock:{pclkd:100e6},nowUs:()=>now,sync(){},icu:{linked:e=>e===0xfc,raise:e=>events.push(e)},atUs:(t,fn)=>{const e={t,fn,cancel(){e.dead=true;}};timers.push(e);return e;},peripheralChanged:n=>changes.push(n)};
+ const t=new Gpt(soc,6);const gpts={6:t};
+ soc.gptRunning=()=>t.running?64:0;soc.gptControl=(m,op)=>{for(const [ch,g]of Object.entries(gpts))if(m&(1<<ch))g[op==='clear'?'setCount':op](0);};
+ t.write(0x2c,1<<23,4);t.write(0x64,49999,4);t.write(0x68,49999,4); // TPCS /2, GTPR
+ t.write(0x54,12499,4);t.write(0x58,12499,4); // GTCCRC, GTCCRE (buffers)
+ t.write(0x40,0x550000,4); // GTBER: buffers on, force transfer
+ t.write(0x34,(0x9|1<<8)<<16,4); // GTIOB: high at cycle end, low at compare match, OBE
+ assert.equal(t.output('GTIOCB').level,0,'stopped: OBDFLT');assert.equal(t.output('GTIOCA'),null,'GTIOCA output off');
+ t.write(0x04,64,4);assert.equal(t.read(0x04,4),64);assert.ok(t.running);
+ assert.deepEqual(t.output('GTIOCB').pwm,{duty:0.25,frequency:1000});
+ now=500;assert.equal(t.read(0x48,4),25000,'GTCNT at 50 MHz');
+ t.write(0x58,37499,4); // new duty waits in GTCCRE
+ assert.equal(t.output('GTIOCB').pwm.duty,0.25);
+ const next=timers.filter(e=>!e.dead).at(-1);assert.ok(Math.abs(next.t-1000)<1e-6);now=1000;next.fn();
+ assert.equal(t.output('GTIOCB').pwm.duty,0.75,'GTCCRE → GTCCRB at the cycle end');assert.deepEqual(events,[0xfc]);
+ t.write(0x30,(3<<24)|1,4);assert.deepEqual(t.output('GTIOCB'),{level:1},'OBDTY 100 %');
+ t.write(0x08,64,4);assert.ok(!t.running);assert.ok(changes.length>0);
+});

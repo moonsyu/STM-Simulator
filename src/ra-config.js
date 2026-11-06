@@ -98,11 +98,14 @@ export function validateRaMcu(mcu){
   }
   out.pins[pin]=q;
  }
- // Peripherals (RASC Stacks): SCI UART channels with their baud rate, callback and interrupt priority.
+ // Peripherals (RASC Stacks): SCI UART channels with their baud rate, callback and interrupt priority; GPT timers with
+ // the mode (saw-wave PWM / periodic), period, duty and the cycle-end callback.
  if(mcu.peripherals!==undefined){
   if(!mcu.peripherals||typeof mcu.peripherals!=='object'||Array.isArray(mcu.peripherals))throw new Error('RA 주변장치 설정을 확인하세요.');
   out.peripherals={};
   for(const [id,p]of Object.entries(mcu.peripherals)){
+   const gpt=/^GPT(\d)$/.exec(id);
+   if(gpt){out.peripherals[id]=validateGpt(id,Number(gpt[1]),p,fam,mcu.clock,signals);continue;}
    const sci=/^SCI(\d)$/.exec(id);if(!sci||!RA_SCI_CHANNELS.includes(Number(sci[1]))||!p||typeof p.enabled!=='boolean')throw new Error(`${id}: 지원하지 않는 주변장치입니다.`);
    const q={enabled:p.enabled,baud:p.baud??115200,callback:p.callback??`user_uart${sci[1]}_callback`,priority:p.priority??12};
    if(!Number.isInteger(q.baud)||q.baud<300||q.baud>2000000)throw new Error(`${id}: 통신 속도는 300~2000000 bps입니다.`);
@@ -127,16 +130,46 @@ export function validateRaMcu(mcu){
 }
 
 // Peripheral pin functions (Table 1.16, LQFP100) with the PmnPFS.PSEL value that selects them (FSP r_ioport.h
-// IOPORT_PERIPHERAL_*): SCI0/2/4 = 4, SCI1/3/9 = 5.
+// IOPORT_PERIPHERAL_*): SCI0/2/4 = 4, SCI1/3/9 = 5, GPT GTIOCnA/B = 3 (IOPORT_PERIPHERAL_GPT1, every channel).
 export const RA_PERIPHERAL_PINS=Object.freeze({
  SCI0_TXD:['P101','P411'],SCI0_RXD:['P100','P410'],SCI1_TXD:['P213'],SCI1_RXD:['P212','P708'],
  SCI2_TXD:['P302','P112'],SCI2_RXD:['P301','P113'],SCI3_TXD:['P409'],SCI3_RXD:['P408'],
- SCI4_TXD:['P207','P205'],SCI4_RXD:['P206'],SCI9_TXD:['P109','P602'],SCI9_RXD:['P110','P601']
+ SCI4_TXD:['P207','P205'],SCI4_RXD:['P206'],SCI9_TXD:['P109','P602'],SCI9_RXD:['P110','P601'],
+ GPT1_GTIOCA:['P105','P109','P405'],GPT1_GTIOCB:['P104','P110','P406'],GPT2_GTIOCA:['P103','P113'],GPT2_GTIOCB:['P102','P114'],
+ GPT4_GTIOCA:['P205','P302','P115'],GPT4_GTIOCB:['P301','P608'],GPT5_GTIOCA:['P101','P609'],GPT5_GTIOCB:['P100','P610'],
+ GPT6_GTIOCA:['P400','P407','P601'],GPT6_GTIOCB:['P401','P408','P600'],GPT7_GTIOCA:['P304'],GPT7_GTIOCB:['P303','P602']
 });
 export const RA_SCI_CHANNELS=Object.freeze([0,1,2,3,4,9]);
+// GPT (Table 1.16 GTIOCnA/B, PSEL 00011b on every port): GPT1/2 are 32-bit, GPT4-7 16-bit (BSP_PERIPHERAL_GPT_CHANNEL_MASK 0xF6).
+export const RA_GPT_CHANNELS=Object.freeze([1,2,4,5,6,7]);
+export const RA_GPT_32BIT=Object.freeze([1,2]);
+export const RA_TIMER_UNITS=Object.freeze(['Hz','kHz','s','ms','us']);
+const GPT_DIVIDERS=[0,1,2,3,4,5,6,8,10]; // TPCS: 1 … 64, 256, 1024 (7 and 9 are not valid on the RA6E1)
+/** GPT period/duty in counts with the smallest clock divider that fits, as RASC computes it. */
+export function raGptCounts(pclkd,channel,period,unit,duty=50){
+ const seconds={Hz:1/period,kHz:1/(period*1e3),s:period,ms:period/1e3,us:period/1e6}[unit],raw=pclkd*seconds,max=RA_GPT_32BIT.includes(channel)?2**32:2**16;
+ if(!Number.isFinite(raw)||raw<2)throw new Error(`GPT${channel}: 주기가 너무 짧습니다(PCLKD ${pclkd/1e6} MHz).`);
+ for(const div of GPT_DIVIDERS){const counts=Math.round(raw/2**div);if(counts<=max)return {div,counts,duty:Math.round(counts*duty/100),hz:pclkd/2**div/counts};}
+ throw new Error(`GPT${channel}: 주기가 너무 깁니다(${RA_GPT_32BIT.includes(channel)?32:16}비트, 최대 분주 1024).`);
+}
+/** A clock of an RA MCU configuration in Hz (default PCLKD, the GPT count clock). */
+export function raClockHz(mcu,key='pclkd'){const c={...raFamily(mcu?.family).clock,...(mcu?.clock||{})};return c.hocoMHz*1e6/c.pllDiv*c.pllMul/c[key+'Div'];}
+function validateGpt(id,ch,p,fam,clock,signals){
+ if(!RA_GPT_CHANNELS.includes(ch)||!p||typeof p.enabled!=='boolean')throw new Error(`${id}: 지원하지 않는 주변장치입니다.`);
+ const q={enabled:p.enabled,mode:p.mode??'PWM',period:p.period??1,unit:p.unit??'kHz',duty:p.duty??50,callback:p.callback??'',priority:p.priority??12};
+ if(!['PWM','PERIODIC'].includes(q.mode))throw new Error(`${id}: 동작 모드는 PWM 또는 Periodic입니다.`);
+ if(typeof q.period!=='number'||!(q.period>0)||!RA_TIMER_UNITS.includes(q.unit))throw new Error(`${id}: 주기와 단위를 확인하세요.`);
+ if(typeof q.duty!=='number'||q.duty<0||q.duty>100)throw new Error(`${id}: 듀티는 0~100 %입니다.`);
+ if(typeof q.callback!=='string'||q.callback!==''&&!C_NAME.test(q.callback))throw new Error(`${id}: 콜백 이름은 C 식별자로 쓰세요(없으면 비워 둡니다).`);
+ if(!Number.isInteger(q.priority)||q.priority<0||q.priority>15)throw new Error(`${id}: 인터럽트 우선순위는 0~15입니다.`);
+ raGptCounts(raClockHz({family:fam.id,clock}),ch,q.period,q.unit,q.duty);
+ if(q.enabled&&q.mode==='PWM'&&!signals.has(id+'_GTIOCA')&&!signals.has(id+'_GTIOCB'))throw new Error(`${id}: PWM 출력 핀(GTIOC${ch}A 또는 GTIOC${ch}B)을 정하세요.`);
+ return q;
+}
 /** PSEL of a peripheral signal ("SCI9_TXD" → 5). */
 export function raPsel(signal){
  const sci=/^SCI(\d)_/.exec(signal);if(sci)return [0,2,4].includes(Number(sci[1]))?4:5;
+ if(/^GPT\d_GTIOC[AB]$/.test(signal))return 3;
  throw new Error(`${signal}: 지원하지 않는 주변장치 신호입니다.`);
 }
-export const RA_PSEL_NAMES=Object.freeze({4:'IOPORT_PERIPHERAL_SCI0_2_4_6_8',5:'IOPORT_PERIPHERAL_SCI1_3_5_7_9'});
+export const RA_PSEL_NAMES=Object.freeze({3:'IOPORT_PERIPHERAL_GPT1',4:'IOPORT_PERIPHERAL_SCI0_2_4_6_8',5:'IOPORT_PERIPHERAL_SCI1_3_5_7_9'});

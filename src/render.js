@@ -17,6 +17,15 @@ const rect=(x,y,w,h,fill,rx=0,extra='')=>`<rect x="${x}" y="${y}" width="${w}" h
 function chip(x,y,w,h){let pins='';for(let i=0;i<16;i++){const d=(i+1)*(w-8)/17;pins+=rect(x+4+d,y-6,2,8,'#aeb4b5')+rect(x+4+d,y+h-2,2,8,'#aeb4b5')+rect(x-6,y+4+d,8,2,'#aeb4b5')+rect(x+w-2,y+4+d,8,2,'#aeb4b5');}return pins+rect(x,y,w,h,'#292b2c',2,'stroke="#111718" stroke-width="1.5"')+rect(x+2,y+2,w-4,h-4,'none',1,'stroke="#444849" stroke-width=".7"')+`<circle cx="${x+7}" cy="${y+7}" r="2" fill="#767c7c"/>`;}
 function button(x,y,color,id,label){return `<g data-button="${id}" class="board-button">${rect(x-19,y-19,38,38,'#c7cdcc',4,'stroke="#8c999d"')}<circle cx="${x}" cy="${y}" r="14" fill="${color}" stroke="#233744" stroke-width="2"/>${[[-14,-14],[14,-14],[-14,14],[14,14]].map(([dx,dy])=>`<circle cx="${x+dx}" cy="${y+dy}" r="2.5" fill="#303b40"/>`).join('')}${text(x,y+31,label,8,'#3f6684','text-anchor="middle"')}</g>`;}
 // Both supported boards are the MB1136 NUCLEO-64; only the MCU label and a few header signals differ.
+// An on-board LED's colour from its pin voltage: off below 0.2 V, fully lit from 3.3 V, and in between for PWM (the
+// averaged level a timer output drives), so a dimmed LED looks dimmer.
+export function ledShade(v){
+ const b=Math.max(0,Math.min(1,(v-0.2)/3.1));
+ if(b>=.95)return {fill:'#64e66b',filter:'drop-shadow(0 0 5px #59dc65)'};
+ if(b<=.05)return {fill:'#89a486',filter:''};
+ const mix=(x,y)=>Math.round(x+(y-x)*b).toString(16).padStart(2,'0');
+ return {fill:'#'+mix(0x89,0x64)+mix(0xa4,0xe6)+mix(0x86,0x6b),filter:`drop-shadow(0 0 ${(5*b).toFixed(1)}px rgba(89,220,101,${b.toFixed(2)}))`};
+}
 export function boardSvg(boardId=DEFAULT_BOARD_ID,{prefix=''}={}){
  const board=getBoard(boardId)??getBoard(DEFAULT_BOARD_ID);
  if(board.id==='fpb-ra6e1')return fpbBoardSvg(board,prefix);
@@ -201,7 +210,7 @@ export function updateSimulationSvg(svg,project,result,pressed){
    if(p.type==='button')g.querySelector('.switch-cap')?.setAttribute('fill',pressed[p.id]?'#168775':'#354857');
  }
  updateDevboardSvg(svg,project,result,!!result);
- for(const [id,pin]of [['#builtin-led','PA5'],['#board-led-LED1','P408'],['#board-led-LED2','P407']]){const on=result&&!result.fault&&result.voltage('signal:'+pin)>1.8,led=svg.querySelector(id);if(led){led.setAttribute('fill',on?'#64e66b':'#89a486');led.style.filter=on?'drop-shadow(0 0 5px #59dc65)':'';}}
+ for(const [id,pin]of [['#builtin-led','PA5'],['#board-led-LED1','P408'],['#board-led-LED2','P407']]){const led=svg.querySelector(id);if(led){const s=ledShade(result&&!result.fault?result.voltage('signal:'+pin):0);led.setAttribute('fill',s.fill);led.style.filter=s.filter;}}
 }
 export function lcdContent(lcd){
  if(!lcd?.visible)return text(0,-9,lcd?.powered?'LCD · INITIALIZE':'LCD 1602',12,'#687440','text-anchor="middle"')+text(0,7,lcd?.powered?'RS / E / DATA / VO':'5 V POWER',8,'#687440','text-anchor="middle"');

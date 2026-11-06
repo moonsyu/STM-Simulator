@@ -16,7 +16,7 @@ import {keyFor,withKey} from './keybindings.js';
 import {partReadouts} from './part-controls.js';
 import {paintMedia} from './part-media-ui.js';
 import {setActiveBoard,endpointInfo} from './pins.js';
-import {boardSvg,updateSurfaces,renderBreadboards,renderDevboards,renderWires,renderParts,updateSimulationSvg,renderEndpoints,esc} from './render.js';
+import {ledShade,boardSvg,updateSurfaces,renderBreadboards,renderDevboards,renderWires,renderParts,updateSimulationSvg,renderEndpoints,esc} from './render.js';
 import {stm32Boards,mainBoardName} from './stm32-boards.js';
 import {roundedWirePath} from './wire-path.js';
 
@@ -39,7 +39,7 @@ export function refresh({preserveWires=false}={}){
  $('endpoint-layer').innerHTML=renderEndpoints(state.project,state.pending);
  renderConnections();renderIssues(true);
  // On-board LEDs: LD2 (PA5) on the NUCLEO boards, LED1 (P408) / LED2 (P407) on the FPB-RA6E1.
- for(const [id,pin]of [['builtin-led','PA5'],['board-led-LED1','P408'],['board-led-LED2','P407']]){const el=document.getElementById(id);if(!el)continue;const on=!!state.result&&state.result.voltage('signal:'+pin)>1.8;el.setAttribute('fill',on?'#64e66b':'#89a486');el.style.filter=on?'drop-shadow(0 0 5px #59dc65)':'';}
+ for(const [id,pin]of [['builtin-led','PA5'],['board-led-LED1','P408'],['board-led-LED2','P407']]){const el=document.getElementById(id);if(!el)continue;const s=ledShade(state.result?state.result.voltage('signal:'+pin):0);el.setAttribute('fill',s.fill);el.style.filter=s.filter;}
  $('tool-select')?.classList.toggle('active',state.mode==='select');
  document.querySelectorAll('[data-add]').forEach(b=>{b.classList.toggle('active',state.mode===b.dataset.add);b.disabled=running();if(b.dataset.add==='board')b.querySelector('b').textContent=state.project.surfaces?.board?.hidden?'+':'✓';});
  $('undo').disabled=running()||!state.undoStack.length;$('redo').disabled=running()||!state.redoStack.length;$('delete').disabled=running()||!['part','wire','group','surface'].includes(state.selection?.type);
