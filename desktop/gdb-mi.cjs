@@ -16,9 +16,11 @@ function parseRecord(line){
 }
 class GdbSession extends EventEmitter {
   constructor(){super();this.sequence=0;this.pending=new Map();this.state='idle';this.breakpoints=[];this.closed=true;}
-  async start({gdb,elf,cwd,target='host',endpoint='127.0.0.1:3333',flash=false,reset=false,resetCommand='monitor reset halt',entry=true,breakpoints=[],files=['main.c']}){
+  async start({gdb,elf,cwd,target='host',endpoint='127.0.0.1:3333',flash=false,reset=false,resetCommand='monitor reset halt',entry=true,breakpoints=[],files=['main.c'],aliases={}}){
     if(!this.closed)throw new Error('디버거가 이미 실행 중입니다.');
     this.closed=false;this.state='starting';this.target=target;this.cwd=cwd;this.files=new Set(files);this.breakpoints=[];
+    // Editor file name → built file name (an FSP project's main.c is src/hal_entry.c), and back for what GDB reports.
+    this.aliases=aliases;this.unaliases=Object.fromEntries(Object.entries(aliases).map(([a,b])=>[b,a]));
     this.child=launch(gdb,['--quiet','--nx','--nh','--interpreter=mi2','-iex','set auto-load off'],{cwd});let buffer='';
     const child=this.child;child.stdin.on('error',e=>{if(this.child===child)this.finish(e);});
     this.child.stdout.setEncoding('utf8');this.child.stdout.on('data',chunk=>{buffer+=chunk;let end;while((end=buffer.indexOf('\n'))>=0){const line=buffer.slice(0,end).replace(/\r$/,'');buffer=buffer.slice(end+1);this.receive(line);}});
@@ -49,18 +51,23 @@ class GdbSession extends EventEmitter {
       if(record.class==='running'){this.state='running';this.emit('state',{state:'running'});}
       // A board halted while GDB connects (before the program is started) is not a pause the user asked for.
       else if(record.class==='stopped'&&this.state==='starting'&&!record.reason)return;
-      else if(record.class==='stopped'){this.state=record.reason?.startsWith('exited')?'exited':'paused';this.emit('state',{state:this.state,reason:record.reason,frame:record.frame,exitCode:record['exit-code']});}
+      else if(record.class==='stopped'){this.state=record.reason?.startsWith('exited')?'exited':'paused';this.emit('state',{state:this.state,reason:record.reason,frame:this.editorFrame(record.frame),exitCode:record['exit-code']});}
     }else if(record.text)this.emit('output',record.text);
   }
   command(text,timeout=12000){
     if(this.closed)return Promise.reject(new Error('디버거를 먼저 시작하세요.'));
     return new Promise((resolve,reject)=>{const id=++this.sequence,timer=setTimeout(()=>{this.pending.delete(id);reject(new Error('GDB 응답 시간 초과: '+text.split(' ')[0]));},timeout);this.pending.set(id,{resolve,reject,timer});this.child.stdin.write(`${id}${text}\n`,e=>{if(e){clearTimeout(timer);this.pending.delete(id);reject(e);}});});
   }
+  // A frame with the editor's file name (src/hal_entry.c of an FSP build is main.c; FSP's ra_gen/main.c keeps its name).
+  editorFrame(frame){
+    if(!frame||!this.unaliases)return frame;const name=path.basename(frame.file||frame.fullname||''),to=this.unaliases[name];
+    return to&&/[\\/]src[\\/]/.test(frame.fullname||frame.file||'')?{...frame,file:to}:frame;
+  }
   async setBreakpoints(points){
     if(points.length>1000)throw new Error('중단점이 너무 많습니다.');
     for(const id of this.breakpoints)await this.command('-break-delete '+id);this.breakpoints=[];
     const result=[];
-    for(const p of points){if(!/^[\w.-]+\.(c|h|cpp|hpp|cc)$/.test(p.file)||!Number.isInteger(p.line)||p.line<1)throw new Error('중단점 위치가 올바르지 않습니다.');try{const r=await this.command('-break-insert -f '+quote(p.file+':'+p.line));this.breakpoints.push(r.bkpt.number);result.push({...p,verified:r.bkpt.addr!=='<PENDING>',actualLine:Number(r.bkpt.line)||p.line});}catch(e){result.push({...p,verified:false,message:e.message});}}
+    for(const p of points){if(!/^[\w.-]+\.(c|h|cpp|hpp|cc)$/.test(p.file)||!Number.isInteger(p.line)||p.line<1)throw new Error('중단점 위치가 올바르지 않습니다.');try{const r=await this.command('-break-insert -f '+quote((this.aliases?.[p.file]||p.file)+':'+p.line));this.breakpoints.push(r.bkpt.number);result.push({...p,verified:r.bkpt.addr!=='<PENDING>',actualLine:Number(r.bkpt.line)||p.line});}catch(e){result.push({...p,verified:false,message:e.message});}}
     this.emit('breakpoints',result);return result;
   }
   async action(action){const commands={continue:'-exec-continue',pause:'-exec-interrupt --all',over:'-exec-next',into:'-exec-step',out:'-exec-finish'};if(!commands[action])throw new Error('지원하지 않는 디버그 동작입니다.');if(action!=='pause'&&this.state!=='paused')throw new Error('먼저 디버거를 일시정지하세요.');await this.command(commands[action]);}
@@ -70,7 +77,7 @@ class GdbSession extends EventEmitter {
     const stack=await this.command('-stack-list-frames 0 30'),locals=await this.command('-stack-list-variables --all-values'),names=await this.command('-data-list-register-names'),values=await this.command('-data-list-register-values x');
     const globals=[];
     try{const symbols=await this.command('-symbol-info-variables --max-results 100');for(const file of symbols.symbols?.debug||[]){if(!this.files.has(path.basename(file.filename||file.fullname||'')))continue;for(const symbol of file.symbols||[]){if(globals.length>=40)break;try{globals.push({name:symbol.name,type:symbol.type,value:(await this.command('-data-evaluate-expression '+quote(symbol.name))).value});}catch{}}}}catch{}
-    return {frames:stack.stack||[],locals:locals.variables||[],globals,registers:(values['register-values']||[]).map(r=>({name:names['register-names'][Number(r.number)]||'',value:r.value})).filter(r=>r.name)};
+    return {frames:(stack.stack||[]).map(f=>this.editorFrame(f)),locals:locals.variables||[],globals,registers:(values['register-values']||[]).map(r=>({name:names['register-names'][Number(r.number)]||'',value:r.value})).filter(r=>r.name)};
   }
   async evaluate(expression){
     if(this.state!=='paused')throw new Error('일시정지 상태에서 감시식을 평가하세요.');

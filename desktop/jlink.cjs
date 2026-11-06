@@ -55,5 +55,5 @@ async function programJlink({jlink,hex,serial,device,onOutput=()=>{},launcher=la
   return log;
 }
 /** Arguments of JLinkGDBServerCL for the probe and MCU (only 127.0.0.1, one session). */
-function gdbServerArgs({serial,device}){return [...(serial?['-select',`USB=${serial}`]:[]),'-device',device,'-if','SWD','-speed','4000','-port',String(GDB_PORT),'-swoport','2332','-telnetport','2333','-localhostonly','1','-nogui','1','-singlerun','-noir'];}
+function gdbServerArgs({serial,device}){return [...(serial?['-select',`USB=${serial}`]:[]),'-device',device,'-if','SWD','-speed','4000','-port',String(GDB_PORT),'-swoport','2332','-telnetport','2333','-localhostonly','1','-nogui','-singlerun','-noir'];}
 module.exports={JLINK_DEVICES,GDB_PORT,findJlink,gdbServerOf,listJlinks,chooseJlink,programJlink,programScript,gdbServerArgs,jlinkHint,commonArgs};
