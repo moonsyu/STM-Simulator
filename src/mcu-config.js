@@ -157,7 +157,8 @@ export function evalIocNumber(raw){
 }
 export function importIoc(text){
   if(typeof text!=='string'||text.length>500000)throw new Error('.ioc 파일은 500 KB 이하로 선택하세요.');
-  const values=Object.fromEntries(text.split(/\r?\n/).filter(l=>l&&!l.startsWith('#')&&l.includes('=')).map(l=>[l.slice(0,l.indexOf('=')),l.slice(l.indexOf('=')+1).replaceAll('\\:',':')]));
+  // CubeMX writes keys as Java properties: spaces and # are escaped ("TIM2.Pulse-PWM\ Generation1\ CH1").
+  const values=Object.fromEntries(text.split(/\r?\n/).filter(l=>l&&!l.startsWith('#')&&l.includes('=')).map(l=>[l.slice(0,l.indexOf('=')).replace(/\\(.)/g,'$1'),l.slice(l.indexOf('=')+1).replaceAll('\\:',':')]));
   // CubeMX writes package ranges in Mcu.Name (STM32F103R(8-B)Tx); Mcu.CPN/UserName hold the exact part.
   const familyOf=name=>/^STM32F446R/.test(name)?'STM32F446RE':/^STM32F103R(?:[8B]|\([^)]*B[^)]*\))/.test(name)?'STM32F103RB':null;
   const family=['Mcu.Name','Mcu.CPN','Mcu.UserName'].map(k=>familyOf(values[k]||'')).find(Boolean);
