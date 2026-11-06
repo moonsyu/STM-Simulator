@@ -24,6 +24,8 @@ export const MODES=['Reset','GPIO_Input','GPIO_Output','GPIO_EXTI','Analog','Res
 export const irqForPin=pin=>{const n=Number(pin.slice(2));return n<5?`EXTI${n}_IRQn`:n<10?'EXTI9_5_IRQn':'EXTI15_10_IRQn';};
 export function pinFunctions(pin,family=DEFAULT_FAMILY){return [...MODES,...Object.entries(routesOf(family)).flatMap(([id,routes])=>Object.entries(routes).filter(([,pins])=>pins.includes(pin)).map(([signal])=>`${id}_${signal}`)),...Object.entries(usartCkRoutesOf(family)).filter(([,pins])=>pins.includes(pin)).map(([id])=>id+'_CK')];}
 export function defaultMcu(family=DEFAULT_FAMILY){const f=familyProfile(family);return {family:f.id,pins:{},peripherals:{},nvic:{},timerClockHz:f.clock.defaultHz};}
+/** UART Parameter Settings (CubeMX Asynchronous mode): the first value of each list is CubeMX's default. */
+export const UART_PARAMS=Object.freeze({wordLength:[8,9],parity:['NONE','EVEN','ODD'],stopBits:[1,2],direction:['TX_RX','TX','RX'],overSampling:[16,8]});
 export function validateMcu(value){
   if(!value||!Object.hasOwn(FAMILIES,value.family)||!value.pins||!value.peripherals||!value.nvic)throw new Error(`MCU 핀 설정이 필요합니다 (${Object.keys(FAMILIES).join(' / ')}).`);
   const f=familyProfile(value.family),routes=routesOf(f.id);
@@ -45,6 +47,11 @@ export function validateMcu(value){
     if(isTimer(id)){q.mode=p.mode??defaults.mode;if(!['base','pwm','capture','encoder'].includes(q.mode))throw new Error(id+': 타이머 모드를 확인하세요.');}
     // CubeMX ADC Settings › Continuous Conversion Mode (off = single conversion per HAL_ADC_Start, as CubeMX's default).
     if(id==='ADC1'&&p.continuous!==undefined){if(typeof p.continuous!=='boolean')throw new Error('ADC1: Continuous Conversion Mode를 확인하세요.');if(p.continuous)q.continuous=true;}
+    // CubeMX Parameter Settings of an asynchronous UART (only the values that differ from 8N1 / TX_RX / 16 are kept).
+    if(isSerial(id)){
+     for(const [key,values]of Object.entries(UART_PARAMS)){if(p[key]===undefined)continue;if(!values.includes(p[key]))throw new Error(`${id}.${key}: ${values.join(' / ')} 중에서 고르세요.`);if(p[key]!==values[0])q[key]=p[key];}
+     if(q.overSampling===8&&f.id==='STM32F103RB')throw new Error(`${id}: STM32F103RB의 USART는 Over Sampling 16만 지원합니다.`);
+    }
     if(isSerial(id)&&p.mode!==undefined&&p.mode!=='asynchronous'){if(p.mode!=='synchronous'||!f.usartCk[id])throw new Error(`${id}: 동기 모드는 USART${Object.keys(f.usartCk).map(u=>u.replace('USART','')).join('/')}에서만 지원합니다.`);q.mode='synchronous';for(const [key,values]of [['cpol',[0,1]],['cpha',[0,1]],['lastBit',[0,1]]]){q[key]=p[key]??0;if(!values.includes(q[key]))throw new Error(`${id}.${key}: 0 또는 1입니다.`);}}
     out.peripherals[id]=q;
   }
@@ -143,6 +150,9 @@ export function importIoc(text){
   for(const id of Object.keys(f.serial))if(config.peripherals[id]){
     const p=config.peripherals[id];p.baud=number(values[id+'.BaudRate'],115200);
     // A pin carrying USARTx_CK means CubeMX's synchronous mode.
+    const w=values[id+'.WordLength'],par=values[id+'.Parity'],stop=values[id+'.StopBits'],mode=values[id+'.Mode'],over=values[id+'.OverSampling'];
+    if(/9B/.test(w||''))p.wordLength=9;if(/EVEN/.test(par||''))p.parity='EVEN';else if(/ODD/.test(par||''))p.parity='ODD';if(/STOPBITS_2/.test(stop||''))p.stopBits=2;
+    if(/MODE_TX$/.test(mode||''))p.direction='TX';else if(/MODE_RX$/.test(mode||''))p.direction='RX';if(/OVERSAMPLING_8/.test(over||'')&&f.id!=='STM32F103RB')p.overSampling=8;
     if(Object.values(config.pins).some(q=>q.function===id+'_CK'))Object.assign(p,{mode:'synchronous',cpol:values[id+'.CLKPolarity']==='USART_POLARITY_HIGH'?1:0,cpha:values[id+'.CLKPhase']==='USART_PHASE_2EDGE'?1:0,lastBit:values[id+'.CLKLastBit']==='USART_LASTBIT_ENABLE'?1:0});
   }
   if(config.peripherals.I2C1)config.peripherals.I2C1.clock=number(values['I2C1.ClockSpeed'],100000);

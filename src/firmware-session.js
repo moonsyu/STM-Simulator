@@ -208,7 +208,8 @@ export class FirmwareSession {
     if (!this.ra) list.push(new UartReceiver(sig, this.soc, {
       sources: () => { const l = sig.lines.get('PA2'); return l ? [l] : []; },
       config: () => { const u = this.soc.usarts.USART2, b = u.baud(); return b && u.txEnabled() ? { baud: b, dataBits: u.frameBits(), parity: u.parity(), stopBits: u.stopBits() } : null; },
-      onFrame: f => { const v = f.value & 0xff; this.buses.vcpOutput = ((this.buses.vcpOutput || '') + String.fromCharCode(v)).slice(-512); this.buses.uart.baud = Math.round(this.soc.usarts.USART2.baud()); this.buses.uart.ready = true; this.buses.uart.instance = 'USART2'; },
+      // The host terminal uses the same format: the parity bit is not data (8 bits incl. parity = 7 data bits).
+      onFrame: f => { const u = this.soc.usarts.USART2, v = f.value & ((1 << Math.min(8, u.frameBits() - (u.parity() === 'none' ? 0 : 1))) - 1); this.buses.vcpOutput = ((this.buses.vcpOutput || '') + String.fromCharCode(v)).slice(-512); this.buses.uart.baud = Math.round(this.soc.usarts.USART2.baud()); this.buses.uart.ready = true; this.buses.uart.instance = 'USART2'; },
     }));
     for (const p of this.project.components.filter(p => p.type === 'uart')) {
       list.push(new UartReceiver(sig, this.soc, {

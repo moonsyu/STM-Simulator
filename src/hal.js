@@ -304,7 +304,7 @@ export class HalAdapter {
       const type=name.split('_')[1],{h,id,init}=this.handle(a,r,type),get=k=>this.field(init,k);this.callback(r,`HAL_${type}${type==='TIM'?'_'+name.split('_')[2]:''}_MspInit`,[a]);
       if(type==='UART'){
         if(this.config.peripherals[id]?.mode==='synchronous')throw new Error(`${id}: Pinout에서 동기(Synchronous) 모드입니다. HAL_USART_Init을 사용하세요.`);
-        if(!isSerial(id)||get('WordLength')!==0||get('StopBits')!==0||get('Parity')!==0||get('HwFlowCtl')!==0||get('Mode')!==12||get('OverSampling')!==0)throw new Error(`${id}: 비동기 8N1, TX/RX, 흐름제어 없음, oversampling 16을 지원합니다.`);
+        if(!isSerial(id)||get('WordLength')!==0||get('StopBits')!==0||get('Parity')!==0||get('HwFlowCtl')!==0||get('Mode')!==12||get('OverSampling')!==0)throw new Error(`${id}: 내장 해석기는 비동기 8N1, TX/RX, 흐름제어 없음, oversampling 16만 지원합니다. 다른 설정(9비트·패리티·정지 비트 2·한 방향·oversampling 8)은 ARM GCC 시뮬레이터로 실행하세요.`);
         if(get('BaudRate')!==this.config.peripherals[id].baud)throw new Error(`${id}: 소스와 Pinout의 baud rate가 다릅니다.`);
         const {bus}=this.uart(id);bus.call('Serial1.setPins',[this.pinFor(id+'_RX'),this.pinFor(id+'_TX')],r);bus.call('Serial1.begin',[get('BaudRate')],r);
       }
