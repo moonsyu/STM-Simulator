@@ -17,10 +17,11 @@ async function zip(dir,out){execFileSync(path.join(process.env.SystemRoot||'C:/W
 const fakeFetch=routes=>async url=>{const body=routes[url];if(body===undefined)return new Response('missing',{status:404});return new Response(body,{headers:{'content-length':String(body.length)}});};
 
 test('the plan lists only missing tools, in install order, with sizes and hosts',()=>{
- const all={armGcc:'g',armGdb:'d',cube:'c',cubeF1:'f',openocd:'o',clangd:'l'};
+ const all={armGcc:'g',armGdb:'d',cube:'c',cubeF1:'f',fsp:'r',openocd:'o',clangd:'l'};
  assert.deepEqual(installPlan(all),[]);
- const plan=installPlan({...all,armGdb:'',cube:'',cubeF1:'',clangd:''});
- assert.deepEqual(plan.map(p=>p.id),['gcc','cube','cubeF1','clangd']);
+ const plan=installPlan({...all,armGdb:'',cube:'',cubeF1:'',fsp:'',clangd:''});
+ assert.deepEqual(plan.map(p=>p.id),['gcc','cube','cubeF1','fsp','clangd']);
+ assert.equal(plan.find(p=>p.id==='fsp').source,'github.com/renesas');
  assert.ok(plan.every(p=>p.bytes>0&&p.label&&p.source));
  assert.equal(plan[0].source,'github.com');
 });

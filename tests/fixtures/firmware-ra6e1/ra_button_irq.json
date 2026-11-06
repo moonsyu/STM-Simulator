@@ -1,0 +1,46 @@
+{
+ "format": "stm32-circuit-lab",
+ "version": 2,
+ "name": "ra_button_irq",
+ "code": "#include \"hal_data.h\"\n\nFSP_CPP_HEADER\nvoid R_BSP_WarmStart(bsp_warm_start_event_t event);\nFSP_CPP_FOOTER\n\nvolatile uint32_t presses = 0;\nstatic bsp_io_level_t led2 = BSP_IO_LEVEL_LOW;\n\n/* S1 (P205, IRQ1) falling edge: g_external_irq1 calls this from r_icu's ISR. */\nvoid external_irq1_callback(external_irq_callback_args_t *p_args)\n{\n    (void) p_args;\n    presses++;\n    led2 = (BSP_IO_LEVEL_LOW == led2) ? BSP_IO_LEVEL_HIGH : BSP_IO_LEVEL_LOW;\n    R_IOPORT_PinWrite(&g_ioport_ctrl, LED2, led2);\n}\n\nvoid hal_entry(void)\n{\n    R_ICU_ExternalIrqOpen(&g_external_irq1_ctrl, &g_external_irq1_cfg);\n    R_ICU_ExternalIrqEnable(&g_external_irq1_ctrl);\n\n    /* LED1 blinks while the interrupt waits for S1. */\n    while (1)\n    {\n        R_IOPORT_PinWrite(&g_ioport_ctrl, LED1, BSP_IO_LEVEL_HIGH);\n        R_BSP_SoftwareDelay(200, BSP_DELAY_UNITS_MILLISECONDS);\n        R_IOPORT_PinWrite(&g_ioport_ctrl, LED1, BSP_IO_LEVEL_LOW);\n        R_BSP_SoftwareDelay(200, BSP_DELAY_UNITS_MILLISECONDS);\n    }\n}\n\nvoid R_BSP_WarmStart(bsp_warm_start_event_t event)\n{\n    if (BSP_WARM_START_POST_C == event)\n    {\n        /* C runtime environment and system clocks are setup. */\n\n        /* Configure pins. */\n        R_IOPORT_Open (&IOPORT_CFG_CTRL, &IOPORT_CFG_NAME);\n    }\n}\n",
+ "components": [],
+ "wires": [],
+ "boardId": "fpb-ra6e1",
+ "surfaces": {
+  "board": {
+   "hidden": false
+  },
+  "breadboard": {
+   "hidden": true
+  }
+ },
+ "mcu": {
+  "family": "R7FA6E10F",
+  "pins": {
+   "P408": {
+    "function": "GPIO_Output",
+    "label": "LED1",
+    "initial": 0,
+    "drive": "LOW"
+   },
+   "P407": {
+    "function": "GPIO_Output",
+    "label": "LED2",
+    "initial": 0,
+    "drive": "LOW"
+   },
+   "P205": {
+    "function": "IRQ",
+    "label": "SW1",
+    "pull": "PULLUP",
+    "edge": "FALLING",
+    "priority": 12,
+    "callback": "external_irq1_callback"
+   }
+  }
+ },
+ "firmware": {
+  "mode": "fsp",
+  "files": []
+ }
+}

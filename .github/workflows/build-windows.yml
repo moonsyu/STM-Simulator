@@ -58,6 +58,7 @@ jobs:
       ARM_GCC: ${{ github.workspace }}\.cache\toolchain\xpack-arm-none-eabi-gcc-14.2.1-1.1\bin\arm-none-eabi-gcc.exe
       STM32CUBE_F4_ROOT: ${{ github.workspace }}\.cache\toolchain\cubef4
       STM32CUBE_F1_ROOT: ${{ github.workspace }}\.cache\toolchain\cubef1
+      FSP_ROOT: ${{ github.workspace }}\.cache\toolchain\FSP
       EXAMPLES: blank,ref_led_tht_2,ref_button_4,ref_lcd_parallel_16,ref_max98357a_9,dma_uart_echo,adc_dma_scan,nvic_preemption,usart_sync_matrix,camera_tft,noise_errors
     steps:
       - name: Check out source
@@ -71,10 +72,10 @@ jobs:
           cache: npm
       - name: Install locked dependencies
         run: npm ci
-      - name: Install ARM GCC and STM32CubeF4 / STM32CubeF1 drivers
+      - name: Install ARM GCC, STM32CubeF4 / STM32CubeF1 drivers and Renesas FSP
         uses: ./.github/actions/arm-toolchain
       - name: Build examples with ST HAL and run them on the emulator
-        run: node --test --test-reporter=spec --test-reporter-destination=stdout --test-reporter=./tests/github-reporter.mjs --test-reporter-destination=stdout --test-concurrency=1 tests/toolchain/arm-examples.test.mjs tests/toolchain/board-links.test.mjs
+        run: node --test --test-reporter=spec --test-reporter-destination=stdout --test-reporter=./tests/github-reporter.mjs --test-reporter-destination=stdout --test-concurrency=1 tests/toolchain/arm-examples.test.mjs tests/toolchain/board-links.test.mjs tests/toolchain/ra-build.test.mjs
       - name: Report firmware build failures
         if: failure()
         shell: pwsh
@@ -154,6 +155,7 @@ jobs:
       ARM_GCC: ${{ github.workspace }}\.cache\toolchain\xpack-arm-none-eabi-gcc-14.2.1-1.1\bin\arm-none-eabi-gcc.exe
       STM32CUBE_F4_ROOT: ${{ github.workspace }}\.cache\toolchain\cubef4
       STM32CUBE_F1_ROOT: ${{ github.workspace }}\.cache\toolchain\cubef1
+      FSP_ROOT: ${{ github.workspace }}\.cache\toolchain\FSP
     steps:
       - name: Check out source
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
@@ -173,7 +175,7 @@ jobs:
         run: npm ci
       - name: Ensure Electron runtime is installed
         run: node node_modules/electron/install.js
-      - name: Install ARM GCC and STM32CubeF4 / STM32CubeF1 drivers
+      - name: Install ARM GCC, STM32CubeF4 / STM32CubeF1 drivers and Renesas FSP
         uses: ./.github/actions/arm-toolchain
       - name: Electron end-to-end tests (half of the files)
         shell: pwsh

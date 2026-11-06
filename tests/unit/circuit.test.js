@@ -40,7 +40,8 @@ describe('pins and board connectors',()=>{
     assert.equal(PINS.length,108);assert.equal(new Set(PINS.map(p=>p.id)).size,108);
     assert.equal(HOLES.length,400);assert.equal(new Set(HOLES.map(h=>h.id)).size,400);
     assert.equal(new Set(HOLES.map(h=>`${h.x},${h.y}`)).size,400,'no two holes overlap');
-    assert.equal(PIN_BY_ID.size,108);assert.equal(HOLE_BY_ID.size,400);
+    // PIN_BY_ID knows every board's header pins: the NUCLEO-64's 108 and the FPB-RA6E1's 32 (other ids).
+    assert.equal(PIN_BY_ID.size,108+32);assert.ok(PINS.every(p=>PIN_BY_ID.get(p.id)===p));assert.equal(HOLE_BY_ID.size,400);
   });
   test('Arduino aliases resolve to their STM32 port pins',()=>{
     assert.equal(canonicalPin('D13'),'PA5');assert.equal(canonicalPin('LED_BUILTIN'),'PA5');assert.equal(canonicalPin('USER_BUTTON'),'PC13');

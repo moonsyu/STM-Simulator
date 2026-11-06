@@ -1,5 +1,5 @@
-name: ARM GCC and STM32Cube drivers
-description: Installs xPack ARM GCC 14.2.1 and the STM32CubeF4 / STM32CubeF1 HAL and CMSIS drivers under .cache/toolchain (ARM_GCC, STM32CUBE_F4_ROOT and STM32CUBE_F1_ROOT point there).
+name: ARM GCC, STM32Cube drivers and Renesas FSP
+description: Installs xPack ARM GCC 14.2.1, the STM32CubeF4 / STM32CubeF1 HAL and CMSIS drivers and Renesas FSP v6.6.0 (FPB-RA6E1) under .cache/toolchain (ARM_GCC, STM32CUBE_F4_ROOT, STM32CUBE_F1_ROOT and FSP_ROOT point there).
 runs:
   using: composite
   steps:
@@ -19,4 +19,6 @@ runs:
           $to = "$dir/cubef1/$($src[2])"; git init -q $to; git -C $to fetch -q --depth 1 "https://github.com/STMicroelectronics/$($src[0]).git" $src[1]; git -C $to checkout -q FETCH_HEAD
         }
         Copy-Item -Recurse "$dir/cmsis5/CMSIS/Core/Include" "$dir/cubef1/Drivers/CMSIS/Include"
+        # Renesas FSP v6.6.0 through the app's own installer (pinned files of desktop/tool-manifest-fsp.json, SHA-256 checked).
+        node -e "require('./desktop/tool-installer.cjs').installTools(['fsp'],{root:require('path').resolve('.cache/toolchain')}).then(()=>console.log('Renesas FSP installed'),e=>{console.error(e.message);process.exit(1);})"
         & $env:ARM_GCC --version
