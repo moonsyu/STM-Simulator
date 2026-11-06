@@ -133,9 +133,12 @@ export function setupNativeIde({o,editor,select,showMonitor,points,watches,toggl
   // clangd serves only the ARM and Windows targets; its markers belong to the previous target's flags.
   editor.clearLanguageDiagnostics();if(language&&!gcc()){language=false;languageReady=false;$('language-toggle').textContent='clangd 꺼짐';void guard(()=>api['language-stop']());}
   $('build-status').textContent=gccSimulation()?'ARM GCC → 시뮬레이터 · 빌드 준비':emulator()?'ARM GCC → 에뮬레이터 · 빌드 준비':esp32()?'Arduino CLI → ESP32 · 빌드 준비':selected()?`${config().target==='arm'?'ARM GCC':'Windows GCC'} · 빌드 준비`:'시뮬레이터용 빌드';$('new').disabled=$('open').disabled=$('workspace-open').disabled=false;o.refresh();queueLanguage();}
- function queueLanguage(){clearTimeout(languageTimer);if(!language||!gcc())return;languageTimer=setTimeout(()=>void updateLanguage(),500);}
- async function updateLanguage(){if(!language||!gcc())return;if(languageRunning){languageQueued=true;return;}languageRunning=true;try{await api.language(text(),config());languageReady=true;$('language-toggle').textContent='clangd 연결됨';}catch(e){languageReady=false;$('language-toggle').textContent='clangd 설정 필요';$('language-toggle').title=e.message;}finally{languageRunning=false;if(languageQueued){languageQueued=false;queueLanguage();}}}
- const lsp={enabled:()=>language&&languageReady&&gcc(),query:(method,file,position)=>api['language-query'](method,file,position)};editor.setLanguageService(lsp);
+ function queueLanguage(){clearTimeout(languageTimer);if(!language||!gcc())return;languageDirty=true;languageTimer=setTimeout(()=>void updateLanguage(),500);}
+ // Completion while typing sends the pending edit at once (flushLanguage) instead of after the 500 ms debounce.
+ let languageDirty=false,languageRun=null;
+ async function flushLanguage(){if(languageRunning)await languageRun;if(languageDirty){clearTimeout(languageTimer);await updateLanguage();}}
+ async function updateLanguage(){if(!language||!gcc())return;if(languageRunning){languageQueued=true;return languageRun;}languageRunning=true;languageDirty=false;let done;languageRun=new Promise(r=>done=r);try{await api.language(text(),config());languageReady=true;$('language-toggle').textContent='clangd 연결됨';}catch(e){languageReady=false;$('language-toggle').textContent='clangd 설정 필요';$('language-toggle').title=e.message;}finally{languageRunning=false;done();if(languageQueued){languageQueued=false;queueLanguage();}}}
+ const lsp={enabled:()=>language&&languageReady&&gcc(),flush:flushLanguage,query:(method,file,position)=>api['language-query'](method,file,position)};editor.setLanguageService(lsp);
  $('native-target').onchange=change;
  $('sim-engine').onchange=()=>{setEngine($('sim-engine').value);change();o.log($('sim-engine').value==='gcc'?'시뮬레이터는 ARM GCC로 빌드해 실행합니다(실물 보드와 같은 헤더·C 라이브러리).':'시뮬레이터는 내장 C 해석기로 실행합니다(지원하는 헤더와 함수만).');};
  // The title bar's run button carries the run target too: ▾ next to it lists the same targets as the select.
