@@ -30,6 +30,7 @@
 - 한 것: 4f7a8d0(두 기능이 같은 파일의 같은 줄을 고쳐 한 커밋으로 묶음). TIM PWM 채널별 Pulse·CH Polarity·PWM mode, I2C1 Primary Address·Fast Mode Duty Cycle·No Stretch. E2E 파일 이름을 peripheral-params로 바꿨다.
 - 맞춘 것: 해석기에 `TIM_OCPOLARITY_LOW`가 없어 "정의되지 않은 이름"이 먼저 나옴 → 상수 추가로 지원 범위 안내가 나오게. PWM 예제가 PWM 파형 모드를 켜서 핀에 평균 듀티가 없음 → 시험에서 끔. F103RB의 TIM2 CH2는 CH1과 같은 리맵 묶음(PA15 → PB3). 한 줄짜리 코드에 // 주석을 넣어 뒤가 주석이 됨 → /* */.
 - 검증: 단위 935개 중 934개 통과·1개 건너뜀, 툴체인 TIM 두 보드(CH1 25 %, CH2 PWM2·Low 75 %), E2E peripheral-params 4개 통과.
+- 게시: 4f7a8d0·e563039는 같은 폴더를 쓰는 다른 세션이 1.24.1(9b074f2·5bc04ab)과 함께 푸시해 v1.24.0 Release는 따로 없고 [Release v1.24.1](https://github.com/moonsyu/STM-Simulator/releases/tag/v1.24.1)(5bc04ab, CI 42165228015 성공, 자산 5개)에 들어갔다. 푸시 전 로컬 검사(ESLint 0건, 단위 939개 중 938개·툴체인 279개 중 278개·E2E 73개 중 72개 통과·각 1개 건너뜀, 패키지 3개)는 e563039 기준. 그 뒤 푸시할 때 다른 세션의 문서 커밋 63f8266도 함께 올라갔다(그 세션에 알림, 버전 같아 Release 없음).
 - 남은 사항: TIM Output Compare·Counter mode, 클록 트리, TIM6/7·RTC·DAC, J-Link 실물 확인.
 
 ## 2026-11-06 · 1.23.0 FSP 원본 색인(5단계) · J-Link(6단계 앱 쪽) · USART/SPI Parameter Settings (기능 목록 2·3번)
