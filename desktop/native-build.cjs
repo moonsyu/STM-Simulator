@@ -2,7 +2,12 @@ const fs=require('node:fs/promises'),path=require('node:path'),os=require('node:
 const {randomUUID,createHash}=require('node:crypto');
 const {execute}=require('./process-tools.cjs');
 const {findArduinoCli}=require('./esp32-build.cjs');
-const TOOL_KEYS=['armGcc','armGdb','cube','cubeF1','hostGcc','hostGdb','clangd','openocd','arduinoCli','buildRoot'];
+const {prepareRa}=require('./ra-build.cjs');
+const TOOL_KEYS=['armGcc','armGdb','cube','cubeF1','fsp','hostGcc','hostGdb','clangd','openocd','arduinoCli','buildRoot'];
+// Renesas RA families build with FSP (desktop/ra-build.cjs), not an STM32Cube SDK.
+const RA_FAMILIES=new Set(['R7FA6E10F']);
+const isRa=project=>RA_FAMILIES.has(project.mcu?.family);
+const fspReady=root=>exists(path.join(root,'ra/fsp/src/bsp/mcu/ra6e1/bsp_feature.h'));
 const F4_MODULES=['hal','hal_rcc','hal_rcc_ex','hal_gpio','hal_cortex','hal_pwr','hal_pwr_ex','hal_flash','hal_flash_ex','hal_dma','hal_dma_ex','hal_can','hal_i2s','hal_i2s_ex','hal_uart','hal_usart','hal_adc','hal_adc_ex','hal_i2c','hal_spi','hal_tim','hal_tim_ex','hal_dcmi','hal_dcmi_ex','hal_sd','ll_sdmmc','hal_iwdg','hal_wwdg','hal_rtc','hal_rtc_ex','hal_crc'];
 const F1_MODULES=['hal','hal_rcc','hal_rcc_ex','hal_gpio','hal_gpio_ex','hal_cortex','hal_pwr','hal_flash','hal_flash_ex','hal_dma','hal_can','hal_uart','hal_usart','hal_adc','hal_adc_ex','hal_i2c','hal_spi','hal_tim','hal_tim_ex','hal_iwdg','hal_wwdg','hal_rtc','hal_rtc_ex','hal_crc'];
 // The ARM build per MCU family: SDK tool key and layout, CPU flags, startup file and memory sizes.
@@ -10,7 +15,7 @@ const SDKS={
   STM32F446RE:{key:'cube',name:'STM32CubeF4',hal:'STM32F4xx_HAL_Driver',device:'STM32F4xx',prefix:'stm32f4xx',cpu:['-mcpu=cortex-m4','-mthumb','-mfpu=fpv4-sp-d16','-mfloat-abi=hard','-DSTM32F446xx'],startup:'startup_stm32f446xx.s',ld:'stm32f446re.ld',flash:'512K',ram:'128K',modules:F4_MODULES},
   STM32F103RB:{key:'cubeF1',name:'STM32CubeF1',hal:'STM32F1xx_HAL_Driver',device:'STM32F1xx',prefix:'stm32f1xx',cpu:['-mcpu=cortex-m3','-mthumb','-mfloat-abi=soft','-DSTM32F103xB'],startup:'startup_stm32f103xb.s',ld:'stm32f103rb.ld',flash:'128K',ram:'20K',modules:F1_MODULES}
 };
-const sdkFor=project=>SDKS[project.mcu?.family||'STM32F446RE'];
+const sdkFor=project=>isRa(project)?{key:'fsp',name:'Renesas FSP'}:SDKS[project.mcu?.family||'STM32F446RE'];
 const linker=sdk=>`ENTRY(Reset_Handler)
 MEMORY { FLASH (rx) : ORIGIN = 0x08000000, LENGTH = ${sdk.flash}
 RAM (xrw) : ORIGIN = 0x20000000, LENGTH = ${sdk.ram} }
@@ -48,12 +53,15 @@ async function detectTools(current={}){
   const hostBins=['C:/msys64/ucrt64/bin','C:/msys64/mingw64/bin'];
   for(const [key,name,dirs]of [['armGcc','arm-none-eabi-gcc',armBins],['armGdb','arm-none-eabi-gdb',armBins],['hostGcc','gcc',hostBins],['hostGdb','gdb',hostBins],['clangd','clangd',['C:/Program Files/LLVM/bin',...hostBins]],['openocd','openocd',openocdBins]])if(!tools[key])tools[key]=await findExecutable(name,dirs);
   if(!tools.arduinoCli)tools.arduinoCli=await findArduinoCli();
+  // Renesas FSP: the app's install, FSP_ROOT, or e² studio / RASC's FSP packs are not a source tree (not used).
+  if(!tools.fsp){const local2=path.join(local,'FSP');if(await fspReady(local2))tools.fsp=local2;}
+  if(process.env.FSP_ROOT&&await fspReady(process.env.FSP_ROOT))tools.fsp=process.env.FSP_ROOT;
   // STM32CubeMX/IDE firmware packages live in ~/STM32Cube/Repository/STM32Cube_FW_F4_Vx (and _F1_).
   for(const [family,sdk]of Object.entries(SDKS))if(!tools[sdk.key]){const parent=path.join(os.homedir(),'STM32Cube/Repository'),series=family.slice(5,7);for(const e of (await fs.readdir(parent).catch(()=>[])).filter(n=>n.startsWith(`STM32Cube_FW_${series}_`)).sort().reverse()){const candidate=path.join(parent,e);if(await exists(path.join(candidate,'Drivers',sdk.hal,'Inc',sdk.prefix+'_hal.h'))){tools[sdk.key]=candidate;break;}}const env=process.env[`STM32CUBE_${series}_ROOT`];if(env)tools[sdk.key]=env;}
   return tools;
 }
 function validateTools(value){const result={};if(!value||typeof value!=='object')throw new Error('개발 도구 설정을 확인하세요.');for(const key of TOOL_KEYS){const v=value[key]||'';if(typeof v!=='string'||v.length>2048||/[\r\n\0]/.test(v)||v&&!path.isAbsolute(v))throw new Error('도구는 절대 경로로 지정하세요.');result[key]=v;}return result;}
-async function probeTools(tools){const result={};for(const key of TOOL_KEYS){if(!tools[key]){result[key]={ok:false,message:'설정되지 않음'};continue;}try{if(key==='buildRoot'){if(/[^\x00-\x7f]/.test(tools.buildRoot))throw new Error('영문 경로를 선택하세요.');result[key]={ok:true,message:tools.buildRoot};}else if(key==='cube'||key==='cubeF1'){const sdk=Object.values(SDKS).find(s=>s.key===key);if(!await exists(path.join(tools[key],'Drivers',sdk.hal,'Inc',sdk.prefix+'_hal.h')))throw new Error(`${sdk.name} Drivers 폴더를 찾을 수 없습니다.`);result[key]={ok:true,message:`${sdk.name} HAL / CMSIS`};}else{const r=await execute(tools[key],[key==='arduinoCli'?'version':'--version'],{timeout:8000});result[key]={ok:r.code===0,message:(r.stdout||r.stderr).split('\n')[0]};}}catch(e){result[key]={ok:false,message:e.message};}}return result;}
+async function probeTools(tools){const result={};for(const key of TOOL_KEYS){if(!tools[key]){result[key]={ok:false,message:'설정되지 않음'};continue;}try{if(key==='buildRoot'){if(/[^\x00-\x7f]/.test(tools.buildRoot))throw new Error('영문 경로를 선택하세요.');result[key]={ok:true,message:tools.buildRoot};}else if(key==='fsp'){if(!await fspReady(tools.fsp))throw new Error('Renesas FSP의 ra/fsp/src/bsp 폴더를 찾을 수 없습니다.');result[key]={ok:true,message:'Renesas FSP BSP / 드라이버'};}else if(key==='cube'||key==='cubeF1'){const sdk=Object.values(SDKS).find(s=>s.key===key);if(!await exists(path.join(tools[key],'Drivers',sdk.hal,'Inc',sdk.prefix+'_hal.h')))throw new Error(`${sdk.name} Drivers 폴더를 찾을 수 없습니다.`);result[key]={ok:true,message:`${sdk.name} HAL / CMSIS`};}else{const r=await execute(tools[key],[key==='arduinoCli'?'version':'--version'],{timeout:8000});result[key]={ok:r.code===0,message:(r.stdout||r.stderr).split('\n')[0]};}}catch(e){result[key]={ok:false,message:e.message};}}return result;}
 // Linker errors with a source location ("main.c:12:(.text.main+0x8): undefined reference to `foo'") are listed too.
 function diagnosticsFrom(text){return text.split(/\r?\n/).flatMap(line=>{const ld=/^(.+?):(\d+):(?:\([^)]*\):)?\s*((?:undefined reference to|multiple definition of) [^;]*)/.exec(line);if(ld)return [{file:path.basename(ld[1]),line:Number(ld[2]),column:1,severity:'error',message:'링크: '+ld[3],path:ld[1]}];const m=/^(.+?):(\d+):(\d+):\s*(fatal error|error|warning|note):\s*(.*)$/.exec(line);return m?[{file:path.basename(m[1]),line:Number(m[2]),column:Number(m[3]),severity:m[4]==='warning'?'warning':m[4]==='note'?'info':'error',message:m[5],path:m[1]}]:[];});}
 function fingerprint(project,config){return createHash('sha256').update(JSON.stringify({code:project.code,firmware:project.firmware,mcu:project.mcu,config})).digest('hex');}
@@ -63,13 +71,21 @@ async function prepareBuild({project,tools,root,target='arm',configuration='Debu
   if(/[^\x00-\x7f]/.test(root))throw new Error('GCC 빌드 작업 경로에 한글이 있습니다. 개발 도구 설정에서 영문 경로의 빌드 작업 폴더를 선택하세요.');
   if(!['arm','host'].includes(target)||!['Debug','Release'].includes(configuration))throw new Error('빌드 대상을 확인하세요.');
   const gcc=target==='arm'?tools.armGcc:tools.hostGcc;if(!gcc||!await exists(gcc))throw new Error(`${target==='arm'?'ARM':'Windows'} GCC 경로를 개발 도구 설정에서 지정하세요.`);
-  if(target==='arm'&&project.firmware?.mode!=='hal')throw new Error('ARM 빌드는 HAL 프로젝트를 사용하세요.');
+  if(target==='arm'&&!isRa(project)&&project.firmware?.mode!=='hal')throw new Error('ARM 빌드는 HAL 프로젝트를 사용하세요.');
+  if(target==='arm'&&isRa(project)&&project.firmware?.mode!=='fsp')throw new Error('Renesas RA 빌드는 FSP 프로젝트를 사용하세요.');
   const directory=path.join(root,randomUUID());await fs.mkdir(directory,{recursive:true});
   const files=[{name:'main.c',text:project.code},...(project.firmware?.files||[])],sources=[];
-  for(const f of files){if(!/^[\w.-]+\.(c|h|cpp|hpp|cc)$/.test(f.name))throw new Error('소스 파일명이 올바르지 않습니다.');await fs.writeFile(path.join(directory,f.name),f.text);if(/\.(c|cpp|cc)$/.test(f.name))sources.push(path.join(directory,f.name));}
+  // An RA project's main source is FSP's src/hal_entry.c (ra_gen/main.c calls hal_entry()); the other sources go to src/.
+  const ra=target==='arm'&&isRa(project),place=name=>ra?path.join(directory,'src',name==='main.c'?'hal_entry.c':name):path.join(directory,name);
+  if(ra)await fs.mkdir(path.join(directory,'src'),{recursive:true});
+  for(const f of files){if(!/^[\w.-]+\.(c|h|cpp|hpp|cc)$/.test(f.name))throw new Error('소스 파일명이 올바르지 않습니다.');if(ra&&f.name==='hal_entry.c')throw new Error('hal_entry.c는 FSP 프로젝트의 주 소스 이름입니다. 다른 이름을 쓰세요.');await fs.writeFile(place(f.name),f.text);if(/\.(c|cpp|cc)$/.test(f.name))sources.push(place(f.name));}
   if(files.some(f=>f.name==='__stm_environment.c'))throw new Error('__stm_environment.c는 내부 빌드용 파일명입니다.');
   let flags=['-g3',configuration==='Debug'?'-O0':'-Os','-ffunction-sections','-fdata-sections','-Wall','-Wextra','-Werror=implicit-function-declaration','-I'+directory],linkFlags=[],generated=[];
-  if(target==='arm'){
+  let sdkFiles=new Set();
+  if(ra){
+    const r=await prepareRa({project,tools,directory,userFiles:files});
+    flags.unshift(...r.cpu);flags.push(...r.includes);generated=r.sdkSources;sdkFiles=new Set(r.sdkSources);linkFlags=r.linkFlags;
+  }else if(target==='arm'){
     const cube=tools[sdk.key],hal=path.join(cube||'','Drivers',sdk.hal),device=path.join(cube||'','Drivers/CMSIS/Device/ST',sdk.device),core=path.join(cube||'','Drivers/CMSIS/Include'),p=sdk.prefix;
     if(!cube||!await exists(path.join(hal,'Inc',p+'_hal.h')))throw new Error(`개발 도구 설정에서 ${sdk.name} SDK 루트 폴더를 선택하거나 필요한 도구 설치로 받으세요.`);
     flags.unshift(...sdk.cpu,'-DUSE_HAL_DRIVER');
@@ -91,13 +107,15 @@ async function prepareBuild({project,tools,root,target='arm',configuration='Debu
   }
   const cpp=gcc.replace(/gcc(\.exe)?$/,(_,ext)=>'g++'+(ext||''));
   // ST SDK sources (outside the build folder) are not the user's code: their warnings would only fill the 빌드 panel.
-  const units=[...sources,...generated].map((file,index)=>{const isCpp=/\.(cpp|cc)$/.test(file),compiler=isCpp?cpp:gcc,sdk=!path.resolve(file).startsWith(path.resolve(directory));return {directory,file,arguments:[compiler,...flags.filter(f=>(!isCpp||f!=='-Werror=implicit-function-declaration')&&!(sdk&&['-Wall','-Wextra'].includes(f))),isCpp?'-std=c++17':'-std=c11','-c',file,'-o',path.join(directory,`unit-${index}.o`)]};});
+  const units=[...sources,...generated].map((file,index)=>{const isCpp=/\.(cpp|cc)$/.test(file),compiler=isCpp?cpp:gcc,sdk=sdkFiles.has(file)||!path.resolve(file).startsWith(path.resolve(directory));return {directory,file,arguments:[compiler,...flags.filter(f=>(!isCpp||f!=='-Werror=implicit-function-declaration')&&!(sdk&&['-Wall','-Wextra'].includes(f))),isCpp?'-std=c++17':'-std=c11','-c',file,'-o',path.join(directory,`unit-${index}.o`)]};});
   await fs.writeFile(path.join(directory,'compile_commands.json'),JSON.stringify(units,null,2));
-  return {directory,units,gcc,linker:sources.some(f=>/\.(cpp|cc)$/.test(f))?cpp:gcc,flags,linkFlags,target,configuration,elf:path.join(directory,target==='arm'?'firmware.elf':'program.exe'),files:files.map(f=>f.name)};
+  return {directory,ra,units,gcc,linker:sources.some(f=>/\.(cpp|cc)$/.test(f))?cpp:gcc,flags,linkFlags,target,configuration,elf:path.join(directory,target==='arm'?'firmware.elf':'program.exe'),files:files.map(f=>f.name)};
 }
+// RA builds compile the main source as src/hal_entry.c; the editor knows it as main.c.
+const mainOf=plan=>list=>plan.ra?list.map(d=>d.file==='hal_entry.c'&&/[\\/]src[\\/]hal_entry\.c$/.test(d.path||'')?{...d,file:'main.c'}:d):list;
 async function build(plan,{signal,onOutput=()=>{}}={}){
-  let output='';const write=text=>{output=(output+text).slice(-2000000);onOutput(text);};
-  async function run(exe,args){write(`> ${path.basename(exe)} ${args.map(a=>/\s/.test(a)?JSON.stringify(a):a).join(' ')}\n`);const r=await execute(exe,args,{cwd:plan.directory,signal,onOutput:write});if(r.code!==0){const diagnostics=diagnosticsFrom(output),first=diagnostics.find(d=>d.severity==='error');const error=new Error(`컴파일 또는 링크 실패 (종료 코드 ${r.code})${first?` · ${first.file}:${first.line}: ${first.message}`:''}`);error.diagnostics=diagnostics;throw error;}return r;}
+  const remap=mainOf(plan);let output='';const write=text=>{output=(output+text).slice(-2000000);onOutput(text);};
+  async function run(exe,args){write(`> ${path.basename(exe)} ${args.map(a=>/\s/.test(a)?JSON.stringify(a):a).join(' ')}\n`);const r=await execute(exe,args,{cwd:plan.directory,signal,onOutput:write});if(r.code!==0){const diagnostics=remap(diagnosticsFrom(output)),first=diagnostics.find(d=>d.severity==='error');const error=new Error(`컴파일 또는 링크 실패 (종료 코드 ${r.code})${first?` · ${first.file}:${first.line}: ${first.message}`:''}`);error.diagnostics=diagnostics;throw error;}return r;}
   const version=await run(plan.gcc,['--version']);
   for(const unit of plan.units)await run(unit.arguments[0],unit.arguments.slice(1));
   const map=path.join(plan.directory,plan.target==='arm'?'firmware.map':'program.map');
@@ -109,7 +127,7 @@ async function build(plan,{signal,onOutput=()=>{}}={}){
     await run(size,[plan.elf]);
   }
   const manifest=[];for(const file of artifacts){const data=await fs.readFile(file);manifest.push({name:path.basename(file),path:file,bytes:data.length,sha256:createHash('sha256').update(data).digest('hex')});}
-  const result={...plan,artifacts:manifest,diagnostics:diagnosticsFrom(output),compiler:version.stdout.split('\n')[0]};
+  const result={...plan,artifacts:manifest,diagnostics:remap(diagnosticsFrom(output)),compiler:version.stdout.split('\n')[0]};
   await fs.writeFile(path.join(plan.directory,'build-result.json'),JSON.stringify({configuration:plan.configuration,target:plan.target,compiler:result.compiler,artifacts:manifest},null,2));return result;
 }
-module.exports={TOOL_KEYS,SDKS,detectTools,validateTools,probeTools,prepareBuild,build,diagnosticsFrom,fingerprint};
+module.exports={TOOL_KEYS,SDKS,isRa,detectTools,validateTools,probeTools,prepareBuild,build,diagnosticsFrom,fingerprint};

@@ -1,11 +1,11 @@
 // In-app installer for the tools a real-board build needs (개발 도구 → 필요한 도구 설치).
 // It mirrors scripts/setup-native-tools.ps1 without Git: release zips are checked against pinned SHA-256 values,
-// and the STM32CubeF4/F1 subsets come from GitHub source archives at fixed commits, every kept file verified against
-// desktop/tool-manifest.json (F4) and tool-manifest-f1.json (F1). Everything lands in %LOCALAPPDATA%/STM-Simulator-Tools, which detectTools reads.
+// and the STM32CubeF4/F1 and Renesas FSP subsets come from GitHub at fixed commits, every kept file verified against
+// desktop/tool-manifest.json (F4), tool-manifest-f1.json (F1) and tool-manifest-fsp.json (FSP). Everything lands in %LOCALAPPDATA%/STM-Simulator-Tools, which detectTools reads.
 const fs=require('node:fs/promises'),path=require('node:path'),os=require('node:os');
 const {createHash}=require('node:crypto');
 const {execFile}=require('node:child_process');
-const MANIFEST=require('./tool-manifest.json'),MANIFEST_F1=require('./tool-manifest-f1.json');
+const MANIFEST=require('./tool-manifest.json'),MANIFEST_F1=require('./tool-manifest-f1.json'),MANIFEST_FSP=require('./tool-manifest-fsp.json');
 
 const RELEASES=[
   {id:'gcc',keys:['armGcc','armGdb'],label:'ARM GCC 15.2.1 · GDB 포함 (xPack)',bytes:335571206,
@@ -20,7 +20,9 @@ const RELEASES=[
 ];
 const CUBE={id:'cube',keys:['cube'],label:'STM32CubeF4 v1.28.3 · HAL·CMSIS 드라이버 (NUCLEO-F446RE)',bytes:10*1024*1024,check:'STM32CubeF4/Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal.h',manifest:MANIFEST};
 const CUBE_F1={id:'cubeF1',keys:['cubeF1'],label:'STM32CubeF1 v1.8.7 · HAL·CMSIS 드라이버 (NUCLEO-F103RB)',bytes:3*1024*1024,check:'STM32CubeF1/Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal.h',manifest:MANIFEST_F1};
-const ITEMS=[RELEASES[0],CUBE,CUBE_F1,RELEASES[1],RELEASES[2]];
+// Renesas FSP for the RA boards (FPB-RA6E1): BSP, RA6E1 CMSIS device files, drivers and board files (BSD-3-Clause).
+const FSP={id:'fsp',keys:['fsp'],label:'Renesas FSP v6.6.0 · BSP·드라이버 (FPB-RA6E1)',bytes:8*1024*1024,check:'FSP/ra/fsp/src/bsp/mcu/ra6e1/bsp_feature.h',manifest:MANIFEST_FSP,source:'github.com/renesas'};
+const ITEMS=[RELEASES[0],CUBE,CUBE_F1,FSP,RELEASES[1],RELEASES[2]];
 
 const installRoot=()=>path.join(process.env.LOCALAPPDATA||os.homedir(),'STM-Simulator-Tools');
 const exists=p=>fs.access(p).then(()=>true,()=>false);
@@ -28,7 +30,7 @@ const sha256=buffer=>createHash('sha256').update(buffer).digest('hex');
 
 /** The tools that `tools` (detectTools output) still lacks, in install order. */
 function installPlan(tools){
-  return ITEMS.filter(item=>item.keys.some(key=>!tools[key])).map(({id,label,bytes,url})=>({id,label,bytes,source:url?new URL(url).host:'github.com/STMicroelectronics'}));
+  return ITEMS.filter(item=>item.keys.some(key=>!tools[key])).map(({id,label,bytes,url,source})=>({id,label,bytes,source:url?new URL(url).host:source||'github.com/STMicroelectronics'}));
 }
 
 async function download(url,file,{fetchImpl,signal,onBytes}){
@@ -73,9 +75,13 @@ async function installCube(root,o,manifest=MANIFEST,item=CUBE){
         const [top]=await fs.readdir(work);
         for(const file of source.files)await keep(source,file,await fs.readFile(path.join(work,top,file.path)).catch(()=>{throw new Error(`${folder}: 압축 안에 ${file.path}가 없습니다.`);}));
       }else for(const file of source.files){
-        const response=await o.fetchImpl(`https://raw.githubusercontent.com/${source.repo}/${source.commit}/${file.path}`,{signal:o.signal});
-        if(!response.ok)throw new Error(`다운로드 실패 (${response.status}): ${file.path}`);
-        await keep(source,file,Buffer.from(await response.arrayBuffer()));
+        // One file at a time: a dropped connection retries that file (up to 3 tries) instead of failing the install.
+        let bytes;
+        for(let attempt=1;;attempt++){
+          try{const response=await o.fetchImpl(`https://raw.githubusercontent.com/${source.repo}/${source.commit}/${file.path}`,{signal:o.signal});if(!response.ok)throw new Error(`다운로드 실패 (${response.status}): ${file.path}`);bytes=Buffer.from(await response.arrayBuffer());break;}
+          catch(error){if(o.signal?.aborted||attempt>=3)throw error;await new Promise(r=>setTimeout(r,500*attempt));}
+        }
+        await keep(source,file,bytes);
       }
     }
     await fs.rm(path.join(root,folder),{recursive:true,force:true});await fs.rename(stage,path.join(root,folder));
@@ -95,4 +101,4 @@ async function installTools(ids,{root=installRoot(),fetchImpl=globalThis.fetch,s
   return root;
 }
 // installRelease/installCube take a package description so tests can use small local packages instead of the network.
-module.exports={installPlan,installTools,installRoot,installRelease,installCube,RELEASES,CUBE,CUBE_F1};
+module.exports={installPlan,installTools,installRoot,installRelease,installCube,RELEASES,CUBE,CUBE_F1,FSP};

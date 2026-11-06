@@ -46,7 +46,7 @@ nativeHandle('probe',async()=>probeTools(await nativeIde.settings()));
 nativeHandle('install-plan',()=>nativeIde.installPlan());
 nativeHandle('install-tools',ids=>nativeIde.installTools(ids));
 nativeHandle('install-cancel',()=>nativeIde.cancelInstall());
-nativeHandle('choose-tool',async key=>{if(!TOOL_KEYS.includes(key))throw new Error('지원하지 않는 도구입니다.');const folder=['cube','cubeF1','buildRoot'].includes(key);const r=await dialog.showOpenDialog(win,{title:{cube:'STM32CubeF4 SDK 폴더 선택',cubeF1:'STM32CubeF1 SDK 폴더 선택',buildRoot:'빌드 작업 폴더 선택'}[key]||'개발 도구 실행 파일 선택',properties:[folder?'openDirectory':'openFile'],...(folder?{}:{filters:[{name:'실행 파일',extensions:['exe']}]})});return r.canceled?null:r.filePaths[0];});
+nativeHandle('choose-tool',async key=>{if(!TOOL_KEYS.includes(key))throw new Error('지원하지 않는 도구입니다.');const folder=['cube','cubeF1','fsp','buildRoot'].includes(key);const r=await dialog.showOpenDialog(win,{title:{cube:'STM32CubeF4 SDK 폴더 선택',cubeF1:'STM32CubeF1 SDK 폴더 선택',buildRoot:'빌드 작업 폴더 선택'}[key]||'개발 도구 실행 파일 선택',properties:[folder?'openDirectory':'openFile'],...(folder?{}:{filters:[{name:'실행 파일',extensions:['exe']}]})});return r.canceled?null:r.filePaths[0];});
 nativeHandle('build',(text,config)=>nativeIde.compile(text,config));
 nativeHandle('sdk-definition',(family,name)=>nativeIde.sdkDefinition(family,name));
 nativeHandle('sdk-names',(family,prefix)=>nativeIde.sdkNames(family,prefix));
