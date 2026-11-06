@@ -341,7 +341,12 @@ export class HalAdapter {
     }
     if(['HAL_ADC_Start','HAL_ADC_Stop','HAL_ADC_PollForConversion','HAL_ADC_GetValue'].includes(name)){
       const {id}=this.requireHandle(a,r,'ADC'),s=this.adc.get(id);if(s.channel===null)throw new Error('ADC 채널 설정이 필요합니다.');
-      if(name==='HAL_ADC_Stop'){s.active=false;return 0;}if(name==='HAL_ADC_Start'){s.value=this.adcRead(s.channel,r);s.active=true;return 0;}if(!s.active)return name==='HAL_ADC_GetValue'?s.value:1;return name==='HAL_ADC_GetValue'?s.value:0;
+      if(name==='HAL_ADC_Stop'){s.active=false;return 0;}if(name==='HAL_ADC_Start'){s.value=this.adcRead(s.channel,r);s.active=true;s.read=false;return 0;}
+      // Continuous Conversion Mode: the ADC keeps converting after one Start, so DR holds the latest input (single mode: one conversion).
+      if(s.continuous&&s.active&&!s.scan)s.value=this.adcRead(s.channel,r);
+      else if(name==='HAL_ADC_GetValue'&&s.read&&!s.noticed&&Math.abs(this.adcRead(s.channel,r)-s.value)>40){s.noticed=true;r.warn?.('ADC1: 단일 변환 모드라 HAL_ADC_GetValue가 같은 값을 돌려줍니다. 매번 HAL_ADC_Start · HAL_ADC_PollForConversion을 부르거나 Pinout의 ADC1에서 Continuous Conversion Mode를 켜세요.');}
+      if(name==='HAL_ADC_GetValue')s.read=true;
+      if(!s.active)return name==='HAL_ADC_GetValue'?s.value:1;return name==='HAL_ADC_GetValue'?s.value:0;
     }
     const timerResult=this.timerModel.call(name,args,r);if(timerResult!==undefined)return timerResult;
     if(['HAL_I2C_Master_Transmit','HAL_I2C_Master_Receive','HAL_I2C_Mem_Write','HAL_I2C_Mem_Read'].includes(name)){
