@@ -1,3 +1,4 @@
+import {withExamplePrintfFloat} from './printf-float.js';
 import {exampleStatements} from './device-inline-example.js';
 import {arrangeExampleOnBreadboards} from './example-breadboard.js';
 import {remapGpioCalls} from './device-gpio-remap.js';
@@ -256,7 +257,8 @@ export function applyDeviceExample(original,target,options={}){
  }
  installBinding(project,binding);
  const hasBare=updateTarget(project,original);
- const validated=validateProject(project);if(!hasBare)compileHal(validated.code,validated.firmware.files,validated.mcu?.family);return {project:validated,report,binding,file:'main.c'};
+ // A Docs example that prints floats turns CubeIDE's float printf on (its CubeIDE project would need it).
+ const validated=withExamplePrintfFloat(validateProject(project));if(!hasBare)compileHal(validated.code,validated.firmware.files,validated.mcu?.family);return {project:validated,report,binding,file:'main.c'};
 }
 // Keeps a removed device's wires when another applied example still depends on them.
 function bindingGroups(project,b){

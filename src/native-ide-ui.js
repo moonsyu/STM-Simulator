@@ -1,3 +1,4 @@
+import {printfFloatEnabled} from './printf-float.js';
 import {withKey,keyFor} from './keybindings.js';
 import {esc} from './render.js';
 import {sourceFiles} from './source-files.js';
@@ -6,7 +7,7 @@ import {$} from './common.js';
 import {projectBoard} from './boards.js';
 const TOOL_LABELS={armGcc:'ARM GCC · arm-none-eabi-gcc.exe',armGdb:'ARM GDB · arm-none-eabi-gdb.exe',cube:'STM32CubeF4 SDK 폴더 · NUCLEO-F446RE',cubeF1:'STM32CubeF1 SDK 폴더 · NUCLEO-F103RB',fsp:'Renesas FSP 폴더 · FPB-RA6E1',hostGcc:'Windows GCC · gcc.exe',hostGdb:'Windows GDB · gdb.exe',clangd:'C/C++ 언어 서버 · clangd.exe',openocd:'ST-LINK 서버 · openocd.exe',jlink:'J-Link (FPB-RA6E1) · SEGGER JLink.exe',arduinoCli:'ESP32 빌드·업로드 · arduino-cli.exe (Arduino IDE 2에 포함)',buildRoot:'빌드 작업 폴더 · 영문 경로 (선택)'};
 export function mountNativeChrome(){
- document.querySelector('.ide-toolbar').insertAdjacentHTML('afterbegin','<label class="native-target-label">실행 대상<select id="native-target" aria-label="실행 대상"><option value="simulator">시뮬레이터</option><option value="emulator">펌웨어 에뮬레이터</option><option value="arm" data-board-placeholder>실물 보드 (연결 안 됨)</option><option value="esp32">ESP32 보드 (연결 안 됨)</option><option value="host">Windows · C/C++</option></select></label><select id="native-config" aria-label="빌드 구성"><option>Release</option><option>Debug</option></select><select id="sim-engine" aria-label="시뮬레이터 실행 방식" title="ARM GCC 빌드: 실물 보드와 같은 컴파일러·헤더·C 라이브러리로 빌드해 회로에서 실행 · 내장 해석기: 빠르지만 지원하는 헤더와 함수만"><option value="gcc">ARM GCC 빌드</option><option value="interpreter">내장 해석기</option></select>');
+ document.querySelector('.ide-toolbar').insertAdjacentHTML('afterbegin','<label class="native-target-label">실행 대상<select id="native-target" aria-label="실행 대상"><option value="simulator">시뮬레이터</option><option value="emulator">펌웨어 에뮬레이터</option><option value="arm" data-board-placeholder>실물 보드 (연결 안 됨)</option><option value="esp32">ESP32 보드 (연결 안 됨)</option><option value="host">Windows · C/C++</option></select></label><select id="native-config" aria-label="빌드 구성"><option>Release</option><option>Debug</option></select><label class="printf-float-label" title="Use float with printf from newlib-nano (-u _printf_float) — CubeIDE: Project Properties › C/C++ Build › Settings › MCU/MPU Settings. 새 프로젝트는 꺼져 있어 printf의 %f가 빈칸으로 나옵니다."><input type="checkbox" id="printf-float"> printf float</label><select id="sim-engine" aria-label="시뮬레이터 실행 방식" title="ARM GCC 빌드: 실물 보드와 같은 컴파일러·헤더·C 라이브러리로 빌드해 회로에서 실행 · 내장 해석기: 빠르지만 지원하는 헤더와 함수만"><option value="gcc">ARM GCC 빌드</option><option value="interpreter">내장 해석기</option></select>');
  document.querySelector('.ide-toolbar').insertAdjacentHTML('beforeend','<button id="native-tools">개발 도구</button><button id="native-connection" hidden>보드 연결</button>');
  $('build-panel').insertAdjacentHTML('afterbegin','<div class="native-build-actions" id="native-build-actions" hidden><button id="native-artifacts" disabled>빌드 폴더 열기</button><span id="native-artifact-list"></span></div>');
  document.querySelector('.editor-position').insertAdjacentHTML('beforeend','<button id="language-toggle" title="clangd 의미 분석 사용">clangd 꺼짐</button>');
@@ -98,7 +99,7 @@ export function setupNativeIde({o,editor,select,showMonitor,points,watches,toggl
   }catch(e){if(state==='paused'&&current===sequence)$('debug-location').textContent=e.message;}
  }
  // A project without its own setting builds Release; debugging always builds Debug (see 'start').
- function sync(){const value=o.getProject().ide?.native||{target:'simulator',configuration:'Release'};$('native-target').value=value.target;selectBoard();$('native-config').value=value.configuration;control();queueLanguage();}
+ function sync(){const value=o.getProject().ide?.native||{target:'simulator',configuration:'Release'};$('native-target').value=value.target;selectBoard();$('native-config').value=value.configuration;$('printf-float').checked=printfFloatEnabled(o.getProject());control();queueLanguage();}
  // Results of the previous target's build (problems, ELF/map list, build folder) do not belong to the new one.
  function clearBuild(){$('build-errors').replaceChildren();$('native-artifact-list').textContent='';$('native-artifacts').disabled=true;$('build-output').textContent='';}
  // Each connected NUCLEO is its own run target: "NUCLEO-F446RE (COM5)". The pick is the ST-LINK serial OpenOCD uses.
@@ -140,6 +141,8 @@ export function setupNativeIde({o,editor,select,showMonitor,points,watches,toggl
  async function updateLanguage(){if(!language||!gcc())return;if(languageRunning){languageQueued=true;return languageRun;}languageRunning=true;languageDirty=false;let done;languageRun=new Promise(r=>done=r);try{await api.language(text(),config());languageReady=true;$('language-toggle').textContent='clangd 연결됨';}catch(e){languageReady=false;$('language-toggle').textContent='clangd 설정 필요';$('language-toggle').title=e.message;}finally{languageRunning=false;done();if(languageQueued){languageQueued=false;queueLanguage();}}}
  const lsp={enabled:()=>language&&languageReady&&gcc(),flush:flushLanguage,query:(method,file,position)=>api['language-query'](method,file,position)};editor.setLanguageService(lsp);
  $('native-target').onchange=change;
+ // CubeIDE's Use float with printf: a project build setting (both ARM GCC builds and the interpreter).
+ $('printf-float').onchange=()=>{const p=o.getProject();o.checkpoint?.();p.build={...(p.build||{}),printfFloat:$('printf-float').checked};o.saveLocal();clearBuild();o.log?.($('printf-float').checked?'printf float를 켰습니다(-u _printf_float). printf의 %f가 숫자로 나옵니다.':'printf float를 껐습니다(CubeIDE 새 프로젝트 기본값). printf의 %f는 빈칸으로 나옵니다.');o.refresh();};
  $('sim-engine').onchange=()=>{setEngine($('sim-engine').value);change();o.log($('sim-engine').value==='gcc'?'시뮬레이터는 ARM GCC로 빌드해 실행합니다(실물 보드와 같은 헤더·C 라이브러리).':'시뮬레이터는 내장 C 해석기로 실행합니다(지원하는 헤더와 함수만).');};
  // The title bar's run button carries the run target too: ▾ next to it lists the same targets as the select.
  const runToggle=document.createElement('button');runToggle.type='button';runToggle.id='run-target-toggle';runToggle.className='run-target-toggle';runToggle.textContent='▾';runToggle.setAttribute('aria-haspopup','menu');runToggle.setAttribute('aria-controls','run-target-menu');runToggle.setAttribute('aria-expanded','false');

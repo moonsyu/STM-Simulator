@@ -33,6 +33,8 @@ export function formatPrintf(args,r){
     const value=args[index++];let output;
     if(length&&['s','c'].includes(kind))throw new Error('printf 와이드 문자는 지원하지 않습니다.');
     if(kind==='s'){output=string(value);if(precision!==null)output=output.slice(0,precision);}
+    // newlib-nano without -u _printf_float (CubeIDE's default) consumes the argument and prints nothing for %f.
+    else if(kind==='f'&&r.printfFloat===false)output='';
     // %f of NaN / ±Infinity prints nan / inf as C does (e.g. a DHT read that failed).
     else if(kind==='f'&&typeof value==='number'&&!Number.isFinite(value))output=Number.isNaN(value)?'nan':value>0?'inf':'-inf';
     else{

@@ -1,3 +1,4 @@
+import {withExamplePrintfFloat} from './printf-float.js';
 import {CATALOG_DEFS,catalogType} from './catalog-defs.js';
 import {endpointInfo,breadboardPrefix,BB} from './pins.js';
 import {localTerminals} from './components.js';
@@ -292,6 +293,6 @@ function indentExampleCode(project){
 }
 export function applyLectureExample(id){
  const example=lectureExample(id);if(!example)throw new Error('강의 예제를 찾을 수 없습니다.');
- const project=indentExampleCode(validateProject(example.build())),board=project.components.find(p=>p.type==='devboard');
+ const project=withExamplePrintfFloat(indentExampleCode(validateProject(example.build()))),board=project.components.find(p=>p.type==='devboard');
  return {project,file:board&&!example.boards.includes('stm32')?boardFileKey(board):'main.c'};
 }

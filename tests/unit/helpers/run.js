@@ -6,7 +6,8 @@ import {blankProject} from '../../../src/project.js';
 
 /** Runs `code` as main.c of a blank HAL project. Returns {session, out, error, location}. */
 export function runHal(code,{ms=50,files=[],project}={}){
-  const p=project??blankProject();p.code=code;if(files.length)p.firmware={...p.firmware,files};
+  // Language tests print floats, as a project with CubeIDE's float printf turned on does.
+  const p=project??{...blankProject(),build:{printfFloat:true}};p.code=code;if(files.length)p.firmware={...p.firmware,files};
   const out=[];let session,error=null,location=null;
   try{session=new SimulationSession(p,{print:v=>out.push(String(v))});session.tick(ms);}
   catch(e){error=e;location=e.location??session?.runtime.location??null;}
