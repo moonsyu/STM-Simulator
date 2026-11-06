@@ -1,5 +1,5 @@
-// CubeMX USART Parameter Settings in the Pinout dialog: Word Length, Parity, Stop Bits, Data Direction (and Over
-// Sampling on the F446RE; the F103RB's USART has only 16) of USART2 reach the generated MX_USART2_UART_Init.
+// CubeMX Parameter Settings in the Pinout dialog: USART2 Word Length, Parity, Stop Bits, Data Direction (and Over
+// Sampling on the F446RE), SPI1 CPOL/CPHA/Data Size/First Bit, and TIM PWM channels' own Pulse and polarity.
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {launch} from './harness.mjs';
@@ -50,6 +50,49 @@ test('SPI1 Parameter Settings (CPOL High, CPHA 2 Edge, 16 bits, LSB first) show 
   await win.waitForFunction(()=>/hspi1\.Init\.CLKPolarity = SPI_POLARITY_HIGH;/.test(document.getElementById('code').value),null,{timeout:10000});
   const c=await code();
   for(const line of ['hspi1.Init.CLKPhase = SPI_PHASE_2EDGE;','hspi1.Init.DataSize = SPI_DATASIZE_16BIT;','hspi1.Init.FirstBit = SPI_FIRSTBIT_LSB;'])assert.ok(c.includes(line),line);
+  assert.deepEqual(s.errors,[]);
+ }finally{await s.close();}
+});
+
+test('TIM2 PWM Generation CH1: its own Pulse and CH Polarity show the duty and are generated before HAL_TIM_PWM_ConfigChannel',{timeout:120000},async()=>{
+ const s=await launch();
+ try{
+  const {win}=s,code=()=>win.evaluate(()=>document.getElementById('code').value);
+  await win.click('[data-activity="examples"]');if(!await win.locator('#view-examples').isVisible())await win.click('[data-activity="examples"]');
+  await win.selectOption('#hal-example','pwm');await win.waitForFunction(()=>/HAL_TIM_PWM_Init\(&htim2\)/.test(document.getElementById('code').value));
+  await win.evaluate(()=>document.getElementById('pinout-open').click());await win.waitForSelector('#pinout-dialog[open]');
+  const ch='#pinout-peripherals fieldset.tim-channel';
+  assert.match(await win.textContent(ch),/PWM Generation CH1 · P[AB]\d+/);
+  await win.fill('[data-tim-channel="TIM2"][data-ch="CH1"][data-key="pulse"]','300');await win.locator('[data-tim-channel="TIM2"][data-ch="CH1"][data-key="pulse"]').dispatchEvent('change');
+  assert.match(await win.textContent(ch),/듀티 30\.0 %/);
+  await win.selectOption('[data-tim-channel="TIM2"][data-ch="CH1"][data-key="polarity"]','LOW');
+  assert.match(await win.textContent(ch),/듀티 70\.0 %/);
+  await generate(win);
+  await win.waitForFunction(()=>/channel\.OCPolarity = TIM_OCPOLARITY_LOW;\s*channel\.Pulse = 300;\s*HAL_TIM_PWM_ConfigChannel\(&htim2, &channel, TIM_CHANNEL_1\);/.test(document.getElementById('code').value),null,{timeout:10000})
+   .catch(async e=>{throw new Error(e.message+'\n'+(await code()).split('\n').filter(l=>/channel\./.test(l)).join('\n'));});
+  assert.deepEqual(s.errors,[]);
+ }finally{await s.close();}
+});
+
+test('I2C1 Parameter Settings: Primary Address, Fast Mode Duty Cycle (above 100 kHz) and No Stretch reach MX_I2C1_Init',{timeout:120000},async()=>{
+ const s=await launch();
+ try{
+  const {win}=s,code=()=>win.evaluate(()=>document.getElementById('code').value);
+  await win.click('[data-activity="examples"]');if(!await win.locator('#view-examples').isVisible())await win.click('[data-activity="examples"]');
+  await win.selectOption('#hal-example','i2c');await win.waitForFunction(()=>/MX_I2C1_Init/.test(document.getElementById('code').value));
+  await win.evaluate(()=>document.getElementById('pinout-open').click());await win.waitForSelector('#pinout-dialog[open]');
+  assert.equal(await win.locator('[data-i2c-param="dutyCycle"]').isDisabled(),true,'100 kHz: Standard Mode has no duty choice');
+  await win.fill('[data-peripheral-value="I2C1"][data-key="clock"]','400000');await win.locator('[data-peripheral-value="I2C1"][data-key="clock"]').dispatchEvent('change');
+  // The clock field updates the card on its change; the duty choice is then enabled.
+  await win.locator('[data-i2c-param="noStretch"]').selectOption('1');
+  await win.waitForFunction(()=>!document.querySelector('[data-i2c-param="dutyCycle"]').disabled);
+  await win.selectOption('[data-i2c-param="dutyCycle"]','16_9');
+  await win.fill('[data-i2c-param="ownAddress"]','0x3c');await win.locator('[data-i2c-param="ownAddress"]').dispatchEvent('change');
+  assert.match(await win.textContent('#pinout-peripherals'),/Fast Mode · 7-bit addressing/);
+  await generate(win);
+  await win.waitForFunction(()=>/hi2c1\.Init\.DutyCycle = I2C_DUTYCYCLE_16_9;/.test(document.getElementById('code').value),null,{timeout:10000});
+  const c=await code();
+  for(const line of ['hi2c1.Init.ClockSpeed = 400000;','hi2c1.Init.OwnAddress1 = 0x78;','hi2c1.Init.NoStretchMode = I2C_NOSTRETCH_ENABLE;'])assert.ok(c.includes(line),line);
   assert.deepEqual(s.errors,[]);
  }finally{await s.close();}
 });

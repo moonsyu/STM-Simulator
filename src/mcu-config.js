@@ -27,6 +27,8 @@ export function defaultMcu(family=DEFAULT_FAMILY){const f=familyProfile(family);
 /** UART Parameter Settings (CubeMX Asynchronous mode): the first value of each list is CubeMX's default. */
 /** SPI Parameter Settings (CubeMX Full-Duplex Master): clock polarity/phase (SPI mode 0-3), data size, first bit. */
 export const SPI_PARAMS=Object.freeze({cpol:['LOW','HIGH'],cpha:['1EDGE','2EDGE'],dataSize:[8,16],firstBit:['MSB','LSB']});
+/** PWM channel settings: CH Polarity and PWM mode (the first value is CubeMX's default). */
+export const TIM_CHANNEL_PARAMS=Object.freeze({polarity:['HIGH','LOW'],ocMode:['PWM1','PWM2']});
 export const UART_PARAMS=Object.freeze({wordLength:[8,9],parity:['NONE','EVEN','ODD'],stopBits:[1,2],direction:['TX_RX','TX','RX'],overSampling:[16,8]});
 export function validateMcu(value){
   if(!value||!Object.hasOwn(FAMILIES,value.family)||!value.pins||!value.peripherals||!value.nvic)throw new Error(`MCU 핀 설정이 필요합니다 (${Object.keys(FAMILIES).join(' / ')}).`);
@@ -47,12 +49,33 @@ export function validateMcu(value){
     const q={enabled:p.enabled},defaults=isTimer(id)?timerDefaults(id,f.id):null;
     for(const [key,def,min,max]of isSerial(id)?[['baud',115200,300,2000000]]:id==='I2C1'?[['clock',100000,1000,1000000]]:id==='SPI1'?[['clock',1000000,1000,20000000]]:isTimer(id)?[['prescaler',defaults.prescaler,0,65535],['period',defaults.period,0,f.timerMax(id)],['pulse',defaults.pulse,0,f.timerMax(id)]]:[]){q[key]=p[key]??def;if(!Number.isInteger(q[key])||q[key]<min||q[key]>max)throw new Error(`${id}.${key}: 범위를 확인하세요.`);}
     if(isTimer(id)){q.mode=p.mode??defaults.mode;if(!['base','pwm','capture','encoder'].includes(q.mode))throw new Error(id+': 타이머 모드를 확인하세요.');}
+    // PWM Generation CHn (CubeMX): each channel's Pulse, CH Polarity and PWM mode; only what differs from the timer's
+    // Pulse / High / PWM1 is kept.
+    if(isTimer(id)&&p.channels!==undefined){
+     if(!p.channels||typeof p.channels!=='object'||Array.isArray(p.channels))throw new Error(id+': 채널 설정을 확인하세요.');
+     const channels={};
+     for(const [ch,c]of Object.entries(p.channels)){
+      if(!/^CH[1-4]$/.test(ch)||!c||typeof c!=='object')throw new Error(`${id}.${ch}: 채널 설정을 확인하세요.`);
+      const out={};
+      if(c.pulse!==undefined){if(!Number.isInteger(c.pulse)||c.pulse<0||c.pulse>f.timerMax(id))throw new Error(`${id}.${ch}.pulse: 범위를 확인하세요.`);if(c.pulse!==q.pulse)out.pulse=c.pulse;}
+      for(const [key,values]of Object.entries(TIM_CHANNEL_PARAMS)){if(c[key]===undefined)continue;if(!values.includes(c[key]))throw new Error(`${id}.${ch}.${key}: ${values.join(' / ')} 중에서 고르세요.`);if(c[key]!==values[0])out[key]=c[key];}
+      if(Object.keys(out).length)channels[ch]=out;
+     }
+     if(Object.keys(channels).length)q.channels=channels;
+    }
     // CubeMX ADC Settings › Continuous Conversion Mode (off = single conversion per HAL_ADC_Start, as CubeMX's default).
     if(id==='ADC1'&&p.continuous!==undefined){if(typeof p.continuous!=='boolean')throw new Error('ADC1: Continuous Conversion Mode를 확인하세요.');if(p.continuous)q.continuous=true;}
     // CubeMX Parameter Settings of an asynchronous UART (only the values that differ from 8N1 / TX_RX / 16 are kept).
     if(isSerial(id)){
      for(const [key,values]of Object.entries(UART_PARAMS)){if(p[key]===undefined)continue;if(!values.includes(p[key]))throw new Error(`${id}.${key}: ${values.join(' / ')} 중에서 고르세요.`);if(p[key]!==values[0])q[key]=p[key];}
      if(q.overSampling===8&&f.id==='STM32F103RB')throw new Error(`${id}: STM32F103RB의 USART는 Over Sampling 16만 지원합니다.`);
+    }
+    // I2C1 Parameter Settings: Primary slave address (7-bit, OwnAddress1 = address << 1), Fast Mode Duty Cycle (Tlow/Thigh
+    // 2 or 16/9, only above 100 kHz), Clock No Stretch Mode.
+    if(id==='I2C1'){
+     if(p.ownAddress!==undefined){if(!Number.isInteger(p.ownAddress)||p.ownAddress<0||p.ownAddress>0x7f)throw new Error('I2C1.ownAddress: 7비트 주소(0x00~0x7F)입니다.');if(p.ownAddress)q.ownAddress=p.ownAddress;}
+     if(p.dutyCycle!==undefined){if(!['2','16_9'].includes(p.dutyCycle))throw new Error('I2C1.dutyCycle: 2 / 16_9 중에서 고르세요.');if(p.dutyCycle==='16_9'){if(q.clock<=100000)throw new Error('I2C1: Fast Mode Duty Cycle 16/9는 100 kHz보다 빠를 때만 씁니다.');q.dutyCycle='16_9';}}
+     if(p.noStretch!==undefined){if(typeof p.noStretch!=='boolean')throw new Error('I2C1.noStretch: true 또는 false입니다.');if(p.noStretch)q.noStretch=true;}
     }
     if(id==='SPI1')for(const [key,values]of Object.entries(SPI_PARAMS)){if(p[key]===undefined)continue;if(!values.includes(p[key]))throw new Error(`SPI1.${key}: ${values.join(' / ')} 중에서 고르세요.`);if(p[key]!==values[0])q[key]=p[key];}
     if(isSerial(id)&&p.mode!==undefined&&p.mode!=='asynchronous'){if(p.mode!=='synchronous'||!f.usartCk[id])throw new Error(`${id}: 동기 모드는 USART${Object.keys(f.usartCk).map(u=>u.replace('USART','')).join('/')}에서만 지원합니다.`);q.mode='synchronous';for(const [key,values]of [['cpol',[0,1]],['cpha',[0,1]],['lastBit',[0,1]]]){q[key]=p[key]??0;if(!values.includes(q[key]))throw new Error(`${id}.${key}: 0 또는 1입니다.`);}}
@@ -158,12 +181,22 @@ export function importIoc(text){
     if(/MODE_TX$/.test(mode||''))p.direction='TX';else if(/MODE_RX$/.test(mode||''))p.direction='RX';if(/OVERSAMPLING_8/.test(over||'')&&f.id!=='STM32F103RB')p.overSampling=8;
     if(Object.values(config.pins).some(q=>q.function===id+'_CK'))Object.assign(p,{mode:'synchronous',cpol:values[id+'.CLKPolarity']==='USART_POLARITY_HIGH'?1:0,cpha:values[id+'.CLKPhase']==='USART_PHASE_2EDGE'?1:0,lastBit:values[id+'.CLKLastBit']==='USART_LASTBIT_ENABLE'?1:0});
   }
-  if(config.peripherals.I2C1)config.peripherals.I2C1.clock=number(values['I2C1.ClockSpeed'],100000);
+  if(config.peripherals.I2C1){const c=config.peripherals.I2C1;c.clock=number(values['I2C1.ClockSpeed'],100000);const own=Number(values['I2C1.OwnAddress']);if(Number.isInteger(own)&&own>0)c.ownAddress=(own>>1)&0x7f; /* the value CubeMX writes to OwnAddress1 (address << 1) */if(/16_9/.test(values['I2C1.DutyCycle']||'')&&c.clock>100000)c.dutyCycle='16_9';if(/NOSTRETCH_ENABLE/.test(values['I2C1.NoStretchMode']||''))c.noStretch=true;}
   if(config.peripherals.ADC1&&values['ADC1.ContinuousConvMode']==='ENABLE')config.peripherals.ADC1.continuous=true;
   // SPI1 speed: CubeMX stores the computed rate ("5.25 MBits/s") next to the prescaler.
   if(config.peripherals.SPI1){const s=config.peripherals.SPI1;if(/HIGH/.test(values['SPI1.CLKPolarity']||''))s.cpol='HIGH';if(/2EDGE/.test(values['SPI1.CLKPhase']||''))s.cpha='2EDGE';if(/16BIT/.test(values['SPI1.DataSize']||''))s.dataSize=16;if(/LSB/.test(values['SPI1.FirstBit']||''))s.firstBit='LSB';}
   if(config.peripherals.SPI1){const m=/^([\d.]+)\s*([KM]?)Bits\/s/i.exec(values['SPI1.CalculateBaudRate']||'');if(m)config.peripherals.SPI1.clock=Math.min(20000000,Math.max(1000,Math.round(Number(m[1])*({K:1e3,M:1e6}[m[2].toUpperCase()]??1))));}
   for(const id of Object.keys(f.timers))if(config.peripherals[id]){const p=config.peripherals[id],defaults=timerDefaults(id,family);p.prescaler=number(values[id+'.Prescaler'],defaults.prescaler);p.period=number(values[id+'.Period'],defaults.period);const pulse=Object.keys(values).find(k=>k.startsWith(id+'.Pulse'));if(pulse)p.pulse=number(values[pulse],defaults.pulse);const settings=Object.entries(values).filter(([k])=>k.startsWith(id+'.')).map(([,v])=>v).join(' ');p.mode=/Encoder|ENCODER/.test(settings)?'encoder':/PWM/.test(settings)?'pwm':/INPUTCAPTURE|Input_Capture|IC_CHANNEL/.test(settings)?'capture':'base';}
+  // Per-channel PWM settings: "TIM2.Pulse-PWM Generation1 CH1", "TIM2.OCPolarity_1", "TIM2.OCMode_PWM-PWM Generation1 CH1".
+  for(const id of Object.keys(f.timers))if(config.peripherals[id]?.mode==='pwm'){
+   const p=config.peripherals[id],ch={};const at=n=>ch['CH'+n]??={};
+   for(const [k,v]of Object.entries(values)){
+    let m=new RegExp('^'+id+'\\.Pulse-PWM Generation(\\d) CH\\d$').exec(k);if(m){at(m[1]).pulse=number(v,p.pulse);continue;}
+    m=new RegExp('^'+id+'\\.OCPolarity_(\\d)$').exec(k);if(m&&/LOW/.test(v)){at(m[1]).polarity='LOW';continue;}
+    m=new RegExp('^'+id+'\\.OCMode_PWM-PWM Generation(\\d) CH\\d$').exec(k);if(m&&/PWM2/.test(v))at(m[1]).ocMode='PWM2';
+   }
+   if(Object.keys(ch).length)p.channels=ch;
+  }
   config.timerClockHz=number(values['RCC.APB1TimFreq_Value'],f.clock.defaultHz);
   // HSE/other PLL setups (F103 at 72 MHz) cannot be rebuilt from HSI: keep the nearest clock the generator can make.
   if(!f.clock.valid(config.timerClockHz)){const wanted=config.timerClockHz,hz=f.clock.valid(Math.min(f.clock.maxHz,Math.round(wanted/4e6)*4e6))?Math.min(f.clock.maxHz,Math.round(wanted/4e6)*4e6):f.clock.exampleHz;warnings.push(`APB1 타이머 클록 ${wanted/1e6} MHz는 HSI로 만들 수 없어 ${hz/1e6} MHz로 바꿨습니다 (${f.clock.label}). 타이머 Prescaler/Period를 확인하세요.`);config.timerClockHz=hz;}

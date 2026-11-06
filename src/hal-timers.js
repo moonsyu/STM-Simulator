@@ -87,7 +87,7 @@ export class HalTimers {
     }
     if(name==='HAL_TIM_PWM_ConfigChannel'){
       if(s.kind==='Encoder')throw new Error('엔코더와 PWM은 같은 타이머를 공유할 수 없습니다.');
-      integer(c/4,0,3,'TIM 채널');const cfg=r.get(r.pointerCell(b));if(h.field(cfg,'OCMode')!==96||h.field(cfg,'OCPolarity'))throw new Error('PWM1 active high만 지원합니다.');
+      integer(c/4,0,3,'TIM 채널');const cfg=r.get(r.pointerCell(b));if(h.field(cfg,'OCMode')!==96||h.field(cfg,'OCPolarity'))throw new Error('PWM: 내장 해석기는 PWM1 active high만 지원합니다. PWM2·Low 극성은 ARM GCC 시뮬레이터로 실행하세요.');
       s.channels.set(c,{kind:'PWM',pulse:integer(h.field(cfg,'Pulse'),0,this.max(s.id),'PWM compare'),active:false,pin:h.pinFor(s.id+'_CH'+(c/4+1))});return 0;
     }
     if(name==='HAL_TIM_IC_ConfigChannel'){
