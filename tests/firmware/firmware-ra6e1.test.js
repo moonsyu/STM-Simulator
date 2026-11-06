@@ -89,3 +89,16 @@ test('ra_adc_pot: R_ADC single scan reads A0 (P000 = AN000) from the potentiomet
  v=session.readVariable('adc_value');assert.ok(near(v,'P000')&&v<600,'10 %: '+v);assert.ok(session.gpio.P408.value<1);
  assert.ok(session.soc.adc0.scans>5,'a scan every 20 ms');
 });
+
+test('ra_agt_tick: AGT0 (LOCO, 250 ms) toggles LED1 from agt0_callback; AGT1 (PCLKB, 1 ms) ticks; LED2 every 1000 ticks',()=>{
+ const {session}=open(fixture('ra_agt_tick'));
+ const edges=[];let last=null;
+ runUntil(session,2100,{onTick:()=>{const v=session.gpio.P408.value>1.65;if(v!==last){edges.push(Math.round(session.now/1000));last=v;}}});
+ const a0=session.soc.agts[0],a1=session.soc.agts[1];
+ assert.equal(a0.hz(),32768,'LOCO');assert.equal(a0.period(),8192);
+ assert.equal(a1.hz(),50e6,'PCLKB 50 MHz');assert.equal(a1.period(),50000);
+ assert.equal(session.readVariable('blinks'),8,'every 250 ms for 2.1 s');
+ const ms=session.readVariable('ms');assert.ok(Math.abs(ms-2100)<=25,'1 ms tick: '+ms);
+ assert.ok(edges.slice(1).every((t,i)=>Math.abs(t-edges[i]-250)<=20),'LED1 every 250 ms: '+edges);
+ assert.ok(session.gpio.P407.value>1.65,'LED2 after 2000 ticks');
+});

@@ -10,7 +10,8 @@ import { RaBus } from './bus.js';
 import { Sci } from './sci.js';
 import { Gpt } from './gpt.js';
 import { Adc12 } from './adc.js';
-import { RA_PERIPHERAL_PINS, RA_SCI_CHANNELS, RA_GPT_CHANNELS, raPsel } from '../../ra-config.js';
+import { Agt } from './agt.js';
+import { RA_PERIPHERAL_PINS, RA_SCI_CHANNELS, RA_GPT_CHANNELS, RA_AGT_CHANNELS, raPsel } from '../../ra-config.js';
 
 export { RaBus };
 export const RA_BASES = {
@@ -251,6 +252,8 @@ export class Ra6e1 {
     this.gpts = {};
     for (const ch of RA_GPT_CHANNELS) this.timers['GPT' + ch] = this.gpts[ch] = new Gpt(this, ch);
     this.adc0 = new Adc12(this); this.adcs = [this.adc0];
+    this.agts = {};
+    for (const ch of RA_AGT_CHANNELS) this.timers['AGT' + ch] = this.agts[ch] = new Agt(this, ch);
     const devices = [
       [RA_BASES.SYSTEM, 0x700, this.system],
       [RA_BASES.PORT, 0x1000, this.ports],
@@ -267,6 +270,7 @@ export class Ra6e1 {
       ...RA_SCI_CHANNELS.map(ch => [0x40118000 + ch * 0x100, 0x100, this.scis[ch]]),
       ...RA_GPT_CHANNELS.map(ch => [0x40169000 + ch * 0x100, 0x100, this.gpts[ch]]),
       [0x40170000, 0x200, this.adc0],
+      ...RA_AGT_CHANNELS.map(ch => [0x400e8000 + ch * 0x100, 0x100, this.agts[ch]]),
       [RA_BASES.CACHE, 0x400, plain('CACHE', 0x400)],
       // RTC: RCR2.RESET (bit 1) clears itself once the reset is done; START (bit 0) reads back what was written
       // (BSP R_BSP_Init_RTC waits on both after the sub-clock starts).

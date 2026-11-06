@@ -1,0 +1,62 @@
+{
+ "format": "stm32-circuit-lab",
+ "version": 2,
+ "name": "ra_agt_tick",
+ "code": "#include \"hal_data.h\"\n\nFSP_CPP_HEADER\nvoid R_BSP_WarmStart(bsp_warm_start_event_t event);\nFSP_CPP_FOOTER\n\nvolatile uint32_t ms = 0;\nvolatile uint32_t blinks = 0;\n\n/* AGT0 underflow, every 250 ms (LOCO count source): LED1 toggles. */\nvoid agt0_callback(timer_callback_args_t *p_args)\n{\n    (void) p_args;\n    blinks++;\n    R_IOPORT_PinWrite(&g_ioport_ctrl, LED1, (blinks & 1U) ? BSP_IO_LEVEL_HIGH : BSP_IO_LEVEL_LOW);\n}\n\n/* AGT1 underflow, every 1 ms (PCLKB): a millisecond tick. */\nvoid agt1_callback(timer_callback_args_t *p_args)\n{\n    (void) p_args;\n    ms++;\n}\n\nvoid hal_entry(void)\n{\n    uint32_t next = 1000;\n\n    R_AGT_Open(&g_agt0_ctrl, &g_agt0_cfg);\n    R_AGT_Start(&g_agt0_ctrl);\n    R_AGT_Open(&g_agt1_ctrl, &g_agt1_cfg);\n    R_AGT_Start(&g_agt1_ctrl);\n\n    /* LED2 toggles every 1000 ticks of AGT1. */\n    while (1)\n    {\n        if (ms >= next)\n        {\n            next += 1000;\n            R_IOPORT_PinWrite(&g_ioport_ctrl, LED2, ((next / 1000) & 1U) ? BSP_IO_LEVEL_HIGH : BSP_IO_LEVEL_LOW);\n        }\n    }\n}\n\nvoid R_BSP_WarmStart(bsp_warm_start_event_t event)\n{\n    if (BSP_WARM_START_POST_C == event)\n    {\n        /* C runtime environment and system clocks are setup. */\n\n        /* Configure pins. */\n        R_IOPORT_Open (&IOPORT_CFG_CTRL, &IOPORT_CFG_NAME);\n    }\n}\n",
+ "components": [],
+ "wires": [],
+ "boardId": "fpb-ra6e1",
+ "surfaces": {
+  "board": {
+   "hidden": false
+  },
+  "breadboard": {
+   "hidden": true
+  }
+ },
+ "mcu": {
+  "family": "R7FA6E10F",
+  "pins": {
+   "P408": {
+    "function": "GPIO_Output",
+    "label": "LED1",
+    "initial": 0,
+    "drive": "LOW"
+   },
+   "P407": {
+    "function": "GPIO_Output",
+    "label": "LED2",
+    "initial": 0,
+    "drive": "LOW"
+   },
+   "P205": {
+    "function": "IRQ",
+    "label": "SW1",
+    "pull": "PULLUP",
+    "edge": "FALLING",
+    "priority": 12,
+    "callback": "external_irq1_callback"
+   }
+  },
+  "peripherals": {
+   "AGT0": {
+    "enabled": true,
+    "period": 250,
+    "unit": "ms",
+    "callback": "agt0_callback",
+    "priority": 12
+   },
+   "AGT1": {
+    "enabled": true,
+    "period": 1,
+    "unit": "ms",
+    "callback": "agt1_callback",
+    "priority": 10
+   }
+  }
+ },
+ "firmware": {
+  "mode": "fsp",
+  "files": []
+ }
+}

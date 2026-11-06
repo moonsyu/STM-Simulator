@@ -3,7 +3,7 @@
 // linker init tables) and script (linker scripts). The user's code is src/hal_entry.c; the app builds these with the
 // FSP sources (BSP + r_* drivers) and ARM GCC, then runs the ELF on the RA6E1 emulator.
 // Formats follow RASC output for FSP 5.x/6.x (only what the FPB-RA6E1 configurations here need).
-import {raFamily,raPinName,raPortBit,RA_IRQ_PINS,raPsel,RA_PSEL_NAMES,RA_SCI_CHANNELS,RA_GPT_CHANNELS,RA_ADC_CHANNELS,raGptCounts,raClockHz} from './ra-config.js';
+import {raFamily,raPinName,raPortBit,RA_IRQ_PINS,raPsel,RA_PSEL_NAMES,RA_SCI_CHANNELS,RA_GPT_CHANNELS,RA_ADC_CHANNELS,RA_AGT_CHANNELS,raGptCounts,raAgtCounts,raClockHz} from './ra-config.js';
 
 const HEADER=kind=>`/* generated ${kind} - do not edit */\n`;
 const hex=(n,w=8)=>'0x'+(n>>>0).toString(16).toUpperCase().padStart(w,'0');
@@ -97,6 +97,51 @@ const adc_instance_t g_adc0 =
     .p_api         = &g_adc_on_adc
 };`;
 }
+// AGT timer instances (r_agt), g_agtN periodic timers; the AGTn_INT (underflow) interrupt when a callback is named.
+const agtsOf=mcu=>RA_AGT_CHANNELS.filter(ch=>mcu.peripherals?.['AGT'+ch]?.enabled).map(ch=>{const p=mcu.peripherals['AGT'+ch];return {channel:ch,name:`g_agt${ch}`,period:p.period??100,unit:p.unit||'ms',callback:p.callback??`agt${ch}_callback`,priority:p.priority??12,counts:raAgtCounts(raClockHz(mcu,'pclkb'),ch,p.period??100,p.unit||'ms')};});
+const agtDecl=t=>`/** AGT Timer Instance */
+extern const timer_instance_t ${t.name};
+/** Access the AGT instance using these structures when calling API functions directly (::p_api is not used). */
+extern agt_instance_ctrl_t ${t.name}_ctrl;
+extern const timer_cfg_t ${t.name}_cfg;${t.callback?`
+#ifndef ${t.callback}
+void ${t.callback}(timer_callback_args_t * p_args);
+#endif`:''}`;
+const agtInstance=t=>`agt_instance_ctrl_t ${t.name}_ctrl;
+const agt_extended_cfg_t ${t.name}_extend =
+{
+    .count_source            = AGT_CLOCK_${t.counts.source},
+    .agto                    = AGT_PIN_CFG_DISABLED,
+    .agtoab_settings_b.agtoa = AGT_PIN_CFG_DISABLED,
+    .agtoab_settings_b.agtob = AGT_PIN_CFG_DISABLED,
+    .measurement_mode        = AGT_MEASURE_DISABLED,
+    .agtio_filter            = AGT_AGTIO_FILTER_NONE,
+    .enable_pin              = AGT_ENABLE_PIN_NOT_USED,
+    .trigger_edge            = AGT_TRIGGER_EDGE_RISING,
+    .counter_bit_width       = AGT_COUNTER_BIT_WIDTH_16,
+};
+const timer_cfg_t ${t.name}_cfg =
+{
+    .mode                = TIMER_MODE_PERIODIC,
+    /* Actual period: ${t.period} ${UNIT_TEXT[t.unit]}. Actual duty: 50%. */ .period_counts = (uint32_t) ${hexCount(t.counts.counts)}, .duty_cycle_counts = ${hexCount(Math.floor(t.counts.counts/2))}, .source_div = (timer_source_div_t) ${t.counts.div},
+    .channel             = ${t.channel},
+    .p_callback          = ${t.callback||'NULL'},
+    .p_context           = NULL,
+    .p_extend            = &${t.name}_extend,
+    .cycle_end_ipl       = ${t.callback?`(${t.priority})`:'(BSP_IRQ_DISABLED)'},
+#if defined(VECTOR_NUMBER_AGT${t.channel}_INT)
+    .cycle_end_irq       = VECTOR_NUMBER_AGT${t.channel}_INT,
+#else
+    .cycle_end_irq       = FSP_INVALID_VECTOR,
+#endif
+};
+/* Instance structure to use this module. */
+const timer_instance_t ${t.name} =
+{
+    .p_ctrl        = &${t.name}_ctrl,
+    .p_cfg         = &${t.name}_cfg,
+    .p_api         = &g_timer_on_agt
+};`;
 const UNIT_TEXT={Hz:'Hz',kHz:'kHz',s:'seconds',ms:'milliseconds',us:'microseconds'};
 const hexCount=n=>"0x"+n.toString(16);
 const gptDecl=t=>`/** Timer on GPT Instance. */
@@ -171,6 +216,7 @@ export function raVectors(mcu){
  for(const u of uartsOf(mcu))for(const [kind,label]of [['RXI','Receive data full'],['TXI','Transmit data empty'],['TEI','Transmit end'],['ERI','Receive error']])list.push({isr:`sci_uart_${kind.toLowerCase()}_isr`,event:`SCI${u.channel}_${kind}`,label:`SCI${u.channel} ${kind} (${label})`,vector:`SCI${u.channel}_${kind}`});
  for(const irq of irqsOf(mcu))list.push({isr:'r_icu_isr',event:`ICU_IRQ${irq.channel}`,label:`ICU IRQ${irq.channel} (External pin interrupt ${irq.channel})`,vector:`ICU_IRQ${irq.channel}`});
  const adc=adcOf(mcu);if(adc?.callback)list.push({isr:'adc_scan_end_isr',event:'ADC0_SCAN_END',label:'ADC0 SCAN END (End of A/D scanning operation)',vector:'ADC0_SCAN_END'});
+ for(const t of agtsOf(mcu))if(t.callback)list.push({isr:'agt_int_isr',event:`AGT${t.channel}_INT`,label:`AGT${t.channel} INT (AGT interrupt)`,vector:`AGT${t.channel}_INT`});
  for(const t of gptsOf(mcu))if(t.callback)list.push({isr:'gpt_counter_overflow_isr',event:`GPT${t.channel}_COUNTER_OVERFLOW`,label:`GPT${t.channel} COUNTER OVERFLOW (Overflow)`,vector:`GPT${t.channel}_COUNTER_OVERFLOW`});
  return list.map((v,i)=>({...v,index:i}));
 }
@@ -435,7 +481,7 @@ ${vectors.map(v=>`    [${v.index}] = BSP_PRV_VECT_ENUM(EVENT_${v.event},GROUP${v
 }
 
 function halDataH(mcu){
- const irqs=irqsOf(mcu),uarts=uartsOf(mcu),includes=(irqs.length?'#include "r_icu.h"\n#include "r_external_irq_api.h"\n':'')+(uarts.length?'#include "r_sci_uart.h"\n#include "r_uart_api.h"\n':'')+(gptsOf(mcu).length?'#include "r_gpt.h"\n#include "r_timer_api.h"\n':'')+(adcOf(mcu)?'#include "r_adc.h"\n#include "r_adc_api.h"\n':'');
+ const irqs=irqsOf(mcu),uarts=uartsOf(mcu),includes=(irqs.length?'#include "r_icu.h"\n#include "r_external_irq_api.h"\n':'')+(uarts.length?'#include "r_sci_uart.h"\n#include "r_uart_api.h"\n':'')+(gptsOf(mcu).length?'#include "r_gpt.h"\n#include "r_timer_api.h"\n':'')+(adcOf(mcu)?'#include "r_adc.h"\n#include "r_adc_api.h"\n':'')+(agtsOf(mcu).length?'#include "r_agt.h"\n'+(gptsOf(mcu).length?'':'#include "r_timer_api.h"\n'):'');
  const decls=irqs.map(i=>`/** External IRQ on ICU Instance. */
 extern const external_irq_instance_t ${i.name};
 /** Access the ICU instance using these structures when calling API functions directly (::p_api is not used). */
@@ -451,7 +497,7 @@ extern const uart_cfg_t ${u.name}_cfg;
 extern const sci_uart_extended_cfg_t ${u.name}_cfg_extend;
 #ifndef ${u.callback}
 void ${u.callback}(uart_callback_args_t * p_args);
-#endif`)).concat(gptsOf(mcu).map(gptDecl)).concat(adcOf(mcu)?[adcDecl(adcOf(mcu))]:[]).join('\n');
+#endif`)).concat(gptsOf(mcu).map(gptDecl)).concat(adcOf(mcu)?[adcDecl(adcOf(mcu))]:[]).concat(agtsOf(mcu).map(agtDecl)).join('\n');
  return HEADER('HAL header file')+`#ifndef HAL_DATA_H_
 #define HAL_DATA_H_
 #include <stdint.h>
@@ -543,7 +589,7 @@ const uart_instance_t ${u.name} =
     .p_ctrl        = &${u.name}_ctrl,
     .p_cfg         = &${u.name}_cfg,
     .p_api         = &g_uart_on_sci
-};`;})).concat(gptsOf(mcu).map(gptInstance)).concat(adcOf(mcu)?[adcInstance(adcOf(mcu))]:[]).join('\n');
+};`;})).concat(gptsOf(mcu).map(gptInstance)).concat(adcOf(mcu)?[adcInstance(adcOf(mcu))]:[]).concat(agtsOf(mcu).map(agtInstance)).join('\n');
  return HEADER('HAL source file')+`#include "hal_data.h"
 ${body}${body?'\n':''}void g_hal_init(void) {
 g_common_init();
@@ -737,6 +783,7 @@ export function generateRaFiles(mcu,{board}={}){
   cfg('bsp/board_cfg.h',HEADER('configuration header file')+`#ifndef BOARD_CFG_H_\n#define BOARD_CFG_H_\n#include "${board?.fspBoard?'board.h':'bsp_api.h'}"\n#endif /* BOARD_CFG_H_ */\n`),
   cfg('r_ioport_cfg.h',moduleCfg('r_ioport_cfg.h','R_IOPORT_CFG_H_',['#define IOPORT_CFG_PARAM_CHECKING_ENABLE (BSP_CFG_PARAM_CHECKING_ENABLE)'])),
   cfg('r_icu_cfg.h',moduleCfg('r_icu_cfg.h','R_ICU_CFG_H_',['#define ICU_CFG_PARAM_CHECKING_ENABLE (BSP_CFG_PARAM_CHECKING_ENABLE)'])),
+  cfg('r_agt_cfg.h',moduleCfg('r_agt_cfg.h','R_AGT_CFG_H_',['#define AGT_CFG_PARAM_CHECKING_ENABLE (BSP_CFG_PARAM_CHECKING_ENABLE)','#define AGT_CFG_OUTPUT_SUPPORT_ENABLE (0)','#define AGT_CFG_INPUT_SUPPORT_ENABLE (0)'])),
   cfg('r_adc_cfg.h',moduleCfg('r_adc_cfg.h','R_ADC_CFG_H_',['#define ADC_CFG_PARAM_CHECKING_ENABLE (BSP_CFG_PARAM_CHECKING_ENABLE)'])),
   cfg('r_gpt_cfg.h',moduleCfg('r_gpt_cfg.h','R_GPT_CFG_H_',['#define GPT_CFG_PARAM_CHECKING_ENABLE (BSP_CFG_PARAM_CHECKING_ENABLE)','#define GPT_CFG_OUTPUT_SUPPORT_ENABLE (1)','#define GPT_CFG_WRITE_PROTECT_ENABLE (0)','#define GPT_CFG_GPTCLK_BYPASS (0)'])),
   cfg('r_sci_uart_cfg.h',moduleCfg('r_sci_uart_cfg.h','R_SCI_UART_CFG_H_',['#define SCI_UART_CFG_PARAM_CHECKING_ENABLE (BSP_CFG_PARAM_CHECKING_ENABLE)','#define SCI_UART_CFG_FIFO_SUPPORT (0)','#define SCI_UART_CFG_DTC_SUPPORTED (0)','#define SCI_UART_CFG_FLOW_CONTROL_SUPPORT (0)','#define SCI_UART_CFG_RS485_SUPPORT (0)','#define SCI_UART_CFG_IRDA_SUPPORT (0)'])),

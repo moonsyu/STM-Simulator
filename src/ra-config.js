@@ -66,6 +66,8 @@ export function raDefaultMcu(family=RA_FAMILY_ID){
 }
 
 const C_NAME=/^[A-Za-z_][A-Za-z0-9_]{0,40}$/;
+/** Maximum frequency of each RA6E1 internal clock in MHz. */
+export const RA_CLOCK_LIMITS=Object.freeze({iclk:200,pclka:100,pclkb:50,pclkc:50,pclkd:100,fclk:50});
 const PIN_FUNCTIONS=['GPIO_Output','GPIO_Input','IRQ','Analog','Peripheral'];
 /** A checked copy of an RA project's MCU settings (pins, clock); throws with the reason. */
 export function validateRaMcu(mcu){
@@ -107,6 +109,8 @@ export function validateRaMcu(mcu){
    const gpt=/^GPT(\d)$/.exec(id);
    if(gpt){out.peripherals[id]=validateGpt(id,Number(gpt[1]),p,fam,mcu.clock,signals);continue;}
    if(id==='ADC0'){out.peripherals[id]=validateAdc(p,out.pins);continue;}
+   const agt=/^AGT(\d)$/.exec(id);
+   if(agt){out.peripherals[id]=validateAgt(id,Number(agt[1]),p,fam,mcu.clock);continue;}
    const sci=/^SCI(\d)$/.exec(id);if(!sci||!RA_SCI_CHANNELS.includes(Number(sci[1]))||!p||typeof p.enabled!=='boolean')throw new Error(`${id}: 지원하지 않는 주변장치입니다.`);
    const q={enabled:p.enabled,baud:p.baud??115200,callback:p.callback??`user_uart${sci[1]}_callback`,priority:p.priority??12};
    if(!Number.isInteger(q.baud)||q.baud<300||q.baud>2000000)throw new Error(`${id}: 통신 속도는 300~2000000 bps입니다.`);
@@ -125,6 +129,11 @@ export function validateRaMcu(mcu){
   const pll=clock.hocoMHz/clock.pllDiv*clock.pllMul,input=clock.hocoMHz/clock.pllDiv;
   if(input<8||input>24||pll<120||pll>200)throw new Error(`PLL ${pll} MHz: PLL 입력 8~24 MHz, 출력 120~200 MHz로 설정하세요.`);
   for(const k of ['iclkDiv','pclkaDiv','pclkbDiv','pclkcDiv','pclkdDiv','fclkDiv'])if(![1,2,4,8,16,32,64].includes(clock[k]))throw new Error('RA 클록 분주를 확인하세요.');
+  // RA6E1 operating limits (User's Manual 8.1) and the ratios the clock dividers must keep.
+  const mhz=Object.fromEntries(Object.keys(RA_CLOCK_LIMITS).map(k=>[k,pll/clock[k+'Div']]));
+  for(const [k,max]of Object.entries(RA_CLOCK_LIMITS))if(mhz[k]>max+1e-9)throw new Error(`${k.toUpperCase()} ${+mhz[k].toFixed(3)} MHz: 최대 ${max} MHz입니다.`);
+  if(mhz.fclk<4)throw new Error(`FCLK ${+mhz.fclk.toFixed(3)} MHz: 플래시 동작에 4 MHz 이상이 필요합니다.`);
+  if(!(mhz.iclk>=mhz.pclka&&mhz.pclka>=mhz.pclkb&&mhz.pclkd>=mhz.pclka&&mhz.iclk>=mhz.fclk))throw new Error('클록 비율: ICLK ≥ PCLKA ≥ PCLKB, PCLKD ≥ PCLKA, ICLK ≥ FCLK로 정하세요.');
   out.clock=Object.fromEntries(Object.keys(c).filter(k=>k in d).map(k=>[k,clock[k]]));
  }
  return out;
@@ -145,6 +154,16 @@ export const RA_SCI_CHANNELS=Object.freeze([0,1,2,3,4,9]);
 // ADC12 unit 0 analog inputs (Table 1.16 ADC12 column; BSP_FEATURE_ADC_UNIT_0_CHANNELS_MASK 0x31FF).
 export const RA_ADC_CHANNELS=Object.freeze({P000:0,P001:1,P002:2,P003:3,P004:4,P005:5,P006:6,P007:7,P008:8,P014:12,P015:13});
 export const RA_GPT_CHANNELS=Object.freeze([1,2,4,5,6,7]);
+// AGT0-5 (16-bit, BSP_PERIPHERAL_AGT_CHANNEL_MASK 0x3F): periodic timers counting PCLKB /1, /2, /8 or LOCO (32.768 kHz) /1-/128.
+export const RA_AGT_CHANNELS=Object.freeze([0,1,2,3,4,5]);
+const LOCO_HZ=32768;
+/** AGT count source, divider and period counts for a period, PCLKB first, then LOCO (as RASC offers them). */
+export function raAgtCounts(pclkb,channel,period,unit){
+ const seconds={Hz:1/period,kHz:1/(period*1e3),s:period,ms:period/1e3,us:period/1e6}[unit];
+ const options=[['PCLKB',pclkb,0],['PCLKB',pclkb/2,1],['PCLKB',pclkb/8,3],...[0,1,2,3,4,5,6,7].map(d=>['LOCO',LOCO_HZ/2**d,d])];
+ for(const [source,hz,div]of options){const counts=Math.round(seconds*hz);if(Number.isFinite(counts)&&counts>=2&&counts<=65536)return {source,div,counts,hz:hz/counts};}
+ throw new Error(`AGT${channel}: 주기는 PCLKB 2카운트 이상, LOCO/128로 65536카운트(약 256초) 이하로 정하세요.`);
+}
 export const RA_GPT_32BIT=Object.freeze([1,2]);
 export const RA_TIMER_UNITS=Object.freeze(['Hz','kHz','s','ms','us']);
 const GPT_DIVIDERS=[0,1,2,3,4,5,6,8,10]; // TPCS: 1 … 64, 256, 1024 (7 and 9 are not valid on the RA6E1)
@@ -166,6 +185,15 @@ function validateAdc(p,pins){
  if(typeof q.callback!=='string'||q.callback!==''&&!C_NAME.test(q.callback))throw new Error('ADC0: 콜백 이름은 C 식별자로 쓰세요(없으면 비워 둡니다).');
  if(!Number.isInteger(q.priority)||q.priority<0||q.priority>15)throw new Error('ADC0: 인터럽트 우선순위는 0~15입니다.');
  if(q.enabled&&!Object.entries(pins).some(([pin,x])=>x.function==='Analog'&&RA_ADC_CHANNELS[pin]!=null))throw new Error('ADC0: 아날로그 입력 핀(AN000~AN008, AN012, AN013)을 Analog로 정하세요.');
+ return q;
+}
+function validateAgt(id,ch,p,fam,clock){
+ if(!RA_AGT_CHANNELS.includes(ch)||!p||typeof p.enabled!=='boolean')throw new Error(`${id}: 지원하지 않는 주변장치입니다.`);
+ const q={enabled:p.enabled,period:p.period??100,unit:p.unit??'ms',callback:p.callback??`agt${ch}_callback`,priority:p.priority??12};
+ if(typeof q.period!=='number'||!(q.period>0)||!RA_TIMER_UNITS.includes(q.unit))throw new Error(`${id}: 주기와 단위를 확인하세요.`);
+ if(typeof q.callback!=='string'||q.callback!==''&&!C_NAME.test(q.callback))throw new Error(`${id}: 콜백 이름은 C 식별자로 쓰세요(없으면 비워 둡니다).`);
+ if(!Number.isInteger(q.priority)||q.priority<0||q.priority>15)throw new Error(`${id}: 인터럽트 우선순위는 0~15입니다.`);
+ raAgtCounts(raClockHz({family:fam.id,clock},'pclkb'),ch,q.period,q.unit);
  return q;
 }
 function validateGpt(id,ch,p,fam,clock,signals){

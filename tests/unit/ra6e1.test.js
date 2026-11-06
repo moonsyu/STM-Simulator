@@ -204,3 +204,40 @@ test('RA6E1 ADC12 model: single scan stores ADDRn and raises scan end, continuou
  a.write(0x0e,0,2);a.write(0x00,0x8000|(2<<13),2); // continuous, nothing linked: live reads
  volts=0.825;assert.equal(a.read(0x20,2),1024);assert.equal(a.read(0x00,2)&0x8000,0x8000);
 });
+
+test('AGT: periodic g_agtN (PCLKB /1·/2·/8 or LOCO /1-/128), AGTn_INT vector, r_agt_cfg.h; clock limits and ratios',async()=>{
+ const {raAgtCounts}=await import('../../src/ra-config.js');
+ assert.deepEqual(raAgtCounts(50e6,0,1,'ms'),{source:'PCLKB',div:0,counts:50000,hz:1000});
+ assert.deepEqual(raAgtCounts(50e6,0,5,'ms'),{source:'PCLKB',div:3,counts:31250,hz:200});
+ assert.equal(raAgtCounts(50e6,0,250,'ms').source,'LOCO');assert.throws(()=>raAgtCounts(50e6,0,300,'s'),/256초/);
+ const m={...raDefaultMcu(),peripherals:{AGT0:{enabled:true,period:250,unit:'ms',callback:'agt0_callback'},AGT1:{enabled:true,period:1,unit:'ms',callback:''}}};
+ const v=validateRaMcu(m);assert.deepEqual(v.peripherals.AGT0,{enabled:true,period:250,unit:'ms',callback:'agt0_callback',priority:12});
+ assert.throws(()=>validateRaMcu({...m,peripherals:{AGT6:{enabled:true}}}),/지원하지 않는/);
+ const files=generateRaFiles(v,{board:'FPB-RA6E1'}),c=files['ra_gen/hal_data.c'];
+ assert.ok(c.includes('.count_source            = AGT_CLOCK_LOCO,')&&c.includes('.period_counts = (uint32_t) 0x2000,')&&c.includes('.p_api         = &g_timer_on_agt'));
+ assert.ok(c.includes('.count_source            = AGT_CLOCK_PCLKB,')&&c.includes('.cycle_end_ipl       = (BSP_IRQ_DISABLED),'),'AGT1 without a callback');
+ assert.ok(files['ra_gen/vector_data.c'].includes('= agt_int_isr, /* AGT0 INT')&&!files['ra_gen/vector_data.c'].includes('AGT1'));
+ assert.ok(files['ra_gen/hal_data.h'].includes('#include "r_agt.h"')&&files['ra_gen/hal_data.h'].includes('#include "r_timer_api.h"'));
+ assert.ok(files['ra_cfg/fsp_cfg/r_agt_cfg.h'].includes('AGT_CFG_OUTPUT_SUPPORT_ENABLE (0)'));
+ // Clocks: frequency limits and divider ratios (User's Manual 8.1).
+ assert.throws(()=>validateRaMcu({...raDefaultMcu(),clock:{pclkbDiv:2}}),/PCLKB 100 MHz: 최대 50 MHz/);
+ assert.throws(()=>validateRaMcu({...raDefaultMcu(),clock:{pclkdDiv:4}}),/PCLKD ≥ PCLKA/);
+ assert.throws(()=>validateRaMcu({...raDefaultMcu(),clock:{fclkDiv:64}}),/4 MHz 이상/);
+ assert.deepEqual(validateRaMcu({...raDefaultMcu(),clock:{pllMul:15}}).clock,{pllMul:15},'PLL 150 MHz: ICLK 150, PCLKA 75, PCLKB 37.5, FCLK 37.5');assert.throws(()=>validateRaMcu({...raDefaultMcu(),clock:{pllMul:15,pclkdDiv:1}}),/PCLKD 150 MHz/);
+});
+
+test('RA6E1 AGT model: TCSTF follows TSTART, the counter counts down from the reload, underflows raise AGTn_INT',async()=>{
+ const {Agt,AGT_EVENT}=await import('../../src/emu/ra6e1/agt.js');
+ let now=0;const timers=[],events=[];
+ const soc={clock:{pclkb:50e6},nowUs:()=>now,sync(){},icu:{linked:e=>e===AGT_EVENT(2),raise:e=>events.push(e)},atUs:(t,fn)=>{const e={t,fn,cancel(){e.dead=true;}};timers.push(e);return e;}};
+ const a=new Agt(soc,2);
+ a.write(0x08,0,1);assert.equal(a.read(0x08,1)&2,0);
+ a.write(0x09,0x40,1);a.write(0x0a,0,1); // TCK = 100: LOCO, no division
+ a.write(0x00,8191,2);a.write(0x08,0xf1,1);
+ assert.equal(a.read(0x08,1)&3,3,'TSTART and TCSTF');
+ now=125000;assert.equal(a.read(0x00,2),4095,'half way at 32.768 kHz');
+ const e=timers.filter(t=>!t.dead).at(-1);assert.ok(Math.abs(e.t-250000)<1);now=e.t;e.fn();
+ assert.deepEqual(events,[0x46]);assert.equal(a.read(0x08,1)&0x20,0x20,'TUNDF');
+ a.write(0x08,0xd1,1);assert.equal(a.read(0x08,1)&0x20,0,'flag cleared by writing 0');
+ a.write(0x08,0xf0,1);assert.equal(a.read(0x08,1)&3,0,'stopped');
+});

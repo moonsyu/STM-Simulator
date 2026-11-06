@@ -196,5 +196,47 @@ void hal_entry(void)
     }
 }
 `+WARM_START});
-RA_EXAMPLES.push(UART_EXAMPLE,GPT_EXAMPLE,ADC_EXAMPLE);
+// AGT0 (LOCO, 250 ms) toggles LED1 from its callback; AGT1 (PCLKB, 1 ms) counts milliseconds for the main loop's LED2.
+const AGT_EXAMPLE=Object.freeze({id:'ra_agt_tick',name:'AGT 주기 타이머 · 1 ms 틱 (R_AGT_Open · Start · 콜백)',tags:['AGT','timer','interrupt','tick'],
+ mcu:()=>({...raDefaultMcu(),peripherals:{AGT0:{enabled:true,period:250,unit:'ms',callback:'agt0_callback',priority:12},AGT1:{enabled:true,period:1,unit:'ms',callback:'agt1_callback',priority:10}}}),
+ code:HEAD+`
+volatile uint32_t ms = 0;
+volatile uint32_t blinks = 0;
+
+/* AGT0 underflow, every 250 ms (LOCO count source): LED1 toggles. */
+void agt0_callback(timer_callback_args_t *p_args)
+{
+    (void) p_args;
+    blinks++;
+    R_IOPORT_PinWrite(&g_ioport_ctrl, LED1, (blinks & 1U) ? BSP_IO_LEVEL_HIGH : BSP_IO_LEVEL_LOW);
+}
+
+/* AGT1 underflow, every 1 ms (PCLKB): a millisecond tick. */
+void agt1_callback(timer_callback_args_t *p_args)
+{
+    (void) p_args;
+    ms++;
+}
+
+void hal_entry(void)
+{
+    uint32_t next = 1000;
+
+    R_AGT_Open(&g_agt0_ctrl, &g_agt0_cfg);
+    R_AGT_Start(&g_agt0_ctrl);
+    R_AGT_Open(&g_agt1_ctrl, &g_agt1_cfg);
+    R_AGT_Start(&g_agt1_ctrl);
+
+    /* LED2 toggles every 1000 ticks of AGT1. */
+    while (1)
+    {
+        if (ms >= next)
+        {
+            next += 1000;
+            R_IOPORT_PinWrite(&g_ioport_ctrl, LED2, ((next / 1000) & 1U) ? BSP_IO_LEVEL_HIGH : BSP_IO_LEVEL_LOW);
+        }
+    }
+}
+`+WARM_START});
+RA_EXAMPLES.push(UART_EXAMPLE,GPT_EXAMPLE,ADC_EXAMPLE,AGT_EXAMPLE);
 Object.freeze(RA_EXAMPLES);
