@@ -1,9 +1,14 @@
 import {$,esc} from './common.js';
-import {RA6E1_PORTS,RA_IRQ_PINS,RA_RESERVED,FPB_RA6E1,validateRaMcu,raDefaultMcu} from './ra-config.js';
+import {RA6E1_PORTS,RA_IRQ_PINS,RA_RESERVED,FPB_RA6E1,RA_PERIPHERAL_PINS,validateRaMcu,raDefaultMcu} from './ra-config.js';
+import {sciBaudSetting,raPclka} from './ra-generator.js';
 // Pin settings of a Renesas RA project (FPB-RA6E1), as the RA Smart Configurator's Pins tab sets them: per port pin the
 // mode (output / input / IRQ / analog), the symbolic name RASC writes into bsp_pin_cfg.h, output level and drive, the
 // pull-up, and for IRQ pins the trigger, priority and callback that the generated g_external_irqN instance uses.
-const MODES=[['','사용 안 함'],['GPIO_Output','Output (출력)'],['GPIO_Input','Input (입력)'],['IRQ','IRQ (외부 인터럽트)'],['Analog','Analog (아날로그)']];
+// Peripheral pins carry an SCI UART signal (TXDn / RXDn); choosing one turns on that channel's g_uartN (r_sci_uart) stack with
+// its baud rate, interrupt priority and callback, and a channel with no pin left is turned off again.
+const MODES=[['','사용 안 함'],['GPIO_Output','Output (출력)'],['GPIO_Input','Input (입력)'],['IRQ','IRQ (외부 인터럽트)'],['Analog','Analog (아날로그)'],['Peripheral','Peripheral (SCI UART)']];
+const signalsOf=pin=>Object.keys(RA_PERIPHERAL_PINS).filter(s=>RA_PERIPHERAL_PINS[s].includes(pin));
+const SIGNAL_NOTE={TXD:'송신',RXD:'수신'};
 const ARDUINO_OF=Object.fromEntries(Object.entries(FPB_RA6E1.arduino).map(([k,v])=>[v,k]));
 const NOTES={P408:'LED1 (녹색, 보드 내장)',P407:'LED2 (녹색, 보드 내장)',P205:'S1 사용자 스위치 (보드 내장, 누르면 LOW)',P400:'Arduino SCL · 2.2 kΩ 풀업 (보드)',P401:'Arduino SDA · 2.2 kΩ 풀업 (보드)'};
 
@@ -29,7 +34,7 @@ export class RaPinoutPanel {
   $('ra-pin-grid').innerHTML=RA6E1_PORTS.map(pin=>{const p=pins[pin],locked=RA_RESERVED[pin];return `<button type="button" role="option" data-ra-pin="${pin}" class="ra-pin ${p?'mode-'+p.function:''} ${locked?'locked':''} ${pin===this.pin?'active':''}" aria-selected="${pin===this.pin}" title="${esc([pin,ARDUINO_OF[pin]&&'Arduino '+ARDUINO_OF[pin],NOTES[pin],locked,p?.label].filter(Boolean).join(' · '))}"><b>${pin}</b><small>${esc(p?.label||ARDUINO_OF[pin]||(locked?'잠김':''))}</small></button>`;}).join('');
   const pin=this.pin,p=pins[pin],locked=RA_RESERVED[pin],irq=RA_IRQ_PINS[pin];
   const option=(value,label,cur)=>`<option value="${value}" ${value===cur?'selected':''}>${label}</option>`;
-  const modes=MODES.filter(([m])=>m!=='IRQ'||irq!=null).map(([m,l])=>option(m,m==='IRQ'?`IRQ${irq} (외부 인터럽트)`:l,p?.function||'')).join('');
+  const signals=signalsOf(pin),modes=MODES.filter(([m])=>(m!=='IRQ'||irq!=null)&&(m!=='Peripheral'||signals.length)).map(([m,l])=>option(m,m==='IRQ'?`IRQ${irq} (외부 인터럽트)`:l,p?.function||'')).join('');
   let html=`<h3>${pin}${ARDUINO_OF[pin]?` · Arduino ${ARDUINO_OF[pin]}`:''}</h3>${NOTES[pin]?`<p class="form-hint">${NOTES[pin]}</p>`:''}`;
   if(locked&&!['P212','P213','P200'].includes(pin))html+=`<p class="form-hint">${esc(locked)} — 보드가 쓰는 핀이라 바꿀 수 없습니다.</p>`;
   else{
@@ -39,17 +44,30 @@ export class RaPinoutPanel {
     if(p.function==='GPIO_Output')html+=`<label>Output Data (초기값)<select data-ra="initial">${option('0','Low',String(p.initial??0))}${option('1','High',String(p.initial??0))}</select></label><label>Drive Capacity<select data-ra="drive">${['LOW','MID','HIGH'].map(d=>option(d,{LOW:'Low',MID:'Middle',HIGH:'High'}[d],p.drive||'LOW')).join('')}</select></label><label>Output type<select data-ra="outputType">${option('CMOS','CMOS',p.outputType||'CMOS')}${option('NMOS','n-ch open drain',p.outputType||'CMOS')}</select></label>`;
     if(['GPIO_Input','IRQ'].includes(p.function))html+=`<label>Pull-up<select data-ra="pull">${option('NONE','None',p.pull||'NONE')}${option('PULLUP','Input pull-up',p.pull||'NONE')}</select></label>`;
     if(p.function==='IRQ')html+=`<fieldset><legend>g_external_irq${irq} (r_icu)</legend><label>Trigger<select data-ra="edge">${[['FALLING','Falling'],['RISING','Rising'],['BOTH','Both Edges'],['LOW','Low Level']].map(([v,l])=>option(v,l,p.edge||'FALLING')).join('')}</select></label><label>Priority<select data-ra="priority">${Array.from({length:16},(_,i)=>option(String(i),`Priority ${i}${i===0?' (highest)':i===15?' (lowest)':''}`,String(p.priority??12))).join('')}</select></label><label>Callback<input data-ra="callback" value="${esc(p.callback||`external_irq${irq}_callback`)}" spellcheck="false"></label><p class="form-hint">hal_entry()에서 R_ICU_ExternalIrqOpen(&amp;g_external_irq${irq}_ctrl, &amp;g_external_irq${irq}_cfg)과 R_ICU_ExternalIrqEnable(&amp;g_external_irq${irq}_ctrl)을 부르면 콜백이 호출됩니다.</p></fieldset>`;
+    if(p.function==='Peripheral'){
+     const id=p.signal.split('_')[0],ch=id.slice(3),u=this.draft.peripherals?.[id]||{},baud=u.baud??115200;
+     let rate='';try{const b=sciBaudSetting(raPclka(this.draft),baud);rate=`PCLKA ${raPclka(this.draft)/1e6} MHz → 실제 ${Math.round(b.actual)} bps (오차 ${b.error.toFixed(2)} %)`;}catch(error){rate=error.message;}
+     html+=`<label>Signal<select data-ra="signal">${signals.map(sg=>option(sg,`${sg} (${SIGNAL_NOTE[sg.split('_')[1]]})`,p.signal)).join('')}</select></label><fieldset><legend>g_uart${ch} (r_sci_uart · SCI${ch})</legend><label>Baud Rate<input type="number" data-ra-sci="baud" min="300" max="2000000" step="1" value="${baud}"></label><p class="form-hint">${esc(rate)} · 8N1</p><label>Priority<select data-ra-sci="priority">${Array.from({length:16},(_,i)=>option(String(i),`Priority ${i}${i===0?' (highest)':i===15?' (lowest)':''}`,String(u.priority??12))).join('')}</select></label><label>Callback<input data-ra-sci="callback" value="${esc(u.callback||`user_uart${ch}_callback`)}" spellcheck="false"></label><p class="form-hint">hal_entry()에서 R_SCI_UART_Open(&amp;g_uart${ch}_ctrl, &amp;g_uart${ch}_cfg) 후 R_SCI_UART_Write · R_SCI_UART_Read를 부르고, 콜백에서 UART_EVENT_RX_CHAR · UART_EVENT_TX_COMPLETE를 받습니다.</p></fieldset>`;
+    }
     if(p.label)html+=`<p class="form-hint">bsp_pin_cfg.h: <code>#define ${esc(p.label)} (BSP_IO_PORT_${pin.slice(1,2).padStart(2,'0')}_PIN_${pin.slice(2)})</code></p>`;
    }
   }
   $('ra-pin-props').innerHTML=html;
  }
  change(el){
-  const key=el.dataset.ra;if(!key)return;const pin=this.pin,pins=this.draft.pins;
-  if(key==='function'){if(!el.value)delete pins[pin];else{const old=pins[pin]||{};pins[pin]={function:el.value,...(old.label?{label:old.label}:{})};if(el.value==='IRQ')Object.assign(pins[pin],{edge:'FALLING',pull:'PULLUP',priority:12,callback:`external_irq${RA_IRQ_PINS[pin]}_callback`});if(el.value==='GPIO_Output')Object.assign(pins[pin],{initial:0,drive:'LOW'});if(el.value==='GPIO_Input')pins[pin].pull='NONE';}}
-  else{const p=pins[pin];if(!p)return;let v=el.value.trim();if(['initial','priority'].includes(key))v=Number(v);if(key==='label'&&!v)delete p.label;else if(key==='outputType'&&v==='CMOS')delete p.outputType;else p[key]=v;}
+  const key=el.dataset.ra;if(!key&&!el.dataset.raSci)return;const pin=this.pin,pins=this.draft.pins;
+  if(key==='function'){if(!el.value)delete pins[pin];else{const old=pins[pin]||{};pins[pin]={function:el.value,...(old.label?{label:old.label}:{})};if(el.value==='IRQ')Object.assign(pins[pin],{edge:'FALLING',pull:'PULLUP',priority:12,callback:`external_irq${RA_IRQ_PINS[pin]}_callback`});if(el.value==='GPIO_Output')Object.assign(pins[pin],{initial:0,drive:'LOW'});if(el.value==='GPIO_Input')pins[pin].pull='NONE';if(el.value==='Peripheral')pins[pin].signal=signalsOf(pin)[0];}}
+  else if(el.dataset.raSci){const id=pins[pin]?.signal?.split('_')[0];if(!id)return;const u=this.draft.peripherals[id];const v=el.value.trim();u[el.dataset.raSci]=el.dataset.raSci==='callback'?v:Number(v);}
+  else if(key){const p=pins[pin];if(!p)return;let v=el.value.trim();if(['initial','priority'].includes(key))v=Number(v);if(key==='label'&&!v)delete p.label;else if(key==='outputType'&&v==='CMOS')delete p.outputType;else p[key]=v;}
+  this.syncChannels();
   $('ra-pinout-error').textContent='';try{validateRaMcu(this.draft);}catch(error){$('ra-pinout-error').textContent=error.message;}
   this.render();
+ }
+ // A channel is on while one of its TXD/RXD pins is set (its baud, priority and callback stay when it goes off).
+ syncChannels(){
+  const used=new Set(Object.values(this.draft.pins).filter(p=>p.function==='Peripheral').map(p=>p.signal.split('_')[0])),per=this.draft.peripherals||={};
+  for(const id of used)per[id]={baud:115200,callback:`user_uart${id.slice(3)}_callback`,priority:12,...per[id],enabled:true};
+  for(const id of Object.keys(per))if(!used.has(id))per[id].enabled=false;
  }
  commit(){
   try{const mcu=validateRaMcu(this.draft);this.apply({mcu});$('ra-pinout-dialog').close();}

@@ -7,6 +7,8 @@ import { Scheduler } from '../stm32f446/core.js';
 import { BusFaultSignal } from '../bus.js';
 import { Signals } from '../stm32f446/signals.js';
 import { RaBus } from './bus.js';
+import { Sci } from './sci.js';
+import { RA_PERIPHERAL_PINS, RA_SCI_CHANNELS, raPsel } from '../../ra-config.js';
 
 export { RaBus };
 export const RA_BASES = {
@@ -240,6 +242,8 @@ export class Ra6e1 {
     this.ports = new Ports(this);
     this.icu = new Icu(this);
     const plain = (name, size, reset) => new RegisterFile(this, name, size, { reset });
+    this.scis = {};
+    for (const ch of RA_SCI_CHANNELS) this.usarts['SCI' + ch] = this.scis[ch] = new Sci(this, ch); // usarts: the session's UART parts and inject()
     const devices = [
       [RA_BASES.SYSTEM, 0x700, this.system],
       [RA_BASES.PORT, 0x1000, this.ports],
@@ -253,6 +257,7 @@ export class Ra6e1 {
       [RA_BASES.CPSCU, 0x400, plain('CPSCU', 0x400)],
       [RA_BASES.DEBUG, 0x400, plain('DEBUG', 0x400)],
       [RA_BASES.ELC, 0x400, plain('ELC', 0x400)],
+      ...RA_SCI_CHANNELS.map(ch => [0x40118000 + ch * 0x100, 0x100, this.scis[ch]]),
       [RA_BASES.CACHE, 0x400, plain('CACHE', 0x400)],
       // RTC: RCR2.RESET (bit 1) clears itself once the reset is done; START (bit 0) reads back what was written
       // (BSP R_BSP_Init_RTC waits on both after the sub-clock starts).
@@ -332,6 +337,20 @@ export class Ra6e1 {
   analogIn(pin) { this.env.beforeInputRead?.(); return this.env.analogIn ? this.env.analogIn(pin) : null; }
   beforeInputRead() { this.env.beforeInputRead?.(); }
   inputsUpdated() { this.ports.refreshInputs(); }
-  routedPins() { return new Map(); }
-  peripheralOutput() { return null; }
+  // Pins whose PFS selects `signal` ("SCI9_TXD"): PMR = 1 and the signal's PSEL.
+  routedPins(signal) {
+    const pins = RA_PERIPHERAL_PINS[signal]; if (!pins || !this.ports) return [];
+    const psel = raPsel(signal);
+    return pins.filter(pin => { const port = Number(pin.slice(1, -2)), bit = Number(pin.slice(-2)), c = this.ports.cfg(port, bit); return c.pmr && c.psel === psel; });
+  }
+  signalOf(pin, psel) { return Object.entries(RA_PERIPHERAL_PINS).find(([sig, pins]) => pins.includes(pin) && raPsel(sig) === psel)?.[0] ?? null; }
+  // The level a peripheral drives on a pin set to it (SCI TXD idles high while TE is set).
+  peripheralOutput(pin, psel) {
+    const signal = this.signalOf(pin, psel); if (!signal) return null;
+    const sci = /^SCI(\d)_(TXD|RXD)$/.exec(signal); if (sci) return this.scis[sci[1]]?.output(sci[2]) ?? null;
+    return null;
+  }
+  peripheralChanged(name) { for (const role of ['TXD', 'RXD']) for (const pin of this.routedPins(`${name}_${role}`)) { const port = Number(pin.slice(1, -2)), bit = Number(pin.slice(-2)); this.ports.publish(port, 1 << bit); } }
+  lineSources(pin) { return this.env.lineSources ? this.env.lineSources(pin) : []; }
+  uartEvent(e) { this.env.uartEvent?.(e); }
 }

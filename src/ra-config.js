@@ -66,11 +66,11 @@ export function raDefaultMcu(family=RA_FAMILY_ID){
 }
 
 const C_NAME=/^[A-Za-z_][A-Za-z0-9_]{0,40}$/;
-const PIN_FUNCTIONS=['GPIO_Output','GPIO_Input','IRQ','Analog'];
+const PIN_FUNCTIONS=['GPIO_Output','GPIO_Input','IRQ','Analog','Peripheral'];
 /** A checked copy of an RA project's MCU settings (pins, clock); throws with the reason. */
 export function validateRaMcu(mcu){
  if(!mcu||typeof mcu!=='object'||Array.isArray(mcu))throw new Error('RA 핀 설정을 확인하세요.');
- const fam=raFamily(mcu.family),out={family:fam.id,pins:{}},labels=new Set(),channels=new Map();
+ const fam=raFamily(mcu.family),out={family:fam.id,pins:{}},labels=new Set(),channels=new Map(),signals=new Map();
  if(!mcu.pins||typeof mcu.pins!=='object'||Array.isArray(mcu.pins))throw new Error('RA 핀 설정을 확인하세요.');
  for(const [pin,p]of Object.entries(mcu.pins)){
   if(!fam.ports.includes(pin))throw new Error(`${pin}: ${fam.part}에 없는 핀입니다.`);
@@ -84,6 +84,10 @@ export function validateRaMcu(mcu){
    if(p.outputType!==undefined){if(!['CMOS','NMOS'].includes(p.outputType))throw new Error(`${pin}: 출력 형식을 확인하세요.`);if(p.outputType==='NMOS')q.outputType='NMOS';}
   }
   if(['GPIO_Input','IRQ'].includes(p.function)){q.pull=p.pull??'NONE';if(!['NONE','PULLUP'].includes(q.pull))throw new Error(`${pin}: 풀업 설정을 확인하세요.`);}
+  if(p.function==='Peripheral'){
+   if(typeof p.signal!=='string'||!RA_PERIPHERAL_PINS[p.signal]?.includes(pin))throw new Error(`${pin}: ${p.signal??'주변장치 신호'}를 이 핀에 둘 수 없습니다.`);
+   if(signals.has(p.signal))throw new Error(`${p.signal}은 이미 ${signals.get(p.signal)}에서 씁니다.`);signals.set(p.signal,pin);q.signal=p.signal;
+  }
   if(p.function==='IRQ'){
    const ch=RA_IRQ_PINS[pin];if(ch==null)throw new Error(`${pin}: 외부 인터럽트(IRQ) 핀이 아닙니다.`);
    if(channels.has(ch))throw new Error(`${pin}: IRQ${ch}는 이미 ${channels.get(ch)}에서 씁니다.`);channels.set(ch,pin);
@@ -94,6 +98,21 @@ export function validateRaMcu(mcu){
   }
   out.pins[pin]=q;
  }
+ // Peripherals (RASC Stacks): SCI UART channels with their baud rate, callback and interrupt priority.
+ if(mcu.peripherals!==undefined){
+  if(!mcu.peripherals||typeof mcu.peripherals!=='object'||Array.isArray(mcu.peripherals))throw new Error('RA 주변장치 설정을 확인하세요.');
+  out.peripherals={};
+  for(const [id,p]of Object.entries(mcu.peripherals)){
+   const sci=/^SCI(\d)$/.exec(id);if(!sci||!RA_SCI_CHANNELS.includes(Number(sci[1]))||!p||typeof p.enabled!=='boolean')throw new Error(`${id}: 지원하지 않는 주변장치입니다.`);
+   const q={enabled:p.enabled,baud:p.baud??115200,callback:p.callback??`user_uart${sci[1]}_callback`,priority:p.priority??12};
+   if(!Number.isInteger(q.baud)||q.baud<300||q.baud>2000000)throw new Error(`${id}: 통신 속도는 300~2000000 bps입니다.`);
+   if(typeof q.callback!=='string'||!C_NAME.test(q.callback))throw new Error(`${id}: 콜백 이름은 C 식별자로 쓰세요.`);
+   if(!Number.isInteger(q.priority)||q.priority<0||q.priority>15)throw new Error(`${id}: 인터럽트 우선순위는 0~15입니다.`);
+   if(q.enabled&&!signals.has(id+'_TXD')&&!signals.has(id+'_RXD'))throw new Error(`${id}: TXD 또는 RXD 핀을 정하세요.`);
+   out.peripherals[id]=q;
+  }
+ }
+ for(const signal of signals.keys()){const id=signal.split('_')[0];if(!out.peripherals?.[id]?.enabled)throw new Error(`${signals.get(signal)}: ${id}를 켜야 ${signal}로 쓸 수 있습니다.`);}
  if(mcu.clock!==undefined){
   const c=mcu.clock,d=fam.clock;
   if(!c||typeof c!=='object')throw new Error('RA 클록 설정을 확인하세요.');
@@ -106,3 +125,18 @@ export function validateRaMcu(mcu){
  }
  return out;
 }
+
+// Peripheral pin functions (Table 1.16, LQFP100) with the PmnPFS.PSEL value that selects them (FSP r_ioport.h
+// IOPORT_PERIPHERAL_*): SCI0/2/4 = 4, SCI1/3/9 = 5.
+export const RA_PERIPHERAL_PINS=Object.freeze({
+ SCI0_TXD:['P101','P411'],SCI0_RXD:['P100','P410'],SCI1_TXD:['P213'],SCI1_RXD:['P212','P708'],
+ SCI2_TXD:['P302','P112'],SCI2_RXD:['P301','P113'],SCI3_TXD:['P409'],SCI3_RXD:['P408'],
+ SCI4_TXD:['P207','P205'],SCI4_RXD:['P206'],SCI9_TXD:['P109','P602'],SCI9_RXD:['P110','P601']
+});
+export const RA_SCI_CHANNELS=Object.freeze([0,1,2,3,4,9]);
+/** PSEL of a peripheral signal ("SCI9_TXD" → 5). */
+export function raPsel(signal){
+ const sci=/^SCI(\d)_/.exec(signal);if(sci)return [0,2,4].includes(Number(sci[1]))?4:5;
+ throw new Error(`${signal}: 지원하지 않는 주변장치 신호입니다.`);
+}
+export const RA_PSEL_NAMES=Object.freeze({4:'IOPORT_PERIPHERAL_SCI0_2_4_6_8',5:'IOPORT_PERIPHERAL_SCI1_3_5_7_9'});

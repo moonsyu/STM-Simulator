@@ -603,6 +603,7 @@ body.dock-dragging .dock-unit{pointer-events:none}
 .ra-pin.mode-GPIO_Input{background:color-mix(in srgb,#4f8cff 22%,transparent)}
 .ra-pin.mode-IRQ{background:color-mix(in srgb,#d2a8ff 26%,transparent)}
 .ra-pin.mode-Analog{background:color-mix(in srgb,#e3b341 24%,transparent)}
+.ra-pin.mode-Peripheral{background:color-mix(in srgb,#39c5cf 26%,transparent)}
 .ra-pin-props{display:flex;flex-direction:column;gap:8px;font-size:12px;border-left:1px solid var(--ide-border);padding-left:14px}
 .ra-pin-props h3{margin:0;font-size:14px}
 .ra-pin-props label{display:flex;flex-direction:column;gap:3px;color:var(--ide-muted)}

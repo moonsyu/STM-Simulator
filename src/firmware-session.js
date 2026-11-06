@@ -193,7 +193,7 @@ export class FirmwareSession {
     for (const [name, line] of this.soc.signals.lines) {
       if (line.protocol !== 'uart' || name === pin) continue;
       let endpoint = null;
-      if (/^P[A-H]\d+$/.test(name)) endpoint = 'signal:' + name;
+      if (/^P(?:[A-H]\d+|\d{3})$/.test(name)) endpoint = 'signal:' + name;
       else if (name.startsWith('uart:')) endpoint = `part:${name.slice(5)}:p3`;
       else if (name === 'vcp') { if (pin === 'PA3') out.push(line); continue; }
       else if (name.startsWith('peer:')) { if (line.rx === pin) out.push(line); continue; }
@@ -212,7 +212,7 @@ export class FirmwareSession {
     }));
     for (const p of this.project.components.filter(p => p.type === 'uart')) {
       list.push(new UartReceiver(sig, this.soc, {
-        sources: () => { const r = this.result; if (!r?.uf || !this.buses.powered(p)) return []; const root = r.uf.find(`part:${p.id}:p4`), out = []; for (const [name, line] of sig.lines) if (line.protocol === 'uart' && /^P[A-H]\d+$/.test(name) && r.uf.find('signal:' + name) === root) out.push(line); return out; },
+        sources: () => { const r = this.result; if (!r?.uf || !this.buses.powered(p)) return []; const root = r.uf.find(`part:${p.id}:p4`), out = []; for (const [name, line] of sig.lines) if (line.protocol === 'uart' && /^P(?:[A-H]\d+|\d{3})$/.test(name) && r.uf.find('signal:' + name) === root) out.push(line); return out; },
         config: () => ({ baud: p.baud, dataBits: 8, parity: 'none', stopBits: 1 }),
         onFrame: f => { if (!f.framingError) this.buses.received.set(p.id, ((this.buses.received.get(p.id) || '') + String.fromCharCode(f.value & 0xff)).slice(-512)); },
       }));
@@ -220,7 +220,7 @@ export class FirmwareSession {
     // A wireless module's RXD reads the pins on its net; what it answers goes out on a line of its own (wirelessRx).
     for (const p of this.project.components.filter(p => p.type === 'wireless')) {
       list.push(new UartReceiver(sig, this.soc, {
-        sources: () => { const r = this.result; if (!r?.uf || !this.wireless.module(p).powered) return []; const root = r.uf.find(`part:${p.id}:p4`), out = []; for (const [name, line] of sig.lines) if (line.protocol === 'uart' && /^P[A-H]\d+$/.test(name) && r.uf.find('signal:' + name) === root) out.push(line); return out; },
+        sources: () => { const r = this.result; if (!r?.uf || !this.wireless.module(p).powered) return []; const root = r.uf.find(`part:${p.id}:p4`), out = []; for (const [name, line] of sig.lines) if (line.protocol === 'uart' && /^P(?:[A-H]\d+|\d{3})$/.test(name) && r.uf.find('signal:' + name) === root) out.push(line); return out; },
         config: () => ({ baud: this.wireless.module(p).uartBaud, dataBits: 8, parity: 'none', stopBits: 1 }),
         onFrame: f => { if (!f.framingError) this.wireless.transmit([{ value: f.value & 0xff, at: this.now }], this.wireless.module(p).uartBaud, id => id === p.id); },
       }));
@@ -256,7 +256,7 @@ export class FirmwareSession {
   linkPeerUart(usart, key, target, view) {
     const sig = this.soc.signals, settings = () => { const u = target().soc.usarts[usart], b = u.baud(); return b && u.rxEnabled() && u.rxPins()[0] ? { baud: b, dataBits: u.frameBits(), parity: u.parity(), stopBits: u.stopBits() } : null; };
     this.receivers.push(new UartReceiver(sig, this.soc, {
-      sources: () => { const r = this.result, rx = target().soc.usarts[usart].rxPins()[0]; if (!r?.uf || !rx || !settings()) return []; const root = r.uf.find(view('signal:' + rx)), out = []; for (const [name, line] of sig.lines) if (line.protocol === 'uart' && /^P[A-H]\d+$/.test(name) && r.uf.find('signal:' + name) === root) out.push(line); return out; },
+      sources: () => { const r = this.result, rx = target().soc.usarts[usart].rxPins()[0]; if (!r?.uf || !rx || !settings()) return []; const root = r.uf.find(view('signal:' + rx)), out = []; for (const [name, line] of sig.lines) if (line.protocol === 'uart' && /^P(?:[A-H]\d+|\d{3})$/.test(name) && r.uf.find('signal:' + name) === root) out.push(line); return out; },
       config: settings,
       onFrame: f => { if (!f.framingError) target().peerFrame(usart, key, f.value, settings()); },
     }));

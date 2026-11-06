@@ -77,3 +77,49 @@ test('an FPB-RA6E1 project is an FSP project; resets keep it one; the vendors do
  const reset=resetBoardConfiguration({...p,mcu:{family:'R7FA6E10F',pins:{}}});assert.deepEqual(Object.keys(reset.mcu.pins).sort(),['P205','P407','P408']);assert.equal(reset.firmware.mode,'fsp');
  for(const ex of RA_EXAMPLES)assert.doesNotThrow(()=>validateProject({...p,mcu:ex.mcu(),code:ex.code}),ex.id);
 });
+
+test('SCI UART: peripheral pins, channel settings and the RASC baud setting, g_uartN in hal_data and the vector table',async()=>{
+ const {RA_PERIPHERAL_PINS,raPsel}=await import('../../src/ra-config.js');
+ const {sciBaudSetting,raPclka}=await import('../../src/ra-generator.js');
+ assert.deepEqual(RA_PERIPHERAL_PINS.SCI9_TXD,['P109','P602']);assert.equal(raPsel('SCI9_TXD'),5);assert.equal(raPsel('SCI0_RXD'),4);
+ const uart=()=>{const m=raDefaultMcu();m.pins.P109={function:'Peripheral',signal:'SCI9_TXD'};m.pins.P110={function:'Peripheral',signal:'SCI9_RXD'};m.peripherals={SCI9:{enabled:true,baud:115200}};return m;};
+ const v=validateRaMcu(uart());assert.deepEqual(v.peripherals.SCI9,{enabled:true,baud:115200,callback:'user_uart9_callback',priority:12});
+ assert.throws(()=>validateRaMcu({...uart(),pins:{...uart().pins,P602:{function:'Peripheral',signal:'SCI9_TXD'}}}),/이미 P109/);
+ assert.throws(()=>validateRaMcu({...uart(),pins:{...uart().pins,P111:{function:'Peripheral',signal:'SCI9_RXD'}}}),/둘 수 없습니다/);
+ assert.throws(()=>validateRaMcu({...uart(),peripherals:{SCI9:{enabled:false}}}),/SCI9를 켜야/);
+ assert.throws(()=>validateRaMcu({...raDefaultMcu(),peripherals:{SCI9:{enabled:true}}}),/TXD 또는 RXD/);
+ assert.throws(()=>validateRaMcu({...uart(),peripherals:{SCI9:{enabled:true,baud:100}}}),/300~2000000/);
+ assert.throws(()=>validateRaMcu({...uart(),peripherals:{SCI5:{enabled:false}}}),/지원하지 않는/);
+ // PCLKA 100 MHz: 115200 → ABCS 1, BGDM 1, CKS 0, BRR 108 (0.45 %), as RASC writes it.
+ assert.equal(raPclka(v),100e6);
+ const b=sciBaudSetting(100e6,115200);assert.deepEqual([b.abcs,b.bgdm,b.cks,b.brr],[1,1,0,108]);assert.ok(b.error<0.5);
+ assert.ok(sciBaudSetting(100e6,9600).error<0.2);assert.throws(()=>sciBaudSetting(100e6,1),/만들 수 없는/);
+ const files=generateRaFiles(v,{board:'FPB-RA6E1'});
+ const halC=files['ra_gen/hal_data.c'],halH=files['ra_gen/hal_data.h'];
+ assert.match(halH,/extern const uart_instance_t g_uart9;/);assert.match(halH,/void user_uart9_callback\(uart_callback_args_t \* p_args\);/);
+ assert.match(halC,/\.channel {13}= 9,/);assert.match(halC,/\.brr = 108/);assert.match(halC,/\.p_api {9}= &g_uart_on_sci/);
+ assert.match(files['ra_gen/vector_data.h'],/VECTOR_NUMBER_SCI9_RXI \(\(IRQn_Type\) 0\)/);
+ assert.match(files['ra_gen/vector_data.c'],/sci_uart_txi_isr/);assert.match(files['ra_gen/vector_data.c'],/\[2\] = BSP_PRV_VECT_ENUM\(EVENT_SCI9_TEI,GROUP2\)/);
+ assert.match(files['ra_gen/pin_data.c'],/BSP_IO_PORT_01_PIN_09,[^}]*IOPORT_CFG_PERIPHERAL_PIN \| \(uint32_t\) IOPORT_PERIPHERAL_SCI1_3_5_7_9\)/);
+ assert.match(files['ra_cfg/fsp_cfg/r_sci_uart_cfg.h'],/SCI_UART_CFG_FIFO_SUPPORT \(0\)/);
+});
+
+test('RA6E1 SCI model: baud from SMR/BRR/SEMR, TXI on the TDR → shift transfer, TEI after the last frame, RXI on a frame',async()=>{
+ const {Sci}=await import('../../src/emu/ra6e1/sci.js');
+ const events=[],timers=[];let now=0;
+ const soc={clock:{pclka:100e6},signals:{receivers:new Set(),channel(){},line(){return {};},uartFrame:(l,t)=>t+86.8},nowUs:()=>now,sync(){},icu:{raise:e=>events.push(e)},routedPins:s=>s.endsWith('TXD')?['P109']:['P110'],lineSources:()=>[],atUs:(t,fn)=>{const e={t,fn};timers.push(e);return e;},uartEvent:e=>events.push(e)};
+ const sci=new Sci(soc,9);
+ sci.write(0x07,0x50,1); // SEMR: ABCS + BGDM
+ sci.write(0x01,108,1);
+ assert.ok(Math.abs(sci.baud()-114679)<1);
+ sci.write(0x02,0xf0,1); // TIE RIE TE RE
+ sci.write(0x03,0x41,1); // TDR 'A'
+ assert.deepEqual(events,[0x1b6+1],'TXI as the byte moves to the shift register');
+ assert.equal(sci.peek(0x04)&0x80,0x80,'TDRE again');
+ sci.write(0x02,0xf4,1); // TEIE while the frame is on the line: no TEI yet
+ assert.equal(events.length,1);
+ now=90;timers.shift().fn();
+ assert.deepEqual(events.slice(1),[{instance:'SCI9',direction:'TX',bytes:[0x41],micros:90},0x1b6+2]);
+ sci.received({value:0x5a});assert.equal(events.at(-1),0x1b6+0);assert.equal(sci.read(0x05,1),0x5a);
+ assert.equal(sci.peek(0x04)&0x40,0,'RDRF cleared by reading RDR');
+});

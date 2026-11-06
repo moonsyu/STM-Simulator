@@ -3,7 +3,7 @@
 // linker init tables) and script (linker scripts). The user's code is src/hal_entry.c; the app builds these with the
 // FSP sources (BSP + r_* drivers) and ARM GCC, then runs the ELF on the RA6E1 emulator.
 // Formats follow RASC output for FSP 5.x/6.x (only what the FPB-RA6E1 configurations here need).
-import {raFamily,raPinName,raPortBit,RA_IRQ_PINS} from './ra-config.js';
+import {raFamily,raPinName,raPortBit,RA_IRQ_PINS,raPsel,RA_PSEL_NAMES,RA_SCI_CHANNELS} from './ra-config.js';
 
 const HEADER=kind=>`/* generated ${kind} - do not edit */\n`;
 const hex=(n,w=8)=>'0x'+(n>>>0).toString(16).toUpperCase().padStart(w,'0');
@@ -16,7 +16,7 @@ export function pinCfgWord(pin){
  else if(p.function==='GPIO_Input'){parts.push('IOPORT_CFG_PORT_DIRECTION_INPUT');if(p.pull==='PULLUP')parts.push('IOPORT_CFG_PULLUP_ENABLE');}
  else if(p.function==='IRQ'){parts.push('IOPORT_CFG_IRQ_ENABLE','IOPORT_CFG_PORT_DIRECTION_INPUT');if(p.pull==='PULLUP')parts.push('IOPORT_CFG_PULLUP_ENABLE');}
  else if(p.function==='Analog')parts.push('IOPORT_CFG_ANALOG_ENABLE');
- else if(p.function==='Peripheral'){parts.push('IOPORT_CFG_PERIPHERAL_PIN',p.psel);if(p.pull==='PULLUP')parts.push('IOPORT_CFG_PULLUP_ENABLE');if(p.outputType==='NMOS')parts.push('IOPORT_CFG_NMOS_ENABLE');if(p.drive==='MID')parts.push('IOPORT_CFG_DRIVE_MID');}
+ else if(p.function==='Peripheral'){parts.push('IOPORT_CFG_DRIVE_HIGH','IOPORT_CFG_PERIPHERAL_PIN',RA_PSEL_NAMES[raPsel(p.signal)]);if(p.pull==='PULLUP')parts.push('IOPORT_CFG_PULLUP_ENABLE');if(p.outputType==='NMOS')parts.push('IOPORT_CFG_NMOS_ENABLE');if(p.drive==='MID')parts.push('IOPORT_CFG_DRIVE_MID');}
  else throw new Error(`${pin?.name||'핀'}: 지원하지 않는 핀 기능입니다.`);
  return `((uint32_t) ${parts.map(x=>`(uint32_t) ${x}`).join(' | ')})`;
 }
@@ -24,9 +24,21 @@ export function pinCfgWord(pin){
 // External IRQ instances (r_icu): one per pin set to IRQ, named g_external_irqN like RASC.
 const irqsOf=mcu=>Object.entries(mcu.pins||{}).filter(([,p])=>p.function==='IRQ').map(([pin,p])=>{const channel=RA_IRQ_PINS[pin];if(channel==null)throw new Error(`${pin}: IRQ 핀이 아닙니다.`);return {pin,channel,name:p.instance||`g_external_irq${channel}`,callback:p.callback||`external_irq${channel}_callback`,trigger:p.edge||'FALLING',priority:p.priority??12,filter:!!p.filter};});
 
+// SCI UART instances (r_sci_uart), g_uartN on each enabled SCI channel.
+const uartsOf=mcu=>RA_SCI_CHANNELS.filter(ch=>mcu.peripherals?.['SCI'+ch]?.enabled).map(ch=>{const p=mcu.peripherals['SCI'+ch];return {channel:ch,name:`g_uart${ch}`,baud:p.baud??115200,callback:p.callback||`user_uart${ch}_callback`,priority:p.priority??12};});
+/** PCLKA of an RA MCU configuration in Hz (the SCI clock). */
+export function raPclka(mcu){const c={...raFamily(mcu.family).clock,...(mcu.clock||{})};return c.hocoMHz*1e6/c.pllDiv*c.pllMul/c.pclkaDiv;}
+/** SCI asynchronous baud register settings closest to `baud` (CKS, BRR, ABCS, BGDM; no modulation), as RASC computes them. */
+export function sciBaudSetting(pclk,baud){
+ let best=null;
+ for(const [abcs,bgdm]of [[0,1],[1,1],[0,0],[1,0]])for(let n=0;n<4;n++){const c=64>>(abcs+bgdm),N=Math.round(pclk/(c*2**(2*n-1)*baud))-1;if(N<0||N>255)continue;const actual=pclk/(c*2**(2*n-1)*(N+1)),error=Math.abs(actual-baud)/baud*100;if(!best||error<best.error-1e-9)best={abcs,bgdm,cks:n,brr:N,error,actual};}
+ if(!best)throw new Error(`${baud} bps: SCI로 만들 수 없는 통신 속도입니다.`);
+ return best;
+}
 /** The interrupt slots the vector table allocates, in RASC order (first-come numbering from 0). */
 export function raVectors(mcu){
  const list=[];
+ for(const u of uartsOf(mcu))for(const [kind,label]of [['RXI','Receive data full'],['TXI','Transmit data empty'],['TEI','Transmit end'],['ERI','Receive error']])list.push({isr:`sci_uart_${kind.toLowerCase()}_isr`,event:`SCI${u.channel}_${kind}`,label:`SCI${u.channel} ${kind} (${label})`,vector:`SCI${u.channel}_${kind}`});
  for(const irq of irqsOf(mcu))list.push({isr:'r_icu_isr',event:`ICU_IRQ${irq.channel}`,label:`ICU IRQ${irq.channel} (External pin interrupt ${irq.channel})`,vector:`ICU_IRQ${irq.channel}`});
  return list.map((v,i)=>({...v,index:i}));
 }
@@ -291,7 +303,7 @@ ${vectors.map(v=>`    [${v.index}] = BSP_PRV_VECT_ENUM(EVENT_${v.event},GROUP${v
 }
 
 function halDataH(mcu){
- const irqs=irqsOf(mcu),includes=irqs.length?'#include "r_icu.h"\n#include "r_external_irq_api.h"\n':'';
+ const irqs=irqsOf(mcu),uarts=uartsOf(mcu),includes=(irqs.length?'#include "r_icu.h"\n#include "r_external_irq_api.h"\n':'')+(uarts.length?'#include "r_sci_uart.h"\n#include "r_uart_api.h"\n':'');
  const decls=irqs.map(i=>`/** External IRQ on ICU Instance. */
 extern const external_irq_instance_t ${i.name};
 /** Access the ICU instance using these structures when calling API functions directly (::p_api is not used). */
@@ -299,7 +311,15 @@ extern icu_instance_ctrl_t ${i.name}_ctrl;
 extern const external_irq_cfg_t ${i.name}_cfg;
 #ifndef ${i.callback}
 void ${i.callback}(external_irq_callback_args_t * p_args);
-#endif`).join('\n');
+#endif`).concat(uarts.map(u=>`/** UART on SCI Instance. */
+extern const uart_instance_t ${u.name};
+/** Access the UART instance using these structures when calling API functions directly (::p_api is not used). */
+extern sci_uart_instance_ctrl_t ${u.name}_ctrl;
+extern const uart_cfg_t ${u.name}_cfg;
+extern const sci_uart_extended_cfg_t ${u.name}_cfg_extend;
+#ifndef ${u.callback}
+void ${u.callback}(uart_callback_args_t * p_args);
+#endif`)).join('\n');
  return HEADER('HAL header file')+`#ifndef HAL_DATA_H_
 #define HAL_DATA_H_
 #include <stdint.h>
@@ -341,7 +361,57 @@ const external_irq_instance_t ${i.name} =
     .p_ctrl        = &${i.name}_ctrl,
     .p_cfg         = &${i.name}_cfg,
     .p_api         = &g_external_irq_on_icu
-};`).join('\n');
+};`).concat(uartsOf(mcu).map(u=>{const b=sciBaudSetting(raPclka(mcu),u.baud),irq=k=>`#if defined(VECTOR_NUMBER_SCI${u.channel}_${k})\n    .${k.toLowerCase()}_irq             = VECTOR_NUMBER_SCI${u.channel}_${k},\n#else\n    .${k.toLowerCase()}_irq             = FSP_INVALID_VECTOR,\n#endif`;return `sci_uart_instance_ctrl_t ${u.name}_ctrl;
+baud_setting_t ${u.name}_baud_setting =
+{
+    /* Baud rate calculated with ${b.error.toFixed(3)}% error. */ .semr_baudrate_bits_b.abcse = 0, .semr_baudrate_bits_b.abcs = ${b.abcs}, .semr_baudrate_bits_b.bgdm = ${b.bgdm}, .cks = ${b.cks}, .brr = ${b.brr}, .mddr = (uint8_t) 256, .semr_baudrate_bits_b.brme = false
+};
+/** UART extended configuration for UARTonSCI HAL driver */
+const sci_uart_extended_cfg_t ${u.name}_cfg_extend =
+{
+    .clock                = SCI_UART_CLOCK_INT,
+    .rx_edge_start        = SCI_UART_START_BIT_FALLING_EDGE,
+    .noise_cancel         = SCI_UART_NOISE_CANCELLATION_DISABLE,
+    .rx_fifo_trigger      = SCI_UART_RX_FIFO_TRIGGER_MAX,
+    .p_baud_setting       = &${u.name}_baud_setting,
+    .flow_control         = SCI_UART_FLOW_CONTROL_RTS,
+    .flow_control_pin     = (bsp_io_port_pin_t) UINT16_MAX,
+    .rs485_setting = {
+        .enable = SCI_UART_RS485_DISABLE,
+        .polarity = SCI_UART_RS485_DE_POLARITY_HIGH,
+        .de_control_pin = (bsp_io_port_pin_t) UINT16_MAX,
+    },
+    .irda_setting = {
+        .ircr_bits_b.ire = 0,
+        .ircr_bits_b.irrxinv = 0,
+        .ircr_bits_b.irtxinv = 0,
+    },
+};
+/** UART interface configuration */
+const uart_cfg_t ${u.name}_cfg =
+{
+    .channel             = ${u.channel},
+    .data_bits           = UART_DATA_BITS_8,
+    .parity              = UART_PARITY_OFF,
+    .stop_bits           = UART_STOP_BITS_1,
+    .p_callback          = ${u.callback},
+    .p_context           = NULL,
+    .p_extend            = &${u.name}_cfg_extend,
+    .p_transfer_tx       = NULL,
+    .p_transfer_rx       = NULL,
+    .rxi_ipl             = (${u.priority}),
+    .txi_ipl             = (${u.priority}),
+    .tei_ipl             = (${u.priority}),
+    .eri_ipl             = (${u.priority}),
+${['RXI','TXI','TEI','ERI'].map(irq).join('\n')}
+};
+/* Instance structure to use this module. */
+const uart_instance_t ${u.name} =
+{
+    .p_ctrl        = &${u.name}_ctrl,
+    .p_cfg         = &${u.name}_cfg,
+    .p_api         = &g_uart_on_sci
+};`;})).join('\n');
  return HEADER('HAL source file')+`#include "hal_data.h"
 ${body}${body?'\n':''}void g_hal_init(void) {
 g_common_init();
@@ -535,6 +605,7 @@ export function generateRaFiles(mcu,{board}={}){
   cfg('bsp/board_cfg.h',HEADER('configuration header file')+`#ifndef BOARD_CFG_H_\n#define BOARD_CFG_H_\n#include "${board?.fspBoard?'board.h':'bsp_api.h'}"\n#endif /* BOARD_CFG_H_ */\n`),
   cfg('r_ioport_cfg.h',moduleCfg('r_ioport_cfg.h','R_IOPORT_CFG_H_',['#define IOPORT_CFG_PARAM_CHECKING_ENABLE (BSP_CFG_PARAM_CHECKING_ENABLE)'])),
   cfg('r_icu_cfg.h',moduleCfg('r_icu_cfg.h','R_ICU_CFG_H_',['#define ICU_CFG_PARAM_CHECKING_ENABLE (BSP_CFG_PARAM_CHECKING_ENABLE)'])),
+  cfg('r_sci_uart_cfg.h',moduleCfg('r_sci_uart_cfg.h','R_SCI_UART_CFG_H_',['#define SCI_UART_CFG_PARAM_CHECKING_ENABLE (BSP_CFG_PARAM_CHECKING_ENABLE)','#define SCI_UART_CFG_FIFO_SUPPORT (0)','#define SCI_UART_CFG_DTC_SUPPORTED (0)','#define SCI_UART_CFG_FLOW_CONTROL_SUPPORT (0)','#define SCI_UART_CFG_RS485_SUPPORT (0)','#define SCI_UART_CFG_IRDA_SUPPORT (0)'])),
   gen('bsp_clock_cfg.h',clockCfg(c)),
   gen('common_data.h',HEADER('common header file')+`#ifndef COMMON_DATA_H_\n#define COMMON_DATA_H_\n#include <stdint.h>\n#include "bsp_api.h"\n#include "r_ioport.h"\n#include "bsp_pin_cfg.h"\nFSP_HEADER\n#define IOPORT_CFG_NAME g_bsp_pin_cfg\n#define IOPORT_CFG_OPEN R_IOPORT_Open\n#define IOPORT_CFG_CTRL g_ioport_ctrl\n/* IOPORT Instance */\nextern const ioport_instance_t g_ioport;\n/* IOPORT control structure. */\nextern ioport_instance_ctrl_t g_ioport_ctrl;\nvoid g_common_init(void);\nFSP_FOOTER\n#endif /* COMMON_DATA_H_ */\n`),
   gen('common_data.c',HEADER('common source file')+`#include "common_data.h"\nioport_instance_ctrl_t g_ioport_ctrl;\nconst ioport_instance_t g_ioport =\n{\n    .p_api = &g_ioport_on_ioport,\n    .p_ctrl = &g_ioport_ctrl,\n    .p_cfg = &g_bsp_pin_cfg,\n};\nvoid g_common_init(void) {\n}\n`),

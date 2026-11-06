@@ -40,3 +40,20 @@ test('opening the other vendor\'s ELF says which board it is for',async()=>{
  assert.throws(()=>new FirmwareSession(project(fixture('ra_blink')),{elf:elf('blink')}),/FPB-RA6E1\(Renesas FSP\)용이 아닙니다/);
  assert.throws(()=>new FirmwareSession(project('blink'),{elf:elf(fixture('ra_blink'))}),/FPB-RA6E1\(Renesas FSP\)용입니다/);
 });
+
+test('ra_uart_echo: SCI9 (P109 TXD / P110 RXD, 115200) says hello to the UART part on D0/D1 and echoes what it sends',()=>{
+ const {session,log}=open(fixture('ra_uart_echo'));
+ runUntil(session,60);
+ const tx=log.uart.filter(e=>e.instance==='SCI9'&&e.direction==='TX');
+ assert.equal(String.fromCharCode(...tx.flatMap(e=>e.bytes)),'FPB-RA6E1 SCI9 ready\r\n');
+ // 10 bits a frame at 114.6 kbps (PCLKA 100 MHz, BRR 108 with ABCS/BGDM: 0.45 % error, as RASC sets it).
+ const gap=tx[1].micros-tx[0].micros;assert.ok(Math.abs(gap-1e7/114679)<1,'frame time '+gap);
+ assert.equal(session.buses.received.get('term'),'FPB-RA6E1 SCI9 ready\r\n','the part decodes the TXD line');
+ assert.equal(session.gpio.P109.mode,'OUTPUT');
+ assert.equal(session.inject('Hi','SCI9'),2);
+ runUntil(session,120);
+ assert.equal(session.readVariable('received'),2,'RXI → r_sci_uart → user_uart9_callback (UART_EVENT_RX_CHAR)');
+ assert.deepEqual(log.uart.filter(e=>e.direction==='RX').map(e=>e.bytes[0]),[72,105]);
+ assert.ok(session.buses.received.get('term').endsWith('Hi'),'echoed back');
+ assert.ok(session.gpio.P407.value<1,'LED2 toggled twice');
+});

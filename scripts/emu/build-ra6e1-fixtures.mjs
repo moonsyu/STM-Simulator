@@ -23,7 +23,7 @@ await fs.mkdir(out,{recursive:true});
 const ids=process.argv.slice(2),work=await fs.mkdtemp(path.join(os.tmpdir(),'ra6e1-fixtures-'));
 try{
  for(const ex of RA_EXAMPLES.filter(e=>!ids.length||ids.includes(e.id))){
-  const project=validateProject({...projectForBoard('fpb-ra6e1'),name:ex.id,mcu:ex.mcu(),code:ex.code});
+  const project=validateProject({...projectForBoard('fpb-ra6e1'),name:ex.id,mcu:ex.mcu(),code:ex.code,...(ex.circuit?.()||{})});
   const plan=await prepareBuild({project,tools,root:work,target:'arm',configuration:'Debug'});
   const result=await build(plan);
   await fs.copyFile(result.elf,path.join(out,ex.id+'.elf'));

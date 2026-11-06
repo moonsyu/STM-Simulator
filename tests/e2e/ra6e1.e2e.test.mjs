@@ -78,3 +78,43 @@ test('FPB-RA6E1 Pins dialog (RA Smart Configurator style): set D3 (P104) as an o
   assert.deepEqual(s.errors,[]);
  }finally{await s.close();}
 });
+
+test('FPB-RA6E1 SCI9 UART example: the USB-TTL part on D0/D1 shows the hello line, the serial monitor sends to SCI9 and gets the echo',{skip:!toolchain&&!process.env.CI_REQUIRE_TOOLCHAIN&&'ARM GCC / Renesas FSP not installed',timeout:240000},async()=>{
+ const s=await launch();
+ await fs.writeFile(path.join(s.profile,'native-tools.json'),JSON.stringify({armGcc:gcc,fsp,armGdb:'',cube:'',cubeF1:'',hostGcc:'',hostGdb:'',clangd:'',openocd:'',buildRoot:''}));
+ try{
+  const {win}=s;
+  await win.click('[data-activity="board"]');if(!await win.locator('#board-open').isVisible())await win.click('[data-activity="board"]');
+  await win.click('#board-open');await win.click('[data-board-id="fpb-ra6e1"]');
+  if(await win.locator('#board-change-dialog').isVisible())await win.click('#board-change-confirm');
+  await win.waitForFunction(()=>document.querySelector('#surface > .board')?.dataset.board==='fpb-ra6e1');
+  await win.click('[data-activity="examples"]');if(!await win.locator('#view-examples').isVisible())await win.click('[data-activity="examples"]');
+  await win.fill('#hal-example-search','SCI9 UART');await win.locator('#hal-example-list [data-example]').first().click();
+  await win.waitForFunction(()=>/R_SCI_UART_Open\(&g_uart9_ctrl, &g_uart9_cfg\)/.test(document.getElementById('code').value));
+  // The example places the USB-TTL part wired to 3V3/GND and D0 (RXD9) / D1 (TXD9).
+  await win.waitForSelector('[data-part="term"]');
+  // The Pins dialog shows P109 as SCI9_TXD with g_uart9's baud rate.
+  await win.click('[data-activity="board"]');if(!await win.locator('#pinout-open').isVisible())await win.click('[data-activity="board"]');
+  await win.click('#pinout-open');await win.waitForSelector('#ra-pinout-dialog[open]');
+  await win.click('[data-ra-pin="P109"]');
+  assert.equal(await win.inputValue('[data-ra="signal"]'),'SCI9_TXD');
+  assert.equal(await win.inputValue('[data-ra-sci="baud"]'),'115200');
+  assert.match(await win.textContent('#ra-pin-props'),/g_uart9 \(r_sci_uart · SCI9\)[\s\S]*114679 bps \(오차 0\.45 %\)/);
+  await win.click('#ra-pinout-close');
+  await win.keyboard.press('Control+F5');
+  await win.waitForFunction(()=>/시뮬레이터\(ARM GCC 빌드\)를 시작했습니다/.test(document.getElementById('console-output').textContent),null,{timeout:180000})
+   .catch(async error=>{throw new Error(`${error.message}\n출력: ${(await win.textContent('#console-output')).slice(-1500)}\n빌드: ${(await win.textContent('#build-errors').catch(()=>'')).slice(-800)}`);});
+  await win.click('[data-monitor="bus"]');
+  assert.equal(await win.inputValue('#serial-target'),'SCI9');
+  await win.waitForFunction(()=>/USB-TTL: FPB-RA6E1 SCI9 ready/.test(document.getElementById('uart-output').textContent),null,{timeout:30000});
+  await win.uncheck('#serial-newline');
+  await win.waitForFunction(()=>!document.getElementById('serial-send').disabled);
+  await win.fill('#serial-input','ok');await win.click('#serial-send');
+  assert.equal(await win.evaluate(()=>document.getElementById('serial-feedback').textContent),'');
+  await win.waitForFunction(()=>/ready\r?\n?ok/.test(document.getElementById('uart-output').textContent),null,{timeout:15000});
+  await shot(win,'ra6e1-uart.png');
+  await win.keyboard.press('Control+F2');
+  await win.waitForFunction(()=>document.getElementById('shell').dataset.running==='false');
+  assert.deepEqual(s.errors,[]);
+ }finally{await s.close();}
+});
