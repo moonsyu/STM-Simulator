@@ -25,6 +25,8 @@ export const irqForPin=pin=>{const n=Number(pin.slice(2));return n<5?`EXTI${n}_I
 export function pinFunctions(pin,family=DEFAULT_FAMILY){return [...MODES,...Object.entries(routesOf(family)).flatMap(([id,routes])=>Object.entries(routes).filter(([,pins])=>pins.includes(pin)).map(([signal])=>`${id}_${signal}`)),...Object.entries(usartCkRoutesOf(family)).filter(([,pins])=>pins.includes(pin)).map(([id])=>id+'_CK')];}
 export function defaultMcu(family=DEFAULT_FAMILY){const f=familyProfile(family);return {family:f.id,pins:{},peripherals:{},nvic:{},timerClockHz:f.clock.defaultHz};}
 /** UART Parameter Settings (CubeMX Asynchronous mode): the first value of each list is CubeMX's default. */
+/** SPI Parameter Settings (CubeMX Full-Duplex Master): clock polarity/phase (SPI mode 0-3), data size, first bit. */
+export const SPI_PARAMS=Object.freeze({cpol:['LOW','HIGH'],cpha:['1EDGE','2EDGE'],dataSize:[8,16],firstBit:['MSB','LSB']});
 export const UART_PARAMS=Object.freeze({wordLength:[8,9],parity:['NONE','EVEN','ODD'],stopBits:[1,2],direction:['TX_RX','TX','RX'],overSampling:[16,8]});
 export function validateMcu(value){
   if(!value||!Object.hasOwn(FAMILIES,value.family)||!value.pins||!value.peripherals||!value.nvic)throw new Error(`MCU 핀 설정이 필요합니다 (${Object.keys(FAMILIES).join(' / ')}).`);
@@ -52,6 +54,7 @@ export function validateMcu(value){
      for(const [key,values]of Object.entries(UART_PARAMS)){if(p[key]===undefined)continue;if(!values.includes(p[key]))throw new Error(`${id}.${key}: ${values.join(' / ')} 중에서 고르세요.`);if(p[key]!==values[0])q[key]=p[key];}
      if(q.overSampling===8&&f.id==='STM32F103RB')throw new Error(`${id}: STM32F103RB의 USART는 Over Sampling 16만 지원합니다.`);
     }
+    if(id==='SPI1')for(const [key,values]of Object.entries(SPI_PARAMS)){if(p[key]===undefined)continue;if(!values.includes(p[key]))throw new Error(`SPI1.${key}: ${values.join(' / ')} 중에서 고르세요.`);if(p[key]!==values[0])q[key]=p[key];}
     if(isSerial(id)&&p.mode!==undefined&&p.mode!=='asynchronous'){if(p.mode!=='synchronous'||!f.usartCk[id])throw new Error(`${id}: 동기 모드는 USART${Object.keys(f.usartCk).map(u=>u.replace('USART','')).join('/')}에서만 지원합니다.`);q.mode='synchronous';for(const [key,values]of [['cpol',[0,1]],['cpha',[0,1]],['lastBit',[0,1]]]){q[key]=p[key]??0;if(!values.includes(q[key]))throw new Error(`${id}.${key}: 0 또는 1입니다.`);}}
     out.peripherals[id]=q;
   }
@@ -158,6 +161,7 @@ export function importIoc(text){
   if(config.peripherals.I2C1)config.peripherals.I2C1.clock=number(values['I2C1.ClockSpeed'],100000);
   if(config.peripherals.ADC1&&values['ADC1.ContinuousConvMode']==='ENABLE')config.peripherals.ADC1.continuous=true;
   // SPI1 speed: CubeMX stores the computed rate ("5.25 MBits/s") next to the prescaler.
+  if(config.peripherals.SPI1){const s=config.peripherals.SPI1;if(/HIGH/.test(values['SPI1.CLKPolarity']||''))s.cpol='HIGH';if(/2EDGE/.test(values['SPI1.CLKPhase']||''))s.cpha='2EDGE';if(/16BIT/.test(values['SPI1.DataSize']||''))s.dataSize=16;if(/LSB/.test(values['SPI1.FirstBit']||''))s.firstBit='LSB';}
   if(config.peripherals.SPI1){const m=/^([\d.]+)\s*([KM]?)Bits\/s/i.exec(values['SPI1.CalculateBaudRate']||'');if(m)config.peripherals.SPI1.clock=Math.min(20000000,Math.max(1000,Math.round(Number(m[1])*({K:1e3,M:1e6}[m[2].toUpperCase()]??1))));}
   for(const id of Object.keys(f.timers))if(config.peripherals[id]){const p=config.peripherals[id],defaults=timerDefaults(id,family);p.prescaler=number(values[id+'.Prescaler'],defaults.prescaler);p.period=number(values[id+'.Period'],defaults.period);const pulse=Object.keys(values).find(k=>k.startsWith(id+'.Pulse'));if(pulse)p.pulse=number(values[pulse],defaults.pulse);const settings=Object.entries(values).filter(([k])=>k.startsWith(id+'.')).map(([,v])=>v).join(' ');p.mode=/Encoder|ENCODER/.test(settings)?'encoder':/PWM/.test(settings)?'pwm':/INPUTCAPTURE|Input_Capture|IC_CHANNEL/.test(settings)?'capture':'base';}
   config.timerClockHz=number(values['RCC.APB1TimFreq_Value'],f.clock.defaultHz);

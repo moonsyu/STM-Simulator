@@ -33,3 +33,23 @@ test('USART2 Parameter Settings (9 bits, even parity, 2 stop bits, TX only) are 
   assert.deepEqual(s.errors,[]);
  }finally{await s.close();}
 });
+
+test('SPI1 Parameter Settings (CPOL High, CPHA 2 Edge, 16 bits, LSB first) show SPI mode 3 and are generated into main.c',{timeout:120000},async()=>{
+ const s=await launch();
+ try{
+  const {win}=s,code=()=>win.evaluate(()=>document.getElementById('code').value);
+  // The SPI memory example routes SPI1 (PA5/PA6/PA7) and enables it.
+  await win.click('[data-activity="examples"]');if(!await win.locator('#view-examples').isVisible())await win.click('[data-activity="examples"]');
+  await win.selectOption('#hal-example','spi');await win.waitForFunction(()=>/MX_SPI1_Init/.test(document.getElementById('code').value));
+  await win.evaluate(()=>document.getElementById('pinout-open').click());await win.waitForSelector('#pinout-dialog[open]');
+  assert.equal(await win.locator('#pinout-peripherals [data-peripheral="SPI1"]').isChecked(),true);
+  assert.match(await win.textContent('#pinout-peripherals'),/SPI mode 0 · Full-Duplex Master/);
+  for(const [key,value]of [['cpol','HIGH'],['cpha','2EDGE'],['dataSize','16'],['firstBit','LSB']])await win.selectOption(`[data-spi-param="${key}"]`,value);
+  assert.match(await win.textContent('#pinout-peripherals'),/SPI mode 3 · Full-Duplex Master/);
+  await generate(win);
+  await win.waitForFunction(()=>/hspi1\.Init\.CLKPolarity = SPI_POLARITY_HIGH;/.test(document.getElementById('code').value),null,{timeout:10000});
+  const c=await code();
+  for(const line of ['hspi1.Init.CLKPhase = SPI_PHASE_2EDGE;','hspi1.Init.DataSize = SPI_DATASIZE_16BIT;','hspi1.Init.FirstBit = SPI_FIRSTBIT_LSB;'])assert.ok(c.includes(line),line);
+  assert.deepEqual(s.errors,[]);
+ }finally{await s.close();}
+});

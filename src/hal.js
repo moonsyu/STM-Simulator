@@ -314,7 +314,7 @@ export class HalAdapter {
         this.buses.call('Wire.begin',[this.pinFor('I2C1_SDA'),this.pinFor('I2C1_SCL')],r);this.buses.call('Wire.setClock',[get('ClockSpeed')],r);
       }
       if(type==='SPI'){
-        if(![260,0].includes(get('Mode'))||get('Direction')!==0||get('DataSize')!==0||get('CLKPolarity')||get('CLKPhase')||get('FirstBit')||get('NSS')!==512||get('CRCCalculation')||get('TIMode'))throw new Error('SPI1: master 또는 slave, 8비트, mode 0, MSB first, software NSS를 지원합니다.');
+        if(![260,0].includes(get('Mode'))||get('Direction')!==0||get('DataSize')!==0||get('CLKPolarity')||get('CLKPhase')||get('FirstBit')||get('NSS')!==512||get('CRCCalculation')||get('TIMode'))throw new Error('SPI1: 내장 해석기는 master 또는 slave, 8비트, mode 0, MSB first, software NSS만 지원합니다. 다른 설정(CPOL·CPHA·16비트·LSB first)은 ARM GCC 시뮬레이터로 실행하세요.');
         this.buses.call('SPI.setPins',[this.pinFor('SPI1_MOSI'),this.pinFor('SPI1_MISO'),this.pinFor('SPI1_SCK')],r);this.spiSlaveMode=get('Mode')===0;
         // A slave leaves SCK and MOSI to the master; it drives only MISO.
         if(this.spiSlaveMode)this.buses.beginPins(r,[this.buses.spi.miso],[this.buses.spi.mosi,this.buses.spi.sck]);
