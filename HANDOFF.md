@@ -1,6 +1,14 @@
 # STM Simulator — 개발 인계
 
-현재 버전: **1.22.0**. 정리일: **2026-11-06**. NUCLEO-F446RE·NUCLEO-F103RB 또는 Renesas FPB-RA6E1(1.20.0, FSP·에뮬레이터 전용)과 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+현재 버전: **1.23.0**. 정리일: **2026-11-06**. NUCLEO-F446RE·NUCLEO-F103RB 또는 Renesas FPB-RA6E1(1.20.0, FSP·에뮬레이터 전용)과 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+
+## 1.23.0 FSP 원본 색인 · J-Link 실물 보드 · USART/SPI Parameter Settings
+
+- FSP 원본(RA6E1-PLAN 5단계): `desktop/sdk-index.cjs` LAYOUT에 `R7FA6E10F`(도구 키 `fsp`, `walk`로 설치 폴더의 ra/·Drivers/CMSIS/Include 전체, GCC가 아닌 `cmsis_armcc`·`armclang`·`iccarm`·`tiarmclang` 제외). 정의 이동·자동완성·읽기 전용 탭은 STM과 같은 IPC(`native:sdk-*`).
+- J-Link(6단계, **실물 확인 전**): `desktop/jlink.cjs` — `listJlinks`(PnP USB VID_1366, 일련번호 앞 0 제거, 보드 이름 FPB-RA6E1), `findJlink`(C:/Program Files/SEGGER/JLink*/JLink.exe), `programJlink`(J-Link Commander `-device R7FA6E10F -if SWD -speed 4000`, 명령 파일 `r h loadfile firmware.hex r g qc`), `gdbServerArgs`(JLinkGDBServerCL 127.0.0.1:2331, `-singlerun`). `native-ide.cjs`: RA 프로젝트의 실물 실행·디버그는 J-Link(`raDevice`·`startJlinkServer`, GDB 리셋 `monitor reset` — `gdb-mi.cjs` `resetCommand`), `listBoards`가 ST-LINK와 J-Link를 함께 주고(`probe`), STM 프로젝트에 J-Link를 고르면 거부. 도구 키 `jlink`(개발 도구 설정). OpenOCD는 RA 플래시 드라이버가 없어 쓰지 않는다. 이 PC에는 J-Link OB(일련번호 831363305)가 연결되어 있지만 SEGGER 소프트웨어가 없어 기록·디버그는 아직 실물로 확인하지 않았다.
+- USART Parameter Settings(`mcu-config.js` `UART_PARAMS`: wordLength 8/9, parity, stopBits 1/2, direction TX_RX/TX/RX, overSampling 16/8 — F103RB는 16만): 기본값은 저장하지 않음, 생성 코드·.ioc 가져오기·Pinout 카드. 내장 해석기는 8N1만(안내 후 ARM GCC 시뮬레이터). VCP 수신은 패리티 비트를 데이터에서 뺀다(8비트+패리티 = 데이터 7비트).
+- SPI1 Parameter Settings(`SPI_PARAMS`: cpol, cpha, dataSize 8/16, firstBit): 생성 코드·.ioc·Pinout 카드(SPI mode 표시). 에뮬레이터 SPI는 원래 CR1의 CPOL/CPHA/DFF/LSBFIRST를 따른다. SPI 부품 모델은 모드를 확인하지 않는다.
+- 시험: `tests/unit/{uart,spi}-params.test.js`, `tests/toolchain/{uart,spi}-params.test.mjs`(CI firmware 단계), `tests/e2e/uart-params.e2e.test.mjs`, `tests/unit/jlink.test.js`, c-symbols의 FSP 색인 시험, RA E2E의 F12·자동완성.
 
 ## 1.22.0 FPB-RA6E1 주변장치(SCI·GPT·AGT·ADC12·IIC)와 Clocks·Stacks 설정
 

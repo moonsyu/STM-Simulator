@@ -57,6 +57,11 @@ White/Dark는 VS Code Modern 계열의 중성 표면과 파란 강조색을 사�
 
 저장 직후 또는 저장 중에 다시 편집한 내용은 미저장으로 유지한다. 정상 창 종료 직전에는 자동 저장 대기 중인 최신 초안을 기록한다. 초안 기록에 실패하고 미저장 내용이 있으면 창을 닫지 않는다. 새 프로젝트나 다른 폴더로 이동하면 터미널도 이전 폴더 문맥을 해제한다. 정상 종료의 초안 복원은 강제 전원 차단이나 디스크 고장을 보장하는 기능이 아니다.
 
+## Pinout의 USART · SPI 설정 (1.23.0)
+
+- **USART(비동기) Parameter Settings**: Word Length(8/9비트, 패리티 포함), Parity(None/Even/Odd), Stop Bits(1/2), Data Direction(송수신/송신만/수신만), Over Sampling(16/8 — F103RB는 16만). 생성 코드의 `huartN.Init`과 .ioc 가져오기에 반영된다. ARM GCC 시뮬레이터(기본)에서 그대로 동작하고, 내장 해석기는 8N1만 지원한다. 직렬 모니터의 ST-LINK VCP는 같은 형식으로 받는다(실물 PC 터미널을 같은 형식으로 맞춘 것과 같다). 외부 UART 부품은 8N1이다.
+- **SPI1 Parameter Settings**: Clock Polarity(CPOL)·Clock Phase(CPHA)로 SPI mode 0~3, Data Size 8/16비트, First Bit(MSB/LSB). 카드에 SPI mode 번호가 보인다. 로직 분석기의 SPI 해석도 이 설정을 따른다.
+
 ## 코드 초기화
 
 **HAL 코드 생성**(Pinout & Configuration)은 핀·주변장치를 바꾼 뒤 main.c를 다시 만들 때 CubeMX처럼 `/* USER CODE BEGIN … */`~`/* USER CODE END … */` 사이의 코드를 그대로 옮긴다(1.13.0). 생성되는 구간은 `Includes`(헤더), `PV`(전역 변수), `0`(main 앞 함수), `2`(초기화 뒤), `3`(while 안), `4`(파일 끝 함수)와 콜백 본문(`EXTI_Callback`, `UART_RxCplt`, `TIM_PeriodElapsed`, `TIM_IC_Capture`)이다. 새 코드에 없어진 구간(꺼진 주변장치의 콜백 등)은 버리지 않고 `#if 0`으로 감싸 구간 4 끝에 보관하며, 사용자가 손대지 않은 구간은 새 설정에 맞는 기본 코드로 바뀐다. 구간 밖의 코드는 새로 만든다.
@@ -151,7 +156,9 @@ Vim은 `highlight ... guifg=#RRGGBB guibg=#RRGGBB gui=...`, `highlight link`, �
 - **보드**: LED1(P408)·LED2(P407, 녹색, High에서 켜짐), S1(P205, 누르면 LOW, 보드에 풀업 없음 — 템플릿이 내부 풀업을 켠다), S2 RESET, Arduino Uno R3 헤더(A0~A5 = P000~P004·P008, D0 P110 ~ D13 P102, SDA P401·SCL P400과 2.2 kΩ 풀업). 보드에는 ST-LINK 같은 USB 가상 COM이 없다(J-Link OB). Pmod와 J3/J4 MCU 헤더는 실물처럼 미장착으로 그린다.
 - **탐색기 `ra_gen · ra_cfg`**: 앱이 빌드에 넣는 RASC 방식 생성 파일(pin_data.c, hal_data.c/h, vector_data.c/h, common_data, bsp_clock_cfg.h, bsp_pin_cfg.h, fsp.ld 등)을 읽기 전용으로 연다. Ctrl+클릭으로 `g_ioport_ctrl`·`g_external_irq1_cfg` 같은 생성 심볼의 정의로 간다.
 - **예제**: 예제 패널의 FSP 예제 — LED1 깜빡이기, S1 외부 인터럽트로 LED2 토글, SCI9 UART 에코(USB-TTL 부품), GPT PWM으로 LED1 밝기·주기 인터럽트로 LED2, 가변저항 전압 읽기(ADC), AGT 주기 타이머·1 ms 틱, I²C 메모리 쓰기·읽기. 회로가 필요한 예제는 부품과 배선도 놓는다. 보드 LED는 PWM이면 듀티만큼 흐리게 보인다.
-- 아직 없는 것: FSP 원본으로 정의 이동·자동완성, J-Link 실물 보드 기록·디버그([RA6E1-PLAN.md](RA6E1-PLAN.md) 5·6단계), 로직 분석기의 IIC·GPT 파형, SPI·DTC.
+- **FSP 원본 보기(1.23.0)**: `hal_entry.c`에서 `R_IOPORT_PinWrite`·`R_SCI_UART_Open`·`uart_callback_args_t` 같은 FSP 이름을 F12 또는 Ctrl+클릭하면 설치된 Renesas FSP 폴더의 원본(ra/fsp/src·inc, BSP, CMSIS)을 읽기 전용 탭으로 연다. 자동완성(Ctrl+Space)에 FSP 함수·매크로·열거형 이름이 나온다.
+- **실물 보드(J-Link, 1.23.0 · 실물 확인 전)**: FPB-RA6E1을 USB(J10, DEBUG)로 연결하면 실행 대상 목록에 "FPB-RA6E1 (J-Link 일련번호)"가 나온다. 실행(Ctrl+F5)은 SEGGER J-Link Commander로 `firmware.hex`를 기록·검증·리셋하고, 디버그(F10)는 JLinkGDBServer(127.0.0.1:2331)로 연결한다. SEGGER J-Link Software and Documentation Pack을 직접 설치해야 한다(segger.com, 라이선스 동의·관리자 권한 필요 — 앱이 대신 받지 않는다). 설치 경로가 다르면 개발 도구 설정의 J-Link 칸에 JLink.exe를 지정한다.
+- 아직 없는 것: 로직 분석기의 IIC·GPT 파형, SPI·DTC.
 
 ## 보드 선택: NUCLEO-F446RE · NUCLEO-F103RB
 

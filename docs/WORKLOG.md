@@ -2,6 +2,15 @@
 
 작업할 때마다 날짜순으로 맨 위에 추가합니다. 무엇을 했는지, 왜 했는지, 어떻게 검증했는지, 커밋·릴리스와 남은 사항을 적습니다. 버전별 구조 설명은 [HANDOFF.md](../HANDOFF.md), 검증 수치는 [VERIFICATION.md](VERIFICATION.md)에 있습니다.
 
+## 2026-11-06 · 1.23.0 FSP 원본 색인(5단계) · J-Link(6단계 앱 쪽) · USART/SPI Parameter Settings (기능 목록 2·3번)
+
+- 요청: 이어서 진행 — 기능 목록의 미구현 기능.
+- 한 것(기능마다 커밋): FSP 원본 색인(05c5a8f, e99e4b3 시험 수정) — 정의 이동·자동완성이 FSP 설치 폴더를 쓴다. J-Link(5a75148) — J-Link OB 감지, J-Link Commander 기록, JLinkGDBServer 디버그, 개발 도구 J-Link 칸. USART Parameter Settings(bc9bdf0), SPI1 Parameter Settings(b2e58d2). 1.22.0 게시 확인 기록(021d563).
+- 확인: 이 PC에 J-Link OB(USB VID 1366 PID 0101, 일련번호 831363305)와 NUCLEO-F103RB(ST-LINK)가 연결되어 있다. SEGGER J-Link 소프트웨어는 설치되어 있지 않다(C:/Program Files/SEGGER 없음). 설치는 SEGGER 라이선스 동의와 관리자 권한(USB 드라이버)이 필요해 앱·작업자가 대신하지 않고, 실물 기록·디버그 확인은 사용자 설치 뒤로 남겼다. OpenOCD는 RA 플래시 드라이버가 없어 쓰지 않는다.
+- 맞춘 것: F103RB 패리티 UART에서 VCP가 패리티 비트를 데이터로 표시 → 데이터 비트만 남김(8비트+패리티 = 7비트). E2E 정규식의 \b가 heredoc에서 백스페이스 문자로 바뀜 → 수정, 자동완성 목록은 보이는 줄만 DOM에 있어 확인 이름을 바꿈.
+- 검증: 단위·해석기·에뮬레이터 933개 중 932개 통과·1개 건너뜀, 툴체인 UART(F446RE 9E2·F103RB 7O1이 VCP로 바르게 수신)·SPI(두 보드 mode 3·16비트·LSB first가 SPI_CR1에 반영), E2E(USART·SPI Pinout → 생성 코드, RA F12·자동완성), J-Link 단위 시험(명령 파일·인수·프로브 선택·실패 안내).
+- 남은 사항: J-Link 실물 확인, CubeMX 차이의 나머지(클록 트리, TIM 채널별 설정 등).
+
 ## 2026-11-06 · 1.22.0 FPB-RA6E1 3·4단계: 주변장치(SCI·GPT·AGT·ADC12·IIC)와 Clocks·Stacks (기능 목록 2번)
 
 - 요청: 기능 목록의 미구현 기능 구현(이어서 진행, 중간 일시정지 2번 후 재개). FPB-RA6E1 계획의 3단계(주변장치)와 4단계(앱 안 설정) 나머지.

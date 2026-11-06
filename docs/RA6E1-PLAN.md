@@ -1,6 +1,6 @@
 # FPB-RA6E1 추가 계획
 
-작성 2026-11-06. 상태: **1.20.0에서 1·2단계, 1.22.0에서 3·4단계(SCI·GPT·AGT·ADC12·IIC, Pins·Clocks·Stacks) 구현**. 남은 것: 5·6단계. 0단계 결정: 목표를 STM + Renesas RA로 넓힘, 실행은 에뮬레이터 전용(STM 시뮬레이터의 기본 경로와 같은 ARM GCC 빌드, 해석기 없음), 설정 화면은 앱 안에서 RASC처럼, 실물 보드(J-Link)까지 진행(사용자, 2026-11-06). 다운로드 승인: FSP, 하드웨어 매뉴얼, 회로도, 예제·poppler, J-Link. 회로도 Design Package는 MyRenesas 로그인이 필요해 받지 못했다(보드 그림은 Quick Start Guide 그림과 Arduino Uno R3 규격 기준). 하드웨어 매뉴얼 Rev.1.40(2026-04)은 정정 문서 내용(Table 1.16)이 반영된 판이다.
+작성 2026-11-06. 상태: **1.20.0에서 1·2단계, 1.22.0에서 3·4단계(SCI·GPT·AGT·ADC12·IIC, Pins·Clocks·Stacks), 1.23.0에서 5단계(FSP 원본 색인)와 6단계 앱 쪽(J-Link 기록·디버그) 구현**. 남은 것: 6단계 실물 확인(SEGGER J-Link 소프트웨어 설치 후). 0단계 결정: 목표를 STM + Renesas RA로 넓힘, 실행은 에뮬레이터 전용(STM 시뮬레이터의 기본 경로와 같은 ARM GCC 빌드, 해석기 없음), 설정 화면은 앱 안에서 RASC처럼, 실물 보드(J-Link)까지 진행(사용자, 2026-11-06). 다운로드 승인: FSP, 하드웨어 매뉴얼, 회로도, 예제·poppler, J-Link. 회로도 Design Package는 MyRenesas 로그인이 필요해 받지 못했다(보드 그림은 Quick Start Guide 그림과 Arduino Uno R3 규격 기준). 하드웨어 매뉴얼 Rev.1.40(2026-04)은 정정 문서 내용(Table 1.16)이 반영된 판이다.
 
 앱의 지금 목표는 "CubeMX + CubeIDE + STM 보드 시뮬레이터"이고 보드는 NUCLEO-F446RE·NUCLEO-F103RB다. FPB-RA6E1은 Renesas 보드라 MCU·SDK·설정 도구가 모두 달라서, F103RB를 더할 때(0.32.0·0.33.0, F4 모델을 대부분 공유)와 달리 **새 플랫폼을 하나 더 만드는 규모**다. 이 문서는 확인한 사실, 지금 앱과의 차이, 단계별 계획, 미확인 사항을 정리한다.
 
@@ -83,12 +83,18 @@
 - 새 RA 프로젝트 템플릿(`hal_entry.c`), 예제 목록(보드 LED·버튼·UART·PWM·ADC·I2C).
 - 완료 기준: e² studio 없이 앱에서 설정 → 생성 → 빌드 → 에뮬레이터 실행. 생성 파일은 같은 설정의 RASC 출력과 비교해 맞춘다.
 
-### 5단계 — IDE 연결
+### 5단계 — IDE 연결 — 완료 (1.23.0)
+
+결과: `sdk-index.cjs`가 FSP 설치 폴더 전체를 색인한다(정의 이동·자동완성·읽기 전용 탭). `ra_gen` 생성 파일은 1.20.0부터 탐색기 묶음으로 열린다.
+
 
 - 정의로 이동·자동완성의 SDK 색인을 FSP로(지금 `desktop/sdk-index.cjs`는 STM32Cube 기준), Core·Startup 묶음에 `ra_gen` 생성 파일과 FSP startup을 읽기 전용으로.
 - 완료 기준: `R_IOPORT_PinWrite` Ctrl+클릭으로 FSP 원본, 자동완성에 FSP 이름.
 
-### 6단계(선택) — 실물 보드
+### 6단계(선택) — 실물 보드 — 앱 쪽 완료 (1.23.0), 실물 확인 전
+
+결과: `desktop/jlink.cjs`(J-Link OB 감지, J-Link Commander로 firmware.hex 기록·검증·리셋, JLinkGDBServerCL로 GDB 디버그). 이 PC에 J-Link OB가 연결되어 있으나 SEGGER 소프트웨어가 없어(설치는 라이선스 동의·관리자 권한이 필요해 사용자가 직접) 실물 기록·디버그는 확인하지 못했다.
+
 
 - SEGGER J-Link GDB Server로 기록·디버그, 보드 선택(J-Link 시리얼). 실물 FPB-RA6E1이 있어야 검증할 수 있다.
 
