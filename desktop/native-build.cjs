@@ -82,7 +82,9 @@ async function prepareBuild({project,tools,root,target='arm',configuration='Debu
   if(ra)await fs.mkdir(path.join(directory,'src'),{recursive:true});
   for(const f of files){if(!/^[\w.-]+\.(c|h|cpp|hpp|cc)$/.test(f.name))throw new Error('소스 파일명이 올바르지 않습니다.');if(ra&&f.name==='hal_entry.c')throw new Error('hal_entry.c는 FSP 프로젝트의 주 소스 이름입니다. 다른 이름을 쓰세요.');await fs.writeFile(place(f.name),f.text);if(/\.(c|cpp|cc)$/.test(f.name))sources.push(place(f.name));}
   if(files.some(f=>f.name==='__stm_environment.c'))throw new Error('__stm_environment.c는 내부 빌드용 파일명입니다.');
-  let flags=['-g3',configuration==='Debug'?'-O0':'-Os','-ffunction-sections','-fdata-sections','-Wall','-Wextra','-Werror=implicit-function-declaration','-I'+directory],linkFlags=[],generated=[];
+  // ARM builds keep DWARF 4 (GCC 15 defaults to 5): STM Studio's GDB reads only DWARF 2-4; the app's emulator, GDB and
+  // clangd read both.
+  let flags=['-g3',...(target==='arm'?['-gdwarf-4']:[]),configuration==='Debug'?'-O0':'-Os','-ffunction-sections','-fdata-sections','-Wall','-Wextra','-Werror=implicit-function-declaration','-I'+directory],linkFlags=[],generated=[];
   let sdkFiles=new Set();
   if(ra){
     const r=await prepareRa({project,tools,directory,userFiles:files});
@@ -121,7 +123,19 @@ async function build(plan,{signal,onOutput=()=>{}}={}){
   const version=await run(plan.gcc,['--version']);
   for(const unit of plan.units)await run(unit.arguments[0],unit.arguments.slice(1));
   const map=path.join(plan.directory,plan.target==='arm'?'firmware.map':'program.map');
-  await run(plan.linker,[...plan.flags.filter(f=>!f.startsWith('-W')),...plan.linkFlags,...plan.units.map(u=>u.arguments.at(-1)),'-Wl,--gc-sections','-Wl,-Map='+map,'-lm','-o',plan.elf]);
+  // The toolchain's libgcc.a is built with DWARF 5 line/debug info; link a copy without debug sections (searched before
+  // the default one through -L) so every unit of firmware.elf is DWARF 4 and STM Studio's GDB can load it.
+  const libs=[];
+  if(plan.target==='arm'){
+    const multilib=[...plan.flags,...plan.linkFlags].filter(f=>/^(-mcpu|-mthumb|-mfloat-abi|-mfpu|-march)/.test(f));
+    const lib=(await execute(plan.gcc,[...multilib,'-print-libgcc-file-name'],{cwd:plan.directory,signal})).stdout.trim();
+    if(lib&&await fs.access(lib).then(()=>true,()=>false)){
+      const dir=path.join(plan.directory,'dwarf4-libs'),objcopy=plan.gcc.replace(/gcc(\.exe)?$/,(_,e)=>'objcopy'+(e||''));
+      await fs.mkdir(dir,{recursive:true});
+      if((await execute(objcopy,['--strip-debug',lib,path.join(dir,'libgcc.a')],{cwd:plan.directory,signal})).code===0)libs.push('-L'+dir);
+    }
+  }
+  await run(plan.linker,[...plan.flags.filter(f=>!f.startsWith('-W')),...libs,...plan.linkFlags,...plan.units.map(u=>u.arguments.at(-1)),'-Wl,--gc-sections','-Wl,-Map='+map,'-lm','-o',plan.elf]);
   const artifacts=[plan.elf,map,path.join(plan.directory,'compile_commands.json')];
   if(plan.target==='arm'){
     const objcopy=plan.gcc.replace(/gcc(\.exe)?$/,(_,e)=>'objcopy'+(e||'')),size=plan.gcc.replace(/gcc(\.exe)?$/,(_,e)=>'size'+(e||''));
