@@ -16,7 +16,7 @@ function parseRecord(line){
 }
 class GdbSession extends EventEmitter {
   constructor(){super();this.sequence=0;this.pending=new Map();this.state='idle';this.breakpoints=[];this.closed=true;}
-  async start({gdb,elf,cwd,target='host',endpoint='127.0.0.1:3333',flash=false,reset=false,entry=true,breakpoints=[],files=['main.c']}){
+  async start({gdb,elf,cwd,target='host',endpoint='127.0.0.1:3333',flash=false,reset=false,resetCommand='monitor reset halt',entry=true,breakpoints=[],files=['main.c']}){
     if(!this.closed)throw new Error('디버거가 이미 실행 중입니다.');
     this.closed=false;this.state='starting';this.target=target;this.cwd=cwd;this.files=new Set(files);this.breakpoints=[];
     this.child=launch(gdb,['--quiet','--nx','--nh','--interpreter=mi2','-iex','set auto-load off'],{cwd});let buffer='';
@@ -31,9 +31,9 @@ class GdbSession extends EventEmitter {
       if(target==='arm'){
         if(!/^(?:localhost|127\.0\.0\.1|[a-zA-Z0-9.-]+):\d{1,5}$/.test(endpoint)||Number(endpoint.split(':')[1])>65535)throw new Error('GDB 서버 주소는 host:port 형식으로 입력하세요.');
         await this.command('-target-select extended-remote '+endpoint,15000);
-        if(reset)await this.command('-interpreter-exec console "monitor reset halt"');
+        if(reset)await this.command(`-interpreter-exec console "${resetCommand}"`);
         if(flash)await this.command('-target-download',60000);
-        if(reset)await this.command('-interpreter-exec console "monitor reset halt"');
+        if(reset)await this.command(`-interpreter-exec console "${resetCommand}"`);
       }
       await this.setBreakpoints(breakpoints);
       if(entry)await this.command('-break-insert -t main');

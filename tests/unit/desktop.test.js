@@ -531,7 +531,7 @@ describe('native tools for a real NUCLEO board',()=>{
   await assert.rejects(chooseStlink('NUCLEO-F103RB','',async()=>[{serial:'AAAA0000',board:''},{serial:'BBBB1111',board:''}]),/ST-LINK가 2개 연결되어 있습니다.*AAAA0000, BBBB1111/);
  });
  test('saving the tools dialog keeps the entered values in the file and auto-detects empty entries right away',()=>withTempDir(async dir=>{
-  const ide=new NativeIde(dir),entered={armGcc:'',armGdb:'',cube:'',cubeF1:'',fsp:'',hostGcc:'',hostGdb:'',clangd:'',openocd:'',arduinoCli:'',buildRoot:''};
+  const ide=new NativeIde(dir),entered={armGcc:'',armGdb:'',cube:'',cubeF1:'',fsp:'',hostGcc:'',hostGdb:'',clangd:'',openocd:'',jlink:'',arduinoCli:'',buildRoot:''};
   const tools=await ide.configure(entered);
   assert.deepEqual(JSON.parse(await readText(path.join(dir,'native-tools.json'))),entered);
   assert.deepEqual(tools,await detectTools(entered));

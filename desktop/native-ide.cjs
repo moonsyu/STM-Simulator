@@ -5,6 +5,7 @@ const {detectTools,validateTools,probeTools,prepareBuild,build,fingerprint}=requ
 const {GdbSession}=require('./gdb-mi.cjs');
 const {LanguageServer}=require('./clangd.cjs');
 const {SdkIndex}=require('./sdk-index.cjs');
+const jlink=require('./jlink.cjs');
 const {launch,terminate}=require('./process-tools.cjs');
 const {installPlan,installTools}=require('./tool-installer.cjs');
 const {execute}=require('./process-tools.cjs');
@@ -51,8 +52,8 @@ async function stlinkPorts(){
 }
 /** Connected NUCLEO boards for the run target list: [{serial,board,port}] (board/port '' when unknown). */
 async function listBoards(){
-  const [links,ports]=await Promise.all([listStlinks().catch(()=>[]),stlinkPorts().catch(()=>new Map())]);
-  return links.map(l=>({serial:l.serial,board:l.board,port:ports.get(l.serial)||''}));
+  const [links,ports,jlinks]=await Promise.all([listStlinks().catch(()=>[]),stlinkPorts().catch(()=>new Map()),jlink.listJlinks().catch(()=>[])]);
+  return [...links.map(l=>({serial:l.serial,board:l.board,port:ports.get(l.serial)||'',probe:'stlink'})),...jlinks];
 }
 /** The ST-LINK serial for `boardName`: the one set by the user, the one whose board name matches, or the only one
  * connected when its board is unknown. A connected board of another kind is never chosen (it would be written with
@@ -120,14 +121,27 @@ class NativeIde extends EventEmitter{
   async startDebug({text,config,connection={},entry=true,breakpoints=[]}){
     if(this.busy())throw new Error('현재 실행을 먼저 종료하세요.');const plan=await this.ensureBuild(text,config),tools=await this.settings();
     if(entry&&config.configuration!=='Debug')throw new Error('소스 디버깅은 Debug 구성으로 빌드하세요.');
-    if(config.target==='arm'&&connection.server==='openocd')await this.startServer(tools.openocd,await this.boardTarget(text,connection));
-    try{await this.gdb.start({gdb:config.target==='arm'?tools.armGdb:tools.hostGdb,elf:plan.elf,cwd:plan.directory,target:config.target,endpoint:connection.server==='openocd'?'127.0.0.1:3333':connection.endpoint||'127.0.0.1:3333',flash:connection.flash===true,reset:connection.server==='openocd',entry,breakpoints,files:plan.files});}
+    const board=config.target==='arm'&&connection.server==='openocd',ra=board&&await this.raDevice(text);
+    // FPB-RA6E1: JLinkGDBServer on 2331 (its reset halts the core; `monitor reset halt` is OpenOCD's).
+    if(ra)await this.startJlinkServer(tools,{serial:await jlink.chooseJlink(this.jlinkSerial(connection)),device:ra});
+    else if(board)await this.startServer(tools.openocd,await this.boardTarget(text,connection));
+    try{await this.gdb.start({gdb:config.target==='arm'?tools.armGdb:tools.hostGdb,elf:plan.elf,cwd:plan.directory,target:config.target,endpoint:ra?`127.0.0.1:${jlink.GDB_PORT}`:board?'127.0.0.1:3333':connection.endpoint||'127.0.0.1:3333',flash:connection.flash===true,reset:board,resetCommand:ra?'monitor reset':'monitor reset halt',entry,breakpoints,files:plan.files});}
     catch(e){await this.stopServer();throw e;}
     return {directory:plan.directory};
+  }
+  /** J-Link device name when the project is for a Renesas RA board (FPB-RA6E1), else null. */
+  async raDevice(text){const project=await this.validate(text);return jlink.JLINK_DEVICES[project.mcu?.family]??null;}
+  jlinkSerial(connection){return typeof connection?.serial==='string'&&/^\d{6,12}$/.test(connection.serial)?connection.serial:'';}
+  async startJlinkServer(tools,options){
+    if(!tools.jlink)throw new Error('SEGGER J-Link 소프트웨어(JLink.exe)가 없습니다. segger.com에서 J-Link Software and Documentation Pack을 설치하거나 개발 도구 설정에서 JLink.exe를 지정하세요.');
+    if(this.server)throw new Error('GDB 서버가 이미 실행 중입니다.');
+    const child=this.server=launch(jlink.gdbServerOf(tools.jlink),jlink.gdbServerArgs(options),{});
+    try{await new Promise((resolve,reject)=>{let log='';const timer=setTimeout(()=>reject(new Error('J-Link GDB 서버 연결 시간이 초과되었습니다. J-Link 연결을 확인하세요.\n'+log.slice(-1500))),20000);const done=error=>{clearTimeout(timer);error?reject(error):resolve();};child.once('error',done);child.once('exit',code=>{if(this.server===child)this.server=null;const hint=jlink.jlinkHint(log);done(new Error('J-Link GDB 서버 종료: '+code+(hint?' · '+hint:'')+'\n'+log.slice(-2000)));});for(const stream of [child.stdout,child.stderr]){stream.setEncoding('utf8');stream.on('data',t=>{log=(log+t).slice(-10000);this.send('debug-output',{text:t});if(/Waiting for GDB connection/i.test(log))done();});}});}catch(e){await this.stopServer();throw e;}
   }
   // OpenOCD target script and ST-LINK serial of the project's board.
   async boardTarget(text,connection={}){
     const project=await this.validate(text),{projectBoard}=await import('../src/boards.js'),board=projectBoard(project);
+    if(connection.serial&&(await jlink.listJlinks().catch(()=>[])).some(l=>l.serial===connection.serial))throw new Error(`선택한 실행 대상은 J-Link(FPB-RA6E1)입니다. ${board.name}의 ST-LINK를 실행 대상에서 고르세요.`);
     return {target:OPENOCD_TARGETS[board.mcuFamily],serial:await chooseStlink(board.name,typeof connection.serial==='string'&&/^\w{8,40}$/.test(connection.serial)?connection.serial:'')};
   }
   // Run (Ctrl+F5) on the board like CubeIDE's Run: always write the current build, verify, reset, and let OpenOCD exit
@@ -137,7 +151,11 @@ class NativeIde extends EventEmitter{
     if(this.busy())throw new Error('현재 실행을 먼저 종료하세요.');
     const plan=await this.ensureBuild(text,config);
     this.send('run-state',{state:'running'});
-    try{await this.program(plan,await this.boardTarget(text,connection));this.send('run-output',{text:'\n펌웨어를 보드에 기록·검증하고 리셋했습니다. 디버거를 분리했으므로 보드가 단독으로 실행합니다.\n'});return {directory:plan.directory,flashed:true};}
+    try{
+      const device=await this.raDevice(text);
+      if(device){const tools=await this.settings(),serial=await jlink.chooseJlink(this.jlinkSerial(connection));this.send('run-output',{text:`J-Link ${serial} · ${device} · ${path.join(plan.directory,'firmware.hex')}\n`});await jlink.programJlink({jlink:tools.jlink,hex:path.join(plan.directory,'firmware.hex'),serial,device,directory:plan.directory,onOutput:t=>this.send('run-output',{text:t}),launcher:(exe,args,opts)=>this.runProcess=launch(exe,args,opts)}).finally(()=>{this.runProcess=null;});}
+      else await this.program(plan,await this.boardTarget(text,connection));
+      this.send('run-output',{text:'\n펌웨어를 보드에 기록·검증하고 리셋했습니다. 디버거를 분리했으므로 보드가 단독으로 실행합니다.\n'});return {directory:plan.directory,flashed:true};}
     finally{this.send('run-state',{state:'idle'});}
   }
   // OpenOCD `program … verify reset exit` of a built ELF through one ST-LINK.

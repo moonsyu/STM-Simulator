@@ -3,7 +3,7 @@ const {randomUUID,createHash}=require('node:crypto');
 const {execute}=require('./process-tools.cjs');
 const {findArduinoCli}=require('./esp32-build.cjs');
 const {prepareRa}=require('./ra-build.cjs');
-const TOOL_KEYS=['armGcc','armGdb','cube','cubeF1','fsp','hostGcc','hostGdb','clangd','openocd','arduinoCli','buildRoot'];
+const TOOL_KEYS=['armGcc','armGdb','cube','cubeF1','fsp','hostGcc','hostGdb','clangd','openocd','jlink','arduinoCli','buildRoot'];
 // Renesas RA families build with FSP (desktop/ra-build.cjs), not an STM32Cube SDK.
 const RA_FAMILIES=new Set(['R7FA6E10F']);
 const isRa=project=>RA_FAMILIES.has(project.mcu?.family);
@@ -53,6 +53,8 @@ async function detectTools(current={}){
   const hostBins=['C:/msys64/ucrt64/bin','C:/msys64/mingw64/bin'];
   for(const [key,name,dirs]of [['armGcc','arm-none-eabi-gcc',armBins],['armGdb','arm-none-eabi-gdb',armBins],['hostGcc','gcc',hostBins],['hostGdb','gdb',hostBins],['clangd','clangd',['C:/Program Files/LLVM/bin',...hostBins]],['openocd','openocd',openocdBins]])if(!tools[key])tools[key]=await findExecutable(name,dirs);
   if(!tools.arduinoCli)tools.arduinoCli=await findArduinoCli();
+  // SEGGER J-Link Software (FPB-RA6E1's on-board J-Link): C:/Program Files/SEGGER/JLink*/JLink.exe.
+  if(!tools.jlink)tools.jlink=await require('./jlink.cjs').findJlink();
   // Renesas FSP: the app's install, FSP_ROOT, or e² studio / RASC's FSP packs are not a source tree (not used).
   if(!tools.fsp){const local2=path.join(local,'FSP');if(await fspReady(local2))tools.fsp=local2;}
   if(process.env.FSP_ROOT&&await fspReady(process.env.FSP_ROOT))tools.fsp=process.env.FSP_ROOT;
@@ -61,7 +63,7 @@ async function detectTools(current={}){
   return tools;
 }
 function validateTools(value){const result={};if(!value||typeof value!=='object')throw new Error('개발 도구 설정을 확인하세요.');for(const key of TOOL_KEYS){const v=value[key]||'';if(typeof v!=='string'||v.length>2048||/[\r\n\0]/.test(v)||v&&!path.isAbsolute(v))throw new Error('도구는 절대 경로로 지정하세요.');result[key]=v;}return result;}
-async function probeTools(tools){const result={};for(const key of TOOL_KEYS){if(!tools[key]){result[key]={ok:false,message:'설정되지 않음'};continue;}try{if(key==='buildRoot'){if(/[^\x00-\x7f]/.test(tools.buildRoot))throw new Error('영문 경로를 선택하세요.');result[key]={ok:true,message:tools.buildRoot};}else if(key==='fsp'){if(!await fspReady(tools.fsp))throw new Error('Renesas FSP의 ra/fsp/src/bsp 폴더를 찾을 수 없습니다.');result[key]={ok:true,message:'Renesas FSP BSP / 드라이버'};}else if(key==='cube'||key==='cubeF1'){const sdk=Object.values(SDKS).find(s=>s.key===key);if(!await exists(path.join(tools[key],'Drivers',sdk.hal,'Inc',sdk.prefix+'_hal.h')))throw new Error(`${sdk.name} Drivers 폴더를 찾을 수 없습니다.`);result[key]={ok:true,message:`${sdk.name} HAL / CMSIS`};}else{const r=await execute(tools[key],[key==='arduinoCli'?'version':'--version'],{timeout:8000});result[key]={ok:r.code===0,message:(r.stdout||r.stderr).split('\n')[0]};}}catch(e){result[key]={ok:false,message:e.message};}}return result;}
+async function probeTools(tools){const result={};for(const key of TOOL_KEYS){if(!tools[key]){result[key]={ok:false,message:'설정되지 않음'};continue;}try{if(key==='buildRoot'){if(/[^\x00-\x7f]/.test(tools.buildRoot))throw new Error('영문 경로를 선택하세요.');result[key]={ok:true,message:tools.buildRoot};}else if(key==='jlink'){const server=require('./jlink.cjs').gdbServerOf(tools.jlink);if(!await exists(server))throw new Error('같은 폴더에 JLinkGDBServerCL.exe가 없습니다.');result[key]={ok:true,message:'SEGGER J-Link Commander / GDB Server'};}else if(key==='fsp'){if(!await fspReady(tools.fsp))throw new Error('Renesas FSP의 ra/fsp/src/bsp 폴더를 찾을 수 없습니다.');result[key]={ok:true,message:'Renesas FSP BSP / 드라이버'};}else if(key==='cube'||key==='cubeF1'){const sdk=Object.values(SDKS).find(s=>s.key===key);if(!await exists(path.join(tools[key],'Drivers',sdk.hal,'Inc',sdk.prefix+'_hal.h')))throw new Error(`${sdk.name} Drivers 폴더를 찾을 수 없습니다.`);result[key]={ok:true,message:`${sdk.name} HAL / CMSIS`};}else{const r=await execute(tools[key],[key==='arduinoCli'?'version':'--version'],{timeout:8000});result[key]={ok:r.code===0,message:(r.stdout||r.stderr).split('\n')[0]};}}catch(e){result[key]={ok:false,message:e.message};}}return result;}
 // Linker errors with a source location ("main.c:12:(.text.main+0x8): undefined reference to `foo'") are listed too.
 function diagnosticsFrom(text){return text.split(/\r?\n/).flatMap(line=>{const ld=/^(.+?):(\d+):(?:\([^)]*\):)?\s*((?:undefined reference to|multiple definition of) [^;]*)/.exec(line);if(ld)return [{file:path.basename(ld[1]),line:Number(ld[2]),column:1,severity:'error',message:'링크: '+ld[3],path:ld[1]}];const m=/^(.+?):(\d+):(\d+):\s*(fatal error|error|warning|note):\s*(.*)$/.exec(line);return m?[{file:path.basename(m[1]),line:Number(m[2]),column:Number(m[3]),severity:m[4]==='warning'?'warning':m[4]==='note'?'info':'error',message:m[5],path:m[1]}]:[];});}
 function fingerprint(project,config){return createHash('sha256').update(JSON.stringify({code:project.code,firmware:project.firmware,mcu:project.mcu,config})).digest('hex');}
