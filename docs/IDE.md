@@ -138,6 +138,17 @@ Vim은 `highlight ... guifg=#RRGGBB guibg=#RRGGBB gui=...`, `highlight link`, �
 - 크기 조절점과 **기본 크기** 명령은 없다. 데이터시트 크기가 없던 5종은 같은 계열의 일반 치수를 쓴다(`confidence: 'typical'`).
 - HAL 예제 자동 배치는 부품끼리 겹치지 않도록 실제 크기를 쓰고, 막히는 구멍과 배선 경로는 핀 위에 떠 있는 모듈의 기판 자리로 계산한다. 배터리 홀더·DC 모터는 빵판 옆에 선으로 연결되는 부품으로 보아 겹침 검사에서 기판 자리만 쓴다.
 
+## Renesas FPB-RA6E1 (1.20.0)
+
+활동 바 **보드/핀 설정**의 보드 목록에서 **FPB-RA6E1**(Renesas RA6E1, Cortex-M33 200 MHz)을 고른다. 이 보드는 Renesas **FSP**로 작성하고, 실행하면 앱이 ARM GCC와 Renesas FSP로 빌드해 RA6E1 펌웨어 에뮬레이터에서 실행한다(STM 보드의 기본 시뮬레이터 방식과 같고, 내장 해석기는 없다). 도구가 없으면 **시뮬레이터 실행 도구 설치** 창이 ARM GCC와 Renesas FSP v6.6.0(약 8 MB)을 받는다.
+
+- **주 소스 `hal_entry.c`**: 새 프로젝트는 e² studio의 FSP 템플릿이다. `hal_entry()`에 코드를 쓰고, 핀은 `R_BSP_WarmStart()`의 `R_IOPORT_Open(&IOPORT_CFG_CTRL, &IOPORT_CFG_NAME)`이 설정한다. 핀은 `R_IOPORT_PinWrite(&g_ioport_ctrl, LED1, BSP_IO_LEVEL_HIGH)`처럼 Pins에서 정한 심볼(LED1 = P408)로 쓴다.
+- **Pinout & Configuration**: RA Smart Configurator의 Pins 탭처럼 76개 포트에서 핀을 고르고 Mode(Output·Input·IRQ·Analog), Symbolic Name, 출력 초기값·세기, 풀업, IRQ의 Trigger·Priority·Callback을 정한다. IRQ 핀은 `g_external_irqN`(r_icu) 인스턴스가 생기므로 `R_ICU_ExternalIrqOpen(&g_external_irq1_ctrl, &g_external_irq1_cfg)`과 `R_ICU_ExternalIrqEnable()` 뒤 콜백이 불린다. 같은 IRQ 채널을 두 핀에 쓰면 거부한다(예: P104와 S1 P205는 둘 다 IRQ1). SWD(P108·P300)와 부트 모드(P201)는 바꿀 수 없다.
+- **보드**: LED1(P408)·LED2(P407, 녹색, High에서 켜짐), S1(P205, 누르면 LOW, 보드에 풀업 없음 — 템플릿이 내부 풀업을 켠다), S2 RESET, Arduino Uno R3 헤더(A0~A5 = P000~P004·P008, D0 P110 ~ D13 P102, SDA P401·SCL P400과 2.2 kΩ 풀업). 보드에는 ST-LINK 같은 USB 가상 COM이 없다(J-Link OB). Pmod와 J3/J4 MCU 헤더는 실물처럼 미장착으로 그린다.
+- **탐색기 `ra_gen · ra_cfg`**: 앱이 빌드에 넣는 RASC 방식 생성 파일(pin_data.c, hal_data.c/h, vector_data.c/h, common_data, bsp_clock_cfg.h, bsp_pin_cfg.h, fsp.ld 등)을 읽기 전용으로 연다. Ctrl+클릭으로 `g_ioport_ctrl`·`g_external_irq1_cfg` 같은 생성 심볼의 정의로 간다.
+- **예제**: 예제 패널에 FSP 예제(LED1 깜빡이기, S1 외부 인터럽트로 LED2 토글)가 나온다.
+- 아직 없는 것: SCI(UART)·GPT·AGT·ADC·IIC 주변장치 모델, Clocks/Stacks 설정 화면, FSP 원본으로 정의 이동·자동완성, J-Link 실물 보드 기록·디버그([RA6E1-PLAN.md](RA6E1-PLAN.md) 3~6단계).
+
 ## 보드 선택: NUCLEO-F446RE · NUCLEO-F103RB
 
 첫 실행, **새 회로**, 새 프로젝트 창은 NUCLEO-F103RB로 시작한다. 보드 기록이 없는 예전 프로젝트 파일은 예전처럼 NUCLEO-F446RE로 연다.

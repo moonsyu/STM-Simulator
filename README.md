@@ -1,6 +1,6 @@
 # STM Simulator
 
-STM Simulator는 **NUCLEO-F446RE·NUCLEO-F103RB 회로 시뮬레이터와 Cortex-M 펌웨어 에뮬레이터를 통합한 Windows 학습용 IDE**입니다. 두 보드 모두 회로 시뮬레이터, 실제 ARM 빌드, 실물 보드 실행·디버그, 펌웨어 에뮬레이터를 쓸 수 있습니다. 프로젝트 생성, C/C++ 코드 작성, 실제 GCC 빌드·GDB 디버그, 가상 빵판 회로 실습을 VS Code와 같은 한 화면에서 진행합니다.
+STM Simulator는 **NUCLEO-F446RE·NUCLEO-F103RB 회로 시뮬레이터와 Cortex-M 펌웨어 에뮬레이터를 통합한 Windows 학습용 IDE**입니다. 1.20.0부터 **Renesas FPB-RA6E1**(RA6E1, Renesas FSP)도 ARM GCC 빌드와 RA6E1 에뮬레이터로 실행합니다. 두 보드 모두 회로 시뮬레이터, 실제 ARM 빌드, 실물 보드 실행·디버그, 펌웨어 에뮬레이터를 쓸 수 있습니다. 프로젝트 생성, C/C++ 코드 작성, 실제 GCC 빌드·GDB 디버그, 가상 빵판 회로 실습을 VS Code와 같은 한 화면에서 진행합니다.
 
 ## 실행 대상
 

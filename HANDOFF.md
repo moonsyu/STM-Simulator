@@ -1,6 +1,17 @@
 # STM Simulator — 개발 인계
 
-현재 버전: **1.19.0**. 정리일: **2026-11-03**. NUCLEO-F446RE 또는 NUCLEO-F103RB와 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+현재 버전: **1.20.0**. 정리일: **2026-11-06**. NUCLEO-F446RE·NUCLEO-F103RB 또는 Renesas FPB-RA6E1(1.20.0, FSP·에뮬레이터 전용)과 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+
+## 1.20.0 Renesas FPB-RA6E1 (RA6E1 · FSP · 에뮬레이터)
+
+계획·확인 자료는 [docs/RA6E1-PLAN.md](docs/RA6E1-PLAN.md). STM 시뮬레이터의 기본 경로(1.14.0, ARM GCC 빌드 → 펌웨어 에뮬레이터)와 같은 구조로, 해석기는 없다.
+- 보드·프로젝트: `boards.js` `fpb-ra6e1`(`vendor:'renesas'`, mcuFamily `R7FA6E10F`). `src/ra-config.js`(RA6E1 LQFP100 76포트, Table 1.16의 IRQ 핀, SWD 등 잠긴 핀, 보드 LED/S1/Arduino/풀업, `raDefaultMcu`, `validateRaMcu`: 모드·심볼·IRQ 채널 중복·클록 범위). 프로젝트는 `firmware.mode:'fsp'`만 허용(vendor 교차 거부), 주 소스는 내부 키 `main.c`·화면/빌드 이름 `hal_entry.c`. 보드에 STM32 보드를 두 번째 보드로 놓지 않는다(`DEVBOARD_MODELS`에 없음).
+- 코드 생성 `src/ra-generator.js`: RASC가 쓰는 `ra_cfg/fsp_cfg`(bsp_cfg·family·device·pn·ofs·pin_cfg·board_cfg, r_ioport/r_icu cfg), `ra_gen`(bsp_clock_cfg HOCO 20 MHz/2×20=200 MHz, common_data, hal_data의 `g_external_irqN`, main.c, pin_data, vector_data·`BSP_ICU_VECTOR_NUM_ENTRIES`, bsp_linker_info.h), `script/fsp.ld`·memory_regions.ld(주 스택·힙은 0으로 지우는 영역 밖). 형식은 RT-Thread가 공개한 RASC 출력(FSP 5.5/6.2)을 참고했다. `raHalEntry()`는 e² studio 템플릿.
+- 빌드 `desktop/ra-build.cjs` + `native-build.cjs`: 도구 키 `fsp`(감지: `STM-Simulator-Tools/FSP`, `FSP_ROOT`), `src/hal_entry.c`, FSP BSP(all·ra6e1)·CMSIS 장치 startup/system·r_ioport·사용하는 r_* 드라이버·board(ra6e1_fpb), `-mcpu=cortex-m33 -mfpu=fpv5-sp-d16 -mfloat-abi=hard`. 진단의 `src/hal_entry.c`는 `main.c`로 바꾼다. 설치 `tool-installer.cjs` `FSP`(renesas/fsp v6.6.0 커밋 6e26753의 180개 + CMSIS Core 31개, `desktop/tool-manifest-fsp.json`, `scripts/build-tool-manifest.mjs --fsp`, 파일별 3회 재시도).
+- 에뮬레이터 `src/emu/ra6e1/`: `RaBus`(Code Flash 1 MB@0, SRAM 256 KB@0x2000_0000, Data Flash 8 KB@0x0800_0000, 옵션 설정 영역은 지운 값), `Ra6e1` SoC(SYSTEM: CGC·OSCSF·OPCCR·SCKSCR/SCKDIVCR/PLLCCR로 클록 계산, PORT/PFS/PWPR: Renesas 레인 배치(16비트 +0=31:16, +2=15:0), ICU: IRQCR·IELSR(IR 비트가 NVIC 라인), FCACHEIV·RTC RCR2 자동 해제, 그 밖의 주변장치 영역은 쓴 값 유지·기록). CPU: MSPLIM/PSPLIM, `branchPenalty`(STM 2, RA 1 — FSP 지연 루프 4사이클과 일치). `Machine({bus})`. `FirmwareSession`이 `isRaFamily`로 RA 경로(VCP 없음, FSP/STM ELF 교차 확인).
+- 회로·화면: `pins.js` FPB 헤더(J1/J2/J5/J6, Uno R3 간격, 55×95 mm), `setActiveBoard`가 `PINS`·`GPIO_PINS`·`BOARD` 크기를 활성 보드로 바꾼다. 엔진: S1(P205→GND, 보드 풀업 없음), LED1/LED2(P408/P407, 1 kΩ), I2C 풀업 2.2 kΩ. `render.js` `fpbBoardSvg`. RA Pins 대화상자 `src/ra-pinout-ui.js`(Pinout & Configuration이 연다). 탐색기 `ra_gen · ra_cfg` 묶음(읽기 전용, 정의 이동 대상). 예제 패널은 FSP 예제(`src/ra-examples.js`)를 보인다. 시뮬레이터 엔진 선택·내장 해석기 선택지는 숨긴다.
+- 테스트: `tests/unit/ra6e1.test.js`, `tests/firmware/firmware-ra6e1.test.js`(고정 ELF `tests/fixtures/firmware-ra6e1`, `scripts/emu/build-ra6e1-fixtures.mjs`), `tests/toolchain/ra-build.test.mjs`, `tests/e2e/ra6e1.e2e.test.mjs`. CI 툴체인 액션이 앱 설치기로 FSP를 받고 `FSP_ROOT`를 쓴다.
+- 남은 단계(계획 3~6): SCI UART·GPT·AGT·ADC·IIC 모델과 예제, 앱 안 Clocks/Stacks 설정, FSP 정의 이동·자동완성(SDK 색인), J-Link 실물 보드.
 
 ## 1.19.0 변수 그래프 (STM Studio 방식)
 
