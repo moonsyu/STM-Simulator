@@ -17,7 +17,9 @@
   - 실물: `NativeIde.run` 기록·검증 O.K., PORT4 읽기로 LED1(P408) 토글, 디버그 main.c 13행 중단점 → hal_entry 호출 스택, `SystemCoreClock` = 200000000.
   - 단위 751개 통과, ESLint 0건.
   - 툴체인 printf-float·dwarf-version 통과. E2E printf-float·irq-duplicate·pin-overvoltage·completion 통과.
-  - 전체 E2E·펌웨어·툴체인: (아래 기록)
+  - 전체 E2E 79개 중 78개 통과·1개 건너뜀, 펌웨어 64개 통과.
+  - 툴체인 278개 중 270개 통과·8개 실패. 8개는 모두 시험 파일을 불러오다 `src/serial-config.js`를 못 찾은 것이었다. 실행 도중(16:07) 임시 복제본(다른 세션의 임시 폴더 안)에서 소스 20여 개와 `node_modules/.bin`이 지워졌다. 이 세션 임시 폴더에 새 복제본을 만들고 `npm ci`(설치 스크립트가 막혀 electron `install.js`·postinstall을 직접 실행)한 뒤 8개 파일을 다시 돌렸다: 11개 중 10개 통과·1개 건너뜀(ESP32 스케치, 로컬에 ARDUINO_CLI 없음 — CI에서 확인).
+  - 패키지 검사(`npm run build` + `build:artifact`, `tests/release/packaged.test.mjs`) 3개 통과. STM-Simulator.exe 115,541,399바이트, SHA-256 `4efbc986…d4b6ef`. 산출물(work/build, dist, outputs)은 지웠다.
 - 맞춘 것:
   - E2E는 복제본의 편집기 묶음이 오래되면 바뀐 `code-editor.js`가 반영되지 않는다 → 동기화 뒤 `npm run build:editor`.
   - 빈 프로젝트는 보드가 숨겨져 있어 보드 핀 배선이 무효였다 → 시험에서 보드를 보이게 했다.
