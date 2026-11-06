@@ -1,5 +1,9 @@
 # 검증 기록
 
+## 1.26.0 Clock Configuration(클록 트리) · ADC1 Sampling Time — 게시 확인(API)
+
+2026-11-06. 태그·빌드 커밋 `79f13fc18587ba809cb24805ba5ec87b954c9303` · [Windows CI 42201538562](https://github.com/moonsyu/STM-Simulator/actions/runs/42201538562) 성공(정적 검사·단위, E2E 2/2, ST HAL ARM GCC, ESP32 스케치, Windows x64 포터블의 패키지 검사, 검증한 Release 게시) · [Release v1.26.0](https://github.com/moonsyu/STM-Simulator/releases/tag/v1.26.0) 최신 릴리스, draft/prerelease 아님, 자산 5개(STM-Simulator.exe 115,549,233바이트, STM-Simulator-1.26.0-Windows-x64.zip 116,631,937바이트, SHA256.txt, BUILD-INFO.json, update-manifest.json). 로컬 검사는 [작업 로그](WORKLOG.md) 1.26.0 항목.
+
 ## 1.25.0 printf float · it.c 핸들러 중복 · 핀 과전압 · 입력 중 자동완성 · DWARF 4 · FPB-RA6E1 실물 — 게시 확인(API)
 
 2026-11-06. 태그·빌드 커밋 `2f67d3b0080d0eb00b1255aa22e86250bd145817` · [Windows CI 42183657414](https://github.com/moonsyu/STM-Simulator/actions/runs/42183657414) 성공(정적 검사·단위, E2E 2/2, ST HAL ARM GCC, ESP32 스케치, Windows x64 포터블의 패키지 검사, 검증한 Release 게시) · [Release v1.25.0](https://github.com/moonsyu/STM-Simulator/releases/tag/v1.25.0) 최신 릴리스, 자산 5개(STM-Simulator.exe 115,543,301바이트, STM-Simulator-1.25.0-Windows-x64.zip 116,625,232바이트, SHA256.txt, BUILD-INFO.json, update-manifest.json). 로컬 검사는 [작업 로그](WORKLOG.md) 1.25.0 항목.

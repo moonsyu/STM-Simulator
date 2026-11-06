@@ -17,7 +17,7 @@
   - `.ioc`에 주파수 값(Freq_Value)만 있고 설정 키가 없을 때 트리로 읽던 것 → 설정 키가 있을 때만 읽는다.
   - 180 MHz에서 에뮬레이터 한 tick이 실제 시간 예산에 걸려 시뮬레이션 시간이 느리게 가, 툴체인 시험의 UART 출력이 모자랐다 → 정해진 시뮬레이션 시간까지 tick을 반복한다.
   - Clock 탭 프리셋 버튼이 글자처럼 보였다 → 버튼 모양 CSS.
-- 커밋·릴리스: d53e6a7(클록 트리), 54e33d9(Sampling Time), 문서·버전 커밋. CI·Release 확인은 VERIFICATION.md와 이 항목에 이어 적는다.
+- 커밋·릴리스: d53e6a7(클록 트리), 54e33d9(Sampling Time), 79f13fc(문서·버전)를 푸시. [CI 42201538562](https://github.com/moonsyu/STM-Simulator/actions/runs/42201538562) 성공 뒤 [v1.26.0](https://github.com/moonsyu/STM-Simulator/releases/tag/v1.26.0)이 최신 릴리스로 자산 5개와 함께 게시된 것을 API로 확인했다(내려받지 않음). Release를 기다리는 동안 fork-2 세션에 main 푸시를 미뤄 달라고 알렸다.
 - 남은 사항:
   - 3번의 TIM Output Compare·Counter mode, TIM6/7·RTC·DAC 등.
   - 클록 트리에서 하지 않은 것: LSE·LSI·RTC 클록, MCO 출력, PLLI2S·PLLSAI, PLLR SYSCLK, F1 USB 분주, CSS. 화면은 CubeMX 그림 대신 표.
