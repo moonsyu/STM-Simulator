@@ -2,6 +2,19 @@
 
 작업할 때마다 날짜순으로 맨 위에 추가합니다. 무엇을 했는지, 왜 했는지, 어떻게 검증했는지, 커밋·릴리스와 남은 사항을 적습니다. 버전별 구조 설명은 [HANDOFF.md](../HANDOFF.md), 검증 수치는 [VERIFICATION.md](VERIFICATION.md)에 있습니다.
 
+## 2026-11-06 · 실물 CubeIDE 안내문 대조로 구현할 기능 추가 (기능 목록 4~6번)
+
+- 요청: 이 세션은 구현할 기능을 찾아 목록에 적는 역할이다. 가변저항 ADC를 실물 NUCLEO-F103RB·CubeIDE에서 돌리는 안내문을 보고 앱에 없는 것을 찾는다. 안내문 항목: printf 실수 출력 설정, it.c 핸들러 중복, .ioc 설정, 하드웨어 연결, 터미널.
+- 확인(코드 대조):
+  - printf 실수: ARM GCC 빌드가 늘 `-u _printf_float`를 넣는다(`native-build.cjs`). 해석기도 늘 출력한다. CubeIDE 기본(꺼짐)과 달라 실물에서만 빈칸이 나온다 → 4번.
+  - 핸들러 중복: 앱은 main.c에 쓴 핸들러를 it.c에서 빼서 오류가 나지 않는다(`build-environment.js`). CubeIDE 생성 코드에서는 multiple definition이 된다 → 6번.
+  - SysTick_Handler: 앱이 늘 넣는다.
+  - .ioc 설정: ADC1 IN4·NVIC(ADC1 and ADC2 global interrupts)·USART2 115200·SYS Serial Wire는 있다. Sampling Time 선택은 없고 고정이다 → 3번 비고와 CUBEMX-GAPS ADC 줄. ADC Prescaler는 클록 트리 항목에 포함한다.
+  - 하드웨어: STM32 핀 과전압 경고가 없다. ADC는 0~3.3 V로 조용히 자른다 → 5번.
+  - 터미널: 직렬 모니터가 있어 추가할 것이 없다.
+- 한 것: `docs/FEATURES.md` 4~6번 추가, 3번 비고에 ADC Sampling Time·Prescaler, `docs/CUBEMX-GAPS.md` ADC 줄에 Sampling Time. 코드는 바꾸지 않았다.
+- 게시: 문서만 바뀌어 버전이 같다. v1.24.1 CI·Release를 기다리는 동안에는 main에 푸시하지 않고, 끝난 뒤 푸시한다.
+
 ## 2026-11-06 · 1.24.1 가변저항 값이 실행 중 반영되지 않는다는 제보 (ARM GCC 엔진 안내)
 
 - 요청: "ADC 분압 POT"(속성 패널 머리글이 `ADC 분압`인 10 kΩ 트리머 가변저항)의 값을 바꿔도 적용되지 않는다.
