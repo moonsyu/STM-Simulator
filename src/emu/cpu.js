@@ -71,6 +71,9 @@ export class Cpu {
     this.breakpoints = new Set();
     this.cycles = 0;
     this.instructions = 0;
+    // Extra cycles of a taken branch (pipeline refill): 2 on the STM32 Cortex-M3/M4 models; the RA6E1 (Cortex-M33)
+    // sets 1, the cycle count FSP's R_BSP_SoftwareDelay is calibrated for (bsp_delay.c: BNE = 2 cycles).
+    this.branchPenalty = 2;
     this.onBkpt = null; // (imm) => true(계속) | false(정지)
     this.lastFault = null;
     this.lockup = null;
@@ -402,7 +405,7 @@ export class Cpu {
   // ---- PC 쓰기 ----
   branchTo(v) {
     this.npc = (v & ~1) >>> 0;
-    this.cycles += 2;
+    this.cycles += this.branchPenalty;
   }
 
   bxWritePC(v) {
@@ -413,7 +416,7 @@ export class Cpu {
     }
     if ((v & 1) === 0) this.tbit = 0;
     this.npc = (v & ~1) >>> 0;
-    this.cycles += 2;
+    this.cycles += this.branchPenalty;
   }
 
   setSP(v) {
@@ -536,13 +539,13 @@ export class Cpu {
         if (c === 15) { this.svc(); return; }
         if (this.cond(c)) {
           this.npc = (this.pc + 4 + ((hw << 24) >> 23)) >>> 0;
-          this.cycles += 2;
+          this.cycles += this.branchPenalty;
         }
         return;
       }
       case 28: // B
         this.npc = (this.pc + 4 + ((hw << 21) >> 20)) >>> 0;
-        this.cycles += 2;
+        this.cycles += this.branchPenalty;
         return;
       default:
         this.udf();
@@ -617,7 +620,7 @@ export class Cpu {
         const nonzero = (hw & 0x800) !== 0;
         if ((r[n] !== 0) === nonzero) {
           this.npc = (this.pc + 4 + imm) >>> 0;
-          this.cycles += 2;
+          this.cycles += this.branchPenalty;
         }
         return;
       }
@@ -1016,7 +1019,7 @@ export class Cpu {
       const imm = ((S ? 0xff000000 : 0) | (I1 << 23) | (I2 << 22) | ((hw1 & 0x3ff) << 12) | ((hw2 & 0x7ff) << 1)) | 0;
       if (op1 & 4) r[14] = (this.pc + 4) | 1;
       this.npc = (this.pc + 4 + imm) >>> 0;
-      this.cycles += 2;
+      this.cycles += this.branchPenalty;
       return;
     }
     if (op1 & 4) this.udf(); // BLX imm: M 프로파일에 없음
@@ -1028,7 +1031,7 @@ export class Cpu {
         let imm = (S << 20) | (J2 << 19) | (J1 << 18) | ((hw1 & 0x3f) << 12) | ((hw2 & 0x7ff) << 1);
         imm = (imm << 11) >> 11;
         this.npc = (this.pc + 4 + imm) >>> 0;
-        this.cycles += 2;
+        this.cycles += this.branchPenalty;
       }
       return;
     }
@@ -1062,6 +1065,9 @@ export class Cpu {
         if (!this.privileged) return 0;
         if (sysm === 8) return this.getMSP() | 0;
         if (sysm === 9) return this.getPSP() | 0;
+        // Cortex-M33 (ARMv8-M Mainline) stack limit registers; the M3/M4 firmware never uses them.
+        if (sysm === 10) return this.msplim | 0;
+        if (sysm === 11) return this.psplim | 0;
         return 0;
       case 2:
         switch (sysm & 7) {
@@ -1088,6 +1094,8 @@ export class Cpu {
         if (!this.privileged) return;
         if (sysm === 8) this.setMSP(v);
         else if (sysm === 9) this.setPSP(v);
+        else if (sysm === 10) this.msplim = (v & ~7) >>> 0;
+        else if (sysm === 11) this.psplim = (v & ~7) >>> 0;
         return;
       case 2:
         if (!this.privileged) return;

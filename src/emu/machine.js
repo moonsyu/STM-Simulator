@@ -31,9 +31,9 @@ export function exceptionName(n) {
 const hex = (v) => '0x' + (v >>> 0).toString(16).toUpperCase().padStart(8, '0');
 
 export class Machine {
-  constructor({ sysclk = 16e6, semihosting = false, swv = false, sliceCycles = 64 } = {}) {
+  constructor({ sysclk = 16e6, semihosting = false, swv = false, sliceCycles = 64, bus = null } = {}) {
     this.clock = { sysclk, hclk: sysclk, pclk1: sysclk, pclk2: sysclk };
-    this.bus = new Bus();
+    this.bus = bus ?? new Bus();
     this.scs = new Scs(this);
     this.nvic = this.scs.nvic;
     this.cpu = new Cpu(this.bus, this.scs, this);
