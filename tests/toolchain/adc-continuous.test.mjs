@@ -25,13 +25,17 @@ test('continuous ADC on the emulator: GetValue follows the wiper after one Start
  try{
   for(const [board,base]of [['F446RE',blankProject()],['F103RB',projectForBoard('nucleo-f103rb')]])for(const continuous of [true,false]){
    const p=program(continuous,base),result=await build(await prepareBuild({project:p,tools,root,target:'arm'}));
-   const s=new FirmwareSession(p,{elf:new Uint8Array(await fs.readFile(result.elf))});
+   const warnings=[],s=new FirmwareSession(p,{elf:new Uint8Array(await fs.readFile(result.elf)),warn:w=>warnings.push(w)});
    const until=ms=>{for(let t=Math.ceil(s.now/1000/20)*20+20;t<=ms;t+=20)s.tick(t);};
    until(300);const first=s.readVariable('adc_val');assert.ok(first>1900&&first<2200,`${board} start ${first}`);
+   assert.deepEqual(warnings,[],`${board}: no hint while the input has not moved`);
    // The session's model part reads the position from the project's part (catalog-model.js), as the property panel changes it.
    p.components.find(c=>c.type==='ref_pot_bare_3').position=90;s.dirty=true;
    until(700);const later=s.readVariable('adc_val');
    if(continuous)assert.ok(later>3500,`${board} continuous follows: ${later}`);else assert.ok(Math.abs(later-first)<60,`${board} single keeps ${first}: ${later}`);
+   // Single mode read again after the wiper moved: the emulator says so once, as the built-in interpreter does.
+   if(continuous)assert.deepEqual(warnings,[],board);
+   else{assert.equal(warnings.length,1,`${board}: ${warnings.join('|')}`);assert.match(warnings[0],/ADC1: 단일 변환 모드[\s\S]*Pinout의 ADC1에서 Continuous Conversion Mode/);}
   }
  }finally{await fs.rm(root,{recursive:true,force:true});}
 });

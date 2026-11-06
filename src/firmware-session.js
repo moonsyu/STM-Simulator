@@ -33,10 +33,12 @@ const hex = v => '0x' + (v >>> 0).toString(16).toUpperCase().padStart(8, '0');
 const reverse8 = b => { let r = 0; for (let i = 0; i < 8; i++) r |= ((b >> i) & 1) << (7 - i); return r; };
 
 export class FirmwareSession {
-  constructor(project, { elf, print = () => {}, trace = () => {}, uart = () => {}, channels, debug, sdImage, camera, noise, clock } = {}) {
+  constructor(project, { elf, print = () => {}, trace = () => {}, uart = () => {}, warn, channels, debug, sdImage, camera, noise, clock } = {}) {
     if (!elf) throw new Error('펌웨어 ELF가 필요합니다. ARM GCC로 먼저 빌드하세요.');
     project = physicalToModel(project);
-    this.project = project; this.print = print; this.traceCb = trace; this.uartCb = uart;
+    this.project = project; this.print = print; this.traceCb = trace; this.uartCb = uart; this.warnings = [];
+    // Hints about the program (as the built-in interpreter gives them), each said once.
+    this.warnOut = warn ?? (message => trace({ micros: this.now, protocol: '경고', message }));
     this.pressed = {}; this.result = null; this.time = 0; this.integrated = -1; this.stepMs = project.simulation?.stepMs ?? 1;
     this.circuit = new CircuitSimulation(); this.motion = new MotionDevices(); this.catalogMotion = new CatalogMotion(); this.singleWire = new CatalogSingleWire();
     this.sensors = new UltrasonicSignals(); this.lcds = new Map(); this.passiveBuzzers = new PassiveBuzzers(); this.wave = new WaveRecorder(channels);
@@ -92,6 +94,7 @@ export class FirmwareSession {
       i2sSamples: (name, samples, rate) => this.i2sSamples(name, samples, rate),
       chipSelect: () => null,
       onReset: reason => { this.resets.push({ reason, us: this.soc?.nowUs() ?? 0 }); this.traceCb({ micros: this.soc?.nowUs() ?? 0, protocol: 'RESET', message: `MCU 리셋 · ${reason}` }); },
+      warn: message => { if (this.warnings.includes(message)) return; this.warnings.push(message); this.warnOut(message); },
       clockChanged: () => this.updateMco(),
       routingChanged: () => this.updateMco(),
     };

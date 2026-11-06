@@ -48,4 +48,6 @@ export class AdcF1 extends Adc {
     const cr2 = this.get(CR2); if (!this.on()) return false;
     return (bit(cr2, 20) && EXTSEL[field(cr2, 17, 3)] === name) || (bit(cr2, 15) && JEXTSEL[field(cr2, 12, 3)] === name);
   }
+  // EXTTRIG with EXTSEL = 111 is the software start HAL uses; any other EXTSEL waits for a timer / EXTI event.
+  externalTrigger() { const cr2 = this.get(CR2); return !!bit(cr2, 20) && field(cr2, 17, 3) !== 7; }
 }

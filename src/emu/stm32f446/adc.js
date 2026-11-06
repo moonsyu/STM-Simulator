@@ -25,7 +25,21 @@ export class Adc extends Peripheral {
   reset() {
     super.reset(); this.set(HTR, 0xfff);
     this.event?.cancel(); this.event = null; this.seq = null; this.inj = null; this.stats = { conversions: 0, last: [] };
+    this.fresh = false; this.lastRegular = null; this.noticed = false;
     this.updateIrq();
+  }
+  // A regular conversion started by an external (timer / EXTI) trigger, not by software (SWSTART).
+  externalTrigger() { return field(this.get(CR2), 28, 2) !== 0; }
+  // Single conversion mode: DR is read again without a new conversion while the input has moved. The value is right
+  // (the chip keeps the last result too), but the program will not follow the input, so it is said once.
+  staleRead() {
+    if (this.fresh) { this.fresh = false; return; }
+    const cr2 = this.get(CR2), ch = this.lastRegular;
+    if (this.noticed || ch == null || this.seq || bit(cr2, 1) || bit(cr2, 8) || this.externalTrigger()) return;
+    const shift = 12 - this.resolution(), now = Math.round(Math.max(0, Math.min(3.3, this.voltage(ch))) / 3.3 * 4095) >> shift;
+    if (Math.abs(now - (this.stats.last[ch] ?? now)) << shift <= 40) return;
+    this.noticed = true;
+    this.soc.env.warn?.(`${this.name}: 단일 변환 모드라 HAL_ADC_GetValue가 같은 값을 돌려줍니다. 매번 HAL_ADC_Start · HAL_ADC_PollForConversion을 부르거나 ${this.name === 'ADC1' ? 'Pinout의 ADC1에서 ' : ''}Continuous Conversion Mode를 켜세요.`);
   }
   adcclk() { return this.soc.clock.pclk2 / this.soc.adcCommon.prescaler(); }
   resolution() { return [12, 10, 8, 6][field(this.get(CR1), 24, 2)]; }
@@ -58,7 +72,7 @@ export class Adc extends Peripheral {
   align(value, offset = 0) { let v = value - offset; if (bit(this.get(CR2), 11)) { v = (v << (16 - this.resolution())) & 0xffff; if (this.resolution() === 6) v = (v >> 8) & 0xff; } return v & 0xffff; }
   // ------------------------------------------------------------ registers
   readReg(off) {
-    if (off === DR) { this.clearBits(SR, 2); this.updateIrq(); this.soc.dmaLine(this.name, false); return this.get(DR); }
+    if (off === DR) { this.staleRead(); this.clearBits(SR, 2); this.updateIrq(); this.soc.dmaLine(this.name, false); return this.get(DR); }
     if (off >= 0x3c && off <= 0x48) return this.get(off);
     return this.get(off);
   }
@@ -107,7 +121,7 @@ export class Adc extends Peripheral {
     const dma = bit(cr2, 8), eoc = bit(this.get(SR), 1);
     if (dma && this.dmaPending) { this.setBits(SR, 0x20); this.seq = null; this.updateIrq(); return; } // OVR
     if (!dma && bit(cr2, 10) && eoc && bit(cr1, 26)) { this.setBits(SR, 0x20); }
-    this.set(DR, this.align(value));
+    this.set(DR, this.align(value)); this.fresh = true; this.lastRegular = job.list.length === 1 ? ch : null;
     job.i++;
     const last = job.i >= job.list.length;
     if (bit(cr2, 10) || last) this.setBits(SR, 2);
