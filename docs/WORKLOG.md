@@ -8,6 +8,7 @@
 - 한 것: Pinout ADC1에 Continuous Conversion Mode(Disabled/Enabled), 설정 검증·저장·.ioc 가져오기, 생성 코드 `ContinuousConvMode`, 해석기 연속 변환 값 반영과 단일 모드 안내 경고. 에뮬레이터는 레지스터 모델이 원래 지원(확인만).
 - 검증: 단위(설정·생성·.ioc·해석기 연속/단일), 툴체인(F446RE·F103RB ARM GCC 빌드 + 에뮬레이터에서 연속은 접점 90 %에서 3500 초과, 단일은 처음 값 유지; CI firmware 단계에 추가), E2E(Pinout에서 켜기 → Start 한 번 코드 → 실행 중 속성 패널로 접점 이동 → 출력 2047→36xx).
 - 1.20.0 게시 확인도 함께 기록했다.
+- 게시: d699a92 58d707b b9ef3e9 푸시. CI 42147456223 성공, Release v1.21.0 latest·자산 5개(API 확인). 푸시 전 ESLint·단위 913(912 통과)·E2E 63(62 통과)·패키지 검사 3개 통과.
 
 ## 2026-11-06 · 1.20.0 Renesas FPB-RA6E1 (1·2단계 + Pins 설정·예제)
 

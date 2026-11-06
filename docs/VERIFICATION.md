@@ -1,5 +1,9 @@
 # 검증 기록
 
+## 1.21.0 ADC1 Continuous Conversion Mode — 게시 확인(API)
+
+2026-11-06. 태그·빌드 커밋 `b9ef3e969140580273722e749b13afaa674d9b4e` · [Windows CI 42147456223](https://github.com/moonsyu/STM-Simulator/actions/runs/42147456223) 성공 · [Release v1.21.0](https://github.com/moonsyu/STM-Simulator/releases/tag/v1.21.0) latest, draft/prerelease 아님, 자산 5개(BUILD-INFO.json, SHA256.txt, STM-Simulator-1.21.0-Windows-x64.zip, STM-Simulator.exe 115,507,852 B, update-manifest.json). 파일은 내려받지 않고 API로만 확인했다. 푸시 전 로컬 검사: ESLint 0건, 단위·해석기·에뮬레이터 913개 중 912개 통과·1개 건너뜀, E2E 63개 중 62개 통과·1개 건너뜀, 패키지 검사 3개 통과(산출물 삭제).
+
 ## 1.20.0 Renesas FPB-RA6E1 — 게시 확인(API)
 
 2026-11-06. 태그·빌드 커밋 `9fb884ea2ccab7e3b05435aeeebc33b0eba82977` · [Windows CI 42145714843](https://github.com/moonsyu/STM-Simulator/actions/runs/42145714843) 성공(툴체인 액션이 앱 설치기로 FSP를 받고 RA 빌드 시험 포함) · [Release v1.20.0](https://github.com/moonsyu/STM-Simulator/releases/tag/v1.20.0) latest, draft/prerelease 아님, 자산 5개(BUILD-INFO.json, SHA256.txt, STM-Simulator-1.20.0-Windows-x64.zip, STM-Simulator.exe 115,506,868 B, update-manifest.json). 파일은 내려받지 않고 API로만 확인했다. 푸시 전 로컬 패키지 검사 3개 통과(산출물 삭제). 로컬 검사: 단위·해석기·에뮬레이터 911개 중 910개 통과·1개 건너뜀, RA 툴체인 2개 통과, E2E 62개 중 61개 통과·1개 건너뜀, ESLint 0건.
