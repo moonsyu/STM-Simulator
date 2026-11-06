@@ -187,3 +187,44 @@ test('FPB-RA6E1 ADC example: P000 is AN000 of g_adc0 in Pins; turning the potent
   assert.deepEqual(s.errors,[]);
  }finally{await s.close();}
 });
+
+test('FPB-RA6E1 Clocks and Stacks tabs with the AGT example: g_agt0 on LOCO, adding/removing a timer, clock limits; LED1 blinks from AGT0',{skip:!toolchain&&!process.env.CI_REQUIRE_TOOLCHAIN&&'ARM GCC / Renesas FSP not installed',timeout:240000},async()=>{
+ const s=await launch();
+ await fs.writeFile(path.join(s.profile,'native-tools.json'),JSON.stringify({armGcc:gcc,fsp,armGdb:'',cube:'',cubeF1:'',hostGcc:'',hostGdb:'',clangd:'',openocd:'',buildRoot:''}));
+ try{
+  const {win}=s;
+  await win.click('[data-activity="board"]');if(!await win.locator('#board-open').isVisible())await win.click('[data-activity="board"]');
+  await win.click('#board-open');await win.click('[data-board-id="fpb-ra6e1"]');
+  if(await win.locator('#board-change-dialog').isVisible())await win.click('#board-change-confirm');
+  await win.waitForFunction(()=>document.querySelector('#surface > .board')?.dataset.board==='fpb-ra6e1');
+  await win.click('[data-activity="examples"]');if(!await win.locator('#view-examples').isVisible())await win.click('[data-activity="examples"]');
+  await win.fill('#hal-example-search','AGT 주기');await win.locator('#hal-example-list [data-example]').first().click();
+  await win.waitForFunction(()=>/R_AGT_Start\(&g_agt0_ctrl\)/.test(document.getElementById('code').value));
+  await win.click('[data-activity="board"]');if(!await win.locator('#pinout-open').isVisible())await win.click('[data-activity="board"]');
+  await win.click('#pinout-open');await win.waitForSelector('#ra-pinout-dialog[open]');
+  await win.click('[data-ra-tab="stacks"]');
+  assert.match(await win.textContent('#ra-stacks'),/g_agt0[\s\S]*LOCO 32\.768 kHz \/ 1 → 8192 counts \(4 Hz\)/);
+  assert.match(await win.textContent('#ra-stacks'),/g_agt1[\s\S]*PCLKB 50 MHz \/ 1 → 50000 counts \(1000 Hz\)/);
+  assert.match(await win.textContent('#ra-stacks'),/g_external_irq1/);
+  await win.selectOption('#ra-stack-add','GPT2');await win.click('[data-ra-add]');
+  assert.match(await win.textContent('#ra-stacks'),/g_timer2[\s\S]*PCLKD \/ 1 → 10000000 counts/);
+  await win.click('[data-ra-remove="GPT2"]');assert.doesNotMatch(await win.textContent('#ra-stacks'),/g_timer2/);
+  await win.click('[data-ra-tab="clocks"]');
+  assert.match(await win.textContent('#ra-clocks'),/PLL 200 MHz/);
+  await win.selectOption('[data-ra-clock="pclkbDiv"]','2');
+  assert.match(await win.textContent('#ra-pinout-error'),/PCLKB 100 MHz: 최대 50 MHz/);
+  await win.selectOption('[data-ra-clock="pclkbDiv"]','4');assert.equal(await win.textContent('#ra-pinout-error'),'');
+  await shot(win,'ra6e1-clocks.png');
+  await win.click('[data-ra-tab="stacks"]');await win.click('[data-ra-goto="P205"]');
+  assert.equal(await win.locator('#ra-pin-props').isVisible(),true);assert.match(await win.textContent('#ra-pin-props'),/P205/);
+  await win.click('#ra-pinout-close');
+  await win.keyboard.press('Control+F5');
+  await win.waitForFunction(()=>/시뮬레이터\(ARM GCC 빌드\)를 시작했습니다/.test(document.getElementById('console-output').textContent),null,{timeout:180000})
+   .catch(async error=>{throw new Error(`${error.message}\n출력: ${(await win.textContent('#console-output')).slice(-1500)}\n빌드: ${(await win.textContent('#build-errors').catch(()=>'')).slice(-800)}`);});
+  await win.waitForFunction(()=>document.getElementById('board-led-LED1')?.getAttribute('fill')==='#64e66b',null,{timeout:30000});
+  await win.waitForFunction(()=>document.getElementById('board-led-LED1')?.getAttribute('fill')==='#89a486',null,{timeout:30000});
+  await win.keyboard.press('Control+F2');
+  await win.waitForFunction(()=>document.getElementById('shell').dataset.running==='false');
+  assert.deepEqual(s.errors,[]);
+ }finally{await s.close();}
+});

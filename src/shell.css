@@ -610,3 +610,20 @@ body.dock-dragging .dock-unit{pointer-events:none}
 .ra-pin-props select,.ra-pin-props input{height:26px;font-size:12px}
 .ra-pin-props fieldset{border:1px solid var(--ide-border);border-radius:var(--radius);padding:6px 8px;display:flex;flex-direction:column;gap:6px}
 .ra-pin-props code{font:11px var(--mono)}
+.ra-tabs{display:flex;gap:4px;margin-top:8px}
+.ra-tabs button{height:26px;padding:0 12px;font-size:12px;border:1px solid var(--ide-border);background:transparent;border-radius:var(--radius)}
+.ra-tabs button.active{background:var(--ide-accent,#4f6bd8);color:#fff;border-color:transparent}
+.ra-config-view{margin-top:10px;max-height:62vh;overflow:auto;font-size:12px;display:flex;flex-direction:column;gap:10px}
+.ra-clock-tree{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.ra-clock-tree label{display:flex;align-items:center;gap:4px}
+.ra-clock-table{border-collapse:collapse;width:100%;max-width:560px}
+.ra-clock-table th,.ra-clock-table td{text-align:left;padding:4px 8px;border-bottom:1px solid var(--ide-border)}
+.ra-clock-table tr.over td{color:var(--ide-error,#e5484d)}
+.ra-stack-new{display:flex;align-items:flex-end;gap:8px}
+.ra-stack-new label{display:flex;flex-direction:column;gap:3px;color:var(--ide-muted)}
+.ra-stack{border:1px solid var(--ide-border);border-radius:var(--radius);padding:8px 10px;display:flex;flex-direction:column;gap:6px}
+.ra-stack header{display:flex;align-items:center;gap:10px}
+.ra-stack header span{color:var(--ide-muted);flex:1}
+.ra-stack-fields{display:flex;flex-wrap:wrap;gap:8px}
+.ra-stack-fields label{display:flex;flex-direction:column;gap:3px;color:var(--ide-muted)}
+.ra-stack select,.ra-stack input,.ra-config-view select{height:26px;font-size:12px}

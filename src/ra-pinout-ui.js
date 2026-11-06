@@ -1,5 +1,5 @@
 import {$,esc} from './common.js';
-import {RA6E1_PORTS,RA_IRQ_PINS,RA_RESERVED,FPB_RA6E1,RA_PERIPHERAL_PINS,RA_ADC_CHANNELS,RA_GPT_32BIT,RA_TIMER_UNITS,raGptCounts,raClockHz,validateRaMcu,raDefaultMcu} from './ra-config.js';
+import {RA6E1_PORTS,RA_IRQ_PINS,RA_RESERVED,FPB_RA6E1,RA_PERIPHERAL_PINS,RA_ADC_CHANNELS,RA_GPT_32BIT,RA_GPT_CHANNELS,RA_AGT_CHANNELS,RA_TIMER_UNITS,RA_CLOCK_LIMITS,raGptCounts,raAgtCounts,raClockHz,raFamily,validateRaMcu,raDefaultMcu} from './ra-config.js';
 import {sciBaudSetting,raPclka} from './ra-generator.js';
 // Pin settings of a Renesas RA project (FPB-RA6E1), as the RA Smart Configurator's Pins tab sets them: per port pin the
 // mode (output / input / IRQ / analog), the symbolic name RASC writes into bsp_pin_cfg.h, output level and drive, the
@@ -19,9 +19,15 @@ const NOTES={P408:'LED1 (녹색, 보드 내장)',P407:'LED2 (녹색, 보드 내�
 export class RaPinoutPanel {
  constructor({getProject,apply,isRunning,onError}){
   Object.assign(this,{getProject,apply,isRunning,onError});this.pin='P408';
-  document.body.insertAdjacentHTML('beforeend',`<dialog id="ra-pinout-dialog" class="ra-pinout" aria-labelledby="ra-pinout-title"><div class="ra-pinout-head"><h2 id="ra-pinout-title">FPB-RA6E1 · Pins</h2><span class="form-hint">R7FA6E10F2CFP · LQFP100 · RA Smart Configurator의 Pins 탭과 같은 설정입니다. 적용하면 다음 빌드의 ra_gen(pin_data.c, hal_data.c, vector_data.c)과 bsp_pin_cfg.h에 반영됩니다.</span></div>
-<div class="ra-pinout-body"><div id="ra-pin-grid" class="ra-pin-grid" role="listbox" aria-label="핀 목록"></div><section id="ra-pin-props" class="ra-pin-props" aria-live="polite"></section></div>
+  document.body.insertAdjacentHTML('beforeend',`<dialog id="ra-pinout-dialog" class="ra-pinout" aria-labelledby="ra-pinout-title"><div class="ra-pinout-head"><h2 id="ra-pinout-title">FPB-RA6E1 · RA Configuration</h2><span class="form-hint">R7FA6E10F2CFP · LQFP100 · RA Smart Configurator의 Pins · Clocks · Stacks 탭과 같은 설정입니다. 적용하면 다음 빌드의 ra_gen(pin_data.c, hal_data.c, vector_data.c, bsp_clock_cfg.h)과 ra_cfg에 반영됩니다.</span><div class="ra-tabs" role="tablist"><button type="button" role="tab" data-ra-tab="pins">Pins</button><button type="button" role="tab" data-ra-tab="clocks">Clocks</button><button type="button" role="tab" data-ra-tab="stacks">Stacks</button></div></div>
+<div class="ra-pinout-body" data-ra-view="pins"><div id="ra-pin-grid" class="ra-pin-grid" role="listbox" aria-label="핀 목록"></div><section id="ra-pin-props" class="ra-pin-props" aria-live="polite"></section></div>
+<section id="ra-clocks" class="ra-config-view" data-ra-view="clocks" hidden></section><section id="ra-stacks" class="ra-config-view" data-ra-view="stacks" hidden></section>
 <p id="ra-pinout-error" class="form-error" role="alert"></p><div class="dialog-actions"><button type="button" id="ra-pinout-reset">보드 기본값</button><button type="button" id="ra-pinout-close">닫기</button><button type="button" id="ra-pinout-apply" class="run-button">적용</button></div></dialog>`);
+  this.tab='pins';
+  $('ra-pinout-dialog').querySelector('.ra-tabs').onclick=e=>{const b=e.target.closest('[data-ra-tab]');if(b){this.tab=b.dataset.raTab;this.render();}};
+  $('ra-clocks').addEventListener('change',e=>{const k=e.target.dataset.raClock;if(!k)return;this.draft.clock={...(this.draft.clock||{}),[k]:Number(e.target.value)};this.validate();this.render();});
+  $('ra-stacks').addEventListener('change',e=>this.stackChange(e.target));
+  $('ra-stacks').addEventListener('click',e=>this.stackClick(e.target));
   $('ra-pinout-close').onclick=()=>$('ra-pinout-dialog').close();
   $('ra-pinout-apply').onclick=()=>this.commit();
   $('ra-pinout-reset').onclick=()=>{this.draft=raDefaultMcu(this.draft.family);this.render();};
@@ -30,10 +36,15 @@ export class RaPinoutPanel {
  }
  open(pin){
   if(this.isRunning())return;const project=this.getProject();
-  this.draft=structuredClone(project.mcu);if(pin&&RA6E1_PORTS.includes(pin))this.pin=pin;
+  this.draft=structuredClone(project.mcu);if(pin&&RA6E1_PORTS.includes(pin)){this.pin=pin;this.tab='pins';}
   $('ra-pinout-error').textContent='';this.render();$('ra-pinout-dialog').showModal();
  }
+ validate(){$('ra-pinout-error').textContent='';try{validateRaMcu(this.draft);}catch(error){$('ra-pinout-error').textContent=error.message;}}
  render(){
+  for(const b of $('ra-pinout-dialog').querySelectorAll('[data-ra-tab]')){b.classList.toggle('active',b.dataset.raTab===this.tab);b.setAttribute('aria-selected',String(b.dataset.raTab===this.tab));}
+  for(const v of $('ra-pinout-dialog').querySelectorAll('[data-ra-view]'))v.hidden=v.dataset.raView!==this.tab;
+  if(this.tab==='clocks')return this.renderClocks();
+  if(this.tab==='stacks')return this.renderStacks();
   const pins=this.draft.pins;
   $('ra-pin-grid').innerHTML=RA6E1_PORTS.map(pin=>{const p=pins[pin],locked=RA_RESERVED[pin];return `<button type="button" role="option" data-ra-pin="${pin}" class="ra-pin ${p?'mode-'+p.function:''} ${locked?'locked':''} ${pin===this.pin?'active':''}" aria-selected="${pin===this.pin}" title="${esc([pin,ARDUINO_OF[pin]&&'Arduino '+ARDUINO_OF[pin],NOTES[pin],locked,p?.label].filter(Boolean).join(' · '))}"><b>${pin}</b><small>${esc(p?.label||ARDUINO_OF[pin]||(locked?'잠김':''))}</small></button>`;}).join('');
   const pin=this.pin,p=pins[pin],locked=RA_RESERVED[pin],irq=RA_IRQ_PINS[pin];
@@ -87,7 +98,44 @@ export class RaPinoutPanel {
   // ADC0 is on while a pin with an AN channel is set to Analog.
   if(Object.entries(this.draft.pins).some(([q,x])=>x.function==='Analog'&&RA_ADC_CHANNELS[q]!=null))used.add('ADC0');
   if(used.has('ADC0'))per.ADC0={mode:'SINGLE',resolution:12,callback:'',priority:12,...per.ADC0,enabled:true};
-  for(const id of Object.keys(per))if(!used.has(id)&&!(id.startsWith('GPT')&&per[id].mode==='PERIODIC'))per[id].enabled=false;
+  for(const id of Object.keys(per))if(!used.has(id)&&!id.startsWith('AGT')&&!(id.startsWith('GPT')&&per[id].mode==='PERIODIC'))per[id].enabled=false;
+ }
+ // Clocks tab: HOCO → PLL → the internal clock dividers, with the resulting frequencies and their limits.
+ renderClocks(){
+  const fam=raFamily(this.draft.family),c={...fam.clock,...(this.draft.clock||{})},pll=c.hocoMHz/c.pllDiv*c.pllMul;
+  const sel=(k,values,fmt=v=>v)=>`<select data-ra-clock="${k}">${values.map(v=>`<option value="${v}" ${v===c[k]?'selected':''}>${fmt(v)}</option>`).join('')}</select>`;
+  const divs=[1,2,4,8,16,32,64],rows=Object.entries(RA_CLOCK_LIMITS).map(([k,max])=>{const f=pll/c[k+'Div'];return `<tr class="${f>max+1e-9?'over':''}"><th>${k.toUpperCase()}</th><td>${sel(k+'Div',divs,v=>'/ '+v)}</td><td>${+f.toFixed(3)} MHz</td><td>최대 ${max} MHz</td></tr>`;}).join('');
+  $('ra-clocks').innerHTML=`<div class="ra-clock-tree"><label>HOCO ${sel('hocoMHz',[16,18,20],v=>v+' MHz')}</label><span>→</span><label>PLL Src: HOCO · Div ${sel('pllDiv',[1,2,3],v=>'/ '+v)}</label><label>Mul ${sel('pllMul',Array.from({length:21},(_,i)=>i+10),v=>'x '+v+'.0')}</label><span>→</span><strong>PLL ${+pll.toFixed(3)} MHz</strong><span class="form-hint">(입력 ${+(c.hocoMHz/c.pllDiv).toFixed(3)} MHz: 8~24, 출력 120~200 MHz)</span></div>
+<table class="ra-clock-table"><thead><tr><th>클록</th><th>분주</th><th>주파수</th><th>한계</th></tr></thead><tbody>${rows}</tbody></table><p class="form-hint">Clock Src: PLL. 메인 크리스털(24 MHz)은 FPB-RA6E1에 실장되어 있지 않아 HOCO를 씁니다. PCLKA는 SCI, PCLKB는 AGT, PCLKC는 ADC, PCLKD는 GPT의 기준 클록입니다. 적용하면 bsp_clock_cfg.h가 바뀌고, 에뮬레이터는 FSP가 설정한 레지스터대로 동작합니다.</p>`;
+ }
+ // Stacks tab: the FSP module instances the configuration generates; timers without pins (AGT, periodic GPT) are added
+ // and set here, the others link to the pin that owns them.
+ renderStacks(){
+  const per=this.draft.peripherals||{},pins=this.draft.pins,list=[];
+  const pinOf=prefix=>Object.entries(pins).find(([,p])=>p.function==='Peripheral'&&p.signal.startsWith(prefix+'_'))?.[0];
+  for(const [pin,p]of Object.entries(pins))if(p.function==='IRQ')list.push({name:`g_external_irq${RA_IRQ_PINS[pin]}`,module:'External IRQ (r_icu)',pin,info:`${pin} · ${p.edge||'FALLING'} · ${p.callback}`});
+  for(const [id,p]of Object.entries(per)){
+   if(!p.enabled)continue;const ch=id.slice(3);
+   if(id.startsWith('SCI'))list.push({name:`g_uart${ch}`,module:'UART (r_sci_uart)',pin:pinOf(id),info:`${p.baud} bps · ${p.callback}`});
+   else if(id==='ADC0')list.push({name:'g_adc0',module:'ADC (r_adc)',pin:Object.entries(pins).find(([q,x])=>x.function==='Analog'&&RA_ADC_CHANNELS[q]!=null)?.[0],info:`${p.mode==='CONTINUOUS'?'Continuous':'Single'} Scan · ${p.resolution}-Bit`});
+   else if(id.startsWith('GPT')&&p.mode==='PWM')list.push({name:`g_timer${ch}`,module:'Timer, General PWM (r_gpt)',pin:pinOf(id),info:`PWM ${p.period} ${p.unit} · ${p.duty} %`});
+   else list.push({id,name:id.startsWith('AGT')?`g_agt${ch}`:`g_timer${ch}`,module:id.startsWith('AGT')?'Timer, Low-Power (r_agt)':'Timer, General PWM (r_gpt) · Periodic',p,edit:true});
+  }
+  const timerInfo=(id,p)=>{try{if(id.startsWith('AGT')){const c=raAgtCounts(raClockHz(this.draft,'pclkb'),Number(id.slice(3)),p.period,p.unit);return `${c.source}${c.source==='LOCO'?' 32.768 kHz':' '+raClockHz(this.draft,'pclkb')/1e6+' MHz'} / ${c.source==='LOCO'?2**c.div:[1,2,0,8][c.div]} → ${c.counts} counts (${Number(c.hz.toPrecision(6))} Hz)`;}const c=raGptCounts(raClockHz(this.draft),Number(id.slice(3)),p.period,p.unit);return `PCLKD / ${2**c.div} → ${c.counts} counts (${Number(c.hz.toPrecision(6))} Hz)`;}catch(error){return error.message;}};
+  const card=s=>s.edit?`<article class="ra-stack" data-ra-stack="${s.id}"><header><b>${s.name}</b><span>${s.module}</span><button type="button" data-ra-remove="${s.id}">삭제</button></header><div class="ra-stack-fields"><label>Period<input type="number" data-ra-field="period" min="0" step="any" value="${s.p.period}"></label><label>Unit<select data-ra-field="unit">${RA_TIMER_UNITS.map(u=>`<option value="${u}" ${u===s.p.unit?'selected':''}>${u}</option>`).join('')}</select></label><label>Callback<input data-ra-field="callback" value="${esc(s.p.callback)}" placeholder="NULL" spellcheck="false"></label><label>Priority<select data-ra-field="priority">${PRIORITIES(s.p.priority)}</select></label></div><p class="form-hint">${esc(timerInfo(s.id,s.p))} · R_${s.id.startsWith('AGT')?'AGT':'GPT'}_Open(&amp;${s.name}_ctrl, &amp;${s.name}_cfg) · R_${s.id.startsWith('AGT')?'AGT':'GPT'}_Start(&amp;${s.name}_ctrl)</p></article>`
+   :`<article class="ra-stack"><header><b>${s.name}</b><span>${s.module}</span>${s.pin?`<button type="button" data-ra-goto="${s.pin}">Pins: ${s.pin}</button>`:''}</header><p class="form-hint">${esc(s.info)}</p></article>`;
+  const free=[...RA_AGT_CHANNELS.map(ch=>'AGT'+ch),...RA_GPT_CHANNELS.map(ch=>'GPT'+ch)].filter(id=>!per[id]?.enabled);
+  $('ra-stacks').innerHTML=`<div class="ra-stack-new"><label>New Stack<select id="ra-stack-add">${free.map(id=>`<option value="${id}">${id.startsWith('AGT')?`Timer, Low-Power (r_agt) · AGT${id.slice(3)}`:`Timer, General PWM (r_gpt) · GPT${id.slice(3)} Periodic`}</option>`).join('')}</select></label><button type="button" data-ra-add ${free.length?'':'disabled'}>추가</button></div>${list.length?list.map(card).join(''):'<p class="form-hint">스택이 없습니다. 핀 기능을 정하거나 타이머를 추가하세요.</p>'}`;
+ }
+ stackChange(el){
+  const id=el.closest('[data-ra-stack]')?.dataset.raStack,k=el.dataset.raField;if(!id||!k)return;
+  const v=el.value.trim();this.draft.peripherals[id][k]=['unit','callback'].includes(k)?v:Number(v);this.validate();this.renderStacks();
+ }
+ stackClick(el){
+  const per=this.draft.peripherals||={};
+  if(el.closest('[data-ra-add]')){const id=$('ra-stack-add').value;if(!id)return;per[id]=id.startsWith('AGT')?{enabled:true,period:100,unit:'ms',callback:`agt${id.slice(3)}_callback`,priority:12}:{enabled:true,mode:'PERIODIC',period:100,unit:'ms',duty:50,callback:`gpt${id.slice(3)}_callback`,priority:12};this.validate();this.renderStacks();return;}
+  const rm=el.closest('[data-ra-remove]')?.dataset.raRemove;if(rm){delete per[rm];this.validate();this.renderStacks();return;}
+  const go=el.closest('[data-ra-goto]')?.dataset.raGoto;if(go){this.pin=go;this.tab='pins';this.render();}
  }
  commit(){
   try{const mcu=validateRaMcu(this.draft);this.apply({mcu});$('ra-pinout-dialog').close();}
