@@ -1,5 +1,9 @@
 # 검증 기록
 
+## 1.22.0 FPB-RA6E1 주변장치·Clocks·Stacks — 게시 확인(API)
+
+2026-11-06. 태그·빌드 커밋 `dd697629fdb678e6fe08ea6257c979e7dc9f0b2c` · [Windows CI 42154435131](https://github.com/moonsyu/STM-Simulator/actions/runs/42154435131) 성공 · [Release v1.22.0](https://github.com/moonsyu/STM-Simulator/releases/tag/v1.22.0) latest, draft/prerelease 아님, 자산 5개(BUILD-INFO.json, SHA256.txt, STM-Simulator-1.22.0-Windows-x64.zip, STM-Simulator.exe 115,530,343 B, update-manifest.json). 파일은 내려받지 않고 API로만 확인했다. 푸시 전 로컬 검사: ESLint 0건, 단위·해석기·에뮬레이터 928개 중 927개 통과·1개 건너뜀, E2E 68개 중 67개 통과·1개 건너뜀(RA E2E 7개 포함), 패키지 검사 3개 통과(산출물 삭제). 그 뒤의 로컬 커밋(FSP 원본 색인, J-Link)은 이 Release에 들어가지 않도록 `dd69762`까지만 푸시했다.
+
 ## 1.21.0 ADC1 Continuous Conversion Mode — 게시 확인(API)
 
 2026-11-06. 태그·빌드 커밋 `b9ef3e969140580273722e749b13afaa674d9b4e` · [Windows CI 42147456223](https://github.com/moonsyu/STM-Simulator/actions/runs/42147456223) 성공 · [Release v1.21.0](https://github.com/moonsyu/STM-Simulator/releases/tag/v1.21.0) latest, draft/prerelease 아님, 자산 5개(BUILD-INFO.json, SHA256.txt, STM-Simulator-1.21.0-Windows-x64.zip, STM-Simulator.exe 115,507,852 B, update-manifest.json). 파일은 내려받지 않고 API로만 확인했다. 푸시 전 로컬 검사: ESLint 0건, 단위·해석기·에뮬레이터 913개 중 912개 통과·1개 건너뜀, E2E 63개 중 62개 통과·1개 건너뜀, 패키지 검사 3개 통과(산출물 삭제).
