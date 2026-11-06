@@ -73,3 +73,19 @@ test('ra_gpt_pwm: GPT6 PWM (1 kHz, GTIOC6B) dims LED1 in 10 % steps; GPT1 (500 m
  // The board LED's net follows the averaged PWM level.
  const v=session.result.voltage('signal:P408');assert.ok(v>=0&&v<3.31);
 });
+
+test('ra_adc_pot: R_ADC single scan reads A0 (P000 = AN000) from the potentiometer; LED1 follows half scale',()=>{
+ const {session}=open(fixture('ra_adc_pot'));
+ runUntil(session,100);
+ const near=(v,pin)=>Math.abs(v-Math.round(session.result.voltage('signal:'+pin)/3.3*4095))<=2;
+ let v=session.readVariable('adc_value');
+ assert.ok(near(v,'P000')&&Math.abs(v-2048)<60,'position 50 %: '+v);
+ assert.equal(session.gpio.P000.mode,'ANALOG');
+ session.project.components.find(p=>p.id==='pot').position=80;runUntil(session,200);
+ v=session.readVariable('adc_value');assert.ok(near(v,'P000')&&v>3000,'80 %: '+v);
+ assert.ok(session.gpio.P408.value>1.65,'LED1 on above half scale');
+ assert.equal(session.readVariable('millivolts'),Math.floor(v*3300/4095));
+ session.project.components.find(p=>p.id==='pot').position=10;runUntil(session,300);
+ v=session.readVariable('adc_value');assert.ok(near(v,'P000')&&v<600,'10 %: '+v);assert.ok(session.gpio.P408.value<1);
+ assert.ok(session.soc.adc0.scans>5,'a scan every 20 ms');
+});

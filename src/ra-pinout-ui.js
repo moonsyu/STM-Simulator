@@ -1,5 +1,5 @@
 import {$,esc} from './common.js';
-import {RA6E1_PORTS,RA_IRQ_PINS,RA_RESERVED,FPB_RA6E1,RA_PERIPHERAL_PINS,RA_GPT_32BIT,RA_TIMER_UNITS,raGptCounts,raClockHz,validateRaMcu,raDefaultMcu} from './ra-config.js';
+import {RA6E1_PORTS,RA_IRQ_PINS,RA_RESERVED,FPB_RA6E1,RA_PERIPHERAL_PINS,RA_ADC_CHANNELS,RA_GPT_32BIT,RA_TIMER_UNITS,raGptCounts,raClockHz,validateRaMcu,raDefaultMcu} from './ra-config.js';
 import {sciBaudSetting,raPclka} from './ra-generator.js';
 // Pin settings of a Renesas RA project (FPB-RA6E1), as the RA Smart Configurator's Pins tab sets them: per port pin the
 // mode (output / input / IRQ / analog), the symbolic name RASC writes into bsp_pin_cfg.h, output level and drive, the
@@ -47,6 +47,11 @@ export class RaPinoutPanel {
     html+=`<label>Symbolic Name<input data-ra="label" value="${esc(p.label||'')}" placeholder="예: LED1" spellcheck="false"></label>`;
     if(p.function==='GPIO_Output')html+=`<label>Output Data (초기값)<select data-ra="initial">${option('0','Low',String(p.initial??0))}${option('1','High',String(p.initial??0))}</select></label><label>Drive Capacity<select data-ra="drive">${['LOW','MID','HIGH'].map(d=>option(d,{LOW:'Low',MID:'Middle',HIGH:'High'}[d],p.drive||'LOW')).join('')}</select></label><label>Output type<select data-ra="outputType">${option('CMOS','CMOS',p.outputType||'CMOS')}${option('NMOS','n-ch open drain',p.outputType||'CMOS')}</select></label>`;
     if(['GPIO_Input','IRQ'].includes(p.function))html+=`<label>Pull-up<select data-ra="pull">${option('NONE','None',p.pull||'NONE')}${option('PULLUP','Input pull-up',p.pull||'NONE')}</select></label>`;
+    if(p.function==='Analog'&&RA_ADC_CHANNELS[pin]!=null){
+     const u={mode:'SINGLE',resolution:12,callback:'',priority:12,...this.draft.peripherals?.ADC0},an=String(RA_ADC_CHANNELS[pin]).padStart(3,'0'),scan=Object.entries(pins).filter(([q,x])=>x.function==='Analog'&&RA_ADC_CHANNELS[q]!=null).map(([q])=>'AN'+String(RA_ADC_CHANNELS[q]).padStart(3,'0'));
+     html+=`<fieldset><legend>g_adc0 (r_adc · ADC0) · AN${an}</legend><label>Mode<select data-ra-adc="mode">${option('SINGLE','Single Scan',u.mode)}${option('CONTINUOUS','Continuous Scan',u.mode)}</select></label><label>Resolution<select data-ra-adc="resolution">${[12,10,8].map(b=>option(String(b),`${b}-Bit`,String(u.resolution))).join('')}</select></label><label>Callback<input data-ra-adc="callback" value="${esc(u.callback)}" placeholder="NULL" spellcheck="false"></label>${u.callback?`<label>Scan End Interrupt Priority<select data-ra-adc="priority">${PRIORITIES(u.priority)}</select></label>`:''}<p class="form-hint">스캔 채널: ${scan.join(', ')} (Analog로 정한 핀). hal_entry()에서 R_ADC_Open(&amp;g_adc0_ctrl, &amp;g_adc0_cfg), R_ADC_ScanCfg(&amp;g_adc0_ctrl, &amp;g_adc0_channel_cfg) 후 R_ADC_ScanStart · R_ADC_StatusGet · R_ADC_Read(&amp;g_adc0_ctrl, ADC_CHANNEL_${RA_ADC_CHANNELS[pin]}, &amp;value)로 읽습니다. VREFH0 3.3 V 기준입니다.</p></fieldset>`;
+    }
+    else if(p.function==='Analog')html+=`<p class="form-hint">이 핀에는 ADC12 입력(AN 채널)이 없습니다.</p>`;
     if(p.function==='IRQ')html+=`<fieldset><legend>g_external_irq${irq} (r_icu)</legend><label>Trigger<select data-ra="edge">${[['FALLING','Falling'],['RISING','Rising'],['BOTH','Both Edges'],['LOW','Low Level']].map(([v,l])=>option(v,l,p.edge||'FALLING')).join('')}</select></label><label>Priority<select data-ra="priority">${Array.from({length:16},(_,i)=>option(String(i),`Priority ${i}${i===0?' (highest)':i===15?' (lowest)':''}`,String(p.priority??12))).join('')}</select></label><label>Callback<input data-ra="callback" value="${esc(p.callback||`external_irq${irq}_callback`)}" spellcheck="false"></label><p class="form-hint">hal_entry()에서 R_ICU_ExternalIrqOpen(&amp;g_external_irq${irq}_ctrl, &amp;g_external_irq${irq}_cfg)과 R_ICU_ExternalIrqEnable(&amp;g_external_irq${irq}_ctrl)을 부르면 콜백이 호출됩니다.</p></fieldset>`;
     if(p.function==='Peripheral'&&p.signal.startsWith('GPT')){
      const id=p.signal.split('_')[0],ch=Number(id.slice(3)),u={...DEFAULTS.GPT(),...this.draft.peripherals?.[id]},pwm=u.mode==='PWM';
@@ -64,9 +69,10 @@ export class RaPinoutPanel {
   $('ra-pin-props').innerHTML=html;
  }
  change(el){
-  const key=el.dataset.ra;if(!key&&!el.dataset.raSci&&!el.dataset.raGpt)return;const pin=this.pin,pins=this.draft.pins;
+  const key=el.dataset.ra;if(!key&&!el.dataset.raSci&&!el.dataset.raGpt&&!el.dataset.raAdc)return;const pin=this.pin,pins=this.draft.pins;
   if(key==='function'){if(!el.value)delete pins[pin];else{const old=pins[pin]||{};pins[pin]={function:el.value,...(old.label?{label:old.label}:{})};if(el.value==='IRQ')Object.assign(pins[pin],{edge:'FALLING',pull:'PULLUP',priority:12,callback:`external_irq${RA_IRQ_PINS[pin]}_callback`});if(el.value==='GPIO_Output')Object.assign(pins[pin],{initial:0,drive:'LOW'});if(el.value==='GPIO_Input')pins[pin].pull='NONE';if(el.value==='Peripheral')pins[pin].signal=signalsOf(pin)[0];}}
   else if(el.dataset.raSci){const id=pins[pin]?.signal?.split('_')[0];if(!id)return;const u=this.draft.peripherals[id];const v=el.value.trim();u[el.dataset.raSci]=el.dataset.raSci==='callback'?v:Number(v);}
+  else if(el.dataset.raAdc){const u=((this.draft.peripherals||={}).ADC0||={enabled:true}),k=el.dataset.raAdc,v=el.value.trim();u[k]=['mode','callback'].includes(k)?v:Number(v);}
   else if(el.dataset.raGpt){const id=pins[pin]?.signal?.split('_')[0];if(!id)return;const u=this.draft.peripherals[id],k=el.dataset.raGpt,v=el.value.trim();u[k]=['mode','unit','callback'].includes(k)?v:Number(v);}
   else if(key){const p=pins[pin];if(!p)return;let v=el.value.trim();if(['initial','priority'].includes(key))v=Number(v);if(key==='label'&&!v)delete p.label;else if(key==='outputType'&&v==='CMOS')delete p.outputType;else p[key]=v;}
   this.syncChannels();
@@ -78,6 +84,9 @@ export class RaPinoutPanel {
  syncChannels(){
   const used=new Set(Object.values(this.draft.pins).filter(p=>p.function==='Peripheral').map(p=>p.signal.split('_')[0])),per=this.draft.peripherals||={};
   for(const id of used)per[id]={...DEFAULTS[id.slice(0,3)](id.slice(3)),...per[id],enabled:true};
+  // ADC0 is on while a pin with an AN channel is set to Analog.
+  if(Object.entries(this.draft.pins).some(([q,x])=>x.function==='Analog'&&RA_ADC_CHANNELS[q]!=null))used.add('ADC0');
+  if(used.has('ADC0'))per.ADC0={mode:'SINGLE',resolution:12,callback:'',priority:12,...per.ADC0,enabled:true};
   for(const id of Object.keys(per))if(!used.has(id)&&!(id.startsWith('GPT')&&per[id].mode==='PERIODIC'))per[id].enabled=false;
  }
  commit(){

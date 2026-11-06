@@ -169,3 +169,38 @@ test('RA6E1 GPT model: GTSTR start, GTCNT, buffer transfer at the cycle end, PWM
  t.write(0x30,(3<<24)|1,4);assert.deepEqual(t.output('GTIOCB'),{level:1},'OBDTY 100 %');
  t.write(0x08,64,4);assert.ok(!t.running);assert.ok(changes.length>0);
 });
+
+test('ADC0: Analog pins with an AN channel, mode/resolution settings, g_adc0 with its channel mask, r_adc_cfg.h',async()=>{
+ const {RA_ADC_CHANNELS}=await import('../../src/ra-config.js');
+ assert.equal(RA_ADC_CHANNELS.P000,0);assert.equal(RA_ADC_CHANNELS.P008,8);assert.equal(RA_ADC_CHANNELS.P015,13);assert.equal(RA_ADC_CHANNELS.P105,undefined);
+ const adc=()=>{const m=raDefaultMcu();m.pins.P000={function:'Analog'};m.pins.P008={function:'Analog'};m.peripherals={ADC0:{enabled:true,mode:'CONTINUOUS',resolution:10,callback:'adc_cb'}};return m;};
+ const v=validateRaMcu(adc());assert.deepEqual(v.peripherals.ADC0,{enabled:true,mode:'CONTINUOUS',resolution:10,callback:'adc_cb',priority:12});
+ assert.throws(()=>validateRaMcu({...adc(),pins:raDefaultMcu().pins}),/Analog로 정하세요/);
+ assert.throws(()=>validateRaMcu({...adc(),peripherals:{ADC0:{enabled:true,resolution:14}}}),/12·10·8/);
+ const files=generateRaFiles(v,{board:'FPB-RA6E1'}),c=files['ra_gen/hal_data.c'];
+ assert.ok(c.includes('.scan_mask           = ADC_MASK_CHANNEL_0 | ADC_MASK_CHANNEL_8 | 0,'));
+ assert.ok(c.includes('.mode                = ADC_MODE_CONTINUOUS_SCAN,')&&c.includes('.resolution          = ADC_RESOLUTION_10_BIT,')&&c.includes('.p_callback          = adc_cb,'));
+ assert.ok(files['ra_gen/hal_data.h'].includes('extern const adc_channel_cfg_t g_adc0_channel_cfg;')&&files['ra_gen/hal_data.h'].includes('void adc_cb(adc_callback_args_t * p_args);'));
+ assert.ok(files['ra_gen/vector_data.c'].includes('= adc_scan_end_isr, /* ADC0 SCAN END'));
+ assert.ok(files['ra_cfg/fsp_cfg/r_adc_cfg.h'].includes('ADC_CFG_PARAM_CHECKING_ENABLE'));
+ assert.ok(files['ra_gen/pin_data.c'].includes('IOPORT_CFG_ANALOG_ENABLE'));
+});
+
+test('RA6E1 ADC12 model: single scan stores ADDRn and raises scan end, continuous reads live, resolution and alignment',async()=>{
+ const {Adc12,ADC0_SCAN_END}=await import('../../src/emu/ra6e1/adc.js');
+ let now=0,volts=1.65;const timers=[],events=[];
+ const soc={nowUs:()=>now,sync(){},analogIn:pin=>pin==='P000'?volts:0,icu:{linked:()=>false,raise:e=>events.push(e)},atUs:(t,fn)=>{const e={t,fn,cancel(){e.dead=true;}};timers.push(e);return e;}};
+ const a=new Adc12(soc);
+ a.write(0x04,0x101,2); // ADANSA0: AN000, AN008
+ a.write(0x00,0x8000,2); // ADST, single scan
+ assert.equal(a.read(0x00,2)&0x8000,0x8000,'converting');
+ now=timers.at(-1).t;timers.at(-1).fn();
+ assert.equal(a.read(0x00,2)&0x8000,0,'ADST clears at the scan end');assert.deepEqual(events,[ADC0_SCAN_END]);
+ assert.equal(a.read(0x20,2),2048);assert.equal(a.read(0x30,2),0,'AN008 at 0 V');
+ a.write(0x0e,1<<1,2); // ADPRC 10-bit
+ volts=3.3;a.write(0x00,0x8000,2);now=timers.at(-1).t;timers.at(-1).fn();assert.equal(a.read(0x20,2),1023);
+ a.write(0x0e,(1<<15)|(1<<1),2); // left-aligned
+ a.write(0x00,0x8000,2);now=timers.at(-1).t;timers.at(-1).fn();assert.equal(a.read(0x20,2),1023<<6);
+ a.write(0x0e,0,2);a.write(0x00,0x8000|(2<<13),2); // continuous, nothing linked: live reads
+ volts=0.825;assert.equal(a.read(0x20,2),1024);assert.equal(a.read(0x00,2)&0x8000,0x8000);
+});

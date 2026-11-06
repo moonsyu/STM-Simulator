@@ -1,0 +1,89 @@
+{
+ "format": "stm32-circuit-lab",
+ "version": 2,
+ "name": "ra_adc_pot",
+ "code": "#include \"hal_data.h\"\n\nFSP_CPP_HEADER\nvoid R_BSP_WarmStart(bsp_warm_start_event_t event);\nFSP_CPP_FOOTER\n\nvolatile uint16_t adc_value = 0;\nvolatile uint32_t millivolts = 0;\n\nvoid hal_entry(void)\n{\n    adc_status_t status;\n\n    /* g_adc0: single scan of AN000 (A0, P000). */\n    R_ADC_Open(&g_adc0_ctrl, &g_adc0_cfg);\n    R_ADC_ScanCfg(&g_adc0_ctrl, &g_adc0_channel_cfg);\n\n    while (1)\n    {\n        R_ADC_ScanStart(&g_adc0_ctrl);\n        do\n        {\n            R_ADC_StatusGet(&g_adc0_ctrl, &status);\n        } while (ADC_STATE_SCAN_IN_PROGRESS == status.state);\n        R_ADC_Read(&g_adc0_ctrl, ADC_CHANNEL_0, (uint16_t *) &adc_value);\n        millivolts = (uint32_t) adc_value * 3300U / 4095U;\n\n        /* LED1 on above half scale. */\n        R_IOPORT_PinWrite(&g_ioport_ctrl, LED1, (adc_value > 2048U) ? BSP_IO_LEVEL_HIGH : BSP_IO_LEVEL_LOW);\n        R_BSP_SoftwareDelay(20, BSP_DELAY_UNITS_MILLISECONDS);\n    }\n}\n\nvoid R_BSP_WarmStart(bsp_warm_start_event_t event)\n{\n    if (BSP_WARM_START_POST_C == event)\n    {\n        /* C runtime environment and system clocks are setup. */\n\n        /* Configure pins. */\n        R_IOPORT_Open (&IOPORT_CFG_CTRL, &IOPORT_CFG_NAME);\n    }\n}\n",
+ "components": [
+  {
+   "id": "pot",
+   "name": "VR1",
+   "type": "potentiometer",
+   "x": 520,
+   "y": 380,
+   "rotation": 0,
+   "value": 10000,
+   "position": 50
+  }
+ ],
+ "wires": [
+  {
+   "id": "w_gnd",
+   "from": "part:pot:p1",
+   "to": "board:J2:6",
+   "color": "#3a3a3a"
+  },
+  {
+   "id": "w_wiper",
+   "from": "part:pot:p2",
+   "to": "board:J6:1",
+   "color": "#f5c518"
+  },
+  {
+   "id": "w_vcc",
+   "from": "part:pot:p3",
+   "to": "board:J2:4",
+   "color": "#e5484d"
+  }
+ ],
+ "boardId": "fpb-ra6e1",
+ "surfaces": {
+  "board": {
+   "hidden": false
+  },
+  "breadboard": {
+   "hidden": true
+  }
+ },
+ "mcu": {
+  "family": "R7FA6E10F",
+  "pins": {
+   "P408": {
+    "function": "GPIO_Output",
+    "label": "LED1",
+    "initial": 0,
+    "drive": "LOW"
+   },
+   "P407": {
+    "function": "GPIO_Output",
+    "label": "LED2",
+    "initial": 0,
+    "drive": "LOW"
+   },
+   "P205": {
+    "function": "IRQ",
+    "label": "SW1",
+    "pull": "PULLUP",
+    "edge": "FALLING",
+    "priority": 12,
+    "callback": "external_irq1_callback"
+   },
+   "P000": {
+    "function": "Analog",
+    "label": "POT"
+   }
+  },
+  "peripherals": {
+   "ADC0": {
+    "enabled": true,
+    "mode": "SINGLE",
+    "resolution": 12,
+    "callback": "",
+    "priority": 12
+   }
+  }
+ },
+ "firmware": {
+  "mode": "fsp",
+  "files": []
+ }
+}

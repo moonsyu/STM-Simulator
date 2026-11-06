@@ -3,7 +3,7 @@
 // linker init tables) and script (linker scripts). The user's code is src/hal_entry.c; the app builds these with the
 // FSP sources (BSP + r_* drivers) and ARM GCC, then runs the ELF on the RA6E1 emulator.
 // Formats follow RASC output for FSP 5.x/6.x (only what the FPB-RA6E1 configurations here need).
-import {raFamily,raPinName,raPortBit,RA_IRQ_PINS,raPsel,RA_PSEL_NAMES,RA_SCI_CHANNELS,RA_GPT_CHANNELS,raGptCounts,raClockHz} from './ra-config.js';
+import {raFamily,raPinName,raPortBit,RA_IRQ_PINS,raPsel,RA_PSEL_NAMES,RA_SCI_CHANNELS,RA_GPT_CHANNELS,RA_ADC_CHANNELS,raGptCounts,raClockHz} from './ra-config.js';
 
 const HEADER=kind=>`/* generated ${kind} - do not edit */\n`;
 const hex=(n,w=8)=>'0x'+(n>>>0).toString(16).toUpperCase().padStart(w,'0');
@@ -33,6 +33,70 @@ const gptsOf=mcu=>RA_GPT_CHANNELS.filter(ch=>mcu.peripherals?.['GPT'+ch]?.enable
  return {channel:ch,name:`g_timer${ch}`,mode:p.mode||'PWM',period:p.period??1,unit:p.unit||'kHz',duty:p.duty??50,callback:p.callback||'',priority:p.priority??12,
   a:used.has(`GPT${ch}_GTIOCA`),b:used.has(`GPT${ch}_GTIOCB`),counts:raGptCounts(raClockHz(mcu),ch,p.period??1,p.unit||'kHz',p.duty??50)};
 });
+// ADC instance (r_adc), g_adc0 with g_adc0_channel_cfg scanning the Analog pins' channels.
+const adcOf=mcu=>{const p=mcu.peripherals?.ADC0;if(!p?.enabled)return null;return {...p,mode:p.mode||'SINGLE',resolution:p.resolution??12,callback:p.callback||'',priority:p.priority??12,channels:Object.entries(mcu.pins||{}).filter(([pin,q])=>q.function==='Analog'&&RA_ADC_CHANNELS[pin]!=null).map(([pin])=>RA_ADC_CHANNELS[pin]).sort((a,b)=>a-b)};};
+const adcDecl=a=>`/** ADC on ADC Instance. */
+extern const adc_instance_t g_adc0;
+/** Access the ADC instance using these structures when calling API functions directly (::p_api is not used). */
+extern adc_instance_ctrl_t g_adc0_ctrl;
+extern const adc_cfg_t g_adc0_cfg;
+extern const adc_channel_cfg_t g_adc0_channel_cfg;${a.callback?`
+#ifndef ${a.callback}
+void ${a.callback}(adc_callback_args_t * p_args);
+#endif`:''}`;
+function adcInstance(a){
+ const v=(k,name)=>`#if defined(VECTOR_NUMBER_ADC0_${k})\n    .${name} = VECTOR_NUMBER_ADC0_${k},\n#else\n    .${name} = FSP_INVALID_VECTOR,\n#endif`;
+ return `adc_instance_ctrl_t g_adc0_ctrl;
+const adc_extended_cfg_t g_adc0_cfg_extend =
+{
+    .add_average_count   = ADC_ADD_OFF,
+    .clearing            = ADC_CLEAR_AFTER_READ_ON,
+    .trigger             = ADC_START_SOURCE_DISABLED,
+    .trigger_group_b     = ADC_START_SOURCE_DISABLED,
+    .double_trigger_mode = ADC_DOUBLE_TRIGGER_DISABLED,
+    .adc_vref_control    = ADC_VREF_CONTROL_VREFH,
+    .enable_adbuf        = 0,
+${v('WINDOW_A','window_a_irq')}
+    .window_a_ipl        = (BSP_IRQ_DISABLED),
+${v('WINDOW_B','window_b_irq')}
+    .window_b_ipl        = (BSP_IRQ_DISABLED),
+};
+const adc_cfg_t g_adc0_cfg =
+{
+    .unit                = 0,
+    .mode                = ${a.mode==='CONTINUOUS'?'ADC_MODE_CONTINUOUS_SCAN':'ADC_MODE_SINGLE_SCAN'},
+    .resolution          = ADC_RESOLUTION_${a.resolution}_BIT,
+    .alignment           = (adc_alignment_t) ADC_ALIGNMENT_RIGHT,
+    .trigger             = (adc_trigger_t) 0xF, // Not used
+    .p_callback          = ${a.callback||'NULL'},
+    .p_context           = NULL,
+    .p_extend            = &g_adc0_cfg_extend,
+${a.callback?v('SCAN_END','scan_end_irq'):'    .scan_end_irq        = FSP_INVALID_VECTOR,'}
+    .scan_end_ipl        = ${a.callback?`(${a.priority})`:'(BSP_IRQ_DISABLED)'},
+    .scan_end_b_irq      = FSP_INVALID_VECTOR,
+    .scan_end_b_ipl      = (BSP_IRQ_DISABLED),
+    .scan_end_c_irq      = FSP_INVALID_VECTOR,
+    .scan_end_c_ipl      = (BSP_IRQ_DISABLED),
+};
+const adc_channel_cfg_t g_adc0_channel_cfg =
+{
+    .scan_mask           = ${a.channels.map(c=>`ADC_MASK_CHANNEL_${c}`).join(' | ')} | 0,
+    .scan_mask_group_b   = 0,
+    .priority_group_a    = ADC_GROUP_A_PRIORITY_OFF,
+    .add_mask            = 0,
+    .sample_hold_mask    = 0,
+    .sample_hold_states  = 24,
+    .p_window_cfg        = NULL,
+};
+/* Instance structure to use this module. */
+const adc_instance_t g_adc0 =
+{
+    .p_ctrl        = &g_adc0_ctrl,
+    .p_cfg         = &g_adc0_cfg,
+    .p_channel_cfg = &g_adc0_channel_cfg,
+    .p_api         = &g_adc_on_adc
+};`;
+}
 const UNIT_TEXT={Hz:'Hz',kHz:'kHz',s:'seconds',ms:'milliseconds',us:'microseconds'};
 const hexCount=n=>"0x"+n.toString(16);
 const gptDecl=t=>`/** Timer on GPT Instance. */
@@ -106,6 +170,7 @@ export function raVectors(mcu){
  const list=[];
  for(const u of uartsOf(mcu))for(const [kind,label]of [['RXI','Receive data full'],['TXI','Transmit data empty'],['TEI','Transmit end'],['ERI','Receive error']])list.push({isr:`sci_uart_${kind.toLowerCase()}_isr`,event:`SCI${u.channel}_${kind}`,label:`SCI${u.channel} ${kind} (${label})`,vector:`SCI${u.channel}_${kind}`});
  for(const irq of irqsOf(mcu))list.push({isr:'r_icu_isr',event:`ICU_IRQ${irq.channel}`,label:`ICU IRQ${irq.channel} (External pin interrupt ${irq.channel})`,vector:`ICU_IRQ${irq.channel}`});
+ const adc=adcOf(mcu);if(adc?.callback)list.push({isr:'adc_scan_end_isr',event:'ADC0_SCAN_END',label:'ADC0 SCAN END (End of A/D scanning operation)',vector:'ADC0_SCAN_END'});
  for(const t of gptsOf(mcu))if(t.callback)list.push({isr:'gpt_counter_overflow_isr',event:`GPT${t.channel}_COUNTER_OVERFLOW`,label:`GPT${t.channel} COUNTER OVERFLOW (Overflow)`,vector:`GPT${t.channel}_COUNTER_OVERFLOW`});
  return list.map((v,i)=>({...v,index:i}));
 }
@@ -370,7 +435,7 @@ ${vectors.map(v=>`    [${v.index}] = BSP_PRV_VECT_ENUM(EVENT_${v.event},GROUP${v
 }
 
 function halDataH(mcu){
- const irqs=irqsOf(mcu),uarts=uartsOf(mcu),includes=(irqs.length?'#include "r_icu.h"\n#include "r_external_irq_api.h"\n':'')+(uarts.length?'#include "r_sci_uart.h"\n#include "r_uart_api.h"\n':'')+(gptsOf(mcu).length?'#include "r_gpt.h"\n#include "r_timer_api.h"\n':'');
+ const irqs=irqsOf(mcu),uarts=uartsOf(mcu),includes=(irqs.length?'#include "r_icu.h"\n#include "r_external_irq_api.h"\n':'')+(uarts.length?'#include "r_sci_uart.h"\n#include "r_uart_api.h"\n':'')+(gptsOf(mcu).length?'#include "r_gpt.h"\n#include "r_timer_api.h"\n':'')+(adcOf(mcu)?'#include "r_adc.h"\n#include "r_adc_api.h"\n':'');
  const decls=irqs.map(i=>`/** External IRQ on ICU Instance. */
 extern const external_irq_instance_t ${i.name};
 /** Access the ICU instance using these structures when calling API functions directly (::p_api is not used). */
@@ -386,7 +451,7 @@ extern const uart_cfg_t ${u.name}_cfg;
 extern const sci_uart_extended_cfg_t ${u.name}_cfg_extend;
 #ifndef ${u.callback}
 void ${u.callback}(uart_callback_args_t * p_args);
-#endif`)).concat(gptsOf(mcu).map(gptDecl)).join('\n');
+#endif`)).concat(gptsOf(mcu).map(gptDecl)).concat(adcOf(mcu)?[adcDecl(adcOf(mcu))]:[]).join('\n');
  return HEADER('HAL header file')+`#ifndef HAL_DATA_H_
 #define HAL_DATA_H_
 #include <stdint.h>
@@ -478,7 +543,7 @@ const uart_instance_t ${u.name} =
     .p_ctrl        = &${u.name}_ctrl,
     .p_cfg         = &${u.name}_cfg,
     .p_api         = &g_uart_on_sci
-};`;})).concat(gptsOf(mcu).map(gptInstance)).join('\n');
+};`;})).concat(gptsOf(mcu).map(gptInstance)).concat(adcOf(mcu)?[adcInstance(adcOf(mcu))]:[]).join('\n');
  return HEADER('HAL source file')+`#include "hal_data.h"
 ${body}${body?'\n':''}void g_hal_init(void) {
 g_common_init();
@@ -672,6 +737,7 @@ export function generateRaFiles(mcu,{board}={}){
   cfg('bsp/board_cfg.h',HEADER('configuration header file')+`#ifndef BOARD_CFG_H_\n#define BOARD_CFG_H_\n#include "${board?.fspBoard?'board.h':'bsp_api.h'}"\n#endif /* BOARD_CFG_H_ */\n`),
   cfg('r_ioport_cfg.h',moduleCfg('r_ioport_cfg.h','R_IOPORT_CFG_H_',['#define IOPORT_CFG_PARAM_CHECKING_ENABLE (BSP_CFG_PARAM_CHECKING_ENABLE)'])),
   cfg('r_icu_cfg.h',moduleCfg('r_icu_cfg.h','R_ICU_CFG_H_',['#define ICU_CFG_PARAM_CHECKING_ENABLE (BSP_CFG_PARAM_CHECKING_ENABLE)'])),
+  cfg('r_adc_cfg.h',moduleCfg('r_adc_cfg.h','R_ADC_CFG_H_',['#define ADC_CFG_PARAM_CHECKING_ENABLE (BSP_CFG_PARAM_CHECKING_ENABLE)'])),
   cfg('r_gpt_cfg.h',moduleCfg('r_gpt_cfg.h','R_GPT_CFG_H_',['#define GPT_CFG_PARAM_CHECKING_ENABLE (BSP_CFG_PARAM_CHECKING_ENABLE)','#define GPT_CFG_OUTPUT_SUPPORT_ENABLE (1)','#define GPT_CFG_WRITE_PROTECT_ENABLE (0)','#define GPT_CFG_GPTCLK_BYPASS (0)'])),
   cfg('r_sci_uart_cfg.h',moduleCfg('r_sci_uart_cfg.h','R_SCI_UART_CFG_H_',['#define SCI_UART_CFG_PARAM_CHECKING_ENABLE (BSP_CFG_PARAM_CHECKING_ENABLE)','#define SCI_UART_CFG_FIFO_SUPPORT (0)','#define SCI_UART_CFG_DTC_SUPPORTED (0)','#define SCI_UART_CFG_FLOW_CONTROL_SUPPORT (0)','#define SCI_UART_CFG_RS485_SUPPORT (0)','#define SCI_UART_CFG_IRDA_SUPPORT (0)'])),
   gen('bsp_clock_cfg.h',clockCfg(c)),

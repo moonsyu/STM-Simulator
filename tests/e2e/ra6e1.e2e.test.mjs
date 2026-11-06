@@ -152,3 +152,38 @@ test('FPB-RA6E1 GPT example: Pins shows P408 as GTIOC6B with g_timer6 (1 kHz PWM
   assert.deepEqual(s.errors,[]);
  }finally{await s.close();}
 });
+
+test('FPB-RA6E1 ADC example: P000 is AN000 of g_adc0 in Pins; turning the potentiometer while running changes adc_value and LED1',{skip:!toolchain&&!process.env.CI_REQUIRE_TOOLCHAIN&&'ARM GCC / Renesas FSP not installed',timeout:240000},async()=>{
+ const s=await launch();
+ await fs.writeFile(path.join(s.profile,'native-tools.json'),JSON.stringify({armGcc:gcc,fsp,armGdb:'',cube:'',cubeF1:'',hostGcc:'',hostGdb:'',clangd:'',openocd:'',buildRoot:''}));
+ try{
+  const {win}=s;
+  await win.click('[data-activity="board"]');if(!await win.locator('#board-open').isVisible())await win.click('[data-activity="board"]');
+  await win.click('#board-open');await win.click('[data-board-id="fpb-ra6e1"]');
+  if(await win.locator('#board-change-dialog').isVisible())await win.click('#board-change-confirm');
+  await win.waitForFunction(()=>document.querySelector('#surface > .board')?.dataset.board==='fpb-ra6e1');
+  await win.click('[data-activity="examples"]');if(!await win.locator('#view-examples').isVisible())await win.click('[data-activity="examples"]');
+  await win.fill('#hal-example-search','가변저항 전압');await win.locator('#hal-example-list [data-example]').first().click();
+  await win.waitForFunction(()=>/R_ADC_ScanStart\(&g_adc0_ctrl\)/.test(document.getElementById('code').value));
+  await win.waitForSelector('#part-layer [data-part="pot"]');
+  await win.click('[data-activity="board"]');if(!await win.locator('#pinout-open').isVisible())await win.click('[data-activity="board"]');
+  await win.click('#pinout-open');await win.waitForSelector('#ra-pinout-dialog[open]');
+  await win.click('[data-ra-pin="P000"]');
+  assert.match(await win.textContent('#ra-pin-props'),/g_adc0 \(r_adc · ADC0\) · AN000[\s\S]*스캔 채널: AN000/);
+  await win.click('[data-ra-pin="P105"]');await win.selectOption('[data-ra="function"]','Analog');
+  assert.match(await win.textContent('#ra-pin-props'),/AN 채널\)이 없습니다/);
+  await win.click('#ra-pinout-close');
+  await win.keyboard.press('Control+F5');
+  await win.waitForFunction(()=>/시뮬레이터\(ARM GCC 빌드\)를 시작했습니다/.test(document.getElementById('console-output').textContent),null,{timeout:180000})
+   .catch(async error=>{throw new Error(`${error.message}\n출력: ${(await win.textContent('#console-output')).slice(-1500)}\n빌드: ${(await win.textContent('#build-errors').catch(()=>'')).slice(-800)}`);});
+  await win.waitForFunction(()=>document.getElementById('board-led-LED1')?.getAttribute('fill')==='#89a486',null,{timeout:30000});
+  await win.locator('#part-layer [data-part="pot"] .part-body').first().click({force:true});
+  await win.waitForSelector('#extra-position');
+  await win.evaluate(()=>{const el=document.getElementById('extra-position');el.value='90';el.dispatchEvent(new Event('input',{bubbles:true}));el.dispatchEvent(new Event('change',{bubbles:true}));});
+  await win.waitForFunction(()=>document.getElementById('board-led-LED1')?.getAttribute('fill')==='#64e66b',null,{timeout:30000});
+  await shot(win,'ra6e1-adc.png');
+  await win.keyboard.press('Control+F2');
+  await win.waitForFunction(()=>document.getElementById('shell').dataset.running==='false');
+  assert.deepEqual(s.errors,[]);
+ }finally{await s.close();}
+});

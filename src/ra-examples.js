@@ -163,5 +163,38 @@ void hal_entry(void)
     }
 }
 `+WARM_START});
-RA_EXAMPLES.push(UART_EXAMPLE,GPT_EXAMPLE);
+// ADC12 single scan of A0 (P000 = AN000) with a potentiometer between 3V3 and GND: LED1 lights above half scale.
+const ADC_EXAMPLE=Object.freeze({id:'ra_adc_pot',name:'가변저항 전압 읽기 (R_ADC_Open · ScanCfg · ScanStart · Read)',tags:['ADC','analog','potentiometer'],
+ mcu:()=>{const m=raDefaultMcu();m.pins.P000={function:'Analog',label:'POT'};m.peripherals={ADC0:{enabled:true,mode:'SINGLE',resolution:12}};return m;},
+ circuit:()=>({components:[{id:'pot',type:'potentiometer',name:'VR1',x:520,y:380,rotation:0,value:10000,position:50}],wires:[
+  {id:'w_gnd',from:'part:pot:p1',to:'board:J2:6',color:'#3a3a3a'},{id:'w_wiper',from:'part:pot:p2',to:'board:J6:1',color:'#f5c518'},{id:'w_vcc',from:'part:pot:p3',to:'board:J2:4',color:'#e5484d'}]}),
+ code:HEAD+`
+volatile uint16_t adc_value = 0;
+volatile uint32_t millivolts = 0;
+
+void hal_entry(void)
+{
+    adc_status_t status;
+
+    /* g_adc0: single scan of AN000 (A0, P000). */
+    R_ADC_Open(&g_adc0_ctrl, &g_adc0_cfg);
+    R_ADC_ScanCfg(&g_adc0_ctrl, &g_adc0_channel_cfg);
+
+    while (1)
+    {
+        R_ADC_ScanStart(&g_adc0_ctrl);
+        do
+        {
+            R_ADC_StatusGet(&g_adc0_ctrl, &status);
+        } while (ADC_STATE_SCAN_IN_PROGRESS == status.state);
+        R_ADC_Read(&g_adc0_ctrl, ADC_CHANNEL_0, (uint16_t *) &adc_value);
+        millivolts = (uint32_t) adc_value * 3300U / 4095U;
+
+        /* LED1 on above half scale. */
+        R_IOPORT_PinWrite(&g_ioport_ctrl, LED1, (adc_value > 2048U) ? BSP_IO_LEVEL_HIGH : BSP_IO_LEVEL_LOW);
+        R_BSP_SoftwareDelay(20, BSP_DELAY_UNITS_MILLISECONDS);
+    }
+}
+`+WARM_START});
+RA_EXAMPLES.push(UART_EXAMPLE,GPT_EXAMPLE,ADC_EXAMPLE);
 Object.freeze(RA_EXAMPLES);
