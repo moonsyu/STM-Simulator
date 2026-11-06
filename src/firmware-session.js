@@ -29,6 +29,8 @@ const STATIC_TYPES = new Set(['resistor', 'led', 'button', 'potentiometer', 'rgb
 const WALL_BUDGET_MS = 28;
 const VECTOR_TABLE_BYTES = { STM32F446RE: 452, STM32F103RB: 268 }, BOARD_OF = { STM32F446RE: 'NUCLEO-F446RE', STM32F103RB: 'NUCLEO-F103RB' };
 const basename = f => String(f || '').split(/[\\/]/).pop();
+// An FSP project's main source is the editor's main.c, built as src/hal_entry.c (ra_gen/main.c is FSP's own).
+const RA_MAIN = 'hal_entry.c';
 const hex = v => '0x' + (v >>> 0).toString(16).toUpperCase().padStart(8, '0');
 const reverse8 = b => { let r = 0; for (let i = 0; i < 8; i++) r |= ((b >> i) & 1) << (7 - i); return r; };
 
@@ -445,6 +447,8 @@ export class FirmwareSession {
     this.runtime.debug.mode = 'continue';
     this.pause();
   }
+  /** The editor's name of a source file in the line table (an FSP project's src/hal_entry.c is main.c). */
+  sourceName(file) { const name = basename(file); return this.ra && name === RA_MAIN && /[\\/]src[\\/]hal_entry\.c$/.test(file) ? 'main.c' : name; }
   syncBreakpoints() {
     const set = this.runtime.debug.breakpoints, keys = [...(set || [])].map(b => typeof b === 'string' ? b : `${b.file}:${b.line}`), sig = keys.join('|');
     if (sig === this.bpSignature) return;
@@ -454,20 +458,20 @@ export class FirmwareSession {
     const lt = this.elf.lineTable;
     for (const key of keys) {
       const i = key.lastIndexOf(':'), file = key.slice(0, i), line = Number(key.slice(i + 1));
-      const hit = lt.resolveBreakpoint(file, line, 20);
+      const hit = lt.resolveBreakpoint(this.ra && file === 'main.c' ? 'src/' + RA_MAIN : file, line, 20);
       if (hit) for (const a of hit.addrs.slice(0, 1)) { this.machine.breakpoints.add(a); this.bpAddrs.push(a); }
     }
   }
   updateLocation() {
     const rt = this.runtime, pc = this.machine.pc, line = this.elf.lineTable.addrToLine(pc);
-    rt.location = line ? { file: basename(line.file), line: line.line } : null;
+    rt.location = line ? { file: this.sourceName(line.file), line: line.line } : null;
     rt.frames = this.callStack();
     rt.depth = rt.frames.length;
   }
   // Frame-pointer-less unwinding: current function, LR, then return addresses found on the stack.
   callStack() {
     const m = this.machine, elf = this.elf, lt = elf.lineTable, frames = [];
-    const push = (pc) => { const f = elf.functionAt(pc), l = lt.addrToLine(pc); if (!f) return false; if (frames.length && frames.at(-1).name === f.name && frames.at(-1).pc === pc) return false; frames.push({ name: f.name, pc, loc: l ? { file: basename(l.file), line: l.line } : null }); return true; };
+    const push = (pc) => { const f = elf.functionAt(pc), l = lt.addrToLine(pc); if (!f) return false; if (frames.length && frames.at(-1).name === f.name && frames.at(-1).pc === pc) return false; frames.push({ name: f.name, pc, loc: l ? { file: this.sourceName(l.file), line: l.line } : null }); return true; };
     const peek = (a, n) => m.bus.peek(a >>> 0, n, { allowSideEffects: false });
     // A stack word is a return address only if the instruction before it is a call to the frame found so far:
     // BL is decoded and must target that function; BLX <reg> (function pointers) cannot be checked.

@@ -117,3 +117,15 @@ test('ra_iic_memory: IIC0 (P400 SCL / P401 SDA, 100 kHz) writes the I²C memory 
  assert.equal(session.gpio.P400.openDrain,true);
  assert.ok(log.trace.some(t=>/IIC0 · 0x50 WRITE 5 B · ACK/.test(t.message)));
 });
+
+test('FSP debugging: a breakpoint on main.c (built as src/hal_entry.c) stops there and the editor location is main.c',()=>{
+ const code=JSON.parse(globalThis.process.getBuiltinModule('node:fs').readFileSync(new URL('../fixtures/firmware-ra6e1/ra_blink.json',import.meta.url),'utf8')).code;
+ const line=code.split('\n').findIndex(l=>l.includes('R_BSP_SoftwareDelay(500'))+1;
+ const {session}=open(fixture('ra_blink'),{debug:{entry:false,breakpoints:[`main.c:${line}`]}});
+ runUntil(session,100);
+ const rt=session.runtime;
+ assert.equal(rt.debug.paused,true,'stopped at the breakpoint');
+ assert.deepEqual(rt.location,{file:'main.c',line});
+ assert.equal(rt.frames[0].name,'hal_entry');
+ assert.equal(rt.frames[0].loc.file,'main.c');
+});

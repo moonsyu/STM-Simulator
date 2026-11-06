@@ -415,6 +415,10 @@ function buildLineTable(rows, files) {
   const entries = []; // 줄 진입 지점(중단점 후보)
   for (const seq of bySeq.values()) {
     seq.sort((a, b) => a.address - b.address || (a.end ? 1 : 0) - (b.end ? 1 : 0));
+    // A sequence of a function removed by --gc-sections is relocated to address 0 by ld. On the RA6E1 real code starts
+    // just after the vector table at 0, so such sequences would shadow it (STM32 code starts at 0x0800_0000); no code
+    // the app builds is linked at 0 (the vector table is data there).
+    if (seq[0].address === 0) continue;
     let prevLine = -1, prevFile = null;
     for (let i = 0; i < seq.length; i++) {
       const row = seq[i];
