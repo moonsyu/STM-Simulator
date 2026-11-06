@@ -4,6 +4,7 @@ import {PINS,boardPin} from './pins.js';
 import {terminalKeys,terminalLabel,PART_DEFS} from './components.js';
 import {configProblems} from './mcu-config.js';
 import {cubeIdeHandlerDuplicates,duplicateMessage} from './irq-duplicates.js';
+import {overVoltagePins} from './pin-tolerance.js';
 
 export function circuitDiagnostics(project,result=null,pressed={}){
   const measured=result||solveCircuit(project,{},pressed),uf=measured.uf||topology(project,pressed),issues=[],add=(id,message,target,severity='warning')=>issues.push({id,message,target,severity});
@@ -25,6 +26,8 @@ export function circuitDiagnostics(project,result=null,pressed={}){
   const busPin=(p,label)=>'part:'+p.id+':'+terminalKeys(p)[PART_DEFS[p.type].labels.indexOf(label)];
   for(let i=0;i<i2c.length;i++)for(let j=i+1;j<i2c.length;j++){const a=i2c[i],b=i2c[j];if(a.address===b.address&&uf.find(busPin(a,'SDA'))===uf.find(busPin(b,'SDA'))&&uf.find(busPin(a,'SCL'))===uf.find(busPin(b,'SCL')))add('address:'+a.id+':'+b.id,`${a.name} / ${b.name}: 같은 I²C 버스에서 주소 0x${a.address.toString(16)}가 중복됩니다. 부품 속성에서 주소를 변경하세요.`,{type:'part',id:b.id},'error');}
   if(project.mcu&&!isRaFamily(project.mcu.family))for(const [i,message]of configProblems(project.mcu).entries()){const pin=/\bP[ABCDH]\d+\b/.exec(message)?.[0];add('config:'+i,message,pin?{type:'endpoint',id:boardPin(pin)}:null,'error');}
+  // A header pin above its rating (5 V on a TT pin, more than 5.5 V on an FT pin, an FT pin in analog mode above 3.6 V).
+  if(!measured.fault)for(const o of overVoltagePins(project,PINS,measured.voltage))add('overvoltage:'+o.pin,o.message,{type:'endpoint',id:o.endpoint},'error');
   // A handler main.c defines that CubeIDE also generates in stm32xxxx_it.c: fine here, a link error in CubeIDE.
   for(const d of cubeIdeHandlerDuplicates(project))add('irq-duplicate:'+d.name,duplicateMessage(d),{type:'code',file:d.file,line:d.line});
   for(const [i,detail]of (measured.diagnostics||[]).entries())add('runtime:'+i,detail.message,detail.target,'error');

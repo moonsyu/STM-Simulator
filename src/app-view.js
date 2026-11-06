@@ -1,6 +1,6 @@
 // Drawing the circuit and the panels around it: refresh, board title, live readouts, connections, issues and sound.
 import {viewUpdate} from './app-canvas.js';
-import {running,inspectTab} from './app-core.js';
+import {running,inspectTab,log} from './app-core.js';
 import {filterExamples} from './app-examples.js';
 import {updateRunScope} from './app-run.js';
 import {state} from './app-state.js';
@@ -114,7 +114,10 @@ export function focusIssue(target){
 }
 export function renderIssues(force=false){
  if(!force&&performance.now()-state.issuesStamp<250)return;state.issuesStamp=performance.now();
- const issues=circuitDiagnostics(state.project,state.result,state.pressed),key=JSON.stringify(issues);if(key===state.issuesKey)return;state.issuesKey=key;
+ const issues=circuitDiagnostics(state.project,state.result,state.pressed),key=JSON.stringify(issues);
+ // While running, a pin over its voltage rating is also said once per run in the output tab.
+ if(running())for(const issue of issues)if(issue.id.startsWith('overvoltage:')&&!(state.overvoltageLogged??=new Set()).has(issue.id)){state.overvoltageLogged.add(issue.id);log('핀 과전압: '+issue.message,'error');}
+ if(key===state.issuesKey)return;state.issuesKey=key;
  $('circuit-issues').innerHTML=issues.length?issues.map((issue,i)=>`<button class="circuit-issue ${issue.severity}" data-issue="${i}" ${!issue.target&&running()?'disabled':''}><span>${issue.severity==='error'?'!':'·'}</span>${esc(issue.message)}<b>위치 보기 ↗</b></button>`).join(''):'<p class="issues-clear">현재 연결 검사에서 발견한 문제가 없습니다. 실행 중 전압·전류 검사도 함께 표시됩니다.</p>';
  $('circuit-issues').querySelectorAll('[data-issue]').forEach(b=>b.onclick=()=>focusIssue(issues[Number(b.dataset.issue)].target));
  document.querySelector('[data-monitor="issues"]').textContent='문제'+(issues.length?` (${issues.length})`:'');
