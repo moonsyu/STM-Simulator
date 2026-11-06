@@ -24,6 +24,13 @@ export const dmaRequestsOf=family=>familyProfile(family).dmaRequests??DMA_REQUES
 export const MODES=['Reset','GPIO_Input','GPIO_Output','GPIO_EXTI','Analog','Reserved'];
 export const irqForPin=pin=>{const n=Number(pin.slice(2));return n<5?`EXTI${n}_IRQn`:n<10?'EXTI9_5_IRQn':'EXTI15_10_IRQn';};
 export function pinFunctions(pin,family=DEFAULT_FAMILY){return [...MODES,...Object.entries(routesOf(family)).flatMap(([id,routes])=>Object.entries(routes).filter(([,pins])=>pins.includes(pin)).map(([signal])=>`${id}_${signal}`)),...Object.entries(usartCkRoutesOf(family)).filter(([,pins])=>pins.includes(pin)).map(([id])=>id+'_CK')];}
+// ADC1 Rank 1 Sampling Time in ADC clock cycles (CubeMX ADC_SAMPLETIME_*). The app has always generated the longest one, so
+// that stays the default when none is stored; CubeMX's own default is the shortest (3 / 1.5 cycles).
+export const ADC_SAMPLING={STM32F446RE:[3,15,28,56,84,112,144,480],STM32F103RB:[1.5,7.5,13.5,28.5,41.5,55.5,71.5,239.5]};
+export const adcSamplingDefault=family=>ADC_SAMPLING[family].at(-1);
+export const adcSamplingOf=config=>config.peripherals?.ADC1?.samplingTime??adcSamplingDefault(config.family);
+/** HAL macro of a sampling time: 480 → ADC_SAMPLETIME_480CYCLES, 239.5 → ADC_SAMPLETIME_239CYCLES_5, 1.5 → ADC_SAMPLETIME_1CYCLE_5. */
+export const adcSamplingMacro=cycles=>Number.isInteger(cycles)?`ADC_SAMPLETIME_${cycles}CYCLES`:`ADC_SAMPLETIME_${Math.floor(cycles)}CYCLE${cycles<2?'':'S'}_5`;
 export function defaultMcu(family=DEFAULT_FAMILY){const f=familyProfile(family);return {family:f.id,pins:{},peripherals:{},nvic:{},timerClockHz:f.clock.defaultHz};}
 /** UART Parameter Settings (CubeMX Asynchronous mode): the first value of each list is CubeMX's default. */
 /** SPI Parameter Settings (CubeMX Full-Duplex Master): clock polarity/phase (SPI mode 0-3), data size, first bit. */
@@ -68,6 +75,7 @@ export function validateMcu(value){
      if(Object.keys(channels).length)q.channels=channels;
     }
     // CubeMX ADC Settings › Continuous Conversion Mode (off = single conversion per HAL_ADC_Start, as CubeMX's default).
+    if(id==='ADC1'&&p.samplingTime!==undefined){if(!ADC_SAMPLING[f.id].includes(p.samplingTime))throw new Error(`ADC1 Sampling Time: ${ADC_SAMPLING[f.id].join(' / ')} Cycles 중에서 고르세요.`);if(p.samplingTime!==adcSamplingDefault(f.id))q.samplingTime=p.samplingTime;}
     if(id==='ADC1'&&p.continuous!==undefined){if(typeof p.continuous!=='boolean')throw new Error('ADC1: Continuous Conversion Mode를 확인하세요.');if(p.continuous)q.continuous=true;}
     // CubeMX Parameter Settings of an asynchronous UART (only the values that differ from 8N1 / TX_RX / 16 are kept).
     if(isSerial(id)){
@@ -188,6 +196,8 @@ export function importIoc(text){
   }
   if(config.peripherals.I2C1){const c=config.peripherals.I2C1;c.clock=number(values['I2C1.ClockSpeed'],100000);const own=Number(values['I2C1.OwnAddress']);if(Number.isInteger(own)&&own>0)c.ownAddress=(own>>1)&0x7f; /* the value CubeMX writes to OwnAddress1 (address << 1) */if(/16_9/.test(values['I2C1.DutyCycle']||'')&&c.clock>100000)c.dutyCycle='16_9';if(/NOSTRETCH_ENABLE/.test(values['I2C1.NoStretchMode']||''))c.noStretch=true;}
   if(config.peripherals.ADC1&&values['ADC1.ContinuousConvMode']==='ENABLE')config.peripherals.ADC1.continuous=true;
+  // Rank 1 Sampling Time (ADC1.SamplingTime-0\#ChannelRegularConversion); a .ioc without it has CubeMX's default, the shortest.
+  if(config.peripherals.ADC1){const key=Object.keys(values).find(k=>/^ADC1\.SamplingTime-0\\?#ChannelRegularConversion$/.test(k)),m=/ADC_SAMPLETIME_(\d+)CYCLES?(_5)?/.exec(values[key]||''),cycles=m?Number(m[1])+(m[2]?0.5:0):ADC_SAMPLING[family][0];if(ADC_SAMPLING[family].includes(cycles)&&cycles!==adcSamplingDefault(family))config.peripherals.ADC1.samplingTime=cycles;}
   // SPI1 speed: CubeMX stores the computed rate ("5.25 MBits/s") next to the prescaler.
   if(config.peripherals.SPI1){const s=config.peripherals.SPI1;if(/HIGH/.test(values['SPI1.CLKPolarity']||''))s.cpol='HIGH';if(/2EDGE/.test(values['SPI1.CLKPhase']||''))s.cpha='2EDGE';if(/16BIT/.test(values['SPI1.DataSize']||''))s.dataSize=16;if(/LSB/.test(values['SPI1.FirstBit']||''))s.firstBit='LSB';}
   if(config.peripherals.SPI1){const m=/^([\d.]+)\s*([KM]?)Bits\/s/i.exec(values['SPI1.CalculateBaudRate']||'');if(m)config.peripherals.SPI1.clock=Math.min(20000000,Math.max(1000,Math.round(Number(m[1])*({K:1e3,M:1e6}[m[2].toUpperCase()]??1))));}

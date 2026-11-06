@@ -6,6 +6,7 @@ import {dmaHandle,irqHandlers,handlerText} from './irq-handlers.js';
 import {nvicGroup,tickPriority,NVIC_GROUP_DEFAULT,TICK_PRIORITY_DEFAULT} from './nvic-config.js';
 import {gpioMode,hasSpeed,pinSpeed} from './gpio-config.js';
 import {clockFrequencies,flashLatency,needsOverDrive} from './clock-tree.js';
+import {adcSamplingMacro,adcSamplingOf} from './mcu-config.js';
 // SystemClock_Config from the project's Clock Configuration, as CubeMX writes it (HSE = ST-LINK MCO in BYPASS mode).
 function treeClockLines(config,f1){
   const t=config.clock,q=clockFrequencies(config.family,t),pll=t.sysclkSource==='PLLCLK';
@@ -145,7 +146,7 @@ export function generateMain(config,{minimal=false,legacyGpio=false}={}){
       lines.push(`  HAL_TIM_Encoder_Init(&${name}, &encoder);`);
     }else if(id==='SDIO')lines.push('  /* HAL_SD_Init(&hsd) is called by FatFs BSP_SD_Init() or user code. */');
     else lines.push(`  HAL_${type}${isTimer(id)?p.mode==='pwm'?'_PWM':p.mode==='capture'?'_IC':'_Base':''}_Init(&${name});`);
-    if(id==='ADC1'){const channel=Object.values(config.pins).find(p=>p.function.startsWith('ADC1_IN')).function.slice(7);lines.push('  ADC_ChannelConfTypeDef sConfig = {0};',`  sConfig.Channel = ADC_CHANNEL_${channel};`,`  sConfig.Rank = ${f1?'ADC_REGULAR_RANK_1':1};`,`  sConfig.SamplingTime = ADC_SAMPLETIME_${f1?'239CYCLES_5':'480CYCLES'};`,'  HAL_ADC_ConfigChannel(&hadc1, &sConfig);',...(f1?['  HAL_ADCEx_Calibration_Start(&hadc1);']:[]));}
+    if(id==='ADC1'){const channel=Object.values(config.pins).find(p=>p.function.startsWith('ADC1_IN')).function.slice(7);lines.push('  ADC_ChannelConfTypeDef sConfig = {0};',`  sConfig.Channel = ADC_CHANNEL_${channel};`,`  sConfig.Rank = ${f1?'ADC_REGULAR_RANK_1':1};`,`  sConfig.SamplingTime = ${adcSamplingMacro(adcSamplingOf(config))};`,'  HAL_ADC_ConfigChannel(&hadc1, &sConfig);',...(f1?['  HAL_ADCEx_Calibration_Start(&hadc1);']:[]));}
     if(isTimer(id)&&['pwm','capture'].includes(p.mode)){
       lines.push(`  ${p.mode==='pwm'?'TIM_OC_InitTypeDef':'TIM_IC_InitTypeDef'} channel = {0};`);
       if(p.mode==='pwm')lines.push('  channel.OCMode = TIM_OCMODE_PWM1;','  channel.OCPolarity = TIM_OCPOLARITY_HIGH;',`  channel.Pulse = ${p.pulse};`,'  channel.OCFastMode = TIM_OCFAST_DISABLE;');
