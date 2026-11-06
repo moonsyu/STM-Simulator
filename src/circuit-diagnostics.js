@@ -3,6 +3,7 @@ import {isRaFamily} from './ra-config.js';
 import {PINS,boardPin} from './pins.js';
 import {terminalKeys,terminalLabel,PART_DEFS} from './components.js';
 import {configProblems} from './mcu-config.js';
+import {cubeIdeHandlerDuplicates,duplicateMessage} from './irq-duplicates.js';
 
 export function circuitDiagnostics(project,result=null,pressed={}){
   const measured=result||solveCircuit(project,{},pressed),uf=measured.uf||topology(project,pressed),issues=[],add=(id,message,target,severity='warning')=>issues.push({id,message,target,severity});
@@ -24,6 +25,8 @@ export function circuitDiagnostics(project,result=null,pressed={}){
   const busPin=(p,label)=>'part:'+p.id+':'+terminalKeys(p)[PART_DEFS[p.type].labels.indexOf(label)];
   for(let i=0;i<i2c.length;i++)for(let j=i+1;j<i2c.length;j++){const a=i2c[i],b=i2c[j];if(a.address===b.address&&uf.find(busPin(a,'SDA'))===uf.find(busPin(b,'SDA'))&&uf.find(busPin(a,'SCL'))===uf.find(busPin(b,'SCL')))add('address:'+a.id+':'+b.id,`${a.name} / ${b.name}: 같은 I²C 버스에서 주소 0x${a.address.toString(16)}가 중복됩니다. 부품 속성에서 주소를 변경하세요.`,{type:'part',id:b.id},'error');}
   if(project.mcu&&!isRaFamily(project.mcu.family))for(const [i,message]of configProblems(project.mcu).entries()){const pin=/\bP[ABCDH]\d+\b/.exec(message)?.[0];add('config:'+i,message,pin?{type:'endpoint',id:boardPin(pin)}:null,'error');}
+  // A handler main.c defines that CubeIDE also generates in stm32xxxx_it.c: fine here, a link error in CubeIDE.
+  for(const d of cubeIdeHandlerDuplicates(project))add('irq-duplicate:'+d.name,duplicateMessage(d),{type:'code',file:d.file,line:d.line});
   for(const [i,detail]of (measured.diagnostics||[]).entries())add('runtime:'+i,detail.message,detail.target,'error');
   for(const [i,message]of (measured.warnings||[]).entries()){
     if(message.startsWith('전원 단락')&&shorts.size||(measured.diagnostics||[]).some(d=>d.message===message))continue;

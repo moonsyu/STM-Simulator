@@ -4,7 +4,8 @@ import {running,inspectTab} from './app-core.js';
 import {filterExamples} from './app-examples.js';
 import {updateRunScope} from './app-run.js';
 import {state} from './app-state.js';
-import {svg,updateBoardPicker,editorSearch,CARRY_HINT,inspector,monitor,pinout} from './app.js';
+import {svg,updateBoardPicker,editorSearch,CARRY_HINT,inspector,monitor,pinout,layout} from './app.js';
+import {syncEditor} from './app-editor.js';
 import {projectBoard} from './boards.js';
 import {BuzzerAudio} from './buzzer-audio.js';
 import {circuitDiagnostics} from './circuit-diagnostics.js';
@@ -107,6 +108,7 @@ export function renderConnections(){
 }
 export function focusIssue(target){
  if(!target){pinout.open();return;}
+ if(target.type==='code'){state.sourceFile=target.file;syncEditor();layout.reveal('code');state.ide?.editor?.goto?.(target.line);return;}
  state.pending=null;state.mode='select';state.selection=target;const p=target.type==='endpoint'?endpointInfo(target.id,state.project.components,state.project.surfaces):state.project.components.find(p=>p.id===target.id);
  if(p){state.view={x:p.x-310,y:p.y-202,w:620,h:620*730/1120};viewUpdate();}inspectTab();refresh();svg.focus({preventScroll:true});
 }
