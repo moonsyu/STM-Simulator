@@ -2,6 +2,14 @@
 
 작업할 때마다 날짜순으로 맨 위에 추가합니다. 무엇을 했는지, 왜 했는지, 어떻게 검증했는지, 커밋·릴리스와 남은 사항을 적습니다. 버전별 구조 설명은 [HANDOFF.md](../HANDOFF.md), 검증 수치는 [VERIFICATION.md](VERIFICATION.md)에 있습니다.
 
+## 2026-11-06 · 1.24.0 TIM PWM 채널별 설정 · I2C1 Parameter Settings (기능 목록 3번)
+
+- 요청: 이어서 진행 — CubeMX 차이 목록(TIM, I2C 줄).
+- 한 것: 4f7a8d0(두 기능이 같은 파일의 같은 줄을 고쳐 한 커밋으로 묶음). TIM PWM 채널별 Pulse·CH Polarity·PWM mode, I2C1 Primary Address·Fast Mode Duty Cycle·No Stretch. E2E 파일 이름을 peripheral-params로 바꿨다.
+- 맞춘 것: 해석기에 `TIM_OCPOLARITY_LOW`가 없어 "정의되지 않은 이름"이 먼저 나옴 → 상수 추가로 지원 범위 안내가 나오게. PWM 예제가 PWM 파형 모드를 켜서 핀에 평균 듀티가 없음 → 시험에서 끔. F103RB의 TIM2 CH2는 CH1과 같은 리맵 묶음(PA15 → PB3). 한 줄짜리 코드에 // 주석을 넣어 뒤가 주석이 됨 → /* */.
+- 검증: 단위 935개 중 934개 통과·1개 건너뜀, 툴체인 TIM 두 보드(CH1 25 %, CH2 PWM2·Low 75 %), E2E peripheral-params 4개 통과.
+- 남은 사항: TIM Output Compare·Counter mode, 클록 트리, TIM6/7·RTC·DAC, J-Link 실물 확인.
+
 ## 2026-11-06 · 1.23.0 FSP 원본 색인(5단계) · J-Link(6단계 앱 쪽) · USART/SPI Parameter Settings (기능 목록 2·3번)
 
 - 요청: 이어서 진행 — 기능 목록의 미구현 기능.

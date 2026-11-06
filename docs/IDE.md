@@ -61,6 +61,8 @@ White/Dark는 VS Code Modern 계열의 중성 표면과 파란 강조색을 사�
 
 - **USART(비동기) Parameter Settings**: Word Length(8/9비트, 패리티 포함), Parity(None/Even/Odd), Stop Bits(1/2), Data Direction(송수신/송신만/수신만), Over Sampling(16/8 — F103RB는 16만). 생성 코드의 `huartN.Init`과 .ioc 가져오기에 반영된다. ARM GCC 시뮬레이터(기본)에서 그대로 동작하고, 내장 해석기는 8N1만 지원한다. 직렬 모니터의 ST-LINK VCP는 같은 형식으로 받는다(실물 PC 터미널을 같은 형식으로 맞춘 것과 같다). 외부 UART 부품은 8N1이다.
 - **SPI1 Parameter Settings**: Clock Polarity(CPOL)·Clock Phase(CPHA)로 SPI mode 0~3, Data Size 8/16비트, First Bit(MSB/LSB). 카드에 SPI mode 번호가 보인다. 로직 분석기의 SPI 해석도 이 설정을 따른다.
+- **TIM PWM 채널별 설정(1.24.0)**: PWM 모드 타이머 카드에 채널 핀마다 PWM Generation CHn이 생긴다. Pulse, Mode(PWM mode 1/2), CH Polarity(High/Low)를 채널마다 정하고, 출력이 High인 비율을 보여 준다. 생성 코드는 채널마다 설정을 다시 쓴 뒤 `HAL_TIM_PWM_ConfigChannel`을 부른다. 내장 해석기는 PWM mode 1·High만 지원한다.
+- **I2C1 Parameter Settings(1.24.0)**: Primary Address(슬레이브로 쓸 때의 7비트 주소, 코드에는 `OwnAddress1 = 주소 << 1`), Fast Mode Duty Cycle(100 kHz보다 빠를 때 2 또는 16/9), Clock No Stretch Mode.
 
 ## 코드 초기화
 

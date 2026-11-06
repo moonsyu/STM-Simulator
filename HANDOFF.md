@@ -1,6 +1,12 @@
 # STM Simulator — 개발 인계
 
-현재 버전: **1.23.0**. 정리일: **2026-11-06**. NUCLEO-F446RE·NUCLEO-F103RB 또는 Renesas FPB-RA6E1(1.20.0, FSP·에뮬레이터 전용)과 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+현재 버전: **1.24.0**. 정리일: **2026-11-06**. NUCLEO-F446RE·NUCLEO-F103RB 또는 Renesas FPB-RA6E1(1.20.0, FSP·에뮬레이터 전용)과 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+
+## 1.24.0 TIM PWM 채널별 설정 · I2C1 Parameter Settings
+
+- TIM(`mcu-config.js` `peripherals.TIMx.channels`: `CH1`~`CH4`의 pulse·polarity HIGH/LOW·ocMode PWM1/PWM2, `TIM_CHANNEL_PARAMS`, 타이머 Pulse·High·PWM1과 같은 값은 저장하지 않음): 채널 설정이 있으면 `MX_TIMx_Init`이 ConfigChannel마다 `channel.OCMode/OCPolarity/Pulse`를 다시 쓴다(없으면 예전처럼 Pulse 하나). .ioc의 `Pulse-PWM GenerationN CHN`·`OCPolarity_N`·`OCMode_PWM-PWM GenerationN CHN`. Pinout 타이머 카드에 채널별 Pulse·Mode·CH Polarity와 출력 High 비율. 내장 해석기는 PWM1·High만(`TIM_OCMODE_PWM2`·`TIM_OCPOLARITY_LOW` 상수는 추가해 안내 메시지가 나온다).
+- I2C1(`ownAddress` 7비트 → `OwnAddress1 = 주소 << 1`, `dutyCycle` '16_9'은 100 kHz 초과에서만, `noStretch`): 생성 코드·.ioc(`I2C1.OwnAddress`는 OwnAddress1 값으로 보고 1비트 내림)·Pinout 카드. 해석기 상수 `I2C_DUTYCYCLE_16_9`·`I2C_NOSTRETCH_ENABLE`.
+- 시험: `tests/unit/{tim-channels,i2c-params}.test.js`(+ `helpers/tim-channels.js`), `tests/toolchain/tim-channels.test.mjs`(두 보드 CH1 25 %·CH2 PWM2·Low 75 %, CI firmware 단계), `tests/e2e/peripheral-params.e2e.test.mjs`(USART·SPI·TIM·I2C Pinout → main.c; 이전 이름 uart-params).
 
 ## 1.23.0 FSP 원본 색인 · J-Link 실물 보드 · USART/SPI Parameter Settings
 
