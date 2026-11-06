@@ -33,7 +33,7 @@ export class CatalogPeripherals {
  }
  call(name,args,r){
   const h=this.hal,[ptr,a,b,c]=args,get=(o,key)=>h.field(o,key);
-  if(name==='HAL_RCC_GetPCLK1Freq')return h.config.timerClockHz>42000000?h.config.timerClockHz/2:h.config.timerClockHz;
+  if(name==='HAL_RCC_GetPCLK1Freq')return h.clocks?Math.round(h.clocks.pclk1):h.config.timerClockHz>42000000?h.config.timerClockHz/2:h.config.timerClockHz;
   if(['__HAL_RCC_CAN1_CLK_ENABLE','__HAL_RCC_SPI2_CLK_ENABLE'].includes(name))return 0;
   if(name==='HAL_RCCEx_PeriphCLKConfig'){const cfg=r.get(r.pointerCell(ptr));this.audioClock=get(cfg,'PeriphClockSelection')===1&&get(get(cfg,'PLLI2S'),'PLLI2SN')===192&&get(get(cfg,'PLLI2S'),'PLLI2SR')===2&&get(cfg,'I2sApb1ClockSelection')===0;return this.audioClock?0:1;}
   if(name==='HAL_RCC_MCOConfig'){if(ptr!==0||a!==0||b!==0)throw new Error('MCO: PA8의 HSI 16 MHz 출력을 지원합니다.');h.buses.clocks??=new Map();h.buses.clocks.set('PA8',16000000);return 0;}

@@ -24,7 +24,8 @@ export class HalTimers {
   }
   get(ptr,r){const {id}=this.hal.requireHandle(ptr,r,'TIM'),s=this.states.get(id);if(!s)throw new Error(id+': 타이머 초기화가 필요합니다.');return s;}
   period(s){return this.hal.field(s.init,'Period')+1;}
-  hz(s){return this.hal.config.timerClockHz/(this.hal.field(s.init,'Prescaler')+1);}
+  // With a Clock Configuration, TIM1/8/9/10/11 count on the APB2 timer clock and the others on APB1's.
+  hz(s){const c=this.hal.clocks,clock=c?(/^TIM(1|8|9|10|11)$/.test(s.id)?c.tim2:c.tim1):this.hal.config.timerClockHz;return clock/(this.hal.field(s.init,'Prescaler')+1);}
   counter(s,us){if(this.period(s)===1)return s.value;return Math.floor(wrap(s.value+(s.active&&s.kind!=='Encoder'?(us-s.at)*this.hz(s)/1e6:0),this.period(s)));}
   freeze(s,us){s.value=this.counter(s,us);s.at=us;}
   syncActive(s,r){this.freeze(s,r.microTime);s.active=s.base||s.baseIT||s.encoderActive||[...s.channels.values()].some(c=>c.active);}

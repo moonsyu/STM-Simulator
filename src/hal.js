@@ -11,6 +11,7 @@ import {HalUsart,USART_CONSTANTS} from './hal-usart.js';
 import {HalDcmi,DCMI_CONSTANTS} from './hal-dcmi.js';
 import {HalStorage,STORAGE_CONSTANTS} from './hal-storage.js';
 import {familyProfile,remapFor,irqNamesOf} from './mcu-family.js';
+import {clockFrequencies} from './clock-tree.js';
 
 export const HAL_CONSTANTS={...CATALOG_HAL_CONSTANTS,HAL_OK:0,HAL_ERROR:1,HAL_BUSY:2,HAL_TIMEOUT:3,HAL_MAX_DELAY:4294967295,
   GPIO_PIN_RESET:0,GPIO_PIN_SET:1,GPIO_MODE_INPUT:0,GPIO_MODE_OUTPUT_PP:1,GPIO_MODE_OUTPUT_OD:17,GPIO_MODE_AF_PP:2,GPIO_MODE_AF_OD:18,GPIO_MODE_ANALOG:3,
@@ -61,7 +62,7 @@ const int=(value,min,max,label)=>{if(!Number.isInteger(value)||value<min||value>
 const PINOUT_IRQS=new Set(['EXTI0_IRQn','EXTI1_IRQn','EXTI2_IRQn','EXTI3_IRQn','EXTI4_IRQn','EXTI9_5_IRQn','EXTI15_10_IRQn',...SERIAL_IDS.map(id=>id+'_IRQn'),...TIMER_IDS.map(id=>id+'_IRQn')]);
 const isIterator=v=>v&&typeof v.next==='function'&&typeof v[Symbol.iterator]==='function';
 export class HalAdapter {
-  constructor(config,buses,{session}={}){this.config=validateMcu(config);this.family=familyProfile(this.config.family);this.f1=this.family.pinMux==='remap';this.remaps=new Set();this.afio=false;this.adcIrq=this.f1?'ADC1_2_IRQn':'ADC_IRQn';this.slave={i2cRx:null,i2cTx:null,spiJob:null,i2cOn:false,i2cHeld:[],spiHeld:[]};const errors=configProblems(this.config);if(errors.length)throw new Error(errors.join('\n'));this.buses=buses;this.nvic=new Map();this.pending=[];this.extiPending=0;this.serials=new Map();this.handles=new Map();this.timerModel=new HalTimers(this);this.adc=new Map();this.latches=new Map();this.priorities=new Map();this.initializedGpio=new Set();this.catalog=new CatalogPeripherals(this);this.nvicModel=new Nvic(this);this.subPriorities=new Map();this.noticeIrq=new Set();this.session=session;this.dma=new HalDma(this);this.usart=new HalUsart(this);this.camera=new HalDcmi(this);this.storage=new HalStorage(this);this.extensions=[this.dma,this.usart,this.camera,this.storage];}
+  constructor(config,buses,{session}={}){this.config=validateMcu(config);/* Clock Configuration: bus clocks from the tree (null: the single APB1 timer clock). */this.clocks=this.config.clock?clockFrequencies(this.config.family,this.config.clock):null;this.family=familyProfile(this.config.family);this.f1=this.family.pinMux==='remap';this.remaps=new Set();this.afio=false;this.adcIrq=this.f1?'ADC1_2_IRQn':'ADC_IRQn';this.slave={i2cRx:null,i2cTx:null,spiJob:null,i2cOn:false,i2cHeld:[],spiHeld:[]};const errors=configProblems(this.config);if(errors.length)throw new Error(errors.join('\n'));this.buses=buses;this.nvic=new Map();this.pending=[];this.extiPending=0;this.serials=new Map();this.handles=new Map();this.timerModel=new HalTimers(this);this.adc=new Map();this.latches=new Map();this.priorities=new Map();this.initializedGpio=new Set();this.catalog=new CatalogPeripherals(this);this.nvicModel=new Nvic(this);this.subPriorities=new Map();this.noticeIrq=new Set();this.session=session;this.dma=new HalDma(this);this.usart=new HalUsart(this);this.camera=new HalDcmi(this);this.storage=new HalStorage(this);this.extensions=[this.dma,this.usart,this.camera,this.storage];}
   get active(){return this.nvicModel.active;}
   uart(id){
     if(!isSerial(id))throw new Error(`지원하지 않는 UART 인스턴스: ${id}`);
@@ -132,7 +133,7 @@ export class HalAdapter {
   }
   // ADC conversion time: (sampling + 12) ADC clocks, ADCCLK = PCLK2 / prescaler (PCLK2 = configured clock).
   // F1: sample time + 12.5 cycles at PCLK2 / ADC prescaler (PCLK2 = SYSCLK = timer clock here).
-  adcConversionUs(sampling){if(this.f1)return ([1.5,7.5,13.5,28.5,41.5,55.5,71.5,239.5][sampling??0]+12.5)*(this.adcDiv??2)*1e6/this.config.timerClockHz;const s=this.adc.get('ADC1'),cycles=[3,15,28,56,84,112,144,480][sampling??0]+12;return cycles*(s?.prescaler??4)*1e6/this.config.timerClockHz;}
+  adcConversionUs(sampling){if(this.f1)return ([1.5,7.5,13.5,28.5,41.5,55.5,71.5,239.5][sampling??0]+12.5)*(this.adcDiv??2)*1e6/(this.clocks?.pclk2??this.config.timerClockHz);const s=this.adc.get('ADC1'),cycles=[3,15,28,56,84,112,144,480][sampling??0]+12;return cycles*(s?.prescaler??4)*1e6/this.config.timerClockHz;}
   // Internal channels: 16 temperature sensor (25 °C), 17 VREFINT (1.21 V), 18 VBAT/4 (3.0 V).
   adcRead(channel,r){if(channel===16)return Math.round(.76/3.3*4095);if(channel===17)return Math.round(1.21/3.3*4095);if(channel===18)return Math.round(.75/3.3*4095);return r.call('analogRead',[this.pinFor('ADC1_IN'+channel)]);}
   declareGlobals(r){for(const ext of this.extensions)ext.declareGlobals?.(r);}
@@ -229,7 +230,7 @@ export class HalAdapter {
     if(/^__HAL_AFIO_REMAP_\w+$/.test(name)){if(!this.afio)throw new Error(`${name}: 먼저 __HAL_RCC_AFIO_CLK_ENABLE()로 AFIO 클록을 켜세요.`);this.remaps.add(name);return 0;}
     if(name==='HAL_RCCEx_PeriphCLKConfig'){const cfg=r.get(r.pointerCell(a));if(this.field(cfg,'PeriphClockSelection')&2)this.adcDiv=[2,4,6,8][(this.field(cfg,'AdcClockSelection')>>14)&3];return 0;}
     if(name==='HAL_ADCEx_Calibration_Start'){const {id}=this.requireHandle(a,r,'ADC');this.adc.get(id).calibrated=true;return 0;}
-    if(name==='HAL_RCC_GetPCLK1Freq')return this.config.timerClockHz>36000000?this.config.timerClockHz/2:this.config.timerClockHz;
+    if(name==='HAL_RCC_GetPCLK1Freq')return this.clocks?Math.round(this.clocks.pclk1):this.config.timerClockHz>36000000?this.config.timerClockHz/2:this.config.timerClockHz;
     if(['HAL_PWREx_EnableOverDrive','__HAL_PWR_VOLTAGESCALING_CONFIG','HAL_PWREx_ControlVoltageScaling','__HAL_RCC_SYSCFG_CLK_ENABLE'].includes(name))throw new Error(`${name}: STM32F103에는 없는 기능입니다.`);
     return undefined;
   }
@@ -320,7 +321,7 @@ export class HalAdapter {
         if(this.spiSlaveMode)this.buses.beginPins(r,[this.buses.spi.miso],[this.buses.spi.mosi,this.buses.spi.sck]);
         else{this.buses.call('SPI.begin',[],r);this.buses.call('SPI.setClock',[this.config.peripherals.SPI1.clock],r);}
       }
-      if(type==='ADC'&&this.f1){const nbr=get('NbrOfConversion')||1,adcHz=this.config.timerClockHz/(this.adcDiv??2);if(get('DataAlign')||get('ExternalTrigConv')!==0xE0000||!Number.isInteger(nbr)||nbr<1||nbr>16||nbr>1&&get('ScanConvMode')!==0x100)throw new Error('ADC1: 오른쪽 정렬, 소프트웨어 시작(ADC_SOFTWARE_START), 스캔 시 ADC_SCAN_ENABLE과 NbrOfConversion 1~16을 지원합니다.');if(adcHz>14000000)throw new Error(`ADC1: ADC 클록 ${adcHz/1e6} MHz가 14 MHz를 넘습니다. HAL_RCCEx_PeriphCLKConfig로 RCC_ADCPCLK2_DIV6 등을 설정하세요.`);this.adc.set(id,{active:false,channel:null,value:0,ranks:[],nbr,scan:get('ScanConvMode')===0x100,continuous:!!get('ContinuousConvMode'),prescaler:this.adcDiv??2});}
+      if(type==='ADC'&&this.f1){const nbr=get('NbrOfConversion')||1,adcHz=(this.clocks?.pclk2??this.config.timerClockHz)/(this.adcDiv??2);if(get('DataAlign')||get('ExternalTrigConv')!==0xE0000||!Number.isInteger(nbr)||nbr<1||nbr>16||nbr>1&&get('ScanConvMode')!==0x100)throw new Error('ADC1: 오른쪽 정렬, 소프트웨어 시작(ADC_SOFTWARE_START), 스캔 시 ADC_SCAN_ENABLE과 NbrOfConversion 1~16을 지원합니다.');if(adcHz>14000000)throw new Error(`ADC1: ADC 클록 ${adcHz/1e6} MHz가 14 MHz를 넘습니다. HAL_RCCEx_PeriphCLKConfig로 RCC_ADCPCLK2_DIV6 등을 설정하세요.`);this.adc.set(id,{active:false,channel:null,value:0,ranks:[],nbr,scan:get('ScanConvMode')===0x100,continuous:!!get('ContinuousConvMode'),prescaler:this.adcDiv??2});}
       if(type==='ADC'&&!this.f1){const nbr=get('NbrOfConversion')||1;if(get('Resolution')||get('DataAlign')||get('ExternalTrigConvEdge')||!Number.isInteger(nbr)||nbr<1||nbr>16||nbr>1&&!get('ScanConvMode'))throw new Error('ADC1: 12비트, 오른쪽 정렬, 소프트웨어 시작, 스캔 시 NbrOfConversion 1~16을 지원합니다.');if(![0,0x10000,0x20000,0x30000].includes(get('ClockPrescaler')))throw new Error('ADC1: ClockPrescaler를 확인하세요.');this.adc.set(id,{active:false,channel:null,value:0,ranks:[],nbr,scan:!!get('ScanConvMode'),continuous:!!get('ContinuousConvMode'),prescaler:[2,4,6,8][get('ClockPrescaler')/0x10000]});}
       if(type==='TIM')this.timerModel.init(a,r,name.split('_')[2],b);
       this.handles.set(id,h);return 0;

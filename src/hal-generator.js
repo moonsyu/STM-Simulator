@@ -5,6 +5,29 @@ import {familyProfile,remapFor} from './mcu-family.js';
 import {dmaHandle,irqHandlers,handlerText} from './irq-handlers.js';
 import {nvicGroup,tickPriority,NVIC_GROUP_DEFAULT,TICK_PRIORITY_DEFAULT} from './nvic-config.js';
 import {gpioMode,hasSpeed,pinSpeed} from './gpio-config.js';
+import {clockFrequencies,flashLatency,needsOverDrive} from './clock-tree.js';
+// SystemClock_Config from the project's Clock Configuration, as CubeMX writes it (HSE = ST-LINK MCO in BYPASS mode).
+function treeClockLines(config,f1){
+  const t=config.clock,q=clockFrequencies(config.family,t),pll=t.sysclkSource==='PLLCLK';
+  const hse=t.sysclkSource==='HSE'||pll&&t.pllSource==='HSE',hsi=t.sysclkSource==='HSI'||pll&&t.pllSource==='HSI';
+  const types=[...(hsi?['RCC_OSCILLATORTYPE_HSI']:[]),...(hse?['RCC_OSCILLATORTYPE_HSE']:[])];
+  const lines=['void SystemClock_Config(void) {','  RCC_OscInitTypeDef osc = {0};','  RCC_ClkInitTypeDef clk = {0};',
+    ...(f1?[]:['  __HAL_RCC_PWR_CLK_ENABLE();','  __HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE1);']),
+    `  osc.OscillatorType = ${types.join(' | ')};`,
+    ...(hse?['  osc.HSEState = RCC_HSE_BYPASS;',...(f1?[`  osc.HSEPredivValue = RCC_HSE_PREDIV_DIV${t.hsePrediv};`]:[])]:[]),
+    ...(hsi?['  osc.HSIState = RCC_HSI_ON;','  osc.HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT;']:[]),
+    ...(!pll?['  osc.PLL.PLLState = RCC_PLL_OFF;']:f1?['  osc.PLL.PLLState = RCC_PLL_ON;',`  osc.PLL.PLLSource = ${t.pllSource==='HSE'?'RCC_PLLSOURCE_HSE':'RCC_PLLSOURCE_HSI_DIV2'};`,`  osc.PLL.PLLMUL = RCC_PLL_MUL${t.pllMul};`]
+      :['  osc.PLL.PLLState = RCC_PLL_ON;',`  osc.PLL.PLLSource = RCC_PLLSOURCE_${t.pllSource};`,`  osc.PLL.PLLM = ${t.pllM};`,`  osc.PLL.PLLN = ${t.pllN};`,`  osc.PLL.PLLP = RCC_PLLP_DIV${t.pllP};`,`  osc.PLL.PLLQ = ${t.pllQ};`,'  osc.PLL.PLLR = 2;']),
+    '  if (HAL_RCC_OscConfig(&osc) != HAL_OK) Error_Handler();',
+    ...(needsOverDrive(config.family,q.hclk)?['  /* HCLK above 168 MHz: the regulator runs in over-drive mode. */','  if (HAL_PWREx_EnableOverDrive() != HAL_OK) Error_Handler();']:[]),
+    '  clk.ClockType = RCC_CLOCKTYPE_HCLK | RCC_CLOCKTYPE_SYSCLK | RCC_CLOCKTYPE_PCLK1 | RCC_CLOCKTYPE_PCLK2;',
+    `  clk.SYSCLKSource = RCC_SYSCLKSOURCE_${t.sysclkSource};`,`  clk.AHBCLKDivider = RCC_SYSCLK_DIV${t.ahb};`,
+    `  clk.APB1CLKDivider = RCC_HCLK_DIV${t.apb1};`,`  clk.APB2CLKDivider = RCC_HCLK_DIV${t.apb2};`,
+    `  if (HAL_RCC_ClockConfig(&clk, FLASH_LATENCY_${flashLatency(config.family,q.hclk)}) != HAL_OK) Error_Handler();`];
+  if(f1&&config.peripherals.ADC1?.enabled)lines.push('  RCC_PeriphCLKInitTypeDef periph = {0};','  periph.PeriphClockSelection = RCC_PERIPHCLK_ADC;',`  periph.AdcClockSelection = RCC_ADCPCLK2_DIV${t.adcPrescaler};`,'  if (HAL_RCCEx_PeriphCLKConfig(&periph) != HAL_OK) Error_Handler();');
+  return [...lines,'}'];
+}
+const mhzText=hz=>`${Number((hz/1e6).toFixed(3))} MHz`;
 // DMA handle names / link fields / data widths per request (CubeMX naming).
 const dmaLink=request=>request==='ADC1'||request==='DCMI'?'DMA_Handle':/_CH(\d)$/.test(request)?`hdma[TIM_DMA_ID_CC${/_CH(\d)$/.exec(request)[1]}]`:/_RX$/.test(request)?'hdmarx':'hdmatx';
 const dmaWidth=request=>request==='ADC1'?['HALFWORD','HALFWORD']:/^TIM\d_CH/.test(request)?['WORD','HALFWORD']:request==='DCMI'||request.startsWith('SDIO')?['WORD','WORD']:['BYTE','BYTE'];
@@ -38,10 +61,10 @@ export function clockPlanF1(hz){
 }
 export function generateMain(config,{minimal=false,legacyGpio=false}={}){
   const family=familyProfile(config.family),f1=family.pinMux==='remap';
-  const clock=f1?clockPlanF1(config.timerClockHz):clockPlan(config.timerClockHz),pins=Object.entries(config.pins).filter(([,p])=>!['Reset','Reserved'].includes(p.function)),irqs=Object.entries(config.nvic).filter(([,p])=>p.enabled),gpioInit=!minimal||pins.length>0||irqs.length>0,lines=['#include "main.h"',...(minimal?[]:['#include <stdio.h>']),'/* USER CODE BEGIN Includes */','/* USER CODE END Includes */','',
+  const tree=config.clock?clockFrequencies(config.family,config.clock):null,clock=tree?null:f1?clockPlanF1(config.timerClockHz):clockPlan(config.timerClockHz),pins=Object.entries(config.pins).filter(([,p])=>!['Reset','Reserved'].includes(p.function)),irqs=Object.entries(config.nvic).filter(([,p])=>p.enabled),gpioInit=!minimal||pins.length>0||irqs.length>0,lines=['#include "main.h"',...(minimal?[]:['#include <stdio.h>']),'/* USER CODE BEGIN Includes */','/* USER CODE END Includes */','',
     `/* Copy this main.c into a CubeIDE ${family.id} project with matching`,
     ' * pin / peripheral / NVIC settings and Cube-generated IRQ / MSP files.',
-    ' * Clock: '+(clock.source==='HSI'?'HSI direct (PLL off)':'HSI PLL')+', APB1 timer clock = '+config.timerClockHz+' Hz.',
+    ' * Clock: '+(tree?`${config.clock.sysclkSource==='PLLCLK'?config.clock.pllSource+' PLL':config.clock.sysclkSource+' direct'}, SYSCLK ${mhzText(tree.sysclk)}, HCLK ${mhzText(tree.hclk)}, APB1 ${mhzText(tree.pclk1)} (timers ${mhzText(tree.tim1)}), APB2 ${mhzText(tree.pclk2)} (timers ${mhzText(tree.tim2)}).`:(clock.source==='HSI'?'HSI direct (PLL off)':'HSI PLL')+', APB1 timer clock = '+config.timerClockHz+' Hz.'),
     ...(minimal?[' */']:[' * printf: SWV ITM port 0 (enable SWV in the debugger). UART uses its pins.',
     ' * With newlib-nano, enable -u _printf_float for floating-point printf. */']),''];
   const sync=id=>isSerial(id)&&config.peripherals[id]?.mode==='synchronous',dma=Object.entries(config.dma||{});
@@ -61,7 +84,8 @@ export function generateMain(config,{minimal=false,legacyGpio=false}={}){
   lines.push('  /* USER CODE END 2 */','  while (1) {','    /* USER CODE BEGIN 3 */');
   const output=Object.entries(config.pins).find(([,p])=>p.function==='GPIO_Output');if(!minimal&&output)lines.push(`    HAL_GPIO_TogglePin(GPIO${output[0][1]}, GPIO_PIN_${output[0].slice(2)});`);
   lines.push(...(minimal?[]:['    HAL_Delay(500);']),'    /* USER CODE END 3 */','  }','}','',
-    'void SystemClock_Config(void) {','  RCC_OscInitTypeDef osc = {0};','  RCC_ClkInitTypeDef clk = {0};',
+  );
+  if(tree)lines.push(...treeClockLines(config,f1));else{lines.push('void SystemClock_Config(void) {','  RCC_OscInitTypeDef osc = {0};','  RCC_ClkInitTypeDef clk = {0};',
     ...(f1?[]:['  __HAL_RCC_PWR_CLK_ENABLE();','  __HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE1);']),
     '  osc.OscillatorType = RCC_OSCILLATORTYPE_HSI;','  osc.HSIState = RCC_HSI_ON;','  osc.HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT;',
     ...(clock.source==='HSI'?['  osc.PLL.PLLState = RCC_PLL_OFF;']:f1?['  osc.PLL.PLLState = RCC_PLL_ON;','  osc.PLL.PLLSource = RCC_PLLSOURCE_HSI_DIV2;',`  osc.PLL.PLLMUL = RCC_PLL_MUL${clock.mul};`]:['  osc.PLL.PLLState = RCC_PLL_ON;','  osc.PLL.PLLSource = RCC_PLLSOURCE_HSI;','  osc.PLL.PLLM = 16;',`  osc.PLL.PLLN = ${clock.n};`,`  osc.PLL.PLLP = RCC_PLLP_DIV${clock.divider};`,'  osc.PLL.PLLQ = 7;','  osc.PLL.PLLR = 2;']),
@@ -72,7 +96,7 @@ export function generateMain(config,{minimal=false,legacyGpio=false}={}){
     `  if (HAL_RCC_ClockConfig(&clk, FLASH_LATENCY_${clock.latency}) != HAL_OK) Error_Handler();`);
   // F1 ADC clock (PCLK2 = SYSCLK here) must stay at or below 14 MHz.
   if(f1&&config.peripherals.ADC1?.enabled){const div=[2,4,6,8].find(n=>config.timerClockHz/n<=14000000);lines.push('  RCC_PeriphCLKInitTypeDef periph = {0};','  periph.PeriphClockSelection = RCC_PERIPHCLK_ADC;',`  periph.AdcClockSelection = RCC_ADCPCLK2_DIV${div};`,'  if (HAL_RCCEx_PeriphCLKConfig(&periph) != HAL_OK) Error_Handler();');}
-  lines.push('}');
+  lines.push('}');}
   if(gpioInit){
   lines.push('', 'static void MX_GPIO_Init(void) {',...(pins.length?['  GPIO_InitTypeDef GPIO_InitStruct = {0};']:[]));
   for(const port of new Set(pins.map(([pin])=>pin[1])))lines.push(`  __HAL_RCC_GPIO${port}_CLK_ENABLE();`);
@@ -113,7 +137,7 @@ export function generateMain(config,{minimal=false,legacyGpio=false}={}){
     if(id==='I2C1')for(const [k,v]of Object.entries({ClockSpeed:p.clock,DutyCycle:`I2C_DUTYCYCLE_${p.dutyCycle??'2'}`,OwnAddress1:p.ownAddress?`0x${(p.ownAddress<<1).toString(16).toUpperCase()}`:0,AddressingMode:'I2C_ADDRESSINGMODE_7BIT',DualAddressMode:'I2C_DUALADDRESS_DISABLE',OwnAddress2:0,GeneralCallMode:'I2C_GENERALCALL_DISABLE',NoStretchMode:p.noStretch?'I2C_NOSTRETCH_ENABLE':'I2C_NOSTRETCH_DISABLE'}))set(k,v);
     if(id==='SPI1')for(const [k,v]of Object.entries({Mode:'SPI_MODE_MASTER',Direction:'SPI_DIRECTION_2LINES',DataSize:`SPI_DATASIZE_${p.dataSize??8}BIT`,CLKPolarity:`SPI_POLARITY_${p.cpol??'LOW'}`,CLKPhase:`SPI_PHASE_${p.cpha??'1EDGE'}`,NSS:'SPI_NSS_SOFT',BaudRatePrescaler:'SPI_BAUDRATEPRESCALER_'+Math.min(256,2**Math.max(1,Math.ceil(Math.log2(config.timerClockHz/p.clock)))),FirstBit:`SPI_FIRSTBIT_${p.firstBit??'MSB'}`,TIMode:'SPI_TIMODE_DISABLE',CRCCalculation:'SPI_CRCCALCULATION_DISABLE',CRCPolynomial:10}))set(k,v);
     if(id==='ADC1'&&f1)for(const [k,v]of Object.entries({ScanConvMode:'ADC_SCAN_DISABLE',ContinuousConvMode:p.continuous?'ENABLE':'DISABLE',DiscontinuousConvMode:'DISABLE',ExternalTrigConv:'ADC_SOFTWARE_START',DataAlign:'ADC_DATAALIGN_RIGHT',NbrOfConversion:1}))set(k,v);
-    if(id==='ADC1'&&!f1)for(const [k,v]of Object.entries({ClockPrescaler:'ADC_CLOCK_SYNC_PCLK_DIV4',Resolution:'ADC_RESOLUTION_12B',ScanConvMode:'DISABLE',ContinuousConvMode:p.continuous?'ENABLE':'DISABLE',DiscontinuousConvMode:'DISABLE',ExternalTrigConvEdge:'ADC_EXTERNALTRIGCONVEDGE_NONE',ExternalTrigConv:'ADC_SOFTWARE_START',DataAlign:'ADC_DATAALIGN_RIGHT',NbrOfConversion:1,DMAContinuousRequests:'DISABLE',EOCSelection:'ADC_EOC_SINGLE_CONV'}))set(k,v);
+    if(id==='ADC1'&&!f1)for(const [k,v]of Object.entries({ClockPrescaler:`ADC_CLOCK_SYNC_PCLK_DIV${config.clock?.adcPrescaler??4}`,Resolution:'ADC_RESOLUTION_12B',ScanConvMode:'DISABLE',ContinuousConvMode:p.continuous?'ENABLE':'DISABLE',DiscontinuousConvMode:'DISABLE',ExternalTrigConvEdge:'ADC_EXTERNALTRIGCONVEDGE_NONE',ExternalTrigConv:'ADC_SOFTWARE_START',DataAlign:'ADC_DATAALIGN_RIGHT',NbrOfConversion:1,DMAContinuousRequests:'DISABLE',EOCSelection:'ADC_EOC_SINGLE_CONV'}))set(k,v);
     if(isTimer(id))for(const [k,v]of Object.entries({Prescaler:p.prescaler,CounterMode:'TIM_COUNTERMODE_UP',Period:p.period,ClockDivision:'TIM_CLOCKDIVISION_DIV1',AutoReloadPreload:'TIM_AUTORELOAD_PRELOAD_DISABLE'}))set(k,v);
     if(isTimer(id)&&p.mode==='encoder'){
       lines.push('  TIM_Encoder_InitTypeDef encoder = {0};','  encoder.EncoderMode = TIM_ENCODERMODE_TI12;');

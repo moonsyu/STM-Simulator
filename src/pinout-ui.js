@@ -9,6 +9,7 @@ import {keepUserCode,dropShadowedHandlers} from './c-source-edit.js';
 const previousDefault=mcu=>{try{return expandC(generateHal(mcu));}catch{return '';}};
 import {isSerial,serialAf,serialFunction,assignSerialPin,setSerialEnabled} from './serial-config.js';
 import {familyProfile,routesOf,irqNamesOf} from './mcu-family.js';
+import {renderClockPanel} from './clock-ui.js';
 import {dmaRequestsOf,UART_PARAMS,SPI_PARAMS,TIM_CHANNEL_PARAMS} from './mcu-config.js';
 import {projectBoard} from './boards.js';
 import {$,esc} from './common.js';
@@ -77,7 +78,10 @@ export class PinoutPanel {
     this.draft.pins[pin]=next;
   }
   refreshProblems(){try{$('pinout-errors').textContent=configProblems(this.draft).join('\n');}catch(e){$('pinout-errors').textContent=e.message;}}
-  showSide(side){this.side=side;for(const b of $('pinout-dialog').querySelectorAll('[data-side-tab]'))b.setAttribute('aria-selected',String(b.dataset.sideTab===side));$('pinout-pin-panel').hidden=side!=='pin';$('pinout-nvic-panel').hidden=side!=='nvic';if(side==='nvic')this.renderNvic();}
+  showSide(side){this.side=side;for(const b of $('pinout-dialog').querySelectorAll('[data-side-tab]'))b.setAttribute('aria-selected',String(b.dataset.sideTab===side));$('pinout-pin-panel').hidden=side!=='pin';$('pinout-nvic-panel').hidden=side!=='nvic';$('pinout-clock-panel').hidden=side!=='clock';if(side==='nvic')this.renderNvic();if(side==='clock')this.renderClock();}
+  // Clock Configuration: every edit re-checks the draft, so limits show while choosing.
+  renderClock(){renderClockPanel($('pinout-clock-panel'),this.draft,()=>{try{const v=validateMcu(this.draft);this.draft.timerClockHz=v.timerClockHz;$('pinout-errors').textContent=configProblems(v).join('\n');}catch(e){$('pinout-errors').textContent=e.message;}this.syncTimerClock();this.renderClock();});}
+  syncTimerClock(){const tree=!!this.draft.clock;$('timer-clock').value=numberText(this.draft.timerClockHz);$('timer-clock').disabled=tree;$('timer-clock-tree').hidden=!tree;}
   // A pin's new function (CubeMX pin menu): serial pins bring their peripheral and partner pins, a peripheral signal
   // turns its peripheral on, EXTI starts with CubeMX's rising edge.
   choose(pin,fn){
@@ -207,7 +211,7 @@ export class PinoutPanel {
     });
     $('pinout-peripherals').querySelectorAll('[data-peripheral-value]').forEach(el=>el.onchange=()=>{const id=el.dataset.peripheralValue;config.peripherals[id]??={enabled:false};config.peripherals[id][el.dataset.key]=numberInput(el);const note=el.closest('.peripheral-card').querySelector('.serial-mode-note');if(isTimer(id)&&note)note.textContent=timerHint(id,config.peripherals[id],fam.timerMax(id));});
     this.renderNvic();this.showSide(this.side??'pin');
-    $('timer-clock').value=numberText(config.timerClockHz);$('timer-clock').onchange=()=>config.timerClockHz=numberInput($('timer-clock'));
+    this.syncTimerClock();$('timer-clock').onchange=()=>config.timerClockHz=numberInput($('timer-clock'));
     $('pinout-errors').textContent=configProblems(config).join('\n');
     $('pinout-summary').textContent=`${Object.values(config.pins).filter(p=>!['Reset','Reserved'].includes(p.function)).length}개 핀 활성 · ${[...new Set(Object.entries(config.peripherals).filter(([,p])=>p.enabled).map(([id])=>'HAL_'+(isSerial(id)?'UART':id.replace(/\d$/,''))))].join(' · ')||'HAL_GPIO'}`;
   }

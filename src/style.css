@@ -345,3 +345,17 @@ dialog h1{font-size:21px;margin:8px 0 18px;letter-spacing:-.5px}
 .sys-settings>strong{display:block;font-size:11px}
 .pin-tile.sys{background:#cde7da;border-color:#126b4c}
 .pin-menu-note{margin:4px 8px;font-size:10.5px;opacity:.75;max-width:200px}
+/* 1.26.0 Pinout › Clock: CubeMX Clock Configuration as groups of selects and a frequency table. */
+.clock-panel label{display:flex;justify-content:space-between;align-items:center;gap:6px;font-size:11.5px;margin:3px 0}
+.clock-panel select,.clock-panel input[type="number"]{width:9.5em}
+.clock-panel .clock-toggle{justify-content:flex-start;font-weight:700}
+.clock-group{border:1px solid #c5d4cc;border-radius:6px;margin:6px 0;padding:4px 8px}
+.clock-group legend{font-size:11px;font-weight:700;padding:0 4px}
+.clock-presets{display:flex;flex-direction:column;gap:4px;margin:6px 0}
+.clock-presets button{font-size:11px;text-align:left;padding:5px 8px;border:1px solid #c5d4cc;border-radius:5px;background:#f3f7f5;cursor:pointer}
+.clock-presets button:hover{border-color:#126b4c}
+.clock-table{width:100%;border-collapse:collapse;font-size:11px;margin-top:6px}
+.clock-table th,.clock-table td{text-align:left;padding:3px 4px;border-bottom:1px solid #d8e2dd}
+.clock-table td:last-child{color:#5a6d64}
+.clock-table tr.clock-over td{color:#a82c2c;font-weight:700}
+.clock-problems{color:#a82c2c;font-size:11px;line-height:1.6}

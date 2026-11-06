@@ -87,7 +87,7 @@ export class HalDma{
  stop(st){if(!st)return;st.busy=false;st.gen++;if(st.handle)st.handle.fields.State.value=1;}
  pause(st,r){if(st?.busy){st.paused=true;}}
  resume(st,r){if(st?.busy&&st.paused){st.paused=false;st.base=r.microTime-st.index*st.spec.itemUs;if(!st.spec.external)this.schedule(r,st);}}
- hclk(){return this.hal.config.timerClockHz;}
+ hclk(){return this.hal.clocks?.hclk??this.hal.config.timerClockHz;}
  callbackJob(r,st,field,fallback){const hal=this.hal;return function*(){const cb=st.handle.fields[field]?.value;if(isFn(cb)&&r.program.functions[cb.name])yield* r.invoke(cb.name,[st.ptr]);else if(fallback)yield* fallback();};}
  // ---- user-level API ----
  invoke(name,args,r){

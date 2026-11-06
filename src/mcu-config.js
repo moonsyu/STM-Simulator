@@ -7,6 +7,7 @@ import {DMA_REQUESTS} from './hal-dma.js';
 import {familyProfile,routesOf,irqNamesOf,remapFor,DEFAULT_FAMILY,FAMILIES} from './mcu-family.js';
 import {nvicProblems,NVIC_GROUP_DEFAULT,TICK_PRIORITY_DEFAULT} from './nvic-config.js';
 import {speedsOf,SPEED_NAMES} from './gpio-config.js';
+import {validateClockTree,clockFrequencies,clockTreeProblems,adcClockProblem,clockTreeFromIoc,treeFromTimerHz} from './clock-tree.js';
 // Synchronous USART clock outputs on F446RE LQFP64 (DS10693 table 11): AF7 USART1/2/3, AF8 USART6.
 export const USART_CK_ROUTES=familyProfile(DEFAULT_FAMILY).usartCk;
 export const usartCkRoutesOf=family=>familyProfile(family).usartCk;
@@ -34,7 +35,10 @@ export function validateMcu(value){
   if(!value||!Object.hasOwn(FAMILIES,value.family)||!value.pins||!value.peripherals||!value.nvic)throw new Error(`MCU 핀 설정이 필요합니다 (${Object.keys(FAMILIES).join(' / ')}).`);
   const f=familyProfile(value.family),routes=routesOf(f.id);
   const out={family:value.family,pins:{},peripherals:{},nvic:{},timerClockHz:value.timerClockHz??f.clock.defaultHz};
-  if(!f.clock.valid(out.timerClockHz))throw new Error(`APB1 타이머 클록 범위: ${f.clock.label}`);
+  // CubeMX Clock Configuration (`clock`): the APB1 timer clock follows the tree, so the interpreter and examples keep
+  // reading timerClockHz. Without a tree the project keeps the older single HSI setting.
+  if(value.clock!==undefined){out.clock=validateClockTree(f.id,value.clock);out.timerClockHz=Math.round(clockFrequencies(f.id,out.clock).tim1);}
+  else if(!f.clock.valid(out.timerClockHz))throw new Error(`APB1 타이머 클록 범위: ${f.clock.label}`);
   for(const [pin,p] of Object.entries(value.pins)){
     if(!f.gpioPins.includes(pin)||!p||!pinFunctions(pin,f.id).includes(p.function))throw new Error(`${pin}: ${f.id}에서 지원하지 않는 핀 기능입니다.`);
     if(typeof p.label!=='string'||(p.label&&!/^[A-Za-z_]\w{0,39}$/.test(p.label))||['__proto__','constructor','prototype'].includes(p.label))throw new Error(`${pin}: 라벨은 영문자나 _로 시작하는 C 이름(영문·숫자·_ 40자 이내)으로 쓰세요.`);
@@ -133,6 +137,7 @@ export function configProblems(config){
   for(const [irq,n]of Object.entries(config.nvic||{})){const id=irq.replace(/_IRQn$/,'');if(n.enabled&&(isSerial(id)||isTimer(id))&&!config.peripherals[id]?.enabled)errors.push(`${irq}: ${id} 주변장치를 활성화하거나 인터럽트를 끄세요.`);}
   for(const [request,d]of Object.entries(config.dma||{})){const id=dmaPeripheral(request);if(id&&!config.peripherals[id]?.enabled)errors.push(`${request} DMA: ${id} 주변장치를 활성화하세요.`);if(id&&isTimer(id)&&config.peripherals[id].mode!=='pwm')errors.push(`${request} DMA: ${id}를 PWM 모드로 설정하세요.`);}
   errors.push(...nvicProblems(config));
+  if(config.clock){errors.push(...clockTreeProblems(config.family,config.clock));if(config.peripherals.ADC1?.enabled){const adc=adcClockProblem(config.family,config.clock);if(adc)errors.push(adc);}}
   return errors;
 }
 // CubeMX keeps parameter expressions as typed ("84-1", "1000*2"): + - * / and parentheses on integers only.
@@ -198,8 +203,13 @@ export function importIoc(text){
    if(Object.keys(ch).length)p.channels=ch;
   }
   config.timerClockHz=number(values['RCC.APB1TimFreq_Value'],f.clock.defaultHz);
+  // The .ioc clock tree: kept as the project's Clock Configuration unless the single APB1 timer clock gives the same clocks.
+  const tree=clockTreeFromIoc(f.id,values);
+  if(tree){const q=clockFrequencies(f.id,tree),hz=Math.round(q.tim1),old=f.clock.valid(hz)?clockFrequencies(f.id,treeFromTimerHz(f.id,hz)):null;
+   const same=old&&['sysclk','hclk','pclk1','pclk2','adc'].every(k=>Math.abs(old[k]-q[k])<1);
+   if(same)config.timerClockHz=hz;else{config.clock=tree;config.timerClockHz=hz;for(const p of clockTreeProblems(f.id,tree))warnings.push('클록 설정: '+p);}}
   // HSE/other PLL setups (F103 at 72 MHz) cannot be rebuilt from HSI: keep the nearest clock the generator can make.
-  if(!f.clock.valid(config.timerClockHz)){const wanted=config.timerClockHz,hz=f.clock.valid(Math.min(f.clock.maxHz,Math.round(wanted/4e6)*4e6))?Math.min(f.clock.maxHz,Math.round(wanted/4e6)*4e6):f.clock.exampleHz;warnings.push(`APB1 타이머 클록 ${wanted/1e6} MHz는 HSI로 만들 수 없어 ${hz/1e6} MHz로 바꿨습니다 (${f.clock.label}). 타이머 Prescaler/Period를 확인하세요.`);config.timerClockHz=hz;}
+  if(!config.clock&&!f.clock.valid(config.timerClockHz)){const wanted=config.timerClockHz,hz=f.clock.valid(Math.min(f.clock.maxHz,Math.round(wanted/4e6)*4e6))?Math.min(f.clock.maxHz,Math.round(wanted/4e6)*4e6):f.clock.exampleHz;warnings.push(`APB1 타이머 클록 ${wanted/1e6} MHz는 HSI로 만들 수 없어 ${hz/1e6} MHz로 바꿨습니다 (${f.clock.label}). 타이머 Prescaler/Period를 확인하세요.`);config.timerClockHz=hz;}
   // DMA: Dma.<request>.<n>.Instance/Channel/Mode/Priority; a request this model cannot route is reported, not dropped silently.
   const requests=dmaRequestsOf(family),dma={};
   for(const [key,request]of Object.entries(values)){

@@ -186,3 +186,8 @@
 :root[data-ide-theme] #outline-list button:hover{background:var(--ide-hover)}
 :root[data-ide-theme] .sys-settings{border-color:var(--ide-border)}
 :root[data-ide-theme] .pin-tile.sys{background:var(--ide-selection);border-color:var(--ide-accent);color:var(--ide-foreground)}
+:root[data-ide-theme] :is(.clock-group,.clock-table th,.clock-table td){border-color:var(--ide-border)}
+:root[data-ide-theme] .clock-table td:last-child{color:var(--ide-muted)}
+:root[data-ide-theme] :is(.clock-table tr.clock-over td,.clock-problems){color:var(--ide-error,#f48771)}
+:root[data-ide-theme] .clock-presets button{background:var(--ide-panel);border-color:var(--ide-border);color:var(--ide-foreground)}
+:root[data-ide-theme] .clock-presets button:hover{border-color:var(--ide-accent);background:var(--ide-hover)}
