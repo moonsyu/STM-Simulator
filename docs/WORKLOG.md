@@ -2,6 +2,30 @@
 
 작업할 때마다 날짜순으로 맨 위에 추가합니다. 무엇을 했는지, 왜 했는지, 어떻게 검증했는지, 커밋·릴리스와 남은 사항을 적습니다. 버전별 구조 설명은 [HANDOFF.md](../HANDOFF.md), 검증 수치는 [VERIFICATION.md](VERIFICATION.md)에 있습니다.
 
+## 2026-11-06 · 1.25.0 기능 목록 2·4~8번: FPB-RA6E1 실물 확인, DWARF 4, 입력 중 자동완성, printf float, it.c 핸들러 중복, 핀 과전압
+
+- 요청: "2번 승인할게 설치해 … 4 ~ 7번 진행해"(SEGGER J-Link 설치·약관 동의 승인), 진행 중 "실물 보드 확인 끝나면 8번 부터 진행해". 두 번 일시정지 뒤 재개. 순서: 실물 확인 → 8 → 7 → 4 → 6 → 5.
+- 한 것과 이유:
+  - FPB-RA6E1 실물(2번 6단계, 973ba61): J-Link V9.92를 `C:\Program Files\SEGGER\JLink_V992`에 설치했다. J-Link-OB-S124(831363305)가 첫 연결에서 펌웨어를 갱신해 USB를 한 번 다시 꽂았다. 기록·검증·리셋은 됐지만 LED가 멈춰 있었다. 원인은 `R_BSP_Init_RTC` 대기였다: 보드에 32.768 kHz 수정은 있지만 E25/E26이 열려 있어 MCU에 이어지지 않는다 → `BSP_CLOCK_CFG_SUBCLOCK_POPULATED (0)`. GDB가 main.c 중단점을 `ra_gen/main.c`로 잡아 `aliases`로 `src/hal_entry.c`와 이었다. `JLinkGDBServerCL -nogui`는 값 없이 준다(`-nogui 1`은 알 수 없는 인수 경고).
+  - 에뮬레이터 RA 디버그(f86cd26): `--gc-sections`로 지워진 함수의 줄 정보가 0번지에 남아 실제 코드 줄을 가렸다 → 0번지에서 시작하는 시퀀스를 건너뛴다.
+  - 8번 DWARF 4(2669199): `-gdwarf-4`를 넣었는데 툴체인 libgcc.a가 DWARF 5 조각을 남겨, 디버그 정보를 뺀 사본으로 링크한다.
+  - 7번 자동완성(d0b9dc1): clangd `isIncomplete` 전달, 질의 전 동기화, Monaco 단어 목록 끔, 치는 중인 단어 제외.
+  - 4번 printf float(18f3780): CubeIDE 새 프로젝트처럼 꺼진 것이 기본이다. 시뮬레이터에서 되던 `%f`가 실물에서 빈칸이 되는 차이를 없앤다. 예전 프로젝트는 켜진 채로 둬 동작이 바뀌지 않는다. 메뉴 대신 툴바 칸으로 두었다(앱에 Project Properties 창이 없음).
+  - 6번 it.c 핸들러 중복(7992dcf): 빌드는 그대로 사용자 핸들러를 쓰고, 문제 탭에 경고만 낸다. 앱의 코드 생성이 만든 핸들러(USER CODE 구역)와 가져온 `*_it.c`는 제외한다.
+  - 5번 핀 과전압(6cff13b): 회로 풀이 전압으로 판단한다. 문제 탭 오류, 실행 중에는 출력 탭에 핀당 한 번.
+- 검증(의존성을 설치한 임시 복제본, 창은 다른 창 뒤·다크 모드):
+  - 실물: `NativeIde.run` 기록·검증 O.K., PORT4 읽기로 LED1(P408) 토글, 디버그 main.c 13행 중단점 → hal_entry 호출 스택, `SystemCoreClock` = 200000000.
+  - 단위 751개 통과, ESLint 0건.
+  - 툴체인 printf-float·dwarf-version 통과. E2E printf-float·irq-duplicate·pin-overvoltage·completion 통과.
+  - 전체 E2E·펌웨어·툴체인: (아래 기록)
+- 맞춘 것:
+  - E2E는 복제본의 편집기 묶음이 오래되면 바뀐 `code-editor.js`가 반영되지 않는다 → 동기화 뒤 `npm run build:editor`.
+  - 빈 프로젝트는 보드가 숨겨져 있어 보드 핀 배선이 무효였다 → 시험에서 보드를 보이게 했다.
+  - 과전압 출력 안내가 "문제 목록이 그대로면 다시 그리지 않음" 검사 뒤에 있어 실행 중 나오지 않았다 → 그 앞으로 옮겼다.
+- 남은 사항:
+  - 5번 핀 구조 표(F446RE: PA4·PA5만 TTa, F103RB: PA0~7·PB0·PB1·PB5·PC0~5·PC13~15 비FT)는 데이터시트 원문으로 대조하지 못했다. 사용자가 내려받기를 승인했지만 st.com이 curl(시간 초과)과 앱 브라우저 모두에서 열리지 않았다. 원문 확인 뒤 `src/pin-tolerance.js`를 맞춘다.
+  - STM Studio 프로그램 자체로 ELF를 읽어 보지는 않았다(이 PC에 없음). ELF의 모든 컴파일 단위가 버전 4인 것만 확인했다.
+
 ## 2026-11-06 · 기능 목록 8번: STM Studio에서 ELF를 못 읽는 문제
 
 - 요청: STM Studio에 앱이 빌드한 firmware.elf를 넣으면 `Dwarf Error: wrong version in compilation unit header (is 5, should be 2, 3, or 4)`가 난다. 구현 세션에서 처리하도록 목록에만 작성.

@@ -1,6 +1,6 @@
 # FPB-RA6E1 추가 계획
 
-작성 2026-11-06. 상태: **1.20.0에서 1·2단계, 1.22.0에서 3·4단계(SCI·GPT·AGT·ADC12·IIC, Pins·Clocks·Stacks), 1.23.0에서 5단계(FSP 원본 색인)와 6단계 앱 쪽(J-Link 기록·디버그) 구현**. 남은 것: 6단계 실물 확인(SEGGER J-Link 소프트웨어 설치 후). 0단계 결정: 목표를 STM + Renesas RA로 넓힘, 실행은 에뮬레이터 전용(STM 시뮬레이터의 기본 경로와 같은 ARM GCC 빌드, 해석기 없음), 설정 화면은 앱 안에서 RASC처럼, 실물 보드(J-Link)까지 진행(사용자, 2026-11-06). 다운로드 승인: FSP, 하드웨어 매뉴얼, 회로도, 예제·poppler, J-Link. 회로도 Design Package는 MyRenesas 로그인이 필요해 받지 못했다(보드 그림은 Quick Start Guide 그림과 Arduino Uno R3 규격 기준). 하드웨어 매뉴얼 Rev.1.40(2026-04)은 정정 문서 내용(Table 1.16)이 반영된 판이다.
+작성 2026-11-06. 상태: **1.20.0에서 1·2단계, 1.22.0에서 3·4단계(SCI·GPT·AGT·ADC12·IIC, Pins·Clocks·Stacks), 1.23.0에서 5단계(FSP 원본 색인)와 6단계 앱 쪽(J-Link 기록·디버그), 1.25.0에서 6단계 실물 확인 — 모든 단계 완료**. 0단계 결정: 목표를 STM + Renesas RA로 넓힘, 실행은 에뮬레이터 전용(STM 시뮬레이터의 기본 경로와 같은 ARM GCC 빌드, 해석기 없음), 설정 화면은 앱 안에서 RASC처럼, 실물 보드(J-Link)까지 진행(사용자, 2026-11-06). 다운로드 승인: FSP, 하드웨어 매뉴얼, 회로도, 예제·poppler, J-Link. 회로도 Design Package는 MyRenesas 로그인이 필요해 받지 못했다(보드 그림은 Quick Start Guide 그림과 Arduino Uno R3 규격 기준). 하드웨어 매뉴얼 Rev.1.40(2026-04)은 정정 문서 내용(Table 1.16)이 반영된 판이다.
 
 앱의 지금 목표는 "CubeMX + CubeIDE + STM 보드 시뮬레이터"이고 보드는 NUCLEO-F446RE·NUCLEO-F103RB다. FPB-RA6E1은 Renesas 보드라 MCU·SDK·설정 도구가 모두 달라서, F103RB를 더할 때(0.32.0·0.33.0, F4 모델을 대부분 공유)와 달리 **새 플랫폼을 하나 더 만드는 규모**다. 이 문서는 확인한 사실, 지금 앱과의 차이, 단계별 계획, 미확인 사항을 정리한다.
 
@@ -91,9 +91,11 @@
 - 정의로 이동·자동완성의 SDK 색인을 FSP로(지금 `desktop/sdk-index.cjs`는 STM32Cube 기준), Core·Startup 묶음에 `ra_gen` 생성 파일과 FSP startup을 읽기 전용으로.
 - 완료 기준: `R_IOPORT_PinWrite` Ctrl+클릭으로 FSP 원본, 자동완성에 FSP 이름.
 
-### 6단계(선택) — 실물 보드 — 앱 쪽 완료 (1.23.0), 실물 확인 전
+### 6단계(선택) — 실물 보드 — 앱 쪽 완료 (1.23.0), 실물 확인 (1.25.0)
 
 결과: `desktop/jlink.cjs`(J-Link OB 감지, J-Link Commander로 firmware.hex 기록·검증·리셋, JLinkGDBServerCL로 GDB 디버그). 이 PC에 J-Link OB가 연결되어 있으나 SEGGER 소프트웨어가 없어(설치는 라이선스 동의·관리자 권한이 필요해 사용자가 직접) 실물 기록·디버그는 확인하지 못했다.
+
+실물 확인(1.25.0, 사용자 승인으로 SEGGER J-Link V9.92 설치): J-Link-OB-S124(일련번호 831363305)에서 `NativeIde.run`이 기록·검증(O.K.)·리셋하고 LED1(P408)이 토글했다. 처음에는 `R_BSP_Init_RTC`에서 멈췄다 — 보드에 32.768 kHz 수정은 있지만 E25/E26이 열려 있어 MCU에 연결되지 않으므로 `BSP_CLOCK_CFG_SUBCLOCK_POPULATED (0)`으로 고쳤다. 디버그는 main.c 13행 중단점에서 hal_entry 호출 스택과 `SystemCoreClock` = 200000000을 읽었다(GDB가 main.c를 `ra_gen/main.c`로 잡던 것을 `src/hal_entry.c`로 잇게 수정). J-Link가 처음 연결될 때 펌웨어를 갱신해 USB를 한 번 다시 꽂았다.
 
 
 - SEGGER J-Link GDB Server로 기록·디버그, 보드 선택(J-Link 시리얼). 실물 FPB-RA6E1이 있어야 검증할 수 있다.

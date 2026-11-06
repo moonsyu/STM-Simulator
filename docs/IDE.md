@@ -159,7 +159,7 @@ Vim은 `highlight ... guifg=#RRGGBB guibg=#RRGGBB gui=...`, `highlight link`, �
 - **탐색기 `ra_gen · ra_cfg`**: 앱이 빌드에 넣는 RASC 방식 생성 파일(pin_data.c, hal_data.c/h, vector_data.c/h, common_data, bsp_clock_cfg.h, bsp_pin_cfg.h, fsp.ld 등)을 읽기 전용으로 연다. Ctrl+클릭으로 `g_ioport_ctrl`·`g_external_irq1_cfg` 같은 생성 심볼의 정의로 간다.
 - **예제**: 예제 패널의 FSP 예제 — LED1 깜빡이기, S1 외부 인터럽트로 LED2 토글, SCI9 UART 에코(USB-TTL 부품), GPT PWM으로 LED1 밝기·주기 인터럽트로 LED2, 가변저항 전압 읽기(ADC), AGT 주기 타이머·1 ms 틱, I²C 메모리 쓰기·읽기. 회로가 필요한 예제는 부품과 배선도 놓는다. 보드 LED는 PWM이면 듀티만큼 흐리게 보인다.
 - **FSP 원본 보기(1.23.0)**: `hal_entry.c`에서 `R_IOPORT_PinWrite`·`R_SCI_UART_Open`·`uart_callback_args_t` 같은 FSP 이름을 F12 또는 Ctrl+클릭하면 설치된 Renesas FSP 폴더의 원본(ra/fsp/src·inc, BSP, CMSIS)을 읽기 전용 탭으로 연다. 자동완성(Ctrl+Space)에 FSP 함수·매크로·열거형 이름이 나온다.
-- **실물 보드(J-Link, 1.23.0 · 실물 확인 전)**: FPB-RA6E1을 USB(J10, DEBUG)로 연결하면 실행 대상 목록에 "FPB-RA6E1 (J-Link 일련번호)"가 나온다. 실행(Ctrl+F5)은 SEGGER J-Link Commander로 `firmware.hex`를 기록·검증·리셋하고, 디버그(F10)는 JLinkGDBServer(127.0.0.1:2331)로 연결한다. SEGGER J-Link Software and Documentation Pack을 직접 설치해야 한다(segger.com, 라이선스 동의·관리자 권한 필요 — 앱이 대신 받지 않는다). 설치 경로가 다르면 개발 도구 설정의 J-Link 칸에 JLink.exe를 지정한다.
+- **실물 보드(J-Link, 1.23.0 · 실물 확인 1.25.0)**: FPB-RA6E1을 USB(J10, DEBUG)로 연결하면 실행 대상 목록에 "FPB-RA6E1 (J-Link 일련번호)"가 나온다. 실행(Ctrl+F5)은 SEGGER J-Link Commander로 `firmware.hex`를 기록·검증·리셋하고, 디버그(F10)는 JLinkGDBServer(127.0.0.1:2331)로 연결한다. SEGGER J-Link Software and Documentation Pack을 직접 설치해야 한다(segger.com, 라이선스 동의·관리자 권한 필요 — 앱이 대신 받지 않는다). 설치 경로가 다르면 개발 도구 설정의 J-Link 칸에 JLink.exe를 지정한다.
 - 아직 없는 것: 로직 분석기의 IIC·GPT 파형, SPI·DTC.
 
 ## 보드 선택: NUCLEO-F446RE · NUCLEO-F103RB
@@ -365,6 +365,12 @@ Ctrl+F는 현재 파일 찾기, Ctrl+R은 바꾸기, Ctrl+Z/Y는 프로젝트 �
 
 위 설명은 **회로 시뮬레이터** 실행 대상에 해당한다. 실제 GCC/GDB 대상은 아래 항목을 따른다.
 
+**printf float**(1.25.0, 툴바 빌드 구성 옆 칸)은 CubeIDE의 *Use float with printf from newlib-nano (-u _printf_float)*(Project Properties › C/C++ Build › Settings › MCU/MPU Settings)와 같다. 새 프로젝트는 CubeIDE처럼 꺼져 있어 `printf("%.2f", t)`의 숫자 자리가 빈칸으로 나온다(ARM GCC 빌드·해석 실행 모두). printf에 `%f`·`%e`·`%g`를 쓰는데 꺼져 있으면 실행할 때 출력 탭에 한 번 알린다. 켜면 프로젝트에 저장되고 다음 빌드부터 적용된다. 실수를 출력하는 예제를 적용하면 켜진다.
+
+**문제 탭**은 배선·전원 검사와 함께 다음도 알린다(1.25.0).
+- **it.c 핸들러 중복**: Pinout NVIC를 켠 인터럽트의 핸들러(`ADC1_2_IRQHandler` 등)나 `SysTick_Handler`를 main.c에 직접 쓰면, 시뮬레이터에서는 동작하지만 CubeIDE는 같은 함수를 `Core/Src/stm32xxxx_it.c`에 만들어 *multiple definition* 링크 오류가 난다고 알린다. 처리는 HAL 콜백(`HAL_ADC_ConvCpltCallback`, `HAL_GPIO_EXTI_Callback`, `HAL_TIM_PeriodElapsedCallback` 등)에 쓴다. 항목을 누르면 그 줄로 이동한다. Pinout 코드 생성이 만든 핸들러(USER CODE 구역이 있는 형태)와 가져온 it.c는 알리지 않는다.
+- **핀 과전압**: STM32 핀에 걸린 전압이 핀의 허용 범위를 넘으면 오류로 표시한다. 5 V 비허용(TT·TTa) 핀은 VDD + 0.3 V = 3.6 V까지(NUCLEO-F103RB의 PA0~PA7·PB0·PB1·PB5·PC0~PC5·PC13~PC15, NUCLEO-F446RE의 PA4·PA5), 5 V 허용(FT) 핀은 5.5 V까지, ADC 입력으로 쓰는 핀은 FT여도 3.6 V까지, 모든 핀은 −0.3 V 이상이다. 실행 중이면 출력 탭에도 한 번 알린다. 가변저항 양 끝을 5V에 연결해 ADC 핀에 넣는 경우 등을 잡는다.
+
 ## 실행과 소스 디버그
 
 | 조작 | 동작 |
@@ -485,8 +491,7 @@ ARM 또는 Windows 대상을 선택하고 편집기 아래 **clangd 꺼짐**을 
 
 - 읽을 수 있는 식: 전역 변수, 배열 요소(`adc[0]`), 구조체 멤버(`point.x`, 해석 실행), 전역 변수끼리의 계산(`value * 2`). 지역 변수는 STM Studio처럼 읽지 않는다(어디서 실행 중이든 같은 전역 값을 읽는다).
 - **해석 실행**은 해석기의 전역 변수를, **ARM GCC 빌드(에뮬레이터)**는 ELF의 심볼 주소에서 에뮬레이터 RAM 값을 읽는다(타입은 소스의 선언으로 정한다). 배열·구조체 전체, 없는 이름은 칩에 "읽기 실패"와 이유가 나온다.
-- 실물 보드에서 STM Studio를 쓰려면 ARM GCC Debug 빌드의 `firmware.elf`(빌드 탭 **빌드 폴더 열기**)를 STM Studio에 넣으면 된다. 기본 빌드 폴더는 `%APPDATA%\STM32 Circuit Lab
-ative-builds\<빌드마다 새 폴더>`다.
+- 실물 보드에서 STM Studio를 쓰려면 ARM GCC Debug 빌드의 `firmware.elf`(빌드 탭 **빌드 폴더 열기**)를 STM Studio에 넣으면 된다. 기본 빌드 폴더는 `%APPDATA%\STM32 Circuit Lab\native-builds\<빌드마다 새 폴더>`다. 1.25.0부터 디버그 정보가 DWARF 4라 STM Studio의 GDB가 읽는다(1.24.1까지는 "Dwarf Error: wrong version"이 났다).
 
 ## 로직 분석기와 선로 잡음
 

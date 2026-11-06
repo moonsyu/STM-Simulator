@@ -1,6 +1,17 @@
 # STM Simulator — 개발 인계
 
-현재 버전: **1.24.1**. 정리일: **2026-11-06**. NUCLEO-F446RE·NUCLEO-F103RB 또는 Renesas FPB-RA6E1(1.20.0, FSP·에뮬레이터 전용)과 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+현재 버전: **1.25.0**. 정리일: **2026-11-06**. NUCLEO-F446RE·NUCLEO-F103RB 또는 Renesas FPB-RA6E1(1.20.0, FSP·에뮬레이터 전용)과 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+
+## 1.25.0 printf float 설정 · it.c 핸들러 중복 안내 · 핀 과전압 · 입력 중 자동완성 · DWARF 4 · FPB-RA6E1 실물 확인
+
+[FEATURES.md](docs/FEATURES.md) 2·4~8번.
+- printf float(4번, `src/printf-float.js`): 프로젝트 `build.printfFloat`(새 프로젝트 `false` = CubeIDE 기본, 이 칸이 없는 예전 프로젝트는 `true`로 봄). ARM 빌드 두 곳(`native-build.cjs`, `ra-build.cjs`)이 켜졌을 때만 `-u _printf_float`, 지문(fingerprint)에 `build` 포함. 해석기 `hal-stdio.js`는 꺼지면 `%f/%e/%g`를 빈칸(newlib-nano와 같음). `usesFloatPrintf`(printf 계열 형식 문자열, 주석 제외)가 참인데 꺼져 있으면 실행마다 출력 탭에 `PRINTF_FLOAT_NOTICE` 한 번. IDE 툴바 `#printf-float`. 예제 적용(`applyHalExample`·`applyLectureExample`·장치 Docs)은 `withExamplePrintfFloat`로 실수를 찍는 예제만 켬.
+- it.c 핸들러 중복(6번, `src/irq-duplicates.js`): `irqHandlers(mcu)`(NVIC가 켜진 줄·DMA 스트림)와 `SysTick_Handler`를 main.c·추가 .c(이름이 `*_it.c`인 파일 제외)에서 찾음(주석·`#if 0` 제외, 줄 번호 유지). 생성기가 쓰는 형태(`{` 뒤 `/* USER CODE BEGIN <IRQ> 0 */`)는 제외. `circuitDiagnostics`가 경고 `irq-duplicate:<이름>`, 대상 `{type:'code',file,line}` → `focusIssue`가 그 파일·줄로 이동. 빌드는 그대로(앱은 사용자 핸들러를 씀).
+- 핀 과전압(5번, `src/pin-tolerance.js`): I/O 구조 F446RE는 PA4·PA5만 TTa, F103RB는 PA0~7·PB0·PB1·PB5·PC0~5·PC13~15가 TT(그 밖 FT). 한계 FT 5.5 V, TT·TTa·ADC 모드 FT 3.6 V, 하한 −0.3 V. `circuitDiagnostics`가 헤더 핀(`signal:Pxn`)의 풀이 전압을 보고 오류 `overvoltage:<핀>`. 실행 중이면 `renderIssues`가 실행마다 핀당 한 번 출력 탭에 씀(`state.overvoltageLogged`, 실행 시작 때 비움). RA 보드·다른 보드는 제외. 핀 구조 표는 데이터시트 원문을 받지 못해(st.com 접속 실패) 알고 있던 표로 작성 — WORKLOG 남은 사항.
+- 입력 중 자동완성(7번): clangd 결과의 `isIncomplete`를 Monaco에 넘김, 질의 전 `languageService.flush()`로 편집 내용 동기화(`native-ide-ui.js` `flushLanguage`), Monaco 단어 목록 끔(`wordBasedSuggestions:'off'`), 치는 중인 단어는 식별자 후보에서 뺌.
+- DWARF 4(8번): ARM 빌드 `-gdwarf-4`, 툴체인 libgcc.a는 `--strip-debug` 사본(`<build>/dwarf4-libs`)으로 링크해 DWARF 5 조각이 남지 않음. `elf.js` 줄 표는 0번지에서 시작하는 시퀀스(--gc-sections로 지워진 함수)를 건너뜀.
+- FPB-RA6E1 실물(2번 6단계): J-Link V9.92·J-Link-OB-S124에서 기록·검증·리셋, LED1 토글, 디버그 중단점·호출 스택·`SystemCoreClock` 확인. 보드는 32.768 kHz 수정이 있으나 E25/E26이 열려 있어 `BSP_CLOCK_CFG_SUBCLOCK_POPULATED (0)`. GDB(`gdb-mi.cjs` `aliases`)와 에뮬레이터(`firmware-session.js` `RA_MAIN`)가 main.c 중단점·프레임을 `src/hal_entry.c`와 잇는다. `JLinkGDBServerCL -nogui`(값 없음).
+- 시험: `tests/unit/{printf-float,irq-duplicates,pin-tolerance}.test.js`, `tests/toolchain/{printf-float,dwarf-version}.test.mjs`(CI firmware 단계), `tests/e2e/{printf-float,irq-duplicate,pin-overvoltage,completion}.e2e.test.mjs`, `tests/firmware/firmware-ra6e1.test.js`(FSP 디버그 줄).
 
 ## 1.24.1 ARM GCC 에뮬레이터의 ADC 단일 변환 안내
 
