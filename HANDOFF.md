@@ -1,6 +1,12 @@
 # STM Simulator — 개발 인계
 
-현재 버전: **1.24.0**. 정리일: **2026-11-06**. NUCLEO-F446RE·NUCLEO-F103RB 또는 Renesas FPB-RA6E1(1.20.0, FSP·에뮬레이터 전용)과 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+현재 버전: **1.24.1**. 정리일: **2026-11-06**. NUCLEO-F446RE·NUCLEO-F103RB 또는 Renesas FPB-RA6E1(1.20.0, FSP·에뮬레이터 전용)과 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+
+## 1.24.1 ARM GCC 에뮬레이터의 ADC 단일 변환 안내
+
+- 에뮬레이터 ADC(`emu/stm32f446/adc.js` `Adc.staleRead`, F103은 `AdcF1.externalTrigger`만 다름): 정규 변환 결과를 DR에 쓰면 `fresh`. DR을 다시 읽을 때 새 변환이 없고, CONT·DMA·외부 트리거가 아니며, 채널이 하나이고, 지금 입력을 변환한 값이 DR 값과 12비트 기준 40 넘게 다르면 `soc.env.warn`으로 한 번 알린다(값은 실물처럼 그대로).
+- `FirmwareSession`: `warn` 옵션(없으면 '경고' 프로토콜 기록), 같은 문구는 한 번. `app-run.js`가 두 엔진 모두에 `warn`을 넘겨 출력 탭(`log(…,'error')`)과 프로토콜 모니터에 쓴다. 전에는 해석기 안내가 프로토콜 기록에만 갔다.
+- 시험: `tests/toolchain/adc-continuous.test.mjs`(두 보드 단일 모드는 안내 1번·연속 모드는 0번), `tests/e2e/adc-continuous.e2e.test.mjs`(GCC 엔진: 예제는 접점을 따라가고 안내 없음, 제보 코드는 값 고정·안내 1번).
 
 ## 1.24.0 TIM PWM 채널별 설정 · I2C1 Parameter Settings
 

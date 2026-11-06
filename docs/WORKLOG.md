@@ -2,6 +2,15 @@
 
 작업할 때마다 날짜순으로 맨 위에 추가합니다. 무엇을 했는지, 왜 했는지, 어떻게 검증했는지, 커밋·릴리스와 남은 사항을 적습니다. 버전별 구조 설명은 [HANDOFF.md](../HANDOFF.md), 검증 수치는 [VERIFICATION.md](VERIFICATION.md)에 있습니다.
 
+## 2026-11-06 · 1.24.1 가변저항 값이 실행 중 반영되지 않는다는 제보 (ARM GCC 엔진 안내)
+
+- 요청: "ADC 분압 POT"(속성 패널 머리글이 `ADC 분압`인 10 kΩ 트리머 가변저항)의 값을 바꿔도 적용되지 않는다.
+- 확인: 의존성을 설치한 임시 복제본(e563039)에서 기본 가변저항 예제를 창을 다른 창 뒤에 띄운 다크 모드로 실행했다. GCC 엔진·해석기 모두 접점 50 → 90 %에서 2047 → 3685로 따라갔다. 사용자 앱(1.23.0, `Desktop/jms/STM-Simulator.exe`)의 진단 기록(`diagnostics/latest-project.stm32lab`, `events.jsonl`)을 보니 코드는 지난번 제보와 같았다: `HAL_ADC_Start`를 USER CODE 2에서 한 번 부르고, 루프에서는 `HAL_ADC_GetValue`만 부르며, `ContinuousConvMode = DISABLE`. 실행 엔진은 ARM GCC였다. 단일 변환 모드라 실물 보드도 값이 고정되므로 동작은 맞다. 다만 1.21.0의 안내가 해석기에만 있어 사용자에게 아무것도 보이지 않았다.
+- 한 것(9b074f2): 에뮬레이터 ADC가 새 변환 없이 DR을 다시 읽는데 입력이 바뀌었으면 한 번 알린다(CONT·DMA·외부 트리거·스캔 제외). `FirmwareSession` `warn` 옵션을 추가했고, `app-run.js`가 두 엔진의 안내를 출력 탭과 프로토콜 모니터에 쓴다.
+- 맞춘 것: E2E의 page 함수 안에 쓴 C 문자열 `\r\n`이 GCC에 실제 줄바꿈으로 들어가 "missing terminating \" character"가 났다. 바꿀 코드를 `String.raw` 인자로 넘기게 했다.
+- 검증: 단위·해석기·에뮬레이터·펌웨어 936개 중 935개 통과·1개 건너뜀. 툴체인 adc-continuous 통과(두 보드 단일 모드 안내 1번, 연속 모드 0번). E2E adc-continuous 2개 통과(GCC: 예제는 안내 없이 3685, 제보 코드는 값 고정·안내 1번). ESLint 0건.
+- 게시: 1.24.0(4f7a8d0·29c1bac·e563039, 다른 세션 작업)이 푸시되지 않은 채 남아 있어 함께 1.24.1로 게시한다.
+
 ## 2026-11-06 · 1.24.0 TIM PWM 채널별 설정 · I2C1 Parameter Settings (기능 목록 3번)
 
 - 요청: 이어서 진행 — CubeMX 차이 목록(TIM, I2C 줄).
