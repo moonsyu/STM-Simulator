@@ -1,5 +1,9 @@
 # 검증 기록
 
+## 1.23.0 FSP 원본 색인·J-Link·USART/SPI 설정 — 게시 확인(API)
+
+2026-11-06. 태그·빌드 커밋 `8685030d86b411b40791fbfbbe7656aea81d5cdf` · [Windows CI 42160908541](https://github.com/moonsyu/STM-Simulator/actions/runs/42160908541) 성공 · [Release v1.23.0](https://github.com/moonsyu/STM-Simulator/releases/tag/v1.23.0) latest, draft/prerelease 아님, 자산 5개(BUILD-INFO.json, SHA256.txt, STM-Simulator-1.23.0-Windows-x64.zip, STM-Simulator.exe 115,566,524 B, update-manifest.json). 파일은 내려받지 않고 API로만 확인했다. 푸시 전 로컬 검사: ESLint 0건, 단위 936개 중 935개 통과·1개 건너뜀, 툴체인 278개 중 277개 통과·1개 건너뜀, 패키지 검사 3개 통과, E2E 71개 중 69개 통과·1개 건너뜀·1개 실패 — 실패는 `copy.e2e` Ctrl+C 복사로, 이 PC의 Windows 클립보드를 다른 프로세스가 잡고 있어(PowerShell Set-Clipboard도 "Requested Clipboard operation did not succeed") 생긴 환경 문제다. 복사 코드는 1.22.0 이후 바뀌지 않았고 CI E2E에서 통과했다. `8685030`까지만 푸시했다(TIM·I2C 커밋 제외).
+
 ## 1.22.0 FPB-RA6E1 주변장치·Clocks·Stacks — 게시 확인(API)
 
 2026-11-06. 태그·빌드 커밋 `dd697629fdb678e6fe08ea6257c979e7dc9f0b2c` · [Windows CI 42154435131](https://github.com/moonsyu/STM-Simulator/actions/runs/42154435131) 성공 · [Release v1.22.0](https://github.com/moonsyu/STM-Simulator/releases/tag/v1.22.0) latest, draft/prerelease 아님, 자산 5개(BUILD-INFO.json, SHA256.txt, STM-Simulator-1.22.0-Windows-x64.zip, STM-Simulator.exe 115,530,343 B, update-manifest.json). 파일은 내려받지 않고 API로만 확인했다. 푸시 전 로컬 검사: ESLint 0건, 단위·해석기·에뮬레이터 928개 중 927개 통과·1개 건너뜀, E2E 68개 중 67개 통과·1개 건너뜀(RA E2E 7개 포함), 패키지 검사 3개 통과(산출물 삭제). 그 뒤의 로컬 커밋(FSP 원본 색인, J-Link)은 이 Release에 들어가지 않도록 `dd69762`까지만 푸시했다.
