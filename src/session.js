@@ -1,5 +1,4 @@
 import {CatalogSingleWire} from './catalog-singlewire.js';
-import {printfFloatEnabled} from './printf-float.js';
 import {CatalogMotion} from './catalog-motion.js';
 import {physicalToModel,physicalResult} from './catalog-model.js';
 import {MotionDevices} from './device-motion.js';
@@ -44,8 +43,6 @@ export class SimulationSession {
       construct:(name,args,runtime)=>constructLCD(args,runtime),deviceCall:(device,method,args,runtime)=>callLCD(device,method,args,runtime),
       call:(name,args,runtime)=>this.hal?.call(name,args,runtime)??this.buses.call(name,args,runtime),serialAvailable:()=>this.serial.length,serialRead:()=>this.serial.shift()??-1
     });
-    // CubeIDE "Use float with printf" off: printf prints nothing for %f (newlib-nano without -u _printf_float).
-    this.runtime.printfFloat=printfFloatEnabled(project);
   }
   // A global (or an expression of globals: arr[2], s.x, a+b) as one number for the variable graph, read in the
   // global scope wherever the program is, as STM Studio reads RAM.

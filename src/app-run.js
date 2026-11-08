@@ -1,5 +1,4 @@
 // Running and debugging: which boards run, starting and stopping a run, firmware builds for the emulator, step commands.
-import {printfFloatEnabled,usesFloatPrintf,projectSources,PRINTF_FLOAT_NOTICE} from './printf-float.js';
 import {log,running,logUart,checkpoint,autosave} from './app-core.js';
 import {state} from './app-state.js';
 import {refresh} from './app-view.js';
@@ -32,9 +31,7 @@ export function initializeRuntime({debug=false,entry=false}={}){
    warn:message=>{log(message,'error');monitor.trace({micros:state.session?.now??state.session?.runtime?.microTime??0,protocol:'경고',message});}};
   state.session=emulate?new FirmwareSession(state.project,{...options,elf:state.firmware.bytes}):new SimulationSession(boardOnly?{...state.project,code:BOARD_ONLY_PROGRAM,firmware:{mode:'sketch',files:[]}}:state.project,{...options,program});state.runtime=state.session.runtime;state.status='paused';state.pending=null;state.mode='select';// The start line comes before what the program prints in its first tick.
   log(boardOnly?'다른 보드만 실행합니다. STM32 코드는 실행하지 않습니다.':emulate?`${state.ide?.gccSimulation?.()?'시뮬레이터(ARM GCC 빌드)를 시작했습니다':'펌웨어 에뮬레이터를 시작했습니다'} · ${state.firmware.name} · ${projectBoard(state.project).mcu} (${projectBoard(state.project).core}) 명령어 실행`:state.project.firmware?.mode==='hal'?'HAL 프로그램을 시작했습니다.':'스케치를 시작했습니다.');
-  // printf("%.2f") with CubeIDE's float printf off prints nothing for the number: say why once per run.
   state.overvoltageLogged=new Set();
-  if(!boardOnly&&!printfFloatEnabled(state.project)&&usesFloatPrintf(projectSources(state.project)))log(PRINTF_FLOAT_NOTICE,'error');
   state.session.circuit.drivers=scope==='stm32'?[]:[...createBoardDrivers(state.project,{log:s=>log(s,'serial'),scope}),...createStm32Drivers(state.project,{scope,emulate:!!state.ide?.emulator(),elfs:state.boardElfs,log:s=>log(s,'serial'),trace:event=>monitor.trace(event)})];state.session.buses.boards=()=>state.session.circuit.drivers;connectStm32Drivers(state.session);state.result=state.session.tick(0);for(const p of state.project.components)if(isCamera(p))void applyCameraImage(p,state.session);diagnostic('simulation.started',{debug,entry},true);state.ide?.debugView();return true;}
  catch(e){state.runtime=null;state.result=state.session?.viewResult??null;state.status='error';log(e.message,'error');return false;}
 }

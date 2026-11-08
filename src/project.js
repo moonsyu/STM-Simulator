@@ -25,8 +25,8 @@ function stm32Software(p,version){
 }
 export function blankProject(family){
   // A Renesas RA board starts as e² studio's FSP template: the board's pins (LEDs, S1) and an empty hal_entry().
-  if(isRaFamily(family))return {format:'stm32-circuit-lab',version:2,name:'새 회로',components:[],wires:[],surfaces:{board:{hidden:true},breadboard:{hidden:true}},mcu:raDefaultMcu(family),firmware:{mode:'fsp',files:[]},build:{printfFloat:false},code:raHalEntry()};
-  const mcu={...defaultMcu(family),pins:{}};return {format:'stm32-circuit-lab',version:2,name:'새 회로',components:[],wires:[],surfaces:{board:{hidden:true},breadboard:{hidden:true}},mcu,firmware:{mode:'hal',files:[]},build:{printfFloat:false},code:expandC(generateHal(mcu).replace('/* USER CODE BEGIN 2 */','/* USER CODE BEGIN 2 */\n  printf("HAL ready\\n");'))};}
+  if(isRaFamily(family))return {format:'stm32-circuit-lab',version:2,name:'새 회로',components:[],wires:[],surfaces:{board:{hidden:true},breadboard:{hidden:true}},mcu:raDefaultMcu(family),firmware:{mode:'fsp',files:[]},code:raHalEntry()};
+  const mcu={...defaultMcu(family),pins:{}};return {format:'stm32-circuit-lab',version:2,name:'새 회로',components:[],wires:[],surfaces:{board:{hidden:true},breadboard:{hidden:true}},mcu,firmware:{mode:'hal',files:[]},code:expandC(generateHal(mcu).replace('/* USER CODE BEGIN 2 */','/* USER CODE BEGIN 2 */\n  printf("HAL ready\\n");'))};}
 // Complete example circuits explicitly include the legacy board and breadboard.
 export function exampleProject(){const p=blankProject();delete p.surfaces;return p;}
 export function validateProject(data){
@@ -128,8 +128,6 @@ export function validateProject(data){
     if((data.firmware.mode==='fsp')!==isRaFamily(project.mcu?.family))throw new Error(isRaFamily(project.mcu?.family)?'Renesas RA 보드는 FSP 프로젝트로 작성합니다.':'FSP 프로젝트는 Renesas RA 보드에서만 씁니다.');
     project.firmware={mode:data.firmware.mode,files};
   }
-  // Build settings: CubeIDE's "Use float with printf from newlib-nano" (off in a new project; absent = on, as before).
-  if(data.build!==undefined){const b=data.build;if(!b||typeof b!=='object'||Array.isArray(b)||(b.printfFloat!==undefined&&typeof b.printfFloat!=='boolean'))throw new Error('빌드 설정이 올바르지 않습니다.');project.build={};if(b.printfFloat!==undefined)project.build.printfFloat=b.printfFloat;}
   if(data.simulation!==undefined){const s=data.simulation;if(!s||typeof s!=='object'||![.1,.5,1,5,20].includes(s.stepMs)||typeof s.pwmWaveform!=='boolean')throw new Error('시뮬레이션 시간 설정이 올바르지 않습니다.');project.simulation={stepMs:s.stepMs,pwmWaveform:s.pwmWaveform};if(s.noise!==undefined)project.simulation.noise=validateNoise(s.noise);}
   if(data.ide!==undefined){
     const s=data.ide,names=new Set(['main.c',...(project.firmware?.files||[]).map(f=>f.name)]);

@@ -33,7 +33,7 @@ async function prepareRa({project,tools,directory,userFiles}){
   includes:includes.map(i=>'-I'+i),
   // FSP and the generated files are not the user's code: their warnings would only fill the 빌드 panel.
   sdkSources:[...fspSources,...genSources],
-  linkFlags:['-T'+path.join(script,'fsp.ld'),'-L'+script,'-nostartfiles','--specs=nano.specs','--specs=nosys.specs',...(project.build?.printfFloat===false?[]:['-u','_printf_float'])],
+  linkFlags:['-T'+path.join(script,'fsp.ld'),'-L'+script,'-nostartfiles','--specs=nano.specs','--specs=nosys.specs','-u','_printf_float'],
   generated:Object.keys(generated)
  };
 }

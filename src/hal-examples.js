@@ -1,4 +1,3 @@
-import {withExamplePrintfFloat} from './printf-float.js';
 import {CATALOG_EXAMPLES,CATALOG_GUIDES,catalogExample,physicalExample} from './catalog-examples.js';
 import {arrangeExampleOnBreadboards} from './example-breadboard.js';
 import {L298_EXAMPLES,L298_GUIDES,l298Example} from './l298n-example.js';
@@ -100,5 +99,5 @@ const arranged=new Map();
 export function applyHalExample(project,kind){
   const boardId=projectBoard(project).id,key=boardId+':'+kind;
   if(!arranged.has(key))arranged.set(key,arrangeExampleOnBreadboards(tidyExampleSource(halExampleFor(kind,boardId))));
-  return withExamplePrintfFloat({...structuredClone(arranged.get(key)),name:project.name});
+  return {...structuredClone(arranged.get(key)),name:project.name};
 }
