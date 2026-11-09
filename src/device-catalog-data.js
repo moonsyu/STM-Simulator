@@ -2145,30 +2145,26 @@ export const DEVICE_CATALOG = [
   {
     "id": "ds3231-zs042-10",
     "family": "external_rtc",
-    "name": "DS3231 RTC 모듈 (ZS-042) 6+4핀",
-    "pin_count": 10,
+    "name": "DS3231 RTC 모듈 (ZS-042) 6핀",
+    "pin_count": 6,
     "pins": [
       "32K",
       "SQW",
       "SCL",
       "SDA",
       "VCC",
-      "GND",
-      "SCL",
-      "SDA",
-      "VCC",
       "GND"
     ],
     "interface": "I²C",
-    "appearance": "파란 기판(약 38×22 mm) 가운데 DS3231 칩, 아래에 AT24C32 EEPROM, 왼쪽 6핀 헤더(32K·SQW·SCL·SDA·VCC·GND), 오른쪽 4핀(SCL·SDA·VCC·GND), 뒷면 CR2032 코인셀 홀더.",
-    "notes": "DS3231 0x68, 같은 기판의 AT24C32 EEPROM 0x57(A0~A2 점퍼로 0x50~0x57). 오른쪽 4핀은 왼쪽의 SCL·SDA·VCC·GND와 같은 선으로, 다음 I²C 장치를 이어 붙일 때 씁니다. VCC 2.3~5.5 V.",
-    "additional_contacts": "오른쪽 4핀은 왼쪽 SCL·SDA·VCC·GND와 연결된 통과 핀입니다. 뒷면 A0~A2 점퍼와 코인셀 홀더는 접점에서 뺐습니다.",
+    "appearance": "파란 기판(약 38×22 mm) 가운데 DS3231 칩, 아래에 AT24C32 EEPROM, 왼쪽 6핀 직각 헤더(32K·SQW·SCL·SDA·VCC·GND), 뒷면 CR2032 코인셀 홀더.",
+    "notes": "DS3231 0x68, 같은 기판의 AT24C32 EEPROM 0x57(A0~A2 점퍼로 0x50~0x57). VCC 2.3~5.5 V. 기판 오른쪽의 4개 구멍(SCL·SDA·VCC·GND)은 다음 I²C 장치를 이어 붙이는 통과 구멍이라 연결점으로 두지 않습니다.",
+    "additional_contacts": "오른쪽 4개 통과 구멍, 뒷면 A0~A2 점퍼와 코인셀 홀더는 접점에서 뺐습니다.",
     "source_ids": [
       "ds3231_datasheet",
       "zs042_lme"
     ],
     "visual_source_id": "zs042_lme",
-    "pin_order": "왼쪽 6핀은 위에서부터 32K, SQW, SCL, SDA, VCC, GND, 오른쪽 4핀은 위에서부터 SCL, SDA, VCC, GND입니다(ZS-042 실크). 판매처에 따라 다를 수 있으니 실물 실크와 대조하세요.",
+    "pin_order": "왼쪽 6핀 헤더, 위에서부터 32K, SQW, SCL, SDA, VCC, GND입니다(ZS-042 실크). 판매처에 따라 다를 수 있으니 실물 실크와 대조하세요.",
     "source": [
       {
         "title": "DS3231 Extremely Accurate I²C-Integrated RTC/TCXO/Crystal (Analog Devices data sheet)",

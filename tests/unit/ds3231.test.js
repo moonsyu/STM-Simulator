@@ -6,6 +6,7 @@ import {resetDs3231,writeDs3231,readDs3231,ds3231Time,resetEeprom,writeEeprom,re
 import {catalogExample} from '../../src/catalog-examples.js';
 import {catalogType,CATALOG_DEFS} from '../../src/catalog-defs.js';
 import {SimulationSession} from '../../src/session.js';
+import {validateProject} from '../../src/project.js';
 
 const bcd=n=>((Math.floor(n/10)<<4)|(n%10));
 const read=(s,reg,count,us,t=25)=>{writeDs3231(s,[reg],us);return readDs3231(s,count,us,t);};
@@ -56,9 +57,11 @@ test('AT24C32: 12-bit word address, writes wrap inside a 32-byte page, sequentia
  writeEeprom(e,[0x0f,0xe0]);assert.deepEqual(readEeprom(e,2),[3,4],'page wrap: 3 and 4 went to 0FE0 and 0FE1');
 });
 
-test('ZS-042 module: 6 + 4 pins, 0x68 clock and 0x57 EEPROM, the Docs example prints date, time and temperature',()=>{
+test('ZS-042 module: the left 6-pin header, 0x68 clock and 0x57 EEPROM, the Docs example prints date, time and temperature',()=>{
  const type=catalogType('ds3231-zs042-10');
- assert.deepEqual(CATALOG_DEFS[type].labels,['32K','SQW','SCL','SDA','VCC','GND','SCL','SDA','VCC','GND']);
+ assert.deepEqual(CATALOG_DEFS[type].labels,['32K','SQW','SCL','SDA','VCC','GND']);
+ // The header pins stand two holes (5 mm) left of the board's header holes: drawn as legs out of the board.
+ assert.ok(CATALOG_DEFS[type].terminals.every(([x])=>x===-119)&&CATALOG_DEFS[type].body.width===210);
  const project=catalogExample(type,()=>{throw new Error('own example');});
  const part=project.components.find(p=>p.type===type);part.temperature=31.75;
  const out=[],session=new SimulationSession(project,{print:s=>out.push(String(s))});
@@ -71,4 +74,18 @@ test('ZS-042 module: 6 + 4 pins, 0x68 clock and 0x57 EEPROM, the Docs example pr
  assert.equal(session.buses.i2cTarget(0x68).connected,true);assert.equal(session.buses.i2cTarget(0x57).connected,true);
  assert.equal(session.buses.i2cTarget(0x50).part,undefined);
  assert.ok(ds3231Time(session.buses.devices.state(session.buses.project.components.find(p=>p.catalogVariant==='ds3231-zs042-10')).rtc,2e6)>0);
+});
+
+test('a 1.27.0 project with wires and pins on the removed right pins (p7..p10) opens with them on the left pins of the same signal',()=>{
+ const project=catalogExample(catalogType('ds3231-zs042-10'),()=>{throw new Error('own example');});
+ const part=project.components.find(p=>p.type==='ref_ds3231_zs042_10');
+ const old=structuredClone(project);
+ // 1.27.0: SCL wired at the right pin p7 instead of p3, and the right VCC (p9) wired to the left VCC (p5).
+ const pin=k=>`part:${part.id}:${k}`,scl=old.wires.find(w=>w.from===pin('p3')||w.to===pin('p3'));
+ if(scl.from===pin('p3'))scl.from=pin('p7');else scl.to=pin('p7');
+ old.wires.push({id:'bridge',from:pin('p9'),to:pin('p5'),color:'#23a68a'});
+ const clean=validateProject(old),w=clean.wires.find(x=>x.id===scl.id);
+ assert.ok([w.from,w.to].includes(pin('p3')),JSON.stringify(w));
+ assert.equal(clean.wires.find(x=>x.id==='bridge'),undefined,'a wire between a removed pin and its own left pin disappears');
+ assert.ok(!clean.wires.some(x=>/:p(7|8|9|10)$/.test(x.from)||/:p(7|8|9|10)$/.test(x.to)));
 });

@@ -29,7 +29,18 @@ export function blankProject(family){
   const mcu={...defaultMcu(family),pins:{}};return {format:'stm32-circuit-lab',version:2,name:'새 회로',components:[],wires:[],surfaces:{board:{hidden:true},breadboard:{hidden:true}},mcu,firmware:{mode:'hal',files:[]},code:expandC(generateHal(mcu).replace('/* USER CODE BEGIN 2 */','/* USER CODE BEGIN 2 */\n  printf("HAL ready\\n");'))};}
 // Complete example circuits explicitly include the legacy board and breadboard.
 export function exampleProject(){const p=blankProject();delete p.surfaces;return p;}
+// 1.27.0 ZS-042 DS3231 (ref_ds3231_zs042_10) had 4 pass-through pins p7..p10 tied to p3..p6; they were removed in 1.28.0,
+// so their wires and breadboard pins move to the left pin of the same signal.
+function migrateZs042(data){
+  const parts=new Set((Array.isArray(data?.components)?data.components:[]).filter(p=>p?.type==='ref_ds3231_zs042_10').map(p=>p.id));
+  if(!parts.size)return data;
+  const move=id=>{const m=/^part:([^:]+):p(7|8|9|10)$/.exec(id||'');return m&&parts.has(m[1])?`part:${m[1]}:p${Number(m[2])-4}`:id;};
+  const components=data.components.map(p=>{if(!parts.has(p?.id)||!p.attachments||typeof p.attachments!=='object')return p;const a={};for(const [k,v]of Object.entries(p.attachments)){const n=/^p(7|8|9|10)$/.test(k)?'p'+(Number(k.slice(1))-4):k;if(!(n in a)||n===k)a[n]=v;}return {...p,attachments:a};});
+  const wires=Array.isArray(data.wires)?data.wires.map(w=>w&&typeof w==='object'?{...w,from:move(w.from),to:move(w.to)}:w).filter(w=>!w||w.from!==w.to):data.wires;
+  return {...data,components,wires};
+}
 export function validateProject(data){
+  data=migrateZs042(data);
   if(!data||data.format!=='stm32-circuit-lab'||![1,2].includes(data.version))throw new Error('지원하지 않는 회로 파일 형식입니다.');
   if(typeof data.name!=='string'||data.name.length>120||typeof data.code!=='string'||data.code.length>300000)throw new Error('회로 이름 또는 코드가 올바르지 않습니다.');
   if(!Array.isArray(data.components)||data.components.length>100||!Array.isArray(data.wires)||data.wires.length>500)throw new Error('부품 100개, 배선 500개까지 지원합니다.');

@@ -53,8 +53,8 @@ export const ON_CONTACT_PINS={
  'urm09-trig-3':[[-14,35],[-1.5,35],[13,35]],
  'urm09-i2c-4':[[-17,33],[17,33],[5,33],[-6.5,33]],
  'mcp4725-6':[[-55,-16],[-55,-2],[-27,54],[-13,54],[1,54],[15,54]],
- // ZS-042 DS3231: the 6-pin header on the left edge, the 4 pass-through pins on the right, one 2.54 mm grid.
- 'ds3231-zs042-10':[[-91,-38.5],[-91,-24.5],[-91,-10.5],[-91,3.5],[-91,17.5],[-91,31.5],[91,-24.5],[91,-10.5],[91,3.5],[91,17.5]],
+ // ZS-042 DS3231: the 6-pin right-angle header on the left edge, its pins two holes (5 mm) left of the header holes.
+ 'ds3231-zs042-10':[[-119,-38.5],[-119,-24.5],[-119,-10.5],[-119,3.5],[-119,17.5],[-119,31.5]],
  // ESP-01: 2 × 4 header (table order 1-4 on the upper row, 5-8 back along the lower one).
  'esp01-wifi-8':[[-20,45],[-7,45],[6.5,45],[20,45],[20,58],[6.5,58],[-7,58],[-20,58]],
 };
