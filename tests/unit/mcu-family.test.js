@@ -15,7 +15,7 @@ test('the default family is still the STM32F446RE with its original routes and I
 
 test('STM32F103RB profile: peripherals, GPIO set, clocks and IRQs of the F103 medium-density part',()=>{
  const f=familyProfile(F1),routes=routesOf(F1);
- assert.deepEqual(Object.keys(routes).sort(),['ADC1','I2C1','SPI1','TIM2','TIM3','TIM4','USART1','USART2','USART3']);
+ assert.deepEqual(Object.keys(routes).sort(),['ADC1','I2C1','RTC','SPI1','TIM2','TIM3','TIM4','USART1','USART2','USART3']);
  for(const missing of ['SDIO','DCMI','UART4','UART5','USART6','TIM5'])assert.ok(!routes[missing],missing);
  assert.ok(f.gpioPins.includes('PB11')&&f.gpioPins.includes('PD0')&&!f.gpioPins.includes('PH0'));
  assert.equal(defaultMcu(F1).timerClockHz,8000000);
