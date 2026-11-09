@@ -83,6 +83,7 @@ Pinout & Configuration 오른쪽의 **Clock** 탭에서 CubeMX Clock Configurati
 - **USART(비동기) Parameter Settings**: Word Length(8/9비트, 패리티 포함), Parity(None/Even/Odd), Stop Bits(1/2), Data Direction(송수신/송신만/수신만), Over Sampling(16/8 — F103RB는 16만). 생성 코드의 `huartN.Init`과 .ioc 가져오기에 반영된다. ARM GCC 시뮬레이터(기본)에서 그대로 동작하고, 내장 해석기는 8N1만 지원한다. 직렬 모니터의 ST-LINK VCP는 같은 형식으로 받는다(실물 PC 터미널을 같은 형식으로 맞춘 것과 같다). 외부 UART 부품은 8N1이다.
 - **SPI1 Parameter Settings**: Clock Polarity(CPOL)·Clock Phase(CPHA)로 SPI mode 0~3, Data Size 8/16비트, First Bit(MSB/LSB). 카드에 SPI mode 번호가 보인다. 로직 분석기의 SPI 해석도 이 설정을 따른다.
 - **TIM PWM 채널별 설정(1.24.0)**: PWM 모드 타이머 카드에 채널 핀마다 PWM Generation CHn이 생긴다. Pulse, Mode(PWM mode 1/2), CH Polarity(High/Low)를 채널마다 정하고, 출력이 High인 비율을 보여 준다. 생성 코드는 채널마다 설정을 다시 쓴 뒤 `HAL_TIM_PWM_ConfigChannel`을 부른다. 내장 해석기는 PWM mode 1·High만 지원한다.
+- **TIM 출력 비교·Counter Mode(1.27.0)**: 동작 모드에서 **출력 비교 (Output Compare)**를 고르면 채널 핀마다 Output Compare CHn 칸이 생긴다. Mode(Frozen, Active/Inactive Level on match, Toggle on match, Forced Active/Inactive), Pulse, CH Polarity를 정하면 아래에 핀이 어떻게 바뀌는지 나온다(예: "CCR 일치 2 Hz · 핀 토글 → 1 Hz 사각파"). Frozen은 핀을 바꾸지 않고 인터럽트로만 쓴다. NVIC를 켜면 생성 코드가 `HAL_TIM_OC_Start_IT`와 `HAL_TIM_OC_DelayElapsedCallback`을 넣는다. 엔코더가 아닌 타이머에는 **Counter Mode**(Up, Down, Center Aligned mode1~3)가 있다. 중앙 정렬은 0 → ARR → 0으로 세어 PWM 주파수가 타이머 클록 / 2·ARR이 된다.
 - **I2C1 Parameter Settings(1.24.0)**: Primary Address(슬레이브로 쓸 때의 7비트 주소, 코드에는 `OwnAddress1 = 주소 << 1`), Fast Mode Duty Cycle(100 kHz보다 빠를 때 2 또는 16/9), Clock No Stretch Mode.
 
 ## 코드 초기화
@@ -304,6 +305,15 @@ STM32 보드 옆에 **ESP32**와 **Raspberry Pi 5** 보드를 함께 놓을 수 
 
 한계: 라즈베리파이의 리눅스 커널 모듈(C)은 실행하지 않는다(고정 실행). ESP32 스케치는 회로 시뮬레이터에서 해석 실행하고, 실물 보드에는 **ESP32 (COMn)** 실행 대상으로 Arduino CLI 빌드·업로드한다(1.9.0, 디버그 없음). 로직 분석기에는 다른 보드의 핀이 나오지 않는다. 1.5.0의 회로 파일을 이전 버전에서 열면 다른 보드를 알 수 없어 열리지 않는다.
 
+## DS3231 RTC 모듈 (1.27.0)
+
+부품 검색에서 `DS3231`으로 찾는다. **DS3231 RTC 모듈 (ZS-042)**은 흔히 쓰는 파란 모듈이다: 왼쪽 6핀 32K·SQW·SCL·SDA·VCC·GND, 오른쪽 4핀 SCL·SDA·VCC·GND(왼쪽과 같은 선, 다음 I²C 장치를 이어 붙일 때). 뒷면의 CR2032 홀더는 그리지 않는다.
+- I²C 주소: DS3231 0x68, 같은 기판의 AT24C32 EEPROM 0x57.
+- 실행을 시작하면 PC의 지금 시각에서 시작한다(배터리가 있는 모듈처럼). 00h~06h에 시각을 쓰면 그 시각부터 흐른다. 날짜·월·연(세기 비트), 12/24시간, 요일(1~7, 자정마다 1씩), 알람 1·2와 상태의 A1F·A2F, 제어·에이징 레지스터를 데이터시트대로 읽고 쓴다.
+- 온도(11h·12h)는 속성 패널의 **칩 온도**(0.25 °C 단위)다.
+- 아직 없는 것: SQW/INT 핀 출력(알람 인터럽트, 사각파)과 32K 출력.
+- 이전의 8핀 부품은 **Adafruit DS3231 RTC 브레이크아웃 8핀**으로 이름이 바뀌었고 같은 모델로 동작한다.
+
 ## 블루투스·Wi-Fi 모듈과 보드 간 통신
 
 부품 검색에서 `블루투스`, `와이파이`, `HC-05`, `ESP-01`로 찾는다. 보드와 모듈은 실물처럼 UART로 연결한다. 보드 TX → 모듈 RXD, 모듈 TXD → 보드 RX, 전원·GND를 연결하고 양쪽 속도가 같아야 한다.
@@ -386,7 +396,7 @@ Ctrl+F는 현재 파일 찾기, Ctrl+R은 바꾸기, Ctrl+Z/Y는 프로젝트 �
 
 위 설명은 **회로 시뮬레이터** 실행 대상에 해당한다. 실제 GCC/GDB 대상은 아래 항목을 따른다.
 
-**printf float**(1.25.0, 툴바 빌드 구성 옆 칸)은 CubeIDE의 *Use float with printf from newlib-nano (-u _printf_float)*(Project Properties › C/C++ Build › Settings › MCU/MPU Settings)와 같다. 새 프로젝트는 CubeIDE처럼 꺼져 있어 `printf("%.2f", t)`의 숫자 자리가 빈칸으로 나온다(ARM GCC 빌드·해석 실행 모두). printf에 `%f`·`%e`·`%g`를 쓰는데 꺼져 있으면 실행할 때 출력 탭에 한 번 알린다. 켜면 프로젝트에 저장되고 다음 빌드부터 적용된다. 실수를 출력하는 예제를 적용하면 켜진다.
+**printf 실수 출력**: `printf("%.2f", t)`는 시뮬레이터와 ARM GCC 빌드 모두 숫자를 출력한다(빌드는 늘 `-u _printf_float`). 1.25.0~1.26.0의 도구 막대 printf float 칸은 1.27.0에서 없앴다. CubeIDE 새 프로젝트는 이 설정(*Use float with printf from newlib-nano*, Project Properties › C/C++ Build › Settings › MCU/MPU Settings)이 꺼져 있으니, 실물 보드용 CubeIDE 프로젝트에서는 직접 켠다.
 
 **문제 탭**은 배선·전원 검사와 함께 다음도 알린다(1.25.0).
 - **it.c 핸들러 중복**: Pinout NVIC를 켠 인터럽트의 핸들러(`ADC1_2_IRQHandler` 등)나 `SysTick_Handler`를 main.c에 직접 쓰면, 시뮬레이터에서는 동작하지만 CubeIDE는 같은 함수를 `Core/Src/stm32xxxx_it.c`에 만들어 *multiple definition* 링크 오류가 난다고 알린다. 처리는 HAL 콜백(`HAL_ADC_ConvCpltCallback`, `HAL_GPIO_EXTI_Callback`, `HAL_TIM_PeriodElapsedCallback` 등)에 쓴다. 항목을 누르면 그 줄로 이동한다. Pinout 코드 생성이 만든 핸들러(USER CODE 구역이 있는 형태)와 가져온 it.c는 알리지 않는다.

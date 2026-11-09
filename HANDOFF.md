@@ -1,6 +1,34 @@
 # STM Simulator — 개발 인계
 
-현재 버전: **1.26.0**. 정리일: **2026-11-06**. NUCLEO-F446RE·NUCLEO-F103RB 또는 Renesas FPB-RA6E1(1.20.0, FSP·에뮬레이터 전용)과 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+현재 버전: **1.27.0**. 정리일: **2026-11-09**. NUCLEO-F446RE·NUCLEO-F103RB 또는 Renesas FPB-RA6E1(1.20.0, FSP·에뮬레이터 전용)과 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+
+## 1.27.0 TIM Output Compare · Counter Mode · printf float 늘 켬 · DS3231 ZS-042 모듈
+
+- printf float(사용자 요청): 1.25.0의 툴바 칸·실행 안내·예제 켜기와 `src/printf-float.js`를 지웠다(1a1a5c6). ARM 빌드 두 곳은 늘 `-u _printf_float`, 해석기는 늘 `%f`를 출력한다. 1.25.0~1.26.0이 저장한 `build` 칸은 `validateProject`가 버린다(`tests/unit/printf-float.test.js`).
+- DS3231(사용자 요청, bc3d163):
+  - 새 부품 `ds3231-zs042-10`(ZS-042: 38×22 mm 파란 기판, 왼쪽 6핀 32K·SQW·SCL·SDA·VCC·GND, 오른쪽 4핀 통과 SCL·SDA·VCC·GND). 사진은 Figma 생성(글자·로고 없음), 헤더 구멍은 `part-art.js` PADS, 핀은 `ON_CONTACT_PINS`, 오른쪽 4핀은 `catalogTies`로 왼쪽과 묶는다. 모델 단자는 `catalog-model.js`의 `[5,6,4,3,1,2]`(VCC, GND, SDA, SCL, 32K, SQW)와 `eepromAddress:0x57`.
+  - 레지스터 모델 `src/ds3231.js`(기존 `ds3231-8`도 사용): 00h~06h는 쓴 값에 흐른 초를 더한다(실행 시작은 PC 지역 시각, 초를 쓰면 1초 분주 초기화). 12/24시간, 세기 비트, 요일은 자정마다 세는 카운터, 알람 1·2(마스크·DY/DT)는 상태 레지스터를 읽을 때 A1F/A2F를 세운다. 제어 CONV는 바로 끝, 상태의 OSF·A1F·A2F는 지우기만, 온도 11h·12h는 부품 속성 `temperature`(0.25 °C). 포인터는 12h 다음 00h. AT24C32: 12비트 주소, 32바이트 페이지 안에서 쓰기 순환.
+  - 두 주소: `device-defs.js` `answersI2c`(인터프리터 `buses.js`·펌웨어 `firmware-session.js`), 주소를 `writeI2c/readI2c`에 넘긴다.
+  - 남음: SQW/INT 핀 출력(알람 인터럽트·1 Hz 사각파)과 32K 출력은 없다.
+
+[FEATURES.md](docs/FEATURES.md) 3번. 근거는 CubeMX 6.18 DB `TIM1_8-gptimer2_v2_x_Cube_Modes.xml`(CounterMode, OCMode_n, OCPolarity_n, Pulse, "Output Compare CHn" 모드)이다.
+- 설정(`mcu-config.js`):
+  - 타이머 모드에 `oc`가 있다(`timer-config.js` `TIMER_MODES`).
+  - `TIM_OC_MODES`: TIMING(Frozen, CubeMX 기본)·ACTIVE·INACTIVE·TOGGLE·FORCED_ACTIVE·FORCED_INACTIVE. `timChannelParams(mode)`가 모드별 채널 값 목록이다(PWM은 PWM1/PWM2).
+  - `TIM_COUNTER_MODES`: UP·DOWN·CENTERALIGNED1~3. `counterMode`는 Up이 아니면 저장한다. 엔코더 모드에서는 Up만 된다.
+- 생성(`hal-generator.js`): `CounterMode`, `HAL_TIM_OC_Init`, 채널마다 OCMode·Polarity·Pulse를 다시 쓴 뒤 `HAL_TIM_OC_ConfigChannel`, `HAL_TIM_OC_Start`(NVIC가 켜지면 `_IT`와 `HAL_TIM_OC_DelayElapsedCallback` 틀).
+- .ioc(`importIoc`):
+  - 키의 Java properties 이스케이프(`\ `, `\#`)를 푼다(8f9cd39). 지금까지는 실제 CubeMX 파일의 `TIM2.Pulse-PWM\ Generation1\ CH1` 같은 키를 못 읽어 1.24.0의 PWM 채널별 설정이 빠졌다.
+  - IPParameters의 "Output Compare n CHn"이면 `oc` 모드다. `OCMode_n`(없으면 Frozen), `OCPolarity_n`, `Pulse-Output Compare n CHn`, `CounterMode`를 읽는다.
+- Pinout 화면(`src/timer-ui.js`): Counter Mode 칸, PWM Generation / Output Compare CHn 칸(Mode, Pulse, CH Polarity)과 핀 동작 안내(일치 주파수, 토글 사각파, 첫 일치 뒤 유지, 바로 고정). PWM과 OC를 바꾸면 채널 Mode는 지운다.
+- 해석기(`hal-timers.js`):
+  - 카운터를 한 주기 안의 위치(phase)로 둔다. Up CNT = u, Down CNT = ARR − u, Center CNT = u ≤ ARR ? u : 2·ARR − u. 주기는 Center면 2·ARR, 아니면 ARR + 1이다.
+  - Center 모드는 갱신 인터럽트가 ARR 틱마다다. PWM은 타이머 클록 / 2·ARR, 듀티 CCR / ARR이다. `__HAL_TIM_IS_TIM_COUNTING_DOWN`, `__HAL_TIM_SET_COUNTER`가 방향을 따른다.
+  - 출력 비교: `HAL_TIM_OC_ConfigChannel/Start/Stop(_IT)`, `__HAL_TIM_SET_COMPARE`. Toggle은 PWM처럼 그린 사각파(일치 횟수 / 2, 2000 Hz까지)이고, Active/Inactive는 다음 일치에서 핀을 바꾸며, `_IT`는 일치마다 `HAL_TIM_OC_DelayElapsedCallback`(htim->Channel)을 부른다.
+- 에뮬레이터:
+  - 타이머 `refreshOutputs`는 레벨뿐 아니라 채널 출력 켜기(CCxE)와 비교/캡처 전환(CCxS)이 바뀔 때도 핀 상태를 다시 알린다(1c247ff, F4·F1 공용). 앱의 생성 코드는 MX_GPIO_Init에서 타이머 핀을 AF로 둔 뒤 타이머 클록을 켜는데, 클록이 꺼진 동안 입력으로 알려진 채널 핀이 출력이 Low인 채로 켜지면 입력으로 남아 있었다. 처음 시도한 "RCC 클록 켜기 때 모든 핀 다시 알리기"는 리셋 상태(출력 비교)의 입력 캡처 핀을 Low 출력으로 알려 timer_capture·timer_encoder 펌웨어 시험을 깨뜨려 버렸다.
+  - 중앙 정렬 Toggle 출력 주파수는 일치 횟수를 따른다. CCR = ARR일 때 일치를 두 번 세던 것을 한 번으로 고쳤다.
+- 시험: 단위 `tests/unit/tim-oc.test.js`, 해석기 `tests/interp/timer-oc.test.js`, 툴체인(CI firmware 단계) `tests/toolchain/tim-oc.test.mjs`, E2E `tests/e2e/tim-oc.e2e.test.mjs`.
 
 ## 1.26.0 Clock Configuration(클록 트리) · ADC1 Sampling Time
 
@@ -37,7 +65,7 @@
 ## 1.25.0 printf float 설정 · it.c 핸들러 중복 안내 · 핀 과전압 · 입력 중 자동완성 · DWARF 4 · FPB-RA6E1 실물 확인
 
 [FEATURES.md](docs/FEATURES.md) 2·4~8번.
-- printf float(4번, `src/printf-float.js`): 프로젝트 `build.printfFloat`(새 프로젝트 `false` = CubeIDE 기본, 이 칸이 없는 예전 프로젝트는 `true`로 봄). ARM 빌드 두 곳(`native-build.cjs`, `ra-build.cjs`)이 켜졌을 때만 `-u _printf_float`, 지문(fingerprint)에 `build` 포함. 해석기 `hal-stdio.js`는 꺼지면 `%f/%e/%g`를 빈칸(newlib-nano와 같음). `usesFloatPrintf`(printf 계열 형식 문자열, 주석 제외)가 참인데 꺼져 있으면 실행마다 출력 탭에 `PRINTF_FLOAT_NOTICE` 한 번. IDE 툴바 `#printf-float`. 예제 적용(`applyHalExample`·`applyLectureExample`·장치 Docs)은 `withExamplePrintfFloat`로 실수를 찍는 예제만 켬.
+- printf float(4번, 1.27.0에서 사용자 요청으로 지움 — 지금은 늘 켜짐): 프로젝트 `build.printfFloat`(새 프로젝트 `false` = CubeIDE 기본, 이 칸이 없는 예전 프로젝트는 `true`로 봄). ARM 빌드 두 곳(`native-build.cjs`, `ra-build.cjs`)이 켜졌을 때만 `-u _printf_float`, 지문(fingerprint)에 `build` 포함. 해석기 `hal-stdio.js`는 꺼지면 `%f/%e/%g`를 빈칸(newlib-nano와 같음). `usesFloatPrintf`(printf 계열 형식 문자열, 주석 제외)가 참인데 꺼져 있으면 실행마다 출력 탭에 `PRINTF_FLOAT_NOTICE` 한 번. IDE 툴바 `#printf-float`. 예제 적용(`applyHalExample`·`applyLectureExample`·장치 Docs)은 `withExamplePrintfFloat`로 실수를 찍는 예제만 켬.
 - it.c 핸들러 중복(6번, `src/irq-duplicates.js`): `irqHandlers(mcu)`(NVIC가 켜진 줄·DMA 스트림)와 `SysTick_Handler`를 main.c·추가 .c(이름이 `*_it.c`인 파일 제외)에서 찾음(주석·`#if 0` 제외, 줄 번호 유지). 생성기가 쓰는 형태(`{` 뒤 `/* USER CODE BEGIN <IRQ> 0 */`)는 제외. `circuitDiagnostics`가 경고 `irq-duplicate:<이름>`, 대상 `{type:'code',file,line}` → `focusIssue`가 그 파일·줄로 이동. 빌드는 그대로(앱은 사용자 핸들러를 씀).
 - 핀 과전압(5번, `src/pin-tolerance.js`): I/O 구조 F446RE는 PA4·PA5만 TTa, F103RB는 PA0~7·PB0·PB1·PB5·PC0~5·PC13~15가 TT(그 밖 FT). 한계 FT 5.5 V, TT·TTa·ADC 모드 FT 3.6 V, 하한 −0.3 V. `circuitDiagnostics`가 헤더 핀(`signal:Pxn`)의 풀이 전압을 보고 오류 `overvoltage:<핀>`. 실행 중이면 `renderIssues`가 실행마다 핀당 한 번 출력 탭에 씀(`state.overvoltageLogged`, 실행 시작 때 비움). RA 보드·다른 보드는 제외. 핀 구조 표는 데이터시트 원문을 받지 못해(st.com 접속 실패) 알고 있던 표로 작성 — WORKLOG 남은 사항.
 - 입력 중 자동완성(7번): clangd 결과의 `isIncomplete`를 Monaco에 넘김, 질의 전 `languageService.flush()`로 편집 내용 동기화(`native-ide-ui.js` `flushLanguage`), Monaco 단어 목록 끔(`wordBasedSuggestions:'off'`), 치는 중인 단어는 식별자 후보에서 뺌.

@@ -27,7 +27,7 @@
 | UART/USART | **1.23.0 반영:** Word Length·Parity·Stop Bits·Data Direction·Over Sampling(Pinout·생성 코드·.ioc). Half-duplex·RTS/CTS는 남음. 이전: baud만 설정. 8N1·TX_RX·Oversampling 16 고정 | Word length, Parity, Stop bits, Direction, Oversampling, Half-duplex, RTS/CTS 등 | S~M | 상 |
 | SPI | **1.23.0 반영:** CPOL·CPHA(mode 0~3)·Data Size 8/16·First Bit. Slave·Half-duplex/RX-only·HW NSS·CRC는 남음. 이전: Master·Full-duplex·8비트·Mode 0·Soft NSS 고정, 속도만 | Slave, Half-duplex/RX-only, HW NSS, CPOL/CPHA, 16비트, LSB first, CRC | S~M | 상 |
 | ADC | 생성 코드는 채널 하나, 소프트웨어 시작·고정 샘플링(`hal-generator.js`). **Continuous Conversion Mode는 1.21.0에서, Rank 1 Sampling Time 선택은 1.26.0에서 지원**(Pinout ADC1, 생성 코드, .ioc 가져오기, 두 실행 엔진) | Scan(Rank), 외부 트리거(TIM TRGO), Injected, Watchdog, 해상도, TempSens·Vrefint·Vbat, Rank별 Sampling Time(지금 F103 239.5·F446 480 Cycles 고정) | M | 상 |
-| TIM | **1.24.0 반영:** PWM 채널별 Pulse·CH Polarity·PWM mode 1/2(Pinout·생성 코드·.ioc). 남음: Output Compare·One Pulse·PWM Input·Counter mode·ARR preload·ETR·Slave·TRGO·IC 필터. 이전: Base·PWM·Capture·Encoder, Up 카운트만. 한 타이머의 PWM 채널이 Pulse 하나를 공유 | Output Compare, One Pulse, PWM Input, 채널별 Pulse·극성, Counter mode, ARR preload, ETR·Slave·Trigger, TRGO, IC 필터 | M~L | 상 |
+| TIM | **1.24.0 반영:** PWM 채널별 Pulse·CH Polarity·PWM mode 1/2(Pinout·생성 코드·.ioc). **1.27.0 반영:** Output Compare 채널(Mode·Pulse·CH Polarity, OC 인터럽트)과 Counter Mode(Up·Down·Center Aligned 1~3)(Pinout·생성 코드·.ioc·두 실행 엔진). 남음: One Pulse·PWM Input·ARR preload·ETR·Slave·TRGO·IC 필터, 핀 없는 Output Compare No Output | Output Compare, One Pulse, PWM Input, 채널별 Pulse·극성, Counter mode, ARR preload, ETR·Slave·Trigger, TRGO, IC 필터 | M~L | 상 |
 | I2C | **1.24.0 반영:** Primary Address(7비트)·Fast Mode Duty Cycle(2, 16/9)·Clock No Stretch. 남음: 10비트 주소·Dual address·General call·SMBus. 이전: 클럭만 | 주소 방식(7/10비트), Own address, Slave, SMBus | S | 중 |
 | DMA | 요청별 폭·증가 고정. FIFO·Burst 없음. TIMx_UP·DAC·SPI2/3 등 요청 없음 | 요청마다 Data width, Increment, FIFO·Threshold·Burst | S~M | 중 |
 | SYS | PA13/PA14 고정 잠금 | Debug(Serial Wire/JTAG/Trace/No Debug), Timebase Source(SysTick/TIMx) | S | 중 |
@@ -237,7 +237,7 @@ CubeMX를 화면 없이(`-q` 스크립트) 실행해 실제 생성 코드를 받
 ## C. 우선순위 제안
 
 1. **(1.16.0 로컬 구현) NVIC를 CubeMX처럼:** Priority Group·Sub Priority, 주변장치별 NVIC 탭, SysTick 줄을 넣습니다. GPIO의 Output type·Speed와 AF 핀 Pull도 함께 넣습니다(S~M).
-2. **기존 주변장치 설정 채우기:** UART 형식, SPI 모드, ADC 다채널·트리거, TIM 채널별 Pulse·OC·One Pulse(M). 에뮬레이터가 이미 지원하므로 UI와 생성만 만들면 됩니다.
+2. **기존 주변장치 설정 채우기:** UART 형식, SPI 모드, ADC 다채널·트리거, TIM One Pulse(M)(채널별 Pulse 1.24.0, OC 1.27.0 완료). 에뮬레이터가 이미 지원하므로 UI와 생성만 만들면 됩니다.
 3. **클럭 트리 화면:** HSE Bypass·PLL·분주, 180/72 MHz(L).
 4. **주변장치 추가:** TIM1·TIM6/7, IWDG/WWDG, I2C2·SPI2, RTC(F103 에뮬레이터 포함), DAC(F446 에뮬레이터 포함)(M).
 5. **시뮬레이터 정확도:**

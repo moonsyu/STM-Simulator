@@ -2,6 +2,28 @@
 
 작업할 때마다 날짜순으로 맨 위에 추가합니다. 무엇을 했는지, 왜 했는지, 어떻게 검증했는지, 커밋·릴리스와 남은 사항을 적습니다. 버전별 구조 설명은 [HANDOFF.md](../HANDOFF.md), 검증 수치는 [VERIFICATION.md](VERIFICATION.md)에 있습니다.
 
+## 2026-11-09 · 1.27.0 기능 목록 3번: TIM Output Compare·Counter Mode, printf float 늘 켬, DS3231 ZS-042 모듈
+
+- 요청: "3번 진행"의 세 번째 항목(목록 순서, 2026-11-06). 2026-11-09 추가 요청: (1) printf float는 늘 켠 채로 두고 툴바 칸을 없앨 것 (2) 1.27.0에 버그가 있는 것 같으니 확인해서 다시 올릴 것 (3) 가진 DS3231(강의 자료 사진의 파란 ZS-042 모듈)과 생김새가 다르니 확인해서 고칠 것.
+- 한 것과 이유:
+  - 출력 비교·Counter Mode(bb6b5e3): 지금까지 타이머는 Base·PWM·입력 캡처·엔코더와 Up 카운트만 됐다. CubeMX 6.18 DB(`TIM1_8-gptimer2_v2_x_Cube_Modes.xml`)의 이름·기본값대로 Output Compare CHn(Mode 기본 Frozen, Pulse, CH Polarity)과 Counter Mode(Up/Down/Center Aligned 1~3)를 Pinout·생성 코드·.ioc에 넣었다. 채널 칸 아래에 핀이 어떻게 바뀌는지(일치 주파수, 토글 사각파 주파수) 보여 준다. 에뮬레이터는 이미 OC·카운트 방향을 모델링하고 있었고, 내장 해석기에는 Down·Center 카운트, 중앙 정렬 PWM, OC 핀 출력·인터럽트를 새로 넣었다.
+  - .ioc 키 이스케이프(8f9cd39): OC 키를 확인하려고 CubeMX 보드 파일을 보니 키가 `TIM2.Pulse-PWM\ Generation1\ CH1`처럼 이스케이프되어 있었다. 지금까지는 풀지 않아 1.24.0의 PWM 채널별 설정이 실제 .ioc에서는 빠졌다(이전 코드로 같은 파일을 가져와 channels가 없음을 확인). 단위 시험이 이스케이프 없는 키를 썼기 때문에 놓쳤다.
+  - printf float(1a1a5c6): 1.25.0의 printf float 커밋(18f3780)을 되돌리고, 예전에 끈 채 저장한 프로젝트도 숫자를 출력하게 했다. 빌드는 늘 `-u _printf_float`이다.
+  - 1.27.0 확인: 2026-11-06의 전체 검사는 PC가 꺼지며 툴체인 도중에 끊겼고 결과가 남지 않아 1.27.0은 푸시되지 않은 상태였다. E2E 로그에는 Ctrl+C 복사 시험 하나가 클립보드 내용 없음으로 실패해 있었다. 이번 변경과 함께 전체 검사를 처음부터 다시 돌렸다.
+  - DS3231(bc3d163): 앱의 부품은 Adafruit DS3231 브레이크아웃(8핀)이었고, 사용자의 모듈은 ZS-042(파란 기판, 왼쪽 6핀 32K·SQW·SCL·SDA·VCC·GND, 오른쪽 4핀, 뒷면 CR2032, AT24C32 EEPROM 0x57)다. 새 부품으로 추가하고(저장된 프로젝트를 깨지 않게 기존 부품은 이름만 구분), 사진은 Figma 이미지 생성(gpt-image-2.5-flare, 크레딧 1, 글자·로고 없음)으로 만들었다. 모델도 고쳤다: 지금까지는 실행 시작부터 시·분·초만 세고 날짜는 늘 01-01-00, 쓰기는 무시해서 강의처럼 시각을 맞추고 읽는 코드가 동작하지 않았다. 데이터시트 레지스터(시각·날짜·요일·12/24시간·세기, 알람 1·2 플래그, 제어·상태·에이징, 온도)와 EEPROM을 만들었다. 근거: Analog Devices DS3231 데이터시트, Last Minute Engineers의 ZS-042 핀·EEPROM 설명.
+  - 에뮬레이터 타이머(1c247ff): 툴체인 시험에서 OC Active 채널 핀이 일치 전 "INPUT"으로 보였다. 생성 코드가 MX_GPIO_Init에서 핀을 AF로 둘 때 타이머 클록이 꺼져 있어 입력으로 알려졌고, 채널을 켜도 레벨(Low)이 같아 다시 알리지 않았다. 처음에는 RCC 클록 켜기 때 모든 핀을 다시 알리게 했는데, 리셋 상태(출력 비교)인 입력 캡처 핀이 Low 출력으로 알려져 timer_capture·timer_encoder 펌웨어 시험이 깨졌다. 그래서 되돌리고, 타이머가 CCxE·CCxS가 바뀔 때도 다시 알리게 했다. 중앙 정렬 Toggle 주파수(일치 두 번)와 CCR = ARR 일치 중복도 고쳤다.
+- 검증(의존성을 설치한 임시 복제본, 창은 다른 창 뒤·다크 모드):
+  - ESLint 0건. 단위·해석기·에뮬레이터 909개 중 908개 통과·1개 건너뜀(printf float·DS3231 시험 포함).
+  - 새 시험: 단위 `tim-oc`(4), 해석기 `timer-oc`(5), 툴체인 `tim-oc`(2: F446RE·F103RB를 실제 HAL로 빌드, Toggle 1 Hz·Active 200 ms·OC 콜백, 중앙 정렬 PWM 500.5 Hz·듀티 CCR/ARR·중앙 정렬 Toggle), E2E `tim-oc`(1). 기존 `tim-channels` 툴체인·`peripheral-params` E2E 통과.
+  - 전체 검사(마지막 상태): 펌웨어 64개 모두 통과, 툴체인 286개 중 285개 통과·1개 건너뜀(ARM GCC 15.2.1), E2E 81개 중 79개 통과·1개 건너뜀·1개 실패.
+  - E2E 실패는 `copy.e2e`(Ctrl+C 글자 복사) 하나로, 두 번 다시 돌려도 같았다. 원인은 이 PC의 클립보드다: 시험이 먼저 쓴 'before'도 읽히지 않았고, 앱 없이 빈 Electron 앱에서도 `clipboard.readText()`가 값을 돌려주지 않고 멈췄으며, PowerShell `Get-Clipboard`·`Set-Clipboard`도 "요청된 클립보드 작업을 성공하지 못했습니다"로 실패했다. v1.26.0 뒤 키보드·복사 코드(`app-keyboard.js`, `desktop/main.cjs`의 복사 메뉴)는 바뀌지 않았다. CI(깨끗한 Windows)가 같은 E2E를 모두 돌리므로 그 결과로 확인한다.
+  - 패키지 검사(`tests/release/packaged.test.mjs`) 3개 모두 통과. STM-Simulator.exe 115,575,684 바이트, SHA-256 5473b7d0eeaffb22b17ced47a12da795f1fcb606e9fd025eb6108ef4342270ec. 빌드 산출물은 지웠다.
+- 커밋·릴리스: 1c247ff(에뮬레이터), 8f9cd39(.ioc 키), bb6b5e3(OC·Counter Mode), 1a1a5c6(printf float), bc3d163(DS3231), 문서·버전 커밋.
+- 남은 사항:
+  - 3번의 TIM6/7·RTC·DAC 등(목록 순서). TIM은 One Pulse·PWM Input·ARR preload·ETR·Slave·TRGO·IC 필터, 핀 없는 "Output Compare No Output"이 남았다.
+  - 내장 해석기의 PWM은 지금처럼 PWM mode 1·High만 된다(출력 비교는 극성 Low도 됨).
+  - DS3231: SQW/INT 핀 출력(알람 인터럽트·1 Hz 사각파)과 32K 출력은 아직 없다. 실물 모듈로는 확인하지 않았다.
+
 ## 2026-11-06 · 1.26.0 기능 목록 3번: Clock Configuration(클록 트리), ADC1 Sampling Time
 
 - 요청: "아직 구현 안된 내용 있어?"에 3번 남은 항목을 답한 뒤 "3번 진행". 목록 순서대로 클록 트리(ADC Prescaler 포함) → ADC1 Sampling Time → TIM Output Compare·Counter mode → TIM6/7·RTC·DAC 순으로 한다. 이번 버전은 앞의 둘이다.
