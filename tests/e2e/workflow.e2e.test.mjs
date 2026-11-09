@@ -29,6 +29,8 @@ test('parts view adds a resistor between two breadboard holes and undo removes i
   const {win}=s;
   await win.click('#empty-add-board');
   await win.click('[data-activity="parts"]');if(!await win.locator('#view-parts').isVisible())await win.click('[data-activity="parts"]');
+  // Every card keeps the height of its wrapped name and hint, also in a narrow panel (no text over the next card).
+  assert.deepEqual(await win.evaluate(()=>{const l=document.getElementById('part-list'),w=l.style.width;l.style.width='220px';const bad=[...l.querySelectorAll('.part-card')].filter(c=>c.scrollHeight>c.clientHeight+1).map(c=>c.querySelector('strong')?.textContent);l.style.width=w;return bad;}),[]);
   await win.fill('#part-search','빵판');
   await win.locator('#part-list [data-add="breadboard"]').click();
   await win.waitForFunction(()=>document.querySelectorAll('#breadboard-layer [data-part]').length>0||document.querySelectorAll('[data-hole]').length>100);
