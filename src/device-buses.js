@@ -22,8 +22,8 @@ export class DeviceBuses{
   this.states.set(p.id,s);return s;
  }
  touch(s){s.version=++this.revision;}
- writeI2c(p,bytes,micros,result){
-  const s=this.state(p);if(!bytes.length)return true;if(p.type==='catalog_i2c')return writeCatalogI2c(p,s,bytes,micros,result);
+ writeI2c(p,bytes,micros,result,address=p.address){
+  const s=this.state(p);if(!bytes.length)return true;if(p.type==='catalog_i2c')return writeCatalogI2c(p,s,bytes,micros,result,address);
   if(p.type==='sht31'){
    const command=bytes[0]*256+bytes[1];if(bytes.length!==2)return false;
    if(command===0x30a2){this.reset(p).powered=true;return true;}
@@ -51,9 +51,9 @@ export class DeviceBuses{
   }
   return false;
  }
- readI2c(p,count,micros){
+ readI2c(p,count,micros,address=p.address){
   const s=this.state(p);
-  if(p.type==='catalog_i2c')return readCatalogI2c(p,s,count,micros);
+  if(p.type==='catalog_i2c')return readCatalogI2c(p,s,count,micros,address);
   if(p.type==='sht31'){if(s.readyAt==null||micros<s.readyAt||count!==6)return null;const bytes=s.sample;s.readyAt=null;return bytes;}
   if(p.type==='mpu6050'){
    if(!(s.registers[0x6b]&0x40)){

@@ -16,6 +16,8 @@ export const DEVICE_DEFS={
  encoder:{name:'로터리 인코더',prefix:'ENC',icon:'↻',hint:'입력 · A/B 직교 펄스 / 버튼',defaults:{position:0,switch:0},labels:['VCC','GND','A','B','SW'],help:'3.3 V, 내부 10 kΩ 풀업이 있는 인코더 모듈입니다. 위치를 한 칸 바꾸면 2 ms 간격의 A/B 4개 전이가 발생합니다. Docs는 TIM4 하드웨어 엔코더로 방향과 카운트를 읽습니다. HAL 예제 목록에는 양쪽 에지 EXTI 예제도 있습니다. 누름 스위치도 LOW 활성입니다.'}
 };
 export const I2C_DEVICES=['catalog_i2c','sht31','mpu6050','oled'];
+/** Whether an I2C part answers `address`: its own, or a second chip on the same module (ZS-042 EEPROM). */
+export const answersI2c=(p,address)=>p.address===address||p.eepromAddress===address;
 export const SPI_DEVICES=['catalog_spi','tft','matrix'];
 export const MODULE_DEVICES=[...I2C_DEVICES,...SPI_DEVICES,'pir','servo','motor','stepper','relay','encoder','joystick'];
 export const DEVICE_RANGES={ldr:{lux:[1,100000]},ntc:{temperature:[-40,125]},sht31:{temperature:[-40,125],humidity:[0,100]},mpu6050:{ax:[-16,16],ay:[-16,16],az:[-16,16],gx:[-2000,2000],gy:[-2000,2000],gz:[-2000,2000]},pir:{motion:[0,1]},joystick:{axisX:[0,100],axisY:[0,100],switch:[0,1]},encoder:{position:[-1000,1000],switch:[0,1]}};

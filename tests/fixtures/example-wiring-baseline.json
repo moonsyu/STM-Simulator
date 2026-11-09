@@ -1,4 +1,4 @@
-{"total":{"wires":1181,"length":493080,"crossings":1476,"overlaps":1075},"examples":{"ref_nucleo_f446re":[5,1860,1,1],
+{"total":{"wires":1187,"length":496268,"crossings":1476,"overlaps":1075},"examples":{"ref_nucleo_f446re":[5,1860,1,1],
 "ref_resistor_axial_2":[7,3062,2,3],
 "ref_led_tht_2":[5,1872,1,1],
 "ref_button_2":[13,3613,11,7],
@@ -69,6 +69,7 @@
 "ref_can_transceiver_6":[6,2501,3,3],
 "ref_isolated_rs485":[6,3023,4,4],
 "ref_ds3231_8":[6,2501,3,3],
+"ref_ds3231_zs042_10":[6,3188,0,0],
 "ref_sd_storage_board":[9,3984,12,12],
 "ref_max98357a_9":[9,4570,7,5],
 "ref_ov2640_camera":[9,4250,2,2],

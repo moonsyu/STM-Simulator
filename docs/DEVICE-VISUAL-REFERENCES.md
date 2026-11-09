@@ -1,6 +1,6 @@
 # STM32 장치 외형과 핀 구성 자료집
 
-확인일: 2026-10-14. 기준 소스: `a24bc19`. 기존 학습 부품 라이브러리 **35종 전체**, 외형·핀 구성 **83항목**, MCU 내부 주변장치 **24분류**를 연결한다.
+확인일: 2026-10-14. 기준 소스: `a24bc19`. 기존 학습 부품 라이브러리 **35종 전체**, 외형·핀 구성 **84항목**, MCU 내부 주변장치 **24분류**를 연결한다.
 
 [사진과 핀 수로 찾아보기](device-reference-gallery.html) · [구조화된 원본 목록](device-visual-references.json)
 
@@ -800,7 +800,7 @@
 ### 외부 RTC
 
 <a id="ds3231-8"></a>
-#### DS3231 RTC 메인 헤더 8핀
+#### Adafruit DS3231 RTC 브레이크아웃 8핀
 
 - 외형: RTC 칩과 코인셀 홀더를 함께 실장한 보드. [사진](https://cdn-shop.adafruit.com/970x728/3013-06.jpg)
 - 주요 핀: 8접점 — VIN, GND, SCL, SDA, BAT, 32K, SQW, RST
@@ -808,6 +808,16 @@
 - 별도 접점: QT판은 중복 I²C 커넥터 4접점×2 추가
 - 구분점: 내부 RTC 주변장치와 별개인 외부 RTC입니다.
 - 근거: [Pinouts  /  Adafruit DS3231 Precision RTC Breakout  /  Adafruit Learning System](https://learn.adafruit.com/adafruit-ds3231-precision-rtc-breakout/pinouts) · [Adafruit DS3231 Precision RTC Breakout : Adafruit Industries, Unique & fun DIY electronics and kits](https://www.adafruit.com/product/3013)
+
+<a id="ds3231-zs042-10"></a>
+#### DS3231 RTC 모듈 (ZS-042) 6+4핀
+
+- 외형: 파란 기판(약 38×22 mm) 가운데 DS3231 칩, 아래에 AT24C32 EEPROM, 왼쪽 6핀 헤더(32K·SQW·SCL·SDA·VCC·GND), 오른쪽 4핀(SCL·SDA·VCC·GND), 뒷면 CR2032 코인셀 홀더. [외형도 원문](https://lastminuteengineers.com/ds3231-rtc-arduino-tutorial/)
+- 주요 핀: 10접점 — 32K, SQW, SCL, SDA, VCC, GND, SCL, SDA, VCC, GND
+- 연결 방식: I²C
+- 별도 접점: 오른쪽 4핀은 왼쪽 SCL·SDA·VCC·GND와 연결된 통과 핀입니다. 뒷면 A0~A2 점퍼와 코인셀 홀더는 접점에서 뺐습니다.
+- 구분점: DS3231 0x68, 같은 기판의 AT24C32 EEPROM 0x57(A0~A2 점퍼로 0x50~0x57). 오른쪽 4핀은 왼쪽의 SCL·SDA·VCC·GND와 같은 선으로, 다음 I²C 장치를 이어 붙일 때 씁니다. VCC 2.3~5.5 V.
+- 근거: [DS3231 Extremely Accurate I²C-Integrated RTC/TCXO/Crystal (Analog Devices data sheet)](https://www.analog.com/media/en/technical-documentation/data-sheets/DS3231.pdf) · [Interface DS3231 Precision RTC Module with Arduino (Last Minute Engineers)](https://lastminuteengineers.com/ds3231-rtc-arduino-tutorial/)
 
 ### SD 카드
 

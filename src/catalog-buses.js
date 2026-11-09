@@ -1,6 +1,9 @@
 import {LCDController} from './lcd.js';
 import {sdCardFor} from './sdcard.js';
 import {receiveWs2812} from './rgb-color.js';
+import {resetDs3231,writeDs3231,readDs3231,resetEeprom,writeEeprom,readEeprom} from './ds3231.js';
+// DS3231 parts: the Adafruit breakout and the ZS-042 module (with its AT24C32 EEPROM at 0x57).
+export const DS3231_PARTS=new Set(['ds3231-8','ds3231-zs042-10']);
 // SPI-mode SD card: CMD0/8/55/41/58 init, CMD9/10 registers, CMD13 status, CMD16 block length,
 // CMD17/18 single/multi block read, CMD24/25 single/multi block write, CMD12 stop. SDHC block addressing.
 function sdData(card,block){return [0xfe,...card.disk.read(block),0xff,0xff];}
@@ -24,16 +27,18 @@ function transferSdSpi(p,s,value){
   else s.response=[4];
  }return 255;
 }
-const word=n=>[n>>8&255,n&255],bcd=n=>((Math.floor(n/10)<<4)|(n%10));
+const word=n=>[n>>8&255,n&255];
 export function resetCatalogBus(p){const id=p.catalogVariant,s={pointer:0,registers:new Uint8Array(256),words:new Uint16Array(4),version:0,display:false};
  if(id==='ov2640-camera'){s.cameraBank=0;s.cameraBanks=[new Uint8Array(256),new Uint8Array(256)];s.cameraBanks[1].set([0x26,0x42],10);}
  if(id==='lcd-i2c-4'){s.lcd=new LCDController();s.lcd.powered=true;}
+ if(DS3231_PARTS.has(id)){s.rtc=resetDs3231();if(p.eepromAddress)s.eeprom=resetEeprom();}
  if(id==='sd-storage-board'){s.command=[];s.response=[];s.idle=true;s.app=false;s.write=null;s.reading=null;}
  if(id?.startsWith('rgb-'))s.symbols='';
  p.catalogState??={};return s;
 }
-export function writeCatalogI2c(p,s,bytes,micros,result){
+export function writeCatalogI2c(p,s,bytes,micros,result,address=p.address){
  const id=p.catalogVariant;if(!bytes.length)return true;s.version++;
+ if(DS3231_PARTS.has(id))return s.eeprom&&address===p.eepromAddress?writeEeprom(s.eeprom,bytes):writeDs3231(s.rtc,bytes,micros);
  if(id==='lcd-i2c-4'){if(![0,0x40].includes(bytes[0]))return false;bytes.slice(1).forEach((value,i)=>s.lcd.receive(value,bytes[0]===0x40,micros+i*90));s.display=s.lcd.display;s.lcd.powered=true;return true;}
  if(id==='mcp4725-6'){if(bytes.length<2)return false;const value=bytes[0]&0x40?(bytes[1]<<4)|(bytes[2]>>4):((bytes[0]&15)<<8)|bytes[1];s.value=value;p.catalogState.voltage=value*3.3/4096;return true;}
  s.pointer=bytes[0];
@@ -43,12 +48,12 @@ export function writeCatalogI2c(p,s,bytes,micros,result){
  if(id==='motor-driver-hat'){const duty=n=>{const b=6+n*4,on=s.registers[b]|s.registers[b+1]<<8,off=s.registers[b+2]|s.registers[b+3]<<8;return off&4096?0:on&4096?1:((off-on+4096)&4095)/4096;},vm=result?.voltage(`part:${p.id}:p5`)??0;p.catalogState.outputs=[duty(1)*duty(0)*vm,duty(2)*duty(0)*vm,duty(3)*duty(5)*vm,duty(4)*duty(5)*vm];}
  return true;
 }
-export function readCatalogI2c(p,s,count,micros){
+export function readCatalogI2c(p,s,count,micros,address=p.address){
  const id=p.catalogVariant;
+ if(DS3231_PARTS.has(id))return s.eeprom&&address===p.eepromAddress?readEeprom(s.eeprom,count):readDs3231(s.rtc,count,micros,p.temperature??25);
  if(id==='ov2640-camera')return Array.from({length:count},()=>{const reg=s.pointer++&255;return reg===255?s.cameraBank:s.cameraBanks[s.cameraBank][reg];});
  if(id==='ads1115-10'){if(s.pointer===0&&micros<(s.readyAt??0))return null;const bytes=word(s.words[s.pointer&3]);return Array.from({length:count},(_,i)=>bytes[i%2]);}
  if(id==='urm09-i2c-4')s.registers.set(word(p.distance??100),3);
- if(id==='ds3231-8'){const seconds=Math.floor(micros/1e6);s.registers.set([bcd(seconds%60),bcd(Math.floor(seconds/60)%60),bcd(Math.floor(seconds/3600)%24),1,1,1,0]);}
  return Array.from({length:count},()=>s.registers[s.pointer++&255]);
 }
 export function transferCatalogSpi(p,s,value){

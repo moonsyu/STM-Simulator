@@ -10,7 +10,7 @@ import { LCDController } from './lcd.js';
 import { BusDevices } from './buses.js';
 import { WaveRecorder } from './trace.js';
 import { VariableRecorder } from './variable-graph.js';
-import { I2C_DEVICES, SPI_DEVICES } from './device-defs.js';
+import { I2C_DEVICES, SPI_DEVICES, answersI2c } from './device-defs.js';
 import { familyProfile } from './mcu-family.js';
 import { Machine } from './emu/machine.js';
 import { Stm32f446 } from './emu/stm32f446/soc.js';
@@ -319,7 +319,7 @@ export class FirmwareSession {
       let ok = true;
       try {
         if (part.type === 'i2c') { const m = buses.memory(part); m.address = bytes[0]; for (const v of bytes.slice(1)) { m.data[m.address] = v; m.address = (m.address + 1) & 255; } }
-        else ok = buses.devices.writeI2c(part, bytes, session.now, session.result) !== false;
+        else ok = buses.devices.writeI2c(part, bytes, session.now, session.result, addr) !== false;
       } catch (e) { ok = false; report(e.message); }
       report(`0x${addr.toString(16)} WRITE ${bytes.length} B · ${ok ? 'ACK' : 'NACK'}`);
     };
@@ -328,7 +328,7 @@ export class FirmwareSession {
         commit(); session.solveIfDirty();
         const r = session.result; addr = a; reader = null;
         const sda = r?.voltage('signal:' + pins.sda), scl = r?.voltage('signal:' + pins.scl);
-        const candidates = session.project.components.filter(p => ['i2c', ...I2C_DEVICES].includes(p.type) && p.address === a && buses.powered(p) && buses.same(buses.terminal(p, 3), buses.pin(pins.sda)) && buses.same(buses.terminal(p, 4), buses.pin(pins.scl)));
+        const candidates = session.project.components.filter(p => ['i2c', ...I2C_DEVICES].includes(p.type) && answersI2c(p, a) && buses.powered(p) && buses.same(buses.terminal(p, 3), buses.pin(pins.sda)) && buses.same(buses.terminal(p, 4), buses.pin(pins.scl)));
         part = candidates.length === 1 && sda > 2 && scl > 2 ? candidates[0] : null;
         // Another emulated STM32 board listening on its own address on the same SDA/SCL nets.
         const peer = !candidates.length && sda > 2 && scl > 2 && session.peerI2c(name, a, pins);
@@ -338,7 +338,7 @@ export class FirmwareSession {
         if (part.type === 'i2c') { const m = buses.memory(part); reader = () => { const v = m.data[m.address]; m.address = (m.address + 1) & 255; return v; }; }
         else if (part.type === 'sht31') { const bytes = buses.devices.readI2c(part, 6, session.now); if (!bytes) { report(`0x${a.toString(16)} READ · NACK (측정 중)`); return false; } let i = 0; reader = () => bytes[i++ % 6]; }
         else if (part.catalogVariant === 'ads1115-10') { const bytes = buses.devices.readI2c(part, 2, session.now); if (!bytes) return false; let i = 0; reader = () => bytes[i++ % 2]; }
-        else reader = () => (buses.devices.readI2c(part, 1, session.now) ?? [0xff])[0];
+        else reader = () => (buses.devices.readI2c(part, 1, session.now, a) ?? [0xff])[0];
         report(`0x${a.toString(16)} READ · ACK`);
         return true;
       },

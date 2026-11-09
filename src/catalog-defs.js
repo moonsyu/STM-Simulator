@@ -9,7 +9,7 @@ export const catalogType=id=>'ref_'+id.replaceAll('-','_');
 /** Catalog id of the real part each basic (simplified) part type is drawn as. */
 export const LEGACY_PHYSICAL={resistor:'resistor-axial-2',led:'led-tht-2',button:'button-4',ldr:'ldr-bare-2',ntc:'ntc-bare-2',sht31:'sht31-grove-4',mpu6050:'mpu6050-8',pir:'pir-3',potentiometer:'pot-bare-3',slide:'slide-spdt-3',rgb:'rgb-common-cathode-4',capacitor:'capacitor-ceramic-2',diode:'diode-axial-2',buzzer:'buzzer-active-2',passive_buzzer:'buzzer-passive-2',temperature:'tmp36-to92-3',ultrasonic:'hcsr04-4',dc_motor:'dc-motor-2',dc_supply:'dc-supply-2',relay:'relay-module-6',joystick:'joystick-module-5',encoder:'encoder-module-5',lcd:'lcd-parallel-16',oled:'oled-i2c-4',tft:'st7735-8',matrix:'matrix-10',sevenseg:'sevenseg-common-cathode-10',stepper:'stepper-bipolar-4',motor:'motor-driver-hat',l298n:'l298n-module-13',servo:'servo-3',uart:'uart-cable-4',i2c:'i2c-eeprom-8',spi:'spi-eeprom-8'};
 export const CATALOG_BY_TYPE=Object.fromEntries(DEVICE_CATALOG.filter(v=>!['board','breadboard'].includes(v.family)).map(v=>[catalogType(v.id),v]));
-const defaults={resistor:{value:330},led:{color:'red'},button:{switch:0},potentiometer:{value:10000,position:50},slide:{position:0},capacitor:{value:100},uart:{baud:9600},rs485:{baud:9600},i2c:{address:80},temperature:{temperature:25},ultrasonic:{distance:100},dc_supply:{voltage:12},sd:{sizeMB:64,cardImage:''},dcmi:{pattern:'colorbars',image:''}};
+const defaults={resistor:{value:330},led:{color:'red'},button:{switch:0},potentiometer:{value:10000,position:50},slide:{position:0},capacitor:{value:100},uart:{baud:9600},rs485:{baud:9600},i2c:{address:80},temperature:{temperature:25},external_rtc:{temperature:25},ultrasonic:{distance:100},dc_supply:{voltage:12},sd:{sizeMB:64,cardImage:''},dcmi:{pattern:'colorbars',image:''}};
 // Map simulator-model contacts to the physical variant's contact numbers. Additional contacts
 // remain separate until their explicit tie, address, reset or signal behavior is installed.
 export const CONTACT_MAPS={
@@ -53,6 +53,8 @@ export const ON_CONTACT_PINS={
  'urm09-trig-3':[[-14,35],[-1.5,35],[13,35]],
  'urm09-i2c-4':[[-17,33],[17,33],[5,33],[-6.5,33]],
  'mcp4725-6':[[-55,-16],[-55,-2],[-27,54],[-13,54],[1,54],[15,54]],
+ // ZS-042 DS3231: the 6-pin header on the left edge, the 4 pass-through pins on the right, one 2.54 mm grid.
+ 'ds3231-zs042-10':[[-91,-38.5],[-91,-24.5],[-91,-10.5],[-91,3.5],[-91,17.5],[-91,31.5],[91,-24.5],[91,-10.5],[91,3.5],[91,17.5]],
  // ESP-01: 2 × 4 header (table order 1-4 on the upper row, 5-8 back along the lower one).
  'esp01-wifi-8':[[-20,45],[-7,45],[6.5,45],[20,45],[20,58],[6.5,58],[-7,58],[-20,58]],
 };
@@ -81,7 +83,7 @@ export function catalogGeometry(v){
  else if(id==='encoder-bare-5')terminals=[...row(3,42),[-14,-42],[14,-42]];
  // Modules on pins under their own contacts (ON_CONTACT_PINS): only the package drawing size is set here.
  else if(ON_CONTACT_PINS[id]){
-  body=({'motor-driver-hat':{width:294,height:168},'matrix-10':{width:112,height:112},'l298n-module-13':{width:140,height:112},'relay-module-6':{width:98,height:70},'stepper-driver-11':{width:126,height:84},'urm09-i2c-4':{width:126,height:56}})[id]??body;
+  body=({'motor-driver-hat':{width:294,height:168},'matrix-10':{width:112,height:112},'ds3231-zs042-10':{width:210,height:122},'l298n-module-13':{width:140,height:112},'relay-module-6':{width:98,height:70},'stepper-driver-11':{width:126,height:84},'urm09-i2c-4':{width:126,height:56}})[id]??body;
   terminals=ON_CONTACT_PINS[id];
  }
  else {

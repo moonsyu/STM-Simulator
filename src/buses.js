@@ -1,5 +1,5 @@
 import {DeviceBuses} from './device-buses.js';
-import {I2C_DEVICES,SPI_DEVICES} from './device-defs.js';
+import {I2C_DEVICES,SPI_DEVICES,answersI2c} from './device-defs.js';
 import {modulePowered} from './device-motion.js';
 import {canonicalPin} from './pins.js';
 import {encodeUart,encodeI2c,encodeSpi} from './signals.js';
@@ -34,7 +34,7 @@ export class BusDevices {
   uartTx(value,at){const id=this.uartLine('TX');if(!id&&!this.noise?.active)return value;const f=encodeUart(at,value,{baud:this.uart.baud,noise:this.noise});if(id)this.signals.write(id,f.edges);return f.value;}
   uartRx(value,at){const id=this.uartLine('RX');if(!id&&!this.noise?.active)return {value,fe:false,pe:false,ne:false};const f=encodeUart(at,value,{baud:this.uart.baud,noise:this.noise});if(id)this.signals.write(id,f.edges);return f;}
   i2cTarget(address){
-    const w=this.wire,candidates=this.project.components.filter(p=>['i2c',...I2C_DEVICES].includes(p.type)&&p.address===address&&this.powered(p)&&this.same(this.terminal(p,3),this.pin(w.sda))&&this.same(this.terminal(p,4),this.pin(w.scl)));
+    const w=this.wire,candidates=this.project.components.filter(p=>['i2c',...I2C_DEVICES].includes(p.type)&&answersI2c(p,address)&&this.powered(p)&&this.same(this.terminal(p,3),this.pin(w.sda))&&this.same(this.terminal(p,4),this.pin(w.scl)));
     const result=this.result(),sda=result?.voltage(this.pin(w.sda)),scl=result?.voltage(this.pin(w.scl));
     // Another board answering as an I2C slave on the same SDA/SCL nets (a fixed run, an ESP32 sketch or another STM32).
     const board=!candidates.length&&this.boards?.().find(d=>{const s=d.i2cSlave?.();return s?.address===address&&this.same(`signal:${d.part.id}.${s.sda}`,this.pin(w.sda))&&this.same(`signal:${d.part.id}.${s.scl}`,this.pin(w.scl));});
@@ -50,14 +50,14 @@ export class BusDevices {
     if(head.busError)return {ok:false,busError:true,nack:false};if(!head.acks[0])return {ok:false,nack:true};
     let ready=connected;const data=this.i2cPhase(head.endUs,bytes,bytes.map(()=>'master'),()=>ready,{start:false});
     const received=data.seen.slice(0,data.acks.length);
-    if(received.length){if(part.type==='board')ready=part.driver.i2cReceive(received)!==false;else if(part.type==='i2c'){const m=this.memory(part);m.address=received[0];for(const value of received.slice(1)){m.data[m.address]=value;m.address=(m.address+1)&255;}}else ready=this.devices.writeI2c(part,received,runtime.microTime,this.result());}
+    if(received.length){if(part.type==='board')ready=part.driver.i2cReceive(received)!==false;else if(part.type==='i2c'){const m=this.memory(part);m.address=received[0];for(const value of received.slice(1)){m.data[m.address]=value;m.address=(m.address+1)&255;}}else ready=this.devices.writeI2c(part,received,runtime.microTime,this.result(),address);}
     const ok=ready&&!data.busError&&data.acks.length===bytes.length&&data.acks.every(Boolean);return {ok,busError:data.busError,nack:!ok&&!data.busError,written:received.length};
   }
   i2cRead(address,count,runtime,at=runtime.microTime){
     const {part,connected}=this.i2cTarget(address),ack0=(i,v)=>connected&&v>>1===address&&!!(v&1);
     const head=this.i2cPhase(at,[(address<<1)|1],['master'],ack0,{stop:!count});
     if(head.busError||!head.acks[0])return {ok:false,data:[],busError:head.busError,nack:!head.busError};
-    let bytes=[];if(part.type==='board')bytes=part.driver.i2cRequest(count);else if(part.type==='i2c'){const m=this.memory(part);for(let i=0;i<count;i++){bytes.push(m.data[m.address]);m.address=(m.address+1)&255;}}else{bytes=this.devices.readI2c(part,count,runtime.microTime);if(bytes===null)return {ok:false,data:[],nack:true};}
+    let bytes=[];if(part.type==='board')bytes=part.driver.i2cRequest(count);else if(part.type==='i2c'){const m=this.memory(part);for(let i=0;i<count;i++){bytes.push(m.data[m.address]);m.address=(m.address+1)&255;}}else{bytes=this.devices.readI2c(part,count,runtime.microTime,address);if(bytes===null)return {ok:false,data:[],nack:true};}
     const data=this.i2cPhase(head.endUs,bytes,bytes.map(()=>'slave'),i=>i<count-1,{start:false});
     return {ok:!data.busError,data:data.busError?[]:data.seen,busError:data.busError};
   }

@@ -9,8 +9,9 @@ import {searchHalExamples} from '../../src/hal-example-search.js';
 const F4='nucleo-f446re',F1='nucleo-f103rb';
 const project=(board,id)=>validateProject(applyHalExample({...blankProject(board===F1?'STM32F103RB':undefined),boardId:board},id));
 function run(p,ms=400){const out=[],s=new SimulationSession(p,{print:x=>out.push(x)});s.tick(0);advance(s,ms,10);return {out,vcp:s.buses.vcpOutput,fault:s.result?.fault};}
-// Printed numbers with decimals depend on analog timing; compare the text around them.
-const norm=lines=>lines.slice(0,8).map(l=>l.replace(/-?\d+\.\d+/g,'#.#'));
+// Printed numbers with decimals depend on analog timing; compare the text around them. The DS3231 examples print the
+// clock, which starts at the PC time of each run.
+const norm=lines=>lines.slice(0,8).map(l=>l.replace(/-?\d+\.\d+/g,'#.#').replace(/\d\d:\d\d:\d\d/g,'#:#:#').replace(/20\d\d-\d\d-\d\d/g,'#-#-#'));
 // Peripherals the STM32F103RB lacks (DCMI camera, I2S audio).
 const UNAVAILABLE=['camera_tft','ref_max98357a_9'];
 // The F1 ADC (239.5-cycle sampling at 64 MHz) completes conversions at a different rate.

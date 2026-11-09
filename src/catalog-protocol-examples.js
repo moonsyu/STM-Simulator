@@ -34,8 +34,9 @@ export function protocolExample(v){
  if(HAL_ADC_PollForConversion(&hadc1,10)==HAL_OK) printf("pole %lu=%lu\\n",channel+1,HAL_ADC_GetValue(&hadc1));
  } HAL_Delay(100);`);
  }
- if(['ads1115-10','mcp4725-6','ds3231-8','urm09-i2c-4','lcd-i2c-4'].includes(id)){
-  power(1,2);i2c(id==='urm09-i2c-4'?3:4,id==='urm09-i2c-4'?4:3);
+ if(['ads1115-10','mcp4725-6','ds3231-8','ds3231-zs042-10','urm09-i2c-4','lcd-i2c-4'].includes(id)){
+  // ZS-042: VCC and GND are pins 5 and 6 of its 6-pin header (SCL 3, SDA 4 like the others).
+  if(id==='ds3231-zs042-10')power(5,6);else power(1,2);i2c(id==='urm09-i2c-4'?3:4,id==='urm09-i2c-4'?4:3);
   if(id==='ads1115-10'){
    connect(5,'GND');connect(7,'3V3');connect(8,'GND');connect(9,'GND');connect(10,'GND');
    return finish('',`uint8_t config[3]={1,0xC3,0x83}; uint8_t pointer[1]={0}; uint8_t data[2]={0};
@@ -54,6 +55,11 @@ export function protocolExample(v){
  if(HAL_I2C_Mem_Read(&hi2c1,0x68<<1,0,I2C_MEMADD_SIZE_8BIT,data,7,100)==HAL_OK) {
  printf("RTC %02u:%02u:%02u\\n",bcd(data[2]&63),bcd(data[1]),bcd(data[0])); }
  HAL_Delay(1000);`,'uint32_t bcd(uint8_t value) { return (value>>4)*10+(value&15); }');
+  // Date, time (registers 00h-06h, BCD) and the chip temperature (11h-12h, 0.25 °C steps).
+  if(id==='ds3231-zs042-10')return finish('',`uint8_t t[7]={0}, temp[2]={0};
+ if(HAL_I2C_Mem_Read(&hi2c1,0x68<<1,0x00,I2C_MEMADD_SIZE_8BIT,t,7,100)==HAL_OK && HAL_I2C_Mem_Read(&hi2c1,0x68<<1,0x11,I2C_MEMADD_SIZE_8BIT,temp,2,100)==HAL_OK) {
+ printf("20%02u-%02u-%02u %02u:%02u:%02u  %.2f C\\n",bcd(t[6]),bcd(t[5]&0x1F),bcd(t[4]&0x3F),bcd(t[2]&0x3F),bcd(t[1]),bcd(t[0]&0x7F),(int8_t)temp[0]+(temp[1]>>6)*0.25); }
+ HAL_Delay(1000);`,'unsigned bcd(uint8_t value) { return (value>>4)*10+(value&15); }');
   if(id==='urm09-i2c-4')return finish('',`uint8_t measure[1]={1},data[2]={0};
  if(HAL_I2C_Mem_Write(&hi2c1,0x11<<1,8,I2C_MEMADD_SIZE_8BIT,measure,1,100)==HAL_OK) { HAL_Delay(100);
  if(HAL_I2C_Mem_Read(&hi2c1,0x11<<1,3,I2C_MEMADD_SIZE_8BIT,data,2,100)==HAL_OK) printf("distance=%u cm\\n",(data[0]<<8)|data[1]); }

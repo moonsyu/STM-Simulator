@@ -12,7 +12,7 @@ export function baremetalCards(config,type,sample){
    cards.push({id:'spi-transfer',name:'SPI1 → DR 송수신',description:'CS를 선택하고 실제 8비트 전송을 수행합니다. TXE/RXNE와 BSY를 확인하고, 수신값 또는 타임아웃을 출력합니다. 0xFF는 버스 점검용이며 장치별 명령은 HAL 예제를 참고하세요.',code:`${cs?'GPIO'+cs[1]+'->BSRR=1UL<<'+(n+16)+';':''}\nint received=BM_spi(0xFF);\nuint32_t timeout=1000000U;while((SPI1->SR&SPI_SR_BSY)&&--timeout){}\n${cs?'GPIO'+cs[1]+'->BSRR=1UL<<'+n+';':''}\nprintf("SPI RX=%d timeout=%lu\\n",received,timeout==0);`});
   }
   if(id==='I2C1'){
-   const address=sample?.components.find(p=>p.address)?.address??({'ref_lcd_i2c_4':0x3e,'ref_ads1115_10':0x48,'ref_mcp4725_6':0x62,'ref_ds3231_8':0x68,'ref_urm09_i2c_4':0x11,'ref_motor_driver_hat':0x40,'ref_ov2640_camera':0x30})[type]??0x50;
+   const address=sample?.components.find(p=>p.address)?.address??({'ref_lcd_i2c_4':0x3e,'ref_ads1115_10':0x48,'ref_mcp4725_6':0x62,'ref_ds3231_8':0x68,'ref_ds3231_zs042_10':0x68,'ref_urm09_i2c_4':0x11,'ref_motor_driver_hat':0x40,'ref_ov2640_camera':0x30})[type]??0x50;
    cards.push({id:'i2c-transfer',name:'I2C1 → START / ADDR / DR / STOP',description:'주소 단계 ACK를 확인하고 1바이트를 수신합니다. STM32F4의 1바이트 수신 순서에 맞춰 ACK를 끄고 ADDR 해제 직후 STOP을 설정합니다. 슬레이브의 현재 포인터에서 읽으며 다바이트 센서 측정은 HAL 예제를 사용하세요.',code:`uint32_t acknowledged=BM_i2cWrite(0x${address.toString(16)},0,0);\nint received=acknowledged?BM_i2cReadByte(0x${address.toString(16)}):-1;\nprintf("I2C ACK=%lu byte=%d\\n",acknowledged,received);`});
   }
  }
