@@ -45,7 +45,9 @@ export function rotateSelected(){
 }
 export function addPart(type,a,b,position,extra={}){
  if(state.project.components.length>=100){log('부품은 100개까지 추가할 수 있습니다.','error');return;}
- const prefix=(({resistor:'R',led:'LED',button:'SW',lcd:'LCD',breadboard:'BB'})[type])||PART_DEFS[type]?.prefix,names=new Set(state.project.components.map(p=>p.name));let number=state.project.components.filter(p=>p.type===type).length+1;while(names.has(prefix+number))number++;const name=prefix+number;
+ // Names count up per type (R1, LED2). A model number ending in a digit is not run together with the counter:
+ // DS3231, DS3231-2 (not DS32311, DS32312).
+ const prefix=(({resistor:'R',led:'LED',button:'SW',lcd:'LCD',breadboard:'BB'})[type])||PART_DEFS[type]?.prefix,names=new Set(state.project.components.map(p=>p.name));let number=state.project.components.filter(p=>p.type===type).length+1;const label=n=>/\d$/.test(prefix)?(n===1?prefix:`${prefix}-${n}`):prefix+n;while(names.has(label(number)))number++;const name=label(number);
  const p={id:uid('p'),type,name,x:position?.x??(a.x+b.x)/2,y:position?.y??(a.y+b.y)/2,rotation:0};Object.assign(p,extra);
  if(type==='resistor')p.value=330;if(type==='led')p.color='red';Object.assign(p,PART_DEFS[type]?.defaults||{});
  if(TWO_PIN_TYPES.includes(type)){p.span=a&&b?Math.hypot(b.x-a.x,b.y-a.y):fixedLeadSpan(p)??70;if(a&&b){p.attachA=a.id;p.attachB=b.id;p.rotation=normalizeAngle(Math.atan2(b.y-a.y,b.x-a.x)*180/Math.PI);}}
