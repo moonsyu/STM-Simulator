@@ -214,14 +214,25 @@ jobs:
         with:
           path: ~\AppData\Local\electron\Cache
           key: electron-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+      # electron-builder downloads 7-Zip and NSIS from GitHub on every build; a 504 there failed the 1.28.0 package job.
+      - name: Restore the electron-builder tools
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~\AppData\Local\electron-builder\Cache
+          key: electron-builder-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
       - name: Install locked dependencies
         run: npm ci
       - name: Ensure Electron runtime is installed
         run: node node_modules/electron/install.js
       - name: Build portable executable
+        shell: pwsh
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: 'false'
-        run: npm run build
+        run: |
+          # One retry: the tool downloads above can time out (HTTP 504) while the build itself is fine.
+          npm run build
+          if ($LASTEXITCODE -ne 0) { Write-Output 'Build failed; retrying once.'; Remove-Item -Recurse -Force work/build -ErrorAction SilentlyContinue; npm run build }
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Verify package and prepare download
         run: npm run build:artifact
       - name: Verify the packaged app, its update helper and the portable EXE
