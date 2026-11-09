@@ -143,13 +143,13 @@ jobs:
         run: node --test --test-reporter=spec --test-reporter-destination=stdout --test-reporter=./tests/github-reporter.mjs --test-reporter-destination=stdout --test-concurrency=1 tests/toolchain/esp32-sketches.test.mjs
 
   e2e:
-    name: Electron end-to-end tests ${{ matrix.shard }}/2
+    name: Electron end-to-end tests ${{ matrix.shard }}/3
     runs-on: windows-latest
     timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
-        shard: [1, 2]
+        shard: [1, 2, 3]
     env:
       CI_REQUIRE_TOOLCHAIN: '1'
       ARM_GCC: ${{ github.workspace }}\.cache\toolchain\xpack-arm-none-eabi-gcc-14.2.1-1.1\bin\arm-none-eabi-gcc.exe
@@ -177,16 +177,14 @@ jobs:
         run: node node_modules/electron/install.js
       - name: Install ARM GCC, STM32CubeF4 / STM32CubeF1 drivers and Renesas FSP
         uses: ./.github/actions/arm-toolchain
-      - name: Electron end-to-end tests (half of the files)
+      - name: Electron end-to-end tests (a third of the files)
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force work/test-results | Out-Null
-          # Two groups of about equal running time (measured); group 2 takes every file not in group 1, new ones included.
-          $first = 'devboards','shell','help','docs','format','format-ime','appearance','stm32-boards' | ForEach-Object { "tests/e2e/$_.e2e.test.mjs" }
-          $all = Get-ChildItem tests/e2e/*.test.mjs | ForEach-Object { "tests/e2e/$($_.Name)" }
-          $files = if ('${{ matrix.shard }}' -eq '1') { $first } else { $all | Where-Object { $_ -notin $first } }
-          "E2E group ${{ matrix.shard }}: $($files -join ', ')"
-          node --test --test-reporter=spec --test-reporter-destination=stdout --test-reporter=./tests/github-reporter.mjs --test-reporter-destination=stdout --test-concurrency=1 @files 2>&1 | Tee-Object -FilePath work/test-results/e2e.log
+          # node --test-shard deals the files out in turn, so the three jobs stay about equal as files are added
+          # (the old fixed list sent every new file to group 2, which grew to 5.5 min against 1.5 min).
+          $files = Get-ChildItem tests/e2e/*.test.mjs | Sort-Object Name | ForEach-Object { "tests/e2e/$($_.Name)" }
+          node --test --test-shard=${{ matrix.shard }}/3 --test-reporter=spec --test-reporter-destination=stdout --test-reporter=./tests/github-reporter.mjs --test-reporter-destination=stdout --test-concurrency=1 @files 2>&1 | Tee-Object -FilePath work/test-results/e2e.log
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Upload test diagnostics on failure
         if: failure()
