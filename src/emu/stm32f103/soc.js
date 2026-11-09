@@ -11,13 +11,15 @@ import { RccF1 } from './rcc.js';
 import { GpioPortF1, Afio, FlashF1, DbgmcuF1, PwrF1 } from './gpio.js';
 import { DmaF1 } from './dma.js';
 import { AdcF1 } from './adc.js';
+import { RtcF1, BkpF1 } from './rtc.js';
 
 export { BASES };
 
 // STM32F103RB system-on-chip (NUCLEO-F103RB). Time base, scheduler, IRQ aggregation and the circuit
 // bridge come from the STM32F446 model; the blocks that differ on the F1 (RCC, FLASH, GPIO CRL/CRH,
 // AFIO remap and EXTI routing, DMA1 channels, ADC) have their own models, and the rest (USART, I2C,
-// SPI, TIM1-4, EXTI, CAN, CRC, IWDG, WWDG) is shared at the F1 register addresses.
+// SPI, TIM1-4, EXTI, CAN, CRC, IWDG, WWDG) is shared at the F1 register addresses. The RTC (a seconds counter) and the
+// backup registers are F1 models (rtc.js).
 // Memory stays the F446 bus (512 KB / 128 KB); an F103RB image uses the first 128 KB / 20 KB of it.
 export class Stm32f103 extends Stm32f446 {
   get resetHz() { return 8e6; }
@@ -61,6 +63,8 @@ export class Stm32f103 extends Stm32f446 {
     this.can1 = add('CAN1', new Can(this, 'CAN1'));
     this.crc = add('CRC', new Crc(this));
     this.iwdg = add('IWDG', new Iwdg(this));
+    this.rtc = add('RTC', new RtcF1(this));
+    this.bkp = add('BKP', new BkpF1(this));
     this.wwdg = add('WWDG', new Wwdg(this));
     this.dbg = new DbgmcuF1(this); this.peripherals.set('DBGMCU', this.dbg);
     this.machine.map(BASES.DBGMCU, 0x10, this.dbg, 'DBGMCU');

@@ -195,14 +195,14 @@ export class Wwdg extends Peripheral {
 
 const bcd = n => ((Math.floor(n / 10) << 4) | (n % 10));
 const unbcd = n => (n >> 4) * 10 + (n & 15);
-// RTC calendar (RM0390 22): time/date counters with init mode, shadow registers and wakeup timer.
+// RTC calendar (RM0390 22): time/date counters with init mode, shadow registers, wakeup timer and alarms A/B.
 export class Rtc extends Peripheral {
   constructor(soc) { super(soc, 'RTC'); this.reset(); }
   reset() {
     super.reset();
     this.set(0x04, 0x00002101); this.set(0x0c, 0x00000007); this.set(0x10, 0x007f00ff); this.set(0x14, 0xffff);
     this.epoch = { seconds: Date.UTC(2000, 0, 1) / 1000, us: 0 };
-    this.unlock = 0; this.wakeup?.cancel(); this.wakeup = null;
+    this.unlock = 0; this.wakeup?.cancel(); this.wakeup = null; this.alarmTimer?.cancel(); this.alarmTimer = null;
   }
   running() { return bit(this.soc.rcc.get(0x70), 15) && !bit(this.get(0x0c), 7); }
   seconds() { return this.epoch.seconds + (this.running() ? Math.floor((this.soc.nowUs() - this.epoch.us) / 1e6) : 0); }
@@ -219,10 +219,20 @@ export class Rtc extends Peripheral {
     return this.get(off);
   }
   locked() { return this.unlock < 2; }
-  writeReg(off, value, mask) {
+  // Every write may change the calendar, the alarm registers or their enables: re-arm the alarm check after it.
+  writeReg(off, value, mask) { this.writeRtc(off, value, mask); this.scheduleAlarms(); }
+  writeRtc(off, value, mask) {
     const v = this.merge(off, value, mask);
     if (off === 0x24) { const k = v & 0xff; this.unlock = k === 0xca ? 1 : k === 0x53 && this.unlock === 1 ? 2 : 0; return; }
     if (off >= 0x50 && off < 0xa0) { this.set(off, v); return; } // backup registers
+    // RTC_ISR[13:8] (ALRAF, ALRBF, WUTF, TSF, TSOVF, TAMP1F) is not write protected (RM0390 22.6.4): the HAL interrupt
+    // handlers clear these flags without unlocking.
+    if (this.locked() && off === 0x0c) {
+      this.clearBits(0x0c, ~v & 0x3f00);
+      if (!(this.get(0x0c) & 0x0300)) this.soc.exti?.input(17, 0);
+      if (!(this.get(0x0c) & 0x0400)) this.soc.exti?.input(22, 0);
+      return;
+    }
     if (this.locked()) return;
     if (off === 0x0c) {
       let isr = this.get(0x0c);
@@ -253,6 +263,30 @@ export class Rtc extends Peripheral {
       return;
     }
     this.set(off, v);
+  }
+  // Alarms are compared at each 1 Hz calendar update (RM0390 22.3.7): a field is ignored when its MSKx bit is set; the
+  // date field is the day of the month, or with WDSEL the day of the week (computed from the date here).
+  scheduleAlarms() {
+    this.alarmTimer?.cancel(); this.alarmTimer = null;
+    if (!(this.get(0x08) & 0x300) || !this.running()) return;
+    const into = (this.soc.nowUs() - this.epoch.us) % 1e6;
+    this.alarmTimer = this.soc.after(1e6 - into + 1, () => { this.alarmTimer = null; this.checkAlarms(); this.scheduleAlarms(); });
+  }
+  alarmMatches(alr) {
+    const { tr, dr } = this.calendar(), weekday = (dr >> 13) & 7;
+    if (!bit(alr, 7) && (alr & 0x7f) !== (tr & 0x7f)) return false;
+    if (!bit(alr, 15) && ((alr >> 8) & 0x7f) !== ((tr >> 8) & 0x7f)) return false;
+    if (!bit(alr, 23) && ((alr >> 16) & 0x7f) !== ((tr >> 16) & 0x7f)) return false;
+    if (!bit(alr, 31) && (bit(alr, 30) ? ((alr >> 24) & 0xf) !== weekday : ((alr >> 24) & 0x3f) !== (dr & 0x3f))) return false;
+    return true;
+  }
+  checkAlarms() {
+    const cr = this.get(0x08);
+    for (const n of [0, 1]) {
+      if (!bit(cr, 8 + n) || !this.alarmMatches(this.get(0x1c + 4 * n))) continue;
+      this.setBits(0x0c, 0x100 << n);
+      if (bit(cr, 12 + n)) this.soc.exti?.input(17, 1, n ? 'RTC alarm B' : 'RTC alarm A');
+    }
   }
   scheduleWakeup() {
     this.wakeup?.cancel(); this.wakeup = null;
