@@ -17,8 +17,12 @@ if (@(Compare-Object $required @($release.assets.name)).Count) { throw 'Release 
 $directory = Join-Path $PWD "work/release-verification/$Tag"
 New-Item -ItemType Directory -Force $directory | Out-Null
 foreach ($asset in $release.assets) {
-    # Public download route, without credentials, must work for every asset.
-    Invoke-WebRequest -Uri $asset.browser_download_url -OutFile (Join-Path $directory $asset.name)
+    # Public download route, without credentials, must work for every asset. GitHub's download host sometimes answers
+    # 502/503/504 for a moment (the 1.28.0 publish failed that way after the release was out), so try up to 4 times.
+    for ($try = 1; ; $try++) {
+        try { Invoke-WebRequest -Uri $asset.browser_download_url -OutFile (Join-Path $directory $asset.name); break }
+        catch { if ($try -ge 4) { throw }; Write-Output "Download of $($asset.name) failed ($($_.Exception.Message)); retry $try in $(15 * $try) s."; Start-Sleep -Seconds (15 * $try) }
+    }
     if ((Get-Item -LiteralPath (Join-Path $directory $asset.name)).Length -ne $asset.size) { throw "Asset size differs: $($asset.name)" }
 }
 $info = Get-Content (Join-Path $directory 'BUILD-INFO.json') -Raw | ConvertFrom-Json
