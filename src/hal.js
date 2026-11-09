@@ -1,5 +1,5 @@
 import {CatalogPeripherals,CATALOG_HAL_CONSTANTS} from './catalog-peripherals.js';
-import {TIMER_IDS,timerAf} from './timer-config.js';
+import {TIMER_IDS,CHANNEL_TIMER_IDS,timerAf,timerIrq} from './timer-config.js';
 import {HalTimers} from './hal-timers.js';
 import {validateMcu,configProblems,irqForPin,IRQ_NAMES} from './mcu-config.js';
 import {BusDevices} from './buses.js';
@@ -21,7 +21,7 @@ export const HAL_CONSTANTS={...CATALOG_HAL_CONSTANTS,HAL_OK:0,HAL_ERROR:1,HAL_BU
   I2C_ADDRESSINGMODE_7BIT:16384,I2C_ADDRESSINGMODE_10BIT:49152,I2C_DUTYCYCLE_2:0,I2C_DUTYCYCLE_16_9:16384,I2C_DUALADDRESS_DISABLE:0,I2C_GENERALCALL_DISABLE:0,I2C_NOSTRETCH_DISABLE:0,I2C_NOSTRETCH_ENABLE:128,I2C_MEMADD_SIZE_8BIT:1,I2C_MEMADD_SIZE_16BIT:16,
   SPI_MODE_MASTER:260,SPI_MODE_SLAVE:0,SPI_DIRECTION_2LINES:0,SPI_DATASIZE_8BIT:0,SPI_DATASIZE_16BIT:2048,SPI_POLARITY_LOW:0,SPI_POLARITY_HIGH:2,SPI_PHASE_1EDGE:0,SPI_PHASE_2EDGE:1,SPI_NSS_SOFT:512,SPI_FIRSTBIT_MSB:0,SPI_FIRSTBIT_LSB:128,SPI_TIMODE_DISABLE:0,SPI_CRCCALCULATION_DISABLE:0,
   ADC_RESOLUTION_12B:0,ADC_DATAALIGN_RIGHT:0,ADC_SCAN_DISABLE:0,ADC_SOFTWARE_START:0,ADC_EXTERNALTRIGCONVEDGE_NONE:0,ADC_EOC_SINGLE_CONV:1,ADC_CLOCK_SYNC_PCLK_DIV4:65536,ADC_SAMPLETIME_3CYCLES:0,ADC_SAMPLETIME_480CYCLES:7,
-  TIM_COUNTERMODE_UP:0,TIM_COUNTERMODE_DOWN:16,TIM_COUNTERMODE_CENTERALIGNED1:32,TIM_COUNTERMODE_CENTERALIGNED2:64,TIM_COUNTERMODE_CENTERALIGNED3:96,TIM_OCMODE_TIMING:0,TIM_OCMODE_ACTIVE:16,TIM_OCMODE_INACTIVE:32,TIM_OCMODE_TOGGLE:48,TIM_OCMODE_FORCED_INACTIVE:64,TIM_OCMODE_FORCED_ACTIVE:80,TIM_CLOCKDIVISION_DIV1:0,TIM_AUTORELOAD_PRELOAD_DISABLE:0,TIM_CLOCKSOURCE_INTERNAL:0,TIM_TRGO_RESET:0,TIM_MASTERSLAVEMODE_DISABLE:0,TIM_OCMODE_PWM1:96,TIM_OCMODE_PWM2:112,TIM_OCPOLARITY_LOW:2,TIM_OCPOLARITY_HIGH:0,TIM_OCFAST_DISABLE:0,TIM_CHANNEL_ALL:60,TIM_ICPOLARITY_RISING:0,TIM_ICPOLARITY_FALLING:2,TIM_ICPOLARITY_BOTHEDGE:10,TIM_ICSELECTION_DIRECTTI:1,TIM_ICSELECTION_INDIRECTTI:2,TIM_ICPSC_DIV1:0,TIM_ICPSC_DIV2:4,TIM_ICPSC_DIV4:8,TIM_ICPSC_DIV8:12,TIM_ENCODERMODE_TI1:1,TIM_ENCODERMODE_TI2:2,TIM_ENCODERMODE_TI12:3,HAL_TIM_ACTIVE_CHANNEL_1:1,HAL_TIM_ACTIVE_CHANNEL_2:2,HAL_TIM_ACTIVE_CHANNEL_3:4,HAL_TIM_ACTIVE_CHANNEL_4:8,HAL_TIM_ACTIVE_CHANNEL_CLEARED:0,
+  TIM_COUNTERMODE_UP:0,TIM_COUNTERMODE_DOWN:16,TIM_COUNTERMODE_CENTERALIGNED1:32,TIM_COUNTERMODE_CENTERALIGNED2:64,TIM_COUNTERMODE_CENTERALIGNED3:96,TIM_OCMODE_TIMING:0,TIM_OCMODE_ACTIVE:16,TIM_OCMODE_INACTIVE:32,TIM_OCMODE_TOGGLE:48,TIM_OCMODE_FORCED_INACTIVE:64,TIM_OCMODE_FORCED_ACTIVE:80,TIM_CLOCKDIVISION_DIV1:0,TIM_AUTORELOAD_PRELOAD_DISABLE:0,TIM_CLOCKSOURCE_INTERNAL:0,TIM_TRGO_RESET:0,TIM_TRGO_ENABLE:16,TIM_TRGO_UPDATE:32,TIM_MASTERSLAVEMODE_DISABLE:0,TIM_MASTERSLAVEMODE_ENABLE:128,TIM_OCMODE_PWM1:96,TIM_OCMODE_PWM2:112,TIM_OCPOLARITY_LOW:2,TIM_OCPOLARITY_HIGH:0,TIM_OCFAST_DISABLE:0,TIM_CHANNEL_ALL:60,TIM_ICPOLARITY_RISING:0,TIM_ICPOLARITY_FALLING:2,TIM_ICPOLARITY_BOTHEDGE:10,TIM_ICSELECTION_DIRECTTI:1,TIM_ICSELECTION_INDIRECTTI:2,TIM_ICPSC_DIV1:0,TIM_ICPSC_DIV2:4,TIM_ICPSC_DIV4:8,TIM_ICPSC_DIV8:12,TIM_ENCODERMODE_TI1:1,TIM_ENCODERMODE_TI2:2,TIM_ENCODERMODE_TI12:3,HAL_TIM_ACTIVE_CHANNEL_1:1,HAL_TIM_ACTIVE_CHANNEL_2:2,HAL_TIM_ACTIVE_CHANNEL_3:4,HAL_TIM_ACTIVE_CHANNEL_4:8,HAL_TIM_ACTIVE_CHANNEL_CLEARED:0,
   RCC_OSCILLATORTYPE_HSI:2,RCC_OSCILLATORTYPE_HSE:1,RCC_OSCILLATORTYPE_LSE:4,RCC_OSCILLATORTYPE_LSI:8,RCC_HSI_ON:1,RCC_HSE_ON:1,RCC_HSE_BYPASS:5,RCC_LSE_ON:1,RCC_LSI_ON:1,RCC_HSICALIBRATION_DEFAULT:16,RCC_PLL_NONE:0,RCC_PLL_OFF:1,RCC_PLL_ON:2,RCC_PLLSOURCE_HSI:0,RCC_PLLSOURCE_HSE:1,RCC_PLLP_DIV2:2,RCC_PLLP_DIV4:4,RCC_PLLP_DIV6:6,RCC_PLLP_DIV8:8,
   RCC_CLOCKTYPE_HCLK:2,RCC_CLOCKTYPE_SYSCLK:1,RCC_CLOCKTYPE_PCLK1:4,RCC_CLOCKTYPE_PCLK2:8,RCC_SYSCLKSOURCE_PLLCLK:2,RCC_SYSCLKSOURCE_HSI:0,RCC_SYSCLK_DIV1:1,RCC_HCLK_DIV1:1,RCC_HCLK_DIV2:2,RCC_HCLK_DIV4:4,PWR_REGULATOR_VOLTAGE_SCALE1:1,PWR_REGULATOR_VOLTAGE_SCALE2:2,PWR_REGULATOR_VOLTAGE_SCALE3:3,
   FLASH_LATENCY_0:0,FLASH_LATENCY_1:1,FLASH_LATENCY_2:2,FLASH_LATENCY_3:3,FLASH_LATENCY_4:4,FLASH_LATENCY_5:5,...NVIC_CONSTANTS,
@@ -36,7 +36,7 @@ for(let i=0;i<16;i++)HAL_CONSTANTS['ADC_CHANNEL_'+i]=i;
 for(let i=1;i<=4;i++)HAL_CONSTANTS['TIM_CHANNEL_'+i]=(i-1)*4;
 for(const n of [2,4,8,16,32,64,128,256])HAL_CONSTANTS['SPI_BAUDRATEPRESCALER_'+n]=Math.log2(n)-1;
 for(const id of [...SERIAL_IDS,'I2C1','SPI1','ADC1',...TIMER_IDS,...IRQ_NAMES])HAL_CONSTANTS[id]=id;
-for(const id of TIMER_IDS)HAL_CONSTANTS[`GPIO_AF${timerAf(id)}_${id}`]=timerAf(id);
+for(const id of CHANNEL_TIMER_IDS)HAL_CONSTANTS[`GPIO_AF${timerAf(id)}_${id}`]=timerAf(id);
 for(const id of SERIAL_IDS)HAL_CONSTANTS[`GPIO_AF${serialAf(id)}_${id}`]=serialAf(id);
 for(const [name,n]of [['GPIO_AF12_SDIO',12],['GPIO_AF13_DCMI',13],['GPIO_AF4_I2C1',4],['GPIO_AF5_SPI1',5],['GPIO_AF1_TIM2',1]])HAL_CONSTANTS[name]=n;
 // STM32F1 HAL names (stm32f1xx_hal_*.h). F4-only names are dropped so F1 code cannot use them by mistake.
@@ -59,7 +59,7 @@ export function halConstantsFor(family){
 
 const int=(value,min,max,label)=>{if(!Number.isInteger(value)||value<min||value>max)throw new Error(`${label}: ${min}~${max} 범위의 정수가 필요합니다.`);return value;};
 // IRQs that existed before the Pinout NVIC table grew; they still require the Pinout NVIC switch.
-const PINOUT_IRQS=new Set(['EXTI0_IRQn','EXTI1_IRQn','EXTI2_IRQn','EXTI3_IRQn','EXTI4_IRQn','EXTI9_5_IRQn','EXTI15_10_IRQn',...SERIAL_IDS.map(id=>id+'_IRQn'),...TIMER_IDS.map(id=>id+'_IRQn')]);
+const PINOUT_IRQS=new Set(['EXTI0_IRQn','EXTI1_IRQn','EXTI2_IRQn','EXTI3_IRQn','EXTI4_IRQn','EXTI9_5_IRQn','EXTI15_10_IRQn',...SERIAL_IDS.map(id=>id+'_IRQn'),...TIMER_IDS.map(timerIrq)]);
 const isIterator=v=>v&&typeof v.next==='function'&&typeof v[Symbol.iterator]==='function';
 export class HalAdapter {
   constructor(config,buses,{session}={}){this.config=validateMcu(config);/* Clock Configuration: bus clocks from the tree (null: the single APB1 timer clock). */this.clocks=this.config.clock?clockFrequencies(this.config.family,this.config.clock):null;this.family=familyProfile(this.config.family);this.f1=this.family.pinMux==='remap';this.remaps=new Set();this.afio=false;this.adcIrq=this.f1?'ADC1_2_IRQn':'ADC_IRQn';this.slave={i2cRx:null,i2cTx:null,spiJob:null,i2cOn:false,i2cHeld:[],spiHeld:[]};const errors=configProblems(this.config);if(errors.length)throw new Error(errors.join('\n'));this.buses=buses;this.nvic=new Map();this.pending=[];this.extiPending=0;this.serials=new Map();this.handles=new Map();this.timerModel=new HalTimers(this);this.adc=new Map();this.latches=new Map();this.priorities=new Map();this.initializedGpio=new Set();this.catalog=new CatalogPeripherals(this);this.nvicModel=new Nvic(this);this.subPriorities=new Map();this.noticeIrq=new Set();this.session=session;this.dma=new HalDma(this);this.usart=new HalUsart(this);this.camera=new HalDcmi(this);this.storage=new HalStorage(this);this.extensions=[this.dma,this.usart,this.camera,this.storage];}
@@ -144,7 +144,7 @@ export class HalAdapter {
     if(name==='HAL_I2S_Transmit')return this.catalog.transmit(args,r);
     if(name==='HAL_GPIO_EXTI_IRQHandler')return this.extiHandler(r,args[0]);
     if(name==='HAL_UART_IRQHandler'){const {id}=this.requireHandle(args[0],r,'UART');return this.drain(r,id+'_IRQn');}
-    if(name==='HAL_TIM_IRQHandler'){const {id}=this.requireHandle(args[0],r,'TIM');return this.drain(r,id+'_IRQn');}
+    if(name==='HAL_TIM_IRQHandler'){const {id}=this.requireHandle(args[0],r,'TIM');return this.drain(r,timerIrq(id));}
     if(name==='NVIC_SystemReset'||name==='HAL_NVIC_SystemReset')return (function*(){r.warn('[NVIC] 시스템 리셋: 프로그램을 처음부터 다시 실행합니다.');yield {kind:'reset'};})();
     for(const ext of this.extensions){const it=ext.invoke?.(name,args,r);if(it)return it;}
     if(name==='__HAL_TIM_GET_COUNTER'&&this.buses.project.components.some(p=>p.type==='catalog_singlewire'))return this.pollCounter(name,args,r);
@@ -271,7 +271,7 @@ export class HalAdapter {
     if(name==='HAL_NVIC_GetActive'||name==='NVIC_GetActive')return Number(this.nvicModel.active.includes(a));
     if(name==='NVIC_EnableIRQ')return this.call('HAL_NVIC_EnableIRQ',[a],r);if(name==='NVIC_DisableIRQ')return this.call('HAL_NVIC_DisableIRQ',[a],r);
     if(name==='Error_Handler')throw new Error('Error_Handler(): HAL 초기화 또는 사용자 코드 오류');
-    if(/^__HAL_RCC_(GPIO[ABCDH]|SYSCFG|PWR|USART[1236]|UART[45]|I2C1|SPI1|ADC1|TIM[2345]|SDIO|DCMI|DMA[12])_CLK_ENABLE$/.test(name)){if(this.f1&&name==='__HAL_RCC_GPIOH_CLK_ENABLE')throw new Error('STM32F103RB에는 GPIOH가 없습니다.');return 0;}
+    if(/^__HAL_RCC_(GPIO[ABCDH]|SYSCFG|PWR|USART[1236]|UART[45]|I2C1|SPI1|ADC1|TIM[234567]|SDIO|DCMI|DMA[12])_CLK_ENABLE$/.test(name)){if(this.f1&&name==='__HAL_RCC_GPIOH_CLK_ENABLE')throw new Error('STM32F103RB에는 GPIOH가 없습니다.');if(this.f1&&/TIM[67]/.test(name))throw new Error(`STM32F103RB에는 ${name.slice(10,14)}이 없습니다(기본 타이머 TIM6/TIM7은 STM32F446RE에 있습니다).`);return 0;}
     if(['HAL_RCC_OscConfig','HAL_RCC_ClockConfig','HAL_PWREx_ControlVoltageScaling','HAL_PWREx_EnableOverDrive','__HAL_PWR_VOLTAGESCALING_CONFIG'].includes(name))return 0;
     if(name==='HAL_NVIC_SetPriority'){if(a!==SYSTICK&&!this.nvicModel.isIrq(a))throw new Error(`미지원 IRQ: ${a}`);int(b,0,15,'IRQ priority');this.nvicModel.setPriority(a,b,c??0);if(a===SYSTICK){this.nvicModel.updateTick(r);return 0;}this.priorities.set(a,b);this.subPriorities.set(a,c??0);if(this.nvic.has(a))this.nvic.set(a,b);return 0;}
     if(name==='HAL_NVIC_EnableIRQ'){if(!this.nvicModel.isIrq(a)||PINOUT_IRQS.has(a)&&!this.config.nvic[a]?.enabled)throw new Error(`${a}: NVIC 설정에서 인터럽트를 활성화하세요.`);this.nvic.set(a,this.priorities.get(a)??this.config.nvic[a]?.priority??0);return 0;}

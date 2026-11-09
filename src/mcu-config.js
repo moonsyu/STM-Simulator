@@ -1,4 +1,4 @@
-import {TIMER_ROUTES,TIMER_IDS,isTimer,timerMax} from './timer-config.js';
+import {TIMER_ROUTES,TIMER_IDS,isTimer,isBasicTimer,timerOfIrq,timerMax,TIM_TRGO} from './timer-config.js';
 import {generateMain} from './hal-generator.js';
 import {GPIO_PINS} from './pins.js';
 import {SERIAL_ROUTES,SERIAL_IDS,isSerial,serialFunction} from './serial-config.js';
@@ -65,6 +65,17 @@ export function validateMcu(value){
     const q={enabled:p.enabled},defaults=isTimer(id)?timerDefaults(id,f.id):null;
     for(const [key,def,min,max]of isSerial(id)?[['baud',115200,300,2000000]]:id==='I2C1'?[['clock',100000,1000,1000000]]:id==='SPI1'?[['clock',1000000,1000,20000000]]:isTimer(id)?[['prescaler',defaults.prescaler,0,65535],['period',defaults.period,0,f.timerMax(id)],['pulse',defaults.pulse,0,f.timerMax(id)]]:[]){q[key]=p[key]??def;if(!Number.isInteger(q[key])||q[key]<min||q[key]>max)throw new Error(`${id}.${key}: 범위를 확인하세요.`);}
     if(isTimer(id)){q.mode=p.mode??defaults.mode;if(!['base','pwm','oc','capture','encoder'].includes(q.mode))throw new Error(id+': 타이머 모드를 확인하세요.');}
+    // Basic timers (TIM6/TIM7): an up counter without channels; TRGO Trigger Event Selection is kept when not Reset.
+    if(isBasicTimer(id)){
+     if(q.mode!=='base')throw new Error(`${id}: 기본 타이머는 채널이 없어 내부 클록 / 주기 모드만 씁니다.`);
+     if(p.counterMode!==undefined&&p.counterMode!=='UP')throw new Error(`${id}: 기본 타이머는 Up 카운터만 있습니다.`);
+     if(p.channels!==undefined)throw new Error(`${id}: 기본 타이머에는 채널이 없습니다.`);
+    }
+    if(p.trgo!==undefined){
+     if(!isBasicTimer(id))throw new Error(`${id}: TRGO(Trigger Event Selection)는 기본 타이머 TIM6/TIM7에서 설정합니다.`);
+     if(!Object.hasOwn(TIM_TRGO,p.trgo))throw new Error(`${id}.trgo: ${Object.keys(TIM_TRGO).join(' / ')} 중에서 고르세요.`);
+     if(p.trgo!=='RESET')q.trgo=p.trgo;
+    }
     // Counter Mode: only a non-Up value is kept; the encoder sets the direction itself.
     if(isTimer(id)&&p.counterMode!==undefined){
      if(!TIM_COUNTER_MODES.includes(p.counterMode))throw new Error(`${id}.counterMode: ${TIM_COUNTER_MODES.join(' / ')} 중에서 고르세요.`);
@@ -152,7 +163,7 @@ export function configProblems(config){
     const assigned=Object.fromEntries(Object.entries(config.pins).filter(([,p])=>p.function.startsWith(id+'_')).map(([pin,p])=>[p.function.slice(id.length+1),pin]));
     if(Object.keys(assigned).length&&!remapFor(family.id,id,assigned))errors.push(`${id}: ${Object.entries(assigned).map(([s,pin])=>`${s}=${pin}`).join(', ')} 조합은 ${family.id}에서 쓸 수 없습니다. 함께 옮겨지는 핀 묶음: ${family.remaps[id].map(o=>Object.entries(o.pins).map(([s,pin])=>`${s} ${pin}`).join('/')).join(' 또는 ')}`);
   }
-  for(const [irq,n]of Object.entries(config.nvic||{})){const id=irq.replace(/_IRQn$/,'');if(n.enabled&&(isSerial(id)||isTimer(id))&&!config.peripherals[id]?.enabled)errors.push(`${irq}: ${id} 주변장치를 활성화하거나 인터럽트를 끄세요.`);}
+  for(const [irq,n]of Object.entries(config.nvic||{})){const id=timerOfIrq(irq)??irq.replace(/_IRQn$/,'');if(n.enabled&&(isSerial(id)||isTimer(id))&&!config.peripherals[id]?.enabled)errors.push(`${irq}: ${id} 주변장치를 활성화하거나 인터럽트를 끄세요.`);}
   for(const [request,d]of Object.entries(config.dma||{})){const id=dmaPeripheral(request);if(id&&!config.peripherals[id]?.enabled)errors.push(`${request} DMA: ${id} 주변장치를 활성화하세요.`);if(id&&isTimer(id)&&config.peripherals[id].mode!=='pwm')errors.push(`${request} DMA: ${id}를 PWM 모드로 설정하세요.`);}
   errors.push(...nvicProblems(config));
   if(config.clock){errors.push(...clockTreeProblems(config.family,config.clock));if(config.peripherals.ADC1?.enabled){const adc=adcClockProblem(config.family,config.clock);if(adc)errors.push(adc);}}
@@ -213,7 +224,9 @@ export function importIoc(text){
   if(config.peripherals.SPI1){const s=config.peripherals.SPI1;if(/HIGH/.test(values['SPI1.CLKPolarity']||''))s.cpol='HIGH';if(/2EDGE/.test(values['SPI1.CLKPhase']||''))s.cpha='2EDGE';if(/16BIT/.test(values['SPI1.DataSize']||''))s.dataSize=16;if(/LSB/.test(values['SPI1.FirstBit']||''))s.firstBit='LSB';}
   if(config.peripherals.SPI1){const m=/^([\d.]+)\s*([KM]?)Bits\/s/i.exec(values['SPI1.CalculateBaudRate']||'');if(m)config.peripherals.SPI1.clock=Math.min(20000000,Math.max(1000,Math.round(Number(m[1])*({K:1e3,M:1e6}[m[2].toUpperCase()]??1))));}
   for(const id of Object.keys(f.timers))if(config.peripherals[id]){const p=config.peripherals[id],defaults=timerDefaults(id,family);p.prescaler=number(values[id+'.Prescaler'],defaults.prescaler);p.period=number(values[id+'.Period'],defaults.period);const pulse=Object.keys(values).find(k=>k.startsWith(id+'.Pulse'));if(pulse)p.pulse=number(values[pulse],defaults.pulse);const settings=Object.entries(values).filter(([k])=>k.startsWith(id+'.')).map(([,v])=>v).join(' ');p.mode=/Encoder|ENCODER/.test(settings)?'encoder':/PWM/.test(settings)?'pwm':/Output Compare\d CH\d/.test(settings)?'oc':/INPUTCAPTURE|Input_Capture|IC_CHANNEL/.test(settings)?'capture':'base';
-    const counter=/TIM_COUNTERMODE_(\w+)/.exec(values[id+'.CounterMode']||'')?.[1];if(counter&&counter!=='UP'&&TIM_COUNTER_MODES.includes(counter)&&p.mode!=='encoder')p.counterMode=counter;}
+    const counter=/TIM_COUNTERMODE_(\w+)/.exec(values[id+'.CounterMode']||'')?.[1];if(counter&&counter!=='UP'&&TIM_COUNTER_MODES.includes(counter)&&p.mode!=='encoder'&&!isBasicTimer(id))p.counterMode=counter;
+    // TIM6/TIM7 TRGO Parameters (TIM6.TIM_MasterOutputTrigger=TIM_TRGO_UPDATE); the basic timers have only the time base.
+    if(isBasicTimer(id)){p.mode='base';const trgo=/^TIM_TRGO_(RESET|ENABLE|UPDATE)$/.exec(values[id+'.TIM_MasterOutputTrigger']||'')?.[1];if(trgo&&trgo!=='RESET')p.trgo=trgo;}}
   // Per-channel settings: PWM "TIM2.Pulse-PWM Generation1 CH1", "TIM2.OCPolarity_1", "TIM2.OCMode_PWM-PWM Generation1 CH1";
   // Output Compare "TIM2.Pulse-Output Compare1 CH1", "TIM2.OCMode_1" (TIM_OCMODE_TIMING when missing, as CubeMX).
   for(const id of Object.keys(f.timers))if(['pwm','oc'].includes(config.peripherals[id]?.mode)){

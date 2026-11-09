@@ -1,4 +1,4 @@
-import {isTimer,timerMax as f4TimerMax} from './timer-config.js';
+import {isTimer,isBasicTimer,timerIrq,timerMax as f4TimerMax,TIM_TRGO} from './timer-config.js';
 const integer=(n,min,max,label)=>{if(!Number.isInteger(n)||n<min||n>max)throw new Error(`${label}: ${min}~${max} 범위를 확인하세요.`);return n;};
 const wrap=(n,period)=>((n%period)+period)%period;
 const quadrature=[0,-1,1,0,1,0,0,-1,-1,0,0,1,0,1,-1,0];
@@ -17,6 +17,7 @@ export class HalTimers {
     const h=this.hal,{id,init}=h.handle(ptr,r,'TIM'),get=k=>h.field(init,k),p=h.config.peripherals[id];
     if(!isTimer(id)||!Object.hasOwn(COUNT_MODES,get('CounterMode'))||get('ClockDivision'))throw new Error(`${id}: 내부 클록, Counter Mode Up/Down/Center Aligned, DIV1을 사용하세요.`);
     if(kind==='Encoder'&&get('CounterMode'))throw new Error(id+': 엔코더 모드는 Counter Mode Up으로 초기화하세요.');
+    if(isBasicTimer(id)&&(kind!=='Base'||get('CounterMode')))throw new Error(`${id}: 기본 타이머는 채널이 없는 Up 카운터입니다. HAL_TIM_Base_Init과 TIM_COUNTERMODE_UP을 쓰세요.`);
     integer(get('Prescaler'),0,65535,id+' Prescaler');integer(get('Period'),0,this.max(id),id+' ARR');
     if(get('Prescaler')!==p.prescaler||get('Period')!==p.period)throw new Error(`${id}: 소스와 Pinout의 Prescaler/Period가 다릅니다.`);
     if(this.states.get(id)?.active)throw new Error(id+': 타이머를 정지한 뒤 초기화하세요.');
@@ -51,11 +52,11 @@ export class HalTimers {
     // Update events at overflow, and also at underflow in center-aligned mode (so every ARR ticks there).
     const u=this.phase(s,r.microTime),cycle=this.cycle(s),step=s.count==='center'?this.arr(s):cycle,next=s.count==='center'&&u<this.arr(s)?this.arr(s):cycle;
     const ms=(next-u)*1000/this.hz(s),full=step*1000/this.hz(s);if(full<.1||full>3600000)throw new Error(s.id+': 인터럽트 주기 범위 0.1~3600000 ms');
-    const fire=()=>{if(generation!==s.generation||!s.baseIT)return;const hal=this.hal;hal.queue(s.id+'_IRQn',function*(){if(s.baseIT)yield* hal.userCall(r,'HAL_TIM_PeriodElapsedCallback',[s.ptr]);},s.id+':update');r.event(r.microTime/1000+full,fire);};
+    const fire=()=>{if(generation!==s.generation||!s.baseIT)return;const hal=this.hal;hal.queue(timerIrq(s.id),function*(){if(s.baseIT)yield* hal.userCall(r,'HAL_TIM_PeriodElapsedCallback',[s.ptr]);},s.id+':update');r.event(r.microTime/1000+full,fire);};
     r.event(r.microTime/1000+Math.max(.000001,ms),fire);
   }
   channel(s,key){integer(key/4,0,3,'TIM 채널');const c=s.channels.get(key);if(!c)throw new Error(s.id+': 채널을 먼저 초기화하세요.');return c;}
-  notify(s,c,key,r){if(!c.it)return;const hal=this.hal;hal.queue(s.id+'_IRQn',function*(){if(!c.active||s.kind==='Encoder'&&!s.encoderActive)return;const {h}=hal.requireHandle(s.ptr,r,'TIM');h.fields.Channel.value=1<<(key/4);try{yield* hal.userCall(r,'HAL_TIM_IC_CaptureCallback',[s.ptr]);}finally{h.fields.Channel.value=0;}},s.id+':capture:'+key);}
+  notify(s,c,key,r){if(!c.it)return;const hal=this.hal;hal.queue(timerIrq(s.id),function*(){if(!c.active||s.kind==='Encoder'&&!s.encoderActive)return;const {h}=hal.requireHandle(s.ptr,r,'TIM');h.fields.Channel.value=1<<(key/4);try{yield* hal.userCall(r,'HAL_TIM_IC_CaptureCallback',[s.ptr]);}finally{h.fields.Channel.value=0;}},s.id+':capture:'+key);}
   observe(r,us=r.microTime){
     for(const s of this.states.values()){
       if(!s.active)continue;
@@ -95,7 +96,7 @@ export class HalTimers {
       if(generation!==ch.generation||!ch.active)return;
       if(ch.mode===16||ch.mode===32){const level=ch.mode===16?1:0;if(ch.ref!==level){ch.ref=level;r.call('digitalWrite',[pin,ch.ref^pol]);}}
       if(!ch.it)return;
-      hal.queue(s.id+'_IRQn',function*(){if(!ch.active)return;const {h}=hal.requireHandle(s.ptr,r,'TIM');h.fields.Channel.value=1<<(key/4);try{yield* hal.userCall(r,'HAL_TIM_OC_DelayElapsedCallback',[s.ptr]);}finally{h.fields.Channel.value=0;}},s.id+':oc:'+key);
+      hal.queue(timerIrq(s.id),function*(){if(!ch.active)return;const {h}=hal.requireHandle(s.ptr,r,'TIM');h.fields.Channel.value=1<<(key/4);try{yield* hal.userCall(r,'HAL_TIM_OC_DelayElapsedCallback',[s.ptr]);}finally{h.fields.Channel.value=0;}},s.id+':oc:'+key);
       const j=(i+1)%matches.length,step=((matches[j]-matches[i])%cycle+cycle)%cycle||cycle;i=j;r.event(r.microTime/1000+step*1000/hz,fire);
     };
     r.event(r.microTime/1000+Math.max(.000001,(next-u)*1000/hz),fire);
@@ -119,7 +120,7 @@ export class HalTimers {
     if(!name.startsWith('HAL_TIM')&&!name.startsWith('__HAL_TIM'))return undefined;
     const [a,b,c]=args,h=this.hal,s=this.get(a,r);
     if(name==='HAL_TIM_ConfigClockSource'){if(h.field(r.get(r.pointerCell(b)),'ClockSource')!==0)throw new Error(s.id+': 내부 클록만 지원합니다.');return 0;}
-    if(name==='HAL_TIMEx_MasterConfigSynchronization'){const cfg=r.get(r.pointerCell(b));if(h.field(cfg,'MasterOutputTrigger')||h.field(cfg,'MasterSlaveMode'))throw new Error('타이머 동기화는 지원하지 않습니다.');return 0;}
+    if(name==='HAL_TIMEx_MasterConfigSynchronization'){const cfg=r.get(r.pointerCell(b)),trgo=h.field(cfg,'MasterOutputTrigger');if(![0,16,32].includes(trgo)||h.field(cfg,'MasterSlaveMode'))throw new Error(`${s.id}: TRGO는 ${Object.keys(TIM_TRGO).map(k=>'TIM_TRGO_'+k).join('·')}, MasterSlaveMode는 DISABLE만 지원합니다.`);s.trgo=trgo;return 0;}
     if(name==='HAL_TIM_MspPostInit'||name==='HAL_TIM_IRQHandler')return 0;
     if(name==='__HAL_TIM_GET_COUNTER')return this.counter(s,r.microTime);
     if(name==='__HAL_TIM_IS_TIM_COUNTING_DOWN')return Number(this.countingDown(s,r.microTime));
@@ -137,6 +138,7 @@ export class HalTimers {
       const start=name.includes('_Start'),it=name.endsWith('_IT'),key=it?'baseIT':'base';if(start&&s[key])return 2;
       this.freeze(s,r.microTime);s[key]=start;this.syncActive(s,r);this.schedule(s,r);return 0;
     }
+    if(isBasicTimer(s.id)&&/^(HAL_TIM_(PWM|OC|IC)_|__HAL_TIM_(SET|GET)_COMPARE|HAL_TIM_ReadCapturedValue|HAL_TIM_Encoder_|__HAL_TIM_SET_CAPTUREPOLARITY)/.test(name))throw new Error(`${s.id}: 기본 타이머에는 채널이 없습니다(${name}).`);
     if(name==='HAL_TIM_PWM_ConfigChannel'){
       if(s.kind==='Encoder')throw new Error('엔코더와 PWM은 같은 타이머를 공유할 수 없습니다.');
       integer(c/4,0,3,'TIM 채널');const cfg=r.get(r.pointerCell(b));if(h.field(cfg,'OCMode')!==96||h.field(cfg,'OCPolarity'))throw new Error('PWM: 내장 해석기는 PWM1 active high만 지원합니다. PWM2·Low 극성은 ARM GCC 시뮬레이터로 실행하세요.');

@@ -2,7 +2,7 @@
 // ones the built-in interpreter runs (UART/USART, timers, EXTI, DMA, DCMI, SDIO); the GCC build adds every missing one to
 // its environment file, so a project without them (or an older main.c) still links with working interrupts.
 import {isSerial,serialHandle} from './serial-config.js';
-import {isTimer} from './timer-config.js';
+import {isTimer,timerOfIrq} from './timer-config.js';
 
 export const dmaHandle=request=>request==='MEMTOMEM'?'hdma_memtomem':'hdma_'+request.toLowerCase();
 const usartHandle=id=>'husart'+id.replace(/\D/g,'');
@@ -32,7 +32,7 @@ export function irqHandlers(mcu){
     if(id==='SDIO')return of('SD','SDIO','hsd','HAL_SD_IRQHandler',true);
     return {body:''};
   };
-  for(const [irq,p]of Object.entries(mcu?.nvic||{}))if(p.enabled&&!streams.has(irq.replace('_IRQn',''))){const id=irq.replace('_IRQn','');out.push({name:`${id}_IRQHandler`,irq,shown:false,...body(id)});}
+  for(const [irq,p]of Object.entries(mcu?.nvic||{}))if(p.enabled&&!streams.has(irq.replace('_IRQn',''))){const id=irq.replace('_IRQn','');out.push({name:`${id}_IRQHandler`,irq,shown:false,...body(timerOfIrq(irq)??id)});}
   return out;
 }
 

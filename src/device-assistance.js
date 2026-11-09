@@ -12,7 +12,7 @@ import {projectBoard} from './boards.js';
 import {PINS,PIN_BY_ID,GPIO_PINS,boardPin,endpointInfo} from './pins.js';
 import {terminalKeys,terminalLabel,attachments,assignAttachments,pluggedKeys} from './components.js';
 import {defaultMcu,validateMcu,generateHal,ROUTES,irqForPin} from './mcu-config.js';
-import {timerMax} from './timer-config.js';
+import {timerMax,isBasicTimer} from './timer-config.js';
 import {SERIAL_IDS,serialHandle} from './serial-config.js';
 import {validateProject} from './project.js';
 import {legalizeWireEnds} from './wire-ends.js';
@@ -52,7 +52,7 @@ function bindParts(p,sample,target,prior,report){
 function allocatePins(p,sample,parts,prior){
  const config=structuredClone(p.mcu||defaultMcu(projectBoard(p).mcuFamily)),map={},peripherals={},assigned=new Set(),owned=new Set(Object.values(prior?.pins||{})),uf=wiringTopology(p);
  // Pins, routes, timers and UARTs of the project's MCU (NUCLEO-F103RB: AFIO remap routes, TIM2-4, USART1-3).
- const family=familyProfile(config.family),ROUTES=routesOf(config.family),GPIO_PINS=family.gpioPins,timerMax=family.timerMax,SERIAL_IDS=Object.keys(family.serial),TIMERS=Object.keys(family.timers);
+ const family=familyProfile(config.family),ROUTES=routesOf(config.family),GPIO_PINS=family.gpioPins,timerMax=family.timerMax,SERIAL_IDS=Object.keys(family.serial),TIMERS=Object.keys(family.timers).filter(t=>!isBasicTimer(t));
  const partIds=new Set(Object.values(parts)),otherTerminals=p.components.filter(c=>!partIds.has(c.id)&&c.type!=='breadboard').flatMap(c=>terminalKeys(c).map(key=>partTerminal(c.id,key)));
  const fixed=sample.ide?.native?.target==='arm'||/HAL_(CAN_Init|I2S_Init|RCC_MCOConfig)/.test(sample.code)||/HAL_GPIO_WritePin\(GPIO[A-H],\s*1U\s*<</.test(sample.code);
  const free=pin=>!assigned.has(pin)&&(!config.pins[pin]||config.pins[pin].function==='Reset'||owned.has(pin))&&!otherTerminals.some(id=>uf.find(id)===uf.find(boardPin(pin)));

@@ -15,6 +15,7 @@ export function irqLabel(irq){
   if((m=/^EXTI(\d)_IRQn$/.exec(irq)))return `EXTI line${m[1]} interrupt`;
   if(irq==='EXTI9_5_IRQn')return 'EXTI line[9:5] interrupts';if(irq==='EXTI15_10_IRQn')return 'EXTI line[15:10] interrupts';
   if((m=/^(I2C\d)_(EV|ER)_IRQn$/.exec(irq)))return `${m[1]} ${m[2]==='EV'?'event':'error'} interrupt`;
+  if(irq==='TIM6_DAC_IRQn')return 'TIM6 global interrupt, DAC1 and DAC2 underrun error interrupts';
   if(irq==='ADC_IRQn')return 'ADC1, ADC2 and ADC3 global interrupts';if(irq==='ADC1_2_IRQn')return 'ADC1 and ADC2 global interrupts';
   if((m=/^(DMA\d)_(Stream|Channel)(\d)_IRQn$/.exec(irq)))return `${m[1]} ${m[2].toLowerCase()}${m[3]} global interrupt`;
   return irq.replace(/_IRQn$/,'')+' global interrupt';

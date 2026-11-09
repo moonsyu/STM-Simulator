@@ -3,7 +3,7 @@
 // Everything that differs between the two (pin routes, how a pin gets an alternate function, IRQ names and
 // numbers, DMA units, clocks, GPIO set) lives here so the Pinout, validator, generator and interpreter share it.
 import {SERIAL_ROUTES} from './serial-config.js';
-import {TIMER_ROUTES} from './timer-config.js';
+import {TIMER_ROUTES,timerIrq} from './timer-config.js';
 import {GPIO_PINS} from './pins.js';
 
 const adcRoutes=pins=>Object.fromEntries(pins.map((p,i)=>['IN'+i,[p]]));
@@ -91,7 +91,7 @@ export function routesOf(id=DEFAULT_FAMILY){
 }
 export const serialIdsOf=id=>Object.keys(familyProfile(id).serial);
 export const timerIdsOf=id=>Object.keys(familyProfile(id).timers);
-export const irqNamesOf=id=>{const f=familyProfile(id);return [...EXTI_IRQS,...serialIdsOf(id).map(s=>s+'_IRQn'),...timerIdsOf(id).map(t=>t+'_IRQn'),...f.irqExtra];};
+export const irqNamesOf=id=>{const f=familyProfile(id);return [...EXTI_IRQS,...serialIdsOf(id).map(s=>s+'_IRQn'),...timerIdsOf(id).map(timerIrq),...f.irqExtra];};
 /** F1: the remap option a peripheral's assigned signals select, or null when the pins mix options. */
 export function remapFor(id,peripheral,assigned){
   const f=familyProfile(id);if(f.pinMux!=='remap'||!f.remaps[peripheral])return f.remaps?.[peripheral]?.[0]??null;

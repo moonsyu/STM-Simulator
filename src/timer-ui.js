@@ -2,6 +2,7 @@
 // (Mode, Pulse, CH Polarity), with what the chosen values do on the pin.
 import {esc} from './common.js';
 import {TIM_COUNTER_MODES,TIM_OC_MODES} from './mcu-config.js';
+import {TIM_TRGO} from './timer-config.js';
 
 export const COUNTER_MODE_LABELS={UP:'Up',DOWN:'Down',CENTERALIGNED1:'Center Aligned mode1',CENTERALIGNED2:'Center Aligned mode2',CENTERALIGNED3:'Center Aligned mode3'};
 export const OC_MODE_LABELS={TIMING:'Frozen (used for Timing base)',ACTIVE:'Active Level on match',INACTIVE:'Inactive Level on match',TOGGLE:'Toggle on match',FORCED_ACTIVE:'Forced Active',FORCED_INACTIVE:'Forced Inactive'};
@@ -16,6 +17,11 @@ export const compareMatches=(c,pulse)=>pulse>(c.period??0)?0:center(c)&&pulse>0&
 export function counterModeField(id,c){
   if(c.mode==='encoder')return '';
   return `<label>Counter Mode<select data-timer-counter="${id}" aria-label="${id} Counter Mode">${TIM_COUNTER_MODES.map(v=>`<option value="${v}" ${(c.counterMode??'UP')===v?'selected':''}>${COUNTER_MODE_LABELS[v]}</option>`).join('')}</select></label>`;
+}
+
+/** TIM6/TIM7: TRGO Parameters › Trigger Event Selection (the basic timers have no mode, channel or Counter Mode choice). */
+export function basicTimerField(id,c){
+  return `<label>Trigger Event Selection (TRGO)<select data-timer-trgo="${id}" aria-label="${id} Trigger Event Selection">${Object.entries(TIM_TRGO).map(([v,t])=>`<option value="${v}" ${(c.trgo??'RESET')===v?'selected':''}>${t}</option>`).join('')}</select></label>`;
 }
 
 function channelNote(c,cc,clockHz){

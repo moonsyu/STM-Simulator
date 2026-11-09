@@ -1,4 +1,4 @@
-import {isTimer,timerMax,TIMER_MODES} from './timer-config.js';
+import {isTimer,isBasicTimer,timerIrq,timerMax,TIMER_MODES} from './timer-config.js';
 import {timerDefaults} from './mcu-defaults.js';
 import {GPIO_PINS} from './pins.js';
 import {MODES,ROUTES,defaultMcu,validateMcu,configProblems,pinFunctions,irqForPin,IRQ_NAMES,generateHal,USART_CK_ROUTES,DMA_MODES,DMA_PRIORITIES,dmaPeripheral,dmaDirection} from './mcu-config.js';
@@ -19,7 +19,7 @@ function adcSamplingField(config,c){
   return `<label>Sampling Time (Rank 1)<select data-adc-sampling aria-label="ADC1 Sampling Time" ${c.enabled?'':'disabled'}>${ADC_SAMPLING[config.family].map(v=>`<option value="${v}" ${v===now?'selected':''}>${v} Cycles</option>`).join('')}</select></label><small class="serial-mode-note">${us?`한 번 변환 ${Number(us.toFixed(2))} µs (ADC 클록 ${Number((adcHz/1e6).toFixed(3))} MHz). `:''}가변저항처럼 출력 저항이 큰 입력은 긴 시간을 고르세요.</small>`;
 }
 import {dmaRequestsOf,UART_PARAMS,SPI_PARAMS,timChannelParams} from './mcu-config.js';
-import {counterModeField,timerChannelsField} from './timer-ui.js';
+import {counterModeField,timerChannelsField,basicTimerField} from './timer-ui.js';
 import {projectBoard} from './boards.js';
 import {$,esc} from './common.js';
 import {IRQ_NUMBERS} from './hal-nvic.js';
@@ -46,7 +46,7 @@ function alignSerialRemap(config,id,pin){
 }
 const numberInput=el=>el.value.trim()===''?NaN:Number(el.value);
 const numberText=value=>Number.isFinite(value)?value:'';
-const timerHint=(id,c,max=timerMax(id))=>`${max===65535?'16':'32'}비트 · 초기 ARR ${max}${c.period===0?' · ARR=0: 카운터 정지':''}`;
+const timerHint=(id,c,max=timerMax(id))=>`${isBasicTimer(id)?`기본 타이머(채널·핀 없음, Up 카운터, 인터럽트 ${timerIrq(id)}) · `:''}${max===65535?'16':'32'}비트 · 초기 ARR ${max}${c.period===0?' · ARR=0: 카운터 정지':''}`;
 export class PinoutPanel {
   constructor({getProject,apply,isRunning,onError}){
     Object.assign(this,{getProject,apply,isRunning,onError});this.pin='PA5';
@@ -197,7 +197,7 @@ export class PinoutPanel {
         const fn=id+'_'+role,current=Object.keys(config.pins).find(pin=>config.pins[pin].function===fn);
         return `<label>${role} 핀<select data-serial-route="${id}" data-role="${role}" aria-label="${id} ${role} 핀" ${c.enabled?'':'disabled'}><option value="">선택…</option>${fam.serial[id][role].map(pin=>{const other=config.pins[pin]?.function,busy=other&&other!=='Reset'&&other!==fn;return `<option value="${pin}" ${pin===current?'selected':''} ${busy?'disabled':''}>${pin}${busy?' · '+esc(other)+' 사용 중':''}</option>`;}).join('')}</select></label>`;
       }).join(''):'';
-      return `<section class="peripheral-card"><label class="check-label"><input type="checkbox" data-peripheral="${id}" ${c.enabled?'checked':''}>${id}</label>${routing}${i2cParams}${spiParams}${id==='ADC1'?`<label>Continuous Conversion Mode<select data-adc-continuous aria-label="ADC1 Continuous Conversion Mode" ${c.enabled?'':'disabled'}><option value="0">Disabled</option><option value="1" ${c.continuous?'selected':''}>Enabled</option></select></label><small class="serial-mode-note">${c.continuous?'HAL_ADC_Start 한 번 뒤 계속 변환합니다. HAL_ADC_GetValue가 최신 값을 돌려줍니다.':'변환은 HAL_ADC_Start마다 한 번입니다. 값을 새로 읽으려면 매번 Start · PollForConversion을 부르세요.'}</small>${adcSamplingField(config,c)}`:''}${isTimer(id)?`<label>동작 모드<select data-timer-mode="${id}">${Object.entries(TIMER_MODES).map(([mode,label])=>`<option value="${mode}" ${(c.mode??'base')===mode?'selected':''}>${label}</option>`).join('')}</select></label>${counterModeField(id,c)}`:''}${fields.map(([key,label,value,max])=>`<label>${label}<input type="number" data-peripheral-value="${id}" data-key="${key}" aria-label="${id} ${label}" value="${numberText(c[key]??value)}" min="0" ${max===undefined?'':`max="${max}"`} step="1"></label>`).join('')}${isTimer(id)?`<small class="serial-mode-note">${timerHint(id,c,fam.timerMax(id))}</small>`:''}${isTimer(id)?timerChannelsField(id,c,config,fam.timerMax(id)):''}${c.enabled&&peripheralIrqs(config.family,id).length?`<div class="card-nvic"><strong>NVIC Settings</strong>${peripheralIrqs(config.family,id).map(irq=>this.irqRow(config,irq,{card:true})).join('')}</div>`:''}</section>`;
+      return `<section class="peripheral-card"><label class="check-label"><input type="checkbox" data-peripheral="${id}" ${c.enabled?'checked':''}>${id}</label>${routing}${i2cParams}${spiParams}${id==='ADC1'?`<label>Continuous Conversion Mode<select data-adc-continuous aria-label="ADC1 Continuous Conversion Mode" ${c.enabled?'':'disabled'}><option value="0">Disabled</option><option value="1" ${c.continuous?'selected':''}>Enabled</option></select></label><small class="serial-mode-note">${c.continuous?'HAL_ADC_Start 한 번 뒤 계속 변환합니다. HAL_ADC_GetValue가 최신 값을 돌려줍니다.':'변환은 HAL_ADC_Start마다 한 번입니다. 값을 새로 읽으려면 매번 Start · PollForConversion을 부르세요.'}</small>${adcSamplingField(config,c)}`:''}${isBasicTimer(id)?basicTimerField(id,c):isTimer(id)?`<label>동작 모드<select data-timer-mode="${id}">${Object.entries(TIMER_MODES).map(([mode,label])=>`<option value="${mode}" ${(c.mode??'base')===mode?'selected':''}>${label}</option>`).join('')}</select></label>${counterModeField(id,c)}`:''}${fields.map(([key,label,value,max])=>`<label>${label}<input type="number" data-peripheral-value="${id}" data-key="${key}" aria-label="${id} ${label}" value="${numberText(c[key]??value)}" min="0" ${max===undefined?'':`max="${max}"`} step="1"></label>`).join('')}${isTimer(id)?`<small class="serial-mode-note">${timerHint(id,c,fam.timerMax(id))}</small>`:''}${isTimer(id)?timerChannelsField(id,c,config,fam.timerMax(id)):''}${c.enabled&&peripheralIrqs(config.family,id).length?`<div class="card-nvic"><strong>NVIC Settings</strong>${peripheralIrqs(config.family,id).map(irq=>this.irqRow(config,irq,{card:true})).join('')}</div>`:''}</section>`;
     }).join('')+this.dmaCard(config);
     this.bindDma(config);this.bindIrqRows($('pinout-peripherals'),{card:true});
     $('pinout-peripherals').querySelector('[data-open-nvic]').onclick=()=>this.showSide('nvic');
@@ -221,6 +221,7 @@ export class PinoutPanel {
       if(c.channels&&!Object.keys(c.channels).length)delete c.channels;
       c.mode=el.value;if(el.value==='encoder'){c.prescaler=0;delete c.counterMode;}this.render();
     });
+    $('pinout-peripherals').querySelectorAll('[data-timer-trgo]').forEach(el=>el.onchange=()=>{this.sync();const c=config.peripherals[el.dataset.timerTrgo]??={enabled:false};if(el.value==='RESET')delete c.trgo;else c.trgo=el.value;this.render();});
     $('pinout-peripherals').querySelectorAll('[data-timer-counter]').forEach(el=>el.onchange=()=>{this.sync();const c=config.peripherals[el.dataset.timerCounter]??={enabled:false};if(el.value==='UP')delete c.counterMode;else c.counterMode=el.value;this.render();});
     $('pinout-peripherals').querySelectorAll('[data-peripheral-value]').forEach(el=>el.onchange=()=>{const id=el.dataset.peripheralValue;config.peripherals[id]??={enabled:false};config.peripherals[id][el.dataset.key]=numberInput(el);const note=el.closest('.peripheral-card').querySelector('.serial-mode-note');if(isTimer(id)&&note)note.textContent=timerHint(id,config.peripherals[id],fam.timerMax(id));});
     this.renderNvic();this.showSide(this.side??'pin');

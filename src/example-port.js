@@ -21,7 +21,7 @@ export function f1Unavailable(project){
   if(m.peripherals?.DCMI?.enabled||/\bHAL_DCMI_/.test(code))reasons.push('DCMI 카메라 인터페이스');
   if(/\bHAL_I2S_|PLLI2S/.test(code))reasons.push('I2S 디지털 오디오');
   if(m.peripherals?.SDIO?.enabled||/\bHAL_SD_/.test(code))reasons.push('SDIO');
-  for(const id of ['UART4','UART5','USART6','TIM5'])if(m.peripherals?.[id]?.enabled)reasons.push(id);
+  for(const id of ['UART4','UART5','USART6','TIM5','TIM6','TIM7'])if(m.peripherals?.[id]?.enabled)reasons.push(id);
   return reasons;
 }
 
