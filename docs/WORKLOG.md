@@ -18,7 +18,7 @@
   - 전체 검사(마지막 상태): 펌웨어 64개 모두 통과, 툴체인 286개 중 285개 통과·1개 건너뜀(ARM GCC 15.2.1), E2E 81개 중 79개 통과·1개 건너뜀·1개 실패.
   - E2E 실패는 `copy.e2e`(Ctrl+C 글자 복사) 하나로, 두 번 다시 돌려도 같았다. 원인은 이 PC의 클립보드다: 시험이 먼저 쓴 'before'도 읽히지 않았고, 앱 없이 빈 Electron 앱에서도 `clipboard.readText()`가 값을 돌려주지 않고 멈췄으며, PowerShell `Get-Clipboard`·`Set-Clipboard`도 "요청된 클립보드 작업을 성공하지 못했습니다"로 실패했다. v1.26.0 뒤 키보드·복사 코드(`app-keyboard.js`, `desktop/main.cjs`의 복사 메뉴)는 바뀌지 않았다. CI(깨끗한 Windows)가 같은 E2E를 모두 돌리므로 그 결과로 확인한다.
   - 패키지 검사(`tests/release/packaged.test.mjs`) 3개 모두 통과. STM-Simulator.exe 115,575,684 바이트, SHA-256 5473b7d0eeaffb22b17ced47a12da795f1fcb606e9fd025eb6108ef4342270ec. 빌드 산출물은 지웠다.
-- 커밋·릴리스: 1c247ff(에뮬레이터), 8f9cd39(.ioc 키), bb6b5e3(OC·Counter Mode), 1a1a5c6(printf float), bc3d163(DS3231), 문서·버전 커밋.
+- 커밋·릴리스: 1c247ff(에뮬레이터), 8f9cd39(.ioc 키), bb6b5e3(OC·Counter Mode), 1a1a5c6(printf float), bc3d163(DS3231), 99c13a8(문서·버전). [Windows CI 42546243234](https://github.com/moonsyu/STM-Simulator/actions/runs/42546243234) 성공(E2E 2/2에서 `copy.e2e`도 통과 — 로컬 실패는 이 PC 클립보드 탓으로 확인), [Release v1.27.0](https://github.com/moonsyu/STM-Simulator/releases/tag/v1.27.0) 최신·자산 5개(API 확인, 내려받지 않음).
 - 남은 사항:
   - 3번의 TIM6/7·RTC·DAC 등(목록 순서). TIM은 One Pulse·PWM Input·ARR preload·ETR·Slave·TRGO·IC 필터, 핀 없는 "Output Compare No Output"이 남았다.
   - 내장 해석기의 PWM은 지금처럼 PWM mode 1·High만 된다(출력 비교는 극성 Low도 됨).
