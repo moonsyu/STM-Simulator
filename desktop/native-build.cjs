@@ -119,9 +119,19 @@ async function prepareBuild({project,tools,root,target='arm',configuration='Debu
 const mainOf=plan=>list=>plan.ra?list.map(d=>d.file==='hal_entry.c'&&/[\\/]src[\\/]hal_entry\.c$/.test(d.path||'')?{...d,file:'main.c'}:d):list;
 async function build(plan,{signal,onOutput=()=>{}}={}){
   const remap=mainOf(plan);let output='';const write=text=>{output=(output+text).slice(-2000000);onOutput(text);};
-  async function run(exe,args){write(`> ${path.basename(exe)} ${args.map(a=>/\s/.test(a)?JSON.stringify(a):a).join(' ')}\n`);const r=await execute(exe,args,{cwd:plan.directory,signal,onOutput:write});if(r.code!==0){const diagnostics=remap(diagnosticsFrom(output)),first=diagnostics.find(d=>d.severity==='error');const error=new Error(`컴파일 또는 링크 실패 (종료 코드 ${r.code})${first?` · ${first.file}:${first.line}: ${first.message}`:''}`);error.diagnostics=diagnostics;throw error;}return r;}
+  const command=(exe,args)=>`> ${path.basename(exe)} ${args.map(a=>/\s/.test(a)?JSON.stringify(a):a).join(' ')}\n`;
+  const fail=code=>{const diagnostics=remap(diagnosticsFrom(output)),first=diagnostics.find(d=>d.severity==='error');const error=new Error(`컴파일 또는 링크 실패 (종료 코드 ${code})${first?` · ${first.file}:${first.line}: ${first.message}`:''}`);error.diagnostics=diagnostics;return error;};
+  async function run(exe,args){write(command(exe,args));const r=await execute(exe,args,{cwd:plan.directory,signal,onOutput:write});if(r.code!==0)throw fail(r.code);return r;}
   const version=await run(plan.gcc,['--version']);
-  for(const unit of plan.units)await run(unit.arguments[0],unit.arguments.slice(1));
+  // Translation units compile in parallel (one process per CPU, at most 8): the ~30 HAL / FSP driver sources of every
+  // build used to compile one after another. Each unit's output is kept and written in source order when all are done,
+  // so the 빌드 panel and its diagnostics read the same as a sequential build; the first failing unit is reported.
+  const units=plan.units,done=new Array(units.length),workers=Math.max(1,Math.min(8,os.cpus().length,units.length));let next=0;
+  await Promise.all(Array.from({length:workers},async()=>{
+    while(next<units.length&&!signal?.aborted){const i=next++,[exe,...args]=units[i].arguments;let text=command(exe,args);const r=await execute(exe,args,{cwd:plan.directory,signal,onOutput:t=>{text+=t;}});done[i]={code:r.code,text};}
+  }));
+  // A cancelled build (signal) or a compiler that cannot start rejects in execute(), as before.
+  for(const d of done){write(d.text);if(d.code!==0)throw fail(d.code);}
   const map=path.join(plan.directory,plan.target==='arm'?'firmware.map':'program.map');
   // The toolchain's libgcc.a is built with DWARF 5 line/debug info; link a copy without debug sections (searched before
   // the default one through -L) so every unit of firmware.elf is DWARF 4 and STM Studio's GDB can load it.
@@ -129,10 +139,18 @@ async function build(plan,{signal,onOutput=()=>{}}={}){
   if(plan.target==='arm'){
     const multilib=[...plan.flags,...plan.linkFlags].filter(f=>/^(-mcpu|-mthumb|-mfloat-abi|-mfpu|-march)/.test(f));
     const lib=(await execute(plan.gcc,[...multilib,'-print-libgcc-file-name'],{cwd:plan.directory,signal})).stdout.trim();
-    if(lib&&await fs.access(lib).then(()=>true,()=>false)){
-      const dir=path.join(plan.directory,'dwarf4-libs'),objcopy=plan.gcc.replace(/gcc(\.exe)?$/,(_,e)=>'objcopy'+(e||''));
-      await fs.mkdir(dir,{recursive:true});
-      if((await execute(objcopy,['--strip-debug',lib,path.join(dir,'libgcc.a')],{cwd:plan.directory,signal})).code===0)libs.push('-L'+dir);
+    const stat=lib?await fs.stat(lib).catch(()=>null):null;
+    if(stat){
+      // Stripping the 10 MB libgcc.a took ~3 s of every build; the stripped copy is kept per library (path, size, time)
+      // in the temp folder and reused. It is written under a unique name and renamed, so parallel builds never read half a file.
+      const key=createHash('sha256').update(`${path.resolve(lib)}|${stat.size}|${stat.mtimeMs}`).digest('hex').slice(0,16);
+      const dir=path.join(os.tmpdir(),'stm-simulator-dwarf4',key),target=path.join(dir,'libgcc.a'),objcopy=plan.gcc.replace(/gcc(\.exe)?$/,(_,e)=>'objcopy'+(e||''));
+      if(await fs.access(target).then(()=>true,()=>false))libs.push('-L'+dir);
+      else{
+        await fs.mkdir(dir,{recursive:true});const part=path.join(dir,`libgcc-${randomUUID()}.tmp`);
+        if((await execute(objcopy,['--strip-debug',lib,part],{cwd:plan.directory,signal})).code===0){await fs.rename(part,target).catch(()=>fs.rm(part,{force:true}));libs.push('-L'+dir);}
+        else await fs.rm(part,{force:true});
+      }
     }
   }
   await run(plan.linker,[...plan.flags.filter(f=>!f.startsWith('-W')),...libs,...plan.linkFlags,...plan.units.map(u=>u.arguments.at(-1)),'-Wl,--gc-sections','-Wl,-Map='+map,'-lm','-o',plan.elf]);
