@@ -1,6 +1,16 @@
 # STM Simulator — 개발 인계
 
-현재 버전: **1.28.2**. 정리일: **2026-11-09**. NUCLEO-F446RE·NUCLEO-F103RB 또는 Renesas FPB-RA6E1(1.20.0, FSP·에뮬레이터 전용)과 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+현재 버전: **1.29.0**. 정리일: **2026-11-09**. NUCLEO-F446RE·NUCLEO-F103RB 또는 Renesas FPB-RA6E1(1.20.0, FSP·에뮬레이터 전용)과 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+
+## 1.29.0 RTC (두 보드)
+
+- 기능 목록 3번의 다음 항목. CubeMX Timers › RTC의 주요 설정을 두 보드에 넣었다.
+- `src/rtc-config.js`: 프로젝트 `mcu.peripherals.RTC`(clockSource LSE|LSI, time, date, hourFormat 12(F4만), alarm{시·분·초, F4 마스크·date}, wakeUp{clock, counter}(F4만))의 검증 `validateRtc`, `rtcInitLines`(MX_RTC_Init), `rtcFromIoc`(RTC.Hours·WeekDay·Hours_A·AlarmMask*·WakeUpClock·WakeUpCounter, RCC.RTCClockSelection/RTCFreq_Value, VP_RTC_VS_*). 생성 코드는 CubeMX 기본 Data Format처럼 BCD 값과 `RTC_FORMAT_BCD`를 쓴다: F1 HAL은 BIN 형식의 월(RTC_MONTH_DECEMBER = 0x12)을 바꾸지 않아 날짜가 멈추기 때문이다(실제 HAL·에뮬레이터 시험에서 확인). MSP 부분(LSE/LSI 켜기, `HAL_RCCEx_PeriphCLKConfig` RTC, F1 PWR·BKP 클록과 백업 접근, `__HAL_RCC_RTC_ENABLE`)도 MX_RTC_Init 안에 쓴다. 프리스케일러: F4 LSE 127/255, LSI(32 kHz) 127/249, F1 `RTC_AUTO_1_SECOND`.
+- 주변장치 목록(`mcu-family.js` extra `RTC:{}`)과 NVIC: F4 `RTC_Alarm_IRQn`·`RTC_WKUP_IRQn`, F1 `RTC_IRQn`·`RTC_Alarm_IRQn`. 핸들러는 `irq-handlers.js`(HAL_RTC_AlarmIRQHandler, HAL_RTCEx_WakeUpTimerIRQHandler, HAL_RTCEx_RTCIRQHandler). Pinout 카드는 `src/rtc-ui.js`(값이 틀리면 카드에 바로 표시).
+- 내장 해석기 `src/hal-rtc.js`(`HalRtc`, extensions): 2000-01-01부터의 초로 달력을 세고, 프리스케일러가 1 Hz가 아니면 그 비율로 빠르거나 느리게 간다. F4 요일은 쓴 값에서 자정마다 1씩, F1 요일은 HAL처럼 날짜로 계산(일요일 0). F1에서 BIN 형식으로 10~12월 상수를 쓰면 실제처럼 멈추는 대신 이유를 알리는 오류를 낸다. `catalog-peripherals.js`의 F4 `HAL_RCCEx_PeriphCLKConfig`는 I2S 외 설정에 HAL_ERROR를 돌려줬는데, RTC 선택(`RCC_PERIPHCLK_RTC`)은 성공으로 둔다.
+- 에뮬레이터: F446 `Rtc`에 알람 A/B(ALRMAR/ALRMBR, MSK1~4·WDSEL, 1 Hz 갱신마다 비교, ALRAF/ALRBF → EXTI 17)를 넣고, RTC_ISR[13:8]은 쓰기 보호 없이 지울 수 있게 했다(RM0390 22.6.4, HAL 핸들러가 잠금 없이 지움 — 전에는 WakeUp 플래그가 안 지워져 한 번만 울렸다). F103은 `src/emu/stm32f103/rtc.js`의 `RtcF1`(CRH/CRL/PRL/DIV/CNT/ALR, CNF 설정 모드, RSF, SECF/ALRF/OWF, RTCCLK = RCC_BDCR RTCSEL·RTCEN·LSERDY, PWR DBP 쓰기 보호, RTC_IRQn·EXTI 17)와 `BkpF1`(DR1~DR10, RTCCR, CR, CSR). 주의: SoC가 주변장치의 `base`를 레지스터 주소로 쓰므로 모델 안에서 그 이름을 쓰면 안 된다(처음에 카운터 기준점을 `base`로 둬서 모든 접근이 NaN 주소가 됐다).
+- 시험: 단위 `rtc-config`(3), 해석기 `rtc`(3), 툴체인 `rtc`(두 보드 실제 HAL: 23:59:58 → 다음 날, 00:00:02 알람 A, F4 1 Hz WakeUp), E2E `rtc`(F103 카드·생성·실행 출력과 알람, F446 12시간·WakeUp 생성).
+- 남음: RTC 출력 핀(AFO_ALARM·512 Hz), Tamper·Timestamp, Alarm B 화면, SubSeconds 마스크, Smooth calibration, 리셋 뒤 달력 유지(에뮬레이터는 리셋 때 지움), F446 에뮬레이터 달력이 프리스케일러·클록과 무관하게 1초씩 가는 점.
 
 ## 1.28.2 부품 목록 겹침
 

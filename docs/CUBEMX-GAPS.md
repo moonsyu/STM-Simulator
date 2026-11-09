@@ -12,8 +12,8 @@
 크기 S/M/L은 작업량, 중요도 상/중/하는 STM32 수업에서 흔히 쓰는 정도입니다.
 
 **구현 비용 메모:** 1.14.0부터 시뮬레이터는 기본으로 ARM GCC로 빌드해 펌웨어 에뮬레이터에서 실행합니다. 그래서 새 주변장치를 Pinout에 추가할 때는 **에뮬레이터에 레지스터 모델이 있으면** Pinout과 코드 생성만 만들면 됩니다.
-- 에뮬레이터에 이미 모델이 있는 것: TIM1~14, I2C1~3, SPI1~4, ADC1~3, CAN, IWDG/WWDG, CRC, F446 RTC
-- 에뮬레이터에도 없는 것: DAC, F103 RTC/BKP
+- 에뮬레이터에 이미 모델이 있는 것: TIM1~14, I2C1~3, SPI1~4, ADC1~3, CAN, IWDG/WWDG, CRC, RTC(F446, 1.29.0부터 F103·BKP도)
+- 에뮬레이터에도 없는 것: DAC
 - 내장 해석기는 지원 범위 밖이라고 안내하면 됩니다.
 
 ## A. CubeMX 쪽 (Pinout · 클럭 · NVIC · DMA · 코드 생성)
@@ -51,7 +51,7 @@
 |---|---|---|---|
 | TIM1(두 보드)·TIM8(F446) 고급 타이머(CHxN·Dead-time·Break) | 있음(Dead-time·Break 입력은 부족, B2) | M | 상 |
 | ~~TIM6/7(기본 타이머)~~ **1.28.0 반영**(F446RE: Pinout 카드·TRGO·NVIC TIM6_DAC_IRQn·생성·.ioc·해석기, F103RB에는 없음). 남음: SYS Timebase Source를 TIM으로, TIM9~14 | 있음 | S~M | 상 |
-| RTC(달력, Alarm A/B, WakeUp) | F446만 있음(알람 미동작, B2). F103 없음 | M | 상 |
+| ~~RTC(달력, Alarm A/B, WakeUp)~~ **1.29.0 반영**(두 보드: 클록 원본·달력·알람 A·WakeUp(F4)·Hour Format(F4), 생성·.ioc·해석기, F446 알람 A/B와 F103 RTC/BKP 에뮬레이터). 남음: RTC 출력 핀, Tamper·Timestamp, Alarm B 화면, Smooth calibration | 있음 | M | 상 |
 | DAC OUT1/OUT2(F446) | **없음** | M | 상 |
 | I2C2(두 보드)·I2C3(F446), SPI2(두 보드)·SPI3(F446), I2S | 있음 | M | 중~상 |
 | ADC2/3(F446). 가져올 때 ADC1로 합쳐짐(`mcu-config.js:113`) | 있음 | M | 중 |
@@ -195,7 +195,7 @@ CubeMX를 화면 없이(`-q` 스크립트) 실행해 실제 생성 코드를 받
 | 항목 | 근거 | 크기 | 중요도 |
 |---|---|---|---|
 | DAC1/2(F446): 매핑 없음, 빌드 모듈에 `hal_dac` 없음, 해석기에도 없음 | `stm32f446/soc.js:29-40`, `native-build.cjs:6` | M | 상 |
-| F103 RTC·BKP: 주소 표에는 있으나 매핑 안 됨. `hal_rtc`는 빌드되므로 `HAL_RTC_*`가 BusFault | `stm32f103/soc.js` | M | 상 |
+| ~~F103 RTC·BKP: 주소 표에는 있으나 매핑 안 됨~~ **1.29.0 반영**: `stm32f103/rtc.js` RtcF1·BkpF1 | `stm32f103/soc.js` | M | 상 |
 | 매핑 안 된 주소 접근이 "잘못된 메모리 접근"으로만 보이고 "이 주변장치는 에뮬레이터에 없음" 안내가 없음 | `machine.js` | S | 상 |
 | USB OTG/FS, BKPSRAM, FMPI2C, SAI, SPDIF, CEC, QUADSPI, FMC | `rcc.js`에 클럭 비트만 있음 | L | 하~중 |
 
@@ -204,7 +204,7 @@ CubeMX를 화면 없이(`-q` 스크립트) 실행해 실제 생성 코드를 받
 | 항목 | 빠진 것 | 크기 | 중요도 |
 |---|---|---|---|
 | PWR 저전력 | WFI/WFE는 Sleep만. STOP이 Sleep처럼 동작(깨어날 때 HSI 복귀 없음. `SystemClock_Config()` 재호출을 빠뜨려도 시뮬레이터에선 동작함), Standby·WKUP·PVD 없음(`cpu.js:712-718`, `scs.js:247`) | M | 상 |
-| RTC(F446) | Alarm A/B 플래그가 서지 않음, PREDIV·LSE/LSI와 무관하게 1초씩, DBP 쓰기 보호 없음, Tamper 없음(`system.js:198-265`) | M | 상 |
+| RTC(F446) | ~~Alarm A/B 플래그가 서지 않음~~(1.29.0 반영). PREDIV·LSE/LSI와 무관하게 1초씩, DBP 쓰기 보호 없음, Tamper 없음(`system.js` Rtc) | M | 상 |
 | FLASH | Program/Erase가 HAL_OK만 돌려주고 쓰지 않음, Option byte 없음, Latency 값을 무시(잘못된 wait state·Over-drive 없는 180 MHz도 동작) | M | 중 |
 | 고급 타이머 | Dead-time 무시(CHxN은 반전만), BKIN 없음, 타이머 간 ITR 동기화 없음, ETR·입력 필터 없음(`timer.js`) | M | 중 |
 | USART | RTS/CTS·LIN·IrDA·SmartCard·Half-duplex 없음 | M | 하~중 |
@@ -230,7 +230,7 @@ CubeMX를 화면 없이(`-q` 스크립트) 실행해 실제 생성 코드를 받
 
 ### B5. 두 실행 엔진의 차이
 
-- **해석기의 범위:** 내장 해석기는 HAL API 수준만 실행합니다. TIM1/8·CAN·RTC·IWDG·PWR·FLASH·DAC가 없고 레지스터 직접 접근 코드도 실행하지 않습니다.
+- **해석기의 범위:** 내장 해석기는 HAL API 수준만 실행합니다. TIM1/8·CAN·IWDG·PWR·FLASH·DAC가 없고(RTC는 1.29.0부터 HAL 수준으로 있음) 레지스터 직접 접근 코드도 실행하지 않습니다.
 - **해석기로 실행되는 경우:** FatFs 프로젝트와 ARM GCC가 없는 PC는 해석기로 돌아가서, 같은 코드가 다르게 동작할 수 있습니다.
 - **Pinout과 소스가 다를 때:** 해석기는 멈추고 에뮬레이터는 그대로 실행합니다.
 
@@ -239,11 +239,11 @@ CubeMX를 화면 없이(`-q` 스크립트) 실행해 실제 생성 코드를 받
 1. **(1.16.0 로컬 구현) NVIC를 CubeMX처럼:** Priority Group·Sub Priority, 주변장치별 NVIC 탭, SysTick 줄을 넣습니다. GPIO의 Output type·Speed와 AF 핀 Pull도 함께 넣습니다(S~M).
 2. **기존 주변장치 설정 채우기:** UART 형식, SPI 모드, ADC 다채널·트리거, TIM One Pulse(M)(채널별 Pulse 1.24.0, OC 1.27.0 완료). 에뮬레이터가 이미 지원하므로 UI와 생성만 만들면 됩니다.
 3. **클럭 트리 화면:** HSE Bypass·PLL·분주, 180/72 MHz(L).
-4. **주변장치 추가:** TIM1·TIM6/7(1.28.0 완료), IWDG/WWDG, I2C2·SPI2, RTC(F103 에뮬레이터 포함), DAC(F446 에뮬레이터 포함)(M).
+4. **주변장치 추가:** TIM1·TIM6/7(1.28.0 완료), IWDG/WWDG, I2C2·SPI2, RTC(1.29.0 완료, F103 에뮬레이터 포함), DAC(F446 에뮬레이터 포함)(M).
 5. **시뮬레이터 정확도:**
    - 없는 주변장치 접근 안내(S)
    - F103 메모리 한도(S)
-   - RTC 알람(M)
+   - ~~RTC 알람(M)~~(1.29.0 완료)
    - STOP/Standby(M)
    - FLASH Latency 검사(S~M)
    - NRST 핀·버튼 바운스(S)

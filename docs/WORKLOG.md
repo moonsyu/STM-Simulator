@@ -2,6 +2,23 @@
 
 작업할 때마다 날짜순으로 맨 위에 추가합니다. 무엇을 했는지, 왜 했는지, 어떻게 검증했는지, 커밋·릴리스와 남은 사항을 적습니다. 버전별 구조 설명은 [HANDOFF.md](../HANDOFF.md), 검증 수치는 [VERIFICATION.md](VERIFICATION.md)에 있습니다.
 
+## 2026-11-09 · 1.29.0 기능 목록 3번: RTC
+
+- 요청: "RTC가 뭐야"에 답한 뒤 "어 진행해"(기능 목록 3번의 다음 항목).
+- 한 것과 이유:
+  - CubeMX Timers › RTC를 두 보드에 넣었다: 클록 원본(LSE/LSI), 달력 시각·날짜, 알람 A, WakeUp(F446RE), Hour Format(F446RE), NVIC 줄, MX_RTC_Init 생성, .ioc 가져오기, 내장 해석기. NUCLEO 두 보드 모두 LSE 32.768 kHz 크리스털(X2)이 있어 기본 클록 원본을 LSE로 했다(CubeMX 자체 기본값은 LSI라 .ioc에 키가 없으면 LSI로 가져온다).
+  - .ioc 키 이름은 공개된 CubeMX 프로젝트 파일(F446RE·F411 RTC 예제)에서 확인했다: RTC.Hours·WeekDay·Month·Date·Year, RTC.Hours_A·Seconds_A, RTC.AlarmMaskDateWeekDay, RTC.WakeUpClock·WakeUpCounter, VP_RTC_VS_RTC_Alarm_A_Intern·WakeUp_intern. 내려받은 참고 파일은 확인 뒤 지웠다.
+  - 에뮬레이터: F446 RTC에는 시각·날짜·WakeUp만 있고 알람이 없어 넣었다. F103 RTC·BKP는 주소만 있고 모델이 없어 HAL_RTC_Init이 BusFault였으므로 새로 만들었다.
+  - 실제 HAL로 돌려 보며 찾은 것: (1) F446 WakeUp이 한 번만 울림 — HAL 인터럽트 핸들러는 쓰기 보호를 풀지 않고 RTC_ISR 플래그를 지우는데 에뮬레이터가 이것까지 막았다(RM0390: ISR[13:8]은 보호 대상 아님). (2) F103 RTC 접근이 모두 NaN 주소 — 모델이 SoC가 쓰는 `base` 속성을 덮어썼다. (3) F103에서 12월 31일이 넘어가지 않음 — F1 HAL은 BIN 형식에서 월 상수 0x12를 18월로 저장한다. 생성 코드를 CubeMX 기본값처럼 BCD 형식으로 바꿨다. (4) 내장 해석기에서 F4 `HAL_RCCEx_PeriphCLKConfig`가 I2S 외 설정에 HAL_ERROR를 돌려줘 RTC 클록 선택이 Error_Handler로 빠졌다.
+- 검증(의존성을 설치한 임시 복제본, 창은 다른 창 뒤·다크 모드):
+  - 새 시험: 단위 `rtc-config`(3), 해석기 `rtc`(3: F446 자정 넘김·요일·알람·WakeUp 출력, F103 같은 달력·알람·초 인터럽트, F1 BIN 10~12월·F1 WakeUp·초기화 없음 오류), 툴체인 `rtc`(ARM GCC 15.2.1·STM32CubeF4/F1 실제 HAL·에뮬레이터, 두 보드 23:59:58 → 2027-01-01, 00:00:02 알람 A 인터럽트, F446 1 Hz WakeUp 3번), E2E `rtc`(F103 카드에서 시각·날짜·알람·NVIC, 틀린 날짜 표시, 생성 코드, 실행 출력 "2027-01-01 00:00:02"와 ALARM; F446 12시간 형식·WakeUp 생성) 모두 통과.
+  - 바뀐 범위 검사(로컬 전체 검사 대신): ESLint 0건, 단위·해석기·에뮬레이터 922개 중 921개 통과·1개 건너뜀(첫 실행은 F103 주변장치 목록 시험이 RTC를 몰라 실패, 목록을 고침), 펌웨어 64개, 툴체인(CI와 같은 파일·예제 11개) 46개, E2E(rtc·tim-basic·workflow·peripheral-params·tim-oc·docs) 18개 모두 통과.
+  - 패키지 검사 3개 통과(STM-Simulator.exe 115,569,947 바이트, SHA-256 0300cfcadb4907672d944348fc5e141f526bea98e27f421f9e0058f3cf1bc626), 빌드 산출물은 지웠다.
+- 커밋·릴리스: e74556e(에뮬레이터 RTC), 366e454(RTC), 시험 목록 커밋, 문서·버전 커밋.
+- 남은 사항:
+  - 3번의 DAC 등(목록 순서).
+  - RTC: 출력 핀(AFO_ALARM·512 Hz), Tamper·Timestamp, Alarm B 화면, SubSeconds 마스크, Smooth calibration, 리셋 뒤 달력 유지, F446 에뮬레이터 달력이 프리스케일러와 무관하게 1초씩 가는 점. 실물 보드로는 확인하지 않았다.
+
 ## 2026-11-09 · 1.28.2 부품 목록 겹침
 
 - 요청: 부품 검색 목록 화면 캡처와 함께 "겹치니까 보기 힘들다".
