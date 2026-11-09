@@ -19,7 +19,7 @@ const F4={
   usartCk:{USART1:['PA8'],USART2:['PA4'],USART3:['PB12','PC12'],USART6:['PC8']},
   timers:TIMER_ROUTES,
   extra:{I2C1:{SCL:['PB6','PB8'],SDA:['PB7','PB9']},SDIO:{D0:['PC8'],D1:['PC9'],D2:['PC10'],D3:['PC11'],CK:['PC12'],CMD:['PD2']},DCMI:{},
-    SPI1:{SCK:['PA5','PB3'],MISO:['PA6','PB4'],MOSI:['PA7','PB5']},ADC1:adcRoutes(ADC_PINS),RTC:{}},
+    SPI1:{SCK:['PA5','PB3'],MISO:['PA6','PB4'],MOSI:['PA7','PB5']},ADC1:adcRoutes(ADC_PINS),RTC:{},DAC:{OUT1:['PA4'],OUT2:['PA5']}},
   // Alternate functions are selected per pin with GPIO_InitStruct.Alternate.
   pinMux:'af',
   timerMax:id=>['TIM2','TIM5'].includes(id)?4294967295:65535,

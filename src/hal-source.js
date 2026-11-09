@@ -17,6 +17,8 @@ export const HAL_STRUCTS={
   RTC_DateTypeDef:'WeekDay Month Date Year',
   RTC_AlarmTypeDef:'AlarmTime:RTC_TimeTypeDef AlarmMask AlarmSubSecondMask AlarmDateWeekDaySel AlarmDateWeekDay Alarm',
   RTC_HandleTypeDef:'Instance Init:RTC_InitTypeDef Lock State',
+  DAC_HandleTypeDef:'Instance State Lock DMA_Handle1 DMA_Handle2 ErrorCode',
+  DAC_ChannelConfTypeDef:'DAC_Trigger DAC_OutputBuffer',
 
   GPIO_InitTypeDef:'Pin Mode Pull Speed Alternate',
   UART_InitTypeDef:'BaudRate WordLength StopBits Parity Mode HwFlowCtl OverSampling',
@@ -60,14 +62,14 @@ const F1_STRUCTS={GPIO_InitTypeDef:'Pin Mode Pull Speed',RCC_PLLInitTypeDef:'PLL
   ADC_InitTypeDef:'DataAlign ScanConvMode ContinuousConvMode NbrOfConversion DiscontinuousConvMode NbrOfDiscConversion ExternalTrigConv',
   ADC_ChannelConfTypeDef:'Channel Rank SamplingTime',DMA_InitTypeDef:'Direction PeriphInc MemInc PeriphDataAlignment MemDataAlignment Mode Priority',
   RTC_InitTypeDef:'AsynchPrediv OutPut',RTC_TimeTypeDef:'Hours Minutes Seconds',RTC_AlarmTypeDef:'AlarmTime:RTC_TimeTypeDef Alarm',RTC_HandleTypeDef:'Instance Init:RTC_InitTypeDef DateToUpdate:RTC_DateTypeDef Lock State'};
-const F4_ONLY_STRUCTS=/^(I2S_|RCC_PLLI2S|DCMI_|SD_|HAL_SD_)/;
+const F4_ONLY_STRUCTS=/^(I2S_|RCC_PLLI2S|DCMI_|SD_|HAL_SD_|DAC_)/;
 export function halStructs(family){
   const f1=familyProfile(family).pinMux==='remap';
   return f1?{...Object.fromEntries(Object.entries(HAL_STRUCTS).filter(([name])=>!F4_ONLY_STRUCTS.test(name))),...F1_STRUCTS}:HAL_STRUCTS;
 }
 export const HAL_ALIASES={FRESULT:'int',UINT:'uint32_t',BYTE:'uint8_t',WORD:'uint16_t',DWORD:'uint32_t',QWORD:'uint32_t',FSIZE_t:'uint32_t',LBA_t:'uint32_t',TCHAR:'char',DSTATUS:'uint8_t',
   HAL_SD_CardStateTypeDef:'uint32_t',HAL_DMA_StateTypeDef:'int',HAL_UART_StateTypeDef:'int',HAL_USART_StateTypeDef:'int',HAL_DCMI_StateTypeDef:'int',HAL_SD_StateTypeDef:'int',HAL_SPI_StateTypeDef:'int',HAL_I2C_StateTypeDef:'int',
-  HAL_LockTypeDef:'int',HAL_RTCStateTypeDef:'int',FunctionalState:'int',FlagStatus:'int',ITStatus:'int',IRQn_Type:'int',HAL_DMA_LevelCompleteTypeDef:'int',HAL_DMA_CallbackIDTypeDef:'int',HAL_UART_RxEventTypeTypeDef:'uint32_t'};
+  HAL_LockTypeDef:'int',HAL_RTCStateTypeDef:'int',HAL_DAC_StateTypeDef:'int',FunctionalState:'int',FlagStatus:'int',ITStatus:'int',IRQn_Type:'int',HAL_DMA_LevelCompleteTypeDef:'int',HAL_DMA_CallbackIDTypeDef:'int',HAL_UART_RxEventTypeTypeDef:'uint32_t'};
 const systemHeaders=prefix=>new Set(['main.h',`${prefix}_hal.h`,`${prefix}.h`,'stdint.h','stddef.h','stdbool.h','string.h','stdio.h','math.h',`${prefix}_it.h`,`${prefix}_hal_conf.h`,'fatfs.h','ff.h','ff_gen_drv.h','diskio.h','sd_diskio.h','user_diskio.h','bsp_driver_sd.h','fatfs_platform.h',...['gpio','gpio_ex','uart','usart','tim','tim_ex','adc','adc_ex','i2c','spi','rcc','rcc_ex','cortex','pwr','pwr_ex','dma','dma_ex','dcmi','sd','uart_ex'].map(n=>`${prefix}_hal_${n}.h`)]);
 export function prepareHalSource(source,files=[],options={}){
   if(typeof source!=='string'||source.length>300000||!Array.isArray(files)||files.length>40)throw new Error('HAL 소스 크기 또는 파일 수 한도를 넘었습니다.');

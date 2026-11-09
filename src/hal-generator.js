@@ -1,6 +1,7 @@
 import {SERIAL_IDS,isSerial,serialAf,serialHandle,serialFunction} from './serial-config.js';
 import {TIMER_IDS,isTimer,isBasicTimer,timerAf,timerIrq} from './timer-config.js';
 import {rtcInitLines} from './rtc-config.js';
+import {dacInitLines,dacChannelOf} from './dac-config.js';
 import {DEFAULT_TIMER_CLOCK_HZ} from './mcu-defaults.js';
 import {familyProfile,remapFor} from './mcu-family.js';
 import {dmaHandle,irqHandlers,handlerText} from './irq-handlers.js';
@@ -31,10 +32,10 @@ function treeClockLines(config,f1){
 }
 const mhzText=hz=>`${Number((hz/1e6).toFixed(3))} MHz`;
 // DMA handle names / link fields / data widths per request (CubeMX naming).
-const dmaLink=request=>request==='ADC1'||request==='DCMI'?'DMA_Handle':/_CH(\d)$/.test(request)?`hdma[TIM_DMA_ID_CC${/_CH(\d)$/.exec(request)[1]}]`:/_RX$/.test(request)?'hdmarx':'hdmatx';
-const dmaWidth=request=>request==='ADC1'?['HALFWORD','HALFWORD']:/^TIM\d_CH/.test(request)?['WORD','HALFWORD']:request==='DCMI'||request.startsWith('SDIO')?['WORD','WORD']:['BYTE','BYTE'];
+const dmaLink=request=>/^DAC[12]$/.test(request)?'DMA_Handle'+request[3]:request==='ADC1'||request==='DCMI'?'DMA_Handle':/_CH(\d)$/.test(request)?`hdma[TIM_DMA_ID_CC${/_CH(\d)$/.exec(request)[1]}]`:/_RX$/.test(request)?'hdmarx':'hdmatx';
+const dmaWidth=request=>request==='ADC1'||/^DAC[12]$/.test(request)?['HALFWORD','HALFWORD']:/^TIM\d_CH/.test(request)?['WORD','HALFWORD']:request==='DCMI'||request.startsWith('SDIO')?['WORD','WORD']:['BYTE','BYTE'];
 const dmaDir=request=>request==='MEMTOMEM'?'DMA_MEMORY_TO_MEMORY':/_RX$|^ADC1$|^DCMI$/.test(request)?'DMA_PERIPH_TO_MEMORY':'DMA_MEMORY_TO_PERIPH';
-const dmaOwner=request=>request==='MEMTOMEM'?null:request==='ADC1'||request==='DCMI'?request:request.startsWith('SDIO')?'SDIO':request.replace(/_(RX|TX|CH\d)$/,'');
+const dmaOwner=request=>request==='MEMTOMEM'?null:/^DAC[12]$/.test(request)?'DAC':request==='ADC1'||request==='DCMI'?request:request.startsWith('SDIO')?'SDIO':request.replace(/_(RX|TX|CH\d)$/,'');
 function dmaLines(name,request,d,f1=false){
   const [p,m]=dmaWidth(request),set=(k,v)=>`  ${name}.Init.${k} = ${v};`;
   return [`  ${name}.Instance = ${d.stream};`,...(f1?[]:[set('Channel','DMA_CHANNEL_'+d.channel)]),set('Direction',dmaDir(request)),set('PeriphInc',request==='MEMTOMEM'?'DMA_PINC_ENABLE':'DMA_PINC_DISABLE'),set('MemInc','DMA_MINC_ENABLE'),
@@ -70,7 +71,7 @@ export function generateMain(config,{minimal=false,legacyGpio=false}={}){
     ...(minimal?[' */']:[' * printf: SWV ITM port 0 (enable SWV in the debugger). UART uses its pins.',
     ' * With newlib-nano, enable -u _printf_float for floating-point printf. */']),''];
   const sync=id=>isSerial(id)&&config.peripherals[id]?.mode==='synchronous',dma=Object.entries(config.dma||{});
-  const handles={...Object.fromEntries(Object.keys(family.serial).map(id=>[id,sync(id)?['USART','husart'+id.replace(/\D/g,'')]:['UART',serialHandle(id)]])),I2C1:['I2C','hi2c1'],SPI1:['SPI','hspi1'],ADC1:['ADC','hadc1'],SDIO:['SD','hsd'],DCMI:['DCMI','hdcmi'],RTC:['RTC','hrtc'],...Object.fromEntries(Object.keys(family.timers).map(id=>[id,['TIM','htim'+id.slice(3)]]))};
+  const handles={...Object.fromEntries(Object.keys(family.serial).map(id=>[id,sync(id)?['USART','husart'+id.replace(/\D/g,'')]:['UART',serialHandle(id)]])),I2C1:['I2C','hi2c1'],SPI1:['SPI','hspi1'],ADC1:['ADC','hadc1'],SDIO:['SD','hsd'],DCMI:['DCMI','hdcmi'],RTC:['RTC','hrtc'],DAC:['DAC','hdac'],...Object.fromEntries(Object.keys(family.timers).map(id=>[id,['TIM','htim'+id.slice(3)]]))};
   const active=Object.entries(config.peripherals).filter(([,p])=>p.enabled),serials=active.filter(([id])=>isSerial(id)),timers=active.filter(([id])=>isTimer(id));
   for(const [id]of active){const [type,name]=handles[id];lines.push(`${type}_HandleTypeDef ${name};`);}
   for(const [request]of dma)lines.push(`DMA_HandleTypeDef ${dmaHandle(request)};`);
@@ -82,6 +83,7 @@ export function generateMain(config,{minimal=false,legacyGpio=false}={}){
     else if(['pwm','oc','capture'].includes(p.mode)){for(const value of Object.values(config.pins)){const match=new RegExp('^'+id+'_CH([1-4])$').exec(value.function);if(match)lines.push(`  HAL_TIM_${p.mode==='pwm'?'PWM_Start':(p.mode==='oc'?'OC':'IC')+'_Start'+(config.nvic[timerIrq(id)]?.enabled?'_IT':'')}(&${h}, TIM_CHANNEL_${match[1]});`);}}
     else if(config.nvic[timerIrq(id)]?.enabled)lines.push(`  HAL_TIM_Base_Start_IT(&${h});`);
   }
+  if(!minimal&&config.peripherals.DAC?.enabled)for(const p of Object.values(config.pins)){const ch=dacChannelOf(p.function);if(ch&&!dma.some(([r])=>r==='DAC'+ch.slice(3)))lines.push(`  HAL_DAC_Start(&hdac, DAC_CHANNEL_${ch.slice(3)});`);}
   if(!minimal&&serials.some(([id])=>!sync(id))){lines.push('  uint8_t message[] = "HAL ready\\r\\n";');for(const [id]of serials)if(!sync(id))lines.push(`  HAL_UART_Transmit(&${serialHandle(id)}, message, sizeof(message)-1, 100);`);}
   lines.push('  /* USER CODE END 2 */','  while (1) {','    /* USER CODE BEGIN 3 */');
   const output=Object.entries(config.pins).find(([,p])=>p.function==='GPIO_Output');if(!minimal&&output)lines.push(`    HAL_GPIO_TogglePin(GPIO${output[0][1]}, GPIO_PIN_${output[0].slice(2)});`);
@@ -134,6 +136,7 @@ export function generateMain(config,{minimal=false,legacyGpio=false}={}){
     // RTC: clock source, prescalers, calendar, alarm and wakeup (rtc-config.js); it has no __HAL_RCC_RTC_CLK_ENABLE.
     if(id==='RTC'){lines.push('','static void MX_RTC_Init(void) {',...rtcInitLines(config),'}');continue;}
     lines.push('',`static void ${initName(id)}(void) {`,`  __HAL_RCC_${id}_CLK_ENABLE();`,`  ${name}.Instance = ${id};`);
+    if(id==='DAC'){lines.push(...dacInitLines(config));for(const [request,d]of dma)if(dmaOwner(request)===id){const h=dmaHandle(request);lines.push(...dmaLines(h,request,d,f1),`  __HAL_LINKDMA(&${name}, ${dmaLink(request)}, ${h});`);}lines.push('}');continue;}
     const set=(key,value)=>lines.push(`  ${name}.Init.${key} = ${value};`);
     if(isSerial(id)&&!sync(id))for(const [k,v]of Object.entries({BaudRate:p.baud,WordLength:`UART_WORDLENGTH_${p.wordLength??8}B`,StopBits:`UART_STOPBITS_${p.stopBits??1}`,Parity:`UART_PARITY_${p.parity??'NONE'}`,Mode:`UART_MODE_${p.direction??'TX_RX'}`,HwFlowCtl:'UART_HWCONTROL_NONE',OverSampling:`UART_OVERSAMPLING_${p.overSampling??16}`}))set(k,v);
     if(sync(id))for(const [k,v]of Object.entries({BaudRate:p.baud,WordLength:'USART_WORDLENGTH_8B',StopBits:'USART_STOPBITS_1',Parity:'USART_PARITY_NONE',Mode:'USART_MODE_TX_RX',CLKPolarity:p.cpol?'USART_POLARITY_HIGH':'USART_POLARITY_LOW',CLKPhase:p.cpha?'USART_PHASE_2EDGE':'USART_PHASE_1EDGE',CLKLastBit:p.lastBit?'USART_LASTBIT_ENABLE':'USART_LASTBIT_DISABLE'}))set(k,v);

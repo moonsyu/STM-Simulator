@@ -11,7 +11,7 @@ export const pinSpeed=(p,f1)=>p.speed??defaultSpeed(p.function,f1);
 export function gpioMode(p,config,f1){
   if(p.function==='GPIO_Output')return p.outputType==='OD'?'OUTPUT_OD':'OUTPUT_PP';
   if(p.function==='GPIO_EXTI')return `IT_${p.edge==='CHANGE'?'RISING_FALLING':p.edge}`;
-  if(p.function==='Analog'||p.function.startsWith('ADC1_'))return 'ANALOG';
+  if(p.function==='Analog'||p.function.startsWith('ADC1_')||p.function.startsWith('DAC_'))return 'ANALOG';
   // F1 peripheral inputs (UART RX, SPI MISO, timer capture/encoder channels) are plain inputs.
   const afInput=f1&&(/_RX$|^SPI1_MISO$/.test(p.function)||/^TIM\d_CH\d$/.test(p.function)&&['capture','encoder'].includes(config.peripherals[p.function.split('_')[0]]?.mode));
   if(p.function==='GPIO_Input'||afInput)return 'INPUT';

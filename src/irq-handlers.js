@@ -36,7 +36,10 @@ export function irqHandlers(mcu){
     if(id==='SDIO')return of('SD','SDIO','hsd','HAL_SD_IRQHandler',true);
     return {body:''};
   };
-  for(const [irq,p]of Object.entries(mcu?.nvic||{}))if(p.enabled&&!streams.has(irq.replace('_IRQn',''))){const id=irq.replace('_IRQn','');out.push({name:`${id}_IRQHandler`,irq,shown:false,...body(timerOfIrq(irq)??id)});}
+  for(const [irq,p]of Object.entries(mcu?.nvic||{}))if(p.enabled&&!streams.has(irq.replace('_IRQn',''))){const id=irq.replace('_IRQn','');const h={name:`${id}_IRQHandler`,irq,shown:false,...body(timerOfIrq(irq)??id)};
+    // TIM6_DAC_IRQn: TIM6's update and the DAC's DMA underrun share the vector, as CubeMX's handler serves both.
+    if(irq==='TIM6_DAC_IRQn'&&peripherals.DAC?.enabled){const dac=of('DAC','DAC','hdac','HAL_DAC_IRQHandler',true);Object.assign(h,{body:h.body+dac.body,extern:[h.extern,dac.extern].filter(Boolean).join('\n'),shown:true});}
+    out.push(h);}
   return out;
 }
 

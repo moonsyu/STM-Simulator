@@ -8,13 +8,14 @@ import {familyProfile,routesOf,irqNamesOf,remapFor,DEFAULT_FAMILY,FAMILIES} from
 import {nvicProblems,NVIC_GROUP_DEFAULT,TICK_PRIORITY_DEFAULT} from './nvic-config.js';
 import {speedsOf,SPEED_NAMES} from './gpio-config.js';
 import {validateRtc,rtcFromIoc} from './rtc-config.js';
+import {validateDac,dacFromIoc,dacProblems} from './dac-config.js';
 import {validateClockTree,clockFrequencies,clockTreeProblems,adcClockProblem,clockTreeFromIoc,treeFromTimerHz} from './clock-tree.js';
 // Synchronous USART clock outputs on F446RE LQFP64 (DS10693 table 11): AF7 USART1/2/3, AF8 USART6.
 export const USART_CK_ROUTES=familyProfile(DEFAULT_FAMILY).usartCk;
 export const usartCkRoutesOf=family=>familyProfile(family).usartCk;
 export const DMA_MODES=['normal','circular'],DMA_PRIORITIES=['low','medium','high','very_high'];
 // Peripheral of each DMA request (used to require that peripheral to be enabled).
-export const dmaPeripheral=request=>request==='MEMTOMEM'?null:request==='ADC1'||request==='DCMI'?request:request.startsWith('SDIO')?'SDIO':request.replace(/_(RX|TX|CH\d)$/,'');
+export const dmaPeripheral=request=>request==='MEMTOMEM'?null:/^DAC[12]$/.test(request)?'DAC':request==='ADC1'||request==='DCMI'?request:request.startsWith('SDIO')?'SDIO':request.replace(/_(RX|TX|CH\d)$/,'');
 export const dmaDirection=request=>request==='MEMTOMEM'?'M2M':/_RX$|^ADC1$|^DCMI$/.test(request)?'P2M':'M2P';
 
 // Routes and IRQs of the default (F446RE) family; per-family versions come from mcu-family.js.
@@ -64,6 +65,7 @@ export function validateMcu(value){
   for(const [id,p]of Object.entries(value.peripherals)){
     if(!Object.hasOwn(routes,id)||!p||typeof p.enabled!=='boolean')throw new Error(`${id}: ${f.id}에서 지원하지 않는 주변장치입니다.`);
     if(id==='RTC'){out.peripherals[id]=validateRtc(p,f.id);continue;}
+    if(id==='DAC'){out.peripherals[id]=validateDac(p);continue;}
     const q={enabled:p.enabled},defaults=isTimer(id)?timerDefaults(id,f.id):null;
     for(const [key,def,min,max]of isSerial(id)?[['baud',115200,300,2000000]]:id==='I2C1'?[['clock',100000,1000,1000000]]:id==='SPI1'?[['clock',1000000,1000,20000000]]:isTimer(id)?[['prescaler',defaults.prescaler,0,65535],['period',defaults.period,0,f.timerMax(id)],['pulse',defaults.pulse,0,f.timerMax(id)]]:[]){q[key]=p[key]??def;if(!Number.isInteger(q[key])||q[key]<min||q[key]>max)throw new Error(`${id}.${key}: 범위를 확인하세요.`);}
     if(isTimer(id)){q.mode=p.mode??defaults.mode;if(!['base','pwm','oc','capture','encoder'].includes(q.mode))throw new Error(id+': 타이머 모드를 확인하세요.');}
@@ -165,8 +167,9 @@ export function configProblems(config){
     const assigned=Object.fromEntries(Object.entries(config.pins).filter(([,p])=>p.function.startsWith(id+'_')).map(([pin,p])=>[p.function.slice(id.length+1),pin]));
     if(Object.keys(assigned).length&&!remapFor(family.id,id,assigned))errors.push(`${id}: ${Object.entries(assigned).map(([s,pin])=>`${s}=${pin}`).join(', ')} 조합은 ${family.id}에서 쓸 수 없습니다. 함께 옮겨지는 핀 묶음: ${family.remaps[id].map(o=>Object.entries(o.pins).map(([s,pin])=>`${s} ${pin}`).join('/')).join(' 또는 ')}`);
   }
-  for(const [irq,n]of Object.entries(config.nvic||{})){const id=timerOfIrq(irq)??irq.replace(/_IRQn$/,'');if(n.enabled&&(isSerial(id)||isTimer(id))&&!config.peripherals[id]?.enabled)errors.push(`${irq}: ${id} 주변장치를 활성화하거나 인터럽트를 끄세요.`);}
+  for(const [irq,n]of Object.entries(config.nvic||{})){if(irq==='TIM6_DAC_IRQn'&&config.peripherals.DAC?.enabled)continue;const id=timerOfIrq(irq)??irq.replace(/_IRQn$/,'');if(n.enabled&&(isSerial(id)||isTimer(id))&&!config.peripherals[id]?.enabled)errors.push(`${irq}: ${id} 주변장치를 활성화하거나 인터럽트를 끄세요.`);}
   for(const [request,d]of Object.entries(config.dma||{})){const id=dmaPeripheral(request);if(id&&!config.peripherals[id]?.enabled)errors.push(`${request} DMA: ${id} 주변장치를 활성화하세요.`);if(id&&isTimer(id)&&config.peripherals[id].mode!=='pwm')errors.push(`${request} DMA: ${id}를 PWM 모드로 설정하세요.`);}
+  errors.push(...dacProblems(config));
   errors.push(...nvicProblems(config));
   if(config.clock){errors.push(...clockTreeProblems(config.family,config.clock));if(config.peripherals.ADC1?.enabled){const adc=adcClockProblem(config.family,config.clock);if(adc)errors.push(adc);}}
   return errors;
@@ -192,7 +195,7 @@ export function importIoc(text){
     const m=/^(P[A-H]\d+)(?:-[^.]+)?\.Signal$/.exec(key);if(!m)continue;const pin=m[1],base=key.slice(0,-7);
     if(!f.gpioPins.includes(pin)){warnings.push(`${pin}: 보드에서 접근할 수 없는 핀`);continue;}
     // ADCx_INn: a channel shared by ADC1/2/3; the model uses ADC1.
-    let fn=signal==='GPIO_Analog'?'Analog':signal==='GPIO_Output'?'GPIO_Output':signal==='GPIO_Input'?'GPIO_Input':signal.startsWith('GPXTI')?'GPIO_EXTI':/^S_TIM\d+_CH\d$/.test(signal)?signal.slice(2):/^ADC(?:x|\d+)_IN\d+$/.test(signal)?'ADC1_'+signal.split('_')[1]:signal;
+    let fn=/^COMP_DAC([12])_group$/.test(signal)?'DAC_OUT'+signal[8]:signal==='GPIO_Analog'?'Analog':signal==='GPIO_Output'?'GPIO_Output':signal==='GPIO_Input'?'GPIO_Input':signal.startsWith('GPXTI')?'GPIO_EXTI':/^S_TIM\d+_CH\d$/.test(signal)?signal.slice(2):/^ADC(?:x|\d+)_IN\d+$/.test(signal)?'ADC1_'+signal.split('_')[1]:signal;
     if(!pinFunctions(pin,family).includes(fn)){fn='Reserved';if(!/^(SYS_|RCC_)/.test(signal))warnings.push(`${pin}: ${signal} 실행 모델 미지원`);}
     const pull=(values[base+'.GPIO_PuPd']||'GPIO_NOPULL').replace('GPIO_','');
     // CubeMX omits GPIO_ModeDefaultEXTI for its default, rising edge.
@@ -220,6 +223,7 @@ export function importIoc(text){
   }
   if(config.peripherals.I2C1){const c=config.peripherals.I2C1;c.clock=number(values['I2C1.ClockSpeed'],100000);const own=Number(values['I2C1.OwnAddress']);if(Number.isInteger(own)&&own>0)c.ownAddress=(own>>1)&0x7f; /* the value CubeMX writes to OwnAddress1 (address << 1) */if(/16_9/.test(values['I2C1.DutyCycle']||'')&&c.clock>100000)c.dutyCycle='16_9';if(/NOSTRETCH_ENABLE/.test(values['I2C1.NoStretchMode']||''))c.noStretch=true;}
   // RTC: calendar time/date, alarm A and wakeup (rtc-config.js); enabled through Mcu.IP or VP_RTC_VS_RTC_Activate.
+  if(config.peripherals.DAC)config.peripherals.DAC=dacFromIoc(values);
   if(config.peripherals.RTC||values['VP_RTC_VS_RTC_Activate.Mode'])config.peripherals.RTC=rtcFromIoc(values,family,number);
   if(config.peripherals.ADC1&&values['ADC1.ContinuousConvMode']==='ENABLE')config.peripherals.ADC1.continuous=true;
   // Rank 1 Sampling Time (ADC1.SamplingTime-0\#ChannelRegularConversion); a .ioc without it has CubeMX's default, the shortest.
@@ -257,7 +261,8 @@ export function importIoc(text){
   const requests=dmaRequestsOf(family),dma={};
   for(const [key,request]of Object.entries(values)){
     if(!/^Dma\.Request\d+$/.test(key))continue;const base=Object.keys(values).find(k=>new RegExp(`^Dma\\.${request}\\.\\d+\\.Instance$`).test(k))?.slice(0,-9);
-    const q=base&&{stream:values[base+'.Instance'],channel:Number(/\d+$/.exec(values[base+'.Channel']||'')?.[0]??0),mode:values[base+'.Mode']==='DMA_CIRCULAR'?'circular':'normal',priority:(values[base+'.Priority']||'DMA_PRIORITY_LOW').replace('DMA_PRIORITY_','').toLowerCase()};
+    // CubeMX leaves Channel out when the stream serves the request on one channel only (Dma.DAC1.0.* has no Channel key).
+    const q=base&&{stream:values[base+'.Instance'],channel:Number(/\d+$/.exec(values[base+'.Channel']||'')?.[0]??requests[request]?.find(([st])=>st===values[base+'.Instance'])?.[1]??0),mode:values[base+'.Mode']==='DMA_CIRCULAR'?'circular':'normal',priority:(values[base+'.Priority']||'DMA_PRIORITY_LOW').replace('DMA_PRIORITY_','').toLowerCase()};
     try{if(!requests[request]||!q)throw new Error();validateMcu({...defaultMcu(family),dma:{...dma,[request]:q}});dma[request]=q;}catch{warnings.push(`${request} DMA: 실행 모델에서 같은 설정을 쓸 수 없어 가져오지 않았습니다.`);}
   }
   if(Object.keys(dma).length)config.dma=dma;
@@ -265,7 +270,7 @@ export function importIoc(text){
   for(const irq of irqNamesOf(family)){const raw=values['NVIC.'+irq];if(raw){const [enabled,priority,sub]=raw.split(':');config.nvic[irq]={enabled:enabled==='true',priority:Number(priority)};if(Number(sub))config.nvic[irq].sub=Number(sub);}}
   const group=/^NVIC_PRIORITYGROUP_([0-4])$/.exec(values['NVIC.PriorityGroup']||'');if(group)config.nvicGroup=Number(group[1]);
   const tick=values['NVIC.SysTick_IRQn']?.split(':');if(tick&&Number.isInteger(Number(tick[1])))config.tickPriority=Number(tick[1]);
-  for(const [key,v]of Object.entries(values))if(/^Mcu.IP\d+$/.test(key)&&!Object.hasOwn(routes,v)&&!['GPIO','RCC','NVIC','SYS','NUCLEO-F446RE','NUCLEO-F103RB'].includes(v))warnings.push(`${v}: 실행 모델 미지원`);
+  for(const [key,v]of Object.entries(values))if(/^Mcu.IP\d+$/.test(key)&&!Object.hasOwn(routes,v)&&!['GPIO','RCC','NVIC','SYS','DMA','NUCLEO-F446RE','NUCLEO-F103RB'].includes(v))warnings.push(`${v}: 실행 모델 미지원`);
   const clean=validateMcu(config);return {config:clean,warnings:[...new Set([...warnings,...configProblems(clean)])]};
 }
 export function generateHal(config,options){const clean=validateMcu(config),errors=configProblems(clean);if(errors.length)throw new Error(errors.join('\n'));return generateMain(clean,options);}

@@ -11,6 +11,7 @@ import {HalUsart,USART_CONSTANTS} from './hal-usart.js';
 import {HalDcmi,DCMI_CONSTANTS} from './hal-dcmi.js';
 import {HalStorage,STORAGE_CONSTANTS} from './hal-storage.js';
 import {HalRtc,RTC_CONSTANTS,RTC_F1_CONSTANTS,RTC_F4_ONLY} from './hal-rtc.js';
+import {HalDac,DAC_HAL_CONSTANTS} from './hal-dac.js';
 import {familyProfile,remapFor,irqNamesOf} from './mcu-family.js';
 import {clockFrequencies} from './clock-tree.js';
 
@@ -29,7 +30,7 @@ export const HAL_CONSTANTS={...CATALOG_HAL_CONSTANTS,HAL_OK:0,HAL_ERROR:1,HAL_BU
   HAL_UART_STATE_RESET:0,HAL_UART_STATE_READY:0x20,HAL_UART_STATE_BUSY:0x24,HAL_UART_STATE_BUSY_TX:0x21,HAL_UART_STATE_BUSY_RX:0x22,HAL_UART_STATE_BUSY_TX_RX:0x23,
   HAL_UART_ERROR_NONE:0,HAL_UART_ERROR_PE:1,HAL_UART_ERROR_NE:2,HAL_UART_ERROR_FE:4,HAL_UART_ERROR_ORE:8,HAL_UART_ERROR_DMA:16
 };
-Object.assign(HAL_CONSTANTS,DMA_CONSTANTS,USART_CONSTANTS,DCMI_CONSTANTS,STORAGE_CONSTANTS,RTC_CONSTANTS);
+Object.assign(HAL_CONSTANTS,DMA_CONSTANTS,USART_CONSTANTS,DCMI_CONSTANTS,STORAGE_CONSTANTS,RTC_CONSTANTS,DAC_HAL_CONSTANTS);
 for(const port of ['A','B','C','D','H'])HAL_CONSTANTS['GPIO'+port]='GPIO'+port;
 for(let i=0;i<16;i++)HAL_CONSTANTS['GPIO_PIN_'+i]=1<<i;
 HAL_CONSTANTS.GPIO_PIN_All=65535;
@@ -41,7 +42,7 @@ for(const id of CHANNEL_TIMER_IDS)HAL_CONSTANTS[`GPIO_AF${timerAf(id)}_${id}`]=t
 for(const id of SERIAL_IDS)HAL_CONSTANTS[`GPIO_AF${serialAf(id)}_${id}`]=serialAf(id);
 for(const [name,n]of [['GPIO_AF12_SDIO',12],['GPIO_AF13_DCMI',13],['GPIO_AF4_I2C1',4],['GPIO_AF5_SPI1',5],['GPIO_AF1_TIM2',1]])HAL_CONSTANTS[name]=n;
 // STM32F1 HAL names (stm32f1xx_hal_*.h). F4-only names are dropped so F1 code cannot use them by mistake.
-const F4_ONLY=/^(GPIO_AF\d+_|GPIO_SPEED_FREQ_VERY_HIGH$|GPIOH$|DMA2|DMA\d_Stream|DMA_CHANNEL_|DMA_FIFO|DMA_[MP]BURST|DMA_PFCTRL$|DMA_IT_(DME|FE)$|HAL_DMA_XFER_M1|SDIO|DCMI|HAL_SD_|SD_|RCC_PLLP_|PWR_REGULATOR|ADC_CLOCK_SYNC|ADC_RESOLUTION|ADC_EOC_|ADC_EXTERNALTRIGCONVEDGE|ADC_SAMPLETIME_\d+CYCLES$|ADC_CHANNEL_(18|VBAT)$|ADC_IRQn$|UART[45]|USART6|TIM5|I2S|PLLI2S)/;
+const F4_ONLY=/^(GPIO_AF\d+_|GPIO_SPEED_FREQ_VERY_HIGH$|GPIOH$|DMA2|DMA\d_Stream|DMA_CHANNEL_|DMA_FIFO|DMA_[MP]BURST|DMA_PFCTRL$|DMA_IT_(DME|FE)$|HAL_DMA_XFER_M1|SDIO|DCMI|HAL_SD_|SD_|RCC_PLLP_|PWR_REGULATOR|ADC_CLOCK_SYNC|ADC_RESOLUTION|ADC_EOC_|ADC_EXTERNALTRIGCONVEDGE|ADC_SAMPLETIME_\d+CYCLES$|ADC_CHANNEL_(18|VBAT)$|ADC_IRQn$|UART[45]|USART6|TIM5|I2S|PLLI2S|DAC|HAL_DAC_)/;
 const F1_CONSTANTS={GPIO_SPEED_FREQ_LOW:2,GPIO_SPEED_FREQ_MEDIUM:1,GPIO_SPEED_FREQ_HIGH:3,GPIO_MODE_AF_INPUT:0,
   RCC_PLLSOURCE_HSI_DIV2:0,RCC_PLLSOURCE_HSE:0x10000,RCC_HSE_PREDIV_DIV1:0,RCC_HSE_PREDIV_DIV2:0x20000,RCC_PERIPHCLK_RTC:1,RCC_PERIPHCLK_ADC:2,RCC_PERIPHCLK_USB:0x10,
   RCC_ADCPCLK2_DIV2:0,RCC_ADCPCLK2_DIV4:0x4000,RCC_ADCPCLK2_DIV6:0x8000,RCC_ADCPCLK2_DIV8:0xC000,
@@ -63,7 +64,7 @@ const int=(value,min,max,label)=>{if(!Number.isInteger(value)||value<min||value>
 const PINOUT_IRQS=new Set(['EXTI0_IRQn','EXTI1_IRQn','EXTI2_IRQn','EXTI3_IRQn','EXTI4_IRQn','EXTI9_5_IRQn','EXTI15_10_IRQn',...SERIAL_IDS.map(id=>id+'_IRQn'),...TIMER_IDS.map(timerIrq)]);
 const isIterator=v=>v&&typeof v.next==='function'&&typeof v[Symbol.iterator]==='function';
 export class HalAdapter {
-  constructor(config,buses,{session}={}){this.config=validateMcu(config);/* Clock Configuration: bus clocks from the tree (null: the single APB1 timer clock). */this.clocks=this.config.clock?clockFrequencies(this.config.family,this.config.clock):null;this.family=familyProfile(this.config.family);this.f1=this.family.pinMux==='remap';this.remaps=new Set();this.afio=false;this.adcIrq=this.f1?'ADC1_2_IRQn':'ADC_IRQn';this.slave={i2cRx:null,i2cTx:null,spiJob:null,i2cOn:false,i2cHeld:[],spiHeld:[]};const errors=configProblems(this.config);if(errors.length)throw new Error(errors.join('\n'));this.buses=buses;this.nvic=new Map();this.pending=[];this.extiPending=0;this.serials=new Map();this.handles=new Map();this.timerModel=new HalTimers(this);this.adc=new Map();this.latches=new Map();this.priorities=new Map();this.initializedGpio=new Set();this.catalog=new CatalogPeripherals(this);this.nvicModel=new Nvic(this);this.subPriorities=new Map();this.noticeIrq=new Set();this.session=session;this.dma=new HalDma(this);this.usart=new HalUsart(this);this.camera=new HalDcmi(this);this.storage=new HalStorage(this);this.rtc=new HalRtc(this);this.extensions=[this.dma,this.usart,this.camera,this.storage,this.rtc];}
+  constructor(config,buses,{session}={}){this.config=validateMcu(config);/* Clock Configuration: bus clocks from the tree (null: the single APB1 timer clock). */this.clocks=this.config.clock?clockFrequencies(this.config.family,this.config.clock):null;this.family=familyProfile(this.config.family);this.f1=this.family.pinMux==='remap';this.remaps=new Set();this.afio=false;this.adcIrq=this.f1?'ADC1_2_IRQn':'ADC_IRQn';this.slave={i2cRx:null,i2cTx:null,spiJob:null,i2cOn:false,i2cHeld:[],spiHeld:[]};const errors=configProblems(this.config);if(errors.length)throw new Error(errors.join('\n'));this.buses=buses;this.nvic=new Map();this.pending=[];this.extiPending=0;this.serials=new Map();this.handles=new Map();this.timerModel=new HalTimers(this);this.adc=new Map();this.latches=new Map();this.priorities=new Map();this.initializedGpio=new Set();this.catalog=new CatalogPeripherals(this);this.nvicModel=new Nvic(this);this.subPriorities=new Map();this.noticeIrq=new Set();this.session=session;this.dma=new HalDma(this);this.usart=new HalUsart(this);this.camera=new HalDcmi(this);this.storage=new HalStorage(this);this.rtc=new HalRtc(this);this.dac=new HalDac(this);this.extensions=[this.dma,this.usart,this.camera,this.storage,this.rtc,this.dac];}
   get active(){return this.nvicModel.active;}
   uart(id){
     if(!isSerial(id))throw new Error(`지원하지 않는 UART 인스턴스: ${id}`);
@@ -272,7 +273,7 @@ export class HalAdapter {
     if(name==='HAL_NVIC_GetActive'||name==='NVIC_GetActive')return Number(this.nvicModel.active.includes(a));
     if(name==='NVIC_EnableIRQ')return this.call('HAL_NVIC_EnableIRQ',[a],r);if(name==='NVIC_DisableIRQ')return this.call('HAL_NVIC_DisableIRQ',[a],r);
     if(name==='Error_Handler')throw new Error('Error_Handler(): HAL 초기화 또는 사용자 코드 오류');
-    if(/^__HAL_RCC_(GPIO[ABCDH]|SYSCFG|PWR|USART[1236]|UART[45]|I2C1|SPI1|ADC1|TIM[234567]|SDIO|DCMI|DMA[12])_CLK_ENABLE$/.test(name)){if(this.f1&&name==='__HAL_RCC_GPIOH_CLK_ENABLE')throw new Error('STM32F103RB에는 GPIOH가 없습니다.');if(this.f1&&/TIM[67]/.test(name))throw new Error(`STM32F103RB에는 ${name.slice(10,14)}이 없습니다(기본 타이머 TIM6/TIM7은 STM32F446RE에 있습니다).`);return 0;}
+    if(/^__HAL_RCC_(GPIO[ABCDH]|SYSCFG|PWR|USART[1236]|UART[45]|I2C1|SPI1|ADC1|TIM[234567]|SDIO|DCMI|DAC|DMA[12])_CLK_ENABLE$/.test(name)){if(this.f1&&name==='__HAL_RCC_GPIOH_CLK_ENABLE')throw new Error('STM32F103RB에는 GPIOH가 없습니다.');if(this.f1&&/TIM[67]/.test(name))throw new Error(`STM32F103RB에는 ${name.slice(10,14)}이 없습니다(기본 타이머 TIM6/TIM7은 STM32F446RE에 있습니다).`);return 0;}
     if(['HAL_RCC_OscConfig','HAL_RCC_ClockConfig','HAL_PWREx_ControlVoltageScaling','HAL_PWREx_EnableOverDrive','__HAL_PWR_VOLTAGESCALING_CONFIG'].includes(name))return 0;
     if(name==='HAL_NVIC_SetPriority'){if(a!==SYSTICK&&!this.nvicModel.isIrq(a))throw new Error(`미지원 IRQ: ${a}`);int(b,0,15,'IRQ priority');this.nvicModel.setPriority(a,b,c??0);if(a===SYSTICK){this.nvicModel.updateTick(r);return 0;}this.priorities.set(a,b);this.subPriorities.set(a,c??0);if(this.nvic.has(a))this.nvic.set(a,b);return 0;}
     if(name==='HAL_NVIC_EnableIRQ'){if(!this.nvicModel.isIrq(a)||PINOUT_IRQS.has(a)&&!this.config.nvic[a]?.enabled)throw new Error(`${a}: NVIC 설정에서 인터럽트를 활성화하세요.`);this.nvic.set(a,this.priorities.get(a)??this.config.nvic[a]?.priority??0);return 0;}
@@ -282,7 +283,7 @@ export class HalAdapter {
       for(const pin of this.pins(a,mask)){
         if(this.catalog.configurePin(pin,mode,this.f1?0:this.field(init,'Alternate'),r))continue;
         // F1 peripheral inputs (UART RX, SPI MISO, timer capture/encoder channels) use GPIO_MODE_INPUT.
-        const p=this.configured(pin),afInput=this.f1&&(/_RX$|^SPI1_MISO$/.test(p.function)||/^TIM\d_CH\d$/.test(p.function)&&['capture','encoder'].includes(this.config.peripherals[p.function.split('_')[0]]?.mode)),expected=p.function==='GPIO_Output'?(p.outputType==='OD'?17:1):p.function==='GPIO_Input'||afInput?0:p.function==='GPIO_EXTI'?HAL_CONSTANTS['GPIO_MODE_IT_'+(p.edge==='CHANGE'?'RISING_FALLING':p.edge)]:p.function==='Analog'||p.function.startsWith('ADC1_')?3:p.function.startsWith('I2C1_')?18:2;
+        const p=this.configured(pin),afInput=this.f1&&(/_RX$|^SPI1_MISO$/.test(p.function)||/^TIM\d_CH\d$/.test(p.function)&&['capture','encoder'].includes(this.config.peripherals[p.function.split('_')[0]]?.mode)),expected=p.function==='GPIO_Output'?(p.outputType==='OD'?17:1):p.function==='GPIO_Input'||afInput?0:p.function==='GPIO_EXTI'?HAL_CONSTANTS['GPIO_MODE_IT_'+(p.edge==='CHANGE'?'RISING_FALLING':p.edge)]:p.function==='Analog'||p.function.startsWith('ADC1_')||p.function.startsWith('DAC_')?3:p.function.startsWith('I2C1_')?18:2;
         const dynamic=this.initializedGpio.has(pin)&&(['GPIO_Output','GPIO_Input'].includes(p.function)&&[0,1,17,3].includes(mode)||(p.function==='Analog'||p.function.startsWith('ADC1_'))&&[0,3].includes(mode));
         if(!dynamic&&(mode!==expected&&!(expected===1&&mode===17)||pull!==['NOPULL','PULLUP','PULLDOWN'].indexOf(p.pull)))throw new Error(`${pin}: HAL_GPIO_Init 모드/풀 설정과 Pinout이 다릅니다.`);
         if(this.f1)this.checkF1Pin(pin,p);

@@ -22,7 +22,7 @@ export function irqLabel(irq){
   return irq.replace(/_IRQn$/,'')+' global interrupt';
 }
 // The interrupts a Pinout peripheral owns (its NVIC Settings tab).
-export const peripheralIrqs=(family,id)=>irqNamesOf(family).filter(irq=>irq===id+'_IRQn'||(irq.startsWith(id+'_')&&!/^DMA/.test(irq))||(id==='ADC1'&&/^ADC(1_2)?_IRQn$/.test(irq)));
+export const peripheralIrqs=(family,id)=>irqNamesOf(family).filter(irq=>irq===id+'_IRQn'||id==='DAC'&&irq==='TIM6_DAC_IRQn'||(irq.startsWith(id+'_')&&!/^DMA/.test(irq))||(id==='ADC1'&&/^ADC(1_2)?_IRQn$/.test(irq)));
 const extiLines=irq=>{if(irq==='EXTI9_5_IRQn')return [5,6,7,8,9];if(irq==='EXTI15_10_IRQn')return [10,11,12,13,14,15];const m=/^EXTI(\d)_IRQn$/.exec(irq);return m?[Number(m[1])]:null;};
 // CubeMX "available interrupts": enabled ones, and those of configured EXTI pins, enabled peripherals and used DMA streams.
 export function irqAvailable(config,irq){

@@ -8,7 +8,7 @@ const TOOL_KEYS=['armGcc','armGdb','cube','cubeF1','fsp','hostGcc','hostGdb','cl
 const RA_FAMILIES=new Set(['R7FA6E10F']);
 const isRa=project=>RA_FAMILIES.has(project.mcu?.family);
 const fspReady=root=>exists(path.join(root,'ra/fsp/src/bsp/mcu/ra6e1/bsp_feature.h'));
-const F4_MODULES=['hal','hal_rcc','hal_rcc_ex','hal_gpio','hal_cortex','hal_pwr','hal_pwr_ex','hal_flash','hal_flash_ex','hal_dma','hal_dma_ex','hal_can','hal_i2s','hal_i2s_ex','hal_uart','hal_usart','hal_adc','hal_adc_ex','hal_i2c','hal_spi','hal_tim','hal_tim_ex','hal_dcmi','hal_dcmi_ex','hal_sd','ll_sdmmc','hal_iwdg','hal_wwdg','hal_rtc','hal_rtc_ex','hal_crc'];
+const F4_MODULES=['hal','hal_rcc','hal_rcc_ex','hal_gpio','hal_cortex','hal_pwr','hal_pwr_ex','hal_flash','hal_flash_ex','hal_dma','hal_dma_ex','hal_can','hal_i2s','hal_i2s_ex','hal_uart','hal_usart','hal_adc','hal_adc_ex','hal_i2c','hal_spi','hal_tim','hal_tim_ex','hal_dcmi','hal_dcmi_ex','hal_sd','ll_sdmmc','hal_iwdg','hal_wwdg','hal_rtc','hal_rtc_ex','hal_crc','hal_dac','hal_dac_ex'];
 const F1_MODULES=['hal','hal_rcc','hal_rcc_ex','hal_gpio','hal_gpio_ex','hal_cortex','hal_pwr','hal_flash','hal_flash_ex','hal_dma','hal_can','hal_uart','hal_usart','hal_adc','hal_adc_ex','hal_i2c','hal_spi','hal_tim','hal_tim_ex','hal_iwdg','hal_wwdg','hal_rtc','hal_rtc_ex','hal_crc'];
 // The ARM build per MCU family: SDK tool key and layout, CPU flags, startup file and memory sizes.
 const SDKS={

@@ -15,7 +15,7 @@ export const DMA_REQUESTS={
  TIM3_CH1:[['DMA1_Stream4',5]],TIM3_CH2:[['DMA1_Stream5',5]],TIM3_CH3:[['DMA1_Stream7',5]],TIM3_CH4:[['DMA1_Stream2',5]],
  TIM4_CH1:[['DMA1_Stream0',2]],TIM4_CH2:[['DMA1_Stream3',2]],TIM4_CH3:[['DMA1_Stream7',2]],
  TIM5_CH1:[['DMA1_Stream2',6]],TIM5_CH2:[['DMA1_Stream4',6]],TIM5_CH3:[['DMA1_Stream0',6]],TIM5_CH4:[['DMA1_Stream1',6],['DMA1_Stream3',6]],
- DCMI:[['DMA2_Stream1',1],['DMA2_Stream7',1]],SDIO_RX:[['DMA2_Stream3',4],['DMA2_Stream6',4]],SDIO_TX:[['DMA2_Stream3',4],['DMA2_Stream6',4]],
+ DCMI:[['DMA2_Stream1',1],['DMA2_Stream7',1]],SDIO_RX:[['DMA2_Stream3',4],['DMA2_Stream6',4]],SDIO_TX:[['DMA2_Stream3',4],['DMA2_Stream6',4]],DAC1:[['DMA1_Stream5',7]],DAC2:[['DMA1_Stream6',7]],
  MEMTOMEM:Array.from({length:8},(_,i)=>[`DMA2_Stream${i}`,null])
 };
 export const DMA_CONSTANTS={...Object.fromEntries(DMA_STREAMS.map(s=>[s,s])),...Object.fromEntries(Array.from({length:8},(_,i)=>['DMA_CHANNEL_'+i,i*0x2000000])),
