@@ -1,6 +1,21 @@
 # STM Simulator — 개발 인계
 
-현재 버전: **1.27.0**. 정리일: **2026-11-09**. NUCLEO-F446RE·NUCLEO-F103RB 또는 Renesas FPB-RA6E1(1.20.0, FSP·에뮬레이터 전용)과 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+현재 버전: **1.28.0**. 정리일: **2026-11-09**. NUCLEO-F446RE·NUCLEO-F103RB 또는 Renesas FPB-RA6E1(1.20.0, FSP·에뮬레이터 전용)과 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+
+## 1.28.0 TIM6/TIM7 기본 타이머 (NUCLEO-F446RE) · DS3231 모듈 다리·이름
+
+- DS3231(사용자 요청, 5a21bf4·87e2617):
+  - 이름: `app-circuit.js` `addPart`가 접두어+번호로 이름을 짓는데, 접두어(변형 ID 앞부분 대문자)가 숫자로 끝나면 DS32311처럼 붙어 버렸다. 숫자로 끝나는 접두어는 첫째를 접두어 그대로, 다음부터 `-2`, `-3`을 붙인다(MCP4725·ADS1115 등도 같음).
+  - 다리: `ON_CONTACT_PINS` 단자를 사진의 헤더 구멍(x = -91) 위에서 기판 밖 두 칸(x = -119)으로 옮겼다. 다리는 `render.js`가 사진 패드(`part-art.js` PADS)에서 단자까지 그리므로, 단자가 패드와 같던 1.27.0에는 다리가 없었다.
+  - 오른쪽 통과 핀 4개를 연결점에서 뺐다(카탈로그 핀 6개, `catalogTies`·PADS에서도 제거). 변형 ID `ds3231-zs042-10`은 저장 파일 호환을 위해 그대로 둔다. `project.js` `migrateZs042`가 1.27.0 파일의 p7~p10 배선·빵판 핀을 p3~p6으로 옮긴다(같은 선끼리 잇던 배선은 없앤다).
+
+- 기능 목록 3번(CubeMX와 다른 점)의 다음 항목(801b15d). STM32F103RB(중밀도)에는 TIM6/7이 없어 F446RE만 해당한다. 펌웨어 에뮬레이터(`src/emu/stm32f446/timer.js`, `basic: true`)는 이미 있었고, 화면·생성·가져오기·해석기를 붙였다.
+- `timer-config.js`: `TIMER_ROUTES`에 채널 없는 `TIM6:{}`·`TIM7:{}`, `isBasicTimer`, `CHANNEL_TIMER_IDS`(GPIO_AF 상수용), `timerIrq(id)`(TIM6 → `TIM6_DAC_IRQn`)·`timerOfIrq`, `TIM_TRGO`. IRQ 이름을 `id+'_IRQn'`으로 만들던 곳(mcu-family `irqNamesOf`, hal.js 드레인·PINOUT_IRQS, hal-timers 큐, hal-generator, irq-handlers, mcu-config NVIC 검사)은 이 함수로 바꿨다.
+- 프로젝트 값: 기본 타이머는 `mode:'base'`만, Counter Mode·channels 불가, `trgo`('ENABLE'|'UPDATE', Reset은 저장 안 함)는 기본 타이머에서만. Pinout 카드는 동작 모드·Counter Mode 대신 Trigger Event Selection(`basicTimerField`, `data-timer-trgo`).
+- 생성: Init에 ClockDivision을 쓰지 않고(CubeMX와 같음), `HAL_TIM_Base_Init` 뒤에 늘 `TIM_MasterConfigTypeDef sMasterConfig`와 `HAL_TIMEx_MasterConfigSynchronization`. 해석기는 TRGO Reset/Enable/Update·MasterSlaveMode DISABLE을 받아 두기만 한다(듣는 DAC·ADC 외부 트리거가 아직 없음). 기본 타이머의 채널·Down 카운트 호출은 오류. `hal-nvic` IRQ 번호 TIM6_DAC 54·TIM7 55.
+- device-assistance의 타이머 바꾸기 후보에서 기본 타이머를 뺐고, `f1Unavailable`은 TIM6/7을 막는다.
+- 시험: 단위 `tim-basic`(4), 해석기 `timer-basic`(3), 툴체인 `tim-basic`(실제 HAL·에뮬레이터, 빌드 환경의 TIM6_DAC_IRQHandler, CR2 MMS = Update), E2E `tim-basic`(F446RE로 바꾼 뒤 카드·생성·실행).
+- 남음: SYS Timebase Source를 TIM으로(현재 SysTick 고정, `.ioc`의 `VP_SYS_VS_timN`은 읽지 않음), TRGO를 쓰는 DAC 트리거(DAC 없음), TIM9~14.
 
 ## 1.27.0 TIM Output Compare · Counter Mode · printf float 늘 켬 · DS3231 ZS-042 모듈
 

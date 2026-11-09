@@ -84,6 +84,7 @@ Pinout & Configuration 오른쪽의 **Clock** 탭에서 CubeMX Clock Configurati
 - **SPI1 Parameter Settings**: Clock Polarity(CPOL)·Clock Phase(CPHA)로 SPI mode 0~3, Data Size 8/16비트, First Bit(MSB/LSB). 카드에 SPI mode 번호가 보인다. 로직 분석기의 SPI 해석도 이 설정을 따른다.
 - **TIM PWM 채널별 설정(1.24.0)**: PWM 모드 타이머 카드에 채널 핀마다 PWM Generation CHn이 생긴다. Pulse, Mode(PWM mode 1/2), CH Polarity(High/Low)를 채널마다 정하고, 출력이 High인 비율을 보여 준다. 생성 코드는 채널마다 설정을 다시 쓴 뒤 `HAL_TIM_PWM_ConfigChannel`을 부른다. 내장 해석기는 PWM mode 1·High만 지원한다.
 - **TIM 출력 비교·Counter Mode(1.27.0)**: 동작 모드에서 **출력 비교 (Output Compare)**를 고르면 채널 핀마다 Output Compare CHn 칸이 생긴다. Mode(Frozen, Active/Inactive Level on match, Toggle on match, Forced Active/Inactive), Pulse, CH Polarity를 정하면 아래에 핀이 어떻게 바뀌는지 나온다(예: "CCR 일치 2 Hz · 핀 토글 → 1 Hz 사각파"). Frozen은 핀을 바꾸지 않고 인터럽트로만 쓴다. NVIC를 켜면 생성 코드가 `HAL_TIM_OC_Start_IT`와 `HAL_TIM_OC_DelayElapsedCallback`을 넣는다. 엔코더가 아닌 타이머에는 **Counter Mode**(Up, Down, Center Aligned mode1~3)가 있다. 중앙 정렬은 0 → ARR → 0으로 세어 PWM 주파수가 타이머 클록 / 2·ARR이 된다.
+- **TIM6·TIM7 기본 타이머(1.28.0, NUCLEO-F446RE)**: 채널·핀이 없는 Up 카운터다. 카드에는 동작 모드·Counter Mode 대신 Prescaler·Period와 **Trigger Event Selection (TRGO)**(Reset, Enable, Update Event)만 있다. 주기 인터럽트는 NVIC Settings에서 켠다. TIM6의 인터럽트 이름은 CubeMX처럼 `TIM6_DAC_IRQn`(핸들러 `TIM6_DAC_IRQHandler`)이고 TIM7은 `TIM7_IRQn`이다. 생성 코드는 `HAL_TIMEx_MasterConfigSynchronization`으로 TRGO를 정한다. TRGO는 DAC·ADC 변환을 시작하는 신호인데, 이 시뮬레이터에는 아직 그것을 받는 DAC가 없다. NUCLEO-F103RB(STM32F103RB)에는 TIM6·TIM7이 없다.
 - **I2C1 Parameter Settings(1.24.0)**: Primary Address(슬레이브로 쓸 때의 7비트 주소, 코드에는 `OwnAddress1 = 주소 << 1`), Fast Mode Duty Cycle(100 kHz보다 빠를 때 2 또는 16/9), Clock No Stretch Mode.
 
 ## 코드 초기화
@@ -307,7 +308,7 @@ STM32 보드 옆에 **ESP32**와 **Raspberry Pi 5** 보드를 함께 놓을 수 
 
 ## DS3231 RTC 모듈 (1.27.0)
 
-부품 검색에서 `DS3231`으로 찾는다. **DS3231 RTC 모듈 (ZS-042)**은 흔히 쓰는 파란 모듈이다: 왼쪽 6핀 32K·SQW·SCL·SDA·VCC·GND, 오른쪽 4핀 SCL·SDA·VCC·GND(왼쪽과 같은 선, 다음 I²C 장치를 이어 붙일 때). 뒷면의 CR2032 홀더는 그리지 않는다.
+부품 검색에서 `DS3231`으로 찾는다. **DS3231 RTC 모듈 (ZS-042)**은 흔히 쓰는 파란 모듈이다: 왼쪽 6핀 직각 헤더 32K·SQW·SCL·SDA·VCC·GND가 기판 왼쪽으로 다리처럼 나와 빵판에 꽂힌다. 오른쪽 4개 구멍(다음 I²C 장치를 이어 붙이는 통과 구멍)은 1.28.0부터 연결점이 아니다. 새로 놓으면 이름은 `DS3231`, 두 번째는 `DS3231-2`다. 뒷면의 CR2032 홀더는 그리지 않는다.
 - I²C 주소: DS3231 0x68, 같은 기판의 AT24C32 EEPROM 0x57.
 - 실행을 시작하면 PC의 지금 시각에서 시작한다(배터리가 있는 모듈처럼). 00h~06h에 시각을 쓰면 그 시각부터 흐른다. 날짜·월·연(세기 비트), 12/24시간, 요일(1~7, 자정마다 1씩), 알람 1·2와 상태의 A1F·A2F, 제어·에이징 레지스터를 데이터시트대로 읽고 쓴다.
 - 온도(11h·12h)는 속성 패널의 **칩 온도**(0.25 °C 단위)다.

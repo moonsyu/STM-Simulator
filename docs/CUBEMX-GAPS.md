@@ -50,7 +50,7 @@
 | 주변장치 | 에뮬레이터 | 크기 | 중요도 |
 |---|---|---|---|
 | TIM1(두 보드)·TIM8(F446) 고급 타이머(CHxN·Dead-time·Break) | 있음(Dead-time·Break 입력은 부족, B2) | M | 상 |
-| TIM6/7(기본 타이머, Timebase·DAC 트리거)·TIM9~14 | 있음 | S~M | 상 |
+| ~~TIM6/7(기본 타이머)~~ **1.28.0 반영**(F446RE: Pinout 카드·TRGO·NVIC TIM6_DAC_IRQn·생성·.ioc·해석기, F103RB에는 없음). 남음: SYS Timebase Source를 TIM으로, TIM9~14 | 있음 | S~M | 상 |
 | RTC(달력, Alarm A/B, WakeUp) | F446만 있음(알람 미동작, B2). F103 없음 | M | 상 |
 | DAC OUT1/OUT2(F446) | **없음** | M | 상 |
 | I2C2(두 보드)·I2C3(F446), SPI2(두 보드)·SPI3(F446), I2S | 있음 | M | 중~상 |
@@ -239,7 +239,7 @@ CubeMX를 화면 없이(`-q` 스크립트) 실행해 실제 생성 코드를 받
 1. **(1.16.0 로컬 구현) NVIC를 CubeMX처럼:** Priority Group·Sub Priority, 주변장치별 NVIC 탭, SysTick 줄을 넣습니다. GPIO의 Output type·Speed와 AF 핀 Pull도 함께 넣습니다(S~M).
 2. **기존 주변장치 설정 채우기:** UART 형식, SPI 모드, ADC 다채널·트리거, TIM One Pulse(M)(채널별 Pulse 1.24.0, OC 1.27.0 완료). 에뮬레이터가 이미 지원하므로 UI와 생성만 만들면 됩니다.
 3. **클럭 트리 화면:** HSE Bypass·PLL·분주, 180/72 MHz(L).
-4. **주변장치 추가:** TIM1·TIM6/7, IWDG/WWDG, I2C2·SPI2, RTC(F103 에뮬레이터 포함), DAC(F446 에뮬레이터 포함)(M).
+4. **주변장치 추가:** TIM1·TIM6/7(1.28.0 완료), IWDG/WWDG, I2C2·SPI2, RTC(F103 에뮬레이터 포함), DAC(F446 에뮬레이터 포함)(M).
 5. **시뮬레이터 정확도:**
    - 없는 주변장치 접근 안내(S)
    - F103 메모리 한도(S)
