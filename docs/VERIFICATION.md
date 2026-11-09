@@ -1,5 +1,9 @@
 # 검증 기록
 
+## 1.28.1 ARM GCC 빌드 속도 · CI 분할·재시도 — 게시 확인(API)
+
+2026-11-09. 태그·빌드 커밋 `f165888b9ee39c834a3262d1b1b88f030b589e66` · [Windows CI 42572633464](https://github.com/moonsyu/STM-Simulator/actions/runs/42572633464): 1차는 E2E 1/3이 Electron 다운로드 504(GitHub 장애)로 실패, 2차(실패 작업 재실행) 성공(정적 검사·단위, E2E 3/3, ST HAL ARM GCC 5.1분, ESP32, 패키지, 검증한 Release 게시). [Release v1.28.1](https://github.com/moonsyu/STM-Simulator/releases/tag/v1.28.1) 최신 릴리스, draft/prerelease 아님, 자산 5개(STM-Simulator.exe 115,590,919바이트, STM-Simulator-1.28.1-Windows-x64.zip 116,678,154바이트, SHA256.txt, BUILD-INFO.json, update-manifest.json).
+
 ## 1.28.0 TIM6/TIM7 기본 타이머 · DS3231 모듈 다리·이름 — 게시 확인(API)
 
 2026-11-09. 태그·빌드 커밋 `4f21d044985ad0e04650e3f885ce25b8a0d1201d` · [Windows CI 42569610685](https://github.com/moonsyu/STM-Simulator/actions/runs/42569610685): 1차는 패키지 작업이 electron-builder의 NSIS 다운로드 504로 실패, 2차(실패 작업 재실행)에서 정적 검사·단위, E2E 2/2, ST HAL ARM GCC, ESP32, 패키지가 모두 성공하고 Release가 게시됐으나 게시 작업 마지막의 공개 다운로드 확인(`verify-release.ps1`)이 GitHub 504로 실패, 3차도 같은 이유로 실패. [Release v1.28.0](https://github.com/moonsyu/STM-Simulator/releases/tag/v1.28.0)은 API로 최신 릴리스, draft/prerelease 아님, 자산 5개(STM-Simulator.exe 115,588,043바이트, STM-Simulator-1.28.0-Windows-x64.zip 116,675,198바이트, SHA256.txt, BUILD-INFO.json, update-manifest.json)를 확인했다. 확인 다운로드 재시도는 1.28.1에 넣었다.

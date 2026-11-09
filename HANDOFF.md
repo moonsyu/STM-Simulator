@@ -1,6 +1,11 @@
 # STM Simulator — 개발 인계
 
-현재 버전: **1.28.1**. 정리일: **2026-11-09**. NUCLEO-F446RE·NUCLEO-F103RB 또는 Renesas FPB-RA6E1(1.20.0, FSP·에뮬레이터 전용)과 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+현재 버전: **1.28.2**. 정리일: **2026-11-09**. NUCLEO-F446RE·NUCLEO-F103RB 또는 Renesas FPB-RA6E1(1.20.0, FSP·에뮬레이터 전용)과 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+
+## 1.28.2 부품 목록 겹침
+
+- 부품 목록(`#part-list`)은 세로 flex 목록인데 카드(`.part-card`, `shell.css`)가 기본값 `flex-shrink:1`이라, 목록이 길면 카드가 내용 높이보다 작게 눌려 접힌 이름·설명이 다음 카드 위로 넘쳤다(사용자 화면 캡처). 카드에 `flex:0 0 auto`를 줬다. `workflow.e2e`가 목록을 220px로 좁혀 넘치는 카드가 없는지 본다.
+- CI: E2E·패키지 작업의 Electron 받기를 최대 4번 시도(221b3d8, 1.28.1 CI의 E2E 1/3이 GitHub 504로 시험 전에 실패).
 
 ## 1.28.1 ARM GCC 빌드 속도 · CI 분할·재시도
 
