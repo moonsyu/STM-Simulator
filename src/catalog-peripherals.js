@@ -35,6 +35,8 @@ export class CatalogPeripherals {
   const h=this.hal,[ptr,a,b,c]=args,get=(o,key)=>h.field(o,key);
   if(name==='HAL_RCC_GetPCLK1Freq')return h.clocks?Math.round(h.clocks.pclk1):h.config.timerClockHz>42000000?h.config.timerClockHz/2:h.config.timerClockHz;
   if(['__HAL_RCC_CAN1_CLK_ENABLE','__HAL_RCC_SPI2_CLK_ENABLE'].includes(name))return 0;
+  // RCC_PERIPHCLK_RTC alone (0x20 here, hal-rtc.js): the RTC clock source, which the RTC model takes from the Pinout.
+  if(name==='HAL_RCCEx_PeriphCLKConfig'&&get(r.get(r.pointerCell(ptr)),'PeriphClockSelection')===0x20)return 0;
   if(name==='HAL_RCCEx_PeriphCLKConfig'){const cfg=r.get(r.pointerCell(ptr));this.audioClock=get(cfg,'PeriphClockSelection')===1&&get(get(cfg,'PLLI2S'),'PLLI2SN')===192&&get(get(cfg,'PLLI2S'),'PLLI2SR')===2&&get(cfg,'I2sApb1ClockSelection')===0;return this.audioClock?0:1;}
   if(name==='HAL_RCC_MCOConfig'){if(ptr!==0||a!==0||b!==0)throw new Error('MCO: PA8의 HSI 16 MHz 출력을 지원합니다.');h.buses.clocks??=new Map();h.buses.clocks.set('PA8',16000000);return 0;}
   if(name==='HAL_I2S_Init'){const handle=this.handle(ptr,r,'I2S'),init=get(handle,'Init');if(get(handle,'Instance')!=='SPI2'||!this.audioClock||[...['PB12','PB13','PB15']].some(p=>this.routes.get(p)!==5)||get(init,'Mode')!==512||get(init,'Standard')||get(init,'DataFormat')||get(init,'AudioFreq')!==16000)throw new Error('I2S2: PB12/13/15 AF5, PLLI2S, Philips 16-bit stereo 16 kHz 설정을 확인하세요.');this.i2s={handle,rate:get(init,'AudioFreq')};return 0;}

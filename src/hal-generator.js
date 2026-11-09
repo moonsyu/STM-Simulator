@@ -1,5 +1,6 @@
 import {SERIAL_IDS,isSerial,serialAf,serialHandle,serialFunction} from './serial-config.js';
 import {TIMER_IDS,isTimer,isBasicTimer,timerAf,timerIrq} from './timer-config.js';
+import {rtcInitLines} from './rtc-config.js';
 import {DEFAULT_TIMER_CLOCK_HZ} from './mcu-defaults.js';
 import {familyProfile,remapFor} from './mcu-family.js';
 import {dmaHandle,irqHandlers,handlerText} from './irq-handlers.js';
@@ -69,7 +70,7 @@ export function generateMain(config,{minimal=false,legacyGpio=false}={}){
     ...(minimal?[' */']:[' * printf: SWV ITM port 0 (enable SWV in the debugger). UART uses its pins.',
     ' * With newlib-nano, enable -u _printf_float for floating-point printf. */']),''];
   const sync=id=>isSerial(id)&&config.peripherals[id]?.mode==='synchronous',dma=Object.entries(config.dma||{});
-  const handles={...Object.fromEntries(Object.keys(family.serial).map(id=>[id,sync(id)?['USART','husart'+id.replace(/\D/g,'')]:['UART',serialHandle(id)]])),I2C1:['I2C','hi2c1'],SPI1:['SPI','hspi1'],ADC1:['ADC','hadc1'],SDIO:['SD','hsd'],DCMI:['DCMI','hdcmi'],...Object.fromEntries(Object.keys(family.timers).map(id=>[id,['TIM','htim'+id.slice(3)]]))};
+  const handles={...Object.fromEntries(Object.keys(family.serial).map(id=>[id,sync(id)?['USART','husart'+id.replace(/\D/g,'')]:['UART',serialHandle(id)]])),I2C1:['I2C','hi2c1'],SPI1:['SPI','hspi1'],ADC1:['ADC','hadc1'],SDIO:['SD','hsd'],DCMI:['DCMI','hdcmi'],RTC:['RTC','hrtc'],...Object.fromEntries(Object.keys(family.timers).map(id=>[id,['TIM','htim'+id.slice(3)]]))};
   const active=Object.entries(config.peripherals).filter(([,p])=>p.enabled),serials=active.filter(([id])=>isSerial(id)),timers=active.filter(([id])=>isTimer(id));
   for(const [id]of active){const [type,name]=handles[id];lines.push(`${type}_HandleTypeDef ${name};`);}
   for(const [request]of dma)lines.push(`DMA_HandleTypeDef ${dmaHandle(request)};`);
@@ -129,7 +130,10 @@ export function generateMain(config,{minimal=false,legacyGpio=false}={}){
     for(const [,d]of dma)lines.push(`  HAL_NVIC_SetPriority(${d.stream}_IRQn, ${config.nvic[d.stream+'_IRQn']?.priority??0}, ${config.nvic[d.stream+'_IRQn']?.sub??0});`,`  HAL_NVIC_EnableIRQ(${d.stream}_IRQn);`);
     lines.push('}');
   }
-  for(const [id,p]of active){const [type,name]=handles[id];lines.push('',`static void ${initName(id)}(void) {`,`  __HAL_RCC_${id}_CLK_ENABLE();`,`  ${name}.Instance = ${id};`);
+  for(const [id,p]of active){const [type,name]=handles[id];
+    // RTC: clock source, prescalers, calendar, alarm and wakeup (rtc-config.js); it has no __HAL_RCC_RTC_CLK_ENABLE.
+    if(id==='RTC'){lines.push('','static void MX_RTC_Init(void) {',...rtcInitLines(config),'}');continue;}
+    lines.push('',`static void ${initName(id)}(void) {`,`  __HAL_RCC_${id}_CLK_ENABLE();`,`  ${name}.Instance = ${id};`);
     const set=(key,value)=>lines.push(`  ${name}.Init.${key} = ${value};`);
     if(isSerial(id)&&!sync(id))for(const [k,v]of Object.entries({BaudRate:p.baud,WordLength:`UART_WORDLENGTH_${p.wordLength??8}B`,StopBits:`UART_STOPBITS_${p.stopBits??1}`,Parity:`UART_PARITY_${p.parity??'NONE'}`,Mode:`UART_MODE_${p.direction??'TX_RX'}`,HwFlowCtl:'UART_HWCONTROL_NONE',OverSampling:`UART_OVERSAMPLING_${p.overSampling??16}`}))set(k,v);
     if(sync(id))for(const [k,v]of Object.entries({BaudRate:p.baud,WordLength:'USART_WORDLENGTH_8B',StopBits:'USART_STOPBITS_1',Parity:'USART_PARITY_NONE',Mode:'USART_MODE_TX_RX',CLKPolarity:p.cpol?'USART_POLARITY_HIGH':'USART_POLARITY_LOW',CLKPhase:p.cpha?'USART_PHASE_2EDGE':'USART_PHASE_1EDGE',CLKLastBit:p.lastBit?'USART_LASTBIT_ENABLE':'USART_LASTBIT_DISABLE'}))set(k,v);
@@ -167,6 +171,9 @@ export function generateMain(config,{minimal=false,legacyGpio=false}={}){
   if(!minimal&&serials.length)lines.push('','void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart) {','  UNUSED(huart);','  /* USER CODE BEGIN UART_RxCplt */','  /* HAL_UART_Receive_IT() 수신 완료 */','  /* USER CODE END UART_RxCplt */','}');
   if(!minimal&&timers.length)lines.push('','void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {','  UNUSED(htim);','  /* USER CODE BEGIN TIM_PeriodElapsed */','  /* 타이머 주기 인터럽트 */','  /* USER CODE END TIM_PeriodElapsed */','}');
   if(!minimal&&timers.some(([id,p])=>p.mode==='oc'&&config.nvic[timerIrq(id)]?.enabled))lines.push('','void HAL_TIM_OC_DelayElapsedCallback(TIM_HandleTypeDef *htim) {','  UNUSED(htim);','  /* USER CODE BEGIN TIM_OC_DelayElapsed */','  /* 출력 비교 일치(CCR) 인터럽트 */','  /* USER CODE END TIM_OC_DelayElapsed */','}');
+  const rtc=config.peripherals.RTC?.enabled&&config.peripherals.RTC;
+  if(!minimal&&rtc?.alarm&&config.nvic.RTC_Alarm_IRQn?.enabled)lines.push('','void HAL_RTC_AlarmAEventCallback(RTC_HandleTypeDef *hrtc) {','  UNUSED(hrtc);','  /* USER CODE BEGIN RTC_AlarmA */','  /* 알람 A 시각이 됨 (HAL_RTC_GetTime으로 시각 읽기) */','  /* USER CODE END RTC_AlarmA */','}');
+  if(!minimal&&rtc?.wakeUp&&config.nvic.RTC_WKUP_IRQn?.enabled)lines.push('','void HAL_RTCEx_WakeUpTimerEventCallback(RTC_HandleTypeDef *hrtc) {','  UNUSED(hrtc);','  /* USER CODE BEGIN RTC_WakeUp */','  /* WakeUp 타이머 주기 인터럽트 */','  /* USER CODE END RTC_WakeUp */','}');
   if(!minimal&&timers.some(([,p])=>p.mode==='capture'))lines.push('','void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim) {','  UNUSED(htim);','  /* USER CODE BEGIN TIM_IC_Capture */','  /* Read HAL_TIM_ReadCapturedValue(htim, TIM_CHANNEL_1). */','  /* USER CODE END TIM_IC_Capture */','}');
   if(!minimal)lines.push('','int __io_putchar(int ch) {','  ITM_SendChar(ch);','  return ch;','}');
   lines.push('','/* USER CODE BEGIN 4 */','/* USER CODE END 4 */','','void Error_Handler(void) {','  __disable_irq();','  while (1) { }','}');

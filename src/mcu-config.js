@@ -7,6 +7,7 @@ import {DMA_REQUESTS} from './hal-dma.js';
 import {familyProfile,routesOf,irqNamesOf,remapFor,DEFAULT_FAMILY,FAMILIES} from './mcu-family.js';
 import {nvicProblems,NVIC_GROUP_DEFAULT,TICK_PRIORITY_DEFAULT} from './nvic-config.js';
 import {speedsOf,SPEED_NAMES} from './gpio-config.js';
+import {validateRtc,rtcFromIoc} from './rtc-config.js';
 import {validateClockTree,clockFrequencies,clockTreeProblems,adcClockProblem,clockTreeFromIoc,treeFromTimerHz} from './clock-tree.js';
 // Synchronous USART clock outputs on F446RE LQFP64 (DS10693 table 11): AF7 USART1/2/3, AF8 USART6.
 export const USART_CK_ROUTES=familyProfile(DEFAULT_FAMILY).usartCk;
@@ -62,6 +63,7 @@ export function validateMcu(value){
   }
   for(const [id,p]of Object.entries(value.peripherals)){
     if(!Object.hasOwn(routes,id)||!p||typeof p.enabled!=='boolean')throw new Error(`${id}: ${f.id}에서 지원하지 않는 주변장치입니다.`);
+    if(id==='RTC'){out.peripherals[id]=validateRtc(p,f.id);continue;}
     const q={enabled:p.enabled},defaults=isTimer(id)?timerDefaults(id,f.id):null;
     for(const [key,def,min,max]of isSerial(id)?[['baud',115200,300,2000000]]:id==='I2C1'?[['clock',100000,1000,1000000]]:id==='SPI1'?[['clock',1000000,1000,20000000]]:isTimer(id)?[['prescaler',defaults.prescaler,0,65535],['period',defaults.period,0,f.timerMax(id)],['pulse',defaults.pulse,0,f.timerMax(id)]]:[]){q[key]=p[key]??def;if(!Number.isInteger(q[key])||q[key]<min||q[key]>max)throw new Error(`${id}.${key}: 범위를 확인하세요.`);}
     if(isTimer(id)){q.mode=p.mode??defaults.mode;if(!['base','pwm','oc','capture','encoder'].includes(q.mode))throw new Error(id+': 타이머 모드를 확인하세요.');}
@@ -217,6 +219,8 @@ export function importIoc(text){
     if(Object.values(config.pins).some(q=>q.function===id+'_CK'))Object.assign(p,{mode:'synchronous',cpol:values[id+'.CLKPolarity']==='USART_POLARITY_HIGH'?1:0,cpha:values[id+'.CLKPhase']==='USART_PHASE_2EDGE'?1:0,lastBit:values[id+'.CLKLastBit']==='USART_LASTBIT_ENABLE'?1:0});
   }
   if(config.peripherals.I2C1){const c=config.peripherals.I2C1;c.clock=number(values['I2C1.ClockSpeed'],100000);const own=Number(values['I2C1.OwnAddress']);if(Number.isInteger(own)&&own>0)c.ownAddress=(own>>1)&0x7f; /* the value CubeMX writes to OwnAddress1 (address << 1) */if(/16_9/.test(values['I2C1.DutyCycle']||'')&&c.clock>100000)c.dutyCycle='16_9';if(/NOSTRETCH_ENABLE/.test(values['I2C1.NoStretchMode']||''))c.noStretch=true;}
+  // RTC: calendar time/date, alarm A and wakeup (rtc-config.js); enabled through Mcu.IP or VP_RTC_VS_RTC_Activate.
+  if(config.peripherals.RTC||values['VP_RTC_VS_RTC_Activate.Mode'])config.peripherals.RTC=rtcFromIoc(values,family,number);
   if(config.peripherals.ADC1&&values['ADC1.ContinuousConvMode']==='ENABLE')config.peripherals.ADC1.continuous=true;
   // Rank 1 Sampling Time (ADC1.SamplingTime-0\#ChannelRegularConversion); a .ioc without it has CubeMX's default, the shortest.
   if(config.peripherals.ADC1){const key=Object.keys(values).find(k=>/^ADC1\.SamplingTime-0\\?#ChannelRegularConversion$/.test(k)),m=/ADC_SAMPLETIME_(\d+)CYCLES?(_5)?/.exec(values[key]||''),cycles=m?Number(m[1])+(m[2]?0.5:0):ADC_SAMPLING[family][0];if(ADC_SAMPLING[family].includes(cycles)&&cycles!==adcSamplingDefault(family))config.peripherals.ADC1.samplingTime=cycles;}

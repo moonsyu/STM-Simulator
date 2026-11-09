@@ -29,6 +29,10 @@ export function irqHandlers(mcu){
     if(id==='SPI1')return of('SPI','SPI1','hspi1','HAL_SPI_IRQHandler',false);
     if(id==='ADC'||id==='ADC1_2')return of('ADC','ADC1','hadc1','HAL_ADC_IRQHandler',false);
     if(id==='DCMI')return of('DCMI','DCMI','hdcmi','HAL_DCMI_IRQHandler',true);
+    // RTC: alarm (EXTI 17), F4 wakeup (EXTI 22), F1 second / overflow interrupt.
+    if(id==='RTC_Alarm')return of('RTC','RTC','hrtc','HAL_RTC_AlarmIRQHandler',true);
+    if(id==='RTC_WKUP')return of('RTC','RTC','hrtc','HAL_RTCEx_WakeUpTimerIRQHandler',true);
+    if(id==='RTC')return of('RTC','RTC','hrtc','HAL_RTCEx_RTCIRQHandler',true);
     if(id==='SDIO')return of('SD','SDIO','hsd','HAL_SD_IRQHandler',true);
     return {body:''};
   };

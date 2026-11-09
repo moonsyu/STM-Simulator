@@ -275,6 +275,11 @@ dialog h1{font-size:21px;margin:8px 0 18px;letter-spacing:-.5px}
 #pinout-dialog .pinout-hint{margin-top:0}
 .peripheral-card{padding:7px 10px;border:1px solid #c5d4cc;border-radius:6px;margin-bottom:7px}
 .peripheral-card select{font-size:11px}
+/* RTC card (rtc-ui.js): grouped calendar / alarm / wakeup fields, alarm mask checkboxes and an out-of-range message. */
+.peripheral-card fieldset.tim-channel{border:1px solid rgba(127,127,127,.35);border-radius:5px;margin:6px 0;padding:4px 7px}
+.peripheral-card fieldset.tim-channel legend{font-size:11px;padding:0 3px}
+.peripheral-card .rtc-masks{display:flex;flex-wrap:wrap;gap:2px 10px}
+.peripheral-card .rtc-problem{color:#e5534b;font-size:11px;margin:4px 0 0}
 .serial-mode-note{display:block;color:#4d6358;font-size:9.5px;line-height:1.5;margin-top:3px}
 .pinout-layout .check-label{display:flex;gap:7px;font-weight:700;color:#1a2b25;align-items:center}
 #pinout-pins{display:grid;grid-template-columns:repeat(4,minmax(65px,1fr));gap:6px;max-height:none;min-height:0;flex:1;align-content:start;overflow:auto;padding:4px}

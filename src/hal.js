@@ -10,6 +10,7 @@ import {HalDma,DMA_CONSTANTS} from './hal-dma.js';
 import {HalUsart,USART_CONSTANTS} from './hal-usart.js';
 import {HalDcmi,DCMI_CONSTANTS} from './hal-dcmi.js';
 import {HalStorage,STORAGE_CONSTANTS} from './hal-storage.js';
+import {HalRtc,RTC_CONSTANTS,RTC_F1_CONSTANTS,RTC_F4_ONLY} from './hal-rtc.js';
 import {familyProfile,remapFor,irqNamesOf} from './mcu-family.js';
 import {clockFrequencies} from './clock-tree.js';
 
@@ -28,7 +29,7 @@ export const HAL_CONSTANTS={...CATALOG_HAL_CONSTANTS,HAL_OK:0,HAL_ERROR:1,HAL_BU
   HAL_UART_STATE_RESET:0,HAL_UART_STATE_READY:0x20,HAL_UART_STATE_BUSY:0x24,HAL_UART_STATE_BUSY_TX:0x21,HAL_UART_STATE_BUSY_RX:0x22,HAL_UART_STATE_BUSY_TX_RX:0x23,
   HAL_UART_ERROR_NONE:0,HAL_UART_ERROR_PE:1,HAL_UART_ERROR_NE:2,HAL_UART_ERROR_FE:4,HAL_UART_ERROR_ORE:8,HAL_UART_ERROR_DMA:16
 };
-Object.assign(HAL_CONSTANTS,DMA_CONSTANTS,USART_CONSTANTS,DCMI_CONSTANTS,STORAGE_CONSTANTS);
+Object.assign(HAL_CONSTANTS,DMA_CONSTANTS,USART_CONSTANTS,DCMI_CONSTANTS,STORAGE_CONSTANTS,RTC_CONSTANTS);
 for(const port of ['A','B','C','D','H'])HAL_CONSTANTS['GPIO'+port]='GPIO'+port;
 for(let i=0;i<16;i++)HAL_CONSTANTS['GPIO_PIN_'+i]=1<<i;
 HAL_CONSTANTS.GPIO_PIN_All=65535;
@@ -47,13 +48,13 @@ const F1_CONSTANTS={GPIO_SPEED_FREQ_LOW:2,GPIO_SPEED_FREQ_MEDIUM:1,GPIO_SPEED_FR
   ADC_SCAN_DISABLE:0,ADC_SCAN_ENABLE:0x100,ADC_SOFTWARE_START:0xE0000,ADC_DATAALIGN_LEFT:0x800,ADC_CHANNEL_TEMPSENSOR:16,ADC_CHANNEL_VREFINT:17,
   ...Object.fromEntries(['1CYCLE_5','7CYCLES_5','13CYCLES_5','28CYCLES_5','41CYCLES_5','55CYCLES_5','71CYCLES_5','239CYCLES_5'].map((n,i)=>['ADC_SAMPLETIME_'+n,i])),
   ...Object.fromEntries(Array.from({length:16},(_,i)=>['ADC_REGULAR_RANK_'+(i+1),i+1])),
-  ...Object.fromEntries(Array.from({length:15},(_,i)=>['RCC_PLL_MUL'+(i+2),i<<18]))};
+  ...Object.fromEntries(Array.from({length:15},(_,i)=>['RCC_PLL_MUL'+(i+2),i<<18])),...RTC_F1_CONSTANTS};
 for(const name of [...familyProfile('STM32F103RB').dmaUnits,...irqNamesOf('STM32F103RB'),'AFIO'])F1_CONSTANTS[name]=name;
 const constantsByFamily=new Map();
 /** Constants the C source of a project may use (its family's HAL names). */
 export function halConstantsFor(family){
   if(familyProfile(family).pinMux!=='remap')return HAL_CONSTANTS;
-  if(!constantsByFamily.has(family))constantsByFamily.set(family,{...Object.fromEntries(Object.entries(HAL_CONSTANTS).filter(([k])=>!F4_ONLY.test(k))),...F1_CONSTANTS});
+  if(!constantsByFamily.has(family))constantsByFamily.set(family,{...Object.fromEntries(Object.entries(HAL_CONSTANTS).filter(([k])=>!F4_ONLY.test(k)&&!RTC_F4_ONLY.test(k))),...F1_CONSTANTS});
   return constantsByFamily.get(family);
 }
 
@@ -62,7 +63,7 @@ const int=(value,min,max,label)=>{if(!Number.isInteger(value)||value<min||value>
 const PINOUT_IRQS=new Set(['EXTI0_IRQn','EXTI1_IRQn','EXTI2_IRQn','EXTI3_IRQn','EXTI4_IRQn','EXTI9_5_IRQn','EXTI15_10_IRQn',...SERIAL_IDS.map(id=>id+'_IRQn'),...TIMER_IDS.map(timerIrq)]);
 const isIterator=v=>v&&typeof v.next==='function'&&typeof v[Symbol.iterator]==='function';
 export class HalAdapter {
-  constructor(config,buses,{session}={}){this.config=validateMcu(config);/* Clock Configuration: bus clocks from the tree (null: the single APB1 timer clock). */this.clocks=this.config.clock?clockFrequencies(this.config.family,this.config.clock):null;this.family=familyProfile(this.config.family);this.f1=this.family.pinMux==='remap';this.remaps=new Set();this.afio=false;this.adcIrq=this.f1?'ADC1_2_IRQn':'ADC_IRQn';this.slave={i2cRx:null,i2cTx:null,spiJob:null,i2cOn:false,i2cHeld:[],spiHeld:[]};const errors=configProblems(this.config);if(errors.length)throw new Error(errors.join('\n'));this.buses=buses;this.nvic=new Map();this.pending=[];this.extiPending=0;this.serials=new Map();this.handles=new Map();this.timerModel=new HalTimers(this);this.adc=new Map();this.latches=new Map();this.priorities=new Map();this.initializedGpio=new Set();this.catalog=new CatalogPeripherals(this);this.nvicModel=new Nvic(this);this.subPriorities=new Map();this.noticeIrq=new Set();this.session=session;this.dma=new HalDma(this);this.usart=new HalUsart(this);this.camera=new HalDcmi(this);this.storage=new HalStorage(this);this.extensions=[this.dma,this.usart,this.camera,this.storage];}
+  constructor(config,buses,{session}={}){this.config=validateMcu(config);/* Clock Configuration: bus clocks from the tree (null: the single APB1 timer clock). */this.clocks=this.config.clock?clockFrequencies(this.config.family,this.config.clock):null;this.family=familyProfile(this.config.family);this.f1=this.family.pinMux==='remap';this.remaps=new Set();this.afio=false;this.adcIrq=this.f1?'ADC1_2_IRQn':'ADC_IRQn';this.slave={i2cRx:null,i2cTx:null,spiJob:null,i2cOn:false,i2cHeld:[],spiHeld:[]};const errors=configProblems(this.config);if(errors.length)throw new Error(errors.join('\n'));this.buses=buses;this.nvic=new Map();this.pending=[];this.extiPending=0;this.serials=new Map();this.handles=new Map();this.timerModel=new HalTimers(this);this.adc=new Map();this.latches=new Map();this.priorities=new Map();this.initializedGpio=new Set();this.catalog=new CatalogPeripherals(this);this.nvicModel=new Nvic(this);this.subPriorities=new Map();this.noticeIrq=new Set();this.session=session;this.dma=new HalDma(this);this.usart=new HalUsart(this);this.camera=new HalDcmi(this);this.storage=new HalStorage(this);this.rtc=new HalRtc(this);this.extensions=[this.dma,this.usart,this.camera,this.storage,this.rtc];}
   get active(){return this.nvicModel.active;}
   uart(id){
     if(!isSerial(id))throw new Error(`지원하지 않는 UART 인스턴스: ${id}`);

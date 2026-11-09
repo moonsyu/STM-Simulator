@@ -4,7 +4,7 @@ const names=(prefix,from,count)=>Array.from({length:count},(_,i)=>`${prefix}${i}
 export const IRQ_NUMBERS={WWDG_IRQn:0,PVD_IRQn:1,TAMP_STAMP_IRQn:2,RTC_WKUP_IRQn:3,FLASH_IRQn:4,RCC_IRQn:5,EXTI0_IRQn:6,EXTI1_IRQn:7,EXTI2_IRQn:8,EXTI3_IRQn:9,EXTI4_IRQn:10,
  ...Object.fromEntries(names('DMA1_Stream',0,7).map((n,i)=>[n,11+i])),ADC_IRQn:18,CAN1_TX_IRQn:19,CAN1_RX0_IRQn:20,CAN1_RX1_IRQn:21,CAN1_SCE_IRQn:22,EXTI9_5_IRQn:23,
  TIM2_IRQn:28,TIM3_IRQn:29,TIM4_IRQn:30,I2C1_EV_IRQn:31,I2C1_ER_IRQn:32,I2C2_EV_IRQn:33,I2C2_ER_IRQn:34,SPI1_IRQn:35,SPI2_IRQn:36,USART1_IRQn:37,USART2_IRQn:38,USART3_IRQn:39,EXTI15_10_IRQn:40,
- DMA1_Stream7_IRQn:47,SDIO_IRQn:49,TIM5_IRQn:50,SPI3_IRQn:51,UART4_IRQn:52,UART5_IRQn:53,TIM6_DAC_IRQn:54,TIM7_IRQn:55,...Object.fromEntries(names('DMA2_Stream',0,5).map((n,i)=>[n,56+i])),
+ DMA1_Stream7_IRQn:47,SDIO_IRQn:49,TIM5_IRQn:50,SPI3_IRQn:51,UART4_IRQn:52,UART5_IRQn:53,TIM6_DAC_IRQn:54,RTC_Alarm_IRQn:41,TIM7_IRQn:55,...Object.fromEntries(names('DMA2_Stream',0,5).map((n,i)=>[n,56+i])),
  DMA2_Stream5_IRQn:68,DMA2_Stream6_IRQn:69,DMA2_Stream7_IRQn:70,USART6_IRQn:71,DCMI_IRQn:78};
 export const SYSTICK='SysTick_IRQn';
 // HAL NVIC_PRIORITYGROUP_x register values -> number of preemption bits.

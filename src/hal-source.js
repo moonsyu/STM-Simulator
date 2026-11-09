@@ -11,7 +11,12 @@ export const HAL_STRUCTS={
   I2S_InitTypeDef:'Mode Standard DataFormat MCLKOutput AudioFreq CPOL ClockSource FullDuplexMode',
   I2S_HandleTypeDef:'Instance Init:I2S_InitTypeDef',
   RCC_PLLI2SInitTypeDef:'PLLI2SM PLLI2SN PLLI2SP PLLI2SR PLLI2SQ',
-  RCC_PeriphCLKInitTypeDef:'PeriphClockSelection PLLI2S:RCC_PLLI2SInitTypeDef PLLI2SDivQ I2sApb1ClockSelection',
+  RCC_PeriphCLKInitTypeDef:'PeriphClockSelection PLLI2S:RCC_PLLI2SInitTypeDef PLLI2SDivQ I2sApb1ClockSelection RTCClockSelection',
+  RTC_InitTypeDef:'HourFormat AsynchPrediv SynchPrediv OutPut OutPutRemap OutPutPolarity OutPutType',
+  RTC_TimeTypeDef:'Hours Minutes Seconds TimeFormat SubSeconds SecondFraction DayLightSaving StoreOperation',
+  RTC_DateTypeDef:'WeekDay Month Date Year',
+  RTC_AlarmTypeDef:'AlarmTime:RTC_TimeTypeDef AlarmMask AlarmSubSecondMask AlarmDateWeekDaySel AlarmDateWeekDay Alarm',
+  RTC_HandleTypeDef:'Instance Init:RTC_InitTypeDef Lock State',
 
   GPIO_InitTypeDef:'Pin Mode Pull Speed Alternate',
   UART_InitTypeDef:'BaudRate WordLength StopBits Parity Mode HwFlowCtl OverSampling',
@@ -53,7 +58,8 @@ const F1_STRUCTS={GPIO_InitTypeDef:'Pin Mode Pull Speed',RCC_PLLInitTypeDef:'PLL
   RCC_OscInitTypeDef:'OscillatorType HSEState HSEPredivValue LSEState HSIState HSICalibrationValue LSIState PLL:RCC_PLLInitTypeDef',
   RCC_PeriphCLKInitTypeDef:'PeriphClockSelection RTCClockSelection AdcClockSelection UsbClockSelection',
   ADC_InitTypeDef:'DataAlign ScanConvMode ContinuousConvMode NbrOfConversion DiscontinuousConvMode NbrOfDiscConversion ExternalTrigConv',
-  ADC_ChannelConfTypeDef:'Channel Rank SamplingTime',DMA_InitTypeDef:'Direction PeriphInc MemInc PeriphDataAlignment MemDataAlignment Mode Priority'};
+  ADC_ChannelConfTypeDef:'Channel Rank SamplingTime',DMA_InitTypeDef:'Direction PeriphInc MemInc PeriphDataAlignment MemDataAlignment Mode Priority',
+  RTC_InitTypeDef:'AsynchPrediv OutPut',RTC_TimeTypeDef:'Hours Minutes Seconds',RTC_AlarmTypeDef:'AlarmTime:RTC_TimeTypeDef Alarm',RTC_HandleTypeDef:'Instance Init:RTC_InitTypeDef DateToUpdate:RTC_DateTypeDef Lock State'};
 const F4_ONLY_STRUCTS=/^(I2S_|RCC_PLLI2S|DCMI_|SD_|HAL_SD_)/;
 export function halStructs(family){
   const f1=familyProfile(family).pinMux==='remap';
@@ -61,7 +67,7 @@ export function halStructs(family){
 }
 export const HAL_ALIASES={FRESULT:'int',UINT:'uint32_t',BYTE:'uint8_t',WORD:'uint16_t',DWORD:'uint32_t',QWORD:'uint32_t',FSIZE_t:'uint32_t',LBA_t:'uint32_t',TCHAR:'char',DSTATUS:'uint8_t',
   HAL_SD_CardStateTypeDef:'uint32_t',HAL_DMA_StateTypeDef:'int',HAL_UART_StateTypeDef:'int',HAL_USART_StateTypeDef:'int',HAL_DCMI_StateTypeDef:'int',HAL_SD_StateTypeDef:'int',HAL_SPI_StateTypeDef:'int',HAL_I2C_StateTypeDef:'int',
-  HAL_LockTypeDef:'int',FunctionalState:'int',FlagStatus:'int',ITStatus:'int',IRQn_Type:'int',HAL_DMA_LevelCompleteTypeDef:'int',HAL_DMA_CallbackIDTypeDef:'int',HAL_UART_RxEventTypeTypeDef:'uint32_t'};
+  HAL_LockTypeDef:'int',HAL_RTCStateTypeDef:'int',FunctionalState:'int',FlagStatus:'int',ITStatus:'int',IRQn_Type:'int',HAL_DMA_LevelCompleteTypeDef:'int',HAL_DMA_CallbackIDTypeDef:'int',HAL_UART_RxEventTypeTypeDef:'uint32_t'};
 const systemHeaders=prefix=>new Set(['main.h',`${prefix}_hal.h`,`${prefix}.h`,'stdint.h','stddef.h','stdbool.h','string.h','stdio.h','math.h',`${prefix}_it.h`,`${prefix}_hal_conf.h`,'fatfs.h','ff.h','ff_gen_drv.h','diskio.h','sd_diskio.h','user_diskio.h','bsp_driver_sd.h','fatfs_platform.h',...['gpio','gpio_ex','uart','usart','tim','tim_ex','adc','adc_ex','i2c','spi','rcc','rcc_ex','cortex','pwr','pwr_ex','dma','dma_ex','dcmi','sd','uart_ex'].map(n=>`${prefix}_hal_${n}.h`)]);
 export function prepareHalSource(source,files=[],options={}){
   if(typeof source!=='string'||source.length>300000||!Array.isArray(files)||files.length>40)throw new Error('HAL 소스 크기 또는 파일 수 한도를 넘었습니다.');
