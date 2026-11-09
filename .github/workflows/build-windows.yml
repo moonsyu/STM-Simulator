@@ -174,7 +174,11 @@ jobs:
       - name: Install locked dependencies
         run: npm ci
       - name: Ensure Electron runtime is installed
-        run: node node_modules/electron/install.js
+        shell: pwsh
+        run: |
+          # The Electron zip comes from GitHub releases; retry a temporary 502/503/504 (1.28.1 CI lost a job to one).
+          for ($try = 1; $try -le 4; $try++) { node node_modules/electron/install.js; if ($LASTEXITCODE -eq 0) { exit 0 }; Write-Output "Electron download failed; retry $try in $(15 * $try) s."; Start-Sleep -Seconds (15 * $try) }
+          exit 1
       - name: Install ARM GCC, STM32CubeF4 / STM32CubeF1 drivers and Renesas FSP
         uses: ./.github/actions/arm-toolchain
       - name: Electron end-to-end tests (a third of the files)
@@ -223,7 +227,11 @@ jobs:
       - name: Install locked dependencies
         run: npm ci
       - name: Ensure Electron runtime is installed
-        run: node node_modules/electron/install.js
+        shell: pwsh
+        run: |
+          # The Electron zip comes from GitHub releases; retry a temporary 502/503/504 (1.28.1 CI lost a job to one).
+          for ($try = 1; $try -le 4; $try++) { node node_modules/electron/install.js; if ($LASTEXITCODE -eq 0) { exit 0 }; Write-Output "Electron download failed; retry $try in $(15 * $try) s."; Start-Sleep -Seconds (15 * $try) }
+          exit 1
       - name: Build portable executable
         shell: pwsh
         env:
