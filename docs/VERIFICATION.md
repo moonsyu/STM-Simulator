@@ -1,5 +1,9 @@
 # 검증 기록
 
+## 1.28.2 부품 목록 겹침 — 게시 확인(API)
+
+2026-11-09. 태그·빌드 커밋 `e8a615dbd3c3e93b0f83ab368d8ca4863fa3890e` · [Windows CI 42574403033](https://github.com/moonsyu/STM-Simulator/actions/runs/42574403033) 첫 실행에서 모두 성공(정적 검사·단위 3.2분, E2E 3묶음 3.2·3.3·4.2분, ST HAL ARM GCC 6.3분, ESP32 5.8분, 패키지 4.0분, 검증한 Release 게시 0.7분 — 전체 7.0분). [Release v1.28.2](https://github.com/moonsyu/STM-Simulator/releases/tag/v1.28.2) 최신 릴리스, draft/prerelease 아님, 자산 5개(STM-Simulator.exe 115,561,004바이트, STM-Simulator-1.28.2-Windows-x64.zip 116,647,781바이트, SHA256.txt, BUILD-INFO.json, update-manifest.json).
+
 ## 1.28.1 ARM GCC 빌드 속도 · CI 분할·재시도 — 게시 확인(API)
 
 2026-11-09. 태그·빌드 커밋 `f165888b9ee39c834a3262d1b1b88f030b589e66` · [Windows CI 42572633464](https://github.com/moonsyu/STM-Simulator/actions/runs/42572633464): 1차는 E2E 1/3이 Electron 다운로드 504(GitHub 장애)로 실패, 2차(실패 작업 재실행) 성공(정적 검사·단위, E2E 3/3, ST HAL ARM GCC 5.1분, ESP32, 패키지, 검증한 Release 게시). [Release v1.28.1](https://github.com/moonsyu/STM-Simulator/releases/tag/v1.28.1) 최신 릴리스, draft/prerelease 아님, 자산 5개(STM-Simulator.exe 115,590,919바이트, STM-Simulator-1.28.1-Windows-x64.zip 116,678,154바이트, SHA256.txt, BUILD-INFO.json, update-manifest.json).
