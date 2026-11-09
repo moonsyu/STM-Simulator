@@ -1,6 +1,13 @@
 # STM Simulator — 개발 인계
 
-현재 버전: **1.28.0**. 정리일: **2026-11-09**. NUCLEO-F446RE·NUCLEO-F103RB 또는 Renesas FPB-RA6E1(1.20.0, FSP·에뮬레이터 전용)과 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+현재 버전: **1.28.1**. 정리일: **2026-11-09**. NUCLEO-F446RE·NUCLEO-F103RB 또는 Renesas FPB-RA6E1(1.20.0, FSP·에뮬레이터 전용)과 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+
+## 1.28.1 ARM GCC 빌드 속도 · CI 분할·재시도
+
+- 사용자가 릴리스가 너무 오래 걸린다고 해서 원인을 찾았다(2026-11-09).
+- `desktop/native-build.cjs` `build`: 번역 단위를 `os.cpus()`(최대 8)개씩 동시에 컴파일한다. 각 단위의 출력은 모았다가 소스 순서대로 쓰고, 첫 실패 단위로 오류를 낸다(빌드 탭·진단 동일). DWARF 4용 `--strip-debug` libgcc.a를 빌드마다 만들던 것(10 MB, 3.3초)을 `os.tmpdir()/stm-simulator-dwarf4/<경로·크기·시각 해시>/libgcc.a`에 한 번 만들어 다시 쓴다(고유 이름으로 쓴 뒤 rename). 빌드 한 번 16초 → 2.8초(이 PC, 링크 포함).
+- CI(`build-windows.yml`): E2E는 3묶음 `node --test --test-shard=i/3`(전에는 고정 목록이라 새 파일이 모두 2묶음에 들어가 5.4분 대 2.1분). 패키지 작업은 `~\AppData\Local\electron-builder\Cache`를 캐시하고 `npm run build`가 실패하면 한 번 다시 시도한다(1.28.0 CI는 NSIS 다운로드 504로 실패). `scripts/verify-release.ps1`은 게시한 파일 받기를 최대 4번(15·30·45초 간격) 시도한다(1.28.0 게시 확인이 504로 실패).
+- 진행 방식: 버전 푸시 전 로컬 전체 검사(45~60분, 그중 59분이 모든 예제를 두 보드로 빌드하는 `arm-examples`)는 하지 않는다. 바뀐 부분의 시험과 패키지 검사만 돌리고 나머지는 CI가 한다.
 
 ## 1.28.0 TIM6/TIM7 기본 타이머 (NUCLEO-F446RE) · DS3231 모듈 다리·이름
 
