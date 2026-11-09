@@ -14,7 +14,7 @@
   - 새 시험: 단위 `dac-config`(3), 해석기 `dac`(3: SetValue 1241 → PA4, 배선한 ADC가 1241±8로 읽음; TIM6 TRGO + 순환 DMA 4단계·Half/Cplt 콜백·TIM7 삼각파 0~15; TRGO 미설정·5 kHz 초과 오류), 툴체인 `dac`(ARM GCC 15.2.1·STM32CubeF4 실제 HAL·에뮬레이터: 2048 → 1.65 V, TIM6 1 kHz 순환 DMA 계단 4단계, TIM7 삼각파 0~15), E2E `dac`(F446RE 카드에서 OUT1·OUT2, 트리거 없으면 파형 비활성, TIM7 TRGO 삼각파, 생성 코드, 실행 출력 DAC1=3000) 모두 통과.
   - 바뀐 범위 검사: ESLint 0건, 단위·해석기·에뮬레이터 929개 중 928개 통과·1개 건너뜀, 펌웨어 64개, 툴체인(CI와 같은 파일·예제 11개) 47개, E2E(dac·rtc·pinout·adc-continuous·adc-sampling·workflow·peripheral-params) 20개 모두 통과.
   - 패키지 검사 3개 통과(STM-Simulator.exe 115,641,147 바이트, SHA-256 23474dd8f8baf09534188fb4e84cd170df1556de831429557f0280d50d8a15df), 빌드 산출물은 지웠다.
-- 커밋·릴리스: cef5979(에뮬레이터 DAC), 8eefdf0(DAC), 문서·버전 커밋.
+- 커밋·릴리스: cef5979(에뮬레이터 DAC), 8eefdf0(DAC), 1b21962(문서·버전). [Windows CI 42585975088](https://github.com/moonsyu/STM-Simulator/actions/runs/42585975088) 첫 실행에서 모두 성공(전체 6.9분), [Release v1.30.0](https://github.com/moonsyu/STM-Simulator/releases/tag/v1.30.0) 최신·자산 5개(API 확인, 내려받지 않음).
 - 남은 사항:
   - 3번의 나머지(CUBEMX-GAPS: TIM1/8, IWDG/WWDG, I2C2·SPI2 등).
   - DAC: DMA 언더런 플래그·인터럽트, 출력 버퍼 부하 특성(지금은 40 Ω 전압원), 해석기의 TIM8·EXTI9 트리거, 사인파 예제. 실물 보드로는 확인하지 않았다.
