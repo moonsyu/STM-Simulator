@@ -13,7 +13,7 @@
 
 **구현 비용 메모:** 1.14.0부터 시뮬레이터는 기본으로 ARM GCC로 빌드해 펌웨어 에뮬레이터에서 실행합니다. 그래서 새 주변장치를 Pinout에 추가할 때는 **에뮬레이터에 레지스터 모델이 있으면** Pinout과 코드 생성만 만들면 됩니다.
 - 에뮬레이터에 이미 모델이 있는 것: TIM1~14, I2C1~3, SPI1~4, ADC1~3, CAN, IWDG/WWDG, CRC, RTC(F446, 1.29.0부터 F103·BKP도)
-- 에뮬레이터에도 없는 것: DAC
+- 에뮬레이터에도 없는 것: (DAC는 1.30.0에 넣음)
 - 내장 해석기는 지원 범위 밖이라고 안내하면 됩니다.
 
 ## A. CubeMX 쪽 (Pinout · 클럭 · NVIC · DMA · 코드 생성)
@@ -29,7 +29,7 @@
 | ADC | 생성 코드는 채널 하나, 소프트웨어 시작·고정 샘플링(`hal-generator.js`). **Continuous Conversion Mode는 1.21.0에서, Rank 1 Sampling Time 선택은 1.26.0에서 지원**(Pinout ADC1, 생성 코드, .ioc 가져오기, 두 실행 엔진) | Scan(Rank), 외부 트리거(TIM TRGO), Injected, Watchdog, 해상도, TempSens·Vrefint·Vbat, Rank별 Sampling Time(지금 F103 239.5·F446 480 Cycles 고정) | M | 상 |
 | TIM | **1.24.0 반영:** PWM 채널별 Pulse·CH Polarity·PWM mode 1/2(Pinout·생성 코드·.ioc). **1.27.0 반영:** Output Compare 채널(Mode·Pulse·CH Polarity, OC 인터럽트)과 Counter Mode(Up·Down·Center Aligned 1~3)(Pinout·생성 코드·.ioc·두 실행 엔진). 남음: One Pulse·PWM Input·ARR preload·ETR·Slave·TRGO·IC 필터, 핀 없는 Output Compare No Output | Output Compare, One Pulse, PWM Input, 채널별 Pulse·극성, Counter mode, ARR preload, ETR·Slave·Trigger, TRGO, IC 필터 | M~L | 상 |
 | I2C | **1.24.0 반영:** Primary Address(7비트)·Fast Mode Duty Cycle(2, 16/9)·Clock No Stretch. 남음: 10비트 주소·Dual address·General call·SMBus. 이전: 클럭만 | 주소 방식(7/10비트), Own address, Slave, SMBus | S | 중 |
-| DMA | 요청별 폭·증가 고정. FIFO·Burst 없음. TIMx_UP·DAC·SPI2/3 등 요청 없음 | 요청마다 Data width, Increment, FIFO·Threshold·Burst | S~M | 중 |
+| DMA | 요청별 폭·증가 고정. FIFO·Burst 없음. TIMx_UP·SPI2/3 등 요청 없음(DAC1/DAC2는 1.30.0) | 요청마다 Data width, Increment, FIFO·Threshold·Burst | S~M | 중 |
 | SYS | PA13/PA14 고정 잠금 | Debug(Serial Wire/JTAG/Trace/No Debug), Timebase Source(SysTick/TIMx) | S | 중 |
 
 ### A2. 클럭 설정 (L, 상) — 1.26.0 반영
@@ -52,7 +52,7 @@
 | TIM1(두 보드)·TIM8(F446) 고급 타이머(CHxN·Dead-time·Break) | 있음(Dead-time·Break 입력은 부족, B2) | M | 상 |
 | ~~TIM6/7(기본 타이머)~~ **1.28.0 반영**(F446RE: Pinout 카드·TRGO·NVIC TIM6_DAC_IRQn·생성·.ioc·해석기, F103RB에는 없음). 남음: SYS Timebase Source를 TIM으로, TIM9~14 | 있음 | S~M | 상 |
 | ~~RTC(달력, Alarm A/B, WakeUp)~~ **1.29.0 반영**(두 보드: 클록 원본·달력·알람 A·WakeUp(F4)·Hour Format(F4), 생성·.ioc·해석기, F446 알람 A/B와 F103 RTC/BKP 에뮬레이터). 남음: RTC 출력 핀, Tamper·Timestamp, Alarm B 화면, Smooth calibration | 있음 | M | 상 |
-| DAC OUT1/OUT2(F446) | **없음** | M | 상 |
+| ~~DAC OUT1/OUT2(F446)~~ **1.30.0 반영**(Pinout 카드·트리거·버퍼·파형·DMA·생성·.ioc·해석기·에뮬레이터). 남음: DMA 언더런, 출력 부하 특성 | 있음 | M | 상 |
 | I2C2(두 보드)·I2C3(F446), SPI2(두 보드)·SPI3(F446), I2S | 있음 | M | 중~상 |
 | ADC2/3(F446). 가져올 때 ADC1로 합쳐짐(`mcu-config.js:113`) | 있음 | M | 중 |
 | IWDG·WWDG·CRC | 있음 | S | 중 |
@@ -194,7 +194,7 @@ CubeMX를 화면 없이(`-q` 스크립트) 실행해 실제 생성 코드를 받
 
 | 항목 | 근거 | 크기 | 중요도 |
 |---|---|---|---|
-| DAC1/2(F446): 매핑 없음, 빌드 모듈에 `hal_dac` 없음, 해석기에도 없음 | `stm32f446/soc.js:29-40`, `native-build.cjs:6` | M | 상 |
+| ~~DAC1/2(F446): 매핑 없음, 빌드 모듈에 `hal_dac` 없음, 해석기에도 없음~~ **1.30.0 반영**(`stm32f446/dac.js`, `hal-dac.js`) | `stm32f446/soc.js`, `native-build.cjs` | M | 상 |
 | ~~F103 RTC·BKP: 주소 표에는 있으나 매핑 안 됨~~ **1.29.0 반영**: `stm32f103/rtc.js` RtcF1·BkpF1 | `stm32f103/soc.js` | M | 상 |
 | 매핑 안 된 주소 접근이 "잘못된 메모리 접근"으로만 보이고 "이 주변장치는 에뮬레이터에 없음" 안내가 없음 | `machine.js` | S | 상 |
 | USB OTG/FS, BKPSRAM, FMPI2C, SAI, SPDIF, CEC, QUADSPI, FMC | `rcc.js`에 클럭 비트만 있음 | L | 하~중 |
@@ -230,7 +230,7 @@ CubeMX를 화면 없이(`-q` 스크립트) 실행해 실제 생성 코드를 받
 
 ### B5. 두 실행 엔진의 차이
 
-- **해석기의 범위:** 내장 해석기는 HAL API 수준만 실행합니다. TIM1/8·CAN·IWDG·PWR·FLASH·DAC가 없고(RTC는 1.29.0부터 HAL 수준으로 있음) 레지스터 직접 접근 코드도 실행하지 않습니다.
+- **해석기의 범위:** 내장 해석기는 HAL API 수준만 실행합니다. TIM1/8·CAN·IWDG·PWR·FLASH가 없고(RTC는 1.29.0, DAC는 1.30.0부터 HAL 수준으로 있음) 레지스터 직접 접근 코드도 실행하지 않습니다.
 - **해석기로 실행되는 경우:** FatFs 프로젝트와 ARM GCC가 없는 PC는 해석기로 돌아가서, 같은 코드가 다르게 동작할 수 있습니다.
 - **Pinout과 소스가 다를 때:** 해석기는 멈추고 에뮬레이터는 그대로 실행합니다.
 
@@ -239,7 +239,7 @@ CubeMX를 화면 없이(`-q` 스크립트) 실행해 실제 생성 코드를 받
 1. **(1.16.0 로컬 구현) NVIC를 CubeMX처럼:** Priority Group·Sub Priority, 주변장치별 NVIC 탭, SysTick 줄을 넣습니다. GPIO의 Output type·Speed와 AF 핀 Pull도 함께 넣습니다(S~M).
 2. **기존 주변장치 설정 채우기:** UART 형식, SPI 모드, ADC 다채널·트리거, TIM One Pulse(M)(채널별 Pulse 1.24.0, OC 1.27.0 완료). 에뮬레이터가 이미 지원하므로 UI와 생성만 만들면 됩니다.
 3. **클럭 트리 화면:** HSE Bypass·PLL·분주, 180/72 MHz(L).
-4. **주변장치 추가:** TIM1·TIM6/7(1.28.0 완료), IWDG/WWDG, I2C2·SPI2, RTC(1.29.0 완료, F103 에뮬레이터 포함), DAC(F446 에뮬레이터 포함)(M).
+4. **주변장치 추가:** TIM1·TIM6/7(1.28.0 완료), IWDG/WWDG, I2C2·SPI2, RTC(1.29.0 완료, F103 에뮬레이터 포함), DAC(1.30.0 완료, F446 에뮬레이터 포함)(M).
 5. **시뮬레이터 정확도:**
    - 없는 주변장치 접근 안내(S)
    - F103 메모리 한도(S)

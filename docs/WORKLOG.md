@@ -2,6 +2,23 @@
 
 작업할 때마다 날짜순으로 맨 위에 추가합니다. 무엇을 했는지, 왜 했는지, 어떻게 검증했는지, 커밋·릴리스와 남은 사항을 적습니다. 버전별 구조 설명은 [HANDOFF.md](../HANDOFF.md), 검증 수치는 [VERIFICATION.md](VERIFICATION.md)에 있습니다.
 
+## 2026-11-09 · 1.30.0 기능 목록 3번: DAC
+
+- 요청: "DAC 진행"(기능 목록 3번의 다음 항목).
+- 한 것과 이유:
+  - NUCLEO-F446RE의 DAC1(OUT1 PA4, OUT2 PA5)을 Pinout 카드·생성 코드·.ioc 가져오기·내장 해석기·펌웨어 에뮬레이터에 넣었다. STM32F103RB에는 DAC가 없다. 강의에서 흔한 "타이머 트리거 + DMA로 표(사인파) 출력"이 되도록 TRGO 트리거와 DMA 요청 DAC1/DAC2까지 만들었다.
+  - .ioc 키는 공개된 CubeMX 프로젝트 파일(F446RE·F429ZI DAC 예제)에서 확인했다: 핀 신호 `COMP_DAC1_group`, `DAC.DAC_Trigger`/`DAC_Trigger2`, `Dma.DAC1.n.*`(Channel 키 없음). 받은 참고 파일은 확인 뒤 지웠다.
+  - 회로: 엔진은 출력 핀의 전압을 그대로 전압원으로 쓰므로, 에뮬레이터는 아날로그 모드 핀이 DAC 전압의 출력이 되게 했고 해석기도 같은 방식으로 핀 전압을 정한다. 그래서 DAC 출력을 같은 회로의 ADC나 부품이 읽는다.
+  - 가져오기에서 찾은 기존 문제 두 가지를 함께 고쳤다: Channel 키가 없는 DMA 요청이 채널 0으로 읽혀 버려짐, `Mcu.IPn=DMA`가 "실행 모델 미지원" 경고로 나옴.
+- 검증(의존성을 설치한 임시 복제본, 창은 다른 창 뒤·다크 모드):
+  - 새 시험: 단위 `dac-config`(3), 해석기 `dac`(3: SetValue 1241 → PA4, 배선한 ADC가 1241±8로 읽음; TIM6 TRGO + 순환 DMA 4단계·Half/Cplt 콜백·TIM7 삼각파 0~15; TRGO 미설정·5 kHz 초과 오류), 툴체인 `dac`(ARM GCC 15.2.1·STM32CubeF4 실제 HAL·에뮬레이터: 2048 → 1.65 V, TIM6 1 kHz 순환 DMA 계단 4단계, TIM7 삼각파 0~15), E2E `dac`(F446RE 카드에서 OUT1·OUT2, 트리거 없으면 파형 비활성, TIM7 TRGO 삼각파, 생성 코드, 실행 출력 DAC1=3000) 모두 통과.
+  - 바뀐 범위 검사: ESLint 0건, 단위·해석기·에뮬레이터 929개 중 928개 통과·1개 건너뜀, 펌웨어 64개, 툴체인(CI와 같은 파일·예제 11개) 47개, E2E(dac·rtc·pinout·adc-continuous·adc-sampling·workflow·peripheral-params) 20개 모두 통과.
+  - 패키지 검사 3개 통과(STM-Simulator.exe 115,641,147 바이트, SHA-256 23474dd8f8baf09534188fb4e84cd170df1556de831429557f0280d50d8a15df), 빌드 산출물은 지웠다.
+- 커밋·릴리스: cef5979(에뮬레이터 DAC), 8eefdf0(DAC), 문서·버전 커밋.
+- 남은 사항:
+  - 3번의 나머지(CUBEMX-GAPS: TIM1/8, IWDG/WWDG, I2C2·SPI2 등).
+  - DAC: DMA 언더런 플래그·인터럽트, 출력 버퍼 부하 특성(지금은 40 Ω 전압원), 해석기의 TIM8·EXTI9 트리거, 사인파 예제. 실물 보드로는 확인하지 않았다.
+
 ## 2026-11-09 · 1.29.0 기능 목록 3번: RTC
 
 - 요청: "RTC가 뭐야"에 답한 뒤 "어 진행해"(기능 목록 3번의 다음 항목).

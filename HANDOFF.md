@@ -1,6 +1,17 @@
 # STM Simulator — 개발 인계
 
-현재 버전: **1.29.0**. 정리일: **2026-11-09**. NUCLEO-F446RE·NUCLEO-F103RB 또는 Renesas FPB-RA6E1(1.20.0, FSP·에뮬레이터 전용)과 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+현재 버전: **1.30.0**. 정리일: **2026-11-09**. NUCLEO-F446RE·NUCLEO-F103RB 또는 Renesas FPB-RA6E1(1.20.0, FSP·에뮬레이터 전용)과 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+
+## 1.30.0 DAC (NUCLEO-F446RE)
+
+- 기능 목록 3번의 다음 항목. STM32F103RB(중밀도)에는 DAC가 없다.
+- `src/dac-config.js`: 프로젝트 `mcu.peripherals.DAC.channels.OUT1|OUT2`(trigger, buffer false, wave NOISE|TRIANGLE, amplitude 0~11 = MAMP)와 `validateDac`, `dacProblems`(채널 핀 필요), `dacInitLines`, `dacFromIoc`(DAC.DAC_Trigger/DAC_Trigger2, 버퍼·파형 키). 채널은 핀 기능 `DAC_OUT1`(PA4)·`DAC_OUT2`(PA5)로 켠다(mcu-family F4 extra `DAC`). GPIO 모드는 ANALOG(gpio-config, 해석기 HAL_GPIO_Init 검사). .ioc 핀 신호는 CubeMX F4가 쓰는 `COMP_DAC1_group`. Pinout 카드 `src/dac-ui.js`.
+- DMA: `DAC1`(DMA1 Stream5 CH7)·`DAC2`(Stream6 CH7), 폭 HALFWORD, `__HAL_LINKDMA(&hdac, DMA_Handle1/2, …)`. 생성 코드는 DMA 없는 채널만 `HAL_DAC_Start`(DMA는 사용자의 표로 `HAL_DAC_Start_DMA`). `TIM6_DAC_IRQn`은 TIM6과 DAC가 함께 쓰는 줄이라 핸들러가 둘 다 부르고(irq-handlers), DAC만 켜져 있어도 NVIC 검사가 통과한다.
+- .ioc 가져오기 수정: CubeMX는 요청이 한 채널뿐이면 `Dma.<요청>.n.Channel`을 쓰지 않아 채널이 0으로 읽혔다(이제 요청 표에서 찾음). `Mcu.IPn=DMA`가 "실행 모델 미지원"으로 나오던 것도 고쳤다.
+- 에뮬레이터 `src/emu/stm32f446/dac.js`: CR(EN·TEN·TSEL·WAVE·MAMP·DMAEN, 채널 2는 16비트 위), SWTRIGR, DHR12R/12L/8R(1·2·D), DOR, SR. 트리거는 `soc.trigger(name)`(타이머 TRGO가 이미 보내던 것)로 받고 `triggerWanted`로 타이머가 TRGO 이벤트를 계속 만들게 한다. 아날로그 모드 핀(`gpio.js` mode 3)은 `soc.analogOutput(pin)`이 있으면 그 전압의 OUTPUT으로 알린다. 빌드 모듈에 `hal_dac`·`hal_dac_ex`(native-build F4_MODULES)를 넣었다.
+- 내장 해석기 `src/hal-dac.js`: 핀 전압 = DOR/4095 × 3.3 V(runtime.gpio OUTPUT). 트리거 없으면 SetValue 즉시, TRGO 트리거는 해당 타이머(TRGO Update, 동작 중)의 갱신마다, Start_DMA는 hal-dma의 `start`(itemUs = 타이머 주기)로 표를 내보내고 Half/Cplt 콜백. 회로 재계산 부담 때문에 갱신 5 kHz까지(넘으면 에뮬레이터 안내). TIM8·EXTI9 트리거는 해석기에서 미지원.
+- 시험: 단위 `dac-config`(3), 해석기 `dac`(3: SetValue와 ADC 되읽기, TIM6 DMA 표·콜백·TIM7 삼각파, 오류), 툴체인 `dac`(실제 HAL·에뮬레이터: 2048 → 1.65 V, TIM6 1 kHz DMA 계단, TIM7 삼각파 0~15), E2E `dac`.
+- 남음: DMA 언더런 플래그·인터럽트, 출력 버퍼의 부하 특성(지금은 40 Ω 전압원), 해석기의 TIM8·EXTI9 트리거, DAC 예제(사인파 표).
 
 ## 1.29.0 RTC (두 보드)
 
