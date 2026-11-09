@@ -14,7 +14,7 @@
   - 새 시험: 단위 `rtc-config`(3), 해석기 `rtc`(3: F446 자정 넘김·요일·알람·WakeUp 출력, F103 같은 달력·알람·초 인터럽트, F1 BIN 10~12월·F1 WakeUp·초기화 없음 오류), 툴체인 `rtc`(ARM GCC 15.2.1·STM32CubeF4/F1 실제 HAL·에뮬레이터, 두 보드 23:59:58 → 2027-01-01, 00:00:02 알람 A 인터럽트, F446 1 Hz WakeUp 3번), E2E `rtc`(F103 카드에서 시각·날짜·알람·NVIC, 틀린 날짜 표시, 생성 코드, 실행 출력 "2027-01-01 00:00:02"와 ALARM; F446 12시간 형식·WakeUp 생성) 모두 통과.
   - 바뀐 범위 검사(로컬 전체 검사 대신): ESLint 0건, 단위·해석기·에뮬레이터 922개 중 921개 통과·1개 건너뜀(첫 실행은 F103 주변장치 목록 시험이 RTC를 몰라 실패, 목록을 고침), 펌웨어 64개, 툴체인(CI와 같은 파일·예제 11개) 46개, E2E(rtc·tim-basic·workflow·peripheral-params·tim-oc·docs) 18개 모두 통과.
   - 패키지 검사 3개 통과(STM-Simulator.exe 115,569,947 바이트, SHA-256 0300cfcadb4907672d944348fc5e141f526bea98e27f421f9e0058f3cf1bc626), 빌드 산출물은 지웠다.
-- 커밋·릴리스: e74556e(에뮬레이터 RTC), 366e454(RTC), 시험 목록 커밋, 문서·버전 커밋.
+- 커밋·릴리스: e74556e(에뮬레이터 RTC), 366e454(RTC), 시험 목록 커밋, bc3155c(문서·버전), 5ca7d4f(CI 툴체인 캐시). [Release v1.29.0](https://github.com/moonsyu/STM-Simulator/releases/tag/v1.29.0) 최신·자산 5개(API 확인, 내려받지 않음). GitHub 다운로드 장애(504)로 첫 CI가 시험 전에 실패해, 작업마다 GitHub Releases에서 ARM GCC를 받던 툴체인 설치를 Actions 캐시로 바꾸고 재시도를 넣었다(5ca7d4f). 그 커밋의 CI가 v1.29.0 공개 다운로드 확인까지 통과했다. 자세한 경과는 [검증 기록](VERIFICATION.md).
 - 남은 사항:
   - 3번의 DAC 등(목록 순서).
   - RTC: 출력 핀(AFO_ALARM·512 Hz), Tamper·Timestamp, Alarm B 화면, SubSeconds 마스크, Smooth calibration, 리셋 뒤 달력 유지, F446 에뮬레이터 달력이 프리스케일러와 무관하게 1초씩 가는 점. 실물 보드로는 확인하지 않았다.

@@ -1,5 +1,9 @@
 # 검증 기록
 
+## 1.29.0 RTC (두 보드) — 게시 확인(API)
+
+2026-11-09. 태그·빌드 커밋 `bc3155c1e113aca8d5db9c3e2587b838c0c56b87`. [Windows CI 42578874788](https://github.com/moonsyu/STM-Simulator/actions/runs/42578874788): 1차는 GitHub 다운로드 장애(504, "Increased timeouts due to surge in anonymous users")로 ARM GCC·Electron·빌드 도구 받기에서 시험 전에 실패, 2차(실패 작업 재실행)에서 정적 검사·단위, E2E 3/3, ST HAL ARM GCC, ESP32, 패키지가 모두 성공하고 Release가 게시됐으나 공개 다운로드 확인이 4번 재시도 끝에 504로 실패. 이어서 툴체인 캐시 커밋 `5ca7d4f`의 [Windows CI 42580808208](https://github.com/moonsyu/STM-Simulator/actions/runs/42580808208)(같은 버전이라 기존 Release 유지)이 2차 실행에서 모두 성공했고, 그 게시 작업이 v1.29.0의 공개 다운로드·메타데이터 확인을 통과했다(툴체인 설치는 캐시로 0.1분). [Release v1.29.0](https://github.com/moonsyu/STM-Simulator/releases/tag/v1.29.0) 최신 릴리스, draft/prerelease 아님, 자산 5개(STM-Simulator.exe 115,572,888바이트, STM-Simulator-1.29.0-Windows-x64.zip 116,659,597바이트, SHA256.txt, BUILD-INFO.json, update-manifest.json).
+
 ## 1.28.2 부품 목록 겹침 — 게시 확인(API)
 
 2026-11-09. 태그·빌드 커밋 `e8a615dbd3c3e93b0f83ab368d8ca4863fa3890e` · [Windows CI 42574403033](https://github.com/moonsyu/STM-Simulator/actions/runs/42574403033) 첫 실행에서 모두 성공(정적 검사·단위 3.2분, E2E 3묶음 3.2·3.3·4.2분, ST HAL ARM GCC 6.3분, ESP32 5.8분, 패키지 4.0분, 검증한 Release 게시 0.7분 — 전체 7.0분). [Release v1.28.2](https://github.com/moonsyu/STM-Simulator/releases/tag/v1.28.2) 최신 릴리스, draft/prerelease 아님, 자산 5개(STM-Simulator.exe 115,561,004바이트, STM-Simulator-1.28.2-Windows-x64.zip 116,647,781바이트, SHA256.txt, BUILD-INFO.json, update-manifest.json).
