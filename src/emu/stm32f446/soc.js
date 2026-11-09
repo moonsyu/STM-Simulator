@@ -13,6 +13,7 @@ import { Dma } from './dma.js';
 import { Dcmi } from './dcmi.js';
 import { Sdio } from './sdio.js';
 import { Can } from './can.js';
+import { Dac } from './dac.js';
 import { Signals } from './signals.js';
 
 // STM32F446RE system-on-chip: maps every peripheral model onto the machine bus,
@@ -30,7 +31,7 @@ export const BASES = {
   TIM2: 0x40000000, TIM3: 0x40000400, TIM4: 0x40000800, TIM5: 0x40000c00, TIM6: 0x40001000, TIM7: 0x40001400,
   TIM12: 0x40001800, TIM13: 0x40001c00, TIM14: 0x40002000, RTC: 0x40002800, WWDG: 0x40002c00, IWDG: 0x40003000,
   SPI2: 0x40003800, SPI3: 0x40003c00, USART2: 0x40004400, USART3: 0x40004800, UART4: 0x40004c00, UART5: 0x40005000,
-  I2C1: 0x40005400, I2C2: 0x40005800, I2C3: 0x40005c00, CAN1: 0x40006400, CAN2: 0x40006800, PWR: 0x40007000,
+  I2C1: 0x40005400, I2C2: 0x40005800, I2C3: 0x40005c00, CAN1: 0x40006400, CAN2: 0x40006800, PWR: 0x40007000, DAC: 0x40007400,
   TIM1: 0x40010000, TIM8: 0x40010400, USART1: 0x40011000, USART6: 0x40011400, ADC1: 0x40012000, ADC2: 0x40012100,
   ADC3: 0x40012200, ADC_COMMON: 0x40012300, SDIO: 0x40012c00, SPI1: 0x40013000, SPI4: 0x40013400, SYSCFG: 0x40013800,
   EXTI: 0x40013c00, TIM9: 0x40014000, TIM10: 0x40014400, TIM11: 0x40014800,
@@ -104,6 +105,7 @@ export class Stm32f446 {
     this.iwdg = add('IWDG', new Iwdg(this));
     this.wwdg = add('WWDG', new Wwdg(this));
     this.rtc = add('RTC', new Rtc(this));
+    this.dac = add('DAC', new Dac(this));
     // DBGMCU lives inside the PPB window handled by the SCS model; it maps a
     // more specific entry when the bus allows overlapping pages.
     this.dbg = new Dbgmcu(this); this.peripherals.set('DBGMCU', this.dbg);
@@ -267,8 +269,10 @@ export class Stm32f446 {
   }
   requestOf(dma, stream) { return stream.requests()[0] ?? null; }
   // ------------------------------------------------------------ triggers
-  trigger(name) { for (const a of this.adcs) a.trigger(name); if (name === 'EXTI11' || name === 'EXTI15') return; }
-  triggerWanted(name) { return this.adcs.some(a => a.wants(name)); }
+  trigger(name) { for (const a of this.adcs) a.trigger(name); this.dac?.trigger(name); if (name === 'EXTI11' || name === 'EXTI15') return; }
+  triggerWanted(name) { return this.adcs.some(a => a.wants(name)) || !!this.dac?.wants(name); }
+  // A pin in analog mode carries the DAC output when that channel is on (PA4 OUT1, PA5 OUT2).
+  analogOutput(pin) { return this.dac?.output(pin) ?? null; }
   triggersChanged() { for (const t of Object.values(this.timers)) t.schedule(); }
   // ------------------------------------------------------------ env bridges
   uartEvent(e) { this.env.uartEvent?.(e); }

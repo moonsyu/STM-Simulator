@@ -33,7 +33,7 @@ export class GpioPort extends Peripheral {
     const mode = this.moder(n), pull = this.pupd(n), openDrain = !!((this.get(0x04) >> n) & 1);
     const input = { mode: pull === 1 ? 'INPUT_PULLUP' : pull === 2 ? 'INPUT_PULLDOWN' : 'INPUT', value: 0 };
     if (mode === 0) return input;
-    if (mode === 3) return { mode: 'ANALOG', value: 0 };
+    if (mode === 3) { const v = this.soc.analogOutput?.(this.pin(n)); return v == null ? { mode: 'ANALOG', value: 0 } : { mode: 'OUTPUT', value: v }; }
     if (mode === 1) return { mode: 'OUTPUT', value: this.outputBit(n) ? 3.3 : 0, openDrain, pull: pull === 3 ? 0 : pull };
     const out = this.soc.afOutput(this.signal(n), this.pin(n));
     if (!out) return input;
