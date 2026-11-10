@@ -53,7 +53,7 @@
 | ~~TIM6/7(기본 타이머)~~ **1.28.0 반영**(F446RE: Pinout 카드·TRGO·NVIC TIM6_DAC_IRQn·생성·.ioc·해석기, F103RB에는 없음). 남음: SYS Timebase Source를 TIM으로, TIM9~14 | 있음 | S~M | 상 |
 | ~~RTC(달력, Alarm A/B, WakeUp)~~ **1.29.0 반영**(두 보드: 클록 원본·달력·알람 A·WakeUp(F4)·Hour Format(F4), 생성·.ioc·해석기, F446 알람 A/B와 F103 RTC/BKP 에뮬레이터). 남음: RTC 출력 핀, Tamper·Timestamp, Alarm B 화면, Smooth calibration | 있음 | M | 상 |
 | ~~DAC OUT1/OUT2(F446)~~ **1.30.0 반영**(Pinout 카드·트리거·버퍼·파형·DMA·생성·.ioc·해석기·에뮬레이터). 남음: DMA 언더런, 출력 부하 특성 | 있음 | M | 상 |
-| I2C2(두 보드)·I2C3(F446), SPI2(두 보드)·SPI3(F446), I2S | 있음 | M | 중~상 |
+| ~~I2C2(두 보드)·I2C3(F446), SPI2(두 보드)·SPI3(F446)~~ **1.32.0 반영**(핀 경로·AF·Pinout·생성·.ioc·해석기, 에뮬레이터 핀 표 수정). 남음: 이 인스턴스들의 DMA 요청, I2S | 있음 | M | 중~상 |
 | ADC2/3(F446). 가져올 때 ADC1로 합쳐짐(`mcu-config.js:113`) | 있음 | M | 중 |
 | ~~IWDG·WWDG~~ **1.31.0 반영**(두 보드: Pinout 카드·생성·.ioc·해석기 리셋·리셋 원인 플래그, 에뮬레이터 WWDG 수정). 남음: CRC | 있음 | S | 중 |
 | CAN1/2 | 있음 | M | 하~중 |
@@ -239,7 +239,7 @@ CubeMX를 화면 없이(`-q` 스크립트) 실행해 실제 생성 코드를 받
 1. **(1.16.0 로컬 구현) NVIC를 CubeMX처럼:** Priority Group·Sub Priority, 주변장치별 NVIC 탭, SysTick 줄을 넣습니다. GPIO의 Output type·Speed와 AF 핀 Pull도 함께 넣습니다(S~M).
 2. **기존 주변장치 설정 채우기:** UART 형식, SPI 모드, ADC 다채널·트리거, TIM One Pulse(M)(채널별 Pulse 1.24.0, OC 1.27.0 완료). 에뮬레이터가 이미 지원하므로 UI와 생성만 만들면 됩니다.
 3. **클럭 트리 화면:** HSE Bypass·PLL·분주, 180/72 MHz(L).
-4. **주변장치 추가:** TIM1·TIM6/7(1.28.0 완료), IWDG/WWDG(1.31.0 완료), I2C2·SPI2, RTC(1.29.0 완료, F103 에뮬레이터 포함), DAC(1.30.0 완료, F446 에뮬레이터 포함)(M).
+4. **주변장치 추가:** TIM1·TIM6/7(1.28.0 완료), IWDG/WWDG(1.31.0 완료), I2C2·SPI2(1.32.0 완료), RTC(1.29.0 완료, F103 에뮬레이터 포함), DAC(1.30.0 완료, F446 에뮬레이터 포함)(M).
 5. **시뮬레이터 정확도:**
    - 없는 주변장치 접근 안내(S)
    - F103 메모리 한도(S)

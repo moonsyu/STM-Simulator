@@ -1,6 +1,15 @@
 # STM Simulator — 개발 인계
 
-현재 버전: **1.31.0**. 정리일: **2026-11-10**. NUCLEO-F446RE·NUCLEO-F103RB 또는 Renesas FPB-RA6E1(1.20.0, FSP·에뮬레이터 전용)과 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+현재 버전: **1.32.0**. 정리일: **2026-11-10**. NUCLEO-F446RE·NUCLEO-F103RB 또는 Renesas FPB-RA6E1(1.20.0, FSP·에뮬레이터 전용)과 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+
+## 1.32.0 I2C2·SPI2 (두 보드), I2C3·SPI3 (F446RE)
+
+- `src/bus-config.js`: `I2C_IDS`·`SPI_IDS`, `isI2c`·`isSpi`, `i2cOf`·`spiOf`(핀 기능 → 인스턴스), `busHandle`(hi2c2·hspi3), 보드 헤더에 있는 핀만 담은 경로 `F4_BUS_ROUTES`·`F1_BUS_ROUTES`, F446 AF `busAf(fn, pin)`(I2C AF4, SPI1·2 AF5, SPI3 AF6, 예외: PC1 SPI2_MOSI AF7 / SPI3_MOSI AF5, PB0·PB2 SPI3_MOSI AF7). ST 공개 핀 데이터(STM32_open_pin_data, GPIO-STM32F446_gpio_v1_0_Modes.xml)와 대조했다. F103의 I2C2(PB10/PB11)·SPI2(PB13~15)는 리맵이 없다.
+- `I2C1`·`SPI1`로 고정돼 있던 곳을 인스턴스 공통으로 바꿨다: `mcu-config.js`(검사·필수 핀·.ioc), `hal-generator.js`(핸들·AF·Init), `irq-handlers.js`(I2Cx_EV/ER, SPIx), `gpio-config.js`(I2C는 AF_OD, F1 SPI MISO는 입력), `pinout-ui.js`(매개변수 입력에 `data-i2c`·`data-spi`로 인스턴스 표시).
+- 해석기(`hal.js`): 회로 쪽 I2C·SPI 엔진은 하나라서, `requireHandle`이 I2C·SPI 핸들을 볼 때 `selectBus(type, id)`가 그 인스턴스의 핀·속도로 엔진을 옮긴다(`busState`, `activeBus`, 신호 채널 이름 `buses.i2cId`·`spiId`). 전송이 순서대로 일어나므로 인스턴스마다 자기 핀의 부품만 보인다. I2C 슬레이브는 I2C1만(다른 인스턴스는 안내 오류), SD 카드 SPI 모드도 SPI1 핀만.
+- 에뮬레이터(`stm32f446/tables.js`): PC1의 SPI2_MOSI·SPI3_MOSI AF가 뒤바뀌어 있었고 PC12 I2C2_SDA(AF4)·PB0 SPI3_MOSI(AF7)가 없었다.
+- 시험: 단위 `bus-config`, 해석기 `bus-instances`, 툴체인 `bus-instances`(실제 HAL로 6개 조합: F446 I2C2·I2C3·SPI2·SPI3, F103 I2C2·SPI2), E2E `bus-instances`.
+- 남음: I2C2/3·SPI2/3의 DMA 요청, I2S, SPI 슬레이브 NSS 하드웨어 모드.
 
 ## 1.31.0 IWDG·WWDG (두 보드)
 

@@ -1,5 +1,9 @@
 # 검증 기록
 
+## 1.31.0 IWDG·WWDG — 게시 확인(API)
+
+2026-11-10. 태그·빌드 커밋 `1194f3f84e2990064021ef71a81a3ddbdaca934d` · [Windows CI 42733522293](https://github.com/moonsyu/STM-Simulator/actions/runs/42733522293) 첫 실행에서 모두 성공(전체 7.0분). [Release v1.31.0](https://github.com/moonsyu/STM-Simulator/releases/tag/v1.31.0) 최신 릴리스, draft/prerelease 아님, 자산 5개(STM-Simulator.exe 115,638,867바이트, STM-Simulator-1.31.0-Windows-x64.zip 116,725,582바이트, SHA256.txt, BUILD-INFO.json, update-manifest.json).
+
 ## 1.30.1 .ioc만 가져올 때 main.c도 생성 — 게시 확인(API)
 
 2026-11-10. 태그·빌드 커밋 `1fab30c65a8f337b027be8f2884b1563188dddc3` · [Windows CI 42729233938](https://github.com/moonsyu/STM-Simulator/actions/runs/42729233938) 첫 실행에서 모두 성공(전체 6.3분). [Release v1.30.1](https://github.com/moonsyu/STM-Simulator/releases/tag/v1.30.1) 최신 릴리스, draft/prerelease 아님, 자산 5개(STM-Simulator.exe 115,610,046바이트, STM-Simulator-1.30.1-Windows-x64.zip 116,696,237바이트, SHA256.txt, BUILD-INFO.json, update-manifest.json).
