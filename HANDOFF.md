@@ -1,6 +1,24 @@
 # STM Simulator — 개발 인계
 
-현재 버전: **1.36.0**. 정리일: **2026-11-10**. NUCLEO-F446RE·NUCLEO-F103RB 또는 Renesas FPB-RA6E1(1.20.0, FSP·에뮬레이터 전용)과 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+현재 버전: **1.37.0**. 정리일: **2026-11-10**. NUCLEO-F446RE·NUCLEO-F103RB 또는 Renesas FPB-RA6E1(1.20.0, FSP·에뮬레이터 전용)과 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+
+## 1.37.0 해석기 C 문법 2차·HAL 관용구, 소스 이름 충돌, CI 묶음 균형
+
+1.36.0 뒤의 오류 탐색(관용구 103개, RTC·DAC 무작위 설정 394개, .ioc 무작위 왕복 4,751개, 끌어다 놓기·이름 변경 경계 사례)에서 찾은 것을 고쳤다.
+
+- **해석기 C 문법(`parser.js`·`hal-source.js`·`runtime.js`)**
+  - 쉼표 연산자: `sequence()`가 식 문장과 for의 초기·증감식에서만 `{type:'sequence',exprs}`를 만든다(인자·초기값 목록의 쉼표는 그대로 구분자). 값은 마지막 식.
+  - `#if` 식과 `#elif`: `hal-source.js` `evalCondition(text, definitions)` — `defined(X)`/`defined X`, 매크로 값(빈 매크로는 1, 모르는 이름은 0), 정수 리터럴과 정수 연산자(`?:` 포함). 건너뛰는 블록 안의 조건은 계산하지 않는다. 조건 스택의 `yes`는 "이 #if에서 이미 한 가지를 골랐다"는 뜻이다.
+  - 구조체: 필드 다중 선언(`int x, y;`), 포인터 필드(`const char *name;` `uint8_t *buf;` `In *in;` — 셀 `dataType:'pointer'`, 크기 4). 포인터 배열 필드는 안내 오류.
+  - `GPIO_TypeDef *`: 포트는 이름(문자열 `'GPIOA'`)이라 `spec()`이 `{type:'uint32_t', port:true}`를 돌려주고 `declarator`가 `*`(와 `*const`)를 삼켜 보통 4바이트 값으로 선언한다. 변수·표·매개변수·구조체 필드·반환형에 쓸 수 있고 `==`로 비교된다. `포트->레지스터`는 `reference()`가 "레지스터 직접 접근은 지원하지 않습니다"로 알린다.
+  - 매크로: 본문이 `do`·`{`·`if`·`for`·`while`·`switch`·`return`으로 시작하면 괄호 없이 붙인다(문장형). 줄 끝 `\`는 다음 줄과 잇고, 이어진 줄은 빈 줄로 남겨 줄 번호를 지킨다.
+  - `inline`(무시), `<stdlib.h>`(`atoi`·`atol`·`rand`·`srand` — `hal.js`), `__HAL_GPIO_EXTI_GET_IT/GET_FLAG/CLEAR_IT/CLEAR_FLAG`(`extiPending`), `HAL_DAC_IRQHandler`(`hal-dac.js` `invoke`, 하는 일 없음).
+  - 고친 계산: 포인터 배열 `sizeof`(요소 4바이트 × 개수, `expressionType`의 `pointerElements`), 포인터와 배열의 `==`(배열을 첫 요소 포인터로), 포인터 값으로 둔 문자열 리터럴의 인덱싱(`cmds[i].name[1]` — `pointerCell`이 리터럴마다 문자 배열 하나를 둔다).
+  - 여전히 안내 오류: 다차원 배열, union, goto, 함수 포인터, 지정 초기화, `uint64_t`/`int64_t`, 레지스터 직접 접근.
+- **소스 이름 충돌(`source-files.js` `nameClash(names, name)`)**: `'main'`(어느 폴더·대소문자의 main.c), `'same'`(대소문자 무시), `'folder'`(파일 이름이 다른 소스의 폴더이기도 함). `changeSourceFile`·`planDrop`(겹치는 것은 `skipped`로)·`importFirmware`(경고)·`validateProject`가 같은 함수를 쓴다. 이름 변경·삭제는 `resolveInclude`로 그 파일을 가리키는 `#include`만 바꾸거나 센다(`Core/Inc/app.h`와 `Drivers/app.h`).
+- **.ioc 내보내기**: 꺼 둔 NVIC 줄도 `false:우선순위:…`로 쓰고, F103RB RTC 요일을 쓴다.
+- **CI**: 툴체인 시험을 `scripts/toolchain-shard.mjs <n>`의 3묶음으로 실행한다(1.36.0 측정 시간으로 균형: 162·159·150초. `--test-shard`는 196·99·182초였다). 새 툴체인 시험 파일은 이 목록에 넣어야 하며, 빠지면 `tests/unit/toolchain-shards.test.js`가 실패한다. 1.36.0 전체 5.0분(1.35.0 6.6분).
+- 시험: 해석기 `c-idioms-2`·`c-idioms-3`·`probe-regressions`, 단위 `source-name-clash`·`toolchain-shards`.
 
 ## 1.36.0 .ioc 내보내기, 해석기 C 문법 보강, CI 추가 분할
 
