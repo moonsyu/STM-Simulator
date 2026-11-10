@@ -57,7 +57,7 @@ export function setupNativeIde({o,editor,select,showMonitor,points,watches,toggl
   $('mode-label').textContent=esp32()?'ESP32 보드 실행':config().target==='arm'?'STM32 보드 실행':'Windows 프로그램 실행';
  }
  function lockUpdate(){o.refresh();control();}
- function renderDiagnostics(items){if(esp32()){const key=esp32Board()&&boardFileKey(esp32Board());items=items.map(i=>i.file==='sketch.ino'&&key?{...i,file:key}:i);}editor.diagnostics(items);$('build-errors').replaceChildren();for(const item of items){const button=document.createElement('button');button.className='build-error '+(item.severity||'error');button.textContent=`${item.file}:${item.line}:${item.column||1} · ${item.message}`;button.onclick=()=>select(item.file,item.line,item.column);$('build-errors').append(button);}}
+ function renderDiagnostics(items){if(esp32()){const key=esp32Board()&&boardFileKey(esp32Board());items=items.map(i=>i.file==='sketch.ino'&&key?{...i,file:key}:i);}items=items.map(i=>({...i,file:projectFileName(o.getProject(),i.file)}));editor.diagnostics(items);$('build-errors').replaceChildren();for(const item of items){const button=document.createElement('button');button.className='build-error '+(item.severity||'error');button.textContent=`${item.file}:${item.line}:${item.column||1} · ${item.message}`;button.onclick=()=>select(item.file,item.line,item.column);$('build-errors').append(button);}}
  async function build(override,source=text(),{reveal=true}={}){if(!api)return report(new Error('실제 빌드는 Windows 데스크톱 앱에서 사용할 수 있습니다.'));if(busy())return;working=true;lockUpdate();$('build-output').textContent='';$('build-errors').replaceChildren();$('native-artifact-list').textContent='';$('native-artifacts').disabled=true;if(reveal)showMonitor('build');try{return !override&&esp32()?await api['esp32-build'](esp32Request()):await api.build(source,override||config());}catch(e){report(e);return null;}finally{working=false;lockUpdate();}}
  // Build the ARM firmware for the in-app emulator and return the ELF bytes (`source`: another STM32 board's view).
  async function buildElf(source){if(!api)throw new Error('ARM GCC 빌드는 Windows 데스크톱 앱에서 사용할 수 있습니다. 대신 파일 → 펌웨어 ELF 열기를 사용하세요.');const result=await build({target:'arm',configuration:$('native-config').value},source??text(),{reveal:false});if(!result)throw new Error('ARM GCC 빌드에 실패했습니다. 빌드 탭의 오류를 확인하세요.');return await api.elf();}
@@ -81,7 +81,7 @@ export function setupNativeIde({o,editor,select,showMonitor,points,watches,toggl
   }catch(e){if(action==='start'||action==='run')state='idle';report(e);}finally{working=false;lockUpdate();}return true;
  }
  async function debugView(){
-  if(!selected())return;editor.updateDebug(points(),state==='paused'&&lastStop?.frame?{file:basename(lastStop.frame.file||lastStop.frame.fullname||'main.c'),line:Number(lastStop.frame.line)||1}:null);
+  if(!selected())return;editor.updateDebug(points(),state==='paused'&&lastStop?.frame?{file:projectFileName(o.getProject(),basename(lastStop.frame.file||lastStop.frame.fullname||'main.c')),line:Number(lastStop.frame.line)||1}:null);
   $('debug-breakpoints').innerHTML=points().map(b=>{const result=breakpointStates.find(p=>p.file===b.file&&p.line===b.line);return `<button class="debug-frame" data-native-point="${esc(b.file)}:${b.line}">${esc(b.file)}:${b.line}${result?result.verified?` · 확인됨${result.actualLine!==b.line?' → '+result.actualLine:''}`:' · 보류됨':''} · 해제</button>`;}).join('')||'설정된 중단점 없음';
   for(const el of $('debug-breakpoints').querySelectorAll('button'))el.onclick=()=>{const [file,line]=el.dataset.nativePoint.split(':');toggleBreakpoint(file,Number(line));};
   if(state!=='paused'){sequence++;$('debug-location').textContent=state==='running'?'GDB 실행 중 — 일시정지하면 변수와 스택을 확인할 수 있습니다.':'GDB 디버그 시작 또는 중단점을 설정하세요.';for(const id of ['debug-locals','debug-globals','debug-stack','watch-values','native-registers'])$(id).replaceChildren();return;}
@@ -245,7 +245,7 @@ export function setupNativeIde({o,editor,select,showMonitor,points,watches,toggl
    lockUpdate();
   }
   if(event.type==='debug-output'||event.type==='run-output'||event.type==='terminal-output')append('native-output',event.text);
-  if(event.type==='debug-state'){state=event.state==='exited'?'finishing':event.state;lastStop=event;frame=0;if(state==='paused'){showMonitor('debug');if(event.frame?.line)select(basename(event.frame.file||event.frame.fullname||'main.c'),Number(event.frame.line));}lockUpdate();void debugView();}
+  if(event.type==='debug-state'){state=event.state==='exited'?'finishing':event.state;lastStop=event;frame=0;if(state==='paused'){showMonitor('debug');if(event.frame?.line)select(projectFileName(o.getProject(),basename(event.frame.file||event.frame.fullname||'main.c')),Number(event.frame.line));}lockUpdate();void debugView();}
   if(event.type==='breakpoints')breakpointStates=event.points;
   if(event.type==='tools-install'){progress[event.id]=event.phase==='download'?`받는 중 ${MB(event.received)}${event.total?' / '+MB(event.total):''}`:event.phase==='extract'?'압축 해제 중':event.phase==='verify'?`파일 검증 ${event.received}/${event.total}`:event.phase==='skipped'?'이미 설치됨':'설치 완료';renderPlan();}
   if(event.type==='run-state'){state=event.state;lockUpdate();
@@ -258,3 +258,5 @@ export function setupNativeIde({o,editor,select,showMonitor,points,watches,toggl
  return {selected,emulator,gccSimulation,ensureSimTools:()=>api?ensureSimTools():Promise.resolve('interpreter'),buildElf,config,busy,boards:()=>boards,paused:()=>selected()&&state==='paused',controls:control,sync,build,command,debugView,queueLanguage,async syncBreakpoints(){if(!['paused','running'].includes(state))return;await guard(()=>api.breakpoints(points()));},reset(){state='idle';lastStop=null;sequence++;editor.clearLanguageDiagnostics();clearBuild();sync();}};
 }
 function basename(value){return value.replaceAll('\\','/').split('/').at(-1);}
+// The compiler and GDB report a bare file name; the project may keep that file in a folder (Core/Src/app.c).
+export function projectFileName(project,name){const names=sourceFiles(project).map(f=>f.name);if(names.includes(name))return name;const hits=names.filter(n=>n.split('/').at(-1)===name);return hits.length===1?hits[0]:name;}

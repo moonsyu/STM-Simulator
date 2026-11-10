@@ -67,7 +67,7 @@ class GdbSession extends EventEmitter {
     if(points.length>1000)throw new Error('중단점이 너무 많습니다.');
     for(const id of this.breakpoints)await this.command('-break-delete '+id);this.breakpoints=[];
     const result=[];
-    for(const p of points){if(!/^[\w.-]+\.(c|h|cpp|hpp|cc)$/.test(p.file)||!Number.isInteger(p.line)||p.line<1)throw new Error('중단점 위치가 올바르지 않습니다.');try{const r=await this.command('-break-insert -f '+quote((this.aliases?.[p.file]||p.file)+':'+p.line));this.breakpoints.push(r.bkpt.number);result.push({...p,verified:r.bkpt.addr!=='<PENDING>',actualLine:Number(r.bkpt.line)||p.line});}catch(e){result.push({...p,verified:false,message:e.message});}}
+    for(const p of points){if(!/^(?:[A-Za-z0-9_][\w.-]{0,40}\/){0,6}[\w.-]+\.(c|h|cpp|hpp|cc)$/.test(p.file)||!Number.isInteger(p.line)||p.line<1)throw new Error('중단점 위치가 올바르지 않습니다.');try{/* GDB matches a file by the tail of its path: the project's folder path (Core/Src/app.c) works as it is. */const r=await this.command('-break-insert -f '+quote((this.aliases?.[p.file]||p.file)+':'+p.line));this.breakpoints.push(r.bkpt.number);result.push({...p,verified:r.bkpt.addr!=='<PENDING>',actualLine:Number(r.bkpt.line)||p.line});}catch(e){result.push({...p,verified:false,message:e.message});}}
     this.emit('breakpoints',result);return result;
   }
   async action(action){const commands={continue:'-exec-continue',pause:'-exec-interrupt --all',over:'-exec-next',into:'-exec-step',out:'-exec-finish'};if(!commands[action])throw new Error('지원하지 않는 디버그 동작입니다.');if(action!=='pause'&&this.state!=='paused')throw new Error('먼저 디버거를 일시정지하세요.');await this.command(commands[action]);}

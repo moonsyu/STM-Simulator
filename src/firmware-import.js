@@ -3,12 +3,13 @@ import {expandC} from './c-format.js';
 import {regenerateMain} from './c-source-edit.js';
 import {validateProject} from './project.js';
 import {projectBoard,boardForFamily} from './boards.js';
+import {SOURCE_PATH,MAX_SOURCE_FILES,MAX_SOURCE_BYTES,baseName,folderOf} from './source-files.js';
 
 export function importFirmware(project,files){
-  if(!Array.isArray(files)||files.length>41||!files.length)throw new Error('.ioc 및 .c/.h 파일을 선택하세요.');
+  if(!Array.isArray(files)||files.length>MAX_SOURCE_FILES+1||!files.length)throw new Error('.ioc 및 .c/.h 파일을 선택하세요.');
   const next=structuredClone(project),warnings=[],names=new Set();let size=0;
-  for(const file of files){if(!file||typeof file.name!=='string'||! /^[\w.-]+\.(ioc|c|h)$/.test(file.name)||typeof file.text!=='string'||names.has(file.name))throw new Error('파일 이름, 확장자 또는 중복을 확인하세요.');names.add(file.name);size+=file.text.length;}
-  if(size>800000)throw new Error('가져올 파일은 합계 800 KB 이하로 선택하세요.');
+  for(const file of files){if(!file||typeof file.name!=='string'||!(/^[\w.-]+\.ioc$/.test(file.name)||SOURCE_PATH.test(file.name)&&/\.[ch]$/.test(file.name))||typeof file.text!=='string'||names.has(file.name))throw new Error('파일 이름, 확장자 또는 중복을 확인하세요.');names.add(file.name);size+=file.text.length;}
+  if(size>MAX_SOURCE_BYTES)throw new Error('가져올 파일은 합계 1 MB 이하로 선택하세요.');
   const iocs=files.filter(f=>f.name.endsWith('.ioc'));if(iocs.length>1)throw new Error('.ioc 파일은 하나만 선택하세요.');
   const board=projectBoard(project);
   if(iocs.length){
@@ -19,9 +20,11 @@ export function importFirmware(project,files){
   next.mcu??=defaultMcu(board.mcuFamily);
   const sourceFiles=files.filter(f=>/\.[ch]$/.test(f.name));
   if(sourceFiles.length){
-    const main=sourceFiles.find(f=>f.name==='main.c');
+    // main.c: at the top, or where CubeIDE keeps it (Core/Src); its folder is remembered so the tree stays as imported.
+    const mains=sourceFiles.filter(f=>baseName(f.name)==='main.c'),main=mains.find(f=>f.name==='main.c')??mains.find(f=>/(^|\/)Core\/Src\/main\.c$/.test(f.name))??mains[0];
     if(!main)throw new Error('C 소스를 가져올 때 main.c를 함께 선택하세요.');
-    next.code=main.text;next.firmware={mode:'hal',files:sourceFiles.filter(f=>f!==main).map(f=>({name:f.name,text:f.text}))};
+    if(mains.length>1)warnings.push(`main.c가 여러 개라 ${main.name}을 주 소스로 썼습니다: ${mains.filter(f=>f!==main).map(f=>f.name).join(', ')}는 가져오지 않았습니다.`);
+    next.code=main.text;next.firmware={mode:'hal',files:sourceFiles.filter(f=>baseName(f.name)!=='main.c').map(f=>({name:f.name,text:f.text})),...(folderOf(main.name)?{mainFolder:folderOf(main.name)}:{})};
   }
   // Only an .ioc: the settings change and main.c is generated from them as CubeMX does (USER CODE sections kept), so the
   // import shows in the code too. A configuration that cannot be generated leaves main.c as it was, with the reason. A

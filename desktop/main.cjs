@@ -113,12 +113,22 @@ ipcMain.handle('firmware:import',async(_event,folder)=>{
   let paths=result.filePaths;
   if(folder){
     const root=paths[0];paths=[];
-    for(const relative of ['','Core/Src','Core/Inc']){
-      const directory=path.join(root,relative);let entries;try{entries=await fs.readdir(directory,{withFileTypes:true});}catch(error){if(error.code==='ENOENT')continue;throw error;}
-      for(const entry of entries){if(!entry.isFile())continue;const ext=relative?/\.[ch]$/:/\.ioc$/;
+    // The project's own sources with their folders (Core/Src, Core/Inc, user folders); the SDK (Drivers, Middlewares),
+    // build output and IDE folders are left out: the app builds with its own SDK copy.
+    const SKIP=new Set(['drivers','middlewares','debug','release','build','.git','.settings','.metadata','node_modules','startup']),relativeOf=new Map();
+    const walk=async(directory,relative,depth)=>{let entries;try{entries=await fs.readdir(directory,{withFileTypes:true});}catch(error){if(error.code==='ENOENT')return;throw error;}
+      for(const entry of entries){const rel=relative?relative+'/'+entry.name:entry.name;
+        if(entry.isDirectory()){if(depth<6&&!SKIP.has(entry.name.toLowerCase())&&/^[A-Za-z0-9_][\w.-]{0,40}$/.test(entry.name))await walk(path.join(directory,entry.name),rel,depth+1);continue;}
+        if(!entry.isFile())continue;
         // The project's *_hal_conf.h is kept: its HSE_VALUE (8 MHz ST-LINK clock on a NUCLEO) drives the ARM build; the SDK template says 25 MHz.
-        if(ext.test(entry.name)&&!['syscalls.c','sysmem.c','system_stm32f4xx.c','system_stm32f1xx.c'].includes(entry.name))paths.push(path.join(directory,entry.name));}
-    }
+        if((relative?/\.[ch]$/:/\.(ioc|c|h)$/).test(entry.name)&&/^[A-Za-z0-9_][\w.-]{0,70}$/.test(entry.name)&&!['syscalls.c','sysmem.c','system_stm32f4xx.c','system_stm32f1xx.c'].includes(entry.name)){const full=path.join(directory,entry.name);paths.push(full);relativeOf.set(full,rel);}}
+    };
+    await walk(root,'',0);
+    if(paths.length>121)throw new Error(`소스 파일이 ${paths.length}개입니다. 프로젝트 폴더의 .c/.h는 120개까지 가져옵니다(Drivers·Middlewares·빌드 폴더 제외).`);
+    const files=[];let total=0;
+    for(const filename of paths){const stat=await fs.stat(filename);total+=stat.size;if(total>1000000)throw new Error('소스는 합계 1 MB 이하여야 합니다.');files.push({name:relativeOf.get(filename),text:await fs.readFile(filename,'utf8')});}
+    if(!files.length)throw new Error('이 폴더에서 .ioc나 .c/.h 소스를 찾지 못했습니다.');
+    return files;
   }
   if(!paths.length||paths.length>41)throw new Error('소스 파일 1~41개를 선택하세요.');
   const files=[];let total=0;

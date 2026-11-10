@@ -1,4 +1,5 @@
 import {CATALOG_DEFS,CATALOG_BY_TYPE} from './catalog-defs.js';
+import {SOURCE_PATH,MAX_SOURCE_FILES,MAX_SOURCE_BYTES,baseName} from './source-files.js';
 import {DEVICE_RANGES,DEVICE_ADDRESSES} from './device-defs.js';
 import {PIN_BY_ID,holeInfo} from './pins.js';
 import {terminalKeys,TWO_PIN_TYPES,MULTI_PIN_TYPES,normalizeAngle} from './components.js';
@@ -130,14 +131,16 @@ export function validateProject(data){
   }
   if(data.mcu!==undefined){project.mcu=isRaFamily(data.mcu?.family)?validateRaMcu(data.mcu):validateMcu(data.mcu);const board=getBoard(data.boardId??DEFAULT_BOARD_ID);if(project.mcu.family!==board.mcuFamily)throw new Error(`${board.name} 보드에는 ${board.mcuFamily} 핀 설정이 필요합니다 (${project.mcu.family}).`);}
   if(data.firmware!==undefined){
-    if(!data.firmware||!['sketch','hal','fsp'].includes(data.firmware.mode)||!Array.isArray(data.firmware.files)||data.firmware.files.length>40)throw new Error('펌웨어 소스 설정이 올바르지 않습니다.');
+    if(!data.firmware||!['sketch','hal','fsp'].includes(data.firmware.mode)||!Array.isArray(data.firmware.files)||data.firmware.files.length>MAX_SOURCE_FILES)throw new Error('펌웨어 소스 설정이 올바르지 않습니다.');
     const names=new Set();let size=data.code.length;
-    const files=data.firmware.files.map(f=>{if(!f||typeof f.name!=='string'||! /^[\w.-]+\.(c|h|cpp|hpp|cc)$/.test(f.name)||f.name.toLowerCase()==='main.c'||names.has(f.name.toLowerCase())||typeof f.text!=='string')throw new Error('소스 파일 이름/내용을 확인하세요.');names.add(f.name.toLowerCase());size+=f.text.length;return {name:f.name,text:f.text};});
-    if(size>300000)throw new Error('HAL 소스 전체는 300 KB 이하로 선택하세요.');
+    const files=data.firmware.files.map(f=>{if(!f||typeof f.name!=='string'||!SOURCE_PATH.test(f.name)||baseName(f.name).toLowerCase()==='main.c'||names.has(f.name.toLowerCase())||typeof f.text!=='string')throw new Error('소스 파일 이름/내용을 확인하세요.');names.add(f.name.toLowerCase());size+=f.text.length;return {name:f.name,text:f.text};});
+    if(size>MAX_SOURCE_BYTES)throw new Error('소스 전체는 1 MB 이하로 선택하세요.');
+    // Where main.c sits in an imported CubeIDE project (Core/Src): the build puts it there so its relative includes work.
+    let mainFolder;if(data.firmware.mainFolder!==undefined){if(typeof data.firmware.mainFolder!=='string'||!SOURCE_PATH.test(data.firmware.mainFolder+'/main.c'))throw new Error('main.c 폴더 경로를 확인하세요.');mainFolder=data.firmware.mainFolder;}
     if(data.firmware.mode==='hal'&&!project.mcu)throw new Error('HAL 프로젝트에는 핀 설정이 필요합니다.');
     // FSP projects are the Renesas RA boards' only mode (and only theirs).
     if((data.firmware.mode==='fsp')!==isRaFamily(project.mcu?.family))throw new Error(isRaFamily(project.mcu?.family)?'Renesas RA 보드는 FSP 프로젝트로 작성합니다.':'FSP 프로젝트는 Renesas RA 보드에서만 씁니다.');
-    project.firmware={mode:data.firmware.mode,files};
+    project.firmware={mode:data.firmware.mode,files,...(mainFolder?{mainFolder}:{})};
   }
   if(data.simulation!==undefined){const s=data.simulation;if(!s||typeof s!=='object'||![.1,.5,1,5,20].includes(s.stepMs)||typeof s.pwmWaveform!=='boolean')throw new Error('시뮬레이션 시간 설정이 올바르지 않습니다.');project.simulation={stepMs:s.stepMs,pwmWaveform:s.pwmWaveform};if(s.noise!==undefined)project.simulation.noise=validateNoise(s.noise);}
   if(data.ide!==undefined){

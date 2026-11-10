@@ -1,5 +1,6 @@
 import {compile} from './parser.js';
 import {familyProfile} from './mcu-family.js';
+import {SOURCE_PATH,MAX_SOURCE_FILES,resolveInclude,baseName} from './source-files.js';
 
 // These are interpreter value layouts, not STM32 register or ABI definitions.
 export const HAL_STRUCTS={
@@ -75,9 +76,9 @@ export const HAL_ALIASES={FRESULT:'int',UINT:'uint32_t',BYTE:'uint8_t',WORD:'uin
   HAL_LockTypeDef:'int',HAL_RTCStateTypeDef:'int',HAL_DAC_StateTypeDef:'int',FunctionalState:'int',FlagStatus:'int',ITStatus:'int',IRQn_Type:'int',HAL_DMA_LevelCompleteTypeDef:'int',HAL_DMA_CallbackIDTypeDef:'int',HAL_UART_RxEventTypeTypeDef:'uint32_t'};
 const systemHeaders=prefix=>new Set(['main.h',`${prefix}_hal.h`,`${prefix}.h`,'stdint.h','stddef.h','stdbool.h','string.h','stdio.h','math.h',`${prefix}_it.h`,`${prefix}_hal_conf.h`,'fatfs.h','ff.h','ff_gen_drv.h','diskio.h','sd_diskio.h','user_diskio.h','bsp_driver_sd.h','fatfs_platform.h',...['gpio','gpio_ex','uart','usart','tim','tim_ex','adc','adc_ex','i2c','spi','rcc','rcc_ex','cortex','pwr','pwr_ex','dma','dma_ex','dcmi','sd','uart_ex'].map(n=>`${prefix}_hal_${n}.h`)]);
 export function prepareHalSource(source,files=[],options={}){
-  if(typeof source!=='string'||source.length>300000||!Array.isArray(files)||files.length>40)throw new Error('HAL 소스 크기 또는 파일 수 한도를 넘었습니다.');
+  if(typeof source!=='string'||source.length>300000||!Array.isArray(files)||files.length>MAX_SOURCE_FILES)throw new Error('HAL 소스 크기 또는 파일 수 한도를 넘었습니다.');
   const map=new Map();let total=source.length;
-  for(const file of files){if(!file||typeof file.name!=='string'||! /^[\w.-]+\.[ch]$/.test(file.name)||typeof file.text!=='string'||map.has(file.name))throw new Error('소스 파일 이름이 중복되거나 올바르지 않습니다.');total+=file.text.length;if(total>300000)throw new Error('HAL 소스 전체는 300 KB 이하로 선택하세요.');map.set(file.name,file.text);}
+  for(const file of files){if(!file||typeof file.name!=='string'||!SOURCE_PATH.test(file.name)||!/\.[ch]$/.test(file.name)||typeof file.text!=='string'||map.has(file.name))throw new Error('소스 파일 이름이 중복되거나 올바르지 않습니다.');total+=file.text.length;if(total>300000)throw new Error('HAL 소스 전체는 300 KB 이하로 선택하세요.');map.set(file.name,file.text);}
   map.set('main.c',source);
   const hal=familyProfile(options.family).hal,SYSTEM_HEADERS=systemHeaders(hal.prefix);
   const definitions=new Map([[hal.define,'1'],['USE_HAL_DRIVER','1']]),stack=[],included=new Set();
@@ -101,10 +102,12 @@ export function prepareHalSource(source,files=[],options={}){
       if(op==='endif'){const c=condition.pop();if(!c)error('#endif 위치 오류');active=c.parent;output.push('');continue;}
       if(!active){output.push('');continue;}
       if(op==='include'){
-        const m=/^[<"]([^>"]+)[>"]\s*$/.exec(arg);if(!m)error('include 형식 오류');const file=m[1];
+        const m=/^[<"]([^>"]+)[>"]\s*$/.exec(arg);if(!m)error('include 형식 오류');
+        // A project file by its name or path ("app.h", "../Inc/app.h", "Inc/app.h"), whatever folder it is kept in.
+        const file=resolveInclude(map.keys(),m[1],name)??m[1];
         if(included.has(file)){output.push('');continue;}
         if(map.has(file)){included.add(file);output.push(preprocess(map.get(file),file));}
-        else if(SYSTEM_HEADERS.has(file)){output.push('');}
+        else if(SYSTEM_HEADERS.has(baseName(file))){output.push('');}
         else error(`지원하지 않거나 선택하지 않은 헤더: ${file}`);
       }else if(op==='define'){
         const m=/^(\w+)(.*)$/.exec(arg);if(!m||m[2].startsWith('('))error('함수형 매크로는 지원하지 않습니다.');const value=m[2].trim();

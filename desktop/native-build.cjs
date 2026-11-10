@@ -76,15 +76,19 @@ async function prepareBuild({project,tools,root,target='arm',configuration='Debu
   if(target==='arm'&&!isRa(project)&&project.firmware?.mode!=='hal')throw new Error('ARM 빌드는 HAL 프로젝트를 사용하세요.');
   if(target==='arm'&&isRa(project)&&project.firmware?.mode!=='fsp')throw new Error('Renesas RA 빌드는 FSP 프로젝트를 사용하세요.');
   const directory=path.join(root,randomUUID());await fs.mkdir(directory,{recursive:true});
-  const files=[{name:'main.c',text:project.code},...(project.firmware?.files||[])],sources=[];
+  // Project files keep their folders (Core/Src/app.c, as in a CubeIDE project); main.c sits in firmware.mainFolder.
+  const SOURCE_PATH=/^(?:[A-Za-z0-9_][\w.-]{0,40}\/){0,6}[A-Za-z0-9_][\w.-]{0,70}\.(c|h|cpp|hpp|cc)$/,base=name=>name.split('/').at(-1);
+  const mainFolder=typeof project.firmware?.mainFolder==='string'&&SOURCE_PATH.test(project.firmware.mainFolder+'/main.c')?project.firmware.mainFolder:'';
+  const files=[{name:(mainFolder?mainFolder+'/':'')+'main.c',text:project.code},...(project.firmware?.files||[])],sources=[];
   // An RA project's main source is FSP's src/hal_entry.c (ra_gen/main.c calls hal_entry()); the other sources go to src/.
-  const ra=target==='arm'&&isRa(project),place=name=>ra?path.join(directory,'src',name==='main.c'?'hal_entry.c':name):path.join(directory,name);
+  const ra=target==='arm'&&isRa(project),place=name=>ra?path.join(directory,'src',base(name)==='main.c'?name.replace(/main\.c$/,'hal_entry.c'):name):path.join(directory,name);
   if(ra)await fs.mkdir(path.join(directory,'src'),{recursive:true});
-  for(const f of files){if(!/^[\w.-]+\.(c|h|cpp|hpp|cc)$/.test(f.name))throw new Error('소스 파일명이 올바르지 않습니다.');if(ra&&f.name==='hal_entry.c')throw new Error('hal_entry.c는 FSP 프로젝트의 주 소스 이름입니다. 다른 이름을 쓰세요.');await fs.writeFile(place(f.name),f.text);if(/\.(c|cpp|cc)$/.test(f.name))sources.push(place(f.name));}
-  if(files.some(f=>f.name==='__stm_environment.c'))throw new Error('__stm_environment.c는 내부 빌드용 파일명입니다.');
+  const folders=new Set();
+  for(const f of files){if(!SOURCE_PATH.test(f.name))throw new Error('소스 파일명이 올바르지 않습니다.');if(ra&&base(f.name)==='hal_entry.c')throw new Error('hal_entry.c는 FSP 프로젝트의 주 소스 이름입니다. 다른 이름을 쓰세요.');const to=place(f.name);if(f.name.includes('/')){await fs.mkdir(path.dirname(to),{recursive:true});folders.add(path.dirname(to));}await fs.writeFile(to,f.text);if(/\.(c|cpp|cc)$/.test(f.name))sources.push(place(f.name));}
+  if(files.some(f=>base(f.name)==='__stm_environment.c'))throw new Error('__stm_environment.c는 내부 빌드용 파일명입니다.');
   // ARM builds keep DWARF 4 (GCC 15 defaults to 5): STM Studio's GDB reads only DWARF 2-4; the app's emulator, GDB and
   // clangd read both.
-  let flags=['-g3',...(target==='arm'?['-gdwarf-4']:[]),configuration==='Debug'?'-O0':'-Os','-ffunction-sections','-fdata-sections','-Wall','-Wextra','-Werror=implicit-function-declaration','-I'+directory],linkFlags=[],generated=[];
+  let flags=['-g3',...(target==='arm'?['-gdwarf-4']:[]),configuration==='Debug'?'-O0':'-Os','-ffunction-sections','-fdata-sections','-Wall','-Wextra','-Werror=implicit-function-declaration','-I'+directory,...[...folders].map(d=>'-I'+d)],linkFlags=[],generated=[];
   let sdkFiles=new Set();
   if(ra){
     const r=await prepareRa({project,tools,directory,userFiles:files});
@@ -95,12 +99,12 @@ async function prepareBuild({project,tools,root,target='arm',configuration='Debu
     flags.unshift(...sdk.cpu,'-DUSE_HAL_DRIVER');
     flags.push(...[path.join(hal,'Inc'),path.join(device,'Include'),core].map(p=>'-I'+p));
     // Without the project's conf, the SDK template is used; its HSE_VALUE (25 MHz on F4) is not the NUCLEO's 8 MHz ST-LINK clock.
-    if(!files.some(f=>f.name===p+'_hal_conf.h')){await fs.copyFile(path.join(hal,'Inc',p+'_hal_conf_template.h'),path.join(directory,p+'_hal_conf.h'));flags.push('-DHSE_VALUE=8000000U');}
-    if(!files.some(f=>f.name==='main.h'))await fs.writeFile(path.join(directory,'main.h'),`#pragma once\n#include "${p}_hal.h"\nvoid Error_Handler(void);\n`);
+    if(!files.some(f=>base(f.name)===p+'_hal_conf.h')){await fs.copyFile(path.join(hal,'Inc',p+'_hal_conf_template.h'),path.join(directory,p+'_hal_conf.h'));flags.push('-DHSE_VALUE=8000000U');}
+    if(!files.some(f=>base(f.name)==='main.h'))await fs.writeFile(path.join(directory,'main.h'),`#pragma once\n#include "${p}_hal.h"\nvoid Error_Handler(void);\n`);
     // Pinout labels: CubeMX writes LABEL_Pin / LABEL_GPIO_Port into main.h; -D gives them to every source, also with a user main.h (same text, so no redefinition warning).
     for(const [pin,q]of Object.entries(project.mcu?.pins||{}))if(q.label)flags.push(`-D${q.label}_Pin=GPIO_PIN_${pin.slice(2)}`,`-D${q.label}_GPIO_Port=GPIO${pin[1]}`);
     generated=sdk.modules.map(n=>path.join(hal,'Src',`${p}_${n}.c`));
-    if(!files.some(f=>f.name===`system_${p}.c`))generated.push(path.join(device,'Source/Templates',`system_${p}.c`));
+    if(!files.some(f=>base(f.name)===`system_${p}.c`))generated.push(path.join(device,'Source/Templates',`system_${p}.c`));
     generated.push(path.join(device,'Source/Templates/gcc',sdk.startup));
     // Handlers, system calls and heap the build adds (CubeIDE's stm32xxxx_it.c / syscalls.c / sysmem.c), shared with the
     // editor's read-only views of them (src/build-environment.js).

@@ -125,7 +125,7 @@ class NativeIde extends EventEmitter{
     // FPB-RA6E1: JLinkGDBServer on 2331 (its reset halts the core; `monitor reset halt` is OpenOCD's).
     if(ra)await this.startJlinkServer(tools,{serial:await jlink.chooseJlink(this.jlinkSerial(connection)),device:ra});
     else if(board)await this.startServer(tools.openocd,await this.boardTarget(text,connection));
-    try{await this.gdb.start({gdb:config.target==='arm'?tools.armGdb:tools.hostGdb,elf:plan.elf,cwd:plan.directory,target:config.target,endpoint:ra?`127.0.0.1:${jlink.GDB_PORT}`:board?'127.0.0.1:3333':connection.endpoint||'127.0.0.1:3333',flash:connection.flash===true,reset:board,resetCommand:ra?'monitor reset':'monitor reset halt',entry,breakpoints,files:ra?[...plan.files,'hal_entry.c']:plan.files,aliases:ra?{'main.c':'hal_entry.c'}:{}});}
+    try{await this.gdb.start({gdb:config.target==='arm'?tools.armGdb:tools.hostGdb,elf:plan.elf,cwd:plan.directory,target:config.target,endpoint:ra?`127.0.0.1:${jlink.GDB_PORT}`:board?'127.0.0.1:3333':connection.endpoint||'127.0.0.1:3333',flash:connection.flash===true,reset:board,resetCommand:ra?'monitor reset':'monitor reset halt',entry,breakpoints,files:(ra?[...plan.files,'hal_entry.c']:plan.files).map(f=>f.split('/').at(-1)),aliases:ra?{'main.c':'hal_entry.c'}:{}});}
     catch(e){await this.stopServer();throw e;}
     return {directory:plan.directory};
   }

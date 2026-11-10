@@ -108,9 +108,9 @@ describe('validateProject limits',()=>{
   test('firmware files: names, duplicates, count and total size',()=>{
     const p=blankProject(),files=f=>{const q=structuredClone(p);q.firmware.files=f;return q;};
     assert.equal(validateProject(files([{name:'user.c',text:''},{name:'user.h',text:''}])).firmware.files.length,2);
-    for(const bad of [[{name:'main.c',text:''}],[{name:'MAIN.C',text:''}],[{name:'a.c',text:''},{name:'A.c',text:''}],[{name:'../x.c',text:''}],[{name:'x.py',text:''}],[{name:'x.c',text:1}],Array.from({length:41},(_,i)=>({name:`f${i}.c`,text:''}))])
+    for(const bad of [[{name:'main.c',text:''}],[{name:'MAIN.C',text:''}],[{name:'a.c',text:''},{name:'A.c',text:''}],[{name:'../x.c',text:''}],[{name:'x.py',text:''}],[{name:'x.c',text:1}],[{name:'Core/../x.c',text:''}],[{name:'.hidden/x.c',text:''}],[{name:'Core/Src/main.c',text:''}],Array.from({length:121},(_,i)=>({name:`f${i}.c`,text:''}))])
       assert.throws(()=>validateProject(files(bad)));
-    assert.throws(()=>validateProject(files([{name:'big.c',text:'x'.repeat(300001-p.code.length)}])),/300 KB/);
+    assert.throws(()=>validateProject(files([{name:'big.c',text:'x'.repeat(1000001-p.code.length)}])),/1 MB/);
     const noMcu=blankProject();delete noMcu.mcu;assert.throws(()=>validateProject(noMcu),/핀 설정이 필요/);
     const bad=blankProject();bad.firmware.mode='asm';assert.throws(()=>validateProject(bad),/펌웨어/);
   });
@@ -182,8 +182,8 @@ describe('source files',()=>{
   test('add creates templates and rejects bad or duplicate names',()=>{
     let p=changeSourceFile(blankProject(),'add','user.h');assert.equal(p.firmware.files[0].text,'#pragma once\n');
     p=changeSourceFile(p,'add','user.c');assert.equal(p.firmware.files[1].text,'#include "main.h"\n\n');
-    for(const name of ['USER.h','main.c','../x.c','1abc.c','x.txt','con.c','a b.c'])assert.throws(()=>changeSourceFile(p,'add',name),undefined,name);
-    let q=blankProject();for(let i=0;i<40;i++)q=changeSourceFile(q,'add',`f${i}.c`);assert.throws(()=>changeSourceFile(q,'add','extra.c'),/40개/);
+    for(const name of ['USER.h','main.c','../x.c','Core/../x.c','x.txt','con.c','a b.c'])assert.throws(()=>changeSourceFile(p,'add',name),undefined,name);
+    let q=blankProject();for(let i=0;i<120;i++)q=changeSourceFile(q,'add',`f${i}.c`);assert.throws(()=>changeSourceFile(q,'add','extra.c'),/120개/);
   });
   test('rename rewrites includes everywhere; delete refuses included files',()=>{
     let p=changeSourceFile(blankProject(),'add','user.h');p.code='#include "user.h"\n'+p.code;p=changeSourceFile(p,'add','user.c');p.firmware.files[1].text='#include "user.h"\n';
@@ -350,7 +350,7 @@ describe('.ioc and firmware import',()=>{
     assert.throws(()=>importFirmware(original,[{name:'a.ioc',text:IOC},{name:'b.ioc',text:IOC}]),/하나만/);
     assert.throws(()=>importFirmware(original,[{name:'main.c',text:''},{name:'main.c',text:''}]),/중복/);
     assert.throws(()=>importFirmware(original,[{name:'evil.exe',text:''}]),/확장자/);
-    assert.throws(()=>importFirmware(original,[{name:'main.c',text:'x'.repeat(800001)}]),/800 KB/);
+    assert.throws(()=>importFirmware(original,[{name:'main.c',text:'int main(void){}'},{name:'big.c',text:'x'.repeat(1000001)}]),/1 MB/);
   });
 });
 
