@@ -102,7 +102,7 @@ describe('HAL printf (hal-stdio formatting)',()=>{
   test('errors: unsupported specifiers, missing args, bounds and bad types',()=>{
     assert.throws(()=>fmt('%q',1),/지원하지 않는 printf 형식/);
     assert.throws(()=>fmt('%d'),/인수가 부족/);
-    assert.throws(()=>fmt('%100d',1),/폭은 80/);assert.throws(()=>fmt('%.9f',1),/정밀도는 8/);
+    assert.throws(()=>fmt('%100d',1),/폭은 80/);assert.throws(()=>fmt('%.18f',1),/정밀도는 17/);assert.equal(fmt('%.9f',1),'1.000000000');
     assert.throws(()=>fmt('%d',NaN),/유한한 숫자/);assert.throws(()=>fmt('%ls','x'),/와이드/);
     assert.throws(()=>formatPrintf([],{format:()=>''}),/32개/);
     assert.throws(()=>fmt('x'.repeat(1025)),/1024자/);

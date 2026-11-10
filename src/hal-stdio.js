@@ -83,6 +83,31 @@ export function stringCall(name,args,r){
  if(name==='memcmp'){const n=count(c,'memcmp'),x=readBytes(r,a,n,name),y=readBytes(r,b,n,name);for(let i=0;i<n;i++)if(x[i]!==y[i])return x[i]-y[i];return 0;}
  return undefined;
 }
+// %f / %e / %g digits as C prints them. Number.prototype.toFixed and toExponential pick the larger digit when a value
+// lies exactly between two (2.5 → "3", 0.25 → "0.3"); C's printf (newlib, glibc) rounds such a tie to the even digit
+// ("2", "0.2"), and the same program built with ARM GCC prints that. The value is taken exactly (a double is
+// mantissa / 2^shift) and rounded with integer arithmetic.
+const exactDouble=v=>{const bits=new BigUint64Array(new Float64Array([Math.abs(v)]).buffer)[0],e=Number(bits>>52n&0x7ffn),m=bits&0xfffffffffffffn;return e===0?[m,1074]:[m|0x10000000000000n,1075-e];};
+/** |v| × 10^power rounded to an integer, ties to even. */
+function roundScaled(v,power){
+  let [n,shift]=exactDouble(v),den=1n;
+  if(power>=0)n*=10n**BigInt(power);else den=10n**BigInt(-power);
+  if(shift>=0)den<<=BigInt(shift);else n<<=BigInt(-shift);
+  const q=n/den,twice=n%den*2n;return twice>den||twice===den&&(q&1n)===1n?q+1n:q;
+}
+export function cFixed(v,precision){
+  if(!Number.isFinite(v))return v.toFixed(precision);
+  const digits=roundScaled(v,precision).toString().padStart(precision+1,'0');
+  return (v<0?'-':'')+(precision?digits.slice(0,-precision)+'.'+digits.slice(-precision):digits);
+}
+/** Like toExponential: "1.5e+4" (the caller pads the exponent to two digits). */
+export function cExponential(v,precision){
+  if(!Number.isFinite(v)||v===0)return v.toExponential(precision);
+  let exp=Math.floor(Math.log10(Math.abs(v))),digits=roundScaled(v,precision-exp).toString();
+  // log10 can be off by one at a power of ten, and rounding can carry into a new digit (9.99 → 1.00e+1).
+  for(let k=0;k<2&&digits.length!==precision+1;k++){exp+=digits.length>precision+1?1:-1;digits=roundScaled(v,precision-exp).toString();}
+  return (v<0?'-':'')+digits[0]+(precision?'.'+digits.slice(1):'')+'e'+(exp<0?'-':'+')+Math.abs(exp);
+}
 export function formatPrintf(args,r){
   if(!args.length||args.length>33)throw new Error('printf 인수는 형식 문자열과 값 32개까지 지원합니다.');
   const string=value=>{if(typeof value!=='string'&&!['array','pointer'].includes(value?.kind))throw new Error('printf 문자열 또는 유효한 문자 포인터가 필요합니다.');return r.format([value]);};
@@ -94,7 +119,8 @@ export function formatPrintf(args,r){
     const match=/^%([-+ 0]*)(\d*)(?:\.(\d+))?(hh|h|ll|l|z)?([diuxXofFeEgGcs])/.exec(format.slice(i));
     if(!match)throw new Error('지원하지 않는 printf 형식입니다. d/u/x/X/o/f/e/g/c/s/%%를 사용하세요.');
     const [,flags,widthText,precisionText,length,kind]=match,width=Number(widthText||0),precision=precisionText===undefined?null:Number(precisionText);
-    if(width>80||(precision!==null&&precision>8))throw new Error('printf 폭은 80, 정밀도는 8까지 지원합니다.');
+    // 17 significant digits tell every double apart; the digits are computed exactly (cFixed / cExponential).
+    if(width>80||(precision!==null&&precision>17))throw new Error('printf 폭은 80, 정밀도는 17까지 지원합니다.');
     if(index>=args.length)throw new Error('printf 형식에 필요한 인수가 부족합니다.');
     const value=args[index++];let output;
     if(length&&['s','c'].includes(kind))throw new Error('printf 와이드 문자는 지원하지 않습니다.');
@@ -105,10 +131,10 @@ export function formatPrintf(args,r){
       if(typeof value!=='number'||!Number.isFinite(value))throw new Error('printf 숫자 형식에는 유한한 숫자가 필요합니다.');
       const bits=length==='hh'?8:length==='h'?16:32,unsigned=bits===8?value&255:bits===16?value&65535:value>>>0,signed=bits===8?(value<<24)>>24:bits===16?(value<<16)>>16:value|0;
       if(kind==='c')output=String.fromCharCode(value&255);
-      else if(kind==='f'||kind==='F')output=value.toFixed(precision??6);
+      else if(kind==='f'||kind==='F')output=cFixed(value,precision??6);
       // %e: d.dddddde±dd; %g: the shorter of %e and %f for the precision, without trailing zeros.
-      else if(kind==='e'||kind==='E'){output=value.toExponential(precision??6).replace(/e([+-])(\d)$/,'e$10$2');if(kind==='E')output=output.toUpperCase();}
-      else if(kind==='g'||kind==='G'){const p=precision===0?1:precision??6,exp=value===0?0:Math.floor(Math.log10(Math.abs(Number(value.toExponential(p-1)))));output=exp<-4||exp>=p?value.toExponential(p-1).replace(/\.?0+e/,'e').replace(/e([+-])(\d)$/,'e$10$2'):value.toFixed(Math.max(0,p-1-exp)).replace(/(\.\d*?)0+$/,'$1').replace(/\.$/,'');if(kind==='G')output=output.toUpperCase();}
+      else if(kind==='e'||kind==='E'){output=cExponential(value,precision??6).replace(/e([+-])(\d)$/,'e$10$2');if(kind==='E')output=output.toUpperCase();}
+      else if(kind==='g'||kind==='G'){const p=precision===0?1:precision??6,exp=value===0?0:Math.floor(Math.log10(Math.abs(Number(cExponential(value,p-1)))));output=exp<-4||exp>=p?cExponential(value,p-1).replace(/\.?0+e/,'e').replace(/e([+-])(\d)$/,'e$10$2'):cFixed(value,Math.max(0,p-1-exp)).replace(/(\.\d*?)0+$/,'$1').replace(/\.$/,'');if(kind==='G')output=output.toUpperCase();}
       else{const n=['d','i'].includes(kind)?signed:unsigned;output=n.toString(kind==='o'?8:['x','X'].includes(kind)?16:10);if(kind==='X')output=output.toUpperCase();if(precision!==null)output=output.startsWith('-')?'-'+output.slice(1).padStart(precision,'0'):output.padStart(precision,'0');}
       if(['d','i','f','F','e','E','g','G'].includes(kind)&&!output.startsWith('-')){if(flags.includes('+'))output='+'+output;else if(flags.includes(' '))output=' '+output;}
     }
