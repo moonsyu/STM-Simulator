@@ -48,3 +48,38 @@ test('the CubeIDE tree lists the whole project; startup code and the linker scri
   assert.deepEqual(s.errors,[]);
  }finally{await s.close();}
 });
+
+// Feature 20: an FSP project in the layout of the e² studio project explorer.
+test('an FPB-RA6E1 project shows src, ra_gen, ra_cfg, script and ra; hal_entry.c is the project\'s, the rest opens read only',{timeout:150000},async()=>{
+ const s=await launch();
+ try{
+  const {win}=s;
+  await win.evaluate(()=>document.getElementById('new').click());if(await win.evaluate(()=>document.getElementById('replace-dialog').open))await win.click('#replace-confirm');
+  await win.waitForSelector('#project-dialog[open]');await win.selectOption('#new-project-board','fpb-ra6e1');await win.selectOption('#new-project-template','ra_button_irq_rising');
+  await win.click('#project-create');await win.waitForFunction(()=>!document.getElementById('project-dialog').open);
+  await win.click('[data-activity="explorer"]');if(!await win.locator('#build-files > summary').isVisible())await win.click('[data-activity="explorer"]');
+  assert.equal(await win.textContent('#build-files-title'),'프로젝트 구조 (e² studio)');
+  await win.click('#build-files > summary');
+  const folders=await win.$$eval('#build-file-list [data-tree-folder]',d=>d.map(x=>x.dataset.treeFolder));
+  for(const f of ['src','ra_gen','ra_cfg','ra_cfg/fsp_cfg/bsp','script','ra','ra/fsp/src/bsp/mcu/all','ra/fsp/src/r_icu','ra/fsp/inc/api','ra/board/ra6e1_fpb'])assert.ok(folders.includes(f),f);
+  // This project has an IRQ stack and no UART: r_icu is listed, r_sci_uart is not.
+  assert.ok(!folders.includes('ra/fsp/src/r_sci_uart'));
+  // src holds the user's hal_entry.c; ra_gen/main.c is the generated one that calls it.
+  assert.deepEqual(await win.$$eval('#build-file-list [data-tree-folder="src"] > .tree-children > button',b=>b.map(x=>[x.textContent.replace(/^[A-Z]/,''),x.classList.contains('tree-own')])),[['hal_entry.c',true]]);
+  await win.click('#build-file-list [data-build-file="ra_gen/main.c"]');
+  await win.waitForFunction(()=>/hal_entry\(\)/.test(document.querySelector('#group-code .monaco-editor .view-lines')?.textContent||''));
+  assert.match(await win.textContent('#source-path'),/읽기 전용/);assert.equal(await win.locator('#copy-to-project').count(),0);
+  // The pin names of the course: ra_cfg/fsp_cfg/bsp/bsp_pin_cfg.h; the delay function: ra/fsp/src/bsp/mcu/all/bsp_delay.c.
+  await win.click('#build-file-list [data-tree-folder="ra_cfg"] > summary');await win.click('#build-file-list [data-tree-folder="ra_cfg/fsp_cfg"] > summary');await win.click('#build-file-list [data-tree-folder="ra_cfg/fsp_cfg/bsp"] > summary');
+  await win.click('#build-file-list [data-build-file="ra_cfg/fsp_cfg/bsp/bsp_pin_cfg.h"]');
+  await win.waitForFunction(()=>/LED1/.test(document.querySelector('#group-code .monaco-editor .view-lines')?.textContent||''));
+  for(const f of ['ra','ra/fsp','ra/fsp/src','ra/fsp/src/bsp','ra/fsp/src/bsp/mcu','ra/fsp/src/bsp/mcu/all'])await win.click(`#build-file-list [data-tree-folder="${f}"] > summary`);
+  await win.click('#build-file-list [data-build-file="ra/fsp/src/bsp/mcu/all/bsp_delay.c"]');
+  // The file opens as a read-only SDK tab (its first screen is the licence header).
+  await win.waitForSelector('[data-sdk-file$="bsp_delay.c"]',{timeout:15000});assert.match(await win.textContent('#source-path'),/bsp_delay.c/);
+  // Back to the user's file from the tree.
+  await win.click('#build-file-list [data-tree-source="main.c"]');
+  await win.waitForFunction(()=>/irq_callback/.test(document.getElementById('code').value));
+  assert.deepEqual(s.errors,[]);
+ }finally{await s.close();}
+});

@@ -72,7 +72,7 @@ export function setupIde(o){
     return [...buildEnvironment(p).files,...ioc];}
   // The rows of the CubeIDE tree: {kind: 'own' | 'gen' | 'sdk', file, label}. `file` is what opens (a project source
   // name, a generated view, a path under the SDK); `label` is the path CubeIDE shows it at.
-  let treeLabels=new Map();const treeOpen=new Set(['Core','Core/Inc','Core/Src','Core/Startup']);
+  let treeLabels=new Map();const treeOpen=new Set(['Core','Core/Inc','Core/Src','Core/Startup','src','ra_gen']);
   function projectRows(p){
     const family=p.mcu.family,prefix=prefixOf(family),series=prefix.toUpperCase().replace('XX','xx'),hal=`Drivers/${series}_HAL_Driver`,device='Drivers/CMSIS/Device/ST/'+series,base=n=>n.split('/').at(-1);
     const files=sourceFiles(p),ownBase=new Set(files.map(f=>base(f.name))),folder=p.firmware?.mainFolder;
@@ -88,13 +88,28 @@ export function setupIde(o){
     add(`${device}/Include/${prefix}.h`);add(`${device}/Include/system_${prefix}.h`);
     return [...own,...gen,...sdk];
   }
+  // The rows of an FSP project's tree, as the e² studio project explorer shows it: src (hal_entry.c and the user's
+  // sources), ra_gen and ra_cfg (what the configurator generates — "do not edit"), script (linker scripts) and ra (the
+  // FSP sources the stacks of this project use: BSP, the r_… modules, their API and instance headers, the board).
+  function raRows(p){
+    const own=sourceFiles(p).map(f=>({kind:'own',file:f.name,label:f.name==='main.c'?'src/hal_entry.c':f.name.includes('/')?f.name:'src/'+f.name}));
+    const gen=generatedFiles().map(g=>({kind:'gen',file:g.file,label:g.file}));
+    const sdk=[],add=file=>sdk.push({kind:'sdk',file,label:file}),per=p.mcu.peripherals||{},has=re=>Object.entries(per).some(([id,q])=>re.test(id)&&q?.enabled);
+    for(const n of ['bsp_delay.c','bsp_delay.h','bsp_io.c','bsp_io.h','bsp_irq.c','bsp_irq.h','bsp_clocks.c','bsp_common.c','bsp_common.h','bsp_sbrk.c'])add('ra/fsp/src/bsp/mcu/all/'+n);
+    for(const n of ['startup.c','system.c'])add('ra/fsp/src/bsp/cmsis/Device/RENESAS/Source/'+n);
+    for(const n of ['board.h','board_init.c','board_leds.c','board_leds.h'])add('ra/board/ra6e1_fpb/'+n);
+    const modules=[['r_ioport','r_ioport_api.h',true],['r_icu','r_external_irq_api.h',Object.values(p.mcu.pins||{}).some(q=>q.function==='IRQ')],['r_sci_uart','r_uart_api.h',has(/^SCI\d/)],['r_gpt','r_timer_api.h',has(/^GPT\d/)],['r_agt','r_timer_api.h',has(/^AGT\d/)],['r_adc','r_adc_api.h',has(/^ADC\d/)],['r_iic_master','r_i2c_master_api.h',has(/^IIC\d/)]];
+    const apis=new Set();
+    for(const [m,api,used]of modules)if(used){add(`ra/fsp/src/${m}/${m}.c`);add(`ra/fsp/inc/instances/${m}.h`);if(!apis.has(api)){apis.add(api);add('ra/fsp/inc/api/'+api);}}
+    return [...own,...gen,...sdk];
+  }
   function buildFilesView(){
-    const p=o.getProject(),hal=p.firmware?.mode==='hal'&&!!p.mcu,fsp=p.firmware?.mode==='fsp'&&!!p.mcu;$('build-files').hidden=!hal&&!fsp;$('build-files-title').textContent=fsp?'ra_gen · ra_cfg':'프로젝트 구조 (CubeIDE)';if(!hal&&!fsp){$('build-file-list').innerHTML='';return;}
-    if(fsp){const ext=editor.externalFile()?.file;$('build-file-list').innerHTML=generatedFiles().map(g=>`<button data-build-file="${esc(g.file)}" data-build-kind="gen" class="${ext===g.file?'active':''}" title="RA Smart Configurator 방식으로 앱이 만드는 FSP 파일 · 읽기 전용"><span class="file-kind">${/\.ld$/.test(g.file)?'L':/\.h$/.test(g.file)?'H':'C'}</span><span class="file-label">${esc(g.file.split('/').at(-1))}</span><small>${esc(g.file.split('/').slice(0,-1).join('/'))}</small></button>`).join('');for(const el of $('build-file-list').querySelectorAll('[data-build-file]'))el.onclick=()=>{o.layout.reveal('code');document.querySelector('[data-tab="code"]')?.click();editor.openGenerated(el.dataset.buildFile);};return;}
+    const p=o.getProject(),hal=p.firmware?.mode==='hal'&&!!p.mcu,fsp=p.firmware?.mode==='fsp'&&!!p.mcu;$('build-files').hidden=!hal&&!fsp;$('build-files-title').textContent=fsp?'프로젝트 구조 (e² studio)':'프로젝트 구조 (CubeIDE)';if(!hal&&!fsp){$('build-file-list').innerHTML='';return;}
     // Feature 14: the project as CubeIDE lays it out — the .ioc, Core/Inc, Core/Src, Core/Startup, Drivers and the
     // linker script — with the project's own files (plain) next to what the build provides (italic, read only until
     // "프로젝트로 복사해 수정" makes a project file of it, which the build then uses in its place).
-    const rows=projectRows(p),ext=editor.externalFile()?.file,active=o.getSource();treeLabels=new Map(rows.map(r=>[r.file,r.label]));
+    // Feature 20: an FSP project as e² studio lays it out — src, ra_gen, ra_cfg, script and ra (FSP itself).
+    const rows=fsp?raRows(p):projectRows(p),ext=editor.externalFile()?.file,active=o.getSource();treeLabels=new Map(rows.map(r=>[r.file,r.label]));
     const root={folders:new Map(),files:[]};
     for(const r of rows){const parts=r.label.split('/');let node=root;for(const part of parts.slice(0,-1)){if(!node.folders.has(part))node.folders.set(part,{folders:new Map(),files:[]});node=node.folders.get(part);}node.files.push({...r,leaf:parts.at(-1)});}
     const kindOf=n=>/\.ioc$/.test(n)?'M':/\.ld$/.test(n)?'L':/\.s$/i.test(n)?'S':/\.(h|hpp)$/.test(n)?'H':'C';
