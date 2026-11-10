@@ -64,3 +64,23 @@ test('the challenge: four LEDs on the Arduino header count 0000 → 1111 every 0
   until(1310,{sw1:true});until(1360,{});until(1700);assert.deepEqual(seq.slice(0,3),['0000','0001','0010']);
  }finally{await fs.rm(root,{recursive:true,force:true});}
 });
+
+// Feature 22: the BSP tab's sizes reach the build — the main stack and the heap take the room they are given, the
+// extremes build and run, and malloc returns NULL once a small heap is used up.
+test('BSP tab sizes: a large stack with no heap and a small stack with a large heap build and blink; the heap size limits malloc',{skip,timeout:600000},async()=>{
+ const root=await fs.mkdtemp(path.join(os.tmpdir(),'ra-bsp-'));
+ try{
+  for(const bsp of [{stackBytes:0x20000,heapBytes:0},{stackBytes:0x100,heapBytes:0x20000}]){
+   const s=await session({...base(),mcu:{...raDefaultMcu(),bsp},code:raHalEntry({blink:true})},root),seen=new Set();
+   for(let ms=10;ms<=1200;ms+=10){s.tick(ms);seen.add(`${high(s,'P408')}${high(s,'P407')}`);}
+   assert.deepEqual([...seen].sort(),['00','11'],JSON.stringify(bsp));
+  }
+  // LED1 on when a 0x800-byte block fits the heap, LED2 on when it does not.
+  const code=raHalEntry().replace('#include "hal_data.h"','#include "hal_data.h"\n#include <stdlib.h>').replace('    /* TODO: add your own code here */','    void *p = malloc(0x800);\n    R_IOPORT_PinWrite(&g_ioport_ctrl, p ? BSP_IO_PORT_04_PIN_08 : BSP_IO_PORT_04_PIN_07, BSP_IO_LEVEL_HIGH);\n    while (1) { }');
+  assert.match(code,/malloc\(0x800\)/);
+  const fits=await session({...base(),mcu:{...raDefaultMcu(),bsp:{stackBytes:0x400,heapBytes:0x1000}},code},root);fits.tick(50);
+  assert.deepEqual([high(fits,'P408'),high(fits,'P407')],[1,0]);
+  const full=await session({...base(),mcu:{...raDefaultMcu(),bsp:{stackBytes:0x400,heapBytes:0x400}},code},root);full.tick(50);
+  assert.deepEqual([high(full,'P408'),high(full,'P407')],[0,1]);
+ }finally{await fs.rm(root,{recursive:true,force:true});}
+});
