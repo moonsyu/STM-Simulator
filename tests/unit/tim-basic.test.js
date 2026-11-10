@@ -11,13 +11,14 @@ import {timerIrq,timerOfIrq} from '../../src/timer-config.js';
 
 const mcu=(peripherals,nvic={})=>({...defaultMcu(),timerClockHz:84000000,peripherals,nvic});
 
-test('TIM6/TIM7: base mode with an Up counter only, no channels; TRGO Reset / Enable / Update (only on the basic timers)',()=>{
+test('TIM6/TIM7: base mode with an Up counter only, no channels; TRGO Reset / Enable / Update',()=>{
  const v=validateMcu(mcu({TIM6:{enabled:true,prescaler:8399,period:4999,trgo:'UPDATE'},TIM7:{enabled:true,trgo:'RESET'}}));
  assert.deepEqual(v.peripherals.TIM6,{enabled:true,prescaler:8399,period:4999,pulse:0,mode:'base',trgo:'UPDATE'});
  assert.deepEqual(v.peripherals.TIM7,{enabled:true,prescaler:0,period:65535,pulse:0,mode:'base'},'Reset is the default and is not stored');
  for(const [bad,message]of [[{mode:'pwm'},/TIM6: 기본 타이머는 채널이 없어 내부 클록 \/ 주기 모드만 씁니다/],[{counterMode:'DOWN'},/Up 카운터만/],[{channels:{CH1:{pulse:1}}},/채널이 없습니다/],[{trgo:'OC1'},/RESET \/ ENABLE \/ UPDATE/]])
   assert.throws(()=>validateMcu(mcu({TIM6:{enabled:true,...bad}})),message);
- assert.throws(()=>validateMcu(mcu({TIM2:{enabled:true,trgo:'UPDATE'}})),/TIM2: TRGO\(Trigger Event Selection\)는 기본 타이머 TIM6\/TIM7에서 설정합니다/);
+ // Since 1.34.0 the other timers have a TRGO too (the ADC's external trigger).
+ assert.equal(validateMcu(mcu({TIM2:{enabled:true,trgo:'UPDATE'}})).peripherals.TIM2.trgo,'UPDATE');
  assert.throws(()=>validateMcu({...defaultMcu('STM32F103RB'),peripherals:{TIM6:{enabled:true}}}),/TIM6: STM32F103RB에서 지원하지 않는 주변장치입니다/);
 });
 

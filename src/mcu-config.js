@@ -11,6 +11,7 @@ import {validateRtc,rtcFromIoc} from './rtc-config.js';
 import {validateDac,dacFromIoc,dacProblems} from './dac-config.js';
 import {validateIwdg,validateWwdg,iwdgFromIoc,wwdgFromIoc} from './wdg-config.js';
 import {isI2c,isSpi} from './bus-config.js';
+import {validateAdcGroup,adcGroupProblems,adcGroupFromIoc} from './adc-config.js';
 import {validateClockTree,clockFrequencies,clockTreeProblems,adcClockProblem,clockTreeFromIoc,treeFromTimerHz} from './clock-tree.js';
 // Synchronous USART clock outputs on F446RE LQFP64 (DS10693 table 11): AF7 USART1/2/3, AF8 USART6.
 export const USART_CK_ROUTES=familyProfile(DEFAULT_FAMILY).usartCk;
@@ -80,7 +81,6 @@ export function validateMcu(value){
      if(p.channels!==undefined)throw new Error(`${id}: 기본 타이머에는 채널이 없습니다.`);
     }
     if(p.trgo!==undefined){
-     if(!isBasicTimer(id))throw new Error(`${id}: TRGO(Trigger Event Selection)는 기본 타이머 TIM6/TIM7에서 설정합니다.`);
      if(!Object.hasOwn(TIM_TRGO,p.trgo))throw new Error(`${id}.trgo: ${Object.keys(TIM_TRGO).join(' / ')} 중에서 고르세요.`);
      if(p.trgo!=='RESET')q.trgo=p.trgo;
     }
@@ -89,6 +89,8 @@ export function validateMcu(value){
      if(!isAdvancedTimer(id))throw new Error(`${id}: ${label}는 고급 타이머 TIM1/TIM8에만 있습니다.`);
      if(!Number.isInteger(p[key])||p[key]<0||p[key]>255)throw new Error(`${id} ${label}: 0~255 범위의 정수를 입력하세요.`);if(p[key])q[key]=p[key];
     }
+    // One Pulse Mode (CubeMX's checkbox): the counter stops at the next update event.
+    if(isTimer(id)&&p.onePulse!==undefined){if(typeof p.onePulse!=='boolean')throw new Error(`${id}.onePulse: true 또는 false입니다.`);if(p.onePulse){if(q.mode==='encoder')throw new Error(id+': 엔코더 모드에서는 One Pulse Mode를 쓰지 않습니다.');q.onePulse=true;}}
     // Counter Mode: only a non-Up value is kept; the encoder sets the direction itself.
     if(isTimer(id)&&p.counterMode!==undefined){
      if(!TIM_COUNTER_MODES.includes(p.counterMode))throw new Error(`${id}.counterMode: ${TIM_COUNTER_MODES.join(' / ')} 중에서 고르세요.`);
@@ -110,6 +112,7 @@ export function validateMcu(value){
     }
     // CubeMX ADC Settings › Continuous Conversion Mode (off = single conversion per HAL_ADC_Start, as CubeMX's default).
     if(id==='ADC1'&&p.samplingTime!==undefined){if(!ADC_SAMPLING[f.id].includes(p.samplingTime))throw new Error(`ADC1 Sampling Time: ${ADC_SAMPLING[f.id].join(' / ')} Cycles 중에서 고르세요.`);if(p.samplingTime!==adcSamplingDefault(f.id))q.samplingTime=p.samplingTime;}
+    if(id==='ADC1')validateAdcGroup(p,q,f.id);
     if(id==='ADC1'&&p.continuous!==undefined){if(typeof p.continuous!=='boolean')throw new Error('ADC1: Continuous Conversion Mode를 확인하세요.');if(p.continuous)q.continuous=true;}
     // CubeMX Parameter Settings of an asynchronous UART (only the values that differ from 8N1 / TX_RX / 16 are kept).
     if(isSerial(id)){
@@ -182,6 +185,7 @@ export function configProblems(config){
   for(const [request,d]of Object.entries(config.dma||{})){const id=dmaPeripheral(request);if(id&&!config.peripherals[id]?.enabled)errors.push(`${request} DMA: ${id} 주변장치를 활성화하세요.`);if(id&&isTimer(id)&&config.peripherals[id].mode!=='pwm')errors.push(`${request} DMA: ${id}를 PWM 모드로 설정하세요.`);}
   if(config.nvic?.WWDG_IRQn?.enabled&&!config.peripherals.WWDG?.enabled)errors.push('WWDG_IRQn: WWDG를 활성화하거나 인터럽트를 끄세요.');
   errors.push(...dacProblems(config));
+  errors.push(...adcGroupProblems(config));
   errors.push(...nvicProblems(config));
   if(config.clock){errors.push(...clockTreeProblems(config.family,config.clock));if(config.peripherals.ADC1?.enabled){const adc=adcClockProblem(config.family,config.clock);if(adc)errors.push(adc);}}
   return errors;
@@ -240,6 +244,7 @@ export function importIoc(text){
   for(const [id,read,check]of [['IWDG',iwdgFromIoc,validateIwdg],['WWDG',wwdgFromIoc,validateWwdg]])if(config.peripherals[id]||values[`VP_${id}_VS_${id}.Mode`]){const q=read(values,number);try{check(q);config.peripherals[id]=q;}catch(e){warnings.push(e.message+' 기본값을 씁니다.');config.peripherals[id]={enabled:true};}}
   if(config.peripherals.RTC||values['VP_RTC_VS_RTC_Activate.Mode'])config.peripherals.RTC=rtcFromIoc(values,family,number);
   if(config.peripherals.ADC1&&values['ADC1.ContinuousConvMode']==='ENABLE')config.peripherals.ADC1.continuous=true;
+  if(config.peripherals.ADC1)adcGroupFromIoc(values,family,config.peripherals.ADC1);
   // Rank 1 Sampling Time (ADC1.SamplingTime-0\#ChannelRegularConversion); a .ioc without it has CubeMX's default, the shortest.
   if(config.peripherals.ADC1){const key=Object.keys(values).find(k=>/^ADC1\.SamplingTime-0\\?#ChannelRegularConversion$/.test(k)),m=/ADC_SAMPLETIME_(\d+)CYCLES?(_5)?/.exec(values[key]||''),cycles=m?Number(m[1])+(m[2]?0.5:0):ADC_SAMPLING[family][0];if(ADC_SAMPLING[family].includes(cycles)&&cycles!==adcSamplingDefault(family))config.peripherals.ADC1.samplingTime=cycles;}
   // SPI1 speed: CubeMX stores the computed rate ("5.25 MBits/s") next to the prescaler.
@@ -249,7 +254,9 @@ export function importIoc(text){
     const counter=/TIM_COUNTERMODE_(\w+)/.exec(values[id+'.CounterMode']||'')?.[1];if(counter&&counter!=='UP'&&TIM_COUNTER_MODES.includes(counter)&&p.mode!=='encoder'&&!isBasicTimer(id))p.counterMode=counter;
     // TIM6/TIM7 TRGO Parameters (TIM6.TIM_MasterOutputTrigger=TIM_TRGO_UPDATE); the basic timers have only the time base.
     if(isAdvancedTimer(id)){const rep=number(values[id+'.RepetitionCounter'],0),dead=number(values[id+'.DeadTime'],0);if(rep>0&&rep<=255)p.repetition=rep;if(dead>0&&dead<=255)p.deadTime=dead;}
-    if(isBasicTimer(id)){p.mode='base';const trgo=/^TIM_TRGO_(RESET|ENABLE|UPDATE)$/.exec(values[id+'.TIM_MasterOutputTrigger']||'')?.[1];if(trgo&&trgo!=='RESET')p.trgo=trgo;}}
+    if(isBasicTimer(id))p.mode='base';
+    if(values[`VP_${id}_VS_OPM.Mode`]&&p.mode!=='encoder')p.onePulse=true;
+    {const trgo=/^TIM_TRGO_(RESET|ENABLE|UPDATE)$/.exec(values[id+'.TIM_MasterOutputTrigger']||'')?.[1];if(trgo&&trgo!=='RESET')p.trgo=trgo;}}
   // Per-channel settings: PWM "TIM2.Pulse-PWM Generation1 CH1", "TIM2.OCPolarity_1", "TIM2.OCMode_PWM-PWM Generation1 CH1";
   // Output Compare "TIM2.Pulse-Output Compare1 CH1", "TIM2.OCMode_1" (TIM_OCMODE_TIMING when missing, as CubeMX).
   for(const id of Object.keys(f.timers))if(['pwm','oc'].includes(config.peripherals[id]?.mode)){

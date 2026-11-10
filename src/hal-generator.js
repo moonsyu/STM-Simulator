@@ -4,6 +4,7 @@ import {rtcInitLines} from './rtc-config.js';
 import {dacInitLines,dacChannelOf} from './dac-config.js';
 import {iwdgInitLines,wwdgInitLines,iwdgTimeoutMs} from './wdg-config.js';
 import {I2C_IDS,SPI_IDS,isI2c,isSpi,busHandle,busAf} from './bus-config.js';
+import {adcRanks,adcConversions} from './adc-config.js';
 import {DEFAULT_TIMER_CLOCK_HZ} from './mcu-defaults.js';
 import {familyProfile,remapFor} from './mcu-family.js';
 import {dmaHandle,irqHandlers,handlerText} from './irq-handlers.js';
@@ -153,8 +154,8 @@ export function generateMain(config,{minimal=false,legacyGpio=false}={}){
     if(id==='DCMI')for(const [k,v]of Object.entries({SynchroMode:'DCMI_SYNCHRO_HARDWARE',PCKPolarity:'DCMI_PCKPOLARITY_RISING',VSPolarity:'DCMI_VSPOLARITY_LOW',HSPolarity:'DCMI_HSPOLARITY_LOW',CaptureRate:'DCMI_CR_ALL_FRAME',ExtendedDataMode:'DCMI_EXTEND_DATA_8B',JPEGMode:'DCMI_JPEG_DISABLE'}))set(k,v);
     if(isI2c(id))for(const [k,v]of Object.entries({ClockSpeed:p.clock,DutyCycle:`I2C_DUTYCYCLE_${p.dutyCycle??'2'}`,OwnAddress1:p.ownAddress?`0x${(p.ownAddress<<1).toString(16).toUpperCase()}`:0,AddressingMode:'I2C_ADDRESSINGMODE_7BIT',DualAddressMode:'I2C_DUALADDRESS_DISABLE',OwnAddress2:0,GeneralCallMode:'I2C_GENERALCALL_DISABLE',NoStretchMode:p.noStretch?'I2C_NOSTRETCH_ENABLE':'I2C_NOSTRETCH_DISABLE'}))set(k,v);
     if(isSpi(id))for(const [k,v]of Object.entries({Mode:'SPI_MODE_MASTER',Direction:'SPI_DIRECTION_2LINES',DataSize:`SPI_DATASIZE_${p.dataSize??8}BIT`,CLKPolarity:`SPI_POLARITY_${p.cpol??'LOW'}`,CLKPhase:`SPI_PHASE_${p.cpha??'1EDGE'}`,NSS:'SPI_NSS_SOFT',BaudRatePrescaler:'SPI_BAUDRATEPRESCALER_'+Math.min(256,2**Math.max(1,Math.ceil(Math.log2(config.timerClockHz/p.clock)))),FirstBit:`SPI_FIRSTBIT_${p.firstBit??'MSB'}`,TIMode:'SPI_TIMODE_DISABLE',CRCCalculation:'SPI_CRCCALCULATION_DISABLE',CRCPolynomial:10}))set(k,v);
-    if(id==='ADC1'&&f1)for(const [k,v]of Object.entries({ScanConvMode:'ADC_SCAN_DISABLE',ContinuousConvMode:p.continuous?'ENABLE':'DISABLE',DiscontinuousConvMode:'DISABLE',ExternalTrigConv:'ADC_SOFTWARE_START',DataAlign:'ADC_DATAALIGN_RIGHT',NbrOfConversion:1}))set(k,v);
-    if(id==='ADC1'&&!f1)for(const [k,v]of Object.entries({ClockPrescaler:`ADC_CLOCK_SYNC_PCLK_DIV${config.clock?.adcPrescaler??4}`,Resolution:'ADC_RESOLUTION_12B',ScanConvMode:'DISABLE',ContinuousConvMode:p.continuous?'ENABLE':'DISABLE',DiscontinuousConvMode:'DISABLE',ExternalTrigConvEdge:'ADC_EXTERNALTRIGCONVEDGE_NONE',ExternalTrigConv:'ADC_SOFTWARE_START',DataAlign:'ADC_DATAALIGN_RIGHT',NbrOfConversion:1,DMAContinuousRequests:'DISABLE',EOCSelection:'ADC_EOC_SINGLE_CONV'}))set(k,v);
+    if(id==='ADC1'&&f1)for(const [k,v]of Object.entries({ScanConvMode:adcConversions(config)>1?'ADC_SCAN_ENABLE':'ADC_SCAN_DISABLE',ContinuousConvMode:p.continuous?'ENABLE':'DISABLE',DiscontinuousConvMode:'DISABLE',ExternalTrigConv:p.trigger?`ADC_EXTERNALTRIGCONV_${p.trigger}`:'ADC_SOFTWARE_START',DataAlign:'ADC_DATAALIGN_RIGHT',NbrOfConversion:adcConversions(config)}))set(k,v);
+    if(id==='ADC1'&&!f1)for(const [k,v]of Object.entries({ClockPrescaler:`ADC_CLOCK_SYNC_PCLK_DIV${config.clock?.adcPrescaler??4}`,Resolution:'ADC_RESOLUTION_12B',ScanConvMode:adcConversions(config)>1?'ENABLE':'DISABLE',ContinuousConvMode:p.continuous?'ENABLE':'DISABLE',DiscontinuousConvMode:'DISABLE',ExternalTrigConvEdge:p.trigger?'ADC_EXTERNALTRIGCONVEDGE_RISING':'ADC_EXTERNALTRIGCONVEDGE_NONE',ExternalTrigConv:p.trigger?`ADC_EXTERNALTRIGCONV_${p.trigger}`:'ADC_SOFTWARE_START',DataAlign:'ADC_DATAALIGN_RIGHT',NbrOfConversion:adcConversions(config),DMAContinuousRequests:'DISABLE',EOCSelection:'ADC_EOC_SINGLE_CONV'}))set(k,v);
     if(isTimer(id))for(const [k,v]of Object.entries({Prescaler:p.prescaler,CounterMode:`TIM_COUNTERMODE_${p.counterMode??'UP'}`,Period:p.period,...(isBasicTimer(id)?{}:{ClockDivision:'TIM_CLOCKDIVISION_DIV1'}),...(isAdvancedTimer(id)?{RepetitionCounter:p.repetition??0}:{}),AutoReloadPreload:'TIM_AUTORELOAD_PRELOAD_DISABLE'}))set(k,v);
     if(isTimer(id)&&p.mode==='encoder'){
       lines.push('  TIM_Encoder_InitTypeDef encoder = {0};','  encoder.EncoderMode = TIM_ENCODERMODE_TI12;');
@@ -162,9 +163,12 @@ export function generateMain(config,{minimal=false,legacyGpio=false}={}){
       lines.push(`  HAL_TIM_Encoder_Init(&${name}, &encoder);`);
     }else if(id==='SDIO')lines.push('  /* HAL_SD_Init(&hsd) is called by FatFs BSP_SD_Init() or user code. */');
     else lines.push(`  HAL_${type}${isTimer(id)?p.mode==='pwm'?'_PWM':p.mode==='oc'?'_OC':p.mode==='capture'?'_IC':'_Base':''}_Init(&${name});`);
+    // One Pulse Mode: CubeMX calls HAL_TIM_OnePulse_Init after the base / channel init.
+    if(isTimer(id)&&p.onePulse)lines.push(`  if (HAL_TIM_OnePulse_Init(&${name}, TIM_OPMODE_SINGLE) != HAL_OK) Error_Handler();`);
     // TRGO Parameters of a basic timer (CubeMX always writes them): the trigger output a DAC or ADC conversion can start on.
-    if(isBasicTimer(id))lines.push('  TIM_MasterConfigTypeDef sMasterConfig = {0};',`  sMasterConfig.MasterOutputTrigger = TIM_TRGO_${p.trgo??'RESET'};`,'  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;',`  HAL_TIMEx_MasterConfigSynchronization(&${name}, &sMasterConfig);`);
-    if(id==='ADC1'){const channel=Object.values(config.pins).find(p=>p.function.startsWith('ADC1_IN')).function.slice(7);lines.push('  ADC_ChannelConfTypeDef sConfig = {0};',`  sConfig.Channel = ADC_CHANNEL_${channel};`,`  sConfig.Rank = ${f1?'ADC_REGULAR_RANK_1':1};`,`  sConfig.SamplingTime = ${adcSamplingMacro(adcSamplingOf(config))};`,'  HAL_ADC_ConfigChannel(&hadc1, &sConfig);',...(f1?['  HAL_ADCEx_Calibration_Start(&hadc1);']:[]));}
+    if(isBasicTimer(id)||p.trgo)lines.push('  TIM_MasterConfigTypeDef sMasterConfig = {0};',`  sMasterConfig.MasterOutputTrigger = TIM_TRGO_${p.trgo??'RESET'};`,'  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;',`  HAL_TIMEx_MasterConfigSynchronization(&${name}, &sMasterConfig);`);
+    // One HAL_ADC_ConfigChannel per rank of the regular group (Number Of Conversion), as CubeMX writes them.
+    if(id==='ADC1'){lines.push('  ADC_ChannelConfTypeDef sConfig = {0};');adcRanks(config).forEach((channel,i)=>lines.push(`  sConfig.Channel = ADC_CHANNEL_${channel};`,`  sConfig.Rank = ${f1?'ADC_REGULAR_RANK_'+(i+1):i+1};`,`  sConfig.SamplingTime = ${adcSamplingMacro(adcSamplingOf(config))};`,'  HAL_ADC_ConfigChannel(&hadc1, &sConfig);'));if(f1)lines.push('  HAL_ADCEx_Calibration_Start(&hadc1);');}
     if(isTimer(id)&&['pwm','oc','capture'].includes(p.mode)){
       const out=p.mode!=='capture',kind=p.mode==='pwm'?'PWM':p.mode==='oc'?'OC':'IC',ocDefault=p.mode==='oc'?'TIMING':'PWM1';
       lines.push(`  ${out?'TIM_OC_InitTypeDef':'TIM_IC_InitTypeDef'} channel = {0};`);

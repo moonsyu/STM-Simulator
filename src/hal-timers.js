@@ -49,8 +49,20 @@ export class HalTimers {
     return pulse===0?[cycle]:pulse===arr?[arr]:[pulse,cycle-pulse];
   }
   syncActive(s,r){this.freeze(s,r.microTime);s.active=s.base||s.baseIT||s.encoderActive||[...s.channels.values()].some(c=>c.active);}
+  // One Pulse Mode: at the next update event the counter stops at 0 (CEN cleared); a PWM1 output is then at its
+  // CNT < CCR level. The update interrupt of that event still comes.
+  onePulse(s,r,generation){
+    const u=this.phase(s,r.microTime),cycle=this.cycle(s),hal=this.hal;
+    r.event(r.microTime/1000+Math.max(.000001,(cycle-u)*1000/this.hz(s)),()=>{
+      if(generation!==s.generation||!s.active)return;
+      if(s.baseIT)hal.queue(timerIrq(s.id,hal.f1),function*(){yield* hal.userCall(r,'HAL_TIM_PeriodElapsedCallback',[s.ptr]);},s.id+':update');
+      s.generation++;s.value=0;s.at=r.microTime;s.base=false;s.baseIT=false;
+      for(const c of s.channels.values()){if(!c.active)continue;c.active=false;c.generation=(c.generation??0)+1;if(c.kind==='PWM')r.call('digitalWrite',[c.pin,Number(c.pulse>0)]);}
+      s.active=false;
+    });
+  }
   schedule(s,r){
-    const generation=++s.generation;if(!s.baseIT||this.period(s)===1)return;
+    const generation=++s.generation;if(s.onePulse&&s.active&&this.period(s)>1){this.onePulse(s,r,generation);return;}if(!s.baseIT||this.period(s)===1)return;
     // Update events at overflow, and also at underflow in center-aligned mode (so every ARR ticks there).
     const u=this.phase(s,r.microTime),cycle=this.cycle(s),step=s.count==='center'?this.arr(s):cycle,next=s.count==='center'&&u<this.arr(s)?this.arr(s):cycle;
     const rep=(s.repetition??0)+1,ms=((next-u)+(rep-1)*step)*1000/this.hz(s),full=rep*step*1000/this.hz(s);if(full<.1||full>3600000)throw new Error(s.id+': 인터럽트 주기 범위 0.1~3600000 ms');
@@ -126,6 +138,7 @@ export class HalTimers {
     if(name==='HAL_TIM_ConfigClockSource'){if(h.field(r.get(r.pointerCell(b)),'ClockSource')!==0)throw new Error(s.id+': 내부 클록만 지원합니다.');return 0;}
     if(name==='HAL_TIMEx_MasterConfigSynchronization'){const cfg=r.get(r.pointerCell(b)),trgo=h.field(cfg,'MasterOutputTrigger');if(![0,16,32].includes(trgo)||h.field(cfg,'MasterSlaveMode'))throw new Error(`${s.id}: TRGO는 ${Object.keys(TIM_TRGO).map(k=>'TIM_TRGO_'+k).join('·')}, MasterSlaveMode는 DISABLE만 지원합니다.`);s.trgo=trgo;return 0;}
     if(name==='HAL_TIM_MspPostInit'||name==='HAL_TIM_IRQHandler')return 0;
+    if(name==='HAL_TIM_OnePulse_Init'){if(s.kind==='Encoder')throw new Error(s.id+': 엔코더 모드에서는 One Pulse Mode를 쓰지 않습니다.');if(![0,8].includes(b))throw new Error('HAL_TIM_OnePulse_Init: TIM_OPMODE_SINGLE 또는 TIM_OPMODE_REPETITIVE입니다.');if(s.active)throw new Error(s.id+': 타이머를 정지한 뒤 One Pulse Mode를 설정하세요.');s.onePulse=b===8;return 0;}
     if(name==='HAL_TIMEx_ConfigBreakDeadTime'){
       if(!isAdvancedTimer(s.id))throw new Error(`${s.id}: Break / Dead Time은 고급 타이머 TIM1/TIM8에만 있습니다.`);
       const cfg=r.get(r.pointerCell(b)),dead=h.field(cfg,'DeadTime');integer(dead,0,255,s.id+' DeadTime');
@@ -185,7 +198,7 @@ export class HalTimers {
         const start=name.includes('_Start');if(start&&ch.active)return 2;this.freeze(s,r.microTime);ch.active=start;ch.it=name.endsWith('_IT');
         if(ch.kind==='IC'){ch.previous=Number(!!r.api.read(ch.pin));ch.edges=0;}
       }
-      this.syncActive(s,r);if(ch.kind==='PWM')this.pwm(s,ch,r);else if(ch.kind==='OC')this.oc(s,ch,b,r);return 0;
+      this.syncActive(s,r);if(s.onePulse)this.schedule(s,r);if(ch.kind==='PWM')this.pwm(s,ch,r);else if(ch.kind==='OC')this.oc(s,ch,b,r);return 0;
     }
     if(/^HAL_TIM_Encoder_(Start|Stop)(_IT)?$/.test(name)){
       if(s.kind!=='Encoder'||b!==60)throw new Error('엔코더 초기화 후 TIM_CHANNEL_ALL을 사용하세요.');
