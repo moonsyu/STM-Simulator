@@ -21,9 +21,15 @@ const key=k=>k.replace(/([ #:])/g,'\\$1');
 const systemSignal=(pin,f1)=>({PA13:'SYS_JTMS-SWDIO',PA14:'SYS_JTCK-SWCLK',PB3:f1?'SYS_JTDO-TRACESWO':'SYS_JTDO-SWO',PC14:'RCC_OSC32_IN',PC15:'RCC_OSC32_OUT',...(f1?{PD0:'RCC_OSC_IN',PD1:'RCC_OSC_OUT'}:{PH0:'RCC_OSC_IN',PH1:'RCC_OSC_OUT'})})[pin];
 const signalOf=(fn,pin)=>fn==='Analog'?'GPIO_Analog':fn==='GPIO_EXTI'?'GPXTI'+Number(pin.slice(2)):/^TIM\d+_CH\dN?$/.test(fn)?'S_'+fn:/^ADC1_IN\d+$/.test(fn)?'ADCx_'+fn.slice(5):/^DAC_OUT[12]$/.test(fn)?`COMP_DAC${fn.at(-1)}_group`:fn;
 
+/** Pins the export leaves out, with the reason: a Reserved pin whose CubeMX signal is not known (set by an example,
+ * not read from an .ioc). The caller shows them, so the loss is not silent. */
+export function unexportedPins(config){
+  const m=validateMcu(config),f1=familyProfile(m.family).pinMux==='remap';
+  return Object.entries(m.pins).filter(([pin,p])=>p.function==='Reserved'&&!p.signal&&!systemSignal(pin,f1)).map(([pin])=>pin);
+}
 export function exportIoc(config){
   const m=validateMcu(config),f=familyProfile(m.family),f1=f.pinMux==='remap',id=MCU[m.family],out=new Map(),set=(k,v)=>out.set(k,String(v));
-  const per=Object.entries(m.peripherals).filter(([,p])=>p.enabled),pins=Object.entries(m.pins).filter(([pin,p])=>p.function==='Reserved'?!!systemSignal(pin,f1):p.function!=='Reset');
+  const per=Object.entries(m.peripherals).filter(([,p])=>p.enabled),pins=Object.entries(m.pins).filter(([pin,p])=>p.function==='Reserved'?!!(p.signal||systemSignal(pin,f1)):p.function!=='Reset');
   set('File.Version',6);set('KeepUserPlacement',false);set('Mcu.Family',id.family);set('Mcu.Name',id.name);set('Mcu.CPN',id.cpn);set('Mcu.Package','LQFP64');set('Mcu.UserName',id.cpn.slice(0,-2)+'Tx');set('board',id.board);
   const ips=[...new Set([...per.map(([n])=>n),...(m.dma&&Object.keys(m.dma).length?['DMA']:[]),...(pins.some(([,p])=>/^GPIO_|^Analog$/.test(p.function))?['GPIO']:[]),'NVIC','RCC','SYS'])].sort();
   ips.forEach((ip,i)=>set('Mcu.IP'+i,ip));set('Mcu.IPNb',ips.length);
@@ -32,8 +38,8 @@ export function exportIoc(config){
   const names=pins.map(([pin])=>pin);
   names.forEach((pin,i)=>set('Mcu.Pin'+i,pin));set('Mcu.PinsNb',names.length);
   for(const [pin,p]of pins){
-    set(pin+'.Signal',p.function==='Reserved'?systemSignal(pin,f1):signalOf(p.function,pin));set(pin+'.Locked',true);const params=[];
-    if(p.function==='Reserved'&&/^PA1[34]$/.test(pin))set(pin+'.Mode','Serial_Wire');
+    set(pin+'.Signal',p.function==='Reserved'?(p.signal||systemSignal(pin,f1)):signalOf(p.function,pin));set(pin+'.Locked',true);const params=[];
+    if(p.function==='Reserved'&&!p.signal&&/^PA1[34]$/.test(pin))set(pin+'.Mode','Serial_Wire');
     if(p.label){set(pin+'.GPIO_Label',p.label);params.push('GPIO_Label');}
     if(p.pull!=='NOPULL'){set(pin+'.GPIO_PuPd','GPIO_'+p.pull);params.push('GPIO_PuPd');}
     if(p.function==='GPIO_EXTI'){set(pin+'.GPIO_ModeDefaultEXTI','GPIO_MODE_IT_'+(p.edge==='CHANGE'?'RISING_FALLING':p.edge));params.push('GPIO_ModeDefaultEXTI');}

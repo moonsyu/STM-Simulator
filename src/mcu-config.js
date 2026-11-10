@@ -62,6 +62,9 @@ export function validateMcu(value){
     if(typeof p.label!=='string'||(p.label&&!/^[A-Za-z_]\w{0,39}$/.test(p.label))||['__proto__','constructor','prototype'].includes(p.label))throw new Error(`${pin}: 라벨은 영문자나 _로 시작하는 C 이름(영문·숫자·_ 40자 이내)으로 쓰세요.`);
     if(!['NOPULL','PULLUP','PULLDOWN'].includes(p.pull)||!['RISING','FALLING','CHANGE'].includes(p.edge)||![0,1].includes(p.initial))throw new Error(`${pin}: GPIO 설정이 올바르지 않습니다.`);
     out.pins[pin]={function:p.function,pull:p.pull,edge:p.edge,label:p.label,initial:p.initial};
+    // A Reserved pin may keep the CubeMX signal it stands for (CAN1_RX, I2S2_SD, DCMI_D0 …: read from an .ioc, the model
+    // does not run it), so the .ioc export writes the pin back instead of dropping it.
+    if(p.signal!==undefined){if(p.function!=='Reserved'||typeof p.signal!=='string'||!/^[A-Za-z][\w-]{0,39}$/.test(p.signal))throw new Error(`${pin}: 신호 이름을 확인하세요.`);out.pins[pin].signal=p.signal;}
     // Optional CubeMX GPIO fields: maximum output speed and push-pull / open-drain output.
     if(p.speed!==undefined){if(!speedsOf(f.pinMux==='remap').includes(p.speed))throw new Error(`${pin}: 최대 출력 속도는 ${speedsOf(f.pinMux==='remap').map(s=>SPEED_NAMES[s]).join(' / ')} 중에서 고르세요.`);out.pins[pin].speed=p.speed;}
     if(p.outputType!==undefined){if(!['PP','OD'].includes(p.outputType))throw new Error(`${pin}: GPIO 출력 방식은 Push Pull 또는 Open Drain입니다.`);out.pins[pin].outputType=p.outputType;}
@@ -225,6 +228,7 @@ export function importIoc(text){
     const rawLabel=values[base+'.GPIO_Label']||'',firstWord=rawLabel.split(/[\s[]/)[0],label=firstWord.replace(/[^A-Za-z0-9_]/g,'_').replace(/^(?=\d)/,'_');
     if(label&&(!/^[A-Za-z_]\w{0,39}$/.test(label)||['__proto__','constructor','prototype'].includes(label)))warnings.push(`${pin}: 라벨 "${rawLabel}"은 C 이름으로 쓸 수 없어 비웠습니다.`);
     config.pins[pin]={function:fn,pull,edge,label:/^[A-Za-z_]\w{0,39}$/.test(label)&&!['__proto__','constructor','prototype'].includes(label)?label:'',initial:values[base+'.PinState']==='GPIO_PIN_SET'?1:0};
+    if(fn==='Reserved'&&/^[A-Za-z][\w-]{0,39}$/.test(signal)&&!/^(SYS_|RCC_)/.test(signal))config.pins[pin].signal=signal;
     // GPIO_Speed (absent = CubeMX default) and an open-drain output (GPIO_ModeDefaultOutputPP).
     const speed=/^GPIO_SPEED_FREQ_(LOW|MEDIUM|HIGH|VERY_HIGH)$/.exec(values[base+'.GPIO_Speed']||'')?.[1];
     if(speed&&speedsOf(f.pinMux==='remap').includes(speed)&&fn!=='Reserved')config.pins[pin].speed=speed;

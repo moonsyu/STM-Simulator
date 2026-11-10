@@ -52,7 +52,7 @@ import {running,log,flushAutosave,autosave,checkpoint,changed,setMode,tab,inspec
 import {filterParts,filterExamples,replaceProject,requestReplace,onHalExampleChange} from './app-examples.js';
 import {setupFileDrop} from './file-drop.js';
 import {offerCircuit} from './ioc-circuit-ui.js';
-import {exportIoc} from './ioc-export.js';
+import {exportIoc,unexportedPins} from './ioc-export.js';
 import {syncEditor,replaceCodeText,applyFirmware,applyCircuit,editBoard,onCodeInput,onCodeResetConfirmClick,onFirmwareFilesChange} from './app-editor.js';
 import {save,open,onFileInputChange,onMainExportClick} from './app-files.js';
 import {refresh,updateReadouts,onSoundClick} from './app-view.js';
@@ -170,6 +170,7 @@ $('firmware-folder').onclick=async()=>{try{applyFirmware(await window.desktop.im
 $('firmware-files').onchange=onFirmwareFilesChange;
 // Pinout › .ioc로 내보내기: the applied settings as a CubeMX .ioc (ioc-export.js).
 $('pinout-export-ioc').onclick=async()=>{try{if(!state.project.mcu?.pins||state.project.firmware?.mode==='fsp')throw new Error('STM32 HAL 프로젝트의 핀 설정을 내보냅니다.');const text=exportIoc(state.project.mcu),name=(state.project.name||'project').replace(/[^\w가-힣 .-]/g,'_');
+  {const left=unexportedPins(state.project.mcu);if(left.length)log(`.ioc에 쓰지 않은 핀: ${left.join(', ')} — 실행 모델에 없는 기능의 자리표시(Reserved)라 CubeMX 신호 이름을 알 수 없습니다. CubeMX에서 그 핀의 기능을 직접 정하세요.`,'error');}
   if(window.desktop?.exportIoc){const file=await window.desktop.exportIoc(text,name);if(!file)return;log('.ioc로 내보냈습니다: '+file+' (열려 있는 설정이 아니라 적용된 설정입니다. CubeMX에서 열어 확인하세요.)');}
   else{const url=URL.createObjectURL(new Blob([text],{type:'text/plain;charset=utf-8'})),a=document.createElement('a');a.href=url;a.download=name+'.ioc';a.click();URL.revokeObjectURL(url);log('.ioc로 내보냈습니다.');}}catch(e){log(e.message,'error');}};
 // Pinout › 핀 설정으로 회로 만들기: the applied settings (not the open draft) decide the parts.
