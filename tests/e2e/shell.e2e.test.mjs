@@ -7,7 +7,7 @@ test('VS Code style workbench regions, views, toggles and persistence',{timeout:
  try{
   const {win}=s;
   for(const id of ['#activitybar','#sidebar','#group-code','#group-circuit','#bottom-panel','#auxbar','#statusbar','#menubar'])assert.ok(await visible(win,id),id+' visible');
-  // Every activity opens its own side bar view and clicking it again collapses the side bar.
+  // Every activity opens its own side bar view.
   assert.equal(await win.locator('[data-activity="settings"]').count(),0,'settings moved to the 편집 menu');
   for(const view of ['explorer','parts','examples','board','debug','docs']){
    await win.click(`[data-activity="${view}"]`);
@@ -15,8 +15,11 @@ test('VS Code style workbench regions, views, toggles and persistence',{timeout:
    assert.ok(await visible(win,`#view-${view}`),view);
    assert.equal(await win.getAttribute(`[data-activity="${view}"]`,'aria-pressed'),'true');
   }
-  await win.click('[data-activity="docs"]');
-  assert.equal(await win.getAttribute('#shell','data-sidebar'),'false');
+  // Pressing the button of the open view again leaves it open (feature 16: 장치 Docs pressed twice vanished); the side
+  // bar is folded with Ctrl+B.
+  await win.click('[data-activity="docs"]');await win.click('[data-activity="docs"]');
+  assert.equal(await win.getAttribute('#shell','data-sidebar'),'true');assert.ok(await visible(win,'#view-docs'));
+  await win.keyboard.press('Control+B');assert.equal(await win.getAttribute('#shell','data-sidebar'),'false');
   await win.keyboard.press('Control+B');assert.equal(await win.getAttribute('#shell','data-sidebar'),'true');
   await win.locator('#circuit').click({position:{x:40,y:40}});
   await win.keyboard.press('Control+J');assert.equal(await win.getAttribute('#shell','data-panel'),'false');
@@ -194,6 +197,43 @@ test('hovering a HAL example shows a preview of its part layout',{timeout:60000}
   // The preview draws the example's own circuit: the board, a breadboard and its parts and wires.
   assert.ok(await win.evaluate(()=>{const svg=document.querySelector('#example-layout-preview svg');return !!svg&&svg.querySelectorAll('[data-part]').length>=2&&svg.querySelectorAll('path').length>0&&!svg.querySelector('#part-layer');}));
   await win.mouse.move(900,600);await win.waitForFunction(()=>document.getElementById('example-layout-preview').hidden);
+  assert.deepEqual(s.errors,[]);
+ }finally{await s.close();}
+});
+
+// Features 15 and 17 (2026-11-10).
+test('the side bar taken out into its own window comes back when an activity bar button is pressed',{timeout:90000},async()=>{
+ const s=await launch();
+ try{
+  const {app,win}=s;
+  await win.click('[data-activity="explorer"]');if(!await visible(win,'#view-explorer'))await win.click('[data-activity="explorer"]');
+  const opened=app.waitForEvent('window');await win.click('[data-unit="sidebar"] .dock-popout');const child=await opened;
+  await child.waitForSelector('#view-explorer');
+  assert.equal(await win.evaluate(()=>!!document.querySelector('#sidebar .dock-placeholder')),true,'placeholder in the old place');
+  // The activity bar button brings the side bar back into the main window, on the view asked for.
+  await win.click('[data-activity="parts"]');
+  await win.waitForFunction(()=>document.getElementById('sidebar').querySelector(':scope>.dock-unit')?.dataset.unit==='sidebar');
+  assert.equal(await win.evaluate(()=>!!document.querySelector('#sidebar .dock-placeholder')),false);
+  assert.equal(await win.getAttribute('#shell','data-sidebar'),'true');assert.ok(await visible(win,'#view-parts'));
+  assert.deepEqual(s.errors,[]);
+ }finally{await s.close();}
+});
+
+test('a double-click on a part opens its properties, also after the properties panel was closed',{timeout:90000},async()=>{
+ const s=await launch();
+ try{
+  const {win}=s;
+  await win.click('[data-activity="parts"]');if(!await visible(win,'#view-parts'))await win.click('[data-activity="parts"]');
+  await win.fill('#part-search','LED');await win.locator('#part-list [data-add="ref_led_tht_2"]').click();
+  const part=win.locator('#part-layer [data-part]').last();await part.waitFor();
+  // Close the properties panel, click elsewhere, then double-click the part.
+  await win.keyboard.press('Control+Alt+B');
+  if(await win.getAttribute('#shell','data-aux')!=='false'){await win.click('#auxbar-close');}
+  assert.equal(await win.getAttribute('#shell','data-aux'),'false');
+  await part.click({force:true});assert.equal(await win.getAttribute('#shell','data-aux'),'false','a single click keeps the closed panel closed');
+  await part.dblclick({force:true});
+  await win.waitForFunction(()=>document.getElementById('shell').dataset.aux==='true');
+  assert.ok(await visible(win,'#auxbar'));
   assert.deepEqual(s.errors,[]);
  }finally{await s.close();}
 });

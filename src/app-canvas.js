@@ -103,10 +103,19 @@ export function onSvgPointermove(e){
    $('tooltip').textContent=info.label+(state.result?`\n${Number.isFinite(v)?v.toFixed(3)+' V · ':''}${signalState(v).label}`:'');const box=$('canvas-container').getBoundingClientRect();$('tooltip').style.left=Math.min(e.clientX-box.left+12,box.width-220)+'px';$('tooltip').style.top=Math.max(0,e.clientY-box.top-47)+'px';$('tooltip').hidden=false;
  }else if(wireHit&&state.result){const w=state.project.wires.find(w=>w.id===wireHit.dataset.wire),v=w&&state.result.voltage(w.from),box=$('canvas-container').getBoundingClientRect();$('tooltip').textContent=`점퍼선 · ${Number.isFinite(v)?v.toFixed(3)+' V · ':''}${signalState(v).label}`;$('tooltip').style.left=Math.min(e.clientX-box.left+12,box.width-220)+'px';$('tooltip').style.top=Math.max(0,e.clientY-box.top-47)+'px';$('tooltip').hidden=false;}else $('tooltip').hidden=true;
 }
+const lastPress={id:null,at:0,x:0,y:0};
 export function onSvgPointerdown(e){
  if(e.button!==0&&e.button!==1)return;svg.focus({preventScroll:true});
  if(e.button===1){state.drag={type:'pan',clientX:e.clientX,clientY:e.clientY,x:state.view.x,y:state.view.y};e.preventDefault();svg.setPointerCapture(e.pointerId);return;}
  const target=e.target,part=target.closest('[data-part]'),onboard=target.closest('[data-button]');
+ // A double-click on a part or a board opens its properties, also when the properties panel was closed. The browser's
+ // dblclick event does not arrive for parts (the first press redraws the part and captures the pointer), so two presses
+ // on the same part within 450 ms and a few pixels count as one.
+ if(part&&e.button===0&&!running()&&state.mode==='select'&&!e.shiftKey){
+  const now=performance.now(),id=part.dataset.part;
+  if(lastPress.id===id&&now-lastPress.at<450&&Math.hypot(e.clientX-lastPress.x,e.clientY-lastPress.y)<6){lastPress.id=null;inspectTab({force:true});}
+  else Object.assign(lastPress,{id,at:now,x:e.clientX,y:e.clientY});
+ }
  if(running()&&(onboard||part)){
    if(onboard?.dataset.button==='RESET'){resetRuntime();return;}
    if(onboard?.dataset.button.endsWith('.RESET')){resetBoard(onboard.dataset.button.slice(0,-6));return;}

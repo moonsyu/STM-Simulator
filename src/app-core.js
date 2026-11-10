@@ -33,5 +33,5 @@ export function setMode(m){if(running()){log('편집하려면 시뮬레이션을
 // The shell owns where each view lives: code in the editor group, the inspector in the
 // secondary side bar, settings and device Docs in the primary side bar.
 export function tab(name){if(name==='code')layout.reveal('code');else if(name==='inspect')layout.reveal('inspect');else if(['settings','docs'].includes(name))layout.showView(name);}
-export function inspectTab(){layout.reveal('inspect');}
+export function inspectTab(options){layout.reveal('inspect',options);}
 export function editUndo(redo=false){if(running())return;const from=redo?state.redoStack:state.undoStack,to=redo?state.undoStack:state.redoStack;if(!from.length)return;to.push(JSON.stringify(state.project));state.project=JSON.parse(from.pop());state.selection=null;state.pending=null;syncEditor();changed();pinSearch();}
