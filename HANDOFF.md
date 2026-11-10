@@ -1,6 +1,15 @@
 # STM Simulator — 개발 인계
 
-현재 버전: **1.33.0**. 정리일: **2026-11-10**. NUCLEO-F446RE·NUCLEO-F103RB 또는 Renesas FPB-RA6E1(1.20.0, FSP·에뮬레이터 전용)과 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+현재 버전: **1.34.0**. 정리일: **2026-11-10**. NUCLEO-F446RE·NUCLEO-F103RB 또는 Renesas FPB-RA6E1(1.20.0, FSP·에뮬레이터 전용)과 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+
+## 1.34.0 ADC 다채널·외부 트리거, 타이머 TRGO·One Pulse, NRST, 에뮬레이터 안내
+
+- **ADC1 정규 그룹(`src/adc-config.js`)**: `ADC1.conversions`(Number Of Conversion 1~16, 2 이상이면 Scan), `ranks`(Rank별 채널, 없으면 ADC 핀 채널 오름차순), `trigger`(`T2_TRGO`·`T3_TRGO`·`T8_TRGO`, F103은 `T3_TRGO`). `adcRanks(config)`·`adcGroupProblems`(Rank 채널에 핀이 없음, 트리거 타이머가 꺼졌거나 TRGO가 Update가 아님)·`adcGroupFromIoc`. 생성: ScanConvMode·NbrOfConversion·Rank마다 `HAL_ADC_ConfigChannel`, 트리거면 `ExternalTrigConv`(+F4 `ExternalTrigConvEdge = RISING`). 해석기(`hal.js`): 트리거가 있으면 `HAL_ADC_Start_IT`가 그 타이머의 갱신 주기마다 그룹을 변환(콜백은 변환마다). 폴링 `HAL_ADC_Start`는 안내 오류.
+- **타이머**: `trgo`를 모든 타이머에 허용(이전에는 TIM6/7만), `onePulse`(엔코더 제외) → `HAL_TIM_OnePulse_Init(&htimX, TIM_OPMODE_SINGLE)`. 해석기 `hal-timers.js` `onePulse()`: 다음 갱신에서 인터럽트를 한 번 내고 카운터를 0에서 멈춘다(PWM1 출력은 CNT<CCR 수준). .ioc: `TIMx.TIM_MasterOutputTrigger`, `VP_TIMx_VS_OPM.Mode`.
+- **NRST**: `engine.js`가 NRST 헤더 핀에 배선이 있으면 내장 풀업(40 kΩ)을 넣고, 두 세션의 `checkNrst()`가 틱 끝에 `signal:NRST` 전압이 0.8 V 아래면 리셋한다(해석기 `runtime.restart()`·`resetCause=26`, 에뮬레이터 `soc.systemReset('PIN')`: CSR에 PINRSTF만). LOW인 동안은 틱마다 다시 리셋된다.
+- **에뮬레이터 안내**: `machine.describeFault`가 `describeAddress`(SoC `addressHint`)로 주소 설명을 붙인다. `stm32f446/soc.js` `MISSING`(USB_OTG_FS/HS·FMPI2C1·SAI·SPDIFRX·CEC·QUADSPI·FMC·BKPSRAM), F103은 USB. `emu/bus.js` `BusF103`: 플래시 128 KB·RAM 20 KB 밖 접근은 BusFault(`firmware-session.js`가 F103 프로젝트에 사용).
+- 시험: 해석기 `adc-group`·`timer-opm`·`nrst`, 툴체인 `adc-group`(스캔+TIM3 트리거, One Pulse, 두 보드)·`emu-accuracy`(없는 주변장치·F103 RAM 한도·NRST), E2E `adc-group`. 예제 271개 ARM 빌드·실행은 F103 메모리 한도를 넣은 뒤에도 통과.
+- 남음: 버튼 채터링, STOP/Standby, FLASH Latency 검사, ADC 트리거의 폴링·DMA(해석기), Injected 채널.
 
 ## 1.33.0 다시 생성할 때 사용자 코드 유지(기능 9번), TIM1·TIM8
 

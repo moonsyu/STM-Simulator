@@ -1,5 +1,9 @@
 # 검증 기록
 
+## 1.33.0 다시 생성할 때 사용자 코드 유지, TIM1·TIM8 — 게시 확인(API)
+
+2026-11-10. 태그·빌드 커밋 `540f34a` · [Windows CI 42740747744](https://github.com/moonsyu/STM-Simulator/actions/runs/42740747744) 첫 실행에서 모두 성공(전체 8.0분, 가장 긴 작업은 "ST HAL examples on ARM GCC" 7.2분). [Release v1.33.0](https://github.com/moonsyu/STM-Simulator/releases/tag/v1.33.0) 최신 릴리스, draft/prerelease 아님, 자산 5개(STM-Simulator.exe 115,614,046바이트, STM-Simulator-1.33.0-Windows-x64.zip 116,702,338바이트, SHA256.txt, BUILD-INFO.json, update-manifest.json). 로그인 없는 API의 `releases/latest`는 게시 직후 이전 버전을 돌려줘(캐시) 인증한 요청으로 확인했다.
+
 ## 1.32.0 I2C2·SPI2, I2C3·SPI3 — 게시 확인(API)
 
 2026-11-10. 태그·빌드 커밋 `616ddacff1541b9c231ce57323e398953b913cab` · [Windows CI 42737014075](https://github.com/moonsyu/STM-Simulator/actions/runs/42737014075) 모두 성공. 앞선 실행 [42735529391](https://github.com/moonsyu/STM-Simulator/actions/runs/42735529391)(커밋 70b9414)은 E2E `peripheral-params` 1개 실패로 게시되지 않았다: I2C1 매개변수 선택자가 새 I2C2 카드에도 걸린 시험 쪽 문제였고, 선택자를 인스턴스로 한정해 다시 올렸다(같은 버전, 태그는 처음 만들어짐). [Release v1.32.0](https://github.com/moonsyu/STM-Simulator/releases/tag/v1.32.0) 최신 릴리스, draft/prerelease 아님, 자산 5개(STM-Simulator.exe 115,586,598바이트, STM-Simulator-1.32.0-Windows-x64.zip 116,674,124바이트, SHA256.txt, BUILD-INFO.json, update-manifest.json).
