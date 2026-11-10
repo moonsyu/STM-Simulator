@@ -43,3 +43,27 @@ test('SysTick_Handler is always generated in it.c; callbacks per peripheral',()=
  assert.match(halCallbackFor('EXTI15_10_IRQHandler'),/HAL_GPIO_EXTI_Callback/);
  assert.match(halCallbackFor('DMA1_Channel1_IRQHandler'),/완료 콜백/);
 });
+
+// Found by probing the notice with odd sources.
+test('a handler after a string that holds // or /* is still reported; conditions on macros of the file are followed',()=>{
+ const names=code=>cubeIdeHandlerDuplicates(withCode(f103(),code)).map(d=>d.name);
+ assert.deepEqual(names('const char *u = "http://x"; void ADC1_2_IRQHandler(void) { }\n'),['ADC1_2_IRQHandler']);
+ assert.deepEqual(names('const char *u = "/* not a comment";\nvoid ADC1_2_IRQHandler(void) { }\n/* real */\n'),['ADC1_2_IRQHandler']);
+ assert.deepEqual(names("char q = '\"'; void ADC1_2_IRQHandler(void) { } // \"\n"),['ADC1_2_IRQHandler']);
+ // The text of a string is not code.
+ assert.deepEqual(names('const char *t = "void ADC1_2_IRQHandler(void) {";\n'),[]);
+ assert.deepEqual(names('#define SIM 0\n#if SIM == 1\nvoid ADC1_2_IRQHandler(void) { }\n#endif\n'),[]);
+ assert.deepEqual(names('#define SIM 1\n#if SIM == 1\nvoid ADC1_2_IRQHandler(void) { }\n#endif\n'),['ADC1_2_IRQHandler']);
+ assert.deepEqual(names('#define MODE 2\n#if MODE == 1\nint a;\n#elif MODE == 2\nvoid ADC1_2_IRQHandler(void) { }\n#else\nint b;\n#endif\n'),['ADC1_2_IRQHandler']);
+ assert.deepEqual(names('#define MODE 1\n#if MODE == 1\nint a;\n#elif MODE == 2\nvoid ADC1_2_IRQHandler(void) { }\n#endif\n'),[]);
+ assert.deepEqual(names('#define OWN\n#ifndef OWN\nvoid ADC1_2_IRQHandler(void) { }\n#endif\n'),[]);
+ // A macro from another header cannot be decided here: the block counts.
+ assert.deepEqual(names('#ifdef USE_SOMETHING\nvoid ADC1_2_IRQHandler(void) { }\n#endif\n'),['ADC1_2_IRQHandler']);
+});
+
+test('RTC and watchdog handlers name their HAL callback',()=>{
+ assert.match(halCallbackFor('RTC_Alarm_IRQHandler'),/HAL_RTC_AlarmAEventCallback/);
+ assert.match(halCallbackFor('RTC_WKUP_IRQHandler'),/HAL_RTCEx_WakeUpTimerEventCallback/);
+ assert.match(halCallbackFor('RTC_IRQHandler'),/HAL_RTCEx_RTCEventCallback/);
+ assert.match(halCallbackFor('WWDG_IRQHandler'),/HAL_WWDG_EarlyWakeupCallback/);
+});

@@ -5,16 +5,37 @@
 import {isRaFamily} from './ra-config.js';
 import {irqHandlers} from './irq-handlers.js';
 import {prefixOf} from './build-environment.js';
+import {evalCondition} from './hal-source.js';
 
-// Comments blanked and `#if 0` lines emptied, keeping every line in place for the line numbers.
+// Comments and the contents of string / character literals blanked, and the lines of a conditional block that is off
+// emptied, keeping every line in place for the line numbers. A condition is decided when it is 0 / 1 or uses only
+// macros this file defines (#define SIM 0 … #if SIM == 1); one that depends on other headers is taken as on.
 function liveText(text){
- const blank=s=>s.replace(/[^\n]/g,' '),stack=[],live=()=>stack.every(s=>s.live);
- return text.replace(/\/\*[\s\S]*?\*\//g,blank).replace(/\/\/[^\n]*/g,blank).split('\n').map(line=>{
-  const d=/^[ \t]*#[ \t]*(if|ifdef|ifndef|elif|else|endif)\b(.*)$/.exec(line);
-  if(!d)return live()?line:'';
-  if(['if','ifdef','ifndef'].includes(d[1])){const c=d[1]==='if'?d[2].trim():'';stack.push({known:c==='0'||c==='1',live:c!=='0',taken:c==='1'});return '';}
+ let out='',i=0;const n=text.length;
+ while(i<n){
+  const c=text[i],d=text[i+1];
+  if(c==='/'&&d==='*'){const end=text.indexOf('*/',i+2),stop=end<0?n:end+2;out+=text.slice(i,stop).replace(/[^\n]/g,' ');i=stop;}
+  else if(c==='/'&&d==='/'){let stop=text.indexOf('\n',i);if(stop<0)stop=n;out+=' '.repeat(stop-i);i=stop;}
+  else if(c==='"'||c==="'"){let j=i+1;while(j<n&&text[j]!==c&&text[j]!=='\n'){if(text[j]==='\\')j++;j++;}out+=c+' '.repeat(Math.max(0,Math.min(j,n)-i-1))+(text[j]===c?c:'');i=text[j]===c?j+1:j;}
+  else{out+=c;i++;}
+ }
+ const stack=[],on=()=>stack.every(s=>s.live),defs=new Map();
+ const decide=(op,arg)=>{
+  if(op==='ifdef'||op==='ifndef')return defs.has(arg.trim())?(op==='ifdef'):null;
+  const names=(arg.match(/[A-Za-z_]\w*/g)||[]).filter(w=>w!=='defined');
+  if(names.some(w=>!defs.has(w)))return null;
+  try{return evalCondition(arg,defs);}catch{return null;}
+ };
+ return out.split('\n').map(line=>{
+  const d=/^[ \t]*#[ \t]*(if|ifdef|ifndef|elif|else|endif|define)\b(.*)$/.exec(line);
+  if(!d)return on()?line:'';
+  if(d[1]==='define'){const m=/^\s*(\w+)(?!\()\s*(.*)$/.exec(d[2]);if(m&&on())defs.set(m[1],m[2].trim());return '';}
+  if(['if','ifdef','ifndef'].includes(d[1])){const yes=on()?decide(d[1],d[2]):false;stack.push({known:yes!==null,live:yes!==false,taken:yes===true});return '';}
   const top=stack.at(-1);if(!top)return '';
-  if(d[1]==='endif')stack.pop();else if(top.known)top.live=!top.taken&&!top.live,top.taken=top.taken||top.live;else top.live=true;
+  if(d[1]==='endif')stack.pop();
+  else if(!top.known)top.live=true;
+  else if(d[1]==='else'){top.live=!top.taken;top.taken=true;}
+  else{const outer=stack.slice(0,-1).every(s=>s.live),yes=top.taken||!outer?false:decide('if',d[2]);if(yes===null){top.known=false;top.live=true;}else{top.live=yes;top.taken=top.taken||yes;}}
   return '';
  }).join('\n');
 }
@@ -33,6 +54,11 @@ export function halCallbackFor(name){
  if(/^DMA\d_(Stream|Channel)\d/.test(id))return 'DMA를 쓰는 주변장치의 완료 콜백(HAL_UART_RxCpltCallback(), HAL_ADC_ConvCpltCallback() 등)';
  if(id==='DCMI')return 'HAL_DCMI_FrameEventCallback()';
  if(id==='SDIO')return 'HAL_SD_RxCpltCallback() / HAL_SD_TxCpltCallback()';
+ if(id==='RTC_Alarm')return 'HAL_RTC_AlarmAEventCallback()';
+ if(id==='RTC_WKUP')return 'HAL_RTCEx_WakeUpTimerEventCallback()';
+ if(id==='RTC')return 'HAL_RTCEx_RTCEventCallback()';
+ if(id==='WWDG')return 'HAL_WWDG_EarlyWakeupCallback()';
+ if(id==='TIM6_DAC')return 'HAL_TIM_PeriodElapsedCallback()';
  return 'HAL 콜백';
 }
 
