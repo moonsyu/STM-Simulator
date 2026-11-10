@@ -129,7 +129,7 @@ export class Runtime {
     if(n.type==='sizeofType')return n.pointer?4:this.typeSize(n.to);
     if(n.type==='sizeofExpr'){const type=expressionType(this,n.arg);return type.pointerElements?4*type.length:type.pointer?4:this.typeSize(type.type)*(type.array?type.length:1);}
     if(n.type==='name'){if(own(this.program.functions,n.name))return {kind:'function',name:n.name};return this.get(this.cell(n.name));}
-    if(n.type==='list'){const values=[];for(const v of n.values)values.push(yield* this.evaluate(v));return {kind:'initializer',values};}
+    if(n.type==='list'){const values=[];for(const v of n.values)values.push(v.type==='designated'?{kind:'designated',key:v.key,index:v.index?integer(yield* this.evaluate(v.index)):undefined,value:yield* this.evaluate(v.value)}:yield* this.evaluate(v));return {kind:'initializer',values};}
     if(n.type==='construct'){const args=[];for(const v of n.args)args.push(yield* this.evaluate(v));if(n.name!=='LiquidCrystal'&&!this.api.constructs?.includes(n.name))throw new Error('지원하지 않는 생성자입니다.');return this.api.construct?.(n.name,args,this)??{kind:'device',name:n.name,args};}
     if(n.type==='cast'){const value=yield* this.evaluate(n.a);if(n.pointer){if(typeof value==='string')return this.pointer(this.array([...value].map(c=>c.charCodeAt(0)).concat(0),this.globals));return this.pointer(value);}if(this.program.hal&&(isArray(value)||isPointer(value)||value?.kind==='function'))return isArray(value)?this.pointer(value):value;return n.to==='String'?String(value):n.to==='bool'?Number(truth(value)):this.program.hal?this.coerce(n.to,checkedNumber(value)):['float','double'].includes(n.to)?checkedNumber(value):integer(value);}
     if(n.type==='index'||n.type==='member')return this.get(yield* this.reference(n));
@@ -185,10 +185,17 @@ export class Runtime {
     return type==='String'?'':0;
   }
   fieldArray(f,owner,depth){const a=this.array(Array.from({length:f.size},()=>this.defaultValue(f.type,owner,depth+1)),owner);a.cells.forEach(c=>c.dataType=f.type);return a;}
+  /** The values of an array initializer in order, with [index] = value placed at its index (the gaps stay undefined: zero). */
+  arrayValues(values){
+    if(!values.some(v=>v?.kind==='designated'))return values;
+    const out=[];let at=0;
+    for(const v of values){if(v?.kind==='designated'){if(v.index===undefined)throw new Error('배열 초기값에는 [번호] = 값 형식을 쓰세요.');if(v.index<0||v.index>=this.maxArray)throw new Error('배열 초기값의 번호가 범위를 벗어났습니다.');at=v.index;out[at++]=v.value;}else out[at++]=v;}
+    return Array.from(out,v=>v);
+  }
   initialize(type,value,owner=this.scope()){
     if(own(this.program.structs,type)){
       if(value?.kind==='struct')return this.clone(value,owner);
-      const result=this.defaultValue(type,owner);if(value?.kind==='initializer'){const keys=Object.keys(result.fields);if(value.values.length>keys.length)throw new Error('구조체 초기값이 너무 많습니다.');if(value.values.length===1&&value.values[0]===0)return result;value.values.forEach((v,i)=>{const field=result.fields[keys[i]];if(field.value?.kind==='array'){const list=v?.kind==='initializer'?v.values:typeof v==='string'?[...v].map(c=>c.charCodeAt(0)).concat(0):[v];if(list.length>field.value.cells.length)throw new Error('구조체 배열 필드 초기값이 너무 많습니다.');list.forEach((x,j)=>field.value.cells[j].value=this.coerce(field.dataType,x));return;}field.value=field.dataType==='pointer'?this.pointer(v):this.initialize(field.dataType,v,owner);});}return result;
+      const result=this.defaultValue(type,owner);if(value?.kind==='initializer'){const keys=Object.keys(result.fields);if(value.values.length===1&&value.values[0]===0)return result;let at=0;value.values.forEach(v=>{if(v?.kind==='designated'){if(v.key===undefined)throw new Error('구조체 초기값에는 .필드 = 값 형식을 쓰세요.');at=keys.indexOf(v.key);if(at<0)throw new Error(`구조체 필드가 없습니다: ${v.key}`);v=v.value;}if(at>=keys.length)throw new Error('구조체 초기값이 너무 많습니다.');const field=result.fields[keys[at++]];if(field.value?.kind==='array'){const list=v?.kind==='initializer'?this.arrayValues(v.values):typeof v==='string'?[...v].map(c=>c.charCodeAt(0)).concat(0):[v];if(list.length>field.value.cells.length)throw new Error('구조체 배열 필드 초기값이 너무 많습니다.');list.forEach((x,j)=>field.value.cells[j].value=this.coerce(field.dataType,x));return;}field.value=field.dataType==='pointer'?this.pointer(v):this.initialize(field.dataType,v,owner);});}return result;
     }
     if(value?.kind==='initializer')throw new Error('배열 또는 구조체에만 초기값 목록을 사용하세요.');return this.coerce(type,value??this.defaultValue(type,owner));
   }
@@ -197,7 +204,7 @@ export class Runtime {
     if(s.type!=='block'&&s.type!=='empty')yield* this.checkpoint(s.loc);
     if(s.type==='declare'){
       for(const d of s.declarations){if(d.external)continue;if(d.storage&&this.staticCells.has(d)){this.scope().cells[d.name]=this.staticCells.get(d);continue;}let value=d.value?yield* this.evaluate(d.value):undefined;
-        if(d.array){let values=value?.kind==='initializer'?value.values:typeof value==='string'?[...value].map(c=>c.charCodeAt(0)).concat(0):[];const length=d.size?integer(yield* this.evaluate(d.size)):values.length;if(length<1||length>this.maxArray||values.length>length)throw new Error('배열 크기 또는 초기값 개수를 확인하세요.');const plain=this.program.hal&&!own(this.program.structs,d.type),zero=plain?this.coerce(d.type,0):0;value=this.array(Array.from({length},(_,i)=>plain&&values[i]===undefined?zero:this.initialize(d.type,values[i])));if(d.constant)value.cells.forEach(c=>c.constant=true);}
+        if(d.array){let values=value?.kind==='initializer'?this.arrayValues(value.values):typeof value==='string'?[...value].map(c=>c.charCodeAt(0)).concat(0):[];const length=d.size?integer(yield* this.evaluate(d.size)):values.length;if(length<1||length>this.maxArray||values.length>length)throw new Error('배열 크기 또는 초기값 개수를 확인하세요.');const plain=this.program.hal&&!own(this.program.structs,d.type),zero=plain?this.coerce(d.type,0):0;value=this.array(Array.from({length},(_,i)=>plain&&values[i]===undefined?zero:this.initialize(d.type,values[i])));if(d.constant)value.cells.forEach(c=>c.constant=true);}
         else if(d.pointer){if(typeof value==='string')value=this.array([...value].map(c=>c.charCodeAt(0)).concat(0),this.globals);value=this.pointer(value??0);if(value!==0&&!isPointer(value))throw new Error('포인터 초기값을 확인하세요.');}
         else if(d.type!=='LiquidCrystal')value=this.initialize(d.type,value);
         if(d.array)value.cells.forEach(c=>c.dataType=d.type);

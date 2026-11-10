@@ -86,8 +86,12 @@ export function compile(source,options={}) {
   }
   function initializer(){
     if(peek()!=='{')return expression();take();const values=[];
-    if(peek()==='.'||peek()==='[')fail('지정 초기화(.필드 = 값, [번호] = 값)는 지원하지 않습니다. 선언한 순서대로 값을 쓰세요.');
-    while(peek()!=='}'){values.push(initializer());if(peek()!==',')break;take();if(peek()==='}')break;}
+    // Designated initializers: .field = value in a struct, [index] = value in an array. What follows one continues from it.
+    while(peek()!=='}'){
+      if(peek()==='.'){take();const key=identifier();expect('=');values.push({type:'designated',key,value:initializer()});}
+      else if(peek()==='['){take();const index=expression();expect(']');expect('=');values.push({type:'designated',index,value:initializer()});}
+      else values.push(initializer());
+      if(peek()!==',')break;take();if(peek()==='}')break;}
     expect('}');return {type:'list',values};
   }
   function finishDeclaration(first,base,semicolon=true){

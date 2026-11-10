@@ -49,8 +49,7 @@ test('sizeof of an array of pointers counts pointers',()=>{
  assert.deepEqual(run('static const char *names[] = {"red", "green", "blue"};',r`const char *s = names[1]; printf("%d %d %c %s\n", (int)sizeof(names), (int)(sizeof(names) / sizeof(names[0])), s[1], names[2]);`),['12 3 r blue']);
 });
 
-test('what is not supported is named: 64-bit integers, union, designated initializers',()=>{
+test('what is not supported is named: 64-bit integers, union',()=>{
  assert.throws(()=>run('',r`uint64_t big = 5; printf("%d\n", (int)big);`),/64비트 정수형\(uint64_t, int64_t\)은 지원하지 않습니다/);
  assert.throws(()=>run('typedef union { uint32_t w; uint8_t b[4]; } U;','printf("x\\n");'),/union은 지원하지 않습니다/);
- assert.throws(()=>run('typedef struct { int a; int b; } D;',r`D d = { .b = 2, .a = 1 }; printf("%d\n", d.a);`),/지정 초기화/);
 });
