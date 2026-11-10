@@ -42,5 +42,5 @@ test('<math.h>: float forms and the functions sensor code uses',()=>{
 
 test('what the interpreter does not run says so: 3-D arrays, unions, goto',()=>{
  assert.throws(()=>run('','int g[2][3][4];\n  printf("x\\n");'),/3차원 이상의 배열은 지원하지 않습니다/);
- assert.throws(()=>run('union U { uint32_t w; uint8_t b[4]; };','printf("x\\n");'),/main\.c:\d+/);
+ assert.throws(()=>run('typedef struct { union { uint32_t w; uint8_t b[4]; }; } A;','printf("x\\n");'),/구조체 안에 직접 쓴 union은 지원하지 않습니다/);
 });

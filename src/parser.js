@@ -36,14 +36,14 @@ export function compile(source,options={}) {
     if(tokens.length>(options.hal?60000:20000))throw new Error('코드 토큰 수가 너무 많습니다.');
   }
   tokens.push({v:'<end>',line});let at=0,depth=0;
-  const program={globals:[],functions:Object.create(null),structs:Object.assign(Object.create(null),options.structs||{}),hal:!!options.hal};
+  const program={globals:[],functions:Object.create(null),structs:Object.assign(Object.create(null),options.structs||{}),unions:Object.create(null),hal:!!options.hal};
   const aliases=new Map([['HAL_StatusTypeDef','int'],['GPIO_PinState','int'],...Object.entries(options.aliases||{})]),enumConstants=new Map();
   const peek=(n=0)=>tokens[at+n]?.v??'<end>',take=()=>tokens[at++].v;
   const location=(index=at)=>options.sourceMap?.[(tokens[index]?.line??line)-1]??{file:options.filename??'main.c',line:tokens[index]?.line??line};
   const fail=(message,index=at)=>{const loc=location(index),error=new Error(`${loc.file}:${loc.line}: ${message}`);error.location=loc;throw error;};
   const expect=value=>{if(peek()!==value)fail(`'${value}'가 필요합니다. 현재 '${peek()}'`);take();};
   const identifier=()=>{if(!/^[A-Za-z_]\w*$/.test(peek()))fail('이름이 필요합니다.');const name=take();if(['__proto__','prototype','constructor'].includes(name))fail('사용할 수 없는 이름입니다.');return name;};
-  const isType=()=>types.has(peek())||peek()==='GPIO_TypeDef'&&!!options.hal||aliases.has(peek())||QUALIFIERS.has(peek())||['struct','enum','extern'].includes(peek())||Object.hasOwn(program.structs,peek());
+  const isType=()=>types.has(peek())||peek()==='GPIO_TypeDef'&&!!options.hal||aliases.has(peek())||QUALIFIERS.has(peek())||['struct','union','enum','extern'].includes(peek())||Object.hasOwn(program.structs,peek());
   function constantValue(n){
     if(n.type==='literal'&&typeof n.value==='number'&&Number.isInteger(n.value))return {value:n.value,type:n.numericType||'int'};
     if(n.type==='name'&&enumConstants.has(n.name))return enumConstants.get(n.name);
@@ -74,9 +74,9 @@ export function compile(source,options={}) {
     // GPIO_TypeDef * — a port kept in a variable, a table or a parameter. A port is a name here (GPIOA), not memory, so
     // the pointer is an ordinary 4-byte value that HAL_GPIO_… takes; its registers (port->ODR) cannot be reached.
     if(peek()==='GPIO_TypeDef'&&options.hal){take();return {type:'uint32_t',constant,external,storage,volatile,port:true};}
-    if(peek()==='struct'){take();type=identifier();if(!Object.hasOwn(program.structs,type))fail('정의되지 않은 구조체입니다.');}
+    if(peek()==='struct'||peek()==='union'){take();type=identifier();if(!Object.hasOwn(program.structs,type))fail('정의되지 않은 구조체입니다.');}
     else if(peek()==='enum'){take();const tag=identifier();type=aliases.get(tag)||'int';}
-    else {if(peek()==='union')fail('union은 지원하지 않습니다.');if(!isType())fail('자료형이 필요합니다.');const specs=[take()];if(/^u?int64_t$/.test(specs[0]))fail('64비트 정수형(uint64_t, int64_t)은 지원하지 않습니다. 32비트 값 둘로 나누어 쓰세요.');while(['long','short','int','unsigned','signed','char','double'].includes(peek()))specs.push(take());type=specs.at(-1);if(specs.includes('unsigned'))type=specs.includes('char')?'uint8_t':specs.includes('short')?'uint16_t':'uint32_t';else if(specs.includes('short'))type='int16_t';}
+    else {if(!isType())fail('자료형이 필요합니다.');const specs=[take()];if(/^u?int64_t$/.test(specs[0]))fail('64비트 정수형(uint64_t, int64_t)은 지원하지 않습니다. 32비트 값 둘로 나누어 쓰세요.');while(['long','short','int','unsigned','signed','char','double'].includes(peek()))specs.push(take());type=specs.at(-1);if(specs.includes('unsigned'))type=specs.includes('char')?'uint8_t':specs.includes('short')?'uint16_t':'uint32_t';else if(specs.includes('short'))type='int16_t';}
     return {type:aliases.get(type)||type,constant,external,storage,volatile};
   }
   function declarator(base){
@@ -119,7 +119,7 @@ export function compile(source,options={}) {
   function argumentsList(){expect('(');const args=[];if(peek()!==')')do{args.push(expression());if(peek()!==',')break;take();}while(true);expect(')');return args;}
   function castAhead(){
     let i=0;while(['const','volatile'].includes(peek(i)))i++;
-    if(peek(i)==='struct'||peek(i)==='enum'){i++;if(!/^[A-Za-z_]\w*$/.test(peek(i)))return false;i++;}
+    if(peek(i)==='struct'||peek(i)==='union'||peek(i)==='enum'){i++;if(!/^[A-Za-z_]\w*$/.test(peek(i)))return false;i++;}
     else if(types.has(peek(i))||aliases.has(peek(i))||Object.hasOwn(program.structs,peek(i))){i++;while(['long','short','int','unsigned','signed','char','double'].includes(peek(i)))i++;}
     else return false;
     if(peek(i)==='*')i++;return peek(i)===')';
@@ -187,19 +187,24 @@ export function compile(source,options={}) {
   }
   while(peek()!=='<end>'){
     if(peek()==='typedef'&&peek(1)==='enum'){const loc=location();take();take();if(peek()!=='{')aliases.set(identifier(),'int');const declarations=parseEnumBody(),alias=identifier();expect(';');aliases.set(alias,'int');program.globals.push({type:'declare',declarations,loc});continue;}
+    // typedef union { … } Name; / union Tag { … }; — read like a struct definition and marked as a union: its members
+    // share their bytes (runtime.js unionField). Members are numbers and arrays of numbers.
+    let unionHere=false;
+    if(peek()==='typedef'&&peek(1)==='union'||peek()==='union'&&peek(2)==='{'){const i=peek()==='typedef'?at+1:at;tokens[i]={...tokens[i],v:'struct'};unionHere=true;}
     if(peek()==='typedef'&&peek(1)!=='struct'){take();const base=spec(),d=declarator(base);if(d.pointer)fail('포인터 typedef는 지원하지 않습니다.');expect(';');aliases.set(d.name,d.fnptr?d.type:base.type);continue;}
     if(peek()==='enum'&&(peek(1)==='{'||peek(2)==='{')){const loc=location();take();if(peek()!=='{')aliases.set(identifier(),'int');const declarations=parseEnumBody();expect(';');program.globals.push({type:'declare',declarations,loc});continue;}
     // The fields between { and } of a struct definition.
     const structBody=()=>{expect('{');const fields=[];
       while(peek()!=='}'){
-        if(peek()==='union')fail('union은 지원하지 않습니다.');
+        if(peek()==='union'&&(peek(1)==='{'||peek(2)==='{'))fail('구조체 안에 직접 쓴 union은 지원하지 않습니다. union을 먼저 typedef로 정의한 뒤 필드로 쓰세요.');
         const base=spec();
         // One field, or several of the same type: int x, y;
         // A pointer field (const char *name; uint8_t *buf;) holds a pointer value; an array of pointers does not fit a field.
         for(;;){const d=declarator(base);if(d.pointer&&peek()==='[')fail('구조체의 포인터 배열 필드는 지원하지 않습니다.');if(peek()==='['){take();const size=constantValue(expression()).value;expect(']');if(!Number.isInteger(size)||size<1||size>4096)fail('구조체 배열 필드 크기는 1~4096입니다.');d.array=true;d.size=size;}fields.push(d);if(peek()!==',')break;take();}
         expect(';');}
       take();return fields;};
-    const defineStruct=(name,fields)=>{if(Object.hasOwn(program.structs,name))fail('구조체가 중복되었습니다.');program.structs[name]=fields;};
+    const defineStruct=(name,fields)=>{if(Object.hasOwn(program.structs,name))fail('구조체가 중복되었습니다.');program.structs[name]=fields;
+      if(unionHere){if(fields.some(f=>f.pointer||Object.hasOwn(program.structs,f.type)))fail('union의 멤버는 숫자형과 그 배열만 지원합니다.');program.unions[name]=true;}};
     // typedef struct { … } Name;  typedef struct Tag { … } Name;  typedef struct Tag Name; — the usual C way to name a
     // struct type. Tag and Name become the same struct (the same name for both is fine).
     if(peek()==='typedef'&&peek(1)==='struct'&&(peek(2)==='{'||peek(3)==='{'||/^[A-Za-z_]\w*$/.test(peek(3))&&peek(4)===';')){

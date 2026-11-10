@@ -7,7 +7,9 @@ const isFloatType=type=>type==='float'||type==='double';
 // The bytes one element of a buffer takes (a char / uint8_t cell is 1, uint16_t 2, the rest 4, double 8).
 const elementSize=(r,cell)=>cell.dataType==='pointer'?4:r.typeSize(cell.dataType||(typeof r.get(cell)==='number'?'uint8_t':'int'));
 // The memory of a numeric buffer as bytes: each element little-endian in its own size (a float as its IEEE 754 bits).
-const numberBytes=(value,size,float)=>{const view=new DataView(new ArrayBuffer(8));if(float){if(size===4)view.setFloat32(0,value,true);else view.setFloat64(0,value,true);}else{view.setUint32(0,value>>>0,true);}return Array.from({length:size},(_,i)=>view.getUint8(i));};
+export const numberBytes=(value,size,float)=>{const view=new DataView(new ArrayBuffer(8));if(float){if(size===4)view.setFloat32(0,value,true);else view.setFloat64(0,value,true);}else{view.setUint32(0,value>>>0,true);}return Array.from({length:size},(_,i)=>view.getUint8(i));};
+/** The number an element of `size` bytes holds for these little-endian bytes (before the cell's own type is applied). */
+export function bytesNumber(bytes,size,float){const view=new DataView(new Uint8Array([...bytes.slice(0,size),0,0,0,0,0,0,0,0]).buffer);return float?(size===4?view.getFloat32(0,true):view.getFloat64(0,true)):view.getUint32(0,true);}
 function readBytes(r,buffer,n,name){
  const out=[];
  for(let i=0;out.length<n;i++){const cell=r.pointerCell(buffer,i),value=r.get(cell);if(typeof value!=='number')throw new Error(`${name}: 숫자 배열 또는 같은 구조체끼리만 지원합니다.`);out.push(...numberBytes(value,elementSize(r,cell),isFloatType(cell.dataType)));}

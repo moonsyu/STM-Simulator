@@ -2,6 +2,7 @@ import {ALL_GPIO_PINS as GPIO_PINS,ALIASES,canonicalPin} from './pins.js';
 // C <math.h> name → Math function; each also has a float form with an f suffix.
 const MATH_FUNCTIONS={sin:'sin',cos:'cos',tan:'tan',asin:'asin',acos:'acos',atan:'atan',atan2:'atan2',sinh:'sinh',cosh:'cosh',tanh:'tanh',sqrt:'sqrt',cbrt:'cbrt',floor:'floor',ceil:'ceil',round:'round',trunc:'trunc',pow:'pow',log:'log',log10:'log10',log2:'log2',exp:'exp',hypot:'hypot',fabs:'abs',fmin:'min',fmax:'max',fmod:'fmod'};
 import {convert,arithmetic} from './c-types.js';
+import {numberBytes,bytesNumber} from './hal-stdio.js';
 import {expressionType} from './c-expression-type.js';
 
 const own=(o,k)=>Object.hasOwn(o,k), truth=v=>!!v;
@@ -67,7 +68,7 @@ export class Runtime {
     if(value?.kind==='array'&&depth>0)return {kind:'array',cells:value.cells.map(c=>({...c,owner,value:this.clone(c.value,owner,depth+1)}))};
     if(value?.kind!=='struct')return value;
     if(depth>80)throw new Error('구조체 중첩 한도를 넘었습니다.');
-    return {kind:'struct',type:value.type,fields:Object.fromEntries(Object.entries(value.fields).map(([key,cell])=>{this.budget();if(++this.allocations>this.maxAllocations)throw new Error('구조체 복사 한도를 넘었습니다.');return [key,{...cell,owner,value:this.clone(cell.value,owner,depth+1)}];}))};
+    return {...(value.last!==undefined?{last:value.last,bytes:value.bytes&&[...value.bytes]}:{}),kind:'struct',type:value.type,fields:Object.fromEntries(Object.entries(value.fields).map(([key,cell])=>{this.budget();if(++this.allocations>this.maxAllocations)throw new Error('구조체 복사 한도를 넘었습니다.');return [key,{...cell,owner,value:this.clone(cell.value,owner,depth+1)}];}))};
   }
   scope(){return this.scopes.at(-1);}
   pushScope(){const scope={cells:Object.create(null),alive:true};this.scopes.push(scope);return scope;}
@@ -85,6 +86,19 @@ export class Runtime {
   set(cell,value){this.get(cell);if(cell.constant)throw new Error('const 값은 변경할 수 없습니다.');cell.value=this.clone(this.coerce(cell.dataType,value),cell.owner);return cell.value;}
   array(values,owner=this.scope()){if(values.length>this.maxArray)throw new Error(`배열은 ${this.maxArray}개 이하로 선언하세요.`);this.allocations+=values.length;if(this.allocations>this.maxAllocations)throw new Error('한 단계의 메모리 할당 한도를 넘었습니다.');return {kind:'array',cells:values.map(value=>({value:this.clone(value,owner),owner,constant:false}))};}
   pointer(value){return isArray(value)?{kind:'pointer',array:value,index:0}:value;}
+  /**
+   * A union keeps one set of bytes for all its members. Members are separate cells here, so the bytes are brought up to
+   * date when another member is reached: the member used last is written into the bytes, the one asked for is read
+   * from them (little-endian, a float as its IEEE 754 bits).
+   */
+  unionField(u,key){
+    if(u.last===key)return;
+    const cellsOf=name=>{const f=u.fields[name];return f.value?.kind==='array'?f.value.cells:[f];},size=c=>this.typeSize(c.dataType),float=c=>c.dataType==='float'||c.dataType==='double';
+    u.bytes??=Array(this.typeSize(u.type)).fill(0);
+    let at=0;for(const c of cellsOf(u.last)){numberBytes(c.value,size(c),float(c)).forEach((b,i)=>{u.bytes[at+i]=b;});at+=size(c);}
+    at=0;for(const c of cellsOf(key)){c.value=this.coerce(c.dataType,bytesNumber(u.bytes.slice(at),size(c),float(c)));at+=size(c);}
+    u.last=key;
+  }
   /** A string literal as the character array it stands for (one per literal); other values as they are. */
   literal(p){if(typeof p!=='string')return p;this.literals??=new Map();if(!this.literals.has(p)){const a=this.array([...p].map(c=>c.charCodeAt(0)).concat(0),this.globals);a.cells.forEach(c=>{c.dataType='char';c.constant=true;});this.literals.set(p,a);}return this.literals.get(p);}
   pointerCell(p,offset=0){
@@ -110,7 +124,9 @@ export class Runtime {
       // GPIOA->ODR, TIM2->CNT: a peripheral is a name here, with no registers behind it.
       if(n.pointer&&typeof object==='string'&&this.program.hal&&/^[A-Z][A-Z0-9_]*$/.test(object))throw new Error(`레지스터 직접 접근(${object}->${n.key})은 내장 해석기에서 지원하지 않습니다. HAL 함수를 쓰거나 ARM GCC 빌드로 실행하세요.`);
       if(n.pointer)object=this.get(this.pointerCell(object));
-      if(object?.kind!=='struct'||!own(object.fields,n.key))throw new Error(`구조체 필드가 없습니다: ${n.key}`);return object.fields[n.key];
+      if(object?.kind!=='struct'||!own(object.fields,n.key))throw new Error(`구조체 필드가 없습니다: ${n.key}`);
+      if(object.last!==undefined)this.unionField(object,n.key);
+      return object.fields[n.key];
     }
     throw new Error('대입할 수 없는 값입니다.');
   }
@@ -187,14 +203,14 @@ export class Runtime {
     if(depth>32)throw Error('구조체 중첩 한도를 넘었습니다.');
     this.layouts??=new Map();if(this.layouts.has(type))return this.layouts.get(type);
     let layout;
-    if(own(this.program.structs,type)){let size=0,alignment=1;for(const field of this.program.structs[type]){const next=field.pointer?{size:4,alignment:4}:this.typeLayout(field.type,depth+1);alignment=Math.max(alignment,next.alignment);size=Math.ceil(size/next.alignment)*next.alignment+next.size*(field.array?field.size:1);}layout={size:Math.ceil(size/alignment)*alignment,alignment};}
+    if(own(this.program.structs,type)){let size=0,alignment=1;const union=this.program.unions&&own(this.program.unions,type);for(const field of this.program.structs[type]){const next=field.pointer?{size:4,alignment:4}:this.typeLayout(field.type,depth+1);alignment=Math.max(alignment,next.alignment);size=union?Math.max(size,next.size*(field.array?field.size:1)):Math.ceil(size/next.alignment)*next.alignment+next.size*(field.array?field.size:1);}layout={size:Math.ceil(size/alignment)*alignment,alignment};}
     else{const size=['char','byte','bool','uint8_t','int8_t'].includes(type)?1:['short','uint16_t','int16_t'].includes(type)?2:type==='double'?8:4;layout={size,alignment:size};}
     this.layouts.set(type,layout);return layout;
   }
   typeSize(type){return this.typeLayout(type).size;}
   defaultValue(type,owner=this.scope(),depth=0){
     this.budget();if(depth>32||++this.allocations>this.maxAllocations)throw new Error('구조체 메모리 한도를 넘었습니다.');
-    if(own(this.program.structs,type))return {kind:'struct',type,fields:Object.fromEntries(this.program.structs[type].map(f=>[f.name,f.pointer?{value:0,owner,constant:false,dataType:'pointer',pointeeType:f.type}:{value:f.array?this.fieldArray(f,owner,depth):this.defaultValue(f.type,owner,depth+1),owner,constant:f.constant,dataType:f.type}]))};
+    if(own(this.program.structs,type))return {...(this.program.unions&&own(this.program.unions,type)?{last:this.program.structs[type][0]?.name}:{}),kind:'struct',type,fields:Object.fromEntries(this.program.structs[type].map(f=>[f.name,f.pointer?{value:0,owner,constant:false,dataType:'pointer',pointeeType:f.type}:{value:f.array?this.fieldArray(f,owner,depth):this.defaultValue(f.type,owner,depth+1),owner,constant:f.constant,dataType:f.type}]))};
     return type==='String'?'':0;
   }
   fieldArray(f,owner,depth){const a=this.array(Array.from({length:f.size},()=>this.defaultValue(f.type,owner,depth+1)),owner);a.cells.forEach(c=>c.dataType=f.type);return a;}
@@ -230,7 +246,7 @@ export class Runtime {
   initialize(type,value,owner=this.scope()){
     if(own(this.program.structs,type)){
       if(value?.kind==='struct')return this.clone(value,owner);
-      const result=this.defaultValue(type,owner);if(value?.kind==='initializer'){const keys=Object.keys(result.fields);if(value.values.length===1&&value.values[0]===0)return result;let at=0;value.values.forEach(v=>{if(v?.kind==='designated'){if(v.key===undefined)throw new Error('구조체 초기값에는 .필드 = 값 형식을 쓰세요.');at=keys.indexOf(v.key);if(at<0)throw new Error(`구조체 필드가 없습니다: ${v.key}`);v=v.value;}if(at>=keys.length)throw new Error('구조체 초기값이 너무 많습니다.');const field=result.fields[keys[at++]];if(field.value?.kind==='array'){const list=v?.kind==='initializer'?this.arrayValues(v.values):typeof v==='string'?[...v].map(c=>c.charCodeAt(0)).concat(0):[v];if(list.length>field.value.cells.length)throw new Error('구조체 배열 필드 초기값이 너무 많습니다.');list.forEach((x,j)=>field.value.cells[j].value=this.coerce(field.dataType,x));return;}field.value=field.dataType==='pointer'?this.pointer(v):this.initialize(field.dataType,v,owner);});}return result;
+      const result=this.defaultValue(type,owner);if(value?.kind==='initializer'){const keys=Object.keys(result.fields);if(value.values.length===1&&value.values[0]===0)return result;let at=0;value.values.forEach(v=>{if(v?.kind==='designated'){if(v.key===undefined)throw new Error('구조체 초기값에는 .필드 = 값 형식을 쓰세요.');at=keys.indexOf(v.key);if(at<0)throw new Error(`구조체 필드가 없습니다: ${v.key}`);v=v.value;}if(at>=keys.length)throw new Error('구조체 초기값이 너무 많습니다.');const field=result.fields[keys[at++]];if(result.last!==undefined)result.last=keys[at-1];if(field.value?.kind==='array'){const list=v?.kind==='initializer'?this.arrayValues(v.values):typeof v==='string'?[...v].map(c=>c.charCodeAt(0)).concat(0):[v];if(list.length>field.value.cells.length)throw new Error('구조체 배열 필드 초기값이 너무 많습니다.');list.forEach((x,j)=>field.value.cells[j].value=this.coerce(field.dataType,x));return;}field.value=field.dataType==='pointer'?this.pointer(v):this.initialize(field.dataType,v,owner);});}return result;
     }
     if(value?.kind==='initializer')throw new Error('배열 또는 구조체에만 초기값 목록을 사용하세요.');return this.coerce(type,value??this.defaultValue(type,owner));
   }

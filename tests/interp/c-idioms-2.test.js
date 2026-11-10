@@ -51,5 +51,5 @@ test('sizeof of an array of pointers counts pointers',()=>{
 
 test('what is not supported is named: 64-bit integers, union',()=>{
  assert.throws(()=>run('',r`uint64_t big = 5; printf("%d\n", (int)big);`),/64비트 정수형\(uint64_t, int64_t\)은 지원하지 않습니다/);
- assert.throws(()=>run('typedef union { uint32_t w; uint8_t b[4]; } U;','printf("x\\n");'),/union은 지원하지 않습니다/);
+ assert.throws(()=>run('typedef struct { uint8_t a; } In;\ntypedef union { In i; uint8_t b; } Bad;','printf("x\\n");'),/union의 멤버는 숫자형과 그 배열만 지원합니다/);
 });
