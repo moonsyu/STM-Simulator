@@ -1,6 +1,6 @@
 import {importIoc,defaultMcu,generateHal} from './mcu-config.js';
 import {expandC} from './c-format.js';
-import {keepUserCode,dropShadowedHandlers} from './c-source-edit.js';
+import {regenerateMain} from './c-source-edit.js';
 import {validateProject} from './project.js';
 import {projectBoard,boardForFamily} from './boards.js';
 
@@ -30,7 +30,7 @@ export function importFirmware(project,files){
   if(iocs.length&&!sourceFiles.length&&!/\/\* USER CODE BEGIN /.test(project.code||''))warnings.push('main.c에 USER CODE 구역이 없어 코드는 그대로 두었습니다. Pinout & Configuration의 "설정으로 HAL 코드 생성"으로 이 설정의 코드를 만들 수 있습니다.');
   else if(iocs.length&&!sourceFiles.length){
     const previous=(()=>{try{return expandC(generateHal(project.mcu));}catch{return '';}})();
-    try{next.code=dropShadowedHandlers(keepUserCode(project.code,expandC(generateHal(next.mcu)),previous),(next.firmware?.files||[]).map(f=>f.text));regenerated=true;}
+    try{const r=regenerateMain(project.code,expandC(generateHal(next.mcu)),previous,(next.firmware?.files||[]).map(f=>f.text));next.code=r.code;regenerated=true;if(r.moved.length)warnings.push('USER CODE 구역 밖에 있던 코드를 구역 안으로 옮겨 유지했습니다: '+r.moved.join(', '));}
     catch(e){warnings.push('main.c는 바꾸지 않았습니다: '+e.message);}
   }
   return {project:validateProject(next),warnings,regenerated};

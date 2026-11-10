@@ -18,12 +18,15 @@ test('.ioc import alone sets the Pinout and regenerates main.c, keeping USER COD
  const s=await launch();
  try{
   const {win,app}=s,code=()=>win.evaluate(()=>document.getElementById('code').value);
-  await win.evaluate(()=>{const c=document.getElementById('code');c.value=c.value.replace(/\/\* USER CODE BEGIN 3 \*\/\n/,m=>m+'        my_loop_work();\n');c.dispatchEvent(new Event('input',{bubbles:true}));});
+  await win.evaluate(()=>{const c=document.getElementById('code');c.value=c.value.replace(/\/\* USER CODE BEGIN 3 \*\/\n/,m=>m+'        my_loop_work();\n').replace('/* USER CODE END 0 */','/* USER CODE END 0 */\nvoid outsideHelper(void) { }');c.dispatchEvent(new Event('input',{bubbles:true}));});
   await app.evaluate(({dialog},p)=>{dialog.showOpenDialog=async()=>({canceled:false,filePaths:[p]});},file);
   await win.evaluate(()=>document.getElementById('firmware-import').click());
   await win.waitForFunction(()=>/Pinout 설정과 main\.c를 \.ioc대로 만들었습니다/.test(document.getElementById('console-output').textContent),null,{timeout:10000});
   const c=await code();
   for(const k of ['MX_USART2_UART_Init();','MX_I2C1_Init();','MX_SPI1_Init();','RCC_PLL_MUL9','__HAL_AFIO_REMAP_I2C1_ENABLE','my_loop_work();'])assert.ok(c.includes(k),k);
+  // A function outside the USER CODE sections is moved into section 0, not lost.
+  assert.match(c,/\/\* USER CODE BEGIN 0 \*\/[\s\S]*void outsideHelper\(void\)[\s\S]*\/\* USER CODE END 0 \*\//);
+  assert.match(await win.textContent('#console-output'),/USER CODE 구역 밖에 있던 코드를 구역 안으로 옮겨 유지했습니다: outsideHelper/);
   await win.evaluate(()=>document.getElementById('pinout-open').click());await win.waitForSelector('#pinout-dialog[open]');
   assert.equal(await win.evaluate(()=>[...document.querySelectorAll('#pinout-peripherals [data-peripheral]')].filter(e=>e.checked).map(e=>e.dataset.peripheral).sort().join(',')),'I2C1,SPI1,USART2');
   assert.deepEqual(s.errors,[]);

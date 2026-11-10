@@ -10,6 +10,7 @@ import {defaultMcu,validateMcu,generateHal} from './mcu-config.js';
 import {configureHalCircuit} from './hal-circuits.js';
 import {EXAMPLE_TIMER_CLOCK_HZ} from './mcu-defaults.js';
 import {expandC} from './c-format.js';
+import {adoptOutsideCode} from './c-source-edit.js';
 import {getBoard,projectBoard} from './boards.js';
 import {F1_FAMILY,portExampleToF1,portMcu} from './example-port.js';
 import {ADVANCED_EXAMPLES,ADVANCED_GUIDES,advancedExample} from './advanced-examples.js';
@@ -80,6 +81,9 @@ export function halExample(kind){
 // Example sources are composed from compact snippets; one statement per line makes them readable.
 function tidyExampleSource(p){
   p.code=expandC(p.code);
+  // Helper functions, globals and #includes go into USER CODE sections (0 / 4, PV, Includes), so regenerating main.c
+  // from the Pinout or an .ioc keeps them.
+  try{const generated=expandC(generateHal(p.mcu));p.code=adoptOutsideCode(p.code,generated,generated).source;}catch{/* a configuration the generator cannot write: the example keeps its layout */}
   for(const file of p.firmware?.files||[])if(/\.(c|h)$/i.test(file.name))file.text=expandC(file.text);
   return p;
 }

@@ -113,7 +113,10 @@ test('every applied HAL example has one statement per line and the same tokens a
  const strip=t=>t.replace(/\s+/g,'');
  for(const id of Object.keys(allHalExamples())){
   const p=applyHalExample(blankProject(),id),compact=halExampleCode(id);
-  assert.equal(strip(p.code).replace(/[{}]/g,''),strip(compact).replace(/[{}]/g,''),id);
+  // Applying an example also moves its helper functions and globals into USER CODE sections, so the order differs:
+  // the same characters must all be there.
+  const chars=t=>[...strip(t).replace(/[{}]/g,'')].sort().join('');
+  assert.equal(chars(p.code),chars(compact),id);
   for(const line of p.code.split('\n')){
    if(/^\s*(\/\/|\/\*|\*|#)/.test(line))continue;
    const code=line.replace(/\/\/.*$|\/\*.*?\*\//g,'').replace(/"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'/g,'""').replace(/\bfor\s*\(.*?\)\s*/,'');

@@ -4,7 +4,7 @@ import {GPIO_PINS} from './pins.js';
 import {MODES,ROUTES,defaultMcu,validateMcu,configProblems,pinFunctions,irqForPin,IRQ_NAMES,generateHal,USART_CK_ROUTES,DMA_MODES,DMA_PRIORITIES,dmaPeripheral,dmaDirection} from './mcu-config.js';
 import {DMA_REQUESTS} from './hal-dma.js';
 import {expandC} from './c-format.js';
-import {keepUserCode,dropShadowedHandlers} from './c-source-edit.js';
+import {regenerateMain} from './c-source-edit.js';
 // What the project's current settings generate: sections still equal to it were never edited.
 const previousDefault=mcu=>{try{return expandC(generateHal(mcu));}catch{return '';}};
 import {isSerial,serialAf,serialFunction,assignSerialPin,setSerialEnabled} from './serial-config.js';
@@ -150,7 +150,7 @@ export class PinoutPanel {
     $('nvic-tick')&&($('nvic-tick').onchange=()=>{const v=numberInput($('nvic-tick'));config.tickPriority=v;this.refreshProblems();});
     this.updateNvicCount();
   }
-  commit(generate){try{this.sync();for(const el of $('pinout-dialog').querySelectorAll('input[type="number"]'))if(!Number.isFinite(numberInput(el)))throw new Error(`${el.getAttribute('aria-label')||(el.id==='timer-clock'?'APB1 타이머 입력 클록':'숫자 설정')}: 숫자를 입력하세요.`);const mcu=validateMcu(this.draft),project=this.getProject(),code=generate?dropShadowedHandlers(keepUserCode(project.code,expandC(generateHal(mcu)),previousDefault(project.mcu)),(project.firmware?.files||[]).map(f=>f.text)):null;this.apply({mcu,code});$('pinout-dialog').close();}catch(e){$('pinout-errors').textContent=e.message;this.onError(e.message);}}
+  commit(generate){try{this.sync();for(const el of $('pinout-dialog').querySelectorAll('input[type="number"]'))if(!Number.isFinite(numberInput(el)))throw new Error(`${el.getAttribute('aria-label')||(el.id==='timer-clock'?'APB1 타이머 입력 클록':'숫자 설정')}: 숫자를 입력하세요.`);const mcu=validateMcu(this.draft),project=this.getProject(),regen=generate?regenerateMain(project.code,expandC(generateHal(mcu)),previousDefault(project.mcu),(project.firmware?.files||[]).map(f=>f.text)):null,code=regen?.code??null;this.apply({mcu,code,moved:regen?.moved??[]});$('pinout-dialog').close();}catch(e){$('pinout-errors').textContent=e.message;this.onError(e.message);}}
   // DMA requests of the enabled peripherals: stream/channel, direction, normal/circular, priority.
   dmaCard(config){
     const requestsOf=dmaRequestsOf(config.family),f1=familyProfile(config.family).pinMux==='remap',enabled=id=>id===null||config.peripherals[id]?.enabled,requests=Object.keys(requestsOf).filter(r=>enabled(dmaPeripheral(r)));

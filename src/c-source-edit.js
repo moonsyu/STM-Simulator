@@ -49,3 +49,84 @@ export function dropShadowedHandlers(source,others=[]){
  return source;
 }
 export function checksum(text){let h=2166136261;for(let i=0;i<text.length;i++)h=Math.imul(h^text.charCodeAt(i),16777619);return (h>>>0).toString(16);}
+// ---- User code outside the USER CODE sections (helper functions, globals, #includes of an older example or a main.c
+// edited by hand). CubeMX loses it on regeneration; here it is moved into a section first, so keepUserCode carries it over:
+// #include → Includes, other declarations before main → PV, functions before main → 0, anything after main → 4. What the
+// generator itself writes (same function name, same declaration) is not user code and is generated again.
+const flatC=text=>text.replace(/\s+/g,' ').trim();
+const FN_NAME=/([A-Za-z_]\w*)\s*\([^()]*(?:\([^()]*\)[^()]*)*\)\s*$/,LAST_NAME=/([A-Za-z_]\w*)\s*(?:\[[^\]]*\]\s*)*$/;
+// The name a top-level declaration (comments and strings masked) introduces: `x` of `int x[2] = …`, `t` of
+// `int (*t[2])(void)`, `Reading` of `typedef struct { … } Reading`, `P` of `struct P { … }`.
+function declaredName(text){
+ const body=text.replace(/;\s*$/,''),open=body.indexOf('{'),eq=body.indexOf('=');
+ if(open>=0&&(eq<0||open<eq)){const after=body.slice(body.lastIndexOf('}')+1).split('=')[0];return LAST_NAME.exec(after)?.[1]??LAST_NAME.exec(body.slice(0,open))?.[1]??'';}
+ const head=eq<0?body:body.slice(0,eq);return /\(\s*\*\s*([A-Za-z_]\w*)/.exec(head)?.[1]??LAST_NAME.exec(head.split('(')[0])?.[1]??'';
+}
+// Top-level items of a source: [{kind:'function'|'declaration'|'directive', name, start, end, text, comment}], skipping
+// the user sections. `comment` is the comment block directly above the item.
+export function topLevelItems(source){
+ const masked=maskC(source),sections=[...source.matchAll(USER_SECTION)].map(m=>[m.index,m.index+m[0].length]),items=[];let i=0,gapStart=0;
+ const section=at=>sections.find(([a,b])=>at>=a&&at<b);
+ while(i<masked.length){
+  const s=section(i);if(s){i=s[1];gapStart=i;continue;}
+  if(/\s/.test(masked[i])){i++;continue;}
+  const start=i;let end,kind,name='';
+  if(masked[i]==='#'&&/^[ \t]*$/.test(masked.slice(masked.lastIndexOf('\n',i-1)+1,i))){
+   end=i;do{end=masked.indexOf('\n',end);if(end<0)end=masked.length;}while(source[end-1]==='\\'&&end++<masked.length);kind='directive';name=flatC(source.slice(start,end));
+  }else{
+   // Up to the first `;` or `{` at parenthesis depth 0: a `{` after `)` without `=` opens a function body.
+   let j=i,paren=0;while(j<masked.length&&!(paren===0&&(masked[j]===';'||masked[j]==='{'))){if(masked[j]==='(')paren++;else if(masked[j]===')')paren--;j++;}
+   const head=masked.slice(i,j),fn=masked[j]==='{'&&/\)\s*$/.test(head)&&!head.includes('=');
+   if(masked[j]==='{'){let depth=1;j++;while(j<masked.length&&depth){if(masked[j]==='{')depth++;else if(masked[j]==='}')depth--;j++;}if(depth)return null;if(!fn){while(j<masked.length&&masked[j]!==';'){if(masked[j]==='{')return null;j++;}j++;}}else j++;
+   end=Math.min(j,masked.length);kind=fn?'function':'declaration';
+   name=fn?FN_NAME.exec(head)?.[1]??'':declaredName(masked.slice(i,end));
+  }
+  if(section(end-1))return null;
+  // A comment after the item on its last line (`int n; /* count */`) is part of it.
+  {const eol=source.indexOf('\n',end),rest=source.slice(end,eol<0?source.length:eol);if(/^[ \t]*(\/\/.*|\/\*.*\*\/)[ \t]*$/.test(rest))end+=rest.length;}
+  // The comment lines right above belong to the item.
+  const gap=source.slice(gapStart,start),comment=/((?:[ \t]*(?:\/\/[^\n]*|\/\*[\s\S]*?\*\/)[ \t]*\n)+)[ \t]*$/.exec(gap)?.[1]??'';
+  items.push({kind,name,start:start-comment.length,end,text:source.slice(start,end),comment});i=end;gapStart=end;
+ }
+ return items;
+}
+/** Moves user code outside the USER CODE sections of `previous` into its sections. Returns {source, moved:[names]}. */
+export function adoptOutsideCode(previous,generated,previousDefault=''){
+ const out={source:previous,moved:[]};
+ if(!/\/\* USER CODE BEGIN PV \*\//.test(previous)||!/\/\* USER CODE BEGIN 4 \*\//.test(previous))return out;
+ let items;try{items=topLevelItems(previous);}catch{return out;}
+ const known=[generated,previousDefault].filter(Boolean).map(t=>{try{return topLevelItems(t)??[];}catch{return [];}}).flat();if(!items||!known.length)return out;
+ const texts=new Set(known.map(k=>flatC(k.text))),names=new Set(known.filter(k=>k.kind!=='directive'&&k.name).map(k=>k.name));
+ const main=items.find(k=>k.kind==='function'&&k.name==='main');if(!main)return out;
+ const has=tag=>previous.includes(`/* USER CODE END ${tag} */`),add={};
+ // A callback or handler written without the generator's user section, under a name the generator also writes, is the
+ // user's own version: it is kept and the generated one is dropped (dropShadowedCallbacks).
+ const own=k=>k.kind==='function'&&/^HAL_\w+Callback$|_Handler$/.test(k.name)&&!k.text.includes('/* USER CODE BEGIN ');
+ const user=items.filter(k=>!(texts.has(flatC(k.text))||k.kind!=='directive'&&names.has(k.name)&&!own(k)||k===main||k.kind==='declaration'&&!k.name));
+ for(const k of user){
+  const before=k.start<main.start,tag=!before?'4':k.kind==='directive'&&/^#\s*include\b/.test(k.text)&&has('Includes')?'Includes':k.kind==='function'?(has('0')?'0':'4'):'PV';
+  (add[tag]??=[]).push(k);
+ }
+ if(!user.length)return out;
+ let source=previous;
+ // Remove from the end so offsets stay valid, then append each group to its section in source order.
+ for(const k of [...user].sort((a,b)=>b.start-a.start))source=source.slice(0,k.start)+source.slice(k.end).replace(/^[ \t]*\n/,'');
+ for(const [tag,list]of Object.entries(add)){
+  const marker=`/* USER CODE END ${tag} */`,at=source.indexOf(marker),lineStart=source.lastIndexOf('\n',at-1)+1;
+  const text=list.map(k=>k.comment+k.text).join('\n')+'\n';source=source.slice(0,lineStart)+text+source.slice(lineStart);
+ }
+ return {source,moved:user.map(k=>k.name||flatC(k.text).slice(0,40))};
+}
+// A callback or handler the user defines in a user section replaces the generated one of the same name.
+function dropShadowedCallbacks(source){
+ let fns;try{fns=cFunctions(source);}catch{return source;}
+ const spans=[...source.matchAll(USER_SECTION)].map(m=>[m.index,m.index+m[0].length]),inUser=at=>spans.some(([a,b])=>at>=a&&at<b);
+ const user=new Set(fns.filter(f=>inUser(f.start)).map(f=>f.name));
+ for(const f of fns.filter(f=>!inUser(f.start)&&user.has(f.name)&&/^HAL_\w+Callback$|^__io_putchar$|^_write$/.test(f.name)).sort((a,b)=>b.start-a.start))source=source.slice(0,f.start).replace(/\n\n$/,'\n')+source.slice(f.end).replace(/^\n/,'');
+ return source;
+}
+/** Regenerated main.c: user sections kept, user code outside them moved into sections, shadowed handlers dropped. */
+export function regenerateMain(previous,generated,previousDefault='',others=[]){
+ const adopted=adoptOutsideCode(String(previous||''),generated,previousDefault);
+ return {code:dropShadowedCallbacks(dropShadowedHandlers(keepUserCode(adopted.source,generated,previousDefault),others)),moved:adopted.moved};
+}
