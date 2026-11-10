@@ -17,7 +17,8 @@ const signalPin=(mcu,fn)=>Object.keys(mcu.pins).find(p=>mcu.pins[p].function===f
 export function suggestCircuit(mcu){
   const out=[],pins=Object.entries(mcu.pins||{}).filter(([,p])=>!['Reset','Reserved'].includes(p.function)),per=mcu.peripherals||{},used=new Set();
   const label=pin=>mcu.pins[pin]?.label||'',name=pin=>label(pin)?`${pin} (${label(pin)})`:pin;
-  const add=s=>{out.push(s);for(const p of s.pins)used.add(p);};
+  // A pin without a header terminal (PA2 / PA3 on a NUCLEO-64: solder bridges SB62 / SB63 are open) cannot be wired.
+  const add=s=>{const off=s.pins.filter(p=>!boardPin(p));if(off.length&&!s.skipped)s={...s,parts:[],skipped:`${off.join('·')}은 보드 헤더에 나와 있지 않아 배선할 수 없습니다.`};out.push(s);for(const p of s.pins)used.add(p);};
   // Buses first: they claim their pins and, for SPI, a chip-select output.
   for(const id of Object.keys(per).filter(i=>/^I2C\d$/.test(i)&&per[i].enabled)){
     const scl=signalPin(mcu,id+'_SCL'),sda=signalPin(mcu,id+'_SDA');if(!scl||!sda)continue;

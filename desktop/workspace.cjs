@@ -3,11 +3,13 @@ const hash=text=>createHash('sha256').update(text).digest('hex');
 const transaction=require('./workspace-transaction.cjs'),pending=new Map();
 function serial(directory,action){const key=path.resolve(directory).toLowerCase(),previous=pending.get(key)||Promise.resolve(),next=previous.catch(()=>{}).then(action);pending.set(key,next);next.finally(()=>{if(pending.get(key)===next)pending.delete(key);}).catch(()=>{});return next;}
 const safeName=name=>typeof name==='string'&&/^[\w가-힣][\w가-힣 .-]{0,79}$/.test(name)&&!/[. ]$/.test(name)&&! /^(con|prn|aux|nul|com[1-9]|lpt[1-9])(?:\.|$)/i.test(name);
+// A source kept in folders (Core/Src/app.c): every part of the path must be a safe name.
+const safePath=name=>typeof name==='string'&&name.split('/').length<=7&&name.split('/').every(safeName);
 async function filesFor(text){
   if(typeof text!=='string'||Buffer.byteLength(text)>2000000)throw new Error('프로젝트 크기 제한을 넘었습니다.');
   const {validateProject}=await import('../src/project.js');const project=validateProject(JSON.parse(text));
   const files=new Map([['project.stm32lab',JSON.stringify(project,null,2)+'\n'],['main.c',project.code]]);
-  for(const f of project.firmware?.files||[]){if(!safeName(f.name))throw new Error('Windows에서 사용할 수 없는 소스 파일명입니다.');files.set(f.name,f.text);}
+  for(const f of project.firmware?.files||[]){if(!safePath(f.name))throw new Error('Windows에서 사용할 수 없는 소스 파일명입니다.');files.set(f.name,f.text);}
   for(const [name,source]of await boardSources(project)){if(!safeName(name)||files.has(name))throw new Error(`${name}: 다른 보드의 소스 파일명을 쓸 수 없습니다.`);files.set(name,source.get());}
   return files;
 }
@@ -26,7 +28,7 @@ async function createWorkspace(parent,name,text){
   if(!safeName(name))throw new Error('프로젝트 이름은 1~80자의 한글·영문·숫자·공백·밑줄·하이픈으로 입력하세요. Windows 예약 이름은 사용할 수 없습니다.');
   const directory=path.join(parent,name),files=await filesFor(text);
   try{await fs.mkdir(directory);}catch(e){if(e.code==='EEXIST')throw new Error('같은 이름의 폴더가 이미 있습니다. 다른 프로젝트 이름을 선택하세요.');throw e;}
-  for(const [name,value]of files)await fs.writeFile(path.join(directory,name),value,{encoding:'utf8',flag:'wx'});
+  for(const [name,value]of files){if(name.includes('/'))await fs.mkdir(path.dirname(path.join(directory,name)),{recursive:true});await fs.writeFile(path.join(directory,name),value,{encoding:'utf8',flag:'wx'});}
   await fs.writeFile(path.join(directory,'stm-project.json'),JSON.stringify({format:'stm-simulator-workspace',version:1,document:'project.stm32lab'},null,2)+'\n',{flag:'wx'});
   return {directory,hashes:await snapshot(directory,files.keys())};
 }

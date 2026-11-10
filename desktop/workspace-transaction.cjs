@@ -21,7 +21,7 @@ async function recover(directory){
  for(const [i,e]of record.entries.entries()){
   const value=e.before===null?null:Buffer.from(e.before,'base64'),old=value===null?null:hash(value);if(current.get(e.name)===old)continue;
   const dest=path.join(directory,e.name);
-  if(value===null)await fs.unlink(dest);else{const temp=path.join(folder,`restore-${i}`);await fs.unlink(temp).catch(error=>{if(error.code!=='ENOENT')throw error;});await durableWrite(temp,value);await fs.rename(temp,dest);}
+  if(value===null)await fs.unlink(dest);else{await fs.mkdir(path.dirname(dest),{recursive:true});const temp=path.join(folder,`restore-${i}`);await fs.unlink(temp).catch(error=>{if(error.code!=='ENOENT')throw error;});await durableWrite(temp,value);await fs.rename(temp,dest);}
  }
  await removeJournal(directory);return true;
 }
@@ -39,7 +39,7 @@ async function commit(directory,files,names,expected){
   for(const [i,name]of [...names].entries()){
    const dest=path.join(directory,name),current=await readFile(dest),before=entries[i].before;
    if((current===null?null:hash(current))!==(before===null?null:hash(Buffer.from(before,'base64'))))throw Error(`${name} 파일이 저장 준비 중 앱 밖에서 변경되었습니다.`);
-   if(files.has(name))await fs.rename(path.join(folder,`next-${i}`),dest);else await fs.unlink(dest);
+   if(files.has(name)){await fs.mkdir(path.dirname(dest),{recursive:true});await fs.rename(path.join(folder,`next-${i}`),dest);}else await fs.unlink(dest);
   }
   await durableWrite(path.join(folder,'committed'),'1');committed=true;
  }catch(error){
