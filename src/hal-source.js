@@ -78,7 +78,8 @@ const systemHeaders=prefix=>new Set(['main.h',`${prefix}_hal.h`,`${prefix}.h`,'s
 export function prepareHalSource(source,files=[],options={}){
   if(typeof source!=='string'||source.length>300000||!Array.isArray(files)||files.length>MAX_SOURCE_FILES)throw new Error('HAL 소스 크기 또는 파일 수 한도를 넘었습니다.');
   const map=new Map();let total=source.length;
-  for(const file of files){if(!file||typeof file.name!=='string'||!SOURCE_PATH.test(file.name)||!/\.[ch]$/.test(file.name)||typeof file.text!=='string'||map.has(file.name))throw new Error('소스 파일 이름이 중복되거나 올바르지 않습니다.');total+=file.text.length;if(total>300000)throw new Error('HAL 소스 전체는 300 KB 이하로 선택하세요.');map.set(file.name,file.text);}
+  const armOnly=name=>/^(Drivers|Middlewares)\//.test(name)||/^(syscalls|sysmem|system_stm32\w+)\.c$/.test(baseName(name));
+  for(const file of files){if(file&&typeof file.name==='string'&&armOnly(file.name))continue;if(!file||typeof file.name!=='string'||!SOURCE_PATH.test(file.name)||!/\.[ch]$/.test(file.name)||typeof file.text!=='string'||map.has(file.name))throw new Error('소스 파일 이름이 중복되거나 올바르지 않습니다.');total+=file.text.length;if(total>300000)throw new Error('HAL 소스 전체는 300 KB 이하로 선택하세요.');map.set(file.name,file.text);}
   map.set('main.c',source);
   const hal=familyProfile(options.family).hal,SYSTEM_HEADERS=systemHeaders(hal.prefix);
   const definitions=new Map([[hal.define,'1'],['USE_HAL_DRIVER','1']]),stack=[],included=new Set();

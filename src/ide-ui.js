@@ -6,7 +6,7 @@ import {allHalExamples,applyHalExample} from './hal-examples.js';
 import {searchHalExamples} from './hal-example-search.js';
 import {BOARD_CATALOG,DEFAULT_BOARD_ID,START_BOARD_ID,getBoard} from './boards.js';
 import {familyProfile} from './mcu-family.js';
-import {sourceFiles,changeSourceFile} from './source-files.js';
+import {SOURCE_PATH,sourceFiles,changeSourceFile} from './source-files.js';
 import {boardSourceFiles,isBoardFile} from './devboards.js';
 import {inspectRuntime,watchValue} from './debug-tools.js';
 import {esc} from './render.js';
@@ -67,9 +67,26 @@ export function setupIde(o){
     const p=o.getProject(),hal=p.firmware?.mode==='hal'&&!!p.mcu,fsp=p.firmware?.mode==='fsp'&&!!p.mcu;$('build-files').hidden=!hal&&!fsp;$('build-files-title').textContent=fsp?'ra_gen · ra_cfg':'Core · Startup';if(!hal&&!fsp){$('build-file-list').innerHTML='';return;}
     if(fsp){const ext=editor.externalFile()?.file;$('build-file-list').innerHTML=generatedFiles().map(g=>`<button data-build-file="${esc(g.file)}" data-build-kind="gen" class="${ext===g.file?'active':''}" title="RA Smart Configurator 방식으로 앱이 만드는 FSP 파일 · 읽기 전용"><span class="file-kind">${/\.ld$/.test(g.file)?'L':/\.h$/.test(g.file)?'H':'C'}</span><span class="file-label">${esc(g.file.split('/').at(-1))}</span><small>${esc(g.file.split('/').slice(0,-1).join('/'))}</small></button>`).join('');for(const el of $('build-file-list').querySelectorAll('[data-build-file]'))el.onclick=()=>{o.layout.reveal('code');document.querySelector('[data-tab="code"]')?.click();editor.openGenerated(el.dataset.buildFile);};return;}
     const prefix=prefixOf(p.mcu.family),device='Drivers/CMSIS/Device/ST/'+prefix.toUpperCase().replace('XX','xx'),own=new Set(sourceFiles(p).map(f=>f.name)),ext=editor.externalFile()?.file;
-    const rows=[...generatedFiles().map(g=>({kind:'gen',file:g.file,label:g.file})),...(own.has(`system_${prefix}.c`)?[]:[{kind:'sdk',file:`${device}/Source/Templates/system_${prefix}.c`,label:`Core/Src/system_${prefix}.c`}]),{kind:'sdk',file:`${device}/Source/Templates/gcc/${startupOf(p.mcu.family)}`,label:`Core/Startup/${startupOf(p.mcu.family)}`}];
+    const ownBase=new Set([...own].map(n=>n.split('/').at(-1)));
+    const rows=[...generatedFiles().filter(g=>!ownBase.has(g.file.split('/').at(-1))).map(g=>({kind:'gen',file:g.file,label:g.file})),...(ownBase.has(`system_${prefix}.c`)?[]:[{kind:'sdk',file:`${device}/Source/Templates/system_${prefix}.c`,label:`Core/Src/system_${prefix}.c`}]),{kind:'sdk',file:`${device}/Source/Templates/gcc/${startupOf(p.mcu.family)}`,label:`Core/Startup/${startupOf(p.mcu.family)}`}];
     $('build-file-list').innerHTML=rows.map(r=>`<button data-build-file="${esc(r.file)}" data-build-kind="${r.kind}" class="${ext===r.file?'active':''}" title="${esc(r.kind==='gen'?'STM Simulator가 빌드에 넣는 코드':'STM32Cube SDK '+r.file)} · 읽기 전용"><span class="file-kind">${r.label.endsWith('.s')?'S':'C'}</span><span class="file-label">${esc(r.label.split('/').at(-1))}</span><small>${esc(r.label.split('/').slice(0,-1).join('/'))}</small></button>`).join('');
     for(const el of $('build-file-list').querySelectorAll('[data-build-file]'))el.onclick=async()=>{o.layout.reveal('code');document.querySelector('[data-tab="code"]')?.click();try{if(el.dataset.buildKind==='gen')editor.openGenerated(el.dataset.buildFile);else await editor.openSdk(el.dataset.buildFile);}catch(e){o.log(e.message,'error');}};
+  }
+  // Feature 11: a read-only file (what the build adds, an SDK source or header) becomes a project file the user can
+  // edit. The ARM build then compiles the project's copy in place of the generated / SDK one (native-build.cjs), and
+  // regenerating main.c or updating the SDK never touches it.
+  const copyable=ext=>o.getProject().firmware?.mode==='hal'&&/\.[ch]$/.test(ext.file);
+  function copyToProject(ext){
+    try{
+      if(o.isRunning())throw new Error('실행을 정지한 뒤 복사하세요.');
+      const leaf=ext.file.split('/').at(-1),name=SOURCE_PATH.test(ext.file)?ext.file:leaf,p=structuredClone(o.getProject());p.firmware.files??=[];
+      if(leaf==='main.c'||!SOURCE_PATH.test(name))throw new Error('이 파일은 프로젝트로 복사할 수 없습니다.');
+      if(sourceFiles(p).some(f=>f.name.split('/').at(-1).toLowerCase()===leaf.toLowerCase()))throw new Error(`${leaf}: 같은 이름의 파일이 이미 프로젝트에 있습니다.`);
+      // The view's own header comment ("읽기 전용") is replaced: the copy is the user's file now.
+      const text=(editor.externalText()??'').replace(/^\/\* [^\n]* — STM Simulator가 ARM 빌드에 넣는 코드\(읽기 전용\)\.[\s\S]*?\*\/\n?/,`/* ${leaf} — 프로젝트로 복사한 파일입니다. ARM 빌드는 이 파일을 쓰며, 여기 없는 핸들러·시스템 호출만 앱이 채웁니다. */\n`);
+      p.firmware.files.push({name,text});editor.closeExternal(ext.file);o.applySources(p,name);sync();
+      o.log(`${name}을 프로젝트로 복사했습니다. 이제 빌드가 이 파일을 쓰고, 자유롭게 고칠 수 있습니다(지우면 원래 파일로 돌아갑니다).`);
+    }catch(e){o.log(e.message,'error');}
   }
   // Open tabs: project files, other boards' programs, then SDK files opened by go to definition (read only, ×).
   function tabsView(){
@@ -80,7 +97,8 @@ export function setupIde(o){
     for(const el of $('source-tabs').querySelectorAll('[data-sdk-file]'))el.onclick=()=>editor.showExternal(el.dataset.sdkFile);
     for(const el of $('source-tabs').querySelectorAll('[data-sdk-close]'))el.onclick=e=>{e.stopPropagation();editor.closeExternal(el.dataset.sdkClose);};
     // Where the file lives in the SDK (CubeIDE shows it in the title bar), like the Drivers folder of a Cube project.
-    $('source-path').hidden=!ext;$('code-panel').classList.toggle('sdk-open',!!ext);$('source-path').innerHTML=ext?`<span>${esc(ext.sdk)}</span>${ext.file.split('/').map(p=>`<span>${esc(p)}</span>`).join('')}<em>읽기 전용 · Alt+← 돌아가기</em>`:'';
+    $('source-path').hidden=!ext;$('code-panel').classList.toggle('sdk-open',!!ext);$('source-path').innerHTML=ext?`<span>${esc(ext.sdk)}</span>${ext.file.split('/').map(p=>`<span>${esc(p)}</span>`).join('')}<em>읽기 전용 · Alt+← 돌아가기</em>${copyable(ext)?'<button type="button" id="copy-to-project" title="이 파일을 프로젝트 소스로 복사합니다. 복사한 뒤에는 빌드가 프로젝트의 파일을 쓰고, 자유롭게 고칠 수 있습니다.">프로젝트로 복사해 수정</button>':''}`:'';
+    if($('copy-to-project'))$('copy-to-project').onclick=()=>copyToProject(ext);
     buildFilesView();outlineView();
   }
   let outlineTimer;

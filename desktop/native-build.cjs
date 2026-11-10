@@ -103,7 +103,7 @@ async function prepareBuild({project,tools,root,target='arm',configuration='Debu
     if(!files.some(f=>base(f.name)==='main.h'))await fs.writeFile(path.join(directory,'main.h'),`#pragma once\n#include "${p}_hal.h"\nvoid Error_Handler(void);\n`);
     // Pinout labels: CubeMX writes LABEL_Pin / LABEL_GPIO_Port into main.h; -D gives them to every source, also with a user main.h (same text, so no redefinition warning).
     for(const [pin,q]of Object.entries(project.mcu?.pins||{}))if(q.label)flags.push(`-D${q.label}_Pin=GPIO_PIN_${pin.slice(2)}`,`-D${q.label}_GPIO_Port=GPIO${pin[1]}`);
-    generated=sdk.modules.map(n=>path.join(hal,'Src',`${p}_${n}.c`));
+    generated=sdk.modules.map(n=>path.join(hal,'Src',`${p}_${n}.c`)).filter(file=>!files.some(f=>base(f.name)===path.basename(file)));
     if(!files.some(f=>base(f.name)===`system_${p}.c`))generated.push(path.join(device,'Source/Templates',`system_${p}.c`));
     generated.push(path.join(device,'Source/Templates/gcc',sdk.startup));
     // Handlers, system calls and heap the build adds (CubeIDE's stm32xxxx_it.c / syscalls.c / sysmem.c), shared with the
