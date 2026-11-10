@@ -1,6 +1,14 @@
 # STM Simulator — 개발 인계
 
-현재 버전: **1.44.0**. 정리일: **2026-11-10**. NUCLEO-F446RE·NUCLEO-F103RB 또는 Renesas FPB-RA6E1(1.20.0, FSP·에뮬레이터 전용)과 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+현재 버전: **1.45.0**. 정리일: **2026-11-10**. NUCLEO-F446RE·NUCLEO-F103RB 또는 Renesas FPB-RA6E1(1.20.0, FSP·에뮬레이터 전용)과 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+
+## 1.45.0 기능 목록 18·19·23·24번: RA6E1 강의 실습, 템플릿, 버튼 채터링
+
+- **23번 버튼 채터링(`src/button-bounce.js`)**: `ButtonBounce(ms)` — `press(current, target, nowMs)`가 바뀐 버튼마다 +1 ms부터 1 ms 간격의 뒤집힘을 큐에 넣고(반대·목표·반대·…, 목표 상태로 끝남), `nextAt()`/`apply(pressed, nowMs)`로 꺼낸다. 사용자의 의도(`target`)와 흔들리는 현재 상태를 따로 둔다. `SimulationSession.tick`은 다음 뒤집힘 시각까지 프로그램을 돌리고 입력을 바꾼 뒤 `pollInterrupts`, `FirmwareSession`은 실행 조각을 그 시각에서 끊고 `changed`·`inputsUpdated`. 설정은 `project.simulation.bounceMs`(0이면 저장하지 않음), UI는 파형 탭 `#button-bounce`. 뗄 때도 흔들리므로 "누른 뒤 100 ms 대기"만으로는 다시 걸린다(시험이 이를 확인한다).
+- **19번 RA 템플릿(`ide-ui.js`)**: 새 프로젝트 창의 템플릿 `<option data-ra>`(ra-minimal, ra-blinky, `RA_EXAMPLES`)는 RA 보드에서만 보이고 HAL 템플릿은 숨는다. 생성은 `blankProject(RA)`에 `raHalEntry({blink})` 또는 예제의 `mcu()`·`code`·`circuit()`. 이전 코드는 RA 가족에 `familyProfile`을 불러 예외가 났다.
+- **18·24번 예제(`ra-examples.js`)**: `ra_button_poll`(P205를 GPIO_Input·풀업, `R_IOPORT_PinRead`, 누름·뗌 디바운스), `ra_button_irq_rising`(Rising·`irq_callback`·WarmStart에서 Open·`p_args->channel`), `ra_led4_switch2`(회로 포함: 부품 단자와 보드 헤더를 직접 잇는 배선).
+- **RA 생성기**: `BSP_ICU_VECTOR_NUM_ENTRIES`를 최소 1로(IRQ가 없을 때 FSP의 기본 표가 0칸 배열이 되어 경고).
+- 시험: 해석기 `button-bounce`, 툴체인 `button-bounce`·`ra-course`(둘 다 `scripts/toolchain-shard.mjs` 묶음에 추가), E2E `ra-new-project`.
 
 ## 1.44.0 기능 목록 14~17번: CubeIDE식 프로젝트 구조, 셸 오류 2건, 더블클릭 속성
 

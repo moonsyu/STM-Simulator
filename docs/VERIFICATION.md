@@ -1,5 +1,9 @@
 # 검증 기록
 
+## 1.45.0 RA6E1 강의 Day5 실습, 버튼 채터링 — 로컬 검증
+
+2026-11-10. ① 강의의 실습 세 가지를 슬라이드대로 작성해 FSP + ARM GCC로 빌드하고 RA6E1 에뮬레이터에서 실행: LED(`BBQ_LED`로 이름 바꾼 P408이 깜빡임), 스위치 폴링(`R_IOPORT_PinRead`, 누를 때마다 LED1 토글), 인터럽트(Rising: S1을 누르고 있을 때는 그대로, 뗄 때 LED2 토글 / LED1은 계속 깜빡임). ②에서 FSP 빌드 경고 1건을 찾아 고쳤다. ② Blinky 템플릿: LED1·LED2가 함께 켜지고 꺼짐. ③ 도전 과제: LED 4개가 0000 → 0100까지 0.1초마다 세고, 스위치 2를 누르면 멈춘 값이 0.4초 뒤에도 그대로이며 다시 누르면 다음 값부터 이어지고, 스위치 1을 누르면 0000부터 다시 센다. ④ 버튼 채터링: 해석기(EXTI 횟수 1 → 5 ms에서 여러 번 → 10 ms에서 더 많이, 30 ms 유지 디바운스로 1), 에뮬레이터(FPB-RA6E1·NUCLEO-F446RE 폴링: 깨끗한 접점 1번 토글, 10 ms 채터링에서 여러 번, 누름·뗌 100 ms 디바운스로 1번). ⑤ 새 프로젝트 창: RA 보드에서 Minimal·Blinky·예제로 생성, STM32 보드에서는 HAL 템플릿(E2E). 시험: 단위+해석기+에뮬레이터+펌웨어 1,115개(1개 건너뜀), 툴체인 `ra-course` 3개·`button-bounce` 2개·`ra-build` 2개, E2E `ra-new-project`, ESLint 통과.
+
 ## 1.44.0 기능 목록 14~17번 — 게시 확인(API)
 
 2026-11-10. 태그·빌드 커밋 `3427d1c` · [Windows CI 42783355033](https://github.com/moonsyu/STM-Simulator/actions/runs/42783355033) 첫 실행에서 모두 성공, 전체 5.4분. [Release v1.44.0](https://github.com/moonsyu/STM-Simulator/releases/tag/v1.44.0) 최신 릴리스, draft/prerelease 아님, 자산 5개(STM-Simulator.exe 115,673,500바이트, STM-Simulator-1.44.0-Windows-x64.zip 116,765,484바이트, SHA256.txt, BUILD-INFO.json, update-manifest.json).
