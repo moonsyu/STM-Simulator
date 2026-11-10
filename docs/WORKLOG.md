@@ -2,6 +2,15 @@
 
 작업할 때마다 날짜순으로 맨 위에 추가합니다. 무엇을 했는지, 왜 했는지, 어떻게 검증했는지, 커밋·릴리스와 남은 사항을 적습니다. 버전별 구조 설명은 [HANDOFF.md](../HANDOFF.md), 검증 수치는 [VERIFICATION.md](VERIFICATION.md)에 있습니다.
 
+## 2026-11-10 · 1.31.0 기능 목록 3번: IWDG·WWDG
+
+- 요청: "남은 3번 기능 구현해"(CubeMX와 다른 점 메우기의 남은 항목). 이어서 목표 지정: 기능 목록 모두 구현 → 기능별 오류 케이스 탐색 → 오류 수정 → 빌드·CI 속도 최적화. 첫 묶음으로 워치독을 넣었다.
+- 한 것: Pinout에 IWDG·WWDG 카드(두 보드), 설정 검사, MX_IWDG_Init·MX_WWDG_Init·WWDG_IRQHandler·Early wakeup 콜백 생성, .ioc 가져오기, 내장 해석기의 워치독(시간 초과·창 밖 Refresh → 프로그램 재시작)과 리셋 원인 플래그(`__HAL_RCC_GET_FLAG`). 이유: 에뮬레이터에는 모델이 있었지만 Pinout·생성·해석기에 없어 CubeMX 프로젝트의 워치독 설정을 쓸 수 없었다.
+- 찾은 오류(에뮬레이터, 실제 HAL로 돌려 보며): ① WWDG 모델이 SoC의 주소 필드(`base`)를 덮어썼다. ② HAL_WWDG_Init은 CR 다음에 CFR을 쓰는데 CFR 쓰기가 일정을 다시 잡지 않아 Prescaler와 Early wakeup이 반영되지 않았다(EWI 인터럽트가 안 옴). ③ F103의 IWDG가 LSI 32 kHz로 계산됐다(실제 40 kHz). ④ F103 리셋 때 이전 리셋 플래그를 F4 주소에서 읽었다. 넷 다 고쳤다.
+- 검증: 새 단위 4·해석기 4·툴체인 1(두 보드, 실제 HAL)·E2E 1 통과. 단위+해석기 870개, 에뮬레이터 65개(1개 건너뜀) 통과, ESLint 통과. 패키지 검사(로컬 빌드 뒤 `packaged.test.mjs`) 2개 통과·1개 건너뜀(단일 EXE, 이전과 같음).
+- 커밋·릴리스: 기능 커밋, 문서·버전 커밋.
+- 남은 사항: 3번의 나머지(I2C2·SPI2, TIM1/TIM8, 정확도 항목, ADC Scan·트리거, .ioc 내보내기), 9번(예제 함수가 USER CODE 밖에 있어 지워지는 문제).
+
 ## 2026-11-10 · 기능 목록 9번: 다시 생성할 때 예제 함수가 지워지는 문제
 
 - 제보: `.ioc`를 가져온 뒤(1.30.1) ARM 빌드가 `implicit declaration of function 'oledSend'`로 실패.

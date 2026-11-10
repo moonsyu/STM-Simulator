@@ -1,6 +1,16 @@
 # STM Simulator — 개발 인계
 
-현재 버전: **1.30.1**. 정리일: **2026-11-09**. NUCLEO-F446RE·NUCLEO-F103RB 또는 Renesas FPB-RA6E1(1.20.0, FSP·에뮬레이터 전용)과 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+현재 버전: **1.31.0**. 정리일: **2026-11-10**. NUCLEO-F446RE·NUCLEO-F103RB 또는 Renesas FPB-RA6E1(1.20.0, FSP·에뮬레이터 전용)과 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+
+## 1.31.0 IWDG·WWDG (두 보드)
+
+- 설정: `mcu.peripherals.IWDG = {enabled, prescaler(4~256), reload(0~4095)}`, `WWDG = {enabled, prescaler(1/2/4/8), window(64~127), counter(64~127), ewi?}`. 기본값은 CubeMX와 같다(IWDG 4 / 4095, WWDG 1 / 64 / 64). `src/wdg-config.js`가 검사·시간 계산(`iwdgTimeoutMs`, `wwdgTiming`, `pclk1Hz`, `lsiHz`: F446 32 kHz, F103 40 kHz)·생성 줄·.ioc 읽기를 맡는다. `mcu-family.js`의 두 보드 `extra`에 `IWDG:{}`·`WWDG:{}`, `irqExtra`에 `WWDG_IRQn`.
+- Pinout: `src/wdg-ui.js`(`wdgFields`·`bindWdg`). 카드가 타임아웃(IWDG)과 Refresh 가능 구간·리셋 시점(WWDG)을 보여 주고, Early wakeup interrupt를 켜면 NVIC `WWDG_IRQn`도 켠다.
+- 생성: `MX_IWDG_Init`에는 클록 켜기가 없다(LSI). `MX_WWDG_Init`은 `__HAL_RCC_WWDG_CLK_ENABLE` 뒤 Init. `irq-handlers.js`가 `WWDG_IRQHandler → HAL_WWDG_IRQHandler(&hwwdg)`. EWI + NVIC이면 `HAL_WWDG_EarlyWakeupCallback`(USER CODE 안에서 `HAL_WWDG_Refresh`). IWDG를 켠 새 예제 루프는 `HAL_IWDG_Refresh` 뒤 타임아웃의 절반(최대 500 ms)만 쉰다.
+- 해석기: `src/hal-wdg.js`(`HalWdg`, 확장 목록 마지막). IWDG 타임아웃과 WWDG 0x40→0x3F는 예약 이벤트에서 `r.restart()`, 창 밖 `HAL_WWDG_Refresh`는 `invoke`가 `{kind:'reset'}`을 내 그 자리에서 멈춘다. EWI는 `WWDG_IRQn` 대기열 → `HAL_WWDG_IRQHandler`가 비운다. 리셋 원인은 `hal.resetFlags`(RCC_CSR 비트 번호 집합, 전원 켤 때 POR·PIN, F4는 BOR도)에 두고, 세션의 reset 훅이 새 HAL에 `inheritReset(old)`로 넘긴다(`resetCause` 없으면 SFT). `__HAL_RCC_GET_FLAG`·`__HAL_RCC_CLEAR_RESET_FLAGS`.
+- 에뮬레이터에서 고친 것(`stm32f446/system.js`): `Wwdg`가 카운터 기준점을 `this.base`에 둬 SoC의 주소 필드와 겹쳤다(→ `anchor`). HAL은 CR을 쓴 뒤 CFR을 쓰는데 CFR 쓰기가 일정을 다시 잡지 않아 Prescaler·EWI가 반영되지 않았다. `Iwdg.periodUs`가 F103에서도 32 kHz였다(`soc.lsiHz` 40000). F103 리셋 때 이전 CSR 플래그를 0x74가 아닌 0x24에서 읽게 했다(`rcc.csrOffset`).
+- 시험: 단위 `wdg-config`, 해석기 `wdg`, 툴체인 `wdg`(실제 HAL, 두 보드: IWDG 리셋·EWI 유지·WWDG 늦은/이른 Refresh 리셋·리셋 플래그), E2E `wdg`.
+- 남음: IWDG Window(F4 HAL에 없음), STOP/Standby에서의 동작, DBGMCU 정지 설정 UI.
 
 ## 1.30.1 .ioc만 가져올 때 main.c도 생성
 
