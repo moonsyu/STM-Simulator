@@ -207,17 +207,21 @@ export function importIoc(text){
   if(!family)throw new Error('STM32F446RE 또는 STM32F103RB 설정만 지원합니다.');
   const config=defaultMcu(family),f=familyProfile(family),routes=routesOf(family);config.pins={};const warnings=[];
   const number=(raw,fallback)=>{if(raw===undefined)return fallback;const n=evalIocNumber(raw);if(n===null){warnings.push(`${raw}: 숫자로 읽을 수 없어 기본값 ${fallback}을 사용합니다.`);return fallback;}return n;};
-  for(const [key,signal]of Object.entries(values)){
+  for(let [key,signal]of Object.entries(values)){
     const m=/^(P[A-H]\d+)(?:-[^.]+)?\.Signal$/.exec(key);if(!m)continue;const pin=m[1],base=key.slice(0,-7);
     if(!f.gpioPins.includes(pin)){warnings.push(`${pin}: 보드에서 접근할 수 없는 핀`);continue;}
     // ADCx_INn: a channel shared by ADC1/2/3; the model uses ADC1.
+    // A shared signal (S_TIM2_CH1_ETR: the pin's timer channel or its external trigger) is the one its SH line picks:
+    // SH.S_TIM2_CH1_ETR.0=TIM2_CH1,PWM Generation1 CH1.
+    const picked=(values[`SH.${signal}.0`]||'').split(',')[0];if(/^S_TIM\d+_/.test(signal)&&/^TIM\d+_CH\dN?$/.test(picked))signal='S_'+picked;
     let fn=/^COMP_DAC([12])_group$/.test(signal)?'DAC_OUT'+signal[8]:signal==='GPIO_Analog'?'Analog':signal==='GPIO_Output'?'GPIO_Output':signal==='GPIO_Input'?'GPIO_Input':signal.startsWith('GPXTI')?'GPIO_EXTI':/^S_TIM\d+_CH\dN?$/.test(signal)?signal.slice(2):/^ADC(?:x|\d+)_IN\d+$/.test(signal)?'ADC1_'+signal.split('_')[1]:signal;
     if(!pinFunctions(pin,family).includes(fn)){fn='Reserved';if(!/^(SYS_|RCC_)/.test(signal))warnings.push(`${pin}: ${signal} 실행 모델 미지원`);}
     const pull=(values[base+'.GPIO_PuPd']||'GPIO_NOPULL').replace('GPIO_','');
     // CubeMX omits GPIO_ModeDefaultEXTI for its default, rising edge.
     const extiMode=values[base+'.GPIO_ModeDefaultEXTI']||(fn==='GPIO_EXTI'?'GPIO_MODE_IT_RISING':''),edge=extiMode.includes('RISING_FALLING')?'CHANGE':extiMode.includes('RISING')?'RISING':'FALLING';
     // Board templates label pins like "B1 [Blue PushButton]"; the C name is the first word.
-    const rawLabel=values[base+'.GPIO_Label']||'',label=rawLabel.split(/[\s[]/)[0];
+    // A character a C name cannot hold becomes _, as in the macro CubeMX generates (LCD-D4 → LCD_D4_Pin, HV+ → HV_).
+    const rawLabel=values[base+'.GPIO_Label']||'',firstWord=rawLabel.split(/[\s[]/)[0],label=firstWord.replace(/[^A-Za-z0-9_]/g,'_').replace(/^(?=\d)/,'_');
     if(label&&(!/^[A-Za-z_]\w{0,39}$/.test(label)||['__proto__','constructor','prototype'].includes(label)))warnings.push(`${pin}: 라벨 "${rawLabel}"은 C 이름으로 쓸 수 없어 비웠습니다.`);
     config.pins[pin]={function:fn,pull,edge,label:/^[A-Za-z_]\w{0,39}$/.test(label)&&!['__proto__','constructor','prototype'].includes(label)?label:'',initial:values[base+'.PinState']==='GPIO_PIN_SET'?1:0};
     // GPIO_Speed (absent = CubeMX default) and an open-drain output (GPIO_ModeDefaultOutputPP).
@@ -295,6 +299,13 @@ export function importIoc(text){
   const group=/^NVIC_PRIORITYGROUP_([0-4])$/.exec(values['NVIC.PriorityGroup']||'');if(group)config.nvicGroup=Number(group[1]);
   const tick=values['NVIC.SysTick_IRQn']?.split(':');if(tick&&Number.isInteger(Number(tick[1])))config.tickPriority=Number(tick[1]);
   for(const [key,v]of Object.entries(values))if(/^Mcu.IP\d+$/.test(key)&&!Object.hasOwn(routes,v)&&!['GPIO','RCC','NVIC','SYS','DMA','NUCLEO-F446RE','NUCLEO-F103RB'].includes(v))warnings.push(`${v}: 실행 모델 미지원`);
-  const clean=validateMcu(config);return {config:clean,warnings:[...new Set([...warnings,...configProblems(clean)])]};
+  // An interrupt line whose peripheral was not imported (a timer used as the HAL time base, a part the model does not
+  // have) is left out with a note: kept, it would be an error the user has to clear by hand before generating code.
+  let clean=validateMcu(config);
+  for(let pass=0;pass<40;pass++){
+    const orphan=configProblems(clean).map(p=>/^(\w+_IRQn): .*(?:주변장치를 활성화하거나|를 활성화하거나) 인터럽트를 끄세요/.exec(p)?.[1]).find(irq=>irq&&config.nvic?.[irq]);if(!orphan)break;
+    delete config.nvic[orphan];warnings.push(`${orphan}: 이 인터럽트를 쓰는 주변장치를 가져오지 않아 NVIC 설정에서 뺐습니다.`);clean=validateMcu(config);
+  }
+  return {config:clean,warnings:[...new Set([...warnings,...configProblems(clean)])]};
 }
 export function generateHal(config,options){const clean=validateMcu(config),errors=configProblems(clean);if(errors.length)throw new Error(errors.join('\n'));return generateMain(clean,options);}

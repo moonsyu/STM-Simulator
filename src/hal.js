@@ -304,9 +304,12 @@ export class HalAdapter {
       for(const pin of this.pins(a,mask)){
         if(this.catalog.configurePin(pin,mode,this.f1?0:this.field(init,'Alternate'),r))continue;
         // F1 peripheral inputs (UART RX, SPI MISO, timer capture/encoder channels) use GPIO_MODE_INPUT.
+        // F1 alternate-function inputs (USART RX, SPI MISO, capture channels) are GPIO_MODE_INPUT as CubeMX writes them by
+        // default — or GPIO_MODE_AF_PP when the .ioc says so: the NUCLEO-F103RB board template sets PA2 and PA3 together
+        // (GPIO_InitStruct.Pin = USART_TX_Pin|USART_RX_Pin; Mode = GPIO_MODE_AF_PP), and that code must run as it is.
         const p=this.configured(pin),afInput=this.f1&&(/_RX$|^SPI[123]_MISO$/.test(p.function)||/^TIM\d_CH\d$/.test(p.function)&&['capture','encoder'].includes(this.config.peripherals[p.function.split('_')[0]]?.mode)),expected=p.function==='GPIO_Output'?(p.outputType==='OD'?17:1):p.function==='GPIO_Input'||afInput?0:p.function==='GPIO_EXTI'?HAL_CONSTANTS['GPIO_MODE_IT_'+(p.edge==='CHANGE'?'RISING_FALLING':p.edge)]:p.function==='Analog'||p.function.startsWith('ADC1_')||p.function.startsWith('DAC_')?3:/^I2C[123]_/.test(p.function)?18:2;
         const dynamic=this.initializedGpio.has(pin)&&(['GPIO_Output','GPIO_Input'].includes(p.function)&&[0,1,17,3].includes(mode)||(p.function==='Analog'||p.function.startsWith('ADC1_'))&&[0,3].includes(mode));
-        if(!dynamic&&(mode!==expected&&!(expected===1&&mode===17)||pull!==['NOPULL','PULLUP','PULLDOWN'].indexOf(p.pull)))throw new Error(`${pin}: HAL_GPIO_Init 모드/풀 설정과 Pinout이 다릅니다.`);
+        if(!dynamic&&(mode!==expected&&!(expected===1&&mode===17)&&!(afInput&&mode===2)||pull!==['NOPULL','PULLUP','PULLDOWN'].indexOf(p.pull)))throw new Error(`${pin}: HAL_GPIO_Init 모드/풀 설정과 Pinout이 다릅니다.`);
         if(this.f1)this.checkF1Pin(pin,p);
         if([2,18].includes(mode)&&!this.f1){const serial=serialFunction(p.function)||/^(USART\d)_CK$/.exec(p.function)?.[1],af=serial?serialAf(serial):busAf(p.function,pin)??(p.function.startsWith('SDIO_')?12:timerAf(p.function.split('_')[0]));if(this.field(init,'Alternate')!==af)throw new Error(`${pin}: GPIO Alternate(AF) 설정을 확인하세요.`);}
         this.initializedGpio.add(pin);

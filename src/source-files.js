@@ -3,6 +3,12 @@
 export const SOURCE_PATH=/^(?:[A-Za-z0-9_][\w.-]{0,40}\/){0,6}[A-Za-z0-9_][\w.-]{0,70}\.(c|h|cpp|hpp|cc)$/;
 export const MAX_SOURCE_FILES=120,MAX_SOURCE_BYTES=1000000;
 export const baseName=name=>name.split('/').at(-1);
+/**
+ * Source text as the app keeps it: no byte order mark, lines ending in \n. CubeIDE on Windows writes \r\n, and the code
+ * that edits sources by position or by line (main hooks, regeneration, moving user code, the notices that name a line)
+ * is written for \n text, so imported and dropped files are brought to that form once, where they come in.
+ */
+export const normalizeText=text=>text.replace(/^\uFEFF/,'').replace(/\r\n?/g,'\n');
 export const folderOf=name=>name.split('/').slice(0,-1).join('/');
 /** The file an #include "x.h" / "dir/x.h" written in `from` means: the same folder first, then the path from the root, then any folder. */
 export function resolveInclude(names,include,from=''){

@@ -4,7 +4,7 @@
 //  - other .c / .h / .cpp / .hpp files → added to the project's sources (a dropped folder keeps its tree under its name);
 //    a file that already exists is replaced with the dropped text.
 // The decision is a pure function (planDrop) so it can be tested without a window.
-import {SOURCE_PATH,MAX_SOURCE_FILES,MAX_SOURCE_BYTES,baseName,nameClash} from './source-files.js';
+import {SOURCE_PATH,MAX_SOURCE_FILES,MAX_SOURCE_BYTES,baseName,nameClash,normalizeText} from './source-files.js';
 
 // Folders of a CubeIDE project that are not the user's sources (the app builds with its own SDK copy).
 const SKIP_FOLDERS=new Set(['drivers','middlewares','debug','release','build','.git','.settings','.metadata','node_modules','startup']);
@@ -18,7 +18,7 @@ export async function readDropped(dataTransfer){
     if(!/\.(c|h|cpp|hpp|cc|ioc|stm32lab|json)$/i.test(name))return;
     if(++count>MAX_SOURCE_FILES+2)throw new Error(`파일이 너무 많습니다. .c/.h는 ${MAX_SOURCE_FILES}개까지 놓을 수 있습니다(Drivers·Middlewares·빌드 폴더는 제외됩니다).`);
     bytes+=file.size;if(bytes>2_000_000)throw new Error('놓은 파일이 너무 큽니다(합계 2 MB까지).');
-    out.push({name,text:await file.text(),size:file.size});
+    out.push({name,text:normalizeText(await file.text()),size:file.size});
   };
   const walk=async(entry,prefix,depth)=>{
     if(entry.isFile){const file=await new Promise((resolve,reject)=>entry.file(resolve,reject));await add(file,prefix+entry.name);return;}

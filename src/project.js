@@ -1,5 +1,5 @@
 import {CATALOG_DEFS,CATALOG_BY_TYPE} from './catalog-defs.js';
-import {SOURCE_PATH,MAX_SOURCE_FILES,MAX_SOURCE_BYTES,baseName,nameClash} from './source-files.js';
+import {SOURCE_PATH,MAX_SOURCE_FILES,MAX_SOURCE_BYTES,baseName,nameClash,normalizeText} from './source-files.js';
 import {DEVICE_RANGES,DEVICE_ADDRESSES} from './device-defs.js';
 import {PIN_BY_ID,holeInfo} from './pins.js';
 import {terminalKeys,TWO_PIN_TYPES,MULTI_PIN_TYPES,normalizeAngle} from './components.js';
@@ -116,7 +116,8 @@ export function validateProject(data){
     if(w.points!==undefined&&(!Array.isArray(w.points)||w.points.length>32||w.points.some(p=>!p||!Number.isFinite(p.x)||!Number.isFinite(p.y))))throw new Error('배선 꺾임점은 유효한 좌표로 32개까지 지원합니다.');
     wireIds.add(w.id);return {id:w.id,from:w.from,to:w.to,color:w.color,...(w.points?{points:w.points.map(p=>({x:p.x,y:p.y}))}:{})};
   });
-  const project={format:data.format,version:2,name:data.name,code:data.code,components,wires};
+  // Sources are kept with \n line ends (a project saved before 1.43.0 may hold a CubeIDE file with \r\n).
+  const project={format:data.format,version:2,name:data.name,code:normalizeText(data.code),components,wires};
   if(data.boardId!==undefined)project.boardId=data.boardId;
   if(data.surfaces!==undefined){
     if(!data.surfaces||typeof data.surfaces!=='object'||Array.isArray(data.surfaces))throw new Error('보드 크기 설정을 확인하세요.');
@@ -133,7 +134,7 @@ export function validateProject(data){
   if(data.firmware!==undefined){
     if(!data.firmware||!['sketch','hal','fsp'].includes(data.firmware.mode)||!Array.isArray(data.firmware.files)||data.firmware.files.length>MAX_SOURCE_FILES)throw new Error('펌웨어 소스 설정이 올바르지 않습니다.');
     const names=new Set();let size=data.code.length;
-    const files=data.firmware.files.map(f=>{if(!f||typeof f.name!=='string'||!SOURCE_PATH.test(f.name)||nameClash(names,f.name)||typeof f.text!=='string')throw new Error('소스 파일 이름/내용을 확인하세요.');names.add(f.name.toLowerCase());size+=f.text.length;return {name:f.name,text:f.text};});
+    const files=data.firmware.files.map(f=>{if(!f||typeof f.name!=='string'||!SOURCE_PATH.test(f.name)||nameClash(names,f.name)||typeof f.text!=='string')throw new Error('소스 파일 이름/내용을 확인하세요.');names.add(f.name.toLowerCase());size+=f.text.length;return {name:f.name,text:normalizeText(f.text)};});
     if(size>MAX_SOURCE_BYTES)throw new Error('소스 전체는 1 MB 이하로 선택하세요.');
     // Where main.c sits in an imported CubeIDE project (Core/Src): the build puts it there so its relative includes work.
     let mainFolder;if(data.firmware.mainFolder!==undefined){if(typeof data.firmware.mainFolder!=='string'||!SOURCE_PATH.test(data.firmware.mainFolder+'/main.c'))throw new Error('main.c 폴더 경로를 확인하세요.');mainFolder=data.firmware.mainFolder;}

@@ -3,13 +3,14 @@ import {expandC} from './c-format.js';
 import {regenerateMain} from './c-source-edit.js';
 import {validateProject} from './project.js';
 import {projectBoard,boardForFamily} from './boards.js';
-import {SOURCE_PATH,MAX_SOURCE_FILES,MAX_SOURCE_BYTES,baseName,folderOf,nameClash} from './source-files.js';
+import {SOURCE_PATH,MAX_SOURCE_FILES,MAX_SOURCE_BYTES,baseName,folderOf,nameClash,normalizeText} from './source-files.js';
 
 export function importFirmware(project,files){
   if(!Array.isArray(files)||files.length>MAX_SOURCE_FILES+1||!files.length)throw new Error('.ioc 및 .c/.h 파일을 선택하세요.');
   const next=structuredClone(project),warnings=[],names=new Set();let size=0;
   for(const file of files){if(!file||typeof file.name!=='string'||!(/^[\w.-]+\.ioc$/.test(file.name)||SOURCE_PATH.test(file.name)&&/\.[ch]$/.test(file.name))||typeof file.text!=='string'||names.has(file.name))throw new Error('파일 이름, 확장자 또는 중복을 확인하세요.');names.add(file.name);size+=file.text.length;}
   if(size>MAX_SOURCE_BYTES)throw new Error('가져올 파일은 합계 1 MB 이하로 선택하세요.');
+  files=files.map(f=>({...f,text:normalizeText(f.text)}));
   const iocs=files.filter(f=>f.name.endsWith('.ioc'));if(iocs.length>1)throw new Error('.ioc 파일은 하나만 선택하세요.');
   const board=projectBoard(project);
   if(iocs.length){
