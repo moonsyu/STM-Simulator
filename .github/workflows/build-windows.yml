@@ -77,7 +77,8 @@ jobs:
           node-version: '24'
           cache: npm
       - name: Install locked dependencies
-        run: npm ci
+        # These tests use neither Electron nor the bundled editor: skip the install scripts (Electron download, editor build).
+        run: npm ci --ignore-scripts
       - name: Install ARM GCC, STM32CubeF4 / STM32CubeF1 drivers and Renesas FSP
         uses: ./.github/actions/arm-toolchain
       - name: Build examples with ST HAL and run them on the emulator
@@ -129,7 +130,8 @@ jobs:
           node-version: '24'
           cache: npm
       - name: Install locked dependencies
-        run: npm ci
+        # These tests use neither Electron nor the bundled editor: skip the install scripts (Electron download, editor build).
+        run: npm ci --ignore-scripts
       - name: Restore Arduino CLI, the esp32 core and libraries
         id: arduino-cache
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
@@ -254,8 +256,9 @@ jobs:
           CSC_IDENTITY_AUTO_DISCOVERY: 'false'
         run: |
           # One retry: the tool downloads above can time out (HTTP 504) while the build itself is fine.
-          npm run build
-          if ($LASTEXITCODE -ne 0) { Write-Output 'Build failed; retrying once.'; Remove-Item -Recurse -Force work/build -ErrorAction SilentlyContinue; npm run build }
+          # npm ci already built the editor (postinstall), so only the package is built here.
+          npm run build:package
+          if ($LASTEXITCODE -ne 0) { Write-Output 'Build failed; retrying once.'; Remove-Item -Recurse -Force work/build -ErrorAction SilentlyContinue; npm run build:package }
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Verify package and prepare download
         run: npm run build:artifact

@@ -22,12 +22,25 @@ function sketches(){
  }
  return [...seen.values()];
 }
+// Seconds a sketch took to build in CI (1.46.1); WiFi sketches are the slow ones. A sketch not listed counts as 25.
+const BUILD_SECONDS={'WF-03-ESP32-1':62,'WF-02-ESP32-1':44,'WF-02-ESP32-2':43,'BT-03-ESP32-1':27,'IOT-01-ESP32-1':22,'FW-09-ESP32-1':17,'BT-02-ESP32-1':14,'FW-08-ESP32-1':13};
+function dealSketches(all,shards){
+ const jobs=Array.from({length:shards},()=>({seconds:0,list:[]})),cost=s=>BUILD_SECONDS[s.name]??25;
+ for(const s of [...all].sort((a,b)=>cost(b)-cost(a)||a.name.localeCompare(b.name))){const job=jobs.reduce((least,j)=>j.seconds<least.seconds?j:least);job.list.push(s);job.seconds+=cost(s);}
+ return jobs.map(j=>j.list);
+}
+test('the sketches are dealt to the CI jobs once each, with about the same build time',()=>{
+ const all=sketches(),jobs=dealSketches(all,2),cost=list=>list.reduce((n,s)=>n+(BUILD_SECONDS[s.name]??25),0);
+ assert.deepEqual(jobs.flat().map(s=>s.name).sort(),all.map(s=>s.name).sort());
+ assert.ok(Math.abs(cost(jobs[0])-cost(jobs[1]))<=30,`${cost(jobs[0])} s / ${cost(jobs[1])} s`);
+ assert.deepEqual(dealSketches(all,1)[0].map(s=>s.name).sort(),all.map(s=>s.name).sort());
+});
 test('the examples have ESP32 sketches to build',()=>{assert.ok(sketches().length>=5);});
 test('every example ESP32 sketch compiles with the esp32 core',{skip:!cli&&!process.env.CI_REQUIRE_ESP32&&'ARDUINO_CLI is not set',timeout:3600000},()=>{
  assert.ok(cli,'ARDUINO_CLI must point to arduino-cli');
  const root=fs.mkdtempSync(path.join(os.tmpdir(),'stm-esp32-')),failures=[];
- // CI splits the sketches over jobs: ESP32_SHARD="1/2" builds every second one, starting with the first.
- const [shard,shards]=(process.env.ESP32_SHARD||'1/1').split('/').map(Number),all=sketches(),mine=all.filter((_,i)=>i%shards===shard-1);
+ // CI splits the sketches over jobs: ESP32_SHARD="1/2". The slowest go first, each to the job with the least so far.
+ const [shard,shards]=(process.env.ESP32_SHARD||'1/1').split('/').map(Number),all=sketches(),mine=dealSketches(all,shards)[shard-1]||[];
  assert.ok(Number.isInteger(shard)&&Number.isInteger(shards)&&shard>=1&&shard<=shards,'ESP32_SHARD is n/m');
  console.log(`building ${mine.length} of ${all.length} sketches (shard ${shard}/${shards})`);
  for(const s of mine){const started=Date.now();
