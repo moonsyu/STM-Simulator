@@ -130,9 +130,9 @@ ipcMain.handle('firmware:import',async(_event,folder)=>{
     if(!files.length)throw new Error('이 폴더에서 .ioc나 .c/.h 소스를 찾지 못했습니다.');
     return files;
   }
-  if(!paths.length||paths.length>41)throw new Error('소스 파일 1~41개를 선택하세요.');
+  if(!paths.length||paths.length>121)throw new Error('소스 파일 1~121개를 선택하세요.');
   const files=[];let total=0;
-  for(const filename of paths){if(!/\.(ioc|c|h)$/.test(filename))throw new Error('.ioc 및 .c/.h 파일만 읽을 수 있습니다.');const stat=await fs.stat(filename);total+=stat.size;if(total>800000)throw new Error('소스는 합계 800 KB 이하로 선택하세요.');files.push({name:path.basename(filename),text:await fs.readFile(filename,'utf8')});}
+  for(const filename of paths){if(!/\.(ioc|c|h)$/.test(filename))throw new Error('.ioc 및 .c/.h 파일만 읽을 수 있습니다.');const stat=await fs.stat(filename);total+=stat.size;if(total>1000000)throw new Error('소스는 합계 1 MB 이하로 선택하세요.');files.push({name:path.basename(filename),text:await fs.readFile(filename,'utf8')});}
   return files;
 });
 ipcMain.handle('project:save',async(_event,text)=>{

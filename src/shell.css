@@ -628,3 +628,6 @@ body.dock-dragging .dock-unit{pointer-events:none}
 .ra-stack-fields{display:flex;flex-wrap:wrap;gap:8px}
 .ra-stack-fields label{display:flex;flex-direction:column;gap:3px;color:var(--ide-muted)}
 .ra-stack select,.ra-stack input,.ra-config-view select{height:26px;font-size:12px}
+
+/* A file or folder dragged over the window (file-drop.js): the whole workbench is the drop target. */
+body.file-drop-target::after{content:'여기에 놓기 · .c/.h 추가, .ioc·프로젝트 폴더 가져오기, .stm32lab 열기';position:fixed;inset:8px;z-index:9999;display:grid;place-items:center;border:2px dashed var(--ide-accent);border-radius:8px;background:color-mix(in srgb,var(--ide-accent) 10%,transparent);color:var(--ide-fg,inherit);font-size:15px;pointer-events:none;}

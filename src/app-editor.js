@@ -64,4 +64,4 @@ export function onCodeResetConfirmClick(){
   $('code-reset-dialog').close();log('기본 코드로 초기화했습니다. 회로·핀 설정·다른 파일은 유지됩니다. Ctrl+Z로 되돌릴 수 있습니다.');
  }catch(error){$('code-reset-error').textContent=error.message;}
 }
-export async function onFirmwareFilesChange(e){const chosen=[...e.target.files];try{if(chosen.length>41||chosen.reduce((n,f)=>n+f.size,0)>800000)throw new Error('파일은 41개, 합계 800 KB 이하로 선택하세요.');applyFirmware(await Promise.all(chosen.map(async f=>({name:f.name,text:await f.text()}))));}catch(err){log(err.message,'error');}finally{e.target.value='';}}
+export async function onFirmwareFilesChange(e){const chosen=[...e.target.files];try{if(chosen.length>121||chosen.reduce((n,f)=>n+f.size,0)>1000000)throw new Error('파일은 121개, 합계 1 MB 이하로 선택하세요.');applyFirmware(await Promise.all(chosen.map(async f=>({name:f.name,text:await f.text()}))));}catch(err){log(err.message,'error');}finally{e.target.value='';}}

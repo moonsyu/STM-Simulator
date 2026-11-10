@@ -50,6 +50,7 @@ import {$} from './common.js';
 import {state} from './app-state.js';
 import {running,log,flushAutosave,autosave,checkpoint,changed,setMode,tab,inspectTab,editUndo} from './app-core.js';
 import {filterParts,filterExamples,replaceProject,requestReplace,onHalExampleChange} from './app-examples.js';
+import {setupFileDrop} from './file-drop.js';
 import {syncEditor,replaceCodeText,applyFirmware,editBoard,onCodeInput,onCodeResetConfirmClick,onFirmwareFilesChange} from './app-editor.js';
 import {save,open,onFileInputChange,onMainExportClick} from './app-files.js';
 import {refresh,updateReadouts,onSoundClick} from './app-view.js';
@@ -165,6 +166,14 @@ $('firmware-import').onclick=async()=>{try{if(window.desktop?.importFirmware)app
 $('firmware-folder').hidden=!window.desktop?.importFirmware;
 $('firmware-folder').onclick=async()=>{try{applyFirmware(await window.desktop.importFirmware(true));}catch(e){log(e.message,'error');}};
 $('firmware-files').onchange=onFirmwareFilesChange;
+// Files and folders dropped on the window: a project file opens, an .ioc / main.c set is imported, other sources are added.
+setupFileDrop(document,{isRunning:running,getProject:()=>state.project,log,
+  open:text=>{replaceProject(validateProject(JSON.parse(text)));log('놓은 프로젝트를 열었습니다.');},
+  importFiles:files=>applyFirmware(files),
+  addFiles:files=>{checkpoint();const p=state.project;p.firmware??={mode:'sketch',files:[]};for(const f of files){const old=p.firmware.files.find(x=>x.name===f.name);if(old)old.text=f.text;else p.firmware.files.push({name:f.name,text:f.text});}
+    state.project=validateProject(p);state.sourceFile=files[0].name;syncEditor();changed();state.ide?.invalidate?.();
+    const added=files.filter(f=>!f.replaces).map(f=>f.name),replaced=files.filter(f=>f.replaces).map(f=>f.name);
+    log([added.length?'소스에 추가했습니다: '+added.join(', '):'',replaced.length?'같은 이름의 파일을 놓은 내용으로 바꿨습니다: '+replaced.join(', '):''].filter(Boolean).join(' · ')+' (Ctrl+Z로 되돌림)');}});
 $('code').addEventListener('scroll',()=>{$('line-numbers').scrollTop=$('code').scrollTop;});
 $('code').addEventListener('keydown',e=>{if(e.key==='Tab'){e.preventDefault();if(running())return;const a=e.target.selectionStart,b=e.target.selectionEnd;e.target.setRangeText(' '.repeat(loadPreferences().tabSize),a,b,'end');e.target.dispatchEvent(new Event('input'));}});
 $('main-export').onclick=onMainExportClick;
