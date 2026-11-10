@@ -1,6 +1,13 @@
 # STM Simulator — 개발 인계
 
-현재 버전: **1.46.0**. 정리일: **2026-11-10**. NUCLEO-F446RE·NUCLEO-F103RB 또는 Renesas FPB-RA6E1(1.20.0, FSP·에뮬레이터 전용)과 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+현재 버전: **1.46.1**. 정리일: **2026-11-10**. NUCLEO-F446RE·NUCLEO-F103RB 또는 Renesas FPB-RA6E1(1.20.0, FSP·에뮬레이터 전용)과 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+
+## 1.46.1 수정: 설정 적용 뒤 탐색기 갱신, Developer Assistance 드롭
+
+- **적용 뒤 갱신(`ide-ui.js` `invalidate()`)**: Pinout·RA Configuration을 적용하면 앱이 `ide.invalidate()`만 부르는데, 여기서 트리(`buildFilesView`)·Developer Assistance(`assistView`)·열린 생성 파일(`editor.refreshGenerated`)을 다시 그리지 않아 이전 Stack이 남아 있었다. `invalidate()`가 셋을 함께 부른다(STM32 트리의 HAL 모듈 목록도 같은 경로).
+- **드롭(`ide-ui.js` `insertAssist`, `code-editor.js` `insert(text, point)`)**: 항목은 `text/plain`이 아니라 `application/x-ra-assistance`로 코드를 싣는다. `document`의 캡처 단계 `dragover`/`drop`이 `#group-code` 위의 그 형식만 받아 `editor.getTargetAtClientPoint`의 위치에 넣는다. Monaco의 기본 글자 드롭은 끝에 `$0`를 글자로 남겼다.
+- **TZ 템플릿(`ra-generator.js` `raHalEntry`)**: e² studio 템플릿의 두 번째 `#if BSP_TZ_SECURE_BUILD`(`template_nonsecure_callable`)를 넣었다(1.46.0에 포함).
+- 시험: E2E `ra-rasc`(적용 뒤 Developer Assistance가 g_external_irq6), `ra-assistance`(마우스로 끌어 놓기, `$0` 없음), 툴체인 `ra-course`(BSP 스택·힙 크기로 실제 빌드, 힙 크기에 따른 malloc 실패).
 
 ## 1.46.0 기능 목록 20·21·22번: e² studio 프로젝트 구조, Developer Assistance, RASC 이름·흐름
 

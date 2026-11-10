@@ -1,8 +1,16 @@
 # 검증 기록
 
+## 1.46.1 설정 적용 뒤 갱신, 드롭 — 로컬 검증
+
+2026-11-10. 20~22번의 오류 케이스를 찾아본 결과 두 건. ① RA Configuration에서 External IRQ를 채널 1에서 6으로 바꿔 적용한 뒤에도 Developer Assistance가 `g_external_irq1`을 보였다 → 수정 후 E2E `ra-rasc`가 `g_ioport, BSP, g_external_irq6`을 확인. ② 항목을 마우스로 끌어 편집기에 놓으면 `…OUTPUT);$0`처럼 `$0`가 붙었다 → 수정 후 E2E `ra-assistance`가 코드가 한 번만, `$0` 없이 들어가는 것을 확인. 오류가 아니었던 것: BSP 크기 극단값(스택 0x20000·힙 0, 스택 0x100·힙 0x20000)은 FSP로 빌드되어 Blinky가 동작하고, 힙 0x1000에서는 `malloc(0x800)`이 성공, 0x400에서는 NULL(툴체인 `ra-course`). 관련 E2E `ra-rasc`·`ra-assistance`·`project-structure`·`shell` 13개, 단위 833개(툴체인 환경 변수가 있으면 836개), ESLint, 패키지 검사 통과.
+
+## 1.46.0 기능 목록 20~22번 — 게시 확인(API)
+
+2026-11-10. 빌드 커밋 `85f5bc3` · [Windows CI 42791354778](https://github.com/moonsyu/STM-Simulator/actions/runs/42791354778) 첫 실행에서 성공, 전체 5.0분. [Release v1.46.0](https://github.com/moonsyu/STM-Simulator/releases/tag/v1.46.0)이 최신 릴리스이고 자산 5개(STM-Simulator.exe, ZIP, SHA256.txt, BUILD-INFO.json, update-manifest.json). 파일은 내려받지 않았다.
+
 ## 1.46.0 기능 목록 20~22번 — 로컬 검증
 
-2026-11-10. 20번: E2E `project-structure`(RA 프로젝트의 src·ra_gen·ra_cfg·script·ra 폴더, IRQ Stack이 있으면 r_icu가 있고 r_sci_uart는 없음, hal_entry.c만 프로젝트 파일, ra_gen/main.c·bsp_pin_cfg.h·bsp_delay.c가 읽기 전용으로 열림). 21번: 단위 `ra-assistance` 3개(보드 템플릿의 그룹·코드, 바꾼 핀 이름·콜백, 모든 예제의 Stack 그룹이 예제 코드의 인스턴스 이름과 같음), E2E `ra-assistance`(STM32 프로젝트에는 없음, 누르면 `R_IOPORT_PinCfg(…)`가 hal_entry.c에 들어감, 읽기 전용 파일이 열려 있으면 넣지 않음). 22번: 단위 `ra-rasc` 3개(IRQn-DS 이름, 같은 채널 거절 문구, BSP 크기 검사와 bsp_cfg.h), E2E `ra-rasc`(탭 다섯 개, 모드 이름, External IRQ Stack 삭제·추가·채널·핀 변경, 같은 채널 오류, BSP 크기, 생성된 bsp_cfg.h의 0x800). 단위 시험 전체 836개 통과, 기존 E2E `ra6e1`·`ra-new-project`와 툴체인 `ra-course`(FSP 실제 빌드) 12개 통과, ESLint 통과. 1.45.0 게시: 빌드 커밋 `8126ef0` · Windows CI 42788029612 성공(5.3분) · Release v1.45.0이 최신, 자산 5개(API 확인).
+2026-11-10. 20번: E2E `project-structure`(RA 프로젝트의 src·ra_gen·ra_cfg·script·ra 폴더, IRQ Stack이 있으면 r_icu가 있고 r_sci_uart는 없음, hal_entry.c만 프로젝트 파일, ra_gen/main.c·bsp_pin_cfg.h·bsp_delay.c가 읽기 전용으로 열림). 21번: 단위 `ra-assistance` 3개(보드 템플릿의 그룹·코드, 바꾼 핀 이름·콜백, 모든 예제의 Stack 그룹이 예제 코드의 인스턴스 이름과 같음), E2E `ra-assistance`(STM32 프로젝트에는 없음, 누르면 `R_IOPORT_PinCfg(…)`가 hal_entry.c에 들어감, 읽기 전용 파일이 열려 있으면 넣지 않음). 22번: 단위 `ra-rasc` 3개(IRQn-DS 이름, 같은 채널 거절 문구, BSP 크기 검사와 bsp_cfg.h), E2E `ra-rasc`(탭 다섯 개, 모드 이름, External IRQ Stack 삭제·추가·채널·핀 변경, 같은 채널 오류, BSP 크기, 생성된 bsp_cfg.h의 0x800). 단위 시험 전체 833개(툴체인 환경 변수가 있으면 836개) 통과, 기존 E2E `ra6e1`·`ra-new-project`와 툴체인 `ra-course`(FSP 실제 빌드) 12개 통과, ESLint 통과. 1.45.0 게시: 빌드 커밋 `8126ef0` · Windows CI 42788029612 성공(5.3분) · Release v1.45.0이 최신, 자산 5개(API 확인).
 
 ## 1.45.0 RA6E1 강의 Day5 실습, 버튼 채터링 — 로컬 검증
 
