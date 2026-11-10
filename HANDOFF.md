@@ -1,6 +1,14 @@
 # STM Simulator — 개발 인계
 
-현재 버전: **1.45.0**. 정리일: **2026-11-10**. NUCLEO-F446RE·NUCLEO-F103RB 또는 Renesas FPB-RA6E1(1.20.0, FSP·에뮬레이터 전용)과 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+현재 버전: **1.46.0**. 정리일: **2026-11-10**. NUCLEO-F446RE·NUCLEO-F103RB 또는 Renesas FPB-RA6E1(1.20.0, FSP·에뮬레이터 전용)과 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+
+## 1.46.0 기능 목록 20·21·22번: e² studio 프로젝트 구조, Developer Assistance, RASC 이름·흐름
+
+- **20번 FSP 프로젝트 트리(`ide-ui.js` `raRows(p)`)**: `firmware.mode==='fsp'`이면 탐색기 트리가 `src/hal_entry.c`(프로젝트의 main.c 소스, `tree-own`), `ra_gen`·`ra_cfg`·`script`(`generateRaFiles` 결과, 읽기 전용), `ra/fsp/src/bsp`·`ra/fsp/src/r_*`(켜진 Stack만)·`ra/fsp/inc`·`ra/board/ra6e1_fpb`(SDK 파일, 읽기 전용 탭)로 그려진다. 제목은 "프로젝트 구조 (e² studio)".
+- **21번 Developer Assistance(`src/ra-assistance.js`)**: `raAssistance(mcu)` → `[{name,title,items:[{label,code}]}]`. `ide-ui.js` `assistView()`가 `#ra-assist`(FSP 프로젝트에서만 보임)에 그리고, 누르면 `editor.insert(text)`(`code-editor.js`: 프로젝트 파일을 보이고 선택 자리에 넣음, 뒤 줄은 커서 줄의 들여쓰기). 실행 중·읽기 전용 파일이 열려 있을 때는 넣지 않고 출력 탭에 알린다. 항목은 `draggable`이고 `text/plain`으로 코드를 싣는다.
+- **22번 RASC 이름·흐름(`ra-pinout-ui.js`, `ra-config.js`)**: 탭 `summary`·`bsp`·`clocks`·`pins`·`stacks`(열면 Pins). `RA_IRQ_DS`·`raIrqName(pin)`(IRQ1-DS), `RA_BSP_DEFAULTS`·`mcu.bsp={stackBytes,heapBytes}`(없으면 저장하지 않음, 생성기 `bspCfg(mcu)`). External IRQ Stack은 `irqCard`/`irqChange`: 채널이나 핀을 바꾸면 핀 항목을 옮기고 기본 콜백 이름을 새 채널로 바꾼다. 데이터 모델은 그대로(`pins[pin].function==='IRQ'`)라 이전 프로젝트가 그대로 열린다. Pins 탭의 IRQ 핀은 요약과 "Stacks: … Properties" 단추만 보인다.
+- 시험: 단위 `ra-assistance`·`ra-rasc`, E2E `project-structure`(RA 트리)·`ra-assistance`·`ra-rasc`.
+- 남은 것: `RA_IRQ_DS` 표를 RA6E1 하드웨어 매뉴얼 Table 1.16과 대조(P205만 확인). FSP 버전은 Summary에 번호로 나오지 않는다.
 
 ## 1.45.0 기능 목록 18·19·23·24번: RA6E1 강의 실습, 템플릿, 버튼 채터링
 

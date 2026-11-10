@@ -1,5 +1,9 @@
 # 검증 기록
 
+## 1.46.0 기능 목록 20~22번 — 로컬 검증
+
+2026-11-10. 20번: E2E `project-structure`(RA 프로젝트의 src·ra_gen·ra_cfg·script·ra 폴더, IRQ Stack이 있으면 r_icu가 있고 r_sci_uart는 없음, hal_entry.c만 프로젝트 파일, ra_gen/main.c·bsp_pin_cfg.h·bsp_delay.c가 읽기 전용으로 열림). 21번: 단위 `ra-assistance` 3개(보드 템플릿의 그룹·코드, 바꾼 핀 이름·콜백, 모든 예제의 Stack 그룹이 예제 코드의 인스턴스 이름과 같음), E2E `ra-assistance`(STM32 프로젝트에는 없음, 누르면 `R_IOPORT_PinCfg(…)`가 hal_entry.c에 들어감, 읽기 전용 파일이 열려 있으면 넣지 않음). 22번: 단위 `ra-rasc` 3개(IRQn-DS 이름, 같은 채널 거절 문구, BSP 크기 검사와 bsp_cfg.h), E2E `ra-rasc`(탭 다섯 개, 모드 이름, External IRQ Stack 삭제·추가·채널·핀 변경, 같은 채널 오류, BSP 크기, 생성된 bsp_cfg.h의 0x800). 단위 시험 전체 836개 통과, 기존 E2E `ra6e1`·`ra-new-project`와 툴체인 `ra-course`(FSP 실제 빌드) 12개 통과, ESLint 통과. 1.45.0 게시: 빌드 커밋 `8126ef0` · Windows CI 42788029612 성공(5.3분) · Release v1.45.0이 최신, 자산 5개(API 확인).
+
 ## 1.45.0 RA6E1 강의 Day5 실습, 버튼 채터링 — 로컬 검증
 
 2026-11-10. ① 강의의 실습 세 가지를 슬라이드대로 작성해 FSP + ARM GCC로 빌드하고 RA6E1 에뮬레이터에서 실행: LED(`BBQ_LED`로 이름 바꾼 P408이 깜빡임), 스위치 폴링(`R_IOPORT_PinRead`, 누를 때마다 LED1 토글), 인터럽트(Rising: S1을 누르고 있을 때는 그대로, 뗄 때 LED2 토글 / LED1은 계속 깜빡임). ②에서 FSP 빌드 경고 1건을 찾아 고쳤다. ② Blinky 템플릿: LED1·LED2가 함께 켜지고 꺼짐. ③ 도전 과제: LED 4개가 0000 → 0100까지 0.1초마다 세고, 스위치 2를 누르면 멈춘 값이 0.4초 뒤에도 그대로이며 다시 누르면 다음 값부터 이어지고, 스위치 1을 누르면 0000부터 다시 센다. ④ 버튼 채터링: 해석기(EXTI 횟수 1 → 5 ms에서 여러 번 → 10 ms에서 더 많이, 30 ms 유지 디바운스로 1), 에뮬레이터(FPB-RA6E1·NUCLEO-F446RE 폴링: 깨끗한 접점 1번 토글, 10 ms 채터링에서 여러 번, 누름·뗌 100 ms 디바운스로 1번). ⑤ 새 프로젝트 창: RA 보드에서 Minimal·Blinky·예제로 생성, STM32 보드에서는 HAL 템플릿(E2E). 시험: 단위+해석기+에뮬레이터+펌웨어 1,115개(1개 건너뜀), 툴체인 `ra-course` 3개·`button-bounce` 2개·`ra-build` 2개, E2E `ra-new-project`, ESLint 통과.
