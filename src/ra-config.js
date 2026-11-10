@@ -73,20 +73,33 @@ export function raDefaultMcu(family=RA_FAMILY_ID){
 }
 
 const C_NAME=/^[A-Za-z_][A-Za-z0-9_]{0,40}$/;
+// A pin's symbolic name becomes "#define NAME (BSP_IO_PORT_…)" in bsp_pin_cfg.h and a callback name becomes a function
+// the generated code declares, so a name the compiler or the generated code already uses breaks the build far from where
+// it was typed (LED "int": every int in the project turns into a pin). Those are refused here with the reason.
+const C_WORDS=new Set(('auto break case char const continue default do double else enum extern float for goto if inline int long register restrict return short signed sizeof static struct switch typedef union unsigned void volatile while '
+ +'bool true false NULL size_t int8_t int16_t int32_t int64_t uint8_t uint16_t uint32_t uint64_t main hal_entry errno printf sprintf snprintf puts putchar malloc free memcpy memset strlen abs').split(' '));
+/** Why a name cannot be a pin symbol or a callback of an FSP project, or '' when it can. */
+export function raNameProblem(name){
+ if(C_WORDS.has(name))return `${name}은(는) C나 생성 코드가 쓰는 이름입니다`;
+ if(/^(R_|BSP_|FSP_|IOPORT_|ELC_|ICU_|__)/.test(name)||/^_[A-Z]/.test(name))return `${name}: R_ · BSP_ · FSP_ · IOPORT_ 로 시작하는 이름과 __ 로 시작하는 이름은 FSP와 컴파일러가 씁니다`;
+ if(/^g_(ioport|external_irq\d+|uart\d+|timer\d+|agt\d+|adc\d+|i2c_master\d+|bsp_pin_cfg)(_ctrl|_cfg|_extend|_cfg_extend|_channel_cfg)?$/.test(name))return `${name}은(는) 생성 코드의 인스턴스 이름입니다`;
+ return '';
+}
+const checkName=(where,name)=>{const problem=raNameProblem(name);if(problem)throw new Error(`${where}: ${problem}. 다른 이름을 쓰세요.`);};
 /** Maximum frequency of each RA6E1 internal clock in MHz. */
 export const RA_CLOCK_LIMITS=Object.freeze({iclk:200,pclka:100,pclkb:50,pclkc:50,pclkd:100,fclk:50});
 const PIN_FUNCTIONS=['GPIO_Output','GPIO_Input','IRQ','Analog','Peripheral'];
 /** A checked copy of an RA project's MCU settings (pins, clock); throws with the reason. */
 export function validateRaMcu(mcu){
  if(!mcu||typeof mcu!=='object'||Array.isArray(mcu))throw new Error('RA 핀 설정을 확인하세요.');
- const fam=raFamily(mcu.family),out={family:fam.id,pins:{}},labels=new Set(),channels=new Map(),signals=new Map();
+ const fam=raFamily(mcu.family),out={family:fam.id,pins:{}},labels=new Set(),channels=new Map(),signals=new Map(),callbacks=[];
  if(!mcu.pins||typeof mcu.pins!=='object'||Array.isArray(mcu.pins))throw new Error('RA 핀 설정을 확인하세요.');
  for(const [pin,p]of Object.entries(mcu.pins)){
   if(!fam.ports.includes(pin))throw new Error(`${pin}: ${fam.part}에 없는 핀입니다.`);
   if(RA_RESERVED[pin]&&!['P212','P213','P200'].includes(pin))throw new Error(`${pin}: ${RA_RESERVED[pin]} 핀이라 바꿀 수 없습니다.`);
   if(!p||!PIN_FUNCTIONS.includes(p.function))throw new Error(`${pin}: 지원하지 않는 핀 기능입니다.`);
   const q={function:p.function};
-  if(p.label!==undefined&&p.label!==''){if(typeof p.label!=='string'||!C_NAME.test(p.label)||labels.has(p.label))throw new Error(`${pin}: 핀 이름(심볼)은 겹치지 않는 C 식별자로 쓰세요.`);labels.add(p.label);q.label=p.label;}
+  if(p.label!==undefined&&p.label!==''){if(typeof p.label!=='string'||!C_NAME.test(p.label)||labels.has(p.label))throw new Error(`${pin}: 핀 이름(심볼)은 겹치지 않는 C 식별자로 쓰세요.`);checkName(pin,p.label);labels.add(p.label);q.label=p.label;}
   if(p.function==='GPIO_Output'){
    q.initial=p.initial?1:0;
    q.drive=p.drive??'LOW';if(!['LOW','MID','HIGH'].includes(q.drive))throw new Error(`${pin}: 출력 세기를 확인하세요.`);
@@ -102,7 +115,7 @@ export function validateRaMcu(mcu){
    if(channels.has(ch))throw new Error(`${pin}: IRQ${ch}는 이미 ${channels.get(ch)}(${raIrqName(channels.get(ch))})에서 씁니다. ${raIrqName(pin)}와 같은 채널이라 함께 쓸 수 없습니다.`);channels.set(ch,pin);
    q.edge=p.edge??'FALLING';if(!['FALLING','RISING','BOTH','LOW'].includes(q.edge))throw new Error(`${pin}: 인터럽트 조건을 확인하세요.`);
    q.priority=p.priority??12;if(!Number.isInteger(q.priority)||q.priority<0||q.priority>15)throw new Error(`${pin}: 인터럽트 우선순위는 0~15입니다.`);
-   q.callback=p.callback??`external_irq${ch}_callback`;if(typeof q.callback!=='string'||!C_NAME.test(q.callback))throw new Error(`${pin}: 콜백 이름은 C 식별자로 쓰세요.`);
+   q.callback=p.callback??`external_irq${ch}_callback`;if(typeof q.callback!=='string'||!C_NAME.test(q.callback))throw new Error(`${pin}: 콜백 이름은 C 식별자로 쓰세요.`);checkName(pin,q.callback);callbacks.push([pin,q.callback]);
    if(p.filter)q.filter=true;
   }
   out.pins[pin]=q;
@@ -129,6 +142,9 @@ export function validateRaMcu(mcu){
    out.peripherals[id]=q;
   }
  }
+ for(const [id,q]of Object.entries(out.peripherals||{}))if(q.callback){checkName(id,q.callback);callbacks.push([id,q.callback]);}
+ // A callback is a function: it cannot have the name of a pin symbol (a macro).
+ for(const [where,name]of callbacks)if(labels.has(name))throw new Error(`${where}: 콜백 이름 ${name}은(는) 핀 이름(심볼)과 같습니다. 다른 이름을 쓰세요.`);
  for(const signal of signals.keys()){const id=signal.split('_')[0];if(!out.peripherals?.[id]?.enabled)throw new Error(`${signals.get(signal)}: ${id}를 켜야 ${signal}로 쓸 수 있습니다.`);}
  if(mcu.clock!==undefined){
   const c=mcu.clock,d=fam.clock;
