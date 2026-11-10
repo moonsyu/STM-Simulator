@@ -1,6 +1,7 @@
 // A project source name: a file name, or a path of up to six folders (`Core/Src/app.c`, as a CubeIDE project keeps its
 // files). Folder and file names are letters, digits, _ . - and do not start with a dot, so `.` / `..` cannot appear.
-export const SOURCE_PATH=/^(?:[A-Za-z0-9_][\w.-]{0,40}\/){0,6}[A-Za-z0-9_][\w.-]{0,70}\.(c|h|cpp|hpp|cc)$/;
+// .s (startup code) and .ld (linker script) are the two other kinds a CubeIDE project holds; only the ARM build uses them.
+export const SOURCE_PATH=/^(?:[A-Za-z0-9_][\w.-]{0,40}\/){0,6}[A-Za-z0-9_][\w.-]{0,70}\.(c|h|cpp|hpp|cc|s|ld)$/;
 export const MAX_SOURCE_FILES=120,MAX_SOURCE_BYTES=1000000;
 export const baseName=name=>name.split('/').at(-1);
 /**
@@ -48,7 +49,7 @@ export function changeSourceFile(project,action,name,nextName){
     if(clash==='same')throw new Error('같은 이름의 파일이 이미 있습니다.');
     if(clash==='folder')throw new Error('파일 이름과 폴더 이름이 겹칩니다: 다른 소스의 경로에 같은 이름이 있습니다.');
   }
-  if(action==='add'){if(files.length>=MAX_SOURCE_FILES)throw new Error(`보조 소스는 ${MAX_SOURCE_FILES}개까지 추가할 수 있습니다.`);files.push({name,text:/\.(h|hpp)$/.test(name)?'#pragma once\n':'#include "main.h"\n\n'});}
+  if(action==='add'){if(files.length>=MAX_SOURCE_FILES)throw new Error(`보조 소스는 ${MAX_SOURCE_FILES}개까지 추가할 수 있습니다.`);files.push({name,text:/\.(h|hpp)$/.test(name)?'#pragma once\n':/\.(s|ld)$/.test(name)?'':'#include "main.h"\n\n'});}
   else {
     const index=files.findIndex(f=>f.name===name);if(index<0)throw new Error('파일을 찾을 수 없습니다.');
     // Only the #include lines that mean this file: another folder may hold a header of the same name (Core/Inc/app.h and

@@ -12,7 +12,7 @@ import {FirmwareSession} from '../../src/firmware-session.js';
 import {SimulationSession} from '../../src/session.js';
 import {blankProject,projectForBoard,validateProject} from '../../src/project.js';
 import {generateHal} from '../../src/mcu-config.js';
-import {buildEnvironment,prefixOf} from '../../src/build-environment.js';
+import {buildEnvironment,prefixOf,startupOf,linkerScript,linkerName} from '../../src/build-environment.js';
 
 const require=createRequire(import.meta.url),{prepareBuild,build,detectTools}=require('../../desktop/native-build.cjs');
 const tools=await detectTools({armGcc:process.env.ARM_GCC||''});
@@ -40,6 +40,30 @@ test('project copies of the generated it.c and of an SDK driver source are compi
    // The interpreter runs the same project without the ARM-only copy (HAL at API level) and with the copied handlers.
    const sim=new SimulationSession(q,{print:()=>{},warn:()=>{}});sim.tick(0);for(let t=10;t<=60;t+=10)sim.tick(t);
    assert.ok(!sim.result?.fault,board);assert.ok(sim.runtime.gpio.PC2,'main loop toggles PC2');
+  }
+ }finally{await fs.rm(root,{recursive:true,force:true});}
+});
+
+// Feature 14: the startup code and the linker script are project files too once copied in.
+test('a project copy of the startup file and of the linker script is what the ARM build assembles and links with (F446RE, F103RB)',{skip,timeout:600000},async()=>{
+ const root=await fs.mkdtemp(path.join(os.tmpdir(),'structure-'));
+ try{
+  for(const [board,base,cube]of [['F446RE',blankProject(),tools.cube],['F103RB',projectForBoard('nucleo-f103rb'),tools.cubeF1]]){
+   const p=structuredClone(base),m=p.mcu,prefix=prefixOf(m.family),series=prefix.toUpperCase().replace('XX','xx');p.components=[];p.wires=[];
+   m.pins.PC0=pin('GPIO_Output');
+   // The copied startup file calls a function of main.c before main(); the copied linker script moves the stack top
+   // down by 256 bytes, which the program reads back through _estack.
+   p.code=generateHal(m,{minimal:true}).replace('/* USER CODE BEGIN 0 */','/* USER CODE BEGIN 0 */\nvolatile unsigned before_main;\nvoid early_hook(void) { before_main = 0xC0DE; }\nextern unsigned _estack;')
+    .replace('  /* USER CODE BEGIN 2 */','  /* USER CODE BEGIN 2 */\n  if (before_main == 0xC0DE && ((unsigned)&_estack & 0x1FF) == 0x100) HAL_GPIO_WritePin(GPIOC, GPIO_PIN_0, GPIO_PIN_SET);');
+   const startup=await fs.readFile(path.join(cube,`Drivers/CMSIS/Device/ST/${series}/Source/Templates/gcc/${startupOf(m.family)}`),'utf8');
+   const edited=startup.replace(/(\n\s*bl\s+main\b)/,'\n  bl early_hook$1');assert.notEqual(edited,startup,board+': bl main found in the startup file');
+   const ld=linkerScript(m.family).replace('_estack = ORIGIN(RAM) + LENGTH(RAM);','_estack = ORIGIN(RAM) + LENGTH(RAM) - 0x100;');assert.notEqual(ld,linkerScript(m.family));
+   p.firmware.files=[{name:`Core/Startup/${startupOf(m.family)}`,text:edited},{name:linkerName(m.family),text:ld}];
+   const q=validateProject(p),plan=await prepareBuild({project:q,tools,root,target:'arm'}),result=await build(plan);
+   assert.deepEqual(result.diagnostics.filter(d=>d.severity==='error'),[],board);
+   assert.ok(!plan.units.some(u=>u.file.startsWith(cube.replaceAll('/',path.sep))&&/startup_.*\.s$/.test(u.file)),`${board}: the SDK's startup file is not assembled`);
+   const s=new FirmwareSession(q,{elf:new Uint8Array(await fs.readFile(result.elf))});for(let t=10;t<=60;t+=10)s.tick(t);
+   assert.equal(s.gpio.PC0?.value,3.3,`${board}: the copied startup file and linker script are in the firmware`);
   }
  }finally{await fs.rm(root,{recursive:true,force:true});}
 });

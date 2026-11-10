@@ -13,7 +13,7 @@ test('the build text has the handlers, system calls and heap; the views split it
   const env=buildEnvironment(project(family));
   assert.equal(prefixOf(family),p);assert.match(startupOf(family),/^startup_stm32f(103xb|446xx)\.s$/);
   for(const part of ['void SysTick_Handler(void) { HAL_IncTick(); }','void USART2_IRQHandler(void)','HAL_UART_IRQHandler(&huart2);','void *_sbrk(ptrdiff_t increment)','int _write(int file, char *ptr, int len)','int _read(int file, char *ptr, int len)'])assert.ok(env.text.includes(part),family+' '+part);
-  assert.deepEqual(env.files.map(f=>f.file),[`Core/Src/${p}_it.c`,'Core/Src/syscalls.c','Core/Src/sysmem.c']);
+  assert.deepEqual(env.files.map(f=>f.file),[`Core/Src/${p}_it.c`,'Core/Src/syscalls.c','Core/Src/sysmem.c','Core/Inc/main.h',p==='stm32f1xx'?'STM32F103RBTX_FLASH.ld':'STM32F446RETX_FLASH.ld']);
   const [it,sys,mem]=env.files.map(f=>f.text);
   assert.match(it,/SysTick_Handler[\s\S]*USART2_IRQHandler/);assert.match(it,/Default_Handler/);assert.doesNotMatch(it,/_sbrk/);
   assert.match(sys,/_write[\s\S]*_kill/);assert.doesNotMatch(sys,/SysTick/);assert.match(mem,/_sbrk/);

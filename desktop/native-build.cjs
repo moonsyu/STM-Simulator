@@ -8,32 +8,12 @@ const TOOL_KEYS=['armGcc','armGdb','cube','cubeF1','fsp','hostGcc','hostGdb','cl
 const RA_FAMILIES=new Set(['R7FA6E10F']);
 const isRa=project=>RA_FAMILIES.has(project.mcu?.family);
 const fspReady=root=>exists(path.join(root,'ra/fsp/src/bsp/mcu/ra6e1/bsp_feature.h'));
-const F4_MODULES=['hal','hal_rcc','hal_rcc_ex','hal_gpio','hal_cortex','hal_pwr','hal_pwr_ex','hal_flash','hal_flash_ex','hal_dma','hal_dma_ex','hal_can','hal_i2s','hal_i2s_ex','hal_uart','hal_usart','hal_adc','hal_adc_ex','hal_i2c','hal_spi','hal_tim','hal_tim_ex','hal_dcmi','hal_dcmi_ex','hal_sd','ll_sdmmc','hal_iwdg','hal_wwdg','hal_rtc','hal_rtc_ex','hal_crc','hal_dac','hal_dac_ex'];
-const F1_MODULES=['hal','hal_rcc','hal_rcc_ex','hal_gpio','hal_gpio_ex','hal_cortex','hal_pwr','hal_flash','hal_flash_ex','hal_dma','hal_can','hal_uart','hal_usart','hal_adc','hal_adc_ex','hal_i2c','hal_spi','hal_tim','hal_tim_ex','hal_iwdg','hal_wwdg','hal_rtc','hal_rtc_ex','hal_crc'];
 // The ARM build per MCU family: SDK tool key and layout, CPU flags, startup file and memory sizes.
 const SDKS={
-  STM32F446RE:{key:'cube',name:'STM32CubeF4',hal:'STM32F4xx_HAL_Driver',device:'STM32F4xx',prefix:'stm32f4xx',cpu:['-mcpu=cortex-m4','-mthumb','-mfpu=fpv4-sp-d16','-mfloat-abi=hard','-DSTM32F446xx'],startup:'startup_stm32f446xx.s',ld:'stm32f446re.ld',flash:'512K',ram:'128K',modules:F4_MODULES},
-  STM32F103RB:{key:'cubeF1',name:'STM32CubeF1',hal:'STM32F1xx_HAL_Driver',device:'STM32F1xx',prefix:'stm32f1xx',cpu:['-mcpu=cortex-m3','-mthumb','-mfloat-abi=soft','-DSTM32F103xB'],startup:'startup_stm32f103xb.s',ld:'stm32f103rb.ld',flash:'128K',ram:'20K',modules:F1_MODULES}
+  STM32F446RE:{key:'cube',name:'STM32CubeF4',hal:'STM32F4xx_HAL_Driver',device:'STM32F4xx',prefix:'stm32f4xx',cpu:['-mcpu=cortex-m4','-mthumb','-mfpu=fpv4-sp-d16','-mfloat-abi=hard','-DSTM32F446xx'],startup:'startup_stm32f446xx.s'},
+  STM32F103RB:{key:'cubeF1',name:'STM32CubeF1',hal:'STM32F1xx_HAL_Driver',device:'STM32F1xx',prefix:'stm32f1xx',cpu:['-mcpu=cortex-m3','-mthumb','-mfloat-abi=soft','-DSTM32F103xB'],startup:'startup_stm32f103xb.s'}
 };
 const sdkFor=project=>isRa(project)?{key:'fsp',name:'Renesas FSP'}:SDKS[project.mcu?.family||'STM32F446RE'];
-const linker=sdk=>`ENTRY(Reset_Handler)
-MEMORY { FLASH (rx) : ORIGIN = 0x08000000, LENGTH = ${sdk.flash}
-RAM (xrw) : ORIGIN = 0x20000000, LENGTH = ${sdk.ram} }
-_estack = ORIGIN(RAM) + LENGTH(RAM);
-SECTIONS {
- .isr_vector : { KEEP(*(.isr_vector)) } >FLASH
- .text : { *(.text*) *(.rodata*) KEEP(*(.init)) KEEP(*(.fini)) . = ALIGN(4); } >FLASH
- .ARM.extab : { *(.ARM.extab*) } >FLASH
- .ARM.exidx : { __exidx_start = .; *(.ARM.exidx*) __exidx_end = .; } >FLASH
- .preinit_array : { PROVIDE_HIDDEN(__preinit_array_start = .); KEEP(*(.preinit_array*)) PROVIDE_HIDDEN(__preinit_array_end = .); } >FLASH
- .init_array : { PROVIDE_HIDDEN(__init_array_start = .); KEEP(*(SORT(.init_array.*))) KEEP(*(.init_array)) PROVIDE_HIDDEN(__init_array_end = .); } >FLASH
- .fini_array : { PROVIDE_HIDDEN(__fini_array_start = .); KEEP(*(.fini_array*)) PROVIDE_HIDDEN(__fini_array_end = .); } >FLASH
- _sidata = LOADADDR(.data);
- .data : { . = ALIGN(4); _sdata = .; *(.data*) . = ALIGN(4); _edata = .; } >RAM AT>FLASH
- .bss : { . = ALIGN(4); _sbss = .; __bss_start__ = .; *(.bss*) *(COMMON) . = ALIGN(8); _ebss = .; __bss_end__ = .; end = .; _end = .; } >RAM
- .heap_stack (NOLOAD) : { . = ALIGN(8); . += 0x400; . += 0x1000; . = ALIGN(8); } >RAM
-}
-`;
 async function exists(p){try{await fs.access(p);return true;}catch{return false;}}
 async function findExecutable(name,extra=[]){for(const dir of [...extra,...(process.env.PATH||'').split(path.delimiter)]){if(!dir)continue;const p=path.join(dir,name+(process.platform==='win32'?'.exe':''));if(await exists(p))return p;}return '';}
 async function detectTools(current={}){
@@ -77,14 +57,14 @@ async function prepareBuild({project,tools,root,target='arm',configuration='Debu
   if(target==='arm'&&isRa(project)&&project.firmware?.mode!=='fsp')throw new Error('Renesas RA 빌드는 FSP 프로젝트를 사용하세요.');
   const directory=path.join(root,randomUUID());await fs.mkdir(directory,{recursive:true});
   // Project files keep their folders (Core/Src/app.c, as in a CubeIDE project); main.c sits in firmware.mainFolder.
-  const SOURCE_PATH=/^(?:[A-Za-z0-9_][\w.-]{0,40}\/){0,6}[A-Za-z0-9_][\w.-]{0,70}\.(c|h|cpp|hpp|cc)$/,base=name=>name.split('/').at(-1);
+  const SOURCE_PATH=/^(?:[A-Za-z0-9_][\w.-]{0,40}\/){0,6}[A-Za-z0-9_][\w.-]{0,70}\.(c|h|cpp|hpp|cc|s|ld)$/,base=name=>name.split('/').at(-1);
   const mainFolder=typeof project.firmware?.mainFolder==='string'&&SOURCE_PATH.test(project.firmware.mainFolder+'/main.c')?project.firmware.mainFolder:'';
   const files=[{name:(mainFolder?mainFolder+'/':'')+'main.c',text:project.code},...(project.firmware?.files||[])],sources=[];
   // An RA project's main source is FSP's src/hal_entry.c (ra_gen/main.c calls hal_entry()); the other sources go to src/.
   const ra=target==='arm'&&isRa(project),place=name=>ra?path.join(directory,'src',base(name)==='main.c'?name.replace(/main\.c$/,'hal_entry.c'):name):path.join(directory,name);
   if(ra)await fs.mkdir(path.join(directory,'src'),{recursive:true});
   const folders=new Set();
-  for(const f of files){if(!SOURCE_PATH.test(f.name))throw new Error('소스 파일명이 올바르지 않습니다.');if(ra&&base(f.name)==='hal_entry.c')throw new Error('hal_entry.c는 FSP 프로젝트의 주 소스 이름입니다. 다른 이름을 쓰세요.');const to=place(f.name);if(f.name.includes('/')){await fs.mkdir(path.dirname(to),{recursive:true});folders.add(path.dirname(to));}await fs.writeFile(to,f.text);if(/\.(c|cpp|cc)$/.test(f.name))sources.push(place(f.name));}
+  for(const f of files){if(!SOURCE_PATH.test(f.name))throw new Error('소스 파일명이 올바르지 않습니다.');if(ra&&base(f.name)==='hal_entry.c')throw new Error('hal_entry.c는 FSP 프로젝트의 주 소스 이름입니다. 다른 이름을 쓰세요.');const to=place(f.name);if(f.name.includes('/')){await fs.mkdir(path.dirname(to),{recursive:true});folders.add(path.dirname(to));}await fs.writeFile(to,f.text);if(/\.(c|cpp|cc)$/.test(f.name)||target==='arm'&&/\.s$/.test(f.name))sources.push(place(f.name));}
   if(files.some(f=>base(f.name)==='__stm_environment.c'))throw new Error('__stm_environment.c는 내부 빌드용 파일명입니다.');
   // ARM builds keep DWARF 4 (GCC 15 defaults to 5): STM Studio's GDB reads only DWARF 2-4; the app's emulator, GDB and
   // clangd read both.
@@ -103,15 +83,18 @@ async function prepareBuild({project,tools,root,target='arm',configuration='Debu
     if(!files.some(f=>base(f.name)==='main.h'))await fs.writeFile(path.join(directory,'main.h'),`#pragma once\n#include "${p}_hal.h"\nvoid Error_Handler(void);\n`);
     // Pinout labels: CubeMX writes LABEL_Pin / LABEL_GPIO_Port into main.h; -D gives them to every source, also with a user main.h (same text, so no redefinition warning).
     for(const [pin,q]of Object.entries(project.mcu?.pins||{}))if(q.label)flags.push(`-D${q.label}_Pin=GPIO_PIN_${pin.slice(2)}`,`-D${q.label}_GPIO_Port=GPIO${pin[1]}`);
-    generated=sdk.modules.map(n=>path.join(hal,'Src',`${p}_${n}.c`)).filter(file=>!files.some(f=>base(f.name)===path.basename(file)));
+    const {buildEnvironment,HAL_MODULES,linkerScript,linkerName}=await import('../src/build-environment.js'),family=project.mcu?.family||'STM32F446RE';
+    generated=HAL_MODULES[family].map(n=>path.join(hal,'Src',`${p}_${n}.c`)).filter(file=>!files.some(f=>base(f.name)===path.basename(file)));
     if(!files.some(f=>base(f.name)===`system_${p}.c`))generated.push(path.join(device,'Source/Templates',`system_${p}.c`));
-    generated.push(path.join(device,'Source/Templates/gcc',sdk.startup));
+    // The project's own startup file (Core/Startup/startup_….s, copied from the SDK and edited) replaces the SDK's.
+    if(!files.some(f=>/^startup_.*\.s$/i.test(base(f.name))))generated.push(path.join(device,'Source/Templates/gcc',sdk.startup));
     // Handlers, system calls and heap the build adds (CubeIDE's stm32xxxx_it.c / syscalls.c / sysmem.c), shared with the
     // editor's read-only views of them (src/build-environment.js).
-    const {buildEnvironment}=await import('../src/build-environment.js');
     await fs.writeFile(path.join(directory,'__stm_environment.c'),buildEnvironment(project).text);generated.push(path.join(directory,'__stm_environment.c'));
-    await fs.writeFile(path.join(directory,sdk.ld),linker(sdk));
-    linkFlags=['-T'+path.join(directory,sdk.ld),'-nostartfiles','--specs=nano.specs','--specs=nosys.specs','-u','_printf_float'];
+    // The linker script: the project's own .ld file, or the one the app writes.
+    const ownLd=files.find(f=>/\.ld$/.test(f.name)),ld=ownLd?place(ownLd.name):path.join(directory,linkerName(family));
+    if(!ownLd)await fs.writeFile(ld,linkerScript(family));
+    linkFlags=['-T'+ld,'-nostartfiles','--specs=nano.specs','--specs=nosys.specs','-u','_printf_float'];
   }
   const cpp=gcc.replace(/gcc(\.exe)?$/,(_,ext)=>'g++'+(ext||''));
   // ST SDK sources (outside the build folder) are not the user's code: their warnings would only fill the 빌드 panel.

@@ -51,8 +51,8 @@ test('F12 and Ctrl+click on HAL calls open the SDK source read only; Outline, Al
   await win.click('[data-sdk-close$="_hal_uart.c"]');assert.equal(await win.locator('[data-sdk-file$="_hal_uart.c"]').count(),0);
   // Core · Startup (closed by default): what the ARM build adds, read only, in CubeIDE's file names.
   assert.equal(await win.evaluate(()=>document.getElementById('build-files').open),false);
-  await win.click('[data-activity="explorer"]');if(!await win.locator('#build-files summary').isVisible())await win.click('[data-activity="explorer"]');
-  await win.click('#build-files summary');
+  await win.click('[data-activity="explorer"]');if(!await win.locator('#build-files > summary').isVisible())await win.click('[data-activity="explorer"]');
+  await win.click('#build-files > summary');
   const rows=await win.$$eval('#build-file-list [data-build-file]',b=>b.map(x=>x.textContent));
   for(const name of [/_it\.c/,/syscalls\.c/,/sysmem\.c/,/system_stm32f[14]xx\.c/,/startup_stm32f(103xb|446xx)\.s/])assert.ok(rows.some(r=>name.test(r)),String(name));
   await win.click('#build-file-list [data-build-file$="_it.c"]');await win.waitForSelector('[data-sdk-file$="_it.c"]');

@@ -376,7 +376,7 @@ describe('native build helpers',()=>{
     assert.match(await readText(path.join(plan.directory,'main.h')),/void Error_Handler/);assert.ok(plan.flags.includes('-DLD2_Pin=GPIO_PIN_5')&&plan.flags.includes('-DLD2_GPIO_Port=GPIOA'),'labels reach every source, also with a user main.h');
     const env=await readText(path.join(plan.directory,'__stm_environment.c'));
     assert.match(env,/void EXTI15_10_IRQHandler\(void\) \{ HAL_GPIO_EXTI_IRQHandler\(GPIO_PIN_13\); \}/);assert.match(env,/void USART2_IRQHandler\(void\) \{ HAL_UART_IRQHandler\(&huart2\); \}/);
-    assert.match(await readText(path.join(plan.directory,'stm32f446re.ld')),/FLASH \(rx\) : ORIGIN = 0x08000000, LENGTH = 512K/);
+    assert.match(await readText(path.join(plan.directory,'STM32F446RETX_FLASH.ld')),/FLASH \(rx\) : ORIGIN = 0x08000000, LENGTH = 512K/);
     assert.equal(await readText(path.join(plan.directory,'stm32f4xx_hal_conf.h')),'/* conf */');
     assert.ok(plan.flags.includes('-mcpu=cortex-m4')&&plan.flags.includes('-DSTM32F446xx')&&plan.flags.includes('-O0'));assert.ok(plan.linkFlags.includes('--specs=nano.specs'));
     assert.ok(plan.units.some(u=>u.file.endsWith('startup_stm32f446xx.s')));assert.equal(path.basename(plan.elf),'firmware.elf');
@@ -390,7 +390,7 @@ describe('native build helpers',()=>{
     const plan=await nativeBuild.prepareBuild({project:p,tools:{armGcc:gcc,cubeF1},root:path.join(dir,'build')});
     assert.match(await readText(path.join(plan.directory,'main.h')),/#include "stm32f1xx_hal.h"/);
     assert.equal(await readText(path.join(plan.directory,'stm32f1xx_hal_conf.h')),'/* f1 conf */');
-    const ld=await readText(path.join(plan.directory,'stm32f103rb.ld'));assert.match(ld,/LENGTH = 128K/);assert.match(ld,/LENGTH = 20K/);
+    const ld=await readText(path.join(plan.directory,'STM32F103RBTX_FLASH.ld'));assert.match(ld,/LENGTH = 128K/);assert.match(ld,/LENGTH = 20K/);
     assert.ok(plan.flags.includes('-mcpu=cortex-m3')&&plan.flags.includes('-DSTM32F103xB')&&!plan.flags.some(f=>f.startsWith('-mfpu')));
     assert.ok(plan.units.some(u=>u.file.endsWith('startup_stm32f103xb.s'))&&plan.units.some(u=>u.file.endsWith('stm32f1xx_hal_gpio_ex.c')));
     assert.match(await readText(path.join(plan.directory,'__stm_environment.c')),/void DMA1_Channel6_IRQHandler\(void\) \{ HAL_DMA_IRQHandler\(&hdma_usart2_rx\); \}/);

@@ -36,6 +36,40 @@ __attribute__((weak)) int _isatty(int file) { (void)file; return 1; }
 __attribute__((weak)) int _lseek(int file, int ptr, int dir) { (void)file; (void)ptr; (void)dir; return 0; }
 __attribute__((weak)) int _getpid(void) { return 1; }
 __attribute__((weak)) int _kill(int pid, int sig) { (void)pid; (void)sig; errno=EINVAL; return -1; }`;
+// The HAL modules the ARM build compiles from the SDK (CubeIDE's Drivers/<HAL>/Src), and the memory of each part.
+export const HAL_MODULES=Object.freeze({
+  STM32F446RE:['hal','hal_rcc','hal_rcc_ex','hal_gpio','hal_cortex','hal_pwr','hal_pwr_ex','hal_flash','hal_flash_ex','hal_dma','hal_dma_ex','hal_can','hal_i2s','hal_i2s_ex','hal_uart','hal_usart','hal_adc','hal_adc_ex','hal_i2c','hal_spi','hal_tim','hal_tim_ex','hal_dcmi','hal_dcmi_ex','hal_sd','ll_sdmmc','hal_iwdg','hal_wwdg','hal_rtc','hal_rtc_ex','hal_dac','hal_dac_ex','hal_crc'],
+  STM32F103RB:['hal','hal_rcc','hal_rcc_ex','hal_gpio','hal_gpio_ex','hal_cortex','hal_pwr','hal_flash','hal_flash_ex','hal_dma','hal_can','hal_uart','hal_usart','hal_adc','hal_adc_ex','hal_i2c','hal_spi','hal_tim','hal_tim_ex','hal_iwdg','hal_wwdg','hal_rtc','hal_rtc_ex','hal_crc']});
+const LINKER={STM32F446RE:{name:'STM32F446RETX_FLASH.ld',flash:'512K',ram:'128K'},STM32F103RB:{name:'STM32F103RBTX_FLASH.ld',flash:'128K',ram:'20K'}};
+/** The linker script's file name as CubeIDE names it. */
+export const linkerName=family=>(LINKER[family]||LINKER.STM32F446RE).name;
+/** The linker script the ARM build uses unless the project has its own .ld file. */
+export function linkerScript(family){
+  const m=LINKER[family]||LINKER.STM32F446RE;
+  return `ENTRY(Reset_Handler)
+MEMORY { FLASH (rx) : ORIGIN = 0x08000000, LENGTH = ${m.flash}
+RAM (xrw) : ORIGIN = 0x20000000, LENGTH = ${m.ram} }
+_estack = ORIGIN(RAM) + LENGTH(RAM);
+SECTIONS {
+ .isr_vector : { KEEP(*(.isr_vector)) } >FLASH
+ .text : { *(.text*) *(.rodata*) KEEP(*(.init)) KEEP(*(.fini)) . = ALIGN(4); } >FLASH
+ .ARM.extab : { *(.ARM.extab*) } >FLASH
+ .ARM.exidx : { __exidx_start = .; *(.ARM.exidx*) __exidx_end = .; } >FLASH
+ .preinit_array : { PROVIDE_HIDDEN(__preinit_array_start = .); KEEP(*(.preinit_array*)) PROVIDE_HIDDEN(__preinit_array_end = .); } >FLASH
+ .init_array : { PROVIDE_HIDDEN(__init_array_start = .); KEEP(*(SORT(.init_array.*))) KEEP(*(.init_array)) PROVIDE_HIDDEN(__init_array_end = .); } >FLASH
+ .fini_array : { PROVIDE_HIDDEN(__fini_array_start = .); KEEP(*(.fini_array*)) PROVIDE_HIDDEN(__fini_array_end = .); } >FLASH
+ _sidata = LOADADDR(.data);
+ .data : { . = ALIGN(4); _sdata = .; *(.data*) . = ALIGN(4); _edata = .; } >RAM AT>FLASH
+ .bss : { . = ALIGN(4); _sbss = .; __bss_start__ = .; *(.bss*) *(COMMON) . = ALIGN(8); _ebss = .; __bss_end__ = .; end = .; _end = .; } >RAM
+ .heap_stack (NOLOAD) : { . = ALIGN(8); . += 0x400; . += 0x1000; . = ALIGN(8); } >RAM
+}
+`;
+}
+/** The main.h the ARM build writes when the project has none: the HAL include, Error_Handler and the Pinout labels. */
+export function mainHeader(project){
+  const p=prefixOf(project.mcu?.family),labels=Object.entries(project.mcu?.pins||{}).filter(([,q])=>q.label);
+  return ['#pragma once',`#include "${p}_hal.h"`,'void Error_Handler(void);',...(labels.length?['','/* Pinout labels (CubeMX writes them here; the build also passes them to every source). */',...labels.flatMap(([pin,q])=>[`#define ${q.label}_Pin GPIO_PIN_${pin.slice(2)}`,`#define ${q.label}_GPIO_Port GPIO${pin[1]}`])]:[]),''].join('\n');
+}
 /** The build's added code for a HAL project: {text} for the build and {files} as CubeIDE would name them. */
 export function buildEnvironment(project){
   const files=[{name:'main.c',text:project.code||''},...(project.firmware?.files||[])],p=prefixOf(project.mcu?.family);
@@ -62,5 +96,8 @@ export function buildEnvironment(project){
     `/* NMI_Handler, HardFault_Handler, MemManage_Handler, BusFault_Handler, UsageFault_Handler, SVC_Handler,\n * DebugMon_Handler, PendSV_Handler와 정의하지 않은 다른 IRQ는 ${startupOf(project.mcu?.family)}의 Default_Handler(무한 반복)가 받습니다. */`];
   const viewSyscalls=[note('syscalls.c','printf(_write → __io_putchar)·scanf(_read → __io_getchar)가 쓰는 newlib 시스템 호출입니다.'),'#include <errno.h>','#include <sys/stat.h>','',...syscalls.flatMap(l=>[l,''])];
   const viewSysmem=[note('sysmem.c','malloc이 쓰는 힙(_sbrk): 링커의 end부터 스택 4 KB 앞(_estack-0x1000)까지입니다.'),'#include <errno.h>','#include <stddef.h>','#include <stdint.h>','',SBRK];
-  return {text,files:[{file:`Core/Src/${p}_it.c`,text:viewIt.join('\n')+'\n'},{file:'Core/Src/syscalls.c',text:viewSyscalls.join('\n')},{file:'Core/Src/sysmem.c',text:viewSysmem.join('\n')+'\n'}]};
+  // main.h and the linker script are written by the build too, unless the project has its own.
+  const has=test=>files.some(f=>test(f.name.split('/').at(-1)));
+  const extra=[...(has(n=>n==='main.h')?[]:[{file:'Core/Inc/main.h',text:`/* main.h — STM Simulator가 ARM 빌드에 넣는 코드(읽기 전용).\n * CubeIDE 프로젝트의 Core/Inc/main.h에 해당합니다. Pinout 라벨이 바뀌면 이 내용도 바뀝니다. */\n`+mainHeader(project)}]),...(has(n=>/\.ld$/.test(n))?[]:[{file:linkerName(project.mcu?.family),text:`/* ${linkerName(project.mcu?.family)} — STM Simulator가 ARM 빌드에 넣는 코드(읽기 전용).\n * CubeIDE 프로젝트의 링커 스크립트에 해당합니다: FLASH·RAM 크기, 섹션 배치, 힙 1 KB와 스택 4 KB. */\n`+linkerScript(project.mcu?.family)}])];
+  return {text,files:[{file:`Core/Src/${p}_it.c`,text:viewIt.join('\n')+'\n'},{file:'Core/Src/syscalls.c',text:viewSyscalls.join('\n')},{file:'Core/Src/sysmem.c',text:viewSysmem.join('\n')+'\n'},...extra]};
 }

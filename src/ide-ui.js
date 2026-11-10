@@ -15,7 +15,8 @@ import {setupCodeFormat} from './code-format-ui.js';
 import {mountNativeChrome,setupNativeIde} from './native-ide-ui.js';
 import {$} from './common.js';
 import {outlineLabel} from './c-symbols.js';
-import {buildEnvironment,prefixOf,startupOf} from './build-environment.js';
+import {buildEnvironment,prefixOf,startupOf,HAL_MODULES} from './build-environment.js';
+import {exportIoc} from './ioc-export.js';
 import {generateRaFiles} from './ra-generator.js';
 export function mountIdeChrome(){
   const toolbar=document.createElement('nav');toolbar.className='ide-toolbar';toolbar.setAttribute('aria-label','빌드와 디버그');toolbar.innerHTML='<button id="ide-build" class="primary" title="시뮬레이터용 빌드">빌드</button><span class="toolbar-divider"></span><button id="debug-start" title="시작 위치에서 디버깅">디버그 시작</button><span id="build-status" role="status">시뮬레이터용 빌드</span>';
@@ -62,28 +63,59 @@ export function setupIde(o){
   // CubeIDE's Core/Src and Startup files the ARM build uses besides the project's own sources (read only): the added
   // handlers / system calls / heap, and the SDK's system and startup files (unless the project has its own).
   // What the build adds: the STM32 environment (it.c, syscalls.c, sysmem.c) or, for an FSP project, the RASC-style files.
-  function generatedFiles(){const p=o.getProject();if(p.firmware?.mode==='fsp'&&p.mcu){try{return Object.entries(generateRaFiles(p.mcu,{board:{fspBoard:true}})).map(([file,text])=>({file,text}));}catch{return [];}}return p.firmware?.mode==='hal'&&p.mcu?buildEnvironment(p).files:[];}
+  function generatedFiles(){const p=o.getProject();if(p.firmware?.mode==='fsp'&&p.mcu){try{return Object.entries(generateRaFiles(p.mcu,{board:{fspBoard:true}})).map(([file,text])=>({file,text}));}catch{return [];}}if(!(p.firmware?.mode==='hal'&&p.mcu))return [];
+    // The .ioc of the Pinout as it is now (what ".ioc로 내보내기" saves): shown, and changed through the Pinout.
+    let ioc=[];try{ioc=[{file:(String(p.name||'').replace(/[^\w.-]+/g,'_').replace(/^[._]+|[._]+$/g,'')||'project')+'.ioc',text:'# 읽기 전용: 이 프로젝트의 핀·주변장치·클록 설정을 CubeMX .ioc 형식으로 본 것입니다.\n# 보드/핀 설정(Pinout)에서 바꾸면 이 내용이 바뀌고, Pinout의 ".ioc로 내보내기"로 파일로 저장합니다.\n'+exportIoc(p.mcu)}];}catch{/* a Pinout with open problems has no .ioc yet */}
+    return [...buildEnvironment(p).files,...ioc];}
+  // The rows of the CubeIDE tree: {kind: 'own' | 'gen' | 'sdk', file, label}. `file` is what opens (a project source
+  // name, a generated view, a path under the SDK); `label` is the path CubeIDE shows it at.
+  let treeLabels=new Map();const treeOpen=new Set(['Core','Core/Inc','Core/Src','Core/Startup']);
+  function projectRows(p){
+    const family=p.mcu.family,prefix=prefixOf(family),series=prefix.toUpperCase().replace('XX','xx'),hal=`Drivers/${series}_HAL_Driver`,device='Drivers/CMSIS/Device/ST/'+series,base=n=>n.split('/').at(-1);
+    const files=sourceFiles(p),ownBase=new Set(files.map(f=>base(f.name))),folder=p.firmware?.mainFolder;
+    // A project file without a folder sits where CubeIDE would keep it.
+    const place=name=>name.includes('/')||folder?name:/\.(h|hpp)$/.test(name)?'Core/Inc/'+name:/\.s$/.test(name)?'Core/Startup/'+name:/\.ld$/.test(name)?name:'Core/Src/'+name;
+    const own=files.map(f=>({kind:'own',file:f.name,label:f.name==='main.c'?(folder||'Core/Src')+'/main.c':place(f.name)}));
+    const gen=generatedFiles().filter(g=>!ownBase.has(base(g.file))).map(g=>({kind:'gen',file:g.file,label:g.file}));
+    const sdk=[];const add=(file,label=file)=>sdk.push({kind:'sdk',file,label});
+    if(!ownBase.has(`${prefix}_hal_conf.h`))add(`${hal}/Inc/${prefix}_hal_conf_template.h`,`Core/Inc/${prefix}_hal_conf.h`);
+    if(!ownBase.has(`system_${prefix}.c`))add(`${device}/Source/Templates/system_${prefix}.c`,`Core/Src/system_${prefix}.c`);
+    if(![...ownBase].some(n=>/^startup_.*\.s$/i.test(n)))add(`${device}/Source/Templates/gcc/${startupOf(family)}`,`Core/Startup/${startupOf(family)}`);
+    for(const m of HAL_MODULES[family]||[]){if(!ownBase.has(`${prefix}_${m}.c`))add(`${hal}/Src/${prefix}_${m}.c`);if(!ownBase.has(`${prefix}_${m}.h`))add(`${hal}/Inc/${prefix}_${m}.h`);}
+    add(`${device}/Include/${prefix}.h`);add(`${device}/Include/system_${prefix}.h`);
+    return [...own,...gen,...sdk];
+  }
   function buildFilesView(){
-    const p=o.getProject(),hal=p.firmware?.mode==='hal'&&!!p.mcu,fsp=p.firmware?.mode==='fsp'&&!!p.mcu;$('build-files').hidden=!hal&&!fsp;$('build-files-title').textContent=fsp?'ra_gen · ra_cfg':'Core · Startup';if(!hal&&!fsp){$('build-file-list').innerHTML='';return;}
+    const p=o.getProject(),hal=p.firmware?.mode==='hal'&&!!p.mcu,fsp=p.firmware?.mode==='fsp'&&!!p.mcu;$('build-files').hidden=!hal&&!fsp;$('build-files-title').textContent=fsp?'ra_gen · ra_cfg':'프로젝트 구조 (CubeIDE)';if(!hal&&!fsp){$('build-file-list').innerHTML='';return;}
     if(fsp){const ext=editor.externalFile()?.file;$('build-file-list').innerHTML=generatedFiles().map(g=>`<button data-build-file="${esc(g.file)}" data-build-kind="gen" class="${ext===g.file?'active':''}" title="RA Smart Configurator 방식으로 앱이 만드는 FSP 파일 · 읽기 전용"><span class="file-kind">${/\.ld$/.test(g.file)?'L':/\.h$/.test(g.file)?'H':'C'}</span><span class="file-label">${esc(g.file.split('/').at(-1))}</span><small>${esc(g.file.split('/').slice(0,-1).join('/'))}</small></button>`).join('');for(const el of $('build-file-list').querySelectorAll('[data-build-file]'))el.onclick=()=>{o.layout.reveal('code');document.querySelector('[data-tab="code"]')?.click();editor.openGenerated(el.dataset.buildFile);};return;}
-    const prefix=prefixOf(p.mcu.family),device='Drivers/CMSIS/Device/ST/'+prefix.toUpperCase().replace('XX','xx'),own=new Set(sourceFiles(p).map(f=>f.name)),ext=editor.externalFile()?.file;
-    const ownBase=new Set([...own].map(n=>n.split('/').at(-1)));
-    const rows=[...generatedFiles().filter(g=>!ownBase.has(g.file.split('/').at(-1))).map(g=>({kind:'gen',file:g.file,label:g.file})),...(ownBase.has(`system_${prefix}.c`)?[]:[{kind:'sdk',file:`${device}/Source/Templates/system_${prefix}.c`,label:`Core/Src/system_${prefix}.c`}]),{kind:'sdk',file:`${device}/Source/Templates/gcc/${startupOf(p.mcu.family)}`,label:`Core/Startup/${startupOf(p.mcu.family)}`}];
-    $('build-file-list').innerHTML=rows.map(r=>`<button data-build-file="${esc(r.file)}" data-build-kind="${r.kind}" class="${ext===r.file?'active':''}" title="${esc(r.kind==='gen'?'STM Simulator가 빌드에 넣는 코드':'STM32Cube SDK '+r.file)} · 읽기 전용"><span class="file-kind">${r.label.endsWith('.s')?'S':'C'}</span><span class="file-label">${esc(r.label.split('/').at(-1))}</span><small>${esc(r.label.split('/').slice(0,-1).join('/'))}</small></button>`).join('');
+    // Feature 14: the project as CubeIDE lays it out — the .ioc, Core/Inc, Core/Src, Core/Startup, Drivers and the
+    // linker script — with the project's own files (plain) next to what the build provides (italic, read only until
+    // "프로젝트로 복사해 수정" makes a project file of it, which the build then uses in its place).
+    const rows=projectRows(p),ext=editor.externalFile()?.file,active=o.getSource();treeLabels=new Map(rows.map(r=>[r.file,r.label]));
+    const root={folders:new Map(),files:[]};
+    for(const r of rows){const parts=r.label.split('/');let node=root;for(const part of parts.slice(0,-1)){if(!node.folders.has(part))node.folders.set(part,{folders:new Map(),files:[]});node=node.folders.get(part);}node.files.push({...r,leaf:parts.at(-1)});}
+    const kindOf=n=>/\.ioc$/.test(n)?'M':/\.ld$/.test(n)?'L':/\.s$/i.test(n)?'S':/\.(h|hpp)$/.test(n)?'H':'C';
+    const fileRow=r=>r.kind==='own'
+      ?`<button data-tree-source="${esc(r.file)}" class="tree-own${!ext&&r.file===active?' active':''}" title="${esc(r.label)} · 프로젝트 파일"><span class="file-kind">${kindOf(r.leaf)}</span><span class="file-label">${esc(r.leaf)}</span></button>`
+      :`<button data-build-file="${esc(r.file)}" data-build-kind="${r.kind}" class="${ext===r.file?'active':''}" title="${esc(r.kind==='gen'?'STM Simulator가 빌드에 넣는 코드':'STM32Cube SDK '+r.file)} · 읽기 전용${/\.ioc$/.test(r.leaf)?'':' · 열어서 \"프로젝트로 복사해 수정\"'}"><span class="file-kind">${kindOf(r.leaf)}</span><span class="file-label">${esc(r.leaf)}</span></button>`;
+    const render=(node,path)=>[...[...node.folders].sort(([x],[y])=>x.localeCompare(y)).map(([name,child])=>{const full=path?path+'/'+name:name;return `<details class="tree-folder" data-tree-folder="${esc(full)}"${treeOpen.has(full)?' open':''}><summary>${esc(name)}</summary><div class="tree-children">${render(child,full)}</div></details>`;}),...node.files.sort((x,y)=>x.leaf.localeCompare(y.leaf)).map(fileRow)].join('');
+    $('build-file-list').innerHTML=render(root,'');
+    for(const el of $('build-file-list').querySelectorAll('[data-tree-folder]'))el.addEventListener('toggle',()=>{if(el.open)treeOpen.add(el.dataset.treeFolder);else treeOpen.delete(el.dataset.treeFolder);});
+    for(const el of $('build-file-list').querySelectorAll('[data-tree-source]'))el.onclick=()=>{o.layout.reveal('code');select(el.dataset.treeSource);};
     for(const el of $('build-file-list').querySelectorAll('[data-build-file]'))el.onclick=async()=>{o.layout.reveal('code');document.querySelector('[data-tab="code"]')?.click();try{if(el.dataset.buildKind==='gen')editor.openGenerated(el.dataset.buildFile);else await editor.openSdk(el.dataset.buildFile);}catch(e){o.log(e.message,'error');}};
   }
   // Feature 11: a read-only file (what the build adds, an SDK source or header) becomes a project file the user can
   // edit. The ARM build then compiles the project's copy in place of the generated / SDK one (native-build.cjs), and
   // regenerating main.c or updating the SDK never touches it.
-  const copyable=ext=>o.getProject().firmware?.mode==='hal'&&/\.[ch]$/.test(ext.file);
+  const copyable=ext=>o.getProject().firmware?.mode==='hal'&&/\.([chs]|ld)$/.test(ext.file);
   function copyToProject(ext){
     try{
       if(o.isRunning())throw new Error('실행을 정지한 뒤 복사하세요.');
-      const leaf=ext.file.split('/').at(-1),name=SOURCE_PATH.test(ext.file)?ext.file:leaf,p=structuredClone(o.getProject());p.firmware.files??=[];
+      const shown=treeLabels.get(ext.file),leaf=(shown||ext.file).split('/').at(-1),name=shown&&SOURCE_PATH.test(shown)?shown:SOURCE_PATH.test(ext.file)?ext.file:leaf,p=structuredClone(o.getProject());p.firmware.files??=[];
       if(leaf==='main.c'||!SOURCE_PATH.test(name))throw new Error('이 파일은 프로젝트로 복사할 수 없습니다.');
       if(sourceFiles(p).some(f=>f.name.split('/').at(-1).toLowerCase()===leaf.toLowerCase()))throw new Error(`${leaf}: 같은 이름의 파일이 이미 프로젝트에 있습니다.`);
       // The view's own header comment ("읽기 전용") is replaced: the copy is the user's file now.
-      const text=(editor.externalText()??'').replace(/^\/\* [^\n]* — STM Simulator가 ARM 빌드에 넣는 코드\(읽기 전용\)\.[\s\S]*?\*\/\n?/,`/* ${leaf} — 프로젝트로 복사한 파일입니다. ARM 빌드는 이 파일을 쓰며, 여기 없는 핸들러·시스템 호출만 앱이 채웁니다. */\n`);
+      const text=(editor.externalText()??'').replace(/^\/\* [^\n]* — STM Simulator가 ARM 빌드에 넣는 코드\(읽기 전용\)\.[\s\S]*?\*\/\n?/,/\.(c|h)$/.test(leaf)?`/* ${leaf} — 프로젝트로 복사한 파일입니다. ARM 빌드는 이 파일을 쓰며, 여기 없는 핸들러·시스템 호출만 앱이 채웁니다. */\n`:`/* ${leaf} — 프로젝트로 복사한 파일입니다. ARM 빌드는 이 파일을 씁니다. */\n`);
       p.firmware.files.push({name,text});editor.closeExternal(ext.file);o.applySources(p,name);sync();
       o.log(`${name}을 프로젝트로 복사했습니다. 이제 빌드가 이 파일을 쓰고, 자유롭게 고칠 수 있습니다(지우면 원래 파일로 돌아갑니다).`);
     }catch(e){o.log(e.message,'error');}

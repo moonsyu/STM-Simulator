@@ -70,9 +70,9 @@ test('FPB-RA6E1 Pins dialog (RA Smart Configurator style): set D3 (P104) as an o
   await win.selectOption('[data-ra="function"]','IRQ');assert.match(await win.textContent('#ra-pinout-error'),/IRQ1는 이미 P205/);
   await win.selectOption('[data-ra="function"]','GPIO_Output');await win.fill('[data-ra="label"]','MOTOR');await win.locator('[data-ra="label"]').dispatchEvent('change');
   await win.click('#ra-pinout-apply');await win.waitForFunction(()=>!document.getElementById('ra-pinout-dialog').open);
-  await win.click('[data-activity="explorer"]');if(!await win.locator('#build-files summary').isVisible())await win.click('[data-activity="explorer"]');
+  await win.click('[data-activity="explorer"]');if(!await win.locator('#build-files > summary').isVisible())await win.click('[data-activity="explorer"]');
   assert.equal(await win.textContent('#build-files-title'),'ra_gen · ra_cfg');
-  await win.click('#build-files summary');await win.click('#build-file-list [data-build-file="ra_gen/pin_data.c"]');
+  await win.click('#build-files > summary');await win.click('#build-file-list [data-build-file="ra_gen/pin_data.c"]');
   await win.waitForFunction(()=>/BSP_IO_PORT_01_PIN_04/.test(document.querySelector('#group-code .monaco-editor .view-lines')?.textContent||''),null,{timeout:10000});
   assert.match(await win.textContent('#source-tabs'),/hal_entry\.c/);
   assert.deepEqual(s.errors,[]);

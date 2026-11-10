@@ -287,3 +287,7 @@
 #build-file-list button small{margin-left:auto;font-style:normal;opacity:.6;font-size:10.5px}
 #build-file-list button:hover{background:var(--ide-hover,#e7efec)}
 #build-file-list button.active{background:var(--ide-selection,#cde7da)}
+/* Feature 14: the CubeIDE tree — folders fold, the project's own files are upright, what the build provides is italic. */
+#build-file-list .tree-folder>summary{padding:1px 12px;font-size:12.5px;cursor:pointer;user-select:none}
+#build-file-list .tree-children{display:flex;flex-direction:column;padding-left:12px}
+#build-file-list button.tree-own{font-style:normal}
