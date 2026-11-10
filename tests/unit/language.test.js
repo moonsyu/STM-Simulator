@@ -171,7 +171,7 @@ describe('compile errors',()=>{
     ['syntax error','int main(void){\n  int x = ;\n  return 0;\n}',/^main\.c:2: 표현식 오류/,2],
     ['missing main','int f(void){return 0;}',/int main\(void\) 함수를 작성하세요/,1],
     ['unknown header','#include <foo.h>\nint main(void){return 0;}',/지원하지 않거나 선택하지 않은 헤더: foo\.h/,1],
-    ['multi-dimensional array (unsupported)','int main(void){\n  int m[2][3];\n  return 0;\n}',/다차원 배열은 지원하지 않습니다/,2],
+    ['three-dimensional array (unsupported)','int main(void){\n  int m[2][3][4];\n  return 0;\n}',/3차원 이상의 배열은 지원하지 않습니다/,2],
     ['invalid octal literal','int main(void){\n  int x=09;\n  return 0;\n}',/8진수/,2],
   ];
   for(const [name,code,pattern,line]of cases)test(name,()=>{

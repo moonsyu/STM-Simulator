@@ -40,7 +40,7 @@ test('<math.h>: float forms and the functions sensor code uses',()=>{
  assert.throws(()=>run('#include <math.h>','printf("%f\\n", sqrtf(-1.0f));'),/수학 함수 결과가 유효하지 않습니다/);
 });
 
-test('what the interpreter does not run says so: 2-D arrays, unions, goto',()=>{
- assert.throws(()=>run('','int g[2][3];\n  printf("x\\n");'),/다차원 배열은 지원하지 않습니다/);
+test('what the interpreter does not run says so: 3-D arrays, unions, goto',()=>{
+ assert.throws(()=>run('','int g[2][3][4];\n  printf("x\\n");'),/3차원 이상의 배열은 지원하지 않습니다/);
  assert.throws(()=>run('union U { uint32_t w; uint8_t b[4]; };','printf("x\\n");'),/main\.c:\d+/);
 });

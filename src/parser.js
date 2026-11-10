@@ -97,7 +97,9 @@ export function compile(source,options={}) {
   function finishDeclaration(first,base,semicolon=true){
     const declarations=[];let d=first;
     do{
-      if(peek()==='['){take();d.array=true;if(peek()!==']')d.size=expression();expect(']');if(peek()==='[')fail('다차원 배열은 지원하지 않습니다.');}
+      if(peek()==='['){take();d.array=true;if(peek()!==']')d.size=expression();expect(']');
+        // type name[rows][cols]: rows of cols elements. The row count may be left to the initializer, the column count not.
+        if(peek()==='['){take();if(peek()===']')fail('2차원 배열의 열 수를 지정하세요.');d.size2=expression();expect(']');if(peek()==='[')fail('3차원 이상의 배열은 지원하지 않습니다.');}}
       if(peek()==='='){take();d.value=initializer();}
       else if(CONSTRUCTED.has(d.type)&&peek()==='('){d.value={type:'construct',name:d.type,args:argumentsList()};}
       else if(BARE_CONSTRUCTED.has(d.type)&&peek()!=='='){d.value={type:'construct',name:d.type,args:[]};}
@@ -205,7 +207,7 @@ export function compile(source,options={}) {
     const loc=location(),base=spec(),d=declarator(base);
     if(peek()==='('&&!CONSTRUCTED.has(base.type)){
       take();const params=[];if(peek()==='void'&&peek(1)===')')take();
-      else if(peek()!==')')do{const p=declarator(spec());if(peek()==='['){take();expect(']');p.pointer=true;}params.push(p);if(peek()!==',')break;take();}while(true);
+      else if(peek()!==')')do{const p=declarator(spec());while(peek()==='['){take();if(peek()!==']')expression();expect(']');p.pointer=true;}params.push(p);if(peek()!==',')break;take();}while(true);
       expect(')');if(peek()===';'){take();continue;}
       if(Object.hasOwn(program.functions,d.name))fail(`${d.name}() 함수가 중복되었습니다.`);
       program.functions[d.name]={...d,params,loc,body:block()};

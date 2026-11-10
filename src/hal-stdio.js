@@ -24,8 +24,10 @@ function writeBytes(r,buffer,bytes,name){
 }
 const CTYPE={isdigit:/[0-9]/,isalpha:/[A-Za-z]/,isalnum:/[A-Za-z0-9]/,isspace:/[ \t\n\r\f\v]/,isupper:/[A-Z]/,islower:/[a-z]/,isxdigit:/[0-9A-Fa-f]/,ispunct:/[!-\/:-@[-`{-~]/,isprint:/[ -~]/,toupper:null,tolower:null};
 /** sprintf / snprintf, <string.h>, the text-to-number functions of <stdlib.h> and <ctype.h>; undefined for other names. */
+// A two-dimensional array given whole to memset / memcpy / memcmp: its elements row after row, as they lie in memory.
+const flat=(r,v)=>{const p=v?.kind==='array'||v?.kind==='pointer'?r.pointer(v):null;return p?.array?.cells[p.index]?.value?.kind==='array'?{kind:'array',cells:p.array.cells.slice(p.index).flatMap(c=>c.value.cells)}:v;};
 export function stringCall(name,args,r){
- const [a,b,c]=args;
+ let [a,b,c]=args;if(['memset','memcpy','memmove','memcmp'].includes(name)){a=flat(r,a);if(name!=='memset')b=flat(r,b);}
  if(name==='sprintf'){const text=formatPrintf(args.slice(1),r);writeCString(r,a,text);return text.length;}
  // snprintf writes at most size-1 characters and the 0, and returns the length the whole text would have.
  if(name==='snprintf'){const size=count(b,'snprintf'),text=formatPrintf(args.slice(2),r);if(size)writeCString(r,a,text.slice(0,size-1));return text.length;}

@@ -13,10 +13,12 @@ export function expressionType(runtime,n){
   const c=runtime.cell(n.name),value=c.value;
   // An array of pointers (const char *names[]): its size is 4 per element, and an element is a pointer.
   if(c.dataType==='pointer'&&value?.kind==='array')return {type:c.pointeeType||'int',pointer:true,pointerElements:true,length:value.cells.length};
+  // type name[rows][cols]: the whole is rows × cols elements, name[i] is a row of cols.
+  if(c.cols&&value?.kind==='array')return {type:c.dataType,array:true,length:value.cells.length*c.cols,rowLength:c.cols};
   if(c.dataType==='pointer')return {type:c.pointeeType||value?.array?.cells[0]?.dataType||value?.cell?.dataType||'int',pointer:true};
   return {type:c.dataType||value?.type||(typeof value==='number'&&!Number.isInteger(value)?'double':value>2147483647?'uint32_t':'int'),...(value?.kind==='array'?{array:true,length:value.cells.length}:{})};
  }
- if(n.type==='index'){const object=of(n.object);return object.pointerElements?{type:object.type,pointer:true}:scalar(object.type);}
+ if(n.type==='index'){const object=of(n.object);return object.rowLength?{type:object.type,array:true,length:object.rowLength}:object.pointerElements?{type:object.type,pointer:true}:scalar(object.type);}
  if(n.type==='sequence')return of(n.exprs.at(-1));
  if(n.type==='member'){
   const object=of(n.object),field=runtime.program.structs[object.type]?.find(f=>f.name===n.key);

@@ -185,6 +185,28 @@ export class Runtime {
     return type==='String'?'':0;
   }
   fieldArray(f,owner,depth){const a=this.array(Array.from({length:f.size},()=>this.defaultValue(f.type,owner,depth+1)),owner);a.cells.forEach(c=>c.dataType=f.type);return a;}
+  /**
+   * type name[rows][cols]: an array of rows, each row an array of its own, so name[i] is a row (it can be passed where a
+   * pointer is taken) and name[i][j] an element. { {…}, {…} } and { "ab", "cd" } give one row each; a flat list fills
+   * row after row. rows = 0: as many as the initializer gives.
+   */
+  matrix(d,value,cols,rows){
+    const list=value?.kind==='initializer'?this.arrayValues(value.values):[],nested=list.some(v=>v?.kind==='initializer'||typeof v==='string');
+    if(nested&&list.some(v=>v!==undefined&&v?.kind!=='initializer'&&typeof v!=='string'))throw new Error('2차원 배열 초기값은 행마다 { }로 묶거나 모두 한 줄로 쓰세요.');
+    const given=nested?list.length:Math.ceil(list.length/Math.max(1,cols));rows=rows||given;
+    if(!Number.isInteger(cols)||cols<1||rows<1||rows*cols>this.maxArray||given>rows)throw new Error('배열 크기 또는 초기값 개수를 확인하세요.');
+    const plain=this.program.hal&&!own(this.program.structs,d.type),zero=plain?this.coerce(d.type,0):0,owner=this.scope();
+    const cells=Array.from({length:rows},(_,i)=>{
+      const v=nested?list[i]:list.slice(i*cols,(i+1)*cols);
+      let values=v===undefined?[]:typeof v==='string'?[...v].map(c=>c.charCodeAt(0)):v?.kind==='initializer'?this.arrayValues(v.values):v;
+      if(values.length>cols)throw new Error('배열 크기 또는 초기값 개수를 확인하세요.');
+      const row=this.array(Array.from({length:cols},(_,j)=>plain&&values[j]===undefined?zero:this.initialize(d.type,values[j])),owner);
+      row.cells.forEach(c=>{c.dataType=d.type;if(d.constant)c.constant=true;});
+      // A row cannot be assigned as a whole (name[i] = …), only its elements.
+      return {value:row,owner,constant:true};
+    });
+    return {kind:'array',cells};
+  }
   /** The values of an array initializer in order, with [index] = value placed at its index (the gaps stay undefined: zero). */
   arrayValues(values){
     if(!values.some(v=>v?.kind==='designated'))return values;
@@ -204,12 +226,13 @@ export class Runtime {
     if(s.type!=='block'&&s.type!=='empty')yield* this.checkpoint(s.loc);
     if(s.type==='declare'){
       for(const d of s.declarations){if(d.external)continue;if(d.storage&&this.staticCells.has(d)){this.scope().cells[d.name]=this.staticCells.get(d);continue;}let value=d.value?yield* this.evaluate(d.value):undefined;
-        if(d.array){let values=value?.kind==='initializer'?this.arrayValues(value.values):typeof value==='string'?[...value].map(c=>c.charCodeAt(0)).concat(0):[];const length=d.size?integer(yield* this.evaluate(d.size)):values.length;if(length<1||length>this.maxArray||values.length>length)throw new Error('배열 크기 또는 초기값 개수를 확인하세요.');const plain=this.program.hal&&!own(this.program.structs,d.type),zero=plain?this.coerce(d.type,0):0;value=this.array(Array.from({length},(_,i)=>plain&&values[i]===undefined?zero:this.initialize(d.type,values[i])));if(d.constant)value.cells.forEach(c=>c.constant=true);}
+        if(d.array&&d.size2){value=this.matrix(d,value,integer(yield* this.evaluate(d.size2)),d.size?integer(yield* this.evaluate(d.size)):0);}
+        else if(d.array){let values=value?.kind==='initializer'?this.arrayValues(value.values):typeof value==='string'?[...value].map(c=>c.charCodeAt(0)).concat(0):[];const length=d.size?integer(yield* this.evaluate(d.size)):values.length;if(length<1||length>this.maxArray||values.length>length)throw new Error('배열 크기 또는 초기값 개수를 확인하세요.');const plain=this.program.hal&&!own(this.program.structs,d.type),zero=plain?this.coerce(d.type,0):0;value=this.array(Array.from({length},(_,i)=>plain&&values[i]===undefined?zero:this.initialize(d.type,values[i])));if(d.constant)value.cells.forEach(c=>c.constant=true);}
         else if(d.pointer){if(typeof value==='string')value=this.array([...value].map(c=>c.charCodeAt(0)).concat(0),this.globals);value=this.pointer(value??0);if(value!==0&&!isPointer(value))throw new Error('포인터 초기값을 확인하세요.');}
         else if(d.type!=='LiquidCrystal')value=this.initialize(d.type,value);
-        if(d.array)value.cells.forEach(c=>c.dataType=d.type);
+        if(d.array)value.cells.forEach(c=>c.dataType=d.type);if(d.size2)value.cols=value.cells[0].value.cells.length;
         // const char *p: what it points at is const; the pointer itself can move (p++).
-        const cell=this.declareCell(d.name,value,d.constant&&!(d.pointer&&!d.array));cell.dataType=d.pointer?'pointer':d.type;if(d.pointer)cell.pointeeType=d.type;
+        const cell=this.declareCell(d.name,value,d.constant&&!(d.pointer&&!d.array));cell.dataType=d.pointer?'pointer':d.type;if(d.size2)cell.cols=value.cols;if(d.pointer)cell.pointeeType=d.type;
         if(d.storage){cell.owner=this.globals;this.staticCells.set(d,cell);if(d.array)value.cells.forEach(c=>c.owner=this.globals);}
       }return;
     }
