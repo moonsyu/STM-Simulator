@@ -48,7 +48,7 @@ export class HalTimers {
     if(s.count==='up')return [pulse||cycle];if(s.count==='down')return [arr-pulse||cycle];
     return pulse===0?[cycle]:pulse===arr?[arr]:[pulse,cycle-pulse];
   }
-  syncActive(s,r){this.freeze(s,r.microTime);s.active=s.base||s.baseIT||s.encoderActive||[...s.channels.values()].some(c=>c.active);}
+  syncActive(s,r){this.freeze(s,r.microTime);s.active=s.base||s.baseIT||s.encoderActive||[...s.channels.values()].some(c=>c.active||c.nActive);}
   // One Pulse Mode: at the next update event the counter stops at 0 (CEN cleared); a PWM1 output is then at its
   // CNT < CCR level. The update interrupt of that event still comes.
   onePulse(s,r,generation){
@@ -69,6 +69,8 @@ export class HalTimers {
     const fire=()=>{if(generation!==s.generation||!s.baseIT)return;const hal=this.hal;hal.queue(timerIrq(s.id,hal.f1),function*(){if(s.baseIT)yield* hal.userCall(r,'HAL_TIM_PeriodElapsedCallback',[s.ptr]);},s.id+':update');r.event(r.microTime/1000+full,fire);};
     r.event(r.microTime/1000+Math.max(.000001,ms),fire);
   }
+  // The channel's own pin; null when only its complementary pin (CHxN) is assigned.
+  mainPin(s,n){const h=this.hal,fn=`${s.id}_CH${n}`,has=f=>Object.values(h.config.pins).some(p=>p.function===f);return has(fn)||!has(fn+'N')?h.pinFor(fn):null;}
   channel(s,key){integer(key/4,0,3,'TIM 채널');const c=s.channels.get(key);if(!c)throw new Error(s.id+': 채널을 먼저 초기화하세요.');return c;}
   notify(s,c,key,r){if(!c.it)return;const hal=this.hal;hal.queue(timerCcIrq(s.id,hal.f1),function*(){if(!c.active||s.kind==='Encoder'&&!s.encoderActive)return;const {h}=hal.requireHandle(s.ptr,r,'TIM');h.fields.Channel.value=1<<(key/4);try{yield* hal.userCall(r,'HAL_TIM_IC_CaptureCallback',[s.ptr]);}finally{h.fields.Channel.value=0;}},s.id+':capture:'+key);}
   observe(r,us=r.microTime){
@@ -92,23 +94,27 @@ export class HalTimers {
   // Inactive on match change the level at the next match; the interrupt calls HAL_TIM_OC_DelayElapsedCallback per match.
   oc(s,ch,key,r){
     const generation=ch.generation=(ch.generation??0)+1,pin=ch.pin,pol=ch.polarity?1:0;
-    r.call('pinMode',[pin,'OUTPUT']);
+    // `main`: the channel's own output is driven (started, and it has a pin); the complementary one may run alone.
+    const main=ch.active&&!!pin;if(pin)r.call('pinMode',[pin,'OUTPUT']);
     if(ch.mode===80)ch.ref=1;else if(ch.mode===64)ch.ref=0;
-    if(!ch.active){r.call('digitalWrite',[pin,0]);return;}
+    if(pin&&!ch.active)r.call('digitalWrite',[pin,0]);
+    if(!ch.active&&!ch.nActive){if(ch.nPin)r.call('digitalWrite',[ch.nPin,0]);return;}
     const matches=this.matchPhases(s,ch.pulse),cycle=this.cycle(s),hz=this.hz(s);
     if(ch.mode===48&&matches.length){
       const f=hz/cycle*matches.length/2,high=matches.length===2?(matches[1]-matches[0])/cycle:.5;
       if(f>2000)throw new Error(`${s.id} ${pin}: 회로 시뮬레이터의 토글 출력은 2000 Hz까지입니다 (현재 ${Math.round(f)} Hz). Prescaler/Period를 키우거나 펌웨어 에뮬레이터로 실행하세요.`);
-      if(f<1)r.pwmFrequency.set(pin,f);else r.call('analogWriteFrequency',[pin,f]);
-      r.call('analogWrite',[pin,(pol?1-high:high)*255]);
-    }else r.call('digitalWrite',[pin,ch.ref^pol]);
+      if(main){if(f<1)r.pwmFrequency.set(pin,f);else r.call('analogWriteFrequency',[pin,f]);
+      r.call('analogWrite',[pin,(pol?1-high:high)*255]);}
+    }else if(main)r.call('digitalWrite',[pin,ch.ref^pol]);
+    // Complementary output (HAL_TIMEx_OCN_Start): the inverse of the channel's output.
+    if(ch.nPin){r.call('pinMode',[ch.nPin,'OUTPUT']);if(!ch.nActive)r.call('digitalWrite',[ch.nPin,0]);else if(ch.mode===48&&matches.length){const f=hz/cycle*matches.length/2,high=matches.length===2?(matches[1]-matches[0])/cycle:.5;if(f<1)r.pwmFrequency.set(ch.nPin,f);else r.call('analogWriteFrequency',[ch.nPin,f]);r.call('analogWrite',[ch.nPin,(pol?high:1-high)*255]);}else r.call('digitalWrite',[ch.nPin,(ch.ref^pol)?0:1]);}
     const settle=ch.mode===16&&!ch.ref||ch.mode===32&&ch.ref;
     if(!matches.length||!settle&&!ch.it)return;
     const each=cycle/matches.length*1000/hz;if(ch.it&&(each<.1||each>3600000))throw new Error(s.id+': 출력 비교 인터럽트 주기 범위 0.1~3600000 ms');
     const u=this.phase(s,r.microTime);let i=matches.findIndex(m=>m>u+1e-9);const next=i<0?matches[0]+cycle:matches[i];if(i<0)i=0;
     const hal=this.hal,fire=()=>{
-      if(generation!==ch.generation||!ch.active)return;
-      if(ch.mode===16||ch.mode===32){const level=ch.mode===16?1:0;if(ch.ref!==level){ch.ref=level;r.call('digitalWrite',[pin,ch.ref^pol]);}}
+      if(generation!==ch.generation||!ch.active&&!ch.nActive)return;
+      if(ch.mode===16||ch.mode===32){const level=ch.mode===16?1:0;if(ch.ref!==level){ch.ref=level;if(main)r.call('digitalWrite',[pin,ch.ref^pol]);if(ch.nPin&&ch.nActive)r.call('digitalWrite',[ch.nPin,(ch.ref^pol)?0:1]);}}
       if(!ch.it)return;
       hal.queue(timerCcIrq(s.id,hal.f1),function*(){if(!ch.active)return;const {h}=hal.requireHandle(s.ptr,r,'TIM');h.fields.Channel.value=1<<(key/4);try{yield* hal.userCall(r,'HAL_TIM_OC_DelayElapsedCallback',[s.ptr]);}finally{h.fields.Channel.value=0;}},s.id+':oc:'+key);
       const j=(i+1)%matches.length,step=((matches[j]-matches[i])%cycle+cycle)%cycle||cycle;i=j;r.event(r.microTime/1000+step*1000/hz,fire);
@@ -118,9 +124,10 @@ export class HalTimers {
   pwm(s,c,r){
     // Center-aligned PWM runs at timer clock / 2*ARR with duty CCR / ARR.
     const pin=c.pin,period=this.period(s),hz=this.hz(s)/this.cycle(s),span=s.count==='center'?Math.max(1,this.arr(s)):period;
-    r.call('pinMode',[pin,'OUTPUT']);
+    if(pin)r.call('pinMode',[pin,'OUTPUT']);
     // Complementary output (TIMx_CHnN, HAL_TIMEx_PWMN_Start): the inverse of the channel's PWM; dead time is not drawn.
     if(c.nPin){r.call('pinMode',[c.nPin,'OUTPUT']);if(c.nActive&&period>1&&hz<=2000){if(hz<1)r.pwmFrequency.set(c.nPin,hz);else r.call('analogWriteFrequency',[c.nPin,hz]);r.call('analogWrite',[c.nPin,(1-Math.min(1,c.pulse/span))*255]);}else r.call('digitalWrite',[c.nPin,0]);}
+    if(!pin)return;
     if(c.active&&period>1){
       // Full-width 32-bit ARR gives a valid period of several minutes.
       // The sketch API's 1 Hz lower bound must not reject an initialized HAL timer.
@@ -148,8 +155,11 @@ export class HalTimers {
     }
     if(/^HAL_TIMEx_(PWMN|OCN)_(Start|Stop)$/.test(name)){
       if(!isAdvancedTimer(s.id))throw new Error(`${s.id}: 상보 출력(CHxN)은 고급 타이머 TIM1/TIM8에만 있습니다.`);
-      integer(b/4,0,2,'TIM 상보 채널(CH1N~CH3N)');const ch=this.channel(s,b);if(ch.kind!=='PWM')throw new Error(`${s.id}: 내장 해석기의 상보 출력은 PWM 채널만 지원합니다. ARM GCC 시뮬레이터로 실행하세요.`);
-      ch.nPin=h.pinFor(`${s.id}_CH${b/4+1}N`);ch.nActive=name.endsWith('_Start');this.freeze(s,r.microTime);ch.nOnly=!ch.active;this.pwm(s,ch,r);return 0;
+      integer(b/4,0,2,'TIM 상보 채널(CH1N~CH3N)');const ch=this.channel(s,b);if(ch.kind==='IC'||ch.kind!==(name.includes('PWMN')?'PWM':'OC'))throw new Error(`${s.id}: ${name}은 ${name.includes('PWMN')?'PWM':'출력 비교'} 채널에 씁니다.`);
+      ch.nPin=h.pinFor(`${s.id}_CH${b/4+1}N`);ch.nActive=name.endsWith('_Start');this.freeze(s,r.microTime);
+      // The complementary output runs with the counter even when the main output (CHx) is not started.
+      if(ch.nActive&&!ch.active){ch.nRuns=true;s.nCount=(s.nCount??0)+1;}else if(!ch.nActive&&ch.nRuns){ch.nRuns=false;s.nCount--;}
+      this.syncActive(s,r);if(ch.kind==='PWM')this.pwm(s,ch,r);else this.oc(s,ch,b,r);return 0;
     }
     if(name==='__HAL_TIM_GET_COUNTER')return this.counter(s,r.microTime);
     if(name==='__HAL_TIM_IS_TIM_COUNTING_DOWN')return Number(this.countingDown(s,r.microTime));
@@ -171,14 +181,14 @@ export class HalTimers {
     if(name==='HAL_TIM_PWM_ConfigChannel'){
       if(s.kind==='Encoder')throw new Error('엔코더와 PWM은 같은 타이머를 공유할 수 없습니다.');
       integer(c/4,0,3,'TIM 채널');const cfg=r.get(r.pointerCell(b));if(h.field(cfg,'OCMode')!==96||h.field(cfg,'OCPolarity'))throw new Error('PWM: 내장 해석기는 PWM1 active high만 지원합니다. PWM2·Low 극성은 ARM GCC 시뮬레이터로 실행하세요.');
-      s.channels.set(c,{kind:'PWM',pulse:integer(h.field(cfg,'Pulse'),0,this.max(s.id),'PWM compare'),active:false,pin:h.pinFor(s.id+'_CH'+(c/4+1))});return 0;
+      s.channels.set(c,{kind:'PWM',pulse:integer(h.field(cfg,'Pulse'),0,this.max(s.id),'PWM compare'),active:false,pin:this.mainPin(s,c/4+1)});return 0;
     }
     if(name==='HAL_TIM_OC_ConfigChannel'){
       if(s.kind==='Encoder')throw new Error('엔코더와 출력 비교는 같은 타이머를 공유할 수 없습니다.');
       integer(c/4,0,3,'TIM 채널');const cfg=r.get(r.pointerCell(b)),mode=h.field(cfg,'OCMode'),polarity=h.field(cfg,'OCPolarity');
       if(!OC_MODES.includes(mode)||![0,2].includes(polarity))throw new Error('출력 비교: OCMode는 TIMING·ACTIVE·INACTIVE·TOGGLE·FORCED_ACTIVE·FORCED_INACTIVE, CH Polarity는 HIGH·LOW를 지원합니다. PWM 모드는 HAL_TIM_PWM_ConfigChannel을 쓰세요.');
       const old=s.channels.get(c);if(old?.active)throw new Error(s.id+': 채널을 정지한 뒤 설정하세요.');
-      s.channels.set(c,{kind:'OC',mode,polarity,pulse:integer(h.field(cfg,'Pulse'),0,this.max(s.id),'Output compare Pulse'),ref:old?.ref??0,active:false,pin:h.pinFor(s.id+'_CH'+(c/4+1))});return 0;
+      s.channels.set(c,{kind:'OC',mode,polarity,pulse:integer(h.field(cfg,'Pulse'),0,this.max(s.id),'Output compare Pulse'),ref:old?.ref??0,active:false,pin:this.mainPin(s,c/4+1)});return 0;
     }
     if(name==='HAL_TIM_IC_ConfigChannel'){
       if(s.kind==='Encoder')throw new Error('엔코더와 입력 캡처는 같은 타이머를 공유할 수 없습니다.');

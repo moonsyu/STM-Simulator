@@ -54,3 +54,13 @@ test('settings and calls that only the advanced timers have are refused elsewher
  assert.throws(()=>{const {s}=run(p);advance(s,20,10);},/TIM2: 상보 출력\(CHxN\)은 고급 타이머 TIM1\/TIM8에만 있습니다/);
  assert.throws(()=>validateMcu({...blankProject('STM32F103RB').mcu,peripherals:{TIM8:{enabled:true}}}),/TIM8: STM32F103RB에서 지원하지 않는 주변장치입니다/);
 });
+
+test('a complementary pin alone (CH1N without CH1) gets its channel configured; output compare has a complementary output too',()=>{
+ // Found by the random-configuration check: the generated code started CH1N of a channel it had not configured.
+ const p=halProject({pins:{PB13:pin('TIM1_CH1N')},peripherals:{TIM1:{enabled:true,prescaler:15999,period:99,pulse:25,mode:'pwm'}},init:'  HAL_TIMEx_PWMN_Start(&htim1, TIM_CHANNEL_1);'});
+ assert.match(p.code,/HAL_TIM_PWM_ConfigChannel\(&htim1, &channel, TIM_CHANNEL_1\);/);
+ const {s}=run(p);advance(s,50,10);assert.deepEqual(s.runtime.gpio.PB13.pwm,{duty:.75,frequency:10});
+ const full=generateHal(p.mcu);assert.match(full,/HAL_TIMEx_PWMN_Start\(&htim1, TIM_CHANNEL_1\);/);assert.ok(!/HAL_TIM_PWM_Start\(&htim1/.test(full),'no start of a channel without a pin');
+ const oc=halProject({pins:{PA8:pin('TIM1_CH1'),PB13:pin('TIM1_CH1N')},peripherals:{TIM1:{enabled:true,prescaler:15999,period:99,mode:'oc',channels:{CH1:{ocMode:'FORCED_ACTIVE'}}}},init:'  HAL_TIM_OC_Start(&htim1, TIM_CHANNEL_1);\n  HAL_TIMEx_OCN_Start(&htim1, TIM_CHANNEL_1);'});
+ const r=run(oc);advance(r.s,20,10);assert.equal(r.s.runtime.gpio.PA8.value,3.3);assert.equal(r.s.runtime.gpio.PB13.value,0,'CH1N is the inverse');
+});
