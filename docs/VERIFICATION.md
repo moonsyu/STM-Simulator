@@ -1,5 +1,9 @@
 # 검증 기록
 
+## 1.35.0 기능 목록 10~13번 — 게시 확인(API)
+
+2026-11-10. 태그·빌드 커밋 `d5f4237` · [Windows CI 42749262745](https://github.com/moonsyu/STM-Simulator/actions/runs/42749262745) 첫 실행에서 모두 성공, 전체 6.6분(396초, 1.33.0은 8.0분). 작업별: 툴체인 3조각 204·133·143초, E2E 4조각 196·184·151·131초, 단위 199초, 패키지 208초, ESP32 349초(캐시 복원 66초 + 스케치 빌드 234초: 컴파일 캐시를 넣었지만 빌드 시간은 줄지 않았다), 게시 43초. [Release v1.35.0](https://github.com/moonsyu/STM-Simulator/releases/tag/v1.35.0) 최신 릴리스, draft/prerelease 아님, 자산 5개(STM-Simulator.exe 115,625,586바이트, STM-Simulator-1.35.0-Windows-x64.zip 116,715,677바이트, SHA256.txt, BUILD-INFO.json, update-manifest.json).
+
 ## 1.34.0 ADC 다채널·트리거, 타이머 TRGO·One Pulse, NRST — 게시 확인(API)
 
 2026-11-10. 태그·빌드 커밋 `cb0b445` · [Windows CI 42743352494](https://github.com/moonsyu/STM-Simulator/actions/runs/42743352494) 첫 실행에서 모두 성공. 새 분할 구조의 첫 실행: 툴체인 시험 3조각 283·168·138초, E2E 4조각 152·199·150·178초, 단위 200초, 패키지 222초, ESP32는 캐시를 새로 만드느라 459초(설치 104초 + 빌드 266초 + 캐시 저장 45초), 전체 8.5분(1.33.0은 8.0분, ESP32를 뺀 나머지는 4.7분 안). [Release v1.34.0](https://github.com/moonsyu/STM-Simulator/releases/tag/v1.34.0) 최신 릴리스, draft/prerelease 아님, 자산 5개(STM-Simulator.exe 115,598,298바이트, STM-Simulator-1.34.0-Windows-x64.zip 116,686,344바이트, SHA256.txt, BUILD-INFO.json, update-manifest.json).

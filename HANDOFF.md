@@ -1,6 +1,14 @@
 # STM Simulator — 개발 인계
 
-현재 버전: **1.35.0**. 정리일: **2026-11-10**. NUCLEO-F446RE·NUCLEO-F103RB 또는 Renesas FPB-RA6E1(1.20.0, FSP·에뮬레이터 전용)과 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+현재 버전: **1.36.0**. 정리일: **2026-11-10**. NUCLEO-F446RE·NUCLEO-F103RB 또는 Renesas FPB-RA6E1(1.20.0, FSP·에뮬레이터 전용)과 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+
+## 1.36.0 .ioc 내보내기, 해석기 C 문법 보강, CI 추가 분할
+
+- **.ioc 내보내기(`src/ioc-export.js` `exportIoc(mcu)`)**: `importIoc`의 역방향. Mcu.*·핀 Signal과 GPIO 속성(Label·PuPd·EXTI 모드·PinState·Speed·Open Drain)·주변장치 매개변수(UART·I2C·SPI·TIM 채널/모드/TRGO/One Pulse/Repetition/DeadTime·ADC Rank/트리거·IWDG·WWDG·RTC·DAC)·DMA·NVIC·RCC(클록 트리)를 CubeMX 키 이름으로 쓴다(키의 공백·`#`와 값의 `:`는 Java properties 방식으로 이스케이프). `desktop/main.cjs` `firmware:export-ioc`는 저장 전에 그 텍스트를 `importIoc`로 읽어 본다. Pinout `#pinout-export-ioc`. 검증: `importIoc(exportIoc(v)).config`가 `v`와 같은지(모든 종류를 넣은 설정 1건, 두 보드 무작위 유효 설정 120건). **CubeMX에서 실제로 여는 것은 확인하지 못했다**(빌드 PC에 CubeMX 없음): 핀 이름은 `PA0-WKUP` 같은 CubeMX 고유 표기 대신 `PA0`을 쓰고, Project Manager 구역과 계산된 `*Freq_Value`는 타이머 클록만 쓴다.
+  - 가져오기 쪽: CubeMX는 Rank마다 채널을 늘 쓰므로, 기본 순서(ADC 핀 채널 오름차순)와 같은 `ranks`는 저장하지 않는다.
+- **해석기 C 문법(관용구 25개 검사)**: `parser.js` `typedef struct { … } Name;`·`typedef struct Tag { … } Name;`·`typedef struct Tag Name;`(Tag와 Name이 같은 구조체). `hal-source.js` `expandMacros`: 함수형 매크로를 뒤따르는 줄에서 글자대로 전개(문자열·멤버 접근 `s.NAME(`는 건드리지 않음, 중첩 20회까지, `#`/`##`와 가변 인자는 오류 안내). `runtime.js` `MATH_FUNCTIONS`와 `c-expression-type.js`: `<math.h>` 함수와 `f` 접미 실수형, 반환형을 double/float로 인식(이전에는 모르는 함수를 int로 보아 `sqrtf(a)+fabsf(b)`가 정수로 잘렸다). 아직 안 되는 것(안내 오류): 다차원 배열, union, goto, 함수 포인터, 지정 초기화(`.x = 1`).
+- **CI**: ESP32 스케치 빌드를 2조각으로(`ESP32_SHARD=n/m`, 스케치별 시간 출력). 1.33.0 8.0분 → 1.35.0 6.6분(가장 긴 작업 ESP32 5.8분, 컴파일 캐시는 시간을 줄이지 못함: 스케치마다 라이브러리를 다시 컴파일).
+- 시험: 단위 `ioc-export`, 해석기 `c-idioms`, E2E `ioc-export`.
 
 ## 1.35.0 기능 목록 10~13번: 폴더 구조, 드래그 앤 드롭, 모든 파일 수정, .ioc로 회로 초안
 

@@ -75,7 +75,7 @@
 
 ### A5. .ioc 내보내기 (M, 상)
 
-`.ioc`는 가져오기만 됩니다(`mcu-config.js:100` `importIoc`). 앱에서 만든 설정을 CubeMX나 CubeIDE에서 다시 열 수 없습니다.
+**1.36.0 반영**: Pinout의 ".ioc로 내보내기"(`ioc-export.js`)가 설정을 CubeMX 키 이름으로 저장하고, 다시 가져오면 같은 설정입니다. 남음: CubeMX에서 실제로 열어 확인, CubeMX 고유 핀 이름(`PA0-WKUP`), Project Manager 구역.
 
 ### A6. 미들웨어 (L)
 
