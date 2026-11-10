@@ -48,10 +48,16 @@ jobs:
       - name: Update helper replacement and rollback
         run: node --test --test-reporter=spec --test-reporter-destination=stdout --test-reporter=./tests/github-reporter.mjs --test-reporter-destination=stdout tests/release/update-helper.test.mjs
 
+  # The toolchain test files are dealt out over three jobs (node --test-shard): as one job they were the longest of the
+  # run (6.4 min of tests at 1.33.0) and set how long a release takes.
   firmware:
-    name: ST HAL examples on ARM GCC and the emulator
+    name: ST HAL on ARM GCC and the emulator ${{ matrix.shard }}/3
     runs-on: windows-latest
     timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3]
     env:
       ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
       CI_REQUIRE_TOOLCHAIN: '1'
@@ -75,7 +81,7 @@ jobs:
       - name: Install ARM GCC, STM32CubeF4 / STM32CubeF1 drivers and Renesas FSP
         uses: ./.github/actions/arm-toolchain
       - name: Build examples with ST HAL and run them on the emulator
-        run: node --test --test-reporter=spec --test-reporter-destination=stdout --test-reporter=./tests/github-reporter.mjs --test-reporter-destination=stdout --test-concurrency=1 tests/toolchain/arm-examples.test.mjs tests/toolchain/board-links.test.mjs tests/toolchain/ra-build.test.mjs tests/toolchain/adc-continuous.test.mjs tests/toolchain/uart-params.test.mjs tests/toolchain/spi-params.test.mjs tests/toolchain/tim-channels.test.mjs tests/toolchain/tim-oc.test.mjs tests/toolchain/tim-basic.test.mjs tests/toolchain/rtc.test.mjs tests/toolchain/dac.test.mjs tests/toolchain/wdg.test.mjs tests/toolchain/bus-instances.test.mjs tests/toolchain/tim-advanced.test.mjs tests/toolchain/emu-accuracy.test.mjs tests/toolchain/adc-group.test.mjs tests/toolchain/dwarf-version.test.mjs tests/toolchain/clock-tree.test.mjs tests/toolchain/adc-sampling.test.mjs
+        run: node --test --test-shard=${{ matrix.shard }}/3 --test-reporter=spec --test-reporter-destination=stdout --test-reporter=./tests/github-reporter.mjs --test-reporter-destination=stdout --test-concurrency=1 tests/toolchain/arm-examples.test.mjs tests/toolchain/board-links.test.mjs tests/toolchain/ra-build.test.mjs tests/toolchain/adc-continuous.test.mjs tests/toolchain/uart-params.test.mjs tests/toolchain/spi-params.test.mjs tests/toolchain/tim-channels.test.mjs tests/toolchain/tim-oc.test.mjs tests/toolchain/tim-basic.test.mjs tests/toolchain/rtc.test.mjs tests/toolchain/dac.test.mjs tests/toolchain/wdg.test.mjs tests/toolchain/bus-instances.test.mjs tests/toolchain/tim-advanced.test.mjs tests/toolchain/emu-accuracy.test.mjs tests/toolchain/adc-group.test.mjs tests/toolchain/dwarf-version.test.mjs tests/toolchain/clock-tree.test.mjs tests/toolchain/adc-sampling.test.mjs
       - name: Report firmware build failures
         if: failure()
         shell: pwsh
@@ -85,7 +91,7 @@ jobs:
         if: failure()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
-          name: Windows-test-diagnostics-firmware
+          name: Windows-test-diagnostics-firmware-${{ matrix.shard }}
           path: work/test-results/**
           if-no-files-found: ignore
           retention-days: 14
@@ -102,6 +108,9 @@ jobs:
       ARDUINO_DIRECTORIES_DATA: ${{ github.workspace }}\.cache\arduino\data
       ARDUINO_DIRECTORIES_DOWNLOADS: ${{ github.workspace }}\.cache\arduino\staging
       ARDUINO_DIRECTORIES_USER: ${{ github.workspace }}\.cache\arduino\user
+      # The compiled esp32 core and libraries (arduino-cli --build-cache-path) are kept with the cache: compiling the core
+      # again on every run was most of this job's 3.6 minutes.
+      ESP32_BUILD_CACHE: ${{ github.workspace }}\.cache\arduino\build-cache
     steps:
       - name: Check out source
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
@@ -119,7 +128,7 @@ jobs:
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: .cache/arduino
-          key: arduino-cli-1.5.1-esp32-3.3.12-dht-1.4.6-unified-1.1.15-pubsub-2.8-${{ runner.os }}
+          key: arduino-cli-1.5.1-esp32-3.3.12-dht-1.4.6-unified-1.1.15-pubsub-2.8-buildcache1-${{ runner.os }}
       - name: Install Arduino CLI and the esp32 core for the example sketches
         if: steps.arduino-cache.outputs.cache-hit != 'true'
         shell: pwsh
@@ -143,13 +152,13 @@ jobs:
         run: node --test --test-reporter=spec --test-reporter-destination=stdout --test-reporter=./tests/github-reporter.mjs --test-reporter-destination=stdout --test-concurrency=1 tests/toolchain/esp32-sketches.test.mjs
 
   e2e:
-    name: Electron end-to-end tests ${{ matrix.shard }}/3
+    name: Electron end-to-end tests ${{ matrix.shard }}/4
     runs-on: windows-latest
     timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
-        shard: [1, 2, 3]
+        shard: [1, 2, 3, 4]
     env:
       CI_REQUIRE_TOOLCHAIN: '1'
       ARM_GCC: ${{ github.workspace }}\.cache\toolchain\xpack-arm-none-eabi-gcc-14.2.1-1.1\bin\arm-none-eabi-gcc.exe
@@ -181,14 +190,14 @@ jobs:
           exit 1
       - name: Install ARM GCC, STM32CubeF4 / STM32CubeF1 drivers and Renesas FSP
         uses: ./.github/actions/arm-toolchain
-      - name: Electron end-to-end tests (a third of the files)
+      - name: Electron end-to-end tests (a quarter of the files)
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force work/test-results | Out-Null
-          # node --test-shard deals the files out in turn, so the three jobs stay about equal as files are added
+          # node --test-shard deals the files out in turn, so the four jobs stay about equal as files are added
           # (the old fixed list sent every new file to group 2, which grew to 5.5 min against 1.5 min).
           $files = Get-ChildItem tests/e2e/*.test.mjs | Sort-Object Name | ForEach-Object { "tests/e2e/$($_.Name)" }
-          node --test --test-shard=${{ matrix.shard }}/3 --test-reporter=spec --test-reporter-destination=stdout --test-reporter=./tests/github-reporter.mjs --test-reporter-destination=stdout --test-concurrency=1 @files 2>&1 | Tee-Object -FilePath work/test-results/e2e.log
+          node --test --test-shard=${{ matrix.shard }}/4 --test-reporter=spec --test-reporter-destination=stdout --test-reporter=./tests/github-reporter.mjs --test-reporter-destination=stdout --test-concurrency=1 @files 2>&1 | Tee-Object -FilePath work/test-results/e2e.log
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Upload test diagnostics on failure
         if: failure()

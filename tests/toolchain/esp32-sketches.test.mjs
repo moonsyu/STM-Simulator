@@ -28,7 +28,7 @@ test('every example ESP32 sketch compiles with the esp32 core',{skip:!cli&&!proc
  const root=fs.mkdtempSync(path.join(os.tmpdir(),'stm-esp32-')),failures=[];
  for(const s of sketches()){
   const dir=path.join(root,s.name);fs.mkdirSync(dir);fs.writeFileSync(path.join(dir,s.name+'.ino'),s.code);
-  const r=spawnSync(cli,['compile','--fqbn','esp32:esp32:esp32','--build-cache-path',path.join(root,'.cache'),dir],{encoding:'utf8'});
+  const r=spawnSync(cli,['compile','--fqbn','esp32:esp32:esp32','--build-cache-path',process.env.ESP32_BUILD_CACHE||path.join(root,'.cache'),dir],{encoding:'utf8'});
   if(r.status!==0)failures.push(`${s.name}\n${(r.stderr||r.stdout||String(r.error)).slice(-2000)}`);
   else console.log(`built ${s.name}`);
  }
