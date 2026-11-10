@@ -1,5 +1,9 @@
 # 검증 기록
 
+## 1.43.0 실제 CubeMX .ioc 190개 — 로컬 검증
+
+2026-11-10. ① 사용자 폴더의 CubeIDE 프로젝트 2개(CubeMX 6.18.1, NUCLEO-F103RB 보드 템플릿): `.ioc`는 경고 없이 읽히고 핀·라벨·EXTI 에지·클록(HSI/2 × 16 = 64 MHz)이 CubeMX가 생성한 `main.c`·`main.h`와 같았다. 폴더째 가져와 실행: ARM GCC 빌드와 에뮬레이터는 통과, 내장 해석기는 `PA3: HAL_GPIO_Init 모드/풀 설정과 Pinout이 다릅니다`로 멈춤 → 수정 후 통과. 다른 한 프로젝트는 원본 `main.c` 123행의 오타(`HAL_RCC _OscConfig`)로 두 엔진 모두 같은 줄에서 컴파일 오류를 냈다(앱 문제 아님). ② 공개 저장소의 실제 `.ioc` 188개(F446RE 97, F103RB 91, CubeMX 4.8~6.17)와 합쳐 190개를 가져오기 → 검증 → 코드 생성 → 회로 추천·구성 → 내보내기 → 다시 가져오기에 통과시켰다. 190개 모두 읽혔고 JS 오류는 없었다. 수정 전에는 설정 오류로 남는 항목이 SPI MISO 12, 클록 한도 약 40, 주변장치 없는 인터럽트 16, 라벨 중복·HAL 이름 26, ADC Rank 8 등이었고, 수정 후 남은 것은 모델에 없는 구성 14건(UART 반이중 6, 타이머 채널 핀 없음 4, SDIO 2, ADC 트리거 2, 엔코더 Prescaler 2)과 파일 자체가 한도를 넘는 클록 1건, SWD 핀을 GPIO로 쓰는 1건이다. 클록은 파일에 적힌 SYSCLK·HCLK·PCLK1·PCLK2와 대조해 177개 중 174개 일치(수정 전 165개). 내보내기 왕복은 SWD·오실레이터 핀을 포함해 같아졌고, 모델에 없는 신호의 예약 핀만 빠진다. ③ SPI 송신 전용: 해석기 실행(수신 0xFF), ARM GCC 빌드와 에뮬레이터 실행(두 보드, 경고 0). 시험: 단위+해석기+에뮬레이터+펌웨어 1,107개(1개 건너뜀) 통과, 관련 E2E 8개(`peripheral-params`·`bus-instances`·`folder-import`·`file-drop`·`ioc-export`) 통과, ESLint 통과.
+
 ## 1.42.0 해석기 union — 게시 확인(API)
 
 2026-11-10. 태그·빌드 커밋 `0d99e49` · [Windows CI 42761757914](https://github.com/moonsyu/STM-Simulator/actions/runs/42761757914) 첫 실행에서 모두 성공, 전체 5.1분. [Release v1.42.0](https://github.com/moonsyu/STM-Simulator/releases/tag/v1.42.0) 최신 릴리스, draft/prerelease 아님, 자산 5개(STM-Simulator.exe 115,625,333바이트, STM-Simulator-1.42.0-Windows-x64.zip 116,716,706바이트, SHA256.txt, BUILD-INFO.json, update-manifest.json).

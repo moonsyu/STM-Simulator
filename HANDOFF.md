@@ -1,6 +1,22 @@
 # STM Simulator — 개발 인계
 
-현재 버전: **1.42.0**. 정리일: **2026-11-10**. NUCLEO-F446RE·NUCLEO-F103RB 또는 Renesas FPB-RA6E1(1.20.0, FSP·에뮬레이터 전용)과 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+현재 버전: **1.43.0**. 정리일: **2026-11-10**. NUCLEO-F446RE·NUCLEO-F103RB 또는 Renesas FPB-RA6E1(1.20.0, FSP·에뮬레이터 전용)과 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+
+## 1.43.0 실제 CubeMX .ioc로 검증한 가져오기, SPI 송신 전용
+
+검증에 쓴 파일: CubeMX 6.18.1로 만든 NUCLEO-F103RB 프로젝트 2개(보드 템플릿)와 공개 저장소의 `.ioc` 188개(F446RE 97·F103RB 91, CubeMX 4.8~6.17). 파일은 저장소에 넣지 않았고, 시험(`tests/unit/ioc-real-files.test.js`)의 예는 각 사례에 필요한 키만 남긴 것이다.
+
+- **해석기 `HAL_GPIO_Init` 검사(`hal.js`)**: F1의 AF 입력(USART RX·SPI MISO·캡처 채널)은 `GPIO_MODE_INPUT`뿐 아니라 `GPIO_MODE_AF_PP`도 받는다. 보드 템플릿 `.ioc`는 PA2·PA3을 함께 `AF_PP`로 두고 CubeMX가 그대로 `HAL_UART_MspInit`에 쓴다.
+- **`importIoc`(`mcu-config.js`)**
+  - 공유 신호: `S_TIMn_…`은 `SH.<신호>.0`의 첫 항목으로 읽는다(`S_TIM2_CH1_ETR` → `TIM2_CH1`).
+  - 라벨: 첫 단어에서 C 이름에 못 쓰는 글자를 `_`로(CubeMX가 매크로 이름을 만드는 방식). 같은 라벨의 두 번째 핀과 HAL 이름처럼 읽히는 라벨(`GPIO_…`)은 경고와 함께 비운다.
+  - 설정 오류로 남던 것을 경고와 함께 뺀다: 주변장치를 가져오지 않은 NVIC 줄(HAL 타임베이스용 TIM 등)과 DMA 요청(끝의 반복문이 `configProblems` 문구로 찾는다), ADC 내부 채널 Rank(`adcGroupFromIoc`가 빼고 이름을 돌려준다. 남은 입력 핀이 없으면 ADC1을 끈다).
+  - 클록: `RCC.HSE_VALUE`가 8 MHz가 아니고 트리가 HSE를 쓰면 트리를 가져오지 않고 보드 기본 클록을 둔다(경고). `clockTreeFromIoc`는 `RCC.PLLSourceVirtual`이 없을 때 파일의 `RCC.SYSCLKFreq_VALUE`와 맞는 PLL 소스를 고른다(CubeMX는 기본값인 줄을 생략하는데 실제 파일에 HSE인데 줄이 없는 것이 있다). 대조 결과 177개 중 174개가 파일의 SYSCLK·HCLK·PCLK와 일치(나머지는 파일 안의 값끼리 맞지 않는 옛 파일).
+- **SPI `direction: 'TX_ONLY'`(`SPI_PARAMS`)**: MISO 핀을 요구하지 않는다. 생성 코드는 CubeMX처럼 `SPI_DIRECTION_2LINES`. 해석기는 `SPI.setPins`에 MISO 없이 넘기고(`buses.spi.txOnly`) 수신은 0xFF. `.ioc`에서 SCK·MOSI만 있으면 TX_ONLY로 읽고, `SPI_DIRECTION_1LINE`(반이중)은 경고를 붙인다. Pinout의 SPI `Mode` 선택.
+- **`exportIoc`**: `Reserved` 핀 중 SWD(PA13·PA14·PB3)와 오실레이터(PC14·PC15, PD0·PD1 또는 PH0·PH1)를 시스템 신호로 쓴다.
+- **줄 끝(`source-files.js` `normalizeText`)**: 가져오기·끌어다 놓기·프로젝트 읽기에서 BOM을 떼고 CRLF를 LF로.
+- 모델에 없어 경고로 남는 것(실제 파일 190개 기준): F446의 TIM9~14(23개 파일), ADC2·ADC3(18), CAN(32), USB(27), FreeRTOS(20), I2S·SAI·QUADSPI 등. UART 반이중(RX 핀 없음), SDIO 1비트 외 구성, 엔코더 Prescaler는 Pinout에서 고쳐야 하는 문제로 표시된다.
+- 시험: 단위 `ioc-real-files`(9개), 해석기 `spi-tx-only`(3개).
 
 ## 1.42.0 해석기 union
 

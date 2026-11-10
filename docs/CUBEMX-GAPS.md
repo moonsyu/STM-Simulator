@@ -197,6 +197,8 @@ CubeMX를 화면 없이(`-q` 스크립트) 실행해 실제 생성 코드를 받
 | ~~DAC1/2(F446): 매핑 없음, 빌드 모듈에 `hal_dac` 없음, 해석기에도 없음~~ **1.30.0 반영**(`stm32f446/dac.js`, `hal-dac.js`) | `stm32f446/soc.js`, `native-build.cjs` | M | 상 |
 | ~~F103 RTC·BKP: 주소 표에는 있으나 매핑 안 됨~~ **1.29.0 반영**: `stm32f103/rtc.js` RtcF1·BkpF1 | `stm32f103/soc.js` | M | 상 |
 | ~~매핑 안 된 주소 접근이 "잘못된 메모리 접근"으로만 보이고 "이 주변장치는 에뮬레이터에 없음" 안내가 없음~~ **1.34.0 반영** | `machine.js` | S | 상 |
+| F446의 TIM9~TIM14(Pinout·생성기·두 엔진 모두 없음). 실제 .ioc 190개 중 23개가 씀(TIM10 7, TIM9 5, TIM14 5, TIM11 3, TIM12 2, TIM13 1) — 가져오면 "실행 모델 미지원" 경고 | `mcu-family.js` 경로 표, 2026-11-10 실제 파일 집계 | M~L | 중 |
+| ADC2·ADC3(F446), ADC2(F103): ADC1만 있음. 실제 .ioc 190개 중 18개가 씀. ADC 내부 채널(온도 센서·VREFINT)도 없음(8개) | 같은 집계 | M | 중 |
 | USB OTG/FS, BKPSRAM, FMPI2C, SAI, SPDIF, CEC, QUADSPI, FMC | `rcc.js`에 클럭 비트만 있음 | L | 하~중 |
 
 ### B2. 일부만 있는 주변장치
