@@ -1,5 +1,11 @@
 # 검증 기록
 
+## 1.46.2 채터링 2 ms, CI 시간 — 로컬 검증
+
+2026-11-10. **오류 케이스 탐색(14~19·23·24번)**. 찾은 오류 1건: 채터링 2 ms가 뒤집힘 0번 → 수정, 해석기 `button-bounce`가 목록의 모든 시간(2·5·10·20 ms)이 2번 이상 짝수로 뒤집히고 그 시간 안에 눌린 상태로 끝나는지 확인, 툴체인 `button-bounce`(STM32·RA6E1 실제 빌드) 통과. 오류가 아니었던 것: ① 새 프로젝트 창에서 RA 템플릿을 고른 뒤 STM 보드로 바꾸면 템플릿이 `blank`로 돌아가고 HAL 프로젝트가 생긴다. 반대로 HAL 예제를 고른 뒤 FPB-RA6E1로 바꾸면 `ra-minimal`이 되고 hal_entry.c가 생긴다(Electron에서 직접 실행해 확인, 콘솔 오류 없음). ② 시작 파일·링커 스크립트를 프로젝트로 복사한 뒤 보드를 바꾸는 경우: 보드 변경은 프로젝트를 그 보드의 기본 프로젝트로 바꾸므로 다른 MCU의 시작 파일이 남지 않는다(`app.js` `projectForBoard`). 확인하지 못한 것은 이전과 같다(18번 디버그 Resume, 24번 헤더 IRQ 핀 수, 22번 `RA_IRQ_DS` 표, 20번 TZ 구간의 글자 단위 대조).
+
+**CI 시간**. 1.46.1 실행(42792915183)의 작업별 시간을 API로 읽었다: 펌웨어 1/3 235초(시험 185초), 2/3·3/3 162초, ESP32 198·219초, 패키지 201초, E2E 139~186초, 검사 169초, 게시 41초 — 전체 4.7분, 가장 긴 것이 펌웨어 1/3. 고친 것: 펌웨어 묶음 재분배(시험 146/146/136초 예상), ESP32 분배(120/122초 예상), 펌웨어·ESP32의 설치 스크립트 생략, 패키지의 편집기 재빌드 생략(약 10초). 로컬 확인: 묶음 2를 `node scripts/toolchain-shard.mjs 2`로 실행해 파일 실행 7개 + `arm-examples`의 F103RB 시험만 도는 것, `npm ci --ignore-scripts`로 설치한 새 복제본에서 툴체인 시험 파일 전부가 로드되고 5개 파일 12개 시험이 통과하는 것, `npm run build`(→ `build:package`)와 패키지 검사. 실제 CI 시간은 게시 확인에 적는다.
+
 ## 1.46.1 설정 적용 뒤 갱신, 드롭 — 게시 확인(API)
 
 2026-11-10. 빌드 커밋 `95b0293` · [Windows CI 42792915183](https://github.com/moonsyu/STM-Simulator/actions/runs/42792915183) 첫 실행에서 성공, 전체 4.7분. [Release v1.46.1](https://github.com/moonsyu/STM-Simulator/releases/tag/v1.46.1)이 최신 릴리스이고 자산 5개(STM-Simulator.exe, ZIP, SHA256.txt, BUILD-INFO.json, update-manifest.json). 파일은 내려받지 않았다.
