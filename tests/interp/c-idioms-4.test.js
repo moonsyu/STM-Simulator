@@ -45,6 +45,13 @@ test('pointers into one array compare by position; a const char * moves; pointer
  assert.throws(()=>run('',r`const int k = 1; k = 2;`),/const 값은 변경할 수 없습니다/);
 });
 
+test('sscanf: numbers, words, characters, widths, %*; it stops where the text does not fit',()=>{
+ assert.deepEqual(run('',r`int a = 0, b = 0; char cmd[8]; int v = 0; int n = sscanf("12,34", "%d,%d", &a, &b); int m = sscanf("LED 1", "%7s %d", cmd, &v); printf("%d %d %d %s %d\n", n, a + b, m, cmd, v);`),['2 46 2 LED 1']);
+ assert.deepEqual(run('',r`float f = 0; unsigned x = 0; char c = 0; int n = sscanf("T=23.5 0x1F Z", "T=%f %x %c", &f, &x, &c); printf("%d %.1f %u %c\n", n, f, x, c);`),['3 23.5 31 Z']);
+ assert.deepEqual(run('',r`int a = 7, b = 7, h = 0, m = 0, k = 0; int n = sscanf("5;x", "%d;%d", &a, &b); sscanf("1234", "%2d%2d", &h, &m); sscanf("a 9", "%*s %d", &k); printf("%d %d %d %d %d %d %d\n", n, a, b, h, m, k, sscanf("abc", "%d", &a));`),['1 5 7 12 34 9 0']);
+ assert.throws(()=>run('',r`int a; sscanf("1", "%q", &a);`),/지원하지 않는 sscanf 형식/);
+});
+
 test('printf %e / %g / %zu / %lld; putchar gathers a line',()=>{
  assert.deepEqual(run('',r`printf("%.2e %g %g %g %zu %lld %E\n", 12345.678, 0.0001, 1234567.0, 2.50, sizeof(int), 5LL, 0.5);`),['1.23e+04 0.0001 1.23457e+06 2.5 4 5 5.000000E-01']);
  assert.deepEqual(run('',r`for (const char *p = "hey"; *p; p++) putchar(*p); putchar('\n'); puts("done");`),['hey','done']);

@@ -46,6 +46,29 @@ export function stringCall(name,args,r){
   if(value?.kind==='struct'||r.get(first)?.kind==='struct'){if(value?.kind!=='struct'||r.get(first)?.kind!=='struct'||r.get(first).type!==value.type)throw new Error(`${name}: 같은 구조체끼리만 복사할 수 있습니다.`);const size=r.typeSize(value.type);if(n%size)throw new Error(`${name} 길이가 구조체 크기의 배수가 아닙니다.`);const copies=Array.from({length:n/size},(_,i)=>r.get(r.pointerCell(b,i)));copies.forEach((v,i)=>r.set(r.pointerCell(a,i),v));return a;}
   const bytes=readBytes(r,b,n,name);writeBytes(r,a,bytes,name);return a;
  }
+ // sscanf: %d %i %u %x %f %s %c (with * to skip, a width, h / l / ll), white space and literal characters. Returns how
+ // many values were stored; reading stops at the first part of the text that does not fit, as in C.
+ if(name==='sscanf'){
+  const text=r.format([a]),format=r.format([b]);let at=0,arg=2,stored=0;
+  const skipSpace=()=>{while(at<text.length&&/\s/.test(text[at]))at++;};
+  for(let i=0;i<format.length;){
+   const ch=format[i];
+   if(/\s/.test(ch)){skipSpace();i++;continue;}
+   if(ch!=='%'||format[i+1]==='%'){if(ch==='%')i++;if(text[at]!==format[i])return stored;at++;i++;continue;}
+   const m=/^%(\*?)(\d*)(hh|h|ll|l)?([diuxXfeEgsc])/.exec(format.slice(i));if(!m)throw new Error('지원하지 않는 sscanf 형식입니다. d/i/u/x/f/s/c를 사용하세요.');
+   i+=m[0].length;const [,skip,widthText,,kind]=m,width=widthText?Number(widthText):kind==='c'?1:Infinity;
+   if(kind!=='c')skipSpace();
+   const rest=text.slice(at,width===Infinity?undefined:at+width);
+   const found=kind==='c'?(rest.length>=width?[rest]:null):kind==='s'?/^\S+/.exec(rest):'di'.includes(kind)?/^[+-]?\d+/.exec(rest):kind==='u'?/^\d+/.exec(rest):'xX'.includes(kind)?/^(0[xX])?[0-9a-fA-F]+/.exec(rest):/^[+-]?(\d+\.?\d*|\.\d+)([eE][+-]?\d+)?/.exec(rest);
+   if(!found)return stored;at+=found[0].length;if(skip)continue;
+   if(arg>=args.length)throw new Error('sscanf 형식에 필요한 인수가 부족합니다.');const target=args[arg++];
+   if(kind==='s')writeCString(r,target,found[0]);
+   else if(kind==='c')[...found[0]].forEach((c,k)=>r.set(r.pointerCell(target,k),c.charCodeAt(0)&255));
+   else r.set(r.pointerCell(target,0),'xX'.includes(kind)?parseInt(found[0],16):'diu'.includes(kind)?Number(found[0])|0:Number(found[0]));
+   stored++;
+  }
+  return stored;
+ }
  // <string.h> searches: a pointer into the text, or NULL.
  if(name==='strchr'||name==='strrchr'){const p=r.pointer(r.literal(a)),text=r.format([a]),at=b===0?text.length:name==='strchr'?text.indexOf(String.fromCharCode(b&255)):text.lastIndexOf(String.fromCharCode(b&255));return at<0?0:{...p,index:p.index+at};}
  if(name==='strstr'){const p=r.pointer(r.literal(a)),at=r.format([a]).indexOf(r.format([b]));return at<0?0:{...p,index:p.index+at};}
