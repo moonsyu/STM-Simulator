@@ -1,4 +1,4 @@
-import {TIMER_ROUTES,TIMER_IDS,isTimer,isBasicTimer,timerOfIrq,timerMax,TIM_TRGO} from './timer-config.js';
+import {TIMER_ROUTES,TIMER_IDS,isTimer,isBasicTimer,isAdvancedTimer,timerOfIrq,timerMax,TIM_TRGO} from './timer-config.js';
 import {generateMain} from './hal-generator.js';
 import {GPIO_PINS} from './pins.js';
 import {SERIAL_ROUTES,SERIAL_IDS,isSerial,serialFunction} from './serial-config.js';
@@ -84,6 +84,11 @@ export function validateMcu(value){
      if(!Object.hasOwn(TIM_TRGO,p.trgo))throw new Error(`${id}.trgo: ${Object.keys(TIM_TRGO).join(' / ')} 중에서 고르세요.`);
      if(p.trgo!=='RESET')q.trgo=p.trgo;
     }
+    // Advanced timers (TIM1 / TIM8): Repetition Counter (RCR) and Dead Time (the raw DTG value), kept when not 0.
+    for(const [key,label]of [['repetition','Repetition Counter'],['deadTime','Dead Time']])if(p[key]!==undefined){
+     if(!isAdvancedTimer(id))throw new Error(`${id}: ${label}는 고급 타이머 TIM1/TIM8에만 있습니다.`);
+     if(!Number.isInteger(p[key])||p[key]<0||p[key]>255)throw new Error(`${id} ${label}: 0~255 범위의 정수를 입력하세요.`);if(p[key])q[key]=p[key];
+    }
     // Counter Mode: only a non-Up value is kept; the encoder sets the direction itself.
     if(isTimer(id)&&p.counterMode!==undefined){
      if(!TIM_COUNTER_MODES.includes(p.counterMode))throw new Error(`${id}.counterMode: ${TIM_COUNTER_MODES.join(' / ')} 중에서 고르세요.`);
@@ -163,6 +168,8 @@ export function configProblems(config){
     // The encoder model counts every edge (TIM_ENCODERMODE_TI1/TI2/TI12 with Prescaler 0), as the interpreter does.
     if(isTimer(id)&&p.enabled&&p.mode==='encoder'&&p.prescaler)errors.push(id+': 엔코더 모드는 Prescaler 0을 사용하세요.');
     if(isTimer(id)&&['pwm','oc','capture'].includes(p.mode)&&![...signals.keys()].some(k=>k.startsWith(id+'_CH')))errors.push(id+': 채널 핀을 활성화하세요.');
+    // Complementary outputs (TIMx_CHnN) exist only for PWM / output compare channels.
+    if(isAdvancedTimer(id)&&!['pwm','oc'].includes(p.mode)&&[...signals.keys()].some(k=>new RegExp('^'+id+'_CH\\dN$').test(k)))errors.push(id+': 상보 출력(CHxN)은 PWM 또는 출력 비교 모드에서 씁니다.');
     if(id==='ADC1'&&![...signals.keys()].some(k=>k.startsWith('ADC1_IN')))errors.push('ADC1: 입력 채널을 활성화하세요.');
   }
   // F1: every signal of a peripheral must sit on one AFIO remap option (default or remapped pins together).
@@ -200,7 +207,7 @@ export function importIoc(text){
     const m=/^(P[A-H]\d+)(?:-[^.]+)?\.Signal$/.exec(key);if(!m)continue;const pin=m[1],base=key.slice(0,-7);
     if(!f.gpioPins.includes(pin)){warnings.push(`${pin}: 보드에서 접근할 수 없는 핀`);continue;}
     // ADCx_INn: a channel shared by ADC1/2/3; the model uses ADC1.
-    let fn=/^COMP_DAC([12])_group$/.test(signal)?'DAC_OUT'+signal[8]:signal==='GPIO_Analog'?'Analog':signal==='GPIO_Output'?'GPIO_Output':signal==='GPIO_Input'?'GPIO_Input':signal.startsWith('GPXTI')?'GPIO_EXTI':/^S_TIM\d+_CH\d$/.test(signal)?signal.slice(2):/^ADC(?:x|\d+)_IN\d+$/.test(signal)?'ADC1_'+signal.split('_')[1]:signal;
+    let fn=/^COMP_DAC([12])_group$/.test(signal)?'DAC_OUT'+signal[8]:signal==='GPIO_Analog'?'Analog':signal==='GPIO_Output'?'GPIO_Output':signal==='GPIO_Input'?'GPIO_Input':signal.startsWith('GPXTI')?'GPIO_EXTI':/^S_TIM\d+_CH\dN?$/.test(signal)?signal.slice(2):/^ADC(?:x|\d+)_IN\d+$/.test(signal)?'ADC1_'+signal.split('_')[1]:signal;
     if(!pinFunctions(pin,family).includes(fn)){fn='Reserved';if(!/^(SYS_|RCC_)/.test(signal))warnings.push(`${pin}: ${signal} 실행 모델 미지원`);}
     const pull=(values[base+'.GPIO_PuPd']||'GPIO_NOPULL').replace('GPIO_','');
     // CubeMX omits GPIO_ModeDefaultEXTI for its default, rising edge.
@@ -238,18 +245,19 @@ export function importIoc(text){
   // SPI1 speed: CubeMX stores the computed rate ("5.25 MBits/s") next to the prescaler.
   for(const id of Object.keys(routes).filter(isSpi))if(config.peripherals[id]){const s=config.peripherals[id];if(/HIGH/.test(values[id+'.CLKPolarity']||''))s.cpol='HIGH';if(/2EDGE/.test(values[id+'.CLKPhase']||''))s.cpha='2EDGE';if(/16BIT/.test(values[id+'.DataSize']||''))s.dataSize=16;if(/LSB/.test(values[id+'.FirstBit']||''))s.firstBit='LSB';
    const m=/^([\d.]+)\s*([KM]?)Bits\/s/i.exec(values[id+'.CalculateBaudRate']||'');if(m)s.clock=Math.min(20000000,Math.max(1000,Math.round(Number(m[1])*({K:1e3,M:1e6}[m[2].toUpperCase()]??1))));}
-  for(const id of Object.keys(f.timers))if(config.peripherals[id]){const p=config.peripherals[id],defaults=timerDefaults(id,family);p.prescaler=number(values[id+'.Prescaler'],defaults.prescaler);p.period=number(values[id+'.Period'],defaults.period);const pulse=Object.keys(values).find(k=>k.startsWith(id+'.Pulse'));if(pulse)p.pulse=number(values[pulse],defaults.pulse);const settings=Object.entries(values).filter(([k])=>k.startsWith(id+'.')).map(([,v])=>v).join(' ');p.mode=/Encoder|ENCODER/.test(settings)?'encoder':/PWM/.test(settings)?'pwm':/Output Compare\d CH\d/.test(settings)?'oc':/INPUTCAPTURE|Input_Capture|IC_CHANNEL/.test(settings)?'capture':'base';
+  for(const id of Object.keys(f.timers))if(config.peripherals[id]){const p=config.peripherals[id],defaults=timerDefaults(id,family);p.prescaler=number(values[id+'.Prescaler'],defaults.prescaler);p.period=number(values[id+'.Period'],defaults.period);const pulse=Object.keys(values).find(k=>k.startsWith(id+'.Pulse'));if(pulse)p.pulse=number(values[pulse],defaults.pulse);const settings=Object.entries(values).filter(([k])=>k.startsWith(id+'.')).map(([k,v])=>k+' '+v).join(' ');p.mode=/Encoder|ENCODER/.test(settings)?'encoder':/PWM/.test(settings)?'pwm':/Output Compare\d CH\d/.test(settings)?'oc':/INPUTCAPTURE|Input_Capture|IC_CHANNEL/.test(settings)?'capture':'base';
     const counter=/TIM_COUNTERMODE_(\w+)/.exec(values[id+'.CounterMode']||'')?.[1];if(counter&&counter!=='UP'&&TIM_COUNTER_MODES.includes(counter)&&p.mode!=='encoder'&&!isBasicTimer(id))p.counterMode=counter;
     // TIM6/TIM7 TRGO Parameters (TIM6.TIM_MasterOutputTrigger=TIM_TRGO_UPDATE); the basic timers have only the time base.
+    if(isAdvancedTimer(id)){const rep=number(values[id+'.RepetitionCounter'],0),dead=number(values[id+'.DeadTime'],0);if(rep>0&&rep<=255)p.repetition=rep;if(dead>0&&dead<=255)p.deadTime=dead;}
     if(isBasicTimer(id)){p.mode='base';const trgo=/^TIM_TRGO_(RESET|ENABLE|UPDATE)$/.exec(values[id+'.TIM_MasterOutputTrigger']||'')?.[1];if(trgo&&trgo!=='RESET')p.trgo=trgo;}}
   // Per-channel settings: PWM "TIM2.Pulse-PWM Generation1 CH1", "TIM2.OCPolarity_1", "TIM2.OCMode_PWM-PWM Generation1 CH1";
   // Output Compare "TIM2.Pulse-Output Compare1 CH1", "TIM2.OCMode_1" (TIM_OCMODE_TIMING when missing, as CubeMX).
   for(const id of Object.keys(f.timers))if(['pwm','oc'].includes(config.peripherals[id]?.mode)){
    const p=config.peripherals[id],oc=p.mode==='oc',ch={},name=oc?'Output Compare':'PWM Generation';const at=n=>ch['CH'+n]??={};
    for(const [k,v]of Object.entries(values)){
-    let m=new RegExp('^'+id+'\\.Pulse-'+name+'(\\d) CH\\d$').exec(k);if(m){at(m[1]).pulse=number(v,p.pulse);continue;}
+    let m=new RegExp('^'+id+'\\.Pulse-'+name+'(\\d) CH\\d(?: CH\\dN)?$').exec(k);if(m){at(m[1]).pulse=number(v,p.pulse);continue;}
     m=new RegExp('^'+id+'\\.OCPolarity_(\\d)(?:-.*)?$').exec(k);if(m&&/LOW/.test(v)){at(m[1]).polarity='LOW';continue;}
-    m=new RegExp('^'+id+'\\.OCMode_PWM-PWM Generation(\\d) CH\\d$').exec(k);if(!oc&&m&&/PWM2/.test(v)){at(m[1]).ocMode='PWM2';continue;}
+    m=new RegExp('^'+id+'\\.OCMode_PWM-PWM Generation(\\d) CH\\d(?: CH\\dN)?$').exec(k);if(!oc&&m&&/PWM2/.test(v)){at(m[1]).ocMode='PWM2';continue;}
     m=new RegExp('^'+id+'\\.OCMode_(\\d)(?:-.*)?$').exec(k);const mode=/TIM_OCMODE_(\w+)/.exec(v)?.[1];if(oc&&m&&mode!=='TIMING'&&TIM_OC_MODES.includes(mode))at(m[1]).ocMode=mode;
    }
    for(const c of Object.values(ch))if(c.pulse===p.pulse)delete c.pulse;

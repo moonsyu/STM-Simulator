@@ -1,4 +1,4 @@
-import {isTimer,isBasicTimer,timerIrq,timerMax as f4TimerMax,TIM_TRGO} from './timer-config.js';
+import {isTimer,isBasicTimer,isAdvancedTimer,timerIrq,timerCcIrq,timerMax as f4TimerMax,TIM_TRGO} from './timer-config.js';
 const integer=(n,min,max,label)=>{if(!Number.isInteger(n)||n<min||n>max)throw new Error(`${label}: ${min}~${max} 범위를 확인하세요.`);return n;};
 const wrap=(n,period)=>((n%period)+period)%period;
 const quadrature=[0,-1,1,0,1,0,0,-1,-1,0,0,1,0,1,-1,0];
@@ -21,7 +21,9 @@ export class HalTimers {
     integer(get('Prescaler'),0,65535,id+' Prescaler');integer(get('Period'),0,this.max(id),id+' ARR');
     if(get('Prescaler')!==p.prescaler||get('Period')!==p.period)throw new Error(`${id}: 소스와 Pinout의 Prescaler/Period가 다릅니다.`);
     if(this.states.get(id)?.active)throw new Error(id+': 타이머를 정지한 뒤 초기화하세요.');
-    const s={id,ptr,init,kind,count:COUNT_MODES[get('CounterMode')],value:0,at:r.microTime,active:false,base:false,baseIT:false,generation:0,channels:new Map(),down:false};
+    // Advanced timers: an update event (and its interrupt) comes every RepetitionCounter + 1 counter cycles.
+    const repetition=isAdvancedTimer(id)?integer(get('RepetitionCounter')??0,0,255,id+' RepetitionCounter'):0;
+    const s={id,ptr,init,kind,repetition,count:COUNT_MODES[get('CounterMode')],value:0,at:r.microTime,active:false,base:false,baseIT:false,generation:0,channels:new Map(),down:false};
     if(kind==='Encoder'){
       const cfg=r.get(r.pointerCell(encoder));s.encoderMode=h.field(cfg,'EncoderMode');
       if(![1,2,3].includes(s.encoderMode)||get('Prescaler')!==0)throw new Error(id+': 엔코더 TI1/TI2/TI12, Prescaler 0을 사용하세요.');
@@ -51,12 +53,12 @@ export class HalTimers {
     const generation=++s.generation;if(!s.baseIT||this.period(s)===1)return;
     // Update events at overflow, and also at underflow in center-aligned mode (so every ARR ticks there).
     const u=this.phase(s,r.microTime),cycle=this.cycle(s),step=s.count==='center'?this.arr(s):cycle,next=s.count==='center'&&u<this.arr(s)?this.arr(s):cycle;
-    const ms=(next-u)*1000/this.hz(s),full=step*1000/this.hz(s);if(full<.1||full>3600000)throw new Error(s.id+': 인터럽트 주기 범위 0.1~3600000 ms');
-    const fire=()=>{if(generation!==s.generation||!s.baseIT)return;const hal=this.hal;hal.queue(timerIrq(s.id),function*(){if(s.baseIT)yield* hal.userCall(r,'HAL_TIM_PeriodElapsedCallback',[s.ptr]);},s.id+':update');r.event(r.microTime/1000+full,fire);};
+    const rep=(s.repetition??0)+1,ms=((next-u)+(rep-1)*step)*1000/this.hz(s),full=rep*step*1000/this.hz(s);if(full<.1||full>3600000)throw new Error(s.id+': 인터럽트 주기 범위 0.1~3600000 ms');
+    const fire=()=>{if(generation!==s.generation||!s.baseIT)return;const hal=this.hal;hal.queue(timerIrq(s.id,hal.f1),function*(){if(s.baseIT)yield* hal.userCall(r,'HAL_TIM_PeriodElapsedCallback',[s.ptr]);},s.id+':update');r.event(r.microTime/1000+full,fire);};
     r.event(r.microTime/1000+Math.max(.000001,ms),fire);
   }
   channel(s,key){integer(key/4,0,3,'TIM 채널');const c=s.channels.get(key);if(!c)throw new Error(s.id+': 채널을 먼저 초기화하세요.');return c;}
-  notify(s,c,key,r){if(!c.it)return;const hal=this.hal;hal.queue(timerIrq(s.id),function*(){if(!c.active||s.kind==='Encoder'&&!s.encoderActive)return;const {h}=hal.requireHandle(s.ptr,r,'TIM');h.fields.Channel.value=1<<(key/4);try{yield* hal.userCall(r,'HAL_TIM_IC_CaptureCallback',[s.ptr]);}finally{h.fields.Channel.value=0;}},s.id+':capture:'+key);}
+  notify(s,c,key,r){if(!c.it)return;const hal=this.hal;hal.queue(timerCcIrq(s.id,hal.f1),function*(){if(!c.active||s.kind==='Encoder'&&!s.encoderActive)return;const {h}=hal.requireHandle(s.ptr,r,'TIM');h.fields.Channel.value=1<<(key/4);try{yield* hal.userCall(r,'HAL_TIM_IC_CaptureCallback',[s.ptr]);}finally{h.fields.Channel.value=0;}},s.id+':capture:'+key);}
   observe(r,us=r.microTime){
     for(const s of this.states.values()){
       if(!s.active)continue;
@@ -96,7 +98,7 @@ export class HalTimers {
       if(generation!==ch.generation||!ch.active)return;
       if(ch.mode===16||ch.mode===32){const level=ch.mode===16?1:0;if(ch.ref!==level){ch.ref=level;r.call('digitalWrite',[pin,ch.ref^pol]);}}
       if(!ch.it)return;
-      hal.queue(timerIrq(s.id),function*(){if(!ch.active)return;const {h}=hal.requireHandle(s.ptr,r,'TIM');h.fields.Channel.value=1<<(key/4);try{yield* hal.userCall(r,'HAL_TIM_OC_DelayElapsedCallback',[s.ptr]);}finally{h.fields.Channel.value=0;}},s.id+':oc:'+key);
+      hal.queue(timerCcIrq(s.id,hal.f1),function*(){if(!ch.active)return;const {h}=hal.requireHandle(s.ptr,r,'TIM');h.fields.Channel.value=1<<(key/4);try{yield* hal.userCall(r,'HAL_TIM_OC_DelayElapsedCallback',[s.ptr]);}finally{h.fields.Channel.value=0;}},s.id+':oc:'+key);
       const j=(i+1)%matches.length,step=((matches[j]-matches[i])%cycle+cycle)%cycle||cycle;i=j;r.event(r.microTime/1000+step*1000/hz,fire);
     };
     r.event(r.microTime/1000+Math.max(.000001,(next-u)*1000/hz),fire);
@@ -105,6 +107,8 @@ export class HalTimers {
     // Center-aligned PWM runs at timer clock / 2*ARR with duty CCR / ARR.
     const pin=c.pin,period=this.period(s),hz=this.hz(s)/this.cycle(s),span=s.count==='center'?Math.max(1,this.arr(s)):period;
     r.call('pinMode',[pin,'OUTPUT']);
+    // Complementary output (TIMx_CHnN, HAL_TIMEx_PWMN_Start): the inverse of the channel's PWM; dead time is not drawn.
+    if(c.nPin){r.call('pinMode',[c.nPin,'OUTPUT']);if(c.nActive&&period>1&&hz<=2000){if(hz<1)r.pwmFrequency.set(c.nPin,hz);else r.call('analogWriteFrequency',[c.nPin,hz]);r.call('analogWrite',[c.nPin,(1-Math.min(1,c.pulse/span))*255]);}else r.call('digitalWrite',[c.nPin,0]);}
     if(c.active&&period>1){
       // Full-width 32-bit ARR gives a valid period of several minutes.
       // The sketch API's 1 Hz lower bound must not reject an initialized HAL timer.
@@ -122,6 +126,18 @@ export class HalTimers {
     if(name==='HAL_TIM_ConfigClockSource'){if(h.field(r.get(r.pointerCell(b)),'ClockSource')!==0)throw new Error(s.id+': 내부 클록만 지원합니다.');return 0;}
     if(name==='HAL_TIMEx_MasterConfigSynchronization'){const cfg=r.get(r.pointerCell(b)),trgo=h.field(cfg,'MasterOutputTrigger');if(![0,16,32].includes(trgo)||h.field(cfg,'MasterSlaveMode'))throw new Error(`${s.id}: TRGO는 ${Object.keys(TIM_TRGO).map(k=>'TIM_TRGO_'+k).join('·')}, MasterSlaveMode는 DISABLE만 지원합니다.`);s.trgo=trgo;return 0;}
     if(name==='HAL_TIM_MspPostInit'||name==='HAL_TIM_IRQHandler')return 0;
+    if(name==='HAL_TIMEx_ConfigBreakDeadTime'){
+      if(!isAdvancedTimer(s.id))throw new Error(`${s.id}: Break / Dead Time은 고급 타이머 TIM1/TIM8에만 있습니다.`);
+      const cfg=r.get(r.pointerCell(b)),dead=h.field(cfg,'DeadTime');integer(dead,0,255,s.id+' DeadTime');
+      if(h.field(cfg,'BreakState'))throw new Error(`${s.id}: 내장 해석기는 Break 입력을 지원하지 않습니다(TIM_BREAK_DISABLE). ARM GCC 시뮬레이터로 실행하세요.`);
+      if(dead&&!s.deadNoted){s.deadNoted=true;r.warn?.(`[${s.id}] Dead Time ${dead}: 내장 해석기는 상보 출력의 데드타임 구간을 그리지 않습니다(ARM GCC 시뮬레이터에서 확인).`);}
+      s.deadTime=dead;return 0;
+    }
+    if(/^HAL_TIMEx_(PWMN|OCN)_(Start|Stop)$/.test(name)){
+      if(!isAdvancedTimer(s.id))throw new Error(`${s.id}: 상보 출력(CHxN)은 고급 타이머 TIM1/TIM8에만 있습니다.`);
+      integer(b/4,0,2,'TIM 상보 채널(CH1N~CH3N)');const ch=this.channel(s,b);if(ch.kind!=='PWM')throw new Error(`${s.id}: 내장 해석기의 상보 출력은 PWM 채널만 지원합니다. ARM GCC 시뮬레이터로 실행하세요.`);
+      ch.nPin=h.pinFor(`${s.id}_CH${b/4+1}N`);ch.nActive=name.endsWith('_Start');this.freeze(s,r.microTime);ch.nOnly=!ch.active;this.pwm(s,ch,r);return 0;
+    }
     if(name==='__HAL_TIM_GET_COUNTER')return this.counter(s,r.microTime);
     if(name==='__HAL_TIM_IS_TIM_COUNTING_DOWN')return Number(this.countingDown(s,r.microTime));
     if(name==='__HAL_TIM_SET_COUNTER'){

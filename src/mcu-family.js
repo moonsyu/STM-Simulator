@@ -4,7 +4,7 @@
 // numbers, DMA units, clocks, GPIO set) lives here so the Pinout, validator, generator and interpreter share it.
 import {SERIAL_ROUTES} from './serial-config.js';
 import {F4_BUS_ROUTES,F1_BUS_ROUTES,busIrqs} from './bus-config.js';
-import {TIMER_ROUTES,timerIrq} from './timer-config.js';
+import {TIMER_ROUTES,timerIrq,timerCcIrq} from './timer-config.js';
 import {GPIO_PINS} from './pins.js';
 
 const adcRoutes=pins=>Object.fromEntries(pins.map((p,i)=>['IN'+i,[p]]));
@@ -42,6 +42,8 @@ const F1_REMAPS={
   USART3:[{pins:{TX:'PB10',RX:'PB11',CK:'PB12'}},{macro:'__HAL_AFIO_REMAP_USART3_PARTIAL',pins:{TX:'PC10',RX:'PC11',CK:'PC12'}}],
   I2C1:[{pins:{SCL:'PB6',SDA:'PB7'}},{macro:'__HAL_AFIO_REMAP_I2C1_ENABLE',pins:{SCL:'PB8',SDA:'PB9'}}],
   SPI1:[{pins:{SCK:'PA5',MISO:'PA6',MOSI:'PA7'}},{macro:'__HAL_AFIO_REMAP_SPI1_ENABLE',pins:{SCK:'PB3',MISO:'PB4',MOSI:'PB5'}}],
+  // TIM1 (RM0008 9.3.7): the partial remap moves only the complementary outputs.
+  TIM1:[{pins:{CH1:'PA8',CH2:'PA9',CH3:'PA10',CH4:'PA11',CH1N:'PB13',CH2N:'PB14',CH3N:'PB15'}},{macro:'__HAL_AFIO_REMAP_TIM1_PARTIAL',pins:{CH1:'PA8',CH2:'PA9',CH3:'PA10',CH4:'PA11',CH1N:'PA7',CH2N:'PB0',CH3N:'PB1'}}],
   TIM2:[{pins:{CH1:'PA0',CH2:'PA1',CH3:'PA2',CH4:'PA3'}},{macro:'__HAL_AFIO_REMAP_TIM2_PARTIAL_1',pins:{CH1:'PA15',CH2:'PB3',CH3:'PA2',CH4:'PA3'}},
     {macro:'__HAL_AFIO_REMAP_TIM2_PARTIAL_2',pins:{CH1:'PA0',CH2:'PA1',CH3:'PB10',CH4:'PB11'}},{macro:'__HAL_AFIO_REMAP_TIM2_ENABLE',pins:{CH1:'PA15',CH2:'PB3',CH3:'PB10',CH4:'PB11'}}],
   TIM3:[{pins:{CH1:'PA6',CH2:'PA7',CH3:'PB0',CH4:'PB1'}},{macro:'__HAL_AFIO_REMAP_TIM3_PARTIAL',pins:{CH1:'PB4',CH2:'PB5',CH3:'PB0',CH4:'PB1'}},
@@ -65,7 +67,7 @@ const F1={
   id:'STM32F103RB',series:'STM32F1',core:'Cortex-M3',fpu:false,flashKB:128,ramKB:20,
   serial:{USART1:routesFromRemaps('USART1'),USART2:routesFromRemaps('USART2'),USART3:routesFromRemaps('USART3')},
   usartCk:{USART1:['PA8'],USART2:['PA4'],USART3:['PB12','PC12']},
-  timers:{TIM2:routesFromRemaps('TIM2'),TIM3:routesFromRemaps('TIM3'),TIM4:routesFromRemaps('TIM4')},
+  timers:{TIM1:routesFromRemaps('TIM1'),TIM2:routesFromRemaps('TIM2'),TIM3:routesFromRemaps('TIM3'),TIM4:routesFromRemaps('TIM4')},
   extra:{I2C1:routesFromRemaps('I2C1'),SPI1:routesFromRemaps('SPI1'),ADC1:adcRoutes(ADC_PINS),RTC:{},IWDG:{},WWDG:{},...F1_BUS_ROUTES},
   pinMux:'remap',remaps:F1_REMAPS,
   // PA15/PB3/PB4 are JTAG pins after reset; using them needs __HAL_AFIO_REMAP_SWJ_NOJTAG() (SWD stays on).
@@ -92,7 +94,7 @@ export function routesOf(id=DEFAULT_FAMILY){
 }
 export const serialIdsOf=id=>Object.keys(familyProfile(id).serial);
 export const timerIdsOf=id=>Object.keys(familyProfile(id).timers);
-export const irqNamesOf=id=>{const f=familyProfile(id);return [...EXTI_IRQS,...serialIdsOf(id).map(s=>s+'_IRQn'),...timerIdsOf(id).map(timerIrq),...f.irqExtra];};
+export const irqNamesOf=id=>{const f=familyProfile(id);return [...EXTI_IRQS,...serialIdsOf(id).map(s=>s+'_IRQn'),...new Set(timerIdsOf(id).flatMap(t=>[timerIrq(t,f.pinMux==='remap'),timerCcIrq(t)])),...f.irqExtra];};
 /** F1: the remap option a peripheral's assigned signals select, or null when the pins mix options. */
 export function remapFor(id,peripheral,assigned){
   const f=familyProfile(id);if(f.pinMux!=='remap'||!f.remaps[peripheral])return f.remaps?.[peripheral]?.[0]??null;

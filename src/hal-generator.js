@@ -1,5 +1,5 @@
 import {SERIAL_IDS,isSerial,serialAf,serialHandle,serialFunction} from './serial-config.js';
-import {TIMER_IDS,isTimer,isBasicTimer,timerAf,timerIrq} from './timer-config.js';
+import {TIMER_IDS,isTimer,isBasicTimer,isAdvancedTimer,timerAf,timerIrq,timerCcIrq} from './timer-config.js';
 import {rtcInitLines} from './rtc-config.js';
 import {dacInitLines,dacChannelOf} from './dac-config.js';
 import {iwdgInitLines,wwdgInitLines,iwdgTimeoutMs} from './wdg-config.js';
@@ -82,8 +82,10 @@ export function generateMain(config,{minimal=false,legacyGpio=false}={}){
     'int main(void) {','  HAL_Init();',...nvicInit(config),'  SystemClock_Config();',...(gpioInit?['  MX_GPIO_Init();']:[]),...(dma.length?['  MX_DMA_Init();']:[]),...active.map(([id])=>`  ${initName(id)}();`),'  /* USER CODE BEGIN 2 */');
   if(!minimal)for(const [id,p]of timers){const h=handles[id][1];
     if(p.mode==='encoder')lines.push(`  HAL_TIM_Encoder_Start(&${h}, TIM_CHANNEL_ALL);`);
-    else if(['pwm','oc','capture'].includes(p.mode)){for(const value of Object.values(config.pins)){const match=new RegExp('^'+id+'_CH([1-4])$').exec(value.function);if(match)lines.push(`  HAL_TIM_${p.mode==='pwm'?'PWM_Start':(p.mode==='oc'?'OC':'IC')+'_Start'+(config.nvic[timerIrq(id)]?.enabled?'_IT':'')}(&${h}, TIM_CHANNEL_${match[1]});`);}}
-    else if(config.nvic[timerIrq(id)]?.enabled)lines.push(`  HAL_TIM_Base_Start_IT(&${h});`);
+    else if(['pwm','oc','capture'].includes(p.mode)){for(const value of Object.values(config.pins)){const match=new RegExp('^'+id+'_CH([1-4])$').exec(value.function);if(match)lines.push(`  HAL_TIM_${p.mode==='pwm'?'PWM_Start':(p.mode==='oc'?'OC':'IC')+'_Start'+(config.nvic[timerCcIrq(id,f1)]?.enabled?'_IT':'')}(&${h}, TIM_CHANNEL_${match[1]});`);
+      // Complementary output of an advanced timer (TIMx_CHnN).
+      const n=new RegExp('^'+id+'_CH([1-3])N$').exec(value.function);if(n&&p.mode!=='capture')lines.push(`  HAL_TIMEx_${p.mode==='pwm'?'PWMN':'OCN'}_Start(&${h}, TIM_CHANNEL_${n[1]});`);}}
+    else if(config.nvic[timerIrq(id,f1)]?.enabled)lines.push(`  HAL_TIM_Base_Start_IT(&${h});`);
   }
   if(!minimal&&config.peripherals.DAC?.enabled)for(const p of Object.values(config.pins)){const ch=dacChannelOf(p.function);if(ch&&!dma.some(([r])=>r==='DAC'+ch.slice(3)))lines.push(`  HAL_DAC_Start(&hdac, DAC_CHANNEL_${ch.slice(3)});`);}
   if(!minimal&&serials.some(([id])=>!sync(id))){lines.push('  uint8_t message[] = "HAL ready\\r\\n";');for(const [id]of serials)if(!sync(id))lines.push(`  HAL_UART_Transmit(&${serialHandle(id)}, message, sizeof(message)-1, 100);`);}
@@ -153,7 +155,7 @@ export function generateMain(config,{minimal=false,legacyGpio=false}={}){
     if(isSpi(id))for(const [k,v]of Object.entries({Mode:'SPI_MODE_MASTER',Direction:'SPI_DIRECTION_2LINES',DataSize:`SPI_DATASIZE_${p.dataSize??8}BIT`,CLKPolarity:`SPI_POLARITY_${p.cpol??'LOW'}`,CLKPhase:`SPI_PHASE_${p.cpha??'1EDGE'}`,NSS:'SPI_NSS_SOFT',BaudRatePrescaler:'SPI_BAUDRATEPRESCALER_'+Math.min(256,2**Math.max(1,Math.ceil(Math.log2(config.timerClockHz/p.clock)))),FirstBit:`SPI_FIRSTBIT_${p.firstBit??'MSB'}`,TIMode:'SPI_TIMODE_DISABLE',CRCCalculation:'SPI_CRCCALCULATION_DISABLE',CRCPolynomial:10}))set(k,v);
     if(id==='ADC1'&&f1)for(const [k,v]of Object.entries({ScanConvMode:'ADC_SCAN_DISABLE',ContinuousConvMode:p.continuous?'ENABLE':'DISABLE',DiscontinuousConvMode:'DISABLE',ExternalTrigConv:'ADC_SOFTWARE_START',DataAlign:'ADC_DATAALIGN_RIGHT',NbrOfConversion:1}))set(k,v);
     if(id==='ADC1'&&!f1)for(const [k,v]of Object.entries({ClockPrescaler:`ADC_CLOCK_SYNC_PCLK_DIV${config.clock?.adcPrescaler??4}`,Resolution:'ADC_RESOLUTION_12B',ScanConvMode:'DISABLE',ContinuousConvMode:p.continuous?'ENABLE':'DISABLE',DiscontinuousConvMode:'DISABLE',ExternalTrigConvEdge:'ADC_EXTERNALTRIGCONVEDGE_NONE',ExternalTrigConv:'ADC_SOFTWARE_START',DataAlign:'ADC_DATAALIGN_RIGHT',NbrOfConversion:1,DMAContinuousRequests:'DISABLE',EOCSelection:'ADC_EOC_SINGLE_CONV'}))set(k,v);
-    if(isTimer(id))for(const [k,v]of Object.entries({Prescaler:p.prescaler,CounterMode:`TIM_COUNTERMODE_${p.counterMode??'UP'}`,Period:p.period,...(isBasicTimer(id)?{}:{ClockDivision:'TIM_CLOCKDIVISION_DIV1'}),AutoReloadPreload:'TIM_AUTORELOAD_PRELOAD_DISABLE'}))set(k,v);
+    if(isTimer(id))for(const [k,v]of Object.entries({Prescaler:p.prescaler,CounterMode:`TIM_COUNTERMODE_${p.counterMode??'UP'}`,Period:p.period,...(isBasicTimer(id)?{}:{ClockDivision:'TIM_CLOCKDIVISION_DIV1'}),...(isAdvancedTimer(id)?{RepetitionCounter:p.repetition??0}:{}),AutoReloadPreload:'TIM_AUTORELOAD_PRELOAD_DISABLE'}))set(k,v);
     if(isTimer(id)&&p.mode==='encoder'){
       lines.push('  TIM_Encoder_InitTypeDef encoder = {0};','  encoder.EncoderMode = TIM_ENCODERMODE_TI12;');
       for(const n of [1,2])lines.push(`  encoder.IC${n}Polarity = TIM_ICPOLARITY_RISING;`,`  encoder.IC${n}Selection = TIM_ICSELECTION_DIRECTTI;`,`  encoder.IC${n}Prescaler = TIM_ICPSC_DIV1;`,`  encoder.IC${n}Filter = 0;`);
@@ -166,12 +168,14 @@ export function generateMain(config,{minimal=false,legacyGpio=false}={}){
     if(isTimer(id)&&['pwm','oc','capture'].includes(p.mode)){
       const out=p.mode!=='capture',kind=p.mode==='pwm'?'PWM':p.mode==='oc'?'OC':'IC',ocDefault=p.mode==='oc'?'TIMING':'PWM1';
       lines.push(`  ${out?'TIM_OC_InitTypeDef':'TIM_IC_InitTypeDef'} channel = {0};`);
-      if(out)lines.push(`  channel.OCMode = TIM_OCMODE_${ocDefault};`,'  channel.OCPolarity = TIM_OCPOLARITY_HIGH;',`  channel.Pulse = ${p.pulse};`,'  channel.OCFastMode = TIM_OCFAST_DISABLE;');
+      if(out)lines.push(`  channel.OCMode = TIM_OCMODE_${ocDefault};`,'  channel.OCPolarity = TIM_OCPOLARITY_HIGH;',`  channel.Pulse = ${p.pulse};`,'  channel.OCFastMode = TIM_OCFAST_DISABLE;',...(isAdvancedTimer(id)?['  channel.OCNPolarity = TIM_OCNPOLARITY_HIGH;','  channel.OCIdleState = TIM_OCIDLESTATE_RESET;','  channel.OCNIdleState = TIM_OCNIDLESTATE_RESET;']:[]));
       else lines.push('  channel.ICPolarity = TIM_ICPOLARITY_RISING;','  channel.ICSelection = TIM_ICSELECTION_DIRECTTI;','  channel.ICPrescaler = TIM_ICPSC_DIV1;','  channel.ICFilter = 0;');
       // Channels with their own Pulse / polarity / mode set the shared structure again before their ConfigChannel.
       const own=out&&p.channels&&Object.keys(p.channels).length;
       for(const value of Object.values(config.pins)){const m=new RegExp('^'+id+'_CH([1-4])$').exec(value.function);if(!m)continue;if(own){const c=p.channels['CH'+m[1]]||{};lines.push(`  channel.OCMode = TIM_OCMODE_${c.ocMode??ocDefault};`,`  channel.OCPolarity = TIM_OCPOLARITY_${c.polarity??'HIGH'};`,`  channel.Pulse = ${c.pulse??p.pulse};`);}lines.push(`  HAL_TIM_${kind}_ConfigChannel(&${name}, &channel, TIM_CHANNEL_${m[1]});`);}
     }
+    // Break and dead time of an advanced timer's outputs (CubeMX writes it for PWM / output compare; break input off).
+    if(isAdvancedTimer(id)&&['pwm','oc'].includes(p.mode))lines.push('  TIM_BreakDeadTimeConfigTypeDef sBreakDeadTimeConfig = {0};','  sBreakDeadTimeConfig.OffStateRunMode = TIM_OSSR_DISABLE;','  sBreakDeadTimeConfig.OffStateIDLEMode = TIM_OSSI_DISABLE;','  sBreakDeadTimeConfig.LockLevel = TIM_LOCKLEVEL_OFF;',`  sBreakDeadTimeConfig.DeadTime = ${p.deadTime??0};`,'  sBreakDeadTimeConfig.BreakState = TIM_BREAK_DISABLE;','  sBreakDeadTimeConfig.BreakPolarity = TIM_BREAKPOLARITY_HIGH;','  sBreakDeadTimeConfig.AutomaticOutput = TIM_AUTOMATICOUTPUT_DISABLE;',`  HAL_TIMEx_ConfigBreakDeadTime(&${name}, &sBreakDeadTimeConfig);`);
     for(const [request,d]of dma)if(dmaOwner(request)===id){const h=dmaHandle(request);lines.push(...dmaLines(h,request,d,f1),`  __HAL_LINKDMA(&${name}, ${dmaLink(request)}, ${h});`);}
     lines.push('}');
   }
@@ -180,7 +184,7 @@ export function generateMain(config,{minimal=false,legacyGpio=false}={}){
   if(!minimal&&pins.some(([,p])=>p.function==='GPIO_EXTI'))lines.push('','void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {','  UNUSED(GPIO_Pin);','  /* USER CODE BEGIN EXTI_Callback */','  /* 핀 번호에 따라 인터럽트 처리를 작성하세요. */','  /* USER CODE END EXTI_Callback */','}');
   if(!minimal&&serials.length)lines.push('','void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart) {','  UNUSED(huart);','  /* USER CODE BEGIN UART_RxCplt */','  /* HAL_UART_Receive_IT() 수신 완료 */','  /* USER CODE END UART_RxCplt */','}');
   if(!minimal&&timers.length)lines.push('','void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {','  UNUSED(htim);','  /* USER CODE BEGIN TIM_PeriodElapsed */','  /* 타이머 주기 인터럽트 */','  /* USER CODE END TIM_PeriodElapsed */','}');
-  if(!minimal&&timers.some(([id,p])=>p.mode==='oc'&&config.nvic[timerIrq(id)]?.enabled))lines.push('','void HAL_TIM_OC_DelayElapsedCallback(TIM_HandleTypeDef *htim) {','  UNUSED(htim);','  /* USER CODE BEGIN TIM_OC_DelayElapsed */','  /* 출력 비교 일치(CCR) 인터럽트 */','  /* USER CODE END TIM_OC_DelayElapsed */','}');
+  if(!minimal&&timers.some(([id,p])=>p.mode==='oc'&&config.nvic[timerCcIrq(id,f1)]?.enabled))lines.push('','void HAL_TIM_OC_DelayElapsedCallback(TIM_HandleTypeDef *htim) {','  UNUSED(htim);','  /* USER CODE BEGIN TIM_OC_DelayElapsed */','  /* 출력 비교 일치(CCR) 인터럽트 */','  /* USER CODE END TIM_OC_DelayElapsed */','}');
   // WWDG early wakeup (counter 0x40): the example refreshes there, one count before the reset.
   if(!minimal&&config.peripherals.WWDG?.enabled&&config.peripherals.WWDG.ewi&&config.nvic.WWDG_IRQn?.enabled)lines.push('','void HAL_WWDG_EarlyWakeupCallback(WWDG_HandleTypeDef *hwwdg) {','  /* USER CODE BEGIN WWDG_EarlyWakeup */','  HAL_WWDG_Refresh(hwwdg); /* 카운터 0x40: 지금 갱신하지 않으면 다음 카운트에 리셋 */','  /* USER CODE END WWDG_EarlyWakeup */','}');
   const rtc=config.peripherals.RTC?.enabled&&config.peripherals.RTC;

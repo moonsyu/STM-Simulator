@@ -36,6 +36,7 @@ export const HAL_STRUCTS={
   TIM_HandleTypeDef:'Instance Init:TIM_Base_InitTypeDef Channel hdma:uint32_t[7] State',
   TIM_ClockConfigTypeDef:'ClockSource ClockPolarity ClockPrescaler ClockFilter',
   TIM_MasterConfigTypeDef:'MasterOutputTrigger MasterSlaveMode',
+  TIM_BreakDeadTimeConfigTypeDef:'OffStateRunMode OffStateIDLEMode LockLevel DeadTime BreakState BreakPolarity BreakFilter AutomaticOutput',
   TIM_IC_InitTypeDef:'ICPolarity ICSelection ICPrescaler ICFilter',
   TIM_Encoder_InitTypeDef:'EncoderMode IC1Polarity IC1Selection IC1Prescaler IC1Filter IC2Polarity IC2Selection IC2Prescaler IC2Filter',
   TIM_OC_InitTypeDef:'OCMode Pulse OCPolarity OCNPolarity OCFastMode OCIdleState OCNIdleState',

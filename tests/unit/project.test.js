@@ -262,7 +262,7 @@ describe('serial configuration',()=>{
 
 describe('timer configuration',()=>{
   test('routes, alternate functions and widths',()=>{
-    assert.deepEqual(TIMER_IDS,['TIM2','TIM3','TIM4','TIM5','TIM6','TIM7']);assert.deepEqual(TIMER_ROUTES.TIM6,{},'basic timers have no channels');assert.ok(isTimer('TIM4')&&!isTimer('TIM1'));
+    assert.deepEqual(TIMER_IDS,['TIM1','TIM2','TIM3','TIM4','TIM5','TIM6','TIM7','TIM8']);assert.deepEqual(TIMER_ROUTES.TIM6,{},'basic timers have no channels');assert.ok(isTimer('TIM4')&&isTimer('TIM1')&&!isTimer('TIM9'));
     assert.equal(timerAf('TIM2'),1);assert.equal(timerAf('TIM4'),2);assert.equal(timerMax('TIM5'),4294967295);assert.equal(timerMax('TIM3'),65535);
     assert.deepEqual(TIMER_ROUTES.TIM4.CH1,['PB6']);assert.deepEqual(timerDefaults('TIM3'),{enabled:false,prescaler:0,period:65535,pulse:0,mode:'base'});
   });
