@@ -20,11 +20,12 @@ import {exportIoc} from './ioc-export.js';
 import {isRaFamily} from './ra-config.js';
 import {RA_EXAMPLES,raExample} from './ra-examples.js';
 import {raHalEntry} from './ra-generator.js';
+import {raAssistance} from './ra-assistance.js';
 import {generateRaFiles} from './ra-generator.js';
 export function mountIdeChrome(){
   const toolbar=document.createElement('nav');toolbar.className='ide-toolbar';toolbar.setAttribute('aria-label','빌드와 디버그');toolbar.innerHTML='<button id="ide-build" class="primary" title="시뮬레이터용 빌드">빌드</button><span class="toolbar-divider"></span><button id="debug-start" title="시작 위치에서 디버깅">디버그 시작</button><span id="build-status" role="status">시뮬레이터용 빌드</span>';
   document.querySelector('.topbar').after(toolbar);toolbar.prepend(document.querySelector('.run-tools'));
-  const tree=document.createElement('section');tree.className='project-files';tree.innerHTML='<div class="project-files-title"><strong>소스 파일</strong><button id="source-add">파일 추가</button></div><nav id="file-tree" aria-label="프로젝트 파일"></nav><div class="file-tools"><button id="source-rename">이름 변경</button><button id="source-delete">삭제</button></div><details id="build-files" class="build-files" hidden><summary><span id="build-files-title">Core · Startup</span> <small>빌드에 들어가는 파일 · 읽기 전용</small></summary><nav id="build-file-list" aria-label="빌드 파일"></nav></details><div class="project-folder-note" id="workspace-path">미저장 프로젝트</div>';
+  const tree=document.createElement('section');tree.className='project-files';tree.innerHTML='<div class="project-files-title"><strong>소스 파일</strong><button id="source-add">파일 추가</button></div><nav id="file-tree" aria-label="프로젝트 파일"></nav><div class="file-tools"><button id="source-rename">이름 변경</button><button id="source-delete">삭제</button></div><details id="build-files" class="build-files" hidden><summary><span id="build-files-title">Core · Startup</span> <small>빌드에 들어가는 파일 · 읽기 전용</small></summary><nav id="build-file-list" aria-label="빌드 파일"></nav></details><details id="ra-assist" class="build-files ra-assist" hidden><summary>Developer Assistance <small>눌러서 커서 자리에 넣기</small></summary><nav id="ra-assist-list" aria-label="Developer Assistance"></nav></details><div class="project-folder-note" id="workspace-path">미저장 프로젝트</div>';
   document.querySelector('.library').prepend(tree);
   // CubeIDE's Outline: the structure of the file on screen (project or SDK); the file tree keeps the project files only.
   const outline=document.createElement('section');outline.className='project-files outline-view';outline.innerHTML='<div class="project-files-title"><strong>코드 개요 (Outline)</strong><span id="outline-file"></span></div><input id="outline-filter" type="search" placeholder="개요 검색" aria-label="코드 개요 검색"><nav id="outline-list" aria-label="코드 개요"></nav>';tree.after(outline);
@@ -88,6 +89,20 @@ export function setupIde(o){
     add(`${device}/Include/${prefix}.h`);add(`${device}/Include/system_${prefix}.h`);
     return [...own,...gen,...sdk];
   }
+  // Feature 21: Developer Assistance — the API calls of this project's stacks; a click puts the call at the cursor of
+  // the source being edited, and an item can be dragged into the editor as text.
+  const assistOpen=new Set(['g_ioport']);
+  function assistView(){
+    const p=o.getProject(),fsp=p.firmware?.mode==='fsp'&&!!p.mcu;$('ra-assist').hidden=!fsp;if(!fsp){$('ra-assist-list').innerHTML='';return;}
+    let groups=[];try{groups=raAssistance(p.mcu);}catch{groups=[];}
+    $('ra-assist-list').innerHTML=`<details class="tree-folder" open><summary>HAL/Common</summary><div class="tree-children">${groups.map((g,i)=>`<details class="tree-folder" data-assist="${esc(g.name)}"${assistOpen.has(g.name)?' open':''}><summary title="${esc(g.title)}">${esc(g.name)} <small>${esc(g.title)}</small></summary><div class="tree-children">${g.items.map((it,j)=>`<button data-assist-item="${i}:${j}" draggable="true" class="tree-own" title="${esc(it.code)}"><span class="file-kind">ƒ</span><span class="file-label">${esc(it.label)}</span></button>`).join('')}</div></details>`).join('')}</div></details>`;
+    for(const el of $('ra-assist-list').querySelectorAll('[data-assist]'))el.addEventListener('toggle',()=>{if(el.open)assistOpen.add(el.dataset.assist);else assistOpen.delete(el.dataset.assist);});
+    for(const el of $('ra-assist-list').querySelectorAll('[data-assist-item]')){
+      const [i,j]=el.dataset.assistItem.split(':').map(Number),item=groups[i].items[j];
+      el.onclick=()=>{if(o.isRunning()){o.log('실행을 정지한 뒤 코드를 넣으세요.','error');return;}if(editor.externalFile()){o.log('읽기 전용 파일이 열려 있습니다. 프로젝트 소스(hal_entry.c)를 연 뒤 넣으세요.','error');return;}o.layout.reveal('code');editor.insert(item.code+(item.code.endsWith('\n')?'':'\n'));};
+      el.ondragstart=e=>{e.dataTransfer.setData('text/plain',item.code);e.dataTransfer.effectAllowed='copy';};
+    }
+  }
   // The rows of an FSP project's tree, as the e² studio project explorer shows it: src (hal_entry.c and the user's
   // sources), ra_gen and ra_cfg (what the configurator generates — "do not edit"), script (linker scripts) and ra (the
   // FSP sources the stacks of this project use: BSP, the r_… modules, their API and instance headers, the board).
@@ -149,7 +164,7 @@ export function setupIde(o){
     // Where the file lives in the SDK (CubeIDE shows it in the title bar), like the Drivers folder of a Cube project.
     $('source-path').hidden=!ext;$('code-panel').classList.toggle('sdk-open',!!ext);$('source-path').innerHTML=ext?`<span>${esc(ext.sdk)}</span>${ext.file.split('/').map(p=>`<span>${esc(p)}</span>`).join('')}<em>읽기 전용 · Alt+← 돌아가기</em>${copyable(ext)?'<button type="button" id="copy-to-project" title="이 파일을 프로젝트 소스로 복사합니다. 복사한 뒤에는 빌드가 프로젝트의 파일을 쓰고, 자유롭게 고칠 수 있습니다.">프로젝트로 복사해 수정</button>':''}`:'';
     if($('copy-to-project'))$('copy-to-project').onclick=()=>copyToProject(ext);
-    buildFilesView();outlineView();
+    buildFilesView();assistView();outlineView();
   }
   let outlineTimer;
   function outlineView(){
