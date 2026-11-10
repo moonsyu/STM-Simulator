@@ -853,8 +853,10 @@ export function raHalEntry({blink}={}){
     while (1)
     {
         R_IOPORT_PinWrite(&g_ioport_ctrl, BSP_IO_PORT_04_PIN_08, BSP_IO_LEVEL_HIGH);
+        R_IOPORT_PinWrite(&g_ioport_ctrl, BSP_IO_PORT_04_PIN_07, BSP_IO_LEVEL_HIGH);
         R_BSP_SoftwareDelay(500, BSP_DELAY_UNITS_MILLISECONDS);
         R_IOPORT_PinWrite(&g_ioport_ctrl, BSP_IO_PORT_04_PIN_08, BSP_IO_LEVEL_LOW);
+        R_IOPORT_PinWrite(&g_ioport_ctrl, BSP_IO_PORT_04_PIN_07, BSP_IO_LEVEL_LOW);
         R_BSP_SoftwareDelay(500, BSP_DELAY_UNITS_MILLISECONDS);
     }
 `:'';
