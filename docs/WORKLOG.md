@@ -2,6 +2,12 @@
 
 작업할 때마다 날짜순으로 맨 위에 추가합니다. 무엇을 했는지, 왜 했는지, 어떻게 검증했는지, 커밋·릴리스와 남은 사항을 적습니다. 버전별 구조 설명은 [HANDOFF.md](../HANDOFF.md), 검증 수치는 [VERIFICATION.md](VERIFICATION.md)에 있습니다.
 
+## 2026-11-10 · 기능 목록 9번: 다시 생성할 때 예제 함수가 지워지는 문제
+
+- 제보: `.ioc`를 가져온 뒤(1.30.1) ARM 빌드가 `implicit declaration of function 'oledSend'`로 실패.
+- 확인: 앱 빌드 폴더의 09:43·09:51 main.c를 비교했다. OLED 예제의 `oledSend`가 `USER CODE END 0` 아래(구간 밖)에 있어, .ioc 가져오기가 main.c를 다시 만들 때 빠졌다. 다른 차이는 .ioc대로 바뀐 클럭·USART2·I2C1뿐. 같은 방식으로 HAL 예제를 두 보드에서 다시 생성해 보니 260개 중 69개가 함수를 잃는다.
+- 한 것: [FEATURES.md](FEATURES.md) 9번으로 적었다. 사용자에게는 `oledSend`를 `USER CODE 0` 안에 다시 넣는 방법을 안내했다(.ioc의 OLED_CS·OLED_DC 라벨 사용, DC 핀이 PB7→PA8로 바뀐 점). 코드는 바꾸지 않았다.
+
 ## 2026-11-10 · 1.30.1 .ioc만 가져올 때 main.c도 생성
 
 - 요청: "C:\Users\SSAFY\Desktop\jms\embedded\firmware\day4\OLED_Module_Code\STM32\STM32-F103RBT6 여기 있는 ioc 파일 가져오기 했는데 적용이 안되는거 같다?"
