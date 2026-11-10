@@ -24,9 +24,8 @@ export function irqHandlers(mcu){
     if(isTimer(id))return {body:`HAL_TIM_IRQHandler(&htim${id.slice(3)});`,extern:`extern TIM_HandleTypeDef htim${id.slice(3)};`,shown:true};
     if(isSerial(id))return sync(id)?{body:`HAL_USART_IRQHandler(&${usartHandle(id)});`,extern:`extern USART_HandleTypeDef ${usartHandle(id)};`,shown:true}:{body:`HAL_UART_IRQHandler(&${serialHandle(id)});`,extern:`extern UART_HandleTypeDef ${serialHandle(id)};`,shown:true};
     const exti=/^EXTI(\d+)(?:_(\d+))?$/.exec(id);if(exti){const a=Number(exti[1]),b=exti[2]===undefined?a:Number(exti[2]);return {body:extiPins(Math.min(a,b),Math.max(a,b)),shown:true};}
-    if(id==='I2C1_EV')return of('I2C','I2C1','hi2c1','HAL_I2C_EV_IRQHandler',false);
-    if(id==='I2C1_ER')return of('I2C','I2C1','hi2c1','HAL_I2C_ER_IRQHandler',false);
-    if(id==='SPI1')return of('SPI','SPI1','hspi1','HAL_SPI_IRQHandler',false);
+    const i2c=/^(I2C[123])_(EV|ER)$/.exec(id);if(i2c)return of('I2C',i2c[1],'h'+i2c[1].toLowerCase(),`HAL_I2C_${i2c[2]}_IRQHandler`,false);
+    if(/^SPI[123]$/.test(id))return of('SPI',id,'h'+id.toLowerCase(),'HAL_SPI_IRQHandler',false);
     if(id==='ADC'||id==='ADC1_2')return of('ADC','ADC1','hadc1','HAL_ADC_IRQHandler',false);
     if(id==='DCMI')return of('DCMI','DCMI','hdcmi','HAL_DCMI_IRQHandler',true);
     // RTC: alarm (EXTI 17), F4 wakeup (EXTI 22), F1 second / overflow interrupt.

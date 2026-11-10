@@ -13,12 +13,12 @@ export function gpioMode(p,config,f1){
   if(p.function==='GPIO_EXTI')return `IT_${p.edge==='CHANGE'?'RISING_FALLING':p.edge}`;
   if(p.function==='Analog'||p.function.startsWith('ADC1_')||p.function.startsWith('DAC_'))return 'ANALOG';
   // F1 peripheral inputs (UART RX, SPI MISO, timer capture/encoder channels) are plain inputs.
-  const afInput=f1&&(/_RX$|^SPI1_MISO$/.test(p.function)||/^TIM\d_CH\d$/.test(p.function)&&['capture','encoder'].includes(config.peripherals[p.function.split('_')[0]]?.mode));
+  const afInput=f1&&(/_RX$|^SPI[123]_MISO$/.test(p.function)||/^TIM\d_CH\d$/.test(p.function)&&['capture','encoder'].includes(config.peripherals[p.function.split('_')[0]]?.mode));
   if(p.function==='GPIO_Input'||afInput)return 'INPUT';
-  return p.function.startsWith('I2C1_')?'AF_OD':'AF_PP';
+  return /^I2C[123]_/.test(p.function)?'AF_OD':'AF_PP';
 }
 // CubeMX writes Speed only for outputs and alternate functions.
 export const hasSpeed=mode=>mode.startsWith('OUTPUT')||mode.startsWith('AF_');
 // CubeMX signal names for the pin click menu and the pin tiles.
 export const signalName=(fn,pin)=>fn==='Reset'?'Reset_State':fn==='Analog'?'GPIO_Analog':fn==='GPIO_EXTI'?'GPIO_EXTI'+Number(pin.slice(2)):fn;
-export const isCommSignal=fn=>!!serialFunction(fn)||/^(I2C1|SPI1|SDIO)_/.test(fn);
+export const isCommSignal=fn=>!!serialFunction(fn)||/^(I2C[123]|SPI[123]|SDIO)_/.test(fn);

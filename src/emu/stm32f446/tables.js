@@ -31,7 +31,7 @@ const AF = {
   PA12: { 1: 'TIM1_ETR', 7: 'USART1_RTS', 9: 'CAN1_TX' },
   PA13: { 0: 'SWDIO' }, PA14: { 0: 'SWCLK' },
   PA15: { 0: 'JTDI', 1: 'TIM2_CH1', 5: 'SPI1_NSS', 6: 'SPI3_NSS', 8: 'UART4_RTS' },
-  PB0: { 1: 'TIM1_CH2N', 2: 'TIM3_CH3', 3: 'TIM8_CH2N', 8: 'UART4_CTS' },
+  PB0: { 1: 'TIM1_CH2N', 2: 'TIM3_CH3', 3: 'TIM8_CH2N', 7: 'SPI3_MOSI', 8: 'UART4_CTS' },
   PB1: { 1: 'TIM1_CH3N', 2: 'TIM3_CH4', 3: 'TIM8_CH3N' },
   PB2: { 7: 'SPI3_MOSI' },
   PB3: { 0: 'SWO', 1: 'TIM2_CH2', 4: 'I2C2_SDA', 5: 'SPI1_SCK', 6: 'SPI3_SCK' },
@@ -46,7 +46,7 @@ const AF = {
   PB13: { 1: 'TIM1_CH1N', 5: 'SPI2_SCK', 6: 'SPI4_SCK', 9: 'CAN2_TX' },
   PB14: { 1: 'TIM1_CH2N', 3: 'TIM8_CH2N', 5: 'SPI2_MISO', 9: 'TIM12_CH1' },
   PB15: { 1: 'TIM1_CH3N', 3: 'TIM8_CH3N', 5: 'SPI2_MOSI', 9: 'TIM12_CH2' },
-  PC1: { 5: 'SPI2_MOSI', 7: 'SPI3_MOSI' },
+  PC1: { 5: 'SPI3_MOSI', 7: 'SPI2_MOSI' },
   PC2: { 5: 'SPI2_MISO' },
   PC3: { 5: 'SPI2_MOSI' },
   PC4: { 7: 'USART3_TX' }, PC5: { 7: 'USART3_RX' },
@@ -56,7 +56,7 @@ const AF = {
   PC9: { 0: 'MCO2', 2: 'TIM3_CH4', 3: 'TIM8_CH4', 4: 'I2C3_SDA', 12: 'SDIO_D1', 13: 'DCMI_D3' },
   PC10: { 6: 'SPI3_SCK', 7: 'USART3_TX', 8: 'UART4_TX', 12: 'SDIO_D2', 13: 'DCMI_D8' },
   PC11: { 6: 'SPI3_MISO', 7: 'USART3_RX', 8: 'UART4_RX', 12: 'SDIO_D3', 13: 'DCMI_D4' },
-  PC12: { 6: 'SPI3_MOSI', 7: 'USART3_CK', 8: 'UART5_TX', 12: 'SDIO_CK', 13: 'DCMI_D9' },
+  PC12: { 4: 'I2C2_SDA', 6: 'SPI3_MOSI', 7: 'USART3_CK', 8: 'UART5_TX', 12: 'SDIO_CK', 13: 'DCMI_D9' },
   PD2: { 2: 'TIM3_ETR', 8: 'UART5_RX', 12: 'SDIO_CMD', 13: 'DCMI_D11' },
 };
 export const afSignal = (pin, af) => AF[pin]?.[af] ?? null;

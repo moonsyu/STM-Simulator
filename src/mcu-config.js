@@ -10,6 +10,7 @@ import {speedsOf,SPEED_NAMES} from './gpio-config.js';
 import {validateRtc,rtcFromIoc} from './rtc-config.js';
 import {validateDac,dacFromIoc,dacProblems} from './dac-config.js';
 import {validateIwdg,validateWwdg,iwdgFromIoc,wwdgFromIoc} from './wdg-config.js';
+import {isI2c,isSpi} from './bus-config.js';
 import {validateClockTree,clockFrequencies,clockTreeProblems,adcClockProblem,clockTreeFromIoc,treeFromTimerHz} from './clock-tree.js';
 // Synchronous USART clock outputs on F446RE LQFP64 (DS10693 table 11): AF7 USART1/2/3, AF8 USART6.
 export const USART_CK_ROUTES=familyProfile(DEFAULT_FAMILY).usartCk;
@@ -70,7 +71,7 @@ export function validateMcu(value){
     if(id==='IWDG'){out.peripherals[id]=validateIwdg(p);continue;}
     if(id==='WWDG'){out.peripherals[id]=validateWwdg(p);continue;}
     const q={enabled:p.enabled},defaults=isTimer(id)?timerDefaults(id,f.id):null;
-    for(const [key,def,min,max]of isSerial(id)?[['baud',115200,300,2000000]]:id==='I2C1'?[['clock',100000,1000,1000000]]:id==='SPI1'?[['clock',1000000,1000,20000000]]:isTimer(id)?[['prescaler',defaults.prescaler,0,65535],['period',defaults.period,0,f.timerMax(id)],['pulse',defaults.pulse,0,f.timerMax(id)]]:[]){q[key]=p[key]??def;if(!Number.isInteger(q[key])||q[key]<min||q[key]>max)throw new Error(`${id}.${key}: 범위를 확인하세요.`);}
+    for(const [key,def,min,max]of isSerial(id)?[['baud',115200,300,2000000]]:isI2c(id)?[['clock',100000,1000,1000000]]:isSpi(id)?[['clock',1000000,1000,20000000]]:isTimer(id)?[['prescaler',defaults.prescaler,0,65535],['period',defaults.period,0,f.timerMax(id)],['pulse',defaults.pulse,0,f.timerMax(id)]]:[]){q[key]=p[key]??def;if(!Number.isInteger(q[key])||q[key]<min||q[key]>max)throw new Error(`${id}.${key}: 범위를 확인하세요.`);}
     if(isTimer(id)){q.mode=p.mode??defaults.mode;if(!['base','pwm','oc','capture','encoder'].includes(q.mode))throw new Error(id+': 타이머 모드를 확인하세요.');}
     // Basic timers (TIM6/TIM7): an up counter without channels; TRGO Trigger Event Selection is kept when not Reset.
     if(isBasicTimer(id)){
@@ -112,12 +113,12 @@ export function validateMcu(value){
     }
     // I2C1 Parameter Settings: Primary slave address (7-bit, OwnAddress1 = address << 1), Fast Mode Duty Cycle (Tlow/Thigh
     // 2 or 16/9, only above 100 kHz), Clock No Stretch Mode.
-    if(id==='I2C1'){
-     if(p.ownAddress!==undefined){if(!Number.isInteger(p.ownAddress)||p.ownAddress<0||p.ownAddress>0x7f)throw new Error('I2C1.ownAddress: 7비트 주소(0x00~0x7F)입니다.');if(p.ownAddress)q.ownAddress=p.ownAddress;}
-     if(p.dutyCycle!==undefined){if(!['2','16_9'].includes(p.dutyCycle))throw new Error('I2C1.dutyCycle: 2 / 16_9 중에서 고르세요.');if(p.dutyCycle==='16_9'){if(q.clock<=100000)throw new Error('I2C1: Fast Mode Duty Cycle 16/9는 100 kHz보다 빠를 때만 씁니다.');q.dutyCycle='16_9';}}
-     if(p.noStretch!==undefined){if(typeof p.noStretch!=='boolean')throw new Error('I2C1.noStretch: true 또는 false입니다.');if(p.noStretch)q.noStretch=true;}
+    if(isI2c(id)){
+     if(p.ownAddress!==undefined){if(!Number.isInteger(p.ownAddress)||p.ownAddress<0||p.ownAddress>0x7f)throw new Error(`${id}.ownAddress: 7비트 주소(0x00~0x7F)입니다.`);if(p.ownAddress)q.ownAddress=p.ownAddress;}
+     if(p.dutyCycle!==undefined){if(!['2','16_9'].includes(p.dutyCycle))throw new Error(`${id}.dutyCycle: 2 / 16_9 중에서 고르세요.`);if(p.dutyCycle==='16_9'){if(q.clock<=100000)throw new Error(`${id}: Fast Mode Duty Cycle 16/9는 100 kHz보다 빠를 때만 씁니다.`);q.dutyCycle='16_9';}}
+     if(p.noStretch!==undefined){if(typeof p.noStretch!=='boolean')throw new Error(`${id}.noStretch: true 또는 false입니다.`);if(p.noStretch)q.noStretch=true;}
     }
-    if(id==='SPI1')for(const [key,values]of Object.entries(SPI_PARAMS)){if(p[key]===undefined)continue;if(!values.includes(p[key]))throw new Error(`SPI1.${key}: ${values.join(' / ')} 중에서 고르세요.`);if(p[key]!==values[0])q[key]=p[key];}
+    if(isSpi(id))for(const [key,values]of Object.entries(SPI_PARAMS)){if(p[key]===undefined)continue;if(!values.includes(p[key]))throw new Error(`${id}.${key}: ${values.join(' / ')} 중에서 고르세요.`);if(p[key]!==values[0])q[key]=p[key];}
     if(isSerial(id)&&p.mode!==undefined&&p.mode!=='asynchronous'){if(p.mode!=='synchronous'||!f.usartCk[id])throw new Error(`${id}: 동기 모드는 USART${Object.keys(f.usartCk).map(u=>u.replace('USART','')).join('/')}에서만 지원합니다.`);q.mode='synchronous';for(const [key,values]of [['cpol',[0,1]],['cpha',[0,1]],['lastBit',[0,1]]]){q[key]=p[key]??0;if(!values.includes(q[key]))throw new Error(`${id}.${key}: 0 또는 1입니다.`);}}
     out.peripherals[id]=q;
   }
@@ -154,10 +155,10 @@ export function configProblems(config){
     if(/_CK$/.test(p.function)&&serial&&config.peripherals[serial]?.mode!=='synchronous')errors.push(`${pin}: ${serial} 동기(Synchronous) 모드에서만 CK 핀을 사용합니다.`);
   }
   for(const [id,p]of Object.entries(config.peripherals))if(p.enabled){
-    const required=isSerial(id)?['TX','RX',...(p.mode==='synchronous'?['CK']:[])]:id==='I2C1'?['SCL','SDA']:id==='SPI1'?['SCK','MISO','MOSI']:id==='SDIO'?['D0','CK','CMD']:[];
+    const required=isSerial(id)?['TX','RX',...(p.mode==='synchronous'?['CK']:[])]:isI2c(id)?['SCL','SDA']:isSpi(id)?['SCK','MISO','MOSI']:id==='SDIO'?['D0','CK','CMD']:[];
     for(const role of required)if(!signals.has(`${id}_${role}`))errors.push(`${id}: ${role} 핀을 활성화하세요.`);
     // F446/F103 I2C1 (not FMPI2C) runs standard or fast mode only.
-    if(id==='I2C1'&&p.clock>400000)errors.push('I2C1: 클록은 400 kHz(Fast mode) 이하로 설정하세요.');
+    if(isI2c(id)&&p.clock>400000)errors.push(`${id}: 클록은 400 kHz(Fast mode) 이하로 설정하세요.`);
     if(isTimer(id)&&p.mode==='encoder')for(const ch of ['CH1','CH2'])if(!signals.has(id+'_'+ch))errors.push(id+': 엔코더 '+ch+' 핀을 활성화하세요.');
     // The encoder model counts every edge (TIM_ENCODERMODE_TI1/TI2/TI12 with Prescaler 0), as the interpreter does.
     if(isTimer(id)&&p.enabled&&p.mode==='encoder'&&p.prescaler)errors.push(id+': 엔코더 모드는 Prescaler 0을 사용하세요.');
@@ -225,7 +226,7 @@ export function importIoc(text){
     if(/MODE_TX$/.test(mode||''))p.direction='TX';else if(/MODE_RX$/.test(mode||''))p.direction='RX';if(/OVERSAMPLING_8/.test(over||'')&&f.id!=='STM32F103RB')p.overSampling=8;
     if(Object.values(config.pins).some(q=>q.function===id+'_CK'))Object.assign(p,{mode:'synchronous',cpol:values[id+'.CLKPolarity']==='USART_POLARITY_HIGH'?1:0,cpha:values[id+'.CLKPhase']==='USART_PHASE_2EDGE'?1:0,lastBit:values[id+'.CLKLastBit']==='USART_LASTBIT_ENABLE'?1:0});
   }
-  if(config.peripherals.I2C1){const c=config.peripherals.I2C1;c.clock=number(values['I2C1.ClockSpeed'],100000);const own=Number(values['I2C1.OwnAddress']);if(Number.isInteger(own)&&own>0)c.ownAddress=(own>>1)&0x7f; /* the value CubeMX writes to OwnAddress1 (address << 1) */if(/16_9/.test(values['I2C1.DutyCycle']||'')&&c.clock>100000)c.dutyCycle='16_9';if(/NOSTRETCH_ENABLE/.test(values['I2C1.NoStretchMode']||''))c.noStretch=true;}
+  for(const id of Object.keys(routes).filter(isI2c))if(config.peripherals[id]){const c=config.peripherals[id];c.clock=number(values[id+'.ClockSpeed'],100000);const own=Number(values[id+'.OwnAddress']);if(Number.isInteger(own)&&own>0)c.ownAddress=(own>>1)&0x7f; /* the value CubeMX writes to OwnAddress1 (address << 1) */if(/16_9/.test(values[id+'.DutyCycle']||'')&&c.clock>100000)c.dutyCycle='16_9';if(/NOSTRETCH_ENABLE/.test(values[id+'.NoStretchMode']||''))c.noStretch=true;}
   // RTC: calendar time/date, alarm A and wakeup (rtc-config.js); enabled through Mcu.IP or VP_RTC_VS_RTC_Activate.
   if(config.peripherals.DAC)config.peripherals.DAC=dacFromIoc(values);
   // Watchdogs (System Core › IWDG / WWDG): Mcu.IP or the VP_xWDG_VS_xWDG activation; a value out of range keeps CubeMX's default.
@@ -235,8 +236,8 @@ export function importIoc(text){
   // Rank 1 Sampling Time (ADC1.SamplingTime-0\#ChannelRegularConversion); a .ioc without it has CubeMX's default, the shortest.
   if(config.peripherals.ADC1){const key=Object.keys(values).find(k=>/^ADC1\.SamplingTime-0\\?#ChannelRegularConversion$/.test(k)),m=/ADC_SAMPLETIME_(\d+)CYCLES?(_5)?/.exec(values[key]||''),cycles=m?Number(m[1])+(m[2]?0.5:0):ADC_SAMPLING[family][0];if(ADC_SAMPLING[family].includes(cycles)&&cycles!==adcSamplingDefault(family))config.peripherals.ADC1.samplingTime=cycles;}
   // SPI1 speed: CubeMX stores the computed rate ("5.25 MBits/s") next to the prescaler.
-  if(config.peripherals.SPI1){const s=config.peripherals.SPI1;if(/HIGH/.test(values['SPI1.CLKPolarity']||''))s.cpol='HIGH';if(/2EDGE/.test(values['SPI1.CLKPhase']||''))s.cpha='2EDGE';if(/16BIT/.test(values['SPI1.DataSize']||''))s.dataSize=16;if(/LSB/.test(values['SPI1.FirstBit']||''))s.firstBit='LSB';}
-  if(config.peripherals.SPI1){const m=/^([\d.]+)\s*([KM]?)Bits\/s/i.exec(values['SPI1.CalculateBaudRate']||'');if(m)config.peripherals.SPI1.clock=Math.min(20000000,Math.max(1000,Math.round(Number(m[1])*({K:1e3,M:1e6}[m[2].toUpperCase()]??1))));}
+  for(const id of Object.keys(routes).filter(isSpi))if(config.peripherals[id]){const s=config.peripherals[id];if(/HIGH/.test(values[id+'.CLKPolarity']||''))s.cpol='HIGH';if(/2EDGE/.test(values[id+'.CLKPhase']||''))s.cpha='2EDGE';if(/16BIT/.test(values[id+'.DataSize']||''))s.dataSize=16;if(/LSB/.test(values[id+'.FirstBit']||''))s.firstBit='LSB';
+   const m=/^([\d.]+)\s*([KM]?)Bits\/s/i.exec(values[id+'.CalculateBaudRate']||'');if(m)s.clock=Math.min(20000000,Math.max(1000,Math.round(Number(m[1])*({K:1e3,M:1e6}[m[2].toUpperCase()]??1))));}
   for(const id of Object.keys(f.timers))if(config.peripherals[id]){const p=config.peripherals[id],defaults=timerDefaults(id,family);p.prescaler=number(values[id+'.Prescaler'],defaults.prescaler);p.period=number(values[id+'.Period'],defaults.period);const pulse=Object.keys(values).find(k=>k.startsWith(id+'.Pulse'));if(pulse)p.pulse=number(values[pulse],defaults.pulse);const settings=Object.entries(values).filter(([k])=>k.startsWith(id+'.')).map(([,v])=>v).join(' ');p.mode=/Encoder|ENCODER/.test(settings)?'encoder':/PWM/.test(settings)?'pwm':/Output Compare\d CH\d/.test(settings)?'oc':/INPUTCAPTURE|Input_Capture|IC_CHANNEL/.test(settings)?'capture':'base';
     const counter=/TIM_COUNTERMODE_(\w+)/.exec(values[id+'.CounterMode']||'')?.[1];if(counter&&counter!=='UP'&&TIM_COUNTER_MODES.includes(counter)&&p.mode!=='encoder'&&!isBasicTimer(id))p.counterMode=counter;
     // TIM6/TIM7 TRGO Parameters (TIM6.TIM_MasterOutputTrigger=TIM_TRGO_UPDATE); the basic timers have only the time base.
