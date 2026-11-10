@@ -74,7 +74,7 @@ state.restoreError='';try{const cached=localStorage.getItem('stm32lab.project.v2
 export const diagnostic=createDiagnostics(window.localDiagnostics?.record,()=>state.project);
 initSvg(svg);
 state.session=null;state.audioEnabled=false;state.audioContext=undefined;state.buzzerAudio=undefined;
-export const monitor=new Monitor({getSession:()=>state.session,isRunning:()=>running(),onSettings:settings=>{if(running())return;checkpoint();state.project.simulation=settings;autosave();},onError:message=>log(message,'error')});
+export const monitor=new Monitor({getSession:()=>state.session,isRunning:()=>running(),onSettings:({bounceMs,...settings})=>{if(running())return;checkpoint();const noise=state.project.simulation?.noise;state.project.simulation={...settings,...(noise?{noise}:{}),...(bounceMs?{bounceMs}:{})};autosave();},onError:message=>log(message,'error')});
 // The open source tab survives a relaunch (syncEditor falls back to main.c when the file is gone).
 export const SOURCE_KEY='stm32lab.sourceFile.v1';
 state.sourceFile=(()=>{try{return localStorage.getItem(SOURCE_KEY)||'main.c';}catch{return 'main.c';}})();state.circuitClipboard=null;state.clipboardOffset=28;state.issuesStamp=0;state.issuesKey='';

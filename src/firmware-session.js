@@ -1,4 +1,5 @@
 import { WirelessHub } from './wireless.js';
+import { ButtonBounce } from './button-bounce.js';
 import { CatalogSingleWire } from './catalog-singlewire.js';
 import { CatalogMotion } from './catalog-motion.js';
 import { physicalToModel, physicalResult } from './catalog-model.js';
@@ -42,6 +43,7 @@ export class FirmwareSession {
     this.project = project; this.print = print; this.traceCb = trace; this.uartCb = uart; this.warnings = [];
     // Hints about the program (as the built-in interpreter gives them), each said once.
     this.warnOut = warn ?? (message => trace({ micros: this.now, protocol: '경고', message }));
+    this.bounce = new ButtonBounce(project.simulation?.bounceMs ?? 0);
     this.pressed = {}; this.result = null; this.time = 0; this.integrated = -1; this.stepMs = project.simulation?.stepMs ?? 1;
     this.circuit = new CircuitSimulation(); this.motion = new MotionDevices(); this.catalogMotion = new CatalogMotion(); this.singleWire = new CatalogSingleWire();
     this.sensors = new UltrasonicSignals(); this.lcds = new Map(); this.passiveBuzzers = new PassiveBuzzers(); this.wave = new WaveRecorder(channels);
@@ -406,10 +408,12 @@ export class FirmwareSession {
     if (rt.debug.enabled && rt.debug.mode === 'into') { this.debugStep('into'); return this.finishTick(); }
     const startUs = this.now;
     while (this.now < targetUs - 1e-6 && !rt.debug.paused && !rt.finished) {
-      const hz = this.soc.clock.hclk, chunkUs = Math.min(targetUs - this.now, this.dynamic ? this.stepMs * 1000 : 5000);
+      // Contact bounce: a chunk ends at the next queued flip, where the input changes.
+      const hz = this.soc.clock.hclk, chunkUs = Math.min(targetUs - this.now, this.dynamic ? this.stepMs * 1000 : 5000, Math.max(1, this.bounce.nextAt() * 1000 - this.now));
       const cycles = Math.max(1, Math.ceil(chunkUs * hz / 1e6));
       const res = this.machine.run(cycles);
       this.afterRun(res);
+      { const flipped = this.bounce.apply(this.pressed, this.now / 1000); if (flipped) { this.pressed = flipped; this.changed(this.now); this.computeConnected(); this.soc.inputsUpdated(); } }
       if (this.dynamic) this.advance(this.now);
       if (this.dirty) this.changed(this.now);
       if (performanceNow() - wallStart > WALL_BUDGET_MS) break;
@@ -626,7 +630,7 @@ export class FirmwareSession {
     };
     return rt;
   }
-  setPressed(pressed) { this.pressed = pressed; this.changed(this.now); this.computeConnected(); this.soc.inputsUpdated(); }
+  setPressed(pressed) { this.pressed = this.bounce.press(this.pressed, pressed, this.now / 1000); this.changed(this.now); this.computeConnected(); this.soc.inputsUpdated(); }
   // ------------------------------------------------------------ logic analyzer API (UI contract)
   signalsApi() {
     const sig = this.soc.signals;

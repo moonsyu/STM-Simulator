@@ -11,7 +11,7 @@ export const TOOLCHAIN_SHARDS=Object.freeze([
  // 33 + 29 + 28 + 27 + 27 + 15
  ['wdg','adc-sampling','bus-instances','adc-continuous','adc-group','dwarf-version'],
  // 23 + 15 + 14 + 13 + 13 + 11 + 10 + 10 + 10 + 9 + 9 + 8 + 6
- ['emu-accuracy','tim-oc','board-links','spi-params','tim-advanced','dac','tim-channels','rtc','uart-params','source-folders','clock-tree','copied-files','tim-basic'],
+ ['emu-accuracy','button-bounce','tim-oc','board-links','spi-params','tim-advanced','dac','tim-channels','rtc','uart-params','source-folders','clock-tree','copied-files','tim-basic'],
 ]);
 
 if(import.meta.url===pathToFileURL(process.argv[1]||'').href){

@@ -14,6 +14,7 @@ import {VariableRecorder} from './variable-graph.js';
 import {watchExpression,readExpression,numericValue} from './debug-tools.js';
 import {compileHal} from './hal-source.js';
 import {HalAdapter,halConstantsFor,coreClockHz} from './hal.js';
+import {ButtonBounce} from './button-bounce.js';
 import {SignalRecorder,NoiseModel,signalsApi,validateNoise} from './signals.js';
 import {WirelessHub,deliverToBuses} from './wireless.js';
 
@@ -25,7 +26,7 @@ export class SimulationSession {
     this.signals=signalsApi(this.signalRecorder,this.noise,{now:()=>this.runtime.microTime,record:pins=>this.record(pins),onNoise:cfg=>{for(const p of new Set([source,project]))if(p.simulation)p.simulation.noise=cfg;else p.simulation={stepMs:this.stepMs,pwmWaveform:false,noise:cfg};}});
     const warnOut=warn??(message=>trace({micros:this.runtime?.microTime??0,protocol:'경고',message}));
     this.passiveBuzzers=new PassiveBuzzers();
-    this.project=project;this.pressed={};this.result=null;this.time=0;this.integrated=-1;this.stepMs=project.simulation?.stepMs??1;this.circuit=new CircuitSimulation();this.motion=new MotionDevices();this.catalogMotion=new CatalogMotion();this.singleWire=new CatalogSingleWire();this.sensors=new UltrasonicSignals();this.lcds=new Map();this.wave=new WaveRecorder(channels);this.vars=new VariableRecorder(source.ide?.plots||[]);this.varExprs=new Map();this.serial=[];
+    this.project=project;this.bounce=new ButtonBounce(project.simulation?.bounceMs??0);this.pressed={};this.result=null;this.time=0;this.integrated=-1;this.stepMs=project.simulation?.stepMs??1;this.circuit=new CircuitSimulation();this.motion=new MotionDevices();this.catalogMotion=new CatalogMotion();this.singleWire=new CatalogSingleWire();this.sensors=new UltrasonicSignals();this.lcds=new Map();this.wave=new WaveRecorder(channels);this.vars=new VariableRecorder(source.ide?.plots||[]);this.varExprs=new Map();this.serial=[];
     this.buses=new BusDevices(project,()=>this.result,trace);this.buses.signals=this.signalRecorder;this.buses.noise=this.noise;new WirelessHub(this);
     this.hal=project.firmware?.mode==='hal'?this.createHal():null;
     this.runtime=new Runtime(program??(this.hal?compileHal(project.code,project.firmware.files,project.mcu?.family):compile(project.code)),{
@@ -86,7 +87,11 @@ export class SimulationSession {
     this.advance(micros);this.result=this.circuit.hold(this.project,this.runtime.gpio,this.pressed,this.sensors.echoHigh(micros),this.motion.signals);this.enrich(micros);if(this.result.fault)throw new Error(this.result.warnings[0]||'회로 해석 오류');return this.result;
   }
   get viewResult(){return physicalResult(this.result,this.project);}
-  tick(time){if(this.project.components.some(p=>p.type==='catalog_singlewire')){while(this.runtime.time<time&&!this.runtime.debug.paused)this.runtime.tick(Math.min(time,this.runtime.time+1));if(time===0)this.runtime.tick(0);}else this.runtime.tick(time);const result=this.changed(this.runtime.microTime);this.checkNrst();return physicalResult(result,this.project);}
+  tick(time){
+    // Contact bounce: the program runs up to each queued flip, the input changes there, and it goes on — so polling code
+    // and edge interrupts see every flip.
+    while(this.bounce.nextAt()<=time&&!this.runtime.debug.paused){const at=Math.max(this.bounce.nextAt(),this.runtime.time);this.runtime.tick(at);const next=this.bounce.apply(this.pressed,at);if(!next)break;this.pressed=next;this.changed(this.runtime.microTime);this.runtime.pollInterrupts();}
+    if(this.project.components.some(p=>p.type==='catalog_singlewire')){while(this.runtime.time<time&&!this.runtime.debug.paused)this.runtime.tick(Math.min(time,this.runtime.time+1));if(time===0)this.runtime.tick(0);}else this.runtime.tick(time);const result=this.changed(this.runtime.microTime);this.checkNrst();return physicalResult(result,this.project);}
   // The NRST header pin pulled LOW (below VIL(NRST) 0.8 V) resets the MCU: the program restarts and stays at its start
   // while the line is LOW. RCC_FLAG_PINRST is the only cause set.
   checkNrst(){
@@ -94,7 +99,7 @@ export class SimulationSession {
     if(low&&this.hal){if(!this.nrstLow)this.runtime.api.warn?.('[NRST] 리셋 핀이 LOW입니다 — 프로그램을 처음부터 다시 실행합니다.');this.hal.resetCause=26;this.runtime.restart();}
     this.nrstLow=low;
   }
-  setPressed(pressed){this.pressed=pressed;this.changed();this.runtime.pollInterrupts();}
+  setPressed(pressed){this.pressed=this.bounce.press(this.pressed,pressed,this.runtime.microTime/1000);this.changed();this.runtime.pollInterrupts();}
   inject(text,target='Serial1'){
     if(target==='Serial'){const bytes=[...String(text)].slice(0,256).map(c=>c.charCodeAt(0)&255);if(this.serial.length+bytes.length>4096)throw new Error('Serial 수신 버퍼가 가득 찼습니다.');this.serial.push(...bytes);return bytes.length;}
     const external=target.endsWith(':external'),id=external?target.slice(0,-9):target,bus=this.hal?this.hal.serials.get(id==='Serial1'?'USART2':id)?.bus:this.buses;

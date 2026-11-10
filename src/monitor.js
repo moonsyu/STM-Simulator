@@ -11,8 +11,8 @@ export class Monitor {
     ['PA5','PA10','PA0','PC13'].forEach((pin,i)=>{const select=$('channel-'+i);select.innerHTML=GPIO_PINS.map(p=>`<option ${pin===p?'selected':''}>${p}</option>`).join('');select.onchange=()=>{this.getSession()?.wave.setChannels(this.channels());this.dirty=true;this.render();};});
     $('wave-window').onchange=()=>{this.dirty=true;this.render();};
     $('wave-clear').onclick=()=>{this.getSession()?.wave.clear();this.dirty=true;this.render();};
-    const settings=()=>this.onSettings({stepMs:Number($('sim-resolution').value),pwmWaveform:$('pwm-waveform').checked});
-    $('sim-resolution').onchange=settings;$('pwm-waveform').onchange=settings;
+    const settings=()=>this.onSettings({stepMs:Number($('sim-resolution').value),pwmWaveform:$('pwm-waveform').checked,bounceMs:Number($('button-bounce').value)});
+    $('sim-resolution').onchange=settings;$('pwm-waveform').onchange=settings;$('button-bounce').onchange=settings;
     $('wave-export').onclick=async()=>{try{const session=this.getSession();if(!session?.wave.samples.length)throw new Error('먼저 시뮬레이션을 실행해 파형을 기록하세요.');const text=session.wave.csv();if(window.desktop?.exportCsv)await window.desktop.exportCsv(text);else{const url=URL.createObjectURL(new Blob([text],{type:'text/csv;charset=utf-8'})),link=document.createElement('a');link.href=url;link.download='stm-simulator-waveform.csv';link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}}catch(error){this.onError(error.message);}};
     $('serial-send').onclick=()=>{try{if(!this.isRunning())throw new Error('시뮬레이션을 먼저 실행하세요.');const session=this.getSession();if(!session)throw new Error('빌드가 끝나고 실행이 시작된 뒤에 보내세요.');const text=$('serial-input').value+($('serial-newline').checked?'\n':'');if(!text)throw new Error('전송할 문자를 입력하세요.');
       if($('serial-target').value.startsWith('outside:')){if(!session.wireless.outsideInput($('serial-target').value.slice(8),text,session.now??session.runtime.microTime))throw new Error('받을 상대가 없습니다. 모듈 전원과 연결(공유기 접속·TCP 서버)을 확인하세요.');$('serial-input').value='';$('serial-feedback').textContent='';this.dirty=true;this.render();return;}
@@ -25,7 +25,7 @@ export class Monitor {
   channels(){return Array.from({length:4},(_,i)=>$('channel-'+i).value);}
   // The running driver of the board picked as serial target (`board:<id>`).
   boardDriver(session){const value=$('serial-target').value;return value.startsWith('board:')?session?.circuit?.drivers?.find(d=>d.part.id===value.slice(6))??null:null;}
-  settings(value){$('sim-resolution').value=String(value?.stepMs??1);$('pwm-waveform').checked=value?.pwmWaveform??false;}
+  settings(value){$('sim-resolution').value=String(value?.stepMs??1);$('pwm-waveform').checked=value?.pwmWaveform??false;$('button-bounce').value=String(value?.bounceMs??0);}
   clear(){this.events=[];this.dirty=true;$('serial-feedback').textContent='';$('bus-events').textContent='';$('uart-output').textContent='';$('wave-svg').textContent='시뮬레이션을 실행하면 파형이 표시됩니다.';}
   trace(event){this.events.push(event);if(this.events.length>250)this.events.shift();this.dirty=true;}
   render(){

@@ -1,5 +1,6 @@
 import {CATALOG_DEFS,CATALOG_BY_TYPE} from './catalog-defs.js';
 import {SOURCE_PATH,MAX_SOURCE_FILES,MAX_SOURCE_BYTES,baseName,nameClash,normalizeText} from './source-files.js';
+import {BOUNCE_MS} from './button-bounce.js';
 import {DEVICE_RANGES,DEVICE_ADDRESSES} from './device-defs.js';
 import {PIN_BY_ID,holeInfo} from './pins.js';
 import {terminalKeys,TWO_PIN_TYPES,MULTI_PIN_TYPES,normalizeAngle} from './components.js';
@@ -143,7 +144,9 @@ export function validateProject(data){
     if((data.firmware.mode==='fsp')!==isRaFamily(project.mcu?.family))throw new Error(isRaFamily(project.mcu?.family)?'Renesas RA 보드는 FSP 프로젝트로 작성합니다.':'FSP 프로젝트는 Renesas RA 보드에서만 씁니다.');
     project.firmware={mode:data.firmware.mode,files,...(mainFolder?{mainFolder}:{})};
   }
-  if(data.simulation!==undefined){const s=data.simulation;if(!s||typeof s!=='object'||![.1,.5,1,5,20].includes(s.stepMs)||typeof s.pwmWaveform!=='boolean')throw new Error('시뮬레이션 시간 설정이 올바르지 않습니다.');project.simulation={stepMs:s.stepMs,pwmWaveform:s.pwmWaveform};if(s.noise!==undefined)project.simulation.noise=validateNoise(s.noise);}
+  if(data.simulation!==undefined){const s=data.simulation;if(!s||typeof s!=='object'||![.1,.5,1,5,20].includes(s.stepMs)||typeof s.pwmWaveform!=='boolean')throw new Error('시뮬레이션 시간 설정이 올바르지 않습니다.');project.simulation={stepMs:s.stepMs,pwmWaveform:s.pwmWaveform};if(s.noise!==undefined)project.simulation.noise=validateNoise(s.noise);
+    // Button contact bounce (button-bounce.js): how long a press or release chatters, in ms. Absent or 0: clean buttons.
+    if(s.bounceMs!==undefined){if(!BOUNCE_MS.includes(s.bounceMs))throw new Error('버튼 채터링 시간이 올바르지 않습니다.');if(s.bounceMs)project.simulation.bounceMs=s.bounceMs;}}
   if(data.ide!==undefined){
     const s=data.ide,names=new Set(['main.c',...(project.firmware?.files||[]).map(f=>f.name)]);
     if(!s||!Array.isArray(s.breakpoints)||s.breakpoints.length>1000||!Array.isArray(s.watches)||s.watches.length>20)throw new Error('디버그 설정을 확인하세요.');
