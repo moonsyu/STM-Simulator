@@ -57,3 +57,9 @@ test('misuse is reported: refresh before init, a watchdog that is off in the Pin
  fails(halProject({code:'#include "main.h"\nIWDG_HandleTypeDef hiwdg;\nint main(void) { hiwdg.Instance = IWDG; hiwdg.Init.Prescaler = IWDG_PRESCALER_4; hiwdg.Init.Reload = 4095; HAL_IWDG_Init(&hiwdg); while (1) {} }\n'}),/System Core에서 IWDG를 활성화하세요/);
  fails(halProject({peripherals:{IWDG:{enabled:true}},code:'#include "main.h"\nint main(void) { __HAL_RCC_IWDG_CLK_ENABLE(); while (1) {} }\n'}),/IWDG는 LSI로 돌아/);
 });
+
+test('a watchdog whose timeout is shorter than the start-up code stops the run with an explanation instead of restarting forever',()=>{
+ const storm=p=>assert.throws(()=>{const {s}=run(p);advance(s,60,1);},/워치독 리셋이 계속 반복됩니다[\s\S]*타임아웃이 초기화 코드보다 짧습니다/);
+ storm(halProject({peripherals:{IWDG:{enabled:true,prescaler:4,reload:0}},loop:'    HAL_Delay(10);'}));
+ storm(halProject({peripherals:{WWDG:{enabled:true,prescaler:1,window:64,counter:64}},loop:'    HAL_Delay(10);'}));
+});

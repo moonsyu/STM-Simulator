@@ -20,7 +20,13 @@ export class HalWdg{
   if(this.hal.field(h,'Instance')!==id||!this.hal.config.peripherals[id]?.enabled)throw new Error(`${id}: Pinout & Configuration › System Core에서 ${id}를 활성화하세요.`);return h;
  }
  // Watchdog reset from a timed event: the runtime restarts the program (session.js makes a new HAL that inherits the flags).
- expire(r,id,why){this.hal.resetCause=RESET_BITS[id];r.warn(`[${id}] ${why} — 워치독 리셋: 프로그램을 처음부터 다시 실행합니다.`);r.restart();}
+ expire(r,id,why){
+  // A watchdog that resets again and again within a few milliseconds (a timeout shorter than the start-up code) would
+  // restart the program forever: after 10 resets inside 20 ms the run stops and says so. The runtime outlives the resets.
+  const recent=(r.wdgResets??=[]);recent.push(r.microTime);while(recent.length>10)recent.shift();
+  if(recent.length===10&&recent[9]-recent[0]<20000)throw new Error(`[${id}] 워치독 리셋이 계속 반복됩니다(${why}). 타임아웃이 초기화 코드보다 짧습니다: Pinout의 ${id}에서 ${id==='IWDG'?'Prescaler·Reload':'Prescaler·Counter'}를 키우거나 제때 HAL_${id}_Refresh를 부르세요.`);
+  this.hal.resetCause=RESET_BITS[id];r.warn(`[${id}] ${why} — 워치독 리셋: 프로그램을 처음부터 다시 실행합니다.`);r.restart();
+ }
  // ---- IWDG
  iwdgReload(r){
   const w=this.iwdg,gen=++w.gen;w.at=r.microTime;
