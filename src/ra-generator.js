@@ -493,8 +493,9 @@ extern "C" {
 #ifndef VECTOR_DATA_IRQ_COUNT
 #define VECTOR_DATA_IRQ_COUNT    (${vectors.length})
 #endif
-/* Number of ICU vector table entries the application uses (FSP 6). */
-#define BSP_ICU_VECTOR_NUM_ENTRIES (${vectors.length})
+/* Number of ICU vector table entries the application uses (FSP 6). At least 1: with no interrupt at all, FSP's own
+ * default tables (bsp_irq.c) would be arrays of 0 elements with an initializer — a build warning. */
+#define BSP_ICU_VECTOR_NUM_ENTRIES (${Math.max(1,vectors.length)})
 /* ISR prototypes */
 ${[...new Set(vectors.map(v=>v.isr))].map(f=>`void ${f}(void);`).join('\n')}
 /* Vector table allocations */
