@@ -1,5 +1,9 @@
 # 검증 기록
 
+## 1.44.0 기능 목록 14~17번 — 게시 확인(API)
+
+2026-11-10. 태그·빌드 커밋 `3427d1c` · [Windows CI 42783355033](https://github.com/moonsyu/STM-Simulator/actions/runs/42783355033) 첫 실행에서 모두 성공, 전체 5.4분. [Release v1.44.0](https://github.com/moonsyu/STM-Simulator/releases/tag/v1.44.0) 최신 릴리스, draft/prerelease 아님, 자산 5개(STM-Simulator.exe 115,673,500바이트, STM-Simulator-1.44.0-Windows-x64.zip 116,765,484바이트, SHA256.txt, BUILD-INFO.json, update-manifest.json).
+
 ## 1.44.0 기능 목록 14~17번 — 로컬 검증
 
 2026-11-10. 14번: 단위 시험(`.s`·`.ld` 이름 검증, 생성 보기 목록, 가짜 SDK 배치로 빌드 계획 — 프로젝트의 시작 파일만 어셈블하고 `-T`가 프로젝트의 `.ld`를 가리킴, 해석기는 무시), 실제 ARM GCC 빌드(두 보드: 복사한 시작 파일에 넣은 `bl early_hook`과 256바이트 낮춘 `_estack`이 펌웨어에서 확인됨), E2E(트리의 폴더 7개, Core 열림·Drivers 접힘, Core/Src 5개 파일, `.ioc` 보기, 링커 스크립트·시작 코드 복사 → 트리에서 프로젝트 파일로 바뀜 → 수정 유지, 연 폴더 유지). 15번: 사이드바를 새 창으로 꺼낸 뒤 활동 바 단추를 누르면 본 창으로 돌아오고 그 보기가 열림(E2E). 16번: Docs 단추를 두 번 눌러도 보기가 남고 Ctrl+B로 접힘(E2E). 17번: 속성 패널을 닫은 뒤 부품을 한 번 누르면 닫힌 채, 두 번 누르면 열림(E2E). 시험: 단위+해석기+에뮬레이터+펌웨어 1,111개(1개 건너뜀), E2E `shell` 8개·`project-structure`·`definition`·`copy-to-project`·`folder-import` 통과, 툴체인 `copied-files` 2개 통과, ESLint 통과.
