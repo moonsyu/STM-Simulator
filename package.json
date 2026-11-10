@@ -18,7 +18,7 @@
     "test:toolchain": "node --test --test-concurrency=1 \"tests/toolchain/*.test.mjs\"",
     "test:release": "node --test --test-concurrency=1 \"tests/release/*.test.mjs\"",
     "build": "npm run build:editor && npm run build:package",
-    "build:package": "node scripts/clean-build.cjs && electron-builder --win portable --x64 --publish never",
+    "build:package": "node scripts/clean-build.cjs && node scripts/build-package.cjs",
     "build:artifact": "node scripts/prepare-artifact.cjs",
     "build:editor": "node scripts/build-editor.mjs",
     "lint": "eslint .",
