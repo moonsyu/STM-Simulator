@@ -91,7 +91,16 @@ export function setupIde(o){
   }
   // Feature 21: Developer Assistance — the API calls of this project's stacks; a click puts the call at the cursor of
   // the source being edited, and an item can be dragged into the editor as text.
-  const assistOpen=new Set(['g_ioport']);
+  const assistOpen=new Set(['g_ioport']),ASSIST_TYPE='application/x-ra-assistance';
+  function insertAssist(code,point){
+    if(o.isRunning()){o.log('실행을 정지한 뒤 코드를 넣으세요.','error');return;}
+    if(editor.externalFile()){o.log('읽기 전용 파일이 열려 있습니다. 프로젝트 소스(hal_entry.c)를 연 뒤 넣으세요.','error');return;}
+    o.layout.reveal('code');editor.insert(code+(code.endsWith('\n')?'':'\n'),point);
+  }
+  // A dragged item is dropped by the app, not by the editor's own text drop (which appends a literal "$0").
+  const assistDrag=e=>e.dataTransfer?.types?.includes(ASSIST_TYPE)&&e.target?.closest?.('#group-code');
+  document.addEventListener('dragover',e=>{if(assistDrag(e)){e.preventDefault();e.stopPropagation();e.dataTransfer.dropEffect='copy';}},true);
+  document.addEventListener('drop',e=>{if(!assistDrag(e))return;const code=e.dataTransfer.getData(ASSIST_TYPE);e.preventDefault();e.stopPropagation();if(code)insertAssist(code,{x:e.clientX,y:e.clientY});},true);
   function assistView(){
     const p=o.getProject(),fsp=p.firmware?.mode==='fsp'&&!!p.mcu;$('ra-assist').hidden=!fsp;if(!fsp){$('ra-assist-list').innerHTML='';return;}
     let groups=[];try{groups=raAssistance(p.mcu);}catch{groups=[];}
@@ -99,8 +108,8 @@ export function setupIde(o){
     for(const el of $('ra-assist-list').querySelectorAll('[data-assist]'))el.addEventListener('toggle',()=>{if(el.open)assistOpen.add(el.dataset.assist);else assistOpen.delete(el.dataset.assist);});
     for(const el of $('ra-assist-list').querySelectorAll('[data-assist-item]')){
       const [i,j]=el.dataset.assistItem.split(':').map(Number),item=groups[i].items[j];
-      el.onclick=()=>{if(o.isRunning()){o.log('실행을 정지한 뒤 코드를 넣으세요.','error');return;}if(editor.externalFile()){o.log('읽기 전용 파일이 열려 있습니다. 프로젝트 소스(hal_entry.c)를 연 뒤 넣으세요.','error');return;}o.layout.reveal('code');editor.insert(item.code+(item.code.endsWith('\n')?'':'\n'));};
-      el.ondragstart=e=>{e.dataTransfer.setData('text/plain',item.code);e.dataTransfer.effectAllowed='copy';};
+      el.onclick=()=>insertAssist(item.code);
+      el.ondragstart=e=>{e.dataTransfer.setData(ASSIST_TYPE,item.code);e.dataTransfer.effectAllowed='copy';};
     }
   }
   // The rows of an FSP project's tree, as the e² studio project explorer shows it: src (hal_entry.c and the user's

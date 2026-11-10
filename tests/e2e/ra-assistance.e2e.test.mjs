@@ -38,3 +38,26 @@ test('Developer Assistance lists the stacks of an FSP project and a click insert
   assert.deepEqual(s.errors,[]);
  }finally{await s.close();}
 });
+
+test('a Developer Assistance item dragged into the editor lands where it is dropped, as plain code',{timeout:150000},async()=>{
+ const s=await launch();
+ try{
+  const {win}=s;
+  await win.evaluate(()=>document.getElementById('new').click());if(await win.evaluate(()=>document.getElementById('replace-dialog').open))await win.click('#replace-confirm');
+  await win.waitForSelector('#project-dialog[open]');await win.selectOption('#new-project-board','fpb-ra6e1');await win.selectOption('#new-project-template','ra-minimal');
+  await win.click('#project-create');await win.waitForFunction(()=>!document.getElementById('project-dialog').open);
+  await win.click('[data-activity="explorer"]');if(!await win.locator('#ra-assist > summary').isVisible())await win.click('[data-activity="explorer"]');
+  await win.click('#ra-assist > summary');
+  const a=await win.locator('#ra-assist-list [data-assist="g_ioport"] [data-assist-item="0:2"]').boundingBox(),ed=await win.locator('#group-code .monaco-editor').boundingBox();
+  await win.mouse.move(a.x+a.width/2,a.y+a.height/2);await win.mouse.down();
+  await win.mouse.move(a.x+a.width/2+20,a.y+a.height/2+5,{steps:4});
+  await win.mouse.move(ed.x+200,ed.y+120,{steps:12});await win.waitForTimeout(300);await win.mouse.move(ed.x+205,ed.y+122,{steps:3});
+  await win.mouse.up();
+  await win.waitForFunction(()=>/R_IOPORT_PinCfg/.test(document.getElementById('code').value));
+  const code=await win.$eval('#code',c=>c.value);
+  // Once, as written, with no snippet placeholder left behind by the editor's own text drop.
+  assert.equal(code.split('R_IOPORT_PinCfg(&g_ioport_ctrl, LED1, IOPORT_CFG_PORT_DIRECTION_OUTPUT);\n').length,2);
+  assert.doesNotMatch(code,/\$0/);
+  assert.deepEqual(s.errors,[]);
+ }finally{await s.close();}
+});
