@@ -82,7 +82,7 @@ export function exportIoc(config){
       const twelve=p.hourFormat===12&&!f1;if(twelve)set('RTC.HourFormat','RTC_HOURFORMAT_12');
       const time=(t,s)=>{set('RTC.Hours'+s,t.hours??(twelve?12:0));set('RTC.Minutes'+s,t.minutes??0);set('RTC.Seconds'+s,t.seconds??0);if(twelve&&t.pm)set('RTC.TimeFormat'+s,'RTC_HOURFORMAT12_PM');};
       time(p.time??{},'');const d=p.date??{};
-      if(!f1)set('RTC.WeekDay','RTC_WEEKDAY_'+RTC_WEEKDAYS[(d.weekDay??1)-1]);set('RTC.Month','RTC_MONTH_'+RTC_MONTHS[(d.month??1)-1]);set('RTC.Date',d.date??1);set('RTC.Year',d.year??0);
+      set('RTC.WeekDay','RTC_WEEKDAY_'+RTC_WEEKDAYS[(d.weekDay??1)-1]);set('RTC.Month','RTC_MONTH_'+RTC_MONTHS[(d.month??1)-1]);set('RTC.Date',d.date??1);set('RTC.Year',d.year??0);
       if(p.alarm?.enabled){set('VP_RTC_VS_RTC_Alarm_A_Intern.Mode','Alarm A');set('VP_RTC_VS_RTC_Alarm_A_Intern.Signal','RTC_VS_RTC_Alarm_A_Intern');set('RTC.Alarm','RTC_ALARM_A');time(p.alarm,'_A');
         if(!f1){set('RTC.AlarmDateWeekDay',p.alarm.date??1);for(const [k,name]of [['maskDateWeekDay','DateWeekDay'],['maskHours','Hours'],['maskMinutes','Minutes'],['maskSeconds','Seconds']])if(p.alarm[k])set('RTC.AlarmMask'+name,'RTC_ALARMMASK_'+name.toUpperCase());}}
       if(p.wakeUp?.enabled&&!f1){set('VP_RTC_VS_RTC_WakeUp_intern.Mode','WakeUp');set('VP_RTC_VS_RTC_WakeUp_intern.Signal','RTC_VS_RTC_WakeUp_intern');set('RTC.WakeUpClock','RTC_WAKEUPCLOCK_'+(p.wakeUp.clock??'RTCCLK_DIV16'));set('RTC.WakeUpCounter',p.wakeUp.counter??0);}
@@ -97,7 +97,8 @@ export function exportIoc(config){
   dma.forEach(([request,d],i)=>{set('Dma.Request'+i,request);const b=`Dma.${request}.${i}.`;set(b+'Instance',d.stream);if(!f1)set(b+'Channel','DMA_CHANNEL_'+d.channel);set(b+'Mode',d.mode==='circular'?'DMA_CIRCULAR':'DMA_NORMAL');set(b+'Priority','DMA_PRIORITY_'+d.priority.toUpperCase());set(b+'Direction',/_RX$|^ADC1$|^DCMI$/.test(request)?'DMA_PERIPH_TO_MEMORY':request==='MEMTOMEM'?'DMA_MEMORY_TO_MEMORY':'DMA_MEMORY_TO_PERIPH');});
   if(dma.length)set('Dma.RequestsNb',dma.length);
   // ---- NVIC: enabled:preemption:sub:… (the trailing flags are CubeMX's code-generation options)
-  for(const [irq,n]of Object.entries(m.nvic))if(n.enabled)set('NVIC.'+irq,`true:${n.priority}:${n.sub??0}:false:false:true:true:true:true`);
+  // A line that is off keeps its priority too (CubeMX writes only enabled lines; the importer reads both).
+  for(const [irq,n]of Object.entries(m.nvic))set('NVIC.'+irq,`${n.enabled}:${n.priority}:${n.sub??0}:false:false:true:true:true:true`);
   set('NVIC.PriorityGroup','NVIC_PRIORITYGROUP_'+(m.nvicGroup??NVIC_GROUP_DEFAULT));
   set('NVIC.SysTick_IRQn',`true:${m.tickPriority??TICK_PRIORITY_DEFAULT}:0:false:false:true:false:true:false`);
   // ---- clock

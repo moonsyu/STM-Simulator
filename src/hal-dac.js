@@ -48,6 +48,9 @@ export class HalDac{
  }
  poll(r){for(const c of this.ch)if(c&&c.on&&!c.running)this.arm(c,r);}
  align(v,align){if(align===4)return (v>>>4)&0xfff;if(align===8)return (v&0xff)<<4;if(align===0)return v&0xfff;throw new Error('DAC 정렬은 DAC_ALIGN_12B_R / 12B_L / 8B_R입니다.');}
+ // HAL_DAC_IRQHandler (in the generated TIM6_DAC_IRQHandler) serves the DMA underrun interrupt, which this model never
+ // raises: the call is accepted and does nothing.
+ invoke(name,args,r){if(name!=='HAL_DAC_IRQHandler')return null;this.handle(args[0],r);return (function*(){return 0;})();}
  call(name,args,r){
   if(!/^HAL_DAC(Ex)?_/.test(name))return undefined;
   const hal=this.hal,[a,b,c,d,e]=args,h=this.handle(a,r);
