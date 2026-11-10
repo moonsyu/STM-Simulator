@@ -55,16 +55,16 @@ jobs:
         if: matrix.shard == 1
         run: node --test --test-reporter=spec --test-reporter-destination=stdout --test-reporter=./tests/github-reporter.mjs --test-reporter-destination=stdout tests/release/update-helper.test.mjs
 
-  # The toolchain test files run in four jobs: as one job they were the longest of the run (6.4 min of tests at 1.33.0)
+  # The toolchain test files run in five jobs: as one job they were the longest of the run (6.4 min of tests at 1.33.0)
   # and set how long a release takes. scripts/toolchain-shard.mjs holds the groups, balanced by measured time.
   firmware:
-    name: ST HAL on ARM GCC and the emulator ${{ matrix.shard }}/4
+    name: ST HAL on ARM GCC and the emulator ${{ matrix.shard }}/5
     runs-on: windows-latest
     timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
-        shard: [1, 2, 3, 4]
+        shard: [1, 2, 3, 4, 5]
     env:
       ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
       CI_REQUIRE_TOOLCHAIN: '1'

@@ -1,24 +1,28 @@
-// Runs one of the CI's toolchain test groups: node scripts/toolchain-shard.mjs <1|2|3|4>.
-// node --test-shard deals files out by position, which left one job twice as long as another (196 / 99 / 182 s of tests at
-// 1.36.0). The groups below are balanced by the time each file took (seconds in the comments, from the 1.46.1 run, where
-// the groups had drifted to 185 / 122 / 123 s as examples were added), so a new toolchain test goes into the lightest
-// group; tests/unit/toolchain-shards.test.js fails when a file is in no group.
+// Runs one of the CI's toolchain test groups: node scripts/toolchain-shard.mjs <1-5>.
+// node --test-shard deals files out by position, which left one job twice as long as another, so the groups are listed
+// here by measured time. The seconds in the comments are from one run (1.46.3, CI 42807689195) on runners with the same
+// CPU (AMD EPYC 7763, 4 cores; the one job on a faster CPU scaled by its benchmark) — times taken from jobs on different
+// runners are not comparable: the same test took 0.6 to 1.8 times as long from one job to another, and the first
+// regrouping (1.46.2) was made from such numbers and came out uneven. The line "runner: … benchmark: …" each job prints
+// says what it ran on. A new toolchain test goes into the lightest group; tests/unit/toolchain-shards.test.js fails
+// when a file is in no group.
 // An entry is a file name, or [file name, test name pattern] for a file whose tests are dealt to different groups
-// (arm-examples: one test per board, 68 s and 59 s). The patterns of a file must cover all its tests; the unit test checks
-// that for arm-examples.
+// (arm-examples: one test per board). The patterns of a file must cover all its tests; the unit test checks that.
 import {spawnSync} from 'node:child_process';
 import {pathToFileURL} from 'node:url';
 import os from 'node:os';
 
 export const TOOLCHAIN_SHARDS=Object.freeze([
- // 68 + 40 = 108
+ // 70 + 57 = 127
  [['arm-examples','NUCLEO-F446RE'],'ra-course'],
- // 59 + 57 = 116
+ // 58 + 62 = 120
  [['arm-examples','NUCLEO-F103RB'],'ra-build'],
- // 20 + 21 + 17 + 10 + 11 + 27 = 106
- ['wdg','adc-continuous','bus-instances','adc-sampling','adc-group','button-bounce'],
- // 96 + 13 = 109
- ['emu-accuracy','tim-oc','board-links','spi-params','tim-advanced','dac','tim-channels','rtc','uart-params','source-folders','clock-tree','copied-files','tim-basic','dwarf-version'],
+ // 38 + 32 + 28 + 26 = 124
+ ['button-bounce','wdg','bus-instances','adc-continuous'],
+ // 26 + 23 + 22 + 17 + 17 + 16 = 121
+ ['emu-accuracy','dwarf-version','board-links','copied-files','tim-oc','adc-group'],
+ // 16 + 15 + 14 + 13 + 11 + 9 + 9 + 9 + 9 + 6 = 111
+ ['adc-sampling','clock-tree','tim-advanced','dac','rtc','source-folders','spi-params','tim-channels','uart-params','tim-basic'],
 ]);
 /** The file names of a group (an entry with a pattern counts once). */
 export const shardFiles=group=>group.map(e=>Array.isArray(e)?e[0]:e);
