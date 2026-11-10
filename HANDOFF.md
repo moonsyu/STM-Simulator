@@ -1,6 +1,17 @@
 # STM Simulator — 개발 인계
 
-현재 버전: **1.43.0**. 정리일: **2026-11-10**. NUCLEO-F446RE·NUCLEO-F103RB 또는 Renesas FPB-RA6E1(1.20.0, FSP·에뮬레이터 전용)과 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+현재 버전: **1.44.0**. 정리일: **2026-11-10**. NUCLEO-F446RE·NUCLEO-F103RB 또는 Renesas FPB-RA6E1(1.20.0, FSP·에뮬레이터 전용)과 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+
+## 1.44.0 기능 목록 14~17번: CubeIDE식 프로젝트 구조, 셸 오류 2건, 더블클릭 속성
+
+- **14번 프로젝트 구조 트리(`ide-ui.js`)**: `projectRows(p)`가 `{kind:'own'|'gen'|'sdk', file, label}` 목록을 만든다. `file`은 여는 대상(프로젝트 소스 이름, 생성 보기, SDK 루트 기준 경로), `label`은 CubeIDE에서의 경로다. 폴더 없는 프로젝트 파일은 CubeIDE 자리(`.c` → Core/Src, `.h` → Core/Inc, `.s` → Core/Startup)에 보인다. `buildFilesView`가 중첩 `<details data-tree-folder>`로 그리고, 연 폴더는 `treeOpen`에 남겨 다시 그려도 유지한다(Core는 열림, Drivers는 접힘). `#build-files`·`#build-file-list [data-build-file]`는 그대로라 기존 동작(읽기 전용 열기)과 호환된다. 프로젝트 파일은 `[data-tree-source]`.
+  - **공유 빌드 정보(`build-environment.js`)**: `HAL_MODULES`(빌드가 컴파일하는 HAL 모듈), `linkerScript(family)`·`linkerName(family)`(CubeIDE식 이름 `STM32F446RETX_FLASH.ld`), `mainHeader(project)`. `native-build.cjs`도 여기서 가져온다. `buildEnvironment().files`에 `Core/Inc/main.h`와 링커 스크립트 보기가 추가됐다(프로젝트에 같은 파일이 있으면 빠진다). `.ioc` 보기는 `ide-ui.js`가 `exportIoc`로 만든다(읽기 전용, Pinout에서 수정).
+  - **수정이 빌드에 쓰이는 방식**: `SOURCE_PATH`가 `.s`·`.ld`를 받는다. `native-build.cjs`는 프로젝트의 `.s`를 어셈블하고 `startup_*.s`가 있으면 SDK 시작 파일을 빼며, 프로젝트의 `.ld`가 있으면 그것으로 링크한다. 해석기는 `.s`·`.ld`를 건너뛴다(`hal-source.js` `armOnly`). "프로젝트로 복사해 수정"은 트리의 경로를 이름으로 쓴다(`treeLabels`).
+  - **다시 생성 정책**: 프로젝트 파일은 다시 생성하지 않는다. `main.c`만 USER CODE·구역 밖 사용자 코드를 유지하며 다시 생성된다. 복사하지 않은 파일의 보기는 현재 설정을 따른다.
+- **15번(`shell.js`)**: `setupDock`이 `layout.popout={has,focus,close}`를 건다. `showView(view,{toggle:true})`(활동 바)는 사이드바가 새 창에 있으면 닫아 본 창으로 되돌리고, `showUnit`은 새 창에 있는 단위를 앞으로 가져온다.
+- **16번**: 활동 바 단추가 열린 보기를 다시 눌러도 사이드바를 접지 않는다.
+- **17번(`app-canvas.js`)**: `onSvgPointerdown`의 `lastPress` — 같은 부품을 450 ms·6 px 안에 두 번 누르면 `inspectTab({force:true})`. `reveal('inspect',{force})`는 사용자가 닫아 둔 패널도 연다.
+- 시험: 단위 `project-structure`(4개), 툴체인 `copied-files`(+1), E2E `project-structure`·`shell`(+2, 1개 수정).
 
 ## 1.43.0 실제 CubeMX .ioc로 검증한 가져오기, SPI 송신 전용
 
