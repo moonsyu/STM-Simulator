@@ -11,7 +11,7 @@ import {validateRtc,rtcFromIoc} from './rtc-config.js';
 import {validateDac,dacFromIoc,dacProblems} from './dac-config.js';
 import {validateIwdg,validateWwdg,iwdgFromIoc,wwdgFromIoc} from './wdg-config.js';
 import {isI2c,isSpi} from './bus-config.js';
-import {validateAdcGroup,adcGroupProblems,adcGroupFromIoc} from './adc-config.js';
+import {validateAdcGroup,adcGroupProblems,adcGroupFromIoc,adcRanks} from './adc-config.js';
 import {validateClockTree,clockFrequencies,clockTreeProblems,adcClockProblem,clockTreeFromIoc,treeFromTimerHz} from './clock-tree.js';
 // Synchronous USART clock outputs on F446RE LQFP64 (DS10693 table 11): AF7 USART1/2/3, AF8 USART6.
 export const USART_CK_ROUTES=familyProfile(DEFAULT_FAMILY).usartCk;
@@ -244,7 +244,9 @@ export function importIoc(text){
   for(const [id,read,check]of [['IWDG',iwdgFromIoc,validateIwdg],['WWDG',wwdgFromIoc,validateWwdg]])if(config.peripherals[id]||values[`VP_${id}_VS_${id}.Mode`]){const q=read(values,number);try{check(q);config.peripherals[id]=q;}catch(e){warnings.push(e.message+' 기본값을 씁니다.');config.peripherals[id]={enabled:true};}}
   if(config.peripherals.RTC||values['VP_RTC_VS_RTC_Activate.Mode'])config.peripherals.RTC=rtcFromIoc(values,family,number);
   if(config.peripherals.ADC1&&values['ADC1.ContinuousConvMode']==='ENABLE')config.peripherals.ADC1.continuous=true;
-  if(config.peripherals.ADC1)adcGroupFromIoc(values,family,config.peripherals.ADC1);
+  if(config.peripherals.ADC1){const adc=config.peripherals.ADC1;adcGroupFromIoc(values,family,adc);
+   // CubeMX always writes the channel of each rank: ranks in the default order (the pins' channels ascending) are not kept.
+   if(adc.ranks){const plain={...config,peripherals:{...config.peripherals,ADC1:{...adc,ranks:undefined}}},wanted=adcRanks({...config,peripherals:{...config.peripherals,ADC1:adc}});if(wanted.every((ch,i)=>ch===adcRanks(plain)[i]))delete adc.ranks;}}
   // Rank 1 Sampling Time (ADC1.SamplingTime-0\#ChannelRegularConversion); a .ioc without it has CubeMX's default, the shortest.
   if(config.peripherals.ADC1){const key=Object.keys(values).find(k=>/^ADC1\.SamplingTime-0\\?#ChannelRegularConversion$/.test(k)),m=/ADC_SAMPLETIME_(\d+)CYCLES?(_5)?/.exec(values[key]||''),cycles=m?Number(m[1])+(m[2]?0.5:0):ADC_SAMPLING[family][0];if(ADC_SAMPLING[family].includes(cycles)&&cycles!==adcSamplingDefault(family))config.peripherals.ADC1.samplingTime=cycles;}
   // SPI1 speed: CubeMX stores the computed rate ("5.25 MBits/s") next to the prescaler.

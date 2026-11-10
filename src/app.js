@@ -52,6 +52,7 @@ import {running,log,flushAutosave,autosave,checkpoint,changed,setMode,tab,inspec
 import {filterParts,filterExamples,replaceProject,requestReplace,onHalExampleChange} from './app-examples.js';
 import {setupFileDrop} from './file-drop.js';
 import {offerCircuit} from './ioc-circuit-ui.js';
+import {exportIoc} from './ioc-export.js';
 import {syncEditor,replaceCodeText,applyFirmware,applyCircuit,editBoard,onCodeInput,onCodeResetConfirmClick,onFirmwareFilesChange} from './app-editor.js';
 import {save,open,onFileInputChange,onMainExportClick} from './app-files.js';
 import {refresh,updateReadouts,onSoundClick} from './app-view.js';
@@ -167,6 +168,10 @@ $('firmware-import').onclick=async()=>{try{if(window.desktop?.importFirmware)app
 $('firmware-folder').hidden=!window.desktop?.importFirmware;
 $('firmware-folder').onclick=async()=>{try{applyFirmware(await window.desktop.importFirmware(true));}catch(e){log(e.message,'error');}};
 $('firmware-files').onchange=onFirmwareFilesChange;
+// Pinout › .ioc로 내보내기: the applied settings as a CubeMX .ioc (ioc-export.js).
+$('pinout-export-ioc').onclick=async()=>{try{if(!state.project.mcu?.pins||state.project.firmware?.mode==='fsp')throw new Error('STM32 HAL 프로젝트의 핀 설정을 내보냅니다.');const text=exportIoc(state.project.mcu),name=(state.project.name||'project').replace(/[^\w가-힣 .-]/g,'_');
+  if(window.desktop?.exportIoc){const file=await window.desktop.exportIoc(text,name);if(!file)return;log('.ioc로 내보냈습니다: '+file+' (열려 있는 설정이 아니라 적용된 설정입니다. CubeMX에서 열어 확인하세요.)');}
+  else{const url=URL.createObjectURL(new Blob([text],{type:'text/plain;charset=utf-8'})),a=document.createElement('a');a.href=url;a.download=name+'.ioc';a.click();URL.revokeObjectURL(url);log('.ioc로 내보냈습니다.');}}catch(e){log(e.message,'error');}};
 // Pinout › 핀 설정으로 회로 만들기: the applied settings (not the open draft) decide the parts.
 $('pinout-circuit').onclick=()=>{if(running()){log('실행을 정지한 뒤 회로를 만드세요.','error');return;}if(!state.project.mcu?.pins){log('핀 설정이 있는 STM32 프로젝트에서 씁니다.','error');return;}$('pinout-dialog').close();offerCircuit(state.project.mcu,{getProject:()=>state.project,log,apply:applyCircuit});};
 // Files and folders dropped on the window: a project file opens, an .ioc / main.c set is imported, other sources are added.

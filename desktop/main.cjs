@@ -173,6 +173,14 @@ ipcMain.handle('firmware:open-elf',async event=>{
   const data=await fs.readFile(file);if(data.length<52||data.readUInt32BE(0)!==0x7f454c46)throw new Error('ELF 형식의 펌웨어 파일이 아닙니다.');
   return {name:path.basename(file),bytes:new Uint8Array(data)};
 });
+// The Pinout settings as a CubeMX .ioc (src/ioc-export.js writes the text; it is checked to be an .ioc the app reads).
+ipcMain.handle('firmware:export-ioc',async(_event,text,name)=>{
+  if(typeof text!=='string'||text.length>500000||!text.startsWith('#MicroXplorer Configuration settings'))throw new Error('.ioc 내용을 확인하세요.');
+  const {importIoc}=await import('../src/mcu-config.js');importIoc(text);
+  const base=typeof name==='string'&&/^[\w가-힣][\w가-힣 .-]{0,60}$/.test(name)?name:'project';
+  const result=await dialog.showSaveDialog(win,{title:'CubeMX .ioc로 내보내기',defaultPath:base+'.ioc',filters:[{name:'STM32CubeMX 설정',extensions:['ioc']}]});
+  if(result.canceled)return null;await fs.writeFile(result.filePath,text,'utf8');return result.filePath;
+});
 ipcMain.handle('firmware:export-main',async(_event,text)=>{
   if(typeof text!=='string'||text.length>300000)throw new Error('main.c는 300,000자 이하로 저장하세요.');
   const result=await dialog.showSaveDialog(win,{title:'HAL main.c 저장',defaultPath:'main.c',filters:[{name:'C 소스',extensions:['c']}]});
