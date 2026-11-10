@@ -1,5 +1,9 @@
 # 검증 기록
 
+## 1.42.0 해석기 union — 게시 확인(API)
+
+2026-11-10. 태그·빌드 커밋 `0d99e49` · [Windows CI 42761757914](https://github.com/moonsyu/STM-Simulator/actions/runs/42761757914) 첫 실행에서 모두 성공, 전체 5.1분. [Release v1.42.0](https://github.com/moonsyu/STM-Simulator/releases/tag/v1.42.0) 최신 릴리스, draft/prerelease 아님, 자산 5개(STM-Simulator.exe 115,625,333바이트, STM-Simulator-1.42.0-Windows-x64.zip 116,716,706바이트, SHA256.txt, BUILD-INFO.json, update-manifest.json).
+
 ## 1.42.0 해석기 union — 로컬 검증
 
 2026-11-10. union 사례 11개: 워드와 바이트(리틀 엔디언), float와 비트(1.0f = 0x3F800000, 0x40490FDB = 3.1416), 두 바이트와 16비트 값, 부호 있는 멤버, 첫 멤버·지정 초기화, 복사(원본 유지), 구조체 필드, 포인터 매개변수로 바이트 뒤집기, union 배열과 memset, 같은 멤버 반복 사용, 안내 오류 2가지 — 모두 기대한 출력. 시험: 단위+해석기+에뮬레이터+펌웨어 1,095개(1개 건너뜀) 통과, ESLint 통과. 1.41.0 뒤의 문서·시험 푸시(`4f1936e`)의 CI도 성공.
