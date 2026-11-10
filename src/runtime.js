@@ -94,6 +94,11 @@ export class Runtime {
     if(p.array){const index=p.index+integer(offset);if(index<0||index>=p.array.cells.length)throw new Error('배열 인덱스가 범위를 벗어났습니다.');return p.array.cells[index];}
     if(offset!==0)throw new Error('단일 변수 포인터에 범위를 벗어난 연산을 할 수 없습니다.');return p.cell;
   }
+  *invokeValue(value,args){
+    if(value===0)throw new Error('NULL 함수 포인터를 호출했습니다.');
+    if(value?.kind!=='function'||!own(this.program.functions,value.name))throw new Error('함수가 아닌 값을 호출했습니다.');
+    return yield* this.invoke(value.name,args);
+  }
   callback(value){if(value?.kind!=='function'||!own(this.program.functions,value.name))throw new Error('사용자 함수 이름을 콜백으로 지정하세요.');return value;}
   *reference(n){
     this.budget();
@@ -134,6 +139,7 @@ export class Runtime {
     if(n.type==='cast'){const value=yield* this.evaluate(n.a);if(n.pointer){if(typeof value==='string')return this.pointer(this.array([...value].map(c=>c.charCodeAt(0)).concat(0),this.globals));return this.pointer(value);}if(this.program.hal&&(isArray(value)||isPointer(value)||value?.kind==='function'))return isArray(value)?this.pointer(value):value;return n.to==='String'?String(value):n.to==='bool'?Number(truth(value)):this.program.hal?this.coerce(n.to,checkedNumber(value)):['float','double'].includes(n.to)?checkedNumber(value):integer(value);}
     if(n.type==='index'||n.type==='member')return this.get(yield* this.reference(n));
     if(n.type==='unary'){
+      if(n.op==='&'&&n.a.type==='name'&&own(this.program.functions,n.a.name))return {kind:'function',name:n.a.name};
       if(n.op==='&'){if(n.a.type==='index')return {kind:'pointer',array:(this.pointer(yield* this.evaluate(n.a.object))).array,index:integer(yield* this.evaluate(n.a.index))};return {kind:'pointer',cell:yield* this.reference(n.a)};}
       if(n.op==='*')return this.get(this.pointerCell(yield* this.evaluate(n.a)));
       if(n.op==='++'||n.op==='--'){const cell=yield* this.reference(n.a);return this.set(cell,this.binary(n.op==='++'?'+':'-',this.get(cell),1));}
@@ -153,10 +159,17 @@ export class Runtime {
       if(n.callee.type==='name'){
         if(this.api.invoke){const iterator=this.api.invoke(n.callee.name,args,this);if(iterator)return yield* iterator;}
         if(own(this.program.functions,n.callee.name))return yield* this.invoke(n.callee.name,args);
+        // A variable that holds a function (a function pointer). Any other variable of that name leaves the call to the
+        // built-in functions below (a sketch may name a variable like one of them).
+        let empty=false;
+        for(let i=this.scopes.length-1;i>=0;i--)if(own(this.scopes[i].cells,n.callee.name)){const held=this.get(this.scopes[i].cells[n.callee.name]);if(held?.kind==='function')return yield* this.invokeValue(held,args);empty=held===0;break;}
+        if(empty)try{return this.call(n.callee.name,args);}catch(e){throw /지원하지 않는 (함수|HAL API)/.test(e.message)?new Error('NULL 함수 포인터를 호출했습니다.'):e;}
         if(n.callee.name==='delay'){if(this.inCallback)throw new Error('콜백에서는 delay()를 사용할 수 없습니다.');const ms=this.interval(args[0],0);if(args.length!==1)throw new Error('delay(ms) 인수 하나가 필요합니다.');yield Math.max(.001,ms);return 0;}
         return this.call(n.callee.name,args);
       }
       if(n.callee.type==='member'&&!n.callee.pointer){const object=yield* this.evaluate(n.callee.object);if(object?.kind==='library')return this.call(`${object.name}.${n.callee.key}`,args);if(object?.kind==='device')return this.api.deviceCall?.(object,n.callee.key,args,this)??0;}
+      // table[i](…), item.handler(…), p->handler(…), (*fn)(…): the value is a function.
+      if(this.program.hal)return yield* this.invokeValue(yield* this.evaluate(n.callee.type==='unary'&&n.callee.op==='*'?n.callee.a:n.callee),args);
       throw new Error('지원하지 않는 함수 호출입니다.');
     }
     throw new Error('표현식을 실행할 수 없습니다.');

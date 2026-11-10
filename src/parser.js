@@ -80,6 +80,14 @@ export function compile(source,options={}) {
     return {type:aliases.get(type)||type,constant,external,storage,volatile};
   }
   function declarator(base){
+    // A function pointer: type (*name)(parameters), or a table of them: type (*name[n])(parameters). It holds a function
+    // (its name) as an ordinary 4-byte value; the parameter list is read and not checked.
+    if(peek()==='('&&peek(1)==='*'){
+      take();take();while(peek()==='const')take();const {port,...rest}=base,d={...rest,type:'uint32_t',name:identifier(),pointer:false,fnptr:true};
+      if(peek()==='['){take();d.array=true;if(peek()!==']')d.size=expression();expect(']');}
+      expect(')');expect('(');for(let open=1;open;){const t=take();if(t==='<end>')fail("닫는 ')'가 없습니다.");if(t==='(')open++;else if(t===')')open--;}
+      return d;
+    }
     let pointer=false;while(peek()==='*'){take();if(pointer)fail('이중 포인터는 지원하지 않습니다.');pointer=true;while(peek()==='const')take();}
     if(base.port){if(!pointer)fail('GPIO_TypeDef는 포인터(GPIO_TypeDef *)로 선언하세요.');const {port,...rest}=base;return {...rest,name:identifier(),pointer:false};}
     return {...base,name:identifier(),pointer};
@@ -179,7 +187,7 @@ export function compile(source,options={}) {
   }
   while(peek()!=='<end>'){
     if(peek()==='typedef'&&peek(1)==='enum'){const loc=location();take();take();if(peek()!=='{')aliases.set(identifier(),'int');const declarations=parseEnumBody(),alias=identifier();expect(';');aliases.set(alias,'int');program.globals.push({type:'declare',declarations,loc});continue;}
-    if(peek()==='typedef'&&peek(1)!=='struct'){take();const base=spec(),d=declarator(base);if(d.pointer)fail('포인터 typedef는 지원하지 않습니다.');expect(';');aliases.set(d.name,base.type);continue;}
+    if(peek()==='typedef'&&peek(1)!=='struct'){take();const base=spec(),d=declarator(base);if(d.pointer)fail('포인터 typedef는 지원하지 않습니다.');expect(';');aliases.set(d.name,d.fnptr?d.type:base.type);continue;}
     if(peek()==='enum'&&(peek(1)==='{'||peek(2)==='{')){const loc=location();take();if(peek()!=='{')aliases.set(identifier(),'int');const declarations=parseEnumBody();expect(';');program.globals.push({type:'declare',declarations,loc});continue;}
     // The fields between { and } of a struct definition.
     const structBody=()=>{expect('{');const fields=[];
