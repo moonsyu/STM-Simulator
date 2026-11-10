@@ -1,5 +1,9 @@
 # 검증 기록
 
+## 1.30.1 .ioc만 가져올 때 main.c도 생성 — 게시 확인(API)
+
+2026-11-10. 태그·빌드 커밋 `1fab30c65a8f337b027be8f2884b1563188dddc3` · [Windows CI 42729233938](https://github.com/moonsyu/STM-Simulator/actions/runs/42729233938) 첫 실행에서 모두 성공(전체 6.3분). [Release v1.30.1](https://github.com/moonsyu/STM-Simulator/releases/tag/v1.30.1) 최신 릴리스, draft/prerelease 아님, 자산 5개(STM-Simulator.exe 115,610,046바이트, STM-Simulator-1.30.1-Windows-x64.zip 116,696,237바이트, SHA256.txt, BUILD-INFO.json, update-manifest.json).
+
 ## 1.30.0 DAC (NUCLEO-F446RE) — 게시 확인(API)
 
 2026-11-09. 태그·빌드 커밋 `1b21962058194f659745ce26479933240e130022` · [Windows CI 42585975088](https://github.com/moonsyu/STM-Simulator/actions/runs/42585975088) 첫 실행에서 모두 성공(정적 검사·단위 3.1분, E2E 3묶음 3.5·3.9·2.6분, ST HAL ARM GCC 6.1분, ESP32 5.5분, 패키지 3.6분, 검증한 Release 게시 0.7분 — 전체 6.9분). [Release v1.30.0](https://github.com/moonsyu/STM-Simulator/releases/tag/v1.30.0) 최신 릴리스, draft/prerelease 아님, 자산 5개(STM-Simulator.exe 115,588,565바이트, STM-Simulator-1.30.0-Windows-x64.zip 116,674,856바이트, SHA256.txt, BUILD-INFO.json, update-manifest.json).
