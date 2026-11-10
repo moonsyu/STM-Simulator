@@ -36,6 +36,21 @@ export function structFields(source,typeName){
  return out;
 }
 
+/** Fields of a variable declared together with its struct: "struct { int raw; } reading;" or "struct Tag { … } a, *b;". */
+export function inlineStructFields(source,name){
+ if(!/^[A-Za-z_]\w*$/.test(name||''))return [];
+ const text=mask(source);
+ // After the struct's "}" come the declarators, some with an initializer in braces: } config = {0}, *active;
+ for(const m of text.matchAll(new RegExp(`\\}(?:[^;{}]|\\{[^{}]*\\})*?\\b${name}\\b\\s*(?=[;=,\\[])`,'g'))){
+  const body=bodyBefore(text,m.index);if(body===null)continue;
+  // The same reader, on a copy that names the type.
+  const open=m.index-body.length-1,head=text.slice(Math.max(0,open-80),open);
+  if(!/\b(?:struct|union)\b[^;{}]*$/.test(head))continue;
+  return structFields(`typedef struct {${body}} __inline_t;`,'__inline_t');
+ }
+ return [];
+}
+
 const NOT_A_TYPE=new Set(['return','else','case','goto','sizeof','typedef','if','while','for','switch','do','new','delete','throw']);
 /** The declared type name of the variable or parameter `name` in `source` ("ADC_HandleTypeDef" for hadc1), or ''. */
 export function declaredType(source,name){

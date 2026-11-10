@@ -3,7 +3,7 @@
 // accessed.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {structFields,declaredType,accessChain} from '../../src/c-struct-fields.js';
+import {structFields,declaredType,accessChain,inlineStructFields} from '../../src/c-struct-fields.js';
 
 const HAL=`
 /** @brief GPIO Init structure definition */
@@ -54,6 +54,14 @@ test('the declared type of a variable, a pointer parameter and an array; not foo
  assert.equal(declaredType(code,'hadc1'),'ADC_HandleTypeDef');assert.equal(declaredType(code,'GPIO_InitStruct'),'GPIO_InitTypeDef');
  assert.equal(declaredType(code,'huart'),'UART_HandleTypeDef');assert.equal(declaredType(code,'p'),'Point');assert.equal(declaredType(code,'path'),'Point');
  assert.equal(declaredType(code,'ghost'),'','a comment declares nothing');assert.equal(declaredType(code,'nothing'),'');
+});
+
+test('a variable declared together with its struct: the fields come from that declaration',()=>{
+ const code='struct { int raw; float volts; } reading;\nstatic struct Config { uint8_t mode; uint16_t period_ms; } config = {0}, *active;\nunion { uint32_t word; uint8_t bytes[4]; } packet;\nint plain;\nvoid f(void) { if (plain) { plain = 0; } plain++; }\n';
+ assert.deepEqual(inlineStructFields(code,'reading'),[{name:'raw',type:'int'},{name:'volts',type:'float'}]);
+ assert.deepEqual(inlineStructFields(code,'config').map(f=>f.name),['mode','period_ms']);assert.deepEqual(inlineStructFields(code,'active').map(f=>f.name),['mode','period_ms']);
+ assert.deepEqual(inlineStructFields(code,'packet').map(f=>f.name),['word','bytes']);
+ assert.deepEqual(inlineStructFields(code,'plain'),[],'a brace that closes a block is not a struct');assert.deepEqual(inlineStructFields(code,'missing'),[]);
 });
 
 test('the access before the cursor',()=>{

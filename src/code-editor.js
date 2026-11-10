@@ -6,7 +6,7 @@ import 'monaco-editor/languages/definitions/python/register.js';
 import {loadPreferences,selectedTheme} from './ide-preferences.js';
 import {editorTheme} from './colorscheme.js';
 import {cSymbols,pickDefinitions,KIND_RANK,outlineLabel} from './c-symbols.js';
-import {structFields,declaredType,accessChain} from './c-struct-fields.js';
+import {structFields,declaredType,accessChain,inlineStructFields} from './c-struct-fields.js';
 // Standard C names the SDK index does not hold (they come from the compiler's headers).
 const C_NAMES=['uint8_t','uint16_t','uint32_t','uint64_t','int8_t','int16_t','int32_t','int64_t','size_t','bool','true','false','NULL','volatile','unsigned','static','const','struct','typedef','sizeof','return','switch','continue','default','float','double','extern','while','break'];
 
@@ -109,7 +109,9 @@ export function createCodeEditor({textarea,getFile,getFiles,onBreakpoint,onBreak
       const files=getFiles(),fieldsOf=async type=>{if(!type)return [];for(const f of files){const own=structFields(f.text,type);if(own.length)return own;}return sdk?.['sdk-members']?sdk['sdk-members'](getFamily(),type).catch(()=>[]):[];};
       let type='';for(const f of files){type=declaredType(f.text,chain[0]);if(type)break;}
       for(const part of chain.slice(1)){type=(await fieldsOf(type)).find(x=>x.name===part)?.type||'';if(!type)break;}
-      const fields=await fieldsOf(type);
+      let fields=await fieldsOf(type);
+      // A variable declared together with its struct (struct { … } reading;) has no type name to look up.
+      if(!fields.length&&chain.length===1)for(const f of files){fields=inlineStructFields(f.text,chain[0]);if(fields.length)break;}
       if(!fields.length)return {suggestions:[]};
       return {suggestions:fields.map((f,i)=>({label:f.name,kind:monaco.languages.CompletionItemKind.Field,insertText:f.name,detail:(f.type?f.type+' ':'')+f.name+' · '+type,range,sortText:String(i).padStart(4,'0')}))};
      }

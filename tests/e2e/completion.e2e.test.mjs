@@ -82,6 +82,10 @@ test('simulator target: struct members after "." (SDK struct and a struct of the
   await win.waitForFunction(()=>/pin_setup\.Pull\b/.test(document.getElementById('code').value));
   await line('reading.');
   await win.waitForFunction(()=>{const rows=[...document.querySelectorAll('#group-code .suggest-widget .monaco-list-row')].map(r=>(r.getAttribute('aria-label')||r.textContent).split(',')[0]);return rows.length===2&&rows.includes('raw')&&rows.includes('volts');},null,{timeout:20000}).catch(async e=>{throw new Error(e.message+' rows: '+JSON.stringify(await labels()));});
+  // A variable declared together with its struct.
+  await line('struct { int count; int limit; } tally;');
+  await line('tally.');
+  await win.waitForFunction(()=>{const rows=[...document.querySelectorAll('#group-code .suggest-widget .monaco-list-row')].map(r=>(r.getAttribute('aria-label')||r.textContent).split(',')[0]);return rows.length===2&&rows.includes('count')&&rows.includes('limit');},null,{timeout:20000}).catch(async e=>{throw new Error(e.message+' rows: '+JSON.stringify(await labels()));});
   await line('uint32');
   await expectRows(win,['uint32_t'],'uint32');
   assert.deepEqual(s.errors,[]);
