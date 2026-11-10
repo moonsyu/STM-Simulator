@@ -23,6 +23,13 @@ export { BASES };
 // Memory stays the F446 bus (512 KB / 128 KB); an F103RB image uses the first 128 KB / 20 KB of it.
 export class Stm32f103 extends Stm32f446 {
   get resetHz() { return 8e6; }
+  // USB device and its packet memory are not modeled.
+  get missing() { return { USB: [0x40005c00, 0x400], 'USB/CAN SRAM': [0x40006000, 0x400] }; }
+  memoryHint(a) {
+    if (a >= 0x20005000 && a < 0x20020000) return 'STM32F103RB의 RAM은 20 KB(0x20000000~0x20004FFF)입니다: 스택이나 배열이 RAM 끝을 넘었습니다';
+    if (a >= 0x08020000 && a < 0x08080000) return 'STM32F103RB의 플래시는 128 KB(0x08000000~0x0801FFFF)입니다';
+    return null;
+  }
   build() {
     const pages = new Map();
     const add = (name, dev, base = BASES[name], size = 0x400) => {
@@ -73,6 +80,7 @@ export class Stm32f103 extends Stm32f446 {
     const dv = new DataView(bytes.buffer); dv.setUint16(0, 128, true); dv.setUint32(8, uid[0], true); dv.setUint32(12, uid[1], true); dv.setUint32(16, uid[2], true);
     this.bus.loadBytes?.(0x1ffff7e0, bytes);
     this.lsiHz = 40000; // IWDG clock (the F446's LSI is 32 kHz)
+    this.machine.describeAddress = addr => this.addressHint(addr);
     this.machine.onResetRequest = reason => this.prepareReset(reason);
     this.republishAll();
   }

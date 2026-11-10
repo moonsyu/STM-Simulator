@@ -362,3 +362,22 @@ export class Bus {
     return hi === 0x100 || hi === 0 || (a >>> 17) === 0x1000 || (a >>> 16) === 0x1fff;
   }
 }
+
+// STM32F103RB (medium density): 128 KB flash and 20 KB SRAM. The shared buffers are the F446 size; an access past the
+// real end faults as on the chip, so a stack or buffer that outgrows 20 KB shows up instead of silently working.
+export const F103_FLASH_SIZE = 0x20000;
+export const F103_SRAM_SIZE = 0x5000;
+export class BusF103 extends Bus {
+  _check(a, write, size) {
+    if ((a >>> 17) === 0x1000) { if ((a & 0x1ffff) >= F103_SRAM_SIZE) throw new BusFaultSignal(a, write, size); return; }
+    const hi = a >>> 19;
+    if ((hi === 0x100 || hi === 0) && (a & 0x7ffff) >= F103_FLASH_SIZE) throw new BusFaultSignal(a, write, size);
+  }
+  read32(a) { this._check(a, false, 4); return super.read32(a); }
+  read16(a) { this._check(a, false, 2); return super.read16(a); }
+  read8(a) { this._check(a, false, 1); return super.read8(a); }
+  write32(a, v) { this._check(a, true, 4); super.write32(a, v); }
+  write16(a, v) { this._check(a, true, 2); super.write16(a, v); }
+  write8(a, v) { this._check(a, true, 1); super.write8(a, v); }
+  fetch16(a) { const hi = a >>> 19; if ((hi === 0x100 || hi === 0) && (a & 0x7ffff) >= F103_FLASH_SIZE || (a >>> 17) === 0x1000 && (a & 0x1ffff) >= F103_SRAM_SIZE) throw new BusFaultSignal(a, false, 2, true); return super.fetch16(a); }
+}

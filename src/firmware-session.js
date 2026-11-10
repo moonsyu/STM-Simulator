@@ -13,6 +13,7 @@ import { VariableRecorder } from './variable-graph.js';
 import { I2C_DEVICES, SPI_DEVICES, answersI2c } from './device-defs.js';
 import { familyProfile } from './mcu-family.js';
 import { Machine } from './emu/machine.js';
+import { BusF103 } from './emu/bus.js';
 import { Stm32f446 } from './emu/stm32f446/soc.js';
 import { Stm32f103 } from './emu/stm32f103/soc.js';
 import { Ra6e1, RaBus } from './emu/ra6e1/soc.js';
@@ -58,7 +59,8 @@ export class FirmwareSession {
     this.pwmMap = new Map(); this.pwmFrequency = new Map(); this.eventCount = 0;
     // A Renesas RA project runs on the RA6E1 model (its own memory map, FSP-compiled ELF); the STM32 boards on theirs.
     this.ra = isRaFamily(project.mcu?.family);
-    this.machine = new Machine({ swv: true, ...(this.ra ? { bus: new RaBus() } : {}) });
+    // The F103RB runs on a bus with its real memory size (128 KB flash, 20 KB RAM): past it is a bus fault, as on the chip.
+    this.machine = new Machine({ swv: true, ...(this.ra ? { bus: new RaBus() } : project.mcu?.family === 'STM32F103RB' ? { bus: new BusF103() } : {}) });
     this.pins = this.ra ? [...RA6E1_PORTS] : familyProfile(project.mcu?.family).gpioPins;
     // Pins wired to parts on the board itself (switch, LEDs, I2C pull-ups) are always solved with the circuit.
     this.boardPins = new Set(this.ra ? [FPB_RA6E1.userSwitch, ...Object.values(FPB_RA6E1.leds), ...Object.keys(FPB_RA6E1.pullups)] : ['PC13']);

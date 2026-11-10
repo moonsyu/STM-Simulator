@@ -560,7 +560,8 @@ export class Machine {
     if (cfsr & CFSR.MSTKERR) msgs.push('예외 진입 중 스택 저장 실패(MemManage)');
     if (cfsr & CFSR.MUNSTKERR) msgs.push('예외 복귀 중 스택 복원 실패(MemManage)');
     if (cfsr & CFSR.IBUSERR) msgs.push('명령어를 가져오는 중 버스 오류가 발생했습니다');
-    if (cfsr & CFSR.PRECISERR) msgs.push(`잘못된 메모리 접근 ${cfsr & CFSR.BFARVALID ? hex(scs.bfar) : ''}`.trim());
+    // The SoC names what lives at the address (a peripheral this emulator does not have, memory past the chip's size).
+    if (cfsr & CFSR.PRECISERR) { const hint = cfsr & CFSR.BFARVALID ? this.describeAddress?.(scs.bfar >>> 0) : null; msgs.push(`잘못된 메모리 접근 ${cfsr & CFSR.BFARVALID ? hex(scs.bfar) : ''}`.trim() + (hint ? ` (${hint})` : '')); }
     if (cfsr & CFSR.IMPRECISERR) msgs.push('부정확한(imprecise) 버스 오류: 쓰기 주소를 확인하세요');
     if (cfsr & CFSR.STKERR) msgs.push('예외 진입 중 스택 저장 실패(스택 오버플로 가능성)');
     if (cfsr & CFSR.UNSTKERR) msgs.push('예외 복귀 중 스택 복원 실패');

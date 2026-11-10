@@ -27,6 +27,11 @@ import { Signals } from './signals.js';
 //   uartEvent(e), i2cBus(name, pins), spiTransfer(name, pins, byte, cfg),
 //   usartSync(name, pins, byte), camera(), sdCard(), canBus(can, frame),
 //   i2sSamples(name, samples, rate), chipSelect(name), onReset(reason)
+// Peripherals of the STM32F446 that this emulator does not model: [base, size]. An access there is a bus fault here.
+export const MISSING = {
+  SPDIFRX: [0x40004000, 0x400], FMPI2C1: [0x40006000, 0x400], HDMI_CEC: [0x40006c00, 0x400], SAI1: [0x40015800, 0x400], SAI2: [0x40015c00, 0x400],
+  BKPSRAM: [0x40024000, 0x1000], USB_OTG_HS: [0x40040000, 0x40000], USB_OTG_FS: [0x50000000, 0x40000], FMC: [0xa0000000, 0x1000], QUADSPI: [0xa0001000, 0x1000],
+};
 export const BASES = {
   TIM2: 0x40000000, TIM3: 0x40000400, TIM4: 0x40000800, TIM5: 0x40000c00, TIM6: 0x40001000, TIM7: 0x40001400,
   TIM12: 0x40001800, TIM13: 0x40001c00, TIM14: 0x40002000, RTC: 0x40002800, WWDG: 0x40002c00, IWDG: 0x40003000,
@@ -116,6 +121,7 @@ export class Stm32f446 {
     this.bus.loadBytes?.(0x1fff7a10, bytes);
     this.bus.loadBytes?.(0x1fff7bf0, Uint8Array.from([0x00, 0x03]));
     this.machine.onResetRequest = reason => this.prepareReset(reason);
+    this.machine.describeAddress = addr => this.addressHint(addr);
     this.republishAll();
   }
   // Core clock after reset (HSI).
@@ -140,6 +146,16 @@ export class Stm32f446 {
     Object.assign(this.machine.clock, { sysclk: clock.sysclk, hclk: clock.hclk, pclk1: clock.pclk1, pclk2: clock.pclk2 });
     for (const t of Object.values(this.timers ?? {})) { t.c0 = now; t.schedule(); t.refreshOutputs?.(); }
     this.env.clockChanged?.(clock);
+  }
+  // What a faulting address is, for the fault message.
+  get missing() { return MISSING; }
+  addressHint(addr) {
+    const a = addr >>> 0, hit = Object.entries(this.missing).find(([, [base, size]]) => a >= base && a < base + size);
+    if (hit) return `${hit[0]}: 이 시뮬레이터에 없는 주변장치입니다`;
+    const mem = this.memoryHint?.(a); if (mem) return mem;
+    if (a >= 0x40000000 && a < 0x60000000) return '주변장치 영역이지만 이 MCU에 없는 주소입니다';
+    if (a >= 0x20000000 && a < 0x40000000) return 'RAM 범위를 벗어난 주소입니다(배열 범위·포인터를 확인하세요)';
+    return null;
   }
   // ------------------------------------------------------------ reset
   prepareReset(reason) {
