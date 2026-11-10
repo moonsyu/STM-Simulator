@@ -1,6 +1,15 @@
 # STM Simulator — 개발 인계
 
-현재 버전: **1.46.2**. 정리일: **2026-11-10**. NUCLEO-F446RE·NUCLEO-F103RB 또는 Renesas FPB-RA6E1(1.20.0, FSP·에뮬레이터 전용)과 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+현재 버전: **1.46.3**. 정리일: **2026-11-10**. NUCLEO-F446RE·NUCLEO-F103RB 또는 Renesas FPB-RA6E1(1.20.0, FSP·에뮬레이터 전용)과 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+
+## 1.46.3 1~13번 오류 탐색 수정 3건, 패키지 빌드 시간, CI 작업 분할
+
+- **`.ioc` 왕복(`mcu-config.js` `importIoc`, `ioc-export.js`)**: 파일의 키는 글자순이라 가져온 핀 순서가 PA10 → PA5였다. `importIoc`가 끝에서 `Mcu.PinN` 번호로 `config.pins`를 다시 줄 세우고(목록에 없는 핀은 뒤), 내보내기는 `Mcu.PinN`을 설정의 순서대로 쓴다. 순서는 설정의 일부다: `generateHal`이 그 순서로 초기화 코드를 쓰고 새 main 루프는 첫 출력 핀을 토글한다.
+- **printf(`hal-stdio.js` `cFixed`, `cExponential`)**: double을 정확한 분수(가수/2^n, BigInt)로 보고 정수 연산으로 반올림한다(동률은 짝수). `toFixed`/`toExponential`은 동률에서 큰 쪽을 고른다. 정밀도 한계 17.
+- **드롭(`file-drop.js`)**: `SOURCE`에 `.s`·`.ld`.
+- **빌드(`scripts/build-package.cjs`, `scripts/clean-build.cjs`)**: `build:package`가 electron-builder API로 포터블 EXE를 만들며 `ELECTRON_BUILDER_COMPRESSION_LEVEL`을 5로 둔다(호출한 쪽이 정하면 그 값). 정리 스크립트의 허용 목록에 Electron 45의 `electron_wer.dll`.
+- **CI**: 검사 2개(`--test-shard`, lint·audit·update-helper는 첫 작업), 펌웨어 4개, ESP32 3개, E2E 6개. 묶음은 `scripts/toolchain-shard.mjs`.
+- 시험: 단위 `examples-sweep`(예제 124개 × 보드 2개 = 247개 프로젝트: `.ioc` 왕복, 재생성, 핸들러 중복, 회로 생성, 드롭 이름), 해석기 `printf-formats`.
 
 ## 1.46.2 수정: 채터링 2 ms, CI 시간
 
