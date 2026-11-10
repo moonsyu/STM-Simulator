@@ -77,8 +77,8 @@ jobs:
           node-version: '24'
           cache: npm
       - name: Install locked dependencies
-        # These tests use neither Electron nor the bundled editor: skip the install scripts (Electron download, editor build).
-        run: npm ci --ignore-scripts
+        # With the install scripts: measured without them (1.46.2), the tests that build and run were 1.6-1.8 times slower.
+        run: npm ci
       - name: Install ARM GCC, STM32CubeF4 / STM32CubeF1 drivers and Renesas FSP
         uses: ./.github/actions/arm-toolchain
       - name: Build examples with ST HAL and run them on the emulator
