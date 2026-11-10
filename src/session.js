@@ -86,7 +86,14 @@ export class SimulationSession {
     this.advance(micros);this.result=this.circuit.hold(this.project,this.runtime.gpio,this.pressed,this.sensors.echoHigh(micros),this.motion.signals);this.enrich(micros);if(this.result.fault)throw new Error(this.result.warnings[0]||'회로 해석 오류');return this.result;
   }
   get viewResult(){return physicalResult(this.result,this.project);}
-  tick(time){if(this.project.components.some(p=>p.type==='catalog_singlewire')){while(this.runtime.time<time&&!this.runtime.debug.paused)this.runtime.tick(Math.min(time,this.runtime.time+1));if(time===0)this.runtime.tick(0);}else this.runtime.tick(time);return physicalResult(this.changed(this.runtime.microTime),this.project);}
+  tick(time){if(this.project.components.some(p=>p.type==='catalog_singlewire')){while(this.runtime.time<time&&!this.runtime.debug.paused)this.runtime.tick(Math.min(time,this.runtime.time+1));if(time===0)this.runtime.tick(0);}else this.runtime.tick(time);const result=this.changed(this.runtime.microTime);this.checkNrst();return physicalResult(result,this.project);}
+  // The NRST header pin pulled LOW (below VIL(NRST) 0.8 V) resets the MCU: the program restarts and stays at its start
+  // while the line is LOW. RCC_FLAG_PINRST is the only cause set.
+  checkNrst(){
+    const v=this.result?.fault?null:this.result?.voltage?.('signal:NRST'),low=typeof v==='number'&&v<.8;
+    if(low&&this.hal){if(!this.nrstLow)this.runtime.api.warn?.('[NRST] 리셋 핀이 LOW입니다 — 프로그램을 처음부터 다시 실행합니다.');this.hal.resetCause=26;this.runtime.restart();}
+    this.nrstLow=low;
+  }
   setPressed(pressed){this.pressed=pressed;this.changed();this.runtime.pollInterrupts();}
   inject(text,target='Serial1'){
     if(target==='Serial'){const bytes=[...String(text)].slice(0,256).map(c=>c.charCodeAt(0)&255);if(this.serial.length+bytes.length>4096)throw new Error('Serial 수신 버퍼가 가득 찼습니다.');this.serial.push(...bytes);return bytes.length;}

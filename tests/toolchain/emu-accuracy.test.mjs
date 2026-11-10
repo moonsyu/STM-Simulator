@@ -34,3 +34,26 @@ test('fault messages: a missing peripheral is named (F446RE USB OTG FS); RAM pas
   const ok=await run(projectForBoard('nucleo-f103rb'),'  *(volatile uint32_t *)0x20004ff0 = 0x1234;');assert.equal(ok.error,null);assert.equal(ok.s.gpio.PC0?.value,3.3,'inside the 20 KB');
  }finally{await fs.rm(root,{recursive:true,force:true});}
 });
+
+test('NRST pulled LOW by a button resets the MCU and RCC_FLAG_PINRST alone is set (F446RE, F103RB)',{skip,timeout:600000},async()=>{
+ const {halExample}=await import('../../src/hal-examples.js'),{boardPins}=await import('../../src/pins.js');
+ const root=await fs.mkdtemp(path.join(os.tmpdir(),'nrst-'));
+ try{
+  for(const [board,base]of [['F446RE',blankProject()],['F103RB',projectForBoard('nucleo-f103rb')]]){
+   // The button example's circuit (same header positions on both NUCLEO-64 boards) on this board's own settings.
+   const p=halExample('button');p.boardId=base.boardId;p.mcu=structuredClone(base.mcu);const input='PA10',from=boardPins(p.boardId).filter(x=>x.signal===input).map(x=>x.id);
+   const wire=p.wires.find(w=>from.includes(w.from)||from.includes(w.to));assert.ok(wire,board+' button wire');
+   const nrst=boardPins(p.boardId).find(x=>x.signal==='NRST').id;if(from.includes(wire.from))wire.from=nrst;else wire.to=nrst;
+   p.mcu.pins.PC0={function:'GPIO_Output',pull:'NOPULL',edge:'FALLING',label:'',initial:0};p.mcu.pins.PC1={...p.mcu.pins.PC0};
+   // PC0: started at least once; PC1: this start came after a pin reset with no power-on, software or watchdog cause.
+   p.code=generateHal(p.mcu,{minimal:true}).replace('  /* USER CODE BEGIN 2 */','  /* USER CODE BEGIN 2 */\n  if (__HAL_RCC_GET_FLAG(RCC_FLAG_PINRST) && !__HAL_RCC_GET_FLAG(RCC_FLAG_PORRST) && !__HAL_RCC_GET_FLAG(RCC_FLAG_SFTRST) && !__HAL_RCC_GET_FLAG(RCC_FLAG_IWDGRST)) HAL_GPIO_WritePin(GPIOC, GPIO_PIN_1, GPIO_PIN_SET);\n  __HAL_RCC_CLEAR_RESET_FLAGS();\n  HAL_GPIO_WritePin(GPIOC, GPIO_PIN_0, GPIO_PIN_SET);');
+   const result=await build(await prepareBuild({project:p,tools,root,target:'arm'}));assert.deepEqual(result.diagnostics.filter(d=>d.severity==='error'),[],board);
+   const s=new FirmwareSession(p,{elf:new Uint8Array(await fs.readFile(result.elf))});
+   for(let t=10;t<=100;t+=10)s.tick(t);
+   assert.equal(s.gpio.PC0?.value,3.3,board);assert.equal(s.gpio.PC1?.value,0,board+': first start is a power-on reset');
+   const button=p.components.find(c=>c.type==='button').id;s.setPressed({[button]:true});for(let t=110;t<=150;t+=10)s.tick(t);
+   s.setPressed({});for(let t=160;t<=300;t+=10)s.tick(t);
+   assert.equal(s.gpio.PC1?.value,3.3,board+': restarted with RCC_FLAG_PINRST only');
+  }
+ }finally{await fs.rm(root,{recursive:true,force:true});}
+});

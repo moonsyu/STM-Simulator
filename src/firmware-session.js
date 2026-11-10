@@ -418,7 +418,14 @@ export class FirmwareSession {
     if (wall > 0) this.realtimeRatio = Math.min(1e3, (this.now - startUs) / 1000 / Math.max(wall, 20));
     return this.finishTick();
   }
-  finishTick() { return physicalResult(this.changed(this.now), this.project); }
+  finishTick() { const result = this.changed(this.now); this.checkNrst(); return physicalResult(result, this.project); }
+  // The NRST header pin pulled LOW (below VIL(NRST) 0.8 V) resets the MCU, again at every tick while it stays LOW.
+  checkNrst() {
+    if (this.ra) return;
+    const v = this.result?.fault ? null : this.result?.voltage?.('signal:NRST'), low = typeof v === 'number' && v < 0.8;
+    if (low) { if (!this.nrstLow) this.runtime.api?.warn?.('[NRST] 리셋 핀이 LOW입니다 — MCU를 리셋합니다.'); this.soc.systemReset('PIN'); }
+    this.nrstLow = low;
+  }
   afterRun(res) {
     const rt = this.runtime, cpu = this.machine.cpu;
     if (res.reason === 'breakpoint' || res.reason === 'bkpt') { if (this.entryBreak !== undefined && ((res.pc ?? this.machine.cpu.pc) & ~1) === this.entryBreak) { this.machine.breakpoints.delete(this.entryBreak); this.entryBreak = undefined; } this.pause(); return; }

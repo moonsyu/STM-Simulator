@@ -102,7 +102,11 @@ function solveOnce(project,gpio={},pressed={},transient={},owner=project){
   // FPB-RA6E1 (R20UT4960EG0100 Tables 2, 8, 9): S1 shorts P205 to GND (no pull-up on the board: FSP's template turns the
   // internal one on), green LED1/LED2 on P408/P407 to GND, and the 2.2 kΩ I2C pull-ups R1/R2 on P400/P401 (E7/E8 closed).
   if(project.boardId==='fpb-ra6e1'){if(pressed.SW1)branch('signal:P205','signal:GND',100);for(const pin of ['P408','P407'])branch('signal:'+pin,'signal:GND',1000,{diode:true,vf:2.1});for(const pin of ['P400','P401'])branch('signal:'+pin,'signal:3V3',2200);}
-  else onboard('signal:',pressed.USER);
+  else{onboard('signal:',pressed.USER);
+    // NRST header pins (CN6-3 RESET, CN7-14): the MCU's internal pull-up (about 40 kΩ) once something is wired to them,
+    // so a button to GND pulls the line LOW and the sessions reset the MCU (session.js / firmware-session.js checkNrst).
+    const nrst=new Set(boardPins(project.boardId).filter(p=>p.signal==='NRST').map(p=>p.id));
+    if(nrst.size&&project.wires.some(w=>nrst.has(w.from)||nrst.has(w.to)))branch('signal:NRST','signal:3V3',40000);}
   for(const p of project.components)if(p.type==='devboard')for(const [pin,r]of Object.entries(devboardModel(p)?.pullups||{}))branch(`signal:${p.id}.${pin}`,'signal:3V3',r);
   // Other STM32 boards have the same B1 and LD2 (`<id>.USER` while pressed).
   for(const p of project.components)if(p.type==='devboard'&&devboardModel(p)?.kind==='stm32')onboard(`signal:${p.id}.`,pressed[p.id+'.USER']);
