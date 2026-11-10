@@ -11,10 +11,13 @@ export function expressionType(runtime,n){
  if(n.type==='name'){
   const fn=runtime.program.functions[n.name];if(fn)return {type:fn.type,pointer:!!fn.pointer};
   const c=runtime.cell(n.name),value=c.value;
+  // An array of pointers (const char *names[]): its size is 4 per element, and an element is a pointer.
+  if(c.dataType==='pointer'&&value?.kind==='array')return {type:c.pointeeType||'int',pointer:true,pointerElements:true,length:value.cells.length};
   if(c.dataType==='pointer')return {type:c.pointeeType||value?.array?.cells[0]?.dataType||value?.cell?.dataType||'int',pointer:true};
   return {type:c.dataType||value?.type||(typeof value==='number'&&!Number.isInteger(value)?'double':value>2147483647?'uint32_t':'int'),...(value?.kind==='array'?{array:true,length:value.cells.length}:{})};
  }
- if(n.type==='index'){const object=of(n.object);return scalar(object.type);}
+ if(n.type==='index'){const object=of(n.object);return object.pointerElements?{type:object.type,pointer:true}:scalar(object.type);}
+ if(n.type==='sequence')return of(n.exprs.at(-1));
  if(n.type==='member'){
   const object=of(n.object),field=runtime.program.structs[object.type]?.find(f=>f.name===n.key);
   if(!field)throw Error('구조체 필드가 없습니다: '+n.key);return {type:field.type,pointer:!!field.pointer,...(field.array?{array:true,length:field.size}:{})};

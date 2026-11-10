@@ -1,6 +1,6 @@
 // A bounded C-like parser. Sketches never enter the JavaScript evaluator.
 import {numberLiteral,arithmetic,convert,promote,commonType} from './c-types.js';
-const TYPES = new Set(['void','int','bool','float','double','long','short','char','byte','String','unsigned','signed','uint8_t','uint16_t','uint32_t','int8_t','int16_t','int32_t','size_t','LiquidCrystal']);
+const TYPES = new Set(['void','int','bool','float','double','long','short','char','byte','String','unsigned','signed','uint8_t','uint16_t','uint32_t','int8_t','int16_t','int32_t','int64_t','uint64_t','size_t','LiquidCrystal']);
 const QUALIFIERS = new Set(['const','volatile','static']);
 const INCLUDES = new Set(['Arduino.h','LiquidCrystal.h','Wire.h','SPI.h','stdint.h','math.h']);
 // ESP32 sketches (`compile(code,{esp32:true})`) also take the DHT sensor library and its class.
@@ -72,7 +72,7 @@ export function compile(source,options={}) {
     let type;
     if(peek()==='struct'){take();type=identifier();if(!Object.hasOwn(program.structs,type))fail('정의되지 않은 구조체입니다.');}
     else if(peek()==='enum'){take();const tag=identifier();type=aliases.get(tag)||'int';}
-    else {if(!isType())fail('자료형이 필요합니다.');const specs=[take()];while(['long','short','int','unsigned','signed','char','double'].includes(peek()))specs.push(take());type=specs.at(-1);if(specs.includes('unsigned'))type=specs.includes('char')?'uint8_t':specs.includes('short')?'uint16_t':'uint32_t';else if(specs.includes('short'))type='int16_t';}
+    else {if(peek()==='union')fail('union은 지원하지 않습니다.');if(!isType())fail('자료형이 필요합니다.');const specs=[take()];if(/^u?int64_t$/.test(specs[0]))fail('64비트 정수형(uint64_t, int64_t)은 지원하지 않습니다. 32비트 값 둘로 나누어 쓰세요.');while(['long','short','int','unsigned','signed','char','double'].includes(peek()))specs.push(take());type=specs.at(-1);if(specs.includes('unsigned'))type=specs.includes('char')?'uint8_t':specs.includes('short')?'uint16_t':'uint32_t';else if(specs.includes('short'))type='int16_t';}
     return {type:aliases.get(type)||type,constant,external,storage,volatile};
   }
   function declarator(base){
@@ -81,6 +81,7 @@ export function compile(source,options={}) {
   }
   function initializer(){
     if(peek()!=='{')return expression();take();const values=[];
+    if(peek()==='.'||peek()==='[')fail('지정 초기화(.필드 = 값, [번호] = 값)는 지원하지 않습니다. 선언한 순서대로 값을 쓰세요.');
     while(peek()!=='}'){values.push(initializer());if(peek()!==',')break;take();if(peek()==='}')break;}
     expect('}');return {type:'list',values};
   }
@@ -104,6 +105,9 @@ export function compile(source,options={}) {
     else return false;
     if(peek(i)==='*')i++;return peek(i)===')';
   }
+  // a = 1, b = 2 — the comma operator: each expression in turn, the value of the last one. Only where C code uses it in
+  // practice (an expression statement, the init and step of for); elsewhere a comma separates arguments or initializers.
+  function sequence(){const first=expression();if(peek()!==',')return first;const exprs=[first];while(peek()===','){take();exprs.push(expression());}return {type:'sequence',exprs};}
   function expression(min=0){
     if(++depth>80)fail('표현식 중첩이 너무 깊습니다.');let node;const t=take();
     if(['!','~','-','+','*','&','++','--'].includes(t))node={type:'unary',op:t,a:expression(13)};
@@ -152,14 +156,14 @@ export function compile(source,options={}) {
     else if(t==='while'){take();expect('(');const test=expression();expect(')');result={type:'while',test,body:statement()};}
     else if(t==='do'){take();const body=statement();expect('while');expect('(');const test=expression();expect(')');expect(';');result={type:'do',test,body};}
     else if(t==='for'){
-      take();expect('(');let init=null;if(peek()!==';'){if(isType()){const base=spec();init=finishDeclaration(declarator(base),base,false);}else init={type:'expression',expr:expression()};}expect(';');
-      const test=peek()===';'?{type:'literal',value:1}:expression();expect(';');const update=peek()===')'?null:expression();expect(')');result={type:'for',init,test,update,body:statement()};
+      take();expect('(');let init=null;if(peek()!==';'){if(isType()){const base=spec();init=finishDeclaration(declarator(base),base,false);}else init={type:'expression',expr:sequence()};}expect(';');
+      const test=peek()===';'?{type:'literal',value:1}:expression();expect(';');const update=peek()===')'?null:sequence();expect(')');result={type:'for',init,test,update,body:statement()};
     }
     else if(t==='return'){take();const value=peek()===';'?null:expression();expect(';');result={type:'return',value};}
     else if(t==='break'||t==='continue'){take();expect(';');result={type:t};}
     else if(t==='enum'&&(peek(1)==='{'||peek(2)==='{')){take();if(peek()!=='{')aliases.set(identifier(),'int');const declarations=parseEnumBody();expect(';');result={type:'declare',declarations};}
     else if(isType()){const base=spec();result=finishDeclaration(declarator(base),base);}
-    else {result={type:'expression',expr:expression()};expect(';');}
+    else {result={type:'expression',expr:sequence()};expect(';');}
     depth--;return {...result,loc};
   }
   while(peek()!=='<end>'){
@@ -168,7 +172,12 @@ export function compile(source,options={}) {
     if(peek()==='enum'&&(peek(1)==='{'||peek(2)==='{')){const loc=location();take();if(peek()!=='{')aliases.set(identifier(),'int');const declarations=parseEnumBody();expect(';');program.globals.push({type:'declare',declarations,loc});continue;}
     // The fields between { and } of a struct definition.
     const structBody=()=>{expect('{');const fields=[];
-      while(peek()!=='}'){const base=spec(),d=declarator(base);if(d.pointer)fail('구조체 필드는 스칼라/구조체/배열 값으로 선언하세요.');if(peek()==='['){take();const size=constantValue(expression()).value;expect(']');if(!Number.isInteger(size)||size<1||size>4096)fail('구조체 배열 필드 크기는 1~4096입니다.');d.array=true;d.size=size;}fields.push(d);expect(';');}
+      while(peek()!=='}'){
+        if(peek()==='union')fail('union은 지원하지 않습니다.');
+        const base=spec();
+        // One field, or several of the same type: int x, y;
+        for(;;){const d=declarator(base);if(d.pointer)fail('구조체 필드는 스칼라/구조체/배열 값으로 선언하세요.');if(peek()==='['){take();const size=constantValue(expression()).value;expect(']');if(!Number.isInteger(size)||size<1||size>4096)fail('구조체 배열 필드 크기는 1~4096입니다.');d.array=true;d.size=size;}fields.push(d);if(peek()!==',')break;take();}
+        expect(';');}
       take();return fields;};
     const defineStruct=(name,fields)=>{if(Object.hasOwn(program.structs,name))fail('구조체가 중복되었습니다.');program.structs[name]=fields;};
     // typedef struct { … } Name;  typedef struct Tag { … } Name;  typedef struct Tag Name; — the usual C way to name a

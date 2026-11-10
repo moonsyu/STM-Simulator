@@ -116,7 +116,7 @@ export class Runtime {
     this.budget();
     if(n.type==='literal')return n.value;
     if(n.type==='sizeofType')return n.pointer?4:this.typeSize(n.to);
-    if(n.type==='sizeofExpr'){const type=expressionType(this,n.arg);return type.pointer?4:this.typeSize(type.type)*(type.array?type.length:1);}
+    if(n.type==='sizeofExpr'){const type=expressionType(this,n.arg);return type.pointerElements?4*type.length:type.pointer?4:this.typeSize(type.type)*(type.array?type.length:1);}
     if(n.type==='name'){if(own(this.program.functions,n.name))return {kind:'function',name:n.name};return this.get(this.cell(n.name));}
     if(n.type==='list'){const values=[];for(const v of n.values)values.push(yield* this.evaluate(v));return {kind:'initializer',values};}
     if(n.type==='construct'){const args=[];for(const v of n.args)args.push(yield* this.evaluate(v));if(n.name!=='LiquidCrystal'&&!this.api.constructs?.includes(n.name))throw new Error('지원하지 않는 생성자입니다.');return this.api.construct?.(n.name,args,this)??{kind:'device',name:n.name,args};}
@@ -130,6 +130,7 @@ export class Runtime {
     }
     if(n.type==='postfix'){const cell=yield* this.reference(n.a),old=this.get(cell);this.set(cell,this.binary(n.op==='++'?'+':'-',old,1));return old;}
     if(n.type==='assign'){const cell=yield* this.reference(n.a),value=yield* this.evaluate(n.b);return this.set(cell,n.op==='='?value:this.binary(n.op.slice(0,-1),this.get(cell),value,cell.dataType,this.program.hal?expressionType(this,n.b).type:undefined));}
+    if(n.type==='sequence'){let value;for(const e of n.exprs)value=yield* this.evaluate(e);return value;}
     if(n.type==='conditional'){const value=yield* this.evaluate(truth(yield* this.evaluate(n.test))?n.yes:n.no);return this.program.hal?this.coerce(expressionType(this,n).type,value):value;}
     if(n.type==='binary'){
       const a=yield* this.evaluate(n.a);if(n.op==='&&')return a?Number(truth(yield* this.evaluate(n.b))):0;if(n.op==='||')return a?1:Number(truth(yield* this.evaluate(n.b)));

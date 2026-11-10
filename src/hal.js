@@ -388,6 +388,11 @@ export class HalAdapter {
       this.requireHandle(a,r,'SPI');const both=name==='HAL_SPI_TransmitReceive',receive=name!=='HAL_SPI_Transmit',count=both?d:c;int(count,1,256,'SPI 길이');const timeout=int(both?e:d,0,4294967295,'SPI timeout');const rx=both?c:b;if(receive)r.pointerCell(rx,count-1);const bytes=name==='HAL_SPI_Receive'?Array(count).fill(255):this.bytes(b,count,r);if(count*8000/this.buses.spi.clock>timeout){r.microTime+=timeout*1000;return 3;}bytes.forEach((value,i)=>{const result=this.buses.call('SPI.transfer',[value],r);if(receive)r.set(r.pointerCell(rx,i),result);});return 0;
     }
     if(name==='strlen'){const str=r.format([a]);return str.length;}
+    // <stdlib.h>: atoi / atol read the leading integer of a text (0 when there is none); rand gives 0..32767 from a
+    // seed that srand sets (the same seed gives the same numbers, as on the board).
+    if(name==='atoi'||name==='atol'){const m=/^\s*[+-]?\d+/.exec(r.format([a]));return m?Number(m[0])|0:0;}
+    if(name==='srand'){this.randState=a>>>0;return 0;}
+    if(name==='rand'){this.randState=(Math.imul(this.randState??1,1103515245)+12345)>>>0;return (this.randState>>>16)&0x7fff;}
     const text=stringCall(name,args,r);if(text!==undefined)return text;
     if(name==='printf'){const text=formatPrintf(args,r);if(text)r.api.print(text.replace(/\r?\n$/,''));return text.length;}
     if(name==='puts'){if(args.length!==1)throw new Error('puts는 문자열 하나가 필요합니다.');const text=r.format([a]);if(text.length>4096)throw new Error('puts 출력 한도는 4096자입니다.');r.api.print(text);return text.length+1;}

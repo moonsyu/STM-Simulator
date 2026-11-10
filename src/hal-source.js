@@ -74,9 +74,37 @@ export function halStructs(family){
 export const HAL_ALIASES={FRESULT:'int',UINT:'uint32_t',BYTE:'uint8_t',WORD:'uint16_t',DWORD:'uint32_t',QWORD:'uint32_t',FSIZE_t:'uint32_t',LBA_t:'uint32_t',TCHAR:'char',DSTATUS:'uint8_t',
   HAL_SD_CardStateTypeDef:'uint32_t',HAL_DMA_StateTypeDef:'int',HAL_UART_StateTypeDef:'int',HAL_USART_StateTypeDef:'int',HAL_DCMI_StateTypeDef:'int',HAL_SD_StateTypeDef:'int',HAL_SPI_StateTypeDef:'int',HAL_I2C_StateTypeDef:'int',
   HAL_LockTypeDef:'int',HAL_RTCStateTypeDef:'int',HAL_DAC_StateTypeDef:'int',FunctionalState:'int',FlagStatus:'int',ITStatus:'int',IRQn_Type:'int',HAL_DMA_LevelCompleteTypeDef:'int',HAL_DMA_CallbackIDTypeDef:'int',HAL_UART_RxEventTypeTypeDef:'uint32_t'};
-const systemHeaders=prefix=>new Set(['main.h',`${prefix}_hal.h`,`${prefix}.h`,'stdint.h','stddef.h','stdbool.h','string.h','stdio.h','math.h',`${prefix}_it.h`,`${prefix}_hal_conf.h`,'fatfs.h','ff.h','ff_gen_drv.h','diskio.h','sd_diskio.h','user_diskio.h','bsp_driver_sd.h','fatfs_platform.h',...['gpio','gpio_ex','uart','usart','tim','tim_ex','adc','adc_ex','i2c','spi','rcc','rcc_ex','cortex','pwr','pwr_ex','dma','dma_ex','dcmi','sd','uart_ex'].map(n=>`${prefix}_hal_${n}.h`)]);
+const systemHeaders=prefix=>new Set(['main.h',`${prefix}_hal.h`,`${prefix}.h`,'stdint.h','stddef.h','stdbool.h','string.h','stdlib.h','stdio.h','math.h',`${prefix}_it.h`,`${prefix}_hal_conf.h`,'fatfs.h','ff.h','ff_gen_drv.h','diskio.h','sd_diskio.h','user_diskio.h','bsp_driver_sd.h','fatfs_platform.h',...['gpio','gpio_ex','uart','usart','tim','tim_ex','adc','adc_ex','i2c','spi','rcc','rcc_ex','cortex','pwr','pwr_ex','dma','dma_ex','dcmi','sd','uart_ex'].map(n=>`${prefix}_hal_${n}.h`)]);
 // Replaces NAME(args) of function-like macros in a code line (comments already removed; string and character literals
 // are left alone). Arguments are split at top-level commas; nested and repeated use is expanded up to 20 rounds.
+/**
+ * Whether an #if / #elif condition holds: defined(X) / defined X, macros (their value, an empty one counts as 1), integer
+ * literals and the integer operators. A name that is not a macro is 0, as in C.
+ */
+export function evalCondition(text,definitions){
+  const bad=()=>{throw new Error('이 #if 조건식은 지원하지 않습니다.');},tokens=[];
+  const scan=(src,depth)=>{
+    if(depth>20)bad();
+    const re=/\s*(?:(0[xX][0-9a-fA-F]+|\d+)[uUlL]*|([A-Za-z_]\w*)|(&&|\|\||==|!=|<=|>=|<<|>>|[-+*/%<>!~&|^?:()]))/y,name=/\s*(?:\(\s*(\w+)\s*\)|(\w+))/y;
+    let at=0;
+    while(src.slice(at).trim()){
+      re.lastIndex=at;const m=re.exec(src);if(!m)bad();at=re.lastIndex;
+      if(m[1]!==undefined)tokens.push(Number(m[1]));
+      else if(m[3])tokens.push(m[3]);
+      else if(m[2]==='defined'){name.lastIndex=at;const d=name.exec(src);if(!d)bad();at=name.lastIndex;tokens.push(definitions.has(d[1]??d[2])?1:0);}
+      else if(!definitions.has(m[2]))tokens.push(0);
+      else {const value=definitions.get(m[2]);if(value==='')tokens.push(1);else {tokens.push('(');scan(value,depth+1);tokens.push(')');}}
+    }
+  };
+  scan(text,0);
+  let i=0;const peek=()=>tokens[i],take=()=>tokens[i++];
+  const LEVELS=[['||'],['&&'],['|'],['^'],['&'],['==','!='],['<','>','<=','>='],['<<','>>'],['+','-'],['*','/','%']];
+  const apply=(op,a,b)=>{switch(op){case '||':return a||b?1:0;case '&&':return a&&b?1:0;case '|':return a|b;case '^':return a^b;case '&':return a&b;case '==':return a===b?1:0;case '!=':return a!==b?1:0;case '<':return a<b?1:0;case '>':return a>b?1:0;case '<=':return a<=b?1:0;case '>=':return a>=b?1:0;case '<<':return a<<b;case '>>':return a>>b;case '+':return a+b;case '-':return a-b;case '*':return a*b;default:if(b===0)bad();return op==='/'?Math.trunc(a/b):a%b;}};
+  const unary=()=>{const t=take();if(typeof t==='number')return t;if(t==='('){const v=ternary();if(take()!==')')bad();return v;}if(t==='!')return unary()?0:1;if(t==='-')return -unary();if(t==='+')return unary();if(t==='~')return ~unary();return bad();};
+  const binary=level=>{if(level===LEVELS.length)return unary();let a=binary(level+1);while(LEVELS[level].includes(peek())){const op=take();a=apply(op,a,binary(level+1));}return a;};
+  function ternary(){const c=binary(0);if(peek()!=='?')return c;take();const yes=ternary();if(take()!==':')bad();const no=ternary();return c?yes:no;}
+  const value=ternary();if(i!==tokens.length)bad();return value!==0;
+}
 export function expandMacros(line,macros){
   if(!macros.size)return line;
   for(let round=0;round<20;round++){
@@ -122,9 +150,13 @@ export function prepareHalSource(source,files=[],options={}){
       const [,op,arg]=directive;
       if(['ifdef','ifndef','if'].includes(op)){
         let yes;if(op==='ifdef'||op==='ifndef')yes=definitions.has(arg.trim())===(op==='ifdef');
-        else {const a=arg.trim(),match=/^(!?)defined\s*\(?\s*(\w+)\s*\)?$/.exec(a);if(match)yes=definitions.has(match[2])!==!!match[1];else if(/^[01]$/.test(a))yes=a==='1';else if(/^[A-Za-z_]\w*$/.test(a))yes=definitions.has(a)&&definitions.get(a)!=='0';else error('이 #if 조건식은 지원하지 않습니다.');}
+        // A condition inside a skipped block is not evaluated (it may use what the skipped code would have defined).
+        else if(!active)yes=false;
+        else try{yes=evalCondition(arg,definitions);}catch(e){error(e.message);}
         condition.push({parent:active,yes,hadElse:false});active=active&&yes;output.push('');continue;
       }
+      // #elif: taken when no earlier branch of this #if was; c.yes then records that a branch has been taken.
+      if(op==='elif'){const c=condition.at(-1);if(!c||c.hadElse)error('#elif 위치 오류');let yes=false;if(c.parent&&!c.yes){try{yes=evalCondition(arg,definitions);}catch(e){error(e.message);}}active=c.parent&&yes;if(yes)c.yes=true;output.push('');continue;}
       if(op==='else'){const c=condition.at(-1);if(!c||c.hadElse)error('#else 위치 오류');c.hadElse=true;active=c.parent&&!c.yes;output.push('');continue;}
       if(op==='endif'){const c=condition.pop();if(!c)error('#endif 위치 오류');active=c.parent;output.push('');continue;}
       if(!active){output.push('');continue;}
