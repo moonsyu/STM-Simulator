@@ -28,7 +28,8 @@ export function exportIoc(config){
   const ips=[...new Set([...per.map(([n])=>n),...(m.dma&&Object.keys(m.dma).length?['DMA']:[]),...(pins.some(([,p])=>/^GPIO_|^Analog$/.test(p.function))?['GPIO']:[]),'NVIC','RCC','SYS'])].sort();
   ips.forEach((ip,i)=>set('Mcu.IP'+i,ip));set('Mcu.IPNb',ips.length);
   // ---- pins
-  const names=pins.map(([pin])=>pin).sort((a,b)=>a[1].localeCompare(b[1])||Number(a.slice(2))-Number(b.slice(2)));
+  // In the order the settings hold them: importIoc reads the order back from Mcu.PinN (the keys below are sorted as text).
+  const names=pins.map(([pin])=>pin);
   names.forEach((pin,i)=>set('Mcu.Pin'+i,pin));set('Mcu.PinsNb',names.length);
   for(const [pin,p]of pins){
     set(pin+'.Signal',p.function==='Reserved'?systemSignal(pin,f1):signalOf(p.function,pin));set(pin+'.Locked',true);const params=[];

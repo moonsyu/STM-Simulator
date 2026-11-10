@@ -327,6 +327,10 @@ if(/HIGH/.test(values[id+'.CLKPolarity']||''))s.cpol='HIGH';if(/2EDGE/.test(valu
     else break;
     clean=validateMcu(config);
   }
+  // Pins in the order of Mcu.Pin0, Mcu.Pin1, … — the file's own keys are sorted as text (PA10 before PA5). The order is
+  // part of the settings: generated code lists the pins in it, and a new main loop toggles the first output pin.
+  {const order=new Map();for(const [key,value]of Object.entries(values)){const n=/^Mcu\.Pin(\d+)$/.exec(key),pin=/^P[A-H]\d+/.exec(value||'');if(n&&pin&&!order.has(pin[0]))order.set(pin[0],Number(n[1]));}
+    if(order.size&&clean.pins){const entries=Object.entries(clean.pins).map((e,i)=>[order.get(e[0])??1e6+i,e]);entries.sort((a,b)=>a[0]-b[0]);clean.pins=Object.fromEntries(entries.map(e=>e[1]));}}
   return {config:clean,warnings:[...new Set([...warnings,...configProblems(clean)])]};
 }
 export function generateHal(config,options){const clean=validateMcu(config),errors=configProblems(clean);if(errors.length)throw new Error(errors.join('\n'));return generateMain(clean,options);}
