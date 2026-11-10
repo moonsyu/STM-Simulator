@@ -1,4 +1,6 @@
-import {importIoc,defaultMcu} from './mcu-config.js';
+import {importIoc,defaultMcu,generateHal} from './mcu-config.js';
+import {expandC} from './c-format.js';
+import {keepUserCode,dropShadowedHandlers} from './c-source-edit.js';
 import {validateProject} from './project.js';
 import {projectBoard,boardForFamily} from './boards.js';
 
@@ -21,5 +23,15 @@ export function importFirmware(project,files){
     if(!main)throw new Error('C 소스를 가져올 때 main.c를 함께 선택하세요.');
     next.code=main.text;next.firmware={mode:'hal',files:sourceFiles.filter(f=>f!==main).map(f=>({name:f.name,text:f.text}))};
   }
-  return {project:validateProject(next),warnings};
+  // Only an .ioc: the settings change and main.c is generated from them as CubeMX does (USER CODE sections kept), so the
+  // import shows in the code too. A configuration that cannot be generated leaves main.c as it was, with the reason. A
+  // main.c without USER CODE sections (written by hand) is never replaced: it would lose everything outside them.
+  let regenerated=false;
+  if(iocs.length&&!sourceFiles.length&&!/\/\* USER CODE BEGIN /.test(project.code||''))warnings.push('main.c에 USER CODE 구역이 없어 코드는 그대로 두었습니다. Pinout & Configuration의 "설정으로 HAL 코드 생성"으로 이 설정의 코드를 만들 수 있습니다.');
+  else if(iocs.length&&!sourceFiles.length){
+    const previous=(()=>{try{return expandC(generateHal(project.mcu));}catch{return '';}})();
+    try{next.code=dropShadowedHandlers(keepUserCode(project.code,expandC(generateHal(next.mcu)),previous),(next.firmware?.files||[]).map(f=>f.text));regenerated=true;}
+    catch(e){warnings.push('main.c는 바꾸지 않았습니다: '+e.message);}
+  }
+  return {project:validateProject(next),warnings,regenerated};
 }

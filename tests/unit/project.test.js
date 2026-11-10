@@ -332,8 +332,19 @@ describe('.ioc and firmware import',()=>{
     assert.equal(project.mcu.peripherals.USART2.baud,9600);assert.equal(project.components.length,2);assert.notEqual(original.code,project.code);
     const r=runHal(project.code,{ms:20,project});assert.equal(r.error,null,r.error?.message);
   });
-  test('importFirmware with only an .ioc keeps the code; validation errors',()=>{
-    const original=ledCircuit(),{project}=importFirmware(original,[{name:'x.ioc',text:IOC}]);assert.equal(project.code,original.code);assert.equal(project.mcu.pins.PA5.label,'LD2');
+  test('importFirmware with only an .ioc regenerates a CubeMX-style main.c (USER CODE kept), never a hand-written one',()=>{
+    // A main.c with USER CODE sections: generated from the imported settings, the user's lines stay.
+    const base=blankProject();base.code=base.code.replace(/(\/\* USER CODE BEGIN 3 \*\/\n)/,'$1    my_loop_work();\n');
+    const r=importFirmware(base,[{name:'x.ioc',text:IOC}]);
+    assert.equal(r.regenerated,true);assert.deepEqual(r.warnings,[]);
+    assert.match(r.project.code,/MX_USART2_UART_Init\(\);[\s\S]*huart2\.Init\.BaudRate = 9600;/);assert.match(r.project.code,/USER CODE BEGIN 3 \*\/\n\s*my_loop_work\(\);/);
+    // Without USER CODE sections the code is left alone, with a hint to generate it from the Pinout.
+    const original=ledCircuit();original.code='#include "main.h"\nint main(void) {\n  HAL_Init();\n  while (1) { }\n}\n';
+    const {project,warnings,regenerated}=importFirmware(original,[{name:'x.ioc',text:IOC}]);
+    assert.equal(regenerated,false);assert.equal(project.code,original.code);assert.equal(project.mcu.pins.PA5.label,'LD2');assert.match(warnings.join('\n'),/USER CODE 구역이 없어 코드는 그대로/);
+  });
+  test('importFirmware validation errors',()=>{
+    const original=ledCircuit();
     assert.throws(()=>importFirmware(original,[]),/\.ioc 및/);
     assert.throws(()=>importFirmware(original,[{name:'x.c',text:''}]),/main\.c/);
     assert.throws(()=>importFirmware(original,[{name:'a.ioc',text:IOC},{name:'b.ioc',text:IOC}]),/하나만/);

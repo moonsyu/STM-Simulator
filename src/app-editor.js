@@ -44,7 +44,7 @@ export function replaceCodeText(edit){
  try{code.setRangeText(edit.text,edit.start,edit.end,'end');code.dispatchEvent(new Event('input',{bubbles:true}));}
  finally{state.replaceCheckpoint=false;}
 }
-export function applyFirmware(files){try{if(!files)return;const imported=importFirmware(state.project,files);checkpoint();state.project=imported.project;state.sourceFile='main.c';syncEditor();changed();log('가져왔습니다: '+files.map(f=>f.name).join(', '));for(const warning of imported.warnings)log(warning,'error');}catch(e){log(e.message,'error');}}
+export function applyFirmware(files){try{if(!files)return;const imported=importFirmware(state.project,files);checkpoint();state.project=imported.project;state.sourceFile='main.c';syncEditor();changed();log('가져왔습니다: '+files.map(f=>f.name).join(', ')+(imported.regenerated?' · Pinout 설정과 main.c를 .ioc대로 만들었습니다(USER CODE 구역은 유지).':''));for(const warning of imported.warnings)log(warning,'error');}catch(e){log(e.message,'error');}}
 export /** Edit another STM32 board: it becomes the main board (code, pin settings, sources, build, debug and flashing). */
 function editBoard(id){
  const part=state.project.components.find(p=>p.id===id);if(!isStm32Board(part))return false;
