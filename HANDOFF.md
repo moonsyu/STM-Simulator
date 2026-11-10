@@ -1,6 +1,12 @@
 # STM Simulator — 개발 인계
 
-현재 버전: **1.30.0**. 정리일: **2026-11-09**. NUCLEO-F446RE·NUCLEO-F103RB 또는 Renesas FPB-RA6E1(1.20.0, FSP·에뮬레이터 전용)과 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+현재 버전: **1.30.1**. 정리일: **2026-11-09**. NUCLEO-F446RE·NUCLEO-F103RB 또는 Renesas FPB-RA6E1(1.20.0, FSP·에뮬레이터 전용)과 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+
+## 1.30.1 .ioc만 가져올 때 main.c도 생성
+
+- 사용자 보고: CubeIDE 프로젝트(OLED, STM32F103RBT6)의 .ioc를 가져왔는데 적용이 안 되는 것 같다. 가져오기 자체는 맞았지만(SPI1·I2C1 리맵·USART2·HSE 72 MHz·핀 라벨) `firmware-import.js`가 .ioc만 있으면 `mcu`만 바꾸고 코드는 그대로 둬, main.c에 MX_*_Init이 하나도 없었다.
+- 이제 C 소스 없이 .ioc만 가져오면 Pinout의 코드 버튼과 같은 `keepUserCode(현재 코드, 새 생성 코드, 이전 설정의 생성 코드)` + `dropShadowedHandlers`로 main.c를 다시 만든다(`regenerated`를 돌려주고 로그에 알림). 현재 main.c에 `/* USER CODE BEGIN` 구역이 없으면(직접 쓴 코드) 바꾸지 않고 경고로 안내한다. 생성이 안 되는 설정이면 이유를 경고로 남기고 코드는 둔다.
+- 시험: 단위 `project`(USER CODE 유지·직접 쓴 코드 유지), E2E `ioc-import`(대화상자를 바꿔 .ioc 하나를 가져와 Pinout·main.c·USER CODE 확인).
 
 ## 1.30.0 DAC (NUCLEO-F446RE)
 

@@ -2,6 +2,15 @@
 
 작업할 때마다 날짜순으로 맨 위에 추가합니다. 무엇을 했는지, 왜 했는지, 어떻게 검증했는지, 커밋·릴리스와 남은 사항을 적습니다. 버전별 구조 설명은 [HANDOFF.md](../HANDOFF.md), 검증 수치는 [VERIFICATION.md](VERIFICATION.md)에 있습니다.
 
+## 2026-11-10 · 1.30.1 .ioc만 가져올 때 main.c도 생성
+
+- 요청: "C:\Users\SSAFY\Desktop\jms\embedded\firmware\day4\OLED_Module_Code\STM32\STM32-F103RBT6 여기 있는 ioc 파일 가져오기 했는데 적용이 안되는거 같다?"
+- 확인한 것: 그 .ioc(STM32F103RBT6, OLED 예제)를 가져오기 함수에 넣으면 핀(SPI1 PA5~7, I2C1 PB8/PB9 리맵, USART2, OLED_DC·OLED_RST·OLED_CS 등 GPIO와 라벨), 주변장치(USART2·I2C1·SPI1 9 MHz), 클록(HSE PLL ×9 = 72 MHz)이 모두 읽혔다. 앱에서 같은 파일을 가져와 보니(파일 선택 대화상자만 바꿔서) Pinout은 바뀌었지만 main.c가 가져오기 전과 같은 1822자 그대로였다. .ioc만 가져오면 설정만 바꾸고 코드는 두게 되어 있어, MX_I2C1_Init 같은 초기화가 코드에 없으니 적용이 안 된 것처럼 보였다.
+- 한 것: .ioc만 가져오면 Pinout의 "설정으로 HAL 코드 생성"과 같은 방식으로 main.c도 다시 만든다(USER CODE 구역 유지, 가져오기 전으로 Ctrl+Z). 직접 쓴 main.c(USER CODE 구역 없음)는 코드를 잃지 않도록 바꾸지 않고 코드 버튼을 안내한다. 같은 파일로 앱에서 다시 확인: main.c 1822 → 6999자, MX_I2C1_Init·MX_SPI1_Init·MX_USART2_UART_Init·RCC_PLL_MUL9가 들어감.
+- 검증: 단위·해석기 862개 모두 통과, ESLint 통과, 새 E2E `ioc-import`와 `workflow` 11개 통과. 패키지 검사 3개 통과(STM-Simulator.exe 115,577,503 바이트, SHA-256 4a995222d1a2674127a1b85eebec26c8e57a9f7c11511a1a1dc06ac9b9f59e76), 빌드 산출물은 지웠다.
+- 커밋·릴리스: 8ec6c3f(.ioc 가져오기), 문서·버전 커밋.
+- 남은 사항: 폴더 가져오기(.ioc + Core/Src·Inc)는 그 프로젝트의 main.c를 그대로 쓰므로 이번 변경과 무관하다. 사용자의 OLED 예제의 OLED 구동 코드(별도 파일)는 이 폴더에 없어 가져오기 대상이 아니다.
+
 ## 2026-11-09 · 1.30.0 기능 목록 3번: DAC
 
 - 요청: "DAC 진행"(기능 목록 3번의 다음 항목).
