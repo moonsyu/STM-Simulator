@@ -1,6 +1,17 @@
 # STM Simulator — 개발 인계
 
-현재 버전: **1.37.0**. 정리일: **2026-11-10**. NUCLEO-F446RE·NUCLEO-F103RB 또는 Renesas FPB-RA6E1(1.20.0, FSP·에뮬레이터 전용)과 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+현재 버전: **1.38.0**. 정리일: **2026-11-10**. NUCLEO-F446RE·NUCLEO-F103RB 또는 Renesas FPB-RA6E1(1.20.0, FSP·에뮬레이터 전용)과 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+
+## 1.38.0 해석기 문자열·메모리 관용구
+
+관용구 45개(문자열 검색·숫자 변환·ctype·memset/memcpy·포인터 비교·printf 형식)를 돌려 찾은 것.
+
+- **`hal-stdio.js` `stringCall`**: `strchr`·`strrchr`·`strstr`(글 안을 가리키는 포인터 또는 0), `strtol`·`strtoul`(진법 0·2~36, 끝 포인터), `atof`·`strtod`·`strtof`, `<ctype.h>`(`CTYPE` 표와 `toupper`·`tolower`). 반환형은 `c-expression-type.js`(atof는 double — int로 보면 `atof("2.5") * 2`가 4가 된다).
+- **memset·memcpy·memmove·memcmp는 바이트 수**: 해석기의 버퍼는 요소(셀) 배열이라, 길이 n을 요소 크기(`elementSize`: char 1, uint16_t 2, 그 밖 4, double 8)로 나눈다. 이전에는 n을 요소 수로 써서 `memset(buf16, 0, sizeof(buf16))`이 배열 범위 오류였다. 숫자 버퍼의 복사·비교는 `readBytes`/`writeBytes`가 리틀 엔디언 바이트로 바꿔 하므로 요소 크기가 다른 버퍼 사이(uint8_t[4] → uint16_t[2], uint32_t → uint8_t[4], uint32_t 비트 → float)도 된다. 구조체는 같은 형끼리 통째로 복사하고, memset은 0만 받는다.
+- **포인터**: 같은 배열을 가리키는 포인터의 `<`·`>`·`<=`·`>=`(위치 비교, 다른 배열이면 오류). `const char *p`의 const는 가리키는 글자의 것이라 변수 셀을 const로 만들지 않는다(`p++`). 문자열 리터럴을 포인터 매개변수로 받거나 `"text" + 1`을 하면 `runtime.literal()`이 리터럴마다 하나인 문자 배열로 바꾼다(이전에는 `s++`가 문자열 덧붙이기가 되어 끝나지 않았다).
+- **출력**: printf `%e`·`%E`·`%g`·`%G`·`%F`와 길이 `ll`·`z`. `putchar`는 줄 끝까지 모았다가 한 줄로 낸다(`hal.putLine`).
+- 여전히 안 되는 것: `sscanf`.
+- 시험: 해석기 `c-idioms-4`.
 
 ## 1.37.0 해석기 C 문법 2차·HAL 관용구, 소스 이름 충돌, CI 묶음 균형
 
