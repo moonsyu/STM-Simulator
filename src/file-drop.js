@@ -9,7 +9,9 @@ import {SOURCE_PATH,MAX_SOURCE_FILES,MAX_SOURCE_BYTES,baseName,nameClash,normali
 // Folders of a CubeIDE project that are not the user's sources (the app builds with its own SDK copy).
 const SKIP_FOLDERS=new Set(['drivers','middlewares','debug','release','build','.git','.settings','.metadata','node_modules','startup']);
 const APP_PROVIDED=new Set(['syscalls.c','sysmem.c','system_stm32f4xx.c','system_stm32f1xx.c']);
-const SOURCE=/\.(c|h|cpp|hpp|cc)$/i;
+// What a drop can add to a project: sources and headers, and (since the project tree of 1.44.0) its own startup code
+// and linker script.
+const SOURCE=/\.(c|h|cpp|hpp|cc|s|ld)$/i;
 
 /** Reads the dropped items (DataTransfer) as [{name: path, text, size}], walking folders. */
 export async function readDropped(dataTransfer){
@@ -37,7 +39,7 @@ export async function readDropped(dataTransfer){
  * or throws with the reason. `files` of 'import' is what importFirmware takes; of 'add' the sources to add or replace.
  */
 export function planDrop(dropped,project){
-  if(!dropped.length)throw new Error('놓을 수 있는 파일이 없습니다. .c/.h/.cpp/.hpp, .ioc, .stm32lab 파일이나 그 폴더를 놓으세요.');
+  if(!dropped.length)throw new Error('놓을 수 있는 파일이 없습니다. .c/.h/.cpp/.hpp, .s/.ld, .ioc, .stm32lab 파일이나 그 폴더를 놓으세요.');
   const projects=dropped.filter(f=>/\.(stm32lab|json)$/i.test(f.name));
   if(projects.length){if(dropped.length>1)throw new Error('프로젝트 파일(.stm32lab)은 하나만 놓으세요.');return {action:'open',text:projects[0].text};}
   const skipped=[];
@@ -50,7 +52,7 @@ export function planDrop(dropped,project){
     if(!SOURCE_PATH.test(f.name)){skipped.push(f.name);return false;}
     return true;
   });
-  if(!files.length)throw new Error('놓은 파일의 이름을 쓸 수 없습니다: 영문·숫자·밑줄로 된 .c/.h/.cpp/.hpp 파일과 폴더만 가져옵니다.');
+  if(!files.length)throw new Error('놓은 파일의 이름을 쓸 수 없습니다: 영문·숫자·밑줄로 된 .c/.h/.cpp/.hpp/.s/.ld 파일과 폴더만 가져옵니다(확장자는 소문자).');
   const sources=files.filter(f=>SOURCE.test(f.name)),iocs=files.filter(f=>/\.ioc$/i.test(f.name));
   if(iocs.length||sources.some(f=>baseName(f.name)==='main.c')){
     // .cpp sources come along only when added to an existing project; a CubeIDE import is C.
