@@ -17,7 +17,9 @@ import {I2C_IDS,SPI_IDS,isI2c,isSpi,busAf} from './bus-config.js';
 import {familyProfile,remapFor,irqNamesOf} from './mcu-family.js';
 import {clockFrequencies} from './clock-tree.js';
 
-export const HAL_CONSTANTS={...CATALOG_HAL_CONSTANTS,HAL_OK:0,HAL_ERROR:1,HAL_BUSY:2,HAL_TIMEOUT:3,HAL_MAX_DELAY:4294967295,
+/** HCLK of a validated MCU configuration: what SystemCoreClock and HAL_RCC_GetHCLKFreq give. */
+export function coreClockHz(config){return config.clock?Math.round(clockFrequencies(config.family,config.clock).hclk):config.timerClockHz;}
+export const HAL_CONSTANTS={...CATALOG_HAL_CONSTANTS,PWR_MAINREGULATOR_ON:0,PWR_LOWPOWERREGULATOR_ON:1,PWR_SLEEPENTRY_WFI:1,PWR_SLEEPENTRY_WFE:2,HAL_OK:0,HAL_ERROR:1,HAL_BUSY:2,HAL_TIMEOUT:3,HAL_MAX_DELAY:4294967295,
   GPIO_PIN_RESET:0,GPIO_PIN_SET:1,GPIO_MODE_INPUT:0,GPIO_MODE_OUTPUT_PP:1,GPIO_MODE_OUTPUT_OD:17,GPIO_MODE_AF_PP:2,GPIO_MODE_AF_OD:18,GPIO_MODE_ANALOG:3,
   GPIO_MODE_IT_RISING:0x10110000,GPIO_MODE_IT_FALLING:0x10210000,GPIO_MODE_IT_RISING_FALLING:0x10310000,GPIO_NOPULL:0,GPIO_PULLUP:1,GPIO_PULLDOWN:2,
   GPIO_SPEED_FREQ_LOW:0,GPIO_SPEED_FREQ_MEDIUM:1,GPIO_SPEED_FREQ_HIGH:2,GPIO_SPEED_FREQ_VERY_HIGH:3,
@@ -165,6 +167,8 @@ export class HalAdapter {
     if(name==='NVIC_SystemReset'||name==='HAL_NVIC_SystemReset')return (function*(){r.warn('[NVIC] 시스템 리셋: 프로그램을 처음부터 다시 실행합니다.');yield {kind:'reset'};})();
     for(const ext of this.extensions){const it=ext.invoke?.(name,args,r);if(it)return it;}
     if(name==='__HAL_TIM_GET_COUNTER'&&this.buses.project.components.some(p=>p.type==='catalog_singlewire'))return this.pollCounter(name,args,r);
+    // __WFI / Sleep mode: the core stops until an interrupt; SysTick wakes it within a millisecond.
+    if(name==='__WFI'||name==='__WFE'||name==='HAL_PWR_EnterSLEEPMode')return this.blocking('HAL_Delay',[1],r);
     if(name==='HAL_Delay'||name==='HAL_UART_Transmit'||name==='HAL_UART_Receive'||name==='HAL_I2C_Slave_Receive'||name==='HAL_I2C_Slave_Transmit'||this.spiSlaveMode&&['HAL_SPI_Transmit','HAL_SPI_Receive','HAL_SPI_TransmitReceive'].includes(name))return this.blocking(name,args,r);
     return null;
   }
@@ -401,6 +405,20 @@ export class HalAdapter {
     // putchar: characters gather until a line end, then go out as one log line.
     if(name==='putchar'){if(typeof a!=='number')throw new Error('putchar: 문자 값이 필요합니다.');const ch=String.fromCharCode(a&255);if(ch==='\n'){r.api.print((this.putLine||'').replace(/\r$/,''));this.putLine='';}else{this.putLine=(this.putLine||'')+ch;if(this.putLine.length>=1024){r.api.print(this.putLine);this.putLine='';}}return a&255;}
     if(name==='puts'){if(args.length!==1)throw new Error('puts는 문자열 하나가 필요합니다.');const text=r.format([a]);if(text.length>4096)throw new Error('puts 출력 한도는 4096자입니다.');r.api.print(text);return text.length+1;}
+    // The other clock queries, from the Clock Configuration (without one: the single clock the timers run on).
+    if(name==='HAL_RCC_GetHCLKFreq')return coreClockHz(this.config);
+    if(name==='HAL_RCC_GetSysClockFreq')return this.clocks?Math.round(this.clocks.sysclk):this.config.timerClockHz;
+    if(name==='HAL_RCC_GetPCLK2Freq')return this.clocks?Math.round(this.clocks.pclk2):this.config.timerClockHz;
+    // Small queries and no-ops of everyday code: the tick is 1 kHz, assert_param is compiled out, the peripherals are
+    // always ready between calls, the device has a fixed identity.
+    if(name==='HAL_GetTickFreq')return 1;
+    if(name==='assert_param')return 0;
+    if(name==='HAL_UART_GetState'){this.requireHandle(a,r,'UART');return 0x20;}
+    if(name==='HAL_ADC_GetState'){this.requireHandle(a,r,'ADC');return 1;}
+    if(name==='HAL_GetUIDw0')return 0x00350041;if(name==='HAL_GetUIDw1')return 0x3233510B;if(name==='HAL_GetUIDw2')return 0x36323538;
+    if(name==='HAL_GetDEVID')return this.f1?0x410:0x421;if(name==='HAL_GetREVID')return 0x1000;if(name==='HAL_GetHalVersion')return this.f1?0x01010900:0x01080100;
+    // HAL_I2C_IsDeviceReady: the address is called and the answer (ACK) decides.
+    if(name==='HAL_I2C_IsDeviceReady'){this.requireHandle(a,r,'I2C');int(b,16,238,'HAL I2C 주소(7비트 주소 << 1)');if(b&1)throw new Error('HAL I2C 주소는 7비트 주소를 왼쪽으로 1비트 이동하세요.');this.buses.call('Wire.beginTransmission',[b>>1],r);return this.buses.call('Wire.endTransmission',[],r)===0?0:1;}
     if(name.startsWith('HAL_')||name.startsWith('__HAL_'))throw new Error(`지원하지 않는 HAL API: ${name}`);
     return undefined;
   }

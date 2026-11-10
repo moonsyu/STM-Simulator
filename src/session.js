@@ -13,7 +13,7 @@ import {WaveRecorder} from './trace.js';
 import {VariableRecorder} from './variable-graph.js';
 import {watchExpression,readExpression,numericValue} from './debug-tools.js';
 import {compileHal} from './hal-source.js';
-import {HalAdapter,halConstantsFor} from './hal.js';
+import {HalAdapter,halConstantsFor,coreClockHz} from './hal.js';
 import {SignalRecorder,NoiseModel,signalsApi,validateNoise} from './signals.js';
 import {WirelessHub,deliverToBuses} from './wireless.js';
 
@@ -32,7 +32,7 @@ export class SimulationSession {
       debug,preciseTiming:project.components.some(p=>p.type==='catalog_singlewire'),
       // Pinout labels give CubeMX-style LABEL_Pin / LABEL_GPIO_Port names, as main.h does in an ARM build,
       // unless the sources (an imported CubeMX main.h) already #define them.
-      constants:this.hal?{...halConstantsFor(project.mcu?.family),...Object.fromEntries(Object.entries(project.mcu?.pins||{}).filter(([,p])=>p.label&&!definedLabel(project,p.label)).flatMap(([pin,p])=>[[p.label+'_Pin',1<<Number(pin.slice(2))],[p.label+'_GPIO_Port','GPIO'+pin[1]]]))}:undefined,
+      constants:this.hal?{...halConstantsFor(project.mcu?.family),...(project.mcu?.timerClockHz?{SystemCoreClock:coreClockHz(project.mcu)}:{}),...Object.fromEntries(Object.entries(project.mcu?.pins||{}).filter(([,p])=>p.label&&!definedLabel(project,p.label)).flatMap(([pin,p])=>[[p.label+'_Pin',1<<Number(pin.slice(2))],[p.label+'_GPIO_Port','GPIO'+pin[1]]]))}:undefined,
       invoke:(name,args,runtime)=>this.hal?.invoke(name,args,runtime),poll:runtime=>this.hal?.poll(runtime),
       preempt:runtime=>this.hal?.preempt(runtime)??false,declareGlobals:runtime=>this.hal?.declareGlobals?.(runtime),
       warn:message=>{this.warnings.push(message);if(this.warnings.length>50)this.warnings.shift();warnOut(message);},reset:runtime=>{if(this.hal){const old=this.hal;this.hal=this.createHal();this.hal.inheritReset(old);this.hal.nvicModel.tick.lost=Math.floor(runtime.microTime/1000);}},
