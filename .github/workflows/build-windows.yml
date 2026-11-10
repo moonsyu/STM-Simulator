@@ -210,10 +210,9 @@ jobs:
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force work/test-results | Out-Null
-          # node --test-shard deals the files out in turn, so the four jobs stay about equal as files are added
-          # (the old fixed list sent every new file to group 2, which grew to 5.5 min against 1.5 min).
-          $files = Get-ChildItem tests/e2e/*.test.mjs | Sort-Object Name | ForEach-Object { "tests/e2e/$($_.Name)" }
-          node --test --test-shard=${{ matrix.shard }}/6 --test-reporter=spec --test-reporter-destination=stdout --test-reporter=./tests/github-reporter.mjs --test-reporter-destination=stdout --test-concurrency=1 @files 2>&1 | Tee-Object -FilePath work/test-results/e2e.log
+          # scripts/e2e-shard.mjs deals the files to the jobs by measured time (node --test-shard deals them by position,
+          # which put the three heaviest files of 1.46.3 into one job: 153 s against 68 to 99 s).
+          node scripts/e2e-shard.mjs ${{ matrix.shard }}/6 2>&1 | Tee-Object -FilePath work/test-results/e2e.log
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Upload test diagnostics on failure
         if: failure()
