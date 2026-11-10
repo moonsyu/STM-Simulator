@@ -83,6 +83,17 @@ export function clockTreeFromIoc(family,values){
  t.ahb=num('RCC.AHBCLKDivider',1);t.apb1=num('RCC.APB1CLKDivider',1);t.apb2=num('RCC.APB2CLKDivider',1);
  if(f1(family)){t.pllMul=num('RCC.PLLMUL',2);t.hsePrediv=/DIV2/.test(values['RCC.HSEDivPLL']||'')?2:1;t.adcPrescaler=num('RCC.ADCPresc',2);}
  else{t.pllM=num('RCC.PLLM',16);t.pllN=num('RCC.PLLN',192);t.pllP=num('RCC.PLLP',2);t.pllQ=num('RCC.PLLQ',2);t.adcPrescaler=num('ADC1.ClockPrescaler',4);}
+ // CubeMX leaves out a setting that has its default value, and which value is the default depends on its version and
+ // on the oscillator pins (real files have a PLL fed by HSE with no RCC.PLLSourceVirtual line). The frequency CubeMX
+ // computed is in the file, so when the tree read so far does not give that SYSCLK and the other PLL source does, the
+ // other source is the one meant.
+ const want=Number(values['RCC.SYSCLKFreq_VALUE']);
+ if(want&&t.sysclkSource==='PLLCLK'&&!values['RCC.PLLSourceVirtual']){
+  const sysclk=x=>{try{return clockFrequencies(family,validateClockTree(family,x)).sysclk;}catch{return 0;}},other={...t,pllSource:t.pllSource==='HSE'?'HSI':'HSE'};
+  // The same with the crystal of another board (RCC.HSE_VALUE): the tree is an HSE one, and the import says so.
+  const hse=Number(values['RCC.HSE_VALUE']),crystal=hse?(f1(family)?hse/(t.hsePrediv||1)*t.pllMul:hse/t.pllM*t.pllN/t.pllP):0;
+  if(Math.abs(sysclk(t)-want)>1&&(Math.abs(sysclk(other)-want)<=1||Math.abs(crystal-want)<=1))t.pllSource=Math.abs(sysclk(other)-want)<=1?other.pllSource:'HSE';
+ }
  return validateClockTree(family,t);
 }
 

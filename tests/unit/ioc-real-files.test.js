@@ -4,6 +4,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {importIoc,configProblems,generateHal} from '../../src/mcu-config.js';
+import {clockFrequencies} from '../../src/clock-tree.js';
 import {exportIoc} from '../../src/ioc-export.js';
 import {importFirmware} from '../../src/firmware-import.js';
 import {planDrop} from '../../src/file-drop.js';
@@ -183,4 +184,37 @@ VP_SYS_VS_tim1.Signal=SYS_VS_tim1
  assert.equal(config.nvic.TIM1_UP_TIM10_IRQn,undefined);
  assert.deepEqual(warnings,['TIM1_UP_TIM10_IRQn: 이 인터럽트를 쓰는 주변장치를 가져오지 않아 NVIC 설정에서 뺐습니다.']);
  assert.deepEqual(configProblems(config),[]);generateHal(config);
+});
+
+test('a PLL fed by HSE with no RCC.PLLSourceVirtual line is read from the SYSCLK CubeMX computed',()=>{
+ // CubeMX 6.15 file: PLLM 4, PLLN 120, SYSCLK 120 MHz — 8 MHz HSE / 4 × 120 / 2. Read as HSI it would be 240 MHz.
+ const {config,warnings}=importIoc(F446+'RCC.HSE_VALUE=8000000\nRCC.PLLM=4\nRCC.PLLN=120\nRCC.SYSCLKSource=RCC_SYSCLKSOURCE_PLLCLK\nRCC.SYSCLKFreq_VALUE=120000000\nRCC.APB1CLKDivider=RCC_HCLK_DIV4\nRCC.APB2CLKDivider=RCC_HCLK_DIV2\n');
+ assert.equal(config.clock.pllSource,'HSE');assert.equal(clockFrequencies(config.family,config.clock).sysclk,120e6);assert.deepEqual(warnings,[]);
+ // With the line, or without a computed frequency, nothing is guessed.
+ assert.equal(importIoc(F446+'RCC.PLLM=8\nRCC.PLLN=180\nRCC.SYSCLKSource=RCC_SYSCLKSOURCE_PLLCLK\nRCC.APB1CLKDivider=RCC_HCLK_DIV4\nRCC.APB2CLKDivider=RCC_HCLK_DIV2\n').config.clock.pllSource,'HSI');
+});
+
+test('a clock tree made for another crystal is not taken over: the board clock stays, with the reason',()=>{
+ const {config,warnings}=importIoc(F446+'RCC.HSE_VALUE=24000000\nRCC.PLLM=12\nRCC.PLLN=168\nRCC.SYSCLKSource=RCC_SYSCLKSOURCE_PLLCLK\nRCC.SYSCLKFreq_VALUE=168000000\nRCC.APB1CLKDivider=RCC_HCLK_DIV4\nRCC.APB2CLKDivider=RCC_HCLK_DIV2\n');
+ assert.equal(config.clock,undefined);assert.equal(warnings.length,1);assert.match(warnings[0],/HSE 24 MHz인 보드용입니다/);assert.deepEqual(configProblems(config),[]);
+});
+
+test('ADC ranks on internal channels are left out; with no input pin left the ADC and its DMA request go too',()=>{
+ const adc=String.raw`Mcu.IP0=ADC1
+ADC1.Channel-0\#ChannelRegularConversion=ADC_CHANNEL_TEMPSENSOR
+ADC1.Channel-1\#ChannelRegularConversion=ADC_CHANNEL_1
+ADC1.NbrOfConversion=2
+`;
+ const kept=importIoc(F446+adc+'PA1.Signal=ADCx_IN1\nSH.ADCx_IN1.0=ADC1_IN1,IN1\n');
+ assert.deepEqual(kept.warnings,['ADC1: 내부 채널(TEMPSENSOR)은 실행 모델에 없어 가져오지 않았습니다.']);
+ assert.equal(kept.config.peripherals.ADC1.conversions,undefined);assert.deepEqual(configProblems(kept.config),[]);
+ const gone=importIoc(F446+adc.replace('ADC_CHANNEL_1\n','ADC_CHANNEL_VREFINT\n')+'Dma.ADC1.0.Instance=DMA2_Stream0\nDma.ADC1.0.Direction=DMA_PERIPH_TO_MEMORY\nDma.ADC1.0.Mode=DMA_CIRCULAR\nDma.Request0=ADC1\nDma.RequestsNb=1\n');
+ assert.equal(gone.config.peripherals.ADC1,undefined);assert.deepEqual(configProblems(gone.config),[]);
+ assert.match(gone.warnings.join('|'),/남은 입력 핀이 없어 ADC1을 껐습니다/);
+});
+
+test('a label used on a second pin, or one that reads as a HAL name, is left out with a note',()=>{
+ const {config,warnings}=importIoc(F446+'PA8.Signal=GPIO_Output\nPA8.GPIO_Label=LS1\nPA9.Signal=GPIO_Output\nPA9.GPIO_Label=LS1\nPA10.Signal=GPIO_Output\nPA10.GPIO_Label=GPIO_CH_COMM\nPB0.Signal=GPIO_Output\nPB0.GPIO_Label=HV+\nPB1.Signal=GPIO_Output\nPB1.GPIO_Label=HV-\n');
+ assert.deepEqual(['PA8','PA9','PA10','PB0','PB1'].map(p=>config.pins[p].label),['LS1','','','HV_','']);
+ assert.equal(warnings.length,3);assert.deepEqual(configProblems(config),[]);
 });

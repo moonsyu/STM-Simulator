@@ -32,7 +32,11 @@ export function adcGroupProblems(config){
 /** .ioc: ADC1.NbrOfConversion, ADC1.Channel-N\#ChannelRegularConversion=ADC_CHANNEL_n, ADC1.ExternalTrigConv. */
 export function adcGroupFromIoc(values,family,target){
  const n=Number(values['ADC1.NbrOfConversion']);if(Number.isInteger(n)&&n>1&&n<=16)target.conversions=n;
- const ranks=[];for(const [k,v]of Object.entries(values)){const m=/^ADC1\.Channel-(\d+)\\?#ChannelRegularConversion$/.exec(k),ch=/^ADC_CHANNEL_(\d+)$/.exec(v);if(m&&ch&&Number(m[1])<(target.conversions??1))ranks[Number(m[1])]=Number(ch[1]);}
- if(ranks.length)target.ranks=Array.from(ranks,c=>c??null);
+ // A rank on an internal channel (temperature sensor, VREFINT, VBAT) has no pin and no model here: it is left out, the
+ // ranks after it move up, and the names are returned for the import's note.
+ const ranks=[],internal=[];for(const [k,v]of Object.entries(values)){const m=/^ADC1\.Channel-(\d+)\\?#ChannelRegularConversion$/.exec(k),ch=/^ADC_CHANNEL_(\d+)$/.exec(v);if(!m||Number(m[1])>=(target.conversions??1))continue;if(ch)ranks[Number(m[1])]=Number(ch[1]);else if(/^ADC_CHANNEL_(TEMPSENSOR|VREFINT|VBAT)/.test(v)){ranks[Number(m[1])]='internal';internal.push(v.replace('ADC_CHANNEL_',''));}}
+ if(internal.length){const kept=Array.from(ranks,c=>c??null).filter(c=>c!=='internal');ranks.length=0;ranks.push(...kept);const n=(target.conversions??1)-internal.length;if(n>1)target.conversions=n;else delete target.conversions;}
+ if(ranks.length)target.ranks=Array.from(ranks,c=>c??null);else delete target.ranks;
  const t=/^ADC_EXTERNALTRIGCONV_(T\d_TRGO)$/.exec(values['ADC1.ExternalTrigConv']||'')?.[1];if(t&&ADC_TRIGGERS[family].includes(t))target.trigger=t;
+ return internal;
 }

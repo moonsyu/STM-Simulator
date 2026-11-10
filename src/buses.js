@@ -61,7 +61,7 @@ export class BusDevices {
     const data=this.i2cPhase(head.endUs,bytes,bytes.map(()=>'slave'),i=>i<count-1,{start:false});
     return {ok:!data.busError,data:data.busError?[]:data.seen,busError:data.busError};
   }
-  spiLines(){if(!this.signals)return null;const s=this.spi,id=this.spiId||'SPI1',params={clockHz:s.clock,cpol:s.cpol||0,cpha:s.cpha||0,lsbFirst:!!s.lsbFirst};for(const [role,pin]of [['sck',s.sck],['mosi',s.mosi],['miso',s.miso]])this.signals.define(id+'.'+role.toUpperCase(),{label:role.toUpperCase(),pins:[pin],protocol:'spi',group:id,busLabel:id,params:{...params,role}});return id;}
+  spiLines(){if(!this.signals)return null;const s=this.spi,id=this.spiId||'SPI1',params={clockHz:s.clock,cpol:s.cpol||0,cpha:s.cpha||0,lsbFirst:!!s.lsbFirst};for(const [role,pin]of [['sck',s.sck],['mosi',s.mosi],...(s.txOnly?[]:[['miso',s.miso]])])this.signals.define(id+'.'+role.toUpperCase(),{label:role.toUpperCase(),pins:[pin],protocol:'spi',group:id,busLabel:id,params:{...params,role}});return id;}
   // A full-duplex byte without trace/time side effects (shared by blocking SPI and DMA).
   spiExchange(value,runtime,at=runtime.microTime){
     const s=this.spi;if(!s.ready)throw new Error('SPI.begin()을 먼저 호출하세요.');value=Number(value)&255;
@@ -112,8 +112,9 @@ export class BusDevices {
         runtime.microTime+=(w.tx.length+1)*9e6/w.clock;this.report(runtime,'I²C',`0x${address.toString(16)} WRITE ${w.tx.length} B · ${x.ok?'ACK':'NACK'}`);w.address=null;w.tx=[];runtime.api.changed?.(runtime.microTime);return x.ok?0:2;
       }
     }
-    if(name==='SPI.setPins'){s.mosi=runtime.pin(a);s.miso=runtime.pin(b);s.sck=runtime.pin(c);if(new Set([s.mosi,s.miso,s.sck]).size!==3)throw new Error('SPI 핀은 서로 달라야 합니다.');return 0;}
-    if(name==='SPI.begin'){s.ready=true;this.beginPins(runtime,[s.mosi,s.sck],[s.miso]);runtime.call('digitalWrite',[s.sck,0]);return 0;}
+    // No MISO (transmit only): reads give 0xFF, and the missing pin stands in as MOSI so the checks below hold.
+    if(name==='SPI.setPins'){s.mosi=runtime.pin(a);s.txOnly=b==null;s.miso=s.txOnly?s.mosi:runtime.pin(b);s.sck=runtime.pin(c);if(new Set([s.mosi,s.miso,s.sck]).size!==(s.txOnly?2:3))throw new Error('SPI 핀은 서로 달라야 합니다.');return 0;}
+    if(name==='SPI.begin'){s.ready=true;this.beginPins(runtime,[s.mosi,s.sck],s.txOnly?[]:[s.miso]);runtime.call('digitalWrite',[s.sck,0]);return 0;}
     if(name==='SPI.setClock'){if(!Number.isInteger(a)||a<1000||a>20000000)throw new Error('SPI 속도 범위: 1000~20000000 Hz');s.clock=a;return 0;}
     if(name==='SPI.transfer'){
       const value=Number(a)&255,answer=this.spiExchange(value,runtime);
@@ -128,7 +129,7 @@ export class BusDevices {
       if(board)return board.spiExchange(value);
       const active=this.project.components.filter(p=>['spi',...SPI_DEVICES].includes(p.type)&&this.powered(p)&&(p.catalogVariant?.startsWith('rgb-')||this.same(this.terminal(p,4),this.pin(s.sck)))&&this.same(this.terminal(p,5),this.pin(s.mosi))&&(p.type!=='spi'||this.same(this.terminal(p,6),this.pin(s.miso)))&&(p.catalogVariant?.startsWith('rgb-')||this.result()?.voltage(this.terminal(p,3))!=null&&this.result()?.voltage(this.terminal(p,3))<.8));
       if(active.length>1)throw new Error('SPI CS가 동시에 활성화되었습니다.');
-      let answer=this.same(this.pin(s.mosi),this.pin(s.miso))?value:255;
+      let answer=!s.txOnly&&this.same(this.pin(s.mosi),this.pin(s.miso))?value:255;
       if(active.length===1&&active[0].type!=='spi')answer=this.devices.transfer(active[0],value,this.result());
       if(active.length===1&&active[0].type==='spi'){
        const part=active[0],memory=this.memory(part),eeprom=part.catalogVariant==='spi-eeprom-8';let session=this.spiSessions.get(part.id);

@@ -39,7 +39,8 @@ export const adcSamplingMacro=cycles=>Number.isInteger(cycles)?`ADC_SAMPLETIME_$
 export function defaultMcu(family=DEFAULT_FAMILY){const f=familyProfile(family);return {family:f.id,pins:{},peripherals:{},nvic:{},timerClockHz:f.clock.defaultHz};}
 /** UART Parameter Settings (CubeMX Asynchronous mode): the first value of each list is CubeMX's default. */
 /** SPI Parameter Settings (CubeMX Full-Duplex Master): clock polarity/phase (SPI mode 0-3), data size, first bit. */
-export const SPI_PARAMS=Object.freeze({cpol:['LOW','HIGH'],cpha:['1EDGE','2EDGE'],dataSize:[8,16],firstBit:['MSB','LSB']});
+// direction TX_ONLY: CubeMX's "Transmit Only Master" — SCK and MOSI, no MISO pin (displays, DACs, shift registers).
+export const SPI_PARAMS=Object.freeze({direction:['FULL','TX_ONLY'],cpol:['LOW','HIGH'],cpha:['1EDGE','2EDGE'],dataSize:[8,16],firstBit:['MSB','LSB']});
 /** PWM channel settings: CH Polarity and PWM mode (the first value is CubeMX's default). */
 export const TIM_CHANNEL_PARAMS=Object.freeze({polarity:['HIGH','LOW'],ocMode:['PWM1','PWM2']});
 /** Output Compare CHn modes (CubeMX OCMode_n; Frozen = TIMING is its default). */
@@ -163,7 +164,7 @@ export function configProblems(config){
     if(/_CK$/.test(p.function)&&serial&&config.peripherals[serial]?.mode!=='synchronous')errors.push(`${pin}: ${serial} 동기(Synchronous) 모드에서만 CK 핀을 사용합니다.`);
   }
   for(const [id,p]of Object.entries(config.peripherals))if(p.enabled){
-    const required=isSerial(id)?['TX','RX',...(p.mode==='synchronous'?['CK']:[])]:isI2c(id)?['SCL','SDA']:isSpi(id)?['SCK','MISO','MOSI']:id==='SDIO'?['D0','CK','CMD']:[];
+    const required=isSerial(id)?['TX','RX',...(p.mode==='synchronous'?['CK']:[])]:isI2c(id)?['SCL','SDA']:isSpi(id)?(p.direction==='TX_ONLY'?['SCK','MOSI']:['SCK','MISO','MOSI']):id==='SDIO'?['D0','CK','CMD']:[];
     for(const role of required)if(!signals.has(`${id}_${role}`))errors.push(`${id}: ${role} 핀을 활성화하세요.`);
     // F446/F103 I2C1 (not FMPI2C) runs standard or fast mode only.
     if(isI2c(id)&&p.clock>400000)errors.push(`${id}: 클록은 400 kHz(Fast mode) 이하로 설정하세요.`);
@@ -229,6 +230,14 @@ export function importIoc(text){
     if(speed&&speedsOf(f.pinMux==='remap').includes(speed)&&fn!=='Reserved')config.pins[pin].speed=speed;
     if(fn==='GPIO_Output'&&values[base+'.GPIO_ModeDefaultOutputPP']==='GPIO_MODE_OUTPUT_OD')config.pins[pin].outputType='OD';
   }
+  // Labels the Pinout does not take are left out here with a note, instead of coming in as errors to clear by hand: the
+  // same label on a second pin (real files have them — CubeMX then defines the macro twice), and a label that reads as
+  // a HAL name (GPIO_…, HAL_…).
+  {const seen=new Set();
+   for(const [pin,p]of Object.entries(config.pins)){if(!p.label)continue;
+    if(/^(GPIO|HAL|RCC|NVIC|EXTI|SYSCFG|AFIO|PWR|FLASH|IS|USE|STM32\w*)$/i.test(p.label)||/^(__|HAL_|GPIO_|RCC_|LL_|IS_)/i.test(p.label)){warnings.push(`${pin}: 라벨 ${p.label}은 HAL 이름과 겹쳐 비웠습니다.`);p.label='';}
+    else if(seen.has(p.label)){warnings.push(`${pin}: 라벨 ${p.label}은 다른 핀에도 있어 이 핀의 라벨은 비웠습니다.`);p.label='';}
+    else seen.add(p.label);}}
   for(const id of Object.keys(routes)){
     const enabled=Object.values(config.pins).some(p=>p.function.startsWith(id+'_'))||Object.entries(values).some(([k,v])=>/^Mcu.IP\d+$/.test(k)&&v===id);
     if(enabled)config.peripherals[id]={enabled:true};
@@ -248,13 +257,18 @@ export function importIoc(text){
   for(const [id,read,check]of [['IWDG',iwdgFromIoc,validateIwdg],['WWDG',wwdgFromIoc,validateWwdg]])if(config.peripherals[id]||values[`VP_${id}_VS_${id}.Mode`]){const q=read(values,number);try{check(q);config.peripherals[id]=q;}catch(e){warnings.push(e.message+' 기본값을 씁니다.');config.peripherals[id]={enabled:true};}}
   if(config.peripherals.RTC||values['VP_RTC_VS_RTC_Activate.Mode'])config.peripherals.RTC=rtcFromIoc(values,family,number);
   if(config.peripherals.ADC1&&values['ADC1.ContinuousConvMode']==='ENABLE')config.peripherals.ADC1.continuous=true;
-  if(config.peripherals.ADC1){const adc=config.peripherals.ADC1;adcGroupFromIoc(values,family,adc);
+  if(config.peripherals.ADC1){const adc=config.peripherals.ADC1,internal=adcGroupFromIoc(values,family,adc);
+   if(internal.length){const pinned=Object.values(config.pins).some(q=>q.function.startsWith('ADC1_'));warnings.push(`ADC1: 내부 채널(${[...new Set(internal)].join(', ')})은 실행 모델에 없어 가져오지 않았습니다${pinned?'':' — 남은 입력 핀이 없어 ADC1을 껐습니다'}.`);if(!pinned)delete config.peripherals.ADC1;}}
+  if(config.peripherals.ADC1){const adc=config.peripherals.ADC1;
    // CubeMX always writes the channel of each rank: ranks in the default order (the pins' channels ascending) are not kept.
    if(adc.ranks){const plain={...config,peripherals:{...config.peripherals,ADC1:{...adc,ranks:undefined}}},wanted=adcRanks({...config,peripherals:{...config.peripherals,ADC1:adc}});if(wanted.every((ch,i)=>ch===adcRanks(plain)[i]))delete adc.ranks;}}
   // Rank 1 Sampling Time (ADC1.SamplingTime-0\#ChannelRegularConversion); a .ioc without it has CubeMX's default, the shortest.
   if(config.peripherals.ADC1){const key=Object.keys(values).find(k=>/^ADC1\.SamplingTime-0\\?#ChannelRegularConversion$/.test(k)),m=/ADC_SAMPLETIME_(\d+)CYCLES?(_5)?/.exec(values[key]||''),cycles=m?Number(m[1])+(m[2]?0.5:0):ADC_SAMPLING[family][0];if(ADC_SAMPLING[family].includes(cycles)&&cycles!==adcSamplingDefault(family))config.peripherals.ADC1.samplingTime=cycles;}
   // SPI1 speed: CubeMX stores the computed rate ("5.25 MBits/s") next to the prescaler.
-  for(const id of Object.keys(routes).filter(isSpi))if(config.peripherals[id]){const s=config.peripherals[id];if(/HIGH/.test(values[id+'.CLKPolarity']||''))s.cpol='HIGH';if(/2EDGE/.test(values[id+'.CLKPhase']||''))s.cpha='2EDGE';if(/16BIT/.test(values[id+'.DataSize']||''))s.dataSize=16;if(/LSB/.test(values[id+'.FirstBit']||''))s.firstBit='LSB';
+  for(const id of Object.keys(routes).filter(isSpi))if(config.peripherals[id]){const s=config.peripherals[id];
+    // No MISO pin: Transmit Only Master (2 lines, MISO unused) or a half-duplex mode (1 line, read as transmit only).
+    {const has=sig=>Object.values(config.pins).some(q=>q.function===`${id}_${sig}`);if(has('SCK')&&has('MOSI')&&!has('MISO')){s.direction='TX_ONLY';if(/1LINE/.test(values[id+'.Direction']||''))warnings.push(`${id}: 반이중(1선) 모드는 송신 전용으로 가져왔습니다. 같은 선으로 받는 동작은 실행 모델에 없습니다.`);}}
+if(/HIGH/.test(values[id+'.CLKPolarity']||''))s.cpol='HIGH';if(/2EDGE/.test(values[id+'.CLKPhase']||''))s.cpha='2EDGE';if(/16BIT/.test(values[id+'.DataSize']||''))s.dataSize=16;if(/LSB/.test(values[id+'.FirstBit']||''))s.firstBit='LSB';
    const m=/^([\d.]+)\s*([KM]?)Bits\/s/i.exec(values[id+'.CalculateBaudRate']||'');if(m)s.clock=Math.min(20000000,Math.max(1000,Math.round(Number(m[1])*({K:1e3,M:1e6}[m[2].toUpperCase()]??1))));}
   for(const id of Object.keys(f.timers))if(config.peripherals[id]){const p=config.peripherals[id],defaults=timerDefaults(id,family);p.prescaler=number(values[id+'.Prescaler'],defaults.prescaler);p.period=number(values[id+'.Period'],defaults.period);const pulse=Object.keys(values).find(k=>k.startsWith(id+'.Pulse'));if(pulse)p.pulse=number(values[pulse],defaults.pulse);const settings=Object.entries(values).filter(([k])=>k.startsWith(id+'.')).map(([k,v])=>k+' '+v).join(' ');p.mode=/Encoder|ENCODER/.test(settings)?'encoder':/PWM/.test(settings)?'pwm':/Output Compare\d CH\d/.test(settings)?'oc':/INPUTCAPTURE|Input_Capture|IC_CHANNEL/.test(settings)?'capture':'base';
     const counter=/TIM_COUNTERMODE_(\w+)/.exec(values[id+'.CounterMode']||'')?.[1];if(counter&&counter!=='UP'&&TIM_COUNTER_MODES.includes(counter)&&p.mode!=='encoder'&&!isBasicTimer(id))p.counterMode=counter;
@@ -279,8 +293,11 @@ export function importIoc(text){
   }
   config.timerClockHz=number(values['RCC.APB1TimFreq_Value'],f.clock.defaultHz);
   // The .ioc clock tree: kept as the project's Clock Configuration unless the single APB1 timer clock gives the same clocks.
-  const tree=clockTreeFromIoc(f.id,values);
-  if(tree){const q=clockFrequencies(f.id,tree),hz=Math.round(q.tim1),old=f.clock.valid(hz)?clockFrequencies(f.id,treeFromTimerHz(f.id,hz)):null;
+  const tree=clockTreeFromIoc(f.id,values),hse=Number(values['RCC.HSE_VALUE']||8000000);
+  // The NUCLEO boards feed HSE with 8 MHz from the ST-LINK. A tree made for another crystal would give other clocks
+  // here, so it is not taken over.
+  if(tree&&(tree.sysclkSource==='HSE'||tree.pllSource==='HSE')&&hse!==8000000){warnings.push(`클록 설정: 이 .ioc는 HSE ${hse/1e6} MHz인 보드용입니다. NUCLEO 보드의 HSE는 8 MHz(ST-LINK MCO)라 클록 트리는 가져오지 않고 보드 기본 클록을 씁니다. Clock 탭에서 다시 맞추세요.`);config.timerClockHz=f.clock.defaultHz;}
+  else if(tree){const q=clockFrequencies(f.id,tree),hz=Math.round(q.tim1),old=f.clock.valid(hz)?clockFrequencies(f.id,treeFromTimerHz(f.id,hz)):null;
    const same=old&&['sysclk','hclk','pclk1','pclk2','adc'].every(k=>Math.abs(old[k]-q[k])<1);
    if(same)config.timerClockHz=hz;else{config.clock=tree;config.timerClockHz=hz;for(const p of clockTreeProblems(f.id,tree))warnings.push('클록 설정: '+p);}}
   // HSE/other PLL setups (F103 at 72 MHz) cannot be rebuilt from HSI: keep the nearest clock the generator can make.
@@ -303,8 +320,12 @@ export function importIoc(text){
   // have) is left out with a note: kept, it would be an error the user has to clear by hand before generating code.
   let clean=validateMcu(config);
   for(let pass=0;pass<40;pass++){
-    const orphan=configProblems(clean).map(p=>/^(\w+_IRQn): .*(?:주변장치를 활성화하거나|를 활성화하거나) 인터럽트를 끄세요/.exec(p)?.[1]).find(irq=>irq&&config.nvic?.[irq]);if(!orphan)break;
-    delete config.nvic[orphan];warnings.push(`${orphan}: 이 인터럽트를 쓰는 주변장치를 가져오지 않아 NVIC 설정에서 뺐습니다.`);clean=validateMcu(config);
+    const problems=configProblems(clean),orphan=problems.map(p=>/^(\w+_IRQn): .*(?:주변장치를 활성화하거나|를 활성화하거나) 인터럽트를 끄세요/.exec(p)?.[1]).find(irq=>irq&&config.nvic?.[irq]);
+    const request=problems.map(p=>/^(\S+) DMA: \w+ 주변장치를 활성화하세요/.exec(p)?.[1]).find(r=>r&&config.dma?.[r]);
+    if(orphan){delete config.nvic[orphan];warnings.push(`${orphan}: 이 인터럽트를 쓰는 주변장치를 가져오지 않아 NVIC 설정에서 뺐습니다.`);}
+    else if(request){delete config.dma[request];warnings.push(`${request} DMA: 이 요청을 쓰는 주변장치를 가져오지 않아 DMA 설정에서 뺐습니다.`);}
+    else break;
+    clean=validateMcu(config);
   }
   return {config:clean,warnings:[...new Set([...warnings,...configProblems(clean)])]};
 }

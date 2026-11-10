@@ -95,7 +95,7 @@ export class HalAdapter {
   selectBus(type,id,r){
     const s=this.busState.get(id);if(!s||this.activeBus[type]===id)return;this.activeBus[type]=id;
     if(type==='I2C'){this.buses.i2cId=id;this.buses.call('Wire.begin',[this.pinFor(id+'_SDA'),this.pinFor(id+'_SCL')],r);this.buses.call('Wire.setClock',[s.clock],r);return;}
-    this.buses.spiId=id;this.buses.call('SPI.setPins',[this.pinFor(id+'_MOSI'),this.pinFor(id+'_MISO'),this.pinFor(id+'_SCK')],r);this.spiSlaveMode=s.slave;
+    this.buses.spiId=id;this.buses.call('SPI.setPins',[this.pinFor(id+'_MOSI'),this.config.peripherals[id]?.direction==='TX_ONLY'?null:this.pinFor(id+'_MISO'),this.pinFor(id+'_SCK')],r);this.spiSlaveMode=s.slave;
     // A slave leaves SCK and MOSI to the master; it drives only MISO.
     if(s.slave)this.buses.beginPins(r,[this.buses.spi.miso],[this.buses.spi.mosi,this.buses.spi.sck]);
     else{this.buses.call('SPI.begin',[],r);this.buses.call('SPI.setClock',[s.clock],r);}
