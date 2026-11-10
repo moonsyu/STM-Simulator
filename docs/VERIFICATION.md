@@ -1,5 +1,9 @@
 # 검증 기록
 
+## 1.34.0 ADC 다채널·트리거, 타이머 TRGO·One Pulse, NRST — 게시 확인(API)
+
+2026-11-10. 태그·빌드 커밋 `cb0b445` · [Windows CI 42743352494](https://github.com/moonsyu/STM-Simulator/actions/runs/42743352494) 첫 실행에서 모두 성공. 새 분할 구조의 첫 실행: 툴체인 시험 3조각 283·168·138초, E2E 4조각 152·199·150·178초, 단위 200초, 패키지 222초, ESP32는 캐시를 새로 만드느라 459초(설치 104초 + 빌드 266초 + 캐시 저장 45초), 전체 8.5분(1.33.0은 8.0분, ESP32를 뺀 나머지는 4.7분 안). [Release v1.34.0](https://github.com/moonsyu/STM-Simulator/releases/tag/v1.34.0) 최신 릴리스, draft/prerelease 아님, 자산 5개(STM-Simulator.exe 115,598,298바이트, STM-Simulator-1.34.0-Windows-x64.zip 116,686,344바이트, SHA256.txt, BUILD-INFO.json, update-manifest.json).
+
 ## 1.33.0 다시 생성할 때 사용자 코드 유지, TIM1·TIM8 — 게시 확인(API)
 
 2026-11-10. 태그·빌드 커밋 `540f34a` · [Windows CI 42740747744](https://github.com/moonsyu/STM-Simulator/actions/runs/42740747744) 첫 실행에서 모두 성공(전체 8.0분, 가장 긴 작업은 "ST HAL examples on ARM GCC" 7.2분). [Release v1.33.0](https://github.com/moonsyu/STM-Simulator/releases/tag/v1.33.0) 최신 릴리스, draft/prerelease 아님, 자산 5개(STM-Simulator.exe 115,614,046바이트, STM-Simulator-1.33.0-Windows-x64.zip 116,702,338바이트, SHA256.txt, BUILD-INFO.json, update-manifest.json). 로그인 없는 API의 `releases/latest`는 게시 직후 이전 버전을 돌려줘(캐시) 인증한 요청으로 확인했다.

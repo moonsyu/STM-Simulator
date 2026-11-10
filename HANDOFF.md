@@ -1,6 +1,20 @@
 # STM Simulator — 개발 인계
 
-현재 버전: **1.34.0**. 정리일: **2026-11-10**. NUCLEO-F446RE·NUCLEO-F103RB 또는 Renesas FPB-RA6E1(1.20.0, FSP·에뮬레이터 전용)과 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+현재 버전: **1.35.0**. 정리일: **2026-11-10**. NUCLEO-F446RE·NUCLEO-F103RB 또는 Renesas FPB-RA6E1(1.20.0, FSP·에뮬레이터 전용)과 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+
+## 1.35.0 기능 목록 10~13번: 폴더 구조, 드래그 앤 드롭, 모든 파일 수정, .ioc로 회로 초안
+
+- **10번 폴더 구조(`src/source-files.js`)**: 소스 이름 = 파일 이름 또는 폴더 여섯 단계까지의 경로(`SOURCE_PATH`, 점으로 시작하는 폴더·`..` 불가). `MAX_SOURCE_FILES` 120·`MAX_SOURCE_BYTES` 1 MB(이전 40개·300 KB). `resolveInclude(names, include, from)`: 같은 폴더 → 루트 기준 경로 → 경로 끝 일치 → 이름 순. `firmware.mainFolder`(가져온 main.c가 있던 폴더, 예 `Core/Src`)는 표시와 빌드 배치에 쓴다(내부 키는 그대로 `main.c`).
+  - 가져오기(`desktop/main.cjs` firmware:import 폴더): 루트부터 6단계까지 걸으며 `.c/.h`(루트는 `.ioc`도)를 상대 경로로 읽는다. 제외: Drivers·Middlewares·Debug·Release·build·Startup·점 폴더, `syscalls.c`·`sysmem.c`·`system_stm32*.c`(앱이 넣음; 사용자가 원하면 11번의 복사로 가져온다). `firmware-import.js`가 `Core/Src/main.c`를 주 소스로 삼는다.
+  - 빌드(`native-build.cjs`): 파일을 경로대로 쓰고 폴더마다 `-I`. `*_hal_conf.h`·`main.h`·`system_*.c` 유무는 파일 이름(basename)으로 본다. 컴파일러·GDB는 폴더 없는 이름을 돌려주므로 `native-ide-ui.js` `projectFileName`이 프로젝트 경로로 되돌린다. GDB 파일 목록은 basename으로 준다.
+  - 해석기(`hal-source.js`): include를 `resolveInclude`로 찾고, ARM 전용 파일(`Drivers/`·`Middlewares/` 아래, syscalls·sysmem·system_stm32*)은 프로그램에서 뺀다.
+- **12번 드래그 앤 드롭(`src/file-drop.js`)**: `readDropped`(DataTransfer, 폴더는 `webkitGetAsEntry`로 걸음)와 순수 함수 `planDrop(dropped, project)` → `open`(.stm32lab 하나) / `import`(.ioc나 main.c 포함: 한 폴더를 놓으면 그 폴더가 루트) / `add`(소스 추가, 같은 이름은 교체). 실행 중에는 받지 않는다. `app.js`가 처리기를 건다. 끄는 동안 `body.file-drop-target` 표시.
+- **11번 모든 파일 수정**: 읽기 전용 보기(앱이 넣는 `Core/Src/stm32xxxx_it.c`·`syscalls.c`·`sysmem.c`, SDK 소스·헤더)의 경로 줄에 `#copy-to-project` 단추(`ide-ui.js` `copyToProject`). 복사본은 같은 경로의 프로젝트 파일이 된다. `buildEnvironment`는 사용자 소스에 있는 핸들러를 건너뛰고 시스템 호출은 weak이므로 복사본이 이긴다. SDK 소스 복사본이 있으면 `native-build.cjs`가 그 모듈의 SDK 파일을 빼고 복사본을 컴파일한다(헤더는 프로젝트 폴더 include가 앞). 빌드 파일 목록은 복사한 파일을 더 보여 주지 않는다. main.c의 이름 변경·삭제와 실행 중 편집 잠금은 그대로 둔다(주 소스 키, 실행 중인 프로그램과의 불일치 방지). 어셈블리(startup .s)와 링커 스크립트는 복사 대상이 아니다.
+  - `code-editor.js`를 바꾸면 `npm run build:editor`로 번들을 다시 만들어야 앱에 반영된다.
+- **13번 .ioc로 회로 초안(`src/ioc-circuit.js`·`ioc-circuit-ui.js`)**: `suggestCircuit(mcu)` → 제안 목록(출력→LED+330 Ω, 라벨 BUZZ→부저, 입력·EXTI→버튼(Pull-down이면 3.3 V 쪽), ADC→가변저항, PWM 채널→LED·라벨 SERVO→서보, I2C→메모리·라벨에 OLED가 있으면 OLED, SPI→메모리+라벨이 CS/NSS로 끝나는 출력, UART→터미널). 보드 내장(PA5 LD2·PC13 B1·PA2/PA3 ST-LINK)과 제어 핀(라벨이 CS·DC·RST 등으로 끝남)은 이유와 함께 목록에만 둔다. `buildCircuit(project, chosen)`은 모델 부품과 넷(부품 단자 배선)을 만들고 `physicalExample` + `arrangeExampleOnBreadboards`가 배치·배선한다. 회로가 없는 프로젝트에 .ioc를 가져오면 대화상자가 뜨고, Pinout의 `#pinout-circuit`으로 언제든 연다(기존 회로는 교체, Ctrl+Z).
+- **오류 탐색에서 고친 것**: 무작위 Pinout 설정을 생성 → 해석기 실행(800개), ARM GCC 빌드 → 에뮬레이터 실행(220개) 검사. ① 워치독이 수 ms 안에 계속 리셋되면 "실행 한도" 오류 → 원인 안내(`hal-wdg.js` expire). ② CHxN 핀만 잡은 채널의 `ConfigChannel` 누락(`hal-generator.js`), 해석기의 CHxN 단독·`HAL_TIMEx_OCN_Start` 지원(`hal-timers.js` `mainPin`). ARM 쪽은 220개 모두 빌드·실행.
+- **CI**: 툴체인 시험 3조각·E2E 4조각·ESP32 빌드 캐시(1.34.0 커밋). 1.33.0 8.0분 → 1.34.0은 ESP32 캐시를 새로 만드는 첫 실행이라 8.5분(나머지 작업은 4.7분 안), 1.35.0에서 효과를 확인.
+- 시험: 단위 `source-paths`·`file-drop`, 해석기 `ioc-circuit`, 툴체인 `source-folders`·`copied-files`, E2E `folder-import`·`file-drop`·`copy-to-project`·`ioc-circuit`.
 
 ## 1.34.0 ADC 다채널·외부 트리거, 타이머 TRGO·One Pulse, NRST, 에뮬레이터 안내
 
