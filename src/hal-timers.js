@@ -41,7 +41,13 @@ export class HalTimers {
   cntOf(s,u){u=Math.floor(u);return s.kind==='Encoder'||s.count==='up'||this.period(s)===1?u:s.count==='down'?this.arr(s)-u:u<=this.arr(s)?u:2*this.arr(s)-u;}
   counter(s,us){return this.cntOf(s,this.phase(s,us));}
   countingDown(s,us){return s.kind==='Encoder'?s.down:s.count==='down'||s.count==='center'&&this.phase(s,us)>this.arr(s);}
-  freeze(s,us){s.value=this.phase(s,us);s.at=us;}
+  freeze(s,us){s.updates=this.updates(s,us);s.value=this.phase(s,us);s.at=us;}
+  // Update events (the counter passing its end; both ends in center-aligned mode) since the update flag was last
+  // cleared — for code that polls __HAL_TIM_GET_FLAG(&htim, TIM_FLAG_UPDATE) instead of using the interrupt.
+  updates(s,us){
+    const held=s.updates??0;if(this.period(s)===1||s.kind==='Encoder'||!s.active)return held;
+    const span=this.cycle(s)/(s.count==='center'?2:1);return held+Math.floor((s.value+(us-s.at)*this.hz(s)/1e6)/span)-Math.floor(s.value/span);
+  }
   // Phases in (0, cycle] where CNT = CCR: none when CCR > ARR, two in center-aligned mode (counting up and down).
   matchPhases(s,pulse){
     const arr=this.arr(s),cycle=this.cycle(s);if(pulse>arr||this.period(s)===1)return [];
@@ -56,7 +62,7 @@ export class HalTimers {
     r.event(r.microTime/1000+Math.max(.000001,(cycle-u)*1000/this.hz(s)),()=>{
       if(generation!==s.generation||!s.active)return;
       if(s.baseIT)hal.queue(timerIrq(s.id,hal.f1),function*(){yield* hal.userCall(r,'HAL_TIM_PeriodElapsedCallback',[s.ptr]);},s.id+':update');
-      s.generation++;s.value=0;s.at=r.microTime;s.base=false;s.baseIT=false;
+      s.generation++;s.value=0;s.updates=0;s.at=r.microTime;s.base=false;s.baseIT=false;
       for(const c of s.channels.values()){if(!c.active)continue;c.active=false;c.generation=(c.generation??0)+1;if(c.kind==='PWM')r.call('digitalWrite',[c.pin,Number(c.pulse>0)]);}
       s.active=false;
     });
@@ -162,9 +168,14 @@ export class HalTimers {
       this.syncActive(s,r);if(ch.kind==='PWM')this.pwm(s,ch,r);else this.oc(s,ch,b,r);return 0;
     }
     if(name==='__HAL_TIM_GET_COUNTER')return this.counter(s,r.microTime);
+    if(['__HAL_TIM_GET_FLAG','__HAL_TIM_CLEAR_FLAG','__HAL_TIM_CLEAR_IT'].includes(name)){
+      if(b!==1)throw new Error(`${name}: 내장 해석기는 Update 플래그(TIM_FLAG_UPDATE / TIM_IT_UPDATE)만 지원합니다. 다른 플래그는 ARM GCC 빌드로 실행하세요.`);
+      if(name==='__HAL_TIM_GET_FLAG')return Number(this.updates(s,r.microTime)>0);
+      this.freeze(s,r.microTime);s.updates=0;return 0;
+    }
     if(name==='__HAL_TIM_IS_TIM_COUNTING_DOWN')return Number(this.countingDown(s,r.microTime));
     if(name==='__HAL_TIM_SET_COUNTER'){
-      const v=integer(b,0,this.max(s.id),'TIM counter'),arr=this.arr(s),cycle=this.cycle(s),down=this.countingDown(s,r.microTime);
+      const v=integer(b,0,this.max(s.id),'TIM counter'),arr=this.arr(s),cycle=this.cycle(s),down=this.countingDown(s,r.microTime);s.updates=this.updates(s,r.microTime);
       s.value=s.kind==='Encoder'||s.count==='up'||this.period(s)===1?v:s.count==='down'?wrap(arr-v,cycle):down&&v>0?wrap(2*arr-v,cycle):wrap(v,cycle);
       s.at=r.microTime;this.schedule(s,r);this.outputs(s,r);return 0;
     }
