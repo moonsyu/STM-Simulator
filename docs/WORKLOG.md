@@ -2,6 +2,14 @@
 
 작업할 때마다 날짜순으로 맨 위에 추가합니다. 무엇을 했는지, 왜 했는지, 어떻게 검증했는지, 커밋·릴리스와 남은 사항을 적습니다. 버전별 구조 설명은 [HANDOFF.md](../HANDOFF.md), 검증 수치는 [VERIFICATION.md](VERIFICATION.md)에 있습니다.
 
+## 2026-11-10 · 기능 목록 18~24번 추가(RA6E1 강의 Day5)
+
+- 요청: 르네사스 보드 공부 자료(강의 Day5 PDF)를 보고 필요한 기능 검증·추가·수정 작업을 목록에 추가.
+- 한 것: PDF 165쪽을 텍스트로 뽑아 읽었다(pdftotext는 한글이 깨져 pypdf로 다시 뽑음, 임시 파일은 세션 임시 폴더). 실습 내용(LED·스위치 폴링·디바운스·외부 인터럽트·도전 과제)과 e² studio 화면(새 프로젝트 마법사, Summary·BSP·Clocks·Pins·Stacks, Developer Assistance, 파일 구조)을 앱의 RA6E1 지원(`src/ra-config.js`·`ra-examples.js`·`ra-generator.js`·`ra-pinout-ui.js`)과 비교했다. 겹치는 것(LED1 P408·LED2 P407·SW1 P205, IRQ1, R_IOPORT_PinWrite·R_BSP_SoftwareDelay·R_ICU_ExternalIrq*, J-Link·Pmod·아두이노 핀 표)은 이미 있고, 없는 것과 다른 것을 18~24번으로 적었다: 강의 순서대로 따라 하기 검증, Blinky·Minimal 템플릿, e² studio 파일 구조, Developer Assistance, RASC 이름·흐름(Summary·BSP 탭, IRQ1-DS, Stack Properties), 버튼 채터링, 도전 4(외부 LED 4개·스위치 2개). 반도체 용어·사업 구조 같은 이론 부분(Day5-1, 도전 1~3)은 앱 기능과 관계없어 넣지 않았다.
+- 검증: 문서만 바뀜.
+- 커밋·릴리스: 문서 커밋. 버전 변경 없음.
+- 남은 사항: 18~24번 구현. 강의 코드 원본(gist)은 아직 받아 보지 않았다.
+
 ## 2026-11-10 · 기능 목록 14~17번 추가
 
 - 요청: 수정 사항 4가지 — CubeIDE처럼 전체 파일 구조 보고 수정, 탐색기를 창 밖으로 꺼낸 뒤 키로 안 돌아옴, Docs 두 번 누르면 화면 사라짐, 장치 더블클릭 시 속성 페이지.
