@@ -60,7 +60,7 @@ const FN_NAME=/([A-Za-z_]\w*)\s*\([^()]*(?:\([^()]*\)[^()]*)*\)\s*$/,LAST_NAME=/
 function declaredName(text){
  const body=text.replace(/;\s*$/,''),open=body.indexOf('{'),eq=body.indexOf('=');
  if(open>=0&&(eq<0||open<eq)){const after=body.slice(body.lastIndexOf('}')+1).split('=')[0];return LAST_NAME.exec(after)?.[1]??LAST_NAME.exec(body.slice(0,open))?.[1]??'';}
- const head=eq<0?body:body.slice(0,eq);return /\(\s*\*\s*([A-Za-z_]\w*)/.exec(head)?.[1]??LAST_NAME.exec(head.split('(')[0])?.[1]??'';
+ const head=eq<0?body:body.slice(0,eq);return /\(\s*\*\s*(?:(?:const|volatile)\s+)*([A-Za-z_]\w*)/.exec(head)?.[1]??LAST_NAME.exec(head.split('(')[0])?.[1]??'';
 }
 // Top-level items of a source: [{kind:'function'|'declaration'|'directive', name, start, end, text, comment}], skipping
 // the user sections. `comment` is the comment block directly above the item.

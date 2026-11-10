@@ -59,3 +59,25 @@ test('every HAL example keeps all of its functions when main.c is regenerated (b
   assert.deepEqual(adoptOutsideCode(p.code,generated,generated).moved,[],kind);
  }
 });
+
+// The syntax the interpreter learned in 1.37–1.40, written outside the sections: each item is kept once and named.
+test('function pointer tables, 2-D tables, designated initializers and multi-line macros outside the sections are kept once',()=>{
+ const mcu=defaultMcu(),base=generateHal(mcu),next={...mcu,pins:{...mcu.pins,PB0:{function:'GPIO_Output',pull:'NOPULL',edge:'FALLING',label:'',initial:0}}},generated=generateHal(next);
+ const code=String.raw`typedef void (*Handler)(int);
+static void a(void) { }
+static void (*const tbl[])(void) = { a };
+static void (*const other[])(void) = { a };
+static int (*op)(int) = 0;
+static const uint8_t font[][3] = { {1, 2, 3}, {4, 5, 6} };
+typedef struct { const char *name; uint16_t pin; } Led;
+static const Led led = { .name = "}{", .pin = GPIO_PIN_5 };
+#define BLINK(n) \\
+  for (int i = 0; i < (n); i++) { \\
+    HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_5); \\
+  }`;
+ assert.deepEqual(topLevelItems(code).filter(i=>i.kind!=='directive').map(i=>i.name),['Handler','a','tbl','other','op','font','Led','led']);
+ const out=regenerateMain(base.replace('int main(void)',code+'\n\nint main(void)'),generated,base);
+ for(const line of code.split('\n').filter(l=>l.trim().length>8))assert.equal(out.code.split(line).length-1,1,line);
+ assert.deepEqual(out.moved.filter(n=>!/BLINK/.test(n)),['Handler','a','tbl','other','op','font','Led','led']);
+ assert.equal(regenerateMain(out.code,generated,generated).code,out.code);
+});
