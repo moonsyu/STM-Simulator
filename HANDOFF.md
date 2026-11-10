@@ -8,7 +8,7 @@
 - **printf(`hal-stdio.js` `cFixed`, `cExponential`)**: double을 정확한 분수(가수/2^n, BigInt)로 보고 정수 연산으로 반올림한다(동률은 짝수). `toFixed`/`toExponential`은 동률에서 큰 쪽을 고른다. 정밀도 한계 17.
 - **드롭(`file-drop.js`)**: `SOURCE`에 `.s`·`.ld`.
 - **빌드(`scripts/build-package.cjs`, `scripts/clean-build.cjs`)**: `build:package`가 electron-builder API로 포터블 EXE를 만들며 `ELECTRON_BUILDER_COMPRESSION_LEVEL`을 5로 둔다(호출한 쪽이 정하면 그 값). 정리 스크립트의 허용 목록에 Electron 45의 `electron_wer.dll`.
-- **CI**: 검사 2개(`--test-shard`, lint·audit·update-helper는 첫 작업), 펌웨어 4개, ESP32 3개, E2E 6개. 묶음은 `scripts/toolchain-shard.mjs`.
+- **CI**: 검사 2개(`--test-shard`, lint·audit·update-helper는 첫 작업), 펌웨어 5개, ESP32 3개, E2E 6개. 묶음은 `scripts/toolchain-shard.mjs`(같은 CPU에서 잰 시간으로 나눔; 각 작업이 `runner: <CPU> · benchmark: …` 한 줄을 출력하고, `node scripts/toolchain-shard.mjs benchmark`는 그 줄만 낸다). 전체 4.7분 → 3.3~3.6분(같은 커밋 세 번, [VERIFICATION](docs/VERIFICATION.md)).
 - 시험: 단위 `examples-sweep`(예제 124개 × 보드 2개 = 247개 프로젝트: `.ioc` 왕복, 재생성, 핸들러 중복, 회로 생성, 드롭 이름), 해석기 `printf-formats`.
 
 ## 1.46.2 수정: 채터링 2 ms, CI 시간
