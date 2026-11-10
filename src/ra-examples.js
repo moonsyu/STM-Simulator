@@ -301,5 +301,176 @@ void hal_entry(void)
     }
 }
 `+WARM_START});
-RA_EXAMPLES.push(UART_EXAMPLE,GPT_EXAMPLE,ADC_EXAMPLE,AGT_EXAMPLE,IIC_EXAMPLE);
+// ---- The course exercises (RA6E1 lecture, Day 5), as its slides write them.
+// Switch polling: S1 (P205) as an input with the pull-up, read with R_IOPORT_PinRead; each press toggles LED1. The
+// 100 ms waits are the debounce: without them a bouncing contact toggles the LED several times (파형 탭 → 버튼 채터링).
+const POLL_EXAMPLE=Object.freeze({id:'ra_button_poll',name:'S1 폴링으로 LED1 토글 · 디바운스 (R_IOPORT_PinRead)',tags:['GPIO','button','polling','debounce','PinRead'],
+ mcu:()=>{const m=raDefaultMcu();m.pins.P205={function:'GPIO_Input',pull:'PULLUP',label:'SW1'};return m;},
+ code:HEAD+`
+/* S1 is pressed: the pin reads LOW (the switch connects it to GND, the pull-up holds it HIGH otherwise). */
+static bool isButton(void)
+{
+    bsp_io_level_t level;
+    fsp_err_t err = R_IOPORT_PinRead(&g_ioport_ctrl, SW1, &level);
+    if (FSP_SUCCESS != err)
+    {
+        return false;
+    }
+    return BSP_IO_LEVEL_LOW == level;
+}
+
+void hal_entry(void)
+{
+    bsp_io_level_t led = BSP_IO_LEVEL_LOW;
+
+    while (1)
+    {
+        if (isButton())
+        {
+            led = (BSP_IO_LEVEL_LOW == led) ? BSP_IO_LEVEL_HIGH : BSP_IO_LEVEL_LOW;
+            R_IOPORT_PinWrite(&g_ioport_ctrl, LED1, led);
+
+            /* Debounce: wait out the bounce of the press, then of the release. */
+            R_BSP_SoftwareDelay(100, BSP_DELAY_UNITS_MILLISECONDS);
+            while (isButton())
+            {
+            }
+            R_BSP_SoftwareDelay(100, BSP_DELAY_UNITS_MILLISECONDS);
+        }
+    }
+}
+`+WARM_START});
+
+// External interrupt as the course sets it up: Stack g_external_irq1 with callback irq_callback, trigger Rising (the
+// release of S1), opened in R_BSP_WarmStart and enabled in hal_entry; the callback tells the channel by p_args->channel.
+const IRQ_COURSE_EXAMPLE=Object.freeze({id:'ra_button_irq_rising',name:'S1 인터럽트(Rising · irq_callback)로 LED2 토글 — 강의 방식',tags:['IRQ','ICU','button','interrupt','rising','WarmStart'],
+ mcu:()=>{const m=raDefaultMcu();m.pins.P205={function:'IRQ',edge:'RISING',pull:'PULLUP',priority:12,label:'SW1',callback:'irq_callback'};return m;},
+ code:HEAD+`
+static volatile bsp_io_level_t led2 = BSP_IO_LEVEL_LOW;
+
+/* Called from r_icu's ISR. One callback can serve several IRQ stacks: p_args->channel says which one fired. */
+void irq_callback(external_irq_callback_args_t *p_args)
+{
+    if (1 == p_args->channel)
+    {
+        led2 = (BSP_IO_LEVEL_LOW == led2) ? BSP_IO_LEVEL_HIGH : BSP_IO_LEVEL_LOW;
+        R_IOPORT_PinWrite(&g_ioport_ctrl, LED2, led2);
+    }
+}
+
+void hal_entry(void)
+{
+    R_ICU_ExternalIrqEnable(&g_external_irq1_ctrl);
+
+    /* LED1 blinks on its own; S1 toggles LED2 when it is let go (rising edge). */
+    while (1)
+    {
+        R_IOPORT_PinWrite(&g_ioport_ctrl, LED1, BSP_IO_LEVEL_HIGH);
+        R_BSP_SoftwareDelay(500, BSP_DELAY_UNITS_MILLISECONDS);
+        R_IOPORT_PinWrite(&g_ioport_ctrl, LED1, BSP_IO_LEVEL_LOW);
+        R_BSP_SoftwareDelay(500, BSP_DELAY_UNITS_MILLISECONDS);
+    }
+}
+
+void R_BSP_WarmStart(bsp_warm_start_event_t event)
+{
+    if (BSP_WARM_START_POST_C == event)
+    {
+        /* C runtime environment and system clocks are setup. */
+
+        /* Configure pins. */
+        R_IOPORT_Open (&IOPORT_CFG_CTRL, &IOPORT_CFG_NAME);
+
+        /* Open the external interrupt before main code runs. */
+        R_ICU_ExternalIrqOpen(&g_external_irq1_ctrl, &g_external_irq1_cfg);
+    }
+}
+`});
+
+// The course's challenge: four external LEDs on the Arduino header show the 16 combinations xxxx … oooo, one every
+// 0.1 s (walked by a recursive function); switch 1 starts over, switch 2 pauses and resumes at once. The switches
+// are on header pins that can be IRQ inputs: D2 (P409, IRQ6) and D8 (P402, IRQ4).
+const CHALLENGE_EXAMPLE=Object.freeze({id:'ra_led4_switch2',name:'도전: 외부 LED 4개 16가지 조합 · 스위치 2개(다시 시작 / 일시정지)',tags:['GPIO','LED','IRQ','button','recursion','Arduino','challenge'],
+ mcu:()=>{const m=raDefaultMcu();
+  Object.assign(m.pins,{P107:{function:'GPIO_Output',initial:0,drive:'LOW',label:'LED_A'},P303:{function:'GPIO_Output',initial:0,drive:'LOW',label:'LED_B'},P113:{function:'GPIO_Output',initial:0,drive:'LOW',label:'LED_C'},P103:{function:'GPIO_Output',initial:0,drive:'LOW',label:'LED_D'},
+   P409:{function:'IRQ',edge:'FALLING',pull:'PULLUP',priority:12,label:'SW_RESTART',callback:'restart_callback'},P402:{function:'IRQ',edge:'FALLING',pull:'PULLUP',priority:12,label:'SW_PAUSE',callback:'pause_callback'}});
+  return m;},
+ circuit:()=>{const components=[],wires=[];let n=0;const wire=(from,to,color)=>wires.push({id:'w'+(++n),from,to,color});
+  // D4 (J5-5), D6 (J5-7), D7 (J5-8), D10 (J1-3): each through 330 Ω to an LED to GND.
+  [['a','board:J5:5'],['b','board:J5:7'],['c','board:J5:8'],['d','board:J1:3']].forEach(([k,pin],i)=>{
+   components.push({id:'r'+k,type:'resistor',name:'R'+(i+1),value:330,x:520,y:120+60*i,rotation:0},{id:'led'+k,type:'led',name:'LED'+(i+1),color:['red','yellow','green','blue'][i],x:620,y:120+60*i,rotation:0});
+   wire(pin,`part:r${k}:a`,'#23a68a');wire(`part:r${k}:b`,`part:led${k}:a`,'#23a68a');wire(`part:led${k}:b`,'board:J2:6','#3a3a3a');});
+  // D2 (J5-3) and D8 (J1-1): a push button to GND (the pins have their pull-ups on).
+  [['sw1','SW1','board:J5:3'],['sw2','SW2','board:J1:1']].forEach(([id,name,pin],i)=>{components.push({id,type:'button',name,x:520,y:380+70*i,rotation:0});wire(pin,`part:${id}:a`,'#8064d8');wire(`part:${id}:d`,'board:J2:7','#3a3a3a');});
+  return {components,wires};},
+ code:HEAD+`
+static const bsp_io_port_pin_t leds[4] = { LED_A, LED_B, LED_C, LED_D };
+static volatile bool restart = false;
+static volatile bool paused  = false;
+
+/* Switch 1 (D2, IRQ6): start over. Switch 2 (D8, IRQ4): pause / resume. */
+void restart_callback(external_irq_callback_args_t *p_args)
+{
+    (void) p_args;
+    restart = true;
+}
+
+void pause_callback(external_irq_callback_args_t *p_args)
+{
+    (void) p_args;
+    paused = !paused;
+}
+
+static void show(uint8_t value)
+{
+    for (int i = 0; i < 4; i++)
+    {
+        R_IOPORT_PinWrite(&g_ioport_ctrl, leds[i], (value & (1U << (3 - i))) ? BSP_IO_LEVEL_HIGH : BSP_IO_LEVEL_LOW);
+    }
+}
+
+/* Walks the combinations of the remaining LEDs: off first, then on. Returns false when switch 1 asked to start over. */
+static bool play(uint8_t value, int led)
+{
+    if (4 == led)
+    {
+        show(value);
+        /* 0.1 s in 10 ms steps, so a pause or a restart takes effect at once. */
+        for (int step = 0; step < 10; step++)
+        {
+            R_BSP_SoftwareDelay(10, BSP_DELAY_UNITS_MILLISECONDS);
+            while (paused && !restart)
+            {
+            }
+            if (restart)
+            {
+                return false;
+            }
+        }
+        return true;
+    }
+    return play((uint8_t) (value << 1), led + 1) && play((uint8_t) ((value << 1) | 1U), led + 1);
+}
+
+void hal_entry(void)
+{
+    R_ICU_ExternalIrqOpen(&g_external_irq6_ctrl, &g_external_irq6_cfg);
+    R_ICU_ExternalIrqEnable(&g_external_irq6_ctrl);
+    R_ICU_ExternalIrqOpen(&g_external_irq4_ctrl, &g_external_irq4_cfg);
+    R_ICU_ExternalIrqEnable(&g_external_irq4_ctrl);
+
+    while (1)
+    {
+        restart = false;
+        paused  = false;
+        play(0, 0);
+    }
+}
+
+void external_irq1_callback(external_irq_callback_args_t *p_args)
+{
+    (void) p_args;
+}
+`+WARM_START});
+RA_EXAMPLES.push(POLL_EXAMPLE,IRQ_COURSE_EXAMPLE,UART_EXAMPLE,GPT_EXAMPLE,ADC_EXAMPLE,AGT_EXAMPLE,IIC_EXAMPLE,CHALLENGE_EXAMPLE);
 Object.freeze(RA_EXAMPLES);

@@ -9,7 +9,7 @@ export const TOOLCHAIN_SHARDS=Object.freeze([
  // 106 + 56
  ['arm-examples','ra-build'],
  // 33 + 29 + 28 + 27 + 27 + 15
- ['wdg','adc-sampling','bus-instances','adc-continuous','adc-group','dwarf-version'],
+ ['wdg','adc-sampling','bus-instances','adc-continuous','adc-group','dwarf-version','ra-course'],
  // 23 + 15 + 14 + 13 + 13 + 11 + 10 + 10 + 10 + 9 + 9 + 8 + 6
  ['emu-accuracy','button-bounce','tim-oc','board-links','spi-params','tim-advanced','dac','tim-channels','rtc','uart-params','source-folders','clock-tree','copied-files','tim-basic'],
 ]);
