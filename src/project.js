@@ -1,5 +1,5 @@
 import {CATALOG_DEFS,CATALOG_BY_TYPE} from './catalog-defs.js';
-import {SOURCE_PATH,MAX_SOURCE_FILES,MAX_SOURCE_BYTES,baseName} from './source-files.js';
+import {SOURCE_PATH,MAX_SOURCE_FILES,MAX_SOURCE_BYTES,baseName,nameClash} from './source-files.js';
 import {DEVICE_RANGES,DEVICE_ADDRESSES} from './device-defs.js';
 import {PIN_BY_ID,holeInfo} from './pins.js';
 import {terminalKeys,TWO_PIN_TYPES,MULTI_PIN_TYPES,normalizeAngle} from './components.js';
@@ -133,7 +133,7 @@ export function validateProject(data){
   if(data.firmware!==undefined){
     if(!data.firmware||!['sketch','hal','fsp'].includes(data.firmware.mode)||!Array.isArray(data.firmware.files)||data.firmware.files.length>MAX_SOURCE_FILES)throw new Error('펌웨어 소스 설정이 올바르지 않습니다.');
     const names=new Set();let size=data.code.length;
-    const files=data.firmware.files.map(f=>{if(!f||typeof f.name!=='string'||!SOURCE_PATH.test(f.name)||baseName(f.name).toLowerCase()==='main.c'||names.has(f.name.toLowerCase())||typeof f.text!=='string')throw new Error('소스 파일 이름/내용을 확인하세요.');names.add(f.name.toLowerCase());size+=f.text.length;return {name:f.name,text:f.text};});
+    const files=data.firmware.files.map(f=>{if(!f||typeof f.name!=='string'||!SOURCE_PATH.test(f.name)||nameClash(names,f.name)||typeof f.text!=='string')throw new Error('소스 파일 이름/내용을 확인하세요.');names.add(f.name.toLowerCase());size+=f.text.length;return {name:f.name,text:f.text};});
     if(size>MAX_SOURCE_BYTES)throw new Error('소스 전체는 1 MB 이하로 선택하세요.');
     // Where main.c sits in an imported CubeIDE project (Core/Src): the build puts it there so its relative includes work.
     let mainFolder;if(data.firmware.mainFolder!==undefined){if(typeof data.firmware.mainFolder!=='string'||!SOURCE_PATH.test(data.firmware.mainFolder+'/main.c'))throw new Error('main.c 폴더 경로를 확인하세요.');mainFolder=data.firmware.mainFolder;}

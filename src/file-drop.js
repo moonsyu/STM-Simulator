@@ -4,7 +4,7 @@
 //  - other .c / .h / .cpp / .hpp files → added to the project's sources (a dropped folder keeps its tree under its name);
 //    a file that already exists is replaced with the dropped text.
 // The decision is a pure function (planDrop) so it can be tested without a window.
-import {SOURCE_PATH,MAX_SOURCE_FILES,MAX_SOURCE_BYTES,baseName} from './source-files.js';
+import {SOURCE_PATH,MAX_SOURCE_FILES,MAX_SOURCE_BYTES,baseName,nameClash} from './source-files.js';
 
 // Folders of a CubeIDE project that are not the user's sources (the app builds with its own SDK copy).
 const SKIP_FOLDERS=new Set(['drivers','middlewares','debug','release','build','.git','.settings','.metadata','node_modules','startup']);
@@ -59,6 +59,12 @@ export function planDrop(dropped,project){
   }
   if(project.firmware?.mode==='fsp'&&sources.some(f=>baseName(f.name)==='hal_entry.c'))throw new Error('hal_entry.c는 FSP 프로젝트의 주 소스 이름입니다.');
   const existing=new Map((project.firmware?.files||[]).map(f=>[f.name.toLowerCase(),f.name]));
+  // Names the project cannot hold are left out and reported: Main.c (main.c is the main source), the same name twice in
+  // one drop (also when only the case differs), a file where a folder of that name is. Replacing a project file is fine.
+  {const kept=[],taken=[...existing.values()],seen=new Set();
+    for(const f of sources){const low=f.name.toLowerCase();if(seen.has(low)||!existing.has(low)&&nameClash(taken,f.name)){skipped.push(f.name);continue;}seen.add(low);if(!existing.has(low))taken.push(f.name);kept.push(f);}
+    if(!kept.length)throw new Error('놓은 파일을 추가할 수 없습니다: main.c와 이름이 같거나 프로젝트의 폴더·파일 이름과 겹칩니다.');
+    sources.length=0;sources.push(...kept);}
   const fresh=sources.filter(f=>!existing.has(f.name.toLowerCase())).length;
   if((project.firmware?.files?.length||0)+fresh>MAX_SOURCE_FILES)throw new Error(`보조 소스는 ${MAX_SOURCE_FILES}개까지입니다.`);
   const total=(project.code?.length||0)+(project.firmware?.files||[]).filter(f=>!sources.some(s=>s.name.toLowerCase()===f.name.toLowerCase())).reduce((n,f)=>n+f.text.length,0)+sources.reduce((n,f)=>n+f.text.length,0);

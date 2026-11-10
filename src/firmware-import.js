@@ -3,7 +3,7 @@ import {expandC} from './c-format.js';
 import {regenerateMain} from './c-source-edit.js';
 import {validateProject} from './project.js';
 import {projectBoard,boardForFamily} from './boards.js';
-import {SOURCE_PATH,MAX_SOURCE_FILES,MAX_SOURCE_BYTES,baseName,folderOf} from './source-files.js';
+import {SOURCE_PATH,MAX_SOURCE_FILES,MAX_SOURCE_BYTES,baseName,folderOf,nameClash} from './source-files.js';
 
 export function importFirmware(project,files){
   if(!Array.isArray(files)||files.length>MAX_SOURCE_FILES+1||!files.length)throw new Error('.ioc 및 .c/.h 파일을 선택하세요.');
@@ -24,7 +24,11 @@ export function importFirmware(project,files){
     const mains=sourceFiles.filter(f=>baseName(f.name)==='main.c'),main=mains.find(f=>f.name==='main.c')??mains.find(f=>/(^|\/)Core\/Src\/main\.c$/.test(f.name))??mains[0];
     if(!main)throw new Error('C 소스를 가져올 때 main.c를 함께 선택하세요.');
     if(mains.length>1)warnings.push(`main.c가 여러 개라 ${main.name}을 주 소스로 썼습니다: ${mains.filter(f=>f!==main).map(f=>f.name).join(', ')}는 가져오지 않았습니다.`);
-    next.code=main.text;next.firmware={mode:'hal',files:sourceFiles.filter(f=>baseName(f.name)!=='main.c').map(f=>({name:f.name,text:f.text})),...(folderOf(main.name)?{mainFolder:folderOf(main.name)}:{})};
+    // Names a project cannot hold (MAIN.C beside main.c, two names that differ only in case, a file where a folder is)
+    // are left out with a warning: with them the project could not be saved or opened again.
+    const kept=[],left=[];for(const f of sourceFiles.filter(f=>baseName(f.name)!=='main.c')){if(nameClash(kept.map(k=>k.name),f.name))left.push(f.name);else kept.push(f);}
+    if(left.length)warnings.push(`이름이 겹쳐 가져오지 않은 파일: ${left.join(', ')}`);
+    next.code=main.text;next.firmware={mode:'hal',files:kept.map(f=>({name:f.name,text:f.text})),...(folderOf(main.name)?{mainFolder:folderOf(main.name)}:{})};
   }
   // Only an .ioc: the settings change and main.c is generated from them as CubeMX does (USER CODE sections kept), so the
   // import shows in the code too. A configuration that cannot be generated leaves main.c as it was, with the reason. A
