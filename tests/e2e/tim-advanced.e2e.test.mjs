@@ -16,7 +16,8 @@ test('Pinout TIM1: Repetition Counter, Dead Time in PWM mode, TIM1_UP / TIM1_CC 
   await win.selectOption('[data-timer-mode="TIM1"]','pwm');await win.waitForSelector('[data-peripheral-value="TIM1"][data-key="deadTime"]');
   await win.fill('[data-peripheral-value="TIM1"][data-key="repetition"]','300');await win.dispatchEvent('[data-peripheral-value="TIM1"][data-key="repetition"]','change');
   await win.evaluate(()=>document.getElementById('hal-generate').click());
-  await win.waitForFunction(()=>/TIM1 Repetition Counter: 0~255 범위의 정수를 입력하세요/.test(document.getElementById('pinout-errors').textContent),null,{timeout:10000});
+  if(await win.evaluate(()=>document.getElementById('hal-replace-dialog').open))await win.click('#hal-replace-confirm');
+  await win.waitForFunction(()=>/TIM1 Repetition Counter: 0~255 범위의 정수를 입력하세요/.test(document.getElementById('pinout-errors').textContent),null,{timeout:10000}).catch(async e=>{throw new Error(e.message+' / errors: '+await win.textContent('#pinout-errors')+' / open: '+await win.evaluate(()=>[...document.querySelectorAll('dialog[open]')].map(d=>d.id).join(',')));});
   const nvic=await win.evaluate(()=>[...document.querySelectorAll('#pinout-dialog [data-irq]')].map(e=>e.dataset.irq));
   for(const irq of ['TIM1_UP_IRQn','TIM1_CC_IRQn'])assert.ok(nvic.includes(irq),irq+' in '+nvic.join(','));
   assert.deepEqual(s.errors,[]);
