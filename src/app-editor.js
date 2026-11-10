@@ -1,3 +1,4 @@
+import {validateProject} from './project.js';
 // The code editor: the open source file, line numbers, edits from tools, firmware mode and the board being edited.
 import {pinSearch} from './app-canvas.js';
 import {running,checkpoint,changed,log,autosave,tab} from './app-core.js';
@@ -8,6 +9,7 @@ import {resetMainCode} from './code-reset.js';
 import {$} from './common.js';
 import {devboardModel,boardForFile,boardFileKey,isBoardFile} from './devboards.js';
 import {importFirmware} from './firmware-import.js';
+import {offerCircuit} from './ioc-circuit-ui.js';
 import {esc} from './render.js';
 import {isKernelSource} from './rpi-python.js';
 import {SERIAL_IDS} from './serial-config.js';
@@ -44,7 +46,13 @@ export function replaceCodeText(edit){
  try{code.setRangeText(edit.text,edit.start,edit.end,'end');code.dispatchEvent(new Event('input',{bubbles:true}));}
  finally{state.replaceCheckpoint=false;}
 }
-export function applyFirmware(files){try{if(!files)return;const imported=importFirmware(state.project,files);checkpoint();state.project=imported.project;state.sourceFile='main.c';syncEditor();changed();log('가져왔습니다: '+files.map(f=>f.name).join(', ')+(imported.regenerated?' · Pinout 설정과 main.c를 .ioc대로 만들었습니다(USER CODE 구역은 유지).':''));for(const warning of imported.warnings)log(warning,'error');}catch(e){log(e.message,'error');}}
+export function applyFirmware(files){try{if(!files)return;const imported=importFirmware(state.project,files);checkpoint();state.project=imported.project;state.sourceFile='main.c';syncEditor();changed();log('가져왔습니다: '+files.map(f=>f.name).join(', ')+(imported.regenerated?' · Pinout 설정과 main.c를 .ioc대로 만들었습니다(USER CODE 구역은 유지).':''));for(const warning of imported.warnings)log(warning,'error');
+  // An .ioc carries no circuit: offer the parts its pins suggest (feature 13). Only when the project has no circuit yet,
+  // so importing settings into a finished project does not ask every time (the Pinout has the same button).
+  if(files.some(f=>/\.ioc$/i.test(f.name))&&!state.project.components.length&&document.getElementById('ioc-circuit-dialog'))offerCircuit(state.project.mcu,{getProject:()=>state.project,log:()=>{},intro:'.ioc에는 회로가 없습니다. ',apply:applyCircuit});
+  }catch(e){log(e.message,'error');}}
+/** Replaces the circuit with one built from the Pinout (ioc-circuit.js). */
+export function applyCircuit(project){checkpoint();state.project=validateProject(project);syncEditor();changed();log(`핀 설정으로 회로를 만들었습니다: ${project.components.map(c=>c.name).join(', ')} (Ctrl+Z로 되돌림). 부품은 초안이니 실제 장치에 맞게 바꾸세요.`);}
 export /** Edit another STM32 board: it becomes the main board (code, pin settings, sources, build, debug and flashing). */
 function editBoard(id){
  const part=state.project.components.find(p=>p.id===id);if(!isStm32Board(part))return false;

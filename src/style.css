@@ -364,3 +364,6 @@ dialog h1{font-size:21px;margin:8px 0 18px;letter-spacing:-.5px}
 .clock-table td:last-child{color:#5a6d64}
 .clock-table tr.clock-over td{color:#a82c2c;font-weight:700}
 .clock-problems{color:#a82c2c;font-size:11px;line-height:1.6}
+
+/* 핀 설정으로 회로 만들기 (ioc-circuit-ui.js) */
+.ioc-circuit-list{display:grid;gap:6px;max-height:50vh;overflow:auto;margin:8px 0}.ioc-circuit-list .check-label{align-items:flex-start}.ioc-circuit-list small{display:block;opacity:.75}.ioc-circuit-list details{margin-top:6px}.ioc-circuit-list details p{margin:4px 0 4px 12px}
