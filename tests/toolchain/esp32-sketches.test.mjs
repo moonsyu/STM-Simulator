@@ -26,11 +26,15 @@ test('the examples have ESP32 sketches to build',()=>{assert.ok(sketches().lengt
 test('every example ESP32 sketch compiles with the esp32 core',{skip:!cli&&!process.env.CI_REQUIRE_ESP32&&'ARDUINO_CLI is not set',timeout:3600000},()=>{
  assert.ok(cli,'ARDUINO_CLI must point to arduino-cli');
  const root=fs.mkdtempSync(path.join(os.tmpdir(),'stm-esp32-')),failures=[];
- for(const s of sketches()){
+ // CI splits the sketches over jobs: ESP32_SHARD="1/2" builds every second one, starting with the first.
+ const [shard,shards]=(process.env.ESP32_SHARD||'1/1').split('/').map(Number),all=sketches(),mine=all.filter((_,i)=>i%shards===shard-1);
+ assert.ok(Number.isInteger(shard)&&Number.isInteger(shards)&&shard>=1&&shard<=shards,'ESP32_SHARD is n/m');
+ console.log(`building ${mine.length} of ${all.length} sketches (shard ${shard}/${shards})`);
+ for(const s of mine){const started=Date.now();
   const dir=path.join(root,s.name);fs.mkdirSync(dir);fs.writeFileSync(path.join(dir,s.name+'.ino'),s.code);
   const r=spawnSync(cli,['compile','--fqbn','esp32:esp32:esp32','--build-cache-path',process.env.ESP32_BUILD_CACHE||path.join(root,'.cache'),dir],{encoding:'utf8'});
   if(r.status!==0)failures.push(`${s.name}\n${(r.stderr||r.stdout||String(r.error)).slice(-2000)}`);
-  else console.log(`built ${s.name}`);
+  else console.log(`built ${s.name} in ${Math.round((Date.now()-started)/1000)} s`);
  }
  assert.deepEqual(failures,[]);
 });
