@@ -22,6 +22,13 @@ export const RA_IRQ_PINS=Object.freeze({
  P400:0,P401:5,P402:4,P403:14,P404:15,P408:7,P409:6,P410:5,P411:4,P414:9,P415:8,
  P501:11,P502:12,P505:14,P708:11
 });
+// The pins whose interrupt input is IRQn-DS (it also cancels Deep Software Standby); one per channel. RASC lists the pin
+// function by this name (S1 on P205 is IRQ1-DS). IRQn and IRQn-DS are the same ICU channel, so only one of them is used.
+export const RA_IRQ_DS=Object.freeze(['P000','P001','P002','P004','P005','P006','P008','P205','P206','P212','P213','P401','P402','P403','P404']);
+/** The RASC name of a pin's interrupt function: "IRQ1-DS", "IRQ6", or '' for a pin without one. */
+export const raIrqName=pin=>RA_IRQ_PINS[pin]==null?'':`IRQ${RA_IRQ_PINS[pin]}${RA_IRQ_DS.includes(pin)?'-DS':''}`;
+/** BSP tab defaults (bsp_cfg.h). */
+export const RA_BSP_DEFAULTS=Object.freeze({stackBytes:0x400,heapBytes:0x400});
 // Pins the board or the debugger uses: SWD (J-Link OB), the boot mode pin, NMI, and the crystal pins.
 export const RA_RESERVED=Object.freeze({P300:'SWCLK (J-Link OB)',P108:'SWDIO (J-Link OB)',P201:'MD (부트 모드)',P200:'NMI',P212:'EXTAL (24 MHz 미장착)',P213:'XTAL (24 MHz 미장착)'});
 
@@ -92,7 +99,7 @@ export function validateRaMcu(mcu){
   }
   if(p.function==='IRQ'){
    const ch=RA_IRQ_PINS[pin];if(ch==null)throw new Error(`${pin}: 외부 인터럽트(IRQ) 핀이 아닙니다.`);
-   if(channels.has(ch))throw new Error(`${pin}: IRQ${ch}는 이미 ${channels.get(ch)}에서 씁니다.`);channels.set(ch,pin);
+   if(channels.has(ch))throw new Error(`${pin}: IRQ${ch}는 이미 ${channels.get(ch)}(${raIrqName(channels.get(ch))})에서 씁니다. ${raIrqName(pin)}와 같은 채널이라 함께 쓸 수 없습니다.`);channels.set(ch,pin);
    q.edge=p.edge??'FALLING';if(!['FALLING','RISING','BOTH','LOW'].includes(q.edge))throw new Error(`${pin}: 인터럽트 조건을 확인하세요.`);
    q.priority=p.priority??12;if(!Number.isInteger(q.priority)||q.priority<0||q.priority>15)throw new Error(`${pin}: 인터럽트 우선순위는 0~15입니다.`);
    q.callback=p.callback??`external_irq${ch}_callback`;if(typeof q.callback!=='string'||!C_NAME.test(q.callback))throw new Error(`${pin}: 콜백 이름은 C 식별자로 쓰세요.`);
@@ -137,6 +144,14 @@ export function validateRaMcu(mcu){
   if(mhz.fclk<4)throw new Error(`FCLK ${+mhz.fclk.toFixed(3)} MHz: 플래시 동작에 4 MHz 이상이 필요합니다.`);
   if(!(mhz.iclk>=mhz.pclka&&mhz.pclka>=mhz.pclkb&&mhz.pclkd>=mhz.pclka&&mhz.iclk>=mhz.fclk))throw new Error('클록 비율: ICLK ≥ PCLKA ≥ PCLKB, PCLKD ≥ PCLKA, ICLK ≥ FCLK로 정하세요.');
   out.clock=Object.fromEntries(Object.keys(c).filter(k=>k in d).map(k=>[k,clock[k]]));
+ }
+ // BSP tab: main stack and heap sizes (bsp_cfg.h BSP_CFG_STACK_MAIN_BYTES / BSP_CFG_HEAP_BYTES).
+ if(mcu.bsp!==undefined){
+  const b=mcu.bsp;if(!b||typeof b!=='object'||Array.isArray(b))throw new Error('RA BSP 설정을 확인하세요.');
+  const stackBytes=b.stackBytes??RA_BSP_DEFAULTS.stackBytes,heapBytes=b.heapBytes??RA_BSP_DEFAULTS.heapBytes;
+  if(!Number.isInteger(stackBytes)||stackBytes<0x100||stackBytes>0x20000||stackBytes%8)throw new Error('Main stack size: 0x100~0x20000 바이트, 8의 배수로 정하세요.');
+  if(!Number.isInteger(heapBytes)||heapBytes<0||heapBytes>0x20000||heapBytes%8)throw new Error('Heap size: 0~0x20000 바이트, 8의 배수로 정하세요.');
+  out.bsp={stackBytes,heapBytes};
  }
  return out;
 }

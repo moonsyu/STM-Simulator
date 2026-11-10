@@ -401,7 +401,7 @@ extern "C" {
 `;
 }
 
-function bspCfg(){
+function bspCfg(mcu){
  return HEADER('configuration header file')+`#ifndef BSP_CFG_H_
 #define BSP_CFG_H_
 #ifdef __cplusplus
@@ -419,8 +419,8 @@ extern "C" {
 #define BSP_CFG_RTC_USED (0)
 #endif
 #define BSP_CFG_MCU_VCC_MV (3300)
-#define BSP_CFG_STACK_MAIN_BYTES (0x400)
-#define BSP_CFG_HEAP_BYTES (0x400)
+#define BSP_CFG_STACK_MAIN_BYTES (0x${(mcu?.bsp?.stackBytes??0x400).toString(16)})
+#define BSP_CFG_HEAP_BYTES (0x${(mcu?.bsp?.heapBytes??0x400).toString(16)})
 #define BSP_CFG_PARAM_CHECKING_ENABLE (1)
 #define BSP_CFG_ASSERT (0)
 #define BSP_CFG_ERROR_LOG (0)
@@ -818,7 +818,7 @@ export function generateRaFiles(mcu,{board}={}){
  const cfg=(name,text)=>[`ra_cfg/fsp_cfg/${name}`,text],gen=(name,text)=>[`ra_gen/${name}`,text];
  const moduleCfg=(file,guard,macros)=>HEADER('configuration header file')+`#ifndef ${guard}\n#define ${guard}\n#ifdef __cplusplus\nextern "C" {\n#endif\n${macros.join('\n')}\n#ifdef __cplusplus\n}\n#endif\n#endif /* ${guard} */\n`;
  return Object.fromEntries([
-  cfg('bsp/bsp_cfg.h',bspCfg()),
+  cfg('bsp/bsp_cfg.h',bspCfg(mcu)),
   cfg('bsp/bsp_mcu_device_cfg.h',HEADER('configuration header file')+`#ifndef BSP_MCU_DEVICE_CFG_H_\n#define BSP_MCU_DEVICE_CFG_H_\n#define BSP_CFG_MCU_PART_SERIES (${fam.series})\n#endif /* BSP_MCU_DEVICE_CFG_H_ */\n`),
   cfg('bsp/bsp_mcu_device_pn_cfg.h',HEADER('configuration header file')+`#ifndef BSP_MCU_DEVICE_PN_CFG_H_\n#define BSP_MCU_DEVICE_PN_CFG_H_\n#define BSP_MCU_${fam.part}\n#define BSP_MCU_FEATURE_SET ('${fam.featureSet}')\n#define BSP_ROM_SIZE_BYTES (${fam.flashKB*1024})\n#define BSP_RAM_SIZE_BYTES (${fam.ramKB*1024})\n#define BSP_DATA_FLASH_SIZE_BYTES (${fam.dataFlashKB*1024})\n#define BSP_PACKAGE_${fam.package}\n#define BSP_PACKAGE_PINS (${fam.pins})\n#endif /* BSP_MCU_DEVICE_PN_CFG_H_ */\n`),
   cfg('bsp/bsp_mcu_family_cfg.h',familyCfg(fam)),
