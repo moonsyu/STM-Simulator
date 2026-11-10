@@ -318,6 +318,9 @@ export class HalAdapter {
       return 0;
     }
     if(name==='HAL_GPIO_EXTI_IRQHandler'){int(a,1,65535,'EXTI 마스크');if(this.extiPending&a){this.extiPending&=~a;this.callback(r,'HAL_GPIO_EXTI_Callback',[a]);}return 0;}
+    // The pending bits a hand-written EXTI handler reads and clears itself instead of calling HAL_GPIO_EXTI_IRQHandler.
+    if(name==='__HAL_GPIO_EXTI_GET_IT'||name==='__HAL_GPIO_EXTI_GET_FLAG'){int(a,1,65535,'EXTI 마스크');return this.extiPending&a;}
+    if(name==='__HAL_GPIO_EXTI_CLEAR_IT'||name==='__HAL_GPIO_EXTI_CLEAR_FLAG'){int(a,1,65535,'EXTI 마스크');this.extiPending&=~a;return 0;}
     if(name==='HAL_GPIO_EXTI_GenerateSWIT'){int(a,1,65535,'EXTI 마스크');for(let i=0;i<16;i++)if(a&(1<<i)){const pin=Object.keys(this.config.pins).find(p=>Number(p.slice(2))===i&&this.config.pins[p].function==='GPIO_EXTI');if(pin){this.extiPending|=1<<i;this.queue(irqForPin(pin),()=>this.extiHandler(r,1<<i),pin);this.pending.at(-1).exti=1<<i;}}return 0;}
     if(['HAL_UART_Init','HAL_I2C_Init','HAL_SPI_Init','HAL_ADC_Init','HAL_TIM_Base_Init','HAL_TIM_PWM_Init','HAL_TIM_OC_Init','HAL_TIM_IC_Init','HAL_TIM_Encoder_Init'].includes(name)){
       const type=name.split('_')[1],{h,id,init}=this.handle(a,r,type),get=k=>this.field(init,k);this.callback(r,`HAL_${type}${type==='TIM'?'_'+name.split('_')[2]:''}_MspInit`,[a]);

@@ -123,7 +123,9 @@ export function expandMacros(line,macros){
       args.push(line.slice(start,j));if(args.length===1&&!args[0].trim()&&!macro.params.length)args=[];
       if(args.length!==macro.params.length)throw new Error(`매크로 ${id[0]}의 인자는 ${macro.params.length}개입니다.`);
       const map=new Map(macro.params.map((p,n)=>[p,args[n].trim()]));
-      out+='('+macro.body.replace(/[A-Za-z_]\w*/g,w=>map.has(w)?map.get(w):w)+')';i=j+1;changed=true;
+      // A statement macro (do { … } while (0), { … }, if / for / while …) is pasted as it is; an expression gets parentheses.
+      const body=macro.body.replace(/[A-Za-z_]\w*/g,w=>map.has(w)?map.get(w):w);
+      out+=/^\s*(\{|(do|if|for|while|switch|return)\b)/.test(macro.body)?body:'('+body+')';i=j+1;changed=true;
     }
     line=out;if(!changed)return line;
   }
@@ -140,7 +142,11 @@ export function prepareHalSource(source,files=[],options={}){
   const preprocess=(text,name)=>{
     if(stack.includes(name))throw new Error(`순환 include: ${name}`);stack.push(name);const output=[],locations=[],condition=[];let active=true,inComment=false,currentLine=1;
     const append=output.push.bind(output);output.push=value=>{if(typeof value==='object'){locations.push(...value.locations);return append(value.text);}locations.push({file:name,line:currentLine});return append(value);};
-    for(const [index,line]of text.split(/\r?\n/).entries()){
+    // A line ending in \ continues on the next one (multi-line #define): joined here, and the lines taken up stay as
+    // blank lines so that line numbers do not move.
+    const lines=text.split(/\r?\n/);
+    for(let i=0;i<lines.length;i++){let j=i;while(/\\\s*$/.test(lines[i])&&j+1<lines.length){lines[i]=lines[i].replace(/\\\s*$/,' ')+lines[++j];lines[j]='';}}
+    for(const [index,line]of lines.entries()){
       currentLine=index+1;
       // Strip comments without touching string/character literals or line numbering.
       let clean='',quote='',escape=false;

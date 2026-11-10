@@ -86,6 +86,8 @@ export class Runtime {
   array(values,owner=this.scope()){if(values.length>this.maxArray)throw new Error(`배열은 ${this.maxArray}개 이하로 선언하세요.`);this.allocations+=values.length;if(this.allocations>this.maxAllocations)throw new Error('한 단계의 메모리 할당 한도를 넘었습니다.');return {kind:'array',cells:values.map(value=>({value:this.clone(value,owner),owner,constant:false}))};}
   pointer(value){return isArray(value)?{kind:'pointer',array:value,index:0}:value;}
   pointerCell(p,offset=0){
+    // A string literal kept as a pointer value (an element of const char *names[], a struct field): its characters.
+    if(typeof p==='string'){this.literals??=new Map();if(!this.literals.has(p)){const a=this.array([...p].map(c=>c.charCodeAt(0)).concat(0),this.globals);a.cells.forEach(c=>{c.dataType='char';c.constant=true;});this.literals.set(p,a);}p=this.literals.get(p);}
     if(isArray(p))p=this.pointer(p);if(!isPointer(p))throw new Error('배열 또는 유효한 포인터가 필요합니다.');
     if(p.array){const index=p.index+integer(offset);if(index<0||index>=p.array.cells.length)throw new Error('배열 인덱스가 범위를 벗어났습니다.');return p.array.cells[index];}
     if(offset!==0)throw new Error('단일 변수 포인터에 범위를 벗어난 연산을 할 수 없습니다.');return p.cell;
@@ -97,7 +99,10 @@ export class Runtime {
     if(n.type==='unary'&&n.op==='*')return this.pointerCell(yield* this.evaluate(n.a));
     if(n.type==='index')return this.pointerCell(yield* this.evaluate(n.object),yield* this.evaluate(n.index));
     if(n.type==='member'){
-      let object=yield* this.evaluate(n.object);if(n.pointer)object=this.get(this.pointerCell(object));
+      let object=yield* this.evaluate(n.object);
+      // GPIOA->ODR, TIM2->CNT: a peripheral is a name here, with no registers behind it.
+      if(n.pointer&&typeof object==='string'&&this.program.hal&&/^[A-Z][A-Z0-9_]*$/.test(object))throw new Error(`레지스터 직접 접근(${object}->${n.key})은 내장 해석기에서 지원하지 않습니다. HAL 함수를 쓰거나 ARM GCC 빌드로 실행하세요.`);
+      if(n.pointer)object=this.get(this.pointerCell(object));
       if(object?.kind!=='struct'||!own(object.fields,n.key))throw new Error(`구조체 필드가 없습니다: ${n.key}`);return object.fields[n.key];
     }
     throw new Error('대입할 수 없는 값입니다.');
@@ -107,7 +112,7 @@ export class Runtime {
     if((isPointer(a)||isArray(a))&&['+','-'].includes(op)){const p=this.pointer(a);if(!p.array)throw new Error('포인터 산술에는 배열이 필요합니다.');const index=p.index+(op==='+'?1:-1)*integer(b);if(index<0||index>p.array.cells.length)throw new Error('포인터가 배열 범위를 벗어났습니다.');return {...p,index};}
     if(op==='+'&&(typeof a==='string'||typeof b==='string'))return String(a)+String(b);
     if(this.program.hal&&ta&&typeof a==='number'&&typeof b==='number')return arithmetic(op,a,b,ta,tb);
-    if(['==','!='].includes(op)){let eq=a===b;if(isPointer(a)&&isPointer(b))eq=a.array? a.array===b.array&&a.index===b.index:a.cell===b.cell;return Number(op==='=='?eq:!eq);}
+    if(['==','!='].includes(op)){if(isArray(a))a=this.pointer(a);if(isArray(b))b=this.pointer(b);let eq=a===b;if(isPointer(a)&&isPointer(b))eq=a.array? a.array===b.array&&a.index===b.index:a.cell===b.cell;return Number(op==='=='?eq:!eq);}
     checkedNumber(a);checkedNumber(b);if(['/','%'].includes(op)&&b===0)throw new Error('0으로 나눌 수 없습니다.');
     const value=({'+':()=>a+b,'-':()=>a-b,'*':()=>a*b,'/':()=>a/b,'%':()=>a%b,'<':()=>Number(a<b),'>':()=>Number(a>b),'<=':()=>Number(a<=b),'>=':()=>Number(a>=b),'&':()=>a&b,'|':()=>a|b,'^':()=>a^b,'<<':()=>a<<b,'>>':()=>a>>b})[op]?.();
     if(value===undefined||!Number.isFinite(value))throw new Error('숫자 연산 결과가 유효하지 않습니다.');return value;
@@ -163,21 +168,21 @@ export class Runtime {
     if(depth>32)throw Error('구조체 중첩 한도를 넘었습니다.');
     this.layouts??=new Map();if(this.layouts.has(type))return this.layouts.get(type);
     let layout;
-    if(own(this.program.structs,type)){let size=0,alignment=1;for(const field of this.program.structs[type]){const next=this.typeLayout(field.type,depth+1);alignment=Math.max(alignment,next.alignment);size=Math.ceil(size/next.alignment)*next.alignment+next.size*(field.array?field.size:1);}layout={size:Math.ceil(size/alignment)*alignment,alignment};}
+    if(own(this.program.structs,type)){let size=0,alignment=1;for(const field of this.program.structs[type]){const next=field.pointer?{size:4,alignment:4}:this.typeLayout(field.type,depth+1);alignment=Math.max(alignment,next.alignment);size=Math.ceil(size/next.alignment)*next.alignment+next.size*(field.array?field.size:1);}layout={size:Math.ceil(size/alignment)*alignment,alignment};}
     else{const size=['char','byte','bool','uint8_t','int8_t'].includes(type)?1:['short','uint16_t','int16_t'].includes(type)?2:type==='double'?8:4;layout={size,alignment:size};}
     this.layouts.set(type,layout);return layout;
   }
   typeSize(type){return this.typeLayout(type).size;}
   defaultValue(type,owner=this.scope(),depth=0){
     this.budget();if(depth>32||++this.allocations>this.maxAllocations)throw new Error('구조체 메모리 한도를 넘었습니다.');
-    if(own(this.program.structs,type))return {kind:'struct',type,fields:Object.fromEntries(this.program.structs[type].map(f=>[f.name,{value:f.array?this.fieldArray(f,owner,depth):this.defaultValue(f.type,owner,depth+1),owner,constant:f.constant,dataType:f.type}]))};
+    if(own(this.program.structs,type))return {kind:'struct',type,fields:Object.fromEntries(this.program.structs[type].map(f=>[f.name,f.pointer?{value:0,owner,constant:false,dataType:'pointer',pointeeType:f.type}:{value:f.array?this.fieldArray(f,owner,depth):this.defaultValue(f.type,owner,depth+1),owner,constant:f.constant,dataType:f.type}]))};
     return type==='String'?'':0;
   }
   fieldArray(f,owner,depth){const a=this.array(Array.from({length:f.size},()=>this.defaultValue(f.type,owner,depth+1)),owner);a.cells.forEach(c=>c.dataType=f.type);return a;}
   initialize(type,value,owner=this.scope()){
     if(own(this.program.structs,type)){
       if(value?.kind==='struct')return this.clone(value,owner);
-      const result=this.defaultValue(type,owner);if(value?.kind==='initializer'){const keys=Object.keys(result.fields);if(value.values.length>keys.length)throw new Error('구조체 초기값이 너무 많습니다.');if(value.values.length===1&&value.values[0]===0)return result;value.values.forEach((v,i)=>{const field=result.fields[keys[i]];if(field.value?.kind==='array'){const list=v?.kind==='initializer'?v.values:typeof v==='string'?[...v].map(c=>c.charCodeAt(0)).concat(0):[v];if(list.length>field.value.cells.length)throw new Error('구조체 배열 필드 초기값이 너무 많습니다.');list.forEach((x,j)=>field.value.cells[j].value=this.coerce(field.dataType,x));return;}field.value=this.initialize(field.dataType,v,owner);});}return result;
+      const result=this.defaultValue(type,owner);if(value?.kind==='initializer'){const keys=Object.keys(result.fields);if(value.values.length>keys.length)throw new Error('구조체 초기값이 너무 많습니다.');if(value.values.length===1&&value.values[0]===0)return result;value.values.forEach((v,i)=>{const field=result.fields[keys[i]];if(field.value?.kind==='array'){const list=v?.kind==='initializer'?v.values:typeof v==='string'?[...v].map(c=>c.charCodeAt(0)).concat(0):[v];if(list.length>field.value.cells.length)throw new Error('구조체 배열 필드 초기값이 너무 많습니다.');list.forEach((x,j)=>field.value.cells[j].value=this.coerce(field.dataType,x));return;}field.value=field.dataType==='pointer'?this.pointer(v):this.initialize(field.dataType,v,owner);});}return result;
     }
     if(value?.kind==='initializer')throw new Error('배열 또는 구조체에만 초기값 목록을 사용하세요.');return this.coerce(type,value??this.defaultValue(type,owner));
   }

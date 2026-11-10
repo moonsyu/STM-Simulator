@@ -1,7 +1,8 @@
 // A bounded C-like parser. Sketches never enter the JavaScript evaluator.
 import {numberLiteral,arithmetic,convert,promote,commonType} from './c-types.js';
 const TYPES = new Set(['void','int','bool','float','double','long','short','char','byte','String','unsigned','signed','uint8_t','uint16_t','uint32_t','int8_t','int16_t','int32_t','int64_t','uint64_t','size_t','LiquidCrystal']);
-const QUALIFIERS = new Set(['const','volatile','static']);
+// inline is accepted and ignored (static inline helpers in headers).
+const QUALIFIERS = new Set(['const','volatile','static','inline']);
 const INCLUDES = new Set(['Arduino.h','LiquidCrystal.h','Wire.h','SPI.h','stdint.h','math.h']);
 // ESP32 sketches (`compile(code,{esp32:true})`) also take the DHT sensor library and its class.
 const ESP32_INCLUDES = new Set([...INCLUDES,'DHT.h','DHT_U.h','Adafruit_Sensor.h','WiFi.h','WiFiClient.h','WiFiServer.h','BluetoothSerial.h','HTTPClient.h','PubSubClient.h']);
@@ -42,7 +43,7 @@ export function compile(source,options={}) {
   const fail=(message,index=at)=>{const loc=location(index),error=new Error(`${loc.file}:${loc.line}: ${message}`);error.location=loc;throw error;};
   const expect=value=>{if(peek()!==value)fail(`'${value}'가 필요합니다. 현재 '${peek()}'`);take();};
   const identifier=()=>{if(!/^[A-Za-z_]\w*$/.test(peek()))fail('이름이 필요합니다.');const name=take();if(['__proto__','prototype','constructor'].includes(name))fail('사용할 수 없는 이름입니다.');return name;};
-  const isType=()=>types.has(peek())||aliases.has(peek())||QUALIFIERS.has(peek())||['struct','enum','extern'].includes(peek())||Object.hasOwn(program.structs,peek());
+  const isType=()=>types.has(peek())||peek()==='GPIO_TypeDef'&&!!options.hal||aliases.has(peek())||QUALIFIERS.has(peek())||['struct','enum','extern'].includes(peek())||Object.hasOwn(program.structs,peek());
   function constantValue(n){
     if(n.type==='literal'&&typeof n.value==='number'&&Number.isInteger(n.value))return {value:n.value,type:n.numericType||'int'};
     if(n.type==='name'&&enumConstants.has(n.name))return enumConstants.get(n.name);
@@ -70,13 +71,17 @@ export function compile(source,options={}) {
   function spec(){
     let constant=false,external=false,storage=false,volatile=false;while(QUALIFIERS.has(peek())||peek()==='extern'){const q=take();if(q==='const')constant=true;if(q==='extern')external=true;if(q==='static')storage=true;if(q==='volatile')volatile=true;}
     let type;
+    // GPIO_TypeDef * — a port kept in a variable, a table or a parameter. A port is a name here (GPIOA), not memory, so
+    // the pointer is an ordinary 4-byte value that HAL_GPIO_… takes; its registers (port->ODR) cannot be reached.
+    if(peek()==='GPIO_TypeDef'&&options.hal){take();return {type:'uint32_t',constant,external,storage,volatile,port:true};}
     if(peek()==='struct'){take();type=identifier();if(!Object.hasOwn(program.structs,type))fail('정의되지 않은 구조체입니다.');}
     else if(peek()==='enum'){take();const tag=identifier();type=aliases.get(tag)||'int';}
     else {if(peek()==='union')fail('union은 지원하지 않습니다.');if(!isType())fail('자료형이 필요합니다.');const specs=[take()];if(/^u?int64_t$/.test(specs[0]))fail('64비트 정수형(uint64_t, int64_t)은 지원하지 않습니다. 32비트 값 둘로 나누어 쓰세요.');while(['long','short','int','unsigned','signed','char','double'].includes(peek()))specs.push(take());type=specs.at(-1);if(specs.includes('unsigned'))type=specs.includes('char')?'uint8_t':specs.includes('short')?'uint16_t':'uint32_t';else if(specs.includes('short'))type='int16_t';}
     return {type:aliases.get(type)||type,constant,external,storage,volatile};
   }
   function declarator(base){
-    let pointer=false;while(peek()==='*'){take();if(pointer)fail('이중 포인터는 지원하지 않습니다.');pointer=true;}
+    let pointer=false;while(peek()==='*'){take();if(pointer)fail('이중 포인터는 지원하지 않습니다.');pointer=true;while(peek()==='const')take();}
+    if(base.port){if(!pointer)fail('GPIO_TypeDef는 포인터(GPIO_TypeDef *)로 선언하세요.');const {port,...rest}=base;return {...rest,name:identifier(),pointer:false};}
     return {...base,name:identifier(),pointer};
   }
   function initializer(){
@@ -118,7 +123,7 @@ export function compile(source,options={}) {
       }else node={type:'sizeofExpr',arg:expression(13)};
     }
     else if(t==='('){
-      if(castAhead()){const base=spec(),pointer=peek()==='*';if(pointer)take();take();node={type:'cast',to:base.type,constant:base.constant,volatile:base.volatile,pointer,a:expression(13)};}
+      if(castAhead()){const base=spec(),pointer=peek()==='*';if(pointer)take();take();if(base.port)node=expression(13);else node={type:'cast',to:base.type,constant:base.constant,volatile:base.volatile,pointer,a:expression(13)};}
       else {node=expression();expect(')');}
     }
     else if(/^\d|^\.\d/.test(t)){try{node={type:'literal',...numberLiteral(t),raw:t};}catch(error){fail(error.message);}}
@@ -176,7 +181,8 @@ export function compile(source,options={}) {
         if(peek()==='union')fail('union은 지원하지 않습니다.');
         const base=spec();
         // One field, or several of the same type: int x, y;
-        for(;;){const d=declarator(base);if(d.pointer)fail('구조체 필드는 스칼라/구조체/배열 값으로 선언하세요.');if(peek()==='['){take();const size=constantValue(expression()).value;expect(']');if(!Number.isInteger(size)||size<1||size>4096)fail('구조체 배열 필드 크기는 1~4096입니다.');d.array=true;d.size=size;}fields.push(d);if(peek()!==',')break;take();}
+        // A pointer field (const char *name; uint8_t *buf;) holds a pointer value; an array of pointers does not fit a field.
+        for(;;){const d=declarator(base);if(d.pointer&&peek()==='[')fail('구조체의 포인터 배열 필드는 지원하지 않습니다.');if(peek()==='['){take();const size=constantValue(expression()).value;expect(']');if(!Number.isInteger(size)||size<1||size>4096)fail('구조체 배열 필드 크기는 1~4096입니다.');d.array=true;d.size=size;}fields.push(d);if(peek()!==',')break;take();}
         expect(';');}
       take();return fields;};
     const defineStruct=(name,fields)=>{if(Object.hasOwn(program.structs,name))fail('구조체가 중복되었습니다.');program.structs[name]=fields;};
