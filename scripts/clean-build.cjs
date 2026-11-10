@@ -12,7 +12,7 @@ const BUNDLE_FILES = new Set(['LICENSE.electron.txt', 'LICENSES.chromium.html', 
 const BUNDLE_DOCS = new Set(['APP-ICON.md', 'COPYRIGHT-REVIEW.md', 'SKETCH-API.md', 'HAL-API.md', 'IDE.md', 'MCU-DEFAULTS.md', 'UPDATES.md', 'DEVICE-DOCS.md', 'DIAGNOSTICS.md', 'DEVICE-CATALOG.md', 'device-model-gallery.html', 'DEVICE-VISUAL-REFERENCES.md', 'device-reference-gallery.html', 'device-visual-references.json']);
 const RUNTIME_FILES = new Set([
   'STM Emulator.exe', 'STM Simulator.exe', 'LICENSE.electron.txt', 'LICENSES.chromium.html',
-  'chrome_100_percent.pak', 'chrome_200_percent.pak', 'd3dcompiler_47.dll', 'dxcompiler.dll', 'dxil.dll',
+  'chrome_100_percent.pak', 'chrome_200_percent.pak', 'd3dcompiler_47.dll', 'dxcompiler.dll', 'dxil.dll', 'electron_wer.dll',
   'ffmpeg.dll', 'icudtl.dat', 'libEGL.dll', 'libGLESv2.dll', 'resources.pak', 'snapshot_blob.bin',
   'v8_context_snapshot.bin', 'vk_swiftshader_icd.json', 'vk_swiftshader.dll', 'vulkan-1.dll',
   'chrome_crashpad_handler.exe', 'notification_helper.exe'
