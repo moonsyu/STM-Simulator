@@ -1,5 +1,9 @@
 # 검증 기록
 
+## 1.46.1 설정 적용 뒤 갱신, 드롭 — 게시 확인(API)
+
+2026-11-10. 빌드 커밋 `95b0293` · [Windows CI 42792915183](https://github.com/moonsyu/STM-Simulator/actions/runs/42792915183) 첫 실행에서 성공, 전체 4.7분. [Release v1.46.1](https://github.com/moonsyu/STM-Simulator/releases/tag/v1.46.1)이 최신 릴리스이고 자산 5개(STM-Simulator.exe, ZIP, SHA256.txt, BUILD-INFO.json, update-manifest.json). 파일은 내려받지 않았다.
+
 ## 1.46.1 설정 적용 뒤 갱신, 드롭 — 로컬 검증
 
 2026-11-10. 20~22번의 오류 케이스를 찾아본 결과 두 건. ① RA Configuration에서 External IRQ를 채널 1에서 6으로 바꿔 적용한 뒤에도 Developer Assistance가 `g_external_irq1`을 보였다 → 수정 후 E2E `ra-rasc`가 `g_ioport, BSP, g_external_irq6`을 확인. ② 항목을 마우스로 끌어 편집기에 놓으면 `…OUTPUT);$0`처럼 `$0`가 붙었다 → 수정 후 E2E `ra-assistance`가 코드가 한 번만, `$0` 없이 들어가는 것을 확인. 오류가 아니었던 것: BSP 크기 극단값(스택 0x20000·힙 0, 스택 0x100·힙 0x20000)은 FSP로 빌드되어 Blinky가 동작하고, 힙 0x1000에서는 `malloc(0x800)`이 성공, 0x400에서는 NULL(툴체인 `ra-course`). 관련 E2E `ra-rasc`·`ra-assistance`·`project-structure`·`shell` 13개, 단위 833개(툴체인 환경 변수가 있으면 836개), ESLint, 패키지 검사 통과.
