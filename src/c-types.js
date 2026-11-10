@@ -24,7 +24,8 @@ export function arithmetic(op,a,b,ta='int',tb='int'){
 }
 export function numberLiteral(raw){
  const hex=/^0x/i.test(raw),binary=/^0b/i.test(raw),floating=!hex&&!binary&&/[.eEfF]/.test(raw);
- if(floating){const type=/f$/i.test(raw)?'float':'double',value=Number(raw.replace(/[fFlL]$/,''));if(!Number.isFinite(value))throw Error('숫자 형식이 잘못되었습니다.');return {value,numericType:type};}
+ if(floating){const type=/f$/i.test(raw)?'float':'double',value=Number(raw.replace(/[fFlL]$/,''));if(!Number.isFinite(value))throw Error('숫자 형식이 잘못되었습니다.');// 0.1f is the float nearest to 0.1 (0.100000001490116…), also where it is passed on as a double (printf).
+  return {value:type==='float'?Math.fround(value):value,numericType:type};}
  const digits=raw.replace(/[uUlL]+$/,''),octal=!hex&&!binary&&/^0\d/.test(digits);
  if(octal&&/[89]/.test(digits))throw Error('8진수에는 0~7만 사용할 수 있습니다.');
  const value=octal?parseInt(digits,8):Number(digits);
