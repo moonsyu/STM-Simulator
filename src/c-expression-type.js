@@ -34,7 +34,8 @@ export function expressionType(runtime,n){
  }
  if(n.type==='call'&&n.callee.type==='name'){
   const name=n.callee.name,fn=runtime.program.functions[name];if(fn)return {type:fn.type,pointer:!!fn.pointer};
-  if(['sin','cos','tan','sqrt','floor','ceil','round','pow','log'].includes(name))return scalar('double');
+  // <math.h> (runtime.js MATH_FUNCTIONS): double, and float for the f-suffixed forms.
+  {const MATH=new Set(['sin','cos','tan','asin','acos','atan','atan2','sinh','cosh','tanh','sqrt','cbrt','floor','ceil','round','trunc','pow','log','log10','log2','exp','hypot','fabs','fmin','fmax','fmod']);if(MATH.has(name))return scalar('double');if(name.endsWith('f')&&MATH.has(name.slice(0,-1)))return scalar('float');}
   if(['HAL_GetTick','HAL_ADC_GetValue','HAL_RCC_GetHCLKFreq','HAL_RCC_GetPCLK1Freq','HAL_RCC_GetPCLK2Freq','HAL_RCC_GetSysClockFreq','__HAL_TIM_GET_COUNTER','__HAL_TIM_GET_COMPARE'].includes(name))return scalar('uint32_t');
  }
  return scalar('int');

@@ -75,6 +75,32 @@ export const HAL_ALIASES={FRESULT:'int',UINT:'uint32_t',BYTE:'uint8_t',WORD:'uin
   HAL_SD_CardStateTypeDef:'uint32_t',HAL_DMA_StateTypeDef:'int',HAL_UART_StateTypeDef:'int',HAL_USART_StateTypeDef:'int',HAL_DCMI_StateTypeDef:'int',HAL_SD_StateTypeDef:'int',HAL_SPI_StateTypeDef:'int',HAL_I2C_StateTypeDef:'int',
   HAL_LockTypeDef:'int',HAL_RTCStateTypeDef:'int',HAL_DAC_StateTypeDef:'int',FunctionalState:'int',FlagStatus:'int',ITStatus:'int',IRQn_Type:'int',HAL_DMA_LevelCompleteTypeDef:'int',HAL_DMA_CallbackIDTypeDef:'int',HAL_UART_RxEventTypeTypeDef:'uint32_t'};
 const systemHeaders=prefix=>new Set(['main.h',`${prefix}_hal.h`,`${prefix}.h`,'stdint.h','stddef.h','stdbool.h','string.h','stdio.h','math.h',`${prefix}_it.h`,`${prefix}_hal_conf.h`,'fatfs.h','ff.h','ff_gen_drv.h','diskio.h','sd_diskio.h','user_diskio.h','bsp_driver_sd.h','fatfs_platform.h',...['gpio','gpio_ex','uart','usart','tim','tim_ex','adc','adc_ex','i2c','spi','rcc','rcc_ex','cortex','pwr','pwr_ex','dma','dma_ex','dcmi','sd','uart_ex'].map(n=>`${prefix}_hal_${n}.h`)]);
+// Replaces NAME(args) of function-like macros in a code line (comments already removed; string and character literals
+// are left alone). Arguments are split at top-level commas; nested and repeated use is expanded up to 20 rounds.
+export function expandMacros(line,macros){
+  if(!macros.size)return line;
+  for(let round=0;round<20;round++){
+    let out='',i=0,changed=false;
+    while(i<line.length){
+      const c=line[i];
+      if(c==='"'||c==="'"){let j=i+1;while(j<line.length&&line[j]!==c){if(line[j]==='\\')j++;j++;}out+=line.slice(i,j+1);i=j+1;continue;}
+      const id=/^[A-Za-z_]\w*/.exec(line.slice(i));
+      if(!id){out+=c;i++;continue;}
+      const macro=macros.get(id[0]),after=i+id[0].length,open=/^\s*\(/.exec(line.slice(after));
+      // A member of the same name (s.ADD(…), p->ADD(…)) is not the macro.
+      if(!macro||!open||/(\.|->)\s*$/.test(out)){out+=id[0];i=after;continue;}
+      let j=after+open[0].length,depth=1,args=[],start=j;
+      for(;j<line.length&&depth;j++){const ch=line[j];if(ch==='"'||ch==="'"){let k=j+1;while(k<line.length&&line[k]!==ch){if(line[k]==='\\')k++;k++;}j=k;continue;}if(ch==='(')depth++;else if(ch===')'){depth--;if(!depth)break;}else if(ch===','&&depth===1){args.push(line.slice(start,j));start=j+1;}}
+      if(depth){out+=id[0];i=after;continue;}
+      args.push(line.slice(start,j));if(args.length===1&&!args[0].trim()&&!macro.params.length)args=[];
+      if(args.length!==macro.params.length)throw new Error(`매크로 ${id[0]}의 인자는 ${macro.params.length}개입니다.`);
+      const map=new Map(macro.params.map((p,n)=>[p,args[n].trim()]));
+      out+='('+macro.body.replace(/[A-Za-z_]\w*/g,w=>map.has(w)?map.get(w):w)+')';i=j+1;changed=true;
+    }
+    line=out;if(!changed)return line;
+  }
+  throw new Error('매크로가 자기 자신을 반복해서 부릅니다.');
+}
 export function prepareHalSource(source,files=[],options={}){
   if(typeof source!=='string'||source.length>300000||!Array.isArray(files)||files.length>MAX_SOURCE_FILES)throw new Error('HAL 소스 크기 또는 파일 수 한도를 넘었습니다.');
   const map=new Map();let total=source.length;
@@ -82,7 +108,7 @@ export function prepareHalSource(source,files=[],options={}){
   for(const file of files){if(file&&typeof file.name==='string'&&armOnly(file.name))continue;if(!file||typeof file.name!=='string'||!SOURCE_PATH.test(file.name)||!/\.[ch]$/.test(file.name)||typeof file.text!=='string'||map.has(file.name))throw new Error('소스 파일 이름이 중복되거나 올바르지 않습니다.');total+=file.text.length;if(total>300000)throw new Error('HAL 소스 전체는 300 KB 이하로 선택하세요.');map.set(file.name,file.text);}
   map.set('main.c',source);
   const hal=familyProfile(options.family).hal,SYSTEM_HEADERS=systemHeaders(hal.prefix);
-  const definitions=new Map([[hal.define,'1'],['USE_HAL_DRIVER','1']]),stack=[],included=new Set();
+  const definitions=new Map([[hal.define,'1'],['USE_HAL_DRIVER','1']]),stack=[],included=new Set(),macros=new Map();
   const preprocess=(text,name)=>{
     if(stack.includes(name))throw new Error(`순환 include: ${name}`);stack.push(name);const output=[],locations=[],condition=[];let active=true,inComment=false,currentLine=1;
     const append=output.push.bind(output);output.push=value=>{if(typeof value==='object'){locations.push(...value.locations);return append(value.text);}locations.push({file:name,line:currentLine});return append(value);};
@@ -92,7 +118,7 @@ export function prepareHalSource(source,files=[],options={}){
       let clean='',quote='',escape=false;
       for(let i=0;i<line.length;i++){const c=line[i],next=line[i+1];if(inComment){if(c==='*'&&next==='/'){inComment=false;i++;}continue;}if(quote){clean+=c;if(escape)escape=false;else if(c==='\\')escape=true;else if(c===quote)quote='';continue;}if(c==='"'||c==="'"){quote=c;clean+=c;}else if(c==='/'&&next==='*'){inComment=true;i++;clean+=' ';}else if(c==='/'&&next==='/')break;else clean+=c;}
       const directive=/^\s*#\s*(\w+)\s*(.*)$/.exec(clean),error=message=>{const e=new Error(`${name}:${index+1}: ${message}`);e.location={file:name,line:index+1};throw e;};
-      if(!directive){output.push(active?clean:'');continue;}
+      if(!directive){output.push(active?expandMacros(clean,macros):'');continue;}
       const [,op,arg]=directive;
       if(['ifdef','ifndef','if'].includes(op)){
         let yes;if(op==='ifdef'||op==='ifndef')yes=definitions.has(arg.trim())===(op==='ifdef');
@@ -111,7 +137,10 @@ export function prepareHalSource(source,files=[],options={}){
         else if(SYSTEM_HEADERS.has(baseName(file))){output.push('');}
         else error(`지원하지 않거나 선택하지 않은 헤더: ${file}`);
       }else if(op==='define'){
-        const m=/^(\w+)(.*)$/.exec(arg);if(!m||m[2].startsWith('('))error('함수형 매크로는 지원하지 않습니다.');const value=m[2].trim();
+        // #define NAME(a, b) body — a function-like macro (no space before the parenthesis): expanded as text where it is used.
+        const fn=/^(\w+)\(([^)]*)\)\s*(.*)$/.exec(arg);
+        if(fn){const params=fn[2].split(',').map(p=>p.trim()).filter(Boolean);if(params.some(p=>!/^[A-Za-z_]\w*$/.test(p)))error('가변 인자(...) 매크로는 지원하지 않습니다.');if(/#/.test(fn[3]))error('매크로의 # / ## 연산자는 지원하지 않습니다.');macros.set(fn[1],{params,body:fn[3]});output.push('');continue;}
+        const m=/^(\w+)(.*)$/.exec(arg);if(!m)error('#define 형식 오류');const value=m[2].trim();
         if(definitions.has(m[1])){if(definitions.get(m[1])!==value)error(`매크로 재정의: ${m[1]}`);output.push('');continue;}
         definitions.set(m[1],value);output.push(value?`#define ${m[1]} ${value}`:'');
       }else if(op==='pragma'&&arg.trim()==='once')output.push('');

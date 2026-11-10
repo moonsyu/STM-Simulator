@@ -164,12 +164,23 @@ export function compile(source,options={}) {
   }
   while(peek()!=='<end>'){
     if(peek()==='typedef'&&peek(1)==='enum'){const loc=location();take();take();if(peek()!=='{')aliases.set(identifier(),'int');const declarations=parseEnumBody(),alias=identifier();expect(';');aliases.set(alias,'int');program.globals.push({type:'declare',declarations,loc});continue;}
-    if(peek()==='typedef'){take();const base=spec(),d=declarator(base);if(d.pointer)fail('포인터 typedef는 지원하지 않습니다.');expect(';');aliases.set(d.name,base.type);continue;}
+    if(peek()==='typedef'&&peek(1)!=='struct'){take();const base=spec(),d=declarator(base);if(d.pointer)fail('포인터 typedef는 지원하지 않습니다.');expect(';');aliases.set(d.name,base.type);continue;}
     if(peek()==='enum'&&(peek(1)==='{'||peek(2)==='{')){const loc=location();take();if(peek()!=='{')aliases.set(identifier(),'int');const declarations=parseEnumBody();expect(';');program.globals.push({type:'declare',declarations,loc});continue;}
-    if(peek()==='struct'&&peek(2)==='{'){
-      take();const name=identifier();if(Object.hasOwn(program.structs,name))fail('구조체가 중복되었습니다.');expect('{');const fields=[];
+    // The fields between { and } of a struct definition.
+    const structBody=()=>{expect('{');const fields=[];
       while(peek()!=='}'){const base=spec(),d=declarator(base);if(d.pointer)fail('구조체 필드는 스칼라/구조체/배열 값으로 선언하세요.');if(peek()==='['){take();const size=constantValue(expression()).value;expect(']');if(!Number.isInteger(size)||size<1||size>4096)fail('구조체 배열 필드 크기는 1~4096입니다.');d.array=true;d.size=size;}fields.push(d);expect(';');}
-      take();expect(';');program.structs[name]=fields;continue;
+      take();return fields;};
+    const defineStruct=(name,fields)=>{if(Object.hasOwn(program.structs,name))fail('구조체가 중복되었습니다.');program.structs[name]=fields;};
+    // typedef struct { … } Name;  typedef struct Tag { … } Name;  typedef struct Tag Name; — the usual C way to name a
+    // struct type. Tag and Name become the same struct (the same name for both is fine).
+    if(peek()==='typedef'&&peek(1)==='struct'&&(peek(2)==='{'||peek(3)==='{'||/^[A-Za-z_]\w*$/.test(peek(3))&&peek(4)===';')){
+      take();take();const tag=peek()==='{'?null:identifier();
+      if(peek()==='{'){const fields=structBody(),name=identifier();expect(';');if(tag&&tag!==name)defineStruct(tag,fields);defineStruct(name,fields);}
+      else{if(!Object.hasOwn(program.structs,tag))fail('정의되지 않은 구조체입니다.');const name=identifier();expect(';');if(name!==tag)defineStruct(name,program.structs[tag]);}
+      continue;
+    }
+    if(peek()==='struct'&&peek(2)==='{'){
+      take();const name=identifier(),fields=structBody();expect(';');defineStruct(name,fields);continue;
     }
     if(!isType())fail('전역 변수 또는 함수 정의가 필요합니다.');
     const loc=location(),base=spec(),d=declarator(base);

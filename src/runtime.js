@@ -1,4 +1,6 @@
 import {ALL_GPIO_PINS as GPIO_PINS,ALIASES,canonicalPin} from './pins.js';
+// C <math.h> name → Math function; each also has a float form with an f suffix.
+const MATH_FUNCTIONS={sin:'sin',cos:'cos',tan:'tan',asin:'asin',acos:'acos',atan:'atan',atan2:'atan2',sinh:'sinh',cosh:'cosh',tanh:'tanh',sqrt:'sqrt',cbrt:'cbrt',floor:'floor',ceil:'ceil',round:'round',trunc:'trunc',pow:'pow',log:'log',log10:'log10',log2:'log2',exp:'exp',hypot:'hypot',fabs:'abs',fmin:'min',fmax:'max',fmod:'fmod'};
 import {convert,arithmetic} from './c-types.js';
 import {expressionType} from './c-expression-type.js';
 
@@ -301,7 +303,10 @@ export class Runtime {
     if(name==='map'){if(c===b)throw new Error('map 입력 범위가 0입니다.');return (a-b)*(e-d)/(c-b)+d;}
     if(name==='bitRead')return (integer(a)>>>integer(b))&1;
     if(name==='abs')return Math.abs(checkedNumber(a));if(name==='min')return Math.min(...args.map(checkedNumber));if(name==='max')return Math.max(...args.map(checkedNumber));
-    if(['sin','cos','tan','sqrt','floor','ceil','round','pow','log'].includes(name)){const value=Math[name](...args.map(checkedNumber));if(!Number.isFinite(value))throw new Error('수학 함수 결과가 유효하지 않습니다.');return value;}
+    // <math.h>: the double functions and their float (…f) forms (sqrtf, fabsf, atan2f …).
+    {const key=Object.hasOwn(MATH_FUNCTIONS,name)?name:name.endsWith('f')&&Object.hasOwn(MATH_FUNCTIONS,name.slice(0,-1))?name.slice(0,-1):null;
+     if(key==='fmod'){const [x,y]=args.map(checkedNumber);if(y===0)throw new Error('fmod: 0으로 나눌 수 없습니다.');return x%y;}
+     if(key){const value=Math[MATH_FUNCTIONS[key]](...args.map(checkedNumber));if(!Number.isFinite(value))throw new Error('수학 함수 결과가 유효하지 않습니다.');return value;}}
     if(['int','long','byte','char','uint8_t','uint16_t','uint32_t','float','double'].includes(name)){const value=checkedNumber(a);return ['float','double'].includes(name)?value:['byte','char','uint8_t'].includes(name)?integer(value)&255:name==='uint16_t'?integer(value)&65535:integer(value);}
     if(name==='String')return this.format(args);
     if(this.api.call){const result=this.api.call(name,args,this);if(result!==undefined)return result;}
