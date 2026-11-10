@@ -57,3 +57,33 @@ test('real-board ARM target with clangd: typing HAL_ADC_Conv lists HAL_ADC_ConvC
   assert.deepEqual(s.errors,[]);
  }finally{await s.close();}
 });
+
+// Error-case pass: after "." the list was unrelated names that start with the typed letters (GPIO_InitStruct.Pu gave
+// pUART_CallbackTypeDef); it is the fields of the struct now, from the SDK header. uint32_t and the other standard
+// names, which the SDK index does not hold, are offered too.
+test('simulator target: struct members after "." (SDK struct and a struct of the project), and standard C type names',{skip:!sdk&&'STM32CubeF4 not installed',timeout:180000},async()=>{
+ const s=await launch();
+ await fs.writeFile(path.join(s.profile,'native-tools.json'),JSON.stringify({armGcc:'',cube:cubeF4,cubeF1,armGdb:'',hostGcc:'',hostGdb:'',clangd:'',openocd:'',buildRoot:''}));
+ try{
+  const {win}=s;
+  const labels=()=>win.evaluate(()=>[...document.querySelectorAll('#group-code .suggest-widget .monaco-list-row')].map(r=>(r.getAttribute('aria-label')||r.textContent).split(',')[0]));
+  // A variable of an SDK type and one of a struct the project defines.
+  // Each line is typed after closing the list the line before left open (Enter would take its first entry).
+  const line=async text=>{await win.keyboard.press('Escape');await typeInMain(win,text);};
+  await line('struct Reading reading;');
+  await line('struct Reading { int raw; float volts; };');
+  await line('GPIO_InitTypeDef pin_setup;');
+  await line('pin_setup.');
+  await win.waitForFunction(()=>[...document.querySelectorAll('#group-code .suggest-widget .monaco-list-row')].some(r=>/^Pull\b/.test(r.getAttribute('aria-label')||r.textContent)),null,{timeout:20000}).catch(async e=>{throw new Error(e.message+' rows: '+JSON.stringify(await labels()));});
+  const all=await labels();
+  for(const name of ['Pin','Mode','Pull','Speed'])assert.ok(all.includes(name),name+' in '+JSON.stringify(all));
+  assert.ok(all.every(n=>/^(Pin|Mode|Pull|Speed|Alternate)$/.test(n)),'only the fields: '+JSON.stringify(all));
+  await win.keyboard.type('Pu');await win.waitForTimeout(400);await win.keyboard.press('Tab');
+  await win.waitForFunction(()=>/pin_setup\.Pull\b/.test(document.getElementById('code').value));
+  await line('reading.');
+  await win.waitForFunction(()=>{const rows=[...document.querySelectorAll('#group-code .suggest-widget .monaco-list-row')].map(r=>(r.getAttribute('aria-label')||r.textContent).split(',')[0]);return rows.length===2&&rows.includes('raw')&&rows.includes('volts');},null,{timeout:20000}).catch(async e=>{throw new Error(e.message+' rows: '+JSON.stringify(await labels()));});
+  await line('uint32');
+  await expectRows(win,['uint32_t'],'uint32');
+  assert.deepEqual(s.errors,[]);
+ }finally{await s.close();}
+});

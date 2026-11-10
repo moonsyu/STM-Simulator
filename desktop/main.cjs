@@ -50,6 +50,7 @@ nativeHandle('choose-tool',async key=>{if(!TOOL_KEYS.includes(key))throw new Err
 nativeHandle('build',(text,config)=>nativeIde.compile(text,config));
 nativeHandle('sdk-definition',(family,name)=>nativeIde.sdkDefinition(family,name));
 nativeHandle('sdk-names',(family,prefix)=>nativeIde.sdkNames(family,prefix));
+nativeHandle('sdk-members',(family,typeName)=>nativeIde.sdkMembers(family,typeName));
 nativeHandle('sdk-file',(family,file)=>nativeIde.sdkFile(family,file));
 nativeHandle('sdk-relative',(family,absolute)=>nativeIde.sdkRelative(family,absolute));
 // Tests (a test profile) give the connected boards themselves, so a NUCLEO on the test machine changes nothing.

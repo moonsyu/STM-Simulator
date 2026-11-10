@@ -6,6 +6,9 @@ import 'monaco-editor/languages/definitions/python/register.js';
 import {loadPreferences,selectedTheme} from './ide-preferences.js';
 import {editorTheme} from './colorscheme.js';
 import {cSymbols,pickDefinitions,KIND_RANK,outlineLabel} from './c-symbols.js';
+import {structFields,declaredType,accessChain} from './c-struct-fields.js';
+// Standard C names the SDK index does not hold (they come from the compiler's headers).
+const C_NAMES=['uint8_t','uint16_t','uint32_t','uint64_t','int8_t','int16_t','int32_t','int64_t','size_t','bool','true','false','NULL','volatile','unsigned','static','const','struct','typedef','sizeof','return','switch','continue','default','float','double','extern','while','break'];
 
 globalThis.MonacoEnvironment={getWorker:()=>new Worker(new URL('./editor.worker.js',import.meta.url),{name:'stm-editor'})};
 const API={HAL_GPIO_WritePin:'HAL_GPIO_WritePin(GPIOx, GPIO_Pin, PinState)',HAL_GPIO_ReadPin:'HAL_GPIO_ReadPin(GPIOx, GPIO_Pin)',HAL_GPIO_TogglePin:'HAL_GPIO_TogglePin(GPIOx, GPIO_Pin)',HAL_Delay:'HAL_Delay(milliseconds)',HAL_GetTick:'HAL_GetTick()',HAL_UART_Transmit:'HAL_UART_Transmit(&huart, data, size, timeout)',HAL_ADC_GetValue:'HAL_ADC_GetValue(&hadc)',HAL_TIM_PWM_Start:'HAL_TIM_PWM_Start(&htim, channel)',printf:'printf("format", values)',pinMode:'pinMode(pin, OUTPUT)',digitalWrite:'digitalWrite(pin, HIGH)',digitalRead:'digitalRead(pin)',analogRead:'analogRead(pin)',delay:'delay(milliseconds)'};
@@ -97,10 +100,25 @@ export function createCodeEditor({textarea,getFile,getFiles,onBreakpoint,onBreak
   const KINDS={function:'Function',declaration:'Function',macro:'Constant',enum:'EnumMember',typedef:'Struct',variable:'Variable'};
   const sdkNames=new Map();
   const sdkComplete=prefix=>{if(!sdk?.['sdk-names']||prefix.length<2)return Promise.resolve([]);const key=getFamily()+':'+prefix.toLowerCase();if(!sdkNames.has(key)){if(sdkNames.size>200)sdkNames.clear();sdkNames.set(key,sdk['sdk-names'](getFamily(),prefix).catch(()=>{sdkNames.delete(key);return [];}));}return sdkNames.get(key);};
-  monaco.languages.registerCompletionItemProvider('cpp',{async provideCompletionItems(model,position){if(languageService?.enabled())return {suggestions:[]};const word=model.getWordUntilPosition(position),range={startLineNumber:position.lineNumber,endLineNumber:position.lineNumber,startColumn:word.startColumn,endColumn:word.endColumn},words=new Set(getFiles().flatMap(f=>f.text.match(/\b[A-Za-z_]\w*\b/g)||[]));words.delete(word.word);
+  monaco.languages.registerCompletionItemProvider('cpp',{triggerCharacters:['.','>'],async provideCompletionItems(model,position,context){if(languageService?.enabled())return {suggestions:[]};const word=model.getWordUntilPosition(position),range={startLineNumber:position.lineNumber,endLineNumber:position.lineNumber,startColumn:word.startColumn,endColumn:word.endColumn},words=new Set(getFiles().flatMap(f=>f.text.match(/\b[A-Za-z_]\w*\b/g)||[]));words.delete(word.word);
+    // After "." or "->" the candidates are the fields of that struct (hadc1.Init.Resolution, GPIO_InitStruct.Pull): the
+    // type comes from the declaration in the project, its fields from the project or from the SDK header. Once the list
+    // was the unrelated names that start with the typed letters. An access whose type is not known offers nothing.
+    {const chain=accessChain(model.getLineContent(position.lineNumber).slice(0,word.startColumn-1));
+     if(chain){
+      const files=getFiles(),fieldsOf=async type=>{if(!type)return [];for(const f of files){const own=structFields(f.text,type);if(own.length)return own;}return sdk?.['sdk-members']?sdk['sdk-members'](getFamily(),type).catch(()=>[]):[];};
+      let type='';for(const f of files){type=declaredType(f.text,chain[0]);if(type)break;}
+      for(const part of chain.slice(1)){type=(await fieldsOf(type)).find(x=>x.name===part)?.type||'';if(!type)break;}
+      const fields=await fieldsOf(type);
+      if(!fields.length)return {suggestions:[]};
+      return {suggestions:fields.map((f,i)=>({label:f.name,kind:monaco.languages.CompletionItemKind.Field,insertText:f.name,detail:(f.type?f.type+' ':'')+f.name+' · '+type,range,sortText:String(i).padStart(4,'0')}))};
+     }
+     // "." or ">" that is not a member access (1.5, a > b) opens no list.
+     else if(context?.triggerKind===monaco.languages.CompletionTriggerKind.TriggerCharacter)return {suggestions:[]};}
     const fromSdk=await sdkComplete(word.word),seen=new Set(),out=[];
     for(const d of fromSdk){seen.add(d.name);out.push({label:d.name,kind:monaco.languages.CompletionItemKind[KINDS[d.kind]||'Text'],insertText:d.name,detail:outlineLabel(d),range,sortText:'1'+d.name});}
     for(const w of Object.keys(API))if(!seen.has(w)){seen.add(w);out.push({label:w,kind:monaco.languages.CompletionItemKind.Function,insertText:w,detail:API[w],range,sortText:'1'+w});}
+    for(const w of C_NAMES)if(!seen.has(w)&&w.toLowerCase().startsWith(word.word.toLowerCase())){seen.add(w);out.push({label:w,kind:monaco.languages.CompletionItemKind.Keyword,insertText:w,detail:'C',range,sortText:'1'+w});}
     for(const w of words)if(!seen.has(w)&&out.length<1500){seen.add(w);out.push({label:w,kind:monaco.languages.CompletionItemKind.Text,insertText:w,detail:'프로젝트의 식별자',range,sortText:'2'+w});}
     return {suggestions:out,incomplete:word.word.length>=2&&fromSdk.length>0};}});
   monaco.languages.registerHoverProvider('cpp',{provideHover(model,position){if(languageService?.enabled())return null;const w=model.getWordAtPosition(position);return w&&API[w.word]?{contents:[{value:'```c\n'+API[w.word]+';\n```'},{value:'STM Simulator에서 지원하는 API입니다. 상세 범위는 HAL API 문서를 확인하세요.'}]}:null;}});

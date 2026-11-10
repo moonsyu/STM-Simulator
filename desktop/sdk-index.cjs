@@ -53,6 +53,16 @@ class SdkIndex {
     const rank={function:0,declaration:0,macro:1,enum:2,typedef:3,variable:4};
     return out.sort((a,b)=>(rank[a.kind]??5)-(rank[b.kind]??5)||(a.name.startsWith(prefix)?0:1)-(b.name.startsWith(prefix)?0:1)||a.name.localeCompare(b.name)).slice(0,limit);
   }
+  // Member completion: the fields of a struct type the SDK defines (ADC_HandleTypeDef → Instance, Init, …), read from
+  // the file that holds its typedef. Cached with the index.
+  async members(family,tools,typeName){
+    if(typeof typeName!=='string'||!NAME.test(typeName))return [];
+    const root=this.root(family,tools),index=await this.build(family,root);index.members??=new Map();
+    if(index.members.has(typeName))return index.members.get(typeName);
+    const {structFields}=await import('../src/c-struct-fields.js');let fields=[];
+    for(const d of (index.symbols.get(typeName)||[]).filter(d=>d.kind==='typedef'||d.kind==='struct')){fields=structFields(await fs.readFile(path.join(root,d.file),'utf8'),typeName);if(fields.length)break;}
+    index.members.set(typeName,fields);return fields;
+  }
   async file(family,tools,file){
     const root=this.root(family,tools),index=await this.build(family,root);
     if(typeof file!=='string'||!index.files.has(file))throw new Error('SDK 색인에 없는 파일입니다.');
