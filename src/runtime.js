@@ -85,9 +85,11 @@ export class Runtime {
   set(cell,value){this.get(cell);if(cell.constant)throw new Error('const 값은 변경할 수 없습니다.');cell.value=this.clone(this.coerce(cell.dataType,value),cell.owner);return cell.value;}
   array(values,owner=this.scope()){if(values.length>this.maxArray)throw new Error(`배열은 ${this.maxArray}개 이하로 선언하세요.`);this.allocations+=values.length;if(this.allocations>this.maxAllocations)throw new Error('한 단계의 메모리 할당 한도를 넘었습니다.');return {kind:'array',cells:values.map(value=>({value:this.clone(value,owner),owner,constant:false}))};}
   pointer(value){return isArray(value)?{kind:'pointer',array:value,index:0}:value;}
+  /** A string literal as the character array it stands for (one per literal); other values as they are. */
+  literal(p){if(typeof p!=='string')return p;this.literals??=new Map();if(!this.literals.has(p)){const a=this.array([...p].map(c=>c.charCodeAt(0)).concat(0),this.globals);a.cells.forEach(c=>{c.dataType='char';c.constant=true;});this.literals.set(p,a);}return this.literals.get(p);}
   pointerCell(p,offset=0){
     // A string literal kept as a pointer value (an element of const char *names[], a struct field): its characters.
-    if(typeof p==='string'){this.literals??=new Map();if(!this.literals.has(p)){const a=this.array([...p].map(c=>c.charCodeAt(0)).concat(0),this.globals);a.cells.forEach(c=>{c.dataType='char';c.constant=true;});this.literals.set(p,a);}p=this.literals.get(p);}
+    p=this.literal(p);
     if(isArray(p))p=this.pointer(p);if(!isPointer(p))throw new Error('배열 또는 유효한 포인터가 필요합니다.');
     if(p.array){const index=p.index+integer(offset);if(index<0||index>=p.array.cells.length)throw new Error('배열 인덱스가 범위를 벗어났습니다.');return p.array.cells[index];}
     if(offset!==0)throw new Error('단일 변수 포인터에 범위를 벗어난 연산을 할 수 없습니다.');return p.cell;
@@ -108,11 +110,15 @@ export class Runtime {
     throw new Error('대입할 수 없는 값입니다.');
   }
   binary(op,a,b,ta,tb){
+    // "text" + 1 in C is a pointer into the literal, not a longer text.
+    if(this.program.hal&&typeof a==='string'&&typeof b==='number'&&['+','-'].includes(op))a=this.literal(a);
     if(op==='-'&&(isPointer(a)||isArray(a))&&(isPointer(b)||isArray(b))){const p=this.pointer(a),q=this.pointer(b);if(p.array&&p.array===q.array)return p.index-q.index;if(!p.array&&!q.array&&p.cell===q.cell)return 0;throw new Error('서로 다른 배열을 가리키는 포인터끼리는 뺄 수 없습니다.');}
     if((isPointer(a)||isArray(a))&&['+','-'].includes(op)){const p=this.pointer(a);if(!p.array)throw new Error('포인터 산술에는 배열이 필요합니다.');const index=p.index+(op==='+'?1:-1)*integer(b);if(index<0||index>p.array.cells.length)throw new Error('포인터가 배열 범위를 벗어났습니다.');return {...p,index};}
     if(op==='+'&&(typeof a==='string'||typeof b==='string'))return String(a)+String(b);
     if(this.program.hal&&ta&&typeof a==='number'&&typeof b==='number')return arithmetic(op,a,b,ta,tb);
     if(['==','!='].includes(op)){if(isArray(a))a=this.pointer(a);if(isArray(b))b=this.pointer(b);let eq=a===b;if(isPointer(a)&&isPointer(b))eq=a.array? a.array===b.array&&a.index===b.index:a.cell===b.cell;return Number(op==='=='?eq:!eq);}
+    // p < end, p >= buf: pointers into the same array compare by position.
+    if(['<','>','<=','>='].includes(op)&&(isPointer(a)||isArray(a))&&(isPointer(b)||isArray(b))){const p=this.pointer(a),q=this.pointer(b);if(!p.array||p.array!==q.array)throw new Error('서로 다른 배열을 가리키는 포인터끼리는 크기를 비교할 수 없습니다.');a=p.index;b=q.index;}
     checkedNumber(a);checkedNumber(b);if(['/','%'].includes(op)&&b===0)throw new Error('0으로 나눌 수 없습니다.');
     const value=({'+':()=>a+b,'-':()=>a-b,'*':()=>a*b,'/':()=>a/b,'%':()=>a%b,'<':()=>Number(a<b),'>':()=>Number(a>b),'<=':()=>Number(a<=b),'>=':()=>Number(a>=b),'&':()=>a&b,'|':()=>a|b,'^':()=>a^b,'<<':()=>a<<b,'>>':()=>a>>b})[op]?.();
     if(value===undefined||!Number.isFinite(value))throw new Error('숫자 연산 결과가 유효하지 않습니다.');return value;
@@ -195,7 +201,8 @@ export class Runtime {
         else if(d.pointer){if(typeof value==='string')value=this.array([...value].map(c=>c.charCodeAt(0)).concat(0),this.globals);value=this.pointer(value??0);if(value!==0&&!isPointer(value))throw new Error('포인터 초기값을 확인하세요.');}
         else if(d.type!=='LiquidCrystal')value=this.initialize(d.type,value);
         if(d.array)value.cells.forEach(c=>c.dataType=d.type);
-        const cell=this.declareCell(d.name,value,d.constant);cell.dataType=d.pointer?'pointer':d.type;if(d.pointer)cell.pointeeType=d.type;
+        // const char *p: what it points at is const; the pointer itself can move (p++).
+        const cell=this.declareCell(d.name,value,d.constant&&!(d.pointer&&!d.array));cell.dataType=d.pointer?'pointer':d.type;if(d.pointer)cell.pointeeType=d.type;
         if(d.storage){cell.owner=this.globals;this.staticCells.set(d,cell);if(d.array)value.cells.forEach(c=>c.owner=this.globals);}
       }return;
     }
@@ -231,7 +238,7 @@ export class Runtime {
     const fn=this.program.functions[name];if(!fn)throw new Error(`정의되지 않은 함수: ${name}`);if(args.length!==fn.params.length)throw new Error(`${name}(): 인수 개수를 확인하세요.`);
     if(++this.depth>32)throw new Error('함수 호출 깊이 한도를 넘었습니다.');
     const previous=this.scopes;this.scopes=[this.globals];this.pushScope();this.frames.push({name,scopes:this.scopes,loc:fn.loc});
-    try{fn.params.forEach((p,i)=>{const cell=this.declareCell(p.name,p.pointer?this.pointer(args[i]):this.initialize(p.type,args[i]),p.constant);cell.dataType=p.pointer?'pointer':p.type;if(p.pointer)cell.pointeeType=p.type;});const signal=yield* this.statement(fn.body);if(signal&&signal.type!=='return')throw new Error('break/continue는 반복문 안에서 사용하세요.');return this.coerce(fn.type,signal?.value??0);}
+    try{fn.params.forEach((p,i)=>{const cell=this.declareCell(p.name,p.pointer?this.pointer(this.program.hal?this.literal(args[i]):args[i]):this.initialize(p.type,args[i]),p.constant&&!p.pointer);cell.dataType=p.pointer?'pointer':p.type;if(p.pointer)cell.pointeeType=p.type;});const signal=yield* this.statement(fn.body);if(signal&&signal.type!=='return')throw new Error('break/continue는 반복문 안에서 사용하세요.');return this.coerce(fn.type,signal?.value??0);}
     finally{this.frames.pop();this.popScope();this.scopes=previous;this.depth--;}
   }
   *checkpoint(loc){

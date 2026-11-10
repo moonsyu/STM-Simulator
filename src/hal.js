@@ -398,6 +398,8 @@ export class HalAdapter {
     if(name==='rand'){this.randState=(Math.imul(this.randState??1,1103515245)+12345)>>>0;return (this.randState>>>16)&0x7fff;}
     const text=stringCall(name,args,r);if(text!==undefined)return text;
     if(name==='printf'){const text=formatPrintf(args,r);if(text)r.api.print(text.replace(/\r?\n$/,''));return text.length;}
+    // putchar: characters gather until a line end, then go out as one log line.
+    if(name==='putchar'){if(typeof a!=='number')throw new Error('putchar: 문자 값이 필요합니다.');const ch=String.fromCharCode(a&255);if(ch==='\n'){r.api.print((this.putLine||'').replace(/\r$/,''));this.putLine='';}else{this.putLine=(this.putLine||'')+ch;if(this.putLine.length>=1024){r.api.print(this.putLine);this.putLine='';}}return a&255;}
     if(name==='puts'){if(args.length!==1)throw new Error('puts는 문자열 하나가 필요합니다.');const text=r.format([a]);if(text.length>4096)throw new Error('puts 출력 한도는 4096자입니다.');r.api.print(text);return text.length+1;}
     if(name.startsWith('HAL_')||name.startsWith('__HAL_'))throw new Error(`지원하지 않는 HAL API: ${name}`);
     return undefined;
