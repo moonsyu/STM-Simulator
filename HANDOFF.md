@@ -1,6 +1,14 @@
 # STM Simulator — 개발 인계
 
-현재 버전: **1.46.3**. 정리일: **2026-11-10**. NUCLEO-F446RE·NUCLEO-F103RB 또는 Renesas FPB-RA6E1(1.20.0, FSP·에뮬레이터 전용)과 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+현재 버전: **1.46.4**. 정리일: **2026-11-10**. NUCLEO-F446RE·NUCLEO-F103RB 또는 Renesas FPB-RA6E1(1.20.0, FSP·에뮬레이터 전용)과 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+
+## 1.46.4 1·2·7번 오류 탐색 수정, E2E 분배
+
+- **멤버 완성(`src/c-struct-fields.js`, `code-editor.js`, `desktop/sdk-index.cjs` `members`)**: `accessChain(커서 앞 글자)` → `declaredType(프로젝트 소스, 변수)` → `structFields(소스, 형)`. 형의 필드는 프로젝트 파일에서 먼저 찾고 없으면 IPC `sdk-members`(SDK 색인이 그 typedef가 있는 헤더를 읽어 파싱, 색인과 함께 캐시). 완성 제공자의 트리거 문자에 `.`·`>`를 넣었고, 멤버 접근이 아닌 `.`·`>`(1.5, a > b)에서는 목록을 열지 않는다. clangd가 켜져 있으면 이 제공자는 쓰이지 않는다.
+- **RA 이름 검사(`ra-config.js` `raNameProblem`)**: C 예약어·표준 이름, `R_`·`BSP_`·`FSP_`·`IOPORT_`·`__` 접두사, 생성 인스턴스 이름(`g_ioport`, `g_uart9_cfg` …)을 핀 심볼·콜백에서 거절. 콜백이 핀 심볼과 같아도 거절.
+- **ADC(`hal.js`)**: `s.eoc`(Start가 세우고 단일 모드의 Poll이 가져감). 없을 때 Poll은 3(HAL_TIMEOUT)과 한 번의 안내. 정지 상태 안내 문구는 연속/단일을 가린다.
+- **CI E2E(`scripts/e2e-shard.mjs`)**: `dealE2e(files, jobs)`가 측정 시간 표(`E2E_SECONDS`, 없는 파일은 5초)로 느린 파일부터 가벼운 작업에 넣는다. 워크플로는 `node scripts/e2e-shard.mjs n/6`.
+- 시험: 단위 `c-struct-fields`·`ra-names`·`adc-edge`·`e2e-shards`, E2E `completion`(멤버).
 
 ## 1.46.3 1~13번 오류 탐색 수정 3건, 패키지 빌드 시간, CI 작업 분할
 

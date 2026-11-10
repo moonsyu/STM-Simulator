@@ -1,5 +1,23 @@
 # 검증 기록
 
+## 1.46.4 1·2·7·8·11번 오류 케이스 탐색, CI 측정 정정 — 로컬 검증
+
+2026-11-11. **남아 있던 다섯 기능의 오류 탐색.**
+
+| 기능 | 넣어 본 것 | 결과 |
+|---|---|---|
+| 1 ADC 연속 변환 | 해석기에서 10가지: 연속 모드 Stop 뒤 읽기·다시 Start, 단일 모드에서 Start 없이 Poll 반복, Start 전 GetValue·Poll, Start 두 번 | **오류 2건**: 연속 모드의 정지 안내가 "단일 변환 모드라…"였음. 단일 모드의 두 번째 Poll이 HAL_OK(HAL은 HAL_TIMEOUT). 수정, 단위 `adc-edge` |
+| 2 FPB-RA6E1 | 핀 심볼 19가지·콜백 8가지 이름(`int`, `main`, `hal_entry`, `NULL`, `g_ioport`, `R_IOPORT_PinWrite`, `printf` …), 같은 이름을 STM32 라벨 17가지로도 | **오류**: RA는 심볼이 그대로 `#define`이라 18가지가 통과해 빌드를 깨뜨림(STM32는 `_Pin`이 붙어 무해, HAL 이름은 이미 거절). 수정, 단위 `ra-names` |
+| 7 자동완성 | 15가지 문맥: HAL 함수·매크로·typedef, `hadc1.In`, `GPIO_InitStruct.Pu`, 인자 안, `uint32`, 주석·문자열 안 | **오류 2건**: `.` 뒤에 관계없는 이름(`pUART_CallbackTypeDef` 등), `uint32_t`가 안 나옴. 수정, 단위 `c-struct-fields`·E2E `completion`. 주석·문자열 안에서는 목록이 뜨지 않음(정상) |
+| 8 DWARF 4 | F446RE·F103RB × Debug·Release × (libm `sin`·`pow` + `snprintf %f` + `malloc`·`qsort`, `.cpp` 소스) 8가지를 실제 빌드해 모든 컴파일 단위의 버전 확인 | 문제 없음(전부 4) |
+| 11 복사한 파일 | `stm32f4xx_it.c`를 복사한 뒤 Pinout에서 EXTI를 켬(복사본에는 그 핸들러가 없음), 반대로 켰다 끔 | 문제 없음. 핸들러는 생성된 main.c에 들어가고, 어디에도 없으면 빌드 환경이 만든다. 처음에는 오류로 보았으나 탐색 스크립트의 판정이 틀렸다 |
+
+**CI 측정 정정.** 아래 "같은 커밋 세 번"의 3.4분·3.3분은 `workflow_dispatch` 실행이고, 그 실행에서는 게시 작업이 건너뛰어진다(API로 확인: publish `skipped`). 그래서 전체 시간으로는 1.46.1과 비교할 수 없다. 게시까지 한 푸시 실행만 보면 **282초(4.7분) → 215초(3.6분)·251초(4.2분)**이고, 게시 전 "마지막 시험 작업이 끝난 시각"으로 보면 237초 → 183 · 204 · 193 · 204초다. 4.2분이었던 실행(42815651634)은 E2E 1/6이 204초(시험 153초)로 가장 늦었고 게시가 44초 걸렸다(다른 실행은 29초).
+
+그 E2E 작업을 고쳤다. 로그에서 파일별 시간을 모으니(합 447초, 43개 파일) `--test-shard`가 devboards 53초 · workflow 38초 · adc-continuous 25초를 한 작업에 넣고 있었다. `scripts/e2e-shard.mjs`가 측정 시간으로 나눠 6개 작업이 79~84초가 된다(계산값; 실제 시간은 게시 확인에 적는다). 로컬에서 6/6 작업을 실행해 14개 시험이 도는 것을 확인.
+
+검증: 단위·해석기·에뮬레이터·펌웨어 시험 전체, 관련 E2E, ESLint, 패키지 검사.
+
 ## 1.46.3 게시 확인과 CI 시간 — 같은 커밋 세 번
 
 2026-11-10. 빌드 커밋 `63527db` · [Windows CI 42806440261](https://github.com/moonsyu/STM-Simulator/actions/runs/42806440261) 성공 · [Release v1.46.3](https://github.com/moonsyu/STM-Simulator/releases/tag/v1.46.3)이 최신 릴리스, 자산 5개. 파일은 내려받지 않았다.
