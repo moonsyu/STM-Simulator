@@ -35,7 +35,7 @@ export class SimulationSession {
       constants:this.hal?{...halConstantsFor(project.mcu?.family),...Object.fromEntries(Object.entries(project.mcu?.pins||{}).filter(([,p])=>p.label&&!definedLabel(project,p.label)).flatMap(([pin,p])=>[[p.label+'_Pin',1<<Number(pin.slice(2))],[p.label+'_GPIO_Port','GPIO'+pin[1]]]))}:undefined,
       invoke:(name,args,runtime)=>this.hal?.invoke(name,args,runtime),poll:runtime=>this.hal?.poll(runtime),
       preempt:runtime=>this.hal?.preempt(runtime)??false,declareGlobals:runtime=>this.hal?.declareGlobals?.(runtime),
-      warn:message=>{this.warnings.push(message);if(this.warnings.length>50)this.warnings.shift();warnOut(message);},reset:runtime=>{if(this.hal){this.hal=this.createHal();this.hal.nvicModel.tick.lost=Math.floor(runtime.microTime/1000);}},
+      warn:message=>{this.warnings.push(message);if(this.warnings.length>50)this.warnings.shift();warnOut(message);},reset:runtime=>{if(this.hal){const old=this.hal;this.hal=this.createHal();this.hal.inheritReset(old);this.hal.nvicModel.tick.lost=Math.floor(runtime.microTime/1000);}},
       print,uart,pwmEnabled:project.simulation?.pwmWaveform??false,
       beforeChange:us=>this.advance(us),changed:us=>this.changed(us),advance:us=>this.advance(us),
       read:pin=>digitalRead(pin,this.result),voltage:pin=>this.result?.voltage('signal:'+pin),

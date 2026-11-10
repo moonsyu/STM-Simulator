@@ -72,6 +72,7 @@ export class Stm32f103 extends Stm32f446 {
     const uid = this.options.uid ?? [0x0668ff54, 0x49498786, 0x67173544], bytes = new Uint8Array(0x14);
     const dv = new DataView(bytes.buffer); dv.setUint16(0, 128, true); dv.setUint32(8, uid[0], true); dv.setUint32(12, uid[1], true); dv.setUint32(16, uid[2], true);
     this.bus.loadBytes?.(0x1ffff7e0, bytes);
+    this.lsiHz = 40000; // IWDG clock (the F446's LSI is 32 kHz)
     this.machine.onResetRequest = reason => this.prepareReset(reason);
     this.republishAll();
   }

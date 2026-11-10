@@ -9,6 +9,7 @@ import {nvicProblems,NVIC_GROUP_DEFAULT,TICK_PRIORITY_DEFAULT} from './nvic-conf
 import {speedsOf,SPEED_NAMES} from './gpio-config.js';
 import {validateRtc,rtcFromIoc} from './rtc-config.js';
 import {validateDac,dacFromIoc,dacProblems} from './dac-config.js';
+import {validateIwdg,validateWwdg,iwdgFromIoc,wwdgFromIoc} from './wdg-config.js';
 import {validateClockTree,clockFrequencies,clockTreeProblems,adcClockProblem,clockTreeFromIoc,treeFromTimerHz} from './clock-tree.js';
 // Synchronous USART clock outputs on F446RE LQFP64 (DS10693 table 11): AF7 USART1/2/3, AF8 USART6.
 export const USART_CK_ROUTES=familyProfile(DEFAULT_FAMILY).usartCk;
@@ -66,6 +67,8 @@ export function validateMcu(value){
     if(!Object.hasOwn(routes,id)||!p||typeof p.enabled!=='boolean')throw new Error(`${id}: ${f.id}에서 지원하지 않는 주변장치입니다.`);
     if(id==='RTC'){out.peripherals[id]=validateRtc(p,f.id);continue;}
     if(id==='DAC'){out.peripherals[id]=validateDac(p);continue;}
+    if(id==='IWDG'){out.peripherals[id]=validateIwdg(p);continue;}
+    if(id==='WWDG'){out.peripherals[id]=validateWwdg(p);continue;}
     const q={enabled:p.enabled},defaults=isTimer(id)?timerDefaults(id,f.id):null;
     for(const [key,def,min,max]of isSerial(id)?[['baud',115200,300,2000000]]:id==='I2C1'?[['clock',100000,1000,1000000]]:id==='SPI1'?[['clock',1000000,1000,20000000]]:isTimer(id)?[['prescaler',defaults.prescaler,0,65535],['period',defaults.period,0,f.timerMax(id)],['pulse',defaults.pulse,0,f.timerMax(id)]]:[]){q[key]=p[key]??def;if(!Number.isInteger(q[key])||q[key]<min||q[key]>max)throw new Error(`${id}.${key}: 범위를 확인하세요.`);}
     if(isTimer(id)){q.mode=p.mode??defaults.mode;if(!['base','pwm','oc','capture','encoder'].includes(q.mode))throw new Error(id+': 타이머 모드를 확인하세요.');}
@@ -169,6 +172,7 @@ export function configProblems(config){
   }
   for(const [irq,n]of Object.entries(config.nvic||{})){if(irq==='TIM6_DAC_IRQn'&&config.peripherals.DAC?.enabled)continue;const id=timerOfIrq(irq)??irq.replace(/_IRQn$/,'');if(n.enabled&&(isSerial(id)||isTimer(id))&&!config.peripherals[id]?.enabled)errors.push(`${irq}: ${id} 주변장치를 활성화하거나 인터럽트를 끄세요.`);}
   for(const [request,d]of Object.entries(config.dma||{})){const id=dmaPeripheral(request);if(id&&!config.peripherals[id]?.enabled)errors.push(`${request} DMA: ${id} 주변장치를 활성화하세요.`);if(id&&isTimer(id)&&config.peripherals[id].mode!=='pwm')errors.push(`${request} DMA: ${id}를 PWM 모드로 설정하세요.`);}
+  if(config.nvic?.WWDG_IRQn?.enabled&&!config.peripherals.WWDG?.enabled)errors.push('WWDG_IRQn: WWDG를 활성화하거나 인터럽트를 끄세요.');
   errors.push(...dacProblems(config));
   errors.push(...nvicProblems(config));
   if(config.clock){errors.push(...clockTreeProblems(config.family,config.clock));if(config.peripherals.ADC1?.enabled){const adc=adcClockProblem(config.family,config.clock);if(adc)errors.push(adc);}}
@@ -224,6 +228,8 @@ export function importIoc(text){
   if(config.peripherals.I2C1){const c=config.peripherals.I2C1;c.clock=number(values['I2C1.ClockSpeed'],100000);const own=Number(values['I2C1.OwnAddress']);if(Number.isInteger(own)&&own>0)c.ownAddress=(own>>1)&0x7f; /* the value CubeMX writes to OwnAddress1 (address << 1) */if(/16_9/.test(values['I2C1.DutyCycle']||'')&&c.clock>100000)c.dutyCycle='16_9';if(/NOSTRETCH_ENABLE/.test(values['I2C1.NoStretchMode']||''))c.noStretch=true;}
   // RTC: calendar time/date, alarm A and wakeup (rtc-config.js); enabled through Mcu.IP or VP_RTC_VS_RTC_Activate.
   if(config.peripherals.DAC)config.peripherals.DAC=dacFromIoc(values);
+  // Watchdogs (System Core › IWDG / WWDG): Mcu.IP or the VP_xWDG_VS_xWDG activation; a value out of range keeps CubeMX's default.
+  for(const [id,read,check]of [['IWDG',iwdgFromIoc,validateIwdg],['WWDG',wwdgFromIoc,validateWwdg]])if(config.peripherals[id]||values[`VP_${id}_VS_${id}.Mode`]){const q=read(values,number);try{check(q);config.peripherals[id]=q;}catch(e){warnings.push(e.message+' 기본값을 씁니다.');config.peripherals[id]={enabled:true};}}
   if(config.peripherals.RTC||values['VP_RTC_VS_RTC_Activate.Mode'])config.peripherals.RTC=rtcFromIoc(values,family,number);
   if(config.peripherals.ADC1&&values['ADC1.ContinuousConvMode']==='ENABLE')config.peripherals.ADC1.continuous=true;
   // Rank 1 Sampling Time (ADC1.SamplingTime-0\#ChannelRegularConversion); a .ioc without it has CubeMX's default, the shortest.

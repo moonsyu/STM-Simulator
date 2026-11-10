@@ -18,7 +18,7 @@ const AHB_DIV = [1, 1, 1, 1, 1, 1, 1, 1, 2, 4, 8, 16, 64, 128, 256, 512];
 const APB_DIV = [1, 1, 1, 1, 2, 4, 8, 16];
 
 export class RccF1 extends Peripheral {
-  constructor(soc) { super(soc, 'RCC'); this.timers = {}; this.reset(); }
+  constructor(soc) { super(soc, 'RCC'); this.timers = {}; this.csrOffset = 0x24; this.reset(); }
   reset() {
     super.reset();
     this.set(0x00, 0x00000083 | (0x80 << 8)); // HSION, HSIRDY, HSITRIM=16, factory HSICAL

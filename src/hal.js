@@ -12,6 +12,7 @@ import {HalDcmi,DCMI_CONSTANTS} from './hal-dcmi.js';
 import {HalStorage,STORAGE_CONSTANTS} from './hal-storage.js';
 import {HalRtc,RTC_CONSTANTS,RTC_F1_CONSTANTS,RTC_F4_ONLY} from './hal-rtc.js';
 import {HalDac,DAC_HAL_CONSTANTS} from './hal-dac.js';
+import {HalWdg,WDG_CONSTANTS,WDG_F4_ONLY,powerOnFlags} from './hal-wdg.js';
 import {familyProfile,remapFor,irqNamesOf} from './mcu-family.js';
 import {clockFrequencies} from './clock-tree.js';
 
@@ -30,7 +31,7 @@ export const HAL_CONSTANTS={...CATALOG_HAL_CONSTANTS,HAL_OK:0,HAL_ERROR:1,HAL_BU
   HAL_UART_STATE_RESET:0,HAL_UART_STATE_READY:0x20,HAL_UART_STATE_BUSY:0x24,HAL_UART_STATE_BUSY_TX:0x21,HAL_UART_STATE_BUSY_RX:0x22,HAL_UART_STATE_BUSY_TX_RX:0x23,
   HAL_UART_ERROR_NONE:0,HAL_UART_ERROR_PE:1,HAL_UART_ERROR_NE:2,HAL_UART_ERROR_FE:4,HAL_UART_ERROR_ORE:8,HAL_UART_ERROR_DMA:16
 };
-Object.assign(HAL_CONSTANTS,DMA_CONSTANTS,USART_CONSTANTS,DCMI_CONSTANTS,STORAGE_CONSTANTS,RTC_CONSTANTS,DAC_HAL_CONSTANTS);
+Object.assign(HAL_CONSTANTS,DMA_CONSTANTS,USART_CONSTANTS,DCMI_CONSTANTS,STORAGE_CONSTANTS,RTC_CONSTANTS,DAC_HAL_CONSTANTS,WDG_CONSTANTS);
 for(const port of ['A','B','C','D','H'])HAL_CONSTANTS['GPIO'+port]='GPIO'+port;
 for(let i=0;i<16;i++)HAL_CONSTANTS['GPIO_PIN_'+i]=1<<i;
 HAL_CONSTANTS.GPIO_PIN_All=65535;
@@ -55,7 +56,7 @@ const constantsByFamily=new Map();
 /** Constants the C source of a project may use (its family's HAL names). */
 export function halConstantsFor(family){
   if(familyProfile(family).pinMux!=='remap')return HAL_CONSTANTS;
-  if(!constantsByFamily.has(family))constantsByFamily.set(family,{...Object.fromEntries(Object.entries(HAL_CONSTANTS).filter(([k])=>!F4_ONLY.test(k)&&!RTC_F4_ONLY.test(k))),...F1_CONSTANTS});
+  if(!constantsByFamily.has(family))constantsByFamily.set(family,{...Object.fromEntries(Object.entries(HAL_CONSTANTS).filter(([k])=>!F4_ONLY.test(k)&&!RTC_F4_ONLY.test(k)&&!WDG_F4_ONLY.test(k))),...F1_CONSTANTS});
   return constantsByFamily.get(family);
 }
 
@@ -64,7 +65,9 @@ const int=(value,min,max,label)=>{if(!Number.isInteger(value)||value<min||value>
 const PINOUT_IRQS=new Set(['EXTI0_IRQn','EXTI1_IRQn','EXTI2_IRQn','EXTI3_IRQn','EXTI4_IRQn','EXTI9_5_IRQn','EXTI15_10_IRQn',...SERIAL_IDS.map(id=>id+'_IRQn'),...TIMER_IDS.map(timerIrq)]);
 const isIterator=v=>v&&typeof v.next==='function'&&typeof v[Symbol.iterator]==='function';
 export class HalAdapter {
-  constructor(config,buses,{session}={}){this.config=validateMcu(config);/* Clock Configuration: bus clocks from the tree (null: the single APB1 timer clock). */this.clocks=this.config.clock?clockFrequencies(this.config.family,this.config.clock):null;this.family=familyProfile(this.config.family);this.f1=this.family.pinMux==='remap';this.remaps=new Set();this.afio=false;this.adcIrq=this.f1?'ADC1_2_IRQn':'ADC_IRQn';this.slave={i2cRx:null,i2cTx:null,spiJob:null,i2cOn:false,i2cHeld:[],spiHeld:[]};const errors=configProblems(this.config);if(errors.length)throw new Error(errors.join('\n'));this.buses=buses;this.nvic=new Map();this.pending=[];this.extiPending=0;this.serials=new Map();this.handles=new Map();this.timerModel=new HalTimers(this);this.adc=new Map();this.latches=new Map();this.priorities=new Map();this.initializedGpio=new Set();this.catalog=new CatalogPeripherals(this);this.nvicModel=new Nvic(this);this.subPriorities=new Map();this.noticeIrq=new Set();this.session=session;this.dma=new HalDma(this);this.usart=new HalUsart(this);this.camera=new HalDcmi(this);this.storage=new HalStorage(this);this.rtc=new HalRtc(this);this.dac=new HalDac(this);this.extensions=[this.dma,this.usart,this.camera,this.storage,this.rtc,this.dac];}
+  constructor(config,buses,{session}={}){this.config=validateMcu(config);/* Clock Configuration: bus clocks from the tree (null: the single APB1 timer clock). */this.clocks=this.config.clock?clockFrequencies(this.config.family,this.config.clock):null;this.family=familyProfile(this.config.family);this.f1=this.family.pinMux==='remap';this.remaps=new Set();this.afio=false;this.adcIrq=this.f1?'ADC1_2_IRQn':'ADC_IRQn';this.slave={i2cRx:null,i2cTx:null,spiJob:null,i2cOn:false,i2cHeld:[],spiHeld:[]};const errors=configProblems(this.config);if(errors.length)throw new Error(errors.join('\n'));this.buses=buses;this.nvic=new Map();this.pending=[];this.extiPending=0;this.serials=new Map();this.handles=new Map();this.timerModel=new HalTimers(this);this.adc=new Map();this.latches=new Map();this.priorities=new Map();this.initializedGpio=new Set();this.catalog=new CatalogPeripherals(this);this.nvicModel=new Nvic(this);this.subPriorities=new Map();this.noticeIrq=new Set();this.session=session;this.dma=new HalDma(this);this.usart=new HalUsart(this);this.camera=new HalDcmi(this);this.storage=new HalStorage(this);this.rtc=new HalRtc(this);this.dac=new HalDac(this);this.wdg=new HalWdg(this);this.extensions=[this.dma,this.usart,this.camera,this.storage,this.rtc,this.dac,this.wdg];/* RCC_CSR reset flags (power-on until a reset passes them on: inheritReset). */this.resetFlags=powerOnFlags(this.f1);this.resetCause=null;}
+  // After a reset the new HAL keeps the flags not cleared yet, plus PIN and the reset's own cause (software unless a watchdog).
+  inheritReset(old){this.resetFlags=new Set([...old.resetFlags,26,old.resetCause??28]);}
   get active(){return this.nvicModel.active;}
   uart(id){
     if(!isSerial(id))throw new Error(`지원하지 않는 UART 인스턴스: ${id}`);

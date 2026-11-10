@@ -144,7 +144,7 @@ export class Stm32f446 {
   // ------------------------------------------------------------ reset
   prepareReset(reason) {
     this.resetReason = reason;
-    if (this.pendingCsr === undefined && this.rcc) this.pendingCsr = (this.rcc.get(0x74) & 0xfe000000) | (1 << 26) | (reason === 'IWDG' ? 1 << 29 : reason === 'WWDG' ? 1 << 30 : 1 << 28);
+    if (this.pendingCsr === undefined && this.rcc) this.pendingCsr = (this.rcc.get(this.rcc.csrOffset ?? 0x74) & 0xfe000000) | (1 << 26) | (reason === 'IWDG' ? 1 << 29 : reason === 'WWDG' ? 1 << 30 : 1 << 28);
     this.usBeforeReset = this.nowUs();
     this.cycleOffset = this.machine.cycles;
     this.env.onReset?.(reason);

@@ -19,6 +19,8 @@ export const HAL_STRUCTS={
   RTC_HandleTypeDef:'Instance Init:RTC_InitTypeDef Lock State',
   DAC_HandleTypeDef:'Instance State Lock DMA_Handle1 DMA_Handle2 ErrorCode',
   DAC_ChannelConfTypeDef:'DAC_Trigger DAC_OutputBuffer',
+  IWDG_InitTypeDef:'Prescaler Reload',IWDG_HandleTypeDef:'Instance Init:IWDG_InitTypeDef',
+  WWDG_InitTypeDef:'Prescaler Window Counter EWIMode',WWDG_HandleTypeDef:'Instance Init:WWDG_InitTypeDef',
 
   GPIO_InitTypeDef:'Pin Mode Pull Speed Alternate',
   UART_InitTypeDef:'BaudRate WordLength StopBits Parity Mode HwFlowCtl OverSampling',

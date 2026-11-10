@@ -2,6 +2,7 @@ import {SERIAL_IDS,isSerial,serialAf,serialHandle,serialFunction} from './serial
 import {TIMER_IDS,isTimer,isBasicTimer,timerAf,timerIrq} from './timer-config.js';
 import {rtcInitLines} from './rtc-config.js';
 import {dacInitLines,dacChannelOf} from './dac-config.js';
+import {iwdgInitLines,wwdgInitLines,iwdgTimeoutMs} from './wdg-config.js';
 import {DEFAULT_TIMER_CLOCK_HZ} from './mcu-defaults.js';
 import {familyProfile,remapFor} from './mcu-family.js';
 import {dmaHandle,irqHandlers,handlerText} from './irq-handlers.js';
@@ -71,7 +72,7 @@ export function generateMain(config,{minimal=false,legacyGpio=false}={}){
     ...(minimal?[' */']:[' * printf: SWV ITM port 0 (enable SWV in the debugger). UART uses its pins.',
     ' * With newlib-nano, enable -u _printf_float for floating-point printf. */']),''];
   const sync=id=>isSerial(id)&&config.peripherals[id]?.mode==='synchronous',dma=Object.entries(config.dma||{});
-  const handles={...Object.fromEntries(Object.keys(family.serial).map(id=>[id,sync(id)?['USART','husart'+id.replace(/\D/g,'')]:['UART',serialHandle(id)]])),I2C1:['I2C','hi2c1'],SPI1:['SPI','hspi1'],ADC1:['ADC','hadc1'],SDIO:['SD','hsd'],DCMI:['DCMI','hdcmi'],RTC:['RTC','hrtc'],DAC:['DAC','hdac'],...Object.fromEntries(Object.keys(family.timers).map(id=>[id,['TIM','htim'+id.slice(3)]]))};
+  const handles={...Object.fromEntries(Object.keys(family.serial).map(id=>[id,sync(id)?['USART','husart'+id.replace(/\D/g,'')]:['UART',serialHandle(id)]])),I2C1:['I2C','hi2c1'],SPI1:['SPI','hspi1'],ADC1:['ADC','hadc1'],SDIO:['SD','hsd'],DCMI:['DCMI','hdcmi'],RTC:['RTC','hrtc'],DAC:['DAC','hdac'],IWDG:['IWDG','hiwdg'],WWDG:['WWDG','hwwdg'],...Object.fromEntries(Object.keys(family.timers).map(id=>[id,['TIM','htim'+id.slice(3)]]))};
   const active=Object.entries(config.peripherals).filter(([,p])=>p.enabled),serials=active.filter(([id])=>isSerial(id)),timers=active.filter(([id])=>isTimer(id));
   for(const [id]of active){const [type,name]=handles[id];lines.push(`${type}_HandleTypeDef ${name};`);}
   for(const [request]of dma)lines.push(`DMA_HandleTypeDef ${dmaHandle(request)};`);
@@ -87,7 +88,9 @@ export function generateMain(config,{minimal=false,legacyGpio=false}={}){
   if(!minimal&&serials.some(([id])=>!sync(id))){lines.push('  uint8_t message[] = "HAL ready\\r\\n";');for(const [id]of serials)if(!sync(id))lines.push(`  HAL_UART_Transmit(&${serialHandle(id)}, message, sizeof(message)-1, 100);`);}
   lines.push('  /* USER CODE END 2 */','  while (1) {','    /* USER CODE BEGIN 3 */');
   const output=Object.entries(config.pins).find(([,p])=>p.function==='GPIO_Output');if(!minimal&&output)lines.push(`    HAL_GPIO_TogglePin(GPIO${output[0][1]}, GPIO_PIN_${output[0].slice(2)});`);
-  lines.push(...(minimal?[]:['    HAL_Delay(500);']),'    /* USER CODE END 3 */','  }','}','',
+  // IWDG: the example loop refreshes it and waits at most half its timeout (CubeMX's default is about 0.4-0.5 s).
+  const iwdg=config.peripherals.IWDG?.enabled&&config.peripherals.IWDG;if(!minimal&&iwdg)lines.push('    HAL_IWDG_Refresh(&hiwdg);');
+  lines.push(...(minimal?[]:[`    HAL_Delay(${iwdg?Math.max(1,Math.min(500,Math.floor(iwdgTimeoutMs(iwdg,config.family)/2))):500});`]),'    /* USER CODE END 3 */','  }','}','',
   );
   if(tree)lines.push(...treeClockLines(config,f1));else{lines.push('void SystemClock_Config(void) {','  RCC_OscInitTypeDef osc = {0};','  RCC_ClkInitTypeDef clk = {0};',
     ...(f1?[]:['  __HAL_RCC_PWR_CLK_ENABLE();','  __HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE1);']),
@@ -135,7 +138,10 @@ export function generateMain(config,{minimal=false,legacyGpio=false}={}){
   for(const [id,p]of active){const [type,name]=handles[id];
     // RTC: clock source, prescalers, calendar, alarm and wakeup (rtc-config.js); it has no __HAL_RCC_RTC_CLK_ENABLE.
     if(id==='RTC'){lines.push('','static void MX_RTC_Init(void) {',...rtcInitLines(config),'}');continue;}
+    // IWDG runs on the LSI (HAL_IWDG_Init starts it): no __HAL_RCC_IWDG_CLK_ENABLE.
+    if(id==='IWDG'){lines.push('','static void MX_IWDG_Init(void) {',...iwdgInitLines(p),'}');continue;}
     lines.push('',`static void ${initName(id)}(void) {`,`  __HAL_RCC_${id}_CLK_ENABLE();`,`  ${name}.Instance = ${id};`);
+    if(id==='WWDG'){lines.push(...wwdgInitLines(p),'}');continue;}
     if(id==='DAC'){lines.push(...dacInitLines(config));for(const [request,d]of dma)if(dmaOwner(request)===id){const h=dmaHandle(request);lines.push(...dmaLines(h,request,d,f1),`  __HAL_LINKDMA(&${name}, ${dmaLink(request)}, ${h});`);}lines.push('}');continue;}
     const set=(key,value)=>lines.push(`  ${name}.Init.${key} = ${value};`);
     if(isSerial(id)&&!sync(id))for(const [k,v]of Object.entries({BaudRate:p.baud,WordLength:`UART_WORDLENGTH_${p.wordLength??8}B`,StopBits:`UART_STOPBITS_${p.stopBits??1}`,Parity:`UART_PARITY_${p.parity??'NONE'}`,Mode:`UART_MODE_${p.direction??'TX_RX'}`,HwFlowCtl:'UART_HWCONTROL_NONE',OverSampling:`UART_OVERSAMPLING_${p.overSampling??16}`}))set(k,v);
@@ -174,6 +180,8 @@ export function generateMain(config,{minimal=false,legacyGpio=false}={}){
   if(!minimal&&serials.length)lines.push('','void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart) {','  UNUSED(huart);','  /* USER CODE BEGIN UART_RxCplt */','  /* HAL_UART_Receive_IT() 수신 완료 */','  /* USER CODE END UART_RxCplt */','}');
   if(!minimal&&timers.length)lines.push('','void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {','  UNUSED(htim);','  /* USER CODE BEGIN TIM_PeriodElapsed */','  /* 타이머 주기 인터럽트 */','  /* USER CODE END TIM_PeriodElapsed */','}');
   if(!minimal&&timers.some(([id,p])=>p.mode==='oc'&&config.nvic[timerIrq(id)]?.enabled))lines.push('','void HAL_TIM_OC_DelayElapsedCallback(TIM_HandleTypeDef *htim) {','  UNUSED(htim);','  /* USER CODE BEGIN TIM_OC_DelayElapsed */','  /* 출력 비교 일치(CCR) 인터럽트 */','  /* USER CODE END TIM_OC_DelayElapsed */','}');
+  // WWDG early wakeup (counter 0x40): the example refreshes there, one count before the reset.
+  if(!minimal&&config.peripherals.WWDG?.enabled&&config.peripherals.WWDG.ewi&&config.nvic.WWDG_IRQn?.enabled)lines.push('','void HAL_WWDG_EarlyWakeupCallback(WWDG_HandleTypeDef *hwwdg) {','  /* USER CODE BEGIN WWDG_EarlyWakeup */','  HAL_WWDG_Refresh(hwwdg); /* 카운터 0x40: 지금 갱신하지 않으면 다음 카운트에 리셋 */','  /* USER CODE END WWDG_EarlyWakeup */','}');
   const rtc=config.peripherals.RTC?.enabled&&config.peripherals.RTC;
   if(!minimal&&rtc?.alarm&&config.nvic.RTC_Alarm_IRQn?.enabled)lines.push('','void HAL_RTC_AlarmAEventCallback(RTC_HandleTypeDef *hrtc) {','  UNUSED(hrtc);','  /* USER CODE BEGIN RTC_AlarmA */','  /* 알람 A 시각이 됨 (HAL_RTC_GetTime으로 시각 읽기) */','  /* USER CODE END RTC_AlarmA */','}');
   if(!minimal&&rtc?.wakeUp&&config.nvic.RTC_WKUP_IRQn?.enabled)lines.push('','void HAL_RTCEx_WakeUpTimerEventCallback(RTC_HandleTypeDef *hrtc) {','  UNUSED(hrtc);','  /* USER CODE BEGIN RTC_WakeUp */','  /* WakeUp 타이머 주기 인터럽트 */','  /* USER CODE END RTC_WakeUp */','}');

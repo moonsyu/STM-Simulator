@@ -34,6 +34,7 @@ export function irqHandlers(mcu){
     if(id==='RTC_WKUP')return of('RTC','RTC','hrtc','HAL_RTCEx_WakeUpTimerIRQHandler',true);
     if(id==='RTC')return of('RTC','RTC','hrtc','HAL_RTCEx_RTCIRQHandler',true);
     if(id==='SDIO')return of('SD','SDIO','hsd','HAL_SD_IRQHandler',true);
+    if(id==='WWDG')return of('WWDG','WWDG','hwwdg','HAL_WWDG_IRQHandler',true);
     return {body:''};
   };
   for(const [irq,p]of Object.entries(mcu?.nvic||{}))if(p.enabled&&!streams.has(irq.replace('_IRQn',''))){const id=irq.replace('_IRQn','');const h={name:`${id}_IRQHandler`,irq,shown:false,...body(timerOfIrq(irq)??id)};

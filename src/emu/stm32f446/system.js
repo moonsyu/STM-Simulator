@@ -134,7 +134,7 @@ export class Crc extends Peripheral {
   }
 }
 
-// Independent watchdog: LSI 32 kHz / prescaler, reload counter, reset on expiry.
+// Independent watchdog: LSI (F446 32 kHz, F103 40 kHz) / prescaler, reload counter, reset on expiry.
 export class Iwdg extends Peripheral {
   constructor(soc) { super(soc, 'IWDG'); this.reset(); }
   reset() { super.reset(); this.set(0x08, 0xfff); this.unlocked = false; this.running = false; this.event?.cancel(); this.event = null; }
@@ -153,7 +153,7 @@ export class Iwdg extends Peripheral {
     if (off === 0x10) { this.set(0x10, value & 0xfff); this.busy(4); }
   }
   busy(bits) { this.setBits(0x0c, bits); this.soc.after(150, () => { this.clearBits(0x0c, bits); }); }
-  periodUs() { return (this.get(0x08) + 1) * 4 * (1 << this.get(0x04)) / 32000 * 1e6; }
+  periodUs() { return (this.get(0x08) + 1) * 4 * (1 << this.get(0x04)) / (this.soc.lsiHz ?? 32000) * 1e6; }
   reload() {
     if (!this.running) return;
     this.event?.cancel();
@@ -164,12 +164,12 @@ export class Iwdg extends Peripheral {
 // Window watchdog: 7-bit down counter at PCLK1/4096/2^WDGTB.
 export class Wwdg extends Peripheral {
   constructor(soc) { super(soc, 'WWDG'); this.reset(); }
-  reset() { super.reset(); this.set(0, 0x7f); this.set(4, 0x7f); this.base = { value: 0x7f, us: 0 }; this.events?.forEach(e => e.cancel()); this.events = []; }
+  reset() { super.reset(); this.set(0, 0x7f); this.set(4, 0x7f); this.anchor = { value: 0x7f, us: 0 }; this.events?.forEach(e => e.cancel()); this.events = []; }
   tickUs() { return 4096 * (1 << field(this.get(4), 7, 2)) / this.soc.clock.pclk1 * 1e6; }
   counter() {
     if (!bit(this.get(0), 7)) return this.get(0) & 0x7f;
-    const steps = Math.floor((this.soc.nowUs() - this.base.us) / this.tickUs());
-    return Math.max(0, this.base.value - steps) & 0x7f;
+    const steps = Math.floor((this.soc.nowUs() - this.anchor.us) / this.tickUs());
+    return Math.max(0, this.anchor.value - steps) & 0x7f;
   }
   readReg(off) { if (off === 0) return (this.get(0) & 0x80) | this.counter(); return this.get(off); }
   writeReg(off, value, mask) {
@@ -177,18 +177,21 @@ export class Wwdg extends Peripheral {
     if (off === 0) {
       const active = bit(this.get(0), 7) || bit(v, 7);
       if (active && bit(this.get(0), 7) && this.counter() > (this.get(4) & 0x7f)) { this.soc.systemReset('WWDG'); return; }
-      this.set(0, (this.get(0) & 0x80) | (v & 0xff)); this.base = { value: v & 0x7f, us: this.soc.nowUs() }; this.schedule(); return;
+      this.set(0, (this.get(0) & 0x80) | (v & 0xff)); this.anchor = { value: v & 0x7f, us: this.soc.nowUs() }; this.schedule(); return;
     }
     if (off === 8) { this.set(8, this.get(8) & (v & 1)); this.soc.irq('WWDG', 'wwdg', false); return; }
+    // CFR (HAL_WWDG_Init writes it after CR): a new prescaler / EWI applies to the running count from now on.
+    const running = bit(this.get(0), 7), now = running ? this.counter() : 0;
     this.set(off, v & 0x3ff);
+    if (off === 4 && running) { this.anchor = { value: now, us: this.soc.nowUs() }; this.schedule(); }
   }
   schedule() {
     this.events.forEach(e => e.cancel()); this.events = [];
     if (!bit(this.get(0), 7)) return;
-    const value = this.base.value, t = this.tickUs();
+    const value = this.anchor.value, t = this.tickUs();
     if (value >= 0x40) {
-      if (bit(this.get(4), 9)) this.events.push(this.soc.atUs(this.base.us + (value - 0x40) * t, () => { this.setBits(8, 1); this.soc.irq('WWDG', 'wwdg', true); }));
-      this.events.push(this.soc.atUs(this.base.us + (value - 0x3f) * t, () => this.soc.systemReset('WWDG')));
+      if (bit(this.get(4), 9)) this.events.push(this.soc.atUs(this.anchor.us + (value - 0x40) * t, () => { this.setBits(8, 1); this.soc.irq('WWDG', 'wwdg', true); }));
+      this.events.push(this.soc.atUs(this.anchor.us + (value - 0x3f) * t, () => this.soc.systemReset('WWDG')));
     } else this.soc.systemReset('WWDG');
   }
 }

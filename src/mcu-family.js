@@ -19,12 +19,12 @@ const F4={
   usartCk:{USART1:['PA8'],USART2:['PA4'],USART3:['PB12','PC12'],USART6:['PC8']},
   timers:TIMER_ROUTES,
   extra:{I2C1:{SCL:['PB6','PB8'],SDA:['PB7','PB9']},SDIO:{D0:['PC8'],D1:['PC9'],D2:['PC10'],D3:['PC11'],CK:['PC12'],CMD:['PD2']},DCMI:{},
-    SPI1:{SCK:['PA5','PB3'],MISO:['PA6','PB4'],MOSI:['PA7','PB5']},ADC1:adcRoutes(ADC_PINS),RTC:{},DAC:{OUT1:['PA4'],OUT2:['PA5']}},
+    SPI1:{SCK:['PA5','PB3'],MISO:['PA6','PB4'],MOSI:['PA7','PB5']},ADC1:adcRoutes(ADC_PINS),RTC:{},DAC:{OUT1:['PA4'],OUT2:['PA5']},IWDG:{},WWDG:{}},
   // Alternate functions are selected per pin with GPIO_InitStruct.Alternate.
   pinMux:'af',
   timerMax:id=>['TIM2','TIM5'].includes(id)?4294967295:65535,
   dmaUnits:F4_DMA_STREAMS,
-  irqExtra:['ADC_IRQn','SPI1_IRQn','I2C1_EV_IRQn','I2C1_ER_IRQn','DCMI_IRQn','SDIO_IRQn','RTC_Alarm_IRQn','RTC_WKUP_IRQn',...F4_DMA_STREAMS.map(s=>s+'_IRQn')],
+  irqExtra:['ADC_IRQn','SPI1_IRQn','I2C1_EV_IRQn','I2C1_ER_IRQn','DCMI_IRQn','SDIO_IRQn','RTC_Alarm_IRQn','RTC_WKUP_IRQn','WWDG_IRQn',...F4_DMA_STREAMS.map(s=>s+'_IRQn')],
   gpioPins:GPIO_PINS,ports:['A','B','C','D','H'],
   // HSI 16 MHz without PLL; examples run the timers at 84 MHz through the PLL.
   // HSI 16 MHz directly, or an HSI PLL value the generator can build: APB1 timer clock = HCLK <= 90 MHz (APB1 <= 45 MHz),
@@ -65,13 +65,13 @@ const F1={
   serial:{USART1:routesFromRemaps('USART1'),USART2:routesFromRemaps('USART2'),USART3:routesFromRemaps('USART3')},
   usartCk:{USART1:['PA8'],USART2:['PA4'],USART3:['PB12','PC12']},
   timers:{TIM2:routesFromRemaps('TIM2'),TIM3:routesFromRemaps('TIM3'),TIM4:routesFromRemaps('TIM4')},
-  extra:{I2C1:routesFromRemaps('I2C1'),SPI1:routesFromRemaps('SPI1'),ADC1:adcRoutes(ADC_PINS),RTC:{}},
+  extra:{I2C1:routesFromRemaps('I2C1'),SPI1:routesFromRemaps('SPI1'),ADC1:adcRoutes(ADC_PINS),RTC:{},IWDG:{},WWDG:{}},
   pinMux:'remap',remaps:F1_REMAPS,
   // PA15/PB3/PB4 are JTAG pins after reset; using them needs __HAL_AFIO_REMAP_SWJ_NOJTAG() (SWD stays on).
   jtagPins:['PA15','PB3','PB4'],
   timerMax:()=>65535,
   dmaUnits:F1_DMA_CHANNELS,dmaRequests:{...Object.fromEntries(Object.entries(F1_DMA_REQUESTS).map(([r,c])=>[r,[[`DMA1_Channel${c}`,null]]])),MEMTOMEM:F1_DMA_CHANNELS.map(c=>[c,null])},
-  irqExtra:['ADC1_2_IRQn','SPI1_IRQn','I2C1_EV_IRQn','I2C1_ER_IRQn','RTC_IRQn','RTC_Alarm_IRQn',...F1_DMA_CHANNELS.map(c=>c+'_IRQn')],irqNumbers:F1_IRQ_NUMBERS,
+  irqExtra:['ADC1_2_IRQn','SPI1_IRQn','I2C1_EV_IRQn','I2C1_ER_IRQn','RTC_IRQn','RTC_Alarm_IRQn','WWDG_IRQn',...F1_DMA_CHANNELS.map(c=>c+'_IRQn')],irqNumbers:F1_IRQ_NUMBERS,
   // Same MB1136 board: CN7-29/31 carry PD0/PD1 (no port H) and CN10-18 is PB11.
   gpioPins:[...GPIO_PINS.filter(p=>!/^PH/.test(p)),'PB11','PD0','PD1'].sort(),ports:['A','B','C','D'],
   // HSI 8 MHz without PLL; with the PLL, SYSCLK = HSI/2 × PLLMUL (2..16) = 8..64 MHz in 4 MHz steps.
