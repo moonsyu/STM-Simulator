@@ -22,7 +22,8 @@ export class ButtonBounce{
       const goal=!!target?.[key];if(goal===!!before[key])continue;
       // A change in the middle of an earlier bounce starts over from the new state.
       this.queue=this.queue.filter(f=>f.key!==key);
-      const flips=Math.floor((this.ms-1)/2)*2;
+      // An even number of flips, the last one (back to the new state) no later than bounceMs: 2 ms → 2, 5 → 4, 10 → 10.
+      const flips=Math.floor(this.ms/2)*2;
       for(let k=1;k<=flips;k++)this.queue.push({at:nowMs+k,key,on:k%2?!goal:goal});
     }
     this.queue.sort((a,b)=>a.at-b.at);

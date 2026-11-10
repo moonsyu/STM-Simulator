@@ -15,6 +15,8 @@ test('ButtonBounce: flips once a millisecond for bounceMs, ending in the new sta
  // A release in the middle of the bounce starts over from the released state.
  const c=new ButtonBounce(5);let p=c.press({},{USER:true},0);p=c.apply(p,1);p=c.press(p,{},1.5);assert.equal(c.nextAt(),2.5);
  const tail=[];for(let t=2;t<=8;t+=0.5){const n=c.apply(p,t);if(n){p=n;tail.push(!!p.USER);}}assert.deepEqual(tail,[true,false,true,false]);
+ // Every time on the list bounces, the shortest one too (2 ms once gave no flip at all), and ends pressed within it.
+ for(const ms of BOUNCE_MS.filter(Boolean)){const x=new ButtonBounce(ms);let q=x.press({},{USER:true},0),flips=0,last=0;while(x.nextAt()<Infinity){last=x.nextAt();q=x.apply(q,last);flips++;}assert.ok(flips>=2&&flips%2===0&&last<=ms,`${ms} ms: ${flips} flips, last at ${last}`);assert.deepEqual(q,{USER:true},`${ms} ms ends pressed`);}
  assert.deepEqual([...BOUNCE_MS],[0,2,5,10,20]);assert.equal(new ButtonBounce(7).ms,0,'an unknown time is off');
 });
 
