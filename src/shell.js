@@ -64,27 +64,34 @@ export function createShell(){
  }
  const regionOf=unit=>DOCK_REGIONS.find(r=>state.dock[r]===unit);
  // Make the region holding `unit` visible (its show flag, and no other region maximized over it).
+ // A unit that is out in its own window (⧉): asking for it from the main window brings that window to the front.
+ // api.popout is set by setupDock.
  function showUnit(unit){
+  if(api.popout?.has(unit))api.popout.focus(unit);
   const region=regionOf(unit),flag={sidebar:'sidebar','bottom-panel':'panel',auxbar:'aux'}[region];if(flag)state.show[flag]=true;
   const key={'group-code':'code','group-circuit':'circuit','bottom-panel':'panel'}[region];if(state.maximized&&state.maximized!==key)state.maximized=null;
  }
  function showView(view,{toggle=false}={}){
   // Settings and keybindings open in their own floating window.
   if(view==='settings'||view==='keybindings'){settingsDialog?.open(view==='keybindings'?'keys':'general');return;}
-  // The activity bar hides the side bar only while the side bar unit is in the left region.
-  if(toggle&&state.view===view&&state.show.sidebar&&regionOf('sidebar')==='sidebar'){state.show.sidebar=false;}
-  else{state.view=view;showUnit('sidebar');}
+  // The activity bar (toggle): with the side bar out in its own window, the button brings it back into the main
+  // window — before, the click only hid the empty place it left, and nothing came back. Pressing the button of the
+  // view that is already open leaves it open: it used to fold the side bar away, which read as the view vanishing
+  // (reported for 장치 Docs). The side bar is folded with Ctrl+B or the title bar button.
+  if(toggle&&api.popout?.has('sidebar'))api.popout.close('sidebar');
+  state.view=view;showUnit('sidebar');
   if(state.maximized&&state.maximized!=='panel')state.maximized=null;apply();save();
   if(state.show.sidebar&&!toggle){const view=document.querySelector(`.sidebar-view[data-view="${state.view}"]`);view?.querySelector('input,button,select,[tabindex="0"]')?.focus?.({preventScroll:true});}
  }
  function showPanel(tab){showUnit('panel');apply();save();if(tab&&monitor)monitor.select(tab);else if(tab)document.querySelector(`[data-monitor="${tab}"]`)?.click();}
  let auxClosedByUser=false;
  function toggle(key){state.show[key]=!state.show[key];if(key==='aux')auxClosedByUser=!state.show.aux;if(!state.show.panel&&state.maximized==='panel')state.maximized=null;apply();save();}
- function reveal(id){
+ function reveal(id,{force=false}={}){
   // Compatible with the previous dock API: project | code | simulator | terminal.
   if(id==='project'){showUnit('sidebar');if(!['explorer','parts','examples','board'].includes(state.view))state.view='explorer';}
   if(id==='terminal')showUnit('panel');
-  if(id==='inspect'){if(auxClosedByUser&&regionOf('aux')==='auxbar'&&!state.show.aux)return;showUnit('aux');}
+  // The properties panel stays closed once the user closed it — unless it is asked for on purpose (a double-click on a part).
+  if(id==='inspect'){if(!force&&auxClosedByUser&&regionOf('aux')==='auxbar'&&!state.show.aux)return;if(force)auxClosedByUser=false;showUnit('aux');}
   if(id==='code')showUnit('code');
   if(id==='simulator')showUnit('circuit');
   apply();save();
@@ -283,6 +290,7 @@ function setupDock(layout,state,save){
   const win=openUnitWindow(id,DOCK_UNITS[id].label,units[id],()=>{popped.delete(id);place();});
   if(!win)return;popped.set(id,win);place();
  }
+ layout.popout={has:id=>popped.has(id),focus:id=>popped.get(id)?.focus(),close:id=>popped.get(id)?.close()};
  layout.onDock(place);place();
  window.addEventListener('beforeunload',()=>{for(const w of popped.values())w.close();});
 }
