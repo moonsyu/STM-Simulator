@@ -5,7 +5,7 @@
 ## 1.46.2 수정: 채터링 2 ms, CI 시간
 
 - **채터링(`button-bounce.js`)**: 뒤집힘 횟수가 `floor((ms-1)/2)*2`라 2 ms에서 0이었다. `floor(ms/2)*2`로 바꿔 마지막 뒤집힘(새 상태)이 bounceMs 안에 온다.
-- **CI(`scripts/toolchain-shard.mjs`, `.github/workflows/build-windows.yml`)**: 묶음 항목이 `[파일, 시험 이름 패턴]`일 수 있다 — 그 항목은 `--test-name-pattern`을 준 별도 실행으로 돈다. `arm-examples`의 보드별 시험 둘(68초·59초)을 묶음 1·2에 나눠 185/122/123초를 146/146/136초로 맞췄다. `tests/unit/toolchain-shards.test.js`가 나눈 파일의 모든 시험이 패턴 하나에만 걸리는지 확인한다. ESP32 스케치는 `dealSketches`(빌드 시간 표, 느린 것부터 가벼운 작업에)로 나눈다. 펌웨어·ESP32 작업은 `npm ci --ignore-scripts`(Electron 내려받기·편집기 빌드 생략), 패키지 작업은 `npm run build:package`(편집기는 `npm ci`의 postinstall이 이미 빌드).
+- **CI(`scripts/toolchain-shard.mjs`, `.github/workflows/build-windows.yml`)**: 묶음 항목이 `[파일, 시험 이름 패턴]`일 수 있다 — 그 항목은 `--test-name-pattern`을 준 별도 실행으로 돈다. `arm-examples`의 보드별 시험 둘(68초·59초)을 묶음 1·2에 나눠 185/122/123초를 146/146/136초로 맞췄다. `tests/unit/toolchain-shards.test.js`가 나눈 파일의 모든 시험이 패턴 하나에만 걸리는지 확인한다. ESP32 스케치는 `dealSketches`(빌드 시간 표, 느린 것부터 가벼운 작업에)로 나눈다. ESP32 작업은 `npm ci --ignore-scripts`(Electron 내려받기·편집기 빌드 생략; 펌웨어 작업에도 넣었다가 되돌림), 패키지 작업은 `npm run build:package`(편집기는 `npm ci`의 postinstall이 이미 빌드). **실측으로는 CI 전체 시간이 줄지 않았다**(4.7분 → 4.9~6.2분, 러너마다 0.6~1.8배 차이) — [VERIFICATION](docs/VERIFICATION.md) "네 번 측정한 결론".
 
 ## 1.46.1 수정: 설정 적용 뒤 탐색기 갱신, Developer Assistance 드롭
 
