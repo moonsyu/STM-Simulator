@@ -1,6 +1,17 @@
 # STM Simulator — 개발 인계
 
-현재 버전: **1.38.0**. 정리일: **2026-11-10**. NUCLEO-F446RE·NUCLEO-F103RB 또는 Renesas FPB-RA6E1(1.20.0, FSP·에뮬레이터 전용)과 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+현재 버전: **1.39.0**. 정리일: **2026-11-10**. NUCLEO-F446RE·NUCLEO-F103RB 또는 Renesas FPB-RA6E1(1.20.0, FSP·에뮬레이터 전용)과 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+
+## 1.39.0 해석기 HAL 조회 함수
+
+HAL·CMSIS 호출 45개를 해석기에서 돌려 "지원하지 않는 HAL API"로 멈추던 것 중 값만 돌려주면 되는 것을 넣었다(`hal.js` `call`).
+
+- 클록: `HAL_RCC_GetHCLKFreq`·`GetSysClockFreq`·`GetPCLK2Freq`(Clock Configuration의 `clockFrequencies`, 없으면 `timerClockHz`), `SystemCoreClock`(세션 상수, `coreClockHz(config)`).
+- `HAL_GetTickFreq`(1), `assert_param`(무시), `HAL_GetUIDw0~2`·`HAL_GetDEVID`(F446 0x421, F103 0x410)·`HAL_GetREVID`·`HAL_GetHalVersion`, `HAL_UART_GetState`(READY)·`HAL_ADC_GetState`(READY), `HAL_I2C_IsDeviceReady`(주소를 불러 ACK 여부).
+- `__WFI`·`__WFE`·`HAL_PWR_EnterSLEEPMode`: SysTick이 1 ms 안에 깨우므로 1 ms 대기로 처리(`invoke` → `blocking('HAL_Delay',[1])`). 인터럽트 콜백 안에서는 오류.
+- 남긴 것(안내 오류): 플래그 매크로(`__HAL_TIM_GET_FLAG`, `__HAL_UART_GET_FLAG`, `__HAL_UART_ENABLE_IT`), `HAL_UARTEx_ReceiveToIdle_IT`, `HAL_GPIO_LockPin` — 레지스터 비트 수준이라 ARM GCC 시뮬레이터로 실행한다.
+- 같이 확인한 것: 손상된 .ioc 610개(줄 삭제·값 비움·쓰레기 값·BOM/CRLF·중복 키)는 모두 설정으로 읽히거나 한국어 안내로 끝났다(JS 오류 없음).
+- 시험: 해석기 `hal-queries`.
 
 ## 1.38.0 해석기 문자열·메모리 관용구
 
