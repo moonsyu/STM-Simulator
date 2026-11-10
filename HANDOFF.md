@@ -1,6 +1,13 @@
 # STM Simulator — 개발 인계
 
-현재 버전: **1.40.0**. 정리일: **2026-11-10**. NUCLEO-F446RE·NUCLEO-F103RB 또는 Renesas FPB-RA6E1(1.20.0, FSP·에뮬레이터 전용)과 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+현재 버전: **1.41.0**. 정리일: **2026-11-10**. NUCLEO-F446RE·NUCLEO-F103RB 또는 Renesas FPB-RA6E1(1.20.0, FSP·에뮬레이터 전용)과 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+
+## 1.41.0 타이머 Update 플래그 폴링, 핸들러 중복 안내 보완
+
+- **타이머 Update 플래그(`hal-timers.js`)**: `updates(s, us)` — 플래그를 마지막으로 지운 뒤 카운터가 끝을 지난 횟수(center-aligned는 양 끝). `freeze()`가 기준 시각을 옮길 때 `s.updates`에 누적하므로 설정을 바꿔도 이어진다. `__HAL_TIM_GET_FLAG`는 그 값이 0보다 큰지, `__HAL_TIM_CLEAR_FLAG`·`__HAL_TIM_CLEAR_IT`는 0으로. `TIM_FLAG_UPDATE`/`TIM_IT_UPDATE`만 받고 CC 플래그는 안내 오류(상수는 정의). 타이머가 돌지 않으면 플래그는 오르지 않는다.
+- **핸들러 중복 안내(`irq-duplicates.js` `liveText`)**: 주석을 지울 때 문자열·문자 리터럴을 구분한다(이전에는 `"http://x"` 뒤나 `"/* …"` 뒤의 핸들러가 주석으로 지워져 안내가 빠졌다). 리터럴 내용도 공백으로 바꿔 문자열 속 핸들러 이름은 세지 않는다. 조건부 블록은 `0`/`1` 말고도 그 파일이 `#define`한 매크로만 쓰는 조건(`#if SIM == 1`, `#ifndef OWN`, `#elif`)을 `evalCondition`으로 따른다. 다른 헤더의 매크로에 달린 조건은 켜진 것으로 본다. `halCallbackFor`: RTC_Alarm·RTC_WKUP·RTC·WWDG·TIM6_DAC.
+- 같이 확인한 것: 핀 과전압 경고(5번)의 핀 구조·아날로그 모드 한계는 코드로 읽어 확인했고 고칠 것이 없었다.
+- 시험: 해석기 `tim-update-flag`, 단위 `irq-duplicates`(추가 2개).
 
 ## 1.40.0 해석기 2차원 배열, 지정 초기화, 함수 포인터
 
