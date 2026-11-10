@@ -44,7 +44,7 @@ test('SPI1 Parameter Settings (CPOL High, CPHA 2 Edge, 16 bits, LSB first) show 
   await win.evaluate(()=>document.getElementById('pinout-open').click());await win.waitForSelector('#pinout-dialog[open]');
   assert.equal(await win.locator('#pinout-peripherals [data-peripheral="SPI1"]').isChecked(),true);
   assert.match(await win.textContent('#pinout-peripherals'),/SPI mode 0 · Full-Duplex Master/);
-  for(const [key,value]of [['cpol','HIGH'],['cpha','2EDGE'],['dataSize','16'],['firstBit','LSB']])await win.selectOption(`[data-spi-param="${key}"]`,value);
+  for(const [key,value]of [['cpol','HIGH'],['cpha','2EDGE'],['dataSize','16'],['firstBit','LSB']])await win.selectOption(`[data-spi="SPI1"][data-spi-param="${key}"]`,value);
   assert.match(await win.textContent('#pinout-peripherals'),/SPI mode 3 · Full-Duplex Master/);
   await generate(win);
   await win.waitForFunction(()=>/hspi1\.Init\.CLKPolarity = SPI_POLARITY_HIGH;/.test(document.getElementById('code').value),null,{timeout:10000});
@@ -81,13 +81,13 @@ test('I2C1 Parameter Settings: Primary Address, Fast Mode Duty Cycle (above 100 
   await win.click('[data-activity="examples"]');if(!await win.locator('#view-examples').isVisible())await win.click('[data-activity="examples"]');
   await win.selectOption('#hal-example','i2c');await win.waitForFunction(()=>/MX_I2C1_Init/.test(document.getElementById('code').value));
   await win.evaluate(()=>document.getElementById('pinout-open').click());await win.waitForSelector('#pinout-dialog[open]');
-  assert.equal(await win.locator('[data-i2c-param="dutyCycle"]').isDisabled(),true,'100 kHz: Standard Mode has no duty choice');
+  assert.equal(await win.locator('[data-i2c="I2C1"][data-i2c-param="dutyCycle"]').isDisabled(),true,'100 kHz: Standard Mode has no duty choice');
   await win.fill('[data-peripheral-value="I2C1"][data-key="clock"]','400000');await win.locator('[data-peripheral-value="I2C1"][data-key="clock"]').dispatchEvent('change');
   // The clock field updates the card on its change; the duty choice is then enabled.
-  await win.locator('[data-i2c-param="noStretch"]').selectOption('1');
-  await win.waitForFunction(()=>!document.querySelector('[data-i2c-param="dutyCycle"]').disabled);
-  await win.selectOption('[data-i2c-param="dutyCycle"]','16_9');
-  await win.fill('[data-i2c-param="ownAddress"]','0x3c');await win.locator('[data-i2c-param="ownAddress"]').dispatchEvent('change');
+  await win.locator('[data-i2c="I2C1"][data-i2c-param="noStretch"]').selectOption('1');
+  await win.waitForFunction(()=>!document.querySelector('[data-i2c="I2C1"][data-i2c-param="dutyCycle"]').disabled);
+  await win.selectOption('[data-i2c="I2C1"][data-i2c-param="dutyCycle"]','16_9');
+  await win.fill('[data-i2c="I2C1"][data-i2c-param="ownAddress"]','0x3c');await win.locator('[data-i2c="I2C1"][data-i2c-param="ownAddress"]').dispatchEvent('change');
   assert.match(await win.textContent('#pinout-peripherals'),/Fast Mode · 7-bit addressing/);
   await generate(win);
   await win.waitForFunction(()=>/hi2c1\.Init\.DutyCycle = I2C_DUTYCYCLE_16_9;/.test(document.getElementById('code').value),null,{timeout:10000});
