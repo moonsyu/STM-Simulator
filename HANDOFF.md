@@ -1,6 +1,16 @@
 # STM Simulator — 개발 인계
 
-현재 버전: **1.41.0**. 정리일: **2026-11-10**. NUCLEO-F446RE·NUCLEO-F103RB 또는 Renesas FPB-RA6E1(1.20.0, FSP·에뮬레이터 전용)과 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+현재 버전: **1.42.0**. 정리일: **2026-11-10**. NUCLEO-F446RE·NUCLEO-F103RB 또는 Renesas FPB-RA6E1(1.20.0, FSP·에뮬레이터 전용)과 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+
+## 1.42.0 해석기 union
+
+- **union(`parser.js` `program.unions`, `runtime.js` `unionField`)**: `typedef union { … } Name;`·`union Tag { … };`를 구조체 정의로 읽고(토큰 `union`을 `struct`로 바꿔 같은 분기 사용) `program.unions[이름]`으로 표시한다. 멤버는 숫자형과 그 배열만(구조체·포인터 멤버, 구조체 안에 직접 쓴 이름 없는 union은 안내 오류). 크기는 가장 큰 멤버(`typeLayout`).
+  - 해석기에서 멤버는 서로 다른 셀이라, 바이트를 **멤버를 바꿔 접근할 때** 맞춘다: 값에 `last`(마지막으로 쓴 멤버)와 `bytes`를 두고, `reference()`가 다른 멤버에 닿으면 `last` 멤버의 셀을 바이트로 쓰고 요청한 멤버의 셀을 바이트에서 읽는다(리틀 엔디언, float는 IEEE 754 비트 — `hal-stdio.js` `numberBytes`/`bytesNumber`). 같은 멤버를 계속 쓰는 동안은 아무것도 하지 않는다.
+  - 초기값은 채운 멤버를 `last`로 둔다(첫 멤버, 또는 `.b = {…}`). `clone`이 `last`·`bytes`를 복사한다.
+- **다시 생성**: `declaredName`이 `(*const name[])`에서 `const`를 건너뛴다.
+- 실습 프로그램 통째 실행 시험 `tests/interp/course-programs.test.js`(1.41.0 뒤에 추가).
+- 이제 내장 해석기에서 실행되지 않는 문법: goto, 3차원 이상 배열, `uint64_t`, 레지스터 직접 접근, Update 외의 플래그 매크로, 구조체 안의 이름 없는 union.
+- 시험: 해석기 `c-idioms-8`.
 
 ## 1.41.0 타이머 Update 플래그 폴링, 핸들러 중복 안내 보완
 
