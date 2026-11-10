@@ -907,5 +907,19 @@ void R_BSP_WarmStart(bsp_warm_start_event_t event)
         R_IOPORT_Open (&IOPORT_CFG_CTRL, &IOPORT_CFG_NAME);
     }
 }
+
+#if BSP_TZ_SECURE_BUILD
+
+FSP_CPP_HEADER
+BSP_CMSE_NONSECURE_ENTRY void template_nonsecure_callable ();
+
+/* Trustzone Secure Projects require at least one nonsecure callable function in order to build (Remove this if it is not required to build). */
+BSP_CMSE_NONSECURE_ENTRY void template_nonsecure_callable ()
+{
+
+}
+FSP_CPP_FOOTER
+
+#endif
 `;
 }
