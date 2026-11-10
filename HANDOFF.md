@@ -1,6 +1,17 @@
 # STM Simulator — 개발 인계
 
-현재 버전: **1.32.0**. 정리일: **2026-11-10**. NUCLEO-F446RE·NUCLEO-F103RB 또는 Renesas FPB-RA6E1(1.20.0, FSP·에뮬레이터 전용)과 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+현재 버전: **1.33.0**. 정리일: **2026-11-10**. NUCLEO-F446RE·NUCLEO-F103RB 또는 Renesas FPB-RA6E1(1.20.0, FSP·에뮬레이터 전용)과 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+
+## 1.33.0 다시 생성할 때 사용자 코드 유지(기능 9번), TIM1·TIM8
+
+- **다시 생성(`src/c-source-edit.js`)**: `topLevelItems(source)`가 USER CODE 구역 밖의 최상위 항목(함수·선언·전처리 줄, 바로 위 주석과 같은 줄 뒤 주석 포함)을 나누고, `adoptOutsideCode(previous, generated, previousDefault)`가 생성기가 쓰지 않는 항목(같은 이름의 함수·같은 선언이 생성 코드에 없는 것)을 구역 안으로 옮긴다: `#include` → Includes, main 앞 선언·`#define`·타입 → PV, main 앞 함수 → 0, main 뒤 → 4. 생성기와 같은 이름의 콜백·핸들러라도 안에 USER CODE 구역이 없으면 사용자가 쓴 것으로 보고 옮기고, `dropShadowedCallbacks`가 생성된 쪽을 뺀다. `regenerateMain(previous, generated, previousDefault, others)` = 옮기기 + `keepUserCode` + 중복 핸들러·콜백 제거, `{code, moved}`를 돌려준다. Pinout 코드 버튼(`pinout-ui.js` commit → `app.js` apply가 `moved`를 경고로 기록)과 .ioc 가져오기(`firmware-import.js`)가 이것을 쓴다. PV·4 구역이 없는 직접 쓴 main.c는 건드리지 않는다.
+- **예제**: `hal-examples.js`의 `tidyExampleSource`가 적용할 때 같은 함수로 예제의 보조 함수·전역을 구역 안에 넣는다(예제 260개를 다시 생성해도 함수 손실 0, 이전 69개).
+- **Pinout 코드 생성**: `app.js` apply가 `firmware.files`를 비우던 것을 HAL 프로젝트면 유지하게 했다.
+- **TIM1·TIM8(`timer-config.js`)**: `TIMER_ROUTES`에 TIM1(PA8~PA11, CHxN PA7/PB13·PB0/PB14·PB1/PB15, AF1)·TIM8(PC6~PC9, CHxN PA5/PA7·PB0/PB14·PB1/PB15, AF3). `isAdvancedTimer`, `timerIrq(id, f1)`(갱신: F4 `TIM1_UP_TIM10_IRQn`·`TIM8_UP_TIM13_IRQn`, F1 `TIM1_UP_IRQn`), `timerCcIrq(id)`(`TIMx_CC_IRQn`, 다른 타이머는 같은 줄), `timerOfIrq`는 세 이름 모두 인식. F103은 `F1_REMAPS.TIM1`(부분 리맵이 CHxN만 PA7/PB0/PB1로 옮김).
+- 설정: 타이머에 `repetition`(RCR 0~255)·`deadTime`(DTG 0~255), 0이 아니면 저장. CHxN 핀은 PWM·출력 비교 모드에서만. 생성: `RepetitionCounter`, 채널의 `OCNPolarity`·`OCIdleState`·`OCNIdleState`, `HAL_TIMEx_ConfigBreakDeadTime`(Break 꺼짐), 예제 시작 줄에 `HAL_TIMEx_PWMN_Start`/`OCN_Start`. 채널 인터럽트 시작(`_IT`)은 `timerCcIrq` 줄이 켜졌을 때.
+- 해석기(`hal-timers.js`): 갱신 인터럽트는 Repetition + 1 주기마다, 캡처/비교는 CC 줄 대기열. `HAL_TIM_IRQHandler`는 실행 중인 핸들러의 줄을 비운다. `HAL_TIMEx_PWMN_Start/Stop`은 CHxN 핀에 채널 PWM의 반전을 낸다(데드타임 구간은 그리지 않고 한 번 안내, Break 입력은 오류 안내). `hal-nvic.js`에 TIM1/TIM8 줄 번호와 빠져 있던 `I2C3_EV/ER_IRQn`(72·73)을 넣었다.
+- 시험: 단위 `regenerate`·`tim-advanced`, 해석기 `timer-advanced`, 툴체인 `tim-advanced`(실제 HAL, 두 보드: RCR·BDTR MOE·데드타임·CC1E/CC1NE·듀티 25 %/75 %, TIM8 CC 인터럽트), E2E `tim-advanced`·`ioc-import`(구역 밖 함수 유지).
+- 남음: Break 입력·데드타임 파형(해석기), TIM9~14, One Pulse, 채널별 OCN 극성 설정.
 
 ## 1.32.0 I2C2·SPI2 (두 보드), I2C3·SPI3 (F446RE)
 

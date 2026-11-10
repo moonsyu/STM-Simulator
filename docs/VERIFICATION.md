@@ -1,5 +1,9 @@
 # 검증 기록
 
+## 1.32.0 I2C2·SPI2, I2C3·SPI3 — 게시 확인(API)
+
+2026-11-10. 태그·빌드 커밋 `616ddacff1541b9c231ce57323e398953b913cab` · [Windows CI 42737014075](https://github.com/moonsyu/STM-Simulator/actions/runs/42737014075) 모두 성공. 앞선 실행 [42735529391](https://github.com/moonsyu/STM-Simulator/actions/runs/42735529391)(커밋 70b9414)은 E2E `peripheral-params` 1개 실패로 게시되지 않았다: I2C1 매개변수 선택자가 새 I2C2 카드에도 걸린 시험 쪽 문제였고, 선택자를 인스턴스로 한정해 다시 올렸다(같은 버전, 태그는 처음 만들어짐). [Release v1.32.0](https://github.com/moonsyu/STM-Simulator/releases/tag/v1.32.0) 최신 릴리스, draft/prerelease 아님, 자산 5개(STM-Simulator.exe 115,586,598바이트, STM-Simulator-1.32.0-Windows-x64.zip 116,674,124바이트, SHA256.txt, BUILD-INFO.json, update-manifest.json).
+
 ## 1.31.0 IWDG·WWDG — 게시 확인(API)
 
 2026-11-10. 태그·빌드 커밋 `1194f3f84e2990064021ef71a81a3ddbdaca934d` · [Windows CI 42733522293](https://github.com/moonsyu/STM-Simulator/actions/runs/42733522293) 첫 실행에서 모두 성공(전체 7.0분). [Release v1.31.0](https://github.com/moonsyu/STM-Simulator/releases/tag/v1.31.0) 최신 릴리스, draft/prerelease 아님, 자산 5개(STM-Simulator.exe 115,638,867바이트, STM-Simulator-1.31.0-Windows-x64.zip 116,725,582바이트, SHA256.txt, BUILD-INFO.json, update-manifest.json).
