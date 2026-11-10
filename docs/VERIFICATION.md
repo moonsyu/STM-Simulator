@@ -1,5 +1,13 @@
 # 검증 기록
 
+## 1.36.0 뒤 오류 탐색 — RTC·DAC 무작위 설정, .ioc 무작위 왕복
+
+2026-11-10. ① RTC·DAC 설정 394개(F446RE·F103RB, 12/24시간·알람 마스크·WakeUp 클록·DAC 트리거/파형/버퍼·TIM6/TIM7·NVIC 조합)를 생성 코드 그대로 해석기에서 2.1초 실행하고 `.ioc`로 내보냈다가 다시 가져왔다. 찾은 오류 3개: 생성된 `TIM6_DAC_IRQHandler`의 `HAL_DAC_IRQHandler`를 해석기가 모르는 함수로 거부, 내보내기가 꺼 둔 NVIC 줄(우선순위만 정한 것)을 버림, F103RB RTC 요일을 내보내지 않음. 고친 뒤 390개 통과, 나머지 4개는 의도한 한도 안내(`RTC WakeUp: 주기가 0.1 ms보다 짧습니다`). 회귀 시험 `tests/interp/probe-regressions.test.js` 2개. ② 칩 전체 무작위 설정(타이머 모드·TRGO·One Pulse·반복 카운터·데드타임, UART 속도·패리티·정지 비트, I2C 속도, SPI 분주·극성·위상·비트 수·순서, ADC 변환 수·트리거, 워치독, GPIO 출력/입력/EXTI의 풀·라벨·초기값·Open Drain·속도, NVIC 켬/끔과 우선순위)을 시드 6개로 4,751개 왕복: 모두 같은 설정으로 돌아오고 경고 없음.
+
+## 1.36.0 .ioc 내보내기, 해석기 C 문법, ESP32 CI 분할 — 게시 확인(API)
+
+2026-11-10. 태그·빌드 커밋 `1d14d5f` · [Windows CI 42752042601](https://github.com/moonsyu/STM-Simulator/actions/runs/42752042601) 첫 실행에서 모두 성공, 전체 5.0분(300초, 1.35.0은 6.6분, 1.33.0은 8.0분). 작업별: 툴체인 3조각 252·150·228초, E2E 4조각 210·138·186·156초, 단위 210초, 패키지 222초, ESP32 2조각 204·198초(한 작업일 때 349초), 게시 42초. 이제 가장 긴 작업은 툴체인 1번 조각(4.2분)이다. [Release v1.36.0](https://github.com/moonsyu/STM-Simulator/releases/tag/v1.36.0) 최신 릴리스, draft/prerelease 아님, 자산 5개(STM-Simulator.exe 115,632,264바이트, STM-Simulator-1.36.0-Windows-x64.zip 116,723,010바이트, SHA256.txt, BUILD-INFO.json, update-manifest.json).
+
 ## 1.35.0 기능 목록 10~13번 — 게시 확인(API)
 
 2026-11-10. 태그·빌드 커밋 `d5f4237` · [Windows CI 42749262745](https://github.com/moonsyu/STM-Simulator/actions/runs/42749262745) 첫 실행에서 모두 성공, 전체 6.6분(396초, 1.33.0은 8.0분). 작업별: 툴체인 3조각 204·133·143초, E2E 4조각 196·184·151·131초, 단위 199초, 패키지 208초, ESP32 349초(캐시 복원 66초 + 스케치 빌드 234초: 컴파일 캐시를 넣었지만 빌드 시간은 줄지 않았다), 게시 43초. [Release v1.35.0](https://github.com/moonsyu/STM-Simulator/releases/tag/v1.35.0) 최신 릴리스, draft/prerelease 아님, 자산 5개(STM-Simulator.exe 115,625,586바이트, STM-Simulator-1.35.0-Windows-x64.zip 116,715,677바이트, SHA256.txt, BUILD-INFO.json, update-manifest.json).
