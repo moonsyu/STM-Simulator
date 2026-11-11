@@ -12,6 +12,14 @@ import {spawnSync} from 'node:child_process';
 import {pathToFileURL} from 'node:url';
 import os from 'node:os';
 
+const file=name=>`tests/toolchain/${name}.test.mjs`;
+/** The `node --test` runs of a group: its whole files in one run, then each patterned entry in a run of its own (a name
+ * pattern applies to every file of a run). A group with no whole file has no first run — `node --test` without a file
+ * runs every test of the repository (1.47.0: group 1 was one patterned entry and its job never finished). */
+export function shardRuns(group){
+ const whole=group.filter(e=>!Array.isArray(e)).map(file);
+ return [...(whole.length?[whole]:[]),...group.filter(Array.isArray).map(([name,pattern])=>[`--test-name-pattern=${pattern}`,file(name)])];
+}
 export const TOOLCHAIN_SHARDS=Object.freeze([
  // ra-course's test that builds and runs every FSP example took 78 s on a faster runner (1.46.6): about 94, on its own
  [['ra-course','contact bounce on']],
@@ -44,9 +52,7 @@ if(import.meta.url===pathToFileURL(process.argv[1]||'').href){
   console.log(`runner: ${cpus[0]?.model?.trim()} x${cpus.length}, ${Math.round(os.totalmem()/2**30)} GB · benchmark: JavaScript ${Math.round(js)} ms, ARM GCC ${gcc} (${x&1})`);}
  if(only)process.exit(0);
  const base=['--test','--test-reporter=spec','--test-reporter-destination=stdout','--test-reporter=./tests/github-reporter.mjs','--test-reporter-destination=stdout','--test-concurrency=1'];
- const file=name=>`tests/toolchain/${name}.test.mjs`;
- // Whole files in one run, then each patterned entry in a run of its own (a name pattern applies to every file of a run).
- const runs=[[...base,...group.filter(e=>!Array.isArray(e)).map(file)],...group.filter(Array.isArray).map(([name,pattern])=>[...base,`--test-name-pattern=${pattern}`,file(name)])];
+ const runs=shardRuns(group).map(args=>[...base,...args]);
  let status=0;
  for(const args of runs){const run=spawnSync(process.execPath,args,{stdio:'inherit'});if(run.status!==0)status=run.status??1;}
  process.exit(status);

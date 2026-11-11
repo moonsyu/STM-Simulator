@@ -4,7 +4,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readdirSync,readFileSync} from 'node:fs';
-import {TOOLCHAIN_SHARDS,shardFiles} from '../../scripts/toolchain-shard.mjs';
+import {TOOLCHAIN_SHARDS,shardFiles,shardRuns} from '../../scripts/toolchain-shard.mjs';
 
 test('every toolchain test file is in a CI group, split files are covered by their patterns, and the workflow runs each group',()=>{
  // esp32-sketches has its own job (Arduino CLI, not ARM GCC).
@@ -28,4 +28,13 @@ test('every toolchain test file is in a CI group, split files are covered by the
  assert.match(workflow,/run: node scripts\/toolchain-shard\.mjs \$\{\{ matrix\.shard \}\}/);
  const shards=workflow.match(/firmware:[\s\S]*?shard: \[([\d, ]+)\]/)[1].split(',').map(Number);
  assert.deepEqual(shards,TOOLCHAIN_SHARDS.map((_,i)=>i+1));
+});
+
+// 1.47.0: a group of one patterned entry started `node --test` with no file, which runs every test of the repository.
+test('every run of every group names a test file',()=>{
+ for(const [i,group]of TOOLCHAIN_SHARDS.entries()){
+  const runs=shardRuns(group);assert.ok(runs.length>0,`group ${i+1} has a run`);
+  for(const args of runs)assert.ok(args.some(a=>/^tests\/toolchain\/.+\.test\.mjs$/.test(a)),`group ${i+1}: ${args.join(' ')}`);
+ }
+ assert.deepEqual(shardRuns([['ra-course','x']]),[['--test-name-pattern=x','tests/toolchain/ra-course.test.mjs']]);
 });
