@@ -109,20 +109,21 @@ ipcMain.handle('workspace:open',async()=>{const r=await dialog.showOpenDialog(wi
 ipcMain.handle('workspace:save',async(_event,text)=>workspace.saveWorkspace(workspaceState,text));
 ipcMain.handle('workspace:clear',async event=>{if(event.sender!==win?.webContents||event.senderFrame?.parent)throw new Error('허용하지 않는 요청입니다.');workspaceState=null;await nativeIde.closeTerminal();});
 ipcMain.handle('firmware:import',async(_event,folder)=>{
-  const result=await dialog.showOpenDialog(win,{title:folder?'Cube 프로젝트 루트 폴더 선택':'.ioc, main.c와 필요한 .c/.h 선택',properties:folder?['openDirectory']:['openFile','multiSelections'],...(!folder?{filters:[{name:'Cube 소스와 설정',extensions:['ioc','c','h']}]}:{})});
+  const result=await dialog.showOpenDialog(win,{title:folder?'Cube 프로젝트 루트 폴더 선택':'.ioc, main.c와 필요한 .c/.h 선택',properties:folder?['openDirectory']:['openFile','multiSelections'],...(!folder?{filters:[{name:'Cube 소스와 설정',extensions:['ioc','c','h','s','ld']}]}:{})});
   if(result.canceled)return null;
   let paths=result.filePaths;
   if(folder){
     const root=paths[0];paths=[];
     // The project's own sources with their folders (Core/Src, Core/Inc, user folders); the SDK (Drivers, Middlewares),
     // build output and IDE folders are left out: the app builds with its own SDK copy.
-    const SKIP=new Set(['drivers','middlewares','debug','release','build','.git','.settings','.metadata','node_modules','startup']),relativeOf=new Map();
+    const SKIP=new Set(['drivers','middlewares','debug','release','build','.git','.settings','.metadata','node_modules']),relativeOf=new Map();
     const walk=async(directory,relative,depth)=>{let entries;try{entries=await fs.readdir(directory,{withFileTypes:true});}catch(error){if(error.code==='ENOENT')return;throw error;}
       for(const entry of entries){const rel=relative?relative+'/'+entry.name:entry.name;
         if(entry.isDirectory()){if(depth<6&&!SKIP.has(entry.name.toLowerCase())&&/^[A-Za-z0-9_][\w.-]{0,40}$/.test(entry.name))await walk(path.join(directory,entry.name),rel,depth+1);continue;}
         if(!entry.isFile())continue;
         // The project's *_hal_conf.h is kept: its HSE_VALUE (8 MHz ST-LINK clock on a NUCLEO) drives the ARM build; the SDK template says 25 MHz.
-        if((relative?/\.[ch]$/:/\.(ioc|c|h)$/).test(entry.name)&&/^[A-Za-z0-9_][\w.-]{0,70}$/.test(entry.name)&&!['syscalls.c','sysmem.c','system_stm32f4xx.c','system_stm32f1xx.c'].includes(entry.name)){const full=path.join(directory,entry.name);paths.push(full);relativeOf.set(full,rel);}}
+        // Also the project's startup code (Core/Startup/startup_….s) and its linker script in the root (…_FLASH.ld).
+        if((relative?/\.(c|h|s)$/:/\.(ioc|c|h|ld)$/).test(entry.name)&&/^[A-Za-z0-9_][\w.-]{0,70}$/.test(entry.name)&&!['syscalls.c','sysmem.c','system_stm32f4xx.c','system_stm32f1xx.c'].includes(entry.name)){const full=path.join(directory,entry.name);paths.push(full);relativeOf.set(full,rel);}}
     };
     await walk(root,'',0);
     if(paths.length>121)throw new Error(`소스 파일이 ${paths.length}개입니다. 프로젝트 폴더의 .c/.h는 120개까지 가져옵니다(Drivers·Middlewares·빌드 폴더 제외).`);

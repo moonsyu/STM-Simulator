@@ -8,7 +8,7 @@ import {SOURCE_PATH,MAX_SOURCE_FILES,MAX_SOURCE_BYTES,baseName,folderOf,nameClas
 export function importFirmware(project,files){
   if(!Array.isArray(files)||files.length>MAX_SOURCE_FILES+1||!files.length)throw new Error('.ioc 및 .c/.h 파일을 선택하세요.');
   const next=structuredClone(project),warnings=[],names=new Set();let size=0;
-  for(const file of files){if(!file||typeof file.name!=='string'||!(/^[\w.-]+\.ioc$/.test(file.name)||SOURCE_PATH.test(file.name)&&/\.[ch]$/.test(file.name))||typeof file.text!=='string'||names.has(file.name))throw new Error('파일 이름, 확장자 또는 중복을 확인하세요.');names.add(file.name);size+=file.text.length;}
+  for(const file of files){if(!file||typeof file.name!=='string'||!(/^[\w.-]+\.ioc$/.test(file.name)||SOURCE_PATH.test(file.name)&&/\.(c|h|s|ld)$/.test(file.name))||typeof file.text!=='string'||names.has(file.name))throw new Error('파일 이름, 확장자 또는 중복을 확인하세요.');names.add(file.name);size+=file.text.length;}
   if(size>MAX_SOURCE_BYTES)throw new Error('가져올 파일은 합계 1 MB 이하로 선택하세요.');
   files=files.map(f=>({...f,text:normalizeText(f.text)}));
   const iocs=files.filter(f=>f.name.endsWith('.ioc'));if(iocs.length>1)throw new Error('.ioc 파일은 하나만 선택하세요.');
@@ -20,6 +20,7 @@ export function importFirmware(project,files){
   }
   next.mcu??=defaultMcu(board.mcuFamily);
   const sourceFiles=files.filter(f=>/\.[ch]$/.test(f.name));
+  if(!sourceFiles.length&&files.some(f=>/\.(s|ld)$/.test(f.name)))throw new Error('시작 코드·링커 스크립트는 main.c를 함께 가져올 때 들어옵니다. 이미 있는 프로젝트에는 파일 추가로 넣으세요.');
   if(sourceFiles.length){
     // main.c: at the top, or where CubeIDE keeps it (Core/Src); its folder is remembered so the tree stays as imported.
     const mains=sourceFiles.filter(f=>baseName(f.name)==='main.c'),main=mains.find(f=>f.name==='main.c')??mains.find(f=>/(^|\/)Core\/Src\/main\.c$/.test(f.name))??mains[0];
@@ -29,6 +30,16 @@ export function importFirmware(project,files){
     // are left out with a warning: with them the project could not be saved or opened again.
     const kept=[],left=[];for(const f of sourceFiles.filter(f=>baseName(f.name)!=='main.c')){if(nameClash(kept.map(k=>k.name),f.name))left.push(f.name);else kept.push(f);}
     if(left.length)warnings.push(`이름이 겹쳐 가져오지 않은 파일: ${left.join(', ')}`);
+    // The project's own startup code and linker script come along (the ARM build then uses them in place of the SDK's
+    // startup file and the script the app writes) — only the ones of this board's MCU: a startup file of another MCU
+    // would give a wrong vector table, and the _RAM script would link the program into RAM.
+    const digits=/^STM32F(\d{3})/.exec(next.mcu.family)?.[1]||'',skippedBuild=[];
+    for(const f of files.filter(f=>/\.(s|ld)$/.test(f.name))){
+      const base=baseName(f.name),fits=/\.s$/.test(base)?new RegExp(`^startup_stm32f${digits}`,'i').test(base):new RegExp(`F${digits}`,'i').test(base)&&!/_RAM\.ld$/i.test(base);
+      const twice=/\.s$/.test(base)?kept.some(k=>/(^|\/)startup_[^/]*\.s$/i.test(k.name)):kept.some(k=>/\.ld$/.test(k.name));
+      if(!digits||!fits||twice||nameClash(kept.map(k=>k.name),f.name))skippedBuild.push(f.name);else kept.push(f);
+    }
+    if(skippedBuild.length)warnings.push(`가져오지 않은 시작 코드·링커 스크립트: ${skippedBuild.join(', ')} (이 보드의 MCU 것이 아니거나 _RAM 스크립트이거나 이미 하나 가져옴). 앱이 넣는 것으로 빌드합니다.`);
     next.code=main.text;next.firmware={mode:'hal',files:kept.map(f=>({name:f.name,text:f.text})),...(folderOf(main.name)?{mainFolder:folderOf(main.name)}:{})};
   }
   // Only an .ioc: the settings change and main.c is generated from them as CubeMX does (USER CODE sections kept), so the

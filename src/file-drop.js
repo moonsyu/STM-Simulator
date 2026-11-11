@@ -56,7 +56,7 @@ export function planDrop(dropped,project){
   const sources=files.filter(f=>SOURCE.test(f.name)),iocs=files.filter(f=>/\.ioc$/i.test(f.name));
   if(iocs.length||sources.some(f=>baseName(f.name)==='main.c')){
     // .cpp sources come along only when added to an existing project; a CubeIDE import is C.
-    const cFiles=files.filter(f=>/\.(ioc|c|h)$/i.test(f.name));for(const f of files)if(!cFiles.includes(f))skipped.push(f.name);
+    const cFiles=files.filter(f=>/\.(ioc|c|h|s|ld)$/.test(f.name));for(const f of files)if(!cFiles.includes(f))skipped.push(f.name);
     return {action:'import',files:cFiles.map(f=>({name:f.name,text:f.text})),skipped};
   }
   if(project.firmware?.mode==='fsp'&&sources.some(f=>baseName(f.name)==='hal_entry.c'))throw new Error('hal_entry.c는 FSP 프로젝트의 주 소스 이름입니다.');
