@@ -1,6 +1,15 @@
 # STM Simulator — 개발 인계
 
-현재 버전: **1.48.0**. 정리일: **2026-11-10**. NUCLEO-F446RE·NUCLEO-F103RB 또는 Renesas FPB-RA6E1(1.20.0, FSP·에뮬레이터 전용)과 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+현재 버전: **1.49.0**. 정리일: **2026-11-10**. NUCLEO-F446RE·NUCLEO-F103RB 또는 Renesas FPB-RA6E1(1.20.0, FSP·에뮬레이터 전용)과 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+
+## 1.49.0 기능 목록 43번: STM32 주변장치별 .c/.h 분리 생성
+
+- **`src/peripheral-files.js`**: `splitMain(text)`가 한 파일짜리 생성 `main.c`에서 핸들 줄·`static void MX_*_Init` 원형·정의를 잘라 `{main, files}`로 나눈다(파일 이름은 CubeMX처럼 종류별: usart·i2c·spi·tim·adc·dac·dma·rtc·iwdg·wwdg·sdio·dcmi·gpio). DMA 핸들은 `dma.c`에 두고 그것을 쓰는 쌍이 `dma.h`를 포함한다. `generatedSources(project)`는 빌드가 더할 쌍 — 프로젝트 소스가 그 헤더를 포함할 때만, 같은 이름의 프로젝트 파일이 없을 때만, 프로젝트가 그 `MX_*_Init`을 정의하지 않을 때만(`.c`). `halFiles(project)` = 프로젝트 파일 + 그 쌍.
+- **쓰는 곳**: 해석기 `compileHal` 호출(`session.js`, `app.js` 문법 검사, `ide-ui.js` 빌드), ARM 빌드(`desktop/native-build.cjs`가 파일 목록에 더해 빌드 폴더에 쓰고 컴파일), 프로젝트 구조(`ide-ui.js` 환경 파일 목록에 `Core/Inc`·`Core/Src`로).
+- **옵션**: `mcu.coupleFiles`(true일 때만 저장, `validateMcu`), `generateHal`이 켜져 있으면 `splitMain(...).main`을 돌려준다(`minimal` 생성은 한 파일 그대로). Pinout 창 `#pinout-couple`. `.ioc`: `ProjectManager.CoupleFile`.
+- **오류 안내(`hal-source.js`)**: 쌍의 헤더 이름인데 파일이 없으면 "Pinout에서 해당 주변장치를 켜면…"을 붙인다.
+- 쌍은 프로젝트에 저장하지 않는다(읽기 전용 생성 파일). 고치려면 프로젝트 구조에서 복사.
+- 시험: 단위 `peripheral-files`, 툴체인 `peripheral-files`(묶음 6), E2E `peripheral-files`, 공용 강의 프로젝트 `tests/fixtures/lecture-ds3231.js`.
 
 ## 1.48.0 기능 목록 29번: MCU 보드 회전
 
