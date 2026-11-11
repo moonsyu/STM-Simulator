@@ -32,3 +32,37 @@ test('a new FPB-RA6E1 project from Bare Metal - Blinky, Minimal and a course exa
   assert.deepEqual(s.errors,[]);
  }finally{await s.close();}
 });
+
+// Error-case pass, feature 19: the template list follows the board in both directions, every RA template and example
+// creates a project, and a name is required.
+test('the template follows the board when it is switched after a template was chosen; every FPB-RA6E1 template creates a project; an empty name is refused',{timeout:180000},async()=>{
+ const s=await launch();
+ try{
+  const {win}=s;
+  const open=async()=>{await win.evaluate(()=>document.getElementById('new').click());if(await win.evaluate(()=>document.getElementById('replace-dialog').open))await win.click('#replace-confirm');await win.waitForSelector('#project-dialog[open]');};
+  const created=()=>win.waitForFunction(()=>!document.getElementById('project-dialog').open);
+  // RA template chosen, then an STM32 board: back to the blank HAL template.
+  await open();await win.selectOption('#new-project-board','fpb-ra6e1');await win.selectOption('#new-project-template','ra_button_irq_rising');
+  await win.selectOption('#new-project-board','nucleo-f446re');assert.equal(await win.inputValue('#new-project-template'),'blank');
+  await win.click('#project-create');await created();assert.match(await win.$eval('#code',c=>c.value),/#include "main\.h"/);
+  // A HAL example chosen, then the RA board: Bare Metal - Minimal.
+  await open();await win.selectOption('#new-project-board','nucleo-f446re');
+  const hal=await win.$$eval('#new-project-template option',o=>o.filter(x=>!x.hidden&&x.value&&x.value!=='blank').map(x=>x.value));
+  await win.selectOption('#new-project-template',hal.at(-1));await win.selectOption('#new-project-board','fpb-ra6e1');
+  assert.equal(await win.inputValue('#new-project-template'),'ra-minimal');
+  const templates=await win.$$eval('#new-project-template option',o=>o.filter(x=>!x.hidden).map(x=>x.value));
+  assert.ok(templates.length>=12&&templates.every(t=>/^ra[-_]/.test(t)),templates.join(' '));
+  await win.click('#project-cancel');
+  for(const template of templates){
+   await open();await win.selectOption('#new-project-board','fpb-ra6e1');await win.selectOption('#new-project-template',template);
+   await win.click('#project-create');await created();
+   assert.match(await win.$eval('#code',c=>c.value),/void hal_entry\(void\)/,template);
+  }
+  // A name of spaces only.
+  await open();await win.fill('#new-project-name','   ');await win.click('#project-create');
+  await win.waitForFunction(()=>/프로젝트 이름을 입력하세요/.test(document.getElementById('project-form-error').textContent));
+  assert.equal(await win.evaluate(()=>document.getElementById('project-dialog').open),true);assert.equal(await win.getAttribute('#new-project-name','maxlength'),'80');
+  await win.click('#project-cancel');
+  assert.deepEqual(s.errors,[]);
+ }finally{await s.close();}
+});

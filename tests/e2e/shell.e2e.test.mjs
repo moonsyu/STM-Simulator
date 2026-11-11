@@ -237,3 +237,53 @@ test('a double-click on a part opens its properties, also after the properties p
   assert.deepEqual(s.errors,[]);
  }finally{await s.close();}
 });
+
+// Error-case pass, features 15 to 17: the same things in the orders the tests above do not use.
+test('the popped-out side bar comes back when its window is closed, when its own activity is pressed and while running; every activity pressed three times stays open',{timeout:150000},async()=>{
+ const s=await launch();
+ try{
+  const {app,win}=s;
+  const docked=()=>win.evaluate(()=>({placeholder:!!document.querySelector('#sidebar .dock-placeholder'),unit:document.getElementById('sidebar').querySelector(':scope>.dock-unit')?.dataset.unit||null,sidebar:document.getElementById('shell').dataset.sidebar}));
+  const popout=async()=>{await win.click('[data-activity="explorer"]');if(!await visible(win,'#view-explorer'))await win.click('[data-activity="explorer"]');const opened=app.waitForEvent('window');await win.click('[data-unit="sidebar"] .dock-popout');const child=await opened;await child.waitForSelector('#view-explorer');return child;};
+  // 16: three presses of each activity.
+  for(const view of ['explorer','parts','examples','board','debug','docs']){for(let i=0;i<3;i++)await win.click(`[data-activity="${view}"]`);assert.ok(await visible(win,`#view-${view}`),view);}
+  // 15: the pop-out window closed with its own close button.
+  let child=await popout();assert.deepEqual(await docked(),{placeholder:true,unit:null,sidebar:'true'});
+  await child.close();
+  await win.waitForFunction(()=>document.getElementById('sidebar').querySelector(':scope>.dock-unit')?.dataset.unit==='sidebar');
+  assert.deepEqual(await docked(),{placeholder:false,unit:'sidebar',sidebar:'true'});assert.ok(await visible(win,'#view-explorer'));
+  // 15: the activity that the pop-out is showing.
+  await popout();await win.click('[data-activity="explorer"]');
+  await win.waitForFunction(()=>document.getElementById('sidebar').querySelector(':scope>.dock-unit')?.dataset.unit==='sidebar');
+  assert.ok(await visible(win,'#view-explorer'));assert.equal(app.windows().length,1,'the pop-out window is gone');
+  // 15: while the simulation runs.
+  await popout();await win.evaluate(()=>document.getElementById('run').click());
+  await win.waitForFunction(()=>document.getElementById('shell').dataset.running==='true');
+  await win.click('[data-activity="parts"]');
+  await win.waitForFunction(()=>document.getElementById('sidebar').querySelector(':scope>.dock-unit')?.dataset.unit==='sidebar');
+  assert.ok(await visible(win,'#view-parts'));
+  assert.deepEqual(s.errors,[]);
+ }finally{await s.close();}
+});
+
+test('the properties panel opens on a double press of one part only: not on empty canvas, a slow second press, a press elsewhere, or while running',{timeout:120000},async()=>{
+ const s=await launch();
+ try{
+  const {win}=s;
+  await win.click('[data-activity="parts"]');if(!await visible(win,'#view-parts'))await win.click('[data-activity="parts"]');
+  await win.fill('#part-search','LED');await win.locator('#part-list [data-add="ref_led_tht_2"]').click();
+  const part=win.locator('#part-layer [data-part]').last();await part.waitFor();
+  const aux=()=>win.getAttribute('#shell','data-aux');
+  // Closing the panel moves the canvas, so the part's place is read after it.
+  const closed=async()=>{if(await aux()!=='false'){await win.keyboard.press('Control+Alt+B');if(await aux()!=='false')await win.click('#auxbar-close');}await win.waitForTimeout(300);const r=await part.boundingBox();return [r.x+r.width/2,r.y+r.height/2];};
+  let [x,y]=await closed();const box=await win.locator('#circuit').boundingBox();
+  await win.mouse.dblclick(box.x+box.width-25,box.y+box.height-25);await win.waitForTimeout(300);assert.equal(await aux(),'false','empty canvas');
+  [x,y]=await closed();await win.mouse.click(x,y);await win.waitForTimeout(700);await win.mouse.click(x,y);await win.waitForTimeout(300);assert.equal(await aux(),'false','two presses 700 ms apart');
+  [x,y]=await closed();await win.mouse.click(x,y);await win.mouse.click(x+20,y+20);await win.waitForTimeout(300);assert.equal(await aux(),'false','the second press 28 px away');
+  [x,y]=await closed();await win.mouse.dblclick(x,y);await win.waitForFunction(()=>document.getElementById('shell').dataset.aux==='true');
+  // While running a press works the part (a button, a slider), so it does not open the panel.
+  [x,y]=await closed();await win.evaluate(()=>document.getElementById('run').click());await win.waitForFunction(()=>document.getElementById('shell').dataset.running==='true');
+  [x,y]=await closed();await win.mouse.dblclick(x,y);await win.waitForTimeout(400);assert.equal(await aux(),'false','while running');
+  assert.deepEqual(s.errors,[]);
+ }finally{await s.close();}
+});
