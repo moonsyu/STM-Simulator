@@ -1,5 +1,6 @@
 import {TIMER_ROUTES,TIMER_IDS,isTimer,isBasicTimer,isAdvancedTimer,timerOfIrq,timerMax,TIM_TRGO} from './timer-config.js';
 import {generateMain} from './hal-generator.js';
+import {splitMain} from './peripheral-files.js';
 import {GPIO_PINS} from './pins.js';
 import {SERIAL_ROUTES,SERIAL_IDS,isSerial,serialFunction} from './serial-config.js';
 import {DEFAULT_TIMER_CLOCK_HZ,timerDefaults} from './mcu-defaults.js';
@@ -149,6 +150,8 @@ export function validateMcu(value){
   for(const [irq,p]of Object.entries(value.nvic)){if(!irqs.includes(irq))throw new Error(`${irq}: ${f.id}에 없는 인터럽트입니다.`);if(!p||typeof p.enabled!=='boolean'||!priority(p.priority)||p.sub!==undefined&&!priority(p.sub))throw new Error(`${irq}: NVIC 우선순위는 0~15 정수로 설정하세요.`);out.nvic[irq]={enabled:p.enabled,priority:p.priority};if(p.sub)out.nvic[irq].sub=p.sub;}
   // CubeMX NVIC Priority Group (NVIC_PRIORITYGROUP_0..4, HAL default 4) and the time base priority (TICK_INT_PRIORITY).
   if(value.nvicGroup!==undefined){if(![0,1,2,3,4].includes(value.nvicGroup))throw new Error('NVIC Priority Group은 0~4입니다.');if(value.nvicGroup!==NVIC_GROUP_DEFAULT)out.nvicGroup=value.nvicGroup;}
+  // CubeMX Project Manager › Code Generator: peripheral initialisation as a pair of .c/.h files per peripheral.
+  if(value.coupleFiles!==undefined){if(typeof value.coupleFiles!=='boolean')throw new Error('주변장치별 파일 생성 설정을 확인하세요.');if(value.coupleFiles)out.coupleFiles=true;}
   if(value.tickPriority!==undefined){if(!priority(value.tickPriority))throw new Error('SysTick(Time base) 우선순위는 0~15 정수로 설정하세요.');if(value.tickPriority!==TICK_PRIORITY_DEFAULT)out.tickPriority=value.tickPriority;}
   return out;
 }
@@ -317,6 +320,7 @@ if(/HIGH/.test(values[id+'.CLKPolarity']||''))s.cpol='HIGH';if(/2EDGE/.test(valu
   if(Object.keys(dma).length)config.dma=dma;
   // NVIC.<irq>=enabled:preemption:sub:…; NVIC.PriorityGroup; the time base priority is TICK_INT_PRIORITY.
   for(const irq of irqNamesOf(family)){const raw=values['NVIC.'+irq];if(raw){const [enabled,priority,sub]=raw.split(':');config.nvic[irq]={enabled:enabled==='true',priority:Number(priority)};if(Number(sub))config.nvic[irq].sub=Number(sub);}}
+  if(values['ProjectManager.CoupleFile']==='true')config.coupleFiles=true;
   const group=/^NVIC_PRIORITYGROUP_([0-4])$/.exec(values['NVIC.PriorityGroup']||'');if(group)config.nvicGroup=Number(group[1]);
   const tick=values['NVIC.SysTick_IRQn']?.split(':');if(tick&&Number.isInteger(Number(tick[1])))config.tickPriority=Number(tick[1]);
   for(const [key,v]of Object.entries(values))if(/^Mcu.IP\d+$/.test(key)&&!Object.hasOwn(routes,v)&&!['GPIO','RCC','NVIC','SYS','DMA','NUCLEO-F446RE','NUCLEO-F103RB'].includes(v))warnings.push(`${v}: 실행 모델 미지원`);
@@ -337,4 +341,4 @@ if(/HIGH/.test(values[id+'.CLKPolarity']||''))s.cpol='HIGH';if(/2EDGE/.test(valu
     if(order.size&&clean.pins){const entries=Object.entries(clean.pins).map((e,i)=>[order.get(e[0])??1e6+i,e]);entries.sort((a,b)=>a[0]-b[0]);clean.pins=Object.fromEntries(entries.map(e=>e[1]));}}
   return {config:clean,warnings:[...new Set([...warnings,...configProblems(clean)])]};
 }
-export function generateHal(config,options){const clean=validateMcu(config),errors=configProblems(clean);if(errors.length)throw new Error(errors.join('\n'));return generateMain(clean,options);}
+export function generateHal(config,options){const clean=validateMcu(config),errors=configProblems(clean);if(errors.length)throw new Error(errors.join('\n'));const text=generateMain(clean,options);return clean.coupleFiles&&!options?.minimal?splitMain(text).main:text;}

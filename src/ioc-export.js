@@ -109,6 +109,7 @@ export function exportIoc(config){
   // ---- NVIC: enabled:preemption:sub:… (the trailing flags are CubeMX's code-generation options)
   // A line that is off keeps its priority too (CubeMX writes only enabled lines; the importer reads both).
   for(const [irq,n]of Object.entries(m.nvic))set('NVIC.'+irq,`${n.enabled}:${n.priority}:${n.sub??0}:false:false:true:true:true:true`);
+  if(m.coupleFiles)set('ProjectManager.CoupleFile',true);
   set('NVIC.PriorityGroup','NVIC_PRIORITYGROUP_'+(m.nvicGroup??NVIC_GROUP_DEFAULT));
   set('NVIC.SysTick_IRQn',`true:${m.tickPriority??TICK_PRIORITY_DEFAULT}:0:false:false:true:false:true:false`);
   // ---- clock

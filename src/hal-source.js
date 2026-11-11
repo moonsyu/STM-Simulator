@@ -173,7 +173,9 @@ export function prepareHalSource(source,files=[],options={}){
         if(included.has(file)){output.push('');continue;}
         if(map.has(file)){included.add(file);output.push(preprocess(map.get(file),file));}
         else if(SYSTEM_HEADERS.has(baseName(file))){output.push('');}
-        else error(`지원하지 않거나 선택하지 않은 헤더: ${file}`);
+        // CubeMX's per-peripheral headers are written from the Pinout settings (peripheral-files.js): without the
+        // peripheral there is no such file.
+        else error(`지원하지 않거나 선택하지 않은 헤더: ${file}`+(/^(?:usart|i2c|spi|tim|adc|dac|dma|rtc|iwdg|wwdg|sdio|dcmi)\.h$/.test(baseName(file))?` — CubeMX가 주변장치별로 만드는 파일입니다. Pinout에서 해당 주변장치를 켜면 앱이 이 파일을 만들어 빌드에 넣습니다.`:''));
       }else if(op==='define'){
         // #define NAME(a, b) body — a function-like macro (no space before the parenthesis): expanded as text where it is used.
         const fn=/^(\w+)\(([^)]*)\)\s*(.*)$/.exec(arg);

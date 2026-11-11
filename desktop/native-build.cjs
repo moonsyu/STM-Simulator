@@ -60,6 +60,9 @@ async function prepareBuild({project,tools,root,target='arm',configuration='Debu
   const SOURCE_PATH=/^(?:[A-Za-z0-9_][\w.-]{0,40}\/){0,6}[A-Za-z0-9_][\w.-]{0,70}\.(c|h|cpp|hpp|cc|s|ld)$/,base=name=>name.split('/').at(-1);
   const mainFolder=typeof project.firmware?.mainFolder==='string'&&SOURCE_PATH.test(project.firmware.mainFolder+'/main.c')?project.firmware.mainFolder:'';
   const files=[{name:(mainFolder?mainFolder+'/':'')+'main.c',text:project.code},...(project.firmware?.files||[])],sources=[];
+  // CubeMX's per-peripheral pairs (gpio.c/.h, i2c.c/.h, usart.c/.h …) when a source includes them and the project has
+  // no file of that name: written from the Pinout settings (src/peripheral-files.js).
+  if(target==='arm'&&!isRa(project)&&project.firmware?.mode==='hal'){const {generatedSources}=await import('../src/peripheral-files.js');files.push(...generatedSources(project));}
   // An RA project's main source is FSP's src/hal_entry.c (ra_gen/main.c calls hal_entry()); the other sources go to src/.
   const ra=target==='arm'&&isRa(project),place=name=>ra?path.join(directory,'src',base(name)==='main.c'?name.replace(/main\.c$/,'hal_entry.c'):name):path.join(directory,name);
   if(ra)await fs.mkdir(path.join(directory,'src'),{recursive:true});

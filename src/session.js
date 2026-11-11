@@ -13,6 +13,7 @@ import {WaveRecorder} from './trace.js';
 import {VariableRecorder} from './variable-graph.js';
 import {watchExpression,readExpression,numericValue} from './debug-tools.js';
 import {compileHal} from './hal-source.js';
+import {halFiles} from './peripheral-files.js';
 import {HalAdapter,halConstantsFor,coreClockHz} from './hal.js';
 import {ButtonBounce} from './button-bounce.js';
 import {SignalRecorder,NoiseModel,signalsApi,validateNoise} from './signals.js';
@@ -29,7 +30,7 @@ export class SimulationSession {
     this.project=project;this.bounce=new ButtonBounce(project.simulation?.bounceMs??0);this.pressed={};this.result=null;this.time=0;this.integrated=-1;this.stepMs=project.simulation?.stepMs??1;this.circuit=new CircuitSimulation();this.motion=new MotionDevices();this.catalogMotion=new CatalogMotion();this.singleWire=new CatalogSingleWire();this.sensors=new UltrasonicSignals();this.lcds=new Map();this.wave=new WaveRecorder(channels);this.vars=new VariableRecorder(source.ide?.plots||[]);this.varExprs=new Map();this.serial=[];
     this.buses=new BusDevices(project,()=>this.result,trace);this.buses.signals=this.signalRecorder;this.buses.noise=this.noise;new WirelessHub(this);
     this.hal=project.firmware?.mode==='hal'?this.createHal():null;
-    this.runtime=new Runtime(program??(this.hal?compileHal(project.code,project.firmware.files,project.mcu?.family):compile(project.code)),{
+    this.runtime=new Runtime(program??(this.hal?compileHal(project.code,halFiles(project),project.mcu?.family):compile(project.code)),{
       debug,preciseTiming:project.components.some(p=>p.type==='catalog_singlewire'),
       // Pinout labels give CubeMX-style LABEL_Pin / LABEL_GPIO_Port names, as main.h does in an ARM build,
       // unless the sources (an imported CubeMX main.h) already #define them.

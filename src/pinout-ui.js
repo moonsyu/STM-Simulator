@@ -81,6 +81,7 @@ export class PinoutPanel {
     $('pinout-dialog').addEventListener('pointerdown',e=>{if(!$('pin-menu').hidden&&!e.target.closest('#pin-menu,[data-config-pin]'))this.closeMenu();});
     $('pinout-dialog').addEventListener('cancel',e=>{if(!$('pin-menu').hidden){e.preventDefault();this.closeMenu(true);}});
     $('pinout-dialog').addEventListener('close',()=>this.closeMenu());
+    $('pinout-couple').onchange=e=>{if(e.target.checked)this.draft.coupleFiles=true;else delete this.draft.coupleFiles;};
     $('pinout-apply').onclick=()=>this.commit(false);$('hal-generate').onclick=()=>{if(this.isRunning())return;this.sync();if(this.getProject().code.trim())$('hal-replace-dialog').showModal();else this.commit(true);};
     $('hal-replace-cancel').onclick=()=>$('hal-replace-dialog').close();$('hal-replace-confirm').onclick=()=>{$('hal-replace-dialog').close();this.commit(true);};
   }
@@ -173,6 +174,7 @@ export class PinoutPanel {
     root.querySelectorAll('[data-dma-field]').forEach(el=>el.onchange=()=>{const d=config.dma[el.dataset.dmaField];if(el.dataset.key==='route'){const [stream,channel]=el.value.split(':');d.stream=stream;d.channel=Number(channel);}else d[el.dataset.key]=el.value;$('pinout-errors').textContent=(()=>{try{validateMcu(config);return configProblems(config).join('\n');}catch(e){return e.message;}})();});
   }
   render(){
+    $('pinout-couple').checked=!!this.draft.coupleFiles;
     const config=this.draft,p=config.pins[this.pin]||RESET_PIN,fam=familyProfile(config.family),f1=fam.pinMux==='remap';
     document.querySelector('.pinout-heading .eyebrow').textContent=`${fam.id} · LQFP64 · ${fam.core}`;$('timer-clock').title=`APB1 타이머 클록: ${fam.clock.label}`;$('timer-clock').min=fam.clock.minHz;$('timer-clock').max=fam.clock.maxHz;$('timer-clock-hint').textContent=`새 프로젝트: HSI ${fam.clock.defaultHz/1e6} MHz · PLL OFF · AHB/APB 분주 1 · 설정 범위 ${fam.clock.label}. 예제와 저장된 설정은 각 프로젝트 값을 사용합니다.`;
     $('pinout-pins').innerHTML=[...fam.gpioPins].sort((a,b)=>a.localeCompare(b,undefined,{numeric:true})).map(pin=>{const value=config.pins[pin],sys=sysSignal(config,pin);if(sys)return `<button class="pin-tile enabled sys ${pin===this.pin?'selected':''}" data-config-pin="${pin}" aria-haspopup="menu" title="${pin}: ${sys} (Serial Wire 디버그, 잠김)"><strong>${pin}</strong><small>${sys}</small></button>`;return `<button class="pin-tile ${pin===this.pin?'selected':''} ${value&&!['Reset','Reserved'].includes(value.function)?'enabled':''} ${value?.function==='Reserved'?'reserved':''}" data-config-pin="${pin}" aria-haspopup="menu" title="${pin}: 눌러서 신호 선택"><strong>${pin}</strong><small>${esc(value?.label||signalName(value?.function||'Reset',pin))}</small>${value?.label?`<small class="pin-signal">${esc(signalName(value.function,pin))}</small>`:''}</button>`;}).join('');

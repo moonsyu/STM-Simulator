@@ -16,6 +16,7 @@ import {mountNativeChrome,setupNativeIde} from './native-ide-ui.js';
 import {$} from './common.js';
 import {outlineLabel} from './c-symbols.js';
 import {buildEnvironment,prefixOf,startupOf,HAL_MODULES} from './build-environment.js';
+import {halFiles,generatedSources} from './peripheral-files.js';
 import {exportIoc} from './ioc-export.js';
 import {isRaFamily} from './ra-config.js';
 import {RA_EXAMPLES,raExample} from './ra-examples.js';
@@ -86,7 +87,9 @@ export function setupIde(o){
   function generatedFiles(){const p=o.getProject();if(p.firmware?.mode==='fsp'&&p.mcu){try{return Object.entries(generateRaFiles(p.mcu,{board:{fspBoard:true}})).map(([file,text])=>({file,text}));}catch{return [];}}if(!(p.firmware?.mode==='hal'&&p.mcu))return [];
     // The .ioc of the Pinout as it is now (what ".ioc로 내보내기" saves): shown, and changed through the Pinout.
     let ioc=[];try{ioc=[{file:(String(p.name||'').replace(/[^\w.-]+/g,'_').replace(/^[._]+|[._]+$/g,'')||'project')+'.ioc',text:'# 읽기 전용: 이 프로젝트의 핀·주변장치·클록 설정을 CubeMX .ioc 형식으로 본 것입니다.\n# 보드/핀 설정(Pinout)에서 바꾸면 이 내용이 바뀌고, Pinout의 ".ioc로 내보내기"로 파일로 저장합니다.\n'+exportIoc(p.mcu)}];}catch{/* a Pinout with open problems has no .ioc yet */}
-    return [...buildEnvironment(p).files,...ioc];}
+    // The peripheral .c/.h pairs the project includes (peripheral-files.js), where CubeIDE keeps them.
+    const pairs=generatedSources(p).map(f=>({file:`Core/${f.name.endsWith('.h')?'Inc':'Src'}/${f.name}`,text:f.text}));
+    return [...buildEnvironment(p).files,...pairs,...ioc];}
   // The rows of the CubeIDE tree: {kind: 'own' | 'gen' | 'sdk', file, label}. `file` is what opens (a project source
   // name, a generated view, a path under the SDK); `label` is the path CubeIDE shows it at.
   let treeLabels=new Map();const treeOpen=new Set(['Core','Core/Inc','Core/Src','Core/Startup','src','ra_gen']);
@@ -248,7 +251,7 @@ export function setupIde(o){
   }
   function build({reveal=true}={}){
     if(o.isRunning())return null;editor.diagnostics([]);$('build-errors').replaceChildren();if(reveal)showMonitor('build');
-    try{const p=o.getProject(),program=p.firmware?.mode==='hal'?compileHal(p.code,p.firmware.files,p.mcu?.family):compile(p.code);built=program;$('build-status').textContent='빌드 통과';$('build-output').textContent=`빌드 성공 · ${sourceFiles(p).length}개 파일 · ${Object.keys(program.functions).length}개 함수\n시뮬레이터 실행 프로그램을 준비했습니다. 전원·배선·HAL 설정은 실행 시 검사합니다.`;return program;}
+    try{const p=o.getProject(),program=p.firmware?.mode==='hal'?compileHal(p.code,halFiles(p),p.mcu?.family):compile(p.code);built=program;$('build-status').textContent='빌드 통과';$('build-output').textContent=`빌드 성공 · ${sourceFiles(p).length}개 파일 · ${Object.keys(program.functions).length}개 함수\n시뮬레이터 실행 프로그램을 준비했습니다. 전원·배선·HAL 설정은 실행 시 검사합니다.`;return program;}
     catch(e){built=null;$('build-status').textContent='빌드 실패';$('build-output').textContent='빌드 실패 — 아래 항목을 누르면 오류 위치로 이동합니다.';const m=/^(?:(.+?):)?(\d+)(?:행)?:/.exec(e.message),loc=e.location||{file:m?.[1]||'main.c',line:Number(m?.[2]||1)},d={...loc,message:e.message};editor.diagnostics([d]);const b=document.createElement('button');b.className='build-error';b.textContent=e.message;b.onclick=()=>select(loc.file,loc.line);$('build-errors').append(b);return null;}
   }
   let stackFrame=0;
