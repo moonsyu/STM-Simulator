@@ -1,6 +1,15 @@
 # STM Simulator — 개발 인계
 
-현재 버전: **1.46.4**. 정리일: **2026-11-10**. NUCLEO-F446RE·NUCLEO-F103RB 또는 Renesas FPB-RA6E1(1.20.0, FSP·에뮬레이터 전용)과 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+현재 버전: **1.46.5**. 정리일: **2026-11-10**. NUCLEO-F446RE·NUCLEO-F103RB 또는 Renesas FPB-RA6E1(1.20.0, FSP·에뮬레이터 전용)과 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+
+## 1.46.5 남은 한계 수정, 폴더 가져오기의 .s/.ld, ESP32 캐시
+
+- **가져오기(`firmware-import.js`, `desktop/main.cjs`, `file-drop.js`)**: 폴더 가져오기가 `.s`(어느 폴더든, `startup` 폴더를 건너뛰지 않음)와 루트의 `.ld`를 읽어 넘기고, `importFirmware`가 이 보드 MCU의 것만 `firmware.files`에 넣는다(시작 파일 하나, 링커 스크립트 하나, `_RAM.ld` 제외). 나머지는 경고로 이름을 알린다. main.c 없이 `.s`/`.ld`만 고르면 거절.
+- **Reserved 핀의 신호(`mcu-config.js`, `ioc-export.js`)**: `pins[pin].signal`(Reserved 핀에만, 이름 형식 검사). `importIoc`가 넣고 `exportIoc`가 `.Signal`로 쓴다. `unexportedPins(config)`는 신호도 시스템 신호도 없는 Reserved 핀.
+- **float 리터럴(`c-types.js` `numberLiteral`)**: `f` 접미사 값에 `Math.fround`.
+- **멤버 완성(`c-struct-fields.js` `inlineStructFields`)**: 형 이름을 못 찾은 한 단계 접근에서 `} name` 선언의 본문을 읽는다.
+- **CI ESP32 캐시(`build-windows.yml`)**: 설치 뒤 `packages/esp32/tools/esp32?*-libs/<버전>/`의 내용을 지운다(폴더는 남겨 Arduino CLI가 도구를 설치된 것으로 봄). 캐시 키 `…-esp32only2-…`. 1,705 MB → 1,169 MB.
+- 시험: 단위 `import-startup`·`ioc-reserved`·`c-struct-fields`, 해석기 `printf-formats`, E2E `completion`.
 
 ## 1.46.4 1·2·7번 오류 탐색 수정, E2E 분배
 
