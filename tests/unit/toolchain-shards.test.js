@@ -38,3 +38,13 @@ test('every run of every group names a test file',()=>{
  }
  assert.deepEqual(shardRuns([['ra-course','x']]),[['--test-name-pattern=x','tests/toolchain/ra-course.test.mjs']]);
 });
+
+// The account runs 20 jobs at a time. At 1.48.0 the tests were 21 jobs: one waited 70 s for a runner, and the run was
+// as long as that job.
+test('the jobs that run at once fit the 20 concurrent jobs of the account',()=>{
+ const workflow=readFileSync(new URL('../../.github/workflows/build-windows.yml',import.meta.url),'utf8');
+ const matrices=[...workflow.matchAll(/^\s+shard: \[([\d, ]+)\]/gm)].map(m=>m[1].split(',').length);
+ assert.equal(matrices.length,4,'checks, firmware, ESP32 and E2E are matrix jobs');
+ const jobs=matrices.reduce((a,b)=>a+b,0)+1; // + the package job; the release job runs after them
+ assert.ok(jobs<=20,`${jobs} jobs at once`);
+});

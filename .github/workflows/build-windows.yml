@@ -15,14 +15,18 @@ concurrency:
 
 jobs:
   # The checks run as parallel jobs; the release job publishes only when every one of them passed.
+  # The jobs that run at once (checks 2 + firmware 7 + ESP32 3 + E2E 7 + package 1) stay at 20: the account runs 20 jobs
+  # at a time, and at 1.48.0 the 21st waited 70 s for a runner and set the length of the whole run
+  # (tests/unit/toolchain-shards.test.js counts them). The lighter half of the unit tests carries lint, audit and the
+  # update helper test.
   checks:
-    name: Static checks and unit tests ${{ matrix.shard }}/3
+    name: Static checks and unit tests ${{ matrix.shard }}/2
     runs-on: windows-latest
     timeout-minutes: 20
     strategy:
       fail-fast: false
       matrix:
-        shard: [1, 2, 3]
+        shard: [1, 2]
     env:
       ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
     steps:
@@ -38,7 +42,7 @@ jobs:
       - name: Install locked dependencies
         run: npm ci
       - name: Reject vulnerable locked dependencies
-        if: matrix.shard == 1
+        if: matrix.shard == 2
         run: npm audit --audit-level=low
       - name: Verify release tag matches package version
         if: startsWith(github.ref, 'refs/tags/')
@@ -47,12 +51,12 @@ jobs:
           $releaseVersion = (Get-Content package.json -Raw | ConvertFrom-Json).version
           if ($env:GITHUB_REF_NAME -cne "v$releaseVersion" -or $releaseVersion -notmatch '^\d+\.\d+\.\d+$') { throw 'Release tag must match the stable package version.' }
       - name: Static checks (undefined names, duplicate keys, unreachable code)
-        if: matrix.shard == 1
+        if: matrix.shard == 2
         run: npm run lint
-      - name: Unit, interpreter, emulator and firmware tests (a third of the files)
-        run: node --test --test-shard=${{ matrix.shard }}/3 --test-reporter=spec --test-reporter-destination=stdout --test-reporter=./tests/github-reporter.mjs --test-reporter-destination=stdout "tests/unit/*.test.js" "tests/interp/*.test.js" "tests/emu/*.test.js" "tests/firmware/*.test.js"
+      - name: Unit, interpreter, emulator and firmware tests (half of the files)
+        run: node --test --test-shard=${{ matrix.shard }}/2 --test-reporter=spec --test-reporter-destination=stdout --test-reporter=./tests/github-reporter.mjs --test-reporter-destination=stdout "tests/unit/*.test.js" "tests/interp/*.test.js" "tests/emu/*.test.js" "tests/firmware/*.test.js"
       - name: Update helper replacement and rollback
-        if: matrix.shard == 1
+        if: matrix.shard == 2
         run: node --test --test-reporter=spec --test-reporter-destination=stdout --test-reporter=./tests/github-reporter.mjs --test-reporter-destination=stdout tests/release/update-helper.test.mjs
 
   # The toolchain test files run in seven jobs: as one job they were the longest of the run (6.4 min of tests at 1.33.0)
