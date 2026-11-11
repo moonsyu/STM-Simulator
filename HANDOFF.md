@@ -1,6 +1,17 @@
 # STM Simulator — 개발 인계
 
-현재 버전: **1.46.6**. 정리일: **2026-11-10**. NUCLEO-F446RE·NUCLEO-F103RB 또는 Renesas FPB-RA6E1(1.20.0, FSP·에뮬레이터 전용)과 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+현재 버전: **1.47.0**. 정리일: **2026-11-10**. NUCLEO-F446RE·NUCLEO-F103RB 또는 Renesas FPB-RA6E1(1.20.0, FSP·에뮬레이터 전용)과 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+
+## 1.47.0 기능 목록 25~28·30·31번: 탭 닫기, 소스 파일 트리, 트리 들여쓰기, FPB-RA6E1 회로도, 빌드 실패 단추
+
+- **25·26번 열린 탭(`ide-ui.js`)**: `closedTabs`(닫은 탭 이름)와 `emptyTabs`(마지막 탭까지 닫음). `tabsView`는 닫지 않은 프로젝트 파일·보드 프로그램과 읽기 전용 탭(`sdk:<file>`)을 `<span data-tab-id>`로 그리고 끝에 `#tabs-more`. `closeTabs(ids)`는 읽기 전용 탭을 먼저 닫고(닫을 때마다 줄을 다시 그리며 화면의 파일에 탭을 돌려주므로) 이름을 닫은 뒤, 화면의 탭이 닫혔으면 오른쪽 → 왼쪽 순으로 가까운 탭을 연다. `select()`는 닫힌 탭을 다시 연다. 메뉴는 `#tab-menu`, 빈 화면 안내는 `#editor-empty`(`#code-panel.no-tabs`). 명령 `editor.closeAll`(Ctrl+K W) → `ide.closeAllTabs`. `reset()`이 상태를 지운다.
+- **28번 소스 파일 트리(`ide-ui.js` `sync`)**: 파일 이름의 폴더로 트리를 만들어 `<details class="tree-folder" data-src-folder>`로 그린다. 접은 폴더는 `sourceFolded`.
+- **27번(`ide.css`, `shell.css`)**: `#build-file-list`·`#ra-assist-list`가 같은 규칙(목록 `padding-left:24px`, `.tree-children`이 5+1+6 = 12 px와 안내선, 파일 단추 `padding-left:14px`). `#file-tree`는 셸 테마에서 같은 간격.
+- **30번(`engine.js`, `pins.js`, `ra-pinout-ui.js`)**: FPB 분기에 P205·P014 10 kΩ 풀업, LED 직렬 10 kΩ. 헤더 J2-3의 신호가 `P014`.
+- **31번(`app-run.js` `startRun`)**: 빌드 분기 `finally`에서 `refresh()`.
+- **CI**: 펌웨어 7묶음(`ra-course`의 "모든 FSP 예제 + 채터링" 시험이 한 묶음, 나머지 `ra-course`는 이름을 나열한 패턴으로 다른 묶음 — 부정 전방탐색 패턴은 `--test-name-pattern`에서 걸러지지 않았다).
+- 시험: E2E `tabs`·`build-failure`·`project-structure`(들여쓰기, 소스 트리)·`folder-import`, 단위 `fpb-ra6e1-board`.
+- 남은 것: 29번(MCU 보드 회전).
 
 ## 1.46.6 강의 화면 대조, 오류 케이스 시험, CI 작업 분할
 
