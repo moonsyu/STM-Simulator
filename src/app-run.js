@@ -58,7 +58,10 @@ export async function startRun(options){
  // The simulator builds with ARM GCC like the real board: missing tools are installed first (or the run falls back to
  // the built-in interpreter, or is cancelled).
  if(state.ide?.gccSimulation?.()&&!running()){state.starting=true;refresh();let tools;try{tools=await state.ide.ensureSimTools();}catch(error){log(error.message,'error');tools='cancel';}finally{state.starting=false;refresh();}if(tools==='cancel')return false;}
- if(state.ide?.emulator()&&(!boardOnlyRun()||runStm32().length)){const token=++state.startToken;state.starting=true;refresh();try{if(!boardOnlyRun())await ensureFirmware();await ensureBoardFirmware();}catch(error){if(token===state.startToken){log(error.message,'error');feedback.show('펌웨어를 준비하지 못했습니다. 빌드 탭의 오류를 확인하거나 ELF 파일을 여세요.','firmware');}return false;}finally{if(token===state.startToken)state.starting=false;}if(token!==state.startToken)return false;}
+ if(state.ide?.emulator()&&(!boardOnlyRun()||runStm32().length)){const token=++state.startToken;state.starting=true;refresh();try{if(!boardOnlyRun())await ensureFirmware();await ensureBoardFirmware();}catch(error){if(token===state.startToken){log(error.message,'error');feedback.show('펌웨어를 준비하지 못했습니다. 빌드 탭의 오류를 확인하거나 ELF 파일을 여세요.','firmware');}return false;}finally{
+  // The run button reads state.starting ("■ 빌드 취소"), so it is redrawn when the build ends either way: a failed build
+  // once left the button on "빌드 취소", and pressing it started a new build.
+  if(token===state.startToken){state.starting=false;refresh();}}if(token!==state.startToken)return false;}
  if(running())return false;const ok=initializeRuntime(options);if(ok)state.status=state.runtime.debug.paused?'paused':'running';refresh();if(ok)state.ide?.debugView();return ok;
 }
 export async function ensureFirmware(force=false){
