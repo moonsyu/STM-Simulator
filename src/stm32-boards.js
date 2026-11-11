@@ -1,4 +1,4 @@
-import {BOARD,scaleXOf,scaleYOf,surfaceOrigin} from './geometry.js';
+import {BOARD,surfaceCentre,matrixOf,vector} from './geometry.js';
 import {DEFAULT_BOARD_ID,getBoard} from './boards.js';
 import {attachments,assignAttachments,terminalKeys} from './components.js';
 import {DEVBOARD_MODELS,devboardModel,devboardPrefix,devboardBounds,nextDevboardName,removeDevboard,MAX_DEVBOARDS,STM32_COMMON} from './devboards.js';
@@ -52,14 +52,16 @@ export function swapStm32(project,id){
  if(project.surfaces?.board?.hidden)throw new Error('주 STM32 보드가 회로에 없습니다.');
  // Projects saved before 0.23 (and examples) have no surfaces entry: their board is shown at its default place.
  project.surfaces??={};project.surfaces.board??={};
- const surface=project.surfaces.board,origin=surfaceOrigin('board',project.surfaces),sx=scaleXOf(surface),sy=scaleYOf(surface),px=scaleXOf(part),py=scaleYOf(part);
+ const surface=project.surfaces.board,centre=surfaceCentre('board',project.surfaces),turn=surface.rotation??0;
  const main={model:project.boardId??DEFAULT_BOARD_ID,name:mainBoardName(project),code:project.code,mcu:project.mcu,firmware:project.firmware,deviceDocs:project.deviceDocs,stlink:surface.stlink,
   ide:project.ide?{breakpoints:project.ide.breakpoints,watches:project.ide.watches,...(project.ide.plots?{plots:project.ide.plots}:{})}:undefined,scale:Object.fromEntries(SCALE_FIELDS.map(k=>[k,surface[k]]))};
  project.boardId=part.model;project.code=part.code;setField(project,'mcu',part.mcu);setField(project,'firmware',part.firmware);setField(project,'deviceDocs',part.deviceDocs);
  // Breakpoints and watches belong to a board's sources; the run target (ide.native) belongs to the IDE.
  if(part.ide||project.ide)project.ide={...(project.ide?.native?{native:project.ide.native}:{}),breakpoints:part.ide?.breakpoints??[],watches:part.ide?.watches??[]};
- const next={...surface,name:part.name,x:part.x-BOARD.w*px/2,y:part.y-BOARD.h*py/2};for(const k of SCALE_FIELDS)setField(next,k,part[k]);setField(next,'stlink',part.stlink);project.surfaces.board=next;
- part.model=main.model;part.name=main.name;part.code=main.code;part.x=origin.x+BOARD.w*sx/2;part.y=origin.y+BOARD.h*sy/2;part.rotation=0;
+ // Each board keeps its place, size and turn: the surface is drawn from its corner, the component from its centre.
+ const next={...surface,name:part.name};for(const k of SCALE_FIELDS)setField(next,k,part[k]);setField(next,'stlink',part.stlink);setField(next,'rotation',part.rotation||undefined);
+ const half=vector(matrixOf(next),{x:BOARD.w/2,y:BOARD.h/2});next.x=part.x-half.x;next.y=part.y-half.y;project.surfaces.board=next;
+ part.model=main.model;part.name=main.name;part.code=main.code;part.x=centre.x;part.y=centre.y;part.rotation=turn;
  for(const k of ['mcu','firmware','deviceDocs','stlink','ide'])setField(part,k,main[k]);for(const k of SCALE_FIELDS)setField(part,k,main.scale[k]);
  relabel(project,id);
  return project;

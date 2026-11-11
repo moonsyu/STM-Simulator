@@ -14,6 +14,8 @@ export function resizeObject(project,target,size){
  const validPosition=p=>Number.isFinite(p.x)&&Number.isFinite(p.y);
  if(!validPosition(destination))throw new Error('장치가 작업 공간을 벗어납니다.');
  const next={...object};assignScale(next,fields);
+ // A surface can also be turned (size.rotation): mounted parts follow through the same transform.
+ if(surface&&size.rotation!==undefined)next.rotation=size.rotation;
  const transform=multiply(matrixOf(next),inverse(matrixOf(object)));
  const owns=anchor=>surface?(id==='board'?anchor.startsWith('board:'):anchor.startsWith('bb:')||anchor.startsWith('rail:')):anchor.startsWith(breadboardPrefix(id));
  const children=surface||object.type==='breadboard'?project.components.filter(p=>p!==object&&Object.values(attachments(p)).length&&Object.values(attachments(p)).every(owns)):[];
@@ -22,7 +24,8 @@ export function resizeObject(project,target,size){
  const changes=children.map(p=>{const q=vector(transform,{x:p.x-origin.x,y:p.y-origin.y});return {p,position:{x:destination.x+q.x,y:destination.y+q.y},fields:matrixFields(multiply(transform,matrixOf(p)))};});
  if(changes.some(c=>!validPosition(c.position)))throw new Error('크기를 바꾸면 장착 부품이 작업 공간을 벗어납니다.');
  for(const c of changes){assignScale(c.p,c.fields);Object.assign(c.p,c.position);}
- if(surface){project.surfaces??={};project.surfaces[id]={...fields,...destination};}
+ // The surface keeps its other fields (the main board's name, ST-LINK serial and turn).
+ if(surface){project.surfaces??={};if(!next.rotation)delete next.rotation;project.surfaces[id]={...next,...destination};}
  else{assignScale(object,fields);Object.assign(object,destination);}
  return typeof size==='number'?size:fields;
 }

@@ -6,7 +6,7 @@
 // laid out this way; the caller then keeps the general arranger.
 import {attachments,assignAttachments,nominalTerminals,terminalKeys,terminalLabel,TWO_PIN_TYPES,fixedLeadSpan,wiredKeys} from './components.js';
 import {PINS,BOARD,BB,circuitHoles,holeInfo,endpointInfo,breadboardHoles} from './pins.js';
-import {surfacePoint} from './geometry.js';
+import {surfaceBounds} from './geometry.js';
 import {displayModel} from './model-geometry.js';
 import {CATALOG_BY_TYPE} from './catalog-defs.js';
 import {wiringTopology} from './circuit-topology.js';
@@ -56,7 +56,7 @@ export function planExampleLayout(source,{variant='half',debug=false,halfShift=4
  // Fresh breadboard next to the header that faces it.
  project.wires=[];for(const p of parts)assignAttachments(p,{});
  project.components=project.components.filter(p=>p.type!=='breadboard');
- const mcuRight=surfacePoint({x:BOARD.x+BOARD.w,y:BOARD.y},'board',project.surfaces).x;
+ const mcuRight=surfaceBounds('board',project.surfaces).right;
  let holes;
  if(variant==='half'){
   project.surfaces={...(project.surfaces||{}),breadboard:{x:mcuRight+68,y:BB.y+halfShift}};
@@ -67,7 +67,7 @@ export function planExampleLayout(source,{variant='half',debug=false,halfShift=4
   project.components.unshift(board);holes=breadboardHoles(board);
  }
  const bbBox={left:Math.min(...holes.map(h=>h.x))-30,right:Math.max(...holes.map(h=>h.x))+30,top:Math.min(...holes.map(h=>h.y))-30,bottom:Math.max(...holes.map(h=>h.y))+30};
- const mcuBox=(()=>{const a=surfacePoint({x:BOARD.x,y:BOARD.y},'board',project.surfaces),b=surfacePoint({x:BOARD.x+BOARD.w,y:BOARD.y+BOARD.h},'board',project.surfaces);return {left:a.x,top:a.y,right:b.x,bottom:b.y};})();
+ const mcuBox=surfaceBounds('board',project.surfaces);
  const strips=new Map(),holeAt=new Map();
  for(const h of holes){if(!strips.has(h.bus))strips.set(h.bus,{bus:h.bus,holes:[],net:null,rail:h.id.includes('rail:')});strips.get(h.bus).holes.push(h);if(!h.id.includes('rail:'))holeAt.set(key(h),h);}
  const state={used:new Set(),bodies:[],covered:new Set(),leadAt:new Map()};

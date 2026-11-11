@@ -147,7 +147,7 @@ export function renderBreadboards(project,selected){return project.components.fi
 // Other STM32 boards: the main board's drawing (buttons `<id>.USER` / `<id>.RESET`, LD2) centred on the component.
 function stm32DevboardSvg(p,selected){
  const cx=BOARD.x+BOARD.w/2,cy=BOARD.y+BOARD.h/2;
- return `<g class="devboard ${selected?'part-selected':''}" data-part="${p.id}" data-rotation="0" data-devboard="${p.model}" transform="translate(${p.x} ${p.y}) ${scaleTransform(p)} translate(${-cx} ${-cy})">${boardSvg(p.model,{prefix:p.id+'.'})}${text(cx,BOARD.y-10,p.name,12,'#496477','text-anchor="middle" font-weight="700" class="devboard-name"')}</g>`;
+ return `<g class="devboard ${selected?'part-selected':''}" data-part="${p.id}" data-rotation="${p.rotation}" data-devboard="${p.model}" transform="translate(${p.x} ${p.y}) ${p.rotation?`rotate(${p.rotation}) `:''}${scaleTransform(p)} translate(${-cx} ${-cy})">${boardSvg(p.model,{prefix:p.id+'.'})}${text(cx,BOARD.y-10,p.name,12,'#496477','text-anchor="middle" font-weight="700" class="devboard-name"')}</g>`;
 }
 export function renderDevboards(project,selected){return project.components.filter(p=>p.type==='devboard').map(p=>devboardModel(p)?.kind==='stm32'?stm32DevboardSvg(p,isSelected(selected,'part',p.id)):devboardSvg(p,isSelected(selected,'part',p.id))).join('');}
 export function updateSurfaces(svg,project,selected){for(const [key,selector]of [['board','.board'],['breadboard','[data-surface="breadboard"]']]){const group=svg.querySelector(selector);group.style.display=project.surfaces?.[key]?.hidden?'none':'';group.dataset.surface=key;group.setAttribute('transform',surfaceTransform(key,project.surfaces));group.classList.toggle('part-selected',selected?.type==='surface'&&selected.id===key);}}

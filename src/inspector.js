@@ -28,7 +28,7 @@ function stlinkField(serial,dis){
 function bindStlink(apply){const el=$('board-stlink');if(el)el.onchange=e=>apply(e.target.value);}
 function inspector(force=false){
  const el=$('inspector'),selected=app.selection?.type==='part'?app.project.components.find(p=>p.id===app.selection.id):app.selection?.type==='wire'?app.project.wires.find(w=>w.id===app.selection.id):app.selection?.type==='endpoint'?endpointInfo(app.selection.id,app.project.components,app.project.surfaces):null;
- const key=JSON.stringify([app.selection,selected,running()]);
+ const key=JSON.stringify([app.selection,selected,running(),app.selection?.type==='surface'?app.project.surfaces?.[app.selection.id]?.rotation??0:0]);
  if(!force&&key===inspectorKey&&(!['part','wire'].includes(app.selection?.type)||selected===inspectorModel))return;
  inspectorKey=key;inspectorModel=selected;
  if(!app.selection){el.innerHTML='<span class="overline">CIRCUIT INSPECTOR</span><h2>회로 살펴보기</h2><div class="empty-inspector">핀, 배선 또는 부품을 선택하세요.<br>실행 중 전압과 전류를 확인할 수 있습니다.</div>';return;}
@@ -36,13 +36,13 @@ function inspector(force=false){
  if(app.selection.type==='surface'){
    if(app.selection.id==='board'&&stm32Boards(app.project).length){
     const dis=running()?'disabled':'';
-    el.innerHTML=`<span class="overline">STM32 · 편집 중</span><h2 title="${esc(mainBoardName(app.project))}">${esc(mainBoardName(app.project))}</h2><p>${esc(projectBoard(app.project).name)} · 지금 편집기·핀 설정·빌드·디버그가 이 보드를 대상으로 합니다.</p><div class="inspector-card"><label for="part-name">보드 이름</label><input id="part-name" value="${esc(mainBoardName(app.project))}" maxlength="40" ${dis}>${stlinkField(app.project.surfaces.board.stlink,dis)}</div><p>실행하면 회로의 STM32 보드가 모두 함께 실행됩니다. 실물 보드 실행은 보드마다 빌드해 각자의 ST-LINK에 차례로 기록합니다.</p><button class="inspector-action" id="inspect-open-docs">장치 Docs · 배선/예제 보기</button>`;
-    $('inspect-open-docs').onclick=()=>tab('docs');
+    el.innerHTML=`<span class="overline">STM32 · 편집 중</span><h2 title="${esc(mainBoardName(app.project))}">${esc(mainBoardName(app.project))}</h2><p>${esc(projectBoard(app.project).name)} · 지금 편집기·핀 설정·빌드·디버그가 이 보드를 대상으로 합니다.</p><div class="inspector-card"><label for="part-name">보드 이름</label><input id="part-name" value="${esc(mainBoardName(app.project))}" maxlength="40" ${dis}>${stlinkField(app.project.surfaces.board.stlink,dis)}</div><div class="measure"><span>방향</span><b id="board-rotation">${app.project.surfaces.board.rotation??0}°</b></div><p>실행하면 회로의 STM32 보드가 모두 함께 실행됩니다. 실물 보드 실행은 보드마다 빌드해 각자의 ST-LINK에 차례로 기록합니다.</p><button class="inspector-action" id="rotate-part" ${dis}>90° 회전 (R)</button><button class="inspector-action" id="inspect-open-docs">장치 Docs · 배선/예제 보기</button>`;
+    $('inspect-open-docs').onclick=()=>tab('docs');$('rotate-part').onclick=rotateSelected;
     $('part-name').onchange=e=>{const name=e.target.value.trim();if(!name||app.project.components.some(c=>c.name===name)){log('보드 이름이 비었거나 다른 부품·보드 이름과 같습니다.','error');inspector(true);return;}checkpoint();app.project.surfaces.board.name=name;syncEditor();changed();};
     bindStlink(value=>{checkpoint();if(value)app.project.surfaces.board.stlink=value;else delete app.project.surfaces.board.stlink;changed();});return;
    }
-   el.innerHTML=`<h2>${app.selection.id==='board'?'STM32 보드':'기본 빵판'}</h2><p>몸체를 끌어 이동하세요. 드래그 중 Esc를 누르면 취소합니다. 연결된 핀·배선과 장착 부품도 함께 이동합니다.</p><button class="inspector-action" id="inspect-open-docs">장치 Docs · 배선/예제 보기</button>`;
-   $('inspect-open-docs').onclick=()=>tab('docs');
+   el.innerHTML=`<h2>${app.selection.id==='board'?'STM32 보드':'기본 빵판'}</h2><p>몸체를 끌어 이동하세요. 드래그 중 Esc를 누르면 취소합니다. 연결된 핀·배선과 장착 부품도 함께 이동합니다.</p>${app.selection.id==='board'?`<div class="measure"><span>방향</span><b id="board-rotation">${app.project.surfaces?.board?.rotation??0}°</b></div><button class="inspector-action" id="rotate-part" ${running()?'disabled':''}>90° 회전 (R)</button>`:''}<button class="inspector-action" id="inspect-open-docs">장치 Docs · 배선/예제 보기</button>`;
+   $('inspect-open-docs').onclick=()=>tab('docs');if($('rotate-part'))$('rotate-part').onclick=rotateSelected;
  } else if(app.selection.type==='endpoint'){
    const e=endpointInfo(app.selection.id,app.project.components,app.project.surfaces),pin=PIN_BY_ID.get(app.selection.id),boardPin=devboardPinInfo(app.selection.id,app.project.components);
    const connected=connectedNet(app.project,app.selection.id,app.pressed).endpoints.length;
@@ -55,9 +55,9 @@ function inspector(force=false){
    }
    if(isStm32Board(p)){
     const model=devboardModel(p),dis=running()?'disabled':'';
-    el.innerHTML=`<span class="overline">STM32</span><h2 title="${esc(p.name)}">${esc(p.name)}</h2><p>${esc(model.name)} · ${esc(model.description)}</p><div class="inspector-card"><label for="part-name">보드 이름</label><input id="part-name" value="${esc(p.name)}" maxlength="40" ${dis}>${stlinkField(p.stlink,dis)}</div><div class="measure"><span>코드</span><b>main.c · ${p.firmware?.mode==='hal'?'HAL':'스케치'}${p.firmware?.files?.length?` · 소스 ${p.firmware.files.length+1}개`:''}</b></div><p>이 보드의 main.c·핀 설정·소스는 보드에 따로 저장됩니다. 편집하면 이 보드가 편집 대상이 되고, 지금 편집 중인 ${esc(mainBoardName(app.project))}는 이 자리에 그대로 남습니다.</p><button class="inspector-action" id="edit-board" ${dis}>이 보드 편집 · 코드와 핀 설정</button><button class="inspector-action" id="inspect-open-docs">장치 Docs · 핀 표</button><button class="inspector-action danger" id="remove-part" ${dis}>보드 삭제</button>`;
+    el.innerHTML=`<span class="overline">STM32</span><h2 title="${esc(p.name)}">${esc(p.name)}</h2><p>${esc(model.name)} · ${esc(model.description)}</p><div class="inspector-card"><label for="part-name">보드 이름</label><input id="part-name" value="${esc(p.name)}" maxlength="40" ${dis}>${stlinkField(p.stlink,dis)}</div><div class="measure"><span>코드</span><b>main.c · ${p.firmware?.mode==='hal'?'HAL':'스케치'}${p.firmware?.files?.length?` · 소스 ${p.firmware.files.length+1}개`:''}</b></div><p>이 보드의 main.c·핀 설정·소스는 보드에 따로 저장됩니다. 편집하면 이 보드가 편집 대상이 되고, 지금 편집 중인 ${esc(mainBoardName(app.project))}는 이 자리에 그대로 남습니다.</p><div class="measure"><span>방향</span><b id="board-rotation">${p.rotation}°</b></div><button class="inspector-action" id="edit-board" ${dis}>이 보드 편집 · 코드와 핀 설정</button><button class="inspector-action" id="rotate-part" ${dis}>90° 회전 (R)</button><button class="inspector-action" id="inspect-open-docs">장치 Docs · 핀 표</button><button class="inspector-action danger" id="remove-part" ${dis}>보드 삭제</button>`;
     $('part-name').onchange=e=>{const name=e.target.value.trim();if(!name||name===mainBoardName(app.project)||app.project.components.some(c=>c!==p&&c.name===name)){log('보드 이름이 비었거나 다른 부품·보드 이름과 같습니다.','error');inspector(true);return;}checkpoint();p.name=name;syncEditor();changed();};
-    $('edit-board').onclick=()=>{if(editBoard(p.id))tab('code');};$('inspect-open-docs').onclick=()=>tab('docs');$('remove-part').onclick=removeSelected;
+    $('edit-board').onclick=()=>{if(editBoard(p.id))tab('code');};$('inspect-open-docs').onclick=()=>tab('docs');$('rotate-part').onclick=rotateSelected;$('remove-part').onclick=removeSelected;
     bindStlink(value=>{checkpoint();if(value)p.stlink=value;else delete p.stlink;changed();});return;
    }
    if(p.type==='devboard'){

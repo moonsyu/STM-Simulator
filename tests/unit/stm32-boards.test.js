@@ -47,7 +47,7 @@ describe('STM32 boards: pins and project',()=>{
   assert.throws(()=>newStm32Fields(p,'nucleo-f103rb'),/4개까지/);
   assert.throws(()=>validateProject({...p,components:[...p.components,{...p.components[1],id:'b5',name:'STM32-5'}]}),/4개까지/);
   assert.throws(()=>validateProject({...p,components:[{...p.components[0],mcu:{...p.components[0].mcu,family:'STM32F103RB'}}]}),/STM32F446RE 핀 설정/);
-  assert.throws(()=>validateProject({...p,components:[{...p.components[0],rotation:90}]}),/회전하지 않습니다/);
+  assert.equal(validateProject({...p,components:[{...p.components[0],rotation:90}]}).components[0].rotation,90);assert.throws(()=>validateProject({...p,components:[{...p.components[0],rotation:45}]}),/90° 단위/);
   assert.throws(()=>validateProject({...p,components:[{...p.components[0],stlink:'x'}]}),/ST-LINK/);
  });
  test('the two boards drive each other through wires; supplies are common',()=>{

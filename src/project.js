@@ -17,7 +17,7 @@ import {DEVBOARD_MODELS,MAX_DEVBOARDS,devboardPinInfo} from './devboards.js';
 const stlinkSerial=(value,name)=>{if(value===undefined)return {};if(typeof value!=='string'||!/^\w{8,40}$/.test(value))throw new Error(name+': ST-LINK 시리얼을 확인하세요.');return {stlink:value};};
 // The fields of an STM32 board component checked as the project it becomes when edited (code, mcu, firmware …).
 function stm32Software(p,version){
-  if(p.rotation!==0)throw new Error(p.name+': STM32 보드는 회전하지 않습니다.');
+  if(![0,90,180,270].includes(p.rotation))throw new Error(p.name+': STM32 보드는 90° 단위로 회전합니다.');
   const own=validateProject({format:'stm32-circuit-lab',version,name:'board',code:p.code,components:[],wires:[],boardId:p.model,mcu:p.mcu,firmware:p.firmware,...(p.ide!==undefined?{ide:p.ide}:{}),...(p.deviceDocs!==undefined?{deviceDocs:p.deviceDocs}:{})});
   const out={model:p.model,code:own.code,...stlinkSerial(p.stlink,p.name)};
   for(const key of ['mcu','firmware','deviceDocs'])if(own[key]!==undefined)out[key]=own[key];
@@ -127,6 +127,8 @@ export function validateProject(data){
       const surface={};if(source.hidden!==undefined){if(typeof source.hidden!=='boolean')throw new Error('장치 표시 설정을 확인하세요.');surface.hidden=source.hidden;}for(const field of ['scale','scaleX','scaleY'])if(source[field]!==undefined)surface[field]=validScale(source[field]);
       for(const field of ['x','y'])if(source[field]!==undefined){if(!Number.isFinite(source[field]))throw new Error('보드 위치를 확인하세요.');surface[field]=source[field];}
       // The main STM32 board's name (STM32-1) and ST-LINK serial, kept with it when another board is edited.
+      // The main board's turn in quarter turns (absent = 0°, as in every file saved before 1.48.0).
+      if(key==='board'&&source.rotation!==undefined){if(![0,90,180,270].includes(source.rotation))throw new Error('보드 회전 각도를 확인하세요 (0, 90, 180, 270).');if(source.rotation)surface.rotation=source.rotation;}
       if(key==='board'){if(source.name!==undefined){if(typeof source.name!=='string'||!source.name.trim()||source.name.length>80)throw new Error('보드 이름을 확인하세요.');surface.name=source.name;}Object.assign(surface,stlinkSerial(source.stlink,'보드'));}
       project.surfaces[key]=surface;
     }

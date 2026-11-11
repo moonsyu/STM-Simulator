@@ -11,7 +11,8 @@ import {selectedIds,copySelection,pasteSelection} from './circuit-edit.js';
 import {$} from './common.js';
 import {detachPart,normalizeAngle,PART_DEFS,TWO_PIN_TYPES,fixedLeadSpan} from './components.js';
 import {removeDevboard,boardForFile,devboardBounds,DEVBOARD_MODELS,newDevboardFields} from './devboards.js';
-import {surfaceOrigin,BOARD,scaleXOf} from './geometry.js';
+import {surfaceBounds} from './geometry.js';
+import {rotateBoard,rotateDevboard} from './surface-move.js';
 import {displayModel} from './model-geometry.js';
 import {BB} from './pins.js';
 import {findMount,applyMount} from './placement.js';
@@ -32,13 +33,15 @@ export function removeSelected(){
  state.selection=null;state.pending=null;state.drag=null;$('preview-layer').innerHTML='';changed();
 }
 export function rotateSelected(){
- if(running()||state.selection?.type!=='part')return;
+ if(running())return;
+ // The main board turns in quarter turns about its centre (not while it is being dragged: the drag works on a draft).
+ if(state.selection?.type==='surface'&&state.selection.id==='board'){if(state.drag||state.project.surfaces?.board?.hidden)return;checkpoint();rotateBoard(state.project,90);log(`${mainBoardName(state.project)}: ${state.project.surfaces.board.rotation??0}°로 돌렸습니다. 헤더에 꽂은 부품과 배선도 함께 돕니다.`);changed();return;}
+ if(state.selection?.type!=='part')return;
  const p=state.project.components.find(p=>p.id===state.selection.id);if(!p)return;
  if(!state.drag?.moved)checkpoint();
  if(p.type==='breadboard'){moveBreadboard(state.project,p.id,{x:p.x,y:p.y,rotation:p.rotation+45});if(state.drag?.type==='part')state.drag.moved=true;changed();return;}
- if(isStm32Board(p)){log('STM32 보드는 회전하지 않습니다. 편집할 때 주 보드와 자리를 바꾸기 때문입니다.');return;}
  // Boards turn in 90° steps; an ESP32 then plugs in again where its pins meet free holes.
- if(p.type==='devboard'){detachPart(p);p.rotation=normalizeAngle(p.rotation+90);if(state.drag?.type==='part'){state.drag.moved=true;refresh();$('preview-layer').innerHTML=renderMountPreview(findMount(p,state.project.components,15,state.project.surfaces,state.project.wires));}else{applyMount(p,findMount(p,state.project.components,15,state.project.surfaces,state.project.wires));changed();}return;}
+ if(p.type==='devboard'){detachPart(p);rotateDevboard(state.project,p.id,90);if(state.drag?.type==='part'){state.drag.moved=true;refresh();$('preview-layer').innerHTML=renderMountPreview(findMount(p,state.project.components,15,state.project.surfaces,state.project.wires));}else{applyMount(p,findMount(p,state.project.components,15,state.project.surfaces,state.project.wires));changed();}return;}
  detachPart(p);p.rotation=normalizeAngle(p.rotation+45);
  if(state.drag?.type==='part'){state.drag.moved=true;refresh();$('preview-layer').innerHTML=renderMountPreview(findMount(p,state.project.components,15,state.project.surfaces,state.project.wires));}
  else {applyMount(p,findMount(p,state.project.components,15,state.project.surfaces,state.project.wires));changed();}
@@ -66,7 +69,7 @@ export function addDevboard(modelId){
  if(running())return;if(state.project.components.length>=100){log('부품은 100개까지 추가할 수 있습니다.','error');return;}
  // A second STM32 board swaps with the main board when edited; a Renesas RA main board cannot swap with it.
  if(DEVBOARD_MODELS[modelId]?.kind==='stm32'&&state.project.firmware?.mode==='fsp'){log('FPB-RA6E1 회로에는 STM32 보드를 함께 놓을 수 없습니다. ESP32·라즈베리파이 보드는 추가할 수 있습니다.','error');return;}
- const surfaceRight=key=>state.project.surfaces?.[key]?.hidden?0:surfaceOrigin(key,state.project.surfaces).x+(key==='board'?BOARD:BB).w*scaleXOf(state.project.surfaces?.[key]);
+ const surfaceRight=key=>state.project.surfaces?.[key]?.hidden?0:surfaceBounds(key,state.project.surfaces).right;
  const right=Math.max(surfaceRight('board'),surfaceRight('breadboard'),...state.project.components.map(p=>p.type==='breadboard'?breadboardBounds(p).right:p.type==='devboard'?devboardBounds(p).right:p.x+40));
  let fields;try{fields=DEVBOARD_MODELS[modelId].kind==='stm32'?newStm32Fields(state.project,modelId,right):newDevboardFields(state.project,modelId,right);}catch(e){log(e.message,'error');return;}
  checkpoint();const p={id:uid('b'),...fields};state.project.components.push(p);state.selection={type:'part',id:p.id};state.pending=null;state.mode='select';inspectTab();syncEditor();changed();fitView();
