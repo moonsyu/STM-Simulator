@@ -1,6 +1,17 @@
 # STM Simulator — 개발 인계
 
-현재 버전: **1.47.0**. 정리일: **2026-11-10**. NUCLEO-F446RE·NUCLEO-F103RB 또는 Renesas FPB-RA6E1(1.20.0, FSP·에뮬레이터 전용)과 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+현재 버전: **1.48.0**. 정리일: **2026-11-10**. NUCLEO-F446RE·NUCLEO-F103RB 또는 Renesas FPB-RA6E1(1.20.0, FSP·에뮬레이터 전용)과 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+
+## 1.48.0 기능 목록 29번: MCU 보드 회전
+
+- **기하(`geometry.js`)**: 표면(주 보드)은 원점(돌리기 전의 왼쪽 위 모서리)에서 `translate(origin) rotate(r) scale translate(-base)`로 그린다. `surfacePoint`·`surfaceTransform`이 `surfaces.board.rotation`을 쓰고, 돌린 보드의 원점은 보이는 상자의 왼쪽 위가 아니므로 상자가 필요한 곳은 `surfaceBounds`·`surfaceCentre`를 쓴다(화면 맞춤, 새 보드 놓을 자리, 예제 배치). `matrixOf`는 90° 배수에서 cos·sin을 정확히 0·±1로 둔다(네 번 돌리면 정확히 제자리).
+- **회전(`surface-move.js`)**: `rotateBoard(project,delta)` — 중심을 지키도록 원점을 다시 잡고, `resizeObject`에 `rotation`을 넘겨 `board:` 핀에만 꽂힌 부품을 같은 변환으로 옮긴다. 보드 핀(과 그 부품)끼리 이은 배선의 꺾임점도 같은 변환. `rotateDevboard(project,id,delta)` — 부품 보드(ESP32·라즈베리파이·추가 STM32)를 중심으로 돌리고 그 핀에만 꽂힌 부품·꺾임점을 함께 돌린다.
+- **`resize.js` `resizeObject`**: 표면을 `{...fields,...destination}`로 덮어써 이름·ST-LINK 시리얼이 지워지던 것을 고쳤다(다른 필드 유지).
+- **UI**: `app-circuit.js` `rotateSelected`가 선택 `{type:'surface',id:'board'}`를 처리(끄는 중·실행 중·숨긴 보드는 제외). `inspector.js`의 주 보드·추가 STM32 보드 화면에 방향(`#board-rotation`)과 `#rotate-part`. 인스펙터 키에 표면의 회전값을 넣어 돌릴 때 다시 그린다. `render.js` `stm32DevboardSvg`가 `rotate(p.rotation)`.
+- **교체(`stm32-boards.js` `swapStm32`)**: 표면의 중심·회전 ↔ 부품의 x/y·rotation을 서로 옮긴다.
+- **검증(`project.js`)**: `surfaces.board.rotation`과 STM32 보드 부품의 `rotation`은 0·90·180·270.
+- 시험: 단위 `board-rotation`(8개), E2E `board-rotation`.
+- **CI 수정**: 1.47.0은 펌웨어 묶음 1이 끝나지 않아 게시되지 않았다(파일 없는 `node --test`가 모든 시험을 실행). `toolchain-shard.mjs` `shardRuns`가 통째 파일이 없는 묶음에는 그 실행을 만들지 않는다. 1.47.0의 변경은 1.48.0 Release에 들어 있다.
 
 ## 1.47.0 기능 목록 25~28·30·31번: 탭 닫기, 소스 파일 트리, 트리 들여쓰기, FPB-RA6E1 회로도, 빌드 실패 단추
 
