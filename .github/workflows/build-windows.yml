@@ -144,7 +144,7 @@ jobs:
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: .cache/arduino
-          key: arduino-cli-1.5.1-esp32-3.3.12-dht-1.4.6-unified-1.1.15-pubsub-2.8-buildcache1-esp32only1-${{ runner.os }}
+          key: arduino-cli-1.5.1-esp32-3.3.12-dht-1.4.6-unified-1.1.15-pubsub-2.8-buildcache1-esp32only2-${{ runner.os }}
       - name: Install Arduino CLI and the esp32 core for the example sketches
         if: steps.arduino-cache.outputs.cache-hit != 'true'
         shell: pwsh
@@ -159,10 +159,12 @@ jobs:
           & $env:ARDUINO_CLI core install esp32:esp32@3.3.12 --additional-urls $index
           & $env:ARDUINO_CLI lib install 'DHT sensor library@1.4.6' 'Adafruit Unified Sensor@1.1.15' 'PubSubClient@2.8'
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          # Only the esp32 chip is built (esp32:esp32:esp32). The precompiled libraries of the other chips (esp32s2, s3, c3,
-          # c6, h2, p4 …) are most of the 1.7 GB cache, whose download and unpacking took 45 to 75 s of every job.
-          Get-ChildItem "$env:ARDUINO_DIRECTORIES_DATA/packages/esp32/tools/esp32-arduino-libs" -Directory -ErrorAction SilentlyContinue | ForEach-Object {
-            Get-ChildItem $_.FullName -Directory | Where-Object { $_.Name -like 'esp32?*' } | ForEach-Object { Write-Output "Not cached: $($_.FullName)"; Remove-Item -Recurse -Force $_.FullName }
+          # Only the esp32 chip is built (esp32:esp32:esp32). The core installs the precompiled libraries of every chip as
+          # tools of their own (esp32c3-libs, esp32s3-libs, esp32p4-libs …), and they are most of the 1.7 GB cache, whose
+          # download and unpacking took 45 to 75 s of every job. Their folders stay (Arduino CLI sees the tools as
+          # installed); what is in them is not cached.
+          Get-ChildItem "$env:ARDUINO_DIRECTORIES_DATA/packages/esp32/tools" -Directory | Where-Object { $_.Name -like 'esp32?*-libs' } | ForEach-Object {
+            Get-ChildItem $_.FullName -Directory | ForEach-Object { Write-Output "Not cached: the contents of $($_.FullName)"; Get-ChildItem $_.FullName -Force | Remove-Item -Recurse -Force }
           }
           # Downloaded archives are not needed once installed; the cache keeps the installed core only.
           Remove-Item -Recurse -Force $env:ARDUINO_DIRECTORIES_DOWNLOADS -ErrorAction SilentlyContinue
