@@ -1,5 +1,29 @@
 # 검증 기록
 
+## 1.46.6 강의 화면 대조, 오류 케이스를 시험으로, CI — 로컬 검증
+
+2026-11-11. **강의 화면 대조.** 강의 Day5 PDF의 화면은 그림이라 글로는 뽑히지 않았다. 그림을 PNG로 꺼내(파이썬 표준 라이브러리만, 임시 폴더, 확인 뒤 삭제) 직접 읽었다. 앞에서 "강의 화면이 필요해 하지 못했다"고 적은 세 가지를 포함한다.
+
+| 강의 | 화면의 내용 | 앱 | 조치 |
+|---|---|---|---|
+| p.110 hal_entry.c 템플릿 | `#if BSP_TZ_SECURE_BUILD` 구간 둘, 두 번째에 `FSP_CPP_HEADER` 없음 | 두 번째 구간에 `FSP_CPP_HEADER/FOOTER`가 더 있었음 | 화면과 같게 고침 |
+| p.110 `R_IOPORT_Open (&g_ioport_ctrl, g_ioport.p_cfg);` (FSP 5.5) | — | 앱 템플릿은 FSP 6.6 형태 | 그대로 둠. 강의 형태로 써도 빌드·동작(툴체인 `ra-course`) |
+| p.111 `#if` 구간을 지운 모습 | — | 지운 코드가 빌드·동작 | 시험으로 남김 |
+| p.118·133 "resume 2번" | 리셋 핸들러, main()에서 한 번씩 멈춤 | main()에서만 멈췄음 | FSP 프로젝트는 두 번 멈추게 고침. 앱 화면에서 확인: 시작 `Reset_Handler() · startup.c:48` → 계속 `main() · main.c:3` → 계속 실행, LED1 깜빡임 |
+| p.103 P408 Pin Configuration | Mode `Output mode (Initial Low)`, Drive Capacity H, IRQ None, 능력 `ICU: IRQ7` | Drive가 Low였음. `RA_IRQ_PINS.P408=7` | LED Drive를 H로. Mode 표기는 다름(FEATURES 22번) |
+| p.146·148 P205 | `IRQ1-DS`, Mode `IRQ mode`, Pull up/down None, 인터럽트 모드에서는 Pull up/down을 고를 수 없음 | 같음(이름·제한) | — |
+| p.149~151 Stack | New Stack → Input → External IRQ, Name `g_external_irq1`·Channel 1·Callback `irq_callback`·Trigger Rising, Priority 12 | 같은 항목. 새 Stack의 기본 Trigger는 앱이 Falling | 기록만 |
+| p.142 아두이노 헤더 IRQ 핀 7개 | P400 IRQ0, P401 IRQ5, P302 IRQ5, P402 IRQ4, P105 IRQ0, P104 IRQ1, P409 IRQ6 | 일곱 핀 모두 같은 채널 | — |
+| p.142 그림의 GPT·SCI | GTIOC6A/6B(P400/P401), 2B·5B·5A·2A·4A·7B·1A·1B, RXD0/TXD0, TXD9/RXD9 | `RA_PERIPHERAL_PINS`와 일치 | — |
+
+`RA_IRQ_DS`(표시 이름의 `-DS`)로 확인된 것: P205(강의), P408·P501·P502·P505는 `-DS` 아님(강의 p.103, Renesas 정정 공지). 강의 p.142의 그림은 `-DS`를 붙이지 않아(P401·P402) 판단에 쓸 수 없었다. 나머지는 여전히 원문 대조가 없다.
+
+**오류 케이스를 시험으로.** 앞 절에서 탐색 스크립트로만 본 것을 시험에 넣었다: 가져오기 20가지와 채터링 설정값(단위 `import-cases`), 꺼낸 사이드바의 세 가지 복귀·여섯 보기 세 번씩·더블클릭이 열지 않는 네 경우(E2E `shell`), 새 프로젝트 창의 보드 전환과 RA 템플릿 12개(E2E `ra-new-project`), 모든 FSP 예제를 채터링 20 ms로 빌드·실행하고 도전 과제가 16가지 패턴을 다 보이는지(툴체인 `ra-course`), 디버그 시작 순서(펌웨어 `firmware-ra6e1`·`firmware-system`).
+
+**CI.** 1.46.5의 작업별 단계 시간(42934783004): 체크아웃 8~11초, Node 5~6초, `npm ci` 10~17초(그중 편집기 빌드 약 10초 — 설치 스크립트를 뺀 ESP32 작업은 10초), 툴체인 캐시 8~10초, 게시 작업 37초(체크아웃 7 · 내려받기 5 · 검증·게시 21). 바꾼 것: 펌웨어 작업도 설치 스크립트 생략, 펌웨어 6묶음(106~115초 예상), 검사 3개, E2E 7개(67~72초 예상), 게시 작업은 `scripts`만 체크아웃. 앞 절에 적지 못한 실행: 문서 커밋 `08d3d50`(42935826576)은 전체 217초 = 3.6분.
+
+검증: 단위·해석기·에뮬레이터·펌웨어 시험 전체, 위 E2E·툴체인 시험, ESLint, 패키지 검사.
+
 ## 1.46.5 게시 확인과 CI 시간
 
 2026-11-11. 빌드 커밋 `a9db2b3` · [Windows CI 42934783004](https://github.com/moonsyu/STM-Simulator/actions/runs/42934783004) 첫 실행에서 18개 작업 모두 성공 · [Release v1.46.5](https://github.com/moonsyu/STM-Simulator/releases/tag/v1.46.5)가 최신 릴리스, 자산 5개. 파일은 내려받지 않았다.

@@ -1,6 +1,14 @@
 # STM Simulator — 개발 인계
 
-현재 버전: **1.46.5**. 정리일: **2026-11-10**. NUCLEO-F446RE·NUCLEO-F103RB 또는 Renesas FPB-RA6E1(1.20.0, FSP·에뮬레이터 전용)과 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+현재 버전: **1.46.6**. 정리일: **2026-11-10**. NUCLEO-F446RE·NUCLEO-F103RB 또는 Renesas FPB-RA6E1(1.20.0, FSP·에뮬레이터 전용)과 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+
+## 1.46.6 강의 화면 대조, 오류 케이스 시험, CI 작업 분할
+
+- **FSP 디버그 시작(`firmware-session.js` `debugStep('entry')`)**: RA(`this.ra`)는 main에 임시 중단점을 건 채 리셋 위치에서 `pause()`한다. 계속 → main에서 정지(`afterRun`이 임시 중단점 제거) → 계속 → 실행. STM32는 전처럼 main까지 달린 뒤 한 번 멈춘다.
+- **템플릿(`ra-generator.js` `raHalEntry`)**: 두 번째 `#if BSP_TZ_SECURE_BUILD` 구간에서 `FSP_CPP_HEADER/FOOTER`를 뺐다(강의 화면, FSP 5.5). `raDefaultMcu`의 LED는 `drive:'HIGH'`.
+- **예제의 Reserved 핀(`catalog-hardware-examples.js` `signal`, `advanced-examples.js`)**: `[F4 이름, F1 이름]`으로 `pins[pin].signal`을 넣는다.
+- **CI**: 검사 3개, 펌웨어 6개(`npm ci --ignore-scripts`), ESP32 3개, E2E 7개, 게시 작업은 `scripts`만 체크아웃. `ra-course`가 길어져(강의 화면 시험, 모든 예제 + 채터링) 혼자 한 묶음이다.
+- 시험: 펌웨어 `firmware-ra6e1`(디버그 시작 순서)·`firmware-system`(STM32는 main만), 툴체인 `ra-course`(강의 형태 hal_entry, 모든 예제 + 채터링 20 ms), 단위 `import-cases`, E2E `shell`(꺼낸 사이드바의 세 가지 복귀, 더블클릭이 열지 않는 경우)·`ra-new-project`(보드 전환, 템플릿 12개).
 
 ## 1.46.5 남은 한계 수정, 폴더 가져오기의 .s/.ld, ESP32 캐시
 
