@@ -99,9 +99,11 @@ function solveOnce(project,gpio={},pressed={},transient={},owner=project){
   // The on-board parts of the NUCLEO-64 (MB1136 C-04 sheets 3 and 5): B1 USER pulls PC13 LOW through R29 100 Ω against
   // R30 4.7 kΩ (C15 is not modeled), and the green LD2 loads PA5 through R31 510 Ω (SB21 closed).
   const onboard=(prefix,userPressed)=>{branch(prefix+'PC13','signal:3V3',4700);if(userPressed)branch(prefix+'PC13','signal:GND',100);branch(prefix+'PA5','signal:GND',510,{diode:true,vf:2.1});};
-  // FPB-RA6E1 (R20UT4960EG0100 Tables 2, 8, 9): S1 shorts P205 to GND (no pull-up on the board: FSP's template turns the
-  // internal one on), green LED1/LED2 on P408/P407 to GND, and the 2.2 kΩ I2C pull-ups R1/R2 on P400/P401 (E7/E8 closed).
-  if(project.boardId==='fpb-ra6e1'){if(pressed.SW1)branch('signal:P205','signal:GND',100);for(const pin of ['P408','P407'])branch('signal:'+pin,'signal:GND',1000,{diode:true,vf:2.1});for(const pin of ['P400','P401'])branch('signal:'+pin,'signal:3V3',2200);}
+  // FPB-RA6E1, from the board's schematic (Design Package D018122_04 Issue 2.0, BOM 2021-06-18): S1 shorts P205 to GND and
+  // R17 10 kΩ pulls P205 up to 3.3 V (so P205 reads HIGH with the switch open, also without the MCU's own pull-up);
+  // green LED1/LED2 on P408/P407 through R5/R11 10 kΩ to GND; the I2C pull-ups R1/R2 2.2 kΩ on P400/P401 (E7/E8
+  // closed); and P014 — the Arduino header's RESET pin (J2-3), not the MCU's RES# — pulled up by R4 10 kΩ.
+  if(project.boardId==='fpb-ra6e1'){if(pressed.SW1)branch('signal:P205','signal:GND',100);branch('signal:P205','signal:3V3',10000);for(const pin of ['P408','P407'])branch('signal:'+pin,'signal:GND',10000,{diode:true,vf:2.1});for(const pin of ['P400','P401'])branch('signal:'+pin,'signal:3V3',2200);branch('signal:P014','signal:3V3',10000);}
   else{onboard('signal:',pressed.USER);
     // NRST header pins (CN6-3 RESET, CN7-14): the MCU's internal pull-up (about 40 kΩ) once something is wired to them,
     // so a button to GND pulls the line LOW and the sessions reset the MCU (session.js / firmware-session.js checkNrst).

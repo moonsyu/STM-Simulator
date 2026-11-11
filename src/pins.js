@@ -45,7 +45,7 @@ const NUCLEO_PINS = Object.freeze(headers.map(bridged));
 const FPB_PINS=(()=>{
   const out=[],add=(name,x,rows)=>rows.forEach(([number,label,signal,y])=>out.push(Object.freeze({id:`board:${name}:${number}`,header:name,number,label,signal:signal??label,x:BOARD.x+x*MM,y:BOARD.y+y*MM})));
   const p=2.54,left=3.3,right=left+48.26,d0=63.2;
-  add('J2',left,[[1,'NC','NC'],[2,'IOREF','3V3'],[3,'RESET','RESET'],[4,'3V3','3V3'],[5,'5V','5V'],[6,'GND','GND'],[7,'GND','GND'],[8,'VIN','NC']].map((r,i)=>[...r,d0-2*p-p*(7-i)]));
+  add('J2',left,[[1,'NC','NC'],[2,'IOREF','3V3'],[3,'RESET','P014'],[4,'3V3','3V3'],[5,'5V','5V'],[6,'GND','GND'],[7,'GND','GND'],[8,'VIN','NC']].map((r,i)=>[...r,d0-2*p-p*(7-i)]));
   add('J6',left,[['A0','P000'],['A1','P001'],['A2','P002'],['A3','P003'],['A4','P004'],['A5','P008']].map((r,i)=>[i+1,...r,d0-p*(5-i)]));
   add('J5',right,[['D0','P110'],['D1','P109'],['D2','P409'],['D3','P104'],['D4','P107'],['D5','P105'],['D6','P303'],['D7','P113']].map((r,i)=>[i+1,...r,d0-p*i]));
   add('J1',right,[['D8','P402'],['D9','P302'],['D10','P103'],['D11','P101'],['D12','P100'],['D13','P102'],['GND','GND'],['AREF','AREF'],['D14','P401'],['D15','P400']].map((r,i)=>[i+1,...r,d0-7*p-4.064-p*i]));

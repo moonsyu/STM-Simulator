@@ -14,7 +14,7 @@ const signalLabel=sg=>{const [id,role]=sg.split('_');return role.startsWith('GTI
 const PRIORITIES=(cur,none)=>(none?`<option value="" ${cur===''?'selected':''}>Disabled</option>`:'')+Array.from({length:16},(_,i)=>`<option value="${i}" ${String(i)===String(cur)?'selected':''}>Priority ${i}${i===0?' (highest)':i===15?' (lowest)':''}</option>`).join('');
 const DEFAULTS={IIC:ch=>({rate:'STANDARD',slave:0x50,callback:`i2c_master${ch}_callback`,priority:12}),SCI:ch=>({baud:115200,callback:`user_uart${ch}_callback`,priority:12}),GPT:()=>({mode:'PWM',period:1,unit:'kHz',duty:50,callback:'',priority:12})};
 const ARDUINO_OF=Object.fromEntries(Object.entries(FPB_RA6E1.arduino).map(([k,v])=>[v,k]));
-const NOTES={P408:'LED1 (녹색, 보드 내장)',P407:'LED2 (녹색, 보드 내장)',P205:'S1 사용자 스위치 (보드 내장, 누르면 LOW)',P400:'Arduino SCL · 2.2 kΩ 풀업 (보드)',P401:'Arduino SDA · 2.2 kΩ 풀업 (보드)'};
+const NOTES={P408:'LED1 (녹색, 보드 내장 · 직렬 10 kΩ)',P407:'LED2 (녹색, 보드 내장 · 직렬 10 kΩ)',P205:'S1 사용자 스위치 (보드 내장, 누르면 LOW · 10 kΩ 풀업 R17)',P014:'Arduino 헤더의 RESET 핀(J2-3) · 10 kΩ 풀업 R4 — MCU의 RES#가 아니라 GPIO라서 LOW로 당겨도 리셋되지 않습니다',P400:'Arduino SCL · 2.2 kΩ 풀업 (보드)',P401:'Arduino SDA · 2.2 kΩ 풀업 (보드)'};
 
 export class RaPinoutPanel {
  constructor({getProject,apply,isRunning,onError}){
