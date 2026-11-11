@@ -28,9 +28,11 @@ test('the signal is only for Reserved pins and must be a name; a Reserved pin wi
  assert.equal(validateMcu({...base,pins:{PB8:{...pin('Reserved'),signal:'CAN1_RX'}}}).pins.PB8.signal,'CAN1_RX');
  assert.throws(()=>validateMcu({...base,pins:{PA5:{...pin('GPIO_Output'),signal:'CAN1_RX'}}}),/PA5: 신호 이름을 확인하세요/);
  for(const signal of ['','bad name','1X','A=B',5])assert.throws(()=>validateMcu({...base,pins:{PB8:{...pin('Reserved'),signal}}}),/PB8: 신호 이름을 확인하세요/,String(signal));
- // The CAN example reserves PB8 / PB9 without a signal: left out of the file, and named.
+ // The examples name the signal of their Reserved pins (CAN, I2S, MCO), so those are written too.
  const can=applyHalExample(blankProject(),'ref_can_transceiver_6').mcu;
- assert.deepEqual(unexportedPins(can),['PB8','PB9']);assert.doesNotMatch(exportIoc(can),/^PB8\./m);
+ assert.deepEqual(unexportedPins(can),[]);assert.match(exportIoc(can),/^PB8\.Signal=CAN1_RX$/m);assert.match(exportIoc(can),/^PB9\.Signal=CAN1_TX$/m);
+ // A Reserved pin set by hand has no signal: left out of the file, and named.
+ assert.deepEqual(unexportedPins({...base,pins:{PB8:pin('Reserved')}}),['PB8']);assert.doesNotMatch(exportIoc({...base,pins:{PB8:pin('Reserved')}}),/^PB8\./m);
  // The debug pins are written with their system signal, as before.
  const swd={...base,pins:{PA13:pin('Reserved'),PA14:pin('Reserved')}};assert.deepEqual(unexportedPins(swd),[]);assert.match(exportIoc(swd),/^PA13\.Signal=SYS_JTMS-SWDIO$/m);
 });

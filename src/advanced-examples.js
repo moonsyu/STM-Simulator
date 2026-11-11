@@ -111,7 +111,7 @@ void matrixWrite(uint8_t reg, uint8_t value) {
   const p=baseExample('ref_ov2640_camera'),tft=deviceExample('tft');p.mcu.timerClockHz=EXAMPLE_TIMER_CLOCK_HZ;
   p.components[0].id='cam';p.wires.forEach(w=>{w.to=w.to.replace('part:demo:','part:cam:');w.id='c'+w.id;});p.wires.find(w=>w.to==='part:cam:p17').from=boardPin('PC8');
   const t=tft.components[0];t.id='tft';t.y=120;p.components.push(t);for(const w of tft.wires)p.wires.push({...w,id:'t'+w.id,to:w.to.replace('part:demo:','part:tft:')});
-  p.mcu.pins={PB8:pin('I2C1_SCL'),PB9:pin('I2C1_SDA'),PC8:pin('GPIO_Output'),PC6:pin('GPIO_Output'),PA8:pin('Reserved'),PA5:pin('SPI1_SCK'),PA6:pin('SPI1_MISO'),PA7:pin('SPI1_MOSI'),PB6:pin('GPIO_Output',{initial:1}),PB7:pin('GPIO_Output'),PC7:pin('GPIO_Output',{initial:1})};
+  p.mcu.pins={PB8:pin('I2C1_SCL'),PB9:pin('I2C1_SDA'),PC8:pin('GPIO_Output'),PC6:pin('GPIO_Output'),PA8:pin('Reserved',{signal:'RCC_MCO_1'}),PA5:pin('SPI1_SCK'),PA6:pin('SPI1_MISO'),PA7:pin('SPI1_MOSI'),PB6:pin('GPIO_Output',{initial:1}),PB7:pin('GPIO_Output'),PC7:pin('GPIO_Output',{initial:1})};
   p.mcu.peripherals={I2C1:{enabled:true,clock:100000},SPI1:{enabled:true,clock:10500000},DCMI:{enabled:true}};p.mcu.dma={DCMI:{mode:'normal',priority:'high'},SPI1_TX:{}};p.mcu.nvic={DCMI_IRQn:{enabled:true,priority:2}};
   return finish(p,kind,{globals:`uint32_t frame[9600];  /* 160 x 120 RGB565 = 38400 bytes */
 volatile uint8_t frameReady = 0, sending = 0;

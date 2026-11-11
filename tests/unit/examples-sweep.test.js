@@ -24,14 +24,16 @@ test('every example is there on both boards',()=>{assert.ok(projects.length>=240
 test('.ioc export then import: the same pins in the same order, and the same generated code',()=>{
  // The order matters: generated code lists the pins in it and a new main loop toggles the first output pin. The file's
  // keys are sorted as text (PA10 before PA5), so the order comes back from Mcu.PinN.
- let declarationOrderOnly=0;
+ let declarationOrderOnly=0,unsigned=0;
  for(const {tag,p}of projects){
   const before=validateMcu(p.mcu),back=importIoc(exportIoc(p.mcu)),after=validateMcu(back.config);
-  // A Reserved pin (a signal the model does not have: CAN, I2S, DCMI) has no signal name to write, so it is not exported.
-  assert.deepEqual(Object.keys(after.pins),Object.keys(before.pins).filter(pin=>before.pins[pin].function!=='Reserved'),tag+': pin order');
+  // Every pin comes back, the Reserved ones too (the examples name their CubeMX signal: CAN, I2S, MCO).
+  assert.deepEqual(Object.keys(after.pins),Object.keys(before.pins).filter(pin=>before.pins[pin].function!=='Reserved'||before.pins[pin].signal),tag+': pin order');
+  unsigned+=Object.values(before.pins).filter(q=>q.function==='Reserved'&&!q.signal).length;
   const a=generateHal(before),b=generateHal(after);
   if(a!==b){assert.equal(sorted(b),sorted(a),tag+': generated code has the same lines');declarationOrderOnly++;}
  }
+ assert.ok(unsigned<=2,`Reserved pins without a signal: ${unsigned}`);
  // Two projects differ only in the order of two handle declarations (the file lists peripherals by name).
  assert.ok(declarationOrderOnly<=4,String(declarationOrderOnly));
  const camera=projects.find(x=>x.tag==='F446RE/ref_ov2640_camera').p,toggled=code=>/HAL_GPIO_TogglePin\(GPIO\w, GPIO_PIN_\d+\)/.exec(code)?.[0];
