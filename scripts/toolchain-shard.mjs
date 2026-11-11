@@ -1,4 +1,4 @@
-// Runs one of the CI's toolchain test groups: node scripts/toolchain-shard.mjs <1-5>.
+// Runs one of the CI's toolchain test groups: node scripts/toolchain-shard.mjs <1-6>.
 // node --test-shard deals files out by position, which left one job twice as long as another, so the groups are listed
 // here by measured time. The seconds in the comments are from one run (1.46.3, CI 42807689195) on runners with the same
 // CPU (AMD EPYC 7763, 4 cores; the one job on a faster CPU scaled by its benchmark) — times taken from jobs on different
@@ -13,16 +13,18 @@ import {pathToFileURL} from 'node:url';
 import os from 'node:os';
 
 export const TOOLCHAIN_SHARDS=Object.freeze([
- // 70 + 57 = 127
- [['arm-examples','NUCLEO-F446RE'],'ra-course'],
- // 58 + 62 = 120
- [['arm-examples','NUCLEO-F103RB'],'ra-build'],
- // 38 + 32 + 28 + 26 = 124
- ['button-bounce','wdg','bus-instances','adc-continuous'],
- // 26 + 23 + 22 + 17 + 17 + 16 = 121
- ['emu-accuracy','dwarf-version','board-links','copied-files','tim-oc','adc-group'],
- // 16 + 15 + 14 + 13 + 11 + 9 + 9 + 9 + 9 + 6 = 111
- ['adc-sampling','clock-tree','tim-advanced','dac','rtc','source-folders','spi-params','tim-channels','uart-params','tim-basic'],
+ // ra-course grew with the course-screen and all-examples tests of 1.46.6: about 115
+ ['ra-course'],
+ // 70 + 38 = 108
+ [['arm-examples','NUCLEO-F446RE'],'button-bounce'],
+ // 58 + 32 + 16 = 106
+ [['arm-examples','NUCLEO-F103RB'],'wdg','adc-group'],
+ // 62 + 28 + 16 = 106
+ ['ra-build','bus-instances','adc-sampling'],
+ // 26 + 26 + 23 + 22 + 15 = 112
+ ['adc-continuous','emu-accuracy','dwarf-version','board-links','clock-tree'],
+ // 17 + 17 + 14 + 13 + 11 + 9 + 9 + 9 + 9 + 6 = 114
+ ['copied-files','tim-oc','tim-advanced','dac','rtc','source-folders','spi-params','tim-channels','uart-params','tim-basic'],
 ]);
 /** The file names of a group (an entry with a pattern counts once). */
 export const shardFiles=group=>group.map(e=>Array.isArray(e)?e[0]:e);

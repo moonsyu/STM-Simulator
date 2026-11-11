@@ -16,13 +16,13 @@ concurrency:
 jobs:
   # The checks run as parallel jobs; the release job publishes only when every one of them passed.
   checks:
-    name: Static checks and unit tests ${{ matrix.shard }}/2
+    name: Static checks and unit tests ${{ matrix.shard }}/3
     runs-on: windows-latest
     timeout-minutes: 20
     strategy:
       fail-fast: false
       matrix:
-        shard: [1, 2]
+        shard: [1, 2, 3]
     env:
       ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
     steps:
@@ -49,22 +49,22 @@ jobs:
       - name: Static checks (undefined names, duplicate keys, unreachable code)
         if: matrix.shard == 1
         run: npm run lint
-      - name: Unit, interpreter, emulator and firmware tests (half of the files)
-        run: node --test --test-shard=${{ matrix.shard }}/2 --test-reporter=spec --test-reporter-destination=stdout --test-reporter=./tests/github-reporter.mjs --test-reporter-destination=stdout "tests/unit/*.test.js" "tests/interp/*.test.js" "tests/emu/*.test.js" "tests/firmware/*.test.js"
+      - name: Unit, interpreter, emulator and firmware tests (a third of the files)
+        run: node --test --test-shard=${{ matrix.shard }}/3 --test-reporter=spec --test-reporter-destination=stdout --test-reporter=./tests/github-reporter.mjs --test-reporter-destination=stdout "tests/unit/*.test.js" "tests/interp/*.test.js" "tests/emu/*.test.js" "tests/firmware/*.test.js"
       - name: Update helper replacement and rollback
         if: matrix.shard == 1
         run: node --test --test-reporter=spec --test-reporter-destination=stdout --test-reporter=./tests/github-reporter.mjs --test-reporter-destination=stdout tests/release/update-helper.test.mjs
 
-  # The toolchain test files run in five jobs: as one job they were the longest of the run (6.4 min of tests at 1.33.0)
+  # The toolchain test files run in six jobs: as one job they were the longest of the run (6.4 min of tests at 1.33.0)
   # and set how long a release takes. scripts/toolchain-shard.mjs holds the groups, balanced by measured time.
   firmware:
-    name: ST HAL on ARM GCC and the emulator ${{ matrix.shard }}/5
+    name: ST HAL on ARM GCC and the emulator ${{ matrix.shard }}/6
     runs-on: windows-latest
     timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
-        shard: [1, 2, 3, 4, 5]
+        shard: [1, 2, 3, 4, 5, 6]
     env:
       ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
       CI_REQUIRE_TOOLCHAIN: '1'
@@ -84,8 +84,9 @@ jobs:
           node-version: '24'
           cache: npm
       - name: Install locked dependencies
-        # With the install scripts: measured without them (1.46.2), the tests that build and run were 1.6-1.8 times slower.
-        run: npm ci
+        # These tests use neither Electron nor the bundled editor, so the install scripts (the editor build, about 10 s) are
+        # skipped. (1.46.2 took this back on the suspicion that it slowed the tests; the cause was the uneven groups.)
+        run: npm ci --ignore-scripts
       - name: Install ARM GCC, STM32CubeF4 / STM32CubeF1 drivers and Renesas FSP
         uses: ./.github/actions/arm-toolchain
       - name: Build examples with ST HAL and run them on the emulator
@@ -175,13 +176,13 @@ jobs:
         run: node --test --test-reporter=spec --test-reporter-destination=stdout --test-reporter=./tests/github-reporter.mjs --test-reporter-destination=stdout --test-concurrency=1 tests/toolchain/esp32-sketches.test.mjs
 
   e2e:
-    name: Electron end-to-end tests ${{ matrix.shard }}/6
+    name: Electron end-to-end tests ${{ matrix.shard }}/7
     runs-on: windows-latest
     timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
-        shard: [1, 2, 3, 4, 5, 6]
+        shard: [1, 2, 3, 4, 5, 6, 7]
     env:
       CI_REQUIRE_TOOLCHAIN: '1'
       ARM_GCC: ${{ github.workspace }}\.cache\toolchain\xpack-arm-none-eabi-gcc-14.2.1-1.1\bin\arm-none-eabi-gcc.exe
@@ -213,13 +214,13 @@ jobs:
           exit 1
       - name: Install ARM GCC, STM32CubeF4 / STM32CubeF1 drivers and Renesas FSP
         uses: ./.github/actions/arm-toolchain
-      - name: Electron end-to-end tests (a sixth of the files)
+      - name: Electron end-to-end tests (a seventh of the files)
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force work/test-results | Out-Null
           # scripts/e2e-shard.mjs deals the files to the jobs by measured time (node --test-shard deals them by position,
           # which put the three heaviest files of 1.46.3 into one job: 153 s against 68 to 99 s).
-          node scripts/e2e-shard.mjs ${{ matrix.shard }}/6 2>&1 | Tee-Object -FilePath work/test-results/e2e.log
+          node scripts/e2e-shard.mjs ${{ matrix.shard }}/7 2>&1 | Tee-Object -FilePath work/test-results/e2e.log
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Upload test diagnostics on failure
         if: failure()
@@ -316,6 +317,8 @@ jobs:
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           persist-credentials: false
+          # This job runs after every other one, so its seconds add to the whole run: only scripts/ is needed here.
+          sparse-checkout: scripts
       - name: Download this run's verified build
         shell: pwsh
         run: |
