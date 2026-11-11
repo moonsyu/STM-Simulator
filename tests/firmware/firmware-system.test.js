@@ -139,3 +139,14 @@ test('session exposes real-time ratio and signal API defaults', () => {
   assert.deepEqual(session.signals.noise(), { enabled: false, bitErrorRate: 0, glitchRate: 0, jitterNs: 0 });
   assert.ok(Math.abs(session.signals.now() - session.now) < 1e-6);
 });
+
+test('STM32 debugging from the start stops at main() only (as CubeIDE does); one resume runs the program', () => {
+  const { session } = open('blink', { debug: { entry: true } });
+  const rt = session.runtime;
+  runUntil(session, 200);
+  assert.equal(rt.debug.paused, true);
+  assert.equal(rt.frames[0].name, 'main');
+  rt.resume('continue');
+  runUntil(session, session.now / 1000 + 300);
+  assert.equal(rt.debug.paused, false);
+});

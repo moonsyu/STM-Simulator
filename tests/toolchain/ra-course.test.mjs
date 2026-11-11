@@ -84,3 +84,23 @@ test('BSP tab sizes: a large stack with no heap and a small stack with a large h
   assert.deepEqual([high(full,'P408'),high(full,'P407')],[0,1]);
  }finally{await fs.rm(root,{recursive:true,force:true});}
 });
+
+// The course's hal_entry.c (Day 5 p.110-111, FSP 5.5): pins opened with R_IOPORT_Open (&g_ioport_ctrl, g_ioport.p_cfg),
+// the template's #if blocks deleted by hand, the LED named BBQ_LED. Typed as the screen shows it, it builds and blinks.
+test('hal_entry.c as the course screen shows it (g_ioport.p_cfg, #if blocks removed) builds and blinks; the new-project template keeps both TrustZone blocks',{skip,timeout:600000},async()=>{
+ const root=await fs.mkdtemp(path.join(os.tmpdir(),'ra-lecture-'));
+ try{
+  const code=['#include "hal_data.h"','','FSP_CPP_HEADER','void R_BSP_WarmStart(bsp_warm_start_event_t event);','FSP_CPP_FOOTER','','void hal_entry(void)','{','    /* TODO: add your own code here */',
+   '    while (1)','    {','        R_IOPORT_PinWrite(&g_ioport_ctrl, BBQ_LED, BSP_IO_LEVEL_HIGH);','        R_BSP_SoftwareDelay(500, BSP_DELAY_UNITS_MILLISECONDS);','        R_IOPORT_PinWrite(&g_ioport_ctrl, BBQ_LED, BSP_IO_LEVEL_LOW);','        R_BSP_SoftwareDelay(500, BSP_DELAY_UNITS_MILLISECONDS);','    }','}','',
+   'void R_BSP_WarmStart(bsp_warm_start_event_t event)','{','    if (BSP_WARM_START_RESET == event)','    {','    }','','    if (BSP_WARM_START_POST_C == event)','    {','        /* C runtime environment and system clocks are setup. */','','        /* Configure pins. */','        R_IOPORT_Open (&g_ioport_ctrl, g_ioport.p_cfg);','    }','}',''].join('\n');
+  const mcu=raDefaultMcu();mcu.pins.P408.label='BBQ_LED';
+  const s=await session({...base(),mcu,code},root),seen=new Set();
+  for(let ms=10;ms<=1200;ms+=10){s.tick(ms);seen.add(high(s,'P408'));}
+  assert.deepEqual([...seen].sort(),[0,1]);
+  // The template of a new project: the two #if BSP_TZ_SECURE_BUILD blocks of the screen, the second without FSP_CPP_HEADER.
+  const template=raHalEntry();
+  assert.equal(template.split('#if BSP_TZ_SECURE_BUILD').length,3);
+  assert.match(template,/#if BSP_TZ_SECURE_BUILD\n\nBSP_CMSE_NONSECURE_ENTRY void template_nonsecure_callable \(\);\n\n\/\* Trustzone Secure Projects require at least one nonsecure callable function/);
+  assert.match(template,/BSP_CMSE_NONSECURE_ENTRY void template_nonsecure_callable \(\)\n\{\n\n\}\n#endif\n$/);
+ }finally{await fs.rm(root,{recursive:true,force:true});}
+});

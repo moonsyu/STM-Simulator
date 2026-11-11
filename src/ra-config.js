@@ -66,8 +66,8 @@ export const FPB_RA6E1=Object.freeze({
 export function raDefaultMcu(family=RA_FAMILY_ID){
  raFamily(family);
  return {family,pins:{
-  P408:{function:'GPIO_Output',initial:0,drive:'LOW',label:'LED1'},
-  P407:{function:'GPIO_Output',initial:0,drive:'LOW',label:'LED2'},
+  P408:{function:'GPIO_Output',initial:0,drive:'HIGH',label:'LED1'},
+  P407:{function:'GPIO_Output',initial:0,drive:'HIGH',label:'LED2'},
   P205:{function:'IRQ',edge:'FALLING',pull:'PULLUP',priority:12,label:'SW1',callback:'external_irq1_callback'}
  }};
 }

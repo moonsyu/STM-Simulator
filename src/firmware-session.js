@@ -450,7 +450,14 @@ export class FirmwareSession {
       const main = this.elf.findSymbol('main');
       this.started = true;
       // Run to main through the normal tick loop (chunked) so start-up code never blocks the UI.
-      if (main) { const addr = (main.value & ~1) >>> 0; if (!m.breakpoints.has(addr)) { m.breakpoints.add(addr); this.entryBreak = addr; } const rt = this.runtime; rt.debug.paused = false; rt.debug.mode = 'continue'; return; }
+      if (main) {
+        const addr = (main.value & ~1) >>> 0; if (!m.breakpoints.has(addr)) { m.breakpoints.add(addr); this.entryBreak = addr; }
+        // An FSP project starts as in e² studio: the session first stops at the reset handler, Resume goes on to main(),
+        // and a second Resume runs the program (the course: "resume 2번 눌러서 LED를 깜빡이자"). STM32 projects stop at
+        // main() only, as CubeIDE does.
+        if (this.ra) { this.pause(); return; }
+        const rt = this.runtime; rt.debug.paused = false; rt.debug.mode = 'continue'; return;
+      }
     } else if (mode === 'over') res = m.stepOver({ maxCycles: 40e6 });
     else if (mode === 'out') res = m.stepOut({ maxCycles: 40e6 });
     else res = m.stepLine({ maxCycles: 40e6 });

@@ -129,3 +129,19 @@ test('FSP debugging: a breakpoint on main.c (built as src/hal_entry.c) stops the
  assert.equal(rt.frames[0].name,'hal_entry');
  assert.equal(rt.frames[0].loc.file,'main.c');
 });
+
+// The course (Day 5 p.118, p.133): "resume 2번 눌러서 LED를 깜빡이자" — e² studio stops at the reset handler when the
+// session starts and again at main(). An FSP project starts the same way; an STM32 project stops at main() only.
+test('FSP debugging starts as in e² studio: the reset handler, then main(), then running — resume twice',()=>{
+ const {session}=open(fixture('ra_blink'),{debug:{entry:true}});
+ const rt=session.runtime;
+ runUntil(session,40);
+ assert.equal(rt.debug.paused,true,'stopped when the session starts');
+ assert.notEqual(rt.frames[0]?.name,'main');assert.equal(session.now,0,'nothing has run yet');
+ rt.resume('continue');runUntil(session,400);
+ assert.equal(rt.debug.paused,true,'stopped again');assert.equal(rt.frames[0].name,'main');
+ const at=session.now/1000;
+ rt.resume('continue');
+ const seen=new Set();runUntil(session,at+1300,{onTick:()=>seen.add(session.gpio.P408?.value>1.65)});
+ assert.equal(rt.debug.paused,false,'running after the second resume');assert.deepEqual([...seen].sort(),[false,true],'LED1 blinks');
+});
