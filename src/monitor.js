@@ -1,6 +1,7 @@
 import {GPIO_PINS} from './pins.js';
 import {waveSvg} from './trace.js';
 import {$} from './common.js';
+import {uartMonitorText} from './uart-text.js';
 export class Monitor {
   constructor(options){
     Object.assign(this,options);this.events=[];this.view='log';this.lastPaint=0;this.dirty=true;
@@ -43,7 +44,7 @@ export class Monitor {
       if($('serial-target').value.startsWith('outside:'))$('uart-output').textContent=session?.wireless?`${$('serial-target').selectedOptions[0].textContent}\n${session.wireless.outsideOutput($('serial-target').value.slice(8))}`:'';
       else if($('serial-target').value.startsWith('board:'))$('uart-output').textContent=board?`${board.part.name} · Serial (USB) · ${board.outputLabel??'고정 실행 출력'}
 ${board.output??''}`:'이 보드는 이번 실행에 포함되지 않았습니다.';
-      else $('uart-output').textContent=session?($('serial-target').value==='USART2'?`ST-LINK VCP · USART2 · ${session.buses.uart.baud} baud\n${session.buses.vcpOutput||''}`:[...session.buses.received.entries()].map(([id,text])=>`${session.project.components.find(p=>p.id===id)?.name}: ${text}`).join('\n')):'';
+      else $('uart-output').textContent=session?($('serial-target').value==='USART2'?`ST-LINK VCP · USART2 · ${session.buses.uart.baud} baud\n${uartMonitorText(session.buses.vcpOutput)}`:[...session.buses.received.entries()].map(([id,text])=>`${session.project.components.find(p=>p.id===id)?.name}: ${text}`).join('\n')):'';
     }
   }
 }

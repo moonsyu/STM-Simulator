@@ -6,6 +6,7 @@ import {familyProfile} from './mcu-family.js';
 import {blankProject} from './project.js';
 import {SimulationSession} from './session.js';
 import {FirmwareSession} from './firmware-session.js';
+import {uartLineText} from './uart-text.js';
 
 // More STM32 boards in one circuit. The main board (surfaces.board, pins `board:CNx:n`, nets `signal:PA5`) is the one
 // the IDE edits; every other STM32 board is a 'devboard' component that keeps its own main.c, pin settings, sources,
@@ -106,8 +107,9 @@ export class Stm32Driver{
  }
  // UART bytes the board sends, shown a line at a time: `[USART2 TX] hello`.
  uartText(event,say){
-  if(event?.direction!=='TX')return;const key=`${event.instance} TX`;let line=this.lines.get(key)??'';
-  for(const byte of event.bytes){if(byte===13)continue;if(byte===10){say(`[${key}] ${line}\n`);line='';continue;}line+=byte>=32&&byte<=126?String.fromCharCode(byte):'\\x'+byte.toString(16).padStart(2,'0');if(line.length>=512){say(`[${key}] ${line}\n`);line='';}}
+  if(event?.direction!=='TX')return;const key=`${event.instance} TX`;let line=this.lines.get(key)??[];
+  // The line's bytes are kept and shown as UTF-8 text (uart-text.js): a Korean printf reads as written.
+  for(const byte of event.bytes){if(byte===13)continue;if(byte===10){say(`[${key}] ${uartLineText(line)}\n`);line=[];continue;}line.push(byte);if(line.length>=512){say(`[${key}] ${uartLineText(line)}\n`);line=[];}}
   this.lines.set(key,line);
  }
  /** The latest shared result with this board's names (its own pins are `signal:PA5`, the main board's `signal:<id>.PA5`). */

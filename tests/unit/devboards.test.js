@@ -12,6 +12,7 @@ import {LECTURE_EXAMPLES,EXAMPLE_BOARDS,applyLectureExample,searchLectureExample
 import {wiringMetrics} from './helpers/wiring-metrics.js';
 import {SimulationSession} from '../../src/session.js';
 import {SketchDriver} from '../../src/esp32-sketch.js';
+import {consoleSink} from './helpers/console.js';
 
 const board=(model,extra={})=>({id:'b1',type:'devboard',model,name:'B1',x:400,y:300,rotation:0,code:'',...extra});
 const project=(...components)=>{const p=startProject();p.components.push(...components);return p;};
@@ -171,7 +172,7 @@ describe('lecture examples',()=>{
   assert.deepEqual([timers(5100).LED1.on,timers(5100).LED2.on],[true,false]);assert.deepEqual([timers(7100).LED1.on,timers(7100).LED2.on],[true,true]);assert.deepEqual([timers(10100).LED1.on,timers(10100).LED2.on],[false,true]);
  });
  test('FW-09: the STM32 HAL code writes 1 / 0 over I2C and the ESP32 slave switches its LED',()=>{
-  const {project:p}=applyLectureExample('lecture-fw-09'),out=[],logs=[],session=new SimulationSession(p,{print:s=>out.push(String(s))});
+  const {project:p}=applyLectureExample('lecture-fw-09'),out=[],logs=[],session=new SimulationSession(p,consoleSink(out));
   session.circuit.drivers=createBoardDrivers(p,{log:s=>logs.push(s)});session.buses.boards=()=>session.circuit.drivers;
   let r=session.tick(0);for(let t=20;t<=1500;t+=20)r=session.tick(t);
   assert.ok(out.some(s=>/ESP32에 1 보냄 \(status=0\)/.test(s)),out.join('|'));assert.ok(out.some(s=>/ESP32에 0 보냄 \(status=0\)/.test(s)));

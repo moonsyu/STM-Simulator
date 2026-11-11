@@ -5,6 +5,7 @@ import {state} from './app-state.js';
 import {refresh} from './app-view.js';
 import {diagnostic,uartLines,feedback,layout} from './app.js';
 import {$} from './common.js';
+import {uartLineText} from './uart-text.js';
 
 export function uid(prefix){return prefix+crypto.randomUUID().replaceAll('-','').slice(0,12);}
 export function running(){return state.status==='running'||state.status==='paused'||!!state.ide?.nativeBusy();}
@@ -19,8 +20,9 @@ export function logUart(event){
  diagnostic('uart',{instance:event.instance,direction:event.direction,bytes:Array.from(event.bytes).slice(0,512),micros:event.micros});
  const key=event.instance+' '+event.direction;
  for(const byte of event.bytes){if(byte===13)continue;if(byte===10){uartLines.delete(key);continue;}
-  let row=uartLines.get(key);if(!row?.node.isConnected||row.text.length>=512){row={node:log('['+key+'] ','serial'),text:''};row.node.querySelector('.stamp').textContent=(event.micros/1e6).toFixed(3)+' s';uartLines.set(key,row);}
-  row.text+=byte>=32&&byte<=126?String.fromCharCode(byte):'\\x'+byte.toString(16).padStart(2,'0');row.node.lastChild.textContent='['+key+'] '+row.text;
+  let row=uartLines.get(key);if(!row?.node.isConnected||row.bytes.length>=512){row={node:log('['+key+'] ','serial'),text:'',bytes:[]};row.node.querySelector('.stamp').textContent=(event.micros/1e6).toFixed(3)+' s';uartLines.set(key,row);}
+  // UTF-8 text (a Korean printf) is shown as text; other bytes as \\xNN (uart-text.js).
+  row.bytes.push(byte);row.text=uartLineText(row.bytes);row.node.lastChild.textContent='['+key+'] '+row.text;
  }
  $('console-output').scrollTop=$('console-output').scrollHeight;
 }

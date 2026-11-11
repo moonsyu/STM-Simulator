@@ -6,7 +6,7 @@ import {findMount,applyMount} from './placement.js';
 import {DEVBOARD_MODELS,devboardPins,boardFileKey,devboardModel} from './devboards.js';
 import {defineScenario} from './fixed-run.js';
 import {startProject,validateProject} from './project.js';
-import {halExampleFor} from './hal-examples.js';
+import {halExampleFor,consoleExample} from './hal-examples.js';
 import {WIRELESS_EXAMPLES} from './wireless-examples.js';
 import {reindentC} from './c-format.js';
 import {isKernelSource} from './rpi-python.js';
@@ -293,5 +293,8 @@ function indentExampleCode(project){
 export function applyLectureExample(id){
  const example=lectureExample(id);if(!example)throw new Error('강의 예제를 찾을 수 없습니다.');
  const project=indentExampleCode(validateProject(example.build())),board=project.components.find(p=>p.type==='devboard');
+ // The STM32 programs print on USART2 (the ST-LINK virtual COM port) where it is free, as the HAL examples do.
+ if(!project.surfaces?.board?.hidden)consoleExample(project);
+ for(const part of project.components)if(part.type==='devboard'&&devboardModel(part)?.kind==='stm32'&&part.firmware?.mode==='hal'&&part.mcu){const view=consoleExample({firmware:part.firmware,mcu:part.mcu,code:part.code});part.mcu=view.mcu;part.code=view.code;}
  return {project,file:board&&!example.boards.includes('stm32')?boardFileKey(board):'main.c'};
 }

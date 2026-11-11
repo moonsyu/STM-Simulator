@@ -8,15 +8,16 @@ import {SimulationSession} from '../../src/session.js';
 import {createStm32Drivers,connectStm32Drivers} from '../../src/stm32-boards.js';
 import {createBoardDrivers} from '../../src/fixed-run.js';
 import {WirelessHub} from '../../src/wireless.js';
+import {consoleSink} from './helpers/console.js';
 
 function runBoards(project,ms){
- const main=[],boards=[],session=new SimulationSession(project,{print:s=>main.push(String(s))});
+ const main=[],boards=[],session=new SimulationSession(project,consoleSink(main));
  session.circuit.drivers=[...createBoardDrivers(project,{log:s=>boards.push(s)}),...createStm32Drivers(project,{log:s=>boards.push(s)})];connectStm32Drivers(session);
  let result=session.tick(0);for(let t=20;t<=ms;t+=20)result=session.tick(t);
  return {main,boards,session,result};
 }
 const example=type=>catalogExample(catalogType(type),()=>{throw new Error('own example');});
-function single(type,ms){const out=[],session=new SimulationSession(example(type),{print:s=>out.push(String(s))});let result=session.tick(0);for(let t=20;t<=ms;t+=20)result=session.tick(t);return {out,session,result};}
+function single(type,ms){const out=[],session=new SimulationSession(example(type),consoleSink(out));let result=session.tick(0);for(let t=20;t<=ms;t+=20)result=session.tick(t);return {out,session,result};}
 
 // A bare model module and what it answers, without a board.
 function bench(variant,part={}){
