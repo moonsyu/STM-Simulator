@@ -225,7 +225,7 @@
 :root[data-workbench-ui] #file-tree button{padding:5px 6px}
 :root[data-workbench-ui] #workspace-path{display:block;-webkit-line-clamp:unset}
 :root[data-workbench-ui] .source-tabs{height:auto;min-height:28px;align-items:stretch}
-:root[data-workbench-ui] .source-tabs:has(button:only-child){display:none}
+/* (the tab row is always shown: every tab can be closed, and the ⋯ menu is at its end) */
 :root[data-workbench-ui] .source-tabs button{padding:4px 8px;flex:none}
 :root[data-workbench-ui] .ide-shell .editor-heading{height:auto;min-height:32px;overflow:visible;padding:4px 8px;flex-wrap:wrap}
 :root[data-workbench-ui] #source-file{flex:1 1 90px;min-width:70px;max-width:none;width:90px;margin:0;padding:3px 6px}
@@ -295,3 +295,20 @@
 :is(#build-file-list,#ra-assist-list) .tree-folder>summary small{opacity:.6;font-size:10.5px;margin-left:4px}
 :is(#build-file-list,#ra-assist-list) .tree-children{display:flex;flex-direction:column;margin-left:5px;padding-left:6px;border-left:1px solid var(--ide-border,#c9d5df)}
 :is(#build-file-list,#ra-assist-list) button.tree-own{font-style:normal}
+/* Features 25 and 26: a tab with its close button, the tab menu, and the note of an editor with no tab. */
+.source-tab{display:inline-flex;align-items:stretch;flex:none;border-radius:5px 5px 0 0}
+.source-tabs .source-tab .source-tab-close{padding:4px 6px;opacity:0}
+.source-tabs .source-tab:is(:hover,:focus-within,.active) .source-tab-close{opacity:.7}
+.source-tabs .source-tab .source-tab-close:hover{opacity:1}
+.source-tabs .tabs-more{margin-left:auto;padding:4px 8px;flex:none;opacity:.7}
+.source-tabs .tabs-more:hover{opacity:1}
+.tab-menu{position:fixed;z-index:2000;display:flex;flex-direction:column;min-width:170px;padding:4px;background:var(--ide-background,#fcfdfc);color:var(--ide-foreground,#172b40);border:1px solid var(--ide-border,#c9d5df);border-radius:6px;box-shadow:0 6px 24px rgba(0,0,0,.25)}
+.tab-menu[hidden]{display:none}
+.tab-menu button{display:flex;justify-content:space-between;gap:16px;padding:5px 10px;border:0;background:transparent;color:inherit;text-align:left;font-size:12.5px;border-radius:4px}
+.tab-menu button:is(:hover,:focus-visible):not([disabled]){background:var(--ide-hover,#e7efec)}
+.tab-menu button[disabled]{opacity:.45}
+.tab-menu button small{opacity:.6;font-size:11px}
+.editor-wrap{position:relative}
+.editor-empty{display:none}
+#code-panel.no-tabs .editor-empty{display:grid;place-content:center;gap:4px;position:absolute;inset:0;z-index:5;text-align:center;font-size:13px;color:var(--ide-muted,#4e6377);background:var(--ide-background,#fcfdfc)}
+#code-panel.no-tabs .editor-empty p{margin:0}

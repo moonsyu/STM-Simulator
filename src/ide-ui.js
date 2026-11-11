@@ -30,6 +30,7 @@ export function mountIdeChrome(){
   // CubeIDE's Outline: the structure of the file on screen (project or SDK); the file tree keeps the project files only.
   const outline=document.createElement('section');outline.className='project-files outline-view';outline.innerHTML='<div class="project-files-title"><strong>코드 개요 (Outline)</strong><span id="outline-file"></span></div><input id="outline-filter" type="search" placeholder="개요 검색" aria-label="코드 개요 검색"><nav id="outline-list" aria-label="코드 개요"></nav>';tree.after(outline);
   const tabs=document.createElement('nav');tabs.className='source-tabs';tabs.id='source-tabs';tabs.setAttribute('aria-label','열린 소스');$('code-panel').prepend(tabs);
+  {const empty=document.createElement('div');empty.id='editor-empty';empty.className='editor-empty';empty.innerHTML='<p>열린 파일이 없습니다.</p><p>탐색기에서 파일을 눌러 여세요.</p>';document.querySelector('.editor-wrap').append(empty);}
   const sourcePath=document.createElement('div');sourcePath.id='source-path';sourcePath.className='source-path';sourcePath.hidden=true;tabs.after(sourcePath);
   const position=document.createElement('div');position.className='editor-position';position.innerHTML='<span id="cursor-position">줄 1, 열 1</span><span>UTF-8 · C/H · F9 중단점</span>';document.querySelector('.editor-wrap').after(position);
   document.querySelector('.monitor-tabs').insertAdjacentHTML('beforeend','<button data-monitor="build">빌드</button>');
@@ -46,12 +47,18 @@ export function setupIde(o){
   const points=()=>o.getProject().ide?.breakpoints||[],watches=()=>o.getProject().ide?.watches||[];
   const settings=()=>o.getProject().ide??=( {breakpoints:[],watches:[]} );
   const editor=createCodeEditor({textarea:$('code'),getFile:o.getSource,getFiles:()=>sourceFiles(o.getProject()),onBreakpoint:toggleBreakpoint,onBreakpointsMoved:(file,moved)=>{const unique=[...new Map(moved.map(b=>[b.line,b])).values()];settings().breakpoints=[...points().filter(b=>b.file!==file),...unique];o.saveLocal();debugView();},onPosition:p=>{$('cursor-position').textContent=`줄 ${p?.lineNumber||1}, 열 ${p?.column||1}`;},getFamily:()=>o.getProject().mcu?.family||'STM32F446RE',getGenerated:()=>generatedFiles(),onExternal:()=>tabsView()});
-  function select(file,line,column){editor.showProject();o.selectSource(file);o.layout.reveal('code');document.querySelector('[data-tab="code"]').click();if(line)editor.goto(line,column);}
+  // Features 25 and 26 — open tabs. A project starts with a tab for each of its files; a tab can be closed (×, the tab's
+  // context menu, "모두 닫기") and comes back when the file is opened from the explorer. Closing is only about the tab
+  // row: the file stays in the project and its text is kept, also while the program runs. closedTabs holds the closed
+  // ones; emptyTabs is set when the last tab was closed (the editor then shows a note instead of a file).
+  const closedTabs=new Set();let emptyTabs=false;
+  function select(file,line,column){closedTabs.delete(file);emptyTabs=false;editor.showProject();o.selectSource(file);o.layout.reveal('code');document.querySelector('[data-tab="code"]').click();if(line)editor.goto(line,column);}
   // The debug view lives in the side bar; every other monitor is a bottom-panel tab.
   function showMonitor(name){if(name==='debug'){o.layout.showView('debug');return;}o.layout.showPanel(name);}
   function toggleBreakpoint(file,line){if(!Number.isInteger(line)||line<1||isBoardFile(file))return;o.checkpoint();const p=settings(),i=p.breakpoints.findIndex(b=>b.file===file&&b.line===line);if(i<0)p.breakpoints.push({file,line});else p.breakpoints.splice(i,1);const r=o.getSession()?.runtime;if(r)r.debug.breakpoints=new Set(points().map(b=>`${b.file}:${b.line}`));o.saveLocal();native?.syncBreakpoints();debugView();}
   // An FSP project's main source is e² studio's src/hal_entry.c (stored as the project's main file).
   const shown=name=>name==='main.c'&&o.getProject().firmware?.mode==='fsp'?'hal_entry.c':name;
+  const sourceFolded=new Set();
   function sync(){
     const focused=document.activeElement?.closest('[data-source]'),focusSource=focused?.dataset.source,focusContainer=focused?.parentElement.id;
     const files=sourceFiles(o.getProject()),active=o.getSource(),key=JSON.stringify([o.getProject().firmware?.mode,files]);if(sourceKey&&sourceKey!==key){built=null;$('build-status').textContent='변경됨 · 빌드 필요';editor.diagnostics([]);}sourceKey=key;
@@ -59,7 +66,16 @@ export function setupIde(o){
     const boards=boardSourceFiles(o.getProject());
     // A file kept in a folder (Core/Src/app.c) shows its name with the folder beside it, as the build file list does.
     const folderOfFile=name=>name==='main.c'?(o.getProject().firmware?.mainFolder??''):name.split('/').slice(0,-1).join('/'),leaf=name=>shown(name).split('/').at(-1);
-    $('file-tree').innerHTML=[...files].sort((a,b)=>folderOfFile(a.name).localeCompare(folderOfFile(b.name))).map(f=>`<button data-source="${esc(f.name)}" class="${f.name===active?'active':''}" title="${esc((folderOfFile(f.name)?folderOfFile(f.name)+'/':'')+leaf(f.name))}"><span class="file-kind">${f.name.endsWith('.h')?'H':'C'}</span><span class="file-label">${esc(leaf(f.name))}</span>${folderOfFile(f.name)?`<small>${esc(folderOfFile(f.name))}</small>`:''}</button>`).join('')+boards.map(f=>`<button data-source="${esc(f.name)}" class="${f.name===active?'active':''}" title="${esc(f.label)}"><span class="file-kind">${f.name.endsWith('.py')?'PY':'INO'}</span><span class="file-label">${esc(f.label)}</span></button>`).join('');
+    // Feature 28: the project's files as a tree — a folder (Core, Core/Src, USER …) folds and its files sit one step in,
+    // as in the project structure below. A folder is there because a file's name has it; main.c sits in the folder it
+    // was imported from. The folders a user folded stay folded while the list is drawn again.
+    const kind=name=>name.endsWith('.h')?'H':/\.s$/i.test(name)?'S':name.endsWith('.ld')?'L':'C';
+    const fileRow=f=>`<button data-source="${esc(f.name)}" class="${f.name===active?'active':''}" title="${esc((folderOfFile(f.name)?folderOfFile(f.name)+'/':'')+leaf(f.name))}"><span class="file-kind">${kind(f.name)}</span><span class="file-label">${esc(leaf(f.name))}</span></button>`;
+    const root={folders:new Map(),files:[]};
+    for(const f of files){let node=root;for(const part of folderOfFile(f.name).split('/').filter(Boolean)){if(!node.folders.has(part))node.folders.set(part,{folders:new Map(),files:[]});node=node.folders.get(part);}node.files.push(f);}
+    const drawTree=(node,path)=>[...[...node.folders].sort(([a],[b])=>a.localeCompare(b)).map(([name,child])=>{const full=path?path+'/'+name:name;return `<details class="tree-folder" data-src-folder="${esc(full)}"${sourceFolded.has(full)?'':' open'}><summary>${esc(name)}</summary><div class="tree-children">${drawTree(child,full)}</div></details>`;}),...node.files.map(fileRow)].join('');
+    $('file-tree').innerHTML=drawTree(root,'')+boards.map(f=>`<button data-source="${esc(f.name)}" class="${f.name===active?'active':''}" title="${esc(f.label)}"><span class="file-kind">${f.name.endsWith('.py')?'PY':'INO'}</span><span class="file-label">${esc(f.label)}</span></button>`).join('');
+    for(const el of $('file-tree').querySelectorAll('[data-src-folder]'))el.addEventListener('toggle',()=>{if(el.open)sourceFolded.delete(el.dataset.srcFolder);else sourceFolded.add(el.dataset.srcFolder);});
     for(const el of $('file-tree').querySelectorAll('[data-source]'))el.onclick=()=>select(el.dataset.source);editor.refreshGenerated();tabsView();
     const wp=folder||'미저장 프로젝트';$('workspace-path').textContent=wp;$('workspace-path').title=wp;editor.reset();if(!native?.selected())editor.updateDebug(points(),o.getSession()?.runtime?.debug.paused?o.getSession().runtime.location:null);native?.sync();controls();if(!o.isRunning())debugView();
     if(focusSource&&focusContainer)[...$(focusContainer).querySelectorAll('[data-source]')].find(el=>el.dataset.source===focusSource)?.focus({preventScroll:true});
@@ -162,14 +178,53 @@ export function setupIde(o){
       o.log(`${name}을 프로젝트로 복사했습니다. 이제 빌드가 이 파일을 쓰고, 자유롭게 고칠 수 있습니다(지우면 원래 파일로 돌아갑니다).`);
     }catch(e){o.log(e.message,'error');}
   }
+  const tabIds=()=>[...$('source-tabs').querySelectorAll('[data-tab-id]')].map(el=>el.dataset.tabId);
+  // Closes tabs by id (a project file or a board program by name, an SDK file as "sdk:<file>"). When the tab on screen
+  // goes, the nearest tab left takes its place (the one to the right first); with none left the editor shows the note.
+  function closeTabs(ids){
+    const order=tabIds(),shownId=editor.externalFile()?'sdk:'+editor.externalFile().file:o.getSource(),at=order.indexOf(shownId);
+    // The read-only tabs first: closing one redraws the row, and that redraw gives the file then on screen its tab back.
+    for(const id of ids)if(id.startsWith('sdk:'))editor.closeExternal(id.slice(4));
+    for(const id of ids)if(!id.startsWith('sdk:'))closedTabs.add(id);
+    if(ids.includes(shownId)){
+      const left=order.filter(id=>!ids.includes(id)),next=left.find(id=>order.indexOf(id)>at)??left.at(-1);
+      if(!next)emptyTabs=true;else if(next.startsWith('sdk:'))editor.showExternal(next.slice(4));else{select(next);return;}
+    }
+    tabsView();
+  }
+  const closeAllTabs=()=>closeTabs(tabIds());
+  // The tab menu: on a tab (right click) or from the ⋯ button at the end of the row.
+  const menu=document.createElement('div');menu.id='tab-menu';menu.className='tab-menu';menu.setAttribute('role','menu');menu.hidden=true;document.body.append(menu);
+  const hideTabMenu=()=>{menu.hidden=true;};
+  document.addEventListener('pointerdown',e=>{if(!menu.hidden&&!menu.contains(e.target))hideTabMenu();},true);
+  document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!menu.hidden)hideTabMenu();},true);
+  function tabMenu(x,y,id){
+    const order=tabIds(),at=order.indexOf(id),items=id?[['close','닫기',[id]],['others','다른 탭 닫기',order.filter(t=>t!==id)],['right','오른쪽 탭 닫기',order.slice(at+1)],['all','모두 닫기',order]]:[['all','모두 닫기',order]];
+    menu.innerHTML=items.map(([key,label,list])=>`<button type="button" role="menuitem" data-tab-action="${key}" ${list.length?'':'disabled'}>${label}${key==='all'?'<small>Ctrl+K W</small>':''}</button>`).join('');
+    for(const [key,,list]of items)menu.querySelector(`[data-tab-action="${key}"]`).onclick=()=>{hideTabMenu();
+      // "다른 탭 닫기" leaves the tab that was right-clicked as the one on screen.
+      if(key==='others'&&id){if(id.startsWith('sdk:'))editor.showExternal(id.slice(4));else if(editor.externalFile()||o.getSource()!==id)select(id);}
+      closeTabs(list);};
+    menu.hidden=false;menu.style.left=Math.max(4,Math.min(x,innerWidth-menu.offsetWidth-4))+'px';menu.style.top=Math.max(4,Math.min(y,innerHeight-menu.offsetHeight-4))+'px';menu.querySelector('button:not([disabled])')?.focus();
+  }
   // Open tabs: project files, other boards' programs, then SDK files opened by go to definition (read only, ×).
   function tabsView(){
     const files=sourceFiles(o.getProject()),boards=boardSourceFiles(o.getProject()),active=o.getSource(),ext=editor.externalFile(),base=f=>f.split('/').at(-1);
-    $('source-tabs').innerHTML=[...files.map(f=>({name:f.name,label:shown(f.name)})),...boards].map(f=>`<button data-source="${esc(f.name)}" class="${!ext&&f.name===active?'active':''}">${esc(f.label)}</button>`).join('')
-      +editor.externalFiles().map(f=>`<span class="source-tab-sdk${ext?.file===f.file?' active':''}"><button data-sdk-file="${esc(f.file)}" title="${esc(f.sdk+' › '+f.file)} · 읽기 전용">${esc(base(f.file))}</button><button class="source-tab-close" data-sdk-close="${esc(f.file)}" aria-label="${esc(base(f.file))} 닫기" title="닫기">×</button></span>`).join('');
+    const all=[...files.map(f=>({name:f.name,label:shown(f.name)})),...boards];
+    for(const name of [...closedTabs])if(!all.some(f=>f.name===name))closedTabs.delete(name);
+    // The file on screen always has its tab (a jump from the debugger or the problems list opens it).
+    if(!emptyTabs)closedTabs.delete(active);
+    const on=name=>!ext&&!emptyTabs&&name===active;
+    $('source-tabs').innerHTML=all.filter(f=>!closedTabs.has(f.name)).map(f=>`<span class="source-tab${on(f.name)?' active':''}" data-tab-id="${esc(f.name)}"><button data-source="${esc(f.name)}" class="${on(f.name)?'active':''}">${esc(f.label)}</button><button class="source-tab-close" data-tab-close="${esc(f.name)}" aria-label="${esc(f.label)} 닫기" title="닫기">×</button></span>`).join('')
+      +editor.externalFiles().map(f=>`<span class="source-tab-sdk${ext?.file===f.file?' active':''}" data-tab-id="sdk:${esc(f.file)}"><button data-sdk-file="${esc(f.file)}" title="${esc(f.sdk+' › '+f.file)} · 읽기 전용">${esc(base(f.file))}</button><button class="source-tab-close" data-sdk-close="${esc(f.file)}" aria-label="${esc(base(f.file))} 닫기" title="닫기">×</button></span>`).join('');
     for(const el of $('source-tabs').querySelectorAll('[data-source]'))el.onclick=()=>select(el.dataset.source);
     for(const el of $('source-tabs').querySelectorAll('[data-sdk-file]'))el.onclick=()=>editor.showExternal(el.dataset.sdkFile);
-    for(const el of $('source-tabs').querySelectorAll('[data-sdk-close]'))el.onclick=e=>{e.stopPropagation();editor.closeExternal(el.dataset.sdkClose);};
+    for(const el of $('source-tabs').querySelectorAll('[data-sdk-close]'))el.onclick=e=>{e.stopPropagation();closeTabs(['sdk:'+el.dataset.sdkClose]);};
+    for(const el of $('source-tabs').querySelectorAll('[data-tab-close]'))el.onclick=e=>{e.stopPropagation();closeTabs([el.dataset.tabClose]);};
+    for(const el of $('source-tabs').querySelectorAll('[data-tab-id]'))el.oncontextmenu=e=>{e.preventDefault();tabMenu(e.clientX,e.clientY,el.dataset.tabId);};
+    $('source-tabs').insertAdjacentHTML('beforeend','<button type="button" id="tabs-more" class="tabs-more" title="탭 메뉴 (모두 닫기 Ctrl+K W)" aria-label="탭 메뉴" aria-haspopup="menu">⋯</button>');
+    $('tabs-more').onclick=e=>{const r=e.currentTarget.getBoundingClientRect();tabMenu(r.left,r.bottom,null);};
+    $('code-panel').classList.toggle('no-tabs',emptyTabs&&!ext);
     // Where the file lives in the SDK (CubeIDE shows it in the title bar), like the Drivers folder of a Cube project.
     $('source-path').hidden=!ext;$('code-panel').classList.toggle('sdk-open',!!ext);$('source-path').innerHTML=ext?`<span>${esc(ext.sdk)}</span>${ext.file.split('/').map(p=>`<span>${esc(p)}</span>`).join('')}<em>읽기 전용 · Alt+← 돌아가기</em>${copyable(ext)?'<button type="button" id="copy-to-project" title="이 파일을 프로젝트 소스로 복사합니다. 복사한 뒤에는 빌드가 프로젝트의 파일을 쓰고, 자유롭게 고칠 수 있습니다.">프로젝트로 복사해 수정</button>':''}`:'';
     if($('copy-to-project'))$('copy-to-project').onclick=()=>copyToProject(ext);
@@ -253,8 +308,8 @@ export function setupIde(o){
   let languageService=null;const setService=editor.setLanguageService;editor.setLanguageService=service=>{languageService=service;setService(service);};
   const formatter=setupCodeFormat({code:editor,textarea:$('code'),lsp:{enabled:()=>!!languageService?.enabled()},log:o.log});
   native=setupNativeIde({o,editor,select,showMonitor,points,watches,toggleBreakpoint});
-  return {sync,controls,build,editor,debugView,debug:doDebug,format:()=>formatter.formatDocument(),formatSelection:()=>formatter.formatSelection(),emulator:()=>!!native?.emulator(),gccSimulation:()=>!!native?.gccSimulation(),ensureSimTools:()=>native?native.ensureSimTools():Promise.resolve('interpreter'),nativePaused:()=>!!native?.paused(),buildElf:source=>native.buildElf(source),connectedBoards:()=>native?.boards?.()||[],nativeBusy:()=>native.busy(),breakpoints:()=>points().map(b=>`${b.file}:${b.line}`),invalidate(){built=null;sourceKey=JSON.stringify([o.getProject().firmware?.mode,sourceFiles(o.getProject())]);$('build-status').textContent='변경됨 · 빌드 필요';editor.diagnostics([]);native.queueLanguage();
+  return {closeAllTabs,sync,controls,build,editor,debugView,debug:doDebug,format:()=>formatter.formatDocument(),formatSelection:()=>formatter.formatSelection(),emulator:()=>!!native?.emulator(),gccSimulation:()=>!!native?.gccSimulation(),ensureSimTools:()=>native?native.ensureSimTools():Promise.resolve('interpreter'),nativePaused:()=>!!native?.paused(),buildElf:source=>native.buildElf(source),connectedBoards:()=>native?.boards?.()||[],nativeBusy:()=>native.busy(),breakpoints:()=>points().map(b=>`${b.file}:${b.line}`),invalidate(){built=null;sourceKey=JSON.stringify([o.getProject().firmware?.mode,sourceFiles(o.getProject())]);$('build-status').textContent='변경됨 · 빌드 필요';editor.diagnostics([]);native.queueLanguage();
     // The configuration changed (Pinout / RA Configuration applied): the project tree, Developer Assistance and an open
     // generated file follow the new stacks.
-    editor.refreshGenerated();buildFilesView();assistView();},reset({preserveWorkspace=false}={}){if(!preserveWorkspace)window.desktop?.clearWorkspace?.().catch(e=>o.log(e.message,'error'));folder='';built=null;lastPause='';sourceKey='';$('build-status').textContent='시뮬레이터용 빌드';editor.diagnostics([]);native.reset();sync();},async saveWorkspace(text){if(!folder)return false;await window.desktop.saveWorkspace(text);return true;}};
+    editor.refreshGenerated();buildFilesView();assistView();},reset({preserveWorkspace=false}={}){closedTabs.clear();emptyTabs=false;if(!preserveWorkspace)window.desktop?.clearWorkspace?.().catch(e=>o.log(e.message,'error'));folder='';built=null;lastPause='';sourceKey='';$('build-status').textContent='시뮬레이터용 빌드';editor.diagnostics([]);native.reset();sync();},async saveWorkspace(text){if(!folder)return false;await window.desktop.saveWorkspace(text);return true;}};
 }

@@ -121,3 +121,42 @@ test('the project tree and Developer Assistance indent one step per level',{time
   assert.deepEqual(s.errors,[]);
  }finally{await s.close();}
 });
+
+// Feature 28: "소스 파일" is a tree too — a file kept in a folder sits under that folder, one step in per level, and a
+// folder the user folded stays folded when the list is drawn again.
+test('the source file list shows folders as a tree; folding is kept; files open from inside a folder',{timeout:150000},async()=>{
+ const s=await launch();
+ try{
+  const {win}=s;
+  await win.click('[data-activity="explorer"]');if(!await win.locator('#build-files > summary').isVisible())await win.click('[data-activity="explorer"]');
+  await win.click('#build-files > summary');
+  // Two project files in folders (the startup file and a header) and one at the top (the linker script).
+  for(const file of ['startup_stm32f103xb.s','main.h']){await win.click(`#build-file-list [data-build-file$="${file}"]`);await win.waitForSelector('#copy-to-project');await win.click('#copy-to-project');await win.waitForFunction(file=>!!document.querySelector(`#file-tree [data-source$="${file}"]`),file);}
+  await win.click('#build-file-list > button[data-build-file$=".ld"]');await win.waitForSelector('#copy-to-project');await win.click('#copy-to-project');
+  await win.waitForFunction(()=>!!document.querySelector('#file-tree [data-source="STM32F103RBTX_FLASH.ld"]'));
+  assert.deepEqual(await win.$$eval('#file-tree [data-src-folder]',d=>d.map(x=>x.dataset.srcFolder).sort()),['Core','Core/Inc','Core/Startup']);
+  // Files sit in their folders; main.c and the linker script are at the top.
+  assert.deepEqual(await win.$$eval('#file-tree [data-src-folder="Core/Startup"] > .tree-children > [data-source]',b=>b.map(x=>x.dataset.source)),['Core/Startup/startup_stm32f103xb.s']);
+  assert.deepEqual(await win.$$eval('#file-tree [data-src-folder="Core/Inc"] > .tree-children > [data-source]',b=>b.map(x=>x.dataset.source)),['Core/Inc/main.h']);
+  assert.deepEqual(await win.$$eval('#file-tree > [data-source]',b=>b.map(x=>x.dataset.source)),['main.c','STM32F103RBTX_FLASH.ld']);
+  assert.deepEqual(await win.$$eval('#file-tree [data-source] .file-kind',k=>k.map(x=>x.textContent).sort()),['C','H','L','S']);
+  // One step (12 px) per level, as in the project structure tree.
+  const left=selector=>win.$eval(selector,e=>e.getBoundingClientRect().left),near=(a,b,m)=>assert.ok(Math.abs(a-b)<=1,`${m}: ${a} for ${b}`);
+  const core=await left('#file-tree [data-src-folder="Core"] > summary > *, #file-tree [data-src-folder="Core"] > summary').catch(()=>left('#file-tree [data-src-folder="Core"] > summary'));
+  const arrow=selector=>win.$eval(selector,e=>e.getBoundingClientRect().left+parseFloat(getComputedStyle(e).paddingLeft));
+  const coreArrow=await arrow('#file-tree [data-src-folder="Core"] > summary'),incArrow=await arrow('#file-tree [data-src-folder="Core/Inc"] > summary');
+  near(incArrow-coreArrow,12,'Core → Core/Inc');void core;
+  const header=await win.$eval('#file-tree [data-src-folder="Core/Inc"] [data-source] .file-kind',e=>e.getBoundingClientRect().left);
+  near(header-incArrow,12+14,'a file is one step in from its folder, after the arrow column');
+  // Open a file from inside a folder; fold Core; the fold stays when the list is drawn again.
+  await win.click('#file-tree [data-source="Core/Inc/main.h"]');
+  await win.waitForFunction(()=>document.querySelector('#file-tree [data-source="Core/Inc/main.h"]')?.classList.contains('active'));
+  await win.click('#file-tree [data-src-folder="Core"] > summary');
+  assert.equal(await win.$eval('#file-tree [data-src-folder="Core"]',d=>d.open),false);
+  await win.click('#file-tree [data-source="main.c"]');
+  await win.waitForFunction(()=>document.querySelector('#file-tree [data-source="main.c"]')?.classList.contains('active'));
+  assert.equal(await win.$eval('#file-tree [data-src-folder="Core"]',d=>d.open),false,'still folded after the list was drawn again');
+  assert.equal(await win.$eval('#file-tree [data-src-folder="Core/Inc"]',d=>d.open),true,'a folder inside keeps its own state');
+  assert.deepEqual(s.errors,[]);
+ }finally{await s.close();}
+});

@@ -21,7 +21,8 @@ test('importing a CubeIDE project folder keeps its tree and runs',{timeout:12000
   await app.evaluate(({dialog},p)=>{dialog.showOpenDialog=async()=>({canceled:false,filePaths:[p]});},dir);
   await win.evaluate(()=>document.getElementById('firmware-folder').click());
   await win.waitForFunction(()=>document.querySelectorAll('#file-tree [data-source]').length===4,null,{timeout:10000}).catch(async e=>{throw new Error(e.message+'\n'+await win.textContent('#console-output')+'\n'+await win.evaluate(()=>[...document.querySelectorAll('#file-tree [data-source]')].map(b=>b.dataset.source).join(',')));});
-  const files=await win.evaluate(()=>[...document.querySelectorAll('#file-tree [data-source]')].map(b=>[b.dataset.source,b.querySelector('small')?.textContent??'']));
+  // Each file sits under its folder in the tree (feature 28): the folder it is in is the nearest folder row above it.
+  const files=await win.evaluate(()=>[...document.querySelectorAll('#file-tree [data-source]')].map(b=>[b.dataset.source,b.closest('[data-src-folder]')?.dataset.srcFolder??'']));
   assert.deepEqual(files.sort(),[['Core/Inc/app.h','Core/Inc'],['Core/Src/app.c','Core/Src'],['USER/board.h','USER'],['main.c','Core/Src']]);
   await win.keyboard.press('Control+F5');
   await win.waitForFunction(()=>/sum=15/.test(document.getElementById('console-output').textContent),null,{timeout:25000}).catch(async e=>{throw new Error(e.message+'\n'+await win.textContent('#console-output'));});

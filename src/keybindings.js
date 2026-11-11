@@ -5,7 +5,7 @@ export const DEFAULT_KEYBINDINGS={
  'run.run':'Ctrl+F5','run.debug':'F10','run.over':'F11','run.into':'Ctrl+F11','run.out':'Shift+F11','run.pause':'F6','run.stop':'Ctrl+F2','run.build':'Ctrl+Shift+B','edit.format':'Alt+Shift+F',
  'view.palette':'Ctrl+Shift+P','view.quickOpen':'Ctrl+P','view.toggleSidebar':'Ctrl+B','view.togglePanel':'Ctrl+J','view.toggleAux':'Ctrl+Alt+B',
  'view.explorer':'Ctrl+Shift+E','view.parts':'Ctrl+Shift+A','view.examples':'Ctrl+Shift+X','view.board':'Ctrl+Shift+O','view.debug':'Ctrl+Shift+D','view.docs':'Ctrl+Shift+K',
- 'view.settings':'Ctrl+,','view.keybindings':'Ctrl+K Ctrl+S','view.problems':'Ctrl+Shift+M','view.output':'Ctrl+Shift+U','view.terminal':'Ctrl+`'
+ 'view.settings':'Ctrl+,','view.keybindings':'Ctrl+K Ctrl+S','editor.closeAll':'Ctrl+K W','view.problems':'Ctrl+Shift+M','view.output':'Ctrl+Shift+U','view.terminal':'Ctrl+`'
 };
 const NAMES={' ':'Space',ArrowUp:'Up',ArrowDown:'Down',ArrowLeft:'Left',ArrowRight:'Right',Escape:'Esc'};
 // Canonical "Ctrl+Alt+Shift+Key" text for a keyboard event (null for bare modifier presses).

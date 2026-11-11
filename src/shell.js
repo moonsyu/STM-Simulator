@@ -368,7 +368,7 @@ function registerCommands(layout,options){
   {id:'file.openElf',label:'펌웨어 ELF 열기 (에뮬레이터에서 실행)',group:'파일',run:()=>options.openElf?.()},
   {id:'file.import',label:'.ioc / C 소스 가져오기',group:'파일',run:click('firmware-import')},
   {id:'file.importFolder',label:'Cube 프로젝트 폴더 가져오기',group:'파일',run:click('firmware-folder')},
-  {id:'file.addSource',label:'소스 파일 추가',group:'파일',run:click('source-add')},
+  {id:'file.addSource',label:'소스 파일 추가',group:'파일',run:click('source-add')},{id:'editor.closeAll',label:'편집기 탭 모두 닫기',keywords:'close all tabs',group:'파일',run:()=>options.closeAllTabs?.()},
   {id:'edit.undo',label:'실행 취소',keys:'Ctrl+Z',group:'편집',run:click('undo')},
   {id:'edit.redo',label:'다시 실행',keys:'Ctrl+Y',group:'편집',run:click('redo')},
   {id:'edit.find',label:'찾기',keys:'Ctrl+F',group:'편집',run:()=>options.find?.(false)},

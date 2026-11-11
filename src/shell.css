@@ -631,3 +631,10 @@ body.dock-dragging .dock-unit{pointer-events:none}
 
 /* A file or folder dragged over the window (file-drop.js): the whole workbench is the drop target. */
 body.file-drop-target::after{content:'여기에 놓기 · .c/.h 추가, .ioc·프로젝트 폴더 가져오기, .stm32lab 열기';position:fixed;inset:8px;z-index:9999;display:grid;place-items:center;border:2px dashed var(--ide-accent);border-radius:8px;background:color-mix(in srgb,var(--ide-accent) 10%,transparent);color:var(--ide-fg,inherit);font-size:15px;pointer-events:none;}
+/* Feature 28: the source files as a tree, with the steps of the project structure tree (12 px a level, a guide line). */
+:root[data-shell] #file-tree .tree-folder>summary{height:22px;line-height:22px;padding:0 12px 0 8px;font-size:13px;cursor:pointer;user-select:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--ide-foreground)}
+:root[data-shell] #file-tree .tree-folder>summary:hover{background:var(--ide-hover)}
+:root[data-shell] #file-tree .tree-children{display:flex;flex-direction:column;margin-left:13px;padding-left:6px;border-left:1px solid var(--ide-border)}
+:root[data-shell] #file-tree .tree-children button{padding-left:14px}
+:root[data-shell] #file-tree .tree-children .tree-folder>summary{padding-left:0}
+:root[data-shell] #file-tree .tree-children .tree-children{margin-left:5px}
