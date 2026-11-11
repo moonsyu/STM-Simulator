@@ -5,14 +5,20 @@ import {allHalExamples,applyHalExample} from '../../src/hal-examples.js';
 import {blankProject,validateProject} from '../../src/project.js';
 import {SimulationSession} from '../../src/session.js';
 import {searchHalExamples} from '../../src/hal-example-search.js';
+import {consoleSink} from '../unit/helpers/console.js';
 
 const F4='nucleo-f446re',F1='nucleo-f103rb';
 const project=(board,id)=>validateProject(applyHalExample({...blankProject(board===F1?'STM32F103RB':undefined),boardId:board},id));
-function run(p,ms=400){const out=[],s=new SimulationSession(p,{print:x=>out.push(x)});s.tick(0);advance(s,ms,10);return {out,vcp:s.buses.vcpOutput,fault:s.result?.fault};}
+function run(p,ms=400){const out=[],s=new SimulationSession(p,consoleSink(out));s.tick(0);advance(s,ms,10);return {out,vcp:s.buses.vcpOutput,fault:s.result?.fault};}
 // Printed numbers with decimals depend on analog timing; compare the text around them. The DS3231 examples print the
 // clock, which starts at the PC time of each run.
+// printf goes to the virtual COM port now (feature 44), so its text is compared the same way.
+// (the port keeps the last 512 characters: a longer text starts at a different place on each board and is left to `out`)
+const vcpLines=text=>(text||'').length>=500?[]:(text||'').split(/\r?\n/).filter(Boolean);
 const norm=lines=>lines.slice(0,8).map(l=>l.replace(/-?\d+\.\d+/g,'#.#').replace(/\d\d:\d\d:\d\d/g,'#:#:#').replace(/20\d\d-\d\d-\d\d/g,'#-#-#'));
 // Peripherals the STM32F103RB lacks (DCMI camera, I2S audio).
+// A printed line takes time on the wire, so a run cut at a fixed time can end one line apart on the two boards.
+const same=(x,y)=>{const n=Math.min(x.length,y.length);return Math.abs(x.length-y.length)<=1&&JSON.stringify(x.slice(0,n))===JSON.stringify(y.slice(0,n));};
 const UNAVAILABLE=['camera_tft','ref_max98357a_9'];
 // The F1 ADC (239.5-cycle sampling at 64 MHz) completes conversions at a different rate.
 const TIMING=['adc_dma_scan'];
@@ -26,7 +32,7 @@ test('every HAL example ports to NUCLEO-F103RB and prints the same output as on 
   if(b.fault){failures.push(`${id}: fault ${b.fault}`);continue;}
   if(TIMING.includes(id))continue;
   a=run(project(F4,id));
-  if(JSON.stringify(norm(a.out))!==JSON.stringify(norm(b.out))||a.vcp!==b.vcp)failures.push(`${id}: F4 ${JSON.stringify(a.out.slice(0,2))} / F1 ${JSON.stringify(b.out.slice(0,2))}`);
+  if(!same(norm(a.out),norm(b.out))||!same(norm(vcpLines(a.vcp)),norm(vcpLines(b.vcp))))failures.push(`${id}: F4 ${JSON.stringify(a.out.slice(0,2))} / F1 ${JSON.stringify(b.out.slice(0,2))}`);
  }
  assert.deepEqual(failures,[]);
 });

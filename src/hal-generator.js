@@ -49,6 +49,8 @@ function dmaLines(name,request,d,f1=false){
 // CubeMX sets these in HAL_MspInit (priority group) and stm32xxxx_hal_conf.h (TICK_INT_PRIORITY); a single main.c sets
 // them right after HAL_Init(). HAL_InitTick() keeps the priority when SystemClock_Config() reconfigures SysTick.
 const nvicInit=config=>[...(nvicGroup(config)!==NVIC_GROUP_DEFAULT?[`  HAL_NVIC_SetPriorityGrouping(NVIC_PRIORITYGROUP_${nvicGroup(config)});`]:[]),...(tickPriority(config)!==TICK_PRIORITY_DEFAULT?[`  HAL_InitTick(${tickPriority(config)});`]:[])];
+/** printf / scanf go to USART2 when it is enabled as an asynchronous UART that can transmit. */
+export const stdioUart=config=>{const u=config.peripherals?.USART2;return !!u?.enabled&&u.mode!=='synchronous'&&(u.direction??'TX_RX')!=='RX';};
 export function clockPlan(hz){
   if(hz===DEFAULT_TIMER_CLOCK_HZ)return {source:'HSI',apb1:1,latency:0};
   // HSI removes any dependency on the Nucleo ST-LINK MCO / HSE jumper.
@@ -71,7 +73,7 @@ export function generateMain(config,{minimal=false,legacyGpio=false}={}){
     `/* Copy this main.c into a CubeIDE ${family.id} project with matching`,
     ' * pin / peripheral / NVIC settings and Cube-generated IRQ / MSP files.',
     ' * Clock: '+(tree?`${config.clock.sysclkSource==='PLLCLK'?config.clock.pllSource+' PLL':config.clock.sysclkSource+' direct'}, SYSCLK ${mhzText(tree.sysclk)}, HCLK ${mhzText(tree.hclk)}, APB1 ${mhzText(tree.pclk1)} (timers ${mhzText(tree.tim1)}), APB2 ${mhzText(tree.pclk2)} (timers ${mhzText(tree.tim2)}).`:(clock.source==='HSI'?'HSI direct (PLL off)':'HSI PLL')+', APB1 timer clock = '+config.timerClockHz+' Hz.'),
-    ...(minimal?[' */']:[' * printf: SWV ITM port 0 (enable SWV in the debugger). UART uses its pins.',
+    ...(minimal?[' */']:[stdioUart(config)?' * printf / scanf: USART2 (ST-LINK virtual COM port) through _write / _read below.':' * printf: SWV ITM port 0 (enable SWV in the debugger). Enable USART2 in Pinout to print on the UART.',
     ' * With newlib-nano, enable -u _printf_float for floating-point printf. */']),''];
   const sync=id=>isSerial(id)&&config.peripherals[id]?.mode==='synchronous',dma=Object.entries(config.dma||{});
   const handles={...Object.fromEntries(Object.keys(family.serial).map(id=>[id,sync(id)?['USART','husart'+id.replace(/\D/g,'')]:['UART',serialHandle(id)]])),...Object.fromEntries(I2C_IDS.map(id=>[id,['I2C',busHandle(id)]])),...Object.fromEntries(SPI_IDS.map(id=>[id,['SPI',busHandle(id)]])),ADC1:['ADC','hadc1'],SDIO:['SD','hsd'],DCMI:['DCMI','hdcmi'],RTC:['RTC','hrtc'],DAC:['DAC','hdac'],IWDG:['IWDG','hiwdg'],WWDG:['WWDG','hwwdg'],...Object.fromEntries(Object.keys(family.timers).map(id=>[id,['TIM','htim'+id.slice(3)]]))};
@@ -196,7 +198,12 @@ export function generateMain(config,{minimal=false,legacyGpio=false}={}){
   if(!minimal&&rtc?.alarm&&config.nvic.RTC_Alarm_IRQn?.enabled)lines.push('','void HAL_RTC_AlarmAEventCallback(RTC_HandleTypeDef *hrtc) {','  UNUSED(hrtc);','  /* USER CODE BEGIN RTC_AlarmA */','  /* 알람 A 시각이 됨 (HAL_RTC_GetTime으로 시각 읽기) */','  /* USER CODE END RTC_AlarmA */','}');
   if(!minimal&&rtc?.wakeUp&&config.nvic.RTC_WKUP_IRQn?.enabled)lines.push('','void HAL_RTCEx_WakeUpTimerEventCallback(RTC_HandleTypeDef *hrtc) {','  UNUSED(hrtc);','  /* USER CODE BEGIN RTC_WakeUp */','  /* WakeUp 타이머 주기 인터럽트 */','  /* USER CODE END RTC_WakeUp */','}');
   if(!minimal&&timers.some(([,p])=>p.mode==='capture'))lines.push('','void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim) {','  UNUSED(htim);','  /* USER CODE BEGIN TIM_IC_Capture */','  /* Read HAL_TIM_ReadCapturedValue(htim, TIM_CHANNEL_1). */','  /* USER CODE END TIM_IC_Capture */','}');
-  if(!minimal)lines.push('','int __io_putchar(int ch) {','  ITM_SendChar(ch);','  return ch;','}');
+  // printf / scanf: with USART2 (the ST-LINK virtual COM port) enabled, newlib's _write / _read use it, as in the
+  // lecture code; without it printf goes to SWV ITM port 0.
+  if(!minimal&&stdioUart(config)){
+    lines.push('','int _write(int file, char *ptr, int len) {','  UNUSED(file);','  HAL_UART_Transmit(&huart2, (uint8_t *)ptr, len, HAL_MAX_DELAY);','  return len;','}');
+    if((config.peripherals.USART2.direction??'TX_RX')==='TX_RX')lines.push('','int _read(int file, char *ptr, int len) {','  UNUSED(file);','  UNUSED(len);','  /* One character at a time, echoed back so the terminal shows what is typed. */','  if (HAL_UART_Receive(&huart2, (uint8_t *)ptr, 1, HAL_MAX_DELAY) != HAL_OK) return 0;','  HAL_UART_Transmit(&huart2, (uint8_t *)ptr, 1, HAL_MAX_DELAY);','  return 1;','}');
+  }else if(!minimal)lines.push('','int __io_putchar(int ch) {','  ITM_SendChar(ch);','  return ch;','}');
   lines.push('','/* USER CODE BEGIN 4 */','/* USER CODE END 4 */','','void Error_Handler(void) {','  __disable_irq();','  while (1) { }','}');
   return lines.join('\n')+'\n';
 }

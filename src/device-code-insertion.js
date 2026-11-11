@@ -104,7 +104,7 @@ export function anchorFor(source,role){
  if(role==='HEADERS'||role.startsWith('HANDLE_'))return {at:top(),level:0};
  // A created MX_*_Init definition: after the last MX init definition, else before the support functions.
  let at=-1;for(const f of fns)if(/^MX_\w+_Init$/.test(f.name)||f.name==='SystemClock_Config'){const r=insideRegion(regions,f.start);at=Math.max(at,r?r.end:afterLine(source,f.end));}
- if(at<0){const tail=fns.find(f=>['__io_putchar','Error_Handler'].includes(f.name));at=tail?lineStart(source,tail.start):source.length;}
+ if(at<0){const tail=fns.find(f=>['_write','__io_putchar','Error_Handler'].includes(f.name));at=tail?lineStart(source,tail.start):source.length;}
  return {at,level:0};
 }
 export function functionEndAnchor(name){return source=>{const fn=cFunctions(source).find(f=>f.name===name);if(!fn)throw new Error(name+' 함수를 찾을 수 없습니다.');return {at:lineStart(source,fn.end-1),level:1};};}
@@ -113,7 +113,7 @@ export function ensureGpioInit(source){
  if(cFunctions(source).some(f=>f.name==='MX_GPIO_Init'))return source;
  const mask=maskC(source);
  if(!/\bvoid\s+MX_GPIO_Init\s*\(\s*void\s*\)\s*;/.test(mask)){const {at}=anchorFor(source,'MX_GPIO_Init_PROTO');source=insertAt(source,at,'static void MX_GPIO_Init(void);\n');}
- const fns=cFunctions(source),clock=fns.find(f=>f.name==='SystemClock_Config'),tail=fns.find(f=>['__io_putchar','Error_Handler'].includes(f.name));
+ const fns=cFunctions(source),clock=fns.find(f=>f.name==='SystemClock_Config'),tail=fns.find(f=>['_write','__io_putchar','Error_Handler'].includes(f.name));
  const u=indentUnit(source),def='\nstatic void MX_GPIO_Init(void) {\n'+u+'GPIO_InitTypeDef GPIO_InitStruct = {0};\n}\n';
  source=clock?insertAt(source,afterLine(source,clock.end-1),def):tail?insertAt(source,lineStart(source,tail.start),def.slice(1)+'\n'):source.replace(/\s*$/,'\n')+def;
  const {main}=mainLoop(source),body=maskC(source).slice(main.open,main.end);

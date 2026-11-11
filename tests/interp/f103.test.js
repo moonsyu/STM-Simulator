@@ -4,6 +4,7 @@ import {advance} from './helpers.js';
 import {generateHal,defaultMcu} from '../../src/mcu-config.js';
 import {projectForBoard,validateProject} from '../../src/project.js';
 import {SimulationSession} from '../../src/session.js';
+import {consoleSink} from '../unit/helpers/console.js';
 
 const pin=(fn,extra={})=>({function:fn,pull:'NOPULL',edge:'FALLING',initial:0,label:'',...extra});
 // NUCLEO-F103RB project: LD2, USART2 VCP, I2C1 remapped to PB8/PB9, ADC1 on PA0 at a 64 MHz SYSCLK.
@@ -14,7 +15,7 @@ function f103(edit=code=>code){
  p.code=edit(generateHal(c).replace('    HAL_Delay(500);','    HAL_ADC_Start(&hadc1);\n    HAL_ADC_PollForConversion(&hadc1, 10);\n    printf("PA5=%u adc=%lu tick=%lu\\n", HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_5), HAL_ADC_GetValue(&hadc1), HAL_GetTick());\n    HAL_Delay(500);'));
  return validateProject(p);
 }
-const start=p=>{const output=[],s=new SimulationSession(p,{print:x=>output.push(x)});s.tick(0);return {s,output};};
+const start=p=>{const output=[],s=new SimulationSession(p,consoleSink(output));s.tick(0);return {s,output};};
 
 test('generated STM32F103 HAL code (AFIO remap, F1 clock, ADC prescaler) runs in the circuit simulator',()=>{
  const p=f103();
@@ -23,7 +24,12 @@ test('generated STM32F103 HAL code (AFIO remap, F1 clock, ADC prescaler) runs in
  assert.match(p.code,/RCC_ADCPCLK2_DIV6[\s\S]*ADC_SAMPLETIME_239CYCLES_5[\s\S]*HAL_ADCEx_Calibration_Start/);
  assert.doesNotMatch(p.code,/Alternate|VERY_HIGH|PWR_REGULATOR|ClockPrescaler/);
  const {s,output}=start(p);advance(s,1600,5);
- assert.deepEqual(output.slice(0,4).map(l=>l.replace(/ adc=\d+/,'')),['PA5=1 tick=0','PA5=0 tick=501','PA5=1 tick=1001','PA5=0 tick=1501']);
+ // USART2 is enabled, so printf goes out through the generated _write (feature 44): after the greeting, one line per
+ // 500 ms plus the time the line takes on the wire.
+ assert.equal(output[0],'HAL ready');
+ const lines=output.slice(1,4).map(l=>/^PA5=([01]) adc=\d+ tick=(\d+)$/.exec(l)),ticks=lines.map(m=>Number(m[2]));
+ assert.deepEqual(lines.map(m=>m[1]),['1','0','1']);assert.equal(ticks[0],0);
+ for(let i=1;i<ticks.length;i++)assert.ok(ticks[i]-ticks[i-1]>=500&&ticks[i]-ticks[i-1]<=506,ticks.join(','));
  assert.match(s.buses.vcpOutput,/^HAL ready\r\n/);
 });
 
@@ -47,7 +53,7 @@ test('all STM32F103 timers are 16-bit in the interpreter (TIM2 included)',()=>{
   p.code=generateHal(c).replace('    HAL_Delay(500);',`    __HAL_TIM_SET_AUTORELOAD(&htim2, ${value});
     printf("arr=%lu\\n", __HAL_TIM_GET_AUTORELOAD(&htim2));
     HAL_Delay(500);`);
-  const output=[],s=new SimulationSession(validateProject(p),{print:x=>output.push(x)});
+  const output=[],s=new SimulationSession(validateProject(p),consoleSink(output));
   try{s.tick(0);advance(s,100,10);}catch(e){return e.message;}return s.result?.fault||output.join('|');
  };
  assert.match(run(65535),/arr=65535/);

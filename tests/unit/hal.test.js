@@ -6,11 +6,12 @@ import {blankProject,validateProject} from '../../src/project.js';
 import {setSerialEnabled} from '../../src/serial-config.js';
 import {generateHal} from '../../src/mcu-config.js';
 import {close} from './helpers/circuit.js';
+import {consoleSink} from './helpers/console.js';
 
 /** Applies a HAL example to a blank project and starts a session that records printf and bus traces. */
 function start(kind){
   const project=applyHalExample(blankProject(),kind),out=[],trace=[],uart=[];
-  const session=new SimulationSession(project,{print:v=>out.push(String(v)),trace:e=>trace.push(e.message),uart:e=>uart.push(e)});
+  const session=new SimulationSession(project,{...consoleSink(out,e=>uart.push(e)),trace:e=>trace.push(e.message)});
   session.tick(0);return {project,session,out,trace,uart};
 }
 const run=(session,end,step=10)=>{for(let t=Math.ceil(session.runtime.time/step)*step;t<=end;t+=step)session.tick(t);return session;};
@@ -140,16 +141,16 @@ describe('I2C, SPI and displays',()=>{
     assert.equal(session.result.parts.demo.memory[0x10],42);
   });
   test('I2C to a wrong address NACKs (HAL_ERROR)',()=>{
-    const p=applyHalExample(blankProject(),'i2c');p.components.find(c=>c.type==='ref_i2c_eeprom_8').address=81;const out=[];const s=new SimulationSession(p,{print:v=>out.push(v)});run(s,50);
+    const p=applyHalExample(blankProject(),'i2c');p.components.find(c=>c.type==='ref_i2c_eeprom_8').address=81;const out=[];const s=new SimulationSession(p,consoleSink(out));run(s,50);
     assert.match(out[0],/write=1 read=1/);
   });
   test('I2C memory without power does not respond',()=>{
-    const p=applyHalExample(blankProject(),'i2c');delete p.components.find(c=>c.type==='ref_i2c_eeprom_8').attachments.p8;const out=[];const s=new SimulationSession(p,{print:v=>out.push(v)});run(s,50);
+    const p=applyHalExample(blankProject(),'i2c');delete p.components.find(c=>c.type==='ref_i2c_eeprom_8').attachments.p8;const out=[];const s=new SimulationSession(p,consoleSink(out));run(s,50);
     assert.doesNotMatch(out[0],/write=0 read=0/);
   });
   test('SPI memory round-trip under chip select',()=>{
     const {session,out,trace}=start('spi');run(session,50);assert.deepEqual(out,['42']);assert.deepEqual(trace.slice(0,2),['TX 06 · RX 00','TX 02 · RX 00'],'write enable, then write');
-    const p=applyHalExample(blankProject(),'spi');delete p.components.find(c=>c.type==='ref_spi_eeprom_8').attachments.p1;const o2=[];run(new SimulationSession(p,{print:v=>o2.push(v)}),50);
+    const p=applyHalExample(blankProject(),'spi');delete p.components.find(c=>c.type==='ref_spi_eeprom_8').attachments.p1;const o2=[];run(new SimulationSession(p,consoleSink(o2)),50);
     assert.deepEqual(o2,['255'],'unconnected CS: MISO floats high');
   });
   test('LCD 1602 in 4-bit mode shows text',()=>{

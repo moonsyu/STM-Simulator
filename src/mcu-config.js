@@ -341,4 +341,15 @@ if(/HIGH/.test(values[id+'.CLKPolarity']||''))s.cpol='HIGH';if(/2EDGE/.test(valu
     if(order.size&&clean.pins){const entries=Object.entries(clean.pins).map((e,i)=>[order.get(e[0])??1e6+i,e]);entries.sort((a,b)=>a[0]-b[0]);clean.pins=Object.fromEntries(entries.map(e=>e[1]));}}
   return {config:clean,warnings:[...new Set([...warnings,...configProblems(clean)])]};
 }
+/** An example's console: USART2 on PA2 / PA3 (the ST-LINK virtual COM port, 115200 8N1) unless the example already
+ * uses USART2 or one of the two pins. The generated code then sends printf there (hal-generator.js stdioUart). */
+export function consoleUart(mcu){
+  if(mcu.peripherals.USART2||mcu.pins.PA2||mcu.pins.PA3)return mcu;
+  const pin=fn=>({function:fn,pull:'NOPULL',edge:'FALLING',label:'',initial:0});
+  mcu.pins.PA2=pin('USART2_TX');mcu.pins.PA3=pin('USART2_RX');
+  // In the order an .ioc import gives (the serial ports first, in the family's order), so export and import agree.
+  const serials=Object.keys(familyProfile(mcu.family).serial),rank=id=>serials.includes(id)?serials.indexOf(id):serials.length;
+  const others=Object.entries(mcu.peripherals),at=others.findIndex(([id])=>rank(id)>rank('USART2'));others.splice(at<0?others.length:at,0,['USART2',{enabled:true,baud:115200}]);mcu.peripherals=Object.fromEntries(others);
+  return mcu;
+}
 export function generateHal(config,options){const clean=validateMcu(config),errors=configProblems(clean);if(errors.length)throw new Error(errors.join('\n'));const text=generateMain(clean,options);return clean.coupleFiles&&!options?.minimal?splitMain(text).main:text;}

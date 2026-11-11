@@ -112,7 +112,8 @@ test('expandC puts each statement on its own line and keeps initializers, for he
 test('every applied HAL example has one statement per line and the same tokens as its compact source',()=>{
  const strip=t=>t.replace(/\s+/g,'');
  for(const id of Object.keys(allHalExamples())){
-  const p=applyHalExample(blankProject(),id),compact=halExampleCode(id);
+  // Without the UART console the app adds when an example is opened (feature 44): only the example's own text.
+  const p=applyHalExample(blankProject(),id,{console:false}),compact=halExampleCode(id);
   // Applying an example also moves its helper functions and globals into USER CODE sections, so the order differs:
   // the same characters must all be there.
   const chars=t=>[...strip(t).replace(/[{}]/g,'')].sort().join('');

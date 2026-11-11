@@ -122,7 +122,7 @@ function dropShadowedCallbacks(source){
  let fns;try{fns=cFunctions(source);}catch{return source;}
  const spans=[...source.matchAll(USER_SECTION)].map(m=>[m.index,m.index+m[0].length]),inUser=at=>spans.some(([a,b])=>at>=a&&at<b);
  const user=new Set(fns.filter(f=>inUser(f.start)).map(f=>f.name));
- for(const f of fns.filter(f=>!inUser(f.start)&&user.has(f.name)&&/^HAL_\w+Callback$|^__io_putchar$|^_write$/.test(f.name)).sort((a,b)=>b.start-a.start))source=source.slice(0,f.start).replace(/\n\n$/,'\n')+source.slice(f.end).replace(/^\n/,'');
+ for(const f of fns.filter(f=>!inUser(f.start)&&user.has(f.name)&&/^HAL_\w+Callback$|^__io_putchar$|^__io_getchar$|^_write$|^_read$/.test(f.name)).sort((a,b)=>b.start-a.start))source=source.slice(0,f.start).replace(/\n\n$/,'\n')+source.slice(f.end).replace(/^\n/,'');
  return source;
 }
 /** Regenerated main.c: user sections kept, user code outside them moved into sections, shadowed handlers dropped. */

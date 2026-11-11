@@ -27,7 +27,7 @@ export function mainOnlyRecipe(sample){
  return {...sample,code};
 }
 export function exampleStatements(sample,api='all',prefix='example_'){
- const functions=cFunctions(sample.code),helpers=functions.filter(f=>!['main','SystemClock_Config','Error_Handler','__io_putchar'].includes(f.name)&&!f.name.startsWith('MX_'));
+ const functions=cFunctions(sample.code),helpers=functions.filter(f=>!['main','SystemClock_Config','Error_Handler','__io_putchar','_write','_read'].includes(f.name)&&!f.name.startsWith('MX_'));
  const section=n=>sample.code.match(new RegExp('/\\* USER CODE BEGIN '+n+' \\*/([\\s\\S]*?)/\\* USER CODE END '+n+' \\*/'))?.[1]||'';
  const step=selectOperation(section(3),api,helpers),init=api!=='all'&&!step.trim()?selectOperation(section(2),api,helpers):section(2);
  // A GPIO reset in MX_GPIO_Init is setup, not the requested main operation.

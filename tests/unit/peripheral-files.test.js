@@ -72,9 +72,11 @@ test('the lecture main.c (DS3231 seconds over I2C1, printf to USART2) runs on th
  // Without the pairs the include is refused, as before this feature.
  assert.throws(()=>compileHal(p.code,p.firmware.files,p.mcu.family),/헤더: i2c\.h/);
  assert.doesNotThrow(()=>compileHal(p.code,halFiles(p),p.mcu.family));
- const out=[],session=new SimulationSession(validateProject(p),{print:s=>out.push(String(s)),uart:(id,text)=>out.push(String(text))});
+ const out=[],session=new SimulationSession(validateProject(p),{print:s=>out.push(String(s))});
  for(let t=50;t<=2600;t+=50)session.tick(t);
- const text=[out.join(''),JSON.stringify(session.uartLog??''),session.monitorText?.()??''].join('\n'),seconds=[...text.matchAll(/(\d+) sec/g)].map(m=>Number(m[1]));
+ // printf goes through the pasted _write: HAL_UART_Transmit on USART2, the ST-LINK virtual COM port (feature 44).
+ assert.deepEqual(out,[],'nothing goes to the console directly');
+ const text=session.buses.vcpOutput||'',seconds=[...text.matchAll(/(\d+) sec/g)].map(m=>Number(m[1]));
  assert.ok(seconds.length>=3,'printed: '+text.slice(0,400));
  assert.ok(seconds.every(s=>s>=0&&s<60));
  // The DS3231 counts on: 2 s later the reading is 2 s further (modulo a minute).

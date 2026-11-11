@@ -6,11 +6,12 @@ import {TIMER_EXAMPLES,TIMER_GUIDES,timerExample} from './timer-examples.js';
 import {BUZZER_EXAMPLES,BUZZER_GUIDES,passiveBuzzerExample} from './passive-buzzer-example.js';
 import {DEVICE_EXAMPLES,DEVICE_GUIDES,deviceExample} from './device-examples.js';
 import {exampleProject} from './project.js';
-import {defaultMcu,validateMcu,generateHal} from './mcu-config.js';
+import {defaultMcu,validateMcu,generateHal,consoleUart} from './mcu-config.js';
+import {compileHal} from './hal-source.js';
 import {configureHalCircuit} from './hal-circuits.js';
 import {EXAMPLE_TIMER_CLOCK_HZ} from './mcu-defaults.js';
 import {expandC} from './c-format.js';
-import {adoptOutsideCode} from './c-source-edit.js';
+import {adoptOutsideCode,cFunctions} from './c-source-edit.js';
 import {getBoard,projectBoard} from './boards.js';
 import {F1_FAMILY,portExampleToF1,portMcu} from './example-port.js';
 import {ADVANCED_EXAMPLES,ADVANCED_GUIDES,advancedExample} from './advanced-examples.js';
@@ -98,10 +99,42 @@ export function halGuideFor(kind,boardId){
   if(getBoard(boardId)?.mcuFamily!==F1_FAMILY)return guide;
   const {moved}=portMcu(halExample(kind).mcu);return guide.replace(/\bP[A-H]\d+\b/g,pin=>moved[pin]??pin);
 }
+/** An example opened as a project prints on the UART (feature 44): USART2 on PA2 / PA3 (the ST-LINK virtual COM port)
+ * is turned on when the example leaves it and both pins free, and the code for it is added to main.c — the handle,
+ * MX_USART2_UART_Init with its two pins, the call before USER CODE 2, and _write / _read in place of the ITM
+ * __io_putchar. The pieces come from the generator, but the example's code is not regenerated: several examples set
+ * up a peripheral by hand beyond what the Pinout stores. An example that uses USART2 or one of the pins for something
+ * else keeps its code (printf on SWV ITM port 0), and so do the recipes device Docs merge into a project (recipeFor):
+ * their pins are the device's. */
+export function consoleExample(p){
+  if(p.firmware?.mode!=='hal'||!p.mcu||p.mcu.peripherals.USART2||p.mcu.pins.PA2||p.mcu.pins.PA3)return p;
+  try{
+    const mcu=validateMcu(consoleUart(structuredClone(p.mcu)));
+    // What the generator writes for USART2 alone: its pins (in MX_GPIO_Init), its init and the stdio functions.
+    const only=expandC(generateHal({...defaultMcu(mcu.family),timerClockHz:mcu.timerClockHz,pins:{PA2:mcu.pins.PA2,PA3:mcu.pins.PA3},peripherals:{USART2:mcu.peripherals.USART2},nvic:{}})),parts=cFunctions(only),part=name=>parts.find(f=>f.name===name);
+    const gpio=part('MX_GPIO_Init').body.replace(/^\n+|\s+$/g,''),init=part('MX_USART2_UART_Init'),write=part('_write'),read=part('_read');
+    const setup=init.text.replace(/\{\n/,()=>'{\n'+gpio+'\n').replace(/^static /,'');
+    let code=p.code;const own=cFunctions(code),has=name=>own.some(f=>f.name===name);
+    if(has('_write')||has('_read')||has('MX_USART2_UART_Init')||/\bhuart2\b/.test(code))return p;
+    const before=(marker,text)=>{const at=code.indexOf(marker);if(at<0)throw new Error(marker);const line=code.lastIndexOf('\n',at-1)+1;code=code.slice(0,line)+text+code.slice(line);};
+    // The ITM __io_putchar the generator (or an advanced example) wrote gives way to _write.
+    const itm=own.find(f=>f.name==='__io_putchar'&&/ITM_SendChar/.test(f.body));
+    if(itm)code=code.slice(0,itm.start).replace(/\n\n$/,'\n')+code.slice(itm.end).replace(/^\n/,'');
+    else if(has('__io_putchar'))return p;
+    before('/* USER CODE BEGIN 4 */',setup+'\n\n'+write.text+'\n\n'+read.text+'\n\n');
+    before('/* USER CODE BEGIN 2 */','    MX_USART2_UART_Init();\n');
+    before('/* USER CODE BEGIN 0 */','void MX_USART2_UART_Init(void);\n\n');
+    before('/* USER CODE BEGIN PV */','UART_HandleTypeDef huart2;\n');
+    code=code.replace(' * printf: SWV ITM port 0 (enable SWV in the debugger). Enable USART2 in Pinout to print on the UART.',' * printf / scanf: USART2 (ST-LINK virtual COM port) through _write / _read below.');
+    compileHal(code,p.firmware?.files||[],mcu.family);
+    p.code=code;p.mcu=mcu;
+  }catch{/* an example this cannot be added to keeps its code */}
+  return p;
+}
 // Laying out a complete example is deterministic, so each one is planned once per session and board.
 const arranged=new Map();
-export function applyHalExample(project,kind){
-  const boardId=projectBoard(project).id,key=boardId+':'+kind;
-  if(!arranged.has(key))arranged.set(key,arrangeExampleOnBreadboards(tidyExampleSource(halExampleFor(kind,boardId))));
+export function applyHalExample(project,kind,{console=true}={}){
+  const boardId=projectBoard(project).id,key=boardId+':'+kind+(console?'':':plain');
+  if(!arranged.has(key)){const p=tidyExampleSource(halExampleFor(kind,boardId));arranged.set(key,arrangeExampleOnBreadboards(console?consoleExample(p):p));}
   return {...structuredClone(arranged.get(key)),name:project.name};
 }

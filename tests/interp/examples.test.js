@@ -6,8 +6,9 @@ import {HAL_EXAMPLES,allHalExamples,allHalGuides,applyHalExample,halExample} fro
 import {searchHalExamples} from '../../src/hal-example-search.js';
 import {blankProject,validateProject} from '../../src/project.js';
 import {SimulationSession} from '../../src/session.js';
+import {consoleSink} from '../unit/helpers/console.js';
 
-const start=kind=>{const p=validateProject(applyHalExample(blankProject(),kind)),output=[],warnings=[];const s=new SimulationSession(p,{print:x=>output.push(x),warn:x=>warnings.push(x)});s.tick(0);return {p,s,output,warnings};};
+const start=kind=>{const p=validateProject(applyHalExample(blankProject(),kind)),output=[],warnings=[];const s=new SimulationSession(p,{...consoleSink(output),warn:x=>warnings.push(x)});s.tick(0);return {p,s,output,warnings};};
 test('new interpreter examples are registered, guided in Korean and found by the example search',()=>{
  assert.equal(Object.keys(ADVANCED_EXAMPLES).length,7);for(const k of Object.keys(ADVANCED_EXAMPLES)){assert.ok(allHalExamples()[k]&&allHalGuides()[k]===ADVANCED_GUIDES[k]);assert.ok(!HAL_EXAMPLES[k]);assert.match(ADVANCED_EXAMPLES[k],/^HAL · /);assert.match(ADVANCED_GUIDES[k],/[가-힣]/);}
  for(const [query,id]of [['DMA 에코','dma_uart_echo'],['ADC DMA','adc_dma_scan'],['NVIC 선점','nvic_preemption'],['USART 동기','usart_sync_matrix'],['DCMI','camera_tft'],['FatFs','sd_logger'],['노이즈','noise_errors'],['HAL_UARTEx_ReceiveToIdle_DMA','dma_uart_echo'],['f_printf','sd_logger']])assert.ok(searchHalExamples(query).some(x=>x.id===id),query);

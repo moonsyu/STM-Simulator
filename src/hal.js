@@ -19,7 +19,7 @@ import {clockFrequencies} from './clock-tree.js';
 
 /** HCLK of a validated MCU configuration: what SystemCoreClock and HAL_RCC_GetHCLKFreq give. */
 export function coreClockHz(config){return config.clock?Math.round(clockFrequencies(config.family,config.clock).hclk):config.timerClockHz;}
-export const HAL_CONSTANTS={...CATALOG_HAL_CONSTANTS,PWR_MAINREGULATOR_ON:0,PWR_LOWPOWERREGULATOR_ON:1,PWR_SLEEPENTRY_WFI:1,PWR_SLEEPENTRY_WFE:2,HAL_OK:0,HAL_ERROR:1,HAL_BUSY:2,HAL_TIMEOUT:3,HAL_MAX_DELAY:4294967295,
+export const HAL_CONSTANTS={...CATALOG_HAL_CONSTANTS,stdin:0,stdout:1,stderr:2,_IOFBF:0,_IOLBF:1,_IONBF:2,EOF:-1,PWR_MAINREGULATOR_ON:0,PWR_LOWPOWERREGULATOR_ON:1,PWR_SLEEPENTRY_WFI:1,PWR_SLEEPENTRY_WFE:2,HAL_OK:0,HAL_ERROR:1,HAL_BUSY:2,HAL_TIMEOUT:3,HAL_MAX_DELAY:4294967295,
   GPIO_PIN_RESET:0,GPIO_PIN_SET:1,GPIO_MODE_INPUT:0,GPIO_MODE_OUTPUT_PP:1,GPIO_MODE_OUTPUT_OD:17,GPIO_MODE_AF_PP:2,GPIO_MODE_AF_OD:18,GPIO_MODE_ANALOG:3,
   GPIO_MODE_IT_RISING:0x10110000,GPIO_MODE_IT_FALLING:0x10210000,GPIO_MODE_IT_RISING_FALLING:0x10310000,GPIO_NOPULL:0,GPIO_PULLUP:1,GPIO_PULLDOWN:2,
   GPIO_SPEED_FREQ_LOW:0,GPIO_SPEED_FREQ_MEDIUM:1,GPIO_SPEED_FREQ_HIGH:2,GPIO_SPEED_FREQ_VERY_HIGH:3,
@@ -160,6 +160,11 @@ export class HalAdapter {
   *pollCounter(name,args,r){yield .002;r.steps=0;return this.call(name,args,r);}
   invoke(name,args,r){
     this.runtime=r;
+    // <stdio.h> through the project's own newlib hooks, as on the board (feature 44).
+    if((name==='printf'||name==='puts'||name==='putchar')&&!this.inStdio&&this.stdoutHook(r))return this.stdout(name,args,r);
+    if(name==='fflush')return this.stdout(name,args,r);
+    if(name==='setvbuf'){this.unbuffered=args[2]===2;return (function*(){return 0;})();}
+    if(name==='scanf'||name==='getchar')return this.stdin(name,args,r);
     if(name==='HAL_I2S_Transmit')return this.catalog.transmit(args,r);
     if(name==='HAL_GPIO_EXTI_IRQHandler')return this.extiHandler(r,args[0]);
     if(name==='HAL_UART_IRQHandler'){const {id}=this.requireHandle(args[0],r,'UART');return this.drain(r,id+'_IRQn');}
@@ -211,8 +216,56 @@ export class HalAdapter {
     const out=job.tx?job.tx[job.index]:0xff;if(job.rx!=null)r.set(r.pointerCell(job.rx,job.index),value);
     if(++job.index===job.count)this.finishSlave(job,r);return out;
   }
+  // printf / puts / putchar go to the project's _write (or __io_putchar) when it has one: newlib calls it with the
+  // text, and the lecture's _write sends it with HAL_UART_Transmit. The generated __io_putchar that only calls
+  // ITM_SendChar keeps the direct path to the console (the same text, without a call per character).
+  stdoutHook(r){
+    const f=r.program.functions;if(f._write)return true;if(!f.__io_putchar)return false;
+    this.itmPutchar??=JSON.stringify(f.__io_putchar).includes('ITM_SendChar');return !this.itmPutchar;
+  }
+  // stdout is line buffered, as newlib's is: the text goes out at a line end, when 1024 characters have gathered, on
+  // fflush(stdout), with setvbuf(stdout, NULL, _IONBF, 0) at once, and before input is read.
+  *stdout(name,args,r){
+    const a=args[0];let text='',result=0;
+    if(name==='printf'){text=formatPrintf(args,r);result=text.length;}
+    else if(name==='puts'){if(args.length!==1)throw new Error('puts는 문자열 하나가 필요합니다.');text=r.format([a])+'\n';result=text.length;}
+    else if(name==='putchar'){if(typeof a!=='number')throw new Error('putchar: 문자 값이 필요합니다.');text=String.fromCharCode(a&255);result=a&255;}
+    this.stdoutText=(this.stdoutText||'')+text;
+    const all=this.stdoutText.length,cut=name==='fflush'||this.unbuffered||all>=1024?all:this.stdoutText.lastIndexOf('\n')+1;
+    yield* this.flushStdout(r,cut);
+    return result;
+  }
+  *flushStdout(r,cut=(this.stdoutText||'').length){
+    const text=(this.stdoutText||'').slice(0,cut);this.stdoutText=(this.stdoutText||'').slice(cut);
+    if(!text||!this.stdoutHook(r))return;
+    const bytes=[...new TextEncoder().encode(text)];this.inStdio=true;
+    try{
+      if(r.program.functions._write)for(let i=0;i<bytes.length;i+=128){const part=bytes.slice(i,i+128);yield* r.invoke('_write',[1,r.pointer(r.array(part)),part.length]);}
+      else for(const byte of bytes)yield* r.invoke('__io_putchar',[byte]);
+    }finally{this.inStdio=false;}
+  }
+  // One character of input from the project's _read (newlib asks for a buffer; the lecture's _read fills one
+  // character with HAL_UART_Receive and echoes it) or __io_getchar. -1 when it gives nothing.
+  *stdinChar(r){
+    const f=r.program.functions;
+    if(f._read){const buffer=r.pointer(r.array([0])),n=yield* r.invoke('_read',[0,buffer,1]);return typeof n==='number'&&n>0?r.get(r.pointerCell(buffer,0))&255:-1;}
+    const c=yield* r.invoke('__io_getchar',[]);return typeof c==='number'&&c>=0?c&255:-1;
+  }
+  // scanf reads one line (up to Enter) and takes the values from it as sscanf does; getchar gives the next character.
+  *stdin(name,args,r){
+    const f=r.program.functions;
+    if(!f._read&&!f.__io_getchar)throw new Error(`${name}: 입력을 받는 _read(또는 __io_getchar)가 프로젝트에 없습니다. USER CODE 0에 _read를 넣어 HAL_UART_Receive로 한 글자를 받게 하세요.`);
+    if(r.atomic)throw new Error(`${name}: 인터럽트 콜백에서는 입력을 기다릴 수 없습니다.`);
+    yield* this.flushStdout(r);
+    if(name==='getchar'){if(this.stdinText){const c=this.stdinText.charCodeAt(0);this.stdinText=this.stdinText.slice(1);return c;}return yield* this.stdinChar(r);}
+    let line=this.stdinText||'';this.stdinText='';
+    while(!/[\r\n]/.test(line.replace(/^[\r\n ]+/,''))&&line.length<256){const c=yield* this.stdinChar(r);if(c<0)break;line+=String.fromCharCode(c);}
+    line=line.replace(/^[\r\n ]+/,'');if(!line)return -1;
+    return stringCall('sscanf',[line,...args],r);
+  }
   *blocking(name,args,r){
-    if(r.atomic)throw new Error(`${name}: 인터럽트 콜백에서 대기할 수 없습니다.`);
+    // In an interrupt callback only a transmit is possible (HAL polls the data register; no time passes here).
+    if(r.atomic&&name!=='HAL_UART_Transmit')throw new Error(`${name}: 인터럽트 콜백에서 대기할 수 없습니다.`);
     if(name==='HAL_Delay'){if(args.length!==1)throw new Error('HAL_Delay(ms) 형식을 확인하세요.');int(args[0],0,3600000,'HAL_Delay');yield* this.delay(r,args[0]);return 0;}
     if(/I2C_Slave|HAL_SPI_/.test(name)){
       const both=name==='HAL_SPI_TransmitReceive',timeout=int(args[both?4:3],0,4294967295,'대기 시간'),job=this.armSlave(name,args,r,false),start=r.microTime/1000;
@@ -223,8 +276,8 @@ export class HalAdapter {
     const [ptr,buffer,count,timeout]=args,{id}=this.requireHandle(ptr,r,'UART'),channel=this.uart(id);int(count,1,256,'UART 길이');int(timeout,0,4294967295,'UART timeout');const start=r.microTime/1000;
     if(name==='HAL_UART_Transmit'){
       if(channel.tx)return 2;const bytes=this.bytes(buffer,count,r),duration=count*10000/channel.bus.uart.baud;
-      if(duration>timeout){if(timeout)yield timeout;return 3;}
-      this.uartWrite(channel,bytes,r);yield duration;return 0;
+      if(duration>timeout){if(timeout&&!r.atomic)yield timeout;return 3;}
+      this.uartWrite(channel,bytes,r);if(!r.atomic)yield duration;return 0;
     }
     if(channel.rx)return 2;r.pointerCell(buffer,count-1);let index=0;
     while(index<count){while(index<count&&channel.bus.call('Serial1.available',[],r)>0)r.set(r.pointerCell(buffer,index++),this.uartRead(channel,r));if(index===count)return 0;const remaining=timeout-(r.microTime/1000-start);if(remaining<=1e-9)return 3;yield Math.min(1,remaining);}
@@ -412,6 +465,8 @@ export class HalAdapter {
     if(name==='srand'){this.randState=a>>>0;return 0;}
     if(name==='rand'){this.randState=(Math.imul(this.randState??1,1103515245)+12345)>>>0;return (this.randState>>>16)&0x7fff;}
     const text=stringCall(name,args,r);if(text!==undefined)return text;
+    // ITM_SendChar (SWV ITM port 0): characters gather until a line end, then go to the console.
+    if(name==='ITM_SendChar'){const ch=String.fromCharCode(a&255);if(ch==='\n'){r.api.print((this.itmLine||'').replace(/\r$/,''));this.itmLine='';}else{this.itmLine=(this.itmLine||'')+ch;if(this.itmLine.length>=1024){r.api.print(this.itmLine);this.itmLine='';}}return a;}
     if(name==='printf'){const text=formatPrintf(args,r);if(text)r.api.print(text.replace(/\r?\n$/,''));return text.length;}
     // putchar: characters gather until a line end, then go out as one log line.
     if(name==='putchar'){if(typeof a!=='number')throw new Error('putchar: 문자 값이 필요합니다.');const ch=String.fromCharCode(a&255);if(ch==='\n'){r.api.print((this.putLine||'').replace(/\r$/,''));this.putLine='';}else{this.putLine=(this.putLine||'')+ch;if(this.putLine.length>=1024){r.api.print(this.putLine);this.putLine='';}}return a&255;}

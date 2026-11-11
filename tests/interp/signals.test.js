@@ -31,7 +31,8 @@ test('wire noise makes HAL_UART_ErrorCallback report FE/PE/NE and echoes corrupt
  const p=halExample('uart');p.simulation={stepMs:1,pwmWaveform:false,noise:{enabled:true,bitErrorRate:.08,glitchRate:.05,jitterNs:200}};
  p.code+='\nvoid HAL_UART_ErrorCallback(UART_HandleTypeDef *huart){ printf("uart error 0x%lx\\n", huart->ErrorCode); }\n';
  const {s,output}=run(validateProject(p));advance(s,30);s.inject('The quick brown fox jumps over the lazy dog','USART2');advance(s,120);
- assert.ok(output.some(x=>/^uart error 0x[1-7]$/.test(x)),output.join('|'));assert.ok(s.signals.decode('USART2.RX').some(f=>f.error));
+ // printf shares USART2 with the echo (feature 44): the line may follow an echoed, corrupted byte.
+ assert.ok(output.some(x=>/uart error 0x[1-7]$/.test(x)),output.join('|'));assert.ok(s.signals.decode('USART2.RX').some(f=>f.error));
  const clean=run(halExample('uart'));advance(clean.s,30);clean.s.inject('abc','USART2');advance(clean.s,60);assert.ok(clean.s.signals.decode('USART2.RX').every(f=>!f.error));
 });
 test('wire noise turns I2C transfers into NACK/bus errors and corrupts SPI bytes; setNoise applies live and persists',()=>{
