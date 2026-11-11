@@ -1,4 +1,4 @@
-// Runs one of the CI's toolchain test groups: node scripts/toolchain-shard.mjs <1-6>.
+// Runs one of the CI's toolchain test groups: node scripts/toolchain-shard.mjs <1-7>.
 // node --test-shard deals files out by position, which left one job twice as long as another, so the groups are listed
 // here by measured time. The seconds in the comments are from one run (1.46.3, CI 42807689195) on runners with the same
 // CPU (AMD EPYC 7763, 4 cores; the one job on a faster CPU scaled by its benchmark) — times taken from jobs on different
@@ -13,18 +13,21 @@ import {pathToFileURL} from 'node:url';
 import os from 'node:os';
 
 export const TOOLCHAIN_SHARDS=Object.freeze([
- // ra-course grew with the course-screen and all-examples tests of 1.46.6: about 115
- ['ra-course'],
- // 70 + 38 = 108
- [['arm-examples','NUCLEO-F446RE'],'button-bounce'],
- // 58 + 32 + 16 = 106
- [['arm-examples','NUCLEO-F103RB'],'wdg','adc-group'],
- // 62 + 28 + 16 = 106
- ['ra-build','bus-instances','adc-sampling'],
- // 26 + 26 + 23 + 22 + 15 = 112
- ['adc-continuous','emu-accuracy','dwarf-version','board-links','clock-tree'],
- // 17 + 17 + 14 + 13 + 11 + 9 + 9 + 9 + 9 + 6 = 114
- ['copied-files','tim-oc','tim-advanced','dac','rtc','source-folders','spi-params','tim-channels','uart-params','tim-basic'],
+ // ra-course's test that builds and runs every FSP example took 78 s on a faster runner (1.46.6): about 94, on its own
+ [['ra-course','contact bounce on']],
+ // 70 + 28 = 98
+ [['arm-examples','NUCLEO-F446RE'],'bus-instances'],
+ // 58 + 38 = 96
+ [['arm-examples','NUCLEO-F103RB'],'button-bounce'],
+ // 62 + 32 + 6 = 100
+ ['ra-build','wdg','tim-basic'],
+ // the rest of ra-course 61 + 26 + 15 = 102
+ // (the tests are named: a "not this one" pattern with a lookahead did not keep the heavy test out)
+ [['ra-course','Bare Metal - Blinky|switch polling toggles|the challenge:|BSP tab sizes|as the course screen shows it'],'adc-continuous','clock-tree'],
+ // 26 + 23 + 22 + 17 + 16 = 104
+ ['emu-accuracy','dwarf-version','board-links','copied-files','adc-group'],
+ // 17 + 16 + 14 + 13 + 11 + 9 + 9 + 9 + 9 = 107
+ ['tim-oc','adc-sampling','tim-advanced','dac','rtc','source-folders','spi-params','tim-channels','uart-params'],
 ]);
 /** The file names of a group (an entry with a pattern counts once). */
 export const shardFiles=group=>group.map(e=>Array.isArray(e)?e[0]:e);
