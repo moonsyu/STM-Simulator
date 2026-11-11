@@ -105,3 +105,16 @@ test('the Renesas board turns too',()=>{
  assert.doesNotThrow(()=>validateProject(p));
  setActiveBoard('nucleo-f446re');
 });
+
+test('error cases: a hidden board does not turn; a part between the board and a breadboard stays; odd angles snap to quarter turns',()=>{
+ const p=fresh();p.surfaces={board:{hidden:true}};
+ assert.throws(()=>rotateBoard(p,90),/주 보드가 회로에 없습니다/);
+ assert.throws(()=>rotateDevboard(fresh(),'nope',90),/회전할 보드/);
+ const q=fresh();
+ q.components.push({id:'r1',type:'resistor',name:'R1',value:330,x:500,y:200,rotation:0,span:70,attachA:PINS[0].id,attachB:'bb:a:1'});
+ rotateBoard(q,90);
+ assert.deepEqual([q.components[0].x,q.components[0].y,q.components[0].rotation],[500,200,0],'not mounted on the board alone');
+ // A turn that is not a multiple of 90° (a caller's mistake) still leaves a valid quarter turn; negative turns wrap.
+ const r=fresh();rotateBoard(r,100);assert.equal(r.surfaces.board.rotation,90);rotateBoard(r,-180);assert.equal(r.surfaces.board.rotation,270);
+ assert.doesNotThrow(()=>validateProject(r));
+});
