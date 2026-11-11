@@ -199,7 +199,7 @@ test('BT-01: two boards pair their Bluetooth modules and exchange commands; the 
   assert.equal(await win.evaluate(()=>document.querySelectorAll('[data-part-image="hc05-bluetooth-6"],[data-part-image="hc06-bluetooth-4"]').length),2);
   await win.keyboard.press('Control+F5');
   await win.waitForFunction(()=>/answer: ACK ON/.test(document.getElementById('console-output').textContent),null,{timeout:30000});
-  assert.match(await logText(win),/HC-05 paired/);assert.match(await logText(win),/\[STM32-2\] got: LED ON/);
+  assert.match(await logText(win),/HC-05 paired/);assert.match(await logText(win),/\[STM32-2\] \[USART2 TX\] got: LED ON/);
   await win.locator('[data-part="hc05"]').click({force:true});
   await win.waitForFunction(()=>/연결됨 · HC-06/.test(document.getElementById('inspector').textContent));
   await win.keyboard.press('Control+F2');
@@ -213,7 +213,7 @@ test('WF-01: a station joins the other ESP-01 access point and sends commands ov
   const {win}=s;await applyLecture(win,'WF-01');
   await win.keyboard.press('Control+F5');
   await win.waitForFunction(()=>/answer: ACK/.test(document.getElementById('console-output').textContent),null,{timeout:40000});
-  assert.match(await logText(win),/WIFI GOT IP/);assert.match(await logText(win),/\[STM32-2\] got: LED ON/);
+  assert.match(await logText(win),/WIFI GOT IP/);assert.match(await logText(win),/\[STM32-2\] \[USART2 TX\] got: LED ON/);
   await win.keyboard.press('Control+F2');
   assert.deepEqual(s.errors,[]);
  }finally{await s.close();}

@@ -1,6 +1,15 @@
 # STM Simulator — 개발 인계
 
-현재 버전: **1.49.0**. 정리일: **2026-11-10**. NUCLEO-F446RE·NUCLEO-F103RB 또는 Renesas FPB-RA6E1(1.20.0, FSP·에뮬레이터 전용)과 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+현재 버전: **1.50.0**. 정리일: **2026-11-10**. NUCLEO-F446RE·NUCLEO-F103RB 또는 Renesas FPB-RA6E1(1.20.0, FSP·에뮬레이터 전용)과 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+
+## 1.50.0 기능 목록 44번: printf·입력을 UART(USART2)로
+
+- **해석기(`hal.js`)**: `invoke`가 `printf`·`puts`·`putchar`를 `stdout()`으로 보낸다 — 프로그램에 `_write`가 있거나 ITM이 아닌 `__io_putchar`가 있을 때(`stdoutHook`; 생성된 ITM `__io_putchar`는 전처럼 콘솔로 바로). `stdoutText`에 모았다가 줄 끝·1024자·`fflush`·비버퍼(`setvbuf … _IONBF`)에서 `flushStdout`이 UTF-8 바이트를 128바이트씩 `_write(1, ptr, len)`로 넘긴다. `scanf`·`getchar`는 `stdin()` — `stdinChar`가 `_read(0, buf, 1)`(또는 `__io_getchar`)를 불러 한 글자씩 받고, `scanf`는 Enter까지 한 줄을 모아 `sscanf`로 값을 넣는다. `blocking`의 `HAL_UART_Transmit`은 인터럽트 콜백 안에서도 된다(시간은 흐르지 않음). 상수 `stdin`·`stdout`·`stderr`·`_IONBF`·`EOF`, `ITM_SendChar`(줄 단위로 콘솔).
+- **생성기(`hal-generator.js`)**: `stdioUart(config)` — USART2가 비동기이고 송신 가능하면 `_write`(와 수신 가능하면 `_read`), 아니면 ITM `__io_putchar`. 재생성 때 사용자 구역의 `_write`·`_read`·`__io_getchar`가 생성분을 대신한다(`c-source-edit.js` `dropShadowedCallbacks`).
+- **예제(`hal-examples.js` `consoleExample`, `mcu-config.js` `consoleUart`)**: `applyHalExample`과 `applyLectureExample`이 예제를 프로젝트로 만들 때 부른다. USART2·PA2·PA3이 비어 있으면 Pinout에 켜고, 생성기가 USART2만으로 만든 조각(핸들, 핀 설정을 넣은 `MX_USART2_UART_Init`, `_write`, `_read`)을 코드에 끼우고 ITM `__io_putchar`를 뺀다. 재생성하지 않는 이유: 몇몇 예제가 Pinout에 없는 값으로 초기화 코드를 손본다(재생성하면 ADC 스캔 설정 등이 사라졌다). `recipeFor`(Docs 병합 견본)와 `halExampleFor`는 그대로다. `applyHalExample(project, kind, {console:false})`는 콘솔 없이.
+- **표시(`uart-text.js`)**: `uartLineText(bytes)`(출력 창·추가 보드 로그: UTF-8 글자는 글자로, 나머지는 `\xNN`), `uartMonitorText(codes)`(직렬 모니터).
+- 시험 도우미 `tests/unit/helpers/console.js` `consoleSink(out)`: 콘솔 줄과 USART2 송신 줄을 같은 배열에 모은다(printf 출력을 읽는 시험들이 쓴다).
+- 그대로 둔 것: `dma_uart_echo`·`noise_errors`(ITM), 주 보드가 숨겨진 강의 예제, 빈 새 프로젝트(USART2 꺼짐).
 
 ## 1.49.0 기능 목록 43번: STM32 주변장치별 .c/.h 분리 생성
 

@@ -24,7 +24,6 @@ export function uartLineText(bytes){
 export function uartMonitorText(codes){
  const text=String(codes||'');
  // Plain ASCII (the usual case) is shown as it is.
- // eslint-disable-next-line no-control-regex
  if(!/[^\x00-\x7f]/.test(text))return text;
  return text.split('\n').map(line=>{const cr=line.endsWith('\r');const bytes=[...(cr?line.slice(0,-1):line)].map(c=>c.charCodeAt(0)&255);let out='';
   // Keep tabs and other characters the monitor already showed raw; decode what is valid UTF-8.
