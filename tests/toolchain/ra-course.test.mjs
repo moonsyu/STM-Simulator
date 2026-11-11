@@ -10,7 +10,7 @@ import path from 'node:path';
 import {createRequire} from 'node:module';
 import {FirmwareSession} from '../../src/firmware-session.js';
 import {projectForBoard,validateProject} from '../../src/project.js';
-import {raExample} from '../../src/ra-examples.js';
+import {raExample,RA_EXAMPLES} from '../../src/ra-examples.js';
 import {raHalEntry} from '../../src/ra-generator.js';
 import {raDefaultMcu} from '../../src/ra-config.js';
 
@@ -102,5 +102,24 @@ test('hal_entry.c as the course screen shows it (g_ioport.p_cfg, #if blocks remo
   assert.equal(template.split('#if BSP_TZ_SECURE_BUILD').length,3);
   assert.match(template,/#if BSP_TZ_SECURE_BUILD\n\nBSP_CMSE_NONSECURE_ENTRY void template_nonsecure_callable \(\);\n\n\/\* Trustzone Secure Projects require at least one nonsecure callable function/);
   assert.match(template,/BSP_CMSE_NONSECURE_ENTRY void template_nonsecure_callable \(\)\n\{\n\n\}\n#endif\n$/);
+ }finally{await fs.rm(root,{recursive:true,force:true});}
+});
+
+// Error-case pass, features 18 and 24 with feature 23: every FSP example, built and run with the longest contact bounce
+// while S1 is pressed and let go several times — none of them faults, and the challenge still counts 0000 → 1111.
+test('every FSP example builds and runs with contact bounce on (20 ms) while S1 is pressed and released; the challenge still shows all sixteen patterns',{skip,timeout:900000},async()=>{
+ const root=await fs.mkdtemp(path.join(os.tmpdir(),'ra-bounce-all-'));
+ try{
+  for(const e of RA_EXAMPLES){
+   const p=example(e.id);p.simulation={stepMs:1,pwmWaveform:false,bounceMs:20};
+   const s=await session(p,root),patterns=new Set();
+   for(let ms=5;ms<=2000;ms+=5){
+    if(ms%400===100)s.setPressed({SW1:true});if(ms%400===250)s.setPressed({});
+    s.tick(ms);
+    if(e.id==='ra_led4_switch2')patterns.add(['P107','P303','P113','P103'].map(pin=>high(s,pin)).join(''));
+   }
+   assert.ok(!s.fault,`${e.id}: ${s.fault}`);assert.ok(s.time>=1990,`${e.id} ran to ${s.time} ms`);
+   if(e.id==='ra_led4_switch2')assert.equal(patterns.size,16,[...patterns].sort().join(' '));
+  }
  }finally{await fs.rm(root,{recursive:true,force:true});}
 });
