@@ -2,6 +2,14 @@
 
 작업할 때마다 날짜순으로 맨 위에 추가합니다. 무엇을 했는지, 왜 했는지, 어떻게 검증했는지, 커밋·릴리스와 남은 사항을 적습니다. 버전별 구조 설명은 [HANDOFF.md](../HANDOFF.md), 검증 수치는 [VERIFICATION.md](VERIFICATION.md)에 있습니다.
 
+## 2026-11-11 · 강의 DS3231 main.c를 지금 앱에서 돌게 고친 파일 제공
+
+- 요청: 43번 구현을 기다리지 않고, 강의 코드를 고쳐서 지금 앱에 바로 넣어 실행할 수 있게 해 달라.
+- 한 것: `#include "i2c.h"`·`"usart.h"`·`"gpio.h"`를 빼고, 그 파일들에 있던 핸들(`hi2c1`, `huart2`)과 `MX_GPIO_Init`(리맵 `__HAL_AFIO_REMAP_I2C1_ENABLE`, PB8/PB9 AF_OD, PA2 AF_PP, PA3 입력)·`MX_I2C1_Init`·`MX_USART2_UART_Init`을 앱 생성기(`generateHal`) 출력과 같은 형태로 `main.c` 안에 넣었다. USER CODE 내용(`_read`/`_write`, 초 읽기 루프)은 그대로. 사용자에게 `outputs/ds3231-sec/main.c`(무시되는 폴더)로 전달.
+- 검증: Node로 ZS-042 DS3231 예제 회로를 STM32F103RB, Pinout PB8 I2C1_SCL·PB9 I2C1_SDA·PA2/PA3 USART2로 바꿔 `SimulationSession`(내장 해석기)에서 3초 실행 → `51 sec`~`54 sec`가 0.5초마다 PC 시계와 맞게 출력. ARM GCC 빌드는 이 PC에서 확인하지 않음.
+- 커밋·릴리스: 문서 커밋. 앱 코드 변경 없음.
+- 남은 사항: 43번(그대로 넣어도 되게 하는 앱 수정)은 구현 세션에서 계속.
+
 ## 2026-11-11 · 기능 목록 43번 추가(STM32 주변장치별 .c/.h 분리 생성)
 
 - 요청: 강의 `main.c`(DS3231 초 읽기)를 앱에 그대로 넣을 수 있는지 → 안 되는 이유를 목록에 추가하고 가능하게 수정.
