@@ -11,6 +11,7 @@
 - **교체(`stm32-boards.js` `swapStm32`)**: 표면의 중심·회전 ↔ 부품의 x/y·rotation을 서로 옮긴다.
 - **검증(`project.js`)**: `surfaces.board.rotation`과 STM32 보드 부품의 `rotation`은 0·90·180·270.
 - 시험: 단위 `board-rotation`(8개), E2E `board-rotation`.
+- **CI 동시 작업 20개(1.48.0 뒤)**: 검사 2 + 펌웨어 7 + ESP32 3 + E2E 7 + 패키지 1. 21개였을 때 한 작업이 러너를 70초 기다렸다. 묶음을 늘릴 때는 다른 묶음을 줄여 20개를 넘지 않게 한다(단위 `toolchain-shards`가 센다). 전체 3.8분.
 - **CI 수정**: 1.47.0은 펌웨어 묶음 1이 끝나지 않아 게시되지 않았다(파일 없는 `node --test`가 모든 시험을 실행). `toolchain-shard.mjs` `shardRuns`가 통째 파일이 없는 묶음에는 그 실행을 만들지 않는다. 1.47.0의 변경은 1.48.0 Release에 들어 있다.
 
 ## 1.47.0 기능 목록 25~28·30·31번: 탭 닫기, 소스 파일 트리, 트리 들여쓰기, FPB-RA6E1 회로도, 빌드 실패 단추
