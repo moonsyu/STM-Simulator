@@ -280,14 +280,18 @@
 /* 1.17.1 Core · Startup: the files the ARM build uses besides the project's sources (read only, closed by default). */
 .build-files{margin:2px 0 4px}
 .build-files[hidden]{display:none}
-.build-files summary{cursor:pointer;padding:2px 12px;font-size:12px;user-select:none}
-.build-files summary small{opacity:.7;margin-left:4px;font-size:10.5px}
-#build-file-list{display:flex;flex-direction:column}
-#build-file-list button{display:flex;align-items:center;gap:6px;min-height:22px;padding:0 12px 0 22px;border:0;background:transparent;text-align:left;font-size:12.5px;font-style:italic;width:100%}
-#build-file-list button small{margin-left:auto;font-style:normal;opacity:.6;font-size:10.5px}
-#build-file-list button:hover{background:var(--ide-hover,#e7efec)}
-#build-file-list button.active{background:var(--ide-selection,#cde7da)}
-/* Feature 14: the CubeIDE tree — folders fold, the project's own files are upright, what the build provides is italic. */
-#build-file-list .tree-folder>summary{padding:1px 12px;font-size:12.5px;cursor:pointer;user-select:none}
-#build-file-list .tree-children{display:flex;flex-direction:column;padding-left:12px}
-#build-file-list button.tree-own{font-style:normal}
+/* The explorer trees (project structure, Developer Assistance): one step of 12 px for every level, the top level one
+   step in from the section title, and a guide line down each open folder. A folder row starts with its arrow, a file
+   row with the same width left empty, so names of one level line up. */
+.build-files>summary{cursor:pointer;padding:2px 12px;font-size:12px;user-select:none}
+.build-files>summary small{display:block;opacity:.7;margin-left:14px;font-size:10.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* 24 px: the title's own 12 px and one step, so the top-level rows stand to the right of the title's arrow. */
+:is(#build-file-list,#ra-assist-list){display:flex;flex-direction:column;padding-left:24px}
+:is(#build-file-list,#ra-assist-list) button{display:flex;align-items:center;gap:6px;min-height:22px;padding:0 12px 0 14px;border:0;background:transparent;text-align:left;font-size:12.5px;font-style:italic;width:100%}
+:is(#build-file-list,#ra-assist-list) button small{margin-left:auto;font-style:normal;opacity:.6;font-size:10.5px}
+:is(#build-file-list,#ra-assist-list) button:hover{background:var(--ide-hover,#e7efec)}
+:is(#build-file-list,#ra-assist-list) button.active{background:var(--ide-selection,#cde7da)}
+:is(#build-file-list,#ra-assist-list) .tree-folder>summary{padding:1px 12px 1px 0;font-size:12.5px;cursor:pointer;user-select:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+:is(#build-file-list,#ra-assist-list) .tree-folder>summary small{opacity:.6;font-size:10.5px;margin-left:4px}
+:is(#build-file-list,#ra-assist-list) .tree-children{display:flex;flex-direction:column;margin-left:5px;padding-left:6px;border-left:1px solid var(--ide-border,#c9d5df)}
+:is(#build-file-list,#ra-assist-list) button.tree-own{font-style:normal}

@@ -83,3 +83,41 @@ test('an FPB-RA6E1 project shows src, ra_gen, ra_cfg, script and ra; hal_entry.c
   assert.deepEqual(s.errors,[]);
  }finally{await s.close();}
 });
+
+// Feature 27: every level of the explorer trees is one 12 px step in — the top level from the section title, a
+// folder's files from the folder — and the Developer Assistance tree uses the same steps.
+test('the project tree and Developer Assistance indent one step per level',{timeout:150000},async()=>{
+ const s=await launch();
+ try{
+  const {win}=s;
+  await win.click('[data-activity="explorer"]');if(!await win.locator('#build-files > summary').isVisible())await win.click('[data-activity="explorer"]');
+  await win.click('#build-files > summary');
+  const left=selector=>win.$eval(selector,e=>e.getBoundingClientRect().left);
+  // Within a pixel: the window's scale rounds the border and the paddings.
+  const near=(actual,expected,message)=>assert.ok(Math.abs(actual-expected)<=1,`${message}: ${actual} for ${expected}`);
+  const step=12,title=await left('#build-files > summary'),core=await left('#build-file-list [data-tree-folder="Core"] > summary');
+  // The title's text starts 12 px in (its padding); the top-level folder one step further.
+  // The title's arrow starts at its 12 px padding; the top-level rows start one step to the right of it.
+  near(core-title,12+step,'the top-level folder is one step in from the title');
+  const src=await left('#build-file-list [data-tree-folder="Core/Src"] > summary');near(src-core,step,'Core → Core/Src');
+  const file=await left('#build-file-list [data-tree-folder="Core/Src"] > .tree-children > button');near(file-src,step,'Core/Src → its files');
+  // A file and a folder of one level start at the same place (the file leaves the arrow's width empty).
+  near(await left('#build-file-list > button'),core,'a file beside a folder');
+  // Three levels down the step is still the same.
+  for(const f of ['Drivers','Drivers/STM32F1xx_HAL_Driver'])await win.click(`#build-file-list [data-tree-folder="${f}"] > summary`);
+  const drivers=await left('#build-file-list [data-tree-folder="Drivers"] > summary'),hal=await left('#build-file-list [data-tree-folder="Drivers/STM32F1xx_HAL_Driver"] > summary'),inc=await left('#build-file-list [data-tree-folder="Drivers/STM32F1xx_HAL_Driver/Src"] > summary');
+  near(drivers-core,0,'Drivers beside Core');near(hal-drivers,step,'Drivers → HAL driver');near(inc-hal,step,'HAL driver → Src');
+  // The note beside the title sits on its own line and does not wrap.
+  assert.equal(await win.$eval('#build-files > summary small',e=>getComputedStyle(e).display+' '+getComputedStyle(e).whiteSpace),'block nowrap');
+  // Developer Assistance (an FSP project): the same rules.
+  await win.evaluate(()=>document.getElementById('new').click());if(await win.evaluate(()=>document.getElementById('replace-dialog').open))await win.click('#replace-confirm');
+  await win.waitForSelector('#project-dialog[open]');await win.selectOption('#new-project-board','fpb-ra6e1');await win.selectOption('#new-project-template','ra-minimal');
+  await win.click('#project-create');await win.waitForFunction(()=>!document.getElementById('project-dialog').open);
+  await win.click('[data-activity="explorer"]');if(!await win.locator('#ra-assist > summary').isVisible())await win.click('[data-activity="explorer"]');
+  await win.click('#ra-assist > summary');
+  const root=await left('#ra-assist-list > .tree-folder > summary'),group=await left('#ra-assist-list [data-assist="g_ioport"] > summary'),item=await left('#ra-assist-list [data-assist="g_ioport"] [data-assist-item]');
+  near(root-await left('#ra-assist > summary'),12+step,'assistance: top level');near(group-root,step,'assistance: group');near(item-group,step,'assistance: item');
+  assert.equal(await win.$eval('#ra-assist-list [data-assist-item]',e=>getComputedStyle(e).backgroundColor),'rgba(0, 0, 0, 0)','the items are tree rows, not default buttons');
+  assert.deepEqual(s.errors,[]);
+ }finally{await s.close();}
+});

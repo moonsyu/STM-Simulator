@@ -588,8 +588,8 @@ body.dock-dragging .dock-unit{pointer-events:none}
 :root[data-shell] #code-panel.sdk-open .editor-heading{display:none}
 :root[data-shell] .outline-view{margin-top:6px}
 :root[data-shell] .build-files summary{color:var(--ide-muted)}
-:root[data-shell] #build-file-list button{color:var(--ide-foreground)}
-:root[data-shell] #build-file-list button.active{color:var(--ide-selectionText)}
+:root[data-shell] :is(#build-file-list,#ra-assist-list) button{color:var(--ide-foreground)}
+:root[data-shell] :is(#build-file-list,#ra-assist-list) button.active{color:var(--ide-selectionText)}
 /* Renesas RA Pins dialog (ra-pinout-ui.js) */
 #ra-pinout-dialog{width:min(980px,94vw);max-height:90vh;padding:16px 18px}
 .ra-pinout-head h2{margin:0 0 4px;font-size:16px}
