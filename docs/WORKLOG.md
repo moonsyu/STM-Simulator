@@ -11,6 +11,14 @@
 - 커밋·릴리스: 43번 구현, 문서·버전 커밋. Release v1.49.0.
 - 남은 사항: CubeMX의 `HAL_*_MspInit` 분리와 쌍 안의 USER CODE 구역은 없다. 사용자의 실제 강의 파일로는 확인하지 않았다.
 
+## 2026-11-11 · 기능 목록 44번 추가(예제 printf·입력을 UART로)
+
+- 요청: DS3231 장치 예제의 `printf`가 UART가 아니라 SWV ITM으로 나간다 → printf 출력은 모두 UART로, scanf·receive 입력은 `_read`로.
+- 한 것: 출력 경로를 코드로 확인(`hal-generator.js`·`advanced-examples.js`의 `__io_putchar`→`ITM_SendChar`; 해석기 `hal.js`의 `printf`는 사용자 `_write`를 거치지 않고 `scanf`는 미지원). 예제 파일별 printf 수를 세어 `docs/FEATURES.md` 44번을 `미착수`로 적고 구현 세션에 넘겼다.
+- 검증: 문서만 바뀜.
+- 커밋·릴리스: 문서 커밋. 버전 변경 없음.
+- 남은 사항: 44번 구현(구현 세션).
+
 ## 2026-11-11 · 강의 DS3231 main.c를 지금 앱에서 돌게 고친 파일 제공
 
 - 요청: 43번 구현을 기다리지 않고, 강의 코드를 고쳐서 지금 앱에 바로 넣어 실행할 수 있게 해 달라.
