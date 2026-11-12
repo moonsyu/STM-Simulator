@@ -28,7 +28,7 @@ test('the project keeps the bounce time; an unknown one is refused',()=>{
 
 const pin=(fn,label='')=>({function:fn,pull:'NOPULL',edge:'FALLING',label,initial:0});
 function run(bounceMs,globals,loop=''){
- const p=blankProject();p.mcu.pins={PC13:pin('GPIO_EXTI','B1'),PA5:pin('GPIO_Output','LD2')};p.mcu.nvic={EXTI15_10_IRQn:{enabled:true,priority:5}};p.mcu=validateMcu(p.mcu);
+ const p=blankProject();p.mcu.peripherals={};p.mcu.pins={PC13:pin('GPIO_EXTI','B1'),PA5:pin('GPIO_Output','LD2')};p.mcu.nvic={EXTI15_10_IRQn:{enabled:true,priority:5}};p.mcu=validateMcu(p.mcu);
  p.simulation={stepMs:1,pwmWaveform:false,...(bounceMs?{bounceMs}:{})};
  p.code=generateHal(p.mcu,{minimal:true}).replace('/* USER CODE BEGIN 0 */','/* USER CODE BEGIN 0 */\n'+globals).replace('    /* USER CODE BEGIN 3 */','    /* USER CODE BEGIN 3 */\n    '+loop);
  const out=[],s=new SimulationSession(validateProject(p),{print:x=>out.push(x),warn:()=>{}});s.tick(0);

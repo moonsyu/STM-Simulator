@@ -4,7 +4,7 @@ import {BOUNCE_MS} from './button-bounce.js';
 import {DEVICE_RANGES,DEVICE_ADDRESSES} from './device-defs.js';
 import {PIN_BY_ID,holeInfo} from './pins.js';
 import {terminalKeys,TWO_PIN_TYPES,MULTI_PIN_TYPES,normalizeAngle} from './components.js';
-import {generateHal,defaultMcu,validateMcu} from './mcu-config.js';
+import {generateHal,defaultMcu,validateMcu,consoleUart} from './mcu-config.js';
 import {expandC} from './c-format.js';
 import {DEFAULT_BOARD_ID,START_BOARD_ID,getBoard} from './boards.js';
 import {isRaFamily,raDefaultMcu,validateRaMcu} from './ra-config.js';
@@ -28,9 +28,15 @@ function stm32Software(p,version){
 export function blankProject(family){
   // A Renesas RA board starts as e² studio's FSP template: the board's pins (LEDs, S1) and an empty hal_entry().
   if(isRaFamily(family))return {format:'stm32-circuit-lab',version:2,name:'새 회로',components:[],wires:[],surfaces:{board:{hidden:true},breadboard:{hidden:true}},mcu:raDefaultMcu(family),firmware:{mode:'fsp',files:[]},code:raHalEntry()};
-  const mcu={...defaultMcu(family),pins:{}};return {format:'stm32-circuit-lab',version:2,name:'새 회로',components:[],wires:[],surfaces:{board:{hidden:true},breadboard:{hidden:true}},mcu,firmware:{mode:'hal',files:[]},code:expandC(generateHal(mcu).replace('/* USER CODE BEGIN 2 */','/* USER CODE BEGIN 2 */\n  printf("HAL ready\\n");'))};}
-// Complete example circuits explicitly include the legacy board and breadboard.
-export function exampleProject(){const p=blankProject();delete p.surfaces;return p;}
+  // A new STM32 project prints on the UART (feature 44, 2026-11-12 user decision "기본값도 UART로"): USART2 on PA2 / PA3
+  // (the ST-LINK virtual COM port, 115200 8N1) is on, and the generated _write / _read carry printf / scanf.
+  return halBlank(consoleUart({...defaultMcu(family),pins:{}}));}
+// The generator's own UART greeting is left out: the new project's main.c says hello once, with printf.
+const withoutGreeting=code=>code.replace(/^[ \t]*uint8_t message\[\] = "HAL ready\\r\\n";\r?\n/m,'').replace(/^[ \t]*HAL_UART_Transmit\(&huart2, message, sizeof\(message\) ?- ?1, 100\);\r?\n/m,'');
+function halBlank(mcu){return {format:'stm32-circuit-lab',version:2,name:'새 회로',components:[],wires:[],surfaces:{board:{hidden:true},breadboard:{hidden:true}},mcu,firmware:{mode:'hal',files:[]},code:expandC(withoutGreeting(generateHal(mcu)).replace('/* USER CODE BEGIN 2 */','/* USER CODE BEGIN 2 */\n  printf("HAL ready\\n");'))};}
+// Complete example circuits explicitly include the legacy board and breadboard. They start without the UART console:
+// an example sets its own pins, and the console is added when it is opened as a project (hal-examples.js consoleExample).
+export function exampleProject(){const p=halBlank({...defaultMcu(),pins:{}});delete p.surfaces;return p;}
 // 1.27.0 ZS-042 DS3231 (ref_ds3231_zs042_10) had 4 pass-through pins p7..p10 tied to p3..p6; they were removed in 1.28.0,
 // so their wires and breadboard pins move to the left pin of the same signal.
 function migrateZs042(data){

@@ -8,6 +8,7 @@ import path from 'node:path';
 import {createRequire} from 'node:module';
 import {blankProject,validateProject} from '../../src/project.js';
 import {SimulationSession} from '../../src/session.js';
+import {consoleSink} from './helpers/console.js';
 
 const require=createRequire(import.meta.url),nativeBuild=require('../../desktop/native-build.cjs');
 const saved=()=>({...blankProject(),build:{printfFloat:false}});
@@ -16,7 +17,7 @@ test('a project saved with the old printf float switch off loads without it and 
  assert.equal(blankProject().build,undefined);
  const p=validateProject(saved());assert.equal(p.build,undefined);
  p.code=p.code.replace('printf("HAL ready\\n");','printf("v=[%.2f] n=%d\\n", 3.14159, 7);');
- const out=[];const s=new SimulationSession(p,{print:t=>out.push(String(t))});for(let t=10;t<=50;t+=10)s.tick(t);
+ const out=[];const s=new SimulationSession(p,consoleSink(out));for(let t=10;t<=50;t+=10)s.tick(t);
  assert.match(out.join('\n'),/v=\[3\.14\] n=7/);
 });
 

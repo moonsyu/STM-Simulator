@@ -15,6 +15,8 @@ import {compileHal} from '../../src/hal-source.js';
 import {boardPin} from '../../src/pins.js';
 import {ledCircuit,boardProject,wire} from './helpers/circuit.js';
 import {runHal} from './helpers/run.js';
+import {consoleSink} from './helpers/console.js';
+import {SimulationSession} from '../../src/session.js';
 
 const pin=(fn,extra={})=>({function:fn,pull:'NOPULL',edge:'FALLING',label:'',initial:0,...extra});
 const IOC=['#MicroXplorer Configuration settings','Mcu.Name=STM32F446R(C-E)Tx','Mcu.IP0=NVIC','Mcu.IP1=USART2',
@@ -28,13 +30,18 @@ describe('blank and example projects',()=>{
     const p=blankProject();
     assert.equal(p.format,'stm32-circuit-lab');assert.equal(p.version,2);assert.deepEqual(p.components,[]);assert.deepEqual(p.wires,[]);
     assert.deepEqual(p.surfaces,{board:{hidden:true},breadboard:{hidden:true}});
-    assert.deepEqual(p.firmware,{mode:'hal',files:[]});assert.deepEqual(p.mcu.pins,{});assert.match(p.code,/printf\("HAL ready\\n"\);/);
+    assert.deepEqual(p.firmware,{mode:'hal',files:[]});assert.match(p.code,/printf\("HAL ready\\n"\);/);
+    // The UART console (2026-11-12): USART2 on PA2 / PA3, printf through _write; the generator's own UART greeting is left out.
+    assert.deepEqual(Object.keys(p.mcu.pins),['PA2','PA3']);assert.deepEqual(p.mcu.peripherals,{USART2:{enabled:true,baud:115200}});
+    assert.match(p.code,/int _write\(int file, char \*ptr, int len\)/);assert.doesNotMatch(p.code,/ITM_SendChar|uint8_t message\[\]/);
+    assert.deepEqual(Object.keys(blankProject('STM32F103RB').mcu.pins),['PA2','PA3']);assert.deepEqual(exampleProject().mcu.pins,{},'examples set their own pins');
     assert.deepEqual(validateProject(p),p,'blank project round-trips unchanged');
     assert.doesNotThrow(()=>compileHal(p.code));
     assert.notEqual(blankProject().mcu,blankProject().mcu,'fresh objects each call');
   });
   test('blank project prints its greeting when run',()=>{
-    const r=runHal(blankProject().code,{ms:10});assert.equal(r.error,null);assert.deepEqual(r.out,['HAL ready']);
+    const p=blankProject(),out=[],s=new SimulationSession(validateProject(p),consoleSink(out));for(let t=0;t<=20;t+=10)s.tick(t);
+    assert.deepEqual(out,['HAL ready']);assert.equal(s.buses.vcpOutput,'HAL ready\n','on the ST-LINK virtual COM port');
   });
   test('exampleProject shows the legacy board and breadboard',()=>{
     const p=exampleProject();assert.equal(p.surfaces,undefined);assert.ok(validateProject(p));
@@ -162,7 +169,7 @@ describe('code and board reset',()=>{
     const p=ledCircuit();p.mcu.pins.PA5=pin('GPIO_Output');p.code='int main(void){return 0;}';p.firmware={mode:'hal',files:[{name:'a.c',text:'int a;'}]};
     p.ide={breakpoints:[{file:'main.c',line:3},{file:'a.c',line:1}],watches:[]};
     const r=resetBoardConfiguration(p);
-    assert.deepEqual(r.components,[]);assert.deepEqual(r.wires,[]);assert.deepEqual(r.mcu.pins,{});assert.deepEqual(r.surfaces,blankProject().surfaces);
+    assert.deepEqual(r.components,[]);assert.deepEqual(r.wires,[]);assert.deepEqual(r.mcu.pins,blankProject().mcu.pins,'the new project\'s Pinout: the UART console');assert.deepEqual(r.surfaces,blankProject().surfaces);
     assert.equal(r.code,resetMainCode(blankProject()).code,'main.c as after 코드 초기화');assert.doesNotMatch(r.code,/GPIO_PIN_5/);
     assert.deepEqual(r.firmware.files,[{name:'a.c',text:'int a;'}]);assert.deepEqual(r.ide.breakpoints.map(b=>b.file),['a.c'],'main.c breakpoints go with its code');
     assert.equal(p.components.length,2,'input untouched');assert.equal(p.code,'int main(void){return 0;}');

@@ -343,6 +343,11 @@ if(/HIGH/.test(values[id+'.CLKPolarity']||''))s.cpol='HIGH';if(/2EDGE/.test(valu
 }
 /** An example's console: USART2 on PA2 / PA3 (the ST-LINK virtual COM port, 115200 8N1) unless the example already
  * uses USART2 or one of the two pins. The generated code then sends printf there (hal-generator.js stdioUart). */
+/** The pins a user set up, without the UART console a new project starts with (USART2 on PA2 / PA3 at 115200). */
+export function userPins(mcu){
+  const u=mcu?.peripherals?.USART2,console=u?.enabled&&u.baud===115200&&mcu.pins.PA2?.function==='USART2_TX'&&mcu.pins.PA3?.function==='USART2_RX';
+  return Object.fromEntries(Object.entries(mcu?.pins||{}).filter(([pin])=>!(console&&(pin==='PA2'||pin==='PA3'))));
+}
 export function consoleUart(mcu){
   if(mcu.peripherals.USART2||mcu.pins.PA2||mcu.pins.PA3)return mcu;
   const pin=fn=>({function:fn,pull:'NOPULL',edge:'FALLING',label:'',initial:0});

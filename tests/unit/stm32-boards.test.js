@@ -124,7 +124,7 @@ describe('STM32 boards: running together',()=>{
   const p=twoBoards();p.components[0].code='int main(void){HAL_Init(); while(1){}';
   assert.throws(()=>createStm32Drivers(p),/STM32-2 · main\.c/);
   const ok=twoBoards(),out=[],{session}=run(ok,300,{out}),driver=session.circuit.drivers[0];
-  const count=()=>out.filter(l=>l==='[STM32-2] HAL ready').length,before=count();driver.reset();session.tick(600);assert.equal(count(),before+1);
+  const count=()=>out.filter(l=>/^\[STM32-2\] (\[USART2 TX\] )?HAL ready$/.test(l)).length,before=count();driver.reset();session.tick(600);assert.equal(count(),before+1);
  });
  test('emulator: STM32-2 runs its ARM ELF on the shared circuit',()=>{
   const dir=new URL('../fixtures/firmware/',import.meta.url),fixture=JSON.parse(fs.readFileSync(new URL('blink.json',dir),'utf8'));

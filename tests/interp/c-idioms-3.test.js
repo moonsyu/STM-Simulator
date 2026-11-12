@@ -7,12 +7,13 @@ import {blankProject} from '../../src/project.js';
 import {generateHal,validateMcu} from '../../src/mcu-config.js';
 import {SimulationSession} from '../../src/session.js';
 import {expandMacros} from '../../src/hal-source.js';
+import {consoleSink} from '../unit/helpers/console.js';
 
 const pin=(fn,label='')=>({function:fn,pull:'NOPULL',edge:'FALLING',label,initial:0});
 function run(globals,body){
- const p=blankProject();p.mcu.pins={PA5:pin('GPIO_Output','LD2'),PB0:pin('GPIO_Output'),PC13:pin('GPIO_EXTI','B1')};p.mcu.nvic={EXTI15_10_IRQn:{enabled:true,priority:5}};p.mcu=validateMcu(p.mcu);
+ const p=blankProject();p.mcu.peripherals={};p.mcu.pins={PA5:pin('GPIO_Output','LD2'),PB0:pin('GPIO_Output'),PC13:pin('GPIO_EXTI','B1')};p.mcu.nvic={EXTI15_10_IRQn:{enabled:true,priority:5}};p.mcu=validateMcu(p.mcu);
  p.code=generateHal(p.mcu,{minimal:true}).replace('/* USER CODE BEGIN 0 */','/* USER CODE BEGIN 0 */\n'+globals).replace('  /* USER CODE BEGIN 2 */','  /* USER CODE BEGIN 2 */\n  '+body);
- const out=[],s=new SimulationSession(p,{print:x=>out.push(x),warn:()=>{}});s.tick(0);for(let t=10;t<=60;t+=10)s.tick(t);return out;
+ const out=[],s=new SimulationSession(p,{...consoleSink(out),warn:()=>{}});s.tick(0);for(let t=10;t<=60;t+=10)s.tick(t);return out;
 }
 const r=String.raw;
 

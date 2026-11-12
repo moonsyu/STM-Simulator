@@ -16,6 +16,7 @@ import {SimulationSession} from '../../src/session.js';
 import {compileHal} from '../../src/hal-source.js';
 import {wiringTopology} from '../../src/device-docs-data.js';
 import {boardPin} from '../../src/pins.js';
+import {consoleSink} from './helpers/console.js';
 
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'../..');
 const USER_LINE='  int keepMe = 7; /* 학생 코드 */';
@@ -53,7 +54,7 @@ describe('Docs apply: CubeMX init functions',()=>{
     assert.ok(regions(created,'sht31:sel').some(r=>r.role==='MX_I2C1_Init'));assert.match(body(created,'sht31:sel','MX_I2C1_Init'),/static void MX_I2C1_Init\(void\) \{[\s\S]*HAL_I2C_Init\(&hi2c1\)/);
     assert.match(body(created,'sht31:sel','MX_I2C1_Init_PROTO'),/static void MX_I2C1_Init\(void\);/);assert.match(body(created,'sht31:sel','HANDLE_hi2c1'),/I2C_HandleTypeDef hi2c1;/);
     const main=fn(created,'main').body;assert.ok(main.indexOf('MX_I2C1_Init();')>main.indexOf('MX_GPIO_Init();')&&main.indexOf('MX_I2C1_Init();')<main.indexOf('USER CODE BEGIN 2'));
-    const p=projectWith(['sht31']);p.code=p.code.replace('static void MX_GPIO_Init(void);','static void MX_GPIO_Init(void);\nstatic void MX_I2C1_Init(void);\nI2C_HandleTypeDef hi2c1;').replace('  MX_GPIO_Init();','  MX_GPIO_Init();\n  MX_I2C1_Init();').replace('int __io_putchar','static void MX_I2C1_Init(void) {\n  /* 사용자 초기화 */\n}\n\nint __io_putchar');
+    const p=projectWith(['sht31']);p.code=p.code.replace('static void MX_GPIO_Init(void);','static void MX_GPIO_Init(void);\nstatic void MX_I2C1_Init(void);\nI2C_HandleTypeDef hi2c1;').replace('  MX_GPIO_Init();','  MX_GPIO_Init();\n  MX_I2C1_Init();').replace('int _write','static void MX_I2C1_Init(void) {\n  /* 사용자 초기화 */\n}\n\nint _write');
     const extended=apply(p,'sel').code;
     assert.ok(inside(extended,'sht31:sel','MX_I2C1_Init','MX_I2C1_Init'),'body region inside the existing function');assert.match(extended,/사용자 초기화/);
     assert.equal((extended.match(/MX_I2C1_Init\(\);/g)||[]).length,1);assert.equal((extended.match(/I2C_HandleTypeDef hi2c1;/g)||[]).length,1);
@@ -66,7 +67,7 @@ describe('Docs apply: BareMetal mode',()=>{
     for(const api of ['all','gpio-write']){
       const {project,binding}=applyDeviceExample(projectWith(['led']),part('sel'),{mode:'baremetal',api});const code=project.code;
       assert.equal(binding.mode,'baremetal');assert.equal(project.ide.native.target,'arm');
-      assert.match(body(code,'led:sel','LOOP'),/GPIOA->BSRR = \(?1UL << 5/);assert.doesNotMatch(code,/HAL_GPIO_TogglePin|HAL_GPIO_Init/);
+      assert.match(body(code,'led:sel','LOOP'),/GPIOA->BSRR = \(?1UL << 5/);assert.doesNotMatch(code,/HAL_GPIO_TogglePin/);assert.equal(code.split('HAL_GPIO_Init(').length,blankProject().code.split('HAL_GPIO_Init(').length,'only the console pins use HAL_GPIO_Init');
       assert.match(body(code,'led:sel','MX_GPIO_Init'),/RCC->AHB1ENR\s*\|=\s*RCC_AHB1ENR_GPIOAEN[\s\S]*GPIOA->MODER/);assert.ok(inside(code,'led:sel','MX_GPIO_Init','MX_GPIO_Init'));
     }
     const pot=apply(projectWith(['potentiometer']),'sel',{mode:'baremetal',api:'all'}).code;
@@ -85,7 +86,7 @@ describe('Docs remove',()=>{
     assert.match(applied.code,/내 수정/);
     const {project,report}=removeDeviceExample(applied,part('sel'));
     assert.equal(project.code,withoutDefaultDelay(original.code));assert.deepEqual(report.missing,[]);assert.ok(report.removed>=2);
-    assert.deepEqual(project.mcu.pins,{});assert.deepEqual(project.deviceDocs.bindings,[]);
+    assert.deepEqual(project.mcu.pins,blankProject().mcu.pins);assert.deepEqual(project.deviceDocs.bindings,[]);
     assert.ok(project.components.some(c=>c.type==='ref_resistor_axial_2'),'code-only removal keeps the circuit');assert.doesNotThrow(()=>compileHal(project.code));
   });
   test('remove with circuit deletes the parts and wires Docs added, keeps the selected part',()=>{
@@ -103,7 +104,7 @@ describe('Docs remove',()=>{
     for(const text of keep)assert.ok(project.code.includes(text));
     assert.doesNotMatch(project.code,/hi2c1|MX_I2C1_Init|SHT31/);assert.equal(project.mcu.peripherals.I2C1,undefined);assert.equal(project.mcu.pins.PB8,undefined);
     assert.deepEqual(report.missing,[]);assert.ok(project.code.includes(USER_LINE));
-    const out=[],s=new SimulationSession(project,{print:v=>out.push(v)});for(let t=0;t<=1200;t+=50)s.tick(t);
+    const out=[],s=new SimulationSession(project,consoleSink(out));for(let t=0;t<=1200;t+=50)s.tick(t);
     assert.ok(out.some(l=>/^PA5=/.test(l))&&out.some(l=>/^ADC=/.test(l)));assert.ok(!out.some(l=>/SHT31/.test(l)));
     const uf=wiringTopology(project);assert.equal(uf.find(boardPin('PA0')),uf.find('part:pot1:p2'),'other device wiring intact');
   });
@@ -112,8 +113,8 @@ describe('Docs remove',()=>{
     assert.equal(regions(p.code).filter(r=>r.role==='MX_I2C1_Init').length,1);
     const {project,report}=removeDeviceExample(p,part('a'));
     assert.ok(report.retagged>=3);assert.ok(regions(project.code,'sht31:b').some(r=>r.role==='MX_I2C1_Init'));assert.ok(project.mcu.peripherals.I2C1?.enabled);
-    const out=[],s=new SimulationSession(project,{print:v=>out.push(v)});for(let t=0;t<=600;t+=50)s.tick(t);assert.ok(out.some(l=>/SHT31=/.test(l)),out.join('\n'));
-    const last=removeDeviceExample(project,part('b')).project;assert.deepEqual(last.mcu.peripherals,{});assert.deepEqual(last.mcu.pins,{});assert.doesNotMatch(last.code,/STM-DOCS|hi2c1/);
+    const out=[],s=new SimulationSession(project,consoleSink(out));for(let t=0;t<=600;t+=50)s.tick(t);assert.ok(out.some(l=>/SHT31=/.test(l)),out.join('\n'));
+    const last=removeDeviceExample(project,part('b')).project;assert.deepEqual(last.mcu.peripherals,blankProject().mcu.peripherals);assert.deepEqual(last.mcu.pins,blankProject().mcu.pins);assert.doesNotMatch(last.code,/STM-DOCS|hi2c1/);
   });
   test('a deleted marker is reported and the code around it is left untouched',()=>{
     const p=apply(projectWith(['led']),'sel');p.code=p.code.replace(/[ \t]*\/\* STM-DOCS END led:sel LOOP \*\/\n/,'');

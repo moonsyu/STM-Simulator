@@ -27,7 +27,7 @@ test('a second STM32 board is added, edited by swapping with the main board, and
   await win.evaluate(()=>{const code=document.getElementById('code');code.value=code.value.replace('printf("HAL ready\\n");','printf("board two\\n");');code.dispatchEvent(new Event('input',{bubbles:true}));});
   // Both boards run: the edited one as the main session, STM32-1 as its own session on the same circuit.
   await win.keyboard.press('Control+F5');
-  await win.waitForFunction(()=>/\[STM32-1\] HAL ready/.test(document.getElementById('console-output').textContent),null,{timeout:30000});
+  await win.waitForFunction(()=>/\[STM32-1\] (\[USART2 TX\] )?HAL ready/.test(document.getElementById('console-output').textContent),null,{timeout:30000});
   const text=await logText(win);assert.match(text,/board two/);assert.match(text,/\[STM32-1\] HAL 프로그램을 시작했습니다/);
   // STM32-1's RESET restarts only that board.
   await win.locator('#devboard-layer [data-button$=".RESET"]').click({force:true});

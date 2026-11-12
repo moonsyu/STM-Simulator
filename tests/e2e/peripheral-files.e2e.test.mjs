@@ -24,7 +24,7 @@ test('the Pinout option writes main.c with the peripheral headers; the pairs are
   await generate(win,true);
   await win.waitForFunction(()=>/#include "gpio\.h"/.test(document.getElementById('code').value));
   const split=await code(win);
-  assert.match(split,/#include "main\.h"\n#include "gpio\.h"/);assert.match(split,/\n\s+MX_GPIO_Init\(\);/);
+  assert.match(split,/#include "main\.h"\n#include "usart\.h"\n#include "gpio\.h"/);assert.match(split,/\n\s+MX_GPIO_Init\(\);/);
   assert.doesNotMatch(split,/static void MX_GPIO_Init|void MX_GPIO_Init\(void\)\s*\{/);
   // The option is kept: the dialog shows it checked the next time.
   await win.evaluate(()=>document.getElementById('pinout-open').click());await win.waitForSelector('#pinout-dialog[open]');

@@ -15,6 +15,7 @@ import {blankProject,validateProject} from '../../src/project.js';
 import {SimulationSession} from '../../src/session.js';
 import {boardPin} from '../../src/pins.js';
 import {compileHal} from '../../src/hal-source.js';
+import {consoleSink} from './helpers/console.js';
 
 const USER_LINE='  int keepMe = 7; /* 학생 코드 */';
 function projectWith(...parts){
@@ -44,7 +45,7 @@ describe('device Docs: applying examples to main.c',()=>{
     assert.doesNotThrow(()=>compileHal(project.code));
   });
   test('applied LED example actually blinks',()=>{
-    const {project}=applyDeviceExample(projectWith(['led']),part('sel'));const out=[];const s=new SimulationSession(project,{print:v=>out.push(v)});
+    const {project}=applyDeviceExample(projectWith(['led']),part('sel'));const out=[];const s=new SimulationSession(project,consoleSink(out));
     const seen=new Set();for(let t=0;t<=1200;t+=50){s.tick(t);seen.add(s.result.parts.sel.on);}
     assert.deepEqual([...seen].sort(),[false,true]);assert.ok(out.includes('PA5=1')&&out.includes('PA5=0'));
   });
@@ -65,7 +66,7 @@ describe('device Docs: applying examples to main.c',()=>{
   test('a valid alternative ADC pin chosen by the user is kept',()=>{
     const p=projectWith(['potentiometer']);p.surfaces.board.hidden=false;p.wires=[{id:'signal',from:boardPin('PC0'),to:'part:sel:p2',color:'#abcdef'}];
     const {project}=applyDeviceExample(p,part('sel'));assert.ok(project.wires.some(w=>w.id==='signal'));assert.equal(project.deviceDocs.bindings[0].pins.PA0,'PC0');
-    const out=[];const s=new SimulationSession(project,{print:v=>out.push(v)});for(let t=0;t<=600;t+=50)s.tick(t);assert.match(out.join('\n'),/1\.65\d V/);
+    const out=[];const s=new SimulationSession(project,consoleSink(out));for(let t=0;t<=600;t+=50)s.tick(t);assert.match(out.join('\n'),/1\.65\d V/);
   });
   // Changed in 0.26.1: edits inside a device's own region no longer block re-apply; re-applying
   // replaces only that device's regions (Ctrl+Z restores), other devices' edited regions stay.

@@ -11,7 +11,7 @@ import {familyProfile,routesOf} from './mcu-family.js';
 import {projectBoard} from './boards.js';
 import {PINS,PIN_BY_ID,GPIO_PINS,boardPin,endpointInfo} from './pins.js';
 import {terminalKeys,terminalLabel,attachments,assignAttachments,pluggedKeys} from './components.js';
-import {defaultMcu,validateMcu,generateHal,ROUTES,irqForPin} from './mcu-config.js';
+import {defaultMcu,validateMcu,generateHal,ROUTES,irqForPin,userPins} from './mcu-config.js';
 import {timerMax,isBasicTimer} from './timer-config.js';
 import {SERIAL_IDS,serialHandle} from './serial-config.js';
 import {validateProject} from './project.js';
@@ -215,7 +215,7 @@ export function applyDeviceExample(original,target,options={}){
  if(!['hal','baremetal'].includes(mode))throw new Error('예제 모드를 확인하세요.');
  if(mode==='baremetal'&&projectBoard(project).mcuFamily!=='STM32F446RE')throw new Error('레지스터 예제는 NUCLEO-F446RE(STM32F4 레지스터)용입니다. NUCLEO-F103RB에서는 HAL 예제를 사용하세요.');
  showSurface(project,'board');
- const sample=recipeFor(type,projectBoard(project).id);if(sample.mcu.timerClockHz!==project.mcu.timerClockHz&&/^ref_rgb_(neopixel|gravity)/.test(type)){if(Object.keys(project.mcu.pins).length||project.deviceDocs?.bindings.length)throw new Error('이 장치의 비트 타이밍에는 '+sample.mcu.timerClockHz+' Hz 클록이 필요합니다. Pinout의 클록을 맞춰 주세요.');project.mcu.timerClockHz=sample.mcu.timerClockHz;project.code=project.code.replace(cFunctions(project.code).find(f=>f.name==='SystemClock_Config')?.text||'__no_clock__',cFunctions(generateHal(project.mcu)).find(f=>f.name==='SystemClock_Config')?.text||'');}
+ const sample=recipeFor(type,projectBoard(project).id);if(sample.mcu.timerClockHz!==project.mcu.timerClockHz&&/^ref_rgb_(neopixel|gravity)/.test(type)){if(Object.keys(userPins(project.mcu)).length||project.deviceDocs?.bindings.length)throw new Error('이 장치의 비트 타이밍에는 '+sample.mcu.timerClockHz+' Hz 클록이 필요합니다. Pinout의 클록을 맞춰 주세요.');project.mcu.timerClockHz=sample.mcu.timerClockHz;project.code=project.code.replace(cFunctions(project.code).find(f=>f.name==='SystemClock_Config')?.text||'__no_clock__',cFunctions(generateHal(project.mcu)).find(f=>f.name==='SystemClock_Config')?.text||'');}
  const busPin=(p,label)=>partTerminal(p.id,terminalKeys(p).find(k=>terminalLabel(p,k)===label));
  const key=component?.id||'surface_'+type;project.deviceDocs??={bindings:[]};
  if(['uart','rs485'].includes(CATALOG_BY_TYPE[type]?.family||type)&&component?.baud)sample.mcu.peripherals.USART1.baud=component.baud;

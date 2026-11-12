@@ -9,7 +9,7 @@ import {SimulationSession} from '../../src/session.js';
 function run(body,loop='',ms=400){
  const p=blankProject();
  // 16 MHz / 16000 = 1 kHz counter, period 100 → an update every 100 ms.
- p.mcu.peripherals={TIM2:{enabled:true,prescaler:15999,period:99}};p.mcu=validateMcu(p.mcu);
+ p.mcu.pins={};p.mcu.peripherals={TIM2:{enabled:true,prescaler:15999,period:99}};p.mcu=validateMcu(p.mcu);
  p.code=generateHal(p.mcu,{minimal:true}).replace('/* USER CODE BEGIN 0 */','/* USER CODE BEGIN 0 */\nstatic int ticks;').replace('  /* USER CODE BEGIN 2 */','  /* USER CODE BEGIN 2 */\n  '+body).replace('    /* USER CODE BEGIN 3 */','    /* USER CODE BEGIN 3 */\n    '+loop);
  const out=[],s=new SimulationSession(p,{print:x=>out.push(x),warn:()=>{}});s.tick(0);for(let t=10;t<=ms;t+=10)s.tick(t);return out;
 }

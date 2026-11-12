@@ -19,7 +19,7 @@ test('보드 구성 초기화 resets main.c too, and 실행 취소 restores circ
   await win.waitForFunction(()=>!document.getElementById('board-reset-dialog').open);
   assert.equal(await parts(),0);
   const after=await code();
-  assert.doesNotMatch(after,/HAL_GPIO_(Toggle|Write)Pin|MX_GPIO_Init/,'the example code is gone with its pins');
+  assert.doesNotMatch(after,/HAL_GPIO_(Toggle|Write)Pin|GPIO_PIN_5\b/,'the example code is gone with its pins');assert.match(after,/MX_USART2_UART_Init\(\);/,'the new project\'s UART console');
   assert.match(after,/int main\(void\)[\s\S]*HAL_Init\(\);[\s\S]*SystemClock_Config\(\);/,'main.c of the default settings');
   assert.match(await win.textContent('#console-output'),/보드 구성과 main\.c를 초기화했습니다/);
   await win.click('#undo');

@@ -67,7 +67,7 @@ test('NUCLEO-F446RE: polling B1 with HAL_GPIO_ReadPin — the same three cases',
  const root=await fs.mkdtemp(path.join(os.tmpdir(),'bounce-f4-'));
  try{
   const pin=(fn,label)=>({function:fn,pull:'NOPULL',edge:'FALLING',label,initial:0});
-  const project=(bounceMs,wait)=>{const p=blankProject();p.components=[];p.wires=[];p.mcu.pins={PC13:pin('GPIO_Input','B1'),PA5:pin('GPIO_Output','LD2')};p.mcu=validateMcu(p.mcu);
+  const project=(bounceMs,wait)=>{const p=blankProject();p.components=[];p.wires=[];p.mcu.peripherals={};p.mcu.pins={PC13:pin('GPIO_Input','B1'),PA5:pin('GPIO_Output','LD2')};p.mcu=validateMcu(p.mcu);
    p.code=generateHal(p.mcu,{minimal:true}).replace('    /* USER CODE BEGIN 3 */',`    /* USER CODE BEGIN 3 */
     if (HAL_GPIO_ReadPin(B1_GPIO_Port, B1_Pin) == GPIO_PIN_RESET) {
       HAL_GPIO_TogglePin(LD2_GPIO_Port, LD2_Pin);
