@@ -16,7 +16,10 @@ const require=createRequire(import.meta.url),{prepareBuild,build,detectTools}=re
 const tools=await detectTools({armGcc:process.env.ARM_GCC||''});
 const skip=!(tools.armGcc&&tools.cube&&tools.cubeF1)&&!process.env.CI_REQUIRE_TOOLCHAIN&&'ARM GCC / STM32CubeF4·F1 not installed';
 const pin=fn=>({function:fn,pull:'NOPULL',edge:'FALLING',label:'',initial:0});
+// New projects have USART2 on (the UART console, 1.51.0). On the F103 USART2_RTS shares PA1 with TIM2_CH2: without
+// hardware flow control the pin is the timer's (the emulator drove RTS whenever USART2 was enabled before 1.51.0).
 const boards=[['F446RE',blankProject()],['F103RB',projectForBoard('nucleo-f103rb')]];
+assert.ok(boards.every(([,p])=>p.mcu.peripherals.USART2?.enabled),'the boards start with USART2 on');
 const user=(code,lines,extra='')=>code.replace('  /* USER CODE BEGIN 2 */','  /* USER CODE BEGIN 2 */\n'+lines)+extra;
 async function firmware(p,root,board){
  const result=await build(await prepareBuild({project:p,tools,root,target:'arm'}));

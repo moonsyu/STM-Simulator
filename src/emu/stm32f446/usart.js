@@ -47,10 +47,10 @@ export class Usart extends Peripheral {
   afOutput(role) {
     if (role === 'TX') return this.txEnabled() ? { level: 1 } : null;
     if (role === 'CK') return this.syncMode() && this.txEnabled() ? { level: bit(this.get(CR2), 10) } : null;
-    if (role === 'RTS') return this.enabled() ? { level: 0 } : null;
+    if (role === 'RTS') return this.enabled() && bit(this.get(CR3), 8) ? { level: 0 } : null;
     return null;
   }
-  publishTx() { this.soc.afChanged?.(this.name + '_TX'); this.soc.afChanged?.(this.name + '_CK'); }
+  publishTx() { this.soc.afChanged?.(this.name + '_TX'); this.soc.afChanged?.(this.name + '_CK'); this.soc.afChanged?.(this.name + '_RTS'); }
   rxSources() {
     if (!this.rxEnabled() || this.syncMode()) return [];
     const pins = this.rxPins(); if (!pins.length) return [];
@@ -99,6 +99,7 @@ export class Usart extends Peripheral {
         this.publishTx(); break;
       }
       case CR2: this.set(CR2, v); this.publishTx(); break;
+      case CR3: this.set(CR3, v); this.publishTx(); break;
       default: this.set(off, v);
     }
     this.updateIrq(); this.dmaLines();
