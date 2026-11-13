@@ -8,6 +8,8 @@
 
 FSP 모듈 준비: 사용자 승인(2026-11-13)으로 renesas/fsp의 같은 커밋(6e26753)에서 필요한 폴더만 부분 복제해 매니페스트를 다시 만들었다(파일 249개, 7.8 MB, 모두 BSD-3-Clause — r_usb_pcdc·rm_freertos_port 헤더 확인; rm_freertos_port는 커널이 없어 넣지 않음). 이 PC의 FSP를 앱 설치 기능으로 다시 설치(모든 파일 SHA-256 확인)하고 RA 빌드 시험 통과.
 
+**첫 게시 실패(CI 43359185092)**: E2E 4/7의 "대체 실행 뒤 개발 도구에 ARM GCC·FSP 지정" 시험이 상태 표시를 15초 기다리다 실패(이 PC에서는 통과). 원인: 대체 실행 여부를 설치 계획의 ARM GCC 항목으로 판단했는데, 그 항목은 ARM GDB도 요구한다. CI 러너에는 GDB를 따로 찾을 곳이 없어 GCC·FSP를 넣어도 계속 해석기로 남았고, 이 PC는 `C:\Program Files\Arm GNU Toolchain`·STM32CubeIDE에서 GDB가 잡혀 드러나지 않았다. 시뮬레이터 빌드는 GDB가 필요 없으므로 FSP 프로젝트의 판단을 ARM GCC와 FSP 경로만 보게 고쳤다(`native-ide-ui.js` fspToolsMissing). RA E2E 3파일 12개 통과.
+
 ## 1.51.0 기능 목록 45번, 새 프로젝트 기본값 UART, F103 RTS — 로컬 검증
 
 2026-11-13. **새 프로젝트 기본값 UART**(2026-11-12 사용자 결정): 단위 `project`(USART2·`_write`, 인사말이 가상 COM으로)·`docs`·`docs-apply`(콘솔 핀이 있어도 Docs 적용, NeoPixel 클록 검사)·`stm32-boards`. 핀 목록을 통째로 바꾸던 시험들(`p.mcu.pins={…}`)은 콘솔 주변장치도 비우게 고쳤다. 툴체인: 새 기본 프로젝트(`blank`)가 두 보드에서 ARM GCC로 빌드·실행.
