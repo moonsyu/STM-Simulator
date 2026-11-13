@@ -44,6 +44,21 @@ test('callbacks: modules whose callback arguments differ cannot share a name; FS
  assert.throws(()=>validateRaMcu(withLabel('spi_tei_isr')),/ISR/,'a pin symbol as well');
 });
 
+// Re-check of the review fix: the generator writes no disabled stack (the Pins dialog keeps a stack's settings, callback
+// included, when its pins are cleared), so a disabled one shares a name with anything; and only FSP's own API objects
+// are refused, not every g_…_on_… name.
+test('callbacks: a disabled stack keeps its name without a clash; only the FSP API object names of the headers are refused',()=>{
+ const m=raDefaultMcu();m.pins.P109={function:'Peripheral',signal:'SCI9_TXD'};
+ m.peripherals={SPI1:{enabled:false,bitrate:1000000,cpol:0,cpha:0,bitOrder:'MSB',ssl:'SSL0',callback:'my_callback',priority:12},SCI9:{enabled:true,callback:'my_callback'}};
+ assert.equal(validateRaMcu(m).peripherals.SCI9.callback,'my_callback','a saved project opens');
+ const gpt=raDefaultMcu();gpt.peripherals={GPT1:{enabled:false,mode:'PWM',period:1,unit:'kHz',duty:50,callback:'external_irq1_callback',priority:12}};
+ assert.doesNotThrow(()=>validateRaMcu(gpt));
+ m.peripherals.SPI1.enabled=true;m.peripherals.SPI1.ssl='NONE';Object.assign(m.pins,{P101:{function:'Peripheral',signal:'SPI1_MOSI'},P102:{function:'Peripheral',signal:'SPI1_RSPCK'}});
+ assert.throws(()=>validateRaMcu(m),/인자 형식이 다릅니다/,'enabled again: the clash is back');
+ for(const name of ['g_button_on_press','g_led_on_off','g_spi_on_done','g_uart_on_receive'])assert.equal(raNameProblem(name),'',name);
+ for(const name of ['g_uart_on_sci','g_spi_on_spi','g_spi_on_sci','g_timer_on_gpt','g_timer_on_agt','g_external_irq_on_icu','g_i2c_master_on_iic','g_adc_on_adc','g_ioport_on_ioport','g_transfer_on_dtc'])assert.match(raNameProblem(name),/API 객체 이름/,name);
+});
+
 test('every example and the board template keep their names',()=>{
  assert.doesNotThrow(()=>validateRaMcu(raDefaultMcu()));
  for(const e of RA_EXAMPLES)assert.doesNotThrow(()=>validateRaMcu(e.mcu()),e.id);

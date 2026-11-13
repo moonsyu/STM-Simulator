@@ -78,15 +78,18 @@ const C_NAME=/^[A-Za-z_][A-Za-z0-9_]{0,40}$/;
 // it was typed (LED "int": every int in the project turns into a pin). Those are refused here with the reason.
 const C_WORDS=new Set(('auto break case char const continue default do double else enum extern float for goto if inline int long register restrict return short signed sizeof static struct switch typedef union unsigned void volatile while '
  +'bool true false NULL size_t int8_t int16_t int32_t int64_t uint8_t uint16_t uint32_t uint64_t main hal_entry errno printf sprintf snprintf puts putchar malloc free memcpy memset strlen abs').split(' '));
+// The API objects the FSP 6.6 headers declare (ra/fsp/inc: extern const <api>_api_t g_<api>_on_<module>); other names of
+// that shape (g_button_on_press) are the user's.
+const FSP_API_OBJECTS=new Set(['g_adc_on_adc','g_can_on_can','g_elc_on_elc','g_external_irq_on_icu','g_flash_on_flash_hp','g_i2c_master_on_iic','g_i2c_slave_on_iic','g_ioport_on_ioport','g_lpm_on_lpm','g_rtc_on_rtc','g_spi_on_sci','g_spi_on_spi','g_timer_on_agt','g_timer_on_gpt','g_transfer_on_dmac','g_transfer_on_dtc','g_uart_on_sci','g_usb_on_usb','g_wdt_on_iwdt','g_wdt_on_wdt']);
 /** Why a name cannot be a pin symbol or a callback of an FSP project, or '' when it can. */
 export function raNameProblem(name){
  if(C_WORDS.has(name))return `${name}은(는) C나 생성 코드가 쓰는 이름입니다`;
  if(/^(R_|BSP_|FSP_|IOPORT_|ELC_|ICU_|__)/.test(name)||/^_[A-Z]/.test(name))return `${name}: R_ · BSP_ · FSP_ · IOPORT_ 로 시작하는 이름과 __ 로 시작하는 이름은 FSP와 컴파일러가 씁니다`;
  if(/^g_(ioport|external_irq\d+|uart\d+|timer\d+|agt\d+|adc\d+|i2c_master\d+|spi\d+|sci_spi\d+|bsp_pin_cfg)(_ctrl|_cfg|_extend|_cfg_extend|_ext_cfg|_channel_cfg)?$/.test(name))return `${name}은(는) 생성 코드의 인스턴스 이름입니다`;
  // The interrupt service routines vector_data.h names (FSP drivers define them) and the drivers' API objects
- // (g_uart_on_sci, g_spi_on_spi, g_timer_on_gpt …).
+ // (g_uart_on_sci, g_spi_on_spi, g_timer_on_gpt …: the extern const …_api_t g_<api>_on_<module> of the FSP 6.6 headers).
  if(/^((sci_uart|sci_spi|spi|iic_master)_(rxi|txi|tei|eri)|r_icu|adc_scan_end|agt_int|gpt_counter_overflow)_isr$/.test(name))return `${name}은(는) FSP 드라이버의 인터럽트 처리 함수(ISR) 이름입니다`;
- if(/^g_\w+_on_\w+$/.test(name))return `${name}은(는) FSP 드라이버의 API 객체 이름(g_…_on_…)입니다`;
+ if(FSP_API_OBJECTS.has(name))return `${name}은(는) FSP 드라이버의 API 객체 이름(g_…_on_…)입니다`;
  return '';
 }
 // The argument type of a callback by where it is set: an IRQ pin, or a peripheral (an SCI channel is a UART or, in
@@ -171,8 +174,10 @@ export function validateRaMcu(mcu){
  for(const [where,name]of callbacks)if(labels.has(name))throw new Error(`${where}: 콜백 이름 ${name}은(는) 핀 이름(심볼)과 같습니다. 다른 이름을 쓰세요.`);
  // hal_data.h declares each callback with its module's argument type: one function can serve stacks of the same kind
  // (two UARTs, GPT and AGT timers), but a name shared by modules whose arguments differ is two conflicting declarations.
+ // A disabled stack is not generated (a project keeps its settings when its pins are cleared), so only enabled ones count.
  const seen=new Map();
  for(const [where,name]of callbacks){
+  if(out.peripherals?.[where]&&!out.peripherals[where].enabled)continue;
   const type=callbackArgType(where,out.peripherals?.[where]),other=seen.get(name);
   if(other&&other.type!==type)throw new Error(`${where}: 콜백 이름 ${name}은(는) ${other.where}의 콜백과 같지만 인자 형식이 다릅니다(${type} / ${other.type}). hal_data.h에 서로 다른 선언이 둘 생기니 다른 이름을 쓰세요.`);
   if(!other)seen.set(name,{where,type});
