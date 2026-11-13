@@ -336,7 +336,7 @@ function spyCallbacks(session){const at=[],own=session.hal.callback.bind(session
 
 test('SPI: ra_spi_memory runs on the interpreter — SPI1 writes 0x2A at 0x10 of the SPI memory and reads it back with SSL0 low; SCI9 prints it, LED2 lights',()=>{
  const {session,log}=open(example('ra_spi_memory')),calls=spyCallbacks(session),ssl=[];
- const own=session.buses.spiExchange.bind(session.buses);session.buses.spiExchange=(v,r,at)=>{ssl.push(session.result.voltage('signal:P103')<.8);return own(v,r,at);};
+ const own=session.buses.spiRespond.bind(session.buses);session.buses.spiRespond=(v,r)=>{ssl.push(session.result.voltage('signal:P103')<.8);return own(v,r);};
  run(session,1200);
  assert.equal(session.readVariable('matched'),1);assert.equal(session.readVariable('readback'),0x2a);
  assert.equal(session.buses.received.get('term'),'SPI1 read 0x2A\r\n');assert.equal(high(session,'P407'),1,'LED2 on');
@@ -368,7 +368,7 @@ test('SPI: SPI1 3-wire LSB first in 16- and 32-bit frames and SCI9 simple SPI lo
    '    R_SPI_Open(&g_spi1_ctrl, &g_spi1_cfg);','    odd_width = R_SPI_Write(&g_spi1_ctrl, tx16, 1, SPI_BIT_WIDTH_28_BITS);','    R_SPI_WriteRead(&g_spi1_ctrl, tx16, rx16, 2, SPI_BIT_WIDTH_16_BITS);','    while (spi_done < 1)\n    {\n    }','    R_SPI_WriteRead(&g_spi1_ctrl, tx32, rx32, 1, SPI_BIT_WIDTH_32_BITS);','    while (spi_done < 2)\n    {\n    }',
    '    spi_ok = (rx16[0] == 0x1234) && (rx16[1] == 0xABCD) && (rx32[0] == 0xDEADBEEF);','    while (1)\n    {\n    }'].join('\n'),spiLoopMcu());
  const {session,log}=open({...code,wires:LOOP_WIRES}),wire=[];
- const own=session.buses.spiExchange.bind(session.buses);session.buses.spiExchange=(v,r,at)=>{wire.push([session.buses.spiId,v]);return own(v,r,at);};
+ const own=session.buses.spiRespond.bind(session.buses);session.buses.spiRespond=(v,r)=>{wire.push([session.buses.spiId,v]);return own(v,r);};
  run(session,40);assert.deepEqual(log.warn,[]);
  assert.deepEqual(['wide','odd_width','sci_ok','spi_ok','sci_cb_channel'].map(n=>session.readVariable(n)),[6,1,1,1,9],'FSP_ERR_UNSUPPORTED, FSP_ERR_ASSERTION, both loops');
  // On the wire: SCI9 MSB first; SPI1 LSB first, so 0x1234 goes out as 0x2C48 (MSB byte first), 0xDEADBEEF as 0xF77DB57B.
@@ -389,4 +389,59 @@ test('SPI: R_SPI_CallbackSet replaces the Stacks callback and passes its context
  const prelude=fspPrelude(validateRaMcu(spiLoopMcu()));
  for(const name of ['g_spi1_ctrl','g_spi1_ext_cfg','g_spi1_cfg','g_spi1','g_sci_spi9_ctrl','g_sci_spi9_cfg_extend','g_sci_spi9_cfg','g_sci_spi9'])assert.match(prelude,new RegExp(`\\b${name} =|\\b${name};`),name);
  assert.match(prelude,/\.spi_clksyn = SPI_SSL_MODE_CLK_SYN/);assert.match(prelude,/\.bit_order = SPI_BIT_ORDER_LSB_FIRST/);assert.doesNotMatch(prelude,/g_uart9/,'SCI9 in SPI mode is not a UART');
+});
+
+// ---- Feature 32 review fixes (the interpreter's SPI against r_spi.c / r_sci_spi.c).
+const SPI_CBS='void spi1_callback(spi_callback_args_t *p_args)\n{\n    (void) p_args;\n}\nvoid sci_spi9_callback(spi_callback_args_t *p_args)\n{\n    (void) p_args;\n}\n';
+const spiLoop=(globals,lines,mcu=spiLoopMcu())=>{const {session,log}=open({...program(globals,[...lines,'    while (1)\n    {\n    }'].join('\n'),mcu),wires:LOOP_WIRES});run(session,20);return {session,log,spi:log.trace.filter(t=>t.protocol==='SPI').map(t=>t.message)};};
+
+test('SPI review 2: parameter checks in the drivers\' order — WriteRead needs both buffers, r_sci_spi checks width and buffers before the open state, CallbackSet(NULL) is FSP_ERR_ASSERTION',()=>{
+ const {session,spi}=spiLoop(SPI_CBS+'fsp_err_t e[8] = { 99, 99, 99, 99, 99, 99, 99, 99 };\nuint8_t tx[2] = { 1, 2 };\nuint8_t rx[2];\n',[
+  '    e[0] = R_SCI_SPI_Write(&g_sci_spi9_ctrl, NULL, 2, SPI_BIT_WIDTH_8_BITS);','    e[1] = R_SCI_SPI_Write(&g_sci_spi9_ctrl, tx, 2, SPI_BIT_WIDTH_16_BITS);','    e[2] = R_SPI_Write(&g_spi1_ctrl, NULL, 2, SPI_BIT_WIDTH_8_BITS);','    e[3] = R_SPI_CallbackSet(&g_spi1_ctrl, NULL, NULL, NULL);',
+  '    R_SPI_Open(&g_spi1_ctrl, &g_spi1_cfg);','    R_SCI_SPI_Open(&g_sci_spi9_ctrl, &g_sci_spi9_cfg);',
+  '    e[4] = R_SPI_WriteRead(&g_spi1_ctrl, tx, NULL, 2, SPI_BIT_WIDTH_8_BITS);','    e[5] = R_SCI_SPI_WriteRead(&g_sci_spi9_ctrl, NULL, rx, 2, SPI_BIT_WIDTH_8_BITS);','    e[6] = R_SCI_SPI_Read(&g_sci_spi9_ctrl, NULL, 2, SPI_BIT_WIDTH_8_BITS);','    e[7] = R_SPI_Write(&g_spi1_ctrl, tx, 0, SPI_BIT_WIDTH_8_BITS);']);
+ // ASSERTION before NOT_OPEN (r_sci_spi), UNSUPPORTED first, NOT_OPEN before the buffer (r_spi common), then the open
+ // channel's NULL buffers and length 0 — and none of them transfers anything.
+ assert.deepEqual(Array.from({length:8},(_,i)=>session.readVariable(`e[${i}]`)),[1,6,7,1,1,1,1,1]);
+ assert.deepEqual(spi,[]);
+});
+
+test('SPI review 3: frames are read and written through the driver\'s uint8/16/32 pointer — a uint8_t buffer holds 16-bit frames little-endian, a uint32_t buffer four 8-bit frames',()=>{
+ const {session,spi}=spiLoop(SPI_CBS+'uint8_t tx8[4] = { 0x34, 0x12, 0xCD, 0xAB };\nuint8_t rx8[4];\nuint32_t tx32[1] = { 0x44332211 };\nuint32_t rx32[1];\nuint16_t tx16[1] = { 0xBEEF };\nuint8_t rx16[2];\n',[
+  '    R_SPI_Open(&g_spi1_ctrl, &g_spi1_cfg);','    R_SPI_WriteRead(&g_spi1_ctrl, tx8, rx8, 2, SPI_BIT_WIDTH_16_BITS);','    R_BSP_SoftwareDelay(1, BSP_DELAY_UNITS_MILLISECONDS);',
+  '    R_SPI_WriteRead(&g_spi1_ctrl, tx32, rx32, 4, SPI_BIT_WIDTH_8_BITS);','    R_BSP_SoftwareDelay(1, BSP_DELAY_UNITS_MILLISECONDS);','    R_SPI_WriteRead(&g_spi1_ctrl, tx16, rx16, 2, SPI_BIT_WIDTH_8_BITS);','    R_BSP_SoftwareDelay(1, BSP_DELAY_UNITS_MILLISECONDS);']);
+ // SPI1 is LSB first here; the trace shows the frame values.
+ assert.deepEqual(spi,['SPI1 · 2 × 16비트 · TX 1234 ABCD · RX 1234 ABCD','SPI1 · 4 × 8비트 · TX 11 22 33 44 · RX 11 22 33 44','SPI1 · 2 × 8비트 · TX EF BE · RX EF BE']);
+ assert.deepEqual([0,1,2,3].map(i=>session.readVariable(`rx8[${i}]`)),[0x34,0x12,0xcd,0xab]);
+ assert.equal(session.readVariable('rx32[0]'),0x44332211);assert.deepEqual([0,1].map(i=>session.readVariable(`rx16[${i}]`)),[0xef,0xbe]);
+ // A buffer too small for the frames stops with the interpreter's range error, as an out-of-bounds access does.
+ assert.throws(()=>spiLoop(SPI_CBS+'uint8_t small[3];\n',['    R_SPI_Open(&g_spi1_ctrl, &g_spi1_cfg);','    R_SPI_Write(&g_spi1_ctrl, small, 2, SPI_BIT_WIDTH_16_BITS);']),/범위/);
+});
+
+test('SPI review 4: the callback gets p_cfg->p_context of the configuration Open was given; SSL0 follows ssl_polarity (active high)',()=>{
+ const mcu=raExample('ra_spi_memory').mcu();
+ const p=program('uint32_t token = 7;\nuint32_t seen = 0;\nvolatile uint32_t done = 0;\nspi_cfg_t my_cfg;\nspi_extended_cfg_t my_ext;\nuint8_t b[2] = { 1, 2 };\nvoid spi1_callback(spi_callback_args_t *p_args)\n{\n    if (p_args->p_context != NULL)\n    {\n        seen = *(uint32_t *) p_args->p_context;\n    }\n    done++;\n}\nvoid user_uart9_callback(uart_callback_args_t *p_args)\n{\n    (void) p_args;\n}',
+  ['    my_ext = g_spi1_ext_cfg;','    my_ext.ssl_polarity = SPI_SSLP_HIGH;','    my_cfg = g_spi1_cfg;','    my_cfg.p_context = &token;','    my_cfg.p_extend = &my_ext;','    R_SPI_Open(&g_spi1_ctrl, &my_cfg);','    R_BSP_SoftwareDelay(5, BSP_DELAY_UNITS_MILLISECONDS);','    R_SPI_Write(&g_spi1_ctrl, b, 2, SPI_BIT_WIDTH_8_BITS);','    R_BSP_SoftwareDelay(1, BSP_DELAY_UNITS_MILLISECONDS);','    while (1)\n    {\n    }'].join('\n'),mcu);
+ const {session}=open(p),during=[];const own=session.buses.spiRespond.bind(session.buses);session.buses.spiRespond=(v,r)=>{during.push(high(session,'P103'));return own(v,r);};
+ run(session,2,undefined,1);assert.equal(high(session,'P103'),0,'SSL0 idles low when active high');
+ run(session,20);
+ assert.deepEqual(['seen','done'].map(n=>session.readVariable(n)),[7,1]);
+ assert.deepEqual(during,[1,1],'SSL0 high (active) while the bytes are exchanged');assert.equal(high(session,'P103'),0,'inactive again');
+});
+
+test('SPI review 5 and 6: 9-bit frames take 9 bit times on the bus and the logic analyzer (no overlap), loop back whole; LSB first is decoded LSB first',()=>{
+ const mcu=spiLoopMcu();mcu.peripherals.SPI1.bitrate=1000000;
+ const globals='volatile uint32_t done = 0;\nvoid spi1_callback(spi_callback_args_t *p_args)\n{\n    (void) p_args;\n    done++;\n}\nvoid sci_spi9_callback(spi_callback_args_t *p_args)\n{\n    (void) p_args;\n}\nuint16_t tx[3] = { 0x1FF, 0x101, 0x0AA };\nuint16_t rx[3];\nuint8_t lsb[2] = { 0x01, 0xA5 };\n';
+ const {session,log}=open({...program(globals,['    R_SPI_Open(&g_spi1_ctrl, &g_spi1_cfg);','    R_SPI_WriteRead(&g_spi1_ctrl, tx, rx, 3, SPI_BIT_WIDTH_9_BITS);','    while (done == 0)\n    {\n    }','    R_BSP_SoftwareDelay(2, BSP_DELAY_UNITS_MILLISECONDS);','    R_SPI_Write(&g_spi1_ctrl, lsb, 2, SPI_BIT_WIDTH_8_BITS);','    while (1)\n    {\n    }'].join('\n'),mcu),wires:LOOP_WIRES});
+ const calls=spyCallbacks(session),decoded=from=>session.signalRecorder.decode('SPI1.SCK').filter(f=>!f.error&&f.startUs>=from).map(f=>[f.value,f.answer]);
+ run(session,1,undefined,1);
+ assert.deepEqual([0,1,2].map(i=>session.readVariable(`rx[${i}]`)),[0x1ff,0x101,0x0aa],'whole 9-bit frames through the loopback');
+ const start=log.trace.find(t=>t.protocol==='SPI').micros;assert.ok(Math.abs(calls[0].us-start-27)<1e-6,`3 x 9 bits at 1 MHz: ${calls[0].us-start}`);
+ const sck=session.signalRecorder.samples('SPI1.SCK',start,start+30),rising=sck.filter((e,i)=>i&&e[1]===1&&sck[i-1][1]===0);
+ assert.equal(rising.length,27,'27 clocks for 27 bits');assert.ok(rising.at(-1)[0]<start+27);
+ assert.deepEqual(decoded(start),[[0x1ff,0x1ff],[0x101,0x101],[0xaa,0xaa]],'decoded in 9-bit frames');
+ run(session,20);
+ // The analyzer line takes the frame width of the latest transfer: read the 8-bit LSB-first frames from their start on.
+ const second=log.trace.filter(t=>t.protocol==='SPI')[1].micros;
+ assert.deepEqual(decoded(second).map(f=>f[0]),[0x01,0xa5],'LSB first decoded LSB first');
 });

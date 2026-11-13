@@ -113,6 +113,18 @@ export function encodeSpi(startUs,value,{clockHz=1e6,cpol=0,cpha=0,lsbFirst=fals
  }
  return {sck,mosi,miso,endUs:t,mosiSeen,misoSeen:byteOf(gs,lsbFirst),reply};
 }
+// Frames of `bits` bits (4-32) back to back, MOSI and MISO values already exchanged: the RA SPI masters on the FSP
+// interpreter, whose frames are not always whole bytes (r_spi takes 8-16, 20, 24 and 32 bits).
+export function encodeSpiFrames(startUs,frames,{clockHz=1e6,cpol=0,cpha=0,lsbFirst=false,bits=8}={}){
+ const H=5e5/clockHz,sck=[[startUs,cpol]],mosi=[[startUs,0]],miso=[[startUs,1]];let t=startUs;
+ for(const {tx,rx} of frames)for(let i=0;i<bits;i++){
+  const k=lsbFirst?i:bits-1-i,m=Math.floor(tx/2**k)%2,s=Math.floor(rx/2**k)%2;
+  if(cpha===0){push(mosi,t,m);push(miso,t,s);push(sck,t+H,cpol^1);push(sck,t+2*H,cpol);}
+  else{push(sck,t,cpol^1);push(mosi,t+H/4,m);push(miso,t+H/4,s);push(sck,t+H,cpol);}
+  t+=2*H;
+ }
+ return {sck,mosi,miso,endUs:t};
+}
 // Synchronous USART: LSB first data on TX with a CK burst; LastBit decides whether the MSB clock pulse is output.
 export function encodeUsartSync(startUs,value,{baud,cpol=0,cpha=0,lastBit=false,noise=QUIET}={}){
  const T=1e6/baud,H=T/2,ck=[[startUs-T,cpol]],tx=[[startUs-T,1]],data=bitsOf(value,8,true),frame=[0,...data,1];
@@ -158,8 +170,10 @@ function decodeClocked({role,lead},{clock='sck',out='mosi',inp='miso',select='ns
  const capture=[];for(let i=0;i<ck.edges.length;i++){const [t,l]=ck.edges[i],prev=i?ck.edges[i-1][1]:ck.idle;if(l===prev)continue;const leading=prev===cpol;if(leading===(cpha===0))capture.push(t);}
  let group=[],last=-Infinity;const gap=p.gapUs??(p.clockHz?16e6/p.clockHz:50);
  const flush=()=>{if(!group.length)return;const n=group.length,mb=group.map(t=>tx?levelAt(tx.edges,t-1e-6,tx.idle):1),sb=group.map(t=>rx?levelAt(rx.edges,t-1e-6,rx.idle):1);
-  for(let i=0;i+8<=n;i+=8){const m=byteOf(mb.slice(i,i+8),lsbFirst),s=byteOf(sb.slice(i,i+8),lsbFirst);frames.push({startUs:group[i],endUs:group[i+7],label:`${out.toUpperCase()} ${hex(m)} / ${inp.toUpperCase()} ${hex(s)}`,value:m,answer:s});}
-  if(n%8)frames.push({startUs:group[n-n%8],endUs:group[n-1],label:`${n%8} bit`,error:'incomplete'});group=[];};
+  // Frames of p.bits (8 unless the line says otherwise, as the RA SPI masters do for 9-32 bit frames).
+  const w=p.bits||8,word=(list,i)=>list.slice(i,i+w).reduce((v,b,j)=>v+b*2**(lsbFirst?j:w-1-j),0),hx=v=>w===8?hex(v):'0x'+v.toString(16).toUpperCase().padStart(Math.ceil(w/4),'0');
+  for(let i=0;i+w<=n;i+=w){const m=word(mb,i),s=word(sb,i);frames.push({startUs:group[i],endUs:group[i+w-1],label:`${out.toUpperCase()} ${hx(m)} / ${inp.toUpperCase()} ${hx(s)}`,value:m,answer:s});}
+  if(n%w)frames.push({startUs:group[n-n%w],endUs:group[n-1],label:`${n%w} bit`,error:'incomplete'});group=[];};
  for(const t of capture){const selected=!cs||levelAt(cs.edges,t,cs.idle)===0;if(!selected){flush();continue;}if(t-last>gap||(cs&&group.length&&levelAt(cs.edges,(t+last)/2,cs.idle)!==0))flush();group.push(t);last=t;if(frames.length>=4000)break;}
  flush();return frames;
 }

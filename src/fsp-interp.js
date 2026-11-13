@@ -14,6 +14,7 @@ import {formatPrintf,stringCall} from './hal-stdio.js';
 import {validateRaMcu,raClockHz,raPinName,RA6E1_PORTS,RA_ADC_CHANNELS,RA_IRQ_PINS} from './ra-config.js';
 import {raInstances,raIoName,raVectors,pinCfgWord} from './ra-generator.js';
 import {exchangeFrame} from './emu/ra6e1/spi.js';
+import {encodeSpiFrames} from './signals.js';
 
 const pad=n=>String(n).padStart(2,'0');
 const hex=(n,w=4)=>'0x'+(n>>>0).toString(16).toUpperCase().padStart(w,'0');
@@ -441,50 +442,83 @@ export class FspAdapter {
   const pin=s=>this.pinOf(`${id}_${s}`),sck=pin(rspi?'RSPCK':'SCK'),mosi=pin(rspi?'MOSI':'TXD'),miso=pin(rspi?'MISO':'RXD'),ssl=fourWire?pin('SSL0'):null;
   if(!sck||!mosi)throw new Error(`${fn}: 내장 해석기는 ${id}의 ${rspi?'RSPCK':'SCK'}와 ${rspi?'MOSI':'TXD(MOSI)'} 핀을 정한 SPI만 실행합니다(Pins).`);
   if(fourWire&&!ssl)throw new Error(`${fn}: ${id}의 Slave Select가 SSL0이면 Pins에서 SSL0 핀을 정하세요.`);
-  Object.assign(st,{open:true,busy:0,id,rspi,hz,sck,mosi,miso,ssl,cpol:f('clk_polarity')&1,cpha:f('clk_phase')&1,lsb:f('bit_order')===1,ipl:f('tei_ipl'),callback:t.callback,context:null});
-  // The pins as the module drives them: RSPCK idles at CPOL, MOSI low, SSL0 inactive (high), MISO an input.
+  // SSL0 polarity (spi_extended_cfg_t ssl_polarity): SPI_SSLP_LOW (0) is active low; the callback gets p_cfg->p_context.
+  const sslActive=rspi&&Number(ext?.fields?.ssl_polarity?.value??0)===1?1:0,context=cfg.fields.p_context?.value;
+  Object.assign(st,{open:true,busy:0,id,rspi,hz,sck,mosi,miso,ssl,sslActive,cpol:f('clk_polarity')&1,cpha:f('clk_phase')&1,lsb:f('bit_order')===1,ipl:f('tei_ipl'),callback:t.callback,context:context?.kind==='pointer'?context:null});
+  // The pins as the module drives them: RSPCK idles at CPOL, MOSI low, SSL0 inactive, MISO an input.
   r.call('pinMode',[sck,'OUTPUT']);r.call('digitalWrite',[sck,st.cpol]);r.call('pinMode',[mosi,'OUTPUT']);r.call('digitalWrite',[mosi,0]);
-  if(miso)r.call('pinMode',[miso,'INPUT']);if(ssl){r.call('pinMode',[ssl,'OUTPUT']);r.call('digitalWrite',[ssl,1]);}
+  if(miso)r.call('pinMode',[miso,'INPUT']);if(ssl){r.call('pinMode',[ssl,'OUTPUT']);r.call('digitalWrite',[ssl,sslActive^1]);}
   this.activeSpi=null;return FSP.SUCCESS;
  }
- spiSelect(r,st){
+ spiSelect(r,st,bits){
   if(this.activeSpi!==st.name){this.activeSpi=st.name;this.buses.spiId=st.id;this.buses.call('SPI.setPins',[st.mosi,st.miso,st.sck],r);}
-  Object.assign(this.buses.spi,{ready:true,clock:Math.round(st.hz),cpol:st.cpol,cpha:st.cpha,lsbFirst:false});
+  Object.assign(this.buses.spi,{ready:true,clock:Math.round(st.hz),cpol:st.cpol,cpha:st.cpha,lsbFirst:st.lsb,bits});
+ }
+ // A buffer of frames as the driver reaches it: through a uint8_t, uint16_t or uint32_t pointer by the frame width
+ // (8, 9-16, 20-32 bits), whatever the C type of the buffer is (little-endian memory: a uint8_t buffer holds a 16-bit
+ // frame in two elements, low byte first; a uint32_t buffer holds four 8-bit frames).
+ spiBuffer(r,ptr,count,bits){
+  const size=bits<=8?1:bits<=16?2:4;
+  if(typeof ptr==='string')return {read:i=>i*size<ptr.length?[...ptr.slice(i*size,i*size+size)].reduce((v,c,j)=>v+(c.charCodeAt(0)&255)*256**j,0):0,write(){}};
+  const first=r.pointerCell(ptr),type=String(first.dataType||''),integer=/^(unsigned |signed )?(char|short|int|long|bool|_Bool)|^u?int(8|16|32)_t$|^(uint|int|bool)$/.test(type)&&!/\*/.test(type);
+  const elem=integer?r.typeSize(type):size,cell=i=>r.pointerCell(ptr,i),bytesOf=v=>2**(8*elem);
+  const u=i=>{const v=Number(r.get(cell(i)));return ((v%bytesOf())+bytesOf())%bytesOf();};
+  if(![1,2,4].includes(elem)||elem===size){r.pointerCell(ptr,count-1);return {read:i=>u(i),write:(i,v)=>r.set(cell(i),v)};}
+  if(elem<size){const n=size/elem;r.pointerCell(ptr,count*n-1);
+   return {read:i=>Array.from({length:n},(_,j)=>u(i*n+j)*bytesOf()**j).reduce((a,b)=>a+b,0),write:(i,v)=>{for(let j=0;j<n;j++)r.set(cell(i*n+j),Math.floor(v/bytesOf()**j)%bytesOf());}};}
+  const k=elem/size,span=2**(8*size);r.pointerCell(ptr,Math.ceil(count/k)-1);
+  return {read:i=>Math.floor(u(Math.floor(i/k))/span**(i%k))%span,write:(i,v)=>{const at=Math.floor(i/k),old=u(at),shift=span**(i%k),part=Math.floor(old/shift)%span;r.set(cell(at),old+(v%span-part)*shift);}};
  }
  // R_SPI_Write / Read / WriteRead: the frames are exchanged with the devices now, but the transfer runs in the background
  // as on the RSPI / SCI — the call returns at once, the channel is busy (FSP_ERR_IN_USE) for bits / bit rate a frame,
- // then the received frames are in the buffer, SSL0 goes high and the TEI interrupt calls back TRANSFER_COMPLETE.
- spiTransfer(r,fn,kind,ctrl,tx,rx,count,width){
-  const st=this.instance(ctrl,r,fn,kind);
-  if(kind==='sciSpi'&&width!==7)return FSP.UNSUPPORTED;
-  if(!st.open)return FSP.NOT_OPEN;
-  const bits=Number(width)+1;if(!tx&&!rx||!Number.isInteger(count)||count<1||!(bits>=8&&bits<=16||bits===20||bits===24||bits===32))return FSP.ASSERTION;
+ // then the received frames are in the buffer, SSL0 goes inactive and the TEI interrupt calls back TRANSFER_COMPLETE.
+ // The parameter checks come in the drivers' order (BSP_CFG_PARAM_CHECKING_ENABLE): r_sci_spi checks the bit width, the
+ // buffers, then the open state; r_spi checks WriteRead's two buffers, then the open state, a buffer, the length and the
+ // width (r_spi_write_read_common).
+ spiTransfer(r,fn,kind,op,ctrl,tx,rx,count,width){
+  const st=this.instance(ctrl,r,fn,kind),bits=Number(width)+1;
+  if(kind==='sciSpi'){
+   if(width!==7)return FSP.UNSUPPORTED;
+   if(op!=='read'&&!tx||op!=='write'&&!rx)return FSP.ASSERTION;
+   if(!st.open)return FSP.NOT_OPEN;
+   if(!count)return FSP.ASSERTION;
+  }else{
+   if(op==='both'&&(!tx||!rx))return FSP.ASSERTION;
+   if(!st.open)return FSP.NOT_OPEN;
+   if(!tx&&!rx||!count||!(bits>=8&&bits<=16||bits===20||bits===24||bits===32))return FSP.ASSERTION;
+  }
   if(st.busy)return FSP.IN_USE;
-  int(count,1,4096,`${fn} 길이(내장 해석기는 한 번에 4096프레임까지)`);if(rx)r.pointerCell(rx,count-1);
-  const mask=bits===32?0xffffffff:2**bits-1,frameUs=bits*1e6/st.hz,byteUs=8e6/st.hz,t0=r.microTime;
-  const out=Array.from({length:count},(_,i)=>!tx?0:typeof tx==='string'?tx.charCodeAt(i)&255:((Number(r.get(r.pointerCell(tx,i)))>>>0)&mask)>>>0);
-  this.spiSelect(r,st);if(st.ssl)r.call('digitalWrite',[st.ssl,0]);
-  let frame=0,part=0;const soc={spiTransfer:(name,pins,byte)=>this.buses.spiExchange(byte,r,t0+frame*frameUs+(part++)*byteUs)};
-  const got=out.map((value,i)=>{frame=i;part=0;return exchangeFrame(soc,st.id,null,value,bits,{lsbFirst:st.lsb})>>>0;});
+  int(count,1,4096,`${fn} 길이(내장 해석기는 한 번에 4096프레임까지)`);
+  const source=tx?this.spiBuffer(r,tx,count,bits):null,dest=rx?this.spiBuffer(r,rx,count,bits):null;
+  const mask=2**bits,frameUs=bits*1e6/st.hz,t0=r.microTime;
+  const out=Array.from({length:count},(_,i)=>source?source.read(i)%mask:0);
+  this.spiSelect(r,st,bits);if(st.ssl)r.call('digitalWrite',[st.ssl,st.sslActive]);
+  // Each frame reaches the devices as the RA6E1 emulator gives it to them (exchangeFrame: whole bytes, MSB byte first,
+  // bits reversed for LSB first); the logic analyzer gets the frames with their real length and bit order.
+  const soc={spiTransfer:(name,pins,byte)=>this.buses.spiRespond(byte,r)};
+  const got=out.map(value=>exchangeFrame(soc,st.id,null,value,bits,{lsbFirst:st.lsb})>>>0);
+  const lines=this.buses.spiLines();
+  if(lines){const e=encodeSpiFrames(t0,out.map((v,i)=>({tx:v,rx:got[i]})),{clockHz:st.hz,cpol:st.cpol,cpha:st.cpha,lsbFirst:st.lsb,bits});this.buses.signals.write(lines+'.SCK',e.sck);this.buses.signals.write(lines+'.MOSI',e.mosi);if(st.miso)this.buses.signals.write(lines+'.MISO',e.miso);}
   const hex=list=>list.slice(0,8).map(v=>v.toString(16).toUpperCase().padStart(Math.ceil(bits/4),'0')).join(' ')+(list.length>8?' …':'');
   this.buses.report(r,'SPI',`${st.id} · ${count} × ${bits}비트 · TX ${hex(out)} · RX ${hex(got)}`);
   const id=++this.seq;st.busy=id;
   r.event((t0+count*frameUs)/1000,()=>{
    if(st.busy!==id)return;st.busy=0;
-   if(rx)got.forEach((v,i)=>r.set(r.pointerCell(rx,i),v));
-   if(st.ssl)r.call('digitalWrite',[st.ssl,1]);
+   if(dest)got.forEach((v,i)=>dest.write(i,v));
+   if(st.ssl)r.call('digitalWrite',[st.ssl,st.sslActive^1]);
    const fields={channel:st.channel,event:1,...(st.context?{p_context:st.context}:{})};
    if(st.open)this.queue(r,`${st.id}_TEI`,st.ipl,()=>this.callback(r,st.callback,'spi_callback_args_t',fields),st.rspi?'spi_tei_isr':'sci_spi_tei_isr',`${st.id}:spi:${id}`);
   });
   return FSP.SUCCESS;
  }
- // R_SPI_Close / R_SCI_SPI_Close: a transfer under way stops (its buffer is not filled, no callback), SSL0 goes high.
+ // R_SPI_Close / R_SCI_SPI_Close: a transfer under way stops (its buffer is not filled, no callback), SSL0 goes inactive.
  spiClose(args,r,fn,kind){
   const st=this.instance(args[0],r,fn,kind);if(!st.open)return FSP.NOT_OPEN;
-  st.busy=0;this.dropJobs(`${st.id}:spi:`);if(st.ssl)r.call('digitalWrite',[st.ssl,1]);st.open=false;if(this.activeSpi===st.name)this.activeSpi=null;return FSP.SUCCESS;
+  st.busy=0;this.dropJobs(`${st.id}:spi:`);if(st.ssl)r.call('digitalWrite',[st.ssl,st.sslActive^1]);st.open=false;if(this.activeSpi===st.name)this.activeSpi=null;return FSP.SUCCESS;
  }
+ // CallbackSet asserts the callback before the open state (r_spi.c, r_sci_spi.c).
  spiCallbackSet([ctrl,callback,context],r,fn,kind){
-  const st=this.instance(ctrl,r,fn,kind);if(!st.open)return FSP.NOT_OPEN;
+  const st=this.instance(ctrl,r,fn,kind);if(!callback)return FSP.ASSERTION;if(!st.open)return FSP.NOT_OPEN;
   st.callback=r.callback(callback).name;st.context=context?.kind==='pointer'?context:null;return FSP.SUCCESS;
  }
 }
@@ -605,9 +639,9 @@ const HANDLERS={
 // src, dest, length, width), CallbackSet and Close.
 for(const [prefix,kind] of [['R_SPI_','spi'],['R_SCI_SPI_','sciSpi']])Object.assign(HANDLERS,{
  [prefix+'Open'](args,r,fn){return this.spiOpen(args,r,fn,kind);},
- [prefix+'Write']([ctrl,src,length,width],r,fn){return this.spiTransfer(r,fn,kind,ctrl,src,null,length,width);},
- [prefix+'Read']([ctrl,dest,length,width],r,fn){return this.spiTransfer(r,fn,kind,ctrl,null,dest,length,width);},
- [prefix+'WriteRead']([ctrl,src,dest,length,width],r,fn){return this.spiTransfer(r,fn,kind,ctrl,src,dest,length,width);},
+ [prefix+'Write']([ctrl,src,length,width],r,fn){return this.spiTransfer(r,fn,kind,'write',ctrl,src,null,length,width);},
+ [prefix+'Read']([ctrl,dest,length,width],r,fn){return this.spiTransfer(r,fn,kind,'read',ctrl,null,dest,length,width);},
+ [prefix+'WriteRead']([ctrl,src,dest,length,width],r,fn){return this.spiTransfer(r,fn,kind,'both',ctrl,src,dest,length,width);},
  [prefix+'CallbackSet'](args,r,fn){return this.spiCallbackSet(args,r,fn,kind);},
  [prefix+'Close'](args,r,fn){return this.spiClose(args,r,fn,kind);}
 });
