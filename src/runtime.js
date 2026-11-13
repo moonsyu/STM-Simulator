@@ -9,14 +9,14 @@ const own=(o,k)=>Object.hasOwn(o,k), truth=v=>!!v;
 const checkedNumber=v=>{if(typeof v!=='number'||!Number.isFinite(v))throw new Error('유한한 숫자가 필요합니다.');return v;};
 const integer=v=>Math.trunc(checkedNumber(v));
 const isArray=v=>v?.kind==='array', isPointer=v=>v?.kind==='pointer';
-const LOOP_ITERATION_US=.1,SPIN_LOOPS=32;
+const LOOP_ITERATION_US=.1,SPIN_LOOPS=32,BUSY_LOOPS=4096,STEP_NS=2;
 
 export class Runtime {
   constructor(program,api={}){
     this.program=program;this.api=api;this.gpio={};this.time=0;this.microTime=0;this.steps=0;this.depth=0;this.loopDepth=0;this.allocations=0;
     this.frames=[];this.location=null;this.finished=false;this.debug={enabled:!!api.debug,paused:false,mode:api.debug?.entry?'into':'continue',depth:0,breakpoints:new Set(api.debug?.breakpoints||[])};
     this.globals={cells:Object.create(null),alive:true};this.scopes=[this.globals];this.vars=Object.create(null);
-    this.events=[];this.nextId=1;this.nextOrder=1;this.timers=new Map();this.dmas=new Map();this.interrupts=new Map();this.interruptsEnabled=true;this.atomic=0;this.pwm=new Map();this.pwmFrequency=new Map();
+    this.events=[];this.nextId=1;this.nextOrder=1;this.timers=new Map();this.dmas=new Map();this.interrupts=new Map();this.interruptsEnabled=true;this.atomic=0;this.pwm=new Map();this.pwmFrequency=new Map();this.polls=0;
     // HAL arrays may hold camera frames / SD sectors; sketches keep the original bound.
     this.maxArray=program.hal?131072:4096;this.maxAllocations=program.hal?400000:50000;this.warnings=[];this.busyUs=0;
     this.contexts=[{name:'main',wake:0}];this.initGlobals();
@@ -83,7 +83,7 @@ export class Runtime {
   cell(name){for(let i=this.scopes.length-1;i>=0;i--)if(own(this.scopes[i].cells,name))return this.scopes[i].cells[name];throw new Error(`정의되지 않은 이름: ${name}`);}
   get(cell){if(cell.owner&&!cell.owner.alive)throw new Error('유효기간이 끝난 지역 변수를 참조했습니다.');return cell.value;}
   coerce(type,value){return this.program.hal?convert(type,value):value;}
-  set(cell,value){this.get(cell);if(cell.constant)throw new Error('const 값은 변경할 수 없습니다.');cell.value=this.clone(this.coerce(cell.dataType,value),cell.owner);return cell.value;}
+  set(cell,value){this.get(cell);if(cell.constant)throw new Error('const 값은 변경할 수 없습니다.');if(this.contexts.length>1)cell.async=true;cell.value=this.clone(this.coerce(cell.dataType,value),cell.owner);return cell.value;}
   array(values,owner=this.scope()){if(values.length>this.maxArray)throw new Error(`배열은 ${this.maxArray}개 이하로 선언하세요.`);this.allocations+=values.length;if(this.allocations>this.maxAllocations)throw new Error('한 단계의 메모리 할당 한도를 넘었습니다.');return {kind:'array',cells:values.map(value=>({value:this.clone(value,owner),owner,constant:false}))};}
   pointer(value){return isArray(value)?{kind:'pointer',array:value,index:0}:value;}
   /**
@@ -149,7 +149,8 @@ export class Runtime {
     if(n.type==='literal')return n.value;
     if(n.type==='sizeofType')return n.pointer?4:this.typeSize(n.to);
     if(n.type==='sizeofExpr'){const type=expressionType(this,n.arg);return type.pointerElements?4*type.length:type.pointer?4:this.typeSize(type.type)*(type.array?type.length:1);}
-    if(n.type==='name'){if(own(this.program.functions,n.name))return {kind:'function',name:n.name};return this.get(this.cell(n.name));}
+    // Reading a volatile variable, or one an interrupt has written, counts as polling (the FSP loop rule above).
+    if(n.type==='name'){if(own(this.program.functions,n.name))return {kind:'function',name:n.name};const cell=this.cell(n.name);if(cell.volatile||cell.async)this.polls++;return this.get(cell);}
     if(n.type==='list'){const values=[];for(const v of n.values)values.push(v.type==='designated'?{kind:'designated',key:v.key,index:v.index?integer(yield* this.evaluate(v.index)):undefined,value:yield* this.evaluate(v.value)}:yield* this.evaluate(v));return {kind:'initializer',values};}
     if(n.type==='construct'){const args=[];for(const v of n.args)args.push(yield* this.evaluate(v));if(n.name!=='LiquidCrystal'&&!this.api.constructs?.includes(n.name))throw new Error('지원하지 않는 생성자입니다.');return this.api.construct?.(n.name,args,this)??{kind:'device',name:n.name,args};}
     if(n.type==='cast'){const value=yield* this.evaluate(n.a);if(n.pointer){if(typeof value==='string')return this.pointer(this.array([...value].map(c=>c.charCodeAt(0)).concat(0),this.globals));return this.pointer(value);}if(this.program.hal&&(isArray(value)||isPointer(value)||value?.kind==='function'))return isArray(value)?this.pointer(value):value;return n.to==='String'?String(value):n.to==='bool'?Number(truth(value)):this.program.hal?this.coerce(n.to,checkedNumber(value)):['float','double'].includes(n.to)?checkedNumber(value):integer(value);}
@@ -261,7 +262,7 @@ export class Runtime {
         else if(d.type!=='LiquidCrystal')value=this.initialize(d.type,value);
         if(d.array)value.cells.forEach(c=>c.dataType=d.type);if(d.size2)value.cols=value.cells[0].value.cells.length;
         // const char *p: what it points at is const; the pointer itself can move (p++).
-        const cell=this.declareCell(d.name,value,d.constant&&!(d.pointer&&!d.array));cell.dataType=d.pointer?'pointer':d.type;if(d.size2)cell.cols=value.cols;if(d.pointer)cell.pointeeType=d.type;
+        const cell=this.declareCell(d.name,value,d.constant&&!(d.pointer&&!d.array));cell.dataType=d.pointer?'pointer':d.type;if(d.volatile)cell.volatile=true;if(d.size2)cell.cols=value.cols;if(d.pointer)cell.pointeeType=d.type;
         if(d.storage){cell.owner=this.globals;this.staticCells.set(d,cell);if(d.array)value.cells.forEach(c=>c.owner=this.globals);}
       }return;
     }
@@ -283,12 +284,22 @@ export class Runtime {
     }
     if(['while','for','do'].includes(s.type)){
       this.loopDepth++;this.pushScope();try{
-        if(s.init)yield* this.statement(s.init);let first=true,spin=0;
-        while((s.type==='do'&&first)||truth(yield* this.evaluate(s.test))){if(!first)yield* this.checkpoint(s.loc);first=false;const start=this.microTime,signal=yield* this.statement(s.body);if(signal?.type==='return')return signal;if(signal?.type==='break')break;if(s.update)yield* this.evaluate(s.update);
-          // FSP programs (hal_entry and the functions it calls, at any depth): a loop whose body waits (R_BSP_SoftwareDelay)
-          // costs no extra time, so its timing matches the board; one that spins without time passing (polling a flag, a
-          // pin, a status) advances 0.1 ms an iteration after SPIN_LOOPS rounds, so short computing loops stay free.
-          if(this.program.fsp&&!this.inCallback){if(s.test.type==='literal'&&truth(s.test.value)&&!s.update&&s.body.type==='block'&&s.body.body.every(n=>n.type==='empty')){this.steps=0;this.idleMain=true;yield Infinity;}else if(this.microTime>start)spin=0;else if(++spin>=SPIN_LOOPS){this.steps=0;yield .1;}}
+        if(s.init)yield* this.statement(s.init);let first=true,spin=0,mark=this.microTime,polls=this.polls;
+        while((s.type==='do'&&first)||truth(yield* this.evaluate(s.test))){if(!first)yield* this.checkpoint(s.loc);first=false;const signal=yield* this.statement(s.body);if(signal?.type==='return')return signal;if(signal?.type==='break')break;if(s.update)yield* this.evaluate(s.update);
+          // FSP programs (hal_entry and the functions it calls, at any depth), with the time an iteration takes on the
+          // board in mind: a loop whose iteration waited (R_BSP_SoftwareDelay) costs nothing more and starts a new step
+          // budget; a computing loop costs its steps at STEP_NS each (microseconds for a thousand rounds, as on the
+          // 200 MHz core); a loop that polls what can change by itself (a volatile variable, one an interrupt wrote, a
+          // pin or a status read: this.polls) lets 0.1 ms pass an iteration after SPIN_LOOPS rounds, so callbacks and
+          // inputs come; a loop that does neither for BUSY_LOOPS rounds is a busy wait and is treated like a polling one.
+          if(this.program.fsp&&!this.inCallback){
+            const waited=this.microTime>mark,polled=this.polls>polls;
+            if(s.test.type==='literal'&&truth(s.test.value)&&!s.update&&s.body.type==='block'&&s.body.body.every(n=>n.type==='empty')){this.steps=0;this.idleMain=true;yield Infinity;}
+            else if(waited){spin=0;this.steps=0;}
+            else if(++spin>=(polled?SPIN_LOOPS:BUSY_LOOPS)){this.steps=0;yield .1;}
+            else if(this.steps>15000){const ms=this.steps*STEP_NS/1e6;this.steps=0;yield ms;}
+            mark=this.microTime;polls=this.polls;
+          }
           else if(this.program.hal&&!this.inCallback&&this.depth===1&&(!this.api.preciseTiming||this.loopDepth===1)){this.steps=0;const idle=this.loopDepth===1&&s.type==='while'&&s.test.type==='literal'&&truth(s.test.value)&&s.body.type==='block'&&s.body.body.every(n=>n.type==='empty');this.idleMain=idle;yield idle?Infinity:.1;}
           // Inside an ISR a loop iteration costs CPU time, so a long loop can be preempted.
           else if(this.program.hal&&this.inIsr&&!this.atomic){this.busyUs+=LOOP_ITERATION_US;if(this.steps>15000){const ms=Math.max(.001,this.busyUs/1000);this.busyUs=0;this.steps=0;yield ms;}}this.budget();}

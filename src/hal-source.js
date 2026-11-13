@@ -139,7 +139,9 @@ export function prepareHalSource(source,files=[],options={}){
   map.set('main.c',source);
   // options.headers / options.defines / options.virtual: another SDK's headers (FSP, fsp-interp.js) — the names that
   // read as empty, the macros defined from the start, and header texts the project does not hold itself.
-  for(const [name,text]of Object.entries(options.virtual||{}))if(!map.has(name))map.set(name,text);
+  // A project file of the same base name in any folder (src/board.h) wins, as the compiler finds it first.
+  const ownBases=new Set([...map.keys()].map(baseName));
+  for(const [name,text]of Object.entries(options.virtual||{}))if(!ownBases.has(baseName(name)))map.set(name,text);
   const hal=options.headers?null:familyProfile(options.family).hal,SYSTEM_HEADERS=options.headers??systemHeaders(hal.prefix);
   const definitions=new Map(options.defines??[[hal.define,'1'],['USE_HAL_DRIVER','1']]),stack=[],included=new Set(),macros=new Map();
   const preprocess=(text,name)=>{

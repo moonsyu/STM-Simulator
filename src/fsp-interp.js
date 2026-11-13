@@ -6,6 +6,7 @@
 // from its own interrupt at the Stacks priority. Enum values and struct members follow FSP 5.x (r_*_api.h).
 import {compile} from './parser.js';
 import {prepareHalSource} from './hal-source.js';
+import {baseName} from './source-files.js';
 import {HalAdapter} from './hal.js';
 import {BusDevices} from './buses.js';
 import {formatPrintf,stringCall} from './hal-stdio.js';
@@ -50,15 +51,15 @@ ${enumOf('e_timer_direction','timer_direction_t',[['TIMER_DIRECTION_DOWN',0],['T
 ${enumOf('e_timer_state','timer_state_t',[['TIMER_STATE_STOPPED',0],['TIMER_STATE_COUNTING',1],['TIMER_STATE_UNKNOWN',2]])}
 ${enumOf('e_timer_source_div','timer_source_div_t',[1,2,4,8,16,32,64,128,256,512,1024].map((n,i)=>['TIMER_SOURCE_DIV_'+n,i]))}
 ${enumOf('e_gpt_io_pin','gpt_io_pin_t',[['GPT_IO_PIN_GTIOCA',0],['GPT_IO_PIN_GTIOCB',1],['GPT_IO_PIN_GTIOCA_AND_GTIOCB',2]])}
-${enumOf('e_gpt_pin_level','gpt_pin_level_t',[['GPT_PIN_LEVEL_LOW',0],['GPT_PIN_LEVEL_HIGH',1],['GPT_PIN_LEVEL_RETAINED',2]])}
-${enumOf('e_agt_clock','agt_clock_t',[['AGT_CLOCK_PCLKB',0],['AGT_CLOCK_LOCO',4],['AGT_CLOCK_FSUB',5]])}
+${enumOf('e_gpt_pin_level','gpt_pin_level_t',[['GPT_PIN_LEVEL_LOW',0],['GPT_PIN_LEVEL_HIGH',1]])}
+${enumOf('e_agt_clock','agt_clock_t',[['AGT_CLOCK_PCLKB','0x00'],['AGT_CLOCK_LOCO','0x40'],['AGT_CLOCK_AGT_UNDERFLOW','0x50'],['AGT_CLOCK_SUBCLOCK','0x60']])}
 ${enumOf('e_adc_mode','adc_mode_t',[['ADC_MODE_SINGLE_SCAN',0],['ADC_MODE_GROUP_SCAN',1],['ADC_MODE_CONTINUOUS_SCAN',2]])}
 ${enumOf('e_adc_resolution','adc_resolution_t',[['ADC_RESOLUTION_12_BIT',0],['ADC_RESOLUTION_10_BIT',1],['ADC_RESOLUTION_8_BIT',2],['ADC_RESOLUTION_14_BIT',3]])}
 ${enumOf('e_adc_alignment','adc_alignment_t',[['ADC_ALIGNMENT_RIGHT',0],['ADC_ALIGNMENT_LEFT',1]])}
 ${enumOf('e_adc_trigger','adc_trigger_t',[['ADC_TRIGGER_SOFTWARE',0],['ADC_TRIGGER_SYNC_ELC',2],['ADC_TRIGGER_ASYNC_EXTERNAL',3]])}
 ${enumOf('e_adc_event','adc_event_t',['SCAN_COMPLETE','SCAN_COMPLETE_GROUP_B','SCAN_COMPLETE_GROUP_C','CALIBRATION_COMPLETE','CONVERSION_COMPLETE','CALIBRATION_REQUEST','CONVERSION_ERROR','OVERFLOW','LIMIT_CLIP','FIFO_READ_REQUEST','FIFO_OVERFLOW'].map((k,i)=>['ADC_EVENT_'+k,i]))}
 ${enumOf('e_adc_state','adc_state_t',[['ADC_STATE_IDLE',0],['ADC_STATE_SCAN_IN_PROGRESS',1],['ADC_STATE_CALIBRATION_IN_PROGRESS',2]])}
-${enumOf('e_adc_channel','adc_channel_t',[...Array.from({length:29},(_,i)=>['ADC_CHANNEL_'+i,i]),['ADC_CHANNEL_TEMPERATURE',-3],['ADC_CHANNEL_VOLT',-4]])}
+${enumOf('e_adc_channel','adc_channel_t',[...Array.from({length:29},(_,i)=>['ADC_CHANNEL_'+i,i]),['ADC_CHANNEL_TEMPERATURE',-3],['ADC_CHANNEL_VOLT',-2]])}
 ${enumOf('e_adc_mask','adc_mask_t',Array.from({length:29},(_,i)=>['ADC_MASK_CHANNEL_'+i,hex(2**i,8)]))}
 ${enumOf('e_i2c_master_rate','i2c_master_rate_t',[['I2C_MASTER_RATE_STANDARD',100000],['I2C_MASTER_RATE_FAST',400000],['I2C_MASTER_RATE_FASTPLUS',1000000]])}
 ${enumOf('e_i2c_master_addr_mode','i2c_master_addr_mode_t',[['I2C_MASTER_ADDR_MODE_7BIT',1],['I2C_MASTER_ADDR_MODE_10BIT',2]])}
@@ -152,14 +153,17 @@ function substitute(text){
 
 /** An FSP project (src/hal_entry.c as `source`, its other sources as `files`) as an interpreter program. */
 export function compileFsp(source,files=[],mcu){
- const config=validateRaMcu(mcu),prelude=fspPrelude(config),virtual=Object.fromEntries(FSP_HEADERS.map(name=>[name,prelude]));
+ const config=validateRaMcu(mcu),prelude=fspPrelude(config);
  const own=(files||[]).filter(f=>!FSP_FILE.test(f?.name||'')).map(f=>({...f,text:substitute(f.text)}));
+ // A project header of the same name (src/board.h) is the one GCC finds next to hal_entry.c: no stand-in for it.
+ const shadowed=new Set(own.map(f=>baseName(f.name))),virtualNames=FSP_HEADERS.filter(name=>!shadowed.has(name)),virtual=Object.fromEntries(virtualNames.map(name=>[name,prelude]));
  const prepared=prepareHalSource(substitute(source),own,{withMap:true,headers:C_HEADERS,defines:[],virtual});
  let program;
  try{program=compile(prepared.text,{hal:true,entry:'hal_entry',sourceMap:prepared.sourceMap});}
  catch(error){if(!error.location){const m=/^(\d+)행:/.exec(error.message);if(m){error.location=prepared.sourceMap[Number(m[1])-1];if(error.location)error.message=error.message.replace(/^\d+행:/,`${error.location.file}:${error.location.line}:`);}}throw error;}
  if(program.functions.main){const loc=program.functions.main.loc,error=new Error(`${loc?.file??'main.c'}:${loc?.line??1}: FSP 프로젝트의 main()은 ra_gen/main.c가 만듭니다. 프로그램은 hal_entry()에 쓰세요.`);error.location=loc;throw error;}
- const prelude_=new Set(FSP_HEADERS),declared=new Set();program.preludeNames=new Set();
+ // Only what the stand-in itself declares is hidden from the debugger's variables, not a project header's globals.
+ const prelude_=new Set(virtualNames),declared=new Set();program.preludeNames=new Set();
  for(const s of program.globals)for(const d of s.declarations||[]){declared.add(d.name);if(prelude_.has(s.loc?.file))program.preludeNames.add(d.name);}
  // Peripheral register blocks the code reaches (R_PORT4->PODR): names here, so the access stops with the reason.
  program.registers=[...new Set([...prepared.text.matchAll(/\b(R_[A-Z][A-Z0-9_]*)\s*->/g)].map(m=>m[1]))].filter(n=>!declared.has(n)&&!program.functions[n]);
@@ -172,6 +176,7 @@ export function compileFsp(source,files=[],mcu){
 /** Constants the session declares for an FSP program (its register block names). */
 export const fspConstants=program=>Object.fromEntries((program.registers||[]).map(n=>[n,n]));
 
+const SHORT_WAIT_MS=.05;
 const FSP={SUCCESS:0,ASSERTION:1,INVALID_ARGUMENT:3,NOT_OPEN:7,IN_USE:8,ALREADY_OPEN:14};
 const KINDS={ioport:[/^g_ioport_ctrl$/,'g_ioport_ctrl'],icu:[/^g_external_irq(\d+)_ctrl$/,'g_external_irq1_ctrl'],uart:[/^g_uart(\d+)_ctrl$/,'g_uart9_ctrl'],gpt:[/^g_timer(\d+)_ctrl$/,'g_timer1_ctrl'],agt:[/^g_agt(\d+)_ctrl$/,'g_agt0_ctrl'],adc:[/^g_adc(\d+)_ctrl$/,'g_adc0_ctrl'],iic:[/^g_i2c_master(\d+)_ctrl$/,'g_i2c_master0_ctrl']};
 const SUPPORTED='R_IOPORT_*, R_BSP_SoftwareDelay · R_BSP_Pin*, R_ICU_ExternalIrq*, R_SCI_UART_*, R_GPT_*, R_AGT_*, R_ADC_*, R_IIC_MASTER_*';
@@ -182,7 +187,7 @@ export class FspAdapter {
  constructor(mcu,buses,{session}={}){
   this.config=validateRaMcu(mcu);this.buses=buses;this.session=session;this.inst=raInstances(this.config);
   this.pclkd=raClockHz(this.config);this.pclkb=raClockHz(this.config,'pclkb');
-  this.pending=[];this.active=[];this.seq=0;this.dispatched=0;this.serials=new Map();this.states=new Map();this.peripheralPins=new Set();this.warned=new Set();this.names=null;this.activeIic=null;
+  this.pending=[];this.active=[];this.seq=0;this.dispatched=0;this.serials=new Map();this.states=new Map();this.peripheralPins=new Set();this.warned=new Set();this.names=null;this.activeIic=null;this.shortWait=0;
  }
  inheritReset(){}
  declareGlobals(){}
@@ -253,12 +258,17 @@ export class FspAdapter {
   if(![1,1000,1000000].includes(units))throw new Error('R_BSP_SoftwareDelay: 단위는 BSP_DELAY_UNITS_MICROSECONDS · MILLISECONDS · SECONDS입니다.');
   const ms=delay*units/1000;if(ms>3600000)throw new Error('R_BSP_SoftwareDelay: 한 번에 1시간까지 기다릴 수 있습니다.');
   if(r.atomic)throw new Error('R_BSP_SoftwareDelay: 이 위치에서는 기다릴 수 없습니다.');
-  yield Math.max(.001,ms);return 0;
+  // Waits of a few microseconds (bit-banging, a pin toggled every 2 µs) pass in place as delayMicroseconds does, up to
+  // SHORT_WAIT_MS in a row; then one is a real wait, so a 20 ms tick takes a few hundred waits and interrupts still run.
+  if(ms<SHORT_WAIT_MS&&!r.inIsr&&this.shortWait+ms<SHORT_WAIT_MS){this.shortWait+=ms;r.microTime+=ms*1000;return 0;}
+  this.shortWait=0;yield Math.max(.001,ms);return 0;
  }
  // __WFI: the core sleeps until an interrupt is taken.
  *wfi(r){if(r.inIsr)return 0;const seen=this.dispatched;while(this.dispatched===seen)yield .1;return 0;}
  call(name,args,r){
   this.runtime=r;const [a,b,c,d]=args;
+  // A read of a pin or a status is polling (the interpreter's FSP loop rule, runtime.js).
+  if(/Read|StatusGet/.test(name))r.polls++;
   const handler=Object.hasOwn(HANDLERS,name)?HANDLERS[name]:null;if(handler)return handler.call(this,args,r,name);
   if(name==='UNUSED'||name==='assert_param'||['__NOP','__DSB','__ISB','__DMB','g_hal_init','g_common_init','BSP_PinConfigSecurityInit','R_BSP_PinCfgSecurityInit'].includes(name))return 0;
   if(name==='assert'){if(!a)throw new Error('assert 실패: 조건이 거짓입니다.');return 0;}
@@ -305,7 +315,7 @@ export class FspAdapter {
  // ---- SCI UART: each channel has its own UART line (BusDevices) to the circuit, like the HAL's extra USARTs.
  uartChannel(ch){
   const id='SCI'+ch;
-  if(!this.serials.has(id)){const bus=new BusDevices(this.buses.project,this.buses.getResult,this.buses.trace);bus.uart.instance=id;bus.received=this.buses.received;bus.signals=this.buses.signals;bus.noise=this.buses.noise;bus.peers=(...x)=>this.buses.peers?.(...x);bus.wireless=this.buses.wireless;this.serials.set(id,{id,channel:ch,bus,st:null,rx:null,txFree:0});}
+  if(!this.serials.has(id)){const bus=new BusDevices(this.buses.project,this.buses.getResult,this.buses.trace);bus.uart.instance=id;bus.received=this.buses.received;bus.signals=this.buses.signals;bus.noise=this.buses.noise;bus.peers=(...x)=>this.buses.peers?.(...x);bus.wireless=this.buses.wireless;this.serials.set(id,{id,channel:ch,bus,st:null,rx:null,txFree:0,txEnd:0,txGen:0,txAbort:0});}
   return this.serials.get(id);
  }
  pollUart(ch,r){
@@ -319,7 +329,10 @@ export class FspAdapter {
    else this.uartEvent(r,ch,4,value,'rxi');
   }
  }
- uartEvent(r,ch,event,data,isr){const st=ch.st;if(!st?.callback)return;this.queue(r,`SCI${ch.channel}_${isr.toUpperCase()}`,st.ipl,()=>this.callback(r,st.callback,'uart_callback_args_t',{channel:ch.channel,event,data}),`sci_uart_${isr}_isr`,`SCI${ch.channel}:${isr}:${this.seq}`);}
+ // An aborted (or closed) transmission: the bytes not sent yet stay, its TX_DATA_EMPTY / TX_COMPLETE do not come.
+ uartStop(r,ch){ch.txAbort++;ch.txGen++;ch.txFree=0;ch.txEnd=r.microTime;this.dropJobs(`SCI${ch.channel}:txi:`);this.dropJobs(`SCI${ch.channel}:tei:`);}
+ dropJobs(prefix){this.pending=this.pending.filter(j=>!String(j.key).startsWith(prefix));}
+ uartEvent(r,ch,event,data,isr){const st=ch.st;if(!st?.open||!st.callback)return;this.queue(r,`SCI${ch.channel}_${isr.toUpperCase()}`,st.ipl,()=>this.callback(r,st.callback,'uart_callback_args_t',{channel:ch.channel,event,data}),`sci_uart_${isr}_isr`,`SCI${ch.channel}:${isr}:${this.seq}`);}
  // ---- timers: GPT (saw-wave PWM, periodic) and AGT (periodic); a cycle end every period while counting.
  timerOpen(r,args,fn,kind){
   const st=this.instance(args[0],r,fn,kind);if(st.open)return FSP.ALREADY_OPEN;const cfg=this.struct(args[1],r,'timer_cfg_t',fn),f=k=>Number(cfg.fields[k].value);
@@ -336,9 +349,14 @@ export class FspAdapter {
   const fire=()=>{if(st.gen!==gen||!st.running)return;st.last=st.next;
    if(st.callback)this.queue(r,st.kind==='gpt'?`GPT${st.channel}_COUNTER_OVERFLOW`:`AGT${st.channel}_INT`,st.ipl,()=>this.callback(r,st.callback,'timer_callback_args_t',{event:0}),st.kind==='gpt'?'gpt_counter_overflow_isr':'agt_int_isr');
    if(st.mode===1){st.running=false;this.pwm(r,st);return;}
+   // A period set while counting (buffered, GTPBR / AGT reload) takes over at this overflow.
+   if(st.newPeriod!=null){st.period=st.newPeriod;st.newPeriod=null;st.duty=st.duty.map(d=>Math.min(d,st.period));this.pwm(r,st);}
    st.next+=this.periodUs(st);r.event(st.next/1000,fire);};
   st.last=r.microTime;r.event(st.next/1000,fire);this.pwm(r,st);
  }
+ // R_GPT_PeriodSet / R_AGT_PeriodSet: a stopped timer gets the period at once and its counter cleared (GTCLR); a counting
+ // one keeps the current cycle and the counter until the next overflow.
+ periodSet(r,st,period){if(st.running){st.newPeriod=period;return;}st.period=period;st.newPeriod=null;st.counter=0;this.pwm(r,st);}
  timerStop(r,st){if(st.running)st.counter=this.counter(r,st);st.running=false;st.gen++;this.pwm(r,st);}
  counter(r,st){if(!st.running)return st.counter;const c=Math.floor((r.microTime-(st.next-this.periodUs(st)))*st.hz/1e6);return Math.max(0,Math.min(st.period-1,c));}
  // Saw-wave PWM on the GTIOC pins: high from the cycle start for duty counts (0 % low, 100 % high), the stop level
@@ -360,7 +378,15 @@ export class FspAdapter {
  adcSample(r,st,ch){const pin=this.adcPin(ch,'R_ADC_Read'),max=2**st.bits-1,v=Number(r.api.voltage?.(pin)??0);return Math.round(Math.max(0,Math.min(3.3,Number.isFinite(v)?v:0))/3.3*max);}
  // ---- IIC master: the circuit's I²C engine, moved to this channel's pins and speed for each transfer.
  iicSelect(r,st){if(this.activeIic===st.name)return;this.activeIic=st.name;this.buses.i2cId='IIC'+st.channel;this.buses.call('Wire.begin',[st.sda,st.scl],r);this.buses.call('Wire.setClock',[st.rate],r);for(const p of [st.sda,st.scl])if(r.gpio[p])r.gpio[p].openDrain=true;}
- iicDone(r,st,event){st.busy=true;this.queue(r,`IIC${st.channel}_TEI`,st.ipl,()=>{st.busy=false;return this.callback(r,st.callback,'i2c_master_callback_args_t',{event});},event===1?'iic_master_eri_isr':'iic_master_tei_isr',`IIC${st.channel}:${this.seq}`);}
+ // A transfer: the bytes are exchanged with the bus model now, but it runs in the background as on the RIIC — the
+ // caller goes on at once, the bus stays busy (FSP_ERR_IN_USE) for its 9 SCL periods a byte, then the ISR reports it.
+ iicTransfer(r,st,transfer){
+  this.iicSelect(r,st);const t0=r.microTime,event=transfer(),end=r.microTime;r.microTime=t0;
+  const id=++this.seq;st.busy=id;
+  r.event(end/1000,()=>{if(st.busy!==id)return;st.busy=0;if(st.open)this.queue(r,`IIC${st.channel}_TEI`,st.ipl,()=>this.callback(r,st.callback,'i2c_master_callback_args_t',{event}),event===1?'iic_master_eri_isr':'iic_master_tei_isr',`IIC${st.channel}:${id}`);});
+ }
+ // R_IIC_MASTER_Abort / Close: the bus is released, the transfer's completion is dropped and no callback comes.
+ iicStop(st){st.busy=0;this.dropJobs(`IIC${st.channel}:`);}
 }
 for(const k of ['stdoutHook','stdout','flushStdout','stdinChar','stdin'])FspAdapter.prototype[k]=HalAdapter.prototype[k];
 
@@ -396,23 +422,24 @@ const HANDLERS={
   if(!p?.enabled)throw new Error(`${fn}: Stacks에서 ${id} UART를 켜세요.`);
   if(Number(cfg.fields.data_bits.value)!==2||Number(cfg.fields.parity.value)!==0||Number(cfg.fields.stop_bits.value)!==0)throw new Error(`${fn}: 내장 해석기는 8비트, 패리티 없음, 정지 비트 1(8N1)만 실행합니다. 다른 형식은 ARM GCC 빌드로 실행하세요.`);
   const tx=this.pinOf(id+'_TXD'),rx=this.pinOf(id+'_RXD');if(!tx||!rx)throw new Error(`${fn}: 내장 해석기는 ${id}의 TXD와 RXD 핀을 모두 정한 UART만 실행합니다(Pins).`);
-  const ch=this.uartChannel(st.channel);ch.st=st;ch.rx=null;ch.txFree=0;ch.bus.call('Serial1.setPins',[rx,tx],r);ch.bus.call('Serial1.begin',[p.baud],r);
+  const ch=this.uartChannel(st.channel);ch.st=st;ch.rx=null;ch.txFree=0;ch.txEnd=0;ch.bus.call('Serial1.setPins',[rx,tx],r);ch.bus.call('Serial1.begin',[p.baud],r);
   Object.assign(st,{open:true,ipl:Number(cfg.fields.rxi_ipl.value),callback:p.callback||''});return FSP.SUCCESS;
  },
  R_SCI_UART_Write([ctrl,buffer,count],r,fn){
   const st=this.instance(ctrl,r,fn,'uart');if(!st.open)return FSP.NOT_OPEN;const ch=this.uartChannel(st.channel),u=ch.bus.uart;
   int(count,1,256,`${fn} 길이(내장 해석기는 한 번에 256바이트까지)`);if(r.microTime<ch.txFree-1e-6)return FSP.IN_USE;
-  const bytes=this.bytes(buffer,count,r,fn),frame=1e7/u.baud,start=Math.max(r.microTime,u.lastTx??0);
-  ch.bus.call('Serial1.write',[r.array(bytes),bytes.length],r);bytes.forEach((byte,i)=>r.api.uart?.({instance:ch.id,direction:'TX',bytes:[byte],micros:start+i*frame}));
-  // TXI takes the last byte into the shift register one frame before the end (TX_DATA_EMPTY, a new Write may start),
-  // TEI comes when it has gone out (TX_COMPLETE).
-  const end=u.lastTx;ch.txFree=end-frame;
-  r.event(ch.txFree/1000,()=>this.uartEvent(r,ch,128,0,'txi'));r.event(end/1000,()=>this.uartEvent(r,ch,2,0,'tei'));return FSP.SUCCESS;
+  // Each byte goes out at its frame start (an Abort or a Close stops the rest). TXI takes the last byte into the shift
+  // register one frame before the end (TX_DATA_EMPTY; a new Write may start then and continues the transmission, so the
+  // earlier TEI does not come), TEI when the last byte of the last write has gone out (TX_COMPLETE).
+  const bytes=this.bytes(buffer,count,r,fn),frame=1e7/u.baud,start=Math.max(r.microTime,ch.txEnd??0),gen=++ch.txGen,abort=ch.txAbort;
+  bytes.forEach((byte,i)=>r.event((start+i*frame)/1000,()=>{if(ch.txAbort!==abort||!st.open)return;ch.bus.call('Serial1.write',[r.array([byte]),1],r);r.api.uart?.({instance:ch.id,direction:'TX',bytes:[byte],micros:r.microTime});}));
+  ch.txEnd=start+count*frame;ch.txFree=ch.txEnd-frame;
+  r.event(ch.txFree/1000,()=>{if(ch.txAbort===abort)this.uartEvent(r,ch,128,0,'txi');});r.event(ch.txEnd/1000,()=>{if(ch.txGen===gen&&ch.txAbort===abort)this.uartEvent(r,ch,2,0,'tei');});return FSP.SUCCESS;
  },
  R_SCI_UART_Read([ctrl,buffer,count],r,fn){const st=this.instance(ctrl,r,fn,'uart');if(!st.open)return FSP.NOT_OPEN;const ch=this.uartChannel(st.channel);if(ch.rx)return FSP.IN_USE;int(count,1,4096,`${fn} 길이`);r.pointerCell(buffer,count-1);ch.rx={buffer,count,index:0};return FSP.SUCCESS;},
- R_SCI_UART_Abort([ctrl,dir],r,fn){const st=this.instance(ctrl,r,fn,'uart');if(!st.open)return FSP.NOT_OPEN;const ch=this.uartChannel(st.channel);if(dir&1)ch.rx=null;if(dir&2)ch.txFree=0;return FSP.SUCCESS;},
+ R_SCI_UART_Abort([ctrl,dir],r,fn){const st=this.instance(ctrl,r,fn,'uart');if(!st.open)return FSP.NOT_OPEN;const ch=this.uartChannel(st.channel);if(dir&1)ch.rx=null;if(dir&2)this.uartStop(r,ch);return FSP.SUCCESS;},
  R_SCI_UART_InfoGet([ctrl,info],r,fn){const st=this.instance(ctrl,r,fn,'uart');if(!st.open)return FSP.NOT_OPEN;const v=this.struct(info,r,'uart_info_t',fn);this.setField(v,'write_bytes_max',256,r);this.setField(v,'read_bytes_max',4096,r);return FSP.SUCCESS;},
- R_SCI_UART_Close(args,r,fn){const st=this.instance(args[0],r,fn,'uart');if(!st.open)return FSP.NOT_OPEN;const ch=this.uartChannel(st.channel);ch.bus.call('Serial1.end',[],r);ch.rx=null;st.open=false;return FSP.SUCCESS;},
+ R_SCI_UART_Close(args,r,fn){const st=this.instance(args[0],r,fn,'uart');if(!st.open)return FSP.NOT_OPEN;const ch=this.uartChannel(st.channel);this.uartStop(r,ch);ch.bus.call('Serial1.end',[],r);ch.rx=null;st.open=false;this.dropJobs(`SCI${ch.channel}:`);return FSP.SUCCESS;},
  R_GPT_Open(args,r,fn){return this.timerOpen(r,args,fn,'gpt');},R_AGT_Open(args,r,fn){return this.timerOpen(r,args,fn,'agt');},
  R_GPT_Start(args,r,fn){return timerCall.call(this,args,r,fn,'gpt',st=>{if(!st.running)this.timerStart(r,st);});},
  R_AGT_Start(args,r,fn){return timerCall.call(this,args,r,fn,'agt',st=>{if(!st.running)this.timerStart(r,st);});},
@@ -421,8 +448,8 @@ const HANDLERS={
  R_GPT_Reset(args,r,fn){return timerCall.call(this,args,r,fn,'gpt',st=>{st.counter=0;if(st.running){st.running=false;this.timerStart(r,st);}});},
  R_AGT_Reset(args,r,fn){return timerCall.call(this,args,r,fn,'agt',st=>{st.counter=0;if(st.running){st.running=false;this.timerStart(r,st);}});},
  R_GPT_CounterSet(args,r,fn){return timerCall.call(this,args,r,fn,'gpt',st=>{const c=int(Number(args[1])>>>0,0,st.period-1,`${fn} 카운터`);st.counter=c;if(st.running){st.running=false;this.timerStart(r,st);}});},
- R_GPT_PeriodSet(args,r,fn){return timerCall.call(this,args,r,fn,'gpt',st=>{st.period=int(Number(args[1])>>>0,1,2**32-1,`${fn} 주기`);this.pwm(r,st);});},
- R_AGT_PeriodSet(args,r,fn){return timerCall.call(this,args,r,fn,'agt',st=>{st.period=int(Number(args[1])>>>0,1,65536,`${fn} 주기`);});},
+ R_GPT_PeriodSet(args,r,fn){return timerCall.call(this,args,r,fn,'gpt',st=>this.periodSet(r,st,int(Number(args[1])>>>0,1,2**32-1,`${fn} 주기`)));},
+ R_AGT_PeriodSet(args,r,fn){return timerCall.call(this,args,r,fn,'agt',st=>this.periodSet(r,st,int(Number(args[1])>>>0,1,65536,`${fn} 주기`)));},
  R_GPT_DutyCycleSet([ctrl,counts,pin],r,fn){
   const st=this.instance(ctrl,r,fn,'gpt');if(!st.open)return FSP.NOT_OPEN;const value=Number(counts)>>>0;if(value>st.period)return FSP.INVALID_ARGUMENT;
   const which=int(pin,0,2,`${fn} 핀(GPT_IO_PIN_GTIOCA/B)`);if(which!==1)st.duty[0]=value;if(which!==0)st.duty[1]=value;this.pwm(r,st);return FSP.SUCCESS;
@@ -459,22 +486,19 @@ const HANDLERS={
   const st=this.instance(ctrl,r,fn,'iic');if(st.open)return FSP.ALREADY_OPEN;const cfg=this.struct(cfgPtr,r,'i2c_master_cfg_t',fn),id='IIC'+st.channel,t=this.inst.iics.find(x=>x.channel===st.channel);
   const scl=this.pinOf(id+'_SCL'),sda=this.pinOf(id+'_SDA');if(!scl||!sda)throw new Error(`${fn}: Pins에서 ${id}의 SCL과 SDA 핀을 정하세요.`);
   if(Number(cfg.fields.addr_mode.value)!==1)throw new Error(`${fn}: 내장 해석기는 7비트 주소만 실행합니다.`);
-  Object.assign(st,{open:true,busy:false,scl,sda,rate:Number(cfg.fields.rate.value),slave:Number(cfg.fields.slave.value),ipl:Number(cfg.fields.ipl.value),callback:t?.callback||''});
+  Object.assign(st,{open:true,busy:0,scl,sda,rate:Number(cfg.fields.rate.value),slave:Number(cfg.fields.slave.value),ipl:Number(cfg.fields.ipl.value),callback:t?.callback||''});
   this.activeIic=null;this.iicSelect(r,st);return FSP.SUCCESS;
  },
  R_IIC_MASTER_SlaveAddressSet([ctrl,address,mode],r,fn){const st=this.instance(ctrl,r,fn,'iic');if(!st.open)return FSP.NOT_OPEN;if(st.busy)return FSP.IN_USE;if(mode!==1)throw new Error(`${fn}: 내장 해석기는 7비트 주소(I2C_MASTER_ADDR_MODE_7BIT)만 실행합니다.`);st.slave=int(address,0,127,`${fn} 주소`);return FSP.SUCCESS;},
  R_IIC_MASTER_Write([ctrl,buffer,count],r,fn){
   const st=this.instance(ctrl,r,fn,'iic');if(!st.open)return FSP.NOT_OPEN;if(st.busy)return FSP.IN_USE;const bytes=this.bytes(buffer,count,r,fn);
-  this.iicSelect(r,st);this.buses.call('Wire.beginTransmission',[st.slave],r);for(const byte of bytes)this.buses.call('Wire.write',[byte],r);
-  this.iicDone(r,st,this.buses.call('Wire.endTransmission',[],r)===0?3:1);return FSP.SUCCESS;
+  this.iicTransfer(r,st,()=>{this.buses.call('Wire.beginTransmission',[st.slave],r);for(const byte of bytes)this.buses.call('Wire.write',[byte],r);return this.buses.call('Wire.endTransmission',[],r)===0?3:1;});return FSP.SUCCESS;
  },
  R_IIC_MASTER_Read([ctrl,buffer,count],r,fn){
   const st=this.instance(ctrl,r,fn,'iic');if(!st.open)return FSP.NOT_OPEN;if(st.busy)return FSP.IN_USE;int(count,1,256,`${fn} 길이`);r.pointerCell(buffer,count-1);
-  this.iicSelect(r,st);const got=this.buses.call('Wire.requestFrom',[st.slave,count],r);
-  if(got===count)for(let i=0;i<count;i++)r.set(r.pointerCell(buffer,i),this.buses.call('Wire.read',[],r));
-  this.iicDone(r,st,got===count?2:1);return FSP.SUCCESS;
+  this.iicTransfer(r,st,()=>{const got=this.buses.call('Wire.requestFrom',[st.slave,count],r);if(got!==count)return 1;for(let i=0;i<count;i++)r.set(r.pointerCell(buffer,i),this.buses.call('Wire.read',[],r));return 2;});return FSP.SUCCESS;
  },
- R_IIC_MASTER_Abort(args,r,fn){const st=this.instance(args[0],r,fn,'iic');if(!st.open)return FSP.NOT_OPEN;return FSP.SUCCESS;},
- R_IIC_MASTER_Close(args,r,fn){const st=this.instance(args[0],r,fn,'iic');if(!st.open)return FSP.NOT_OPEN;st.open=false;if(this.activeIic===st.name)this.activeIic=null;return FSP.SUCCESS;}
+ R_IIC_MASTER_Abort(args,r,fn){const st=this.instance(args[0],r,fn,'iic');if(!st.open)return FSP.NOT_OPEN;this.iicStop(st);return FSP.SUCCESS;},
+ R_IIC_MASTER_Close(args,r,fn){const st=this.instance(args[0],r,fn,'iic');if(!st.open)return FSP.NOT_OPEN;this.iicStop(st);st.open=false;if(this.activeIic===st.name)this.activeIic=null;return FSP.SUCCESS;}
 };
 function timerCall(args,r,fn,kind,action){const st=this.instance(args[0],r,fn,kind);if(!st.open)return FSP.NOT_OPEN;action(st);return FSP.SUCCESS;}
