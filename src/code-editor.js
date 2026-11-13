@@ -12,7 +12,12 @@ const C_NAMES=['uint8_t','uint16_t','uint32_t','uint64_t','int8_t','int16_t','in
 
 globalThis.MonacoEnvironment={getWorker:()=>new Worker(new URL('./editor.worker.js',import.meta.url),{name:'stm-editor'})};
 const API={HAL_GPIO_WritePin:'HAL_GPIO_WritePin(GPIOx, GPIO_Pin, PinState)',HAL_GPIO_ReadPin:'HAL_GPIO_ReadPin(GPIOx, GPIO_Pin)',HAL_GPIO_TogglePin:'HAL_GPIO_TogglePin(GPIOx, GPIO_Pin)',HAL_Delay:'HAL_Delay(milliseconds)',HAL_GetTick:'HAL_GetTick()',HAL_UART_Transmit:'HAL_UART_Transmit(&huart, data, size, timeout)',HAL_ADC_GetValue:'HAL_ADC_GetValue(&hadc)',HAL_TIM_PWM_Start:'HAL_TIM_PWM_Start(&htim, channel)',printf:'printf("format", values)',pinMode:'pinMode(pin, OUTPUT)',digitalWrite:'digitalWrite(pin, HIGH)',digitalRead:'digitalRead(pin)',analogRead:'analogRead(pin)',delay:'delay(milliseconds)'};
-export function createCodeEditor({textarea,getFile,getFiles,onBreakpoint,onBreakpointsMoved,onPosition,getFamily=()=>'STM32F446RE',getGenerated=()=>[],sdk=globalThis.window?.nativeIde,onExternal}){
+// Feature 45: a generated or SDK file opens as an external model and is edited in place: on its first change
+// onExternalEdit(file, text, {generated}) stores it as a project file and gives back its name, and the editor carries on
+// in that project file. canEdit(file) says which external files can be edited (not the .ioc view, not Renesas FSP's);
+// readOnlyMessage(file) explains the others. isRegenerated(name) marks files whose lines outside the USER CODE sections
+// code generation writes again: those lines are shown faded.
+export function createCodeEditor({textarea,getFile,getFiles,onBreakpoint,onBreakpointsMoved,onPosition,getFamily=()=>'STM32F446RE',getGenerated=()=>[],sdk=globalThis.window?.nativeIde,onExternal,onExternalEdit,canEdit=()=>false,readOnlyMessage=()=>'',isRegenerated=()=>false,outsideRanges=()=>[]}){
   const wrapper=textarea.parentElement,host=document.createElement('div');host.id='monaco-host';wrapper.append(host);wrapper.classList.add('monaco-ready');
   monaco.editor.defineTheme('stm-light',{base:'vs',inherit:true,rules:[{token:'comment',foreground:'567B60'},{token:'keyword',foreground:'8755A1'},{token:'string',foreground:'A34D2F'},{token:'number',foreground:'246D90'}],colors:{'editor.background':'#FCFDFC','editor.foreground':'#263E34','editorLineNumber.foreground':'#718579','editor.lineHighlightBackground':'#EFF5F1','editor.selectionBackground':'#CBE8D9','editorCursor.foreground':'#166E4E','editorGutter.background':'#F5F8F6'}});
   const editor=monaco.editor.create(host,{value:textarea.value,language:'cpp',theme:'stm-light',automaticLayout:true,editContext:false,fontSize:13,lineHeight:21,fontFamily:"Consolas, 'Malgun Gothic', monospace",minimap:{enabled:false},wordBasedSuggestions:'off',glyphMargin:true,scrollBeyondLastLine:false,tabSize:4,insertSpaces:true,wordWrap:'off',folding:true,bracketPairColorization:{enabled:true},padding:{top:9,bottom:9},fixedOverflowWidgets:true,ariaLabel:'C 소스 코드 편집기',readOnly:textarea.readOnly});
@@ -72,9 +77,9 @@ export function createCodeEditor({textarea,getFile,getFiles,onBreakpoint,onBreak
   textarea.setSelectionRange=(start,end,direction)=>{nativeSelect(start,end,direction);const model=editor.getModel(),a=model.getPositionAt(start),b=model.getPositionAt(end);editor.setSelection(new monaco.Range(a.lineNumber,a.column,b.lineNumber,b.column));editor.revealPositionInCenterIfOutsideViewport(a);};
   textarea.focus=()=>editor.focus();
   textarea.addEventListener('input',()=>{if(!syncing)sync(nativeValue.get.call(textarea));});
-  editor.onDidChangeModelContent(()=>{if(syncing||external)return;const moved=breakpoints.filter(b=>b.file===active).map((b,i)=>({...b,line:decorations.getRange(i)?.startLineNumber||b.line}));nativeValue.set.call(textarea,editor.getValue());textarea.dispatchEvent(new Event('input',{bubbles:true}));if(moved.some((b,i)=>b.line!==breakpoints.filter(p=>p.file===active)[i]?.line))onBreakpointsMoved?.(active,moved);});
+  editor.onDidChangeModelContent(()=>{fadeSoon();if(external&&!syncing&&canEdit(external))adoptSoon(external);if(syncing||external)return;const moved=breakpoints.filter(b=>b.file===active).map((b,i)=>({...b,line:decorations.getRange(i)?.startLineNumber||b.line}));nativeValue.set.call(textarea,editor.getValue());textarea.dispatchEvent(new Event('input',{bubbles:true}));if(moved.some((b,i)=>b.line!==breakpoints.filter(p=>p.file===active)[i]?.line))onBreakpointsMoved?.(active,moved);});
   editor.onDidChangeCursorSelection(e=>{if(external){onPosition?.(editor.getPosition());return;}const m=editor.getModel();nativeSelect(m.getOffsetAt(e.selection.getStartPosition()),m.getOffsetAt(e.selection.getEndPosition()));onPosition?.(editor.getPosition());});
-  const readOnly=()=>editor.updateOptions(external?{readOnly:true,readOnlyMessage:{value:`${externals.get(external).sdk} 원본 파일이라 읽기 전용입니다. 프로젝트 파일 탭으로 돌아가 수정하세요.`}}:{readOnly:textarea.readOnly,readOnlyMessage:{value:textarea.dataset.readOnlyMessage||'이 파일은 읽기 전용입니다.'}});
+  const readOnly=()=>editor.updateOptions(external&&!canEdit(external)?{readOnly:true,readOnlyMessage:{value:readOnlyMessage(external)||`${externals.get(external).sdk} 파일이라 여기서 고칠 수 없습니다.`}}:{readOnly:textarea.readOnly,readOnlyMessage:{value:textarea.dataset.readOnlyMessage||'이 파일은 읽기 전용입니다.'}});
   new MutationObserver(readOnly).observe(textarea,{attributes:true,attributeFilter:['readonly','data-read-only-message']});
   editor.onMouseDown(e=>{if(!external&&e.target.type===monaco.editor.MouseTargetType.GUTTER_GLYPH_MARGIN&&e.target.position)onBreakpoint(active,e.target.position.lineNumber);});
   editor.addCommand(monaco.KeyCode.F9,()=>{if(!external)onBreakpoint(active,editor.getPosition().lineNumber);});
@@ -86,8 +91,27 @@ export function createCodeEditor({textarea,getFile,getFiles,onBreakpoint,onBreak
   const find=replace=>()=>{if(external){editor.getAction('actions.find')?.run();return;}document.dispatchEvent(new CustomEvent('ide-find',{detail:replace}));};
   for(const key of [monaco.KeyMod.CtrlCmd|monaco.KeyCode.KeyF,monaco.KeyCode.F3,monaco.KeyMod.Shift|monaco.KeyCode.F3,monaco.KeyMod.CtrlCmd|monaco.KeyCode.F3])editor.addCommand(key,find(false));
   editor.addCommand(monaco.KeyMod.CtrlCmd|monaco.KeyCode.KeyH,find(true));
-  const decorations=editor.createDecorationsCollection();
-  function decorate(){
+  const decorations=editor.createDecorationsCollection(),faded=editor.createDecorationsCollection();let fadeTimer=0;
+  const FADE_HOVER={value:'USER CODE 구역 밖 — 코드를 다시 생성하면 Pinout 설정대로 새로 써집니다(CubeMX와 같음). 남길 코드는 USER CODE BEGIN/END 사이에 쓰세요.'};
+  function fade(){
+    const model=editor.getModel(),name=external??active;
+    if(!model||!name||!isRegenerated(name)){faded.set([]);return;}
+    faded.set(outsideRanges(model.getValue()).map(([a,b])=>({range:new monaco.Range(a,1,b,1),options:{isWholeLine:true,className:'outside-user-code',inlineClassName:'outside-user-code-text',hoverMessage:FADE_HOVER}})));
+  }
+  function fadeSoon(){clearTimeout(fadeTimer);fadeTimer=setTimeout(fade,150);}
+  // The first edit of an external file: it becomes a project file (stored by the app), and the editor follows it there
+  // with the cursor and scroll where they were. Keys typed before the switch are in the text it takes along.
+  let adopting=null;
+  function adoptSoon(file){if(adopting)return;adopting=file;setTimeout(()=>{adopting=null;adopt(file);},0);}
+  function adopt(file){
+    const e=externals.get(file);if(!e||!onExternalEdit)return;
+    const text=e.model.getValue(),view=external===file?editor.saveViewState():e.view;
+    if(external===file)showProject();
+    const name=onExternalEdit(file,text,{generated:!!e.generated,sdk:e.sdk});
+    if(!name){if(e.original!==undefined&&!e.model.isDisposed())e.model.setValue(e.original);showExternal(file,null,{record:false});return;}
+    if(view)editor.restoreViewState(view);closeExternal(file);readOnly();fade();editor.focus();
+  }
+  function decorate(){fade();
     for(const [name,model] of models)monaco.editor.setModelMarkers(model,'clangd',languageMarkers.get(name)||[]);
     if(external){decorations.set([]);return;}
     const ds=breakpoints.filter(b=>b.file===active).map(b=>({range:new monaco.Range(b.line,1,b.line,1),options:{isWholeLine:false,stickiness:monaco.editor.TrackedRangeStickiness.NeverGrowsWhenTypingAtEdges,glyphMarginClassName:'debug-breakpoint',glyphMarginHoverMessage:{value:'중단점 — 클릭하여 해제'}}}));
@@ -126,11 +150,11 @@ export function createCodeEditor({textarea,getFile,getFiles,onBreakpoint,onBreak
   monaco.languages.registerHoverProvider('cpp',{provideHover(model,position){if(languageService?.enabled())return null;const w=model.getWordAtPosition(position);return w&&API[w.word]?{contents:[{value:'```c\n'+API[w.word]+';\n```'},{value:'STM Simulator에서 지원하는 API입니다. 상세 범위는 HAL API 문서를 확인하세요.'}]}:null;}});
   // Go to definition (Ctrl+click, F12, Alt+F12 peek) as in CubeIDE: the project's own files first, then the
   // STM32Cube SDK (HAL driver, CMSIS) of the project's MCU, opened as a read-only tab.
-  const sdkModel=async file=>{let e=externals.get(file);if(e)return e;const r=await sdk['sdk-file'](getFamily(),file);e={model:monaco.editor.createModel(r.text,file.endsWith('.s')?'plaintext':'cpp',monaco.Uri.from({scheme:'inmemory',authority:'sdk',path:'/'+file})),sdk:r.sdk,file};externals.set(file,e);return e;};
+  const sdkModel=async file=>{let e=externals.get(file);if(e)return e;const r=await sdk['sdk-file'](getFamily(),file);e={model:monaco.editor.createModel(r.text,/\.(s|ld)$/.test(file)?'plaintext':'cpp',monaco.Uri.from({scheme:'inmemory',authority:'sdk',path:'/'+file})),sdk:r.sdk,file,original:r.text};externals.set(file,e);return e;};
   // The code the ARM build adds (CubeIDE's Core/Src/stm32xxxx_it.c, syscalls.c, sysmem.c): read only, regenerated from the project.
   const GENERATED='STM Simulator 빌드';
-  const genModel=file=>{const g=getGenerated().find(x=>x.file===file);if(!g)return null;let e=externals.get(file);if(!e){e={model:monaco.editor.createModel(g.text,'cpp',monaco.Uri.from({scheme:'inmemory',authority:'gen',path:'/'+file})),sdk:GENERATED,file,generated:true};externals.set(file,e);}else if(e.model.getValue()!==g.text)e.model.setValue(g.text);return e;};
-  const refreshGenerated=()=>{const now=getGenerated();for(const e of [...externals.values()])if(e.generated){const g=now.find(x=>x.file===e.file);if(g){if(e.model.getValue()!==g.text)e.model.setValue(g.text);}else closeExternal(e.file);}};
+  const genModel=file=>{const g=getGenerated().find(x=>x.file===file);if(!g)return null;let e=externals.get(file);if(!e){e={model:monaco.editor.createModel(g.text,/\.(s|ld|ioc)$/.test(file)?'plaintext':'cpp',monaco.Uri.from({scheme:'inmemory',authority:'gen',path:'/'+file})),sdk:GENERATED,file,generated:true,original:g.text};externals.set(file,e);}else if(e.model.getValue()!==g.text){e.original=g.text;syncing=true;e.model.setValue(g.text);syncing=false;}return e;};
+  const refreshGenerated=()=>{const now=getGenerated();for(const e of [...externals.values()])if(e.generated){if(adopting===e.file)continue;const g=now.find(x=>x.file===e.file);if(g){if(e.model.getValue()!==g.text){e.original=g.text;syncing=true;e.model.setValue(g.text);syncing=false;}}else closeExternal(e.file);}};
   const sdkDefinitions=new Map();let sdkWarned=false;
   const sdkLookup=name=>{if(!sdk?.['sdk-definition'])return Promise.resolve([]);const key=getFamily()+':'+name;if(!sdkDefinitions.has(key))sdkDefinitions.set(key,sdk['sdk-definition'](getFamily(),name).catch(e=>{sdkDefinitions.delete(key);if(!sdkWarned){sdkWarned=true;document.dispatchEvent(new CustomEvent('ide-notice',{detail:e.message}));}return [];}));return sdkDefinitions.get(key);};
   const projectModel=name=>{let m=models.get(name);const file=getFiles().find(f=>f.name===name);if(!file)return null;if(!m){m=monaco.editor.createModel(file.text,'cpp',monaco.Uri.parse('inmemory://stm/'+encodeURIComponent(name)));models.set(name,m);}else if(!external&&name===active&&m.getValue()!==file.text)m.setValue(file.text);return m;};
@@ -190,7 +214,7 @@ export function createCodeEditor({textarea,getFile,getFiles,onBreakpoint,onBreak
   monaco.languages.registerDocumentFormattingEditProvider('cpp',{async provideDocumentFormattingEdits(model){return (await query('formatting',model)||[]).map(edit=>({range:lspRange(edit.range),text:edit.newText}));}});
   sync(textarea.value);
   return {editor,sync,preferences,
-    externalFile:()=>external?{file:external,sdk:externals.get(external).sdk}:null,externalText:()=>external?externals.get(external).model.getValue():null,externalFiles:()=>[...externals.values()].map(e=>({file:e.file,sdk:e.sdk})),
+    externalFile:()=>external?{file:external,sdk:externals.get(external).sdk}:null,externalOriginal:file=>externals.get(file)?.original,externalText:()=>external?externals.get(external).model.getValue():null,externalFiles:()=>[...externals.values()].map(e=>({file:e.file,sdk:e.sdk})),
     showExternal:file=>showExternal(file),openGenerated:file=>!!genModel(file)&&showExternal(file),openSdk:async file=>showExternal((await sdkModel(file)).file),refreshGenerated,showProject,closeExternal,outline:()=>cSymbols(editor.getModel()?.getValue()||''),onContent:fn=>editor.onDidChangeModelContent(fn),onModel:fn=>editor.onDidChangeModel(fn),setLanguageService(service){languageService=service;},clearLanguageDiagnostics(){languageMarkers.clear();decorate();},languageDiagnostics(file,items){languageMarkers.set(file,items.map(d=>({severity:({1:monaco.MarkerSeverity.Error,2:monaco.MarkerSeverity.Warning,3:monaco.MarkerSeverity.Info,4:monaco.MarkerSeverity.Hint})[d.severity]||monaco.MarkerSeverity.Error,message:d.message,startLineNumber:d.range.start.line+1,startColumn:d.range.start.character+1,endLineNumber:d.range.end.line+1,endColumn:d.range.end.character+1})));decorate();},focus:()=>editor.focus(),
     // Puts text at the cursor of the project file being edited (Developer Assistance); following lines take the indent of
     // the cursor's line. With a point (client x, y of a drop) the text goes to the position under it.

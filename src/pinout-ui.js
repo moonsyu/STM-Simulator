@@ -5,6 +5,7 @@ import {MODES,ROUTES,defaultMcu,validateMcu,configProblems,pinFunctions,irqForPi
 import {DMA_REQUESTS} from './hal-dma.js';
 import {expandC} from './c-format.js';
 import {regenerateMain} from './c-source-edit.js';
+import {generationPlan} from './project-overrides.js';
 // What the project's current settings generate: sections still equal to it were never edited.
 const previousDefault=mcu=>{try{return expandC(generateHal(mcu));}catch{return '';}};
 import {isSerial,serialAf,serialFunction,assignSerialPin,setSerialEnabled} from './serial-config.js';
@@ -82,7 +83,7 @@ export class PinoutPanel {
     $('pinout-dialog').addEventListener('cancel',e=>{if(!$('pin-menu').hidden){e.preventDefault();this.closeMenu(true);}});
     $('pinout-dialog').addEventListener('close',()=>this.closeMenu());
     $('pinout-couple').onchange=e=>{if(e.target.checked)this.draft.coupleFiles=true;else delete this.draft.coupleFiles;};
-    $('pinout-apply').onclick=()=>this.commit(false);$('hal-generate').onclick=()=>{if(this.isRunning())return;this.sync();if(this.getProject().code.trim())$('hal-replace-dialog').showModal();else this.commit(true);};
+    $('pinout-apply').onclick=()=>this.commit(false);$('hal-generate').onclick=()=>{if(this.isRunning())return;this.sync();if(!this.getProject().code.trim()&&!this.plan()?.report.length){this.commit(true);return;}this.showLoss();$('hal-replace-dialog').showModal();};
     $('hal-replace-cancel').onclick=()=>$('hal-replace-dialog').close();$('hal-replace-confirm').onclick=()=>{$('hal-replace-dialog').close();this.commit(true);};
   }
   open(pin){if(this.isRunning())return;const project=this.getProject();
@@ -161,7 +162,12 @@ export class PinoutPanel {
     $('nvic-tick')&&($('nvic-tick').onchange=()=>{const v=numberInput($('nvic-tick'));config.tickPriority=v;this.refreshProblems();});
     this.updateNvicCount();
   }
-  commit(generate){try{this.sync();for(const el of $('pinout-dialog').querySelectorAll('input[type="number"]'))if(!Number.isFinite(numberInput(el)))throw new Error(`${el.getAttribute('aria-label')||(el.id==='timer-clock'?'APB1 타이머 입력 클록':'숫자 설정')}: 숫자를 입력하세요.`);const mcu=validateMcu(this.draft),project=this.getProject(),regen=generate?regenerateMain(project.code,expandC(generateHal(mcu)),previousDefault(project.mcu),(project.firmware?.files||[]).map(f=>f.text)):null,code=regen?.code??null;this.apply({mcu,code,moved:regen?.moved??[]});$('pinout-dialog').close();}catch(e){$('pinout-errors').textContent=e.message;this.onError(e.message);}}
+  // Feature 45: what generating the code now does to the project — main.c and the regenerated files it has edited (it.c,
+  // main.h, the per-peripheral pairs, hal_conf.h) keep their USER CODE sections; the user's lines outside them go.
+  plan(){try{const mcu=validateMcu(this.draft),project=this.getProject(),previous=previousDefault(project.mcu),regen=regenerateMain(project.code,expandC(generateHal(mcu)),previous,(project.firmware?.files||[]).map(f=>f.text));return {...generationPlan(project,mcu,{main:regen.code,previousMain:previous}),regen};}catch{return null;}}
+  showLoss(){const plan=this.plan(),list=plan?.report||[];$('hal-replace-loss').hidden=!list.length;
+    $('hal-replace-loss').innerHTML=list.length?'<p><strong>USER CODE 구역 밖에서 고친 줄이 지워집니다:</strong></p><ul>'+list.map(r=>`<li><code>${r.name.replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'})[c])}</code> — ${r.reset?'고친 내용 전체(이 파일은 USER CODE 구역이 없어 원본으로 돌아갑니다)':r.lost+'줄'}</li>`).join('')+'</ul>':'';}
+  commit(generate){try{this.sync();for(const el of $('pinout-dialog').querySelectorAll('input[type="number"]'))if(!Number.isFinite(numberInput(el)))throw new Error(`${el.getAttribute('aria-label')||(el.id==='timer-clock'?'APB1 타이머 입력 클록':'숫자 설정')}: 숫자를 입력하세요.`);const mcu=validateMcu(this.draft),plan=generate?this.plan():null;if(generate&&!plan)generateHal(mcu);const regen=plan?.regen??null,code=regen?.code??null;this.apply({mcu,code,moved:regen?.moved??[],files:plan?.files,report:plan?.report??[]});$('pinout-dialog').close();}catch(e){$('pinout-errors').textContent=e.message;this.onError(e.message);}}
   // DMA requests of the enabled peripherals: stream/channel, direction, normal/circular, priority.
   dmaCard(config){
     const requestsOf=dmaRequestsOf(config.family),f1=familyProfile(config.family).pinMux==='remap',enabled=id=>id===null||config.peripherals[id]?.enabled,requests=Object.keys(requestsOf).filter(r=>enabled(dmaPeripheral(r)));

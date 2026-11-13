@@ -17,8 +17,10 @@ test('the pairs hold the handles and the MX_*_Init functions; main.c keeps the c
  const p=lectureProject(),one=generateHal(p.mcu),{main,files}=splitMain(one);
  assert.deepEqual(files.map(f=>f.name),['i2c.h','i2c.c','usart.h','usart.c','gpio.h','gpio.c']);
  const text=name=>files.find(f=>f.name===name).text;
- assert.match(text('i2c.h'),/extern I2C_HandleTypeDef hi2c1;\n\nvoid MX_I2C1_Init\(void\);/);
- assert.match(text('i2c.c'),/#include "i2c\.h"\n\nI2C_HandleTypeDef hi2c1;\n\nvoid MX_I2C1_Init\(void\) \{\n {2}__HAL_RCC_I2C1_CLK_ENABLE\(\);/);
+ assert.match(text('i2c.h'),/extern I2C_HandleTypeDef hi2c1;\n[\s\S]*\nvoid MX_I2C1_Init\(void\);/);
+ assert.match(text('i2c.h'),/USER CODE BEGIN Includes[\s\S]*USER CODE BEGIN Private defines[\s\S]*USER CODE BEGIN Prototypes/);
+ assert.match(text('i2c.c'),/#include "i2c\.h"\n\n\/\* USER CODE BEGIN 0 \*\/\n\/\* USER CODE END 0 \*\/\n\nI2C_HandleTypeDef hi2c1;\n\nvoid MX_I2C1_Init\(void\) \{\n {2}\/\* USER CODE BEGIN I2C1_Init 0 \*\/\n\n {2}\/\* USER CODE END I2C1_Init 0 \*\/\n {2}__HAL_RCC_I2C1_CLK_ENABLE\(\);/);
+ assert.match(text('i2c.c'),/USER CODE END I2C1_Init 2 \*\/\n\}\n\n\/\* USER CODE BEGIN 1 \*\//);
  assert.match(text('usart.h'),/extern UART_HandleTypeDef huart2;[\s\S]*void MX_USART2_UART_Init\(void\);/);
  assert.match(text('gpio.c'),/void MX_GPIO_Init\(void\) \{[\s\S]*GPIO_PIN_8/);
  // main.c: the includes after main.h, the calls, and nothing of what moved out.
@@ -29,8 +31,10 @@ test('the pairs hold the handles and the MX_*_Init functions; main.c keeps the c
  const all=main+'\n'+files.map(f=>f.text).join('\n');
  for(const line of one.split('\n'))if(line.trim()&&!/^static void MX_/.test(line))assert.ok(all.includes(line),line);
  // The init bodies are the same lines.
+ // The pair's function has CubeMX's USER CODE sections around the generated lines (feature 45).
+ const generatedLines=t=>t.split('\n').filter(l=>l.trim()&&!/^\s*\/\* USER CODE (BEGIN|END) /.test(l)).join('\n');
  const body=(t,name)=>new RegExp(`void ${name}\\(void\\) \\{\\n([\\s\\S]*?)\\n\\}`).exec(t)[1];
- for(const [file,name]of [['i2c.c','MX_I2C1_Init'],['usart.c','MX_USART2_UART_Init'],['gpio.c','MX_GPIO_Init']])assert.equal(body(text(file),name),body(one,name),name);
+ for(const [file,name]of [['i2c.c','MX_I2C1_Init'],['usart.c','MX_USART2_UART_Init'],['gpio.c','MX_GPIO_Init']])assert.equal(generatedLines(body(text(file),name)),body(one,name),name);
 });
 
 test('the Pinout option: generateHal writes the split main.c, the project file keeps the option, .ioc carries it',()=>{

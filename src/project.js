@@ -142,9 +142,17 @@ export function validateProject(data){
   if(data.mcu!==undefined){project.mcu=isRaFamily(data.mcu?.family)?validateRaMcu(data.mcu):validateMcu(data.mcu);const board=getBoard(data.boardId??DEFAULT_BOARD_ID);if(project.mcu.family!==board.mcuFamily)throw new Error(`${board.name} 보드에는 ${board.mcuFamily} 핀 설정이 필요합니다 (${project.mcu.family}).`);}
   if(data.firmware!==undefined){
     if(!data.firmware||!['sketch','hal','fsp'].includes(data.firmware.mode)||!Array.isArray(data.firmware.files)||data.firmware.files.length>MAX_SOURCE_FILES)throw new Error('펌웨어 소스 설정이 올바르지 않습니다.');
-    const names=new Set();let size=data.code.length;
-    const files=data.firmware.files.map(f=>{if(!f||typeof f.name!=='string'||!SOURCE_PATH.test(f.name)||nameClash(names,f.name)||typeof f.text!=='string')throw new Error('소스 파일 이름/내용을 확인하세요.');names.add(f.name.toLowerCase());size+=f.text.length;return {name:f.name,text:normalizeText(f.text)};});
+    const names=new Set();let size=data.code.length,sdkSize=0;
+    // Feature 45: a file that started as a generated one (origin 'gen') or an STM32Cube SDK file (origin 'sdk', of: its
+    // path in the SDK) is an edited copy of it. Edited SDK files (HAL, CMSIS) have their own 4 MB beside the 1 MB.
+    const files=data.firmware.files.map(f=>{if(!f||typeof f.name!=='string'||!SOURCE_PATH.test(f.name)||nameClash(names,f.name)||typeof f.text!=='string')throw new Error('소스 파일 이름/내용을 확인하세요.');names.add(f.name.toLowerCase());
+      if(f.origin!==undefined&&f.origin!=='gen'&&f.origin!=='sdk')throw new Error(f.name+': 파일 출처를 확인하세요.');if(f.of!==undefined&&(f.origin!=='sdk'||typeof f.of!=='string'||!/^[\w./-]{1,200}$/.test(f.of)||f.of.split('/').includes('..')))throw new Error(f.name+': SDK 파일 경로를 확인하세요.');
+      // base: the generated text an edited generated file started from (the baseline when it is generated again).
+      if(f.base!==undefined&&(f.origin!=='gen'||typeof f.base!=='string'||f.base.length>300000))throw new Error(f.name+': 생성 원본을 확인하세요.');
+      if(f.origin==='sdk')sdkSize+=f.text.length;else size+=f.text.length;
+      return {name:f.name,text:normalizeText(f.text),...(f.origin?{origin:f.origin}:{}),...(f.of?{of:f.of}:{}),...(typeof f.base==='string'?{base:normalizeText(f.base)}:{})};});
     if(size>MAX_SOURCE_BYTES)throw new Error('소스 전체는 1 MB 이하로 선택하세요.');
+    if(sdkSize>4e6)throw new Error('고친 SDK 파일은 모두 합쳐 4 MB 이하로 두세요.');
     // Where main.c sits in an imported CubeIDE project (Core/Src): the build puts it there so its relative includes work.
     let mainFolder;if(data.firmware.mainFolder!==undefined){if(typeof data.firmware.mainFolder!=='string'||!SOURCE_PATH.test(data.firmware.mainFolder+'/main.c'))throw new Error('main.c 폴더 경로를 확인하세요.');mainFolder=data.firmware.mainFolder;}
     if(data.firmware.mode==='hal'&&!project.mcu)throw new Error('HAL 프로젝트에는 핀 설정이 필요합니다.');

@@ -111,7 +111,7 @@ class NativeIde extends EventEmitter{
   }
   cancelInstall(){this.installing?.abort();}
   busy(){return !!this.buildController||!this.gdb.closed||!!this.runProcess;}
-  async validate(text){if(typeof text!=='string'||Buffer.byteLength(text)>2000000)throw new Error('프로젝트 크기 제한을 넘었습니다.');const {validateProject}=await import('../src/project.js');return validateProject(JSON.parse(text));}
+  async validate(text){if(typeof text!=='string'||Buffer.byteLength(text)>12000000)throw new Error('프로젝트 크기 제한을 넘었습니다.');const {validateProject}=await import('../src/project.js');return validateProject(JSON.parse(text));}
   async compile(text,config){
     config=checkedConfig(config);if(this.busy())throw new Error('현재 작업을 정지한 뒤 빌드하세요.');const project=await this.validate(text);this.result=null;this.buildController=new AbortController();this.send('build-state',{state:'building'});
     try{const plan=await prepareBuild({project,tools:await this.settings(),root:path.join((await this.settings()).buildRoot||this.directory,'native-builds'),...config});this.result=await build(plan,{signal:this.buildController.signal,onOutput:text=>this.send('build-output',{text})});this.result.fingerprint=fingerprint(project,config);this.send('build-state',{state:'succeeded',result:this.result});return this.result;}

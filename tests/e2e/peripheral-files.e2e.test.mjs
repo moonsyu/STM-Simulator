@@ -30,13 +30,15 @@ test('the Pinout option writes main.c with the peripheral headers; the pairs are
   await win.evaluate(()=>document.getElementById('pinout-open').click());await win.waitForSelector('#pinout-dialog[open]');
   assert.equal(await win.isChecked('#pinout-couple'),true);
   await win.keyboard.press('Escape');await win.waitForFunction(()=>!document.getElementById('pinout-dialog').open);
-  // The project structure lists the pair where CubeIDE keeps it; the file opens read only with the init function.
+  // The project structure lists the pair where CubeIDE keeps it; it opens as an editable view of the generated file.
   await win.click('[data-activity="explorer"]');if(!await win.locator('#build-files > summary').isVisible())await win.click('[data-activity="explorer"]');
   await win.click('#build-files > summary');
   await win.waitForSelector('#build-file-list [data-build-file="Core/Src/gpio.c"]');
   assert.equal(await win.locator('#build-file-list [data-build-file="Core/Inc/gpio.h"]').count(),1);
   await win.click('#build-file-list [data-build-file="Core/Src/gpio.c"]');
-  await win.waitForSelector('#copy-to-project');
+  await win.waitForFunction(()=>/USER\s*CODE\s*BEGIN\s*0/.test((document.querySelector('#group-code .monaco-editor .view-lines')?.textContent||'').replace(/\u00a0/g,' ')));
+  assert.match(await win.textContent('#source-path'),/고치면 이 파일만 프로젝트에 저장 · 다시 생성하면 USER CODE 구역 밖은 새로 써짐/);
+  await win.click('#source-tabs [data-source="main.c"]');
   // The program runs: MX_GPIO_Init comes from the generated gpio.c.
   await win.evaluate(()=>{const c=document.getElementById('code');c.value=c.value.replace('/* USER CODE BEGIN 2 */','/* USER CODE BEGIN 2 */\n  printf("pairs ok\\n");');c.dispatchEvent(new Event('input',{bubbles:true}));});
   await win.keyboard.press('Control+F5');

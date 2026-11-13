@@ -6,7 +6,7 @@ const safeName=name=>typeof name==='string'&&/^[\w가-힣][\w가-힣 .-]{0,79}$/
 // A source kept in folders (Core/Src/app.c): every part of the path must be a safe name.
 const safePath=name=>typeof name==='string'&&name.split('/').length<=7&&name.split('/').every(safeName);
 async function filesFor(text){
-  if(typeof text!=='string'||Buffer.byteLength(text)>2000000)throw new Error('프로젝트 크기 제한을 넘었습니다.');
+  if(typeof text!=='string'||Buffer.byteLength(text)>12000000)throw new Error('프로젝트 크기 제한을 넘었습니다.');
   const {validateProject}=await import('../src/project.js');const project=validateProject(JSON.parse(text));
   const files=new Map([['project.stm32lab',JSON.stringify(project,null,2)+'\n'],['main.c',project.code]]);
   for(const f of project.firmware?.files||[]){if(!safePath(f.name))throw new Error('Windows에서 사용할 수 없는 소스 파일명입니다.');files.set(f.name,f.text);}
@@ -36,13 +36,13 @@ async function readWorkspace(directory){
   const marker=JSON.parse(await fs.readFile(path.join(directory,'stm-project.json'),'utf8'));
   if(marker.format!=='stm-simulator-workspace'||marker.document!=='project.stm32lab')throw new Error('STM Simulator 프로젝트 폴더가 아닙니다.');
   await transaction.recover(directory);
-  const stat=await fs.stat(path.join(directory,'project.stm32lab'));if(stat.size>2000000)throw new Error('프로젝트 크기 제한을 넘었습니다.');
+  const stat=await fs.stat(path.join(directory,'project.stm32lab'));if(stat.size>12000000)throw new Error('프로젝트 크기 제한을 넘었습니다.');
   const text=await fs.readFile(path.join(directory,'project.stm32lab'),'utf8'),files=await filesFor(text),hashes=await snapshot(directory,files.keys()),project=JSON.parse(text);
   const boards=await boardSources(project);
   for(const name of files.keys()){if(name==='project.stm32lab')continue;
     // Folders saved before 1.11.0 keep the other boards' code only in project.stm32lab.
     if(hashes.get(name)===null&&boards.has(name))continue;
-    if(hashes.get(name)===null)throw new Error(`${name} 소스 파일이 없습니다.`);const stat=await fs.stat(path.join(directory,name));if(stat.size>1200000)throw new Error('소스 파일 크기 제한을 넘었습니다.');const value=await fs.readFile(path.join(directory,name),'utf8');if(name==='main.c')project.code=value;else if(boards.has(name))boards.get(name).set(value);else project.firmware.files.find(f=>f.name===name).text=value;}
+    if(hashes.get(name)===null)throw new Error(`${name} 소스 파일이 없습니다.`);const stat=await fs.stat(path.join(directory,name));if(stat.size>4500000)throw new Error('소스 파일 크기 제한을 넘었습니다.');const value=await fs.readFile(path.join(directory,name),'utf8');if(name==='main.c')project.code=value;else if(boards.has(name))boards.get(name).set(value);else project.firmware.files.find(f=>f.name===name).text=value;}
   const updated=JSON.stringify(project);await filesFor(updated);return {text:updated,state:{directory,hashes}};
 }
 async function writeWorkspace(state,text){

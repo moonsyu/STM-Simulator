@@ -15,6 +15,8 @@ import {esc} from './render.js';
 import {SimulationSession} from './session.js';
 import {stm32Boards,mainBoardName,createStm32Drivers,connectStm32Drivers,stm32View} from './stm32-boards.js';
 import {PC,INTERNET} from './wireless.js';
+import {armOnly} from './project-overrides.js';
+const armNoted=new Set();
 
 export function recompute(){if(!state.runtime||!state.session)return;try{state.session.setPressed(state.pressed);state.result=state.session.viewResult;const warning=state.result.warnings.join('|');if(warning&&warning!==state.lastWarnings)state.result.warnings.forEach(w=>log(w,'error'));state.lastWarnings=warning;}catch(e){state.result=state.session.viewResult;state.status='error';log(e.message,'error');}}
 export function updateRunScope(){
@@ -29,6 +31,7 @@ export function initializeRuntime({debug=false,entry=false}={}){
  try{state.simTime=0;state.pressed={};state.lastWarnings='';state.result=null;monitor.clear();uartLines.clear();const options={debug:debug?{entry,breakpoints:state.ide?.breakpoints()||[]}:undefined,print:s=>log(s,'serial'),uart:logUart,trace:event=>monitor.trace(event),channels:monitor.channels(),
    // Program hints (e.g. ADC single conversion mode read again) go to the 출력 log as well as the protocol monitor.
    warn:message=>{log(message,'error');monitor.trace({micros:state.session?.now??state.session?.runtime?.microTime??0,protocol:'경고',message});}};
+  if(!emulate&&!boardOnly&&state.project.firmware?.mode==='hal'){const only=(state.project.firmware.files||[]).filter(f=>armOnly(f.name)&&!armNoted.has(f.name));if(only.length){for(const f of only)armNoted.add(f.name);log(`${only.map(f=>f.name).join(', ')}: 내장 해석기는 이 파일을 쓰지 않습니다. 고친 내용은 ARM GCC 빌드(시뮬레이터 엔진 ARM GCC, 에뮬레이터, 실물 보드)에서만 반영됩니다.`,'warning');}}
   state.session=emulate?new FirmwareSession(state.project,{...options,elf:state.firmware.bytes}):new SimulationSession(boardOnly?{...state.project,code:BOARD_ONLY_PROGRAM,firmware:{mode:'sketch',files:[]}}:state.project,{...options,program});state.runtime=state.session.runtime;state.status='paused';state.pending=null;state.mode='select';// The start line comes before what the program prints in its first tick.
   log(boardOnly?'다른 보드만 실행합니다. STM32 코드는 실행하지 않습니다.':emulate?`${state.ide?.gccSimulation?.()?'시뮬레이터(ARM GCC 빌드)를 시작했습니다':'펌웨어 에뮬레이터를 시작했습니다'} · ${state.firmware.name} · ${projectBoard(state.project).mcu} (${projectBoard(state.project).core}) 명령어 실행`:state.project.firmware?.mode==='hal'?'HAL 프로그램을 시작했습니다.':'스케치를 시작했습니다.');
   state.overvoltageLogged=new Set();

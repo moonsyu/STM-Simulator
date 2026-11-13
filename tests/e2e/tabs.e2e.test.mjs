@@ -3,6 +3,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {launch} from './harness.mjs';
+async function editShown(win,file){await win.waitForFunction(leaf=>!document.getElementById('source-path').hidden&&document.getElementById('source-path').textContent.includes(leaf),file.split('/').at(-1),{timeout:15000});await win.evaluate(()=>document.getElementById('code').focus());await win.keyboard.press('Control+End');await win.keyboard.type('\n/* edited */');await win.waitForFunction(f=>!!document.querySelector(`#file-tree [data-source="${f}"]`),file,{timeout:10000});}
 
 test('tabs close one by one, all but one, to the right and all at once; the explorer opens a file again; an editor with no tab says so',{timeout:150000},async()=>{
  const s=await launch();
@@ -12,12 +13,11 @@ test('tabs close one by one, all but one, to the right and all at once; the expl
   const active=()=>win.$$eval('#source-tabs [data-tab-id].active',e=>e.map(x=>x.dataset.tabId));
   const empty=()=>win.evaluate(()=>({flag:document.getElementById('code-panel').classList.contains('no-tabs'),shown:getComputedStyle(document.getElementById('editor-empty')).display!=='none'}));
   const menuItem=async(tab,action)=>{await win.click(`#source-tabs [data-tab-id="${tab}"]`,{button:'right'});await win.waitForSelector('#tab-menu:not([hidden])');await win.click(`#tab-menu [data-tab-action="${action}"]`);};
-  // Three project files: main.c and, copied into the project, the linker script and the startup file.
+  // Three project files: main.c and, edited (so stored in the project), the linker script and the startup file.
   await win.click('[data-activity="explorer"]');if(!await win.locator('#build-files > summary').isVisible())await win.click('[data-activity="explorer"]');
   await win.click('#build-files > summary');
-  await win.click('#build-file-list > button[data-build-file$=".ld"]');await win.waitForSelector('#copy-to-project');await win.click('#copy-to-project');
-  await win.waitForFunction(()=>!!document.querySelector('#file-tree [data-source="STM32F103RBTX_FLASH.ld"]'));
-  await win.click('#build-file-list [data-build-file$="startup_stm32f103xb.s"]');await win.waitForSelector('#copy-to-project');await win.click('#copy-to-project');
+  await win.click('#build-file-list > button[data-build-file$=".ld"]');await editShown(win,'STM32F103RBTX_FLASH.ld');
+  await win.click('#build-file-list [data-build-file$="startup_stm32f103xb.s"]');await editShown(win,'Core/Startup/startup_stm32f103xb.s');
   const LD='STM32F103RBTX_FLASH.ld',ST='Core/Startup/startup_stm32f103xb.s';
   await win.waitForFunction(st=>!!document.querySelector(`#file-tree [data-source="${st}"]`),ST);
   assert.deepEqual(await tabs(),['main.c',LD,ST]);

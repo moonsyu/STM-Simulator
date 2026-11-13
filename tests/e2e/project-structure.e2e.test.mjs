@@ -4,6 +4,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {launch} from './harness.mjs';
+async function editShown(win,file){await win.waitForFunction(leaf=>!document.getElementById('source-path').hidden&&document.getElementById('source-path').textContent.includes(leaf),file.split('/').at(-1),{timeout:15000});await win.evaluate(()=>document.getElementById('code').focus());await win.keyboard.press('Control+End');await win.keyboard.type('\n/* edited */');await win.waitForFunction(f=>!!document.querySelector(`#file-tree [data-source="${f}"]`),file,{timeout:10000});}
 
 test('the CubeIDE tree lists the whole project; startup code and the linker script can be copied in and edited',{timeout:150000},async()=>{
  const s=await launch();
@@ -22,15 +23,13 @@ test('the CubeIDE tree lists the whole project; startup code and the linker scri
   assert.equal(await win.$eval('#build-file-list [data-tree-source="main.c"]',b=>b.classList.contains('tree-own')),true);
   const top=await win.$$eval('#build-file-list > button',b=>b.map(x=>x.textContent.replace(/^[A-Z]/,'')));
   assert.ok(top.some(n=>/\.ioc$/.test(n))&&top.includes('STM32F103RBTX_FLASH.ld'),top.join(' '));
-  // The .ioc of the current Pinout: shown, not copied (it is changed through the Pinout).
+  // The .ioc of the current Pinout: shown read only (it is changed through the Pinout).
   await win.click('#build-file-list > button[data-build-file$=".ioc"]');
   await win.waitForFunction(()=>/Mcu\.UserName=STM32F103RBTx/.test(document.querySelector('#group-code .monaco-editor .view-lines')?.textContent||''));
-  assert.equal(await win.locator('#copy-to-project').count(),0);
-  // The linker script and the startup file become project files.
-  await win.click('#build-file-list > button[data-build-file$=".ld"]');await win.waitForSelector('#copy-to-project');await win.click('#copy-to-project');
-  await win.waitForFunction(()=>!!document.querySelector('#file-tree [data-source="STM32F103RBTX_FLASH.ld"]'));
-  await win.click('#build-file-list [data-build-file$="startup_stm32f103xb.s"]');await win.waitForSelector('#copy-to-project');await win.click('#copy-to-project');
-  await win.waitForFunction(()=>!!document.querySelector('#file-tree [data-source="Core/Startup/startup_stm32f103xb.s"]'));
+  assert.match(await win.textContent('#source-path'),/읽기 전용/);
+  // The linker script and the startup file become project files when they are edited (feature 45).
+  await win.click('#build-file-list > button[data-build-file$=".ld"]');assert.match(await win.textContent('#source-path'),/한 번 만드는 파일 · 고친 내용 유지 · ARM GCC 빌드에서만 쓰임/);await editShown(win,'STM32F103RBTX_FLASH.ld');
+  await win.click('#build-file-list [data-build-file$="startup_stm32f103xb.s"]');await editShown(win,'Core/Startup/startup_stm32f103xb.s');
   // In the tree they are the project's now, and the provided ones are gone.
   assert.equal(await win.locator('#build-file-list [data-build-file$=".ld"]').count(),0);assert.equal(await win.locator('#build-file-list [data-build-file$="startup_stm32f103xb.s"]').count(),0);
   assert.equal(await win.locator('#build-file-list [data-tree-source="STM32F103RBTX_FLASH.ld"]').count(),1);
@@ -68,7 +67,10 @@ test('an FPB-RA6E1 project shows src, ra_gen, ra_cfg, script and ra; hal_entry.c
   assert.deepEqual(await win.$$eval('#build-file-list [data-tree-folder="src"] > .tree-children > button',b=>b.map(x=>[x.textContent.replace(/^[A-Z]/,''),x.classList.contains('tree-own')])),[['hal_entry.c',true]]);
   await win.click('#build-file-list [data-build-file="ra_gen/main.c"]');
   await win.waitForFunction(()=>/hal_entry\(\)/.test(document.querySelector('#group-code .monaco-editor .view-lines')?.textContent||''));
-  assert.match(await win.textContent('#source-path'),/읽기 전용/);assert.equal(await win.locator('#copy-to-project').count(),0);
+  // An FSP project's generated files stay read only, with the reason (e² studio writes them again).
+  assert.match(await win.textContent('#source-path'),/읽기 전용/);
+  await win.evaluate(()=>document.getElementById('code').focus());await win.keyboard.type('zz');await win.waitForTimeout(200);
+  assert.doesNotMatch(await win.evaluate(()=>document.querySelector('#group-code .monaco-editor .view-lines').textContent),/zz/);
   // The pin names of the course: ra_cfg/fsp_cfg/bsp/bsp_pin_cfg.h; the delay function: ra/fsp/src/bsp/mcu/all/bsp_delay.c.
   await win.click('#build-file-list [data-tree-folder="ra_cfg"] > summary');await win.click('#build-file-list [data-tree-folder="ra_cfg/fsp_cfg"] > summary');await win.click('#build-file-list [data-tree-folder="ra_cfg/fsp_cfg/bsp"] > summary');
   await win.click('#build-file-list [data-build-file="ra_cfg/fsp_cfg/bsp/bsp_pin_cfg.h"]');
@@ -131,9 +133,8 @@ test('the source file list shows folders as a tree; folding is kept; files open 
   await win.click('[data-activity="explorer"]');if(!await win.locator('#build-files > summary').isVisible())await win.click('[data-activity="explorer"]');
   await win.click('#build-files > summary');
   // Two project files in folders (the startup file and a header) and one at the top (the linker script).
-  for(const file of ['startup_stm32f103xb.s','main.h']){await win.click(`#build-file-list [data-build-file$="${file}"]`);await win.waitForSelector('#copy-to-project');await win.click('#copy-to-project');await win.waitForFunction(file=>!!document.querySelector(`#file-tree [data-source$="${file}"]`),file);}
-  await win.click('#build-file-list > button[data-build-file$=".ld"]');await win.waitForSelector('#copy-to-project');await win.click('#copy-to-project');
-  await win.waitForFunction(()=>!!document.querySelector('#file-tree [data-source="STM32F103RBTX_FLASH.ld"]'));
+  for(const [file,name]of [['startup_stm32f103xb.s','Core/Startup/startup_stm32f103xb.s'],['main.h','Core/Inc/main.h']]){await win.click(`#build-file-list [data-build-file$="${file}"]`);await editShown(win,name);}
+  await win.click('#build-file-list > button[data-build-file$=".ld"]');await editShown(win,'STM32F103RBTX_FLASH.ld');
   assert.deepEqual(await win.$$eval('#file-tree [data-src-folder]',d=>d.map(x=>x.dataset.srcFolder).sort()),['Core','Core/Inc','Core/Startup']);
   // Files sit in their folders; main.c and the linker script are at the top.
   assert.deepEqual(await win.$$eval('#file-tree [data-src-folder="Core/Startup"] > .tree-children > [data-source]',b=>b.map(x=>x.dataset.source)),['Core/Startup/startup_stm32f103xb.s']);

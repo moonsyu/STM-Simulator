@@ -69,7 +69,7 @@ export function planDrop(dropped,project){
     sources.length=0;sources.push(...kept);}
   const fresh=sources.filter(f=>!existing.has(f.name.toLowerCase())).length;
   if((project.firmware?.files?.length||0)+fresh>MAX_SOURCE_FILES)throw new Error(`보조 소스는 ${MAX_SOURCE_FILES}개까지입니다.`);
-  const total=(project.code?.length||0)+(project.firmware?.files||[]).filter(f=>!sources.some(s=>s.name.toLowerCase()===f.name.toLowerCase())).reduce((n,f)=>n+f.text.length,0)+sources.reduce((n,f)=>n+f.text.length,0);
+  const total=(project.code?.length||0)+(project.firmware?.files||[]).filter(f=>f.origin!=='sdk'&&!sources.some(s=>s.name.toLowerCase()===f.name.toLowerCase())).reduce((n,f)=>n+f.text.length,0)+sources.reduce((n,f)=>n+f.text.length,0);
   if(total>MAX_SOURCE_BYTES)throw new Error('소스 전체는 1 MB 이하여야 합니다.');
   return {action:'add',files:sources.map(f=>({name:existing.get(f.name.toLowerCase())??f.name,text:f.text,replaces:existing.has(f.name.toLowerCase())})),skipped};
 }

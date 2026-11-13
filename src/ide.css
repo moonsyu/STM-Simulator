@@ -312,3 +312,10 @@
 .editor-empty{display:none}
 #code-panel.no-tabs .editor-empty{display:grid;place-content:center;gap:4px;position:absolute;inset:0;z-index:5;text-align:center;font-size:13px;color:var(--ide-muted,#4e6377);background:var(--ide-background,#fcfdfc)}
 #code-panel.no-tabs .editor-empty p{margin:0}
+
+/* Feature 45: lines code generation writes again (outside USER CODE sections) are faded; edited generated / SDK files
+   are marked in the project tree; what generating would remove is listed before it runs. */
+.monaco-editor .outside-user-code-text{opacity:.55}
+.tree-edited-mark{margin-left:auto;padding-left:6px;font-size:9px;color:var(--accent,#2f7df6)}
+.hal-replace-loss{margin:8px 0;padding:8px 10px;border-left:3px solid #d08a1e;background:color-mix(in srgb,#d08a1e 10%,transparent)}
+.hal-replace-loss ul{margin:4px 0 0 18px;padding:0}

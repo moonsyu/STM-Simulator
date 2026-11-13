@@ -17,6 +17,7 @@ import {$} from './common.js';
 import {outlineLabel} from './c-symbols.js';
 import {buildEnvironment,prefixOf,startupOf,HAL_MODULES} from './build-environment.js';
 import {halFiles,generatedSources} from './peripheral-files.js';
+import {regenerated,fileKind,armOnly,outsideRanges,editedLabel} from './project-overrides.js';
 import {exportIoc} from './ioc-export.js';
 import {isRaFamily} from './ra-config.js';
 import {RA_EXAMPLES,raExample} from './ra-examples.js';
@@ -26,7 +27,7 @@ import {generateRaFiles} from './ra-generator.js';
 export function mountIdeChrome(){
   const toolbar=document.createElement('nav');toolbar.className='ide-toolbar';toolbar.setAttribute('aria-label','빌드와 디버그');toolbar.innerHTML='<button id="ide-build" class="primary" title="시뮬레이터용 빌드">빌드</button><span class="toolbar-divider"></span><button id="debug-start" title="시작 위치에서 디버깅">디버그 시작</button><span id="build-status" role="status">시뮬레이터용 빌드</span>';
   document.querySelector('.topbar').after(toolbar);toolbar.prepend(document.querySelector('.run-tools'));
-  const tree=document.createElement('section');tree.className='project-files';tree.innerHTML='<div class="project-files-title"><strong>소스 파일</strong><button id="source-add">파일 추가</button></div><nav id="file-tree" aria-label="프로젝트 파일"></nav><div class="file-tools"><button id="source-rename">이름 변경</button><button id="source-delete">삭제</button></div><details id="build-files" class="build-files" hidden><summary><span id="build-files-title">Core · Startup</span> <small>빌드에 들어가는 파일 · 읽기 전용</small></summary><nav id="build-file-list" aria-label="빌드 파일"></nav></details><details id="ra-assist" class="build-files ra-assist" hidden><summary>Developer Assistance <small>눌러서 커서 자리에 넣기</small></summary><nav id="ra-assist-list" aria-label="Developer Assistance"></nav></details><div class="project-folder-note" id="workspace-path">미저장 프로젝트</div>';
+  const tree=document.createElement('section');tree.className='project-files';tree.innerHTML='<div class="project-files-title"><strong>소스 파일</strong><button id="source-add">파일 추가</button></div><nav id="file-tree" aria-label="프로젝트 파일"></nav><div class="file-tools"><button id="source-rename">이름 변경</button><button id="source-delete">삭제</button></div><details id="build-files" class="build-files" hidden><summary><span id="build-files-title">Core · Startup</span> <small>빌드에 들어가는 파일 · 바로 고치면 그 파일만 프로젝트에 저장</small></summary><nav id="build-file-list" aria-label="빌드 파일"></nav></details><details id="ra-assist" class="build-files ra-assist" hidden><summary>Developer Assistance <small>눌러서 커서 자리에 넣기</small></summary><nav id="ra-assist-list" aria-label="Developer Assistance"></nav></details><div class="project-folder-note" id="workspace-path">미저장 프로젝트</div>';
   document.querySelector('.library').prepend(tree);
   // CubeIDE's Outline: the structure of the file on screen (project or SDK); the file tree keeps the project files only.
   const outline=document.createElement('section');outline.className='project-files outline-view';outline.innerHTML='<div class="project-files-title"><strong>코드 개요 (Outline)</strong><span id="outline-file"></span></div><input id="outline-filter" type="search" placeholder="개요 검색" aria-label="코드 개요 검색"><nav id="outline-list" aria-label="코드 개요"></nav>';tree.after(outline);
@@ -47,7 +48,9 @@ export function setupIde(o){
   let folder='',fileAction='add',lastPause='',built=null,sourceKey='',native=null;
   const points=()=>o.getProject().ide?.breakpoints||[],watches=()=>o.getProject().ide?.watches||[];
   const settings=()=>o.getProject().ide??=( {breakpoints:[],watches:[]} );
-  const editor=createCodeEditor({textarea:$('code'),getFile:o.getSource,getFiles:()=>sourceFiles(o.getProject()),onBreakpoint:toggleBreakpoint,onBreakpointsMoved:(file,moved)=>{const unique=[...new Map(moved.map(b=>[b.line,b])).values()];settings().breakpoints=[...points().filter(b=>b.file!==file),...unique];o.saveLocal();debugView();},onPosition:p=>{$('cursor-position').textContent=`줄 ${p?.lineNumber||1}, 열 ${p?.column||1}`;},getFamily:()=>o.getProject().mcu?.family||'STM32F446RE',getGenerated:()=>generatedFiles(),onExternal:()=>tabsView()});
+  const editor=createCodeEditor({textarea:$('code'),getFile:o.getSource,getFiles:()=>sourceFiles(o.getProject()),onBreakpoint:toggleBreakpoint,onBreakpointsMoved:(file,moved)=>{const unique=[...new Map(moved.map(b=>[b.line,b])).values()];settings().breakpoints=[...points().filter(b=>b.file!==file),...unique];o.saveLocal();debugView();},onPosition:p=>{$('cursor-position').textContent=`줄 ${p?.lineNumber||1}, 열 ${p?.column||1}`;},getFamily:()=>o.getProject().mcu?.family||'STM32F446RE',getGenerated:()=>generatedFiles(),onExternal:()=>tabsView(),
+    canEdit:file=>canEditExternal(file),readOnlyMessage:file=>externalReadOnlyMessage(file),onExternalEdit:(file,text,meta)=>adoptExternal(file,text,meta),
+    isRegenerated:name=>{const p=o.getProject();if(p.firmware?.mode!=='hal')return false;if(name==='main.c')return true;const own=(p.firmware.files||[]).find(f=>f.name===name);if(own)return own.origin==='gen'&&regenerated(name,p.mcu?.family);return regenerated(treeLabels.get(name)||name,p.mcu?.family);},outsideRanges});
   // Features 25 and 26 — open tabs. A project starts with a tab for each of its files; a tab can be closed (×, the tab's
   // context menu, "모두 닫기") and comes back when the file is opened from the explorer. Closing is only about the tab
   // row: the file stays in the project and its text is kept, also while the program runs. closedTabs holds the closed
@@ -61,6 +64,7 @@ export function setupIde(o){
   const shown=name=>name==='main.c'&&o.getProject().firmware?.mode==='fsp'?'hal_entry.c':name;
   const sourceFolded=new Set();
   function sync(){
+    {const ext=editor.externalFile(),p=o.getProject();if(ext&&canEditExternal(ext.file)){const leaf=ext.file.split('/').at(-1),own=(p.firmware?.files||[]).find(f=>(f.origin||treeLabels.get(ext.file)===f.name)&&f.name.split('/').at(-1)===leaf&&(f.of===ext.file||f.name===(treeLabels.get(ext.file)||ext.file)));if(own){editor.closeExternal(ext.file);select(own.name);return;}}}
     const focused=document.activeElement?.closest('[data-source]'),focusSource=focused?.dataset.source,focusContainer=focused?.parentElement.id;
     const files=sourceFiles(o.getProject()),active=o.getSource(),key=JSON.stringify([o.getProject().firmware?.mode,files]);if(sourceKey&&sourceKey!==key){built=null;$('build-status').textContent='변경됨 · 빌드 필요';editor.diagnostics([]);}sourceKey=key;
     // Other boards' programs follow the STM32 sources, labelled with the board name.
@@ -90,6 +94,51 @@ export function setupIde(o){
     // The peripheral .c/.h pairs the project includes (peripheral-files.js), where CubeIDE keeps them.
     const pairs=generatedSources(p).map(f=>({file:`Core/${f.name.endsWith('.h')?'Inc':'Src'}/${f.name}`,text:f.text}));
     return [...buildEnvironment(p).files,...pairs,...ioc];}
+  // Feature 45: every file of the STM32 project tree is edited in place (as in CubeIDE). Not the .ioc view (the Pinout
+  // writes it) and not a Renesas FSP project's generated / FSP files (e² studio writes them again; feature 20).
+  const canEditExternal=file=>o.getProject().firmware?.mode==='hal'&&!/\.ioc$/.test(file);
+  function externalReadOnlyMessage(file){
+    if(/\.ioc$/.test(file))return '.ioc는 지금 Pinout 설정을 CubeMX 형식으로 보여 주는 파일입니다. 바꾸려면 보드/핀 설정(Pinout)에서 설정하세요.';
+    if(o.getProject().firmware?.mode==='fsp')return /^ra\//.test(file)?'Renesas FSP 소스입니다. e² studio도 Generate Project Content 때 이 파일을 다시 덮어써서, 이 앱에서는 고치지 않습니다. 프로젝트 코드는 src/hal_entry.c에 쓰세요.':'RASC(FSP Configuration)가 Pins·Stacks 설정으로 만드는 파일입니다. 바꾸려면 Pins·Stacks에서 설정하세요 — 다시 생성할 때 덮어씁니다.';
+    return '';
+  }
+  // The SDK files an edit may keep in the project (Drivers, CMSIS): their own budget, beside the 1 MB of sources.
+  const SDK_BUDGET=4e6;
+  // The first edit of a generated or SDK file: the file goes into the project under the path the tree shows it at, with
+  // where it came from (only that file is stored); the editor then carries on in the project file. Returns its name.
+  function adoptExternal(file,text,{generated}={}){
+    try{
+      if(o.isRunning())throw new Error('실행을 정지한 뒤 고치세요.');
+      const p=structuredClone(o.getProject());if(p.firmware?.mode!=='hal')throw new Error('이 파일은 고칠 수 없습니다.');p.firmware.files??=[];
+      const shownAs=treeLabels.get(file),leaf=(shownAs||file).split('/').at(-1),name=shownAs&&SOURCE_PATH.test(shownAs)?shownAs:SOURCE_PATH.test(file)?file:leaf;
+      if(leaf==='main.c'||!SOURCE_PATH.test(name))throw new Error(`${leaf}: 프로젝트에 둘 수 없는 경로의 파일이라 여기서 고칠 수 없습니다.`);
+      // One file of a name: the build and the tree match files by name, so a second one would be compiled twice.
+      const same=sourceFiles(p).find(f=>f.name.split('/').at(-1).toLowerCase()===leaf.toLowerCase());
+      if(same)throw new Error(`${leaf}: 같은 이름의 파일(${same.name})이 이미 프로젝트에 있습니다. 그 파일을 고치세요.`);
+      const sdkSize=p.firmware.files.filter(f=>f.origin==='sdk').reduce((n,f)=>n+f.text.length,0);
+      if(!generated&&sdkSize+text.length>SDK_BUDGET)throw new Error(`${leaf}: 고친 SDK 파일은 모두 합쳐 4 MB까지 프로젝트에 둘 수 있습니다.`);
+      const original=editor.externalOriginal?.(file);
+      p.firmware.files.push({name,text,origin:generated?'gen':'sdk',...(generated?{}:{of:file}),...(generated&&typeof original==='string'&&regenerated(name,p.mcu.family)?{base:original}:{})});
+      validateProject(p);
+      emptyTabs=false;closedTabs.delete(name);
+      o.applySources(p,name);
+      const kind=fileKind(name,p.mcu.family);
+      o.log(`${name}을 고쳐 프로젝트에 저장했습니다(고친 파일만 저장). ${kind==='regen'?'코드를 다시 생성하면 USER CODE 구역 안만 남고 나머지는 Pinout 설정대로 새로 써집니다.':'한 번 만드는 파일이라 코드를 다시 생성해도 고친 내용이 남습니다.'}${armOnly(name)?' 내장 해석기는 이 파일을 쓰지 않아 ARM GCC 빌드에서만 반영됩니다.':''} 탐색기에서 우클릭 → 원본으로 되돌리기로 원래 내용으로 돌아갑니다.`);
+      return name;
+    }catch(e){o.log(e.message,'error');return null;}
+  }
+  // "원본으로 되돌리기": the edited copy goes; the generated / SDK file is shown again (Ctrl+Z brings the edit back).
+  function revertToOriginal(name){
+    try{
+      if(o.isRunning())throw new Error('실행을 정지한 뒤 되돌리세요.');
+      const p=structuredClone(o.getProject()),file=p.firmware?.files?.find(f=>f.name===name);if(!file)return;
+      p.firmware.files=p.firmware.files.filter(f=>f!==file);
+      o.applySources(p,o.getSource()===name?'main.c':o.getSource());closedTabs.delete(name);
+      const row=projectRows(o.getProject()).find(r=>r.kind!=='own'&&(r.label===name||file.of&&r.file===file.of));
+      if(row){if(row.kind==='gen')editor.openGenerated(row.file);else editor.openSdk(row.file).catch(e=>o.log(e.message,'error'));}
+      o.log(`${name}을 원본으로 되돌렸습니다. 고친 내용은 Ctrl+Z로 되돌릴 수 있습니다.`);
+    }catch(e){o.log(e.message,'error');}
+  }
   // The rows of the CubeIDE tree: {kind: 'own' | 'gen' | 'sdk', file, label}. `file` is what opens (a project source
   // name, a generated view, a path under the SDK); `label` is the path CubeIDE shows it at.
   let treeLabels=new Map();const treeOpen=new Set(['Core','Core/Inc','Core/Src','Core/Startup','src','ra_gen']);
@@ -98,14 +147,15 @@ export function setupIde(o){
     const files=sourceFiles(p),ownBase=new Set(files.map(f=>base(f.name))),folder=p.firmware?.mainFolder;
     // A project file without a folder sits where CubeIDE would keep it.
     const place=name=>name.includes('/')||folder?name:/\.(h|hpp)$/.test(name)?'Core/Inc/'+name:/\.s$/.test(name)?'Core/Startup/'+name:/\.ld$/.test(name)?name:'Core/Src/'+name;
-    const own=files.map(f=>({kind:'own',file:f.name,label:f.name==='main.c'?(folder||'Core/Src')+'/main.c':place(f.name)}));
-    const gen=generatedFiles().filter(g=>!ownBase.has(base(g.file))).map(g=>({kind:'gen',file:g.file,label:g.file}));
+    const generatedAll=generatedFiles(),provided=new Set([...generatedAll.map(g=>g.file),`Core/Inc/${prefix}_hal_conf.h`,`Core/Src/system_${prefix}.c`,`Core/Startup/${startupOf(family)}`,...(HAL_MODULES[family]||[]).flatMap(m=>[`${hal}/Src/${prefix}_${m}.c`,`${hal}/Inc/${prefix}_${m}.h`]),`${device}/Include/${prefix}.h`,`${device}/Include/system_${prefix}.h`]);
+    const own=files.map(f=>({kind:'own',file:f.name,label:f.name==='main.c'?(folder||'Core/Src')+'/main.c':place(f.name),edited:f.name!=='main.c'&&editedLabel(f,provided)}));
+    const gen=generatedAll.filter(g=>!ownBase.has(base(g.file))).map(g=>({kind:'gen',file:g.file,label:g.file}));
     const sdk=[];const add=(file,label=file)=>sdk.push({kind:'sdk',file,label});
     if(!ownBase.has(`${prefix}_hal_conf.h`))add(`${hal}/Inc/${prefix}_hal_conf_template.h`,`Core/Inc/${prefix}_hal_conf.h`);
     if(!ownBase.has(`system_${prefix}.c`))add(`${device}/Source/Templates/system_${prefix}.c`,`Core/Src/system_${prefix}.c`);
     if(![...ownBase].some(n=>/^startup_.*\.s$/i.test(n)))add(`${device}/Source/Templates/gcc/${startupOf(family)}`,`Core/Startup/${startupOf(family)}`);
     for(const m of HAL_MODULES[family]||[]){if(!ownBase.has(`${prefix}_${m}.c`))add(`${hal}/Src/${prefix}_${m}.c`);if(!ownBase.has(`${prefix}_${m}.h`))add(`${hal}/Inc/${prefix}_${m}.h`);}
-    add(`${device}/Include/${prefix}.h`);add(`${device}/Include/system_${prefix}.h`);
+    if(!ownBase.has(`${prefix}.h`))add(`${device}/Include/${prefix}.h`);if(!ownBase.has(`system_${prefix}.h`))add(`${device}/Include/system_${prefix}.h`);
     return [...own,...gen,...sdk];
   }
   // Feature 21: Developer Assistance — the API calls of this project's stacks; a click puts the call at the cursor of
@@ -149,38 +199,24 @@ export function setupIde(o){
   function buildFilesView(){
     const p=o.getProject(),hal=p.firmware?.mode==='hal'&&!!p.mcu,fsp=p.firmware?.mode==='fsp'&&!!p.mcu;$('build-files').hidden=!hal&&!fsp;$('build-files-title').textContent=fsp?'프로젝트 구조 (e² studio)':'프로젝트 구조 (CubeIDE)';if(!hal&&!fsp){$('build-file-list').innerHTML='';return;}
     // Feature 14: the project as CubeIDE lays it out — the .ioc, Core/Inc, Core/Src, Core/Startup, Drivers and the
-    // linker script — with the project's own files (plain) next to what the build provides (italic, read only until
-    // "프로젝트로 복사해 수정" makes a project file of it, which the build then uses in its place).
+    // linker script — with the project's own files (plain) next to what the build provides (italic). Feature 45: those
+    // are edited in place; an edited one is a project file (marked "수정됨"), which the build uses in its place.
     // Feature 20: an FSP project as e² studio lays it out — src, ra_gen, ra_cfg, script and ra (FSP itself).
     const rows=fsp?raRows(p):projectRows(p),ext=editor.externalFile()?.file,active=o.getSource();treeLabels=new Map(rows.map(r=>[r.file,r.label]));
     const root={folders:new Map(),files:[]};
     for(const r of rows){const parts=r.label.split('/');let node=root;for(const part of parts.slice(0,-1)){if(!node.folders.has(part))node.folders.set(part,{folders:new Map(),files:[]});node=node.folders.get(part);}node.files.push({...r,leaf:parts.at(-1)});}
     const kindOf=n=>/\.ioc$/.test(n)?'M':/\.ld$/.test(n)?'L':/\.s$/i.test(n)?'S':/\.(h|hpp)$/.test(n)?'H':'C';
     const fileRow=r=>r.kind==='own'
-      ?`<button data-tree-source="${esc(r.file)}" class="tree-own${!ext&&r.file===active?' active':''}" title="${esc(r.label)} · 프로젝트 파일"><span class="file-kind">${kindOf(r.leaf)}</span><span class="file-label">${esc(r.leaf)}</span></button>`
-      :`<button data-build-file="${esc(r.file)}" data-build-kind="${r.kind}" class="${ext===r.file?'active':''}" title="${esc(r.kind==='gen'?'STM Simulator가 빌드에 넣는 코드':'STM32Cube SDK '+r.file)} · 읽기 전용${/\.ioc$/.test(r.leaf)?'':' · 열어서 \"프로젝트로 복사해 수정\"'}"><span class="file-kind">${kindOf(r.leaf)}</span><span class="file-label">${esc(r.leaf)}</span></button>`;
+      ?`<button data-tree-source="${esc(r.file)}" class="tree-own${r.edited?' tree-edited':''}${!ext&&r.file===active?' active':''}" title="${esc(r.label)} · ${r.edited?'고친 파일 · 우클릭: 원본으로 되돌리기':'프로젝트 파일'}"${r.edited?' data-tree-edited':''}><span class="file-kind">${kindOf(r.leaf)}</span><span class="file-label">${esc(r.leaf)}</span>${r.edited?'<span class="tree-edited-mark" aria-label="수정됨">●</span>':''}</button>`
+      :`<button data-build-file="${esc(r.file)}" data-build-kind="${r.kind}" class="${ext===r.file?'active':''}" title="${esc(r.kind==='gen'?'STM Simulator가 빌드에 넣는 코드':'STM32Cube SDK '+r.file)}${/\.ioc$/.test(r.leaf)||fsp?' · 읽기 전용':' · 바로 고칠 수 있음(고친 파일만 프로젝트에 저장)'}"><span class="file-kind">${kindOf(r.leaf)}</span><span class="file-label">${esc(r.leaf)}</span></button>`;
     const render=(node,path)=>[...[...node.folders].sort(([x],[y])=>x.localeCompare(y)).map(([name,child])=>{const full=path?path+'/'+name:name;return `<details class="tree-folder" data-tree-folder="${esc(full)}"${treeOpen.has(full)?' open':''}><summary>${esc(name)}</summary><div class="tree-children">${render(child,full)}</div></details>`;}),...node.files.sort((x,y)=>x.leaf.localeCompare(y.leaf)).map(fileRow)].join('');
     $('build-file-list').innerHTML=render(root,'');
     for(const el of $('build-file-list').querySelectorAll('[data-tree-folder]'))el.addEventListener('toggle',()=>{if(el.open)treeOpen.add(el.dataset.treeFolder);else treeOpen.delete(el.dataset.treeFolder);});
     for(const el of $('build-file-list').querySelectorAll('[data-tree-source]'))el.onclick=()=>{o.layout.reveal('code');select(el.dataset.treeSource);};
+    for(const el of $('build-file-list').querySelectorAll('[data-tree-edited]'))el.oncontextmenu=e=>{e.preventDefault();treeMenu(e.clientX,e.clientY,el.dataset.treeSource);};
     for(const el of $('build-file-list').querySelectorAll('[data-build-file]'))el.onclick=async()=>{o.layout.reveal('code');document.querySelector('[data-tab="code"]')?.click();try{if(el.dataset.buildKind==='gen')editor.openGenerated(el.dataset.buildFile);else await editor.openSdk(el.dataset.buildFile);}catch(e){o.log(e.message,'error');}};
   }
-  // Feature 11: a read-only file (what the build adds, an SDK source or header) becomes a project file the user can
-  // edit. The ARM build then compiles the project's copy in place of the generated / SDK one (native-build.cjs), and
-  // regenerating main.c or updating the SDK never touches it.
-  const copyable=ext=>o.getProject().firmware?.mode==='hal'&&/\.([chs]|ld)$/.test(ext.file);
-  function copyToProject(ext){
-    try{
-      if(o.isRunning())throw new Error('실행을 정지한 뒤 복사하세요.');
-      const shown=treeLabels.get(ext.file),leaf=(shown||ext.file).split('/').at(-1),name=shown&&SOURCE_PATH.test(shown)?shown:SOURCE_PATH.test(ext.file)?ext.file:leaf,p=structuredClone(o.getProject());p.firmware.files??=[];
-      if(leaf==='main.c'||!SOURCE_PATH.test(name))throw new Error('이 파일은 프로젝트로 복사할 수 없습니다.');
-      if(sourceFiles(p).some(f=>f.name.split('/').at(-1).toLowerCase()===leaf.toLowerCase()))throw new Error(`${leaf}: 같은 이름의 파일이 이미 프로젝트에 있습니다.`);
-      // The view's own header comment ("읽기 전용") is replaced: the copy is the user's file now.
-      const text=(editor.externalText()??'').replace(/^\/\* [^\n]* — STM Simulator가 ARM 빌드에 넣는 코드\(읽기 전용\)\.[\s\S]*?\*\/\n?/,/\.(c|h)$/.test(leaf)?`/* ${leaf} — 프로젝트로 복사한 파일입니다. ARM 빌드는 이 파일을 쓰며, 여기 없는 핸들러·시스템 호출만 앱이 채웁니다. */\n`:`/* ${leaf} — 프로젝트로 복사한 파일입니다. ARM 빌드는 이 파일을 씁니다. */\n`);
-      p.firmware.files.push({name,text});editor.closeExternal(ext.file);o.applySources(p,name);sync();
-      o.log(`${name}을 프로젝트로 복사했습니다. 이제 빌드가 이 파일을 쓰고, 자유롭게 고칠 수 있습니다(지우면 원래 파일로 돌아갑니다).`);
-    }catch(e){o.log(e.message,'error');}
-  }
+  // Feature 11's "프로젝트로 복사해 수정" became editing in place (feature 45, adoptExternal above).
   const tabIds=()=>[...$('source-tabs').querySelectorAll('[data-tab-id]')].map(el=>el.dataset.tabId);
   // Closes tabs by id (a project file or a board program by name, an SDK file as "sdk:<file>"). When the tab on screen
   // goes, the nearest tab left takes its place (the one to the right first); with none left the editor shows the note.
@@ -219,7 +255,7 @@ export function setupIde(o){
     if(!emptyTabs)closedTabs.delete(active);
     const on=name=>!ext&&!emptyTabs&&name===active;
     $('source-tabs').innerHTML=all.filter(f=>!closedTabs.has(f.name)).map(f=>`<span class="source-tab${on(f.name)?' active':''}" data-tab-id="${esc(f.name)}"><button data-source="${esc(f.name)}" class="${on(f.name)?'active':''}">${esc(f.label)}</button><button class="source-tab-close" data-tab-close="${esc(f.name)}" aria-label="${esc(f.label)} 닫기" title="닫기">×</button></span>`).join('')
-      +editor.externalFiles().map(f=>`<span class="source-tab-sdk${ext?.file===f.file?' active':''}" data-tab-id="sdk:${esc(f.file)}"><button data-sdk-file="${esc(f.file)}" title="${esc(f.sdk+' › '+f.file)} · 읽기 전용">${esc(base(f.file))}</button><button class="source-tab-close" data-sdk-close="${esc(f.file)}" aria-label="${esc(base(f.file))} 닫기" title="닫기">×</button></span>`).join('');
+      +editor.externalFiles().map(f=>`<span class="source-tab-sdk${ext?.file===f.file?' active':''}" data-tab-id="sdk:${esc(f.file)}"><button data-sdk-file="${esc(f.file)}" title="${esc(f.sdk+' › '+f.file)}${canEditExternal(f.file)?' · 고치면 이 파일만 프로젝트에 저장':' · 읽기 전용'}">${esc(base(f.file))}</button><button class="source-tab-close" data-sdk-close="${esc(f.file)}" aria-label="${esc(base(f.file))} 닫기" title="닫기">×</button></span>`).join('');
     for(const el of $('source-tabs').querySelectorAll('[data-source]'))el.onclick=()=>select(el.dataset.source);
     for(const el of $('source-tabs').querySelectorAll('[data-sdk-file]'))el.onclick=()=>editor.showExternal(el.dataset.sdkFile);
     for(const el of $('source-tabs').querySelectorAll('[data-sdk-close]'))el.onclick=e=>{e.stopPropagation();closeTabs(['sdk:'+el.dataset.sdkClose]);};
@@ -229,9 +265,20 @@ export function setupIde(o){
     $('tabs-more').onclick=e=>{const r=e.currentTarget.getBoundingClientRect();tabMenu(r.left,r.bottom,null);};
     $('code-panel').classList.toggle('no-tabs',emptyTabs&&!ext);
     // Where the file lives in the SDK (CubeIDE shows it in the title bar), like the Drivers folder of a Cube project.
-    $('source-path').hidden=!ext;$('code-panel').classList.toggle('sdk-open',!!ext);$('source-path').innerHTML=ext?`<span>${esc(ext.sdk)}</span>${ext.file.split('/').map(p=>`<span>${esc(p)}</span>`).join('')}<em>읽기 전용 · Alt+← 돌아가기</em>${copyable(ext)?'<button type="button" id="copy-to-project" title="이 파일을 프로젝트 소스로 복사합니다. 복사한 뒤에는 빌드가 프로젝트의 파일을 쓰고, 자유롭게 고칠 수 있습니다.">프로젝트로 복사해 수정</button>':''}`:'';
-    if($('copy-to-project'))$('copy-to-project').onclick=()=>copyToProject(ext);
+    $('source-path').hidden=!ext;$('code-panel').classList.toggle('sdk-open',!!ext);$('source-path').innerHTML=ext?`<span>${esc(ext.sdk)}</span>${ext.file.split('/').map(p=>`<span>${esc(p)}</span>`).join('')}<em>${externalNote(ext.file)} · Alt+← 돌아가기</em>`:'';
     buildFilesView();assistView();outlineView();
+  }
+  // What the path line says about the external file on screen (feature 45).
+  function externalNote(file){
+    if(!canEditExternal(file))return '읽기 전용';
+    const label=treeLabels.get(file)||file,family=o.getProject().mcu?.family;
+    return `고치면 이 파일만 프로젝트에 저장 · ${regenerated(label,family)?'다시 생성하면 USER CODE 구역 밖은 새로 써짐':'한 번 만드는 파일 · 고친 내용 유지'}${armOnly(label)?' · ARM GCC 빌드에서만 쓰임':''}`;
+  }
+  // The project tree's menu on an edited file: "원본으로 되돌리기".
+  function treeMenu(x,y,name){
+    menu.innerHTML='<button type="button" role="menuitem" data-tree-action="revert">원본으로 되돌리기</button>';
+    menu.querySelector('[data-tree-action="revert"]').onclick=()=>{hideTabMenu();revertToOriginal(name);};
+    menu.hidden=false;menu.style.left=Math.max(4,Math.min(x,innerWidth-menu.offsetWidth-4))+'px';menu.style.top=Math.max(4,Math.min(y,innerHeight-menu.offsetHeight-4))+'px';menu.querySelector('button')?.focus();
   }
   let outlineTimer;
   function outlineView(){

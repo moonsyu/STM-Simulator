@@ -1,5 +1,6 @@
-// Go to definition as in CubeIDE: F12 / Ctrl+click on a HAL call in main.c opens the STM32Cube SDK source as a
-// read-only tab (the file tree keeps the project files), with its SDK path, the Outline, Alt+← back, and × to close.
+// Go to definition as in CubeIDE: F12 / Ctrl+click on a HAL call in main.c opens the STM32Cube SDK source in a tab
+// (the file tree keeps the project files), with its SDK path, the Outline, Alt+← back, and × to close. Feature 45: the
+// file can be edited there — the first change stores it in the project (shown at the end).
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
@@ -17,7 +18,7 @@ async function applyExample(win,query){
 const exists=p=>fs.access(p).then(()=>true,()=>false);
 const sdk=await exists(path.join(cubeF1,'Drivers/STM32F1xx_HAL_Driver/Src/stm32f1xx_hal_uart.c'))&&await exists(path.join(cubeF4,'Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_uart.c'));
 
-test('F12 and Ctrl+click on HAL calls open the SDK source read only; Outline, Alt+← and × work; the file tree is unchanged',{skip:!sdk&&!process.env.CI_REQUIRE_TOOLCHAIN&&'STM32CubeF1/F4 not installed',timeout:180000},async()=>{
+test('F12 and Ctrl+click on HAL calls open the SDK source; Outline, Alt+← and × work; an edit stores only that file',{skip:!sdk&&!process.env.CI_REQUIRE_TOOLCHAIN&&'STM32CubeF1/F4 not installed',timeout:180000},async()=>{
  const s=await launch();
  await fs.writeFile(path.join(s.profile,'native-tools.json'),JSON.stringify({armGcc:'',cube:cubeF4,cubeF1,armGdb:'',hostGcc:'',hostGdb:'',clangd:'',openocd:'',buildRoot:''}));
  try{
@@ -32,9 +33,9 @@ test('F12 and Ctrl+click on HAL calls open the SDK source read only; Outline, Al
   assert.match(await win.textContent('#outline-list'),/HAL_UART_IRQHandler\(UART_HandleTypeDef \*huart\) : void/,'the Outline shows the SDK file');
   assert.match(await win.textContent('#outline-file'),/_hal_uart\.c/);
   await win.waitForFunction(()=>/void\s*HAL_UART_IRQHandler\s*\(UART_HandleTypeDef/.test(document.querySelector('#group-code .monaco-editor .view-lines').textContent.replace(/ /g,' ')),null,{timeout:10000});
-  // Read only: typing does not change main.c (or anything).
-  const before=await code();await win.keyboard.type('zz');assert.equal(await code(),before);
-  assert.deepEqual(await win.$$eval('#file-tree [data-source]',b=>b.map(x=>x.dataset.source)),tree,'the file tree keeps the project files only');
+  const before=await code();
+  assert.match(await win.textContent('#source-path'),/고치면 이 파일만 프로젝트에 저장 · 한 번 만드는 파일 · 고친 내용 유지 · ARM GCC 빌드에서만 쓰임/);
+  assert.deepEqual(await win.$$eval('#file-tree [data-source]',b=>b.map(x=>x.dataset.source)),tree,'opening a file does not add it to the project');
   // Alt+← goes back to main.c at the call.
   await win.keyboard.press('Alt+ArrowLeft');
   await win.waitForFunction(()=>document.getElementById('source-path').hidden);
@@ -64,6 +65,14 @@ test('F12 and Ctrl+click on HAL calls open the SDK source read only; Outline, Al
   assert.match(await win.textContent('#source-path'),/STM32Cube.*Templates.*gcc.*startup_stm32f/);
   const files=await win.$$eval('#file-tree [data-source]',b=>b.map(x=>x.dataset.source));assert.deepEqual(files,tree,'the project file list is unchanged');
   assert.equal(await code(),before,'main.c is unchanged');
+  // Editing the startup file stores it in the project (Core/Startup, as CubeIDE keeps it) and nothing else.
+  await win.evaluate(()=>document.getElementById('code').focus());await win.keyboard.press('Control+End');await win.keyboard.type('\n/* edited */');
+  await win.waitForFunction(()=>!!document.querySelector('#file-tree [data-source="Core/Startup/startup_stm32f103xb.s"]'),null,{timeout:10000});
+  assert.deepEqual((await win.$$eval('#file-tree [data-source]',b=>b.map(x=>x.dataset.source))).sort(),[...tree,'Core/Startup/startup_stm32f103xb.s'].sort());
+  assert.match(await code(),/Reset_Handler[\s\S]*\/\* edited \*\/$/);
+  // Ctrl+Z takes the edit (and the stored file) back.
+  for(let i=0;i<6&&await win.evaluate(()=>!!document.querySelector('#file-tree [data-source="Core/Startup/startup_stm32f103xb.s"]'));i++){await win.keyboard.press('Control+z');await win.waitForTimeout(300);}
+  await win.waitForFunction(()=>!document.querySelector('#file-tree [data-source="Core/Startup/startup_stm32f103xb.s"]'),null,{timeout:10000});
   // Completion offers every HAL name of the SDK: HAL_TIM_Base_Start / _Start_IT / _Stop_IT are in no built-in list
   // nor in this main.c.
   await win.click('#source-tabs [data-source="main.c"]');

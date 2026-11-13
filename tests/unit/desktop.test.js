@@ -98,7 +98,7 @@ describe('workspace folders',()=>{
   test('saving requires an opened workspace and a valid project',()=>withWorkspace(async(p,state)=>{
     await assert.rejects(workspace.saveWorkspace(null,'{}'),/먼저 프로젝트 폴더/);
     await assert.rejects(workspace.saveWorkspace(state,'{"format":"bad"}'),/지원하지 않는/);
-    await assert.rejects(workspace.saveWorkspace(state,'x'.repeat(2000001)),/크기 제한/);
+    await assert.rejects(workspace.saveWorkspace(state,'x'.repeat(12000001)),/크기 제한/);
     await assertOldState(p,state.directory);
   }));
   test('concurrent saves are serialized and the last one wins',()=>withWorkspace(async(p,state)=>{

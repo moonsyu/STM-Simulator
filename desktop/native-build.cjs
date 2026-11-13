@@ -80,9 +80,15 @@ async function prepareBuild({project,tools,root,target='arm',configuration='Debu
     const cube=tools[sdk.key],hal=path.join(cube||'','Drivers',sdk.hal),device=path.join(cube||'','Drivers/CMSIS/Device/ST',sdk.device),core=path.join(cube||'','Drivers/CMSIS/Include'),p=sdk.prefix;
     if(!cube||!await exists(path.join(hal,'Inc',p+'_hal.h')))throw new Error(`개발 도구 설정에서 ${sdk.name} SDK 루트 폴더를 선택하거나 필요한 도구 설치로 받으세요.`);
     flags.unshift(...sdk.cpu,'-DUSE_HAL_DRIVER');
+    for(const folder of new Set(files.filter(f=>/^Drivers\/.+\.h$/i.test(f.name)).map(f=>f.name.split('/').slice(0,-1).join('/')))){
+      const from=path.join(cube,folder),to=path.join(directory,folder);let names=[];try{names=await fs.readdir(from);}catch{continue;}
+      for(const name of names)if(/\.h$/i.test(name)&&!files.some(f=>f.name===folder+'/'+name))await fs.copyFile(path.join(from,name),path.join(to,name));
+    }
     flags.push(...[path.join(hal,'Inc'),path.join(device,'Include'),core].map(p=>'-I'+p));
     // Without the project's conf, the SDK template is used; its HSE_VALUE (25 MHz on F4) is not the NUCLEO's 8 MHz ST-LINK clock.
-    if(!files.some(f=>base(f.name)===p+'_hal_conf.h')){await fs.copyFile(path.join(hal,'Inc',p+'_hal_conf_template.h'),path.join(directory,p+'_hal_conf.h'));flags.push('-DHSE_VALUE=8000000U');}
+    const ownConf=files.find(f=>base(f.name)===p+'_hal_conf.h');
+    if(!ownConf){await fs.copyFile(path.join(hal,'Inc',p+'_hal_conf_template.h'),path.join(directory,p+'_hal_conf.h'));flags.push('-DHSE_VALUE=8000000U');}
+    else if(/#\s*if\s*!\s*defined\s*\(\s*HSE_VALUE\s*\)/.test(ownConf.text))flags.push('-DHSE_VALUE=8000000U');
     if(!files.some(f=>base(f.name)==='main.h'))await fs.writeFile(path.join(directory,'main.h'),`#pragma once\n#include "${p}_hal.h"\nvoid Error_Handler(void);\n`);
     // Pinout labels: CubeMX writes LABEL_Pin / LABEL_GPIO_Port into main.h; -D gives them to every source, also with a user main.h (same text, so no redefinition warning).
     for(const [pin,q]of Object.entries(project.mcu?.pins||{}))if(q.label)flags.push(`-D${q.label}_Pin=GPIO_PIN_${pin.slice(2)}`,`-D${q.label}_GPIO_Port=GPIO${pin[1]}`);

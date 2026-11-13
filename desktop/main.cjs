@@ -138,7 +138,7 @@ ipcMain.handle('firmware:import',async(_event,folder)=>{
   return files;
 });
 ipcMain.handle('project:save',async(_event,text)=>{
-  if(typeof text!=='string'||Buffer.byteLength(text)>2_000_000)throw new Error('회로 파일이 너무 큽니다.');
+  if(typeof text!=='string'||Buffer.byteLength(text)>12_000_000)throw new Error('회로 파일이 너무 큽니다.');
   JSON.parse(text);
   const result=await dialog.showSaveDialog(win,{title:'회로 저장',defaultPath:'my-circuit.stm32lab',filters:[{name:'STM Simulator',extensions:['stm32lab']}]});
   if(result.canceled)return null;
@@ -159,7 +159,7 @@ ipcMain.handle('colorscheme:export',async(event,text)=>{
 ipcMain.handle('project:open',async()=>{
   const result=await dialog.showOpenDialog(win,{title:'회로 불러오기',properties:['openFile'],filters:[{name:'STM Simulator',extensions:['stm32lab','json']}]});
   if(result.canceled)return null;
-  const stat=await fs.stat(result.filePaths[0]);if(stat.size>2_000_000)throw new Error('2 MB 이하의 회로 파일만 열 수 있습니다.');
+  const stat=await fs.stat(result.filePaths[0]);if(stat.size>12_000_000)throw new Error('12 MB 이하의 회로 파일만 열 수 있습니다.');
   return await fs.readFile(result.filePaths[0],'utf8');
 });
 ipcMain.handle('waveform:export',async(_event,text)=>{
