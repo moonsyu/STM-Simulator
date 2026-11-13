@@ -18,10 +18,12 @@ export { RaBus };
 export const RA_BASES = {
   SRAM: 0x40002000, BUS: 0x40003000, DTC: 0x40005400, ICU: 0x40006000, CPSCU: 0x40008000, DEBUG: 0x4001b000,
   FCACHE: 0x4001c000, SYSTEM: 0x4001e000, PORT: 0x40080000, PFS: 0x40080800, PMISC: 0x40080d00, ELC: 0x40082000,
-  MSTP: 0x40084000, RTC: 0x40083000, CACHE: 0x40007000,
+  MSTP: 0x40084000, RTC: 0x40083000, CACHE: 0x40007000, PSCU: 0x400e0000, IWDT: 0x40083200, WDT: 0x40083400,
 };
 // ELC event numbers (FSP bsp_elc.h, RA6E1): ICU IRQ0..15 are 0x001..0x010.
 export const ELC_EVENT_ICU_IRQ = n => 0x001 + n;
+// RSTSR1 flag of each reset cause the models request (R7FA6E10F.h R_SYSTEM_RSTSR1_*_Pos): IWDTRF b0, WDTRF b1, SWRF b2.
+const RESET_FLAGS = { IWDT: 1, WDT: 2, SYSRESETREQ: 4 };
 const PORT_COUNT = 15;
 
 // A byte-addressed register block (little-endian, any access size), for the many registers that only need to keep
@@ -55,15 +57,32 @@ class System extends RegisterFile {
         0x38: [0x00, 1], // MOCOCR: running
         0x480: [0x01, 1], // SOSCCR: stopped
         0x490: [0x00, 1], // LOCOCR: running
-        0x410: [0x00, 1], 0x411: [0x00, 1], 0xc0: [0x0000, 2],
       },
-      onWrite: (off) => { if ([0x20, 0x26, 0x28, 0x2a, 0x36].includes(off)) this.clocksChanged(); },
+      onWrite: (off, size, before, v) => { if ([0x20, 0x26, 0x28, 0x2a, 0x36].includes(off)) this.clocksChanged(); this.resetStatusWrite(off, size, v); },
       onRead: (off, size) => {
         if (off === 0x3c && size === 1) return this.oscsf();
         if ((off === 0xa0 || off === 0xaa) && size === 1) return this.get(off, 1) & ~0x10; // OPCMTSF / SOPCMTSF: done
-        return undefined;
+        return this.resetStatusRead(off, size);
       },
     });
+  }
+  // Reset status (R7FA6E10F.h): RSTSR1 at 0xC0 (IWDTRF b0, WDTRF b1, SWRF b2), RSTSR0 at 0x410 (PORF b0, DPSRSTF b7),
+  // RSTSR2 at 0x411 (CWSF b0). They live in the SoC (soc.resetStatus), so a reset of the register block keeps them:
+  // the flags say why the MCU restarted. Flags clear by writing 0 (1 leaves them); CWSF is set by writing 1.
+  resetStatusRead(off, size) {
+    const s = this.soc.resetStatus; if (!s) return undefined;
+    if (off === 0xc0) return size === 1 ? s.rstsr1 & 0xff : size === 2 ? s.rstsr1 : ((this.get(0xc0, 4) & 0xffff0000) | s.rstsr1) >>> 0;
+    if (off === 0xc1 && size === 1) return s.rstsr1 >> 8;
+    if (off === 0x410) return size === 1 ? s.rstsr0 : size === 2 ? s.rstsr0 | (s.rstsr2 << 8) : undefined;
+    if (off === 0x411 && size === 1) return s.rstsr2;
+    return undefined;
+  }
+  resetStatusWrite(off, size, v) {
+    const s = this.soc.resetStatus; if (!s) return;
+    if (off === 0xc0) s.rstsr1 &= size === 1 ? (v & 0xff) | 0xff00 : v & 0xffff;
+    else if (off === 0xc1 && size === 1) s.rstsr1 &= ((v & 0xff) << 8) | 0xff;
+    else if (off === 0x410) { s.rstsr0 &= v & 0xff; if (size >= 2) s.rstsr2 |= (v >> 8) & 1; }
+    else if (off === 0x411 && size === 1) s.rstsr2 |= v & 1;
   }
   // OSCSF: HOCOSF(0), MOSCSF(3), PLLSF(5), PLL2SF(6) follow the oscillators' stop bits (stabilised at once).
   oscsf() {
@@ -239,6 +258,11 @@ export class Ra6e1 {
     this.irqPins = options.irqPins ?? {};
     if (machine.cpu) machine.cpu.branchPenalty = 1;
     this.unknown = new Map();
+    // Power-on: RSTSR0.PORF set, no other reset cause yet.
+    this.resetStatus = { rstsr0: 0x01, rstsr1: 0, rstsr2: 0 };
+    // A reset the core asks for (SYSRESETREQ, a watchdog through systemReset) goes through prepareReset first, as on the
+    // STM32 models: the cause is logged ("MCU 리셋") and kept in the reset status registers.
+    machine.onResetRequest = reason => this.prepareReset(reason);
     this.build();
   }
   get resetHz() { return 8e6; } // MOCO
@@ -270,6 +294,8 @@ export class Ra6e1 {
       [RA_BASES.CPSCU, 0x400, plain('CPSCU', 0x400)],
       [RA_BASES.DEBUG, 0x400, plain('DEBUG', 0x400)],
       [RA_BASES.ELC, 0x400, plain('ELC', 0x400)],
+      // Peripheral security attribution (the BSP writes PSARB-E / CFSAMON in every flat project; nothing else reads them).
+      [RA_BASES.PSCU, 0x100, plain('PSCU', 0x100)],
       ...RA_SCI_CHANNELS.map(ch => [0x40118000 + ch * 0x100, 0x100, this.scis[ch]]),
       ...RA_GPT_CHANNELS.map(ch => [0x40169000 + ch * 0x100, 0x100, this.gpts[ch]]),
       [0x40170000, 0x200, this.adc0],
@@ -296,7 +322,18 @@ export class Ra6e1 {
     void BusFaultSignal;
     this.republishAll();
   }
-  note(address, write) { const key = address & ~3; if (!this.unknown.has(key)) this.unknown.set(key, { address: key, write, count: 0 }); this.unknown.get(key).count++; }
+  // A register the model does not have: noted, and said once per address in the output, so firmware that uses a module
+  // the emulator only half models shows where it went past the model.
+  note(address, write) {
+    const key = address & ~3;
+    if (!this.unknown.has(key)) { this.unknown.set(key, { address: key, write, count: 0 }); this.env.warn?.(`[RA6E1] 0x${key.toString(16).toUpperCase().padStart(8, '0')}: 이 레지스터는 아직 모델에 없습니다 (읽으면 0, 쓴 값은 보관만 합니다).`); }
+    this.unknown.get(key).count++;
+  }
+  /** An ICU event (bsp_elc.h ELC_EVENT_*) from a peripheral model: the IELSR slots linked to it get IR. The other
+   *  consumers of an event (ELC, DTC, DMAC: feature 36) attach here. */
+  raiseEvent(ev) { this.icu.raise(ev); }
+  /** Whether anything consumes event `ev`, so a model schedules only what someone observes. */
+  listens(ev) { return this.icu.linked(ev); }
   peripheral(name) { return this.peripherals.get(name); }
   irqChannel(pin) { return this.irqPins[pin]; }
   // ------------------------------------------------------------ time
@@ -317,7 +354,13 @@ export class Ra6e1 {
     this.env.clockChanged?.(clock);
   }
   // ------------------------------------------------------------ reset
-  prepareReset(reason) { this.resetReason = reason; this.usBeforeReset = this.nowUs(); this.cycleOffset = this.machine.cycles; this.env.onReset?.(reason); }
+  prepareReset(reason) {
+    this.resetReason = reason;
+    const s = this.resetStatus, flag = RESET_FLAGS[reason];
+    if (flag != null) s.rstsr1 |= flag;
+    else if (reason === 'PIN') { s.rstsr1 = 0; s.rstsr0 = 0; } // RES# pin: the cause registers start over (no flag of its own)
+    this.usBeforeReset = this.nowUs(); this.cycleOffset = this.machine.cycles; this.env.onReset?.(reason);
+  }
   machineReset() {
     const us = this.usBeforeReset ?? (this.segment ? this.nowUs() : 0);
     this.scheduler.clear?.();
