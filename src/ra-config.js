@@ -82,7 +82,7 @@ const C_WORDS=new Set(('auto break case char const continue default do double el
 export function raNameProblem(name){
  if(C_WORDS.has(name))return `${name}은(는) C나 생성 코드가 쓰는 이름입니다`;
  if(/^(R_|BSP_|FSP_|IOPORT_|ELC_|ICU_|__)/.test(name)||/^_[A-Z]/.test(name))return `${name}: R_ · BSP_ · FSP_ · IOPORT_ 로 시작하는 이름과 __ 로 시작하는 이름은 FSP와 컴파일러가 씁니다`;
- if(/^g_(ioport|external_irq\d+|uart\d+|timer\d+|agt\d+|adc\d+|i2c_master\d+|bsp_pin_cfg)(_ctrl|_cfg|_extend|_cfg_extend|_channel_cfg)?$/.test(name))return `${name}은(는) 생성 코드의 인스턴스 이름입니다`;
+ if(/^g_(ioport|external_irq\d+|uart\d+|timer\d+|agt\d+|adc\d+|i2c_master\d+|wdt\d+|iwdt\d+|rtc\d+|bsp_pin_cfg)(_ctrl|_cfg|_extend|_cfg_extend|_channel_cfg|_err_cfg)?$/.test(name))return `${name}은(는) 생성 코드의 인스턴스 이름입니다`;
  return '';
 }
 const checkName=(where,name)=>{const problem=raNameProblem(name);if(problem)throw new Error(`${where}: ${problem}. 다른 이름을 쓰세요.`);};
@@ -133,6 +133,7 @@ export function validateRaMcu(mcu){
    if(iic){out.peripherals[id]=validateIic(id,Number(iic[1]),p,fam,mcu.clock,signals);continue;}
    const agt=/^AGT(\d)$/.exec(id);
    if(agt){out.peripherals[id]=validateAgt(id,Number(agt[1]),p,fam,mcu.clock);continue;}
+   if(id==='WDT'||id==='IWDT'){out.peripherals[id]=validateWdt(id,p);continue;}
    const sci=/^SCI(\d)$/.exec(id);if(!sci||!RA_SCI_CHANNELS.includes(Number(sci[1]))||!p||typeof p.enabled!=='boolean')throw new Error(`${id}: 지원하지 않는 주변장치입니다.`);
    const q={enabled:p.enabled,baud:p.baud??115200,callback:p.callback??`user_uart${sci[1]}_callback`,priority:p.priority??12};
    if(!Number.isInteger(q.baud)||q.baud<300||q.baud>2000000)throw new Error(`${id}: 통신 속도는 300~2000000 bps입니다.`);
@@ -262,6 +263,51 @@ function validateGpt(id,ch,p,fam,clock,signals){
  raGptCounts(raClockHz({family:fam.id,clock}),ch,q.period,q.unit,q.duty);
  if(q.enabled&&q.mode==='PWM'&&!signals.has(id+'_GTIOCA')&&!signals.has(id+'_GTIOCB'))throw new Error(`${id}: PWM 출력 핀(GTIOC${ch}A 또는 GTIOC${ch}B)을 정하세요.`);
  return q;
+}
+// Watchdogs (r_wdt g_wdt0, r_iwdt g_iwdt0), pin-less stacks. Timeouts and dividers are the ones each one has
+// (r_wdt.c g_wdtcr_timeout, r_iwdt.c g_iwdt_timeout; the CKS codes of wdt_clock_division_t). The IWDT runs from OFS0 only
+// (BSP_FEATURE_IWDT_SUPPORTS_REGISTER_START_MODE 0); the WDT starts from its registers at the first R_WDT_Refresh, or
+// from OFS0 at reset (Start Mode: Auto).
+export const RA_WDT=Object.freeze({
+ WDT:Object.freeze({timeouts:[1024,4096,8192,16384],dividers:[4,64,128,512,2048,8192],defaults:{timeout:16384,clockDiv:8192}}),
+ IWDT:Object.freeze({timeouts:[128,512,1024,2048],dividers:[1,16,32,64,128,256],defaults:{timeout:2048,clockDiv:256}})
+});
+export const RA_WDT_WINDOW_START=Object.freeze([100,75,50,25]),RA_WDT_WINDOW_END=Object.freeze([0,25,50,75]);
+export const RA_IWDT_HZ=15000; // BSP_FEATURE_IWDT_CLOCK_FREQUENCY
+// wdt_clock_division_t / wdt_timeout_t (r_wdt_api.h) and the register field codes.
+export const WDT_DIVISION_CODE=Object.freeze({1:0,4:1,16:2,32:3,64:4,128:15,256:5,512:6,2048:7,8192:8});
+export const WDT_TIMEOUT_ENUM=Object.freeze({128:0,512:1,1024:2,2048:3,4096:4,8192:5,16384:6});
+const WDT_START_CODE={25:0,50:1,75:2,100:3},WDT_END_CODE={75:0,50:1,25:2,0:3};
+function validateWdt(id,p){
+ const info=RA_WDT[id];if(!p||typeof p.enabled!=='boolean')throw new Error(`${id}: 설정을 확인하세요.`);
+ const q={enabled:p.enabled,startMode:id==='IWDT'?'AUTO':p.startMode??'REGISTER',timeout:p.timeout??info.defaults.timeout,clockDiv:p.clockDiv??info.defaults.clockDiv,windowStart:p.windowStart??100,windowEnd:p.windowEnd??0,reset:p.reset??'RESET',stopInSleep:!!p.stopInSleep,callback:p.callback??''};
+ if(id==='IWDT'&&p.startMode!==undefined&&p.startMode!=='AUTO')throw new Error('IWDT: RA6E1의 IWDT는 OFS0으로 리셋 때 시작합니다(Register start mode 없음).');
+ if(!['REGISTER','AUTO'].includes(q.startMode))throw new Error(`${id}: 시작 방식은 Register 또는 Auto입니다.`);
+ if(!info.timeouts.includes(q.timeout))throw new Error(`${id}: Timeout은 ${info.timeouts.join(' · ')} 클록입니다.`);
+ if(!info.dividers.includes(q.clockDiv))throw new Error(`${id}: 클록 분주는 ${info.dividers.map(d=>'/'+d).join(' · ')}입니다.`);
+ if(!RA_WDT_WINDOW_START.includes(q.windowStart)||!RA_WDT_WINDOW_END.includes(q.windowEnd))throw new Error(`${id}: 새로 고침 창 시작은 100·75·50·25 %, 끝은 0·25·50·75 %입니다.`);
+ if(q.windowEnd>=q.windowStart)throw new Error(`${id}: 창 끝(${q.windowEnd} %)은 창 시작(${q.windowStart} %)보다 작아야 합니다.`);
+ if(!['RESET','NMI'].includes(q.reset))throw new Error(`${id}: 시간 초과 동작은 Reset 또는 NMI입니다.`);
+ if(typeof q.callback!=='string'||q.callback!==''&&!C_NAME.test(q.callback))throw new Error(`${id}: 콜백 이름은 C 식별자로 쓰세요(없으면 비워 둡니다).`);
+ if(q.reset==='NMI'&&!q.callback)throw new Error(`${id}: NMI로 알리려면 콜백 이름을 쓰세요.`);
+ return q;
+}
+/** A watchdog's count clock, timeout clocks and timeout in ms for a configuration ("WDT": PCLKB / divider; "IWDT": 15 kHz / divider). */
+export function raWdtTiming(mcu,id){
+ const p={...RA_WDT[id].defaults,...(mcu?.peripherals?.[id]||{})},hz=(id==='IWDT'?RA_IWDT_HZ:raClockHz(mcu,'pclkb'))/p.clockDiv;
+ return {hz,clocks:p.timeout,ms:p.timeout/hz*1000};
+}
+/** OFS0 (BSP_CFG_OPTION_SETTING_OFS0) for a configuration: erased (0xFFFFFFFF) but for an auto-started watchdog. Bit
+ *  positions: r_iwdt.c IWDT_PRV_OFS0_* (IWDTSTRT b1, TOPS b3:2, CKS b7:4, RSTIRQS b12) and r_wdt.c WDT_PRV_OFSX_* (the WDT
+ *  fields from b16: WDTSTRT b17 … STPCTL b30); the IWDT window and stop bits (RPES b9:8, RPSS b11:10, STPCTL b14) mirror them. */
+export function raOfs0(mcu){
+ let ofs=0xffffffff;
+ for(const [id,base]of [['IWDT',0],['WDT',16]]){
+  const p=mcu?.peripherals?.[id];if(!p?.enabled||(id==='WDT'&&p.startMode!=='AUTO'))continue;
+  const tops=RA_WDT[id].timeouts.indexOf(p.timeout),field=(0<<1)|(tops<<2)|(WDT_DIVISION_CODE[p.clockDiv]<<4)|(WDT_END_CODE[p.windowEnd]<<8)|(WDT_START_CODE[p.windowStart]<<10)|((p.reset==='RESET'?1:0)<<12)|((p.stopInSleep?1:0)<<14);
+  ofs=((ofs&~(0x5ffe<<base))|(field<<base))>>>0; // bits 0, 13 and 15 of each half are reserved (stay 1)
+ }
+ return ofs>>>0;
 }
 /** PSEL of a peripheral signal ("SCI9_TXD" → 5). */
 export function raPsel(signal){

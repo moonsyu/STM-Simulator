@@ -1,0 +1,56 @@
+{
+ "format": "stm32-circuit-lab",
+ "version": 2,
+ "name": "ra_wdt_reset",
+ "code": "#include \"hal_data.h\"\n\nFSP_CPP_HEADER\nvoid R_BSP_WarmStart(bsp_warm_start_event_t event);\nFSP_CPP_FOOTER\n\nvolatile uint32_t refreshes = 0;\nvolatile uint32_t wdt_resets_seen = 0;\n\nvoid hal_entry(void)\n{\n    /* Why did the MCU start? RSTSR1.WDTRF stays set after a WDT reset (until software writes 0 to it). */\n    bool after_wdt_reset = (1U == R_SYSTEM->RSTSR1_b.WDTRF);\n    if (after_wdt_reset)\n    {\n        wdt_resets_seen = 1;\n    }\n\n    /* Register-start mode: the first refresh starts the counter (671 ms to underflow). */\n    R_WDT_Open(&g_wdt0_ctrl, &g_wdt0_cfg);\n    R_WDT_Refresh(&g_wdt0_ctrl);\n\n    bsp_io_level_t led2 = BSP_IO_LEVEL_LOW;\n    while (1)\n    {\n        bsp_io_level_t sw1;\n        R_IOPORT_PinRead(&g_ioport_ctrl, SW1, &sw1);\n        if (BSP_IO_LEVEL_HIGH == sw1)\n        {\n            /* S1 up: feed the watchdog, LED1 on. */\n            R_WDT_Refresh(&g_wdt0_ctrl);\n            refreshes++;\n            R_IOPORT_PinWrite(&g_ioport_ctrl, LED1, BSP_IO_LEVEL_HIGH);\n        }\n        else\n        {\n            /* S1 held: no refresh, LED1 off — the WDT resets the MCU after 671 ms. */\n            R_IOPORT_PinWrite(&g_ioport_ctrl, LED1, BSP_IO_LEVEL_LOW);\n        }\n        if (after_wdt_reset)\n        {\n            led2 = (BSP_IO_LEVEL_LOW == led2) ? BSP_IO_LEVEL_HIGH : BSP_IO_LEVEL_LOW;\n            R_IOPORT_PinWrite(&g_ioport_ctrl, LED2, led2);\n        }\n        R_BSP_SoftwareDelay(100, BSP_DELAY_UNITS_MILLISECONDS);\n    }\n}\n\nvoid R_BSP_WarmStart(bsp_warm_start_event_t event)\n{\n    if (BSP_WARM_START_POST_C == event)\n    {\n        /* C runtime environment and system clocks are setup. */\n\n        /* Configure pins. */\n        R_IOPORT_Open (&IOPORT_CFG_CTRL, &IOPORT_CFG_NAME);\n    }\n}\n",
+ "components": [],
+ "wires": [],
+ "boardId": "fpb-ra6e1",
+ "surfaces": {
+  "board": {
+   "hidden": false
+  },
+  "breadboard": {
+   "hidden": true
+  }
+ },
+ "mcu": {
+  "family": "R7FA6E10F",
+  "pins": {
+   "P408": {
+    "function": "GPIO_Output",
+    "label": "LED1",
+    "initial": 0,
+    "drive": "HIGH"
+   },
+   "P407": {
+    "function": "GPIO_Output",
+    "label": "LED2",
+    "initial": 0,
+    "drive": "HIGH"
+   },
+   "P205": {
+    "function": "GPIO_Input",
+    "label": "SW1",
+    "pull": "PULLUP"
+   }
+  },
+  "peripherals": {
+   "WDT": {
+    "enabled": true,
+    "startMode": "REGISTER",
+    "timeout": 16384,
+    "clockDiv": 2048,
+    "windowStart": 100,
+    "windowEnd": 0,
+    "reset": "RESET",
+    "stopInSleep": false,
+    "callback": ""
+   }
+  }
+ },
+ "firmware": {
+  "mode": "fsp",
+  "files": []
+ }
+}

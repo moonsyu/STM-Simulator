@@ -41,5 +41,12 @@ export function raAssistance(mcu){
     out.push({name:g,title:`I2C Master (r_iic_master) · IIC${n}`,items:[call('R_IIC_MASTER_Open',`R_IIC_MASTER_Open(&${g}_ctrl, &${g}_cfg);`),call('R_IIC_MASTER_Write',`uint8_t data[2] = { 0x00, 0x00 };\nR_IIC_MASTER_Write(&${g}_ctrl, data, sizeof(data), false);`),
       call('R_IIC_MASTER_Read',`uint8_t value;\nR_IIC_MASTER_Read(&${g}_ctrl, &value, 1, false);`),call('R_IIC_MASTER_Close',`R_IIC_MASTER_Close(&${g}_ctrl);`),
       ...(q.callback?[callback(q.callback,'i2c_master_callback_args_t')]:[])]});}
+  for(const id of ['WDT','IWDT'])if(per[id]?.enabled){const q=per[id],g=`g_${id.toLowerCase()}0`;
+    out.push({name:g,title:`${id==='WDT'?'Watchdog (r_wdt)':'Independent Watchdog (r_iwdt)'}`,items:[call(`R_${id}_Open`,`R_${id}_Open(&${g}_ctrl, &${g}_cfg);`),call(`R_${id}_Refresh`,`R_${id}_Refresh(&${g}_ctrl);`),
+      call(`R_${id}_CounterGet`,`uint32_t count;\nR_${id}_CounterGet(&${g}_ctrl, &count);`),call(`R_${id}_TimeoutGet`,`wdt_timeout_values_t timeout;\nR_${id}_TimeoutGet(&${g}_ctrl, &timeout);`),
+      ...(q.reset==='NMI'?[call(`R_${id}_StatusGet`,`wdt_status_t status;\nR_${id}_StatusGet(&${g}_ctrl, &status);`),call(`R_${id}_StatusClear`,`R_${id}_StatusClear(&${g}_ctrl, WDT_STATUS_UNDERFLOW);`)]:[]),
+      // FSP has no API for the reset cause: the reset status register says it (the flag stays until 0 is written).
+      {label:'Read reset cause (RSTSR1)',code:`if (1U == R_SYSTEM->RSTSR1_b.${id}RF)\n{\n    /* The ${id} reset the MCU. */\n}\n`},
+      ...(q.callback?[callback(q.callback,'wdt_callback_args_t')]:[])]});}
   return out;
 }

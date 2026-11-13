@@ -472,5 +472,52 @@ void external_irq1_callback(external_irq_callback_args_t *p_args)
     (void) p_args;
 }
 `+WARM_START});
-RA_EXAMPLES.push(POLL_EXAMPLE,IRQ_COURSE_EXAMPLE,UART_EXAMPLE,GPT_EXAMPLE,ADC_EXAMPLE,AGT_EXAMPLE,IIC_EXAMPLE,CHALLENGE_EXAMPLE);
+// WDT (register-start mode, PCLKB 50 MHz / 2048, 16384 clocks = 671 ms) fed every 100 ms while S1 is up. Holding S1 stops
+// the refresh: the WDT resets the MCU, and the program, started again, finds RSTSR1.WDTRF set and blinks LED2.
+const WDT_EXAMPLE=Object.freeze({id:'ra_wdt_reset',name:'워치독(WDT) 리셋과 리셋 원인 읽기 (R_WDT_Open · Refresh · RSTSR1)',tags:['WDT','watchdog','reset','RSTSR1'],
+ mcu:()=>{const m=raDefaultMcu();m.pins.P205={function:'GPIO_Input',pull:'PULLUP',label:'SW1'};m.peripherals={WDT:{enabled:true,startMode:'REGISTER',timeout:16384,clockDiv:2048,windowStart:100,windowEnd:0,reset:'RESET',stopInSleep:false,callback:''}};return m;},
+ code:HEAD+`
+volatile uint32_t refreshes = 0;
+volatile uint32_t wdt_resets_seen = 0;
+
+void hal_entry(void)
+{
+    /* Why did the MCU start? RSTSR1.WDTRF stays set after a WDT reset (until software writes 0 to it). */
+    bool after_wdt_reset = (1U == R_SYSTEM->RSTSR1_b.WDTRF);
+    if (after_wdt_reset)
+    {
+        wdt_resets_seen = 1;
+    }
+
+    /* Register-start mode: the first refresh starts the counter (671 ms to underflow). */
+    R_WDT_Open(&g_wdt0_ctrl, &g_wdt0_cfg);
+    R_WDT_Refresh(&g_wdt0_ctrl);
+
+    bsp_io_level_t led2 = BSP_IO_LEVEL_LOW;
+    while (1)
+    {
+        bsp_io_level_t sw1;
+        R_IOPORT_PinRead(&g_ioport_ctrl, SW1, &sw1);
+        if (BSP_IO_LEVEL_HIGH == sw1)
+        {
+            /* S1 up: feed the watchdog, LED1 on. */
+            R_WDT_Refresh(&g_wdt0_ctrl);
+            refreshes++;
+            R_IOPORT_PinWrite(&g_ioport_ctrl, LED1, BSP_IO_LEVEL_HIGH);
+        }
+        else
+        {
+            /* S1 held: no refresh, LED1 off — the WDT resets the MCU after 671 ms. */
+            R_IOPORT_PinWrite(&g_ioport_ctrl, LED1, BSP_IO_LEVEL_LOW);
+        }
+        if (after_wdt_reset)
+        {
+            led2 = (BSP_IO_LEVEL_LOW == led2) ? BSP_IO_LEVEL_HIGH : BSP_IO_LEVEL_LOW;
+            R_IOPORT_PinWrite(&g_ioport_ctrl, LED2, led2);
+        }
+        R_BSP_SoftwareDelay(100, BSP_DELAY_UNITS_MILLISECONDS);
+    }
+}
+`+WARM_START});
+RA_EXAMPLES.push(POLL_EXAMPLE,IRQ_COURSE_EXAMPLE,UART_EXAMPLE,GPT_EXAMPLE,ADC_EXAMPLE,AGT_EXAMPLE,IIC_EXAMPLE,CHALLENGE_EXAMPLE,WDT_EXAMPLE);
 Object.freeze(RA_EXAMPLES);

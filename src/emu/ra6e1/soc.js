@@ -12,6 +12,8 @@ import { Gpt } from './gpt.js';
 import { Adc12 } from './adc.js';
 import { Agt } from './agt.js';
 import { Iic } from './iic.js';
+import { Watchdog } from './wdt.js';
+import { EXC_NMI } from '../scs.js';
 import { RA_PERIPHERAL_PINS, RA_SCI_CHANNELS, RA_GPT_CHANNELS, RA_AGT_CHANNELS, RA_IIC_CHANNELS, raPsel } from '../../ra-config.js';
 
 export { RaBus };
@@ -220,12 +222,23 @@ class Ports {
 
 // Interrupt controller unit: IRQ pin detection (IRQCRn), and the event link IELSRn that connects an event to NVIC
 // input n with its status flag IR (bit 16). The IR flag holds the NVIC line until software clears it.
+// The non-maskable sources (R7FA6E10F.h): NMIER 0x120 (IWDTEN b0, WDTEN b1; bits can only be set), NMICLR 0x130 (write 1
+// to clear the status bit), NMISR 0x140 (IWDTST b0, WDTST b1). An enabled source pends the core's NMI exception.
 class Icu extends RegisterFile {
   constructor(soc) {
     super(soc, 'ICU', 0x500, {
-      onWrite: (off, size) => { if (off >= 0x300 && off < 0x480) this.updateLine((off - 0x300) >> 2); void size; },
+      onWrite: (off, size, before, v) => {
+        if (off >= 0x300 && off < 0x480) this.updateLine((off - 0x300) >> 2);
+        if (off === 0x120) this.put(0x120, (before | v) & 0xffff, 2);
+        if (off === 0x130) { this.nmisr &= ~v & 0xffff; this.put(0x130, 0, 2); }
+        void size;
+      },
+      onRead: off => (off === 0x140 ? this.nmisr : undefined),
     });
+    this.nmisr = 0;
   }
+  reset() { super.reset(); this.nmisr = 0; }
+  nmi(bit) { this.nmisr |= 1 << bit; if (this.get(0x120, 2) & (1 << bit)) this.soc.machine.nvic?.setPendingExc?.(EXC_NMI); }
   ielsr(n) { return this.get(0x300 + n * 4, 4); }
   updateLine(n) { this.soc.irqNumber(n, 'ICU', !!(this.ielsr(n) & 0x10000)); }
   /** Whether an IELSR slot selects `event` (a peripheral schedules what only an interrupt would observe). */
@@ -281,6 +294,7 @@ export class Ra6e1 {
     for (const ch of RA_IIC_CHANNELS) this.iics[ch] = new Iic(this, ch);
     this.agts = {};
     for (const ch of RA_AGT_CHANNELS) this.timers['AGT' + ch] = this.agts[ch] = new Agt(this, ch);
+    this.wdt = new Watchdog(this, 'WDT'); this.iwdt = new Watchdog(this, 'IWDT');
     const devices = [
       [RA_BASES.SYSTEM, 0x700, this.system],
       [RA_BASES.PORT, 0x1000, this.ports],
@@ -302,6 +316,8 @@ export class Ra6e1 {
       ...RA_AGT_CHANNELS.map(ch => [0x400e8000 + ch * 0x100, 0x100, this.agts[ch]]),
       ...RA_IIC_CHANNELS.map(ch => [0x4009f000 + ch * 0x100, 0x100, this.iics[ch]]),
       [RA_BASES.CACHE, 0x400, plain('CACHE', 0x400)],
+      [RA_BASES.IWDT, 0x100, this.iwdt],
+      [RA_BASES.WDT, 0x100, this.wdt],
       // RTC: RCR2.RESET (bit 1) clears itself once the reset is done; START (bit 0) reads back what was written
       // (BSP R_BSP_Init_RTC waits on both after the sub-clock starts).
       [RA_BASES.RTC, 0x100, new RegisterFile(this, 'RTC', 0x100, { onWrite: (off, size) => { if (off === 0x24 && size === 1) { const v = this.peripherals.get('RTC').get(0x24, 1); this.peripherals.get('RTC').put(0x24, v & ~2, 1); } } })],
@@ -351,6 +367,7 @@ export class Ra6e1 {
     if (this.clock.iclk !== clock.iclk) this.segment = { cycle: now, us: this.nowUs(now), hz: clock.iclk };
     this.clock = clock;
     Object.assign(this.machine.clock, { sysclk: clock.iclk, hclk: clock.iclk, pclk1: clock.pclkb, pclk2: clock.pclka });
+    this.wdt?.clockChanged(); this.iwdt?.clockChanged(); // the scheduler counts core cycles: plan the underflows again
     this.env.clockChanged?.(clock);
   }
   // ------------------------------------------------------------ reset
@@ -359,7 +376,8 @@ export class Ra6e1 {
     const s = this.resetStatus, flag = RESET_FLAGS[reason];
     if (flag != null) s.rstsr1 |= flag;
     else if (reason === 'PIN') { s.rstsr1 = 0; s.rstsr0 = 0; } // RES# pin: the cause registers start over (no flag of its own)
-    this.usBeforeReset = this.nowUs(); this.cycleOffset = this.machine.cycles; this.env.onReset?.(reason);
+    // The log entry first, while the time still reads as before the reset.
+    this.usBeforeReset = this.nowUs(); this.env.onReset?.(reason); this.cycleOffset = this.machine.cycles;
   }
   machineReset() {
     const us = this.usBeforeReset ?? (this.segment ? this.nowUs() : 0);
@@ -370,6 +388,7 @@ export class Ra6e1 {
     this.irqSources.clear();
     for (const dev of this.peripherals.values()) dev.reset?.();
     this.clock = { iclk: this.resetHz, pclka: this.resetHz, pclkb: this.resetHz, pclkc: this.resetHz, pclkd: this.resetHz, fclk: this.resetHz, bclk: this.resetHz, sysclk: this.resetHz, hclk: this.resetHz, pclk1: this.resetHz, pclk2: this.resetHz };
+    this.wdt?.clockChanged(); // an auto-started WDT counts PCLKB from the reset clock on
     this.republishAll();
   }
   systemReset(reason) { this.lastReset = { reason, us: this.nowUs() }; this.machine.requestReset(reason); }
@@ -384,6 +403,8 @@ export class Ra6e1 {
     if (before !== after || active) { const nvic = this.machine.nvic; if (nvic.setLine) nvic.setLine(irq, after); else if (after) nvic.setPending(irq); }
   }
   event() { if (this.machine.cpu) this.machine.cpu.eventReg = 1; }
+  /** A watchdog's NMI request (ICU NMISR bit: 0 IWDT, 1 WDT). */
+  nmi(bit) { this.icu.nmi(bit); }
   // ------------------------------------------------------------ pins
   pinState(pin, state) {
     const old = this.pins.get(pin);

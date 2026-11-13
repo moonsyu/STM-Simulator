@@ -31,12 +31,14 @@ export const TOOLCHAIN_SHARDS=Object.freeze([
  // 58 + 38 = 96 + parity of polling and rising IRQ (18 s locally)
  [['arm-examples','NUCLEO-F103RB'],'button-bounce',['fsp-interp-parity','parity: ra_button_poll']],
  // 62 + 32 + 6 = 100 + parity of the challenge (9 s locally)
- ['ra-build','wdg','tim-basic',['fsp-interp-parity','parity: ra_led4_switch2']],
+ // + parity of the WDT example (10 s locally)
+ ['ra-build','wdg','tim-basic',['fsp-interp-parity','parity: ra_led4_switch2|parity: ra_wdt_reset']],
  // the rest of ra-course 61 + 26 + 15 = 102 + parity of UART and GPT (16 s locally)
  // (the tests are named: a "not this one" pattern with a lookahead did not keep the heavy test out)
  [['ra-course','Bare Metal - Blinky|switch polling toggles|the challenge:|BSP tab sizes|as the course screen shows it'],'adc-continuous','clock-tree',['fsp-interp-parity','parity: ra_uart_echo']],
  // 26 + 23 + 22 + 17 + 16 = 104
- ['emu-accuracy','dwarf-version','board-links','copied-files','adc-group','peripheral-files','project-overrides'],
+ // + ra-wdt-rtc (features 34·35: about 25 s locally)
+ ['emu-accuracy','dwarf-version','board-links','copied-files','adc-group','peripheral-files','project-overrides','ra-wdt-rtc'],
  // 17 + 16 + 14 + 13 + 11 + 9 + 9 + 9 + 9 = 107
  ['tim-oc','adc-sampling','tim-advanced','dac','rtc','source-folders','spi-params','tim-channels','uart-params'],
 ]);

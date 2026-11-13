@@ -145,3 +145,20 @@ test('FSP debugging starts as in e² studio: the reset handler, then main(), the
  const seen=new Set();runUntil(session,at+1300,{onTick:()=>seen.add(session.gpio.P408?.value>1.65)});
  assert.equal(rt.debug.paused,false,'running after the second resume');assert.deepEqual([...seen].sort(),[false,true],'LED1 blinks');
 });
+
+test('ra_wdt_reset: S1 held stops R_WDT_Refresh; the WDT underflows after 671 ms and resets the MCU once (log, RSTSR1.WDTRF → LED2 blinks)',()=>{
+ const {session,log}=open(fixture('ra_wdt_reset'));
+ runUntil(session,340);
+ assert.equal(session.resets.length,0);assert.ok(session.gpio.P408.value>1.65,'LED1 on while refreshing');
+ const cnt=session.soc.wdt.read(4,2)&0x3fff;assert.ok(cnt>16384-0.1*24414-2&&cnt<16384,'WDTSR.CNTVAL counts down after the last refresh: '+cnt);
+ session.setPressed({SW1:true});runUntil(session,1000);
+ assert.equal(session.resets.length,1);assert.equal(session.resets[0].reason,'WDT');
+ assert.ok(Math.abs(session.resets[0].us/1000-971.3)<1,'last refresh at 300 ms + 671 ms: '+session.resets[0].us);
+ assert.ok(log.trace.some(e=>e.protocol==='RESET'&&e.message==='MCU 리셋 · WDT'),'the output says it');
+ assert.equal(session.soc.resetStatus.rstsr1&2,2,'RSTSR1.WDTRF');
+ session.setPressed({});runUntil(session,1700);
+ assert.equal(session.resets.length,1,'fed again: no second reset');
+ assert.equal(session.readVariable('wdt_resets_seen'),1);assert.ok(session.readVariable('refreshes')>=2);
+ const blinks=[];runUntil(session,2200,{onTick:()=>blinks.push(session.gpio.P407.value>1.65)});
+ assert.ok(blinks.includes(true)&&blinks.includes(false),'LED2 blinks after the WDT reset');
+});

@@ -3,7 +3,7 @@
 // linker init tables) and script (linker scripts). The user's code is src/hal_entry.c; the app builds these with the
 // FSP sources (BSP + r_* drivers) and ARM GCC, then runs the ELF on the RA6E1 emulator.
 // Formats follow RASC output for FSP 5.x/6.x (only what the FPB-RA6E1 configurations here need).
-import {raFamily,raPinName,raPortBit,RA_IRQ_PINS,raPsel,RA_PSEL_NAMES,RA_SCI_CHANNELS,RA_GPT_CHANNELS,RA_ADC_CHANNELS,RA_AGT_CHANNELS,RA_IIC_CHANNELS,raGptCounts,raAgtCounts,raIicClock,raClockHz} from './ra-config.js';
+import {raFamily,raPinName,raPortBit,RA_IRQ_PINS,raPsel,RA_PSEL_NAMES,RA_SCI_CHANNELS,RA_GPT_CHANNELS,RA_ADC_CHANNELS,RA_AGT_CHANNELS,RA_IIC_CHANNELS,raGptCounts,raAgtCounts,raIicClock,raClockHz,RA_WDT,raOfs0} from './ra-config.js';
 
 const HEADER=kind=>`/* generated ${kind} - do not edit */\n`;
 const hex=(n,w=8)=>'0x'+(n>>>0).toString(16).toUpperCase().padStart(w,'0');
@@ -184,8 +184,48 @@ const i2c_master_instance_t ${t.name} =
     .p_api         = &g_i2c_master_on_iic
 };`;
 }
+// Watchdog instances (r_wdt g_wdt0, r_iwdt g_iwdt0). No vector: an NMI goes through the BSP's NMI_Handler, which calls the
+// driver's group-IRQ callback and so the user's (R_BSP_GroupIrqWrite in R_WDT_Open / R_IWDT_Open).
+const wdtsOf=mcu=>['WDT','IWDT'].filter(id=>mcu.peripherals?.[id]?.enabled).map(id=>{const p={...RA_WDT[id].defaults,...mcu.peripherals[id]};
+ return {id,kind:id.toLowerCase(),name:`g_${id.toLowerCase()}0`,ctrl:`${id.toLowerCase()}_instance_ctrl_t`,api:`g_wdt_on_${id.toLowerCase()}`,startMode:id==='IWDT'?'AUTO':p.startMode||'REGISTER',timeout:p.timeout,clockDiv:p.clockDiv,windowStart:p.windowStart??100,windowEnd:p.windowEnd??0,reset:p.reset||'RESET',stopInSleep:!!p.stopInSleep,callback:p.callback||''};});
+const wdtDecl=w=>`/** WDT on ${w.id} Instance. */
+extern const wdt_instance_t ${w.name};
+/** Access the ${w.id} instance using these structures when calling API functions directly (::p_api is not used). */
+extern ${w.ctrl} ${w.name}_ctrl;
+extern const wdt_cfg_t ${w.name}_cfg;${w.callback?`
+#ifndef ${w.callback}
+void ${w.callback}(wdt_callback_args_t * p_args);
+#endif`:''}`;
+const wdtInstance=w=>`${w.ctrl} ${w.name}_ctrl;
+const wdt_cfg_t ${w.name}_cfg =
+{
+    .timeout             = WDT_TIMEOUT_${w.timeout},
+    .clock_division      = WDT_CLOCK_DIVISION_${w.clockDiv},
+    .window_start        = WDT_WINDOW_START_${w.windowStart},
+    .window_end          = WDT_WINDOW_END_${w.windowEnd},
+    .reset_control       = WDT_RESET_CONTROL_${w.reset},
+    .stop_control        = WDT_STOP_CONTROL_${w.stopInSleep?'ENABLE':'DISABLE'},
+    .p_callback          = ${w.callback||'NULL'},
+};
+/* Instance structure to use this module. */
+const wdt_instance_t ${w.name} =
+{
+    .p_ctrl        = &${w.name}_ctrl,
+    .p_cfg         = &${w.name}_cfg,
+    .p_api         = &${w.api}
+};`;
+/** OFS0 as bsp_mcu_ofs_cfg.h gives it to the BSP (bsp_linker.c places it at 0x0100A100). */
+function ofsCfg(mcu){
+ const ofs=raOfs0(mcu),iwdt=mcu.peripherals?.IWDT?.enabled,wdt=mcu.peripherals?.WDT?.enabled&&mcu.peripherals.WDT.startMode==='AUTO';
+ return HEADER('configuration header file')+`#ifndef BSP_MCU_OFS_CFG_H_
+#define BSP_MCU_OFS_CFG_H_
+/* OFS0: IWDT ${iwdt?'auto-start (IWDTSTRT = 0)':'stopped'}, WDT ${wdt?'auto-start (WDTSTRT = 0)':'register-start'}; the other fields erased (1). */
+#define BSP_CFG_OPTION_SETTING_OFS0 (${hex(ofs)}UL)
+#endif /* BSP_MCU_OFS_CFG_H_ */
+`;
+}
 /** The FSP instances hal_data.c defines for an RA configuration, as the built-in interpreter declares them (fsp-interp.js). */
-export const raInstances=mcu=>({irqs:irqsOf(mcu),uarts:uartsOf(mcu),gpts:gptsOf(mcu),adc:adcOf(mcu),agts:agtsOf(mcu),iics:iicsOf(mcu)});
+export const raInstances=mcu=>({irqs:irqsOf(mcu),uarts:uartsOf(mcu),gpts:gptsOf(mcu),adc:adcOf(mcu),agts:agtsOf(mcu),iics:iicsOf(mcu),wdts:wdtsOf(mcu)});
 /** "P408" → "BSP_IO_PORT_04_PIN_08". */
 export const raIoName=pin=>ioName(pin);
 const UNIT_TEXT={Hz:'Hz',kHz:'kHz',s:'seconds',ms:'milliseconds',us:'microseconds'};
@@ -529,7 +569,7 @@ ${vectors.map(v=>`    [${v.index}] = BSP_PRV_VECT_ENUM(EVENT_${v.event},GROUP${v
 }
 
 function halDataH(mcu){
- const irqs=irqsOf(mcu),uarts=uartsOf(mcu),includes=(irqs.length?'#include "r_icu.h"\n#include "r_external_irq_api.h"\n':'')+(uarts.length?'#include "r_sci_uart.h"\n#include "r_uart_api.h"\n':'')+(gptsOf(mcu).length?'#include "r_gpt.h"\n#include "r_timer_api.h"\n':'')+(adcOf(mcu)?'#include "r_adc.h"\n#include "r_adc_api.h"\n':'')+(iicsOf(mcu).length?'#include "r_iic_master.h"\n#include "r_i2c_master_api.h"\n':'')+(agtsOf(mcu).length?'#include "r_agt.h"\n'+(gptsOf(mcu).length?'':'#include "r_timer_api.h"\n'):'');
+ const irqs=irqsOf(mcu),uarts=uartsOf(mcu),includes=(irqs.length?'#include "r_icu.h"\n#include "r_external_irq_api.h"\n':'')+(uarts.length?'#include "r_sci_uart.h"\n#include "r_uart_api.h"\n':'')+(gptsOf(mcu).length?'#include "r_gpt.h"\n#include "r_timer_api.h"\n':'')+(adcOf(mcu)?'#include "r_adc.h"\n#include "r_adc_api.h"\n':'')+(iicsOf(mcu).length?'#include "r_iic_master.h"\n#include "r_i2c_master_api.h"\n':'')+(agtsOf(mcu).length?'#include "r_agt.h"\n'+(gptsOf(mcu).length?'':'#include "r_timer_api.h"\n'):'')+wdtsOf(mcu).map(w=>`#include "r_${w.kind}.h"\n`).join('')+(wdtsOf(mcu).length?'#include "r_wdt_api.h"\n':'');
  const decls=irqs.map(i=>`/** External IRQ on ICU Instance. */
 extern const external_irq_instance_t ${i.name};
 /** Access the ICU instance using these structures when calling API functions directly (::p_api is not used). */
@@ -545,7 +585,7 @@ extern const uart_cfg_t ${u.name}_cfg;
 extern const sci_uart_extended_cfg_t ${u.name}_cfg_extend;
 #ifndef ${u.callback}
 void ${u.callback}(uart_callback_args_t * p_args);
-#endif`)).concat(gptsOf(mcu).map(gptDecl)).concat(adcOf(mcu)?[adcDecl(adcOf(mcu))]:[]).concat(agtsOf(mcu).map(agtDecl)).concat(iicsOf(mcu).map(iicDecl)).join('\n');
+#endif`)).concat(gptsOf(mcu).map(gptDecl)).concat(adcOf(mcu)?[adcDecl(adcOf(mcu))]:[]).concat(agtsOf(mcu).map(agtDecl)).concat(iicsOf(mcu).map(iicDecl)).concat(wdtsOf(mcu).map(wdtDecl)).join('\n');
  return HEADER('HAL header file')+`#ifndef HAL_DATA_H_
 #define HAL_DATA_H_
 #include <stdint.h>
@@ -637,7 +677,7 @@ const uart_instance_t ${u.name} =
     .p_ctrl        = &${u.name}_ctrl,
     .p_cfg         = &${u.name}_cfg,
     .p_api         = &g_uart_on_sci
-};`;})).concat(gptsOf(mcu).map(gptInstance)).concat(adcOf(mcu)?[adcInstance(adcOf(mcu))]:[]).concat(agtsOf(mcu).map(agtInstance)).concat(iicsOf(mcu).map(iicInstance)).join('\n');
+};`;})).concat(gptsOf(mcu).map(gptInstance)).concat(adcOf(mcu)?[adcInstance(adcOf(mcu))]:[]).concat(agtsOf(mcu).map(agtInstance)).concat(iicsOf(mcu).map(iicInstance)).concat(wdtsOf(mcu).map(wdtInstance)).join('\n');
  return HEADER('HAL source file')+`#include "hal_data.h"
 ${body}${body?'\n':''}void g_hal_init(void) {
 g_common_init();
@@ -826,7 +866,7 @@ export function generateRaFiles(mcu,{board}={}){
   cfg('bsp/bsp_mcu_device_cfg.h',HEADER('configuration header file')+`#ifndef BSP_MCU_DEVICE_CFG_H_\n#define BSP_MCU_DEVICE_CFG_H_\n#define BSP_CFG_MCU_PART_SERIES (${fam.series})\n#endif /* BSP_MCU_DEVICE_CFG_H_ */\n`),
   cfg('bsp/bsp_mcu_device_pn_cfg.h',HEADER('configuration header file')+`#ifndef BSP_MCU_DEVICE_PN_CFG_H_\n#define BSP_MCU_DEVICE_PN_CFG_H_\n#define BSP_MCU_${fam.part}\n#define BSP_MCU_FEATURE_SET ('${fam.featureSet}')\n#define BSP_ROM_SIZE_BYTES (${fam.flashKB*1024})\n#define BSP_RAM_SIZE_BYTES (${fam.ramKB*1024})\n#define BSP_DATA_FLASH_SIZE_BYTES (${fam.dataFlashKB*1024})\n#define BSP_PACKAGE_${fam.package}\n#define BSP_PACKAGE_PINS (${fam.pins})\n#endif /* BSP_MCU_DEVICE_PN_CFG_H_ */\n`),
   cfg('bsp/bsp_mcu_family_cfg.h',familyCfg(fam)),
-  cfg('bsp/bsp_mcu_ofs_cfg.h',HEADER('configuration header file')+'#ifndef BSP_MCU_OFS_CFG_H_\n#define BSP_MCU_OFS_CFG_H_\n#endif /* BSP_MCU_OFS_CFG_H_ */\n'),
+  cfg('bsp/bsp_mcu_ofs_cfg.h',ofsCfg(mcu)),
   cfg('bsp/bsp_pin_cfg.h',pinCfgH(mcu)),
   cfg('bsp/board_cfg.h',HEADER('configuration header file')+`#ifndef BOARD_CFG_H_\n#define BOARD_CFG_H_\n#include "${board?.fspBoard?'board.h':'bsp_api.h'}"\n#endif /* BOARD_CFG_H_ */\n`),
   cfg('r_ioport_cfg.h',moduleCfg('r_ioport_cfg.h','R_IOPORT_CFG_H_',['#define IOPORT_CFG_PARAM_CHECKING_ENABLE (BSP_CFG_PARAM_CHECKING_ENABLE)'])),
@@ -835,6 +875,8 @@ export function generateRaFiles(mcu,{board}={}){
   cfg('r_agt_cfg.h',moduleCfg('r_agt_cfg.h','R_AGT_CFG_H_',['#define AGT_CFG_PARAM_CHECKING_ENABLE (BSP_CFG_PARAM_CHECKING_ENABLE)','#define AGT_CFG_OUTPUT_SUPPORT_ENABLE (0)','#define AGT_CFG_INPUT_SUPPORT_ENABLE (0)'])),
   cfg('r_adc_cfg.h',moduleCfg('r_adc_cfg.h','R_ADC_CFG_H_',['#define ADC_CFG_PARAM_CHECKING_ENABLE (BSP_CFG_PARAM_CHECKING_ENABLE)'])),
   cfg('r_gpt_cfg.h',moduleCfg('r_gpt_cfg.h','R_GPT_CFG_H_',['#define GPT_CFG_PARAM_CHECKING_ENABLE (BSP_CFG_PARAM_CHECKING_ENABLE)','#define GPT_CFG_OUTPUT_SUPPORT_ENABLE (1)','#define GPT_CFG_WRITE_PROTECT_ENABLE (0)','#define GPT_CFG_GPTCLK_BYPASS (0)'])),
+  cfg('r_wdt_cfg.h',moduleCfg('r_wdt_cfg.h','R_WDT_CFG_H_',['#define WDT_CFG_PARAM_CHECKING_ENABLE (BSP_CFG_PARAM_CHECKING_ENABLE)',`#define WDT_CFG_REGISTER_START_NMI_SUPPORTED (${mcu.peripherals?.WDT?.enabled&&mcu.peripherals.WDT.reset==='NMI'?1:0})`])),
+  cfg('r_iwdt_cfg.h',moduleCfg('r_iwdt_cfg.h','R_IWDT_CFG_H_',['#define IWDT_CFG_PARAM_CHECKING_ENABLE (BSP_CFG_PARAM_CHECKING_ENABLE)','#define IWDT_CFG_REGISTER_START_NMI_SUPPORTED (0)'])),
   cfg('r_sci_uart_cfg.h',moduleCfg('r_sci_uart_cfg.h','R_SCI_UART_CFG_H_',['#define SCI_UART_CFG_PARAM_CHECKING_ENABLE (BSP_CFG_PARAM_CHECKING_ENABLE)','#define SCI_UART_CFG_FIFO_SUPPORT (0)','#define SCI_UART_CFG_DTC_SUPPORTED (0)','#define SCI_UART_CFG_FLOW_CONTROL_SUPPORT (0)','#define SCI_UART_CFG_RS485_SUPPORT (0)','#define SCI_UART_CFG_IRDA_SUPPORT (0)'])),
   gen('bsp_clock_cfg.h',clockCfg(c)),
   gen('common_data.h',HEADER('common header file')+`#ifndef COMMON_DATA_H_\n#define COMMON_DATA_H_\n#include <stdint.h>\n#include "bsp_api.h"\n#include "r_ioport.h"\n#include "bsp_pin_cfg.h"\nFSP_HEADER\n#define IOPORT_CFG_NAME g_bsp_pin_cfg\n#define IOPORT_CFG_OPEN R_IOPORT_Open\n#define IOPORT_CFG_CTRL g_ioport_ctrl\n/* IOPORT Instance */\nextern const ioport_instance_t g_ioport;\n/* IOPORT control structure. */\nextern ioport_instance_ctrl_t g_ioport_ctrl;\nvoid g_common_init(void);\nFSP_FOOTER\n#endif /* COMMON_DATA_H_ */\n`),
