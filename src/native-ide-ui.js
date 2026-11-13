@@ -26,9 +26,11 @@ export function setupNativeIde({o,editor,select,showMonitor,points,watches,toggl
  // interpreter; it also runs sketches and FatFs programs (the installed tools have no FatFs).
  const ENGINE_KEY='stm32lab.simEngine',FATFS=/#\s*include\s*[<"](?:ff|fatfs|ff_gen_drv|diskio|sd_diskio|user_diskio|bsp_driver_sd|fatfs_platform)\.h[>"]/;
  const engine=()=>{try{return localStorage.getItem(ENGINE_KEY)==='interpreter'?'interpreter':'gcc';}catch{return 'gcc';}},setEngine=value=>{try{localStorage.setItem(ENGINE_KEY,value);}catch{}};
- // An FSP project (Renesas RA) always runs as an ARM GCC build on the emulator: there is no interpreter for FSP.
- const fspProject=()=>o.getProject().firmware?.mode==='fsp';
- function gccSimulation(){if(!api||$('native-target').value!=='simulator')return false;if(fspProject())return true;if(engine()!=='gcc')return false;const p=o.getProject();return p.firmware?.mode==='hal'&&![p.code||'',...(p.firmware.files||[]).map(f=>f.text)].some(text=>FATFS.test(text));}
+ // An FSP project (Renesas RA) picks its engine like an STM32 one: the ARM GCC build on the RA6E1 emulator, or the
+ // built-in interpreter (fsp-interp.js). Without ARM GCC and FSP installed the run uses the interpreter (fspFallback, set
+ // by ensureSimTools for that run); `tools` asks whether the engine wants ARM GCC regardless.
+ const fspProject=()=>o.getProject().firmware?.mode==='fsp';let fspFallback=false;
+ function gccSimulation(tools=false){if(!api||$('native-target').value!=='simulator')return false;if(engine()!=='gcc')return false;if(fspProject())return tools||!fspFallback;const p=o.getProject();return p.firmware?.mode==='hal'&&![p.code||'',...(p.firmware.files||[]).map(f=>f.text)].some(text=>FATFS.test(text));}
  const emulator=()=>$('native-target').value==='emulator'||gccSimulation();
  const selected=()=>!['simulator','emulator'].includes($('native-target').value),config=()=>({target:$('native-target').value,configuration:$('native-config').value}),text=()=>JSON.stringify(o.getProject());
  const busy=()=>working||building||['starting','running','paused','finishing'].includes(state);
@@ -42,7 +44,7 @@ export function setupNativeIde({o,editor,select,showMonitor,points,watches,toggl
  async function guard(task){try{return await task();}catch(e){report(e);return null;}}
  function control(){
   const native=selected(),locked=busy(),paused=state==='paused';
-  $('sim-engine').hidden=!api||$('native-target').value!=='simulator'||fspProject();$('sim-engine').value=engine();$('sim-engine').disabled=locked||o.isSimulationRunning();
+  $('sim-engine').hidden=!api||$('native-target').value!=='simulator';$('sim-engine').value=engine();$('sim-engine').disabled=locked||o.isSimulationRunning();
   $('native-config').hidden=!native&&!emulator()||esp32();$('native-connection').hidden=config().target!=='arm';$('native-build-actions').hidden=!native;$('native-debug-details').hidden=!native&&!emulator()||esp32();
   document.querySelector('.firmware-tools').hidden=native&&['host','esp32'].includes(config().target);
   $('sound').hidden=$('step').hidden=native;
@@ -176,11 +178,12 @@ export function setupNativeIde({o,editor,select,showMonitor,points,watches,toggl
  // Resolves 'ready', 'interpreter' or 'cancel'.
  async function ensureSimTools(){
   const family=o.getProject().mcu?.family,sdk=fspProject()?'fsp':family==='STM32F103RB'?'cubeF1':'cube',need=(await api['install-plan']()).filter(i=>i.id==='gcc'||i.id===sdk);
+  // An FSP project without the tools runs on the interpreter this time, with a note; the engine setting stays, so the
+  // run after installing them is the ARM GCC build again.
+  if(fspProject()){fspFallback=need.length>0;if(fspFallback){control();o.log('ARM GCC와 Renesas FSP가 설치되어 있지 않아 FPB-RA6E1 프로젝트를 내장 해석기로 실행합니다(지원하는 FSP API만). 개발 도구에서 설치하면 ARM GCC 빌드로 실행합니다.','warning');}return fspFallback?'interpreter':'ready';}
   if(!need.length)return 'ready';
   plan=need;for(const key of Object.keys(progress))delete progress[key];renderPlan();
   const dialog=$('sim-tools-dialog'),buttons=['sim-tools-install','sim-tools-interpreter'].map($);
-  // FSP projects have no built-in interpreter to fall back to.
-  $('sim-tools-interpreter').hidden=fspProject();
   $('sim-tools-status').textContent=`${need.length}개 · 약 ${MB(need.reduce((n,i)=>n+i.bytes,0))}를 내려받습니다.`;buttons.forEach(b=>b.disabled=false);$('sim-tools-cancel').textContent='취소';
   return new Promise(resolve=>{
    const finish=value=>{dialog.close();resolve(value);};

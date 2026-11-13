@@ -16,7 +16,7 @@ const shot=async(win,name)=>{if(process.env.RA_SHOT_DIR)await win.screenshot({pa
 const ledOn=(win,id)=>win.evaluate(id=>document.getElementById('board-led-'+id)?.getAttribute('fill')==='#64e66b',id);
 
 test('FPB-RA6E1: FSP hal_entry builds with ARM GCC + Renesas FSP and runs on the RA6E1 emulator; LED1 blinks, S1 toggles LED2',{skip:!toolchain&&!process.env.CI_REQUIRE_TOOLCHAIN&&'ARM GCC / Renesas FSP not installed',timeout:240000},async()=>{
- const s=await launch();
+ const s=await launch({simEngine:'gcc'});
  await fs.writeFile(path.join(s.profile,'native-tools.json'),JSON.stringify({armGcc:gcc,fsp,armGdb:'',cube:'',cubeF1:'',hostGcc:'',hostGdb:'',clangd:'',openocd:'',buildRoot:''}));
  try{
   const {win}=s;
@@ -80,7 +80,7 @@ test('FPB-RA6E1 Pins dialog (RA Smart Configurator style): set D3 (P104) as an o
 });
 
 test('FPB-RA6E1 SCI9 UART example: the USB-TTL part on D0/D1 shows the hello line, the serial monitor sends to SCI9 and gets the echo',{skip:!toolchain&&!process.env.CI_REQUIRE_TOOLCHAIN&&'ARM GCC / Renesas FSP not installed',timeout:240000},async()=>{
- const s=await launch();
+ const s=await launch({simEngine:'gcc'});
  await fs.writeFile(path.join(s.profile,'native-tools.json'),JSON.stringify({armGcc:gcc,fsp,armGdb:'',cube:'',cubeF1:'',hostGcc:'',hostGdb:'',clangd:'',openocd:'',buildRoot:''}));
  try{
   const {win}=s;
@@ -120,7 +120,7 @@ test('FPB-RA6E1 SCI9 UART example: the USB-TTL part on D0/D1 shows the hello lin
 });
 
 test('FPB-RA6E1 GPT example: Pins shows P408 as GTIOC6B with g_timer6 (1 kHz PWM); running dims LED1 and GPT1 toggles LED2',{skip:!toolchain&&!process.env.CI_REQUIRE_TOOLCHAIN&&'ARM GCC / Renesas FSP not installed',timeout:240000},async()=>{
- const s=await launch();
+ const s=await launch({simEngine:'gcc'});
  await fs.writeFile(path.join(s.profile,'native-tools.json'),JSON.stringify({armGcc:gcc,fsp,armGdb:'',cube:'',cubeF1:'',hostGcc:'',hostGdb:'',clangd:'',openocd:'',buildRoot:''}));
  try{
   const {win}=s;
@@ -154,7 +154,7 @@ test('FPB-RA6E1 GPT example: Pins shows P408 as GTIOC6B with g_timer6 (1 kHz PWM
 });
 
 test('FPB-RA6E1 ADC example: P000 is AN000 of g_adc0 in Pins; turning the potentiometer while running changes adc_value and LED1',{skip:!toolchain&&!process.env.CI_REQUIRE_TOOLCHAIN&&'ARM GCC / Renesas FSP not installed',timeout:240000},async()=>{
- const s=await launch();
+ const s=await launch({simEngine:'gcc'});
  await fs.writeFile(path.join(s.profile,'native-tools.json'),JSON.stringify({armGcc:gcc,fsp,armGdb:'',cube:'',cubeF1:'',hostGcc:'',hostGdb:'',clangd:'',openocd:'',buildRoot:''}));
  try{
   const {win}=s;
@@ -189,7 +189,7 @@ test('FPB-RA6E1 ADC example: P000 is AN000 of g_adc0 in Pins; turning the potent
 });
 
 test('FPB-RA6E1 Clocks and Stacks tabs with the AGT example: g_agt0 on LOCO, adding/removing a timer, clock limits; LED1 blinks from AGT0',{skip:!toolchain&&!process.env.CI_REQUIRE_TOOLCHAIN&&'ARM GCC / Renesas FSP not installed',timeout:240000},async()=>{
- const s=await launch();
+ const s=await launch({simEngine:'gcc'});
  await fs.writeFile(path.join(s.profile,'native-tools.json'),JSON.stringify({armGcc:gcc,fsp,armGdb:'',cube:'',cubeF1:'',hostGcc:'',hostGdb:'',clangd:'',openocd:'',buildRoot:''}));
  try{
   const {win}=s;
@@ -230,7 +230,7 @@ test('FPB-RA6E1 Clocks and Stacks tabs with the AGT example: g_agt0 on LOCO, add
 });
 
 test('FPB-RA6E1 I²C example: P400/P401 as IIC0 SCL/SDA with g_i2c_master0; running writes and reads back the I²C memory part (LED2 on)',{skip:!toolchain&&!process.env.CI_REQUIRE_TOOLCHAIN&&'ARM GCC / Renesas FSP not installed',timeout:240000},async()=>{
- const s=await launch();
+ const s=await launch({simEngine:'gcc'});
  await fs.writeFile(path.join(s.profile,'native-tools.json'),JSON.stringify({armGcc:gcc,fsp,armGdb:'',cube:'',cubeF1:'',hostGcc:'',hostGdb:'',clangd:'',openocd:'',buildRoot:''}));
  try{
   const {win}=s;

@@ -137,8 +137,11 @@ export function prepareHalSource(source,files=[],options={}){
   const armOnly=name=>/^(Drivers|Middlewares)\//.test(name)||/^(syscalls|sysmem|system_stm32\w+)\.c$/.test(baseName(name))||/\.(s|ld)$/.test(name);
   for(const file of files){if(file&&typeof file.name==='string'&&armOnly(file.name))continue;if(!file||typeof file.name!=='string'||!SOURCE_PATH.test(file.name)||!/\.[ch]$/.test(file.name)||typeof file.text!=='string'||map.has(file.name))throw new Error('소스 파일 이름이 중복되거나 올바르지 않습니다.');total+=file.text.length;if(total>300000)throw new Error('HAL 소스 전체는 300 KB 이하로 선택하세요.');map.set(file.name,file.text);}
   map.set('main.c',source);
-  const hal=familyProfile(options.family).hal,SYSTEM_HEADERS=systemHeaders(hal.prefix);
-  const definitions=new Map([[hal.define,'1'],['USE_HAL_DRIVER','1']]),stack=[],included=new Set(),macros=new Map();
+  // options.headers / options.defines / options.virtual: another SDK's headers (FSP, fsp-interp.js) — the names that
+  // read as empty, the macros defined from the start, and header texts the project does not hold itself.
+  for(const [name,text]of Object.entries(options.virtual||{}))if(!map.has(name))map.set(name,text);
+  const hal=options.headers?null:familyProfile(options.family).hal,SYSTEM_HEADERS=options.headers??systemHeaders(hal.prefix);
+  const definitions=new Map(options.defines??[[hal.define,'1'],['USE_HAL_DRIVER','1']]),stack=[],included=new Set(),macros=new Map();
   const preprocess=(text,name)=>{
     if(stack.includes(name))throw new Error(`순환 include: ${name}`);stack.push(name);const output=[],locations=[],condition=[];let active=true,inComment=false,currentLine=1;
     const append=output.push.bind(output);output.push=value=>{if(typeof value==='object'){locations.push(...value.locations);return append(value.text);}locations.push({file:name,line:currentLine});return append(value);};

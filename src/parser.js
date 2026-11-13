@@ -226,7 +226,9 @@ export function compile(source,options={}) {
       program.functions[d.name]={...d,params,loc,body:block()};
     }else program.globals.push({...finishDeclaration(d,base),loc});
   }
-  if(options.hal){if(!program.functions.main)fail('int main(void) 함수를 작성하세요.');if(program.functions.main.params.length)fail('main(void) 형식을 사용하세요.');}
+  // An FSP program starts at hal_entry() (ra_gen/main.c calls it), an STM32 HAL program at main().
+  const entry=options.entry??'main';
+  if(options.hal){if(!program.functions[entry])fail(entry==='main'?'int main(void) 함수를 작성하세요.':`void ${entry}(void) 함수를 작성하세요.`);if(program.functions[entry].params.length)fail(`${entry}(void) 형식을 사용하세요.`);}
   else if(!program.functions.loop)fail('void loop() 함수를 작성하세요.');
   for(const name of ['setup','loop'])if(program.functions[name]?.params.length)fail(`${name}()에는 매개변수를 지정할 수 없습니다.`);
   return program;

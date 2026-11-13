@@ -9,7 +9,7 @@ const own=(o,k)=>Object.hasOwn(o,k), truth=v=>!!v;
 const checkedNumber=v=>{if(typeof v!=='number'||!Number.isFinite(v))throw new Error('유한한 숫자가 필요합니다.');return v;};
 const integer=v=>Math.trunc(checkedNumber(v));
 const isArray=v=>v?.kind==='array', isPointer=v=>v?.kind==='pointer';
-const LOOP_ITERATION_US=.1;
+const LOOP_ITERATION_US=.1,SPIN_LOOPS=32;
 
 export class Runtime {
   constructor(program,api={}){
@@ -122,7 +122,7 @@ export class Runtime {
     if(n.type==='member'){
       let object=yield* this.evaluate(n.object);
       // GPIOA->ODR, TIM2->CNT: a peripheral is a name here, with no registers behind it.
-      if(n.pointer&&typeof object==='string'&&this.program.hal&&/^[A-Z][A-Z0-9_]*$/.test(object))throw new Error(`레지스터 직접 접근(${object}->${n.key})은 내장 해석기에서 지원하지 않습니다. HAL 함수를 쓰거나 ARM GCC 빌드로 실행하세요.`);
+      if(n.pointer&&typeof object==='string'&&this.program.hal&&/^[A-Z][A-Z0-9_]*$/.test(object))throw new Error(this.program.fsp?`레지스터 직접 접근은 ARM GCC 실행에서만 됩니다(${object}->${n.key}). FSP API(R_IOPORT_PinWrite 등)를 쓰거나 시뮬레이터 실행 방식을 ARM GCC 빌드로 바꾸세요.`:`레지스터 직접 접근(${object}->${n.key})은 내장 해석기에서 지원하지 않습니다. HAL 함수를 쓰거나 ARM GCC 빌드로 실행하세요.`);
       if(n.pointer)object=this.get(this.pointerCell(object));
       if(object?.kind!=='struct'||!own(object.fields,n.key))throw new Error(`구조체 필드가 없습니다: ${n.key}`);
       if(object.last!==undefined)this.unionField(object,n.key);
@@ -283,8 +283,13 @@ export class Runtime {
     }
     if(['while','for','do'].includes(s.type)){
       this.loopDepth++;this.pushScope();try{
-        if(s.init)yield* this.statement(s.init);let first=true;
-        while((s.type==='do'&&first)||truth(yield* this.evaluate(s.test))){if(!first)yield* this.checkpoint(s.loc);first=false;const signal=yield* this.statement(s.body);if(signal?.type==='return')return signal;if(signal?.type==='break')break;if(s.update)yield* this.evaluate(s.update);if(this.program.hal&&!this.inCallback&&this.depth===1&&(!this.api.preciseTiming||this.loopDepth===1)){this.steps=0;const idle=this.loopDepth===1&&s.type==='while'&&s.test.type==='literal'&&truth(s.test.value)&&s.body.type==='block'&&s.body.body.every(n=>n.type==='empty');this.idleMain=idle;yield idle?Infinity:.1;}
+        if(s.init)yield* this.statement(s.init);let first=true,spin=0;
+        while((s.type==='do'&&first)||truth(yield* this.evaluate(s.test))){if(!first)yield* this.checkpoint(s.loc);first=false;const start=this.microTime,signal=yield* this.statement(s.body);if(signal?.type==='return')return signal;if(signal?.type==='break')break;if(s.update)yield* this.evaluate(s.update);
+          // FSP programs (hal_entry and the functions it calls, at any depth): a loop whose body waits (R_BSP_SoftwareDelay)
+          // costs no extra time, so its timing matches the board; one that spins without time passing (polling a flag, a
+          // pin, a status) advances 0.1 ms an iteration after SPIN_LOOPS rounds, so short computing loops stay free.
+          if(this.program.fsp&&!this.inCallback){if(s.test.type==='literal'&&truth(s.test.value)&&!s.update&&s.body.type==='block'&&s.body.body.every(n=>n.type==='empty')){this.steps=0;this.idleMain=true;yield Infinity;}else if(this.microTime>start)spin=0;else if(++spin>=SPIN_LOOPS){this.steps=0;yield .1;}}
+          else if(this.program.hal&&!this.inCallback&&this.depth===1&&(!this.api.preciseTiming||this.loopDepth===1)){this.steps=0;const idle=this.loopDepth===1&&s.type==='while'&&s.test.type==='literal'&&truth(s.test.value)&&s.body.type==='block'&&s.body.body.every(n=>n.type==='empty');this.idleMain=idle;yield idle?Infinity:.1;}
           // Inside an ISR a loop iteration costs CPU time, so a long loop can be preempted.
           else if(this.program.hal&&this.inIsr&&!this.atomic){this.busyUs+=LOOP_ITERATION_US;if(this.steps>15000){const ms=Math.max(.001,this.busyUs/1000);this.busyUs=0;this.steps=0;yield ms;}}this.budget();}
       }finally{this.popScope();this.loopDepth--;}return;
@@ -311,7 +316,9 @@ export class Runtime {
     if(!['continue','into','over','out'].includes(mode))throw new Error('디버그 명령이 올바르지 않습니다.');
     this.debug.mode=mode;this.debug.depth=this.depth;this.debug.paused=false;
   }
-  *run(){this.api.declareGlobals?.(this);yield* this.statements(this.program.globals);if(this.program.hal){yield* this.invoke('main');return;}if(this.program.functions.setup)yield* this.invoke('setup');while(true){yield* this.invoke('loop');yield 1;}}
+  // program.entry: the calls start-up makes, in order (an FSP program: R_BSP_WarmStart for each start-up event when the
+  // project defines it, then hal_entry), each at call depth 1 like main().
+  *run(){this.api.declareGlobals?.(this);yield* this.statements(this.program.globals);if(this.program.hal){for(const {name,args=[],optional}of this.program.entry??[{name:'main'}])if(!optional||own(this.program.functions,name))yield* this.invoke(name,args);return;}if(this.program.functions.setup)yield* this.invoke('setup');while(true){yield* this.invoke('loop');yield 1;}}
   pin(name){if(this.api.pin)return this.api.pin(name);const pin=canonicalPin(name);if(!GPIO_PINS.includes(pin))throw new Error(`GPIO 핀 이름을 확인하세요: ${name}`);return pin;}
   setPinMode(pin,mode){this.pwm.delete(pin);this.gpio[pin]={mode,value:0};this.api.changed?.(this.microTime);}
   inputLevel(pin){return this.gpio[pin]?.mode==='ANALOG'?0:Number(!!this.api.read?.(pin));}

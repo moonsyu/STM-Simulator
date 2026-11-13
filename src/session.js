@@ -16,6 +16,7 @@ import {compileHal} from './hal-source.js';
 import {halFiles} from './peripheral-files.js';
 import {HalAdapter,halConstantsFor,coreClockHz} from './hal.js';
 import {ButtonBounce} from './button-bounce.js';
+import {FspAdapter,compileFsp,fspConstants} from './fsp-interp.js';
 import {SignalRecorder,NoiseModel,signalsApi,validateNoise} from './signals.js';
 import {WirelessHub,deliverToBuses} from './wireless.js';
 
@@ -29,15 +30,17 @@ export class SimulationSession {
     this.passiveBuzzers=new PassiveBuzzers();
     this.project=project;this.bounce=new ButtonBounce(project.simulation?.bounceMs??0);this.pressed={};this.result=null;this.time=0;this.integrated=-1;this.stepMs=project.simulation?.stepMs??1;this.circuit=new CircuitSimulation();this.motion=new MotionDevices();this.catalogMotion=new CatalogMotion();this.singleWire=new CatalogSingleWire();this.sensors=new UltrasonicSignals();this.lcds=new Map();this.wave=new WaveRecorder(channels);this.vars=new VariableRecorder(source.ide?.plots||[]);this.varExprs=new Map();this.serial=[];
     this.buses=new BusDevices(project,()=>this.result,trace);this.buses.signals=this.signalRecorder;this.buses.noise=this.noise;new WirelessHub(this);
-    this.hal=project.firmware?.mode==='hal'?this.createHal():null;
-    this.runtime=new Runtime(program??(this.hal?compileHal(project.code,halFiles(project),project.mcu?.family):compile(project.code)),{
+    // An FSP project (FPB-RA6E1) runs its hal_entry.c with FspAdapter in place of the HAL (fsp-interp.js).
+    this.fsp=project.firmware?.mode==='fsp';this.hal=project.firmware?.mode==='hal'||this.fsp?this.createHal():null;
+    program??=this.fsp?compileFsp(project.code,project.firmware.files,project.mcu):this.hal?compileHal(project.code,halFiles(project),project.mcu?.family):compile(project.code);
+    this.runtime=new Runtime(program,{
       debug,preciseTiming:project.components.some(p=>p.type==='catalog_singlewire'),
       // Pinout labels give CubeMX-style LABEL_Pin / LABEL_GPIO_Port names, as main.h does in an ARM build,
       // unless the sources (an imported CubeMX main.h) already #define them.
-      constants:this.hal?{...halConstantsFor(project.mcu?.family),...(project.mcu?.timerClockHz?{SystemCoreClock:coreClockHz(project.mcu)}:{}),...Object.fromEntries(Object.entries(project.mcu?.pins||{}).filter(([,p])=>p.label&&!definedLabel(project,p.label)).flatMap(([pin,p])=>[[p.label+'_Pin',1<<Number(pin.slice(2))],[p.label+'_GPIO_Port','GPIO'+pin[1]]]))}:undefined,
+      constants:this.fsp?fspConstants(program):this.hal?{...halConstantsFor(project.mcu?.family),...(project.mcu?.timerClockHz?{SystemCoreClock:coreClockHz(project.mcu)}:{}),...Object.fromEntries(Object.entries(project.mcu?.pins||{}).filter(([,p])=>p.label&&!definedLabel(project,p.label)).flatMap(([pin,p])=>[[p.label+'_Pin',1<<Number(pin.slice(2))],[p.label+'_GPIO_Port','GPIO'+pin[1]]]))}:undefined,
       invoke:(name,args,runtime)=>this.hal?.invoke(name,args,runtime),poll:runtime=>this.hal?.poll(runtime),
       preempt:runtime=>this.hal?.preempt(runtime)??false,declareGlobals:runtime=>this.hal?.declareGlobals?.(runtime),
-      warn:message=>{this.warnings.push(message);if(this.warnings.length>50)this.warnings.shift();warnOut(message);},reset:runtime=>{if(this.hal){const old=this.hal;this.hal=this.createHal();this.hal.inheritReset(old);this.hal.nvicModel.tick.lost=Math.floor(runtime.microTime/1000);}},
+      warn:message=>{this.warnings.push(message);if(this.warnings.length>50)this.warnings.shift();warnOut(message);},reset:runtime=>{if(this.hal){const old=this.hal;this.hal=this.createHal();this.hal.inheritReset(old);if(this.hal.nvicModel)this.hal.nvicModel.tick.lost=Math.floor(runtime.microTime/1000);}},
       print,uart,pwmEnabled:project.simulation?.pwmWaveform??false,
       beforeChange:us=>this.advance(us),changed:us=>this.changed(us),advance:us=>this.advance(us),
       read:pin=>digitalRead(pin,this.result),voltage:pin=>this.result?.voltage('signal:'+pin),
@@ -56,7 +59,7 @@ export class SimulationSession {
     return value;
   }
   wirelessRx(module,frames,baud){deliverToBuses(this,module,frames,baud);}
-  createHal(){const hal=new HalAdapter(this.project.mcu,this.buses,{session:this});return hal;}
+  createHal(){return this.fsp?new FspAdapter(this.project.mcu,this.buses,{session:this}):new HalAdapter(this.project.mcu,this.buses,{session:this});}
   // GPIO pins captured as 'gpio' signal channels (logic analyzer).
   record(pins=[]){for(const pin of pins){const id='GPIO.'+pin;this.recordPins.add(pin);this.signalRecorder.define(id,{label:pin,pins:[pin],protocol:'gpio'});}return [...this.recordPins];}
   recordSignals(micros,result){
@@ -67,13 +70,13 @@ export class SimulationSession {
   get camera(){return this.hal?.camera?.api;}
   get storage(){return this.hal?.storage?.api;}
   enrich(micros){
-    this.hal?.catalog.update(this.project,this.result,micros);
+    this.hal?.catalog?.update(this.project,this.result,micros);
     this.singleWire.update(this.project,this.result,micros,this.runtime);
     this.passiveBuzzers.update(this.project,this.result,micros);
     if(!this.result||this.result.fault)return;
     this.sensors.update(this.project,this.result,micros);
     for(const p of this.project.components.filter(p=>p.type==='lcd')){if(!this.lcds.has(p.id))this.lcds.set(p.id,new LCDController());const lcd=this.lcds.get(p.id).update(p,this.result,micros);this.result.parts[p.id]={...this.result.parts[p.id],lcd};}
-    this.motion.update(this.project,this.result,micros,this.runtime,us=>this.changed(us));this.hal?.timerModel.observe(this.runtime,micros);this.buses.update(this.result);this.catalogMotion.update(this.project,this.result,micros,this.runtime);this.wave.record(micros,this.result);this.vars.record(micros,name=>this.readVariable(name));this.recordSignals(micros,this.result);this.hal?.update?.(this.result,micros);this.wireless.advance(micros,this.result,this);
+    this.motion.update(this.project,this.result,micros,this.runtime,us=>this.changed(us));this.hal?.timerModel?.observe(this.runtime,micros);this.buses.update(this.result);this.catalogMotion.update(this.project,this.result,micros,this.runtime);this.wave.record(micros,this.result);this.vars.record(micros,name=>this.readVariable(name));this.recordSignals(micros,this.result);this.hal?.update?.(this.result,micros);this.wireless.advance(micros,this.result,this);
     // Parts another STM32 board drives show that board's device state.
     for(const d of this.circuit.drivers)d.decorate?.(this.result);
   }

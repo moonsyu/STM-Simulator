@@ -184,6 +184,10 @@ const i2c_master_instance_t ${t.name} =
     .p_api         = &g_i2c_master_on_iic
 };`;
 }
+/** The FSP instances hal_data.c defines for an RA configuration, as the built-in interpreter declares them (fsp-interp.js). */
+export const raInstances=mcu=>({irqs:irqsOf(mcu),uarts:uartsOf(mcu),gpts:gptsOf(mcu),adc:adcOf(mcu),agts:agtsOf(mcu),iics:iicsOf(mcu)});
+/** "P408" → "BSP_IO_PORT_04_PIN_08". */
+export const raIoName=pin=>ioName(pin);
 const UNIT_TEXT={Hz:'Hz',kHz:'kHz',s:'seconds',ms:'milliseconds',us:'microseconds'};
 const hexCount=n=>"0x"+n.toString(16);
 const gptDecl=t=>`/** Timer on GPT Instance. */

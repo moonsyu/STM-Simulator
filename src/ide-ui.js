@@ -1,6 +1,7 @@
 import {createCodeEditor} from './generated/code-editor.js';
 import {compile} from './parser.js';
 import {compileHal} from './hal-source.js';
+import {compileFsp} from './fsp-interp.js';
 import {blankProject,validateProject} from './project.js';
 import {allHalExamples,applyHalExample} from './hal-examples.js';
 import {searchHalExamples} from './hal-example-search.js';
@@ -298,7 +299,7 @@ export function setupIde(o){
   }
   function build({reveal=true}={}){
     if(o.isRunning())return null;editor.diagnostics([]);$('build-errors').replaceChildren();if(reveal)showMonitor('build');
-    try{const p=o.getProject(),program=p.firmware?.mode==='hal'?compileHal(p.code,halFiles(p),p.mcu?.family):compile(p.code);built=program;$('build-status').textContent='빌드 통과';$('build-output').textContent=`빌드 성공 · ${sourceFiles(p).length}개 파일 · ${Object.keys(program.functions).length}개 함수\n시뮬레이터 실행 프로그램을 준비했습니다. 전원·배선·HAL 설정은 실행 시 검사합니다.`;return program;}
+    try{const p=o.getProject(),program=p.firmware?.mode==='fsp'?compileFsp(p.code,p.firmware.files,p.mcu):p.firmware?.mode==='hal'?compileHal(p.code,halFiles(p),p.mcu?.family):compile(p.code);built=program;$('build-status').textContent='빌드 통과';$('build-output').textContent=`빌드 성공 · ${sourceFiles(p).length}개 파일 · ${Object.keys(program.functions).length}개 함수\n시뮬레이터 실행 프로그램을 준비했습니다. 전원·배선·HAL 설정은 실행 시 검사합니다.`;return program;}
     catch(e){built=null;$('build-status').textContent='빌드 실패';$('build-output').textContent='빌드 실패 — 아래 항목을 누르면 오류 위치로 이동합니다.';const m=/^(?:(.+?):)?(\d+)(?:행)?:/.exec(e.message),loc=e.location||{file:m?.[1]||'main.c',line:Number(m?.[2]||1)},d={...loc,message:e.message};editor.diagnostics([d]);const b=document.createElement('button');b.className='build-error';b.textContent=e.message;b.onclick=()=>select(loc.file,loc.line);$('build-errors').append(b);return null;}
   }
   let stackFrame=0;
@@ -358,7 +359,7 @@ export function setupIde(o){
   let languageService=null;const setService=editor.setLanguageService;editor.setLanguageService=service=>{languageService=service;setService(service);};
   const formatter=setupCodeFormat({code:editor,textarea:$('code'),lsp:{enabled:()=>!!languageService?.enabled()},log:o.log});
   native=setupNativeIde({o,editor,select,showMonitor,points,watches,toggleBreakpoint});
-  return {closeAllTabs,sync,controls,build,editor,debugView,debug:doDebug,format:()=>formatter.formatDocument(),formatSelection:()=>formatter.formatSelection(),emulator:()=>!!native?.emulator(),gccSimulation:()=>!!native?.gccSimulation(),ensureSimTools:()=>native?native.ensureSimTools():Promise.resolve('interpreter'),nativePaused:()=>!!native?.paused(),buildElf:source=>native.buildElf(source),connectedBoards:()=>native?.boards?.()||[],nativeBusy:()=>native.busy(),breakpoints:()=>points().map(b=>`${b.file}:${b.line}`),invalidate(){built=null;sourceKey=JSON.stringify([o.getProject().firmware?.mode,sourceFiles(o.getProject())]);$('build-status').textContent='변경됨 · 빌드 필요';editor.diagnostics([]);native.queueLanguage();
+  return {closeAllTabs,sync,controls,build,editor,debugView,debug:doDebug,format:()=>formatter.formatDocument(),formatSelection:()=>formatter.formatSelection(),emulator:()=>!!native?.emulator(),gccSimulation:tools=>!!native?.gccSimulation(tools),ensureSimTools:()=>native?native.ensureSimTools():Promise.resolve('interpreter'),nativePaused:()=>!!native?.paused(),buildElf:source=>native.buildElf(source),connectedBoards:()=>native?.boards?.()||[],nativeBusy:()=>native.busy(),breakpoints:()=>points().map(b=>`${b.file}:${b.line}`),invalidate(){built=null;sourceKey=JSON.stringify([o.getProject().firmware?.mode,sourceFiles(o.getProject())]);$('build-status').textContent='변경됨 · 빌드 필요';editor.diagnostics([]);native.queueLanguage();
     // The configuration changed (Pinout / RA Configuration applied): the project tree, Developer Assistance and an open
     // generated file follow the new stacks.
     editor.refreshGenerated();buildFilesView();assistView();},reset({preserveWorkspace=false}={}){closedTabs.clear();emptyTabs=false;if(!preserveWorkspace)window.desktop?.clearWorkspace?.().catch(e=>o.log(e.message,'error'));folder='';built=null;lastPause='';sourceKey='';$('build-status').textContent='시뮬레이터용 빌드';editor.diagnostics([]);native.reset();sync();},async saveWorkspace(text){if(!folder)return false;await window.desktop.saveWorkspace(text);return true;}};
