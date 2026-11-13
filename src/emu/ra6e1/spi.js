@@ -8,10 +8,13 @@
 // Each frame is exchanged with the SPI parts on the RSPCK/MOSI/MISO nets through soc.spiTransfer (the same devices the
 // STM32 SPI model reaches, byte by byte, MSB byte first) and drawn on the logic analyzer. In SPI operation (SPMS = 0)
 // SSL0 is driven active from the first frame and, with SSLKP set as r_spi does in master mode, kept until SPE is cleared.
+// With SPCR2.SCKASE (RSPCK auto-stop, set by r_spi in master mode) a frame waits before its last bit while the receive
+// buffer is full, so a fast bit rate cannot overrun the RXI ISR.
 // The frame length comes from SPCMD0.SPB alone; SPDCR (SPBYT/SPLW) only says which SPDR access width software uses.
 const SPCR = 0x00, SSLP = 0x01, SPSR = 0x03, SPDR = 0x04, SPBR = 0x0a, SPCR2 = 0x0f, SPCMD0 = 0x10, SPCR3 = 0x21;
 const OVRF = 0x01, IDLNF = 0x02, SPTEF = 0x20, CENDF = 0x40, SPRF = 0x80;
 const SPE = 0x40, SPTIE = 0x20, SPRIE = 0x80, SPEIE = 0x10, MSTR = 0x08, TXMD = 0x02, SPMS = 0x01;
+const SCKASE = 0x10; // SPCR2: RSPCK auto-stop
 // ELC events (FSP bsp_elc.h, RA6E1): + 0 RXI, 1 TXI, 2 IDLE, 3 ERI, 4 TEI.
 export const SPI_EVENT_BASE = Object.freeze({ 0: 0x1c4, 1: 0x1c9 });
 const reverse = (v, bits) => { let r = 0; for (let i = 0; i < bits; i++) r |= ((v >>> i) & 1) << (bits - 1 - i); return r >>> 0; };
@@ -78,7 +81,13 @@ export class Rspi {
   // ------------------------------------------------------------ registers
   read(off, size) {
     this.soc.sync();
-    if (off >= SPDR && off < SPDR + 4) { this.r[SPSR] &= ~SPRF; return size === 4 ? this.rxBuf >>> 0 : size === 2 ? this.rxBuf & 0xffff : this.rxBuf & 0xff; }
+    if (off >= SPDR && off < SPDR + 4) {
+      this.r[SPSR] &= ~SPRF;
+      const value = size === 4 ? this.rxBuf >>> 0 : size === 2 ? this.rxBuf & 0xffff : this.rxBuf & 0xff;
+      // RSPCK auto-stop: a frame held before its last bit goes on once the receive buffer is read (one bit time).
+      if (this.frame?.held) { const { rx, bit } = this.frame; this.frame = this.soc.after(bit, () => this.endFrame(rx)); }
+      return value;
+    }
     return this.peek(off, size);
   }
   peek(off, size = 1) {
@@ -121,11 +130,15 @@ export class Rspi {
     const rx = exchangeFrame(this.soc, this.name, cfg.pins, send, bits, cfg);
     spiWave(this.soc, this.name, t0, send, rx, bits, us, cfg);
     this.log.push({ us: t0, tx: send, rx, bits });
-    this.frame = this.soc.after(us, () => this.endFrame(rx));
+    this.frame = this.soc.after(us, () => this.endFrame(rx, us / bits));
   }
-  endFrame(rx) {
-    this.frame = null; this.stats.frames++;
+  endFrame(rx, bit = 0) {
+    this.frame = null;
     const spcr = this.spcr();
+    // SPCR2.SCKASE (r_spi sets it in master mode): with the receive buffer still full the master stops RSPCK before the
+    // frame's last bit instead of overrunning; the frame ends when SPDR has been read (read() above).
+    if (!(spcr & TXMD) && (this.r[SPSR] & SPRF) && (spcr & MSTR) && (this.r[SPCR2] & SCKASE)) { this.frame = { held: true, rx, bit, cancel() {} }; return; }
+    this.stats.frames++;
     if (!(spcr & TXMD)) {
       if (this.r[SPSR] & SPRF) { this.r[SPSR] |= OVRF; if (spcr & SPEIE) this.raise(3); }
       else { this.rxBuf = rx; this.r[SPSR] |= SPRF; if (spcr & SPRIE) this.raise(0); }

@@ -129,3 +129,79 @@ test('r_sci_spi (SCI9) and r_spi (SPI1, 16/32-bit, LSB first) build without a wa
   assert.equal(session.gpio.P408.mode,'OUTPUT');
  }finally{await fs.rm(root,{recursive:true,force:true});}
 });
+
+// Review fix: r_spi sets SPCR2.SCKASE (RSPCK auto-stop) in master mode. At 50, 25 and 12.5 MHz an 8-bit frame is shorter
+// than the RXI ISR, so without the auto-stop the second frame overran the receive buffer and the transfer ended in
+// SPI_EVENT_ERR_READ_OVERFLOW (4); with it the master waits for SPDR to be read and all 16 bytes come back.
+const fastCode=`#include "hal_data.h"
+FSP_CPP_HEADER
+void R_BSP_WarmStart(bsp_warm_start_event_t event);
+FSP_CPP_FOOTER
+volatile uint32_t spi_done = 0;
+volatile uint32_t spi_err = 0;
+volatile uint32_t spi_ok = 0;
+void spi1_callback(spi_callback_args_t *p_args)
+{
+    if (SPI_EVENT_TRANSFER_COMPLETE == p_args->event)
+    {
+        spi_done++;
+    }
+    else
+    {
+        spi_err = p_args->event;
+    }
+}
+void hal_entry(void)
+{
+    static uint8_t tx[16];
+    static uint8_t rx[16];
+    for (int i = 0; i < 16; i++)
+    {
+        tx[i] = (uint8_t) (0x11 * i + 3);
+    }
+    R_SPI_Open(&g_spi1_ctrl, &g_spi1_cfg);
+    R_SPI_WriteRead(&g_spi1_ctrl, tx, rx, 16, SPI_BIT_WIDTH_8_BITS);
+    while (!spi_done && !spi_err)
+    {
+    }
+    spi_ok = 1;
+    for (int i = 0; i < 16; i++)
+    {
+        if (rx[i] != tx[i])
+        {
+            spi_ok = 0;
+        }
+    }
+    while (1)
+    {
+    }
+}
+void external_irq1_callback(external_irq_callback_args_t *p_args)
+{
+    (void) p_args;
+}
+void R_BSP_WarmStart(bsp_warm_start_event_t event)
+{
+    if (BSP_WARM_START_POST_C == event)
+    {
+        R_IOPORT_Open (&IOPORT_CFG_CTRL, &IOPORT_CFG_NAME);
+    }
+}
+`;
+test('r_spi at 50, 25 and 12.5 MHz: RSPCK auto-stop (SCKASE) keeps a 16-byte WriteRead from overrunning the receive buffer',{skip,timeout:300000},async()=>{
+ const root=await fs.mkdtemp(path.join(os.tmpdir(),'ra-spi-fast-'));
+ try{
+  for(const bitrate of [50000000,25000000,12500000]){
+   const mcu=raDefaultMcu(),peripheral=signal=>({function:'Peripheral',signal});
+   Object.assign(mcu.pins,{P100:peripheral('SPI1_MISO'),P101:peripheral('SPI1_MOSI'),P102:peripheral('SPI1_RSPCK')});
+   mcu.peripherals={SPI1:{enabled:true,bitrate,callback:'spi1_callback',priority:10}};
+   const p=validateProject({...projectForBoard('fpb-ra6e1'),mcu,code:fastCode,components:[],wires:[{id:'w_spi',from:'board:J1:4',to:'board:J1:5',color:'#0090ff'}]});
+   const dir=await fs.mkdtemp(path.join(root,'b-')),result=await build(await prepareBuild({project:p,tools,root:dir,target:'arm'}));
+   const session=new FirmwareSession(p,{elf:new Uint8Array(await fs.readFile(result.elf))});
+   for(let ms=10;ms<=50;ms+=10)session.tick(ms);
+   assert.ok(!session.fault,session.fault);
+   assert.deepEqual(['spi_done','spi_err','spi_ok'].map(n=>session.readVariable(n)),[1,0,1],`${bitrate} bps`);
+   assert.equal(session.soc.rspis[1].log.length,16);
+  }
+ }finally{await fs.rm(root,{recursive:true,force:true});}
+});
