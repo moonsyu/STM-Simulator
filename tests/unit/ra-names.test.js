@@ -26,6 +26,24 @@ test('callbacks: the same names are refused, and a callback cannot be called lik
  uart.peripherals[id].callback='main';assert.throws(()=>validateRaMcu(uart),new RegExp(`${id}: main`));
 });
 
+// Feature 32 review: hal_data.h declares each callback with its module's argument type, so a name shared by modules of
+// different kinds is two conflicting prototypes; FSP's own ISR and API object names are taken by the drivers.
+test('callbacks: modules whose callback arguments differ cannot share a name; FSP ISR and API object names are refused',()=>{
+ const mcu=(spi,uart,extra={})=>{const m=raDefaultMcu();Object.assign(m.pins,{P101:{function:'Peripheral',signal:'SPI1_MOSI'},P102:{function:'Peripheral',signal:'SPI1_RSPCK'},P109:{function:'Peripheral',signal:'SCI9_TXD'}});m.peripherals={SPI1:{enabled:true,callback:spi},SCI9:{enabled:true,callback:uart},...extra};return m;};
+ assert.throws(()=>validateRaMcu(mcu('shared_cb','shared_cb')),/SCI9: 콜백 이름 shared_cb은\(는\) SPI1의 콜백과 같지만 인자 형식이 다릅니다\(uart_callback_args_t \/ spi_callback_args_t\)/);
+ // Existing modules too: an SCI UART and a GPT timer, or the S1 IRQ and an IIC master.
+ assert.throws(()=>validateRaMcu(mcu('spi1_callback','tick',{GPT1:{enabled:true,mode:'PERIODIC',period:500,unit:'ms',callback:'tick'}})),/GPT1: 콜백 이름 tick은\(는\) SCI9의 콜백과 같지만 인자 형식이 다릅니다/);
+ const irq=raDefaultMcu();Object.assign(irq.pins,{P400:{function:'Peripheral',signal:'IIC0_SCL'},P401:{function:'Peripheral',signal:'IIC0_SDA'}});irq.peripherals={IIC0:{enabled:true,callback:'external_irq1_callback'}};
+ assert.throws(()=>validateRaMcu(irq),/IIC0: 콜백 이름 external_irq1_callback은\(는\) P205의 콜백과 같지만 인자 형식이 다릅니다/);
+ // Stacks of one kind may share a function, as FSP allows: SCI9 simple SPI and SPI1, GPT1 and AGT0 (both timers).
+ const spis=mcu('any_spi','any_spi');spis.pins.P111={function:'Peripheral',signal:'SCI9_SCK'};spis.peripherals.SCI9.mode='SPI';
+ assert.equal(validateRaMcu(spis).peripherals.SCI9.callback,'any_spi');
+ assert.doesNotThrow(()=>validateRaMcu(mcu('spi1_callback','u',{GPT1:{enabled:true,mode:'PERIODIC',period:500,unit:'ms',callback:'tick'},AGT0:{enabled:true,period:100,unit:'ms',callback:'tick'}})));
+ for(const name of ['spi_rxi_isr','sci_spi_tei_isr','sci_uart_rxi_isr','iic_master_eri_isr','r_icu_isr','gpt_counter_overflow_isr','agt_int_isr','adc_scan_end_isr'])assert.throws(()=>validateRaMcu(mcu(name,'u')),/인터럽트 처리 함수\(ISR\) 이름입니다\. 다른 이름을 쓰세요\./,name);
+ for(const name of ['g_spi_on_spi','g_spi_on_sci','g_uart_on_sci','g_timer_on_gpt'])assert.throws(()=>validateRaMcu(mcu(name,'u')),/API 객체 이름\(g_…_on_…\)입니다/,name);
+ assert.throws(()=>validateRaMcu(withLabel('spi_tei_isr')),/ISR/,'a pin symbol as well');
+});
+
 test('every example and the board template keep their names',()=>{
  assert.doesNotThrow(()=>validateRaMcu(raDefaultMcu()));
  for(const e of RA_EXAMPLES)assert.doesNotThrow(()=>validateRaMcu(e.mcu()),e.id);

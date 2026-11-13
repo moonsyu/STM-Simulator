@@ -83,7 +83,22 @@ export function raNameProblem(name){
  if(C_WORDS.has(name))return `${name}은(는) C나 생성 코드가 쓰는 이름입니다`;
  if(/^(R_|BSP_|FSP_|IOPORT_|ELC_|ICU_|__)/.test(name)||/^_[A-Z]/.test(name))return `${name}: R_ · BSP_ · FSP_ · IOPORT_ 로 시작하는 이름과 __ 로 시작하는 이름은 FSP와 컴파일러가 씁니다`;
  if(/^g_(ioport|external_irq\d+|uart\d+|timer\d+|agt\d+|adc\d+|i2c_master\d+|spi\d+|sci_spi\d+|bsp_pin_cfg)(_ctrl|_cfg|_extend|_cfg_extend|_ext_cfg|_channel_cfg)?$/.test(name))return `${name}은(는) 생성 코드의 인스턴스 이름입니다`;
+ // The interrupt service routines vector_data.h names (FSP drivers define them) and the drivers' API objects
+ // (g_uart_on_sci, g_spi_on_spi, g_timer_on_gpt …).
+ if(/^((sci_uart|sci_spi|spi|iic_master)_(rxi|txi|tei|eri)|r_icu|adc_scan_end|agt_int|gpt_counter_overflow)_isr$/.test(name))return `${name}은(는) FSP 드라이버의 인터럽트 처리 함수(ISR) 이름입니다`;
+ if(/^g_\w+_on_\w+$/.test(name))return `${name}은(는) FSP 드라이버의 API 객체 이름(g_…_on_…)입니다`;
  return '';
+}
+// The argument type of a callback by where it is set: an IRQ pin, or a peripheral (an SCI channel is a UART or, in
+// simple SPI mode, an SPI master; GPT and AGT are both timers).
+function callbackArgType(where,p){
+ if(/^P\d/.test(where))return 'external_irq_callback_args_t';
+ if(/^SCI/.test(where))return p?.mode==='SPI'?'spi_callback_args_t':'uart_callback_args_t';
+ if(/^SPI/.test(where))return 'spi_callback_args_t';
+ if(/^(GPT|AGT)/.test(where))return 'timer_callback_args_t';
+ if(/^ADC/.test(where))return 'adc_callback_args_t';
+ if(/^IIC/.test(where))return 'i2c_master_callback_args_t';
+ return where;
 }
 const checkName=(where,name)=>{const problem=raNameProblem(name);if(problem)throw new Error(`${where}: ${problem}. 다른 이름을 쓰세요.`);};
 /** Maximum frequency of each RA6E1 internal clock in MHz. */
@@ -152,6 +167,14 @@ export function validateRaMcu(mcu){
  for(const [id,q]of Object.entries(out.peripherals||{}))if(q.callback){checkName(id,q.callback);callbacks.push([id,q.callback]);}
  // A callback is a function: it cannot have the name of a pin symbol (a macro).
  for(const [where,name]of callbacks)if(labels.has(name))throw new Error(`${where}: 콜백 이름 ${name}은(는) 핀 이름(심볼)과 같습니다. 다른 이름을 쓰세요.`);
+ // hal_data.h declares each callback with its module's argument type: one function can serve stacks of the same kind
+ // (two UARTs, GPT and AGT timers), but a name shared by modules whose arguments differ is two conflicting declarations.
+ const seen=new Map();
+ for(const [where,name]of callbacks){
+  const type=callbackArgType(where,out.peripherals?.[where]),other=seen.get(name);
+  if(other&&other.type!==type)throw new Error(`${where}: 콜백 이름 ${name}은(는) ${other.where}의 콜백과 같지만 인자 형식이 다릅니다(${type} / ${other.type}). hal_data.h에 서로 다른 선언이 둘 생기니 다른 이름을 쓰세요.`);
+  if(!other)seen.set(name,{where,type});
+ }
  for(const signal of signals.keys()){const id=signal.split('_')[0];if(!out.peripherals?.[id]?.enabled)throw new Error(`${signals.get(signal)}: ${id}를 켜야 ${signal}로 쓸 수 있습니다.`);}
  if(mcu.clock!==undefined){
   const c=mcu.clock,d=fam.clock;
