@@ -46,7 +46,10 @@ export class SignalRecorder{
  channels(){return [...this.buses.values()].map(b=>({id:b.id,label:b.label,protocol:b.protocol,lines:this.lines(b.id).map(c=>({id:c.id,label:c.label,pins:[...c.pins]}))}));}
  clear(){for(const c of this.map.values()){c.edges=[];c.frames=[];c.dropped=0;if(c.spans)c.spans=[];}}
  // A transfer's frame width and bit order on a clock line from fromUs to toUs (decodeClocked reads its frames by it).
- span(id,{fromUs,toUs,bits=8,lsbFirst=false}){const ch=this.map.get(id)??this.define(id);(ch.spans??=[]).push({fromUs,toUs,bits,lsbFirst:!!lsbFirst});if(ch.spans.length>this.frameLimit)ch.spans.splice(0,ch.spans.length-this.frameLimit);}
+ span(id,{fromUs,toUs,bits=8,lsbFirst=false}){const ch=this.map.get(id)??this.define(id);(ch.spans??=[]).push({fromUs,toUs,bits,lsbFirst:!!lsbFirst});
+  // Trimmed a quarter at a time (as edge() does), so a long run does not shift the whole list on every transfer; at
+  // least frameLimit spans stay, which reach back past the edges kept (16 or more clock edges a frame).
+  if(ch.spans.length>this.frameLimit*1.25)ch.spans.splice(0,ch.spans.length-this.frameLimit);}
  edge(id,us,level){const ch=this.map.get(id)??this.define(id);push(ch.edges,us,level?1:0);if(ch.edges.length>this.limit){const n=Math.floor(this.limit/4);ch.idle=ch.edges[n-1][1];ch.edges.splice(0,n);ch.dropped+=n;}}
  write(id,edges){for(const [us,level]of edges)this.edge(id,us,level);}
  level(id,us){const ch=this.map.get(id);return ch?levelAt(ch.edges,us,ch.idle):null;}
