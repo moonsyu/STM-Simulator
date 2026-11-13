@@ -1,6 +1,13 @@
 # STM Simulator — 개발 인계
 
-현재 버전: **1.51.0**. 정리일: **2026-11-10**. NUCLEO-F446RE·NUCLEO-F103RB 또는 Renesas FPB-RA6E1(1.20.0, FSP·에뮬레이터 전용)과 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+현재 버전: **1.52.0**. 정리일: **2026-11-10**. NUCLEO-F446RE·NUCLEO-F103RB 또는 Renesas FPB-RA6E1(1.20.0, FSP·에뮬레이터 전용)과 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+
+## 1.52.0 기능 목록 42번: RA 프로젝트를 내장 해석기로, FSP 모듈 준비
+
+- **해석기(`src/fsp-interp.js`)**: FspAdapter(HalAdapter와 같은 인터페이스). 프렐류드 헤더 `hal_data.h`·`common_data.h`·`bsp_pin_cfg.h`·`vector_data.h`(`hal-source.js`가 프로젝트에 같은 이름 헤더가 없을 때만 씀). `session.js`가 FSP 프로젝트에 FspAdapter와 합성 main(R_BSP_WarmStart → hal_entry)을 쓴다. `runtime.js` 반복문 시간 규칙은 `program.fsp`일 때만 바뀐다(STM32는 그대로).
+- **UI(`native-ide-ui.js`)**: FSP 프로젝트도 실행 방식 선택, 도구가 없으면 `fspFallback`(도구·프로젝트·대상이 바뀌면 다시 확인).
+- **FSP 모듈 준비(G1)**: `desktop/tool-manifest-fsp.json`에 32~41번 드라이버(renesas/fsp 같은 v6.6.0 커밋, BSD-3-Clause), 설치 확인 파일을 `r_spi.c`로 바꿔 예전 설치가 다시 받게, `ra-build.cjs`는 없는 모듈을 한국어로 알림. FreeRTOS 커널은 renesas/fsp에 없어 38번 때 따로.
+- 시험: 단위 `fsp-interp`·`fsp-prelude-values`(설치된 FSP 헤더와 ARM GCC `_Static_assert`로 값 대조), 툴체인 `fsp-interp-parity`(5개로 나눠 펌웨어 1~5묶음), E2E `ra-interpreter`. E2E 하네스 기본 엔진이 해석기라 에뮬레이터를 보는 `ra6e1`·`build-failure`는 `launch({simEngine:'gcc'})`.
 
 ## 1.51.0 기능 목록 45번: 프로젝트 구조의 모든 파일을 바로 고치기, 새 프로젝트 기본값 UART
 
