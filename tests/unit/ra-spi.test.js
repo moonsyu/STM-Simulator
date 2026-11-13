@@ -2,7 +2,7 @@
 // SPI): settings and their checks, the code RASC generates for them, and the emulator models driven the way FSP drives them.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {raDefaultMcu,validateRaMcu,raPsel,raSpiBitrate,raSciSpiBitrate,raNameProblem,RA_PERIPHERAL_PINS,RA6E1_PORTS} from '../../src/ra-config.js';
+import {raUartChannels,raDefaultMcu,validateRaMcu,raPsel,raSpiBitrate,raSciSpiBitrate,raNameProblem,RA_PERIPHERAL_PINS,RA6E1_PORTS} from '../../src/ra-config.js';
 import {generateRaFiles,raVectors} from '../../src/ra-generator.js';
 import {raAssistance} from '../../src/ra-assistance.js';
 
@@ -164,4 +164,13 @@ test('SCI simple SPI model: TDR exchanges a byte at PCLKA/(4x4^CKS x (BRR+1)), R
  // CPHA 1 / CPOL 0 is CKPH 0 with CKPOL 1; LSB first without SDIR.
  sci.write(0x0d,0x40,1);sci.write(0x06,0xe2,1);assert.deepEqual(sci.spiMode(),{cpha:1,cpol:0,lsbFirst:true});
  assert.equal(sci.uartEvent,undefined);assert.equal(sci.stats.rx,0,'no UART frames in clock synchronous mode');
+});
+
+// Feature 32 review: the serial monitor's targets of an FSP project are its SCI UARTs; SCI9 as simple SPI is not one.
+test('serial monitor targets: SCI channels in UART mode only, not one switched to simple SPI',()=>{
+ const uart=raDefaultMcu();uart.pins.P109={function:'Peripheral',signal:'SCI9_TXD'};uart.peripherals={SCI9:{enabled:true}};
+ assert.deepEqual(raUartChannels(validateRaMcu(uart)),['SCI9']);
+ assert.deepEqual(raUartChannels(validateRaMcu(sciSpiMcu())),[]);
+ assert.deepEqual(raUartChannels({peripherals:{SCI9:{enabled:false},SCI3:{enabled:true},SPI1:{enabled:true}}}),['SCI3']);
+ assert.deepEqual(raUartChannels(raDefaultMcu()),[]);
 });

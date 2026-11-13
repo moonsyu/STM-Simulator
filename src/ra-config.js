@@ -101,6 +101,8 @@ function callbackArgType(where,p){
  return where;
 }
 const checkName=(where,name)=>{const problem=raNameProblem(name);if(problem)throw new Error(`${where}: ${problem}. 다른 이름을 쓰세요.`);};
+/** The SCI channels running as UARTs (r_sci_uart), which the serial monitor can reach: not one in simple SPI mode. */
+export const raUartChannels=mcu=>Object.keys(mcu?.peripherals||{}).filter(id=>/^SCI\d$/.test(id)&&mcu.peripherals[id]?.enabled&&mcu.peripherals[id].mode!=='SPI');
 /** Maximum frequency of each RA6E1 internal clock in MHz. */
 export const RA_CLOCK_LIMITS=Object.freeze({iclk:200,pclka:100,pclkb:50,pclkc:50,pclkd:100,fclk:50});
 const PIN_FUNCTIONS=['GPIO_Output','GPIO_Input','IRQ','Analog','Peripheral'];

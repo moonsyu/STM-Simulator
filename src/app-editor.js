@@ -7,6 +7,7 @@ import {state} from './app-state.js';
 import {SOURCE_KEY,monitor,editorSearch,uartLines,layout,diagnostic} from './app.js';
 import {resetMainCode} from './code-reset.js';
 import {$} from './common.js';
+import {raUartChannels} from './ra-config.js';
 import {devboardModel,boardForFile,boardFileKey,isBoardFile} from './devboards.js';
 import {importFirmware} from './firmware-import.js';
 import {offerCircuit} from './ioc-circuit-ui.js';
@@ -25,9 +26,10 @@ export function syncEditor(){
  document.querySelector('.language-badge').textContent=board?(fixedBoard?`${board.name} · Raspberry Pi · 커널 모듈 (고정 실행)`:pythonBoard?`${board.name} · Raspberry Pi · Python`:`${board.name} · ESP32 스케치`):(others.length?mainBoardName(state.project)+' · ':'')+(fsp?'Renesas FSP':hal?'STM32 HAL':'GPIO 스케치');lineNumbers();monitor.settings(state.project.simulation);
  document.querySelector('.code-note code').textContent=fsp?'R_IOPORT_PinWrite · R_IOPORT_PinRead\nR_BSP_SoftwareDelay\nR_ICU_ExternalIrqOpen · Enable\nR_SCI_UART_Open · Write · Read\nhal_entry() · R_BSP_WarmStart()':hal?'HAL_GPIO_Init · WritePin · ReadPin · TogglePin\nHAL_UART_Transmit · Receive_IT\nHAL_GPIO_EXTI_Callback\nHAL_TIM_Base_Start_IT · HAL_ADC_GetValue\nHAL_I2C_Mem_Read · HAL_SPI_Transmit\nprintf("value=%lu\\n", value)':'pinMode · digitalWrite · digitalRead\nanalogRead · analogWrite · delay\nLiquidCrystal · Serial1 · Wire · SPI\nTimer · attachInterrupt · DMA';
  document.querySelector('.code-note p').textContent=fsp?'Renesas FSP 코드를 ARM GCC로 빌드해 RA6E1 에뮬레이터에서 실행합니다.':hal?'main(void)와 지원 HAL API를 회로에 연결합니다. 전체 HAL 드라이버·ELF/BIN 실행은 지원하지 않습니다.':'GPIO 스케치 문법의 일부를 실행합니다. ELF/BIN 펌웨어 로더는 포함되지 않습니다.';
- // FSP (FPB-RA6E1): the enabled SCI UART channels, reached through a UART part on their RXD pin (no VCP on the board).
- const selectedSerial=$('serial-target').value,serials=hal?SERIAL_IDS.filter(id=>state.project.mcu?.peripherals[id]?.enabled):fsp?Object.keys(state.project.mcu?.peripherals||{}).filter(id=>/^SCI\d$/.test(id)&&state.project.mcu.peripherals[id].enabled):[],serialKey=hal||fsp?serials.join(','):'sketch',keepSerial=$('serial-target').dataset.channels===serialKey;
- $('serial-target').innerHTML=fsp?(serials.length?serials.map(id=>`<option value="${id}">외부 UART 장치(USB-TTL 등) → ${id}</option>`).join(''):'<option value="">Pins에서 SCI 핀을 정하세요</option>'):hal?(serials.length?serials.map(id=>id==='USART2'?'<option value="USART2">ST-LINK VCP → USART2 (내장)</option>':`<option value="${id}">외부 UART 장치 → ${id}</option>`).join(''):'<option value="">UART 핀을 활성화하세요</option>'):'<option value="Serial1">외부 UART 장치 → Serial1</option><option value="Serial">USB 콘솔 → Serial</option>';
+ // FSP (FPB-RA6E1): the enabled SCI UART channels, reached through a UART part on their RXD pin (no VCP on the board);
+ // an SCI channel in simple SPI mode (r_sci_spi) is not one.
+ const selectedSerial=$('serial-target').value,serials=hal?SERIAL_IDS.filter(id=>state.project.mcu?.peripherals[id]?.enabled):fsp?raUartChannels(state.project.mcu):[],serialKey=hal||fsp?serials.join(','):'sketch',keepSerial=$('serial-target').dataset.channels===serialKey;
+ $('serial-target').innerHTML=fsp?(serials.length?serials.map(id=>`<option value="${id}">외부 UART 장치(USB-TTL 등) → ${id}</option>`).join(''):'<option value="">Pins에서 SCI UART 핀을 정하세요</option>'):hal?(serials.length?serials.map(id=>id==='USART2'?'<option value="USART2">ST-LINK VCP → USART2 (내장)</option>':`<option value="${id}">외부 UART 장치 → ${id}</option>`).join(''):'<option value="">UART 핀을 활성화하세요</option>'):'<option value="Serial1">외부 UART 장치 → Serial1</option><option value="Serial">USB 콘솔 → Serial</option>';
 // Other boards' program output has its own entries (read only).
  $('serial-target').insertAdjacentHTML('beforeend',state.project.components.filter(p=>p.type==='devboard').map(p=>`<option value="board:${esc(p.id)}">${esc(p.name)} · Serial (USB)</option>`).join('')+outsideTargets(state.project));
  $('serial-target').value=keepSerial&&[...$('serial-target').options].some(o=>o.value===selectedSerial)?selectedSerial:serials.includes('USART2')?'USART2':serials[0]??(boards.length&&state.project.surfaces?.board?.hidden?`board:${boards[0].id}`:hal?'':'Serial1');$('serial-target').dataset.channels=serialKey;$('serial-target').disabled=hal&&!serials.length&&!boards.length;
