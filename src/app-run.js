@@ -47,7 +47,16 @@ export function resetBoard(id){const driver=state.session?.circuit?.drivers?.fin
 export function recordSimulation(){if(state.result)diagnostic('simulation.state',{status:state.status,simulationMs:state.simTime,pins:state.runtime?.gpio||{},parts:state.result.parts,fault:state.result.fault,warnings:state.result.warnings});}
 export function resetRuntime(){
  if(!state.runtime||!state.session||!['running','paused'].includes(state.status))return false;
- const wasRunning=state.status==='running',debug=!!state.runtime.debug?.enabled||!!state.ide?.breakpoints().length;recordSimulation();state.status='stopped';
+ const wasRunning=state.status==='running',debug=!!state.runtime.debug?.enabled||!!state.ide?.breakpoints().length;
+ // An FSP run that went to the interpreter because ARM GCC / FSP were missing: once they are there, the restart builds
+ // and runs the ARM GCC firmware instead (the tool check is asynchronous, so this restart is too).
+ if(state.project.firmware?.mode==='fsp'&&state.ide?.gccSimulation?.(true)&&!boardOnlyRun()&&!(state.session instanceof FirmwareSession)&&state.ide.recheckTools){
+  void state.ide.recheckTools().then(fallback=>{if(!state.runtime)return;if(fallback){restart(wasRunning,debug);return;}stop();void startRun({debug,entry:debug&&!wasRunning});});return true;
+ }
+ return restart(wasRunning,debug);
+}
+function restart(wasRunning,debug){
+ recordSimulation();state.status='stopped';
  // End the previous run before compiling: manual builds remain blocked while running.
  const initialized=initializeRuntime({debug,entry:debug&&!wasRunning});
  if(initialized&&wasRunning)state.status=state.runtime.debug.paused?'paused':'running';

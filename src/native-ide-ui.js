@@ -100,7 +100,7 @@ export function setupNativeIde({o,editor,select,showMonitor,points,watches,toggl
   }catch(e){if(state==='paused'&&current===sequence)$('debug-location').textContent=e.message;}
  }
  // A project without its own setting builds Release; debugging always builds Debug (see 'start').
- function sync(){const value=o.getProject().ide?.native||{target:'simulator',configuration:'Release'};$('native-target').value=value.target;selectBoard();$('native-config').value=value.configuration;control();queueLanguage();}
+ function sync(){const value=o.getProject().ide?.native||{target:'simulator',configuration:'Release'};$('native-target').value=value.target;selectBoard();$('native-config').value=value.configuration;control();queueLanguage();void recheckTools();}
  // Results of the previous target's build (problems, ELF/map list, build folder) do not belong to the new one.
  function clearBuild(){$('build-errors').replaceChildren();$('native-artifact-list').textContent='';$('native-artifacts').disabled=true;$('build-output').textContent='';}
  // Each connected NUCLEO is its own run target: "NUCLEO-F446RE (COM5)". The pick is the ST-LINK serial OpenOCD uses.
@@ -134,7 +134,17 @@ export function setupNativeIde({o,editor,select,showMonitor,points,watches,toggl
  function change(){pickBoard();o.getProject().ide??={breakpoints:[],watches:[]};o.getProject().ide.native=config();o.saveLocal();editor.diagnostics([]);clearBuild();editor.updateDebug(points(),null);
   // clangd serves only the ARM and Windows targets; its markers belong to the previous target's flags.
   editor.clearLanguageDiagnostics();if(language&&!gcc()){language=false;languageReady=false;$('language-toggle').textContent='clangd 꺼짐';void guard(()=>api['language-stop']());}
-  $('build-status').textContent=gccSimulation()?'ARM GCC → 시뮬레이터 · 빌드 준비':emulator()?'ARM GCC → 에뮬레이터 · 빌드 준비':esp32()?'Arduino CLI → ESP32 · 빌드 준비':selected()?`${config().target==='arm'?'ARM GCC':'Windows GCC'} · 빌드 준비`:'시뮬레이터용 빌드';$('new').disabled=$('open').disabled=$('workspace-open').disabled=false;o.refresh();queueLanguage();}
+  buildStatus();$('new').disabled=$('open').disabled=$('workspace-open').disabled=false;o.refresh();queueLanguage();void recheckTools();}
+ function buildStatus(){$('build-status').textContent=gccSimulation()?'ARM GCC → 시뮬레이터 · 빌드 준비':emulator()?'ARM GCC → 에뮬레이터 · 빌드 준비':esp32()?'Arduino CLI → ESP32 · 빌드 준비':selected()?`${config().target==='arm'?'ARM GCC':'Windows GCC'} · 빌드 준비`:'시뮬레이터용 빌드';}
+ // fspFallback from the tools installed now: after the tools are installed or their settings saved, when the project or
+ // the target changes, and before a run, a 20 ms step or a restart (app-run.js, app.js), so none of them keeps using the
+ // interpreter once ARM GCC and FSP are there. The labels follow.
+ async function recheckTools(){
+  const was=fspFallback;
+  if(!api||!fspProject()||engine()!=='gcc'||$('native-target').value!=='simulator')fspFallback=false;
+  else{try{fspFallback=(await api['install-plan']()).some(i=>i.id==='gcc'||i.id==='fsp');}catch{return fspFallback;}}
+  if(was!==fspFallback){buildStatus();lockUpdate();}return fspFallback;
+ }
  function queueLanguage(){clearTimeout(languageTimer);if(!language||!gcc())return;languageDirty=true;languageTimer=setTimeout(()=>void updateLanguage(),500);}
  // Completion while typing sends the pending edit at once (flushLanguage) instead of after the 500 ms debounce.
  let languageDirty=false,languageRun=null;
@@ -180,7 +190,7 @@ export function setupNativeIde({o,editor,select,showMonitor,points,watches,toggl
   const family=o.getProject().mcu?.family,sdk=fspProject()?'fsp':family==='STM32F103RB'?'cubeF1':'cube',need=(await api['install-plan']()).filter(i=>i.id==='gcc'||i.id===sdk);
   // An FSP project without the tools runs on the interpreter this time, with a note; the engine setting stays, so the
   // run after installing them is the ARM GCC build again.
-  if(fspProject()){fspFallback=need.length>0;if(fspFallback){control();o.log('ARM GCC와 Renesas FSP가 설치되어 있지 않아 FPB-RA6E1 프로젝트를 내장 해석기로 실행합니다(지원하는 FSP API만). 개발 도구에서 설치하면 ARM GCC 빌드로 실행합니다.','warning');}return fspFallback?'interpreter':'ready';}
+  if(fspProject()){const was=fspFallback;fspFallback=need.length>0;if(was!==fspFallback){buildStatus();lockUpdate();}if(fspFallback){o.log('ARM GCC와 Renesas FSP가 설치되어 있지 않아 FPB-RA6E1 프로젝트를 내장 해석기로 실행합니다(지원하는 FSP API만). 개발 도구에서 설치하면 ARM GCC 빌드로 실행합니다.','warning');}return fspFallback?'interpreter':'ready';}
   if(!need.length)return 'ready';
   plan=need;for(const key of Object.keys(progress))delete progress[key];renderPlan();
   const dialog=$('sim-tools-dialog'),buttons=['sim-tools-install','sim-tools-interpreter'].map($);
@@ -208,7 +218,7 @@ export function setupNativeIde({o,editor,select,showMonitor,points,watches,toggl
   try{
    const tools=await api['install-tools'](plan.map(i=>i.id));
    for(const key of Object.keys(TOOL_LABELS))$('tool-'+key).value=tools[key]||'';
-   await api.configure(toolValues());$('native-install-start').hidden=true;$('native-install-status').textContent='설치를 마치고 도구 경로를 저장했습니다.';
+   await api.configure(toolValues());await recheckTools();$('native-install-start').hidden=true;$('native-install-status').textContent='설치를 마치고 도구 경로를 저장했습니다.';
   }catch(error){$('native-install-start').disabled=false;$('native-install-status').textContent='설치하지 못했습니다: '+error.message;}
   finally{installing=false;$('native-install-cancel').textContent='닫기';}
  });
@@ -229,9 +239,9 @@ export function setupNativeIde({o,editor,select,showMonitor,points,watches,toggl
  $('native-tools-cancel').onclick=()=>$('native-tools-dialog').close();
  for(const button of document.querySelectorAll('[data-tool-pick]'))button.onclick=()=>guard(async()=>{const value=await api['choose-tool'](button.dataset.toolPick);if(value)$('tool-'+button.dataset.toolPick).value=value;});
  const toolValues=()=>Object.fromEntries(Object.keys(TOOL_LABELS).map(key=>[key,$('tool-'+key).value.trim()]));
- $('native-tools-form').onsubmit=async e=>{e.preventDefault();try{await api.configure(toolValues());$('native-tools-dialog').close();queueLanguage();}catch(error){$('native-tools-error').textContent=error.message;}};
+ $('native-tools-form').onsubmit=async e=>{e.preventDefault();try{await api.configure(toolValues());$('native-tools-dialog').close();queueLanguage();await recheckTools();}catch(error){$('native-tools-error').textContent=error.message;}};
  $('native-tools-detect').onclick=()=>guard(async()=>{const tools=await api.detect();for(const key of Object.keys(TOOL_LABELS))if(!$('tool-'+key).value)$('tool-'+key).value=tools[key]||'';});
- $('native-tools-probe').onclick=async()=>{try{await api.configure(toolValues());$('native-tools-probe').disabled=true;const result=await api.probe();for(const key of Object.keys(TOOL_LABELS))$('tool-result-'+key).textContent=(result[key].ok?'확인됨 · ':'확인 필요 · ')+result[key].message;}catch(e){$('native-tools-error').textContent=e.message;}finally{$('native-tools-probe').disabled=false;}};
+ $('native-tools-probe').onclick=async()=>{try{await api.configure(toolValues());void recheckTools();$('native-tools-probe').disabled=true;const result=await api.probe();for(const key of Object.keys(TOOL_LABELS))$('tool-result-'+key).textContent=(result[key].ok?'확인됨 · ':'확인 필요 · ')+result[key].message;}catch(e){$('native-tools-error').textContent=e.message;}finally{$('native-tools-probe').disabled=false;}};
  $('native-connection').onclick=()=>{$('native-server').value=connection.server;$('native-endpoint').value=connection.endpoint;$('native-flash').checked=connection.flash;$('native-serial').value=connection.serial||'';$('native-connection-error').textContent='';$('native-connection-dialog').showModal();};
  $('native-connection-cancel').onclick=()=>$('native-connection-dialog').close();$('native-connection-form').onsubmit=e=>{e.preventDefault();const endpoint=$('native-endpoint').value.trim();if(!/^[\w.-]+:\d{1,5}$/.test(endpoint)||Number(endpoint.split(':')[1])<1||Number(endpoint.split(':')[1])>65535){$('native-connection-error').textContent='서버 주소를 host:port 형식으로 입력하세요.';return;}const serial=$('native-serial').value.trim();if(serial&&!/^\w{8,40}$/.test(serial)){$('native-connection-error').textContent='ST-LINK 시리얼은 영문·숫자로 입력하세요.';return;}connection={server:$('native-server').value,endpoint,flash:$('native-flash').checked,serial};localStorage.setItem('stm32lab.debugConnection',JSON.stringify(connection));$('native-connection-dialog').close();};
  $('language-toggle').onclick=()=>{language=!language;languageReady=false;editor.clearLanguageDiagnostics();$('language-toggle').textContent=language?'clangd 연결 중':'clangd 꺼짐';if(language){if(!gcc()){language=false;$('language-toggle').textContent='ARM 또는 Windows 대상 선택';return;}queueLanguage();}else void guard(()=>api['language-stop']());};
@@ -258,7 +268,7 @@ export function setupNativeIde({o,editor,select,showMonitor,points,watches,toggl
   if(event.type==='diagnostics'&&language&&gcc())editor.languageDiagnostics(event.file,event.items);
  });
  if(!api){for(const id of ['native-tools','native-target','language-toggle','terminal-start'])$(id).disabled=true;}
- return {selected,emulator,gccSimulation,ensureSimTools:()=>api?ensureSimTools():Promise.resolve('interpreter'),buildElf,config,busy,boards:()=>boards,paused:()=>selected()&&state==='paused',controls:control,sync,build,command,debugView,queueLanguage,async syncBreakpoints(){if(!['paused','running'].includes(state))return;await guard(()=>api.breakpoints(points()));},reset(){state='idle';lastStop=null;sequence++;editor.clearLanguageDiagnostics();clearBuild();sync();}};
+ return {selected,emulator,gccSimulation,ensureSimTools:()=>api?ensureSimTools():Promise.resolve('interpreter'),recheckTools,buildElf,config,busy,boards:()=>boards,paused:()=>selected()&&state==='paused',controls:control,sync,build,command,debugView,queueLanguage,async syncBreakpoints(){if(!['paused','running'].includes(state))return;await guard(()=>api.breakpoints(points()));},reset(){state='idle';lastStop=null;sequence++;editor.clearLanguageDiagnostics();clearBuild();sync();}};
 }
 function basename(value){return value.replaceAll('\\','/').split('/').at(-1);}
 // The compiler and GDB report a bare file name; the project may keep that file in a folder (Core/Src/app.c).
