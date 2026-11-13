@@ -9,7 +9,8 @@ export function displayValue(value,depth=0,seen=new Set()){
 }
 /** Variables at `frame` (0 = innermost call, as listed in the call stack). */
 export function inspectRuntime(runtime,frame=0){
-  const globalNames=new Set(runtime.program.globals.flatMap(s=>(s.declarations||[]).map(d=>d.name)));
+  // An FSP program's stand-in headers (enums, instances: program.preludeNames) are not the project's variables.
+  const globalNames=new Set(runtime.program.globals.flatMap(s=>(s.declarations||[]).map(d=>d.name)).filter(n=>!runtime.program.preludeNames?.has(n)));
   const selected=[...runtime.frames].reverse()[frame],scopes=frame&&selected?.scopes?selected.scopes:runtime.scopes;
   const locals=Object.assign(Object.create(null),...scopes.slice(1).map(s=>s.cells));
   const rows=cells=>Object.entries(cells).map(([name,cell])=>({name,type:cell.dataType||'',value:displayValue(cell.value)}));
