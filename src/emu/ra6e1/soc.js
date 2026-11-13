@@ -12,6 +12,7 @@ import { Gpt } from './gpt.js';
 import { Adc12 } from './adc.js';
 import { Agt } from './agt.js';
 import { Iic } from './iic.js';
+import { Rspi } from './spi.js';
 import { RA_PERIPHERAL_PINS, RA_SCI_CHANNELS, RA_GPT_CHANNELS, RA_AGT_CHANNELS, RA_IIC_CHANNELS, raPsel } from '../../ra-config.js';
 
 export { RaBus };
@@ -257,6 +258,9 @@ export class Ra6e1 {
     for (const ch of RA_IIC_CHANNELS) this.iics[ch] = new Iic(this, ch);
     this.agts = {};
     for (const ch of RA_AGT_CHANNELS) this.timers['AGT' + ch] = this.agts[ch] = new Agt(this, ch);
+    // RSPI: both channels of the chip are modelled (R_SPI0 0x4011A000, R_SPI1 0x4011A100); the configuration offers SPI1.
+    this.rspis = {};
+    for (const ch of [0, 1]) this.spis['SPI' + ch] = this.rspis[ch] = new Rspi(this, ch);
     const devices = [
       [RA_BASES.SYSTEM, 0x700, this.system],
       [RA_BASES.PORT, 0x1000, this.ports],
@@ -275,6 +279,7 @@ export class Ra6e1 {
       [0x40170000, 0x200, this.adc0],
       ...RA_AGT_CHANNELS.map(ch => [0x400e8000 + ch * 0x100, 0x100, this.agts[ch]]),
       ...RA_IIC_CHANNELS.map(ch => [0x4009f000 + ch * 0x100, 0x100, this.iics[ch]]),
+      ...[0, 1].map(ch => [0x4011a000 + ch * 0x100, 0x100, this.rspis[ch]]),
       [RA_BASES.CACHE, 0x400, plain('CACHE', 0x400)],
       // RTC: RCR2.RESET (bit 1) clears itself once the reset is done; START (bit 0) reads back what was written
       // (BSP R_BSP_Init_RTC waits on both after the sub-clock starts).
@@ -364,7 +369,8 @@ export class Ra6e1 {
   // The level a peripheral drives on a pin set to it (SCI TXD idles high while TE is set).
   peripheralOutput(pin, psel) {
     const signal = this.signalOf(pin, psel); if (!signal) return null;
-    const sci = /^SCI(\d)_(TXD|RXD)$/.exec(signal); if (sci) return this.scis[sci[1]]?.output(sci[2]) ?? null;
+    const sci = /^SCI(\d)_(TXD|RXD|SCK)$/.exec(signal); if (sci) return this.scis[sci[1]]?.output(sci[2]) ?? null;
+    const spi = /^SPI(\d)_(RSPCK|MOSI|MISO|SSL0)$/.exec(signal); if (spi) return this.rspis[spi[1]]?.output(spi[2]) ?? null;
     const gpt = /^GPT(\d)_(GTIOC[AB])$/.exec(signal); if (gpt) return this.gpts[gpt[1]]?.output(gpt[2]) ?? null;
     const iic = /^IIC(\d)_(SCL|SDA)$/.exec(signal); if (iic) return this.iics[iic[1]]?.output() ?? null;
     return null;
@@ -376,4 +382,6 @@ export class Ra6e1 {
   lineSources(pin) { return this.env.lineSources ? this.env.lineSources(pin) : []; }
   uartEvent(e) { this.env.uartEvent?.(e); }
   i2cBus(name, pins) { return this.env.i2cBus?.(name, pins) ?? null; }
+  // One byte with the SPI parts on the nets of `pins` ({sck, mosi, miso, nss}); 0xFF when nothing answers.
+  spiTransfer(name, pins, byte, cfg) { return this.env.spiTransfer ? this.env.spiTransfer(name, pins, byte, cfg) : 0xff; }
 }
