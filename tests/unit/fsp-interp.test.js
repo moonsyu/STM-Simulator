@@ -236,3 +236,81 @@ test('debugging: a breakpoint in hal_entry.c (main.c) stops there with hal_entry
  const view=inspectRuntime(session.runtime);assert.deepEqual(view.globals,[],'ra_blink has no globals of its own');
  const irq=open(example('ra_button_irq')).session;run(irq,20);assert.deepEqual(inspectRuntime(irq.runtime).globals.map(g=>g.name).sort(),['led2','presses']);
 });
+
+// ---- Review fixes (1.52 review of feature 42).
+// hal_entry() of the new-project template replaced by `body`, with `globals` before it.
+const program=(globals,body,mcu)=>({...base(),...(mcu?{mcu}:{}),code:raHalEntry().replace('void hal_entry(void)',globals+'\nvoid hal_entry(void)').replace('    /* TODO: add your own code here */',body)});
+
+test('review 1: loops that wait with R_BSP_SoftwareDelay never run out of steps, at 20 ms ticks (computing rounds before a 1 ms or 10 µs wait, a pin toggled every 2 µs)',()=>{
+ const cases=[
+  ['uint32_t sum = 0;\nuint32_t rounds = 0;','    while (1)\n    {\n        for (int k = 0; k < 3; k++)\n            for (int i = 0; i < 31; i++)\n            {\n                sum += i * 3;\n                sum ^= i;\n            }\n        rounds++;\n        R_BSP_SoftwareDelay(1, BSP_DELAY_UNITS_MILLISECONDS);\n    }',1000],
+  ['uint32_t sum = 0;\nuint32_t rounds = 0;','    while (1)\n    {\n        for (int i = 0; i < 20; i++)\n        {\n            sum += i;\n        }\n        rounds++;\n        R_BSP_SoftwareDelay(10, BSP_DELAY_UNITS_MICROSECONDS);\n    }',1e5],
+  ['uint32_t rounds = 0;','    while (1)\n    {\n        R_IOPORT_PinWrite(&g_ioport_ctrl, LED1, BSP_IO_LEVEL_HIGH);\n        R_BSP_SoftwareDelay(2, BSP_DELAY_UNITS_MICROSECONDS);\n        R_IOPORT_PinWrite(&g_ioport_ctrl, LED1, BSP_IO_LEVEL_LOW);\n        R_BSP_SoftwareDelay(2, BSP_DELAY_UNITS_MICROSECONDS);\n        rounds++;\n    }',2.5e5]
+ ];
+ for(const [globals,body,perSecond]of cases){
+  const {session}=open(program(globals,body));
+  assert.doesNotThrow(()=>run(session,200),body);
+  const rounds=session.readVariable('rounds'),expected=perSecond*.2;
+  assert.ok(Math.abs(rounds-expected)<=expected*.05+2,`${rounds} rounds in 200 ms, about ${expected}: ${body}`);
+ }
+});
+
+test('review 2: a computing loop costs microseconds, not 0.1 ms a round; polling a flag an interrupt sets (volatile or not) still lets time pass',()=>{
+ // 1000 rounds filling a buffer before LED1 goes on: on the board a few microseconds.
+ const fill=open(program('static uint32_t buf[1000];','    for (int i = 0; i < 1000; i++)\n    {\n        buf[i] = (uint32_t) i;\n    }\n    R_IOPORT_PinWrite(&g_ioport_ctrl, LED1, BSP_IO_LEVEL_HIGH);\n    while (1)\n    {\n    }')).session;
+ assert.deepEqual(edges(fill,'P408',5)[0],[1,1],'LED1 on in the first millisecond');assert.equal(fill.readVariable('buf[999]'),999);
+ // A 1000-round checksum each 10 ms: about 100 rounds a second, as on the board.
+ const sum=open(program('uint32_t loops = 0;\nuint32_t total = 0;\nstatic uint32_t checksum(void)\n{\n    uint32_t s = 0;\n    for (int i = 0; i < 1000; i++)\n    {\n        s += (uint32_t) i;\n    }\n    return s;\n}','    while (1)\n    {\n        total += checksum();\n        loops++;\n        R_BSP_SoftwareDelay(10, BSP_DELAY_UNITS_MILLISECONDS);\n    }')).session;
+ run(sum,1000);assert.ok(sum.readVariable('loops')>=98&&sum.readVariable('loops')<=101,String(sum.readVariable('loops')));
+ // A plain (not volatile) flag set by the GPT1 callback, polled in a helper: LED1 at the 500 ms cycle end.
+ const mcu=raExample('ra_gpt_pwm').mcu();
+ const poll=open(program('static bool done = false;\nvoid gpt1_callback(timer_callback_args_t *p_args)\n{\n    (void) p_args;\n    done = true;\n}\nstatic void wait_done(void)\n{\n    while (!done)\n    {\n    }\n}','    R_GPT_Open(&g_timer1_ctrl, &g_timer1_cfg);\n    R_GPT_Start(&g_timer1_ctrl);\n    wait_done();\n    R_IOPORT_PinWrite(&g_ioport_ctrl, LED2, BSP_IO_LEVEL_HIGH);\n    while (1)\n    {\n    }',mcu)).session;
+ const on=edges(poll,'P407',700).find(e=>e[1]===1);assert.ok(on&&Math.abs(on[0]-500)<=1,JSON.stringify(on));
+});
+
+test('review 3: an IIC transfer takes its bus time: a second Write meanwhile is FSP_ERR_IN_USE, the callback comes later; Abort drops the transfer and its callback',()=>{
+ const p=example('ra_iic_memory');
+ p.code=program('volatile uint32_t calls = 0;\nuint32_t calls_after_write = 99;\nfsp_err_t first = 99;\nfsp_err_t second = 99;\nfsp_err_t after_abort = 99;\nuint32_t calls_after_abort = 99;\nuint8_t data[4] = { 0x10, 1, 2, 3 };\nvoid i2c_master0_callback(i2c_master_callback_args_t *p_args)\n{\n    (void) p_args;\n    calls++;\n}',
+  ['    R_IIC_MASTER_Open(&g_i2c_master0_ctrl, &g_i2c_master0_cfg);','    first = R_IIC_MASTER_Write(&g_i2c_master0_ctrl, data, 4, false);','    calls_after_write = calls;','    second = R_IIC_MASTER_Write(&g_i2c_master0_ctrl, data, 4, false);','    R_BSP_SoftwareDelay(5, BSP_DELAY_UNITS_MILLISECONDS);',
+   '    R_IIC_MASTER_Write(&g_i2c_master0_ctrl, data, 4, false);','    R_IIC_MASTER_Abort(&g_i2c_master0_ctrl);','    after_abort = R_IIC_MASTER_Write(&g_i2c_master0_ctrl, data, 1, false);','    R_IIC_MASTER_Abort(&g_i2c_master0_ctrl);','    R_BSP_SoftwareDelay(5, BSP_DELAY_UNITS_MILLISECONDS);','    calls_after_abort = calls;','    while (1)\n    {\n    }'].join('\n')).code;
+ const {session}=open(p);run(session,40);
+ assert.deepEqual(['first','second','calls_after_write','after_abort','calls_after_abort'].map(n=>session.readVariable(n)),[0,8,0,0,1]);
+});
+
+test('review 4: SCI UART — a write chained from TX_DATA_EMPTY gives one TX_COMPLETE; Abort(TX) and Close stop the bytes not sent and their events',()=>{
+ const p=example('ra_uart_echo');
+ p.code=program('volatile uint32_t txe = 0;\nvolatile uint32_t tei = 0;\nstatic bool chained = false;\nstatic uint8_t ab[] = "AB";\nstatic uint8_t cd[] = "CD";\nstatic uint8_t text[] = "0123456789abcdefghij";\nvoid user_uart9_callback(uart_callback_args_t *p_args)\n{\n    if (UART_EVENT_TX_DATA_EMPTY == p_args->event)\n    {\n        txe++;\n        if (!chained)\n        {\n            chained = true;\n            R_SCI_UART_Write(&g_uart9_ctrl, cd, 2);\n        }\n    }\n    if (UART_EVENT_TX_COMPLETE == p_args->event)\n    {\n        tei++;\n    }\n}\nuint32_t txe_1 = 0;\nuint32_t tei_1 = 0;',
+  ['    R_SCI_UART_Open(&g_uart9_ctrl, &g_uart9_cfg);','    R_SCI_UART_Write(&g_uart9_ctrl, ab, 2);','    R_BSP_SoftwareDelay(5, BSP_DELAY_UNITS_MILLISECONDS);','    txe_1 = txe;','    tei_1 = tei;',
+   '    R_SCI_UART_Write(&g_uart9_ctrl, text, 20);','    R_SCI_UART_Abort(&g_uart9_ctrl, UART_DIR_TX);','    R_BSP_SoftwareDelay(5, BSP_DELAY_UNITS_MILLISECONDS);',
+   '    R_SCI_UART_Write(&g_uart9_ctrl, text, 20);','    R_BSP_SoftwareDelay(1, BSP_DELAY_UNITS_MILLISECONDS);','    R_SCI_UART_Close(&g_uart9_ctrl);','    while (1)\n    {\n    }'].join('\n')).code;
+ const {session}=open(p);run(session,40);
+ assert.deepEqual([session.readVariable('txe_1'),session.readVariable('tei_1')],[2,1],'TXI after each write, one TEI at the end');
+ assert.deepEqual([session.readVariable('txe'),session.readVariable('tei')],[2,1],'no event from the aborted or closed writes');
+ const got=session.buses.received.get('term');assert.ok(got.startsWith('ABCD'),got);
+ // The aborted write sent nothing; the closed one only the frames started in its first millisecond (86.8 µs each).
+ assert.equal(got.slice(4),'0123456789abcdefghij'.slice(0,got.length-4));assert.equal(got.length-4,12,got);
+});
+
+test('review 5: R_GPT_PeriodSet clears the counter of a stopped timer; a counting one keeps its cycle and takes the period at the next overflow',()=>{
+ const mcu=raExample('ra_gpt_pwm').mcu();
+ const {session}=open(program('volatile uint32_t ticks = 0;\ntimer_status_t stopped;\ntimer_status_t cleared;\ntimer_status_t counting;\nvoid gpt1_callback(timer_callback_args_t *p_args)\n{\n    (void) p_args;\n    ticks++;\n}',
+  ['    R_GPT_Open(&g_timer1_ctrl, &g_timer1_cfg);','    R_GPT_Start(&g_timer1_ctrl);','    R_BSP_SoftwareDelay(100, BSP_DELAY_UNITS_MILLISECONDS);','    R_GPT_Stop(&g_timer1_ctrl);','    R_GPT_StatusGet(&g_timer1_ctrl, &stopped);',
+   '    R_GPT_PeriodSet(&g_timer1_ctrl, 10000000);','    R_GPT_StatusGet(&g_timer1_ctrl, &cleared);','    R_GPT_Start(&g_timer1_ctrl);','    R_BSP_SoftwareDelay(50, BSP_DELAY_UNITS_MILLISECONDS);',
+   '    R_GPT_PeriodSet(&g_timer1_ctrl, 25000000);','    R_GPT_StatusGet(&g_timer1_ctrl, &counting);','    while (1)\n    {\n    }'].join('\n'),mcu));
+ run(session,160);assert.equal(session.readVariable('ticks'),0);
+ assert.ok(Math.abs(session.readVariable('stopped.counter')-1e7)<1e4,'100 ms at 100 MHz');assert.equal(session.readVariable('cleared.counter'),0,'GTCLR');
+ assert.ok(Math.abs(session.readVariable('counting.counter')-5e6)<1e4,'still counting the 100 ms cycle');
+ // Cycle ends at 200 ms (the old 100 ms period), then every 250 ms: 450, 700.
+ const at=[];let last=0;run(session,800,t=>{const n=session.readVariable('ticks');if(n!==last){at.push(t);last=n;}},1);
+ assert.deepEqual(at,[200,450,700]);
+});
+
+test('review 8 and 9: a project header named like an FSP header (src/board.h) is the one included, and its globals show in the debugger',()=>{
+ const p={...base(),code:raHalEntry().replace('#include "hal_data.h"','#include "hal_data.h"\n#include "board.h"').replace('    /* TODO: add your own code here */','    board_var += MY_VALUE;'),firmware:{mode:'fsp',files:[{name:'src/board.h',text:'#define MY_VALUE 35\nint board_var = 7;\n'}]}};
+ const {session}=open(p);run(session,20);
+ assert.equal(session.readVariable('board_var'),42);
+ // The header's own names (its #define as well, as for STM32 projects) are shown; the FSP stand-in's are not.
+ assert.deepEqual(inspectRuntime(session.runtime).globals.map(g=>g.name).sort(),['MY_VALUE','board_var']);
+ // A file of its own at the top (board.h) also wins over the stand-in.
+ assert.equal(compileFsp(p.code,[{name:'board.h',text:'#define MY_VALUE 1\nint board_var = 1;\n'}],raDefaultMcu()).preludeNames.has('board_var'),false);
+});

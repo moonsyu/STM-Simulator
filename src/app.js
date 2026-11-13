@@ -127,7 +127,7 @@ export const firmwareKey=()=>JSON.stringify([state.project.code,state.project.fi
 // Other STM32 boards that run this time, and their ELFs for the emulator (built from each board's own view).
 export const runStm32=()=>{const scope=runScope();return scope==='stm32'?[]:stm32Boards(state.project).filter(p=>scope==='all'||scope===p.id);};
 state.boardElfs={};state.boardElfKeys={};
-$('step').onclick=()=>{if(!state.runtime||state.status==='error'){if(state.ide?.emulator()){void startRun({}).then(ok=>{if(ok){state.status='paused';refresh();}});return;}initializeRuntime();}else {try{state.simTime+=20;state.result=state.session.tick(state.simTime);recompute();}catch(e){state.status='error';log(e.message,'error');}}refresh();};
+$('step').onclick=()=>{if(!state.runtime||state.status==='error'){if(state.ide?.emulator()||state.ide?.gccSimulation?.(true)){void startRun({}).then(ok=>{if(ok){state.status='paused';refresh();}});return;}initializeRuntime();}else {try{state.simTime+=20;state.result=state.session.tick(state.simTime);recompute();}catch(e){state.status='error';log(e.message,'error');}}refresh();};
 setInterval(()=>{
  if(state.status!=='running')return;
  try{state.simTime+=20;state.result=state.session.tick(state.simTime);recompute();
