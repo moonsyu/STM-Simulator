@@ -4,7 +4,7 @@
 const fs=require('node:fs/promises'),path=require('node:path');
 
 // FSP drivers by the header the generated or user code includes.
-const MODULES=['r_ioport','r_icu','r_sci_uart','r_gpt','r_agt','r_adc','r_iic_master'];
+const MODULES=['r_ioport','r_icu','r_sci_uart','r_gpt','r_agt','r_adc','r_iic_master','r_spi','r_sci_spi'];
 const exists=p=>fs.access(p).then(()=>true,()=>false);
 
 /** Writes the generated FSP files into `directory` and returns the compile units, include flags and linker flags. */

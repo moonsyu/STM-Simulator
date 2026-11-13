@@ -82,7 +82,7 @@ const C_WORDS=new Set(('auto break case char const continue default do double el
 export function raNameProblem(name){
  if(C_WORDS.has(name))return `${name}은(는) C나 생성 코드가 쓰는 이름입니다`;
  if(/^(R_|BSP_|FSP_|IOPORT_|ELC_|ICU_|__)/.test(name)||/^_[A-Z]/.test(name))return `${name}: R_ · BSP_ · FSP_ · IOPORT_ 로 시작하는 이름과 __ 로 시작하는 이름은 FSP와 컴파일러가 씁니다`;
- if(/^g_(ioport|external_irq\d+|uart\d+|timer\d+|agt\d+|adc\d+|i2c_master\d+|bsp_pin_cfg)(_ctrl|_cfg|_extend|_cfg_extend|_channel_cfg)?$/.test(name))return `${name}은(는) 생성 코드의 인스턴스 이름입니다`;
+ if(/^g_(ioport|external_irq\d+|uart\d+|timer\d+|agt\d+|adc\d+|i2c_master\d+|spi\d+|sci_spi\d+|bsp_pin_cfg)(_ctrl|_cfg|_extend|_cfg_extend|_ext_cfg|_channel_cfg)?$/.test(name))return `${name}은(는) 생성 코드의 인스턴스 이름입니다`;
  return '';
 }
 const checkName=(where,name)=>{const problem=raNameProblem(name);if(problem)throw new Error(`${where}: ${problem}. 다른 이름을 쓰세요.`);};
@@ -133,7 +133,14 @@ export function validateRaMcu(mcu){
    if(iic){out.peripherals[id]=validateIic(id,Number(iic[1]),p,fam,mcu.clock,signals);continue;}
    const agt=/^AGT(\d)$/.exec(id);
    if(agt){out.peripherals[id]=validateAgt(id,Number(agt[1]),p,fam,mcu.clock);continue;}
+   const spi=/^SPI(\d)$/.exec(id);
+   if(spi){out.peripherals[id]=validateSpi(id,Number(spi[1]),p,fam,mcu.clock,signals);continue;}
    const sci=/^SCI(\d)$/.exec(id);if(!sci||!RA_SCI_CHANNELS.includes(Number(sci[1]))||!p||typeof p.enabled!=='boolean')throw new Error(`${id}: 지원하지 않는 주변장치입니다.`);
+   // One SCI channel is either a UART (r_sci_uart, the default) or a simple SPI master (r_sci_spi), as RASC adds one
+   // stack or the other on the channel; the UART settings keep their shape so earlier projects stay unchanged.
+   if(p.mode!==undefined&&!['UART','SPI'].includes(p.mode))throw new Error(`${id}: 동작 모드는 UART 또는 Simple SPI입니다.`);
+   if(p.mode==='SPI'){out.peripherals[id]=validateSciSpi(id,Number(sci[1]),p,fam,mcu.clock,signals);continue;}
+   if(signals.has(id+'_SCK'))throw new Error(`${signals.get(id+'_SCK')}: ${id}_SCK는 Simple SPI(r_sci_spi) 모드에서 씁니다. ${id}의 모드를 Simple SPI로 바꾸세요.`);
    const q={enabled:p.enabled,baud:p.baud??115200,callback:p.callback??`user_uart${sci[1]}_callback`,priority:p.priority??12};
    if(!Number.isInteger(q.baud)||q.baud<300||q.baud>2000000)throw new Error(`${id}: 통신 속도는 300~2000000 bps입니다.`);
    if(typeof q.callback!=='string'||!C_NAME.test(q.callback))throw new Error(`${id}: 콜백 이름은 C 식별자로 쓰세요.`);
@@ -174,17 +181,45 @@ export function validateRaMcu(mcu){
 
 // Peripheral pin functions (Table 1.16, LQFP100) with the PmnPFS.PSEL value that selects them (FSP r_ioport.h
 // IOPORT_PERIPHERAL_*): SCI0/2/4 = 4, SCI1/3/9 = 5, GPT GTIOCnA/B = 3 (IOPORT_PERIPHERAL_GPT1, every channel),
-// IIC SCLn/SDAn = 7 (IOPORT_PERIPHERAL_IIC).
+// IIC SCLn/SDAn = 7 (IOPORT_PERIPHERAL_IIC), RSPI = 6 (IOPORT_PERIPHERAL_SPI).
+// SPI1 (MISOB/MOSIB/RSPCKB/SSLB0): pin group A P100-P103 (Arduino D12/D11/D13/D10 and Pmod1: the RA6E1 datasheet lists
+// P100 as MISOB_A, the FPB-RA6E1 schematic labels D10-D13 SSLB0/MOSIB/MISOB/RSPCKB), pin group B P410-P413 (Zephyr's
+// fpb_ra6e1 pinctrl for spi1). SPI0's pins are not offered: they could not be checked against the hardware manual.
+// SCI9_SCK (P111, Arduino-side Pmod2 "SCK9" on the schematic) is the clock of SCI9 in simple SPI mode, where TXD9 is
+// MOSI9 and RXD9 is MISO9.
 export const RA_PERIPHERAL_PINS=Object.freeze({
  SCI0_TXD:['P101','P411'],SCI0_RXD:['P100','P410'],SCI1_TXD:['P213'],SCI1_RXD:['P212','P708'],
  SCI2_TXD:['P302','P112'],SCI2_RXD:['P301','P113'],SCI3_TXD:['P409'],SCI3_RXD:['P408'],
- SCI4_TXD:['P207','P205'],SCI4_RXD:['P206'],SCI9_TXD:['P109','P602'],SCI9_RXD:['P110','P601'],
+ SCI4_TXD:['P207','P205'],SCI4_RXD:['P206'],SCI9_TXD:['P109','P602'],SCI9_RXD:['P110','P601'],SCI9_SCK:['P111'],
+ SPI1_MISO:['P100','P410'],SPI1_MOSI:['P101','P411'],SPI1_RSPCK:['P102','P412'],SPI1_SSL0:['P103','P413'],
  GPT1_GTIOCA:['P105','P109','P405'],GPT1_GTIOCB:['P104','P110','P406'],GPT2_GTIOCA:['P103','P113'],GPT2_GTIOCB:['P102','P114'],
  GPT4_GTIOCA:['P205','P302','P115'],GPT4_GTIOCB:['P301','P608'],GPT5_GTIOCA:['P101','P609'],GPT5_GTIOCB:['P100','P610'],
  GPT6_GTIOCA:['P400','P407','P601'],GPT6_GTIOCB:['P401','P408','P600'],GPT7_GTIOCA:['P304'],GPT7_GTIOCB:['P303','P602'],
  IIC0_SCL:['P400','P408'],IIC0_SDA:['P401','P407'],IIC1_SCL:['P205'],IIC1_SDA:['P206']
 });
 export const RA_SCI_CHANNELS=Object.freeze([0,1,2,3,4,9]);
+// RSPI channels offered (BSP_FEATURE_SPI_NUM_CHANNELS is 2; only SPI1's pins are confirmed, see above) and the SCI channels
+// with a simple SPI clock pin (SCKn) in the pin table.
+export const RA_SPI_CHANNELS=Object.freeze([1]);
+export const RA_SCI_SPI_CHANNELS=Object.freeze([9]);
+/** RSPI bit-rate settings (SPBR, SPCMD0.BRDV) for `rate` from PCLKA (BSP_FEATURE_SPI_CLOCK), as R_SPI_CalculateBitrate and
+ * RASC compute them: the smallest divider PCLKA / (2 x (SPBR + 1) x 2^BRDV) not faster than the rate. */
+export function raSpiBitrate(pclka,rate){
+ const divider=Math.ceil(pclka/rate);
+ if(!(rate>0)||divider>4096)throw new Error(`SPI ${rate} bps: PCLKA ${pclka/1e6} MHz로 만들 수 없는 속도입니다(최저 ${Math.ceil(pclka/4096)} bps).`);
+ if(divider<2)return {spbr:0,brdv:0,actual:pclka/2};
+ let brdv=0;while(brdv<3&&divider>512<<brdv)brdv++;
+ const step=2*2**brdv,spbr=Math.ceil(divider/step)-1;
+ return {spbr,brdv,actual:pclka/(step*(spbr+1))};
+}
+/** SCI simple SPI (clock synchronous) bit-rate settings, as R_SCI_SPI_CalculateBitrate computes them without MDDR:
+ * PCLKA / (4 x 4^CKS x (BRR + 1)), the largest rate not above `rate`. */
+export function raSciSpiBitrate(pclka,rate){
+ if(!(rate>0)||rate<Math.ceil(pclka/65536))throw new Error(`Simple SPI ${rate} bps: PCLKA ${pclka/1e6} MHz로 만들 수 없는 속도입니다(최저 ${Math.ceil(pclka/65536)} bps).`);
+ let cks=0,brr=0;
+ for(;cks<4;cks++){brr=Math.ceil(pclka/(4**(cks+1)*rate))-1;if(brr<=255)break;}
+ return {cks,brr,actual:pclka/(4**(cks+1)*(brr+1))};
+}
 // GPT (Table 1.16 GTIOCnA/B, PSEL 00011b on every port): GPT1/2 are 32-bit, GPT4-7 16-bit (BSP_PERIPHERAL_GPT_CHANNEL_MASK 0xF6).
 // ADC12 unit 0 analog inputs (Table 1.16 ADC12 column; BSP_FEATURE_ADC_UNIT_0_CHANNELS_MASK 0x31FF).
 export const RA_ADC_CHANNELS=Object.freeze({P000:0,P001:1,P002:2,P003:3,P004:4,P005:5,P006:6,P007:7,P008:8,P014:12,P015:13});
@@ -242,6 +277,39 @@ function validateIic(id,ch,p,fam,clock,signals){
  if(q.enabled&&(!signals.has(id+'_SCL')||!signals.has(id+'_SDA')))throw new Error(`${id}: SCL과 SDA 핀을 모두 정하세요.`);
  return q;
 }
+// SPI master settings shared by r_spi and r_sci_spi (spi_cfg_t): bit rate, clock polarity/phase, bit order, the callback
+// (both drivers assert p_callback) and one interrupt priority for RXI/TXI/TEI/ERI. The data width is not a setting: FSP
+// takes it per call (spi_bit_width_t of R_SPI_Write/Read/WriteRead).
+function spiCommon(id,p,defaults){
+ const q={enabled:p.enabled,...(defaults.mode?{mode:defaults.mode}:{}),bitrate:p.bitrate??1000000,cpol:p.cpol??0,cpha:p.cpha??0,bitOrder:p.bitOrder??'MSB',...(defaults.ssl?{ssl:p.ssl??defaults.ssl}:{}),callback:p.callback??defaults.callback,priority:p.priority??12};
+ if(typeof q.bitrate!=='number'||!Number.isInteger(q.bitrate))throw new Error(`${id}: 비트레이트(bps)는 정수로 쓰세요.`);
+ if(![0,1].includes(q.cpol)||![0,1].includes(q.cpha))throw new Error(`${id}: Clock Polarity·Clock Phase를 확인하세요.`);
+ if(!['MSB','LSB'].includes(q.bitOrder))throw new Error(`${id}: Bit Order는 MSB First 또는 LSB First입니다.`);
+ if(typeof q.callback!=='string'||!C_NAME.test(q.callback))throw new Error(`${id}: 콜백 이름은 C 식별자로 쓰세요(${defaults.module}는 콜백으로 전송 완료를 알립니다).`);
+ if(!Number.isInteger(q.priority)||q.priority<0||q.priority>15)throw new Error(`${id}: 인터럽트 우선순위는 0~15입니다.`);
+ return q;
+}
+function validateSpi(id,ch,p,fam,clock,signals){
+ if(!RA_SPI_CHANNELS.includes(ch)||!p||typeof p.enabled!=='boolean')throw new Error(`${id}: 지원하지 않는 주변장치입니다${ch===0?' (SPI0의 핀은 아직 확인하지 못해 SPI1만 씁니다)':''}.`);
+ const q=spiCommon(id,p,{callback:`spi${ch}_callback`,module:'r_spi',ssl:signals.has(id+'_SSL0')?'SSL0':'NONE'});
+ if(!['SSL0','NONE'].includes(q.ssl))throw new Error(`${id}: Slave Select는 SSL0(하드웨어) 또는 사용 안 함(GPIO로 CS)입니다.`);
+ const pclka=raClockHz({family:fam.id,clock},'pclka');
+ if(q.bitrate<1000||q.bitrate>pclka/2)throw new Error(`${id}: 비트레이트는 1000 bps~PCLKA/2(${pclka/2} bps)입니다.`);
+ raSpiBitrate(pclka,q.bitrate);
+ if(q.enabled){
+  if(!signals.has(id+'_RSPCK')||!signals.has(id+'_MOSI')&&!signals.has(id+'_MISO'))throw new Error(`${id}: RSPCK 핀과 MOSI 또는 MISO 핀을 정하세요.`);
+  if(q.ssl==='SSL0'&&!signals.has(id+'_SSL0'))throw new Error(`${id}: Slave Select가 SSL0이면 SSL0 핀(P103 또는 P413)을 정하세요. GPIO로 CS를 직접 내리려면 Slave Select를 사용 안 함으로 바꾸세요.`);
+  if(q.ssl==='NONE'&&signals.has(id+'_SSL0'))throw new Error(`${signals.get(id+'_SSL0')}: SSL0 핀을 쓰려면 ${id}의 Slave Select를 SSL0으로 정하세요.`);
+ }
+ return q;
+}
+function validateSciSpi(id,ch,p,fam,clock,signals){
+ if(!RA_SCI_SPI_CHANNELS.includes(ch)||typeof p.enabled!=='boolean')throw new Error(`${id}: Simple SPI(r_sci_spi)는 SCK 핀이 있는 SCI${RA_SCI_SPI_CHANNELS.join('·SCI')}에서 씁니다.`);
+ const q=spiCommon(id,p,{mode:'SPI',callback:`sci_spi${ch}_callback`,module:'r_sci_spi'}),pclka=raClockHz({family:fam.id,clock},'pclka');
+ if(q.bitrate<Math.ceil(pclka/65536)||q.bitrate>pclka/4)throw new Error(`${id}: 비트레이트는 ${Math.ceil(pclka/65536)}~${pclka/4} bps(PCLKA/4)입니다.`);
+ if(q.enabled&&(!signals.has(id+'_SCK')||!signals.has(id+'_TXD')&&!signals.has(id+'_RXD')))throw new Error(`${id}: Simple SPI는 SCK 핀과 TXD(MOSI) 또는 RXD(MISO) 핀을 정하세요.`);
+ return q;
+}
 function validateAgt(id,ch,p,fam,clock){
  if(!RA_AGT_CHANNELS.includes(ch)||!p||typeof p.enabled!=='boolean')throw new Error(`${id}: 지원하지 않는 주변장치입니다.`);
  const q={enabled:p.enabled,period:p.period??100,unit:p.unit??'ms',callback:p.callback??`agt${ch}_callback`,priority:p.priority??12};
@@ -268,6 +336,7 @@ export function raPsel(signal){
  const sci=/^SCI(\d)_/.exec(signal);if(sci)return [0,2,4].includes(Number(sci[1]))?4:5;
  if(/^GPT\d_GTIOC[AB]$/.test(signal))return 3;
  if(/^IIC\d_(SCL|SDA)$/.test(signal))return 7;
+ if(/^SPI\d_(RSPCK|MOSI|MISO|SSL\d)$/.test(signal))return 6;
  throw new Error(`${signal}: 지원하지 않는 주변장치 신호입니다.`);
 }
-export const RA_PSEL_NAMES=Object.freeze({3:'IOPORT_PERIPHERAL_GPT1',7:'IOPORT_PERIPHERAL_IIC',4:'IOPORT_PERIPHERAL_SCI0_2_4_6_8',5:'IOPORT_PERIPHERAL_SCI1_3_5_7_9'});
+export const RA_PSEL_NAMES=Object.freeze({3:'IOPORT_PERIPHERAL_GPT1',7:'IOPORT_PERIPHERAL_IIC',6:'IOPORT_PERIPHERAL_SPI',4:'IOPORT_PERIPHERAL_SCI0_2_4_6_8',5:'IOPORT_PERIPHERAL_SCI1_3_5_7_9'});
