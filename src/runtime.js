@@ -10,6 +10,19 @@ const checkedNumber=v=>{if(typeof v!=='number'||!Number.isFinite(v))throw new Er
 const integer=v=>Math.trunc(checkedNumber(v));
 const isArray=v=>v?.kind==='array', isPointer=v=>v?.kind==='pointer';
 const LOOP_ITERATION_US=.1,SPIN_LOOPS=32,BUSY_LOOPS=4096,STEP_NS=2;
+// The variable an expression names at its root (i, buf[i], p->n, s.count).
+const rootName=n=>{while(n&&(n.type==='index'||n.type==='member'))n=n.object;return n?.type==='name'?n.name:null;};
+const walk=(n,visit)=>{if(!n||typeof n!=='object')return;if(Array.isArray(n)){for(const x of n)walk(x,visit);return;}if(typeof n.type==='string')visit(n);for(const k in n)if(k!=='loc'&&n[k]&&typeof n[k]==='object')walk(n[k],visit);};
+// A loop whose body or update writes a variable its test reads (cached on the loop node).
+const counting=new WeakMap();
+const countingLoop=s=>{
+  if(counting.has(s))return counting.get(s);
+  const read=new Set(),written=new Set();
+  walk(s.test,n=>{if(n.type==='name')read.add(n.name);});
+  const write=n=>{if(n.type==='assign'||n.type==='postfix'||(n.type==='unary'&&(n.op==='++'||n.op==='--'))){const name=rootName(n.a);if(name)written.add(name);}};
+  walk(s.body,write);walk(s.update,write);walk(s.test,write);
+  const result=[...read].some(name=>written.has(name));counting.set(s,result);return result;
+};
 
 export class Runtime {
   constructor(program,api={}){
@@ -296,7 +309,9 @@ export class Runtime {
             const waited=this.microTime>mark,polled=this.polls>polls;
             if(s.test.type==='literal'&&truth(s.test.value)&&!s.update&&s.body.type==='block'&&s.body.body.every(n=>n.type==='empty')){this.steps=0;this.idleMain=true;yield Infinity;}
             else if(waited){spin=0;this.steps=0;}
-            else if(++spin>=(polled?SPIN_LOOPS:BUSY_LOOPS)){this.steps=0;yield .1;}
+            // A counting loop (its body or update writes a variable its test reads: for i < N; i++, while n--) ends by
+            // itself, so it only costs its steps however many rounds it has.
+            else if(++spin>=(polled?SPIN_LOOPS:BUSY_LOOPS)&&(polled||!countingLoop(s))){this.steps=0;yield .1;}
             else if(this.steps>15000){const ms=this.steps*STEP_NS/1e6;this.steps=0;yield ms;}
             mark=this.microTime;polls=this.polls;
           }

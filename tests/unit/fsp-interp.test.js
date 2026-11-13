@@ -262,6 +262,11 @@ test('review 2: a computing loop costs microseconds, not 0.1 ms a round; polling
  // A 1000-round checksum each 10 ms: about 100 rounds a second, as on the board.
  const sum=open(program('uint32_t loops = 0;\nuint32_t total = 0;\nstatic uint32_t checksum(void)\n{\n    uint32_t s = 0;\n    for (int i = 0; i < 1000; i++)\n    {\n        s += (uint32_t) i;\n    }\n    return s;\n}','    while (1)\n    {\n        total += checksum();\n        loops++;\n        R_BSP_SoftwareDelay(10, BSP_DELAY_UNITS_MILLISECONDS);\n    }')).session;
  run(sum,1000);assert.ok(sum.readVariable('loops')>=98&&sum.readVariable('loops')<=101,String(sum.readVariable('loops')));
+ // Longer counting loops (for and while, past 4096 rounds) still cost only their steps: 20000 rounds is well under 1 ms.
+ for(const loop of ['    for (uint32_t i = 0; i < 20000; i++)\n    {\n        acc += i;\n    }','    uint32_t n = 20000;\n    while (n--)\n    {\n        acc += n;\n    }','    uint32_t k = 0;\n    while (k < 20000)\n    {\n        acc += k;\n        k++;\n    }']){
+  const long=open(program('uint32_t acc = 0;','    R_BSP_SoftwareDelay(5, BSP_DELAY_UNITS_MILLISECONDS);\n'+loop+'\n    R_IOPORT_PinWrite(&g_ioport_ctrl, LED1, BSP_IO_LEVEL_HIGH);\n    while (1)\n    {\n    }')).session;
+  const on=edges(long,'P408',20).find(e=>e[1]===1);assert.ok(on&&on[0]<=6,`${JSON.stringify(on)}: ${loop}`);
+ }
  // A plain (not volatile) flag set by the GPT1 callback, polled in a helper: LED1 at the 500 ms cycle end.
  const mcu=raExample('ra_gpt_pwm').mcu();
  const poll=open(program('static bool done = false;\nvoid gpt1_callback(timer_callback_args_t *p_args)\n{\n    (void) p_args;\n    done = true;\n}\nstatic void wait_done(void)\n{\n    while (!done)\n    {\n    }\n}','    R_GPT_Open(&g_timer1_ctrl, &g_timer1_cfg);\n    R_GPT_Start(&g_timer1_ctrl);\n    wait_done();\n    R_IOPORT_PinWrite(&g_ioport_ctrl, LED2, BSP_IO_LEVEL_HIGH);\n    while (1)\n    {\n    }',mcu)).session;
