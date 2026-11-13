@@ -44,7 +44,9 @@ export class SignalRecorder{
  has(id){return this.map.has(id)||this.buses.has(id);}
  lines(busId){return [...this.map.values()].filter(c=>(c.group??c.id)===busId);}
  channels(){return [...this.buses.values()].map(b=>({id:b.id,label:b.label,protocol:b.protocol,lines:this.lines(b.id).map(c=>({id:c.id,label:c.label,pins:[...c.pins]}))}));}
- clear(){for(const c of this.map.values()){c.edges=[];c.frames=[];c.dropped=0;}}
+ clear(){for(const c of this.map.values()){c.edges=[];c.frames=[];c.dropped=0;if(c.spans)c.spans=[];}}
+ // A transfer's frame width and bit order on a clock line from fromUs to toUs (decodeClocked reads its frames by it).
+ span(id,{fromUs,toUs,bits=8,lsbFirst=false}){const ch=this.map.get(id)??this.define(id);(ch.spans??=[]).push({fromUs,toUs,bits,lsbFirst:!!lsbFirst});if(ch.spans.length>this.frameLimit)ch.spans.splice(0,ch.spans.length-this.frameLimit);}
  edge(id,us,level){const ch=this.map.get(id)??this.define(id);push(ch.edges,us,level?1:0);if(ch.edges.length>this.limit){const n=Math.floor(this.limit/4);ch.idle=ch.edges[n-1][1];ch.edges.splice(0,n);ch.dropped+=n;}}
  write(id,edges){for(const [us,level]of edges)this.edge(id,us,level);}
  level(id,us){const ch=this.map.get(id);return ch?levelAt(ch.edges,us,ch.idle):null;}
@@ -115,12 +117,15 @@ export function encodeSpi(startUs,value,{clockHz=1e6,cpol=0,cpha=0,lsbFirst=fals
 }
 // Frames of `bits` bits (4-32) back to back, MOSI and MISO values already exchanged: the RA SPI masters on the FSP
 // interpreter, whose frames are not always whole bytes (r_spi takes 8-16, 20, 24 and 32 bits).
-export function encodeSpiFrames(startUs,frames,{clockHz=1e6,cpol=0,cpha=0,lsbFirst=false,bits=8}={}){
+// The values are drawn as given (bit errors are the caller's: it flips them before the devices answer); the noise adds
+// clock jitter and glitches as encodeSpi does.
+export function encodeSpiFrames(startUs,frames,{clockHz=1e6,cpol=0,cpha=0,lsbFirst=false,bits=8,noise=QUIET}={}){
  const H=5e5/clockHz,sck=[[startUs,cpol]],mosi=[[startUs,0]],miso=[[startUs,1]];let t=startUs;
  for(const {tx,rx} of frames)for(let i=0;i<bits;i++){
   const k=lsbFirst?i:bits-1-i,m=Math.floor(tx/2**k)%2,s=Math.floor(rx/2**k)%2;
-  if(cpha===0){push(mosi,t,m);push(miso,t,s);push(sck,t+H,cpol^1);push(sck,t+2*H,cpol);}
-  else{push(sck,t,cpol^1);push(mosi,t+H/4,m);push(miso,t+H/4,s);push(sck,t+H,cpol);}
+  if(cpha===0){push(mosi,t,m);push(miso,t,s);push(sck,t+H+noise.jitter(),cpol^1);push(sck,t+2*H,cpol);}
+  else{push(sck,t+Math.max(0,noise.jitter()),cpol^1);push(mosi,t+H/4,m);push(miso,t+H/4,s);push(sck,t+H,cpol);}
+  if(noise.glitch()){const g=t+H*.5;push(sck,g,cpol^1);push(sck,g+H/8,cpol);}
   t+=2*H;
  }
  return {sck,mosi,miso,endUs:t};
@@ -168,13 +173,15 @@ function decodeI2c({role}){
 function decodeClocked({role,lead},{clock='sck',out='mosi',inp='miso',select='nss',lsb}){
  const ck=role(clock);if(!ck)return [];const tx=role(out),rx=role(inp),cs=role(select),p=ck.params,cpol=p.cpol??0,cpha=p.cpha??0,lsbFirst=lsb??!!p.lsbFirst,frames=[];
  const capture=[];for(let i=0;i<ck.edges.length;i++){const [t,l]=ck.edges[i],prev=i?ck.edges[i-1][1]:ck.idle;if(l===prev)continue;const leading=prev===cpol;if(leading===(cpha===0))capture.push(t);}
- let group=[],last=-Infinity;const gap=p.gapUs??(p.clockHz?16e6/p.clockHz:50);
+ let group=[],last=-Infinity,groupSpan=null;const gap=p.gapUs??(p.clockHz?16e6/p.clockHz:50);
+ // A transmitter that records its transfers (SignalRecorder.span: the RA SPI masters, 8-32 bit frames) gives each stretch
+ // of the clock line its own frame width and bit order; elsewhere frames are 8 bits in the line's bit order.
+ const spans=ck.spans||[],spanAt=t=>{let lo=0,hi=spans.length-1,found=null;while(lo<=hi){const m=(lo+hi)>>1;if(spans[m].fromUs<=t+1e-9){found=spans[m];lo=m+1;}else hi=m-1;}return found&&t<=found.toUs+1e-9?found:null;};
  const flush=()=>{if(!group.length)return;const n=group.length,mb=group.map(t=>tx?levelAt(tx.edges,t-1e-6,tx.idle):1),sb=group.map(t=>rx?levelAt(rx.edges,t-1e-6,rx.idle):1);
-  // Frames of p.bits (8 unless the line says otherwise, as the RA SPI masters do for 9-32 bit frames).
-  const w=p.bits||8,word=(list,i)=>list.slice(i,i+w).reduce((v,b,j)=>v+b*2**(lsbFirst?j:w-1-j),0),hx=v=>w===8?hex(v):'0x'+v.toString(16).toUpperCase().padStart(Math.ceil(w/4),'0');
+  const w=groupSpan?.bits||8,order=lsb??(groupSpan?groupSpan.lsbFirst:lsbFirst),word=(list,i)=>list.slice(i,i+w).reduce((v,b,j)=>v+b*2**(order?j:w-1-j),0),hx=v=>w===8?hex(v):'0x'+v.toString(16).toUpperCase().padStart(Math.ceil(w/4),'0');
   for(let i=0;i+w<=n;i+=w){const m=word(mb,i),s=word(sb,i);frames.push({startUs:group[i],endUs:group[i+w-1],label:`${out.toUpperCase()} ${hx(m)} / ${inp.toUpperCase()} ${hx(s)}`,value:m,answer:s});}
   if(n%w)frames.push({startUs:group[n-n%w],endUs:group[n-1],label:`${n%w} bit`,error:'incomplete'});group=[];};
- for(const t of capture){const selected=!cs||levelAt(cs.edges,t,cs.idle)===0;if(!selected){flush();continue;}if(t-last>gap||(cs&&group.length&&levelAt(cs.edges,(t+last)/2,cs.idle)!==0))flush();group.push(t);last=t;if(frames.length>=4000)break;}
+ for(const t of capture){const selected=!cs||levelAt(cs.edges,t,cs.idle)===0;if(!selected){flush();continue;}const span=spans.length?spanAt(t):null;if(t-last>gap||span!==groupSpan||(cs&&group.length&&levelAt(cs.edges,(t+last)/2,cs.idle)!==0))flush();groupSpan=span;group.push(t);last=t;if(frames.length>=4000)break;}
  flush();return frames;
 }
 function decodeOneWire({lead}){

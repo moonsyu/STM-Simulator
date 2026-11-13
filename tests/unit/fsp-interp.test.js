@@ -441,7 +441,29 @@ test('SPI review 5 and 6: 9-bit frames take 9 bit times on the bus and the logic
  assert.equal(rising.length,27,'27 clocks for 27 bits');assert.ok(rising.at(-1)[0]<start+27);
  assert.deepEqual(decoded(start),[[0x1ff,0x1ff],[0x101,0x101],[0xaa,0xaa]],'decoded in 9-bit frames');
  run(session,20);
- // The analyzer line takes the frame width of the latest transfer: read the 8-bit LSB-first frames from their start on.
- const second=log.trace.filter(t=>t.protocol==='SPI')[1].micros;
- assert.deepEqual(decoded(second).map(f=>f[0]),[0x01,0xa5],'LSB first decoded LSB first');
+ // Each transfer keeps its own frame width on the analyzer: the 9-bit frames still read as 9 bits after the 8-bit ones.
+ assert.deepEqual(decoded(0).map(f=>f[0]),[0x1ff,0x101,0x0aa,0x01,0xa5],'9-bit frames, then LSB first decoded LSB first');
+});
+
+test('SPI re-check 11: an 8-bit command then 16-bit data — the analyzer decodes each transfer with its own width and bit order',()=>{
+ const mcu=spiLoopMcu();mcu.peripherals.SPI1.bitOrder='MSB';
+ const globals='volatile uint32_t done = 0;\nvoid spi1_callback(spi_callback_args_t *p_args)\n{\n    (void) p_args;\n    done++;\n}\nvoid sci_spi9_callback(spi_callback_args_t *p_args)\n{\n    (void) p_args;\n}\nuint8_t cmd[2] = { 0x12, 0x34 };\nuint16_t data[1] = { 0xABCD };\n';
+ const {session}=open({...program(globals,['    R_SPI_Open(&g_spi1_ctrl, &g_spi1_cfg);','    R_SPI_Write(&g_spi1_ctrl, cmd, 2, SPI_BIT_WIDTH_8_BITS);','    while (done == 0)\n    {\n    }','    R_SPI_Write(&g_spi1_ctrl, data, 1, SPI_BIT_WIDTH_16_BITS);','    while (1)\n    {\n    }'].join('\n'),mcu),wires:LOOP_WIRES});
+ run(session,20);
+ assert.deepEqual(session.signalRecorder.decode('SPI1.SCK').map(f=>f.label),['MOSI 0x12 / MISO 0x12','MOSI 0x34 / MISO 0x34','MOSI 0xABCD / MISO 0xABCD']);
+});
+
+test('SPI re-check 12: the circuit noise reaches the RA SPI as it does the STM32 SPI — bit errors in the received data and on the lines, clock glitches; none without noise',()=>{
+ const mcu=raDefaultMcu(),peripheral=signal=>({function:'Peripheral',signal});
+ Object.assign(mcu.pins,{P100:peripheral('SPI1_MISO'),P101:peripheral('SPI1_MOSI'),P102:peripheral('SPI1_RSPCK')});mcu.peripherals={SPI1:{enabled:true,bitrate:1000000,callback:'spi1_callback',priority:10}};
+ const p=noise=>({...program('volatile uint32_t done = 0;\nuint32_t wrong = 0;\nvoid spi1_callback(spi_callback_args_t *p_args)\n{\n    (void) p_args;\n    done++;\n}\nuint8_t tx[64];\nuint8_t rx[64];\n',
+  ['    for (int i = 0; i < 64; i++)\n    {\n        tx[i] = (uint8_t) i;\n    }','    R_SPI_Open(&g_spi1_ctrl, &g_spi1_cfg);','    R_SPI_WriteRead(&g_spi1_ctrl, tx, rx, 64, SPI_BIT_WIDTH_8_BITS);','    while (done == 0)\n    {\n    }','    for (int i = 0; i < 64; i++)\n    {\n        if (rx[i] != tx[i])\n        {\n            wrong++;\n        }\n    }','    while (1)\n    {\n    }'].join('\n'),mcu),
+  wires:[{id:'w_spi',from:'board:J1:4',to:'board:J1:5',color:'#0090ff'}],simulation:{stepMs:1,pwmWaveform:false,noise}});
+ const noisy=open(p({enabled:true,bitErrorRate:0.2,glitchRate:0.1,jitterNs:50})).session;run(noisy,20);
+ assert.ok(noisy.noise.counts.bitErrors>0&&noisy.noise.counts.glitches>0,JSON.stringify(noisy.noise.counts));
+ assert.ok(noisy.readVariable('wrong')>0,'bit errors reach the receive buffer');
+ assert.ok(noisy.signalRecorder.decode('SPI1.SCK').some((f,i)=>f.error||f.value!==i),'and the analyzer');
+ const clean=open(p({enabled:false,bitErrorRate:0.2,glitchRate:0.1,jitterNs:50})).session;run(clean,20);
+ assert.deepEqual(clean.noise.counts,{bitErrors:0,glitches:0});assert.equal(clean.readVariable('wrong'),0);
+ assert.deepEqual(clean.signalRecorder.decode('SPI1.SCK').map(f=>f.value),Array.from({length:64},(_,i)=>i));
 });

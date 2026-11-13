@@ -61,7 +61,7 @@ export class BusDevices {
     const data=this.i2cPhase(head.endUs,bytes,bytes.map(()=>'slave'),i=>i<count-1,{start:false});
     return {ok:!data.busError,data:data.busError?[]:data.seen,busError:data.busError};
   }
-  spiLines(){if(!this.signals)return null;const s=this.spi,id=this.spiId||'SPI1',params={clockHz:s.clock,cpol:s.cpol||0,cpha:s.cpha||0,lsbFirst:!!s.lsbFirst,bits:s.bits||8};for(const [role,pin]of [['sck',s.sck],['mosi',s.mosi],...(s.txOnly?[]:[['miso',s.miso]])])this.signals.define(id+'.'+role.toUpperCase(),{label:role.toUpperCase(),pins:[pin],protocol:'spi',group:id,busLabel:id,params:{...params,role}});return id;}
+  spiLines(){if(!this.signals)return null;const s=this.spi,id=this.spiId||'SPI1',params={clockHz:s.clock,cpol:s.cpol||0,cpha:s.cpha||0,lsbFirst:!!s.lsbFirst};for(const [role,pin]of [['sck',s.sck],['mosi',s.mosi],...(s.txOnly?[]:[['miso',s.miso]])])this.signals.define(id+'.'+role.toUpperCase(),{label:role.toUpperCase(),pins:[pin],protocol:'spi',group:id,busLabel:id,params:{...params,role}});return id;}
   // A full-duplex byte without trace/time side effects (shared by blocking SPI and DMA).
   spiExchange(value,runtime,at=runtime.microTime){
     const s=this.spi;if(!s.ready)throw new Error('SPI.begin()을 먼저 호출하세요.');value=Number(value)&255;

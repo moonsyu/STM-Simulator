@@ -450,9 +450,9 @@ export class FspAdapter {
   if(miso)r.call('pinMode',[miso,'INPUT']);if(ssl){r.call('pinMode',[ssl,'OUTPUT']);r.call('digitalWrite',[ssl,sslActive^1]);}
   this.activeSpi=null;return FSP.SUCCESS;
  }
- spiSelect(r,st,bits){
+ spiSelect(r,st){
   if(this.activeSpi!==st.name){this.activeSpi=st.name;this.buses.spiId=st.id;this.buses.call('SPI.setPins',[st.mosi,st.miso,st.sck],r);}
-  Object.assign(this.buses.spi,{ready:true,clock:Math.round(st.hz),cpol:st.cpol,cpha:st.cpha,lsbFirst:st.lsb,bits});
+  Object.assign(this.buses.spi,{ready:true,clock:Math.round(st.hz),cpol:st.cpol,cpha:st.cpha,lsbFirst:st.lsb});
  }
  // A buffer of frames as the driver reaches it: through a uint8_t, uint16_t or uint32_t pointer by the frame width
  // (8, 9-16, 20-32 bits), whatever the C type of the buffer is (little-endian memory: a uint8_t buffer holds a 16-bit
@@ -492,13 +492,21 @@ export class FspAdapter {
   const source=tx?this.spiBuffer(r,tx,count,bits):null,dest=rx?this.spiBuffer(r,rx,count,bits):null;
   const mask=2**bits,frameUs=bits*1e6/st.hz,t0=r.microTime;
   const out=Array.from({length:count},(_,i)=>source?source.read(i)%mask:0);
-  this.spiSelect(r,st,bits);if(st.ssl)r.call('digitalWrite',[st.ssl,st.sslActive]);
+  this.spiSelect(r,st);if(st.ssl)r.call('digitalWrite',[st.ssl,st.sslActive]);
   // Each frame reaches the devices as the RA6E1 emulator gives it to them (exchangeFrame: whole bytes, MSB byte first,
   // bits reversed for LSB first); the logic analyzer gets the frames with their real length and bit order.
-  const soc={spiTransfer:(name,pins,byte)=>this.buses.spiRespond(byte,r)};
-  const got=out.map(value=>exchangeFrame(soc,st.id,null,value,bits,{lsbFirst:st.lsb})>>>0);
+  // The circuit's noise, as encodeSpi gives it to the STM32 SPI: bit errors on MOSI reach the devices, bit errors on MISO
+  // the receive buffer, and the clock line gets jitter and glitches.
+  const soc={spiTransfer:(name,pins,byte)=>this.buses.spiRespond(byte,r)},noise=this.buses.noise?.active?this.buses.noise:null;
+  const flip=v=>{if(noise)for(let k=0;k<bits;k++)if(noise.flip())v=(v^(1<<k))>>>0;return v;};
+  const seen=out.map(flip),got=seen.map(value=>flip(exchangeFrame(soc,st.id,null,value,bits,{lsbFirst:st.lsb})>>>0));
   const lines=this.buses.spiLines();
-  if(lines){const e=encodeSpiFrames(t0,out.map((v,i)=>({tx:v,rx:got[i]})),{clockHz:st.hz,cpol:st.cpol,cpha:st.cpha,lsbFirst:st.lsb,bits});this.buses.signals.write(lines+'.SCK',e.sck);this.buses.signals.write(lines+'.MOSI',e.mosi);if(st.miso)this.buses.signals.write(lines+'.MISO',e.miso);}
+  if(lines){
+   const e=encodeSpiFrames(t0,seen.map((v,i)=>({tx:v,rx:got[i]})),{clockHz:st.hz,cpol:st.cpol,cpha:st.cpha,lsbFirst:st.lsb,bits,...(noise?{noise}:{})});
+   this.buses.signals.write(lines+'.SCK',e.sck);this.buses.signals.write(lines+'.MOSI',e.mosi);if(st.miso)this.buses.signals.write(lines+'.MISO',e.miso);
+   // This transfer's frame width and bit order for the decoder (the line's parameters are only the latest transfer's).
+   this.buses.signals.span(lines+'.SCK',{fromUs:t0,toUs:e.endUs,bits,lsbFirst:st.lsb});
+  }
   const hex=list=>list.slice(0,8).map(v=>v.toString(16).toUpperCase().padStart(Math.ceil(bits/4),'0')).join(' ')+(list.length>8?' …':'');
   this.buses.report(r,'SPI',`${st.id} · ${count} × ${bits}비트 · TX ${hex(out)} · RX ${hex(got)}`);
   const id=++this.seq;st.busy=id;
