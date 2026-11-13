@@ -2,8 +2,9 @@
 // compileFsp() reads src/hal_entry.c with a stand-in for the generated headers (hal_data.h, common_data.h,
 // bsp_pin_cfg.h, vector_data.h: the FSP types, enums and the instances RASC writes for the project's Pins and Stacks),
 // and FspAdapter runs the FSP calls on the circuit the way session.js runs HAL calls with HalAdapter: R_IOPORT pins,
-// R_BSP_SoftwareDelay, R_ICU external interrupts, SCI UART, GPT and AGT timers, ADC12 and the IIC master, each callback
-// from its own interrupt at the Stacks priority. Enum values and struct members follow FSP 5.x (r_*_api.h).
+// R_BSP_SoftwareDelay, R_ICU external interrupts, SCI UART, GPT and AGT timers, ADC12, the IIC master and the SPI masters
+// (r_spi, r_sci_spi), each callback from its own interrupt at the Stacks priority. Enum values and struct members follow
+// FSP 5.x / 6.x (r_*_api.h).
 import {compile} from './parser.js';
 import {prepareHalSource} from './hal-source.js';
 import {baseName} from './source-files.js';
@@ -12,6 +13,7 @@ import {BusDevices} from './buses.js';
 import {formatPrintf,stringCall} from './hal-stdio.js';
 import {validateRaMcu,raClockHz,raPinName,RA6E1_PORTS,RA_ADC_CHANNELS,RA_IRQ_PINS} from './ra-config.js';
 import {raInstances,raIoName,raVectors,pinCfgWord} from './ra-generator.js';
+import {exchangeFrame} from './emu/ra6e1/spi.js';
 
 const pad=n=>String(n).padStart(2,'0');
 const hex=(n,w=4)=>'0x'+(n>>>0).toString(16).toUpperCase().padStart(w,'0');
@@ -23,7 +25,7 @@ export const FSP_ALIASES=Object.freeze({FSP_CPP_HEADER:'',FSP_CPP_FOOTER:'',FSP_
  IOPORT_CFG_CTRL:'g_ioport_ctrl',IOPORT_CFG_NAME:'g_bsp_pin_cfg',IOPORT_CFG_OPEN:'R_IOPORT_Open'});
 // FSP and generated headers that resolve to the prelude (it has a guard, so including several is fine); the C
 // library headers read as empty.
-const FSP_HEADERS=['hal_data.h','common_data.h','bsp_pin_cfg.h','vector_data.h','bsp_api.h','bsp_cfg.h','bsp_clock_cfg.h','board.h','board_cfg.h','fsp_common_api.h','r_ioport.h','r_ioport_api.h','r_icu.h','r_external_irq_api.h','r_sci_uart.h','r_uart_api.h','r_gpt.h','r_timer_api.h','r_agt.h','r_adc.h','r_adc_api.h','r_iic_master.h','r_i2c_master_api.h','bsp_io.h','bsp_delay.h','bsp_common.h'];
+const FSP_HEADERS=['hal_data.h','common_data.h','bsp_pin_cfg.h','vector_data.h','bsp_api.h','bsp_cfg.h','bsp_clock_cfg.h','board.h','board_cfg.h','fsp_common_api.h','r_ioport.h','r_ioport_api.h','r_icu.h','r_external_irq_api.h','r_sci_uart.h','r_uart_api.h','r_gpt.h','r_timer_api.h','r_agt.h','r_adc.h','r_adc_api.h','r_iic_master.h','r_i2c_master_api.h','r_spi.h','r_sci_spi.h','r_spi_api.h','bsp_io.h','bsp_delay.h','bsp_common.h'];
 const C_HEADERS=new Set(['stdint.h','stddef.h','stdbool.h','string.h','stdlib.h','stdio.h','ctype.h','math.h','limits.h']);
 // Generated and FSP source folders of the project tree: built by ARM GCC only (the prelude stands in for them here).
 const FSP_FILE=/^(ra|ra_gen|ra_cfg|script)\//;
@@ -95,6 +97,16 @@ typedef struct st_iic_master_instance_ctrl { uint32_t open; } iic_master_instanc
 typedef struct st_i2c_master_cfg { uint8_t channel; i2c_master_rate_t rate; uint32_t slave; i2c_master_addr_mode_t addr_mode; uint8_t ipl; IRQn_Type rxi_irq; IRQn_Type txi_irq; IRQn_Type tei_irq; IRQn_Type eri_irq; void * p_context; void * p_extend; } i2c_master_cfg_t;
 typedef struct st_i2c_master_instance { iic_master_instance_ctrl_t * p_ctrl; const i2c_master_cfg_t * p_cfg; void * p_api; } i2c_master_instance_t;
 typedef struct st_i2c_master_callback_args { void * p_context; i2c_master_event_t event; } i2c_master_callback_args_t;
+${enumOf('e_spi_bit_width','spi_bit_width_t',Array.from({length:29},(_,i)=>[`SPI_BIT_WIDTH_${i+4}_BITS`,i+3]))}
+${enumOf('e_spi_mode','spi_mode_t',[['SPI_MODE_MASTER',0],['SPI_MODE_SLAVE',1]])}
+${enumOf('e_spi_clk_phase','spi_clk_phase_t',[['SPI_CLK_PHASE_EDGE_ODD',0],['SPI_CLK_PHASE_EDGE_EVEN',1]])}
+${enumOf('e_spi_clk_polarity','spi_clk_polarity_t',[['SPI_CLK_POLARITY_LOW',0],['SPI_CLK_POLARITY_HIGH',1]])}
+${enumOf('e_spi_mode_fault','spi_mode_fault_t',[['SPI_MODE_FAULT_ERROR_ENABLE',0],['SPI_MODE_FAULT_ERROR_DISABLE',1]])}
+${enumOf('e_spi_bit_order','spi_bit_order_t',[['SPI_BIT_ORDER_MSB_FIRST',0],['SPI_BIT_ORDER_LSB_FIRST',1]])}
+${enumOf('e_spi_event','spi_event_t',['TRANSFER_COMPLETE','TRANSFER_ABORTED','ERR_MODE_FAULT','ERR_READ_OVERFLOW','ERR_PARITY','ERR_OVERRUN','ERR_FRAMING','ERR_MODE_UNDERRUN'].map((k,i)=>['SPI_EVENT_'+k,i+1]))}
+typedef struct st_spi_cfg { uint8_t channel; IRQn_Type rxi_irq; IRQn_Type txi_irq; IRQn_Type tei_irq; IRQn_Type eri_irq; uint8_t rxi_ipl; uint8_t txi_ipl; uint8_t tei_ipl; uint8_t eri_ipl; spi_mode_t operating_mode; spi_clk_phase_t clk_phase; spi_clk_polarity_t clk_polarity; spi_mode_fault_t mode_fault; spi_bit_order_t bit_order; void * p_transfer_tx; void * p_transfer_rx; void * p_context; void * p_extend; } spi_cfg_t;
+typedef struct st_spi_instance { void * p_ctrl; const spi_cfg_t * p_cfg; void * p_api; } spi_instance_t;
+typedef struct st_spi_callback_args { uint32_t channel; spi_event_t event; void * p_context; } spi_callback_args_t;
 #define FSP_PARAMETER_NOT_USED(p) ((void) (p))
 #define BSP_IRQ_DISABLED (0xFF)
 #define FSP_INVALID_VECTOR ((IRQn_Type) -33)
@@ -107,9 +119,26 @@ typedef struct st_i2c_master_callback_args { void * p_context; i2c_master_event_
 #define BSP_LOCO_HZ (32768)
 `;
 
+// r_spi.h and r_sci_spi.h (FSP 6.x): in hal_data.h only when the stack is there.
+const RSPI_TYPES=`${enumOf('e_spi_ssl_mode','spi_ssl_mode_t',[['SPI_SSL_MODE_SPI',0],['SPI_SSL_MODE_CLK_SYN',1]])}
+${enumOf('e_spi_burst_transfer_without_delay','spi_burst_transfer_without_delay_t',[['SPI_BURST_TRANSFER_WITH_DELAY',0],['SPI_BURST_TRANSFER_WITHOUT_DELAY',1]])}
+${enumOf('e_spi_communication','spi_communication_t',[['SPI_COMMUNICATION_FULL_DUPLEX',0],['SPI_COMMUNICATION_TRANSMIT_ONLY',1]])}
+${enumOf('e_spi_sslp','spi_ssl_polarity_t',[['SPI_SSLP_LOW',0],['SPI_SSLP_HIGH',1]])}
+${enumOf('e_spi_ssl_select','spi_ssl_select_t',[0,1,2,3].map(n=>['SPI_SSL_SELECT_SSL'+n,n]))}
+${enumOf('e_spi_mosi_idle_value_fixing','spi_mosi_idle_value_fixing_t',[['SPI_MOSI_IDLE_VALUE_FIXING_DISABLE',0],['SPI_MOSI_IDLE_VALUE_FIXING_LOW',1],['SPI_MOSI_IDLE_VALUE_FIXING_HIGH',2]])}
+${enumOf('e_spi_parity_mode','spi_parity_t',[['SPI_PARITY_MODE_DISABLE',0],['SPI_PARITY_MODE_ODD',1],['SPI_PARITY_MODE_EVEN',2]])}
+${enumOf('e_spi_byte_swap','spi_byte_swap_t',[['SPI_BYTE_SWAP_DISABLE',0],['SPI_BYTE_SWAP_ENABLE',1]])}
+${enumOf('e_spi_clock_delay_count','spi_delay_count_t',[1,2,3,4,5,6,7,8].map((n,i)=>['SPI_DELAY_COUNT_'+n,i]))}
+typedef struct st_rspck_div_setting { uint8_t spbr; uint8_t brdv; } rspck_div_setting_t;
+typedef struct st_spi_extended_cfg { spi_ssl_mode_t spi_clksyn; spi_communication_t spi_comm; spi_ssl_polarity_t ssl_polarity; spi_ssl_select_t ssl_select; spi_mosi_idle_value_fixing_t mosi_idle; spi_parity_t parity; spi_byte_swap_t byte_swap; rspck_div_setting_t spck_div; spi_delay_count_t spck_delay; spi_delay_count_t ssl_negation_delay; spi_delay_count_t next_access_delay; spi_burst_transfer_without_delay_t burst_interframe_delay; } spi_extended_cfg_t;
+typedef struct st_spi_instance_ctrl { uint32_t open; } spi_instance_ctrl_t;`;
+const SCI_SPI_TYPES=`typedef struct st_sci_spi_div_setting { uint8_t brr; uint8_t cks; uint8_t mddr; } sci_spi_div_setting_t;
+typedef struct st_sci_spi_extended_cfg { sci_spi_div_setting_t clk_div; } sci_spi_extended_cfg_t;
+typedef struct st_sci_spi_instance_ctrl { uint32_t open; } sci_spi_instance_ctrl_t;`;
+
 /** The prelude's text for a checked RA configuration: types, the pin symbols and the Stacks instances of hal_data.c. */
 export function fspPrelude(mcu){
- const {irqs,uarts,gpts,adc,agts,iics}=raInstances(mcu),vectors=raVectors(mcu),vec=k=>vectors.some(v=>v.vector===k)?`VECTOR_NUMBER_${k}`:'FSP_INVALID_VECTOR';
+ const {irqs,uarts,gpts,adc,agts,iics,spis,sciSpis}=raInstances(mcu),vectors=raVectors(mcu),vec=k=>vectors.some(v=>v.vector===k)?`VECTOR_NUMBER_${k}`:'FSP_INVALID_VECTOR';
  const pins=Object.entries(mcu.pins||{}).sort(([a],[b])=>raPinName(a).localeCompare(raPinName(b)));
  const ipl=(name,p)=>name?`(${p})`:'(BSP_IRQ_DISABLED)';
  const out=['#ifndef FSP_INTERP_PRELUDE_H','#define FSP_INTERP_PRELUDE_H',TYPES,
@@ -132,6 +161,13 @@ export function fspPrelude(mcu){
   'const adc_instance_t g_adc0 = { .p_ctrl = &g_adc0_ctrl, .p_cfg = &g_adc0_cfg, .p_channel_cfg = &g_adc0_channel_cfg, .p_api = NULL };',...(adc.callback?[`void ${adc.callback}(adc_callback_args_t * p_args);`]:[]));
  for(const t of iics){const v=k=>vec(`IIC${t.channel}_${k}`);out.push(`iic_master_instance_ctrl_t ${t.name}_ctrl;`,`const i2c_master_cfg_t ${t.name}_cfg = { .channel = ${t.channel}, .rate = I2C_MASTER_RATE_${t.rate}, .slave = ${hex(t.slave,2)}, .addr_mode = I2C_MASTER_ADDR_MODE_7BIT, .p_context = NULL, .p_extend = NULL, .ipl = (${t.priority}), .rxi_irq = ${v('RXI')}, .txi_irq = ${v('TXI')}, .tei_irq = ${v('TEI')}, .eri_irq = ${v('ERI')} };`,
   `const i2c_master_instance_t ${t.name} = { .p_ctrl = &${t.name}_ctrl, .p_cfg = &${t.name}_cfg, .p_api = NULL };`,`void ${t.callback}(i2c_master_callback_args_t * p_args);`);}
+ // SPI masters (r_spi on RSPI, r_sci_spi on an SCI channel): the driver's own types only when its header is in hal_data.h.
+ const spiCfg=(t,event,ext)=>{const v=k=>vec(`${event}${t.channel}_${k}`);return [`const spi_cfg_t ${t.name}_cfg = { .channel = ${t.channel}, .rxi_irq = ${v('RXI')}, .txi_irq = ${v('TXI')}, .tei_irq = ${v('TEI')}, .eri_irq = ${v('ERI')}, .rxi_ipl = (${t.priority}), .txi_ipl = (${t.priority}), .tei_ipl = (${t.priority}), .eri_ipl = (${t.priority}), .operating_mode = SPI_MODE_MASTER, .clk_phase = ${t.cpha?'SPI_CLK_PHASE_EDGE_EVEN':'SPI_CLK_PHASE_EDGE_ODD'}, .clk_polarity = ${t.cpol?'SPI_CLK_POLARITY_HIGH':'SPI_CLK_POLARITY_LOW'}, .mode_fault = SPI_MODE_FAULT_ERROR_DISABLE, .bit_order = ${t.bitOrder==='LSB'?'SPI_BIT_ORDER_LSB_FIRST':'SPI_BIT_ORDER_MSB_FIRST'}, .p_transfer_tx = NULL, .p_transfer_rx = NULL, .p_context = NULL, .p_extend = &${ext} };`,
+  `const spi_instance_t ${t.name} = { .p_ctrl = &${t.name}_ctrl, .p_cfg = &${t.name}_cfg, .p_api = NULL };`,`void ${t.callback}(spi_callback_args_t * p_args);`];};
+ if(spis.length)out.push(RSPI_TYPES);
+ for(const t of spis)out.push(`spi_instance_ctrl_t ${t.name}_ctrl;`,`const spi_extended_cfg_t ${t.name}_ext_cfg = { .spi_clksyn = ${t.ssl==='SSL0'?'SPI_SSL_MODE_SPI':'SPI_SSL_MODE_CLK_SYN'}, .spi_comm = SPI_COMMUNICATION_FULL_DUPLEX, .ssl_polarity = SPI_SSLP_LOW, .ssl_select = SPI_SSL_SELECT_SSL0, .mosi_idle = SPI_MOSI_IDLE_VALUE_FIXING_DISABLE, .parity = SPI_PARITY_MODE_DISABLE, .byte_swap = SPI_BYTE_SWAP_DISABLE, .spck_div = { .spbr = ${t.div.spbr}, .brdv = ${t.div.brdv} }, .spck_delay = SPI_DELAY_COUNT_1, .ssl_negation_delay = SPI_DELAY_COUNT_1, .next_access_delay = SPI_DELAY_COUNT_1, .burst_interframe_delay = SPI_BURST_TRANSFER_WITH_DELAY };`,...spiCfg(t,'SPI',`${t.name}_ext_cfg`));
+ if(sciSpis.length)out.push(SCI_SPI_TYPES);
+ for(const t of sciSpis)out.push(`sci_spi_instance_ctrl_t ${t.name}_ctrl;`,`const sci_spi_extended_cfg_t ${t.name}_cfg_extend = { .clk_div = { .cks = ${t.div.cks}, .brr = ${t.div.brr}, .mddr = 0 } };`,...spiCfg(t,'SCI',`${t.name}_cfg_extend`));
  out.push('void hal_entry(void);','void g_hal_init(void);','void g_common_init(void);','void BSP_PinConfigSecurityInit(void);','#endif');
  return out.join('\n')+'\n';
 }
@@ -177,9 +213,9 @@ export function compileFsp(source,files=[],mcu){
 export const fspConstants=program=>Object.fromEntries((program.registers||[]).map(n=>[n,n]));
 
 const SHORT_WAIT_MS=.05;
-const FSP={SUCCESS:0,ASSERTION:1,INVALID_ARGUMENT:3,NOT_OPEN:7,IN_USE:8,ALREADY_OPEN:14};
-const KINDS={ioport:[/^g_ioport_ctrl$/,'g_ioport_ctrl'],icu:[/^g_external_irq(\d+)_ctrl$/,'g_external_irq1_ctrl'],uart:[/^g_uart(\d+)_ctrl$/,'g_uart9_ctrl'],gpt:[/^g_timer(\d+)_ctrl$/,'g_timer1_ctrl'],agt:[/^g_agt(\d+)_ctrl$/,'g_agt0_ctrl'],adc:[/^g_adc(\d+)_ctrl$/,'g_adc0_ctrl'],iic:[/^g_i2c_master(\d+)_ctrl$/,'g_i2c_master0_ctrl']};
-const SUPPORTED='R_IOPORT_*, R_BSP_SoftwareDelay · R_BSP_Pin*, R_ICU_ExternalIrq*, R_SCI_UART_*, R_GPT_*, R_AGT_*, R_ADC_*, R_IIC_MASTER_*';
+const FSP={SUCCESS:0,ASSERTION:1,INVALID_ARGUMENT:3,UNSUPPORTED:6,NOT_OPEN:7,IN_USE:8,ALREADY_OPEN:14};
+const KINDS={ioport:[/^g_ioport_ctrl$/,'g_ioport_ctrl'],icu:[/^g_external_irq(\d+)_ctrl$/,'g_external_irq1_ctrl'],uart:[/^g_uart(\d+)_ctrl$/,'g_uart9_ctrl'],gpt:[/^g_timer(\d+)_ctrl$/,'g_timer1_ctrl'],agt:[/^g_agt(\d+)_ctrl$/,'g_agt0_ctrl'],adc:[/^g_adc(\d+)_ctrl$/,'g_adc0_ctrl'],iic:[/^g_i2c_master(\d+)_ctrl$/,'g_i2c_master0_ctrl'],spi:[/^g_spi(\d+)_ctrl$/,'g_spi1_ctrl'],sciSpi:[/^g_sci_spi(\d+)_ctrl$/,'g_sci_spi9_ctrl']};
+const SUPPORTED='R_IOPORT_*, R_BSP_SoftwareDelay · R_BSP_Pin*, R_ICU_ExternalIrq*, R_SCI_UART_*, R_GPT_*, R_AGT_*, R_ADC_*, R_IIC_MASTER_*, R_SPI_*, R_SCI_SPI_*';
 const int=(value,min,max,label)=>{if(!Number.isInteger(value)||value<min||value>max)throw new Error(`${label}: ${min}~${max} 범위의 정수가 필요합니다.`);return value;};
 const isIterator=v=>v&&typeof v.next==='function';
 
@@ -387,6 +423,70 @@ export class FspAdapter {
  }
  // R_IIC_MASTER_Abort / Close: the bus is released, the transfer's completion is dropped and no callback comes.
  iicStop(st){st.busy=0;this.dropJobs(`IIC${st.channel}:`);}
+ // ---- SPI masters: r_spi (RSPI, SPIn) and r_sci_spi (SCIn simple SPI) on the circuit's SPI engine, the devices the STM32
+ // HAL interpreter and the RA6E1 emulator (emu/ra6e1/spi.js exchangeFrame) reach: a frame of 8-32 bits goes out MSB
+ // byte first, its bits reversed for LSB first. SSL0 (r_spi 4-wire) is driven low for the transfer; without it the
+ // program drives a GPIO as CS.
+ spiOpen([ctrl,cfgPtr],r,fn,kind){
+  const st=this.instance(ctrl,r,fn,kind);if(st.open)return FSP.ALREADY_OPEN;
+  const cfg=this.struct(cfgPtr,r,'spi_cfg_t',fn),f=k=>Number(cfg.fields[k].value),rspi=kind==='spi',id=(rspi?'SPI':'SCI')+st.channel;
+  const t=(rspi?this.inst.spis:this.inst.sciSpis).find(x=>x.channel===st.channel);
+  if(!t)throw new Error(`${fn}: Stacks에서 ${rspi?`${id} (r_spi)`:`${id} Simple SPI (r_sci_spi)`}를 추가하세요.`);
+  if(f('operating_mode')!==0)throw new Error(`${fn}: 내장 해석기는 SPI 마스터(SPI_MODE_MASTER)만 실행합니다.`);
+  // The bit rate and the slave select from the extended configuration (spck_div / clk_div, spi_clksyn).
+  let ext=null;try{ext=r.get(r.pointerCell(cfg.fields.p_extend.value));}catch{ext=null;}
+  const sub=(name,key,fallback)=>{const v=ext?.fields?.[name]?.value?.fields?.[key]?.value;return v==null?fallback:Number(v);},pclka=raClockHz(this.config,'pclka');
+  const hz=rspi?pclka/(2*(sub('spck_div','spbr',t.div.spbr)+1)*2**sub('spck_div','brdv',t.div.brdv)):pclka/(4*4**sub('clk_div','cks',t.div.cks)*(sub('clk_div','brr',t.div.brr)+1));
+  const fourWire=rspi&&(ext?.fields?.spi_clksyn?Number(ext.fields.spi_clksyn.value)===0:t.ssl==='SSL0');
+  const pin=s=>this.pinOf(`${id}_${s}`),sck=pin(rspi?'RSPCK':'SCK'),mosi=pin(rspi?'MOSI':'TXD'),miso=pin(rspi?'MISO':'RXD'),ssl=fourWire?pin('SSL0'):null;
+  if(!sck||!mosi)throw new Error(`${fn}: 내장 해석기는 ${id}의 ${rspi?'RSPCK':'SCK'}와 ${rspi?'MOSI':'TXD(MOSI)'} 핀을 정한 SPI만 실행합니다(Pins).`);
+  if(fourWire&&!ssl)throw new Error(`${fn}: ${id}의 Slave Select가 SSL0이면 Pins에서 SSL0 핀을 정하세요.`);
+  Object.assign(st,{open:true,busy:0,id,rspi,hz,sck,mosi,miso,ssl,cpol:f('clk_polarity')&1,cpha:f('clk_phase')&1,lsb:f('bit_order')===1,ipl:f('tei_ipl'),callback:t.callback,context:null});
+  // The pins as the module drives them: RSPCK idles at CPOL, MOSI low, SSL0 inactive (high), MISO an input.
+  r.call('pinMode',[sck,'OUTPUT']);r.call('digitalWrite',[sck,st.cpol]);r.call('pinMode',[mosi,'OUTPUT']);r.call('digitalWrite',[mosi,0]);
+  if(miso)r.call('pinMode',[miso,'INPUT']);if(ssl){r.call('pinMode',[ssl,'OUTPUT']);r.call('digitalWrite',[ssl,1]);}
+  this.activeSpi=null;return FSP.SUCCESS;
+ }
+ spiSelect(r,st){
+  if(this.activeSpi!==st.name){this.activeSpi=st.name;this.buses.spiId=st.id;this.buses.call('SPI.setPins',[st.mosi,st.miso,st.sck],r);}
+  Object.assign(this.buses.spi,{ready:true,clock:Math.round(st.hz),cpol:st.cpol,cpha:st.cpha,lsbFirst:false});
+ }
+ // R_SPI_Write / Read / WriteRead: the frames are exchanged with the devices now, but the transfer runs in the background
+ // as on the RSPI / SCI — the call returns at once, the channel is busy (FSP_ERR_IN_USE) for bits / bit rate a frame,
+ // then the received frames are in the buffer, SSL0 goes high and the TEI interrupt calls back TRANSFER_COMPLETE.
+ spiTransfer(r,fn,kind,ctrl,tx,rx,count,width){
+  const st=this.instance(ctrl,r,fn,kind);
+  if(kind==='sciSpi'&&width!==7)return FSP.UNSUPPORTED;
+  if(!st.open)return FSP.NOT_OPEN;
+  const bits=Number(width)+1;if(!tx&&!rx||!Number.isInteger(count)||count<1||!(bits>=8&&bits<=16||bits===20||bits===24||bits===32))return FSP.ASSERTION;
+  if(st.busy)return FSP.IN_USE;
+  int(count,1,4096,`${fn} 길이(내장 해석기는 한 번에 4096프레임까지)`);if(rx)r.pointerCell(rx,count-1);
+  const mask=bits===32?0xffffffff:2**bits-1,frameUs=bits*1e6/st.hz,byteUs=8e6/st.hz,t0=r.microTime;
+  const out=Array.from({length:count},(_,i)=>!tx?0:typeof tx==='string'?tx.charCodeAt(i)&255:((Number(r.get(r.pointerCell(tx,i)))>>>0)&mask)>>>0);
+  this.spiSelect(r,st);if(st.ssl)r.call('digitalWrite',[st.ssl,0]);
+  let frame=0,part=0;const soc={spiTransfer:(name,pins,byte)=>this.buses.spiExchange(byte,r,t0+frame*frameUs+(part++)*byteUs)};
+  const got=out.map((value,i)=>{frame=i;part=0;return exchangeFrame(soc,st.id,null,value,bits,{lsbFirst:st.lsb})>>>0;});
+  const hex=list=>list.slice(0,8).map(v=>v.toString(16).toUpperCase().padStart(Math.ceil(bits/4),'0')).join(' ')+(list.length>8?' …':'');
+  this.buses.report(r,'SPI',`${st.id} · ${count} × ${bits}비트 · TX ${hex(out)} · RX ${hex(got)}`);
+  const id=++this.seq;st.busy=id;
+  r.event((t0+count*frameUs)/1000,()=>{
+   if(st.busy!==id)return;st.busy=0;
+   if(rx)got.forEach((v,i)=>r.set(r.pointerCell(rx,i),v));
+   if(st.ssl)r.call('digitalWrite',[st.ssl,1]);
+   const fields={channel:st.channel,event:1,...(st.context?{p_context:st.context}:{})};
+   if(st.open)this.queue(r,`${st.id}_TEI`,st.ipl,()=>this.callback(r,st.callback,'spi_callback_args_t',fields),st.rspi?'spi_tei_isr':'sci_spi_tei_isr',`${st.id}:spi:${id}`);
+  });
+  return FSP.SUCCESS;
+ }
+ // R_SPI_Close / R_SCI_SPI_Close: a transfer under way stops (its buffer is not filled, no callback), SSL0 goes high.
+ spiClose(args,r,fn,kind){
+  const st=this.instance(args[0],r,fn,kind);if(!st.open)return FSP.NOT_OPEN;
+  st.busy=0;this.dropJobs(`${st.id}:spi:`);if(st.ssl)r.call('digitalWrite',[st.ssl,1]);st.open=false;if(this.activeSpi===st.name)this.activeSpi=null;return FSP.SUCCESS;
+ }
+ spiCallbackSet([ctrl,callback,context],r,fn,kind){
+  const st=this.instance(ctrl,r,fn,kind);if(!st.open)return FSP.NOT_OPEN;
+  st.callback=r.callback(callback).name;st.context=context?.kind==='pointer'?context:null;return FSP.SUCCESS;
+ }
 }
 for(const k of ['stdoutHook','stdout','flushStdout','stdinChar','stdin'])FspAdapter.prototype[k]=HalAdapter.prototype[k];
 
@@ -501,4 +601,14 @@ const HANDLERS={
  R_IIC_MASTER_Abort(args,r,fn){const st=this.instance(args[0],r,fn,'iic');if(!st.open)return FSP.NOT_OPEN;this.iicStop(st);return FSP.SUCCESS;},
  R_IIC_MASTER_Close(args,r,fn){const st=this.instance(args[0],r,fn,'iic');if(!st.open)return FSP.NOT_OPEN;this.iicStop(st);st.open=false;if(this.activeIic===st.name)this.activeIic=null;return FSP.SUCCESS;}
 };
+// r_spi and r_sci_spi share spi_api_t: Open, Write (ctrl, src, length, width), Read (ctrl, dest, …), WriteRead (ctrl,
+// src, dest, length, width), CallbackSet and Close.
+for(const [prefix,kind] of [['R_SPI_','spi'],['R_SCI_SPI_','sciSpi']])Object.assign(HANDLERS,{
+ [prefix+'Open'](args,r,fn){return this.spiOpen(args,r,fn,kind);},
+ [prefix+'Write']([ctrl,src,length,width],r,fn){return this.spiTransfer(r,fn,kind,ctrl,src,null,length,width);},
+ [prefix+'Read']([ctrl,dest,length,width],r,fn){return this.spiTransfer(r,fn,kind,ctrl,null,dest,length,width);},
+ [prefix+'WriteRead']([ctrl,src,dest,length,width],r,fn){return this.spiTransfer(r,fn,kind,ctrl,src,dest,length,width);},
+ [prefix+'CallbackSet'](args,r,fn){return this.spiCallbackSet(args,r,fn,kind);},
+ [prefix+'Close'](args,r,fn){return this.spiClose(args,r,fn,kind);}
+});
 function timerCall(args,r,fn,kind,action){const st=this.instance(args[0],r,fn,kind);if(!st.open)return FSP.NOT_OPEN;action(st);return FSP.SUCCESS;}

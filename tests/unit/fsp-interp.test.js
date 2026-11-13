@@ -1,6 +1,7 @@
 // Feature 42: FPB-RA6E1 (Renesas FSP) projects on the built-in interpreter, without ARM GCC or FSP. Every FSP example
 // runs, and shows what the RA6E1 emulator shows for its ELF (tests/firmware/firmware-ra6e1.test.js, toolchain
-// ra-course): LED1/LED2 timelines, S1 through IRQ1, SCI9 UART, GPT PWM, ADC12, AGT and the IIC master.
+// ra-course, ra-spi): LED1/LED2 timelines, S1 through IRQ1, SCI9 UART, GPT PWM, ADC12, AGT, the IIC master and the SPI
+// masters (r_spi, r_sci_spi).
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {SimulationSession} from '../../src/session.js';
@@ -137,7 +138,7 @@ test('the challenge: four LEDs count 0000 → 1111 every 0.1 s (recursion); swit
 });
 
 test('every instance and macro name the generator writes into hal_data.h, common_data.h, bsp_pin_cfg.h and vector_data.h is in the prelude',()=>{
- const mcus=[...RA_EXAMPLES.map(e=>e.mcu()),raDefaultMcu()];
+ const mcus=[...RA_EXAMPLES.map(e=>e.mcu()),raDefaultMcu(),spiLoopMcu()];
  for(const mcu of mcus){
   const files=generateRaFiles(mcu,{board:{fspBoard:true}}),prelude=fspPrelude(validateRaMcu(mcu)),names=new Set();
   for(const file of ['ra_gen/hal_data.h','ra_gen/common_data.h','ra_cfg/fsp_cfg/bsp/bsp_pin_cfg.h','ra_gen/vector_data.h']){
@@ -318,4 +319,74 @@ test('review 8 and 9: a project header named like an FSP header (src/board.h) is
  assert.deepEqual(inspectRuntime(session.runtime).globals.map(g=>g.name).sort(),['MY_VALUE','board_var']);
  // A file of its own at the top (board.h) also wins over the stand-in.
  assert.equal(compileFsp(p.code,[{name:'board.h',text:'#define MY_VALUE 1\nint board_var = 1;\n'}],raDefaultMcu()).preludeNames.has('board_var'),false);
+});
+
+// ---- SPI (feature 32 on the interpreter): r_spi on SPI1 and r_sci_spi on SCI9.
+// The project of tests/toolchain/ra-spi: SCI9 simple SPI (CPOL 1 / CPHA 1, 2 MHz) and SPI1 3-wire (LSB first, 4 MHz), MOSI
+// and MISO of each wired together on the Arduino header (D1–D0, D11–D12).
+function spiLoopMcu(){
+ const mcu=raDefaultMcu(),peripheral=signal=>({function:'Peripheral',signal});
+ Object.assign(mcu.pins,{P109:peripheral('SCI9_TXD'),P110:peripheral('SCI9_RXD'),P111:peripheral('SCI9_SCK'),P100:peripheral('SPI1_MISO'),P101:peripheral('SPI1_MOSI'),P102:peripheral('SPI1_RSPCK')});
+ mcu.peripherals={SCI9:{enabled:true,mode:'SPI',bitrate:2000000,cpol:1,cpha:1,callback:'sci_spi9_callback',priority:10},SPI1:{enabled:true,bitrate:4000000,bitOrder:'LSB',callback:'spi1_callback',priority:10}};
+ return mcu;
+}
+const LOOP_WIRES=[{id:'w_sci',from:'board:J5:1',to:'board:J5:2',color:'#30a46c'},{id:'w_spi',from:'board:J1:4',to:'board:J1:5',color:'#0090ff'}];
+// The SPI callbacks the adapter calls, with the time (µs) of each.
+function spyCallbacks(session){const at=[],own=session.hal.callback.bind(session.hal);session.hal.callback=function*(r,fn,type,fields){if(type==='spi_callback_args_t')at.push({fn,us:r.microTime,event:fields.event});yield* own(r,fn,type,fields);};return at;}
+
+test('SPI: ra_spi_memory runs on the interpreter — SPI1 writes 0x2A at 0x10 of the SPI memory and reads it back with SSL0 low; SCI9 prints it, LED2 lights',()=>{
+ const {session,log}=open(example('ra_spi_memory')),calls=spyCallbacks(session),ssl=[];
+ const own=session.buses.spiExchange.bind(session.buses);session.buses.spiExchange=(v,r,at)=>{ssl.push(session.result.voltage('signal:P103')<.8);return own(v,r,at);};
+ run(session,1200);
+ assert.equal(session.readVariable('matched'),1);assert.equal(session.readVariable('readback'),0x2a);
+ assert.equal(session.buses.received.get('term'),'SPI1 read 0x2A\r\n');assert.equal(high(session,'P407'),1,'LED2 on');
+ assert.deepEqual(log.trace.filter(t=>t.protocol==='SPI').map(t=>t.message),['SPI1 · 3 × 8비트 · TX 02 10 2A · RX 00 00 00','SPI1 · 3 × 8비트 · TX 03 10 00 · RX 00 00 2A']);
+ assert.deepEqual(ssl,[true,true,true,true,true,true],'SSL0 (P103, D10) low while each byte is exchanged');
+ assert.equal(high(session,'P103'),1,'SSL0 high again after the transfer');assert.equal(session.runtime.gpio.P102.mode,'OUTPUT');assert.equal(session.runtime.gpio.P100.mode,'INPUT');
+ assert.deepEqual(calls.map(c=>[c.fn,c.event]),[['spi1_callback',1],['spi1_callback',1]]);
+ // LED1 toggles every 500 ms from the end of the SPI and UART calls (a fraction of a millisecond after reset).
+ assert.deepEqual(edges(session,'P408',2200).slice(1),[[1501,0],[2001,1]],'LED1 blinks');
+});
+
+test('SPI: a transfer takes its bus time — another call meanwhile is FSP_ERR_IN_USE, TRANSFER_COMPLETE comes 24 µs later at 1 MHz; Close drops the transfer and its callback',()=>{
+ const p=example('ra_spi_memory');
+ p.code=program('volatile uint32_t calls = 0;\nuint32_t calls_after_write = 99;\nfsp_err_t first = 99;\nfsp_err_t second = 99;\nfsp_err_t read_busy = 99;\nfsp_err_t closed = 99;\nfsp_err_t reopened = 99;\nfsp_err_t not_open = 99;\nuint32_t calls_after_close = 99;\nuint8_t data[3] = { 0x02, 0x20, 0x55 };\nuint8_t rx[3];\nvoid spi1_callback(spi_callback_args_t *p_args)\n{\n    if (SPI_EVENT_TRANSFER_COMPLETE == p_args->event)\n    {\n        calls++;\n    }\n}\nvoid user_uart9_callback(uart_callback_args_t *p_args)\n{\n    (void) p_args;\n}',
+  ['    R_SPI_Open(&g_spi1_ctrl, &g_spi1_cfg);','    first = R_SPI_Write(&g_spi1_ctrl, data, 3, SPI_BIT_WIDTH_8_BITS);','    calls_after_write = calls;','    second = R_SPI_Write(&g_spi1_ctrl, data, 3, SPI_BIT_WIDTH_8_BITS);','    read_busy = R_SPI_Read(&g_spi1_ctrl, rx, 3, SPI_BIT_WIDTH_8_BITS);','    R_BSP_SoftwareDelay(1, BSP_DELAY_UNITS_MILLISECONDS);',
+   '    R_SPI_Write(&g_spi1_ctrl, data, 3, SPI_BIT_WIDTH_8_BITS);','    closed = R_SPI_Close(&g_spi1_ctrl);','    not_open = R_SPI_Write(&g_spi1_ctrl, data, 3, SPI_BIT_WIDTH_8_BITS);','    reopened = R_SPI_Open(&g_spi1_ctrl, &g_spi1_cfg);','    R_BSP_SoftwareDelay(1, BSP_DELAY_UNITS_MILLISECONDS);','    calls_after_close = calls;','    while (1)\n    {\n    }'].join('\n'),p.mcu).code;
+ const {session,log}=open(p),calls=spyCallbacks(session);run(session,40);
+ assert.deepEqual(['first','calls_after_write','second','read_busy','closed','not_open','reopened','calls_after_close'].map(n=>session.readVariable(n)),[0,0,8,8,0,7,0,1]);
+ const start=log.trace.find(t=>t.protocol==='SPI').micros;
+ assert.equal(calls.length,1);assert.ok(Math.abs(calls[0].us-start-24)<1e-6,`3 frames of 8 bits at 1 MHz: ${calls[0].us-start} µs`);
+ assert.equal(high(session,'P103'),1,'Close leaves SSL0 high');
+});
+
+test('SPI: SPI1 3-wire LSB first in 16- and 32-bit frames and SCI9 simple SPI loop back through the circuit; SCI SPI takes 8-bit frames only',()=>{
+ const code=program('static volatile uint32_t sci_done = 0;\nstatic volatile uint32_t spi_done = 0;\nvolatile uint32_t sci_ok = 0;\nvolatile uint32_t spi_ok = 0;\nfsp_err_t wide = 99;\nfsp_err_t odd_width = 99;\nuint32_t sci_cb_channel = 0;\nvoid sci_spi9_callback(spi_callback_args_t *p_args)\n{\n    sci_cb_channel = p_args->channel;\n    if (SPI_EVENT_TRANSFER_COMPLETE == p_args->event)\n    {\n        sci_done++;\n    }\n}\nvoid spi1_callback(spi_callback_args_t *p_args)\n{\n    if (SPI_EVENT_TRANSFER_COMPLETE == p_args->event)\n    {\n        spi_done++;\n    }\n}',
+  ['    static const uint8_t tx[4] = { 0x9A, 0x01, 0x80, 0x55 };','    static uint8_t rx[4];','    static const uint16_t tx16[2] = { 0x1234, 0xABCD };','    static uint16_t rx16[2];','    static const uint32_t tx32[1] = { 0xDEADBEEF };','    static uint32_t rx32[1];',
+   '    R_SCI_SPI_Open(&g_sci_spi9_ctrl, &g_sci_spi9_cfg);','    wide = R_SCI_SPI_Write(&g_sci_spi9_ctrl, tx, 2, SPI_BIT_WIDTH_16_BITS);','    R_SCI_SPI_WriteRead(&g_sci_spi9_ctrl, tx, rx, sizeof(tx), SPI_BIT_WIDTH_8_BITS);','    while (sci_done < 1)\n    {\n    }',
+   '    sci_ok = (rx[0] == 0x9A) && (rx[1] == 0x01) && (rx[2] == 0x80) && (rx[3] == 0x55);',
+   '    R_SPI_Open(&g_spi1_ctrl, &g_spi1_cfg);','    odd_width = R_SPI_Write(&g_spi1_ctrl, tx16, 1, SPI_BIT_WIDTH_28_BITS);','    R_SPI_WriteRead(&g_spi1_ctrl, tx16, rx16, 2, SPI_BIT_WIDTH_16_BITS);','    while (spi_done < 1)\n    {\n    }','    R_SPI_WriteRead(&g_spi1_ctrl, tx32, rx32, 1, SPI_BIT_WIDTH_32_BITS);','    while (spi_done < 2)\n    {\n    }',
+   '    spi_ok = (rx16[0] == 0x1234) && (rx16[1] == 0xABCD) && (rx32[0] == 0xDEADBEEF);','    while (1)\n    {\n    }'].join('\n'),spiLoopMcu());
+ const {session,log}=open({...code,wires:LOOP_WIRES}),wire=[];
+ const own=session.buses.spiExchange.bind(session.buses);session.buses.spiExchange=(v,r,at)=>{wire.push([session.buses.spiId,v]);return own(v,r,at);};
+ run(session,40);assert.deepEqual(log.warn,[]);
+ assert.deepEqual(['wide','odd_width','sci_ok','spi_ok','sci_cb_channel'].map(n=>session.readVariable(n)),[6,1,1,1,9],'FSP_ERR_UNSUPPORTED, FSP_ERR_ASSERTION, both loops');
+ // On the wire: SCI9 MSB first; SPI1 LSB first, so 0x1234 goes out as 0x2C48 (MSB byte first), 0xDEADBEEF as 0xF77DB57B.
+ assert.deepEqual(wire.filter(w=>w[0]==='SCI9').map(w=>w[1]),[0x9a,0x01,0x80,0x55]);
+ assert.deepEqual(wire.filter(w=>w[0]==='SPI1').map(w=>w[1].toString(16)),['2c','48','b3','d5','f7','7d','b5','7b']);
+ assert.equal(session.runtime.gpio.P111.mode,'OUTPUT');assert.equal(high(session,'P111'),1,'SCK9 idles high (CPOL 1)');
+ assert.equal(session.runtime.gpio.P103?.mode,undefined,'3-wire: the RSPI drives no SSL0');
+ // r_spi 4 MHz from PCLKA 100 MHz: SPBR 12 → 3.846 MHz, 16 bits in 4.16 µs; SCI 2 MHz: CKS 0, BRR 12 → 1.923 MHz.
+ const t=log.trace.filter(x=>x.protocol==='SPI').map(x=>x.message);
+ assert.deepEqual(t,['SCI9 · 4 × 8비트 · TX 9A 01 80 55 · RX 9A 01 80 55','SPI1 · 2 × 16비트 · TX 1234 ABCD · RX 1234 ABCD','SPI1 · 1 × 32비트 · TX DEADBEEF · RX DEADBEEF']);
+});
+
+test('SPI: R_SPI_CallbackSet replaces the Stacks callback and passes its context; the prelude declares the SPI instances of both drivers',()=>{
+ const code=program('volatile uint32_t mine = 0;\nvolatile uint32_t stacks = 0;\nuint32_t token = 7;\nuint32_t seen = 0;\nspi_callback_args_t cb_memory;\nvoid spi1_callback(spi_callback_args_t *p_args)\n{\n    (void) p_args;\n    stacks++;\n}\nvoid sci_spi9_callback(spi_callback_args_t *p_args)\n{\n    (void) p_args;\n}\nvoid my_callback(spi_callback_args_t *p_args)\n{\n    seen = *(uint32_t *) p_args->p_context;\n    mine++;\n}',
+  ['    static uint8_t b[2] = { 1, 2 };','    R_SPI_Open(&g_spi1_ctrl, &g_spi1_cfg);','    R_SPI_CallbackSet(&g_spi1_ctrl, my_callback, &token, &cb_memory);','    R_SPI_Write(&g_spi1_ctrl, b, 2, SPI_BIT_WIDTH_8_BITS);','    R_BSP_SoftwareDelay(1, BSP_DELAY_UNITS_MILLISECONDS);','    while (1)\n    {\n    }'].join('\n'),spiLoopMcu());
+ const {session}=open({...code,wires:LOOP_WIRES});run(session,20);
+ assert.deepEqual(['mine','stacks','seen'].map(n=>session.readVariable(n)),[1,0,7]);
+ const prelude=fspPrelude(validateRaMcu(spiLoopMcu()));
+ for(const name of ['g_spi1_ctrl','g_spi1_ext_cfg','g_spi1_cfg','g_spi1','g_sci_spi9_ctrl','g_sci_spi9_cfg_extend','g_sci_spi9_cfg','g_sci_spi9'])assert.match(prelude,new RegExp(`\\b${name} =|\\b${name};`),name);
+ assert.match(prelude,/\.spi_clksyn = SPI_SSL_MODE_CLK_SYN/);assert.match(prelude,/\.bit_order = SPI_BIT_ORDER_LSB_FIRST/);assert.doesNotMatch(prelude,/g_uart9/,'SCI9 in SPI mode is not a UART');
 });
