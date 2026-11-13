@@ -173,10 +173,11 @@ describe('Docs output builds with ARM GCC and runs on the emulator',{skip:!toolc
     const work=fs.mkdtempSync(path.join(os.tmpdir(),'docs-arm-'));
     try{
       const plan=await prepareBuild({project,tools:{armGcc:gcc,cube,armGdb:'',hostGcc:'',hostGdb:'',clangd:'',openocd:'',buildRoot:''},root:work,target:'arm',configuration:'Debug'});
-      const r=await build(plan,{onOutput:()=>{}}),elf=new Uint8Array(fs.readFileSync(r.elf)),print=[],seen={};
-      const s=new FirmwareSession(project,{elf,print:t=>print.push(t),uart:()=>{},trace:()=>{}});
+      const r=await build(plan,{onOutput:()=>{}}),elf=new Uint8Array(fs.readFileSync(r.elf)),out=[],seen={};
+      // New projects print through _write on USART2 (1.51.0); the console sink also keeps SWV output.
+      const s=new FirmwareSession(project,{elf,...consoleSink(out),trace:()=>{}});
       for(let t=20;t<=ms;t+=20){const res=s.tick(t);for(const [id,v]of Object.entries(res?.parts||{}))if('on' in v)(seen[id]??=new Set()).add(v.on);}
-      return {print,seen,top:s.runtime.inspect().frames[0]?.name||''};
+      return {print:out.flatMap(l=>l.split('\n')),seen,top:s.runtime.inspect().frames[0]?.name||''};
     }finally{fs.rmSync(work,{recursive:true,force:true});}
   }
   test('BareMetal LED blinks from register code',{timeout:240000},async()=>{
