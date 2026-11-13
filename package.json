@@ -34,13 +34,13 @@
   "devDependencies": {
     "@eslint/js": "10.0.1",
     "dompurify": "3.4.17",
-    "electron": "45.2.1",
+    "electron": "45.2.3",
     "electron-builder": "26.18.0",
     "esbuild": "0.28.2",
     "eslint": "10.14.0",
-    "globals": "17.13.0",
+    "globals": "17.14.0",
     "monaco-editor": "0.57.0",
-    "playwright": "1.64.1"
+    "playwright": "1.65.0"
   },
   "overrides": {
     "dompurify": "$dompurify",
