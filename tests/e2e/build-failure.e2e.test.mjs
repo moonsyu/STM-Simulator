@@ -13,7 +13,7 @@ const exists=p=>fs.access(p).then(()=>true,()=>false);
 const toolchain=await exists(gcc)&&await exists(path.join(fsp,'ra/fsp/src/bsp/mcu/ra6e1/bsp_feature.h'));
 
 test('a failed build leaves the run button on "▶ 실행"; after the code is fixed the same button builds and runs',{skip:!toolchain&&!process.env.CI_REQUIRE_TOOLCHAIN&&'ARM GCC / Renesas FSP not installed',timeout:300000},async()=>{
- const s=await launch();
+ const s=await launch({simEngine:'gcc'});
  await fs.writeFile(path.join(s.profile,'native-tools.json'),JSON.stringify({armGcc:gcc,fsp,armGdb:'',cube:'',cubeF1:'',hostGcc:'',hostGdb:'',clangd:'',openocd:'',buildRoot:''}));
  try{
   const {win}=s;

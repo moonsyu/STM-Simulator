@@ -27,6 +27,7 @@ import {setupBoardPicker} from './board-picker.js';
 import {PinoutPanel} from './pinout-ui.js';
 import {defaultMcu} from './mcu-config.js';
 import {compileHal} from './hal-source.js';
+import {compileFsp} from './fsp-interp.js';
 import {halFiles} from './peripheral-files.js';
 import {compile} from './parser.js';
 import {allHalExamples,allHalGuides} from './hal-examples.js';
@@ -164,7 +165,7 @@ $('code-reset').onclick=()=>{if(running())return;$('code-reset-error').textConte
 $('code-reset-cancel').onclick=()=>$('code-reset-dialog').close();
 $('code-reset-confirm').onclick=onCodeResetConfirmClick;
 $('firmware-mode').onchange=e=>{if(running())return;checkpoint();state.project.firmware={mode:e.target.value,files:state.project.firmware?.files||[]};if(e.target.value==='hal')state.project.mcu??=defaultMcu(projectBoard(state.project).mcuFamily);syncEditor();changed();};
-$('firmware-check').onclick=()=>{try{if(state.project.firmware?.mode==='hal')compileHal(state.project.code,halFiles(state.project),state.project.mcu?.family);else compile(state.project.code);log('소스 문법 검사를 통과했습니다.');}catch(e){log(e.message,'error');}};
+$('firmware-check').onclick=()=>{try{if(state.project.firmware?.mode==='fsp')compileFsp(state.project.code,state.project.firmware.files,state.project.mcu);else if(state.project.firmware?.mode==='hal')compileHal(state.project.code,halFiles(state.project),state.project.mcu?.family);else compile(state.project.code);log('소스 문법 검사를 통과했습니다.');}catch(e){log(e.message,'error');}};
 $('firmware-import').onclick=async()=>{try{if(window.desktop?.importFirmware)applyFirmware(await window.desktop.importFirmware(false));else $('firmware-files').click();}catch(e){log(e.message,'error');}};
 $('firmware-folder').hidden=!window.desktop?.importFirmware;
 $('firmware-folder').onclick=async()=>{try{applyFirmware(await window.desktop.importFirmware(true));}catch(e){log(e.message,'error');}};
