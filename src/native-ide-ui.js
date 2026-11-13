@@ -139,10 +139,13 @@ export function setupNativeIde({o,editor,select,showMonitor,points,watches,toggl
  // fspFallback from the tools installed now: after the tools are installed or their settings saved, when the project or
  // the target changes, and before a run, a 20 ms step or a restart (app-run.js, app.js), so none of them keeps using the
  // interpreter once ARM GCC and FSP are there. The labels follow.
+ // The simulator build of an FSP project needs the compiler and FSP only: ARM GDB (in the install plan's ARM GCC item) is
+ // for real-board debugging, so a PC with GCC and FSP but no GDB found still builds.
+ async function fspToolsMissing(){const tools=await api.settings();return !tools.armGcc||!tools.fsp;}
  async function recheckTools(){
   const was=fspFallback;
   if(!api||!fspProject()||engine()!=='gcc'||$('native-target').value!=='simulator')fspFallback=false;
-  else{try{fspFallback=(await api['install-plan']()).some(i=>i.id==='gcc'||i.id==='fsp');}catch{return fspFallback;}}
+  else{try{fspFallback=await fspToolsMissing();}catch{return fspFallback;}}
   if(was!==fspFallback){buildStatus();lockUpdate();}return fspFallback;
  }
  function queueLanguage(){clearTimeout(languageTimer);if(!language||!gcc())return;languageDirty=true;languageTimer=setTimeout(()=>void updateLanguage(),500);}
@@ -190,7 +193,7 @@ export function setupNativeIde({o,editor,select,showMonitor,points,watches,toggl
   const family=o.getProject().mcu?.family,sdk=fspProject()?'fsp':family==='STM32F103RB'?'cubeF1':'cube',need=(await api['install-plan']()).filter(i=>i.id==='gcc'||i.id===sdk);
   // An FSP project without the tools runs on the interpreter this time, with a note; the engine setting stays, so the
   // run after installing them is the ARM GCC build again.
-  if(fspProject()){const was=fspFallback;fspFallback=need.length>0;if(was!==fspFallback){buildStatus();lockUpdate();}if(fspFallback){o.log('ARM GCC와 Renesas FSP가 설치되어 있지 않아 FPB-RA6E1 프로젝트를 내장 해석기로 실행합니다(지원하는 FSP API만). 개발 도구에서 설치하면 ARM GCC 빌드로 실행합니다.','warning');}return fspFallback?'interpreter':'ready';}
+  if(fspProject()){const was=fspFallback;fspFallback=await fspToolsMissing();if(was!==fspFallback){buildStatus();lockUpdate();}if(fspFallback){o.log('ARM GCC와 Renesas FSP가 설치되어 있지 않아 FPB-RA6E1 프로젝트를 내장 해석기로 실행합니다(지원하는 FSP API만). 개발 도구에서 설치하면 ARM GCC 빌드로 실행합니다.','warning');}return fspFallback?'interpreter':'ready';}
   if(!need.length)return 'ready';
   plan=need;for(const key of Object.keys(progress))delete progress[key];renderPlan();
   const dialog=$('sim-tools-dialog'),buttons=['sim-tools-install','sim-tools-interpreter'].map($);
