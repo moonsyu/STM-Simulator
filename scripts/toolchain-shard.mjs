@@ -27,8 +27,8 @@ export const TOOLCHAIN_SHARDS=Object.freeze([
  [['arm-examples','NUCLEO-F446RE'],'bus-instances'],
  // 58 + 38 = 96
  [['arm-examples','NUCLEO-F103RB'],'button-bounce'],
- // 62 + 32 + 6 = 100
- ['ra-build','wdg','tim-basic'],
+ // 62 + 32 + 6 = 100, + ra-spi (about 6 locally, 1.51.x)
+ ['ra-build','wdg','tim-basic','ra-spi'],
  // the rest of ra-course 61 + 26 + 15 = 102
  // (the tests are named: a "not this one" pattern with a lookahead did not keep the heavy test out)
  [['ra-course','Bare Metal - Blinky|switch polling toggles|the challenge:|BSP tab sizes|as the course screen shows it'],'adc-continuous','clock-tree'],

@@ -46,7 +46,8 @@ export class Sci {
   rxPins() { return this.soc.routedPins(this.name + '_RXD'); }
   output(role) {
     if (role === 'TXD' && this.txEnabled()) return { level: 1 };
-    if (role === 'SCK' && this.sync() && (this.txEnabled() || this.rxEnabled())) return { level: this.spiMode().cpol };
+    // Clock synchronous mode with the internal clock (CKE = 0x): SCK is an output that idles at the SPI clock polarity.
+    if (role === 'SCK' && this.sync() && !(this.r[SCR] & 0x02)) return { level: this.spiMode().cpol };
     return null;
   }
   // ------------------------------------------------------------ simple SPI (clock synchronous)
@@ -115,7 +116,9 @@ export class Sci {
         if ((v & 0x30) !== (old & 0x30)) this.soc.peripheralChanged?.(this.name);
         return;
       }
-      default: this.r[off] = v & 0xff;
+      default:
+        this.r[off] = v & 0xff;
+        if ((off === SMR || off === SPMR) && old !== this.r[off]) this.soc.peripheralChanged?.(this.name);
     }
   }
   writeTdr(data) {
