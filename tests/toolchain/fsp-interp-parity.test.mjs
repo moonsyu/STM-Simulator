@@ -25,7 +25,7 @@ const PLAN={
  ra_uart_echo:{at:{100:s=>s.inject('Hi','SCI9'),700:s=>s.inject('RA','SCI9')},vars:{received:0}},
  ra_gpt_pwm:{vars:{ticks:0,duty_percent:0}},
  ra_adc_pot:{at:{1000:s=>{s.project.components.find(p=>p.id==='pot').position=80;}},vars:{adc_value:3,millivolts:3}},
- ra_agt_tick:{vars:{blinks:0,ms:3}},ra_iic_memory:{vars:{matched:0,nack_seen:0}},
+ ra_agt_tick:{vars:{blinks:0,ms:3}},ra_iic_memory:{vars:{matched:0,nack_seen:0}},ra_spi_memory:{vars:{matched:0,readback:0}},
  ra_led4_switch2:{leds:['P107','P303','P113','P103'],at:{460:s=>s.setPressed({sw2:true}),520:s=>s.setPressed({}),910:s=>s.setPressed({sw2:true}),960:s=>s.setPressed({}),1310:s=>s.setPressed({sw1:true}),1360:s=>s.setPressed({})}}
 };
 // The level of a pin each millisecond: its PWM duty, or high/low.
@@ -66,9 +66,10 @@ async function compare(ids){
  }finally{await fs.rm(root,{recursive:true,force:true});}
 }
 
-// Five tests, so that scripts/toolchain-shard.mjs can deal them to different CI groups.
+// Six tests, so that scripts/toolchain-shard.mjs can deal them to different CI groups.
 test('parity: ra_blink and ra_button_irq (LED1 blink, S1 on IRQ1 falling)',{skip,timeout:900000},()=>compare(['ra_blink','ra_button_irq']));
 test('parity: ra_button_poll and ra_button_irq_rising (S1 polled, S1 on IRQ1 rising)',{skip,timeout:900000},()=>compare(['ra_button_poll','ra_button_irq_rising']));
 test('parity: ra_led4_switch2 (four LEDs, two switches, pause and restart)',{skip,timeout:900000},()=>compare(['ra_led4_switch2']));
 test('parity: ra_uart_echo and ra_gpt_pwm (SCI9 echo, GPT PWM and periodic)',{skip,timeout:900000},()=>compare(['ra_uart_echo','ra_gpt_pwm']));
 test('parity: ra_adc_pot, ra_agt_tick and ra_iic_memory (ADC12, AGT, IIC master)',{skip,timeout:900000},()=>compare(['ra_adc_pot','ra_agt_tick','ra_iic_memory']));
+test('parity: ra_spi_memory (r_spi SPI1 with SSL0, the SPI memory, SCI9 output)',{skip,timeout:900000},()=>compare(['ra_spi_memory']));

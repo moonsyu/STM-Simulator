@@ -1,5 +1,6 @@
 // Feature 32: SPI on the FPB-RA6E1 — RASC-style Stacks (New Stack → Connectivity → r_spi / r_sci_spi) and Pins cards,
-// the generated hal_data, Developer Assistance, and the SPI memory example built with ARM GCC + FSP and run.
+// the generated hal_data, Developer Assistance, and the SPI memory example built with ARM GCC + FSP and run on the RA6E1
+// emulator, and the same example on the built-in interpreter (the default engine, feature 42).
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
@@ -70,7 +71,8 @@ test('RA SPI stacks: New Stack → Connectivity adds g_spi1 on D10-D13 and g_sci
 });
 
 test('FPB-RA6E1 SPI example: the SPI memory on D10-D13 is written and read back over SPI1; SCI9 prints 0x2A and LED2 lights',{skip:!toolchain&&!process.env.CI_REQUIRE_TOOLCHAIN&&'ARM GCC / Renesas FSP (r_spi) not installed',timeout:240000},async()=>{
- const s=await launch();
+ // The RA6E1 emulator (ARM GCC engine): the RSPI registers, SSL0 and the interrupts of the built program.
+ const s=await launch({simEngine:'gcc'});
  await fs.writeFile(path.join(s.profile,'native-tools.json'),JSON.stringify({armGcc:gcc,fsp,armGdb:'',cube:'',cubeF1:'',hostGcc:'',hostGdb:'',clangd:'',openocd:'',buildRoot:''}));
  try{
   const {win}=s;
@@ -94,6 +96,30 @@ test('FPB-RA6E1 SPI example: the SPI memory on D10-D13 is written and read back 
   await win.waitForFunction(()=>document.getElementById('board-led-LED2')?.getAttribute('fill')==='#64e66b',null,{timeout:30000});
   await win.click('[data-monitor="bus"]');
   await win.waitForFunction(()=>/USB-TTL: SPI1 read 0x2A/.test(document.getElementById('uart-output').textContent),null,{timeout:30000});
+  await win.keyboard.press('Control+F2');
+  await win.waitForFunction(()=>document.getElementById('shell').dataset.running==='false');
+  assert.deepEqual(s.errors,[]);
+ }finally{await s.close();}
+});
+
+test('FPB-RA6E1 SPI example on the built-in interpreter: R_SPI_Write and WriteRead reach the SPI memory with SSL0, SCI9 prints 0x2A, LED2 lights',{timeout:150000},async()=>{
+ const s=await launch();
+ try{
+  const {win}=s;
+  await win.evaluate(()=>document.getElementById('new').click());if(await win.evaluate(()=>document.getElementById('replace-dialog').open))await win.click('#replace-confirm');
+  await win.waitForSelector('#project-dialog[open]');await win.selectOption('#new-project-board','fpb-ra6e1');await win.selectOption('#new-project-template','ra_spi_memory');
+  await win.click('#project-create');await win.waitForFunction(()=>!document.getElementById('project-dialog').open);
+  await win.waitForFunction(()=>/R_SPI_WriteRead\(&g_spi1_ctrl/.test(document.getElementById('code').value));
+  await win.waitForSelector('#part-layer [data-part="mem"]');
+  assert.equal(await win.evaluate(()=>document.getElementById('sim-engine').value),'interpreter');
+  await win.keyboard.press('Control+F5');
+  await win.waitForFunction(()=>/FSP 프로그램\(hal_entry\.c\)을 내장 해석기로 시작했습니다/.test(document.getElementById('console-output').textContent),null,{timeout:30000})
+   .catch(async error=>{throw new Error(`${error.message}
+출력: ${(await win.textContent('#console-output')).slice(-1500)}`);});
+  assert.doesNotMatch(await win.textContent('#console-output'),/ARM GCC로 펌웨어를 빌드합니다/);
+  await win.waitForFunction(()=>document.getElementById('board-led-LED2')?.getAttribute('fill')==='#64e66b',null,{timeout:15000});
+  await win.click('[data-monitor="bus"]');
+  await win.waitForFunction(()=>/USB-TTL: SPI1 read 0x2A/.test(document.getElementById('uart-output').textContent),null,{timeout:15000});
   await win.keyboard.press('Control+F2');
   await win.waitForFunction(()=>document.getElementById('shell').dataset.running==='false');
   assert.deepEqual(s.errors,[]);

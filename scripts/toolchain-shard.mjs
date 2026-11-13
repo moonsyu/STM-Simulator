@@ -21,7 +21,7 @@ export function shardRuns(group){
  return [...(whole.length?[whole]:[]),...group.filter(Array.isArray).map(([name,pattern])=>[`--test-name-pattern=${pattern}`,file(name)])];
 }
 export const TOOLCHAIN_SHARDS=Object.freeze([
- // fsp-interp-parity (feature 42) has five tests, one per group 1-5, measured locally at 9-22 s (an FSP build and two
+ // fsp-interp-parity (feature 42) has six tests, one per group 1-6, measured locally at 9-22 s (an FSP build and two
  // 2 s runs per example): the heaviest goes with the lightest group.
  // ra-course's test that builds and runs every FSP example took 78 s on a faster runner (1.46.6): about 94, on its own
  // + parity of ADC, AGT, IIC (22 s locally)
@@ -35,8 +35,8 @@ export const TOOLCHAIN_SHARDS=Object.freeze([
  // the rest of ra-course 61 + 26 + 15 = 102 + parity of UART and GPT (16 s locally)
  // (the tests are named: a "not this one" pattern with a lookahead did not keep the heavy test out)
  [['ra-course','Bare Metal - Blinky|switch polling toggles|the challenge:|BSP tab sizes|as the course screen shows it'],'adc-continuous','clock-tree',['fsp-interp-parity','parity: ra_uart_echo']],
- // 26 + 23 + 22 + 17 + 16 = 104
- ['emu-accuracy','dwarf-version','board-links','copied-files','adc-group','peripheral-files','project-overrides'],
+ // 26 + 23 + 22 + 17 + 16 = 104 + parity of the SPI memory (15 s locally, 1.51.x)
+ ['emu-accuracy','dwarf-version','board-links','copied-files','adc-group','peripheral-files','project-overrides',['fsp-interp-parity','parity: ra_spi_memory']],
  // 17 + 16 + 14 + 13 + 11 + 9 + 9 + 9 + 9 = 107
  ['tim-oc','adc-sampling','tim-advanced','dac','rtc','source-folders','spi-params','tim-channels','uart-params'],
 ]);
