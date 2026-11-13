@@ -442,6 +442,8 @@ export class FspAdapter {
   const pin=s=>this.pinOf(`${id}_${s}`),sck=pin(rspi?'RSPCK':'SCK'),mosi=pin(rspi?'MOSI':'TXD'),miso=pin(rspi?'MISO':'RXD'),ssl=fourWire?pin('SSL0'):null;
   if(!sck||!mosi)throw new Error(`${fn}: 내장 해석기는 ${id}의 ${rspi?'RSPCK':'SCK'}와 ${rspi?'MOSI':'TXD(MOSI)'} 핀을 정한 SPI만 실행합니다(Pins).`);
   if(fourWire&&!ssl)throw new Error(`${fn}: ${id}의 Slave Select가 SSL0이면 Pins에서 SSL0 핀을 정하세요.`);
+  // Only SSL0 has a pin here (Pins and the generator offer no SSL1-3): another ssl_select is said, not driven on SSL0.
+  if(fourWire&&Number(ext?.fields?.ssl_select?.value??0)!==0)throw new Error(`${fn}: 내장 해석기는 SSL0만 구동합니다(spi_extended_cfg_t ssl_select = SPI_SSL_SELECT_SSL0). 다른 SSL은 시뮬레이터 실행 방식을 ARM GCC 빌드로 바꿔 실행하세요.`);
   // SSL0 polarity (spi_extended_cfg_t ssl_polarity): SPI_SSLP_LOW (0) is active low; the callback gets p_cfg->p_context.
   const sslActive=rspi&&Number(ext?.fields?.ssl_polarity?.value??0)===1?1:0,context=cfg.fields.p_context?.value;
   Object.assign(st,{open:true,busy:0,id,rspi,hz,sck,mosi,miso,ssl,sslActive,cpol:f('clk_polarity')&1,cpha:f('clk_phase')&1,lsb:f('bit_order')===1,ipl:f('tei_ipl'),callback:t.callback,context:context?.kind==='pointer'?context:null});

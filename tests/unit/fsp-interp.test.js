@@ -445,6 +445,12 @@ test('SPI review 5 and 6: 9-bit frames take 9 bit times on the bus and the logic
  assert.deepEqual(decoded(0).map(f=>f[0]),[0x1ff,0x101,0x0aa,0x01,0xa5],'9-bit frames, then LSB first decoded LSB first');
 });
 
+test('SPI re-check: an ssl_select other than SSL0 stops with the reason (the interpreter drives SSL0 only)',()=>{
+ const p=program('spi_cfg_t my_cfg;\nspi_extended_cfg_t my_ext;\nvoid spi1_callback(spi_callback_args_t *p_args)\n{\n    (void) p_args;\n}\nvoid user_uart9_callback(uart_callback_args_t *p_args)\n{\n    (void) p_args;\n}',
+  ['    my_ext = g_spi1_ext_cfg;','    my_ext.ssl_select = SPI_SSL_SELECT_SSL1;','    my_cfg = g_spi1_cfg;','    my_cfg.p_extend = &my_ext;','    R_SPI_Open(&g_spi1_ctrl, &my_cfg);','    while (1)\n    {\n    }'].join('\n'),raExample('ra_spi_memory').mcu());
+ assert.throws(()=>run(open(p).session,20),/R_SPI_Open: 내장 해석기는 SSL0만 구동합니다.*ARM GCC/);
+});
+
 test('SPI re-check 11: an 8-bit command then 16-bit data — the analyzer decodes each transfer with its own width and bit order',()=>{
  const mcu=spiLoopMcu();mcu.peripherals.SPI1.bitOrder='MSB';
  const globals='volatile uint32_t done = 0;\nvoid spi1_callback(spi_callback_args_t *p_args)\n{\n    (void) p_args;\n    done++;\n}\nvoid sci_spi9_callback(spi_callback_args_t *p_args)\n{\n    (void) p_args;\n}\nuint8_t cmd[2] = { 0x12, 0x34 };\nuint16_t data[1] = { 0xABCD };\n';
