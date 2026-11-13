@@ -1,5 +1,5 @@
 import {$,esc} from './common.js';
-import {RA6E1_PORTS,RA_IRQ_PINS,RA_RESERVED,FPB_RA6E1,RA_PERIPHERAL_PINS,RA_ADC_CHANNELS,RA_GPT_32BIT,RA_GPT_CHANNELS,RA_AGT_CHANNELS,RA_TIMER_UNITS,RA_CLOCK_LIMITS,RA_IIC_RATES,raIicClock,raGptCounts,raAgtCounts,raClockHz,raFamily,validateRaMcu,raDefaultMcu,raIrqName,RA_BSP_DEFAULTS} from './ra-config.js';
+import {RA6E1_PORTS,RA_IRQ_PINS,RA_RESERVED,FPB_RA6E1,RA_PERIPHERAL_PINS,RA_ADC_CHANNELS,RA_GPT_32BIT,RA_GPT_CHANNELS,RA_AGT_CHANNELS,RA_TIMER_UNITS,RA_CLOCK_LIMITS,RA_IIC_RATES,RA_SPI_CHANNELS,RA_SCI_SPI_CHANNELS,raIicClock,raGptCounts,raAgtCounts,raClockHz,raSpiBitrate,raSciSpiBitrate,raFamily,validateRaMcu,raDefaultMcu,raIrqName,RA_BSP_DEFAULTS} from './ra-config.js';
 import {sciBaudSetting,raPclka} from './ra-generator.js';
 // Pin settings of a Renesas RA project (FPB-RA6E1), as the RA Smart Configurator's Pins tab sets them: per port pin the
 // mode (output / input / IRQ / analog), the symbolic name RASC writes into bsp_pin_cfg.h, output level and drive, the
@@ -7,12 +7,17 @@ import {sciBaudSetting,raPclka} from './ra-generator.js';
 // Peripheral pins carry an SCI UART signal (TXDn / RXDn); choosing one turns on that channel's g_uartN (r_sci_uart) stack with
 // its baud rate, interrupt priority and callback, and a channel with no pin left is turned off again. A GPT GTIOCnA/B
 // signal does the same for g_timerN (r_gpt): mode (PWM / periodic), period and unit, duty, cycle-end callback.
-const MODES=[['','Disabled'],['GPIO_Output','Output mode'],['GPIO_Input','Input mode'],['IRQ','IRQ'],['Analog','Analog mode'],['Peripheral','Peripheral mode (SCI UART · GPT · IIC)']];
+// SPI: an RSPCKn/MOSIn/MISOn/SSL0 signal turns on g_spiN (r_spi), and SCI9 can be a simple SPI master (g_sci_spi9, r_sci_spi)
+// instead of a UART: its SCK9 pin or the Mode select switches it; both are also New Stack → Connectivity entries.
+const MODES=[['','Disabled'],['GPIO_Output','Output mode'],['GPIO_Input','Input mode'],['IRQ','IRQ'],['Analog','Analog mode'],['Peripheral','Peripheral mode (SCI · SPI · GPT · IIC)']];
 const signalsOf=pin=>Object.keys(RA_PERIPHERAL_PINS).filter(s=>RA_PERIPHERAL_PINS[s].includes(pin));
-const SIGNAL_NOTE={TXD:'SCI 송신',RXD:'SCI 수신',GTIOCA:'GPT 출력 A',GTIOCB:'GPT 출력 B',SCL:'I²C 클록',SDA:'I²C 데이터'};
+const SIGNAL_NOTE={TXD:'SCI 송신 · Simple SPI MOSI',RXD:'SCI 수신 · Simple SPI MISO',SCK:'Simple SPI 클록',GTIOCA:'GPT 출력 A',GTIOCB:'GPT 출력 B',SCL:'I²C 클록',SDA:'I²C 데이터',RSPCK:'SPI 클록',MOSI:'SPI 마스터 출력',MISO:'SPI 마스터 입력',SSL0:'SPI 슬레이브 선택'};
 const signalLabel=sg=>{const [id,role]=sg.split('_');return role.startsWith('GTIOC')?`${role.slice(0,5)}${id.slice(3)}${role.slice(5)} (${SIGNAL_NOTE[role]})`:`${sg} (${SIGNAL_NOTE[role]})`;};
 const PRIORITIES=(cur,none)=>(none?`<option value="" ${cur===''?'selected':''}>Disabled</option>`:'')+Array.from({length:16},(_,i)=>`<option value="${i}" ${String(i)===String(cur)?'selected':''}>Priority ${i}${i===0?' (highest)':i===15?' (lowest)':''}</option>`).join('');
-const DEFAULTS={IIC:ch=>({rate:'STANDARD',slave:0x50,callback:`i2c_master${ch}_callback`,priority:12}),SCI:ch=>({baud:115200,callback:`user_uart${ch}_callback`,priority:12}),GPT:()=>({mode:'PWM',period:1,unit:'kHz',duty:50,callback:'',priority:12})};
+const SPI_DEFAULTS={bitrate:1000000,cpol:0,cpha:0,bitOrder:'MSB',priority:12};
+const DEFAULTS={IIC:ch=>({rate:'STANDARD',slave:0x50,callback:`i2c_master${ch}_callback`,priority:12}),SCI:ch=>({baud:115200,callback:`user_uart${ch}_callback`,priority:12}),GPT:()=>({mode:'PWM',period:1,unit:'kHz',duty:50,callback:'',priority:12}),SPI:ch=>({...SPI_DEFAULTS,ssl:'SSL0',callback:`spi${ch}_callback`})};
+// The pins New Stack → Connectivity gives an SPI stack: RSPI pin group A (Arduino D10-D13) or B, SCI9 on D0/D1 and P111.
+const SPI_PIN_GROUPS={SPI1:[{P100:'SPI1_MISO',P101:'SPI1_MOSI',P102:'SPI1_RSPCK',P103:'SPI1_SSL0'},{P410:'SPI1_MISO',P411:'SPI1_MOSI',P412:'SPI1_RSPCK',P413:'SPI1_SSL0'}],SCI9:[{P109:'SCI9_TXD',P110:'SCI9_RXD',P111:'SCI9_SCK'}]};
 const ARDUINO_OF=Object.fromEntries(Object.entries(FPB_RA6E1.arduino).map(([k,v])=>[v,k]));
 const NOTES={P408:'LED1 (녹색, 보드 내장 · 직렬 10 kΩ)',P407:'LED2 (녹색, 보드 내장 · 직렬 10 kΩ)',P205:'S1 사용자 스위치 (보드 내장, 누르면 LOW · 10 kΩ 풀업 R17)',P014:'Arduino 헤더의 RESET 핀(J2-3) · 10 kΩ 풀업 R4 — MCU의 RES#가 아니라 GPIO라서 LOW로 당겨도 리셋되지 않습니다',P400:'Arduino SCL · 2.2 kΩ 풀업 (보드)',P401:'Arduino SDA · 2.2 kΩ 풀업 (보드)'};
 
@@ -68,7 +73,11 @@ export class RaPinoutPanel {
     }
     else if(p.function==='Analog')html+=`<p class="form-hint">이 핀에는 ADC12 입력(AN 채널)이 없습니다.</p>`;
     if(p.function==='IRQ')html+=`<label>Pull up/down<select disabled title="인터럽트 핀의 풀업은 Stacks 탭에서 정합니다"><option>${p.pull==='PULLUP'?'input pull-up':'None'}</option></select></label><fieldset><legend>g_external_irq${irq} (r_icu) · ${raIrqName(pin)}</legend><p class="form-hint">Trigger ${({FALLING:'Falling',RISING:'Rising',BOTH:'Both Edges',LOW:'Low Level'})[p.edge||'FALLING']} · Priority ${p.priority??12} · ${esc(p.callback||`external_irq${irq}_callback`)}. 인터럽트 핀의 Trigger · Callback · 우선순위 · 풀업은 RASC처럼 Stacks 탭의 g_external_irq${irq} Properties에서 정합니다.</p><button type="button" data-ra-to-stacks>Stacks: g_external_irq${irq} Properties</button></fieldset>`;
-    if(p.function==='Peripheral'&&p.signal.startsWith('IIC')){
+    if(p.function==='Peripheral'&&p.signal.startsWith('SPI')){
+     const id=p.signal.split('_')[0],ch=Number(id.slice(3)),u={...DEFAULTS.SPI(ch),...this.draft.peripherals?.[id]};
+     html+=`<label>Signal<select data-ra="signal">${signals.map(sg=>option(sg,signalLabel(sg),p.signal)).join('')}</select></label><fieldset><legend>g_spi${ch} (r_spi · SPI${ch})</legend>${this.spiFields(id,u)}</fieldset>`;
+    }
+    else if(p.function==='Peripheral'&&p.signal.startsWith('IIC')){
      const id=p.signal.split('_')[0],ch=Number(id.slice(3)),u={...DEFAULTS.IIC(ch),...this.draft.peripherals?.[id]};
      let info='';try{const c=raIicClock(raClockHz(this.draft,'pclkb'),u.rate);info=`PCLKB ${raClockHz(this.draft,'pclkb')/1e6} MHz / ${2**c.cks} · ICBRH ${c.brh} · ICBRL ${c.brl} → ${Math.round(c.actual)} bps (듀티 ${Math.round(c.duty)} %)`;}catch(error){info=error.message;}
      html+=`<label>Signal<select data-ra="signal">${signals.map(sg=>option(sg,signalLabel(sg),p.signal)).join('')}</select></label><fieldset><legend>g_i2c_master${ch} (r_iic_master · IIC${ch})</legend><label>Rate<select data-ra-iic="rate">${Object.keys(RA_IIC_RATES).filter(r=>r!=='FASTPLUS'||ch===0).map(r=>option(r,{STANDARD:'Standard (100 kHz)',FAST:'Fast-mode (400 kHz)',FASTPLUS:'Fast-mode plus (1 MHz)'}[r],u.rate)).join('')}</select></label><p class="form-hint">${esc(info)}</p><label>Slave Address<input data-ra-iic="slave" value="0x${u.slave.toString(16).padStart(2,'0')}" spellcheck="false"></label><label>Callback<input data-ra-iic="callback" value="${esc(u.callback)}" spellcheck="false"></label><label>Interrupt Priority<select data-ra-iic="priority">${PRIORITIES(u.priority)}</select></label><p class="form-hint">SCL과 SDA를 모두 이 채널로 정합니다(P400/P401은 보드의 2.2 kΩ 풀업). hal_entry()에서 R_IIC_MASTER_Open(&amp;g_i2c_master${ch}_ctrl, &amp;g_i2c_master${ch}_cfg) 후 R_IIC_MASTER_Write · R_IIC_MASTER_Read를 부르고, 콜백에서 I2C_MASTER_EVENT_TX_COMPLETE · RX_COMPLETE · ABORTED를 받습니다.</p></fieldset>`;
@@ -78,10 +87,15 @@ export class RaPinoutPanel {
      let info='';try{const c=raGptCounts(raClockHz(this.draft),ch,u.period,u.unit,u.duty);info=`PCLKD ${raClockHz(this.draft)/1e6} MHz / ${2**c.div} → ${c.counts} counts${pwm?`, 듀티 ${c.duty} counts`:''} (${Number(c.hz.toPrecision(6))} Hz, ${RA_GPT_32BIT.includes(ch)?32:16}비트)`;}catch(error){info=error.message;}
      html+=`<label>Signal<select data-ra="signal">${signals.map(sg=>option(sg,signalLabel(sg),p.signal)).join('')}</select></label><fieldset><legend>g_timer${ch} (r_gpt · GPT${ch})</legend><label>Mode<select data-ra-gpt="mode">${option('PWM','PWM',u.mode)}${option('PERIODIC','Periodic',u.mode)}</select></label><label>Period<input type="number" data-ra-gpt="period" min="0" step="any" value="${u.period}"></label><label>Period Unit<select data-ra-gpt="unit">${RA_TIMER_UNITS.map(x=>option(x,{Hz:'Hertz',kHz:'Kilohertz',s:'Seconds',ms:'Milliseconds',us:'Microseconds'}[x],u.unit)).join('')}</select></label>${pwm?`<label>Duty Cycle Percent<input type="number" data-ra-gpt="duty" min="0" max="100" step="any" value="${u.duty}"></label>`:''}<p class="form-hint">${esc(info)}</p><label>Callback<input data-ra-gpt="callback" value="${esc(u.callback)}" placeholder="NULL" spellcheck="false"></label>${u.callback?`<label>Overflow/Crest Interrupt Priority<select data-ra-gpt="priority">${PRIORITIES(u.priority)}</select></label>`:''}<p class="form-hint">hal_entry()에서 R_GPT_Open(&amp;g_timer${ch}_ctrl, &amp;g_timer${ch}_cfg)과 R_GPT_Start(&amp;g_timer${ch}_ctrl)를 부릅니다.${pwm?` 듀티는 R_GPT_DutyCycleSet(&amp;g_timer${ch}_ctrl, counts, GPT_IO_PIN_${p.signal.split('_')[1]})로 바꿉니다.`:''}${u.callback?` 주기마다 ${esc(u.callback)}(TIMER_EVENT_CYCLE_END)가 불립니다.`:' 콜백 이름을 쓰면 주기 끝 인터럽트가 켜집니다.'}</p></fieldset>`;
     }
+    else if(p.function==='Peripheral'&&this.draft.peripherals?.[p.signal.split('_')[0]]?.mode==='SPI'){
+     const id=p.signal.split('_')[0],ch=id.slice(3),u={...SPI_DEFAULTS,callback:`sci_spi${ch}_callback`,...this.draft.peripherals[id]};
+     html+=`<label>Signal<select data-ra="signal">${signals.map(sg=>option(sg,signalLabel(sg),p.signal)).join('')}</select></label><fieldset><legend>g_sci_spi${ch} (r_sci_spi · SCI${ch})</legend><label>Mode<select data-ra-sci="mode">${option('UART','UART (r_sci_uart)','SPI')}${option('SPI','Simple SPI (r_sci_spi)','SPI')}</select></label>${this.spiFields(id,u)}</fieldset>`;
+    }
     else if(p.function==='Peripheral'){
      const id=p.signal.split('_')[0],ch=id.slice(3),u=this.draft.peripherals?.[id]||{},baud=u.baud??115200;
      let rate='';try{const b=sciBaudSetting(raPclka(this.draft),baud);rate=`PCLKA ${raPclka(this.draft)/1e6} MHz → 실제 ${Math.round(b.actual)} bps (오차 ${b.error.toFixed(2)} %)`;}catch(error){rate=error.message;}
-     html+=`<label>Signal<select data-ra="signal">${signals.map(sg=>option(sg,signalLabel(sg),p.signal)).join('')}</select></label><fieldset><legend>g_uart${ch} (r_sci_uart · SCI${ch})</legend><label>Baud Rate<input type="number" data-ra-sci="baud" min="300" max="2000000" step="1" value="${baud}"></label><p class="form-hint">${esc(rate)} · 8N1</p><label>Priority<select data-ra-sci="priority">${Array.from({length:16},(_,i)=>option(String(i),`Priority ${i}${i===0?' (highest)':i===15?' (lowest)':''}`,String(u.priority??12))).join('')}</select></label><label>Callback<input data-ra-sci="callback" value="${esc(u.callback||`user_uart${ch}_callback`)}" spellcheck="false"></label><p class="form-hint">hal_entry()에서 R_SCI_UART_Open(&amp;g_uart${ch}_ctrl, &amp;g_uart${ch}_cfg) 후 R_SCI_UART_Write · R_SCI_UART_Read를 부르고, 콜백에서 UART_EVENT_RX_CHAR · UART_EVENT_TX_COMPLETE를 받습니다.</p></fieldset>`;
+     const mode=RA_SCI_SPI_CHANNELS.includes(Number(ch))?`<label>Mode<select data-ra-sci="mode">${option('UART','UART (r_sci_uart)','UART')}${option('SPI','Simple SPI (r_sci_spi)','UART')}</select></label>`:'';
+     html+=`<label>Signal<select data-ra="signal">${signals.map(sg=>option(sg,signalLabel(sg),p.signal)).join('')}</select></label><fieldset><legend>g_uart${ch} (r_sci_uart · SCI${ch})</legend>${mode}<label>Baud Rate<input type="number" data-ra-sci="baud" min="300" max="2000000" step="1" value="${baud}"></label><p class="form-hint">${esc(rate)} · 8N1</p><label>Priority<select data-ra-sci="priority">${Array.from({length:16},(_,i)=>option(String(i),`Priority ${i}${i===0?' (highest)':i===15?' (lowest)':''}`,String(u.priority??12))).join('')}</select></label><label>Callback<input data-ra-sci="callback" value="${esc(u.callback||`user_uart${ch}_callback`)}" spellcheck="false"></label><p class="form-hint">hal_entry()에서 R_SCI_UART_Open(&amp;g_uart${ch}_ctrl, &amp;g_uart${ch}_cfg) 후 R_SCI_UART_Write · R_SCI_UART_Read를 부르고, 콜백에서 UART_EVENT_RX_CHAR · UART_EVENT_TX_COMPLETE를 받습니다.</p></fieldset>`;
     }
     if(p.label)html+=`<p class="form-hint">bsp_pin_cfg.h: <code>#define ${esc(p.label)} (BSP_IO_PORT_${pin.slice(1,2).padStart(2,'0')}_PIN_${pin.slice(2)})</code></p>`;
    }
@@ -89,8 +103,10 @@ export class RaPinoutPanel {
   $('ra-pin-props').innerHTML=html;
  }
  change(el){
-  const key=el.dataset.ra;if(!key&&!el.dataset.raSci&&!el.dataset.raGpt&&!el.dataset.raAdc&&!el.dataset.raIic)return;const pin=this.pin,pins=this.draft.pins;
+  const key=el.dataset.ra;if(!key&&!el.dataset.raSci&&!el.dataset.raGpt&&!el.dataset.raAdc&&!el.dataset.raIic&&!el.dataset.raSpi)return;const pin=this.pin,pins=this.draft.pins;
   if(key==='function'){if(!el.value)delete pins[pin];else{const old=pins[pin]||{};pins[pin]={function:el.value,...(old.label?{label:old.label}:{})};if(el.value==='IRQ')Object.assign(pins[pin],{edge:'FALLING',pull:'PULLUP',priority:12,callback:`external_irq${RA_IRQ_PINS[pin]}_callback`});if(el.value==='GPIO_Output')Object.assign(pins[pin],{initial:0,drive:'LOW'});if(el.value==='GPIO_Input')pins[pin].pull='NONE';if(el.value==='Peripheral')pins[pin].signal=signalsOf(pin)[0];}}
+  else if(el.dataset.raSpi)this.spiValue(el);
+  else if(el.dataset.raSci==='mode'){const id=pins[pin]?.signal?.split('_')[0];if(id)this.sciMode(id,el.value);}
   else if(el.dataset.raSci){const id=pins[pin]?.signal?.split('_')[0];if(!id)return;const u=this.draft.peripherals[id];const v=el.value.trim();u[el.dataset.raSci]=el.dataset.raSci==='callback'?v:Number(v);}
   else if(el.dataset.raAdc){const u=((this.draft.peripherals||={}).ADC0||={enabled:true}),k=el.dataset.raAdc,v=el.value.trim();u[k]=['mode','callback'].includes(k)?v:Number(v);}
   else if(el.dataset.raIic){const id=pins[pin]?.signal?.split('_')[0];if(!id)return;const u=this.draft.peripherals[id],k=el.dataset.raIic,v=el.value.trim();u[k]=k==='slave'?(/^(0x[0-9a-f]+|\d+)$/i.test(v)?Number(v):NaN):['rate','callback'].includes(k)?v:Number(v);}
@@ -105,10 +121,33 @@ export class RaPinoutPanel {
  syncChannels(){
   const used=new Set(Object.values(this.draft.pins).filter(p=>p.function==='Peripheral').map(p=>p.signal.split('_')[0])),per=this.draft.peripherals||={};
   for(const id of used)per[id]={...DEFAULTS[id.slice(0,3)](id.slice(3)),...per[id],enabled:true};
+  // SPI: the SSL0 pin decides hardware slave select (4-wire) or none (3-wire, CS from a GPIO); an SCK pin makes the SCI
+  // channel a simple SPI master.
+  const signals=new Set(Object.values(this.draft.pins).filter(p=>p.function==='Peripheral').map(p=>p.signal));
+  for(const id of used)if(id.startsWith('SPI'))per[id].ssl=signals.has(id+'_SSL0')?'SSL0':'NONE';
+  for(const id of used)if(signals.has(id+'_SCK')&&per[id].mode!=='SPI')this.sciMode(id,'SPI');
   // ADC0 is on while a pin with an AN channel is set to Analog.
   if(Object.entries(this.draft.pins).some(([q,x])=>x.function==='Analog'&&RA_ADC_CHANNELS[q]!=null))used.add('ADC0');
   if(used.has('ADC0'))per.ADC0={mode:'SINGLE',resolution:12,callback:'',priority:12,...per.ADC0,enabled:true};
   for(const id of Object.keys(per))if(!used.has(id)&&!id.startsWith('AGT')&&!(id.startsWith('GPT')&&per[id].mode==='PERIODIC'))per[id].enabled=false;
+ }
+ // The Properties of an SPI master stack (r_spi or r_sci_spi), shown on its pins and in the Stacks tab.
+ spiFields(id,u){
+  const sci=id.startsWith('SCI'),ch=id.replace(/\D/g,''),g=sci?`g_sci_spi${ch}`:`g_spi${ch}`,pclka=raClockHz(this.draft,'pclka'),attr=k=>`data-ra-spi="${k}" data-ra-spi-id="${id}"`;
+  let info='';
+  try{if(sci){const c=raSciSpiBitrate(pclka,u.bitrate);info=`PCLKA ${pclka/1e6} MHz / (4 × ${4**c.cks} × ${c.brr+1}) · CKS ${c.cks} · BRR ${c.brr} → ${Math.round(c.actual)} bps`;}else{const c=raSpiBitrate(pclka,u.bitrate);info=`PCLKA ${pclka/1e6} MHz / (2 × ${c.spbr+1} × ${2**c.brdv}) · SPBR ${c.spbr} · BRDV ${c.brdv} → ${Math.round(c.actual)} bps`;}}catch(error){info=error.message;}
+  const sel=(k,opts)=>`<select ${attr(k)}>${opts.map(([v,l])=>`<option value="${v}" ${String(v)===String(u[k])?'selected':''}>${l}</option>`).join('')}</select>`;
+  const ssl=sci?'Slave Select: 없음 — r_sci_spi는 CS를 내지 않으니 GPIO 출력 핀으로 CS를 직접 내리고 올립니다.'
+   :u.ssl==='SSL0'?`Slave Select: SSL0 (${Object.entries(this.draft.pins).find(([,p])=>p.signal===id+'_SSL0')?.[0]}) — SPI Operation(4-wire). RSPI가 전송마다 SSL0을 LOW로 내리고 끝나면 올립니다.`
+   :'Slave Select: 사용 안 함 — Clock Synchronous Operation(3-wire). SSL0 핀(P103 · D10 또는 P413)을 정하면 SSL0을 쓰고, 아니면 GPIO 출력 핀으로 CS를 내립니다.';
+  return `<label>Operating Mode<select disabled><option>Master</option></select></label><label>Bitrate<input type="number" ${attr('bitrate')} min="1000" step="1" value="${u.bitrate}"></label><p class="form-hint">${esc(info)}</p><label>Clock Phase${sel('cpha',[[0,'Data sampling on odd edge, data variation on even edge'],[1,'Data sampling on even edge, data variation on odd edge']])}</label><label>Clock Polarity${sel('cpol',[[0,'Low when idle'],[1,'High when idle']])}</label><label>Bit Order${sel('bitOrder',[['MSB','MSB First'],['LSB','LSB First']])}</label><label>Callback<input ${attr('callback')} value="${esc(u.callback)}" spellcheck="false"></label><label>Interrupt Priority<select ${attr('priority')}>${PRIORITIES(u.priority)}</select></label><p class="form-hint">${esc(ssl)}</p><p class="form-hint">hal_entry()에서 R_${sci?'SCI_SPI':'SPI'}_Open(&amp;${g}_ctrl, &amp;${g}_cfg) 후 R_${sci?'SCI_SPI':'SPI'}_Write · Read · WriteRead(…, SPI_BIT_WIDTH_8_BITS)를 부르고, 콜백에서 SPI_EVENT_TRANSFER_COMPLETE를 받습니다.${sci?' 8비트 프레임만 됩니다.':' 비트 폭(8 · 16 · 32비트)은 호출마다 정합니다.'}</p>`;
+ }
+ spiValue(el){const id=el.dataset.raSpiId,k=el.dataset.raSpi,u=this.draft.peripherals?.[id];if(!u)return;const v=el.value.trim();u[k]=['bitOrder','callback'].includes(k)?v:Number(v);}
+ // SCI channel as UART or simple SPI: the callback follows the mode while it still has the other mode's default name.
+ sciMode(id,mode){
+  const per=this.draft.peripherals||={},ch=id.slice(3),u=per[id]||={enabled:true},uart=`user_uart${ch}_callback`,spi=`sci_spi${ch}_callback`;
+  if(mode==='SPI'){Object.assign(u,{...SPI_DEFAULTS,...u,mode:'SPI'});if(!u.callback||u.callback===uart)u.callback=spi;}
+  else{delete u.mode;if(!u.callback||u.callback===spi)u.callback=uart;u.baud??=115200;for(const pin of Object.keys(this.draft.pins))if(this.draft.pins[pin].signal===id+'_SCK')delete this.draft.pins[pin];}
  }
  // Clocks tab: HOCO → PLL → the internal clock dividers, with the resulting frequencies and their limits.
  renderClocks(){
@@ -127,16 +166,19 @@ export class RaPinoutPanel {
   for(const [id,p]of Object.entries(per)){
    if(!p.enabled)continue;const ch=id.slice(3);
    if(id.startsWith('IIC'))list.push({name:`g_i2c_master${ch}`,module:'I2C Master (r_iic_master)',pin:pinOf(id),info:`${p.rate} · 0x${(p.slave??0x50).toString(16)} · ${p.callback}`});
+   else if(id.startsWith('SPI'))list.push({spi:id,name:`g_spi${ch}`,module:'SPI (r_spi)',pin:pinOf(id)});
+   else if(id.startsWith('SCI')&&p.mode==='SPI')list.push({spi:id,name:`g_sci_spi${ch}`,module:'SPI (r_sci_spi)',pin:pinOf(id)});
    else if(id.startsWith('SCI'))list.push({name:`g_uart${ch}`,module:'UART (r_sci_uart)',pin:pinOf(id),info:`${p.baud} bps · ${p.callback}`});
    else if(id==='ADC0')list.push({name:'g_adc0',module:'ADC (r_adc)',pin:Object.entries(pins).find(([q,x])=>x.function==='Analog'&&RA_ADC_CHANNELS[q]!=null)?.[0],info:`${p.mode==='CONTINUOUS'?'Continuous':'Single'} Scan · ${p.resolution}-Bit`});
    else if(id.startsWith('GPT')&&p.mode==='PWM')list.push({name:`g_timer${ch}`,module:'Timer, General PWM (r_gpt)',pin:pinOf(id),info:`PWM ${p.period} ${p.unit} · ${p.duty} %`});
    else list.push({id,name:id.startsWith('AGT')?`g_agt${ch}`:`g_timer${ch}`,module:id.startsWith('AGT')?'Timer, Low-Power (r_agt)':'Timer, General PWM (r_gpt) · Periodic',p,edit:true});
   }
   const timerInfo=(id,p)=>{try{if(id.startsWith('AGT')){const c=raAgtCounts(raClockHz(this.draft,'pclkb'),Number(id.slice(3)),p.period,p.unit);return `${c.source}${c.source==='LOCO'?' 32.768 kHz':' '+raClockHz(this.draft,'pclkb')/1e6+' MHz'} / ${c.source==='LOCO'?2**c.div:[1,2,0,8][c.div]} → ${c.counts} counts (${Number(c.hz.toPrecision(6))} Hz)`;}const c=raGptCounts(raClockHz(this.draft),Number(id.slice(3)),p.period,p.unit);return `PCLKD / ${2**c.div} → ${c.counts} counts (${Number(c.hz.toPrecision(6))} Hz)`;}catch(error){return error.message;}};
-  const card=s=>s.irq?this.irqCard(s.irq):s.edit?`<article class="ra-stack" data-ra-stack="${s.id}"><header><b>${s.name}</b><span>${s.module}</span><button type="button" data-ra-remove="${s.id}">삭제</button></header><div class="ra-stack-fields"><label>Period<input type="number" data-ra-field="period" min="0" step="any" value="${s.p.period}"></label><label>Unit<select data-ra-field="unit">${RA_TIMER_UNITS.map(u=>`<option value="${u}" ${u===s.p.unit?'selected':''}>${u}</option>`).join('')}</select></label><label>Callback<input data-ra-field="callback" value="${esc(s.p.callback)}" placeholder="NULL" spellcheck="false"></label><label>Priority<select data-ra-field="priority">${PRIORITIES(s.p.priority)}</select></label></div><p class="form-hint">${esc(timerInfo(s.id,s.p))} · R_${s.id.startsWith('AGT')?'AGT':'GPT'}_Open(&amp;${s.name}_ctrl, &amp;${s.name}_cfg) · R_${s.id.startsWith('AGT')?'AGT':'GPT'}_Start(&amp;${s.name}_ctrl)</p></article>`
+  const card=s=>s.irq?this.irqCard(s.irq):s.spi?`<article class="ra-stack" data-ra-spi-stack="${s.spi}"><header><b>${s.name}</b><span>${s.module}</span>${s.pin?`<button type="button" data-ra-goto="${s.pin}">Pins: ${s.pin}</button>`:''}<button type="button" data-ra-spi-remove="${s.spi}">삭제</button></header><div class="ra-stack-fields">${this.spiFields(s.spi,{...SPI_DEFAULTS,...per[s.spi]})}</div></article>`:s.edit?`<article class="ra-stack" data-ra-stack="${s.id}"><header><b>${s.name}</b><span>${s.module}</span><button type="button" data-ra-remove="${s.id}">삭제</button></header><div class="ra-stack-fields"><label>Period<input type="number" data-ra-field="period" min="0" step="any" value="${s.p.period}"></label><label>Unit<select data-ra-field="unit">${RA_TIMER_UNITS.map(u=>`<option value="${u}" ${u===s.p.unit?'selected':''}>${u}</option>`).join('')}</select></label><label>Callback<input data-ra-field="callback" value="${esc(s.p.callback)}" placeholder="NULL" spellcheck="false"></label><label>Priority<select data-ra-field="priority">${PRIORITIES(s.p.priority)}</select></label></div><p class="form-hint">${esc(timerInfo(s.id,s.p))} · R_${s.id.startsWith('AGT')?'AGT':'GPT'}_Open(&amp;${s.name}_ctrl, &amp;${s.name}_cfg) · R_${s.id.startsWith('AGT')?'AGT':'GPT'}_Start(&amp;${s.name}_ctrl)</p></article>`
    :`<article class="ra-stack"><header><b>${s.name}</b><span>${s.module}</span>${s.pin?`<button type="button" data-ra-goto="${s.pin}">Pins: ${s.pin}</button>`:''}</header><p class="form-hint">${esc(s.info)}</p></article>`;
   const free=[...RA_AGT_CHANNELS.map(ch=>'AGT'+ch),...RA_GPT_CHANNELS.map(ch=>'GPT'+ch)].filter(id=>!per[id]?.enabled);
-  $('ra-stacks').innerHTML=`<div class="ra-stack-new"><label>New Stack<select id="ra-stack-add"><optgroup label="Input"><option value="IRQ">External IRQ (r_icu)</option></optgroup><optgroup label="Timers">${free.map(id=>`<option value="${id}">${id.startsWith('AGT')?`Timer, Low-Power (r_agt) · AGT${id.slice(3)}`:`Timer, General PWM (r_gpt) · GPT${id.slice(3)} Periodic`}</option>`).join('')}</optgroup></select></label><button type="button" data-ra-add>추가</button></div>${list.length?list.map(card).join(''):'<p class="form-hint">스택이 없습니다. New Stack으로 External IRQ나 타이머를 넣거나, Pins 탭에서 핀 기능을 정하세요.</p>'}`;
+  const spiFree=[...RA_SPI_CHANNELS.map(ch=>['SPI'+ch,`SPI (r_spi) · SPI${ch}`]),...RA_SCI_SPI_CHANNELS.map(ch=>['SCI'+ch,`SPI (r_sci_spi) · SCI${ch} Simple SPI`])].filter(([id])=>!per[id]?.enabled);
+  $('ra-stacks').innerHTML=`<div class="ra-stack-new"><label>New Stack<select id="ra-stack-add"><optgroup label="Input"><option value="IRQ">External IRQ (r_icu)</option></optgroup>${spiFree.length?`<optgroup label="Connectivity">${spiFree.map(([id,l])=>`<option value="${id}" data-ra-spi-add>${l}</option>`).join('')}</optgroup>`:''}<optgroup label="Timers">${free.map(id=>`<option value="${id}">${id.startsWith('AGT')?`Timer, Low-Power (r_agt) · AGT${id.slice(3)}`:`Timer, General PWM (r_gpt) · GPT${id.slice(3)} Periodic`}</option>`).join('')}</optgroup></select></label><button type="button" data-ra-add>추가</button></div>${list.length?list.map(card).join(''):'<p class="form-hint">스택이 없습니다. New Stack으로 External IRQ · SPI · 타이머를 넣거나, Pins 탭에서 핀 기능을 정하세요.</p>'}`;
  }
  // An External IRQ stack (New Stack → Input → External IRQ), with the Properties RASC shows: Name, Channel, Trigger,
  // Digital Filtering, Callback, Pin Interrupt Priority, and the pin of the channel with its pull-up. The data stays on the
@@ -160,7 +202,7 @@ export class RaPinoutPanel {
  }
  renderSummary(){
   const fam=raFamily(this.draft.family),c={...fam.clock,...(this.draft.clock||{})},pll=c.hocoMHz/c.pllDiv*c.pllMul,pins=this.draft.pins,per=this.draft.peripherals||{};
-  const stacks=['g_ioport (r_ioport)',...Object.entries(pins).filter(([,p])=>p.function==='IRQ').map(([q])=>`g_external_irq${RA_IRQ_PINS[q]} (r_icu)`),...Object.entries(per).filter(([,p])=>p.enabled).map(([id])=>{const n=id.replace(/\D/g,'');return id.startsWith('SCI')?`g_uart${n} (r_sci_uart)`:id.startsWith('GPT')?`g_timer${n} (r_gpt)`:id.startsWith('AGT')?`g_agt${n} (r_agt)`:id.startsWith('IIC')?`g_i2c_master${n} (r_iic_master)`:'g_adc0 (r_adc)';})];
+  const stacks=['g_ioport (r_ioport)',...Object.entries(pins).filter(([,p])=>p.function==='IRQ').map(([q])=>`g_external_irq${RA_IRQ_PINS[q]} (r_icu)`),...Object.entries(per).filter(([,p])=>p.enabled).map(([id,p])=>{const n=id.replace(/\D/g,'');return id.startsWith('SCI')?(p.mode==='SPI'?`g_sci_spi${n} (r_sci_spi)`:`g_uart${n} (r_sci_uart)`):id.startsWith('SPI')?`g_spi${n} (r_spi)`:id.startsWith('GPT')?`g_timer${n} (r_gpt)`:id.startsWith('AGT')?`g_agt${n} (r_agt)`:id.startsWith('IIC')?`g_i2c_master${n} (r_iic_master)`:'g_adc0 (r_adc)';})];
   const row=(k,v)=>`<tr><th>${k}</th><td>${esc(String(v))}</td></tr>`;
   $('ra-summary').innerHTML=`<table class="ra-clock-table ra-summary-table"><tbody>${row('Board','FPB-RA6E1')}${row('Device',fam.part)}${row('Core','CM33')}${row('Package','LQFP100')}${row('Toolchain','GNU ARM Embedded (arm-none-eabi-gcc)')}${row('FSP','앱에 설치된 FSP (ra/fsp/inc/fsp_version.h)')}${row('Project Type','Flat (Non-TrustZone) Project')}${row('RTOS','No RTOS (Bare Metal)')}${row('Clock',`HOCO ${c.hocoMHz} MHz → PLL ${+pll.toFixed(3)} MHz → ICLK ${+(pll/c.iclkDiv).toFixed(3)} MHz`)}${row('Pins',`${Object.keys(pins).length}개 설정`)}${row('Stacks',stacks.join(', '))}</tbody></table><p class="form-hint">문서: FSP User's Manual (renesas.github.io/fsp) · RA6E1 Group User's Manual: Hardware (R01UH0930) · FPB-RA6E1 v1 User's Manual (R20UT4960). 앱은 바깥 링크를 열지 않으니 브라우저에서 찾아 여세요. 설정은 BSP · Clocks · Pins · Stacks 탭에서 바꿉니다.</p>`;
  }
@@ -175,6 +217,7 @@ export class RaPinoutPanel {
  }
  stackChange(el){
   const irqPin=el.closest('[data-ra-irq]')?.dataset.raIrq;if(irqPin&&el.dataset.raIrqField)return this.irqChange(irqPin,el);
+  if(el.dataset.raSpi){this.spiValue(el);this.validate();this.renderStacks();return;}
   const id=el.closest('[data-ra-stack]')?.dataset.raStack,k=el.dataset.raField;if(!id||!k)return;
   const v=el.value.trim();this.draft.peripherals[id][k]=['unit','callback'].includes(k)?v:Number(v);this.validate();this.renderStacks();
  }
@@ -187,9 +230,19 @@ export class RaPinoutPanel {
    if(!pin){$('ra-pinout-error').textContent='External IRQ를 둘 수 있는 빈 핀이 없습니다.';return;}
    pins[pin]={function:'IRQ',edge:'FALLING',pull:'PULLUP',priority:12,callback:`external_irq${RA_IRQ_PINS[pin]}_callback`};this.validate();this.renderStacks();return;
   }
+  const spiGone=el.closest('[data-ra-spi-remove]')?.dataset.raSpiRemove;
+  if(spiGone){for(const [pin,p]of Object.entries(this.draft.pins))if(p.function==='Peripheral'&&p.signal.startsWith(spiGone+'_'))delete this.draft.pins[pin];delete per[spiGone];this.validate();this.renderStacks();return;}
+  if(el.closest('[data-ra-add]')&&$('ra-stack-add').selectedOptions[0]?.hasAttribute('data-ra-spi-add'))return this.addSpiStack($('ra-stack-add').value);
   if(el.closest('[data-ra-add]')){const id=$('ra-stack-add').value;if(!id)return;per[id]=id.startsWith('AGT')?{enabled:true,period:100,unit:'ms',callback:`agt${id.slice(3)}_callback`,priority:12}:{enabled:true,mode:'PERIODIC',period:100,unit:'ms',duty:50,callback:`gpt${id.slice(3)}_callback`,priority:12};this.validate();this.renderStacks();return;}
   const rm=el.closest('[data-ra-remove]')?.dataset.raRemove;if(rm){delete per[rm];this.validate();this.renderStacks();return;}
   const go=el.closest('[data-ra-goto]')?.dataset.raGoto;if(go){this.pin=go;this.tab='pins';this.render();}
+ }
+ // New Stack → Connectivity → SPI: the first free pin group gets the stack's signals (RSPI group A is Arduino D10-D13).
+ addSpiStack(id){
+  const pins=this.draft.pins,free=q=>!pins[q]&&!RA_RESERVED[q],group=SPI_PIN_GROUPS[id]?.find(g=>Object.keys(g).every(free));
+  if(!group){$('ra-pinout-error').textContent=`${id}: 핀(${SPI_PIN_GROUPS[id].map(g=>Object.keys(g).join('·')).join(' 또는 ')})이 다른 기능에 쓰이고 있습니다. Pins 탭에서 비우세요.`;return;}
+  for(const [pin,signal]of Object.entries(group))pins[pin]={function:'Peripheral',signal};
+  this.syncChannels();this.validate();this.renderStacks();
  }
  commit(){
   try{const mcu=validateRaMcu(this.draft);this.apply({mcu});$('ra-pinout-dialog').close();}

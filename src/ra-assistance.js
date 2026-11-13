@@ -23,7 +23,7 @@ export function raAssistance(mcu){
       call('R_ICU_ExternalIrqDisable',`R_ICU_ExternalIrqDisable(&${g}_ctrl);`),call('R_ICU_ExternalIrqClose',`R_ICU_ExternalIrqClose(&${g}_ctrl);`),
       callback(p.callback||`external_irq${ch}_callback`,'external_irq_callback_args_t',`    if (${ch} == p_args->channel)\n    {\n        /* TODO: add your own code here */\n    }`)]});}
   const on=re=>Object.entries(per).filter(([id,q])=>re.test(id)&&q?.enabled).map(([id,q])=>[id.replace(/\D/g,''),q]);
-  for(const [n,q]of on(/^SCI\d/)){const g=`g_uart${n}`;
+  for(const [n,q]of on(/^SCI\d/).filter(([,q])=>q.mode!=='SPI')){const g=`g_uart${n}`;
     out.push({name:g,title:`UART (r_sci_uart) · SCI${n}`,items:[call('R_SCI_UART_Open',`R_SCI_UART_Open(&${g}_ctrl, &${g}_cfg);`),call('R_SCI_UART_Write',`R_SCI_UART_Write(&${g}_ctrl, (uint8_t *) "hello\\r\\n", 7);`),
       call('R_SCI_UART_Read',`uint8_t buffer[16];\nR_SCI_UART_Read(&${g}_ctrl, buffer, sizeof(buffer));`),call('R_SCI_UART_Close',`R_SCI_UART_Close(&${g}_ctrl);`),
       ...(q.callback?[callback(q.callback,'uart_callback_args_t',`    if (UART_EVENT_RX_CHAR == p_args->event)\n    {\n        /* p_args->data is the received character. */\n    }`)]:[])]});}
@@ -41,5 +41,14 @@ export function raAssistance(mcu){
     out.push({name:g,title:`I2C Master (r_iic_master) · IIC${n}`,items:[call('R_IIC_MASTER_Open',`R_IIC_MASTER_Open(&${g}_ctrl, &${g}_cfg);`),call('R_IIC_MASTER_Write',`uint8_t data[2] = { 0x00, 0x00 };\nR_IIC_MASTER_Write(&${g}_ctrl, data, sizeof(data), false);`),
       call('R_IIC_MASTER_Read',`uint8_t value;\nR_IIC_MASTER_Read(&${g}_ctrl, &value, 1, false);`),call('R_IIC_MASTER_Close',`R_IIC_MASTER_Close(&${g}_ctrl);`),
       ...(q.callback?[callback(q.callback,'i2c_master_callback_args_t')]:[])]});}
+  // SPI masters: r_spi (g_spiN) and r_sci_spi (g_sci_spiN) share spi_api_t; a transfer ends in the callback.
+  const spi=(g,title,api,q)=>out.push({name:g,title,items:[call(`R_${api}_Open`,`R_${api}_Open(&${g}_ctrl, &${g}_cfg);`),
+    call(`R_${api}_Write`,`uint8_t tx[2] = { 0x00, 0x00 };\nR_${api}_Write(&${g}_ctrl, tx, sizeof(tx), SPI_BIT_WIDTH_8_BITS);`),
+    call(`R_${api}_Read`,`uint8_t rx[2];\nR_${api}_Read(&${g}_ctrl, rx, sizeof(rx), SPI_BIT_WIDTH_8_BITS);`),
+    call(`R_${api}_WriteRead`,`uint8_t tx[2] = { 0x00, 0x00 };\nuint8_t rx[2];\nR_${api}_WriteRead(&${g}_ctrl, tx, rx, sizeof(tx), SPI_BIT_WIDTH_8_BITS);`),
+    call(`R_${api}_Close`,`R_${api}_Close(&${g}_ctrl);`),
+    callback(q.callback,'spi_callback_args_t','    if (SPI_EVENT_TRANSFER_COMPLETE == p_args->event)\n    {\n        /* The transfer has finished. */\n    }')]});
+  for(const [n,q]of on(/^SPI\d/))spi(`g_spi${n}`,`SPI (r_spi) · SPI${n}`,'SPI',q);
+  for(const [n,q]of on(/^SCI\d/).filter(([,q])=>q.mode==='SPI'))spi(`g_sci_spi${n}`,`SPI (r_sci_spi) · SCI${n}`,'SCI_SPI',q);
   return out;
 }

@@ -27,12 +27,12 @@ test('a renamed pin and callback, an input pin, and no IRQ stack when S1 is a pl
 });
 
 test('every example: a group per stack it uses, each call naming an instance the generated code has',()=>{
- const want={ra_uart_echo:'g_uart9',ra_gpt_pwm:'g_timer6',ra_adc_pot:'g_adc0',ra_agt_tick:'g_agt0',ra_iic_memory:'g_i2c_master0',ra_led4_switch2:'g_external_irq6'};
+ const want={ra_uart_echo:'g_uart9',ra_gpt_pwm:'g_timer6',ra_adc_pot:'g_adc0',ra_agt_tick:'g_agt0',ra_iic_memory:'g_i2c_master0',ra_spi_memory:'g_spi1',ra_led4_switch2:'g_external_irq6'};
  for(const e of RA_EXAMPLES){
   const g=raAssistance(validateRaMcu(e.mcu()));assert.ok(names(g).includes('g_ioport'),e.id);
   if(want[e.id])assert.ok(names(g).includes(want[e.id]),`${e.id}: ${names(g).join(' ')}`);
   // The example's own code uses the same instance names the assistance offers.
-  for(const group of g)if(/^g_(uart|timer|agt|adc|i2c_master)/.test(group.name))assert.ok(e.code.includes(group.name+'_ctrl'),`${e.id}: ${group.name}_ctrl`);
+  for(const group of g)if(/^g_(uart|timer|agt|adc|i2c_master|spi|sci_spi)/.test(group.name))assert.ok(e.code.includes(group.name+'_ctrl'),`${e.id}: ${group.name}_ctrl`);
  }
  const pwm=raAssistance(validateRaMcu(RA_EXAMPLES.find(e=>e.id==='ra_gpt_pwm').mcu()));
  assert.ok(pwm.find(g=>g.name==='g_timer6').items.some(i=>i.label==='Call R_GPT_DutyCycleSet()'));

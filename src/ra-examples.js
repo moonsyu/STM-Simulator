@@ -301,6 +301,77 @@ void hal_entry(void)
     }
 }
 `+WARM_START});
+// SPI1 (r_spi) on the Arduino header: D13 RSPCK (P102), D11 MOSI (P101), D12 MISO (P100) and D10 SSL0 (P103), which the
+// RSPI drives low for each transfer. The SPI memory part takes 0x02 (write) or 0x03 (read), an address, then data; the
+// byte read back goes out on SCI9 (D1) to the USB-TTL part, LED2 lights when it matches and LED1 blinks.
+const SPI_EXAMPLE=Object.freeze({id:'ra_spi_memory',name:'SPI 메모리 쓰기·읽기 (R_SPI_Open · Write · WriteRead · 콜백)',tags:['SPI','RSPI','r_spi','memory','EEPROM','SSL0'],
+ mcu:()=>{const m=raDefaultMcu();Object.assign(m.pins,{P100:{function:'Peripheral',signal:'SPI1_MISO'},P101:{function:'Peripheral',signal:'SPI1_MOSI'},P102:{function:'Peripheral',signal:'SPI1_RSPCK'},P103:{function:'Peripheral',signal:'SPI1_SSL0'},P109:{function:'Peripheral',signal:'SCI9_TXD'},P110:{function:'Peripheral',signal:'SCI9_RXD'}});
+  m.peripherals={SPI1:{enabled:true,bitrate:1000000,cpol:0,cpha:0,bitOrder:'MSB',ssl:'SSL0',callback:'spi1_callback',priority:12},SCI9:{enabled:true,baud:115200,callback:'user_uart9_callback',priority:12}};return m;},
+ circuit:()=>({components:[{id:'mem',type:'spi',name:'SPI1',x:520,y:180,rotation:0},{id:'term',type:'uart',name:'USB-TTL',x:520,y:330,rotation:0,baud:115200}],wires:[
+  {id:'w_vcc',from:'part:mem:p1',to:'board:J2:2',color:'#e5484d'},{id:'w_gnd',from:'part:mem:p2',to:'board:J2:7',color:'#3a3a3a'},
+  {id:'w_cs',from:'part:mem:p3',to:'board:J1:3',color:'#8064d8'},{id:'w_sck',from:'part:mem:p4',to:'board:J1:6',color:'#f5c518'},
+  {id:'w_mosi',from:'part:mem:p5',to:'board:J1:4',color:'#30a46c'},{id:'w_miso',from:'part:mem:p6',to:'board:J1:5',color:'#0090ff'},
+  {id:'w_tvcc',from:'part:term:p1',to:'board:J2:4',color:'#e5484d'},{id:'w_tgnd',from:'part:term:p2',to:'board:J2:6',color:'#3a3a3a'},
+  {id:'w_tx',from:'part:term:p3',to:'board:J5:1',color:'#f5c518'},{id:'w_rx',from:'part:term:p4',to:'board:J5:2',color:'#30a46c'}]}),
+ code:HEAD+`
+static volatile bool spi_done = false;
+static volatile spi_event_t spi_event = SPI_EVENT_TRANSFER_ABORTED;
+volatile uint32_t readback = 0;
+volatile uint32_t matched = 0;
+
+/* r_spi reports the end of every transfer here (after SSL0 goes high again). */
+void spi1_callback(spi_callback_args_t *p_args)
+{
+    spi_event = p_args->event;
+    spi_done = true;
+}
+
+void user_uart9_callback(uart_callback_args_t *p_args)
+{
+    (void) p_args;
+}
+
+static spi_event_t wait_spi(void)
+{
+    while (!spi_done)
+    {
+    }
+    spi_done = false;
+    return spi_event;
+}
+
+void hal_entry(void)
+{
+    /* SPI memory: 0x02 (write) at address 0x10 the value 0x2A, then 0x03 (read) at 0x10 with one dummy byte. */
+    static const uint8_t write_cmd[3] = { 0x02, 0x10, 0x2A };
+    static const uint8_t read_cmd[3] = { 0x03, 0x10, 0x00 };
+    static uint8_t rx[3];
+    static char line[] = "SPI1 read 0x00\\r\\n";
+    static const char hex[] = "0123456789ABCDEF";
+
+    R_SCI_UART_Open(&g_uart9_ctrl, &g_uart9_cfg);
+    R_SPI_Open(&g_spi1_ctrl, &g_spi1_cfg);
+
+    R_SPI_Write(&g_spi1_ctrl, write_cmd, sizeof(write_cmd), SPI_BIT_WIDTH_8_BITS);
+    wait_spi();
+    R_SPI_WriteRead(&g_spi1_ctrl, read_cmd, rx, sizeof(read_cmd), SPI_BIT_WIDTH_8_BITS);
+    matched = (SPI_EVENT_TRANSFER_COMPLETE == wait_spi()) && (0x2A == rx[2]);
+    readback = rx[2];
+
+    line[12] = hex[rx[2] >> 4];
+    line[13] = hex[rx[2] & 0x0F];
+    R_SCI_UART_Write(&g_uart9_ctrl, (uint8_t *) line, sizeof(line) - 1);
+    R_IOPORT_PinWrite(&g_ioport_ctrl, LED2, matched ? BSP_IO_LEVEL_HIGH : BSP_IO_LEVEL_LOW);
+
+    while (1)
+    {
+        R_IOPORT_PinWrite(&g_ioport_ctrl, LED1, BSP_IO_LEVEL_HIGH);
+        R_BSP_SoftwareDelay(500, BSP_DELAY_UNITS_MILLISECONDS);
+        R_IOPORT_PinWrite(&g_ioport_ctrl, LED1, BSP_IO_LEVEL_LOW);
+        R_BSP_SoftwareDelay(500, BSP_DELAY_UNITS_MILLISECONDS);
+    }
+}
+`+WARM_START});
 // ---- The course exercises (RA6E1 lecture, Day 5), as its slides write them.
 // Switch polling: S1 (P205) as an input with the pull-up, read with R_IOPORT_PinRead; each press toggles LED1. The
 // 100 ms waits are the debounce: without them a bouncing contact toggles the LED several times (파형 탭 → 버튼 채터링).
@@ -472,5 +543,5 @@ void external_irq1_callback(external_irq_callback_args_t *p_args)
     (void) p_args;
 }
 `+WARM_START});
-RA_EXAMPLES.push(POLL_EXAMPLE,IRQ_COURSE_EXAMPLE,UART_EXAMPLE,GPT_EXAMPLE,ADC_EXAMPLE,AGT_EXAMPLE,IIC_EXAMPLE,CHALLENGE_EXAMPLE);
+RA_EXAMPLES.push(POLL_EXAMPLE,IRQ_COURSE_EXAMPLE,UART_EXAMPLE,GPT_EXAMPLE,ADC_EXAMPLE,AGT_EXAMPLE,IIC_EXAMPLE,SPI_EXAMPLE,CHALLENGE_EXAMPLE);
 Object.freeze(RA_EXAMPLES);

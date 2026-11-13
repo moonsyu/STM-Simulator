@@ -3,7 +3,7 @@
 // linker init tables) and script (linker scripts). The user's code is src/hal_entry.c; the app builds these with the
 // FSP sources (BSP + r_* drivers) and ARM GCC, then runs the ELF on the RA6E1 emulator.
 // Formats follow RASC output for FSP 5.x/6.x (only what the FPB-RA6E1 configurations here need).
-import {raFamily,raPinName,raPortBit,RA_IRQ_PINS,raPsel,RA_PSEL_NAMES,RA_SCI_CHANNELS,RA_GPT_CHANNELS,RA_ADC_CHANNELS,RA_AGT_CHANNELS,RA_IIC_CHANNELS,raGptCounts,raAgtCounts,raIicClock,raClockHz} from './ra-config.js';
+import {raFamily,raPinName,raPortBit,RA_IRQ_PINS,raPsel,RA_PSEL_NAMES,RA_SCI_CHANNELS,RA_GPT_CHANNELS,RA_ADC_CHANNELS,RA_AGT_CHANNELS,RA_IIC_CHANNELS,RA_SPI_CHANNELS,RA_SCI_SPI_CHANNELS,raGptCounts,raAgtCounts,raIicClock,raClockHz,raSpiBitrate,raSciSpiBitrate} from './ra-config.js';
 
 const HEADER=kind=>`/* generated ${kind} - do not edit */\n`;
 const hex=(n,w=8)=>'0x'+(n>>>0).toString(16).toUpperCase().padStart(w,'0');
@@ -25,7 +25,7 @@ export function pinCfgWord(pin){
 const irqsOf=mcu=>Object.entries(mcu.pins||{}).filter(([,p])=>p.function==='IRQ').map(([pin,p])=>{const channel=RA_IRQ_PINS[pin];if(channel==null)throw new Error(`${pin}: IRQ 핀이 아닙니다.`);return {pin,channel,name:p.instance||`g_external_irq${channel}`,callback:p.callback||`external_irq${channel}_callback`,trigger:p.edge||'FALLING',priority:p.priority??12,filter:!!p.filter};});
 
 // SCI UART instances (r_sci_uart), g_uartN on each enabled SCI channel.
-const uartsOf=mcu=>RA_SCI_CHANNELS.filter(ch=>mcu.peripherals?.['SCI'+ch]?.enabled).map(ch=>{const p=mcu.peripherals['SCI'+ch];return {channel:ch,name:`g_uart${ch}`,baud:p.baud??115200,callback:p.callback||`user_uart${ch}_callback`,priority:p.priority??12};});
+const uartsOf=mcu=>RA_SCI_CHANNELS.filter(ch=>mcu.peripherals?.['SCI'+ch]?.enabled&&mcu.peripherals['SCI'+ch].mode!=='SPI').map(ch=>{const p=mcu.peripherals['SCI'+ch];return {channel:ch,name:`g_uart${ch}`,baud:p.baud??115200,callback:p.callback||`user_uart${ch}_callback`,priority:p.priority??12};});
 // GPT timer instances (r_gpt), g_timerN on each enabled GPT channel: saw-wave PWM on the GTIOC pins set to it, or a periodic
 // timer; the cycle-end (overflow) interrupt only when a callback is named, as RASC leaves it disabled otherwise.
 const gptsOf=mcu=>RA_GPT_CHANNELS.filter(ch=>mcu.peripherals?.['GPT'+ch]?.enabled).map(ch=>{
@@ -188,6 +188,81 @@ const i2c_master_instance_t ${t.name} =
 export const raInstances=mcu=>({irqs:irqsOf(mcu),uarts:uartsOf(mcu),gpts:gptsOf(mcu),adc:adcOf(mcu),agts:agtsOf(mcu),iics:iicsOf(mcu)});
 /** "P408" → "BSP_IO_PORT_04_PIN_08". */
 export const raIoName=pin=>ioName(pin);
+// SPI masters: r_spi on RSPI (g_spiN) and r_sci_spi on an SCI channel in simple SPI mode (g_sci_spiN). Both use spi_cfg_t
+// with their own extended configuration; transfers end in the callback (SPI_EVENT_TRANSFER_COMPLETE).
+const spiOf=(ch,name,p)=>({channel:ch,name,bitrate:p.bitrate??1000000,cpol:p.cpol??0,cpha:p.cpha??0,bitOrder:p.bitOrder||'MSB',priority:p.priority??12});
+const spisOf=mcu=>RA_SPI_CHANNELS.filter(ch=>mcu.peripherals?.['SPI'+ch]?.enabled).map(ch=>{const p=mcu.peripherals['SPI'+ch];return {...spiOf(ch,`g_spi${ch}`,p),callback:p.callback||`spi${ch}_callback`,ssl:p.ssl||'SSL0',div:raSpiBitrate(raClockHz(mcu,'pclka'),p.bitrate??1000000)};});
+const sciSpisOf=mcu=>RA_SCI_SPI_CHANNELS.filter(ch=>mcu.peripherals?.['SCI'+ch]?.enabled&&mcu.peripherals['SCI'+ch].mode==='SPI').map(ch=>{const p=mcu.peripherals['SCI'+ch];return {...spiOf(ch,`g_sci_spi${ch}`,p),callback:p.callback||`sci_spi${ch}_callback`,div:raSciSpiBitrate(raClockHz(mcu,'pclka'),p.bitrate??1000000)};});
+const spiDecl=(t,kind,ctrl)=>`/** SPI on ${kind} Instance. */
+extern const spi_instance_t ${t.name};
+/** Access the SPI instance using these structures when calling API functions directly (::p_api is not used). */
+extern ${ctrl} ${t.name}_ctrl;
+extern const spi_cfg_t ${t.name}_cfg;
+/** Callback used by SPI Instance. */
+#ifndef ${t.callback}
+void ${t.callback}(spi_callback_args_t * p_args);
+#endif`;
+function spiCfg(t,event,ext){
+ const v=k=>`#if defined(VECTOR_NUMBER_${event}${t.channel}_${k})\n    .${k.toLowerCase()}_irq             = VECTOR_NUMBER_${event}${t.channel}_${k},\n#else\n    .${k.toLowerCase()}_irq             = FSP_INVALID_VECTOR,\n#endif`;
+ return `const spi_cfg_t ${t.name}_cfg =
+{
+    .channel             = ${t.channel},
+${['RXI','TXI','TEI','ERI'].map(v).join('\n')}
+    .rxi_ipl             = (${t.priority}),
+    .txi_ipl             = (${t.priority}),
+    .tei_ipl             = (${t.priority}),
+    .eri_ipl             = (${t.priority}),
+    .operating_mode      = SPI_MODE_MASTER,
+    .clk_phase           = ${t.cpha?'SPI_CLK_PHASE_EDGE_EVEN':'SPI_CLK_PHASE_EDGE_ODD'},
+    .clk_polarity        = ${t.cpol?'SPI_CLK_POLARITY_HIGH':'SPI_CLK_POLARITY_LOW'},
+    .mode_fault          = SPI_MODE_FAULT_ERROR_DISABLE,
+    .bit_order           = ${t.bitOrder==='LSB'?'SPI_BIT_ORDER_LSB_FIRST':'SPI_BIT_ORDER_MSB_FIRST'},
+    .p_transfer_tx       = NULL,
+    .p_transfer_rx       = NULL,
+    .p_callback          = ${t.callback},
+    .p_context           = NULL,
+    .p_extend            = (void *) &${ext},
+};
+/* Instance structure to use this module. */
+const spi_instance_t ${t.name} =
+{
+    .p_ctrl        = &${t.name}_ctrl,
+    .p_cfg         = &${t.name}_cfg,
+    .p_api         = &g_spi_on_${event==='SPI'?'spi':'sci'}
+};`;
+}
+// RSPI: 4-wire SPI with SSL0 asserted by the peripheral, or clock synchronous (3-wire) when the program drives CS itself.
+const spiInstance=t=>`spi_instance_ctrl_t ${t.name}_ctrl;
+/** SPI extended configuration for SPI HAL driver */
+const spi_extended_cfg_t ${t.name}_ext_cfg =
+{
+    .spi_clksyn          = ${t.ssl==='SSL0'?'SPI_SSL_MODE_SPI':'SPI_SSL_MODE_CLK_SYN'},
+    .spi_comm            = SPI_COMMUNICATION_FULL_DUPLEX,
+    .ssl_polarity        = SPI_SSLP_LOW,
+    .ssl_select          = SPI_SSL_SELECT_SSL0,
+    .mosi_idle           = SPI_MOSI_IDLE_VALUE_FIXING_DISABLE,
+    .parity              = SPI_PARITY_MODE_DISABLE,
+    .byte_swap           = SPI_BYTE_SWAP_DISABLE,
+    .spck_div            = {
+        /* Actual calculated bitrate: ${Math.round(t.div.actual)}. */ .spbr = ${t.div.spbr}, .brdv = ${t.div.brdv}
+    },
+    .spck_delay          = SPI_DELAY_COUNT_1,
+    .ssl_negation_delay  = SPI_DELAY_COUNT_1,
+    .next_access_delay   = SPI_DELAY_COUNT_1,
+    .burst_interframe_delay = SPI_BURST_TRANSFER_WITH_DELAY,
+};
+/** SPI configuration for SPI HAL driver */
+${spiCfg(t,'SPI',`${t.name}_ext_cfg`)}`;
+const sciSpiInstance=t=>`sci_spi_instance_ctrl_t ${t.name}_ctrl;
+/** SPI extended configuration for SCI SPI HAL driver */
+const sci_spi_extended_cfg_t ${t.name}_cfg_extend =
+{
+    .clk_div = {
+        /* Actual calculated bitrate: ${Math.round(t.div.actual)}. */ .cks = ${t.div.cks}, .brr = ${t.div.brr}, .mddr = 0,
+    },
+};
+/** SPI configuration for SCI SPI HAL driver */
+${spiCfg(t,'SCI',`${t.name}_cfg_extend`)}`;
 const UNIT_TEXT={Hz:'Hz',kHz:'kHz',s:'seconds',ms:'milliseconds',us:'microseconds'};
 const hexCount=n=>"0x"+n.toString(16);
 const gptDecl=t=>`/** Timer on GPT Instance. */
@@ -265,6 +340,9 @@ export function raVectors(mcu){
  for(const t of iicsOf(mcu))for(const [kind,label]of [['RXI','Receive data full'],['TXI','Transmit data empty'],['TEI','Transmit end'],['ERI','Transfer error']])list.push({isr:`iic_master_${kind.toLowerCase()}_isr`,event:`IIC${t.channel}_${kind}`,label:`IIC${t.channel} ${kind} (${label})`,vector:`IIC${t.channel}_${kind}`});
  for(const t of agtsOf(mcu))if(t.callback)list.push({isr:'agt_int_isr',event:`AGT${t.channel}_INT`,label:`AGT${t.channel} INT (AGT interrupt)`,vector:`AGT${t.channel}_INT`});
  for(const t of gptsOf(mcu))if(t.callback)list.push({isr:'gpt_counter_overflow_isr',event:`GPT${t.channel}_COUNTER_OVERFLOW`,label:`GPT${t.channel} COUNTER OVERFLOW (Overflow)`,vector:`GPT${t.channel}_COUNTER_OVERFLOW`});
+ // Modules added after the first set go last, so the slots of existing projects keep their numbers.
+ for(const t of spisOf(mcu))for(const [kind,label]of [['RXI','Receive buffer full'],['TXI','Transmit buffer empty'],['TEI','Transmission complete event'],['ERI','Error']])list.push({isr:`spi_${kind.toLowerCase()}_isr`,event:`SPI${t.channel}_${kind}`,label:`SPI${t.channel} ${kind} (${label})`,vector:`SPI${t.channel}_${kind}`});
+ for(const t of sciSpisOf(mcu))for(const [kind,label]of [['RXI','Receive data full'],['TXI','Transmit data empty'],['TEI','Transmit end'],['ERI','Receive error']])list.push({isr:`sci_spi_${kind.toLowerCase()}_isr`,event:`SCI${t.channel}_${kind}`,label:`SCI${t.channel} ${kind} (${label})`,vector:`SCI${t.channel}_${kind}`});
  return list.map((v,i)=>({...v,index:i}));
 }
 
@@ -529,7 +607,8 @@ ${vectors.map(v=>`    [${v.index}] = BSP_PRV_VECT_ENUM(EVENT_${v.event},GROUP${v
 }
 
 function halDataH(mcu){
- const irqs=irqsOf(mcu),uarts=uartsOf(mcu),includes=(irqs.length?'#include "r_icu.h"\n#include "r_external_irq_api.h"\n':'')+(uarts.length?'#include "r_sci_uart.h"\n#include "r_uart_api.h"\n':'')+(gptsOf(mcu).length?'#include "r_gpt.h"\n#include "r_timer_api.h"\n':'')+(adcOf(mcu)?'#include "r_adc.h"\n#include "r_adc_api.h"\n':'')+(iicsOf(mcu).length?'#include "r_iic_master.h"\n#include "r_i2c_master_api.h"\n':'')+(agtsOf(mcu).length?'#include "r_agt.h"\n'+(gptsOf(mcu).length?'':'#include "r_timer_api.h"\n'):'');
+ const irqs=irqsOf(mcu),uarts=uartsOf(mcu),includes=(irqs.length?'#include "r_icu.h"\n#include "r_external_irq_api.h"\n':'')+(uarts.length?'#include "r_sci_uart.h"\n#include "r_uart_api.h"\n':'')+(gptsOf(mcu).length?'#include "r_gpt.h"\n#include "r_timer_api.h"\n':'')+(adcOf(mcu)?'#include "r_adc.h"\n#include "r_adc_api.h"\n':'')+(iicsOf(mcu).length?'#include "r_iic_master.h"\n#include "r_i2c_master_api.h"\n':'')+(agtsOf(mcu).length?'#include "r_agt.h"\n'+(gptsOf(mcu).length?'':'#include "r_timer_api.h"\n'):'')
+  +(spisOf(mcu).length?'#include "r_spi.h"\n':'')+(sciSpisOf(mcu).length?'#include "r_sci_spi.h"\n':'')+(spisOf(mcu).length||sciSpisOf(mcu).length?'#include "r_spi_api.h"\n':'');
  const decls=irqs.map(i=>`/** External IRQ on ICU Instance. */
 extern const external_irq_instance_t ${i.name};
 /** Access the ICU instance using these structures when calling API functions directly (::p_api is not used). */
@@ -545,7 +624,7 @@ extern const uart_cfg_t ${u.name}_cfg;
 extern const sci_uart_extended_cfg_t ${u.name}_cfg_extend;
 #ifndef ${u.callback}
 void ${u.callback}(uart_callback_args_t * p_args);
-#endif`)).concat(gptsOf(mcu).map(gptDecl)).concat(adcOf(mcu)?[adcDecl(adcOf(mcu))]:[]).concat(agtsOf(mcu).map(agtDecl)).concat(iicsOf(mcu).map(iicDecl)).join('\n');
+#endif`)).concat(gptsOf(mcu).map(gptDecl)).concat(adcOf(mcu)?[adcDecl(adcOf(mcu))]:[]).concat(agtsOf(mcu).map(agtDecl)).concat(iicsOf(mcu).map(iicDecl)).concat(spisOf(mcu).map(t=>spiDecl(t,'SPI','spi_instance_ctrl_t'))).concat(sciSpisOf(mcu).map(t=>spiDecl(t,'SCI','sci_spi_instance_ctrl_t'))).join('\n');
  return HEADER('HAL header file')+`#ifndef HAL_DATA_H_
 #define HAL_DATA_H_
 #include <stdint.h>
@@ -637,7 +716,7 @@ const uart_instance_t ${u.name} =
     .p_ctrl        = &${u.name}_ctrl,
     .p_cfg         = &${u.name}_cfg,
     .p_api         = &g_uart_on_sci
-};`;})).concat(gptsOf(mcu).map(gptInstance)).concat(adcOf(mcu)?[adcInstance(adcOf(mcu))]:[]).concat(agtsOf(mcu).map(agtInstance)).concat(iicsOf(mcu).map(iicInstance)).join('\n');
+};`;})).concat(gptsOf(mcu).map(gptInstance)).concat(adcOf(mcu)?[adcInstance(adcOf(mcu))]:[]).concat(agtsOf(mcu).map(agtInstance)).concat(iicsOf(mcu).map(iicInstance)).concat(spisOf(mcu).map(spiInstance)).concat(sciSpisOf(mcu).map(sciSpiInstance)).join('\n');
  return HEADER('HAL source file')+`#include "hal_data.h"
 ${body}${body?'\n':''}void g_hal_init(void) {
 g_common_init();
@@ -835,6 +914,8 @@ export function generateRaFiles(mcu,{board}={}){
   cfg('r_agt_cfg.h',moduleCfg('r_agt_cfg.h','R_AGT_CFG_H_',['#define AGT_CFG_PARAM_CHECKING_ENABLE (BSP_CFG_PARAM_CHECKING_ENABLE)','#define AGT_CFG_OUTPUT_SUPPORT_ENABLE (0)','#define AGT_CFG_INPUT_SUPPORT_ENABLE (0)'])),
   cfg('r_adc_cfg.h',moduleCfg('r_adc_cfg.h','R_ADC_CFG_H_',['#define ADC_CFG_PARAM_CHECKING_ENABLE (BSP_CFG_PARAM_CHECKING_ENABLE)'])),
   cfg('r_gpt_cfg.h',moduleCfg('r_gpt_cfg.h','R_GPT_CFG_H_',['#define GPT_CFG_PARAM_CHECKING_ENABLE (BSP_CFG_PARAM_CHECKING_ENABLE)','#define GPT_CFG_OUTPUT_SUPPORT_ENABLE (1)','#define GPT_CFG_WRITE_PROTECT_ENABLE (0)','#define GPT_CFG_GPTCLK_BYPASS (0)'])),
+  cfg('r_spi_cfg.h',moduleCfg('r_spi_cfg.h','R_SPI_CFG_H_',['#define SPI_CFG_PARAM_CHECKING_ENABLE (BSP_CFG_PARAM_CHECKING_ENABLE)','#define SPI_DMA_SUPPORT_ENABLE (0)','#define SPI_TRANSMIT_FROM_RXI_ISR (0)','/* DEPRECATED: Use SPI_DMA_SUPPORT_ENABLE instead. */','#define SPI_DTC_SUPPORT_ENABLE (SPI_DMA_SUPPORT_ENABLE)'])),
+  cfg('r_sci_spi_cfg.h',moduleCfg('r_sci_spi_cfg.h','R_SCI_SPI_CFG_H_',['#define SCI_SPI_CFG_PARAM_CHECKING_ENABLE (BSP_CFG_PARAM_CHECKING_ENABLE)','#define SCI_SPI_DTC_SUPPORT_ENABLE (0)'])),
   cfg('r_sci_uart_cfg.h',moduleCfg('r_sci_uart_cfg.h','R_SCI_UART_CFG_H_',['#define SCI_UART_CFG_PARAM_CHECKING_ENABLE (BSP_CFG_PARAM_CHECKING_ENABLE)','#define SCI_UART_CFG_FIFO_SUPPORT (0)','#define SCI_UART_CFG_DTC_SUPPORTED (0)','#define SCI_UART_CFG_FLOW_CONTROL_SUPPORT (0)','#define SCI_UART_CFG_RS485_SUPPORT (0)','#define SCI_UART_CFG_IRDA_SUPPORT (0)'])),
   gen('bsp_clock_cfg.h',clockCfg(c)),
   gen('common_data.h',HEADER('common header file')+`#ifndef COMMON_DATA_H_\n#define COMMON_DATA_H_\n#include <stdint.h>\n#include "bsp_api.h"\n#include "r_ioport.h"\n#include "bsp_pin_cfg.h"\nFSP_HEADER\n#define IOPORT_CFG_NAME g_bsp_pin_cfg\n#define IOPORT_CFG_OPEN R_IOPORT_Open\n#define IOPORT_CFG_CTRL g_ioport_ctrl\n/* IOPORT Instance */\nextern const ioport_instance_t g_ioport;\n/* IOPORT control structure. */\nextern ioport_instance_ctrl_t g_ioport_ctrl;\nvoid g_common_init(void);\nFSP_FOOTER\n#endif /* COMMON_DATA_H_ */\n`),

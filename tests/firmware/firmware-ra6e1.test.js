@@ -118,6 +118,26 @@ test('ra_iic_memory: IIC0 (P400 SCL / P401 SDA, 100 kHz) writes the I²C memory 
  assert.ok(log.trace.some(t=>/IIC0 · 0x50 WRITE 5 B · ACK/.test(t.message)));
 });
 
+test('ra_spi_memory: SPI1 (D13 RSPCK, D11 MOSI, D12 MISO, D10 SSL0, 1 MHz) writes the SPI memory and reads 0x2A back; SCI9 prints it',()=>{
+ const {session,log}=open(fixture('ra_spi_memory'));
+ const rspi=session.soc.rspis[1],select=rspi.selectSlave.bind(rspi),ssl=[];
+ rspi.selectSlave=on=>{if(on!==rspi.ssl)ssl.push(on?'low':'high');select(on);};
+ runUntil(session,100);
+ const spi=rspi.log;
+ assert.deepEqual(ssl,['low','high','low','high'],'SSL0 asserted for each transfer, negated when the TEI ISR clears SPE');
+ assert.deepEqual(spi.map(e=>[e.tx,e.rx]),[[0x02,0],[0x10,0],[0x2a,0],[0x03,0],[0x10,0],[0x00,0x2a]],'R_SPI_Write, then R_SPI_WriteRead');
+ // Eight RSPCK periods a frame at 1 MHz (PCLKA 100 MHz, SPBR 49, BRDV 0), the TXI ISR keeping the buffer full.
+ assert.ok(Math.abs(spi[1].us-spi[0].us-8)<1,'frame time '+(spi[1].us-spi[0].us));
+ // The two commands are two SSL0 assertions: the memory saw CS go high in between (else the read would be a write).
+ assert.equal(session.readVariable('readback'),0x2a);assert.equal(session.readVariable('matched'),1,'SPI_EVENT_TRANSFER_COMPLETE with the byte written');
+ assert.equal(session.buses.memory(session.project.components.find(p=>p.id==='mem')).data[0x10],0x2a);
+ assert.equal(session.buses.received.get('term'),'SPI1 read 0x2A\r\n');
+ assert.ok(session.gpio.P407.value>1.65,'LED2 on');
+ assert.ok(session.gpio.P103.mode==='OUTPUT'&&session.gpio.P103.value>1.65,'SSL0 negated (high) after the transfers');
+ assert.equal(session.gpio.P102.value,0,'RSPCK idles low (CPOL 0)');
+ assert.ok(log.trace.some(t=>t.protocol==='SPI'&&/TX 00 · RX 2a/.test(t.message)));
+});
+
 test('FSP debugging: a breakpoint on main.c (built as src/hal_entry.c) stops there and the editor location is main.c',()=>{
  const code=JSON.parse(globalThis.process.getBuiltinModule('node:fs').readFileSync(new URL('../fixtures/firmware-ra6e1/ra_blink.json',import.meta.url),'utf8')).code;
  const line=code.split('\n').findIndex(l=>l.includes('R_BSP_SoftwareDelay(500'))+1;

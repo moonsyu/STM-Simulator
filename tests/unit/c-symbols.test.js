@@ -99,6 +99,11 @@ test('FPB-RA6E1: the SDK index resolves FSP APIs, instances, enums and device ty
  assert.deepEqual((await one('__NOP')).map(d=>d.file),['Drivers/CMSIS/Include/cmsis_gcc.h'],'GCC CMSIS only');
  const names=(await index.names('R7FA6E10F',tools,'r_iic_master_')).map(n=>n.name);
  for(const n of ['R_IIC_MASTER_Open','R_IIC_MASTER_Read','R_IIC_MASTER_Write'])assert.ok(names.includes(n),n);
+ // Feature 32: the SPI drivers, in an FSP install that has them.
+ if(await has(path.join(fspRoot,'ra/fsp/src/r_spi/r_spi.c'))){
+  const spi=(await index.names('R7FA6E10F',tools,'R_SPI_')).map(n=>n.name);for(const n of ['R_SPI_Open','R_SPI_WriteRead','R_SPI_Close'])assert.ok(spi.includes(n),n);
+  assert.equal((await one('R_SCI_SPI_Open'))[0].file,'ra/fsp/src/r_sci_spi/r_sci_spi.c');assert.equal((await one('spi_callback_args_t'))[0].file,'ra/fsp/inc/api/r_spi_api.h');
+ }
  const file=await index.file('R7FA6E10F',tools,'ra/fsp/src/r_ioport/r_ioport.c');assert.equal(file.sdk,'Renesas FSP');
  await assert.rejects(index.definition('R7FA6E10F',{},'R_IOPORT_Open'),/Renesas FSP SDK가 없어/);
 });
