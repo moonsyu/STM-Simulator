@@ -4,7 +4,7 @@
 const fs=require('node:fs/promises'),path=require('node:path');
 
 // FSP drivers by the header the generated or user code includes.
-const MODULES=['r_ioport','r_icu','r_sci_uart','r_gpt','r_agt','r_adc','r_iic_master'];
+const MODULES=['r_ioport','r_icu','r_sci_uart','r_gpt','r_agt','r_adc','r_iic_master','r_spi','r_sci_spi','r_iic_slave','r_rtc','r_wdt','r_iwdt','r_dmac','r_dtc','r_elc','r_lpm','r_flash_hp','r_can'];
 const exists=p=>fs.access(p).then(()=>true,()=>false);
 
 /** Writes the generated FSP files into `directory` and returns the compile units, include flags and linker flags. */
@@ -25,6 +25,8 @@ async function prepareRa({project,tools,directory,userFiles}){
  const fspSources=[];
  for(const dir of [path.join(bsp,'mcu/all'),board])for(const f of (await fs.readdir(dir)).sort())if(f.endsWith('.c'))fspSources.push(path.join(dir,f));
  fspSources.push(path.join(bsp,'cmsis/Device/RENESAS/Source/startup.c'),path.join(bsp,'cmsis/Device/RENESAS/Source/system.c'),path.join(mcuDir,'bsp_linker.c'));
+ // An FSP folder installed before 1.52.0 has only the first seven drivers: say what to do instead of a missing-file error.
+ for(const m of used)if(!await exists(path.join(fsp,'ra/fsp/src',m)))throw new Error(`FSP 모듈 ${m}가 설치돼 있지 않습니다. 도구 → 개발 도구 설치에서 Renesas FSP를 다시 설치하세요.`);
  for(const m of used)for(const f of (await fs.readdir(path.join(fsp,'ra/fsp/src',m))).sort())if(f.endsWith('.c'))fspSources.push(path.join(fsp,'ra/fsp/src',m,f));
  const genSources=['common_data.c','hal_data.c','main.c','pin_data.c','vector_data.c'].map(f=>path.join(directory,'ra_gen',f));
  const script=path.join(directory,'script');

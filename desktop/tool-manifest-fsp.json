@@ -633,6 +633,31 @@
      "sha256": "2bbd7fb99211fa274060ea72b832fc351561a205bef52b9803078e37b483f9cf"
     },
     {
+     "path": "ra/fsp/inc/instances/r_can.h",
+     "bytes": 10829,
+     "sha256": "2efe61b859eb1772222b7aeba90b1454dc9a15c2a29644125b5663209df852f6"
+    },
+    {
+     "path": "ra/fsp/inc/instances/r_dmac.h",
+     "bytes": 6787,
+     "sha256": "e7c0f4adb9985e75ef838491a02eb8e508ff0560eb3664eaac618582c175e0fc"
+    },
+    {
+     "path": "ra/fsp/inc/instances/r_dtc.h",
+     "bytes": 5296,
+     "sha256": "578a6de96b0b638deb52ce79ca6b890a24f9b1ac3858239080c4b6920b2aa3ed"
+    },
+    {
+     "path": "ra/fsp/inc/instances/r_elc.h",
+     "bytes": 3321,
+     "sha256": "c33af8a6d4e2fdad47fa496ece36f915d15c1263d395c1319b1ea50be08a727a"
+    },
+    {
+     "path": "ra/fsp/inc/instances/r_flash_hp.h",
+     "bytes": 7476,
+     "sha256": "4eef3de39f39c49d5a5496bddebcf1bfdf730e068e568873a33713cf391d10dd"
+    },
+    {
      "path": "ra/fsp/inc/instances/r_gpt.h",
      "bytes": 25870,
      "sha256": "7589a91c5d1cba1a83f25510c68569666060f1dd28609f7d4343ed1fe8846f96"
@@ -648,14 +673,54 @@
      "sha256": "5ce9b254995e7e551f9111023040d5ca1ed378a47259d0f047bf2fa72f9f9c00"
     },
     {
+     "path": "ra/fsp/inc/instances/r_iic_slave.h",
+     "bytes": 5972,
+     "sha256": "0891c76205ff4a4ddcaacda12761d73de747165a56673cbd99b21cbc1616d0a6"
+    },
+    {
      "path": "ra/fsp/inc/instances/r_ioport.h",
      "bytes": 28702,
      "sha256": "248350d188c76fa0bb4985bcb2e6470da1feb68ceb5fce8903a6dfd22f1e3db8"
     },
     {
+     "path": "ra/fsp/inc/instances/r_iwdt.h",
+     "bytes": 3613,
+     "sha256": "a3df038cf64a26be95870355e9120e83ccb378f7a76449260d6954956c3d8a0f"
+    },
+    {
+     "path": "ra/fsp/inc/instances/r_lpm.h",
+     "bytes": 2999,
+     "sha256": "c83f8c9e1a876ab3f00b3265b19f0c333c2128f6c6edc8326f8c74e320c8f23c"
+    },
+    {
+     "path": "ra/fsp/inc/instances/r_rtc.h",
+     "bytes": 5055,
+     "sha256": "38af5faa0c3d959dc6137c31d5df54b0e606283d73fb1626427d2e3ff05d040b"
+    },
+    {
+     "path": "ra/fsp/inc/instances/r_sci_spi.h",
+     "bytes": 4837,
+     "sha256": "a8f57c935ddf3ccd2cd8341b4e8a7b59a3a8e57b6bda2d8188938a0e3aa44132"
+    },
+    {
      "path": "ra/fsp/inc/instances/r_sci_uart.h",
      "bytes": 12308,
      "sha256": "c7d0671e9f326a878e800869c6351739264351f5ee6290796c0061c3cb813c09"
+    },
+    {
+     "path": "ra/fsp/inc/instances/r_spi.h",
+     "bytes": 9556,
+     "sha256": "ffae0e249b9058a1b74a4e0f80932aac50040879cc8483581df098080e957536"
+    },
+    {
+     "path": "ra/fsp/inc/instances/r_usb_basic.h",
+     "bytes": 5532,
+     "sha256": "2e2738abb21eefd632354693ad11fbefafc2c0e9c488d8e3492a4a38083e4ac0"
+    },
+    {
+     "path": "ra/fsp/inc/instances/r_wdt.h",
+     "bytes": 3903,
+     "sha256": "a9bad513611ef243bc7cec86d54b500cc60e43d6718bf11458ddbf1cb675cc6f"
     },
     {
      "path": "ra/fsp/src/bsp/cmsis/Device/RENESAS/Include/R7FA6E10F.h",
@@ -883,6 +948,31 @@
      "sha256": "13540c8dcea14a161bc07baa694de45182453fdc915a0f2c073cb114c0550641"
     },
     {
+     "path": "ra/fsp/src/r_can/r_can.c",
+     "bytes": 48666,
+     "sha256": "0328f6c14a30345ca5fff0947ef5291f6681ec7bf2edf0519956d702748f72f7"
+    },
+    {
+     "path": "ra/fsp/src/r_dmac/r_dmac.c",
+     "bytes": 36078,
+     "sha256": "0fab7e64c118c8d52d4222ac5e995393f1b8dd4b5845bd939df2929112089307"
+    },
+    {
+     "path": "ra/fsp/src/r_dtc/r_dtc.c",
+     "bytes": 36001,
+     "sha256": "ff8f958ecdf3d399037c3d4e12404f89a662e49cea46e9939ab8549cc6e99d5e"
+    },
+    {
+     "path": "ra/fsp/src/r_elc/r_elc.c",
+     "bytes": 15371,
+     "sha256": "d0f66d011af5600acea517fe9673f79b64719d49711ed0b0df2195325e6a0e21"
+    },
+    {
+     "path": "ra/fsp/src/r_flash_hp/r_flash_hp.c",
+     "bytes": 152052,
+     "sha256": "3047d7d03d6326b375ff95ddacd15bb4cb3b5d21fb64b07cea6cfcb669559d97"
+    },
+    {
      "path": "ra/fsp/src/r_gpt/r_gpt.c",
      "bytes": 92733,
      "sha256": "458500e8758e14898b1f61732f6767ac831b6e382f51c96a01917b72fb6f2f35"
@@ -898,14 +988,269 @@
      "sha256": "0a6c549a239e60e743bef6acd6bb63529fa5eefae7f4f2857156ab2c46680bd8"
     },
     {
+     "path": "ra/fsp/src/r_iic_slave/r_iic_slave.c",
+     "bytes": 67053,
+     "sha256": "2197e8e643a33be6a11a61b68af3982cfe3b680e50da4e879ce92c9d0239019b"
+    },
+    {
      "path": "ra/fsp/src/r_ioport/r_ioport.c",
      "bytes": 44603,
      "sha256": "f7d95165fe2e68e490d6adba1f91dd52453110ed1e2fd7f91f9146583cae467d"
     },
     {
+     "path": "ra/fsp/src/r_iwdt/r_iwdt.c",
+     "bytes": 29215,
+     "sha256": "99a146a07e83bd4d5cc4aba3aef37e831a83b8ab7f4d24e51be561e3e0f8ae88"
+    },
+    {
+     "path": "ra/fsp/src/r_lpm/r_lpm.c",
+     "bytes": 50344,
+     "sha256": "e33255974befdae61c64b2f8dcdf13630844117de5d6cb699622ef1299d2f852"
+    },
+    {
+     "path": "ra/fsp/src/r_rtc/r_rtc.c",
+     "bytes": 76172,
+     "sha256": "4e97806edbed2452d297bb297a040cb9b9b5c60fdc075fc4278e2b4cc3419692"
+    },
+    {
+     "path": "ra/fsp/src/r_sci_spi/r_sci_spi.c",
+     "bytes": 45580,
+     "sha256": "7453821b7d94b89a5c6a799620cd4bf4617d3f33c0950255659df70e71f1eae8"
+    },
+    {
      "path": "ra/fsp/src/r_sci_uart/r_sci_uart.c",
      "bytes": 86936,
      "sha256": "87ec54fbc398bea6f2fa8348233f550ed0c326a67113d19d41e797579510e605"
+    },
+    {
+     "path": "ra/fsp/src/r_spi/r_spi.c",
+     "bytes": 62020,
+     "sha256": "1028b768a18adf9a09ecd42e12b141ad8841af39bc2a8e2f446c51f85cb92554"
+    },
+    {
+     "path": "ra/fsp/src/r_usb_basic/r_usb_basic.c",
+     "bytes": 171164,
+     "sha256": "56640aee6f15af1a4ea88db8415669216e5082d83dfa667eaa4aeaef7e73c708"
+    },
+    {
+     "path": "ra/fsp/src/r_usb_basic/src/driver/inc/r_usb_basic_define.h",
+     "bytes": 66273,
+     "sha256": "d9f35df01641b7cf4f5b7e749519f2fd68c5e0c5572b41ac24b4235f2cac77d3"
+    },
+    {
+     "path": "ra/fsp/src/r_usb_basic/src/driver/inc/r_usb_cstd_rtos.h",
+     "bytes": 5387,
+     "sha256": "78207823e2d2907c336126de6e0745b04d224d9a941dc1586246f19805a8a865"
+    },
+    {
+     "path": "ra/fsp/src/r_usb_basic/src/driver/inc/r_usb_extern.h",
+     "bytes": 46270,
+     "sha256": "b0923bbb1797d0559d579b225c8655e197176b6067841b5c5295f646d86481ce"
+    },
+    {
+     "path": "ra/fsp/src/r_usb_basic/src/driver/inc/r_usb_typedef.h",
+     "bytes": 10525,
+     "sha256": "7789112577bff325dae938e51af33313bc3c89b5b8e3a7a58b6ff4a7af43fb7b"
+    },
+    {
+     "path": "ra/fsp/src/r_usb_basic/src/driver/r_usb_cdataio.c",
+     "bytes": 32689,
+     "sha256": "0338cc2d76c6c7e37353b738467a1b6084be229f5e2aefb401d0bb64fafb3788"
+    },
+    {
+     "path": "ra/fsp/src/r_usb_basic/src/driver/r_usb_clibusbip.c",
+     "bytes": 31769,
+     "sha256": "45345493f1521fca7e69bb2e646c4bd483a406ee45893947388da0c0ecb21ca1"
+    },
+    {
+     "path": "ra/fsp/src/r_usb_basic/src/driver/r_usb_cstd_rtos.c",
+     "bytes": 81865,
+     "sha256": "8fa6edf678df1b7b67d650caea13ee1fc2a633cfa6d20d7316e8f635d45527c5"
+    },
+    {
+     "path": "ra/fsp/src/r_usb_basic/src/driver/r_usb_hbc.c",
+     "bytes": 11476,
+     "sha256": "47a70d1a4a572b85ade182a28786f1cd499f1004ea0e878dca044b83dfe11c8e"
+    },
+    {
+     "path": "ra/fsp/src/r_usb_basic/src/driver/r_usb_hcontrolrw.c",
+     "bytes": 19037,
+     "sha256": "41c39472c66335a93ae94a2baf486b6e128d0727c6561ae28568c1598c40d18d"
+    },
+    {
+     "path": "ra/fsp/src/r_usb_basic/src/driver/r_usb_hdriver.c",
+     "bytes": 129664,
+     "sha256": "3a7b237275c1809302e16fa9f584731f0c3e11740c7aebb17c713bed29817957"
+    },
+    {
+     "path": "ra/fsp/src/r_usb_basic/src/driver/r_usb_hhubsys.c",
+     "bytes": 146517,
+     "sha256": "24d7c7a2440c446bc7d6f14025367b992afad9c2a4683a7cc3f0f0e206cb3294"
+    },
+    {
+     "path": "ra/fsp/src/r_usb_basic/src/driver/r_usb_hintfifo.c",
+     "bytes": 14412,
+     "sha256": "9c60df7374a29a53e278d23c7c518da327c5d907bba8c0cab66bf3ee5cd89cd3"
+    },
+    {
+     "path": "ra/fsp/src/r_usb_basic/src/driver/r_usb_hinthandler_usbip0.c",
+     "bytes": 4694,
+     "sha256": "526c7bac1765c98b07acbd9a22db0076ded66e9774f87e44b5133dcc92d4cba1"
+    },
+    {
+     "path": "ra/fsp/src/r_usb_basic/src/driver/r_usb_hinthandler_usbip1.c",
+     "bytes": 2788,
+     "sha256": "42d640a254c63683c1a6d808895125443b8db48a7426f0fd3454013cf1b3d1a3"
+    },
+    {
+     "path": "ra/fsp/src/r_usb_basic/src/driver/r_usb_hlibusbip.c",
+     "bytes": 100967,
+     "sha256": "6d79bd815cf6d4a87d979cd8dff82ba6cce7a8f417aac24d4bab2b6c51fa6a82"
+    },
+    {
+     "path": "ra/fsp/src/r_usb_basic/src/driver/r_usb_hmanager.c",
+     "bytes": 140456,
+     "sha256": "518643a298a9e91d242a0e4e3b43376f98a979dcd6beb8b149f89a5aed91625b"
+    },
+    {
+     "path": "ra/fsp/src/r_usb_basic/src/driver/r_usb_hscheduler.c",
+     "bytes": 18315,
+     "sha256": "b0a882f6fca12e2715766c5f13d700e1c7fe70214b8c99add3b6fa8015429fd9"
+    },
+    {
+     "path": "ra/fsp/src/r_usb_basic/src/driver/r_usb_hsignal.c",
+     "bytes": 6445,
+     "sha256": "5767f4f7099611b461bef2f8ea100a347fbe7db51cf0251a57689dbc01dfbed4"
+    },
+    {
+     "path": "ra/fsp/src/r_usb_basic/src/driver/r_usb_hstdfunction.c",
+     "bytes": 11978,
+     "sha256": "e0c787a9ff3b2b74f3368cb8e189abdc30b8767bb0db59a4c9abfa68a3b229b2"
+    },
+    {
+     "path": "ra/fsp/src/r_usb_basic/src/driver/r_usb_pbc.c",
+     "bytes": 8441,
+     "sha256": "a7de70d1eb789d2b6eeb77375dadee4a5fd8bda3e5117bb3bed6583514ba14e1"
+    },
+    {
+     "path": "ra/fsp/src/r_usb_basic/src/driver/r_usb_pcontrolrw.c",
+     "bytes": 6524,
+     "sha256": "53e434157d37b798c96ca5de5a279e7048701b3739ecae82d81e3b7744fa6279"
+    },
+    {
+     "path": "ra/fsp/src/r_usb_basic/src/driver/r_usb_pdriver.c",
+     "bytes": 95587,
+     "sha256": "8e65687865a8a8c60ea75bc102aa36fab2a7f8ae45f7581618b089edb547eced"
+    },
+    {
+     "path": "ra/fsp/src/r_usb_basic/src/driver/r_usb_pintfifo.c",
+     "bytes": 6726,
+     "sha256": "83d3d7d6295e8d20c9ea3a626038cf32ee0fe47e4efb4c614a25e1d5716c4d18"
+    },
+    {
+     "path": "ra/fsp/src/r_usb_basic/src/driver/r_usb_pinthandler_usbip0.c",
+     "bytes": 4459,
+     "sha256": "4473f09a430c74736f0fc66f6d13fb39790c52f0c3856cdb340001585b82ec9c"
+    },
+    {
+     "path": "ra/fsp/src/r_usb_basic/src/driver/r_usb_plibusbip.c",
+     "bytes": 70813,
+     "sha256": "051538b886ca975a87a3c2ee237bad374dd7f2764273822810d77eefa8314464"
+    },
+    {
+     "path": "ra/fsp/src/r_usb_basic/src/driver/r_usb_psignal.c",
+     "bytes": 8416,
+     "sha256": "db9db57c722135a3ea8e74d658785e7dd97a044f2e6c26dd0062b7c1cdcb4bd5"
+    },
+    {
+     "path": "ra/fsp/src/r_usb_basic/src/driver/r_usb_pstdfunction.c",
+     "bytes": 13121,
+     "sha256": "f19f2cd91d91619ff78aab100c977a04746310b126b5c24ee4ed24e7bd984827"
+    },
+    {
+     "path": "ra/fsp/src/r_usb_basic/src/driver/r_usb_pstdrequest.c",
+     "bytes": 84092,
+     "sha256": "340e7f00e4b507c5ea15f4e4fc24d20ea19bad4343ddc7c564c801a60ebd6ed0"
+    },
+    {
+     "path": "ra/fsp/src/r_usb_basic/src/hw/inc/r_usb_bitdefine.h",
+     "bytes": 28176,
+     "sha256": "34cd11e42baf08ba0c13910af10e6228ded2e4ef2221db28fc0ccd5653fe96f5"
+    },
+    {
+     "path": "ra/fsp/src/r_usb_basic/src/hw/inc/r_usb_dmac.h",
+     "bytes": 4521,
+     "sha256": "c786691ce20c4a6abc0291e1c66e2119e20ad3e702e05a6ec95f7cac7bebe6f7"
+    },
+    {
+     "path": "ra/fsp/src/r_usb_basic/src/hw/inc/r_usb_reg_access.h",
+     "bytes": 15461,
+     "sha256": "c569939d87d4ef181c50e501d0ac63c650ae9cefd345b185f77e259390c22121"
+    },
+    {
+     "path": "ra/fsp/src/r_usb_basic/src/hw/r_usb_creg_abs.c",
+     "bytes": 20611,
+     "sha256": "f42faee520b2600511a65c0c7f2c02b8ca4648b8b807f885fefdc836c58e6737"
+    },
+    {
+     "path": "ra/fsp/src/r_usb_basic/src/hw/r_usb_creg_access.c",
+     "bytes": 149125,
+     "sha256": "39ee7288a42ecf106d762c5604abd9b5f626b27fe479ebbb2748b642b7ed25b3"
+    },
+    {
+     "path": "ra/fsp/src/r_usb_basic/src/hw/r_usb_dma.c",
+     "bytes": 51699,
+     "sha256": "b4b9db345416517c5247c33fdd51dbf8ccad51126a635c1060b17e1d0969b4d7"
+    },
+    {
+     "path": "ra/fsp/src/r_usb_basic/src/hw/r_usb_hostelectrical.c",
+     "bytes": 7981,
+     "sha256": "a81b69e281247234df9a7415740793c41ccd83decd2e2c0818828ae6a9535baa"
+    },
+    {
+     "path": "ra/fsp/src/r_usb_basic/src/hw/r_usb_hreg_abs.c",
+     "bytes": 39893,
+     "sha256": "3a38439b5ec5165ab48291e5c5069e298bd89bfda9983a7182fc74848d1c942d"
+    },
+    {
+     "path": "ra/fsp/src/r_usb_basic/src/hw/r_usb_hreg_access.c",
+     "bytes": 42524,
+     "sha256": "779e0d1ad3ccef875d53f990a953e7d545d307ad2e878a0a1b2b8b5638857ccf"
+    },
+    {
+     "path": "ra/fsp/src/r_usb_basic/src/hw/r_usb_mcu.c",
+     "bytes": 41629,
+     "sha256": "639b3605e3357a4fe1e5f0b3628519ef4adf923f4b444c9d227b0562256f8452"
+    },
+    {
+     "path": "ra/fsp/src/r_usb_basic/src/hw/r_usb_preg_abs.c",
+     "bytes": 29565,
+     "sha256": "a2e6b22fbecc6d80345faf53119666cfe4f7f30d02241718109c6c7cec37a65c"
+    },
+    {
+     "path": "ra/fsp/src/r_usb_basic/src/hw/r_usb_preg_access.c",
+     "bytes": 14529,
+     "sha256": "2d28bb74389f61fc10dcc2b6fdbc004454a19429fc33a58e708c599d76bd94b8"
+    },
+    {
+     "path": "ra/fsp/src/r_usb_pcdc/r_usb_pcdc_descriptor.c.template",
+     "bytes": 20126,
+     "sha256": "0ddaab8203e0ee1a9a7eb4aa7139cc76ee0fea52e535b0c2177e86e4ecafd4ed"
+    },
+    {
+     "path": "ra/fsp/src/r_usb_pcdc/src/inc/r_usb_pcdc.h",
+     "bytes": 1269,
+     "sha256": "309538a1fd8374f8535f26347602b94125d933ed392fc2973ecec799054513ad"
+    },
+    {
+     "path": "ra/fsp/src/r_usb_pcdc/src/r_usb_pcdc_driver.c",
+     "bytes": 6457,
+     "sha256": "2cde6fdb87949d9190f21185d856234bb5080d92c19bd617d7eb860468686346"
+    },
+    {
+     "path": "ra/fsp/src/r_wdt/r_wdt.c",
+     "bytes": 31162,
+     "sha256": "1a2117fe7a379e19499a6b6d20a6b0447485810ff87905ef8c373cb3997e7b1b"
     }
    ]
   },

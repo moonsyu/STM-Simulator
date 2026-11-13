@@ -46,7 +46,8 @@ function buildFsp(clone){
   if(!clone)throw new Error('renesas/fsp clone path is required (a sparse clone of ra/ is enough).');
   const commit=git(clone,'rev-parse','HEAD').toString().trim();
   const cmsis=JSON.parse(fs.readFileSync(path.join(path.dirname(fileURLToPath(import.meta.url)),'..','desktop','tool-manifest.json'),'utf8')).sources.find(s=>!s.archive);
-  const MODULES=['r_ioport','r_icu','r_sci_uart','r_gpt','r_agt','r_adc','r_iic_master'];
+  // The drivers the RA projects use, and those of features 32-41 (one reinstall for all of them).
+  const MODULES=['r_ioport','r_icu','r_sci_uart','r_gpt','r_agt','r_adc','r_iic_master','r_spi','r_sci_spi','r_iic_slave','r_rtc','r_wdt','r_iwdt','r_dmac','r_dtc','r_elc','r_lpm','r_flash_hp','r_can','r_usb_basic','r_usb_pcdc'];
   const keep=p=>p==='LICENSE.md'||/^ra\/fsp\/inc\/(fsp_features|fsp_version)\.h$/.test(p)||/^ra\/fsp\/inc\/api\/[^/]+\.h$/.test(p)
     ||MODULES.some(m=>p===`ra/fsp/inc/instances/${m}.h`||p.startsWith(`ra/fsp/src/${m}/`))
     ||/^ra\/fsp\/src\/bsp\/mcu\/(all|ra6e1)\/[^/]+$/.test(p)

@@ -21,7 +21,7 @@ const RELEASES=[
 const CUBE={id:'cube',keys:['cube'],label:'STM32CubeF4 v1.28.3 · HAL·CMSIS 드라이버 (NUCLEO-F446RE)',bytes:10*1024*1024,check:'STM32CubeF4/Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_hal.h',manifest:MANIFEST};
 const CUBE_F1={id:'cubeF1',keys:['cubeF1'],label:'STM32CubeF1 v1.8.7 · HAL·CMSIS 드라이버 (NUCLEO-F103RB)',bytes:3*1024*1024,check:'STM32CubeF1/Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal.h',manifest:MANIFEST_F1};
 // Renesas FSP for the RA boards (FPB-RA6E1): BSP, RA6E1 CMSIS device files, drivers and board files (BSD-3-Clause).
-const FSP={id:'fsp',keys:['fsp'],label:'Renesas FSP v6.6.0 · BSP·드라이버 (FPB-RA6E1)',bytes:8*1024*1024,check:'FSP/ra/fsp/src/bsp/mcu/ra6e1/bsp_feature.h',manifest:MANIFEST_FSP,source:'github.com/renesas'};
+const FSP={id:'fsp',keys:['fsp'],label:'Renesas FSP v6.6.0 · BSP·드라이버 (FPB-RA6E1)',bytes:8*1024*1024,check:'FSP/ra/fsp/src/r_spi/r_spi.c',manifest:MANIFEST_FSP,source:'github.com/renesas'};
 const ITEMS=[RELEASES[0],CUBE,CUBE_F1,FSP,RELEASES[1],RELEASES[2]];
 
 const installRoot=()=>path.join(process.env.LOCALAPPDATA||os.homedir(),'STM-Simulator-Tools');
