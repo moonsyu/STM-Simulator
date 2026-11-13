@@ -28,7 +28,7 @@ test('project copies of the generated it.c and of an SDK driver source are compi
    // PC0 is set from the edited SysTick_Handler, PC1 from the edited HAL_GPIO_TogglePin (called with PC2).
    p.code=generateHal(m,{minimal:true}).replace('    /* USER CODE BEGIN 3 */','    /* USER CODE BEGIN 3 */\n    HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_2);\n    HAL_Delay(5);');
    const it=buildEnvironment(p).files.find(f=>f.file.endsWith('_it.c'));assert.ok(it,'generated it.c view');
-   const itText=it.text.replace('void SysTick_Handler(void) { HAL_IncTick(); }','void SysTick_Handler(void) { HAL_IncTick(); GPIOC->BSRR = GPIO_PIN_0; }');assert.notEqual(itText,it.text);
+   const itText=it.text.replace('  /* USER CODE BEGIN SysTick_IRQn 1 */\n','  /* USER CODE BEGIN SysTick_IRQn 1 */\n  GPIOC->BSRR = GPIO_PIN_0;\n');assert.notEqual(itText,it.text);
    const sdkPath=`Drivers/${prefix.toUpperCase().replace('XX','xx')}_HAL_Driver/Src/${prefix}_hal_gpio.c`,sdk=await fs.readFile(path.join(cube,sdkPath),'utf8');
    const edited=sdk.replace(/void HAL_GPIO_TogglePin\([^)]*\)\s*\{/,m0=>m0+'\n  GPIOC->BSRR = GPIO_PIN_1; /* project copy */');assert.notEqual(edited,sdk);
    p.firmware.files=[{name:it.file,text:itText},{name:sdkPath,text:edited}];
