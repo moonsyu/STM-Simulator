@@ -1,5 +1,17 @@
 # 검증 기록
 
+## 1.51.0 기능 목록 45번, 새 프로젝트 기본값 UART, F103 RTS — 로컬 검증
+
+2026-11-13. **새 프로젝트 기본값 UART**(2026-11-12 사용자 결정): 단위 `project`(USART2·`_write`, 인사말이 가상 COM으로)·`docs`·`docs-apply`(콘솔 핀이 있어도 Docs 적용, NeoPixel 클록 검사)·`stm32-boards`. 핀 목록을 통째로 바꾸던 시험들(`p.mcu.pins={…}`)은 콘솔 주변장치도 비우게 고쳤다. 툴체인: 새 기본 프로젝트(`blank`)가 두 보드에서 ARM GCC로 빌드·실행.
+
+**에뮬레이터 오류(기본값 변경으로 찾음)**: 툴체인 `tim-oc`가 F103에서 실패 — USART2를 켜면 TIM2 CH2(PA1) 출력이 0으로 남았다. 같은 펌웨어를 UART 유무로 나눠 돌려 확인했고, 원인은 USART RTS를 흐름 제어(CR3 RTSE)와 관계없이 출력으로 잡은 것(F103의 USART2_RTS = PA1). 실물은 RTSE가 꺼지면 핀을 쓰지 않는다. 고친 뒤 `tim-oc`·`button-bounce`·`uart-params`·`tim-channels` 통과.
+
+**45번**: 단위 `project-overrides` 10개(파일 종류, it.c·main.h·쌍의 USER CODE 구역, 고친 it.c 다시 생성 — 구역 유지·구역 밖 2줄 보고·같으면 저장 안 함, 한 번 만드는 파일과 사용자 파일은 그대로, hal_conf.h와 꺼진 주변장치의 쌍은 원본으로, 생성 전 계획, 흐림 범위, origin/of/base 검증과 SDK 4 MB, 1.44~1.50의 복사본은 다시 생성하지 않음, 리뷰 회귀 2건). 툴체인 `project-overrides`(F103RB): 고친 `system_stm32f1xx.h`(SDK의 stm32f1xx.h가 포함하는 헤더)·hal_conf.h(HSE 8 MHz)·it.c(SysTick에 카운터)가 ARM 빌드에 쓰이고 에뮬레이터에서 카운터가 1 ms마다 오른다. E2E: `copy-to-project`(바로 고치기 → 그 파일만 저장, ●, 흐린 줄, 코드 생성 경고 "Core/Src/stm32f1xx_it.c — 1줄", 생성 뒤 Ctrl+Z, 원본으로 되돌리기, .ioc 읽기 전용)·`definition`(F12로 연 시작 코드를 고치면 Core/Startup에 저장, Ctrl+Z)·`project-structure`(RA 파일은 읽기 전용)·`tabs`·`peripheral-files`. 전체 E2E 113개 통과(1 건너뜀), 단위·해석기 1057개, 에뮬레이터·펌웨어 130개, ESLint, 패키지 검사.
+
+**리뷰**: 독립 리뷰어 3명(편집·생성·빌드/저장)이 diff를 보고, 지적마다 반박 검증 2명을 붙인 워크플로. 13건 중 11건이 확인돼 모두 고쳤다 — ① 탭을 모두 닫은 뒤 고치면 편집기가 "열린 파일 없음"에 가려짐 ② CMSIS 장치 헤더를 고치면 트리에 두 번 나오고 원본 쪽 입력이 되돌려짐 ③ 되돌리기 뒤 Ctrl+Z에도 원본 보기가 남음 ④ 저장이 거부된 입력마다 빈 실행 취소 지점이 쌓임 ⑤ 사용자 파일(출처 없음)까지 흐리게 표시 ⑥ 고친 it.c의 구역에 쓴 핸들러가 다시 생성될 때 한 번 더 생겨 빌드 실패 ⑦ "설정 적용" 뒤 생성하면 사용자가 쓰지 않은 줄이 지워질 줄로 보고됨(고치기 시작한 생성 원본을 `base`로 보관) ⑧ ARM 빌드·clangd·단일 파일 저장/열기가 2 MB 넘는 프로젝트를 거부 ⑨ 고친 SDK 헤더를 다른 SDK 헤더가 포함할 때 원본이 쓰임 ⑩ 파일 놓기가 SDK 파일까지 1 MB에 셈 ⑪ 작업 폴더의 1.2 MB 넘는 소스 파일을 다시 못 엶. 반박된 2건: 구역 밖 생성 줄을 지운 수정이 보고 없이 사라진다(생성되는 줄이라 손실 아님), hal_conf.h의 사용자 HSE 값이 무시된다(템플릿 가드에서만 -D를 넘김).
+
+**작업 중 멈춤**: 리뷰 수정에서 `ide-ui.js`가 `validateProject`를 두 번 import해 앱이 시작되지 않았고(브라우저 문법 오류), E2E가 앱을 기다리며 멈췄다. 중복 import를 지우고, 이후 E2E는 시험별(240초)·전체 제한 시간을 걸어 실행했다.
+
 ## 1.50.0 기능 목록 44번(printf·입력을 UART로) — 로컬 검증
 
 2026-11-11. 단위 `stdio-uart` 10개: 생성 코드(USART2가 켜지면 `_write`/`_read`, 꺼지면 ITM, 송신 전용이면 `_read` 없음, 최소 코드에는 없음) / 재생성 때 사용자 구역의 `_write`·`_read`가 남음 / 해석기에서 printf가 `_write`를 거쳐 USART2로, 콘솔에는 안 나옴(USART2가 없으면 전처럼 콘솔) / 줄 단위 버퍼링, `fflush`, `setvbuf`, `puts`·`putchar`, 긴 줄이 128바이트 이하로 나뉘어 빠짐없이 나감 / 사용자의 `__io_putchar`, 한글 UTF-8 / `scanf`·`getchar`가 `_read`로 직렬 입력을 받고 에코, 프롬프트가 입력보다 먼저 나감 / 오류 케이스(`_read` 없는 `scanf`의 안내, 인터럽트 콜백 안의 printf) / 예제 전수: printf를 쓰는 예제가 USART2·`_write`를 갖고 ITM이 없으며 검증을 통과, USART2를 쓰는 예제와 Docs 견본은 그대로 / DS3231 모듈 예제가 가상 COM에 시각을 찍음 / UART 글자 표시(UTF-8, `\xNN`).

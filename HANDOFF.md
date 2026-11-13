@@ -1,6 +1,16 @@
 # STM Simulator — 개발 인계
 
-현재 버전: **1.50.0**. 정리일: **2026-11-10**. NUCLEO-F446RE·NUCLEO-F103RB 또는 Renesas FPB-RA6E1(1.20.0, FSP·에뮬레이터 전용)과 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+현재 버전: **1.51.0**. 정리일: **2026-11-10**. NUCLEO-F446RE·NUCLEO-F103RB 또는 Renesas FPB-RA6E1(1.20.0, FSP·에뮬레이터 전용)과 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+
+## 1.51.0 기능 목록 45번: 프로젝트 구조의 모든 파일을 바로 고치기, 새 프로젝트 기본값 UART
+
+- **새 프로젝트 기본값(2026-11-12 사용자 결정 "기본값도 UART로")**: `blankProject`가 `consoleUart`로 USART2(PA2/PA3, 115200)를 켜고 생성기의 UART 인사말 없이 main.c를 만든다(`_write`/`_read` 포함). `exampleProject`는 콘솔 없이(예제는 적용 때 `consoleExample`). 코드 초기화(`code-reset.js`)는 USART2가 켜져 있으면 생성된 `_write`/`_read`를 남긴다. 장치 Docs의 NeoPixel 클록 검사는 콘솔 핀을 사용자 핀으로 보지 않는다(`mcu-config.js` `userPins`).
+- **에뮬레이터**: USART RTS 핀은 CR3 RTSE일 때만 출력(`emu/stm32f446/usart.js`, F103 공용). 전에는 USART2가 켜지면 F103의 PA1(TIM2_CH2)을 가렸다.
+- **45번 데이터**: `firmware.files`의 항목에 `origin`('gen' | 'sdk'), `of`(SDK 경로), `base`(다시 생성되는 gen 파일이 고쳐지기 시작한 생성 원본 — 다시 생성할 때의 기준). 검증·한도는 `project.js`(SDK 파일 4 MB 따로), 프로젝트 파일 12 MB(`workspace.cjs`·`main.cjs`·`native-ide.cjs`·`app-files.js`), 작업 폴더의 소스 파일 하나 4.5 MB.
+- **편집(`code-editor.js`)**: 외부 모델(생성 보기·SDK 파일)이 `canEdit`이면 편집 가능, 첫 변경에서 `adopt` → `onExternalEdit`(`ide-ui.js` `adoptExternal`: 이름은 트리 경로, 같은 이름 파일 거부, 검증 뒤 저장) → 프로젝트 파일로 이어서 편집. 흐림: 별도 데코레이션 `faded`(`isRegenerated`, `outsideRanges`). RA·.ioc는 `readOnlyMessage`.
+- **규칙(`project-overrides.js`)**: `regenerated`/`fileKind`, `armOnly`, `regenerateOverrides`(gen/sdk 출처의 다시 생성 파일만, `keepUserCode`, 같으면 저장 안 함), `generationPlan`·`lostLines`(생성 전 경고), `outsideRanges`. 생성기 쪽: it.c·main.h 보기(`build-environment.js`)와 주변장치 쌍(`peripheral-files.js`)에 CubeMX의 USER CODE 구역.
+- **생성(`pinout-ui.js` `plan`/`showLoss`, `app.js` apply의 `files`·`report`, `firmware-import.js`)**, **트리(`ide-ui.js` `projectRows`의 `edited`, `treeMenu`, `revertToOriginal`)**, **해석기 안내(`app-run.js`)**.
+- **빌드(`native-build.cjs`)**: 고친 SDK 헤더가 있는 폴더에는 그 SDK 폴더의 다른 헤더를 복사해 넣는다(SDK 헤더끼리의 `#include "…"`가 고친 헤더를 보게). 고친 hal_conf.h가 템플릿의 HSE 가드를 가지면 `-DHSE_VALUE=8000000U`.
 
 ## 1.50.0 기능 목록 44번: printf·입력을 UART(USART2)로
 
