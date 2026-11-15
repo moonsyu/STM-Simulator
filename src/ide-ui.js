@@ -192,7 +192,7 @@ export function setupIde(o){
     for(const n of ['bsp_delay.c','bsp_delay.h','bsp_io.c','bsp_io.h','bsp_irq.c','bsp_irq.h','bsp_clocks.c','bsp_common.c','bsp_common.h','bsp_sbrk.c'])add('ra/fsp/src/bsp/mcu/all/'+n);
     for(const n of ['startup.c','system.c'])add('ra/fsp/src/bsp/cmsis/Device/RENESAS/Source/'+n);
     for(const n of ['board.h','board_init.c','board_leds.c','board_leds.h'])add('ra/board/ra6e1_fpb/'+n);
-    const modules=[['r_ioport','r_ioport_api.h',true],['r_icu','r_external_irq_api.h',Object.values(p.mcu.pins||{}).some(q=>q.function==='IRQ')],['r_sci_uart','r_uart_api.h',has(/^SCI\d/)],['r_gpt','r_timer_api.h',has(/^GPT\d/)],['r_agt','r_timer_api.h',has(/^AGT\d/)],['r_adc','r_adc_api.h',has(/^ADC\d/)],['r_iic_master','r_i2c_master_api.h',has(/^IIC\d/)],['r_wdt','r_wdt_api.h',has(/^WDT$/)],['r_iwdt','r_wdt_api.h',has(/^IWDT$/)]];
+    const modules=[['r_ioport','r_ioport_api.h',true],['r_icu','r_external_irq_api.h',Object.values(p.mcu.pins||{}).some(q=>q.function==='IRQ')],['r_sci_uart','r_uart_api.h',has(/^SCI\d/)],['r_gpt','r_timer_api.h',has(/^GPT\d/)],['r_agt','r_timer_api.h',has(/^AGT\d/)],['r_adc','r_adc_api.h',has(/^ADC\d/)],['r_iic_master','r_i2c_master_api.h',has(/^IIC\d/)],['r_wdt','r_wdt_api.h',has(/^WDT$/)],['r_iwdt','r_wdt_api.h',has(/^IWDT$/)],['r_rtc','r_rtc_api.h',has(/^RTC$/)]];
     const apis=new Set();
     for(const [m,api,used]of modules)if(used){add(`ra/fsp/src/${m}/${m}.c`);add(`ra/fsp/inc/instances/${m}.h`);if(!apis.has(api)){apis.add(api);add('ra/fsp/inc/api/'+api);}}
     return [...own,...gen,...sdk];

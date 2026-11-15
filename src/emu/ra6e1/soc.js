@@ -13,6 +13,7 @@ import { Adc12 } from './adc.js';
 import { Agt } from './agt.js';
 import { Iic } from './iic.js';
 import { Watchdog } from './wdt.js';
+import { Rtc } from './rtc.js';
 import { EXC_NMI } from '../scs.js';
 import { RA_PERIPHERAL_PINS, RA_SCI_CHANNELS, RA_GPT_CHANNELS, RA_AGT_CHANNELS, RA_IIC_CHANNELS, raPsel } from '../../ra-config.js';
 
@@ -295,6 +296,7 @@ export class Ra6e1 {
     this.agts = {};
     for (const ch of RA_AGT_CHANNELS) this.timers['AGT' + ch] = this.agts[ch] = new Agt(this, ch);
     this.wdt = new Watchdog(this, 'WDT'); this.iwdt = new Watchdog(this, 'IWDT');
+    this.rtc = new Rtc(this);
     const devices = [
       [RA_BASES.SYSTEM, 0x700, this.system],
       [RA_BASES.PORT, 0x1000, this.ports],
@@ -318,9 +320,8 @@ export class Ra6e1 {
       [RA_BASES.CACHE, 0x400, plain('CACHE', 0x400)],
       [RA_BASES.IWDT, 0x100, this.iwdt],
       [RA_BASES.WDT, 0x100, this.wdt],
-      // RTC: RCR2.RESET (bit 1) clears itself once the reset is done; START (bit 0) reads back what was written
-      // (BSP R_BSP_Init_RTC waits on both after the sub-clock starts).
-      [RA_BASES.RTC, 0x100, new RegisterFile(this, 'RTC', 0x100, { onWrite: (off, size) => { if (off === 0x24 && size === 1) { const v = this.peripherals.get('RTC').get(0x24, 1); this.peripherals.get('RTC').put(0x24, v & ~2, 1); } } })],
+      // RTC (calendar, periodic, alarm, carry; rtc.js). It keeps its time across an MCU reset.
+      [RA_BASES.RTC, 0x100, this.rtc],
     ];
     for (const [base, size, dev] of devices) this.peripherals.set(dev.name, dev);
     // Everything else in the peripheral area reads 0 and keeps writes, noted once (so firmware that touches a module the
@@ -367,7 +368,7 @@ export class Ra6e1 {
     if (this.clock.iclk !== clock.iclk) this.segment = { cycle: now, us: this.nowUs(now), hz: clock.iclk };
     this.clock = clock;
     Object.assign(this.machine.clock, { sysclk: clock.iclk, hclk: clock.iclk, pclk1: clock.pclkb, pclk2: clock.pclka });
-    this.wdt?.clockChanged(); this.iwdt?.clockChanged(); // the scheduler counts core cycles: plan the underflows again
+    this.wdt?.clockChanged(); this.iwdt?.clockChanged(); this.rtc?.clockChanged(); // the scheduler counts core cycles: plan their events again
     this.env.clockChanged?.(clock);
   }
   // ------------------------------------------------------------ reset

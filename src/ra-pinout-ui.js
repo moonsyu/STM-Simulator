@@ -1,5 +1,5 @@
 import {$,esc} from './common.js';
-import {RA6E1_PORTS,RA_IRQ_PINS,RA_RESERVED,FPB_RA6E1,RA_PERIPHERAL_PINS,RA_ADC_CHANNELS,RA_GPT_32BIT,RA_GPT_CHANNELS,RA_AGT_CHANNELS,RA_TIMER_UNITS,RA_CLOCK_LIMITS,RA_IIC_RATES,raIicClock,raGptCounts,raAgtCounts,raClockHz,raFamily,validateRaMcu,raDefaultMcu,raIrqName,RA_BSP_DEFAULTS,RA_WDT,RA_WDT_WINDOW_START,RA_WDT_WINDOW_END,raWdtTiming} from './ra-config.js';
+import {RA6E1_PORTS,RA_IRQ_PINS,RA_RESERVED,FPB_RA6E1,RA_PERIPHERAL_PINS,RA_ADC_CHANNELS,RA_GPT_32BIT,RA_GPT_CHANNELS,RA_AGT_CHANNELS,RA_TIMER_UNITS,RA_CLOCK_LIMITS,RA_IIC_RATES,raIicClock,raGptCounts,raAgtCounts,raClockHz,raFamily,validateRaMcu,raDefaultMcu,raIrqName,RA_BSP_DEFAULTS,RA_WDT,RA_WDT_WINDOW_START,RA_WDT_WINDOW_END,raWdtTiming,RA_RTC_DEFAULTS} from './ra-config.js';
 import {sciBaudSetting,raPclka} from './ra-generator.js';
 // Pin settings of a Renesas RA project (FPB-RA6E1), as the RA Smart Configurator's Pins tab sets them: per port pin the
 // mode (output / input / IRQ / analog), the symbolic name RASC writes into bsp_pin_cfg.h, output level and drive, the
@@ -14,8 +14,9 @@ const signalLabel=sg=>{const [id,role]=sg.split('_');return role.startsWith('GTI
 const PRIORITIES=(cur,none)=>(none?`<option value="" ${cur===''?'selected':''}>Disabled</option>`:'')+Array.from({length:16},(_,i)=>`<option value="${i}" ${String(i)===String(cur)?'selected':''}>Priority ${i}${i===0?' (highest)':i===15?' (lowest)':''}</option>`).join('');
 const DEFAULTS={IIC:ch=>({rate:'STANDARD',slave:0x50,callback:`i2c_master${ch}_callback`,priority:12}),SCI:ch=>({baud:115200,callback:`user_uart${ch}_callback`,priority:12}),GPT:()=>({mode:'PWM',period:1,unit:'kHz',duty:50,callback:'',priority:12})};
 // Stacks without pins (added from New Stack, kept until removed there).
-const PINLESS=['WDT','IWDT'];
-const STACK_NAMES={WDT:['g_wdt0','Watchdog (r_wdt)'],IWDT:['g_iwdt0','Independent Watchdog (r_iwdt)']};
+const PINLESS=['WDT','IWDT','RTC'];
+const STACK_NAMES={WDT:['g_wdt0','Watchdog (r_wdt)'],IWDT:['g_iwdt0','Independent Watchdog (r_iwdt)'],RTC:['g_rtc0','Realtime Clock (r_rtc)']};
+const SUBCLOCK_NOTE='FPB-RA6E1에는 32.768 kHz 크리스털 X2가 실장되어 있지만 E25/E26이 열려 있어 그대로는 서브 클록이 돌지 않습니다(XCIN/XCOUT은 J3로만 나옴). 실물 보드에서 Sub-Clock을 쓰려면 E25/E26을 닫으세요.';
 const WDT_DEFAULTS=id=>({enabled:true,...(id==='WDT'?{startMode:'REGISTER'}:{}),...RA_WDT[id].defaults,windowStart:100,windowEnd:0,reset:'RESET',stopInSleep:false,callback:''});
 const ARDUINO_OF=Object.fromEntries(Object.entries(FPB_RA6E1.arduino).map(([k,v])=>[v,k]));
 const NOTES={P408:'LED1 (녹색, 보드 내장 · 직렬 10 kΩ)',P407:'LED2 (녹색, 보드 내장 · 직렬 10 kΩ)',P205:'S1 사용자 스위치 (보드 내장, 누르면 LOW · 10 kΩ 풀업 R17)',P014:'Arduino 헤더의 RESET 핀(J2-3) · 10 kΩ 풀업 R4 — MCU의 RES#가 아니라 GPIO라서 LOW로 당겨도 리셋되지 않습니다',P400:'Arduino SCL · 2.2 kΩ 풀업 (보드)',P401:'Arduino SDA · 2.2 kΩ 풀업 (보드)'};
@@ -120,7 +121,9 @@ export class RaPinoutPanel {
   const sel=(k,values,fmt=v=>v)=>`<select data-ra-clock="${k}">${values.map(v=>`<option value="${v}" ${v===c[k]?'selected':''}>${fmt(v)}</option>`).join('')}</select>`;
   const divs=[1,2,4,8,16,32,64],rows=Object.entries(RA_CLOCK_LIMITS).map(([k,max])=>{const f=pll/c[k+'Div'];return `<tr class="${f>max+1e-9?'over':''}"><th>${k.toUpperCase()}</th><td>${sel(k+'Div',divs,v=>'/ '+v)}</td><td>${+f.toFixed(3)} MHz</td><td>최대 ${max} MHz</td></tr>`;}).join('');
   $('ra-clocks').innerHTML=`<div class="ra-clock-tree"><label>HOCO ${sel('hocoMHz',[16,18,20],v=>v+' MHz')}</label><span>→</span><label>PLL Src: HOCO · Div ${sel('pllDiv',[1,2,3],v=>'/ '+v)}</label><label>Mul ${sel('pllMul',Array.from({length:21},(_,i)=>i+10),v=>'x '+v+'.0')}</label><span>→</span><strong>PLL ${+pll.toFixed(3)} MHz</strong><span class="form-hint">(입력 ${+(c.hocoMHz/c.pllDiv).toFixed(3)} MHz: 8~24, 출력 120~200 MHz)</span></div>
-<table class="ra-clock-table"><thead><tr><th>클록</th><th>분주</th><th>주파수</th><th>한계</th></tr></thead><tbody>${rows}</tbody></table><p class="form-hint">Clock Src: PLL. 메인 크리스털(24 MHz)은 FPB-RA6E1에 실장되어 있지 않아 HOCO를 씁니다. PCLKA는 SCI, PCLKB는 AGT, PCLKC는 ADC, PCLKD는 GPT의 기준 클록입니다. 적용하면 bsp_clock_cfg.h가 바뀌고, 에뮬레이터는 FSP가 설정한 레지스터대로 동작합니다.</p>`;
+<table class="ra-clock-table"><thead><tr><th>클록</th><th>분주</th><th>주파수</th><th>한계</th></tr></thead><tbody>${rows}</tbody></table><p class="form-hint">Clock Src: PLL. 메인 크리스털(24 MHz)은 FPB-RA6E1에 실장되어 있지 않아 HOCO를 씁니다. PCLKA는 SCI, PCLKB는 AGT, PCLKC는 ADC, PCLKD는 GPT의 기준 클록입니다. 적용하면 bsp_clock_cfg.h가 바뀌고, 에뮬레이터는 FSP가 설정한 레지스터대로 동작합니다.</p>`
+   +(()=>{const rtc=this.draft.peripherals?.RTC?.enabled?{...RA_RTC_DEFAULTS,...this.draft.peripherals.RTC}:null,sub=rtc?.clockSource==='SUBCLOCK';
+    return `<table class="ra-clock-table" data-ra-low-clocks><thead><tr><th>저속 클록</th><th>주파수</th><th>쓰임</th></tr></thead><tbody><tr><th>LOCO</th><td>32.768 kHz</td><td>${rtc&&!sub?'RTC 카운트 소스 · ':''}AGT LOCO 카운트 소스</td></tr><tr><th>SOSC (Sub-Clock)</th><td>32.768 kHz</td><td>${sub?'RTC 카운트 소스 · Populated (BSP_CLOCK_CFG_SUBCLOCK_POPULATED 1)':'Not Populated'}</td></tr></tbody></table><p class="form-hint">${esc(SUBCLOCK_NOTE)} RTC의 카운트 소스는 Stacks의 g_rtc0에서 고릅니다.</p>`;})();
  }
  // Stacks tab: the FSP module instances the configuration generates; timers without pins (AGT, periodic GPT) are added
  // and set here, the others link to the pin that owns them.
@@ -156,6 +159,14 @@ export class RaPinoutPanel {
     +`<label>Reset Control${sel('reset',[['RESET','Reset Output'],['NMI','NMI Generated']],q.reset)}</label><label>Stop Control${sel('stopInSleep',[[0,'WDT Count Enabled in Low Power Mode'],[1,'WDT Count Disabled in Low Power Mode']],q.stopInSleep?1:0)}</label>`
     +`<label>NMI Callback<input data-ra-field="callback" value="${esc(q.callback)}" placeholder="NULL" spellcheck="false"></label>`;
    hint=`${esc(timing)} ${id==='IWDT'||q.startMode==='AUTO'?'리셋 직후부터 셉니다(OFS0, bsp_mcu_ofs_cfg.h).':'R_WDT_Open 뒤 첫 R_WDT_Refresh부터 셉니다.'} R_${id}_Open(&amp;${name}_ctrl, &amp;${name}_cfg) · R_${id}_Refresh(&amp;${name}_ctrl). 시간 초과면 ${q.reset==='NMI'?`NMI로 ${esc(q.callback||'콜백')}을 부릅니다`:'MCU가 리셋되고 실행 로그에 남습니다'}. 리셋 원인은 R_SYSTEM-&gt;RSTSR1_b.${id}RF로 읽습니다.`;
+  }
+  if(id==='RTC'){
+   const q={...RA_RTC_DEFAULTS,...p},prio=(field,cur,none)=>`<select data-ra-field="${field}">${PRIORITIES(cur===null?'':cur,none)}</select>`;
+   fields=`<label>Clock Source${sel('clockSource',[['LOCO','LOCO'],['SUBCLOCK','Sub-Clock']],q.clockSource)}</label>`
+    +(q.clockSource==='LOCO'?`<label>Frequency Comparison Value (LOCO)<input type="number" data-ra-field="freqCompare" min="8" max="510" step="1" value="${q.freqCompare}"></label>`:'')
+    +`<label>시작 시각 (시뮬레이터)${sel('start',[['SIMULATION','시뮬레이션: 2000-01-01 00:00:00'],['HOST_TIME','PC 시각 (배터리로 계속 돈 RTC처럼)']],q.start)}</label>`
+    +`<label>Callback<input data-ra-field="callback" value="${esc(q.callback)}" placeholder="NULL" spellcheck="false"></label><label>Alarm Interrupt Priority${prio('alarmPriority',q.alarmPriority,true)}</label><label>Period Interrupt Priority${prio('periodicPriority',q.periodicPriority,true)}</label><label>Carry Interrupt Priority${prio('carryPriority',q.carryPriority,false)}</label>`;
+   hint=`${q.clockSource==='SUBCLOCK'?esc(SUBCLOCK_NOTE)+' ':'LOCO 32.768 kHz로 셉니다(RFRL '+q.freqCompare+'). '}${q.start==='HOST_TIME'?'실행을 시작할 때 RTC가 PC 시각을 갖고 돌고 있으며, R_RTC_Open이 멈추지 않습니다(r_rtc_cfg.h RTC_CFG_OPEN_SET_CLOCK_SOURCE 0) — R_RTC_CalendarTimeGet이 바로 PC 시각을 읽습니다.':'실행마다 2000-01-01 00:00:00에서 시작하고, R_RTC_Open이 RTC를 멈추니 R_RTC_CalendarTimeSet으로 시각을 정하세요.'} R_RTC_PeriodicIrqRateSet(1/256~2초) · R_RTC_CalendarAlarmSet의 콜백은 ${esc(q.callback||'(없음)')}에서 RTC_EVENT_PERIODIC_IRQ · RTC_EVENT_ALARM_IRQ로 옵니다. MCU 리셋에도 시각은 이어집니다.`;
   }
   return `<article class="ra-stack" data-ra-stack="${id}"><header><b>${name}</b><span>${module}</span><button type="button" data-ra-remove="${id}">삭제</button></header><div class="ra-stack-fields">${fields}</div><p class="form-hint">${hint}</p></article>`;
  }
@@ -214,6 +225,7 @@ export class RaPinoutPanel {
    pins[pin]={function:'IRQ',edge:'FALLING',pull:'PULLUP',priority:12,callback:`external_irq${RA_IRQ_PINS[pin]}_callback`};this.validate();this.renderStacks();return;
   }
   if(el.closest('[data-ra-add]')&&RA_WDT[$('ra-stack-add').value]){const id=$('ra-stack-add').value;per[id]=WDT_DEFAULTS(id);this.validate();this.renderStacks();return;}
+  if(el.closest('[data-ra-add]')&&$('ra-stack-add').value==='RTC'){per.RTC={enabled:true,...RA_RTC_DEFAULTS};this.validate();this.renderStacks();return;}
   if(el.closest('[data-ra-add]')){const id=$('ra-stack-add').value;if(!id)return;per[id]=id.startsWith('AGT')?{enabled:true,period:100,unit:'ms',callback:`agt${id.slice(3)}_callback`,priority:12}:{enabled:true,mode:'PERIODIC',period:100,unit:'ms',duty:50,callback:`gpt${id.slice(3)}_callback`,priority:12};this.validate();this.renderStacks();return;}
   const rm=el.closest('[data-ra-remove]')?.dataset.raRemove;if(rm){delete per[rm];this.validate();this.renderStacks();return;}
   const go=el.closest('[data-ra-goto]')?.dataset.raGoto;if(go){this.pin=go;this.tab='pins';this.render();}

@@ -519,5 +519,74 @@ void hal_entry(void)
     }
 }
 `+WARM_START});
-RA_EXAMPLES.push(POLL_EXAMPLE,IRQ_COURSE_EXAMPLE,UART_EXAMPLE,GPT_EXAMPLE,ADC_EXAMPLE,AGT_EXAMPLE,IIC_EXAMPLE,CHALLENGE_EXAMPLE,WDT_EXAMPLE);
+// RTC (LOCO) set to 2025-12-31 23:59:55: the 1-second periodic interrupt prints the time on SCI9 (the USB-TTL part on
+// D0/D1) and toggles LED1; the alarm at 00:00:00 adds a greeting to that line and lights LED2.
+const RTC_EXAMPLE=Object.freeze({id:'ra_rtc_clock',name:'RTC 시계 · 1초 주기 인터럽트와 자정 알람 (R_RTC_Open · CalendarTimeSet · AlarmSet · 콜백)',tags:['RTC','clock','calendar','alarm','UART','SCI'],
+ mcu:()=>{const m=UART_EXAMPLE.mcu();m.peripherals.RTC={enabled:true,clockSource:'LOCO',start:'SIMULATION',freqCompare:255,callback:'rtc_callback',alarmPriority:12,periodicPriority:12,carryPriority:12};return m;},
+ circuit:UART_EXAMPLE.circuit,
+ code:HEAD+`#include <stdio.h>
+
+volatile uint32_t seconds = 0;
+static volatile bool second = false;
+static volatile bool alarm = false;
+static volatile bool tx_done = true;
+static char line[48];
+
+/* g_rtc0: RTC_EVENT_PERIODIC_IRQ every second, RTC_EVENT_ALARM_IRQ at midnight. */
+void rtc_callback(rtc_callback_args_t *p_args)
+{
+    if (RTC_EVENT_PERIODIC_IRQ == p_args->event)
+    {
+        seconds++;
+        second = true;
+    }
+    else if (RTC_EVENT_ALARM_IRQ == p_args->event)
+    {
+        alarm = true;
+        R_IOPORT_PinWrite(&g_ioport_ctrl, LED2, BSP_IO_LEVEL_HIGH);
+    }
+}
+
+void user_uart9_callback(uart_callback_args_t *p_args)
+{
+    if (UART_EVENT_TX_COMPLETE == p_args->event)
+    {
+        tx_done = true;
+    }
+}
+
+void hal_entry(void)
+{
+    /* 2025-12-31 23:59:55 (tm_year: years since 1900, tm_mon: 0-11; R_RTC_CalendarTimeSet sets tm_wday). */
+    rtc_time_t start = { .tm_sec = 55, .tm_min = 59, .tm_hour = 23, .tm_mday = 31, .tm_mon = 11, .tm_year = 125 };
+    rtc_alarm_time_t midnight = { .time = { .tm_sec = 0, .tm_min = 0, .tm_hour = 0 }, .sec_match = true, .min_match = true, .hour_match = true };
+
+    R_SCI_UART_Open(&g_uart9_ctrl, &g_uart9_cfg);
+    R_RTC_Open(&g_rtc0_ctrl, &g_rtc0_cfg);
+    R_RTC_CalendarTimeSet(&g_rtc0_ctrl, &start);
+    R_RTC_CalendarAlarmSet(&g_rtc0_ctrl, &midnight);
+    R_RTC_PeriodicIrqRateSet(&g_rtc0_ctrl, RTC_PERIODIC_IRQ_SELECT_1_SECOND);
+
+    bsp_io_level_t led1 = BSP_IO_LEVEL_LOW;
+    while (1)
+    {
+        if (second && tx_done)
+        {
+            second = false;
+            rtc_time_t now;
+            R_RTC_CalendarTimeGet(&g_rtc0_ctrl, &now);
+            int n = sprintf(line, "%04d-%02d-%02d %02d:%02d:%02d%s\\r\\n", now.tm_year + 1900, now.tm_mon + 1, now.tm_mday,
+                            now.tm_hour, now.tm_min, now.tm_sec, alarm ? " Happy New Year!" : "");
+            alarm = false;
+            tx_done = false;
+            R_SCI_UART_Write(&g_uart9_ctrl, (uint8_t *) line, (uint32_t) n);
+            led1 = (BSP_IO_LEVEL_LOW == led1) ? BSP_IO_LEVEL_HIGH : BSP_IO_LEVEL_LOW;
+            R_IOPORT_PinWrite(&g_ioport_ctrl, LED1, led1);
+        }
+        /* Sleep until the next interrupt (RTC, SCI9). */
+        __WFI();
+    }
+}
+`+WARM_START});
+RA_EXAMPLES.push(POLL_EXAMPLE,IRQ_COURSE_EXAMPLE,UART_EXAMPLE,GPT_EXAMPLE,ADC_EXAMPLE,AGT_EXAMPLE,IIC_EXAMPLE,CHALLENGE_EXAMPLE,WDT_EXAMPLE,RTC_EXAMPLE);
 Object.freeze(RA_EXAMPLES);

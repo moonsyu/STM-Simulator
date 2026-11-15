@@ -22,7 +22,9 @@ import {WirelessHub,deliverToBuses} from './wireless.js';
 
 const definedLabel=(project,label)=>[project.code||'',...(project.firmware?.files||[]).map(f=>f.text||'')].some(text=>new RegExp(`^[ \\t]*#[ \\t]*define[ \\t]+${label}_(?:Pin|GPIO_Port)\\b`,'m').test(text));
 export class SimulationSession {
-  constructor(project,{print=()=>{},trace=()=>{},uart=()=>{},warn,channels,debug,program,storage}={}){
+  constructor(project,{print=()=>{},trace=()=>{},uart=()=>{},warn,channels,debug,program,storage,hostTime}={}){
+    // The PC time an RTC with the start time "PC 시각" starts from (an FSP project; tests give a fixed one).
+    this.hostTime=hostTime??Date.now();
     const source=project;project=physicalToModel(project);
     this.signalRecorder=new SignalRecorder();this.noise=new NoiseModel(project.simulation?.noise);this.recordPins=new Set();this.warnings=[];this.onStorage=storage;
     this.signals=signalsApi(this.signalRecorder,this.noise,{now:()=>this.runtime.microTime,record:pins=>this.record(pins),onNoise:cfg=>{for(const p of new Set([source,project]))if(p.simulation)p.simulation.noise=cfg;else p.simulation={stepMs:this.stepMs,pwmWaveform:false,noise:cfg};}});

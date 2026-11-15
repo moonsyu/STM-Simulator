@@ -108,3 +108,96 @@ test('the same project on the RA6E1 emulator (ARM GCC + FSP): the real r_wdt und
   assert.deepEqual(s.errors,[]);
  }finally{await s.close();}
 });
+
+const RTC_CODE=`#include "hal_data.h"
+#include <stdio.h>
+
+FSP_CPP_HEADER
+void R_BSP_WarmStart(bsp_warm_start_event_t event);
+FSP_CPP_FOOTER
+
+static volatile bool tick = false;
+
+void rtc_callback(rtc_callback_args_t *p_args)
+{
+    if (RTC_EVENT_PERIODIC_IRQ == p_args->event)
+    {
+        tick = true;
+    }
+}
+
+void hal_entry(void)
+{
+    rtc_time_t t = { .tm_sec = 58, .tm_min = 59, .tm_hour = 23, .tm_mday = 31, .tm_mon = 11, .tm_year = 125 };
+    R_RTC_Open(&g_rtc0_ctrl, &g_rtc0_cfg);
+    R_RTC_CalendarTimeSet(&g_rtc0_ctrl, &t);
+    R_RTC_PeriodicIrqRateSet(&g_rtc0_ctrl, RTC_PERIODIC_IRQ_SELECT_1_SECOND);
+    while (1)
+    {
+        if (tick)
+        {
+            tick = false;
+            R_RTC_CalendarTimeGet(&g_rtc0_ctrl, &t);
+            printf("RTC %04d-%02d-%02d %02d:%02d:%02d\\n", t.tm_year + 1900, t.tm_mon + 1, t.tm_mday, t.tm_hour, t.tm_min, t.tm_sec);
+        }
+    }
+}
+
+void external_irq1_callback(external_irq_callback_args_t *p_args)
+{
+    (void) p_args;
+}
+
+void R_BSP_WarmStart(bsp_warm_start_event_t event)
+{
+    if (BSP_WARM_START_POST_C == event)
+    {
+        R_IOPORT_Open(&IOPORT_CFG_CTRL, &IOPORT_CFG_NAME);
+    }
+}
+`;
+
+test('New Stack → Realtime Clock (r_rtc): Properties, Summary, the low-speed clocks in Clocks; the run prints the calendar crossing midnight',{timeout:240000},async()=>{
+ const s=await launch();
+ try{
+  const {win}=s;
+  await newRaProject(win);await openStacks(win);
+  await win.selectOption('#ra-stack-add','RTC');await win.click('[data-ra-add]');
+  const card='[data-ra-stack="RTC"]';await win.waitForSelector(card);
+  assert.match(await win.textContent(card+' header'),/g_rtc0\s*Realtime Clock \(r_rtc\)/);
+  assert.equal(await win.inputValue(card+' [data-ra-field="clockSource"]'),'LOCO');assert.equal(await win.inputValue(card+' [data-ra-field="start"]'),'SIMULATION');
+  assert.match(await win.textContent(card+' .form-hint'),/실행마다 2000-01-01 00:00:00에서 시작하고, R_RTC_Open이 RTC를 멈추니/);
+  await win.selectOption(card+' [data-ra-field="clockSource"]','SUBCLOCK');
+  await win.waitForFunction(sel=>/E25\/E26이 열려 있어/.test(document.querySelector(sel+' .form-hint').textContent),card);
+  await win.click('[data-ra-tab="clocks"]');
+  assert.match(await win.textContent('[data-ra-low-clocks]'),/SOSC \(Sub-Clock\)\s*32\.768 kHz\s*RTC 카운트 소스 · Populated/);
+  await win.click('[data-ra-tab="stacks"]');await win.selectOption(card+' [data-ra-field="clockSource"]','LOCO');
+  await win.click('[data-ra-tab="summary"]');assert.match(await win.textContent('#ra-summary'),/g_rtc0 \(r_rtc\)/);
+  await win.click('#ra-pinout-apply');await win.waitForFunction(()=>!document.getElementById('ra-pinout-dialog').open);
+  await setCode(win,RTC_CODE);
+  await win.keyboard.press('Control+F5');
+  await win.waitForFunction(()=>/RTC 2025-12-31 23:59:59[\s\S]*RTC 2026-01-01 00:00:00/.test(document.getElementById('console-output').textContent),null,{timeout:30000})
+   .catch(async error=>{throw new Error(`${error.message}\n출력: ${(await consoleText(win)).slice(-1500)}`);});
+  await win.keyboard.press('Control+F2');await win.waitForFunction(()=>document.getElementById('shell').dataset.running==='false');
+  assert.deepEqual(s.errors,[]);
+ }finally{await s.close();}
+});
+
+test('ra_rtc_clock on the RA6E1 emulator (ARM GCC + FSP): the USB-TTL part shows the time each second and the greeting at midnight',{timeout:240000,skip:!toolchain&&'ARM GCC / Renesas FSP not installed'},async()=>{
+ const s=await launch({simEngine:'gcc'});
+ try{
+  const {win}=s;
+  await win.evaluate(()=>document.getElementById('new').click());
+  if(await win.evaluate(()=>document.getElementById('replace-dialog').open))await win.click('#replace-confirm');
+  await win.waitForSelector('#project-dialog[open]');await win.selectOption('#new-project-board','fpb-ra6e1');await win.selectOption('#new-project-template','ra_rtc_clock');
+  await win.click('#project-create');await win.waitForFunction(()=>!document.getElementById('project-dialog').open);
+  await win.keyboard.press('Control+F5');
+  await win.click('[data-monitor="bus"]');
+  await win.waitForFunction(()=>/USB-TTL: 2025-12-31 23:59:56[\s\S]*2026-01-01 00:00:00 Happy New Year!/.test(document.getElementById('uart-output').textContent),null,{timeout:120000})
+   .catch(async error=>{throw new Error(`${error.message}\n출력: ${(await consoleText(win)).slice(-1500)}\nUART: ${(await win.textContent('#uart-output')).slice(-800)}`);});
+  assert.match(await consoleText(win),/ARM GCC로 펌웨어를 빌드합니다/);
+  await led(win,'LED2',LED_ON);
+  await win.keyboard.press('Control+F2');await win.waitForFunction(()=>document.getElementById('shell').dataset.running==='false');
+  assert.deepEqual(s.errors,[]);
+ }finally{await s.close();}
+});

@@ -28,12 +28,14 @@ const PLAN={
  ra_agt_tick:{vars:{blinks:0,ms:3}},ra_iic_memory:{vars:{matched:0,nack_seen:0}},
  ra_led4_switch2:{leds:['P107','P303','P113','P103'],at:{460:s=>s.setPressed({sw2:true}),520:s=>s.setPressed({}),910:s=>s.setPressed({sw2:true}),960:s=>s.setPressed({}),1310:s=>s.setPressed({sw1:true}),1360:s=>s.setPressed({})}},
  // S1 held 350-1350 ms: no refresh, the WDT resets both engines at 971 ms, and LED2 blinks after it (RSTSR1.WDTRF).
- ra_wdt_reset:{buttons:false,at:{350:s=>s.setPressed({SW1:true}),1350:s=>s.setPressed({})},vars:{refreshes:1,wdt_resets_seen:0},resets:1,warn:/^\[WDT\] /}
+ ra_wdt_reset:{buttons:false,at:{350:s=>s.setPressed({SW1:true}),1350:s=>s.setPressed({})},vars:{refreshes:1,wdt_resets_seen:0},resets:1,warn:/^\[WDT\] /},
+ // 6 s: the time set to 23:59:55 on the RTC, printed on SCI9 each second, and the alarm at midnight (LED2).
+ ra_rtc_clock:{ms:6000,buttons:false,vars:{seconds:0}}
 };
 // The level of a pin each millisecond: its PWM duty, or high/low.
 function timeline(session,id){
  const plan=PLAN[id],pins=[...LEDS,...(plan.leds||[])],gpio=()=>session.gpio??session.runtime.gpio,out=Object.fromEntries(pins.map(p=>[p,[]]));
- for(let ms=1;ms<=MS;ms++){
+ for(let ms=1;ms<=(plan.ms??MS);ms++){
   // S1 pressed for 100 ms twice (the button examples count, toggle or ignore it; the others do not use S1).
   const buttons=id!=='ra_led4_switch2'&&plan.buttons!==false;
   if(buttons&&(ms===300||ms===1300))session.setPressed({SW1:true});if(buttons&&(ms===400||ms===1400))session.setPressed({});
@@ -65,7 +67,7 @@ async function compare(ids){
    assert.equal(simulation.buses.received.get('term')??'',firmware.buses.received.get('term')??'',id+' UART part');
    // Variables are read 5 ms after the last 500 ms boundary: the emulator starts hal_entry about 0.2 ms after reset (the
    // FSP start-up code), so a periodic count read at the boundary itself may differ by one.
-   firmware.tick(MS+5);simulation.tick(MS+5);
+   {const end=(PLAN[id].ms??MS)+5;firmware.tick(end);simulation.tick(end);}
    for(const [name,tolerance]of Object.entries(PLAN[id].vars||{})){const x=firmware.readVariable(name),y=simulation.readVariable(name);assert.ok(Math.abs(x-y)<=tolerance,`${id} ${name}: emulator ${x}, interpreter ${y}`);}
   }
  }finally{await fs.rm(root,{recursive:true,force:true});}
@@ -78,3 +80,4 @@ test('parity: ra_led4_switch2 (four LEDs, two switches, pause and restart)',{ski
 test('parity: ra_uart_echo and ra_gpt_pwm (SCI9 echo, GPT PWM and periodic)',{skip,timeout:900000},()=>compare(['ra_uart_echo','ra_gpt_pwm']));
 test('parity: ra_adc_pot, ra_agt_tick and ra_iic_memory (ADC12, AGT, IIC master)',{skip,timeout:900000},()=>compare(['ra_adc_pot','ra_agt_tick','ra_iic_memory']));
 test('parity: ra_wdt_reset (WDT reset and RSTSR1.WDTRF)',{skip,timeout:900000},()=>compare(['ra_wdt_reset']));
+test('parity: ra_rtc_clock (RTC calendar, 1 s periodic interrupt, alarm)',{skip,timeout:900000},()=>compare(['ra_rtc_clock']));

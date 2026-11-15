@@ -48,5 +48,13 @@ export function raAssistance(mcu){
       // FSP has no API for the reset cause: the reset status register says it (the flag stays until 0 is written).
       {label:'Read reset cause (RSTSR1)',code:`if (1U == R_SYSTEM->RSTSR1_b.${id}RF)\n{\n    /* The ${id} reset the MCU. */\n}\n`},
       ...(q.callback?[callback(q.callback,'wdt_callback_args_t')]:[])]});}
+  if(per.RTC?.enabled){const q=per.RTC;
+    out.push({name:'g_rtc0',title:'Realtime Clock (r_rtc)',items:[call('R_RTC_Open','R_RTC_Open(&g_rtc0_ctrl, &g_rtc0_cfg);'),
+      call('R_RTC_CalendarTimeSet','/* 2026-01-01 09:00:00 (tm_year: years since 1900, tm_mon: 0-11; FSP sets tm_wday) */\nrtc_time_t set_time = { .tm_sec = 0, .tm_min = 0, .tm_hour = 9, .tm_mday = 1, .tm_mon = 0, .tm_year = 126 };\nR_RTC_CalendarTimeSet(&g_rtc0_ctrl, &set_time);'),
+      call('R_RTC_CalendarTimeGet','rtc_time_t now;\nR_RTC_CalendarTimeGet(&g_rtc0_ctrl, &now);'),
+      call('R_RTC_CalendarAlarmSet','rtc_alarm_time_t alarm = { .time = { .tm_sec = 30 }, .sec_match = true };\nR_RTC_CalendarAlarmSet(&g_rtc0_ctrl, &alarm);'),
+      call('R_RTC_PeriodicIrqRateSet','R_RTC_PeriodicIrqRateSet(&g_rtc0_ctrl, RTC_PERIODIC_IRQ_SELECT_1_SECOND);'),
+      call('R_RTC_InfoGet','rtc_info_t info;\nR_RTC_InfoGet(&g_rtc0_ctrl, &info);'),call('R_RTC_Close','R_RTC_Close(&g_rtc0_ctrl);'),
+      ...(q.callback?[callback(q.callback,'rtc_callback_args_t','    if (RTC_EVENT_PERIODIC_IRQ == p_args->event)\n    {\n        /* TODO: every period */\n    }\n    else if (RTC_EVENT_ALARM_IRQ == p_args->event)\n    {\n        /* TODO: the alarm */\n    }')]:[])]});}
   return out;
 }

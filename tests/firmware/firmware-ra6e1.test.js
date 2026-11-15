@@ -162,3 +162,14 @@ test('ra_wdt_reset: S1 held stops R_WDT_Refresh; the WDT underflows after 671 ms
  const blinks=[];runUntil(session,2200,{onTick:()=>blinks.push(session.gpio.P407.value>1.65)});
  assert.ok(blinks.includes(true)&&blinks.includes(false),'LED2 blinks after the WDT reset');
 });
+
+test('ra_rtc_clock: the real r_rtc on LOCO — set to 2025-12-31 23:59:55, the 1 s periodic interrupt prints on SCI9, the midnight alarm lights LED2',()=>{
+ const {session,log}=open(fixture('ra_rtc_clock'));
+ runUntil(session,5600);
+ const text=String.fromCharCode(...log.uart.filter(e=>e.instance==='SCI9'&&e.direction==='TX').flatMap(e=>e.bytes));
+ assert.equal(text,'2025-12-31 23:59:56\r\n2025-12-31 23:59:57\r\n2025-12-31 23:59:58\r\n2025-12-31 23:59:59\r\n2026-01-01 00:00:00 Happy New Year!\r\n');
+ assert.ok(session.gpio.P407.value>1.65,'LED2: the alarm');assert.equal(session.readVariable('seconds'),5);
+ // The RTC registers: running (RCR2.START), 24-hour mode, LOCO count source (RCR4.RCKSEL), PES 1 s with PIE and AIE.
+ const rtc=session.soc.rtc;assert.equal(rtc.read(0x24,1)&0x41,0x41);assert.equal(rtc.read(0x28,1)&1,1);assert.equal(rtc.read(0x22,1)&0xf5,0xe5);
+ assert.deepEqual([rtc.read(0x0e,2),rtc.read(0x0c,1),rtc.read(0x0a,1),rtc.read(0x08,1)],[0x26,0x01,0x01,4],'2026-01-01, a Thursday');
+});

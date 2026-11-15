@@ -134,6 +134,7 @@ export function validateRaMcu(mcu){
    const agt=/^AGT(\d)$/.exec(id);
    if(agt){out.peripherals[id]=validateAgt(id,Number(agt[1]),p,fam,mcu.clock);continue;}
    if(id==='WDT'||id==='IWDT'){out.peripherals[id]=validateWdt(id,p);continue;}
+   if(id==='RTC'){out.peripherals[id]=validateRtc(p);continue;}
    const sci=/^SCI(\d)$/.exec(id);if(!sci||!RA_SCI_CHANNELS.includes(Number(sci[1]))||!p||typeof p.enabled!=='boolean')throw new Error(`${id}: 지원하지 않는 주변장치입니다.`);
    const q={enabled:p.enabled,baud:p.baud??115200,callback:p.callback??`user_uart${sci[1]}_callback`,priority:p.priority??12};
    if(!Number.isInteger(q.baud)||q.baud<300||q.baud>2000000)throw new Error(`${id}: 통신 속도는 300~2000000 bps입니다.`);
@@ -290,6 +291,27 @@ function validateWdt(id,p){
  if(!['RESET','NMI'].includes(q.reset))throw new Error(`${id}: 시간 초과 동작은 Reset 또는 NMI입니다.`);
  if(typeof q.callback!=='string'||q.callback!==''&&!C_NAME.test(q.callback))throw new Error(`${id}: 콜백 이름은 C 식별자로 쓰세요(없으면 비워 둡니다).`);
  if(q.reset==='NMI'&&!q.callback)throw new Error(`${id}: NMI로 알리려면 콜백 이름을 쓰세요.`);
+ return q;
+}
+// RTC (r_rtc g_rtc0), a pin-less stack. Count source LOCO (default: on the FPB-RA6E1 the 32.768 kHz crystal X2 is fitted
+// but E25/E26 are open, so XCIN/XCOUT reach only J3 and the sub-clock does not run as delivered) or the sub-clock; RFRL for
+// LOCO (r_rtc.c accepts 8-510; 255 makes 128 Hz from 32.768 kHz). Interrupt priorities as RASC (null: Disabled); the
+// carry interrupt is required (R_RTC_CalendarTimeGet uses it).
+// Start time (decision, feature 34): 'SIMULATION' (default) — at power-on the counters hold 2000-01-01 00:00:00, and
+// R_RTC_Open sets the count source and stops the RTC (RTC_CFG_OPEN_SET_CLOCK_SOURCE 1, FSP's default) so the program
+// sets the time: every run is the same, which tests and lessons need. 'HOST_TIME' — the counters hold the PC's local
+// time and run, as a battery-backed RTC that kept the time; Open leaves it running (RTC_CFG_OPEN_SET_CLOCK_SOURCE 0) and
+// R_RTC_CalendarTimeGet reads the PC time without setting it.
+export const RA_RTC_DEFAULTS=Object.freeze({clockSource:'LOCO',start:'SIMULATION',freqCompare:255,callback:'rtc_callback',alarmPriority:12,periodicPriority:12,carryPriority:12});
+function validateRtc(p){
+ if(!p||typeof p.enabled!=='boolean')throw new Error('RTC: 설정을 확인하세요.');
+ const q={enabled:p.enabled,...RA_RTC_DEFAULTS,...Object.fromEntries(Object.keys(RA_RTC_DEFAULTS).filter(k=>p[k]!==undefined).map(k=>[k,p[k]]))};
+ if(!['LOCO','SUBCLOCK'].includes(q.clockSource))throw new Error('RTC: 클록 소스는 LOCO 또는 Sub-Clock입니다.');
+ if(!['SIMULATION','HOST_TIME'].includes(q.start))throw new Error('RTC: 시작 시각은 시뮬레이션(2000-01-01) 또는 PC 시각입니다.');
+ if(!Number.isInteger(q.freqCompare)||q.freqCompare<8||q.freqCompare>510)throw new Error('RTC: 주파수 비교값(RFRL)은 8~510입니다(LOCO 32.768 kHz에서 255).');
+ if(typeof q.callback!=='string'||q.callback!==''&&!C_NAME.test(q.callback))throw new Error('RTC: 콜백 이름은 C 식별자로 쓰세요(없으면 비워 둡니다).');
+ for(const [k,label,optional]of [['alarmPriority','Alarm',true],['periodicPriority','Period',true],['carryPriority','Carry',false]])
+  if(!(optional&&q[k]===null)&&(!Number.isInteger(q[k])||q[k]<0||q[k]>15))throw new Error(`RTC: ${label} 인터럽트 우선순위는 0~15${optional?'(또는 Disabled)':''}입니다.`);
  return q;
 }
 /** A watchdog's count clock, timeout clocks and timeout in ms for a configuration ("WDT": PCLKB / divider; "IWDT": 15 kHz / divider). */

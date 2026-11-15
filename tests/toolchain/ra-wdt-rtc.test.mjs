@@ -16,13 +16,13 @@ const require=createRequire(import.meta.url),{prepareBuild,build,detectTools}=re
 const tools=await detectTools({armGcc:process.env.ARM_GCC||''});
 const skip=!(tools.armGcc&&tools.fsp)&&!process.env.CI_REQUIRE_TOOLCHAIN&&'ARM GCC / Renesas FSP not installed';
 
-async function firmware(project,fn){
+async function firmware(project,fn,options={}){
  const root=await fs.mkdtemp(path.join(os.tmpdir(),'ra-wdt-rtc-'));
  try{
   const result=await build(await prepareBuild({project:validateProject(project),tools,root,target:'arm'}));
   assert.deepEqual(result.diagnostics.filter(d=>d.severity!=='info'),[]);
   const log={trace:[],uart:[],warn:[]};
-  const session=new FirmwareSession(validateProject(project),{elf:new Uint8Array(await fs.readFile(result.elf)),trace:e=>log.trace.push(e),uart:e=>log.uart.push(e),warn:m=>log.warn.push(m)});
+  const session=new FirmwareSession(validateProject(project),{elf:new Uint8Array(await fs.readFile(result.elf)),trace:e=>log.trace.push(e),uart:e=>log.uart.push(e),warn:m=>log.warn.push(m),...options});
   await fn(session,log);
  }finally{await fs.rm(root,{recursive:true,force:true});}
 }
@@ -98,4 +98,49 @@ void hal_entry(void)
   run(s,50);
   assert.equal(s.readVariable('nmis'),1);assert.equal(s.readVariable('status'),2,'WDT_STATUS_REFRESH_ERROR');assert.equal(s.readVariable('after'),0);assert.deepEqual(s.resets,[]);
  });
+});
+
+test('RTC (ra_rtc_clock): the real r_rtc on LOCO prints the time each second on SCI9 and raises the midnight alarm',{skip,timeout:600000},async()=>{
+ const e=raExample('ra_rtc_clock'),c=e.circuit(),p={...projectForBoard('fpb-ra6e1'),mcu:e.mcu(),code:e.code,components:c.components,wires:c.wires};delete p.surfaces;
+ await firmware(p,(s,log)=>{
+  run(s,6100);
+  const text=String.fromCharCode(...log.uart.filter(x=>x.instance==='SCI9'&&x.direction==='TX').flatMap(x=>x.bytes));
+  assert.equal(text,'2025-12-31 23:59:56\r\n2025-12-31 23:59:57\r\n2025-12-31 23:59:58\r\n2025-12-31 23:59:59\r\n2026-01-01 00:00:00 Happy New Year!\r\n2026-01-01 00:00:01\r\n');
+  assert.ok(s.gpio.P407.value>1.65);assert.equal(s.buses.received.get('term'),text,'the USB-TTL part decodes it');
+ });
+});
+
+test('RTC start time "PC 시각" on the sub-clock: R_RTC_Open keeps it running (RTC_CFG_OPEN_SET_CLOCK_SOURCE 0), the PC time is read; an MCU reset keeps the calendar',{skip,timeout:600000},async()=>{
+ const mcu={...raDefaultMcu(),peripherals:{RTC:{enabled:true,clockSource:'SUBCLOCK',start:'HOST_TIME',callback:'',alarmPriority:null,periodicPriority:null}}};
+ const code=HEAD+`
+volatile uint32_t status = 9, boots = 0, hhmmss = 0, ymd = 0, wday = 9;
+static uint32_t noinit_boots __attribute__((section(".ram_noinit")));
+void hal_entry(void)
+{
+    if (0U == R_SYSTEM->RSTSR1_b.SWRF) { noinit_boots = 0; }
+    boots = ++noinit_boots;
+    R_RTC_Open(&g_rtc0_ctrl, &g_rtc0_cfg);
+    rtc_info_t info;
+    R_RTC_InfoGet(&g_rtc0_ctrl, &info);
+    status = info.status;
+    R_BSP_SoftwareDelay(600, BSP_DELAY_UNITS_MILLISECONDS);
+    rtc_time_t t;
+    R_RTC_CalendarTimeGet(&g_rtc0_ctrl, &t);
+    hhmmss = (uint32_t) (t.tm_hour * 10000 + t.tm_min * 100 + t.tm_sec);
+    ymd = (uint32_t) ((t.tm_year + 1900) * 10000 + (t.tm_mon + 1) * 100 + t.tm_mday);
+    wday = (uint32_t) t.tm_wday;
+    if (1U == boots) { NVIC_SystemReset(); }
+    while (1) { }
+}
+`;
+ const host=new Date(2026,10,13,9,30,15).getTime();
+ await firmware({...projectForBoard('fpb-ra6e1'),mcu,code},s=>{
+  run(s,700);
+  assert.equal(s.resets.length,1,'SYSRESETREQ after the first reading');
+  run(s,1400);
+  assert.equal(s.readVariable('boots'),2);assert.equal(s.readVariable('status'),1,'RTC_STATUS_RUNNING');
+  assert.equal(s.readVariable('ymd'),20261113);assert.equal(s.readVariable('wday'),5,'a Friday');
+  assert.equal(s.readVariable('hhmmss'),93016,'09:30:15 + 0.6 s + the reset + 0.6 s: the calendar went on across the reset');
+  assert.equal(s.soc.rtc.read(0x28,1)&1,0,'RCR4.RCKSEL: the sub-clock (R_BSP_Init_RTC with SUBCLOCK_POPULATED)');
+ },{hostTime:host});
 });

@@ -27,7 +27,8 @@ export const TOOLCHAIN_SHARDS=Object.freeze([
  // + parity of ADC, AGT, IIC (22 s locally)
  [['ra-course','contact bounce on'],['fsp-interp-parity','parity: ra_adc_pot']],
  // 70 + 28 = 98 + parity of blink and IRQ (14 s locally)
- [['arm-examples','NUCLEO-F446RE'],'bus-instances',['fsp-interp-parity','parity: ra_blink']],
+ // + parity of the RTC example (11 s locally)
+ [['arm-examples','NUCLEO-F446RE'],'bus-instances',['fsp-interp-parity','parity: ra_blink|parity: ra_rtc_clock']],
  // 58 + 38 = 96 + parity of polling and rising IRQ (18 s locally)
  [['arm-examples','NUCLEO-F103RB'],'button-bounce',['fsp-interp-parity','parity: ra_button_poll']],
  // 62 + 32 + 6 = 100 + parity of the challenge (9 s locally)
@@ -37,10 +38,11 @@ export const TOOLCHAIN_SHARDS=Object.freeze([
  // (the tests are named: a "not this one" pattern with a lookahead did not keep the heavy test out)
  [['ra-course','Bare Metal - Blinky|switch polling toggles|the challenge:|BSP tab sizes|as the course screen shows it'],'adc-continuous','clock-tree',['fsp-interp-parity','parity: ra_uart_echo']],
  // 26 + 23 + 22 + 17 + 16 = 104
- // + ra-wdt-rtc (features 34·35: about 25 s locally)
- ['emu-accuracy','dwarf-version','board-links','copied-files','adc-group','peripheral-files','project-overrides','ra-wdt-rtc'],
+ // + the watchdog tests of ra-wdt-rtc (feature 35: about 28 s locally)
+ ['emu-accuracy','dwarf-version','board-links','copied-files','adc-group','peripheral-files','project-overrides',['ra-wdt-rtc','WDT|IWDT']],
  // 17 + 16 + 14 + 13 + 11 + 9 + 9 + 9 + 9 = 107
- ['tim-oc','adc-sampling','tim-advanced','dac','rtc','source-folders','spi-params','tim-channels','uart-params'],
+ // + the RTC tests of ra-wdt-rtc (feature 34: about 22 s locally)
+ ['tim-oc','adc-sampling','tim-advanced','dac','rtc','source-folders','spi-params','tim-channels','uart-params',['ra-wdt-rtc','RTC']],
 ]);
 /** The file names of a group (an entry with a pattern counts once). */
 export const shardFiles=group=>group.map(e=>Array.isArray(e)?e[0]:e);
