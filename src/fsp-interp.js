@@ -528,12 +528,14 @@ export class FspAdapter {
   for(const b of bytes){
    // The byte's ACK is ACKBT as the handler of the byte before left it.
    const ack=!st.nack;if(!ack)ok=false;taken++;
-   if(!notified){notified=true;if(!request(4)){st.nack=true;hang=true;break;}}
+   if(!notified){notified=true;const served=request(4);if(!st.open)break;if(!served){st.nack=true;hang=true;break;}}
    if(st.total===0)st.nack=true;
-   else if(st.total===st.loaded){if(!request(6)){st.nack=true;hang=true;break;}if(st.total===0)st.nack=true;else store(b);}
+   else if(st.total===st.loaded){const served=request(6);if(!st.open)break;if(!served){st.nack=true;hang=true;break;}if(st.total===0)st.nack=true;else store(b);}
    else store(b);
    if(!ack)break; // the master stops after a NACK
   }
+  // R_IIC_SLAVE_Close in the callback (ICIER = 0, module stop): the driver takes nothing more and reports nothing more.
+  if(!st.open)return ok&&taken===bytes.length;
   // No R_IIC_SLAVE_Read in the callback: NACK without the dummy read, SCL stays low until the time-out → ABORTED.
   // The byte itself had its ACK before the callback ran (ACKBT was 0); only a byte after it meets the NACK.
   if(hang){this.slaveNotify(r,st,1);return ok&&taken===bytes.length;}
@@ -551,15 +553,17 @@ export class FspAdapter {
   // ICDRT moves to the shift register at once (TDRE, the next TXI), so the driver is one byte ahead.
   const write=v=>{if(shift==null){shift=v;txi();}else hold=v;};
   const txi=()=>{if(st.direction!==0)return;if(st.total===st.loaded)tei=true;else write(next());};
-  st.direction=2;this.slaveEvent(r,st,5,st.count);txi();
-  for(let i=0;i<count;i++){
+  st.direction=2;this.slaveEvent(r,st,5,st.count);if(st.open)txi();
+  for(let i=0;i<count&&st.open;i++){
    if(shift==null){aborted=true;break;} // nothing in ICDRT: SCL held until the time-out
    out.push(shift);shift=null;
    if(i===count-1)break; // the master's NACK: the transfer ends
    if(hold!=null){shift=hold;hold=null;txi();}
-   else if(tei){tei=false;st.direction=2;this.slaveEvent(r,st,7,st.count);if(st.direction===0&&st.total>0)write(next());}
+   else if(tei){tei=false;st.direction=2;this.slaveEvent(r,st,7,st.count);if(st.open&&st.direction===0&&st.total>0)write(next());}
   }
   while(out.length<count)out.push(0xff);
+  // Closed in the callback: 0xFF for what was not sent, and no further event.
+  if(!st.open)return out;
   if(aborted||st.direction!==0){this.slaveNotify(r,st,1);return out;}
   if(st.total>st.loaded)st.count=(st.count-1)>>>0;
   this.slaveNotify(r,st,3);return out;
