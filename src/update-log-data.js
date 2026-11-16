@@ -1,5 +1,6 @@
 // User-facing update log shown in 도움말 → 업데이트 로그: one entry per released version (date = the release tag's commit date).
 export const UPDATE_LOG=Object.freeze([
+ {version:'1.54.0',date:'2026-11-16',items:['FPB-RA6E1 워치독(r_wdt·r_iwdt): Stacks에서 추가해 시간 초과·창 밖 새로 고침에 MCU 리셋 또는 NMI 콜백, 리셋은 실행 로그에 남고 RSTSR1로 원인 읽기 — 예제 "워치독(WDT) 리셋과 리셋 원인 읽기"','FPB-RA6E1 RTC(r_rtc): 달력 시각 설정·읽기, 알람·주기 인터럽트 콜백, 시작 시각을 시뮬레이션(2000-01-01) 또는 PC 시각으로 — 예제 "RTC 시계"','에뮬레이터: NVIC_SystemReset·워치독 리셋이 실행 로그에 남고 RA 리셋 상태 레지스터(RSTSR0~2)와 옵션 메모리 OFS0을 읽음, 코어가 WFI로 자는 동안의 워치독 리셋이 실행되지 않던 것 수정(STM32 IWDG 포함)']},
  {version:'1.53.1',date:'2026-11-16',items:['부품 검색에서 ESP32·라즈베리파이·두 번째 STM32 보드도 찾아 바로 추가(전에는 "보드와 핀 → 다른 보드 추가"에만 있어 검색에 나오지 않았음)']},
  {version:'1.53.0',date:'2026-11-13',items:['FPB-RA6E1 SPI: SPI1(r_spi, D10~D13)과 SCI9 Simple SPI(r_sci_spi)를 Pins·Stacks에서 추가하고 ra_gen 생성, 예제 "SPI 메모리". ARM GCC 빌드(에뮬레이터)와 내장 해석기 모두에서 회로의 SPI 부품과 주고받고 로직 분석기에 파형','RA 콜백 이름 검사: 인자 형식이 다른 모듈끼리 같은 이름, FSP 내부 함수·객체 이름을 미리 알림','직렬 모니터가 SPI로 쓰는 SCI 채널을 대상으로 내놓지 않음']},
  {version:'1.52.0',date:'2026-11-13',items:['FPB-RA6E1 프로젝트를 ARM GCC·FSP 설치 없이 내장 해석기로 바로 실행: R_IOPORT·R_BSP_SoftwareDelay·외부 인터럽트·SCI9 UART·GPT·AGT·ADC·I²C 마스터 API, 콜백은 Stacks 우선순위대로. 실행 방식에서 ARM GCC 빌드 / 내장 해석기를 고르고, 도구가 없으면 자동으로 해석기','개발 도구의 Renesas FSP에 다음 기능용 드라이버(SPI·RTC·워치독·DMA·저전력·데이터 플래시·CAN·USB) 추가 — 예전 설치는 다시 설치']},
