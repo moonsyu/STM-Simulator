@@ -97,9 +97,11 @@ export class SketchDriver{
   // Wire as an I2C slave: Wire.begin(address), onReceive / onRequest callbacks, available / read / write.
   const w=this.wire;
   if(name==='Wire.begin'){
-   w.address=args.length?Number(args[0]):null;w.master=!args.length;
-   // A master: the bus is on GPIO21/GPIO22; an emulated main board then runs in step with the circuit, as with a second STM32.
-   if(w.master){this.bus.call('Wire.begin',['GPIO21','GPIO22'],runtime);if(this.host?.soc)this.host.dynamic=true;}
+   // Wire.begin() and Wire.begin(sda, scl) are a master (the ESP32 core's two forms); Wire.begin(address) is a slave.
+   w.master=args.length!==1;w.address=w.master?null:Number(args[0]);
+   // A master: the bus is on GPIO21/GPIO22 or the pins given; an emulated main board then runs in step with the circuit,
+   // as with a second STM32.
+   if(w.master){this.bus.call('Wire.begin',args.length>=2?[runtime.pin(args[0]),runtime.pin(args[1])]:['GPIO21','GPIO22'],runtime);if(this.host?.soc)this.host.dynamic=true;}
    return 1;
   }
   if(w.master&&/^Wire\.(setClock|beginTransmission|write|endTransmission|requestFrom|available|read)$/.test(name))return this.bus.call(name,args,runtime);
