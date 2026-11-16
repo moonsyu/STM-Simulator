@@ -294,6 +294,7 @@ export class Ra6e1 {
     this.adc0 = new Adc12(this); this.adcs = [this.adc0];
     this.iics = {};
     for (const ch of RA_IIC_CHANNELS) this.iics[ch] = new Iic(this, ch);
+    this.i2cs = this.iics; // the name another board's I²C master looks its slaves up by (FirmwareSession.peerI2c)
     this.agts = {};
     for (const ch of RA_AGT_CHANNELS) this.timers['AGT' + ch] = this.agts[ch] = new Agt(this, ch);
     // RSPI: both channels of the chip are modelled (R_SPI0 0x4011A000, R_SPI1 0x4011A100); the configuration offers SPI1.
