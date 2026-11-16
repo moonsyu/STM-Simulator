@@ -284,7 +284,8 @@ export class FspAdapter {
   // from the stack's start time and, in its own power domain, goes on across a reset.
   this.hostTime=session?.hostTime??Date.now();this.rtcDev=null;
  }
- inheritReset(old){this.rstsr1=(old.rstsr1|(RESET_FLAG[old.resetCause]??0))&0xffff;this.wdtResets=old.wdtResets;this.rtcDev=old.rtcDev;this.hostTime=old.hostTime;}
+ // A reset pin reset (session.js checkNrst) starts the cause flags over, as the emulator does; any other reset adds its flag.
+ inheritReset(old){this.rstsr1=old.resetCause==='PIN'?0:(old.rstsr1|(RESET_FLAG[old.resetCause]??0))&0xffff;this.wdtResets=old.wdtResets;this.rtcDev=old.rtcDev;this.hostTime=old.hostTime;}
  // Program start (power-on or after a reset): an auto-start watchdog (OFS0) counts from here.
  declareGlobals(r){
   // R_SYSTEM (a register-block name the program uses) gets the type of the part the interpreter stands in for, so

@@ -72,7 +72,6 @@ export class Watchdog {
   }
   refresh() {
     // Register-start mode: the first refresh starts the counter (and locks the settings); after an NMI underflow a
-    // refresh starts it again.
     // refresh starts it again. The IWDT has no register-start mode on the RA6E1: stopped by OFS0, it stays stopped.
     if (!this.running) { if (!this.auto) { if (this.kind === 'IWDT') return; this.armed = true; } this.restart(); return; }
     // Refresh-permitted window: the count left must be between the end and the start position; the end position itself

@@ -286,3 +286,16 @@ test('IWDT model: stopped by OFS0 (IWDTSTRT 1) it ignores a refresh and IWDTCR w
  iw.write(2,0,2);assert.equal(iw.read(2,2),0x33f3,'IWDTCR keeps its reset value');
  const w=new Watchdog(fakeSoc(),'WDT');refresh(w);assert.equal(w.running,true);
 });
+
+// Review of feature 35: a reset-pin reset starts RSTSR1 over on the interpreter too (the emulator clears it).
+test('interpreter: a reset pin reset clears the RSTSR1 cause flags; a software reset adds SWRF to them',()=>{
+ const {session,run}=interp(`volatile uint32_t r1 = 99;
+void hal_entry(void){ r1 = R_SYSTEM->RSTSR1; while (1) { R_BSP_SoftwareDelay(10, BSP_DELAY_UNITS_MILLISECONDS); } }`,{});
+ run(5);assert.equal(session.readVariable('r1'),0);
+ session.hal.resetCause='WDT';session.runtime.restart();run(10);assert.equal(session.readVariable('r1'),2);
+ session.hal.resetCause='SYSRESETREQ';session.runtime.restart();run(15);assert.equal(session.readVariable('r1'),6,'WDTRF | SWRF');
+ session.hal.resetCause='PIN';session.runtime.restart();run(20);assert.equal(session.readVariable('r1'),0,'the pin reset starts the causes over');
+ // The session's NRST check gives an FSP project the pin cause (not the STM32 RCC_CSR bit number).
+ session.hal.rstsr1=4;session.result={voltage:id=>id==='signal:NRST'?0:3.3};session.checkNrst();run(25);
+ assert.equal(session.readVariable('r1'),0);
+});
