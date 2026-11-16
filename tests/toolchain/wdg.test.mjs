@@ -52,6 +52,10 @@ test('IWDG timeout reset and WWDG early wakeup / reset on the emulator (F446RE, 
    // WWDG refreshed above the window: reset at once.
    ({p,s}=await make({WWDG:{enabled:true,prescaler:8,window:80,counter:127}},{},code=>code.replace('  /* USER CODE BEGIN 2 */','  /* USER CODE BEGIN 2 */\n'+flags+'  HAL_Delay(5);\n  HAL_WWDG_Refresh(&hwwdg);')));
    runTo(s,30000);assert.equal(s.gpio.PC1?.value,3.3,`${board}: a refresh above the window resets`);
+   // IWDG while the core sleeps with no interrupt to wake it (SysTick suspended, WFI): the reset still comes (feature 35
+   // review: a reset requested during sleep was not carried out).
+   ({p,s}=await make({IWDG:iwdg},{},code=>code.replace('  /* USER CODE BEGIN 2 */','  /* USER CODE BEGIN 2 */\n'+flags+'  HAL_SuspendTick();\n  while (1) { __WFI(); }')));
+   runTo(s,(timeout+25)*1000);assert.equal(s.resets.length,1,`${board}: IWDG reset during WFI`);assert.equal(s.gpio.PC0?.value,3.3,`${board}: restarted with RCC_FLAG_IWDGRST after sleeping`);
   }
  }finally{await fs.rm(root,{recursive:true,force:true});}
 });

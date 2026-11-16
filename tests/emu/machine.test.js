@@ -174,3 +174,28 @@ test('폴트 설명(UsageFault 0 나누기)', () => {
   assert.ok(m.cpu.lastFault);
   assert.ok(m.describeFault().length > 0);
 });
+
+// 35번 리뷰: 코어가 WFI로 자는 동안 장치(워치독)가 낸 리셋 요청이 실행되지 않던 것
+test('슬립(WFI) 중 장치의 리셋 요청: run과 step 모두 리셋을 실행', () => {
+  const build = () => {
+    const m = new Machine();
+    const img = new Uint8Array(0x60);
+    const dv = new DataView(img.buffer);
+    dv.setUint32(0, 0x20020000, true);
+    dv.setUint32(4, 0x08000051, true);
+    img.set([0x30, 0xbf, 0xfd, 0xe7], 0x50); // wfi; b 0x50
+    m.loadBinary(img);
+    const state = { due: 100000, resets: [] };
+    m.onResetRequest = reason => state.resets.push([reason, m.cycles]);
+    m.map(0x40010000, 0x400, { nextEvent: () => state.due, tick: () => { if (m.cycles >= state.due) { state.due = Infinity; m.requestReset('WDT'); } }, read: () => 0, write() {} }, 'FAKE');
+    return { m, state };
+  };
+  const a = build();
+  a.m.run(300000);
+  assert.deepEqual(a.state.resets.map(r => r[0]), ['WDT'], 'run: 워치독 리셋이 자는 코어에서도 실행됨');
+  assert.ok(a.state.resets[0][1] >= 100000 && a.state.resets[0][1] < 100100);
+  const b = build();
+  b.m.step(); // wfi
+  const r = b.m.step();
+  assert.equal(r.reason, 'reset'); assert.deepEqual(b.state.resets.map(x => x[0]), ['WDT']);
+});

@@ -203,3 +203,20 @@ void hal_entry(void)
   assert.equal(same('wdtrf'),1);assert.equal(same('marker'),0);
  });
 });
+
+test('IWDT underflow while the core sleeps in WFI on both engines: the reset comes at 136.5 ms, then SWRF after NVIC_SystemReset',{skip,timeout:600000},async()=>{
+ await both({IWDT:{enabled:true,timeout:128,clockDiv:16}},`
+volatile uint32_t rstsr1 = 0;
+void hal_entry(void)
+{
+    rstsr1 = R_SYSTEM->RSTSR1;
+    if (rstsr1 == 1U) { R_BSP_SoftwareDelay(5, BSP_DELAY_UNITS_MILLISECONDS); NVIC_SystemReset(); }
+    if (rstsr1 == 5U) { R_IWDT_Open(&g_iwdt0_ctrl, &g_iwdt0_cfg); while (1) { R_IWDT_Refresh(&g_iwdt0_ctrl); R_BSP_SoftwareDelay(10, BSP_DELAY_UNITS_MILLISECONDS); } }
+    while (1) { __WFI(); }
+}
+`,({emu,sim,run,same})=>{
+  run(400);
+  assert.deepEqual(emu.resets.map(r=>r.reason),['IWDT','SYSRESETREQ']);assert.ok(Math.abs(emu.resets[0].us/1000-136.5)<0.5,String(emu.resets[0].us));
+  assert.equal(sim.runtime.resetCount,2);assert.equal(same('rstsr1'),5,'IWDTRF | SWRF');
+ });
+});

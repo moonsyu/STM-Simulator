@@ -258,6 +258,8 @@ export class Machine {
         cpu.cycles = next;
         this.syncAll();
         this._fireEvents();
+        // 자는 동안 장치가 리셋을 요청했으면(워치독) 여기서 리셋
+        if (cpu.stop === STOP.RESET) { cpu.stop = 0; this._doReset(); return this._result('reset'); }
       }
       if (cpu.sleeping) return this._result('sleep');
     }
