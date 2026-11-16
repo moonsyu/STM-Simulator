@@ -1,6 +1,13 @@
 # STM Simulator — 개발 인계
 
-현재 버전: **1.52.0**. 정리일: **2026-11-10**. NUCLEO-F446RE·NUCLEO-F103RB 또는 Renesas FPB-RA6E1(1.20.0, FSP·에뮬레이터 전용)과 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+현재 버전: **1.53.0**. 정리일: **2026-11-10**. NUCLEO-F446RE·NUCLEO-F103RB 또는 Renesas FPB-RA6E1(1.20.0, FSP·에뮬레이터 전용)과 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+
+## 1.53.0 기능 목록 32번: RA SPI(r_spi·r_sci_spi)
+
+- **설정·생성**: `src/ra-config.js`(SPI1·SCI9 SPI 옵션, `raUartChannels`, 콜백 인자 형식 충돌·FSP ISR/API 객체 이름 검사), `src/ra-generator.js`(g_spi1·g_sci_spi9, `raInstances`의 spis·sciSpis), `src/ra-pinout-ui.js`, `src/ra-assistance.js`, 예제 ra_spi_memory.
+- **에뮬레이터**: `src/emu/ra6e1/spi.js`(RSPI, 마스터 + SCKASE면 SPRF=1 동안 RSPCK 정지), `sci.js` 동기 모드, `soc.js` 배선.
+- **해석기**: `src/fsp-interp.js` R_SPI_*·R_SCI_SPI_*. 바이트 교환은 에뮬레이터 `exchangeFrame` 규칙, 파형은 `src/signals.js` `encodeSpiFrames`와 `SignalRecorder.span`(전송 구간별 폭·비트 순서, 4분의 1씩 잘라냄), 노이즈는 STM32와 같은 NoiseModel.
+- 시험: 단위 ra-spi·ra-names·fsp-interp(SPI)·emu ra6e1-rspi, 툴체인 ra-spi(50/25/12.5 MHz 포함)·fsp-interp-parity(ra_spi_memory, 6묶음), E2E ra-spi.
 
 ## 1.52.0 기능 목록 42번: RA 프로젝트를 내장 해석기로, FSP 모듈 준비
 
