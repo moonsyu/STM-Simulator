@@ -256,3 +256,25 @@ void wdt_nmi(wdt_callback_args_t *p_args){ (void) p_args; }
 void hal_entry(void){ wdt_cfg_t cfg = g_wdt0_cfg; cfg.reset_control = WDT_RESET_CONTROL_RESET; err = R_WDT_Open(&g_wdt0_ctrl, &cfg); ok = R_WDT_Open(&g_wdt0_ctrl, &g_wdt0_cfg); }`,{WDT:{enabled:true,reset:'NMI',callback:'wdt_nmi'}});
  b.run(5);assert.equal(b.session.readVariable('err'),1);assert.equal(b.session.readVariable('ok'),0);
 });
+
+// Review of feature 35: the window's end position is inside the window on both engines (1024 clocks, end 75 %: 0x2FF).
+test('window end boundary: a refresh at counter 0x2FF (75 % of 1024) is allowed, at 0x2FE it is a refresh error — model and interpreter alike',()=>{
+ for(const [cnt,errors]of [[0x300,0],[0x2ff,0],[0x2fe,1]]){
+  const soc=fakeSoc(),w=new Watchdog(soc,'WDT');w.write(6,0,1);w.write(2,0|(8<<4)|(0<<8)|(3<<12),2);refresh(w);
+  soc.now=(1023-cnt+0.5)/(50e6/8192)*1e6;assert.equal(w.read(4,2)&0x3fff,cnt);refresh(w);assert.equal(soc.nmis.length,errors,'model at 0x'+cnt.toString(16));
+  const {session,run}=interp(`volatile uint32_t nmis = 0, count = 0;
+void wdt_nmi(wdt_callback_args_t *p_args){ (void) p_args; nmis++; }
+void hal_entry(void)
+{
+    R_WDT_Open(&g_wdt0_ctrl, &g_wdt0_cfg);
+    R_WDT_Refresh(&g_wdt0_ctrl);
+    R_BSP_SoftwareDelay(${Math.round(soc.now)}, BSP_DELAY_UNITS_MICROSECONDS);
+    uint32_t c;
+    R_WDT_CounterGet(&g_wdt0_ctrl, &c);
+    count = c;
+    R_WDT_Refresh(&g_wdt0_ctrl);
+    while (1) { }
+}`,{WDT:{enabled:true,timeout:1024,clockDiv:8192,windowEnd:75,reset:'NMI',callback:'wdt_nmi'}});
+  run(60);assert.equal(session.readVariable('count'),cnt);assert.equal(session.readVariable('nmis'),errors,'interpreter at 0x'+cnt.toString(16));
+ }
+});

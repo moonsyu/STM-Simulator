@@ -74,9 +74,10 @@ export class Watchdog {
     // Register-start mode: the first refresh starts the counter (and locks the settings); after an NMI underflow a
     // refresh starts it again.
     if (!this.running) { if (!this.auto) this.armed = true; this.restart(); return; }
-    // Refresh-permitted window: the count left must be between the end and the start position.
+    // Refresh-permitted window: the count left must be between the end and the start position; the end position itself
+    // (counter 0x2FF of 1024 clocks at 75 %) is inside.
     const left = (this.counter() + 1) / this.timeout() * 100, start = WINDOW_START[(this.cr >> 12) & 3], end = WINDOW_END[(this.cr >> 8) & 3];
-    if (left > start + 1e-9 || left <= end - 1e-9 && end > 0) { this.expire(0x8000, `창 밖에서 새로 고침(남은 카운트 ${left.toFixed(1)} %, 허용 ${end}~${start} %)`); return; }
+    if (left > start + 1e-9 || (end > 0 && left < end - 1e-9)) { this.expire(0x8000, `창 밖에서 새로 고침(남은 카운트 ${left.toFixed(1)} %, 허용 ${end}~${start} %)`); return; }
     this.restart();
   }
   read(off, size) {

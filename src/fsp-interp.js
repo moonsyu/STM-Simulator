@@ -639,7 +639,9 @@ export class FspAdapter {
  // Why a refresh now is outside the refresh-permitted window ('' when it is inside, or the counter is not running).
  wdtWindowError(r,st){
   if(!st.running)return '';const left=(this.wdtCounter(r,st)+1)/st.timeout*100;
-  return left>st.windowStart+1e-9||st.windowEnd>0&&left<=st.windowEnd+1e-9?`허용 창(남은 카운트 ${st.windowEnd}~${st.windowStart} %) 밖에서 R_${st.id}_Refresh를 불렀습니다(남은 ${left.toFixed(1)} %)`:'';
+  // The end position itself is inside the window (1024 clocks, end 75 %: the counter value 0x2FF may still refresh), as
+  // in the emulator model (emu/ra6e1/wdt.js).
+  return left>st.windowStart+1e-9||st.windowEnd>0&&left<st.windowEnd-1e-9?`허용 창(남은 카운트 ${st.windowEnd}~${st.windowStart} %) 밖에서 R_${st.id}_Refresh를 불렀습니다(남은 ${left.toFixed(1)} %)`:'';
  }
  wdtRefresh(r,st){
   if(!st.running){if(!st.auto)st.armed=true;this.wdtStart(r,st);return;}

@@ -234,3 +234,22 @@ void hal_entry(void)
   assert.equal(same('err'),0);assert.equal(same('rerr'),0);assert.deepEqual(emu.resets,[]);assert.equal(sim.runtime.resetCount??0,0);assert.ok(same('refreshes',1)>=19);
  });
 });
+
+test('window end 75 % on both engines: a refresh at counter 0x2FF is allowed, at 0x2FE it is a refresh error (NMI)',{skip,timeout:600000},async()=>{
+ // 1024 clocks of PCLKB/8192 (163.84 us each): the counter reads 0x2FF 42.03 ms after the refresh, 0x2FE at 42.19 ms.
+ for(const [us,count,nmis]of [[42025,0x2ff,0],[42189,0x2fe,1]])await both({WDT:{enabled:true,timeout:1024,clockDiv:8192,windowEnd:75,reset:'NMI',callback:'wdt_nmi'}},`
+volatile uint32_t nmis = 0, count = 0;
+void wdt_nmi(wdt_callback_args_t *p_args){ (void) p_args; nmis++; }
+void hal_entry(void)
+{
+    R_WDT_Open(&g_wdt0_ctrl, &g_wdt0_cfg);
+    R_WDT_Refresh(&g_wdt0_ctrl);
+    R_BSP_SoftwareDelay(${us}, BSP_DELAY_UNITS_MICROSECONDS);
+    uint32_t c;
+    R_WDT_CounterGet(&g_wdt0_ctrl, &c);
+    count = c;
+    R_WDT_Refresh(&g_wdt0_ctrl);
+    while (1) { }
+}
+`,({run,same})=>{run(60);assert.equal(same('count'),count);assert.equal(same('nmis'),nmis,'at 0x'+count.toString(16));});
+});
