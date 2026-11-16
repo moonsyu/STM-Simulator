@@ -37,7 +37,14 @@ export function raAssistance(mcu){
   for(const [,q]of on(/^ADC0$/)){
     out.push({name:'g_adc0',title:'ADC (r_adc)',items:[call('R_ADC_Open','R_ADC_Open(&g_adc0_ctrl, &g_adc0_cfg);'),call('R_ADC_ScanCfg','R_ADC_ScanCfg(&g_adc0_ctrl, &g_adc0_channel_cfg);'),call('R_ADC_ScanStart','R_ADC_ScanStart(&g_adc0_ctrl);'),
       call('R_ADC_Read','uint16_t adc_data;\nR_ADC_Read(&g_adc0_ctrl, ADC_CHANNEL_0, &adc_data);'),call('R_ADC_Close','R_ADC_Close(&g_adc0_ctrl);'),...(q.callback?[callback(q.callback,'adc_callback_args_t')]:[])]});}
-  for(const [n,q]of on(/^IIC\d/)){const g=`g_i2c_master${n}`;
+  // An IIC channel in slave mode (r_iic_slave): the transfers are served from the callback, a buffer per request.
+  for(const [n,q]of on(/^IIC\d/).filter(([,q])=>q.mode==='SLAVE')){const g=`g_i2c_slave${n}`;
+    out.push({name:g,title:`I2C Slave (r_iic_slave) · IIC${n}`,items:[call('R_IIC_SLAVE_Open',`R_IIC_SLAVE_Open(&${g}_ctrl, &${g}_cfg);`),
+      call('R_IIC_SLAVE_Read',`static uint8_t rx_buffer[4];\nR_IIC_SLAVE_Read(&${g}_ctrl, rx_buffer, sizeof(rx_buffer));`),
+      call('R_IIC_SLAVE_Write',`static uint8_t tx_buffer[2] = { 0x00, 0x00 };\nR_IIC_SLAVE_Write(&${g}_ctrl, tx_buffer, sizeof(tx_buffer));`),
+      call('R_IIC_SLAVE_Close',`R_IIC_SLAVE_Close(&${g}_ctrl);`),
+      callback(q.callback,'i2c_slave_callback_args_t',`    static uint8_t rx_buffer[4];\n    static uint8_t tx_buffer[2];\n    switch (p_args->event)\n    {\n        case I2C_SLAVE_EVENT_RX_REQUEST:\n        case I2C_SLAVE_EVENT_RX_MORE_REQUEST:\n        {\n            /* The master writes: give a buffer for its bytes. */\n            R_IIC_SLAVE_Read(&${g}_ctrl, rx_buffer, sizeof(rx_buffer));\n            break;\n        }\n        case I2C_SLAVE_EVENT_TX_REQUEST:\n        case I2C_SLAVE_EVENT_TX_MORE_REQUEST:\n        {\n            /* The master reads: give the bytes to send. */\n            R_IIC_SLAVE_Write(&${g}_ctrl, tx_buffer, sizeof(tx_buffer));\n            break;\n        }\n        case I2C_SLAVE_EVENT_RX_COMPLETE:\n        {\n            /* p_args->bytes bytes are in rx_buffer. */\n            break;\n        }\n        case I2C_SLAVE_EVENT_TX_COMPLETE:\n        {\n            /* The master took p_args->bytes bytes. */\n            break;\n        }\n        default:\n        {\n            /* I2C_SLAVE_EVENT_ABORTED: the transfer did not finish. */\n            break;\n        }\n    }`)]});}
+  for(const [n,q]of on(/^IIC\d/).filter(([,q])=>q.mode!=='SLAVE')){const g=`g_i2c_master${n}`;
     out.push({name:g,title:`I2C Master (r_iic_master) · IIC${n}`,items:[call('R_IIC_MASTER_Open',`R_IIC_MASTER_Open(&${g}_ctrl, &${g}_cfg);`),call('R_IIC_MASTER_Write',`uint8_t data[2] = { 0x00, 0x00 };\nR_IIC_MASTER_Write(&${g}_ctrl, data, sizeof(data), false);`),
       call('R_IIC_MASTER_Read',`uint8_t value;\nR_IIC_MASTER_Read(&${g}_ctrl, &value, 1, false);`),call('R_IIC_MASTER_Close',`R_IIC_MASTER_Close(&${g}_ctrl);`),
       ...(q.callback?[callback(q.callback,'i2c_master_callback_args_t')]:[])]});}
