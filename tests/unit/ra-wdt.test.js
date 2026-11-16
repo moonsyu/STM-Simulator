@@ -212,3 +212,31 @@ test('WDT model: every clock division R_WDT_Open can write reads back and gives 
   assert.equal(w.hz(),15000/div,`IWDT /${div}`);soc.fire();assert.ok(Math.abs(soc.resets[0][1]-2048/(15000/div)*1e6)<1e-6,`IWDT /${div}`);
  }
 });
+
+// Review of feature 35: a refresh outside the window with Reset output restarted the program from inside the call (a
+// TypeError in the interpreter); it now ends the call with a reset, in a statement or in a loop body.
+test('interpreter: R_WDT_Refresh outside the window (Reset output) resets the program at the call; a reset loop stops with the reason',()=>{
+ for(const body of [`
+    R_WDT_Open(&g_wdt0_ctrl, &g_wdt0_cfg);
+    R_WDT_Refresh(&g_wdt0_ctrl);
+    R_BSP_SoftwareDelay(1, BSP_DELAY_UNITS_MILLISECONDS);
+    R_WDT_Refresh(&g_wdt0_ctrl);
+    marker++;
+    while (1) { R_BSP_SoftwareDelay(10, BSP_DELAY_UNITS_MILLISECONDS); }`,`
+    R_WDT_Open(&g_wdt0_ctrl, &g_wdt0_cfg);
+    while (1) { R_WDT_Refresh(&g_wdt0_ctrl); marker++; R_BSP_SoftwareDelay(1, BSP_DELAY_UNITS_MILLISECONDS); }`]){
+  const {session,log,run}=interp(`
+volatile uint32_t marker = 0, wdtrf = 0;
+void hal_entry(void)
+{
+    wdtrf = R_SYSTEM->RSTSR1_b.WDTRF;
+    if (wdtrf) { while (1) { R_BSP_SoftwareDelay(10, BSP_DELAY_UNITS_MILLISECONDS); } }
+${body}
+}`,{WDT:{enabled:true,clockDiv:2048,windowStart:50}});
+  run(50);
+  assert.equal(session.runtime.resetCount,1);assert.equal(session.readVariable('wdtrf'),1);assert.equal(session.readVariable('marker'),0,'the statement after the bad refresh did not run');
+  assert.match(log.warn[0],/^\[WDT\] 허용 창\(남은 카운트 0~50 %\) 밖에서 R_WDT_Refresh를 불렀습니다\(남은 99\.\d %\) — 워치독 리셋/);
+ }
+ const loop=interp(`void hal_entry(void){ R_WDT_Open(&g_wdt0_ctrl, &g_wdt0_cfg); R_WDT_Refresh(&g_wdt0_ctrl); R_BSP_SoftwareDelay(1, BSP_DELAY_UNITS_MILLISECONDS); R_WDT_Refresh(&g_wdt0_ctrl); }`,{WDT:{enabled:true,clockDiv:2048,windowStart:50}});
+ assert.throws(()=>loop.run(50),/\[WDT\] 워치독 리셋이 계속 반복됩니다/);
+});

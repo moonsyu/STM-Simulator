@@ -353,6 +353,7 @@ export class FspAdapter {
   if(r.program.functions[name])return null;
   if(name==='R_BSP_SoftwareDelay')return this.softwareDelay(args,r);
   if(name==='__WFI'||name==='__WFE')return this.wfi(r);
+  if(name==='R_WDT_Refresh'||name==='R_IWDT_Refresh'){const reset=this.wdtBadRefresh(name,args,r);if(reset)return reset;}
   if(name==='NVIC_SystemReset'){const self=this;return (function*(){self.resetCause='SYSRESETREQ';r.warn('[NVIC] 시스템 리셋: 프로그램을 처음부터 다시 실행합니다.');yield {kind:'reset'};})();}
   if((name==='printf'||name==='puts'||name==='putchar')&&!this.inStdio&&this.stdoutHook(r))return this.stdout(name,args,r);
   if(name==='fflush')return this.stdout(name,args,r);
@@ -617,23 +618,42 @@ export class FspAdapter {
   st.running=true;st.count=st.timeout-1;st.t0=r.microTime;const gen=++st.gen;
   r.event((st.t0+st.timeout/this.wdtHz(st)*1e6)/1000,()=>{if(st.gen===gen&&st.running)this.wdtExpire(r,st,0x4000,`${(st.timeout/this.wdtHz(st)*1000).toFixed(1)} ms 안에 R_${st.id}_Refresh가 없었습니다`);});
  }
- wdtExpire(r,st,flag,why){
+ // What a failed watchdog does: it stops with its flag set. With Reset output the reset is prepared here (the cause, the
+ // log entry, the guard against a reset loop) and done by the caller: r.restart() from a timed event (wdtExpire), or
+ // `yield {kind:'reset'}` from the call that broke the window (wdtBadRefresh) — a restart from inside a call would pull
+ // the scopes from under the statement that is running. Returns whether the program is to be reset.
+ wdtFail(r,st,flag,why){
   st.running=false;st.count=0;st.flags|=flag;st.gen++;
-  if(st.reset==='RESET'){
-   // A watchdog that resets again and again within a few milliseconds would restart the program forever (HalWdg).
-   const recent=(this.wdtResets??=[]);recent.push(r.microTime);while(recent.length>10)recent.shift();
-   if(recent.length===10&&recent[9]-recent[0]<20000)throw new Error(`[${st.id}] 워치독 리셋이 계속 반복됩니다(${why}). Stacks의 g_${st.id.toLowerCase()}0에서 Timeout·클록 분주를 키우거나 제때 R_${st.id}_Refresh를 부르세요.`);
-   this.resetCause=st.id;r.warn(`[${st.id}] ${why} — 워치독 리셋: 프로그램을 처음부터 다시 실행합니다(RSTSR1.${st.id}RF).`);r.restart();return;
+  if(st.reset!=='RESET'){
+   // NMI (RSTIRQS 0): the BSP's NMI_Handler calls the driver's group callback, which calls the user's; above every
+   // interrupt priority, also with interrupts disabled.
+   if(st.open&&st.callback)this.queue(r,'NMI',-2,()=>this.callback(r,st.callback,'wdt_callback_args_t',{}),'NMI_Handler',`NMI:${st.id}`);
+   return false;
   }
-  // NMI (RSTIRQS 0): the BSP's NMI_Handler calls the driver's group callback, which calls the user's; above every
-  // interrupt priority, also with interrupts disabled.
-  if(st.open&&st.callback)this.queue(r,'NMI',-2,()=>this.callback(r,st.callback,'wdt_callback_args_t',{}),'NMI_Handler',`NMI:${st.id}`);
+  // A watchdog that resets again and again within a few milliseconds would restart the program forever (HalWdg).
+  const recent=(this.wdtResets??=[]);recent.push(r.microTime);while(recent.length>10)recent.shift();
+  if(recent.length===10&&recent[9]-recent[0]<20000)throw new Error(`[${st.id}] 워치독 리셋이 계속 반복됩니다(${why}). Stacks의 g_${st.id.toLowerCase()}0에서 Timeout·클록 분주를 키우거나 제때 R_${st.id}_Refresh를 부르세요.`);
+  this.resetCause=st.id;r.warn(`[${st.id}] ${why} — 워치독 리셋: 프로그램을 처음부터 다시 실행합니다(RSTSR1.${st.id}RF).`);return true;
+ }
+ wdtExpire(r,st,flag,why){if(this.wdtFail(r,st,flag,why))r.restart();}
+ // Why a refresh now is outside the refresh-permitted window ('' when it is inside, or the counter is not running).
+ wdtWindowError(r,st){
+  if(!st.running)return '';const left=(this.wdtCounter(r,st)+1)/st.timeout*100;
+  return left>st.windowStart+1e-9||st.windowEnd>0&&left<=st.windowEnd+1e-9?`허용 창(남은 카운트 ${st.windowEnd}~${st.windowStart} %) 밖에서 R_${st.id}_Refresh를 불렀습니다(남은 ${left.toFixed(1)} %)`:'';
  }
  wdtRefresh(r,st){
   if(!st.running){if(!st.auto)st.armed=true;this.wdtStart(r,st);return;}
-  const left=(this.wdtCounter(r,st)+1)/st.timeout*100;
-  if(left>st.windowStart+1e-9||st.windowEnd>0&&left<=st.windowEnd+1e-9){this.wdtExpire(r,st,0x8000,`허용 창(남은 카운트 ${st.windowEnd}~${st.windowStart} %) 밖에서 R_${st.id}_Refresh를 불렀습니다(남은 ${left.toFixed(1)} %)`);return;}
+  // With Reset output a refresh outside the window does not get here (invoke → wdtBadRefresh); this is the NMI.
+  const why=this.wdtWindowError(r,st);if(why){this.wdtExpire(r,st,0x8000,why);return;}
   this.wdtStart(r,st);
+ }
+ // R_WDT_Refresh / R_IWDT_Refresh outside the window with Reset output: the program does not run past the call (as
+ // HalWdg does for HAL_WWDG_Refresh above the window).
+ wdtBadRefresh(name,args,r){
+  const id=name==='R_WDT_Refresh'?'WDT':'IWDT';if(!this.config.peripherals?.[id]?.enabled)return null;
+  const st=this.wdtInstance(args,r,name,id);if(!st.open||st.reset!=='RESET')return null;
+  const why=this.wdtWindowError(r,st);if(!why)return null;
+  const self=this;return (function*(){if(self.wdtFail(r,st,0x8000,why))yield {kind:'reset'};})();
  }
  // ---- RTC: the calendar model with no scheduler of its own; the alarm and periodic interrupts are timed here.
  rtcModel(r){

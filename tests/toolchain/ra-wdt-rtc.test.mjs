@@ -182,3 +182,24 @@ void hal_entry(void)
   assert.ok(Math.abs(emu.resets[0].us/1000-42.2)<1,String(emu.resets[0].us));
  });
 });
+
+test('a refresh outside the window with Reset output on both engines: one WDT reset at the call, the statement after it does not run',{skip,timeout:600000},async()=>{
+ await both({WDT:{enabled:true,clockDiv:2048,windowStart:50}},`
+volatile uint32_t marker = 0, wdtrf = 0;
+void hal_entry(void)
+{
+    wdtrf = R_SYSTEM->RSTSR1_b.WDTRF;
+    if (wdtrf) { while (1) { R_BSP_SoftwareDelay(10, BSP_DELAY_UNITS_MILLISECONDS); } }
+    R_WDT_Open(&g_wdt0_ctrl, &g_wdt0_cfg);
+    R_WDT_Refresh(&g_wdt0_ctrl);
+    R_BSP_SoftwareDelay(1, BSP_DELAY_UNITS_MILLISECONDS);
+    R_WDT_Refresh(&g_wdt0_ctrl);
+    marker++;
+    while (1) { R_BSP_SoftwareDelay(10, BSP_DELAY_UNITS_MILLISECONDS); }
+}
+`,({emu,sim,run,same})=>{
+  run(50);
+  assert.deepEqual(emu.resets.map(r=>r.reason),['WDT']);assert.equal(sim.runtime.resetCount,1);
+  assert.equal(same('wdtrf'),1);assert.equal(same('marker'),0);
+ });
+});
