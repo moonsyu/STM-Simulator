@@ -1,6 +1,11 @@
 # STM Simulator — 개발 인계
 
-현재 버전: **1.53.0**. 정리일: **2026-11-10**. NUCLEO-F446RE·NUCLEO-F103RB 또는 Renesas FPB-RA6E1(1.20.0, FSP·에뮬레이터 전용)과 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+현재 버전: **1.53.1**. 정리일: **2026-11-10**. NUCLEO-F446RE·NUCLEO-F103RB 또는 Renesas FPB-RA6E1(1.20.0, FSP·에뮬레이터 전용)과 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+
+## 1.53.1 부품 검색에 다른 보드
+
+- 부품 목록 끝에 "다른 보드" 카드(ESP32 2종, Raspberry Pi 5, STM32 보드)를 넣고 같은 검색창으로 거른다: `src/part-library.js` `boardLibrary`·`searchBoards`(이름·칩·모듈·한글 낱말), `src/app-examples.js` `filterParts`·`BOARD_LIBRARY`, `src/app.js`(카드와 클릭 연결 — `[data-devboard-add]`가 부품 보기와 보드 보기 두 곳에 있다). "보드와 핀 → 다른 보드 추가"는 그대로.
+- 시험에서 `[data-devboard-add=…]`를 누를 때는 `#devboard-options` 또는 `#part-list`로 한정한다.
 
 ## 1.53.0 기능 목록 32번: RA SPI(r_spi·r_sci_spi)
 
