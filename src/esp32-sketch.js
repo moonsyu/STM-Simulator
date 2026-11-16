@@ -28,9 +28,11 @@ export class SketchDriver{
    construct:(name,args)=>({kind:'device',name,args}),deviceCall:(device,method,args)=>this.device(device,method,args),
    call:(name,args,runtime)=>this.call(name,args,runtime),libraryInvoke:(name,args,runtime)=>this.libraryInvoke(name,args,runtime)
   });
-  // Wire as an I2C master (Wire.begin() without an address) on GPIO21 (SDA) / GPIO22 (SCL): the I2C slaves of the other
-  // boards of the run — the main board's program (an STM32 HAL or RA FSP slave on the interpreter, an RA slave on the
-  // emulator) and the other board drivers. I2C parts are not reached from an ESP32.
+  // Wire as an I2C master (Wire.begin() or Wire.begin(sda, scl)) on GPIO21 (SDA) / GPIO22 (SCL): the I2C slaves of the
+  // other boards of the run. Reached: the main board's program on the interpreter (an RA FSP slave, an STM32 HAL slave),
+  // the main board on the emulator (an RA r_iic_slave; an STM32 I2C slave through the same interface, which has no test
+  // yet), another ESP32 sketch or a fixed-run board that is a slave, and a second STM32 board run by the simulator.
+  // Not reached: a second STM32 board run by the emulator, and I2C parts (sensors, displays).
   this.bus=new BusDevices({components:[]},()=>this.result,event=>(this.host?.traceCb??this.host?.buses?.trace)?.({...event,message:`${part.name} · ${event.message}`}));
   this.bus.pin=pin=>`signal:${part.id}.${pin}`;this.bus.boards=()=>this.masterPorts();this.host=null;
  }

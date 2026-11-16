@@ -128,6 +128,11 @@ export class Stm32Driver{
   const us=h.soc?h.now:h.runtime.microTime,r=h.circuit.hold(h.project,h.soc?h.gpio:h.runtime.gpio,h.pressed,h.sensors.echoHigh(us),h.motion.signals);
   const v=r.fault?this.view():this.translate(r);this.last={host:h.result,key,v};return v;
  }
+ // This board's HAL I2C slave, for a board driver that is an I2C master (an ESP32 sketch): the calls the main board's
+ // master makes through connectStm32Drivers' ports. A simulator session only (an emulated board is not reached this way).
+ i2cSlave(){return this.emulate?null:this.session.hal?.i2cSlaveInfo?.()??null;}
+ i2cReceive(bytes){return this.session.hal.i2cSlaveReceive(bytes,this.session.runtime);}
+ i2cRequest(count){return this.session.hal.i2cSlaveRequest(count,this.session.runtime);}
  gpio(){const out={},g=this.emulate?this.session.gpio:this.session.runtime.gpio;for(const [pin,state]of Object.entries(g||{}))if(!pin.includes('.'))out[`${this.part.id}.${pin}`]=state;return out;}
  // The program starts once the circuit has been solved; it then runs up to each circuit step.
  advance(time){if(!this.shared)return;try{this.session.tick(time);this.enriched=this.session.result;}catch(error){throw new Error(`${this.part.name}: ${error.message}`);}}
