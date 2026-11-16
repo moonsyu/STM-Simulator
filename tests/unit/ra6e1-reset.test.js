@@ -56,3 +56,13 @@ test('a register the model does not have is said once per address in the output'
  // The security attribution block the BSP writes in every project is a register block (no note).
  bus.write32(0x400e0004,0xffffffff);assert.equal(warnings.length,2);
 });
+
+test('NMI sources: a status set while its NMIER bit is off requests the NMI once the bit is set; NMICLR clears the status',()=>{
+ const {machine,soc,bus}=chip(),pended=[];
+ machine.nvic.setPendingExc=n=>pended.push(n);
+ soc.nmi(1);assert.deepEqual(pended,[],'WDT underflow with NMIER.WDTEN 0');assert.equal(bus.read16(0x40006140),2,'NMISR.WDTST');
+ bus.write16(0x40006120,2);assert.deepEqual(pended,[2],'enabled: the NMI exception pends');
+ bus.write16(0x40006120,0);assert.equal(bus.read16(0x40006120),2,'NMIER bits cannot be cleared');assert.equal(pended.length,1);
+ bus.write16(0x40006130,2);assert.equal(bus.read16(0x40006140),0);
+ soc.nmi(1);assert.equal(pended.length,2,'enabled source: at once');
+});

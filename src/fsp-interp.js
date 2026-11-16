@@ -834,7 +834,10 @@ for(const id of ['WDT','IWDT']){
     Object.assign(st,{timeout,div,windowStart:[25,50,75,100][f('window_start')],windowEnd:[75,50,25,0][f('window_end')],reset:f('reset_control')?'RESET':'NMI'});
     if(!RA_WDT_WINDOW_START.includes(st.windowStart)||!RA_WDT_WINDOW_END.includes(st.windowEnd))return FSP.ASSERTION;
    }
-   st.open=true;return FSP.SUCCESS;
+   st.open=true;
+   // An underflow before Open (auto-start, NMI): the status is set, and enabling the NMI in Open (NMIER) raises it.
+   if(st.reset==='NMI'&&st.flags&&st.callback)this.queue(r,'NMI',-2,()=>this.callback(r,st.callback,'wdt_callback_args_t',{}),'NMI_Handler',`NMI:${st.id}`);
+   return FSP.SUCCESS;
   },
   [`R_${id}_Refresh`](args,r,fn){return this.wdtCall(args,r,fn,id,st=>{this.wdtRefresh(r,st);return FSP.SUCCESS;});},
   [`R_${id}_StatusGet`](args,r,fn){return this.wdtCall(args,r,fn,id,st=>nmiOnly(this,st,fn,()=>{this.out(args[1],r,st.flags>>14,fn);return FSP.SUCCESS;}));},

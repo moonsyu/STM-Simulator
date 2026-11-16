@@ -306,3 +306,20 @@ test('OFS0 of an unvalidated configuration equals the validated one (the default
  assert.equal(raOfs0(raw),raOfs0(validateRaMcu(raw)));assert.equal(raOfs0(raw),0xbf8dbf5d);
  assert.match(generateRaFiles(raw)['ra_cfg/fsp_cfg/bsp/bsp_mcu_ofs_cfg.h'],/OFS0 \(0xBF8DBF5DUL\)/);
 });
+
+// Review of feature 35: an auto-started watchdog with NMI output that underflows before R_IWDT_Open.
+test('interpreter: an IWDT (NMI) underflow before R_IWDT_Open reaches the callback once Open enables the NMI',()=>{
+ const {session,run}=interp(`volatile uint32_t nmis = 0, status = 9;
+void iwdt_nmi(wdt_callback_args_t *p_args){ (void) p_args; nmis++; }
+void hal_entry(void)
+{
+    R_BSP_SoftwareDelay(200, BSP_DELAY_UNITS_MILLISECONDS);
+    R_IWDT_Open(&g_iwdt0_ctrl, &g_iwdt0_cfg);
+    wdt_status_t s;
+    R_IWDT_StatusGet(&g_iwdt0_ctrl, &s);
+    status = s;
+    while (1) { }
+}`,{IWDT:{enabled:true,timeout:128,clockDiv:16,reset:'NMI',callback:'iwdt_nmi'}});
+ run(190);assert.equal(session.readVariable('nmis'),0,'underflow at 136.5 ms: not enabled yet');
+ run(210);assert.equal(session.readVariable('nmis'),1);assert.equal(session.readVariable('status'),1,'WDT_STATUS_UNDERFLOW');
+});

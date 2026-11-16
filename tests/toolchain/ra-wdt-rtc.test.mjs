@@ -253,3 +253,22 @@ void hal_entry(void)
 }
 `,({run,same})=>{run(60);assert.equal(same('count'),count);assert.equal(same('nmis'),nmis,'at 0x'+count.toString(16));});
 });
+
+test('an IWDT (NMI) underflow before R_IWDT_Open on both engines: the callback comes once Open enables the NMI (NMIER)',{skip,timeout:600000},async()=>{
+ await both({IWDT:{enabled:true,timeout:128,clockDiv:16,reset:'NMI',callback:'iwdt_nmi'}},`
+volatile uint32_t nmis = 0, status = 9;
+void iwdt_nmi(wdt_callback_args_t *p_args){ (void) p_args; nmis++; }
+void hal_entry(void)
+{
+    R_BSP_SoftwareDelay(200, BSP_DELAY_UNITS_MILLISECONDS);
+    R_IWDT_Open(&g_iwdt0_ctrl, &g_iwdt0_cfg);
+    wdt_status_t s;
+    R_IWDT_StatusGet(&g_iwdt0_ctrl, &s);
+    status = s;
+    while (1) { }
+}
+`,({emu,run,same})=>{
+  run(190);assert.equal(same('nmis'),0);
+  run(215);assert.equal(same('nmis'),1);assert.equal(same('status'),1,'WDT_STATUS_UNDERFLOW');assert.deepEqual(emu.resets,[]);
+ });
+});
