@@ -278,3 +278,11 @@ void hal_entry(void)
   run(60);assert.equal(session.readVariable('count'),cnt);assert.equal(session.readVariable('nmis'),errors,'interpreter at 0x'+cnt.toString(16));
  }
 });
+
+// Review of feature 35: the RA6E1's IWDT cannot be started from its registers.
+test('IWDT model: stopped by OFS0 (IWDTSTRT 1) it ignores a refresh and IWDTCR writes; the WDT still starts at its first refresh',()=>{
+ const soc=fakeSoc(),iw=new Watchdog(soc,'IWDT');
+ refresh(iw);assert.equal(iw.running,false);assert.equal(soc.next(),undefined,'no underflow planned');
+ iw.write(2,0,2);assert.equal(iw.read(2,2),0x33f3,'IWDTCR keeps its reset value');
+ const w=new Watchdog(fakeSoc(),'WDT');refresh(w);assert.equal(w.running,true);
+});
