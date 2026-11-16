@@ -104,7 +104,7 @@ export class Watchdog {
     if (off === SR + 1 && size === 1) { this.flags &= (value << 8) & 0xc000; return; }
     // The settings take effect only before the counter first starts (register-start mode), as on the chip.
     if (this.auto || this.armed) return;
-    if (off === CR && size >= 2) this.cr = value & 0x3373;
+    if (off === CR && size >= 2) this.cr = value & 0x33f3; // TOPS b1:0, CKS b7:4 (four bits: /8192 is 8, /128 is 15), RPES b9:8, RPSS b13:12
     else if (off === RCR) this.rcr = value & 0x80;
     else if (off === CSTPR) this.cstpr = value & 0x80;
   }

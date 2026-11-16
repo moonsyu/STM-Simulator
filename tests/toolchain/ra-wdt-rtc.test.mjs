@@ -8,6 +8,7 @@ import os from 'node:os';
 import path from 'node:path';
 import {createRequire} from 'node:module';
 import {FirmwareSession} from '../../src/firmware-session.js';
+import {SimulationSession} from '../../src/session.js';
 import {projectForBoard,validateProject} from '../../src/project.js';
 import {raExample} from '../../src/ra-examples.js';
 import {raDefaultMcu} from '../../src/ra-config.js';
@@ -143,4 +144,41 @@ void hal_entry(void)
   assert.equal(s.readVariable('hhmmss'),93016,'09:30:15 + 0.6 s + the reset + 0.6 s: the calendar went on across the reset');
   assert.equal(s.soc.rtc.read(0x28,1)&1,0,'RCR4.RCKSEL: the sub-clock (R_BSP_Init_RTC with SUBCLOCK_POPULATED)');
  },{hostTime:host});
+});
+
+// ---- review of features 35 and 34: the same program on both engines (the RA6E1 emulator with the real FSP, and the
+// built-in interpreter), 1 ms ticks.
+async function both(peripherals,code,fn,{pins}={}){
+ const mcu={...raDefaultMcu(),peripherals};mcu.pins={...mcu.pins,...(pins||{})};
+ const project={...projectForBoard('fpb-ra6e1'),mcu,code:HEAD+code};
+ const interp={warn:[]},sim=new SimulationSession(validateProject(project),{warn:m=>interp.warn.push(m)});
+ await firmware(project,(emu,log)=>fn({emu,log,sim,interp,run:ms=>{run(emu,ms);for(let t=Math.floor(sim.time)+1;t<=ms;t++)sim.tick(t);},
+  same:(name,tolerance=0)=>{const a=emu.readVariable(name),b=sim.readVariable(name);assert.ok(Math.abs(a-b)<=tolerance,`${name}: emulator ${a}, interpreter ${b}`);return a;}}));
+}
+
+test('WDT defaults on both engines: PCLKB/8192 x 16384 (2.68 s) fed every 100 ms never resets; PCLKB/128 (41.9 ms) resets again and again',{skip,timeout:600000},async()=>{
+ const code=`
+volatile uint32_t refreshes = 0, hz = 0, clocks = 0;
+void hal_entry(void)
+{
+    R_WDT_Open(&g_wdt0_ctrl, &g_wdt0_cfg);
+    wdt_timeout_values_t t;
+    R_WDT_TimeoutGet(&g_wdt0_ctrl, &t);
+    hz = t.clock_frequency_hz;
+    clocks = t.timeout_clocks;
+    while (1) { R_WDT_Refresh(&g_wdt0_ctrl); refreshes++; R_BSP_SoftwareDelay(100, BSP_DELAY_UNITS_MILLISECONDS); }
+}
+`;
+ await both({WDT:{enabled:true}},code,({emu,sim,interp,run,same})=>{
+  run(1000);
+  assert.deepEqual(emu.resets,[],'the emulator counts PCLKB/8192 (WDTCR.CKS 8)');assert.equal(sim.runtime.resetCount??0,0);assert.deepEqual(interp.warn,[]);
+  assert.equal(same('hz'),6103);assert.equal(same('clocks'),16384);assert.ok(same('refreshes',1)>=10);
+  assert.equal(emu.soc.wdt.read(2,2),0x3383,'WDTCR: TOPS 3, CKS 8, window 100/0');
+ });
+ await both({WDT:{enabled:true,clockDiv:128}},code,({emu,sim,run,same})=>{
+  run(400);
+  assert.equal(same('hz'),390625);
+  assert.ok(emu.resets.length>=8&&Math.abs(emu.resets.length-sim.runtime.resetCount)<=1,`resets every 41.9 ms: emulator ${emu.resets.length}, interpreter ${sim.runtime.resetCount}`);
+  assert.ok(Math.abs(emu.resets[0].us/1000-42.2)<1,String(emu.resets[0].us));
+ });
 });

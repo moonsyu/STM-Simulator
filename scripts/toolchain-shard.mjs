@@ -39,7 +39,8 @@ export const TOOLCHAIN_SHARDS=Object.freeze([
  // (the tests are named: a "not this one" pattern with a lookahead did not keep the heavy test out)
  [['ra-course','Bare Metal - Blinky|switch polling toggles|the challenge:|BSP tab sizes|as the course screen shows it'],'adc-continuous','clock-tree',['fsp-interp-parity','parity: ra_uart_echo']],
  // 26 + 23 + 22 + 17 + 16 = 104 + parity of the SPI memory (15 s locally, 1.51.x)
- ['emu-accuracy','dwarf-version','board-links','copied-files','adc-group','peripheral-files','project-overrides',['fsp-interp-parity','parity: ra_spi_memory']],
+ // + the two-engine review tests of ra-wdt-rtc ("on both engines")
+ ['emu-accuracy','dwarf-version','board-links','copied-files','adc-group','peripheral-files','project-overrides',['fsp-interp-parity','parity: ra_spi_memory'],['ra-wdt-rtc','on both engines']],
  // 17 + 16 + 14 + 13 + 11 + 9 + 9 + 9 + 9 = 107
  // + the RTC tests of ra-wdt-rtc (feature 34: about 22 s locally)
  ['tim-oc','adc-sampling','tim-advanced','dac','rtc','source-folders','spi-params','tim-channels','uart-params',['ra-wdt-rtc','RTC \\(ra_rtc_clock\\)|RTC start time']],

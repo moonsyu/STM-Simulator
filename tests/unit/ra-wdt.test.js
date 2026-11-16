@@ -198,3 +198,17 @@ test('callback names across modules: a WDT and an RTC callback of one name are r
  // A disabled stack does not count.
  assert.ok(validateRaMcu(mcu({WDT:{enabled:false,reset:'NMI',callback:'on_event'},RTC:{enabled:true,callback:'on_event'}})));
 });
+
+// Review of feature 35: WDTCR.CKS is four bits (b7:4) — /8192 (code 8) and /128 (code 15) need the top bit.
+test('WDT model: every clock division R_WDT_Open can write reads back and gives its timeout; the IWDT divisions decode from OFS0',()=>{
+ for(const [div,cks]of [[4,1],[64,4],[128,15],[512,6],[2048,7],[8192,8]]){
+  const soc=fakeSoc(),w=new Watchdog(soc,'WDT'),cr=3|(cks<<4)|(3<<8)|(3<<12);
+  w.write(6,0x80,1);w.write(2,cr,2);assert.equal(w.read(2,2),cr,`/${div}: WDTCR reads back`);
+  refresh(w);assert.equal(w.hz(),50e6/div,`/${div}`);
+  soc.fire();assert.ok(Math.abs(soc.resets[0][1]-16384/(50e6/div)*1e6)<1e-6,`/${div}: underflow at ${soc.resets[0][1]} us`);
+ }
+ for(const [div,cks]of [[1,0],[16,2],[32,3],[64,4],[128,15],[256,5]]){
+  const ofs=((0xffffffff&~0x5ffe)|(3<<2)|(cks<<4)|(3<<8)|(3<<10)|(1<<12))>>>0,soc=fakeSoc(ofs),w=new Watchdog(soc,'IWDT');
+  assert.equal(w.hz(),15000/div,`IWDT /${div}`);soc.fire();assert.ok(Math.abs(soc.resets[0][1]-2048/(15000/div)*1e6)<1e-6,`IWDT /${div}`);
+ }
+});
