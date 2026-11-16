@@ -37,7 +37,7 @@ export class BusDevices {
     const w=this.wire,candidates=this.project.components.filter(p=>['i2c',...I2C_DEVICES].includes(p.type)&&answersI2c(p,address)&&this.powered(p)&&this.same(this.terminal(p,3),this.pin(w.sda))&&this.same(this.terminal(p,4),this.pin(w.scl)));
     const result=this.result(),sda=result?.voltage(this.pin(w.sda)),scl=result?.voltage(this.pin(w.scl));
     // Another board answering as an I2C slave on the same SDA/SCL nets (a fixed run, an ESP32 sketch or another STM32).
-    const board=!candidates.length&&this.boards?.().find(d=>{const s=d.i2cSlave?.();return s?.address===address&&this.same(`signal:${d.part.id}.${s.sda}`,this.pin(w.sda))&&this.same(`signal:${d.part.id}.${s.scl}`,this.pin(w.scl));});
+    const board=!candidates.length&&this.boards?.().find(d=>{const s=d.i2cSlave?.(),net=pin=>d.net?d.net(pin):`signal:${d.part.id}.${pin}`;return s?.address===address&&this.same(net(s.sda),this.pin(w.sda))&&this.same(net(s.scl),this.pin(w.scl));});
     if(board)return {part:{type:'board',driver:board},connected:sda>2&&scl>2&&!this.same(this.pin(w.sda),this.pin(w.scl))};
     return {part:candidates[0],connected:candidates.length===1&&sda>2&&scl>2&&!this.same(this.pin(w.sda),this.pin(w.scl))};
   }

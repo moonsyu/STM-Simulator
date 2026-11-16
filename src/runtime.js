@@ -199,7 +199,7 @@ export class Runtime {
         if(n.callee.name==='delay'){if(this.inCallback)throw new Error('콜백에서는 delay()를 사용할 수 없습니다.');const ms=this.interval(args[0],0);if(args.length!==1)throw new Error('delay(ms) 인수 하나가 필요합니다.');yield Math.max(.001,ms);return 0;}
         return this.call(n.callee.name,args);
       }
-      if(n.callee.type==='member'&&!n.callee.pointer){const object=yield* this.evaluate(n.callee.object);if(object?.kind==='library')return this.call(`${object.name}.${n.callee.key}`,args);if(object?.kind==='device')return this.api.deviceCall?.(object,n.callee.key,args,this)??0;}
+      if(n.callee.type==='member'&&!n.callee.pointer){const object=yield* this.evaluate(n.callee.object);if(object?.kind==='library'){const waiting=this.api.libraryInvoke?.(`${object.name}.${n.callee.key}`,args,this);if(waiting)return yield* waiting;return this.call(`${object.name}.${n.callee.key}`,args);}if(object?.kind==='device')return this.api.deviceCall?.(object,n.callee.key,args,this)??0;}
       // table[i](…), item.handler(…), p->handler(…), (*fn)(…): the value is a function.
       if(this.program.hal)return yield* this.invokeValue(yield* this.evaluate(n.callee.type==='unary'&&n.callee.op==='*'?n.callee.a:n.callee),args);
       throw new Error('지원하지 않는 함수 호출입니다.');

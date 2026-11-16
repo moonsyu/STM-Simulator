@@ -164,6 +164,8 @@ export class Stm32Driver{
  */
 export function connectStm32Drivers(session){
  for(const d of session.circuit.drivers)if(d instanceof Stm32Driver)d.host=session;
+ // A board driver that is an I2C master (an ESP32 sketch) reaches the main board's I2C slave through its session.
+ for(const d of session.circuit.drivers)d.attachHost?.(session);
  // Wireless modules: every board of the run shares the main board's air.
  for(const d of session.circuit.drivers)d.joinWireless?.(session.wireless);
  linkFirmwareBoards(session);
