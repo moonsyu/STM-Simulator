@@ -124,6 +124,8 @@ export class Iic {
   /** {address, sda, scl} while this channel answers as a slave (for a master that asks once per transfer). */
   slaveInfo() { const a = this.slaveAddressValue(); if (!this.slaveListens(a)) return null; const p = this.pins(); return p.sda && p.scl ? { address: a, ...p } : null; }
   slaveBusy() { return !!this.slaveState || this.ops.length > 0; }
+  /** The program has taken every byte the master sent so far (or the transfer is gone): the next byte's ACK is known. */
+  slaveSettled() { return !this.ops.length && !(this.slaveState === 'rx' && this.r[ICSR2] & RDRF); }
   slaveAddress(read) { this.ops.push({ t: 'addr', read: !!read }); this.pump(); return true; }
   // The ACK of a byte is ACKBT as it stands now; a byte the slave answers with NACK is still received (RDRF).
   slaveWrite(byte) {

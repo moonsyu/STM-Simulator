@@ -50,11 +50,26 @@ export class SketchDriver{
  }
  // Wire.requestFrom from an emulated slave waits for the slave's program: SCL is held (clock stretching) until each byte
  // is in its transmit register, up to 100 ms.
+ // Wire.endTransmission to an emulated slave goes byte by byte for the same reason: the ACK of a byte is the slave's
+ // answer after its program has taken the byte before (ICMR3.ACKBT on the RA), and a NACK ends the transfer.
  libraryInvoke(name,args,runtime){
-  if(name!=='Wire.requestFrom'||!this.wire.master)return null;
-  const address=Number(args[0]),count=Number(args[1]),target=Number.isInteger(address)&&address>=8&&address<=119&&Number.isInteger(count)&&count>0&&count<=256?this.bus.i2cTarget(address):null;
-  const slave=target?.connected&&target.part?.driver?.emulated?.();if(!slave)return null;
-  const bus=this.bus;
+  if(!this.wire.master||runtime.atomic)return null;
+  const bus=this.bus,w=bus.wire,emulated=address=>{const target=Number.isInteger(address)&&address>=8&&address<=119?bus.i2cTarget(address):null;return target?.connected&&target.part?.driver?.emulated?.()||null;};
+  if(name==='Wire.endTransmission'){
+   const address=w.address,slave=emulated(address);if(!slave)return null;
+   const bytes=w.tx.slice();
+   return (function*(){
+    let waited=0,ok=true,sent=0;
+    // The slave has taken what was sent (the byte read from its receive register), or gave the transfer up.
+    const settle=function*(){while(slave.slaveSettled&&!slave.slaveSettled()&&waited<100){waited+=.25;yield .25;}};
+    slave.slaveAddress(false);yield* settle();
+    for(const b of bytes){ok=slave.slaveWrite(b)!==false;sent++;runtime.microTime+=9e6/w.clock;yield* settle();if(!ok)break;}
+    slave.slaveStop();runtime.microTime+=9e6/w.clock;
+    bus.report(runtime,'I²C',`0x${address.toString(16)} WRITE ${sent} B · ${ok?'ACK':'NACK'}`);w.address=null;w.tx=[];return ok?0:2;
+   })();
+  }
+  if(name!=='Wire.requestFrom')return null;
+  const address=Number(args[0]),count=Number(args[1]),slave=Number.isInteger(count)&&count>0&&count<=256?emulated(address):null;if(!slave)return null;
   return (function*(){
    slave.slaveAddress(true);const out=[];let waited=0;
    read:for(let i=0;i<count;i++){
