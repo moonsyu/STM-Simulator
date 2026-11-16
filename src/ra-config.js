@@ -428,7 +428,9 @@ export function raWdtTiming(mcu,id){
 export function raOfs0(mcu){
  let ofs=0xffffffff;
  for(const [id,base]of [['IWDT',0],['WDT',16]]){
-  const p=mcu?.peripherals?.[id];if(!p?.enabled||(id==='WDT'&&p.startMode!=='AUTO'))continue;
+  // The same defaults validateWdt fills in, so an unvalidated configuration gives the same OFS0.
+  const raw=mcu?.peripherals?.[id];if(!raw?.enabled||(id==='WDT'&&raw.startMode!=='AUTO'))continue;
+  const p={...RA_WDT[id].defaults,windowStart:100,windowEnd:0,reset:'RESET',...raw};
   const tops=RA_WDT[id].timeouts.indexOf(p.timeout),field=(0<<1)|(tops<<2)|(WDT_DIVISION_CODE[p.clockDiv]<<4)|(WDT_END_CODE[p.windowEnd]<<8)|(WDT_START_CODE[p.windowStart]<<10)|((p.reset==='RESET'?1:0)<<12)|((p.stopInSleep?1:0)<<14);
   ofs=((ofs&~(0x5ffe<<base))|(field<<base))>>>0; // bits 0, 13 and 15 of each half are reserved (stay 1)
  }

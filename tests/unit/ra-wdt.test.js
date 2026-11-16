@@ -299,3 +299,10 @@ void hal_entry(void){ r1 = R_SYSTEM->RSTSR1; while (1) { R_BSP_SoftwareDelay(10,
  session.hal.rstsr1=4;session.result={voltage:id=>id==='signal:NRST'?0:3.3};session.checkNrst();run(25);
  assert.equal(session.readVariable('r1'),0);
 });
+
+// Review of feature 35: raOfs0 on a configuration that was not validated (defaults not filled in yet).
+test('OFS0 of an unvalidated configuration equals the validated one (the defaults are the same)',()=>{
+ const raw=mcu({IWDT:{enabled:true},WDT:{enabled:true,startMode:'AUTO'}});
+ assert.equal(raOfs0(raw),raOfs0(validateRaMcu(raw)));assert.equal(raOfs0(raw),0xbf8dbf5d);
+ assert.match(generateRaFiles(raw)['ra_cfg/fsp_cfg/bsp/bsp_mcu_ofs_cfg.h'],/OFS0 \(0xBF8DBF5DUL\)/);
+});
