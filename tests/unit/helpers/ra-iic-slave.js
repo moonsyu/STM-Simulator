@@ -84,7 +84,7 @@ export const SLAVE_SEQUENCES=Object.freeze([
  {name:'2 write 4 into Read(2) and Read(2) more',write:[0x41,0x42,0x43,0x44],events:[[4,0],[6,2],[2,4]],acks:[true,true,true,true],received:[0x41,0x42,0x43,0x44]},
  {name:'3 read 2 of Write(4)',read:2,events:[[5,0],[3,2]],data:[0xa1,0xb2]},
  {name:'4 read 4 of Write(2) and Write(1) twice more',read:4,events:[[5,0],[7,2],[7,3],[3,4]],data:[0xa1,0xb2,0xc3,0xc3]},
- {name:'5 write without R_IIC_SLAVE_Read: SCL held to the time-out, ABORTED',write:[0x55],events:[[4,0],[1,0]],settle:20},
+ {name:'5 write without R_IIC_SLAVE_Read: SCL held to the time-out, ABORTED',write:[0x55],events:[[4,0],[1,0]],acks:[true],settle:20},
  {name:'6 the write after the abort: its first byte still gets the NACK left set',write:[0x66,0x67],events:[[4,0],[2,1]],acks:[false],received:[0x66]},
  {name:'7 read without R_IIC_SLAVE_Write: 0xFF after the time-out, ABORTED',read:1,events:[[5,0],[1,0]],data:[0xff],settle:20}
 ]);

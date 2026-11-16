@@ -522,12 +522,12 @@ export class FspAdapter {
  slaveNotify(r,st,event){const count=st.count;st.count=0;st.direction=2;this.slaveEvent(r,st,event,count);}
  // The master wrote `bytes` after the address. false: a byte was answered with NACK (or the transfer was aborted).
  i2cSlaveReceive(bytes,r){
-  const st=this.slaveOpen();if(!st)return false;let notified=false,ok=true,hang=false;
+  const st=this.slaveOpen();if(!st)return false;let notified=false,ok=true,hang=false,taken=0;
   const request=event=>{st.direction=2;this.slaveEvent(r,st,event,st.count);return st.direction===1;};
   const store=b=>{r.set(r.pointerCell(st.buffer,st.loaded++),b);st.count++;};
   for(const b of bytes){
    // The byte's ACK is ACKBT as the handler of the byte before left it.
-   const ack=!st.nack;if(!ack)ok=false;
+   const ack=!st.nack;if(!ack)ok=false;taken++;
    if(!notified){notified=true;if(!request(4)){st.nack=true;hang=true;break;}}
    if(st.total===0)st.nack=true;
    else if(st.total===st.loaded){if(!request(6)){st.nack=true;hang=true;break;}if(st.total===0)st.nack=true;else store(b);}
@@ -535,7 +535,8 @@ export class FspAdapter {
    if(!ack)break; // the master stops after a NACK
   }
   // No R_IIC_SLAVE_Read in the callback: NACK without the dummy read, SCL stays low until the time-out → ABORTED.
-  if(hang){this.slaveNotify(r,st,1);return false;}
+  // The byte itself had its ACK before the callback ran (ACKBT was 0); only a byte after it meets the NACK.
+  if(hang){this.slaveNotify(r,st,1);return ok&&taken===bytes.length;}
   if(st.direction===1){st.nack=false;this.slaveNotify(r,st,2);}
   else{if(st.total>st.loaded)st.count=(st.count-1)>>>0;this.slaveNotify(r,st,3);}
   return ok;
