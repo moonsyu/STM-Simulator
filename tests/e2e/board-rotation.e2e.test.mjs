@@ -40,7 +40,7 @@ test('the main board and a second STM32 board turn by the button and the R key; 
   await win.keyboard.press('Control+z');await turned(90);
   await win.keyboard.press('Control+y');await turned(180);
   // A second STM32 board is placed clear of the turned main board and turns on its own.
-  await win.click('[data-devboard-add="nucleo-f446re"]');
+  await win.click('#devboard-options [data-devboard-add="nucleo-f446re"]');
   await win.waitForSelector('#edit-board');
   const second='#devboard-layer [data-devboard="nucleo-f446re"]';
   assert.equal(await win.$eval(second,g=>g.dataset.rotation),'0');

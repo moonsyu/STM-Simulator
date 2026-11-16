@@ -13,14 +13,20 @@ import {RA_EXAMPLES,raExample} from './ra-examples.js';
 import {searchHalExamples} from './hal-example-search.js';
 import {applyHalExample,halGuideFor} from './hal-examples.js';
 import {searchLectureExamples,EXAMPLE_BOARDS,LECTURE_PREFIX,applyLectureExample,lectureExample,lectureGuide} from './lecture-examples.js';
-import {searchParts,PART_LIBRARY} from './part-library.js';
+import {searchParts,PART_LIBRARY,boardLibrary,searchBoards} from './part-library.js';
+import {DEVBOARD_MODELS} from './devboards.js';
 import {validateProject} from './project.js';
 import {esc} from './render.js';
 
+export const BOARD_LIBRARY=boardLibrary(DEVBOARD_MODELS);
 export function filterParts(){
  const matches=new Set(searchParts($('part-search').value).map(part=>part.type));
  $('part-list').querySelectorAll('[data-add]').forEach(button=>{button.hidden=!matches.has(button.dataset.add);});
- $('part-count').textContent=`${matches.size} / ${PART_LIBRARY.length}`;$('part-no-results').hidden=matches.size>0;$('part-list').scrollTop=0;
+ // The other boards (ESP32, Raspberry Pi, a second STM32) after the parts, found by the same search.
+ const boards=new Set(searchBoards(BOARD_LIBRARY,$('part-search').value).map(b=>b.id)),found=matches.size+boards.size;
+ $('part-list').querySelectorAll('[data-devboard-add]').forEach(button=>{button.hidden=!boards.has(button.dataset.devboardAdd);});
+ $('part-boards-heading').hidden=!boards.size;
+ $('part-count').textContent=`${found} / ${PART_LIBRARY.length+BOARD_LIBRARY.length}`;$('part-no-results').hidden=found>0;$('part-list').scrollTop=0;
 }
 export function filterExamples(){
  // An FSP project (FPB-RA6E1) lists the FSP examples instead of the STM32 HAL ones (they need the HAL and CubeMX pins).
