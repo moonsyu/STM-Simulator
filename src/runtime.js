@@ -96,7 +96,7 @@ export class Runtime {
   cell(name){for(let i=this.scopes.length-1;i>=0;i--)if(own(this.scopes[i].cells,name))return this.scopes[i].cells[name];throw new Error(`정의되지 않은 이름: ${name}`);}
   get(cell){if(cell.owner&&!cell.owner.alive)throw new Error('유효기간이 끝난 지역 변수를 참조했습니다.');return cell.value;}
   coerce(type,value){return this.program.hal?convert(type,value):value;}
-  set(cell,value){this.get(cell);if(cell.constant)throw new Error('const 값은 변경할 수 없습니다.');if(this.contexts.length>1)cell.async=true;cell.value=this.clone(this.coerce(cell.dataType,value),cell.owner);return cell.value;}
+  set(cell,value){this.get(cell);if(cell.constant)throw new Error(cell.readOnly||'const 값은 변경할 수 없습니다.');if(this.contexts.length>1)cell.async=true;cell.value=this.clone(this.coerce(cell.dataType,value),cell.owner);return cell.value;}
   array(values,owner=this.scope()){if(values.length>this.maxArray)throw new Error(`배열은 ${this.maxArray}개 이하로 선언하세요.`);this.allocations+=values.length;if(this.allocations>this.maxAllocations)throw new Error('한 단계의 메모리 할당 한도를 넘었습니다.');return {kind:'array',cells:values.map(value=>({value:this.clone(value,owner),owner,constant:false}))};}
   pointer(value){return isArray(value)?{kind:'pointer',array:value,index:0}:value;}
   /**
@@ -134,7 +134,9 @@ export class Runtime {
     if(n.type==='index')return this.pointerCell(yield* this.evaluate(n.object),yield* this.evaluate(n.index));
     if(n.type==='member'){
       let object=yield* this.evaluate(n.object);
-      // GPIOA->ODR, TIM2->CNT: a peripheral is a name here, with no registers behind it.
+      // GPIOA->ODR, TIM2->CNT: a peripheral is a name here, with no registers behind it. The adapter may stand in for one
+      // read-only register (an FSP program's R_SYSTEM->RSTSR1 reset cause: fsp-interp.js FspAdapter.register).
+      if(n.pointer&&typeof object==='string'&&this.program.hal&&/^[A-Z][A-Z0-9_]*$/.test(object)){const cell=this.api.register?.(object,n.key,this);if(cell)return cell;}
       if(n.pointer&&typeof object==='string'&&this.program.hal&&/^[A-Z][A-Z0-9_]*$/.test(object))throw new Error(this.program.fsp?`레지스터 직접 접근은 ARM GCC 실행에서만 됩니다(${object}->${n.key}). FSP API(R_IOPORT_PinWrite 등)를 쓰거나 시뮬레이터 실행 방식을 ARM GCC 빌드로 바꾸세요.`:`레지스터 직접 접근(${object}->${n.key})은 내장 해석기에서 지원하지 않습니다. HAL 함수를 쓰거나 ARM GCC 빌드로 실행하세요.`);
       if(n.pointer)object=this.get(this.pointerCell(object));
       if(object?.kind!=='struct'||!own(object.fields,n.key))throw new Error(`구조체 필드가 없습니다: ${n.key}`);

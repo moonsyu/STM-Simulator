@@ -1,5 +1,6 @@
 // RA6E1 (R7FA6E10F) address space: Code Flash 1 MB at 0x0000_0000, SRAM 256 KB at 0x2000_0000, Data Flash 8 KB at
-// 0x0800_0000, the option-setting memory at 0x0100_A100 (erased: reads 0xFF), peripherals from 0x4000_0000.
+// 0x0800_0000, the option-setting memory at 0x0100_A100 (what the ELF's .option_setting puts there, else erased 0xFF:
+// OFS0 at 0x0100_A100 starts the IWDT/WDT at reset), peripherals from 0x4000_0000.
 // Cortex-M33 has no bit-band. Same interface as the STM32 Bus (fast CPU paths, slow device paths, debugger peek/poke,
 // ELF loading), so the CPU, machine and debugger use it unchanged.
 import { Bus, BusFaultSignal } from '../bus.js';
@@ -10,6 +11,8 @@ export const RA_SRAM_SIZE = 0x40000;
 export const RA_DATA_FLASH_BASE = 0x08000000;
 export const RA_DATA_FLASH_SIZE = 0x2000;
 const OPTION_BASE = 0x01000000, OPTION_SIZE = 0x10000;
+// The option-setting memory the linker script's OPTION_SETTING region covers (bsp_linker.c: OFS0 first, at 0x0100_A100).
+export const RA_OPTION_SETTING = 0x0100a100, RA_OPTION_SETTING_SIZE = 0x200;
 
 export class RaBus extends Bus {
   constructor() {
@@ -21,6 +24,15 @@ export class RaBus extends Bus {
     this.sram = new Uint8Array(sbuf); this.sram16 = new Uint16Array(sbuf); this.sram32 = new Int32Array(sbuf); this.sramDV = new DataView(sbuf);
     const dbuf = new ArrayBuffer(RA_DATA_FLASH_SIZE + 8);
     this.dataFlash = new Uint8Array(dbuf); this.dataFlash.fill(0xff); this.dataFlashDV = new DataView(dbuf);
+    const obuf = new ArrayBuffer(RA_OPTION_SETTING_SIZE + 8);
+    this.optionBytes = new Uint8Array(obuf); this.optionBytes.fill(0xff); this.optionDV = new DataView(obuf);
+  }
+  /** OFS0 (option function select register 0) as the ELF programmed it. */
+  get ofs0() { return this.optionDV.getUint32(0, true); }
+  optionRead(a, size) {
+    const o = a - RA_OPTION_SETTING;
+    if (o < 0 || o + size > RA_OPTION_SETTING_SIZE) return size === 4 ? 0xffffffff : size === 2 ? 0xffff : 0xff;
+    return size === 4 ? this.optionDV.getUint32(o, true) : size === 2 ? this.optionDV.getUint16(o, true) : this.optionDV.getUint8(o);
   }
   _initRom() { /* no STM32 system memory */ }
   // Normal memory of `a` as [DataView, offset, writable] or null (a peripheral or unmapped).
@@ -61,7 +73,7 @@ export class RaBus extends Bus {
     a >>>= 0;
     const r = this.region(a);
     if (r) return size === 4 ? r[0].getUint32(r[1], true) : size === 2 ? r[0].getUint16(r[1], true) : r[0].getUint8(r[1]);
-    if ((a >>> 16) === (OPTION_BASE >>> 16)) return size === 4 ? 0xffffffff : size === 2 ? 0xffff : 0xff;
+    if ((a >>> 16) === (OPTION_BASE >>> 16)) return this.optionRead(a, size);
     const e = this.find(a);
     if (e === null) throw new BusFaultSignal(a, false, size);
     if (this.onDeviceAccess !== null) this.onDeviceAccess(e.state);
@@ -81,7 +93,7 @@ export class RaBus extends Bus {
     a >>>= 0;
     const r = this.region(a);
     if (r) return size === 4 ? r[0].getUint32(r[1], true) : size === 2 ? r[0].getUint16(r[1], true) : r[0].getUint8(r[1]);
-    if ((a >>> 16) === (OPTION_BASE >>> 16)) return size === 4 ? 0xffffffff : size === 2 ? 0xffff : 0xff;
+    if ((a >>> 16) === (OPTION_BASE >>> 16)) return this.optionRead(a, size);
     const e = this.find(a);
     if (!e) return null;
     try {
@@ -101,7 +113,7 @@ export class RaBus extends Bus {
     for (let i = 0; i < bytes.length; i++) {
       const a = (addr + i) >>> 0, r = this.region(a);
       if (r) r[0].setUint8(r[1], bytes[i]);
-      else if ((a >>> 16) === (OPTION_BASE >>> 16)) continue; // option settings: the emulator keeps the erased values
+      else if ((a >>> 16) === (OPTION_BASE >>> 16)) { const o = a - RA_OPTION_SETTING; if (o >= 0 && o < RA_OPTION_SETTING_SIZE) this.optionBytes[o] = bytes[i]; }
       else this.poke(a, bytes[i], 1);
     }
   }
@@ -111,7 +123,7 @@ export class RaBus extends Bus {
   }
   resetMemory({ keepFlash = true } = {}) {
     this.sram.fill(0);
-    if (!keepFlash) { this.flash.fill(0xff); this.dataFlash.fill(0xff); }
+    if (!keepFlash) { this.flash.fill(0xff); this.dataFlash.fill(0xff); this.optionBytes.fill(0xff); }
   }
   isNormalMemory(a) { return this.region(a >>> 0) !== null; }
 }

@@ -107,7 +107,7 @@ test('SCI UART: peripheral pins, channel settings and the RASC baud setting, g_u
 test('RA6E1 SCI model: baud from SMR/BRR/SEMR, TXI on the TDR → shift transfer, TEI after the last frame, RXI on a frame',async()=>{
  const {Sci}=await import('../../src/emu/ra6e1/sci.js');
  const events=[],timers=[];let now=0;
- const soc={clock:{pclka:100e6},signals:{receivers:new Set(),channel(){},line(){return {};},uartFrame:(l,t)=>t+86.8},nowUs:()=>now,sync(){},icu:{raise:e=>events.push(e)},routedPins:s=>s.endsWith('TXD')?['P109']:['P110'],lineSources:()=>[],atUs:(t,fn)=>{const e={t,fn};timers.push(e);return e;},uartEvent:e=>events.push(e)};
+ const soc={clock:{pclka:100e6},signals:{receivers:new Set(),channel(){},line(){return {};},uartFrame:(l,t)=>t+86.8},nowUs:()=>now,sync(){},listens(e){return this.icu.linked?.(e)??false;},raiseEvent(e){this.icu.raise(e);},icu:{raise:e=>events.push(e)},routedPins:s=>s.endsWith('TXD')?['P109']:['P110'],lineSources:()=>[],atUs:(t,fn)=>{const e={t,fn};timers.push(e);return e;},uartEvent:e=>events.push(e)};
  const sci=new Sci(soc,9);
  sci.write(0x07,0x50,1); // SEMR: ABCS + BGDM
  sci.write(0x01,108,1);
@@ -151,7 +151,7 @@ test('GPT: GTIOC pins, mode/period/duty settings and RASC counts, g_timerN, r_gp
 test('RA6E1 GPT model: GTSTR start, GTCNT, buffer transfer at the cycle end, PWM output levels, overflow event',async()=>{
  const {Gpt}=await import('../../src/emu/ra6e1/gpt.js');
  let now=0;const timers=[],events=[],changes=[];
- const soc={clock:{pclkd:100e6},nowUs:()=>now,sync(){},icu:{linked:e=>e===0xfc,raise:e=>events.push(e)},atUs:(t,fn)=>{const e={t,fn,cancel(){e.dead=true;}};timers.push(e);return e;},peripheralChanged:n=>changes.push(n)};
+ const soc={clock:{pclkd:100e6},nowUs:()=>now,sync(){},listens(e){return this.icu.linked?.(e)??false;},raiseEvent(e){this.icu.raise(e);},icu:{linked:e=>e===0xfc,raise:e=>events.push(e)},atUs:(t,fn)=>{const e={t,fn,cancel(){e.dead=true;}};timers.push(e);return e;},peripheralChanged:n=>changes.push(n)};
  const t=new Gpt(soc,6);const gpts={6:t};
  soc.gptRunning=()=>t.running?64:0;soc.gptControl=(m,op)=>{for(const [ch,g]of Object.entries(gpts))if(m&(1<<ch))g[op==='clear'?'setCount':op](0);};
  t.write(0x2c,1<<23,4);t.write(0x64,49999,4);t.write(0x68,49999,4); // TPCS /2, GTPR
@@ -189,7 +189,7 @@ test('ADC0: Analog pins with an AN channel, mode/resolution settings, g_adc0 wit
 test('RA6E1 ADC12 model: single scan stores ADDRn and raises scan end, continuous reads live, resolution and alignment',async()=>{
  const {Adc12,ADC0_SCAN_END}=await import('../../src/emu/ra6e1/adc.js');
  let now=0,volts=1.65;const timers=[],events=[];
- const soc={nowUs:()=>now,sync(){},analogIn:pin=>pin==='P000'?volts:0,icu:{linked:()=>false,raise:e=>events.push(e)},atUs:(t,fn)=>{const e={t,fn,cancel(){e.dead=true;}};timers.push(e);return e;}};
+ const soc={nowUs:()=>now,sync(){},listens(e){return this.icu.linked?.(e)??false;},raiseEvent(e){this.icu.raise(e);},analogIn:pin=>pin==='P000'?volts:0,icu:{linked:()=>false,raise:e=>events.push(e)},atUs:(t,fn)=>{const e={t,fn,cancel(){e.dead=true;}};timers.push(e);return e;}};
  const a=new Adc12(soc);
  a.write(0x04,0x101,2); // ADANSA0: AN000, AN008
  a.write(0x00,0x8000,2); // ADST, single scan
@@ -229,7 +229,7 @@ test('AGT: periodic g_agtN (PCLKB /1·/2·/8 or LOCO /1-/128), AGTn_INT vector, 
 test('RA6E1 AGT model: TCSTF follows TSTART, the counter counts down from the reload, underflows raise AGTn_INT',async()=>{
  const {Agt,AGT_EVENT}=await import('../../src/emu/ra6e1/agt.js');
  let now=0;const timers=[],events=[];
- const soc={clock:{pclkb:50e6},nowUs:()=>now,sync(){},icu:{linked:e=>e===AGT_EVENT(2),raise:e=>events.push(e)},atUs:(t,fn)=>{const e={t,fn,cancel(){e.dead=true;}};timers.push(e);return e;}};
+ const soc={clock:{pclkb:50e6},nowUs:()=>now,sync(){},listens(e){return this.icu.linked?.(e)??false;},raiseEvent(e){this.icu.raise(e);},icu:{linked:e=>e===AGT_EVENT(2),raise:e=>events.push(e)},atUs:(t,fn)=>{const e={t,fn,cancel(){e.dead=true;}};timers.push(e);return e;}};
  const a=new Agt(soc,2);
  a.write(0x08,0,1);assert.equal(a.read(0x08,1)&2,0);
  a.write(0x09,0x40,1);a.write(0x0a,0,1); // TCK = 100: LOCO, no division
@@ -265,7 +265,7 @@ test('RA6E1 RIIC model: START → TDRE/TXI, address and data bytes to the device
  const {Iic,IIC_EVENT_BASE}=await import('../../src/emu/ra6e1/iic.js');
  let now=0;const queue=[],events=[],bus=[];
  const device={address:(a,r)=>{bus.push(['A',a,r]);return a===0x50;},write:b=>{bus.push(['W',b]);return true;},read:()=>{bus.push(['R']);return 0x5a;},nack:()=>bus.push(['N']),stop:()=>bus.push(['P']),restart:()=>bus.push(['S'])};
- const soc={clock:{pclkb:50e6},nowUs:()=>now,sync(){},icu:{raise:e=>events.push(e-IIC_EVENT_BASE[0])},after:(us,fn)=>{const e={t:now+us,fn,cancel(){e.dead=true;}};queue.push(e);return e;},i2cBus:()=>device,routedPins:s=>[s.endsWith('SCL')?'P400':'P401']};
+ const soc={clock:{pclkb:50e6},nowUs:()=>now,sync(){},listens(e){return this.icu.linked?.(e)??false;},raiseEvent(e){this.icu.raise(e);},icu:{raise:e=>events.push(e-IIC_EVENT_BASE[0])},after:(us,fn)=>{const e={t:now+us,fn,cancel(){e.dead=true;}};queue.push(e);return e;},i2cBus:()=>device,routedPins:s=>[s.endsWith('SCL')?'P400':'P401']};
  const run=()=>{for(;;){const e=queue.filter(x=>!x.dead&&!x.done).sort((a,b)=>a.t-b.t)[0];if(!e)return;e.done=true;now=e.t;e.fn();}};
  const t=new Iic(soc,0);
  t.write(0x02,0x30,1);t.write(0x11,0xe0|29,1);t.write(0x10,0xe0|30,1);t.write(0x07,0xbf,1); // CKS 3, 100 kHz, all interrupts but TEIE

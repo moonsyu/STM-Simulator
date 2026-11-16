@@ -37,7 +37,7 @@ const hex = v => '0x' + (v >>> 0).toString(16).toUpperCase().padStart(8, '0');
 const reverse8 = b => { let r = 0; for (let i = 0; i < 8; i++) r |= ((b >> i) & 1) << (7 - i); return r; };
 
 export class FirmwareSession {
-  constructor(project, { elf, print = () => {}, trace = () => {}, uart = () => {}, warn, channels, debug, sdImage, camera, noise, clock } = {}) {
+  constructor(project, { elf, print = () => {}, trace = () => {}, uart = () => {}, warn, channels, debug, sdImage, camera, noise, clock, hostTime } = {}) {
     if (!elf) throw new Error('펌웨어 ELF가 필요합니다. ARM GCC로 먼저 빌드하세요.');
     project = physicalToModel(project);
     this.project = project; this.print = print; this.traceCb = trace; this.uartCb = uart; this.warnings = [];
@@ -67,7 +67,7 @@ export class FirmwareSession {
     // Pins wired to parts on the board itself (switch, LEDs, I2C pull-ups) are always solved with the circuit.
     this.boardPins = new Set(this.ra ? [FPB_RA6E1.userSwitch, ...Object.values(FPB_RA6E1.leds), ...Object.keys(FPB_RA6E1.pullups)] : ['PC13']);
     const Soc = this.ra ? Ra6e1 : project.mcu?.family === 'STM32F103RB' ? Stm32f103 : Stm32f446;
-    this.soc = new Soc(this.machine, this.env(), { pwmWaveform: project.simulation?.pwmWaveform ?? false, noise: noise ?? project.simulation?.noise, irqPins: RA_IRQ_PINS, ...(clock || {}) });
+    this.soc = new Soc(this.machine, this.env(), { pwmWaveform: project.simulation?.pwmWaveform ?? false, noise: noise ?? project.simulation?.noise, irqPins: RA_IRQ_PINS, rtcStart: project.mcu?.peripherals?.RTC?.start, hostTime: hostTime ?? Date.now(), ...(clock || {}) });
     this.signals = this.signalsApi();
     this.machine.onItm = (port, byte) => this.itm(port, byte);
     this.elf = this.machine.loadElf(elf instanceof Uint8Array ? elf : new Uint8Array(elf));

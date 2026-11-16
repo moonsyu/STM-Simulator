@@ -36,7 +36,7 @@ export class Agt {
   }
   stop() { if (!this.running) return; this.counter = this.count(); this.running = false; this.ev?.cancel?.(); this.ev = null; }
   plan() {
-    if (!this.running || this.ev || !this.hz() || !this.soc.icu.linked(AGT_EVENT(this.channel))) return;
+    if (!this.running || this.ev || !this.hz() || !this.soc.listens(AGT_EVENT(this.channel))) return;
     const c = this.count(), now = this.soc.nowUs(), hz = this.hz();
     this.counter = c; this.t0 = now;
     const at = now + (c + 1) * 1e6 / hz;
@@ -46,7 +46,7 @@ export class Agt {
     this.ev = null; this.underflows++;
     this.counter = this.reload; this.t0 = at;
     this.b[AGTCR] |= 0x20; // TUNDF
-    this.soc.icu.raise(AGT_EVENT(this.channel));
+    this.soc.raiseEvent(AGT_EVENT(this.channel));
     this.plan();
   }
   read(off, size) {

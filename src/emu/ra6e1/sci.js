@@ -81,7 +81,7 @@ export class Sci {
   }
   rxSources() { if (!this.rxEnabled()) return []; const [pin] = this.rxPins(); return pin ? this.soc.lineSources(pin) : []; }
   rxConfig() { const baud = this.baud(); return baud && this.rxEnabled() ? { baud, dataBits: this.frameBits(), parity: this.parity(), stopBits: this.stopBits() } : null; }
-  event(k) { this.soc.icu.raise(SCI_EVENTS[this.channel] + k); } // 0 RXI, 1 TXI, 2 TEI, 3 ERI
+  event(k) { this.soc.raiseEvent(SCI_EVENTS[this.channel] + k); } // 0 RXI, 1 TXI, 2 TEI, 3 ERI
   read(off, size) {
     this.soc.sync();
     if (size !== 1) return off === 0x0e || off === 0x10 ? (off === 0x10 ? this.readRdr() : 0) : this.r[off] | (this.r[off + 1] << 8);

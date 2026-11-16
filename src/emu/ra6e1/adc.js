@@ -29,7 +29,7 @@ export class Adc12 {
   scanUs() { return Math.max(1, this.channels().length) * SCAN_US_PER_CHANNEL; }
   start() {
     this.ev?.cancel?.(); this.ev = null;
-    if (this.continuous() && !this.soc.icu.linked(ADC0_SCAN_END)) return; // results are read live
+    if (this.continuous() && !this.soc.listens(ADC0_SCAN_END)) return; // results are read live
     const at = this.soc.nowUs() + this.scanUs();
     this.ev = this.soc.atUs(at, () => this.finish());
   }
@@ -37,7 +37,7 @@ export class Adc12 {
     this.ev = null; this.scans++;
     for (const ch of this.channels()) this.r[(ADDR >> 1) + ch] = this.code(ch);
     if (!this.continuous()) this.r[ADCSR >> 1] &= ~0x8000;
-    this.soc.icu.raise(ADC0_SCAN_END);
+    this.soc.raiseEvent(ADC0_SCAN_END);
     if (this.continuous() && this.get(ADCSR) & 0x8000) this.start();
   }
   read(off, size) {

@@ -19,7 +19,7 @@ export class Iic {
   }
   // ------------------------------------------------------------ timing and events
   bitUs() { const ref = this.soc.clock.pclkb / 2 ** ((this.r[ICMR1] >> 4) & 7); return ((this.r[ICBRH] & 31) + (this.r[ICBRL] & 31) + 2) / ref * 1e6 + 0.24; }
-  raise(k) { this.soc.icu.raise(IIC_EVENT_BASE[this.channel] + k); }
+  raise(k) { this.soc.raiseEvent(IIC_EVENT_BASE[this.channel] + k); }
   setStatus(bits) {
     const old = this.r[ICSR2], ier = this.r[ICIER]; this.r[ICSR2] |= bits;
     const rise = bits & ~old;

@@ -68,7 +68,7 @@ export class Rspi {
     return { sck: one('RSPCK'), mosi: one('MOSI'), miso: one('MISO'), nss: this.spcr() & SPMS ? undefined : one('SSL0') };
   }
   slaveSelected() { return false; } // master only (the session asks every SPI of a peer board)
-  raise(k) { this.soc.icu.raise(SPI_EVENT_BASE[this.channel] + k); }
+  raise(k) { this.soc.raiseEvent(SPI_EVENT_BASE[this.channel] + k); }
   // The level the module drives on its pins: RSPCK idles at CPOL, SSL0 is active (SSLP) while selected; MISO is an input.
   output(role) {
     if (!this.master()) return null;

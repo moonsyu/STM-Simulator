@@ -51,7 +51,7 @@ test('every prelude enum constant and macro has the value of the installed FSP h
    const dir=await fs.mkdtemp(path.join(root,'p-')),project={...projectForBoard('fpb-ra6e1'),mcu};
    const r=await prepareRa({project,tools,directory:dir,userFiles:[]});
    const values=preludeValues(fspPrelude(validateRaMcu(mcu)));
-   const headers=['hal_data.h','r_ioport.h','r_icu.h','r_sci_uart.h','r_gpt.h','r_agt.h','r_adc.h','r_iic_master.h','r_external_irq_api.h','r_uart_api.h','r_timer_api.h','r_adc_api.h','r_i2c_master_api.h','r_spi_api.h'];
+   const headers=['hal_data.h','r_ioport.h','r_icu.h','r_sci_uart.h','r_gpt.h','r_agt.h','r_adc.h','r_iic_master.h','r_external_irq_api.h','r_uart_api.h','r_timer_api.h','r_adc_api.h','r_i2c_master_api.h','r_spi_api.h','r_wdt.h','r_iwdt.h','r_wdt_api.h','r_rtc.h','r_rtc_api.h'];
    const check=[...headers.map(h=>`#include "${h}"`),...values.map(([name,value])=>`_Static_assert((long long) (${name}) == (long long) (${value}), "${name}");`)].join('\n')+'\n';
    const file=path.join(dir,'prelude_check.c');await fs.writeFile(file,check);
    const output=await new Promise(resolve=>execFile(tools.armGcc,[...r.cpu,...r.includes,'-std=gnu11','-fsyntax-only','-w',file],{maxBuffer:1<<24},(error,stdout,stderr)=>resolve(error?stderr:'')));

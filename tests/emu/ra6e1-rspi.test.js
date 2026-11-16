@@ -10,7 +10,7 @@ function soc(){
  const s={now:0,queue:[],raised:[],clock:{pclka:100e6},
   nowUs(){return s.now;},sync(){},after(us,fn){const e={at:s.now+us,fn,cancelled:false,cancel(){e.cancelled=true;}};s.queue.push(e);return e;},
   until(us){for(;;){s.queue.sort((a,b)=>a.at-b.at);const e=s.queue.find(x=>!x.cancelled);if(!e||e.at>us)break;s.queue.splice(s.queue.indexOf(e),1);s.now=e.at;e.fn();}s.now=us;},
-  icu:{raise:k=>s.raised.push(k-0x1c9)},routedPins:()=>[],spiTransfer:(name,pins,byte)=>byte,peripheralChanged(){}};
+  raiseEvent:k=>s.raised.push(k-0x1c9),routedPins:()=>[],spiTransfer:(name,pins,byte)=>byte,peripheralChanged(){}};
  return s;
 }
 // Master, 8-bit frames at PCLKA / 2 (50 MHz: 0.16 µs a frame), RXI and ERI enabled; SCKASE as given.

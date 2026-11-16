@@ -49,7 +49,7 @@ export class Gpt {
     const ber = this.reg(GTBER);
     return ((ber >> 16) & 3) && this.ccr(CCRC) !== this.ccr(CCRA) || ((ber >> 18) & 3) && this.ccr(CCRE) !== this.ccr(CCRB) || ((ber >> 20) & 3) && this.reg(GTPBR) !== this.reg(GTPR);
   }
-  needsCycle() { return this.oneShot() || this.buffered() || this.soc.icu.linked(GPT_EVENT_BASE[this.channel] + 6); }
+  needsCycle() { return this.oneShot() || this.buffered() || this.soc.listens(GPT_EVENT_BASE[this.channel] + 6); }
   // Schedule the next cycle end while the timer runs and something waits for it.
   plan() {
     if (!this.running || this.ev || !this.needsCycle()) return;
@@ -64,7 +64,7 @@ export class Gpt {
     this.r[GTST >> 2] |= 1 << 6; // TCFPO
     const before = this.outputKey();
     this.transfer(false);
-    this.soc.icu.raise(GPT_EVENT_BASE[this.channel] + 6);
+    this.soc.raiseEvent(GPT_EVENT_BASE[this.channel] + 6);
     if (this.oneShot()) { this.r[GTCNT >> 2] = 0; this.running = false; this.r[GTCR >> 2] &= ~1; this.changed(); return; }
     if (this.outputKey() !== before) this.changed();
     this.plan();

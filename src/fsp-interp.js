@@ -11,11 +11,15 @@ import {baseName} from './source-files.js';
 import {HalAdapter} from './hal.js';
 import {BusDevices} from './buses.js';
 import {formatPrintf,stringCall} from './hal-stdio.js';
-import {validateRaMcu,raClockHz,raPinName,RA6E1_PORTS,RA_ADC_CHANNELS,RA_IRQ_PINS} from './ra-config.js';
+import {validateRaMcu,raClockHz,raPinName,RA6E1_PORTS,RA_ADC_CHANNELS,RA_IRQ_PINS,WDT_DIVISION_CODE,RA_WDT,RA_IWDT_HZ,RA_WDT_WINDOW_START,RA_WDT_WINDOW_END} from './ra-config.js';
 import {raInstances,raIoName,raVectors,pinCfgWord} from './ra-generator.js';
 import {exchangeFrame} from './emu/ra6e1/spi.js';
 import {encodeSpiFrames} from './signals.js';
+import {Rtc} from './emu/ra6e1/rtc.js';
 
+// RSTSR1 reset-cause flags (R7FA6E10F.h): the one register the interpreter lets the program read (FspAdapter.register).
+const RESET_STATUS=[['IWDTRF',0],['WDTRF',1],['SWRF',2]];
+const RESET_FLAG={IWDT:1,WDT:2,SYSRESETREQ:4};
 const pad=n=>String(n).padStart(2,'0');
 const hex=(n,w=4)=>'0x'+(n>>>0).toString(16).toUpperCase().padStart(w,'0');
 const enumOf=(tag,name,items)=>`typedef enum ${tag}\n{\n${items.map(([k,v])=>`    ${k} = ${v},`).join('\n')}\n} ${name};`;
@@ -26,8 +30,8 @@ export const FSP_ALIASES=Object.freeze({FSP_CPP_HEADER:'',FSP_CPP_FOOTER:'',FSP_
  IOPORT_CFG_CTRL:'g_ioport_ctrl',IOPORT_CFG_NAME:'g_bsp_pin_cfg',IOPORT_CFG_OPEN:'R_IOPORT_Open'});
 // FSP and generated headers that resolve to the prelude (it has a guard, so including several is fine); the C
 // library headers read as empty.
-const FSP_HEADERS=['hal_data.h','common_data.h','bsp_pin_cfg.h','vector_data.h','bsp_api.h','bsp_cfg.h','bsp_clock_cfg.h','board.h','board_cfg.h','fsp_common_api.h','r_ioport.h','r_ioport_api.h','r_icu.h','r_external_irq_api.h','r_sci_uart.h','r_uart_api.h','r_gpt.h','r_timer_api.h','r_agt.h','r_adc.h','r_adc_api.h','r_iic_master.h','r_i2c_master_api.h','r_spi.h','r_sci_spi.h','r_spi_api.h','bsp_io.h','bsp_delay.h','bsp_common.h'];
-const C_HEADERS=new Set(['stdint.h','stddef.h','stdbool.h','string.h','stdlib.h','stdio.h','ctype.h','math.h','limits.h']);
+const FSP_HEADERS=['hal_data.h','common_data.h','bsp_pin_cfg.h','vector_data.h','bsp_api.h','bsp_cfg.h','bsp_clock_cfg.h','board.h','board_cfg.h','fsp_common_api.h','r_ioport.h','r_ioport_api.h','r_icu.h','r_external_irq_api.h','r_sci_uart.h','r_uart_api.h','r_gpt.h','r_timer_api.h','r_agt.h','r_adc.h','r_adc_api.h','r_iic_master.h','r_i2c_master_api.h','r_spi.h','r_sci_spi.h','r_spi_api.h','r_wdt.h','r_iwdt.h','r_wdt_api.h','r_rtc.h','r_rtc_api.h','bsp_io.h','bsp_delay.h','bsp_common.h'];
+const C_HEADERS=new Set(['stdint.h','stddef.h','stdbool.h','string.h','stdlib.h','stdio.h','ctype.h','math.h','limits.h','time.h']);
 // Generated and FSP source folders of the project tree: built by ARM GCC only (the prelude stands in for them here).
 const FSP_FILE=/^(ra|ra_gen|ra_cfg|script)\//;
 
@@ -108,6 +112,39 @@ ${enumOf('e_spi_event','spi_event_t',['TRANSFER_COMPLETE','TRANSFER_ABORTED','ER
 typedef struct st_spi_cfg { uint8_t channel; IRQn_Type rxi_irq; IRQn_Type txi_irq; IRQn_Type tei_irq; IRQn_Type eri_irq; uint8_t rxi_ipl; uint8_t txi_ipl; uint8_t tei_ipl; uint8_t eri_ipl; spi_mode_t operating_mode; spi_clk_phase_t clk_phase; spi_clk_polarity_t clk_polarity; spi_mode_fault_t mode_fault; spi_bit_order_t bit_order; void * p_transfer_tx; void * p_transfer_rx; void * p_context; void * p_extend; } spi_cfg_t;
 typedef struct st_spi_instance { void * p_ctrl; const spi_cfg_t * p_cfg; void * p_api; } spi_instance_t;
 typedef struct st_spi_callback_args { uint32_t channel; spi_event_t event; void * p_context; } spi_callback_args_t;
+${enumOf('e_wdt_timeout','wdt_timeout_t',[128,512,1024,2048,4096,8192,16384].map((n,i)=>['WDT_TIMEOUT_'+n,i]))}
+${enumOf('e_wdt_clock_division','wdt_clock_division_t',Object.entries(WDT_DIVISION_CODE).map(([d,c])=>['WDT_CLOCK_DIVISION_'+d,c]))}
+${enumOf('e_wdt_window_start','wdt_window_start_t',[25,50,75,100].map((n,i)=>['WDT_WINDOW_START_'+n,i]))}
+${enumOf('e_wdt_window_end','wdt_window_end_t',[75,50,25,0].map((n,i)=>['WDT_WINDOW_END_'+n,i]))}
+${enumOf('e_wdt_reset_control','wdt_reset_control_t',[['WDT_RESET_CONTROL_NMI',0],['WDT_RESET_CONTROL_RESET',1]])}
+${enumOf('e_wdt_stop_control','wdt_stop_control_t',[['WDT_STOP_CONTROL_DISABLE',0],['WDT_STOP_CONTROL_ENABLE',1]])}
+${enumOf('e_wdt_status','wdt_status_t',[['WDT_STATUS_NO_ERROR',0],['WDT_STATUS_UNDERFLOW',1],['WDT_STATUS_REFRESH_ERROR',2],['WDT_STATUS_UNDERFLOW_AND_REFRESH_ERROR',3],['WDT_STATUS_OVERFLOW',4]])}
+typedef struct st_wdt_callback_args { void * p_context; } wdt_callback_args_t;
+typedef struct st_wdt_timeout_values { uint32_t clock_frequency_hz; uint32_t timeout_clocks; } wdt_timeout_values_t;
+typedef struct st_wdt_instance_ctrl { uint32_t wdt_open; } wdt_instance_ctrl_t;
+typedef struct st_iwdt_instance_ctrl { uint32_t wdt_open; } iwdt_instance_ctrl_t;
+typedef struct st_wdt_cfg { wdt_timeout_t timeout; wdt_clock_division_t clock_division; wdt_window_start_t window_start; wdt_window_end_t window_end; wdt_reset_control_t reset_control; wdt_stop_control_t stop_control; void * p_context; void * p_extend; } wdt_cfg_t;
+typedef struct st_wdt_instance { void * p_ctrl; const wdt_cfg_t * p_cfg; void * p_api; } wdt_instance_t;
+${enumOf('e_rtc_event','rtc_event_t',[['RTC_EVENT_ALARM_IRQ',0],['RTC_EVENT_ALARM1_IRQ',1],['RTC_EVENT_PERIODIC_IRQ',2]])}
+${enumOf('e_rtc_alarm_channel','rtc_alarm_channel_t',[['RTC_ALARM_CHANNEL_0',0],['RTC_ALARM_CHANNEL_1',1]])}
+${enumOf('e_rtc_count_source','rtc_clock_source_t',[['RTC_CLOCK_SOURCE_SUBCLK',0],['RTC_CLOCK_SOURCE_LOCO',1],['RTC_CLOCK_SOURCE_MAINCLK',2]])}
+${enumOf('e_rtc_status','rtc_status_t',[['RTC_STATUS_STOPPED',0],['RTC_STATUS_RUNNING',1]])}
+${enumOf('e_rtc_error_adjustment','rtc_error_adjustment_t',[['RTC_ERROR_ADJUSTMENT_NONE',0],['RTC_ERROR_ADJUSTMENT_ADD_PRESCALER',1],['RTC_ERROR_ADJUSTMENT_SUBTRACT_PRESCALER',2]])}
+${enumOf('e_rtc_error_adjustment_mode','rtc_error_adjustment_mode_t',[['RTC_ERROR_ADJUSTMENT_MODE_MANUAL',0],['RTC_ERROR_ADJUSTMENT_MODE_AUTOMATIC',1]])}
+${enumOf('e_rtc_error_adjustment_period','rtc_error_adjustment_period_t',[['RTC_ERROR_ADJUSTMENT_PERIOD_1_MINUTE',0],['RTC_ERROR_ADJUSTMENT_PERIOD_10_SECOND',1],['RTC_ERROR_ADJUSTMENT_PERIOD_NONE',2],['RTC_ERROR_ADJUSTMENT_PERIOD_20_SECOND',3]])}
+${enumOf('e_rtc_periodic_irq_select','rtc_periodic_irq_select_t',['1_DIV_BY_256_SECOND','1_DIV_BY_128_SECOND','1_DIV_BY_64_SECOND','1_DIV_BY_32_SECOND','1_DIV_BY_16_SECOND','1_DIV_BY_8_SECOND','1_DIV_BY_4_SECOND','1_DIV_BY_2_SECOND','1_SECOND','2_SECOND','1_MINUTE','1_HOUR','1_DAY','1_MONTH'].map((k,i)=>['RTC_PERIODIC_IRQ_SELECT_'+k,i+6]))}
+struct tm { int tm_sec; int tm_min; int tm_hour; int tm_mday; int tm_mon; int tm_year; int tm_wday; int tm_yday; int tm_isdst; };
+typedef struct tm rtc_time_t;
+typedef struct st_rtc_alarm_time { rtc_time_t time; bool sec_match; bool min_match; bool hour_match; bool mday_match; bool mon_match; bool year_match; bool dayofweek_match; bool sunday_match; bool monday_match; bool tuesday_match; bool wednesday_match; bool thursday_match; bool friday_match; bool saturday_match; rtc_alarm_channel_t channel; } rtc_alarm_time_t;
+typedef struct st_rtc_callback_args { rtc_event_t event; void * p_context; } rtc_callback_args_t;
+typedef struct st_rtc_info { rtc_clock_source_t clock_source; rtc_status_t status; } rtc_info_t;
+typedef struct st_rtc_error_adjustment_cfg { rtc_error_adjustment_mode_t adjustment_mode; rtc_error_adjustment_period_t adjustment_period; rtc_error_adjustment_t adjustment_type; uint32_t adjustment_value; } rtc_error_adjustment_cfg_t;
+typedef struct st_rtc_cfg { rtc_clock_source_t clock_source; uint32_t freq_compare_value; uint8_t alarm_ipl; IRQn_Type alarm_irq; uint8_t periodic_ipl; IRQn_Type periodic_irq; uint8_t carry_ipl; IRQn_Type carry_irq; void * p_context; void * p_extend; } rtc_cfg_t;
+typedef struct st_rtc_ctrl { uint32_t open; } rtc_instance_ctrl_t;
+typedef struct st_rtc_instance { rtc_instance_ctrl_t * p_ctrl; const rtc_cfg_t * p_cfg; void * p_api; } rtc_instance_t;
+${RESET_STATUS.map(([k,pos])=>`#define R_SYSTEM_RSTSR1_${k}_Pos (${pos}UL)\n#define R_SYSTEM_RSTSR1_${k}_Msk (${hex(1<<pos,1)}UL)`).join('\n')}
+typedef struct st_fsp_interp_rstsr1_b { uint16_t IWDTRF; uint16_t WDTRF; uint16_t SWRF; } FSP_INTERP_RSTSR1_b;
+typedef struct st_fsp_interp_system { uint16_t RSTSR1; FSP_INTERP_RSTSR1_b RSTSR1_b; } FSP_INTERP_SYSTEM;
 #define FSP_PARAMETER_NOT_USED(p) ((void) (p))
 #define BSP_IRQ_DISABLED (0xFF)
 #define FSP_INVALID_VECTOR ((IRQn_Type) -33)
@@ -139,7 +176,7 @@ typedef struct st_sci_spi_instance_ctrl { uint32_t open; } sci_spi_instance_ctrl
 
 /** The prelude's text for a checked RA configuration: types, the pin symbols and the Stacks instances of hal_data.c. */
 export function fspPrelude(mcu){
- const {irqs,uarts,gpts,adc,agts,iics,spis,sciSpis}=raInstances(mcu),vectors=raVectors(mcu),vec=k=>vectors.some(v=>v.vector===k)?`VECTOR_NUMBER_${k}`:'FSP_INVALID_VECTOR';
+ const {irqs,uarts,gpts,adc,agts,iics,spis,sciSpis,wdts,rtc}=raInstances(mcu),vectors=raVectors(mcu),vec=k=>vectors.some(v=>v.vector===k)?`VECTOR_NUMBER_${k}`:'FSP_INVALID_VECTOR';
  const pins=Object.entries(mcu.pins||{}).sort(([a],[b])=>raPinName(a).localeCompare(raPinName(b)));
  const ipl=(name,p)=>name?`(${p})`:'(BSP_IRQ_DISABLED)';
  const out=['#ifndef FSP_INTERP_PRELUDE_H','#define FSP_INTERP_PRELUDE_H',TYPES,
@@ -169,6 +206,11 @@ export function fspPrelude(mcu){
  for(const t of spis)out.push(`spi_instance_ctrl_t ${t.name}_ctrl;`,`const spi_extended_cfg_t ${t.name}_ext_cfg = { .spi_clksyn = ${t.ssl==='SSL0'?'SPI_SSL_MODE_SPI':'SPI_SSL_MODE_CLK_SYN'}, .spi_comm = SPI_COMMUNICATION_FULL_DUPLEX, .ssl_polarity = SPI_SSLP_LOW, .ssl_select = SPI_SSL_SELECT_SSL0, .mosi_idle = SPI_MOSI_IDLE_VALUE_FIXING_DISABLE, .parity = SPI_PARITY_MODE_DISABLE, .byte_swap = SPI_BYTE_SWAP_DISABLE, .spck_div = { .spbr = ${t.div.spbr}, .brdv = ${t.div.brdv} }, .spck_delay = SPI_DELAY_COUNT_1, .ssl_negation_delay = SPI_DELAY_COUNT_1, .next_access_delay = SPI_DELAY_COUNT_1, .burst_interframe_delay = SPI_BURST_TRANSFER_WITH_DELAY };`,...spiCfg(t,'SPI',`${t.name}_ext_cfg`));
  if(sciSpis.length)out.push(SCI_SPI_TYPES);
  for(const t of sciSpis)out.push(`sci_spi_instance_ctrl_t ${t.name}_ctrl;`,`const sci_spi_extended_cfg_t ${t.name}_cfg_extend = { .clk_div = { .cks = ${t.div.cks}, .brr = ${t.div.brr}, .mddr = 0 } };`,...spiCfg(t,'SCI',`${t.name}_cfg_extend`));
+ for(const w of wdts)out.push(`${w.ctrl} ${w.name}_ctrl;`,`const wdt_cfg_t ${w.name}_cfg = { .timeout = WDT_TIMEOUT_${w.timeout}, .clock_division = WDT_CLOCK_DIVISION_${w.clockDiv}, .window_start = WDT_WINDOW_START_${w.windowStart}, .window_end = WDT_WINDOW_END_${w.windowEnd}, .reset_control = WDT_RESET_CONTROL_${w.reset}, .stop_control = WDT_STOP_CONTROL_${w.stopInSleep?'ENABLE':'DISABLE'}, .p_context = NULL, .p_extend = NULL };`,
+  `const wdt_instance_t ${w.name} = { .p_ctrl = &${w.name}_ctrl, .p_cfg = &${w.name}_cfg, .p_api = NULL };`,...(w.callback?[`void ${w.callback}(wdt_callback_args_t * p_args);`]:[]));
+ if(rtc){const ipl=p=>p==null?'(BSP_IRQ_DISABLED)':`(${p})`,irq=(k,p)=>p==null?'FSP_INVALID_VECTOR':vec('RTC_'+k);
+  out.push('rtc_instance_ctrl_t g_rtc0_ctrl;',`const rtc_cfg_t g_rtc0_cfg = { .clock_source = ${rtc.clockSource==='SUBCLOCK'?'RTC_CLOCK_SOURCE_SUBCLK':'RTC_CLOCK_SOURCE_LOCO'}, .freq_compare_value = ${rtc.freqCompare}, .alarm_ipl = ${ipl(rtc.alarmPriority)}, .alarm_irq = ${irq('ALARM',rtc.alarmPriority)}, .periodic_ipl = ${ipl(rtc.periodicPriority)}, .periodic_irq = ${irq('PERIOD',rtc.periodicPriority)}, .carry_ipl = ${ipl(rtc.carryPriority)}, .carry_irq = ${irq('CARRY',rtc.carryPriority)}, .p_context = NULL, .p_extend = NULL };`,
+   'const rtc_instance_t g_rtc0 = { .p_ctrl = &g_rtc0_ctrl, .p_cfg = &g_rtc0_cfg, .p_api = NULL };',...(rtc.callback?[`void ${rtc.callback}(rtc_callback_args_t * p_args);`]:[]));}
  out.push('void hal_entry(void);','void g_hal_init(void);','void g_common_init(void);','void BSP_PinConfigSecurityInit(void);','#endif');
  return out.join('\n')+'\n';
 }
@@ -214,9 +256,20 @@ export function compileFsp(source,files=[],mcu){
 export const fspConstants=program=>Object.fromEntries((program.registers||[]).map(n=>[n,n]));
 
 const SHORT_WAIT_MS=.05;
-const FSP={SUCCESS:0,ASSERTION:1,INVALID_ARGUMENT:3,UNSUPPORTED:6,NOT_OPEN:7,IN_USE:8,ALREADY_OPEN:14};
-const KINDS={ioport:[/^g_ioport_ctrl$/,'g_ioport_ctrl'],icu:[/^g_external_irq(\d+)_ctrl$/,'g_external_irq1_ctrl'],uart:[/^g_uart(\d+)_ctrl$/,'g_uart9_ctrl'],gpt:[/^g_timer(\d+)_ctrl$/,'g_timer1_ctrl'],agt:[/^g_agt(\d+)_ctrl$/,'g_agt0_ctrl'],adc:[/^g_adc(\d+)_ctrl$/,'g_adc0_ctrl'],iic:[/^g_i2c_master(\d+)_ctrl$/,'g_i2c_master0_ctrl'],spi:[/^g_spi(\d+)_ctrl$/,'g_spi1_ctrl'],sciSpi:[/^g_sci_spi(\d+)_ctrl$/,'g_sci_spi9_ctrl']};
-const SUPPORTED='R_IOPORT_*, R_BSP_SoftwareDelay · R_BSP_Pin*, R_ICU_ExternalIrq*, R_SCI_UART_*, R_GPT_*, R_AGT_*, R_ADC_*, R_IIC_MASTER_*, R_SPI_*, R_SCI_SPI_*';
+const FSP={SUCCESS:0,ASSERTION:1,INVALID_ARGUMENT:3,UNSUPPORTED:6,NOT_OPEN:7,IN_USE:8,IRQ_BSP_DISABLED:11,ALREADY_OPEN:14,NOT_ENABLED:19};
+const KINDS={ioport:[/^g_ioport_ctrl$/,'g_ioport_ctrl'],icu:[/^g_external_irq(\d+)_ctrl$/,'g_external_irq1_ctrl'],uart:[/^g_uart(\d+)_ctrl$/,'g_uart9_ctrl'],gpt:[/^g_timer(\d+)_ctrl$/,'g_timer1_ctrl'],agt:[/^g_agt(\d+)_ctrl$/,'g_agt0_ctrl'],adc:[/^g_adc(\d+)_ctrl$/,'g_adc0_ctrl'],iic:[/^g_i2c_master(\d+)_ctrl$/,'g_i2c_master0_ctrl'],
+ spi:[/^g_spi(\d+)_ctrl$/,'g_spi1_ctrl'],sciSpi:[/^g_sci_spi(\d+)_ctrl$/,'g_sci_spi9_ctrl'],wdt:[/^g_wdt(\d+)_ctrl$/,'g_wdt0_ctrl'],iwdt:[/^g_iwdt(\d+)_ctrl$/,'g_iwdt0_ctrl'],rtc:[/^g_rtc(\d+)_ctrl$/,'g_rtc0_ctrl']};
+const SUPPORTED='R_IOPORT_*, R_BSP_SoftwareDelay · R_BSP_Pin*, R_ICU_ExternalIrq*, R_SCI_UART_*, R_GPT_*, R_AGT_*, R_ADC_*, R_IIC_MASTER_*, R_SPI_*, R_SCI_SPI_*, R_WDT_*, R_IWDT_*, R_RTC_*';
+// RTC periodic rates the RA6E1 has (RCR1.PES 6-15): FSP's enum also lists 1 minute … 1 month for other RA parts, which
+// would make R_RTC_PeriodicIrqRateSet wait forever on this one.
+const RTC_PERIOD_S={6:1/256,7:1/128,8:1/64,9:1/32,10:1/16,11:1/8,12:1/4,13:1/2,14:1,15:2};
+const RTC_DAYS=[31,28,31,30,31,30,31,31,30,31,30,31];
+const bcd=n=>((Math.floor(n/10)<<4)|(n%10));
+// A program reads the reset cause from R_SYSTEM->RSTSR1 (FSP has no API for it). Every other register access stays an
+// error on the interpreter (it has no registers behind the names); this one is a read of state the interpreter keeps
+// (FspAdapter.rstsr1, handed over across a reset), so the reset-cause snippet and the WDT example run on both engines.
+// Writing it (clearing a flag) is refused with the reason: the flags then would have two sources of truth.
+const RSTSR_READ_ONLY='R_SYSTEM->RSTSR1: 내장 해석기는 리셋 원인 레지스터를 읽기만 합니다(쓰기로 플래그 지우기는 ARM GCC 실행에서). 다른 R_SYSTEM 레지스터는 ARM GCC 실행에서만 됩니다.';
 const int=(value,min,max,label)=>{if(!Number.isInteger(value)||value<min||value>max)throw new Error(`${label}: ${min}~${max} 범위의 정수가 필요합니다.`);return value;};
 const isIterator=v=>v&&typeof v.next==='function';
 
@@ -225,9 +278,27 @@ export class FspAdapter {
   this.config=validateRaMcu(mcu);this.buses=buses;this.session=session;this.inst=raInstances(this.config);
   this.pclkd=raClockHz(this.config);this.pclkb=raClockHz(this.config,'pclkb');
   this.pending=[];this.active=[];this.seq=0;this.dispatched=0;this.serials=new Map();this.states=new Map();this.peripheralPins=new Set();this.warned=new Set();this.names=null;this.activeIic=null;this.shortWait=0;
+  // Reset cause (RSTSR1) and the reason of the reset this adapter's program ends with (session.js passes it on).
+  this.rstsr1=0;this.resetCause=null;
+  // The RTC's calendar (the emulator's model, src/emu/ra6e1/rtc.js, read through its registers): it starts at power-on
+  // from the stack's start time and, in its own power domain, goes on across a reset.
+  this.hostTime=session?.hostTime??Date.now();this.rtcDev=null;
  }
- inheritReset(){}
- declareGlobals(){}
+ inheritReset(old){this.rstsr1=(old.rstsr1|(RESET_FLAG[old.resetCause]??0))&0xffff;this.wdtResets=old.wdtResets;this.rtcDev=old.rtcDev;this.hostTime=old.hostTime;}
+ // Program start (power-on or after a reset): an auto-start watchdog (OFS0) counts from here.
+ declareGlobals(r){
+  // R_SYSTEM (a register-block name the program uses) gets the type of the part the interpreter stands in for, so
+  // R_SYSTEM->RSTSR1_b.WDTRF has a type in expressions.
+  const sys=r.globals.cells.R_SYSTEM;if(sys){sys.dataType='pointer';sys.pointeeType='FSP_INTERP_SYSTEM';}
+  for(const id of ['IWDT','WDT']){const p=this.config.peripherals?.[id];if(p?.enabled&&p.startMode==='AUTO')this.wdtStart(r,this.wdtState(id));}}
+ // R_SYSTEM->RSTSR1 (and RSTSR1_b.IWDTRF / WDTRF / SWRF): a read-only cell holding the reset cause now.
+ register(object,key){
+  if(object!=='R_SYSTEM')return null;
+  const cell=(value,dataType)=>({value,owner:{alive:true},constant:true,readOnly:RSTSR_READ_ONLY,dataType});
+  if(key==='RSTSR1')return cell(this.rstsr1,'uint16_t');
+  if(key==='RSTSR1_b')return cell({kind:'struct',type:'FSP_INTERP_RSTSR1_b',fields:Object.fromEntries(RESET_STATUS.map(([k,pos])=>[k,cell((this.rstsr1>>pos)&1,'uint16_t')]))});
+  return null;
+ }
  update(){}
  warnOnce(r,key,message){if(this.warned.has(key))return;this.warned.add(key);r.warn(message);}
  pinOf(signal){return Object.keys(this.config.pins).find(p=>this.config.pins[p].signal===signal)??null;}
@@ -282,7 +353,7 @@ export class FspAdapter {
   if(r.program.functions[name])return null;
   if(name==='R_BSP_SoftwareDelay')return this.softwareDelay(args,r);
   if(name==='__WFI'||name==='__WFE')return this.wfi(r);
-  if(name==='NVIC_SystemReset')return (function*(){r.warn('[NVIC] 시스템 리셋: 프로그램을 처음부터 다시 실행합니다.');yield {kind:'reset'};})();
+  if(name==='NVIC_SystemReset'){const self=this;return (function*(){self.resetCause='SYSRESETREQ';r.warn('[NVIC] 시스템 리셋: 프로그램을 처음부터 다시 실행합니다.');yield {kind:'reset'};})();}
   if((name==='printf'||name==='puts'||name==='putchar')&&!this.inStdio&&this.stdoutHook(r))return this.stdout(name,args,r);
   if(name==='fflush')return this.stdout(name,args,r);
   if(name==='setvbuf'){this.unbuffered=args[2]===2;return (function*(){return 0;})();}
@@ -531,6 +602,74 @@ export class FspAdapter {
   const st=this.instance(ctrl,r,fn,kind);if(!callback)return FSP.ASSERTION;if(!st.open)return FSP.NOT_OPEN;
   st.callback=r.callback(callback).name;st.context=context?.kind==='pointer'?context:null;return FSP.SUCCESS;
  }
+ // ---- watchdogs (WDT: PCLKB / divider; IWDT: 15 kHz / divider). The settings are the Stacks' (they are OFS0 for an
+ // auto-started one; R_WDT_Open checks the cfg against them). The counter runs down from timeout - 1; an underflow or a
+ // refresh outside the window resets the program (RSTSR1 WDTRF / IWDTRF) or, with NMI, calls the callback from the NMI.
+ wdtState(id){
+  const key=id==='WDT'?'g_wdt0_ctrl':'g_iwdt0_ctrl';
+  if(!this.states.has(key)){const p={...RA_WDT[id].defaults,windowStart:100,windowEnd:0,reset:'RESET',...this.config.peripherals?.[id]};this.states.set(key,{name:key,channel:0,id,open:false,running:false,armed:false,flags:0,gen:0,count:0,t0:0,
+   timeout:p.timeout,div:p.clockDiv,windowStart:p.windowStart,windowEnd:p.windowEnd,reset:p.reset,auto:id==='IWDT'||p.startMode==='AUTO',callback:p.callback||''});}
+  return this.states.get(key);
+ }
+ wdtHz(st){return (st.id==='IWDT'?RA_IWDT_HZ:this.pclkb)/st.div;}
+ wdtCounter(r,st){if(!st.running)return st.count;return Math.max(0,st.count-Math.floor((r.microTime-st.t0)*this.wdtHz(st)/1e6+1e-6));}
+ wdtStart(r,st){
+  st.running=true;st.count=st.timeout-1;st.t0=r.microTime;const gen=++st.gen;
+  r.event((st.t0+st.timeout/this.wdtHz(st)*1e6)/1000,()=>{if(st.gen===gen&&st.running)this.wdtExpire(r,st,0x4000,`${(st.timeout/this.wdtHz(st)*1000).toFixed(1)} ms 안에 R_${st.id}_Refresh가 없었습니다`);});
+ }
+ wdtExpire(r,st,flag,why){
+  st.running=false;st.count=0;st.flags|=flag;st.gen++;
+  if(st.reset==='RESET'){
+   // A watchdog that resets again and again within a few milliseconds would restart the program forever (HalWdg).
+   const recent=(this.wdtResets??=[]);recent.push(r.microTime);while(recent.length>10)recent.shift();
+   if(recent.length===10&&recent[9]-recent[0]<20000)throw new Error(`[${st.id}] 워치독 리셋이 계속 반복됩니다(${why}). Stacks의 g_${st.id.toLowerCase()}0에서 Timeout·클록 분주를 키우거나 제때 R_${st.id}_Refresh를 부르세요.`);
+   this.resetCause=st.id;r.warn(`[${st.id}] ${why} — 워치독 리셋: 프로그램을 처음부터 다시 실행합니다(RSTSR1.${st.id}RF).`);r.restart();return;
+  }
+  // NMI (RSTIRQS 0): the BSP's NMI_Handler calls the driver's group callback, which calls the user's; above every
+  // interrupt priority, also with interrupts disabled.
+  if(st.open&&st.callback)this.queue(r,'NMI',-2,()=>this.callback(r,st.callback,'wdt_callback_args_t',{}),'NMI_Handler',`NMI:${st.id}`);
+ }
+ wdtRefresh(r,st){
+  if(!st.running){if(!st.auto)st.armed=true;this.wdtStart(r,st);return;}
+  const left=(this.wdtCounter(r,st)+1)/st.timeout*100;
+  if(left>st.windowStart+1e-9||st.windowEnd>0&&left<=st.windowEnd+1e-9){this.wdtExpire(r,st,0x8000,`허용 창(남은 카운트 ${st.windowEnd}~${st.windowStart} %) 밖에서 R_${st.id}_Refresh를 불렀습니다(남은 ${left.toFixed(1)} %)`);return;}
+  this.wdtStart(r,st);
+ }
+ // ---- RTC: the calendar model with no scheduler of its own; the alarm and periodic interrupts are timed here.
+ rtcModel(r){
+  if(!this.rtcDev){const p=this.config.peripherals?.RTC||{},soc={r,nowUs:()=>soc.r?.microTime??0,options:{rtcStart:p.start,hostTime:this.hostTime},listens:()=>false,raiseEvent(){},atUs:()=>null};this.rtcDev=new Rtc(soc);}
+  if(r)this.rtcDev.soc.r=r;return this.rtcDev;
+ }
+ rtcInstance(args,r,fn){
+  const st=this.instance(args[0],r,fn,'rtc');if(!this.config.peripherals?.RTC?.enabled)throw new Error(`${fn}: Stacks에서 g_rtc0 (r_rtc)을 추가하세요.`);
+  return st;
+ }
+ rtcCall(args,r,fn,action){const st=this.rtcInstance(args,r,fn);if(!st.open)return FSP.NOT_OPEN;return action(st,this.rtcModel(r));}
+ // r_rtc_set_clock_source: stop, software reset (the alarm registers), interrupts off, 24-hour mode.
+ rtcInit(dev){dev.write(0x24,0,1);dev.write(0x24,2,1);dev.write(0x22,0,1);dev.write(0x24,0x40,1);}
+ rtcTime(ptr,r,fn){const v=this.struct(ptr,r,null,fn);if(!['rtc_time_t','tm'].includes(v.type))throw new Error(`${fn}: rtc_time_t(struct tm) 구조체의 주소가 필요합니다.`);return v;}
+ // r_rtc_date_validate: the date of a 2000-2099 calendar (every fourth year a leap year), and tm_wday by Zeller.
+ rtcDate(t,r){
+  const g=k=>Number(t.fields[k].value),mon=g('tm_mon'),year=g('tm_year');
+  if(year<100||year>199||mon<0||mon>11)return false;
+  const days=mon===1&&(year+1900)%4===0?29:RTC_DAYS[mon];if(g('tm_mday')<1||g('tm_mday')>days)return false;
+  let m=mon+1,y=year+1900;if(m<3){m+=12;y--;}const h=(g('tm_mday')+Math.floor(13*(m+1)/5)+y+Math.floor(y/4)-15)%7;
+  this.setField(t,'tm_wday',(h+6)%7,r);return true;
+ }
+ rtcPlan(r,st){
+  const dev=this.rtcModel(r),gen=++st.gen;if(!dev.running)return;
+  const every=(us,fn)=>{const step=k=>r.event((dev.anchor+k*us)/1000,()=>{if(st.gen!==gen)return;fn();step(k+1);});step(Math.floor((r.microTime-dev.anchor)/us+1e-9)+1);};
+  if(st.pie&&RTC_PERIOD_S[st.pes])every(RTC_PERIOD_S[st.pes]*1e6,()=>this.rtcIrq(r,st,'PERIOD',2,st.periodicIpl));
+  if(st.aie)every(1e6,()=>{const match=dev.alarmMatch();if(match&&!dev.matched)this.rtcIrq(r,st,'ALARM',0,st.alarmIpl);dev.matched=match;});
+ }
+ rtcIrq(r,st,kind,event,ipl){if(st.open&&st.callback)this.queue(r,'RTC_'+kind,ipl,()=>this.callback(r,st.callback,'rtc_callback_args_t',{event}),'rtc_alarm_periodic_isr',`RTC:${kind}:${this.seq}`);}
+ wdtInstance(args,r,fn,id){
+  this.wdtState(id);const st=this.instance(args[0],r,fn,id.toLowerCase());
+  if(!st.id)throw new Error(`${fn}: Stacks의 g_${id.toLowerCase()}0 제어 구조체 주소(&g_${id.toLowerCase()}0_ctrl)를 넘기세요.`);
+  if(!this.config.peripherals?.[id]?.enabled)throw new Error(`${fn}: Stacks에서 g_${id.toLowerCase()}0 (${id==='WDT'?'r_wdt':'r_iwdt'})을 추가하세요.`);
+  return st;
+ }
+ wdtCall(args,r,fn,id,action){const st=this.wdtInstance(args,r,fn,id);if(!st.open)return FSP.NOT_OPEN;return action(st);}
 }
 for(const k of ['stdoutHook','stdout','flushStdout','stdinChar','stdin'])FspAdapter.prototype[k]=HalAdapter.prototype[k];
 
@@ -654,5 +793,90 @@ for(const [prefix,kind] of [['R_SPI_','spi'],['R_SCI_SPI_','sciSpi']])Object.ass
  [prefix+'WriteRead']([ctrl,src,dest,length,width],r,fn){return this.spiTransfer(r,fn,kind,'both',ctrl,src,dest,length,width);},
  [prefix+'CallbackSet'](args,r,fn){return this.spiCallbackSet(args,r,fn,kind);},
  [prefix+'Close'](args,r,fn){return this.spiClose(args,r,fn,kind);}
+});
+// R_WDT_* and R_IWDT_* (wdt_api_t): the same calls on either watchdog.
+for(const id of ['WDT','IWDT']){
+ const nmiOnly=(self,st,fn,action)=>self.config.peripherals?.[id]?.reset==='NMI'?action():FSP.UNSUPPORTED; // r_wdt.c: StatusGet/Clear need the NMI output
+ Object.assign(HANDLERS,{
+  [`R_${id}_Open`](args,r,fn){
+   const st=this.wdtInstance(args,r,fn,id);if(st.open)return FSP.ALREADY_OPEN;const cfg=this.struct(args[1],r,'wdt_cfg_t',fn),f=k=>Number(cfg.fields[k].value);
+   const timeout=[128,512,1024,2048,4096,8192,16384][f('timeout')];if(!RA_WDT[id].timeouts.includes(timeout))return FSP.ASSERTION;
+   // Register-start mode takes the cfg (written to WDTCR at Open); auto-start keeps what OFS0 set at reset.
+   if(!st.auto){
+    const div=Number(Object.keys(WDT_DIVISION_CODE).find(d=>WDT_DIVISION_CODE[d]===f('clock_division')));if(!RA_WDT[id].dividers.includes(div))throw new Error(`${fn}: ${id}의 클록 분주는 ${RA_WDT[id].dividers.map(d=>'/'+d).join(' · ')}입니다.`);
+    Object.assign(st,{timeout,div,windowStart:[25,50,75,100][f('window_start')],windowEnd:[75,50,25,0][f('window_end')],reset:f('reset_control')?'RESET':'NMI'});
+    if(!RA_WDT_WINDOW_START.includes(st.windowStart)||!RA_WDT_WINDOW_END.includes(st.windowEnd))return FSP.ASSERTION;
+   }
+   st.open=true;return FSP.SUCCESS;
+  },
+  [`R_${id}_Refresh`](args,r,fn){return this.wdtCall(args,r,fn,id,st=>{this.wdtRefresh(r,st);return FSP.SUCCESS;});},
+  [`R_${id}_StatusGet`](args,r,fn){return this.wdtCall(args,r,fn,id,st=>nmiOnly(this,st,fn,()=>{this.out(args[1],r,st.flags>>14,fn);return FSP.SUCCESS;}));},
+  [`R_${id}_StatusClear`](args,r,fn){return this.wdtCall(args,r,fn,id,st=>nmiOnly(this,st,fn,()=>{st.flags&=~((Number(args[1])&3)<<14);return FSP.SUCCESS;}));},
+  [`R_${id}_CounterGet`](args,r,fn){return this.wdtCall(args,r,fn,id,st=>{this.out(args[1],r,this.wdtCounter(r,st),fn);return FSP.SUCCESS;});},
+  [`R_${id}_TimeoutGet`](args,r,fn){return this.wdtCall(args,r,fn,id,st=>{const v=this.struct(args[1],r,'wdt_timeout_values_t',fn);this.setField(v,'clock_frequency_hz',Math.floor((id==='IWDT'?RA_IWDT_HZ:this.pclkb)/st.div),r);this.setField(v,'timeout_clocks',st.timeout,r);return FSP.SUCCESS;});},
+  [`R_${id}_CallbackSet`](args,r,fn){return this.wdtCall(args,r,fn,id,st=>{st.callback=r.callback(args[1]).name;return FSP.SUCCESS;});}
+ });
+}
+// R_RTC_* (rtc_api_t of FSP 6.6), as r_rtc.c does them on the RA6E1 (no alarm 1, RCR1.PES 6-15).
+Object.assign(HANDLERS,{
+ R_RTC_Open(args,r,fn){
+  const st=this.rtcInstance(args,r,fn);if(st.open)return FSP.ALREADY_OPEN;const cfg=this.struct(args[1],r,'rtc_cfg_t',fn),f=k=>Number(cfg.fields[k].value),p=this.config.peripherals.RTC;
+  if(f('clock_source')===1&&(f('freq_compare_value')<=7||f('freq_compare_value')>=0x1ff))return FSP.INVALID_ARGUMENT;
+  const dev=this.rtcModel(r);
+  // RTC_CFG_OPEN_SET_CLOCK_SOURCE 1 (start time "simulation"): Open stops the counter and the program sets the time.
+  if(p.start!=='HOST_TIME')this.rtcInit(dev);
+  Object.assign(st,{open:true,callback:p.callback||'',clockSource:f('clock_source'),alarmIpl:f('alarm_ipl'),alarmIrq:f('alarm_irq'),periodicIpl:f('periodic_ipl'),periodicIrq:f('periodic_irq'),carryIrq:f('carry_irq'),aie:false,pie:false,pes:0,gen:(st.gen||0)+1});
+  return FSP.SUCCESS;
+ },
+ R_RTC_Close(args,r,fn){return this.rtcCall(args,r,fn,(st,dev)=>{dev.write(0x22,0,1);dev.write(0x24,dev.read(0x24,1)&~1,1);st.open=st.aie=st.pie=false;st.gen++;this.dropJobs('RTC:');return FSP.SUCCESS;});},
+ R_RTC_ClockSourceSet(args,r,fn){return this.rtcCall(args,r,fn,(st,dev)=>{this.rtcInit(dev);st.aie=st.pie=false;st.gen++;return FSP.SUCCESS;});},
+ R_RTC_CalendarTimeSet(args,r,fn){return this.rtcCall(args,r,fn,(st,dev)=>{
+  const t=this.rtcTime(args[1],r,fn),g=k=>Number(t.fields[k].value);
+  if(g('tm_sec')<0||g('tm_sec')>59||g('tm_min')<0||g('tm_min')>59||g('tm_hour')<0||g('tm_hour')>23||!this.rtcDate(t,r))return FSP.INVALID_ARGUMENT;
+  // START 0, the counters (BCD), START 1: the second starts now.
+  dev.write(0x24,dev.read(0x24,1)&~1,1);
+  for(const [off,v]of [[0x02,g('tm_sec')],[0x04,g('tm_min')],[0x06,g('tm_hour')],[0x08,g('tm_wday')],[0x0a,g('tm_mday')],[0x0c,g('tm_mon')+1]])dev.write(off,off===0x08?v:bcd(v),1);
+  dev.write(0x0e,bcd(g('tm_year')-100),2);dev.write(0x24,dev.read(0x24,1)|1,1);
+  if(st.aie||st.pie)this.rtcPlan(r,st);return FSP.SUCCESS;
+ });},
+ R_RTC_CalendarTimeGet(args,r,fn){return this.rtcCall(args,r,fn,(st,dev)=>{
+  if(st.carryIrq<0)return FSP.IRQ_BSP_DISABLED;const t=this.rtcTime(args[1],r,fn),x=dev.fields();
+  for(const [k,v]of [['tm_sec',x.s],['tm_min',x.m],['tm_hour',x.h],['tm_wday',x.wd],['tm_mday',x.day],['tm_mon',x.mon-1],['tm_year',x.y%100+100]])this.setField(t,k,v,r);
+  return FSP.SUCCESS;
+ });},
+ R_RTC_CalendarAlarmSet(args,r,fn){return this.rtcCall(args,r,fn,(st,dev)=>{
+  if(st.alarmIrq<0)return FSP.IRQ_BSP_DISABLED;
+  const a=this.struct(args[1],r,'rtc_alarm_time_t',fn),m=k=>!!Number(a.fields[k].value),t=r.get(a.fields.time),g=k=>Number(t.fields[k].value);
+  if(m('sec_match')&&(g('tm_sec')<0||g('tm_sec')>59)||m('min_match')&&(g('tm_min')<0||g('tm_min')>59)||m('hour_match')&&(g('tm_hour')<0||g('tm_hour')>23))return FSP.INVALID_ARGUMENT;
+  if(m('year_match')&&m('mon_match')&&m('mday_match')){if(!this.rtcDate(t,r))return FSP.INVALID_ARGUMENT;}
+  else{
+   if(m('mon_match')&&(g('tm_mon')<0||g('tm_mon')>11)||m('year_match')&&(g('tm_year')<100||g('tm_year')>199))return FSP.INVALID_ARGUMENT;
+   const days=m('mon_match')?(g('tm_mon')===1?29:RTC_DAYS[g('tm_mon')]):31;
+   if(m('mday_match')&&(g('tm_mday')<1||g('tm_mday')>days)||m('dayofweek_match')&&(g('tm_wday')<0||g('tm_wday')>6))return FSP.INVALID_ARGUMENT;
+  }
+  // The alarm registers as r_rtc.c writes them (ENB b7 with the BCD value; RDAYAR 1 when off).
+  const reg=(on,v)=>on?(v|0x80):0;
+  dev.write(0x10,reg(m('sec_match'),bcd(g('tm_sec'))),1);dev.write(0x12,reg(m('min_match'),bcd(g('tm_min'))),1);dev.write(0x14,reg(m('hour_match'),bcd(g('tm_hour'))),1);
+  dev.write(0x16,reg(m('dayofweek_match'),g('tm_wday')),1);dev.write(0x18,m('mday_match')?bcd(g('tm_mday'))|0x80:1,1);dev.write(0x1a,reg(m('mon_match'),bcd(g('tm_mon')+1)),1);
+  dev.write(0x1c,m('year_match')?bcd(g('tm_year')-100):0,2);dev.write(0x1e,m('year_match')?0x80:0,1);
+  dev.matched=dev.alarmMatch();st.aie=true;this.rtcPlan(r,st);return FSP.SUCCESS;
+ });},
+ R_RTC_CalendarAlarmGet(args,r,fn){return this.rtcCall(args,r,fn,(st,dev)=>{
+  const a=this.struct(args[1],r,'rtc_alarm_time_t',fn),t=r.get(a.fields.time),b=off=>dev.read(off,1),un=v=>((v>>4)&15)*10+(v&15);
+  for(const [k,off,mask]of [['tm_sec',0x10,0x7f],['tm_min',0x12,0x7f],['tm_hour',0x14,0x3f],['tm_mday',0x18,0x3f]])this.setField(t,k,un(b(off)&mask),r);
+  this.setField(t,'tm_wday',b(0x16)&7,r);this.setField(t,'tm_mon',un(b(0x1a)&0x1f)-1,r);this.setField(t,'tm_year',un(b(0x1c))+100,r);
+  for(const [k,off]of [['sec_match',0x10],['min_match',0x12],['hour_match',0x14],['dayofweek_match',0x16],['mday_match',0x18],['mon_match',0x1a],['year_match',0x1e]])this.setField(a,k,(b(off)>>7)&1,r);
+  return FSP.SUCCESS;
+ });},
+ R_RTC_PeriodicIrqRateSet(args,r,fn){return this.rtcCall(args,r,fn,(st,dev)=>{
+  if(st.periodicIrq<0)return FSP.IRQ_BSP_DISABLED;const rate=Number(args[1]);
+  if(!RTC_PERIOD_S[rate])throw new Error(`${fn}: ${['RTC_PERIODIC_IRQ_SELECT_1_MINUTE','RTC_PERIODIC_IRQ_SELECT_1_HOUR','RTC_PERIODIC_IRQ_SELECT_1_DAY','RTC_PERIODIC_IRQ_SELECT_1_MONTH'][rate-16]??rate}: RA6E1의 RTC는 주기 인터럽트를 1/256초~2초만 냅니다(RCR1.PES 6~15). 실제 FSP는 이 값에서 끝없이 기다립니다. 1분 간격은 1초 주기를 세거나 알람으로 만드세요.`);
+  dev.write(0x22,(dev.read(0x22,1)&0x0f)|(rate<<4)|4,1);st.pie=true;st.pes=rate;this.rtcPlan(r,st);return FSP.SUCCESS;
+ });},
+ R_RTC_ErrorAdjustmentSet(args,r,fn){return this.rtcCall(args,r,fn,()=>FSP.SUCCESS);},
+ R_RTC_CallbackSet(args,r,fn){return this.rtcCall(args,r,fn,st=>{st.callback=r.callback(args[1]).name;return FSP.SUCCESS;});},
+ R_RTC_InfoGet(args,r,fn){return this.rtcCall(args,r,fn,(st,dev)=>{const v=this.struct(args[1],r,'rtc_info_t',fn);this.setField(v,'clock_source',st.clockSource,r);this.setField(v,'status',dev.running?1:0,r);return FSP.SUCCESS;});},
+ R_RTC_TimeCaptureSet(args,r,fn){throw new Error(`${fn}: 내장 해석기는 RTC 시간 캡처를 실행하지 않습니다. ARM GCC 빌드로 실행하세요.`);},
+ R_RTC_TimeCaptureGet(args,r,fn){throw new Error(`${fn}: 내장 해석기는 RTC 시간 캡처를 실행하지 않습니다. ARM GCC 빌드로 실행하세요.`);}
 });
 function timerCall(args,r,fn,kind,action){const st=this.instance(args[0],r,fn,kind);if(!st.open)return FSP.NOT_OPEN;action(st);return FSP.SUCCESS;}

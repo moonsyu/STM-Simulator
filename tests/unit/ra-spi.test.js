@@ -107,7 +107,7 @@ function fakeSoc(){
  let now=0;const queue=[],events=[],bytes=[],changed=[];
  const pins={SPI1_RSPCK:['P102'],SPI1_MOSI:['P101'],SPI1_MISO:['P100'],SPI1_SSL0:['P103'],SCI9_SCK:['P111'],SCI9_TXD:['P109'],SCI9_RXD:['P110']};
  const line=()=>({push(){},end:0});
- const soc={clock:{pclka:100e6},nowUs:()=>now,sync(){},icu:{raise:e=>events.push(e)},routedPins:s=>pins[s]||[],peripheralChanged:n=>changed.push(n),
+ const soc={clock:{pclka:100e6},nowUs:()=>now,sync(){},listens(e){return this.icu.linked?.(e)??false;},raiseEvent(e){this.icu.raise(e);},icu:{raise:e=>events.push(e)},routedPins:s=>pins[s]||[],peripheralChanged:n=>changed.push(n),
   after:(us,fn)=>{const e={t:now+us,fn,cancel(){e.dead=true;}};queue.push(e);return e;},atUs:(t,fn)=>soc.after(t-now,fn),
   spiTransfer:(name,p,byte,cfg)=>{bytes.push({name,byte,sck:p.sck,mosi:p.mosi,miso:p.miso,cpol:cfg.cpol,cpha:cfg.cpha});return ~byte&0xff;},
   signals:{receivers:new Set(),line,channel(){},annotate(){},uartFrame:(l,t)=>t}};

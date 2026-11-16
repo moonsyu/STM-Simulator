@@ -85,10 +85,10 @@ const FSP_API_OBJECTS=new Set(['g_adc_on_adc','g_can_on_can','g_elc_on_elc','g_e
 export function raNameProblem(name){
  if(C_WORDS.has(name))return `${name}은(는) C나 생성 코드가 쓰는 이름입니다`;
  if(/^(R_|BSP_|FSP_|IOPORT_|ELC_|ICU_|__)/.test(name)||/^_[A-Z]/.test(name))return `${name}: R_ · BSP_ · FSP_ · IOPORT_ 로 시작하는 이름과 __ 로 시작하는 이름은 FSP와 컴파일러가 씁니다`;
- if(/^g_(ioport|external_irq\d+|uart\d+|timer\d+|agt\d+|adc\d+|i2c_master\d+|spi\d+|sci_spi\d+|bsp_pin_cfg)(_ctrl|_cfg|_extend|_cfg_extend|_ext_cfg|_channel_cfg)?$/.test(name))return `${name}은(는) 생성 코드의 인스턴스 이름입니다`;
+ if(/^g_(ioport|external_irq\d+|uart\d+|timer\d+|agt\d+|adc\d+|i2c_master\d+|spi\d+|sci_spi\d+|wdt\d+|iwdt\d+|rtc\d+|bsp_pin_cfg)(_ctrl|_cfg|_extend|_cfg_extend|_ext_cfg|_channel_cfg|_err_cfg)?$/.test(name))return `${name}은(는) 생성 코드의 인스턴스 이름입니다`;
  // The interrupt service routines vector_data.h names (FSP drivers define them) and the drivers' API objects
  // (g_uart_on_sci, g_spi_on_spi, g_timer_on_gpt …: the extern const …_api_t g_<api>_on_<module> of the FSP 6.6 headers).
- if(/^((sci_uart|sci_spi|spi|iic_master)_(rxi|txi|tei|eri)|r_icu|adc_scan_end|agt_int|gpt_counter_overflow)_isr$/.test(name))return `${name}은(는) FSP 드라이버의 인터럽트 처리 함수(ISR) 이름입니다`;
+ if(/^((sci_uart|sci_spi|spi|iic_master)_(rxi|txi|tei|eri)|r_icu|adc_scan_end|agt_int|gpt_counter_overflow|rtc_alarm_periodic|rtc_carry)_isr$/.test(name))return `${name}은(는) FSP 드라이버의 인터럽트 처리 함수(ISR) 이름입니다`;
  if(FSP_API_OBJECTS.has(name))return `${name}은(는) FSP 드라이버의 API 객체 이름(g_…_on_…)입니다`;
  return '';
 }
@@ -101,6 +101,8 @@ function callbackArgType(where,p){
  if(/^(GPT|AGT)/.test(where))return 'timer_callback_args_t';
  if(/^ADC/.test(where))return 'adc_callback_args_t';
  if(/^IIC/.test(where))return 'i2c_master_callback_args_t';
+ if(/^I?WDT$/.test(where))return 'wdt_callback_args_t';
+ if(where==='RTC')return 'rtc_callback_args_t';
  return where;
 }
 const checkName=(where,name)=>{const problem=raNameProblem(name);if(problem)throw new Error(`${where}: ${problem}. 다른 이름을 쓰세요.`);};
@@ -155,6 +157,8 @@ export function validateRaMcu(mcu){
    if(agt){out.peripherals[id]=validateAgt(id,Number(agt[1]),p,fam,mcu.clock);continue;}
    const spi=/^SPI(\d)$/.exec(id);
    if(spi){out.peripherals[id]=validateSpi(id,Number(spi[1]),p,fam,mcu.clock,signals);continue;}
+   if(id==='WDT'||id==='IWDT'){out.peripherals[id]=validateWdt(id,p);continue;}
+   if(id==='RTC'){out.peripherals[id]=validateRtc(p);continue;}
    const sci=/^SCI(\d)$/.exec(id);if(!sci||!RA_SCI_CHANNELS.includes(Number(sci[1]))||!p||typeof p.enabled!=='boolean')throw new Error(`${id}: 지원하지 않는 주변장치입니다.`);
    // One SCI channel is either a UART (r_sci_uart, the default) or a simple SPI master (r_sci_spi), as RASC adds one
    // stack or the other on the channel; the UART settings keep their shape so earlier projects stay unchanged.
@@ -360,6 +364,72 @@ function validateGpt(id,ch,p,fam,clock,signals){
  raGptCounts(raClockHz({family:fam.id,clock}),ch,q.period,q.unit,q.duty);
  if(q.enabled&&q.mode==='PWM'&&!signals.has(id+'_GTIOCA')&&!signals.has(id+'_GTIOCB'))throw new Error(`${id}: PWM 출력 핀(GTIOC${ch}A 또는 GTIOC${ch}B)을 정하세요.`);
  return q;
+}
+// Watchdogs (r_wdt g_wdt0, r_iwdt g_iwdt0), pin-less stacks. Timeouts and dividers are the ones each one has
+// (r_wdt.c g_wdtcr_timeout, r_iwdt.c g_iwdt_timeout; the CKS codes of wdt_clock_division_t). The IWDT runs from OFS0 only
+// (BSP_FEATURE_IWDT_SUPPORTS_REGISTER_START_MODE 0); the WDT starts from its registers at the first R_WDT_Refresh, or
+// from OFS0 at reset (Start Mode: Auto).
+export const RA_WDT=Object.freeze({
+ WDT:Object.freeze({timeouts:[1024,4096,8192,16384],dividers:[4,64,128,512,2048,8192],defaults:{timeout:16384,clockDiv:8192}}),
+ IWDT:Object.freeze({timeouts:[128,512,1024,2048],dividers:[1,16,32,64,128,256],defaults:{timeout:2048,clockDiv:256}})
+});
+export const RA_WDT_WINDOW_START=Object.freeze([100,75,50,25]),RA_WDT_WINDOW_END=Object.freeze([0,25,50,75]);
+export const RA_IWDT_HZ=15000; // BSP_FEATURE_IWDT_CLOCK_FREQUENCY
+// wdt_clock_division_t / wdt_timeout_t (r_wdt_api.h) and the register field codes.
+export const WDT_DIVISION_CODE=Object.freeze({1:0,4:1,16:2,32:3,64:4,128:15,256:5,512:6,2048:7,8192:8});
+export const WDT_TIMEOUT_ENUM=Object.freeze({128:0,512:1,1024:2,2048:3,4096:4,8192:5,16384:6});
+const WDT_START_CODE={25:0,50:1,75:2,100:3},WDT_END_CODE={75:0,50:1,25:2,0:3};
+function validateWdt(id,p){
+ const info=RA_WDT[id];if(!p||typeof p.enabled!=='boolean')throw new Error(`${id}: 설정을 확인하세요.`);
+ const q={enabled:p.enabled,startMode:id==='IWDT'?'AUTO':p.startMode??'REGISTER',timeout:p.timeout??info.defaults.timeout,clockDiv:p.clockDiv??info.defaults.clockDiv,windowStart:p.windowStart??100,windowEnd:p.windowEnd??0,reset:p.reset??'RESET',stopInSleep:!!p.stopInSleep,callback:p.callback??''};
+ if(id==='IWDT'&&p.startMode!==undefined&&p.startMode!=='AUTO')throw new Error('IWDT: RA6E1의 IWDT는 OFS0으로 리셋 때 시작합니다(Register start mode 없음).');
+ if(!['REGISTER','AUTO'].includes(q.startMode))throw new Error(`${id}: 시작 방식은 Register 또는 Auto입니다.`);
+ if(!info.timeouts.includes(q.timeout))throw new Error(`${id}: Timeout은 ${info.timeouts.join(' · ')} 클록입니다.`);
+ if(!info.dividers.includes(q.clockDiv))throw new Error(`${id}: 클록 분주는 ${info.dividers.map(d=>'/'+d).join(' · ')}입니다.`);
+ if(!RA_WDT_WINDOW_START.includes(q.windowStart)||!RA_WDT_WINDOW_END.includes(q.windowEnd))throw new Error(`${id}: 새로 고침 창 시작은 100·75·50·25 %, 끝은 0·25·50·75 %입니다.`);
+ if(q.windowEnd>=q.windowStart)throw new Error(`${id}: 창 끝(${q.windowEnd} %)은 창 시작(${q.windowStart} %)보다 작아야 합니다.`);
+ if(!['RESET','NMI'].includes(q.reset))throw new Error(`${id}: 시간 초과 동작은 Reset 또는 NMI입니다.`);
+ if(typeof q.callback!=='string'||q.callback!==''&&!C_NAME.test(q.callback))throw new Error(`${id}: 콜백 이름은 C 식별자로 쓰세요(없으면 비워 둡니다).`);
+ if(q.reset==='NMI'&&!q.callback)throw new Error(`${id}: NMI로 알리려면 콜백 이름을 쓰세요.`);
+ return q;
+}
+// RTC (r_rtc g_rtc0), a pin-less stack. Count source LOCO (default: on the FPB-RA6E1 the 32.768 kHz crystal X2 is fitted
+// but E25/E26 are open, so XCIN/XCOUT reach only J3 and the sub-clock does not run as delivered) or the sub-clock; RFRL for
+// LOCO (r_rtc.c accepts 8-510; 255 makes 128 Hz from 32.768 kHz). Interrupt priorities as RASC (null: Disabled); the
+// carry interrupt is required (R_RTC_CalendarTimeGet uses it).
+// Start time (decision, feature 34): 'SIMULATION' (default) — at power-on the counters hold 2000-01-01 00:00:00, and
+// R_RTC_Open sets the count source and stops the RTC (RTC_CFG_OPEN_SET_CLOCK_SOURCE 1, FSP's default) so the program
+// sets the time: every run is the same, which tests and lessons need. 'HOST_TIME' — the counters hold the PC's local
+// time and run, as a battery-backed RTC that kept the time; Open leaves it running (RTC_CFG_OPEN_SET_CLOCK_SOURCE 0) and
+// R_RTC_CalendarTimeGet reads the PC time without setting it.
+export const RA_RTC_DEFAULTS=Object.freeze({clockSource:'LOCO',start:'SIMULATION',freqCompare:255,callback:'rtc_callback',alarmPriority:12,periodicPriority:12,carryPriority:12});
+function validateRtc(p){
+ if(!p||typeof p.enabled!=='boolean')throw new Error('RTC: 설정을 확인하세요.');
+ const q={enabled:p.enabled,...RA_RTC_DEFAULTS,...Object.fromEntries(Object.keys(RA_RTC_DEFAULTS).filter(k=>p[k]!==undefined).map(k=>[k,p[k]]))};
+ if(!['LOCO','SUBCLOCK'].includes(q.clockSource))throw new Error('RTC: 클록 소스는 LOCO 또는 Sub-Clock입니다.');
+ if(!['SIMULATION','HOST_TIME'].includes(q.start))throw new Error('RTC: 시작 시각은 시뮬레이션(2000-01-01) 또는 PC 시각입니다.');
+ if(!Number.isInteger(q.freqCompare)||q.freqCompare<8||q.freqCompare>510)throw new Error('RTC: 주파수 비교값(RFRL)은 8~510입니다(LOCO 32.768 kHz에서 255).');
+ if(typeof q.callback!=='string'||q.callback!==''&&!C_NAME.test(q.callback))throw new Error('RTC: 콜백 이름은 C 식별자로 쓰세요(없으면 비워 둡니다).');
+ for(const [k,label,optional]of [['alarmPriority','Alarm',true],['periodicPriority','Period',true],['carryPriority','Carry',false]])
+  if(!(optional&&q[k]===null)&&(!Number.isInteger(q[k])||q[k]<0||q[k]>15))throw new Error(`RTC: ${label} 인터럽트 우선순위는 0~15${optional?'(또는 Disabled)':''}입니다.`);
+ return q;
+}
+/** A watchdog's count clock, timeout clocks and timeout in ms for a configuration ("WDT": PCLKB / divider; "IWDT": 15 kHz / divider). */
+export function raWdtTiming(mcu,id){
+ const p={...RA_WDT[id].defaults,...(mcu?.peripherals?.[id]||{})},hz=(id==='IWDT'?RA_IWDT_HZ:raClockHz(mcu,'pclkb'))/p.clockDiv;
+ return {hz,clocks:p.timeout,ms:p.timeout/hz*1000};
+}
+/** OFS0 (BSP_CFG_OPTION_SETTING_OFS0) for a configuration: erased (0xFFFFFFFF) but for an auto-started watchdog. Bit
+ *  positions: r_iwdt.c IWDT_PRV_OFS0_* (IWDTSTRT b1, TOPS b3:2, CKS b7:4, RSTIRQS b12) and r_wdt.c WDT_PRV_OFSX_* (the WDT
+ *  fields from b16: WDTSTRT b17 … STPCTL b30); the IWDT window and stop bits (RPES b9:8, RPSS b11:10, STPCTL b14) mirror them. */
+export function raOfs0(mcu){
+ let ofs=0xffffffff;
+ for(const [id,base]of [['IWDT',0],['WDT',16]]){
+  const p=mcu?.peripherals?.[id];if(!p?.enabled||(id==='WDT'&&p.startMode!=='AUTO'))continue;
+  const tops=RA_WDT[id].timeouts.indexOf(p.timeout),field=(0<<1)|(tops<<2)|(WDT_DIVISION_CODE[p.clockDiv]<<4)|(WDT_END_CODE[p.windowEnd]<<8)|(WDT_START_CODE[p.windowStart]<<10)|((p.reset==='RESET'?1:0)<<12)|((p.stopInSleep?1:0)<<14);
+  ofs=((ofs&~(0x5ffe<<base))|(field<<base))>>>0; // bits 0, 13 and 15 of each half are reserved (stay 1)
+ }
+ return ofs>>>0;
 }
 /** PSEL of a peripheral signal ("SCI9_TXD" → 5). */
 export function raPsel(signal){
