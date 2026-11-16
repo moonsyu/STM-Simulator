@@ -628,7 +628,7 @@ export class FspAdapter {
   if(st.reset!=='RESET'){
    // NMI (RSTIRQS 0): the BSP's NMI_Handler calls the driver's group callback, which calls the user's; above every
    // interrupt priority, also with interrupts disabled.
-   if(st.open&&st.callback)this.queue(r,'NMI',-2,()=>this.callback(r,st.callback,'wdt_callback_args_t',{}),'NMI_Handler',`NMI:${st.id}`);
+   if(st.open&&st.callback)this.queue(r,'NMI',-2,()=>this.callback(r,st.callback,'wdt_callback_args_t',this.contextField(st)),'NMI_Handler',`NMI:${st.id}`);
    return false;
   }
   // A watchdog that resets again and again within a few milliseconds would restart the program forever (HalWdg).
@@ -682,10 +682,19 @@ export class FspAdapter {
  rtcPlan(r,st){
   const dev=this.rtcModel(r),gen=++st.gen;if(!dev.running)return;
   const every=(us,fn)=>{const step=k=>r.event((dev.anchor+k*us)/1000,()=>{if(st.gen!==gen)return;fn();step(k+1);});step(Math.floor((r.microTime-dev.anchor)/us+1e-9)+1);};
-  if(st.pie&&RTC_PERIOD_S[st.pes])every(RTC_PERIOD_S[st.pes]*1e6,()=>this.rtcIrq(r,st,'PERIOD',2,st.periodicIpl));
+  // The alarm is planned first: at the same instant and priority its request comes before the periodic one's, as the
+  // lower vector number (RTC_ALARM before RTC_PERIOD) is taken first.
   if(st.aie)every(1e6,()=>{const match=dev.alarmMatch();if(match&&!dev.matched)this.rtcIrq(r,st,'ALARM',0,st.alarmIpl);dev.matched=match;});
+  if(st.pie&&RTC_PERIOD_S[st.pes])every(RTC_PERIOD_S[st.pes]*1e6,()=>this.rtcIrq(r,st,'PERIOD',2,st.periodicIpl));
  }
- rtcIrq(r,st,kind,event,ipl){if(st.open&&st.callback)this.queue(r,'RTC_'+kind,ipl,()=>this.callback(r,st.callback,'rtc_callback_args_t',{event}),'rtc_alarm_periodic_isr',`RTC:${kind}:${this.seq}`);}
+ // R_x_CallbackSet(ctrl, p_callback, p_context, p_callback_memory) as r_rtc.c / r_wdt.c / r_iwdt.c check it: a NULL
+ // callback is an assertion (before the open state is looked at); the context is handed to the callback.
+ callbackSet(st,[,callback,context],r){
+  if(!callback)return FSP.ASSERTION;if(!st.open)return FSP.NOT_OPEN;
+  st.callback=r.callback(callback).name;st.context=context?.kind==='pointer'?context:null;return FSP.SUCCESS;
+ }
+ contextField(st){return st.context?{p_context:st.context}:{};}
+ rtcIrq(r,st,kind,event,ipl){if(st.open&&st.callback)this.queue(r,'RTC_'+kind,ipl,()=>this.callback(r,st.callback,'rtc_callback_args_t',{event,...this.contextField(st)}),'rtc_alarm_periodic_isr',`RTC:${kind}`);}
  wdtInstance(args,r,fn,id){
   this.wdtState(id);const st=this.instance(args[0],r,fn,id.toLowerCase());
   if(!st.id)throw new Error(`${fn}: Stacks의 g_${id.toLowerCase()}0 제어 구조체 주소(&g_${id.toLowerCase()}0_ctrl)를 넘기세요.`);
@@ -836,7 +845,7 @@ for(const id of ['WDT','IWDT']){
    }
    st.open=true;
    // An underflow before Open (auto-start, NMI): the status is set, and enabling the NMI in Open (NMIER) raises it.
-   if(st.reset==='NMI'&&st.flags&&st.callback)this.queue(r,'NMI',-2,()=>this.callback(r,st.callback,'wdt_callback_args_t',{}),'NMI_Handler',`NMI:${st.id}`);
+   if(st.reset==='NMI'&&st.flags&&st.callback)this.queue(r,'NMI',-2,()=>this.callback(r,st.callback,'wdt_callback_args_t',this.contextField(st)),'NMI_Handler',`NMI:${st.id}`);
    return FSP.SUCCESS;
   },
   [`R_${id}_Refresh`](args,r,fn){return this.wdtCall(args,r,fn,id,st=>{this.wdtRefresh(r,st);return FSP.SUCCESS;});},
@@ -844,7 +853,7 @@ for(const id of ['WDT','IWDT']){
   [`R_${id}_StatusClear`](args,r,fn){return this.wdtCall(args,r,fn,id,st=>nmiOnly(this,st,fn,()=>{st.flags&=~((Number(args[1])&3)<<14);return FSP.SUCCESS;}));},
   [`R_${id}_CounterGet`](args,r,fn){return this.wdtCall(args,r,fn,id,st=>{this.out(args[1],r,this.wdtCounter(r,st),fn);return FSP.SUCCESS;});},
   [`R_${id}_TimeoutGet`](args,r,fn){return this.wdtCall(args,r,fn,id,st=>{const v=this.struct(args[1],r,'wdt_timeout_values_t',fn);this.setField(v,'clock_frequency_hz',Math.floor((id==='IWDT'?RA_IWDT_HZ:this.pclkb)/st.div),r);this.setField(v,'timeout_clocks',st.timeout,r);return FSP.SUCCESS;});},
-  [`R_${id}_CallbackSet`](args,r,fn){return this.wdtCall(args,r,fn,id,st=>{st.callback=r.callback(args[1]).name;return FSP.SUCCESS;});}
+  [`R_${id}_CallbackSet`](args,r,fn){return this.callbackSet(this.wdtInstance(args,r,fn,id),args,r);}
  });
 }
 // R_RTC_* (rtc_api_t of FSP 6.6), as r_rtc.c does them on the RA6E1 (no alarm 1, RCR1.PES 6-15).
@@ -855,7 +864,7 @@ Object.assign(HANDLERS,{
   const dev=this.rtcModel(r);
   // RTC_CFG_OPEN_SET_CLOCK_SOURCE 1 (start time "simulation"): Open stops the counter and the program sets the time.
   if(p.start!=='HOST_TIME')this.rtcInit(dev);
-  Object.assign(st,{open:true,callback:p.callback||'',clockSource:f('clock_source'),alarmIpl:f('alarm_ipl'),alarmIrq:f('alarm_irq'),periodicIpl:f('periodic_ipl'),periodicIrq:f('periodic_irq'),carryIrq:f('carry_irq'),aie:false,pie:false,pes:0,gen:(st.gen||0)+1});
+  Object.assign(st,{open:true,callback:p.callback||'',context:null,clockSource:f('clock_source'),alarmIpl:f('alarm_ipl'),alarmIrq:f('alarm_irq'),periodicIpl:f('periodic_ipl'),periodicIrq:f('periodic_irq'),carryIrq:f('carry_irq'),aie:false,pie:false,pes:0,gen:(st.gen||0)+1});
   return FSP.SUCCESS;
  },
  R_RTC_Close(args,r,fn){return this.rtcCall(args,r,fn,(st,dev)=>{dev.write(0x22,0,1);dev.write(0x24,dev.read(0x24,1)&~1,1);st.open=st.aie=st.pie=false;st.gen++;this.dropJobs('RTC:');return FSP.SUCCESS;});},
@@ -903,8 +912,12 @@ Object.assign(HANDLERS,{
   if(!RTC_PERIOD_S[rate])throw new Error(`${fn}: ${['RTC_PERIODIC_IRQ_SELECT_1_MINUTE','RTC_PERIODIC_IRQ_SELECT_1_HOUR','RTC_PERIODIC_IRQ_SELECT_1_DAY','RTC_PERIODIC_IRQ_SELECT_1_MONTH'][rate-16]??rate}: RA6E1의 RTC는 주기 인터럽트를 1/256초~2초만 냅니다(RCR1.PES 6~15). 실제 FSP는 이 값에서 끝없이 기다립니다. 1분 간격은 1초 주기를 세거나 알람으로 만드세요.`);
   dev.write(0x22,(dev.read(0x22,1)&0x0f)|(rate<<4)|4,1);st.pie=true;st.pes=rate;this.rtcPlan(r,st);return FSP.SUCCESS;
  });},
- R_RTC_ErrorAdjustmentSet(args,r,fn){return this.rtcCall(args,r,fn,()=>FSP.SUCCESS);},
- R_RTC_CallbackSet(args,r,fn){return this.rtcCall(args,r,fn,st=>{st.callback=r.callback(args[1]).name;return FSP.SUCCESS;});},
+ // r_rtc.c: only with the sub-clock; the value up to 0x3F, and automatic adjustment needs a period.
+ R_RTC_ErrorAdjustmentSet(args,r,fn){return this.rtcCall(args,r,fn,st=>{
+  if(st.clockSource!==0)return FSP.UNSUPPORTED;const c=this.struct(args[1],r,'rtc_error_adjustment_cfg_t',fn),g=k=>Number(c.fields[k].value);
+  return g('adjustment_mode')===1&&g('adjustment_period')===2||g('adjustment_value')>0x3f?FSP.INVALID_ARGUMENT:FSP.SUCCESS;
+ });},
+ R_RTC_CallbackSet(args,r,fn){const st=this.rtcInstance(args,r,fn);return this.callbackSet(st,args,r);},
  R_RTC_InfoGet(args,r,fn){return this.rtcCall(args,r,fn,(st,dev)=>{const v=this.struct(args[1],r,'rtc_info_t',fn);this.setField(v,'clock_source',st.clockSource,r);this.setField(v,'status',dev.running?1:0,r);return FSP.SUCCESS;});},
  R_RTC_TimeCaptureSet(args,r,fn){throw new Error(`${fn}: 내장 해석기는 RTC 시간 캡처를 실행하지 않습니다. ARM GCC 빌드로 실행하세요.`);},
  R_RTC_TimeCaptureGet(args,r,fn){throw new Error(`${fn}: 내장 해석기는 RTC 시간 캡처를 실행하지 않습니다. ARM GCC 빌드로 실행하세요.`);}

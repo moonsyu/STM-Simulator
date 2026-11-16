@@ -323,3 +323,21 @@ void hal_entry(void)
  run(190);assert.equal(session.readVariable('nmis'),0,'underflow at 136.5 ms: not enabled yet');
  run(210);assert.equal(session.readVariable('nmis'),1);assert.equal(session.readVariable('status'),1,'WDT_STATUS_UNDERFLOW');
 });
+
+// Review of feature 34 (item 4), the same for the watchdogs: CallbackSet's context and its NULL check.
+test('interpreter: R_WDT_CallbackSet hands p_context to the NMI callback; a NULL callback is FSP_ERR_ASSERTION',()=>{
+ const {session,run}=interp(`volatile uint32_t c0 = 99, c1 = 99, got = 0;
+static uint32_t tag = 0x77;
+void first(wdt_callback_args_t *p_args){ (void) p_args; }
+void second(wdt_callback_args_t *p_args){ got = *(uint32_t *) p_args->p_context; }
+void hal_entry(void)
+{
+    c0 = R_WDT_CallbackSet(&g_wdt0_ctrl, NULL, NULL, NULL);
+    R_WDT_Open(&g_wdt0_ctrl, &g_wdt0_cfg);
+    c1 = R_WDT_CallbackSet(&g_wdt0_ctrl, second, &tag, NULL);
+    R_WDT_Refresh(&g_wdt0_ctrl);
+    while (1) { }
+}`,{WDT:{enabled:true,timeout:1024,clockDiv:64,reset:'NMI',callback:'first'}});
+ run(10);assert.equal(session.readVariable('c0'),1);assert.equal(session.readVariable('c1'),0);
+ assert.equal(session.readVariable('got'),0x77,'underflow after 1.3 ms');
+});

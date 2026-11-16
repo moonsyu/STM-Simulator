@@ -272,3 +272,34 @@ void hal_entry(void)
   run(215);assert.equal(same('nmis'),1);assert.equal(same('status'),1,'WDT_STATUS_UNDERFLOW');assert.deepEqual(emu.resets,[]);
  });
 });
+
+test('RTC interrupts on both engines: the alarm before the periodic one of the same second; requests masked for 1.1 s come as one callback',{skip,timeout:600000},async()=>{
+ await both({RTC:{enabled:true}},`
+volatile uint32_t order = 0, masked = 0, periods = 0;
+void rtc_callback(rtc_callback_args_t *p_args)
+{
+    if (masked) { if (RTC_EVENT_PERIODIC_IRQ == p_args->event) { periods++; } return; }
+    order = order * 10 + (RTC_EVENT_ALARM_IRQ == p_args->event ? 1 : 3);
+}
+void hal_entry(void)
+{
+    rtc_time_t t = { .tm_sec = 58, .tm_min = 0, .tm_hour = 0, .tm_mday = 1, .tm_mon = 0, .tm_year = 126 };
+    rtc_alarm_time_t a = { .time = { .tm_sec = 0 }, .sec_match = true };
+    R_RTC_Open(&g_rtc0_ctrl, &g_rtc0_cfg);
+    R_RTC_CalendarTimeSet(&g_rtc0_ctrl, &t);
+    R_RTC_PeriodicIrqRateSet(&g_rtc0_ctrl, RTC_PERIODIC_IRQ_SELECT_1_SECOND);
+    R_RTC_CalendarAlarmSet(&g_rtc0_ctrl, &a);
+    R_BSP_SoftwareDelay(3100, BSP_DELAY_UNITS_MILLISECONDS);
+    masked = 1;
+    R_RTC_PeriodicIrqRateSet(&g_rtc0_ctrl, RTC_PERIODIC_IRQ_SELECT_1_DIV_BY_4_SECOND);
+    __disable_irq();
+    R_BSP_SoftwareDelay(1100, BSP_DELAY_UNITS_MILLISECONDS);
+    __enable_irq();
+    __disable_irq();
+    while (1) { }
+}
+`,({run,same})=>{
+  run(4300);
+  assert.equal(same('order'),3133,'1 s: period; 2 s: alarm, then period; 3 s: period');assert.equal(same('periods'),1,'one pending request');
+ });
+});

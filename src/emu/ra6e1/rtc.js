@@ -14,6 +14,7 @@ export const RTC_EVENT = Object.freeze({ ALARM: 0x54, PERIOD: 0x55, CARRY: 0x56 
 const PERIOD_S = { 6: 1 / 256, 7: 1 / 128, 8: 1 / 64, 9: 1 / 32, 10: 1 / 16, 11: 1 / 8, 12: 1 / 4, 13: 1 / 2, 14: 1, 15: 2 };
 const bcd = n => ((Math.floor(n / 10) << 4) | (n % 10)), unbcd = n => ((n >> 4) & 15) * 10 + (n & 15);
 const RCR1 = 0x22, RCR2 = 0x24;
+const CENTURY_0 = Date.UTC(2000, 0, 1) / 1000, CENTURY_S = 36525 * 86400;
 /** Calendar seconds (Date.UTC based, no time zone) of a date and time. */
 export const rtcSeconds = (y, mon, d, h, m, s) => Date.UTC(y, mon - 1, d, h, m, s) / 1000;
 /** The power-on calendar of a start mode: 2000-01-01 00:00:00, or the local time of `hostMs` (Date.now()). */
@@ -42,7 +43,10 @@ export class Rtc {
     if (!this.running) return { ...f };
     const n = Math.floor((this.now() - this.anchor) / 1e6 + 1e-9);
     if (!n) return { ...f };
-    const base = rtcSeconds(f.y, f.mon, f.day, f.h, f.m, f.s), d = new Date((base + n) * 1000), days = Math.floor((base + n) / 86400) - Math.floor(base / 86400);
+    // The year counter is two BCD digits and every fourth year is a leap year: after 99 comes 00, a leap year again, so
+    // the calendar is the one of 2000-2099 repeated (36525 days), not the Gregorian 2100.
+    const base = rtcSeconds(f.y, f.mon, f.day, f.h, f.m, f.s), days = Math.floor((base + n) / 86400) - Math.floor(base / 86400);
+    const d = new Date((CENTURY_0 + ((base + n - CENTURY_0) % CENTURY_S + CENTURY_S) % CENTURY_S) * 1000);
     return { y: d.getUTCFullYear(), mon: d.getUTCMonth() + 1, day: d.getUTCDate(), h: d.getUTCHours(), m: d.getUTCMinutes(), s: d.getUTCSeconds(), wd: (f.wd + days) % 7 };
   }
   start() { if (this.running) return; this.running = true; this.anchor = this.now(); this.matched = this.alarmMatch(); this.plan(); }
@@ -124,7 +128,8 @@ export class Rtc {
     const v = value & 0xff;
     if (off >= 0x02 && off <= 0x0e && !(off & 1)) { this.setField(off, v); this.matched = this.alarmMatch(); this.plan(); return; }
     if (off === RCR2) {
-      if (v & 2) { this.b.fill(0, 0x10, 0x20); this.anchor = this.now(); this.matched = false; } // RESET: prescaler and alarms
+      // RESET: the prescaler and the alarm registers. The calendar keeps what it has counted (the second starts again).
+      if (v & 2) { if (this.running) this.f = this.fields(); this.b.fill(0, 0x10, 0x20); this.anchor = this.now(); this.matched = false; }
       this.b[RCR2] = v & ~0x07;
       if (v & 1) this.start(); else this.stop();
       this.plan(); return;
