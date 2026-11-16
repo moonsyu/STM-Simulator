@@ -11,7 +11,7 @@ test('a second STM32 board is added, edited by swapping with the main board, and
   const {win}=s;await openBoardView(win);
   // The start circuit has no board yet: put the NUCLEO-F103RB on the canvas, then add a NUCLEO-F446RE.
   await win.click('#empty-add-board');
-  await win.click('[data-devboard-add="nucleo-f446re"]');
+  await win.click('#devboard-options [data-devboard-add="nucleo-f446re"]');
   assert.equal(await win.evaluate(()=>document.querySelectorAll('#devboard-layer [data-devboard="nucleo-f446re"] [data-button$=".USER"]').length),1);
   assert.equal(await win.textContent('#surface .board-title'),'STM32-1 · 편집 중');
   assert.match(await win.textContent('#inspector'),/STM32-2[\s\S]*이 보드 편집/);

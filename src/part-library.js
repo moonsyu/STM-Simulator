@@ -41,3 +41,12 @@ export function searchParts(query){
  const text=normalize(query);
  return PART_LIBRARY.filter(part=>part.searchText.includes(text));
 }
+// Other boards (ESP32, Raspberry Pi, a second STM32 board) are listed in the parts search too: they are added from
+// 보드와 핀 → 다른 보드 추가, but a board is what people type into the parts search first.
+const BOARD_WORDS={esp32:'esp32 esp 32 espressif wifi 와이파이 블루투스 bluetooth arduino 아두이노',rpi:'raspberry pi rpi 라즈베리파이 라즈베리 파이 gpio 40핀',stm32:'stm stm32 nucleo 뉴클레오 st'};
+/** Search rows for the boards of `models` (DEVBOARD_MODELS): {id, name, hint, icon, searchText}. */
+export function boardLibrary(models){
+ return Object.values(models).map(m=>({id:m.id,name:m.name,hint:m.description,icon:({rpi:'Pi',stm32:'ST'})[m.kind]??'32',
+  searchText:normalize([m.id,m.name,m.short,m.chip,m.module||'',m.description,BOARD_WORDS[m.kind]||'','board 보드 개발보드 개발 보드 mcu'].join(' '))}));
+}
+export function searchBoards(library,query){const text=normalize(query);return library.filter(b=>b.searchText.includes(text));}
