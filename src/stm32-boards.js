@@ -175,7 +175,7 @@ export function connectStm32Drivers(session){
  // A board as seen from another one: the main board's pins are `<viewer id>.PA5` there (viewMapper).
  const port=(viewer,board)=>{
   const hal=()=>board.session().hal,r=()=>board.session().runtime;
-  return {part:{id:board.id??viewer.id},i2cSlave:()=>hal()?.i2cSlaveInfo(),i2cReceive:bytes=>hal().i2cSlaveReceive(bytes,r()),i2cRequest:count=>hal().i2cSlaveRequest(count,r()),spiSlave:()=>hal()?.spiSlaveInfo(),spiExchange:value=>hal().spiSlaveExchange(value,r())};
+  return {part:{id:board.id??viewer.id},i2cSlave:()=>hal()?.i2cSlaveInfo(),i2cProbe:()=>hal()?.i2cSlaveProbe?.(r()),i2cReceive:bytes=>hal().i2cSlaveReceive(bytes,r()),i2cRequest:count=>hal().i2cSlaveRequest(count,r()),spiSlave:()=>hal()?.spiSlaveInfo(),spiExchange:value=>hal().spiSlaveExchange(value,r())};
  };
  const buses=s=>s.hal?[...s.hal.serials.values()].map(c=>c.bus):[s.buses];
  for(const from of boards){

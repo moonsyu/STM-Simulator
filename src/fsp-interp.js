@@ -541,6 +541,8 @@ export class FspAdapter {
   else{if(st.total>st.loaded)st.count=(st.count-1)>>>0;this.slaveNotify(r,st,3);}
   return ok;
  }
+ // The address with W and a STOP, no data (a bus scan): no buffer was asked for, so iic_err_slave reports TX_COMPLETE.
+ i2cSlaveProbe(r){this.i2cSlaveReceive([],r);}
  // The master reads `count` bytes after the address; 0xFF where the slave has nothing to send.
  i2cSlaveRequest(count,r){
   const st=this.slaveOpen(),out=[];if(!st){while(out.length<count)out.push(0xff);return out;}

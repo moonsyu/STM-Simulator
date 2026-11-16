@@ -51,6 +51,8 @@ export class BusDevices {
     let ready=connected;const data=this.i2cPhase(head.endUs,bytes,bytes.map(()=>'master'),()=>ready,{start:false});
     const received=data.seen.slice(0,data.acks.length);
     if(received.length){if(part.type==='board')ready=part.driver.i2cReceive(received)!==false;else if(part.type==='i2c'){const m=this.memory(part);m.address=received[0];for(const value of received.slice(1)){m.data[m.address]=value;m.address=(m.address+1)&255;}}else ready=this.devices.writeI2c(part,received,runtime.microTime,this.result(),address);}
+    // Address and STOP with no data (a bus scan): a board slave that reports it hears of it (r_iic_slave has an event for it).
+    else if(connected&&part?.type==='board'&&!bytes.length)part.driver.i2cProbe?.();
     const ok=ready&&!data.busError&&data.acks.length===bytes.length&&data.acks.every(Boolean);return {ok,busError:data.busError,nack:!ok&&!data.busError,written:received.length};
   }
   i2cRead(address,count,runtime,at=runtime.microTime){

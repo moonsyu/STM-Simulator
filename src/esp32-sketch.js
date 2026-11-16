@@ -44,8 +44,9 @@ export class SketchDriver{
    const slave=()=>Object.values(host.soc.i2cs??{}).find(x=>x.slaveInfo?.());
    ports.push({emulated:slave,net,i2cSlave:()=>slave()?.slaveInfo()??null,
     i2cReceive:bytes=>{const s=slave();if(!s)return false;s.slaveAddress(false);const acks=bytes.map(b=>s.slaveWrite(b));s.slaveStop();return acks.every(Boolean);},
+    i2cProbe:()=>{const s=slave();if(s){s.slaveAddress(false);s.slaveStop();}},
     i2cRequest:count=>Array.from({length:count},()=>0xff)});
-  }else if(host.hal?.i2cSlaveInfo)ports.push({net,i2cSlave:()=>host.hal.i2cSlaveInfo(),i2cReceive:bytes=>host.hal.i2cSlaveReceive(bytes,host.runtime),i2cRequest:count=>host.hal.i2cSlaveRequest(count,host.runtime)});
+  }else if(host.hal?.i2cSlaveInfo)ports.push({net,i2cSlave:()=>host.hal.i2cSlaveInfo(),i2cProbe:()=>host.hal.i2cSlaveProbe?.(host.runtime),i2cReceive:bytes=>host.hal.i2cSlaveReceive(bytes,host.runtime),i2cRequest:count=>host.hal.i2cSlaveRequest(count,host.runtime)});
   return ports;
  }
  // Wire.requestFrom from an emulated slave waits for the slave's program: SCL is held (clock stretching) until each byte
