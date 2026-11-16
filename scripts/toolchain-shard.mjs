@@ -37,9 +37,11 @@ export const TOOLCHAIN_SHARDS=Object.freeze([
  ['ra-build','wdg','tim-basic','ra-spi',['fsp-interp-parity','parity: ra_led4_switch2'],['ra-wdt-rtc','IWDT: OFS0|WDT NMI:']],
  // the rest of ra-course 61 + 26 + 15 = 102 + parity of UART and GPT (16 s locally)
  // (the tests are named: a "not this one" pattern with a lookahead did not keep the heavy test out)
- [['ra-course','Bare Metal - Blinky|switch polling toggles|the challenge:|BSP tab sizes|as the course screen shows it'],'adc-continuous','clock-tree',['fsp-interp-parity','parity: ra_uart_echo']],
+ [['ra-course','Bare Metal - Blinky|switch polling toggles|the challenge:|BSP tab sizes|as the course screen shows it'],'adc-continuous','clock-tree',['fsp-interp-parity','parity: ra_uart_echo|parity: ra_iic_slave']],
+ // (+ parity of the I2C slave example with its ESP32 master, feature 33: about 8 s locally, in the group above)
  // 26 + 23 + 22 + 17 + 16 = 104 + parity of the SPI memory (15 s locally, 1.51.x)
- ['emu-accuracy','dwarf-version','board-links','copied-files','adc-group','peripheral-files','project-overrides',['fsp-interp-parity','parity: ra_spi_memory']],
+ // + ra-iic-slave (feature 33: two FSP builds, about 10 s locally)
+ ['emu-accuracy','dwarf-version','board-links','copied-files','adc-group','peripheral-files','project-overrides',['fsp-interp-parity','parity: ra_spi_memory'],'ra-iic-slave'],
  // 17 + 16 + 14 + 13 + 11 + 9 + 9 + 9 + 9 = 107
  // + the RTC tests of ra-wdt-rtc (feature 34: about 22 s locally)
  ['tim-oc','adc-sampling','tim-advanced','dac','rtc','source-folders','spi-params','tim-channels','uart-params',['ra-wdt-rtc','RTC \\(ra_rtc_clock\\)|RTC start time']],
