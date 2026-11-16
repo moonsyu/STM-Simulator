@@ -119,7 +119,8 @@ export class Iic {
   // ------------------------------------------------------------ slave side (the master is another board's I²C adapter)
   slaveAddressValue() { return this.r[SARL0] >> 1; }
   slaveListens(addr) {
-    return (this.r[ICCR1] & 0xc0) === 0x80 && !!(this.r[ICSER] & 1) && !(this.r[SARU0] & 1) && this.slaveAddressValue() === addr && this.state === 'idle' && !(this.r[ICCR2] & 0x40);
+    // A stopped module (R_IIC_SLAVE_Close ends with R_BSP_MODULE_STOP) has no clock: it does not answer its address.
+    return !this.soc.iicStopped?.(this.channel) && (this.r[ICCR1] & 0xc0) === 0x80 && !!(this.r[ICSER] & 1) && !(this.r[SARU0] & 1) && this.slaveAddressValue() === addr && this.state === 'idle' && !(this.r[ICCR2] & 0x40);
   }
   /** {address, sda, scl} while this channel answers as a slave (for a master that asks once per transfer). */
   slaveInfo() { const a = this.slaveAddressValue(); if (!this.slaveListens(a)) return null; const p = this.pins(); return p.sda && p.scl ? { address: a, ...p } : null; }
