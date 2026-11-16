@@ -199,7 +199,7 @@ export class RaPinoutPanel {
     +`<label>Timeout${sel('timeout',RA_WDT[id].timeouts.map(v=>[v,`${v} Cycles`]),q.timeout)}</label><label>Clock Division Ratio${sel('clockDiv',RA_WDT[id].dividers.map(v=>[v,`${id==='IWDT'?'IWDTCLK':'PCLKB'}/${v}`]),q.clockDiv)}</label>`
     +`<label>Window Start Position${sel('windowStart',RA_WDT_WINDOW_START.map(v=>[v,v===100?'100 (Window Position Not Specified)':`${v} %`]),q.windowStart)}</label><label>Window End Position${sel('windowEnd',RA_WDT_WINDOW_END.map(v=>[v,v===0?'0 (Window Position Not Specified)':`${v} %`]),q.windowEnd)}</label>`
     +`<label>Reset Control${sel('reset',[['RESET','Reset Output'],['NMI','NMI Generated']],q.reset)}</label><label>Stop Control${sel('stopInSleep',[[0,'WDT Count Enabled in Low Power Mode'],[1,'WDT Count Disabled in Low Power Mode']],q.stopInSleep?1:0)}</label>`
-    +`<label>NMI Callback<input data-ra-field="callback" value="${esc(q.callback)}" placeholder="NULL" spellcheck="false"></label>`;
+    +`<label>NMI Callback<input data-ra-field="callback" value="${esc(q.reset==='NMI'?q.callback:'')}" placeholder="NULL" spellcheck="false"${q.reset==='NMI'?'':' disabled title="Reset Output에서는 콜백이 없습니다(FSP: p_callback이 NULL이어야 R_'+id+'_Open이 성공). NMI Generated로 바꾸면 쓸 수 있습니다."'}></label>`;
    hint=`${esc(timing)} ${id==='IWDT'||q.startMode==='AUTO'?'리셋 직후부터 셉니다(OFS0, bsp_mcu_ofs_cfg.h).':'R_WDT_Open 뒤 첫 R_WDT_Refresh부터 셉니다.'} R_${id}_Open(&amp;${name}_ctrl, &amp;${name}_cfg) · R_${id}_Refresh(&amp;${name}_ctrl). 시간 초과면 ${q.reset==='NMI'?`NMI로 ${esc(q.callback||'콜백')}을 부릅니다`:'MCU가 리셋되고 실행 로그에 남습니다'}. 리셋 원인은 R_SYSTEM-&gt;RSTSR1_b.${id}RF로 읽습니다.`;
   }
   if(id==='RTC'){
@@ -256,6 +256,8 @@ export class RaPinoutPanel {
   else if(k==='stopInSleep')q[k]=v==='1';
   else if(/Priority$/.test(k)&&v==='')q[k]=null;
   else q[k]=Number(v);
+  // A watchdog's callback goes with the NMI output: a default name when NMI is chosen, none with Reset.
+  if(k==='reset'&&RA_WDT[id]){if(v==='NMI'&&!q.callback)q.callback=id.toLowerCase()+'_nmi_callback';if(v==='RESET')q.callback='';}
   this.validate();this.renderStacks();
  }
  stackClick(el){

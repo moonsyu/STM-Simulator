@@ -240,3 +240,19 @@ ${body}
  const loop=interp(`void hal_entry(void){ R_WDT_Open(&g_wdt0_ctrl, &g_wdt0_cfg); R_WDT_Refresh(&g_wdt0_ctrl); R_BSP_SoftwareDelay(1, BSP_DELAY_UNITS_MILLISECONDS); R_WDT_Refresh(&g_wdt0_ctrl); }`,{WDT:{enabled:true,clockDiv:2048,windowStart:50}});
  assert.throws(()=>loop.run(50),/\[WDT\] 워치독 리셋이 계속 반복됩니다/);
 });
+
+// Review of feature 35: FSP's Open asserts p_callback == NULL unless the NMI is the output.
+test('a watchdog with Reset output has no callback (generated NULL, as R_WDT_Open / R_IWDT_Open require); interpreter Open checks reset_control like r_wdt.c',()=>{
+ const m=validateRaMcu(mcu({IWDT:{enabled:true,callback:'my_cb'},WDT:{enabled:true,startMode:'AUTO',reset:'RESET',callback:'other_cb'}}));
+ assert.equal(m.peripherals.IWDT.callback,'');assert.equal(m.peripherals.WDT.callback,'');
+ const f=generateRaFiles(m);assert.doesNotMatch(f['ra_gen/hal_data.h'],/my_cb|other_cb/);assert.equal((f['ra_gen/hal_data.c'].match(/\.p_callback {10}= NULL,/g)||[]).length,2);
+ // Register-start, Stacks say Reset (WDT_CFG_REGISTER_START_NMI_SUPPORTED 0): a cfg asking for the NMI is an assertion.
+ const a=interp(`volatile uint32_t err = 99;
+void hal_entry(void){ wdt_cfg_t cfg = g_wdt0_cfg; cfg.reset_control = WDT_RESET_CONTROL_NMI; err = R_WDT_Open(&g_wdt0_ctrl, &cfg); }`,{WDT:{enabled:true}});
+ a.run(5);assert.equal(a.session.readVariable('err'),1,'FSP_ERR_ASSERTION');
+ // Stacks say NMI with a callback: a cfg asking for a reset still has the callback (p_callback must be NULL): assertion.
+ const b=interp(`volatile uint32_t err = 99, ok = 99;
+void wdt_nmi(wdt_callback_args_t *p_args){ (void) p_args; }
+void hal_entry(void){ wdt_cfg_t cfg = g_wdt0_cfg; cfg.reset_control = WDT_RESET_CONTROL_RESET; err = R_WDT_Open(&g_wdt0_ctrl, &cfg); ok = R_WDT_Open(&g_wdt0_ctrl, &g_wdt0_cfg); }`,{WDT:{enabled:true,reset:'NMI',callback:'wdt_nmi'}});
+ b.run(5);assert.equal(b.session.readVariable('err'),1);assert.equal(b.session.readVariable('ok'),0);
+});

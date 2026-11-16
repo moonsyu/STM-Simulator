@@ -220,3 +220,17 @@ void hal_entry(void)
   assert.equal(sim.runtime.resetCount,2);assert.equal(same('rstsr1'),5,'IWDTRF | SWRF');
  });
 });
+
+test('an IWDT with Reset output and a name left in the callback field on both engines: Open succeeds (p_callback NULL) and the refresh keeps it alive',{skip,timeout:600000},async()=>{
+ await both({IWDT:{enabled:true,timeout:128,clockDiv:16,callback:'my_cb'}},`
+volatile uint32_t err = 99, rerr = 99, refreshes = 0;
+void hal_entry(void)
+{
+    err = R_IWDT_Open(&g_iwdt0_ctrl, &g_iwdt0_cfg);
+    while (1) { rerr = R_IWDT_Refresh(&g_iwdt0_ctrl); refreshes++; R_BSP_SoftwareDelay(20, BSP_DELAY_UNITS_MILLISECONDS); }
+}
+`,({emu,sim,run,same})=>{
+  run(400);
+  assert.equal(same('err'),0);assert.equal(same('rerr'),0);assert.deepEqual(emu.resets,[]);assert.equal(sim.runtime.resetCount??0,0);assert.ok(same('refreshes',1)>=19);
+ });
+});

@@ -390,6 +390,9 @@ function validateWdt(id,p){
  if(q.windowEnd>=q.windowStart)throw new Error(`${id}: 창 끝(${q.windowEnd} %)은 창 시작(${q.windowStart} %)보다 작아야 합니다.`);
  if(!['RESET','NMI'].includes(q.reset))throw new Error(`${id}: 시간 초과 동작은 Reset 또는 NMI입니다.`);
  if(typeof q.callback!=='string'||q.callback!==''&&!C_NAME.test(q.callback))throw new Error(`${id}: 콜백 이름은 C 식별자로 쓰세요(없으면 비워 둡니다).`);
+ // r_wdt.c / r_iwdt.c parameter checking: p_callback must be NULL unless the NMI is the output (Open returns
+ // FSP_ERR_ASSERTION otherwise), so with Reset output there is no callback: a name left from an NMI setting is dropped.
+ if(q.reset==='RESET')q.callback='';
  if(q.reset==='NMI'&&!q.callback)throw new Error(`${id}: NMI로 알리려면 콜백 이름을 쓰세요.`);
  return q;
 }

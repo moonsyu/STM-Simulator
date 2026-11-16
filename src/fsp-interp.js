@@ -822,6 +822,10 @@ for(const id of ['WDT','IWDT']){
    const st=this.wdtInstance(args,r,fn,id);if(st.open)return FSP.ALREADY_OPEN;const cfg=this.struct(args[1],r,'wdt_cfg_t',fn),f=k=>Number(cfg.fields[k].value);
    const timeout=[128,512,1024,2048,4096,8192,16384][f('timeout')];if(!RA_WDT[id].timeouts.includes(timeout))return FSP.ASSERTION;
    // Register-start mode takes the cfg (written to WDTCR at Open); auto-start keeps what OFS0 set at reset.
+   // r_wdt.c parameter checking in register-start mode, with the cfg hal_data.c has (p_callback is the Stacks callback, NULL
+   // with Reset output; WDT_CFG_REGISTER_START_NMI_SUPPORTED follows the Stacks setting): the NMI needs the callback and
+   // the NMI support, a reset needs p_callback NULL.
+   if(!st.auto&&(f('reset_control')?'RESET':'NMI')!==this.config.peripherals[id].reset)return FSP.ASSERTION;
    if(!st.auto){
     const div=Number(Object.keys(WDT_DIVISION_CODE).find(d=>WDT_DIVISION_CODE[d]===f('clock_division')));if(!RA_WDT[id].dividers.includes(div))throw new Error(`${fn}: ${id}의 클록 분주는 ${RA_WDT[id].dividers.map(d=>'/'+d).join(' · ')}입니다.`);
     Object.assign(st,{timeout,div,windowStart:[25,50,75,100][f('window_start')],windowEnd:[75,50,25,0][f('window_end')],reset:f('reset_control')?'RESET':'NMI'});
