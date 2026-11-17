@@ -96,7 +96,8 @@ export class Runtime {
   cell(name){for(let i=this.scopes.length-1;i>=0;i--)if(own(this.scopes[i].cells,name))return this.scopes[i].cells[name];throw new Error(`정의되지 않은 이름: ${name}`);}
   get(cell){if(cell.owner&&!cell.owner.alive)throw new Error('유효기간이 끝난 지역 변수를 참조했습니다.');return cell.value;}
   coerce(type,value){return this.program.hal?convert(type,value):value;}
-  set(cell,value){this.get(cell);if(cell.constant)throw new Error(cell.readOnly||'const 값은 변경할 수 없습니다.');if(this.contexts.length>1)cell.async=true;const stored=this.clone(this.coerce(cell.dataType,value),cell.owner);cell.value=stored;return stored;}
+  // The lifetime check of get(), without reading the cell (a cell of memory the adapter stands in for reads on get).
+  set(cell,value){if(cell.owner&&!cell.owner.alive)throw new Error('유효기간이 끝난 지역 변수를 참조했습니다.');if(cell.constant)throw new Error(cell.readOnly||'const 값은 변경할 수 없습니다.');if(this.contexts.length>1)cell.async=true;const stored=this.clone(this.coerce(cell.dataType,value),cell.owner);cell.value=stored;return stored;}
   array(values,owner=this.scope()){if(values.length>this.maxArray)throw new Error(`배열은 ${this.maxArray}개 이하로 선언하세요.`);this.allocations+=values.length;if(this.allocations>this.maxAllocations)throw new Error('한 단계의 메모리 할당 한도를 넘었습니다.');return {kind:'array',cells:values.map(value=>({value:this.clone(value,owner),owner,constant:false}))};}
   pointer(value){return isArray(value)?{kind:'pointer',array:value,index:0}:value;}
   /**

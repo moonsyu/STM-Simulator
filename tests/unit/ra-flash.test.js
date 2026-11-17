@@ -435,6 +435,17 @@ void hal_entry(void)
  assert.deepEqual(log.print,['20 FF','FF','0','A55A 80 2 1500 1.5 RA6E1','A55A 1500 RA6E1 0','5A A5 50 DC 05 R','0250A55A 000005DC 00']);
  assert.equal(log.warn.length,2,'the blank read and the store are each said once');assert.match(log.warn[0],/^\[FLASH\] 지운\(빈\) 데이터 플래시 0x08000080를 읽었습니다/);
  assert.equal(log.warn[1],'[FLASH] 데이터 플래시에 대입(버스 쓰기)한 값은 쓰이지 않고 무시됩니다 — 실제 칩도 같습니다. R_FLASH_HP_Erase로 블록을 지운 뒤 R_FLASH_HP_Write로 쓰세요.');
+ // A store is not a read (the emulator's bus only writes): on an erased place only the store is said.
+ const store=interp(`
+volatile uint32_t after = 0;
+void hal_entry(void)
+{
+    uint32_t *p = (uint32_t *) 0x08000000U;
+    *p = 5U;
+    after = *p;
+}`);
+ store.run(20);assert.deepEqual(store.log.warn.map(w=>w.split(' — ')[0]),['[FLASH] 데이터 플래시에 대입(버스 쓰기)한 값은 쓰이지 않고 무시됩니다','[FLASH] 지운(빈) 데이터 플래시 0x08000000를 읽었습니다'],'the order of the emulator');
+ assert.equal(store.session.readVariable('after'),0xffffffff);
  assert.equal(session.dataFlash.encode()[0].hex,'5aa55002dc0500000000c03f5241364531000000');
 });
 
