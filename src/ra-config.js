@@ -442,6 +442,8 @@ export const raDsPin=ch=>RA_IRQ_DS.find(pin=>RA_IRQ_PINS[pin]===ch)??null;
 export const RA_LPM_DEFAULTS=Object.freeze({mode:'SLEEP',wake:Object.freeze([]),ioKeep:true,power:'DEEPCUT0',cancel:Object.freeze([]),cancelRising:Object.freeze([])});
 function validateLpm(p){
  if(!p||typeof p.enabled!=='boolean')throw new Error('LPM: 설정을 확인하세요.');
+ // A stack that is turned off is not generated: what it holds is not a reason to refuse the project (the defaults stand in).
+ if(!p.enabled){try{return {...validateLpm({...p,enabled:true}),enabled:false};}catch{return {enabled:false,...RA_LPM_DEFAULTS,wake:[],cancel:[],cancelRising:[]};}}
  const list=(v,all,label)=>{
   if(!Array.isArray(v)||v.some(x=>typeof x!=='string'))throw new Error(`LPM: ${label}를 확인하세요.`);
   const bad=v.find(x=>!all.includes(x));if(bad!==undefined)throw new Error(`LPM: ${label} ${bad}은(는) 고를 수 없습니다(${all.filter(x=>!/^IRQ/.test(x)).join(' · ')} · IRQn 중에서 고르세요).`);

@@ -100,6 +100,10 @@ async function lpmProject(win){
  assert.equal(await win.$$eval(card+' [data-ra-lpm="cancel"][value="IRQ2"]',o=>o.length),0,'the RA6E1 has no DPSIER bit for IRQ2-DS');
  assert.equal(await win.inputValue(card+' [data-ra-field="ioKeep"]'),'1');assert.equal(await win.inputValue(card+' [data-ra-field="power"]'),'DEEPCUT0');
  assert.equal(await win.inputValue(card+' [data-ra-lpm-edge="IRQ1"]'),'FALLING');
+ // A source without its stack is said on the Deep Software Standby card as on the Software Standby one.
+ await win.check(card+' [data-ra-lpm="cancel"][value="AGT1"]');await win.check(card+' [data-ra-lpm="cancel"][value="RTC_ALARM"]');
+ await win.waitForFunction(sel=>/AGT1 스택이 없습니다[\s\S]*RTC 스택이 없습니다/.test(document.querySelector(sel+' .form-hint').textContent),card);
+ await win.uncheck(card+' [data-ra-lpm="cancel"][value="AGT1"]');await win.uncheck(card+' [data-ra-lpm="cancel"][value="RTC_ALARM"]');
  assert.match(await win.textContent(card+' .form-hint'),/해제 소스가 오면 MCU가 리셋되어 처음부터 다시 실행됩니다[\s\S]*IRQn-DS 핀만 해제합니다[\s\S]*R_LPM_IoKeepClear\(NULL\)/);
  await win.click('[data-ra-tab="summary"]');assert.match(await win.textContent('#ra-summary'),/g_lpm0 \(r_lpm\)/);
  await win.click('#ra-pinout-apply');await win.waitForFunction(()=>!document.getElementById('ra-pinout-dialog').open);

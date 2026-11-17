@@ -24,6 +24,9 @@ test('LPM settings: defaults, the modes, the sources each mode has, an edge need
  assert.throws(()=>validateRaMcu(mcu({LPM:{enabled:true,power:'DEEPCUT2'}})),/DEEPCUT0 · DEEPCUT1 · DEEPCUT3/);
  assert.throws(()=>validateRaMcu(mcu({LPM:{enabled:true,ioKeep:1}})),/IOKEEP/);
  assert.throws(()=>validateRaMcu(mcu({LPM:{enabled:true,wake:'IRQ1'}})),/깨우는 소스를 확인하세요/);
+ // A stack that is turned off is not generated: its contents do not refuse the project (valid ones are kept).
+ assert.deepEqual(validateRaMcu(mcu({LPM:{enabled:false,mode:'SNOOZE',wake:['LVD1']}})).peripherals.LPM,{enabled:false,mode:'SLEEP',wake:[],ioKeep:true,power:'DEEPCUT0',cancel:[],cancelRising:[]});
+ assert.equal(validateRaMcu(mcu({LPM:{enabled:false,mode:'DEEP',cancel:['IRQ1']}})).peripherals.LPM.mode,'DEEP');
  assert.equal(raNameProblem('g_lpm0_cfg').includes('인스턴스'),true);assert.equal(raNameProblem('g_lpm_on_lpm').includes('API 객체'),true);
 });
 

@@ -228,12 +228,14 @@ export class RaPinoutPanel {
      +q.cancel.filter(n=>/^IRQ/.test(n)).map(n=>`<label>${n}-DS Edge<select data-ra-lpm-edge="${n}">${option('FALLING','Falling',q.cancelRising.includes(n)?'RISING':'FALLING')}${option('RISING','Rising',q.cancelRising.includes(n)?'RISING':'FALLING')}</select></label>`).join('');
    }
    const notes=[];
+   // An AGT source needs its stack, and a count source that runs in the mode (LOCO: the period decides, raAgtCounts).
+   const agtNote=(n,mode)=>{const t=this.draft.peripherals?.['AGT'+n];let source='';try{source=t?.enabled?raAgtCounts(raClockHz(this.draft,'pclkb'),Number(n),t.period,t.unit).source:'';}catch{source='';}
+    if(!t?.enabled)notes.push(`AGT${n} 스택이 없습니다(New Stack → Timers).`);else if(source!=='LOCO')notes.push(`AGT${n}은 PCLKB로 세어 ${mode}에서 멈춥니다 — 주기를 ${Number((65536*8/raClockHz(this.draft,'pclkb')*1000).toFixed(1))} ms보다 길게 정해 LOCO로 세게 하세요.`);};
    if(q.mode==='SLEEP')notes.push('CPU만 멈추고 주변장치는 계속 동작합니다. 켜 둔 인터럽트가 깨웁니다.');
    if(q.mode==='STANDBY'){
     notes.push('클록이 멈춥니다(GPT · PCLKB로 세는 AGT · WDT · SCI 등). RTC와 LOCO로 세는 AGT는 계속 돕니다. 고른 소스의 인터럽트만 깨우며, 그 인터럽트가 켜져 있어야 합니다.');
     if(!q.wake.length)notes.push('깨우는 소스가 없습니다 — 리셋으로만 깨어납니다.');
-    for(const n of q.wake){const m=/^AGT(\d)UD$/.exec(n);if(!m)continue;const t=this.draft.peripherals?.['AGT'+m[1]];let source='';try{source=t?.enabled?raAgtCounts(raClockHz(this.draft,'pclkb'),Number(m[1]),t.period,t.unit).source:'';}catch{source='';}
-     if(!t?.enabled)notes.push(`AGT${m[1]} 스택이 없습니다(New Stack → Timers).`);else if(source!=='LOCO')notes.push(`AGT${m[1]}은 PCLKB로 세어 Software Standby에서 멈춥니다 — 주기를 ${Number((65536*8/raClockHz(this.draft,'pclkb')*1000).toFixed(1))} ms보다 길게 정해 LOCO로 세게 하세요.`);}
+    for(const n of q.wake){const m=/^AGT(\d)UD$/.exec(n);if(m)agtNote(m[1],'Software Standby');}
     if(q.wake.some(n=>/^RTC/.test(n))&&!this.draft.peripherals?.RTC?.enabled)notes.push('RTC 스택이 없습니다(New Stack → Realtime Clock).');
    }
    if(q.mode==='DEEP'){
@@ -241,6 +243,7 @@ export class RaPinoutPanel {
     notes.push(q.ioKeep?'I/O 포트 상태는 리셋 뒤에도 그대로이고 R_LPM_IoKeepClear(NULL)를 부를 때 풀립니다.':'해제되면 I/O 포트는 리셋 상태가 됩니다.');
     if(!q.cancel.length)notes.push('해제 소스가 없습니다 — 리셋으로만 깨어납니다.');
     for(const n of q.cancel){const m=/^IRQ(\d+)$/.exec(n);if(!m)continue;const ch=Number(m[1]),used=irqPin(ch),ds=raDsPin(ch);if(used&&used!==ds)notes.push(`IRQ${ch} 스택은 ${used}(IRQ${ch})에 있습니다 — Deep Software Standby는 IRQ${ch}-DS 핀 ${ds}의 엣지로만 해제됩니다.`);}
+    for(const n of q.cancel){const m=/^AGT(\d)$/.exec(n);if(m)agtNote(m[1],'Deep Software Standby');}
     if(q.power!=='DEEPCUT0'&&q.cancel.some(n=>/^(RTC|AGT)/.test(n)))notes.push(`${q.power}에서는 LOCO와 AGT 전원이 꺼집니다 — LOCO로 세는 RTC와 AGT는 해제하지 못합니다.`);
     if(q.cancel.some(n=>/^RTC/.test(n))&&!this.draft.peripherals?.RTC?.enabled)notes.push('RTC 스택이 없습니다(New Stack → Realtime Clock).');
    }
