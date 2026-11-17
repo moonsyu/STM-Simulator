@@ -42,7 +42,7 @@ export const TOOLCHAIN_SHARDS=Object.freeze([
  // (the tests are named: a "not this one" pattern with a lookahead did not keep the heavy test out)
  // + ra-lpm (feature 37: programs with r_lpm on both engines, about 3 s each locally): its first four tests here (13 s),
  //   the review programs in groups 1, 4 and 7
- [['ra-course','Bare Metal - Blinky|switch polling toggles|the challenge:|BSP tab sizes|as the course screen shows it'],'adc-continuous','clock-tree',['fsp-interp-parity','parity: ra_uart_echo'],['ra-lpm','R_LPM_\\* return codes|Software Standby on both engines|a Software Standby nothing can end']],
+ [['ra-course','Bare Metal - Blinky|switch polling toggles|the challenge:|BSP tab sizes|as the course screen shows it'],'adc-continuous','clock-tree',['fsp-interp-parity','parity: ra_uart_echo'],['ra-lpm','^R_LPM_\\* return codes|^Software Standby on both engines|^Deep Software Standby on both engines|^a Software Standby nothing can end']],
  // 26 + 23 + 22 + 17 + 16 = 104 + parity of the SPI memory (15 s locally, 1.51.x)
  // + the two-engine review tests of ra-wdt-rtc ("on both engines")
  ['emu-accuracy','dwarf-version','board-links','copied-files','adc-group','peripheral-files','project-overrides',['fsp-interp-parity','parity: ra_spi_memory'],['ra-wdt-rtc','on both engines']],
