@@ -32,7 +32,8 @@ export const TOOLCHAIN_SHARDS=Object.freeze([
  [['arm-examples','NUCLEO-F446RE'],'bus-instances',['fsp-interp-parity','parity: ra_blink|parity: ra_rtc_clock'],'ra-iic-slave'],
  // 58 + 38 = 96 + parity of polling and rising IRQ (18 s locally)
  // + the register-start WDT test of ra-wdt-rtc (feature 35: about 16 s locally)
- [['arm-examples','NUCLEO-F103RB'],'button-bounce',['fsp-interp-parity','parity: ra_button_poll'],['ra-wdt-rtc','the real r_wdt in register-start mode']],
+ // + ra-flash (feature 39: three FSP builds, about 8 s locally)
+ [['arm-examples','NUCLEO-F103RB'],'button-bounce',['fsp-interp-parity','parity: ra_button_poll'],['ra-wdt-rtc','the real r_wdt in register-start mode'],'ra-flash'],
  // 62 + 32 + 6 = 100 + parity of the challenge (9 s locally) + ra-spi (about 6 locally, 1.51.x)
  // + the IWDT and WDT NMI tests of ra-wdt-rtc (feature 35: about 13 s locally)
  ['ra-build','wdg','tim-basic','ra-spi',['fsp-interp-parity','parity: ra_led4_switch2'],['ra-wdt-rtc','IWDT: OFS0|WDT NMI:']],
@@ -41,8 +42,8 @@ export const TOOLCHAIN_SHARDS=Object.freeze([
  [['ra-course','Bare Metal - Blinky|switch polling toggles|the challenge:|BSP tab sizes|as the course screen shows it'],'adc-continuous','clock-tree',['fsp-interp-parity','parity: ra_uart_echo|parity: ra_iic_slave']],
  // (+ parity of the I2C slave example with its ESP32 master, feature 33: about 8 s locally, in the group above)
  // 26 + 23 + 22 + 17 + 16 = 104 + parity of the SPI memory (15 s locally, 1.51.x)
- // + the two-engine review tests of ra-wdt-rtc ("on both engines")
- ['emu-accuracy','dwarf-version','board-links','copied-files','adc-group','peripheral-files','project-overrides',['fsp-interp-parity','parity: ra_spi_memory'],['ra-wdt-rtc','on both engines']],
+ // + the two-engine review tests of ra-wdt-rtc ("on both engines") + parity of the flash counter (feature 39)
+ ['emu-accuracy','dwarf-version','board-links','copied-files','adc-group','peripheral-files','project-overrides',['fsp-interp-parity','parity: ra_spi_memory|parity: ra_flash_counter'],['ra-wdt-rtc','on both engines']],
  // 17 + 16 + 14 + 13 + 11 + 9 + 9 + 9 + 9 = 107
  // + the RTC tests of ra-wdt-rtc (feature 34: about 22 s locally)
  ['tim-oc','adc-sampling','tim-advanced','dac','rtc','source-folders','spi-params','tim-channels','uart-params',['ra-wdt-rtc','RTC \\(ra_rtc_clock\\)|RTC start time']],

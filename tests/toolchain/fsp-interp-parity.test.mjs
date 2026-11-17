@@ -35,7 +35,10 @@ const PLAN={
  ra_rtc_clock:{ms:6000,buttons:false,vars:{seconds:0}},
  // The ESP32 sketch (I2C master) runs on both: it writes the LED byte and reads two bytes every 500 ms. On the emulator
  // a read waits for the slave's interrupts (clock stretching, a few ms), so LED2's edges may come that much later.
- ra_iic_slave:{buttons:false,window:12,board:/RA /,vars:{writes_seen:0,reads_answered:0,aborted:0,command:0}}
+ ra_iic_slave:{buttons:false,window:12,board:/RA /,vars:{writes_seen:0,reads_answered:0,aborted:0,command:0}},
+ // The boot counter in the data flash: S1 pressed 300-400 ms and 1300-1400 ms resets the MCU twice (NVIC_SystemReset on
+ // release), so SCI9 prints the counts 1, 2 and 3 and the data flash ends with 3 on both engines.
+ ra_flash_counter:{window:3,vars:{boot_count:0,flash_error:0},resets:2,warn:/^\[NVIC\] /,flash:[{at:0,hex:'03000000'}]}
 };
 // The level of a pin each millisecond: its PWM duty, or high/low.
 function timeline(session,id){
@@ -73,6 +76,8 @@ async function compare(ids){
    assert.equal(firmware.resets.length,PLAN[id].resets??0,id+' emulator resets');assert.equal(simulation.runtime.resetCount??0,PLAN[id].resets??0,id+' interpreter resets');
    const text=log=>String.fromCharCode(...log.uart.filter(e=>e.instance==='SCI9'&&e.direction==='TX').flatMap(e=>e.bytes));
    assert.equal(text(interp),text(emu),id+' SCI9 output');
+   // The data flash the run leaves (feature 39).
+   if(PLAN[id].flash){assert.deepEqual(firmware.dataFlash.encode(),PLAN[id].flash,id+' emulator data flash');assert.deepEqual(simulation.dataFlash.encode(),PLAN[id].flash,id+' interpreter data flash');}
    assert.equal(simulation.buses.received.get('term')??'',firmware.buses.received.get('term')??'',id+' UART part');
    // Variables are read 5 ms after the last 500 ms boundary: the emulator starts hal_entry about 0.2 ms after reset (the
    // FSP start-up code), so a periodic count read at the boundary itself may differ by one.
@@ -92,3 +97,4 @@ test('parity: ra_spi_memory (r_spi SPI1 with SSL0, the SPI memory, SCI9 output)'
 test('parity: ra_wdt_reset (WDT reset and RSTSR1.WDTRF)',{skip,timeout:900000},()=>compare(['ra_wdt_reset']));
 test('parity: ra_rtc_clock (RTC calendar, 1 s periodic interrupt, alarm)',{skip,timeout:900000},()=>compare(['ra_rtc_clock']));
 test('parity: ra_iic_slave (r_iic_slave with the ESP32 sketch as the I2C master)',{skip,timeout:900000},()=>compare(['ra_iic_slave']));
+test('parity: ra_flash_counter (r_flash_hp boot counter in the data flash across two resets)',{skip,timeout:900000},()=>compare(['ra_flash_counter']));
