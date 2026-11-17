@@ -209,7 +209,8 @@ export const FLASH_METHODS={
  },
  flashRead(at,size,type){
   const r=this.runtime,dev=this.flashDev(r);dev.dataRead(at,size);this.flashBlankNoted=!!dev.blankNoted;
-  return bytesValue(r,[...this.dataFlash.bytes.subarray(at,at+size)],type,r.globals);
+  // A char (or a char member) read as ARM GCC has it: unsigned.
+  return bytesValue(r,[...this.dataFlash.bytes.subarray(at,at+size)],type,r.globals,'memcpy',true);
  },
  /** R_FLASH_HP_* by name: a generator (a call waits for the flash), or null for another name. */
  flashCall(name,args,r){

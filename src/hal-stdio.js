@@ -36,14 +36,18 @@ export function valueBytes(r,value,type,name='memcpy'){
  if(typeof value!=='number')throw new Error(`${name}: 숫자 배열 또는 구조체만 바이트로 옮길 수 있습니다.`);
  return numberBytes(value,r.typeSize(type),isFloatType(type));
 }
-/** The value of `type` (a number, or a structure owned by `owner`) these bytes hold. */
-export function bytesValue(r,bytes,type,owner,name='memcpy'){
+/**
+ * The value of `type` (a number, or a structure owned by `owner`) these bytes hold. `unsignedChar`: a char is read as
+ * ARM GCC has it (unsigned) — the RA data flash read path (fsp-flash.js); elsewhere the interpreter's char is unchanged.
+ */
+export function bytesValue(r,bytes,type,owner,name='memcpy',unsignedChar=false){
+ if(unsignedChar&&type==='char')type='uint8_t';
  if(!own(r.program.structs,type))return r.coerce(type,bytesNumber(bytes,r.typeSize(type),isFloatType(type)));
  const value=r.defaultValue(type,owner);
  for(const f of structFields(r,type,name)){
   if(f.pointer)continue;
   const cell=value.fields[f.name],items=f.array?cell.value.cells:[cell];
-  items.forEach((c,i)=>{if(c.value?.kind==='array')throw new Error(`${name}: 2차원 배열 멤버(${f.name})가 든 구조체는 바이트로 옮기지 못합니다.`);c.value=bytesValue(r,bytes.slice(f.at+i*f.size,f.at+(i+1)*f.size),f.type,owner,name);});
+  items.forEach((c,i)=>{if(c.value?.kind==='array')throw new Error(`${name}: 2차원 배열 멤버(${f.name})가 든 구조체는 바이트로 옮기지 못합니다.`);c.value=bytesValue(r,bytes.slice(f.at+i*f.size,f.at+(i+1)*f.size),f.type,owner,name,unsignedChar);});
  }
  return value;
 }

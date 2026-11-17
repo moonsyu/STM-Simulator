@@ -76,7 +76,7 @@ export function compile(source,options={}) {
     if(peek()==='GPIO_TypeDef'&&options.hal){take();return {type:'uint32_t',constant,external,storage,volatile,port:true};}
     if(peek()==='struct'||peek()==='union'){take();type=identifier();if(!Object.hasOwn(program.structs,type))fail('정의되지 않은 구조체입니다.');}
     else if(peek()==='enum'){take();const tag=identifier();type=aliases.get(tag)||'int';}
-    else {if(!isType())fail('자료형이 필요합니다.');const specs=[take()];if(/^u?int64_t$/.test(specs[0]))fail('64비트 정수형(uint64_t, int64_t)은 지원하지 않습니다. 32비트 값 둘로 나누어 쓰세요.');while(['long','short','int','unsigned','signed','char','double'].includes(peek()))specs.push(take());type=specs.at(-1);if(specs.includes('unsigned'))type=specs.includes('char')?'uint8_t':specs.includes('short')?'uint16_t':'uint32_t';else if(specs.includes('short'))type='int16_t';}
+    else {if(!isType())fail('자료형이 필요합니다.');const specs=[take()];if(/^u?int64_t$/.test(specs[0]))fail('64비트 정수형(uint64_t, int64_t)은 지원하지 않습니다. 32비트 값 둘로 나누어 쓰세요.');while(['long','short','int','unsigned','signed','char','double'].includes(peek()))specs.push(take());type=specs.at(-1);if(specs.includes('unsigned'))type=specs.includes('char')?'uint8_t':specs.includes('short')?'uint16_t':'uint32_t';else if(specs.includes('short'))type='int16_t';else if(specs.includes('signed')&&specs.includes('char'))type='int8_t';}
     return {type:aliases.get(type)||type,constant,external,storage,volatile};
   }
   function declarator(base){

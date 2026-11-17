@@ -496,6 +496,22 @@ void hal_entry(void)
  assert.deepEqual(log.warn,['[FLASH] 데이터 플래시 P/E 모드(쓰기·지우기·블랭크 체크가 진행 중)에서 데이터 플래시를 읽었습니다 — 실제 칩에서는 읽은 값이 보장되지 않습니다. 동작이 끝난 뒤(BGO면 콜백 뒤)에 읽으세요.']);
 });
 
+test('interpreter: a char read from the data flash is unsigned, as ARM GCC has it (a byte of 0x80 or more)',()=>{
+ const {log,run}=interp(`
+typedef struct { char tag; uint8_t n; } item_t;
+static uint8_t raw[4] = { 0x81, 0x7F, 0xFF, 0x00 };
+void hal_entry(void)
+{
+    R_FLASH_HP_Open(&g_flash0_ctrl, &g_flash0_cfg);
+    R_FLASH_HP_Erase(&g_flash0_ctrl, 0x08000000U, 1);
+    R_FLASH_HP_Write(&g_flash0_ctrl, (uint32_t) raw, 0x08000000U, 4);
+    const item_t *item = (const item_t *) 0x08000002U;
+    printf("%ld %ld %ld %ld\\n", (long) (int32_t) *(char *) 0x08000000U, (long) (int32_t) *(char *) 0x08000001U, (long) (int32_t) *(signed char *) 0x08000000U, (long) (int32_t) item->tag);
+}`);
+ run(30);
+ assert.deepEqual(log.print,['129 127 -127 255']);
+});
+
 test('outside the data flash: a read past its end or crossing it stops both engines with the same note',()=>{
  const outside=(address,size)=>`데이터 플래시(0x08000000~0x08001FFF) 밖 ${address}에 ${size}바이트로 접근했습니다 — 실제 칩에서는 버스 오류(HardFault)로 멈춥니다. 주소와 읽는 크기를 확인하세요.`;
  for(const [expression,address,size] of [['((uint8_t *) 0x08001FF0U)[16]','0x08002000',1],['*(uint8_t *) 0x08002000U','0x08002000',1],['*(uint32_t *) 0x08001FFEU','0x08001FFE',4],['*(uint16_t *) 0x08004000U','0x08004000',2]]){
