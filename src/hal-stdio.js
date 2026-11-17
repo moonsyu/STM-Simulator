@@ -16,7 +16,7 @@ const own=(object,key)=>Object.hasOwn(object||{},key);
 function structFields(r,type,name){
  if(r.program.unions&&own(r.program.unions,type))throw new Error(`${name}: 공용체(${type})는 바이트로 옮기지 못합니다.`);
  let at=0;
- return r.program.structs[type].map(f=>{const l=f.pointer?{size:4,alignment:4}:r.typeLayout(f.type);at=Math.ceil(at/l.alignment)*l.alignment;const field={...f,at,size:l.size,count:f.array?f.size:1};at+=l.size*field.count;return field;});
+ return r.program.structs[type].map(f=>{const l=f.pointer?{size:4,alignment:4}:f.enumSize?{size:f.enumSize,alignment:f.enumSize}:r.typeLayout(f.type);at=Math.ceil(at/l.alignment)*l.alignment;const field={...f,at,size:l.size,count:f.array?f.size:1};at+=l.size*field.count;return field;});
 }
 /** The bytes of a number of `type` or of a structure value, as the C program has them in memory (little-endian). */
 export function valueBytes(r,value,type,name='memcpy'){
@@ -28,7 +28,8 @@ export function valueBytes(r,value,type,name='memcpy'){
     const v=r.get(c);
     if(f.pointer){if(v!==0)throw new Error(`${name}: 포인터 멤버(${f.name})에 값이 든 구조체는 바이트로 옮기지 못합니다.`);return;}
     if(v?.kind==='array')throw new Error(`${name}: 2차원 배열 멤버(${f.name})가 든 구조체는 바이트로 옮기지 못합니다.`);
-    valueBytes(r,v,f.type,name).forEach((b,k)=>{out[f.at+i*f.size+k]=b;});
+    // An enum member in the size ARM GCC gives it (parser.js enumLayout).
+    (f.enumSize&&typeof v==='number'?numberBytes(v,f.size,false):valueBytes(r,v,f.type,name)).forEach((b,k)=>{out[f.at+i*f.size+k]=b;});
    });
   }
   return out;
@@ -47,7 +48,8 @@ export function bytesValue(r,bytes,type,owner,name='memcpy',unsignedChar=false){
  for(const f of structFields(r,type,name)){
   if(f.pointer)continue;
   const cell=value.fields[f.name],items=f.array?cell.value.cells:[cell];
-  items.forEach((c,i)=>{if(c.value?.kind==='array')throw new Error(`${name}: 2차원 배열 멤버(${f.name})가 든 구조체는 바이트로 옮기지 못합니다.`);c.value=bytesValue(r,bytes.slice(f.at+i*f.size,f.at+(i+1)*f.size),f.type,owner,name,unsignedChar);});
+  const enumValue=bytes=>{const n=bytesNumber(bytes,f.size,false),top=2**(8*f.size);return r.coerce(f.type,f.enumSigned&&n>=top/2?n-top:n);};
+  items.forEach((c,i)=>{if(c.value?.kind==='array')throw new Error(`${name}: 2차원 배열 멤버(${f.name})가 든 구조체는 바이트로 옮기지 못합니다.`);if(f.enumSize){c.value=enumValue(bytes.slice(f.at+i*f.size,f.at+(i+1)*f.size));return;}c.value=bytesValue(r,bytes.slice(f.at+i*f.size,f.at+(i+1)*f.size),f.type,owner,name,unsignedChar);});
  }
  return value;
 }

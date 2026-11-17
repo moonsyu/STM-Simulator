@@ -176,7 +176,8 @@ export class Runtime {
   *evaluate(n){
     this.budget();
     if(n.type==='literal')return n.value;
-    if(n.type==='sizeofType')return n.pointer?4:this.typeSize(n.to);
+    // An enum type has the size ARM GCC gives it (parser.js enumLayout); a struct member of one is laid out so (typeLayout).
+    if(n.type==='sizeofType')return n.pointer?4:n.enumSize??this.typeSize(n.to);
     if(n.type==='sizeofExpr'){const type=expressionType(this,n.arg);return type.pointerElements?4*type.length:type.pointer?4:this.typeSize(type.type)*(type.array?type.length:1);}
     // Reading a volatile variable, or one an interrupt has written, counts as polling (the FSP loop rule above).
     if(n.type==='name'){if(own(this.program.functions,n.name))return {kind:'function',name:n.name};const cell=this.cell(n.name);if(cell.volatile||cell.async)this.polls++;return this.get(cell);}
@@ -242,7 +243,7 @@ export class Runtime {
     if(depth>32)throw Error('구조체 중첩 한도를 넘었습니다.');
     this.layouts??=new Map();if(this.layouts.has(type))return this.layouts.get(type);
     let layout;
-    if(own(this.program.structs,type)){let size=0,alignment=1;const union=this.program.unions&&own(this.program.unions,type);for(const field of this.program.structs[type]){const next=field.pointer?{size:4,alignment:4}:this.typeLayout(field.type,depth+1);alignment=Math.max(alignment,next.alignment);size=union?Math.max(size,next.size*(field.array?field.size:1)):Math.ceil(size/next.alignment)*next.alignment+next.size*(field.array?field.size:1);}layout={size:Math.ceil(size/alignment)*alignment,alignment};}
+    if(own(this.program.structs,type)){let size=0,alignment=1;const union=this.program.unions&&own(this.program.unions,type);for(const field of this.program.structs[type]){const next=field.pointer?{size:4,alignment:4}:field.enumSize?{size:field.enumSize,alignment:field.enumSize}:this.typeLayout(field.type,depth+1);alignment=Math.max(alignment,next.alignment);size=union?Math.max(size,next.size*(field.array?field.size:1)):Math.ceil(size/next.alignment)*next.alignment+next.size*(field.array?field.size:1);}layout={size:Math.ceil(size/alignment)*alignment,alignment};}
     else{const size=['char','byte','bool','uint8_t','int8_t'].includes(type)?1:['short','uint16_t','int16_t'].includes(type)?2:type==='double'?8:4;layout={size,alignment:size};}
     this.layouts.set(type,layout);return layout;
   }

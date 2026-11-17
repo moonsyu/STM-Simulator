@@ -37,7 +37,7 @@ export function compile(source,options={}) {
   }
   tokens.push({v:'<end>',line});let at=0,depth=0;
   const program={globals:[],functions:Object.create(null),structs:Object.assign(Object.create(null),options.structs||{}),unions:Object.create(null),hal:!!options.hal};
-  const aliases=new Map([['HAL_StatusTypeDef','int'],['GPIO_PinState','int'],...Object.entries(options.aliases||{})]),enumConstants=new Map();
+  const aliases=new Map([['HAL_StatusTypeDef','int'],['GPIO_PinState','int'],...Object.entries(options.aliases||{})]),enumConstants=new Map(),enumSizes=new Map();
   const peek=(n=0)=>tokens[at+n]?.v??'<end>',take=()=>tokens[at++].v;
   const location=(index=at)=>options.sourceMap?.[(tokens[index]?.line??line)-1]??{file:options.filename??'main.c',line:tokens[index]?.line??line};
   const fail=(message,index=at)=>{const loc=location(index),error=new Error(`${loc.file}:${loc.line}: ${message}`);error.location=loc;throw error;};
@@ -68,6 +68,16 @@ export function compile(source,options={}) {
     }
     expect('}');return items;
   }
+  // ARM GCC (arm-none-eabi: short enums by default) gives an enum the smallest of 1, 2, 4 bytes that holds its values,
+  // unsigned unless one is negative. Kept by tag and typedef name; a structure member of the type is laid out in that
+  // size (runtime.js typeLayout, hal-stdio.js structFields) and sizeof(type) gives it. Its values stay int.
+  function enumLayout(items,...names){
+    const values=items.map(i=>i.value.value),min=Math.min(0,...values),max=Math.max(0,...values),signed=min<0;
+    const size=signed?(min>=-128&&max<=127?1:min>=-32768&&max<=32767?2:4):(max<=0xff?1:max<=0xffff?2:4);
+    for(const name of names)if(name)enumSizes.set(name,{size,signed});
+    return items;
+  }
+  const enumBytes=name=>{const e=enumSizes.get(name);return e?{enumSize:e.size,enumSigned:e.signed}:{};};
   function spec(){
     let constant=false,external=false,storage=false,volatile=false;while(QUALIFIERS.has(peek())||peek()==='extern'){const q=take();if(q==='const')constant=true;if(q==='extern')external=true;if(q==='static')storage=true;if(q==='volatile')volatile=true;}
     let type;
@@ -75,9 +85,9 @@ export function compile(source,options={}) {
     // the pointer is an ordinary 4-byte value that HAL_GPIO_… takes; its registers (port->ODR) cannot be reached.
     if(peek()==='GPIO_TypeDef'&&options.hal){take();return {type:'uint32_t',constant,external,storage,volatile,port:true};}
     if(peek()==='struct'||peek()==='union'){take();type=identifier();if(!Object.hasOwn(program.structs,type))fail('정의되지 않은 구조체입니다.');}
-    else if(peek()==='enum'){take();const tag=identifier();type=aliases.get(tag)||'int';}
+    else if(peek()==='enum'){take();const tag=identifier();type=aliases.get(tag)||'int';return {type,constant,external,storage,volatile,...enumBytes(tag)};}
     else {if(!isType())fail('자료형이 필요합니다.');const specs=[take()];if(/^u?int64_t$/.test(specs[0]))fail('64비트 정수형(uint64_t, int64_t)은 지원하지 않습니다. 32비트 값 둘로 나누어 쓰세요.');while(['long','short','int','unsigned','signed','char','double'].includes(peek()))specs.push(take());type=specs.at(-1);if(specs.includes('unsigned'))type=specs.includes('char')?'uint8_t':specs.includes('short')?'uint16_t':'uint32_t';else if(specs.includes('short'))type='int16_t';else if(specs.includes('signed')&&specs.includes('char'))type='int8_t';}
-    return {type:aliases.get(type)||type,constant,external,storage,volatile};
+    return {type:aliases.get(type)||type,constant,external,storage,volatile,...enumBytes(type)};
   }
   function declarator(base){
     // A function pointer: type (*name)(parameters), or a table of them: type (*name[n])(parameters). It holds a function
@@ -132,7 +142,7 @@ export function compile(source,options={}) {
     if(['!','~','-','+','*','&','++','--'].includes(t))node={type:'unary',op:t,a:expression(13)};
     else if(t==='sizeof'){
       if(peek()==='('){take();
-       if(castAhead()){const base=spec(),pointer=peek()==='*';if(pointer)take();expect(')');node={type:'sizeofType',to:base.type,pointer};}
+       if(castAhead()){const base=spec(),pointer=peek()==='*';if(pointer)take();expect(')');node={type:'sizeofType',to:base.type,pointer,...(base.enumSize?{enumSize:base.enumSize}:{})};}
        else {const arg=expression();expect(')');node={type:'sizeofExpr',arg};}
       }else node={type:'sizeofExpr',arg:expression(13)};
     }
@@ -180,19 +190,19 @@ export function compile(source,options={}) {
     }
     else if(t==='return'){take();const value=peek()===';'?null:expression();expect(';');result={type:'return',value};}
     else if(t==='break'||t==='continue'){take();expect(';');result={type:t};}
-    else if(t==='enum'&&(peek(1)==='{'||peek(2)==='{')){take();if(peek()!=='{')aliases.set(identifier(),'int');const declarations=parseEnumBody();expect(';');result={type:'declare',declarations};}
+    else if(t==='enum'&&(peek(1)==='{'||peek(2)==='{')){take();let tag;if(peek()!=='{'){tag=identifier();aliases.set(tag,'int');}const declarations=enumLayout(parseEnumBody(),tag);expect(';');result={type:'declare',declarations};}
     else if(isType()){const base=spec();result=finishDeclaration(declarator(base),base);}
     else {result={type:'expression',expr:sequence()};expect(';');}
     depth--;return {...result,loc};
   }
   while(peek()!=='<end>'){
-    if(peek()==='typedef'&&peek(1)==='enum'){const loc=location();take();take();if(peek()!=='{')aliases.set(identifier(),'int');const declarations=parseEnumBody(),alias=identifier();expect(';');aliases.set(alias,'int');program.globals.push({type:'declare',declarations,loc});continue;}
+    if(peek()==='typedef'&&peek(1)==='enum'){const loc=location();take();take();let tag;if(peek()!=='{'){tag=identifier();aliases.set(tag,'int');}const items=parseEnumBody(),alias=identifier(),declarations=enumLayout(items,tag,alias);expect(';');aliases.set(alias,'int');program.globals.push({type:'declare',declarations,loc});continue;}
     // typedef union { … } Name; / union Tag { … }; — read like a struct definition and marked as a union: its members
     // share their bytes (runtime.js unionField). Members are numbers and arrays of numbers.
     let unionHere=false;
     if(peek()==='typedef'&&peek(1)==='union'||peek()==='union'&&peek(2)==='{'){const i=peek()==='typedef'?at+1:at;tokens[i]={...tokens[i],v:'struct'};unionHere=true;}
-    if(peek()==='typedef'&&peek(1)!=='struct'){take();const base=spec(),d=declarator(base);if(d.pointer)fail('포인터 typedef는 지원하지 않습니다.');expect(';');aliases.set(d.name,d.fnptr?d.type:base.type);continue;}
-    if(peek()==='enum'&&(peek(1)==='{'||peek(2)==='{')){const loc=location();take();if(peek()!=='{')aliases.set(identifier(),'int');const declarations=parseEnumBody();expect(';');program.globals.push({type:'declare',declarations,loc});continue;}
+    if(peek()==='typedef'&&peek(1)!=='struct'){take();const base=spec(),d=declarator(base);if(d.pointer)fail('포인터 typedef는 지원하지 않습니다.');expect(';');aliases.set(d.name,d.fnptr?d.type:base.type);if(base.enumSize&&!d.fnptr)enumSizes.set(d.name,{size:base.enumSize,signed:base.enumSigned});continue;}
+    if(peek()==='enum'&&(peek(1)==='{'||peek(2)==='{')){const loc=location();take();let tag;if(peek()!=='{'){tag=identifier();aliases.set(tag,'int');}const declarations=enumLayout(parseEnumBody(),tag);expect(';');program.globals.push({type:'declare',declarations,loc});continue;}
     // The fields between { and } of a struct definition.
     const structBody=()=>{expect('{');const fields=[];
       while(peek()!=='}'){
