@@ -4,7 +4,7 @@
 // and the contents kept in the project file.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {RaDataFlash,validateDataFlash,dataFlashUsed,RA_DF_BASE,RA_DF_SIZE,RA_DF_TIME_US} from '../../src/ra-data-flash.js';
+import {RaDataFlash,validateDataFlash,dataFlashUsed,keepBoardDataFlash,RA_DF_BASE,RA_DF_SIZE,RA_DF_TIME_US} from '../../src/ra-data-flash.js';
 import {Faci,FACI,FSTATR,FCU_EVENT,FASTAT_CMDLK} from '../../src/emu/ra6e1/flash.js';
 import {Machine} from '../../src/emu/machine.js';
 import {Ra6e1,RaBus,RA_BASES} from '../../src/emu/ra6e1/soc.js';
@@ -583,6 +583,14 @@ void hal_entry(void)
  // The next run of the same project file, with what this one left (the app saves it when a run ends: app-run.js).
  const second=interp(code,{dataFlash:first.session.dataFlash.encode()});
  assert.equal(second.session.dataFlash.changed,false);second.run(100);assert.deepEqual(second.log.print,['4']);assert.deepEqual(second.session.dataFlash.encode(),[{at:0,hex:'04000000'}]);
+});
+
+test('undo: a restored snapshot keeps the data flash the last run left, except the steps that changed it themselves',()=>{
+ const now={code:'b',dataFlash:[{at:0,hex:'02000000'}]};
+ assert.deepEqual(keepBoardDataFlash({code:'a',dataFlash:[{at:0,hex:'01000000'}]},now),{code:'a',dataFlash:[{at:0,hex:'02000000'}]},'an edit undone: the newer contents stay');
+ assert.deepEqual(keepBoardDataFlash({code:'a'},now),{code:'a',dataFlash:[{at:0,hex:'02000000'}]});
+ assert.deepEqual(keepBoardDataFlash({code:'a',dataFlash:[{at:0,hex:'01000000'}]},{code:'b'}),{code:'a'},'cleared by a run that erased it');
+ assert.deepEqual(keepBoardDataFlash({code:'a',dataFlash:[{at:0,hex:'01000000'}]},{code:'b'},true),{code:'a',dataFlash:[{at:0,hex:'01000000'}]},'"데이터 플래시 지우기" or an example undone: the old contents come back');
 });
 
 test('project file: an RA project keeps the data flash contents (dataFlash), checked on load; other boards and empty contents have none',()=>{

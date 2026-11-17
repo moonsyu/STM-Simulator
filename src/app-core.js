@@ -5,6 +5,7 @@ import {state} from './app-state.js';
 import {refresh} from './app-view.js';
 import {diagnostic,uartLines,feedback,layout} from './app.js';
 import {$} from './common.js';
+import {keepBoardDataFlash} from './ra-data-flash.js';
 import {uartLineText} from './uart-text.js';
 
 export function uid(prefix){return prefix+crypto.randomUUID().replaceAll('-','').slice(0,12);}
@@ -29,11 +30,16 @@ export function logUart(event){
 export function setSaveState(text,state){$('save-state').textContent=text;$('save-state').dataset.state=state;}
 export function flushAutosave(){clearTimeout(state.saveTimer);state.saveTimer=null;localStorage.setItem('stm32lab.project.v2',JSON.stringify(state.project));if($('save-state').dataset.state==='error-file')setSaveState('파일 저장 실패','error-file');else setSaveState('자동 저장됨','saved');feedback.clear('autosave');diagnostic('project.saved',{status:state.status},true);}
 export function autosave(){clearTimeout(state.saveTimer);if($('save-state').dataset.state!=='error-file')setSaveState('저장 중…','saving');state.saveTimer=setTimeout(()=>{try{flushAutosave();}catch(error){setSaveState('자동 저장 실패',$('save-state').dataset.state==='error-file'?'error-file':'error');log('자동 저장 실패: '+error.message,'error');feedback.show('자동 저장에 실패했습니다. 파일 저장으로 작업을 보관해 주세요.','autosave');}},200);}
-export function checkpoint(){state.undoStack.push(JSON.stringify(state.project));if(state.undoStack.length>80)state.undoStack.shift();state.redoStack=[];state.dirty=true;}
+// An undo step is the project as JSON; one that changes the RA data flash contents itself (`dataFlash`: clearing them,
+// an FSP example) is marked, so only its undo / redo moves the contents (ra-data-flash.js keepBoardDataFlash).
+const FLASH_STEP='\u0000dataFlash\u0000';
+export function checkpoint({dataFlash=false}={}){state.undoStack.push((dataFlash?FLASH_STEP:'')+JSON.stringify(state.project));if(state.undoStack.length>80)state.undoStack.shift();state.redoStack=[];state.dirty=true;}
 export function changed(){autosave();refresh();}
 export function setMode(m){if(running()){log('편집하려면 시뮬레이션을 먼저 정지하세요.');return;}state.mode=m;state.pending=null;state.selection=null;$('preview-layer').innerHTML='';refresh();}
 // The shell owns where each view lives: code in the editor group, the inspector in the
 // secondary side bar, settings and device Docs in the primary side bar.
 export function tab(name){if(name==='code')layout.reveal('code');else if(name==='inspect')layout.reveal('inspect');else if(['settings','docs'].includes(name))layout.showView(name);}
 export function inspectTab(options){layout.reveal('inspect',options);}
-export function editUndo(redo=false){if(running())return;const from=redo?state.redoStack:state.undoStack,to=redo?state.undoStack:state.redoStack;if(!from.length)return;to.push(JSON.stringify(state.project));state.project=JSON.parse(from.pop());state.selection=null;state.pending=null;syncEditor();changed();pinSearch();}
+export function editUndo(redo=false){if(running())return;const from=redo?state.redoStack:state.undoStack,to=redo?state.undoStack:state.redoStack;if(!from.length)return;
+ let step=from.pop();const own=step.startsWith(FLASH_STEP);if(own)step=step.slice(FLASH_STEP.length);
+ to.push((own?FLASH_STEP:'')+JSON.stringify(state.project));state.project=keepBoardDataFlash(JSON.parse(step),state.project,own);state.selection=null;state.pending=null;syncEditor();changed();pinSearch();}

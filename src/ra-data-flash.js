@@ -83,5 +83,15 @@ export function validateDataFlash(runs){
  }
  return out;
 }
+/**
+ * Undo / redo put a project snapshot back (app-core.js editUndo). The data flash contents are what the board holds, not
+ * an edit: the restored project keeps what the last run left (`current.dataFlash`), except for the steps that changed
+ * the contents themselves (`ownStep`: "데이터 플래시 지우기", an FSP example), whose undo brings the old contents back.
+ */
+export function keepBoardDataFlash(restored,current,ownStep=false){
+ if(ownStep)return restored;
+ if(current?.dataFlash)restored.dataFlash=current.dataFlash;else delete restored.dataFlash;
+ return restored;
+}
 /** Programmed bytes of saved contents (0 for none). */
 export const dataFlashUsed=runs=>(runs||[]).reduce((n,run)=>n+run.hex.length/2,0);
