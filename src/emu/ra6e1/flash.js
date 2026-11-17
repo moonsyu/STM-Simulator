@@ -23,7 +23,7 @@
 // are ignored with a note; the reset values of FAEINT (0x98) and FMEPROT (0x0001).
 // Not modelled: code flash programming (commands in code flash P/E mode end in the command-locked state with a note —
 // the ELF's code flash never changes), P/E suspend and resume, the configuration-set and lock-bit commands, ECC errors.
-import { RA_DF_BASE, RA_DF_SIZE, RA_DF_BLOCK, RA_DF_UNIT, RA_DF_TIME_US } from '../../ra-data-flash.js';
+import { RA_DF_BASE, RA_DF_SIZE, RA_DF_BLOCK, RA_DF_UNIT, RA_DF_TIME_US, dataFlashOutside } from '../../ra-data-flash.js';
 
 export const FCU_EVENT = Object.freeze({ FIFERR: 0x30, FRDYI: 0x31 });
 export const FACI = Object.freeze({ FASTAT: 0x10, FAEINT: 0x14, FRDYIE: 0x18, FSADDR: 0x30, FEADDR: 0x34, FMEPROT: 0x44, FSTATR: 0x80, FENTRYR: 0x84, FSUINITR: 0x8c, FCMDR: 0xa0, FBCCNT: 0xd0, FBCSTAT: 0xd4, FBCADDR: 0xd8, FCPSR: 0xe0, FPCKAR: 0xe4 });
@@ -138,6 +138,12 @@ export class Faci {
     if (this.assignNoted) return;
     this.assignNoted = true;
     this.warn('데이터 플래시에 대입(버스 쓰기)한 값은 쓰이지 않고 무시됩니다 — 실제 칩도 같습니다. R_FLASH_HP_Erase로 블록을 지운 뒤 R_FLASH_HP_Write로 쓰세요.');
+  }
+  // An access next to the data flash that is not all inside it (the bus faults after this; the interpreter stops).
+  outside(address, size) {
+    if (this.outsideNoted) return;
+    this.outsideNoted = true;
+    this.warn(dataFlashOutside(address, size));
   }
   // ------------------------------------------------------------ registers
   word(base) {

@@ -9,7 +9,7 @@
 // time-outs cannot be reached (the model's times are below FSP's maximums), so FSP_ERR_TIMEOUT is not returned.
 // One difference from the driver: R_FLASH_HP_Write copies the source bytes when it is called; the driver reads the
 // buffer as it goes (in BGO from the interrupt), which shows only if the program changes the buffer during the write.
-import {RaDataFlash,RA_DF_BASE,RA_DF_SIZE,RA_DF_BLOCK,RA_DF_UNIT} from './ra-data-flash.js';
+import {RaDataFlash,RA_DF_BASE,RA_DF_SIZE,RA_DF_BLOCK,RA_DF_UNIT,RA_DF_WINDOW,dataFlashOutside} from './ra-data-flash.js';
 import {Faci,FCU_EVENT,FACI,FSTATR,FASTAT_CMDLK} from './emu/ra6e1/flash.js';
 import {memoryBytes,bytesValue} from './hal-stdio.js';
 import {raClockHz} from './ra-config.js';
@@ -191,8 +191,10 @@ export const FLASH_METHODS={
  // ---- (type *) address: the data flash as the program reads it through a pointer (session.js → runtime cast).
  // The cells are views of the contents (a store into one is ignored), one array per element type and phase; any other
  // address is left to the runtime.
+ // An address in the 64 KB around the data flash gives a pointer too: an element there that is not all inside the data
+ // flash (past its end, or crossing it) is a bus error on the chip — said as the emulator says it, then the run stops.
  memory(address,type,r){
-  const at=(address>>>0)-RA_DF_BASE;if(!(at>=0&&at<RA_DF_SIZE))return null;
+  const at=(address>>>0)-RA_DF_BASE;if(!(at>=0&&at<RA_DF_WINDOW))return null;
   const elem=type==='void'?'uint8_t':type,size=r.typeSize(elem),phase=at%size,key=elem+'@'+phase;
   this.flashViews??=new Map();
   if(!this.flashViews.has(key)){
@@ -200,7 +202,8 @@ export const FLASH_METHODS={
    // A store through the pointer (*p = v) goes nowhere, as on the chip: said once, and the program goes on.
    for(let o=phase;o+size<=RA_DF_SIZE;o+=size)cells.push({get value(){return self.flashRead(o,size,elem);},set value(v){void v;self.flashDev(self.runtime).assigned();},owner,dataType:elem});
    // `memory`: where the view's elements lie, so a pointer into it has an address (runtime.js memoryAddress).
-   this.flashViews.set(key,{kind:'array',cells,memory:{base:RA_DF_BASE+phase,size}});
+   const base=RA_DF_BASE+phase;
+   this.flashViews.set(key,{kind:'array',cells,memory:{base,size},outside:index=>{const message=dataFlashOutside(base+index*size,size);self.warnOnce(self.runtime,'flash-outside','[FLASH] '+message);return message;}});
   }
   return {kind:'pointer',array:this.flashViews.get(key),index:(at-phase)/size};
  },

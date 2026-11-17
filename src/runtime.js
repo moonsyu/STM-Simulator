@@ -126,7 +126,8 @@ export class Runtime {
     // A string literal kept as a pointer value (an element of const char *names[], a struct field): its characters.
     p=this.literal(p);
     if(isArray(p))p=this.pointer(p);if(!isPointer(p))throw new Error('배열 또는 유효한 포인터가 필요합니다.');
-    if(p.array){const index=p.index+integer(offset);if(index<0||index>=p.array.cells.length)throw new Error('배열 인덱스가 범위를 벗어났습니다.');return p.array.cells[index];}
+    // Memory the adapter stands in for says itself what is past it (`outside`: the RA data flash's bus error).
+    if(p.array){const index=p.index+integer(offset);if(index<0||index>=p.array.cells.length)throw new Error(p.array.outside?.(index)??'배열 인덱스가 범위를 벗어났습니다.');return p.array.cells[index];}
     if(offset!==0)throw new Error('단일 변수 포인터에 범위를 벗어난 연산을 할 수 없습니다.');return p.cell;
   }
   *invokeValue(value,args){
@@ -161,7 +162,7 @@ export class Runtime {
       const compare={'==':x===y,'!=':x!==y,'<':x<y,'>':x>y,'<=':x<=y,'>=':x>=y}[op];if(compare!==undefined)return Number(compare);
     }}
     if(op==='-'&&(isPointer(a)||isArray(a))&&(isPointer(b)||isArray(b))){const p=this.pointer(a),q=this.pointer(b);if(p.array&&p.array===q.array)return p.index-q.index;if(!p.array&&!q.array&&p.cell===q.cell)return 0;throw new Error('서로 다른 배열을 가리키는 포인터끼리는 뺄 수 없습니다.');}
-    if((isPointer(a)||isArray(a))&&['+','-'].includes(op)){const p=this.pointer(a);if(!p.array)throw new Error('포인터 산술에는 배열이 필요합니다.');const index=p.index+(op==='+'?1:-1)*integer(b);if(index<0||index>p.array.cells.length)throw new Error('포인터가 배열 범위를 벗어났습니다.');return {...p,index};}
+    if((isPointer(a)||isArray(a))&&['+','-'].includes(op)){const p=this.pointer(a);if(!p.array)throw new Error('포인터 산술에는 배열이 필요합니다.');const index=p.index+(op==='+'?1:-1)*integer(b);if(!p.array.memory&&(index<0||index>p.array.cells.length))throw new Error('포인터가 배열 범위를 벗어났습니다.');return {...p,index};}
     if(op==='+'&&(typeof a==='string'||typeof b==='string'))return String(a)+String(b);
     if(this.program.hal&&ta&&typeof a==='number'&&typeof b==='number')return arithmetic(op,a,b,ta,tb);
     if(['==','!='].includes(op)){if(isArray(a))a=this.pointer(a);if(isArray(b))b=this.pointer(b);let eq=a===b;if(isPointer(a)&&isPointer(b))eq=a.array? a.array===b.array&&a.index===b.index:a.cell===b.cell;return Number(op==='=='?eq:!eq);}

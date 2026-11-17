@@ -483,6 +483,26 @@ void hal_entry(void)
  assert.deepEqual(log.print,['0 0 0 0 0 88 88','0']);
 });
 
+test('outside the data flash: a read past its end or crossing it stops both engines with the same note',()=>{
+ const outside=(address,size)=>`데이터 플래시(0x08000000~0x08001FFF) 밖 ${address}에 ${size}바이트로 접근했습니다 — 실제 칩에서는 버스 오류(HardFault)로 멈춥니다. 주소와 읽는 크기를 확인하세요.`;
+ for(const [expression,address,size] of [['((uint8_t *) 0x08001FF0U)[16]','0x08002000',1],['*(uint8_t *) 0x08002000U','0x08002000',1],['*(uint32_t *) 0x08001FFEU','0x08001FFE',4],['*(uint16_t *) 0x08004000U','0x08004000',2]]){
+  const {log,run}=interp(`
+void hal_entry(void)
+{
+    printf("%02X\\n", ((uint8_t *) 0x08001FF0U)[15]);
+    printf("%lu\\n", (unsigned long) ${expression});
+    printf("not here\\n");
+}`);
+  assert.throws(()=>run(20),new RegExp('^Error: '+outside(address,size).replace(/[()~.]/g,'\\$&')+'$'),expression);
+  assert.deepEqual(log.print,['FF'],expression);assert.equal(log.warn.at(-1),'[FLASH] '+outside(address,size),expression);
+ }
+ // The emulator's bus: the same note before the bus fault; a read inside the data flash still works.
+ const warnings=[],machine=new Machine({bus:new RaBus()});new Ra6e1(machine,{warn:w=>warnings.push(w)});const bus=machine.bus;
+ assert.equal(bus.read32(RA_DF_BASE+RA_DF_SIZE-4)>>>0,0xffffffff);warnings.length=0;
+ assert.throws(()=>bus.read32(RA_DF_BASE+RA_DF_SIZE-2));assert.deepEqual(warnings,['[FLASH] '+outside('0x08001FFE',4)]);
+ assert.throws(()=>bus.read8(RA_DF_BASE+RA_DF_SIZE));assert.throws(()=>bus.write8(RA_DF_BASE+0x3000,1));assert.equal(warnings.length,1,'said once');
+});
+
 test('interpreter: the data flash survives an MCU reset (NVIC_SystemReset) and starts from the project\'s saved contents',()=>{
  const code=`
 volatile uint32_t seen = 0;

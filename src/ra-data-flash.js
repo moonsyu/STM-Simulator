@@ -12,6 +12,13 @@ export const RA_DF_BASE=0x08000000,RA_DF_SIZE=0x2000,RA_DF_BLOCK=64,RA_DF_UNIT=4
 // at FCLK 4 MHz); the simulated time is a tenth of each (the data sheet's typical times were not at hand).
 export const RA_DF_TIME_US=Object.freeze({write:380,erase:1800,blankCheck:8.4});
 const hexByte=b=>b.toString(16).padStart(2,'0');
+/**
+ * The 64 KB around the data flash (0x0800_0000–0x0800_FFFF): an access there that is not all inside the data flash (past
+ * its end, or a read that crosses it) is a bus error on the chip. Both engines say so with this text, then stop (the
+ * emulator at the HardFault, the interpreter with an error).
+ */
+export const RA_DF_WINDOW=0x10000;
+export const dataFlashOutside=(address,size)=>`데이터 플래시(0x08000000~0x08001FFF) 밖 0x${(address>>>0).toString(16).toUpperCase().padStart(8,'0')}에 ${size}바이트로 접근했습니다 — 실제 칩에서는 버스 오류(HardFault)로 멈춥니다. 주소와 읽는 크기를 확인하세요.`;
 
 export class RaDataFlash {
  /** `bytes`: the memory the contents live in (the emulator bus's data flash array), or none for an array of its own. */

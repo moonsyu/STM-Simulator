@@ -312,6 +312,7 @@ export class Ra6e1 {
     this.bus.onDataFlashRead = (offset, size) => this.faci.dataRead(offset, size);
     // A store into the data flash goes nowhere (code flash stores are ignored as before, without a note).
     this.bus.flashWriteHook = a => { if (a >= RA_DATA_FLASH_BASE) this.faci.assigned(); };
+    this.bus.onDataFlashOutside = (a, size) => this.faci.outside(a, size);
     const devices = [
       [RA_BASES.SYSTEM, 0x700, this.system],
       [RA_BASES.PORT, 0x1000, this.ports],

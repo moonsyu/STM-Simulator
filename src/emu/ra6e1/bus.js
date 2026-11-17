@@ -27,7 +27,7 @@ export class RaBus extends Bus {
     this.dataFlash = new Uint8Array(dbuf); this.dataFlash.fill(0xff); this.dataFlashDV = new DataView(dbuf);
     // The data flash contents with their blank state (erased units): the flash sequencer model (flash.js) programs
     // and erases through it, and the program reads the bytes here. `onDataFlashRead(offset, size)`: a read by the program.
-    this.dataFlashStore = new RaDataFlash(this.dataFlash); this.onDataFlashRead = null;
+    this.dataFlashStore = new RaDataFlash(this.dataFlash); this.onDataFlashRead = null; this.onDataFlashOutside = null;
     const obuf = new ArrayBuffer(RA_OPTION_SETTING_SIZE + 8);
     this.optionBytes = new Uint8Array(obuf); this.optionBytes.fill(0xff); this.optionDV = new DataView(obuf);
   }
@@ -73,14 +73,21 @@ export class RaBus extends Bus {
     if ((a >>> 18) === 0x800) return this.sram16[(a & 0x3ffff) >>> 1];
     throw new BusFaultSignal(a, false, 2, true);
   }
+  // Next to the data flash (its 64 KB window) but not all inside it: a bus error, noted first (`onDataFlashOutside`).
+  outsideDataFlash(a, size, write = false) {
+    if (this.onDataFlashOutside) this.onDataFlashOutside(a, size);
+    throw new BusFaultSignal(a, write, size);
+  }
   slowRead(a, size) {
     a >>>= 0;
     const r = this.region(a);
     if (r) {
+      if (r[0] === this.dataFlashDV && r[1] + size > RA_DATA_FLASH_SIZE) this.outsideDataFlash(a, size);
       if (r[0] === this.dataFlashDV && this.onDataFlashRead !== null) this.onDataFlashRead(r[1], size);
       return size === 4 ? r[0].getUint32(r[1], true) : size === 2 ? r[0].getUint16(r[1], true) : r[0].getUint8(r[1]);
     }
     if ((a >>> 16) === (OPTION_BASE >>> 16)) return this.optionRead(a, size);
+    if ((a >>> 16) === (RA_DATA_FLASH_BASE >>> 16)) this.outsideDataFlash(a, size);
     const e = this.find(a);
     if (e === null) throw new BusFaultSignal(a, false, size);
     if (this.onDeviceAccess !== null) this.onDeviceAccess(e.state);
@@ -91,6 +98,7 @@ export class RaBus extends Bus {
     a >>>= 0;
     if (a < RA_FLASH_SIZE || (a >>> 13) === (RA_DATA_FLASH_BASE >>> 13)) { if (this.flashWriteHook) this.flashWriteHook(a, v, size); return; }
     if ((a >>> 16) === (OPTION_BASE >>> 16)) return;
+    if ((a >>> 16) === (RA_DATA_FLASH_BASE >>> 16)) this.outsideDataFlash(a, size, true);
     const e = this.find(a);
     if (e === null) throw new BusFaultSignal(a, true, size);
     if (this.onDeviceAccess !== null) this.onDeviceAccess(e.state);
