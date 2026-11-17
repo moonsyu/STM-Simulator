@@ -3,7 +3,7 @@
 // linker init tables) and script (linker scripts). The user's code is src/hal_entry.c; the app builds these with the
 // FSP sources (BSP + r_* drivers) and ARM GCC, then runs the ELF on the RA6E1 emulator.
 // Formats follow RASC output for FSP 5.x/6.x (only what the FPB-RA6E1 configurations here need).
-import {raFamily,raPinName,raPortBit,RA_IRQ_PINS,raPsel,RA_PSEL_NAMES,RA_SCI_CHANNELS,RA_GPT_CHANNELS,RA_ADC_CHANNELS,RA_AGT_CHANNELS,RA_IIC_CHANNELS,RA_SPI_CHANNELS,RA_SCI_SPI_CHANNELS,raGptCounts,raAgtCounts,raIicClock,raClockHz,raSpiBitrate,raSciSpiBitrate,RA_WDT,raOfs0,RA_RTC_DEFAULTS,RA_IIC_SLAVE_ADDRESS,raIicSlaveClock} from './ra-config.js';
+import {raFamily,raPinName,raPortBit,RA_IRQ_PINS,raPsel,RA_PSEL_NAMES,RA_SCI_CHANNELS,RA_GPT_CHANNELS,RA_ADC_CHANNELS,RA_AGT_CHANNELS,RA_IIC_CHANNELS,RA_SPI_CHANNELS,RA_SCI_SPI_CHANNELS,raGptCounts,raAgtCounts,raIicClock,raClockHz,raSpiBitrate,raSciSpiBitrate,RA_WDT,raOfs0,RA_RTC_DEFAULTS,RA_IIC_SLAVE_ADDRESS,raIicSlaveClock,RA_FLASH_DEFAULTS} from './ra-config.js';
 
 const HEADER=kind=>`/* generated ${kind} - do not edit */\n`;
 const hex=(n,w=8)=>'0x'+(n>>>0).toString(16).toUpperCase().padStart(w,'0');
@@ -308,6 +308,39 @@ const rtc_instance_t ${t.name} =
     .p_api         = &g_rtc_on_rtc
 };`;
 }
+// Flash instance (r_flash_hp g_flash0) for the data flash. With Data Flash Background Operation the flash-ready
+// (fcu_frdyi_isr) and flash-error (fcu_fiferr_isr) interrupts and the callback are generated; without it neither
+// (r_flash_hp then waits in the call and uses no interrupt).
+const flashOf=mcu=>{const p=mcu.peripherals?.FLASH;if(!p?.enabled)return null;const q={...RA_FLASH_DEFAULTS,...p};return {...q,callback:q.bgo?q.callback:'',name:'g_flash0'};};
+const flashDecl=t=>`/* Flash on Flash HP Instance */
+extern const flash_instance_t ${t.name};
+/** Access the Flash HP instance using these structures when calling API functions directly (::p_api is not used). */
+extern flash_hp_instance_ctrl_t ${t.name}_ctrl;
+extern const flash_cfg_t ${t.name}_cfg;${t.callback?`
+#ifndef ${t.callback}
+void ${t.callback}(flash_callback_args_t * p_args);
+#endif`:''}`;
+function flashInstance(t){
+ const v=(k,field)=>{const name=field.padEnd(20);return t.bgo?`#if defined(VECTOR_NUMBER_FCU_${k})\n    .${name}= VECTOR_NUMBER_FCU_${k},\n#else\n    .${name}= FSP_INVALID_VECTOR,\n#endif`:`    .${name}= FSP_INVALID_VECTOR,`;};
+ return `flash_hp_instance_ctrl_t ${t.name}_ctrl;
+const flash_cfg_t ${t.name}_cfg =
+{
+    .data_flash_bgo      = ${t.bgo?'true':'false'},
+    .p_callback          = ${t.callback||'NULL'},
+    .p_context           = NULL,
+${v('FRDYI','irq')}
+${v('FIFERR','err_irq')}
+    .err_ipl             = ${t.bgo?`(${t.errorPriority})`:'(BSP_IRQ_DISABLED)'},
+    .ipl                 = ${t.bgo?`(${t.readyPriority})`:'(BSP_IRQ_DISABLED)'},
+};
+/* Instance structure to use this module. */
+const flash_instance_t ${t.name} =
+{
+    .p_ctrl        = &${t.name}_ctrl,
+    .p_cfg         = &${t.name}_cfg,
+    .p_api         = &g_flash_on_flash_hp
+};`;
+}
 /** OFS0 as bsp_mcu_ofs_cfg.h gives it to the BSP (bsp_linker.c places it at 0x0100A100). */
 function ofsCfg(mcu){
  const ofs=raOfs0(mcu),iwdt=mcu.peripherals?.IWDT?.enabled,wdt=mcu.peripherals?.WDT?.enabled&&mcu.peripherals.WDT.startMode==='AUTO';
@@ -319,7 +352,7 @@ function ofsCfg(mcu){
 `;
 }
 /** The FSP instances hal_data.c defines for an RA configuration, as the built-in interpreter declares them (fsp-interp.js). */
-export const raInstances=mcu=>({irqs:irqsOf(mcu),uarts:uartsOf(mcu),gpts:gptsOf(mcu),adc:adcOf(mcu),agts:agtsOf(mcu),iics:iicsOf(mcu),spis:spisOf(mcu),sciSpis:sciSpisOf(mcu),wdts:wdtsOf(mcu),rtc:rtcOf(mcu),iicSlaves:iicSlavesOf(mcu)});
+export const raInstances=mcu=>({irqs:irqsOf(mcu),uarts:uartsOf(mcu),gpts:gptsOf(mcu),adc:adcOf(mcu),agts:agtsOf(mcu),iics:iicsOf(mcu),spis:spisOf(mcu),sciSpis:sciSpisOf(mcu),wdts:wdtsOf(mcu),rtc:rtcOf(mcu),iicSlaves:iicSlavesOf(mcu),flash:flashOf(mcu)});
 /** "P408" → "BSP_IO_PORT_04_PIN_08". */
 export const raIoName=pin=>ioName(pin);
 // SPI masters: r_spi on RSPI (g_spiN) and r_sci_spi on an SCI channel in simple SPI mode (g_sci_spiN). Both use spi_cfg_t
@@ -482,6 +515,8 @@ export function raVectors(mcu){
  if(rtc)for(const [k,isr,label,prio]of [['ALARM','rtc_alarm_periodic_isr','Alarm interrupt',rtc.alarmPriority],['PERIOD','rtc_alarm_periodic_isr','Periodic interrupt',rtc.periodicPriority],['CARRY','rtc_carry_isr','Carry interrupt',rtc.carryPriority]])if(prio!=null)list.push({isr,event:'RTC_'+k,label:`RTC ${k} (${label})`,vector:'RTC_'+k});
  // I2C slave (r_iic_slave): the channel's four IIC events with the slave driver's ISRs (no wakeup vector).
  for(const t of iicSlavesOf(mcu))for(const [kind,label]of [['RXI','Receive data full'],['TXI','Transmit data empty'],['TEI','Transmit end'],['ERI','Transfer error']])list.push({isr:`iic_slave_${kind.toLowerCase()}_isr`,event:`IIC${t.channel}_${kind}`,label:`IIC${t.channel} ${kind} (${label})`,vector:`IIC${t.channel}_${kind}`});
+ // Flash (r_flash_hp) with background operation: flash ready first, then the access error (as RASC lists them).
+ if(flashOf(mcu)?.bgo)for(const [k,label]of [['FRDYI','Flash ready interrupt'],['FIFERR','Flash access error interrupt']])list.push({isr:`fcu_${k.toLowerCase()}_isr`,event:'FCU_'+k,label:`FCU ${k} (${label})`,vector:'FCU_'+k});
  return list.map((v,i)=>({...v,index:i}));
 }
 
@@ -751,7 +786,7 @@ ${vectors.map(v=>`    [${v.index}] = BSP_PRV_VECT_ENUM(EVENT_${v.event},GROUP${v
 function halDataH(mcu){
  const irqs=irqsOf(mcu),uarts=uartsOf(mcu),includes=(irqs.length?'#include "r_icu.h"\n#include "r_external_irq_api.h"\n':'')+(uarts.length?'#include "r_sci_uart.h"\n#include "r_uart_api.h"\n':'')+(gptsOf(mcu).length?'#include "r_gpt.h"\n#include "r_timer_api.h"\n':'')+(adcOf(mcu)?'#include "r_adc.h"\n#include "r_adc_api.h"\n':'')+(iicsOf(mcu).length?'#include "r_iic_master.h"\n#include "r_i2c_master_api.h"\n':'')+(agtsOf(mcu).length?'#include "r_agt.h"\n'+(gptsOf(mcu).length?'':'#include "r_timer_api.h"\n'):'')
   +(spisOf(mcu).length?'#include "r_spi.h"\n':'')+(sciSpisOf(mcu).length?'#include "r_sci_spi.h"\n':'')+(spisOf(mcu).length||sciSpisOf(mcu).length?'#include "r_spi_api.h"\n':'')
-  +wdtsOf(mcu).map(w=>`#include "r_${w.kind}.h"\n`).join('')+(wdtsOf(mcu).length?'#include "r_wdt_api.h"\n':'')+(rtcOf(mcu)?'#include "r_rtc.h"\n#include "r_rtc_api.h"\n':'')+(iicSlavesOf(mcu).length?'#include "r_iic_slave.h"\n#include "r_i2c_slave_api.h"\n':'');
+  +wdtsOf(mcu).map(w=>`#include "r_${w.kind}.h"\n`).join('')+(wdtsOf(mcu).length?'#include "r_wdt_api.h"\n':'')+(rtcOf(mcu)?'#include "r_rtc.h"\n#include "r_rtc_api.h"\n':'')+(iicSlavesOf(mcu).length?'#include "r_iic_slave.h"\n#include "r_i2c_slave_api.h"\n':'')+(flashOf(mcu)?'#include "r_flash_hp.h"\n#include "r_flash_api.h"\n':'');
  const decls=irqs.map(i=>`/** External IRQ on ICU Instance. */
 extern const external_irq_instance_t ${i.name};
 /** Access the ICU instance using these structures when calling API functions directly (::p_api is not used). */
@@ -767,7 +802,7 @@ extern const uart_cfg_t ${u.name}_cfg;
 extern const sci_uart_extended_cfg_t ${u.name}_cfg_extend;
 #ifndef ${u.callback}
 void ${u.callback}(uart_callback_args_t * p_args);
-#endif`)).concat(gptsOf(mcu).map(gptDecl)).concat(adcOf(mcu)?[adcDecl(adcOf(mcu))]:[]).concat(agtsOf(mcu).map(agtDecl)).concat(iicsOf(mcu).map(iicDecl)).concat(spisOf(mcu).map(t=>spiDecl(t,'SPI','spi_instance_ctrl_t'))).concat(sciSpisOf(mcu).map(t=>spiDecl(t,'SCI','sci_spi_instance_ctrl_t'))).concat(wdtsOf(mcu).map(wdtDecl)).concat(rtcOf(mcu)?[rtcDecl(rtcOf(mcu))]:[]).concat(iicSlavesOf(mcu).map(iicSlaveDecl)).join('\n');
+#endif`)).concat(gptsOf(mcu).map(gptDecl)).concat(adcOf(mcu)?[adcDecl(adcOf(mcu))]:[]).concat(agtsOf(mcu).map(agtDecl)).concat(iicsOf(mcu).map(iicDecl)).concat(spisOf(mcu).map(t=>spiDecl(t,'SPI','spi_instance_ctrl_t'))).concat(sciSpisOf(mcu).map(t=>spiDecl(t,'SCI','sci_spi_instance_ctrl_t'))).concat(wdtsOf(mcu).map(wdtDecl)).concat(rtcOf(mcu)?[rtcDecl(rtcOf(mcu))]:[]).concat(iicSlavesOf(mcu).map(iicSlaveDecl)).concat(flashOf(mcu)?[flashDecl(flashOf(mcu))]:[]).join('\n');
  return HEADER('HAL header file')+`#ifndef HAL_DATA_H_
 #define HAL_DATA_H_
 #include <stdint.h>
@@ -859,7 +894,7 @@ const uart_instance_t ${u.name} =
     .p_ctrl        = &${u.name}_ctrl,
     .p_cfg         = &${u.name}_cfg,
     .p_api         = &g_uart_on_sci
-};`;})).concat(gptsOf(mcu).map(gptInstance)).concat(adcOf(mcu)?[adcInstance(adcOf(mcu))]:[]).concat(agtsOf(mcu).map(agtInstance)).concat(iicsOf(mcu).map(iicInstance)).concat(spisOf(mcu).map(spiInstance)).concat(sciSpisOf(mcu).map(sciSpiInstance)).concat(wdtsOf(mcu).map(wdtInstance)).concat(rtcOf(mcu)?[rtcInstance(rtcOf(mcu))]:[]).concat(iicSlavesOf(mcu).map(iicSlaveInstance)).join('\n');
+};`;})).concat(gptsOf(mcu).map(gptInstance)).concat(adcOf(mcu)?[adcInstance(adcOf(mcu))]:[]).concat(agtsOf(mcu).map(agtInstance)).concat(iicsOf(mcu).map(iicInstance)).concat(spisOf(mcu).map(spiInstance)).concat(sciSpisOf(mcu).map(sciSpiInstance)).concat(wdtsOf(mcu).map(wdtInstance)).concat(rtcOf(mcu)?[rtcInstance(rtcOf(mcu))]:[]).concat(iicSlavesOf(mcu).map(iicSlaveInstance)).concat(flashOf(mcu)?[flashInstance(flashOf(mcu))]:[]).join('\n');
  return HEADER('HAL source file')+`#include "hal_data.h"
 ${body}${body?'\n':''}void g_hal_init(void) {
 g_common_init();
@@ -1062,6 +1097,9 @@ export function generateRaFiles(mcu,{board}={}){
   cfg('r_sci_spi_cfg.h',moduleCfg('r_sci_spi_cfg.h','R_SCI_SPI_CFG_H_',['#define SCI_SPI_CFG_PARAM_CHECKING_ENABLE (BSP_CFG_PARAM_CHECKING_ENABLE)','#define SCI_SPI_DTC_SUPPORT_ENABLE (0)'])),
   // RTC_CFG_OPEN_SET_CLOCK_SOURCE: RASC's "Set Source Clock in Open" — off for the start time "PC 시각" (ra-config.js).
   cfg('r_rtc_cfg.h',moduleCfg('r_rtc_cfg.h','R_RTC_CFG_H_',['#define RTC_CFG_PARAM_CHECKING_ENABLE (BSP_CFG_PARAM_CHECKING_ENABLE)',`#define RTC_CFG_OPEN_SET_CLOCK_SOURCE (${mcu.peripherals?.RTC?.enabled&&mcu.peripherals.RTC.start==='HOST_TIME'?0:1})`])),
+  // r_flash_hp for the data flash only: code flash programming (functions run from RAM, the access window, the
+  // startup area) is not in the build.
+  cfg('r_flash_hp_cfg.h',moduleCfg('r_flash_hp_cfg.h','R_FLASH_HP_CFG_H_',['#define FLASH_HP_CFG_PARAM_CHECKING_ENABLE (BSP_CFG_PARAM_CHECKING_ENABLE)','#define FLASH_HP_CFG_CODE_FLASH_PROGRAMMING_ENABLE (0)','#define FLASH_HP_CFG_DATA_FLASH_PROGRAMMING_ENABLE (1)'])),
   cfg('r_wdt_cfg.h',moduleCfg('r_wdt_cfg.h','R_WDT_CFG_H_',['#define WDT_CFG_PARAM_CHECKING_ENABLE (BSP_CFG_PARAM_CHECKING_ENABLE)',`#define WDT_CFG_REGISTER_START_NMI_SUPPORTED (${mcu.peripherals?.WDT?.enabled&&mcu.peripherals.WDT.reset==='NMI'?1:0})`])),
   cfg('r_iwdt_cfg.h',moduleCfg('r_iwdt_cfg.h','R_IWDT_CFG_H_',['#define IWDT_CFG_PARAM_CHECKING_ENABLE (BSP_CFG_PARAM_CHECKING_ENABLE)','#define IWDT_CFG_REGISTER_START_NMI_SUPPORTED (0)'])),
   cfg('r_sci_uart_cfg.h',moduleCfg('r_sci_uart_cfg.h','R_SCI_UART_CFG_H_',['#define SCI_UART_CFG_PARAM_CHECKING_ENABLE (BSP_CFG_PARAM_CHECKING_ENABLE)','#define SCI_UART_CFG_FIFO_SUPPORT (0)','#define SCI_UART_CFG_DTC_SUPPORTED (0)','#define SCI_UART_CFG_FLOW_CONTROL_SUPPORT (0)','#define SCI_UART_CFG_RS485_SUPPORT (0)','#define SCI_UART_CFG_IRDA_SUPPORT (0)'])),

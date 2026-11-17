@@ -85,10 +85,10 @@ const FSP_API_OBJECTS=new Set(['g_adc_on_adc','g_can_on_can','g_elc_on_elc','g_e
 export function raNameProblem(name){
  if(C_WORDS.has(name))return `${name}은(는) C나 생성 코드가 쓰는 이름입니다`;
  if(/^(R_|BSP_|FSP_|IOPORT_|ELC_|ICU_|__)/.test(name)||/^_[A-Z]/.test(name))return `${name}: R_ · BSP_ · FSP_ · IOPORT_ 로 시작하는 이름과 __ 로 시작하는 이름은 FSP와 컴파일러가 씁니다`;
- if(/^g_(ioport|external_irq\d+|uart\d+|timer\d+|agt\d+|adc\d+|i2c_master\d+|i2c_slave\d+|spi\d+|sci_spi\d+|wdt\d+|iwdt\d+|rtc\d+|bsp_pin_cfg)(_ctrl|_cfg|_extend|_cfg_extend|_ext_cfg|_channel_cfg|_err_cfg)?$/.test(name))return `${name}은(는) 생성 코드의 인스턴스 이름입니다`;
+ if(/^g_(ioport|external_irq\d+|uart\d+|timer\d+|agt\d+|adc\d+|i2c_master\d+|i2c_slave\d+|spi\d+|sci_spi\d+|wdt\d+|iwdt\d+|rtc\d+|flash\d+|bsp_pin_cfg)(_ctrl|_cfg|_extend|_cfg_extend|_ext_cfg|_channel_cfg|_err_cfg)?$/.test(name))return `${name}은(는) 생성 코드의 인스턴스 이름입니다`;
  // The interrupt service routines vector_data.h names (FSP drivers define them) and the drivers' API objects
  // (g_uart_on_sci, g_spi_on_spi, g_timer_on_gpt …: the extern const …_api_t g_<api>_on_<module> of the FSP 6.6 headers).
- if(/^((sci_uart|sci_spi|spi|iic_master|iic_slave)_(rxi|txi|tei|eri)|r_icu|adc_scan_end|agt_int|gpt_counter_overflow|rtc_alarm_periodic|rtc_carry)_isr$/.test(name))return `${name}은(는) FSP 드라이버의 인터럽트 처리 함수(ISR) 이름입니다`;
+ if(/^((sci_uart|sci_spi|spi|iic_master|iic_slave)_(rxi|txi|tei|eri)|r_icu|adc_scan_end|agt_int|gpt_counter_overflow|rtc_alarm_periodic|rtc_carry|fcu_frdyi|fcu_fiferr)_isr$/.test(name))return `${name}은(는) FSP 드라이버의 인터럽트 처리 함수(ISR) 이름입니다`;
  if(FSP_API_OBJECTS.has(name))return `${name}은(는) FSP 드라이버의 API 객체 이름(g_…_on_…)입니다`;
  return '';
 }
@@ -103,6 +103,7 @@ function callbackArgType(where,p){
  if(/^IIC/.test(where))return p?.mode==='SLAVE'?'i2c_slave_callback_args_t':'i2c_master_callback_args_t';
  if(/^I?WDT$/.test(where))return 'wdt_callback_args_t';
  if(where==='RTC')return 'rtc_callback_args_t';
+ if(where==='FLASH')return 'flash_callback_args_t';
  return where;
 }
 const checkName=(where,name)=>{const problem=raNameProblem(name);if(problem)throw new Error(`${where}: ${problem}. 다른 이름을 쓰세요.`);};
@@ -159,6 +160,7 @@ export function validateRaMcu(mcu){
    if(spi){out.peripherals[id]=validateSpi(id,Number(spi[1]),p,fam,mcu.clock,signals);continue;}
    if(id==='WDT'||id==='IWDT'){out.peripherals[id]=validateWdt(id,p);continue;}
    if(id==='RTC'){out.peripherals[id]=validateRtc(p);continue;}
+   if(id==='FLASH'){out.peripherals[id]=validateFlash(p);continue;}
    const sci=/^SCI(\d)$/.exec(id);if(!sci||!RA_SCI_CHANNELS.includes(Number(sci[1]))||!p||typeof p.enabled!=='boolean')throw new Error(`${id}: 지원하지 않는 주변장치입니다.`);
    // One SCI channel is either a UART (r_sci_uart, the default) or a simple SPI master (r_sci_spi), as RASC adds one
    // stack or the other on the channel; the UART settings keep their shape so earlier projects stay unchanged.
@@ -427,6 +429,23 @@ function validateRtc(p){
  if(typeof q.callback!=='string'||q.callback!==''&&!C_NAME.test(q.callback))throw new Error('RTC: 콜백 이름은 C 식별자로 쓰세요(없으면 비워 둡니다).');
  for(const [k,label,optional]of [['alarmPriority','Alarm',true],['periodicPriority','Period',true],['carryPriority','Carry',false]])
   if(!(optional&&q[k]===null)&&(!Number.isInteger(q[k])||q[k]<0||q[k]>15))throw new Error(`RTC: ${label} 인터럽트 우선순위는 0~15${optional?'(또는 Disabled)':''}입니다.`);
+ return q;
+}
+// Data flash (r_flash_hp g_flash0), a pin-less stack. RASC's Properties: Data Flash Background Operation (BGO), the
+// callback and the flash-ready / flash-error interrupt priorities. Code flash programming is off
+// (FLASH_HP_CFG_CODE_FLASH_PROGRAMMING_ENABLE 0): the simulator programs the data flash only.
+// Without BGO a call returns when the operation is done and r_flash_hp uses no interrupt (R_FLASH_HP_Open does not even
+// take the callback), so the callback goes with BGO, as a watchdog's goes with the NMI output. With BGO the two
+// interrupts are required (Open returns FSP_ERR_IRQ_BSP_DISABLED without them) and Erase / Write / BlankCheck assert
+// a callback, set here or by R_FLASH_HP_CallbackSet.
+export const RA_FLASH_DEFAULTS=Object.freeze({bgo:false,callback:'',readyPriority:12,errorPriority:12});
+function validateFlash(p){
+ if(!p||typeof p.enabled!=='boolean')throw new Error('FLASH: 설정을 확인하세요.');
+ const q={enabled:p.enabled,...RA_FLASH_DEFAULTS,...Object.fromEntries(Object.keys(RA_FLASH_DEFAULTS).filter(k=>p[k]!==undefined).map(k=>[k,p[k]]))};
+ if(typeof q.bgo!=='boolean')throw new Error('FLASH: Data Flash Background Operation은 Enabled 또는 Disabled입니다.');
+ if(typeof q.callback!=='string'||q.callback!==''&&!C_NAME.test(q.callback))throw new Error('FLASH: 콜백 이름은 C 식별자로 쓰세요(없으면 비워 둡니다).');
+ for(const [k,label]of [['readyPriority','Flash Ready'],['errorPriority','Flash Error']])if(!Number.isInteger(q[k])||q[k]<0||q[k]>15)throw new Error(`FLASH: ${label} 인터럽트 우선순위는 0~15입니다.`);
+ if(!q.bgo)q.callback='';
  return q;
 }
 /** A watchdog's count clock, timeout clocks and timeout in ms for a configuration ("WDT": PCLKB / divider; "IWDT": 15 kHz / divider). */

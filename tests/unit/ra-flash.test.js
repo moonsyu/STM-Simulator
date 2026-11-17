@@ -8,6 +8,10 @@ import {RaDataFlash,validateDataFlash,dataFlashUsed,RA_DF_BASE,RA_DF_SIZE,RA_DF_
 import {Faci,FACI,FSTATR,FCU_EVENT,FASTAT_CMDLK} from '../../src/emu/ra6e1/flash.js';
 import {Machine} from '../../src/emu/machine.js';
 import {Ra6e1,RaBus,RA_BASES} from '../../src/emu/ra6e1/soc.js';
+import {raDefaultMcu,validateRaMcu,raNameProblem} from '../../src/ra-config.js';
+import {generateRaFiles,raVectors,raInstances} from '../../src/ra-generator.js';
+
+const mcu=peripherals=>({...raDefaultMcu(),peripherals});
 
 test('data flash contents: erased units are blank, a unit is programmed once, an erase clears its 64-byte block',()=>{
  const f=new RaDataFlash();
@@ -146,4 +150,46 @@ test('RA6E1 SoC: the FACI is on the bus at 0x407FE000 / 0x407E0000, FWEPROR gate
  // An image's data flash bytes (an ELF's .data_flash) are programmed units; loading a new image starts from erased flash.
  bus.loadBytes(RA_DF_BASE+64,Uint8Array.of(9,8,7,6));assert.equal(soc.dataFlash.isBlank(64,4),false);assert.equal(bus.read8(RA_DF_BASE+65),8);
  bus.resetMemory({keepFlash:false});assert.equal(soc.dataFlash.used(),0);assert.equal(bus.read8(RA_DF_BASE),0xff);
+});
+
+test('FLASH settings: no background operation by default, the callback goes with BGO, names and priorities are checked',()=>{
+ const m=validateRaMcu(mcu({FLASH:{enabled:true}}));
+ assert.deepEqual(m.peripherals.FLASH,{enabled:true,bgo:false,callback:'',readyPriority:12,errorPriority:12});
+ assert.equal(validateRaMcu(mcu({FLASH:{enabled:true,bgo:false,callback:'flash_callback'}})).peripherals.FLASH.callback,'','without BGO r_flash_hp takes no callback');
+ assert.deepEqual(validateRaMcu(mcu({FLASH:{enabled:true,bgo:true,callback:'flash_callback',readyPriority:3,errorPriority:2}})).peripherals.FLASH,{enabled:true,bgo:true,callback:'flash_callback',readyPriority:3,errorPriority:2});
+ assert.equal(validateRaMcu(mcu({FLASH:{enabled:true,bgo:true}})).peripherals.FLASH.callback,'','BGO without a callback: R_FLASH_HP_CallbackSet gives one');
+ assert.throws(()=>validateRaMcu(mcu({FLASH:{enabled:true,bgo:1}})),/FLASH: Data Flash Background Operation은 Enabled 또는 Disabled/);
+ assert.throws(()=>validateRaMcu(mcu({FLASH:{enabled:true,bgo:true,callback:'1x'}})),/FLASH: 콜백 이름은 C 식별자/);
+ assert.throws(()=>validateRaMcu(mcu({FLASH:{enabled:true,bgo:true,readyPriority:16}})),/FLASH: Flash Ready 인터럽트 우선순위는 0~15/);
+ assert.throws(()=>validateRaMcu(mcu({FLASH:{enabled:true,bgo:true,errorPriority:-1}})),/FLASH: Flash Error 인터럽트 우선순위는 0~15/);
+ assert.throws(()=>validateRaMcu(mcu({FLASH:{}})),/FLASH: 설정을 확인하세요/);
+ assert.throws(()=>validateRaMcu(mcu({FLASH:{enabled:true,bgo:true,callback:'g_flash0_ctrl'}})),/인스턴스 이름/);
+ assert.throws(()=>validateRaMcu(mcu({FLASH:{enabled:true,bgo:true,callback:'fcu_frdyi_isr'}})),/인터럽트 처리 함수\(ISR\)/);
+ assert.match(raNameProblem('fcu_fiferr_isr'),/ISR/);assert.match(raNameProblem('g_flash_on_flash_hp'),/API 객체/);assert.equal(raNameProblem('flash_callback'),'');
+ // A callback shared with a module of another argument type is two conflicting declarations.
+ assert.throws(()=>validateRaMcu(mcu({FLASH:{enabled:true,bgo:true,callback:'shared'},RTC:{enabled:true,callback:'shared'}})),/인자 형식이 다릅니다\(flash_callback_args_t \/ rtc_callback_args_t\)|인자 형식이 다릅니다\(rtc_callback_args_t \/ flash_callback_args_t\)/);
+});
+
+test('generated files: g_flash0 in hal_data, r_flash_hp_cfg.h (data flash only), FCU_FRDYI / FCU_FIFERR vectors after the others only with BGO',()=>{
+ const plain=validateRaMcu(mcu({FLASH:{enabled:true}})),f=generateRaFiles(plain);
+ assert.match(f['ra_gen/hal_data.h'],/#include "r_flash_hp\.h"\n#include "r_flash_api\.h"/);
+ assert.match(f['ra_gen/hal_data.h'],/extern const flash_instance_t g_flash0;[\s\S]*extern flash_hp_instance_ctrl_t g_flash0_ctrl;\nextern const flash_cfg_t g_flash0_cfg;/);
+ assert.doesNotMatch(f['ra_gen/hal_data.h'],/flash_callback_args_t/);
+ assert.match(f['ra_gen/hal_data.c'],/flash_hp_instance_ctrl_t g_flash0_ctrl;\nconst flash_cfg_t g_flash0_cfg =\n\{\n {4}\.data_flash_bgo {6}= false,\n {4}\.p_callback {10}= NULL,\n {4}\.p_context {11}= NULL,\n {4}\.irq {17}= FSP_INVALID_VECTOR,\n {4}\.err_irq {13}= FSP_INVALID_VECTOR,\n {4}\.err_ipl {13}= \(BSP_IRQ_DISABLED\),\n {4}\.ipl {17}= \(BSP_IRQ_DISABLED\),\n\};[\s\S]*\.p_api {9}= &g_flash_on_flash_hp/);
+ assert.equal(f['ra_cfg/fsp_cfg/r_flash_hp_cfg.h'].includes('#define FLASH_HP_CFG_CODE_FLASH_PROGRAMMING_ENABLE (0)\n#define FLASH_HP_CFG_DATA_FLASH_PROGRAMMING_ENABLE (1)'),true);
+ assert.match(f['ra_cfg/fsp_cfg/r_flash_hp_cfg.h'],/#define FLASH_HP_CFG_PARAM_CHECKING_ENABLE \(BSP_CFG_PARAM_CHECKING_ENABLE\)/);
+ assert.equal(raVectors(plain).length,raVectors(validateRaMcu(raDefaultMcu())).length,'no vector without BGO');
+ assert.deepEqual(raInstances(plain).flash,{enabled:true,bgo:false,callback:'',readyPriority:12,errorPriority:12,name:'g_flash0'});
+ assert.equal(raInstances(validateRaMcu(raDefaultMcu())).flash,null);
+ // The cfg header is there without the stack too (the driver is not built then); no instance.
+ const none=generateRaFiles(validateRaMcu(raDefaultMcu()));assert.ok(none['ra_cfg/fsp_cfg/r_flash_hp_cfg.h']);assert.doesNotMatch(none['ra_gen/hal_data.c'],/g_flash0/);
+ // Background operation: the two interrupts after every earlier vector (RTC here), the callback declared.
+ const bgo=validateRaMcu(mcu({RTC:{enabled:true},FLASH:{enabled:true,bgo:true,callback:'flash_callback',readyPriority:5,errorPriority:4}})),g=generateRaFiles(bgo),v=raVectors(bgo);
+ assert.deepEqual(v.slice(-5).map(x=>[x.vector,x.isr]),[['RTC_ALARM','rtc_alarm_periodic_isr'],['RTC_PERIOD','rtc_alarm_periodic_isr'],['RTC_CARRY','rtc_carry_isr'],['FCU_FRDYI','fcu_frdyi_isr'],['FCU_FIFERR','fcu_fiferr_isr']]);
+ assert.deepEqual(v.map(x=>x.vector).slice(0,-2),raVectors(validateRaMcu(mcu({RTC:{enabled:true}}))).map(x=>x.vector),'the earlier slots keep their numbers');
+ const n=v.length;
+ assert.match(g['ra_gen/vector_data.h'],new RegExp(`#define VECTOR_NUMBER_FCU_FRDYI \\(\\(IRQn_Type\\) ${n-2}\\)[\\s\\S]*#define VECTOR_NUMBER_FCU_FIFERR \\(\\(IRQn_Type\\) ${n-1}\\)`));
+ assert.match(g['ra_gen/vector_data.c'],/fcu_frdyi_isr[\s\S]*fcu_fiferr_isr/);assert.match(g['ra_gen/vector_data.c'],/EVENT_FCU_FRDYI[\s\S]*EVENT_FCU_FIFERR/);
+ assert.match(g['ra_gen/hal_data.h'],/#ifndef flash_callback\nvoid flash_callback\(flash_callback_args_t \* p_args\);\n#endif/);
+ assert.match(g['ra_gen/hal_data.c'],/\.data_flash_bgo {6}= true,\n {4}\.p_callback {10}= flash_callback,\n {4}\.p_context {11}= NULL,\n#if defined\(VECTOR_NUMBER_FCU_FRDYI\)\n {4}\.irq {17}= VECTOR_NUMBER_FCU_FRDYI,\n#else\n {4}\.irq {17}= FSP_INVALID_VECTOR,\n#endif\n#if defined\(VECTOR_NUMBER_FCU_FIFERR\)\n {4}\.err_irq {13}= VECTOR_NUMBER_FCU_FIFERR,\n#else\n {4}\.err_irq {13}= FSP_INVALID_VECTOR,\n#endif\n {4}\.err_ipl {13}= \(4\),\n {4}\.ipl {17}= \(5\),\n\};/);
 });
