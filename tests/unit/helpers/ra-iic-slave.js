@@ -76,6 +76,62 @@ void hal_entry(void)
     }
 }
 `;
+// The same transfers from an ESP32 sketch (Wire master on GPIO21/GPIO22, wired as in the ra_iic_slave example), then a
+// write of no bytes (a bus scan). What the sketch prints is the same on both engines.
+export const SLAVE_SKETCH=`#include <Wire.h>
+void setup() {
+  Serial.begin(115200);
+  Wire.begin(21, 22);
+  delay(100);
+  Wire.beginTransmission(0x42); Wire.write(0x11); Wire.write(0x22);
+  int e0 = Wire.endTransmission();
+  Serial.printf("S0 e=%d\\n", e0);
+  delay(30);
+  Wire.beginTransmission(0x42); Wire.write(0x31); Wire.write(0x32); Wire.write(0x33); Wire.write(0x34);
+  int e1 = Wire.endTransmission();
+  Serial.printf("S1 e=%d\\n", e1);
+  delay(30);
+  Wire.beginTransmission(0x42); Wire.write(0x41); Wire.write(0x42); Wire.write(0x43); Wire.write(0x44);
+  int e2 = Wire.endTransmission();
+  Serial.printf("S2 e=%d\\n", e2);
+  delay(30);
+  int g3 = Wire.requestFrom(0x42, 2);
+  int a3 = Wire.read(); int b3 = Wire.read();
+  Serial.printf("S3 got=%d %d %d\\n", g3, a3, b3);
+  delay(30);
+  int g4 = Wire.requestFrom(0x42, 4);
+  int a4 = Wire.read(); int b4 = Wire.read(); int c4 = Wire.read(); int d4 = Wire.read();
+  Serial.printf("S4 got=%d %d %d %d %d\\n", g4, a4, b4, c4, d4);
+  delay(30);
+  Wire.beginTransmission(0x42); Wire.write(0x55);
+  int e5 = Wire.endTransmission();
+  Serial.printf("S5 e=%d\\n", e5);
+  delay(30);
+  Wire.beginTransmission(0x42); Wire.write(0x66); Wire.write(0x67);
+  int e6 = Wire.endTransmission();
+  Serial.printf("S6 e=%d\\n", e6);
+  delay(30);
+  int g7 = Wire.requestFrom(0x42, 1);
+  int a7 = Wire.read();
+  Serial.printf("S7 got=%d %d\\n", g7, a7);
+  delay(30);
+  Wire.beginTransmission(0x42);
+  int e8 = Wire.endTransmission();
+  Serial.printf("S8 e=%d\\n", e8);
+}
+void loop() {
+  delay(100);
+}
+`;
+// NACK ends a write with error 2; the write the callback does not serve was ACKed (error 0) and aborted afterwards.
+export const SLAVE_SKETCH_LINES=Object.freeze(['S0 e=0','S1 e=2','S2 e=0','S3 got=2 161 178','S4 got=4 161 178 195 195','S5 e=0','S6 e=2','S7 got=1 255','S8 e=0']);
+// The write of no bytes: no buffer was asked for, so r_iic_slave reports TX_COMPLETE, and its count is one less than 0
+// because the Read(4) of transfer 6 had taken 1 byte (the "total > loaded" correction of iic_err_slave).
+export const SLAVE_SKETCH_EVENTS=()=>[...SLAVE_SEQUENCES.flatMap(q=>q.events),[3,0xffffffff]];
+/** The probe program on the board with the ESP32 master of the ra_iic_slave example's circuit. */
+export function slaveSketchProject(base,circuit,code=SLAVE_PROBE){
+ const p={...base,mcu:slaveProbeMcu(),code};p.components=circuit.components.map(c=>c.type==='devboard'?{...c,code:SLAVE_SKETCH}:c);p.wires=circuit.wires;delete p.surfaces;return p;
+}
 // In order (the program counts them): what the master does, the callback's events, the ACK of each written byte, the
 // bytes read, the slave's buffer.
 export const SLAVE_SEQUENCES=Object.freeze([

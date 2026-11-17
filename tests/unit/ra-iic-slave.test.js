@@ -13,7 +13,7 @@ import {raAssistance} from '../../src/ra-assistance.js';
 import {createBoardDrivers} from '../../src/fixed-run.js';
 import {connectStm32Drivers} from '../../src/stm32-boards.js';
 import {Iic,IIC_EVENT_BASE} from '../../src/emu/ra6e1/iic.js';
-import {SLAVE_PROBE,SLAVE_SEQUENCES,slaveProbeMcu} from './helpers/ra-iic-slave.js';
+import {SLAVE_PROBE,SLAVE_SEQUENCES,slaveProbeMcu,SLAVE_SKETCH_LINES,SLAVE_SKETCH_EVENTS,slaveSketchProject} from './helpers/ra-iic-slave.js';
 
 const slave=(extra={})=>{const m=slaveProbeMcu();Object.assign(m.peripherals.IIC0,extra);return m;};
 const base=()=>projectForBoard('fpb-ra6e1');
@@ -119,6 +119,52 @@ void hal_entry(void)
  assert.equal(s.hal.i2cSlaveInfo(),null,'closed: the board no longer answers');
 });
 
+test('interpreter: eri_ipl above ipl is refused; CallbackSet\'s callback is the one called, with its p_context; Close in a callback ends the transfer; a write of no bytes',()=>{
+ const code=SLAVE_PROBE.replace(/void hal_entry\(void\)[\s\S]*$/,`volatile uint32_t r[6];
+uint32_t marker = 5;
+void other_callback(i2c_slave_callback_args_t *p_args)
+{
+    r[1]++;
+    r[2] = (p_args->p_context == (void *) &marker) ? 7 : 1;
+    r[3] = p_args->event;
+    if (I2C_SLAVE_EVENT_RX_REQUEST == p_args->event)
+    {
+        R_IIC_SLAVE_Read(&g_i2c_slave0_ctrl, rx, 4);
+        R_IIC_SLAVE_Close(&g_i2c_slave0_ctrl);
+    }
+}
+void hal_entry(void)
+{
+    i2c_slave_cfg_t bad = g_i2c_slave0_cfg;
+    bad.eri_ipl = 13;
+    r[0] = R_IIC_SLAVE_Open(&g_i2c_slave0_ctrl, &bad);
+    r[4] = R_IIC_SLAVE_Open(&g_i2c_slave0_ctrl, &g_i2c_slave0_cfg);
+    while (1)
+    {
+    }
+}
+`);
+ const {session:s}=open({...base(),mcu:slaveProbeMcu(),code});run(s,20);
+ assert.equal(s.readVariable('r[0]'),3,'FSP_ERR_INVALID_ARGUMENT: eri_ipl 13 is a lower priority than ipl 12');assert.equal(s.readVariable('r[4]'),0);
+ // Address and STOP with no data: TX_COMPLETE with 0 bytes, through the Stacks callback.
+ s.hal.i2cSlaveProbe(s.runtime);
+ assert.deepEqual([s.readVariable('n'),s.readVariable('ev[0]'),s.readVariable('nb[0]')],[1,3,0]);
+ // CallbackSet: the new function gets the events, with the context given.
+ assert.equal(s.runtime.call('R_IIC_SLAVE_CallbackSet',[s.runtime.pointer?{kind:'pointer',cell:s.runtime.globals.cells.g_i2c_slave0_ctrl}:null,{kind:'function',name:'other_callback'},{kind:'pointer',cell:s.runtime.globals.cells.marker}]),0);
+ // It closes the slave in RX_REQUEST: nothing of the transfer is taken after that and no RX_COMPLETE comes.
+ assert.equal(s.hal.i2cSlaveReceive([0x11,0x22,0x33],s.runtime),false);
+ assert.deepEqual([s.readVariable('r[1]'),s.readVariable('r[2]'),s.readVariable('r[3]')],[1,7,4],'called once, with &marker, for RX_REQUEST');
+ assert.equal(s.readVariable('n'),1,'the Stacks callback is no longer called');assert.equal(s.readVariable('rx[0]'),0);
+ assert.equal(s.hal.i2cSlaveInfo(),null);assert.deepEqual(s.hal.i2cSlaveRequest(2,s.runtime),[0xff,0xff]);
+});
+
+test('interpreter: the ESP32 sketch as the master of the probe program — NACK ends a write, an unserved transfer is aborted, Wire.begin(sda, scl), a write of no bytes',()=>{
+ const {session:s,log}=open(slaveSketchProject(base(),raExample('ra_iic_slave').circuit()));run(s,600);
+ assert.deepEqual(log.board.filter(l=>/ S\d /.test(l)).map(l=>l.replace('[ESP32-1] ','')),[...SLAVE_SKETCH_LINES]);
+ assert.deepEqual(Array.from({length:s.readVariable('n')},(_,i)=>[s.readVariable(`ev[${i}]`),s.readVariable(`nb[${i}]`)]),SLAVE_SKETCH_EVENTS());
+ assert.deepEqual(log.warn,[]);
+});
+
 // The registers as r_iic_slave.c writes them at Open, then the bus events another board's master stands for.
 test('RA6E1 RIIC slave model: address match, RDRF per byte with ACKBT as the ACK, TDRE one byte ahead, TEND, NACKF, STOP, IICRST',()=>{
  let now=0;const queue=[],events=[];
@@ -150,6 +196,8 @@ test('RA6E1 RIIC slave model: address match, RDRF per byte with ACKBT as the ACK
  // A byte never read: the time-out (2^16 reference clocks: 10.5 ms at PCLKB/8) sets TMOF; the internal reset keeps the settings.
  t.write(0x09,0,1);t.write(0x07,0xa1,1);take();step(30);t.slaveAddress(false);t.slaveWrite(0x55);step(10000);assert.equal(t.read(0x09,1)&1,0);step(600);assert.equal(t.read(0x09,1)&1,1,'TMOF');assert.ok(take().includes(3));
  t.write(0x00,0xc0,1);t.write(0x00,0x9f,1);assert.equal(t.read(0x09,1),0);assert.equal(t.read(0x0a,1),0x84,'SARL0 kept');assert.ok(t.slaveListens(0x42));assert.equal(t.slaveWrite(1),false,'the transfer is gone');assert.equal(t.slaveRead(),0xff);
+ // R_IIC_SLAVE_Close stops the module (MSTPCRB, soc.iicStopped): the slave no longer answers, though ICCR1 is not written.
+ soc.iicStopped=ch=>ch===0;assert.equal(t.slaveListens(0x42),false,'module stop');assert.equal(t.slaveInfo(),null);soc.iicStopped=()=>false;assert.ok(t.slaveListens(0x42));
  // IICRST with ICE = 0 resets every register.
  t.write(0x00,0x40,1);assert.equal(t.read(0x0a,1),0);assert.equal(t.slaveListens(0x42),false);
 });

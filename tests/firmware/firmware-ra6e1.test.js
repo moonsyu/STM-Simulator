@@ -3,7 +3,8 @@
 // Fixtures: tests/fixtures/firmware-ra6e1 (node scripts/emu/build-ra6e1-fixtures.mjs).
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {open,runUntil} from './helpers.mjs';
+import {open,runUntil,project} from './helpers.mjs';
+import {SimulationSession} from '../../src/session.js';
 import {createBoardDrivers} from '../../src/fixed-run.js';
 import {connectStm32Drivers} from '../../src/stm32-boards.js';
 
@@ -210,4 +211,19 @@ test('ra_iic_slave: IIC0 answers at 0x42 as r_iic_slave; the ESP32 sketch (I2C m
  assert.equal(session.readVariable('writes_seen'),3);assert.equal(session.readVariable('reads_answered'),3);assert.equal(session.readVariable('aborted'),0);
  assert.ok(session.gpio.P407.value>1.65,'LED2: the last byte written was 1');
  assert.ok(log.trace.some(e=>/ESP32-1 · 0x42 READ 2 B · ACK/.test(e.message)));
+});
+
+// The slave's answer to a byte is known only after its program took the byte before: six bytes into the example's
+// R_IIC_SLAVE_Read(4) and Read(0) end with a NACK on both engines, and a write of no bytes (a bus scan) is ACKed.
+test('ra_iic_slave: a write longer than the slave takes ends with NACK (error 2) for the ESP32 master on the emulator and on the interpreter',()=>{
+ const sketch='#include <Wire.h>\nvoid setup() { Serial.begin(115200); Wire.begin(21, 22); delay(100); }\nvoid loop() {\n  Wire.beginTransmission(0x42);\n  Wire.write(1); Wire.write(2); Wire.write(3); Wire.write(4); Wire.write(5); Wire.write(6);\n  int error = Wire.endTransmission();\n  Wire.beginTransmission(0x42);\n  int scan = Wire.endTransmission();\n  Wire.beginTransmission(0x43);\n  int none = Wire.endTransmission();\n  Serial.printf("W6 error=%d scan=%d none=%d\\n", error, scan, none);\n  delay(500);\n}\n';
+ const withSketch=p=>{p.components.find(c=>c.id==='esp1').code=sketch;};
+ const lines={};
+ {const {session}=open(fixture('ra_iic_slave'),{},withSketch),board=[];
+  session.circuit.drivers=createBoardDrivers(session.project,{log:s=>board.push(s)});connectStm32Drivers(session);runUntil(session,400);
+  lines.emulator=board.filter(l=>/W6/.test(l));assert.equal(session.readVariable('writes_seen'),1);assert.equal(session.readVariable('aborted'),0);assert.equal(session.readVariable('command'),1,'the first four bytes were taken');}
+ {const p=project(fixture('ra_iic_slave'));withSketch(p);const board=[],session=new SimulationSession(p,{});
+  session.circuit.drivers=createBoardDrivers(session.project,{log:s=>board.push(s)});session.buses.boards=()=>session.circuit.drivers;connectStm32Drivers(session);for(let t=20;t<=400;t+=20)session.tick(t);
+  lines.interpreter=board.filter(l=>/W6/.test(l));assert.equal(session.readVariable('writes_seen'),1);}
+ assert.deepEqual(lines,{emulator:['[ESP32-1] W6 error=2 scan=0 none=2'],interpreter:['[ESP32-1] W6 error=2 scan=0 none=2']});
 });
