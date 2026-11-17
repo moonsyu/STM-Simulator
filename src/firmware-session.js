@@ -100,6 +100,8 @@ export class FirmwareSession {
       i2sSamples: (name, samples, rate) => this.i2sSamples(name, samples, rate),
       chipSelect: () => null,
       onReset: reason => { this.resets.push({ reason, us: this.soc?.nowUs() ?? 0 }); this.traceCb({ micros: this.soc?.nowUs() ?? 0, protocol: 'RESET', message: `MCU 리셋 · ${reason}` }); },
+      // Low power modes (RA6E1 lpm.js): each entry and wake-up is a run log entry, like a reset.
+      lowPower: message => this.traceCb({ micros: this.soc?.nowUs() ?? 0, protocol: 'LPM', message }),
       warn: message => { if (this.warnings.includes(message)) return; this.warnings.push(message); this.warnOut(message); },
       clockChanged: () => this.updateMco(),
       routingChanged: () => this.updateMco(),

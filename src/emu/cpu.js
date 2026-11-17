@@ -2031,6 +2031,8 @@ export class Cpu {
       if (n !== 0 && p < this._execPriorityNoPrimask()) this.sleeping = false;
       else if (this.sleepWfe && this.eventReg) { this.sleeping = false; this.eventReg = 0; }
       else return false;
+      // The core leaves WFI / WFE: a SoC with low power modes restarts what the mode had stopped (RA6E1 lpm.js).
+      if (this.onWake) this.onWake(n);
     }
     if (n !== 0 && p < this.execPriority()) {
       this.takeException(n);
