@@ -30,7 +30,10 @@ const PLAN={
  // S1 held 350-1350 ms: no refresh, the WDT resets both engines at 971 ms, and LED2 blinks after it (RSTSR1.WDTRF).
  ra_wdt_reset:{buttons:false,at:{350:s=>s.setPressed({SW1:true}),1350:s=>s.setPressed({})},vars:{refreshes:1,wdt_resets_seen:0},resets:1,warn:/^\[WDT\] /},
  // 6 s: the time set to 23:59:55 on the RTC, printed on SCI9 each second, and the alarm at midnight (LED2).
- ra_rtc_clock:{ms:6000,buttons:false,vars:{seconds:0}}
+ ra_rtc_clock:{ms:6000,buttons:false,vars:{seconds:0}},
+ // Deep Software Standby after 1 s; S1 at 1500 ms cancels it (IRQ1-DS): one reset on both engines, LED2 from then on, and
+ // the second Deep Software Standby at about 2.5 s with LED2 kept on by IOKEEP.
+ ra_lpm_deep:{ms:3000,buttons:false,at:{1500:s=>s.setPressed({SW1:true}),1600:s=>s.setPressed({})},vars:{from_deep_standby:0},resets:1}
 };
 // The level of a pin each millisecond: its PWM duty, or high/low.
 function timeline(session,id){
@@ -82,3 +85,4 @@ test('parity: ra_adc_pot, ra_agt_tick and ra_iic_memory (ADC12, AGT, IIC master)
 test('parity: ra_spi_memory (r_spi SPI1 with SSL0, the SPI memory, SCI9 output)',{skip,timeout:900000},()=>compare(['ra_spi_memory']));
 test('parity: ra_wdt_reset (WDT reset and RSTSR1.WDTRF)',{skip,timeout:900000},()=>compare(['ra_wdt_reset']));
 test('parity: ra_rtc_clock (RTC calendar, 1 s periodic interrupt, alarm)',{skip,timeout:900000},()=>compare(['ra_rtc_clock']));
+test('parity: ra_lpm_deep (Deep Software Standby, S1 on IRQ1-DS, RSTSR0.DPSRSTF, IOKEEP)',{skip,timeout:900000},()=>compare(['ra_lpm_deep']));

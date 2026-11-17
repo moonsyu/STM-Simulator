@@ -8,6 +8,7 @@ import {SimulationSession} from '../../src/session.js';
 import {projectForBoard,validateProject} from '../../src/project.js';
 import {raDefaultMcu,validateRaMcu} from '../../src/ra-config.js';
 import {fspPrelude} from '../../src/fsp-interp.js';
+import {raExample} from '../../src/ra-examples.js';
 import {LPM_ERRORS,LPM_STANDBY,LPM_DEEP_RTC,LPM_STUCK} from '../fixtures/ra-lpm-programs.js';
 
 function open({mcu,code},options={}){
@@ -157,6 +158,20 @@ test('a mode nothing can end says why and stays; a bare __WFI() after R_LPM_Open
  const cut=open({mcu:lpmMcu({cancel:['RTC_INTERVAL'],power:'DEEPCUT1'},{RTC:{enabled:true,start:'HOST_TIME'}}),code:rtcCode});run(cut.session,1,2500);
  assert.equal(cut.session.runtime.resetCount??0,0);
  assert.deepEqual(cut.lpm(),['Deep Software Standby 진입 · DEEPCUT1, I/O 유지(IOKEEP 1) — 해제 소스: RTC 주기','Deep Software Standby: 깨울 수 있는 소스가 없습니다 — RTC 주기: 이 모드에서 멈춥니다. 리셋(S2)으로만 다시 시작합니다.']);
+});
+
+test('example ra_lpm_deep: Deep Software Standby after 1 s, S1 (IRQ1-DS) restarts it, the UART part shows where each start came from',()=>{
+ const e=raExample('ra_lpm_deep'),uart=[];
+ const {session,log,lpm}=open({mcu:e.mcu,code:e.code},{uart:x=>uart.push(x)});
+ const text=()=>String.fromCharCode(...uart.filter(x=>x.instance==='SCI9'&&x.direction==='TX').flatMap(x=>x.bytes));
+ run(session,1,1400);
+ assert.equal(text(),'Power-on start\r\nEntering Deep Software Standby: press S1\r\n');assert.equal(high(session,'P408'),0);assert.equal(high(session,'P407'),0);
+ assert.deepEqual(lpm(),['Deep Software Standby 진입 · DEEPCUT0, I/O 유지(IOKEEP 1) — 해제 소스: IRQ1-DS(P205)']);
+ run(session,1401,3500,t=>{if(t===3000)session.setPressed({SW1:true});if(t===3040)session.setPressed({});});
+ assert.equal(session.runtime.resetCount,1);assert.equal(session.readVariable('from_deep_standby'),1);assert.equal(high(session,'P407'),1,'LED2');assert.equal(high(session,'P408'),1,'LED1 working again');
+ assert.match(text(),/Woke up from Deep Software Standby by S1 \(IRQ1-DS\)\r\n$/);assert.match(lpm()[1],/^Deep Software Standby 해제 · IRQ1-DS\(P205\) \(\d\.\d\d s 뒤\) — MCU 리셋/);
+ let dark=0;run(session,3501,4600,t=>{if(t===4500)session.setPressed({SW1:true});if(t===4540)session.setPressed({});if(!high(session,'P407'))dark++;});
+ assert.equal(session.runtime.resetCount,2);assert.equal(dark,0,'IOKEEP: LED2 stays on in the mode and through the second reset');assert.deepEqual(log.warn,[]);
 });
 
 test('what the interpreter does not run is said: Snooze mode, writing the reset status register',()=>{

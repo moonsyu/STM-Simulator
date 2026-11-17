@@ -28,7 +28,8 @@ export const TOOLCHAIN_SHARDS=Object.freeze([
  [['ra-course','contact bounce on'],['fsp-interp-parity','parity: ra_adc_pot|parity: ra_wdt_reset']],
  // 70 + 28 = 98 + parity of blink and IRQ (14 s locally)
  // + parity of the RTC example (11 s locally)
- [['arm-examples','NUCLEO-F446RE'],'bus-instances',['fsp-interp-parity','parity: ra_blink|parity: ra_rtc_clock']],
+ // + parity of the low power example (feature 37)
+ [['arm-examples','NUCLEO-F446RE'],'bus-instances',['fsp-interp-parity','parity: ra_blink|parity: ra_rtc_clock|parity: ra_lpm_deep']],
  // 58 + 38 = 96 + parity of polling and rising IRQ (18 s locally)
  // + the register-start WDT test of ra-wdt-rtc (feature 35: about 16 s locally)
  [['arm-examples','NUCLEO-F103RB'],'button-bounce',['fsp-interp-parity','parity: ra_button_poll'],['ra-wdt-rtc','the real r_wdt in register-start mode']],
