@@ -41,7 +41,10 @@ const PLAN={
  ra_iic_slave:{buttons:false,window:12,board:/RA /,vars:{writes_seen:0,reads_answered:0,aborted:0,command:0}},
  // The boot counter in the data flash: S1 pressed 300-400 ms and 1300-1400 ms resets the MCU twice (NVIC_SystemReset on
  // release), so SCI9 prints the counts 1, 2 and 3 and the data flash ends with 3 on both engines.
- ra_flash_counter:{window:3,vars:{boot_count:0,flash_error:0},resets:2,warn:/^\[NVIC\] /,flash:[{at:0,hex:'03000000'}]}
+ ra_flash_counter:{window:3,vars:{boot_count:0,flash_error:0},resets:2,warn:/^\[NVIC\] /,flash:[{at:0,hex:'03000000'}]},
+ // GPT1 → ELC → ADC0 every 10 ms, the DTC fills 16 samples, then the ADC callback (LED2 toggles, the average on SCI9 by the
+ // UART's DTC); the potentiometer moves at 1 s, so LED1 and the printed averages change on both engines.
+ ra_elc_adc_dtc:{at:{1000:s=>{s.project.components.find(p=>p.id==='pot').position=80;}},vars:{blocks:0,average_mv:2}}
 };
 // The level of a pin each millisecond: its PWM duty, or high/low.
 function timeline(session,id){
@@ -101,4 +104,5 @@ test('parity: ra_wdt_reset (WDT reset and RSTSR1.WDTRF)',{skip,timeout:900000},(
 test('parity: ra_rtc_clock (RTC calendar, 1 s periodic interrupt, alarm)',{skip,timeout:900000},()=>compare(['ra_rtc_clock']));
 test('parity: ra_lpm_deep (Deep Software Standby, S1 on IRQ1-DS, RSTSR0.DPSRSTF, IOKEEP)',{skip,timeout:900000},()=>compare(['ra_lpm_deep']));
 test('parity: ra_iic_slave (r_iic_slave with the ESP32 sketch as the I2C master)',{skip,timeout:900000},()=>compare(['ra_iic_slave']));
+test('parity: ra_elc_adc_dtc (GPT1 → ELC → ADC0, DTC into an array, SCI9 by DTC)',{skip,timeout:900000},()=>compare(['ra_elc_adc_dtc']));
 test('parity: ra_flash_counter (r_flash_hp boot counter in the data flash across two resets)',{skip,timeout:900000},()=>compare(['ra_flash_counter']));

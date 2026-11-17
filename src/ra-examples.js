@@ -927,5 +927,90 @@ void hal_entry(void)
     }
 }
 `+WARM_START});
-RA_EXAMPLES.push(POLL_EXAMPLE,IRQ_COURSE_EXAMPLE,UART_EXAMPLE,GPT_EXAMPLE,ADC_EXAMPLE,AGT_EXAMPLE,IIC_EXAMPLE,SPI_EXAMPLE,CHALLENGE_EXAMPLE,WDT_EXAMPLE,RTC_EXAMPLE,IIC_SLAVE_EXAMPLE,LPM_EXAMPLE,FLASH_EXAMPLE);
+// ELC + DTC (feature 36): GPT1 overflows every 10 ms; the Event Link Controller starts an ADC0 scan of the potentiometer
+// on A0 with that event, with no interrupt and no code; the DTC moves each result (ADDR0) into samples[] at the scan end.
+// After 16 samples the DTC hands the scan end interrupt to the CPU: the ADC callback averages them, LED2 toggles, LED1
+// shows above half scale, and the line goes out on SCI9 by a second DTC (r_sci_uart with p_transfer_tx).
+const ELC_DTC_EXAMPLE=Object.freeze({id:'ra_elc_adc_dtc',name:'ELC · DTC: GPT 주기로 ADC 스캔 시작, 결과를 배열로 (R_ELC_Open · R_DTC_Reset · R_ADC_InfoGet)',tags:['ELC','DTC','DMA','transfer','ADC','GPT','event link','UART','r_elc','r_dtc'],
+ mcu:()=>{const m=UART_EXAMPLE.mcu();m.pins.P000={function:'Analog',label:'POT'};
+  Object.assign(m.peripherals,{SCI9:{...m.peripherals.SCI9,transferTx:'TRANSFER1'},GPT1:{enabled:true,mode:'PERIODIC',period:10,unit:'ms',duty:50,callback:'',priority:12},
+   ADC0:{enabled:true,mode:'SINGLE',resolution:12,callback:'adc_callback',priority:12,trigger:'ELC',elcEvent:'GPT1_COUNTER_OVERFLOW'},ELC:{enabled:true},
+   TRANSFER0:{enabled:true,driver:'DTC',activation:'ADC0_SCAN_END',mode:'NORMAL',size:2,srcMode:'FIXED',destMode:'INCREMENTED',repeatArea:'DESTINATION',irq:'END',length:16,blocks:0},
+   TRANSFER1:{enabled:true,driver:'DTC',activation:'SCI9_TXI'}});return m;},
+ circuit:()=>{const u=UART_EXAMPLE.circuit(),a=ADC_EXAMPLE.circuit();return {components:[...u.components,...a.components],wires:[...u.wires,...a.wires.map(w=>({...w,id:'pot_'+w.id}))]};},
+ code:HEAD+`#include <stdio.h>
+
+#define SAMPLES    (16U)
+
+/* Filled by the DTC (g_transfer0), one ADC result per GPT1 period. */
+static uint16_t samples[SAMPLES];
+volatile uint32_t blocks = 0;
+volatile uint32_t average_mv = 0;
+static volatile bool tx_done = true;
+static char line[40];
+
+void user_uart9_callback(uart_callback_args_t *p_args)
+{
+    if (UART_EVENT_TX_COMPLETE == p_args->event)
+    {
+        tx_done = true;
+    }
+}
+
+/* ADC0 scan end, after the DTC has stored the 16th sample (until then the DTC takes the interrupt). */
+void adc_callback(adc_callback_args_t *p_args)
+{
+    (void) p_args;
+    uint32_t sum = 0;
+    for (uint32_t i = 0; i < SAMPLES; i++)
+    {
+        sum += samples[i];
+    }
+    average_mv = (sum / SAMPLES) * 3300U / 4095U;
+    blocks++;
+    R_IOPORT_PinWrite(&g_ioport_ctrl, LED2, (blocks & 1U) ? BSP_IO_LEVEL_HIGH : BSP_IO_LEVEL_LOW);
+    R_IOPORT_PinWrite(&g_ioport_ctrl, LED1, (average_mv > 1650U) ? BSP_IO_LEVEL_HIGH : BSP_IO_LEVEL_LOW);
+
+    /* The next 16 samples: the DTC starts again at samples[0]. */
+    R_DTC_Reset(&g_transfer0_ctrl, NULL, samples, SAMPLES);
+
+    if (tx_done)
+    {
+        int n = snprintf(line, sizeof(line), "block %lu: %lu mV\\r\\n", (unsigned long) blocks, (unsigned long) average_mv);
+        tx_done = false;
+        R_SCI_UART_Write(&g_uart9_ctrl, (uint8_t *) line, (uint32_t) n);
+    }
+}
+
+void hal_entry(void)
+{
+    adc_info_t adc_info;
+
+    /* SCI9 sends with its own DTC (g_transfer1): the CPU writes only the first byte. */
+    R_SCI_UART_Open(&g_uart9_ctrl, &g_uart9_cfg);
+
+    /* g_elc: GPT1 COUNTER OVERFLOW → ADC0 (the link is in g_elc_cfg, set by g_adc0's ELC trigger). */
+    R_ELC_Open(&g_elc_ctrl, &g_elc_cfg);
+    R_ELC_Enable(&g_elc_ctrl);
+
+    /* g_adc0 started by the ELC; g_transfer0 moves ADDR0 to samples[] on each scan end. */
+    R_ADC_Open(&g_adc0_ctrl, &g_adc0_cfg);
+    R_ADC_ScanCfg(&g_adc0_ctrl, &g_adc0_channel_cfg);
+    R_ADC_InfoGet(&g_adc0_ctrl, &adc_info);
+    R_DTC_Open(&g_transfer0_ctrl, &g_transfer0_cfg);
+    R_DTC_Reset(&g_transfer0_ctrl, (const void *) adc_info.p_address, samples, SAMPLES);
+    R_ADC_ScanStart(&g_adc0_ctrl);
+
+    /* GPT1: 10 ms periodic, no interrupt of its own. */
+    R_GPT_Open(&g_timer1_ctrl, &g_timer1_cfg);
+    R_GPT_Start(&g_timer1_ctrl);
+
+    while (1)
+    {
+        /* Nothing to do here: the ELC and the DTC sample without the CPU. */
+        R_BSP_SoftwareDelay(100, BSP_DELAY_UNITS_MILLISECONDS);
+    }
+}
+`+WARM_START});
+RA_EXAMPLES.push(POLL_EXAMPLE,IRQ_COURSE_EXAMPLE,UART_EXAMPLE,GPT_EXAMPLE,ADC_EXAMPLE,AGT_EXAMPLE,IIC_EXAMPLE,SPI_EXAMPLE,CHALLENGE_EXAMPLE,WDT_EXAMPLE,RTC_EXAMPLE,IIC_SLAVE_EXAMPLE,LPM_EXAMPLE,FLASH_EXAMPLE,ELC_DTC_EXAMPLE);
 Object.freeze(RA_EXAMPLES);

@@ -1,5 +1,5 @@
 import {$,esc} from './common.js';
-import {RA6E1_PORTS,RA_IRQ_PINS,RA_RESERVED,FPB_RA6E1,RA_PERIPHERAL_PINS,RA_ADC_CHANNELS,RA_GPT_32BIT,RA_GPT_CHANNELS,RA_AGT_CHANNELS,RA_TIMER_UNITS,RA_CLOCK_LIMITS,RA_IIC_RATES,RA_IIC_CHANNELS,RA_IIC_SLAVE_ADDRESS,raIicSlaveClock,RA_SPI_CHANNELS,RA_SCI_SPI_CHANNELS,raIicClock,raGptCounts,raAgtCounts,raClockHz,raSpiBitrate,raSciSpiBitrate,raFamily,validateRaMcu,raDefaultMcu,raIrqName,RA_BSP_DEFAULTS,RA_WDT,RA_WDT_WINDOW_START,RA_WDT_WINDOW_END,raWdtTiming,RA_RTC_DEFAULTS,RA_IRQ_DS,RA_LPM_DEFAULTS,RA_LPM_MODES,RA_LPM_MODE_NAMES,RA_LPM_WAKE,RA_LPM_CANCEL,raDsPin,RA_FLASH_DEFAULTS} from './ra-config.js';
+import {RA6E1_PORTS,RA_IRQ_PINS,RA_RESERVED,FPB_RA6E1,RA_PERIPHERAL_PINS,RA_ADC_CHANNELS,RA_GPT_32BIT,RA_GPT_CHANNELS,RA_AGT_CHANNELS,RA_TIMER_UNITS,RA_CLOCK_LIMITS,RA_IIC_RATES,RA_IIC_CHANNELS,RA_IIC_SLAVE_ADDRESS,raIicSlaveClock,RA_SPI_CHANNELS,RA_SCI_SPI_CHANNELS,raIicClock,raGptCounts,raAgtCounts,raClockHz,raSpiBitrate,raSciSpiBitrate,raFamily,validateRaMcu,raDefaultMcu,raIrqName,RA_BSP_DEFAULTS,RA_WDT,RA_WDT_WINDOW_START,RA_WDT_WINDOW_END,raWdtTiming,RA_RTC_DEFAULTS,RA_IRQ_DS,RA_LPM_DEFAULTS,RA_LPM_MODES,RA_LPM_MODE_NAMES,RA_LPM_WAKE,RA_LPM_CANCEL,raDsPin,RA_FLASH_DEFAULTS,RA_ELC_EVENTS,RA_TRANSFER_DEFAULTS,RA_TRANSFER_MODES,RA_TRANSFER_ADDR_MODES,RA_DMAC_CHANNELS,raTransferEvents,raEventHasVector} from './ra-config.js';
 import {RA_DF_BASE,RA_DF_SIZE,RA_DF_BLOCK,RA_DF_UNIT,dataFlashUsed} from './ra-data-flash.js';
 import {lpmWakeLabel,lpmCancelLabel} from './ra-lpm.js';
 import {sciBaudSetting,raPclka} from './ra-generator.js';
@@ -23,10 +23,13 @@ const SPI_PIN_GROUPS={SPI1:[{P100:'SPI1_MISO',P101:'SPI1_MOSI',P102:'SPI1_RSPCK'
 // The pins New Stack → Connectivity gives an I2C slave stack (IIC0 on the Arduino SCL/SDA pins first).
 const IIC_PIN_GROUPS={IIC0:[{P400:'IIC0_SCL',P401:'IIC0_SDA'},{P408:'IIC0_SCL',P407:'IIC0_SDA'}],IIC1:[{P205:'IIC1_SCL',P206:'IIC1_SDA'}]};
 // Stacks without pins (added from New Stack, kept until removed there).
-const PINLESS=['WDT','IWDT','RTC','LPM','FLASH'];
-const STACK_NAMES={WDT:['g_wdt0','Watchdog (r_wdt)'],IWDT:['g_iwdt0','Independent Watchdog (r_iwdt)'],RTC:['g_rtc0','Realtime Clock (r_rtc)'],LPM:['g_lpm0','Low Power Modes (r_lpm)'],FLASH:['g_flash0','Flash (r_flash_hp)']};
+const PINLESS=['WDT','IWDT','RTC','LPM','FLASH','ELC'];
+const STACK_NAMES={WDT:['g_wdt0','Watchdog (r_wdt)'],IWDT:['g_iwdt0','Independent Watchdog (r_iwdt)'],RTC:['g_rtc0','Realtime Clock (r_rtc)'],LPM:['g_lpm0','Low Power Modes (r_lpm)'],FLASH:['g_flash0','Flash (r_flash_hp)'],ELC:['g_elc','Event Link Controller (r_elc)']};
+// Transfer stacks (feature 36): g_transferN with r_dtc or r_dmac, any number of them (New Stack → Transfer).
+const isTransfer=id=>/^TRANSFER\d+$/.test(id);
+const EVENT_LABEL=ev=>ev==='SOFTWARE'?'Software start (R_DMAC_SoftwareStart)':ev.replace(/_/g,' ');
 // New Stack groups of the pin-less stacks, as RASC files them (Power → Low Power Modes).
-const PINLESS_GROUPS=[['Monitoring · System',['WDT','IWDT','RTC']],['Power',['LPM']],['Storage',['FLASH']]];
+const PINLESS_GROUPS=[['Monitoring · System',['WDT','IWDT','RTC','ELC']],['Power',['LPM']],['Storage',['FLASH']]];
 const SUBCLOCK_NOTE='FPB-RA6E1에는 32.768 kHz 크리스털 X2가 실장되어 있지만 E25/E26이 열려 있어 그대로는 서브 클록이 돌지 않습니다(XCIN/XCOUT은 J3로만 나옴). 실물 보드에서 Sub-Clock을 쓰려면 E25/E26을 닫으세요.';
 const WDT_DEFAULTS=id=>({enabled:true,...(id==='WDT'?{startMode:'REGISTER'}:{}),...RA_WDT[id].defaults,windowStart:100,windowEnd:0,reset:'RESET',stopInSleep:false,callback:''});
 const hexAddr=v=>'0x'+v.toString(16).toUpperCase().padStart(8,'0');
@@ -81,7 +84,7 @@ export class RaPinoutPanel {
     if(p.function==='GPIO_Input')html+=`<label>Pull up/down<select data-ra="pull">${option('NONE','None',p.pull||'NONE')}${option('PULLUP','input pull-up',p.pull||'NONE')}</select></label>`;
     if(p.function==='Analog'&&RA_ADC_CHANNELS[pin]!=null){
      const u={mode:'SINGLE',resolution:12,callback:'',priority:12,...this.draft.peripherals?.ADC0},an=String(RA_ADC_CHANNELS[pin]).padStart(3,'0'),scan=Object.entries(pins).filter(([q,x])=>x.function==='Analog'&&RA_ADC_CHANNELS[q]!=null).map(([q])=>'AN'+String(RA_ADC_CHANNELS[q]).padStart(3,'0'));
-     html+=`<fieldset><legend>g_adc0 (r_adc · ADC0) · AN${an}</legend><label>Mode<select data-ra-adc="mode">${option('SINGLE','Single Scan',u.mode)}${option('CONTINUOUS','Continuous Scan',u.mode)}</select></label><label>Resolution<select data-ra-adc="resolution">${[12,10,8].map(b=>option(String(b),`${b}-Bit`,String(u.resolution))).join('')}</select></label><label>Callback<input data-ra-adc="callback" value="${esc(u.callback)}" placeholder="NULL" spellcheck="false"></label>${u.callback?`<label>Scan End Interrupt Priority<select data-ra-adc="priority">${PRIORITIES(u.priority)}</select></label>`:''}<p class="form-hint">스캔 채널: ${scan.join(', ')} (Analog로 정한 핀). hal_entry()에서 R_ADC_Open(&amp;g_adc0_ctrl, &amp;g_adc0_cfg), R_ADC_ScanCfg(&amp;g_adc0_ctrl, &amp;g_adc0_channel_cfg) 후 R_ADC_ScanStart · R_ADC_StatusGet · R_ADC_Read(&amp;g_adc0_ctrl, ADC_CHANNEL_${RA_ADC_CHANNELS[pin]}, &amp;value)로 읽습니다. VREFH0 3.3 V 기준입니다.</p></fieldset>`;
+     html+=`<fieldset><legend>g_adc0 (r_adc · ADC0) · AN${an}</legend><label>Mode<select data-ra-adc="mode">${option('SINGLE','Single Scan',u.mode)}${option('CONTINUOUS','Continuous Scan',u.mode)}</select></label><label>Resolution<select data-ra-adc="resolution">${[12,10,8].map(b=>option(String(b),`${b}-Bit`,String(u.resolution))).join('')}</select></label><label>Callback<input data-ra-adc="callback" value="${esc(u.callback)}" placeholder="NULL" spellcheck="false"></label>${u.callback?`<label>Scan End Interrupt Priority<select data-ra-adc="priority">${PRIORITIES(u.priority)}</select></label>`:''}<label>Start Trigger<select data-ra-adc="trigger">${option('SOFTWARE','Software (R_ADC_ScanStart)',u.trigger||'SOFTWARE')}${option('ELC','ELC Event (ELC_PERIPHERAL_ADC0)',u.trigger||'SOFTWARE')}</select></label>${u.trigger==='ELC'?`<label>ELC Event<select data-ra-adc="elcEvent">${Object.keys(RA_ELC_EVENTS).filter(k=>k!=='ADC0_SCAN_END').map(k=>option(k,EVENT_LABEL(k),u.elcEvent||'GPT1_COUNTER_OVERFLOW')).join('')}</select></label><p class="form-hint">g_elc_cfg의 링크 ELC_PERIPHERAL_ADC0 ← ELC_EVENT_${esc(u.elcEvent||'GPT1_COUNTER_OVERFLOW')}. R_ELC_Open · R_ELC_Enable 뒤 R_ADC_ScanStart가 트리거를 켜면 그 이벤트마다 스캔합니다.</p>`:''}<p class="form-hint">스캔 채널: ${scan.join(', ')} (Analog로 정한 핀). hal_entry()에서 R_ADC_Open(&amp;g_adc0_ctrl, &amp;g_adc0_cfg), R_ADC_ScanCfg(&amp;g_adc0_ctrl, &amp;g_adc0_channel_cfg) 후 R_ADC_ScanStart · R_ADC_StatusGet · R_ADC_Read(&amp;g_adc0_ctrl, ADC_CHANNEL_${RA_ADC_CHANNELS[pin]}, &amp;value)로 읽습니다. VREFH0 3.3 V 기준입니다.</p></fieldset>`;
     }
     else if(p.function==='Analog')html+=`<p class="form-hint">이 핀에는 ADC12 입력(AN 채널)이 없습니다.</p>`;
     if(p.function==='IRQ')html+=`<label>Pull up/down<select disabled title="인터럽트 핀의 풀업은 Stacks 탭에서 정합니다"><option>${p.pull==='PULLUP'?'input pull-up':'None'}</option></select></label><fieldset><legend>g_external_irq${irq} (r_icu) · ${raIrqName(pin)}</legend><p class="form-hint">Trigger ${({FALLING:'Falling',RISING:'Rising',BOTH:'Both Edges',LOW:'Low Level'})[p.edge||'FALLING']} · Priority ${p.priority??12} · ${esc(p.callback||`external_irq${irq}_callback`)}. 인터럽트 핀의 Trigger · Callback · 우선순위 · 풀업은 RASC처럼 Stacks 탭의 g_external_irq${irq} Properties에서 정합니다.</p><button type="button" data-ra-to-stacks>Stacks: g_external_irq${irq} Properties</button></fieldset>`;
@@ -113,7 +116,7 @@ export class RaPinoutPanel {
      const id=p.signal.split('_')[0],ch=id.slice(3),u=this.draft.peripherals?.[id]||{},baud=u.baud??115200;
      let rate='';try{const b=sciBaudSetting(raPclka(this.draft),baud);rate=`PCLKA ${raPclka(this.draft)/1e6} MHz → 실제 ${Math.round(b.actual)} bps (오차 ${b.error.toFixed(2)} %)`;}catch(error){rate=error.message;}
      const mode=RA_SCI_SPI_CHANNELS.includes(Number(ch))?`<label>Mode<select data-ra-sci="mode">${option('UART','UART (r_sci_uart)','UART')}${option('SPI','Simple SPI (r_sci_spi)','UART')}</select></label>`:'';
-     html+=`<label>Signal<select data-ra="signal">${signals.map(sg=>option(sg,signalLabel(sg),p.signal)).join('')}</select></label><fieldset><legend>g_uart${ch} (r_sci_uart · SCI${ch})</legend>${mode}<label>Baud Rate<input type="number" data-ra-sci="baud" min="300" max="2000000" step="1" value="${baud}"></label><p class="form-hint">${esc(rate)} · 8N1</p><label>Priority<select data-ra-sci="priority">${Array.from({length:16},(_,i)=>option(String(i),`Priority ${i}${i===0?' (highest)':i===15?' (lowest)':''}`,String(u.priority??12))).join('')}</select></label><label>Callback<input data-ra-sci="callback" value="${esc(u.callback||`user_uart${ch}_callback`)}" spellcheck="false"></label><p class="form-hint">hal_entry()에서 R_SCI_UART_Open(&amp;g_uart${ch}_ctrl, &amp;g_uart${ch}_cfg) 후 R_SCI_UART_Write · R_SCI_UART_Read를 부르고, 콜백에서 UART_EVENT_RX_CHAR · UART_EVENT_TX_COMPLETE를 받습니다.</p></fieldset>`;
+     html+=`<label>Signal<select data-ra="signal">${signals.map(sg=>option(sg,signalLabel(sg),p.signal)).join('')}</select></label><fieldset><legend>g_uart${ch} (r_sci_uart · SCI${ch})</legend>${mode}<label>Baud Rate<input type="number" data-ra-sci="baud" min="300" max="2000000" step="1" value="${baud}"></label><p class="form-hint">${esc(rate)} · 8N1</p><label>Priority<select data-ra-sci="priority">${Array.from({length:16},(_,i)=>option(String(i),`Priority ${i}${i===0?' (highest)':i===15?' (lowest)':''}`,String(u.priority??12))).join('')}</select></label><label>Callback<input data-ra-sci="callback" value="${esc(u.callback||`user_uart${ch}_callback`)}" spellcheck="false"></label>${['transferTx','transferRx'].map(k=>`<label>${k==='transferTx'?'Transmit (p_transfer_tx)':'Receive (p_transfer_rx)'}<select data-ra-sci-transfer="${k}">${option('','None (CPU interrupt)',u[k]?'DTC':'')}${option('DTC',`Transfer (r_dtc)${u[k]?` · g_transfer${u[k].slice(8)}`:''}`,u[k]?'DTC':'')}</select></label>`).join('')}<p class="form-hint">hal_entry()에서 R_SCI_UART_Open(&amp;g_uart${ch}_ctrl, &amp;g_uart${ch}_cfg) 후 R_SCI_UART_Write · R_SCI_UART_Read를 부르고, 콜백에서 UART_EVENT_RX_CHAR · UART_EVENT_TX_COMPLETE를 받습니다.</p></fieldset>`;
     }
     if(p.label)html+=`<p class="form-hint">bsp_pin_cfg.h: <code>#define ${esc(p.label)} (BSP_IO_PORT_${pin.slice(1,2).padStart(2,'0')}_PIN_${pin.slice(2)})</code></p>`;
    }
@@ -124,9 +127,12 @@ export class RaPinoutPanel {
   const key=el.dataset.ra;if(!key&&!el.dataset.raSci&&!el.dataset.raGpt&&!el.dataset.raAdc&&!el.dataset.raIic&&!el.dataset.raSpi)return;const pin=this.pin,pins=this.draft.pins;
   if(key==='function'){if(!el.value)delete pins[pin];else{const old=pins[pin]||{};pins[pin]={function:el.value,...(old.label?{label:old.label}:{})};if(el.value==='IRQ')Object.assign(pins[pin],{edge:'FALLING',pull:'PULLUP',priority:12,callback:`external_irq${RA_IRQ_PINS[pin]}_callback`});if(el.value==='GPIO_Output')Object.assign(pins[pin],{initial:0,drive:'LOW'});if(el.value==='GPIO_Input')pins[pin].pull='NONE';if(el.value==='Peripheral')pins[pin].signal=signalsOf(pin)[0];}}
   else if(el.dataset.raSpi)this.spiValue(el);
+  else if(el.dataset.raSciTransfer){const id=pins[pin]?.signal?.split('_')[0];if(id)this.uartTransfer(id,el.dataset.raSciTransfer,el.value);}
   else if(el.dataset.raSci==='mode'){const id=pins[pin]?.signal?.split('_')[0];if(id)this.sciMode(id,el.value);}
   else if(el.dataset.raSci){const id=pins[pin]?.signal?.split('_')[0];if(!id)return;const u=this.draft.peripherals[id];const v=el.value.trim();u[el.dataset.raSci]=el.dataset.raSci==='callback'?v:Number(v);}
-  else if(el.dataset.raAdc){const u=((this.draft.peripherals||={}).ADC0||={enabled:true}),k=el.dataset.raAdc,v=el.value.trim();u[k]=['mode','callback'].includes(k)?v:Number(v);}
+  else if(el.dataset.raAdc){const per=this.draft.peripherals||={},u=(per.ADC0||={enabled:true}),k=el.dataset.raAdc,v=el.value.trim();u[k]=['mode','callback','trigger','elcEvent'].includes(k)?v:Number(v);
+   // An ELC start trigger needs the g_elc stack: it comes with the choice (RASC adds the dependency the same way).
+   if(k==='trigger'){if(v==='ELC'){u.elcEvent??='GPT1_COUNTER_OVERFLOW';if(!per.ELC?.enabled)per.ELC={enabled:true};}else{delete u.trigger;delete u.elcEvent;}}}
   else if(el.dataset.raIic==='mode'){const id=pins[pin]?.signal?.split('_')[0];if(id)this.iicMode(id,el.value);}
   else if(el.dataset.raIic){const id=pins[pin]?.signal?.split('_')[0];if(!id)return;const u=this.draft.peripherals[id],k=el.dataset.raIic,v=el.value.trim();u[k]=k==='slave'?(/^(0x[0-9a-f]+|\d+)$/i.test(v)?Number(v):NaN):['rate','callback'].includes(k)?v:Number(v);}
   else if(el.dataset.raGpt){const id=pins[pin]?.signal?.split('_')[0];if(!id)return;const u=this.draft.peripherals[id],k=el.dataset.raGpt,v=el.value.trim();u[k]=['mode','unit','callback'].includes(k)?v:Number(v);}
@@ -163,7 +169,9 @@ export class RaPinoutPanel {
   // ADC0 is on while a pin with an AN channel is set to Analog.
   if(Object.entries(this.draft.pins).some(([q,x])=>x.function==='Analog'&&RA_ADC_CHANNELS[q]!=null))used.add('ADC0');
   if(used.has('ADC0'))per.ADC0={mode:'SINGLE',resolution:12,callback:'',priority:12,...per.ADC0,enabled:true};
-  for(const id of Object.keys(per))if(!used.has(id)&&!id.startsWith('AGT')&&!PINLESS.includes(id)&&!(id.startsWith('GPT')&&per[id].mode==='PERIODIC'))per[id].enabled=false;
+  // A UART's transfers go on and off with the UART (they are its sub-stacks).
+  for(const [id,u]of Object.entries(per))if(/^SCI\d$/.test(id))for(const k of ['transferTx','transferRx'])if(u?.[k]&&per[u[k]])per[u[k]].enabled=used.has(id)&&u.mode!=='SPI';
+  for(const id of Object.keys(per))if(!used.has(id)&&!id.startsWith('AGT')&&!PINLESS.includes(id)&&!isTransfer(id)&&!(id.startsWith('GPT')&&per[id].mode==='PERIODIC'))per[id].enabled=false;
  }
  // The Properties of an SPI master stack (r_spi or r_sci_spi), shown on its pins and in the Stacks tab.
  spiFields(id,u){
@@ -202,6 +210,7 @@ export class RaPinoutPanel {
   for(const [id,p]of Object.entries(per)){
    if(!p.enabled)continue;const ch=id.slice(3);
    if(PINLESS.includes(id))list.push({pinless:id});
+   else if(isTransfer(id))list.push({transfer:id});
    else if(id.startsWith('IIC')&&p.mode==='SLAVE')list.push({name:`g_i2c_slave${ch}`,module:'I2C Slave (r_iic_slave)',pin:pinOf(id),info:`${p.rate} · 자기 주소 0x${Number(p.slave??RA_IIC_SLAVE_ADDRESS).toString(16)} · ${p.callback} · R_IIC_SLAVE_Open(&g_i2c_slave${ch}_ctrl, &g_i2c_slave${ch}_cfg)`,remove:id});
    else if(id.startsWith('IIC'))list.push({name:`g_i2c_master${ch}`,module:'I2C Master (r_iic_master)',pin:pinOf(id),info:`${p.rate} · 0x${(p.slave??0x50).toString(16)} · ${p.callback}`});
    else if(id.startsWith('SPI'))list.push({spi:id,name:`g_spi${ch}`,module:'SPI (r_spi)',pin:pinOf(id)});
@@ -212,12 +221,12 @@ export class RaPinoutPanel {
    else list.push({id,name:id.startsWith('AGT')?`g_agt${ch}`:`g_timer${ch}`,module:id.startsWith('AGT')?'Timer, Low-Power (r_agt)':'Timer, General PWM (r_gpt) · Periodic',p,edit:true});
   }
   const timerInfo=(id,p)=>{try{if(id.startsWith('AGT')){const c=raAgtCounts(raClockHz(this.draft,'pclkb'),Number(id.slice(3)),p.period,p.unit);return `${c.source}${c.source==='LOCO'?' 32.768 kHz':' '+raClockHz(this.draft,'pclkb')/1e6+' MHz'} / ${c.source==='LOCO'?2**c.div:[1,2,0,8][c.div]} → ${c.counts} counts (${Number(c.hz.toPrecision(6))} Hz)`;}const c=raGptCounts(raClockHz(this.draft),Number(id.slice(3)),p.period,p.unit);return `PCLKD / ${2**c.div} → ${c.counts} counts (${Number(c.hz.toPrecision(6))} Hz)`;}catch(error){return error.message;}};
-  const card=s=>s.irq?this.irqCard(s.irq):s.pinless?this.pinlessCard(s.pinless):s.spi?`<article class="ra-stack" data-ra-spi-stack="${s.spi}"><header><b>${s.name}</b><span>${s.module}</span>${s.pin?`<button type="button" data-ra-goto="${s.pin}">Pins: ${s.pin}</button>`:''}<button type="button" data-ra-spi-remove="${s.spi}">삭제</button></header><div class="ra-stack-fields">${this.spiFields(s.spi,{...SPI_DEFAULTS,...per[s.spi]})}</div></article>`:s.edit?`<article class="ra-stack" data-ra-stack="${s.id}"><header><b>${s.name}</b><span>${s.module}</span><button type="button" data-ra-remove="${s.id}">삭제</button></header><div class="ra-stack-fields"><label>Period<input type="number" data-ra-field="period" min="0" step="any" value="${s.p.period}"></label><label>Unit<select data-ra-field="unit">${RA_TIMER_UNITS.map(u=>`<option value="${u}" ${u===s.p.unit?'selected':''}>${u}</option>`).join('')}</select></label><label>Callback<input data-ra-field="callback" value="${esc(s.p.callback)}" placeholder="NULL" spellcheck="false"></label><label>Priority<select data-ra-field="priority">${PRIORITIES(s.p.priority)}</select></label></div><p class="form-hint">${esc(timerInfo(s.id,s.p))} · R_${s.id.startsWith('AGT')?'AGT':'GPT'}_Open(&amp;${s.name}_ctrl, &amp;${s.name}_cfg) · R_${s.id.startsWith('AGT')?'AGT':'GPT'}_Start(&amp;${s.name}_ctrl)</p></article>`
+  const card=s=>s.irq?this.irqCard(s.irq):s.pinless?this.pinlessCard(s.pinless):s.transfer?this.transferCard(s.transfer):s.spi?`<article class="ra-stack" data-ra-spi-stack="${s.spi}"><header><b>${s.name}</b><span>${s.module}</span>${s.pin?`<button type="button" data-ra-goto="${s.pin}">Pins: ${s.pin}</button>`:''}<button type="button" data-ra-spi-remove="${s.spi}">삭제</button></header><div class="ra-stack-fields">${this.spiFields(s.spi,{...SPI_DEFAULTS,...per[s.spi]})}</div></article>`:s.edit?`<article class="ra-stack" data-ra-stack="${s.id}"><header><b>${s.name}</b><span>${s.module}</span><button type="button" data-ra-remove="${s.id}">삭제</button></header><div class="ra-stack-fields"><label>Period<input type="number" data-ra-field="period" min="0" step="any" value="${s.p.period}"></label><label>Unit<select data-ra-field="unit">${RA_TIMER_UNITS.map(u=>`<option value="${u}" ${u===s.p.unit?'selected':''}>${u}</option>`).join('')}</select></label><label>Callback<input data-ra-field="callback" value="${esc(s.p.callback)}" placeholder="NULL" spellcheck="false"></label><label>Priority<select data-ra-field="priority">${PRIORITIES(s.p.priority)}</select></label></div><p class="form-hint">${esc(timerInfo(s.id,s.p))} · R_${s.id.startsWith('AGT')?'AGT':'GPT'}_Open(&amp;${s.name}_ctrl, &amp;${s.name}_cfg) · R_${s.id.startsWith('AGT')?'AGT':'GPT'}_Start(&amp;${s.name}_ctrl)</p></article>`
    :`<article class="ra-stack"${s.remove?` data-ra-iic-stack="${s.remove}"`:''}><header><b>${s.name}</b><span>${s.module}</span>${s.pin?`<button type="button" data-ra-goto="${s.pin}">Pins: ${s.pin}</button>`:''}${s.remove?`<button type="button" data-ra-spi-remove="${s.remove}">삭제</button>`:''}</header><p class="form-hint">${esc(s.info)}</p></article>`;
   const iicFree=RA_IIC_CHANNELS.map(ch=>'IIC'+ch).filter(id=>!per[id]?.enabled);
   const free=[...RA_AGT_CHANNELS.map(ch=>'AGT'+ch),...RA_GPT_CHANNELS.map(ch=>'GPT'+ch)].filter(id=>!per[id]?.enabled);
   const spiFree=[...RA_SPI_CHANNELS.map(ch=>['SPI'+ch,`SPI (r_spi) · SPI${ch}`]),...RA_SCI_SPI_CHANNELS.map(ch=>['SCI'+ch,`SPI (r_sci_spi) · SCI${ch} Simple SPI`])].filter(([id])=>!per[id]?.enabled);
-  $('ra-stacks').innerHTML=`<div class="ra-stack-new"><label>New Stack<select id="ra-stack-add"><optgroup label="Input"><option value="IRQ">External IRQ (r_icu)</option></optgroup>${spiFree.length||iicFree.length?`<optgroup label="Connectivity">${spiFree.map(([id,l])=>`<option value="${id}" data-ra-spi-add>${l}</option>`).join('')}${iicFree.map(id=>`<option value="${id}" data-ra-iic-slave-add>I2C Slave (r_iic_slave) · ${id}</option>`).join('')}</optgroup>`:''}<optgroup label="Timers">${free.map(id=>`<option value="${id}">${id.startsWith('AGT')?`Timer, Low-Power (r_agt) · AGT${id.slice(3)}`:`Timer, General PWM (r_gpt) · GPT${id.slice(3)} Periodic`}</option>`).join('')}</optgroup>${PINLESS_GROUPS.map(([label,ids])=>ids.some(id=>!per[id]?.enabled)?`<optgroup label="${label}">${ids.filter(id=>!per[id]?.enabled).map(id=>`<option value="${id}">${STACK_NAMES[id][1]}</option>`).join('')}</optgroup>`:'').join('')}</select></label><button type="button" data-ra-add>추가</button></div>${list.length?list.map(card).join(''):'<p class="form-hint">스택이 없습니다. New Stack으로 External IRQ · SPI · 타이머를 넣거나, Pins 탭에서 핀 기능을 정하세요.</p>'}`;
+  $('ra-stacks').innerHTML=`<div class="ra-stack-new"><label>New Stack<select id="ra-stack-add"><optgroup label="Input"><option value="IRQ">External IRQ (r_icu)</option></optgroup>${spiFree.length||iicFree.length?`<optgroup label="Connectivity">${spiFree.map(([id,l])=>`<option value="${id}" data-ra-spi-add>${l}</option>`).join('')}${iicFree.map(id=>`<option value="${id}" data-ra-iic-slave-add>I2C Slave (r_iic_slave) · ${id}</option>`).join('')}</optgroup>`:''}<optgroup label="Timers">${free.map(id=>`<option value="${id}">${id.startsWith('AGT')?`Timer, Low-Power (r_agt) · AGT${id.slice(3)}`:`Timer, General PWM (r_gpt) · GPT${id.slice(3)} Periodic`}</option>`).join('')}</optgroup>${PINLESS_GROUPS.map(([label,ids])=>ids.some(id=>!per[id]?.enabled)?`<optgroup label="${label}">${ids.filter(id=>!per[id]?.enabled).map(id=>`<option value="${id}">${STACK_NAMES[id][1]}</option>`).join('')}</optgroup>`:'').join('')}<optgroup label="Transfer"><option value="DTC" data-ra-transfer-add>Transfer (r_dtc)</option><option value="DMAC" data-ra-transfer-add>Transfer (r_dmac)</option></optgroup></select></label><button type="button" data-ra-add>추가</button></div>${list.length?list.map(card).join(''):'<p class="form-hint">스택이 없습니다. New Stack으로 External IRQ · SPI · 타이머를 넣거나, Pins 탭에서 핀 기능을 정하세요.</p>'}`;
  }
  // A stack without pins (New Stack → Monitoring · System): the watchdogs with the Properties RASC shows for them.
  pinlessCard(id){
@@ -250,6 +259,11 @@ export class RaPinoutPanel {
    hint=`데이터 플래시: ${hexAddr(RA_DF_BASE)}~${hexAddr(RA_DF_BASE+RA_DF_SIZE-1)} (${RA_DF_SIZE/1024} KB) · 지우기 블록 ${RA_DF_BLOCK}바이트 · 쓰기 단위 ${RA_DF_UNIT}바이트. R_FLASH_HP_Open(&amp;${name}_ctrl, &amp;${name}_cfg) 뒤 R_FLASH_HP_Erase(&amp;${name}_ctrl, 주소, 블록 수)로 지운 곳에만 R_FLASH_HP_Write(&amp;${name}_ctrl, (uint32_t) 버퍼, 주소, 바이트 수)로 쓸 수 있습니다(지우지 않고 다시 쓰면 FSP_ERR_WRITE_FAILED). 읽기는 주소를 포인터로 — *(uint32_t *) ${hexAddr(RA_DF_BASE)}. 지운 곳을 읽은 값은 실제 칩에서 정해지지 않으니, 썼는지는 R_FLASH_HP_BlankCheck로 확인하세요. `
     +(q.bgo?`Background Operation: 호출이 바로 돌아오고 끝나면 ${esc(q.callback||'콜백(R_FLASH_HP_CallbackSet)')}이 FLASH_EVENT_ERASE_COMPLETE · WRITE_COMPLETE · BLANK · NOT_BLANK · ERR_FAILURE로 불립니다. 그동안 데이터 플래시는 읽지 못합니다. `:'Background Operation 없이는 호출이 끝날 때까지 기다립니다(인터럽트 없음). ')
     +`내용은 MCU 리셋에도, 실행을 멈췄다 다시 실행해도 남습니다(프로젝트에 저장).</p><p class="form-hint" data-ra-flash-saved>프로젝트에 저장된 데이터 플래시: ${saved?`${saved}바이트`:'없음(모두 지워진 상태)'} <button type="button" data-ra-flash-clear${saved?'':' disabled'}>데이터 플래시 지우기</button>`;
+  }
+  if(id==='ELC'){
+   const adc=this.draft.peripherals?.ADC0,cur=adc?.trigger==='ELC'?adc.elcEvent||'GPT1_COUNTER_OVERFLOW':'';
+   fields=`<label>ELC_PERIPHERAL_ADC0 (ADC0 Start)<select data-ra-elc-adc>${option('','No allocation',cur)}${Object.keys(RA_ELC_EVENTS).filter(k=>k!=='ADC0_SCAN_END').map(k=>option(k,EVENT_LABEL(k),cur)).join('')}</select></label>`;
+   hint=`g_elc_cfg (ra_gen/elc_data.c)의 링크: ${cur?`ADC0 ← ${esc(cur)}`:'없음'}. 링크된 이벤트는 CPU 인터럽트 없이 주변장치를 바로 움직입니다(예: GPT1 주기 → ADC0 스캔 시작). R_ELC_Open(&amp;g_elc_ctrl, &amp;g_elc_cfg) · R_ELC_Enable(&amp;g_elc_ctrl) 뒤에 동작하고, R_ELC_LinkSet · LinkBreak로 바꾸며, R_ELC_SoftwareEventGenerate(&amp;g_elc_ctrl, ELC_SOFTWARE_EVENT_0)는 코드에서 이벤트를 냅니다. 시뮬레이터가 받는 쪽은 ADC0 스캔 시작이고(그룹 A), GPT 시작·정지 · ADC 그룹 B · I/O 포트 링크는 실행 로그에 안내만 남깁니다.${adc?.enabled?'':' ADC0은 Pins에서 AN 핀을 Analog로 정하면 켜집니다.'}`;
   }
   if(id==='LPM'){
    const q={...RA_LPM_DEFAULTS,...p},pins=this.draft.pins,irqPin=ch=>Object.keys(pins).find(x=>pins[x].function==='IRQ'&&RA_IRQ_PINS[x]===ch);
@@ -311,7 +325,7 @@ export class RaPinoutPanel {
  }
  renderSummary(){
   const fam=raFamily(this.draft.family),c={...fam.clock,...(this.draft.clock||{})},pll=c.hocoMHz/c.pllDiv*c.pllMul,pins=this.draft.pins,per=this.draft.peripherals||{};
-  const stacks=['g_ioport (r_ioport)',...Object.entries(pins).filter(([,p])=>p.function==='IRQ').map(([q])=>`g_external_irq${RA_IRQ_PINS[q]} (r_icu)`),...Object.entries(per).filter(([,p])=>p.enabled).map(([id,p])=>{const n=id.replace(/\D/g,'');return STACK_NAMES[id]?`${STACK_NAMES[id][0]} (${STACK_NAMES[id][1].match(/\((.+)\)/)[1]})`:id.startsWith('SCI')?(p.mode==='SPI'?`g_sci_spi${n} (r_sci_spi)`:`g_uart${n} (r_sci_uart)`):id.startsWith('SPI')?`g_spi${n} (r_spi)`:id.startsWith('GPT')?`g_timer${n} (r_gpt)`:id.startsWith('AGT')?`g_agt${n} (r_agt)`:id.startsWith('IIC')?(p.mode==='SLAVE'?`g_i2c_slave${n} (r_iic_slave)`:`g_i2c_master${n} (r_iic_master)`):'g_adc0 (r_adc)';})];
+  const stacks=['g_ioport (r_ioport)',...Object.entries(pins).filter(([,p])=>p.function==='IRQ').map(([q])=>`g_external_irq${RA_IRQ_PINS[q]} (r_icu)`),...Object.entries(per).filter(([,p])=>p.enabled).map(([id,p])=>{const n=id.replace(/\D/g,'');return STACK_NAMES[id]?`${STACK_NAMES[id][0]} (${STACK_NAMES[id][1].match(/\((.+)\)/)[1]})`:isTransfer(id)?`g_transfer${n} (r_${p.driver==='DMAC'?'dmac':'dtc'})`:id.startsWith('SCI')?(p.mode==='SPI'?`g_sci_spi${n} (r_sci_spi)`:`g_uart${n} (r_sci_uart)`):id.startsWith('SPI')?`g_spi${n} (r_spi)`:id.startsWith('GPT')?`g_timer${n} (r_gpt)`:id.startsWith('AGT')?`g_agt${n} (r_agt)`:id.startsWith('IIC')?(p.mode==='SLAVE'?`g_i2c_slave${n} (r_iic_slave)`:`g_i2c_master${n} (r_iic_master)`):'g_adc0 (r_adc)';})];
   const row=(k,v)=>`<tr><th>${k}</th><td>${esc(String(v))}</td></tr>`;
   $('ra-summary').innerHTML=`<table class="ra-clock-table ra-summary-table"><tbody>${row('Board','FPB-RA6E1')}${row('Device',fam.part)}${row('Core','CM33')}${row('Package','LQFP100')}${row('Toolchain','GNU ARM Embedded (arm-none-eabi-gcc)')}${row('FSP','앱에 설치된 FSP (ra/fsp/inc/fsp_version.h)')}${row('Project Type','Flat (Non-TrustZone) Project')}${row('RTOS','No RTOS (Bare Metal)')}${row('Clock',`HOCO ${c.hocoMHz} MHz → PLL ${+pll.toFixed(3)} MHz → ICLK ${+(pll/c.iclkDiv).toFixed(3)} MHz`)}${row('Pins',`${Object.keys(pins).length}개 설정`)}${row('Stacks',stacks.join(', '))}</tbody></table><p class="form-hint">문서: FSP User's Manual (renesas.github.io/fsp) · RA6E1 Group User's Manual: Hardware (R01UH0930) · FPB-RA6E1 v1 User's Manual (R20UT4960). 앱은 바깥 링크를 열지 않으니 브라우저에서 찾아 여세요. 설정은 BSP · Clocks · Pins · Stacks 탭에서 바꿉니다.</p>`;
  }
@@ -327,6 +341,8 @@ export class RaPinoutPanel {
  stackChange(el){
   const irqPin=el.closest('[data-ra-irq]')?.dataset.raIrq;if(irqPin&&el.dataset.raIrqField)return this.irqChange(irqPin,el);
   if(el.dataset.raSpi){this.spiValue(el);this.validate();this.renderStacks();return;}
+  if(el.dataset.raTransferField){this.transferValue(el);this.validate();this.renderStacks();return;}
+  if(el.dataset.raElcAdc!==undefined){const per=this.draft.peripherals||={};if(el.value){per.ADC0={mode:'SINGLE',resolution:12,callback:'',priority:12,...per.ADC0,enabled:per.ADC0?.enabled??false,trigger:'ELC',elcEvent:el.value};}else if(per.ADC0){delete per.ADC0.trigger;delete per.ADC0.elcEvent;}this.validate();this.renderStacks();return;}
   const id=el.closest('[data-ra-stack]')?.dataset.raStack;
   // Low Power Modes: the source check boxes and the edge of an IRQn-DS source.
   if(id==='LPM'&&(el.dataset.raLpm||el.dataset.raLpmEdge)){
@@ -356,6 +372,9 @@ export class RaPinoutPanel {
    if(!pin){$('ra-pinout-error').textContent='External IRQ를 둘 수 있는 빈 핀이 없습니다.';return;}
    pins[pin]={function:'IRQ',edge:'FALLING',pull:'PULLUP',priority:12,callback:`external_irq${RA_IRQ_PINS[pin]}_callback`};this.validate();this.renderStacks();return;
   }
+  if(el.closest('[data-ra-add]')&&$('ra-stack-add').selectedOptions[0]?.hasAttribute('data-ra-transfer-add')){const id=this.newTransfer($('ra-stack-add').value);this.validate();this.renderStacks();document.querySelector(`#ra-stacks [data-ra-transfer="${id}"]`)?.scrollIntoView?.({block:'nearest'});return;}
+  const transferGone=el.closest('[data-ra-transfer-remove]')?.dataset.raTransferRemove;
+  if(transferGone){delete per[transferGone];for(const u of Object.values(per))for(const k of ['transferTx','transferRx'])if(u?.[k]===transferGone)delete u[k];this.validate();this.renderStacks();return;}
   const spiGone=el.closest('[data-ra-spi-remove]')?.dataset.raSpiRemove;
   if(spiGone){for(const [pin,p]of Object.entries(this.draft.pins))if(p.function==='Peripheral'&&p.signal.startsWith(spiGone+'_'))delete this.draft.pins[pin];delete per[spiGone];this.validate();this.renderStacks();return;}
   if(el.closest('[data-ra-add]')&&$('ra-stack-add').selectedOptions[0]?.hasAttribute('data-ra-spi-add'))return this.addSpiStack($('ra-stack-add').value);
@@ -373,8 +392,56 @@ export class RaPinoutPanel {
    this.validate();this.renderStacks();return;
   }
   if(el.closest('[data-ra-add]')){const id=$('ra-stack-add').value;if(!id)return;per[id]=id.startsWith('AGT')?{enabled:true,period:100,unit:'ms',callback:`agt${id.slice(3)}_callback`,priority:12}:{enabled:true,mode:'PERIODIC',period:100,unit:'ms',duty:50,callback:`gpt${id.slice(3)}_callback`,priority:12};this.validate();this.renderStacks();return;}
-  const rm=el.closest('[data-ra-remove]')?.dataset.raRemove;if(rm){delete per[rm];this.validate();this.renderStacks();return;}
+  const rm=el.closest('[data-ra-remove]')?.dataset.raRemove;if(rm){delete per[rm];if(rm==='ELC'&&per.ADC0?.trigger==='ELC'){delete per.ADC0.trigger;delete per.ADC0.elcEvent;}this.validate();this.renderStacks();return;}
   const go=el.closest('[data-ra-goto]')?.dataset.raGoto;if(go){this.pin=go;this.tab='pins';this.render();}
+ }
+ // ---- Transfers (feature 36): New Stack → Transfer, and a UART's transmit / receive transfer.
+ newTransfer(driver,extra={}){
+  const per=this.draft.peripherals||={};let n=0;while(per['TRANSFER'+n])n++;
+  const used=new Set(Object.values(per).filter(t=>t?.driver==='DMAC').map(t=>t.channel)),channel=RA_DMAC_CHANNELS.find(c=>!used.has(c))??0;
+  // A DTC needs an event with a vector: the first one this configuration has (the ADC scan end, a timer, an IRQ pin).
+  const events=raTransferEvents(driver),activation=driver==='DMAC'?'SOFTWARE':events.find(ev=>raEventHasVector(this.draft,ev))??'ADC0_SCAN_END';
+  per['TRANSFER'+n]={enabled:true,...RA_TRANSFER_DEFAULTS,driver,activation,...(driver==='DMAC'?{channel,srcMode:'INCREMENTED',size:1,length:1}:{}),callback:'',...extra};
+  if(driver!=='DMAC')delete per['TRANSFER'+n].channel;
+  return 'TRANSFER'+n;
+ }
+ uartTransfer(id,key,value){
+  const per=this.draft.peripherals||={},u=per[id];if(!u)return;
+  if(u[key]){delete per[u[key]];delete u[key];}
+  if(value==='DTC')u[key]=this.newTransfer('DTC',{activation:`${id}_${key==='transferTx'?'TXI':'RXI'}`});
+ }
+ transferValue(el){
+  const id=el.dataset.raTransferId,k=el.dataset.raTransferField,q=this.draft.peripherals?.[id];if(!q)return;const v=el.value.trim();
+  q[k]=['activation','mode','srcMode','destMode','repeatArea','irq','callback'].includes(k)?v:Number(v);
+ }
+ transferCard(id){
+  const p={...RA_TRANSFER_DEFAULTS,...this.draft.peripherals[id]},g=`g_transfer${id.slice(8)}`,dmac=p.driver==='DMAC',api=dmac?'DMAC':'DTC';
+  const owner=Object.entries(this.draft.peripherals).find(([k,u])=>/^SCI\d$/.test(k)&&u?.enabled&&(u.transferTx===id||u.transferRx===id));
+  const option=(value,label,cur)=>`<option value="${value}" ${String(value)===String(cur)?'selected':''}>${label}</option>`;
+  const sel=(k,values)=>`<select data-ra-transfer-field="${k}" data-ra-transfer-id="${id}">${values.map(([v,l])=>option(v,l,p[k])).join('')}</select>`;
+  const num=(k,min,max)=>`<input type="number" data-ra-transfer-field="${k}" data-ra-transfer-id="${id}" min="${min}" max="${max}" step="1" value="${p[k]}">`;
+  const addr=RA_TRANSFER_ADDR_MODES.map(m=>[m,{FIXED:'Fixed',INCREMENTED:'Incremented',DECREMENTED:'Decremented'}[m]]);
+  let fields,hint;
+  if(owner){
+   const [uart,u]=owner,tx=u.transferTx===id;
+   fields=`<label>Activation Source<input value="${uart} ${tx?'TXI':'RXI'}" readonly title="r_sci_uart이 정합니다"></label><label>Mode<input value="Normal · 1 Byte · ${tx?'Source Incremented → TDR':'RDR → Destination Incremented'}" readonly></label>`;
+   hint=`g_uart${uart.slice(3)}의 ${tx?'송신':'수신'} 전송입니다. R_SCI_UART_Open이 이 DTC를 열고, ${tx?'R_SCI_UART_Write는 첫 바이트만 CPU가 쓰고 나머지는 TXI마다 DTC가 TDR로 옮깁니다. 마지막 바이트를 옮기면 TX_DATA_EMPTY, 다 보내면 TX_COMPLETE가 옵니다.':'R_SCI_UART_Read의 버퍼로 RXI마다 DTC가 RDR을 옮기고, 다 받으면 RX_COMPLETE가 옵니다.'} Pins의 ${uart} 카드에서 None으로 바꾸면 없어집니다.`;
+  }else{
+   const events=raTransferEvents(p.driver);
+   fields=(dmac?`<label>Channel${sel('channel',RA_DMAC_CHANNELS.map(c=>[c,'Channel '+c]))}</label>`:'')
+    +`<label>Activation Source${sel('activation',events.map(ev=>[ev,EVENT_LABEL(ev)+(!dmac&&!raEventHasVector(this.draft,ev)?' (벡터 없음)':'')]))}</label>`
+    +`<label>Mode${sel('mode',RA_TRANSFER_MODES.map(m=>[m,{NORMAL:'Normal',REPEAT:'Repeat',BLOCK:'Block'}[m]]))}</label><label>Transfer Size${sel('size',[[1,'1 Byte'],[2,'2 Bytes'],[4,'4 Bytes']])}</label>`
+    +`<label>Source Address Mode${sel('srcMode',addr)}</label><label>Destination Address Mode${sel('destMode',addr)}</label>`
+    +(p.mode!=='NORMAL'?`<label>Repeat Area (Unused in Normal Mode)${sel('repeatArea',[['SOURCE','Source'],['DESTINATION','Destination']])}</label>`:'')
+    +`<label>Interrupt Frequency${sel('irq',[['END','After all transfers have completed'],['EACH','After each transfer']])}</label>`
+    +`<label>Number of Transfers${num('length',0,p.mode==='NORMAL'?65535:dmac?1024:256)}</label>`+(p.mode!=='NORMAL'?`<label>Number of Blocks${num('blocks',0,65535)}</label>`:'')
+    +(dmac?`<label>Callback<input data-ra-transfer-field="callback" data-ra-transfer-id="${id}" value="${esc(p.callback)}" placeholder="NULL" spellcheck="false"></label>${p.callback?`<label>Transfer End Interrupt Priority${sel('priority',Array.from({length:16},(_,i)=>[i,`Priority ${i}`]))}</label>`:''}`:'');
+   const mode={NORMAL:'한 번 활성화될 때마다 1단위, Number of Transfers만큼 옮기면 끝',REPEAT:'1단위씩 옮기고 Number of Transfers마다 반복 영역 주소가 처음으로 돌아감(끝나지 않음)'+(dmac?' — DMAC는 Number of Blocks번 반복 뒤 끝':''),BLOCK:'활성화마다 Number of Transfers 단위(한 블록)를 옮기고 Number of Blocks 블록 뒤 끝'}[p.mode];
+   hint=`${mode}. R_${api}_Open(&amp;${g}_ctrl, &amp;${g}_cfg) 뒤 R_${api}_Reset(&amp;${g}_ctrl, 소스, 목적지, 횟수)가 주소와 횟수를 정하고 전송을 켭니다. `
+    +(dmac?(p.activation==='SOFTWARE'?`R_DMAC_SoftwareStart(&amp;${g}_ctrl, TRANSFER_START_MODE_REPEAT)로 시작합니다. `:`${esc(p.activation)} 이벤트마다 움직입니다(DELSR). `)+(p.callback?`끝나면 ${esc(p.callback)}(dmac_int_isr)이 불립니다.`:'콜백 이름을 쓰면 끝 인터럽트가 켜집니다.')
+     :`${esc(p.activation)} 인터럽트를 DTC가 가로채 전송하고, 전송이 끝나면(또는 매번) 그 인터럽트가 CPU로 가 원래 스택의 콜백이 불립니다. ADC 결과는 R_ADC_InfoGet의 p_address에서 읽습니다.`);
+  }
+  return `<article class="ra-stack" data-ra-transfer="${id}"><header><b>${g}</b><span>Transfer (r_${api.toLowerCase()})</span>${owner?'':`<button type="button" data-ra-transfer-remove="${id}">삭제</button>`}</header><div class="ra-stack-fields">${fields}</div><p class="form-hint">${hint}</p></article>`;
  }
  // New Stack → Connectivity → SPI: the first free pin group gets the stack's signals (RSPI group A is Arduino D10-D13).
  addSpiStack(id){

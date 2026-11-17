@@ -89,5 +89,22 @@ export function raAssistance(mcu){
       // After Deep Software Standby the program starts from the reset vector: RSTSR0.DPSRSTF tells, and with IOKEEP the
       // pins stay as they were until IoKeepClear.
       {label:'Start after Deep Software Standby (RSTSR0.DPSRSTF)',code:`if (1U == R_SYSTEM->RSTSR0_b.DPSRSTF)\n{\n    /* The MCU restarted from Deep Software Standby${deep&&q.ioKeep?': release the I/O ports (IOKEEP)':''}. */\n    R_LPM_IoKeepClear(NULL);\n}\n`}]});}
+  // Event Link Controller (feature 36): the links of g_elc_cfg work once it is opened and enabled.
+  if(per.ELC?.enabled)out.push({name:'g_elc',title:'Event Link Controller (r_elc)',items:[call('R_ELC_Open','R_ELC_Open(&g_elc_ctrl, &g_elc_cfg);'),call('R_ELC_Enable','R_ELC_Enable(&g_elc_ctrl);'),
+    call('R_ELC_LinkSet','/* ADC0 starts a scan on each GPT1 overflow. */\nR_ELC_LinkSet(&g_elc_ctrl, ELC_PERIPHERAL_ADC0, ELC_EVENT_GPT1_COUNTER_OVERFLOW);'),call('R_ELC_LinkBreak','R_ELC_LinkBreak(&g_elc_ctrl, ELC_PERIPHERAL_ADC0);'),
+    call('R_ELC_SoftwareEventGenerate','R_ELC_SoftwareEventGenerate(&g_elc_ctrl, ELC_SOFTWARE_EVENT_0);'),call('R_ELC_Disable','R_ELC_Disable(&g_elc_ctrl);'),call('R_ELC_Close','R_ELC_Close(&g_elc_ctrl);')]});
+  // Transfers (r_dtc / r_dmac): a UART's own transfer is opened by R_SCI_UART_Open, so it lists no calls.
+  const owners=new Map(Object.entries(per).filter(([id,q])=>/^SCI\d$/.test(id)&&q?.enabled&&q.mode!=='SPI').flatMap(([id,q])=>[[q.transferTx,`${id} TX`],[q.transferRx,`${id} RX`]]).filter(([t])=>t));
+  for(const [id,q]of Object.entries(per).filter(([id,q])=>/^TRANSFER\d+$/.test(id)&&q?.enabled).sort(([a],[b])=>Number(a.slice(8))-Number(b.slice(8)))){
+    const g=`g_transfer${id.slice(8)}`,api=q.driver==='DMAC'?'DMAC':'DTC',owner=owners.get(id);
+    if(owner){out.push({name:g,title:`Transfer (r_${api.toLowerCase()}) · ${owner} — R_SCI_UART_Open이 엽니다`,items:[call(`R_${api}_InfoGet`,`transfer_properties_t props;\nR_${api}_InfoGet(&${g}_ctrl, &props);`)]});continue;}
+    out.push({name:g,title:`Transfer (r_${api.toLowerCase()}) · ${q.activation==='SOFTWARE'?'Software start':q.activation}`,items:[call(`R_${api}_Open`,`R_${api}_Open(&${g}_ctrl, &${g}_cfg);`),
+      call(`R_${api}_Reset`,`/* Source, destination and the number of transfers (blocks in block mode); enables the transfer. */\nR_${api}_Reset(&${g}_ctrl, source, destination, count);`),
+      ...(api==='DMAC'&&q.activation==='SOFTWARE'?[call('R_DMAC_SoftwareStart','R_DMAC_SoftwareStart(&'+g+'_ctrl, TRANSFER_START_MODE_REPEAT);')]:[]),
+      call(`R_${api}_Enable`,`R_${api}_Enable(&${g}_ctrl);`),call(`R_${api}_Disable`,`R_${api}_Disable(&${g}_ctrl);`),
+      call(`R_${api}_InfoGet`,`transfer_properties_t props;\nR_${api}_InfoGet(&${g}_ctrl, &props);`),call(`R_${api}_Close`,`R_${api}_Close(&${g}_ctrl);`),
+      ...(api==='DTC'&&q.activation==='ADC0_SCAN_END'?[{label:'ADC result address (R_ADC_InfoGet)',code:`adc_info_t adc_info;\nR_ADC_InfoGet(&g_adc0_ctrl, &adc_info);\nR_DTC_Reset(&${g}_ctrl, (const void *) adc_info.p_address, samples, SAMPLES);\n`}]:[]),
+      ...(q.callback?[callback(q.callback,'dmac_callback_args_t','    /* The DMAC transfer has ended. */\n    (void) p_args;')]:[])]});
+  }
   return out;
 }
