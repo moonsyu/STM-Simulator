@@ -9,7 +9,15 @@ import {projectForBoard,validateProject} from '../../src/project.js';
 import {raDefaultMcu,validateRaMcu} from '../../src/ra-config.js';
 import {fspPrelude} from '../../src/fsp-interp.js';
 import {raExample} from '../../src/ra-examples.js';
-import {LPM_ERRORS,LPM_STANDBY,LPM_DEEP_RTC,LPM_STUCK} from '../fixtures/ra-lpm-programs.js';
+import {LPM_ERRORS,LPM_STANDBY,LPM_DEEP_RTC,LPM_STUCK,LPM_REVIEW} from '../fixtures/ra-lpm-programs.js';
+// A review program on the interpreter (both engines: tests/toolchain/ra-lpm.test.mjs).
+function review(name){const p=LPM_REVIEW[name],x=open(p,{hostTime:Date.UTC(2026,0,1,9,0,0)});run(x.session,1,p.ms,t=>p.at[t]?.(x.session));return x;}
+
+test('review programs on the interpreter: Sleep with an RTC only opened has nothing to end it; SCI9_TXI is named in the log',()=>{
+ const rtc=review('rtcsleep');
+ assert.equal(rtc.lpm()[1],'Sleep: 깨울 수 있는 소스가 없습니다 — 켜진 인터럽트가 없습니다. 리셋(S2)으로만 다시 시작합니다.');assert.equal(rtc.session.readVariable('woke'),0);
+ const uart=review('uart');assert.match(uart.lpm()[1],/^Sleep에서 깨어남 · SCI9_TXI /);
+});
 
 function open({mcu,code},options={}){
  const log={trace:[],warn:[]};

@@ -106,6 +106,9 @@ test('a Software Standby nothing can end, entered by a bare __WFI(): both engine
 });
 
 // ---- the programs of the review (tests/fixtures/ra-lpm-programs.js LPM_REVIEW)
+test('review: rtcsleep — Sleep with an RTC that is only opened: both engines say nothing can end it',{skip,timeout:900000},()=>review('rtcsleep',emu=>{
+ assert.equal(messages(emu)[1],'Sleep: 깨울 수 있는 소스가 없습니다 — 켜진 인터럽트가 없습니다. 리셋(S2)으로만 다시 시작합니다.');assert.equal(emu.session.readVariable('woke'),0);
+}));
 test('review: uart — Sleep ended by the SCI9 transmit interrupt: both logs name it by its vector',{skip,timeout:900000},()=>review('uart',emu=>{
  assert.match(messages(emu)[1],/^Sleep에서 깨어남 · SCI9_TXI \(0\.\d ms 뒤\)$/);assert.equal(emu.session.readVariable('woke'),1);
 }));

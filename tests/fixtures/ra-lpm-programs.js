@@ -179,6 +179,25 @@ const press=(from,to)=>({[from]:s=>s.setPressed({SW1:true}),[to]:s=>s.setPressed
 const lpm=extra=>({enabled:true,mode:'DEEP',wake:[],cancel:[],cancelRising:[],ioKeep:true,power:'DEEPCUT0',...extra});
 const pins=(peripherals,more)=>()=>{const m=raDefaultMcu();m.peripherals=peripherals;Object.assign(m.pins,more);return m;};
 export const LPM_REVIEW={
+ // Sleep with only an opened RTC (no periodic or alarm request set up): R_RTC_Open enables no interrupt, nothing can end it.
+ rtcsleep:{mcu:mcu({LPM:lpm({mode:'SLEEP'}),RTC:{enabled:true,start:'HOST_TIME',callback:'rtc_callback',periodicPriority:12}}),ms:100,at:{},vars:['woke'],
+  code:HEAD+`
+volatile uint32_t woke = 0;
+void external_irq1_callback(external_irq_callback_args_t * p_args) { (void) p_args; }
+void rtc_callback(rtc_callback_args_t * p_args) { (void) p_args; }
+void hal_entry(void)
+{
+    R_RTC_Open(&g_rtc0_ctrl, &g_rtc0_cfg);
+    R_LPM_Open(&g_lpm0_ctrl, &g_lpm0_cfg);
+    R_BSP_SoftwareDelay(10, BSP_DELAY_UNITS_MILLISECONDS);
+    R_LPM_LowPowerModeEnter(&g_lpm0_ctrl);
+    woke = 1;
+    while (1)
+    {
+        R_BSP_SoftwareDelay(10, BSP_DELAY_UNITS_MILLISECONDS);
+    }
+}
+`+WARM_START},
  // Sleep ended by an interrupt that is not an IRQ pin, AGT, GPT or RTC (SCI9 transmit): both logs name it SCI9_TXI.
  uart:{mcu:pins({LPM:lpm({mode:'SLEEP'}),SCI9:{enabled:true,baud:115200,callback:'user_uart9_callback',priority:12}},{P109:{function:'Peripheral',signal:'SCI9_TXD'},P110:{function:'Peripheral',signal:'SCI9_RXD'}}),ms:100,at:{},vars:['woke'],
   code:HEAD+`

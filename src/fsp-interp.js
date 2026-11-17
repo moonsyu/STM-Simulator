@@ -841,8 +841,9 @@ export class FspAdapter {
   const agtWhy=(n,needIrq)=>{const st=this.lpmState('agt',n);return this.isFrozen(low,st)?'STOPPED':!st?.open||!st.running?'IDLE':needIrq&&!st.callback?'OFF':'';};
   const wdtRuns=id=>!!this.states.get(id==='WDT'?'g_wdt0_ctrl':'g_iwdt0_ctrl')?.running;
   if(mode==='SLEEP'){
-   // An interrupt enabled in the NVIC: r_icu enables its interrupt at ExternalIrqEnable, the other drivers at Open.
-   const live=[...this.states.values()].some(st=>st.open&&(st.kind==='gpt'||st.kind==='agt'?!!st.callback:/^g_external_irq/.test(st.name)?st.enabled:/^g_(uart|adc|i2c_master|spi|sci_spi|rtc)\d/.test(st.name)&&(!/^g_adc/.test(st.name)||!!st.callback)));
+   // An interrupt enabled in the NVIC: r_icu enables its interrupt at ExternalIrqEnable, r_rtc when the alarm or the
+   // periodic request is set up (Open alone enables none), the other drivers at Open.
+   const live=[...this.states.values()].some(st=>st.open&&(st.kind==='gpt'||st.kind==='agt'?!!st.callback:/^g_external_irq/.test(st.name)?st.enabled:/^g_rtc\d/.test(st.name)?!!(st.aie||st.pie):/^g_(uart|adc|i2c_master|spi|sci_spi)\d/.test(st.name)&&(!/^g_adc/.test(st.name)||!!st.callback)));
    if(live||wdtRuns('WDT')||wdtRuns('IWDT'))ok=true;else reasons.push('켜진 인터럽트가 없습니다');
    return {labels,reasons,ok};
   }
