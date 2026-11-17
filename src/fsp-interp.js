@@ -441,7 +441,8 @@ export class FspAdapter {
   this.shortWait=0;yield Math.max(.001,ms);return 0;
  }
  // __WFI: the core sleeps until an interrupt is taken.
- *wfi(r){if(r.inIsr)return 0;const seen=this.dispatched;while(this.dispatched===seen)yield .1;return 0;}
+ // (Sleep: a watchdog with its stop control does not count meanwhile, as in lowPower.)
+ *wfi(r){if(r.inIsr)return 0;const seen=this.dispatched,sleep={mode:'SLEEP',frozen:[]};this.lpmFreeze(r,sleep);while(this.dispatched===seen)yield .1;this.lpmThaw(r,sleep);return 0;}
  call(name,args,r){
   this.runtime=r;const [a,b,c,d]=args;
   // A read of a pin or a status is polling (the interpreter's FSP loop rule, runtime.js).

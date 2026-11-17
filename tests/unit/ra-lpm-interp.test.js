@@ -174,6 +174,17 @@ test('example ra_lpm_deep: Deep Software Standby after 1 s, S1 (IRQ1-DS) restart
  assert.equal(session.runtime.resetCount,2);assert.equal(dark,0,'IOKEEP: LED2 stays on in the mode and through the second reset');assert.deepEqual(log.warn,[]);
 });
 
+test('Sleep and the WDT stop control: "Count Disabled in Low Power Mode" stops the count in a __WFI() sleep, otherwise the WDT resets the sleeping program',()=>{
+ // PCLKB / 128 x 16384 clocks = 41.9 ms; the program refreshes once and sleeps until S1.
+ const code=HEAD+'volatile uint32_t presses = 0;\nvoid hal_entry(void)\n{\n    R_ICU_ExternalIrqOpen(&g_external_irq1_ctrl, &g_external_irq1_cfg);\n    R_ICU_ExternalIrqEnable(&g_external_irq1_ctrl);\n    R_WDT_Open(&g_wdt0_ctrl, &g_wdt0_cfg);\n    R_WDT_Refresh(&g_wdt0_ctrl);\n    while (1)\n    {\n        __WFI();\n        R_WDT_Refresh(&g_wdt0_ctrl);\n    }\n}\nvoid external_irq1_callback(external_irq_callback_args_t * p_args) { (void) p_args; presses++; }\n'+WARM;
+ const wdt=stopInSleep=>{const m=raDefaultMcu();m.peripherals={WDT:{enabled:true,clockDiv:128,stopInSleep}};return m;};
+ const stopped=open({mcu:wdt(true),code});
+ run(stopped.session,1,300,t=>{if(t===200)stopped.session.setPressed({SW1:true});if(t===230)stopped.session.setPressed({});});
+ assert.equal(stopped.session.runtime.resetCount??0,0,'the count stands still while the program sleeps');assert.equal(stopped.session.readVariable('presses'),1);
+ const counting=open({mcu:wdt(false),code});run(counting.session,1,100);
+ assert.ok(counting.session.runtime.resetCount>=1,'no stop control: the WDT underflows 41.9 ms into the sleep');
+});
+
 test('what the interpreter does not run is said: Snooze mode, writing the reset status register',()=>{
  const snooze=open({mcu:lpmMcu(),code:HEAD+'void hal_entry(void)\n{\n    lpm_cfg_t cfg = g_lpm0_cfg;\n    cfg.low_power_mode = LPM_MODE_STANDBY_SNOOZE;\n    R_LPM_Open(&g_lpm0_ctrl, &cfg);\n}\nvoid external_irq1_callback(external_irq_callback_args_t * p_args) { (void) p_args; }\n'+WARM});
  assert.throws(()=>run(snooze.session,1,5),/R_LPM_Open: 내장 해석기는 Snooze 모드\(LPM_MODE_STANDBY_SNOOZE\)를 실행하지 않습니다/);
