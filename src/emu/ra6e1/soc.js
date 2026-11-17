@@ -349,8 +349,8 @@ export class Ra6e1 {
       peek(offset, size) { const a = (0x40000000 + offset) >>> 0, hit = lookup(a); return hit ? (hit[0].peek ? hit[0].peek(hit[1], size) : null) : (fallback.get(a & ~3) ?? 0); },
       // The machine asks for the next event when the core sleeps (WFI) with nothing pending: the low power mode begins there.
       // Only WFI: r_lpm enters its modes with WFI, and a WFE wait is the core's own sleep here (as __WFE() is on the
-      // built-in interpreter).
-      tick: () => soc.sync(), nextEvent: () => { const cpu = soc.machine.cpu; if (cpu?.sleeping && !cpu.sleepWfe && !soc.lpm.mode) soc.lpm.enter(); return soc.scheduler.next() + soc.cycleOffset; }, reset: () => soc.machineReset(),
+      // built-in interpreter). Not again between a cancel request and its reset (machine._resetPending).
+      tick: () => soc.sync(), nextEvent: () => { const cpu = soc.machine.cpu; if (cpu?.sleeping && !cpu.sleepWfe && !soc.lpm.mode && !soc.machine._resetPending) soc.lpm.enter(); return soc.scheduler.next() + soc.cycleOffset; }, reset: () => soc.machineReset(),
     };
     this.machine.map(0x40000000, 0x400000, router, 'RA6E1 peripherals');
     void BusFaultSignal;

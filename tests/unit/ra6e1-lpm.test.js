@@ -150,6 +150,16 @@ test('Deep Software Standby: the RTC periodic request cancels it; with DEEPCUT 1
  assert.equal(c.log[0],'Deep Software Standby 진입 · DEEPCUT0, I/O 리셋 상태로(IOKEEP 0) — 해제 소스: 없음(리셋만)');assert.match(c.log[1],/설정된 소스가 없습니다/);
 });
 
+test('single stepping (machine.step) over a Deep Software Standby cancel: the reset is taken, and the mode is not entered again before it',()=>{
+ const {machine,bus,soc,log,resets,levels,us,wfi}=chip();
+ bus.write8(DPSBYCR,0x80);bus.write8(DPSIER,0x02);bus.write16(SBYCR,0x8000);levels.P205=1;soc.inputsUpdated();
+ wfi();us(1000);levels.P205=0;soc.inputsUpdated();
+ assert.equal(machine._resetPending,'DEEP_STANDBY');
+ machine._nextDeadline();assert.equal(log.length,2,'one entry, one cancel: a deadline query before the reset does not enter the mode again');assert.equal(soc.lpm.mode,null);
+ assert.equal(machine.step().reason,'reset');assert.deepEqual(resets,['DEEP_STANDBY']);assert.equal(bus.read8(RSTSR0)&0x80,0x80);
+ assert.equal(log.length,2);
+});
+
 test('WFE is not a low power mode entry: with SBYCR.SSBY set the core just waits, the clocks run',()=>{
  const {machine,bus,soc,log}=chip();
  bus.write16(SBYCR,0x8000);soc.gpts[1].start();
