@@ -85,16 +85,17 @@ const FSP_API_OBJECTS=new Set(['g_adc_on_adc','g_can_on_can','g_elc_on_elc','g_e
 export function raNameProblem(name){
  if(C_WORDS.has(name))return `${name}은(는) C나 생성 코드가 쓰는 이름입니다`;
  if(/^(R_|BSP_|FSP_|IOPORT_|ELC_|ICU_|__)/.test(name)||/^_[A-Z]/.test(name))return `${name}: R_ · BSP_ · FSP_ · IOPORT_ 로 시작하는 이름과 __ 로 시작하는 이름은 FSP와 컴파일러가 씁니다`;
- if(/^g_(ioport|external_irq\d+|uart\d+|timer\d+|agt\d+|adc\d+|i2c_master\d+|i2c_slave\d+|spi\d+|sci_spi\d+|wdt\d+|iwdt\d+|rtc\d+|lpm\d+|flash\d+|bsp_pin_cfg)(_ctrl|_cfg|_extend|_cfg_extend|_ext_cfg|_channel_cfg|_err_cfg)?$/.test(name))return `${name}은(는) 생성 코드의 인스턴스 이름입니다`;
+ if(/^g_(ioport|external_irq\d+|uart\d+|timer\d+|agt\d+|adc\d+|i2c_master\d+|i2c_slave\d+|spi\d+|sci_spi\d+|wdt\d+|iwdt\d+|rtc\d+|lpm\d+|flash\d+|transfer\d+|elc|bsp_pin_cfg)(_ctrl|_cfg|_extend|_cfg_extend|_ext_cfg|_channel_cfg|_err_cfg|_info)?$/.test(name))return `${name}은(는) 생성 코드의 인스턴스 이름입니다`;
  // The interrupt service routines vector_data.h names (FSP drivers define them) and the drivers' API objects
  // (g_uart_on_sci, g_spi_on_spi, g_timer_on_gpt …: the extern const …_api_t g_<api>_on_<module> of the FSP 6.6 headers).
- if(/^((sci_uart|sci_spi|spi|iic_master|iic_slave)_(rxi|txi|tei|eri)|r_icu|adc_scan_end|agt_int|gpt_counter_overflow|rtc_alarm_periodic|rtc_carry|fcu_frdyi|fcu_fiferr)_isr$/.test(name))return `${name}은(는) FSP 드라이버의 인터럽트 처리 함수(ISR) 이름입니다`;
+ if(/^((sci_uart|sci_spi|spi|iic_master|iic_slave)_(rxi|txi|tei|eri)|r_icu|adc_scan_end|agt_int|gpt_counter_overflow|rtc_alarm_periodic|rtc_carry|fcu_frdyi|fcu_fiferr|dmac_int)_isr$/.test(name))return `${name}은(는) FSP 드라이버의 인터럽트 처리 함수(ISR) 이름입니다`;
  if(FSP_API_OBJECTS.has(name))return `${name}은(는) FSP 드라이버의 API 객체 이름(g_…_on_…)입니다`;
  return '';
 }
 // The argument type of a callback by where it is set: an IRQ pin, or a peripheral (an SCI channel is a UART or, in
 // simple SPI mode, an SPI master; GPT and AGT are both timers).
 function callbackArgType(where,p){
+ if(/^TRANSFER/.test(where))return 'dmac_callback_args_t';
  if(/^P\d/.test(where))return 'external_irq_callback_args_t';
  if(/^SCI/.test(where))return p?.mode==='SPI'?'spi_callback_args_t':'uart_callback_args_t';
  if(/^SPI/.test(where))return 'spi_callback_args_t';
@@ -162,6 +163,8 @@ export function validateRaMcu(mcu){
    if(id==='RTC'){out.peripherals[id]=validateRtc(p);continue;}
    if(id==='FLASH'){out.peripherals[id]=validateFlash(p);continue;}
    if(id==='LPM'){out.peripherals[id]=validateLpm(p);continue;}
+   if(id==='ELC'){out.peripherals[id]=validateElc(p);continue;}
+   if(/^TRANSFER\d+$/.test(id)&&Number(id.slice(8))<=31){out.peripherals[id]=validateTransfer(id,p);continue;}
    const sci=/^SCI(\d)$/.exec(id);if(!sci||!RA_SCI_CHANNELS.includes(Number(sci[1]))||!p||typeof p.enabled!=='boolean')throw new Error(`${id}: 지원하지 않는 주변장치입니다.`);
    // One SCI channel is either a UART (r_sci_uart, the default) or a simple SPI master (r_sci_spi), as RASC adds one
    // stack or the other on the channel; the UART settings keep their shape so earlier projects stay unchanged.
@@ -173,8 +176,11 @@ export function validateRaMcu(mcu){
    if(typeof q.callback!=='string'||!C_NAME.test(q.callback))throw new Error(`${id}: 콜백 이름은 C 식별자로 쓰세요.`);
    if(!Number.isInteger(q.priority)||q.priority<0||q.priority>15)throw new Error(`${id}: 인터럽트 우선순위는 0~15입니다.`);
    if(q.enabled&&!signals.has(id+'_TXD')&&!signals.has(id+'_RXD'))throw new Error(`${id}: TXD 또는 RXD 핀을 정하세요.`);
+   // The UART's transfer instances (p_transfer_tx / p_transfer_rx): a TRANSFERn stack name, or none.
+   for(const k of ['transferTx','transferRx'])if(p[k]){if(typeof p[k]!=='string'||!/^TRANSFER\d+$/.test(p[k]))throw new Error(`${id}: 전송 인스턴스 이름을 확인하세요.`);q[k]=p[k];}
    out.peripherals[id]=q;
   }
+  checkTransfers(out);
  }
  for(const [id,q]of Object.entries(out.peripherals||{}))if(q.callback){checkName(id,q.callback);callbacks.push([id,q.callback]);}
  // A callback is a function: it cannot have the name of a pin symbol (a macro).
@@ -302,6 +308,14 @@ export function raClockHz(mcu,key='pclkd'){const c={...raFamily(mcu?.family).clo
 function validateAdc(p,pins){
  if(!p||typeof p.enabled!=='boolean')throw new Error('ADC0: 설정을 확인하세요.');
  const q={enabled:p.enabled,mode:p.mode??'SINGLE',resolution:p.resolution??12,callback:p.callback??'',priority:p.priority??12};
+ // Start source (feature 36): software (R_ADC_ScanStart starts a scan) or the ELC link of ELC_PERIPHERAL_ADC0 (ScanStart
+ // lets the linked event start each scan). Projects from before keep their shape: no field is software.
+ if(p.trigger!==undefined&&p.trigger!=='SOFTWARE'){
+  if(!RA_ADC_TRIGGERS.includes(p.trigger))throw new Error('ADC0: 시작 트리거는 Software 또는 ELC입니다.');
+  q.trigger=p.trigger;q.elcEvent=p.elcEvent??'GPT1_COUNTER_OVERFLOW';
+  if(!Object.hasOwn(RA_ELC_EVENTS,q.elcEvent)||q.elcEvent==='ADC0_SCAN_END')throw new Error('ADC0: ELC로 스캔을 시작할 이벤트를 고르세요.');
+  if(q.mode==='CONTINUOUS')throw new Error('ADC0: ELC 트리거는 Single Scan에서 씁니다.');
+ }
  if(!['SINGLE','CONTINUOUS'].includes(q.mode))throw new Error('ADC0: 동작 모드는 Single Scan 또는 Continuous Scan입니다.');
  if(![12,10,8].includes(q.resolution))throw new Error('ADC0: 분해능은 12·10·8비트입니다.');
  if(typeof q.callback!=='string'||q.callback!==''&&!C_NAME.test(q.callback))throw new Error('ADC0: 콜백 이름은 C 식별자로 쓰세요(없으면 비워 둡니다).');
@@ -489,6 +503,100 @@ function validateLpm(p){
  q.cancelRising=list(p.cancelRising??[],RA_LPM_CANCEL.filter(x=>/^IRQ/.test(x)),'상승 엣지로 해제할 IRQn-DS');
  const lone=q.cancelRising.find(x=>!q.cancel.includes(x));if(lone)throw new Error(`LPM: ${lone}-DS의 엣지를 정하려면 해제 소스에도 ${lone}을(를) 넣으세요.`);
  return q;
+}
+// Event Link Controller (r_elc g_elc), DTC (r_dtc) and DMAC (r_dmac) transfers — feature 36.
+// The events the settings offer: the ones the simulator's peripherals raise (bsp_elc.h of the RA6E1, FSP 6.6). An event
+// name is the ELC_EVENT_ constant without its prefix.
+const gptOverflow={1:0xcf,2:0xd8,4:0xea,5:0xf3,6:0xfc,7:0x105},sciEvent={0:0x180,1:0x186,2:0x18c,3:0x192,4:0x198,9:0x1b6};
+export const RA_ELC_EVENTS=Object.freeze({
+ ...Object.fromEntries(Array.from({length:16},(_,n)=>['ICU_IRQ'+n,1+n])),
+ ...Object.fromEntries(Array.from({length:8},(_,n)=>[`DMAC${n}_INT`,0x20+n])),
+ DTC_COMPLETE:0x29,
+ ...Object.fromEntries([0,1,2,3,4,5].map(n=>[`AGT${n}_INT`,0x40+3*n])),
+ ELC_SOFTWARE_EVENT_0:0xb5,ELC_SOFTWARE_EVENT_1:0xb6,
+ ...Object.fromEntries(Object.entries(gptOverflow).map(([ch,v])=>[`GPT${ch}_COUNTER_OVERFLOW`,v])),
+ ADC0_SCAN_END:0x160,
+ ...Object.fromEntries(Object.entries(sciEvent).flatMap(([ch,v])=>['RXI','TXI','TEI','ERI'].map((k,i)=>[`SCI${ch}_${k}`,v+i])))
+});
+/** The ELC event name of an event number (null when the settings do not offer it). */
+export const raElcEventName=n=>Object.keys(RA_ELC_EVENTS).find(k=>RA_ELC_EVENTS[k]===n)??null;
+// ELSRn of the RA6E1 (bsp_elc.h elc_peripheral_t, BSP_ELC_PERIPHERAL_MASK 0x3D3FF). The simulator links ADC0 (group A
+// start, ADSTRGR.TRSA = ELC_AD0); the others are kept as written but nothing in the models takes them.
+export const RA_ELC_PERIPHERALS=Object.freeze({GPT_A:0,GPT_B:1,GPT_C:2,GPT_D:3,GPT_E:4,GPT_F:5,GPT_G:6,GPT_H:7,ADC0:8,ADC0_B:9,DAC0:12,IOPORT1:14,IOPORT2:15,IOPORT3:16,IOPORT4:17});
+/** ADC start sources (adc_start_source_t) the ADC0 stack offers: software, or the ELC link of ELC_PERIPHERAL_ADC0. */
+export const RA_ADC_TRIGGERS=Object.freeze(['SOFTWARE','ELC']);
+export const RA_DMAC_CHANNELS=Object.freeze([0,1,2,3,4,5,6,7]);
+export const RA_TRANSFER_MODES=Object.freeze(['NORMAL','REPEAT','BLOCK']);
+export const RA_TRANSFER_ADDR_MODES=Object.freeze(['FIXED','INCREMENTED','DECREMENTED']);
+export const RA_TRANSFER_DEFAULTS=Object.freeze({driver:'DTC',channel:0,activation:'ADC0_SCAN_END',mode:'NORMAL',size:2,srcMode:'FIXED',destMode:'INCREMENTED',repeatArea:'DESTINATION',irq:'END',length:1,blocks:0,callback:'',priority:12});
+/** Events a transfer may start on: a DTC on an interrupt that has a vector, a DMAC on any of them or by software. An SCI
+ *  event belongs to the UART's own transfer (r_sci_uart sets it up), so a stand-alone transfer does not offer it. */
+export const raTransferEvents=driver=>[...(driver==='DMAC'?['SOFTWARE']:[]),...Object.keys(RA_ELC_EVENTS).filter(k=>!/^SCI/.test(k)&&!(driver==='DTC'&&/^(DMAC|DTC|ELC_SOFT)/.test(k)))];
+function validateElc(p){
+ if(!p||typeof p.enabled!=='boolean')throw new Error('ELC: 설정을 확인하세요.');
+ return {enabled:p.enabled};
+}
+// A transfer instance g_transferN (TRANSFERn): r_dtc or r_dmac with the transfer_info_t RASC's Properties set. A UART's
+// transmit or receive transfer is one of these too (SCIn transferTx / transferRx names it); r_sci_uart then sets the
+// mode, size, addresses and the activation itself, as the FSP driver does in R_SCI_UART_Open.
+function validateTransfer(id,p){
+ if(!p||typeof p.enabled!=='boolean')throw new Error(`${id}: 설정을 확인하세요.`);
+ const q={enabled:p.enabled,...RA_TRANSFER_DEFAULTS,...Object.fromEntries(Object.keys(RA_TRANSFER_DEFAULTS).filter(k=>p[k]!==undefined).map(k=>[k,p[k]]))};
+ if(!['DTC','DMAC'].includes(q.driver))throw new Error(`${id}: 전송 모듈은 DTC(r_dtc) 또는 DMAC(r_dmac)입니다.`);
+ if(q.driver==='DMAC'&&!RA_DMAC_CHANNELS.includes(q.channel))throw new Error(`${id}: DMAC 채널은 0~7입니다.`);
+ if(typeof q.activation!=='string'||q.activation!=='SOFTWARE'&&!Object.hasOwn(RA_ELC_EVENTS,q.activation))throw new Error(`${id}: 활성화 소스(Activation Source)를 고르세요.`);
+ if(q.activation==='SOFTWARE'&&q.driver==='DTC')throw new Error(`${id}: DTC는 인터럽트 이벤트로만 움직입니다(R_DTC_SoftwareStart는 FSP_ERR_UNSUPPORTED). 소프트웨어 시작은 DMAC를 쓰세요.`);
+ if(!RA_TRANSFER_MODES.includes(q.mode))throw new Error(`${id}: 전송 모드는 Normal · Repeat · Block입니다(Repeat-Block은 시뮬레이터가 지원하지 않습니다).`);
+ if(![1,2,4].includes(q.size))throw new Error(`${id}: 전송 단위는 1 · 2 · 4바이트입니다.`);
+ for(const k of ['srcMode','destMode'])if(!RA_TRANSFER_ADDR_MODES.includes(q[k]))throw new Error(`${id}: 주소 모드는 Fixed · Incremented · Decremented입니다.`);
+ if(!['SOURCE','DESTINATION'].includes(q.repeatArea))throw new Error(`${id}: Repeat Area는 Source 또는 Destination입니다.`);
+ if(!['END','EACH'].includes(q.irq))throw new Error(`${id}: 인터럽트 시점은 전송 끝(End) 또는 매번(Each)입니다.`);
+ const max=q.mode==='NORMAL'?65535:q.driver==='DTC'?256:1024;
+ if(!Number.isInteger(q.length)||q.length<0||q.length>max)throw new Error(`${id}: Number of Transfers는 0~${max}입니다.`);
+ if(!Number.isInteger(q.blocks)||q.blocks<0||q.blocks>65535)throw new Error(`${id}: Number of Blocks는 0~65535입니다.`);
+ if(q.driver==='DTC'){q.callback='';delete q.channel;}
+ else{
+  if(typeof q.callback!=='string'||q.callback!==''&&!C_NAME.test(q.callback))throw new Error(`${id}: 콜백 이름은 C 식별자로 쓰세요(없으면 비워 둡니다).`);
+  if(!Number.isInteger(q.priority)||q.priority<0||q.priority>15)throw new Error(`${id}: 인터럽트 우선순위는 0~15입니다.`);
+ }
+ return q;
+}
+/** Whether the configuration allocates a vector (an IELSR slot) for an event, as raVectors does: a DTC activates on one. */
+export function raEventHasVector(mcu,event){
+ const per=mcu.peripherals||{},on=id=>per[id]?.enabled;
+ let m=/^SCI(\d)_/.exec(event);if(m)return !!on('SCI'+m[1]);
+ m=/^ICU_IRQ(\d+)$/.exec(event);if(m)return Object.entries(mcu.pins||{}).some(([pin,p])=>p.function==='IRQ'&&RA_IRQ_PINS[pin]===Number(m[1]));
+ if(event==='ADC0_SCAN_END')return !!(on('ADC0')&&per.ADC0.callback);
+ m=/^(GPT|AGT)(\d)_/.exec(event);if(m)return !!(on(m[1]+m[2])&&per[m[1]+m[2]].callback);
+ m=/^DMAC(\d)_INT$/.exec(event);if(m)return Object.values(per).some(t=>t?.enabled&&t.driver==='DMAC'&&t.channel===Number(m[1])&&t.callback);
+ return false;
+}
+// The checks across stacks: an ADC started by the ELC needs the g_elc stack, a UART's transfer is a DTC transfer of its own
+// channel's event that nothing else uses, a DTC needs a vector on its event, one DMAC channel per transfer.
+function checkTransfers(out){
+ const per=out.peripherals||{},owner=new Map();
+ if(per.ADC0?.enabled&&per.ADC0.trigger==='ELC'&&!per.ELC?.enabled)throw new Error('ADC0: ELC로 시작하려면 New Stack → System의 Event Link Controller(g_elc)를 추가하세요.');
+ for(const [id,u]of Object.entries(per)){
+  if(!/^SCI\d$/.test(id)||!u.enabled||u.mode==='SPI')continue;
+  for(const [key,event]of [['transferTx',`${id}_TXI`],['transferRx',`${id}_RXI`]]){
+   const t=u[key];if(!t)continue;
+   if(!/^TRANSFER\d+$/.test(t)||!per[t]?.enabled)throw new Error(`${id}: ${key==='transferTx'?'송신':'수신'} 전송 ${t}이(가) Stacks에 없습니다.`);
+   if(per[t].driver!=='DTC')throw new Error(`${id}: UART의 전송은 DTC(r_dtc)로 정하세요. UART + DMAC는 시뮬레이터가 확인하지 못해 지원하지 않습니다.`);
+   if(owner.has(t))throw new Error(`${t}은(는) 이미 ${owner.get(t)}의 전송입니다.`);owner.set(t,`${id} ${key==='transferTx'?'TX':'RX'}`);
+   per[t].activation=event;per[t].owner=`${id}_${key==='transferTx'?'TX':'RX'}`;
+  }
+ }
+ const dtcEvents=new Map(),channels=new Map();
+ for(const [id,t]of Object.entries(per)){
+  if(!/^TRANSFER\d+$/.test(id)||!t.enabled)continue;
+  if(!t.owner&&/^SCI/.test(t.activation))throw new Error(`${id}: SCI 이벤트(${t.activation})로 움직이는 전송은 그 UART(g_uart${t.activation.slice(3,4)})의 송신·수신 전송으로 정하세요.`);
+  if(t.driver==='DTC'){
+   if(dtcEvents.has(t.activation))throw new Error(`${id}: ${t.activation}에는 이미 ${dtcEvents.get(t.activation)}이(가) 있습니다(이벤트 하나에 DTC 전송 하나: R_DTC_Open이 FSP_ERR_IN_USE).`);dtcEvents.set(t.activation,id);
+   if(!raEventHasVector(out,t.activation))throw new Error(`${id}: DTC는 인터럽트 벡터가 있는 이벤트로만 움직입니다. ${t.activation}의 스택에서 콜백(인터럽트)을 켜세요.`);
+  }else{
+   if(channels.has(t.channel))throw new Error(`${id}: DMAC 채널 ${t.channel}은(는) 이미 ${channels.get(t.channel)}에서 씁니다.`);channels.set(t.channel,id);
+  }
+ }
 }
 /** A 64-bit source mask as [low 32 bits, high bits] from source names and their bit table. */
 export const raLpmMask=(names,bits)=>{let lo=0,hi=0;for(const n of names||[]){const b=bits[n];if(b==null)continue;if(b<32)lo|=1<<b;else hi|=1<<(b-32);}return [lo>>>0,hi>>>0];};

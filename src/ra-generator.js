@@ -3,7 +3,7 @@
 // linker init tables) and script (linker scripts). The user's code is src/hal_entry.c; the app builds these with the
 // FSP sources (BSP + r_* drivers) and ARM GCC, then runs the ELF on the RA6E1 emulator.
 // Formats follow RASC output for FSP 5.x/6.x (only what the FPB-RA6E1 configurations here need).
-import {raFamily,raPinName,raPortBit,RA_IRQ_PINS,raPsel,RA_PSEL_NAMES,RA_SCI_CHANNELS,RA_GPT_CHANNELS,RA_ADC_CHANNELS,RA_AGT_CHANNELS,RA_IIC_CHANNELS,RA_SPI_CHANNELS,RA_SCI_SPI_CHANNELS,raGptCounts,raAgtCounts,raIicClock,raClockHz,raSpiBitrate,raSciSpiBitrate,RA_WDT,raOfs0,RA_RTC_DEFAULTS,RA_IIC_SLAVE_ADDRESS,raIicSlaveClock,RA_LPM_DEFAULTS,RA_FLASH_DEFAULTS} from './ra-config.js';
+import {raFamily,raPinName,raPortBit,RA_IRQ_PINS,raPsel,RA_PSEL_NAMES,RA_SCI_CHANNELS,RA_GPT_CHANNELS,RA_ADC_CHANNELS,RA_AGT_CHANNELS,RA_IIC_CHANNELS,RA_SPI_CHANNELS,RA_SCI_SPI_CHANNELS,raGptCounts,raAgtCounts,raIicClock,raClockHz,raSpiBitrate,raSciSpiBitrate,RA_WDT,raOfs0,RA_RTC_DEFAULTS,RA_IIC_SLAVE_ADDRESS,raIicSlaveClock,RA_LPM_DEFAULTS,RA_FLASH_DEFAULTS,RA_ELC_PERIPHERALS,RA_TRANSFER_DEFAULTS} from './ra-config.js';
 
 const HEADER=kind=>`/* generated ${kind} - do not edit */\n`;
 const hex=(n,w=8)=>'0x'+(n>>>0).toString(16).toUpperCase().padStart(w,'0');
@@ -25,7 +25,7 @@ export function pinCfgWord(pin){
 const irqsOf=mcu=>Object.entries(mcu.pins||{}).filter(([,p])=>p.function==='IRQ').map(([pin,p])=>{const channel=RA_IRQ_PINS[pin];if(channel==null)throw new Error(`${pin}: IRQ 핀이 아닙니다.`);return {pin,channel,name:p.instance||`g_external_irq${channel}`,callback:p.callback||`external_irq${channel}_callback`,trigger:p.edge||'FALLING',priority:p.priority??12,filter:!!p.filter};});
 
 // SCI UART instances (r_sci_uart), g_uartN on each enabled SCI channel.
-const uartsOf=mcu=>RA_SCI_CHANNELS.filter(ch=>mcu.peripherals?.['SCI'+ch]?.enabled&&mcu.peripherals['SCI'+ch].mode!=='SPI').map(ch=>{const p=mcu.peripherals['SCI'+ch];return {channel:ch,name:`g_uart${ch}`,baud:p.baud??115200,callback:p.callback||`user_uart${ch}_callback`,priority:p.priority??12};});
+const uartsOf=mcu=>RA_SCI_CHANNELS.filter(ch=>mcu.peripherals?.['SCI'+ch]?.enabled&&mcu.peripherals['SCI'+ch].mode!=='SPI').map(ch=>{const p=mcu.peripherals['SCI'+ch];return {channel:ch,name:`g_uart${ch}`,baud:p.baud??115200,callback:p.callback||`user_uart${ch}_callback`,priority:p.priority??12,transferTx:p.transferTx||'',transferRx:p.transferRx||''};});
 // GPT timer instances (r_gpt), g_timerN on each enabled GPT channel: saw-wave PWM on the GTIOC pins set to it, or a periodic
 // timer; the cycle-end (overflow) interrupt only when a callback is named, as RASC leaves it disabled otherwise.
 const gptsOf=mcu=>RA_GPT_CHANNELS.filter(ch=>mcu.peripherals?.['GPT'+ch]?.enabled).map(ch=>{
@@ -51,7 +51,7 @@ const adc_extended_cfg_t g_adc0_cfg_extend =
 {
     .add_average_count   = ADC_ADD_OFF,
     .clearing            = ADC_CLEAR_AFTER_READ_ON,
-    .trigger             = ADC_START_SOURCE_DISABLED,
+    .trigger             = ${a.trigger==='ELC'?'ADC_START_SOURCE_ELC_AD0':'ADC_START_SOURCE_DISABLED'},
     .trigger_group_b     = ADC_START_SOURCE_DISABLED,
     .double_trigger_mode = ADC_DOUBLE_TRIGGER_DISABLED,
     .adc_vref_control    = ADC_VREF_CONTROL_VREFH,
@@ -384,6 +384,102 @@ const lpm_instance_t ${t.name} =
 };`;
 }
 /** OFS0 as bsp_mcu_ofs_cfg.h gives it to the BSP (bsp_linker.c places it at 0x0100A100). */
+// Event Link Controller (r_elc g_elc, feature 36): the instance in hal_data.c, its link table g_elc_cfg in ra_gen/elc_data.c
+// as RASC writes it (one entry per ELC_PERIPHERAL_*: the event an ADC started by the ELC listens to, else none).
+const elcOf=mcu=>mcu.peripherals?.ELC?.enabled?{name:'g_elc'}:null;
+const elcLinks=mcu=>{const adc=mcu.peripherals?.ADC0;return adc?.enabled&&adc.trigger==='ELC'?{ADC0:adc.elcEvent||'GPT1_COUNTER_OVERFLOW'}:{};};
+const elcDecl=()=>`/** ELC Instance */
+extern const elc_instance_t g_elc;
+/** Access the ELC instance using these structures when calling API functions directly (::p_api is not used). */
+extern elc_instance_ctrl_t g_elc_ctrl;
+extern const elc_cfg_t g_elc_cfg;`;
+const elcInstance=()=>`elc_instance_ctrl_t g_elc_ctrl;
+extern const elc_cfg_t g_elc_cfg;
+const elc_instance_t g_elc =
+{
+    .p_ctrl = &g_elc_ctrl,
+    .p_api  = &g_elc_on_elc,
+    .p_cfg  = &g_elc_cfg
+};`;
+function elcData(mcu){
+ const links=elcLinks(mcu);
+ return HEADER('ELC source file')+`#include "r_elc_api.h"
+const elc_cfg_t g_elc_cfg = {
+${Object.keys(RA_ELC_PERIPHERALS).map(k=>`    .link[ELC_PERIPHERAL_${k}] = ${links[k]?`ELC_EVENT_${links[k]}, /* ${links[k].replace(/_/g,' ')} */`:'ELC_EVENT_NONE, /* No allocation */'}`).join('\n')}
+};
+`;
+}
+// Transfer instances (r_dtc / r_dmac, g_transferN): transfer_info_t from the Properties, the extended configuration (the
+// DTC's activation vector, the DMAC's channel, event, interrupt and callback) and transfer_instance_t. A UART's transfer is
+// set up again by r_sci_uart (R_SCI_UART_Open writes its mode, size and register address), as with RASC.
+const transfersOf=mcu=>Object.entries(mcu.peripherals||{}).filter(([id,p])=>/^TRANSFER\d+$/.test(id)&&p?.enabled).map(([id,p])=>{
+ const q={...RA_TRANSFER_DEFAULTS,...p},owner=Object.entries(mcu.peripherals).find(([k,u])=>/^SCI\d$/.test(k)&&u?.enabled&&u.mode!=='SPI'&&(u.transferTx===id||u.transferRx===id));
+ const own=owner?{uart:owner[0],tx:owner[1].transferTx===id}:null;
+ return {...q,id,n:Number(id.slice(8)),name:`g_transfer${id.slice(8)}`,callback:q.driver==='DMAC'?q.callback||'':'',activation:own?`${own.uart}_${own.tx?'TXI':'RXI'}`:q.activation,own};
+}).sort((a,b)=>a.n-b.n);
+const TRANSFER_SIZE={1:'TRANSFER_SIZE_1_BYTE',2:'TRANSFER_SIZE_2_BYTE',4:'TRANSFER_SIZE_4_BYTE'};
+function transferInfo(t){
+ // r_sci_uart overwrites a UART transfer's settings word and register address in R_SCI_UART_Open.
+ const m=t.own?{mode:'NORMAL',size:1,srcMode:t.own.tx?'INCREMENTED':'FIXED',destMode:t.own.tx?'FIXED':'INCREMENTED',repeatArea:'SOURCE',irq:'END'}:t;
+ return `transfer_info_t ${t.name}_info${t.driver==='DTC'?' DTC_TRANSFER_INFO_ALIGNMENT':''} =
+{
+    .transfer_settings_word_b.dest_addr_mode = TRANSFER_ADDR_MODE_${m.destMode},
+    .transfer_settings_word_b.repeat_area    = TRANSFER_REPEAT_AREA_${m.repeatArea},
+    .transfer_settings_word_b.irq            = TRANSFER_IRQ_${m.irq},
+    .transfer_settings_word_b.chain_mode     = TRANSFER_CHAIN_MODE_DISABLED,
+    .transfer_settings_word_b.src_addr_mode  = TRANSFER_ADDR_MODE_${m.srcMode},
+    .transfer_settings_word_b.size           = ${TRANSFER_SIZE[m.size]},
+    .transfer_settings_word_b.mode           = TRANSFER_MODE_${m.mode},
+    .p_dest                                  = (void *) NULL,
+    .p_src                                   = (void const *) NULL,
+    .num_blocks                              = ${t.own?0:t.blocks},
+    .length                                  = ${t.own?0:t.length},
+};`;
+}
+const transferDecl=t=>`/* Transfer on ${t.driver} Instance. */
+extern const transfer_instance_t ${t.name};
+/** Access the ${t.driver} instance using these structures when calling API functions directly (::p_api is not used). */
+extern ${t.driver==='DTC'?'dtc':'dmac'}_instance_ctrl_t ${t.name}_ctrl;
+extern const transfer_cfg_t ${t.name}_cfg;${t.callback?`
+#ifndef ${t.callback}
+void ${t.callback}(dmac_callback_args_t * p_args);
+#endif`:''}`;
+function transferInstance(t){
+ const ext=t.driver==='DTC'?`const dtc_extended_cfg_t ${t.name}_cfg_extend =
+{
+    .activation_source   = VECTOR_NUMBER_${t.activation},
+};`:`const dmac_extended_cfg_t ${t.name}_extend =
+{
+    .offset              = 1,
+    .src_buffer_size     = 1,
+#if defined(VECTOR_NUMBER_DMAC${t.channel}_INT)
+    .irq                 = VECTOR_NUMBER_DMAC${t.channel}_INT,
+#else
+    .irq                 = FSP_INVALID_VECTOR,
+#endif
+    .ipl                 = ${t.callback?`(${t.priority})`:'(BSP_IRQ_DISABLED)'},
+    .channel             = ${t.channel},
+    .p_callback          = ${t.callback||'NULL'},
+    .p_context           = NULL,
+    .activation_source   = ${t.activation==='SOFTWARE'?'ELC_EVENT_NONE':'ELC_EVENT_'+t.activation},
+};`;
+ return `${t.driver==='DTC'?'dtc':'dmac'}_instance_ctrl_t ${t.name}_ctrl;
+${transferInfo(t)}
+${ext}
+const transfer_cfg_t ${t.name}_cfg =
+{
+    .p_info              = &${t.name}_info,
+    .p_extend            = &${t.name}_${t.driver==='DTC'?'cfg_extend':'extend'},
+};
+/* Instance structure to use this module. */
+const transfer_instance_t ${t.name} =
+{
+    .p_ctrl        = &${t.name}_ctrl,
+    .p_cfg         = &${t.name}_cfg,
+    .p_api         = &g_transfer_on_${t.driver.toLowerCase()}
+};`;
+}
+
 function ofsCfg(mcu){
  const ofs=raOfs0(mcu),iwdt=mcu.peripherals?.IWDT?.enabled,wdt=mcu.peripherals?.WDT?.enabled&&mcu.peripherals.WDT.startMode==='AUTO';
  return HEADER('configuration header file')+`#ifndef BSP_MCU_OFS_CFG_H_
@@ -394,7 +490,7 @@ function ofsCfg(mcu){
 `;
 }
 /** The FSP instances hal_data.c defines for an RA configuration, as the built-in interpreter declares them (fsp-interp.js). */
-export const raInstances=mcu=>({irqs:irqsOf(mcu),uarts:uartsOf(mcu),gpts:gptsOf(mcu),adc:adcOf(mcu),agts:agtsOf(mcu),iics:iicsOf(mcu),spis:spisOf(mcu),sciSpis:sciSpisOf(mcu),wdts:wdtsOf(mcu),rtc:rtcOf(mcu),iicSlaves:iicSlavesOf(mcu),lpm:lpmOf(mcu),flash:flashOf(mcu)});
+export const raInstances=mcu=>({irqs:irqsOf(mcu),uarts:uartsOf(mcu),gpts:gptsOf(mcu),adc:adcOf(mcu),agts:agtsOf(mcu),iics:iicsOf(mcu),spis:spisOf(mcu),sciSpis:sciSpisOf(mcu),wdts:wdtsOf(mcu),rtc:rtcOf(mcu),iicSlaves:iicSlavesOf(mcu),lpm:lpmOf(mcu),flash:flashOf(mcu),elc:elcOf(mcu),elcLinks:elcLinks(mcu),transfers:transfersOf(mcu)});
 /** "P408" → "BSP_IO_PORT_04_PIN_08". */
 export const raIoName=pin=>ioName(pin);
 // SPI masters: r_spi on RSPI (g_spiN) and r_sci_spi on an SCI channel in simple SPI mode (g_sci_spiN). Both use spi_cfg_t
@@ -559,6 +655,8 @@ export function raVectors(mcu){
  for(const t of iicSlavesOf(mcu))for(const [kind,label]of [['RXI','Receive data full'],['TXI','Transmit data empty'],['TEI','Transmit end'],['ERI','Transfer error']])list.push({isr:`iic_slave_${kind.toLowerCase()}_isr`,event:`IIC${t.channel}_${kind}`,label:`IIC${t.channel} ${kind} (${label})`,vector:`IIC${t.channel}_${kind}`});
  // Flash (r_flash_hp) with background operation: flash ready first, then the access error (as RASC lists them).
  if(flashOf(mcu)?.bgo)for(const [k,label]of [['FRDYI','Flash ready interrupt'],['FIFERR','Flash access error interrupt']])list.push({isr:`fcu_${k.toLowerCase()}_isr`,event:'FCU_'+k,label:`FCU ${k} (${label})`,vector:'FCU_'+k});
+ // DMAC channels with a callback: the transfer end interrupt (r_dmac dmac_int_isr), in transfer-instance order.
+ for(const t of transfersOf(mcu))if(t.driver==='DMAC'&&t.callback)list.push({isr:'dmac_int_isr',event:`DMAC${t.channel}_INT`,label:`DMAC${t.channel} INT (DMAC${t.channel} transfer end)`,vector:`DMAC${t.channel}_INT`});
  return list.map((v,i)=>({...v,index:i}));
 }
 
@@ -828,15 +926,16 @@ ${vectors.map(v=>`    [${v.index}] = BSP_PRV_VECT_ENUM(EVENT_${v.event},GROUP${v
 function halDataH(mcu){
  const irqs=irqsOf(mcu),uarts=uartsOf(mcu),includes=(irqs.length?'#include "r_icu.h"\n#include "r_external_irq_api.h"\n':'')+(uarts.length?'#include "r_sci_uart.h"\n#include "r_uart_api.h"\n':'')+(gptsOf(mcu).length?'#include "r_gpt.h"\n#include "r_timer_api.h"\n':'')+(adcOf(mcu)?'#include "r_adc.h"\n#include "r_adc_api.h"\n':'')+(iicsOf(mcu).length?'#include "r_iic_master.h"\n#include "r_i2c_master_api.h"\n':'')+(agtsOf(mcu).length?'#include "r_agt.h"\n'+(gptsOf(mcu).length?'':'#include "r_timer_api.h"\n'):'')
   +(spisOf(mcu).length?'#include "r_spi.h"\n':'')+(sciSpisOf(mcu).length?'#include "r_sci_spi.h"\n':'')+(spisOf(mcu).length||sciSpisOf(mcu).length?'#include "r_spi_api.h"\n':'')
-  +wdtsOf(mcu).map(w=>`#include "r_${w.kind}.h"\n`).join('')+(wdtsOf(mcu).length?'#include "r_wdt_api.h"\n':'')+(rtcOf(mcu)?'#include "r_rtc.h"\n#include "r_rtc_api.h"\n':'')+(iicSlavesOf(mcu).length?'#include "r_iic_slave.h"\n#include "r_i2c_slave_api.h"\n':'')+(lpmOf(mcu)?'#include "r_lpm.h"\n#include "r_lpm_api.h"\n':'')+(flashOf(mcu)?'#include "r_flash_hp.h"\n#include "r_flash_api.h"\n':'');
- const decls=irqs.map(i=>`/** External IRQ on ICU Instance. */
+  +wdtsOf(mcu).map(w=>`#include "r_${w.kind}.h"\n`).join('')+(wdtsOf(mcu).length?'#include "r_wdt_api.h"\n':'')+(rtcOf(mcu)?'#include "r_rtc.h"\n#include "r_rtc_api.h"\n':'')+(iicSlavesOf(mcu).length?'#include "r_iic_slave.h"\n#include "r_i2c_slave_api.h"\n':'')+(lpmOf(mcu)?'#include "r_lpm.h"\n#include "r_lpm_api.h"\n':'')+(flashOf(mcu)?'#include "r_flash_hp.h"\n#include "r_flash_api.h"\n':'')
+  +(transfersOf(mcu).some(t=>t.driver==='DTC')?'#include "r_dtc.h"\n':'')+(transfersOf(mcu).some(t=>t.driver==='DMAC')?'#include "r_dmac.h"\n':'')+(transfersOf(mcu).length?'#include "r_transfer_api.h"\n':'')+(elcOf(mcu)?'#include "r_elc.h"\n#include "r_elc_api.h"\n':'');
+ const decls=transfersOf(mcu).map(transferDecl).concat(irqs.map(i=>`/** External IRQ on ICU Instance. */
 extern const external_irq_instance_t ${i.name};
 /** Access the ICU instance using these structures when calling API functions directly (::p_api is not used). */
 extern icu_instance_ctrl_t ${i.name}_ctrl;
 extern const external_irq_cfg_t ${i.name}_cfg;
 #ifndef ${i.callback}
 void ${i.callback}(external_irq_callback_args_t * p_args);
-#endif`).concat(uarts.map(u=>`/** UART on SCI Instance. */
+#endif`)).concat(uarts.map(u=>`/** UART on SCI Instance. */
 extern const uart_instance_t ${u.name};
 /** Access the UART instance using these structures when calling API functions directly (::p_api is not used). */
 extern sci_uart_instance_ctrl_t ${u.name}_ctrl;
@@ -844,7 +943,7 @@ extern const uart_cfg_t ${u.name}_cfg;
 extern const sci_uart_extended_cfg_t ${u.name}_cfg_extend;
 #ifndef ${u.callback}
 void ${u.callback}(uart_callback_args_t * p_args);
-#endif`)).concat(gptsOf(mcu).map(gptDecl)).concat(adcOf(mcu)?[adcDecl(adcOf(mcu))]:[]).concat(agtsOf(mcu).map(agtDecl)).concat(iicsOf(mcu).map(iicDecl)).concat(spisOf(mcu).map(t=>spiDecl(t,'SPI','spi_instance_ctrl_t'))).concat(sciSpisOf(mcu).map(t=>spiDecl(t,'SCI','sci_spi_instance_ctrl_t'))).concat(wdtsOf(mcu).map(wdtDecl)).concat(rtcOf(mcu)?[rtcDecl(rtcOf(mcu))]:[]).concat(iicSlavesOf(mcu).map(iicSlaveDecl)).concat(lpmOf(mcu)?[lpmDecl(lpmOf(mcu))]:[]).concat(flashOf(mcu)?[flashDecl(flashOf(mcu))]:[]).join('\n');
+#endif`)).concat(gptsOf(mcu).map(gptDecl)).concat(adcOf(mcu)?[adcDecl(adcOf(mcu))]:[]).concat(agtsOf(mcu).map(agtDecl)).concat(iicsOf(mcu).map(iicDecl)).concat(spisOf(mcu).map(t=>spiDecl(t,'SPI','spi_instance_ctrl_t'))).concat(sciSpisOf(mcu).map(t=>spiDecl(t,'SCI','sci_spi_instance_ctrl_t'))).concat(wdtsOf(mcu).map(wdtDecl)).concat(rtcOf(mcu)?[rtcDecl(rtcOf(mcu))]:[]).concat(iicSlavesOf(mcu).map(iicSlaveDecl)).concat(lpmOf(mcu)?[lpmDecl(lpmOf(mcu))]:[]).concat(flashOf(mcu)?[flashDecl(flashOf(mcu))]:[]).concat(elcOf(mcu)?[elcDecl()]:[]).join('\n');
  return HEADER('HAL header file')+`#ifndef HAL_DATA_H_
 #define HAL_DATA_H_
 #include <stdint.h>
@@ -859,7 +958,7 @@ FSP_FOOTER
 }
 function halDataC(mcu){
  const irqs=irqsOf(mcu),trig={FALLING:'EXTERNAL_IRQ_TRIGGER_FALLING',RISING:'EXTERNAL_IRQ_TRIGGER_RISING',BOTH:'EXTERNAL_IRQ_TRIGGER_BOTH_EDGE',LOW:'EXTERNAL_IRQ_TRIGGER_LEVEL_LOW'};
- const body=irqs.map(i=>`icu_instance_ctrl_t ${i.name}_ctrl;
+ const body=transfersOf(mcu).map(transferInstance).concat(irqs.map(i=>`icu_instance_ctrl_t ${i.name}_ctrl;
 const icu_extended_cfg_t ${i.name}_ext_cfg =
 {
     .filter_src = EXTERNAL_IRQ_DIGITAL_FILTER_PCLK_DIV,
@@ -886,7 +985,7 @@ const external_irq_instance_t ${i.name} =
     .p_ctrl        = &${i.name}_ctrl,
     .p_cfg         = &${i.name}_cfg,
     .p_api         = &g_external_irq_on_icu
-};`).concat(uartsOf(mcu).map(u=>{const b=sciBaudSetting(raPclka(mcu),u.baud),irq=k=>`#if defined(VECTOR_NUMBER_SCI${u.channel}_${k})\n    .${k.toLowerCase()}_irq             = VECTOR_NUMBER_SCI${u.channel}_${k},\n#else\n    .${k.toLowerCase()}_irq             = FSP_INVALID_VECTOR,\n#endif`;return `sci_uart_instance_ctrl_t ${u.name}_ctrl;
+};`)).concat(uartsOf(mcu).map(u=>{const b=sciBaudSetting(raPclka(mcu),u.baud),irq=k=>`#if defined(VECTOR_NUMBER_SCI${u.channel}_${k})\n    .${k.toLowerCase()}_irq             = VECTOR_NUMBER_SCI${u.channel}_${k},\n#else\n    .${k.toLowerCase()}_irq             = FSP_INVALID_VECTOR,\n#endif`;return `sci_uart_instance_ctrl_t ${u.name}_ctrl;
 baud_setting_t ${u.name}_baud_setting =
 {
     /* Baud rate calculated with ${b.error.toFixed(3)}% error. */ .semr_baudrate_bits_b.abcse = 0, .semr_baudrate_bits_b.abcs = ${b.abcs}, .semr_baudrate_bits_b.bgdm = ${b.bgdm}, .cks = ${b.cks}, .brr = ${b.brr}, .mddr = (uint8_t) 256, .semr_baudrate_bits_b.brme = false
@@ -922,8 +1021,8 @@ const uart_cfg_t ${u.name}_cfg =
     .p_callback          = ${u.callback},
     .p_context           = NULL,
     .p_extend            = &${u.name}_cfg_extend,
-    .p_transfer_tx       = NULL,
-    .p_transfer_rx       = NULL,
+    .p_transfer_tx       = ${u.transferTx?`&g_transfer${u.transferTx.slice(8)}`:'NULL'},
+    .p_transfer_rx       = ${u.transferRx?`&g_transfer${u.transferRx.slice(8)}`:'NULL'},
     .rxi_ipl             = (${u.priority}),
     .txi_ipl             = (${u.priority}),
     .tei_ipl             = (${u.priority}),
@@ -936,7 +1035,7 @@ const uart_instance_t ${u.name} =
     .p_ctrl        = &${u.name}_ctrl,
     .p_cfg         = &${u.name}_cfg,
     .p_api         = &g_uart_on_sci
-};`;})).concat(gptsOf(mcu).map(gptInstance)).concat(adcOf(mcu)?[adcInstance(adcOf(mcu))]:[]).concat(agtsOf(mcu).map(agtInstance)).concat(iicsOf(mcu).map(iicInstance)).concat(spisOf(mcu).map(spiInstance)).concat(sciSpisOf(mcu).map(sciSpiInstance)).concat(wdtsOf(mcu).map(wdtInstance)).concat(rtcOf(mcu)?[rtcInstance(rtcOf(mcu))]:[]).concat(iicSlavesOf(mcu).map(iicSlaveInstance)).concat(lpmOf(mcu)?[lpmInstance(lpmOf(mcu))]:[]).concat(flashOf(mcu)?[flashInstance(flashOf(mcu))]:[]).join('\n');
+};`;})).concat(gptsOf(mcu).map(gptInstance)).concat(adcOf(mcu)?[adcInstance(adcOf(mcu))]:[]).concat(agtsOf(mcu).map(agtInstance)).concat(iicsOf(mcu).map(iicInstance)).concat(spisOf(mcu).map(spiInstance)).concat(sciSpisOf(mcu).map(sciSpiInstance)).concat(wdtsOf(mcu).map(wdtInstance)).concat(rtcOf(mcu)?[rtcInstance(rtcOf(mcu))]:[]).concat(iicSlavesOf(mcu).map(iicSlaveInstance)).concat(lpmOf(mcu)?[lpmInstance(lpmOf(mcu))]:[]).concat(flashOf(mcu)?[flashInstance(flashOf(mcu))]:[]).concat(elcOf(mcu)?[elcInstance()]:[]).join('\n');
  return HEADER('HAL source file')+`#include "hal_data.h"
 ${body}${body?'\n':''}void g_hal_init(void) {
 g_common_init();
@@ -1037,6 +1136,11 @@ SECTIONS
     *(.ram*)
     . = ALIGN(4);
     __ram_zero$$Limit = .;
+  } > RAM
+  /* The DTC vector table (r_dtc_cfg.h DTC_CFG_VECTOR_TABLE_SECTION_NAME): 1 KB aligned, cleared by r_dtc. */
+  __ram_dtc_vector$$ (NOLOAD) : ALIGN(1024)
+  {
+    *(.fsp_dtc_vector_table)
   } > RAM
   __StackLimit = __ram_main_stack$$Base;
   __StackTop = __ram_main_stack$$Limit;
@@ -1146,7 +1250,12 @@ export function generateRaFiles(mcu,{board}={}){
   // LPM_CFG_STANDBY_LIMIT 0 (RASC's default): R_LPM_Open leaves SBYCR.SSBY set for a standby mode, so a bare __WFI() enters it too.
   cfg('r_lpm_cfg.h',moduleCfg('r_lpm_cfg.h','R_LPM_CFG_H_',['#define LPM_CFG_PARAM_CHECKING_ENABLE (BSP_CFG_PARAM_CHECKING_ENABLE)','#define LPM_CFG_STANDBY_LIMIT (0)'])),
   cfg('r_iwdt_cfg.h',moduleCfg('r_iwdt_cfg.h','R_IWDT_CFG_H_',['#define IWDT_CFG_PARAM_CHECKING_ENABLE (BSP_CFG_PARAM_CHECKING_ENABLE)','#define IWDT_CFG_REGISTER_START_NMI_SUPPORTED (0)'])),
-  cfg('r_sci_uart_cfg.h',moduleCfg('r_sci_uart_cfg.h','R_SCI_UART_CFG_H_',['#define SCI_UART_CFG_PARAM_CHECKING_ENABLE (BSP_CFG_PARAM_CHECKING_ENABLE)','#define SCI_UART_CFG_FIFO_SUPPORT (0)','#define SCI_UART_CFG_DTC_SUPPORTED (0)','#define SCI_UART_CFG_FLOW_CONTROL_SUPPORT (0)','#define SCI_UART_CFG_RS485_SUPPORT (0)','#define SCI_UART_CFG_IRDA_SUPPORT (0)'])),
+  cfg('r_sci_uart_cfg.h',moduleCfg('r_sci_uart_cfg.h','R_SCI_UART_CFG_H_',['#define SCI_UART_CFG_PARAM_CHECKING_ENABLE (BSP_CFG_PARAM_CHECKING_ENABLE)','#define SCI_UART_CFG_FIFO_SUPPORT (0)',`#define SCI_UART_CFG_DTC_SUPPORTED (${uartsOf(mcu).some(u=>u.transferTx||u.transferRx)?1:0})`,'#define SCI_UART_CFG_FLOW_CONTROL_SUPPORT (0)','#define SCI_UART_CFG_RS485_SUPPORT (0)','#define SCI_UART_CFG_IRDA_SUPPORT (0)'])),
+  // Feature 36: the DTC vector table goes in its own 1 KB-aligned RAM section (fsp.ld), as RASC's r_dtc_cfg.h names it.
+  cfg('r_dtc_cfg.h',moduleCfg('r_dtc_cfg.h','R_DTC_CFG_H_',['#define DTC_CFG_PARAM_CHECKING_ENABLE (BSP_CFG_PARAM_CHECKING_ENABLE)','#define DTC_CFG_VECTOR_TABLE_SECTION_NAME ".fsp_dtc_vector_table"'])),
+  cfg('r_dmac_cfg.h',moduleCfg('r_dmac_cfg.h','R_DMAC_CFG_H_',['#define DMAC_CFG_PARAM_CHECKING_ENABLE (BSP_CFG_PARAM_CHECKING_ENABLE)'])),
+  cfg('r_elc_cfg.h',moduleCfg('r_elc_cfg.h','R_ELC_CFG_H_',['#define ELC_CFG_PARAM_CHECKING_ENABLE (BSP_CFG_PARAM_CHECKING_ENABLE)'])),
+  ...(elcOf(mcu)?[gen('elc_data.c',elcData(mcu))]:[]),
   gen('bsp_clock_cfg.h',clockCfg(c,mcu)),
   gen('common_data.h',HEADER('common header file')+`#ifndef COMMON_DATA_H_\n#define COMMON_DATA_H_\n#include <stdint.h>\n#include "bsp_api.h"\n#include "r_ioport.h"\n#include "bsp_pin_cfg.h"\nFSP_HEADER\n#define IOPORT_CFG_NAME g_bsp_pin_cfg\n#define IOPORT_CFG_OPEN R_IOPORT_Open\n#define IOPORT_CFG_CTRL g_ioport_ctrl\n/* IOPORT Instance */\nextern const ioport_instance_t g_ioport;\n/* IOPORT control structure. */\nextern ioport_instance_ctrl_t g_ioport_ctrl;\nvoid g_common_init(void);\nFSP_FOOTER\n#endif /* COMMON_DATA_H_ */\n`),
   gen('common_data.c',HEADER('common source file')+`#include "common_data.h"\nioport_instance_ctrl_t g_ioport_ctrl;\nconst ioport_instance_t g_ioport =\n{\n    .p_api = &g_ioport_on_ioport,\n    .p_ctrl = &g_ioport_ctrl,\n    .p_cfg = &g_bsp_pin_cfg,\n};\nvoid g_common_init(void) {\n}\n`),

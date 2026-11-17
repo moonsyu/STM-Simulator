@@ -17,12 +17,15 @@ import { Watchdog } from './wdt.js';
 import { Rtc } from './rtc.js';
 import { Faci } from './flash.js';
 import { LowPower } from './lpm.js';
+import { Elc } from './elc.js';
+import { Dtc } from './dtc.js';
+import { Dmac } from './dmac.js';
 import { EXC_NMI } from '../scs.js';
 import { RA_PERIPHERAL_PINS, RA_SCI_CHANNELS, RA_GPT_CHANNELS, RA_AGT_CHANNELS, RA_IIC_CHANNELS, raPsel } from '../../ra-config.js';
 
 export { RaBus };
 export const RA_BASES = {
-  SRAM: 0x40002000, BUS: 0x40003000, DTC: 0x40005400, ICU: 0x40006000, CPSCU: 0x40008000, DEBUG: 0x4001b000,
+  SRAM: 0x40002000, BUS: 0x40003000, DMAC: 0x40005000, DTC: 0x40005400, ICU: 0x40006000, CPSCU: 0x40008000, DEBUG: 0x4001b000,
   FCACHE: 0x4001c000, SYSTEM: 0x4001e000, PORT: 0x40080000, PFS: 0x40080800, PMISC: 0x40080d00, ELC: 0x40082000,
   MSTP: 0x40084000, RTC: 0x40083000, CACHE: 0x40007000, PSCU: 0x400e0000, IWDT: 0x40083200, WDT: 0x40083400,
   FACI_CMD: 0x407e0000, FACI: 0x407fe000,
@@ -238,6 +241,8 @@ class Icu extends RegisterFile {
     super(soc, 'ICU', 0x500, {
       onWrite: (off, size, before, v) => {
         if (off >= 0x300 && off < 0x480) this.updateLine((off - 0x300) >> 2);
+        // DELSRn (0x280 + 4n): the DMAC channel's activation event (feature 36).
+        if (off >= 0x280 && off < 0x2a0) this.soc.listenersChanged();
         // NMIER: bits can only be set. A source whose status is already set (an underflow before the driver's Open enabled
         // it) requests the NMI when it is enabled: the request is the status ANDed with the enable.
         if (off === 0x120) { const en = (before | v) & 0xffff; this.put(0x120, en, 2); if (this.nmisr & en & ~before) this.soc.machine.nvic?.setPendingExc?.(EXC_NMI); }
@@ -254,9 +259,20 @@ class Icu extends RegisterFile {
   updateLine(n) { this.soc.irqNumber(n, 'ICU', !!(this.ielsr(n) & 0x10000)); }
   /** Whether an IELSR slot selects `event` (a peripheral schedules what only an interrupt would observe). */
   linked(event) { for (let n = 0; n < 96; n++) if ((this.ielsr(n) & 0x1ff) === event) return true; return false; }
-  // An ELC event: set IR in every slot linked to it.
+  // An ELC event: set IR in every slot linked to it. A slot with DTCE (b24) hands the event to the DTC first (feature 36):
+  // the CPU gets it only when the DTC passes it on (the transfer ended, or DISEL), and an end clears DTCE.
   raise(event) {
-    for (let n = 0; n < 96; n++) { const v = this.ielsr(n); if ((v & 0x1ff) === event) { this.put(0x300 + n * 4, v | 0x10000, 4); this.updateLine(n); } }
+    for (let n = 0; n < 96; n++) {
+      let v = this.ielsr(n);
+      if ((v & 0x1ff) !== event) continue;
+      if ((v & 0x1000000) && this.soc.dtc.enabled()) {
+        const r = this.soc.dtc.activate(n);
+        v = this.ielsr(n);
+        if (r.clearDtce) v &= ~0x1000000;
+        if (!r.cpu) { this.put(0x300 + n * 4, v, 4); continue; }
+      }
+      this.put(0x300 + n * 4, v | 0x10000, 4); this.updateLine(n);
+    }
   }
   pinEdge(pin, level) {
     const channel = this.soc.irqChannel(pin);
@@ -314,6 +330,8 @@ export class Ra6e1 {
     for (const ch of [0, 1]) this.spis['SPI' + ch] = this.rspis[ch] = new Rspi(this, ch);
     this.wdt = new Watchdog(this, 'WDT'); this.iwdt = new Watchdog(this, 'IWDT');
     this.rtc = new Rtc(this);
+    // Event Link Controller, DTC and DMAC (feature 36): the other consumers of an event besides the ICU.
+    this.elc = new Elc(this); this.dtc = new Dtc(this); this.dmac = new Dmac(this);
     // Flash sequencer (FACI) and the data flash it programs (flash.js); the bus tells it when the program reads the area.
     this.dataFlash = this.bus.dataFlashStore; this.faci = new Faci(this);
     this.bus.onDataFlashRead = (offset, size) => this.faci.dataRead(offset, size);
@@ -329,10 +347,11 @@ export class Ra6e1 {
       [RA_BASES.FCACHE, 0x400, new RegisterFile(this, 'FCACHE', 0x400, { onRead: off => (off === 0x104 ? 0 : undefined) })],
       [RA_BASES.SRAM, 0x400, plain('SRAM', 0x400)],
       [RA_BASES.BUS, 0x2000, plain('BUS', 0x2000)],
-      [RA_BASES.DTC, 0x400, plain('DTC', 0x400)],
+      [RA_BASES.DTC, 0x400, this.dtc],
+      [RA_BASES.DMAC, 0x300, this.dmac],
       [RA_BASES.CPSCU, 0x400, plain('CPSCU', 0x400)],
       [RA_BASES.DEBUG, 0x400, plain('DEBUG', 0x400)],
-      [RA_BASES.ELC, 0x400, plain('ELC', 0x400)],
+      [RA_BASES.ELC, 0x80, this.elc],
       // Peripheral security attribution (the BSP writes PSARB-E / CFSAMON in every flat project; nothing else reads them).
       [RA_BASES.PSCU, 0x100, plain('PSCU', 0x100)],
       ...RA_SCI_CHANNELS.map(ch => [0x40118000 + ch * 0x100, 0x100, this.scis[ch]]),
@@ -379,15 +398,17 @@ export class Ra6e1 {
     if (!this.unknown.has(key)) { this.unknown.set(key, { address: key, write, count: 0 }); this.env.warn?.(`[RA6E1] 0x${key.toString(16).toUpperCase().padStart(8, '0')}: 이 레지스터는 아직 모델에 없습니다 (읽으면 0, 쓴 값은 보관만 합니다).`); }
     this.unknown.get(key).count++;
   }
-  /** An ICU event (bsp_elc.h ELC_EVENT_*) from a peripheral model: the IELSR slots linked to it get IR. The other
-   *  consumers of an event (ELC, DTC, DMAC: feature 36) attach here. */
-  raiseEvent(ev) { if (this.lpm.event(ev)) this.icu.raise(ev); }
+  /** An event (bsp_elc.h ELC_EVENT_*) from a peripheral model: the IELSR slots linked to it get IR (or run their DTC
+   *  transfer), the DMAC channels whose DELSR selects it make a request, and the ELC links pass it on (feature 36). */
+  raiseEvent(ev) { if (!this.lpm.event(ev)) return; this.icu.raise(ev); this.dmac.event(ev); this.elc.event(ev); }
+  /** An ELC link, a DMAC channel or its DELSR changed: the timers plan the events someone now waits for. */
+  listenersChanged() { for (const t of Object.values(this.gpts || {})) t.plan(); for (const t of Object.values(this.agts || {})) t.plan(); }
   /** An IIC channel in the module-stop state (MSTPCRB bit 9 - channel, bsp_module_stop.h; set at reset and by R_BSP_MODULE_STOP in a driver's Close). */
   iicStopped(channel) { return !!(this.mstp.peek(0x4, 4) & (1 << (9 - channel))); }
   /** FWEPROR.FLWE = 01b: flash programming and erasure are permitted (r_flash_hp flash_hp_init sets it). */
   flashWriteEnabled() { return (this.system.get(0x416, 1) & 3) === 1; }
   /** Whether anything consumes event `ev`, so a model schedules only what someone observes. */
-  listens(ev) { return this.icu.linked(ev) || this.lpm.listens(ev); }
+  listens(ev) { return this.icu.linked(ev) || this.lpm.listens(ev) || !!this.dmac?.listens(ev) || !!this.elc?.listens(ev); }
   /** An input pin changed level (Ports.refreshInputs): the IRQn-DS pins cancel Deep Software Standby. */
   inputEdge(pin, level) { this.lpm.pinEdge(pin, level); }
   peripheral(name) { return this.peripherals.get(name); }

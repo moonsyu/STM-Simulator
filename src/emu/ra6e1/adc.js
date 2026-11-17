@@ -7,7 +7,7 @@
 // then stores every result, clears ADST and raises ADC0_SCAN_END (the scan end interrupt has no enable bit on the RA;
 // r_adc links it in the ICU when a callback is set). Continuous scan keeps ADST set: ADDRn reads the pin when read, and
 // the scan end event repeats only while the ICU links it.
-const ADCSR = 0x00, ADANSA0 = 0x04, ADANSA1 = 0x06, ADCER = 0x0e, ADTSDR = 0x1a, ADOCDR = 0x1c, ADDR = 0x20;
+const ADCSR = 0x00, ADANSA0 = 0x04, ADANSA1 = 0x06, ADCER = 0x0e, ADSTRGR = 0x10, ADTSDR = 0x1a, ADOCDR = 0x1c, ADDR = 0x20;
 export const ADC_CHANNEL_PINS = Object.freeze({ 0: 'P000', 1: 'P001', 2: 'P002', 3: 'P003', 4: 'P004', 5: 'P005', 6: 'P006', 7: 'P007', 8: 'P008', 12: 'P014', 13: 'P015' });
 export const ADC0_SCAN_END = 0x160;
 const SCAN_US_PER_CHANNEL = 1;
@@ -39,6 +39,16 @@ export class Adc12 {
     if (!this.continuous()) this.r[ADCSR >> 1] &= ~0x8000;
     this.soc.raiseEvent(ADC0_SCAN_END);
     if (this.continuous() && this.get(ADCSR) & 0x8000) this.start();
+  }
+  // An ELC link to ELC_PERIPHERAL_ADC0 (group A, feature 36): with the hardware trigger enabled (ADCSR.TRGE, EXTRG 0) and
+  // ADSTRGR.TRSA = ELC_AD0 (09h) or ELC_AD0/AD1 (0Bh) the event starts a scan, as R_ADC_ScanStart writes ADCSR for an ELC
+  // trigger. A trigger during a scan is ignored (assumption: the manual's rule for a trigger in a single scan could not
+  // be checked). Group B (ELC_PERIPHERAL_ADC0_B) is not modelled.
+  elcTrigger(group) {
+    const csr = this.get(ADCSR), trsa = (this.get(ADSTRGR) >> 8) & 0x3f;
+    if (group !== 'A' || !(csr & 0x200) || (csr & 0x100) || ![0x09, 0x0b].includes(trsa) || (csr & 0x8000)) return;
+    this.r[ADCSR >> 1] = csr | 0x8000; this.elcScans = (this.elcScans || 0) + 1;
+    this.start();
   }
   read(off, size) {
     this.soc.sync();

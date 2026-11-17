@@ -28,7 +28,8 @@ async function prepareRa({project,tools,directory,userFiles}){
  // An FSP folder installed before 1.52.0 has only the first seven drivers: say what to do instead of a missing-file error.
  for(const m of used)if(!await exists(path.join(fsp,'ra/fsp/src',m)))throw new Error(`FSP 모듈 ${m}가 설치돼 있지 않습니다. 도구 → 개발 도구 설치에서 Renesas FSP를 다시 설치하세요.`);
  for(const m of used)for(const f of (await fs.readdir(path.join(fsp,'ra/fsp/src',m))).sort())if(f.endsWith('.c'))fspSources.push(path.join(fsp,'ra/fsp/src',m,f));
- const genSources=['common_data.c','hal_data.c','main.c','pin_data.c','vector_data.c'].map(f=>path.join(directory,'ra_gen',f));
+ // ra_gen/elc_data.c (g_elc_cfg) comes with the Event Link Controller stack (feature 36).
+ const genSources=['common_data.c','hal_data.c','main.c','pin_data.c','vector_data.c',...(generated['ra_gen/elc_data.c']?['elc_data.c']:[])].map(f=>path.join(directory,'ra_gen',f));
  const script=path.join(directory,'script');
  return {
   cpu:fam.cpu,
