@@ -143,7 +143,7 @@ export function validateProject(data){
   if(data.mcu!==undefined){project.mcu=isRaFamily(data.mcu?.family)?validateRaMcu(data.mcu):validateMcu(data.mcu);const board=getBoard(data.boardId??DEFAULT_BOARD_ID);if(project.mcu.family!==board.mcuFamily)throw new Error(`${board.name} 보드에는 ${board.mcuFamily} 핀 설정이 필요합니다 (${project.mcu.family}).`);}
   // What runs left in the RA data flash (feature 39, ra-data-flash.js): the programmed 4-byte units as [{at, hex}].
   // It is not in `mcu` (the build's input), and an earlier app version opens the file without it (the key is dropped).
-  if(data.dataFlash!==undefined&&isRaFamily(project.mcu?.family)){const runs=validateDataFlash(data.dataFlash);if(runs.length)project.dataFlash=runs;}
+  if(data.dataFlash!==undefined&&isRaFamily(project.mcu?.family)){const runs=validateDataFlash(data.dataFlash);if(runs?.length)project.dataFlash=runs;}
   if(data.firmware!==undefined){
     if(!data.firmware||!['sketch','hal','fsp'].includes(data.firmware.mode)||!Array.isArray(data.firmware.files)||data.firmware.files.length>MAX_SOURCE_FILES)throw new Error('펌웨어 소스 설정이 올바르지 않습니다.');
     const names=new Set();let size=data.code.length,sdkSize=0;

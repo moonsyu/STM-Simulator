@@ -65,17 +65,23 @@ export class RaDataFlash {
   return this;
  }
 }
-/** A checked copy of a project's saved data flash contents (undefined stays undefined); throws with the reason. */
+/**
+ * A checked copy of a project's saved data flash contents (undefined and null are none: undefined); throws with the
+ * reason. Runs that touch are joined into one, as encode() writes them, so contents read back unchanged compare equal.
+ */
 export function validateDataFlash(runs){
- if(runs===undefined)return undefined;
+ if(runs===undefined||runs===null)return undefined;
  const bad=()=>new Error('저장된 데이터 플래시 내용이 올바르지 않습니다.');
  if(!Array.isArray(runs)||runs.length>RA_DF_SIZE/RA_DF_UNIT)throw bad();
- let end=0;
- return runs.map(run=>{
+ let end=0;const out=[];
+ for(const run of runs){
   if(!run||!Number.isInteger(run.at)||run.at%RA_DF_UNIT||typeof run.hex!=='string'||!run.hex.length||run.hex.length%(RA_DF_UNIT*2)||!/^[0-9a-f]+$/.test(run.hex))throw bad();
   if(run.at<end||run.at+run.hex.length/2>RA_DF_SIZE)throw bad();
-  end=run.at+run.hex.length/2;return {at:run.at,hex:run.hex};
- });
+  const last=out.at(-1);
+  if(last&&run.at===end)last.hex+=run.hex;else out.push({at:run.at,hex:run.hex});
+  end=run.at+run.hex.length/2;
+ }
+ return out;
 }
 /** Programmed bytes of saved contents (0 for none). */
 export const dataFlashUsed=runs=>(runs||[]).reduce((n,run)=>n+run.hex.length/2,0);

@@ -45,7 +45,11 @@ test('saved contents: runs go back as they were, an ELF\'s own units stay with k
  const runs=f.encode();assert.deepEqual(runs,[{at:0,hex:'01000000'},{at:8188,hex:'deadbeef'}]);assert.equal(dataFlashUsed(runs),8);assert.equal(dataFlashUsed(undefined),0);
  const g=new RaDataFlash().apply(runs);assert.deepEqual(g.encode(),runs);assert.equal(g.changed,false,'restoring is not a change of this run');
  const h=new RaDataFlash();h.load(0,0x55);h.apply(runs,{keep:true});assert.equal(h.bytes[0],0x55,'the image\'s unit stays');assert.deepEqual([...h.bytes.subarray(8188,8192)],[0xde,0xad,0xbe,0xef]);
- assert.equal(validateDataFlash(undefined),undefined);assert.deepEqual(validateDataFlash([]),[]);
+ assert.equal(validateDataFlash(undefined),undefined);assert.deepEqual(validateDataFlash([]),[]);assert.equal(validateDataFlash(null),undefined,'null is none');
+ // Runs that touch are one run, as encode() writes them: contents read back unchanged compare equal.
+ const touching=[{at:0,hex:'01020304'},{at:4,hex:'05060708'},{at:12,hex:'0a0b0c0d'}];
+ assert.deepEqual(validateDataFlash(touching),[{at:0,hex:'0102030405060708'},{at:12,hex:'0a0b0c0d'}]);
+ assert.deepEqual(new RaDataFlash().apply(touching).encode(),validateDataFlash(touching));
  for(const bad of [{},[{at:2,hex:'00000000'}],[{at:0,hex:'000000'}],[{at:0,hex:'0000000G'}],[{at:0,hex:'00000000'},{at:0,hex:'00000000'}],[{at:8192,hex:'00000000'}],[{at:8188,hex:'0000000000000000'}],[{at:0,hex:'AABBCCDD'}],[null]])
   assert.throws(()=>validateDataFlash(bad),/저장된 데이터 플래시 내용이 올바르지 않습니다/,JSON.stringify(bad));
 });
@@ -584,6 +588,8 @@ test('project file: an RA project keeps the data flash contents (dataFlash), che
  assert.deepEqual(validateProject(JSON.parse(JSON.stringify(p))).dataFlash,runs,'through the saved file');
  assert.equal(Object.hasOwn(validateProject({...base,dataFlash:[]}),'dataFlash'),false,'erased flash is no entry');
  assert.equal(Object.hasOwn(validateProject(base),'dataFlash'),false);
+ assert.equal(Object.hasOwn(validateProject({...base,dataFlash:null}),'dataFlash'),false,'null opens as no contents');
+ assert.deepEqual(validateProject({...base,dataFlash:[{at:0,hex:'03000000'},{at:4,hex:'04000000'}]}).dataFlash,[{at:0,hex:'0300000004000000'}]);
  assert.throws(()=>validateProject({...base,dataFlash:[{at:1,hex:'00000000'}]}),/저장된 데이터 플래시 내용이 올바르지 않습니다/);
  assert.throws(()=>validateProject({...base,dataFlash:'01000000'}),/저장된 데이터 플래시 내용이 올바르지 않습니다/);
  // Another board has no RA data flash: the entry does not travel with a project turned into one.
