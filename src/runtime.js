@@ -176,7 +176,8 @@ export class Runtime {
     if(n.type==='index'||n.type==='member')return this.get(yield* this.reference(n));
     if(n.type==='unary'){
       if(n.op==='&'&&n.a.type==='name'&&own(this.program.functions,n.a.name))return {kind:'function',name:n.a.name};
-      if(n.op==='&'){if(n.a.type==='index')return {kind:'pointer',array:(this.pointer(yield* this.evaluate(n.a.object))).array,index:integer(yield* this.evaluate(n.a.index))};return {kind:'pointer',cell:yield* this.reference(n.a)};}
+      // &p[i] is p + i: a pointer that does not start at element 0 (p = buf + 4) keeps its position.
+      if(n.op==='&'){if(n.a.type==='index'){const base=this.pointer(yield* this.evaluate(n.a.object)),i=integer(yield* this.evaluate(n.a.index));return {kind:'pointer',array:base.array,index:(base.array?base.index:0)+i};}return {kind:'pointer',cell:yield* this.reference(n.a)};}
       if(n.op==='*')return this.get(this.pointerCell(yield* this.evaluate(n.a)));
       if(n.op==='++'||n.op==='--'){const cell=yield* this.reference(n.a);return this.set(cell,this.binary(n.op==='++'?'+':'-',this.get(cell),1));}
       const a=yield* this.evaluate(n.a),value=n.op==='!'?Number(!a):n.op==='~'?~integer(a):n.op==='-'?-checkedNumber(a):checkedNumber(a);return this.program.hal?this.coerce(expressionType(this,n).type,value):value;
