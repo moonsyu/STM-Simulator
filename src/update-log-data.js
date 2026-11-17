@@ -1,5 +1,6 @@
 // User-facing update log shown in 도움말 → 업데이트 로그: one entry per released version (date = the release tag's commit date).
 export const UPDATE_LOG=Object.freeze([
+ {version:'1.55.0',date:'2026-11-17',items:['FPB-RA6E1 I2C 슬레이브(r_iic_slave): IIC0·IIC1을 Slave 모드로 두고 주소와 콜백으로 마스터의 쓰기·읽기에 응답 — 예제 "I²C 슬레이브 · ESP32 마스터와 통신"','ESP32 스케치의 Wire 마스터(Wire.begin() / Wire.begin(sda, scl), beginTransmission·write·endTransmission·requestFrom)가 주 보드의 I2C 슬레이브와 통신','I2C 주소만 보내는 버스 스캔(0바이트 쓰기)이 보드 슬레이브에도 전달됨']},
  {version:'1.54.0',date:'2026-11-16',items:['FPB-RA6E1 워치독(r_wdt·r_iwdt): Stacks에서 추가해 시간 초과·창 밖 새로 고침에 MCU 리셋 또는 NMI 콜백, 리셋은 실행 로그에 남고 RSTSR1로 원인 읽기 — 예제 "워치독(WDT) 리셋과 리셋 원인 읽기"','FPB-RA6E1 RTC(r_rtc): 달력 시각 설정·읽기, 알람·주기 인터럽트 콜백, 시작 시각을 시뮬레이션(2000-01-01) 또는 PC 시각으로 — 예제 "RTC 시계"','에뮬레이터: NVIC_SystemReset·워치독 리셋이 실행 로그에 남고 RA 리셋 상태 레지스터(RSTSR0~2)와 옵션 메모리 OFS0을 읽음, 코어가 WFI로 자는 동안의 워치독 리셋이 실행되지 않던 것 수정(STM32 IWDG 포함)']},
  {version:'1.53.1',date:'2026-11-16',items:['부품 검색에서 ESP32·라즈베리파이·두 번째 STM32 보드도 찾아 바로 추가(전에는 "보드와 핀 → 다른 보드 추가"에만 있어 검색에 나오지 않았음)']},
  {version:'1.53.0',date:'2026-11-13',items:['FPB-RA6E1 SPI: SPI1(r_spi, D10~D13)과 SCI9 Simple SPI(r_sci_spi)를 Pins·Stacks에서 추가하고 ra_gen 생성, 예제 "SPI 메모리". ARM GCC 빌드(에뮬레이터)와 내장 해석기 모두에서 회로의 SPI 부품과 주고받고 로직 분석기에 파형','RA 콜백 이름 검사: 인자 형식이 다른 모듈끼리 같은 이름, FSP 내부 함수·객체 이름을 미리 알림','직렬 모니터가 SPI로 쓰는 SCI 채널을 대상으로 내놓지 않음']},

@@ -1,6 +1,16 @@
 # STM Simulator — 개발 인계
 
-현재 버전: **1.54.0**. 정리일: **2026-11-10**. NUCLEO-F446RE·NUCLEO-F103RB 또는 Renesas FPB-RA6E1(1.20.0, FSP·에뮬레이터 전용)과 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+현재 버전: **1.55.0**. 정리일: **2026-11-10**. NUCLEO-F446RE·NUCLEO-F103RB 또는 Renesas FPB-RA6E1(1.20.0, FSP·에뮬레이터 전용)과 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+
+## 1.55.0 기능 목록 33번: RA I2C 슬레이브(r_iic_slave)와 ESP32 Wire 마스터
+
+- **설정·생성**: IIC0·IIC1 카드에 Master/Slave 모드(`ra-config.js`: 슬레이브 주소, 콜백, 우선순위; 마스터 채널과 같은 콜백 이름은 인자 형식이 달라 거부). New Stack → Connectivity의 I2C Slave, Summary. `ra-generator.js`: g_i2c_slaveN(hal_data), 벡터는 기존 번호 뒤에 추가, r_iic_slave_cfg.h, raInstances. clock_settings는 마스터와 같은 CKS/BRL에 필터 0단(RASC 계산식은 대조하지 못함).
+- **에뮬레이터** `src/emu/ra6e1/iic.js`: 슬레이브 주소 일치·RDRF/TDRE·ACKBT·TEND·NACKF·STOP·타임아웃, 내부 리셋(IICRST+ICE)은 설정을 유지, 모듈 스톱(MSTPCRB IIC0 b9·IIC1 b8, R_IIC_SLAVE_Close 뒤)이면 주소에 응답하지 않음. 다른 보드 마스터용 인터페이스 `soc.i2cs`(slaveListens·slaveAddress·slaveWrite·slaveRead·slaveStop·slaveInfo).
+- **해석기** `src/fsp-interp.js`: R_IIC_SLAVE_Open·Read·Write·CallbackSet·Close — r_iic_slave.c의 ISR 순서대로 콜백 이벤트(RX/TX REQUEST·MORE_REQUEST·COMPLETE·ABORTED)와 바이트 수. Read 없는 쓰기는 그 바이트까지 ACK, 콜백 안에서 Close하면 남은 이벤트 없음. 슬레이브는 한 번에 한 채널만 Open(두 번째는 안내 오류).
+- **ESP32 Wire 마스터** `src/esp32-sketch.js`: `Wire.begin()`·`Wire.begin(sda, scl)`는 마스터, 인자 1개는 슬레이브. `endTransmission`·`requestFrom`은 `runtime.js`의 `libraryInvoke` 훅으로 도는 대기 제너레이터 — 에뮬레이터에서는 바이트마다 슬레이브가 가져가기를 기다린 뒤 ACK를 읽고 NACK이면 멈춘다(읽기는 클록 스트레칭 대기). 닿는 범위: 주 보드 슬레이브(RA 두 엔진, STM32 해석기, STM32 에뮬레이터는 `slaveInfo`만 넣고 실행 확인 못 함), 보조 ESP32, 보조 STM32(시뮬레이터 세션). 에뮬레이터로 도는 보조 STM32와 I2C 부품에는 닿지 않는다.
+- `src/buses.js`: 0바이트 쓰기(주소+STOP)를 보드 슬레이브에 선택 훅 `i2cProbe`로 알림.
+- STM32 NUCLEO 마스터 ↔ RA 슬레이브 예제는 없다: RA 프로젝트에 STM32 보조 보드를 둘 수 없다(`app-circuit.js`).
+- 예제 `ra_iic_slave`(ESP32 마스터 ↔ RA 슬레이브). 시험: `tests/unit/ra-iic-slave.test.js`(+ helpers), `tests/toolchain/ra-iic-slave.test.mjs`(묶음 2), parity `ra_iic_slave`(묶음 5), `tests/e2e/ra-iic-slave.e2e.test.mjs`.
 
 ## 1.54.0 기능 목록 34·35번: RA RTC(r_rtc)·워치독(r_wdt·r_iwdt)과 리셋 기반(G3)
 
