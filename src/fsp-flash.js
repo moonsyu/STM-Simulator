@@ -194,7 +194,8 @@ export const FLASH_METHODS={
   if(!this.flashViews.has(key)){
    const self=this,owner={alive:true},cells=[];
    for(let o=phase;o+size<=RA_DF_SIZE;o+=size)cells.push({get value(){return self.flashRead(o,size,elem);},set value(v){void v;},owner,constant:true,readOnly:READ_ONLY,dataType:elem});
-   this.flashViews.set(key,{kind:'array',cells});
+   // `memory`: where the view's elements lie, so a pointer into it has an address (runtime.js memoryAddress).
+   this.flashViews.set(key,{kind:'array',cells,memory:{base:RA_DF_BASE+phase,size}});
   }
   return {kind:'pointer',array:this.flashViews.get(key),index:(at-phase)/size};
  },

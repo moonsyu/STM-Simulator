@@ -100,6 +100,14 @@ export class Runtime {
   array(values,owner=this.scope()){if(values.length>this.maxArray)throw new Error(`배열은 ${this.maxArray}개 이하로 선언하세요.`);this.allocations+=values.length;if(this.allocations>this.maxAllocations)throw new Error('한 단계의 메모리 할당 한도를 넘었습니다.');return {kind:'array',cells:values.map(value=>({value:this.clone(value,owner),owner,constant:false}))};}
   pointer(value){return isArray(value)?{kind:'pointer',array:value,index:0}:value;}
   /**
+   * The address of a pointer into memory the adapter stands in for (an array with `memory: {base, size}`: the RA data
+   * flash, fsp-flash.js FLASH_METHODS.memory), else null. Such a pointer is an address: converted to an integer it is the
+   * address, converted to another pointer type (a cast, a declaration, an assignment, a parameter) it reads the memory
+   * as that type, and two of them compare by address.
+   */
+  memoryAddress(p){const m=isPointer(p)?p.array?.memory:null;return m?m.base+p.index*m.size:null;}
+  retype(p,type){const address=this.memoryAddress(p);if(address===null||!type||!this.api.memory)return p;return this.api.memory(address,type,this)??p;}
+  /**
    * A union keeps one set of bytes for all its members. Members are separate cells here, so the bytes are brought up to
    * date when another member is reached: the member used last is written into the bytes, the one asked for is read
    * from them (little-endian, a float as its IEEE 754 bits).
@@ -148,6 +156,10 @@ export class Runtime {
   binary(op,a,b,ta,tb){
     // "text" + 1 in C is a pointer into the literal, not a longer text.
     if(this.program.hal&&typeof a==='string'&&typeof b==='number'&&['+','-'].includes(op))a=this.literal(a);
+    {const x=this.memoryAddress(a),y=this.memoryAddress(b);if(x!==null&&y!==null){
+      if(op==='-')return (x-y)/a.array.memory.size;
+      const compare={'==':x===y,'!=':x!==y,'<':x<y,'>':x>y,'<=':x<=y,'>=':x>=y}[op];if(compare!==undefined)return Number(compare);
+    }}
     if(op==='-'&&(isPointer(a)||isArray(a))&&(isPointer(b)||isArray(b))){const p=this.pointer(a),q=this.pointer(b);if(p.array&&p.array===q.array)return p.index-q.index;if(!p.array&&!q.array&&p.cell===q.cell)return 0;throw new Error('서로 다른 배열을 가리키는 포인터끼리는 뺄 수 없습니다.');}
     if((isPointer(a)||isArray(a))&&['+','-'].includes(op)){const p=this.pointer(a);if(!p.array)throw new Error('포인터 산술에는 배열이 필요합니다.');const index=p.index+(op==='+'?1:-1)*integer(b);if(index<0||index>p.array.cells.length)throw new Error('포인터가 배열 범위를 벗어났습니다.');return {...p,index};}
     if(op==='+'&&(typeof a==='string'||typeof b==='string'))return String(a)+String(b);
@@ -172,7 +184,11 @@ export class Runtime {
       // (type *) 0x08000000: an address has no memory behind it here, unless the adapter stands in for that memory (an
       // FSP program reading the RA data flash through a pointer: fsp-flash.js FLASH_METHODS.memory).
       if(typeof value==='number'&&value!==0&&this.api.memory){const memory=this.api.memory(value,n.to,this);if(memory)return memory;}
-      if(typeof value==='string')return this.pointer(this.array([...value].map(c=>c.charCodeAt(0)).concat(0),this.globals));return this.pointer(value);}if(this.program.hal&&(isArray(value)||isPointer(value)||value?.kind==='function'))return isArray(value)?this.pointer(value):value;return n.to==='String'?String(value):n.to==='bool'?Number(truth(value)):this.program.hal?this.coerce(n.to,checkedNumber(value)):['float','double'].includes(n.to)?checkedNumber(value):integer(value);}
+      if(this.memoryAddress(value)!==null)return this.retype(value,n.to);
+      if(typeof value==='string')return this.pointer(this.array([...value].map(c=>c.charCodeAt(0)).concat(0),this.globals));return this.pointer(value);}
+      // (uint32_t) p of a pointer into such memory: its address (other pointers stay pointers: an FSP call takes them so).
+      {const address=this.memoryAddress(value);if(address!==null&&n.to!=='String')return n.to==='bool'?1:this.program.hal?this.coerce(n.to,address):address;}
+      if(this.program.hal&&(isArray(value)||isPointer(value)||value?.kind==='function'))return isArray(value)?this.pointer(value):value;return n.to==='String'?String(value):n.to==='bool'?Number(truth(value)):this.program.hal?this.coerce(n.to,checkedNumber(value)):['float','double'].includes(n.to)?checkedNumber(value):integer(value);}
     if(n.type==='index'||n.type==='member')return this.get(yield* this.reference(n));
     if(n.type==='unary'){
       if(n.op==='&'&&n.a.type==='name'&&own(this.program.functions,n.a.name))return {kind:'function',name:n.a.name};
@@ -183,7 +199,7 @@ export class Runtime {
       const a=yield* this.evaluate(n.a),value=n.op==='!'?Number(!a):n.op==='~'?~integer(a):n.op==='-'?-checkedNumber(a):checkedNumber(a);return this.program.hal?this.coerce(expressionType(this,n).type,value):value;
     }
     if(n.type==='postfix'){const cell=yield* this.reference(n.a),old=this.get(cell);this.set(cell,this.binary(n.op==='++'?'+':'-',old,1));return old;}
-    if(n.type==='assign'){const cell=yield* this.reference(n.a),value=yield* this.evaluate(n.b);return this.set(cell,n.op==='='?value:this.binary(n.op.slice(0,-1),this.get(cell),value,cell.dataType,this.program.hal?expressionType(this,n.b).type:undefined));}
+    if(n.type==='assign'){const cell=yield* this.reference(n.a);let value=yield* this.evaluate(n.b);if(n.op==='='&&cell.dataType==='pointer')value=this.retype(value,cell.pointeeType);return this.set(cell,n.op==='='?value:this.binary(n.op.slice(0,-1),this.get(cell),value,cell.dataType,this.program.hal?expressionType(this,n.b).type:undefined));}
     if(n.type==='sequence'){let value;for(const e of n.exprs)value=yield* this.evaluate(e);return value;}
     if(n.type==='conditional'){const value=yield* this.evaluate(truth(yield* this.evaluate(n.test))?n.yes:n.no);return this.program.hal?this.coerce(expressionType(this,n).type,value):value;}
     if(n.type==='binary'){
@@ -278,7 +294,7 @@ export class Runtime {
       for(const d of s.declarations){if(d.external)continue;if(d.storage&&this.staticCells.has(d)){this.scope().cells[d.name]=this.staticCells.get(d);continue;}let value=d.value?yield* this.evaluate(d.value):undefined;
         if(d.array&&d.size2){value=this.matrix(d,value,integer(yield* this.evaluate(d.size2)),d.size?integer(yield* this.evaluate(d.size)):0);}
         else if(d.array){let values=value?.kind==='initializer'?this.arrayValues(value.values):typeof value==='string'?[...value].map(c=>c.charCodeAt(0)).concat(0):[];const length=d.size?integer(yield* this.evaluate(d.size)):values.length;if(length<1||length>this.maxArray||values.length>length)throw new Error('배열 크기 또는 초기값 개수를 확인하세요.');const plain=this.program.hal&&!own(this.program.structs,d.type),zero=plain?this.coerce(d.type,0):0;value=this.array(Array.from({length},(_,i)=>plain&&values[i]===undefined?zero:this.initialize(d.type,values[i])));if(d.constant)value.cells.forEach(c=>c.constant=true);}
-        else if(d.pointer){if(typeof value==='string')value=this.array([...value].map(c=>c.charCodeAt(0)).concat(0),this.globals);value=this.pointer(value??0);if(value!==0&&!isPointer(value))throw new Error('포인터 초기값을 확인하세요.');}
+        else if(d.pointer){if(typeof value==='string')value=this.array([...value].map(c=>c.charCodeAt(0)).concat(0),this.globals);value=this.retype(this.pointer(value??0),d.type);if(value!==0&&!isPointer(value))throw new Error('포인터 초기값을 확인하세요.');}
         else if(d.type!=='LiquidCrystal')value=this.initialize(d.type,value);
         if(d.array)value.cells.forEach(c=>c.dataType=d.type);if(d.size2)value.cols=value.cells[0].value.cells.length;
         // const char *p: what it points at is const; the pointer itself can move (p++).
@@ -335,7 +351,7 @@ export class Runtime {
     const fn=this.program.functions[name];if(!fn)throw new Error(`정의되지 않은 함수: ${name}`);if(args.length!==fn.params.length)throw new Error(`${name}(): 인수 개수를 확인하세요.`);
     if(++this.depth>32)throw new Error('함수 호출 깊이 한도를 넘었습니다.');
     const previous=this.scopes;this.scopes=[this.globals];this.pushScope();this.frames.push({name,scopes:this.scopes,loc:fn.loc});
-    try{fn.params.forEach((p,i)=>{const cell=this.declareCell(p.name,p.pointer?this.pointer(this.program.hal?this.literal(args[i]):args[i]):this.initialize(p.type,args[i]),p.constant&&!p.pointer);cell.dataType=p.pointer?'pointer':p.type;if(p.pointer)cell.pointeeType=p.type;});const signal=yield* this.statement(fn.body);if(signal&&signal.type!=='return')throw new Error('break/continue는 반복문 안에서 사용하세요.');return this.coerce(fn.type,signal?.value??0);}
+    try{fn.params.forEach((p,i)=>{const cell=this.declareCell(p.name,p.pointer?this.retype(this.pointer(this.program.hal?this.literal(args[i]):args[i]),p.type):this.initialize(p.type,args[i]),p.constant&&!p.pointer);cell.dataType=p.pointer?'pointer':p.type;if(p.pointer)cell.pointeeType=p.type;});const signal=yield* this.statement(fn.body);if(signal&&signal.type!=='return')throw new Error('break/continue는 반복문 안에서 사용하세요.');return this.coerce(fn.type,signal?.value??0);}
     finally{this.frames.pop();this.popScope();this.scopes=previous;this.depth--;}
   }
   *checkpoint(loc){

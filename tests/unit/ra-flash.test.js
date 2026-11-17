@@ -429,6 +429,32 @@ void hal_entry(void)
  assert.equal(session.dataFlash.encode()[0].hex,'5aa55002dc0500000000c03f5241364531000000');
 });
 
+test('interpreter: a data flash pointer is an address — cast to another pointer type or to an integer, void *, compared, passed as another type',()=>{
+ const {log,run}=interp(`
+static uint8_t data[8] = { 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88 };
+static uint32_t word_at(const uint32_t *w) { return *w; }
+static uint32_t sum(const uint8_t *p, uint32_t n) { uint32_t s = 0; for (uint32_t i = 0; i < n; i++) { s += p[i]; } return s; }
+void hal_entry(void)
+{
+    R_FLASH_HP_Open(&g_flash0_ctrl, &g_flash0_cfg);
+    R_FLASH_HP_Erase(&g_flash0_ctrl, 0x08000000U, 1);
+    R_FLASH_HP_Write(&g_flash0_ctrl, (uint32_t) data, 0x08000000U, 8);
+    uint32_t *p32 = (uint32_t *) 0x08000000U;
+    uint8_t *p8 = (uint8_t *) p32;
+    uint16_t *p16 = (uint16_t *) (p8 + 2);
+    uint32_t a = (uint32_t) p32 + 4U;
+    printf("%02X %02X %04X %08lX %02X\\n", p8[1], p8[5], *p16, (unsigned long) (uint32_t) p32, *(uint8_t *) a);
+    printf("%d %d %d %d %d\\n", p8 == (uint8_t *) 0x08000000U, (uint32_t) (p8 + 3) == 0x08000003U, p32 != NULL, (int) ((uint8_t *) (p32 + 1) - p8), (void *) p16 > (void *) p8);
+    const void *raw = (const void *) 0x08000004U;
+    const uint32_t *w = raw;
+    const uint8_t *b;
+    b = (const void *) p32;
+    printf("%08lX %08lX %lu %02X\\n", (unsigned long) *w, (unsigned long) word_at(raw), (unsigned long) sum((const uint8_t *) p32, 8), b[7]);
+}`);
+ run(30);
+ assert.deepEqual(log.print,['22 66 4433 08000000 55','1 1 1 4 1','88776655 88776655 612 88']);
+});
+
 test('interpreter: the data flash survives an MCU reset (NVIC_SystemReset) and starts from the project\'s saved contents',()=>{
  const code=`
 volatile uint32_t seen = 0;
