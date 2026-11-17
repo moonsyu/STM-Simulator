@@ -10,11 +10,50 @@ const elementSize=(r,cell)=>cell.dataType==='pointer'?4:r.typeSize(cell.dataType
 export const numberBytes=(value,size,float)=>{const view=new DataView(new ArrayBuffer(8));if(float){if(size===4)view.setFloat32(0,value,true);else view.setFloat64(0,value,true);}else{view.setUint32(0,value>>>0,true);}return Array.from({length:size},(_,i)=>view.getUint8(i));};
 /** The number an element of `size` bytes holds for these little-endian bytes (before the cell's own type is applied). */
 export function bytesNumber(bytes,size,float){const view=new DataView(new Uint8Array([...bytes.slice(0,size),0,0,0,0,0,0,0,0]).buffer);return float?(size===4?view.getFloat32(0,true):view.getFloat64(0,true)):view.getUint32(0,true);}
+const own=(object,key)=>Object.hasOwn(object||{},key);
+// A structure's members in memory order with the layout runtime.typeLayout gives them (each at its alignment): how a
+// structure is written to and read back from bytes (memcpy with a byte buffer, a block of flash).
+function structFields(r,type,name){
+ if(r.program.unions&&own(r.program.unions,type))throw new Error(`${name}: 공용체(${type})는 바이트로 옮기지 못합니다.`);
+ let at=0;
+ return r.program.structs[type].map(f=>{const l=f.pointer?{size:4,alignment:4}:r.typeLayout(f.type);at=Math.ceil(at/l.alignment)*l.alignment;const field={...f,at,size:l.size,count:f.array?f.size:1};at+=l.size*field.count;return field;});
+}
+/** The bytes of a number of `type` or of a structure value, as the C program has them in memory (little-endian). */
+export function valueBytes(r,value,type,name='memcpy'){
+ if(value?.kind==='struct'){
+  const out=Array(r.typeSize(value.type)).fill(0);
+  for(const f of structFields(r,value.type,name)){
+   const cell=value.fields[f.name],items=f.array?cell.value.cells:[cell];
+   items.forEach((c,i)=>{
+    const v=r.get(c);
+    if(f.pointer){if(v!==0)throw new Error(`${name}: 포인터 멤버(${f.name})에 값이 든 구조체는 바이트로 옮기지 못합니다.`);return;}
+    if(v?.kind==='array')throw new Error(`${name}: 2차원 배열 멤버(${f.name})가 든 구조체는 바이트로 옮기지 못합니다.`);
+    valueBytes(r,v,f.type,name).forEach((b,k)=>{out[f.at+i*f.size+k]=b;});
+   });
+  }
+  return out;
+ }
+ if(typeof value!=='number')throw new Error(`${name}: 숫자 배열 또는 구조체만 바이트로 옮길 수 있습니다.`);
+ return numberBytes(value,r.typeSize(type),isFloatType(type));
+}
+/** The value of `type` (a number, or a structure owned by `owner`) these bytes hold. */
+export function bytesValue(r,bytes,type,owner,name='memcpy'){
+ if(!own(r.program.structs,type))return r.coerce(type,bytesNumber(bytes,r.typeSize(type),isFloatType(type)));
+ const value=r.defaultValue(type,owner);
+ for(const f of structFields(r,type,name)){
+  if(f.pointer)continue;
+  const cell=value.fields[f.name],items=f.array?cell.value.cells:[cell];
+  items.forEach((c,i)=>{if(c.value?.kind==='array')throw new Error(`${name}: 2차원 배열 멤버(${f.name})가 든 구조체는 바이트로 옮기지 못합니다.`);c.value=bytesValue(r,bytes.slice(f.at+i*f.size,f.at+(i+1)*f.size),f.type,owner,name);});
+ }
+ return value;
+}
 function readBytes(r,buffer,n,name){
  const out=[];
- for(let i=0;out.length<n;i++){const cell=r.pointerCell(buffer,i),value=r.get(cell);if(typeof value!=='number')throw new Error(`${name}: 숫자 배열 또는 같은 구조체끼리만 지원합니다.`);out.push(...numberBytes(value,elementSize(r,cell),isFloatType(cell.dataType)));}
+ for(let i=0;out.length<n;i++){const cell=r.pointerCell(buffer,i),value=r.get(cell);out.push(...(value?.kind==='struct'?valueBytes(r,value,value.type,name):typeof value==='number'?numberBytes(value,elementSize(r,cell),isFloatType(cell.dataType)):(()=>{throw new Error(`${name}: 숫자 배열 또는 같은 구조체끼리만 지원합니다.`);})()));}
  return out.slice(0,n);
 }
+/** `n` bytes of the memory a pointer points at: numbers of any element size, or structures (R_FLASH_HP_Write's source). */
+export const memoryBytes=(r,buffer,n,name)=>readBytes(r,buffer,n,name);
 function writeBytes(r,buffer,bytes,name){
  for(let i=0,at=0;at<bytes.length;i++){
   const cell=r.pointerCell(buffer,i),size=elementSize(r,cell),old=r.get(cell);if(typeof old!=='number')throw new Error(`${name}: 숫자 배열 또는 같은 구조체끼리만 지원합니다.`);
@@ -47,7 +86,10 @@ export function stringCall(name,args,r){
  }
  if(name==='memcpy'||name==='memmove'){
   const n=count(c,name);if(!n)return a;const first=r.pointerCell(a,0),from=r.pointerCell(b,0),value=r.get(from);
-  if(value?.kind==='struct'||r.get(first)?.kind==='struct'){if(value?.kind!=='struct'||r.get(first)?.kind!=='struct'||r.get(first).type!==value.type)throw new Error(`${name}: 같은 구조체끼리만 복사할 수 있습니다.`);const size=r.typeSize(value.type);if(n%size)throw new Error(`${name} 길이가 구조체 크기의 배수가 아닙니다.`);const copies=Array.from({length:n/size},(_,i)=>r.get(r.pointerCell(b,i)));copies.forEach((v,i)=>r.set(r.pointerCell(a,i),v));return a;}
+  const target=r.get(first);
+  if(value?.kind==='struct'&&target?.kind==='struct'){if(target.type!==value.type)throw new Error(`${name}: 같은 구조체끼리만 복사할 수 있습니다.`);const size=r.typeSize(value.type);if(n%size)throw new Error(`${name} 길이가 구조체 크기의 배수가 아닙니다.`);const copies=Array.from({length:n/size},(_,i)=>r.get(r.pointerCell(b,i)));copies.forEach((v,i)=>r.set(r.pointerCell(a,i),v));return a;}
+  // A structure filled from bytes (a byte buffer, the data flash through a pointer): its members at their offsets.
+  if(target?.kind==='struct'){const size=r.typeSize(target.type);if(n%size)throw new Error(`${name} 길이가 구조체 크기의 배수가 아닙니다.`);const bytes=readBytes(r,b,n,name);for(let i=0;i<n/size;i++){const cell=r.pointerCell(a,i);r.set(cell,bytesValue(r,bytes.slice(i*size,(i+1)*size),r.get(cell).type,cell.owner,name));}return a;}
   const bytes=readBytes(r,b,n,name);writeBytes(r,a,bytes,name);return a;
  }
  // sscanf: %d %i %u %x %f %s %c (with * to skip, a width, h / l / ll), white space and literal characters. Returns how

@@ -168,7 +168,11 @@ export class Runtime {
     if(n.type==='name'){if(own(this.program.functions,n.name))return {kind:'function',name:n.name};const cell=this.cell(n.name);if(cell.volatile||cell.async)this.polls++;return this.get(cell);}
     if(n.type==='list'){const values=[];for(const v of n.values)values.push(v.type==='designated'?{kind:'designated',key:v.key,index:v.index?integer(yield* this.evaluate(v.index)):undefined,value:yield* this.evaluate(v.value)}:yield* this.evaluate(v));return {kind:'initializer',values};}
     if(n.type==='construct'){const args=[];for(const v of n.args)args.push(yield* this.evaluate(v));if(n.name!=='LiquidCrystal'&&!this.api.constructs?.includes(n.name))throw new Error('지원하지 않는 생성자입니다.');return this.api.construct?.(n.name,args,this)??{kind:'device',name:n.name,args};}
-    if(n.type==='cast'){const value=yield* this.evaluate(n.a);if(n.pointer){if(typeof value==='string')return this.pointer(this.array([...value].map(c=>c.charCodeAt(0)).concat(0),this.globals));return this.pointer(value);}if(this.program.hal&&(isArray(value)||isPointer(value)||value?.kind==='function'))return isArray(value)?this.pointer(value):value;return n.to==='String'?String(value):n.to==='bool'?Number(truth(value)):this.program.hal?this.coerce(n.to,checkedNumber(value)):['float','double'].includes(n.to)?checkedNumber(value):integer(value);}
+    if(n.type==='cast'){const value=yield* this.evaluate(n.a);if(n.pointer){
+      // (type *) 0x08000000: an address has no memory behind it here, unless the adapter stands in for that memory (an
+      // FSP program reading the RA data flash through a pointer: fsp-flash.js FLASH_METHODS.memory).
+      if(typeof value==='number'&&value!==0&&this.api.memory){const memory=this.api.memory(value,n.to,this);if(memory)return memory;}
+      if(typeof value==='string')return this.pointer(this.array([...value].map(c=>c.charCodeAt(0)).concat(0),this.globals));return this.pointer(value);}if(this.program.hal&&(isArray(value)||isPointer(value)||value?.kind==='function'))return isArray(value)?this.pointer(value):value;return n.to==='String'?String(value):n.to==='bool'?Number(truth(value)):this.program.hal?this.coerce(n.to,checkedNumber(value)):['float','double'].includes(n.to)?checkedNumber(value):integer(value);}
     if(n.type==='index'||n.type==='member')return this.get(yield* this.reference(n));
     if(n.type==='unary'){
       if(n.op==='&'&&n.a.type==='name'&&own(this.program.functions,n.a.name))return {kind:'function',name:n.a.name};

@@ -41,7 +41,7 @@ export class SimulationSession {
       // unless the sources (an imported CubeMX main.h) already #define them.
       constants:this.fsp?fspConstants(program):this.hal?{...halConstantsFor(project.mcu?.family),...(project.mcu?.timerClockHz?{SystemCoreClock:coreClockHz(project.mcu)}:{}),...Object.fromEntries(Object.entries(project.mcu?.pins||{}).filter(([,p])=>p.label&&!definedLabel(project,p.label)).flatMap(([pin,p])=>[[p.label+'_Pin',1<<Number(pin.slice(2))],[p.label+'_GPIO_Port','GPIO'+pin[1]]]))}:undefined,
       invoke:(name,args,runtime)=>this.hal?.invoke(name,args,runtime),poll:runtime=>this.hal?.poll(runtime),
-      preempt:runtime=>this.hal?.preempt(runtime)??false,declareGlobals:runtime=>this.hal?.declareGlobals?.(runtime),register:(object,key,runtime)=>this.hal?.register?.(object,key,runtime)??null,
+      preempt:runtime=>this.hal?.preempt(runtime)??false,declareGlobals:runtime=>this.hal?.declareGlobals?.(runtime),register:(object,key,runtime)=>this.hal?.register?.(object,key,runtime)??null,memory:(address,type,runtime)=>this.hal?.memory?.(address,type,runtime)??null,
       warn:message=>{this.warnings.push(message);if(this.warnings.length>50)this.warnings.shift();warnOut(message);},reset:runtime=>{if(this.hal){const old=this.hal;this.hal=this.createHal();this.hal.inheritReset(old);if(this.hal.nvicModel)this.hal.nvicModel.tick.lost=Math.floor(runtime.microTime/1000);}},
       print,uart,pwmEnabled:project.simulation?.pwmWaveform??false,
       beforeChange:us=>this.advance(us),changed:us=>this.changed(us),advance:us=>this.advance(us),
@@ -71,6 +71,8 @@ export class SimulationSession {
   }
   get camera(){return this.hal?.camera?.api;}
   get storage(){return this.hal?.storage?.api;}
+  // An FSP project's data flash after this run (RaDataFlash; the app saves it into the project when the run ends).
+  get dataFlash(){return this.fsp?this.hal.dataFlash:null;}
   enrich(micros){
     this.hal?.catalog?.update(this.project,this.result,micros);
     this.singleWire.update(this.project,this.result,micros,this.runtime);

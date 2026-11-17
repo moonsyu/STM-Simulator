@@ -10,8 +10,18 @@ import {Machine} from '../../src/emu/machine.js';
 import {Ra6e1,RaBus,RA_BASES} from '../../src/emu/ra6e1/soc.js';
 import {raDefaultMcu,validateRaMcu,raNameProblem} from '../../src/ra-config.js';
 import {generateRaFiles,raVectors,raInstances} from '../../src/ra-generator.js';
+import {SimulationSession} from '../../src/session.js';
+import {projectForBoard,validateProject} from '../../src/project.js';
 
 const mcu=peripherals=>({...raDefaultMcu(),peripherals});
+// An FSP program on the built-in interpreter with the g_flash0 stack (BGO: with flash_callback and both interrupts).
+function interp(code,{bgo=false,dataFlash,flash}={}){
+ const m=raDefaultMcu();m.peripherals={FLASH:flash??(bgo?{enabled:true,bgo:true,callback:'flash_callback',readyPriority:12,errorPriority:12}:{enabled:true})};
+ const log={warn:[],print:[]};
+ const project=validateProject({...projectForBoard('fpb-ra6e1'),mcu:m,code:'#include "hal_data.h"\n#include <stdio.h>\n#include <string.h>\n'+code+'\nvoid external_irq1_callback(external_irq_callback_args_t *p_args){(void)p_args;}\n',...(dataFlash?{dataFlash}:{})});
+ const session=new SimulationSession(project,{warn:w=>log.warn.push(w),print:t=>log.print.push(t)});
+ return {session,log,project,run:ms=>{for(let t=Math.floor(session.time)+1;t<=ms;t++)session.tick(t);}};
+}
 
 test('data flash contents: erased units are blank, a unit is programmed once, an erase clears its 64-byte block',()=>{
  const f=new RaDataFlash();
@@ -192,4 +202,251 @@ test('generated files: g_flash0 in hal_data, r_flash_hp_cfg.h (data flash only),
  assert.match(g['ra_gen/vector_data.c'],/fcu_frdyi_isr[\s\S]*fcu_fiferr_isr/);assert.match(g['ra_gen/vector_data.c'],/EVENT_FCU_FRDYI[\s\S]*EVENT_FCU_FIFERR/);
  assert.match(g['ra_gen/hal_data.h'],/#ifndef flash_callback\nvoid flash_callback\(flash_callback_args_t \* p_args\);\n#endif/);
  assert.match(g['ra_gen/hal_data.c'],/\.data_flash_bgo {6}= true,\n {4}\.p_callback {10}= flash_callback,\n {4}\.p_context {11}= NULL,\n#if defined\(VECTOR_NUMBER_FCU_FRDYI\)\n {4}\.irq {17}= VECTOR_NUMBER_FCU_FRDYI,\n#else\n {4}\.irq {17}= FSP_INVALID_VECTOR,\n#endif\n#if defined\(VECTOR_NUMBER_FCU_FIFERR\)\n {4}\.err_irq {13}= VECTOR_NUMBER_FCU_FIFERR,\n#else\n {4}\.err_irq {13}= FSP_INVALID_VECTOR,\n#endif\n {4}\.err_ipl {13}= \(4\),\n {4}\.ipl {17}= \(5\),\n\};/);
+});
+
+test('interpreter: Open, blank check, erase, write and the data flash read back through a pointer; each call takes the flash\'s time',()=>{
+ const {session,log,run}=interp(`
+volatile uint32_t word = 0, t_erase = 0, t_write = 0;
+void hal_entry(void)
+{
+    static uint8_t data[8] = { 0x11, 0x22, 0x33, 0x44, 0xAA, 0xBB, 0xCC, 0xDD };
+    flash_result_t blank = FLASH_RESULT_NOT_BLANK, after = FLASH_RESULT_BLANK, next = FLASH_RESULT_NOT_BLANK;
+    flash_status_t status = FLASH_STATUS_BUSY;
+    flash_info_t info;
+    int e[8];
+    e[0] = R_FLASH_HP_Open(&g_flash0_ctrl, &g_flash0_cfg);
+    e[1] = R_FLASH_HP_BlankCheck(&g_flash0_ctrl, 0x08000040U, 8, &blank);
+    e[2] = R_FLASH_HP_Erase(&g_flash0_ctrl, 0x08000047U, 2);
+    e[3] = R_FLASH_HP_Write(&g_flash0_ctrl, (uint32_t) data, 0x08000040U, sizeof(data));
+    e[4] = R_FLASH_HP_BlankCheck(&g_flash0_ctrl, 0x08000040U, 8, &after);
+    e[5] = R_FLASH_HP_BlankCheck(&g_flash0_ctrl, 0x08000048U, 120, &next);
+    e[6] = R_FLASH_HP_StatusGet(&g_flash0_ctrl, &status);
+    e[7] = R_FLASH_HP_InfoGet(&g_flash0_ctrl, &info);
+    printf("%d %d %d %d %d %d %d %d\\n", e[0], e[1], e[2], e[3], e[4], e[5], e[6], e[7]);
+    printf("%d %d %d %d\\n", blank, after, next, status);
+    const uint8_t *p = (const uint8_t *) 0x08000040U;
+    word = *(uint32_t *) 0x08000044U;
+    printf("%02X %02X %02X %02X %08lX %04X\\n", p[0], p[1], p[2], p[7], (unsigned long) word, *(uint16_t *) 0x08000042U);
+    printf("%lu %lX %lX %lu %lu\\n", (unsigned long) info.data_flash.num_regions, (unsigned long) info.data_flash.p_block_array->block_section_st_addr,
+           (unsigned long) info.data_flash.p_block_array[0].block_section_end_addr, (unsigned long) info.data_flash.p_block_array->block_size, (unsigned long) info.data_flash.p_block_array->block_size_write);
+    printf("%lu %lX %lu %lu\\n", (unsigned long) info.code_flash.num_regions, (unsigned long) info.code_flash.p_block_array[1].block_section_st_addr,
+           (unsigned long) info.code_flash.p_block_array[1].block_size, (unsigned long) info.code_flash.p_block_array[0].block_size_write);
+    uint8_t copy[8];
+    memcpy(copy, (void *) 0x08000040U, sizeof(copy));
+    printf("%02X%02X %d %d\\n", copy[4], copy[5], R_FLASH_HP_Close(&g_flash0_ctrl), R_FLASH_HP_Close(&g_flash0_ctrl));
+    while (1) { R_BSP_SoftwareDelay(10, BSP_DELAY_UNITS_MILLISECONDS); }
+}`);
+ run(50);
+ assert.deepEqual(log.print,['0 0 0 0 0 0 0 0','0 1 0 0','11 22 33 DD DDCCBBAA 4433','1 8000000 8001FFF 64 4','2 10000 32768 128','AABB 0 7']);assert.deepEqual(log.warn,[]);
+ assert.deepEqual(session.dataFlash.encode(),[{at:0x40,hex:'11223344aabbccdd'}]);assert.equal(session.dataFlash.changed,true);
+ // A call without background operation returns when the flash is done: four blocks erased take 4 x 1.8 ms.
+ const t=interp(`
+volatile uint32_t done = 0;
+void hal_entry(void)
+{
+    R_FLASH_HP_Open(&g_flash0_ctrl, &g_flash0_cfg);
+    R_FLASH_HP_Erase(&g_flash0_ctrl, 0x08000000U, 4);
+    done = 1;
+    while (1) { R_BSP_SoftwareDelay(10, BSP_DELAY_UNITS_MILLISECONDS); }
+}`);
+ t.run(7);assert.equal(t.session.readVariable('done'),0,'still erasing at 7 ms');t.run(8);assert.equal(t.session.readVariable('done'),1);
+});
+
+test('interpreter: the checks and error codes of r_flash_hp.c in its order; a write to a place not erased fails and the next erase works',()=>{
+ const {log,run,session}=interp(`
+static uint32_t value = 0x12345678U;
+static uint8_t odd[6];
+void hal_entry(void)
+{
+    flash_result_t r = FLASH_RESULT_BLANK;
+    flash_status_t s;
+    printf("%d %d %d %d %d %d\\n", R_FLASH_HP_Write(&g_flash0_ctrl, (uint32_t) &value, 0x08000000U, 4), R_FLASH_HP_Erase(&g_flash0_ctrl, 0x08000000U, 1), R_FLASH_HP_BlankCheck(&g_flash0_ctrl, 0x08000000U, 4, &r),
+           R_FLASH_HP_StatusGet(&g_flash0_ctrl, &s), R_FLASH_HP_Close(&g_flash0_ctrl), R_FLASH_HP_Reset(&g_flash0_ctrl));
+    printf("%d %d %d %d\\n", R_FLASH_HP_Open(&g_flash0_ctrl, NULL), R_FLASH_HP_Open(NULL, &g_flash0_cfg), R_FLASH_HP_Open(&g_flash0_ctrl, &g_flash0_cfg), R_FLASH_HP_Open(&g_flash0_ctrl, &g_flash0_cfg));
+    /* Write: address range, size range, 4-byte boundary, multiple of 4, not zero. */
+    printf("%d %d %d %d %d %d %d\\n", R_FLASH_HP_Write(&g_flash0_ctrl, (uint32_t) &value, 0x00001000U, 4), R_FLASH_HP_Write(&g_flash0_ctrl, (uint32_t) &value, 0x08002000U, 4),
+           R_FLASH_HP_Write(&g_flash0_ctrl, (uint32_t) &value, 0x08001FFCU, 8), R_FLASH_HP_Write(&g_flash0_ctrl, (uint32_t) &value, 0x08000002U, 4),
+           R_FLASH_HP_Write(&g_flash0_ctrl, (uint32_t) odd, 0x08000000U, 6), R_FLASH_HP_Write(&g_flash0_ctrl, (uint32_t) &value, 0x08000000U, 0), R_FLASH_HP_Write(NULL, (uint32_t) &value, 0x08000000U, 4));
+    /* Erase: no blocks, address outside, more blocks than there are. The last block is fine. */
+    printf("%d %d %d %d %d\\n", R_FLASH_HP_Erase(&g_flash0_ctrl, 0x08000000U, 0), R_FLASH_HP_Erase(&g_flash0_ctrl, 0x08002000U, 1), R_FLASH_HP_Erase(&g_flash0_ctrl, 0x00008000U, 1),
+           R_FLASH_HP_Erase(&g_flash0_ctrl, 0x08001FC0U, 2), R_FLASH_HP_Erase(&g_flash0_ctrl, 0x08001FFFU, 1));
+    /* Blank check: any address and length inside the data flash; no result pointer is an assertion (after the range checks). */
+    printf("%d %d %d %d %d\\n", R_FLASH_HP_BlankCheck(&g_flash0_ctrl, 0x08000001U, 3, &r), R_FLASH_HP_BlankCheck(&g_flash0_ctrl, 0x08000000U, 4, NULL), R_FLASH_HP_BlankCheck(&g_flash0_ctrl, 0x07FFFFFCU, 4, &r),
+           R_FLASH_HP_BlankCheck(&g_flash0_ctrl, 0x08001FFFU, 2, &r), R_FLASH_HP_BlankCheck(&g_flash0_ctrl, 0x08000000U, 0, &r));
+    printf("%d %d\\n", R_FLASH_HP_StatusGet(&g_flash0_ctrl, NULL), R_FLASH_HP_InfoGet(&g_flash0_ctrl, NULL));
+    /* Erase, write, write again without an erase (fails), erase and write again (works). */
+    int a = R_FLASH_HP_Erase(&g_flash0_ctrl, 0x08000000U, 1), b = R_FLASH_HP_Write(&g_flash0_ctrl, (uint32_t) &value, 0x08000000U, 4);
+    value = 0x0F0F0F0FU;
+    int c = R_FLASH_HP_Write(&g_flash0_ctrl, (uint32_t) &value, 0x08000000U, 4);
+    R_FLASH_HP_StatusGet(&g_flash0_ctrl, &s);
+    uint32_t spoiled = *(uint32_t *) 0x08000000U;
+    int d = R_FLASH_HP_Erase(&g_flash0_ctrl, 0x08000000U, 1), f = R_FLASH_HP_Write(&g_flash0_ctrl, (uint32_t) &value, 0x08000000U, 4);
+    printf("%d %d %d %d %08lX %d %d %08lX\\n", a, b, c, s, (unsigned long) spoiled, d, f, (unsigned long) *(uint32_t *) 0x08000000U);
+    /* Not in this build or on the RA6E1. */
+    uint32_t count;
+    printf("%d %d %d %d %d %d %d\\n", R_FLASH_HP_AccessWindowSet(&g_flash0_ctrl, 0, 0x1000), R_FLASH_HP_AccessWindowClear(&g_flash0_ctrl), R_FLASH_HP_StartUpAreaSelect(&g_flash0_ctrl, FLASH_STARTUP_AREA_BLOCK1, true),
+           R_FLASH_HP_BankSwap(&g_flash0_ctrl), R_FLASH_HP_AntiRollbackCounterRead(&g_flash0_ctrl, FLASH_ARC_SEC, &count), R_FLASH_HP_UpdateFlashClockFreq(&g_flash0_ctrl), R_FLASH_HP_Reset(&g_flash0_ctrl));
+    while (1) { R_BSP_SoftwareDelay(10, BSP_DELAY_UNITS_MILLISECONDS); }
+}`);
+ run(60);
+ assert.deepEqual(log.print,[
+  '7 7 7 7 7 7',          // FSP_ERR_NOT_OPEN before Open
+  '1 1 0 14',             // NULL cfg / ctrl: assertion; then success; then FSP_ERR_ALREADY_OPEN
+  '22 22 23 22 23 23 1',  // INVALID_ADDRESS (code flash, past the end), INVALID_SIZE, boundary, multiple of 4, zero, NULL ctrl
+  '21 22 22 21 0',        // INVALID_BLOCKS, INVALID_ADDRESS x2, INVALID_BLOCKS, the last block
+  '0 1 22 23 23',
+  '1 1',
+  '0 0 24 0 02040608 0 0 0F0F0F0F', // FSP_ERR_WRITE_FAILED, idle afterwards, the unit holds neither value
+  '6 6 6 6 6 0 0']);
+ assert.equal(log.warn.length,7,log.warn.join('\n'));
+ assert.match(log.warn[0],/^R_FLASH_HP_Write: 0x00001000은\(는\) 코드 플래시 주소입니다\. 이 프로젝트는 코드 플래시 프로그래밍 없이 빌드하므로\(r_flash_hp_cfg\.h FLASH_HP_CFG_CODE_FLASH_PROGRAMMING_ENABLE 0\) FSP_ERR_INVALID_ADDRESS를 돌려줍니다/);
+ assert.match(log.warn[1],/^\[FLASH\] 0x08000000: 지우지 않은\(이미 쓴\) 곳에 다시 썼습니다 — 프로그램 오류\(FSTATR\.PRGERR\)이고 이 4바이트의 내용은 보장되지 않습니다\. 쓰기 전에 그 블록\(64바이트\)을 R_FLASH_HP_Erase로 지우세요\.$/);
+ assert.match(log.warn[2],/^R_FLASH_HP_AccessWindowSet: 코드 플래시 프로그래밍과 액세스 윈도 기능은 이 빌드와 RA6E1에 없어 FSP_ERR_UNSUPPORTED를 돌려줍니다\(실제 r_flash_hp\.c도 같습니다\)\.$/);
+ assert.match(log.warn[6],/^R_FLASH_HP_AntiRollbackCounterRead: 안티 롤백 카운터 기능은/);
+ assert.deepEqual(session.dataFlash.encode(),[{at:0,hex:'0f0f0f0f'}]);
+});
+
+test('interpreter: background operation — the calls return at once, the callback gets ERASE_COMPLETE / WRITE_COMPLETE / BLANK / NOT_BLANK, the flash is in use meanwhile',()=>{
+ const {session,log,run}=interp(`
+static uint8_t data[8] = { 1, 2, 3, 4, 5, 6, 7, 8 };
+volatile uint32_t events = 0, count = 0, context_seen = 0;
+static volatile bool done = false;
+static uint32_t marker = 77;
+void flash_callback(flash_callback_args_t *p_args)
+{
+    events = (events << 4) | ((uint32_t) p_args->event + 1U);
+    count++;
+    if (NULL != p_args->p_context) { context_seen = *(uint32_t *) p_args->p_context; }
+    done = true;
+}
+static void wait(void) { while (!done) { } done = false; }
+void hal_entry(void)
+{
+    flash_result_t r = FLASH_RESULT_BLANK;
+    flash_status_t busy, idle;
+    int e[10];
+    e[0] = R_FLASH_HP_Open(&g_flash0_ctrl, &g_flash0_cfg);
+    e[1] = R_FLASH_HP_Erase(&g_flash0_ctrl, 0x08000100U, 3);
+    R_FLASH_HP_StatusGet(&g_flash0_ctrl, &busy);
+    e[2] = R_FLASH_HP_Write(&g_flash0_ctrl, (uint32_t) data, 0x08000100U, 8);   /* still erasing */
+    e[3] = R_FLASH_HP_BlankCheck(&g_flash0_ctrl, 0x08000100U, 4, &r);
+    wait();
+    R_FLASH_HP_StatusGet(&g_flash0_ctrl, &idle);
+    e[4] = R_FLASH_HP_Write(&g_flash0_ctrl, (uint32_t) data, 0x08000100U, 8);
+    wait();
+    e[5] = R_FLASH_HP_BlankCheck(&g_flash0_ctrl, 0x08000100U, 8, &r);
+    int active = r;
+    wait();
+    e[6] = R_FLASH_HP_CallbackSet(&g_flash0_ctrl, flash_callback, &marker, NULL);
+    e[7] = R_FLASH_HP_BlankCheck(&g_flash0_ctrl, 0x08000108U, 8, &r);
+    wait();
+    e[8] = R_FLASH_HP_CallbackSet(&g_flash0_ctrl, NULL, NULL, NULL);
+    e[9] = R_FLASH_HP_Close(&g_flash0_ctrl);
+    printf("%d %d %d %d %d %d %d %d %d %d\\n", e[0], e[1], e[2], e[3], e[4], e[5], e[6], e[7], e[8], e[9]);
+    printf("%d %d %d %lX %lu %lu %08lX\\n", busy, idle, active, (unsigned long) events, (unsigned long) count, (unsigned long) context_seen, (unsigned long) *(uint32_t *) 0x08000104U);
+    while (1) { R_BSP_SoftwareDelay(10, BSP_DELAY_UNITS_MILLISECONDS); }
+}`,{bgo:true});
+ run(80);
+ // IN_USE (8) while the erase runs; events ERASE_COMPLETE(0) WRITE_COMPLETE(1) NOT_BLANK(3) BLANK(2), each + 1 in a nibble.
+ assert.deepEqual(log.print,['0 0 8 8 0 0 0 0 1 0','1 0 2 1243 4 77 08070605']);assert.deepEqual(log.warn,[]);
+ assert.deepEqual(session.dataFlash.encode(),[{at:0x100,hex:'0102030405060708'}]);
+});
+
+test('interpreter: background operation errors — a write to a place not erased reports FLASH_EVENT_ERR_FAILURE from the error interrupt; no callback is an assertion; BGO needs its interrupts',()=>{
+ const program=bytes=>`
+static uint8_t data[8] = { 1, 2, 3, 4, 5, 6, 7, 8 };
+volatile uint32_t events = 0, count = 0;
+void flash_callback(flash_callback_args_t *p_args) { events = (events << 4) | ((uint32_t) p_args->event + 1U); count++; }
+void hal_entry(void)
+{
+    R_FLASH_HP_Open(&g_flash0_ctrl, &g_flash0_cfg);
+    R_FLASH_HP_Erase(&g_flash0_ctrl, 0x08000000U, 1);
+    while (count < 1) { }
+    R_FLASH_HP_Write(&g_flash0_ctrl, (uint32_t) data, 0x08000000U, 4);
+    while (count < 2) { }
+    int e = R_FLASH_HP_Write(&g_flash0_ctrl, (uint32_t) data, 0x08000000U, ${bytes});
+    R_BSP_SoftwareDelay(5, BSP_DELAY_UNITS_MILLISECONDS);
+    flash_status_t status;
+    R_FLASH_HP_StatusGet(&g_flash0_ctrl, &status);
+    int again = R_FLASH_HP_Erase(&g_flash0_ctrl, 0x08000000U, 1);
+    R_BSP_SoftwareDelay(5, BSP_DELAY_UNITS_MILLISECONDS);
+    printf("%d %d %d %lX\\n", e, status, again, (unsigned long) events);
+    while (1) { R_BSP_SoftwareDelay(10, BSP_DELAY_UNITS_MILLISECONDS); }
+}`;
+ // 8 bytes: the first unit fails, the flash-ready interrupt issues the next (not taken: command-locked), the error
+ // interrupt resets the sequencer and reports ERR_FAILURE (7 + 1). The flash is idle and usable afterwards.
+ let t=interp(program(8),{bgo:true});t.run(60);
+ assert.deepEqual(t.log.print,['0 0 0 1281']);assert.equal(t.log.warn.length,1);assert.match(t.log.warn[0],/지우지 않은\(이미 쓴\) 곳에 다시 썼습니다/);
+ // 4 bytes: nothing is left to write, so fcu_frdyi_isr reports WRITE_COMPLETE before fcu_fiferr_isr reports the failure
+ // (the driver's flash-ready routine does not look at the error flags).
+ t=interp(program(4),{bgo:true});t.run(60);assert.deepEqual(t.log.print,['0 0 0 12281']);
+ // BGO without a callback: Erase / Write / BlankCheck assert it.
+ t=interp(`
+void hal_entry(void)
+{
+    flash_result_t r;
+    uint32_t v = 1;
+    printf("%d %d %d %d\\n", R_FLASH_HP_Open(&g_flash0_ctrl, &g_flash0_cfg), R_FLASH_HP_Erase(&g_flash0_ctrl, 0x08000000U, 1), R_FLASH_HP_Write(&g_flash0_ctrl, (uint32_t) &v, 0x08000000U, 4), R_FLASH_HP_BlankCheck(&g_flash0_ctrl, 0x08000000U, 4, &r));
+    while (1) { R_BSP_SoftwareDelay(10, BSP_DELAY_UNITS_MILLISECONDS); }
+}`,{flash:{enabled:true,bgo:true}});t.run(20);assert.deepEqual(t.log.print,['0 1 1 1']);
+ // A configuration with BGO but no interrupt (made in the program): FSP_ERR_IRQ_BSP_DISABLED.
+ t=interp(`
+void hal_entry(void)
+{
+    flash_cfg_t cfg = g_flash0_cfg;
+    cfg.data_flash_bgo = true;
+    printf("%d\\n", R_FLASH_HP_Open(&g_flash0_ctrl, &cfg));
+    while (1) { R_BSP_SoftwareDelay(10, BSP_DELAY_UNITS_MILLISECONDS); }
+}`);t.run(20);assert.deepEqual(t.log.print,['11']);
+});
+
+test('interpreter: a structure of settings written and read back (pointer, memcpy); reading a blank place says so once; the data flash is not assigned to',()=>{
+ const {log,run,session}=interp(`
+typedef struct { uint16_t magic; uint8_t brightness; uint8_t mode; uint32_t period_ms; float gain; char name[8]; } settings_t;
+static settings_t settings = { .magic = 0xA55A, .brightness = 80, .mode = 2, .period_ms = 1500, .gain = 1.5f, .name = "RA6E1" };
+void hal_entry(void)
+{
+    settings_t copy;
+    R_FLASH_HP_Open(&g_flash0_ctrl, &g_flash0_cfg);
+    printf("%u %02X\\n", (unsigned) sizeof(settings_t), *(uint8_t *) 0x08000080U);
+    printf("%02X\\n", *(uint8_t *) 0x08000084U);
+    R_FLASH_HP_Erase(&g_flash0_ctrl, 0x08000080U, 1);
+    printf("%d\\n", R_FLASH_HP_Write(&g_flash0_ctrl, (uint32_t) &settings, 0x08000080U, sizeof(settings)));
+    const settings_t *stored = (const settings_t *) 0x08000080U;
+    printf("%04X %u %u %lu %.1f %s\\n", stored->magic, stored->brightness, stored->mode, (unsigned long) stored->period_ms, stored->gain, stored->name);
+    memcpy(&copy, (void *) 0x08000080U, sizeof(copy));
+    printf("%04X %lu %s %d\\n", copy.magic, (unsigned long) copy.period_ms, copy.name, memcmp(&copy, &settings, sizeof(copy)));
+    uint8_t raw[20];
+    memcpy(raw, &settings, sizeof(raw));
+    printf("%02X %02X %02X %02X %02X %c\\n", raw[0], raw[1], raw[2], raw[4], raw[5], raw[12]);
+    *(uint32_t *) 0x08000080U = 0;
+}`);
+ assert.throws(()=>run(50),/데이터 플래시는 대입으로 쓸 수 없습니다\. R_FLASH_HP_Erase로 블록을 지운 뒤 R_FLASH_HP_Write로 쓰세요\./);
+ assert.deepEqual(log.print,['20 FF','FF','0','A55A 80 2 1500 1.5 RA6E1','A55A 1500 RA6E1 0','5A A5 50 DC 05 R']);
+ assert.equal(log.warn.length,1,'the blank read is said once');assert.match(log.warn[0],/^\[FLASH\] 지운\(빈\) 데이터 플래시 0x08000080를 읽었습니다/);
+ assert.equal(session.dataFlash.encode()[0].hex,'5aa55002dc0500000000c03f5241364531000000');
+});
+
+test('interpreter: the data flash survives an MCU reset (NVIC_SystemReset) and starts from the project\'s saved contents',()=>{
+ const code=`
+volatile uint32_t seen = 0;
+void hal_entry(void)
+{
+    flash_result_t blank;
+    uint32_t count = 0;
+    R_FLASH_HP_Open(&g_flash0_ctrl, &g_flash0_cfg);
+    R_FLASH_HP_BlankCheck(&g_flash0_ctrl, 0x08000000U, 4, &blank);
+    if (FLASH_RESULT_NOT_BLANK == blank) { count = *(uint32_t *) 0x08000000U; }
+    count++;
+    R_FLASH_HP_Erase(&g_flash0_ctrl, 0x08000000U, 1);
+    R_FLASH_HP_Write(&g_flash0_ctrl, (uint32_t) &count, 0x08000000U, 4);
+    seen = count;
+    printf("%lu\\n", (unsigned long) count);
+    R_BSP_SoftwareDelay(20, BSP_DELAY_UNITS_MILLISECONDS);
+    if (count < 3) { NVIC_SystemReset(); }
+    while (1) { R_BSP_SoftwareDelay(10, BSP_DELAY_UNITS_MILLISECONDS); }
+}`;
+ const first=interp(code);first.run(200);
+ assert.deepEqual(first.log.print,['1','2','3']);assert.equal(first.session.runtime.resetCount,2);assert.deepEqual(first.session.dataFlash.encode(),[{at:0,hex:'03000000'}]);
+ assert.equal(first.project.dataFlash,undefined,'a session does not write into the project it was given');
 });

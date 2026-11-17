@@ -16,6 +16,7 @@ import {raInstances,raIoName,raVectors,pinCfgWord} from './ra-generator.js';
 import {exchangeFrame} from './emu/ra6e1/spi.js';
 import {encodeSpiFrames} from './signals.js';
 import {Rtc} from './emu/ra6e1/rtc.js';
+import {FLASH_TYPES,FLASH_METHODS,FLASH_NAMES,flashPrelude} from './fsp-flash.js';
 
 // RSTSR1 reset-cause flags (R7FA6E10F.h): the one register the interpreter lets the program read (FspAdapter.register).
 const RESET_STATUS=[['IWDTRF',0],['WDTRF',1],['SWRF',2]];
@@ -30,13 +31,13 @@ export const FSP_ALIASES=Object.freeze({FSP_CPP_HEADER:'',FSP_CPP_FOOTER:'',FSP_
  IOPORT_CFG_CTRL:'g_ioport_ctrl',IOPORT_CFG_NAME:'g_bsp_pin_cfg',IOPORT_CFG_OPEN:'R_IOPORT_Open'});
 // FSP and generated headers that resolve to the prelude (it has a guard, so including several is fine); the C
 // library headers read as empty.
-const FSP_HEADERS=['hal_data.h','common_data.h','bsp_pin_cfg.h','vector_data.h','bsp_api.h','bsp_cfg.h','bsp_clock_cfg.h','board.h','board_cfg.h','fsp_common_api.h','r_ioport.h','r_ioport_api.h','r_icu.h','r_external_irq_api.h','r_sci_uart.h','r_uart_api.h','r_gpt.h','r_timer_api.h','r_agt.h','r_adc.h','r_adc_api.h','r_iic_master.h','r_i2c_master_api.h','r_spi.h','r_sci_spi.h','r_spi_api.h','r_wdt.h','r_iwdt.h','r_wdt_api.h','r_rtc.h','r_rtc_api.h','r_iic_slave.h','r_i2c_slave_api.h','bsp_io.h','bsp_delay.h','bsp_common.h'];
+const FSP_HEADERS=['hal_data.h','common_data.h','bsp_pin_cfg.h','vector_data.h','bsp_api.h','bsp_cfg.h','bsp_clock_cfg.h','board.h','board_cfg.h','fsp_common_api.h','r_ioport.h','r_ioport_api.h','r_icu.h','r_external_irq_api.h','r_sci_uart.h','r_uart_api.h','r_gpt.h','r_timer_api.h','r_agt.h','r_adc.h','r_adc_api.h','r_iic_master.h','r_i2c_master_api.h','r_spi.h','r_sci_spi.h','r_spi_api.h','r_wdt.h','r_iwdt.h','r_wdt_api.h','r_rtc.h','r_rtc_api.h','r_iic_slave.h','r_i2c_slave_api.h','r_flash_hp.h','r_flash_api.h','bsp_io.h','bsp_delay.h','bsp_common.h'];
 const C_HEADERS=new Set(['stdint.h','stddef.h','stdbool.h','string.h','stdlib.h','stdio.h','ctype.h','math.h','limits.h','time.h']);
 // Generated and FSP source folders of the project tree: built by ARM GCC only (the prelude stands in for them here).
 const FSP_FILE=/^(ra|ra_gen|ra_cfg|script)\//;
 
 const TYPES=`typedef int IRQn_Type;
-${enumOf('e_fsp_err','fsp_err_t',[['FSP_SUCCESS',0],...['ASSERTION','INVALID_POINTER','INVALID_ARGUMENT','INVALID_CHANNEL','INVALID_MODE','UNSUPPORTED','NOT_OPEN','IN_USE','OUT_OF_MEMORY','HW_LOCKED','IRQ_BSP_DISABLED','OVERFLOW','UNDERFLOW','ALREADY_OPEN','APPROXIMATION','CLAMPED','INVALID_RATE','ABORTED','NOT_ENABLED','TIMEOUT','INVALID_BLOCKS','INVALID_ADDRESS','INVALID_SIZE','WRITE_FAILED','ERASE_FAILED','INVALID_CALL','INVALID_HW_CONDITION','INVALID_FACTORY_FLASH'].map((k,i)=>['FSP_ERR_'+k,i+1]),['FSP_ERR_INVALID_STATE',30]])}
+${enumOf('e_fsp_err','fsp_err_t',[['FSP_SUCCESS',0],...['ASSERTION','INVALID_POINTER','INVALID_ARGUMENT','INVALID_CHANNEL','INVALID_MODE','UNSUPPORTED','NOT_OPEN','IN_USE','OUT_OF_MEMORY','HW_LOCKED','IRQ_BSP_DISABLED','OVERFLOW','UNDERFLOW','ALREADY_OPEN','APPROXIMATION','CLAMPED','INVALID_RATE','ABORTED','NOT_ENABLED','TIMEOUT','INVALID_BLOCKS','INVALID_ADDRESS','INVALID_SIZE','WRITE_FAILED','ERASE_FAILED','INVALID_CALL','INVALID_HW_CONDITION','INVALID_FACTORY_FLASH'].map((k,i)=>['FSP_ERR_'+k,i+1]),['FSP_ERR_INVALID_STATE',30],['FSP_ERR_NOT_ERASED',31],['FSP_ERR_PE_FAILURE',500],['FSP_ERR_CMD_LOCKED',501],['FSP_ERR_FCLK',502],['FSP_ERR_INVALID_LINKED_ADDRESS',503],['FSP_ERR_BLANK_CHECK_FAILED',504]])}
 ${enumOf('e_bsp_io_level','bsp_io_level_t',[['BSP_IO_LEVEL_LOW',0],['BSP_IO_LEVEL_HIGH',1]])}
 ${enumOf('e_bsp_io_dir','bsp_io_direction_t',[['BSP_IO_DIRECTION_INPUT',0],['BSP_IO_DIRECTION_OUTPUT',1]])}
 ${enumOf('e_bsp_io_port','bsp_io_port_t',Array.from({length:10},(_,p)=>[`BSP_IO_PORT_${pad(p)}`,hex(p<<8)]))}
@@ -183,7 +184,7 @@ typedef struct st_sci_spi_instance_ctrl { uint32_t open; } sci_spi_instance_ctrl
 
 /** The prelude's text for a checked RA configuration: types, the pin symbols and the Stacks instances of hal_data.c. */
 export function fspPrelude(mcu){
- const {irqs,uarts,gpts,adc,agts,iics,spis,sciSpis,wdts,rtc,iicSlaves}=raInstances(mcu),vectors=raVectors(mcu),vec=k=>vectors.some(v=>v.vector===k)?`VECTOR_NUMBER_${k}`:'FSP_INVALID_VECTOR';
+ const {irqs,uarts,gpts,adc,agts,iics,spis,sciSpis,wdts,rtc,iicSlaves,flash}=raInstances(mcu),vectors=raVectors(mcu),vec=k=>vectors.some(v=>v.vector===k)?`VECTOR_NUMBER_${k}`:'FSP_INVALID_VECTOR';
  const pins=Object.entries(mcu.pins||{}).sort(([a],[b])=>raPinName(a).localeCompare(raPinName(b)));
  const ipl=(name,p)=>name?`(${p})`:'(BSP_IRQ_DISABLED)';
  const out=['#ifndef FSP_INTERP_PRELUDE_H','#define FSP_INTERP_PRELUDE_H',TYPES,
@@ -220,6 +221,8 @@ export function fspPrelude(mcu){
    'const rtc_instance_t g_rtc0 = { .p_ctrl = &g_rtc0_ctrl, .p_cfg = &g_rtc0_cfg, .p_api = NULL };',...(rtc.callback?[`void ${rtc.callback}(rtc_callback_args_t * p_args);`]:[]));}
  for(const t of iicSlaves){const v=k=>vec(`IIC${t.channel}_${k}`);out.push(`iic_slave_instance_ctrl_t ${t.name}_ctrl;`,`const i2c_slave_cfg_t ${t.name}_cfg = { .channel = ${t.channel}, .rate = I2C_SLAVE_RATE_${t.rate}, .slave = ${hex(t.slave,2)}, .general_call_enable = false, .addr_mode = I2C_SLAVE_ADDR_MODE_7BIT, .p_context = NULL, .rxi_irq = ${v('RXI')}, .txi_irq = ${v('TXI')}, .tei_irq = ${v('TEI')}, .eri_irq = ${v('ERI')}, .ipl = (${t.priority}), .eri_ipl = (${t.priority}), .clock_stretching_enable = true, .p_extend = NULL };`,
   `const i2c_slave_instance_t ${t.name} = { .p_ctrl = &${t.name}_ctrl, .p_cfg = &${t.name}_cfg, .p_api = NULL };`,`void ${t.callback}(i2c_slave_callback_args_t * p_args);`);}
+ // Data flash (r_flash_hp): its types only when the stack is there, as hal_data.h includes r_flash_hp.h then.
+ if(flash)out.push(FLASH_TYPES,...flashPrelude(flash,vec));
  out.push('void hal_entry(void);','void g_hal_init(void);','void g_common_init(void);','void BSP_PinConfigSecurityInit(void);','#endif');
  return out.join('\n')+'\n';
 }
@@ -267,8 +270,8 @@ export const fspConstants=program=>Object.fromEntries((program.registers||[]).ma
 const SHORT_WAIT_MS=.05;
 const FSP={SUCCESS:0,ASSERTION:1,INVALID_ARGUMENT:3,UNSUPPORTED:6,NOT_OPEN:7,IN_USE:8,IRQ_BSP_DISABLED:11,ALREADY_OPEN:14,NOT_ENABLED:19};
 const KINDS={ioport:[/^g_ioport_ctrl$/,'g_ioport_ctrl'],icu:[/^g_external_irq(\d+)_ctrl$/,'g_external_irq1_ctrl'],uart:[/^g_uart(\d+)_ctrl$/,'g_uart9_ctrl'],gpt:[/^g_timer(\d+)_ctrl$/,'g_timer1_ctrl'],agt:[/^g_agt(\d+)_ctrl$/,'g_agt0_ctrl'],adc:[/^g_adc(\d+)_ctrl$/,'g_adc0_ctrl'],iic:[/^g_i2c_master(\d+)_ctrl$/,'g_i2c_master0_ctrl'],
- spi:[/^g_spi(\d+)_ctrl$/,'g_spi1_ctrl'],sciSpi:[/^g_sci_spi(\d+)_ctrl$/,'g_sci_spi9_ctrl'],wdt:[/^g_wdt(\d+)_ctrl$/,'g_wdt0_ctrl'],iwdt:[/^g_iwdt(\d+)_ctrl$/,'g_iwdt0_ctrl'],rtc:[/^g_rtc(\d+)_ctrl$/,'g_rtc0_ctrl'],iicSlave:[/^g_i2c_slave(\d+)_ctrl$/,'g_i2c_slave0_ctrl']};
-const SUPPORTED='R_IOPORT_*, R_BSP_SoftwareDelay · R_BSP_Pin*, R_ICU_ExternalIrq*, R_SCI_UART_*, R_GPT_*, R_AGT_*, R_ADC_*, R_IIC_MASTER_*, R_IIC_SLAVE_*, R_SPI_*, R_SCI_SPI_*, R_WDT_*, R_IWDT_*, R_RTC_*';
+ spi:[/^g_spi(\d+)_ctrl$/,'g_spi1_ctrl'],sciSpi:[/^g_sci_spi(\d+)_ctrl$/,'g_sci_spi9_ctrl'],wdt:[/^g_wdt(\d+)_ctrl$/,'g_wdt0_ctrl'],iwdt:[/^g_iwdt(\d+)_ctrl$/,'g_iwdt0_ctrl'],rtc:[/^g_rtc(\d+)_ctrl$/,'g_rtc0_ctrl'],iicSlave:[/^g_i2c_slave(\d+)_ctrl$/,'g_i2c_slave0_ctrl'],flash:[/^g_flash(\d+)_ctrl$/,'g_flash0_ctrl']};
+const SUPPORTED='R_IOPORT_*, R_BSP_SoftwareDelay · R_BSP_Pin*, R_ICU_ExternalIrq*, R_SCI_UART_*, R_GPT_*, R_AGT_*, R_ADC_*, R_IIC_MASTER_*, R_IIC_SLAVE_*, R_SPI_*, R_SCI_SPI_*, R_WDT_*, R_IWDT_*, R_RTC_*, R_FLASH_HP_*(데이터 플래시)';
 // RTC periodic rates the RA6E1 has (RCR1.PES 6-15): FSP's enum also lists 1 minute … 1 month for other RA parts, which
 // would make R_RTC_PeriodicIrqRateSet wait forever on this one.
 const RTC_PERIOD_S={6:1/256,7:1/128,8:1/64,9:1/32,10:1/16,11:1/8,12:1/4,13:1/2,14:1,15:2};
@@ -292,9 +295,11 @@ export class FspAdapter {
   // The RTC's calendar (the emulator's model, src/emu/ra6e1/rtc.js, read through its registers): it starts at power-on
   // from the stack's start time and, in its own power domain, goes on across a reset.
   this.hostTime=session?.hostTime??Date.now();this.rtcDev=null;
+  // The data flash (fsp-flash.js): what the project saved from earlier runs; an MCU reset keeps it, the sequencer starts over.
+  this.dataFlash=this.flashStore(session?.project?.dataFlash);this.faciDev=null;this.flashFwe=false;
  }
  // A reset pin reset (session.js checkNrst) starts the cause flags over, as the emulator does; any other reset adds its flag.
- inheritReset(old){this.rstsr1=old.resetCause==='PIN'?0:(old.rstsr1|(RESET_FLAG[old.resetCause]??0))&0xffff;this.wdtResets=old.wdtResets;this.rtcDev=old.rtcDev;this.hostTime=old.hostTime;}
+ inheritReset(old){this.rstsr1=old.resetCause==='PIN'?0:(old.rstsr1|(RESET_FLAG[old.resetCause]??0))&0xffff;this.wdtResets=old.wdtResets;this.rtcDev=old.rtcDev;this.hostTime=old.hostTime;this.dataFlash=old.dataFlash;this.flashBlankNoted=old.flashBlankNoted;}
  // Program start (power-on or after a reset): an auto-start watchdog (OFS0) counts from here.
  declareGlobals(r){
   // R_SYSTEM (a register-block name the program uses) gets the type of the part the interpreter stands in for, so
@@ -364,6 +369,8 @@ export class FspAdapter {
   if(name==='R_BSP_SoftwareDelay')return this.softwareDelay(args,r);
   if(name==='__WFI'||name==='__WFE')return this.wfi(r);
   if(name==='R_WDT_Refresh'||name==='R_IWDT_Refresh'){const reset=this.wdtBadRefresh(name,args,r);if(reset)return reset;}
+  // R_FLASH_HP_*: generators, as a call waits while the flash programs or erases (fsp-flash.js).
+  if(name.startsWith('R_FLASH_HP_')){const flash=this.flashCall(name,args,r);if(flash){if(name==='R_FLASH_HP_StatusGet')r.polls++;return flash;}}
   if(name==='NVIC_SystemReset'){const self=this;return (function*(){self.resetCause='SYSRESETREQ';r.warn('[NVIC] 시스템 리셋: 프로그램을 처음부터 다시 실행합니다.');yield {kind:'reset'};})();}
   if((name==='printf'||name==='puts'||name==='putchar')&&!this.inStdio&&this.stdoutHook(r))return this.stdout(name,args,r);
   if(name==='fflush')return this.stdout(name,args,r);
@@ -783,6 +790,9 @@ export class FspAdapter {
  wdtCall(args,r,fn,id,action){const st=this.wdtInstance(args,r,fn,id);if(!st.open)return FSP.NOT_OPEN;return action(st);}
 }
 for(const k of ['stdoutHook','stdout','flushStdout','stdinChar','stdin'])FspAdapter.prototype[k]=HalAdapter.prototype[k];
+// Data flash: R_FLASH_HP_* and the data flash read through a pointer (fsp-flash.js).
+Object.defineProperties(FspAdapter.prototype,Object.getOwnPropertyDescriptors(FLASH_METHODS));
+export {FLASH_NAMES};
 
 // FSP API calls, by name: (args, runtime, name) with `this` the adapter. They return fsp_err_t (or the value of an
 // R_BSP_Pin* read) like the driver does with parameter checking on (BSP_CFG_PARAM_CHECKING_ENABLE 1).
