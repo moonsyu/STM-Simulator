@@ -24,7 +24,18 @@ export function updateRunScope(){
  select.closest('label').hidden=!boards.length;
  select.innerHTML=`<option value="all">전체 보드</option><option value="stm32">${stm32Boards(state.project).length?esc(mainBoardName(state.project)):'STM32'}만</option>`+boards.map(p=>`<option value="${esc(p.id)}">${esc(p.name)}만</option>`).join('');select.value=value;select.disabled=running();
 }
+// Feature 39: what a run left in the RA data flash goes into the project (project.dataFlash), as a board keeps its data
+// flash with the power off — so the next run finds it. Called where a session ends: stop, the board's RESET button
+// (a new session of the same board), and before a new run replaces a session that stopped on an error. It is not an
+// edit (no undo step); Stacks → g_flash0 → "데이터 플래시 지우기" erases it.
+export function keepDataFlash(){
+ const store=state.session?.dataFlash;if(!store?.changed)return;
+ store.changed=false;const runs=store.encode();if(JSON.stringify(runs)===JSON.stringify(state.project.dataFlash??[]))return;
+ if(runs.length)state.project.dataFlash=runs;else delete state.project.dataFlash;
+ state.dirty=true;autosave();log(`데이터 플래시 내용(${store.used()}바이트)을 프로젝트에 저장했습니다. 다음 실행에도 남아 있습니다(지우려면 RA Configuration → Stacks → g_flash0의 "데이터 플래시 지우기").`);
+}
 export function initializeRuntime({debug=false,entry=false}={}){
+ keepDataFlash();
  const scope=runScope(),boardOnly=boardOnlyRun(),emulate=!boardOnly&&!!state.ide?.emulator();
  if(emulate&&!state.firmware){state.status='error';state.runtime=null;state.session=null;log('펌웨어 ELF가 없습니다. 빌드하거나 파일 → 펌웨어 ELF 열기를 사용하세요.','error');return false;}
  const program=boardOnly?compile(BOARD_ONLY_PROGRAM):emulate?null:state.ide?.build({reveal:false});if(!boardOnly&&!emulate&&state.ide&&!program){state.status='error';state.runtime=null;state.session=null;log(`코드 검사에 실패해 실행하지 않았습니다: ${$('build-errors').textContent.trim()||'빌드 탭을 확인하세요.'} (편집기의 빨간 밑줄 위치)`,'error');return false;}
@@ -62,7 +73,7 @@ function restart(wasRunning,debug){
  if(initialized&&wasRunning)state.status=state.runtime.debug.paused?'paused':'running';
  refresh();return initialized;
 }
-export function stop(){recordSimulation();try{const before=JSON.stringify(state.project.components.map(p=>p.cardImage??null)),draft=structuredClone(state.project);state.session?.storage?.applyTo?.(draft);if(JSON.stringify(draft.components.map(p=>p.cardImage??null))!==before){checkpoint();state.project.components.forEach((p,i)=>{if(draft.components[i]?.cardImage!==undefined)p.cardImage=draft.components[i].cardImage;});autosave();log('SD 카드에 기록된 파일을 프로젝트에 저장했습니다.');}}catch(error){log('SD 카드 저장 실패: '+error.message,'error');}state.status='stopped';state.runtime=null;state.result=null;state.pressed={};state.pending=null;$('preview-layer').innerHTML='';log('시뮬레이션을 정지했습니다.');refresh();state.ide?.debugView();}
+export function stop(){recordSimulation();try{keepDataFlash();}catch(error){log('데이터 플래시 저장 실패: '+error.message,'error');}try{const before=JSON.stringify(state.project.components.map(p=>p.cardImage??null)),draft=structuredClone(state.project);state.session?.storage?.applyTo?.(draft);if(JSON.stringify(draft.components.map(p=>p.cardImage??null))!==before){checkpoint();state.project.components.forEach((p,i)=>{if(draft.components[i]?.cardImage!==undefined)p.cardImage=draft.components[i].cardImage;});autosave();log('SD 카드에 기록된 파일을 프로젝트에 저장했습니다.');}}catch(error){log('SD 카드 저장 실패: '+error.message,'error');}state.status='stopped';state.runtime=null;state.result=null;state.pressed={};state.pending=null;$('preview-layer').innerHTML='';log('시뮬레이션을 정지했습니다.');refresh();state.ide?.debugView();}
 // The emulator target needs a built (or opened) ELF before the session can start.
 export function cancelStart(){state.starting=false;state.startToken++;window.nativeIde?.stop?.().catch(()=>{});log('펌웨어 빌드를 취소했습니다.');refresh();}
 export async function startRun(options){

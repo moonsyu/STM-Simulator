@@ -449,4 +449,22 @@ void hal_entry(void)
  const first=interp(code);first.run(200);
  assert.deepEqual(first.log.print,['1','2','3']);assert.equal(first.session.runtime.resetCount,2);assert.deepEqual(first.session.dataFlash.encode(),[{at:0,hex:'03000000'}]);
  assert.equal(first.project.dataFlash,undefined,'a session does not write into the project it was given');
+ // The next run of the same project file, with what this one left (the app saves it when a run ends: app-run.js).
+ const second=interp(code,{dataFlash:first.session.dataFlash.encode()});
+ assert.equal(second.session.dataFlash.changed,false);second.run(100);assert.deepEqual(second.log.print,['4']);assert.deepEqual(second.session.dataFlash.encode(),[{at:0,hex:'04000000'}]);
+});
+
+test('project file: an RA project keeps the data flash contents (dataFlash), checked on load; other boards and empty contents have none',()=>{
+ const base=projectForBoard('fpb-ra6e1'),runs=[{at:0,hex:'03000000'},{at:128,hex:'5aa55002dc050000'}];
+ const p=validateProject({...base,dataFlash:runs});
+ assert.deepEqual(p.dataFlash,runs);assert.notEqual(p.dataFlash,runs,'a copy');
+ assert.deepEqual(validateProject(JSON.parse(JSON.stringify(p))).dataFlash,runs,'through the saved file');
+ assert.equal(Object.hasOwn(validateProject({...base,dataFlash:[]}),'dataFlash'),false,'erased flash is no entry');
+ assert.equal(Object.hasOwn(validateProject(base),'dataFlash'),false);
+ assert.throws(()=>validateProject({...base,dataFlash:[{at:1,hex:'00000000'}]}),/저장된 데이터 플래시 내용이 올바르지 않습니다/);
+ assert.throws(()=>validateProject({...base,dataFlash:'01000000'}),/저장된 데이터 플래시 내용이 올바르지 않습니다/);
+ // Another board has no RA data flash: the entry does not travel with a project turned into one.
+ assert.equal(Object.hasOwn(validateProject({...projectForBoard('nucleo-f446re'),dataFlash:runs}),'dataFlash'),false);
+ // The contents are not part of the MCU settings (the firmware build's input): saving them does not ask for a rebuild.
+ assert.equal(JSON.stringify(p.mcu),JSON.stringify(validateProject(base).mcu));
 });

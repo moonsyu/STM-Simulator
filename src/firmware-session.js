@@ -71,6 +71,8 @@ export class FirmwareSession {
     this.signals = this.signalsApi();
     this.machine.onItm = (port, byte) => this.itm(port, byte);
     this.elf = this.machine.loadElf(elf instanceof Uint8Array ? elf : new Uint8Array(elf));
+    // The RA data flash as earlier runs left it (project.dataFlash); what the ELF itself places there (.data_flash) stays.
+    if (this.ra) this.soc.dataFlash.apply(project.dataFlash, { keep: true });
     // The vector table size tells the STM32 startup file the ELF was linked with; an ELF for the other board would
     // fault at the first peripheral access with no hint, so say which board it is for.
     // An FSP ELF (RA) has __flash_vectors$$ and no .isr_vector; an STM32 ELF the other way round.
@@ -193,6 +195,8 @@ export class FirmwareSession {
       applyTo: project => { const target = project.components.find(q => q.id === self.sdPart.id); if (target && self.sdcard.dirty) target.cardImage = image(); return project; }
     };
   }
+  // An RA project's data flash after this run (RaDataFlash; the app saves it into the project when the run ends).
+  get dataFlash() { return this.ra ? this.soc.dataFlash : null; }
   // Latest camera frame for UI previews.
   cameraFrame() { const f = this.lastFrame; if (!f) return null; const rgba = this.frameRgba(); return rgba ? { width: f.width, height: f.height, format: f.format, rgba } : null; }
   // ------------------------------------------------------------ serial lines
