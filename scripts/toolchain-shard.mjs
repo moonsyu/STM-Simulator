@@ -25,7 +25,8 @@ export const TOOLCHAIN_SHARDS=Object.freeze([
  // 2 s runs per example): the heaviest goes with the lightest group.
  // ra-course's test that builds and runs every FSP example took 78 s on a faster runner (1.46.6): about 94, on its own
  // + parity of ADC, AGT, IIC (22 s locally) + parity of the WDT example (10 s locally)
- [['ra-course','contact bounce on'],['fsp-interp-parity','parity: ra_adc_pot|parity: ra_wdt_reset']],
+ // + five review programs of ra-lpm (about 17 s locally)
+ [['ra-course','contact bounce on'],['fsp-interp-parity','parity: ra_adc_pot|parity: ra_wdt_reset'],['ra-lpm','review: (agt|iwdt|rtc|wdt|hold) —']],
  // 70 + 28 = 98 + parity of blink and IRQ (14 s locally)
  // + parity of the RTC example (11 s locally)
  // + parity of the low power example (feature 37)
@@ -35,17 +36,21 @@ export const TOOLCHAIN_SHARDS=Object.freeze([
  [['arm-examples','NUCLEO-F103RB'],'button-bounce',['fsp-interp-parity','parity: ra_button_poll'],['ra-wdt-rtc','the real r_wdt in register-start mode']],
  // 62 + 32 + 6 = 100 + parity of the challenge (9 s locally) + ra-spi (about 6 locally, 1.51.x)
  // + the IWDT and WDT NMI tests of ra-wdt-rtc (feature 35: about 13 s locally)
- ['ra-build','wdg','tim-basic','ra-spi',['fsp-interp-parity','parity: ra_led4_switch2'],['ra-wdt-rtc','IWDT: OFS0|WDT NMI:']],
+ // + four review programs of ra-lpm (about 11 s locally)
+ ['ra-build','wdg','tim-basic','ra-spi',['fsp-interp-parity','parity: ra_led4_switch2'],['ra-wdt-rtc','IWDT: OFS0|WDT NMI:'],['ra-lpm','review: (isr|isrsleep|pending|flags) —']],
  // the rest of ra-course 61 + 26 + 15 = 102 + parity of UART and GPT (16 s locally)
  // (the tests are named: a "not this one" pattern with a lookahead did not keep the heavy test out)
- // + ra-lpm (feature 37: four programs with r_lpm on both engines, about 13 s locally)
- [['ra-course','Bare Metal - Blinky|switch polling toggles|the challenge:|BSP tab sizes|as the course screen shows it'],'adc-continuous','clock-tree',['fsp-interp-parity','parity: ra_uart_echo'],'ra-lpm'],
+ // + ra-lpm (feature 37: programs with r_lpm on both engines, about 3 s each locally): its first four tests here (13 s),
+ //   the review programs in groups 1, 4 and 7
+ [['ra-course','Bare Metal - Blinky|switch polling toggles|the challenge:|BSP tab sizes|as the course screen shows it'],'adc-continuous','clock-tree',['fsp-interp-parity','parity: ra_uart_echo'],['ra-lpm','R_LPM_\\* return codes|Software Standby on both engines|a Software Standby nothing can end']],
  // 26 + 23 + 22 + 17 + 16 = 104 + parity of the SPI memory (15 s locally, 1.51.x)
  // + the two-engine review tests of ra-wdt-rtc ("on both engines")
  ['emu-accuracy','dwarf-version','board-links','copied-files','adc-group','peripheral-files','project-overrides',['fsp-interp-parity','parity: ra_spi_memory'],['ra-wdt-rtc','on both engines']],
  // 17 + 16 + 14 + 13 + 11 + 9 + 9 + 9 + 9 = 107
  // + the RTC tests of ra-wdt-rtc (feature 34: about 22 s locally)
- ['tim-oc','adc-sampling','tim-advanced','dac','rtc','source-folders','spi-params','tim-channels','uart-params',['ra-wdt-rtc','RTC \\(ra_rtc_clock\\)|RTC start time']],
+ ['tim-oc','adc-sampling','tim-advanced','dac','rtc','source-folders','spi-params','tim-channels','uart-params',['ra-wdt-rtc','RTC \\(ra_rtc_clock\\)|RTC start time'],
+  // + five review programs of ra-lpm (about 13 s locally)
+  ['ra-lpm','review: (holdpwm|pwm|wfe|uart|rtcsleep) —']],
 ]);
 /** The file names of a group (an entry with a pattern counts once). */
 export const shardFiles=group=>group.map(e=>Array.isArray(e)?e[0]:e);

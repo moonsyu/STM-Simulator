@@ -179,6 +179,141 @@ const press=(from,to)=>({[from]:s=>s.setPressed({SW1:true}),[to]:s=>s.setPressed
 const lpm=extra=>({enabled:true,mode:'DEEP',wake:[],cancel:[],cancelRising:[],ioKeep:true,power:'DEEPCUT0',...extra});
 const pins=(peripherals,more)=>()=>{const m=raDefaultMcu();m.peripherals=peripherals;Object.assign(m.pins,more);return m;};
 export const LPM_REVIEW={
+ // Deep Software Standby cancelled by the AGT1 underflow (LOCO, DEEPCUT 0); AGT1 has no interrupt callback.
+ agt:{mcu:mcu({LPM:lpm({cancel:['AGT1']}),AGT1:{enabled:true,period:400,unit:'ms',callback:'',priority:12}}),ms:1250,at:{},vars:['from'],
+  code:HEAD+`
+volatile uint32_t from = 0;
+void external_irq1_callback(external_irq_callback_args_t * p_args) { (void) p_args; }
+void hal_entry(void)
+{
+    from = R_SYSTEM->RSTSR0_b.DPSRSTF;
+    R_LPM_IoKeepClear(NULL);
+    R_IOPORT_PinWrite(&g_ioport_ctrl, LED1, BSP_IO_LEVEL_HIGH);
+    R_AGT_Open(&g_agt1_ctrl, &g_agt1_cfg);
+    R_AGT_Start(&g_agt1_ctrl);
+    R_LPM_Open(&g_lpm0_ctrl, &g_lpm0_cfg);
+    R_BSP_SoftwareDelay(100, BSP_DELAY_UNITS_MILLISECONDS);
+    R_IOPORT_PinWrite(&g_ioport_ctrl, LED1, BSP_IO_LEVEL_LOW);
+    R_LPM_LowPowerModeEnter(&g_lpm0_ctrl);
+    while (1)
+    {
+        R_BSP_SoftwareDelay(10, BSP_DELAY_UNITS_MILLISECONDS);
+    }
+}
+`+WARM_START},
+ // The IWDT (no stop control) in a Software Standby nothing else ends: its reset ends the mode (136.5 ms).
+ iwdt:{mcu:mcu({LPM:lpm({mode:'STANDBY'}),IWDT:{enabled:true,timeout:2048,clockDiv:1,stopInSleep:false}}),ms:700,at:{},vars:['cause','from'],
+  code:HEAD+`
+volatile uint32_t cause = 0;
+volatile uint32_t from = 0;
+void external_irq1_callback(external_irq_callback_args_t * p_args) { (void) p_args; }
+void hal_entry(void)
+{
+    cause = R_SYSTEM->RSTSR1;
+    from = R_SYSTEM->RSTSR0;
+    R_IWDT_Open(&g_iwdt0_ctrl, &g_iwdt0_cfg);
+    R_IWDT_Refresh(&g_iwdt0_ctrl);
+    R_IOPORT_PinWrite(&g_ioport_ctrl, LED1, BSP_IO_LEVEL_HIGH);
+    R_LPM_Open(&g_lpm0_ctrl, &g_lpm0_cfg);
+    R_BSP_SoftwareDelay(50, BSP_DELAY_UNITS_MILLISECONDS);
+    R_IWDT_Refresh(&g_iwdt0_ctrl);
+    R_IOPORT_PinWrite(&g_ioport_ctrl, LED1, BSP_IO_LEVEL_LOW);
+    R_LPM_LowPowerModeEnter(&g_lpm0_ctrl);
+    while (1)
+    {
+        R_BSP_SoftwareDelay(10, BSP_DELAY_UNITS_MILLISECONDS);
+    }
+}
+`+WARM_START},
+ // Software Standby ended by the RTC periodic interrupt (WUPEN RTCPRD, every 0.5 s); a GPT keeps its count meanwhile.
+ rtc:{mcu:mcu({LPM:lpm({mode:'STANDBY',wake:['RTCPRD']}),RTC:{enabled:true,start:'HOST_TIME',callback:'rtc_callback',periodicPriority:12},GPT1:{enabled:true,mode:'PERIODIC',period:30,unit:'ms',duty:50,callback:'gpt1_callback',priority:12}}),ms:1300,at:{},vars:['gpt_ticks','rtc_ticks','wakes'],
+  code:HEAD+`
+volatile uint32_t gpt_ticks = 0;
+volatile uint32_t rtc_ticks = 0;
+volatile uint32_t wakes = 0;
+void external_irq1_callback(external_irq_callback_args_t * p_args) { (void) p_args; }
+void gpt1_callback(timer_callback_args_t * p_args) { (void) p_args; gpt_ticks++; }
+void rtc_callback(rtc_callback_args_t * p_args) { if (RTC_EVENT_PERIODIC_IRQ == p_args->event) { rtc_ticks++; } }
+void hal_entry(void)
+{
+    R_RTC_Open(&g_rtc0_ctrl, &g_rtc0_cfg);
+    R_RTC_PeriodicIrqRateSet(&g_rtc0_ctrl, RTC_PERIODIC_IRQ_SELECT_1_DIV_BY_2_SECOND);
+    R_GPT_Open(&g_timer1_ctrl, &g_timer1_cfg);
+    R_GPT_Start(&g_timer1_ctrl);
+    R_LPM_Open(&g_lpm0_ctrl, &g_lpm0_cfg);
+    R_BSP_SoftwareDelay(100, BSP_DELAY_UNITS_MILLISECONDS);
+    while (1)
+    {
+        R_LPM_LowPowerModeEnter(&g_lpm0_ctrl);
+        wakes++;
+    }
+}
+`+WARM_START},
+ // The WDT (register start, 41.9 ms, no stop control) keeps its count through Software Standby: only the awake time
+ // (10 ms after each wake-up) counts, so it resets the MCU in the fifth awake stretch.
+ wdt:{mcu:mcu({LPM:lpm({mode:'STANDBY',wake:['AGT1UD']}),AGT1:{enabled:true,period:400,unit:'ms',callback:'agt1_callback',priority:12},WDT:{enabled:true,clockDiv:128,stopInSleep:false}}),ms:2500,at:{},vars:['wakes','cause'],
+  code:HEAD+`
+volatile uint32_t wakes = 0;
+volatile uint32_t cause = 0;
+void external_irq1_callback(external_irq_callback_args_t * p_args) { (void) p_args; }
+void agt1_callback(timer_callback_args_t * p_args) { (void) p_args; }
+void hal_entry(void)
+{
+    cause = R_SYSTEM->RSTSR1;
+    R_AGT_Open(&g_agt1_ctrl, &g_agt1_cfg);
+    R_AGT_Start(&g_agt1_ctrl);
+    R_LPM_Open(&g_lpm0_ctrl, &g_lpm0_cfg);
+    R_WDT_Open(&g_wdt0_ctrl, &g_wdt0_cfg);
+    R_WDT_Refresh(&g_wdt0_ctrl);
+    R_BSP_SoftwareDelay(10, BSP_DELAY_UNITS_MILLISECONDS);
+    while (1)
+    {
+        R_LPM_LowPowerModeEnter(&g_lpm0_ctrl);
+        wakes++;
+        R_BSP_SoftwareDelay(10, BSP_DELAY_UNITS_MILLISECONDS);
+    }
+}
+`+WARM_START},
+ // IOKEEP hold and what the program does to the pins before R_LPM_IoKeepClear (LED1 by R_BSP_PinWrite, LED2 by
+ // R_IOPORT_PinCfg): nothing shows, a pin read sees the held level, and both take effect at the release, 100 ms later.
+ hold:{mcu:mcu({LPM:lpm({cancel:['IRQ1']})}),ms:600,at:press(200,230),vars:['from','read1','read2'],
+  code:HEAD+`
+volatile uint32_t from = 0;
+volatile uint32_t read1 = 9;
+volatile uint32_t read2 = 9;
+void external_irq1_callback(external_irq_callback_args_t * p_args) { (void) p_args; }
+void hal_entry(void)
+{
+    bsp_io_level_t level = BSP_IO_LEVEL_LOW;
+    from = R_SYSTEM->RSTSR0_b.DPSRSTF;
+    if (from)
+    {
+        R_BSP_PinAccessEnable();
+        R_BSP_PinWrite(LED1, BSP_IO_LEVEL_LOW);
+        R_BSP_PinAccessDisable();
+        R_IOPORT_PinCfg(&g_ioport_ctrl, LED2, (uint32_t) IOPORT_CFG_PORT_DIRECTION_OUTPUT | (uint32_t) IOPORT_CFG_PORT_OUTPUT_HIGH);
+        R_BSP_SoftwareDelay(50, BSP_DELAY_UNITS_MILLISECONDS);
+        R_IOPORT_PinRead(&g_ioport_ctrl, LED1, &level);
+        read1 = (uint32_t) level;
+        R_IOPORT_PinRead(&g_ioport_ctrl, LED2, &level);
+        read2 = (uint32_t) level;
+        R_BSP_SoftwareDelay(50, BSP_DELAY_UNITS_MILLISECONDS);
+        R_LPM_IoKeepClear(NULL);
+        while (1)
+        {
+            R_BSP_SoftwareDelay(10, BSP_DELAY_UNITS_MILLISECONDS);
+        }
+    }
+    R_IOPORT_PinWrite(&g_ioport_ctrl, LED1, BSP_IO_LEVEL_HIGH);
+    R_LPM_Open(&g_lpm0_ctrl, &g_lpm0_cfg);
+    R_BSP_SoftwareDelay(100, BSP_DELAY_UNITS_MILLISECONDS);
+    R_LPM_LowPowerModeEnter(&g_lpm0_ctrl);
+    while (1)
+    {
+        R_BSP_SoftwareDelay(10, BSP_DELAY_UNITS_MILLISECONDS);
+    }
+}
+`+WARM_START},
  // After Deep Software Standby: RSTSR0 and DPSIFR0 say what happened (DPSRSTF, DIRQ1F), and writing 0 clears the flags.
  flags:{mcu:mcu({LPM:lpm({cancel:['IRQ1']})}),ms:400,at:press(200,230),vars:['rstsr0_start','dpsifr0_start','rstsr0_cleared','dpsifr0_cleared','flag_after'],
   code:HEAD+`

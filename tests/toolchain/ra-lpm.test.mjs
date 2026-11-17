@@ -106,6 +106,25 @@ test('a Software Standby nothing can end, entered by a bare __WFI(): both engine
 });
 
 // ---- the programs of the review (tests/fixtures/ra-lpm-programs.js LPM_REVIEW)
+test('review: agt — Deep Software Standby cancelled by the AGT1 underflow (LOCO), without an AGT interrupt',{skip,timeout:900000},()=>review('agt',emu=>{
+ assert.deepEqual(emu.session.resets.map(r=>`${r.reason}@${Math.round(r.us/1000)}`),['DEEP_STANDBY@400','DEEP_STANDBY@800','DEEP_STANDBY@1200']);
+ assert.equal(messages(emu)[0],'Deep Software Standby 진입 · DEEPCUT0, I/O 유지(IOKEEP 1) — 해제 소스: AGT1 언더플로');assert.equal(emu.session.readVariable('from'),1);
+}));
+test('review: iwdt — the IWDT without stop control resets the MCU out of a Software Standby nothing else ends',{skip,timeout:900000},()=>review('iwdt',emu=>{
+ assert.deepEqual(emu.session.resets.map(r=>r.reason),['IWDT','IWDT','IWDT']);assert.equal(emu.session.readVariable('cause'),1,'RSTSR1.IWDTRF');
+ assert.ok(messages(emu).every(m=>m==='Software Standby 진입 · 클록 정지 — 깨우는 소스: 없음'),'the running IWDT can end it: no "nothing can wake it" entry');
+}));
+test('review: rtc — Software Standby ended by the RTC periodic interrupt; the GPT keeps its count',{skip,timeout:900000},()=>review('rtc',emu=>{
+ const v=n=>emu.session.readVariable(n);assert.deepEqual([v('gpt_ticks'),v('rtc_ticks'),v('wakes')],[3,2,2]);
+ assert.match(messages(emu)[1],/^Software Standby에서 깨어남 · RTC 주기 \(\d+\.\d ms 뒤\)$/);
+}));
+test('review: wdt — the WDT keeps its count through Software Standby and counts only the awake time',{skip,timeout:900000},()=>review('wdt',emu=>{
+ assert.deepEqual(emu.session.resets.map(r=>`${r.reason}@${Math.round(r.us/1000)}`),['WDT@1602'],'41.9 ms of awake time: 10 ms each at 0, 400, 800, 1200 and 1600 ms');assert.equal(emu.session.readVariable('cause'),2);
+}));
+test('review: hold — pin writes and a pin configuration while IOKEEP holds the pins take effect at R_LPM_IoKeepClear',{skip,timeout:900000},()=>review('hold',(emu,interp)=>{
+ const edges=x=>x.map((v,i)=>i&&v!==x[i-1]?i+1:0).filter(Boolean);
+ for(const e of [emu,interp]){assert.deepEqual([edges(e.leds.P408),edges(e.leds.P407)],[[300],[300]],'LED1 off and LED2 on at the release');assert.deepEqual([e.session.readVariable('read1'),e.session.readVariable('read2')],[1,0],'the pins read as held');}
+}));
 test('review: flags — after Deep Software Standby RSTSR0 and DPSIFR0 say why, and writing 0 clears DPSRSTF and DIRQ1F on both engines',{skip,timeout:900000},()=>review('flags',emu=>{
  const v=n=>emu.session.readVariable(n);
  assert.deepEqual([v('rstsr0_start'),v('dpsifr0_start'),v('rstsr0_cleared'),v('dpsifr0_cleared'),v('flag_after')],[0x81,0x02,0x01,0,0]);
