@@ -32,7 +32,7 @@ export const TOOLCHAIN_SHARDS=Object.freeze([
  [['arm-examples','NUCLEO-F446RE'],'bus-instances',['fsp-interp-parity','parity: ra_blink|parity: ra_rtc_clock'],'ra-iic-slave'],
  // 58 + 38 = 96 + parity of polling and rising IRQ (18 s locally)
  // + the register-start WDT test of ra-wdt-rtc (feature 35: about 16 s locally)
- // + ra-flash (feature 39: three FSP builds, about 8 s locally)
+ // + ra-flash (feature 39: fourteen FSP builds with the review's two-engine checks, about 60 s locally)
  [['arm-examples','NUCLEO-F103RB'],'button-bounce',['fsp-interp-parity','parity: ra_button_poll'],['ra-wdt-rtc','the real r_wdt in register-start mode'],'ra-flash'],
  // 62 + 32 + 6 = 100 + parity of the challenge (9 s locally) + ra-spi (about 6 locally, 1.51.x)
  // + the IWDT and WDT NMI tests of ra-wdt-rtc (feature 35: about 13 s locally)
