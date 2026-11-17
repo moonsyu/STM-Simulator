@@ -149,13 +149,15 @@ export class LowPower {
     const watchdog = (w, always) => { if ((always || w.cstpr & 0x80) && w.freeze()) stop(w, 'watchdog'); };
     watchdog(soc.wdt, mode !== 'SLEEP'); watchdog(soc.iwdt, mode === 'DEEP');
     if (mode === 'SLEEP') return;
+    // The core's own timer counts the system clock, which stops: SysTick keeps its count and cannot end the mode.
+    const scs = soc.machine.scs; if (scs && scs.stCtrl & 1) { scs.stCtrl &= ~1; stop(scs, 'systick'); }
     for (const t of Object.values(soc.gpts)) if (t.running) { t.stop(); stop(t, 'timer'); }
     for (const t of Object.values(soc.agts)) if (t.running && !(agtLowSpeed(t) && (mode === 'STANDBY' || this.deepcut === 0))) { t.stop(); stop(t, 'timer'); }
     // Deep Software Standby without the LOCO supply: an RTC that counts LOCO (RCR4.RCKSEL 1) stops.
     if (mode === 'DEEP' && this.deepcut !== 0 && soc.rtc.running && soc.rtc.b[RCR4] & 1) { soc.rtc.stop(); stop(soc.rtc, 'rtc'); }
   }
   thaw() {
-    for (const [dev, how] of this.frozen) { if (how === 'watchdog') dev.thaw(); else dev.start(); }
+    for (const [dev, how] of this.frozen) { if (how === 'watchdog') dev.thaw(); else if (how === 'systick') dev.stCtrl |= 1; else dev.start(); }
     this.frozen = [];
   }
   has(dev) { return this.frozen.some(([d]) => d === dev); }
@@ -198,8 +200,9 @@ export class LowPower {
     return { labels, reasons, ok };
   }
   // ------------------------------------------------------------ leaving
-  /** The core left WFI for exception `exc` (0: a WFE event): Sleep or Software Standby ends. (The requests of the ICU
-   *  do not reach the core in Deep Software Standby; an exception of the core itself, SysTick, would end it the same way.) */
+  /** The core left WFI for exception `exc`: Sleep or Software Standby ends. (In Deep Software Standby the requests of the
+   *  ICU do not reach the core and SysTick is stopped; should an exception of the core itself come all the same, the
+   *  program goes on without a reset, and the log says so instead of the cancel's reset.) */
   wake(exc) {
     if (!this.mode) return;
     const soc = this.soc, mode = this.mode, deferred = this.deferred, nmis = this.deferredNmi, quiet = this.quiet, since = this.since;
@@ -207,7 +210,7 @@ export class LowPower {
     if (!quiet) {
       const event = exc >= 16 ? soc.icu.ielsr(exc - 16) & 0x1ff : 0, vector = vectorOf(event);
       const source = exc === 2 ? 'NMI' : exc === 15 ? 'SysTick' : exc >= 16 ? (vector ? lpmIrqLabel(vector) : `ELC 이벤트 0x${event.toString(16).toUpperCase().padStart(3, '0')}`) : '이벤트(WFE)';
-      this.log.wake(mode, source, soc.nowUs() - since);
+      this.log.wake(mode, source, soc.nowUs() - since, { core: true });
     }
     // What the stopped modules asked for meanwhile reaches the ICU now.
     for (const event of deferred) soc.icu.raise(event);

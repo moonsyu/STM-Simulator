@@ -60,10 +60,12 @@ export class LpmLog {
   const text=`${RA_LPM_MODE_NAMES[mode]}: 깨울 수 있는 소스가 없습니다 — ${reasons.join(', ')}. 리셋(S2)으로만 다시 시작합니다.`;
   if(this.stuckSaid.has(text))return;this.stuckSaid.add(text);this.emit(text);
  }
- /** Leaving the mode by `source` after `us` microseconds. Deep Software Standby ends in a reset (`hold`: IOKEEP is set). */
- wake(mode,source,us,{hold=false}={}){
+ /** Leaving the mode by `source` after `us` microseconds. Deep Software Standby ends in a reset (`hold`: IOKEEP is set),
+  *  unless an exception of the core itself woke the CPU (`core`): then the program goes on. */
+ wake(mode,source,us,{hold=false,core=false}={}){
   if(!this.logged)return;const name=RA_LPM_MODE_NAMES[mode];
-  if(mode==='DEEP')this.emit(`${name} 해제 · ${source} (${duration(us)} 뒤) — MCU 리셋(RSTSR0.DPSRSTF = 1${hold?', I/O는 R_LPM_IoKeepClear까지 유지':''})`);
+  if(mode==='DEEP'&&core)this.emit(`${name}에서 깨어남 · ${source} (${duration(us)} 뒤) — 코어 예외라 리셋 없이 이어서 실행합니다`);
+  else if(mode==='DEEP')this.emit(`${name} 해제 · ${source} (${duration(us)} 뒤) — MCU 리셋(RSTSR0.DPSRSTF = 1${hold?', I/O는 R_LPM_IoKeepClear까지 유지':''})`);
   else this.emit(`${name}에서 깨어남 · ${source} (${duration(us)} 뒤)`);
  }
 }

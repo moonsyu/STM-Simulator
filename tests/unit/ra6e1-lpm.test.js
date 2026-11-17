@@ -160,6 +160,22 @@ test('single stepping (machine.step) over a Deep Software Standby cancel: the re
  assert.equal(log.length,2);
 });
 
+test('SysTick stops in Software Standby and Deep Software Standby (the system clock stops): it does not wake the core, and counts on afterwards',()=>{
+ const SYST=0xe000e010;
+ for(const deep of [false,true]){
+  const {machine,bus,soc,log,wfi,wake,irq}=chip();irq(0,0x002);
+  bus.write8(DPSBYCR,deep?0x80:0);bus.write16(SBYCR,0x8000);bus.write32(WUPEN,2);
+  bus.write32(SYST+4,7999);bus.write32(SYST+8,0);bus.write32(SYST,7);                  // 1 ms at 8 MHz, with its interrupt
+  wfi();assert.equal(bus.read32(SYST)&1,0,'stopped');
+  const r=machine.run(8000*5);
+  assert.equal(r.reason,'cycles');assert.equal(machine.cpu.sleeping,true);assert.equal(soc.lpm.mode,deep?'DEEP':'STANDBY');assert.equal(log.some(m=>/SysTick/.test(m)),false);
+  if(!deep){wake(16);assert.equal(bus.read32(SYST)&1,1,'counting again after the wake-up');}
+ }
+ // Should a core exception end Deep Software Standby all the same, the log does not claim a reset.
+ const c=chip();c.bus.write8(DPSBYCR,0x80);c.bus.write16(SBYCR,0x8000);c.wfi();c.us(1000);c.wake(15);
+ assert.equal(c.log.at(-1),'Deep Software Standby에서 깨어남 · SysTick (1.0 ms 뒤) — 코어 예외라 리셋 없이 이어서 실행합니다');
+});
+
 test('WFE is not a low power mode entry: with SBYCR.SSBY set the core just waits, the clocks run',()=>{
  const {machine,bus,soc,log}=chip();
  bus.write16(SBYCR,0x8000);soc.gpts[1].start();
