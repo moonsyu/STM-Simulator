@@ -231,7 +231,9 @@ class Icu extends RegisterFile {
     super(soc, 'ICU', 0x500, {
       onWrite: (off, size, before, v) => {
         if (off >= 0x300 && off < 0x480) this.updateLine((off - 0x300) >> 2);
-        if (off === 0x120) this.put(0x120, (before | v) & 0xffff, 2);
+        // NMIER: bits can only be set. A source whose status is already set (an underflow before the driver's Open enabled
+        // it) requests the NMI when it is enabled: the request is the status ANDed with the enable.
+        if (off === 0x120) { const en = (before | v) & 0xffff; this.put(0x120, en, 2); if (this.nmisr & en & ~before) this.soc.machine.nvic?.setPendingExc?.(EXC_NMI); }
         if (off === 0x130) { this.nmisr &= ~v & 0xffff; this.put(0x130, 0, 2); }
         void size;
       },

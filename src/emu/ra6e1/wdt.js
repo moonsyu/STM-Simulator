@@ -72,11 +72,12 @@ export class Watchdog {
   }
   refresh() {
     // Register-start mode: the first refresh starts the counter (and locks the settings); after an NMI underflow a
-    // refresh starts it again.
-    if (!this.running) { if (!this.auto) this.armed = true; this.restart(); return; }
-    // Refresh-permitted window: the count left must be between the end and the start position.
+    // refresh starts it again. The IWDT has no register-start mode on the RA6E1: stopped by OFS0, it stays stopped.
+    if (!this.running) { if (!this.auto) { if (this.kind === 'IWDT') return; this.armed = true; } this.restart(); return; }
+    // Refresh-permitted window: the count left must be between the end and the start position; the end position itself
+    // (counter 0x2FF of 1024 clocks at 75 %) is inside.
     const left = (this.counter() + 1) / this.timeout() * 100, start = WINDOW_START[(this.cr >> 12) & 3], end = WINDOW_END[(this.cr >> 8) & 3];
-    if (left > start + 1e-9 || left <= end - 1e-9 && end > 0) { this.expire(0x8000, `창 밖에서 새로 고침(남은 카운트 ${left.toFixed(1)} %, 허용 ${end}~${start} %)`); return; }
+    if (left > start + 1e-9 || (end > 0 && left < end - 1e-9)) { this.expire(0x8000, `창 밖에서 새로 고침(남은 카운트 ${left.toFixed(1)} %, 허용 ${end}~${start} %)`); return; }
     this.restart();
   }
   read(off, size) {
@@ -103,8 +104,8 @@ export class Watchdog {
     if (off === SR) { this.flags &= (size === 1 ? 0xffff : value) & 0xc000; return; }
     if (off === SR + 1 && size === 1) { this.flags &= (value << 8) & 0xc000; return; }
     // The settings take effect only before the counter first starts (register-start mode), as on the chip.
-    if (this.auto || this.armed) return;
-    if (off === CR && size >= 2) this.cr = value & 0x3373;
+    if (this.auto || this.armed || this.kind === 'IWDT') return;
+    if (off === CR && size >= 2) this.cr = value & 0x33f3; // TOPS b1:0, CKS b7:4 (four bits: /8192 is 8, /128 is 15), RPES b9:8, RPSS b13:12
     else if (off === RCR) this.rcr = value & 0x80;
     else if (off === CSTPR) this.cstpr = value & 0x80;
   }

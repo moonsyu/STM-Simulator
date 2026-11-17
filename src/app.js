@@ -51,7 +51,7 @@ import {setupInspector} from './inspector.js';
 import {$} from './common.js';
 import {state} from './app-state.js';
 import {running,log,flushAutosave,autosave,checkpoint,changed,setMode,tab,inspectTab,editUndo} from './app-core.js';
-import {filterParts,filterExamples,replaceProject,requestReplace,onHalExampleChange} from './app-examples.js';
+import {filterParts,BOARD_LIBRARY,filterExamples,replaceProject,requestReplace,onHalExampleChange} from './app-examples.js';
 import {setupFileDrop} from './file-drop.js';
 import {offerCircuit} from './ioc-circuit-ui.js';
 import {exportIoc,unexportedPins} from './ioc-export.js';
@@ -88,7 +88,9 @@ export const editorSearch=setupEditorSearch({applyEdit:replaceCodeText,maxLength
  return state.sourceFile==='main.c'?300000-otherFiles:300000-state.project.code.length-otherFiles;
 }});
 svg.addEventListener('contextmenu',onSvgContextmenu);
-$('part-list').innerHTML=PART_LIBRARY.map(part=>`<button class="part-card" data-add="${part.type}"><span class="part-icon ${part.iconClass}">${part.icon}</span><span><strong title="${esc(part.name)}">${esc(part.name)}</strong><small title="${esc(part.hint)}">${esc(part.hint)}</small></span><b>+</b></button>`).join('')+'<p id="part-no-results" hidden>검색 결과가 없습니다.<br>다른 이름으로 검색해 주세요.</p>';
+$('part-list').innerHTML=PART_LIBRARY.map(part=>`<button class="part-card" data-add="${part.type}"><span class="part-icon ${part.iconClass}">${part.icon}</span><span><strong title="${esc(part.name)}">${esc(part.name)}</strong><small title="${esc(part.hint)}">${esc(part.hint)}</small></span><b>+</b></button>`).join('')
+ +'<h3 id="part-boards-heading" class="part-boards-heading">다른 보드</h3>'+BOARD_LIBRARY.map(b=>`<button class="part-card part-board-card" data-devboard-add="${b.id}"><span class="part-icon part-board-icon">${b.icon}</span><span><strong title="${esc(b.name)}">${esc(b.name)}</strong><small title="${esc(b.hint)}">${esc(b.hint)}</small></span><b>+</b></button>`).join('')
+ +'<p id="part-no-results" hidden>검색 결과가 없습니다.<br>다른 이름으로 검색해 주세요.</p>';
 setupPartPreviews();setupExamplePreviews({getBoardId:()=>projectBoard(state.project).id});
 export const inspector=setupInspector({
  get project(){return state.project;},get selection(){return state.selection;},get result(){return state.result;},get pressed(){return state.pressed;},get session(){return state.session;},get ide(){return state.ide;},set sourceFile(value){state.sourceFile=value;},
@@ -146,7 +148,7 @@ document.querySelectorAll('[data-add]').forEach(b=>b.onclick=()=>{if(running())r
  addPart('breadboard',null,null,{x:f.x,y:f.y},f.variant?{variant:f.variant}:{});fitView();svg.focus({preventScroll:true});
 }else{addPart(type,null,null,freeSpot(type));svg.focus({preventScroll:true});}});
 $('devboard-options').innerHTML=Object.values(DEVBOARD_MODELS).map(m=>`<button class="board-option devboard-option" data-devboard-add="${m.id}"><span class="board-option-icon" aria-hidden="true">${({rpi:'Pi',stm32:'ST'})[m.kind]??'32'}</span><span><strong>${esc(m.name)}</strong><small>${esc(m.description)}</small></span><span class="board-option-action">추가</span></button>`).join('');
-$('devboard-options').querySelectorAll('[data-devboard-add]').forEach(b=>b.onclick=()=>addDevboard(b.dataset.devboardAdd));
+document.querySelectorAll('[data-devboard-add]').forEach(b=>b.onclick=()=>addDevboard(b.dataset.devboardAdd));
 $('empty-add-board').onclick=()=>document.querySelector('[data-add="board"]')?.click();$('empty-open-parts').onclick=()=>layout.showView('parts');$('empty-open-examples').onclick=()=>layout.showView('examples');
 $('wire-palette').innerHTML=WIRE_COLORS.map(([value,name],i)=>`<button data-palette="${i<10?'basic':'pastel'}" data-color="${value}" class="swatch ${value===state.color?'active':''}" style="--swatch:${value}" title="${name} 배선" aria-label="${name} 배선"></button>`).join('');
 document.querySelectorAll('[data-color]').forEach(b=>b.onclick=()=>setWireColor(b.dataset.color));

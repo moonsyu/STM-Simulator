@@ -102,7 +102,7 @@ export class SimulationSession {
   // while the line is LOW. RCC_FLAG_PINRST is the only cause set.
   checkNrst(){
     const v=this.result?.fault?null:this.result?.voltage?.('signal:NRST'),low=typeof v==='number'&&v<.8;
-    if(low&&this.hal){if(!this.nrstLow)this.runtime.api.warn?.('[NRST] 리셋 핀이 LOW입니다 — 프로그램을 처음부터 다시 실행합니다.');this.hal.resetCause=26;this.runtime.restart();}
+    if(low&&this.hal){if(!this.nrstLow)this.runtime.api.warn?.('[NRST] 리셋 핀이 LOW입니다 — 프로그램을 처음부터 다시 실행합니다.');this.hal.resetCause=this.fsp?'PIN':26;this.runtime.restart();}
     this.nrstLow=low;
   }
   setPressed(pressed){this.pressed=this.bounce.press(this.pressed,pressed,this.runtime.microTime/1000);this.changed();this.runtime.pollInterrupts();}

@@ -198,3 +198,146 @@ test('callback names across modules: a WDT and an RTC callback of one name are r
  // A disabled stack does not count.
  assert.ok(validateRaMcu(mcu({WDT:{enabled:false,reset:'NMI',callback:'on_event'},RTC:{enabled:true,callback:'on_event'}})));
 });
+
+// Review of feature 35: WDTCR.CKS is four bits (b7:4) — /8192 (code 8) and /128 (code 15) need the top bit.
+test('WDT model: every clock division R_WDT_Open can write reads back and gives its timeout; the IWDT divisions decode from OFS0',()=>{
+ for(const [div,cks]of [[4,1],[64,4],[128,15],[512,6],[2048,7],[8192,8]]){
+  const soc=fakeSoc(),w=new Watchdog(soc,'WDT'),cr=3|(cks<<4)|(3<<8)|(3<<12);
+  w.write(6,0x80,1);w.write(2,cr,2);assert.equal(w.read(2,2),cr,`/${div}: WDTCR reads back`);
+  refresh(w);assert.equal(w.hz(),50e6/div,`/${div}`);
+  soc.fire();assert.ok(Math.abs(soc.resets[0][1]-16384/(50e6/div)*1e6)<1e-6,`/${div}: underflow at ${soc.resets[0][1]} us`);
+ }
+ for(const [div,cks]of [[1,0],[16,2],[32,3],[64,4],[128,15],[256,5]]){
+  const ofs=((0xffffffff&~0x5ffe)|(3<<2)|(cks<<4)|(3<<8)|(3<<10)|(1<<12))>>>0,soc=fakeSoc(ofs),w=new Watchdog(soc,'IWDT');
+  assert.equal(w.hz(),15000/div,`IWDT /${div}`);soc.fire();assert.ok(Math.abs(soc.resets[0][1]-2048/(15000/div)*1e6)<1e-6,`IWDT /${div}`);
+ }
+});
+
+// Review of feature 35: a refresh outside the window with Reset output restarted the program from inside the call (a
+// TypeError in the interpreter); it now ends the call with a reset, in a statement or in a loop body.
+test('interpreter: R_WDT_Refresh outside the window (Reset output) resets the program at the call; a reset loop stops with the reason',()=>{
+ for(const body of [`
+    R_WDT_Open(&g_wdt0_ctrl, &g_wdt0_cfg);
+    R_WDT_Refresh(&g_wdt0_ctrl);
+    R_BSP_SoftwareDelay(1, BSP_DELAY_UNITS_MILLISECONDS);
+    R_WDT_Refresh(&g_wdt0_ctrl);
+    marker++;
+    while (1) { R_BSP_SoftwareDelay(10, BSP_DELAY_UNITS_MILLISECONDS); }`,`
+    R_WDT_Open(&g_wdt0_ctrl, &g_wdt0_cfg);
+    while (1) { R_WDT_Refresh(&g_wdt0_ctrl); marker++; R_BSP_SoftwareDelay(1, BSP_DELAY_UNITS_MILLISECONDS); }`]){
+  const {session,log,run}=interp(`
+volatile uint32_t marker = 0, wdtrf = 0;
+void hal_entry(void)
+{
+    wdtrf = R_SYSTEM->RSTSR1_b.WDTRF;
+    if (wdtrf) { while (1) { R_BSP_SoftwareDelay(10, BSP_DELAY_UNITS_MILLISECONDS); } }
+${body}
+}`,{WDT:{enabled:true,clockDiv:2048,windowStart:50}});
+  run(50);
+  assert.equal(session.runtime.resetCount,1);assert.equal(session.readVariable('wdtrf'),1);assert.equal(session.readVariable('marker'),0,'the statement after the bad refresh did not run');
+  assert.match(log.warn[0],/^\[WDT\] 허용 창\(남은 카운트 0~50 %\) 밖에서 R_WDT_Refresh를 불렀습니다\(남은 99\.\d %\) — 워치독 리셋/);
+ }
+ const loop=interp(`void hal_entry(void){ R_WDT_Open(&g_wdt0_ctrl, &g_wdt0_cfg); R_WDT_Refresh(&g_wdt0_ctrl); R_BSP_SoftwareDelay(1, BSP_DELAY_UNITS_MILLISECONDS); R_WDT_Refresh(&g_wdt0_ctrl); }`,{WDT:{enabled:true,clockDiv:2048,windowStart:50}});
+ assert.throws(()=>loop.run(50),/\[WDT\] 워치독 리셋이 계속 반복됩니다/);
+});
+
+// Review of feature 35: FSP's Open asserts p_callback == NULL unless the NMI is the output.
+test('a watchdog with Reset output has no callback (generated NULL, as R_WDT_Open / R_IWDT_Open require); interpreter Open checks reset_control like r_wdt.c',()=>{
+ const m=validateRaMcu(mcu({IWDT:{enabled:true,callback:'my_cb'},WDT:{enabled:true,startMode:'AUTO',reset:'RESET',callback:'other_cb'}}));
+ assert.equal(m.peripherals.IWDT.callback,'');assert.equal(m.peripherals.WDT.callback,'');
+ const f=generateRaFiles(m);assert.doesNotMatch(f['ra_gen/hal_data.h'],/my_cb|other_cb/);assert.equal((f['ra_gen/hal_data.c'].match(/\.p_callback {10}= NULL,/g)||[]).length,2);
+ // Register-start, Stacks say Reset (WDT_CFG_REGISTER_START_NMI_SUPPORTED 0): a cfg asking for the NMI is an assertion.
+ const a=interp(`volatile uint32_t err = 99;
+void hal_entry(void){ wdt_cfg_t cfg = g_wdt0_cfg; cfg.reset_control = WDT_RESET_CONTROL_NMI; err = R_WDT_Open(&g_wdt0_ctrl, &cfg); }`,{WDT:{enabled:true}});
+ a.run(5);assert.equal(a.session.readVariable('err'),1,'FSP_ERR_ASSERTION');
+ // Stacks say NMI with a callback: a cfg asking for a reset still has the callback (p_callback must be NULL): assertion.
+ const b=interp(`volatile uint32_t err = 99, ok = 99;
+void wdt_nmi(wdt_callback_args_t *p_args){ (void) p_args; }
+void hal_entry(void){ wdt_cfg_t cfg = g_wdt0_cfg; cfg.reset_control = WDT_RESET_CONTROL_RESET; err = R_WDT_Open(&g_wdt0_ctrl, &cfg); ok = R_WDT_Open(&g_wdt0_ctrl, &g_wdt0_cfg); }`,{WDT:{enabled:true,reset:'NMI',callback:'wdt_nmi'}});
+ b.run(5);assert.equal(b.session.readVariable('err'),1);assert.equal(b.session.readVariable('ok'),0);
+});
+
+// Review of feature 35: the window's end position is inside the window on both engines (1024 clocks, end 75 %: 0x2FF).
+test('window end boundary: a refresh at counter 0x2FF (75 % of 1024) is allowed, at 0x2FE it is a refresh error — model and interpreter alike',()=>{
+ for(const [cnt,errors]of [[0x300,0],[0x2ff,0],[0x2fe,1]]){
+  const soc=fakeSoc(),w=new Watchdog(soc,'WDT');w.write(6,0,1);w.write(2,0|(8<<4)|(0<<8)|(3<<12),2);refresh(w);
+  soc.now=(1023-cnt+0.5)/(50e6/8192)*1e6;assert.equal(w.read(4,2)&0x3fff,cnt);refresh(w);assert.equal(soc.nmis.length,errors,'model at 0x'+cnt.toString(16));
+  const {session,run}=interp(`volatile uint32_t nmis = 0, count = 0;
+void wdt_nmi(wdt_callback_args_t *p_args){ (void) p_args; nmis++; }
+void hal_entry(void)
+{
+    R_WDT_Open(&g_wdt0_ctrl, &g_wdt0_cfg);
+    R_WDT_Refresh(&g_wdt0_ctrl);
+    R_BSP_SoftwareDelay(${Math.round(soc.now)}, BSP_DELAY_UNITS_MICROSECONDS);
+    uint32_t c;
+    R_WDT_CounterGet(&g_wdt0_ctrl, &c);
+    count = c;
+    R_WDT_Refresh(&g_wdt0_ctrl);
+    while (1) { }
+}`,{WDT:{enabled:true,timeout:1024,clockDiv:8192,windowEnd:75,reset:'NMI',callback:'wdt_nmi'}});
+  run(60);assert.equal(session.readVariable('count'),cnt);assert.equal(session.readVariable('nmis'),errors,'interpreter at 0x'+cnt.toString(16));
+ }
+});
+
+// Review of feature 35: the RA6E1's IWDT cannot be started from its registers.
+test('IWDT model: stopped by OFS0 (IWDTSTRT 1) it ignores a refresh and IWDTCR writes; the WDT still starts at its first refresh',()=>{
+ const soc=fakeSoc(),iw=new Watchdog(soc,'IWDT');
+ refresh(iw);assert.equal(iw.running,false);assert.equal(soc.next(),undefined,'no underflow planned');
+ iw.write(2,0,2);assert.equal(iw.read(2,2),0x33f3,'IWDTCR keeps its reset value');
+ const w=new Watchdog(fakeSoc(),'WDT');refresh(w);assert.equal(w.running,true);
+});
+
+// Review of feature 35: a reset-pin reset starts RSTSR1 over on the interpreter too (the emulator clears it).
+test('interpreter: a reset pin reset clears the RSTSR1 cause flags; a software reset adds SWRF to them',()=>{
+ const {session,run}=interp(`volatile uint32_t r1 = 99;
+void hal_entry(void){ r1 = R_SYSTEM->RSTSR1; while (1) { R_BSP_SoftwareDelay(10, BSP_DELAY_UNITS_MILLISECONDS); } }`,{});
+ run(5);assert.equal(session.readVariable('r1'),0);
+ session.hal.resetCause='WDT';session.runtime.restart();run(10);assert.equal(session.readVariable('r1'),2);
+ session.hal.resetCause='SYSRESETREQ';session.runtime.restart();run(15);assert.equal(session.readVariable('r1'),6,'WDTRF | SWRF');
+ session.hal.resetCause='PIN';session.runtime.restart();run(20);assert.equal(session.readVariable('r1'),0,'the pin reset starts the causes over');
+ // The session's NRST check gives an FSP project the pin cause (not the STM32 RCC_CSR bit number).
+ session.hal.rstsr1=4;session.result={voltage:id=>id==='signal:NRST'?0:3.3};session.checkNrst();run(25);
+ assert.equal(session.readVariable('r1'),0);
+});
+
+// Review of feature 35: raOfs0 on a configuration that was not validated (defaults not filled in yet).
+test('OFS0 of an unvalidated configuration equals the validated one (the defaults are the same)',()=>{
+ const raw=mcu({IWDT:{enabled:true},WDT:{enabled:true,startMode:'AUTO'}});
+ assert.equal(raOfs0(raw),raOfs0(validateRaMcu(raw)));assert.equal(raOfs0(raw),0xbf8dbf5d);
+ assert.match(generateRaFiles(raw)['ra_cfg/fsp_cfg/bsp/bsp_mcu_ofs_cfg.h'],/OFS0 \(0xBF8DBF5DUL\)/);
+});
+
+// Review of feature 35: an auto-started watchdog with NMI output that underflows before R_IWDT_Open.
+test('interpreter: an IWDT (NMI) underflow before R_IWDT_Open reaches the callback once Open enables the NMI',()=>{
+ const {session,run}=interp(`volatile uint32_t nmis = 0, status = 9;
+void iwdt_nmi(wdt_callback_args_t *p_args){ (void) p_args; nmis++; }
+void hal_entry(void)
+{
+    R_BSP_SoftwareDelay(200, BSP_DELAY_UNITS_MILLISECONDS);
+    R_IWDT_Open(&g_iwdt0_ctrl, &g_iwdt0_cfg);
+    wdt_status_t s;
+    R_IWDT_StatusGet(&g_iwdt0_ctrl, &s);
+    status = s;
+    while (1) { }
+}`,{IWDT:{enabled:true,timeout:128,clockDiv:16,reset:'NMI',callback:'iwdt_nmi'}});
+ run(190);assert.equal(session.readVariable('nmis'),0,'underflow at 136.5 ms: not enabled yet');
+ run(210);assert.equal(session.readVariable('nmis'),1);assert.equal(session.readVariable('status'),1,'WDT_STATUS_UNDERFLOW');
+});
+
+// Review of feature 34 (item 4), the same for the watchdogs: CallbackSet's context and its NULL check.
+test('interpreter: R_WDT_CallbackSet hands p_context to the NMI callback; a NULL callback is FSP_ERR_ASSERTION',()=>{
+ const {session,run}=interp(`volatile uint32_t c0 = 99, c1 = 99, got = 0;
+static uint32_t tag = 0x77;
+void first(wdt_callback_args_t *p_args){ (void) p_args; }
+void second(wdt_callback_args_t *p_args){ got = *(uint32_t *) p_args->p_context; }
+void hal_entry(void)
+{
+    c0 = R_WDT_CallbackSet(&g_wdt0_ctrl, NULL, NULL, NULL);
+    R_WDT_Open(&g_wdt0_ctrl, &g_wdt0_cfg);
+    c1 = R_WDT_CallbackSet(&g_wdt0_ctrl, second, &tag, NULL);
+    R_WDT_Refresh(&g_wdt0_ctrl);
+    while (1) { }
+}`,{WDT:{enabled:true,timeout:1024,clockDiv:64,reset:'NMI',callback:'first'}});
+ run(10);assert.equal(session.readVariable('c0'),1);assert.equal(session.readVariable('c1'),0);
+ assert.equal(session.readVariable('got'),0x77,'underflow after 1.3 ms');
+});

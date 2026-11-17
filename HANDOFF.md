@@ -1,6 +1,19 @@
 # STM Simulator — 개발 인계
 
-현재 버전: **1.53.0**. 정리일: **2026-11-10**. NUCLEO-F446RE·NUCLEO-F103RB 또는 Renesas FPB-RA6E1(1.20.0, FSP·에뮬레이터 전용)과 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+현재 버전: **1.54.0**. 정리일: **2026-11-10**. NUCLEO-F446RE·NUCLEO-F103RB 또는 Renesas FPB-RA6E1(1.20.0, FSP·에뮬레이터 전용)과 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+
+## 1.54.0 기능 목록 34·35번: RA RTC(r_rtc)·워치독(r_wdt·r_iwdt)과 리셋 기반(G3)
+
+- **리셋 기반(G3)**: 코어의 리셋 요청(SYSRESETREQ, 워치독)이 `soc.prepareReset`을 거쳐 실행 로그 "MCU 리셋"과 원인을 남긴다(`machine.onResetRequest`, STM32와 같음). RSTSR0(PORF)·RSTSR1(IWDTRF b0·WDTRF b1·SWRF b2)·RSTSR2(CWSF)는 실제 레지스터(리셋을 지나도 남고 0을 써서 지움). 옵션 설정 메모리 0x0100A100~(OFS0)는 ELF가 쓴 대로 읽는다(`bus.optionBytes`). `soc.raiseEvent`/`soc.listens`가 주변장치의 ICU 이벤트를 한곳으로 모은다(36번 ELC·DTC·DMAC가 여기에 붙는다). `cpu.run`은 슬립 중에도 대기 중인 stop(리셋)을 돌려준다 — WFI로 자는 동안의 워치독 리셋(STM32 IWDG 공용 경로).
+- **워치독(35번)**: 설정 `mcu.peripherals.WDT`/`IWDT` {startMode, timeout, clockDiv, windowStart, windowEnd, reset RESET|NMI, stopInSleep, callback}(`ra-config.js` `validateWdt`·`raWdtTiming`·`raOfs0`). IWDT는 RA6E1에서 OFS0 자동 시작만(레지스터 시작 없음 — 꺼진 IWDT는 IWDTRR을 무시). Reset 출력이면 콜백 이름은 비운다(FSP Open이 p_callback NULL을 요구). 생성: g_wdt0/g_iwdt0, r_wdt_cfg.h·r_iwdt_cfg.h, bsp_mcu_ofs_cfg.h의 OFS0. 에뮬레이터 `src/emu/ra6e1/wdt.js`(WDTRR 0x00→0xFF, WDTCR(CKS는 4비트 b7:4)/SR/RCR/CSTPR, 언더플로·창 밖 새로 고침 → 리셋 또는 NMI; NMIER가 꺼진 동안 세워진 NMISR은 켤 때 걸림). 해석기 `fsp-interp.js` R_WDT_*/R_IWDT_*(리셋은 `yield {kind:'reset'}`로 프로그램을 처음부터, 10번 반복되면 멈춤). `R_SYSTEM->RSTSR1` 읽기만 해석기에서 허용(쓰기는 안내 오류). 창 끝 경계는 두 엔진이 같다(끝 위치 값은 창 안).
+- **RTC(34번)**: 설정 `mcu.peripherals.RTC` {clockSource LOCO|SUBCLOCK, start SIMULATION|HOST_TIME, freqCompare, callback, alarmPriority·periodicPriority·carryPriority}. FPB-RA6E1은 서브 클록이 돌지 않아(E25/E26 열림) 기본은 LOCO. SIMULATION은 2000-01-01 00:00:00에서 멈춘 채 시작(프로그램이 CalendarTimeSet), HOST_TIME은 PC 시각으로 돌고 있는 RTC. 생성: g_rtc0, 벡터 RTC_ALARM·RTC_PERIOD·RTC_CARRY(맨 뒤에 추가), r_rtc_cfg.h. 에뮬레이터 `src/emu/ra6e1/rtc.js`(BCD 달력, RCR1·RCR2·알람 레지스터, 이벤트 0x54~0x56; MCU 리셋에도 시각이 남음; 인터럽트 대기는 소스당 1비트, 같은 순간이면 알람이 주기보다 먼저). 해석기 R_RTC_* 11개(달력은 에뮬레이터 모델을 그대로 씀).
+- 설정 창: New Stack에 Monitoring · System(Watchdog, Independent Watchdog, Realtime Clock), Clocks 탭의 저속 클록 표. 예제 `ra_wdt_reset`, `ra_rtc_clock`.
+- 시험: `tests/unit/ra-wdt.test.js`·`ra-rtc.test.js`·`ra6e1-reset.test.js`, `tests/toolchain/ra-wdt-rtc.test.mjs`, `tests/e2e/ra-wdt-rtc.e2e.test.mjs`, 픽스처 `ra_wdt_reset`·`ra_rtc_clock`.
+
+## 1.53.1 부품 검색에 다른 보드
+
+- 부품 목록 끝에 "다른 보드" 카드(ESP32 2종, Raspberry Pi 5, STM32 보드)를 넣고 같은 검색창으로 거른다: `src/part-library.js` `boardLibrary`·`searchBoards`(이름·칩·모듈·한글 낱말), `src/app-examples.js` `filterParts`·`BOARD_LIBRARY`, `src/app.js`(카드와 클릭 연결 — `[data-devboard-add]`가 부품 보기와 보드 보기 두 곳에 있다). "보드와 핀 → 다른 보드 추가"는 그대로.
+- 시험에서 `[data-devboard-add=…]`를 누를 때는 `#devboard-options` 또는 `#part-list`로 한정한다.
 
 ## 1.53.0 기능 목록 32번: RA SPI(r_spi·r_sci_spi)
 

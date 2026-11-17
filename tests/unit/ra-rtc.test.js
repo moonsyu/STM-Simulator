@@ -158,3 +158,85 @@ test('ra_rtc_clock example on the interpreter: SCI9 prints the time each second,
  assert.equal(text,'2025-12-31 23:59:56\r\n2025-12-31 23:59:57\r\n2025-12-31 23:59:58\r\n2025-12-31 23:59:59\r\n2026-01-01 00:00:00 Happy New Year!\r\n2026-01-01 00:00:01\r\n');
  assert.ok(s.runtime.gpio.P407.value>1.65,'LED2 on after the alarm');assert.equal(s.readVariable('seconds'),6);
 });
+
+// ---- review of feature 34
+test('interpreter: RTC interrupt requests are one pending bit per source — masked for 1.1 s the callback comes once; 1/256 s masked for 2 s does not overflow',()=>{
+ const code=rate=>`
+volatile uint32_t periods = 0;
+void rtc_callback(rtc_callback_args_t *p_args){ if (RTC_EVENT_PERIODIC_IRQ == p_args->event) { periods++; } }
+void hal_entry(void)
+{
+    rtc_time_t t = { .tm_sec = 0, .tm_min = 0, .tm_hour = 0, .tm_mday = 1, .tm_mon = 0, .tm_year = 126 };
+    R_RTC_Open(&g_rtc0_ctrl, &g_rtc0_cfg);
+    R_RTC_CalendarTimeSet(&g_rtc0_ctrl, &t);
+    R_RTC_PeriodicIrqRateSet(&g_rtc0_ctrl, ${rate});
+    __disable_irq();
+    R_BSP_SoftwareDelay(${rate==='RTC_PERIODIC_IRQ_SELECT_1_DIV_BY_4_SECOND'?1100:2000}, BSP_DELAY_UNITS_MILLISECONDS);
+    __enable_irq();
+    __disable_irq();
+    while (1) { }
+}`;
+ const a=interp(code('RTC_PERIODIC_IRQ_SELECT_1_DIV_BY_4_SECOND'),{RTC:{enabled:true}});a.run(1200);
+ assert.equal(a.session.readVariable('periods'),1,'four periods passed while masked: one request pending');
+ const b=interp(code('RTC_PERIODIC_IRQ_SELECT_1_DIV_BY_256_SECOND'),{RTC:{enabled:true}});b.run(2100);
+ assert.equal(b.session.readVariable('periods'),1);
+});
+
+test('interpreter: the alarm comes before the periodic interrupt of the same instant (RTC_ALARM is the lower vector)',()=>{
+ const {session,run}=interp(`
+volatile uint32_t order = 0;
+void rtc_callback(rtc_callback_args_t *p_args){ order = order * 10 + (RTC_EVENT_ALARM_IRQ == p_args->event ? 1 : 3); }
+void hal_entry(void)
+{
+    rtc_time_t t = { .tm_sec = 58, .tm_min = 0, .tm_hour = 0, .tm_mday = 1, .tm_mon = 0, .tm_year = 126 };
+    rtc_alarm_time_t a = { .time = { .tm_sec = 0 }, .sec_match = true };
+    R_RTC_Open(&g_rtc0_ctrl, &g_rtc0_cfg);
+    R_RTC_CalendarTimeSet(&g_rtc0_ctrl, &t);
+    R_RTC_PeriodicIrqRateSet(&g_rtc0_ctrl, RTC_PERIODIC_IRQ_SELECT_1_SECOND);
+    R_RTC_CalendarAlarmSet(&g_rtc0_ctrl, &a);
+    while (1) { }
+}`,{RTC:{enabled:true}});
+ run(3050);assert.equal(session.readVariable('order'),3133,'1 s: period; 2 s: alarm then period; 3 s: period');
+});
+
+test('interpreter: R_RTC_ErrorAdjustmentSet as r_rtc.c — unsupported on LOCO, value and period checked on the sub-clock; CallbackSet takes the context, NULL is an assertion',()=>{
+ const code=`
+volatile uint32_t e1 = 99, e2 = 99, e3 = 99, c0 = 99, c1 = 99, got = 0;
+static uint32_t tag = 0x1234;
+void other_cb(rtc_callback_args_t *p_args){ if (RTC_EVENT_PERIODIC_IRQ == p_args->event) { got = *(uint32_t *) p_args->p_context; } }
+void rtc_callback(rtc_callback_args_t *p_args){ (void) p_args; }
+void hal_entry(void)
+{
+    rtc_error_adjustment_cfg_t ok = { .adjustment_mode = RTC_ERROR_ADJUSTMENT_MODE_AUTOMATIC, .adjustment_period = RTC_ERROR_ADJUSTMENT_PERIOD_10_SECOND, .adjustment_type = RTC_ERROR_ADJUSTMENT_ADD_PRESCALER, .adjustment_value = 5 };
+    rtc_error_adjustment_cfg_t big = ok, none = ok;
+    big.adjustment_value = 0x40;
+    none.adjustment_period = RTC_ERROR_ADJUSTMENT_PERIOD_NONE;
+    c0 = R_RTC_CallbackSet(&g_rtc0_ctrl, NULL, NULL, NULL);
+    R_RTC_Open(&g_rtc0_ctrl, &g_rtc0_cfg);
+    e1 = R_RTC_ErrorAdjustmentSet(&g_rtc0_ctrl, &ok);
+    e2 = R_RTC_ErrorAdjustmentSet(&g_rtc0_ctrl, &big);
+    e3 = R_RTC_ErrorAdjustmentSet(&g_rtc0_ctrl, &none);
+    c1 = R_RTC_CallbackSet(&g_rtc0_ctrl, other_cb, &tag, NULL);
+    rtc_time_t t = { .tm_mday = 1, .tm_year = 126 };
+    R_RTC_CalendarTimeSet(&g_rtc0_ctrl, &t);
+    R_RTC_PeriodicIrqRateSet(&g_rtc0_ctrl, RTC_PERIODIC_IRQ_SELECT_1_DIV_BY_4_SECOND);
+    while (1) { }
+}`;
+ const loco=interp(code,{RTC:{enabled:true}});loco.run(300);
+ const v=(s,n)=>s.session.readVariable(n);
+ assert.deepEqual(['e1','e2','e3','c0','c1'].map(n=>v(loco,n)),[6,6,6,1,0],'LOCO: FSP_ERR_UNSUPPORTED; CallbackSet(NULL): FSP_ERR_ASSERTION before the open check');
+ assert.equal(v(loco,'got'),0x1234,'p_context reaches the callback');
+ const sub=interp(code,{RTC:{enabled:true,clockSource:'SUBCLOCK'}});sub.run(50);
+ assert.deepEqual(['e1','e2','e3'].map(n=>v(sub,n)),[0,3,3],'sub-clock: value > 0x3F and AUTOMATIC + PERIOD_NONE are FSP_ERR_INVALID_ARGUMENT');
+});
+
+test('RTC model: RCR2.RESET while counting keeps the calendar; after year 99 comes 00, a leap year (the 2000-2099 calendar repeats)',()=>{
+ const soc=fakeSoc(),r=new Rtc(soc);
+ soc.until(5.5e6);assert.equal(r.read(0x02,1),0x05);
+ r.write(0x24,0x43,1);assert.equal(r.read(0x02,1),0x05,'RESET does not take the calendar back');
+ soc.until(6.6e6);assert.equal(r.read(0x02,1),0x06,'the second starts again at the RESET');
+ r.write(0x24,0x40,1);r.write(0x02,0x59,1);r.write(0x04,0x59,1);r.write(0x06,0x23,1);r.write(0x08,4,1);r.write(0x0a,0x31,1);r.write(0x0c,0x12,1);r.write(0x0e,0x99,2);r.write(0x24,0x41,1);
+ const t0=soc.now;soc.until(t0+1e6);
+ assert.deepEqual([r.read(0x0e,2),r.read(0x0c,1),r.read(0x0a,1),r.read(0x08,1),r.read(0x02,1)],[0x00,0x01,0x01,5,0x00],'99-12-31 23:59:59 (Thu) → 00-01-01 (Fri)');
+ soc.until(t0+1e6+59*86400e6);assert.deepEqual([r.read(0x0c,1),r.read(0x0a,1)],[0x02,0x29],'year 00 has 29 February');
+});

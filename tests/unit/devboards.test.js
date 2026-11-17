@@ -197,3 +197,16 @@ describe('ESP32 sketches',()=>{
   const {p,sim}=sketch('void setup(){ pinMode(6, OUTPUT); }\nvoid loop(){}');assert.throws(()=>{for(let t=0;t<3;t++)sim.solve(p,{},{},t);},/플래시/);
  });
 });
+
+// The parts search lists the other boards too (ESP32 was looked for there and not found).
+test('parts search finds the other boards by name, chip and Korean words',async()=>{
+ const {boardLibrary,searchBoards}=await import('../../src/part-library.js'),{DEVBOARD_MODELS}=await import('../../src/devboards.js');
+ const library=boardLibrary(DEVBOARD_MODELS),ids=q=>searchBoards(library,q).map(b=>b.id);
+ assert.equal(library.length,Object.keys(DEVBOARD_MODELS).length);
+ assert.deepEqual(ids('ESP32').sort(),['esp32-devkit-wroom32','esp32-nodemcu-32s']);
+ assert.deepEqual(ids('esp 32').sort(),ids('ESP32').sort(),'spaces and case do not matter');
+ assert.deepEqual(ids('wroom'),['esp32-devkit-wroom32']);
+ assert.deepEqual(ids('라즈베리파이'),['rpi5']);assert.deepEqual(ids('raspberry'),['rpi5']);
+ assert.ok(ids('nucleo').length>=1&&ids('nucleo').every(id=>DEVBOARD_MODELS[id].kind==='stm32'));
+ assert.equal(ids('보드').length,library.length);assert.deepEqual(ids('없는부품zzz'),[]);
+});

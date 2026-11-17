@@ -191,7 +191,11 @@ export class Cpu {
     if (this.lockedUp) return STOP.LOCKUP;
     for (;;) {
       try {
-        if (this.sleeping && !nv.dirty) return STOP.SLEEP;
+        if (this.sleeping && !nv.dirty) {
+          // A stop asked for while the core sleeps (a watchdog's reset request from a timed event, a halt) is not lost.
+          if (this.stop !== 0) { const s = this.stop; this.stop = 0; return s; }
+          return STOP.SLEEP;
+        }
         while (this.cycles < endCycles) {
           // sleeping/lockedUp은 항상 nv.dirty와 함께 바뀝니다(WFI/WFE, 복귀, 폴트).
           if (nv.dirty) {

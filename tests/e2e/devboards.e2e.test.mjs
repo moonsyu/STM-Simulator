@@ -15,7 +15,7 @@ test('ESP32 and Raspberry Pi boards are added, inspected, documented and removed
  const s=await launch();
  try{
   const {win}=s;await openBoardView(win);
-  await win.click('[data-devboard-add="esp32-nodemcu-32s"]');await win.click('[data-devboard-add="rpi5"]');
+  await win.click('#devboard-options [data-devboard-add="esp32-nodemcu-32s"]');await win.click('#devboard-options [data-devboard-add="rpi5"]');
   assert.equal(await win.evaluate(()=>document.querySelectorAll('#devboard-layer [data-devboard]').length),2);
   assert.equal(await win.evaluate(()=>document.querySelectorAll('[data-endpoint^="devboard:"]').length),78);
   assert.match(await win.textContent('#explorer-circuit-summary'),/다른 보드 2개/);
@@ -122,7 +122,7 @@ test('a pin with a wire on it still shows its GPIO in the tooltip',{timeout:1200
  const s=await launch();
  try{
   const {win}=s;await openBoardView(win);
-  await win.click('[data-devboard-add="rpi5"]');await win.click('#zoom-reset');
+  await win.click('#devboard-options [data-devboard-add="rpi5"]');await win.click('#zoom-reset');
   const center=async key=>{const b=await win.locator(`[data-endpoint$=":${key}"]`).boundingBox();return {x:b.x+b.width/2,y:b.y+b.height/2};};
   const tooltip=async key=>{const p=await center(key);await win.mouse.move(p.x,p.y);return win.evaluate(()=>{const tip=document.getElementById('tooltip');return tip.hidden?'':tip.textContent;});};
   assert.match(await tooltip('P40'),/40번 GPIO21/,'a free pin');
@@ -245,6 +245,25 @@ test('the ESP32 run target builds the board sketch with Arduino CLI; debugging i
   await win.waitForFunction(()=>/ESP32 보드는 디버그를 지원하지 않습니다/.test(document.getElementById('console-output').textContent));
   // The target is saved with the project like the other run targets.
   await win.waitForFunction(()=>{try{return JSON.parse(localStorage.getItem('stm32lab.project.v2')).ide.native.target==='esp32';}catch{return false;}},null,{timeout:10000});
+  assert.deepEqual(s.errors,[]);
+ }finally{await s.close();}
+});
+
+// Reported 2026-11-16: "ESP32" typed into the parts search found nothing (the boards were only under 보드와 핀).
+test('the parts search lists the other boards: ESP32 is found there and added with one press',{timeout:120000},async()=>{
+ const s=await launch();
+ try{
+  const {win}=s;await win.click('[data-activity="parts"]');if(!await win.locator('#view-parts').isVisible())await win.click('[data-activity="parts"]');
+  await win.fill('#part-search','ESP32');
+  const shown=()=>win.evaluate(()=>[...document.querySelectorAll('#part-list [data-devboard-add]')].filter(b=>!b.hidden).map(b=>b.dataset.devboardAdd).sort());
+  assert.deepEqual(await shown(),['esp32-devkit-wroom32','esp32-nodemcu-32s']);
+  assert.equal(await win.locator('#part-no-results').isVisible(),false);assert.equal(await win.locator('#part-boards-heading').isVisible(),true);
+  await win.click('#part-list [data-devboard-add="esp32-nodemcu-32s"]');
+  assert.equal(await win.evaluate(()=>document.querySelectorAll('#devboard-layer [data-devboard]').length),1);
+  await win.fill('#part-search','라즈베리');assert.deepEqual(await shown(),['rpi5']);
+  await win.fill('#part-search','저항');assert.deepEqual(await shown(),[]);assert.equal(await win.locator('#part-boards-heading').isVisible(),false);
+  await win.fill('#part-search','없는부품zzz');assert.equal(await win.locator('#part-no-results').isVisible(),true);
+  await win.fill('#part-search','');assert.equal((await shown()).length>=3,true,'all boards listed after the parts without a search');
   assert.deepEqual(s.errors,[]);
  }finally{await s.close();}
 });

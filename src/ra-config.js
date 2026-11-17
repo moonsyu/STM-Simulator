@@ -402,6 +402,9 @@ function validateWdt(id,p){
  if(q.windowEnd>=q.windowStart)throw new Error(`${id}: 창 끝(${q.windowEnd} %)은 창 시작(${q.windowStart} %)보다 작아야 합니다.`);
  if(!['RESET','NMI'].includes(q.reset))throw new Error(`${id}: 시간 초과 동작은 Reset 또는 NMI입니다.`);
  if(typeof q.callback!=='string'||q.callback!==''&&!C_NAME.test(q.callback))throw new Error(`${id}: 콜백 이름은 C 식별자로 쓰세요(없으면 비워 둡니다).`);
+ // r_wdt.c / r_iwdt.c parameter checking: p_callback must be NULL unless the NMI is the output (Open returns
+ // FSP_ERR_ASSERTION otherwise), so with Reset output there is no callback: a name left from an NMI setting is dropped.
+ if(q.reset==='RESET')q.callback='';
  if(q.reset==='NMI'&&!q.callback)throw new Error(`${id}: NMI로 알리려면 콜백 이름을 쓰세요.`);
  return q;
 }
@@ -437,7 +440,9 @@ export function raWdtTiming(mcu,id){
 export function raOfs0(mcu){
  let ofs=0xffffffff;
  for(const [id,base]of [['IWDT',0],['WDT',16]]){
-  const p=mcu?.peripherals?.[id];if(!p?.enabled||(id==='WDT'&&p.startMode!=='AUTO'))continue;
+  // The same defaults validateWdt fills in, so an unvalidated configuration gives the same OFS0.
+  const raw=mcu?.peripherals?.[id];if(!raw?.enabled||(id==='WDT'&&raw.startMode!=='AUTO'))continue;
+  const p={...RA_WDT[id].defaults,windowStart:100,windowEnd:0,reset:'RESET',...raw};
   const tops=RA_WDT[id].timeouts.indexOf(p.timeout),field=(0<<1)|(tops<<2)|(WDT_DIVISION_CODE[p.clockDiv]<<4)|(WDT_END_CODE[p.windowEnd]<<8)|(WDT_START_CODE[p.windowStart]<<10)|((p.reset==='RESET'?1:0)<<12)|((p.stopInSleep?1:0)<<14);
   ofs=((ofs&~(0x5ffe<<base))|(field<<base))>>>0; // bits 0, 13 and 15 of each half are reserved (stay 1)
  }
