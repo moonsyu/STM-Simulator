@@ -30,7 +30,8 @@ export const TOOLCHAIN_SHARDS=Object.freeze([
  // 70 + 28 = 98 + parity of blink and IRQ (14 s locally)
  // + parity of the RTC example (11 s locally)
  // + parity of the low power example (feature 37)
- [['arm-examples','NUCLEO-F446RE'],'bus-instances',['fsp-interp-parity','parity: ra_blink|parity: ra_rtc_clock|parity: ra_lpm_deep']],
+ // + ra-iic-slave (feature 33: four FSP builds, about 18 s locally)
+ [['arm-examples','NUCLEO-F446RE'],'bus-instances',['fsp-interp-parity','parity: ra_blink|parity: ra_rtc_clock|parity: ra_lpm_deep'],'ra-iic-slave'],
  // 58 + 38 = 96 + parity of polling and rising IRQ (18 s locally)
  // + the register-start WDT test of ra-wdt-rtc (feature 35: about 16 s locally)
  [['arm-examples','NUCLEO-F103RB'],'button-bounce',['fsp-interp-parity','parity: ra_button_poll'],['ra-wdt-rtc','the real r_wdt in register-start mode']],
@@ -42,7 +43,8 @@ export const TOOLCHAIN_SHARDS=Object.freeze([
  // (the tests are named: a "not this one" pattern with a lookahead did not keep the heavy test out)
  // + ra-lpm (feature 37: programs with r_lpm on both engines, about 3 s each locally): its first four tests here (13 s),
  //   the review programs in groups 1, 4 and 7
- [['ra-course','Bare Metal - Blinky|switch polling toggles|the challenge:|BSP tab sizes|as the course screen shows it'],'adc-continuous','clock-tree',['fsp-interp-parity','parity: ra_uart_echo'],['ra-lpm','^R_LPM_\\* return codes|^Software Standby on both engines|^Deep Software Standby on both engines|^a Software Standby nothing can end']],
+ [['ra-course','Bare Metal - Blinky|switch polling toggles|the challenge:|BSP tab sizes|as the course screen shows it'],'adc-continuous','clock-tree',['fsp-interp-parity','parity: ra_uart_echo|parity: ra_iic_slave'],['ra-lpm','^R_LPM_\\* return codes|^Software Standby on both engines|^Deep Software Standby on both engines|^a Software Standby nothing can end']],
+ // (+ parity of the I2C slave example with its ESP32 master, feature 33: about 8 s locally, in the group above)
  // 26 + 23 + 22 + 17 + 16 = 104 + parity of the SPI memory (15 s locally, 1.51.x)
  // + the two-engine review tests of ra-wdt-rtc ("on both engines")
  ['emu-accuracy','dwarf-version','board-links','copied-files','adc-group','peripheral-files','project-overrides',['fsp-interp-parity','parity: ra_spi_memory'],['ra-wdt-rtc','on both engines']],

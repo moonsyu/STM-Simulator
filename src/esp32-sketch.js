@@ -3,6 +3,7 @@ import {Runtime} from './runtime.js';
 import {formatPrintf} from './hal-stdio.js';
 import {devboardModel} from './devboards.js';
 import {Esp32Bluetooth,Esp32Wifi} from './wireless.js';
+import {BusDevices} from './buses.js';
 
 // ESP32 boards run their Arduino sketch (setup / loop) in the same C interpreter as STM32 sketches, with ESP32 pin
 // numbers (2 → GPIO2), 12-bit analogRead, LEDC PWM, Serial.printf, the DHT library, Wire as an I2C slave and Serial2
@@ -25,8 +26,61 @@ export class SketchDriver{
    pin:value=>esp32Pin(model,value),constants:{DHT11:11,DHT22:22,LED_BUILTIN:2,SERIAL_8N1:0x800001c,WL_IDLE_STATUS:0,WL_CONNECTED:3,WL_DISCONNECTED:6,WIFI_STA:1,WIFI_AP:2,WIFI_AP_STA:3},constructs:['DHT','BluetoothSerial','WiFiServer','WiFiClient','HTTPClient','PubSubClient'],
    print:text=>this.print(String(text)+'\n'),read:pin=>this.level(pin),voltage:pin=>this.voltage(pin),serialAvailable:()=>this.serialIn.length,serialRead:()=>this.serialIn.shift()??-1,
    construct:(name,args)=>({kind:'device',name,args}),deviceCall:(device,method,args)=>this.device(device,method,args),
-   call:(name,args,runtime)=>this.call(name,args,runtime)
+   call:(name,args,runtime)=>this.call(name,args,runtime),libraryInvoke:(name,args,runtime)=>this.libraryInvoke(name,args,runtime)
   });
+  // Wire as an I2C master (Wire.begin() or Wire.begin(sda, scl)) on GPIO21 (SDA) / GPIO22 (SCL): the I2C slaves of the
+  // other boards of the run. Reached: the main board's program on the interpreter (an RA FSP slave, an STM32 HAL slave),
+  // the main board on the emulator (an RA r_iic_slave; an STM32 I2C slave through the same interface, which has no test
+  // yet), another ESP32 sketch or a fixed-run board that is a slave, and a second STM32 board run by the simulator.
+  // Not reached: a second STM32 board run by the emulator, and I2C parts (sensors, displays).
+  this.bus=new BusDevices({components:[]},()=>this.result,event=>(this.host?.traceCb??this.host?.buses?.trace)?.({...event,message:`${part.name} · ${event.message}`}));
+  this.bus.pin=pin=>`signal:${part.id}.${pin}`;this.bus.boards=()=>this.masterPorts();this.host=null;
+ }
+ /** The session of the run's main board (stm32-boards.js connectStm32Drivers). */
+ attachHost(host){this.host=host;}
+ masterPorts(){
+  const host=this.host,ports=(host?.circuit?.drivers||[]).filter(d=>d!==this&&d.i2cSlave);if(!host)return ports;
+  const net=pin=>'signal:'+pin;
+  if(host.soc){
+   // The emulated main board: its I2C slave model takes the transfer byte by byte (emu/ra6e1/iic.js).
+   const slave=()=>Object.values(host.soc.i2cs??{}).find(x=>x.slaveInfo?.());
+   ports.push({emulated:slave,net,i2cSlave:()=>slave()?.slaveInfo()??null,
+    i2cReceive:bytes=>{const s=slave();if(!s)return false;s.slaveAddress(false);const acks=bytes.map(b=>s.slaveWrite(b));s.slaveStop();return acks.every(Boolean);},
+    i2cProbe:()=>{const s=slave();if(s){s.slaveAddress(false);s.slaveStop();}},
+    i2cRequest:count=>Array.from({length:count},()=>0xff)});
+  }else if(host.hal?.i2cSlaveInfo)ports.push({net,i2cSlave:()=>host.hal.i2cSlaveInfo(),i2cProbe:()=>host.hal.i2cSlaveProbe?.(host.runtime),i2cReceive:bytes=>host.hal.i2cSlaveReceive(bytes,host.runtime),i2cRequest:count=>host.hal.i2cSlaveRequest(count,host.runtime)});
+  return ports;
+ }
+ // Wire.requestFrom from an emulated slave waits for the slave's program: SCL is held (clock stretching) until each byte
+ // is in its transmit register, up to 100 ms.
+ // Wire.endTransmission to an emulated slave goes byte by byte for the same reason: the ACK of a byte is the slave's
+ // answer after its program has taken the byte before (ICMR3.ACKBT on the RA), and a NACK ends the transfer.
+ libraryInvoke(name,args,runtime){
+  if(!this.wire.master||runtime.atomic)return null;
+  const bus=this.bus,w=bus.wire,emulated=address=>{const target=Number.isInteger(address)&&address>=8&&address<=119?bus.i2cTarget(address):null;return target?.connected&&target.part?.driver?.emulated?.()||null;};
+  if(name==='Wire.endTransmission'){
+   const address=w.address,slave=emulated(address);if(!slave)return null;
+   const bytes=w.tx.slice();
+   return (function*(){
+    let waited=0,ok=true,sent=0;
+    // The slave has taken what was sent (the byte read from its receive register), or gave the transfer up.
+    const settle=function*(){while(slave.slaveSettled&&!slave.slaveSettled()&&waited<100){waited+=.25;yield .25;}};
+    slave.slaveAddress(false);yield* settle();
+    for(const b of bytes){ok=slave.slaveWrite(b)!==false;sent++;runtime.microTime+=9e6/w.clock;yield* settle();if(!ok)break;}
+    slave.slaveStop();runtime.microTime+=9e6/w.clock;
+    bus.report(runtime,'I²C',`0x${address.toString(16)} WRITE ${sent} B · ${ok?'ACK':'NACK'}`);w.address=null;w.tx=[];return ok?0:2;
+   })();
+  }
+  if(name!=='Wire.requestFrom')return null;
+  const address=Number(args[0]),count=Number(args[1]),slave=Number.isInteger(count)&&count>0&&count<=256?emulated(address):null;if(!slave)return null;
+  return (function*(){
+   slave.slaveAddress(true);const out=[];let waited=0;
+   read:for(let i=0;i<count;i++){
+    let v;while((v=slave.slaveRead())==null){if(waited>=100||runtime.atomic)break read;waited+=.25;yield .25;}
+    out.push(v&255);runtime.microTime+=9e6/bus.wire.clock;if(i===count-1)slave.slaveNack();
+   }
+   slave.slaveStop();bus.wire.rx=out;bus.report(runtime,'I²C',`0x${address.toString(16)} READ ${out.length} B · ${out.length===count?'ACK':'응답 없음(시간 초과)'}`);return out.length;
+  })();
  }
  voltage(pin){return this.result?.voltage?.(`signal:${this.part.id}.${pin}`)??null;}
  level(pin){const v=this.voltage(pin);return v!=null&&v>=1.65?1:0;}
@@ -44,7 +98,15 @@ export class SketchDriver{
   }
   // Wire as an I2C slave: Wire.begin(address), onReceive / onRequest callbacks, available / read / write.
   const w=this.wire;
-  if(name==='Wire.begin'){w.address=args.length?Number(args[0]):null;return 1;}
+  if(name==='Wire.begin'){
+   // Wire.begin() and Wire.begin(sda, scl) are a master (the ESP32 core's two forms); Wire.begin(address) is a slave.
+   w.master=args.length!==1;w.address=w.master?null:Number(args[0]);
+   // A master: the bus is on GPIO21/GPIO22 or the pins given; an emulated main board then runs in step with the circuit,
+   // as with a second STM32.
+   if(w.master){this.bus.call('Wire.begin',args.length>=2?[runtime.pin(args[0]),runtime.pin(args[1])]:['GPIO21','GPIO22'],runtime);if(this.host?.soc)this.host.dynamic=true;}
+   return 1;
+  }
+  if(w.master&&/^Wire\.(setClock|beginTransmission|write|endTransmission|requestFrom|available|read)$/.test(name))return this.bus.call(name,args,runtime);
   if(name==='Wire.onReceive'){w.receive=runtime.callback(args[0]);return 0;}
   if(name==='Wire.onRequest'){w.request=runtime.callback(args[0]);return 0;}
   if(name==='Wire.available')return w.rx.length;
@@ -183,7 +245,9 @@ export class SketchDriver{
   throw new Error(`DHT.${method}은 지원하지 않습니다. begin / readTemperature / readHumidity를 사용하세요.`);
  }
  // The sketch starts once the circuit has been solved (its first reads see the powered circuit, as after a boot).
- advance(time){if(!this.result)return;try{this.runtime.tick(time);}catch(error){throw new Error(`${this.part.name}: ${error.message}`);}}
+ // A slave's callback on the main board may change a pin while this sketch is inside its I2C transfer: the circuit is
+ // solved then with the sketch where it is (it goes on when the transfer returns).
+ advance(time){if(!this.result||this.advancing)return;this.advancing=true;try{this.runtime.tick(time);}catch(error){throw new Error(`${this.part.name}: ${error.message}`);}finally{this.advancing=false;}}
  gpio(){const out={};for(const [pin,state]of Object.entries(this.runtime.gpio))out[`${this.part.id}.${pin}`]=state;return out;}
  observe(result){this.result=result;this.runtime.pollInterrupts();}
  i2cSlave(){return this.wire.address==null?null:{address:this.wire.address,sda:'GPIO21',scl:'GPIO22'};}

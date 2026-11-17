@@ -85,10 +85,10 @@ const FSP_API_OBJECTS=new Set(['g_adc_on_adc','g_can_on_can','g_elc_on_elc','g_e
 export function raNameProblem(name){
  if(C_WORDS.has(name))return `${name}은(는) C나 생성 코드가 쓰는 이름입니다`;
  if(/^(R_|BSP_|FSP_|IOPORT_|ELC_|ICU_|__)/.test(name)||/^_[A-Z]/.test(name))return `${name}: R_ · BSP_ · FSP_ · IOPORT_ 로 시작하는 이름과 __ 로 시작하는 이름은 FSP와 컴파일러가 씁니다`;
- if(/^g_(ioport|external_irq\d+|uart\d+|timer\d+|agt\d+|adc\d+|i2c_master\d+|spi\d+|sci_spi\d+|wdt\d+|iwdt\d+|rtc\d+|lpm\d+|bsp_pin_cfg)(_ctrl|_cfg|_extend|_cfg_extend|_ext_cfg|_channel_cfg|_err_cfg)?$/.test(name))return `${name}은(는) 생성 코드의 인스턴스 이름입니다`;
+ if(/^g_(ioport|external_irq\d+|uart\d+|timer\d+|agt\d+|adc\d+|i2c_master\d+|i2c_slave\d+|spi\d+|sci_spi\d+|wdt\d+|iwdt\d+|rtc\d+|lpm\d+|bsp_pin_cfg)(_ctrl|_cfg|_extend|_cfg_extend|_ext_cfg|_channel_cfg|_err_cfg)?$/.test(name))return `${name}은(는) 생성 코드의 인스턴스 이름입니다`;
  // The interrupt service routines vector_data.h names (FSP drivers define them) and the drivers' API objects
  // (g_uart_on_sci, g_spi_on_spi, g_timer_on_gpt …: the extern const …_api_t g_<api>_on_<module> of the FSP 6.6 headers).
- if(/^((sci_uart|sci_spi|spi|iic_master)_(rxi|txi|tei|eri)|r_icu|adc_scan_end|agt_int|gpt_counter_overflow|rtc_alarm_periodic|rtc_carry)_isr$/.test(name))return `${name}은(는) FSP 드라이버의 인터럽트 처리 함수(ISR) 이름입니다`;
+ if(/^((sci_uart|sci_spi|spi|iic_master|iic_slave)_(rxi|txi|tei|eri)|r_icu|adc_scan_end|agt_int|gpt_counter_overflow|rtc_alarm_periodic|rtc_carry)_isr$/.test(name))return `${name}은(는) FSP 드라이버의 인터럽트 처리 함수(ISR) 이름입니다`;
  if(FSP_API_OBJECTS.has(name))return `${name}은(는) FSP 드라이버의 API 객체 이름(g_…_on_…)입니다`;
  return '';
 }
@@ -100,7 +100,7 @@ function callbackArgType(where,p){
  if(/^SPI/.test(where))return 'spi_callback_args_t';
  if(/^(GPT|AGT)/.test(where))return 'timer_callback_args_t';
  if(/^ADC/.test(where))return 'adc_callback_args_t';
- if(/^IIC/.test(where))return 'i2c_master_callback_args_t';
+ if(/^IIC/.test(where))return p?.mode==='SLAVE'?'i2c_slave_callback_args_t':'i2c_master_callback_args_t';
  if(/^I?WDT$/.test(where))return 'wdt_callback_args_t';
  if(where==='RTC')return 'rtc_callback_args_t';
  return where;
@@ -268,6 +268,12 @@ export function raIicClock(pclkb,rate){
  for(let cks=0;cks<8;cks++){const ref=pclkb/2**cks,counts=Math.round((1/hz-240e-9)*ref)-2;if(counts<=62&&counts>=2){const brl=Math.ceil(counts/2),brh=counts-brl;return {cks,brh,brl,actual:1/((brh+brl+2)/ref+240e-9),duty:(brh+1)/(brh+brl+2)*100};}}
  throw new Error(`I²C ${hz} Hz: PCLKB ${pclkb/1e6} MHz로 만들 수 없는 속도입니다.`);
 }
+/** This board's default address as an I2C slave (r_iic_slave), outside the addresses of the I2C parts in the circuit. */
+export const RA_IIC_SLAVE_ADDRESS=0x42;
+/** r_iic_slave clock settings (iic_slave_clock_settings_t: ICMR1.CKS, ICBRL for the data setup time, digital filter
+ * stages). The master drives SCL, so the slave uses only the reference clock and the low width: the same CKS and ICBRL
+ * as the master at that rate (raIicClock), and no noise filter stages. */
+export function raIicSlaveClock(pclkb,rate){const c=raIicClock(pclkb,rate);return {cks:c.cks,brl:c.brl,filter:0};}
 // AGT0-5 (16-bit, BSP_PERIPHERAL_AGT_CHANNEL_MASK 0x3F): periodic timers counting PCLKB /1, /2, /8 or LOCO (32.768 kHz) /1-/128.
 export const RA_AGT_CHANNELS=Object.freeze([0,1,2,3,4,5]);
 const LOCO_HZ=32768;
@@ -301,14 +307,20 @@ function validateAdc(p,pins){
  if(q.enabled&&!Object.entries(pins).some(([pin,x])=>x.function==='Analog'&&RA_ADC_CHANNELS[pin]!=null))throw new Error('ADC0: 아날로그 입력 핀(AN000~AN008, AN012, AN013)을 Analog로 정하세요.');
  return q;
 }
+// One IIC channel is an I2C master (r_iic_master, the default: its settings keep their shape) or an I2C slave
+// (r_iic_slave, mode 'SLAVE'), as RASC puts one stack or the other on the channel. `slave` is the address the master
+// talks to, or in slave mode this board's own 7-bit address (i2c_slave_cfg_t.slave; 0x08-0x77, outside the reserved ones).
 function validateIic(id,ch,p,fam,clock,signals){
  if(!RA_IIC_CHANNELS.includes(ch)||!p||typeof p.enabled!=='boolean')throw new Error(`${id}: 지원하지 않는 주변장치입니다.`);
- const q={enabled:p.enabled,rate:p.rate??'STANDARD',slave:p.slave??0x50,callback:p.callback??`i2c_master${ch}_callback`,priority:p.priority??12};
+ if(p.mode!==undefined&&!['MASTER','SLAVE'].includes(p.mode))throw new Error(`${id}: 동작 모드는 Master(r_iic_master) 또는 Slave(r_iic_slave)입니다.`);
+ const slaveMode=p.mode==='SLAVE';
+ const q={enabled:p.enabled,...(slaveMode?{mode:'SLAVE'}:{}),rate:p.rate??'STANDARD',slave:p.slave??(slaveMode?RA_IIC_SLAVE_ADDRESS:0x50),callback:p.callback??`i2c_${slaveMode?'slave':'master'}${ch}_callback`,priority:p.priority??12};
  if(!Object.hasOwn(RA_IIC_RATES,q.rate)||q.rate==='FASTPLUS'&&ch!==0)throw new Error(`${id}: 속도는 Standard(100 kHz)·Fast(400 kHz)${ch===0?'·Fast-mode Plus(1 MHz)':''}입니다.`);
- if(!Number.isInteger(q.slave)||q.slave<0||q.slave>0x7f)throw new Error(`${id}: 슬레이브 주소는 7비트(0x00~0x7F)입니다.`);
- if(typeof q.callback!=='string'||!C_NAME.test(q.callback))throw new Error(`${id}: 콜백 이름은 C 식별자로 쓰세요(r_iic_master는 콜백으로 완료를 알립니다).`);
+ if(slaveMode){if(!Number.isInteger(q.slave)||q.slave<0x08||q.slave>0x77)throw new Error(`${id}: 슬레이브 모드의 자기 주소는 7비트 0x08~0x77입니다(0x00~0x07과 0x78~0x7F는 I²C 예약 주소).`);}
+ else if(!Number.isInteger(q.slave)||q.slave<0||q.slave>0x7f)throw new Error(`${id}: 슬레이브 주소는 7비트(0x00~0x7F)입니다.`);
+ if(typeof q.callback!=='string'||!C_NAME.test(q.callback))throw new Error(`${id}: 콜백 이름은 C 식별자로 쓰세요(${slaveMode?'r_iic_slave는 콜백에서 R_IIC_SLAVE_Read · R_IIC_SLAVE_Write를 부릅니다':'r_iic_master는 콜백으로 완료를 알립니다'}).`);
  if(!Number.isInteger(q.priority)||q.priority<0||q.priority>15)throw new Error(`${id}: 인터럽트 우선순위는 0~15입니다.`);
- raIicClock(raClockHz({family:fam.id,clock},'pclkb'),q.rate);
+ if(slaveMode)raIicSlaveClock(raClockHz({family:fam.id,clock},'pclkb'),q.rate);else raIicClock(raClockHz({family:fam.id,clock},'pclkb'),q.rate);
  if(q.enabled&&(!signals.has(id+'_SCL')||!signals.has(id+'_SDA')))throw new Error(`${id}: SCL과 SDA 핀을 모두 정하세요.`);
  return q;
 }

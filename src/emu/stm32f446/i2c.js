@@ -199,6 +199,8 @@ export class I2c extends Peripheral {
   }
   // ------------------------------------------------------------ slave side (soc.i2cPeers on the master's board)
   slaveListens(addr) { return !this.slaveState && this.enabled() && !!bit(this.get(CR1), 10) && this.state === 'idle' && ((this.get(OAR1) >> 1) & 0x7f) === addr && !bit(this.get(OAR1), 15); }
+  /** {address, sda, scl} while this I2C listens on its own address (for a master that asks once per transfer: an ESP32 sketch). */
+  slaveInfo() { const a = (this.get(OAR1) >> 1) & 0x7f; if (!this.slaveListens(a)) return null; const p = this.pins(); return p.sda && p.scl ? { address: a, sda: p.sda, scl: p.scl } : null; }
   slaveAddress(read) {
     this.slaveState = read ? 'tx-addr' : 'rx-addr'; this.held = []; this.stopSeen = false;
     this.setBits(SR1, 2); this.setBits(SR2, read ? 6 : 2); if (!read) this.clearBits(SR2, 4);

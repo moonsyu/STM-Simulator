@@ -12,6 +12,8 @@ import {FirmwareSession} from '../../src/firmware-session.js';
 import {SimulationSession} from '../../src/session.js';
 import {projectForBoard,validateProject} from '../../src/project.js';
 import {raExample} from '../../src/ra-examples.js';
+import {createBoardDrivers} from '../../src/fixed-run.js';
+import {connectStm32Drivers} from '../../src/stm32-boards.js';
 
 const require=createRequire(import.meta.url),{prepareBuild,build,detectTools}=require('../../desktop/native-build.cjs');
 const tools=await detectTools({armGcc:process.env.ARM_GCC||''});
@@ -33,7 +35,10 @@ const PLAN={
  ra_rtc_clock:{ms:6000,buttons:false,vars:{seconds:0}},
  // Deep Software Standby after 1 s; S1 at 1500 ms cancels it (IRQ1-DS): one reset on both engines, LED2 from then on, and
  // the second Deep Software Standby at about 2.5 s with LED2 kept on by IOKEEP.
- ra_lpm_deep:{ms:3000,buttons:false,at:{1500:s=>s.setPressed({SW1:true}),1600:s=>s.setPressed({})},vars:{from_deep_standby:0},resets:1}
+ ra_lpm_deep:{ms:3000,buttons:false,at:{1500:s=>s.setPressed({SW1:true}),1600:s=>s.setPressed({})},vars:{from_deep_standby:0},resets:1},
+ // The ESP32 sketch (I2C master) runs on both: it writes the LED byte and reads two bytes every 500 ms. On the emulator
+ // a read waits for the slave's interrupts (clock stretching, a few ms), so LED2's edges may come that much later.
+ ra_iic_slave:{buttons:false,window:12,board:/RA /,vars:{writes_seen:0,reads_answered:0,aborted:0,command:0}}
 };
 // The level of a pin each millisecond: its PWM duty, or high/low.
 function timeline(session,id){
@@ -48,8 +53,8 @@ function timeline(session,id){
  return out;
 }
 // Instants where the engines differ, other than within 1 ms of a change in either.
-function differences(a,b){
- const near=(x,t)=>x[t-1]!==x[t]||x[t+1]!==undefined&&x[t+1]!==x[t];
+function differences(a,b,window=1){
+ const near=(x,t)=>{for(let k=t-window+1;k<=t+window;k++)if(k>0&&k<x.length&&x[k-1]!==x[k])return true;return false;};
  return a.map((v,t)=>v===b[t]||near(a,t)||near(b,t)?null:`${t+1} ms: emulator ${v}, interpreter ${b[t]}`).filter(Boolean);
 }
 async function compare(ids){
@@ -60,8 +65,12 @@ async function compare(ids){
    const emu={uart:[]},interp={uart:[]};
    const firmware=new FirmwareSession(validateProject(project),{elf:new Uint8Array(await fs.readFile(result.elf)),uart:e=>emu.uart.push(e)});
    const simulation=new SimulationSession(validateProject(project),{uart:e=>interp.uart.push(e),warn:m=>{if(!PLAN[id].warn?.test(m))throw new Error(`${id}: ${m}`);}});
+   // The other boards of the circuit (an ESP32 sketch) run with each engine, as the app starts them.
+   emu.board=[];interp.board=[];
+   for(const [session,log]of [[firmware,emu],[simulation,interp]])if(project.components.some(p=>p.type==='devboard')){session.circuit.drivers=createBoardDrivers(session.project,{log:s=>log.board.push(s)});if(session.buses)session.buses.boards=()=>session.circuit.drivers;connectStm32Drivers(session);}
    const ta=timeline(firmware,id),tb=timeline(simulation,id);
-   for(const pin of Object.keys(ta))assert.deepEqual(differences(ta[pin],tb[pin]).slice(0,5),[],`${id} ${pin}`);
+   for(const pin of Object.keys(ta))assert.deepEqual(differences(ta[pin],tb[pin],PLAN[id].window).slice(0,5),[],`${id} ${pin}`);
+   if(PLAN[id].board){const lines=log=>log.board.filter(l=>PLAN[id].board.test(l)),n=Math.min(lines(emu).length,lines(interp).length);assert.ok(n>=3,`${id}: the other board printed ${n} lines`);assert.deepEqual(lines(interp).slice(0,n),lines(emu).slice(0,n),id+' other board output');}
    assert.ok(Object.values(ta).some(x=>x.some(v=>v!==x[0])),id+': the LEDs change, so the comparison means something');
    // Watchdog resets: as many on both engines (the emulator logs each one, the interpreter restarts the program).
    assert.equal(firmware.resets.length,PLAN[id].resets??0,id+' emulator resets');assert.equal(simulation.runtime.resetCount??0,PLAN[id].resets??0,id+' interpreter resets');
@@ -86,3 +95,4 @@ test('parity: ra_spi_memory (r_spi SPI1 with SSL0, the SPI memory, SCI9 output)'
 test('parity: ra_wdt_reset (WDT reset and RSTSR1.WDTRF)',{skip,timeout:900000},()=>compare(['ra_wdt_reset']));
 test('parity: ra_rtc_clock (RTC calendar, 1 s periodic interrupt, alarm)',{skip,timeout:900000},()=>compare(['ra_rtc_clock']));
 test('parity: ra_lpm_deep (Deep Software Standby, S1 on IRQ1-DS, RSTSR0.DPSRSTF, IOKEEP)',{skip,timeout:900000},()=>compare(['ra_lpm_deep']));
+test('parity: ra_iic_slave (r_iic_slave with the ESP32 sketch as the I2C master)',{skip,timeout:900000},()=>compare(['ra_iic_slave']));

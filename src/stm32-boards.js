@@ -128,6 +128,11 @@ export class Stm32Driver{
   const us=h.soc?h.now:h.runtime.microTime,r=h.circuit.hold(h.project,h.soc?h.gpio:h.runtime.gpio,h.pressed,h.sensors.echoHigh(us),h.motion.signals);
   const v=r.fault?this.view():this.translate(r);this.last={host:h.result,key,v};return v;
  }
+ // This board's HAL I2C slave, for a board driver that is an I2C master (an ESP32 sketch): the calls the main board's
+ // master makes through connectStm32Drivers' ports. A simulator session only (an emulated board is not reached this way).
+ i2cSlave(){return this.emulate?null:this.session.hal?.i2cSlaveInfo?.()??null;}
+ i2cReceive(bytes){return this.session.hal.i2cSlaveReceive(bytes,this.session.runtime);}
+ i2cRequest(count){return this.session.hal.i2cSlaveRequest(count,this.session.runtime);}
  gpio(){const out={},g=this.emulate?this.session.gpio:this.session.runtime.gpio;for(const [pin,state]of Object.entries(g||{}))if(!pin.includes('.'))out[`${this.part.id}.${pin}`]=state;return out;}
  // The program starts once the circuit has been solved; it then runs up to each circuit step.
  advance(time){if(!this.shared)return;try{this.session.tick(time);this.enriched=this.session.result;}catch(error){throw new Error(`${this.part.name}: ${error.message}`);}}
@@ -164,6 +169,8 @@ export class Stm32Driver{
  */
 export function connectStm32Drivers(session){
  for(const d of session.circuit.drivers)if(d instanceof Stm32Driver)d.host=session;
+ // A board driver that is an I2C master (an ESP32 sketch) reaches the main board's I2C slave through its session.
+ for(const d of session.circuit.drivers)d.attachHost?.(session);
  // Wireless modules: every board of the run shares the main board's air.
  for(const d of session.circuit.drivers)d.joinWireless?.(session.wireless);
  linkFirmwareBoards(session);
@@ -173,7 +180,7 @@ export function connectStm32Drivers(session){
  // A board as seen from another one: the main board's pins are `<viewer id>.PA5` there (viewMapper).
  const port=(viewer,board)=>{
   const hal=()=>board.session().hal,r=()=>board.session().runtime;
-  return {part:{id:board.id??viewer.id},i2cSlave:()=>hal()?.i2cSlaveInfo(),i2cReceive:bytes=>hal().i2cSlaveReceive(bytes,r()),i2cRequest:count=>hal().i2cSlaveRequest(count,r()),spiSlave:()=>hal()?.spiSlaveInfo(),spiExchange:value=>hal().spiSlaveExchange(value,r())};
+  return {part:{id:board.id??viewer.id},i2cSlave:()=>hal()?.i2cSlaveInfo(),i2cProbe:()=>hal()?.i2cSlaveProbe?.(r()),i2cReceive:bytes=>hal().i2cSlaveReceive(bytes,r()),i2cRequest:count=>hal().i2cSlaveRequest(count,r()),spiSlave:()=>hal()?.spiSlaveInfo(),spiExchange:value=>hal().spiSlaveExchange(value,r())};
  };
  const buses=s=>s.hal?[...s.hal.serials.values()].map(c=>c.bus):[s.buses];
  for(const from of boards){

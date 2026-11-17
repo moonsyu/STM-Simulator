@@ -32,7 +32,7 @@ export const FSP_ALIASES=Object.freeze({FSP_CPP_HEADER:'',FSP_CPP_FOOTER:'',FSP_
  IOPORT_CFG_CTRL:'g_ioport_ctrl',IOPORT_CFG_NAME:'g_bsp_pin_cfg',IOPORT_CFG_OPEN:'R_IOPORT_Open'});
 // FSP and generated headers that resolve to the prelude (it has a guard, so including several is fine); the C
 // library headers read as empty.
-const FSP_HEADERS=['hal_data.h','common_data.h','bsp_pin_cfg.h','vector_data.h','bsp_api.h','bsp_cfg.h','bsp_clock_cfg.h','board.h','board_cfg.h','fsp_common_api.h','r_ioport.h','r_ioport_api.h','r_icu.h','r_external_irq_api.h','r_sci_uart.h','r_uart_api.h','r_gpt.h','r_timer_api.h','r_agt.h','r_adc.h','r_adc_api.h','r_iic_master.h','r_i2c_master_api.h','r_spi.h','r_sci_spi.h','r_spi_api.h','r_wdt.h','r_iwdt.h','r_wdt_api.h','r_rtc.h','r_rtc_api.h','r_lpm.h','r_lpm_api.h','bsp_io.h','bsp_delay.h','bsp_common.h'];
+const FSP_HEADERS=['hal_data.h','common_data.h','bsp_pin_cfg.h','vector_data.h','bsp_api.h','bsp_cfg.h','bsp_clock_cfg.h','board.h','board_cfg.h','fsp_common_api.h','r_ioport.h','r_ioport_api.h','r_icu.h','r_external_irq_api.h','r_sci_uart.h','r_uart_api.h','r_gpt.h','r_timer_api.h','r_agt.h','r_adc.h','r_adc_api.h','r_iic_master.h','r_i2c_master_api.h','r_spi.h','r_sci_spi.h','r_spi_api.h','r_wdt.h','r_iwdt.h','r_wdt_api.h','r_rtc.h','r_rtc_api.h','r_iic_slave.h','r_i2c_slave_api.h','r_lpm.h','r_lpm_api.h','bsp_io.h','bsp_delay.h','bsp_common.h'];
 const C_HEADERS=new Set(['stdint.h','stddef.h','stdbool.h','string.h','stdlib.h','stdio.h','ctype.h','math.h','limits.h','time.h']);
 // Generated and FSP source folders of the project tree: built by ARM GCC only (the prelude stands in for them here).
 const FSP_FILE=/^(ra|ra_gen|ra_cfg|script)\//;
@@ -104,6 +104,13 @@ typedef struct st_iic_master_instance_ctrl { uint32_t open; } iic_master_instanc
 typedef struct st_i2c_master_cfg { uint8_t channel; i2c_master_rate_t rate; uint32_t slave; i2c_master_addr_mode_t addr_mode; uint8_t ipl; IRQn_Type rxi_irq; IRQn_Type txi_irq; IRQn_Type tei_irq; IRQn_Type eri_irq; void * p_context; void * p_extend; } i2c_master_cfg_t;
 typedef struct st_i2c_master_instance { iic_master_instance_ctrl_t * p_ctrl; const i2c_master_cfg_t * p_cfg; void * p_api; } i2c_master_instance_t;
 typedef struct st_i2c_master_callback_args { void * p_context; i2c_master_event_t event; } i2c_master_callback_args_t;
+${enumOf('e_i2c_slave_rate','i2c_slave_rate_t',[['I2C_SLAVE_RATE_STANDARD',100000],['I2C_SLAVE_RATE_FAST',400000],['I2C_SLAVE_RATE_FASTPLUS',1000000],['I2C_SLAVE_RATE_HIGHSPEED',3400000]])}
+${enumOf('e_i2c_slave_addr_mode','i2c_slave_addr_mode_t',[['I2C_SLAVE_ADDR_MODE_7BIT',1],['I2C_SLAVE_ADDR_MODE_10BIT',2]])}
+${enumOf('e_i2c_slave_event','i2c_slave_event_t',['ABORTED','RX_COMPLETE','TX_COMPLETE','RX_REQUEST','TX_REQUEST','RX_MORE_REQUEST','TX_MORE_REQUEST','GENERAL_CALL'].map((k,i)=>['I2C_SLAVE_EVENT_'+k,i+1]))}
+typedef struct st_iic_slave_instance_ctrl { uint32_t open; } iic_slave_instance_ctrl_t;
+typedef struct st_i2c_slave_cfg { uint8_t channel; i2c_slave_rate_t rate; uint16_t slave; i2c_slave_addr_mode_t addr_mode; bool general_call_enable; IRQn_Type rxi_irq; IRQn_Type txi_irq; IRQn_Type tei_irq; IRQn_Type eri_irq; uint8_t ipl; uint8_t eri_ipl; bool clock_stretching_enable; void * p_context; void * p_extend; } i2c_slave_cfg_t;
+typedef struct st_i2c_slave_instance { iic_slave_instance_ctrl_t * p_ctrl; const i2c_slave_cfg_t * p_cfg; void * p_api; } i2c_slave_instance_t;
+typedef struct st_i2c_slave_callback_args { void * p_context; uint32_t bytes; i2c_slave_event_t event; } i2c_slave_callback_args_t;
 ${enumOf('e_spi_bit_width','spi_bit_width_t',Array.from({length:29},(_,i)=>[`SPI_BIT_WIDTH_${i+4}_BITS`,i+3]))}
 ${enumOf('e_spi_mode','spi_mode_t',[['SPI_MODE_MASTER',0],['SPI_MODE_SLAVE',1]])}
 ${enumOf('e_spi_clk_phase','spi_clk_phase_t',[['SPI_CLK_PHASE_EDGE_ODD',0],['SPI_CLK_PHASE_EDGE_EVEN',1]])}
@@ -200,7 +207,7 @@ typedef struct st_lpm_instance { lpm_instance_ctrl_t * p_ctrl; const lpm_cfg_t *
 
 /** The prelude's text for a checked RA configuration: types, the pin symbols and the Stacks instances of hal_data.c. */
 export function fspPrelude(mcu){
- const {irqs,uarts,gpts,adc,agts,iics,spis,sciSpis,wdts,rtc,lpm}=raInstances(mcu),vectors=raVectors(mcu),vec=k=>vectors.some(v=>v.vector===k)?`VECTOR_NUMBER_${k}`:'FSP_INVALID_VECTOR';
+ const {irqs,uarts,gpts,adc,agts,iics,spis,sciSpis,wdts,rtc,iicSlaves,lpm}=raInstances(mcu),vectors=raVectors(mcu),vec=k=>vectors.some(v=>v.vector===k)?`VECTOR_NUMBER_${k}`:'FSP_INVALID_VECTOR';
  const pins=Object.entries(mcu.pins||{}).sort(([a],[b])=>raPinName(a).localeCompare(raPinName(b)));
  const ipl=(name,p)=>name?`(${p})`:'(BSP_IRQ_DISABLED)';
  const out=['#ifndef FSP_INTERP_PRELUDE_H','#define FSP_INTERP_PRELUDE_H',TYPES,
@@ -238,6 +245,8 @@ export function fspPrelude(mcu){
  if(lpm){const [wakeLo,wakeHi]=raLpmMask(lpm.wake,RA_LPM_WAKE_BITS),[cancel]=raLpmMask(lpm.cancel,RA_LPM_CANCEL_BITS),[edge]=raLpmMask(lpm.cancelRising,RA_LPM_CANCEL_BITS);
   out.push(LPM_TYPES,'lpm_instance_ctrl_t g_lpm0_ctrl;',`const lpm_cfg_t g_lpm0_cfg = { .low_power_mode = LPM_MODE_${lpm.mode}, .standby_wake_sources = ${hex(wakeLo,8)}, .fsp_interp_wake_sources_high = ${wakeHi}, .snooze_request_source = LPM_SNOOZE_REQUEST_RXD0_FALLING, .snooze_end_sources = 0, .snooze_cancel_sources = LPM_SNOOZE_CANCEL_SOURCE_NONE, .dtc_state_in_snooze = LPM_SNOOZE_DTC_DISABLE, .io_port_state = ${lpm.ioKeep?'LPM_IO_PORT_NO_CHANGE':'LPM_IO_PORT_RESET'}, .power_supply_state = LPM_POWER_SUPPLY_${lpm.power}, .deep_standby_cancel_source = ${hex(cancel,8)}, .deep_standby_cancel_edge = ${hex(edge,8)}, .p_extend = NULL };`,
    'const lpm_instance_t g_lpm0 = { .p_ctrl = &g_lpm0_ctrl, .p_cfg = &g_lpm0_cfg, .p_api = NULL };');}
+ for(const t of iicSlaves){const v=k=>vec(`IIC${t.channel}_${k}`);out.push(`iic_slave_instance_ctrl_t ${t.name}_ctrl;`,`const i2c_slave_cfg_t ${t.name}_cfg = { .channel = ${t.channel}, .rate = I2C_SLAVE_RATE_${t.rate}, .slave = ${hex(t.slave,2)}, .general_call_enable = false, .addr_mode = I2C_SLAVE_ADDR_MODE_7BIT, .p_context = NULL, .rxi_irq = ${v('RXI')}, .txi_irq = ${v('TXI')}, .tei_irq = ${v('TEI')}, .eri_irq = ${v('ERI')}, .ipl = (${t.priority}), .eri_ipl = (${t.priority}), .clock_stretching_enable = true, .p_extend = NULL };`,
+  `const i2c_slave_instance_t ${t.name} = { .p_ctrl = &${t.name}_ctrl, .p_cfg = &${t.name}_cfg, .p_api = NULL };`,`void ${t.callback}(i2c_slave_callback_args_t * p_args);`);}
  out.push('void hal_entry(void);','void g_hal_init(void);','void g_common_init(void);','void BSP_PinConfigSecurityInit(void);','#endif');
  return out.join('\n')+'\n';
 }
@@ -285,8 +294,8 @@ export const fspConstants=program=>Object.fromEntries((program.registers||[]).ma
 const SHORT_WAIT_MS=.05;
 const FSP={SUCCESS:0,ASSERTION:1,INVALID_ARGUMENT:3,INVALID_MODE:5,UNSUPPORTED:6,NOT_OPEN:7,IN_USE:8,IRQ_BSP_DISABLED:11,ALREADY_OPEN:14,NOT_ENABLED:19};
 const KINDS={ioport:[/^g_ioport_ctrl$/,'g_ioport_ctrl'],icu:[/^g_external_irq(\d+)_ctrl$/,'g_external_irq1_ctrl'],uart:[/^g_uart(\d+)_ctrl$/,'g_uart9_ctrl'],gpt:[/^g_timer(\d+)_ctrl$/,'g_timer1_ctrl'],agt:[/^g_agt(\d+)_ctrl$/,'g_agt0_ctrl'],adc:[/^g_adc(\d+)_ctrl$/,'g_adc0_ctrl'],iic:[/^g_i2c_master(\d+)_ctrl$/,'g_i2c_master0_ctrl'],
- spi:[/^g_spi(\d+)_ctrl$/,'g_spi1_ctrl'],sciSpi:[/^g_sci_spi(\d+)_ctrl$/,'g_sci_spi9_ctrl'],wdt:[/^g_wdt(\d+)_ctrl$/,'g_wdt0_ctrl'],iwdt:[/^g_iwdt(\d+)_ctrl$/,'g_iwdt0_ctrl'],rtc:[/^g_rtc(\d+)_ctrl$/,'g_rtc0_ctrl'],lpm:[/^g_lpm(\d+)_ctrl$/,'g_lpm0_ctrl']};
-const SUPPORTED='R_IOPORT_*, R_BSP_SoftwareDelay · R_BSP_Pin*, R_ICU_ExternalIrq*, R_SCI_UART_*, R_GPT_*, R_AGT_*, R_ADC_*, R_IIC_MASTER_*, R_SPI_*, R_SCI_SPI_*, R_WDT_*, R_IWDT_*, R_RTC_*, R_LPM_*';
+ spi:[/^g_spi(\d+)_ctrl$/,'g_spi1_ctrl'],sciSpi:[/^g_sci_spi(\d+)_ctrl$/,'g_sci_spi9_ctrl'],wdt:[/^g_wdt(\d+)_ctrl$/,'g_wdt0_ctrl'],iwdt:[/^g_iwdt(\d+)_ctrl$/,'g_iwdt0_ctrl'],rtc:[/^g_rtc(\d+)_ctrl$/,'g_rtc0_ctrl'],iicSlave:[/^g_i2c_slave(\d+)_ctrl$/,'g_i2c_slave0_ctrl'],lpm:[/^g_lpm(\d+)_ctrl$/,'g_lpm0_ctrl']};
+const SUPPORTED='R_IOPORT_*, R_BSP_SoftwareDelay · R_BSP_Pin*, R_ICU_ExternalIrq*, R_SCI_UART_*, R_GPT_*, R_AGT_*, R_ADC_*, R_IIC_MASTER_*, R_IIC_SLAVE_*, R_SPI_*, R_SCI_SPI_*, R_WDT_*, R_IWDT_*, R_RTC_*, R_LPM_*';
 // RTC periodic rates the RA6E1 has (RCR1.PES 6-15): FSP's enum also lists 1 minute … 1 month for other RA parts, which
 // would make R_RTC_PeriodicIrqRateSet wait forever on this one.
 const RTC_PERIOD_S={6:1/256,7:1/128,8:1/64,9:1/32,10:1/16,11:1/8,12:1/4,13:1/2,14:1,15:2};
@@ -580,6 +589,76 @@ export class FspAdapter {
  }
  // R_IIC_MASTER_Abort / Close: the bus is released, the transfer's completion is dropped and no callback comes.
  iicStop(st){st.busy=0;this.dropJobs(`IIC${st.channel}:`);}
+ // ---- IIC slave (r_iic_slave): another board's I²C master reaches it a transfer at a time (i2cSlaveInfo / Receive /
+ // Request, the calls the HAL adapter's I2C slave answers), and the driver's interrupt handlers (r_iic_slave.c
+ // iic_rxi_slave, iic_txi_slave, iic_tei_slave, iic_err_slave) run on it byte by byte with the same bookkeeping (total,
+ // loaded, transaction_count, direction), so the callback sees the events, their order and the byte counts FSP gives.
+ // The callback runs at once, inside the master's transfer: SCL is held while it runs (clock stretching).
+ slaveOpen(){for(const st of this.states.values())if(st.kind==='iicSlave'&&st.open)return st;return null;}
+ i2cSlaveInfo(){const st=this.slaveOpen();return st?{address:st.address,sda:st.sda,scl:st.scl}:null;}
+ slaveEvent(r,st,event,bytes){
+  const fn=st.callback;if(!fn)return;
+  if(!r.program.functions[fn]){this.warnOnce(r,'cb:'+fn,`[FSP] 콜백 ${fn}()이 hal_entry.c에 없어 인터럽트에서 부르지 않습니다. ARM GCC 빌드에서는 링크 오류(undefined reference)가 납니다.`);return;}
+  const value=r.defaultValue('i2c_slave_callback_args_t',r.globals);value.fields.event.value=event;value.fields.bytes.value=bytes>>>0;if(st.context)value.fields.p_context.value=st.context;
+  this.buses.trace?.({micros:r.microTime,protocol:'I²C',message:`IIC${st.channel} 슬레이브 · ${['','ABORTED','RX_COMPLETE','TX_COMPLETE','RX_REQUEST','TX_REQUEST','RX_MORE_REQUEST','TX_MORE_REQUEST'][event]} · ${bytes>>>0} B`});
+  r.runCallback({name:fn,args:[{kind:'pointer',cell:{value,owner:r.globals,constant:false,dataType:'i2c_slave_callback_args_t'}}]});
+ }
+ // iic_slave_notify: the end of a transfer (or its abort) with the bytes moved.
+ slaveNotify(r,st,event){const count=st.count;st.count=0;st.direction=2;this.slaveEvent(r,st,event,count);}
+ // The master wrote `bytes` after the address. false: a byte was answered with NACK (or the transfer was aborted).
+ i2cSlaveReceive(bytes,r){
+  const st=this.slaveOpen();if(!st)return false;let notified=false,ok=true,hang=false,taken=0;
+  const request=event=>{st.direction=2;this.slaveEvent(r,st,event,st.count);return st.direction===1;};
+  const store=b=>{r.set(r.pointerCell(st.buffer,st.loaded++),b);st.count++;};
+  for(const b of bytes){
+   // The byte's ACK is ACKBT as the handler of the byte before left it.
+   const ack=!st.nack;if(!ack)ok=false;taken++;
+   if(!notified){notified=true;const served=request(4);if(!st.open)break;if(!served){st.nack=true;hang=true;break;}}
+   if(st.total===0)st.nack=true;
+   else if(st.total===st.loaded){const served=request(6);if(!st.open)break;if(!served){st.nack=true;hang=true;break;}if(st.total===0)st.nack=true;else store(b);}
+   else store(b);
+   if(!ack)break; // the master stops after a NACK
+  }
+  // R_IIC_SLAVE_Close in the callback (ICIER = 0, module stop): the driver takes nothing more and reports nothing more.
+  if(!st.open)return ok&&taken===bytes.length;
+  // No R_IIC_SLAVE_Read in the callback: NACK without the dummy read, SCL stays low until the time-out → ABORTED.
+  // The byte itself had its ACK before the callback ran (ACKBT was 0); only a byte after it meets the NACK.
+  if(hang){this.slaveNotify(r,st,1);return ok&&taken===bytes.length;}
+  if(st.direction===1){st.nack=false;this.slaveNotify(r,st,2);}
+  else{if(st.total>st.loaded)st.count=(st.count-1)>>>0;this.slaveNotify(r,st,3);}
+  return ok;
+ }
+ // The address with W and a STOP, no data (a bus scan): no buffer was asked for, so iic_err_slave reports TX_COMPLETE.
+ i2cSlaveProbe(r){this.i2cSlaveReceive([],r);}
+ // The master reads `count` bytes after the address; 0xFF where the slave has nothing to send.
+ i2cSlaveRequest(count,r){
+  const st=this.slaveOpen(),out=[];if(!st){while(out.length<count)out.push(0xff);return out;}
+  let shift=null,hold=null,tei=false,aborted=false;
+  const next=()=>{const v=Number(r.get(r.pointerCell(st.buffer,st.loaded++)))&255;st.count++;return v;};
+  // ICDRT moves to the shift register at once (TDRE, the next TXI), so the driver is one byte ahead.
+  const write=v=>{if(shift==null){shift=v;txi();}else hold=v;};
+  const txi=()=>{if(st.direction!==0)return;if(st.total===st.loaded)tei=true;else write(next());};
+  st.direction=2;this.slaveEvent(r,st,5,st.count);if(st.open)txi();
+  for(let i=0;i<count&&st.open;i++){
+   if(shift==null){aborted=true;break;} // nothing in ICDRT: SCL held until the time-out
+   out.push(shift);shift=null;
+   if(i===count-1)break; // the master's NACK: the transfer ends
+   if(hold!=null){shift=hold;hold=null;txi();}
+   else if(tei){tei=false;st.direction=2;this.slaveEvent(r,st,7,st.count);if(st.open&&st.direction===0&&st.total>0)write(next());}
+  }
+  while(out.length<count)out.push(0xff);
+  // Closed in the callback: 0xFF for what was not sent, and no further event.
+  if(!st.open)return out;
+  if(aborted||st.direction!==0){this.slaveNotify(r,st,1);return out;}
+  if(st.total>st.loaded)st.count=(st.count-1)>>>0;
+  this.slaveNotify(r,st,3);return out;
+ }
+ slaveReadWrite([ctrl,buffer,count],r,fn,direction){
+  const st=this.instance(ctrl,r,fn,'iicSlave');if(buffer==null||buffer===0)return FSP.ASSERTION;
+  if(!st.open)return FSP.NOT_OPEN;if(st.direction!==2)return FSP.IN_USE;
+  int(count,0,65535,`${fn} 길이`);if(count)r.pointerCell(buffer,count-1);
+  Object.assign(st,{buffer,total:count,loaded:0,direction,nack:false});return FSP.SUCCESS;
+ }
  // ---- SPI masters: r_spi (RSPI, SPIn) and r_sci_spi (SCIn simple SPI) on the circuit's SPI engine, the devices the STM32
  // HAL interpreter and the RA6E1 emulator (emu/ra6e1/spi.js exchangeFrame) reach: a frame of 8-32 bits goes out MSB
  // byte first, its bits reversed for LSB first. SSL0 (r_spi 4-wire) is driven low for the transfer; without it the
@@ -1034,7 +1113,23 @@ const HANDLERS={
   this.iicTransfer(r,st,()=>{const got=this.buses.call('Wire.requestFrom',[st.slave,count],r);if(got!==count)return 1;for(let i=0;i<count;i++)r.set(r.pointerCell(buffer,i),this.buses.call('Wire.read',[],r));return 2;});return FSP.SUCCESS;
  },
  R_IIC_MASTER_Abort(args,r,fn){const st=this.instance(args[0],r,fn,'iic');if(!st.open)return FSP.NOT_OPEN;this.iicStop(st);return FSP.SUCCESS;},
- R_IIC_MASTER_Close(args,r,fn){const st=this.instance(args[0],r,fn,'iic');if(!st.open)return FSP.NOT_OPEN;this.iicStop(st);st.open=false;if(this.activeIic===st.name)this.activeIic=null;return FSP.SUCCESS;}
+ R_IIC_MASTER_Close(args,r,fn){const st=this.instance(args[0],r,fn,'iic');if(!st.open)return FSP.NOT_OPEN;this.iicStop(st);st.open=false;if(this.activeIic===st.name)this.activeIic=null;return FSP.SUCCESS;},
+ // r_iic_slave (i2c_slave_api_t): Open, Read / Write (the buffer of the transfer the callback was asked for), CallbackSet, Close.
+ R_IIC_SLAVE_Open([ctrl,cfgPtr],r,fn){
+  const st=this.instance(ctrl,r,fn,'iicSlave');if(st.open)return FSP.ALREADY_OPEN;const cfg=this.struct(cfgPtr,r,'i2c_slave_cfg_t',fn),id='IIC'+st.channel,t=this.inst.iicSlaves.find(x=>x.channel===st.channel),f=k=>Number(cfg.fields[k].value);
+  if(f('eri_ipl')>f('ipl'))return FSP.INVALID_ARGUMENT;
+  const scl=this.pinOf(id+'_SCL'),sda=this.pinOf(id+'_SDA');if(!scl||!sda)throw new Error(`${fn}: Pins에서 ${id}의 SCL과 SDA 핀을 정하세요.`);
+  if(f('addr_mode')!==1)throw new Error(`${fn}: 내장 해석기는 7비트 주소(I2C_SLAVE_ADDR_MODE_7BIT)만 실행합니다.`);
+  const other=this.slaveOpen();if(other)throw new Error(`${fn}: 내장 해석기는 I²C 슬레이브 채널을 하나만 실행합니다(${other.name}이 열려 있음). 두 채널을 함께 쓰려면 ARM GCC 빌드로 실행하세요.`);
+  Object.assign(st,{open:true,kind:'iicSlave',scl,sda,address:f('slave')&0x7f,ipl:f('ipl'),callback:t?.callback||'',context:null,buffer:null,total:0,loaded:0,count:0,direction:2,nack:false});
+  // SCL and SDA are released (the bus pull-ups hold them high).
+  for(const p of [sda,scl])r.call('pinMode',[p,'INPUT']);
+  return FSP.SUCCESS;
+ },
+ R_IIC_SLAVE_Read(args,r,fn){return this.slaveReadWrite(args,r,fn,1);},
+ R_IIC_SLAVE_Write(args,r,fn){return this.slaveReadWrite(args,r,fn,0);},
+ R_IIC_SLAVE_CallbackSet([ctrl,callback,context],r,fn){const st=this.instance(ctrl,r,fn,'iicSlave');if(!callback)return FSP.ASSERTION;if(!st.open)return FSP.NOT_OPEN;st.callback=r.callback(callback).name;st.context=context?.kind==='pointer'?context:null;return FSP.SUCCESS;},
+ R_IIC_SLAVE_Close(args,r,fn){const st=this.instance(args[0],r,fn,'iicSlave');if(!st.open)return FSP.NOT_OPEN;st.open=false;return FSP.SUCCESS;}
 };
 // r_spi and r_sci_spi share spi_api_t: Open, Write (ctrl, src, length, width), Read (ctrl, dest, …), WriteRead (ctrl,
 // src, dest, length, width), CallbackSet and Close.

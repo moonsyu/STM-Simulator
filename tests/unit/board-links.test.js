@@ -4,6 +4,8 @@ import {SimulationSession} from '../../src/session.js';
 import {SketchDriver} from '../../src/esp32-sketch.js';
 import {createStm32Drivers,connectStm32Drivers} from '../../src/stm32-boards.js';
 import {applyLectureExample} from '../../src/lecture-examples.js';
+import {createBoardDrivers} from '../../src/fixed-run.js';
+import {DEVBOARD_MODELS} from '../../src/devboards.js';
 import {projectForBoard} from '../../src/project.js';
 
 function run(project,ms){
@@ -19,6 +21,18 @@ describe('boards on wires',()=>{
   assert.ok(!result.fault,result.warnings?.join());
   assert.match(text(out),/sent ON/);assert.match(text(out),/sent OFF/);assert.match(text(out),/ack/);assert.doesNotMatch(text(out),/no answer/);
   assert.ok(session.circuit.drivers[0].session.runtime.gpio.PA5,'the slave set its LD2 pin');
+ });
+ // Feature 33: an ESP32 sketch as a third board and a second master on the same SDA/SCL nets reaches the HAL slave of
+ // the second STM32 board (Stm32Driver.i2cSlave).
+ test('I²C: an ESP32 sketch (Wire master) reaches the HAL slave on the second STM32 board',()=>{
+  const {project}=applyLectureExample('wired-i2c-stm32'),key=s=>DEVBOARD_MODELS['esp32-nodemcu-32s'].pins.find(p=>p.signal===s).key,out=[];
+  project.components.push({id:'esp1',type:'devboard',model:'esp32-nodemcu-32s',name:'ESP32-1',x:900,y:300,rotation:0,code:'#include <Wire.h>\nvoid setup() { Serial.begin(115200); Wire.begin(); delay(120); }\nvoid loop() {\n  Wire.beginTransmission(0x20); Wire.write(49);\n  int e = Wire.endTransmission();\n  Wire.beginTransmission(0x21);\n  int none = Wire.endTransmission();\n  Serial.printf("ESP e=%d none=%d\\n", e, none);\n  delay(300);\n}\n'});
+  project.wires.push({id:'we1',from:`devboard:esp1:${key('GPIO21')}`,to:'board:CN5:9',color:'#30a46c'},{id:'we2',from:`devboard:esp1:${key('GPIO22')}`,to:'board:CN5:10',color:'#f5c518'});
+  const session=new SimulationSession(project,{});
+  session.circuit.drivers=[...createBoardDrivers(project,{log:t=>out.push(t)}),...createStm32Drivers(project,{log:t=>out.push(t)})];session.buses.boards=()=>session.circuit.drivers;connectStm32Drivers(session);
+  session.tick(0);for(let t=50;t<=1200;t+=50)session.tick(t);
+  const lines=out.filter(l=>/ESP e=/.test(l));assert.ok(lines.length>=3,out.join('|'));
+  assert.ok(lines.some(l=>/ESP e=0 none=2/.test(l)),lines.join('|'));assert.ok(lines.every(l=>/none=2/.test(l)),'nothing answers at 0x21');
  });
  test('I²C without the pull-ups, or without a slave on the address, gets no answer',()=>{
   const {project}=applyLectureExample('wired-i2c-stm32');project.wires=project.wires.filter(w=>!/part:r[12]:/.test(w.from+w.to));

@@ -1,6 +1,7 @@
 // FSP examples for the FPB-RA6E1 (Renesas RA6E1): hal_entry.c code with the pin settings it needs, as e² studio
 // projects for the board are written (hal_data.h instances, R_IOPORT_*, R_ICU_*, R_BSP_SoftwareDelay).
 import {raDefaultMcu} from './ra-config.js';
+import {DEVBOARD_MODELS} from './devboards.js';
 
 const WARM_START=`
 void R_BSP_WarmStart(bsp_warm_start_event_t event)
@@ -659,6 +660,119 @@ void hal_entry(void)
     }
 }
 `+WARM_START});
+// IIC0 as an I2C slave (r_iic_slave) at 0x42 on Arduino SDA (P401) / SCL (P400, the board's 2.2 kΩ pull-ups), with an
+// ESP32 as the master on GPIO21 (SDA) / GPIO22 (SCL): every 500 ms the sketch writes one byte (bit 0 → LED2) and reads
+// two back (how many reads the slave has answered, and the LED state). The slave only acts in its callback: a buffer
+// for each request, and the result when the master ends the transfer.
+const ESP32_MASTER=`#include <Wire.h>
+
+// FPB-RA6E1 (I2C slave 0x42): SDA = GPIO21, SCL = GPIO22
+#define RA_ADDRESS 0x42
+
+int led = 0;
+
+void setup() {
+  Serial.begin(115200);
+  Wire.begin();
+  delay(100);
+}
+
+void loop() {
+  led = led ^ 1;
+  Wire.beginTransmission(RA_ADDRESS);
+  Wire.write(led);
+  int error = Wire.endTransmission();
+
+  int got = Wire.requestFrom(RA_ADDRESS, 2);
+  if (got == 2) {
+    int count = Wire.read();
+    int state = Wire.read();
+    Serial.printf("RA count=%d led=%d error=%d\\n", count, state, error);
+  } else {
+    Serial.printf("RA no answer error=%d\\n", error);
+  }
+  delay(500);
+}
+`;
+const esp32Key=signal=>DEVBOARD_MODELS['esp32-nodemcu-32s'].pins.find(p=>p.signal===signal).key;
+const IIC_SLAVE_EXAMPLE=Object.freeze({id:'ra_iic_slave',name:'I²C 슬레이브 · ESP32 마스터와 통신 (R_IIC_SLAVE_Open · Read · Write · 콜백)',tags:['I2C','IIC','slave','r_iic_slave','ESP32','board'],
+ mcu:()=>{const m=raDefaultMcu();m.pins.P400={function:'Peripheral',signal:'IIC0_SCL'};m.pins.P401={function:'Peripheral',signal:'IIC0_SDA'};m.peripherals={IIC0:{enabled:true,mode:'SLAVE',rate:'STANDARD',slave:0x42,callback:'i2c_slave0_callback',priority:12}};return m;},
+ circuit:()=>({components:[{id:'esp1',type:'devboard',model:'esp32-nodemcu-32s',name:'ESP32-1',x:640,y:330,rotation:0,code:ESP32_MASTER}],wires:[
+  {id:'w_sda',from:`devboard:esp1:${esp32Key('GPIO21')}`,to:'board:J1:9',color:'#30a46c'},{id:'w_scl',from:`devboard:esp1:${esp32Key('GPIO22')}`,to:'board:J1:10',color:'#f5c518'},
+  {id:'w_gnd',from:`devboard:esp1:${esp32Key('GND')}`,to:'board:J1:7',color:'#3a3a3a'}]}),
+ code:HEAD+`
+static uint8_t rx_buffer[4];
+static uint8_t tx_buffer[2];
+volatile uint32_t writes_seen = 0;
+volatile uint32_t reads_answered = 0;
+volatile uint32_t aborted = 0;
+volatile uint8_t command = 0;
+
+/* r_iic_slave calls this from its interrupts: it asks for a buffer when the master starts a transfer and reports
+ * how many bytes moved when the master ends it. */
+void i2c_slave0_callback(i2c_slave_callback_args_t *p_args)
+{
+    switch (p_args->event)
+    {
+        case I2C_SLAVE_EVENT_RX_REQUEST:
+        {
+            /* The master writes: receive up to 4 bytes. */
+            R_IIC_SLAVE_Read(&g_i2c_slave0_ctrl, rx_buffer, sizeof(rx_buffer));
+            break;
+        }
+        case I2C_SLAVE_EVENT_RX_MORE_REQUEST:
+        {
+            /* More than the buffer holds: answer the next byte with NACK. */
+            R_IIC_SLAVE_Read(&g_i2c_slave0_ctrl, rx_buffer, 0);
+            break;
+        }
+        case I2C_SLAVE_EVENT_RX_COMPLETE:
+        {
+            if (p_args->bytes >= 1)
+            {
+                command = rx_buffer[0];
+                R_IOPORT_PinWrite(&g_ioport_ctrl, LED2, (command & 1) ? BSP_IO_LEVEL_HIGH : BSP_IO_LEVEL_LOW);
+            }
+            writes_seen++;
+            break;
+        }
+        case I2C_SLAVE_EVENT_TX_REQUEST:
+        case I2C_SLAVE_EVENT_TX_MORE_REQUEST:
+        {
+            /* The master reads: the number of reads answered so far and the LED state. */
+            tx_buffer[0] = (uint8_t) reads_answered;
+            tx_buffer[1] = (uint8_t) (command & 1);
+            R_IIC_SLAVE_Write(&g_i2c_slave0_ctrl, tx_buffer, sizeof(tx_buffer));
+            break;
+        }
+        case I2C_SLAVE_EVENT_TX_COMPLETE:
+        {
+            reads_answered++;
+            break;
+        }
+        default:
+        {
+            aborted++;
+            break;
+        }
+    }
+}
+
+void hal_entry(void)
+{
+    /* From here the board answers at its address (0x42 in the IIC0 settings). */
+    R_IIC_SLAVE_Open(&g_i2c_slave0_ctrl, &g_i2c_slave0_cfg);
+
+    /* LED1 blinks while the interrupts serve the master. */
+    while (1)
+    {
+        R_IOPORT_PinWrite(&g_ioport_ctrl, LED1, BSP_IO_LEVEL_HIGH);
+        R_BSP_SoftwareDelay(500, BSP_DELAY_UNITS_MILLISECONDS);
+        R_IOPORT_PinWrite(&g_ioport_ctrl, LED1, BSP_IO_LEVEL_LOW);
+        R_BSP_SoftwareDelay(500, BSP_DELAY_UNITS_MILLISECONDS);
+    }
+}
+`+WARM_START});
 // Deep Software Standby and its wake-up by S1: P205 is IRQ1-DS, the pin function that cancels the mode (the course's
 // "IRQn-DS wakes Deep Software Standby"). The program works for a second with LED1 on, says so on SCI9 (the USB-TTL part
 // on D0/D1) and enters the mode; pressing S1 resets the MCU, and the program, started again, finds RSTSR0.DPSRSTF set,
@@ -733,5 +847,5 @@ void hal_entry(void)
     }
 }
 `+WARM_START});
-RA_EXAMPLES.push(POLL_EXAMPLE,IRQ_COURSE_EXAMPLE,UART_EXAMPLE,GPT_EXAMPLE,ADC_EXAMPLE,AGT_EXAMPLE,IIC_EXAMPLE,SPI_EXAMPLE,CHALLENGE_EXAMPLE,WDT_EXAMPLE,RTC_EXAMPLE,LPM_EXAMPLE);
+RA_EXAMPLES.push(POLL_EXAMPLE,IRQ_COURSE_EXAMPLE,UART_EXAMPLE,GPT_EXAMPLE,ADC_EXAMPLE,AGT_EXAMPLE,IIC_EXAMPLE,SPI_EXAMPLE,CHALLENGE_EXAMPLE,WDT_EXAMPLE,RTC_EXAMPLE,IIC_SLAVE_EXAMPLE,LPM_EXAMPLE);
 Object.freeze(RA_EXAMPLES);

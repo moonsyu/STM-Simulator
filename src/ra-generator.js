@@ -3,7 +3,7 @@
 // linker init tables) and script (linker scripts). The user's code is src/hal_entry.c; the app builds these with the
 // FSP sources (BSP + r_* drivers) and ARM GCC, then runs the ELF on the RA6E1 emulator.
 // Formats follow RASC output for FSP 5.x/6.x (only what the FPB-RA6E1 configurations here need).
-import {raFamily,raPinName,raPortBit,RA_IRQ_PINS,raPsel,RA_PSEL_NAMES,RA_SCI_CHANNELS,RA_GPT_CHANNELS,RA_ADC_CHANNELS,RA_AGT_CHANNELS,RA_IIC_CHANNELS,RA_SPI_CHANNELS,RA_SCI_SPI_CHANNELS,raGptCounts,raAgtCounts,raIicClock,raClockHz,raSpiBitrate,raSciSpiBitrate,RA_WDT,raOfs0,RA_RTC_DEFAULTS,RA_LPM_DEFAULTS} from './ra-config.js';
+import {raFamily,raPinName,raPortBit,RA_IRQ_PINS,raPsel,RA_PSEL_NAMES,RA_SCI_CHANNELS,RA_GPT_CHANNELS,RA_ADC_CHANNELS,RA_AGT_CHANNELS,RA_IIC_CHANNELS,RA_SPI_CHANNELS,RA_SCI_SPI_CHANNELS,raGptCounts,raAgtCounts,raIicClock,raClockHz,raSpiBitrate,raSciSpiBitrate,RA_WDT,raOfs0,RA_RTC_DEFAULTS,RA_IIC_SLAVE_ADDRESS,raIicSlaveClock,RA_LPM_DEFAULTS} from './ra-config.js';
 
 const HEADER=kind=>`/* generated ${kind} - do not edit */\n`;
 const hex=(n,w=8)=>'0x'+(n>>>0).toString(16).toUpperCase().padStart(w,'0');
@@ -143,7 +143,7 @@ const timer_instance_t ${t.name} =
     .p_api         = &g_timer_on_agt
 };`;
 // I2C master instances (r_iic_master), g_i2c_masterN; completion and errors come through the callback.
-const iicsOf=mcu=>RA_IIC_CHANNELS.filter(ch=>mcu.peripherals?.['IIC'+ch]?.enabled).map(ch=>{const p=mcu.peripherals['IIC'+ch];return {channel:ch,name:`g_i2c_master${ch}`,rate:p.rate||'STANDARD',slave:p.slave??0x50,callback:p.callback||`i2c_master${ch}_callback`,priority:p.priority??12,clock:raIicClock(raClockHz(mcu,'pclkb'),p.rate||'STANDARD')};});
+const iicsOf=mcu=>RA_IIC_CHANNELS.filter(ch=>mcu.peripherals?.['IIC'+ch]?.enabled&&mcu.peripherals['IIC'+ch].mode!=='SLAVE').map(ch=>{const p=mcu.peripherals['IIC'+ch];return {channel:ch,name:`g_i2c_master${ch}`,rate:p.rate||'STANDARD',slave:p.slave??0x50,callback:p.callback||`i2c_master${ch}_callback`,priority:p.priority??12,clock:raIicClock(raClockHz(mcu,'pclkb'),p.rate||'STANDARD')};});
 const iicDecl=t=>`/* I2C Master on IIC Instance. */
 extern const i2c_master_instance_t ${t.name};
 /** Access the I2C Master instance using these structures when calling API functions directly (::p_api is not used). */
@@ -182,6 +182,50 @@ const i2c_master_instance_t ${t.name} =
     .p_ctrl        = &${t.name}_ctrl,
     .p_cfg         = &${t.name}_cfg,
     .p_api         = &g_i2c_master_on_iic
+};`;
+}
+// I2C slave instances (r_iic_slave), g_i2c_slaveN: an IIC channel in slave mode. The callback asks for a buffer
+// (RX_REQUEST / TX_REQUEST) and reports the end of a transfer; one priority for RXI/TXI/TEI and for ERI (r_iic_slave
+// wants eri_ipl <= ipl). 7-bit address, no general call, clock stretching on (ICMR3.WAIT), no DTC.
+const iicSlavesOf=mcu=>RA_IIC_CHANNELS.filter(ch=>mcu.peripherals?.['IIC'+ch]?.enabled&&mcu.peripherals['IIC'+ch].mode==='SLAVE').map(ch=>{const p=mcu.peripherals['IIC'+ch];return {channel:ch,name:`g_i2c_slave${ch}`,rate:p.rate||'STANDARD',slave:p.slave??RA_IIC_SLAVE_ADDRESS,callback:p.callback||`i2c_slave${ch}_callback`,priority:p.priority??12,clock:raIicSlaveClock(raClockHz(mcu,'pclkb'),p.rate||'STANDARD')};});
+const iicSlaveDecl=t=>`/* I2C Slave on IIC Instance. */
+extern const i2c_slave_instance_t ${t.name};
+/** Access the I2C Slave instance using these structures when calling API functions directly (::p_api is not used). */
+extern iic_slave_instance_ctrl_t ${t.name}_ctrl;
+extern const i2c_slave_cfg_t ${t.name}_cfg;
+#ifndef ${t.callback}
+void ${t.callback}(i2c_slave_callback_args_t * p_args);
+#endif`;
+function iicSlaveInstance(t){
+ const v=k=>`#if defined(VECTOR_NUMBER_IIC${t.channel}_${k})\n    .${k.toLowerCase()}_irq             = VECTOR_NUMBER_IIC${t.channel}_${k},\n#else\n    .${k.toLowerCase()}_irq             = FSP_INVALID_VECTOR,\n#endif`,c=t.clock;
+ return `iic_slave_instance_ctrl_t ${t.name}_ctrl;
+const iic_slave_extended_cfg_t ${t.name}_extend =
+{
+    .clock_settings.cks_value = ${c.cks}, .clock_settings.brl_value = ${c.brl}, .clock_settings.digital_filter_stages = ${c.filter}
+};
+const i2c_slave_cfg_t ${t.name}_cfg =
+{
+    .channel             = ${t.channel},
+    .rate                = I2C_SLAVE_RATE_${t.rate},
+    .slave               = 0x${t.slave.toString(16).padStart(2,'0')},
+    .general_call_enable = false,
+    .addr_mode           = I2C_SLAVE_ADDR_MODE_7BIT,
+    .p_callback          = ${t.callback},
+    .p_context           = NULL,
+${['RXI','TXI','TEI','ERI'].map(v).join('\n')}
+    .ipl                 = (${t.priority}),
+    .eri_ipl             = (${t.priority}),
+    .clock_stretching_enable = true,
+    .p_transfer_tx       = NULL,
+    .p_transfer_rx       = NULL,
+    .p_extend            = &${t.name}_extend,
+};
+/* Instance structure to use this module. */
+const i2c_slave_instance_t ${t.name} =
+{
+    .p_ctrl        = &${t.name}_ctrl,
+    .p_cfg         = &${t.name}_cfg,
+    .p_api         = &g_i2c_slave_on_iic
 };`;
 }
 // Watchdog instances (r_wdt g_wdt0, r_iwdt g_iwdt0). No vector: an NMI goes through the BSP's NMI_Handler, which calls the
@@ -317,7 +361,7 @@ function ofsCfg(mcu){
 `;
 }
 /** The FSP instances hal_data.c defines for an RA configuration, as the built-in interpreter declares them (fsp-interp.js). */
-export const raInstances=mcu=>({irqs:irqsOf(mcu),uarts:uartsOf(mcu),gpts:gptsOf(mcu),adc:adcOf(mcu),agts:agtsOf(mcu),iics:iicsOf(mcu),spis:spisOf(mcu),sciSpis:sciSpisOf(mcu),wdts:wdtsOf(mcu),rtc:rtcOf(mcu),lpm:lpmOf(mcu)});
+export const raInstances=mcu=>({irqs:irqsOf(mcu),uarts:uartsOf(mcu),gpts:gptsOf(mcu),adc:adcOf(mcu),agts:agtsOf(mcu),iics:iicsOf(mcu),spis:spisOf(mcu),sciSpis:sciSpisOf(mcu),wdts:wdtsOf(mcu),rtc:rtcOf(mcu),iicSlaves:iicSlavesOf(mcu),lpm:lpmOf(mcu)});
 /** "P408" → "BSP_IO_PORT_04_PIN_08". */
 export const raIoName=pin=>ioName(pin);
 // SPI masters: r_spi on RSPI (g_spiN) and r_sci_spi on an SCI channel in simple SPI mode (g_sci_spiN). Both use spi_cfg_t
@@ -478,6 +522,8 @@ export function raVectors(mcu){
  // Modules after these are appended, so the slots above keep their numbers.
  const rtc=rtcOf(mcu);
  if(rtc)for(const [k,isr,label,prio]of [['ALARM','rtc_alarm_periodic_isr','Alarm interrupt',rtc.alarmPriority],['PERIOD','rtc_alarm_periodic_isr','Periodic interrupt',rtc.periodicPriority],['CARRY','rtc_carry_isr','Carry interrupt',rtc.carryPriority]])if(prio!=null)list.push({isr,event:'RTC_'+k,label:`RTC ${k} (${label})`,vector:'RTC_'+k});
+ // I2C slave (r_iic_slave): the channel's four IIC events with the slave driver's ISRs (no wakeup vector).
+ for(const t of iicSlavesOf(mcu))for(const [kind,label]of [['RXI','Receive data full'],['TXI','Transmit data empty'],['TEI','Transmit end'],['ERI','Transfer error']])list.push({isr:`iic_slave_${kind.toLowerCase()}_isr`,event:`IIC${t.channel}_${kind}`,label:`IIC${t.channel} ${kind} (${label})`,vector:`IIC${t.channel}_${kind}`});
  return list.map((v,i)=>({...v,index:i}));
 }
 
@@ -747,7 +793,7 @@ ${vectors.map(v=>`    [${v.index}] = BSP_PRV_VECT_ENUM(EVENT_${v.event},GROUP${v
 function halDataH(mcu){
  const irqs=irqsOf(mcu),uarts=uartsOf(mcu),includes=(irqs.length?'#include "r_icu.h"\n#include "r_external_irq_api.h"\n':'')+(uarts.length?'#include "r_sci_uart.h"\n#include "r_uart_api.h"\n':'')+(gptsOf(mcu).length?'#include "r_gpt.h"\n#include "r_timer_api.h"\n':'')+(adcOf(mcu)?'#include "r_adc.h"\n#include "r_adc_api.h"\n':'')+(iicsOf(mcu).length?'#include "r_iic_master.h"\n#include "r_i2c_master_api.h"\n':'')+(agtsOf(mcu).length?'#include "r_agt.h"\n'+(gptsOf(mcu).length?'':'#include "r_timer_api.h"\n'):'')
   +(spisOf(mcu).length?'#include "r_spi.h"\n':'')+(sciSpisOf(mcu).length?'#include "r_sci_spi.h"\n':'')+(spisOf(mcu).length||sciSpisOf(mcu).length?'#include "r_spi_api.h"\n':'')
-  +wdtsOf(mcu).map(w=>`#include "r_${w.kind}.h"\n`).join('')+(wdtsOf(mcu).length?'#include "r_wdt_api.h"\n':'')+(rtcOf(mcu)?'#include "r_rtc.h"\n#include "r_rtc_api.h"\n':'')+(lpmOf(mcu)?'#include "r_lpm.h"\n#include "r_lpm_api.h"\n':'');
+  +wdtsOf(mcu).map(w=>`#include "r_${w.kind}.h"\n`).join('')+(wdtsOf(mcu).length?'#include "r_wdt_api.h"\n':'')+(rtcOf(mcu)?'#include "r_rtc.h"\n#include "r_rtc_api.h"\n':'')+(iicSlavesOf(mcu).length?'#include "r_iic_slave.h"\n#include "r_i2c_slave_api.h"\n':'')+(lpmOf(mcu)?'#include "r_lpm.h"\n#include "r_lpm_api.h"\n':'');
  const decls=irqs.map(i=>`/** External IRQ on ICU Instance. */
 extern const external_irq_instance_t ${i.name};
 /** Access the ICU instance using these structures when calling API functions directly (::p_api is not used). */
@@ -763,7 +809,7 @@ extern const uart_cfg_t ${u.name}_cfg;
 extern const sci_uart_extended_cfg_t ${u.name}_cfg_extend;
 #ifndef ${u.callback}
 void ${u.callback}(uart_callback_args_t * p_args);
-#endif`)).concat(gptsOf(mcu).map(gptDecl)).concat(adcOf(mcu)?[adcDecl(adcOf(mcu))]:[]).concat(agtsOf(mcu).map(agtDecl)).concat(iicsOf(mcu).map(iicDecl)).concat(spisOf(mcu).map(t=>spiDecl(t,'SPI','spi_instance_ctrl_t'))).concat(sciSpisOf(mcu).map(t=>spiDecl(t,'SCI','sci_spi_instance_ctrl_t'))).concat(wdtsOf(mcu).map(wdtDecl)).concat(rtcOf(mcu)?[rtcDecl(rtcOf(mcu))]:[]).concat(lpmOf(mcu)?[lpmDecl(lpmOf(mcu))]:[]).join('\n');
+#endif`)).concat(gptsOf(mcu).map(gptDecl)).concat(adcOf(mcu)?[adcDecl(adcOf(mcu))]:[]).concat(agtsOf(mcu).map(agtDecl)).concat(iicsOf(mcu).map(iicDecl)).concat(spisOf(mcu).map(t=>spiDecl(t,'SPI','spi_instance_ctrl_t'))).concat(sciSpisOf(mcu).map(t=>spiDecl(t,'SCI','sci_spi_instance_ctrl_t'))).concat(wdtsOf(mcu).map(wdtDecl)).concat(rtcOf(mcu)?[rtcDecl(rtcOf(mcu))]:[]).concat(iicSlavesOf(mcu).map(iicSlaveDecl)).concat(lpmOf(mcu)?[lpmDecl(lpmOf(mcu))]:[]).join('\n');
  return HEADER('HAL header file')+`#ifndef HAL_DATA_H_
 #define HAL_DATA_H_
 #include <stdint.h>
@@ -855,7 +901,7 @@ const uart_instance_t ${u.name} =
     .p_ctrl        = &${u.name}_ctrl,
     .p_cfg         = &${u.name}_cfg,
     .p_api         = &g_uart_on_sci
-};`;})).concat(gptsOf(mcu).map(gptInstance)).concat(adcOf(mcu)?[adcInstance(adcOf(mcu))]:[]).concat(agtsOf(mcu).map(agtInstance)).concat(iicsOf(mcu).map(iicInstance)).concat(spisOf(mcu).map(spiInstance)).concat(sciSpisOf(mcu).map(sciSpiInstance)).concat(wdtsOf(mcu).map(wdtInstance)).concat(rtcOf(mcu)?[rtcInstance(rtcOf(mcu))]:[]).concat(lpmOf(mcu)?[lpmInstance(lpmOf(mcu))]:[]).join('\n');
+};`;})).concat(gptsOf(mcu).map(gptInstance)).concat(adcOf(mcu)?[adcInstance(adcOf(mcu))]:[]).concat(agtsOf(mcu).map(agtInstance)).concat(iicsOf(mcu).map(iicInstance)).concat(spisOf(mcu).map(spiInstance)).concat(sciSpisOf(mcu).map(sciSpiInstance)).concat(wdtsOf(mcu).map(wdtInstance)).concat(rtcOf(mcu)?[rtcInstance(rtcOf(mcu))]:[]).concat(iicSlavesOf(mcu).map(iicSlaveInstance)).concat(lpmOf(mcu)?[lpmInstance(lpmOf(mcu))]:[]).join('\n');
  return HEADER('HAL source file')+`#include "hal_data.h"
 ${body}${body?'\n':''}void g_hal_init(void) {
 g_common_init();
@@ -1050,6 +1096,7 @@ export function generateRaFiles(mcu,{board}={}){
   cfg('r_ioport_cfg.h',moduleCfg('r_ioport_cfg.h','R_IOPORT_CFG_H_',['#define IOPORT_CFG_PARAM_CHECKING_ENABLE (BSP_CFG_PARAM_CHECKING_ENABLE)'])),
   cfg('r_icu_cfg.h',moduleCfg('r_icu_cfg.h','R_ICU_CFG_H_',['#define ICU_CFG_PARAM_CHECKING_ENABLE (BSP_CFG_PARAM_CHECKING_ENABLE)'])),
   cfg('r_iic_master_cfg.h',moduleCfg('r_iic_master_cfg.h','R_IIC_MASTER_CFG_H_',['#define IIC_MASTER_CFG_PARAM_CHECKING_ENABLE (BSP_CFG_PARAM_CHECKING_ENABLE)','#define IIC_MASTER_CFG_DTC_ENABLE (0)','#define IIC_MASTER_CFG_ADDR_MODE_10_BIT_ENABLE (0)'])),
+  cfg('r_iic_slave_cfg.h',moduleCfg('r_iic_slave_cfg.h','R_IIC_SLAVE_CFG_H_',['#define IIC_SLAVE_CFG_PARAM_CHECKING_ENABLE (BSP_CFG_PARAM_CHECKING_ENABLE)','#define IIC_SLAVE_CFG_DTC_ENABLE (0)'])),
   cfg('r_agt_cfg.h',moduleCfg('r_agt_cfg.h','R_AGT_CFG_H_',['#define AGT_CFG_PARAM_CHECKING_ENABLE (BSP_CFG_PARAM_CHECKING_ENABLE)','#define AGT_CFG_OUTPUT_SUPPORT_ENABLE (0)','#define AGT_CFG_INPUT_SUPPORT_ENABLE (0)'])),
   cfg('r_adc_cfg.h',moduleCfg('r_adc_cfg.h','R_ADC_CFG_H_',['#define ADC_CFG_PARAM_CHECKING_ENABLE (BSP_CFG_PARAM_CHECKING_ENABLE)'])),
   cfg('r_gpt_cfg.h',moduleCfg('r_gpt_cfg.h','R_GPT_CFG_H_',['#define GPT_CFG_PARAM_CHECKING_ENABLE (BSP_CFG_PARAM_CHECKING_ENABLE)','#define GPT_CFG_OUTPUT_SUPPORT_ENABLE (1)','#define GPT_CFG_WRITE_PROTECT_ENABLE (0)','#define GPT_CFG_GPTCLK_BYPASS (0)'])),

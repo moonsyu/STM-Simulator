@@ -303,6 +303,7 @@ export class Ra6e1 {
     this.adc0 = new Adc12(this); this.adcs = [this.adc0];
     this.iics = {};
     for (const ch of RA_IIC_CHANNELS) this.iics[ch] = new Iic(this, ch);
+    this.i2cs = this.iics; // the name another board's I²C master looks its slaves up by (FirmwareSession.peerI2c)
     this.agts = {};
     for (const ch of RA_AGT_CHANNELS) this.timers['AGT' + ch] = this.agts[ch] = new Agt(this, ch);
     // RSPI: both channels of the chip are modelled (R_SPI0 0x4011A000, R_SPI1 0x4011A100); the configuration offers SPI1.
@@ -314,7 +315,7 @@ export class Ra6e1 {
       [RA_BASES.SYSTEM, 0x700, this.system],
       [RA_BASES.PORT, 0x1000, this.ports],
       [RA_BASES.ICU, 0x500, this.icu],
-      [RA_BASES.MSTP, 0x100, plain('MSTP', 0x100, { 0x4: [0xffffffff, 4], 0x8: [0xffffffff, 4], 0xc: [0xffffffff, 4], 0x10: [0xffffffff, 4] })],
+      [RA_BASES.MSTP, 0x100, this.mstp = plain('MSTP', 0x100, { 0x4: [0xffffffff, 4], 0x8: [0xffffffff, 4], 0xc: [0xffffffff, 4], 0x10: [0xffffffff, 4] })],
       // FCACHEIV (0x104): the cache invalidation finishes at once (the bit reads back 0).
       [RA_BASES.FCACHE, 0x400, new RegisterFile(this, 'FCACHE', 0x400, { onRead: off => (off === 0x104 ? 0 : undefined) })],
       [RA_BASES.SRAM, 0x400, plain('SRAM', 0x400)],
@@ -366,6 +367,8 @@ export class Ra6e1 {
   /** An ICU event (bsp_elc.h ELC_EVENT_*) from a peripheral model: the IELSR slots linked to it get IR. The other
    *  consumers of an event (ELC, DTC, DMAC: feature 36) attach here. */
   raiseEvent(ev) { if (this.lpm.event(ev)) this.icu.raise(ev); }
+  /** An IIC channel in the module-stop state (MSTPCRB bit 9 - channel, bsp_module_stop.h; set at reset and by R_BSP_MODULE_STOP in a driver's Close). */
+  iicStopped(channel) { return !!(this.mstp.peek(0x4, 4) & (1 << (9 - channel))); }
   /** Whether anything consumes event `ev`, so a model schedules only what someone observes. */
   listens(ev) { return this.icu.linked(ev) || this.lpm.listens(ev); }
   /** An input pin changed level (Ports.refreshInputs): the IRQn-DS pins cancel Deep Software Standby. */
