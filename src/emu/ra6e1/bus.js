@@ -120,6 +120,13 @@ export class RaBus extends Bus {
   poke(a, v, size = 4) {
     a >>>= 0;
     const r = this.region(a);
+    // The debugger's memory edit of the data flash: its units become programmed with the bytes, and the contents are
+    // changed (saved into the project when the run ends, as a program's write would be).
+    if (r && r[0] === this.dataFlashDV) {
+      for (let i = 0; i < size && r[1] + i < RA_DATA_FLASH_SIZE; i++) this.dataFlashStore.load(r[1] + i, (v >>> (8 * i)) & 0xff);
+      this.dataFlashStore.changed = true;
+      return true;
+    }
     if (r) { if (size === 4) r[0].setUint32(r[1], v >>> 0, true); else if (size === 2) r[0].setUint16(r[1], v & 0xffff, true); else r[0].setUint8(r[1], v & 0xff); return true; }
     try { this.slowWrite(a, size === 4 ? v >>> 0 : v & ((1 << (size * 8)) - 1), size); return true; } catch { return false; }
   }

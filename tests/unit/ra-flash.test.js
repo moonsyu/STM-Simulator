@@ -166,6 +166,10 @@ test('RA6E1 SoC: the FACI is on the bus at 0x407FE000 / 0x407E0000, FWEPROR gate
  // A store by the program into the data flash goes nowhere and is said once; one into the code flash says nothing.
  warnings.length=0;bus.write32(RA_DF_BASE,0);bus.write8(RA_DF_BASE+5,0);bus.write32(0x1000,0);
  assert.equal(bus.read32(RA_DF_BASE)>>>0,0xdeadbeef);assert.deepEqual(warnings,['[FLASH] 데이터 플래시에 대입(버스 쓰기)한 값은 쓰이지 않고 무시됩니다 — 실제 칩도 같습니다. R_FLASH_HP_Erase로 블록을 지운 뒤 R_FLASH_HP_Write로 쓰세요.']);
+ // The debugger's memory edit: the unit becomes programmed and the contents changed (the app saves them at the end).
+ soc.dataFlash.changed=false;assert.equal(bus.poke(RA_DF_BASE+0x101,0x5a,1),true);
+ assert.equal(bus.read8(RA_DF_BASE+0x101),0x5a);assert.equal(soc.dataFlash.isBlank(0x100,4),false);assert.equal(soc.dataFlash.changed,true);
+ assert.deepEqual(soc.dataFlash.encode(),[{at:0,hex:'efbeadde'},{at:0x100,hex:'ff5affff'}]);
  // An image's data flash bytes (an ELF's .data_flash) are programmed units; loading a new image starts from erased flash.
  bus.loadBytes(RA_DF_BASE+64,Uint8Array.of(9,8,7,6));assert.equal(soc.dataFlash.isBlank(64,4),false);assert.equal(bus.read8(RA_DF_BASE+65),8);
  bus.resetMemory({keepFlash:false});assert.equal(soc.dataFlash.used(),0);assert.equal(bus.read8(RA_DF_BASE),0xff);
