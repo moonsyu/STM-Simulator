@@ -106,6 +106,12 @@ test('a Software Standby nothing can end, entered by a bare __WFI(): both engine
 });
 
 // ---- the programs of the review (tests/fixtures/ra-lpm-programs.js LPM_REVIEW)
+test('review: holdpwm — a GPT PWM started while IOKEEP holds the pins: nothing on the pin until R_LPM_IoKeepClear, the PWM after it',{skip,timeout:900000},()=>review('holdpwm',(emu,interp)=>{
+ for(const e of [emu,interp]){assert.deepEqual(e.leds.P408.slice(210,345).filter(v=>v!==0),[],'low while held (restart at 199 ms, released at 349 ms)');assert.equal(e.leds.P408[390],0.5,'PWM duty after the release');}
+}));
+test('review: pwm — a GPT PWM output in Software Standby: the stop level while the clock is stopped, PWM again after the wake-up',{skip,timeout:900000},()=>review('pwm',(emu,interp)=>{
+ for(const e of [emu,interp])assert.deepEqual([e.leds.P408[40],e.leds.P408[150],e.leds.P408[280]],[0.5,0,0.5]);
+}));
 test('review: isr — R_LPM_LowPowerModeEnter in an interrupt callback enters Deep Software Standby; S1 again resets the MCU',{skip,timeout:900000},()=>review('isr',emu=>{
  assert.deepEqual(emu.session.resets.map(r=>r.reason),['DEEP_STANDBY']);assert.equal(emu.session.readVariable('from'),1);assert.equal(emu.session.readVariable('after'),0,'the callback did not go on');
  assert.match(messages(emu)[0],/^Deep Software Standby 진입 /);assert.match(messages(emu)[1],/^Deep Software Standby 해제 · IRQ1-DS\(P205\) \(200\.\d ms 뒤\)/);

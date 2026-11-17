@@ -548,7 +548,8 @@ export class FspAdapter {
  // Saw-wave PWM on the GTIOC pins: high from the cycle start for duty counts (0 % low, 100 % high), the stop level
  // (low) while stopped. With the waveform option on, the pin toggles edge by edge as analogWrite does.
  pwm(r,st){
-  if(st.kind!=='gpt'||st.mode!==2)return;
+  // I/O hold (IOKEEP): the pins stay as they are; lpmRelease applies the outputs of the timers when the hold ends.
+  if(st.kind!=='gpt'||st.mode!==2||this.hold)return;
   st.pins.forEach((pin,i)=>{
    if(!pin)return;if(r.gpio[pin]?.mode!=='OUTPUT'){this.warnOnce(r,'gtioc:'+pin,`${pin}: GPT${st.channel} 출력 핀이 아직 설정되지 않았습니다. R_IOPORT_Open으로 Pins 설정을 먼저 적용하세요.`);return;}
    const frac=st.running?Math.max(0,Math.min(1,st.duty[i]/st.period)):0,hz=st.hz/st.period;r.pwm.delete(pin);
@@ -808,6 +809,8 @@ export class FspAdapter {
   for(const pin of this.heldPins?.keys()??[])if(!this.heldWrites.has(pin)){delete r.gpio[pin];r.pwm.delete(pin);}
   const writes=[...this.heldWrites];this.heldWrites=new Map();this.heldPins=null;
   for(const [pin,w]of writes){if(w.word!==undefined)this.applyPinCfg(r,pin,w.word,w.fn);if(w.level!==undefined&&r.gpio[pin]?.mode==='OUTPUT')this.pinWrite(r,pin,w.level,w.fn);}
+  // A GPT started meanwhile drives its pins from now on (the pin settings above put them at the stop level).
+  for(const st of this.states.values())if(st.kind==='gpt'&&st.open)this.pwm(r,st);
   r.api.changed?.(r.microTime);
  }
  lpmState(kind,n){return this.states.get({icu:`g_external_irq${n}_ctrl`,agt:`g_agt${n}_ctrl`,rtc:'g_rtc0_ctrl'}[kind]);}

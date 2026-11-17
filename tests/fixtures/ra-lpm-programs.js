@@ -179,6 +179,56 @@ const press=(from,to)=>({[from]:s=>s.setPressed({SW1:true}),[to]:s=>s.setPressed
 const lpm=extra=>({enabled:true,mode:'DEEP',wake:[],cancel:[],cancelRising:[],ioKeep:true,power:'DEEPCUT0',...extra});
 const pins=(peripherals,more)=>()=>{const m=raDefaultMcu();m.peripherals=peripherals;Object.assign(m.pins,more);return m;};
 export const LPM_REVIEW={
+ // IOKEEP hold after Deep Software Standby and a GPT PWM output (LED1 pin, GTIOC6B) started before R_LPM_IoKeepClear:
+ // the pin stays as it was while held, and shows the PWM (duty 0.5) once released, 150 ms after the restart.
+ holdpwm:{mcu:pins({LPM:lpm({cancel:['IRQ1']}),GPT6:{enabled:true,mode:'PWM',period:1,unit:'kHz',duty:50}},{P408:{function:'Peripheral',signal:'GPT6_GTIOCB',label:'LED1'}}),ms:400,at:press(200,230),vars:['from'],
+  code:HEAD+`
+volatile uint32_t from = 0;
+void external_irq1_callback(external_irq_callback_args_t * p_args) { (void) p_args; }
+void hal_entry(void)
+{
+    from = R_SYSTEM->RSTSR0_b.DPSRSTF;
+    if (from)
+    {
+        R_GPT_Open(&g_timer6_ctrl, &g_timer6_cfg);
+        R_GPT_Start(&g_timer6_ctrl);
+        R_BSP_SoftwareDelay(150, BSP_DELAY_UNITS_MILLISECONDS);
+        R_LPM_IoKeepClear(NULL);
+        while (1)
+        {
+            R_BSP_SoftwareDelay(10, BSP_DELAY_UNITS_MILLISECONDS);
+        }
+    }
+    R_LPM_Open(&g_lpm0_ctrl, &g_lpm0_cfg);
+    R_BSP_SoftwareDelay(100, BSP_DELAY_UNITS_MILLISECONDS);
+    R_LPM_LowPowerModeEnter(&g_lpm0_ctrl);
+    while (1)
+    {
+        R_BSP_SoftwareDelay(10, BSP_DELAY_UNITS_MILLISECONDS);
+    }
+}
+`+WARM_START},
+ // A GPT PWM output in Software Standby: the pin is at the timer's stop level while the clock is stopped, PWM again after it.
+ pwm:{mcu:pins({LPM:lpm({mode:'STANDBY',wake:['IRQ1']}),GPT6:{enabled:true,mode:'PWM',period:1,unit:'kHz',duty:50}},{P408:{function:'Peripheral',signal:'GPT6_GTIOCB',label:'LED1'}}),ms:300,at:press(200,230),vars:['wakes'],
+  code:HEAD+`
+volatile uint32_t wakes = 0;
+void external_irq1_callback(external_irq_callback_args_t * p_args) { (void) p_args; }
+void hal_entry(void)
+{
+    R_ICU_ExternalIrqOpen(&g_external_irq1_ctrl, &g_external_irq1_cfg);
+    R_ICU_ExternalIrqEnable(&g_external_irq1_ctrl);
+    R_GPT_Open(&g_timer6_ctrl, &g_timer6_cfg);
+    R_GPT_Start(&g_timer6_ctrl);
+    R_LPM_Open(&g_lpm0_ctrl, &g_lpm0_cfg);
+    R_BSP_SoftwareDelay(50, BSP_DELAY_UNITS_MILLISECONDS);
+    R_LPM_LowPowerModeEnter(&g_lpm0_ctrl);
+    wakes++;
+    while (1)
+    {
+        R_BSP_SoftwareDelay(10, BSP_DELAY_UNITS_MILLISECONDS);
+    }
+}
+`+WARM_START},
  // R_LPM_LowPowerModeEnter called from an interrupt callback (handler mode): Deep Software Standby is entered there too;
  // the second press of S1 (IRQ1-DS) cancels it with the reset.
  isr:{mcu:mcu({LPM:lpm({cancel:['IRQ1']})}),ms:500,at:{...press(100,130),...press(300,330)},vars:['presses','after','err','from'],

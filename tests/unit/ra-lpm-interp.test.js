@@ -24,6 +24,12 @@ test('R_LPM_LowPowerModeEnter in an interrupt callback: Deep Software Standby is
  assert.deepEqual(pending.lpm(),[]);assert.equal(pending.session.runtime.resetCount??0,0);assert.equal(pending.session.readVariable('after'),1);assert.equal(pending.session.readVariable('presses'),1);
 });
 
+test('IOKEEP hold and a GPT PWM started before R_LPM_IoKeepClear: the pin shows nothing while held and the PWM once released',()=>{
+ const p=LPM_REVIEW.holdpwm,{session}=open(p),seen=[];
+ run(session,1,p.ms,t=>{p.at[t]?.(session);if(t===300||t===390){const g=session.runtime.gpio.P408;seen.push(g.pwm?g.pwm.duty:g.value);}});
+ assert.deepEqual(seen,[0,0.5],'held at 300 ms (GPT running since the restart), PWM at 390 ms');assert.equal(session.runtime.resetCount,1);
+});
+
 test('review programs on the interpreter: Sleep with an RTC only opened has nothing to end it; SCI9_TXI is named in the log',()=>{
  const rtc=review('rtcsleep');
  assert.equal(rtc.lpm()[1],'Sleep: 깨울 수 있는 소스가 없습니다 — 켜진 인터럽트가 없습니다. 리셋(S2)으로만 다시 시작합니다.');assert.equal(rtc.session.readVariable('woke'),0);
