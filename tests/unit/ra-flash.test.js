@@ -455,6 +455,25 @@ void hal_entry(void)
  assert.deepEqual(log.print,['22 66 4433 08000000 55','1 1 1 4 1','88776655 88776655 612 88']);
 });
 
+test('interpreter: the address arguments given as a data flash pointer converted to uint32_t (or the pointer itself)',()=>{
+ const {log,run}=interp(`
+static uint8_t data[8] = { 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88 };
+void hal_entry(void)
+{
+    flash_result_t r = FLASH_RESULT_NOT_BLANK;
+    uint8_t *dst = (uint8_t *) 0x08000040U;
+    R_FLASH_HP_Open(&g_flash0_ctrl, &g_flash0_cfg);
+    int e1 = R_FLASH_HP_Erase(&g_flash0_ctrl, (uint32_t) dst, 1);
+    int e2 = R_FLASH_HP_BlankCheck(&g_flash0_ctrl, (uint32_t) dst, 8, &r);
+    int e3 = R_FLASH_HP_Write(&g_flash0_ctrl, (uint32_t) data, (uint32_t) dst, 8);
+    int e4 = R_FLASH_HP_Write(&g_flash0_ctrl, (uint32_t) dst, (uint32_t) (dst + 8), 8);
+    printf("%d %d %d %d %d %02X %02X\\n", e1, e2, (int) r, e3, e4, dst[7], dst[15]);
+    printf("%d\\n", R_FLASH_HP_Erase(&g_flash0_ctrl, dst, 1));
+}`);
+ run(40);
+ assert.deepEqual(log.print,['0 0 0 0 0 88 88','0']);
+});
+
 test('interpreter: the data flash survives an MCU reset (NVIC_SystemReset) and starts from the project\'s saved contents',()=>{
  const code=`
 volatile uint32_t seen = 0;

@@ -56,7 +56,10 @@ export function flashPrelude(t,vec){
 const CODE_REGIONS=[{block_section_st_addr:0,block_section_end_addr:0xffff,block_size:0x2000,block_size_write:128},{block_section_st_addr:0x10000,block_section_end_addr:0xfffff,block_size:0x8000,block_size_write:128}];
 const DATA_REGIONS=[{block_section_st_addr:RA_DF_BASE,block_section_end_addr:DF_END-1,block_size:RA_DF_BLOCK,block_size_write:RA_DF_UNIT}];
 
-const u32=(v,fn,what)=>{if(typeof v!=='number'||!Number.isFinite(v))throw new Error(`${fn}: ${what}은(는) 정수로 넘기세요.`);return v>>>0;};
+// A pointer into the data flash (a view of FLASH_METHODS.memory) given where an address is taken is its address; a
+// (uint32_t) cast of one already is (runtime.js memoryAddress).
+const flashAddress=v=>{const m=v?.kind==='pointer'?v.array?.memory:null;return m?(m.base+v.index*m.size)>>>0:null;};
+const u32=(v,fn,what)=>{const address=flashAddress(v);if(address!==null)return address;if(typeof v!=='number'||!Number.isFinite(v))throw new Error(`${fn}: ${what}은(는) 정수로 넘기세요.`);return v>>>0;};
 
 /** Methods of FspAdapter (fsp-interp.js): the adapter keeps the data flash (`dataFlash`) across resets. */
 export const FLASH_METHODS={
@@ -157,6 +160,7 @@ export const FLASH_METHODS={
  },
  // The bytes R_FLASH_HP_Write programs: the variable, array or structure `source` points at.
  flashSource(r,source,bytes,fn){
+  source=flashAddress(source)??source;
   if(typeof source==='number'){
    const at=(source>>>0)-RA_DF_BASE;if(at>=0&&at+bytes<=RA_DF_SIZE)return [...this.dataFlash.bytes.subarray(at,at+bytes)];
    throw new Error(`${fn}: 쓸 데이터(src_address)는 변수나 배열의 주소로 넘기세요 — (uint32_t) buffer, (uint32_t) &value.`);
