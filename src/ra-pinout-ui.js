@@ -1,5 +1,6 @@
 import {$,esc} from './common.js';
-import {RA6E1_PORTS,RA_IRQ_PINS,RA_RESERVED,FPB_RA6E1,RA_PERIPHERAL_PINS,RA_ADC_CHANNELS,RA_GPT_32BIT,RA_GPT_CHANNELS,RA_AGT_CHANNELS,RA_TIMER_UNITS,RA_CLOCK_LIMITS,RA_IIC_RATES,RA_IIC_CHANNELS,RA_IIC_SLAVE_ADDRESS,raIicSlaveClock,RA_SPI_CHANNELS,RA_SCI_SPI_CHANNELS,raIicClock,raGptCounts,raAgtCounts,raClockHz,raSpiBitrate,raSciSpiBitrate,raFamily,validateRaMcu,raDefaultMcu,raIrqName,RA_BSP_DEFAULTS,RA_WDT,RA_WDT_WINDOW_START,RA_WDT_WINDOW_END,raWdtTiming,RA_RTC_DEFAULTS} from './ra-config.js';
+import {RA6E1_PORTS,RA_IRQ_PINS,RA_RESERVED,FPB_RA6E1,RA_PERIPHERAL_PINS,RA_ADC_CHANNELS,RA_GPT_32BIT,RA_GPT_CHANNELS,RA_AGT_CHANNELS,RA_TIMER_UNITS,RA_CLOCK_LIMITS,RA_IIC_RATES,RA_IIC_CHANNELS,RA_IIC_SLAVE_ADDRESS,raIicSlaveClock,RA_SPI_CHANNELS,RA_SCI_SPI_CHANNELS,raIicClock,raGptCounts,raAgtCounts,raClockHz,raSpiBitrate,raSciSpiBitrate,raFamily,validateRaMcu,raDefaultMcu,raIrqName,RA_BSP_DEFAULTS,RA_WDT,RA_WDT_WINDOW_START,RA_WDT_WINDOW_END,raWdtTiming,RA_RTC_DEFAULTS,RA_FLASH_DEFAULTS} from './ra-config.js';
+import {RA_DF_BASE,RA_DF_SIZE,RA_DF_BLOCK,RA_DF_UNIT,dataFlashUsed} from './ra-data-flash.js';
 import {sciBaudSetting,raPclka} from './ra-generator.js';
 // Pin settings of a Renesas RA project (FPB-RA6E1), as the RA Smart Configurator's Pins tab sets them: per port pin the
 // mode (output / input / IRQ / analog), the symbolic name RASC writes into bsp_pin_cfg.h, output level and drive, the
@@ -21,16 +22,19 @@ const SPI_PIN_GROUPS={SPI1:[{P100:'SPI1_MISO',P101:'SPI1_MOSI',P102:'SPI1_RSPCK'
 // The pins New Stack → Connectivity gives an I2C slave stack (IIC0 on the Arduino SCL/SDA pins first).
 const IIC_PIN_GROUPS={IIC0:[{P400:'IIC0_SCL',P401:'IIC0_SDA'},{P408:'IIC0_SCL',P407:'IIC0_SDA'}],IIC1:[{P205:'IIC1_SCL',P206:'IIC1_SDA'}]};
 // Stacks without pins (added from New Stack, kept until removed there).
-const PINLESS=['WDT','IWDT','RTC'];
-const STACK_NAMES={WDT:['g_wdt0','Watchdog (r_wdt)'],IWDT:['g_iwdt0','Independent Watchdog (r_iwdt)'],RTC:['g_rtc0','Realtime Clock (r_rtc)']};
+const PINLESS=['WDT','IWDT','RTC','FLASH'];
+const STACK_NAMES={WDT:['g_wdt0','Watchdog (r_wdt)'],IWDT:['g_iwdt0','Independent Watchdog (r_iwdt)'],RTC:['g_rtc0','Realtime Clock (r_rtc)'],FLASH:['g_flash0','Flash (r_flash_hp)']};
+// New Stack groups of the pin-less stacks, as RASC files them.
+const PINLESS_GROUPS=[['Monitoring · System',['WDT','IWDT','RTC']],['Storage',['FLASH']]];
 const SUBCLOCK_NOTE='FPB-RA6E1에는 32.768 kHz 크리스털 X2가 실장되어 있지만 E25/E26이 열려 있어 그대로는 서브 클록이 돌지 않습니다(XCIN/XCOUT은 J3로만 나옴). 실물 보드에서 Sub-Clock을 쓰려면 E25/E26을 닫으세요.';
 const WDT_DEFAULTS=id=>({enabled:true,...(id==='WDT'?{startMode:'REGISTER'}:{}),...RA_WDT[id].defaults,windowStart:100,windowEnd:0,reset:'RESET',stopInSleep:false,callback:''});
+const hexAddr=v=>'0x'+v.toString(16).toUpperCase().padStart(8,'0');
 const ARDUINO_OF=Object.fromEntries(Object.entries(FPB_RA6E1.arduino).map(([k,v])=>[v,k]));
 const NOTES={P408:'LED1 (녹색, 보드 내장 · 직렬 10 kΩ)',P407:'LED2 (녹색, 보드 내장 · 직렬 10 kΩ)',P205:'S1 사용자 스위치 (보드 내장, 누르면 LOW · 10 kΩ 풀업 R17)',P014:'Arduino 헤더의 RESET 핀(J2-3) · 10 kΩ 풀업 R4 — MCU의 RES#가 아니라 GPIO라서 LOW로 당겨도 리셋되지 않습니다',P400:'Arduino SCL · 2.2 kΩ 풀업 (보드)',P401:'Arduino SDA · 2.2 kΩ 풀업 (보드)'};
 
 export class RaPinoutPanel {
- constructor({getProject,apply,isRunning,onError}){
-  Object.assign(this,{getProject,apply,isRunning,onError});this.pin='P408';
+ constructor({getProject,apply,isRunning,onError,clearDataFlash}){
+  Object.assign(this,{getProject,apply,isRunning,onError,clearDataFlash});this.pin='P408';
   document.body.insertAdjacentHTML('beforeend',`<dialog id="ra-pinout-dialog" class="ra-pinout" aria-labelledby="ra-pinout-title"><div class="ra-pinout-head"><h2 id="ra-pinout-title">FPB-RA6E1 · RA Configuration</h2><span class="form-hint">R7FA6E10F2CFP · LQFP100 · RA Smart Configurator의 Summary · BSP · Clocks · Pins · Stacks 탭과 같은 설정입니다. 적용하면 다음 빌드의 ra_gen(pin_data.c, hal_data.c, vector_data.c, bsp_clock_cfg.h)과 ra_cfg에 반영됩니다.</span><div class="ra-tabs" role="tablist"><button type="button" role="tab" data-ra-tab="summary">Summary</button><button type="button" role="tab" data-ra-tab="bsp">BSP</button><button type="button" role="tab" data-ra-tab="clocks">Clocks</button><button type="button" role="tab" data-ra-tab="pins">Pins</button><button type="button" role="tab" data-ra-tab="stacks">Stacks</button></div></div>
 <div class="ra-pinout-body" data-ra-view="pins"><div id="ra-pin-grid" class="ra-pin-grid" role="listbox" aria-label="핀 목록"></div><section id="ra-pin-props" class="ra-pin-props" aria-live="polite"></section></div>
 <section id="ra-summary" class="ra-config-view" data-ra-view="summary" hidden></section><section id="ra-bsp" class="ra-config-view" data-ra-view="bsp" hidden></section><section id="ra-clocks" class="ra-config-view" data-ra-view="clocks" hidden></section><section id="ra-stacks" class="ra-config-view" data-ra-view="stacks" hidden></section>
@@ -212,7 +216,7 @@ export class RaPinoutPanel {
   const iicFree=RA_IIC_CHANNELS.map(ch=>'IIC'+ch).filter(id=>!per[id]?.enabled);
   const free=[...RA_AGT_CHANNELS.map(ch=>'AGT'+ch),...RA_GPT_CHANNELS.map(ch=>'GPT'+ch)].filter(id=>!per[id]?.enabled);
   const spiFree=[...RA_SPI_CHANNELS.map(ch=>['SPI'+ch,`SPI (r_spi) · SPI${ch}`]),...RA_SCI_SPI_CHANNELS.map(ch=>['SCI'+ch,`SPI (r_sci_spi) · SCI${ch} Simple SPI`])].filter(([id])=>!per[id]?.enabled);
-  $('ra-stacks').innerHTML=`<div class="ra-stack-new"><label>New Stack<select id="ra-stack-add"><optgroup label="Input"><option value="IRQ">External IRQ (r_icu)</option></optgroup>${spiFree.length||iicFree.length?`<optgroup label="Connectivity">${spiFree.map(([id,l])=>`<option value="${id}" data-ra-spi-add>${l}</option>`).join('')}${iicFree.map(id=>`<option value="${id}" data-ra-iic-slave-add>I2C Slave (r_iic_slave) · ${id}</option>`).join('')}</optgroup>`:''}<optgroup label="Timers">${free.map(id=>`<option value="${id}">${id.startsWith('AGT')?`Timer, Low-Power (r_agt) · AGT${id.slice(3)}`:`Timer, General PWM (r_gpt) · GPT${id.slice(3)} Periodic`}</option>`).join('')}</optgroup>${PINLESS.some(id=>!per[id]?.enabled)?`<optgroup label="Monitoring · System">${PINLESS.filter(id=>!per[id]?.enabled).map(id=>`<option value="${id}">${STACK_NAMES[id][1]}</option>`).join('')}</optgroup>`:''}</select></label><button type="button" data-ra-add>추가</button></div>${list.length?list.map(card).join(''):'<p class="form-hint">스택이 없습니다. New Stack으로 External IRQ · SPI · 타이머를 넣거나, Pins 탭에서 핀 기능을 정하세요.</p>'}`;
+  $('ra-stacks').innerHTML=`<div class="ra-stack-new"><label>New Stack<select id="ra-stack-add"><optgroup label="Input"><option value="IRQ">External IRQ (r_icu)</option></optgroup>${spiFree.length||iicFree.length?`<optgroup label="Connectivity">${spiFree.map(([id,l])=>`<option value="${id}" data-ra-spi-add>${l}</option>`).join('')}${iicFree.map(id=>`<option value="${id}" data-ra-iic-slave-add>I2C Slave (r_iic_slave) · ${id}</option>`).join('')}</optgroup>`:''}<optgroup label="Timers">${free.map(id=>`<option value="${id}">${id.startsWith('AGT')?`Timer, Low-Power (r_agt) · AGT${id.slice(3)}`:`Timer, General PWM (r_gpt) · GPT${id.slice(3)} Periodic`}</option>`).join('')}</optgroup>${PINLESS_GROUPS.map(([label,ids])=>ids.some(id=>!per[id]?.enabled)?`<optgroup label="${label}">${ids.filter(id=>!per[id]?.enabled).map(id=>`<option value="${id}">${STACK_NAMES[id][1]}</option>`).join('')}</optgroup>`:'').join('')}</select></label><button type="button" data-ra-add>추가</button></div>${list.length?list.map(card).join(''):'<p class="form-hint">스택이 없습니다. New Stack으로 External IRQ · SPI · 타이머를 넣거나, Pins 탭에서 핀 기능을 정하세요.</p>'}`;
  }
  // A stack without pins (New Stack → Monitoring · System): the watchdogs with the Properties RASC shows for them.
  pinlessCard(id){
@@ -235,6 +239,16 @@ export class RaPinoutPanel {
     +`<label>시작 시각 (시뮬레이터)${sel('start',[['SIMULATION','시뮬레이션: 2000-01-01 00:00:00'],['HOST_TIME','PC 시각 (배터리로 계속 돈 RTC처럼)']],q.start)}</label>`
     +`<label>Callback<input data-ra-field="callback" value="${esc(q.callback)}" placeholder="NULL" spellcheck="false"></label><label>Alarm Interrupt Priority${prio('alarmPriority',q.alarmPriority,true)}</label><label>Period Interrupt Priority${prio('periodicPriority',q.periodicPriority,true)}</label><label>Carry Interrupt Priority${prio('carryPriority',q.carryPriority,false)}</label>`;
    hint=`${q.clockSource==='SUBCLOCK'?esc(SUBCLOCK_NOTE)+' ':'LOCO 32.768 kHz로 셉니다(RFRL '+q.freqCompare+'). '}${q.start==='HOST_TIME'?'실행을 시작할 때 RTC가 PC 시각을 갖고 돌고 있으며, R_RTC_Open이 멈추지 않습니다(r_rtc_cfg.h RTC_CFG_OPEN_SET_CLOCK_SOURCE 0) — R_RTC_CalendarTimeGet이 바로 PC 시각을 읽습니다.':'실행마다 2000-01-01 00:00:00에서 시작하고, R_RTC_Open이 RTC를 멈추니 R_RTC_CalendarTimeSet으로 시각을 정하세요.'} R_RTC_PeriodicIrqRateSet(1/256~2초) · R_RTC_CalendarAlarmSet의 콜백은 ${esc(q.callback||'(없음)')}에서 RTC_EVENT_PERIODIC_IRQ · RTC_EVENT_ALARM_IRQ로 옵니다. MCU 리셋에도 시각은 이어집니다.`;
+  }
+  if(id==='FLASH'){
+   const q={...RA_FLASH_DEFAULTS,...p},saved=dataFlashUsed(this.getProject().dataFlash);
+   fields=`<label>Code Flash Programming<input value="Disabled" readonly title="시뮬레이터는 데이터 플래시만 프로그램합니다(r_flash_hp_cfg.h FLASH_HP_CFG_CODE_FLASH_PROGRAMMING_ENABLE 0)"></label><label>Data Flash Programming<input value="Enabled" readonly></label>`
+    +`<label>Data Flash Background Operation${sel('bgo',[[0,'Disabled'],[1,'Enabled']],q.bgo?1:0)}</label>`
+    +`<label>Callback<input data-ra-field="callback" value="${esc(q.bgo?q.callback:'')}" placeholder="NULL" spellcheck="false"${q.bgo?'':' disabled title="Background Operation이 Disabled면 r_flash_hp가 콜백을 부르지 않습니다(R_FLASH_HP_Open이 콜백을 받지 않음). Enabled로 바꾸면 쓸 수 있습니다."'}></label>`
+    +(q.bgo?`<label>Flash Ready Interrupt Priority<select data-ra-field="readyPriority">${PRIORITIES(q.readyPriority)}</select></label><label>Flash Error Interrupt Priority<select data-ra-field="errorPriority">${PRIORITIES(q.errorPriority)}</select></label>`:'');
+   hint=`데이터 플래시: ${hexAddr(RA_DF_BASE)}~${hexAddr(RA_DF_BASE+RA_DF_SIZE-1)} (${RA_DF_SIZE/1024} KB) · 지우기 블록 ${RA_DF_BLOCK}바이트 · 쓰기 단위 ${RA_DF_UNIT}바이트. R_FLASH_HP_Open(&amp;${name}_ctrl, &amp;${name}_cfg) 뒤 R_FLASH_HP_Erase(&amp;${name}_ctrl, 주소, 블록 수)로 지운 곳에만 R_FLASH_HP_Write(&amp;${name}_ctrl, (uint32_t) 버퍼, 주소, 바이트 수)로 쓸 수 있습니다(지우지 않고 다시 쓰면 FSP_ERR_WRITE_FAILED). 읽기는 주소를 포인터로 — *(uint32_t *) ${hexAddr(RA_DF_BASE)}. 지운 곳을 읽은 값은 실제 칩에서 정해지지 않으니, 썼는지는 R_FLASH_HP_BlankCheck로 확인하세요. `
+    +(q.bgo?`Background Operation: 호출이 바로 돌아오고 끝나면 ${esc(q.callback||'콜백(R_FLASH_HP_CallbackSet)')}이 FLASH_EVENT_ERASE_COMPLETE · WRITE_COMPLETE · BLANK · NOT_BLANK · ERR_FAILURE로 불립니다. 그동안 데이터 플래시는 읽지 못합니다. `:'Background Operation 없이는 호출이 끝날 때까지 기다립니다(인터럽트 없음). ')
+    +`내용은 MCU 리셋에도, 실행을 멈췄다 다시 실행해도 남습니다(프로젝트에 저장).</p><p class="form-hint" data-ra-flash-saved>프로젝트에 저장된 데이터 플래시: ${saved?`${saved}바이트`:'없음(모두 지워진 상태)'} <button type="button" data-ra-flash-clear${saved?'':' disabled'}>데이터 플래시 지우기</button>`;
   }
   return `<article class="ra-stack" data-ra-stack="${id}"><header><b>${name}</b><span>${module}</span><button type="button" data-ra-remove="${id}">삭제</button></header><div class="ra-stack-fields">${fields}</div><p class="form-hint">${hint}</p></article>`;
  }
@@ -279,11 +293,13 @@ export class RaPinoutPanel {
   const id=el.closest('[data-ra-stack]')?.dataset.raStack,k=el.dataset.raField;if(!id||!k)return;
   const v=el.value.trim(),q=this.draft.peripherals[id];
   if(['unit','callback','startMode','reset','clockSource','start'].includes(k))q[k]=v;
-  else if(k==='stopInSleep')q[k]=v==='1';
+  else if(k==='stopInSleep'||k==='bgo')q[k]=v==='1';
   else if(/Priority$/.test(k)&&v==='')q[k]=null;
   else q[k]=Number(v);
   // A watchdog's callback goes with the NMI output: a default name when NMI is chosen, none with Reset.
   if(k==='reset'&&RA_WDT[id]){if(v==='NMI'&&!q.callback)q.callback=id.toLowerCase()+'_nmi_callback';if(v==='RESET')q.callback='';}
+  // The flash callback goes with background operation, the same way.
+  if(k==='bgo'&&id==='FLASH'){if(q.bgo&&!q.callback)q.callback='flash_callback';if(!q.bgo)q.callback='';}
   this.validate();this.renderStacks();
  }
  stackClick(el){
@@ -301,6 +317,9 @@ export class RaPinoutPanel {
   if(el.closest('[data-ra-add]')&&$('ra-stack-add').selectedOptions[0]?.hasAttribute('data-ra-iic-slave-add'))return this.addIicSlaveStack($('ra-stack-add').value);
   if(el.closest('[data-ra-add]')&&RA_WDT[$('ra-stack-add').value]){const id=$('ra-stack-add').value;per[id]=WDT_DEFAULTS(id);this.validate();this.renderStacks();return;}
   if(el.closest('[data-ra-add]')&&$('ra-stack-add').value==='RTC'){per.RTC={enabled:true,...RA_RTC_DEFAULTS};this.validate();this.renderStacks();return;}
+  if(el.closest('[data-ra-add]')&&$('ra-stack-add').value==='FLASH'){per.FLASH={enabled:true,...RA_FLASH_DEFAULTS};this.validate();this.renderStacks();return;}
+  // The saved data flash contents are the project's, not this dialog's draft: erased at once (undo brings them back).
+  if(el.closest('[data-ra-flash-clear]')){this.clearDataFlash?.();this.renderStacks();return;}
   if(el.closest('[data-ra-add]')){const id=$('ra-stack-add').value;if(!id)return;per[id]=id.startsWith('AGT')?{enabled:true,period:100,unit:'ms',callback:`agt${id.slice(3)}_callback`,priority:12}:{enabled:true,mode:'PERIODIC',period:100,unit:'ms',duty:50,callback:`gpt${id.slice(3)}_callback`,priority:12};this.validate();this.renderStacks();return;}
   const rm=el.closest('[data-ra-remove]')?.dataset.raRemove;if(rm){delete per[rm];this.validate();this.renderStacks();return;}
   const go=el.closest('[data-ra-goto]')?.dataset.raGoto;if(go){this.pin=go;this.tab='pins';this.render();}
