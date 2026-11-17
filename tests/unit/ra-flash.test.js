@@ -496,6 +496,24 @@ void hal_entry(void)
  assert.deepEqual(log.warn,['[FLASH] 데이터 플래시 P/E 모드(쓰기·지우기·블랭크 체크가 진행 중)에서 데이터 플래시를 읽었습니다 — 실제 칩에서는 읽은 값이 보장되지 않습니다. 동작이 끝난 뒤(BGO면 콜백 뒤)에 읽으세요.']);
 });
 
+test('interpreter: the size checks add in uint32_t as r_flash_hp.c does (a sum past 0xFFFFFFFF wraps and passes the check)',()=>{
+ const {log,run,session}=interp(`
+static uint32_t value = 0x11223344U;
+void hal_entry(void)
+{
+    flash_result_t r = FLASH_RESULT_BLANK;
+    R_FLASH_HP_Open(&g_flash0_ctrl, &g_flash0_cfg);
+    R_FLASH_HP_Write(&g_flash0_ctrl, (uint32_t) &value, 0x08001F80U, 4);
+    R_FLASH_HP_Write(&g_flash0_ctrl, (uint32_t) &value, 0x08001FC0U, 4);
+    printf("%d %d\\n", R_FLASH_HP_Erase(&g_flash0_ctrl, 0x08001F80U, 3), R_FLASH_HP_BlankCheck(&g_flash0_ctrl, 0x08000000U, 0x2001U, &r));
+    /* 0x04000001 blocks of 64 bytes are 64 bytes in uint32_t: the check passes, the erase goes on to the end of the data flash and stops there. */
+    printf("%d %d\\n", R_FLASH_HP_Erase(&g_flash0_ctrl, 0x08001F80U, 0x04000001U), R_FLASH_HP_BlankCheck(&g_flash0_ctrl, 0x08000000U, 0xFFFFFFFFU, &r));
+}`);
+ run(60);
+ assert.deepEqual(log.print,['21 23','501 501']);
+ assert.deepEqual(session.dataFlash.encode(),[],'both blocks erased');
+});
+
 test('interpreter: a char read from the data flash is unsigned, as ARM GCC has it (a byte of 0x80 or more)',()=>{
  const {log,run}=interp(`
 typedef struct { char tag; uint8_t n; } item_t;

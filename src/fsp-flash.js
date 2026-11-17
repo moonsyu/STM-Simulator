@@ -153,7 +153,8 @@ export const FLASH_METHODS={
   const err=this.flashCommon(r,st);if(err)return err;
   if(st.bgo&&!st.callback)return E.ASSERTION;
   if(!(address>=RA_DF_BASE&&address<DF_END)){if(address<0x100000)this.warnOnce(r,'flash-cf',`${fn}: ${hex(address)}은(는) ${CODE_FLASH}`);return E.INVALID_ADDRESS;}
-  if(address+bytes>DF_END)return E.INVALID_SIZE;
+  // flash_address + num_bytes in uint32_t, as the driver adds them (a sum past 0xFFFFFFFF wraps).
+  if(((address+bytes)>>>0)>DF_END)return E.INVALID_SIZE;
   if(write){if(address&(RA_DF_UNIT-1))return E.INVALID_ADDRESS;if(bytes&(RA_DF_UNIT-1))return E.INVALID_SIZE;}
   return bytes===0?E.INVALID_SIZE:E.SUCCESS;
  },
@@ -268,7 +269,8 @@ const FLASH_API={
   if(blocks===0)return E.INVALID_BLOCKS;
   st.op=OP.NON_BGO;const start=(address&~(RA_DF_BLOCK-1))>>>0;
   if(!(start>=RA_DF_BASE&&start<DF_END)){if(start<0x100000)this.warnOnce(r,'flash-cf',`${fn}: ${hex(address)}은(는) ${CODE_FLASH}`);return E.INVALID_ADDRESS;}
-  if(start+blocks*RA_DF_BLOCK>DF_END)return E.INVALID_BLOCKS;
+  // num_bytes = num_blocks * 64 and start_address + num_bytes, both in uint32_t as in the driver.
+  if(((start+((blocks*RA_DF_BLOCK)>>>0))>>>0)>DF_END)return E.INVALID_BLOCKS;
   // flash_hp_df_erase
   st.src=start;st.remaining=blocks;
   if(this.flashEnterPe(r,st))return E.PE_FAILURE;
