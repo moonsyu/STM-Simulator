@@ -33,6 +33,24 @@ async function both(flash,code,ms,names,{dataFlash}={}){
   return {emulator:read(emulator,ew),interpreter:read(interpreter,iw),unknown:[...emulator.soc.unknown.keys()].map(a=>a.toString(16)),session:emulator};
  }finally{await fs.rm(root,{recursive:true,force:true});}
 }
+/**
+ * Like both(), for programs that may stop: the error each engine stopped with (the emulator stops at the HardFault
+ * handler's breakpoint: `halted`), the [FLASH] notes, the MCU resets; `peripherals` beside FLASH (a watchdog).
+ */
+async function bothStops(flash,code,ms,names,{dataFlash,peripherals={}}={}){
+ const mcu={...raDefaultMcu(),peripherals:{FLASH:flash,...peripherals}},project=validateProject({...projectForBoard('fpb-ra6e1'),mcu,code:HEAD+code,...(dataFlash?{dataFlash}:{})});
+ const root=await fs.mkdtemp(path.join(os.tmpdir(),'ra-flash-'));
+ try{
+  const result=await build(await prepareBuild({project,tools,root,target:'arm'}));
+  assert.deepEqual(result.diagnostics.filter(d=>d.severity!=='info'),[]);
+  const read=(session,warn,error)=>({vars:Object.fromEntries(names.map(n=>[n,session.readVariable(n)])),flash:session.dataFlash.encode(),warn:warn.filter(w=>/^\[FLASH\]/.test(w)),error});
+  const ew=[],emulator=new FirmwareSession(validateProject(project),{elf:new Uint8Array(await fs.readFile(result.elf)),warn:m=>ew.push(m)});
+  let eerr=null;try{run(emulator,ms);}catch(error){eerr=error.message;}
+  const iw=[],interpreter=new SimulationSession(validateProject(project),{warn:m=>iw.push(m)});
+  let ierr=null;try{for(let t=1;t<=ms;t++)interpreter.tick(t);}catch(error){ierr=error.message;}
+  return {emulator:{...read(emulator,ew,eerr),halted:emulator.runtime.debug.paused,resets:emulator.resets.map(x=>x.reason)},interpreter:{...read(interpreter,iw,ierr),resets:interpreter.runtime.resetCount??0},unknown:[...emulator.soc.unknown.keys()].map(a=>a.toString(16))};
+ }finally{await fs.rm(root,{recursive:true,force:true});}
+}
 const list=(prefix,n)=>Array.from({length:n},(_,i)=>`${prefix}[${i}]`);
 const values=(vars,prefix,n)=>list(prefix,n).map(k=>vars[k]);
 
@@ -222,4 +240,207 @@ void hal_entry(void)
  assert.deepEqual(r.emulator.vars,{stored:17,blank:1,resets:1},'16 from the project, 17 written before the reset');
  assert.deepEqual(r.interpreter.vars,r.emulator.vars);assert.deepEqual(r.emulator.flash,[{at:0x40,hex:'12000000'}]);assert.deepEqual(r.interpreter.flash,r.emulator.flash);
  assert.deepEqual(r.session.resets.map(x=>x.reason),['SYSRESETREQ']);
+});
+
+// ---- review of feature 39: data flash pointers as addresses, structures and enums in the data flash, sources of a
+// write, stores and reads outside it, the size checks' uint32_t sums, and the contents across a watchdog reset.
+const VARS='volatile int32_t e[24];\nvolatile uint32_t v[32];\nvolatile uint32_t finished = 0;\n';
+const OPEN='\n    int n = 0;\n    e[n++] = (int32_t) R_FLASH_HP_Open(&g_flash0_ctrl, &g_flash0_cfg);';
+const END='\n    finished = 1;\n    while (1) { R_BSP_SoftwareDelay(10, BSP_DELAY_UNITS_MILLISECONDS); }\n}';
+const same=(r,label)=>{
+ assert.deepEqual(r.unknown,[],label);
+ for(const key of ['vars','flash','warn','resets'])assert.deepEqual(r.interpreter[key],key==='resets'?r.emulator.resets.length:r.emulator[key],`${label}: ${key}`);
+};
+
+test('data flash pointers on both engines: recast to other pointer types and to integers, the address arguments as (uint32_t) pointers, structures, enums and chars, the sources of a write',{skip,timeout:600000},async()=>{
+ // A flash pointer converted to another pointer type or to an integer and back.
+ let r=await bothStops({enabled:true},VARS+`
+static uint8_t data[8] = { 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88 };
+void hal_entry(void)
+{${OPEN}
+    e[n++] = (int32_t) R_FLASH_HP_Erase(&g_flash0_ctrl, 0x08000000U, 1);
+    e[n++] = (int32_t) R_FLASH_HP_Write(&g_flash0_ctrl, (uint32_t) data, 0x08000000U, 8);
+    uint32_t *p32 = (uint32_t *) 0x08000000U;
+    uint8_t *p8 = (uint8_t *) p32;
+    v[0] = p8[1];
+    v[1] = p8[5];
+    uint16_t *p16 = (uint16_t *) (p8 + 2);
+    v[2] = *p16;
+    v[3] = (uint32_t) p32;
+    uint32_t a = (uint32_t) p32 + 4U;
+    v[4] = *(uint8_t *) a;
+    v[5] = (p8 == (uint8_t *) 0x08000000U) ? 1U : 0U;
+    v[6] = ((uint32_t) (p8 + 3) == 0x08000003U) ? 1U : 0U;
+    v[7] = (p32 != NULL) ? 1U : 0U;
+    const void *raw = (const void *) 0x08000004U;
+    const uint32_t *w = raw;
+    v[8] = *w;${END}`,60,[...list('e',3),...list('v',9),'finished']);
+ same(r,'recast');assert.deepEqual(values(r.emulator.vars,'v',9),[0x22,0x66,0x4433,0x08000000,0x55,1,1,1,0x88776655]);assert.equal(r.emulator.vars.finished,1);
+ // The address arguments given as a pointer converted to uint32_t.
+ r=await bothStops({enabled:true},VARS+`
+static uint8_t data[8] = { 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88 };
+void hal_entry(void)
+{${OPEN}
+    uint8_t *dst = (uint8_t *) 0x08000040U;
+    flash_result_t r = FLASH_RESULT_NOT_BLANK;
+    e[n++] = (int32_t) R_FLASH_HP_Erase(&g_flash0_ctrl, (uint32_t) dst, 1);
+    e[n++] = (int32_t) R_FLASH_HP_BlankCheck(&g_flash0_ctrl, (uint32_t) dst, 8, &r);
+    v[0] = (uint32_t) r;
+    e[n++] = (int32_t) R_FLASH_HP_Write(&g_flash0_ctrl, (uint32_t) data, (uint32_t) dst, 8);
+    v[1] = dst[7];${END}`,60,[...list('e',4),...list('v',2),'finished']);
+ same(r,'ptrarg');assert.deepEqual(r.emulator.vars,{'e[0]':0,'e[1]':0,'e[2]':0,'e[3]':0,'v[0]':0,'v[1]':0x88,finished:1});
+ // Structures: an array of structures written and read back member by member, by assignment and by memcpy; a float.
+ r=await bothStops({enabled:true},VARS+`
+typedef struct { uint8_t a; uint32_t b; uint16_t c; float f; int8_t d[3]; } rec_t;
+static rec_t recs[2] = { { 1, 0x11223344U, 0x5566, 1.5f, { -1, 2, -3 } }, { 2, 0xAABBCCDDU, 0x7788, -2.25f, { 4, -5, 6 } } };
+static uint32_t words[4] = { 1, 2, 3, 4 };
+static float fl = 3.25f;
+void hal_entry(void)
+{${OPEN}
+    e[n++] = (int32_t) R_FLASH_HP_Erase(&g_flash0_ctrl, 0x08000100U, 2);
+    e[n++] = (int32_t) R_FLASH_HP_Write(&g_flash0_ctrl, (uint32_t) recs, 0x08000100U, sizeof(recs));
+    e[n++] = (int32_t) R_FLASH_HP_Write(&g_flash0_ctrl, (uint32_t) &words[1], 0x08000140U, 8);
+    e[n++] = (int32_t) R_FLASH_HP_Write(&g_flash0_ctrl, (uint32_t) &fl, 0x08000148U, 4);
+    const rec_t *r = (const rec_t *) 0x08000100U;
+    v[0] = r[1].b;
+    v[1] = (uint32_t) r->c + ((uint32_t) r[1].c << 16);
+    v[2] = (uint32_t) (int32_t) r[1].d[1];
+    v[3] = (uint32_t) (int32_t) (r[1].f * 100.0f);
+    rec_t one = *r;
+    v[4] = one.b;
+    rec_t two;
+    memcpy(&two, &r[1], sizeof(two));
+    v[5] = (uint32_t) two.d[2] + ((uint32_t) two.a << 8);
+    v[6] = *(uint32_t *) 0x08000140U;
+    v[7] = *(uint32_t *) 0x08000144U;
+    float g = *(float *) 0x08000148U;
+    v[8] = (uint32_t) (g * 100.0f);
+    v[9] = sizeof(rec_t);
+    v[10] = (memcmp(r, recs, sizeof(recs)) == 0) ? 1U : 0U;
+    v[11] = (uint32_t) (int32_t) r->d[0];${END}`,60,[...list('e',5),...list('v',12),'finished']);
+ same(r,'struct');assert.deepEqual(values(r.emulator.vars,'v',12),[0xaabbccdd,0x77885566,0xfffffffb,0xffffff1f,0x11223344,0x206,2,3,325,20,1,0xffffffff]);
+ // Layouts: an enum (one byte with ARM GCC's short enums), a nested structure, bool, double; element types and chars.
+ r=await bothStops({enabled:true},VARS+`
+typedef enum { MODE_A = 1, MODE_B = 2 } mode_t;
+typedef struct { uint8_t x; uint16_t y; } inner_t;
+typedef struct { bool on; mode_t mode; inner_t in; double d; uint32_t big; } mix_t;
+typedef struct { uint16_t lo; uint16_t hi; } bits_t;
+static mix_t mix = { true, MODE_B, { 7, 0x1234 }, 2.5, 0x55667788U };
+static bits_t bits = { 0xBCDA, 0x1234 };
+static uint8_t raw[8] = { 0x81, 0x82, 0x83, 0x84, 0x85, 0x86, 0x87, 0x88 };
+void hal_entry(void)
+{${OPEN}
+    e[n++] = (int32_t) R_FLASH_HP_Erase(&g_flash0_ctrl, 0x08000800U, 2);
+    e[n++] = (int32_t) R_FLASH_HP_Write(&g_flash0_ctrl, (uint32_t) &mix, 0x08000800U, sizeof(mix));
+    e[n++] = (int32_t) R_FLASH_HP_Write(&g_flash0_ctrl, (uint32_t) &bits, 0x08000840U, sizeof(bits));
+    e[n++] = (int32_t) R_FLASH_HP_Write(&g_flash0_ctrl, (uint32_t) raw, 0x08000848U, 8);
+    const mix_t *m = (const mix_t *) 0x08000800U;
+    v[0] = sizeof(mix_t) + (sizeof(mode_t) << 8);
+    v[1] = (uint32_t) m->on + ((uint32_t) m->mode << 8) + ((uint32_t) m->in.x << 16);
+    v[2] = m->in.y;
+    v[3] = (uint32_t) (m->d * 10.0);
+    v[5] = (uint32_t) m->big;
+    const bits_t *b = (const bits_t *) 0x08000840U;
+    v[6] = b->lo;
+    v[8] = b->hi;
+    v[9] = *(uint32_t *) 0x08000840U;
+    v[10] = *(unsigned char *) 0x08000848U;
+    v[11] = *(unsigned short *) 0x08000848U;
+    v[12] = *(unsigned int *) 0x08000848U;
+    v[13] = (uint32_t) *(int *) 0x0800084CU;
+    v[14] = (uint32_t) *(long *) 0x0800084CU;
+    v[15] = (uint32_t) (int32_t) *(char *) 0x08000848U;
+    v[16] = (uint32_t) (int32_t) *(signed char *) 0x08000849U;
+    v[17] = (uint32_t) (int32_t) *(short *) 0x0800084AU;
+    v[19] = *(const volatile uint8_t *) 0x0800084FU;${END}`,60,[...list('e',5),...list('v',20),'finished']);
+ same(r,'layout');assert.equal(r.emulator.vars['v[0]'],24+(1<<8));assert.equal(r.emulator.vars['v[1]'],1+(2<<8)+(7<<16));
+ assert.equal(r.emulator.vars['v[15]'],0x81,'char is unsigned');assert.equal(r.emulator.vars['v[16]'],0xffffff82);
+ assert.deepEqual(r.emulator.flash[0],{at:0x800,hex:'010207003412000000000000000004408877665500000000'});
+ // Sources of R_FLASH_HP_Write: a local array, a pointer variable, a member, 16-bit elements, the data flash itself
+ // (read in P/E mode: noted on both engines).
+ r=await bothStops({enabled:true},VARS+`
+typedef struct { uint32_t id; uint16_t pair[2]; } item_t;
+static item_t item = { 0xCAFEF00DU, { 0x1234, 0x5678 } };
+static uint16_t halves[4] = { 0x0102, 0x0304, 0x0506, 0x0708 };
+static uint8_t bytes[12] = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12 };
+void hal_entry(void)
+{${OPEN}
+    uint8_t local[4] = { 0xA1, 0xA2, 0xA3, 0xA4 };
+    uint8_t *p = bytes + 4;
+    e[n++] = (int32_t) R_FLASH_HP_Erase(&g_flash0_ctrl, 0x08000200U, 2);
+    e[n++] = (int32_t) R_FLASH_HP_Write(&g_flash0_ctrl, (uint32_t) local, 0x08000200U, 4);
+    e[n++] = (int32_t) R_FLASH_HP_Write(&g_flash0_ctrl, (uint32_t) p, 0x08000204U, 8);
+    e[n++] = (int32_t) R_FLASH_HP_Write(&g_flash0_ctrl, (uint32_t) item.pair, 0x0800020CU, 4);
+    e[n++] = (int32_t) R_FLASH_HP_Write(&g_flash0_ctrl, (uint32_t) halves, 0x08000210U, 8);
+    e[n++] = (int32_t) R_FLASH_HP_Write(&g_flash0_ctrl, (uint32_t) &item, 0x08000218U, sizeof(item));
+    e[n++] = (int32_t) R_FLASH_HP_Write(&g_flash0_ctrl, (uint32_t) &bytes[8], 0x08000220U, 4);
+    e[n++] = (int32_t) R_FLASH_HP_Write(&g_flash0_ctrl, 0x08000200U, 0x08000240U, 8);
+    v[0] = *(uint32_t *) 0x08000240U;
+    v[1] = *(uint32_t *) 0x08000244U;${END}`,60,[...list('e',9),...list('v',2),'finished']);
+ same(r,'src');assert.deepEqual(values(r.emulator.vars,'v',2),[0xa4a3a2a1,0x08070605]);
+ assert.equal(r.emulator.warn.length,1);assert.match(r.emulator.warn[0],/P\/E 모드\(쓰기·지우기·블랭크 체크가 진행 중\)에서 데이터 플래시를 읽었습니다/);
+});
+
+test('outside the data flash and stores into it on both engines: the same notes, a store goes nowhere, a read past the end stops; the size checks\' uint32_t sums',{skip,timeout:600000},async()=>{
+ // A store through a pointer goes nowhere and the program goes on.
+ let r=await bothStops({enabled:true},`
+volatile uint32_t after = 0, finished = 0;
+void hal_entry(void)
+{
+    R_FLASH_HP_Open(&g_flash0_ctrl, &g_flash0_cfg);
+    uint32_t *p = (uint32_t *) 0x08000000U;
+    *p = 5U;
+    after = *p;${END}`,40,['after','finished']);
+ same(r,'assign');assert.deepEqual(r.emulator.vars,{after:0xffffffff,finished:1});
+ assert.deepEqual(r.emulator.warn.map(w=>w.split(' — ')[0]),['[FLASH] 데이터 플래시에 대입(버스 쓰기)한 값은 쓰이지 않고 무시됩니다','[FLASH] 지운(빈) 데이터 플래시 0x08000000를 읽었습니다']);
+ // Past the end through an index, just after it, and a 32-bit read that crosses it: the emulator stops at the
+ // HardFault, the interpreter with the note as its error.
+ for(const [label,read,address,size] of [['past','((uint8_t *) 0x08001FF0U)[16]','0x08002000',1],['after','*(uint8_t *) 0x08002000U','0x08002000',1],['cross','*(uint32_t *) 0x08001FFEU','0x08001FFE',4]]){
+  r=await bothStops({enabled:true},`
+volatile uint32_t a = 0, b = 0, finished = 0;
+void hal_entry(void)
+{
+    a = ((uint8_t *) 0x08001FF0U)[15];
+    b = ${read};${END}`,40,['a','b','finished']);
+  same(r,label);assert.deepEqual(r.emulator.vars,{a:0xff,b:0,finished:0},label);assert.equal(r.emulator.halted,true,label);
+  const note=`데이터 플래시(0x08000000~0x08001FFF) 밖 ${address}에 ${size}바이트로 접근했습니다 — 실제 칩에서는 버스 오류(HardFault)로 멈춥니다. 주소와 읽는 크기를 확인하세요.`;
+  assert.equal(r.emulator.warn.at(-1),'[FLASH] '+note,label);assert.equal(r.interpreter.error,note,label);
+ }
+ // flash_address + num_bytes and num_blocks * 64 in uint32_t: a sum that wraps passes the check, as in the driver.
+ r=await bothStops({enabled:true},VARS+`
+static uint32_t value = 0x11223344U;
+void hal_entry(void)
+{${OPEN}
+    flash_result_t r = FLASH_RESULT_BLANK;
+    e[n++] = (int32_t) R_FLASH_HP_Write(&g_flash0_ctrl, (uint32_t) &value, 0x08001F80U, 4);
+    e[n++] = (int32_t) R_FLASH_HP_Write(&g_flash0_ctrl, (uint32_t) &value, 0x08001FC0U, 4);
+    e[n++] = (int32_t) R_FLASH_HP_Erase(&g_flash0_ctrl, 0x08001F80U, 3);
+    e[n++] = (int32_t) R_FLASH_HP_BlankCheck(&g_flash0_ctrl, 0x08000000U, 0x2001U, &r);
+    e[n++] = (int32_t) R_FLASH_HP_Erase(&g_flash0_ctrl, 0x08001F80U, 0x04000001U);
+    e[n++] = (int32_t) R_FLASH_HP_BlankCheck(&g_flash0_ctrl, 0x08000000U, 0xFFFFFFFFU, &r);
+    e[n++] = (int32_t) R_FLASH_HP_Reset(&g_flash0_ctrl);${END}`,60,[...list('e',8),'finished']);
+ same(r,'wrap');assert.deepEqual(values(r.emulator.vars,'e',8),[0,0,0,21,23,501,501,0]);assert.deepEqual(r.emulator.flash,[]);
+});
+
+test('the data flash survives a watchdog reset on both engines (WDT without refresh)',{skip,timeout:600000},async()=>{
+ const r=await bothStops({enabled:true},`
+volatile uint32_t stored = 0, wdtrf = 9, finished = 0;
+void hal_entry(void)
+{
+    flash_result_t r = FLASH_RESULT_BLANK;
+    uint32_t next = 0x5A5A0001U;
+    wdtrf = R_SYSTEM->RSTSR1_b.WDTRF;
+    R_FLASH_HP_Open(&g_flash0_ctrl, &g_flash0_cfg);
+    R_FLASH_HP_BlankCheck(&g_flash0_ctrl, 0x08000080U, 4, &r);
+    if (FLASH_RESULT_NOT_BLANK == r) { stored = *(uint32_t *) 0x08000080U; }
+    if (0U == wdtrf)
+    {
+        R_FLASH_HP_Erase(&g_flash0_ctrl, 0x08000080U, 1);
+        R_FLASH_HP_Write(&g_flash0_ctrl, (uint32_t) &next, 0x08000080U, 4);
+        R_WDT_Open(&g_wdt0_ctrl, &g_wdt0_cfg);
+        R_WDT_Refresh(&g_wdt0_ctrl);
+        while (1) { R_BSP_SoftwareDelay(1, BSP_DELAY_UNITS_MILLISECONDS); }
+    }${END}`,150,['stored','wdtrf','finished'],{peripherals:{WDT:{enabled:true,clockDiv:128}}});
+ assert.deepEqual(r.emulator.resets,['WDT'],'one watchdog reset (41.9 ms)');
+ same(r,'watchdog');assert.deepEqual(r.emulator.vars,{stored:0x5a5a0001,wdtrf:1,finished:1});assert.deepEqual(r.emulator.flash,[{at:0x80,hex:'01005a5a'}]);
 });
