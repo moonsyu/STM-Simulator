@@ -150,6 +150,16 @@ test('Deep Software Standby: the RTC periodic request cancels it; with DEEPCUT 1
  assert.equal(c.log[0],'Deep Software Standby 진입 · DEEPCUT0, I/O 리셋 상태로(IOKEEP 0) — 해제 소스: 없음(리셋만)');assert.match(c.log[1],/설정된 소스가 없습니다/);
 });
 
+test('an RTC stopped for Deep Software Standby (LOCO, DEEPCUT 1) counts again whatever reset ends the mode: pin reset, software reset',()=>{
+ for(const reason of ['PIN','SYSRESETREQ']){
+  const {machine,bus,soc,us,wfi}=chip();
+  bus.write8(RTC+0x28,1);bus.write8(DPSBYCR,0x81);bus.write16(SBYCR,0x8000);
+  wfi();us(100000);assert.equal(soc.rtc.running,false,'stopped in the mode');
+  soc.systemReset(reason);machine._doReset();
+  assert.equal(soc.rtc.running,true,reason);assert.equal(bus.read8(RTC+0x24)&1,1,reason+': RCR2.START');
+ }
+});
+
 test('a reset while a mode is on ends it: the watchdog of a Sleep without stop control resets the MCU',()=>{
  const {machine,bus,soc,resets,us,wfi}=chip();
  bus.write16(SBYCR,0);bus.write16(WDT+2,0x0010);bus.write8(WDT+6,0x80);bus.write8(WDT+8,0);bus.write8(WDT,0);bus.write8(WDT,0xff);  // 1024 clocks of PCLKB / 4

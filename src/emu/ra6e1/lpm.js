@@ -54,12 +54,14 @@ export class LowPower {
   }
   /** Power-on or a pin reset: the Deep Software Standby registers start over (DPSBYCR: DEEPCUT 01b). */
   powerOn() { this.dpsbycr = 0x01; this.dpsier = 0; this.dpsifr = 0; this.dpsiegr = 0; this.hold = false; this.clear(); }
-  clear() { this.mode = null; this.since = 0; this.frozen = []; this.deferred = []; this.deferredNmi = []; this.viaLpm = false; this.quiet = false; }
-  /** An MCU reset: the mode ends (the reset cancels it), the Deep Software Standby registers and the I/O hold stay. */
-  reset() {
-    for (const [dev, how] of this.frozen) if (how === 'rtc') dev.start(); // an RTC stopped for the mode counts again (it is not reset)
-    this.clear(); this.log.reset();
+  // The mode ends: an RTC stopped for it (LOCO without its supply) counts again — it is not reset, whatever ends the mode
+  // (also the pin reset, which comes here through powerOn before the reset itself).
+  clear() {
+    for (const [dev, how] of this.frozen ?? []) if (how === 'rtc') dev.start();
+    this.mode = null; this.since = 0; this.frozen = []; this.deferred = []; this.deferredNmi = []; this.viaLpm = false; this.quiet = false;
   }
+  /** An MCU reset: the mode ends (the reset cancels it), the Deep Software Standby registers and the I/O hold stay. */
+  reset() { this.clear(); this.log.reset(); }
   get deepcut() { return this.dpsbycr & 3; }
   get iokeep() { return (this.dpsbycr >> 6) & 1; }
   // ------------------------------------------------------------ registers (R_SYSTEM, called by the System block)
