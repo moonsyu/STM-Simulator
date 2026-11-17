@@ -1,6 +1,7 @@
 // RA6E1 Data Transfer Controller (DTC) as FSP r_dtc drives it (RA6E1 User's Manual 17 Data Transfer Controller; offsets
 // from R7FA6E10F.h R_DTC_Type): DTCCR (RRS b4) 0x00, DTCVBR 0x04, DTCADMOD 0x08, DTCST (b0) 0x0C, DTCSTS 0x0E (the DTC is
-// never seen busy: a transfer runs within the event).
+// never seen busy: a transfer runs within the event). r_dtc in a flat (secure) project writes DTCCR_SEC 0x10 and
+// DTCVBR_SEC 0x14: the same registers here (one vector table; TrustZone attribution is not modelled).
 //
 // An ICU slot n whose IELSRn.DTCE (b24) is set hands its event to the DTC instead of the CPU: the DTC reads the address of
 // the transfer information from the vector table (DTCVBR + 4n) and runs it. The transfer information in memory is what
