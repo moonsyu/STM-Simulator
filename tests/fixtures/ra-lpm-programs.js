@@ -172,6 +172,40 @@ void rtc_callback(rtc_callback_args_t * p_args)
 }
 `+WARM_START};
 
+// Programs from the review of feature 37, each run on both engines by tests/toolchain/ra-lpm.test.mjs ("review: <name>"):
+// {mcu, code, ms: how long, at: {ms: session => …} (S1 presses), vars: the variables both engines must end with, and
+// what the test checks besides (resets, log) in the test file}.
+const press=(from,to)=>({[from]:s=>s.setPressed({SW1:true}),[to]:s=>s.setPressed({})});
+const lpm=extra=>({enabled:true,mode:'DEEP',wake:[],cancel:[],cancelRising:[],ioKeep:true,power:'DEEPCUT0',...extra});
+const pins=(peripherals,more)=>()=>{const m=raDefaultMcu();m.peripherals=peripherals;Object.assign(m.pins,more);return m;};
+void pins;
+export const LPM_REVIEW={
+ // __WFE() after R_LPM_Open configured Software Standby: not a mode entry (r_lpm enters with WFI) — AGT0 keeps ticking,
+ // and the core's event register lets every second WFE through.
+ wfe:{mcu:mcu({LPM:lpm({mode:'STANDBY',wake:['IRQ1']}),AGT0:{enabled:true,period:7,unit:'ms',callback:'agt0_callback',priority:12}}),ms:400,at:press(300,330),vars:['ticks0','wakes','presses'],
+  code:HEAD+`
+volatile uint32_t ticks0 = 0;
+volatile uint32_t wakes = 0;
+volatile uint32_t presses = 0;
+void agt0_callback(timer_callback_args_t * p_args) { (void) p_args; ticks0++; }
+void external_irq1_callback(external_irq_callback_args_t * p_args) { (void) p_args; presses++; }
+void hal_entry(void)
+{
+    R_ICU_ExternalIrqOpen(&g_external_irq1_ctrl, &g_external_irq1_cfg);
+    R_ICU_ExternalIrqEnable(&g_external_irq1_ctrl);
+    R_AGT_Open(&g_agt0_ctrl, &g_agt0_cfg);
+    R_AGT_Start(&g_agt0_ctrl);
+    R_LPM_Open(&g_lpm0_ctrl, &g_lpm0_cfg);
+    R_BSP_SoftwareDelay(50, BSP_DELAY_UNITS_MILLISECONDS);
+    while (1)
+    {
+        __WFE();
+        wakes++;
+    }
+}
+`+WARM_START}
+};
+
 // A bare __WFI() after R_LPM_Open enters the configured mode (LPM_CFG_STANDBY_LIMIT 0), and a Software Standby that
 // nothing can end: IRQ1 is its wake source, but its interrupt is never enabled.
 export const LPM_STUCK={

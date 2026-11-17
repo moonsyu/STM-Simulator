@@ -11,7 +11,7 @@ import {createRequire} from 'node:module';
 import {FirmwareSession} from '../../src/firmware-session.js';
 import {SimulationSession} from '../../src/session.js';
 import {projectForBoard,validateProject} from '../../src/project.js';
-import {LPM_ERRORS,LPM_STANDBY,LPM_DEEP_RTC,LPM_STUCK} from '../fixtures/ra-lpm-programs.js';
+import {LPM_ERRORS,LPM_STANDBY,LPM_DEEP_RTC,LPM_STUCK,LPM_REVIEW} from '../fixtures/ra-lpm-programs.js';
 
 const require=createRequire(import.meta.url),{prepareBuild,build,detectTools}=require('../../desktop/native-build.cjs');
 const tools=await detectTools({armGcc:process.env.ARM_GCC||''});
@@ -29,7 +29,8 @@ async function both(program,{ms,at={}}){
   const emu=make(FirmwareSession,{elf:new Uint8Array(await fs.readFile(result.elf))}),interp=make(SimulationSession,{});
   for(const e of [emu,interp]){
    const gpio=()=>e.session.gpio??e.session.runtime.gpio;e.leds=Object.fromEntries(LEDS.map(p=>[p,[]]));
-   for(let t=1;t<=ms;t++){at[t]?.(e.session);e.session.tick(t);for(const p of LEDS)e.leds[p].push(gpio()[p]?.value>1.65?1:0);}
+   // The level of a pin each millisecond: its PWM duty, or high / low.
+   for(let t=1;t<=ms;t++){at[t]?.(e.session);e.session.tick(t);for(const p of LEDS){const g=gpio()[p];e.leds[p].push(g?.pwm?Math.round(g.pwm.duty*1000)/1000:g?.value>1.65?1:0);}}
    e.lpm=e.trace.filter(x=>x.protocol==='LPM');
   }
   return {emu,interp};
@@ -50,6 +51,19 @@ function sameLog(emu,interp,label){
  });
 }
 const press=(from,to)=>({[from]:s=>s.setPressed({SW1:true}),[to]:s=>s.setPressed({})});
+// A review program on both engines: the same variables, as many resets, the same LED timelines and the same log; then
+// what is particular to it (`check(emu, interp)`).
+async function review(name,check){
+ const program=LPM_REVIEW[name],{emu,interp}=await both(program,program);
+ for(const v of program.vars)assert.equal(interp.session.readVariable(v),emu.session.readVariable(v),`${name} ${v}: emulator ${emu.session.readVariable(v)}`);
+ assert.equal(interp.session.runtime.resetCount??0,emu.session.resets.length,name+': resets');
+ for(const pin of LEDS)assert.deepEqual(differences(emu.leds[pin],interp.leds[pin]).slice(0,5),[],`${name} ${pin}`);
+ sameLog(emu,interp,name);
+ // A watchdog reset is said in each engine's own words.
+ for(const e of [emu,interp])assert.deepEqual(e.warn.filter(m=>!/^\[I?WDT\] /.test(m)),[],name);
+ check?.(emu,interp);
+}
+const messages=e=>e.lpm.map(x=>x.message);
 
 test('R_LPM_* return codes: the real r_lpm.c and the interpreter give the same ones, in the driver\'s order of checks',{skip,timeout:900000},async()=>{
  const {emu,interp}=await both(LPM_ERRORS,{ms:200,at:press(150,180)});
@@ -90,3 +104,8 @@ test('a Software Standby nothing can end, entered by a bare __WFI(): both engine
  assert.deepEqual(emu.lpm.map(e=>e.message),['Software Standby 진입 · 클록 정지 — 깨우는 소스: IRQ1','Software Standby: 깨울 수 있는 소스가 없습니다 — IRQ1: 인터럽트가 켜져 있지 않습니다. 리셋(S2)으로만 다시 시작합니다.']);
  for(const e of [emu,interp]){assert.equal(e.session.readVariable('after'),0);assert.equal(e.leds.P408.at(-1),1,'LED1 stays as it was');}
 });
+
+// ---- the programs of the review (tests/fixtures/ra-lpm-programs.js LPM_REVIEW)
+test('review: wfe — __WFE() with Software Standby configured is not a mode entry on either engine',{skip,timeout:900000},()=>review('wfe',emu=>{
+ assert.deepEqual(messages(emu),[]);assert.equal(emu.session.readVariable('ticks0'),57,'AGT0 keeps ticking every 7 ms');assert.equal(emu.session.readVariable('wakes'),103,'the event register lets every second WFE through');
+}));

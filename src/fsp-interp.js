@@ -387,7 +387,7 @@ export class FspAdapter {
  exec(r){if(!r.interruptsEnabled)return -1;let p=Infinity;for(const a of this.active)p=Math.min(p,a.prio);return p;}
  preempt(r){if(!this.pending.length||r.atomic)return false;const e=this.exec(r);return this.pending.some(j=>j.prio<e);}
  dispatch(r,job){
-  const entry={prio:job.prio,irq:job.irq};this.active.push(entry);this.dispatched++;
+  const entry={prio:job.prio,irq:job.irq};this.active.push(entry);this.dispatched++;this.eventReg=true;
   const body=(function*(){const it=job.run();if(isIterator(it))yield* it;})();
   return r.enterIsr(body,{irq:job.irq,name:job.name,exit:()=>{const k=this.active.lastIndexOf(entry);if(k>=0)this.active.splice(k,1);}});
  }
@@ -415,7 +415,9 @@ export class FspAdapter {
   if(name==='R_BSP_SoftwareDelay')return this.softwareDelay(args,r);
   // After r_lpm set a mode, a bare __WFI() enters it as well (LPM_CFG_STANDBY_LIMIT 0: SBYCR.SSBY stays set after Open).
   if(name==='__WFI'&&this.lpmReg.set)return this.lowPower(r,name);
-  if(name==='__WFI'||name==='__WFE')return this.wfi(r);
+  if(name==='__WFI')return this.wfi(r);
+  // __WFE: the core's event register, set by every exception taken, lets one WFE through without waiting (as on the core).
+  if(name==='__WFE'){if(this.eventReg){this.eventReg=false;return (function*(){return 0;})();}return this.wfi(r,false);}
   if(name==='R_LPM_LowPowerModeEnter'){
    if(!args[0])return (function*(){return FSP.ASSERTION;})();
    const st=this.instance(args[0],r,name,'lpm'),self=this;if(!st.open)return (function*(){return FSP.NOT_OPEN;})();
@@ -441,8 +443,9 @@ export class FspAdapter {
   this.shortWait=0;yield Math.max(.001,ms);return 0;
  }
  // __WFI: the core sleeps until an interrupt is taken.
- // (Sleep: a watchdog with its stop control does not count meanwhile, as in lowPower.)
- *wfi(r){if(r.inIsr)return 0;const seen=this.dispatched,sleep={mode:'SLEEP',frozen:[]};this.lpmFreeze(r,sleep);while(this.dispatched===seen)yield .1;this.lpmThaw(r,sleep);return 0;}
+ // (WFI is Sleep: a watchdog with its stop control does not count meanwhile, as in lowPower. WFE is the core's own wait
+ // on both engines: no low power mode.)
+ *wfi(r,sleepMode=true){if(r.inIsr)return 0;const seen=this.dispatched,sleep={mode:'SLEEP',frozen:[]};if(sleepMode)this.lpmFreeze(r,sleep);while(this.dispatched===seen)yield .1;this.lpmThaw(r,sleep);return 0;}
  call(name,args,r){
   this.runtime=r;const [a,b,c,d]=args;
   // A read of a pin or a status is polling (the interpreter's FSP loop rule, runtime.js).
