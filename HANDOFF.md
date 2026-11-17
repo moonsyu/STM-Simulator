@@ -1,6 +1,17 @@
 # STM Simulator — 개발 인계
 
-현재 버전: **1.56.0**. 정리일: **2026-11-10**. NUCLEO-F446RE·NUCLEO-F103RB 또는 Renesas FPB-RA6E1(1.20.0, FSP·에뮬레이터 전용)과 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+현재 버전: **1.57.0**. 정리일: **2026-11-10**. NUCLEO-F446RE·NUCLEO-F103RB 또는 Renesas FPB-RA6E1(1.20.0, FSP·에뮬레이터 전용)과 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+
+## 1.57.0 기능 목록 39번: RA 데이터 플래시(r_flash_hp)
+
+- **결정**: 데이터 플래시 내용은 다시 실행해도 남긴다. 실행이 끝날 때(정지, 오류로 멈춤, 프로젝트 교체, 창 닫기 전) 프로젝트 최상위 `dataFlash`에 쓴 4바이트 단위만 `[{at, hex}]`로 저장한다(RA 프로젝트만, `mcu` 밖이라 저장해도 재빌드하지 않음, 붙어 있는 run은 불러올 때 합침, null은 없는 것). 실행 취소·다시 실행은 현재 `dataFlash`를 유지하고, "데이터 플래시 지우기"와 예제 적용 단계만 내용을 함께 되돌린다.
+- **내용 모델** `src/ra-data-flash.js`: `RaDataFlash`(bytes, blank, `erase`·`program`·`load`·`encode`·`apply`·`changed`), `validateDataFlash`, `RA_DF_BASE/SIZE/BLOCK/UNIT`(0x08000000, 8 KB, 64바이트 블록, 4바이트 단위), `RA_DF_TIME_US`(FSP 최대값의 1/10).
+- **에뮬레이터** `src/emu/ra6e1/flash.js` `Faci`: 플래시 시퀀서 레지스터·명령 영역(0x407FE000·0x407E0000), 이벤트 FCU_FIFERR 0x30·FCU_FRDYI 0x31. `bus.js`: `dataFlashStore`·`onDataFlashRead`, 대입은 한 번 안내하고 무시(`flashWriteHook`), 데이터 플래시 주변 64 KB에서 끝을 넘는 접근은 안내 뒤 폴트, 디버거 메모리 편집(`poke`)은 그 단위를 쓴 것으로 표시. `soc.js`: FWEPROR 리셋 값 0x02, C 캐시 CCAFCT 즉시 완료.
+- **설정·생성**: `mcu.peripherals.FLASH {bgo, callback, readyPriority, errorPriority}`(`validateFlash`). `ra-generator.js` `flashOf`·`flashDecl`·`flashInstance` → g_flash0, r_flash_hp_cfg.h(코드 플래시 프로그래밍은 끔), BGO일 때만 벡터 FCU_FRDYI·FCU_FIFERR를 맨 뒤에 추가.
+- **해석기** `src/fsp-flash.js`: r_flash_hp.c를 함수 단위로 옮겨 에뮬레이터와 같은 FACI 모델 위에서 돌린다(`FLASH_METHODS`를 `FspAdapter.prototype`에 붙임). 데이터 플래시 주소 캐스트는 `runtime.js`의 `api.memory` 훅이 주소를 가진 읽기 전용 뷰 포인터를 돌려주고, 다른 포인터 형으로 캐스트·대입하면 그 형으로 다시 읽으며 정수 캐스트·비교·빼기는 주소로 한다. 플래시에서 읽는 char는 부호 없음(ARM과 같음).
+- **모든 해석기에 적용된 변화**(`runtime.js`·`parser`·`hal-stdio.js`): `&p[i]`가 포인터의 시작 위치를 더한다(이전에는 `p = buf + 4; &p[1]`이 `buf[1]`), 사용자 enum은 ARM GCC처럼 값에 맞춘 1·2·4바이트(`sizeof(형)`, 구조체 배치, 구조체↔바이트 memcpy·memcmp; `sizeof(enum 변수)`는 그대로 4), `signed char`는 `int8_t`로 읽는다.
+- **지원하지 않음**: 코드 플래시 프로그래밍(`FSP_ERR_INVALID_ADDRESS`·`FSP_ERR_UNSUPPORTED`), ID 코드, 액세스 윈도, 스타트업 영역, P/E 중단·재개, 해석기의 `uint8_t const *` 선언·비트필드·`flash_cfg_t.p_callback` 직접 선언. 남은 차이: 범위 밖 읽기는 두 엔진이 같은 안내를 내지만 에뮬레이터는 HardFault에서 일시정지, 해석기는 오류로 멈춘다.
+- UI `ra-pinout-ui.js`: New Stack → Storage → Flash (r_flash_hp), 카드의 "데이터 플래시 지우기"(`[data-ra-flash-clear]`). 예제 `ra_flash_counter`. 시험: `tests/unit/ra-flash.test.js`, `tests/interp/c-idioms-9.test.js`, `tests/firmware/firmware-ra6e1.test.js`(픽스처 ra_flash_counter), `tests/toolchain/ra-flash.test.mjs`(묶음 3), parity `ra_flash_counter`(묶음 6), `tests/e2e/ra-flash.e2e.test.mjs`.
 
 ## 1.56.0 기능 목록 37번: RA 저전력 모드(r_lpm)와 IRQn-DS로 깨우기
 
