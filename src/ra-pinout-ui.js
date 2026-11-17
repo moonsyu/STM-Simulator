@@ -1,6 +1,7 @@
 import {$,esc} from './common.js';
-import {RA6E1_PORTS,RA_IRQ_PINS,RA_RESERVED,FPB_RA6E1,RA_PERIPHERAL_PINS,RA_ADC_CHANNELS,RA_GPT_32BIT,RA_GPT_CHANNELS,RA_AGT_CHANNELS,RA_TIMER_UNITS,RA_CLOCK_LIMITS,RA_IIC_RATES,RA_IIC_CHANNELS,RA_IIC_SLAVE_ADDRESS,raIicSlaveClock,RA_SPI_CHANNELS,RA_SCI_SPI_CHANNELS,raIicClock,raGptCounts,raAgtCounts,raClockHz,raSpiBitrate,raSciSpiBitrate,raFamily,validateRaMcu,raDefaultMcu,raIrqName,RA_BSP_DEFAULTS,RA_WDT,RA_WDT_WINDOW_START,RA_WDT_WINDOW_END,raWdtTiming,RA_RTC_DEFAULTS,RA_FLASH_DEFAULTS} from './ra-config.js';
+import {RA6E1_PORTS,RA_IRQ_PINS,RA_RESERVED,FPB_RA6E1,RA_PERIPHERAL_PINS,RA_ADC_CHANNELS,RA_GPT_32BIT,RA_GPT_CHANNELS,RA_AGT_CHANNELS,RA_TIMER_UNITS,RA_CLOCK_LIMITS,RA_IIC_RATES,RA_IIC_CHANNELS,RA_IIC_SLAVE_ADDRESS,raIicSlaveClock,RA_SPI_CHANNELS,RA_SCI_SPI_CHANNELS,raIicClock,raGptCounts,raAgtCounts,raClockHz,raSpiBitrate,raSciSpiBitrate,raFamily,validateRaMcu,raDefaultMcu,raIrqName,RA_BSP_DEFAULTS,RA_WDT,RA_WDT_WINDOW_START,RA_WDT_WINDOW_END,raWdtTiming,RA_RTC_DEFAULTS,RA_IRQ_DS,RA_LPM_DEFAULTS,RA_LPM_MODES,RA_LPM_MODE_NAMES,RA_LPM_WAKE,RA_LPM_CANCEL,raDsPin,RA_FLASH_DEFAULTS} from './ra-config.js';
 import {RA_DF_BASE,RA_DF_SIZE,RA_DF_BLOCK,RA_DF_UNIT,dataFlashUsed} from './ra-data-flash.js';
+import {lpmWakeLabel,lpmCancelLabel} from './ra-lpm.js';
 import {sciBaudSetting,raPclka} from './ra-generator.js';
 // Pin settings of a Renesas RA project (FPB-RA6E1), as the RA Smart Configurator's Pins tab sets them: per port pin the
 // mode (output / input / IRQ / analog), the symbolic name RASC writes into bsp_pin_cfg.h, output level and drive, the
@@ -22,10 +23,10 @@ const SPI_PIN_GROUPS={SPI1:[{P100:'SPI1_MISO',P101:'SPI1_MOSI',P102:'SPI1_RSPCK'
 // The pins New Stack → Connectivity gives an I2C slave stack (IIC0 on the Arduino SCL/SDA pins first).
 const IIC_PIN_GROUPS={IIC0:[{P400:'IIC0_SCL',P401:'IIC0_SDA'},{P408:'IIC0_SCL',P407:'IIC0_SDA'}],IIC1:[{P205:'IIC1_SCL',P206:'IIC1_SDA'}]};
 // Stacks without pins (added from New Stack, kept until removed there).
-const PINLESS=['WDT','IWDT','RTC','FLASH'];
-const STACK_NAMES={WDT:['g_wdt0','Watchdog (r_wdt)'],IWDT:['g_iwdt0','Independent Watchdog (r_iwdt)'],RTC:['g_rtc0','Realtime Clock (r_rtc)'],FLASH:['g_flash0','Flash (r_flash_hp)']};
-// New Stack groups of the pin-less stacks, as RASC files them.
-const PINLESS_GROUPS=[['Monitoring · System',['WDT','IWDT','RTC']],['Storage',['FLASH']]];
+const PINLESS=['WDT','IWDT','RTC','LPM','FLASH'];
+const STACK_NAMES={WDT:['g_wdt0','Watchdog (r_wdt)'],IWDT:['g_iwdt0','Independent Watchdog (r_iwdt)'],RTC:['g_rtc0','Realtime Clock (r_rtc)'],LPM:['g_lpm0','Low Power Modes (r_lpm)'],FLASH:['g_flash0','Flash (r_flash_hp)']};
+// New Stack groups of the pin-less stacks, as RASC files them (Power → Low Power Modes).
+const PINLESS_GROUPS=[['Monitoring · System',['WDT','IWDT','RTC']],['Power',['LPM']],['Storage',['FLASH']]];
 const SUBCLOCK_NOTE='FPB-RA6E1에는 32.768 kHz 크리스털 X2가 실장되어 있지만 E25/E26이 열려 있어 그대로는 서브 클록이 돌지 않습니다(XCIN/XCOUT은 J3로만 나옴). 실물 보드에서 Sub-Clock을 쓰려면 E25/E26을 닫으세요.';
 const WDT_DEFAULTS=id=>({enabled:true,...(id==='WDT'?{startMode:'REGISTER'}:{}),...RA_WDT[id].defaults,windowStart:100,windowEnd:0,reset:'RESET',stopInSleep:false,callback:''});
 const hexAddr=v=>'0x'+v.toString(16).toUpperCase().padStart(8,'0');
@@ -250,6 +251,42 @@ export class RaPinoutPanel {
     +(q.bgo?`Background Operation: 호출이 바로 돌아오고 끝나면 ${esc(q.callback||'콜백(R_FLASH_HP_CallbackSet)')}이 FLASH_EVENT_ERASE_COMPLETE · WRITE_COMPLETE · BLANK · NOT_BLANK · ERR_FAILURE로 불립니다. 그동안 데이터 플래시는 읽지 못합니다. `:'Background Operation 없이는 호출이 끝날 때까지 기다립니다(인터럽트 없음). ')
     +`내용은 MCU 리셋에도, 실행을 멈췄다 다시 실행해도 남습니다(프로젝트에 저장).</p><p class="form-hint" data-ra-flash-saved>프로젝트에 저장된 데이터 플래시: ${saved?`${saved}바이트`:'없음(모두 지워진 상태)'} <button type="button" data-ra-flash-clear${saved?'':' disabled'}>데이터 플래시 지우기</button>`;
   }
+  if(id==='LPM'){
+   const q={...RA_LPM_DEFAULTS,...p},pins=this.draft.pins,irqPin=ch=>Object.keys(pins).find(x=>pins[x].function==='IRQ'&&RA_IRQ_PINS[x]===ch);
+   const check=(list,value,label,on)=>`<label class="ra-lpm-check"><input type="checkbox" data-ra-lpm="${list}" value="${value}" ${on?'checked':''}>${esc(label)}</label>`;
+   fields=`<label>Low Power Mode${sel('mode',RA_LPM_MODES.map(m=>[m,`${RA_LPM_MODE_NAMES[m]} mode`]),q.mode)}</label>`;
+   if(q.mode==='STANDBY'){
+    // The IRQ channels that have an External IRQ stack (others have no interrupt to wake with), and what is already chosen.
+    const names=RA_LPM_WAKE.filter(n=>{const m=/^IRQ(\d+)$/.exec(n);return !m||q.wake.includes(n)||irqPin(Number(m[1]));});
+    fields+=`<div class="ra-lpm-list" data-ra-lpm-wake><span>Wake Sources (WUPEN)</span>${names.map(n=>{const m=/^IRQ(\d+)$/.exec(n),pin=m&&irqPin(Number(m[1]));return check('wake',n,m?`${n}${pin?` · ${pin}`:' · External IRQ 스택 없음'}`:lpmWakeLabel(n),q.wake.includes(n));}).join('')}</div>`;
+   }
+   if(q.mode==='DEEP'){
+    fields+=`<label>I/O Port Retention${sel('ioKeep',[[1,'Maintain the IO port states (IOKEEP)'],[0,'Do not maintain (reset state)']],q.ioKeep?1:0)}</label><label>Power-Supply Control${sel('power',[['DEEPCUT0','DEEPCUT0 · LOCO · AGT 전원 유지'],['DEEPCUT1','DEEPCUT1 · LOCO · AGT 전원 끔'],['DEEPCUT3','DEEPCUT3 · LOCO · AGT 끔, LVD 끔']],q.power)}</label>`
+     +`<div class="ra-lpm-list" data-ra-lpm-cancel><span>Cancel Sources (DPSIER)</span>${RA_LPM_CANCEL.map(n=>check('cancel',n,lpmCancelLabel(n),q.cancel.includes(n))).join('')}</div>`
+     +q.cancel.filter(n=>/^IRQ/.test(n)).map(n=>`<label>${n}-DS Edge<select data-ra-lpm-edge="${n}">${option('FALLING','Falling',q.cancelRising.includes(n)?'RISING':'FALLING')}${option('RISING','Rising',q.cancelRising.includes(n)?'RISING':'FALLING')}</select></label>`).join('');
+   }
+   const notes=[];
+   // An AGT source needs its stack, and a count source that runs in the mode (LOCO: the period decides, raAgtCounts).
+   const agtNote=(n,mode)=>{const t=this.draft.peripherals?.['AGT'+n];let source='';try{source=t?.enabled?raAgtCounts(raClockHz(this.draft,'pclkb'),Number(n),t.period,t.unit).source:'';}catch{source='';}
+    if(!t?.enabled)notes.push(`AGT${n} 스택이 없습니다(New Stack → Timers).`);else if(source!=='LOCO')notes.push(`AGT${n}은 PCLKB로 세어 ${mode}에서 멈춥니다 — 주기를 ${Number((65536*8/raClockHz(this.draft,'pclkb')*1000).toFixed(1))} ms보다 길게 정해 LOCO로 세게 하세요.`);};
+   if(q.mode==='SLEEP')notes.push('CPU만 멈추고 주변장치는 계속 동작합니다. 켜 둔 인터럽트가 깨웁니다.');
+   if(q.mode==='STANDBY'){
+    notes.push('클록이 멈춥니다(GPT · PCLKB로 세는 AGT · WDT · SCI 등). RTC와 LOCO로 세는 AGT는 계속 돕니다. 고른 소스의 인터럽트만 깨우며, 그 인터럽트가 켜져 있어야 합니다.');
+    if(!q.wake.length)notes.push('깨우는 소스가 없습니다 — 리셋으로만 깨어납니다.');
+    for(const n of q.wake){const m=/^AGT(\d)UD$/.exec(n);if(m)agtNote(m[1],'Software Standby');}
+    if(q.wake.some(n=>/^RTC/.test(n))&&!this.draft.peripherals?.RTC?.enabled)notes.push('RTC 스택이 없습니다(New Stack → Realtime Clock).');
+   }
+   if(q.mode==='DEEP'){
+    notes.push('해제 소스가 오면 MCU가 리셋되어 처음부터 다시 실행됩니다(R_SYSTEM-&gt;RSTSR0_b.DPSRSTF가 1). 핀으로는 IRQn-DS 핀만 해제합니다.');
+    notes.push(q.ioKeep?'I/O 포트 상태는 리셋 뒤에도 그대로이고 R_LPM_IoKeepClear(NULL)를 부를 때 풀립니다.':'해제되면 I/O 포트는 리셋 상태가 됩니다.');
+    if(!q.cancel.length)notes.push('해제 소스가 없습니다 — 리셋으로만 깨어납니다.');
+    for(const n of q.cancel){const m=/^IRQ(\d+)$/.exec(n);if(!m)continue;const ch=Number(m[1]),used=irqPin(ch),ds=raDsPin(ch);if(used&&used!==ds)notes.push(`IRQ${ch} 스택은 ${used}(IRQ${ch})에 있습니다 — Deep Software Standby는 IRQ${ch}-DS 핀 ${ds}의 엣지로만 해제됩니다.`);}
+    for(const n of q.cancel){const m=/^AGT(\d)$/.exec(n);if(m)agtNote(m[1],'Deep Software Standby');}
+    if(q.power!=='DEEPCUT0'&&q.cancel.some(n=>/^(RTC|AGT)/.test(n)))notes.push(`${q.power}에서는 LOCO와 AGT 전원이 꺼집니다 — LOCO로 세는 RTC와 AGT는 해제하지 못합니다.`);
+    if(q.cancel.some(n=>/^RTC/.test(n))&&!this.draft.peripherals?.RTC?.enabled)notes.push('RTC 스택이 없습니다(New Stack → Realtime Clock).');
+   }
+   hint=`${notes.join(' ')} R_LPM_Open(&amp;g_lpm0_ctrl, &amp;g_lpm0_cfg) · R_LPM_LowPowerModeEnter(&amp;g_lpm0_ctrl). 다른 모드는 코드에서 lpm_cfg_t를 만들어 R_LPM_LowPowerReconfigure로 바꿉니다. 진입과 깨어남은 실행 로그(LPM)에 남습니다.`;
+  }
   return `<article class="ra-stack" data-ra-stack="${id}"><header><b>${name}</b><span>${module}</span><button type="button" data-ra-remove="${id}">삭제</button></header><div class="ra-stack-fields">${fields}</div><p class="form-hint">${hint}</p></article>`;
  }
  // An External IRQ stack (New Stack → Input → External IRQ), with the Properties RASC shows: Name, Channel, Trigger,
@@ -290,10 +327,18 @@ export class RaPinoutPanel {
  stackChange(el){
   const irqPin=el.closest('[data-ra-irq]')?.dataset.raIrq;if(irqPin&&el.dataset.raIrqField)return this.irqChange(irqPin,el);
   if(el.dataset.raSpi){this.spiValue(el);this.validate();this.renderStacks();return;}
-  const id=el.closest('[data-ra-stack]')?.dataset.raStack,k=el.dataset.raField;if(!id||!k)return;
+  const id=el.closest('[data-ra-stack]')?.dataset.raStack;
+  // Low Power Modes: the source check boxes and the edge of an IRQn-DS source.
+  if(id==='LPM'&&(el.dataset.raLpm||el.dataset.raLpmEdge)){
+   const q=this.draft.peripherals.LPM,set=(key,name,on)=>{q[key]=(q[key]||[]).filter(x=>x!==name);if(on)q[key].push(name);};
+   if(el.dataset.raLpm){set(el.dataset.raLpm,el.value,el.checked);if(el.dataset.raLpm==='cancel'&&!el.checked)set('cancelRising',el.value,false);}
+   else set('cancelRising',el.dataset.raLpmEdge,el.value==='RISING');
+   this.validate();this.renderStacks();return;
+  }
+  const k=el.dataset.raField;if(!id||!k)return;
   const v=el.value.trim(),q=this.draft.peripherals[id];
-  if(['unit','callback','startMode','reset','clockSource','start'].includes(k))q[k]=v;
-  else if(k==='stopInSleep'||k==='bgo')q[k]=v==='1';
+  if(['unit','callback','startMode','reset','clockSource','start','mode','power'].includes(k))q[k]=v;
+  else if(k==='stopInSleep'||k==='ioKeep'||k==='bgo')q[k]=v==='1';
   else if(/Priority$/.test(k)&&v==='')q[k]=null;
   else q[k]=Number(v);
   // A watchdog's callback goes with the NMI output: a default name when NMI is chosen, none with Reset.
@@ -320,6 +365,13 @@ export class RaPinoutPanel {
   if(el.closest('[data-ra-add]')&&$('ra-stack-add').value==='FLASH'){per.FLASH={enabled:true,...RA_FLASH_DEFAULTS};this.validate();this.renderStacks();return;}
   // The saved data flash contents are the project's, not this dialog's draft: erased at once (undo brings them back).
   if(el.closest('[data-ra-flash-clear]')){this.clearDataFlash?.();this.renderStacks();return;}
+  if(el.closest('[data-ra-add]')&&$('ra-stack-add').value==='LPM'){
+   // The External IRQ stacks there are become the first sources: every one wakes Software Standby, the ones on an
+   // IRQn-DS pin cancel Deep Software Standby (the board's S1 on P205 is IRQ1-DS).
+   const irqs=Object.keys(this.draft.pins).filter(q=>this.draft.pins[q].function==='IRQ');
+   per.LPM={enabled:true,...RA_LPM_DEFAULTS,wake:irqs.map(q=>'IRQ'+RA_IRQ_PINS[q]).filter(n=>RA_LPM_WAKE.includes(n)),cancel:irqs.filter(q=>RA_IRQ_DS.includes(q)).map(q=>'IRQ'+RA_IRQ_PINS[q]).filter(n=>RA_LPM_CANCEL.includes(n)),cancelRising:[]};
+   this.validate();this.renderStacks();return;
+  }
   if(el.closest('[data-ra-add]')){const id=$('ra-stack-add').value;if(!id)return;per[id]=id.startsWith('AGT')?{enabled:true,period:100,unit:'ms',callback:`agt${id.slice(3)}_callback`,priority:12}:{enabled:true,mode:'PERIODIC',period:100,unit:'ms',duty:50,callback:`gpt${id.slice(3)}_callback`,priority:12};this.validate();this.renderStacks();return;}
   const rm=el.closest('[data-ra-remove]')?.dataset.raRemove;if(rm){delete per[rm];this.validate();this.renderStacks();return;}
   const go=el.closest('[data-ra-goto]')?.dataset.raGoto;if(go){this.pin=go;this.tab='pins';this.render();}

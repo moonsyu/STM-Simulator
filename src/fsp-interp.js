@@ -11,15 +11,17 @@ import {baseName} from './source-files.js';
 import {HalAdapter} from './hal.js';
 import {BusDevices} from './buses.js';
 import {formatPrintf,stringCall} from './hal-stdio.js';
-import {validateRaMcu,raClockHz,raPinName,RA6E1_PORTS,RA_ADC_CHANNELS,RA_IRQ_PINS,WDT_DIVISION_CODE,RA_WDT,RA_IWDT_HZ,RA_WDT_WINDOW_START,RA_WDT_WINDOW_END} from './ra-config.js';
+import {validateRaMcu,raClockHz,raPinName,RA6E1_PORTS,RA_ADC_CHANNELS,RA_IRQ_PINS,WDT_DIVISION_CODE,RA_WDT,RA_IWDT_HZ,RA_WDT_WINDOW_START,RA_WDT_WINDOW_END,RA_LPM_WAKE_BITS,RA_LPM_CANCEL_BITS,RA_LPM_WUPEN_MASK,RA_LPM_DPSIER_MASK,RA_LPM_DPSIEGR_MASK,RA_LPM_POWER,raLpmMask,raDsPin} from './ra-config.js';
+import {LPM_PROTOCOL,LpmLog,lpmWakeNames,lpmCancelNames,lpmWakeLabel,lpmCancelLabel,lpmIrqLabel,lpmWakeOfIrq,lpmCancelOfIrq,lpmReason,lpmDeepDetail} from './ra-lpm.js';
 import {raInstances,raIoName,raVectors,pinCfgWord} from './ra-generator.js';
 import {exchangeFrame} from './emu/ra6e1/spi.js';
 import {encodeSpiFrames} from './signals.js';
 import {Rtc} from './emu/ra6e1/rtc.js';
 import {FLASH_TYPES,FLASH_METHODS,FLASH_NAMES,flashPrelude} from './fsp-flash.js';
 
-// RSTSR1 reset-cause flags (R7FA6E10F.h): the one register the interpreter lets the program read (FspAdapter.register).
+// RSTSR1 and RSTSR0 reset-cause flags (R7FA6E10F.h): the registers the interpreter lets the program read (FspAdapter.register).
 const RESET_STATUS=[['IWDTRF',0],['WDTRF',1],['SWRF',2]];
+const RESET_STATUS0=[['PORF',0],['LVD0RF',1],['LVD1RF',2],['LVD2RF',3],['DPSRSTF',7]];
 const RESET_FLAG={IWDT:1,WDT:2,SYSRESETREQ:4};
 const pad=n=>String(n).padStart(2,'0');
 const hex=(n,w=4)=>'0x'+(n>>>0).toString(16).toUpperCase().padStart(w,'0');
@@ -31,7 +33,7 @@ export const FSP_ALIASES=Object.freeze({FSP_CPP_HEADER:'',FSP_CPP_FOOTER:'',FSP_
  IOPORT_CFG_CTRL:'g_ioport_ctrl',IOPORT_CFG_NAME:'g_bsp_pin_cfg',IOPORT_CFG_OPEN:'R_IOPORT_Open'});
 // FSP and generated headers that resolve to the prelude (it has a guard, so including several is fine); the C
 // library headers read as empty.
-const FSP_HEADERS=['hal_data.h','common_data.h','bsp_pin_cfg.h','vector_data.h','bsp_api.h','bsp_cfg.h','bsp_clock_cfg.h','board.h','board_cfg.h','fsp_common_api.h','r_ioport.h','r_ioport_api.h','r_icu.h','r_external_irq_api.h','r_sci_uart.h','r_uart_api.h','r_gpt.h','r_timer_api.h','r_agt.h','r_adc.h','r_adc_api.h','r_iic_master.h','r_i2c_master_api.h','r_spi.h','r_sci_spi.h','r_spi_api.h','r_wdt.h','r_iwdt.h','r_wdt_api.h','r_rtc.h','r_rtc_api.h','r_iic_slave.h','r_i2c_slave_api.h','r_flash_hp.h','r_flash_api.h','bsp_io.h','bsp_delay.h','bsp_common.h'];
+const FSP_HEADERS=['hal_data.h','common_data.h','bsp_pin_cfg.h','vector_data.h','bsp_api.h','bsp_cfg.h','bsp_clock_cfg.h','board.h','board_cfg.h','fsp_common_api.h','r_ioport.h','r_ioport_api.h','r_icu.h','r_external_irq_api.h','r_sci_uart.h','r_uart_api.h','r_gpt.h','r_timer_api.h','r_agt.h','r_adc.h','r_adc_api.h','r_iic_master.h','r_i2c_master_api.h','r_spi.h','r_sci_spi.h','r_spi_api.h','r_wdt.h','r_iwdt.h','r_wdt_api.h','r_rtc.h','r_rtc_api.h','r_iic_slave.h','r_i2c_slave_api.h','r_lpm.h','r_lpm_api.h','r_flash_hp.h','r_flash_api.h','bsp_io.h','bsp_delay.h','bsp_common.h'];
 const C_HEADERS=new Set(['stdint.h','stddef.h','stdbool.h','string.h','stdlib.h','stdio.h','ctype.h','math.h','limits.h','time.h']);
 // Generated and FSP source folders of the project tree: built by ARM GCC only (the prelude stands in for them here).
 const FSP_FILE=/^(ra|ra_gen|ra_cfg|script)\//;
@@ -151,8 +153,11 @@ typedef struct st_rtc_cfg { rtc_clock_source_t clock_source; uint32_t freq_compa
 typedef struct st_rtc_ctrl { uint32_t open; } rtc_instance_ctrl_t;
 typedef struct st_rtc_instance { rtc_instance_ctrl_t * p_ctrl; const rtc_cfg_t * p_cfg; void * p_api; } rtc_instance_t;
 ${RESET_STATUS.map(([k,pos])=>`#define R_SYSTEM_RSTSR1_${k}_Pos (${pos}UL)\n#define R_SYSTEM_RSTSR1_${k}_Msk (${hex(1<<pos,1)}UL)`).join('\n')}
+${RESET_STATUS0.map(([k,pos])=>`#define R_SYSTEM_RSTSR0_${k}_Pos (${pos}UL)\n#define R_SYSTEM_RSTSR0_${k}_Msk (${hex(1<<pos,1)}UL)`).join('\n')}
 typedef struct st_fsp_interp_rstsr1_b { uint16_t IWDTRF; uint16_t WDTRF; uint16_t SWRF; } FSP_INTERP_RSTSR1_b;
-typedef struct st_fsp_interp_system { uint16_t RSTSR1; FSP_INTERP_RSTSR1_b RSTSR1_b; } FSP_INTERP_SYSTEM;
+typedef struct st_fsp_interp_rstsr0_b { uint8_t PORF; uint8_t LVD0RF; uint8_t LVD1RF; uint8_t LVD2RF; uint8_t DPSRSTF; } FSP_INTERP_RSTSR0_b;
+typedef struct st_fsp_interp_system { uint16_t RSTSR1; FSP_INTERP_RSTSR1_b RSTSR1_b; uint8_t RSTSR0; FSP_INTERP_RSTSR0_b RSTSR0_b; uint8_t DPSIFR0; uint8_t DPSIFR1; uint8_t DPSIFR2; uint8_t DPSIFR3; } FSP_INTERP_SYSTEM;
+${enumOf('e_bsp_reg_protect','bsp_reg_protect_t',['CGC','OM_LPC_BATT','LVD','SAR'].map((k,i)=>['BSP_REG_PROTECT_'+k,i]))}
 #define FSP_PARAMETER_NOT_USED(p) ((void) (p))
 #define BSP_IRQ_DISABLED (0xFF)
 #define FSP_INVALID_VECTOR ((IRQn_Type) -33)
@@ -181,10 +186,29 @@ typedef struct st_spi_instance_ctrl { uint32_t open; } spi_instance_ctrl_t;`;
 const SCI_SPI_TYPES=`typedef struct st_sci_spi_div_setting { uint8_t brr; uint8_t cks; uint8_t mddr; } sci_spi_div_setting_t;
 typedef struct st_sci_spi_extended_cfg { sci_spi_div_setting_t clk_div; } sci_spi_extended_cfg_t;
 typedef struct st_sci_spi_instance_ctrl { uint32_t open; } sci_spi_instance_ctrl_t;`;
+// r_lpm_api.h and r_lpm.h (FSP 6.6, the RA6E1's lpm_cfg_t: snooze and deep standby, no SBYCR.OPE): in hal_data.h only
+// when the stack is there. The interpreter has no 64-bit integers and its enum constants are ints, so the wake sources
+// are two 32-bit members: the second (WUPEN1: the AGT3 sources) is filled in for g_lpm0 from the Stacks settings and has
+// no enum constants. A lpm_cfg_t written in the code can name every source but IIC0 (bit 31) and the three of AGT3.
+const cancelIrqs=Object.keys(RA_LPM_CANCEL_BITS).filter(k=>/^IRQ/.test(k));
+const LPM_TYPES=`${enumOf('e_lpm_mode','lpm_mode_t',['SLEEP','DEEP_SLEEP','STANDBY','STANDBY_SNOOZE','DEEP'].map((k,i)=>['LPM_MODE_'+k,i]))}
+${enumOf('e_lpm_snooze_request','lpm_snooze_request_t',[['LPM_SNOOZE_REQUEST_RXD0_FALLING',0]])}
+${enumOf('e_lpm_snooze_end','lpm_snooze_end_t',[['LPM_SNOOZE_END_STANDBY_WAKE_SOURCES',0]])}
+${enumOf('e_lpm_snooze_cancel','lpm_snooze_cancel_t',[['LPM_SNOOZE_CANCEL_SOURCE_NONE',0]])}
+${enumOf('e_lpm_snooze_dtc','lpm_snooze_dtc_t',[['LPM_SNOOZE_DTC_DISABLE',0],['LPM_SNOOZE_DTC_ENABLE',1]])}
+${enumOf('e_lpm_standby_wake_source','lpm_standby_wake_source_t',Object.entries(RA_LPM_WAKE_BITS).filter(([,b])=>b<31).map(([k,b])=>['LPM_STANDBY_WAKE_SOURCE_'+k,hex(2**b,8)]))}
+${enumOf('e_lpm_io_port','lpm_io_port_t',[['LPM_IO_PORT_RESET',0],['LPM_IO_PORT_NO_CHANGE',1]])}
+${enumOf('e_lpm_power_supply','lpm_power_supply_t',Object.entries(RA_LPM_POWER).map(([k,v])=>['LPM_POWER_SUPPLY_'+k,v]))}
+${enumOf('e_lpm_deep_standby_cancel_edge','lpm_deep_standby_cancel_edge_t',[['LPM_DEEP_STANDBY_CANCEL_SOURCE_EDGE_NONE',0],...[...cancelIrqs,'LVD1','LVD2','NMI'].flatMap(k=>[[`LPM_DEEP_STANDBY_CANCEL_SOURCE_${k}_RISING`,hex(2**RA_LPM_CANCEL_BITS[k],8)],[`LPM_DEEP_STANDBY_CANCEL_SOURCE_${k}_FALLING`,0]])])}
+${enumOf('e_lpm_deep_standby_cancel_source','lpm_deep_standby_cancel_source_t',[['LPM_DEEP_STANDBY_CANCEL_SOURCE_RESET_ONLY',0],...Object.entries(RA_LPM_CANCEL_BITS).map(([k,b])=>['LPM_DEEP_STANDBY_CANCEL_SOURCE_'+k,hex(2**b,8)])])}
+${enumOf('e_lpm_output_port_enable','lpm_output_port_enable_t',[['LPM_OUTPUT_PORT_ENABLE_HIGH_IMPEDANCE',0],['LPM_OUTPUT_PORT_ENABLE_RETAIN',1]])}
+typedef struct st_lpm_cfg { lpm_mode_t low_power_mode; uint32_t standby_wake_sources; uint32_t fsp_interp_wake_sources_high; lpm_snooze_request_t snooze_request_source; uint16_t snooze_end_sources; lpm_snooze_cancel_t snooze_cancel_sources; lpm_snooze_dtc_t dtc_state_in_snooze; lpm_io_port_t io_port_state; lpm_power_supply_t power_supply_state; uint32_t deep_standby_cancel_source; uint32_t deep_standby_cancel_edge; void * p_extend; } lpm_cfg_t;
+typedef struct st_lpm_instance_ctrl { uint32_t lpm_open; } lpm_instance_ctrl_t;
+typedef struct st_lpm_instance { lpm_instance_ctrl_t * p_ctrl; const lpm_cfg_t * p_cfg; void * p_api; } lpm_instance_t;`;
 
 /** The prelude's text for a checked RA configuration: types, the pin symbols and the Stacks instances of hal_data.c. */
 export function fspPrelude(mcu){
- const {irqs,uarts,gpts,adc,agts,iics,spis,sciSpis,wdts,rtc,iicSlaves,flash}=raInstances(mcu),vectors=raVectors(mcu),vec=k=>vectors.some(v=>v.vector===k)?`VECTOR_NUMBER_${k}`:'FSP_INVALID_VECTOR';
+ const {irqs,uarts,gpts,adc,agts,iics,spis,sciSpis,wdts,rtc,iicSlaves,lpm,flash}=raInstances(mcu),vectors=raVectors(mcu),vec=k=>vectors.some(v=>v.vector===k)?`VECTOR_NUMBER_${k}`:'FSP_INVALID_VECTOR';
  const pins=Object.entries(mcu.pins||{}).sort(([a],[b])=>raPinName(a).localeCompare(raPinName(b)));
  const ipl=(name,p)=>name?`(${p})`:'(BSP_IRQ_DISABLED)';
  const out=['#ifndef FSP_INTERP_PRELUDE_H','#define FSP_INTERP_PRELUDE_H',TYPES,
@@ -219,6 +243,9 @@ export function fspPrelude(mcu){
  if(rtc){const ipl=p=>p==null?'(BSP_IRQ_DISABLED)':`(${p})`,irq=(k,p)=>p==null?'FSP_INVALID_VECTOR':vec('RTC_'+k);
   out.push('rtc_instance_ctrl_t g_rtc0_ctrl;',`const rtc_cfg_t g_rtc0_cfg = { .clock_source = ${rtc.clockSource==='SUBCLOCK'?'RTC_CLOCK_SOURCE_SUBCLK':'RTC_CLOCK_SOURCE_LOCO'}, .freq_compare_value = ${rtc.freqCompare}, .alarm_ipl = ${ipl(rtc.alarmPriority)}, .alarm_irq = ${irq('ALARM',rtc.alarmPriority)}, .periodic_ipl = ${ipl(rtc.periodicPriority)}, .periodic_irq = ${irq('PERIOD',rtc.periodicPriority)}, .carry_ipl = ${ipl(rtc.carryPriority)}, .carry_irq = ${irq('CARRY',rtc.carryPriority)}, .p_context = NULL, .p_extend = NULL };`,
    'const rtc_instance_t g_rtc0 = { .p_ctrl = &g_rtc0_ctrl, .p_cfg = &g_rtc0_cfg, .p_api = NULL };',...(rtc.callback?[`void ${rtc.callback}(rtc_callback_args_t * p_args);`]:[]));}
+ if(lpm){const [wakeLo,wakeHi]=raLpmMask(lpm.wake,RA_LPM_WAKE_BITS),[cancel]=raLpmMask(lpm.cancel,RA_LPM_CANCEL_BITS),[edge]=raLpmMask(lpm.cancelRising,RA_LPM_CANCEL_BITS);
+  out.push(LPM_TYPES,'lpm_instance_ctrl_t g_lpm0_ctrl;',`const lpm_cfg_t g_lpm0_cfg = { .low_power_mode = LPM_MODE_${lpm.mode}, .standby_wake_sources = ${hex(wakeLo,8)}, .fsp_interp_wake_sources_high = ${wakeHi}, .snooze_request_source = LPM_SNOOZE_REQUEST_RXD0_FALLING, .snooze_end_sources = 0, .snooze_cancel_sources = LPM_SNOOZE_CANCEL_SOURCE_NONE, .dtc_state_in_snooze = LPM_SNOOZE_DTC_DISABLE, .io_port_state = ${lpm.ioKeep?'LPM_IO_PORT_NO_CHANGE':'LPM_IO_PORT_RESET'}, .power_supply_state = LPM_POWER_SUPPLY_${lpm.power}, .deep_standby_cancel_source = ${hex(cancel,8)}, .deep_standby_cancel_edge = ${hex(edge,8)}, .p_extend = NULL };`,
+   'const lpm_instance_t g_lpm0 = { .p_ctrl = &g_lpm0_ctrl, .p_cfg = &g_lpm0_cfg, .p_api = NULL };');}
  for(const t of iicSlaves){const v=k=>vec(`IIC${t.channel}_${k}`);out.push(`iic_slave_instance_ctrl_t ${t.name}_ctrl;`,`const i2c_slave_cfg_t ${t.name}_cfg = { .channel = ${t.channel}, .rate = I2C_SLAVE_RATE_${t.rate}, .slave = ${hex(t.slave,2)}, .general_call_enable = false, .addr_mode = I2C_SLAVE_ADDR_MODE_7BIT, .p_context = NULL, .rxi_irq = ${v('RXI')}, .txi_irq = ${v('TXI')}, .tei_irq = ${v('TEI')}, .eri_irq = ${v('ERI')}, .ipl = (${t.priority}), .eri_ipl = (${t.priority}), .clock_stretching_enable = true, .p_extend = NULL };`,
   `const i2c_slave_instance_t ${t.name} = { .p_ctrl = &${t.name}_ctrl, .p_cfg = &${t.name}_cfg, .p_api = NULL };`,`void ${t.callback}(i2c_slave_callback_args_t * p_args);`);}
  // Data flash (r_flash_hp): its types only when the stack is there, as hal_data.h includes r_flash_hp.h then.
@@ -268,10 +295,10 @@ export function compileFsp(source,files=[],mcu){
 export const fspConstants=program=>Object.fromEntries((program.registers||[]).map(n=>[n,n]));
 
 const SHORT_WAIT_MS=.05;
-const FSP={SUCCESS:0,ASSERTION:1,INVALID_ARGUMENT:3,UNSUPPORTED:6,NOT_OPEN:7,IN_USE:8,IRQ_BSP_DISABLED:11,ALREADY_OPEN:14,NOT_ENABLED:19};
+const FSP={SUCCESS:0,ASSERTION:1,INVALID_ARGUMENT:3,INVALID_MODE:5,UNSUPPORTED:6,NOT_OPEN:7,IN_USE:8,IRQ_BSP_DISABLED:11,ALREADY_OPEN:14,NOT_ENABLED:19};
 const KINDS={ioport:[/^g_ioport_ctrl$/,'g_ioport_ctrl'],icu:[/^g_external_irq(\d+)_ctrl$/,'g_external_irq1_ctrl'],uart:[/^g_uart(\d+)_ctrl$/,'g_uart9_ctrl'],gpt:[/^g_timer(\d+)_ctrl$/,'g_timer1_ctrl'],agt:[/^g_agt(\d+)_ctrl$/,'g_agt0_ctrl'],adc:[/^g_adc(\d+)_ctrl$/,'g_adc0_ctrl'],iic:[/^g_i2c_master(\d+)_ctrl$/,'g_i2c_master0_ctrl'],
- spi:[/^g_spi(\d+)_ctrl$/,'g_spi1_ctrl'],sciSpi:[/^g_sci_spi(\d+)_ctrl$/,'g_sci_spi9_ctrl'],wdt:[/^g_wdt(\d+)_ctrl$/,'g_wdt0_ctrl'],iwdt:[/^g_iwdt(\d+)_ctrl$/,'g_iwdt0_ctrl'],rtc:[/^g_rtc(\d+)_ctrl$/,'g_rtc0_ctrl'],iicSlave:[/^g_i2c_slave(\d+)_ctrl$/,'g_i2c_slave0_ctrl'],flash:[/^g_flash(\d+)_ctrl$/,'g_flash0_ctrl']};
-const SUPPORTED='R_IOPORT_*, R_BSP_SoftwareDelay · R_BSP_Pin*, R_ICU_ExternalIrq*, R_SCI_UART_*, R_GPT_*, R_AGT_*, R_ADC_*, R_IIC_MASTER_*, R_IIC_SLAVE_*, R_SPI_*, R_SCI_SPI_*, R_WDT_*, R_IWDT_*, R_RTC_*, R_FLASH_HP_*(데이터 플래시)';
+ spi:[/^g_spi(\d+)_ctrl$/,'g_spi1_ctrl'],sciSpi:[/^g_sci_spi(\d+)_ctrl$/,'g_sci_spi9_ctrl'],wdt:[/^g_wdt(\d+)_ctrl$/,'g_wdt0_ctrl'],iwdt:[/^g_iwdt(\d+)_ctrl$/,'g_iwdt0_ctrl'],rtc:[/^g_rtc(\d+)_ctrl$/,'g_rtc0_ctrl'],iicSlave:[/^g_i2c_slave(\d+)_ctrl$/,'g_i2c_slave0_ctrl'],lpm:[/^g_lpm(\d+)_ctrl$/,'g_lpm0_ctrl'],flash:[/^g_flash(\d+)_ctrl$/,'g_flash0_ctrl']};
+const SUPPORTED='R_IOPORT_*, R_BSP_SoftwareDelay · R_BSP_Pin*, R_ICU_ExternalIrq*, R_SCI_UART_*, R_GPT_*, R_AGT_*, R_ADC_*, R_IIC_MASTER_*, R_IIC_SLAVE_*, R_SPI_*, R_SCI_SPI_*, R_WDT_*, R_IWDT_*, R_RTC_*, R_LPM_*, R_FLASH_HP_*(데이터 플래시)';
 // RTC periodic rates the RA6E1 has (RCR1.PES 6-15): FSP's enum also lists 1 minute … 1 month for other RA parts, which
 // would make R_RTC_PeriodicIrqRateSet wait forever on this one.
 const RTC_PERIOD_S={6:1/256,7:1/128,8:1/64,9:1/32,10:1/16,11:1/8,12:1/4,13:1/2,14:1,15:2};
@@ -281,7 +308,8 @@ const bcd=n=>((Math.floor(n/10)<<4)|(n%10));
 // error on the interpreter (it has no registers behind the names); this one is a read of state the interpreter keeps
 // (FspAdapter.rstsr1, handed over across a reset), so the reset-cause snippet and the WDT example run on both engines.
 // Writing it (clearing a flag) is refused with the reason: the flags then would have two sources of truth.
-const RSTSR_READ_ONLY='R_SYSTEM->RSTSR1: 내장 해석기는 리셋 원인 레지스터를 읽기만 합니다(쓰기로 플래그 지우기는 ARM GCC 실행에서). 다른 R_SYSTEM 레지스터는 ARM GCC 실행에서만 됩니다.';
+// RSTSR0 (PORF, DPSRSTF: the restart after Deep Software Standby) is read the same way (FspAdapter.rstsr0).
+const RSTSR_READ_ONLY=name=>`R_SYSTEM->${name}: 내장 해석기는 리셋 원인 레지스터를 읽기만 합니다(쓰기로 플래그 지우기는 ARM GCC 실행에서). 다른 R_SYSTEM 레지스터는 ARM GCC 실행에서만 됩니다.`;
 const int=(value,min,max,label)=>{if(!Number.isInteger(value)||value<min||value>max)throw new Error(`${label}: ${min}~${max} 범위의 정수가 필요합니다.`);return value;};
 const isIterator=v=>v&&typeof v.next==='function';
 
@@ -291,7 +319,13 @@ export class FspAdapter {
   this.pclkd=raClockHz(this.config);this.pclkb=raClockHz(this.config,'pclkb');
   this.pending=[];this.active=[];this.seq=0;this.dispatched=0;this.serials=new Map();this.states=new Map();this.peripheralPins=new Set();this.warned=new Set();this.names=null;this.activeIic=null;this.shortWait=0;
   // Reset cause (RSTSR1) and the reason of the reset this adapter's program ends with (session.js passes it on).
-  this.rstsr1=0;this.resetCause=null;
+  this.rstsr1=0;this.rstsr0=1;this.dpsifr=0;this.resetCause=null;
+  // Low power modes (R_LPM_*): what r_lpm leaves in the registers (SBYCR.SSBY, WUPEN, DPSBYCR, DPSIER, DPSIEGR; `set` once
+  // a mode was configured since the program started), the mode the program is in now (`low`), and the I/O hold after a
+  // Deep Software Standby with IOKEEP (`hold`: the pins as they were, and what the program writes meanwhile).
+  this.lpmReg={set:false,ssby:false,wupenLo:0,wupenHi:0,dpsby:false,deepcut:1,iokeep:0,dpsier:0,dpsiegr:0};
+  this.low=null;this.hold=false;this.heldPins=null;this.heldWrites=new Map();
+  this.lowLog=new LpmLog(message=>this.buses?.trace?.({micros:this.runtime?.microTime??0,protocol:LPM_PROTOCOL,message}));
   // The RTC's calendar (the emulator's model, src/emu/ra6e1/rtc.js, read through its registers): it starts at power-on
   // from the stack's start time and, in its own power domain, goes on across a reset.
   this.hostTime=session?.hostTime??Date.now();this.rtcDev=null;
@@ -299,7 +333,21 @@ export class FspAdapter {
   this.dataFlash=this.flashStore(session?.project?.dataFlash);this.faciDev=null;this.flashFwe=false;
  }
  // A reset pin reset (session.js checkNrst) starts the cause flags over, as the emulator does; any other reset adds its flag.
- inheritReset(old){this.rstsr1=old.resetCause==='PIN'?0:(old.rstsr1|(RESET_FLAG[old.resetCause]??0))&0xffff;this.wdtResets=old.wdtResets;this.rtcDev=old.rtcDev;this.hostTime=old.hostTime;this.dataFlash=old.dataFlash;this.flashBlankNoted=old.flashBlankNoted;}
+ // The end of Deep Software Standby is a reset too (RSTSR0.DPSRSTF); the Deep Software Standby registers and the I/O hold
+ // stay across the resets the program causes (as in the emulator, emu/ra6e1/lpm.js), and the held pins are put back
+ // after the runtime cleared them for the restart.
+ inheritReset(old,runtime){
+  const pin=old.resetCause==='PIN';
+  this.rstsr1=pin?0:(old.rstsr1|(RESET_FLAG[old.resetCause]??0))&0xffff;this.rstsr0=pin?0:old.rstsr0|(old.resetCause==='DEEP_STANDBY'?0x80:0);
+  this.wdtResets=old.wdtResets;this.rtcDev=old.rtcDev;this.hostTime=old.hostTime;
+  this.dataFlash=old.dataFlash;this.flashBlankNoted=old.flashBlankNoted;
+  // An RTC stopped for the mode (LOCO without its supply) counts again.
+  if(old.low?.rtcStopped)this.rtcDev?.start();
+  if(pin)return;
+  const o=old.lpmReg;Object.assign(this.lpmReg,{dpsby:o.dpsby,deepcut:o.deepcut,iokeep:o.iokeep,dpsier:o.dpsier,dpsiegr:o.dpsiegr});
+  this.hold=old.hold;this.heldPins=old.heldPins;this.dpsifr=old.dpsifr;
+  if(this.hold&&this.heldPins&&runtime)for(const [name,g]of this.heldPins)runtime.gpio[name]={...g};
+ }
  // Program start (power-on or after a reset): an auto-start watchdog (OFS0) counts from here.
  declareGlobals(r){
   // R_SYSTEM (a register-block name the program uses) gets the type of the part the interpreter stands in for, so
@@ -309,9 +357,16 @@ export class FspAdapter {
  // R_SYSTEM->RSTSR1 (and RSTSR1_b.IWDTRF / WDTRF / SWRF): a read-only cell holding the reset cause now.
  register(object,key){
   if(object!=='R_SYSTEM')return null;
-  const cell=(value,dataType)=>({value,owner:{alive:true},constant:true,readOnly:RSTSR_READ_ONLY,dataType});
+  const name=key.slice(0,6),cell=(value,dataType)=>({value,owner:{alive:true},constant:true,readOnly:RSTSR_READ_ONLY(name),dataType});
   if(key==='RSTSR1')return cell(this.rstsr1,'uint16_t');
   if(key==='RSTSR1_b')return cell({kind:'struct',type:'FSP_INTERP_RSTSR1_b',fields:Object.fromEntries(RESET_STATUS.map(([k,pos])=>[k,cell((this.rstsr1>>pos)&1,'uint16_t')]))});
+  // RSTSR0 (PORF, DPSRSTF) and DPSIFR0-3 (what cancelled Deep Software Standby) are the adapter's state itself, so they
+  // are written as on the chip: writing 0 to a flag clears it, writing 1 leaves it.
+  const live=(read,write,dataType)=>({get value(){return read();},set value(v){write(Number(v)>>>0);},owner:{alive:true},constant:false,dataType});
+  if(key==='RSTSR0')return live(()=>this.rstsr0,v=>{this.rstsr0&=v&0xff;},'uint8_t');
+  if(key==='RSTSR0_b')return cell({kind:'struct',type:'FSP_INTERP_RSTSR0_b',fields:Object.fromEntries(RESET_STATUS0.map(([k,pos])=>[k,live(()=>(this.rstsr0>>pos)&1,v=>{if(!(v&1))this.rstsr0&=~(1<<pos);},'uint8_t')]))});
+  const flag=/^DPSIFR([0-3])$/.exec(key);
+  if(flag){const sh=8*Number(flag[1]);return live(()=>(this.dpsifr>>>sh)&0xff,v=>{this.dpsifr=(this.dpsifr&~((~v&0xff)<<sh))>>>0;},'uint8_t');}
   return null;
  }
  update(){}
@@ -335,13 +390,26 @@ export class FspAdapter {
  }
  // ---- interrupts: one pending job per source, taken by priority (RA6E1 NVIC: 4 bits, no sub-priority).
  queue(r,irq,prio,run,name,key=irq){
-  if(this.pending.some(j=>j.key===key))return;this.pending.push({irq,prio,run,name,key,order:this.seq++});
-  if(this.pending.length>256)throw new Error('FSP 인터럽트 대기열 한도를 넘었습니다.');r.event(r.microTime/1000,()=>{});
+  // A low power mode (lowPower): Deep Software Standby keeps every request from the core; Software Standby lets the
+  // WUPEN sources through, keeps the requests of the stopped modules for the wake-up and does not see the other IRQ
+  // pins; the first request that gets through ends the mode.
+  let deferred=[];
+  if(this.low){
+   if(this.low.mode==='DEEP')return;
+   if(this.low.mode==='STANDBY'&&!this.lpmWakes(irq,key)){if(!/^ICU_IRQ/.test(irq)&&!this.low.deferred.some(j=>j[5]===key))this.low.deferred.push([r,irq,prio,run,name,key]);return;}
+   // (entered from an interrupt callback: a request that does not preempt the callback waits, the core sleeps on)
+   if(prio<this.low.prio)deferred=this.lpmWake(r,irq);
+  }
+  if(!this.pending.some(j=>j.key===key)){
+   this.pending.push({irq,prio,run,name,key,order:this.seq++});
+   if(this.pending.length>256)throw new Error('FSP 인터럽트 대기열 한도를 넘었습니다.');r.event(r.microTime/1000,()=>{});
+  }
+  for(const job of deferred)this.queue(...job);
  }
  exec(r){if(!r.interruptsEnabled)return -1;let p=Infinity;for(const a of this.active)p=Math.min(p,a.prio);return p;}
  preempt(r){if(!this.pending.length||r.atomic)return false;const e=this.exec(r);return this.pending.some(j=>j.prio<e);}
  dispatch(r,job){
-  const entry={prio:job.prio,irq:job.irq};this.active.push(entry);this.dispatched++;
+  const entry={prio:job.prio,irq:job.irq};this.active.push(entry);this.dispatched++;this.eventReg=true;
   const body=(function*(){const it=job.run();if(isIterator(it))yield* it;})();
   return r.enterIsr(body,{irq:job.irq,name:job.name,exit:()=>{const k=this.active.lastIndexOf(entry);if(k>=0)this.active.splice(k,1);}});
  }
@@ -367,7 +435,16 @@ export class FspAdapter {
   // The project's own function of that name comes first (as the linker takes it over FSP's weak one).
   if(r.program.functions[name])return null;
   if(name==='R_BSP_SoftwareDelay')return this.softwareDelay(args,r);
-  if(name==='__WFI'||name==='__WFE')return this.wfi(r);
+  // After r_lpm set a mode, a bare __WFI() enters it as well (LPM_CFG_STANDBY_LIMIT 0: SBYCR.SSBY stays set after Open).
+  if(name==='__WFI'&&this.lpmReg.set)return this.lowPower(r,name);
+  if(name==='__WFI')return this.wfi(r);
+  // __WFE: the core's event register, set by every exception taken, lets one WFE through without waiting (as on the core).
+  if(name==='__WFE'){if(this.eventReg){this.eventReg=false;return (function*(){return 0;})();}return this.wfi(r,false);}
+  if(name==='R_LPM_LowPowerModeEnter'){
+   if(!args[0])return (function*(){return FSP.ASSERTION;})();
+   const st=this.instance(args[0],r,name,'lpm'),self=this;if(!st.open)return (function*(){return FSP.NOT_OPEN;})();
+   return (function*(){yield* self.lowPower(r,name);return FSP.SUCCESS;})();
+  }
   if(name==='R_WDT_Refresh'||name==='R_IWDT_Refresh'){const reset=this.wdtBadRefresh(name,args,r);if(reset)return reset;}
   // R_FLASH_HP_*: generators, as a call waits while the flash programs or erases (fsp-flash.js).
   if(name.startsWith('R_FLASH_HP_')){const flash=this.flashCall(name,args,r);if(flash){if(name==='R_FLASH_HP_StatusGet')r.polls++;return flash;}}
@@ -390,7 +467,9 @@ export class FspAdapter {
   this.shortWait=0;yield Math.max(.001,ms);return 0;
  }
  // __WFI: the core sleeps until an interrupt is taken.
- *wfi(r){if(r.inIsr)return 0;const seen=this.dispatched;while(this.dispatched===seen)yield .1;return 0;}
+ // (WFI is Sleep: a watchdog with its stop control does not count meanwhile, as in lowPower. WFE is the core's own wait
+ // on both engines: no low power mode.)
+ *wfi(r,sleepMode=true){if(r.inIsr)return 0;const seen=this.dispatched,sleep={mode:'SLEEP',frozen:[]};if(sleepMode)this.lpmFreeze(r,sleep);while(this.dispatched===seen)yield .1;this.lpmThaw(r,sleep);return 0;}
  call(name,args,r){
   this.runtime=r;const [a,b,c,d]=args;
   // A read of a pin or a status is polling (the interpreter's FSP loop rule, runtime.js).
@@ -414,6 +493,8 @@ export class FspAdapter {
  }
  // ---- I/O ports
  applyPinCfg(r,pin,word,fn){
+  // I/O hold (IOKEEP after Deep Software Standby): the port registers take the setting, the pin follows at IoKeepClear.
+  if(this.hold){this.heldWrites.set(pin,{word,fn});return;}
   const p=this.config.pins[pin];r.pwm.delete(pin);this.peripheralPins.delete(pin);
   if(word&0x10000){this.peripheralPins.add(pin);
    // A GPT output pin drives its stop level (low) until the timer starts; SCI and IIC pins are set up by their Open.
@@ -429,6 +510,7 @@ export class FspAdapter {
   for(let i=0;i<n;i++){const e=r.get(r.pointerCell(data,i));this.applyPinCfg(r,this.pin(e.fields.pin.value,fn),Number(e.fields.pin_cfg.value)>>>0,fn);}
  }
  pinWrite(r,pin,level,fn){
+  if(this.hold){const w=this.heldWrites.get(pin)??{fn};w.level=level;this.heldWrites.set(pin,w);return 0;}
   const g=r.gpio[pin];
   if(g?.mode==='OUTPUT'&&!this.peripheralPins.has(pin)){r.pwm.delete(pin);r.call('digitalWrite',[pin,level?1:0]);return 0;}
   // The port's output latch takes the level, but a pin that is not an output does not show it (as on the board).
@@ -464,7 +546,7 @@ export class FspAdapter {
   const st=this.instance(args[0],r,fn,kind);if(st.open)return FSP.ALREADY_OPEN;const cfg=this.struct(args[1],r,'timer_cfg_t',fn),f=k=>Number(cfg.fields[k].value);
   const t=(kind==='gpt'?this.inst.gpts:this.inst.agts).find(x=>x.channel===st.channel);
   const source=kind==='gpt'?this.pclkd:t?.counts.source==='LOCO'?32768:this.pclkb;
-  Object.assign(st,{open:true,kind,running:false,mode:f('mode'),period:f('period_counts')>>>0,duty:[f('duty_cycle_counts')>>>0,f('duty_cycle_counts')>>>0],hz:source/2**f('source_div'),ipl:f('cycle_end_ipl'),callback:f('cycle_end_ipl')===0xFF?'':t?.callback||'',counter:0,gen:(st.gen||0)+1,
+  Object.assign(st,{open:true,kind,lowSpeed:kind==='agt'&&t?.counts.source==='LOCO',running:false,mode:f('mode'),period:f('period_counts')>>>0,duty:[f('duty_cycle_counts')>>>0,f('duty_cycle_counts')>>>0],hz:source/2**f('source_div'),ipl:f('cycle_end_ipl'),callback:f('cycle_end_ipl')===0xFF?'':t?.callback||'',counter:0,gen:(st.gen||0)+1,
    pins:kind==='gpt'?[this.pinOf(`GPT${st.channel}_GTIOCA`),this.pinOf(`GPT${st.channel}_GTIOCB`)]:[]});
   if(!(st.period>0))throw new Error(`${fn}: period_counts는 1 이상입니다.`);
   return FSP.SUCCESS;
@@ -473,6 +555,7 @@ export class FspAdapter {
  timerStart(r,st){
   st.running=true;st.gen++;const gen=st.gen;st.next=r.microTime+this.periodUs(st)*(1-st.counter/st.period);st.counter=0;
   const fire=()=>{if(st.gen!==gen||!st.running)return;st.last=st.next;
+   if(st.kind==='agt')this.lpmRequest(r,`AGT${st.channel}_INT`);
    if(st.callback)this.queue(r,st.kind==='gpt'?`GPT${st.channel}_COUNTER_OVERFLOW`:`AGT${st.channel}_INT`,st.ipl,()=>this.callback(r,st.callback,'timer_callback_args_t',{event:0}),st.kind==='gpt'?'gpt_counter_overflow_isr':'agt_int_isr');
    if(st.mode===1){st.running=false;this.pwm(r,st);return;}
    // A period set while counting (buffered, GTPBR / AGT reload) takes over at this overflow.
@@ -488,7 +571,8 @@ export class FspAdapter {
  // Saw-wave PWM on the GTIOC pins: high from the cycle start for duty counts (0 % low, 100 % high), the stop level
  // (low) while stopped. With the waveform option on, the pin toggles edge by edge as analogWrite does.
  pwm(r,st){
-  if(st.kind!=='gpt'||st.mode!==2)return;
+  // I/O hold (IOKEEP): the pins stay as they are; lpmRelease applies the outputs of the timers when the hold ends.
+  if(st.kind!=='gpt'||st.mode!==2||this.hold)return;
   st.pins.forEach((pin,i)=>{
    if(!pin)return;if(r.gpio[pin]?.mode!=='OUTPUT'){this.warnOnce(r,'gtioc:'+pin,`${pin}: GPT${st.channel} 출력 핀이 아직 설정되지 않았습니다. R_IOPORT_Open으로 Pins 설정을 먼저 적용하세요.`);return;}
    const frac=st.running?Math.max(0,Math.min(1,st.duty[i]/st.period)):0,hz=st.hz/st.period;r.pwm.delete(pin);
@@ -696,15 +780,19 @@ export class FspAdapter {
  wdtState(id){
   const key=id==='WDT'?'g_wdt0_ctrl':'g_iwdt0_ctrl';
   if(!this.states.has(key)){const p={...RA_WDT[id].defaults,windowStart:100,windowEnd:0,reset:'RESET',...this.config.peripherals?.[id]};this.states.set(key,{name:key,channel:0,id,open:false,running:false,armed:false,flags:0,gen:0,count:0,t0:0,
-   timeout:p.timeout,div:p.clockDiv,windowStart:p.windowStart,windowEnd:p.windowEnd,reset:p.reset,auto:id==='IWDT'||p.startMode==='AUTO',callback:p.callback||''});}
+   timeout:p.timeout,div:p.clockDiv,windowStart:p.windowStart,windowEnd:p.windowEnd,reset:p.reset,stop:!!p.stopInSleep,auto:id==='IWDT'||p.startMode==='AUTO',callback:p.callback||''});}
   return this.states.get(key);
  }
  wdtHz(st){return (st.id==='IWDT'?RA_IWDT_HZ:this.pclkb)/st.div;}
  wdtCounter(r,st){if(!st.running)return st.count;return Math.max(0,st.count-Math.floor((r.microTime-st.t0)*this.wdtHz(st)/1e6+1e-6));}
- wdtStart(r,st){
-  st.running=true;st.count=st.timeout-1;st.t0=r.microTime;const gen=++st.gen;
-  r.event((st.t0+st.timeout/this.wdtHz(st)*1e6)/1000,()=>{if(st.gen===gen&&st.running)this.wdtExpire(r,st,0x4000,`${(st.timeout/this.wdtHz(st)*1000).toFixed(1)} ms 안에 R_${st.id}_Refresh가 없었습니다`);});
+ wdtStart(r,st){st.count=st.timeout-1;this.wdtCount(r,st);}
+ // The counter runs down from st.count from now on (a start, or the end of a low power mode that had stopped it).
+ wdtCount(r,st){
+  st.running=true;st.t0=r.microTime;const gen=++st.gen;
+  r.event((st.t0+(st.count+1)/this.wdtHz(st)*1e6)/1000,()=>{if(st.gen===gen&&st.running)this.wdtExpire(r,st,0x4000,`${(st.timeout/this.wdtHz(st)*1000).toFixed(1)} ms 안에 R_${st.id}_Refresh가 없었습니다`);});
  }
+ // A low power mode stops the count clock: the counter keeps its value (lpmFreeze / lpmThaw).
+ wdtFreeze(r,st){if(!st.running)return false;st.count=this.wdtCounter(r,st);st.running=false;st.gen++;return true;}
  // What a failed watchdog does: it stops with its flag set. With Reset output the reset is prepared here (the cause, the
  // log entry, the guard against a reset loop) and done by the caller: r.restart() from a timed event (wdtExpire), or
  // `yield {kind:'reset'}` from the call that broke the window (wdtBadRefresh) — a restart from inside a call would pull
@@ -780,7 +868,7 @@ export class FspAdapter {
   st.callback=r.callback(callback).name;st.context=context?.kind==='pointer'?context:null;return FSP.SUCCESS;
  }
  contextField(st){return st.context?{p_context:st.context}:{};}
- rtcIrq(r,st,kind,event,ipl){if(st.open&&st.callback)this.queue(r,'RTC_'+kind,ipl,()=>this.callback(r,st.callback,'rtc_callback_args_t',{event,...this.contextField(st)}),'rtc_alarm_periodic_isr',`RTC:${kind}`);}
+ rtcIrq(r,st,kind,event,ipl){this.lpmRequest(r,'RTC_'+kind);if(st.open&&st.callback)this.queue(r,'RTC_'+kind,ipl,()=>this.callback(r,st.callback,'rtc_callback_args_t',{event,...this.contextField(st)}),'rtc_alarm_periodic_isr',`RTC:${kind}`);}
  wdtInstance(args,r,fn,id){
   this.wdtState(id);const st=this.instance(args[0],r,fn,id.toLowerCase());
   if(!st.id)throw new Error(`${fn}: Stacks의 g_${id.toLowerCase()}0 제어 구조체 주소(&g_${id.toLowerCase()}0_ctrl)를 넘기세요.`);
@@ -788,6 +876,137 @@ export class FspAdapter {
   return st;
  }
  wdtCall(args,r,fn,id,action){const st=this.wdtInstance(args,r,fn,id);if(!st.open)return FSP.NOT_OPEN;return action(st);}
+ // ---- low power modes (r_lpm): what the emulator does with the registers r_lpm.c writes (emu/ra6e1/lpm.js), here on the
+ // adapter's own state. r_lpm_configure: the checks of r_lpm_mcu_specific_low_power_check in their order, then SBYCR,
+ // WUPEN / WUPEN1, DPSIER, DPSIEGR and DPSBYCR (which every configure writes: a mode other than Deep Software Standby
+ // clears IOKEEP).
+ lpmConfigure(r,cfgPtr,fn){
+  if(!cfgPtr)return FSP.ASSERTION;
+  const cfg=this.struct(cfgPtr,r,'lpm_cfg_t',fn),f=k=>Number(cfg.fields[k].value)>>>0,mode=f('low_power_mode'),reg=this.lpmReg;
+  if(mode===1)return FSP.UNSUPPORTED; // LPM_MODE_DEEP_SLEEP: BSP_FEATURE_LPM_HAS_DEEP_SLEEP 0
+  const source=f('deep_standby_cancel_source'),edge=f('deep_standby_cancel_edge'),lo=f('standby_wake_sources'),hi=f('fsp_interp_wake_sources_high');
+  if(mode!==0){
+   if(mode===3)throw new Error(`${fn}: 내장 해석기는 Snooze 모드(LPM_MODE_STANDBY_SNOOZE)를 실행하지 않습니다. Sleep · Software Standby · Deep Software Standby를 쓰거나 ARM GCC 빌드로 실행하세요.`);
+   if(mode===4&&((source&~RA_LPM_DPSIER_MASK)>>>0||(edge&~RA_LPM_DPSIEGR_MASK)>>>0||(edge&~source)>>>0))return FSP.INVALID_MODE;
+   if((lo&~(RA_LPM_WUPEN_MASK>>>0))>>>0||hi&~Math.floor(RA_LPM_WUPEN_MASK/2**32))return FSP.INVALID_MODE;
+   if(mode===4){reg.dpsier=source;reg.dpsiegr=edge;}
+   reg.wupenLo=lo;reg.wupenHi=hi;
+  }
+  reg.set=true;reg.ssby=mode!==0;reg.dpsby=mode===4;reg.deepcut=mode===4?f('power_supply_state')&3:0;reg.iokeep=mode===4?f('io_port_state')&1:0;
+  if(!reg.iokeep)this.lpmRelease(r);
+  return FSP.SUCCESS;
+ }
+ // DPSBYCR.IOKEEP cleared: the pins take what the program set since the restart; a pin it did not set is in its reset state.
+ lpmRelease(r){
+  if(!this.hold)return;this.hold=false;
+  for(const pin of this.heldPins?.keys()??[])if(!this.heldWrites.has(pin)){delete r.gpio[pin];r.pwm.delete(pin);}
+  const writes=[...this.heldWrites];this.heldWrites=new Map();this.heldPins=null;
+  for(const [pin,w]of writes){if(w.word!==undefined)this.applyPinCfg(r,pin,w.word,w.fn);if(w.level!==undefined&&r.gpio[pin]?.mode==='OUTPUT')this.pinWrite(r,pin,w.level,w.fn);}
+  // A GPT started meanwhile drives its pins from now on (the pin settings above put them at the stop level).
+  for(const st of this.states.values())if(st.kind==='gpt'&&st.open)this.pwm(r,st);
+  r.api.changed?.(r.microTime);
+ }
+ lpmState(kind,n){return this.states.get({icu:`g_external_irq${n}_ctrl`,agt:`g_agt${n}_ctrl`,rtc:'g_rtc0_ctrl'}[kind]);}
+ /** Whether an interrupt request ends Software Standby: its source's bit in WUPEN / WUPEN1 (the IWDT's NMI: bit 16). */
+ lpmWakes(irq,key){
+  const name=irq==='NMI'?(key==='NMI:IWDT'?'IWDT':null):lpmWakeOfIrq(irq),bit=name==null?null:RA_LPM_WAKE_BITS[name],reg=this.lpmReg;
+  return bit!=null&&!!((bit<32?reg.wupenLo>>>bit:reg.wupenHi>>>(bit-32))&1);
+ }
+ /** An RTC or AGT request at its instant, whether or not an interrupt is set up for it: an enabled cancel source ends Deep Software Standby. */
+ lpmRequest(r,irq){
+  const low=this.low;if(low?.mode!=='DEEP'||low.cancel)return;
+  const name=lpmCancelOfIrq(irq);if(name&&(this.lpmReg.dpsier>>>RA_LPM_CANCEL_BITS[name])&1){low.cancel=lpmCancelLabel(name);low.cancelBit=RA_LPM_CANCEL_BITS[name];}
+ }
+ // What stops in a mode (as emu/ra6e1/lpm.js freeze): a watchdog with its stop control in Sleep; in Software Standby the
+ // WDT, the GPT timers and an AGT counting PCLKB; in Deep Software Standby also the IWDT, an AGT unless it counts LOCO
+ // with DEEPCUT 0, and an RTC on LOCO without the LOCO supply (DEEPCUT 1 or 3).
+ lpmFreeze(r,low){
+  const mode=low.mode,reg=this.lpmReg;
+  for(const id of ['WDT','IWDT']){const st=this.states.get(id==='WDT'?'g_wdt0_ctrl':'g_iwdt0_ctrl');if(st&&(st.stop||mode==='DEEP'||id==='WDT'&&mode!=='SLEEP')&&this.wdtFreeze(r,st))low.frozen.push(['watchdog',st]);}
+  if(mode==='SLEEP')return;
+  for(const st of this.states.values())if((st.kind==='gpt'||st.kind==='agt')&&st.open&&st.running&&!(st.lowSpeed&&(mode==='STANDBY'||reg.deepcut===0))){this.timerStop(r,st);low.frozen.push(['timer',st]);}
+  const rtc=this.lpmState('rtc'),p=this.config.peripherals?.RTC;
+  if(mode==='DEEP'&&reg.deepcut!==0&&p?.enabled&&this.rtcDev?.running&&(rtc?.open?rtc.clockSource===1:p.clockSource!=='SUBCLOCK')){if(rtc)rtc.gen=(rtc.gen||0)+1;this.rtcDev.stop();low.rtcStopped=true;low.frozen.push(['rtc',rtc]);}
+ }
+ lpmThaw(r,low){for(const [how,st]of low.frozen){if(how==='watchdog')this.wdtCount(r,st);else if(how==='timer')this.timerStart(r,st);}low.frozen=[];}
+ isFrozen(low,st){return !!st&&low.frozen.some(([,x])=>x===st);}
+ /** The configured sources of a mode as the log names them, and whether one of them can end it now (else why not). */
+ lpmSources(r,low){
+  const mode=low.mode,reg=this.lpmReg,labels=[],reasons=[];let ok=false;
+  const say=(label,why)=>{if(why)reasons.push(lpmReason(label,why));else ok=true;};
+  const rtc=this.lpmState('rtc'),rtcOn=flag=>rtc?.open&&rtc[flag]&&this.rtcDev?.running,rtcFrozen=!!low.rtcStopped;
+  const agtWhy=(n,needIrq)=>{const st=this.lpmState('agt',n);return this.isFrozen(low,st)?'STOPPED':!st?.open||!st.running?'IDLE':needIrq&&!st.callback?'OFF':'';};
+  const wdtRuns=id=>!!this.states.get(id==='WDT'?'g_wdt0_ctrl':'g_iwdt0_ctrl')?.running;
+  if(mode==='SLEEP'){
+   // An interrupt enabled in the NVIC: r_icu enables its interrupt at ExternalIrqEnable, r_rtc when the alarm or the
+   // periodic request is set up (Open alone enables none), the other drivers at Open.
+   const live=[...this.states.values()].some(st=>st.open&&(st.kind==='gpt'||st.kind==='agt'?!!st.callback:/^g_external_irq/.test(st.name)?st.enabled:/^g_rtc\d/.test(st.name)?!!(st.aie||st.pie):/^g_(uart|adc|i2c_master|spi|sci_spi)\d/.test(st.name)&&(!/^g_adc/.test(st.name)||!!st.callback)));
+   if(live||wdtRuns('WDT')||wdtRuns('IWDT'))ok=true;else reasons.push('켜진 인터럽트가 없습니다');
+   return {labels,reasons,ok};
+  }
+  if(mode==='STANDBY'){
+   for(const name of lpmWakeNames(reg.wupenLo,reg.wupenHi)){
+    const label=lpmWakeLabel(name),irq=/^IRQ(\d+)$/.exec(name);labels.push(label);
+    if(irq){const st=this.lpmState('icu',irq[1]);say(label,st?.open&&st.enabled?'':'OFF');}
+    else if(name==='RTCALM')say(label,rtcOn('aie')?'':'OFF');
+    else if(name==='RTCPRD')say(label,rtcOn('pie')?'':'OFF');
+    else if(name==='AGT1UD'||name==='AGT3UD')say(label,agtWhy(name[3],true));
+    else if(name==='IWDT')say(label,wdtRuns('IWDT')?'':'IDLE');
+    else say(label,'UNMODELLED');
+   }
+   if(wdtRuns('IWDT'))ok=true;
+   if(!labels.length)reasons.push('설정된 소스가 없습니다');
+   return {labels,reasons,ok};
+  }
+  for(const name of lpmCancelNames(reg.dpsier)){
+   const label=lpmCancelLabel(name),irq=/^IRQ(\d+)$/.exec(name);labels.push(label);
+   if(irq)say(label,raDsPin(Number(irq[1]))?'':'NO_PIN');
+   else if(name==='RTC_ALARM')say(label,rtcFrozen?'STOPPED':rtcOn('aie')?'':'OFF');
+   else if(name==='RTC_INTERVAL')say(label,rtcFrozen?'STOPPED':rtcOn('pie')?'':'OFF');
+   else if(name==='AGT1'||name==='AGT3')say(label,agtWhy(name[3],false));
+   else say(label,'UNMODELLED');
+  }
+  if(!labels.length)reasons.push('설정된 소스가 없습니다');
+  return {labels,reasons,ok};
+ }
+ /** Sleep or Software Standby ends with interrupt request `irq`: the stopped modules go on, and their requests follow. */
+ lpmWake(r,irq){
+  const low=this.low;this.low=null;this.lpmThaw(r,low);
+  this.lowLog.wake(low.mode,lpmIrqLabel(irq),r.microTime-low.since);
+  return low.deferred;
+ }
+ // The program executes WFI (R_LPM_LowPowerModeEnter, or a bare __WFI() once a mode is set): the CPU stops, simulated
+ // time goes on. Sleep and Software Standby end in queue() with the first request that reaches the core; Deep Software
+ // Standby ends with a cancel request — an IRQn-DS pin edge seen here, the RTC or AGT request (lpmRequest) — and resets
+ // the program: RSTSR0.DPSRSTF, and with IOKEEP the pins as they are.
+ *lowPower(r,fn){
+  if(r.atomic)throw new Error(`${fn}: 이 위치에서는 기다릴 수 없습니다.`);
+  const reg=this.lpmReg,mode=!reg.ssby?'SLEEP':reg.dpsby?'DEEP':'STANDBY';
+  // The core's WFI rule, in thread mode and in an interrupt callback (handler mode) alike: only a request above the
+  // priority that is running wakes it (interrupts disabled or not), and one that is already waiting keeps the core from
+  // stopping at all — in every mode, Deep Software Standby too.
+  const prio=this.active.reduce((p,a)=>Math.min(p,a.prio),Infinity);
+  // (an IRQ pin edge seen while interrupts are disabled is still with the runtime: it is a request too)
+  for(const s of r.interrupts.values())if(s.pending&&s.callback?.host){s.pending=false;s.callback.host();}
+  if(this.pending.some(j=>j.prio<prio))return;
+  const low=this.low={mode,prio,since:r.microTime,frozen:[],deferred:[],cancel:null,rtcStopped:false};
+  this.lpmFreeze(r,low);
+  const check=this.lpmSources(r,low);
+  this.lowLog.enter(mode,r.microTime,{sources:check.labels,detail:mode==='DEEP'?lpmDeepDetail(reg.deepcut,reg.iokeep):''});
+  if(!check.ok)this.lowLog.stuck(mode,check.reasons);
+  if(mode!=='DEEP'){while(this.low===low)yield .1;return;}
+  const pins=lpmCancelNames(reg.dpsier).filter(n=>/^IRQ/.test(n)).map(n=>{const ch=Number(n.slice(3)),pin=raDsPin(ch);return pin?{name:n,pin,rising:(reg.dpsiegr>>>ch)&1,level:r.inputLevel(pin)}:null;}).filter(Boolean);
+  while(!low.cancel){
+   yield .1;
+   for(const p of pins){const level=r.inputLevel(p.pin);if(level===p.level)continue;p.level=level;if(level===p.rising){low.cancel=lpmCancelLabel(p.name);low.cancelBit=RA_LPM_CANCEL_BITS[p.name];break;}}
+  }
+  // DPSIFR: the flag of what cancelled the mode (r_lpm cleared the flags before the WFI).
+  this.dpsifr=(1<<low.cancelBit)>>>0;
+  this.hold=!!reg.iokeep;this.heldPins=this.hold?new Map(Object.entries(r.gpio).map(([pin,g])=>{const copy={...g};delete copy.pwm;return [pin,copy];})):null;this.heldWrites=new Map();
+  this.lowLog.wake('DEEP',low.cancel,r.microTime-low.since,{hold:this.hold});
+  this.resetCause='DEEP_STANDBY';
+  yield {kind:'reset'};
+ }
 }
 for(const k of ['stdoutHook','stdout','flushStdout','stdinChar','stdin'])FspAdapter.prototype[k]=HalAdapter.prototype[k];
 // Data flash: R_FLASH_HP_* and the data flash read through a pointer (fsp-flash.js).
@@ -805,7 +1024,9 @@ const HANDLERS={
  R_IOPORT_PinRead(args,r,fn){if(!this.ioport(args,r,fn))return FSP.NOT_OPEN;this.out(args[2],r,r.call('digitalRead',[this.pin(args[1],fn)]),fn);return FSP.SUCCESS;},
  R_IOPORT_PortRead(args,r,fn){if(!this.ioport(args,r,fn))return FSP.NOT_OPEN;const port=int(Number(args[1])>>8,0,9,`${fn} 포트`);let value=0;for(let bit=0;bit<16;bit++){const pin=`P${port}${pad(bit)}`;if(RA6E1_PORTS.includes(pin)&&r.call('digitalRead',[pin]))value|=1<<bit;}this.out(args[2],r,value,fn);return FSP.SUCCESS;},
  R_IOPORT_PortWrite(args,r,fn){if(!this.ioport(args,r,fn))return FSP.NOT_OPEN;const port=int(Number(args[1])>>8,0,9,`${fn} 포트`),value=Number(args[2]),mask=Number(args[3]);for(let bit=0;bit<16;bit++){const pin=`P${port}${pad(bit)}`;if(mask&(1<<bit)&&RA6E1_PORTS.includes(pin))this.pinWrite(r,pin,(value>>bit)&1,fn);}return FSP.SUCCESS;},
- R_BSP_PinAccessEnable(){return 0;},R_BSP_PinAccessDisable(){return 0;},R_BSP_IrqStatusClear(){return 0;},
+ R_BSP_PinAccessEnable(){return 0;},R_BSP_PinAccessDisable(){return 0;},
+ // The register write protection (PRCR) around a write of RSTSR0 or DPSIFR: nothing to do here.
+ R_BSP_RegisterProtectEnable(){return 0;},R_BSP_RegisterProtectDisable(){return 0;},R_BSP_IrqStatusClear(){return 0;},
  R_BSP_PinWrite(args,r,fn){this.pinWrite(r,this.pin(args[0],fn),args[1]?1:0,fn);return 0;},
  R_BSP_PinRead(args,r,fn){return r.call('digitalRead',[this.pin(args[0],fn)]);},
  R_BSP_PinCfg(args,r,fn){this.applyPinCfg(r,this.pin(args[0],fn),Number(args[1])>>>0,fn);return 0;},
@@ -945,7 +1166,7 @@ for(const id of ['WDT','IWDT']){
    if(!st.auto&&(f('reset_control')?'RESET':'NMI')!==this.config.peripherals[id].reset)return FSP.ASSERTION;
    if(!st.auto){
     const div=Number(Object.keys(WDT_DIVISION_CODE).find(d=>WDT_DIVISION_CODE[d]===f('clock_division')));if(!RA_WDT[id].dividers.includes(div))throw new Error(`${fn}: ${id}의 클록 분주는 ${RA_WDT[id].dividers.map(d=>'/'+d).join(' · ')}입니다.`);
-    Object.assign(st,{timeout,div,windowStart:[25,50,75,100][f('window_start')],windowEnd:[75,50,25,0][f('window_end')],reset:f('reset_control')?'RESET':'NMI'});
+    Object.assign(st,{timeout,div,windowStart:[25,50,75,100][f('window_start')],windowEnd:[75,50,25,0][f('window_end')],reset:f('reset_control')?'RESET':'NMI',stop:!!f('stop_control')});
     if(!RA_WDT_WINDOW_START.includes(st.windowStart)||!RA_WDT_WINDOW_END.includes(st.windowEnd))return FSP.ASSERTION;
    }
    st.open=true;
@@ -1026,5 +1247,18 @@ Object.assign(HANDLERS,{
  R_RTC_InfoGet(args,r,fn){return this.rtcCall(args,r,fn,(st,dev)=>{const v=this.struct(args[1],r,'rtc_info_t',fn);this.setField(v,'clock_source',st.clockSource,r);this.setField(v,'status',dev.running?1:0,r);return FSP.SUCCESS;});},
  R_RTC_TimeCaptureSet(args,r,fn){throw new Error(`${fn}: 내장 해석기는 RTC 시간 캡처를 실행하지 않습니다. ARM GCC 빌드로 실행하세요.`);},
  R_RTC_TimeCaptureGet(args,r,fn){throw new Error(`${fn}: 내장 해석기는 RTC 시간 캡처를 실행하지 않습니다. ARM GCC 빌드로 실행하세요.`);}
+});
+// R_LPM_* (lpm_api_t), with the checks of r_lpm.c in their order (LPM_CFG_PARAM_CHECKING_ENABLE 1). Open and
+// LowPowerReconfigure save p_cfg and then configure: a refused configuration leaves the registers as they were.
+// R_LPM_LowPowerModeEnter waits (FspAdapter.invoke → lowPower).
+Object.assign(HANDLERS,{
+ R_LPM_Open([ctrl,cfg],r,fn){
+  if(!ctrl)return FSP.ASSERTION;const st=this.instance(ctrl,r,fn,'lpm');if(st.open)return FSP.ALREADY_OPEN;
+  const err=this.lpmConfigure(r,cfg,fn);if(err!==FSP.SUCCESS)return err;st.open=true;return FSP.SUCCESS;
+ },
+ R_LPM_LowPowerReconfigure([ctrl,cfg],r,fn){if(!ctrl)return FSP.ASSERTION;const st=this.instance(ctrl,r,fn,'lpm');if(!st.open)return FSP.NOT_OPEN;return this.lpmConfigure(r,cfg,fn);},
+ // The control structure is not used (FSP_PARAMETER_NOT_USED): NULL is fine, as in the FSP examples.
+ R_LPM_IoKeepClear(args,r){this.lpmReg.iokeep=0;this.lpmRelease(r);return FSP.SUCCESS;},
+ R_LPM_Close([ctrl],r,fn){if(!ctrl)return FSP.ASSERTION;const st=this.instance(ctrl,r,fn,'lpm');if(!st.open)return FSP.NOT_OPEN;st.open=false;return FSP.SUCCESS;}
 });
 function timerCall(args,r,fn,kind,action){const st=this.instance(args[0],r,fn,kind);if(!st.open)return FSP.NOT_OPEN;action(st);return FSP.SUCCESS;}

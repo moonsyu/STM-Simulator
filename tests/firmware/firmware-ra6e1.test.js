@@ -186,6 +186,32 @@ test('ra_wdt_reset: S1 held stops R_WDT_Refresh; the WDT underflows after 671 ms
  assert.ok(blinks.includes(true)&&blinks.includes(false),'LED2 blinks after the WDT reset');
 });
 
+test('ra_lpm_deep: the real r_lpm — Deep Software Standby, S1 (P205, IRQ1-DS) resets the MCU, RSTSR0.DPSRSTF lights LED2, IOKEEP keeps it',()=>{
+ const {session,log}=open(fixture('ra_lpm_deep'));
+ const text=()=>String.fromCharCode(...log.uart.filter(e=>e.instance==='SCI9'&&e.direction==='TX').flatMap(e=>e.bytes)),lpm=()=>log.trace.filter(e=>e.protocol==='LPM').map(e=>e.message);
+ runUntil(session,900);assert.ok(session.gpio.P408.value>1.65,'LED1 on while working');assert.equal(session.soc.lpm.mode,null);
+ runUntil(session,1400);
+ assert.equal(session.soc.lpm.mode,'DEEP');assert.ok(session.gpio.P408.value<1,'LED1 off in the mode');assert.equal(session.machine.cpu.sleeping,true);
+ assert.equal(text(),'Power-on start\r\nEntering Deep Software Standby: press S1\r\n');
+ // What r_lpm.c wrote: SBYCR.SSBY, DPSBYCR = DPSBY | IOKEEP (DEEPCUT 0), DPSIER0.DIRQ1E, falling edge, WUPEN.IRQ1.
+ const sys=session.soc.system,bus=session.machine.bus;
+ assert.equal(sys.get(0x0c,2)&0x8000,0x8000);assert.equal(bus.read8(0x4001e400),0xc0);assert.equal(bus.read8(0x4001e402),0x02);assert.equal(bus.read8(0x4001e40a),0);assert.equal(session.soc.icu.get(0x1a0,4),2);
+ assert.deepEqual(lpm(),['Deep Software Standby 진입 · DEEPCUT0, I/O 유지(IOKEEP 1) — 해제 소스: IRQ1-DS(P205)']);
+ const cycles=session.machine.cpu.instructions;runUntil(session,3000);assert.equal(session.machine.cpu.instructions,cycles,'the CPU is stopped while simulated time passes');assert.equal(session.resets.length,0);
+ session.setPressed({SW1:true});runUntil(session,3040);session.setPressed({});
+ assert.equal(session.resets.length,1);assert.equal(session.resets[0].reason,'DEEP_STANDBY');
+ assert.ok(log.trace.some(e=>e.protocol==='RESET'&&e.message==='MCU 리셋 · DEEP_STANDBY'));
+ assert.match(lpm()[1],/^Deep Software Standby 해제 · IRQ1-DS\(P205\) \(\d\.\d\d s 뒤\) — MCU 리셋\(RSTSR0\.DPSRSTF = 1, I\/O는 R_LPM_IoKeepClear까지 유지\)$/);
+ assert.equal(session.soc.resetStatus.rstsr0&0x80,0x80,'RSTSR0.DPSRSTF');assert.equal(bus.read8(0x4001e406)&0x02,0x02,'DPSIFR0.DIRQ1F');
+ runUntil(session,3500);
+ assert.equal(session.readVariable('from_deep_standby'),1);assert.ok(session.gpio.P407.value>1.65,'LED2: started from Deep Software Standby');assert.ok(session.gpio.P408.value>1.65,'LED1: working again');
+ assert.match(text(),/Woke up from Deep Software Standby by S1 \(IRQ1-DS\)\r\n$/);
+ // The second time LED2 stays on in the mode (the pins keep their state), and after the next wake-up too.
+ runUntil(session,4500);assert.equal(session.soc.lpm.mode,'DEEP');assert.ok(session.gpio.P407.value>1.65);assert.ok(session.gpio.P408.value<1);
+ session.setPressed({SW1:true});runUntil(session,4540);session.setPressed({});
+ assert.equal(session.resets.length,2);assert.ok(session.gpio.P407.value>1.65,'IOKEEP: no dark moment for LED2 at the reset');
+});
+
 test('ra_rtc_clock: the real r_rtc on LOCO — set to 2025-12-31 23:59:55, the 1 s periodic interrupt prints on SCI9, the midnight alarm lights LED2',()=>{
  const {session,log}=open(fixture('ra_rtc_clock'));
  runUntil(session,5600);

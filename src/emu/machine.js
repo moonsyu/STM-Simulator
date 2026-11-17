@@ -251,6 +251,8 @@ export class Machine {
     if (cpu.sleeping) {
       // 깨울 이벤트까지 시간 진행
       for (let guard = 0; guard < 100000 && cpu.sleeping; guard++) {
+        // A reset asked for while the core sleeps, from outside a timed event (an input pin that ends a low power mode).
+        if (cpu.stop === STOP.RESET) { cpu.stop = 0; this._doReset(); return this._result('reset'); }
         if (this.nvic.dirty) { cpu.checkExceptions(); if (!cpu.sleeping) return this._result('step'); continue; }
         let next = this._nextDeadline();
         if (next === Infinity) return this._result('sleep');

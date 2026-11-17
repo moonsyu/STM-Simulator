@@ -40,7 +40,9 @@ export function initializeRuntime({debug=false,entry=false}={}){
  const scope=runScope(),boardOnly=boardOnlyRun(),emulate=!boardOnly&&!!state.ide?.emulator();
  if(emulate&&!state.firmware){state.status='error';state.runtime=null;state.session=null;log('펌웨어 ELF가 없습니다. 빌드하거나 파일 → 펌웨어 ELF 열기를 사용하세요.','error');return false;}
  const program=boardOnly?compile(BOARD_ONLY_PROGRAM):emulate?null:state.ide?.build({reveal:false});if(!boardOnly&&!emulate&&state.ide&&!program){state.status='error';state.runtime=null;state.session=null;log(`코드 검사에 실패해 실행하지 않았습니다: ${$('build-errors').textContent.trim()||'빌드 탭을 확인하세요.'} (편집기의 빨간 밑줄 위치)`,'error');return false;}
- try{state.simTime=0;state.pressed={};state.lastWarnings='';state.result=null;monitor.clear();uartLines.clear();const options={debug:debug?{entry,breakpoints:state.ide?.breakpoints()||[]}:undefined,print:s=>log(s,'serial'),uart:logUart,trace:event=>monitor.trace(event),channels:monitor.channels(),
+ try{state.simTime=0;state.pressed={};state.lastWarnings='';state.result=null;monitor.clear();uartLines.clear();const options={debug:debug?{entry,breakpoints:state.ide?.breakpoints()||[]}:undefined,print:s=>log(s,'serial'),uart:logUart,
+   // A low power mode entered or left (FPB-RA6E1, ra-lpm.js) is said in the 출력 log too, as a watchdog reset is.
+   trace:event=>{monitor.trace(event);if(event.protocol==='LPM')log(`[LPM] ${event.message}`);},channels:monitor.channels(),
    // Program hints (e.g. ADC single conversion mode read again) go to the 출력 log as well as the protocol monitor.
    warn:message=>{log(message,'error');monitor.trace({micros:state.session?.now??state.session?.runtime?.microTime??0,protocol:'경고',message});}};
   if(!emulate&&!boardOnly&&state.project.firmware?.mode==='hal'){const only=(state.project.firmware.files||[]).filter(f=>armOnly(f.name)&&!armNoted.has(f.name));if(only.length){for(const f of only)armNoted.add(f.name);log(`${only.map(f=>f.name).join(', ')}: 내장 해석기는 이 파일을 쓰지 않습니다. 고친 내용은 ARM GCC 빌드(시뮬레이터 엔진 ARM GCC, 에뮬레이터, 실물 보드)에서만 반영됩니다.`,'warning');}}

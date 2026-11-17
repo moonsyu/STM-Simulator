@@ -81,5 +81,13 @@ export function raAssistance(mcu){
       call('R_FLASH_HP_StatusGet','flash_status_t status;\nR_FLASH_HP_StatusGet(&g_flash0_ctrl, &status);'),
       call('R_FLASH_HP_InfoGet','flash_info_t info;\nR_FLASH_HP_InfoGet(&g_flash0_ctrl, &info);'),call('R_FLASH_HP_Close','R_FLASH_HP_Close(&g_flash0_ctrl);'),
       ...(q.bgo&&q.callback?[callback(q.callback,'flash_callback_args_t','    if (FLASH_EVENT_ERASE_COMPLETE == p_args->event)\n    {\n        /* TODO: the erase is done */\n    }\n    else if (FLASH_EVENT_WRITE_COMPLETE == p_args->event)\n    {\n        /* TODO: the write is done */\n    }\n    else if ((FLASH_EVENT_BLANK == p_args->event) || (FLASH_EVENT_NOT_BLANK == p_args->event))\n    {\n        /* TODO: the blank check result */\n    }\n    else\n    {\n        /* TODO: FLASH_EVENT_ERR_FAILURE and the other errors */\n    }')]:[])]});}
+  // Low power modes: enter the configured mode, change it from the code, and what a start after Deep Software Standby does.
+  if(per.LPM?.enabled){const q=per.LPM,deep=q.mode==='DEEP';
+    out.push({name:'g_lpm0',title:'Low Power Modes (r_lpm)',items:[call('R_LPM_Open','R_LPM_Open(&g_lpm0_ctrl, &g_lpm0_cfg);'),call('R_LPM_LowPowerModeEnter','R_LPM_LowPowerModeEnter(&g_lpm0_ctrl);'),
+      call('R_LPM_LowPowerReconfigure',`/* Another mode from the code: a copy of the Stacks configuration with the mode changed. */\nlpm_cfg_t sleep_cfg = g_lpm0_cfg;\nsleep_cfg.low_power_mode = LPM_MODE_SLEEP;\nR_LPM_LowPowerReconfigure(&g_lpm0_ctrl, &sleep_cfg);`),
+      call('R_LPM_IoKeepClear','R_LPM_IoKeepClear(NULL);'),call('R_LPM_Close','R_LPM_Close(&g_lpm0_ctrl);'),
+      // After Deep Software Standby the program starts from the reset vector: RSTSR0.DPSRSTF tells, and with IOKEEP the
+      // pins stay as they were until IoKeepClear.
+      {label:'Start after Deep Software Standby (RSTSR0.DPSRSTF)',code:`if (1U == R_SYSTEM->RSTSR0_b.DPSRSTF)\n{\n    /* The MCU restarted from Deep Software Standby${deep&&q.ioKeep?': release the I/O ports (IOKEEP)':''}. */\n    R_LPM_IoKeepClear(NULL);\n}\n`}]});}
   return out;
 }

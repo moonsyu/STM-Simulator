@@ -153,8 +153,9 @@ void hal_entry(void)
  assert.equal(session.runtime.resetCount??0,0,'NMI: no reset');assert.deepEqual(log.warn,[]);
  const w=interp(`void hal_entry(void){ R_SYSTEM->RSTSR1 = 0; }`,{});
  assert.throws(()=>w.run(5),/R_SYSTEM->RSTSR1: 내장 해석기는 리셋 원인 레지스터를 읽기만 합니다/);
- const other=interp(`volatile uint32_t x; void hal_entry(void){ x = R_SYSTEM->RSTSR0; }`,{});
- assert.throws(()=>other.run(5),/레지스터 직접 접근은 ARM GCC 실행에서만 됩니다\(R_SYSTEM->RSTSR0\)/);
+ // RSTSR0 (PORF, DPSRSTF) is read the same way since feature 37; any other register of the block is not there.
+ const other=interp(`volatile uint32_t x; void hal_entry(void){ x = R_SYSTEM->RSTSR2; }`,{});
+ assert.throws(()=>other.run(5),/레지스터 직접 접근은 ARM GCC 실행에서만 됩니다\(R_SYSTEM->RSTSR2\)/);
 });
 
 test('interpreter: the IWDT starts from OFS0 at the program start (no Open needed) and resets with IWDTRF; StatusGet needs NMI',()=>{

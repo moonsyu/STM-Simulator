@@ -19,6 +19,10 @@ import { Stm32f446 } from './emu/stm32f446/soc.js';
 import { Stm32f103 } from './emu/stm32f103/soc.js';
 import { Ra6e1, RaBus } from './emu/ra6e1/soc.js';
 import { isRaFamily, RA6E1_PORTS, RA_IRQ_PINS, FPB_RA6E1 } from './ra-config.js';
+import { raVectors } from './ra-generator.js';
+// The interrupt of each NVIC slot of an FSP project by its vector_data.h name (SCI9_TXI, ICU_IRQ1 …): the low power
+// log names what woke the core as the built-in interpreter does. (An ELF built from other settings: no names.)
+const raVectorNames = mcu => { try { return raVectors(mcu).map(v => v.vector); } catch { return undefined; } };
 import { UartReceiver, Line } from './emu/stm32f446/signals.js';
 import { Camera, frameToRgba } from './emu/stm32f446/dcmi.js';
 import { SdCard } from './emu/stm32f446/sdcard.js';
@@ -67,7 +71,7 @@ export class FirmwareSession {
     // Pins wired to parts on the board itself (switch, LEDs, I2C pull-ups) are always solved with the circuit.
     this.boardPins = new Set(this.ra ? [FPB_RA6E1.userSwitch, ...Object.values(FPB_RA6E1.leds), ...Object.keys(FPB_RA6E1.pullups)] : ['PC13']);
     const Soc = this.ra ? Ra6e1 : project.mcu?.family === 'STM32F103RB' ? Stm32f103 : Stm32f446;
-    this.soc = new Soc(this.machine, this.env(), { pwmWaveform: project.simulation?.pwmWaveform ?? false, noise: noise ?? project.simulation?.noise, irqPins: RA_IRQ_PINS, rtcStart: project.mcu?.peripherals?.RTC?.start, hostTime: hostTime ?? Date.now(), ...(clock || {}) });
+    this.soc = new Soc(this.machine, this.env(), { pwmWaveform: project.simulation?.pwmWaveform ?? false, noise: noise ?? project.simulation?.noise, irqPins: RA_IRQ_PINS, vectorNames: this.ra ? raVectorNames(project.mcu) : undefined, rtcStart: project.mcu?.peripherals?.RTC?.start, hostTime: hostTime ?? Date.now(), ...(clock || {}) });
     this.signals = this.signalsApi();
     this.machine.onItm = (port, byte) => this.itm(port, byte);
     this.elf = this.machine.loadElf(elf instanceof Uint8Array ? elf : new Uint8Array(elf));
@@ -102,6 +106,8 @@ export class FirmwareSession {
       i2sSamples: (name, samples, rate) => this.i2sSamples(name, samples, rate),
       chipSelect: () => null,
       onReset: reason => { this.resets.push({ reason, us: this.soc?.nowUs() ?? 0 }); this.traceCb({ micros: this.soc?.nowUs() ?? 0, protocol: 'RESET', message: `MCU 리셋 · ${reason}` }); },
+      // Low power modes (RA6E1 lpm.js): each entry and wake-up is a run log entry, like a reset.
+      lowPower: message => this.traceCb({ micros: this.soc?.nowUs() ?? 0, protocol: 'LPM', message }),
       warn: message => { if (this.warnings.includes(message)) return; this.warnings.push(message); this.warnOut(message); },
       clockChanged: () => this.updateMco(),
       routingChanged: () => this.updateMco(),

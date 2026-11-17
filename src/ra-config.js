@@ -85,7 +85,7 @@ const FSP_API_OBJECTS=new Set(['g_adc_on_adc','g_can_on_can','g_elc_on_elc','g_e
 export function raNameProblem(name){
  if(C_WORDS.has(name))return `${name}은(는) C나 생성 코드가 쓰는 이름입니다`;
  if(/^(R_|BSP_|FSP_|IOPORT_|ELC_|ICU_|__)/.test(name)||/^_[A-Z]/.test(name))return `${name}: R_ · BSP_ · FSP_ · IOPORT_ 로 시작하는 이름과 __ 로 시작하는 이름은 FSP와 컴파일러가 씁니다`;
- if(/^g_(ioport|external_irq\d+|uart\d+|timer\d+|agt\d+|adc\d+|i2c_master\d+|i2c_slave\d+|spi\d+|sci_spi\d+|wdt\d+|iwdt\d+|rtc\d+|flash\d+|bsp_pin_cfg)(_ctrl|_cfg|_extend|_cfg_extend|_ext_cfg|_channel_cfg|_err_cfg)?$/.test(name))return `${name}은(는) 생성 코드의 인스턴스 이름입니다`;
+ if(/^g_(ioport|external_irq\d+|uart\d+|timer\d+|agt\d+|adc\d+|i2c_master\d+|i2c_slave\d+|spi\d+|sci_spi\d+|wdt\d+|iwdt\d+|rtc\d+|lpm\d+|flash\d+|bsp_pin_cfg)(_ctrl|_cfg|_extend|_cfg_extend|_ext_cfg|_channel_cfg|_err_cfg)?$/.test(name))return `${name}은(는) 생성 코드의 인스턴스 이름입니다`;
  // The interrupt service routines vector_data.h names (FSP drivers define them) and the drivers' API objects
  // (g_uart_on_sci, g_spi_on_spi, g_timer_on_gpt …: the extern const …_api_t g_<api>_on_<module> of the FSP 6.6 headers).
  if(/^((sci_uart|sci_spi|spi|iic_master|iic_slave)_(rxi|txi|tei|eri)|r_icu|adc_scan_end|agt_int|gpt_counter_overflow|rtc_alarm_periodic|rtc_carry|fcu_frdyi|fcu_fiferr)_isr$/.test(name))return `${name}은(는) FSP 드라이버의 인터럽트 처리 함수(ISR) 이름입니다`;
@@ -161,6 +161,7 @@ export function validateRaMcu(mcu){
    if(id==='WDT'||id==='IWDT'){out.peripherals[id]=validateWdt(id,p);continue;}
    if(id==='RTC'){out.peripherals[id]=validateRtc(p);continue;}
    if(id==='FLASH'){out.peripherals[id]=validateFlash(p);continue;}
+   if(id==='LPM'){out.peripherals[id]=validateLpm(p);continue;}
    const sci=/^SCI(\d)$/.exec(id);if(!sci||!RA_SCI_CHANNELS.includes(Number(sci[1]))||!p||typeof p.enabled!=='boolean')throw new Error(`${id}: 지원하지 않는 주변장치입니다.`);
    // One SCI channel is either a UART (r_sci_uart, the default) or a simple SPI master (r_sci_spi), as RASC adds one
    // stack or the other on the channel; the UART settings keep their shape so earlier projects stay unchanged.
@@ -448,6 +449,49 @@ function validateFlash(p){
  if(!q.bgo)q.callback='';
  return q;
 }
+// Low power modes (r_lpm g_lpm0), a pin-less stack: the mode R_LPM_LowPowerModeEnter enters, the sources that end it
+// and the Deep Software Standby options. The values are the RA6E1's (FSP 6.6 bsp_feature.h of the ra6e1 group):
+//   Software Standby wake sources — lpm_standby_wake_source_t, the bits of ICU WUPEN / WUPEN1
+//     (BSP_FEATURE_ICU_WUPEN_MASK 0x00000007FB0DFFFF);
+//   Deep Software Standby cancel sources — lpm_deep_standby_cancel_source_t, the bits of DPSIER0-3
+//     (BSP_FEATURE_LPM_DPSIER_MASK 0x0D1FDFF3: IRQ0, 1, 4-12, 14, 15 -DS, LVD1/2, RTC interval and alarm, NMI, USBFS,
+//     AGT1 and AGT3 underflow), with the edge of the pin sources in DPSIEGR0-2 (BSP_FEATURE_LPM_DPSIEGR_MASK 0x0013DFF3).
+// R_LPM_Open returns FSP_ERR_INVALID_MODE for a source outside these masks, so the settings offer what is inside them
+// and the simulator models: IRQn pins, the RTC, the AGT1/AGT3 underflow and (Software Standby) the IWDT.
+const irqBits=channels=>Object.fromEntries(channels.map(n=>['IRQ'+n,n]));
+export const RA_LPM_MODES=Object.freeze(['SLEEP','STANDBY','DEEP']);
+export const RA_LPM_MODE_NAMES=Object.freeze({SLEEP:'Sleep',STANDBY:'Software Standby',DEEP:'Deep Software Standby'});
+export const RA_LPM_WUPEN_MASK=0x7fb0dffff,RA_LPM_DPSIER_MASK=0x0d1fdff3,RA_LPM_DPSIEGR_MASK=0x0013dff3;
+export const RA_LPM_WAKE_BITS=Object.freeze({...irqBits(Array.from({length:16},(_,i)=>i)),IWDT:16,LVD1:18,LVD2:19,RTCALM:24,RTCPRD:25,USBFS:27,AGT1UD:28,AGT1CA:29,AGT1CB:30,IIC0:31,AGT3UD:32,AGT3CA:33,AGT3CB:34});
+export const RA_LPM_CANCEL_BITS=Object.freeze({...irqBits([0,1,4,5,6,7,8,9,10,11,12,14,15]),LVD1:16,LVD2:17,RTC_INTERVAL:18,RTC_ALARM:19,NMI:20,USBFS:24,AGT1:26,AGT3:27});
+/** The sources the settings offer (the ones the simulator models), in bit order. */
+export const RA_LPM_WAKE=Object.freeze([...Array.from({length:16},(_,i)=>'IRQ'+i),'IWDT','RTCALM','RTCPRD','AGT1UD','AGT3UD']);
+export const RA_LPM_CANCEL=Object.freeze([...[0,1,4,5,6,7,8,9,10,11,12,14,15].map(n=>'IRQ'+n),'RTC_INTERVAL','RTC_ALARM','AGT1','AGT3']);
+export const RA_LPM_POWER=Object.freeze({DEEPCUT0:0,DEEPCUT1:1,DEEPCUT3:3});
+/** The pin whose IRQn-DS input cancels Deep Software Standby for channel `ch` (null: the channel has none). */
+export const raDsPin=ch=>RA_IRQ_DS.find(pin=>RA_IRQ_PINS[pin]===ch)??null;
+export const RA_LPM_DEFAULTS=Object.freeze({mode:'SLEEP',wake:Object.freeze([]),ioKeep:true,power:'DEEPCUT0',cancel:Object.freeze([]),cancelRising:Object.freeze([])});
+function validateLpm(p){
+ if(!p||typeof p.enabled!=='boolean')throw new Error('LPM: 설정을 확인하세요.');
+ // A stack that is turned off is not generated: what it holds is not a reason to refuse the project (the defaults stand in).
+ if(!p.enabled){try{return {...validateLpm({...p,enabled:true}),enabled:false};}catch{return {enabled:false,...RA_LPM_DEFAULTS,wake:[],cancel:[],cancelRising:[]};}}
+ const list=(v,all,label)=>{
+  if(!Array.isArray(v)||v.some(x=>typeof x!=='string'))throw new Error(`LPM: ${label}를 확인하세요.`);
+  const bad=v.find(x=>!all.includes(x));if(bad!==undefined)throw new Error(`LPM: ${label} ${bad}은(는) 고를 수 없습니다(${all.filter(x=>!/^IRQ/.test(x)).join(' · ')} · IRQn 중에서 고르세요).`);
+  return all.filter(x=>v.includes(x));
+ };
+ const q={enabled:p.enabled,mode:p.mode??RA_LPM_DEFAULTS.mode,wake:list(p.wake??[],RA_LPM_WAKE,'Software Standby를 깨우는 소스'),ioKeep:p.ioKeep??true,power:p.power??RA_LPM_DEFAULTS.power,
+  cancel:list(p.cancel??[],RA_LPM_CANCEL,'Deep Software Standby 해제 소스'),cancelRising:[]};
+ if(!RA_LPM_MODES.includes(q.mode))throw new Error('LPM: 저전력 모드는 Sleep · Software Standby · Deep Software Standby입니다.');
+ if(typeof q.ioKeep!=='boolean')throw new Error('LPM: I/O 포트 상태 유지(IOKEEP)는 켜거나 끕니다.');
+ if(!Object.hasOwn(RA_LPM_POWER,q.power))throw new Error('LPM: 전원 공급은 DEEPCUT0 · DEEPCUT1 · DEEPCUT3입니다.');
+ // r_lpm.c: an edge without its source is FSP_ERR_INVALID_MODE; only the IRQn-DS pins have an edge here.
+ q.cancelRising=list(p.cancelRising??[],RA_LPM_CANCEL.filter(x=>/^IRQ/.test(x)),'상승 엣지로 해제할 IRQn-DS');
+ const lone=q.cancelRising.find(x=>!q.cancel.includes(x));if(lone)throw new Error(`LPM: ${lone}-DS의 엣지를 정하려면 해제 소스에도 ${lone}을(를) 넣으세요.`);
+ return q;
+}
+/** A 64-bit source mask as [low 32 bits, high bits] from source names and their bit table. */
+export const raLpmMask=(names,bits)=>{let lo=0,hi=0;for(const n of names||[]){const b=bits[n];if(b==null)continue;if(b<32)lo|=1<<b;else hi|=1<<(b-32);}return [lo>>>0,hi>>>0];};
 /** A watchdog's count clock, timeout clocks and timeout in ms for a configuration ("WDT": PCLKB / divider; "IWDT": 15 kHz / divider). */
 export function raWdtTiming(mcu,id){
  const p={...RA_WDT[id].defaults,...(mcu?.peripherals?.[id]||{})},hz=(id==='IWDT'?RA_IWDT_HZ:raClockHz(mcu,'pclkb'))/p.clockDiv;

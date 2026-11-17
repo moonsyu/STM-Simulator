@@ -10,8 +10,9 @@
 // starts at the first refresh; auto-start mode (OFS0 WDTSTRT b17 / IWDTSTRT b1 = 0) takes them from OFS0 and counts
 // from the reset on. An underflow, or a refresh outside the window, sets UNDFF / REFEF and then resets the MCU
 // (RSTSR1 WDTRF / IWDTRF) or, with RSTIRQS 0, raises the NMI (ICU NMISR WDTST b1 / IWDTST b0).
-// Not modelled: the sleep-mode stop (SLCSTP: the CPU's WFI does not stop the clocks here) and the debugger stop
-// (DBGSTOPCR: time does not pass while the debugger holds the core anyway).
+// The count stops in the low power modes that stop its clock (freeze / thaw, called by lpm.js): with SLCSTP (the IWDT:
+// OFS0 IWDTSTPCTL) in Sleep, and the WDT always in Software Standby.
+// Not modelled: the debugger stop (DBGSTOPCR: time does not pass while the debugger holds the core anyway).
 const RR = 0x00, CR = 0x02, SR = 0x04, RCR = 0x06, CSTPR = 0x08;
 // CKS code → divider (wdt_clock_division_t: the hardware field values).
 export const WDT_CKS = Object.freeze({ 0: 1, 1: 4, 2: 16, 3: 32, 4: 64, 15: 128, 5: 256, 6: 512, 7: 2048, 8: 8192 });
@@ -28,7 +29,7 @@ export class Watchdog {
   reset() {
     this.ev?.cancel?.(); this.ev = null;
     this.cr = 0x33f3; this.rcr = 0x80; this.cstpr = 0x80; this.flags = 0; this.armed = false; this.step = 0;
-    this.running = false; this.count = 0; this.t0 = 0; this.hz0 = 0;
+    this.running = false; this.frozen = false; this.count = 0; this.t0 = 0; this.hz0 = 0;
     // Auto-start: the settings come from OFS0, and the counter runs from the reset on.
     const ofs = (this.soc.bus?.ofs0 ?? 0xffffffff) >>> 0, s = OFS[this.kind];
     this.auto = !((ofs >>> (s + 1)) & 1);
@@ -47,8 +48,18 @@ export class Watchdog {
     const n = Math.floor((this.soc.nowUs() - this.t0) * this.hz0 / 1e6 + 1e-6);
     return Math.max(0, this.count - n);
   }
+  // A low power mode stops the count clock (lpm.js: the WDT in Software Standby, and in Sleep with SLCSTP; the IWDT with
+  // OFS0's stop control): the counter keeps its value and goes on from it when the mode ends.
+  freeze() {
+    if (!this.running || this.frozen) return false;
+    this.count = this.counter(); this.running = false; this.frozen = true; this.ev?.cancel?.(); this.ev = null; return true;
+  }
+  thaw() {
+    if (!this.frozen) return;
+    this.frozen = false; this.running = true; this.t0 = this.soc.nowUs(); this.hz0 = this.hz(); this.plan();
+  }
   restart() {
-    this.ev?.cancel?.(); this.running = true; this.count = this.timeout() - 1; this.t0 = this.soc.nowUs(); this.hz0 = this.hz(); this.plan();
+    this.frozen = false; this.ev?.cancel?.(); this.running = true; this.count = this.timeout() - 1; this.t0 = this.soc.nowUs(); this.hz0 = this.hz(); this.plan();
   }
   plan() {
     this.ev?.cancel?.(); this.ev = null;

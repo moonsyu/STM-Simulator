@@ -773,6 +773,80 @@ void hal_entry(void)
     }
 }
 `+WARM_START});
+// Deep Software Standby and its wake-up by S1: P205 is IRQ1-DS, the pin function that cancels the mode (the course's
+// "IRQn-DS wakes Deep Software Standby"). The program works for a second with LED1 on, says so on SCI9 (the USB-TTL part
+// on D0/D1) and enters the mode; pressing S1 resets the MCU, and the program, started again, finds RSTSR0.DPSRSTF set,
+// lights LED2 and says where it came from. With IOKEEP LED2 stays on through the next Deep Software Standby.
+const LPM_EXAMPLE=Object.freeze({id:'ra_lpm_deep',name:'저전력: Deep Software Standby와 S1(IRQ1-DS)로 깨우기 (R_LPM_Open · LowPowerModeEnter · IoKeepClear · RSTSR0)',tags:['LPM','low power','standby','deep standby','IRQ-DS','reset','RSTSR0','UART'],
+ mcu:()=>{const m=UART_EXAMPLE.mcu();m.peripherals.LPM={enabled:true,mode:'DEEP',wake:['IRQ1'],ioKeep:true,power:'DEEPCUT0',cancel:['IRQ1'],cancelRising:[]};return m;},
+ circuit:UART_EXAMPLE.circuit,
+ code:HEAD+`#include <string.h>
+
+volatile uint32_t from_deep_standby = 0;
+static volatile bool tx_done = true;
+
+void user_uart9_callback(uart_callback_args_t *p_args)
+{
+    if (UART_EVENT_TX_COMPLETE == p_args->event)
+    {
+        tx_done = true;
+    }
+}
+
+/* S1 (P205) is IRQ1-DS: Deep Software Standby watches the pin itself (DPSIER), so r_icu is not opened here. */
+void external_irq1_callback(external_irq_callback_args_t *p_args)
+{
+    (void) p_args;
+}
+
+/* Sends a line on SCI9 and waits until it has gone out (the clocks of SCI9 stop in Deep Software Standby). */
+static void say(const char *text)
+{
+    tx_done = false;
+    R_SCI_UART_Write(&g_uart9_ctrl, (uint8_t *) text, (uint32_t) strlen(text));
+    while (!tx_done)
+    {
+        R_BSP_SoftwareDelay(1, BSP_DELAY_UNITS_MILLISECONDS);
+    }
+}
+
+void hal_entry(void)
+{
+    /* Why did the MCU start? Deep Software Standby ends with a reset, and RSTSR0.DPSRSTF says so. */
+    bool woke = (1U == R_SYSTEM->RSTSR0_b.DPSRSTF);
+
+    /* IOKEEP: the pins still are as they were in Deep Software Standby (LED2 stayed on). Release them first. */
+    R_LPM_IoKeepClear(NULL);
+
+    R_SCI_UART_Open(&g_uart9_ctrl, &g_uart9_cfg);
+    if (woke)
+    {
+        from_deep_standby = 1;
+        R_IOPORT_PinWrite(&g_ioport_ctrl, LED2, BSP_IO_LEVEL_HIGH);
+        say("Woke up from Deep Software Standby by S1 (IRQ1-DS)\\r\\n");
+    }
+    else
+    {
+        say("Power-on start\\r\\n");
+    }
+
+    /* Work for a second with LED1 on. */
+    R_IOPORT_PinWrite(&g_ioport_ctrl, LED1, BSP_IO_LEVEL_HIGH);
+    R_BSP_SoftwareDelay(1, BSP_DELAY_UNITS_SECONDS);
+    say("Entering Deep Software Standby: press S1\\r\\n");
+    R_IOPORT_PinWrite(&g_ioport_ctrl, LED1, BSP_IO_LEVEL_LOW);
+
+    /* g_lpm0: Deep Software Standby, cancelled by the falling edge of IRQ1-DS (S1), I/O ports kept. */
+    R_LPM_Open(&g_lpm0_ctrl, &g_lpm0_cfg);
+    R_LPM_LowPowerModeEnter(&g_lpm0_ctrl);
+
+    /* Not reached: S1 restarts the program from the reset vector. */
+    while (1)
+    {
+        R_BSP_SoftwareDelay(100, BSP_DELAY_UNITS_MILLISECONDS);
+    }
+}
+`+WARM_START});
 // Data flash (r_flash_hp, no background operation): a boot counter in the first 64-byte block at 0x08000000. Every start
 // reads it (after a blank check: an erased cell has no defined value), adds one, erases the block and writes it back,
 // then prints it on SCI9 (the USB-TTL part on D0/D1). S1 resets the MCU; the count also goes on when the run is stopped
@@ -853,5 +927,5 @@ void hal_entry(void)
     }
 }
 `+WARM_START});
-RA_EXAMPLES.push(POLL_EXAMPLE,IRQ_COURSE_EXAMPLE,UART_EXAMPLE,GPT_EXAMPLE,ADC_EXAMPLE,AGT_EXAMPLE,IIC_EXAMPLE,SPI_EXAMPLE,CHALLENGE_EXAMPLE,WDT_EXAMPLE,RTC_EXAMPLE,IIC_SLAVE_EXAMPLE,FLASH_EXAMPLE);
+RA_EXAMPLES.push(POLL_EXAMPLE,IRQ_COURSE_EXAMPLE,UART_EXAMPLE,GPT_EXAMPLE,ADC_EXAMPLE,AGT_EXAMPLE,IIC_EXAMPLE,SPI_EXAMPLE,CHALLENGE_EXAMPLE,WDT_EXAMPLE,RTC_EXAMPLE,IIC_SLAVE_EXAMPLE,LPM_EXAMPLE,FLASH_EXAMPLE);
 Object.freeze(RA_EXAMPLES);

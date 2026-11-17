@@ -16,6 +16,7 @@ import { Rspi } from './spi.js';
 import { Watchdog } from './wdt.js';
 import { Rtc } from './rtc.js';
 import { Faci } from './flash.js';
+import { LowPower } from './lpm.js';
 import { EXC_NMI } from '../scs.js';
 import { RA_PERIPHERAL_PINS, RA_SCI_CHANNELS, RA_GPT_CHANNELS, RA_AGT_CHANNELS, RA_IIC_CHANNELS, raPsel } from '../../ra-config.js';
 
@@ -65,11 +66,12 @@ class System extends RegisterFile {
         0x490: [0x00, 1], // LOCOCR: running
         0x416: [0x02, 1], // FWEPROR: flash program/erase disabled (FLWE 10b) until software writes 01b
       },
-      onWrite: (off, size, before, v) => { if ([0x20, 0x26, 0x28, 0x2a, 0x36].includes(off)) this.clocksChanged(); this.resetStatusWrite(off, size, v); },
+      onWrite: (off, size, before, v) => { if ([0x20, 0x26, 0x28, 0x2a, 0x36].includes(off)) this.clocksChanged(); this.resetStatusWrite(off, size, v); this.soc.lpm?.write(off, size, v); },
       onRead: (off, size) => {
         if (off === 0x3c && size === 1) return this.oscsf();
         if ((off === 0xa0 || off === 0xaa) && size === 1) return this.get(off, 1) & ~0x10; // OPCMTSF / SOPCMTSF: done
-        return this.resetStatusRead(off, size);
+        // The Deep Software Standby registers (DPSBYCR, DPSIER, DPSIFR, DPSIEGR) live in soc.lpm: a reset keeps them.
+        return this.soc.lpm?.read(off, size) ?? this.resetStatusRead(off, size);
       },
     });
   }
@@ -198,7 +200,9 @@ class Ports {
     if (c.pdr) return { mode: 'OUTPUT', value: c.podr ? 3.3 : 0, openDrain: !!c.ncodr, pull: c.pcr };
     return input;
   }
-  publish(port, mask) { for (let n = 0; n < 16; n++) if (mask & (1 << n)) this.soc.pinState(this.pin(port, n), this.state(port, n)); }
+  // After a Deep Software Standby cancel with DPSBYCR.IOKEEP the pins keep their state (soc.lpm.hold): the registers take
+  // the writes, and the pins follow when the bit is cleared (lpm.js publishes all of them then).
+  publish(port, mask) { if (this.soc.lpm?.hold) return; for (let n = 0; n < 16; n++) if (mask & (1 << n)) this.soc.pinState(this.pin(port, n), this.state(port, n)); }
   publishAll() { for (let p = 0; p < PORT_COUNT; p++) this.publish(p, 0xffff); }
   inputBit(port, n) {
     const c = this.cfg(port, n);
@@ -258,7 +262,7 @@ class Icu extends RegisterFile {
     const channel = this.soc.irqChannel(pin);
     if (channel == null) return;
     const mode = this.get(channel, 1) & 3; // IRQMD: 0 falling, 1 rising, 2 both, 3 low level
-    if (mode === 0 && level === 0 || mode === 1 && level === 1 || mode === 2 || mode === 3 && level === 0) this.raise(ELC_EVENT_ICU_IRQ(channel));
+    if (mode === 0 && level === 0 || mode === 1 && level === 1 || mode === 2 || mode === 3 && level === 0) this.soc.raiseEvent(ELC_EVENT_ICU_IRQ(channel));
   }
 }
 
@@ -283,6 +287,9 @@ export class Ra6e1 {
     // A reset the core asks for (SYSRESETREQ, a watchdog through systemReset) goes through prepareReset first, as on the
     // STM32 models: the cause is logged ("MCU 리셋") and kept in the reset status registers.
     machine.onResetRequest = reason => this.prepareReset(reason);
+    // Low power modes (lpm.js): the core's WFI enters the mode SBYCR / DPSBYCR select, and leaving WFI ends it.
+    this.lpm = new LowPower(this);
+    if (machine.cpu) machine.cpu.onWake = exc => this.lpm.wake(exc);
     this.build();
   }
   get resetHz() { return 8e6; } // MOCO
@@ -351,7 +358,10 @@ export class Ra6e1 {
       read(offset, size) { const a = (0x40000000 + offset) >>> 0, hit = lookup(a); if (hit) return hit[0].read(hit[1], size); soc.note(a, false); return fallback.get(a & ~3) ?? 0; },
       write(offset, value, size) { const a = (0x40000000 + offset) >>> 0, hit = lookup(a); if (hit) { hit[0].write(hit[1], value, size); return; } soc.note(a, true); fallback.set(a & ~3, value >>> 0); },
       peek(offset, size) { const a = (0x40000000 + offset) >>> 0, hit = lookup(a); return hit ? (hit[0].peek ? hit[0].peek(hit[1], size) : null) : (fallback.get(a & ~3) ?? 0); },
-      tick: () => soc.sync(), nextEvent: () => soc.scheduler.next() + soc.cycleOffset, reset: () => soc.machineReset(),
+      // The machine asks for the next event when the core sleeps (WFI) with nothing pending: the low power mode begins there.
+      // Only WFI: r_lpm enters its modes with WFI, and a WFE wait is the core's own sleep here (as __WFE() is on the
+      // built-in interpreter). Not again between a cancel request and its reset (machine._resetPending).
+      tick: () => soc.sync(), nextEvent: () => { const cpu = soc.machine.cpu; if (cpu?.sleeping && !cpu.sleepWfe && !soc.lpm.mode && !soc.machine._resetPending) soc.lpm.enter(); return soc.scheduler.next() + soc.cycleOffset; }, reset: () => soc.machineReset(),
     };
     this.machine.map(0x40000000, 0x400000, router, 'RA6E1 peripherals');
     // The FACI lies above the other peripherals: its registers at 0x407F_E000 and the command-issuing area at
@@ -371,13 +381,15 @@ export class Ra6e1 {
   }
   /** An ICU event (bsp_elc.h ELC_EVENT_*) from a peripheral model: the IELSR slots linked to it get IR. The other
    *  consumers of an event (ELC, DTC, DMAC: feature 36) attach here. */
-  raiseEvent(ev) { this.icu.raise(ev); }
+  raiseEvent(ev) { if (this.lpm.event(ev)) this.icu.raise(ev); }
   /** An IIC channel in the module-stop state (MSTPCRB bit 9 - channel, bsp_module_stop.h; set at reset and by R_BSP_MODULE_STOP in a driver's Close). */
   iicStopped(channel) { return !!(this.mstp.peek(0x4, 4) & (1 << (9 - channel))); }
   /** FWEPROR.FLWE = 01b: flash programming and erasure are permitted (r_flash_hp flash_hp_init sets it). */
   flashWriteEnabled() { return (this.system.get(0x416, 1) & 3) === 1; }
   /** Whether anything consumes event `ev`, so a model schedules only what someone observes. */
-  listens(ev) { return this.icu.linked(ev); }
+  listens(ev) { return this.icu.linked(ev) || this.lpm.listens(ev); }
+  /** An input pin changed level (Ports.refreshInputs): the IRQn-DS pins cancel Deep Software Standby. */
+  inputEdge(pin, level) { this.lpm.pinEdge(pin, level); }
   peripheral(name) { return this.peripherals.get(name); }
   irqChannel(pin) { return this.irqPins[pin]; }
   // ------------------------------------------------------------ time
@@ -403,7 +415,8 @@ export class Ra6e1 {
     this.resetReason = reason;
     const s = this.resetStatus, flag = RESET_FLAGS[reason];
     if (flag != null) s.rstsr1 |= flag;
-    else if (reason === 'PIN') { s.rstsr1 = 0; s.rstsr0 = 0; } // RES# pin: the cause registers start over (no flag of its own)
+    else if (reason === 'DEEP_STANDBY') s.rstsr0 |= 0x80; // RSTSR0.DPSRSTF: the internal reset that ends Deep Software Standby
+    else if (reason === 'PIN') { s.rstsr1 = 0; s.rstsr0 = 0; this.lpm.powerOn(); } // RES# pin: the cause registers start over (no flag of its own)
     // The log entry first, while the time still reads as before the reset.
     this.usBeforeReset = this.nowUs(); this.env.onReset?.(reason); this.cycleOffset = this.machine.cycles;
   }
@@ -414,6 +427,7 @@ export class Ra6e1 {
     if (this.machine.cycles > 0 && this.cycleOffset !== this.machine.cycles) this.cycleOffset = this.machine.cycles;
     this.usBeforeReset = undefined;
     this.irqSources.clear();
+    this.lpm.reset();
     for (const dev of this.peripherals.values()) dev.reset?.();
     this.clock = { iclk: this.resetHz, pclka: this.resetHz, pclkb: this.resetHz, pclkc: this.resetHz, pclkd: this.resetHz, fclk: this.resetHz, bclk: this.resetHz, sysclk: this.resetHz, hclk: this.resetHz, pclk1: this.resetHz, pclk2: this.resetHz };
     this.wdt?.clockChanged(); // an auto-started WDT counts PCLKB from the reset clock on
@@ -432,7 +446,7 @@ export class Ra6e1 {
   }
   event() { if (this.machine.cpu) this.machine.cpu.eventReg = 1; }
   /** A watchdog's NMI request (ICU NMISR bit: 0 IWDT, 1 WDT). */
-  nmi(bit) { this.icu.nmi(bit); }
+  nmi(bit) { if (this.lpm.nmi(bit)) this.icu.nmi(bit); }
   // ------------------------------------------------------------ pins
   pinState(pin, state) {
     const old = this.pins.get(pin);
