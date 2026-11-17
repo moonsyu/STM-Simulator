@@ -5,6 +5,7 @@ import assert from 'node:assert/strict';
 import {raDefaultMcu,validateRaMcu,raNameProblem,RA_IRQ_DS,RA_IRQ_PINS,RA_LPM_WAKE,RA_LPM_CANCEL,RA_LPM_WAKE_BITS,RA_LPM_CANCEL_BITS,RA_LPM_WUPEN_MASK,RA_LPM_DPSIER_MASK,RA_LPM_DPSIEGR_MASK,raLpmMask,raDsPin} from '../../src/ra-config.js';
 import {generateRaFiles,raInstances} from '../../src/ra-generator.js';
 import {raExample} from '../../src/ra-examples.js';
+import {raAssistance} from '../../src/ra-assistance.js';
 import {LpmLog,lpmWakeNames,lpmCancelNames,lpmWakeLabel,lpmCancelLabel,lpmIrqLabel,lpmWakeOfIrq,lpmCancelOfIrq,lpmReason,lpmDeepDetail} from '../../src/ra-lpm.js';
 
 const mcu=peripherals=>({...raDefaultMcu(),peripherals});
@@ -56,6 +57,14 @@ test('generated files: g_lpm0 in hal_data with the FSP enumerators, r_lpm_cfg.h,
  assert.equal(raInstances(validateRaMcu(raDefaultMcu())).lpm,null);assert.equal(raInstances(validateRaMcu(mcu({LPM:{enabled:true}}))).lpm.name,'g_lpm0');
  // A project without the stack generates what it did before (a disabled stack is not generated either).
  assert.deepEqual(generateRaFiles(validateRaMcu(mcu({LPM:{enabled:false,mode:'DEEP'}})))['ra_gen/hal_data.c'],none['ra_gen/hal_data.c']);
+});
+
+test('Developer Assistance lists g_lpm0 with its calls and the start-after-Deep-Software-Standby snippet',()=>{
+ const group=raAssistance(validateRaMcu(mcu({LPM:{enabled:true,mode:'DEEP',cancel:['IRQ1']}}))).find(g=>g.name==='g_lpm0');
+ assert.equal(group.title,'Low Power Modes (r_lpm)');
+ assert.deepEqual(group.items.map(i=>i.label),['Call R_LPM_Open()','Call R_LPM_LowPowerModeEnter()','Call R_LPM_LowPowerReconfigure()','Call R_LPM_IoKeepClear()','Call R_LPM_Close()','Start after Deep Software Standby (RSTSR0.DPSRSTF)']);
+ assert.match(group.items[5].code,/if \(1U == R_SYSTEM->RSTSR0_b\.DPSRSTF\)[\s\S]*R_LPM_IoKeepClear\(NULL\);/);
+ assert.equal(raAssistance(validateRaMcu(raDefaultMcu())).some(g=>g.name==='g_lpm0'),false);
 });
 
 test('example ra_lpm_deep: Deep Software Standby cancelled by IRQ1-DS, S1 left as the IRQ1-DS pin',()=>{
