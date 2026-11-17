@@ -3,7 +3,7 @@
 // linker init tables) and script (linker scripts). The user's code is src/hal_entry.c; the app builds these with the
 // FSP sources (BSP + r_* drivers) and ARM GCC, then runs the ELF on the RA6E1 emulator.
 // Formats follow RASC output for FSP 5.x/6.x (only what the FPB-RA6E1 configurations here need).
-import {raFamily,raPinName,raPortBit,RA_IRQ_PINS,raPsel,RA_PSEL_NAMES,RA_SCI_CHANNELS,RA_GPT_CHANNELS,RA_ADC_CHANNELS,RA_AGT_CHANNELS,RA_IIC_CHANNELS,RA_SPI_CHANNELS,RA_SCI_SPI_CHANNELS,raGptCounts,raAgtCounts,raIicClock,raClockHz,raSpiBitrate,raSciSpiBitrate,RA_WDT,raOfs0,RA_RTC_DEFAULTS} from './ra-config.js';
+import {raFamily,raPinName,raPortBit,RA_IRQ_PINS,raPsel,RA_PSEL_NAMES,RA_SCI_CHANNELS,RA_GPT_CHANNELS,RA_ADC_CHANNELS,RA_AGT_CHANNELS,RA_IIC_CHANNELS,RA_SPI_CHANNELS,RA_SCI_SPI_CHANNELS,raGptCounts,raAgtCounts,raIicClock,raClockHz,raSpiBitrate,raSciSpiBitrate,RA_WDT,raOfs0,RA_RTC_DEFAULTS,RA_LPM_DEFAULTS} from './ra-config.js';
 
 const HEADER=kind=>`/* generated ${kind} - do not edit */\n`;
 const hex=(n,w=8)=>'0x'+(n>>>0).toString(16).toUpperCase().padStart(w,'0');
@@ -264,6 +264,48 @@ const rtc_instance_t ${t.name} =
     .p_api         = &g_rtc_on_rtc
 };`;
 }
+// Low power modes instance (r_lpm g_lpm0), as RASC writes it for the RA6E1: the mode, the Software Standby wake sources
+// (WUPEN), and the Deep Software Standby options (IOKEEP, DEEPCUT, the cancel sources and the edges of the pin sources).
+// The RA6E1 has no SBYCR.OPE (BSP_FEATURE_LPM_HAS_SBYCR_OPE 0), so lpm_cfg_t has no output_port_enable there. Snooze is
+// not offered: its fields get the values RASC writes for "no snooze".
+const lpmOf=mcu=>{const p=mcu.peripherals?.LPM;if(!p?.enabled)return null;return {...RA_LPM_DEFAULTS,...p,name:'g_lpm0'};};
+const lpmDecl=t=>`/** lpm Instance */
+extern const lpm_instance_t ${t.name};
+/** Access the LPM instance using these structures when calling API functions directly (::p_api is not used). */
+extern lpm_instance_ctrl_t ${t.name}_ctrl;
+extern const lpm_cfg_t ${t.name}_cfg;`;
+function lpmInstance(t){
+ const or=(items,type)=>[...items,`(${type}) 0`].join(' | ');
+ return `lpm_instance_ctrl_t ${t.name}_ctrl;
+const lpm_cfg_t ${t.name}_cfg =
+{
+    .low_power_mode             = LPM_MODE_${t.mode},
+    .standby_wake_sources       = ${or(t.wake.map(s=>'LPM_STANDBY_WAKE_SOURCE_'+s),'lpm_standby_wake_source_t')},
+#if BSP_FEATURE_LPM_HAS_SNOOZE
+    .snooze_cancel_sources      = LPM_SNOOZE_CANCEL_SOURCE_NONE,
+    .snooze_request_source      = LPM_SNOOZE_REQUEST_RXD0_FALLING,
+    .snooze_end_sources         = (lpm_snooze_end_t) 0,
+    .dtc_state_in_snooze        = LPM_SNOOZE_DTC_DISABLE,
+#endif
+#if BSP_FEATURE_LPM_HAS_SBYCR_OPE
+    .output_port_enable         = LPM_OUTPUT_PORT_ENABLE_RETAIN,
+#endif
+#if BSP_FEATURE_LPM_HAS_DEEP_STANDBY
+    .io_port_state              = ${t.ioKeep?'LPM_IO_PORT_NO_CHANGE':'LPM_IO_PORT_RESET'},
+    .power_supply_state         = LPM_POWER_SUPPLY_${t.power},
+    .deep_standby_cancel_source = ${or(t.cancel.map(s=>'LPM_DEEP_STANDBY_CANCEL_SOURCE_'+s),'lpm_deep_standby_cancel_source_t')},
+    .deep_standby_cancel_edge   = ${or(t.cancel.filter(s=>/^IRQ/.test(s)).map(s=>`LPM_DEEP_STANDBY_CANCEL_SOURCE_${s}_${t.cancelRising.includes(s)?'RISING':'FALLING'}`),'lpm_deep_standby_cancel_edge_t')},
+#endif
+    .p_extend                   = NULL,
+};
+/* Instance structure to use this module. */
+const lpm_instance_t ${t.name} =
+{
+    .p_api         = &g_lpm_on_lpm,
+    .p_ctrl        = &${t.name}_ctrl,
+    .p_cfg         = &${t.name}_cfg
+};`;
+}
 /** OFS0 as bsp_mcu_ofs_cfg.h gives it to the BSP (bsp_linker.c places it at 0x0100A100). */
 function ofsCfg(mcu){
  const ofs=raOfs0(mcu),iwdt=mcu.peripherals?.IWDT?.enabled,wdt=mcu.peripherals?.WDT?.enabled&&mcu.peripherals.WDT.startMode==='AUTO';
@@ -275,7 +317,7 @@ function ofsCfg(mcu){
 `;
 }
 /** The FSP instances hal_data.c defines for an RA configuration, as the built-in interpreter declares them (fsp-interp.js). */
-export const raInstances=mcu=>({irqs:irqsOf(mcu),uarts:uartsOf(mcu),gpts:gptsOf(mcu),adc:adcOf(mcu),agts:agtsOf(mcu),iics:iicsOf(mcu),spis:spisOf(mcu),sciSpis:sciSpisOf(mcu),wdts:wdtsOf(mcu),rtc:rtcOf(mcu)});
+export const raInstances=mcu=>({irqs:irqsOf(mcu),uarts:uartsOf(mcu),gpts:gptsOf(mcu),adc:adcOf(mcu),agts:agtsOf(mcu),iics:iicsOf(mcu),spis:spisOf(mcu),sciSpis:sciSpisOf(mcu),wdts:wdtsOf(mcu),rtc:rtcOf(mcu),lpm:lpmOf(mcu)});
 /** "P408" → "BSP_IO_PORT_04_PIN_08". */
 export const raIoName=pin=>ioName(pin);
 // SPI masters: r_spi on RSPI (g_spiN) and r_sci_spi on an SCI channel in simple SPI mode (g_sci_spiN). Both use spi_cfg_t
@@ -705,7 +747,7 @@ ${vectors.map(v=>`    [${v.index}] = BSP_PRV_VECT_ENUM(EVENT_${v.event},GROUP${v
 function halDataH(mcu){
  const irqs=irqsOf(mcu),uarts=uartsOf(mcu),includes=(irqs.length?'#include "r_icu.h"\n#include "r_external_irq_api.h"\n':'')+(uarts.length?'#include "r_sci_uart.h"\n#include "r_uart_api.h"\n':'')+(gptsOf(mcu).length?'#include "r_gpt.h"\n#include "r_timer_api.h"\n':'')+(adcOf(mcu)?'#include "r_adc.h"\n#include "r_adc_api.h"\n':'')+(iicsOf(mcu).length?'#include "r_iic_master.h"\n#include "r_i2c_master_api.h"\n':'')+(agtsOf(mcu).length?'#include "r_agt.h"\n'+(gptsOf(mcu).length?'':'#include "r_timer_api.h"\n'):'')
   +(spisOf(mcu).length?'#include "r_spi.h"\n':'')+(sciSpisOf(mcu).length?'#include "r_sci_spi.h"\n':'')+(spisOf(mcu).length||sciSpisOf(mcu).length?'#include "r_spi_api.h"\n':'')
-  +wdtsOf(mcu).map(w=>`#include "r_${w.kind}.h"\n`).join('')+(wdtsOf(mcu).length?'#include "r_wdt_api.h"\n':'')+(rtcOf(mcu)?'#include "r_rtc.h"\n#include "r_rtc_api.h"\n':'');
+  +wdtsOf(mcu).map(w=>`#include "r_${w.kind}.h"\n`).join('')+(wdtsOf(mcu).length?'#include "r_wdt_api.h"\n':'')+(rtcOf(mcu)?'#include "r_rtc.h"\n#include "r_rtc_api.h"\n':'')+(lpmOf(mcu)?'#include "r_lpm.h"\n#include "r_lpm_api.h"\n':'');
  const decls=irqs.map(i=>`/** External IRQ on ICU Instance. */
 extern const external_irq_instance_t ${i.name};
 /** Access the ICU instance using these structures when calling API functions directly (::p_api is not used). */
@@ -721,7 +763,7 @@ extern const uart_cfg_t ${u.name}_cfg;
 extern const sci_uart_extended_cfg_t ${u.name}_cfg_extend;
 #ifndef ${u.callback}
 void ${u.callback}(uart_callback_args_t * p_args);
-#endif`)).concat(gptsOf(mcu).map(gptDecl)).concat(adcOf(mcu)?[adcDecl(adcOf(mcu))]:[]).concat(agtsOf(mcu).map(agtDecl)).concat(iicsOf(mcu).map(iicDecl)).concat(spisOf(mcu).map(t=>spiDecl(t,'SPI','spi_instance_ctrl_t'))).concat(sciSpisOf(mcu).map(t=>spiDecl(t,'SCI','sci_spi_instance_ctrl_t'))).concat(wdtsOf(mcu).map(wdtDecl)).concat(rtcOf(mcu)?[rtcDecl(rtcOf(mcu))]:[]).join('\n');
+#endif`)).concat(gptsOf(mcu).map(gptDecl)).concat(adcOf(mcu)?[adcDecl(adcOf(mcu))]:[]).concat(agtsOf(mcu).map(agtDecl)).concat(iicsOf(mcu).map(iicDecl)).concat(spisOf(mcu).map(t=>spiDecl(t,'SPI','spi_instance_ctrl_t'))).concat(sciSpisOf(mcu).map(t=>spiDecl(t,'SCI','sci_spi_instance_ctrl_t'))).concat(wdtsOf(mcu).map(wdtDecl)).concat(rtcOf(mcu)?[rtcDecl(rtcOf(mcu))]:[]).concat(lpmOf(mcu)?[lpmDecl(lpmOf(mcu))]:[]).join('\n');
  return HEADER('HAL header file')+`#ifndef HAL_DATA_H_
 #define HAL_DATA_H_
 #include <stdint.h>
@@ -813,7 +855,7 @@ const uart_instance_t ${u.name} =
     .p_ctrl        = &${u.name}_ctrl,
     .p_cfg         = &${u.name}_cfg,
     .p_api         = &g_uart_on_sci
-};`;})).concat(gptsOf(mcu).map(gptInstance)).concat(adcOf(mcu)?[adcInstance(adcOf(mcu))]:[]).concat(agtsOf(mcu).map(agtInstance)).concat(iicsOf(mcu).map(iicInstance)).concat(spisOf(mcu).map(spiInstance)).concat(sciSpisOf(mcu).map(sciSpiInstance)).concat(wdtsOf(mcu).map(wdtInstance)).concat(rtcOf(mcu)?[rtcInstance(rtcOf(mcu))]:[]).join('\n');
+};`;})).concat(gptsOf(mcu).map(gptInstance)).concat(adcOf(mcu)?[adcInstance(adcOf(mcu))]:[]).concat(agtsOf(mcu).map(agtInstance)).concat(iicsOf(mcu).map(iicInstance)).concat(spisOf(mcu).map(spiInstance)).concat(sciSpisOf(mcu).map(sciSpiInstance)).concat(wdtsOf(mcu).map(wdtInstance)).concat(rtcOf(mcu)?[rtcInstance(rtcOf(mcu))]:[]).concat(lpmOf(mcu)?[lpmInstance(lpmOf(mcu))]:[]).join('\n');
  return HEADER('HAL source file')+`#include "hal_data.h"
 ${body}${body?'\n':''}void g_hal_init(void) {
 g_common_init();
@@ -1016,6 +1058,8 @@ export function generateRaFiles(mcu,{board}={}){
   // RTC_CFG_OPEN_SET_CLOCK_SOURCE: RASC's "Set Source Clock in Open" — off for the start time "PC 시각" (ra-config.js).
   cfg('r_rtc_cfg.h',moduleCfg('r_rtc_cfg.h','R_RTC_CFG_H_',['#define RTC_CFG_PARAM_CHECKING_ENABLE (BSP_CFG_PARAM_CHECKING_ENABLE)',`#define RTC_CFG_OPEN_SET_CLOCK_SOURCE (${mcu.peripherals?.RTC?.enabled&&mcu.peripherals.RTC.start==='HOST_TIME'?0:1})`])),
   cfg('r_wdt_cfg.h',moduleCfg('r_wdt_cfg.h','R_WDT_CFG_H_',['#define WDT_CFG_PARAM_CHECKING_ENABLE (BSP_CFG_PARAM_CHECKING_ENABLE)',`#define WDT_CFG_REGISTER_START_NMI_SUPPORTED (${mcu.peripherals?.WDT?.enabled&&mcu.peripherals.WDT.reset==='NMI'?1:0})`])),
+  // LPM_CFG_STANDBY_LIMIT 0 (RASC's default): R_LPM_Open leaves SBYCR.SSBY set for a standby mode, so a bare __WFI() enters it too.
+  cfg('r_lpm_cfg.h',moduleCfg('r_lpm_cfg.h','R_LPM_CFG_H_',['#define LPM_CFG_PARAM_CHECKING_ENABLE (BSP_CFG_PARAM_CHECKING_ENABLE)','#define LPM_CFG_STANDBY_LIMIT (0)'])),
   cfg('r_iwdt_cfg.h',moduleCfg('r_iwdt_cfg.h','R_IWDT_CFG_H_',['#define IWDT_CFG_PARAM_CHECKING_ENABLE (BSP_CFG_PARAM_CHECKING_ENABLE)','#define IWDT_CFG_REGISTER_START_NMI_SUPPORTED (0)'])),
   cfg('r_sci_uart_cfg.h',moduleCfg('r_sci_uart_cfg.h','R_SCI_UART_CFG_H_',['#define SCI_UART_CFG_PARAM_CHECKING_ENABLE (BSP_CFG_PARAM_CHECKING_ENABLE)','#define SCI_UART_CFG_FIFO_SUPPORT (0)','#define SCI_UART_CFG_DTC_SUPPORTED (0)','#define SCI_UART_CFG_FLOW_CONTROL_SUPPORT (0)','#define SCI_UART_CFG_RS485_SUPPORT (0)','#define SCI_UART_CFG_IRDA_SUPPORT (0)'])),
   gen('bsp_clock_cfg.h',clockCfg(c,mcu)),
