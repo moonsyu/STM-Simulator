@@ -124,7 +124,7 @@ export class RaPinoutPanel {
   $('ra-pin-props').innerHTML=html;
  }
  change(el){
-  const key=el.dataset.ra;if(!key&&!el.dataset.raSci&&!el.dataset.raGpt&&!el.dataset.raAdc&&!el.dataset.raIic&&!el.dataset.raSpi)return;const pin=this.pin,pins=this.draft.pins;
+  const key=el.dataset.ra;if(!key&&!el.dataset.raSci&&!el.dataset.raSciTransfer&&!el.dataset.raGpt&&!el.dataset.raAdc&&!el.dataset.raIic&&!el.dataset.raSpi)return;const pin=this.pin,pins=this.draft.pins;
   if(key==='function'){if(!el.value)delete pins[pin];else{const old=pins[pin]||{};pins[pin]={function:el.value,...(old.label?{label:old.label}:{})};if(el.value==='IRQ')Object.assign(pins[pin],{edge:'FALLING',pull:'PULLUP',priority:12,callback:`external_irq${RA_IRQ_PINS[pin]}_callback`});if(el.value==='GPIO_Output')Object.assign(pins[pin],{initial:0,drive:'LOW'});if(el.value==='GPIO_Input')pins[pin].pull='NONE';if(el.value==='Peripheral')pins[pin].signal=signalsOf(pin)[0];}}
   else if(el.dataset.raSpi)this.spiValue(el);
   else if(el.dataset.raSciTransfer){const id=pins[pin]?.signal?.split('_')[0];if(id)this.uartTransfer(id,el.dataset.raSciTransfer,el.value);}
