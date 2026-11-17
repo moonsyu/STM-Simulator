@@ -9,6 +9,8 @@ const own=(o,k)=>Object.hasOwn(o,k), truth=v=>!!v;
 const checkedNumber=v=>{if(typeof v!=='number'||!Number.isFinite(v))throw new Error('유한한 숫자가 필요합니다.');return v;};
 const integer=v=>Math.trunc(checkedNumber(v));
 const isArray=v=>v?.kind==='array', isPointer=v=>v?.kind==='pointer';
+// .a.x = 1, .a.y = 2 in one initializer list (parser.js: each is .a = { .x = 1 }): one .a = { .x = 1, .y = 2 }.
+const mergeNested=values=>{const out=[],seen=new Map();for(const v of values){if(v?.kind==='designated'&&v.nested&&v.value?.kind==='initializer'){const at=seen.get(v.key);if(at){at.value.values.push(...v.value.values);continue;}const copy={...v,value:{...v.value,values:[...v.value.values]}};seen.set(v.key,copy);out.push(copy);}else out.push(v);}return out;};
 const LOOP_ITERATION_US=.1,SPIN_LOOPS=32,BUSY_LOOPS=4096,STEP_NS=2;
 // The variable an expression names at its root (i, buf[i], p->n, s.count).
 const rootName=n=>{while(n&&(n.type==='index'||n.type==='member'))n=n.object;return n?.type==='name'?n.name:null;};
@@ -181,7 +183,7 @@ export class Runtime {
     if(n.type==='sizeofExpr'){const type=expressionType(this,n.arg);return type.pointerElements?4*type.length:type.pointer?4:this.typeSize(type.type)*(type.array?type.length:1);}
     // Reading a volatile variable, or one an interrupt has written, counts as polling (the FSP loop rule above).
     if(n.type==='name'){if(own(this.program.functions,n.name))return {kind:'function',name:n.name};const cell=this.cell(n.name);if(cell.volatile||cell.async)this.polls++;return this.get(cell);}
-    if(n.type==='list'){const values=[];for(const v of n.values)values.push(v.type==='designated'?{kind:'designated',key:v.key,index:v.index?integer(yield* this.evaluate(v.index)):undefined,value:yield* this.evaluate(v.value)}:yield* this.evaluate(v));return {kind:'initializer',values};}
+    if(n.type==='list'){const values=[];for(const v of n.values)values.push(v.type==='designated'?{kind:'designated',key:v.key,index:v.index?integer(yield* this.evaluate(v.index)):undefined,value:yield* this.evaluate(v.value),...(v.nested?{nested:true}:{})}:yield* this.evaluate(v));return {kind:'initializer',values};}
     if(n.type==='construct'){const args=[];for(const v of n.args)args.push(yield* this.evaluate(v));if(n.name!=='LiquidCrystal'&&!this.api.constructs?.includes(n.name))throw new Error('지원하지 않는 생성자입니다.');return this.api.construct?.(n.name,args,this)??{kind:'device',name:n.name,args};}
     if(n.type==='cast'){const value=yield* this.evaluate(n.a);if(n.pointer){
       // (type *) 0x08000000: an address has no memory behind it here, unless the adapter stands in for that memory (an
@@ -286,7 +288,7 @@ export class Runtime {
   initialize(type,value,owner=this.scope()){
     if(own(this.program.structs,type)){
       if(value?.kind==='struct')return this.clone(value,owner);
-      const result=this.defaultValue(type,owner);if(value?.kind==='initializer'){const keys=Object.keys(result.fields);if(value.values.length===1&&value.values[0]===0)return result;let at=0;value.values.forEach(v=>{if(v?.kind==='designated'){if(v.key===undefined)throw new Error('구조체 초기값에는 .필드 = 값 형식을 쓰세요.');at=keys.indexOf(v.key);if(at<0)throw new Error(`구조체 필드가 없습니다: ${v.key}`);v=v.value;}if(at>=keys.length)throw new Error('구조체 초기값이 너무 많습니다.');const field=result.fields[keys[at++]];if(result.last!==undefined)result.last=keys[at-1];if(field.value?.kind==='array'){const list=v?.kind==='initializer'?this.arrayValues(v.values):typeof v==='string'?[...v].map(c=>c.charCodeAt(0)).concat(0):[v];if(list.length>field.value.cells.length)throw new Error('구조체 배열 필드 초기값이 너무 많습니다.');list.forEach((x,j)=>field.value.cells[j].value=this.coerce(field.dataType,x));return;}field.value=field.dataType==='pointer'?this.pointer(v):this.initialize(field.dataType,v,owner);});}return result;
+      const result=this.defaultValue(type,owner);if(value?.kind==='initializer'){const keys=Object.keys(result.fields);if(value.values.length===1&&value.values[0]===0)return result;let at=0;mergeNested(value.values).forEach(v=>{if(v?.kind==='designated'){if(v.key===undefined)throw new Error('구조체 초기값에는 .필드 = 값 형식을 쓰세요.');at=keys.indexOf(v.key);if(at<0)throw new Error(`구조체 필드가 없습니다: ${v.key}`);v=v.value;}if(at>=keys.length)throw new Error('구조체 초기값이 너무 많습니다.');const field=result.fields[keys[at++]];if(result.last!==undefined)result.last=keys[at-1];if(field.value?.kind==='array'){const list=v?.kind==='initializer'?this.arrayValues(v.values):typeof v==='string'?[...v].map(c=>c.charCodeAt(0)).concat(0):[v];if(list.length>field.value.cells.length)throw new Error('구조체 배열 필드 초기값이 너무 많습니다.');list.forEach((x,j)=>field.value.cells[j].value=this.coerce(field.dataType,x));return;}field.value=field.dataType==='pointer'?this.pointer(v):this.initialize(field.dataType,v,owner);});}return result;
     }
     if(value?.kind==='initializer')throw new Error('배열 또는 구조체에만 초기값 목록을 사용하세요.');return this.coerce(type,value??this.defaultValue(type,owner));
   }

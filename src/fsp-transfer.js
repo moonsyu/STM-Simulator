@@ -160,7 +160,7 @@ export const TRANSFER_METHODS={
  // ---- DTC (r_dtc.c)
  dtcLengthAssert(r,ptr){for(const i of this.chainOf(r,ptr)){if(i.sm===ADDR.OFFSET||i.dm===ADDR.OFFSET)return E.UNSUPPORTED;if(i.mode!==MODE.NORMAL&&i.length>0x100)return E.ASSERTION;}return E.SUCCESS;},
  dtcSourceCheck(r,ptr){for(const i of this.chainOf(r,ptr)){if(i.sm===ADDR.OFFSET||i.dm===ADDR.OFFSET)return E.UNSUPPORTED;if(isNull(i.src)||isNull(i.dest))return E.ASSERTION;}return E.SUCCESS;},
- dtcSetInfo(r,st,ptr){for(const i of this.chainOf(r,ptr))if(i.mode!==MODE.NORMAL){const cral=i.length&0xff;r.set(i.f.length,((cral<<8)|cral)&0xffff);}st.info=ptr;},
+ dtcSetInfo(r,st,ptr){for(const i of this.chainOf(r,ptr))if(i.mode!==MODE.NORMAL){const cral=i.length&0xff;r.set(i.f.length,((cral<<8)|cral)&0xffff);}st.info=ptr?.kind==='array'?r.pointer(ptr):ptr;},
  dtcEnable(r,st){const err=this.dtcSourceCheck(r,st.info);if(err)return err;st.enabled=true;return E.SUCCESS;},
  dtcVector(st,r,fn){const v=this.vectorIndex(st.event);if(v<0)throw new Error(`${fn}: ${st.event}에 인터럽트 벡터가 없습니다.`);return v;},
  dtcCall(name,args,r){

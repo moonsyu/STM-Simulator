@@ -30,7 +30,7 @@ const enumOf=(tag,name,items)=>`typedef enum ${tag}\n{\n${items.map(([k,v])=>`  
 
 // Object-like macros of the FSP headers that stand for a name or for nothing; the interpreter's preprocessor keeps
 // object-like macros as constants, so these are replaced in the project's text before it (lines stay where they are).
-export const FSP_ALIASES=Object.freeze({FSP_CPP_HEADER:'',FSP_CPP_FOOTER:'',FSP_HEADER:'',FSP_FOOTER:'',BSP_CMSE_NONSECURE_ENTRY:'',BSP_DONT_REMOVE:'',
+export const FSP_ALIASES=Object.freeze({FSP_CPP_HEADER:'',FSP_CPP_FOOTER:'',FSP_HEADER:'',FSP_FOOTER:'',BSP_CMSE_NONSECURE_ENTRY:'',BSP_DONT_REMOVE:'',DTC_TRANSFER_INFO_ALIGNMENT:'',
  IOPORT_CFG_CTRL:'g_ioport_ctrl',IOPORT_CFG_NAME:'g_bsp_pin_cfg',IOPORT_CFG_OPEN:'R_IOPORT_Open'});
 // FSP and generated headers that resolve to the prelude (it has a guard, so including several is fine); the C
 // library headers read as empty.
