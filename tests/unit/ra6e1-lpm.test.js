@@ -10,10 +10,10 @@ import {RA_IRQ_PINS} from '../../src/ra-config.js';
 
 const SYSTEM=0x4001e000,ICU=0x40006000,WDT=0x40083400,RTC=0x40083000,PFS=0x40080800,PORT4=0x40080080;
 const SBYCR=SYSTEM+0x0c,DPSBYCR=SYSTEM+0x400,DPSIER=SYSTEM+0x402,DPSIFR=SYSTEM+0x406,DPSIEGR=SYSTEM+0x40a,RSTSR0=SYSTEM+0x410,WUPEN=ICU+0x1a0,IELSR=n=>ICU+0x300+4*n;
-function chip(){
+function chip(options={}){
  const resets=[],warnings=[],log=[],pins=new Map(),levels={};
  const machine=new Machine({bus:new RaBus()});
- const soc=new Ra6e1(machine,{onReset:r=>resets.push(r),warn:m=>warnings.push(m),lowPower:m=>log.push(m),pinState:(pin,state)=>pins.set(pin,state),digitalIn:pin=>levels[pin]??null},{irqPins:RA_IRQ_PINS});
+ const soc=new Ra6e1(machine,{onReset:r=>resets.push(r),warn:m=>warnings.push(m),lowPower:m=>log.push(m),pinState:(pin,state)=>pins.set(pin,state),digitalIn:pin=>levels[pin]??null},{irqPins:RA_IRQ_PINS,...options});
  const us=n=>{machine.cpu.cycles+=Math.round(n*soc.clock.iclk/1e6);soc.sync();};
  // The core executes WFI and the machine looks for the next event: the mode begins.
  const wfi=()=>{machine.cpu.sleeping=true;machine._nextDeadline();};
@@ -174,6 +174,13 @@ test('SysTick stops in Software Standby and Deep Software Standby (the system cl
  // Should a core exception end Deep Software Standby all the same, the log does not claim a reset.
  const c=chip();c.bus.write8(DPSBYCR,0x80);c.bus.write16(SBYCR,0x8000);c.wfi();c.us(1000);c.wake(15);
  assert.equal(c.log.at(-1),'Deep Software Standby에서 깨어남 · SysTick (1.0 ms 뒤) — 코어 예외라 리셋 없이 이어서 실행합니다');
+});
+
+test('what woke the core is named by the project\'s vector table (any module), else by the event number',()=>{
+ const named=chip({vectorNames:['SCI9_RXI','SCI9_TXI','ICU_IRQ1']});named.irq(1,0x1b7);named.bus.write16(SBYCR,0);
+ named.wfi();named.us(100);named.wake(16+1);assert.equal(named.log[1],'Sleep에서 깨어남 · SCI9_TXI (0.1 ms 뒤)');
+ const plain=chip();plain.irq(1,0x1b7);plain.bus.write16(SBYCR,0);
+ plain.wfi();plain.us(100);plain.wake(16+1);assert.equal(plain.log[1],'Sleep에서 깨어남 · ELC 이벤트 0x1B7 (0.1 ms 뒤)');
 });
 
 test('WFE is not a low power mode entry: with SBYCR.SSBY set the core just waits, the clocks run',()=>{

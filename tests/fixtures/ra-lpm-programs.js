@@ -178,8 +178,27 @@ void rtc_callback(rtc_callback_args_t * p_args)
 const press=(from,to)=>({[from]:s=>s.setPressed({SW1:true}),[to]:s=>s.setPressed({})});
 const lpm=extra=>({enabled:true,mode:'DEEP',wake:[],cancel:[],cancelRising:[],ioKeep:true,power:'DEEPCUT0',...extra});
 const pins=(peripherals,more)=>()=>{const m=raDefaultMcu();m.peripherals=peripherals;Object.assign(m.pins,more);return m;};
-void pins;
 export const LPM_REVIEW={
+ // Sleep ended by an interrupt that is not an IRQ pin, AGT, GPT or RTC (SCI9 transmit): both logs name it SCI9_TXI.
+ uart:{mcu:pins({LPM:lpm({mode:'SLEEP'}),SCI9:{enabled:true,baud:115200,callback:'user_uart9_callback',priority:12}},{P109:{function:'Peripheral',signal:'SCI9_TXD'},P110:{function:'Peripheral',signal:'SCI9_RXD'}}),ms:100,at:{},vars:['woke'],
+  code:HEAD+`
+volatile uint32_t woke = 0;
+void user_uart9_callback(uart_callback_args_t * p_args) { (void) p_args; }
+void external_irq1_callback(external_irq_callback_args_t * p_args) { (void) p_args; }
+void hal_entry(void)
+{
+    R_SCI_UART_Open(&g_uart9_ctrl, &g_uart9_cfg);
+    R_LPM_Open(&g_lpm0_ctrl, &g_lpm0_cfg);
+    R_BSP_SoftwareDelay(10, BSP_DELAY_UNITS_MILLISECONDS);
+    R_SCI_UART_Write(&g_uart9_ctrl, (uint8_t *) "hello", 5);
+    R_LPM_LowPowerModeEnter(&g_lpm0_ctrl);
+    woke = 1;
+    while (1)
+    {
+        R_BSP_SoftwareDelay(10, BSP_DELAY_UNITS_MILLISECONDS);
+    }
+}
+`+WARM_START},
  // __WFE() after R_LPM_Open configured Software Standby: not a mode entry (r_lpm enters with WFI) — AGT0 keeps ticking,
  // and the core's event register lets every second WFE through.
  wfe:{mcu:mcu({LPM:lpm({mode:'STANDBY',wake:['IRQ1']}),AGT0:{enabled:true,period:7,unit:'ms',callback:'agt0_callback',priority:12}}),ms:400,at:press(300,330),vars:['ticks0','wakes','presses'],

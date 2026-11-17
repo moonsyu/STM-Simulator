@@ -208,7 +208,9 @@ export class LowPower {
     const soc = this.soc, mode = this.mode, deferred = this.deferred, nmis = this.deferredNmi, quiet = this.quiet, since = this.since;
     this.thaw(); this.clearMode();
     if (!quiet) {
-      const event = exc >= 16 ? soc.icu.ielsr(exc - 16) & 0x1ff : 0, vector = vectorOf(event);
+      // The interrupt by its vector name: from the project's vector table (soc.options.vectorNames, every module), else
+      // from the event number for the modules known here.
+      const event = exc >= 16 ? soc.icu.ielsr(exc - 16) & 0x1ff : 0, vector = (exc >= 16 && soc.options.vectorNames?.[exc - 16]) || vectorOf(event);
       const source = exc === 2 ? 'NMI' : exc === 15 ? 'SysTick' : exc >= 16 ? (vector ? lpmIrqLabel(vector) : `ELC 이벤트 0x${event.toString(16).toUpperCase().padStart(3, '0')}`) : '이벤트(WFE)';
       this.log.wake(mode, source, soc.nowUs() - since, { core: true });
     }

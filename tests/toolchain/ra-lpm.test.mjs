@@ -106,6 +106,9 @@ test('a Software Standby nothing can end, entered by a bare __WFI(): both engine
 });
 
 // ---- the programs of the review (tests/fixtures/ra-lpm-programs.js LPM_REVIEW)
+test('review: uart — Sleep ended by the SCI9 transmit interrupt: both logs name it by its vector',{skip,timeout:900000},()=>review('uart',emu=>{
+ assert.match(messages(emu)[1],/^Sleep에서 깨어남 · SCI9_TXI \(0\.\d ms 뒤\)$/);assert.equal(emu.session.readVariable('woke'),1);
+}));
 test('review: wfe — __WFE() with Software Standby configured is not a mode entry on either engine',{skip,timeout:900000},()=>review('wfe',emu=>{
  assert.deepEqual(messages(emu),[]);assert.equal(emu.session.readVariable('ticks0'),57,'AGT0 keeps ticking every 7 ms');assert.equal(emu.session.readVariable('wakes'),103,'the event register lets every second WFE through');
 }));
