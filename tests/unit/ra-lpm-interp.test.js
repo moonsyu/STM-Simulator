@@ -210,11 +210,15 @@ test('Sleep and the WDT stop control: "Count Disabled in Low Power Mode" stops t
  assert.ok(counting.session.runtime.resetCount>=1,'no stop control: the WDT underflows 41.9 ms into the sleep');
 });
 
-test('what the interpreter does not run is said: Snooze mode, writing the reset status register',()=>{
+test('Snooze mode is refused with the reason; RSTSR0 and DPSIFR are read and cleared by writing 0',()=>{
  const snooze=open({mcu:lpmMcu(),code:HEAD+'void hal_entry(void)\n{\n    lpm_cfg_t cfg = g_lpm0_cfg;\n    cfg.low_power_mode = LPM_MODE_STANDBY_SNOOZE;\n    R_LPM_Open(&g_lpm0_ctrl, &cfg);\n}\nvoid external_irq1_callback(external_irq_callback_args_t * p_args) { (void) p_args; }\n'+WARM});
  assert.throws(()=>run(snooze.session,1,5),/R_LPM_Open: 내장 해석기는 Snooze 모드\(LPM_MODE_STANDBY_SNOOZE\)를 실행하지 않습니다/);
- const write=open({mcu:lpmMcu(),code:HEAD+'void hal_entry(void)\n{\n    R_SYSTEM->RSTSR0_b.DPSRSTF = 0;\n}\nvoid external_irq1_callback(external_irq_callback_args_t * p_args) { (void) p_args; }\n'+WARM});
- assert.throws(()=>run(write.session,1,5),/R_SYSTEM->RSTSR0: 내장 해석기는 리셋 원인 레지스터를 읽기만 합니다/);
+ // RSTSR0 and DPSIFR0-3 are read and cleared (writing 0) as on the chip: DPSRSTF and DIRQ1F after S1 cancelled the mode.
+ const flags=review('flags').session,v=n=>flags.readVariable(n);
+ assert.deepEqual([v('rstsr0_start'),v('dpsifr0_start'),v('rstsr0_cleared'),v('dpsifr0_cleared'),v('flag_after')],[0x81,0x02,0x01,0,0]);
+ // Writing 1 leaves a flag; the whole RSTSR0_b structure is not assignable.
+ const ones=open({mcu:lpmMcu(),code:HEAD+'volatile uint32_t r = 0;\nvoid hal_entry(void)\n{\n    R_SYSTEM->RSTSR0 = 0xFF;\n    R_SYSTEM->RSTSR0_b.PORF = 1;\n    r = R_SYSTEM->RSTSR0;\n    while (1)\n    {\n        R_BSP_SoftwareDelay(10, BSP_DELAY_UNITS_MILLISECONDS);\n    }\n}\nvoid external_irq1_callback(external_irq_callback_args_t * p_args) { (void) p_args; }\n'+WARM});
+ run(ones.session,1,5);assert.equal(ones.session.readVariable('r'),1,'PORF still set');
  const read=open({mcu:lpmMcu(),code:HEAD+'volatile uint32_t porf = 0;\nvolatile uint32_t rstsr0 = 0;\nvoid hal_entry(void)\n{\n    porf = R_SYSTEM->RSTSR0_b.PORF;\n    rstsr0 = R_SYSTEM->RSTSR0;\n    while (1)\n    {\n        R_BSP_SoftwareDelay(10, BSP_DELAY_UNITS_MILLISECONDS);\n    }\n}\nvoid external_irq1_callback(external_irq_callback_args_t * p_args) { (void) p_args; }\n'+WARM});
  run(read.session,1,5);assert.equal(read.session.readVariable('porf'),1,'power-on');assert.equal(read.session.readVariable('rstsr0'),1);
 });

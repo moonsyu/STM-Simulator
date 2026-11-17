@@ -179,6 +179,44 @@ const press=(from,to)=>({[from]:s=>s.setPressed({SW1:true}),[to]:s=>s.setPressed
 const lpm=extra=>({enabled:true,mode:'DEEP',wake:[],cancel:[],cancelRising:[],ioKeep:true,power:'DEEPCUT0',...extra});
 const pins=(peripherals,more)=>()=>{const m=raDefaultMcu();m.peripherals=peripherals;Object.assign(m.pins,more);return m;};
 export const LPM_REVIEW={
+ // After Deep Software Standby: RSTSR0 and DPSIFR0 say what happened (DPSRSTF, DIRQ1F), and writing 0 clears the flags.
+ flags:{mcu:mcu({LPM:lpm({cancel:['IRQ1']})}),ms:400,at:press(200,230),vars:['rstsr0_start','dpsifr0_start','rstsr0_cleared','dpsifr0_cleared','flag_after'],
+  code:HEAD+`
+volatile uint32_t rstsr0_start = 0;
+volatile uint32_t dpsifr0_start = 0;
+volatile uint32_t rstsr0_cleared = 0xFF;
+volatile uint32_t dpsifr0_cleared = 0xFF;
+volatile uint32_t flag_after = 9;
+void external_irq1_callback(external_irq_callback_args_t * p_args) { (void) p_args; }
+void hal_entry(void)
+{
+    rstsr0_start  = R_SYSTEM->RSTSR0;
+    dpsifr0_start = R_SYSTEM->DPSIFR0;
+    if (1U == R_SYSTEM->RSTSR0_b.DPSRSTF)
+    {
+        R_LPM_IoKeepClear(NULL);
+        R_BSP_RegisterProtectDisable(BSP_REG_PROTECT_OM_LPC_BATT);
+        R_SYSTEM->RSTSR0_b.DPSRSTF = 0;
+        R_SYSTEM->DPSIFR0 = 0;
+        R_BSP_RegisterProtectEnable(BSP_REG_PROTECT_OM_LPC_BATT);
+        rstsr0_cleared  = R_SYSTEM->RSTSR0;
+        dpsifr0_cleared = R_SYSTEM->DPSIFR0;
+        flag_after      = R_SYSTEM->RSTSR0_b.DPSRSTF;
+        R_IOPORT_PinWrite(&g_ioport_ctrl, LED2, BSP_IO_LEVEL_HIGH);
+        while (1)
+        {
+            R_BSP_SoftwareDelay(10, BSP_DELAY_UNITS_MILLISECONDS);
+        }
+    }
+    R_LPM_Open(&g_lpm0_ctrl, &g_lpm0_cfg);
+    R_BSP_SoftwareDelay(100, BSP_DELAY_UNITS_MILLISECONDS);
+    R_LPM_LowPowerModeEnter(&g_lpm0_ctrl);
+    while (1)
+    {
+        R_BSP_SoftwareDelay(10, BSP_DELAY_UNITS_MILLISECONDS);
+    }
+}
+`+WARM_START},
  // IOKEEP hold after Deep Software Standby and a GPT PWM output (LED1 pin, GTIOC6B) started before R_LPM_IoKeepClear:
  // the pin stays as it was while held, and shows the PWM (duty 0.5) once released, 150 ms after the restart.
  holdpwm:{mcu:pins({LPM:lpm({cancel:['IRQ1']}),GPT6:{enabled:true,mode:'PWM',period:1,unit:'kHz',duty:50}},{P408:{function:'Peripheral',signal:'GPT6_GTIOCB',label:'LED1'}}),ms:400,at:press(200,230),vars:['from'],

@@ -106,6 +106,10 @@ test('a Software Standby nothing can end, entered by a bare __WFI(): both engine
 });
 
 // ---- the programs of the review (tests/fixtures/ra-lpm-programs.js LPM_REVIEW)
+test('review: flags — after Deep Software Standby RSTSR0 and DPSIFR0 say why, and writing 0 clears DPSRSTF and DIRQ1F on both engines',{skip,timeout:900000},()=>review('flags',emu=>{
+ const v=n=>emu.session.readVariable(n);
+ assert.deepEqual([v('rstsr0_start'),v('dpsifr0_start'),v('rstsr0_cleared'),v('dpsifr0_cleared'),v('flag_after')],[0x81,0x02,0x01,0,0]);
+}));
 test('review: holdpwm — a GPT PWM started while IOKEEP holds the pins: nothing on the pin until R_LPM_IoKeepClear, the PWM after it',{skip,timeout:900000},()=>review('holdpwm',(emu,interp)=>{
  for(const e of [emu,interp]){assert.deepEqual(e.leds.P408.slice(210,345).filter(v=>v!==0),[],'low while held (restart at 199 ms, released at 349 ms)');assert.equal(e.leds.P408[390],0.5,'PWM duty after the release');}
 }));

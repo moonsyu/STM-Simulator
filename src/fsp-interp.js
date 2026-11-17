@@ -148,7 +148,8 @@ ${RESET_STATUS.map(([k,pos])=>`#define R_SYSTEM_RSTSR1_${k}_Pos (${pos}UL)\n#def
 ${RESET_STATUS0.map(([k,pos])=>`#define R_SYSTEM_RSTSR0_${k}_Pos (${pos}UL)\n#define R_SYSTEM_RSTSR0_${k}_Msk (${hex(1<<pos,1)}UL)`).join('\n')}
 typedef struct st_fsp_interp_rstsr1_b { uint16_t IWDTRF; uint16_t WDTRF; uint16_t SWRF; } FSP_INTERP_RSTSR1_b;
 typedef struct st_fsp_interp_rstsr0_b { uint8_t PORF; uint8_t LVD0RF; uint8_t LVD1RF; uint8_t LVD2RF; uint8_t DPSRSTF; } FSP_INTERP_RSTSR0_b;
-typedef struct st_fsp_interp_system { uint16_t RSTSR1; FSP_INTERP_RSTSR1_b RSTSR1_b; uint8_t RSTSR0; FSP_INTERP_RSTSR0_b RSTSR0_b; } FSP_INTERP_SYSTEM;
+typedef struct st_fsp_interp_system { uint16_t RSTSR1; FSP_INTERP_RSTSR1_b RSTSR1_b; uint8_t RSTSR0; FSP_INTERP_RSTSR0_b RSTSR0_b; uint8_t DPSIFR0; uint8_t DPSIFR1; uint8_t DPSIFR2; uint8_t DPSIFR3; } FSP_INTERP_SYSTEM;
+${enumOf('e_bsp_reg_protect','bsp_reg_protect_t',['CGC','OM_LPC_BATT','LVD','SAR'].map((k,i)=>['BSP_REG_PROTECT_'+k,i]))}
 #define FSP_PARAMETER_NOT_USED(p) ((void) (p))
 #define BSP_IRQ_DISABLED (0xFF)
 #define FSP_INVALID_VECTOR ((IRQn_Type) -33)
@@ -306,7 +307,7 @@ export class FspAdapter {
   this.pclkd=raClockHz(this.config);this.pclkb=raClockHz(this.config,'pclkb');
   this.pending=[];this.active=[];this.seq=0;this.dispatched=0;this.serials=new Map();this.states=new Map();this.peripheralPins=new Set();this.warned=new Set();this.names=null;this.activeIic=null;this.shortWait=0;
   // Reset cause (RSTSR1) and the reason of the reset this adapter's program ends with (session.js passes it on).
-  this.rstsr1=0;this.rstsr0=1;this.resetCause=null;
+  this.rstsr1=0;this.rstsr0=1;this.dpsifr=0;this.resetCause=null;
   // Low power modes (R_LPM_*): what r_lpm leaves in the registers (SBYCR.SSBY, WUPEN, DPSBYCR, DPSIER, DPSIEGR; `set` once
   // a mode was configured since the program started), the mode the program is in now (`low`), and the I/O hold after a
   // Deep Software Standby with IOKEEP (`hold`: the pins as they were, and what the program writes meanwhile).
@@ -329,7 +330,7 @@ export class FspAdapter {
   if(old.low?.rtcStopped)this.rtcDev?.start();
   if(pin)return;
   const o=old.lpmReg;Object.assign(this.lpmReg,{dpsby:o.dpsby,deepcut:o.deepcut,iokeep:o.iokeep,dpsier:o.dpsier,dpsiegr:o.dpsiegr});
-  this.hold=old.hold;this.heldPins=old.heldPins;
+  this.hold=old.hold;this.heldPins=old.heldPins;this.dpsifr=old.dpsifr;
   if(this.hold&&this.heldPins&&runtime)for(const [name,g]of this.heldPins)runtime.gpio[name]={...g};
  }
  // Program start (power-on or after a reset): an auto-start watchdog (OFS0) counts from here.
@@ -344,8 +345,13 @@ export class FspAdapter {
   const name=key.slice(0,6),cell=(value,dataType)=>({value,owner:{alive:true},constant:true,readOnly:RSTSR_READ_ONLY(name),dataType});
   if(key==='RSTSR1')return cell(this.rstsr1,'uint16_t');
   if(key==='RSTSR1_b')return cell({kind:'struct',type:'FSP_INTERP_RSTSR1_b',fields:Object.fromEntries(RESET_STATUS.map(([k,pos])=>[k,cell((this.rstsr1>>pos)&1,'uint16_t')]))});
-  if(key==='RSTSR0')return cell(this.rstsr0,'uint8_t');
-  if(key==='RSTSR0_b')return cell({kind:'struct',type:'FSP_INTERP_RSTSR0_b',fields:Object.fromEntries(RESET_STATUS0.map(([k,pos])=>[k,cell((this.rstsr0>>pos)&1,'uint8_t')]))});
+  // RSTSR0 (PORF, DPSRSTF) and DPSIFR0-3 (what cancelled Deep Software Standby) are the adapter's state itself, so they
+  // are written as on the chip: writing 0 to a flag clears it, writing 1 leaves it.
+  const live=(read,write,dataType)=>({get value(){return read();},set value(v){write(Number(v)>>>0);},owner:{alive:true},constant:false,dataType});
+  if(key==='RSTSR0')return live(()=>this.rstsr0,v=>{this.rstsr0&=v&0xff;},'uint8_t');
+  if(key==='RSTSR0_b')return cell({kind:'struct',type:'FSP_INTERP_RSTSR0_b',fields:Object.fromEntries(RESET_STATUS0.map(([k,pos])=>[k,live(()=>(this.rstsr0>>pos)&1,v=>{if(!(v&1))this.rstsr0&=~(1<<pos);},'uint8_t')]))});
+  const flag=/^DPSIFR([0-3])$/.exec(key);
+  if(flag){const sh=8*Number(flag[1]);return live(()=>(this.dpsifr>>>sh)&0xff,v=>{this.dpsifr=(this.dpsifr&~((~v&0xff)<<sh))>>>0;},'uint8_t');}
   return null;
  }
  update(){}
@@ -822,7 +828,7 @@ export class FspAdapter {
  /** An RTC or AGT request at its instant, whether or not an interrupt is set up for it: an enabled cancel source ends Deep Software Standby. */
  lpmRequest(r,irq){
   const low=this.low;if(low?.mode!=='DEEP'||low.cancel)return;
-  const name=lpmCancelOfIrq(irq);if(name&&(this.lpmReg.dpsier>>>RA_LPM_CANCEL_BITS[name])&1)low.cancel=lpmCancelLabel(name);
+  const name=lpmCancelOfIrq(irq);if(name&&(this.lpmReg.dpsier>>>RA_LPM_CANCEL_BITS[name])&1){low.cancel=lpmCancelLabel(name);low.cancelBit=RA_LPM_CANCEL_BITS[name];}
  }
  // What stops in a mode (as emu/ra6e1/lpm.js freeze): a watchdog with its stop control in Sleep; in Software Standby the
  // WDT, the GPT timers and an AGT counting PCLKB; in Deep Software Standby also the IWDT, an AGT unless it counts LOCO
@@ -905,8 +911,10 @@ export class FspAdapter {
   const pins=lpmCancelNames(reg.dpsier).filter(n=>/^IRQ/.test(n)).map(n=>{const ch=Number(n.slice(3)),pin=raDsPin(ch);return pin?{name:n,pin,rising:(reg.dpsiegr>>>ch)&1,level:r.inputLevel(pin)}:null;}).filter(Boolean);
   while(!low.cancel){
    yield .1;
-   for(const p of pins){const level=r.inputLevel(p.pin);if(level===p.level)continue;p.level=level;if(level===p.rising){low.cancel=lpmCancelLabel(p.name);break;}}
+   for(const p of pins){const level=r.inputLevel(p.pin);if(level===p.level)continue;p.level=level;if(level===p.rising){low.cancel=lpmCancelLabel(p.name);low.cancelBit=RA_LPM_CANCEL_BITS[p.name];break;}}
   }
+  // DPSIFR: the flag of what cancelled the mode (r_lpm cleared the flags before the WFI).
+  this.dpsifr=(1<<low.cancelBit)>>>0;
   this.hold=!!reg.iokeep;this.heldPins=this.hold?new Map(Object.entries(r.gpio).map(([pin,g])=>{const copy={...g};delete copy.pwm;return [pin,copy];})):null;this.heldWrites=new Map();
   this.lowLog.wake('DEEP',low.cancel,r.microTime-low.since,{hold:this.hold});
   this.resetCause='DEEP_STANDBY';
@@ -926,7 +934,9 @@ const HANDLERS={
  R_IOPORT_PinRead(args,r,fn){if(!this.ioport(args,r,fn))return FSP.NOT_OPEN;this.out(args[2],r,r.call('digitalRead',[this.pin(args[1],fn)]),fn);return FSP.SUCCESS;},
  R_IOPORT_PortRead(args,r,fn){if(!this.ioport(args,r,fn))return FSP.NOT_OPEN;const port=int(Number(args[1])>>8,0,9,`${fn} 포트`);let value=0;for(let bit=0;bit<16;bit++){const pin=`P${port}${pad(bit)}`;if(RA6E1_PORTS.includes(pin)&&r.call('digitalRead',[pin]))value|=1<<bit;}this.out(args[2],r,value,fn);return FSP.SUCCESS;},
  R_IOPORT_PortWrite(args,r,fn){if(!this.ioport(args,r,fn))return FSP.NOT_OPEN;const port=int(Number(args[1])>>8,0,9,`${fn} 포트`),value=Number(args[2]),mask=Number(args[3]);for(let bit=0;bit<16;bit++){const pin=`P${port}${pad(bit)}`;if(mask&(1<<bit)&&RA6E1_PORTS.includes(pin))this.pinWrite(r,pin,(value>>bit)&1,fn);}return FSP.SUCCESS;},
- R_BSP_PinAccessEnable(){return 0;},R_BSP_PinAccessDisable(){return 0;},R_BSP_IrqStatusClear(){return 0;},
+ R_BSP_PinAccessEnable(){return 0;},R_BSP_PinAccessDisable(){return 0;},
+ // The register write protection (PRCR) around a write of RSTSR0 or DPSIFR: nothing to do here.
+ R_BSP_RegisterProtectEnable(){return 0;},R_BSP_RegisterProtectDisable(){return 0;},R_BSP_IrqStatusClear(){return 0;},
  R_BSP_PinWrite(args,r,fn){this.pinWrite(r,this.pin(args[0],fn),args[1]?1:0,fn);return 0;},
  R_BSP_PinRead(args,r,fn){return r.call('digitalRead',[this.pin(args[0],fn)]);},
  R_BSP_PinCfg(args,r,fn){this.applyPinCfg(r,this.pin(args[0],fn),Number(args[1])>>>0,fn);return 0;},
