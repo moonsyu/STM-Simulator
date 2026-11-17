@@ -2,7 +2,7 @@
 import {pinSearch,fitView} from './app-canvas.js';
 import {running,setSaveState,autosave,log,checkpoint,changed,tab} from './app-core.js';
 import {syncEditor} from './app-editor.js';
-import {stop} from './app-run.js';
+import {stop,keepDataFlash} from './app-run.js';
 import {state} from './app-state.js';
 import {refresh} from './app-view.js';
 import {HAL_EXAMPLES,feedback,uartLines,monitor,svg,layout} from './app.js';
@@ -41,8 +41,10 @@ export function filterExamples(){
  $('hal-example').innerHTML='<option value="">'+(total+raRows.length?`예제 선택… (${total+raRows.length})`:'검색 결과 없음')+'</option>'+raGroup+groups.map(g=>`<optgroup label="${esc(g.b.label)}" data-count="${g.count}">${g.html}</optgroup>`).join('');
  $('hal-example-count').textContent=`${total} / ${Object.keys(HAL_EXAMPLES).length+searchLectureExamples('').length}`;
 }
-export function replaceProject(p,{preserveWorkspace=false}={}){if(running())stop();state.firmware=null;state.project=validateProject(p);feedback.clear('save');setSaveState('저장 중…','saving');state.selection=null;state.pending=null;state.drag=null;state.mode='select';state.pressed={};state.lastWarnings='';uartLines.clear();state.searchSelectedId=null;$('pin-search').value='';pinSearch();fitView();state.selection=null;state.pending=null;state.drag=null;$('preview-layer').innerHTML='';state.undoStack=[];state.redoStack=[];state.status='stopped';state.runtime=null;state.session=null;monitor.clear();state.result=null;state.simTime=0;state.dirty=false;state.lastCodeCheckpoint=0;state.sourceFile='main.c';syncEditor();state.ide?.reset({preserveWorkspace});autosave();refresh();log('회로를 열었습니다: '+state.project.name);}
-export function requestReplace(action){if(state.ide?.nativeBusy()){log('빌드·실행·디버그를 정지한 뒤 프로젝트를 변경하세요.','error');return;}if(state.dirty){state.replaceAction=action;$('replace-dialog').showModal();}else action();}
+// A run that stopped on an error still holds its data flash: it goes into the project being left (requestReplace asks
+// to save it when that makes the project unsaved).
+export function replaceProject(p,{preserveWorkspace=false}={}){if(running())stop();else keepDataFlash();state.firmware=null;state.project=validateProject(p);feedback.clear('save');setSaveState('저장 중…','saving');state.selection=null;state.pending=null;state.drag=null;state.mode='select';state.pressed={};state.lastWarnings='';uartLines.clear();state.searchSelectedId=null;$('pin-search').value='';pinSearch();fitView();state.selection=null;state.pending=null;state.drag=null;$('preview-layer').innerHTML='';state.undoStack=[];state.redoStack=[];state.status='stopped';state.runtime=null;state.session=null;monitor.clear();state.result=null;state.simTime=0;state.dirty=false;state.lastCodeCheckpoint=0;state.sourceFile='main.c';syncEditor();state.ide?.reset({preserveWorkspace});autosave();refresh();log('회로를 열었습니다: '+state.project.name);}
+export function requestReplace(action){if(state.ide?.nativeBusy()){log('빌드·실행·디버그를 정지한 뒤 프로젝트를 변경하세요.','error');return;}if(!running())keepDataFlash();if(state.dirty){state.replaceAction=action;$('replace-dialog').showModal();}else action();}
 // A lecture example replaces the circuit (Ctrl+Z restores it) and opens the board program.
 export function applyLecture(id){
  try{const applied=applyLectureExample(id);checkpoint();state.project=applied.project;state.sourceFile=applied.file;state.runtime=null;state.session=null;state.result=null;state.status='stopped';state.simTime=0;state.pressed={};state.selection=null;state.pending=null;state.drag=null;state.mode='select';state.lastWarnings='';$('preview-layer').innerHTML='';fitView();monitor.clear();uartLines.clear();syncEditor();changed();tab('code');

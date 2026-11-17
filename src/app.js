@@ -60,7 +60,7 @@ import {save,open,onFileInputChange,onMainExportClick} from './app-files.js';
 import {refresh,updateReadouts,onSoundClick} from './app-view.js';
 import {copyCircuit,removeSelected,rotateSelected,addPart,freeSpot,addDevboard,setWireColor,onBoardResetConfirmClick} from './app-circuit.js';
 import {clickEndpoint,point,viewUpdate,release,zoom,fitView,pinSearch,focusPin,onSvgDblclick,onSvgPointermove,onSvgPointerdown,onSvgContextmenu} from './app-canvas.js';
-import {recompute,updateRunScope,initializeRuntime,resetBoard,recordSimulation,resetRuntime,stop,cancelStart,startRun,ensureFirmware,openElf,debugCommand,runCommand,shellDebugCommand} from './app-run.js';
+import {recompute,updateRunScope,initializeRuntime,resetBoard,recordSimulation,resetRuntime,stop,cancelStart,startRun,ensureFirmware,openElf,debugCommand,runCommand,shellDebugCommand,keepDataFlash} from './app-run.js';
 import {onWindowKeydown} from './app-keyboard.js';
 
 export const svg=$('circuit');
@@ -106,7 +106,8 @@ state.exampleBoard='all';try{state.exampleBoard=localStorage.getItem('stm-simula
 document.querySelectorAll('[data-example-board]').forEach(button=>button.addEventListener('click',()=>{state.exampleBoard=button.dataset.exampleBoard;try{localStorage.setItem('stm-simulator.example-board',state.exampleBoard);}catch{}filterExamples();}));
 $('hal-example-search').oninput=filterExamples;filterExamples();
 export const uartLines=new Map();
-window.addEventListener('beforeunload',event=>{try{flushAutosave();}catch{log('자동 저장에 실패했습니다. 파일로 저장한 뒤 종료해 주세요.','error');if(state.dirty){event.preventDefault();event.returnValue=false;}}});
+// The data flash a run (still going, or stopped on an error) left goes into the project before it is saved.
+window.addEventListener('beforeunload',event=>{try{keepDataFlash();}catch(error){log('데이터 플래시 저장 실패: '+error.message,'error');}try{flushAutosave();}catch{log('자동 저장에 실패했습니다. 파일로 저장한 뒤 종료해 주세요.','error');if(state.dirty){event.preventDefault();event.returnValue=false;}}});
 $('sound').onclick=onSoundClick;
 svg.addEventListener('pointerdown',onSvgPointerdown);
 svg.addEventListener('pointermove',onSvgPointermove);
@@ -131,7 +132,7 @@ export const firmwareKey=()=>JSON.stringify([state.project.code,state.project.fi
 // Other STM32 boards that run this time, and their ELFs for the emulator (built from each board's own view).
 export const runStm32=()=>{const scope=runScope();return scope==='stm32'?[]:stm32Boards(state.project).filter(p=>scope==='all'||scope===p.id);};
 state.boardElfs={};state.boardElfKeys={};
-$('step').onclick=()=>{if(!state.runtime||state.status==='error'){if(state.ide?.emulator()||state.ide?.gccSimulation?.(true)){void startRun({}).then(ok=>{if(ok){state.status='paused';refresh();}});return;}initializeRuntime();}else {try{state.simTime+=20;state.result=state.session.tick(state.simTime);recompute();}catch(e){state.status='error';log(e.message,'error');}}refresh();};
+$('step').onclick=()=>{if(!state.runtime||state.status==='error'){if(state.ide?.emulator()||state.ide?.gccSimulation?.(true)){void startRun({}).then(ok=>{if(ok){state.status='paused';refresh();}});return;}initializeRuntime();}else {try{state.simTime+=20;state.result=state.session.tick(state.simTime);recompute();}catch(e){state.status='error';log(e.message,'error');keepDataFlash();}}refresh();};
 setInterval(()=>{
  if(state.status!=='running')return;
  try{state.simTime+=20;state.result=state.session.tick(state.simTime);recompute();
@@ -139,7 +140,7 @@ setInterval(()=>{
    if(state.runtime.finished&&state.runtime.debug.enabled){state.status='paused';log('프로그램이 종료되었습니다. 정지 버튼으로 편집을 재개하세요.');refresh();state.ide?.debugView();return;}
    updateSimulationSvg(svg,state.project,state.result,state.pressed);updateReadouts();
    if(state.status==='error')refresh();
- }catch(e){state.result=state.session?.viewResult??state.result;state.status='error';log(e.message,'error');refresh();}
+ }catch(e){state.result=state.session?.viewResult??state.result;state.status='error';log(e.message,'error');keepDataFlash();refresh();}
 },20);
 if($('tool-select'))$('tool-select').onclick=()=>setMode('select');$('delete').onclick=removeSelected;$('rotate').onclick=rotateSelected;$('undo').onclick=()=>editUndo();$('redo').onclick=()=>editUndo(true);
 document.querySelectorAll('[data-add]').forEach(b=>b.onclick=()=>{if(running())return;const type=b.dataset.add;if(type==='board'){

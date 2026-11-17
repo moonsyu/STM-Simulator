@@ -122,6 +122,36 @@ test('New Stack → Storage → Flash (r_flash_hp): Properties and Summary; the 
  }finally{await s.close();}
 });
 
+// The counter, then a read past the data flash: the run stops on an error right after it wrote the count.
+const FAILING_CODE=COUNTER_CODE.replace('    printf("boot %lu\\n", (unsigned long) count);\n','    printf("boot %lu\\n", (unsigned long) count);\n    count = *(volatile uint8_t *) 0x08002000U;\n');
+const savedFlash=win=>win.evaluate(()=>JSON.parse(localStorage.getItem('stm32lab.project.v2')||'{}').dataFlash??null);
+const savedCode=win=>win.evaluate(()=>JSON.parse(localStorage.getItem('stm32lab.project.v2')||'{}').code);
+
+test('a run that stops on an error keeps its data flash at once; undo of a code edit does not bring an older count back',{timeout:240000},async()=>{
+ const s=await launch();
+ try{
+  const {win}=s;
+  await newRaProject(win);await openStacks(win);
+  await win.selectOption('#ra-stack-add','FLASH');await win.click('[data-ra-add]');await win.waitForSelector('[data-ra-stack="FLASH"]');
+  await win.click('#ra-pinout-apply');await win.waitForFunction(()=>!document.getElementById('ra-pinout-dialog').open);
+  assert.notEqual(FAILING_CODE,COUNTER_CODE);await setCode(win,FAILING_CODE);
+  // The run stops on the read past the data flash; what it wrote is in the project without stopping or running again.
+  await win.keyboard.press('Control+F5');await printed(win,'boot 1');await stopped(win);
+  assert.match(await consoleText(win),/데이터 플래시\(0x08000000~0x08001FFF\) 밖 0x08002000에 1바이트로 접근했습니다/);
+  assert.match(await consoleText(win),/데이터 플래시 내용\(4바이트\)을 프로젝트에 저장했습니다/);
+  await win.waitForFunction(()=>JSON.parse(localStorage.getItem('stm32lab.project.v2')||'{}').dataFlash?.[0]?.hex==='01000000');
+  // An edit (its own undo step), a second run that leaves 2, then undo of the edit: the code goes back, the count does not.
+  await win.waitForTimeout(1200);await setCode(win,FAILING_CODE+'\n/* edited */\n');
+  await win.keyboard.press('Control+F5');await printed(win,'boot 2');await stopped(win);
+  await win.waitForFunction(()=>JSON.parse(localStorage.getItem('stm32lab.project.v2')||'{}').dataFlash?.[0]?.hex==='02000000');
+  await win.evaluate(()=>document.getElementById('undo').click());
+  await win.waitForFunction(code=>JSON.parse(localStorage.getItem('stm32lab.project.v2')||'{}').code===code,FAILING_CODE);
+  assert.deepEqual(await savedFlash(win),[{at:0,hex:'02000000'}]);assert.equal(await savedCode(win),FAILING_CODE);
+  await win.keyboard.press('Control+F5');await printed(win,'boot 3');await stopped(win);
+  assert.deepEqual(s.errors,[]);
+ }finally{await s.close();}
+});
+
 test('ra_flash_counter on the RA6E1 emulator (ARM GCC + FSP): the count goes on across stop/run without a new build, and across the S1 reset',{timeout:300000,skip:!toolchain&&'ARM GCC / Renesas FSP not installed'},async()=>{
  const s=await launch({simEngine:'gcc'});
  try{
