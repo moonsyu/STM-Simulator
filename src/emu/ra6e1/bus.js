@@ -4,6 +4,7 @@
 // Cortex-M33 has no bit-band. Same interface as the STM32 Bus (fast CPU paths, slow device paths, debugger peek/poke,
 // ELF loading), so the CPU, machine and debugger use it unchanged.
 import { Bus, BusFaultSignal } from '../bus.js';
+import { RaDataFlash } from '../../ra-data-flash.js';
 
 export const RA_FLASH_SIZE = 0x100000;
 export const RA_SRAM_BASE = 0x20000000;
@@ -24,6 +25,9 @@ export class RaBus extends Bus {
     this.sram = new Uint8Array(sbuf); this.sram16 = new Uint16Array(sbuf); this.sram32 = new Int32Array(sbuf); this.sramDV = new DataView(sbuf);
     const dbuf = new ArrayBuffer(RA_DATA_FLASH_SIZE + 8);
     this.dataFlash = new Uint8Array(dbuf); this.dataFlash.fill(0xff); this.dataFlashDV = new DataView(dbuf);
+    // The data flash contents with their blank state (erased units): the flash sequencer model (flash.js) programs
+    // and erases through it, and the program reads the bytes here. `onDataFlashRead(offset, size)`: a read by the program.
+    this.dataFlashStore = new RaDataFlash(this.dataFlash); this.onDataFlashRead = null;
     const obuf = new ArrayBuffer(RA_OPTION_SETTING_SIZE + 8);
     this.optionBytes = new Uint8Array(obuf); this.optionBytes.fill(0xff); this.optionDV = new DataView(obuf);
   }
@@ -72,7 +76,10 @@ export class RaBus extends Bus {
   slowRead(a, size) {
     a >>>= 0;
     const r = this.region(a);
-    if (r) return size === 4 ? r[0].getUint32(r[1], true) : size === 2 ? r[0].getUint16(r[1], true) : r[0].getUint8(r[1]);
+    if (r) {
+      if (r[0] === this.dataFlashDV && this.onDataFlashRead !== null) this.onDataFlashRead(r[1], size);
+      return size === 4 ? r[0].getUint32(r[1], true) : size === 2 ? r[0].getUint16(r[1], true) : r[0].getUint8(r[1]);
+    }
     if ((a >>> 16) === (OPTION_BASE >>> 16)) return this.optionRead(a, size);
     const e = this.find(a);
     if (e === null) throw new BusFaultSignal(a, false, size);
@@ -112,7 +119,8 @@ export class RaBus extends Bus {
     addr >>>= 0;
     for (let i = 0; i < bytes.length; i++) {
       const a = (addr + i) >>> 0, r = this.region(a);
-      if (r) r[0].setUint8(r[1], bytes[i]);
+      if (r && r[0] === this.dataFlashDV) this.dataFlashStore.load(r[1], bytes[i]); // an image's data flash contents: programmed units
+      else if (r) r[0].setUint8(r[1], bytes[i]);
       else if ((a >>> 16) === (OPTION_BASE >>> 16)) { const o = a - RA_OPTION_SETTING; if (o >= 0 && o < RA_OPTION_SETTING_SIZE) this.optionBytes[o] = bytes[i]; }
       else this.poke(a, bytes[i], 1);
     }
@@ -123,7 +131,7 @@ export class RaBus extends Bus {
   }
   resetMemory({ keepFlash = true } = {}) {
     this.sram.fill(0);
-    if (!keepFlash) { this.flash.fill(0xff); this.dataFlash.fill(0xff); this.optionBytes.fill(0xff); }
+    if (!keepFlash) { this.flash.fill(0xff); this.dataFlashStore.clear(); this.optionBytes.fill(0xff); }
   }
   isNormalMemory(a) { return this.region(a >>> 0) !== null; }
 }

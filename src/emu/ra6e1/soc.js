@@ -15,6 +15,7 @@ import { Iic } from './iic.js';
 import { Rspi } from './spi.js';
 import { Watchdog } from './wdt.js';
 import { Rtc } from './rtc.js';
+import { Faci } from './flash.js';
 import { EXC_NMI } from '../scs.js';
 import { RA_PERIPHERAL_PINS, RA_SCI_CHANNELS, RA_GPT_CHANNELS, RA_AGT_CHANNELS, RA_IIC_CHANNELS, raPsel } from '../../ra-config.js';
 
@@ -23,6 +24,7 @@ export const RA_BASES = {
   SRAM: 0x40002000, BUS: 0x40003000, DTC: 0x40005400, ICU: 0x40006000, CPSCU: 0x40008000, DEBUG: 0x4001b000,
   FCACHE: 0x4001c000, SYSTEM: 0x4001e000, PORT: 0x40080000, PFS: 0x40080800, PMISC: 0x40080d00, ELC: 0x40082000,
   MSTP: 0x40084000, RTC: 0x40083000, CACHE: 0x40007000, PSCU: 0x400e0000, IWDT: 0x40083200, WDT: 0x40083400,
+  FACI_CMD: 0x407e0000, FACI: 0x407fe000,
 };
 // ELC event numbers (FSP bsp_elc.h, RA6E1): ICU IRQ0..15 are 0x001..0x010.
 export const ELC_EVENT_ICU_IRQ = n => 0x001 + n;
@@ -61,6 +63,7 @@ class System extends RegisterFile {
         0x38: [0x00, 1], // MOCOCR: running
         0x480: [0x01, 1], // SOSCCR: stopped
         0x490: [0x00, 1], // LOCOCR: running
+        0x416: [0x02, 1], // FWEPROR: flash program/erase disabled (FLWE 10b) until software writes 01b
       },
       onWrite: (off, size, before, v) => { if ([0x20, 0x26, 0x28, 0x2a, 0x36].includes(off)) this.clocksChanged(); this.resetStatusWrite(off, size, v); },
       onRead: (off, size) => {
@@ -304,6 +307,9 @@ export class Ra6e1 {
     for (const ch of [0, 1]) this.spis['SPI' + ch] = this.rspis[ch] = new Rspi(this, ch);
     this.wdt = new Watchdog(this, 'WDT'); this.iwdt = new Watchdog(this, 'IWDT');
     this.rtc = new Rtc(this);
+    // Flash sequencer (FACI) and the data flash it programs (flash.js); the bus tells it when the program reads the area.
+    this.dataFlash = this.bus.dataFlashStore; this.faci = new Faci(this);
+    this.bus.onDataFlashRead = (offset, size) => this.faci.dataRead(offset, size);
     const devices = [
       [RA_BASES.SYSTEM, 0x700, this.system],
       [RA_BASES.PORT, 0x1000, this.ports],
@@ -325,7 +331,8 @@ export class Ra6e1 {
       ...RA_AGT_CHANNELS.map(ch => [0x400e8000 + ch * 0x100, 0x100, this.agts[ch]]),
       ...RA_IIC_CHANNELS.map(ch => [0x4009f000 + ch * 0x100, 0x100, this.iics[ch]]),
       ...[0, 1].map(ch => [0x4011a000 + ch * 0x100, 0x100, this.rspis[ch]]),
-      [RA_BASES.CACHE, 0x400, plain('CACHE', 0x400)],
+      // C-cache: CCAFCT (0x4), the flush r_flash_hp asks for after data flash P/E, finishes at once (reads back 0).
+      [RA_BASES.CACHE, 0x400, new RegisterFile(this, 'CACHE', 0x400, { onRead: off => (off === 0x4 ? 0 : undefined) })],
       [RA_BASES.IWDT, 0x100, this.iwdt],
       [RA_BASES.WDT, 0x100, this.wdt],
       // RTC (calendar, periodic, alarm, carry; rtc.js). It keeps its time across an MCU reset.
@@ -344,6 +351,11 @@ export class Ra6e1 {
       tick: () => soc.sync(), nextEvent: () => soc.scheduler.next() + soc.cycleOffset, reset: () => soc.machineReset(),
     };
     this.machine.map(0x40000000, 0x400000, router, 'RA6E1 peripherals');
+    // The FACI lies above the other peripherals: its registers at 0x407F_E000 and the command-issuing area at
+    // 0x407E_0000. They are mapped on their own (the SoC resets the model with the other peripherals).
+    const faci = this.faci; this.peripherals.set(faci.name, faci);
+    this.machine.map(RA_BASES.FACI, 0x400, { name: 'FACI', read: (off, size) => (off < 0x100 ? faci.read(off, size) : 0), write: (off, v, size) => { if (off < 0x100) faci.write(off, v, size); }, peek: (off, size) => (off < 0x100 ? faci.peek(off, size) : 0) }, 'RA6E1 FACI');
+    this.machine.map(RA_BASES.FACI_CMD, 0x400, { name: 'FACI_CMD', read: () => 0, write: (off, v, size) => { if (off === 0) faci.command(v, size); }, peek: () => 0 }, 'RA6E1 FACI command area');
     void BusFaultSignal;
     this.republishAll();
   }
@@ -359,6 +371,8 @@ export class Ra6e1 {
   raiseEvent(ev) { this.icu.raise(ev); }
   /** An IIC channel in the module-stop state (MSTPCRB bit 9 - channel, bsp_module_stop.h; set at reset and by R_BSP_MODULE_STOP in a driver's Close). */
   iicStopped(channel) { return !!(this.mstp.peek(0x4, 4) & (1 << (9 - channel))); }
+  /** FWEPROR.FLWE = 01b: flash programming and erasure are permitted (r_flash_hp flash_hp_init sets it). */
+  flashWriteEnabled() { return (this.system.get(0x416, 1) & 3) === 1; }
   /** Whether anything consumes event `ev`, so a model schedules only what someone observes. */
   listens(ev) { return this.icu.linked(ev); }
   peripheral(name) { return this.peripherals.get(name); }
