@@ -281,3 +281,18 @@ test('ra_flash_counter: the real r_flash_hp blank-checks, erases and programs th
  const uart=[],interp=new SimulationSession(saved,{uart:e=>uart.push(e)});for(let t=20;t<=200;t+=20)interp.tick(t);
  assert.equal(sci9({uart}),'boot count = 3\r\n');assert.deepEqual(interp.dataFlash.encode(),[{at:0,hex:'03000000'}]);
 });
+
+// Feature 36: the real r_elc, r_dtc, r_adc (ELC trigger) and r_sci_uart with its transmit DTC.
+test('ra_elc_adc_dtc: GPT1 overflows start ADC0 scans through the ELC, the DTC fills 16 samples, then the ADC callback prints the average by the UART\'s DTC',()=>{
+ const {session,log}=open(fixture('ra_elc_adc_dtc'));
+ runUntil(session,500);
+ assert.equal(session.readVariable('blocks'),3,'a block every 160 ms (16 x 10 ms)');
+ assert.equal(sci9(log),'block 1: 1649 mV\r\nblock 2: 1649 mV\r\nblock 3: 1649 mV\r\n');
+ const {elc,dtc,adc0}=session.soc;
+ assert.equal(elc.enabled(),true);assert.equal(elc.elsr[8],0xcf,'ELSR8 (ADC0) ← GPT1 COUNTER OVERFLOW');assert.ok(elc.links>=48);
+ assert.equal(adc0.elcScans,adc0.scans,'every scan was started by the ELC');
+ // One activation per scan on ADC0_SCAN_END, 17 on SCI9_TXI per line (the CPU writes the first of its 18 bytes).
+ assert.equal(dtc.activations,adc0.scans+3*17);
+ assert.deepEqual([...session.soc.unknown.keys()],[],'no register outside the model');assert.deepEqual(session.warnings,[]);
+ assert.ok(session.gpio.P407.value>1.65,'LED2 after an odd number of blocks');
+});
