@@ -106,6 +106,18 @@ test('a Software Standby nothing can end, entered by a bare __WFI(): both engine
 });
 
 // ---- the programs of the review (tests/fixtures/ra-lpm-programs.js LPM_REVIEW)
+test('review: isr — R_LPM_LowPowerModeEnter in an interrupt callback enters Deep Software Standby; S1 again resets the MCU',{skip,timeout:900000},()=>review('isr',emu=>{
+ assert.deepEqual(emu.session.resets.map(r=>r.reason),['DEEP_STANDBY']);assert.equal(emu.session.readVariable('from'),1);assert.equal(emu.session.readVariable('after'),0,'the callback did not go on');
+ assert.match(messages(emu)[0],/^Deep Software Standby 진입 /);assert.match(messages(emu)[1],/^Deep Software Standby 해제 · IRQ1-DS\(P205\) \(200\.\d ms 뒤\)/);
+}));
+test('review: isrsleep — Sleep in an interrupt callback: a request of the same priority waits, a higher one wakes the core',{skip,timeout:900000},()=>review('isrsleep',emu=>{
+ assert.equal(emu.session.readVariable('after'),1);assert.equal(emu.session.readVariable('ticks1'),2,'AGT1 at 150 and 300 ms');
+ assert.equal(emu.session.readVariable('ticks0_at_wake'),5,'AGT0 (same priority as the callback) did not run while the callback slept: 5 ticks before the press');
+ assert.match(messages(emu)[1],/^Sleep에서 깨어남 · AGT1 언더플로 \(11\d\.\d ms 뒤\)$/);
+}));
+test('review: pending — a request already waiting keeps WFI from entering Deep Software Standby on both engines',{skip,timeout:900000},()=>review('pending',emu=>{
+ assert.deepEqual(messages(emu),[]);assert.equal(emu.session.resets.length,0);assert.equal(emu.session.readVariable('after'),1);assert.equal(emu.session.readVariable('err'),0);assert.equal(emu.session.readVariable('presses'),1);
+}));
 test('review: rtcsleep — Sleep with an RTC that is only opened: both engines say nothing can end it',{skip,timeout:900000},()=>review('rtcsleep',emu=>{
  assert.equal(messages(emu)[1],'Sleep: 깨울 수 있는 소스가 없습니다 — 켜진 인터럽트가 없습니다. 리셋(S2)으로만 다시 시작합니다.');assert.equal(emu.session.readVariable('woke'),0);
 }));

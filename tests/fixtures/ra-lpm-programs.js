@@ -179,6 +179,93 @@ const press=(from,to)=>({[from]:s=>s.setPressed({SW1:true}),[to]:s=>s.setPressed
 const lpm=extra=>({enabled:true,mode:'DEEP',wake:[],cancel:[],cancelRising:[],ioKeep:true,power:'DEEPCUT0',...extra});
 const pins=(peripherals,more)=>()=>{const m=raDefaultMcu();m.peripherals=peripherals;Object.assign(m.pins,more);return m;};
 export const LPM_REVIEW={
+ // R_LPM_LowPowerModeEnter called from an interrupt callback (handler mode): Deep Software Standby is entered there too;
+ // the second press of S1 (IRQ1-DS) cancels it with the reset.
+ isr:{mcu:mcu({LPM:lpm({cancel:['IRQ1']})}),ms:500,at:{...press(100,130),...press(300,330)},vars:['presses','after','err','from'],
+  code:HEAD+`
+volatile uint32_t presses = 0;
+volatile uint32_t after = 0;
+volatile int err = -1;
+volatile uint32_t from = 0;
+void hal_entry(void)
+{
+    from = R_SYSTEM->RSTSR0_b.DPSRSTF;
+    R_LPM_IoKeepClear(NULL);
+    R_ICU_ExternalIrqOpen(&g_external_irq1_ctrl, &g_external_irq1_cfg);
+    R_ICU_ExternalIrqEnable(&g_external_irq1_ctrl);
+    R_LPM_Open(&g_lpm0_ctrl, &g_lpm0_cfg);
+    while (1)
+    {
+        R_BSP_SoftwareDelay(10, BSP_DELAY_UNITS_MILLISECONDS);
+    }
+}
+void external_irq1_callback(external_irq_callback_args_t * p_args)
+{
+    (void) p_args;
+    presses++;
+    err = (int) R_LPM_LowPowerModeEnter(&g_lpm0_ctrl);
+    after++;
+}
+`+WARM_START},
+ // Sleep entered from the IRQ1 callback (priority 12): AGT0 at the same priority does not wake the core, AGT1 at priority 2
+ // does (the WFI rule in handler mode). Standby the same way with AGT1 on LOCO as its wake source.
+ isrsleep:{mcu:mcu({LPM:lpm({mode:'SLEEP'}),AGT0:{enabled:true,period:7,unit:'ms',callback:'agt0_callback',priority:12},AGT1:{enabled:true,period:150,unit:'ms',callback:'agt1_callback',priority:2}}),ms:400,at:press(40,60),vars:['presses','after','ticks0','ticks1','ticks0_at_wake'],
+  code:HEAD+`
+volatile uint32_t presses = 0;
+volatile uint32_t after = 0;
+volatile uint32_t ticks0 = 0;
+volatile uint32_t ticks1 = 0;
+volatile uint32_t ticks0_at_wake = 0;
+void agt0_callback(timer_callback_args_t * p_args) { (void) p_args; ticks0++; }
+void agt1_callback(timer_callback_args_t * p_args) { (void) p_args; ticks1++; }
+void hal_entry(void)
+{
+    R_ICU_ExternalIrqOpen(&g_external_irq1_ctrl, &g_external_irq1_cfg);
+    R_ICU_ExternalIrqEnable(&g_external_irq1_ctrl);
+    R_AGT_Open(&g_agt0_ctrl, &g_agt0_cfg);
+    R_AGT_Open(&g_agt1_ctrl, &g_agt1_cfg);
+    R_AGT_Start(&g_agt0_ctrl);
+    R_AGT_Start(&g_agt1_ctrl);
+    R_LPM_Open(&g_lpm0_ctrl, &g_lpm0_cfg);
+    while (1)
+    {
+        R_BSP_SoftwareDelay(10, BSP_DELAY_UNITS_MILLISECONDS);
+    }
+}
+void external_irq1_callback(external_irq_callback_args_t * p_args)
+{
+    (void) p_args;
+    presses++;
+    R_LPM_LowPowerModeEnter(&g_lpm0_ctrl);
+    ticks0_at_wake = ticks0;
+    after++;
+}
+`+WARM_START},
+ // An interrupt request already waiting (interrupts disabled) keeps WFI from stopping the core: Deep Software Standby is
+ // not entered, the call returns and the program goes on.
+ pending:{mcu:mcu({LPM:lpm({cancel:['IRQ1']})}),ms:300,at:press(50,80),vars:['presses','after','err'],
+  code:HEAD+`
+volatile uint32_t presses = 0;
+volatile uint32_t after = 0;
+volatile int err = -1;
+void external_irq1_callback(external_irq_callback_args_t * p_args) { (void) p_args; presses++; }
+void hal_entry(void)
+{
+    R_ICU_ExternalIrqOpen(&g_external_irq1_ctrl, &g_external_irq1_cfg);
+    R_ICU_ExternalIrqEnable(&g_external_irq1_ctrl);
+    R_LPM_Open(&g_lpm0_ctrl, &g_lpm0_cfg);
+    __disable_irq();
+    R_BSP_SoftwareDelay(100, BSP_DELAY_UNITS_MILLISECONDS);
+    err = (int) R_LPM_LowPowerModeEnter(&g_lpm0_ctrl);
+    after = 1;
+    __enable_irq();
+    R_IOPORT_PinWrite(&g_ioport_ctrl, LED1, BSP_IO_LEVEL_HIGH);
+    while (1)
+    {
+        R_BSP_SoftwareDelay(10, BSP_DELAY_UNITS_MILLISECONDS);
+    }
+}
+`+WARM_START},
  // Sleep with only an opened RTC (no periodic or alarm request set up): R_RTC_Open enables no interrupt, nothing can end it.
  rtcsleep:{mcu:mcu({LPM:lpm({mode:'SLEEP'}),RTC:{enabled:true,start:'HOST_TIME',callback:'rtc_callback',periodicPriority:12}}),ms:100,at:{},vars:['woke'],
   code:HEAD+`

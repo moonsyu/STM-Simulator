@@ -13,6 +13,17 @@ import {LPM_ERRORS,LPM_STANDBY,LPM_DEEP_RTC,LPM_STUCK,LPM_REVIEW} from '../fixtu
 // A review program on the interpreter (both engines: tests/toolchain/ra-lpm.test.mjs).
 function review(name){const p=LPM_REVIEW[name],x=open(p,{hostTime:Date.UTC(2026,0,1,9,0,0)});run(x.session,1,p.ms,t=>p.at[t]?.(x.session));return x;}
 
+test('R_LPM_LowPowerModeEnter in an interrupt callback: Deep Software Standby is entered and cancelled; Sleep there waits for a higher priority; a waiting request keeps WFI from stopping',()=>{
+ const isr=review('isr');
+ assert.equal(isr.session.runtime.resetCount,1);assert.equal(isr.session.readVariable('from'),1);assert.equal(isr.session.readVariable('after'),0);
+ assert.match(isr.lpm()[1],/^Deep Software Standby 해제 · IRQ1-DS\(P205\) \(200\.\d ms 뒤\)/);
+ const sleep=review('isrsleep');
+ assert.equal(sleep.session.readVariable('after'),1);assert.equal(sleep.session.readVariable('ticks0_at_wake'),5,'AGT0 at the callback\'s priority waited');
+ assert.match(sleep.lpm()[1],/^Sleep에서 깨어남 · AGT1 언더플로 \(11\d\.\d ms 뒤\)$/);
+ const pending=review('pending');
+ assert.deepEqual(pending.lpm(),[]);assert.equal(pending.session.runtime.resetCount??0,0);assert.equal(pending.session.readVariable('after'),1);assert.equal(pending.session.readVariable('presses'),1);
+});
+
 test('review programs on the interpreter: Sleep with an RTC only opened has nothing to end it; SCI9_TXI is named in the log',()=>{
  const rtc=review('rtcsleep');
  assert.equal(rtc.lpm()[1],'Sleep: 깨울 수 있는 소스가 없습니다 — 켜진 인터럽트가 없습니다. 리셋(S2)으로만 다시 시작합니다.');assert.equal(rtc.session.readVariable('woke'),0);

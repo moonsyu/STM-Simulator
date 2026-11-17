@@ -376,7 +376,8 @@ export class FspAdapter {
   if(this.low){
    if(this.low.mode==='DEEP')return;
    if(this.low.mode==='STANDBY'&&!this.lpmWakes(irq,key)){if(!/^ICU_IRQ/.test(irq)&&!this.low.deferred.some(j=>j[5]===key))this.low.deferred.push([r,irq,prio,run,name,key]);return;}
-   deferred=this.lpmWake(r,irq);
+   // (entered from an interrupt callback: a request that does not preempt the callback waits, the core sleeps on)
+   if(prio<this.low.prio)deferred=this.lpmWake(r,irq);
   }
   if(!this.pending.some(j=>j.key===key)){
    this.pending.push({irq,prio,run,name,key,order:this.seq++});
@@ -883,12 +884,16 @@ export class FspAdapter {
  // Standby ends with a cancel request — an IRQn-DS pin edge seen here, the RTC or AGT request (lpmRequest) — and resets
  // the program: RSTSR0.DPSRSTF, and with IOKEEP the pins as they are.
  *lowPower(r,fn){
-  if(r.inIsr)return;
   if(r.atomic)throw new Error(`${fn}: 이 위치에서는 기다릴 수 없습니다.`);
   const reg=this.lpmReg,mode=!reg.ssby?'SLEEP':reg.dpsby?'DEEP':'STANDBY';
-  // A request already waiting: WFI does not stop the core.
-  if(mode!=='DEEP'&&this.pending.some(j=>mode==='SLEEP'||this.lpmWakes(j.irq,j.key)))return;
-  const low=this.low={mode,since:r.microTime,frozen:[],deferred:[],cancel:null,rtcStopped:false};
+  // The core's WFI rule, in thread mode and in an interrupt callback (handler mode) alike: only a request above the
+  // priority that is running wakes it (interrupts disabled or not), and one that is already waiting keeps the core from
+  // stopping at all — in every mode, Deep Software Standby too.
+  const prio=this.active.reduce((p,a)=>Math.min(p,a.prio),Infinity);
+  // (an IRQ pin edge seen while interrupts are disabled is still with the runtime: it is a request too)
+  for(const s of r.interrupts.values())if(s.pending&&s.callback?.host){s.pending=false;s.callback.host();}
+  if(this.pending.some(j=>j.prio<prio))return;
+  const low=this.low={mode,prio,since:r.microTime,frozen:[],deferred:[],cancel:null,rtcStopped:false};
   this.lpmFreeze(r,low);
   const check=this.lpmSources(r,low);
   this.lowLog.enter(mode,r.microTime,{sources:check.labels,detail:mode==='DEEP'?lpmDeepDetail(reg.deepcut,reg.iokeep):''});
