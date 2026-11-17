@@ -492,6 +492,8 @@ void hal_entry(void)
 }`);
  run(40);
  assert.deepEqual(log.print,['0 0 0 0 0 88 88','0']);
+ // The flash-to-flash write reads its source in P/E mode, as the driver does on the emulator.
+ assert.deepEqual(log.warn,['[FLASH] 데이터 플래시 P/E 모드(쓰기·지우기·블랭크 체크가 진행 중)에서 데이터 플래시를 읽었습니다 — 실제 칩에서는 읽은 값이 보장되지 않습니다. 동작이 끝난 뒤(BGO면 콜백 뒤)에 읽으세요.']);
 });
 
 test('outside the data flash: a read past its end or crossing it stops both engines with the same note',()=>{

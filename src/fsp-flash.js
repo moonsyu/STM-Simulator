@@ -249,6 +249,9 @@ const FLASH_API={
   Object.assign(st,{data:this.flashSource(r,source,bytes,fn),at:0,remaining:bytes>>1,dest:address,op:OP.NON_BGO});
   // flash_hp_df_write
   err=this.flashEnterPe(r,st);if(err)return err;
+  // The driver reads the source as it writes, in P/E mode: a source in the data flash is read there (the sequencer
+  // model says that the value is not assured, as on the emulator).
+  {const from=(flashAddress(source)??(typeof source==='number'?source>>>0:-1))-RA_DF_BASE;if(from>=0&&from<RA_DF_SIZE)this.flashDev(r).dataRead(from,RA_DF_UNIT);}
   if(st.bgo)st.op=OP.WRITE;
   do{
    err=yield* this.flashWriteData(r,st,!st.bgo);
