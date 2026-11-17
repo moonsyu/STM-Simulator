@@ -1,6 +1,15 @@
 # STM Simulator — 개발 인계
 
-현재 버전: **1.55.0**. 정리일: **2026-11-10**. NUCLEO-F446RE·NUCLEO-F103RB 또는 Renesas FPB-RA6E1(1.20.0, FSP·에뮬레이터 전용)과 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+현재 버전: **1.56.0**. 정리일: **2026-11-10**. NUCLEO-F446RE·NUCLEO-F103RB 또는 Renesas FPB-RA6E1(1.20.0, FSP·에뮬레이터 전용)과 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+
+## 1.56.0 기능 목록 37번: RA 저전력 모드(r_lpm)와 IRQn-DS로 깨우기
+
+- **설정·생성**: `ra-config.js`의 `mcu.peripherals.LPM {enabled, mode SLEEP|STANDBY|DEEP, wake[], ioKeep, power DEEPCUT0|1|3, cancel[], cancelRising[]}`(`validateLpm`, `RA_LPM_WAKE`·`RA_LPM_CANCEL` 비트, `raDsPin`, `raLpmMask`; 꺼진 스택은 내용으로 거부하지 않음). `ra-generator.js`: `lpmOf`·`lpmDecl`·`lpmInstance` → g_lpm0, r_lpm_cfg.h. UI: New Stack → Power → Low Power Modes(Standby·Deep 카드에 "스택 없음 / PCLKB로 셈" 안내).
+- **에뮬레이터** `src/emu/ra6e1/lpm.js`(LowPower): SBYCR·DPSBYCR·DPSIER·DPSIFR·DPSIEGR, WFI일 때만 모드 진입(WFE는 Sleep만), 주변장치 freeze/thaw(Standby·Deep 동안 SysTick도 정지), 깨우기 소스(WUPEN)와 해제 소스(DPSIER, IRQn-DS 핀 엣지) → Deep 해제는 `systemReset('DEEP_STANDBY')`와 RSTSR0.DPSRSTF. PIN 리셋을 포함해 모드가 끝나면 멈춘 LOCO RTC를 다시 시작. 깨운 인터럽트 이름은 `FirmwareSession`이 넘긴 `raVectors` 이름(`options.vectorNames`). `machine.step()`(STM32와 공용)은 자는 동안 대기 중인 리셋을 처리한다.
+- **해석기** `src/fsp-interp.js`: R_LPM_Open·Close·LowPowerReconfigure·LowPowerModeEnter·IoKeepClear, `__WFI`·`__WFE`(예외마다 다음 WFE 한 번은 지나감), RSTSR0 읽기와 0 쓰기로 지우기, DPSIFR0~3 읽기·지우기, `R_BSP_RegisterProtectEnable/Disable`(아무 일도 하지 않음), `inheritReset(old, runtime)`. 콜백 안의 LowPowerModeEnter도 그 자리에서 진입하고(Deep은 해제 리셋까지, Sleep·Standby는 더 높은 우선순위 요청까지), 대기 중인 요청이 있으면 진입하지 않는다. IOKEEP 유지 중에는 핀 설정과 GPT PWM을 미뤘다가 IoKeepClear 때 적용.
+- **동작 변화**: 정지 제어를 켠 워치독은 맨 `__WFI` 슬립에서도 멈춘다. 로그 문구는 `src/ra-lpm.js`.
+- **지원하지 않음**: Snooze, LVD·USBFS·IIC0·AGT 비교 일치 소스, 해석기의 64비트 깨우기 마스크. 남은 차이: 해석기의 DPSIFR은 모드를 해제한 소스만 세움, RSTSR1은 읽기만.
+- 예제 `ra_lpm_deep`. 시험: `tests/unit/ra-lpm.test.js`·`ra6e1-lpm.test.js`·`ra-lpm-interp.test.js`, `tests/toolchain/ra-lpm.test.mjs`(18개: 처음 4개는 묶음 5, 검토 프로그램은 묶음 1·4·7), parity `ra_lpm_deep`(묶음 2), `tests/e2e/ra-lpm.e2e.test.mjs`.
 
 ## 1.55.0 기능 목록 33번: RA I2C 슬레이브(r_iic_slave)와 ESP32 Wire 마스터
 
