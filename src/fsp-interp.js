@@ -18,6 +18,7 @@ import {exchangeFrame} from './emu/ra6e1/spi.js';
 import {encodeSpiFrames} from './signals.js';
 import {Rtc} from './emu/ra6e1/rtc.js';
 import {FLASH_TYPES,FLASH_METHODS,FLASH_NAMES,flashPrelude} from './fsp-flash.js';
+import {TRANSFER_TYPES,TRANSFER_METHODS,TRANSFER_NAMES,transferPrelude} from './fsp-transfer.js';
 
 // RSTSR1 and RSTSR0 reset-cause flags (R7FA6E10F.h): the registers the interpreter lets the program read (FspAdapter.register).
 const RESET_STATUS=[['IWDTRF',0],['WDTRF',1],['SWRF',2]];
@@ -33,7 +34,7 @@ export const FSP_ALIASES=Object.freeze({FSP_CPP_HEADER:'',FSP_CPP_FOOTER:'',FSP_
  IOPORT_CFG_CTRL:'g_ioport_ctrl',IOPORT_CFG_NAME:'g_bsp_pin_cfg',IOPORT_CFG_OPEN:'R_IOPORT_Open'});
 // FSP and generated headers that resolve to the prelude (it has a guard, so including several is fine); the C
 // library headers read as empty.
-const FSP_HEADERS=['hal_data.h','common_data.h','bsp_pin_cfg.h','vector_data.h','bsp_api.h','bsp_cfg.h','bsp_clock_cfg.h','board.h','board_cfg.h','fsp_common_api.h','r_ioport.h','r_ioport_api.h','r_icu.h','r_external_irq_api.h','r_sci_uart.h','r_uart_api.h','r_gpt.h','r_timer_api.h','r_agt.h','r_adc.h','r_adc_api.h','r_iic_master.h','r_i2c_master_api.h','r_spi.h','r_sci_spi.h','r_spi_api.h','r_wdt.h','r_iwdt.h','r_wdt_api.h','r_rtc.h','r_rtc_api.h','r_iic_slave.h','r_i2c_slave_api.h','r_lpm.h','r_lpm_api.h','r_flash_hp.h','r_flash_api.h','bsp_io.h','bsp_delay.h','bsp_common.h'];
+const FSP_HEADERS=['hal_data.h','common_data.h','bsp_pin_cfg.h','vector_data.h','bsp_api.h','bsp_cfg.h','bsp_clock_cfg.h','board.h','board_cfg.h','fsp_common_api.h','r_ioport.h','r_ioport_api.h','r_icu.h','r_external_irq_api.h','r_sci_uart.h','r_uart_api.h','r_gpt.h','r_timer_api.h','r_agt.h','r_adc.h','r_adc_api.h','r_iic_master.h','r_i2c_master_api.h','r_spi.h','r_sci_spi.h','r_spi_api.h','r_wdt.h','r_iwdt.h','r_wdt_api.h','r_rtc.h','r_rtc_api.h','r_iic_slave.h','r_i2c_slave_api.h','r_lpm.h','r_lpm_api.h','r_flash_hp.h','r_flash_api.h','r_elc.h','r_elc_api.h','r_dtc.h','r_dmac.h','r_transfer_api.h','bsp_io.h','bsp_delay.h','bsp_common.h'];
 const C_HEADERS=new Set(['stdint.h','stddef.h','stdbool.h','string.h','stdlib.h','stdio.h','ctype.h','math.h','limits.h','time.h']);
 // Generated and FSP source folders of the project tree: built by ARM GCC only (the prelude stands in for them here).
 const FSP_FILE=/^(ra|ra_gen|ra_cfg|script)\//;
@@ -208,15 +209,17 @@ typedef struct st_lpm_instance { lpm_instance_ctrl_t * p_ctrl; const lpm_cfg_t *
 
 /** The prelude's text for a checked RA configuration: types, the pin symbols and the Stacks instances of hal_data.c. */
 export function fspPrelude(mcu){
- const {irqs,uarts,gpts,adc,agts,iics,spis,sciSpis,wdts,rtc,iicSlaves,lpm,flash}=raInstances(mcu),vectors=raVectors(mcu),vec=k=>vectors.some(v=>v.vector===k)?`VECTOR_NUMBER_${k}`:'FSP_INVALID_VECTOR';
+ const inst=raInstances(mcu),{irqs,uarts,gpts,adc,agts,iics,spis,sciSpis,wdts,rtc,iicSlaves,lpm,flash}=inst,vectors=raVectors(mcu),vec=k=>vectors.some(v=>v.vector===k)?`VECTOR_NUMBER_${k}`:'FSP_INVALID_VECTOR';
  const pins=Object.entries(mcu.pins||{}).sort(([a],[b])=>raPinName(a).localeCompare(raPinName(b)));
  const ipl=(name,p)=>name?`(${p})`:'(BSP_IRQ_DISABLED)';
- const out=['#ifndef FSP_INTERP_PRELUDE_H','#define FSP_INTERP_PRELUDE_H',TYPES,
+ const out=['#ifndef FSP_INTERP_PRELUDE_H','#define FSP_INTERP_PRELUDE_H',TYPES,TRANSFER_TYPES,
   `#define VECTOR_DATA_IRQ_COUNT (${vectors.length})`,`#define BSP_ICU_VECTOR_NUM_ENTRIES (${Math.max(1,vectors.length)})`,...vectors.flatMap(v=>[`#define VECTOR_NUMBER_${v.vector} ((IRQn_Type) ${v.index})`,`#define ${v.vector}_IRQn ((IRQn_Type) ${v.index})`]),
   ...pins.filter(([,p])=>p.label).map(([pin,p])=>`#define ${p.label} (${raIoName(pin)})`),
   'ioport_instance_ctrl_t g_ioport_ctrl;',
   ...(pins.length?[`const ioport_pin_cfg_t g_bsp_pin_cfg_data[${pins.length}] = {\n${pins.map(([pin,p])=>`    { .pin = ${raIoName(pin)}, .pin_cfg = ${pinCfgWord({...p,name:pin})} },`).join('\n')}\n};`,`const ioport_cfg_t g_bsp_pin_cfg = { .number_of_pins = ${pins.length}, .p_pin_cfg_data = &g_bsp_pin_cfg_data[0], .p_extend = NULL };`]:['const ioport_cfg_t g_bsp_pin_cfg = { .number_of_pins = 0, .p_pin_cfg_data = NULL, .p_extend = NULL };']),
   'const ioport_instance_t g_ioport = { .p_ctrl = &g_ioport_ctrl, .p_cfg = &g_bsp_pin_cfg, .p_api = NULL };'];
+ // Transfers (r_dtc / r_dmac) and the ELC (feature 36): before the UARTs that point at their transfers.
+ out.push(...transferPrelude(inst,vec));
  for(const i of irqs)out.push(`icu_instance_ctrl_t ${i.name}_ctrl;`,`const external_irq_cfg_t ${i.name}_cfg = { .channel = ${i.channel}, .trigger = EXTERNAL_IRQ_TRIGGER_${{FALLING:'FALLING',RISING:'RISING',BOTH:'BOTH_EDGE',LOW:'LEVEL_LOW'}[i.trigger]||'FALLING'}, .filter_enable = ${i.filter?'true':'false'}, .clock_source_div = EXTERNAL_IRQ_CLOCK_SOURCE_DIV_64, .p_context = NULL, .p_extend = NULL, .ipl = (${i.priority}), .irq = ${vec('ICU_IRQ'+i.channel)} };`,
   `const external_irq_instance_t ${i.name} = { .p_ctrl = &${i.name}_ctrl, .p_cfg = &${i.name}_cfg, .p_api = NULL };`,`void ${i.callback}(external_irq_callback_args_t * p_args);`);
  for(const u of uarts){const v=k=>vec(`SCI${u.channel}_${k}`);out.push(`sci_uart_instance_ctrl_t ${u.name}_ctrl;`,`const sci_uart_extended_cfg_t ${u.name}_cfg_extend = { .clock = 0, .rx_edge_start = 1, .noise_cancel = 0, .rx_fifo_trigger = 0xF, .flow_control = 0 };`,
@@ -297,8 +300,9 @@ export const fspConstants=program=>Object.fromEntries((program.registers||[]).ma
 const SHORT_WAIT_MS=.05;
 const FSP={SUCCESS:0,ASSERTION:1,INVALID_ARGUMENT:3,INVALID_MODE:5,UNSUPPORTED:6,NOT_OPEN:7,IN_USE:8,IRQ_BSP_DISABLED:11,ALREADY_OPEN:14,NOT_ENABLED:19};
 const KINDS={ioport:[/^g_ioport_ctrl$/,'g_ioport_ctrl'],icu:[/^g_external_irq(\d+)_ctrl$/,'g_external_irq1_ctrl'],uart:[/^g_uart(\d+)_ctrl$/,'g_uart9_ctrl'],gpt:[/^g_timer(\d+)_ctrl$/,'g_timer1_ctrl'],agt:[/^g_agt(\d+)_ctrl$/,'g_agt0_ctrl'],adc:[/^g_adc(\d+)_ctrl$/,'g_adc0_ctrl'],iic:[/^g_i2c_master(\d+)_ctrl$/,'g_i2c_master0_ctrl'],
- spi:[/^g_spi(\d+)_ctrl$/,'g_spi1_ctrl'],sciSpi:[/^g_sci_spi(\d+)_ctrl$/,'g_sci_spi9_ctrl'],wdt:[/^g_wdt(\d+)_ctrl$/,'g_wdt0_ctrl'],iwdt:[/^g_iwdt(\d+)_ctrl$/,'g_iwdt0_ctrl'],rtc:[/^g_rtc(\d+)_ctrl$/,'g_rtc0_ctrl'],iicSlave:[/^g_i2c_slave(\d+)_ctrl$/,'g_i2c_slave0_ctrl'],lpm:[/^g_lpm(\d+)_ctrl$/,'g_lpm0_ctrl'],flash:[/^g_flash(\d+)_ctrl$/,'g_flash0_ctrl']};
-const SUPPORTED='R_IOPORT_*, R_BSP_SoftwareDelay · R_BSP_Pin*, R_ICU_ExternalIrq*, R_SCI_UART_*, R_GPT_*, R_AGT_*, R_ADC_*, R_IIC_MASTER_*, R_IIC_SLAVE_*, R_SPI_*, R_SCI_SPI_*, R_WDT_*, R_IWDT_*, R_RTC_*, R_LPM_*, R_FLASH_HP_*(데이터 플래시)';
+ spi:[/^g_spi(\d+)_ctrl$/,'g_spi1_ctrl'],sciSpi:[/^g_sci_spi(\d+)_ctrl$/,'g_sci_spi9_ctrl'],wdt:[/^g_wdt(\d+)_ctrl$/,'g_wdt0_ctrl'],iwdt:[/^g_iwdt(\d+)_ctrl$/,'g_iwdt0_ctrl'],rtc:[/^g_rtc(\d+)_ctrl$/,'g_rtc0_ctrl'],iicSlave:[/^g_i2c_slave(\d+)_ctrl$/,'g_i2c_slave0_ctrl'],lpm:[/^g_lpm(\d+)_ctrl$/,'g_lpm0_ctrl'],flash:[/^g_flash(\d+)_ctrl$/,'g_flash0_ctrl'],
+ elc:[/^g_elc_ctrl$/,'g_elc_ctrl'],transfer:[/^g_transfer(\d+)_ctrl$/,'g_transfer0_ctrl']};
+const SUPPORTED='R_IOPORT_*, R_BSP_SoftwareDelay · R_BSP_Pin*, R_ICU_ExternalIrq*, R_SCI_UART_*, R_GPT_*, R_AGT_*, R_ADC_*, R_IIC_MASTER_*, R_IIC_SLAVE_*, R_SPI_*, R_SCI_SPI_*, R_WDT_*, R_IWDT_*, R_RTC_*, R_LPM_*, R_FLASH_HP_*(데이터 플래시), R_ELC_*, R_DTC_*, R_DMAC_*';
 // RTC periodic rates the RA6E1 has (RCR1.PES 6-15): FSP's enum also lists 1 minute … 1 month for other RA parts, which
 // would make R_RTC_PeriodicIrqRateSet wait forever on this one.
 const RTC_PERIOD_S={6:1/256,7:1/128,8:1/64,9:1/32,10:1/16,11:1/8,12:1/4,13:1/2,14:1,15:2};
@@ -315,7 +319,7 @@ const isIterator=v=>v&&typeof v.next==='function';
 
 export class FspAdapter {
  constructor(mcu,buses,{session}={}){
-  this.config=validateRaMcu(mcu);this.buses=buses;this.session=session;this.inst=raInstances(this.config);
+  this.config=validateRaMcu(mcu);this.buses=buses;this.session=session;this.inst=raInstances(this.config);this.vectors=raVectors(this.config);this.elcOn=false;
   this.pclkd=raClockHz(this.config);this.pclkb=raClockHz(this.config,'pclkb');
   this.pending=[];this.active=[];this.seq=0;this.dispatched=0;this.serials=new Map();this.states=new Map();this.peripheralPins=new Set();this.warned=new Set();this.names=null;this.activeIic=null;this.shortWait=0;
   // Reset cause (RSTSR1) and the reason of the reset this adapter's program ends with (session.js passes it on).
@@ -356,6 +360,7 @@ export class FspAdapter {
   for(const id of ['IWDT','WDT']){const p=this.config.peripherals?.[id];if(p?.enabled&&p.startMode==='AUTO')this.wdtStart(r,this.wdtState(id));}}
  // R_SYSTEM->RSTSR1 (and RSTSR1_b.IWDTRF / WDTRF / SWRF): a read-only cell holding the reset cause now.
  register(object,key){
+  if(object==='R_ADC0'&&key==='ADDR')return {value:this.adcRegisters(),owner:{alive:true},constant:true,readOnly:'R_ADC0->ADDR은 읽기 전용입니다.',dataType:'uint16_t'};
   if(object!=='R_SYSTEM')return null;
   const name=key.slice(0,6),cell=(value,dataType)=>({value,owner:{alive:true},constant:true,readOnly:RSTSR_READ_ONLY(name),dataType});
   if(key==='RSTSR1')return cell(this.rstsr1,'uint16_t');
@@ -533,11 +538,19 @@ export class FspAdapter {
    const f=ch.bus.uartRx(raw,item.at-1e7/u.baud),value=f.value;r.api.uart?.({instance:ch.id,direction:'RX',bytes:[value],micros:r.microTime});
    const errors=(f.pe?8:0)|(f.fe?16:0);
    if(errors){this.uartEvent(r,ch,errors,value,'eri');continue;}
-   if(ch.rx){r.set(r.pointerCell(ch.rx.buffer,ch.rx.index++),value);if(ch.rx.index===ch.rx.count){ch.rx=null;this.uartEvent(r,ch,1,0,'rxi');}}
+   if(ch.rx){r.set(r.pointerCell(ch.rx.buffer,ch.rx.index++),value);if(ch.rx.index===ch.rx.count){ch.rx=null;if(st.dtcRx)st.dtcRx.enabled=false;this.uartEvent(r,ch,1,0,'rxi');}}
    else this.uartEvent(r,ch,4,value,'rxi');
   }
  }
  // An aborted (or closed) transmission: the bytes not sent yet stay, its TX_DATA_EMPTY / TX_COMPLETE do not come.
+ // The state of a UART's DTC transfer (opened by R_SCI_UART_Open, as r_sci_uart opens it).
+ uartTransfer(t){const name=`${t.name}_ctrl`;if(!this.states.has(name))this.states.set(name,{open:false,name,channel:t.n});const st=this.states.get(name);if(!st.driver)Object.assign(st,{driver:'DTC',n:t.n,event:t.activation,own:t.own,callback:'',enabled:false});return st;}
+ // R_DTC_InfoGet on a UART's transfer: what is left of the write (each TXI moves one byte) or of the read.
+ uartTransferRemaining(r,st){
+  const ch=this.serials.get('SCI'+st.uart);if(!ch)return 0;
+  if(st.dir==='rx')return ch.rx?ch.rx.count-ch.rx.index:0;
+  const tx=ch.tx;if(!tx||tx.transfer!==st)return 0;const done=Math.min(tx.count-1,Math.floor((r.microTime-tx.start)/tx.frame+1e-9)+1);return Math.max(0,tx.count-1-done);
+ }
  uartStop(r,ch){ch.txAbort++;ch.txGen++;ch.txFree=0;ch.txEnd=r.microTime;this.dropJobs(`SCI${ch.channel}:txi:`);this.dropJobs(`SCI${ch.channel}:tei:`);}
  dropJobs(prefix){this.pending=this.pending.filter(j=>!String(j.key).startsWith(prefix));}
  uartEvent(r,ch,event,data,isr){const st=ch.st;if(!st?.open||!st.callback)return;this.queue(r,`SCI${ch.channel}_${isr.toUpperCase()}`,st.ipl,()=>this.callback(r,st.callback,'uart_callback_args_t',{channel:ch.channel,event,data}),`sci_uart_${isr}_isr`,`SCI${ch.channel}:${isr}:${this.seq}`);}
@@ -556,7 +569,8 @@ export class FspAdapter {
   st.running=true;st.gen++;const gen=st.gen;st.next=r.microTime+this.periodUs(st)*(1-st.counter/st.period);st.counter=0;
   const fire=()=>{if(st.gen!==gen||!st.running)return;st.last=st.next;
    if(st.kind==='agt')this.lpmRequest(r,`AGT${st.channel}_INT`);
-   if(st.callback)this.queue(r,st.kind==='gpt'?`GPT${st.channel}_COUNTER_OVERFLOW`:`AGT${st.channel}_INT`,st.ipl,()=>this.callback(r,st.callback,'timer_callback_args_t',{event:0}),st.kind==='gpt'?'gpt_counter_overflow_isr':'agt_int_isr');
+   const event=st.kind==='gpt'?`GPT${st.channel}_COUNTER_OVERFLOW`:`AGT${st.channel}_INT`,cpu=this.fspEvent(r,event);
+   if(cpu&&st.callback)this.queue(r,event,st.ipl,()=>this.callback(r,st.callback,'timer_callback_args_t',{event:0}),st.kind==='gpt'?'gpt_counter_overflow_isr':'agt_int_isr');
    if(st.mode===1){st.running=false;this.pwm(r,st);return;}
    // A period set while counting (buffered, GTPBR / AGT reload) takes over at this overflow.
    if(st.newPeriod!=null){st.period=st.newPeriod;st.newPeriod=null;st.duty=st.duty.map(d=>Math.min(d,st.period));this.pwm(r,st);}
@@ -1011,6 +1025,8 @@ export class FspAdapter {
 for(const k of ['stdoutHook','stdout','flushStdout','stdinChar','stdin'])FspAdapter.prototype[k]=HalAdapter.prototype[k];
 // Data flash: R_FLASH_HP_* and the data flash read through a pointer (fsp-flash.js).
 Object.defineProperties(FspAdapter.prototype,Object.getOwnPropertyDescriptors(FLASH_METHODS));
+// ELC, DTC and DMAC, and the event hub of the peripherals (fsp-transfer.js).
+Object.defineProperties(FspAdapter.prototype,Object.getOwnPropertyDescriptors(TRANSFER_METHODS));
 export {FLASH_NAMES};
 
 // FSP API calls, by name: (args, runtime, name) with `this` the adapter. They return fsp_err_t (or the value of an
@@ -1036,7 +1052,7 @@ const HANDLERS={
   const trigger=Number(cfg.fields.trigger.value),mode=['FALLING','RISING','CHANGE','FALLING','RISING'][trigger]??'FALLING';
   if(trigger>=3)this.warnOnce(r,'level:'+pin,`${fn}: 내장 해석기는 레벨 트리거(LOW/HIGH)를 같은 쪽 엣지로 처리합니다.`);
   Object.assign(st,{open:true,enabled:false,pin,ipl:Number(cfg.fields.ipl.value),callback:this.inst.irqs.find(i=>i.channel===st.channel)?.callback||''});
-  r.interrupts.set(pin,{mode,previous:r.inputLevel(pin),pending:false,callback:{host:()=>{if(st.open&&st.enabled)this.queue(r,'ICU_IRQ'+st.channel,st.ipl,()=>this.callback(r,st.callback,'external_irq_callback_args_t',{channel:st.channel}),'r_icu_isr');}}});
+  r.interrupts.set(pin,{mode,previous:r.inputLevel(pin),pending:false,callback:{host:()=>{if(st.open&&this.fspEvent(r,'ICU_IRQ'+st.channel)&&st.enabled)this.queue(r,'ICU_IRQ'+st.channel,st.ipl,()=>this.callback(r,st.callback,'external_irq_callback_args_t',{channel:st.channel}),'r_icu_isr');}}});
   return FSP.SUCCESS;
  },
  R_ICU_ExternalIrqEnable(args,r,fn){const st=this.instance(args[0],r,fn,'icu');if(!st.open)return FSP.NOT_OPEN;st.enabled=true;return FSP.SUCCESS;},
@@ -1047,24 +1063,39 @@ const HANDLERS={
   if(!p?.enabled)throw new Error(`${fn}: Stacks에서 ${id} UART를 켜세요.`);
   if(Number(cfg.fields.data_bits.value)!==2||Number(cfg.fields.parity.value)!==0||Number(cfg.fields.stop_bits.value)!==0)throw new Error(`${fn}: 내장 해석기는 8비트, 패리티 없음, 정지 비트 1(8N1)만 실행합니다. 다른 형식은 ARM GCC 빌드로 실행하세요.`);
   const tx=this.pinOf(id+'_TXD'),rx=this.pinOf(id+'_RXD');if(!tx||!rx)throw new Error(`${fn}: 내장 해석기는 ${id}의 TXD와 RXD 핀을 모두 정한 UART만 실행합니다(Pins).`);
-  const ch=this.uartChannel(st.channel);ch.st=st;ch.rx=null;ch.txFree=0;ch.txEnd=0;ch.bus.call('Serial1.setPins',[rx,tx],r);ch.bus.call('Serial1.begin',[p.baud],r);
-  Object.assign(st,{open:true,ipl:Number(cfg.fields.rxi_ipl.value),callback:p.callback||''});return FSP.SUCCESS;
+  // The UART's DTC transfers (p_transfer_rx, then p_transfer_tx: r_sci_uart_transfer_open opens them in that order).
+  const own={};
+  for(const [key,dir]of [['transferRx','rx'],['transferTx','tx']]){
+   const t=p[key]&&this.inst.transfers.find(x=>x.id===p[key]);if(!t)continue;const ts=this.uartTransfer(t);
+   if(ts.open){if(own.rx)own.rx.open=false;return FSP.ALREADY_OPEN;}
+   Object.assign(ts,{open:true,enabled:false,uart:st.channel,dir});own[dir]=ts;
+  }
+  const ch=this.uartChannel(st.channel);ch.st=st;ch.rx=null;ch.txFree=0;ch.txEnd=0;ch.tx=null;ch.bus.call('Serial1.setPins',[rx,tx],r);ch.bus.call('Serial1.begin',[p.baud],r);
+  Object.assign(st,{open:true,ipl:Number(cfg.fields.rxi_ipl.value),callback:p.callback||'',dtcTx:own.tx||null,dtcRx:own.rx||null});return FSP.SUCCESS;
  },
  R_SCI_UART_Write([ctrl,buffer,count],r,fn){
   const st=this.instance(ctrl,r,fn,'uart');if(!st.open)return FSP.NOT_OPEN;const ch=this.uartChannel(st.channel),u=ch.bus.uart;
-  int(count,1,256,`${fn} 길이(내장 해석기는 한 번에 256바이트까지)`);if(r.microTime<ch.txFree-1e-6)return FSP.IN_USE;
+  int(count,1,256,`${fn} 길이(내장 해석기는 한 번에 256바이트까지)`);
+  // With a DTC for transmission r_sci_uart does not answer FSP_ERR_IN_USE (tx_src_bytes is 0 at once): a Write while TDR
+  // still holds a byte would overwrite it on the board, so the interpreter stops with the reason instead.
+  if(st.dtcTx&&r.microTime<ch.txFree-1e-6)throw new Error(`${fn}: g_uart${st.channel}의 DTC 송신이 끝나기 전에 다시 불렀습니다. DTC로 보낼 때 r_sci_uart는 FSP_ERR_IN_USE로 막지 않아 보내던 마지막 바이트가 덮어써집니다. UART_EVENT_TX_COMPLETE를 기다린 뒤 부르세요.`);
+  if(r.microTime<ch.txFree-1e-6)return FSP.IN_USE;
   // Each byte goes out at its frame start (an Abort or a Close stops the rest). TXI takes the last byte into the shift
   // register one frame before the end (TX_DATA_EMPTY; a new Write may start then and continues the transmission, so the
   // earlier TEI does not come), TEI when the last byte of the last write has gone out (TX_COMPLETE).
   const bytes=this.bytes(buffer,count,r,fn),frame=1e7/u.baud,start=Math.max(r.microTime,ch.txEnd??0),gen=++ch.txGen,abort=ch.txAbort;
   bytes.forEach((byte,i)=>r.event((start+i*frame)/1000,()=>{if(ch.txAbort!==abort||!st.open)return;ch.bus.call('Serial1.write',[r.array([byte]),1],r);r.api.uart?.({instance:ch.id,direction:'TX',bytes:[byte],micros:r.microTime});}));
   ch.txEnd=start+count*frame;ch.txFree=ch.txEnd-frame;
-  r.event(ch.txFree/1000,()=>{if(ch.txAbort===abort)this.uartEvent(r,ch,128,0,'txi');});r.event(ch.txEnd/1000,()=>{if(ch.txGen===gen&&ch.txAbort===abort)this.uartEvent(r,ch,2,0,'tei');});return FSP.SUCCESS;
+  // With the DTC (two bytes or more) the last transfer writes the last byte into TDR while the one before it is sent, and
+  // the TXI interrupt that ends the DTC transfer reaches the CPU then: TX_DATA_EMPTY one frame earlier.
+  const dtc=st.dtcTx&&count>=2?st.dtcTx:null,empty=dtc?ch.txEnd-2*frame:ch.txFree;
+  ch.tx=dtc?{start,count,frame,transfer:dtc}:null;if(dtc)dtc.enabled=true;
+  r.event(empty/1000,()=>{if(dtc&&ch.tx?.transfer===dtc)dtc.enabled=false;if(ch.txAbort===abort)this.uartEvent(r,ch,128,0,'txi');});r.event(ch.txEnd/1000,()=>{if(ch.txGen===gen&&ch.txAbort===abort)this.uartEvent(r,ch,2,0,'tei');});return FSP.SUCCESS;
  },
- R_SCI_UART_Read([ctrl,buffer,count],r,fn){const st=this.instance(ctrl,r,fn,'uart');if(!st.open)return FSP.NOT_OPEN;const ch=this.uartChannel(st.channel);if(ch.rx)return FSP.IN_USE;int(count,1,4096,`${fn} 길이`);r.pointerCell(buffer,count-1);ch.rx={buffer,count,index:0};return FSP.SUCCESS;},
- R_SCI_UART_Abort([ctrl,dir],r,fn){const st=this.instance(ctrl,r,fn,'uart');if(!st.open)return FSP.NOT_OPEN;const ch=this.uartChannel(st.channel);if(dir&1)ch.rx=null;if(dir&2)this.uartStop(r,ch);return FSP.SUCCESS;},
- R_SCI_UART_InfoGet([ctrl,info],r,fn){const st=this.instance(ctrl,r,fn,'uart');if(!st.open)return FSP.NOT_OPEN;const v=this.struct(info,r,'uart_info_t',fn);this.setField(v,'write_bytes_max',256,r);this.setField(v,'read_bytes_max',4096,r);return FSP.SUCCESS;},
- R_SCI_UART_Close(args,r,fn){const st=this.instance(args[0],r,fn,'uart');if(!st.open)return FSP.NOT_OPEN;const ch=this.uartChannel(st.channel);this.uartStop(r,ch);ch.bus.call('Serial1.end',[],r);ch.rx=null;st.open=false;this.dropJobs(`SCI${ch.channel}:`);return FSP.SUCCESS;},
+ R_SCI_UART_Read([ctrl,buffer,count],r,fn){const st=this.instance(ctrl,r,fn,'uart');if(!st.open)return FSP.NOT_OPEN;const ch=this.uartChannel(st.channel);if(ch.rx)return FSP.IN_USE;int(count,1,4096,`${fn} 길이`);r.pointerCell(buffer,count-1);ch.rx={buffer,count,index:0};if(st.dtcRx)st.dtcRx.enabled=true;return FSP.SUCCESS;},
+ R_SCI_UART_Abort([ctrl,dir],r,fn){const st=this.instance(ctrl,r,fn,'uart');if(!st.open)return FSP.NOT_OPEN;const ch=this.uartChannel(st.channel);if(dir&1){ch.rx=null;if(st.dtcRx)st.dtcRx.enabled=false;}if(dir&2){this.uartStop(r,ch);if(st.dtcTx)st.dtcTx.enabled=false;}return FSP.SUCCESS;},
+ R_SCI_UART_InfoGet([ctrl,info],r,fn){const st=this.instance(ctrl,r,fn,'uart');if(!st.open)return FSP.NOT_OPEN;const v=this.struct(info,r,'uart_info_t',fn);this.setField(v,'write_bytes_max',st.dtcTx?0x10000:256,r);this.setField(v,'read_bytes_max',st.dtcRx?0x10000:4096,r);return FSP.SUCCESS;},
+ R_SCI_UART_Close(args,r,fn){const st=this.instance(args[0],r,fn,'uart');if(!st.open)return FSP.NOT_OPEN;const ch=this.uartChannel(st.channel);this.uartStop(r,ch);ch.bus.call('Serial1.end',[],r);ch.rx=null;st.open=false;for(const t of [st.dtcRx,st.dtcTx])if(t){t.open=false;t.enabled=false;}this.dropJobs(`SCI${ch.channel}:`);return FSP.SUCCESS;},
  R_GPT_Open(args,r,fn){return this.timerOpen(r,args,fn,'gpt');},R_AGT_Open(args,r,fn){return this.timerOpen(r,args,fn,'agt');},
  R_GPT_Start(args,r,fn){return timerCall.call(this,args,r,fn,'gpt',st=>{if(!st.running)this.timerStart(r,st);});},
  R_AGT_Start(args,r,fn){return timerCall.call(this,args,r,fn,'agt',st=>{if(!st.running)this.timerStart(r,st);});},
@@ -1087,18 +1118,21 @@ const HANDLERS={
   const st=this.instance(ctrl,r,fn,'adc');if(st.open)return FSP.ALREADY_OPEN;const cfg=this.struct(cfgPtr,r,'adc_cfg_t',fn),f=k=>Number(cfg.fields[k].value),bits=[12,10,8][f('resolution')];
   if(!bits)throw new Error(`${fn}: 분해능은 12·10·8비트입니다.`);
   const callback=f('scan_end_ipl')===0xFF?'':this.inst.adc?.callback||'';if(callback&&f('mode')===2)throw new Error(`${fn}: 내장 해석기는 연속 스캔(Continuous Scan)에서 스캔 완료 콜백을 실행하지 않습니다. 콜백을 비우거나 ARM GCC 빌드로 실행하세요.`);
-  Object.assign(st,{open:true,mode:f('mode'),bits,ipl:f('scan_end_ipl'),callback,mask:null,running:false,values:new Map()});return FSP.SUCCESS;
+  Object.assign(st,{open:true,mode:f('mode'),bits,ipl:f('scan_end_ipl'),callback,mask:null,running:false,values:new Map(),elcTrigger:this.inst.adc?.trigger==='ELC',armed:false,armGen:(st.armGen||0)+1});return FSP.SUCCESS;
  },
  R_ADC_ScanCfg([ctrl,chPtr],r,fn){const st=this.instance(ctrl,r,fn,'adc');if(!st.open)return FSP.NOT_OPEN;const cfg=this.struct(chPtr,r,'adc_channel_cfg_t',fn),mask=Number(cfg.fields.scan_mask.value)>>>0;for(let ch=0;ch<29;ch++)if(mask&(1<<ch))this.adcPin(ch,fn);st.mask=mask;return FSP.SUCCESS;},
  R_ADC_ScanStart(args,r,fn){
   const st=this.instance(args[0],r,fn,'adc');if(!st.open)return FSP.NOT_OPEN;if(st.mask===null)throw new Error(`${fn}: 먼저 R_ADC_ScanCfg(&g_adc0_ctrl, &g_adc0_channel_cfg)로 스캔할 채널을 정하세요.`);
   if(st.running)return FSP.IN_USE;
+  // An ELC start trigger (ADC_START_SOURCE_ELC_AD0): ScanStart lets the linked event start each scan (fsp-transfer.js).
+  if(st.elcTrigger){st.armed=true;return FSP.SUCCESS;}
   for(let ch=0;ch<29;ch++)if(st.mask&(1<<ch))st.values.set(ch,this.adcSample(r,st,ch));
   if(st.mode===2)st.running=true;
-  else if(st.callback)this.queue(r,'ADC0_SCAN_END',st.ipl,()=>this.callback(r,st.callback,'adc_callback_args_t',{unit:0,event:0,group_mask:1}),'adc_scan_end_isr');
+  else this.adcScanEnd(r,st);
   return FSP.SUCCESS;
  },
- R_ADC_ScanStop(args,r,fn){const st=this.instance(args[0],r,fn,'adc');if(!st.open)return FSP.NOT_OPEN;st.running=false;return FSP.SUCCESS;},
+ R_ADC_ScanStop(args,r,fn){const st=this.instance(args[0],r,fn,'adc');if(!st.open)return FSP.NOT_OPEN;st.running=false;st.armed=false;st.armGen=(st.armGen||0)+1;return FSP.SUCCESS;},
+ R_ADC_InfoGet(args,r,fn){return this.adcInfoGet(args,r,fn);},
  R_ADC_StatusGet([ctrl,status],r,fn){const st=this.instance(ctrl,r,fn,'adc');if(!st.open)return FSP.NOT_OPEN;this.setField(this.struct(status,r,'adc_status_t',fn),'state',st.running?1:0,r);return FSP.SUCCESS;},
  R_ADC_Read([ctrl,channel,out],r,fn){
   const st=this.instance(ctrl,r,fn,'adc');if(!st.open)return FSP.NOT_OPEN;const ch=int(channel,0,28,`${fn} 채널`);this.adcPin(ch,fn);
@@ -1106,7 +1140,7 @@ const HANDLERS={
   this.out(out,r,st.running&&st.mask&(1<<ch)?this.adcSample(r,st,ch):st.values.get(ch)??0,fn);return FSP.SUCCESS;
  },
  R_ADC_Read32(args,r,fn){return HANDLERS.R_ADC_Read.call(this,args,r,fn);},
- R_ADC_Close(args,r,fn){const st=this.instance(args[0],r,fn,'adc');if(!st.open)return FSP.NOT_OPEN;st.open=st.running=false;return FSP.SUCCESS;},
+ R_ADC_Close(args,r,fn){const st=this.instance(args[0],r,fn,'adc');if(!st.open)return FSP.NOT_OPEN;st.open=st.running=st.armed=false;st.armGen=(st.armGen||0)+1;return FSP.SUCCESS;},
  R_IIC_MASTER_Open([ctrl,cfgPtr],r,fn){
   const st=this.instance(ctrl,r,fn,'iic');if(st.open)return FSP.ALREADY_OPEN;const cfg=this.struct(cfgPtr,r,'i2c_master_cfg_t',fn),id='IIC'+st.channel,t=this.inst.iics.find(x=>x.channel===st.channel);
   const scl=this.pinOf(id+'_SCL'),sda=this.pinOf(id+'_SDA');if(!scl||!sda)throw new Error(`${fn}: Pins에서 ${id}의 SCL과 SDA 핀을 정하세요.`);
@@ -1261,4 +1295,6 @@ Object.assign(HANDLERS,{
  R_LPM_IoKeepClear(args,r){this.lpmReg.iokeep=0;this.lpmRelease(r);return FSP.SUCCESS;},
  R_LPM_Close([ctrl],r,fn){if(!ctrl)return FSP.ASSERTION;const st=this.instance(ctrl,r,fn,'lpm');if(!st.open)return FSP.NOT_OPEN;st.open=false;return FSP.SUCCESS;}
 });
+// R_ELC_*, R_DTC_*, R_DMAC_* (fsp-transfer.js).
+for(const name of TRANSFER_NAMES)HANDLERS[name]=function(args,r,fn){return fn.startsWith('R_ELC_')?this.elcCall(fn,args,r):fn.startsWith('R_DTC_')?this.dtcCall(fn,args,r):this.dmacCall(fn,args,r);};
 function timerCall(args,r,fn,kind,action){const st=this.instance(args[0],r,fn,kind);if(!st.open)return FSP.NOT_OPEN;action(st);return FSP.SUCCESS;}
