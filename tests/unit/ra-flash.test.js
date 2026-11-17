@@ -159,6 +159,9 @@ test('RA6E1 SoC: the FACI is on the bus at 0x407FE000 / 0x407E0000, FWEPROR gate
  bus.write16(RA_BASES.FACI+FACI.FENTRYR,0xaa80);machine.reset();
  assert.equal(bus.read16(RA_BASES.FACI+FACI.FENTRYR),0);assert.equal(bus.read8(0x4001e416),0x02);assert.equal(bus.read32(RA_DF_BASE)>>>0,0xdeadbeef);
  assert.deepEqual(soc.dataFlash.encode(),[{at:0,hex:'efbeadde'}]);
+ // A store by the program into the data flash goes nowhere and is said once; one into the code flash says nothing.
+ warnings.length=0;bus.write32(RA_DF_BASE,0);bus.write8(RA_DF_BASE+5,0);bus.write32(0x1000,0);
+ assert.equal(bus.read32(RA_DF_BASE)>>>0,0xdeadbeef);assert.deepEqual(warnings,['[FLASH] 데이터 플래시에 대입(버스 쓰기)한 값은 쓰이지 않고 무시됩니다 — 실제 칩도 같습니다. R_FLASH_HP_Erase로 블록을 지운 뒤 R_FLASH_HP_Write로 쓰세요.']);
  // An image's data flash bytes (an ELF's .data_flash) are programmed units; loading a new image starts from erased flash.
  bus.loadBytes(RA_DF_BASE+64,Uint8Array.of(9,8,7,6));assert.equal(soc.dataFlash.isBlank(64,4),false);assert.equal(bus.read8(RA_DF_BASE+65),8);
  bus.resetMemory({keepFlash:false});assert.equal(soc.dataFlash.used(),0);assert.equal(bus.read8(RA_DF_BASE),0xff);
@@ -421,11 +424,17 @@ void hal_entry(void)
     uint8_t raw[20];
     memcpy(raw, &settings, sizeof(raw));
     printf("%02X %02X %02X %02X %02X %c\\n", raw[0], raw[1], raw[2], raw[4], raw[5], raw[12]);
-    *(uint32_t *) 0x08000080U = 0;
+    /* A store through a pointer goes nowhere (as on the chip), said once; the program goes on. */
+    uint32_t *word = (uint32_t *) 0x08000080U;
+    *word = 0;
+    word[1] |= 0x10U;
+    memset((void *) 0x08000088U, 0, 4);
+    printf("%08lX %08lX %02X\\n", (unsigned long) *word, (unsigned long) word[1], *(uint8_t *) 0x08000088U);
 }`);
- assert.throws(()=>run(50),/데이터 플래시는 대입으로 쓸 수 없습니다\. R_FLASH_HP_Erase로 블록을 지운 뒤 R_FLASH_HP_Write로 쓰세요\./);
- assert.deepEqual(log.print,['20 FF','FF','0','A55A 80 2 1500 1.5 RA6E1','A55A 1500 RA6E1 0','5A A5 50 DC 05 R']);
- assert.equal(log.warn.length,1,'the blank read is said once');assert.match(log.warn[0],/^\[FLASH\] 지운\(빈\) 데이터 플래시 0x08000080를 읽었습니다/);
+ run(50);
+ assert.deepEqual(log.print,['20 FF','FF','0','A55A 80 2 1500 1.5 RA6E1','A55A 1500 RA6E1 0','5A A5 50 DC 05 R','0250A55A 000005DC 00']);
+ assert.equal(log.warn.length,2,'the blank read and the store are each said once');assert.match(log.warn[0],/^\[FLASH\] 지운\(빈\) 데이터 플래시 0x08000080를 읽었습니다/);
+ assert.equal(log.warn[1],'[FLASH] 데이터 플래시에 대입(버스 쓰기)한 값은 쓰이지 않고 무시됩니다 — 실제 칩도 같습니다. R_FLASH_HP_Erase로 블록을 지운 뒤 R_FLASH_HP_Write로 쓰세요.');
  assert.equal(session.dataFlash.encode()[0].hex,'5aa55002dc0500000000c03f5241364531000000');
 });
 

@@ -6,7 +6,7 @@
 import { Scheduler } from '../stm32f446/core.js';
 import { BusFaultSignal } from '../bus.js';
 import { Signals } from '../stm32f446/signals.js';
-import { RaBus } from './bus.js';
+import { RaBus, RA_DATA_FLASH_BASE } from './bus.js';
 import { Sci } from './sci.js';
 import { Gpt } from './gpt.js';
 import { Adc12 } from './adc.js';
@@ -310,6 +310,8 @@ export class Ra6e1 {
     // Flash sequencer (FACI) and the data flash it programs (flash.js); the bus tells it when the program reads the area.
     this.dataFlash = this.bus.dataFlashStore; this.faci = new Faci(this);
     this.bus.onDataFlashRead = (offset, size) => this.faci.dataRead(offset, size);
+    // A store into the data flash goes nowhere (code flash stores are ignored as before, without a note).
+    this.bus.flashWriteHook = a => { if (a >= RA_DATA_FLASH_BASE) this.faci.assigned(); };
     const devices = [
       [RA_BASES.SYSTEM, 0x700, this.system],
       [RA_BASES.PORT, 0x1000, this.ports],

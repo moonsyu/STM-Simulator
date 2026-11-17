@@ -132,6 +132,13 @@ export class Faci {
       return;
     }
   }
+  // A store by the program into the data flash area (`*p = v` through a pointer): the flash is not written by a bus
+  // write on the chip either, so the value goes nowhere. Said once (both engines: the interpreter calls this too).
+  assigned() {
+    if (this.assignNoted) return;
+    this.assignNoted = true;
+    this.warn('데이터 플래시에 대입(버스 쓰기)한 값은 쓰이지 않고 무시됩니다 — 실제 칩도 같습니다. R_FLASH_HP_Erase로 블록을 지운 뒤 R_FLASH_HP_Write로 쓰세요.');
+  }
   // ------------------------------------------------------------ registers
   word(base) {
     switch (base) {

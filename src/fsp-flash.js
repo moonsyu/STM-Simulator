@@ -21,7 +21,6 @@ const EVENT={ERASE_COMPLETE:0,WRITE_COMPLETE:1,BLANK:2,NOT_BLANK:3,ERR_DF_ACCESS
 const DF_END=RA_DF_BASE+RA_DF_SIZE;
 const hex=v=>'0x'+(v>>>0).toString(16).toUpperCase().padStart(8,'0');
 const enumOf=(tag,name,items)=>`typedef enum ${tag}\n{\n${items.map(([k,v])=>`    ${k} = ${v},`).join('\n')}\n} ${name};`;
-const READ_ONLY='데이터 플래시는 대입으로 쓸 수 없습니다. R_FLASH_HP_Erase로 블록을 지운 뒤 R_FLASH_HP_Write로 쓰세요.';
 const CODE_FLASH='코드 플래시 주소입니다. 이 프로젝트는 코드 플래시 프로그래밍 없이 빌드하므로(r_flash_hp_cfg.h FLASH_HP_CFG_CODE_FLASH_PROGRAMMING_ENABLE 0) FSP_ERR_INVALID_ADDRESS를 돌려줍니다. 데이터 플래시는 0x08000000~0x08001FFF입니다.';
 // Calls that need code flash programming, an ID code, an access window, anti-rollback counters or a user lockable
 // area: none of them is in this build or on the RA6E1 (bsp_feature.h), and r_flash_hp.c returns FSP_ERR_UNSUPPORTED.
@@ -190,14 +189,16 @@ export const FLASH_METHODS={
   yield* this.flashReset(r,st);st.errPend=false;yield* this.flashCallback(r,st,event);
  },
  // ---- (type *) address: the data flash as the program reads it through a pointer (session.js → runtime cast).
- // The cells are read-only views of the contents, one array per element type; any other address is left to the runtime.
+ // The cells are views of the contents (a store into one is ignored), one array per element type and phase; any other
+ // address is left to the runtime.
  memory(address,type,r){
   const at=(address>>>0)-RA_DF_BASE;if(!(at>=0&&at<RA_DF_SIZE))return null;
   const elem=type==='void'?'uint8_t':type,size=r.typeSize(elem),phase=at%size,key=elem+'@'+phase;
   this.flashViews??=new Map();
   if(!this.flashViews.has(key)){
    const self=this,owner={alive:true},cells=[];
-   for(let o=phase;o+size<=RA_DF_SIZE;o+=size)cells.push({get value(){return self.flashRead(o,size,elem);},set value(v){void v;},owner,constant:true,readOnly:READ_ONLY,dataType:elem});
+   // A store through the pointer (*p = v) goes nowhere, as on the chip: said once, and the program goes on.
+   for(let o=phase;o+size<=RA_DF_SIZE;o+=size)cells.push({get value(){return self.flashRead(o,size,elem);},set value(v){void v;self.flashDev(self.runtime).assigned();},owner,dataType:elem});
    // `memory`: where the view's elements lie, so a pointer into it has an address (runtime.js memoryAddress).
    this.flashViews.set(key,{kind:'array',cells,memory:{base:RA_DF_BASE+phase,size}});
   }
