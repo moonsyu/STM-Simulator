@@ -29,7 +29,8 @@ test('every FSP example compiles and runs 2 s on the interpreter without an erro
  for(const e of RA_EXAMPLES){
   const {session,log}=open(example(e.id));
   run(session,2000,t=>{if(t%400===100)session.setPressed({SW1:true});if(t%400===300)session.setPressed({});});
-  assert.ok(!session.runtime.finished,e.id+' keeps running');assert.deepEqual(log.warn,[],e.id);
+  // ra_flash_counter resets the MCU when S1 is released (NVIC_SystemReset): that log entry is its own doing.
+  assert.ok(!session.runtime.finished,e.id+' keeps running');assert.deepEqual(log.warn.filter(w=>!(e.id==='ra_flash_counter'&&/^\[NVIC\] 시스템 리셋/.test(w))),[],e.id);
   assert.equal(session.runtime.gpio.P408?.mode,'OUTPUT',e.id+': R_IOPORT_Open applied the pins in R_BSP_WarmStart');
  }
 });

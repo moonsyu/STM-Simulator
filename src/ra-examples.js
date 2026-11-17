@@ -773,5 +773,85 @@ void hal_entry(void)
     }
 }
 `+WARM_START});
-RA_EXAMPLES.push(POLL_EXAMPLE,IRQ_COURSE_EXAMPLE,UART_EXAMPLE,GPT_EXAMPLE,ADC_EXAMPLE,AGT_EXAMPLE,IIC_EXAMPLE,SPI_EXAMPLE,CHALLENGE_EXAMPLE,WDT_EXAMPLE,RTC_EXAMPLE,IIC_SLAVE_EXAMPLE);
+// Data flash (r_flash_hp, no background operation): a boot counter in the first 64-byte block at 0x08000000. Every start
+// reads it (after a blank check: an erased cell has no defined value), adds one, erases the block and writes it back,
+// then prints it on SCI9 (the USB-TTL part on D0/D1). S1 resets the MCU; the count also goes on when the run is stopped
+// and started again (the app keeps the data flash in the project).
+const FLASH_EXAMPLE=Object.freeze({id:'ra_flash_counter',name:'데이터 플래시에 부팅 횟수 저장 (R_FLASH_HP_Open · BlankCheck · Erase · Write)',tags:['flash','data flash','r_flash_hp','EEPROM','nonvolatile','reset','UART'],
+ mcu:()=>{const m=UART_EXAMPLE.mcu();m.pins.P205={function:'GPIO_Input',pull:'PULLUP',label:'SW1'};m.peripherals.FLASH={enabled:true,bgo:false,callback:'',readyPriority:12,errorPriority:12};return m;},
+ circuit:UART_EXAMPLE.circuit,
+ code:HEAD+`#include <stdio.h>
+
+/* The boot counter: the first 4 bytes of data flash block 0 (64 bytes at 0x08000000). */
+#define COUNTER_ADDRESS    (0x08000000U)
+#define COUNTER_BYTES      (4U)
+
+volatile uint32_t boot_count = 0;
+volatile uint32_t flash_error = 0;
+static volatile bool tx_done = true;
+static char line[48];
+
+void user_uart9_callback(uart_callback_args_t *p_args)
+{
+    if (UART_EVENT_TX_COMPLETE == p_args->event)
+    {
+        tx_done = true;
+    }
+}
+
+void hal_entry(void)
+{
+    flash_result_t blank = FLASH_RESULT_NOT_BLANK;
+    uint32_t count = 0;
+
+    R_SCI_UART_Open(&g_uart9_ctrl, &g_uart9_cfg);
+    fsp_err_t err = R_FLASH_HP_Open(&g_flash0_ctrl, &g_flash0_cfg);
+
+    /* What an erased data flash cell reads as is not defined: the blank check says whether the counter was written. */
+    if (FSP_SUCCESS == err)
+    {
+        err = R_FLASH_HP_BlankCheck(&g_flash0_ctrl, COUNTER_ADDRESS, COUNTER_BYTES, &blank);
+    }
+    if ((FSP_SUCCESS == err) && (FLASH_RESULT_NOT_BLANK == blank))
+    {
+        count = *(uint32_t *) COUNTER_ADDRESS;
+    }
+    count++;
+
+    /* Flash is written only after an erase: erase the block, then program the new count (4 bytes). */
+    if (FSP_SUCCESS == err)
+    {
+        err = R_FLASH_HP_Erase(&g_flash0_ctrl, COUNTER_ADDRESS, 1);
+    }
+    if (FSP_SUCCESS == err)
+    {
+        err = R_FLASH_HP_Write(&g_flash0_ctrl, (uint32_t) &count, COUNTER_ADDRESS, COUNTER_BYTES);
+    }
+    boot_count  = count;
+    flash_error = (uint32_t) err;
+
+    int n = sprintf(line, "boot count = %lu%s\\r\\n", (unsigned long) count, (FSP_SUCCESS == err) ? "" : " (flash error)");
+    tx_done = false;
+    R_SCI_UART_Write(&g_uart9_ctrl, (uint8_t *) line, (uint32_t) n);
+    R_IOPORT_PinWrite(&g_ioport_ctrl, LED1, (FSP_SUCCESS == err) ? BSP_IO_LEVEL_HIGH : BSP_IO_LEVEL_LOW);
+
+    while (1)
+    {
+        bsp_io_level_t sw1;
+        R_IOPORT_PinRead(&g_ioport_ctrl, SW1, &sw1);
+        if ((BSP_IO_LEVEL_LOW == sw1) && tx_done)
+        {
+            /* S1: reset the MCU when the button is released. The counter in the data flash stays. */
+            while (BSP_IO_LEVEL_LOW == sw1)
+            {
+                R_BSP_SoftwareDelay(10, BSP_DELAY_UNITS_MILLISECONDS);
+                R_IOPORT_PinRead(&g_ioport_ctrl, SW1, &sw1);
+            }
+            NVIC_SystemReset();
+        }
+        R_BSP_SoftwareDelay(20, BSP_DELAY_UNITS_MILLISECONDS);
+    }
+}
+`+WARM_START});
+RA_EXAMPLES.push(POLL_EXAMPLE,IRQ_COURSE_EXAMPLE,UART_EXAMPLE,GPT_EXAMPLE,ADC_EXAMPLE,AGT_EXAMPLE,IIC_EXAMPLE,SPI_EXAMPLE,CHALLENGE_EXAMPLE,WDT_EXAMPLE,RTC_EXAMPLE,IIC_SLAVE_EXAMPLE,FLASH_EXAMPLE);
 Object.freeze(RA_EXAMPLES);

@@ -10,6 +10,8 @@ import {Machine} from '../../src/emu/machine.js';
 import {Ra6e1,RaBus,RA_BASES} from '../../src/emu/ra6e1/soc.js';
 import {raDefaultMcu,validateRaMcu,raNameProblem} from '../../src/ra-config.js';
 import {generateRaFiles,raVectors,raInstances} from '../../src/ra-generator.js';
+import {raAssistance} from '../../src/ra-assistance.js';
+import {raExample} from '../../src/ra-examples.js';
 import {SimulationSession} from '../../src/session.js';
 import {projectForBoard,validateProject} from '../../src/project.js';
 
@@ -467,4 +469,22 @@ test('project file: an RA project keeps the data flash contents (dataFlash), che
  assert.equal(Object.hasOwn(validateProject({...projectForBoard('nucleo-f446re'),dataFlash:runs}),'dataFlash'),false);
  // The contents are not part of the MCU settings (the firmware build's input): saving them does not ask for a rebuild.
  assert.equal(JSON.stringify(p.mcu),JSON.stringify(validateProject(base).mcu));
+});
+
+test('Developer Assistance and the example: g_flash0 calls (the callback only with BGO); ra_flash_counter is a valid project with the stack',()=>{
+ const items=m=>raAssistance(validateRaMcu(m)).find(x=>x.name==='g_flash0');
+ assert.equal(items(raDefaultMcu()),undefined);
+ const plain=items(mcu({FLASH:{enabled:true}}));
+ assert.equal(plain.title,'Flash (r_flash_hp)');
+ assert.deepEqual(plain.items.map(i=>i.label),['Call R_FLASH_HP_Open()','Call R_FLASH_HP_Erase()','Call R_FLASH_HP_Write()','Call R_FLASH_HP_BlankCheck()','Call R_FLASH_HP_StatusGet()','Call R_FLASH_HP_InfoGet()','Call R_FLASH_HP_Close()']);
+ assert.match(plain.items[2].code,/R_FLASH_HP_Write\(&g_flash0_ctrl, \(uint32_t\) &value, 0x08000000U, sizeof\(value\)\);/);
+ assert.match(plain.items[3].code,/R_FLASH_HP_BlankCheck\(&g_flash0_ctrl, 0x08000000U, 4, &blank\);[\s\S]*\*\(uint32_t \*\) 0x08000000U/);
+ const bgo=items(mcu({FLASH:{enabled:true,bgo:true,callback:'flash_done'}}));
+ assert.match(bgo.items.at(-1).code,/^void flash_done\(flash_callback_args_t \*p_args\)\n\{\n {4}if \(FLASH_EVENT_ERASE_COMPLETE == p_args->event\)/);
+ const e=raExample('ra_flash_counter'),project=validateProject({...projectForBoard('fpb-ra6e1'),mcu:e.mcu(),code:e.code,...e.circuit()});
+ assert.deepEqual(project.mcu.peripherals.FLASH,{enabled:true,bgo:false,callback:'',readyPriority:12,errorPriority:12});
+ assert.match(e.code,/R_FLASH_HP_BlankCheck\(&g_flash0_ctrl, COUNTER_ADDRESS, COUNTER_BYTES, &blank\)/);assert.equal(project.dataFlash,undefined);
+ // The snippets run on the interpreter as they are inserted.
+ const t=interp(`void hal_entry(void)\n{\n${plain.items.slice(0,4).map(i=>i.code).join('\n').replace('uint32_t stored','uint32_t stored_value').replace('(void) stored;','printf("%08lX\\n", (unsigned long) stored_value);')}\n    while (1) { R_BSP_SoftwareDelay(10, BSP_DELAY_UNITS_MILLISECONDS); }\n}`);
+ t.run(20);assert.deepEqual(t.log.print,['12345678']);assert.deepEqual(t.log.warn,[]);
 });

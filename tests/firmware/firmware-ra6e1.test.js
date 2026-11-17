@@ -227,3 +227,31 @@ test('ra_iic_slave: a write longer than the slave takes ends with NACK (error 2)
   lines.interpreter=board.filter(l=>/W6/.test(l));assert.equal(session.readVariable('writes_seen'),1);}
  assert.deepEqual(lines,{emulator:['[ESP32-1] W6 error=2 scan=0 none=2'],interpreter:['[ESP32-1] W6 error=2 scan=0 none=2']});
 });
+
+// Feature 39: the real r_flash_hp (no background operation) on the flash sequencer model.
+const sci9=log=>String.fromCharCode(...log.uart.filter(e=>e.instance==='SCI9'&&e.direction==='TX').flatMap(e=>e.bytes));
+test('ra_flash_counter: the real r_flash_hp blank-checks, erases and programs the data flash; the boot count survives the S1 reset and a new run of the project',()=>{
+ const {session,log}=open(fixture('ra_flash_counter'));
+ runUntil(session,200);
+ assert.equal(sci9(log),'boot count = 1\r\n');assert.equal(session.readVariable('boot_count'),1);assert.equal(session.readVariable('flash_error'),0);
+ assert.ok(session.gpio.P408.value>1.65,'LED1: no flash error');
+ assert.deepEqual(session.dataFlash.encode(),[{at:0,hex:'01000000'}]);assert.equal(session.dataFlash.changed,true);
+ // What the driver leaves: read mode, P/E permitted (FWEPROR 01), FCLK 50 MHz told to the sequencer, no error, no interrupt.
+ const faci=session.soc.faci;
+ assert.equal(faci.fentryr,0);assert.equal(faci.read(0x80,4),0x8000,'FSTATR: FRDY only');assert.equal(faci.read(0x10,1),0);assert.equal(faci.fpckar,50);assert.equal(faci.frdyie,0);assert.equal(faci.faeint,0);
+ assert.equal(session.soc.system.get(0x416,1),1);assert.equal(session.soc.clock.fclk,50e6);
+ assert.equal(session.machine.bus.peek(0x08000000,4),1);
+ assert.deepEqual([...session.soc.unknown.keys()],[],'no register outside the model');assert.deepEqual(session.warnings,[]);
+ // S1 pressed and released: NVIC_SystemReset; the program starts again and finds the count.
+ session.setPressed({SW1:true});runUntil(session,260);assert.deepEqual(session.resets,[]);session.setPressed({});runUntil(session,500);
+ assert.deepEqual(session.resets.map(r=>r.reason),['SYSRESETREQ']);assert.equal(sci9(log),'boot count = 1\r\nboot count = 2\r\n');
+ assert.deepEqual(session.dataFlash.encode(),[{at:0,hex:'02000000'}]);
+ // The app saves the contents into the project when the run ends; the next run (a new session) goes on from them.
+ const saved={...project(fixture('ra_flash_counter')),dataFlash:session.dataFlash.encode()};
+ const next=open(fixture('ra_flash_counter'),{project:saved});
+ assert.equal(next.session.dataFlash.changed,false);runUntil(next.session,200);
+ assert.equal(sci9(next.log),'boot count = 3\r\n');assert.deepEqual(next.session.dataFlash.encode(),[{at:0,hex:'03000000'}]);
+ // The interpreter prints the same from the same starting contents.
+ const uart=[],interp=new SimulationSession(saved,{uart:e=>uart.push(e)});for(let t=20;t<=200;t+=20)interp.tick(t);
+ assert.equal(sci9({uart}),'boot count = 3\r\n');assert.deepEqual(interp.dataFlash.encode(),[{at:0,hex:'03000000'}]);
+});

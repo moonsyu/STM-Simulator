@@ -72,5 +72,14 @@ export function raAssistance(mcu){
       call('R_RTC_PeriodicIrqRateSet','R_RTC_PeriodicIrqRateSet(&g_rtc0_ctrl, RTC_PERIODIC_IRQ_SELECT_1_SECOND);'),
       call('R_RTC_InfoGet','rtc_info_t info;\nR_RTC_InfoGet(&g_rtc0_ctrl, &info);'),call('R_RTC_Close','R_RTC_Close(&g_rtc0_ctrl);'),
       ...(q.callback?[callback(q.callback,'rtc_callback_args_t','    if (RTC_EVENT_PERIODIC_IRQ == p_args->event)\n    {\n        /* TODO: every period */\n    }\n    else if (RTC_EVENT_ALARM_IRQ == p_args->event)\n    {\n        /* TODO: the alarm */\n    }')]:[])]});}
+  // Data flash (r_flash_hp): 0x08000000, 64-byte erase blocks, 4-byte writes; read through a pointer.
+  if(per.FLASH?.enabled){const q=per.FLASH;
+    out.push({name:'g_flash0',title:'Flash (r_flash_hp)',items:[call('R_FLASH_HP_Open','R_FLASH_HP_Open(&g_flash0_ctrl, &g_flash0_cfg);'),
+      call('R_FLASH_HP_Erase','/* Erase one 64-byte data flash block (flash is written only after an erase). */\nR_FLASH_HP_Erase(&g_flash0_ctrl, 0x08000000U, 1);'),
+      call('R_FLASH_HP_Write','/* 4 bytes (a multiple of 4) to an erased 4-byte boundary of the data flash. */\nuint32_t value = 0x12345678U;\nR_FLASH_HP_Write(&g_flash0_ctrl, (uint32_t) &value, 0x08000000U, sizeof(value));'),
+      call('R_FLASH_HP_BlankCheck','/* An erased cell has no defined value: ask whether it was written. */\nflash_result_t blank;\nR_FLASH_HP_BlankCheck(&g_flash0_ctrl, 0x08000000U, 4, &blank);\nif (FLASH_RESULT_NOT_BLANK == blank)\n{\n    uint32_t stored = *(uint32_t *) 0x08000000U;\n    (void) stored;\n}'),
+      call('R_FLASH_HP_StatusGet','flash_status_t status;\nR_FLASH_HP_StatusGet(&g_flash0_ctrl, &status);'),
+      call('R_FLASH_HP_InfoGet','flash_info_t info;\nR_FLASH_HP_InfoGet(&g_flash0_ctrl, &info);'),call('R_FLASH_HP_Close','R_FLASH_HP_Close(&g_flash0_ctrl);'),
+      ...(q.bgo&&q.callback?[callback(q.callback,'flash_callback_args_t','    if (FLASH_EVENT_ERASE_COMPLETE == p_args->event)\n    {\n        /* TODO: the erase is done */\n    }\n    else if (FLASH_EVENT_WRITE_COMPLETE == p_args->event)\n    {\n        /* TODO: the write is done */\n    }\n    else if ((FLASH_EVENT_BLANK == p_args->event) || (FLASH_EVENT_NOT_BLANK == p_args->event))\n    {\n        /* TODO: the blank check result */\n    }\n    else\n    {\n        /* TODO: FLASH_EVENT_ERR_FAILURE and the other errors */\n    }')]:[])]});}
   return out;
 }
