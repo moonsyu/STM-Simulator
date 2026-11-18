@@ -569,8 +569,8 @@ export class FspAdapter {
   st.running=true;st.gen++;const gen=st.gen;st.next=r.microTime+this.periodUs(st)*(1-st.counter/st.period);st.counter=0;
   const fire=()=>{if(st.gen!==gen||!st.running)return;st.last=st.next;
    if(st.kind==='agt')this.lpmRequest(r,`AGT${st.channel}_INT`);
-   const event=st.kind==='gpt'?`GPT${st.channel}_COUNTER_OVERFLOW`:`AGT${st.channel}_INT`,cpu=this.fspEvent(r,event);
-   if(cpu&&st.callback)this.queue(r,event,st.ipl,()=>this.callback(r,st.callback,'timer_callback_args_t',{event:0}),st.kind==='gpt'?'gpt_counter_overflow_isr':'agt_int_isr');
+   const event=st.kind==='gpt'?`GPT${st.channel}_COUNTER_OVERFLOW`:`AGT${st.channel}_INT`;
+   this.fspEvent(r,event,cpu=>{if(cpu&&st.callback)this.queue(r,event,st.ipl,()=>this.callback(r,st.callback,'timer_callback_args_t',{event:0}),st.kind==='gpt'?'gpt_counter_overflow_isr':'agt_int_isr');});
    if(st.mode===1){st.running=false;this.pwm(r,st);return;}
    // A period set while counting (buffered, GTPBR / AGT reload) takes over at this overflow.
    if(st.newPeriod!=null){st.period=st.newPeriod;st.newPeriod=null;st.duty=st.duty.map(d=>Math.min(d,st.period));this.pwm(r,st);}
@@ -1052,7 +1052,7 @@ const HANDLERS={
   const trigger=Number(cfg.fields.trigger.value),mode=['FALLING','RISING','CHANGE','FALLING','RISING'][trigger]??'FALLING';
   if(trigger>=3)this.warnOnce(r,'level:'+pin,`${fn}: 내장 해석기는 레벨 트리거(LOW/HIGH)를 같은 쪽 엣지로 처리합니다.`);
   Object.assign(st,{open:true,enabled:false,pin,ipl:Number(cfg.fields.ipl.value),callback:this.inst.irqs.find(i=>i.channel===st.channel)?.callback||''});
-  r.interrupts.set(pin,{mode,previous:r.inputLevel(pin),pending:false,callback:{host:()=>{if(st.open&&this.fspEvent(r,'ICU_IRQ'+st.channel)&&st.enabled)this.queue(r,'ICU_IRQ'+st.channel,st.ipl,()=>this.callback(r,st.callback,'external_irq_callback_args_t',{channel:st.channel}),'r_icu_isr');}}});
+  r.interrupts.set(pin,{mode,previous:r.inputLevel(pin),pending:false,callback:{host:()=>{if(st.open)this.fspEvent(r,'ICU_IRQ'+st.channel,cpu=>{if(cpu&&st.enabled)this.queue(r,'ICU_IRQ'+st.channel,st.ipl,()=>this.callback(r,st.callback,'external_irq_callback_args_t',{channel:st.channel}),'r_icu_isr');});}}});
   return FSP.SUCCESS;
  },
  R_ICU_ExternalIrqEnable(args,r,fn){const st=this.instance(args[0],r,fn,'icu');if(!st.open)return FSP.NOT_OPEN;st.enabled=true;return FSP.SUCCESS;},

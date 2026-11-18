@@ -112,11 +112,14 @@ export const TRANSFER_METHODS={
   });
  },
  /** An event of a peripheral (an ELC_EVENT_ name): the DTC on its vector, the DMAC channels, the ELC links. Returns
-  *  whether the CPU gets the interrupt (false when a DTC took it). */
- fspEvent(r,event){
+  *  whether the CPU gets the interrupt (false when a DTC took it). `own(cpu)` queues the peripheral's own interrupt
+  *  before a DMAC end interrupt the event causes: at the same priority the emulator's NVIC takes the lower vector first,
+  *  and the DMAC vectors are the last ones. */
+ fspEvent(r,event,own){
   let cpu=true;
   const dtc=this.transferStates().find(s=>s.driver==='DTC'&&s.open&&s.enabled&&s.event===event&&!s.own);
   if(dtc){const res=this.dtcActivate(r,dtc);cpu=res.cpu;if(res.clearDtce)dtc.enabled=false;}
+  own?.(cpu);
   for(const s of this.transferStates().filter(s=>s.driver==='DMAC'&&s.open&&s.enabled&&s.event===event).sort((a,b)=>a.channel-b.channel))this.dmacRequest(r,s);
   this.elcDeliver(r,event);
   return cpu;
@@ -298,8 +301,7 @@ export const TRANSFER_METHODS={
    st.enabled=false;
    if(end&&!g.dtie)return units;
    // DMACn_INT: other consumers first (the event goes everywhere), then the CPU's dmac_int_isr when the vector is there.
-   const cpu=this.fspEvent(r,`DMAC${st.channel}_INT`);
-   if(cpu&&st.callback&&st.vectorOk)this.queue(r,`DMAC${st.channel}_INT`,st.ipl,()=>this.dmacIsr(r,st),'dmac_int_isr',`DMAC${st.channel}:${this.seq}`);
+   this.fspEvent(r,`DMAC${st.channel}_INT`,cpu=>{if(cpu&&st.callback&&st.vectorOk)this.queue(r,`DMAC${st.channel}_INT`,st.ipl,()=>this.dmacIsr(r,st),'dmac_int_isr',`DMAC${st.channel}:${this.seq}`);});
   }
   return units;
  },
@@ -327,7 +329,7 @@ export const TRANSFER_METHODS={
   st.running=true;const n=Math.max(1,[...Array(29).keys()].filter(ch=>(st.mask??0)&(1<<ch)).length),gen=st.armGen;
   r.event((r.microTime+n)/1000,()=>{if(!st.open||st.armGen!==gen)return;st.running=false;for(let ch=0;ch<29;ch++)if((st.mask??0)&(1<<ch))st.values.set(ch,this.adcSample(r,st,ch));this.adcScanEnd(r,st);});
  },
- adcScanEnd(r,st){const cpu=this.fspEvent(r,'ADC0_SCAN_END');if(cpu&&st.callback)this.queue(r,'ADC0_SCAN_END',st.ipl,()=>this.callback(r,st.callback,'adc_callback_args_t',{unit:0,event:0,group_mask:1}),'adc_scan_end_isr');},
+ adcScanEnd(r,st){this.fspEvent(r,'ADC0_SCAN_END',cpu=>{if(cpu&&st.callback)this.queue(r,'ADC0_SCAN_END',st.ipl,()=>this.callback(r,st.callback,'adc_callback_args_t',{unit:0,event:0,group_mask:1}),'adc_scan_end_isr');});},
  // ---- vectors
  vectorIndex(event){return this.vectors.find(v=>v.vector===event)?.index??-1;},
  vectorEvent(index){return this.vectors.find(v=>v.index===index)?.event??null;},
