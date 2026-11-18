@@ -13,19 +13,18 @@
 //   block:  DMCRAH units per request, the block area back after each block, DMCRB counts the blocks; RPTIE as above.
 // The end clears DTE, sets DTIF and, with DTIE, raises DMACn_INT (event 0x20 + n). A software start with CLRS = 1
 // (TRANSFER_START_MODE_REPEAT) keeps requesting until the channel stops. Transfers take no time. Repeat-block mode
-// (MD 11b) is not modelled (said once). Address modes: fixed, offset (DMOFR), increment, decrement.
+// (MD 11b) is not modelled (nothing moves). Address modes: fixed, offset (DMOFR), increment, decrement.
 import { BusFaultSignal } from '../bus.js';
 
 export const DMAC_EVENT = n => 0x20 + n;
 const MAX_UNITS = 1 << 20;
 
 export class Dmac {
-  constructor(soc) { this.soc = soc; this.name = 'DMAC'; this.size = 0x300; this.warned = new Set(); this.reset(); }
+  constructor(soc) { this.soc = soc; this.name = 'DMAC'; this.size = 0x300; this.reset(); }
   reset() {
     this.ch = Array.from({ length: 8 }, () => { const bytes = new Uint8Array(0x40); return { bytes, dv: new DataView(bytes.buffer) }; });
     this.dmast = 0; this.common = new Uint8Array(0x100); this.transfers = 0;
   }
-  warn(key, text) { if (this.warned.has(key)) return; this.warned.add(key); this.soc.env.warn?.(text); }
   reg(n, off, size = 4) { const dv = this.ch[n].dv; return size === 4 ? dv.getUint32(off, true) : size === 2 ? dv.getUint16(off, true) : dv.getUint8(off); }
   put(n, off, v, size = 4) { const dv = this.ch[n].dv; if (size === 4) dv.setUint32(off, v >>> 0, true); else if (size === 2) dv.setUint16(off, v & 0xffff, true); else dv.setUint8(off, v & 0xff); }
   delsr(n) { return this.soc.icu.get(0x280 + n * 4, 4) & 0x1ff; }
@@ -54,7 +53,6 @@ export class Dmac {
   access(fn) {
     try { return fn(); } catch (error) {
       if (!(error instanceof BusFaultSignal)) throw error;
-      this.warn('bus:' + error.address, `[DMAC] 0x${(error.address >>> 0).toString(16).toUpperCase().padStart(8, '0')}: DMAC가 접근할 수 없는 주소라 전송을 멈춥니다(전송 정보의 p_src · p_dest를 확인하세요).`);
       return null;
     }
   }
@@ -69,8 +67,7 @@ export class Dmac {
   // One request on channel n; returns the units moved.
   request(n) {
     const bus = this.soc.bus, tmd = this.reg(n, 0x10, 2), amd = this.reg(n, 0x14, 2), md = (tmd >> 14) & 3, sz = (tmd >> 8) & 3, dts = (tmd >> 12) & 3;
-    if (md === 3) { this.warn('rb', '[DMAC] Repeat-Block 모드(TRANSFER_MODE_REPEAT_BLOCK)는 시뮬레이터 모델에 없습니다.'); return 0; }
-    if (sz === 3) { this.warn('sz', '[DMAC] 8바이트 전송은 RA6E1에 없습니다.'); return 0; }
+    if (md === 3 || sz === 3) return 0;
     const bytes = 1 << sz, sm = (amd >> 14) & 3, dm = (amd >> 6) & 3, ofr = this.reg(n, 0x18) | 0;
     const step = m => (m === 1 ? ofr : m === 2 ? bytes : m === 3 ? -bytes : 0);
     let sar = this.reg(n, 0x00), dar = this.reg(n, 0x04), units = 0, stop = false;

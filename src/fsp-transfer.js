@@ -101,15 +101,14 @@ export const TRANSFER_METHODS={
   if(name==='R_ELC_SoftwareEventGenerate'){const n=Number(args[1]);if(n!==0&&n!==1)throw new Error(`${name}: ELC_SOFTWARE_EVENT_0 또는 ELC_SOFTWARE_EVENT_1을 넘기세요.`);this.fspEvent(r,'ELC_SOFTWARE_EVENT_'+n);return E.SUCCESS;}
   return null;
  },
- // An event through the ELC links (ELCR.ELCON set): ELSR8 starts an ADC0 scan; another peripheral is said once, as the
- // emulator says it.
+ // An event through the ELC links (ELCR.ELCON set): ELSR8 starts an ADC0 scan; a link to another peripheral does nothing,
+ // as in the emulator.
  elcDeliver(r,event){
   const st=[...this.states.values()].find(s=>s.kind==='elc');if(!st||!this.elcOn)return;
   const code=RA_ELC_EVENTS[event];
   st.links.forEach((v,n)=>{
    if(v!==code||!code)return;
-   if(n===8){this.adcElcTrigger(r);return;}
-   this.warnOnce(r,'elc:'+n,`[ELC] ELSR${n} (ELC_PERIPHERAL_${ELC_NAMES[n]??n})로 연결한 이벤트는 받는 주변장치가 시뮬레이터 모델에 없어 아무 일도 하지 않습니다(모델에 있는 연결: ADC0 스캔 시작).`);
+   if(n===8)this.adcElcTrigger(r);
   });
  },
  /** An event of a peripheral (an ELC_EVENT_ name): the DTC on its vector, the DMAC channels, the ELC links. Returns

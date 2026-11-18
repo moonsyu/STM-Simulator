@@ -124,7 +124,7 @@ test('emulator DTC: the vector table, normal / repeat / block transfers with wri
  assert.ok(soc.dtc.transfers>0);
 });
 
-test('emulator ELC: ELCR, the software event through ELSEGR, ELSR8 starts an ADC0 scan with the ELC trigger, another link is said once',()=>{
+test('emulator ELC: ELCR, the software event through ELSEGR, ELSR8 starts an ADC0 scan with the ELC trigger, another link does nothing and says nothing',()=>{
  const {bus,soc,warnings,us}=chip();
  // ADC0: AN000, TRGE, TRSA = ELC_AD0 (as R_ADC_Open and ScanStart write them).
  bus.write16(ADC+0x04,1);bus.write16(ADC+0x10,0x09<<8);bus.write16(ADC+0x00,0x0200|0x1000);
@@ -136,8 +136,8 @@ test('emulator ELC: ELCR, the software event through ELSEGR, ELSR8 starts an ADC
  gen();assert.equal(bus.read16(ADC)&0x8000,0x8000,'ADST set by the trigger');us(5);assert.equal(soc.adc0.scans,1);assert.equal(bus.read16(ADC)&0x8000,0);
  // A trigger without TRGE does nothing.
  bus.write16(ADC+0x00,0x1000);gen();us(5);assert.equal(soc.adc0.scans,1);
- bus.write16(ELC+0x10,0xb5);gen();gen();
- assert.deepEqual(warnings.filter(w=>/^\[ELC\]/.test(w)),['[ELC] ELSR0 (ELC_PERIPHERAL_GPT_A)로 연결한 이벤트는 받는 주변장치가 시뮬레이터 모델에 없어 아무 일도 하지 않습니다(모델에 있는 연결: ADC0 스캔 시작).']);
+ bus.write16(ELC+0x10,0xb5);gen();gen();us(5);
+ assert.equal(soc.adc0.scans,1,'ELSR0 (GPT_A) starts nothing');assert.deepEqual(warnings,[]);
  // A GPT overflow a link takes is planned once the link is there (listens).
  assert.equal(soc.listens(0xcf),false);bus.write16(ELC+0x10+8*4,0xcf);assert.equal(soc.listens(0xcf),true);
 });

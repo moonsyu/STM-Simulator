@@ -72,7 +72,8 @@ test('r_elc with r_adc and r_sci_uart + r_dtc: GPT1 → ADC0 scans, LinkBreak, L
  // The first byte is the CPU's and the first TXI moves the second at once: 6 bytes leave 4 for the DTC; 0 at the end.
  assert.deepEqual([v.tx_left_at_write,v.tx_left_at_empty,v.rx_left_after_read,v.write_max],[4,0,4,0x10000]);
  assert.equal(r.emulator.sci9,'DTC!\r\n');
- assert.deepEqual(r.emulator.warn,['[ELC] ELSR0 (ELC_PERIPHERAL_GPT_A)로 연결한 이벤트는 받는 주변장치가 시뮬레이터 모델에 없어 아무 일도 하지 않습니다(모델에 있는 연결: ADC0 스캔 시작).']);
+ // The link to GPT_A (no modelled consumer) does nothing and says nothing.
+ assert.deepEqual(r.emulator.warn,[]);
  assert.deepEqual(r.unknown,[]);
 });
 

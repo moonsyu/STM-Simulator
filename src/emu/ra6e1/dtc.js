@@ -16,13 +16,13 @@
 // The CPU gets the interrupt (IR stays set) when an information with DISEL set ran, or when a normal or block transfer
 // ended; an end without DISEL also clears DTCE. (Assumption: for a chain the rule is applied to each information that ran
 // — the manual's wording for chains could not be checked.)
-// Transfer sizes 1, 2 and 4 bytes; an access the bus refuses stops the transfer and is said once.
+// Transfer sizes 1, 2 and 4 bytes; an access the bus refuses stops the transfer.
 import { BusFaultSignal } from '../bus.js';
 
 const MD = { NORMAL: 0, REPEAT: 1, BLOCK: 2 };
 
 export class Dtc {
-  constructor(soc) { this.soc = soc; this.name = 'DTC'; this.size = 0x400; this.warned = new Set(); this.reset(); }
+  constructor(soc) { this.soc = soc; this.name = 'DTC'; this.size = 0x400; this.reset(); }
   reset() { this.dtccr = 0x08; this.dtcvbr = 0; this.dtcadmod = 0; this.dtcst = 0; this.transfers = 0; this.activations = 0; }
   enabled() { return !!(this.dtcst & 1); }
   read(off, size) {
@@ -45,11 +45,9 @@ export class Dtc {
     else if (off === 0x08) this.dtcadmod = v & 1;
     else if (off === 0x0c) this.dtcst = v & 1;
   }
-  warn(key, text) { if (this.warned.has(key)) return; this.warned.add(key); this.soc.env.warn?.(text); }
   access(fn) {
     try { return fn(); } catch (error) {
       if (!(error instanceof BusFaultSignal)) throw error;
-      this.warn('bus:' + error.address, `[DTC] 0x${(error.address >>> 0).toString(16).toUpperCase().padStart(8, '0')}: DTC가 접근할 수 없는 주소라 전송을 멈춥니다(전송 정보의 p_src · p_dest를 확인하세요).`);
       return null;
     }
   }
@@ -59,7 +57,7 @@ export class Dtc {
     this.activations++;
     const vector = this.access(() => bus.read32((this.dtcvbr + slot * 4) >>> 0));
     if (vector == null) return { cpu: true, clearDtce: false };
-    if (!vector) { this.warn('null:' + slot, `[DTC] 벡터 ${slot}의 전송 정보 주소가 0입니다(R_DTC_Open 전에 DTCE가 켜졌습니다). 인터럽트를 CPU로 넘깁니다.`); return { cpu: true, clearDtce: false }; }
+    if (!vector) return { cpu: true, clearDtce: false };
     let addr = vector >>> 0, cpu = false, clearDtce = false;
     for (let n = 0; n < 64; n++) {
       const r = this.run(addr);
@@ -79,8 +77,7 @@ export class Dtc {
     const mra = (word >>> 24) & 0xff, mrb = (word >>> 16) & 0xff;
     const md = (mra >> 6) & 3, sz = (mra >> 4) & 3, sm = (mra >> 2) & 3, dm = (mrb >> 2) & 3, dts = (mrb >> 4) & 1;
     const info = { chne: !!(mrb & 0x80), chns: !!(mrb & 0x40), disel: !!(mrb & 0x20) };
-    if (sz === 3) { this.warn('sz8', '[DTC] 8바이트 전송은 RA6E1에 없습니다(BSP_FEATURE_DTC_SUPPORT_TRANSFER_8_BYTE 0).'); return null; }
-    if (md === 3) { this.warn('md3', '[DTC] MRA.MD = 11b는 정의되지 않은 모드입니다.'); return null; }
+    if (sz === 3 || md === 3) return null;
     const bytes = 1 << sz, step = m => (m === 2 ? bytes : m === 3 ? -bytes : 0);
     let sar = this.access(() => bus.read32(addr + 4)), dar = this.access(() => bus.read32(addr + 8));
     const crb0 = this.access(() => bus.read16(addr + 12)), cra0 = this.access(() => bus.read16(addr + 14));
