@@ -51,7 +51,7 @@ test('r_dtc: repeat (a pattern into one variable on each GPT1 overflow), block (
  assert.deepEqual(r.unknown,[],'every register the drivers use is modelled');
 });
 
-test('r_dtc chain: two pieces of transfer information (written with .transfer_settings_word_b.… initializers) in each GPT1 activation, R_DTC_Reconfigure — the same on both engines',{skip,timeout:600000},async()=>{
+test('r_dtc chain: two pieces of transfer information (written with .transfer_settings_word_b = { … } initializers) in each GPT1 activation, R_DTC_Reconfigure — the same on both engines',{skip,timeout:600000},async()=>{
  const r=await both(TRANSFER_PROGRAMS.chain,57,['irqs','a_sum','b_sum','err']);
  assert.deepEqual(r.interpreter,r.emulator);
  // GPT1 every 5 ms: four activations move both arrays and the fourth (the end) reaches the CPU: 11 overflows by 57 ms, 8 callbacks.

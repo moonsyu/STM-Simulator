@@ -106,9 +106,7 @@ export function compile(source,options={}) {
     if(peek()!=='{')return expression();take();const values=[];
     // Designated initializers: .field = value in a struct, [index] = value in an array. What follows one continues from it.
     while(peek()!=='}'){
-      // .a.b = value (a member of a member, as FSP's transfer_info_t initializers write .transfer_settings_word_b.mode): the
-      // same as .a = { .b = value }, merged with the other .a.… of the list (runtime.js mergeNested).
-      if(peek()==='.'){take();const keys=[identifier()];while(peek()==='.'){take();keys.push(identifier());}expect('=');let value=initializer();for(let i=keys.length-1;i>0;i--)value={type:'list',values:[{type:'designated',key:keys[i],value,nested:i<keys.length-1}]};values.push({type:'designated',key:keys[0],value,nested:keys.length>1});}
+      if(peek()==='.'){take();const key=identifier();expect('=');values.push({type:'designated',key,value:initializer()});}
       else if(peek()==='['){take();const index=expression();expect(']');expect('=');values.push({type:'designated',index,value:initializer()});}
       else values.push(initializer());
       if(peek()!==',')break;take();if(peek()==='}')break;}
