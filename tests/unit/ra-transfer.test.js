@@ -6,7 +6,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {Machine} from '../../src/emu/machine.js';
 import {Ra6e1,RaBus} from '../../src/emu/ra6e1/soc.js';
-import {RA_IRQ_PINS,raDefaultMcu,validateRaMcu,RA_ELC_EVENTS,raTransferEvents,raEventHasVector,raNameProblem} from '../../src/ra-config.js';
+import {RA_IRQ_PINS,raDefaultMcu,validateRaMcu,RA_ELC_EVENTS,raTransferEvents,raEventHasVector,raNameProblem,RA_ADC_ELC_EVENTS} from '../../src/ra-config.js';
 import {generateRaFiles,raVectors} from '../../src/ra-generator.js';
 import {raAssistance} from '../../src/ra-assistance.js';
 import {raExample} from '../../src/ra-examples.js';
@@ -23,6 +23,12 @@ function mcu(peripherals,pins={}){
 
 test('settings: ELC events and peripherals of the RA6E1, the checks across stacks and their reasons',()=>{
  assert.equal(RA_ELC_EVENTS.GPT1_COUNTER_OVERFLOW,0xcf);assert.equal(RA_ELC_EVENTS.ADC0_SCAN_END,0x160);assert.equal(RA_ELC_EVENTS.SCI9_TXI,0x1b7);assert.equal(RA_ELC_EVENTS.AGT1_INT,0x43);assert.equal(RA_ELC_EVENTS.DMAC3_INT,0x23);assert.equal(RA_ELC_EVENTS.ELC_SOFTWARE_EVENT_1,0xb6);
+ // DTC_COMPLETE (neither engine raises it) is offered nowhere; a DTC takes no software event (no vector).
+ assert.ok(!raTransferEvents('DMAC').includes('DTC_COMPLETE'));assert.ok(!RA_ADC_ELC_EVENTS.includes('DTC_COMPLETE'));assert.ok(!RA_ADC_ELC_EVENTS.includes('ADC0_SCAN_END'));assert.ok(RA_ADC_ELC_EVENTS.includes('GPT1_COUNTER_OVERFLOW'));
+ assert.ok(raTransferEvents('DMAC').includes('ELC_SOFTWARE_EVENT_0'));
+ assert.throws(()=>validateRaMcu(mcu({TRANSFER0:{enabled:true,driver:'DMAC',channel:0,activation:'DTC_COMPLETE'}})),/TRANSFER0: 활성화 소스\(Activation Source\)를 고르세요\./);
+ assert.throws(()=>validateRaMcu(mcu({TRANSFER0:{enabled:true,driver:'DTC',activation:'ELC_SOFTWARE_EVENT_0'}})),/TRANSFER0: 활성화 소스\(Activation Source\)를 고르세요\./);
+ assert.throws(()=>validateRaMcu(mcu({ELC:{enabled:true},ADC0:{enabled:true,mode:'SINGLE',resolution:12,trigger:'ELC',elcEvent:'DTC_COMPLETE'}})),/ADC0: ELC로 스캔을 시작할 이벤트를 고르세요\./);
  assert.ok(raTransferEvents('DMAC').includes('SOFTWARE'));assert.ok(!raTransferEvents('DTC').includes('SOFTWARE'));assert.ok(!raTransferEvents('DTC').some(e=>/^SCI|^DMAC|ELC_SOFT/.test(e)));
  // An ADC started by the ELC needs g_elc; continuous scan is not an ELC mode.
  assert.throws(()=>validateRaMcu(mcu({ADC0:{enabled:true,mode:'SINGLE',resolution:12,trigger:'ELC',elcEvent:'GPT1_COUNTER_OVERFLOW'}})),/Event Link Controller\(g_elc\)를 추가하세요/);

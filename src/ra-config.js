@@ -313,7 +313,7 @@ function validateAdc(p,pins){
  if(p.trigger!==undefined&&p.trigger!=='SOFTWARE'){
   if(!RA_ADC_TRIGGERS.includes(p.trigger))throw new Error('ADC0: 시작 트리거는 Software 또는 ELC입니다.');
   q.trigger=p.trigger;q.elcEvent=p.elcEvent??'GPT1_COUNTER_OVERFLOW';
-  if(!Object.hasOwn(RA_ELC_EVENTS,q.elcEvent)||q.elcEvent==='ADC0_SCAN_END')throw new Error('ADC0: ELC로 스캔을 시작할 이벤트를 고르세요.');
+  if(!RA_ADC_ELC_EVENTS.includes(q.elcEvent))throw new Error('ADC0: ELC로 스캔을 시작할 이벤트를 고르세요.');
   if(q.mode==='CONTINUOUS')throw new Error('ADC0: ELC 트리거는 Single Scan에서 씁니다.');
  }
  if(!['SINGLE','CONTINUOUS'].includes(q.mode))throw new Error('ADC0: 동작 모드는 Single Scan 또는 Continuous Scan입니다.');
@@ -531,7 +531,10 @@ export const RA_TRANSFER_ADDR_MODES=Object.freeze(['FIXED','INCREMENTED','DECREM
 export const RA_TRANSFER_DEFAULTS=Object.freeze({driver:'DTC',channel:0,activation:'ADC0_SCAN_END',mode:'NORMAL',size:2,srcMode:'FIXED',destMode:'INCREMENTED',repeatArea:'DESTINATION',irq:'END',length:1,blocks:0,callback:'',priority:12});
 /** Events a transfer may start on: a DTC on an interrupt that has a vector, a DMAC on any of them or by software. An SCI
  *  event belongs to the UART's own transfer (r_sci_uart sets it up), so a stand-alone transfer does not offer it. */
-export const raTransferEvents=driver=>[...(driver==='DMAC'?['SOFTWARE']:[]),...Object.keys(RA_ELC_EVENTS).filter(k=>!/^SCI/.test(k)&&!(driver==='DTC'&&/^(DMAC|DTC|ELC_SOFT)/.test(k)))];
+// DTC_COMPLETE is not offered: neither engine raises it. A DTC cannot take a software event (it has no vector).
+export const raTransferEvents=driver=>[...(driver==='DMAC'?['SOFTWARE']:[]),...Object.keys(RA_ELC_EVENTS).filter(k=>!/^SCI/.test(k)&&k!=='DTC_COMPLETE'&&!(driver==='DTC'&&/^(DMAC|DTC|ELC_SOFT)/.test(k)))];
+/** The events the ADC0 ELC start trigger offers: not its own scan end, not DTC_COMPLETE (neither engine raises it). */
+export const RA_ADC_ELC_EVENTS=Object.freeze(Object.keys(RA_ELC_EVENTS).filter(k=>k!=='ADC0_SCAN_END'&&k!=='DTC_COMPLETE'));
 function validateElc(p){
  if(!p||typeof p.enabled!=='boolean')throw new Error('ELC: 설정을 확인하세요.');
  return {enabled:p.enabled};
@@ -544,7 +547,7 @@ function validateTransfer(id,p){
  const q={enabled:p.enabled,...RA_TRANSFER_DEFAULTS,...Object.fromEntries(Object.keys(RA_TRANSFER_DEFAULTS).filter(k=>p[k]!==undefined).map(k=>[k,p[k]]))};
  if(!['DTC','DMAC'].includes(q.driver))throw new Error(`${id}: 전송 모듈은 DTC(r_dtc) 또는 DMAC(r_dmac)입니다.`);
  if(q.driver==='DMAC'&&!RA_DMAC_CHANNELS.includes(q.channel))throw new Error(`${id}: DMAC 채널은 0~7입니다.`);
- if(typeof q.activation!=='string'||q.activation!=='SOFTWARE'&&!Object.hasOwn(RA_ELC_EVENTS,q.activation))throw new Error(`${id}: 활성화 소스(Activation Source)를 고르세요.`);
+ if(typeof q.activation!=='string'||q.activation!=='SOFTWARE'&&!Object.hasOwn(RA_ELC_EVENTS,q.activation)||q.activation==='DTC_COMPLETE'||q.driver==='DTC'&&/^ELC_SOFTWARE_EVENT/.test(q.activation))throw new Error(`${id}: 활성화 소스(Activation Source)를 고르세요.`);
  if(q.activation==='SOFTWARE'&&q.driver==='DTC')throw new Error(`${id}: DTC는 인터럽트 이벤트로만 움직입니다(R_DTC_SoftwareStart는 FSP_ERR_UNSUPPORTED). 소프트웨어 시작은 DMAC를 쓰세요.`);
  if(!RA_TRANSFER_MODES.includes(q.mode))throw new Error(`${id}: 전송 모드는 Normal · Repeat · Block입니다(Repeat-Block은 시뮬레이터가 지원하지 않습니다).`);
  if(![1,2,4].includes(q.size))throw new Error(`${id}: 전송 단위는 1 · 2 · 4바이트입니다.`);
