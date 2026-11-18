@@ -6,6 +6,8 @@
 
 ## 1.57.1 편집기 흐림 표시 제거(기능 목록 46번) — 로컬 검증
 
+1.57.1은 게시되지 않았다: 빌드 커밋 `54ec566`의 Windows CI 44223878027이 "Reject vulnerable locked dependencies"(`npm audit --audit-level=low`)에서 실패해 Release 단계를 건너뛰었다. 원인은 코드가 아니라 그날 공개된 picomatch 권고(GHSA-fc5q-39xc-vjpf, ReDoS, 4.0.7 이하 전부, 수정 버전 없음)로, electron-builder → @electron/rebuild → node-gyp → tinyglobby → fdir 경로의 빌드 도구 의존성이다(`npm audit --omit=dev`는 0건). 사용자 결정으로 CI 감사를 앱에 들어가는 의존성만 보게(`--omit=dev`) 바꿨고, 46번은 1.57.2에 함께 실려 나간다.
+
 2026-11-18. ESLint 통과, 단위 1352개(통과 1351, 건너뜀 1), 편집기 번들 빌드 뒤 E2E copy-to-project 2개 통과, 패키지 검사 통과. E2E는 다시 생성되는 파일을 열었을 때 흐림 클래스가 없고 편집기 글자 span의 불투명도가 모두 1인 것을 확인한다. 전체 E2E와 툴체인은 CI에 맡겼다.
 
 ## 1.57.0 RA 데이터 플래시(기능 목록 39번) — 로컬 검증

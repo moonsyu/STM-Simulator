@@ -4,6 +4,8 @@
 
 ## 1.57.2 기능 목록 47번: 생성 전 "지워질 줄" 목록과 "ARM GCC 빌드에서만 반영" 안내 제거
 
+- **CI 감사 범위**: "Reject vulnerable locked dependencies"는 `npm audit --omit=dev --audit-level=low` — 앱에 들어가는 의존성만 막는다(빌드 도구의 권고는 릴리스를 막지 않음, 2026-11-18 사용자 결정). 1.57.1은 이 단계 실패로 게시되지 않았고 46번은 1.57.2에 실렸다.
+
 - 1.51.0(45번 ④·⑤)이 넣은 두 가지를 지웠다. ① HAL 코드 생성 확인 창의 목록: `pinout-ui.js`의 `showLoss`와 호출, `index.html`의 `#hal-replace-loss`, `ide.css`의 `.hal-replace-loss`. 확인 창은 예전처럼 main.c에 코드가 있을 때만 뜬다(코드가 비어 있으면 바로 생성). ② 해석기 안내 문구: `app-run.js`의 실행 시 경고 로그(`armNoted`), `ide-ui.js`의 저장 안내 끝 문장과 파일 경로 줄의 " · ARM GCC 빌드에서만 쓰임".
 - 그대로 둔 것: 다시 생성 규칙(`generationPlan`·`regenerateOverrides`, USER CODE 유지 병합), `armOnly`(`hal-source.js`에서 해석기가 그 파일을 빼는 동작), 그리고 `report`·`lostLines` — 생성한 **뒤** 출력 로그의 "다시 생성하며 USER CODE 구역 밖에서 고친 줄을 지웠습니다(Ctrl+Z로 되돌리기)"(`app.js` apply)가 쓰고 있어 남겼다. 이 로그도 뺄지는 사용자 결정이 필요하다.
 
