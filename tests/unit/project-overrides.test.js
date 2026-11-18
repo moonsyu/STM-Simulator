@@ -7,7 +7,7 @@ import {blankProject,validateProject} from '../../src/project.js';
 import {generateHal,validateMcu} from '../../src/mcu-config.js';
 import {buildEnvironment} from '../../src/build-environment.js';
 import {peripheralFiles} from '../../src/peripheral-files.js';
-import {regenerated,fileKind,armOnly,regenerateOverrides,generationPlan,lostLines,outsideRanges,editedLabel} from '../../src/project-overrides.js';
+import {regenerated,fileKind,armOnly,regenerateOverrides,generationPlan,lostLines,editedLabel} from '../../src/project-overrides.js';
 import {compileHal} from '../../src/hal-source.js';
 import {halFiles} from '../../src/peripheral-files.js';
 import {SimulationSession} from '../../src/session.js';
@@ -84,11 +84,6 @@ test('the plan before generating names main.c and the edited files with the line
  assert.equal(lostLines('a\nb','a\nb','a\nb\nx'),0);
 });
 
-test('lines outside the USER CODE sections, for the faded view',()=>{
- assert.deepEqual(outsideRanges('int a;\n/* USER CODE BEGIN 1 */\nmine();\n/* USER CODE END 1 */\nint b;\n'),[[1,1],[2,2],[4,4],[5,6]]);
- assert.deepEqual(outsideRanges('no sections here\n'),[],'a file without sections is not faded');
- assert.deepEqual(outsideRanges('/* USER CODE BEGIN 0 */\n/* USER CODE END 0 */'),[[1,1],[2,2]]);
-});
 
 test('project files: origin and of are checked; edited SDK files have their own 4 MB',()=>{
  const p=blankProject();

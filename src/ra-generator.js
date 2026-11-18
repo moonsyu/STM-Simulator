@@ -1241,8 +1241,9 @@ export function generateRaFiles(mcu,{board}={}){
   cfg('r_gpt_cfg.h',moduleCfg('r_gpt_cfg.h','R_GPT_CFG_H_',['#define GPT_CFG_PARAM_CHECKING_ENABLE (BSP_CFG_PARAM_CHECKING_ENABLE)','#define GPT_CFG_OUTPUT_SUPPORT_ENABLE (1)','#define GPT_CFG_WRITE_PROTECT_ENABLE (0)','#define GPT_CFG_GPTCLK_BYPASS (0)'])),
   cfg('r_spi_cfg.h',moduleCfg('r_spi_cfg.h','R_SPI_CFG_H_',['#define SPI_CFG_PARAM_CHECKING_ENABLE (BSP_CFG_PARAM_CHECKING_ENABLE)','#define SPI_DMA_SUPPORT_ENABLE (0)','#define SPI_TRANSMIT_FROM_RXI_ISR (0)','/* DEPRECATED: Use SPI_DMA_SUPPORT_ENABLE instead. */','#define SPI_DTC_SUPPORT_ENABLE (SPI_DMA_SUPPORT_ENABLE)'])),
   cfg('r_sci_spi_cfg.h',moduleCfg('r_sci_spi_cfg.h','R_SCI_SPI_CFG_H_',['#define SCI_SPI_CFG_PARAM_CHECKING_ENABLE (BSP_CFG_PARAM_CHECKING_ENABLE)','#define SCI_SPI_DTC_SUPPORT_ENABLE (0)'])),
-  // RTC_CFG_OPEN_SET_CLOCK_SOURCE: RASC's "Set Source Clock in Open" — off for the start time "PC 시각" (ra-config.js).
-  cfg('r_rtc_cfg.h',moduleCfg('r_rtc_cfg.h','R_RTC_CFG_H_',['#define RTC_CFG_PARAM_CHECKING_ENABLE (BSP_CFG_PARAM_CHECKING_ENABLE)',`#define RTC_CFG_OPEN_SET_CLOCK_SOURCE (${mcu.peripherals?.RTC?.enabled&&mcu.peripherals.RTC.start==='HOST_TIME'?0:1})`])),
+  // RTC_CFG_OPEN_SET_CLOCK_SOURCE: RASC's "Set Source Clock in Open" — off for the start time "PC 시각" (the default,
+  // also when `start` is absent), on for "시뮬레이션" and without the RTC stack (ra-config.js).
+  cfg('r_rtc_cfg.h',moduleCfg('r_rtc_cfg.h','R_RTC_CFG_H_',['#define RTC_CFG_PARAM_CHECKING_ENABLE (BSP_CFG_PARAM_CHECKING_ENABLE)',`#define RTC_CFG_OPEN_SET_CLOCK_SOURCE (${mcu.peripherals?.RTC?.enabled&&mcu.peripherals.RTC.start!=='SIMULATION'?0:1})`])),
   // r_flash_hp for the data flash only: code flash programming (functions run from RAM, the access window, the
   // startup area) is not in the build.
   cfg('r_flash_hp_cfg.h',moduleCfg('r_flash_hp_cfg.h','R_FLASH_HP_CFG_H_',['#define FLASH_HP_CFG_PARAM_CHECKING_ENABLE (BSP_CFG_PARAM_CHECKING_ENABLE)','#define FLASH_HP_CFG_CODE_FLASH_PROGRAMMING_ENABLE (0)','#define FLASH_HP_CFG_DATA_FLASH_PROGRAMMING_ENABLE (1)'])),

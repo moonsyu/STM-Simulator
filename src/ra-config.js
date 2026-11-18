@@ -429,12 +429,13 @@ function validateWdt(id,p){
 // but E25/E26 are open, so XCIN/XCOUT reach only J3 and the sub-clock does not run as delivered) or the sub-clock; RFRL for
 // LOCO (r_rtc.c accepts 8-510; 255 makes 128 Hz from 32.768 kHz). Interrupt priorities as RASC (null: Disabled); the
 // carry interrupt is required (R_RTC_CalendarTimeGet uses it).
-// Start time (decision, feature 34): 'SIMULATION' (default) — at power-on the counters hold 2000-01-01 00:00:00, and
-// R_RTC_Open sets the count source and stops the RTC (RTC_CFG_OPEN_SET_CLOCK_SOURCE 1, FSP's default) so the program
-// sets the time: every run is the same, which tests and lessons need. 'HOST_TIME' — the counters hold the PC's local
-// time and run, as a battery-backed RTC that kept the time; Open leaves it running (RTC_CFG_OPEN_SET_CLOCK_SOURCE 0) and
-// R_RTC_CalendarTimeGet reads the PC time without setting it.
-export const RA_RTC_DEFAULTS=Object.freeze({clockSource:'LOCO',start:'SIMULATION',freqCompare:255,callback:'rtc_callback',alarmPriority:12,periodicPriority:12,carryPriority:12});
+// Start time (decisions, features 34 and 48): 'HOST_TIME' (the default, feature 48, the user's decision of 2026-11-18;
+// also when `start` is absent) — the counters hold the PC's local time and run, as a battery-backed RTC that kept the
+// time; Open leaves it running (RTC_CFG_OPEN_SET_CLOCK_SOURCE 0) and R_RTC_CalendarTimeGet reads the PC time without
+// setting it. 'SIMULATION' (when chosen) — at power-on the counters hold 2000-01-01 00:00:00, and R_RTC_Open sets the
+// count source and stops the RTC (RTC_CFG_OPEN_SET_CLOCK_SOURCE 1, FSP's default) so the program sets the time: every
+// run is the same, which tests and lessons need.
+export const RA_RTC_DEFAULTS=Object.freeze({clockSource:'LOCO',start:'HOST_TIME',freqCompare:255,callback:'rtc_callback',alarmPriority:12,periodicPriority:12,carryPriority:12});
 function validateRtc(p){
  if(!p||typeof p.enabled!=='boolean')throw new Error('RTC: 설정을 확인하세요.');
  const q={enabled:p.enabled,...RA_RTC_DEFAULTS,...Object.fromEntries(Object.keys(RA_RTC_DEFAULTS).filter(k=>p[k]!==undefined).map(k=>[k,p[k]]))};

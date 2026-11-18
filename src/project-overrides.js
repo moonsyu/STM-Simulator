@@ -82,15 +82,3 @@ export function generationPlan(project,nextMcu,{main,previousMain}){
 }
 /** The main.c a Pinout generates (with the per-peripheral option), as the pinout dialog writes it. */
 export const generatedMain=mcu=>{try{return expandC(generateHal(mcu));}catch{return '';}};
-/** Line ranges (1-based, inclusive) outside the USER CODE sections, for a file that has at least one section. */
-export function outsideRanges(text){
-  const t=String(text||'');if(!/\/\* USER CODE BEGIN /.test(t))return [];
-  const lineOf=offset=>t.slice(0,offset).split('\n').length,ranges=[];let line=1;
-  for(const m of t.matchAll(USER_SECTION)){
-    // The BEGIN and END comment lines are the generator's too; what is between them is the user's.
-    const begin=lineOf(m.index),end=lineOf(m.index+m[0].length);
-    if(begin>line)ranges.push([line,begin-1]);ranges.push([begin,begin]);if(end>begin)ranges.push([end,end]);line=end+1;
-  }
-  const last=t.split('\n').length;if(line<=last)ranges.push([line,last]);
-  return ranges.filter(([a,b])=>a<=b);
-}

@@ -1,5 +1,23 @@
 # 검증 기록
 
+## 1.57.3 RA RTC 시작 시각 기본값(기능 목록 48번) — 로컬 검증
+
+1.57.3 게시 확인(API): 빌드 커밋 `c557556` · Windows CI 44231233152 성공(작업 21개) · Release v1.57.3 최신, 자산 5개. 전체 303초 = 5.0분.
+
+2026-11-18. Fable이 기획을 쓰고 Opus가 구현한 뒤 diff를 기획과 대조했다(소스 4개 파일의 조건·기본값·주석과 시험 2개 파일, 기획 밖 변경 없음). ESLint 통과, 단위 1353개(통과 1352, 건너뜀 1), 툴체인 묶음 1~7 361개 통과, 편집기 번들 빌드 뒤 E2E ra-wdt-rtc 4개 통과(구현 에이전트 실행), 패키지 검사 통과. 2000-01-01과 "Open이 RTC를 멈춤"에 기대는 시험은 `start:'SIMULATION'`을 명시해 유지했고, start 없는 RTC가 PC 시각으로 돌며 `r_rtc_cfg.h`가 0/1/1(start 없음/SIMULATION/RTC 없음)인 시험을 더했다.
+
+## 1.57.2 생성 전 목록·ARM GCC 안내 제거(기능 목록 47번) — 로컬 검증
+
+1.57.2 게시 확인(API): 빌드 커밋 `2a80340` · Windows CI 44225155542 성공(작업 21개) · Release v1.57.2 최신, 자산 5개. 전체 279초 = 4.7분. 46번(1.57.1 미게시분)도 이 Release에 들어 있다.
+
+2026-11-18. ESLint 통과, 단위 1352개(통과 1351, 건너뜀 1), 편집기 번들 빌드 뒤 E2E copy-to-project · definition · project-structure 7개 통과, 패키지 검사 통과. E2E는 확인 창에 `#hal-replace-loss`가 없고 "지워집니다" 문구가 없는 것, 파일 경로 줄에 "ARM GCC"가 없는 것을 확인한다. 전체 E2E와 툴체인은 CI에 맡겼다.
+
+## 1.57.1 편집기 흐림 표시 제거(기능 목록 46번) — 로컬 검증
+
+1.57.1은 게시되지 않았다: 빌드 커밋 `54ec566`의 Windows CI 44223878027이 "Reject vulnerable locked dependencies"(`npm audit --audit-level=low`)에서 실패해 Release 단계를 건너뛰었다. 원인은 코드가 아니라 그날 공개된 picomatch 권고(GHSA-fc5q-39xc-vjpf, ReDoS, 4.0.7 이하 전부, 수정 버전 없음)로, electron-builder → @electron/rebuild → node-gyp → tinyglobby → fdir 경로의 빌드 도구 의존성이다(`npm audit --omit=dev`는 0건). 사용자 결정으로 CI 감사를 앱에 들어가는 의존성만 보게(`--omit=dev`) 바꿨고, 46번은 1.57.2에 함께 실려 나간다.
+
+2026-11-18. ESLint 통과, 단위 1352개(통과 1351, 건너뜀 1), 편집기 번들 빌드 뒤 E2E copy-to-project 2개 통과, 패키지 검사 통과. E2E는 다시 생성되는 파일을 열었을 때 흐림 클래스가 없고 편집기 글자 span의 불투명도가 모두 1인 것을 확인한다. 전체 E2E와 툴체인은 CI에 맡겼다.
+
 ## 1.57.0 RA 데이터 플래시(기능 목록 39번) — 로컬 검증
 
 1.57.0 게시 확인(API): 빌드 커밋 `c96d98f` · Windows CI 44047944058 성공(작업 21개) · Release v1.57.0 최신, 자산 5개. 전체 328초 = 5.5분.

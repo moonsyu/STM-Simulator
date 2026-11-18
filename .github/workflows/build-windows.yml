@@ -41,9 +41,11 @@ jobs:
           cache: npm
       - name: Install locked dependencies
         run: npm ci
+      # Only what ships in the app (2026-11-18, the user's decision): an advisory with no fixed version in a build tool
+      # (picomatch under electron-builder, GHSA-fc5q-39xc-vjpf) had stopped the release of 1.57.1.
       - name: Reject vulnerable locked dependencies
         if: matrix.shard == 2
-        run: npm audit --audit-level=low
+        run: npm audit --omit=dev --audit-level=low
       - name: Verify release tag matches package version
         if: startsWith(github.ref, 'refs/tags/')
         shell: pwsh

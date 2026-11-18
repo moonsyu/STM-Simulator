@@ -7,8 +7,9 @@
 // seconds carry, the periodic interrupt (PES 6 = 1/256 s … 15 = 2 s, from the same prescaler) and the alarm come at
 // the same instants as on the chip. The events (bsp_elc.h): RTC_ALARM 0x54, RTC_PERIOD 0x55, RTC_CARRY 0x56, raised
 // only while an IELSR slot listens.
-// Power-on: the counters hold 2000-01-01 00:00:00 (a Saturday) and count — or, with the RTC stack's start time
-// "HOST_TIME", the PC's local time, as if a battery had kept the RTC running (soc.options.rtcStart / hostTime). The RTC is
+// Power-on: the counters hold the PC's local time and count, as if a battery had kept the RTC running (the RTC stack's
+// start time "HOST_TIME", the default; soc.options.rtcStart / hostTime) — or, with the start time "SIMULATION",
+// 2000-01-01 00:00:00 (a Saturday). The RTC is
 // in its own power domain: an MCU reset (watchdog, SYSRESETREQ) keeps the calendar and the registers.
 export const RTC_EVENT = Object.freeze({ ALARM: 0x54, PERIOD: 0x55, CARRY: 0x56 });
 const PERIOD_S = { 6: 1 / 256, 7: 1 / 128, 8: 1 / 64, 9: 1 / 32, 10: 1 / 16, 11: 1 / 8, 12: 1 / 4, 13: 1 / 2, 14: 1, 15: 2 };
@@ -17,9 +18,9 @@ const RCR1 = 0x22, RCR2 = 0x24;
 const CENTURY_0 = Date.UTC(2000, 0, 1) / 1000, CENTURY_S = 36525 * 86400;
 /** Calendar seconds (Date.UTC based, no time zone) of a date and time. */
 export const rtcSeconds = (y, mon, d, h, m, s) => Date.UTC(y, mon - 1, d, h, m, s) / 1000;
-/** The power-on calendar of a start mode: 2000-01-01 00:00:00, or the local time of `hostMs` (Date.now()). */
+/** The power-on calendar of a start mode: 2000-01-01 00:00:00 for "SIMULATION", else (the default) the local time of `hostMs` (Date.now()). */
 export function rtcPowerOn(start, hostMs = Date.now()) {
-  if (start !== 'HOST_TIME') return rtcSeconds(2000, 1, 1, 0, 0, 0);
+  if (start === 'SIMULATION') return rtcSeconds(2000, 1, 1, 0, 0, 0);
   const d = new Date(hostMs);
   return rtcSeconds(d.getFullYear(), d.getMonth() + 1, d.getDate(), d.getHours(), d.getMinutes(), d.getSeconds());
 }

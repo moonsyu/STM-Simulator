@@ -28,7 +28,7 @@ test('the CubeIDE tree lists the whole project; startup code and the linker scri
   await win.waitForFunction(()=>/Mcu\.UserName=STM32F103RBTx/.test(document.querySelector('#group-code .monaco-editor .view-lines')?.textContent||''));
   assert.match(await win.textContent('#source-path'),/읽기 전용/);
   // The linker script and the startup file become project files when they are edited (feature 45).
-  await win.click('#build-file-list > button[data-build-file$=".ld"]');assert.match(await win.textContent('#source-path'),/한 번 만드는 파일 · 고친 내용 유지 · ARM GCC 빌드에서만 쓰임/);await editShown(win,'STM32F103RBTX_FLASH.ld');
+  await win.click('#build-file-list > button[data-build-file$=".ld"]');{const note=await win.textContent('#source-path');assert.match(note,/한 번 만드는 파일 · 고친 내용 유지/);assert.doesNotMatch(note,/ARM GCC/);}await editShown(win,'STM32F103RBTX_FLASH.ld');
   await win.click('#build-file-list [data-build-file$="startup_stm32f103xb.s"]');await editShown(win,'Core/Startup/startup_stm32f103xb.s');
   // In the tree they are the project's now, and the provided ones are gone.
   assert.equal(await win.locator('#build-file-list [data-build-file$=".ld"]').count(),0);assert.equal(await win.locator('#build-file-list [data-build-file$="startup_stm32f103xb.s"]').count(),0);

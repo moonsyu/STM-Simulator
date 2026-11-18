@@ -18,7 +18,7 @@ import {$} from './common.js';
 import {outlineLabel} from './c-symbols.js';
 import {buildEnvironment,prefixOf,startupOf,HAL_MODULES} from './build-environment.js';
 import {halFiles,generatedSources} from './peripheral-files.js';
-import {regenerated,fileKind,armOnly,outsideRanges,editedLabel} from './project-overrides.js';
+import {regenerated,fileKind,editedLabel} from './project-overrides.js';
 import {exportIoc} from './ioc-export.js';
 import {isRaFamily} from './ra-config.js';
 import {RA_EXAMPLES,raExample} from './ra-examples.js';
@@ -50,8 +50,7 @@ export function setupIde(o){
   const points=()=>o.getProject().ide?.breakpoints||[],watches=()=>o.getProject().ide?.watches||[];
   const settings=()=>o.getProject().ide??=( {breakpoints:[],watches:[]} );
   const editor=createCodeEditor({textarea:$('code'),getFile:o.getSource,getFiles:()=>sourceFiles(o.getProject()),onBreakpoint:toggleBreakpoint,onBreakpointsMoved:(file,moved)=>{const unique=[...new Map(moved.map(b=>[b.line,b])).values()];settings().breakpoints=[...points().filter(b=>b.file!==file),...unique];o.saveLocal();debugView();},onPosition:p=>{$('cursor-position').textContent=`줄 ${p?.lineNumber||1}, 열 ${p?.column||1}`;},getFamily:()=>o.getProject().mcu?.family||'STM32F446RE',getGenerated:()=>generatedFiles(),onExternal:()=>tabsView(),
-    canEdit:file=>canEditExternal(file),readOnlyMessage:file=>externalReadOnlyMessage(file),onExternalEdit:(file,text,meta)=>adoptExternal(file,text,meta),
-    isRegenerated:name=>{const p=o.getProject();if(p.firmware?.mode!=='hal')return false;if(name==='main.c')return true;const own=(p.firmware.files||[]).find(f=>f.name===name);if(own)return own.origin==='gen'&&regenerated(name,p.mcu?.family);return regenerated(treeLabels.get(name)||name,p.mcu?.family);},outsideRanges});
+    canEdit:file=>canEditExternal(file),readOnlyMessage:file=>externalReadOnlyMessage(file),onExternalEdit:(file,text,meta)=>adoptExternal(file,text,meta)});
   // Features 25 and 26 — open tabs. A project starts with a tab for each of its files; a tab can be closed (×, the tab's
   // context menu, "모두 닫기") and comes back when the file is opened from the explorer. Closing is only about the tab
   // row: the file stays in the project and its text is kept, also while the program runs. closedTabs holds the closed
@@ -124,7 +123,7 @@ export function setupIde(o){
       emptyTabs=false;closedTabs.delete(name);
       o.applySources(p,name);
       const kind=fileKind(name,p.mcu.family);
-      o.log(`${name}을 고쳐 프로젝트에 저장했습니다(고친 파일만 저장). ${kind==='regen'?'코드를 다시 생성하면 USER CODE 구역 안만 남고 나머지는 Pinout 설정대로 새로 써집니다.':'한 번 만드는 파일이라 코드를 다시 생성해도 고친 내용이 남습니다.'}${armOnly(name)?' 내장 해석기는 이 파일을 쓰지 않아 ARM GCC 빌드에서만 반영됩니다.':''} 탐색기에서 우클릭 → 원본으로 되돌리기로 원래 내용으로 돌아갑니다.`);
+      o.log(`${name}을 고쳐 프로젝트에 저장했습니다(고친 파일만 저장). ${kind==='regen'?'코드를 다시 생성하면 USER CODE 구역 안만 남고 나머지는 Pinout 설정대로 새로 써집니다.':'한 번 만드는 파일이라 코드를 다시 생성해도 고친 내용이 남습니다.'} 탐색기에서 우클릭 → 원본으로 되돌리기로 원래 내용으로 돌아갑니다.`);
       return name;
     }catch(e){o.log(e.message,'error');return null;}
   }
@@ -274,7 +273,7 @@ export function setupIde(o){
   function externalNote(file){
     if(!canEditExternal(file))return '읽기 전용';
     const label=treeLabels.get(file)||file,family=o.getProject().mcu?.family;
-    return `고치면 이 파일만 프로젝트에 저장 · ${regenerated(label,family)?'다시 생성하면 USER CODE 구역 밖은 새로 써짐':'한 번 만드는 파일 · 고친 내용 유지'}${armOnly(label)?' · ARM GCC 빌드에서만 쓰임':''}`;
+    return `고치면 이 파일만 프로젝트에 저장 · ${regenerated(label,family)?'다시 생성하면 USER CODE 구역 밖은 새로 써짐':'한 번 만드는 파일 · 고친 내용 유지'}`;
   }
   // The project tree's menu on an edited file: "원본으로 되돌리기".
   function treeMenu(x,y,name){

@@ -165,7 +165,8 @@ test('New Stack → Realtime Clock (r_rtc): Properties, Summary, the low-speed c
   await win.selectOption('#ra-stack-add','RTC');await win.click('[data-ra-add]');
   const card='[data-ra-stack="RTC"]';await win.waitForSelector(card);
   assert.match(await win.textContent(card+' header'),/g_rtc0\s*Realtime Clock \(r_rtc\)/);
-  assert.equal(await win.inputValue(card+' [data-ra-field="clockSource"]'),'LOCO');assert.equal(await win.inputValue(card+' [data-ra-field="start"]'),'SIMULATION');
+  assert.equal(await win.inputValue(card+' [data-ra-field="clockSource"]'),'LOCO');assert.equal(await win.inputValue(card+' [data-ra-field="start"]'),'HOST_TIME');
+  await win.selectOption(card+' [data-ra-field="start"]','SIMULATION');
   assert.match(await win.textContent(card+' .form-hint'),/실행마다 2000-01-01 00:00:00에서 시작하고, R_RTC_Open이 RTC를 멈추니/);
   await win.selectOption(card+' [data-ra-field="clockSource"]','SUBCLOCK');
   await win.waitForFunction(sel=>/E25\/E26이 열려 있어/.test(document.querySelector(sel+' .form-hint').textContent),card);

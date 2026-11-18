@@ -15,9 +15,8 @@ const API={HAL_GPIO_WritePin:'HAL_GPIO_WritePin(GPIOx, GPIO_Pin, PinState)',HAL_
 // Feature 45: a generated or SDK file opens as an external model and is edited in place: on its first change
 // onExternalEdit(file, text, {generated}) stores it as a project file and gives back its name, and the editor carries on
 // in that project file. canEdit(file) says which external files can be edited (not the .ioc view, not Renesas FSP's);
-// readOnlyMessage(file) explains the others. isRegenerated(name) marks files whose lines outside the USER CODE sections
-// code generation writes again: those lines are shown faded.
-export function createCodeEditor({textarea,getFile,getFiles,onBreakpoint,onBreakpointsMoved,onPosition,getFamily=()=>'STM32F446RE',getGenerated=()=>[],sdk=globalThis.window?.nativeIde,onExternal,onExternalEdit,canEdit=()=>false,readOnlyMessage=()=>'',isRegenerated=()=>false,outsideRanges=()=>[]}){
+// readOnlyMessage(file) explains the others.
+export function createCodeEditor({textarea,getFile,getFiles,onBreakpoint,onBreakpointsMoved,onPosition,getFamily=()=>'STM32F446RE',getGenerated=()=>[],sdk=globalThis.window?.nativeIde,onExternal,onExternalEdit,canEdit=()=>false,readOnlyMessage=()=>''}){
   const wrapper=textarea.parentElement,host=document.createElement('div');host.id='monaco-host';wrapper.append(host);wrapper.classList.add('monaco-ready');
   monaco.editor.defineTheme('stm-light',{base:'vs',inherit:true,rules:[{token:'comment',foreground:'567B60'},{token:'keyword',foreground:'8755A1'},{token:'string',foreground:'A34D2F'},{token:'number',foreground:'246D90'}],colors:{'editor.background':'#FCFDFC','editor.foreground':'#263E34','editorLineNumber.foreground':'#718579','editor.lineHighlightBackground':'#EFF5F1','editor.selectionBackground':'#CBE8D9','editorCursor.foreground':'#166E4E','editorGutter.background':'#F5F8F6'}});
   const editor=monaco.editor.create(host,{value:textarea.value,language:'cpp',theme:'stm-light',automaticLayout:true,editContext:false,fontSize:13,lineHeight:21,fontFamily:"Consolas, 'Malgun Gothic', monospace",minimap:{enabled:false},wordBasedSuggestions:'off',glyphMargin:true,scrollBeyondLastLine:false,tabSize:4,insertSpaces:true,wordWrap:'off',folding:true,bracketPairColorization:{enabled:true},padding:{top:9,bottom:9},fixedOverflowWidgets:true,ariaLabel:'C 소스 코드 편집기',readOnly:textarea.readOnly});
@@ -77,7 +76,7 @@ export function createCodeEditor({textarea,getFile,getFiles,onBreakpoint,onBreak
   textarea.setSelectionRange=(start,end,direction)=>{nativeSelect(start,end,direction);const model=editor.getModel(),a=model.getPositionAt(start),b=model.getPositionAt(end);editor.setSelection(new monaco.Range(a.lineNumber,a.column,b.lineNumber,b.column));editor.revealPositionInCenterIfOutsideViewport(a);};
   textarea.focus=()=>editor.focus();
   textarea.addEventListener('input',()=>{if(!syncing)sync(nativeValue.get.call(textarea));});
-  editor.onDidChangeModelContent(()=>{fadeSoon();if(external&&!syncing&&canEdit(external))adoptSoon(external);if(syncing||external)return;const moved=breakpoints.filter(b=>b.file===active).map((b,i)=>({...b,line:decorations.getRange(i)?.startLineNumber||b.line}));nativeValue.set.call(textarea,editor.getValue());textarea.dispatchEvent(new Event('input',{bubbles:true}));if(moved.some((b,i)=>b.line!==breakpoints.filter(p=>p.file===active)[i]?.line))onBreakpointsMoved?.(active,moved);});
+  editor.onDidChangeModelContent(()=>{if(external&&!syncing&&canEdit(external))adoptSoon(external);if(syncing||external)return;const moved=breakpoints.filter(b=>b.file===active).map((b,i)=>({...b,line:decorations.getRange(i)?.startLineNumber||b.line}));nativeValue.set.call(textarea,editor.getValue());textarea.dispatchEvent(new Event('input',{bubbles:true}));if(moved.some((b,i)=>b.line!==breakpoints.filter(p=>p.file===active)[i]?.line))onBreakpointsMoved?.(active,moved);});
   editor.onDidChangeCursorSelection(e=>{if(external){onPosition?.(editor.getPosition());return;}const m=editor.getModel();nativeSelect(m.getOffsetAt(e.selection.getStartPosition()),m.getOffsetAt(e.selection.getEndPosition()));onPosition?.(editor.getPosition());});
   const readOnly=()=>editor.updateOptions(external&&!canEdit(external)?{readOnly:true,readOnlyMessage:{value:readOnlyMessage(external)||`${externals.get(external).sdk} 파일이라 여기서 고칠 수 없습니다.`}}:{readOnly:textarea.readOnly,readOnlyMessage:{value:textarea.dataset.readOnlyMessage||'이 파일은 읽기 전용입니다.'}});
   new MutationObserver(readOnly).observe(textarea,{attributes:true,attributeFilter:['readonly','data-read-only-message']});
@@ -91,14 +90,7 @@ export function createCodeEditor({textarea,getFile,getFiles,onBreakpoint,onBreak
   const find=replace=>()=>{if(external){editor.getAction('actions.find')?.run();return;}document.dispatchEvent(new CustomEvent('ide-find',{detail:replace}));};
   for(const key of [monaco.KeyMod.CtrlCmd|monaco.KeyCode.KeyF,monaco.KeyCode.F3,monaco.KeyMod.Shift|monaco.KeyCode.F3,monaco.KeyMod.CtrlCmd|monaco.KeyCode.F3])editor.addCommand(key,find(false));
   editor.addCommand(monaco.KeyMod.CtrlCmd|monaco.KeyCode.KeyH,find(true));
-  const decorations=editor.createDecorationsCollection(),faded=editor.createDecorationsCollection();let fadeTimer=0;
-  const FADE_HOVER={value:'USER CODE 구역 밖 — 코드를 다시 생성하면 Pinout 설정대로 새로 써집니다(CubeMX와 같음). 남길 코드는 USER CODE BEGIN/END 사이에 쓰세요.'};
-  function fade(){
-    const model=editor.getModel(),name=external??active;
-    if(!model||!name||!isRegenerated(name)){faded.set([]);return;}
-    faded.set(outsideRanges(model.getValue()).map(([a,b])=>({range:new monaco.Range(a,1,b,1),options:{isWholeLine:true,className:'outside-user-code',inlineClassName:'outside-user-code-text',hoverMessage:FADE_HOVER}})));
-  }
-  function fadeSoon(){clearTimeout(fadeTimer);fadeTimer=setTimeout(fade,150);}
+  const decorations=editor.createDecorationsCollection();
   // The first edit of an external file: it becomes a project file (stored by the app), and the editor follows it there
   // with the cursor and scroll where they were. Keys typed before the switch are in the text it takes along.
   let adopting=null;
@@ -109,9 +101,9 @@ export function createCodeEditor({textarea,getFile,getFiles,onBreakpoint,onBreak
     if(external===file)showProject();
     const name=onExternalEdit(file,text,{generated:!!e.generated,sdk:e.sdk});
     if(!name){if(e.original!==undefined&&!e.model.isDisposed())e.model.setValue(e.original);showExternal(file,null,{record:false});return;}
-    if(view)editor.restoreViewState(view);closeExternal(file);readOnly();fade();editor.focus();
+    if(view)editor.restoreViewState(view);closeExternal(file);readOnly();editor.focus();
   }
-  function decorate(){fade();
+  function decorate(){
     for(const [name,model] of models)monaco.editor.setModelMarkers(model,'clangd',languageMarkers.get(name)||[]);
     if(external){decorations.set([]);return;}
     const ds=breakpoints.filter(b=>b.file===active).map(b=>({range:new monaco.Range(b.line,1,b.line,1),options:{isWholeLine:false,stickiness:monaco.editor.TrackedRangeStickiness.NeverGrowsWhenTypingAtEdges,glyphMarginClassName:'debug-breakpoint',glyphMarginHoverMessage:{value:'중단점 — 클릭하여 해제'}}}));
