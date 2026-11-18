@@ -87,7 +87,8 @@ export const TRANSFER_METHODS={
  elcCall(name,args,r){
   const st=this.elcState(args[0],r,name);
   if(name==='R_ELC_Open'){
-   if(st.open)return E.ALREADY_OPEN;if(isNull(args[1]))return E.ASSERTION;
+   // r_elc.c: FSP_ASSERT(p_cfg) before FSP_ERR_ALREADY_OPEN.
+   if(isNull(args[1]))return E.ASSERTION;if(st.open)return E.ALREADY_OPEN;
    const cfg=this.struct(args[1],r,'elc_cfg_t',name),link=cfg.fields.link.value.cells;
    for(let i=0;i<ELC_NUM;i++)if(i in ELC_NAMES)st.links[i]=Number(link[i]?.value??0)>>>0;
    st.open=true;return E.SUCCESS;
@@ -243,6 +244,8 @@ export const TRANSFER_METHODS={
   if(name==='R_DMAC_Reload')return E.UNSUPPORTED;
   if(isNull(args[0]))return E.ASSERTION;
   const st=this.transferState(args[0],r,name,'DMAC');
+  // r_dmac.c R_DMAC_CallbackSet: FSP_ASSERT(p_callback) before FSP_ERR_NOT_OPEN.
+  if(name==='R_DMAC_CallbackSet'&&isNull(args[1]))return E.ASSERTION;
   if(name==='R_DMAC_Open'){
    if(st.open)return E.ALREADY_OPEN;if(isNull(args[1]))return E.ASSERTION;
    const cfg=this.struct(args[1],r,'transfer_cfg_t',name);let ext;try{ext=r.get(r.pointerCell(cfg.fields.p_extend.value));}catch{ext=null;}if(!ext)return E.ASSERTION;
