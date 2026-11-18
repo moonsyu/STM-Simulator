@@ -1,6 +1,16 @@
 # STM Simulator — 개발 인계
 
-현재 버전: **1.57.3**. 정리일: **2026-11-10**. NUCLEO-F446RE·NUCLEO-F103RB 또는 Renesas FPB-RA6E1(1.20.0, FSP·에뮬레이터 전용)과 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+현재 버전: **1.58.0**. 정리일: **2026-11-10**. NUCLEO-F446RE·NUCLEO-F103RB 또는 Renesas FPB-RA6E1(1.20.0, FSP·에뮬레이터 전용)과 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+
+## 1.58.0 기능 목록 36번: RA ELC·DTC·DMAC(r_elc, r_dtc, r_dmac)
+
+- **설정** `ra-config.js`: `peripherals.ELC {enabled}`, `peripherals.TRANSFERn {driver:'DTC'|'DMAC', channel, activation, mode, size, srcMode, destMode, repeatArea, irq, length, blocks, callback, priority}`(이름 `g_transferN`), ADC0 `trigger:'ELC'`·`elcEvent`, SCIn `transferTx/transferRx:'TRANSFERn'`(그 전송의 활성화 소스는 검증이 `SCIn_TXI/RXI`로 정함). `validateElc`·`validateTransfer`·`checkTransfers`, `RA_ELC_EVENTS`·`RA_ELC_PERIPHERALS`·`RA_ADC_ELC_EVENTS`·`raTransferEvents`·`raEventHasVector`. DTC는 벡터가 있는 이벤트에서만(실제 FSP가 `VECTOR_NUMBER_*`를 요구), DTC_COMPLETE와 (DTC의) ELC 소프트웨어 이벤트는 목록에 없다.
+- **생성** `ra-generator.js`: `elcOf`·`elcLinks`·`elcData` → `g_elc`와 `ra_gen/elc_data.c`(`desktop/ra-build.cjs`가 있을 때만 컴파일), `transfersOf`·`transferDecl`·`transferInstance` → `g_transferN`, DMAC 콜백이 있으면 `DMACn_INT` 벡터를 맨 뒤에(기존 벡터 번호 유지), `r_dtc/r_dmac/r_elc_cfg.h`, `SCI_UART_CFG_DTC_SUPPORTED`, `fsp.ld`의 `.fsp_dtc_vector_table`(1 KB 정렬 NOLOAD). 전송이 없는 기존 프로젝트에도 cfg 헤더 3개와 링커 섹션은 생긴다(ELF의 심볼·섹션은 같음).
+- **에뮬레이터** `src/emu/ra6e1/elc.js`·`dtc.js`·`dmac.js`: `soc.raiseEvent`는 ICU(그 슬롯의 DTC) → DMAC → ELC 순서. RA6E1에서 DMAC의 DELSR은 ICU 0x280, flat 프로젝트(보안 빌드)의 r_dtc는 `DTCCR_SEC`/`DTCVBR_SEC`를 쓴다(같은 레지스터로 처리). 링크가 바뀌면 `listenersChanged`가 GPT·AGT 일정을 다시 잡는다. 모델에 없는 것(Repeat-Block, 8바이트 전송, ADC0 외의 ELC 연결)은 안내 없이 아무 일도 하지 않고, DMAC 소프트웨어 시작은 아무것도 옮기지 못하면 끝난다.
+- **해석기** `src/fsp-transfer.js`(`TRANSFER_METHODS`, `fspEvent(r, event, own)`: DTC → 주변장치 자신의 인터럽트 → DMAC → ELC), `fsp-interp.js`의 UART DTC 송수신. R_ELC_*·R_DTC_*·R_DMAC_*, `R_ADC_InfoGet`과 `R_ADC0->ADDR`, ADC ELC 트리거. IRQ 기능 핀은 ICU Open 전에도 하강 엣지마다 이벤트를 내고, UART 이벤트(`uartEvent`를 지나는 것)도 ELC·DMAC로 간다. 지원하지 않는 코드(원소 크기가 다른 전송, ADC ADDR 외 레지스터 src/dest, DMAC 오프셋 모드, Repeat-Block, DTC 송신 중 다시 Write)는 기존 방식대로 오류로 멈춘다.
+- **사용자 결정(2026-11-18)**: 처음 구현에 들어 있던 미지원 안내 로그 5종([ELC]/[DTC]/[DMAC])과 해석기의 `.a.b = 값` 지정 초기화 지원은 뺐고 예제만 남겼다. 해석기에서 `transfer_info_t`를 직접 초기화할 때는 `.transfer_settings_word_b = { … }` 형태를 쓴다.
+- **지원하지 않음**: UART + DMAC(검증이 거부), Repeat-Block(검증이 거부), ADC0 이외의 ELC 연결, GPT의 GTADTR로 ADC 시작, Snooze 중 DTC, ADC ACE. 남은 차이: 수신 중 바이트별 RXI·송신 중 바이트별 TXI는 해석기에서 ELC·DMAC로 가지 않는다, `RA_ELC_EVENTS`에 없는 이벤트 이름(예: ELC_EVENT_RTC_PERIOD)은 해석기가 모른다, Software Standby 중 이벤트 처리(에뮬레이터는 미룸).
+- UI `ra-pinout-ui.js`: New Stack의 Transfer 묶음(`transferCard`), Monitoring · System의 ELC 카드, Pins 탭의 ADC Start Trigger와 UART Transmit/Receive 선택. 예제 `ra_elc_adc_dtc`. 시험: `tests/unit/ra-transfer.test.js`, `tests/firmware/firmware-ra6e1.test.js`(픽스처 ra_elc_adc_dtc), `tests/toolchain/ra-transfer.test.mjs`(묶음 4, 리뷰 프로그램은 묶음 1·2; `tests/fixtures/ra-transfer-programs.js`·`ra-transfer-review.js`), parity `ra_elc_adc_dtc`(묶음 6), `tests/e2e/ra-transfer.e2e.test.mjs`.
 
 ## 1.57.3 기능 목록 48번: RA RTC 시작 시각의 기본값을 PC 시각으로
 
