@@ -181,7 +181,7 @@ export const TRANSFER_METHODS={
   }
   if(!st.open)return E.NOT_OPEN;
   if(name==='R_DTC_Reconfigure'){
-   if(isNull(args[1]))return E.ASSERTION;if(this.dtcLengthAssert(r,args[1])===E.ASSERTION)return E.ASSERTION;
+   if(isNull(args[1]))return E.ASSERTION;if(this.dtcLengthAssert(r,args[1])!==E.SUCCESS)return E.ASSERTION; // r_dtc: FSP_ASSERT(FSP_SUCCESS == r_dtc_length_assert(p_info))
    if(this.infoAt(r,args[1]).size===3)return E.UNSUPPORTED;
    st.enabled=false;this.dtcSetInfo(r,st,args[1]);return this.dtcEnable(r,st)?E.NOT_ENABLED:E.SUCCESS;
   }
