@@ -1,6 +1,11 @@
 # STM Simulator — 개발 인계
 
-현재 버전: **1.57.1**. 정리일: **2026-11-10**. NUCLEO-F446RE·NUCLEO-F103RB 또는 Renesas FPB-RA6E1(1.20.0, FSP·에뮬레이터 전용)과 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+현재 버전: **1.57.2**. 정리일: **2026-11-10**. NUCLEO-F446RE·NUCLEO-F103RB 또는 Renesas FPB-RA6E1(1.20.0, FSP·에뮬레이터 전용)과 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+
+## 1.57.2 기능 목록 47번: 생성 전 "지워질 줄" 목록과 "ARM GCC 빌드에서만 반영" 안내 제거
+
+- 1.51.0(45번 ④·⑤)이 넣은 두 가지를 지웠다. ① HAL 코드 생성 확인 창의 목록: `pinout-ui.js`의 `showLoss`와 호출, `index.html`의 `#hal-replace-loss`, `ide.css`의 `.hal-replace-loss`. 확인 창은 예전처럼 main.c에 코드가 있을 때만 뜬다(코드가 비어 있으면 바로 생성). ② 해석기 안내 문구: `app-run.js`의 실행 시 경고 로그(`armNoted`), `ide-ui.js`의 저장 안내 끝 문장과 파일 경로 줄의 " · ARM GCC 빌드에서만 쓰임".
+- 그대로 둔 것: 다시 생성 규칙(`generationPlan`·`regenerateOverrides`, USER CODE 유지 병합), `armOnly`(`hal-source.js`에서 해석기가 그 파일을 빼는 동작), 그리고 `report`·`lostLines` — 생성한 **뒤** 출력 로그의 "다시 생성하며 USER CODE 구역 밖에서 고친 줄을 지웠습니다(Ctrl+Z로 되돌리기)"(`app.js` apply)가 쓰고 있어 남겼다. 이 로그도 뺄지는 사용자 결정이 필요하다.
 
 ## 1.57.1 기능 목록 46번: 편집기의 USER CODE 구역 밖 흐림 표시 제거
 
@@ -71,7 +76,7 @@
 - **45번 데이터**: `firmware.files`의 항목에 `origin`('gen' | 'sdk'), `of`(SDK 경로), `base`(다시 생성되는 gen 파일이 고쳐지기 시작한 생성 원본 — 다시 생성할 때의 기준). 검증·한도는 `project.js`(SDK 파일 4 MB 따로), 프로젝트 파일 12 MB(`workspace.cjs`·`main.cjs`·`native-ide.cjs`·`app-files.js`), 작업 폴더의 소스 파일 하나 4.5 MB.
 - **편집(`code-editor.js`)**: 외부 모델(생성 보기·SDK 파일)이 `canEdit`이면 편집 가능, 첫 변경에서 `adopt` → `onExternalEdit`(`ide-ui.js` `adoptExternal`: 이름은 트리 경로, 같은 이름 파일 거부, 검증 뒤 저장) → 프로젝트 파일로 이어서 편집. 흐림 표시는 1.57.1에서 뺐다(기능 목록 46번). RA·.ioc는 `readOnlyMessage`.
 - **규칙(`project-overrides.js`)**: `regenerated`/`fileKind`, `armOnly`, `regenerateOverrides`(gen/sdk 출처의 다시 생성 파일만, `keepUserCode`, 같으면 저장 안 함), `generationPlan`·`lostLines`(생성 전 경고), `outsideRanges`. 생성기 쪽: it.c·main.h 보기(`build-environment.js`)와 주변장치 쌍(`peripheral-files.js`)에 CubeMX의 USER CODE 구역.
-- **생성(`pinout-ui.js` `plan`/`showLoss`, `app.js` apply의 `files`·`report`, `firmware-import.js`)**, **트리(`ide-ui.js` `projectRows`의 `edited`, `treeMenu`, `revertToOriginal`)**, **해석기 안내(`app-run.js`)**.
+- **생성(`pinout-ui.js` `plan`, `app.js` apply의 `files`·`report`, `firmware-import.js`; 확인 창의 목록 `showLoss`는 1.57.2에서 뺐다)**, **트리(`ide-ui.js` `projectRows`의 `edited`, `treeMenu`, `revertToOriginal`)**, **해석기 안내(`app-run.js`, 1.57.2에서 뺐다)**.
 - **빌드(`native-build.cjs`)**: 고친 SDK 헤더가 있는 폴더에는 그 SDK 폴더의 다른 헤더를 복사해 넣는다(SDK 헤더끼리의 `#include "…"`가 고친 헤더를 보게). 고친 hal_conf.h가 템플릿의 HSE 가드를 가지면 `-DHSE_VALUE=8000000U`.
 
 ## 1.50.0 기능 목록 44번: printf·입력을 UART(USART2)로
