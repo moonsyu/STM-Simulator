@@ -1,5 +1,6 @@
 // User-facing update log shown in 도움말 → 업데이트 로그: one entry per released version (date = the release tag's commit date).
 export const UPDATE_LOG=Object.freeze([
+ {version:'1.57.1',date:'2026-11-18',items:['편집기에서 USER CODE 구역 밖 줄을 옅게 그리던 표시를 없앰 — main.c 전체가 어둡게 보이던 문제(다시 생성 전 경고 등 나머지는 그대로)']},
  {version:'1.57.0',date:'2026-11-17',items:['FPB-RA6E1 데이터 플래시(r_flash_hp): 8 KB 데이터 플래시 지우기·쓰기·블랭크 체크와 포인터로 읽기 — New Stack → Storage → Flash, 예제 "데이터 플래시에 부팅 횟수 저장"','데이터 플래시 내용은 MCU 리셋에도, 다시 실행해도 남음(프로젝트에 저장) — Stacks의 g_flash0에서 "데이터 플래시 지우기"','내장 해석기: &p[i]가 포인터의 시작 위치를 반영, enum 크기와 구조체 배치를 ARM GCC와 같게(STM32 포함)']},
  {version:'1.56.0',date:'2026-11-17',items:['FPB-RA6E1 저전력 모드(r_lpm): Sleep · Software Standby · Deep Software Standby 진입과 깨우기 — New Stack → Power → Low Power Modes','Deep Software Standby를 IRQn-DS 핀으로 해제하면 MCU가 리셋되고 RSTSR0.DPSRSTF로 원인을 알 수 있음 — 예제 "저전력: Deep Software Standby와 S1(IRQ1-DS)로 깨우기"','I/O 유지(IOKEEP)와 R_LPM_IoKeepClear, 저전력 진입·깨어남을 출력 로그에 표시']},
  {version:'1.55.0',date:'2026-11-17',items:['FPB-RA6E1 I2C 슬레이브(r_iic_slave): IIC0·IIC1을 Slave 모드로 두고 주소와 콜백으로 마스터의 쓰기·읽기에 응답 — 예제 "I²C 슬레이브 · ESP32 마스터와 통신"','ESP32 스케치의 Wire 마스터(Wire.begin() / Wire.begin(sda, scl), beginTransmission·write·endTransmission·requestFrom)가 주 보드의 I2C 슬레이브와 통신','I2C 주소만 보내는 버스 스캔(0바이트 쓰기)이 보드 슬레이브에도 전달됨']},
