@@ -26,12 +26,14 @@ export const TOOLCHAIN_SHARDS=Object.freeze([
  // ra-course's test that builds and runs every FSP example took 78 s on a faster runner (1.46.6): about 94, on its own
  // + parity of ADC, AGT, IIC (22 s locally) + parity of the WDT example (10 s locally)
  // + five review programs of ra-lpm (about 17 s locally)
- [['ra-course','contact bounce on'],['fsp-interp-parity','parity: ra_adc_pot|parity: ra_wdt_reset'],['ra-lpm','review: (agt|iwdt|rtc|wdt|hold) —']],
+ // + the first review test of ra-transfer (feature 36: four FSP builds on both engines, about 17 s locally)
+ [['ra-course','contact bounce on'],['fsp-interp-parity','parity: ra_adc_pot|parity: ra_wdt_reset'],['ra-lpm','review: (agt|iwdt|rtc|wdt|hold) —'],['ra-transfer','^review 1']],
  // 70 + 28 = 98 + parity of blink and IRQ (14 s locally)
  // + parity of the RTC example (11 s locally)
  // + parity of the low power example (feature 37)
  // + ra-iic-slave (feature 33: four FSP builds, about 18 s locally)
- [['arm-examples','NUCLEO-F446RE'],'bus-instances',['fsp-interp-parity','parity: ra_blink|parity: ra_rtc_clock|parity: ra_lpm_deep'],'ra-iic-slave'],
+ // + the second review test of ra-transfer (feature 36: five FSP builds on both engines, about 20 s locally)
+ [['arm-examples','NUCLEO-F446RE'],'bus-instances',['fsp-interp-parity','parity: ra_blink|parity: ra_rtc_clock|parity: ra_lpm_deep'],'ra-iic-slave',['ra-transfer','^review 2']],
  // 58 + 38 = 96 + parity of polling and rising IRQ (18 s locally)
  // + the register-start WDT test of ra-wdt-rtc (feature 35: about 16 s locally)
  // + ra-flash (feature 39: fourteen FSP builds with the review's two-engine checks, about 60 s locally)
@@ -39,8 +41,8 @@ export const TOOLCHAIN_SHARDS=Object.freeze([
  // 62 + 32 + 6 = 100 + parity of the challenge (9 s locally) + ra-spi (about 6 locally, 1.51.x)
  // + the IWDT and WDT NMI tests of ra-wdt-rtc (feature 35: about 13 s locally)
  // + four review programs of ra-lpm (about 11 s locally)
- // + ra-transfer (feature 36: four FSP builds with ELC, DTC and DMAC on both engines, about 14 s locally)
- ['ra-build','wdg','tim-basic','ra-spi','ra-transfer',['fsp-interp-parity','parity: ra_led4_switch2'],['ra-wdt-rtc','IWDT: OFS0|WDT NMI:'],['ra-lpm','review: (isr|isrsleep|pending|flags) —']],
+ // + ra-transfer but its review tests (feature 36: five FSP builds with ELC, DTC and DMAC on both engines, about 17 s locally)
+ ['ra-build','wdg','tim-basic','ra-spi',['ra-transfer','^(r_|the example)'],['fsp-interp-parity','parity: ra_led4_switch2'],['ra-wdt-rtc','IWDT: OFS0|WDT NMI:'],['ra-lpm','review: (isr|isrsleep|pending|flags) —']],
  // the rest of ra-course 61 + 26 + 15 = 102 + parity of UART and GPT (16 s locally)
  // (the tests are named: a "not this one" pattern with a lookahead did not keep the heavy test out)
  // + ra-lpm (feature 37: programs with r_lpm on both engines, about 3 s each locally): its first four tests here (13 s),
