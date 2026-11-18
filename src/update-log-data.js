@@ -1,5 +1,6 @@
 // User-facing update log shown in 도움말 → 업데이트 로그: one entry per released version (date = the release tag's commit date).
 export const UPDATE_LOG=Object.freeze([
+ {version:'1.57.3',date:'2026-11-18',items:['FPB-RA6E1 RTC 스택의 "시작 시각" 기본값을 PC 시각으로 변경 — 새로 넣은 RTC는 실행을 시작할 때 PC 시각을 갖고 돌고 있음(시뮬레이션 2000-01-01은 선택하면 사용, 이미 저장된 설정은 그대로)']},
  {version:'1.57.2',date:'2026-11-18',items:['HAL 코드 생성 확인 창에서 "USER CODE 구역 밖에서 고친 줄이 지워집니다" 목록을 없앰','"내장 해석기는 이 파일을 쓰지 않아 ARM GCC 빌드에서만 반영" 안내(실행 로그, 저장 안내, 파일 경로 줄)를 없앰']},
  {version:'1.57.1',date:'2026-11-18',items:['편집기에서 USER CODE 구역 밖 줄을 옅게 그리던 표시를 없앰 — main.c 전체가 어둡게 보이던 문제(다시 생성 전 경고 등 나머지는 그대로)']},
  {version:'1.57.0',date:'2026-11-17',items:['FPB-RA6E1 데이터 플래시(r_flash_hp): 8 KB 데이터 플래시 지우기·쓰기·블랭크 체크와 포인터로 읽기 — New Stack → Storage → Flash, 예제 "데이터 플래시에 부팅 횟수 저장"','데이터 플래시 내용은 MCU 리셋에도, 다시 실행해도 남음(프로젝트에 저장) — Stacks의 g_flash0에서 "데이터 플래시 지우기"','내장 해석기: &p[i]가 포인터의 시작 위치를 반영, enum 크기와 구조체 배치를 ARM GCC와 같게(STM32 포함)']},

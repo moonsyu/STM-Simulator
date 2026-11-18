@@ -1,6 +1,13 @@
 # STM Simulator — 개발 인계
 
-현재 버전: **1.57.2**. 정리일: **2026-11-10**. NUCLEO-F446RE·NUCLEO-F103RB 또는 Renesas FPB-RA6E1(1.20.0, FSP·에뮬레이터 전용)과 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+현재 버전: **1.57.3**. 정리일: **2026-11-10**. NUCLEO-F446RE·NUCLEO-F103RB 또는 Renesas FPB-RA6E1(1.20.0, FSP·에뮬레이터 전용)과 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+
+## 1.57.3 기능 목록 48번: RA RTC 시작 시각의 기본값을 PC 시각으로
+
+- 원칙: `start`가 없으면 `HOST_TIME`, `'SIMULATION'`이라고 적혀 있을 때만 2000-01-01·Open이 RTC를 멈춤. `ra-config.js` `RA_RTC_DEFAULTS.start='HOST_TIME'`, `emu/ra6e1/rtc.js` `rtcPowerOn`, `fsp-interp.js` `R_RTC_Open`, `ra-generator.js`의 `RTC_CFG_OPEN_SET_CLOCK_SOURCE`(RTC 스택이 있고 SIMULATION이 아니면 0, 그 밖에는 1) 네 곳의 조건을 같은 방향으로 맞췄다.
+- 이미 `start:'SIMULATION'`으로 저장된 프로젝트는 변환하지 않는다(검증이 `start`를 채워 저장하므로 기존 RTC 프로젝트는 대부분 SIMULATION으로 남는다). 선택 칸의 항목·순서·문구는 그대로다.
+- 예제 `ra_rtc_clock`은 `start:'SIMULATION'`을 명시한 채 유지(스스로 23:59:55로 맞추는 결정적 예제, 픽스처·parity가 그 설정). PC 시각으로 돌려도 출력·알람은 같고, 에뮬레이터에서 각 줄이 약 0.2 ms 이르다(Open이 클록 소스 설정·정지를 건너뛰어서로 추정).
+- 부수 효과: RTC 스택이 없는 RA 프로젝트의 에뮬레이터 RTC 카운터도 PC 시각으로 켜진다(`rtcStart`가 undefined). RTC 이벤트는 IELSR이 들을 때만 생겨 동작에는 드러나지 않는다.
 
 ## 1.57.2 기능 목록 47번: 생성 전 "지워질 줄" 목록과 "ARM GCC 빌드에서만 반영" 안내 제거
 
