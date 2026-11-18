@@ -14,9 +14,9 @@ import {raExample} from '../../src/ra-examples.js';
 const mcu=peripherals=>({...raDefaultMcu(),peripherals});
 const base=()=>projectForBoard('fpb-ra6e1');
 
-test('RTC settings: defaults (LOCO, simulation start, priorities 12), the checks, saved and opened again unchanged',()=>{
+test('RTC settings: defaults (LOCO, PC-time start, priorities 12), the checks, saved and opened again unchanged',()=>{
  const m=validateRaMcu(mcu({RTC:{enabled:true}}));
- assert.deepEqual(m.peripherals.RTC,{enabled:true,clockSource:'LOCO',start:'SIMULATION',freqCompare:255,callback:'rtc_callback',alarmPriority:12,periodicPriority:12,carryPriority:12});
+ assert.deepEqual(m.peripherals.RTC,{enabled:true,clockSource:'LOCO',start:'HOST_TIME',freqCompare:255,callback:'rtc_callback',alarmPriority:12,periodicPriority:12,carryPriority:12});
  assert.throws(()=>validateRaMcu(mcu({RTC:{enabled:true,clockSource:'MAIN'}})),/RTC: 클록 소스는 LOCO 또는 Sub-Clock/);
  assert.throws(()=>validateRaMcu(mcu({RTC:{enabled:true,start:'NOW'}})),/RTC: 시작 시각은/);
  assert.throws(()=>validateRaMcu(mcu({RTC:{enabled:true,freqCompare:7}})),/RTC: 주파수 비교값\(RFRL\)은 8~510/);
@@ -27,7 +27,7 @@ test('RTC settings: defaults (LOCO, simulation start, priorities 12), the checks
 });
 
 test('generated files: g_rtc0 in hal_data, RTC_ALARM / PERIOD / CARRY vectors after the others, r_rtc_cfg.h, BSP RTC and sub-clock',()=>{
- const m=validateRaMcu({...mcu({RTC:{enabled:true}}),pins:{...raDefaultMcu().pins}});
+ const m=validateRaMcu({...mcu({RTC:{enabled:true,start:'SIMULATION'}}),pins:{...raDefaultMcu().pins}});
  const f=generateRaFiles(m),v=raVectors(m);
  assert.deepEqual(v.slice(-3).map(x=>[x.vector,x.isr,x.event]),[['RTC_ALARM','rtc_alarm_periodic_isr','RTC_ALARM'],['RTC_PERIOD','rtc_alarm_periodic_isr','RTC_PERIOD'],['RTC_CARRY','rtc_carry_isr','RTC_CARRY']]);
  assert.equal(v[0].vector,'ICU_IRQ1','earlier slots keep their numbers');
@@ -58,7 +58,7 @@ function fakeSoc(options={}){
 }
 
 test('RTC model: power-on 2000-01-01 (Saturday) counting, BCD counters set while stopped, START restarts the second, RESET self-clears',()=>{
- const soc=fakeSoc(),r=new Rtc(soc);
+ const soc=fakeSoc({rtcStart:'SIMULATION'}),r=new Rtc(soc);
  assert.deepEqual([r.read(0x0e,2),r.read(0x0c,1),r.read(0x0a,1),r.read(0x08,1),r.read(0x06,1)],[0x00,0x01,0x01,6,0x00]);
  soc.until(2.5e6);assert.equal(r.read(0x02,1),0x02,'counting from power-on');
  r.write(0x24,0,1);assert.equal(r.read(0x24,1)&1,0,'stopped');r.write(0x24,2,1);assert.equal(r.read(0x24,1)&2,0,'RESET reads back 0');
@@ -118,7 +118,7 @@ void hal_entry(void)
     R_RTC_CalendarAlarmSet(&g_rtc0_ctrl, &a);
     R_RTC_PeriodicIrqRateSet(&g_rtc0_ctrl, RTC_PERIODIC_IRQ_SELECT_1_DIV_BY_4_SECOND);
     while (1) { }
-}`,{RTC:{enabled:true}});
+}`,{RTC:{enabled:true,start:'SIMULATION'}});
  run(3010);
  assert.equal(session.readVariable('status'),0,'RTC_STATUS_STOPPED after Open');assert.equal(session.readVariable('wday'),3,'2025-12-31 is a Wednesday (FSP computes tm_wday)');
  assert.deepEqual(log.print,['2000-01-01 00:00:00 w6','2026-01-01 00:00:00 w4']);
@@ -148,6 +148,26 @@ void hal_entry(void){ R_RTC_Open(&g_rtc0_ctrl, &g_rtc0_cfg); R_RTC_PeriodicIrqRa
  const off=interp(`volatile uint32_t err = 0;
 void hal_entry(void){ R_RTC_Open(&g_rtc0_ctrl, &g_rtc0_cfg); rtc_alarm_time_t a = { .sec_match = true }; err = R_RTC_CalendarAlarmSet(&g_rtc0_ctrl, &a); }`,{RTC:{enabled:true,alarmPriority:null,callback:''}});
  off.run(5);assert.equal(off.session.readVariable('err'),11,'FSP_ERR_IRQ_BSP_DISABLED without the alarm interrupt');
+});
+
+// Feature 48: without `start` the RTC starts at the PC time (HOST_TIME, the default); only 'SIMULATION' stops it in Open.
+test('default start time (no start): the RTC runs from the PC time, Open keeps it running; r_rtc_cfg.h Set Source Clock in Open 0, 1 for SIMULATION and without the RTC',()=>{
+ const host=new Date(2026,10,13,9,30,15).getTime();
+ const {session,log,run}=interp(PRINT+`
+volatile uint32_t status = 9;
+void hal_entry(void)
+{
+    R_RTC_Open(&g_rtc0_ctrl, &g_rtc0_cfg);
+    rtc_info_t info;
+    R_RTC_InfoGet(&g_rtc0_ctrl, &info);
+    status = info.status;
+    R_BSP_SoftwareDelay(1500, BSP_DELAY_UNITS_MILLISECONDS);
+    show();
+}`,{RTC:{enabled:true}},{hostTime:host});
+ run(1600);
+ assert.equal(session.readVariable('status'),1,'RTC_STATUS_RUNNING');assert.deepEqual(log.print,['2026-11-13 09:30:16 w5']);
+ const set=rtc=>generateRaFiles(validateRaMcu(mcu(rtc?{RTC:rtc}:{})))['ra_cfg/fsp_cfg/r_rtc_cfg.h'].match(/RTC_CFG_OPEN_SET_CLOCK_SOURCE \((\d)\)/)[1];
+ assert.deepEqual([set({enabled:true}),set({enabled:true,start:'SIMULATION'}),set(null)],['0','1','1']);
 });
 
 test('ra_rtc_clock example on the interpreter: SCI9 prints the time each second, the alarm at midnight lights LED2',()=>{
@@ -231,7 +251,7 @@ void hal_entry(void)
 });
 
 test('RTC model: RCR2.RESET while counting keeps the calendar; after year 99 comes 00, a leap year (the 2000-2099 calendar repeats)',()=>{
- const soc=fakeSoc(),r=new Rtc(soc);
+ const soc=fakeSoc({rtcStart:'SIMULATION'}),r=new Rtc(soc);
  soc.until(5.5e6);assert.equal(r.read(0x02,1),0x05);
  r.write(0x24,0x43,1);assert.equal(r.read(0x02,1),0x05,'RESET does not take the calendar back');
  soc.until(6.6e6);assert.equal(r.read(0x02,1),0x06,'the second starts again at the RESET');

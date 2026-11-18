@@ -1189,7 +1189,7 @@ Object.assign(HANDLERS,{
   if(f('clock_source')===1&&(f('freq_compare_value')<=7||f('freq_compare_value')>=0x1ff))return FSP.INVALID_ARGUMENT;
   const dev=this.rtcModel(r);
   // RTC_CFG_OPEN_SET_CLOCK_SOURCE 1 (start time "simulation"): Open stops the counter and the program sets the time.
-  if(p.start!=='HOST_TIME')this.rtcInit(dev);
+  if(p.start==='SIMULATION')this.rtcInit(dev);
   Object.assign(st,{open:true,callback:p.callback||'',context:null,clockSource:f('clock_source'),alarmIpl:f('alarm_ipl'),alarmIrq:f('alarm_irq'),periodicIpl:f('periodic_ipl'),periodicIrq:f('periodic_irq'),carryIrq:f('carry_irq'),aie:false,pie:false,pes:0,gen:(st.gen||0)+1});
   return FSP.SUCCESS;
  },
