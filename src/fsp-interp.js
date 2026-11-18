@@ -556,7 +556,9 @@ export class FspAdapter {
  }
  uartStop(r,ch){ch.txAbort++;ch.txGen++;ch.txFree=0;ch.txEnd=r.microTime;this.dropJobs(`SCI${ch.channel}:txi:`);this.dropJobs(`SCI${ch.channel}:tei:`);}
  dropJobs(prefix){this.pending=this.pending.filter(j=>!String(j.key).startsWith(prefix));}
- uartEvent(r,ch,event,data,isr){const st=ch.st;if(!st?.open||!st.callback)return;this.queue(r,`SCI${ch.channel}_${isr.toUpperCase()}`,st.ipl,()=>this.callback(r,st.callback,'uart_callback_args_t',{channel:ch.channel,event,data}),`sci_uart_${isr}_isr`,`SCI${ch.channel}:${isr}:${this.seq}`);}
+ // The SCI event goes to the ELC and DMAC consumers too (fspEvent; the UART's own DTC is run by the UART model, so fspEvent
+ // leaves it out), then the UART's interrupt with its callback.
+ uartEvent(r,ch,event,data,isr){const st=ch.st;if(!st?.open)return;this.fspEvent(r,`SCI${ch.channel}_${isr.toUpperCase()}`,()=>{if(st.callback)this.queue(r,`SCI${ch.channel}_${isr.toUpperCase()}`,st.ipl,()=>this.callback(r,st.callback,'uart_callback_args_t',{channel:ch.channel,event,data}),`sci_uart_${isr}_isr`,`SCI${ch.channel}:${isr}:${this.seq}`);});}
  // ---- timers: GPT (saw-wave PWM, periodic) and AGT (periodic); a cycle end every period while counting.
  timerOpen(r,args,fn,kind){
   const st=this.instance(args[0],r,fn,kind);if(st.open)return FSP.ALREADY_OPEN;const cfg=this.struct(args[1],r,'timer_cfg_t',fn),f=k=>Number(cfg.fields[k].value);
