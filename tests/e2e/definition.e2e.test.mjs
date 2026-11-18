@@ -34,7 +34,7 @@ test('F12 and Ctrl+click on HAL calls open the SDK source; Outline, Alt+← and 
   assert.match(await win.textContent('#outline-file'),/_hal_uart\.c/);
   await win.waitForFunction(()=>/void\s*HAL_UART_IRQHandler\s*\(UART_HandleTypeDef/.test(document.querySelector('#group-code .monaco-editor .view-lines').textContent.replace(/ /g,' ')),null,{timeout:10000});
   const before=await code();
-  assert.match(await win.textContent('#source-path'),/고치면 이 파일만 프로젝트에 저장 · 한 번 만드는 파일 · 고친 내용 유지 · ARM GCC 빌드에서만 쓰임/);
+  {const note=await win.textContent('#source-path');assert.match(note,/고치면 이 파일만 프로젝트에 저장 · 한 번 만드는 파일 · 고친 내용 유지/);assert.doesNotMatch(note,/ARM GCC/);}
   assert.deepEqual(await win.$$eval('#file-tree [data-source]',b=>b.map(x=>x.dataset.source)),tree,'opening a file does not add it to the project');
   // Alt+← goes back to main.c at the call.
   await win.keyboard.press('Alt+ArrowLeft');

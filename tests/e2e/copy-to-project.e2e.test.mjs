@@ -37,10 +37,10 @@ test('a generated build file is edited in place: only it is stored, marked, neve
   assert.match(await win.textContent('#console-output'),/Core\/Src\/stm32f1xx_it\.c을 고쳐 프로젝트에 저장했습니다/);
   // More typing goes on in the project file.
   await win.keyboard.type(' more');await win.waitForFunction(()=>/my change \*\/ more/.test(document.getElementById('code').value));
-  // Generating the code: the dialog names the file and the lines outside the sections that go.
+  // Generating the code: the dialog asks, without a list of the lines that go (feature 47 took the list out).
   await win.evaluate(()=>document.getElementById('pinout-open').click());await win.waitForSelector('#pinout-dialog[open]');
   await win.evaluate(()=>document.getElementById('hal-generate').click());await win.waitForSelector('#hal-replace-dialog[open]');
-  assert.match(await win.textContent('#hal-replace-loss'),/Core\/Src\/stm32f1xx_it\.c — 1줄/);
+  assert.equal(await win.locator('#hal-replace-loss').count(),0);assert.doesNotMatch(await win.textContent('#hal-replace-dialog'),/지워집니다/);
   await win.click('#hal-replace-confirm');await win.waitForFunction(()=>!document.getElementById('pinout-dialog').open);
   // The edit was only outside the sections: the regenerated file equals the generated one, so it is not kept.
   await win.waitForFunction(f=>![...document.querySelectorAll('#file-tree [data-source]')].some(b=>b.dataset.source===f),IT,{timeout:10000});
