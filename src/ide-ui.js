@@ -18,7 +18,7 @@ import {$} from './common.js';
 import {outlineLabel} from './c-symbols.js';
 import {buildEnvironment,prefixOf,startupOf,HAL_MODULES} from './build-environment.js';
 import {halFiles,generatedSources} from './peripheral-files.js';
-import {regenerated,fileKind,armOnly,outsideRanges,editedLabel} from './project-overrides.js';
+import {regenerated,fileKind,armOnly,editedLabel} from './project-overrides.js';
 import {exportIoc} from './ioc-export.js';
 import {isRaFamily} from './ra-config.js';
 import {RA_EXAMPLES,raExample} from './ra-examples.js';
@@ -50,8 +50,7 @@ export function setupIde(o){
   const points=()=>o.getProject().ide?.breakpoints||[],watches=()=>o.getProject().ide?.watches||[];
   const settings=()=>o.getProject().ide??=( {breakpoints:[],watches:[]} );
   const editor=createCodeEditor({textarea:$('code'),getFile:o.getSource,getFiles:()=>sourceFiles(o.getProject()),onBreakpoint:toggleBreakpoint,onBreakpointsMoved:(file,moved)=>{const unique=[...new Map(moved.map(b=>[b.line,b])).values()];settings().breakpoints=[...points().filter(b=>b.file!==file),...unique];o.saveLocal();debugView();},onPosition:p=>{$('cursor-position').textContent=`줄 ${p?.lineNumber||1}, 열 ${p?.column||1}`;},getFamily:()=>o.getProject().mcu?.family||'STM32F446RE',getGenerated:()=>generatedFiles(),onExternal:()=>tabsView(),
-    canEdit:file=>canEditExternal(file),readOnlyMessage:file=>externalReadOnlyMessage(file),onExternalEdit:(file,text,meta)=>adoptExternal(file,text,meta),
-    isRegenerated:name=>{const p=o.getProject();if(p.firmware?.mode!=='hal')return false;if(name==='main.c')return true;const own=(p.firmware.files||[]).find(f=>f.name===name);if(own)return own.origin==='gen'&&regenerated(name,p.mcu?.family);return regenerated(treeLabels.get(name)||name,p.mcu?.family);},outsideRanges});
+    canEdit:file=>canEditExternal(file),readOnlyMessage:file=>externalReadOnlyMessage(file),onExternalEdit:(file,text,meta)=>adoptExternal(file,text,meta)});
   // Features 25 and 26 — open tabs. A project starts with a tab for each of its files; a tab can be closed (×, the tab's
   // context menu, "모두 닫기") and comes back when the file is opened from the explorer. Closing is only about the tab
   // row: the file stays in the project and its text is kept, also while the program runs. closedTabs holds the closed
