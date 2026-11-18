@@ -247,13 +247,15 @@ export const TRANSFER_METHODS={
    if(st.open)return E.ALREADY_OPEN;if(isNull(args[1]))return E.ASSERTION;
    const cfg=this.struct(args[1],r,'transfer_cfg_t',name);let ext;try{ext=r.get(r.pointerCell(cfg.fields.p_extend.value));}catch{ext=null;}if(!ext)return E.ASSERTION;
    const ch=Number(ext.fields.channel.value);if(ch>=8)return E.IP_CHANNEL_NOT_PRESENT;
-   if(st.callback&&Number(ext.fields.irq.value)<0)return E.IRQ_BSP_DISABLED;
+   // The callback of the configuration (p_extend->p_callback): Open sets it again, after a CallbackSet before a Close.
+   const callback=this.inst.transfers.find(x=>x.n===st.n)?.callback||'';
+   if(callback&&Number(ext.fields.irq.value)<0)return E.IRQ_BSP_DISABLED;
    if(isNull(cfg.fields.p_info.value))return E.ASSERTION;
    const i=this.infoAt(r,cfg.fields.p_info.value);if(i.mode!==MODE.NORMAL&&i.length>0x400)return E.ASSERTION;if(i.mode===MODE.REPEAT_BLOCK&&i.irq===1)return E.ASSERTION;
    if(i.mode===MODE.REPEAT_BLOCK)throw new Error(`${name}: Repeat-Block 모드(TRANSFER_MODE_REPEAT_BLOCK)는 시뮬레이터가 지원하지 않습니다.`);
    const ev=Number(ext.fields.activation_source.value);st.event=ev?raElcEventName(ev):'SOFTWARE';st.ipl=Number(ext.fields.ipl.value);
    if(ev&&!st.event)throw new Error(`${name}: activation_source ${hex(ev)}은(는) 시뮬레이터가 내는 이벤트가 아닙니다.`);
-   st.vectorOk=Number(ext.fields.irq.value)>=0;
+   st.vectorOk=Number(ext.fields.irq.value)>=0;st.callback=callback;
    this.dmacConfig(r,st,cfg.fields.p_info.value);st.open=true;return E.SUCCESS;
   }
   if(!st.open)return E.NOT_OPEN;
