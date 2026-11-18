@@ -60,8 +60,9 @@ export class Dmac {
   software(n) {
     if (!this.active(n) || (this.reg(n, 0x10, 2) & 3) !== 0) return;
     const repeat = !!(this.reg(n, 0x1d, 1) & 0x10);
-    let units = 0;
-    do { units += this.request(n); } while (repeat && this.active(n) && (this.reg(n, 0x1d, 1) & 1) && units < MAX_UNITS);
+    // A request that moves nothing (repeat-block mode, 8-byte size: not modelled) ends the loop.
+    let units = 0, moved;
+    do { moved = this.request(n); units += moved; } while (moved && repeat && this.active(n) && (this.reg(n, 0x1d, 1) & 1) && units < MAX_UNITS);
     if (!repeat || !this.active(n)) this.put(n, 0x1d, this.reg(n, 0x1d, 1) & ~1, 1);
   }
   // One request on channel n; returns the units moved.

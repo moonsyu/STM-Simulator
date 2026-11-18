@@ -162,6 +162,11 @@ test('emulator DMAC: DELSR in the ICU, a software start (single / repeat), repea
  bus.write8(ch(1)+0x1c,1);soc.raiseEvent(0x40);soc.raiseEvent(0x40);bus.write8(ch(1)+0x1c,1);soc.raiseEvent(0x40);soc.raiseEvent(0x40);
  assert.equal(bus.read32(ch(1)+0xc),0);assert.equal(bus.read8(ch(1)+0x1e)&0x10,0x10,'the end');assert.equal(bus.read32(ch(1)),src+6);
  soc.raiseEvent(0x40);assert.equal(bus.read32(ch(1)),src+6,'stopped');
+ // A software start with CLRS (TRANSFER_START_MODE_REPEAT) in a mode the model does not have (repeat-block, MD 11b)
+ // moves nothing and returns (it once requested forever).
+ for(const tmd of [3<<14,(3<<8)])
+ {bus.write32(ch(2),src);bus.write32(ch(2)+4,dst+0x80);bus.write32(ch(2)+8,2);bus.write16(ch(2)+0x10,tmd);bus.write16(ch(2)+0x14,(2<<14)|(2<<6));bus.write8(ch(2)+0x1c,1);
+  bus.write8(ch(2)+0x1d,0x11);assert.equal(bus.read32(dst+0x80),0,'nothing moved');assert.equal(bus.read32(ch(2)),src);}
 });
 
 // The interpreter's reasons: a transfer between values of another size, a DTC write while the UART still sends.
