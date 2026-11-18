@@ -387,7 +387,7 @@ export class FspAdapter {
  struct(ptr,r,type,fn){let v;try{v=r.get(r.pointerCell(ptr));}catch{v=null;}if(v?.kind!=='struct'||type&&v.type!==type)throw new Error(`${fn}: ${type} 구조체의 주소가 필요합니다.`);return v;}
  out(ptr,r,value,fn){try{r.set(r.pointerCell(ptr),value);}catch(error){throw new Error(`${fn}: 결과를 받을 변수의 주소를 넘기세요 (${error.message})`);}}
  setField(v,key,value,r){if(Object.hasOwn(v.fields,key))r.set(v.fields[key],value);}
- bytes(buffer,count,r,fn){int(count,0,256,`${fn} 길이`);if(typeof buffer==='string')return Array.from({length:count},(_,i)=>buffer.charCodeAt(i)&255);return Array.from({length:count},(_,i)=>Number(r.get(r.pointerCell(buffer,i)))&255);}
+ bytes(buffer,count,r,fn,max=256){int(count,0,max,`${fn} 길이`);if(typeof buffer==='string')return Array.from({length:count},(_,i)=>buffer.charCodeAt(i)&255);return Array.from({length:count},(_,i)=>Number(r.get(r.pointerCell(buffer,i)))&255);}
  pin(value,fn){
   const v=Number(value),name=`P${v>>8}${pad(v&0xff)}`;
   if(!Number.isInteger(v)||v<0||(v&0xff)>15||!RA6E1_PORTS.includes(name))throw new Error(`${fn}: R7FA6E10F2CFP에 없는 핀입니다 (${Number.isInteger(v)?hex(v):String(value)}). BSP_IO_PORT_04_PIN_08 같은 핀 이름이나 Pins의 핀 이름(심볼)을 쓰세요.`);
@@ -1081,7 +1081,9 @@ const HANDLERS={
  },
  R_SCI_UART_Write([ctrl,buffer,count],r,fn){
   const st=this.instance(ctrl,r,fn,'uart');if(!st.open)return FSP.NOT_OPEN;const ch=this.uartChannel(st.channel),u=ch.bus.uart;
-  int(count,1,256,`${fn} 길이(내장 해석기는 한 번에 256바이트까지)`);
+  // With a DTC for transmission the driver takes up to write_bytes_max (65536) bytes; without it the interpreter's limit.
+  const max=st.dtcTx?0x10000:256;
+  int(count,1,max,max===256?`${fn} 길이(내장 해석기는 한 번에 256바이트까지)`:`${fn} 길이`);
   // With a DTC for transmission r_sci_uart does not answer FSP_ERR_IN_USE (tx_src_bytes is 0 at once): a Write while TDR
   // still holds a byte would overwrite it on the board, so the interpreter stops with the reason instead.
   if(st.dtcTx&&r.microTime<ch.txFree-1e-6)throw new Error(`${fn}: g_uart${st.channel}의 DTC 송신이 끝나기 전에 다시 불렀습니다. DTC로 보낼 때 r_sci_uart는 FSP_ERR_IN_USE로 막지 않아 보내던 마지막 바이트가 덮어써집니다. UART_EVENT_TX_COMPLETE를 기다린 뒤 부르세요.`);
@@ -1089,7 +1091,7 @@ const HANDLERS={
   // Each byte goes out at its frame start (an Abort or a Close stops the rest). TXI takes the last byte into the shift
   // register one frame before the end (TX_DATA_EMPTY; a new Write may start then and continues the transmission, so the
   // earlier TEI does not come), TEI when the last byte of the last write has gone out (TX_COMPLETE).
-  const bytes=this.bytes(buffer,count,r,fn),frame=1e7/u.baud,start=Math.max(r.microTime,ch.txEnd??0),gen=++ch.txGen,abort=ch.txAbort;
+  const bytes=this.bytes(buffer,count,r,fn,max),frame=1e7/u.baud,start=Math.max(r.microTime,ch.txEnd??0),gen=++ch.txGen,abort=ch.txAbort;
   bytes.forEach((byte,i)=>r.event((start+i*frame)/1000,()=>{if(ch.txAbort!==abort||!st.open)return;ch.bus.call('Serial1.write',[r.array([byte]),1],r);r.api.uart?.({instance:ch.id,direction:'TX',bytes:[byte],micros:r.microTime});}));
   ch.txEnd=start+count*frame;ch.txFree=ch.txEnd-frame;
   // With the DTC (two bytes or more) the last transfer writes the last byte into TDR while the one before it is sent, and
