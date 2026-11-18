@@ -509,6 +509,9 @@ export class FspAdapter {
   else if(word&0x8000)r.setPinMode(pin,'ANALOG');
   else if(word&0x4){r.call('pinMode',[pin,'OUTPUT']);r.gpio[pin].openDrain=!!(word&0x40);r.call('digitalWrite',[pin,word&1]);}
   else r.call('pinMode',[pin,word&0x10?'INPUT_PULLUP':'INPUT']);
+  // An IRQ pin (ISEL) detects edges before R_ICU_ExternalIrqOpen too: IRQCR's reset value is the falling edge, and the
+  // ICU_IRQn event reaches the DTC, DMAC and ELC (as in the emulator); the interrupt and callback come after Open.
+  if(word&0x4000&&RA_IRQ_PINS[pin]!=null&&!r.interrupts.has(pin)){const ch=RA_IRQ_PINS[pin];r.interrupts.set(pin,{mode:'FALLING',previous:r.inputLevel(pin),pending:false,callback:{host:()=>{this.fspEvent(r,'ICU_IRQ'+ch);}}});}
  }
  pinsCfg(r,cfgPtr,fn){
   const cfg=this.struct(cfgPtr,r,'ioport_cfg_t',fn),n=Number(cfg.fields.number_of_pins.value),data=cfg.fields.p_pin_cfg_data.value;
