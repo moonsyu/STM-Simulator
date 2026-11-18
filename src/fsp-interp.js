@@ -551,7 +551,8 @@ export class FspAdapter {
  // R_DTC_InfoGet on a UART's transfer: what is left of the write (each TXI moves one byte) or of the read.
  uartTransferRemaining(r,st){
   const ch=this.serials.get('SCI'+st.uart);if(!ch)return 0;
-  if(st.dir==='rx')return ch.rx?ch.rx.count-ch.rx.index:0;
+  // After an Abort the DTC is only disabled (r_sci_uart): its count stays where the reception stopped.
+  if(st.dir==='rx')return ch.rx?ch.rx.count-ch.rx.index:st.rxLeft??0;
   const tx=ch.tx;if(!tx||tx.transfer!==st)return 0;const done=Math.min(tx.count-1,Math.floor((r.microTime-tx.start)/tx.frame+1e-9)+1);return Math.max(0,tx.count-1-done);
  }
  uartStop(r,ch){ch.txAbort++;ch.txGen++;ch.txFree=0;ch.txEnd=r.microTime;this.dropJobs(`SCI${ch.channel}:txi:`);this.dropJobs(`SCI${ch.channel}:tei:`);}
@@ -1097,8 +1098,8 @@ const HANDLERS={
   ch.tx=dtc?{start,count,frame,transfer:dtc}:null;if(dtc)dtc.enabled=true;
   r.event(empty/1000,()=>{if(dtc&&ch.tx?.transfer===dtc)dtc.enabled=false;if(ch.txAbort===abort)this.uartEvent(r,ch,128,0,'txi');});r.event(ch.txEnd/1000,()=>{if(ch.txGen===gen&&ch.txAbort===abort)this.uartEvent(r,ch,2,0,'tei');});return FSP.SUCCESS;
  },
- R_SCI_UART_Read([ctrl,buffer,count],r,fn){const st=this.instance(ctrl,r,fn,'uart');if(!st.open)return FSP.NOT_OPEN;const ch=this.uartChannel(st.channel);if(ch.rx)return FSP.IN_USE;int(count,1,4096,`${fn} 길이`);r.pointerCell(buffer,count-1);ch.rx={buffer,count,index:0};if(st.dtcRx)st.dtcRx.enabled=true;return FSP.SUCCESS;},
- R_SCI_UART_Abort([ctrl,dir],r,fn){const st=this.instance(ctrl,r,fn,'uart');if(!st.open)return FSP.NOT_OPEN;const ch=this.uartChannel(st.channel);if(dir&1){ch.rx=null;if(st.dtcRx)st.dtcRx.enabled=false;}if(dir&2){this.uartStop(r,ch);if(st.dtcTx)st.dtcTx.enabled=false;}return FSP.SUCCESS;},
+ R_SCI_UART_Read([ctrl,buffer,count],r,fn){const st=this.instance(ctrl,r,fn,'uart');if(!st.open)return FSP.NOT_OPEN;const ch=this.uartChannel(st.channel);if(ch.rx)return FSP.IN_USE;int(count,1,4096,`${fn} 길이`);r.pointerCell(buffer,count-1);ch.rx={buffer,count,index:0};if(st.dtcRx){st.dtcRx.enabled=true;st.dtcRx.rxLeft=0;}return FSP.SUCCESS;},
+ R_SCI_UART_Abort([ctrl,dir],r,fn){const st=this.instance(ctrl,r,fn,'uart');if(!st.open)return FSP.NOT_OPEN;const ch=this.uartChannel(st.channel);if(dir&1){if(st.dtcRx){st.dtcRx.enabled=false;st.dtcRx.rxLeft=ch.rx?ch.rx.count-ch.rx.index:0;}ch.rx=null;}if(dir&2){this.uartStop(r,ch);if(st.dtcTx)st.dtcTx.enabled=false;}return FSP.SUCCESS;},
  R_SCI_UART_InfoGet([ctrl,info],r,fn){const st=this.instance(ctrl,r,fn,'uart');if(!st.open)return FSP.NOT_OPEN;const v=this.struct(info,r,'uart_info_t',fn);this.setField(v,'write_bytes_max',st.dtcTx?0x10000:256,r);this.setField(v,'read_bytes_max',st.dtcRx?0x10000:4096,r);return FSP.SUCCESS;},
  R_SCI_UART_Close(args,r,fn){const st=this.instance(args[0],r,fn,'uart');if(!st.open)return FSP.NOT_OPEN;const ch=this.uartChannel(st.channel);this.uartStop(r,ch);ch.bus.call('Serial1.end',[],r);ch.rx=null;st.open=false;for(const t of [st.dtcRx,st.dtcTx])if(t){t.open=false;t.enabled=false;}this.dropJobs(`SCI${ch.channel}:`);return FSP.SUCCESS;},
  R_GPT_Open(args,r,fn){return this.timerOpen(r,args,fn,'gpt');},R_AGT_Open(args,r,fn){return this.timerOpen(r,args,fn,'agt');},
