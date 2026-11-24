@@ -203,6 +203,8 @@ export class FirmwareSession {
   }
   // An RA project's data flash after this run (RaDataFlash; the app saves it into the project when the run ends).
   get dataFlash() { return this.ra ? this.soc.dataFlash : null; }
+  /** What the device sent the PC over the USB virtual COM port (byte codes, the serial monitor's output; feature 41). */
+  get usbOutput() { return this.ra ? this.soc.usbfs.host.output : []; }
   // Latest camera frame for UI previews.
   cameraFrame() { const f = this.lastFrame; if (!f) return null; const rgba = this.frameRgba(); return rgba ? { width: f.width, height: f.height, format: f.format, rgba } : null; }
   // ------------------------------------------------------------ serial lines
@@ -294,6 +296,8 @@ export class FirmwareSession {
   inject(text, target = 'Serial1') {
     const bytes = [...String(text)].slice(0, 256).map(c => c.charCodeAt(0) & 255);
     if (!bytes.length) return 0;
+    // The USB virtual COM port (feature 41): the PC sends the bytes to the device's bulk OUT endpoint (emu/ra6e1/usbfs.js).
+    if (target === 'usb:pcdc') return this.ra ? this.soc.usbfs.host.send(bytes) : 0;
     const external = target.endsWith(':external'), id = external ? target.slice(0, -9) : target === 'Serial1' || target === 'Serial' ? 'USART2' : target;
     const usart = this.soc.usarts[id]; if (!usart) return 0;
     const sig = this.soc.signals, t0 = this.now;
