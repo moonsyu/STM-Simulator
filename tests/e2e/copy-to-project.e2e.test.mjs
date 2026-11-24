@@ -44,6 +44,8 @@ test('a generated build file is edited in place: only it is stored, marked, neve
   await win.click('#hal-replace-confirm');await win.waitForFunction(()=>!document.getElementById('pinout-dialog').open);
   // The edit was only outside the sections: the regenerated file equals the generated one, so it is not kept.
   await win.waitForFunction(f=>![...document.querySelectorAll('#file-tree [data-source]')].some(b=>b.dataset.source===f),IT,{timeout:10000});
+  // Feature 50: the log says the code was generated, not which edited lines went.
+  const generatedLog=await win.textContent('#console-output');assert.match(generatedLog,/설정에 맞는 HAL main\.c를 생성했습니다/);assert.doesNotMatch(generatedLog,/고친 줄을 지웠습니다/);
   // Ctrl+Z brings it back.
   await win.evaluate(()=>document.getElementById('code').focus());await win.keyboard.press('Control+z');
   await win.waitForFunction(f=>[...document.querySelectorAll('#file-tree [data-source]')].some(b=>b.dataset.source===f),IT,{timeout:10000});
