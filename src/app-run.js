@@ -5,9 +5,7 @@ import {refresh} from './app-view.js';
 import {runScope,boardOnlyRun,BOARD_ONLY_PROGRAM,monitor,uartLines,diagnostic,runStm32,feedback,firmwareKey} from './app.js';
 import {projectBoard} from './boards.js';
 import {$} from './common.js';
-import {devboardModel} from './devboards.js';
 import {FirmwareSession} from './firmware-session.js';
-import {createBoardDrivers} from './fixed-run.js';
 import {keyFor} from './keybindings.js';
 import {compile} from './parser.js';
 import {isCamera,applyCameraImage} from './part-media-ui.js';
@@ -46,13 +44,13 @@ export function initializeRuntime({debug=false,entry=false}={}){
   state.session=emulate?new FirmwareSession(state.project,{...options,elf:state.firmware.bytes}):new SimulationSession(boardOnly?{...state.project,code:BOARD_ONLY_PROGRAM,firmware:{mode:'sketch',files:[]}}:state.project,{...options,program});state.runtime=state.session.runtime;state.status='paused';state.pending=null;state.mode='select';// The start line comes before what the program prints in its first tick.
   log(boardOnly?'다른 보드만 실행합니다. STM32 코드는 실행하지 않습니다.':emulate?`${state.ide?.gccSimulation?.()?'시뮬레이터(ARM GCC 빌드)를 시작했습니다':'펌웨어 에뮬레이터를 시작했습니다'} · ${state.firmware.name} · ${projectBoard(state.project).mcu} (${projectBoard(state.project).core}) 명령어 실행`:state.project.firmware?.mode==='hal'?'HAL 프로그램을 시작했습니다.':state.project.firmware?.mode==='fsp'?'FSP 프로그램(hal_entry.c)을 내장 해석기로 시작했습니다.':'스케치를 시작했습니다.');
   state.overvoltageLogged=new Set();
-  state.session.circuit.drivers=scope==='stm32'?[]:[...createBoardDrivers(state.project,{log:s=>log(s,'serial'),scope}),...createStm32Drivers(state.project,{scope,emulate:!!state.ide?.emulator(),elfs:state.boardElfs,log:s=>log(s,'serial'),trace:event=>monitor.trace(event)})];state.session.buses.boards=()=>state.session.circuit.drivers;connectStm32Drivers(state.session);state.result=state.session.tick(0);for(const p of state.project.components)if(isCamera(p))void applyCameraImage(p,state.session);diagnostic('simulation.started',{debug,entry},true);state.ide?.debugView();return true;}
+  state.session.circuit.drivers=scope==='stm32'?[]:[...createStm32Drivers(state.project,{scope,emulate:!!state.ide?.emulator(),elfs:state.boardElfs,log:s=>log(s,'serial'),trace:event=>monitor.trace(event)})];state.session.buses.boards=()=>state.session.circuit.drivers;connectStm32Drivers(state.session);state.result=state.session.tick(0);for(const p of state.project.components)if(isCamera(p))void applyCameraImage(p,state.session);diagnostic('simulation.started',{debug,entry},true);state.ide?.debugView();return true;}
  catch(e){state.runtime=null;state.result=state.session?.viewResult??null;state.status='error';log(e.message,'error');keepDataFlash();return false;}
 }
-// Peers outside the circuit, for the serial monitor: a phone per Bluetooth module or ESP32, the PC on the router.
+// Peers outside the circuit, for the serial monitor: a phone per Bluetooth module, the PC on the router.
 export function outsideTargets(p){
- const bluetooth=p.components.filter(c=>c.type==='wireless'&&c.catalogVariant!=='esp01-wifi-8').map(c=>[c.id,c.name]),esp32=p.components.filter(c=>c.type==='devboard'&&devboardModel(c)?.kind==='esp32'),wifi=esp32.length||p.components.some(c=>c.type==='wireless'&&c.catalogVariant==='esp01-wifi-8');
- return [...bluetooth,...esp32.map(c=>['esp32bt:'+c.id,c.name+' Bluetooth'])].map(([id,name])=>`<option value="outside:phone:${esc(id)}">스마트폰 → ${esc(name)}</option>`).join('')+(wifi?`<option value="outside:pc">공유기의 PC (${PC.ip}:${PC.port})</option><option value="outside:broker">인터넷 MQTT 브로커 (${INTERNET.broker.name})</option><option value="outside:web">인터넷 웹 서버 기록 (${INTERNET.web.name})</option>`:'');
+ const bluetooth=p.components.filter(c=>c.type==='wireless'&&c.catalogVariant!=='esp01-wifi-8').map(c=>[c.id,c.name]),wifi=p.components.some(c=>c.type==='wireless'&&c.catalogVariant==='esp01-wifi-8');
+ return bluetooth.map(([id,name])=>`<option value="outside:phone:${esc(id)}">스마트폰 → ${esc(name)}</option>`).join('')+(wifi?`<option value="outside:pc">공유기의 PC (${PC.ip}:${PC.port})</option><option value="outside:broker">인터넷 MQTT 브로커 (${INTERNET.broker.name})</option><option value="outside:web">인터넷 웹 서버 기록 (${INTERNET.web.name})</option>`:'');
 }
 export function resetBoard(id){const driver=state.session?.circuit?.drivers?.find(d=>d.part.id===id);if(!driver?.reset)return;try{driver.reset();log(`[${driver.part.name}] RESET · 프로그램을 처음부터 다시 실행합니다.`,'serial');}catch(e){state.status='error';log(e.message,'error');keepDataFlash();}refresh();}
 export function recordSimulation(){if(state.result)diagnostic('simulation.state',{status:state.status,simulationMs:state.simTime,pins:state.runtime?.gpio||{},parts:state.result.parts,fault:state.result.fault,warnings:state.result.warnings});}

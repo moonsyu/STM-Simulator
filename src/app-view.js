@@ -11,7 +11,6 @@ import {BuzzerAudio} from './buzzer-audio.js';
 import {circuitDiagnostics} from './circuit-diagnostics.js';
 import {isSelected,connectedNet,wirePoints} from './circuit-edit.js';
 import {$} from './common.js';
-import {isBoardFile,devboardModel,boardForFile} from './devboards.js';
 import {BOARD} from './geometry.js';
 import {keyFor,withKey} from './keybindings.js';
 import {partReadouts} from './part-controls.js';
@@ -45,7 +44,7 @@ export function refresh({preserveWires=false}={}){
  document.querySelectorAll('[data-add]').forEach(b=>{b.classList.toggle('active',state.mode===b.dataset.add);b.disabled=running();if(b.dataset.add==='board')b.querySelector('b').textContent=state.project.surfaces?.board?.hidden?'+':'✓';});
  $('undo').disabled=running()||!state.undoStack.length;$('redo').disabled=running()||!state.redoStack.length;$('delete').disabled=running()||!['part','wire','group','surface'].includes(state.selection?.type);
  $('rotate').disabled=running()||state.selection?.type!=='part';
- $('code').readOnly=running()||(isBoardFile(state.sourceFile)&&devboardModel(boardForFile(state.project,state.sourceFile)??{})?.kind!=='esp32');$('code').dataset.readOnlyMessage=running()?'실행 중에는 코드를 고칠 수 없습니다. 실행 정지(■, Ctrl+F5) 후 수정하세요.':'이 파일은 읽기 전용입니다.';$('project-name').readOnly=running();
+ $('code').readOnly=running();$('code').dataset.readOnlyMessage=running()?'실행 중에는 코드를 고칠 수 없습니다. 실행 정지(■, Ctrl+F5) 후 수정하세요.':'이 파일은 읽기 전용입니다.';$('project-name').readOnly=running();
  editorSearch.refresh();
  for(const id of ['pinout-open','firmware-mode','firmware-import','firmware-folder','firmware-check','code-reset','board-reset'])$(id).disabled=running();$('hal-example').disabled=!!state.ide?.nativeBusy();if($('run-scope'))$('run-scope').disabled=running();document.querySelectorAll('[data-devboard-add]').forEach(b=>b.disabled=running());
  $('run').classList.toggle('running',running()||state.starting);$('run').textContent=state.starting?'■  빌드 취소':state.runtime?.debug.paused?'⏵ 계속':running()?'■ 정지':'▶ 실행';

@@ -2,7 +2,6 @@
 // over a real UART (same net, same baud); what crosses the air is modelled at message level: no radio physics, only a
 // loss rate set on the module. Outside the circuit there are a phone (Bluetooth), a router with a PC on it (Wi-Fi), and
 // behind the router an MQTT broker and a web server (broker.stm-lab.test, api.stm-lab.test).
-// ESP32 sketches join the same air with BluetoothSerial and WiFi (Esp32Bluetooth, Esp32Wifi).
 // Facts come from the HC Serial Bluetooth manual, the HC-05 importer datasheet, the Ai-Thinker ESP-01 datasheet and the
 // Espressif ESP8266 AT command reference (docs/device-visual-references.json lists them).
 //
@@ -48,7 +47,7 @@ class Bluetooth extends Module{
  // Slaves wait; only a master searches. Both ends need the same PIN (manual: master + slave, "the password must be correct").
  get searching(){return this.powered&&this.hc05&&this.role==='master'&&!this.peer&&!this.at38400&&!this.at;}
  get discoverable(){return this.powered&&this.role==='slave'&&!this.peer&&!this.at38400;}
- matches(slave){return (slave.anyPin||slave.btPin===this.btPin)&&(this.cmode===1||this.bind===slave.address.join(','));}
+ matches(slave){return slave.btPin===this.btPin&&(this.cmode===1||this.bind===slave.address.join(','));}
  update(us,result){
   const volts=this.volts(result),on=volts>=3.3&&volts<=6;
   if(on&&!this.powered&&this.hc05)this.at38400=high(this.pin(result,5));
@@ -320,15 +319,9 @@ class WebServer extends Host{
   this.close(link,at);
   return [];
  }
- /** A request made without a link (ESP32 HTTPClient): status and body. */
- request(method,path,body,at){
-  const out=[];const fake={remote:{links:[0],deliver:(l,bytes)=>out.push(...bytes),dropLink(){}},peerLink:0};
-  this.receive(fake,utf8(`${method} ${path} HTTP/1.1\r\nHost: ${this.domain}\r\nContent-Length: ${utf8(body??'').length}\r\n\r\n${body??''}`),at);
-  const raw=text(out),split=raw.indexOf('\r\n\r\n');return {status:Number(raw.split(' ')[1]),body:raw.slice(split+4)};
- }
 }
 // MQTT 3.1.1 (QoS 0, QoS 1 acknowledged): CONNECT, PUBLISH, SUBSCRIBE / UNSUBSCRIBE with + and # filters, PINGREQ,
-// DISCONNECT. Network clients and ESP32 PubSubClient objects (`attach`) share the topics; the serial monitor's
+// DISCONNECT. Network clients share the topics; the serial monitor's
 // "MQTT 브로커" target publishes "topic message" lines and shows what passes through.
 export const topicMatches=(filter,topic)=>{const f=filter.split('/'),t=topic.split('/');for(let i=0;i<f.length;i++){if(f[i]==='#')return true;if(i>=t.length||(f[i]!=='+'&&f[i]!==t[i]))return false;}return f.length===t.length;};
 class Broker extends Host{
@@ -352,41 +345,13 @@ class Broker extends Host{
   if(type===12){this.reply(link,[0xd0,0],at);return;}
   if(type===14){this.clients.delete(link);this.log(`${client.id} 끊음`);}
  }
- subscribers(){return [...[...this.clients].map(([link,c])=>({subs:c.subs,send:(topic,payload,at)=>this.reply(link,mqttPublish(topic,payload),at)})),...this.attached];}
+ subscribers(){return [...[...this.clients].map(([link,c])=>({subs:c.subs,send:(topic,payload,at)=>this.reply(link,mqttPublish(topic,payload),at)}))];}
  publish(topic,payload,at,from='모니터'){
   this.log(`${from} → ${topic}: ${text(payload)}`);this.hub.note('Wi-Fi',at,`MQTT ${topic}: ${text(payload).slice(0,40)}`);
   for(const s of this.subscribers())if(s.subs.some(f=>topicMatches(f,topic)))s.send(topic,payload,at);
  }
- get attached(){return this._attached??=[];}
 }
 function mqttPublish(topic,payload){const t=utf8(topic),len=2+t.length+payload.length,head=[0x30];let x=len;do{let b=x%128;x=Math.floor(x/128);if(x)b|=128;head.push(b);}while(x);return [...head,t.length>>8,t.length&255,...t,...payload];}
-
-// ---------------------------------------------------------------- an ESP32's own radio (BluetoothSerial, WiFi)
-export class Esp32Bluetooth extends Bluetooth{
- constructor(hub,board,name){
-  super(hub,{id:`esp32bt:${board.id}`,name:`${board.name} Bluetooth`,baud:9600,btPin:'1234',catalogVariant:'hc06-bluetooth-4'},hub.bluetooth().length);
-  this.virtual=true;this.anyPin=true;this.powered=true;this.btName=name||'ESP32';this.rx=[];
- }
- update(){}
- take(bytes,at){for(const value of bytes)this.rx.push({value,at});}
- send(bytes,at){if(!this.peer)return 0;for(const value of bytes){const delay=this.hub.air(this,AIR_US.bluetooth,true);if(delay!=null)this.hub.emit(this.peer,[value],at+delay);}return bytes.length;}
-}
-export class Esp32Wifi extends Wifi{
- constructor(hub,board){
-  super(hub,{id:`esp32wifi:${board.id}`,name:`${board.name} Wi-Fi`,baud:115200},hub.wifi().length);
-  this.enabled=true;this.powered=true;this.mux=1;
- }
- update(){}
- say(){}
- powerDown(){}
- deliver(link,data,at){for(const value of data)(link.rx??=[]).push({value,at});}
- begin(ssid,pwd,at){this.mode=1;this.hub.after(at+JOIN_US,us=>this.join(ssid,pwd,us));}
- softAP(ssid,pwd,at){this.mode=2;this.ap={ssid,pwd:pwd??'',channel:1,ecn:pwd?3:0};this.hub.note('Wi-Fi',at,`${this.name}: AP ${q(ssid)} 시작`);}
- client(host,port,at){
-  const id=this.freeId(),before=this.links.length;if(id<0)return null;
-  this.connect([String(id),'TCP',host,String(port)],at);return this.links.length>before?this.links.at(-1):null;
- }
-}
 
 // ---------------------------------------------------------------- the air between the modules of a run
 /**
@@ -395,7 +360,7 @@ export class Esp32Wifi extends Wifi{
  */
 export class WirelessHub{
  constructor(primary){
-  this.primary=primary;this.modules=new Map();this.ports=new Map();this.timers=[];this.now=0;this.radios=[];this.seed=0x2545f491;
+  this.primary=primary;this.modules=new Map();this.ports=new Map();this.timers=[];this.now=0;this.seed=0x2545f491;
   this.router={name:'공유기',enabled:true,ap:{ssid:ROUTER.ssid,pwd:ROUTER.pwd,channel:6,ecn:3},apMac:'c8:3a:35:00:00:01',clients:0,subnet:'192.168.1'};this.pc=new Pc(this);this.phone=new Phone();
   this.broker=new Broker(this);this.web=new WebServer(this);
   this.addPort('main',primary);
@@ -406,8 +371,7 @@ export class WirelessHub{
   let m=this.modules.get(part.id);if(m)return m;
   const index=this.parts().findIndex(p=>p.id===part.id);m=part.catalogVariant==='esp01-wifi-8'?new Wifi(this,part,index):new Bluetooth(this,part,index);this.modules.set(part.id,m);return m;
  }
- all(){return [...this.parts().map(p=>this.module(p)),...this.radios];}
- addRadio(radio){this.radios.push(radio);return radio;}
+ all(){return this.parts().map(p=>this.module(p));}
  // The same sequence every run. Null: lost for good.
  random(){let x=this.seed;x^=x<<13;x^=x>>>17;x^=x<<5;this.seed=x>>>0;return this.seed/4294967296;}
  air(sender,base,reliable){

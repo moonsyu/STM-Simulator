@@ -4,17 +4,12 @@ const TYPES = new Set(['void','int','bool','float','double','long','short','char
 // inline is accepted and ignored (static inline helpers in headers).
 const QUALIFIERS = new Set(['const','volatile','static','inline']);
 const INCLUDES = new Set(['Arduino.h','LiquidCrystal.h','Wire.h','SPI.h','stdint.h','math.h']);
-// ESP32 sketches (`compile(code,{esp32:true})`) also take the DHT sensor library and its class.
-const ESP32_INCLUDES = new Set([...INCLUDES,'DHT.h','DHT_U.h','Adafruit_Sensor.h','WiFi.h','WiFiClient.h','WiFiServer.h','BluetoothSerial.h','HTTPClient.h','PubSubClient.h']);
-const ESP32_CLASSES = ['DHT','BluetoothSerial','WiFiServer','WiFiClient','HTTPClient','PubSubClient'];
-const CONSTRUCTED = new Set(['LiquidCrystal',...ESP32_CLASSES]);
-// `WiFiClient client;` starts empty; these need no constructor arguments.
-const BARE_CONSTRUCTED = new Set(['BluetoothSerial','WiFiClient','HTTPClient','PubSubClient']);
+const CONSTRUCTED = new Set(['LiquidCrystal']);
 const OPS = {'=':1,'+=':1,'-=':1,'*=':1,'/=':1,'%=':1,'&=':1,'|=':1,'^=':1,'<<=':1,'>>=':1,'||':3,'&&':4,'|':5,'^':6,'&':7,'==':8,'!=':8,'<':9,'>':9,'<=':9,'>=':9,'<<':10,'>>':10,'+':11,'-':11,'*':12,'/':12,'%':12};
 const ASSIGN = new Set(['=','+=','-=','*=','/=','%=','&=','|=','^=','<<=','>>=']);
 
 export function compile(source,options={}) {
-  const types=options.esp32?new Set([...TYPES,...ESP32_CLASSES]):TYPES,includes=options.esp32?ESP32_INCLUDES:INCLUDES;
+  const types=TYPES,includes=INCLUDES;
   if(typeof source!=='string'||source.length>(options.hal?300000:50000))throw new Error('코드 크기 한도를 넘었습니다.');
   const tokens=[]; let pos=0,line=1;
   while(pos<source.length){
@@ -120,7 +115,6 @@ export function compile(source,options={}) {
         if(peek()==='['){take();if(peek()===']')fail('2차원 배열의 열 수를 지정하세요.');d.size2=expression();expect(']');if(peek()==='[')fail('3차원 이상의 배열은 지원하지 않습니다.');}}
       if(peek()==='='){take();d.value=initializer();}
       else if(CONSTRUCTED.has(d.type)&&peek()==='('){d.value={type:'construct',name:d.type,args:argumentsList()};}
-      else if(BARE_CONSTRUCTED.has(d.type)&&peek()!=='='){d.value={type:'construct',name:d.type,args:[]};}
       declarations.push(d);if(d.constant&&d.value&&!d.pointer&&!d.array){try{enumConstants.set(d.name,constantValue(d.value));}catch{}}
       if(peek()!==',')break;take();d=declarator(base);
     }while(true);

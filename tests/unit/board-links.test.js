@@ -1,12 +1,8 @@
 import {test,describe} from 'node:test';
 import assert from 'node:assert/strict';
 import {SimulationSession} from '../../src/session.js';
-import {SketchDriver} from '../../src/esp32-sketch.js';
 import {createStm32Drivers,connectStm32Drivers} from '../../src/stm32-boards.js';
 import {applyLectureExample} from '../../src/lecture-examples.js';
-import {createBoardDrivers} from '../../src/fixed-run.js';
-import {DEVBOARD_MODELS} from '../../src/devboards.js';
-import {projectForBoard} from '../../src/project.js';
 
 function run(project,ms){
  const out=[],session=new SimulationSession(project,{print:t=>out.push('main: '+t),uart:e=>{if(e.direction==='TX')out.push('main tx: '+String.fromCharCode(...e.bytes));}});
@@ -21,18 +17,6 @@ describe('boards on wires',()=>{
   assert.ok(!result.fault,result.warnings?.join());
   assert.match(text(out),/sent ON/);assert.match(text(out),/sent OFF/);assert.match(text(out),/ack/);assert.doesNotMatch(text(out),/no answer/);
   assert.ok(session.circuit.drivers[0].session.runtime.gpio.PA5,'the slave set its LD2 pin');
- });
- // Feature 33: an ESP32 sketch as a third board and a second master on the same SDA/SCL nets reaches the HAL slave of
- // the second STM32 board (Stm32Driver.i2cSlave).
- test('I²C: an ESP32 sketch (Wire master) reaches the HAL slave on the second STM32 board',()=>{
-  const {project}=applyLectureExample('wired-i2c-stm32'),key=s=>DEVBOARD_MODELS['esp32-nodemcu-32s'].pins.find(p=>p.signal===s).key,out=[];
-  project.components.push({id:'esp1',type:'devboard',model:'esp32-nodemcu-32s',name:'ESP32-1',x:900,y:300,rotation:0,code:'#include <Wire.h>\nvoid setup() { Serial.begin(115200); Wire.begin(); delay(120); }\nvoid loop() {\n  Wire.beginTransmission(0x20); Wire.write(49);\n  int e = Wire.endTransmission();\n  Wire.beginTransmission(0x21);\n  int none = Wire.endTransmission();\n  Serial.printf("ESP e=%d none=%d\\n", e, none);\n  delay(300);\n}\n'});
-  project.wires.push({id:'we1',from:`devboard:esp1:${key('GPIO21')}`,to:'board:CN5:9',color:'#30a46c'},{id:'we2',from:`devboard:esp1:${key('GPIO22')}`,to:'board:CN5:10',color:'#f5c518'});
-  const session=new SimulationSession(project,{});
-  session.circuit.drivers=[...createBoardDrivers(project,{log:t=>out.push(t)}),...createStm32Drivers(project,{log:t=>out.push(t)})];session.buses.boards=()=>session.circuit.drivers;connectStm32Drivers(session);
-  session.tick(0);for(let t=50;t<=1200;t+=50)session.tick(t);
-  const lines=out.filter(l=>/ESP e=/.test(l));assert.ok(lines.length>=3,out.join('|'));
-  assert.ok(lines.some(l=>/ESP e=0 none=2/.test(l)),lines.join('|'));assert.ok(lines.every(l=>/none=2/.test(l)),'nothing answers at 0x21');
  });
  test('I²C without the pull-ups, or without a slave on the address, gets no answer',()=>{
   const {project}=applyLectureExample('wired-i2c-stm32');project.wires=project.wires.filter(w=>!/part:r[12]:/.test(w.from+w.to));
@@ -59,13 +43,6 @@ describe('boards on wires',()=>{
  });
 });
 describe('serial monitor input',()=>{
- test('an ESP32 sketch reads what the monitor sends on Serial',()=>{
-  const part={id:'e1',type:'devboard',model:'esp32-nodemcu-32s',name:'ESP32-1',x:0,y:0,rotation:0,code:'void setup(){pinMode(2,OUTPUT);}\nvoid loop(){while(Serial.available()>0){int c=Serial.read();Serial.printf("got %c\\n",c);if(c==49)digitalWrite(2,HIGH);}delay(5);}'};
-  const project=projectForBoard('nucleo-f103rb');project.components.push(part);
-  const driver=new SketchDriver(part,{project});assert.equal(driver.acceptsInput,true);
-  driver.observe?.({voltage:()=>0});assert.equal(driver.receive('1'),1);
-  driver.advance?.(50);assert.match(driver.output,/got 1/);
- });
  test('another STM32 board receives on its USART2',()=>{
   const {project}=applyLectureExample('wired-spi-stm32'),board=project.components.find(p=>p.id==='stm2');
   board.code=board.code.replace(/(\/\* USER CODE BEGIN 3 \*\/)[\s\S]*?(\/\* USER CODE END 3 \*\/)/,(_,a,b)=>a+'\n  uint8_t c = 0;\n  if (HAL_UART_Receive(&huart2, &c, 1, 5) == HAL_OK) uartSend("echo\\r\\n");\n'+b);

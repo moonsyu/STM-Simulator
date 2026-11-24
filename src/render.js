@@ -8,7 +8,7 @@ import {DEFAULT_BOARD_ID,getBoard} from './boards.js';
 import {terminalKeys,terminalLabel,localTerminals,nominalTerminals,rotatePoint,attachments,PART_DEFS} from './components.js';
 import {extraShape,updateExtraSvg} from './part-render.js';
 import {scaleXOf,scaleYOf,partTransform,partVector,surfaceTransform,surfacePoint,scaleTransform} from './geometry.js';
-import {devboardPins,devboardSvg,updateDevboardSvg,devboardModel} from './devboards.js';
+import {devboardPins,updateDevboardSvg} from './devboards.js';
 import {ledLevel,mixColor} from './rgb-color.js';
 import {esc} from './common.js';
 export {esc} from './common.js';
@@ -149,7 +149,7 @@ function stm32DevboardSvg(p,selected){
  const cx=BOARD.x+BOARD.w/2,cy=BOARD.y+BOARD.h/2;
  return `<g class="devboard ${selected?'part-selected':''}" data-part="${p.id}" data-rotation="${p.rotation}" data-devboard="${p.model}" transform="translate(${p.x} ${p.y}) ${p.rotation?`rotate(${p.rotation}) `:''}${scaleTransform(p)} translate(${-cx} ${-cy})">${boardSvg(p.model,{prefix:p.id+'.'})}${text(cx,BOARD.y-10,p.name,12,'#496477','text-anchor="middle" font-weight="700" class="devboard-name"')}</g>`;
 }
-export function renderDevboards(project,selected){return project.components.filter(p=>p.type==='devboard').map(p=>devboardModel(p)?.kind==='stm32'?stm32DevboardSvg(p,isSelected(selected,'part',p.id)):devboardSvg(p,isSelected(selected,'part',p.id))).join('');}
+export function renderDevboards(project,selected){return project.components.filter(p=>p.type==='devboard').map(p=>stm32DevboardSvg(p,isSelected(selected,'part',p.id))).join('');}
 export function updateSurfaces(svg,project,selected){for(const [key,selector]of [['board','.board'],['breadboard','[data-surface="breadboard"]']]){const group=svg.querySelector(selector);group.style.display=project.surfaces?.[key]?.hidden?'none':'';group.dataset.surface=key;group.setAttribute('transform',surfaceTransform(key,project.surfaces));group.classList.toggle('part-selected',selected?.type==='surface'&&selected.id===key);}}
 export function renderParts(project,selected,result,pressed){const parts=project.components.filter(p=>!['breadboard','devboard'].includes(p.type)),ordered=[...parts.filter(p=>selected?.id!==p.id),...parts.filter(p=>selected?.id===p.id)];return ordered.map(p=>{
  const x=p.x,y=p.y,angle=p.rotation,scale=Math.max(scaleXOf(p),scaleYOf(p)),terms=localTerminals({...p,scale:1,scaleX:1,scaleY:1,skewX:0}),nominal=nominalTerminals(p),half=Math.min(18,Math.max(4,(p.span??70)/2-4));

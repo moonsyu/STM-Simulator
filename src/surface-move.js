@@ -16,7 +16,7 @@ export function rotateBoard(project,delta=90){
  resizeObject(project,{type:'surface',id:'board'},{...destination,rotation});
  return project;
 }
-/** Turn a board component (ESP32, Raspberry Pi, another STM32 board) by `delta` degrees about its centre, with the parts
+/** Turn a board component (another STM32 board) by `delta` degrees about its centre, with the parts
  * mounted only on its pins and the bend points of wires between its own pins. */
 export function rotateDevboard(project,id,delta=90){
  const part=project.components.find(p=>p.id===id&&p.type==='devboard');if(!part)throw new Error('회전할 보드를 확인하세요.');

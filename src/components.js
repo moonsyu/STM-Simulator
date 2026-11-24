@@ -2,7 +2,6 @@ import {CATALOG_DEFS,CATALOG_TWO_PIN,CATALOG_BY_TYPE,CONTACT_MAPS,LEGACY_PHYSICA
 import {L298_DEFS} from './l298n.js';
 import {DEVICE_DEFS} from './device-defs.js';
 import {scaleXOf,scaleYOf} from './geometry.js';
-import {DEVBOARD_MODELS} from './devboards.js';
 // Geometry shared by rendering, hit testing, mounting and project validation.
 // Lead spacing of the small two-lead parts: legs bent close to the body as on a real breadboard. Radial parts
 // (LED, LDR, NTC, capacitors, 2-pin button) stand on legs two holes apart (lead, free hole, lead: three holes);
@@ -49,8 +48,8 @@ export function terminalLabel(p,key){
 }
 function rawTerminals(p){
  if(p.type==='breadboard')return [];
- // An ESP32 board plugs into a breadboard with its header pins; a Raspberry Pi header takes jumper wires only.
- if(p.type==='devboard'){const model=DEVBOARD_MODELS[p.model];return model?.kind==='esp32'?model.pins.map(pin=>({key:pin.key,x:pin.x,y:pin.y})):[];}
+ // A board's header takes jumper wires only.
+ if(p.type==='devboard')return [];
  if(p.type==='button')return [{key:'a',x:-14,y:-14},{key:'b',x:14,y:-14},{key:'c',x:-14,y:14},{key:'d',x:14,y:14}];
  if(p.type==='lcd')return LCD_LABELS.map((_,i)=>({key:'p'+(i+1),x:(i-7.5)*14,y:44}));
  if(CATALOG_TWO_PIN.includes(p.type))return [{key:'p1',x:-(p.span??70)/2,y:0},{key:'p2',x:(p.span??70)/2,y:0}];

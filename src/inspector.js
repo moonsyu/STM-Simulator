@@ -5,11 +5,10 @@ import {WIRE_COLORS,terminalKeys,attachments} from './components.js';
 import {partControls,partReadouts} from './part-controls.js';
 import {validateProject} from './project.js';
 import {projectBoard} from './boards.js';
-import {devboardModel,devboardPinInfo,boardFileKey} from './devboards.js';
+import {devboardModel,devboardPinInfo} from './devboards.js';
 import {isStm32Board,stm32Boards,mainBoardName} from './stm32-boards.js';
 import {mediaSection,bindMedia} from './part-media-ui.js';
 import {esc,updateSimulationSvg} from './render.js';
-import {hasPythonCode} from './rpi-python.js';
 import {$} from './common.js';
 
 /**
@@ -59,12 +58,6 @@ function inspector(force=false){
     $('part-name').onchange=e=>{const name=e.target.value.trim();if(!name||name===mainBoardName(app.project)||app.project.components.some(c=>c!==p&&c.name===name)){log('보드 이름이 비었거나 다른 부품·보드 이름과 같습니다.','error');inspector(true);return;}checkpoint();p.name=name;syncEditor();changed();};
     $('edit-board').onclick=()=>{if(editBoard(p.id))tab('code');};$('inspect-open-docs').onclick=()=>tab('docs');$('rotate-part').onclick=rotateSelected;$('remove-part').onclick=removeSelected;
     bindStlink(value=>{checkpoint();if(value)p.stlink=value;else delete p.stlink;changed();});return;
-   }
-   if(p.type==='devboard'){
-    const model=devboardModel(p),dis=running()?'disabled':'';
-    el.innerHTML=`<span class="overline">${model.kind==='rpi'?'RASPBERRY PI':'ESP32'}</span><h2 title="${esc(p.name)}">${esc(p.name)}</h2><p>${esc(model.name)} · ${esc(model.description)}</p>${model.unverified?`<p class="pin-check">⚠ ${esc(model.unverified)}</p>`:''}<div class="inspector-card"><label for="part-name">보드 이름</label><input id="part-name" value="${esc(p.name)}" maxlength="40" ${dis}></div><div class="measure"><span>실행 방식</span><b>${model.kind==='esp32'?'스케치 실행':hasPythonCode(p.code)?'main.py 실행 (Python)':p.scenario?'고정 실행 · 커널 모듈':'실행 안 함'}</b></div><p>${model.kind==='esp32'?'sketch.ino를 실행할 때 해석해 STM32와 같은 회로·시간축에서 동작합니다.':hasPythonCode(p.code)?'main.py를 Python으로 해석해 STM32와 같은 회로·시간축에서 실행합니다(gpiozero·RPi.GPIO). 코드를 고치면 동작도 바뀝니다.':p.scenario?'코드를 빌드·실행하지 않고 예제 시나리오대로 핀이 바뀝니다. 배선이 틀리면 실제처럼 동작하지 않습니다.':'강의 예제에서 불러온 라즈베리파이만 고정 실행합니다. 이 보드의 핀은 입력 상태로 두고 전압만 계산합니다.'}</p><button class="inspector-action" id="open-board-code">${esc(model.file)} 열기</button><div class="measure"><span>회전 각도</span><b>${p.rotation}°</b></div><button class="inspector-action" id="rotate-part" ${dis}>90° 회전 (R)</button><button class="inspector-action danger" id="remove-part" ${dis}>보드 삭제</button>`;
-    $('part-name').onchange=e=>{const name=e.target.value.trim();if(!name||app.project.components.some(c=>c!==p&&c.name===name)){log('보드 이름이 비었거나 다른 부품·보드 이름과 같습니다.','error');inspector(true);return;}checkpoint();p.name=name;syncEditor();changed();};
-    $('open-board-code').onclick=()=>{app.sourceFile=boardFileKey(p);syncEditor();tab('code');};$('rotate-part').onclick=rotateSelected;$('remove-part').onclick=removeSelected;return;
    }
    const read=app.result?.parts[p.id],mounted=Object.keys(attachments(p)).length;
    el.innerHTML=`<span class="overline" title="${esc(p.type)}">${esc(CATALOG_BY_TYPE[p.type]?.interface||p.type.toUpperCase())}</span><h2 title="${esc(p.name)}">${esc(p.name)}</h2><p>${mounted?`${mounted} / ${terminalKeys(p).length}개 다리 장착`:'자유 배치 · 끌어서 빵판에 놓으세요.'}</p><div class="inspector-card"><label for="part-name">부품 이름</label><input id="part-name" value="${esc(p.name)}" maxlength="80" ${running()?'disabled':''}>${p.type==='resistor'?`<label for="part-value">저항 (Ω)</label><input id="part-value" type="number" value="${p.value}" min="1" max="10000000" ${running()?'disabled':''}>`:''}${p.type==='led'?`<label for="part-color">LED 색상</label><select id="part-color" ${running()?'disabled':''}>${[['red','빨강'],['green','초록'],['blue','파랑'],['yellow','노랑']].map(([v,l])=>`<option value="${v}" ${p.color===v?'selected':''}>${l}</option>`).join('')}</select>`:''}</div>${partControls(p,running())}${mediaSection(p,running())}<div class="measure"><span>부품 전압</span><b id="part-voltage">${read?read.voltage.toFixed(3)+' V':'—'}</b></div><div class="measure"><span>전류</span><b id="part-current">${read?(read.current*1000).toFixed(3)+' mA':'—'}</b></div>${p.type==='resistor'?`<div class="measure"><span>소비 전력</span><b id="part-power">${read?(read.power*1000).toFixed(2)+' mW':'—'}</b></div>`:''}${p.type==='button'?'<p>실행 중 버튼 몸체를 누르고 계시면 연결되고 손을 떼면 끊어집니다. A1–A2, B1–B2는 항상 연결되며, 누르면 양쪽이 연결됩니다.</p>':''}${p.type==='lcd'?'<p>LCD 1602의 4/8비트 명령·문자 출력을 지원합니다. VDD 5 V, VSS·R/W·VO를 GND에 연결하고 RS/E/DATA 핀을 배선하세요. 기존 스케치의 LiquidCrystal API를 사용할 수 있습니다.</p>':''}<div class="measure"><span>회전 각도</span><b>${Number(p.rotation.toFixed(1))}°</b></div><button class="inspector-action" id="inspect-open-docs">장치 Docs · 배선/예제 보기</button><button class="inspector-action" id="rotate-part" ${running()?'disabled':''}>45° 회전 (R)</button><button class="inspector-action danger" id="remove-part" ${running()?'disabled':''}>부품 삭제</button>`;

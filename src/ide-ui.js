@@ -8,7 +8,6 @@ import {searchHalExamples} from './hal-example-search.js';
 import {BOARD_CATALOG,DEFAULT_BOARD_ID,START_BOARD_ID,getBoard} from './boards.js';
 import {familyProfile} from './mcu-family.js';
 import {SOURCE_PATH,sourceFiles,changeSourceFile} from './source-files.js';
-import {boardSourceFiles,isBoardFile} from './devboards.js';
 import {inspectRuntime,watchValue} from './debug-tools.js';
 import {esc} from './render.js';
 import {withKey} from './keybindings.js';
@@ -59,7 +58,7 @@ export function setupIde(o){
   function select(file,line,column){closedTabs.delete(file);emptyTabs=false;editor.showProject();o.selectSource(file);o.layout.reveal('code');document.querySelector('[data-tab="code"]').click();if(line)editor.goto(line,column);}
   // The debug view lives in the side bar; every other monitor is a bottom-panel tab.
   function showMonitor(name){if(name==='debug'){o.layout.showView('debug');return;}o.layout.showPanel(name);}
-  function toggleBreakpoint(file,line){if(!Number.isInteger(line)||line<1||isBoardFile(file))return;o.checkpoint();const p=settings(),i=p.breakpoints.findIndex(b=>b.file===file&&b.line===line);if(i<0)p.breakpoints.push({file,line});else p.breakpoints.splice(i,1);const r=o.getSession()?.runtime;if(r)r.debug.breakpoints=new Set(points().map(b=>`${b.file}:${b.line}`));o.saveLocal();native?.syncBreakpoints();debugView();}
+  function toggleBreakpoint(file,line){if(!Number.isInteger(line)||line<1)return;o.checkpoint();const p=settings(),i=p.breakpoints.findIndex(b=>b.file===file&&b.line===line);if(i<0)p.breakpoints.push({file,line});else p.breakpoints.splice(i,1);const r=o.getSession()?.runtime;if(r)r.debug.breakpoints=new Set(points().map(b=>`${b.file}:${b.line}`));o.saveLocal();native?.syncBreakpoints();debugView();}
   // An FSP project's main source is e² studio's src/hal_entry.c (stored as the project's main file).
   const shown=name=>name==='main.c'&&o.getProject().firmware?.mode==='fsp'?'hal_entry.c':name;
   const sourceFolded=new Set();
@@ -67,8 +66,6 @@ export function setupIde(o){
     {const ext=editor.externalFile(),p=o.getProject();if(ext&&canEditExternal(ext.file)){const leaf=ext.file.split('/').at(-1),own=(p.firmware?.files||[]).find(f=>(f.origin||treeLabels.get(ext.file)===f.name)&&f.name.split('/').at(-1)===leaf&&(f.of===ext.file||f.name===(treeLabels.get(ext.file)||ext.file)));if(own){editor.closeExternal(ext.file);select(own.name);return;}}}
     const focused=document.activeElement?.closest('[data-source]'),focusSource=focused?.dataset.source,focusContainer=focused?.parentElement.id;
     const files=sourceFiles(o.getProject()),active=o.getSource(),key=JSON.stringify([o.getProject().firmware?.mode,files]);if(sourceKey&&sourceKey!==key){built=null;$('build-status').textContent='변경됨 · 빌드 필요';editor.diagnostics([]);}sourceKey=key;
-    // Other boards' programs follow the STM32 sources, labelled with the board name.
-    const boards=boardSourceFiles(o.getProject());
     // A file kept in a folder (Core/Src/app.c) shows its name with the folder beside it, as the build file list does.
     const folderOfFile=name=>name==='main.c'?(o.getProject().firmware?.mainFolder??''):name.split('/').slice(0,-1).join('/'),leaf=name=>shown(name).split('/').at(-1);
     // Feature 28: the project's files as a tree — a folder (Core, Core/Src, USER …) folds and its files sit one step in,
@@ -79,7 +76,7 @@ export function setupIde(o){
     const root={folders:new Map(),files:[]};
     for(const f of files){let node=root;for(const part of folderOfFile(f.name).split('/').filter(Boolean)){if(!node.folders.has(part))node.folders.set(part,{folders:new Map(),files:[]});node=node.folders.get(part);}node.files.push(f);}
     const drawTree=(node,path)=>[...[...node.folders].sort(([a],[b])=>a.localeCompare(b)).map(([name,child])=>{const full=path?path+'/'+name:name;return `<details class="tree-folder" data-src-folder="${esc(full)}"${sourceFolded.has(full)?'':' open'}><summary>${esc(name)}</summary><div class="tree-children">${drawTree(child,full)}</div></details>`;}),...node.files.map(fileRow)].join('');
-    $('file-tree').innerHTML=drawTree(root,'')+boards.map(f=>`<button data-source="${esc(f.name)}" class="${f.name===active?'active':''}" title="${esc(f.label)}"><span class="file-kind">${f.name.endsWith('.py')?'PY':'INO'}</span><span class="file-label">${esc(f.label)}</span></button>`).join('');
+    $('file-tree').innerHTML=drawTree(root,'');
     for(const el of $('file-tree').querySelectorAll('[data-src-folder]'))el.addEventListener('toggle',()=>{if(el.open)sourceFolded.delete(el.dataset.srcFolder);else sourceFolded.add(el.dataset.srcFolder);});
     for(const el of $('file-tree').querySelectorAll('[data-source]'))el.onclick=()=>select(el.dataset.source);editor.refreshGenerated();tabsView();
     const wp=folder||'미저장 프로젝트';$('workspace-path').textContent=wp;$('workspace-path').title=wp;editor.reset();if(!native?.selected())editor.updateDebug(points(),o.getSession()?.runtime?.debug.paused?o.getSession().runtime.location:null);native?.sync();controls();if(!o.isRunning())debugView();
@@ -247,10 +244,10 @@ export function setupIde(o){
       closeTabs(list);};
     menu.hidden=false;menu.style.left=Math.max(4,Math.min(x,innerWidth-menu.offsetWidth-4))+'px';menu.style.top=Math.max(4,Math.min(y,innerHeight-menu.offsetHeight-4))+'px';menu.querySelector('button:not([disabled])')?.focus();
   }
-  // Open tabs: project files, other boards' programs, then SDK files opened by go to definition (read only, ×).
+  // Open tabs: project files, then SDK files opened by go to definition (read only, ×).
   function tabsView(){
-    const files=sourceFiles(o.getProject()),boards=boardSourceFiles(o.getProject()),active=o.getSource(),ext=editor.externalFile(),base=f=>f.split('/').at(-1);
-    const all=[...files.map(f=>({name:f.name,label:shown(f.name)})),...boards];
+    const files=sourceFiles(o.getProject()),active=o.getSource(),ext=editor.externalFile(),base=f=>f.split('/').at(-1);
+    const all=files.map(f=>({name:f.name,label:shown(f.name)}));
     for(const name of [...closedTabs])if(!all.some(f=>f.name===name))closedTabs.delete(name);
     // The file on screen always has its tab (a jump from the debugger or the problems list opens it).
     if(!emptyTabs)closedTabs.delete(active);
@@ -295,7 +292,7 @@ export function setupIde(o){
   function controls(){const running=o.isRunning(),r=o.getSession()?.runtime,paused=!!r?.debug.paused;
     native?.controls();if(native?.selected())return;
     for(const id of ['source-add','source-rename','source-delete','ide-build','debug-start'])$(id).disabled=running;
-    for(const id of ['source-rename','source-delete'])$(id).disabled=running||o.getSource()==='main.c'||isBoardFile(o.getSource());
+    for(const id of ['source-rename','source-delete'])$(id).disabled=running||o.getSource()==='main.c';
   }
   function build({reveal=true}={}){
     if(o.isRunning())return null;editor.diagnostics([]);$('build-errors').replaceChildren();if(reveal)showMonitor('build');

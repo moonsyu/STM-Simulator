@@ -9,7 +9,6 @@ import {generateRaFiles,raVectors,raInstances} from '../../src/ra-generator.js';
 import {raDefaultMcu,validateRaMcu,raNameProblem,raIicSlaveClock,RA_IIC_SLAVE_ADDRESS} from '../../src/ra-config.js';
 import {fspPrelude} from '../../src/fsp-interp.js';
 import {raAssistance} from '../../src/ra-assistance.js';
-import {createBoardDrivers} from '../../src/fixed-run.js';
 import {connectStm32Drivers} from '../../src/stm32-boards.js';
 import {Iic,IIC_EVENT_BASE} from '../../src/emu/ra6e1/iic.js';
 import {SLAVE_PROBE,SLAVE_SEQUENCES,slaveProbeMcu} from './helpers/ra-iic-slave.js';
@@ -19,7 +18,7 @@ const base=()=>projectForBoard('fpb-ra6e1');
 function open(project){
  const log={print:[],trace:[],warn:[],board:[]},checked=validateProject(project);
  const session=new SimulationSession(checked,{print:t=>log.print.push(t),trace:e=>log.trace.push(e),warn:m=>log.warn.push(m)});
- session.circuit.drivers=createBoardDrivers(checked,{log:s=>log.board.push(s)});session.buses.boards=()=>session.circuit.drivers;connectStm32Drivers(session);
+ connectStm32Drivers(session);
  return {session,log};
 }
 const run=(s,ms,step=20)=>{for(let t=Math.floor(s.time/step)*step+step;t<=ms+1e-9;t+=step)s.tick(t);};

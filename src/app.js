@@ -20,7 +20,7 @@ import {Monitor} from './monitor.js';
 import {startProject,validateProject,projectForBoard} from './project.js';
 import {projectBoard} from './boards.js';
 import {isBreadboardLibraryType,newBreadboardFields} from './breadboards.js';
-import {DEVBOARD_MODELS,boardForFile} from './devboards.js';
+import {DEVBOARD_MODELS} from './devboards.js';
 import {stm32Boards,mainBoardName,stm32View} from './stm32-boards.js';
 
 import {setupBoardPicker} from './board-picker.js';
@@ -116,8 +116,8 @@ svg.addEventListener('wheel',e=>{e.preventDefault();if(!e.deltaY)return;const st
 $('zoom-in').onclick=()=>zoom(1/1.2);$('zoom-out').onclick=()=>zoom(1.2);$('zoom-reset').onclick=fitView;
 $('pin-search').addEventListener('input',()=>{state.searchSelectedId=null;pinSearch();});
 $('pin-search').addEventListener('keydown',e=>{if(e.key==='Enter'){const p=searchPins(e.target.value)[0];if(p)focusPin(p.id);}if(e.key==='Escape'){e.stopPropagation();e.target.value='';state.searchSelectedId=null;pinSearch();}});
-// ESP32 / Raspberry Pi boards run with the STM32 by default. Choosing one board (or a circuit without the STM32 board)
-// runs only the boards' fixed-run scenarios; the STM32 then runs an empty program so its pins stay inputs.
+// The other STM32 boards run with the main board by default. Choosing one board (or a circuit without the main board)
+// runs only that board; the main board then runs an empty program so its pins stay inputs.
 export const BOARD_ONLY_PROGRAM='void setup() {}\nvoid loop() { delay(1000); }';
 export const runScope=()=>{const value=$('run-scope')?.value||'all';return value==='all'||value==='stm32'||state.project.components.some(p=>p.type==='devboard'&&p.id===value)?value:'all';};
 export const boardOnlyRun=()=>state.project.components.some(p=>p.type==='devboard')&&(!!state.project.surfaces?.board?.hidden||!['all','stm32'].includes(runScope()));
@@ -146,7 +146,7 @@ document.querySelectorAll('[data-add]').forEach(b=>b.onclick=()=>{if(running())r
  let f;try{f=newBreadboardFields(state.project,type);}catch(e){log(e.message,'error');return;}
  addPart('breadboard',null,null,{x:f.x,y:f.y},f.variant?{variant:f.variant}:{});fitView();svg.focus({preventScroll:true});
 }else{addPart(type,null,null,freeSpot(type));svg.focus({preventScroll:true});}});
-$('devboard-options').innerHTML=Object.values(DEVBOARD_MODELS).map(m=>`<button class="board-option devboard-option" data-devboard-add="${m.id}"><span class="board-option-icon" aria-hidden="true">${({rpi:'Pi',stm32:'ST'})[m.kind]??'32'}</span><span><strong>${esc(m.name)}</strong><small>${esc(m.description)}</small></span><span class="board-option-action">추가</span></button>`).join('');
+$('devboard-options').innerHTML=Object.values(DEVBOARD_MODELS).map(m=>`<button class="board-option devboard-option" data-devboard-add="${m.id}"><span class="board-option-icon" aria-hidden="true">${({stm32:'ST'})[m.kind]}</span><span><strong>${esc(m.name)}</strong><small>${esc(m.description)}</small></span><span class="board-option-action">추가</span></button>`).join('');
 document.querySelectorAll('[data-devboard-add]').forEach(b=>b.onclick=()=>addDevboard(b.dataset.devboardAdd));
 $('empty-add-board').onclick=()=>document.querySelector('[data-add="board"]')?.click();$('empty-open-parts').onclick=()=>layout.showView('parts');$('empty-open-examples').onclick=()=>layout.showView('examples');
 $('wire-palette').innerHTML=WIRE_COLORS.map(([value,name],i)=>`<button data-palette="${i<10?'basic':'pastel'}" data-color="${value}" class="swatch ${value===state.color?'active':''}" style="--swatch:${value}" title="${name} 배선" aria-label="${name} 배선"></button>`).join('');
@@ -200,7 +200,7 @@ document.addEventListener('ide-undo',e=>editUndo(e.detail));
 document.addEventListener('ide-find',e=>{layout.reveal('code');editorSearch.open(e.detail);});
 state.ide=setupIde({buildFirmware:()=>ensureFirmware(true).catch(error=>log(error.message,'error')),getProject:()=>state.project,getSource:()=>state.sourceFile,getSession:()=>state.runtime?state.session:null,isRunning:running,isSimulationRunning:()=>state.status==='running'||state.status==='paused',refresh,checkpoint,saveLocal:autosave,layout,log,feedback,requestReplace,replaceProject,debugCommand,
  stm32Runs:()=>[{name:mainBoardName(state.project),text:JSON.stringify(state.project),serial:state.project.surfaces?.board?.stlink||'',main:true},...stm32Boards(state.project).map(p=>({name:p.name,text:JSON.stringify(stm32View(state.project,p.id)),serial:p.stlink||''}))],editBoard,
- selectSource:name=>{if(name!=='main.c'&&!state.project.firmware?.files.some(f=>f.name===name)&&!boardForFile(state.project,name))return;state.sourceFile=name;syncEditor();},
+ selectSource:name=>{if(name!=='main.c'&&!state.project.firmware?.files.some(f=>f.name===name))return;state.sourceFile=name;syncEditor();},
  applySources:(p,file)=>{checkpoint();state.project=validateProject(p);state.sourceFile=file;syncEditor();changed();state.ide.invalidate();}});
 // Button titles show the current shortcuts as soon as a binding changes.
 // Help text and the palette button show the user's keys too.
@@ -220,7 +220,7 @@ const logicAnalyzer=setupLogicAnalyzer({getSession:()=>state.session,getProject:
 setupVariableGraph({getSession:()=>state.session,getProject:()=>state.project,isRunning:()=>state.status==='running',onError:message=>log(message,'error'),onChange:plots=>{state.project.ide??={breakpoints:[],watches:[]};state.project.ide.plots=plots;autosave();}});
 const updateLog=setupUpdateLog();
 layout.mount({closeAllTabs:()=>state.ide?.closeAllTabs?.(),openUpdateLog:updateLog.open,openElf,debugCommand:shellDebugCommand,runCommand,formatCode:()=>{layout.reveal('code');state.lastCodeCheckpoint=0;void state.ide?.format?.();},formatSelection:()=>{layout.reveal('code');state.lastCodeCheckpoint=0;state.ide?.formatSelection?.();},find:replace=>editorSearch.open(replace),files:()=>[state.project.code!==undefined?'main.c':null,...(state.project.firmware?.files||[]).map(f=>f.name)].filter(Boolean),openFile:name=>{if(name!=='main.c'&&!state.project.firmware?.files.some(f=>f.name===name))return;state.sourceFile=name;syncEditor();layout.reveal('code');state.ide?.editor?.focus?.();},gotoLine:line=>state.ide?.editor?.goto?.(line),setTarget:value=>{const select=$('native-target');if(!select||select.disabled||![...select.options].some(o=>o.value===value))return;select.value=value;select.dispatchEvent(new Event('change'));}});layout.setMonitor(monitor);
-// Which boards a run starts (shown in Run and Debug once the circuit has an ESP32 or Raspberry Pi board).
+// Which boards a run starts (shown in Run and Debug once the circuit has another STM32 board).
 (document.querySelector('#view-debug .run-config')||document.querySelector('.ide-toolbar'))?.insertAdjacentHTML('beforeend','<label class="run-scope-label" hidden><span>실행 보드</span><select id="run-scope" aria-label="실행할 보드"></select></label>');updateRunScope();
 setupTabAccessibility();
 state.canvasKeys=setupCanvasKeyboard(svg,{

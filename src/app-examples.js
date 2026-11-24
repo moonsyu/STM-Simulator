@@ -22,7 +22,7 @@ export const BOARD_LIBRARY=boardLibrary(DEVBOARD_MODELS);
 export function filterParts(){
  const matches=new Set(searchParts($('part-search').value).map(part=>part.type));
  $('part-list').querySelectorAll('[data-add]').forEach(button=>{button.hidden=!matches.has(button.dataset.add);});
- // The other boards (ESP32, Raspberry Pi, a second STM32) after the parts, found by the same search.
+ // The other boards (a second STM32) after the parts, found by the same search.
  const boards=new Set(searchBoards(BOARD_LIBRARY,$('part-search').value).map(b=>b.id)),found=matches.size+boards.size;
  $('part-list').querySelectorAll('[data-devboard-add]').forEach(button=>{button.hidden=!boards.has(button.dataset.devboardAdd);});
  $('part-boards-heading').hidden=!boards.size;

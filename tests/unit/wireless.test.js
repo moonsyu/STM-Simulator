@@ -6,13 +6,12 @@ import {catalogExample} from '../../src/catalog-examples.js';
 import {catalogType} from '../../src/catalog-defs.js';
 import {SimulationSession} from '../../src/session.js';
 import {createStm32Drivers,connectStm32Drivers} from '../../src/stm32-boards.js';
-import {createBoardDrivers} from '../../src/fixed-run.js';
 import {WirelessHub} from '../../src/wireless.js';
 import {consoleSink} from './helpers/console.js';
 
 function runBoards(project,ms){
  const main=[],boards=[],session=new SimulationSession(project,consoleSink(main));
- session.circuit.drivers=[...createBoardDrivers(project,{log:s=>boards.push(s)}),...createStm32Drivers(project,{log:s=>boards.push(s)})];connectStm32Drivers(session);
+ session.circuit.drivers=createStm32Drivers(project,{log:s=>boards.push(s)});connectStm32Drivers(session);
  let result=session.tick(0);for(let t=20;t<=ms;t+=20)result=session.tick(t);
  return {main,boards,session,result};
 }

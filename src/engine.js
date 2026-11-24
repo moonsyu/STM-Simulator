@@ -35,7 +35,7 @@ export function topology(project,pressed={}) {
   const uf=new UnionFind();
   for(const p of (project.surfaces?.board?.hidden?[]:boardPins(project.boardId))){uf.find(p.id);if(p.signal!=='NC')uf.join(p.id,`signal:${p.signal==='AGND'?'GND':p.signal}`);}
   for(const h of circuitHoles(project.components,project.surfaces))uf.join(h.id,h.bus);
-  // Other boards (ESP32, Raspberry Pi): each GPIO is its own net, power pins join the common rails.
+  // Other STM32 boards: each pin is its own net, power pins join the common rails.
   for(const p of project.components)if(p.type==='devboard')for(const pin of devboardPins(p)){uf.find(pin.id);const net=devboardNet(p,pin);if(net)uf.join(pin.id,net);const hole=p.attachments?.[pin.key];if(hole)uf.join(pin.id,hole);}
   for(const p of project.components){
     for(const key of terminalKeys(p)){const id=`part:${p.id}:${key}`;uf.find(id);if(attachments(p)[key])uf.join(id,attachments(p)[key]);}
@@ -87,7 +87,7 @@ function solveOnce(project,gpio={},pressed={},transient={},owner=project){
   for(const p of ['5V','U5V'])fixed(`signal:${p}`,5);
   if(warnings.length)return {fault:true,warnings:[...new Set(warnings)],parts:{},voltage:()=>null,current:0,uf};
   const branch=(a,b,r,extra={})=>{const aa=uf.find(a),bb=uf.find(b);roots.add(aa);roots.add(bb);branches.push({a:aa,b:bb,r,...extra});};
-  // Board GPIOs other than the STM32's are keyed `<board id>.<GPIO>` (fixed-run and sketch boards).
+  // Pins of the other STM32 boards are keyed `<board id>.<pin>`.
   for(const pin of [...ALL_GPIO_PINS,...Object.keys(gpio).filter(k=>k.includes('.'))]){
     const g=gpio[pin]||{mode:'INPUT'};
     if(g.mode==='OUTPUT'&&!(g.openDrain&&g.value>0)){
@@ -109,7 +109,6 @@ function solveOnce(project,gpio={},pressed={},transient={},owner=project){
     // so a button to GND pulls the line LOW and the sessions reset the MCU (session.js / firmware-session.js checkNrst).
     const nrst=new Set(boardPins(project.boardId).filter(p=>p.signal==='NRST').map(p=>p.id));
     if(nrst.size&&project.wires.some(w=>nrst.has(w.from)||nrst.has(w.to)))branch('signal:NRST','signal:3V3',40000);}
-  for(const p of project.components)if(p.type==='devboard')for(const [pin,r]of Object.entries(devboardModel(p)?.pullups||{}))branch(`signal:${p.id}.${pin}`,'signal:3V3',r);
   // Other STM32 boards have the same B1 and LD2 (`<id>.USER` while pressed).
   for(const p of project.components)if(p.type==='devboard'&&devboardModel(p)?.kind==='stm32')onboard(`signal:${p.id}.`,pressed[p.id+'.USER']);
   for(const p of project.components){
@@ -204,8 +203,8 @@ function solveOnce(project,gpio={},pressed={},transient={},owner=project){
 // A read at the same simulation time must not advance capacitor charge again.
 export class CircuitSimulation{
  constructor(){this.time=null;this.base={};this.latest={};this.dt=1e-6;this.drivers=[];}
- // Programs of the other boards (fixed-run scenarios, ESP32 sketches) advance with circuit time (ms), add their
- // `<board>.<GPIO>` states and read their inputs from each solved step.
+ // Programs of the other boards (the other STM32 boards) advance with circuit time (ms), add their
+ // `<board>.<pin>` states and read their inputs from each solved step.
  withBoards(gpio,time){if(!this.drivers.length)return gpio;const out={...gpio};for(const d of this.drivers){if(time!==undefined)d.advance(time);Object.assign(out,d.gpio());}return out;}
  solve(project,gpio,pressed,time,echoHigh={},deviceSignals={}){
    if(this.time!==null&&time>this.time){this.base={...this.latest};this.dt=(time-this.time)/1000;}

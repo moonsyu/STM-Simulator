@@ -10,7 +10,6 @@ import path from 'node:path';
 import {createRequire} from 'node:module';
 import {FirmwareSession} from '../../src/firmware-session.js';
 import {projectForBoard,validateProject} from '../../src/project.js';
-import {createBoardDrivers} from '../../src/fixed-run.js';
 import {connectStm32Drivers} from '../../src/stm32-boards.js';
 import {SLAVE_PROBE,SLAVE_SEQUENCES,slaveProbeMcu} from '../unit/helpers/ra-iic-slave.js';
 
@@ -25,7 +24,7 @@ async function firmware(project,fn){
   assert.deepEqual(result.diagnostics.filter(d=>d.severity!=='info'),[]);
   const log={trace:[],warn:[],board:[]};
   const session=new FirmwareSession(checked,{elf:new Uint8Array(await fs.readFile(result.elf)),trace:e=>log.trace.push(e),warn:m=>log.warn.push(m)});
-  session.circuit.drivers=createBoardDrivers(checked,{log:s=>log.board.push(s)});connectStm32Drivers(session);
+  connectStm32Drivers(session);
   await fn(session,log);
  }finally{await fs.rm(root,{recursive:true,force:true});}
 }

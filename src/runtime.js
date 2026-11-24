@@ -39,7 +39,7 @@ export class Runtime {
     const api=this.api;
     const constants={HIGH:1,LOW:0,true:1,false:0,NULL:0,OUTPUT:'OUTPUT',INPUT:'INPUT',INPUT_PULLUP:'INPUT_PULLUP',INPUT_PULLDOWN:'INPUT_PULLDOWN',CHANGE:'CHANGE',RISING:'RISING',FALLING:'FALLING',LSBFIRST:0,MSBFIRST:1,DEC:10,HEX:16,OCT:8,BIN:2,PI:Math.PI};
     for(const [key,value]of Object.entries({...constants,...api.constants,...Object.fromEntries([...GPIO_PINS,...Object.keys(ALIASES)].map(p=>[p,p]))}))this.declareCell(key,value,true);
-    for(const name of ['Serial','Serial1','Serial2','Wire','SPI','Timer','DMA',...(this.api.constructs?.includes('WiFiServer')?['WiFi']:[])])this.declareCell(name,{kind:'library',name},true);
+    for(const name of ['Serial','Serial1','Serial2','Wire','SPI','Timer','DMA'])this.declareCell(name,{kind:'library',name},true);
   }
   // Execution contexts: [0] is thread mode (main); higher entries are nested ISRs (strict LIFO).
   get wake(){return this.contexts[0].wake;}
@@ -182,7 +182,7 @@ export class Runtime {
     // Reading a volatile variable, or one an interrupt has written, counts as polling (the FSP loop rule above).
     if(n.type==='name'){if(own(this.program.functions,n.name))return {kind:'function',name:n.name};const cell=this.cell(n.name);if(cell.volatile||cell.async)this.polls++;return this.get(cell);}
     if(n.type==='list'){const values=[];for(const v of n.values)values.push(v.type==='designated'?{kind:'designated',key:v.key,index:v.index?integer(yield* this.evaluate(v.index)):undefined,value:yield* this.evaluate(v.value)}:yield* this.evaluate(v));return {kind:'initializer',values};}
-    if(n.type==='construct'){const args=[];for(const v of n.args)args.push(yield* this.evaluate(v));if(n.name!=='LiquidCrystal'&&!this.api.constructs?.includes(n.name))throw new Error('지원하지 않는 생성자입니다.');return this.api.construct?.(n.name,args,this)??{kind:'device',name:n.name,args};}
+    if(n.type==='construct'){const args=[];for(const v of n.args)args.push(yield* this.evaluate(v));if(n.name!=='LiquidCrystal')throw new Error('지원하지 않는 생성자입니다.');return {kind:'device',name:n.name,args};}
     if(n.type==='cast'){const value=yield* this.evaluate(n.a);if(n.pointer){
       // (type *) 0x08000000: an address has no memory behind it here, unless the adapter stands in for that memory (an
       // FSP program reading the RA data flash through a pointer: fsp-flash.js FLASH_METHODS.memory).
@@ -223,7 +223,7 @@ export class Runtime {
         if(n.callee.name==='delay'){if(this.inCallback)throw new Error('콜백에서는 delay()를 사용할 수 없습니다.');const ms=this.interval(args[0],0);if(args.length!==1)throw new Error('delay(ms) 인수 하나가 필요합니다.');yield Math.max(.001,ms);return 0;}
         return this.call(n.callee.name,args);
       }
-      if(n.callee.type==='member'&&!n.callee.pointer){const object=yield* this.evaluate(n.callee.object);if(object?.kind==='library'){const waiting=this.api.libraryInvoke?.(`${object.name}.${n.callee.key}`,args,this);if(waiting)return yield* waiting;return this.call(`${object.name}.${n.callee.key}`,args);}if(object?.kind==='device')return this.api.deviceCall?.(object,n.callee.key,args,this)??0;}
+      if(n.callee.type==='member'&&!n.callee.pointer){const object=yield* this.evaluate(n.callee.object);if(object?.kind==='library'){return this.call(`${object.name}.${n.callee.key}`,args);}if(object?.kind==='device')return this.api.deviceCall?.(object,n.callee.key,args,this)??0;}
       // table[i](…), item.handler(…), p->handler(…), (*fn)(…): the value is a function.
       if(this.program.hal)return yield* this.invokeValue(yield* this.evaluate(n.callee.type==='unary'&&n.callee.op==='*'?n.callee.a:n.callee),args);
       throw new Error('지원하지 않는 함수 호출입니다.');

@@ -6,10 +6,9 @@ import {solveCircuit} from '../../src/engine.js';
 import {validateProject,projectForBoard} from '../../src/project.js';
 import {boardPins,endpointInfo} from '../../src/pins.js';
 import {BOARD} from '../../src/geometry.js';
-import {DEVBOARD_MODELS,devboardPins,devboardNet,boardSourceFiles} from '../../src/devboards.js';
+import {DEVBOARD_MODELS,devboardPins,devboardNet} from '../../src/devboards.js';
 import {halExampleFor} from '../../src/hal-examples.js';
 import {SimulationSession} from '../../src/session.js';
-import {createBoardDrivers} from '../../src/fixed-run.js';
 import {newStm32Fields,swapStm32,stm32View,viewMapper,promoteStm32,createStm32Drivers,connectStm32Drivers,stm32BoardList,mainBoardName} from '../../src/stm32-boards.js';
 
 const require=createRequire(import.meta.url);
@@ -41,7 +40,6 @@ describe('STM32 boards: pins and project',()=>{
   assert.equal(b2.name,'STM32-2');assert.equal(b2.mcu.family,'STM32F446RE');assert.match(b2.code,/HAL_Init\(\);/);assert.deepEqual(b2.firmware,{mode:'hal',files:[]});
   const saved=validateProject(JSON.parse(JSON.stringify(p)));assert.equal(saved.components[0].mcu.family,'STM32F446RE');
   assert.deepEqual(stm32BoardList(p).map(b=>[b.id,b.name,b.boardId]),[['main','STM32-1','nucleo-f103rb'],['b2','STM32-2','nucleo-f446re']]);
-  assert.deepEqual(boardSourceFiles(p),[],'STM32 boards are edited by swapping, not as board files');
   for(const id of ['b3','b4'])p.components.push({id,...newStm32Fields(p,'nucleo-f103rb',430)});
   assert.deepEqual(p.components.map(c=>c.name),['STM32-2','STM32-3','STM32-4']);
   assert.throws(()=>newStm32Fields(p,'nucleo-f103rb'),/4개까지/);
@@ -93,7 +91,6 @@ describe('STM32 boards: running together',()=>{
   const {result,out}=run(p,2500),reads=out.filter(l=>/^main: [01]$/.test(l));
   assert.equal(out[0],'[STM32-2] HAL 프로그램을 시작했습니다.');assert.ok(out.some(l=>l.startsWith('[STM32-2] ')&&l.includes('PA5=1')),out.join('\n'));
   assert.ok(reads.length>=4,'PA0 follows STM32-2: '+reads.join(','));assert.ok(result.voltage('signal:b2.PA5')!=null);
-  assert.deepEqual(createBoardDrivers(p),[],'STM32 boards are not fixed-run drivers');
  });
  test('a part wired only to another board shows that board\'s device state (OLED)',()=>{
   const p=structuredClone(halExampleFor('oled','nucleo-f103rb'));p.components.push({id:'b2',...newStm32Fields(p,'nucleo-f103rb',600)});swapStm32(p,'b2');

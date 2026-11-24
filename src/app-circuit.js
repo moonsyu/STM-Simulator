@@ -10,7 +10,7 @@ import {removeBreadboard,moveBreadboard,breadboardBounds} from './breadboards.js
 import {selectedIds,copySelection,pasteSelection} from './circuit-edit.js';
 import {$} from './common.js';
 import {detachPart,normalizeAngle,PART_DEFS,TWO_PIN_TYPES,fixedLeadSpan} from './components.js';
-import {removeDevboard,boardForFile,devboardBounds,DEVBOARD_MODELS,newDevboardFields} from './devboards.js';
+import {removeDevboard,devboardBounds,DEVBOARD_MODELS} from './devboards.js';
 import {surfaceBounds} from './geometry.js';
 import {rotateBoard,rotateDevboard} from './surface-move.js';
 import {displayModel} from './model-geometry.js';
@@ -28,7 +28,7 @@ export function removeSelected(){
  if(state.selection.type==='surface'&&state.selection.id==='board'&&stm32Boards(state.project).length){checkpoint();const gone=mainBoardName(state.project);promoteStm32(state.project);state.firmware=null;state.sourceFile='main.c';syncEditor();log(`${gone}를 삭제했습니다. 이제 ${mainBoardName(state.project)}를 편집합니다.`);state.searchSelectedId=null;pinSearch();}
  else if(state.selection.type==='surface'){checkpoint();removeSurface(state.project,state.selection.id);state.searchSelectedId=null;pinSearch();}
  else if(state.selection.type==='group'){checkpoint();const parts=new Set(state.selection.parts),wires=new Set(state.selection.wires);for(const id of parts){const type=state.project.components.find(p=>p.id===id)?.type;if(type==='breadboard')removeBreadboard(state.project,id);if(type==='devboard')removeDevboard(state.project,id);}state.project.components=state.project.components.filter(p=>!parts.has(p.id));state.project.wires=state.project.wires.filter(w=>!wires.has(w.id)&&![w.from,w.to].some(id=>id.startsWith('part:')&&parts.has(id.split(':')[1])));}
- else if(state.selection.type==='part'){checkpoint();const type=state.project.components.find(p=>p.id===state.selection.id)?.type;if(type==='breadboard')removeBreadboard(state.project,state.selection.id);else if(type==='devboard'){if(boardForFile(state.project,state.sourceFile)?.id===state.selection.id)state.sourceFile='main.c';removeDevboard(state.project,state.selection.id);syncEditor();}else {state.project.components=state.project.components.filter(p=>p.id!==state.selection.id);state.project.wires=state.project.wires.filter(w=>![w.from,w.to].some(id=>id.startsWith(`part:${state.selection.id}:`)));}}
+ else if(state.selection.type==='part'){checkpoint();const type=state.project.components.find(p=>p.id===state.selection.id)?.type;if(type==='breadboard')removeBreadboard(state.project,state.selection.id);else if(type==='devboard'){removeDevboard(state.project,state.selection.id);syncEditor();}else {state.project.components=state.project.components.filter(p=>p.id!==state.selection.id);state.project.wires=state.project.wires.filter(w=>![w.from,w.to].some(id=>id.startsWith(`part:${state.selection.id}:`)));}}
  else if(state.selection.type==='wire'){checkpoint();state.project.wires=state.project.wires.filter(w=>w.id!==state.selection.id);}else return;
  state.selection=null;state.pending=null;state.drag=null;$('preview-layer').innerHTML='';changed();
 }
@@ -40,7 +40,7 @@ export function rotateSelected(){
  const p=state.project.components.find(p=>p.id===state.selection.id);if(!p)return;
  if(!state.drag?.moved)checkpoint();
  if(p.type==='breadboard'){moveBreadboard(state.project,p.id,{x:p.x,y:p.y,rotation:p.rotation+45});if(state.drag?.type==='part')state.drag.moved=true;changed();return;}
- // Boards turn in 90° steps; an ESP32 then plugs in again where its pins meet free holes.
+ // Boards turn in 90° steps.
  if(p.type==='devboard'){detachPart(p);rotateDevboard(state.project,p.id,90);if(state.drag?.type==='part'){state.drag.moved=true;refresh();$('preview-layer').innerHTML=renderMountPreview(findMount(p,state.project.components,15,state.project.surfaces,state.project.wires));}else{applyMount(p,findMount(p,state.project.components,15,state.project.surfaces,state.project.wires));changed();}return;}
  detachPart(p);p.rotation=normalizeAngle(p.rotation+45);
  if(state.drag?.type==='part'){state.drag.moved=true;refresh();$('preview-layer').innerHTML=renderMountPreview(findMount(p,state.project.components,15,state.project.surfaces,state.project.wires));}
@@ -68,12 +68,12 @@ export function freeSpot(type){
 export function addDevboard(modelId){
  if(running())return;if(state.project.components.length>=100){log('부품은 100개까지 추가할 수 있습니다.','error');return;}
  // A second STM32 board swaps with the main board when edited; a Renesas RA main board cannot swap with it.
- if(DEVBOARD_MODELS[modelId]?.kind==='stm32'&&state.project.firmware?.mode==='fsp'){log('FPB-RA6E1 회로에는 STM32 보드를 함께 놓을 수 없습니다. ESP32·라즈베리파이 보드는 추가할 수 있습니다.','error');return;}
+ if(DEVBOARD_MODELS[modelId]?.kind==='stm32'&&state.project.firmware?.mode==='fsp'){log('FPB-RA6E1 회로에는 STM32 보드를 함께 놓을 수 없습니다.','error');return;}
  const surfaceRight=key=>state.project.surfaces?.[key]?.hidden?0:surfaceBounds(key,state.project.surfaces).right;
  const right=Math.max(surfaceRight('board'),surfaceRight('breadboard'),...state.project.components.map(p=>p.type==='breadboard'?breadboardBounds(p).right:p.type==='devboard'?devboardBounds(p).right:p.x+40));
- let fields;try{fields=DEVBOARD_MODELS[modelId].kind==='stm32'?newStm32Fields(state.project,modelId,right):newDevboardFields(state.project,modelId,right);}catch(e){log(e.message,'error');return;}
+ let fields;try{fields=newStm32Fields(state.project,modelId,right);}catch(e){log(e.message,'error');return;}
  checkpoint();const p={id:uid('b'),...fields};state.project.components.push(p);state.selection={type:'part',id:p.id};state.pending=null;state.mode='select';inspectTab();syncEditor();changed();fitView();
- log(`${p.name}: ${DEVBOARD_MODELS[modelId].name}를 추가했습니다. ${({esp32:'sketch.ino를 실행합니다.',stm32:'빈 HAL main.c로 시작합니다. 속성의 "이 보드 편집"으로 코드와 핀 설정을 바꿉니다.'})[DEVBOARD_MODELS[modelId].kind]??'강의 예제가 아닌 라즈베리파이는 코드를 실행하지 않고 전압만 계산합니다.'}`);
+ log(`${p.name}: ${DEVBOARD_MODELS[modelId].name}를 추가했습니다. 빈 HAL main.c로 시작합니다. 속성의 "이 보드 편집"으로 코드와 핀 설정을 바꿉니다.`);
 }
 export function setWireColor(value){
  state.color=value;document.querySelectorAll('[data-color]').forEach(s=>{s.classList.toggle('active',s.dataset.color===value);s.setAttribute('aria-pressed',String(s.dataset.color===value));});
