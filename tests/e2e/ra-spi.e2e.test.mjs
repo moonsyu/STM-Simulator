@@ -24,7 +24,7 @@ test('RA SPI stacks: New Stack → Connectivity adds g_spi1 on D10-D13 and g_sci
   await win.click('#pinout-open');await win.waitForSelector('#ra-pinout-dialog[open]');
   await win.click('[data-ra-tab="stacks"]');
   assert.deepEqual(await win.$$eval('#ra-stack-add optgroup',g=>g.map(x=>x.label)),['Input','Connectivity','Timers','Monitoring · System','Power','Storage','Transfer']);
-  assert.deepEqual(await win.$$eval('#ra-stack-add optgroup[label="Connectivity"] option',o=>o.map(x=>x.textContent)),['SPI (r_spi) · SPI1','SPI (r_sci_spi) · SCI9 Simple SPI','I2C Slave (r_iic_slave) · IIC0','I2C Slave (r_iic_slave) · IIC1']);
+  assert.deepEqual(await win.$$eval('#ra-stack-add optgroup[label="Connectivity"] option',o=>o.map(x=>x.textContent)),['SPI (r_spi) · SPI1','SPI (r_sci_spi) · SCI9 Simple SPI','I2C Slave (r_iic_slave) · IIC0','I2C Slave (r_iic_slave) · IIC1','USB PCDC (r_usb_basic · r_usb_pcdc)']);
   // r_spi: pin group A (Arduino D12/D11/D13/D10) and the Properties RASC shows.
   await win.selectOption('#ra-stack-add','SPI1');await win.click('[data-ra-add]');
   const card='#ra-stacks [data-ra-spi-stack="SPI1"]';await win.waitForSelector(card);
