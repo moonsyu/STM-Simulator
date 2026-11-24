@@ -307,7 +307,7 @@ const FSP={SUCCESS:0,ASSERTION:1,INVALID_ARGUMENT:3,INVALID_MODE:5,UNSUPPORTED:6
 const KINDS={ioport:[/^g_ioport_ctrl$/,'g_ioport_ctrl'],icu:[/^g_external_irq(\d+)_ctrl$/,'g_external_irq1_ctrl'],uart:[/^g_uart(\d+)_ctrl$/,'g_uart9_ctrl'],gpt:[/^g_timer(\d+)_ctrl$/,'g_timer1_ctrl'],agt:[/^g_agt(\d+)_ctrl$/,'g_agt0_ctrl'],adc:[/^g_adc(\d+)_ctrl$/,'g_adc0_ctrl'],iic:[/^g_i2c_master(\d+)_ctrl$/,'g_i2c_master0_ctrl'],
  spi:[/^g_spi(\d+)_ctrl$/,'g_spi1_ctrl'],sciSpi:[/^g_sci_spi(\d+)_ctrl$/,'g_sci_spi9_ctrl'],wdt:[/^g_wdt(\d+)_ctrl$/,'g_wdt0_ctrl'],iwdt:[/^g_iwdt(\d+)_ctrl$/,'g_iwdt0_ctrl'],rtc:[/^g_rtc(\d+)_ctrl$/,'g_rtc0_ctrl'],iicSlave:[/^g_i2c_slave(\d+)_ctrl$/,'g_i2c_slave0_ctrl'],lpm:[/^g_lpm(\d+)_ctrl$/,'g_lpm0_ctrl'],flash:[/^g_flash(\d+)_ctrl$/,'g_flash0_ctrl'],
  elc:[/^g_elc_ctrl$/,'g_elc_ctrl'],transfer:[/^g_transfer(\d+)_ctrl$/,'g_transfer0_ctrl']};
-const SUPPORTED='R_IOPORT_*, R_BSP_SoftwareDelay · R_BSP_Pin*, R_ICU_ExternalIrq*, R_SCI_UART_*, R_GPT_*, R_AGT_*, R_ADC_*, R_IIC_MASTER_*, R_IIC_SLAVE_*, R_SPI_*, R_SCI_SPI_*, R_WDT_*, R_IWDT_*, R_RTC_*, R_LPM_*, R_FLASH_HP_*(데이터 플래시), R_ELC_*, R_DTC_*, R_DMAC_*';
+const SUPPORTED='R_IOPORT_*, R_BSP_SoftwareDelay · R_BSP_Pin*, R_ICU_ExternalIrq*, R_SCI_UART_*, R_GPT_*, R_AGT_*, R_ADC_*, R_IIC_MASTER_*, R_IIC_SLAVE_*, R_SPI_*, R_SCI_SPI_*, R_WDT_*, R_IWDT_*, R_RTC_*, R_LPM_*, R_FLASH_HP_*(데이터 플래시), R_ELC_*, R_DTC_*, R_DMAC_*, R_USB_*';
 // RTC periodic rates the RA6E1 has (RCR1.PES 6-15): FSP's enum also lists 1 minute … 1 month for other RA parts, which
 // would make R_RTC_PeriodicIrqRateSet wait forever on this one.
 const RTC_PERIOD_S={6:1/256,7:1/128,8:1/64,9:1/32,10:1/16,11:1/8,12:1/4,13:1/2,14:1,15:2};
