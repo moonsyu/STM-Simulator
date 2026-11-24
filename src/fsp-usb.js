@@ -20,53 +20,57 @@ import {memoryBytes,valueBytes,bytesValue,numberBytes} from './hal-stdio.js';
 const enumOf=(tag,name,items)=>`typedef enum ${tag}\n{\n${items.map(([k,v])=>`    ${k} = ${v},`).join('\n')}\n} ${name};`;
 const STATUS=['POWERED','DEFAULT','ADDRESS','CONFIGURED','SUSPEND','RESUME','DETACH','REQUEST','REQUEST_COMPLETE','READ_COMPLETE','WRITE_COMPLETE','BC','OVERCURRENT','NOT_SUPPORT','NONE','MSC_CMD_COMPLETE'];
 const CLASSES=['PCDC','PCDCC','PCDC2','PCDCC2','PHID','PHID2','PAUD','PPRN','DFU','PUVC','PVND','HCDC','HCDCC','HHID','HVND','HMSC','PMSC','HPRN','HUVC','HAUD','REQUEST','HUB','END'];
-/** r_usb_basic_api.h / r_usb_pcdc_api.h / r_usb_basic.h for the interpreter's stand-in headers (hal_data.h includes them with the stack). */
+/** r_usb_basic_api.h / r_usb_pcdc_api.h / r_usb_basic.h for the interpreter's stand-in headers (hal_data.h includes them
+ *  with the stack): every public macro, enum and typedef with FSP 6.6's values. What the interpreter's C cannot declare is
+ *  left out: the function types usb_compliance_cb_t, usb_callback_t and usb_otg_callback_t (usb_cfg_t's callback member
+ *  is a function pointer here), the bit-field structures usb_serial_state_bitmap_t and usb_pcdc_ctrllinestate_t (here
+ *  three uint16_t members; usb_sci_serialstate_t has its word only), and the uint8_t ** of usb_descriptor_t.p_string
+ *  (a void * here). */
+const hexU=n=>`(0x${n.toString(16).toUpperCase()}U)`;
+const MACROS=[['USB_BREQUEST','(0xFF00U)'],['USB_GET_STATUS','(0x0000U)'],['USB_CLEAR_FEATURE','(0x0100U)'],['USB_REQRESERVED','(0x0200U)'],['USB_SET_FEATURE','(0x0300U)'],['USB_REQRESERVED1','(0x0400U)'],['USB_SET_ADDRESS','(0x0500U)'],['USB_GET_DESCRIPTOR','(0x0600U)'],['USB_SET_DESCRIPTOR','(0x0700U)'],['USB_GET_CONFIGURATION','(0x0800U)'],['USB_SET_CONFIGURATION','(0x0900U)'],['USB_GET_INTERFACE','(0x0A00U)'],['USB_SET_INTERFACE','(0x0B00U)'],['USB_SYNCH_FRAME','(0x0C00U)'],
+ ['USB_HOST_TO_DEV','(0x0000U)'],['USB_DEV_TO_HOST','(0x0080U)'],['USB_STANDARD','(0x0000U)'],['USB_CLASS','(0x0020U)'],['USB_VENDOR','(0x0040U)'],['USB_DEVICE','(0x0000U)'],['USB_INTERFACE','(0x0001U)'],['USB_ENDPOINT','(0x0002U)'],['USB_OTHER','(0x0003U)'],['USB_NULL','(0x0U)'],['USB_IP0','(0)'],['USB_IP1','(1)'],
+ ...Array.from({length:10},(_,i)=>['USB_PIPE'+i,hexU(i)]),...Array.from({length:16},(_,i)=>['USB_EP'+i,hexU(i)]),
+ ['USB_EP_DIR','(0x0080U)'],['USB_EP_DIR_IN','(0x0080U)'],['USB_EP_DIR_OUT','(0x0000U)'],
+ ['USB_DT_DEVICE','(0x01U)'],['USB_DT_CONFIGURATION','(0x02U)'],['USB_DT_STRING','(0x03U)'],['USB_DT_INTERFACE','(0x04U)'],['USB_DT_ENDPOINT','(0x05U)'],['USB_DT_DEVICE_QUALIFIER','(0x06U)'],['USB_DT_OTHER_SPEED_CONF','(0x07U)'],['USB_DT_INTERFACE_POWER','(0x08U)'],['USB_DT_OTGDESCRIPTOR','(0x09U)'],['USB_DT_HUBDESCRIPTOR','(0x29U)'],
+ ['USB_IFCLS_NOT','(0x00U)'],['USB_IFCLS_AUD','(0x01U)'],['USB_IFCLS_CDC','(0x02U)'],['USB_IFCLS_CDCC','(0x02U)'],['USB_IFCLS_HID','(0x03U)'],['USB_IFCLS_PHY','(0x05U)'],['USB_IFCLS_IMG','(0x06U)'],['USB_IFCLS_PRN','(0x07U)'],['USB_IFCLS_MAS','(0x08U)'],['USB_IFCLS_HUB','(0x09U)'],['USB_IFCLS_CDCD','(0x0AU)'],['USB_IFCLS_CHIP','(0x0BU)'],['USB_IFCLS_CNT','(0x0CU)'],['USB_IFCLS_VID','(0x0EU)'],['USB_IFCLS_DIAG','(0xDCU)'],['USB_IFCLS_WIRE','(0xE0U)'],['USB_IFCLS_APL','(0xFEU)'],['USB_IFCLS_VEN','(0xFFU)'],
+ ['USB_EP_IN','(0x80U)'],['USB_EP_OUT','(0x00U)'],['USB_EP_ISO','(0x01U)'],['USB_EP_BULK','(0x02U)'],['USB_EP_INT','(0x03U)'],['USB_CF_RESERVED','(0x80U)'],['USB_CF_SELFP','(0x40U)'],['USB_CF_BUSP','(0x00U)'],['USB_CF_RWUPON','(0x20U)'],['USB_CF_RWUPOFF','(0x00U)'],
+ ['USB_DD_BLENGTH','(18U)'],['USB_CD_BLENGTH','(9U)'],['USB_ID_BLENGTH','(9U)'],['USB_ED_BLENGTH','(7U)'],
+ ['USB_PCDC_SET_LINE_CODING','(0x2000U)'],['USB_PCDC_GET_LINE_CODING','(0x2100U)'],['USB_PCDC_SET_CONTROL_LINE_STATE','(0x2200U)'],['USB_PCDC_SERIAL_STATE','(0x20)'],['USB_PCDC_SETUP_TBL_BSIZE','(10U)'],
+ ['FSP_ERR_USB_FAILED','(1500)'],['FSP_ERR_USB_BUSY','(1501)'],['FSP_ERR_USB_SIZE_SHORT','(1502)'],['FSP_ERR_USB_SIZE_OVER','(1503)'],['FSP_ERR_USB_NOT_OPEN','(1504)'],['FSP_ERR_USB_NOT_SUSPEND','(1505)'],['FSP_ERR_USB_PARAMETER','(1506)']];
+// usb_api_t: the API structure (its members as function pointers; a callback argument as void *).
+const API=['fsp_err_t (*open)(usb_ctrl_t * p_ctrl, const usb_cfg_t * p_cfg);','fsp_err_t (*close)(usb_ctrl_t * p_ctrl);','fsp_err_t (*read)(usb_ctrl_t * p_ctrl, uint8_t * p_buf, uint32_t size, uint8_t destination);','fsp_err_t (*write)(usb_ctrl_t * p_ctrl, const uint8_t * p_buf, uint32_t size, uint8_t destination);',
+ 'fsp_err_t (*stop)(usb_ctrl_t * p_ctrl, usb_transfer_t direction, uint8_t destination);','fsp_err_t (*suspend)(usb_ctrl_t * p_ctrl);','fsp_err_t (*resume)(usb_ctrl_t * p_ctrl);','fsp_err_t (*vbusSet)(usb_ctrl_t * p_ctrl, uint16_t state);','fsp_err_t (*infoGet)(usb_ctrl_t * p_ctrl, usb_info_t * p_info, uint8_t destination);',
+ 'fsp_err_t (*pipeRead)(usb_ctrl_t * p_ctrl, uint8_t * p_buf, uint32_t size, uint8_t pipe_number);','fsp_err_t (*pipeWrite)(usb_ctrl_t * p_ctrl, uint8_t * p_buf, uint32_t size, uint8_t pipe_number);','fsp_err_t (*pipeStop)(usb_ctrl_t * p_ctrl, uint8_t pipe_number);','fsp_err_t (*usedPipesGet)(usb_ctrl_t * p_ctrl, uint16_t * p_pipe, uint8_t destination);',
+ 'fsp_err_t (*pipeInfoGet)(usb_ctrl_t * p_ctrl, usb_pipe_t * p_info, uint8_t pipe_number);','fsp_err_t (*eventGet)(usb_ctrl_t * p_ctrl, usb_status_t * event);','fsp_err_t (*callback)(void * p_callback);','fsp_err_t (*pullUp)(usb_ctrl_t * p_ctrl, uint8_t state);','fsp_err_t (*hostControlTransfer)(usb_ctrl_t * p_ctrl, usb_setup_t * p_setup, uint8_t * p_buf, uint8_t device_address);',
+ 'fsp_err_t (*periControlDataGet)(usb_ctrl_t * p_ctrl, uint8_t * p_buf, uint32_t size);','fsp_err_t (*periControlDataSet)(usb_ctrl_t * p_ctrl, uint8_t * p_buf, uint32_t size);','fsp_err_t (*periControlStatusSet)(usb_ctrl_t * p_ctrl, usb_setup_status_t status);','fsp_err_t (*remoteWakeup)(usb_ctrl_t * p_ctrl);','fsp_err_t (*driverActivate)(usb_ctrl_t * p_api_ctrl);',
+ 'fsp_err_t (*callbackMemorySet)(usb_ctrl_t * p_api_ctrl, usb_callback_args_t * p_callback_memory);','fsp_err_t (*moduleNumberGet)(usb_ctrl_t * p_ctrl, uint8_t * module_number);','fsp_err_t (*classTypeGet)(usb_ctrl_t * p_ctrl, usb_class_t * class_type);','fsp_err_t (*deviceAddressGet)(usb_ctrl_t * p_ctrl, uint8_t * device_address);',
+ 'fsp_err_t (*pipeNumberGet)(usb_ctrl_t * p_ctrl, uint8_t * pipe_number);','fsp_err_t (*deviceStateGet)(usb_ctrl_t * p_ctrl, uint16_t * state);','fsp_err_t (*dataSizeGet)(usb_ctrl_t * p_ctrl, uint32_t * data_size);','fsp_err_t (*setupGet)(usb_ctrl_t * p_ctrl, usb_setup_t * setup);','fsp_err_t (*otgCallbackSet)(usb_ctrl_t * p_ctrl, void * p_callback);','fsp_err_t (*otgSRP)(usb_ctrl_t * p_ctrl);'];
 export const USB_TYPES=`${enumOf('e_usb_speed','usb_speed_t',[['USB_SPEED_LS',0],['USB_SPEED_FS',1],['USB_SPEED_HS',2]])}
 ${enumOf('e_usb_setup_status','usb_setup_status_t',[['USB_SETUP_STATUS_ACK',0],['USB_SETUP_STATUS_STALL',1]])}
 ${enumOf('e_usb_status','usb_status_t',STATUS.map((k,i)=>['USB_STATUS_'+k,i]))}
 ${enumOf('e_usb_class','usb_class_t',CLASSES.map((k,i)=>['USB_CLASS_'+k,'0x'+(0x80+i).toString(16).toUpperCase()]))}
-${enumOf('e_usb_transfer','usb_transfer_t',[['USB_TRANSFER_READ',0],['USB_TRANSFER_WRITE',1]])}
-${enumOf('e_usb_mode','usb_mode_t',[['USB_MODE_HOST',1],['USB_MODE_PERI',2]])}
+${enumOf('e_usb_bcport','usb_bcport_t',[['USB_BCPORT_SDP',0],['USB_BCPORT_CDP',1],['USB_BCPORT_DCP',2]])}
 ${enumOf('e_usb_onoff','usb_onoff_t',[['USB_OFF',0],['USB_ON',1]])}
-#define FSP_ERR_USB_FAILED (1500)
-#define FSP_ERR_USB_BUSY (1501)
-#define FSP_ERR_USB_SIZE_SHORT (1502)
-#define FSP_ERR_USB_SIZE_OVER (1503)
-#define FSP_ERR_USB_NOT_OPEN (1504)
-#define FSP_ERR_USB_NOT_SUSPEND (1505)
-#define FSP_ERR_USB_PARAMETER (1506)
-#define USB_BREQUEST (0xFF00U)
-#define USB_GET_STATUS (0x0000U)
-#define USB_CLEAR_FEATURE (0x0100U)
-#define USB_SET_FEATURE (0x0300U)
-#define USB_SET_ADDRESS (0x0500U)
-#define USB_GET_DESCRIPTOR (0x0600U)
-#define USB_SET_DESCRIPTOR (0x0700U)
-#define USB_GET_CONFIGURATION (0x0800U)
-#define USB_SET_CONFIGURATION (0x0900U)
-#define USB_GET_INTERFACE (0x0A00U)
-#define USB_SET_INTERFACE (0x0B00U)
-#define USB_HOST_TO_DEV (0x0000U)
-#define USB_DEV_TO_HOST (0x0080U)
-#define USB_STANDARD (0x0000U)
-#define USB_CLASS (0x0020U)
-#define USB_VENDOR (0x0040U)
-#define USB_DEVICE (0x0000U)
-#define USB_INTERFACE (0x0001U)
-#define USB_ENDPOINT (0x0002U)
-#define USB_PCDC_SET_LINE_CODING (0x2000U)
-#define USB_PCDC_GET_LINE_CODING (0x2100U)
-#define USB_PCDC_SET_CONTROL_LINE_STATE (0x2200U)
-#define USB_PCDC_SERIAL_STATE (0x20)
-#define USB_PCDC_SETUP_TBL_BSIZE (10U)
+${enumOf('e_usb_transfer','usb_transfer_t',[['USB_TRANSFER_READ',0],['USB_TRANSFER_WRITE',1]])}
+${enumOf('e_usb_transfer_type','usb_transfer_type_t',[['USB_TRANSFER_TYPE_BULK',0],['USB_TRANSFER_TYPE_INT',1],['USB_TRANSFER_TYPE_ISO',2]])}
+${enumOf('e_usb_mode','usb_mode_t',[['USB_MODE_HOST',1],['USB_MODE_PERI',2]])}
+${enumOf('e_usb_compliancetest_status','usb_compliancetest_status_t',['ATTACH','DETACH','TPL','NOTTPL','HUB','OVRC','NORES','SETUP_ERR'].map((k,i)=>['USB_COMPLIANCETEST_'+k,i]))}
+${enumOf('e_usb_address','usb_address_t',[1,2,3,4,5].map(n=>['USB_ADDRESS'+n,n]))}
+${MACROS.map(([k,v])=>`#define ${k} ${v}`).join('\n')}
+typedef void usb_ctrl_t;
+typedef uint32_t ULONG;
 typedef struct st_usb_descriptor { uint8_t * p_device; uint8_t * p_config_f; uint8_t * p_config_h; uint8_t * p_qualifier; void * p_string; uint8_t num_string; } usb_descriptor_t;
 typedef struct st_usb_setup { uint16_t request_type; uint16_t request_value; uint16_t request_index; uint16_t request_length; } usb_setup_t;
+typedef struct st_usb_pipe { uint8_t endpoint; uint8_t transfer_type; uint16_t maxpacketsize; } usb_pipe_t;
 typedef struct st_usb_info { uint8_t class_type; uint8_t speed; uint8_t device_status; uint8_t bcport; } usb_info_t;
+typedef struct st_usb_compliance { usb_compliancetest_status_t status; uint16_t vid; uint16_t pid; } usb_compliance_t;
 typedef struct st_usb_event_info { uint8_t module_number; uint8_t device_address; uint8_t pipe; usb_class_t type; uint16_t status; usb_status_t event; uint32_t data_size; usb_setup_t setup; void * p_data; void * p_context; const transfer_instance_t * p_transfer_tx; const transfer_instance_t * p_transfer_rx; } usb_event_info_t;
 typedef usb_event_info_t usb_instance_ctrl_t;
 typedef usb_event_info_t usb_callback_args_t;
 typedef struct st_usb_cfg { usb_mode_t usb_mode; usb_speed_t usb_speed; uint8_t module_number; usb_class_t type; usb_descriptor_t * p_usb_reg; void * usb_complience_cb; IRQn_Type irq; IRQn_Type irq_r; IRQn_Type irq_d0; IRQn_Type irq_d1; IRQn_Type hsirq; IRQn_Type hsirq_d0; IRQn_Type hsirq_d1; uint8_t ipl; uint8_t ipl_r; uint8_t ipl_d0; uint8_t ipl_d1; uint8_t hsipl; uint8_t hsipl_d0; uint8_t hsipl_d1; void (*p_usb_apl_callback)(usb_callback_args_t *); void * p_context; const transfer_instance_t * p_transfer_tx; const transfer_instance_t * p_transfer_rx; void * p_extend; } usb_cfg_t;
-typedef struct st_usb_instance { usb_instance_ctrl_t * p_ctrl; const usb_cfg_t * p_cfg; void * p_api; } usb_instance_t;
+typedef struct st_usb_api { ${API.join(' ')} } usb_api_t;
+typedef struct st_usb_instance { usb_ctrl_t * p_ctrl; const usb_cfg_t * p_cfg; const usb_api_t * p_api; } usb_instance_t;
+typedef union { uint32_t word; } usb_sci_serialstate_t;
 typedef struct { uint32_t dw_dte_rate; uint8_t b_char_format; uint8_t b_parity_type; uint8_t b_data_bits; uint8_t rsv; } usb_pcdc_linecoding_t;
 typedef struct { uint16_t bdtr; uint16_t brts; uint16_t rsv; } usb_pcdc_ctrllinestate_t;`;
 /** g_basic0 of hal_data.c (and the descriptor g_usb_descriptor, which the interpreter does not read) for the stand-in header. */
