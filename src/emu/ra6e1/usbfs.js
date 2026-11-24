@@ -36,7 +36,7 @@ export const USBFS_EVENT = Object.freeze({ INT: 0x6d, RESUME: 0x6e });
 const VBINT = 0x8000, RESM = 0x4000, SOFR = 0x2000, DVST = 0x1000, CTRT = 0x0800, BEMP = 0x0400, NRDY = 0x0200, BRDY = 0x0100, VBSTS = 0x0080, VALID = 0x0008;
 const LATCHED = VBINT | RESM | SOFR | DVST | CTRT | VALID;
 const PID = { NAK: 0, BUF: 1, STALL: 2 };
-const HOST_LATENCY_US = 10, ATTACH_US = 1000, RESET_US = 10000, GAP_US = 1000;
+const HOST_LATENCY_US = 10, ATTACH_US = 1000, RESET_US = 10000, GAP_US = 1000, GIVE_UP_US = 100000;
 /** Line coding the host sets: 115200 bps, 1 stop bit, no parity, 8 data bits (usb_pcdc_linecoding_t). */
 export const USB_HOST_LINE_CODING = Object.freeze([0x00, 0xc2, 0x01, 0x00, 0x00, 0x00, 0x08]);
 
@@ -295,8 +295,8 @@ export class UsbHost {
       { ...get(1, 18), done: d => { this.device = d; } },
       { ...get(2, 9), done: d => { if (d.length < 9) return false; this.steps.splice(this.at + 1, 0, { ...get(2, d[2] | (d[3] << 8)), done: c => this.configured(c) }); return true; } },
       { setup: () => [0x00, 9, this.config?.value ?? 1, 0, 0, 0, 0, 0], name: 'SET_CONFIGURATION', done: () => { this.dev.deviceState(3); this.state = 'configured'; } },
-      { setup: [0x21, 0x20, 0, 0, 0, 0, 7, 0], data: USB_HOST_LINE_CODING, name: 'SET_LINE_CODING' },
-      { setup: [0x21, 0x22, 3, 0, 0, 0, 0, 0], name: 'SET_CONTROL_LINE_STATE' },
+      { setup: [0x21, 0x20, 0, 0, 0, 0, 7, 0], data: USB_HOST_LINE_CODING, name: 'SET_LINE_CODING', optional: true },
+      { setup: [0x21, 0x22, 3, 0, 0, 0, 0, 0], name: 'SET_CONTROL_LINE_STATE', optional: true },
     ];
     this.at = -1; this.state = 'enumerating'; this.nextStep();
   }
@@ -321,25 +321,34 @@ export class UsbHost {
     const setup = typeof step.setup === 'function' ? step.setup() : step.setup, length = setup[6] | (setup[7] << 8);
     this.ctl = { step, setup, length, read: !!(setup[0] & 0x80), data: [], sent: 0, phase: setup[0] & 0x80 ? 'in' : length ? 'out' : 'status' };
     this.dev.setup(setup); this.log(step.name);
+    // A class request after the enumeration (SET_LINE_CODING, SET_CONTROL_LINE_STATE) the program does not answer is given
+    // up after GIVE_UP_US, and the PC goes on.
+    if (step.optional) { const ctl = this.ctl; this.later(GIVE_UP_US, () => { if (this.ctl === ctl) this.giveUp('TIMEOUT'); }); }
     this.kick();
   }
   /** Something changed on the device: try the transactions again HOST_LATENCY_US later. */
   kick() { if (this.pending || this.state === 'detached' || this.state === 'stalled') return; this.pending = true; this.later(HOST_LATENCY_US, () => { this.pending = false; this.pump(); }); }
-  stall() { this.ctl = null; this.state = 'stalled'; this.log('STALL'); }
+  // A STALL: a request of the enumeration stops the PC; a class request after it is given up.
+  stall(c) { if (c?.step.optional) return this.giveUp('STALL'); this.ctl = null; this.state = 'stalled'; this.log('STALL'); }
+  // The control transfer given up leaves nothing behind: no control stage, the DCP buffer empty; the next step 1 ms later.
+  giveUp(what) {
+    this.log(what); this.ctl = null; this.dev.ctsq = 0; this.dev.pipes[0].clear();
+    this.later(GAP_US, () => this.nextStep());
+  }
   pump() {
     let moved = false;
     const c = this.ctl, dcp = this.dev.pipes[0];
     if (c) {
       if (c.phase === 'in') {
         const r = this.dev.inPacket(dcp);
-        if (r === 'STALL') return this.stall();
+        if (r === 'STALL') return this.stall(c);
         if (r) { c.data.push(...r); moved = true; if (c.data.length >= c.length || r.length < dcp.size) { c.phase = 'status'; this.dev.stage(2); } }
       } else if (c.phase === 'out') {
         const chunk = c.step.data.slice(c.sent, c.sent + dcp.size), r = this.dev.outPacket(dcp, chunk);
-        if (r === 'STALL') return this.stall();
+        if (r === 'STALL') return this.stall(c);
         if (r) { c.sent += chunk.length; moved = true; if (c.sent >= c.length) { c.phase = 'status'; this.dev.stage(4); } }
       } else if (c.phase === 'status') {
-        if (dcp.pid === PID.STALL) return this.stall();
+        if (dcp.pid === PID.STALL) return this.stall(c);
         if (this.dev.ccpl) {
           this.ctl = null; this.dev.ccpl = 0; moved = true;
           const ok = c.step.done?.(c.read ? c.data.slice(0, c.length) : null);
