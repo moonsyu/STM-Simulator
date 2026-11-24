@@ -207,8 +207,9 @@ const CAN_API={
   this.canW(r,ECSR,0x80,1);
   for(let off=MB;off<MB+16*32;off+=4)this.canW(r,off,0,4);
   for(let i=0;i<32;i++){
-   const m=this.canAt(r,ext.fields.p_mailbox.value,i);let mctl=0;
-   if(this.canGet(m,'mailbox_type')===0&&i<count){this.canIdSet(r,ext,MB+16*i,m);mctl=0x40;}
+   // (an entry past mailbox_count is never a receive mailbox: not read, as an array of mailbox_count entries may end there)
+   let mctl=0;
+   if(i<count){const m=this.canAt(r,ext.fields.p_mailbox.value,i);if(this.canGet(m,'mailbox_type')===0){this.canIdSet(r,ext,MB+16*i,m);mctl=0x40;}}
    this.canW(r,MCTL+i,mctl,1);
   }
   let enabled=0;
