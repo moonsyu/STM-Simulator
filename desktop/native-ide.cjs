@@ -9,7 +9,6 @@ const jlink=require('./jlink.cjs');
 const {launch,terminate}=require('./process-tools.cjs');
 const {installPlan,installTools}=require('./tool-installer.cjs');
 const {execute}=require('./process-tools.cjs');
-const esp32=require('./esp32-build.cjs');
 const os=require('node:os');
 // OpenOCD bundled with STM32CubeIDE is ST's fork: its scripts live in a separate plugin (…debug.openocd_*/resources/
 // openocd/st_scripts) and it reaches the ST-LINK through the DAP interface; the legacy hla interface/stlink.cfg loops there.
@@ -201,49 +200,7 @@ class NativeIde extends EventEmitter{
     for(const stream of [child.stdout,child.stderr]){stream.setEncoding('utf8');stream.on('data',text=>this.send('run-output',{text}));}
     child.once('error',error=>this.send('run-output',{text:error.message+'\n'}));child.once('close',code=>{if(this.runProcess===child)this.runProcess=null;this.send('run-state',{state:'exited',code});});return {directory:plan.directory};
   }
-  // The ESP32 board of the circuit (its sketch.ino) that a build or upload uses.
-  async esp32Part(text,id){
-    const project=await this.validate(text),{devboardModel}=await import('../src/devboards.js');
-    const part=project.components.find(p=>p.type==='devboard'&&p.id===id);
-    if(!part||devboardModel(part)?.kind!=='esp32')throw new Error('회로에 ESP32 보드가 없습니다. 부품에서 ESP32 보드를 추가하고 sketch.ino를 작성하세요.');
-    return part;
-  }
-  /** Compile the sketch of one ESP32 board with Arduino CLI (Ctrl+B with an ESP32 run target). */
-  async buildSketch({text,board}){
-    if(this.busy())throw new Error('현재 작업을 정지한 뒤 빌드하세요.');const part=await this.esp32Part(text,board),tools=await this.settings();
-    this.result=null;this.buildController=new AbortController();this.send('build-state',{state:'building'});
-    try{
-      const result=await esp32.compileSketch({cli:tools.arduinoCli,code:part.code,root:path.join(tools.buildRoot||this.directory,'esp32-builds'),signal:this.buildController.signal,onOutput:text=>this.send('build-output',{text})});
-      this.result={...result,board:part.name};this.send('build-state',{state:'succeeded',result:this.result});return this.result;
-    }catch(error){this.send('build-state',{state:'failed',message:error.message,diagnostics:error.diagnostics||[]});throw error;}finally{this.buildController=null;}
-  }
-  // Run (Ctrl+F5) on an ESP32 board: build, upload through its COM port, then show what the board prints (the serial
-  // monitor stays open until the run is stopped; input lines go to the board).
-  async runSketch({text,board,port}){
-    if(this.busy())throw new Error('현재 실행을 먼저 종료하세요.');esp32.checkedPort(port);
-    const result=await this.buildSketch({text,board}),cli=(await this.settings()).arduinoCli;
-    this.send('run-state',{state:'running'});
-    try{
-      this.send('run-output',{text:`\n[${result.board}] ${port}에 업로드합니다. "Connecting..."이 계속되면 보드의 BOOT 버튼을 누른 채로 기다리고, "Writing"이 나오면 손을 떼세요.\n`});
-      let log='';const stops=this.stops;const code=await this.track(launch(cli,await esp32.uploadArgs(result,port),{}),text=>{log=(log+text).slice(-20000);});
-      if(this.stops!==stops)throw new Error('업로드를 중지했습니다.');
-      if(code!==0){const hint=esp32.uploadHint(log);throw new Error(`ESP32 업로드 실패 (종료 코드 ${code}).${hint?' '+hint:''}`);}
-      this.send('run-output',{text:`\n업로드를 마쳤습니다. ${port} 직렬 출력 · ${result.baud} bps (실행 정지로 닫습니다)\n`});
-    }catch(error){this.send('run-state',{state:'idle'});throw error;}
-    const monitor=this.runProcess=launch(cli,await esp32.monitorArgs(port,result.baud),{});
-    let seen='',hinted=false;
-    for(const stream of [monitor.stdout,monitor.stderr]){stream.setEncoding('utf8');stream.on('data',text=>{this.send('run-output',{text});if(hinted)return;seen=(seen+text).slice(-200);const hint=esp32.monitorHint(seen);if(hint){hinted=true;this.send('run-output',{text:`\n${hint}\n`});}});}
-    monitor.once('error',error=>this.send('run-output',{text:error.message+'\n'}));
-    monitor.once('close',()=>{if(this.runProcess===monitor){this.runProcess=null;this.send('run-output',{text:`\n${port} 직렬 모니터를 닫았습니다.\n`});this.send('run-state',{state:'exited'});}});
-    return {directory:result.directory,uploaded:true,port,baud:result.baud};
-  }
-  // A child process that is the current run (stopped by 실행 정지): its output is shown, the exit code returned.
-  async track(child,onText=()=>{}){
-    this.runProcess=child;
-    try{return await new Promise((resolve,reject)=>{child.once('error',reject);child.once('close',resolve);for(const stream of [child.stdout,child.stderr]){stream.setEncoding('utf8');stream.on('data',t=>{onText(t);this.send('run-output',{text:t});});}});}
-    finally{if(this.runProcess===child)this.runProcess=null;}
-  }
-  input(text){if(typeof text!=='string'||text.length>8192)throw new Error('입력이 너무 큽니다.');if(!this.runProcess)throw new Error('실행 중인 Windows 프로그램이나 ESP32 직렬 모니터가 없습니다.');this.runProcess.stdin.write(text);}
+  input(text){if(typeof text!=='string'||text.length>8192)throw new Error('입력이 너무 큽니다.');if(!this.runProcess)throw new Error('실행 중인 Windows 프로그램이 없습니다.');this.runProcess.stdin.write(text);}
   // Go to definition into the STM32Cube SDK (HAL driver / CMSIS) of the project's MCU; the files open read only.
   async sdkDefinition(family,name){return this.sdk.definition(family,await this.settings(),name);}
   async sdkNames(family,prefix){return this.sdk.names(family,await this.settings(),prefix);}
@@ -273,4 +230,4 @@ const OPENOCD_HINTS=[
  [/[Nn]o ST-?LINK|open failed|unable to open ST-?LINK/i,'ST-LINK를 찾지 못했습니다. 데이터 전송이 되는 USB 케이블인지, 보드의 ST-LINK 점퍼(CN2 두 개)가 끼워져 있는지 확인하고 다시 연결하세요.']
 ];
 function openocdHint(log){return OPENOCD_HINTS.find(([pattern])=>pattern.test(String(log??'')))?.[1]??null;}
-module.exports={openocdHint,NativeIde,openocdArgs,chooseStlink,assignStlinks,listBoards,listEsp32Ports:esp32.listEsp32Ports};
+module.exports={openocdHint,NativeIde,openocdArgs,chooseStlink,assignStlinks,listBoards};

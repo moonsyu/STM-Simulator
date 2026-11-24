@@ -7,8 +7,7 @@ import {readdirSync,readFileSync} from 'node:fs';
 import {TOOLCHAIN_SHARDS,shardFiles,shardRuns} from '../../scripts/toolchain-shard.mjs';
 
 test('every toolchain test file is in a CI group, split files are covered by their patterns, and the workflow runs each group',()=>{
- // esp32-sketches has its own job (Arduino CLI, not ARM GCC).
- const files=readdirSync(new URL('../toolchain/',import.meta.url)).filter(f=>f.endsWith('.test.mjs')).map(f=>f.replace('.test.mjs','')).filter(f=>f!=='esp32-sketches').sort();
+ const files=readdirSync(new URL('../toolchain/',import.meta.url)).filter(f=>f.endsWith('.test.mjs')).map(f=>f.replace('.test.mjs','')).sort();
  const entries=TOOLCHAIN_SHARDS.flat(),whole=entries.filter(e=>!Array.isArray(e)),split=entries.filter(Array.isArray);
  assert.deepEqual([...new Set(TOOLCHAIN_SHARDS.flatMap(shardFiles))].sort(),files);
  assert.equal(new Set(whole).size,whole.length,'a whole file is in one group only');
@@ -44,7 +43,7 @@ test('every run of every group names a test file',()=>{
 test('the jobs that run at once fit the 20 concurrent jobs of the account',()=>{
  const workflow=readFileSync(new URL('../../.github/workflows/build-windows.yml',import.meta.url),'utf8');
  const matrices=[...workflow.matchAll(/^\s+shard: \[([\d, ]+)\]/gm)].map(m=>m[1].split(',').length);
- assert.equal(matrices.length,4,'checks, firmware, ESP32 and E2E are matrix jobs');
+ assert.equal(matrices.length,3,'checks, firmware and E2E are matrix jobs');
  const jobs=matrices.reduce((a,b)=>a+b,0)+1; // + the package job; the release job runs after them
  assert.ok(jobs<=20,`${jobs} jobs at once`);
 });

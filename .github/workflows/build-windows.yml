@@ -15,7 +15,7 @@ concurrency:
 
 jobs:
   # The checks run as parallel jobs; the release job publishes only when every one of them passed.
-  # The jobs that run at once (checks 2 + firmware 7 + ESP32 3 + E2E 7 + package 1) stay at 20: the account runs 20 jobs
+  # The jobs that run at once (checks 2 + firmware 7 + E2E 7 + package 1) stay at 20: the account runs 20 jobs
   # at a time, and at 1.48.0 the 21st waited 70 s for a runner and set the length of the whole run
   # (tests/unit/toolchain-shards.test.js counts them). The lighter half of the unit tests carries lint, audit and the
   # update helper test.
@@ -110,76 +110,6 @@ jobs:
           path: work/test-results/**
           if-no-files-found: ignore
           retention-days: 14
-
-  # Three jobs, each compiling a third of the sketches by build time (ESP32_SHARD): as one job this was the longest of the run at 1.35.0
-  # (5.8 min, 3.9 of them compiling), so it set how long a release takes.
-  esp32:
-    name: ESP32 example sketches on Arduino CLI ${{ matrix.shard }}/3
-    runs-on: windows-latest
-    timeout-minutes: 30
-    strategy:
-      fail-fast: false
-      matrix:
-        shard: [1, 2, 3]
-    env:
-      ESP32_SHARD: ${{ matrix.shard }}/3
-      ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
-      CI_REQUIRE_ESP32: '1'
-      ARDUINO_CLI: ${{ github.workspace }}\.cache\arduino\arduino-cli.exe
-      # Everything Arduino CLI downloads stays under .cache/arduino, which is cached between runs.
-      ARDUINO_DIRECTORIES_DATA: ${{ github.workspace }}\.cache\arduino\data
-      ARDUINO_DIRECTORIES_DOWNLOADS: ${{ github.workspace }}\.cache\arduino\staging
-      ARDUINO_DIRECTORIES_USER: ${{ github.workspace }}\.cache\arduino\user
-      # The compiled esp32 core and libraries (arduino-cli --build-cache-path) are kept with the cache: compiling the core
-      # again on every run was most of this job's 3.6 minutes.
-      ESP32_BUILD_CACHE: ${{ github.workspace }}\.cache\arduino\build-cache
-    steps:
-      - name: Check out source
-        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
-        with:
-          persist-credentials: false
-      - name: Set up Node.js
-        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
-        with:
-          node-version: '24'
-          cache: npm
-      - name: Install locked dependencies
-        # These tests use neither Electron nor the bundled editor: skip the install scripts (Electron download, editor build).
-        run: npm ci --ignore-scripts
-      - name: Restore Arduino CLI, the esp32 core and libraries
-        id: arduino-cache
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: .cache/arduino
-          key: arduino-cli-1.5.1-esp32-3.3.12-dht-1.4.6-unified-1.1.15-pubsub-2.8-buildcache1-esp32only2-${{ runner.os }}
-      - name: Install Arduino CLI and the esp32 core for the example sketches
-        if: steps.arduino-cache.outputs.cache-hit != 'true'
-        shell: pwsh
-        run: |
-          $dir = '.cache/arduino'; New-Item -ItemType Directory -Force $dir | Out-Null
-          Invoke-WebRequest 'https://github.com/arduino/arduino-cli/releases/download/v1.5.1/arduino-cli_1.5.1_Windows_64bit.zip' -OutFile "$dir/cli.zip"
-          if ((Get-FileHash "$dir/cli.zip" -Algorithm SHA256).Hash -ne 'FABE42E0EB04D00E776A66178299FF95A46C623DBC260F997E58FD514853DD40') { throw 'arduino-cli download checksum differs' }
-          Expand-Archive "$dir/cli.zip" -DestinationPath $dir
-          Remove-Item "$dir/cli.zip"
-          $index = 'https://espressif.github.io/arduino-esp32/package_esp32_index.json'
-          & $env:ARDUINO_CLI core update-index --additional-urls $index
-          & $env:ARDUINO_CLI core install esp32:esp32@3.3.12 --additional-urls $index
-          & $env:ARDUINO_CLI lib install 'DHT sensor library@1.4.6' 'Adafruit Unified Sensor@1.1.15' 'PubSubClient@2.8'
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          # Only the esp32 chip is built (esp32:esp32:esp32). The core installs the precompiled libraries of every chip as
-          # tools of their own (esp32c3-libs, esp32s3-libs, esp32p4-libs …), and they are most of the 1.7 GB cache, whose
-          # download and unpacking took 45 to 75 s of every job. Their folders stay (Arduino CLI sees the tools as
-          # installed); what is in them is not cached.
-          Get-ChildItem "$env:ARDUINO_DIRECTORIES_DATA/packages/esp32/tools" -Directory | Where-Object { $_.Name -like 'esp32?*-libs' } | ForEach-Object {
-            Get-ChildItem $_.FullName -Directory | ForEach-Object { Write-Output "Not cached: the contents of $($_.FullName)"; Get-ChildItem $_.FullName -Force | Remove-Item -Recurse -Force }
-          }
-          # Downloaded archives are not needed once installed; the cache keeps the installed core only.
-          Remove-Item -Recurse -Force $env:ARDUINO_DIRECTORIES_DOWNLOADS -ErrorAction SilentlyContinue
-      - name: Show Arduino CLI version
-        run: '& $env:ARDUINO_CLI version'
-        shell: pwsh
-      - name: Build the example ESP32 sketches
-        run: node --test --test-reporter=spec --test-reporter-destination=stdout --test-reporter=./tests/github-reporter.mjs --test-reporter-destination=stdout --test-concurrency=1 tests/toolchain/esp32-sketches.test.mjs
 
   e2e:
     name: Electron end-to-end tests ${{ matrix.shard }}/7
@@ -306,7 +236,7 @@ jobs:
   release:
     name: Publish verified release and update manifest
     if: startsWith(github.ref, 'refs/tags/') || (github.event_name == 'push' && github.ref == 'refs/heads/main')
-    needs: [checks, firmware, esp32, e2e, package]
+    needs: [checks, firmware, e2e, package]
     runs-on: windows-latest
     timeout-minutes: 10
     concurrency:

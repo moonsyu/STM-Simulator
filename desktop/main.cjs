@@ -9,7 +9,7 @@ app.setPath('userData',process.env.CIRCUIT_LAB_TEST_PROFILE||legacyUserData);
 let win;
 let chosenProjectParent=null,workspaceState=null;
 const workspace=require('./workspace.cjs');
-const {NativeIde,listBoards,listEsp32Ports}=require('./native-ide.cjs');
+const {NativeIde,listBoards}=require('./native-ide.cjs');
 const {PortableUpdater,RELEASES}=require('./updater.cjs');
 const updater=new PortableUpdater({version:app.getVersion(),directory:path.join(app.getPath('userData'),'updates'),target:process.env.PORTABLE_EXECUTABLE_FILE,enabled:app.isPackaged&&process.platform==='win32'&&!!process.env.PORTABLE_EXECUTABLE_FILE});
 updater.on('state',state=>{if(win&&!win.isDestroyed())win.webContents.send('update:state',state);});
@@ -57,9 +57,6 @@ nativeHandle('sdk-relative',(family,absolute)=>nativeIde.sdkRelative(family,abso
 nativeHandle('boards',()=>process.env.CIRCUIT_LAB_TEST_PROFILE&&process.env.CIRCUIT_LAB_TEST_BOARDS?JSON.parse(process.env.CIRCUIT_LAB_TEST_BOARDS):listBoards());
 nativeHandle('run',data=>nativeIde.run(data));
 nativeHandle('run-boards',data=>nativeIde.runOnBoards(data));
-nativeHandle('esp32-ports',()=>listEsp32Ports());
-nativeHandle('esp32-build',data=>nativeIde.buildSketch(data));
-nativeHandle('esp32-run',data=>nativeIde.runSketch(data));
 nativeHandle('debug',data=>nativeIde.startDebug(data));
 nativeHandle('stop',()=>nativeIde.stop());
 nativeHandle('action',action=>nativeIde.gdb.action(action));
