@@ -75,6 +75,8 @@ export class SimulationSession {
   get dataFlash(){return this.fsp?this.hal.dataFlash:null;}
   /** What the device sent the PC over the USB virtual COM port (byte codes, the serial monitor's output; feature 41). */
   get usbOutput(){return this.fsp?this.hal.usbOutput():[];}
+  /** The frames the board sent the virtual CAN node, one line each (the serial monitor's output; feature 40). */
+  get canOutput(){return this.fsp?this.hal.canOutput():[];}
   enrich(micros){
     this.hal?.catalog?.update(this.project,this.result,micros);
     this.singleWire.update(this.project,this.result,micros,this.runtime);
@@ -112,6 +114,8 @@ export class SimulationSession {
   setPressed(pressed){this.pressed=this.bounce.press(this.pressed,pressed,this.runtime.microTime/1000);this.changed();this.runtime.pollInterrupts();}
   inject(text,target='Serial1'){
     // The USB virtual COM port of an FSP project (feature 41): the PC sends the bytes to the device (fsp-usb.js).
+    // The virtual CAN node of an FSP project (feature 40): the line is one frame it puts on the bus (fsp-can.js).
+    if(target==='can:node'){if(!this.fsp)return 0;const count=this.hal.canSend([...String(text)].slice(0,256).join(''),this.runtime);this.runtime.event(this.runtime.microTime/1000,()=>{});return count;}
     if(target==='usb:pcdc'){const bytes=[...String(text)].slice(0,256).map(c=>c.charCodeAt(0)&255);if(!this.fsp||!bytes.length)return 0;const count=this.hal.usbSend(bytes,this.runtime);this.runtime.event(this.runtime.microTime/1000,()=>{});return count;}
     if(target==='Serial'){const bytes=[...String(text)].slice(0,256).map(c=>c.charCodeAt(0)&255);if(this.serial.length+bytes.length>4096)throw new Error('Serial 수신 버퍼가 가득 찼습니다.');this.serial.push(...bytes);return bytes.length;}
     const external=target.endsWith(':external'),id=external?target.slice(0,-9):target,bus=this.hal?this.hal.serials.get(id==='Serial1'?'USART2':id)?.bus:this.buses;
