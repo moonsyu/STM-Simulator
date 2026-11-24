@@ -271,7 +271,8 @@ export class CanNode {
    *  line is not a frame, else the line's length. */
   send(text) {
     const f = parseCanLine(text); if (!f) return 0;
-    if (this.can.hearsBus()) { this.queue.push(f); this.can.kick(); }
+    // At most OUTPUT_LINES frames wait (the oldest goes first).
+    if (this.can.hearsBus()) { this.queue.push(f); if (this.queue.length > OUTPUT_LINES) this.queue.splice(0, this.queue.length - OUTPUT_LINES); this.can.kick(); }
     return String(text).length;
   }
 }
