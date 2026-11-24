@@ -85,7 +85,14 @@ export const CAN_METHODS={
   this.canPend(r,kind);
  },
  // NVIC_SetPendingIRQ (and an event the ICU passes on): the ISR as an interrupt job at the configuration's ipl.
- canPend(r,kind){const on=this.canIrqs()[kind];if(!on)return;const [irq,isr]=IRQS[kind];this.queue(r,irq,on.ipl,()=>this.canIsr(r,kind,on.ctrl),isr,'CAN0:'+kind);},
+ // The three share the ipl: pending together, the NVIC takes the lowest IRQ number first (error, receive, transmit), so
+ // the CAN jobs waiting are taken in that order.
+ canPend(r,kind){
+  const on=this.canIrqs()[kind];if(!on)return;const [irq,isr]=IRQS[kind];this.queue(r,irq,on.ipl,()=>this.canIsr(r,kind,on.ctrl),isr,'CAN0:'+kind);
+  const mine=this.pending.filter(j=>/^CAN0:/.test(j.key));if(mine.length<2)return;
+  const orders=mine.map(j=>j.order).sort((a,b)=>a-b),rank=j=>this.canIrqs()[j.key.slice(5)]?.irq??0;
+  mine.sort((a,b)=>rank(a)-rank(b)).forEach((j,i)=>{j.order=orders[i];});
+ },
  canGet(v,k){const x=v.fields[k].value;return typeof x==='number'?x>>>0:Number(x)>>>0;},
  canAt(r,ptr,i=0){return r.get(r.pointerCell(ptr,i));},
  // ---- r_can_mode_transition / r_can_switch_to_operation_mode (FSP_HARDWARE_REGISTER_WAIT waits as long as it takes)
