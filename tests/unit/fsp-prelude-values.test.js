@@ -76,3 +76,16 @@ test('the USB prelude has every public macro, enum constant and typedef of r_usb
  }
  assert.deepEqual(missing,[]);
 });
+
+// Feature 40: the CAN stack's stand-in has every public name of r_can_api.h and r_can.h (the macros, enum constants and
+// typedef names read from the installed headers).
+test('the CAN prelude has every public macro, enum constant and typedef of r_can_api.h and r_can.h',{skip},async()=>{
+ const text=fspPrelude(validateRaMcu({...raDefaultMcu(),peripherals:{CAN0:{enabled:true}}})),names=new Set(text.match(/\b\w+\b/g));
+ const missing=[];
+ for(const [dir,header]of [['api','r_can_api.h'],['instances','r_can.h']]){
+  const source=await fs.readFile(path.join(tools.fsp,'ra/fsp/inc',dir,header),'utf8');
+  const found=[...source.matchAll(/^\s*#\s*define\s+(CAN_\w+)\s/gm),...source.matchAll(/^\s+(CAN_[A-Z0-9_]+)\s*(?:=[^,\n]*)?,?\s*(?:\/\/.*)?$/gm),...source.matchAll(/^\}\s*(\w+_t)\s*;/gm),...source.matchAll(/^typedef [^;(]*?\b(\w+_t)\s*;/gm)].map(m=>m[1]);
+  for(const name of new Set(found))if(!names.has(name))missing.push(`${header}: ${name}`);
+ }
+ assert.deepEqual(missing,[]);
+});
