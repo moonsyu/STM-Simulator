@@ -44,6 +44,8 @@ export class Monitor {
       if($('serial-target').value.startsWith('outside:'))$('uart-output').textContent=session?.wireless?`${$('serial-target').selectedOptions[0].textContent}\n${session.wireless.outsideOutput($('serial-target').value.slice(8))}`:'';
       // The USB virtual COM port of an FSP project (feature 41): what the device sent the PC.
       else if($('serial-target').value==='usb:pcdc')$('uart-output').textContent=session?`USB 가상 COM (PCDC)\n${uartMonitorText(String.fromCharCode(...(session.usbOutput||[])))}`:'';
+      // The virtual CAN node of an FSP project (feature 40): the frames the board sent, one line each.
+      else if($('serial-target').value==='can:node')$('uart-output').textContent=session?`CAN 가상 노드\n${(session.canOutput||[]).join('\n')}`:'';
       else if($('serial-target').value.startsWith('board:'))$('uart-output').textContent=board?`${board.part.name} · Serial (USB) · ${board.outputLabel}
 ${board.output??''}`:'이 보드는 이번 실행에 포함되지 않았습니다.';
       else $('uart-output').textContent=session?($('serial-target').value==='USART2'?`ST-LINK VCP · USART2 · ${session.buses.uart.baud} baud\n${uartMonitorText(session.buses.vcpOutput)}`:[...session.buses.received.entries()].map(([id,text])=>`${session.project.components.find(p=>p.id===id)?.name}: ${text}`).join('\n')):'';
