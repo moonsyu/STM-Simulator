@@ -218,8 +218,10 @@ export class Can {
   }
   finish(f) {
     this.busy = null;
+    // The mailbox is no longer on the bus, whether or not the module was stopped meanwhile.
+    if (f.from === 'board') this.mctl[f.mailbox].active = 0;
     if (f.from === 'board' && !f.dropped && !this.stopped()) {
-      const m = this.mctl[f.mailbox]; m.active = 0;
+      const m = this.mctl[f.mailbox];
       const test = this.test;
       if (test === 'internal' || test === 'external') this.receive(f.frame);
       if (test !== 'internal') this.node.heard(f.frame);
