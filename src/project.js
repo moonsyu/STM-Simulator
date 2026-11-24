@@ -48,8 +48,35 @@ function migrateZs042(data){
   const wires=Array.isArray(data.wires)?data.wires.map(w=>w&&typeof w==='object'?{...w,from:move(w.from),to:move(w.to)}:w).filter(w=>!w||w.from!==w.to):data.wires;
   return {...data,components,wires};
 }
+// ESP32 / Raspberry Pi boards are no longer supported (feature 49): a project saved with them opens without those boards,
+// the wires to their pins and the parts' legs plugged into their pins, and an ESP32 run target becomes the simulator.
+// `removed` (null when nothing was taken out) says what went, for the notice when the project is opened.
+export function stripUnsupportedBoards(data){
+  const components=Array.isArray(data?.components)?data.components:null;
+  const boards=components?components.filter(p=>p?.type==='devboard'&&!Object.hasOwn(DEVBOARD_MODELS,p.model)):[];
+  const target=data?.ide?.native?.target==='esp32';
+  if(!boards.length&&!target)return {data,removed:null};
+  const prefixes=boards.map(p=>`devboard:${p.id}:`),onBoard=id=>typeof id==='string'&&prefixes.some(prefix=>id.startsWith(prefix));
+  let wires=data.wires,removedWires=0,detached=0;
+  if(Array.isArray(data.wires)){wires=data.wires.filter(w=>!(w&&typeof w==='object'&&(onBoard(w.from)||onBoard(w.to))));removedWires=data.wires.length-wires.length;}
+  const kept=components?components.filter(p=>!boards.includes(p)).map(p=>{
+    if(!p||typeof p!=='object')return p;
+    const q={...p};let changed=false;
+    for(const key of ['attachA','attachB'])if(onBoard(q[key])){delete q[key];changed=true;}
+    if(q.attachments&&typeof q.attachments==='object'&&Object.values(q.attachments).some(onBoard)){const a=Object.fromEntries(Object.entries(q.attachments).filter(([,id])=>!onBoard(id)));if(Object.keys(a).length)q.attachments=a;else delete q.attachments;changed=true;}
+    if(changed)detached++;return changed?q:p;
+  }):data.components;
+  const out={...data,components:kept,wires};
+  if(target)out.ide={...data.ide,native:{...data.ide.native,target:'simulator'}};
+  return {data:out,removed:{boards:boards.map(p=>({id:p.id,name:p.name,model:p.model})),wires:removedWires,attachments:detached,target}};
+}
+/** The notice for a project opened without its ESP32 / Raspberry Pi boards (stripUnsupportedBoards' `removed`). */
+export function removedBoardsMessage(removed){
+  const names=removed.boards.map(b=>b.name).join(', ');
+  return `이 버전은 ESP32·라즈베리파이 보드를 지원하지 않습니다. 보드 ${removed.boards.length}개(${names})${removed.wires?`와 그 보드에 연결된 배선 ${removed.wires}개`:''}를 빼고 열었습니다. STM32·FPB-RA6E1 보드와 나머지 부품은 그대로입니다.${removed.attachments?` 그 보드 핀에 직접 꽂혀 있던 부품 ${removed.attachments}개는 떼어 두었습니다.`:''}`;
+}
 export function validateProject(data){
-  data=migrateZs042(data);
+  data=migrateZs042(stripUnsupportedBoards(data).data);
   if(!data||data.format!=='stm32-circuit-lab'||![1,2].includes(data.version))throw new Error('지원하지 않는 회로 파일 형식입니다.');
   if(typeof data.name!=='string'||data.name.length>120||typeof data.code!=='string'||data.code.length>300000)throw new Error('회로 이름 또는 코드가 올바르지 않습니다.');
   if(!Array.isArray(data.components)||data.components.length>100||!Array.isArray(data.wires)||data.wires.length>500)throw new Error('부품 100개, 배선 500개까지 지원합니다.');
@@ -65,17 +92,10 @@ export function validateProject(data){
     if(!Number.isFinite(p.x)||!Number.isFinite(p.y)||!Number.isFinite(p.rotation)||(data.version===1?![0,1].includes(p.rotation):p.rotation<0||p.rotation>=360))throw new Error('부품 좌표 또는 회전 각도가 올바르지 않습니다.');
     const q={id:p.id,name:p.name,type:p.type,x:p.x,y:p.y,rotation:data.version===1?p.rotation*90:p.rotation};
     if(p.type==='breadboard'&&p.variant!==undefined){if(p.variant!=='full')throw new Error('지원하지 않는 빵판 종류입니다.');q.variant='full';}
-    // ESP32 / Raspberry Pi boards keep their own program text and, for lecture examples, the fixed-run scenario id.
     if(p.type==='devboard'){
       if(!Object.hasOwn(DEVBOARD_MODELS,p.model))throw new Error(p.name+': 지원하지 않는 보드입니다.');
       // Another STM32 board keeps the software of a whole project: main.c, pin settings, sources, Docs, debug points.
-      if(DEVBOARD_MODELS[p.model].kind==='stm32')return {...q,...stm32Software(p,data.version)};
-      if(typeof p.code!=='string'||p.code.length>100000)throw new Error(p.name+': 보드 코드는 100 KB 이하의 텍스트여야 합니다.');
-      if(p.scenario!==undefined&&!safeId(p.scenario))throw new Error(p.name+': 실행 시나리오 정보를 확인하세요.');
-      // An ESP32 board plugged into a breadboard: header pin key → hole.
-      const keys=new Set(DEVBOARD_MODELS[p.model].kind==='esp32'?DEVBOARD_MODELS[p.model].pins.map(pin=>pin.key):[]),used=new Set(),attached={};
-      for(const [key,id]of Object.entries(p.attachments||{})){if(!keys.has(key)||used.has(id)||!holeInfo(id,data.components,data.surfaces))throw new Error(p.name+': 보드 핀의 빵판 연결 정보를 확인하세요.');used.add(id);attached[key]=id;}
-      return {...q,model:p.model,code:p.code,...(p.scenario!==undefined?{scenario:p.scenario}:{}),...(Object.keys(attached).length?{attachments:attached}:{})};
+      return {...q,...stm32Software(p,data.version)};
     }
     if(p.scale!==undefined)q.scale=validScale(p.scale);
     for(const key of ['scaleX','scaleY'])if(p[key]!==undefined)q[key]=validScale(p[key]);
@@ -173,7 +193,7 @@ export function validateProject(data){
     if(s.breakpoints.some(b=>!b||!names.has(b.file)||!Number.isInteger(b.line)||b.line<1||b.line>50000)||s.watches.some(w=>typeof w!=='string'||!w.trim()||w.length>250))throw new Error('중단점 또는 감시식이 올바르지 않습니다.');
     project.ide={breakpoints:s.breakpoints.map(b=>({file:b.file,line:b.line})),watches:[...s.watches]};
     if(s.plots!==undefined){if(!Array.isArray(s.plots)||s.plots.length>8||s.plots.some(w=>typeof w!=='string'||!w.trim()||w.length>250)||new Set(s.plots).size!==s.plots.length)throw new Error('변수 그래프 목록이 올바르지 않습니다.');project.ide.plots=[...s.plots];}
-    if(s.native!==undefined){const n=s.native;if(!n||!['simulator','emulator','arm','esp32','host'].includes(n.target)||!['Debug','Release'].includes(n.configuration))throw new Error('IDE 실행 대상 설정을 확인하세요.');project.ide.native={target:n.target,configuration:n.configuration};}
+    if(s.native!==undefined){const n=s.native;if(!n||!['simulator','emulator','arm','host'].includes(n.target)||!['Debug','Release'].includes(n.configuration))throw new Error('IDE 실행 대상 설정을 확인하세요.');project.ide.native={target:n.target,configuration:n.configuration};}
   }
   if(data.deviceDocs!==undefined){
     const docs=data.deviceDocs;if(!docs||!Array.isArray(docs.bindings)||docs.bindings.length>100)throw new Error('장치 Docs 연결 정보를 확인하세요.');

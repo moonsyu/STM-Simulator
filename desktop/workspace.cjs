@@ -13,13 +13,14 @@ async function filesFor(text){
   for(const [name,source]of await boardSources(project)){if(!safeName(name)||files.has(name))throw new Error(`${name}: 다른 보드의 소스 파일명을 쓸 수 없습니다.`);files.set(name,source.get());}
   return files;
 }
-// The other boards' code sits beside main.c as board-<part id>-<file>.
+// The other STM32 boards' code sits beside main.c as board-<part id>-<file>. Files of ESP32 / Raspberry Pi boards an
+// older version wrote there (board-<id>-sketch.ino, board-<id>-main.py) are not project files any more and stay as they are.
 async function boardSources(project){
   const {devboardModel}=await import('../src/devboards.js'),out=new Map();
-  for(const part of project.components.filter(p=>p.type==='devboard'&&typeof p.code==='string')){
-    const stm32=devboardModel(part)?.kind==='stm32',prefix=`board-${part.id}-`;
-    out.set(prefix+(stm32?'main.c':devboardModel(part)?.file??'code.txt'),{get:()=>part.code,set:text=>{part.code=text;}});
-    if(stm32)for(const f of part.firmware?.files||[])out.set(prefix+f.name,{get:()=>f.text,set:text=>{f.text=text;}});
+  for(const part of project.components.filter(p=>p.type==='devboard'&&typeof p.code==='string'&&devboardModel(p)?.kind==='stm32')){
+    const prefix=`board-${part.id}-`;
+    out.set(prefix+'main.c',{get:()=>part.code,set:text=>{part.code=text;}});
+    for(const f of part.firmware?.files||[])out.set(prefix+f.name,{get:()=>f.text,set:text=>{f.text=text;}});
   }
   return out;
 }

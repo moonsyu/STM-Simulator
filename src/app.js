@@ -17,7 +17,7 @@ import {selectedIds,wirePoints,insertWirePoint,moveSelection,mountSelection} fro
 import {endpointInfo,searchPins} from './pins.js';
 import {WIRE_COLORS,attachments} from './components.js';
 import {Monitor} from './monitor.js';
-import {startProject,validateProject,projectForBoard} from './project.js';
+import {startProject,validateProject,projectForBoard,stripUnsupportedBoards} from './project.js';
 import {projectBoard} from './boards.js';
 import {isBreadboardLibraryType,newBreadboardFields} from './breadboards.js';
 import {DEVBOARD_MODELS} from './devboards.js';
@@ -56,7 +56,7 @@ import {setupFileDrop} from './file-drop.js';
 import {offerCircuit} from './ioc-circuit-ui.js';
 import {exportIoc,unexportedPins} from './ioc-export.js';
 import {syncEditor,replaceCodeText,applyFirmware,applyCircuit,editBoard,onCodeInput,onCodeResetConfirmClick,onFirmwareFilesChange} from './app-editor.js';
-import {save,open,onFileInputChange,onMainExportClick} from './app-files.js';
+import {save,open,onFileInputChange,onMainExportClick,openProjectData,noticeRemovedBoards} from './app-files.js';
 import {refresh,updateReadouts,onSoundClick} from './app-view.js';
 import {copyCircuit,removeSelected,rotateSelected,addPart,freeSpot,addDevboard,setWireColor,onBoardResetConfirmClick} from './app-circuit.js';
 import {clickEndpoint,point,viewUpdate,release,zoom,fitView,pinSearch,focusPin,onSvgDblclick,onSvgPointermove,onSvgPointerdown,onSvgContextmenu} from './app-canvas.js';
@@ -72,7 +72,7 @@ export const CARRY_HINT='배선 끝을 옮길 핀 또는 빵판 구멍을 클릭
 state.project=startProject();state.mode='select';state.pending=null;state.selection=null;state.color='#23a68a';state.status='stopped';state.result=null;state.runtime=null;state.simTime=0;state.pressed={};state.undoStack=[];state.redoStack=[];state.dirty=false;state.starting=false;state.startToken=0;state.firmware=null;
 state.view={x:0,y:0,w:1120,h:730};state.drag=null;state.lastWarnings='';state.replaceAction=null;state.saveTimer=undefined;state.searchSelectedId=null;state.breadboardKey='';state.devboardKey='';
 // A saved project that no longer validates is kept aside (not overwritten by the blank one) and reported once the log exists.
-state.restoreError='';try{const cached=localStorage.getItem('stm32lab.project.v2')||localStorage.getItem('stm32lab.project.v1');if(cached)try{state.project=validateProject(JSON.parse(cached));}catch(e){state.restoreError=e.message;localStorage.setItem('stm32lab.project.recovery',cached);}}catch{}
+state.restoreError='';try{const cached=localStorage.getItem('stm32lab.project.v2')||localStorage.getItem('stm32lab.project.v1');if(cached)try{const data=JSON.parse(cached);state.restoreRemoved=stripUnsupportedBoards(data).removed;state.project=validateProject(data);}catch(e){state.restoreRemoved=null;state.restoreError=e.message;localStorage.setItem('stm32lab.project.recovery',cached);}}catch{}
 export const diagnostic=createDiagnostics(window.localDiagnostics?.record,()=>state.project);
 initSvg(svg);
 state.session=null;state.audioEnabled=false;state.audioContext=undefined;state.buzzerAudio=undefined;
@@ -180,7 +180,7 @@ $('pinout-export-ioc').onclick=async()=>{try{if(!state.project.mcu?.pins||state.
 $('pinout-circuit').onclick=()=>{if(running()){log('실행을 정지한 뒤 회로를 만드세요.','error');return;}if(!state.project.mcu?.pins){log('핀 설정이 있는 STM32 프로젝트에서 씁니다.','error');return;}$('pinout-dialog').close();offerCircuit(state.project.mcu,{getProject:()=>state.project,log,apply:applyCircuit});};
 // Files and folders dropped on the window: a project file opens, an .ioc / main.c set is imported, other sources are added.
 setupFileDrop(document,{isRunning:running,getProject:()=>state.project,log,
-  open:text=>{replaceProject(validateProject(JSON.parse(text)));log('놓은 프로젝트를 열었습니다.');},
+  open:text=>{openProjectData(JSON.parse(text));log('놓은 프로젝트를 열었습니다.');},
   importFiles:files=>applyFirmware(files),
   addFiles:files=>{checkpoint();const p=state.project;p.firmware??={mode:'sketch',files:[]};for(const f of files){const old=p.firmware.files.find(x=>x.name===f.name);if(old)old.text=f.text;else p.firmware.files.push({name:f.name,text:f.text});}
     state.project=validateProject(p);state.sourceFile=files[0].name;syncEditor();changed();state.ide?.invalidate?.();
@@ -198,7 +198,7 @@ window.addEventListener('keydown',onWindowKeydown);
 window.addEventListener('error',e=>log('화면 오류: '+e.message,'error'));
 document.addEventListener('ide-undo',e=>editUndo(e.detail));
 document.addEventListener('ide-find',e=>{layout.reveal('code');editorSearch.open(e.detail);});
-state.ide=setupIde({buildFirmware:()=>ensureFirmware(true).catch(error=>log(error.message,'error')),getProject:()=>state.project,getSource:()=>state.sourceFile,getSession:()=>state.runtime?state.session:null,isRunning:running,isSimulationRunning:()=>state.status==='running'||state.status==='paused',refresh,checkpoint,saveLocal:autosave,layout,log,feedback,requestReplace,replaceProject,debugCommand,
+state.ide=setupIde({buildFirmware:()=>ensureFirmware(true).catch(error=>log(error.message,'error')),getProject:()=>state.project,getSource:()=>state.sourceFile,getSession:()=>state.runtime?state.session:null,isRunning:running,isSimulationRunning:()=>state.status==='running'||state.status==='paused',refresh,checkpoint,saveLocal:autosave,layout,log,feedback,requestReplace,replaceProject,openProjectData,debugCommand,
  stm32Runs:()=>[{name:mainBoardName(state.project),text:JSON.stringify(state.project),serial:state.project.surfaces?.board?.stlink||'',main:true},...stm32Boards(state.project).map(p=>({name:p.name,text:JSON.stringify(stm32View(state.project,p.id)),serial:p.stlink||''}))],editBoard,
  selectSource:name=>{if(name!=='main.c'&&!state.project.firmware?.files.some(f=>f.name===name))return;state.sourceFile=name;syncEditor();},
  applySources:(p,file)=>{checkpoint();state.project=validateProject(p);state.sourceFile=file;syncEditor();changed();state.ide.invalidate();}});
@@ -208,6 +208,8 @@ const bindingTexts=()=>{for(const el of document.querySelectorAll('[data-binding
 layout.onBindings(()=>{$('debug-start').title=withKey('시작 위치에서 디버깅','run.debug');refresh();state.ide.controls();bindingTexts();});
 setupIdeSettings({editor:state.ide.editor,layout,open:()=>tab('settings')});
 if(state.restoreError)log(`저장된 프로젝트를 열지 못해 새 회로로 시작합니다 (${state.restoreError}). 이전 내용은 브라우저 저장소 stm32lab.project.recovery에 보관했습니다.`,'error');
+noticeRemovedBoards(state.restoreRemoved);
+$('removed-boards-confirm').onclick=()=>$('removed-boards-dialog').close();
 state.deviceDocs=setupDeviceDocs({getProject:()=>state.project,getSelection:()=>state.selection,isRunning:running,open:()=>tab('docs'),showSource:file=>{state.sourceFile=file;syncEditor();tab('code');},apply:(target,options)=>{
  if(running())throw new Error('실행을 정지한 뒤 적용하세요.');
  let applied;try{applied=applyDeviceExample(state.project,target,options);}catch(error){diagnostic('docs.failed',{target,options,message:error.message},true);throw error;}

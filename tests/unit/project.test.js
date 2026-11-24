@@ -376,3 +376,37 @@ test('importFirmware names the board an .ioc of the other MCU needs',async()=>{
   const {importFirmware}=await import('../../src/firmware-import.js');
   assert.throws(()=>importFirmware(blankProject(),[{name:'f1.ioc',text:'Mcu.Name=STM32F103R(8-B)Tx'}]),/NUCLEO-F103RB 보드로 새 프로젝트/);
 });
+// Feature 49: ESP32 / Raspberry Pi boards are not supported any more. A project saved with them opens without those
+// boards, the wires to their pins and the parts' legs plugged into their pins; STM32 boards and the rest stay.
+describe('a project saved with ESP32 / Raspberry Pi boards',()=>{
+  const old=async()=>{
+    const {newStm32Fields}=await import('../../src/stm32-boards.js'),{DEVBOARD_MODELS}=await import('../../src/devboards.js');
+    const p=ledCircuit(),stmPin=DEVBOARD_MODELS[DEFAULT_BOARD_ID].pins[0].key;
+    p.components.push({id:'stm2',...newStm32Fields(p,DEFAULT_BOARD_ID,1200)},
+      {id:'esp',type:'devboard',model:'esp32-nodemcu-32s',name:'ESP32-1',x:900,y:900,rotation:0,code:'void setup(){}\nvoid loop(){}'},
+      {id:'rpi',type:'devboard',model:'rpi5',name:'RPI-1',x:1400,y:900,rotation:90,code:'',scenario:'lecture-rpi-blink'},
+      {id:'r9',name:'R9',type:'resistor',value:220,x:700,y:900,rotation:0,span:42,attachA:'devboard:esp:R15'});
+    p.wires.push(wire('we1','devboard:esp:R7','bb:a:20'),wire('we2','bb:a:22','devboard:rpi:P1'),wire('ws1',`devboard:stm2:${stmPin}`,'bb:a:24'));
+    p.ide={breakpoints:[],watches:[],native:{target:'esp32',configuration:'Debug'}};
+    return p;
+  };
+  test('it validates; only the two boards and their wires go, the STM32 board, the other wires and parts stay',async()=>{
+    const p=await old(),before=JSON.stringify(p),q=validateProject(JSON.parse(before));
+    assert.deepEqual(q.components.map(c=>c.id),['r1','led1','stm2','r9']);
+    assert.deepEqual(q.wires.map(w=>w.id),['w1','w2','w3','ws1']);
+    assert.equal(q.components.find(c=>c.id==='stm2').model,DEFAULT_BOARD_ID);
+    assert.equal(q.components.find(c=>c.id==='r9').attachA,undefined,'the leg in the board pin is detached');
+    assert.equal(q.components.find(c=>c.id==='led1').attachA,'bb:j:8','legs in the breadboard stay');
+    assert.equal(q.ide.native.target,'simulator');
+    assert.equal(JSON.stringify(p),before,'the data read is not changed');
+  });
+  test('stripUnsupportedBoards names what went; a project without such boards is left as it is',async()=>{
+    const {stripUnsupportedBoards,removedBoardsMessage}=await import('../../src/project.js');
+    const {removed}=stripUnsupportedBoards(await old());
+    assert.deepEqual(removed,{boards:[{id:'esp',name:'ESP32-1',model:'esp32-nodemcu-32s'},{id:'rpi',name:'RPI-1',model:'rpi5'}],wires:2,attachments:1,target:true});
+    assert.equal(removedBoardsMessage(removed),'이 버전은 ESP32·라즈베리파이 보드를 지원하지 않습니다. 보드 2개(ESP32-1, RPI-1)와 그 보드에 연결된 배선 2개를 빼고 열었습니다. STM32·FPB-RA6E1 보드와 나머지 부품은 그대로입니다. 그 보드 핀에 직접 꽂혀 있던 부품 1개는 떼어 두었습니다.');
+    assert.equal(removedBoardsMessage({boards:[{id:'esp',name:'ESP32-1',model:'esp32-nodemcu-32s'}],wires:0,attachments:0,target:false}),'이 버전은 ESP32·라즈베리파이 보드를 지원하지 않습니다. 보드 1개(ESP32-1)를 빼고 열었습니다. STM32·FPB-RA6E1 보드와 나머지 부품은 그대로입니다.');
+    const plain=ledCircuit(),kept=stripUnsupportedBoards(plain);
+    assert.equal(kept.removed,null);assert.equal(kept.data,plain);
+  });
+});
