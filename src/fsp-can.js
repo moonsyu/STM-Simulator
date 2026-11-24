@@ -213,7 +213,8 @@ const CAN_API={
  *R_CAN_Close([ctrlPtr],r,fn){
   if(isNull(ctrlPtr))return E.ASSERTION;
   const ctrl=this.canCtrl(ctrlPtr,r,fn);if(this.canGet(ctrl,'open')!==CAN_OPEN)return E.NOT_OPEN;
-  this.setField(ctrl,'open',0,r);this.canIrq={};
+  // R_BSP_IrqDisable: the CAN interrupts waiting are not taken any more (a later Open's R_BSP_IrqCfgEnable clears them).
+  this.setField(ctrl,'open',0,r);this.canIrq={};this.pending=this.pending.filter(j=>!/^CAN0:/.test(j.key));
   this.canW(r,EIER,0,1);this.canW(r,MIER,0,4);
   this.canStopped=true; // R_BSP_MODULE_STOP
   return E.SUCCESS;
