@@ -13,7 +13,9 @@ import {Can,CAN_EVENT} from './emu/ra6e1/can.js';
 const enumOf=(tag,name,items)=>`typedef enum ${tag}\n{\n${items.map(([k,v])=>`    ${k} = ${v},`).join('\n')}\n} ${name};`;
 /** r_can_api.h and r_can.h for the interpreter's stand-in headers (hal_data.h includes them with the stack): their public
  *  enums, structures and macros with FSP 6.6's values (CAN_DATA_BUFFER_LENGTH 8: the RA6E1 has no CAN FD), and the
- *  FSP_ERR_CAN_* codes of fsp_common_api.h. can_instance_ctrl_t's p_reg (R_CAN0_Type *) is a void * here. */
+ *  FSP_ERR_CAN_* codes of fsp_common_api.h. can_instance_ctrl_t's p_reg (R_CAN0_Type *) is a void * here, and
+ *  can_callback_args_t's anonymous union { mailbox; buffer } (which the interpreter's C cannot declare) is two members the
+ *  driver's callbacks fill with the same value. */
 export const CAN_TYPES=`#define CAN_DATA_BUFFER_LENGTH (8)
 ${['DATA_UNAVAILABLE','MODE_SWITCH_FAILED','INIT_FAILED','TRANSMIT_NOT_READY','RECEIVE_MAILBOX','TRANSMIT_MAILBOX','MESSAGE_LOST','TRANSMIT_FIFO_FULL'].map((k,i)=>`#define FSP_ERR_CAN_${k} (${60000+i})`).join('\n')}
 ${enumOf('e_can_event','can_event_t',[['CAN_EVENT_ERR_WARNING','0x0002'],['CAN_EVENT_ERR_PASSIVE','0x0004'],['CAN_EVENT_ERR_BUS_OFF','0x0008'],['CAN_EVENT_BUS_RECOVERY','0x0010'],['CAN_EVENT_MAILBOX_MESSAGE_LOST','0x0020'],['CAN_EVENT_ERR_BUS_LOCK','0x0080'],['CAN_EVENT_ERR_CHANNEL','0x0100'],['CAN_EVENT_TX_ABORTED','0x0200'],['CAN_EVENT_RX_COMPLETE','0x0400'],['CAN_EVENT_TX_COMPLETE','0x0800'],['CAN_EVENT_ERR_GLOBAL','0x1000'],['CAN_EVENT_TX_FIFO_EMPTY','0x2000'],['CAN_EVENT_FIFO_MESSAGE_LOST','0x4000']])}
@@ -24,7 +26,7 @@ ${enumOf('e_can_id_mode','can_id_mode_t',[['CAN_ID_MODE_STANDARD',0],['CAN_ID_MO
 ${enumOf('e_can_frame_type','can_frame_type_t',[['CAN_FRAME_TYPE_DATA',0],['CAN_FRAME_TYPE_REMOTE',1]])}
 typedef struct st_can_bit_timing_cfg { uint32_t baud_rate_prescaler; uint32_t time_segment_1; uint32_t time_segment_2; uint32_t synchronization_jump_width; } can_bit_timing_cfg_t;
 typedef struct st_can_frame { uint32_t id; can_id_mode_t id_mode; can_frame_type_t type; uint8_t data_length_code; uint32_t options; uint8_t data[CAN_DATA_BUFFER_LENGTH]; } can_frame_t;
-typedef struct st_can_callback_args { uint32_t channel; can_event_t event; uint32_t error; uint32_t mailbox; void * p_context; can_frame_t frame; } can_callback_args_t;
+typedef struct st_can_callback_args { uint32_t channel; can_event_t event; uint32_t error; uint32_t mailbox; uint32_t buffer; void * p_context; can_frame_t frame; } can_callback_args_t;
 typedef struct st_can_cfg { uint32_t channel; can_bit_timing_cfg_t * p_bit_timing; void (*p_callback)(can_callback_args_t *); void * p_context; const void * p_extend; uint8_t ipl; IRQn_Type error_irq; IRQn_Type rx_irq; IRQn_Type tx_irq; } can_cfg_t;
 typedef void can_ctrl_t;
 typedef struct st_can_api { fsp_err_t (*open)(can_ctrl_t * p_ctrl, const can_cfg_t * p_cfg); fsp_err_t (*write)(can_ctrl_t * p_ctrl, uint32_t buffer_number, can_frame_t * p_frame); fsp_err_t (*read)(can_ctrl_t * p_ctrl, uint32_t buffer_number, can_frame_t * p_frame); fsp_err_t (*close)(can_ctrl_t * p_ctrl); fsp_err_t (*modeTransition)(can_ctrl_t * p_ctrl, can_operation_mode_t operation_mode, can_test_mode_t test_mode); fsp_err_t (*infoGet)(can_ctrl_t * p_ctrl, can_info_t * p_info); fsp_err_t (*callbackSet)(can_ctrl_t * p_ctrl, void (*p_callback)(can_callback_args_t *), void * p_context, can_callback_args_t * p_callback_memory); } can_api_t;
@@ -159,15 +161,15 @@ export const CAN_METHODS={
   if(kind==='error'){
    let event=this.canR(r,EIFR,1),mb=0;this.canW(r,EIFR,0,1);
    if(this.canR(r,STR,2)&0x10){event|=0x20;mb=search(2);this.canW(r,MCTL+mb,this.canR(r,MCTL+mb,1)&~4,1);}
-   yield* this.canCallback(r,ctrl,{...base,event,error:0,mailbox:mb});
+   yield* this.canCallback(r,ctrl,{...base,event,error:0,mailbox:mb,buffer:mb});
    return !!(this.canR(r,STR,2)&0x10&&this.canGet(ext,'message_mode')!==0);
   }else if(kind==='rx'){
    const mb=search(0),frame=this.canFrame(r,ctrl,ext,mb);
-   yield* this.canCallback(r,ctrl,{...base,event:0x400,mailbox:mb,frame});
+   yield* this.canCallback(r,ctrl,{...base,event:0x400,mailbox:mb,buffer:mb,frame});
    return !!(this.canR(r,STR,2)&1);
   }else{
    const mb=search(1);this.canW(r,MCTL+mb,0,1);this.canW(r,MCTL+mb,0,1);
-   yield* this.canCallback(r,ctrl,{...base,event:0x800,mailbox:mb});
+   yield* this.canCallback(r,ctrl,{...base,event:0x800,mailbox:mb,buffer:mb});
    return !!(this.canR(r,STR,2)&2);
   }
  },

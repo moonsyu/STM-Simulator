@@ -88,4 +88,9 @@ test('the CAN prelude has every public macro, enum constant and typedef of r_can
   for(const name of new Set(found))if(!names.has(name))missing.push(`${header}: ${name}`);
  }
  assert.deepEqual(missing,[]);
+ // The callback argument's members, in the header's order (the union's mailbox and buffer included).
+ const api=await fs.readFile(path.join(tools.fsp,'ra/fsp/inc/api/r_can_api.h'),'utf8');
+ const real=[.../typedef struct st_can_callback_args\s*\{([\s\S]*?)\n\}\s*can_callback_args_t;/.exec(api)[1].replace(/\/\/.*$/gm,'').matchAll(/(\w+)\s*(?:\[[^\]]*\])?\s*;/g)].map(m=>m[1]);
+ const ours=[.../typedef struct st_can_callback_args \{([^}]*)\} can_callback_args_t;/.exec(text)[1].matchAll(/(\w+)\s*(?:\[[^\]]*\])?\s*;/g)].map(m=>m[1]);
+ assert.deepEqual(ours,real);assert.deepEqual(real,['channel','event','error','mailbox','buffer','p_context','frame']);
 });
