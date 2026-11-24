@@ -187,8 +187,9 @@ export class Can {
   // ------------------------------------------------------------ the bus
   frameOf(j) {
     const id = this.dv.getUint32(MB + 16 * j, true), idfm = this.idfm, extended = idfm === 1 || idfm === 2 && !!(id >>> 31);
-    const dlc = this.mem[MB + 16 * j + 4] & 0xf, data = [...this.mem.subarray(MB + 16 * j + 6, MB + 16 * j + 6 + Math.min(8, dlc))];
-    return { id: extended ? id & 0x1fffffff : (id >>> 18) & 0x7ff, extended, remote: !!(id & 0x40000000), dlc, data };
+    // A remote frame carries no data.
+    const remote = !!(id & 0x40000000), dlc = this.mem[MB + 16 * j + 4] & 0xf, data = remote ? [] : [...this.mem.subarray(MB + 16 * j + 6, MB + 16 * j + 6 + Math.min(8, dlc))];
+    return { id: extended ? id & 0x1fffffff : (id >>> 18) & 0x7ff, extended, remote, dlc, data };
   }
   /** The transmit mailbox that wins the bus next, or -1. */
   nextMailbox() {
@@ -251,7 +252,8 @@ export class Can {
     const base = MB + 16 * j, idfm = this.idfm;
     const id = (f.extended ? f.id & 0x1fffffff : (f.id & 0x7ff) << 18) | (f.remote ? 0x40000000 : 0) | (idfm === 2 && f.extended ? 0x80000000 : 0);
     this.dv.setUint32(base, id >>> 0, true); this.dv.setUint16(base + 4, f.dlc & 0xf, true);
-    f.data.slice(0, 8).forEach((b, i) => { this.mem[base + 6 + i] = b; });
+    // (a remote frame: the ID and the DLC only, the data bytes stay as they were)
+    if (!f.remote) f.data.slice(0, 8).forEach((b, i) => { this.mem[base + 6 + i] = b; });
     this.dv.setUint16(base + 14, this.tsr(), true);
   }
 }
