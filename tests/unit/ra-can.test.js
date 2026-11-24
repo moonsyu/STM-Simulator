@@ -11,6 +11,7 @@ import {raAssistance} from '../../src/ra-assistance.js';
 import {raExample} from '../../src/ra-examples.js';
 import {SimulationSession} from '../../src/session.js';
 import {projectForBoard,validateProject} from '../../src/project.js';
+import {RaPinoutPanel} from '../../src/ra-pinout-ui.js';
 
 const mcu=peripherals=>({...raDefaultMcu(),peripherals});
 const CAN0={enabled:true};
@@ -251,4 +252,33 @@ test('interpreter: the loopback example, the virtual node in normal mode, and R_
  const plain=new SimulationSession(validateProject({...base,code:'#include "hal_data.h"\nvoid hal_entry(void)\n{\n    R_CAN_Open(0, 0);\n}\nvoid external_irq1_callback(external_irq_callback_args_t *p_args){(void)p_args;}\n'}));
  assert.throws(()=>{for(let t=1;t<=5;t++)plain.tick(t);},/지원하지 않는 FSP API: R_CAN_Open/);
  assert.equal(plain.inject('100 01','can:node'),0);assert.deepEqual(plain.canOutput,[]);
+});
+
+// Review fixes (feature 40): a frame that ends while the module is stopped leaves the mailbox not active; the node keeps
+// at most 1000 frames waiting.
+test('CAN0 model: a frame ending in module stop clears TRMACTIVE; the node queue keeps the newest 1000',()=>{
+ const {can,soc,run}=bench();open(can);
+ send(can,0,0x100,[1]);assert.equal(can.mctl[0].active,1);soc.stopped=true;run(1000);soc.stopped=false;
+ assert.equal(can.mctl[0].active,0);assert.equal(R(can,MCTL)&2,0);
+ W(can,CTLR,R(can,CTLR,2)|0x200,2);W(can,CTLR,R(can,CTLR,2)&~0x300,2);
+ const q=bench();open(q.can);q.can.write(0x844,1,4); // CANMCLK: the bus does not move, the queue does not drain
+ for(let i=0;i<1500;i++)q.can.node.send(`100 ${(i&0xff).toString(16)}`);
+ assert.equal(q.can.node.queue.length,1000);assert.deepEqual(q.can.node.queue[0].data,[500&0xff],'the oldest 500 went');
+});
+
+// The g_can0 card's handler (RaPinoutPanel.stackChange) on a draft: text that is not hexadecimal leaves an ID or the mask
+// as it was; the ID mode sets the mask to compare every ID bit.
+test('CAN card: non-hexadecimal ID or mask text keeps the value; ID Mode sets the mask (Extended 0x1FFFFFFF, Standard 0x7FF)',()=>{
+ const draft={peripherals:{CAN0:{enabled:true,...RA_CAN_DEFAULTS,mailboxes:RA_CAN_DEFAULTS.mailboxes.map(m=>({...m}))}}},panel={draft,validated:0,rendered:0,validate(){this.validated++;},renderStacks(){this.rendered++;}};
+ const el=(dataset,value)=>({dataset,value,closest:sel=>sel==='[data-ra-stack]'?{dataset:{raStack:'CAN0'}}:null});
+ const change=(dataset,value)=>RaPinoutPanel.prototype.stackChange.call(panel,el(dataset,value));
+ const q=draft.peripherals.CAN0;
+ change({raCanMb:'1',raCanKey:'id'},'0x1A0');assert.equal(q.mailboxes[1].id,0x1a0);
+ change({raCanMb:'1',raCanKey:'id'},'xyz');assert.equal(q.mailboxes[1].id,0x1a0,'kept');
+ change({raCanMb:'1',raCanKey:'id'},'');assert.equal(q.mailboxes[1].id,0x1a0,'kept');
+ change({raField:'mask'},'0x700');assert.equal(q.mask,0x700);change({raField:'mask'},'7G');assert.equal(q.mask,0x700,'kept');
+ assert.ok(panel.rendered>=5,'the card is drawn again with the kept values');
+ change({raField:'idMode'},'EXTENDED');assert.equal(q.idMode,'EXTENDED');assert.equal(q.mask,0x1FFFFFFF);assert.equal(q.mailboxes[1].id,0x1a0,'IDs stay');
+ change({raField:'idMode'},'STANDARD');assert.equal(q.mask,0x7FF);
+ change({raCanMb:'2',raCanKey:'id'},'0x1ABCDEF0');assert.throws(()=>validateRaMcu(mcu({CAN0:q})),BAD,'an ID past 0x7FF in Standard mode');
 });
