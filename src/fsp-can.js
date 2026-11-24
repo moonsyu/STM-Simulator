@@ -140,7 +140,19 @@ export const CAN_METHODS={
   this.canW(r,MCTL+mb,0x44,1);set('options',0);
   return f;
  },
+ // The ISR, entered again while its interrupt is pending at its end (its own NVIC_SetPendingIRQ, or a new event during
+ // it) — in the same job, as the NVIC takes the pending CAN interrupt with the lowest number next; when a lower-numbered CAN
+ // interrupt waits, this one waits as a job behind it.
  *canIsr(r,kind,ctrlPtr){
+  for(;;){
+   const again=yield* this.canIsrOnce(r,kind,ctrlPtr),key='CAN0:'+kind,own=this.pending.find(j=>j.key===key);
+   if(!again&&!own)return;
+   const irq=this.canIrqs()[kind]?.irq;if(irq===undefined)return;
+   if(this.pending.some(j=>/^CAN0:/.test(j.key)&&j.key!==key&&(this.canIrqs()[j.key.slice(5)]?.irq??Infinity)<irq)){if(!own)this.canPend(r,kind);return;}
+   if(own)this.pending.splice(this.pending.indexOf(own),1);
+  }
+ },
+ *canIsrOnce(r,kind,ctrlPtr){
   const ctrl=this.canAt(r,ctrlPtr),cfg=this.canAt(r,ctrl.fields.p_cfg.value),ext=this.canAt(r,cfg.fields.p_extend.value);
   const search=mode=>{const saved=this.canR(r,MSMR,1);this.canW(r,MSMR,mode,1);const mb=this.canR(r,MSSR,1)&0x1f;this.canW(r,MSMR,saved,1);return mb;};
   const base={channel:this.canGet(cfg,'channel'),p_context:ctrl.fields.p_context.value};
@@ -148,15 +160,15 @@ export const CAN_METHODS={
    let event=this.canR(r,EIFR,1),mb=0;this.canW(r,EIFR,0,1);
    if(this.canR(r,STR,2)&0x10){event|=0x20;mb=search(2);this.canW(r,MCTL+mb,this.canR(r,MCTL+mb,1)&~4,1);}
    yield* this.canCallback(r,ctrl,{...base,event,error:0,mailbox:mb});
-   if(this.canR(r,STR,2)&0x10&&this.canGet(ext,'message_mode')!==0)this.canPend(r,'error');
+   return !!(this.canR(r,STR,2)&0x10&&this.canGet(ext,'message_mode')!==0);
   }else if(kind==='rx'){
    const mb=search(0),frame=this.canFrame(r,ctrl,ext,mb);
    yield* this.canCallback(r,ctrl,{...base,event:0x400,mailbox:mb,frame});
-   if(this.canR(r,STR,2)&1)this.canPend(r,'rx');
+   return !!(this.canR(r,STR,2)&1);
   }else{
    const mb=search(1);this.canW(r,MCTL+mb,0,1);this.canW(r,MCTL+mb,0,1);
    yield* this.canCallback(r,ctrl,{...base,event:0x800,mailbox:mb});
-   if(this.canR(r,STR,2)&2)this.canPend(r,'tx');
+   return !!(this.canR(r,STR,2)&2);
   }
  },
  canCtrl(ptr,r,fn){return this.struct(ptr,r,'can_instance_ctrl_t',fn);},
