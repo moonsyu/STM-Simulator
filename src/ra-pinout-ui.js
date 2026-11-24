@@ -365,12 +365,13 @@ export class RaPinoutPanel {
    else set('cancelRising',el.dataset.raLpmEdge,el.value==='RISING');
    this.validate();this.renderStacks();return;
   }
-  // CAN (feature 40): a mailbox's type or ID, and the mask, in hexadecimal (0x100).
+  // CAN (feature 40): a mailbox's type or ID, and the mask, in hexadecimal (0x100). Text that is not hexadecimal leaves
+  // the value as it was (the field shows it again).
   const hexValue=v=>/^(0x)?[0-9a-f]{1,8}$/i.test(v)?parseInt(v.replace(/^0x/i,''),16):NaN;
-  if(id==='CAN0'&&el.dataset.raCanMb!==undefined){const q=this.draft.peripherals.CAN0,j=Number(el.dataset.raCanMb),v=el.value.trim();q.mailboxes=(q.mailboxes||RA_CAN_DEFAULTS.mailboxes).map((m,i)=>i===j?{...m,[el.dataset.raCanKey]:el.dataset.raCanKey==='id'?hexValue(v):v}:{...m});this.validate();this.renderStacks();return;}
+  if(id==='CAN0'&&el.dataset.raCanMb!==undefined){const q=this.draft.peripherals.CAN0,j=Number(el.dataset.raCanMb),v=el.value.trim();if(el.dataset.raCanKey==='id'&&Number.isNaN(hexValue(v))){this.renderStacks();return;}q.mailboxes=(q.mailboxes||RA_CAN_DEFAULTS.mailboxes).map((m,i)=>i===j?{...m,[el.dataset.raCanKey]:el.dataset.raCanKey==='id'?hexValue(v):v}:{...m});this.validate();this.renderStacks();return;}
   const k=el.dataset.raField;if(!id||!k)return;
   const v=el.value.trim(),q=this.draft.peripherals[id];
-  if(id==='CAN0'&&k==='mask'){q.mask=hexValue(v);this.validate();this.renderStacks();return;}
+  if(id==='CAN0'&&k==='mask'){if(!Number.isNaN(hexValue(v))){q.mask=hexValue(v);this.validate();}this.renderStacks();return;}
   if(['unit','callback','startMode','reset','clockSource','start','mode','power','idMode'].includes(k))q[k]=v;
   else if(k==='stopInSleep'||k==='ioKeep'||k==='bgo')q[k]=v==='1';
   else if(/Priority$/.test(k)&&v==='')q[k]=null;
