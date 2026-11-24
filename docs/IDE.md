@@ -96,12 +96,13 @@ Pinout & Configuration 오른쪽의 **Clock** 탭에서 CubeMX Clock Configurati
 - **CubeIDE 프로젝트 폴더 그대로(1.35.0)**: "Cube 프로젝트 폴더 가져오기"가 프로젝트의 `.c/.h`를 폴더와 함께 읽는다(Core/Src, Core/Inc, 직접 만든 폴더. Drivers·Middlewares·Debug 같은 SDK·빌드 폴더는 제외). 소스 파일 목록에 이름과 폴더가 함께 보이고, 파일 추가·이름 변경에서 `Core/Src/app.c`처럼 폴더를 쓸 수 있다. `#include "app.h"`는 어느 폴더에 있든 찾는다(같은 폴더 → 경로 → 이름 순). 한도는 보조 소스 120개, 합계 1 MB.
 - **끌어다 놓기(1.35.0)**: 탐색기에서 파일이나 폴더를 창에 놓는다. `.c/.h/.cpp/.hpp`는 소스에 추가되고(같은 이름은 놓은 내용으로 바뀜), `.ioc`나 `main.c`가 들어 있으면 프로젝트 가져오기, `.stm32lab`은 열기다. 실행 중에는 받지 않는다. Ctrl+Z로 되돌린다.
 - **프로젝트 구조 (CubeIDE)(1.44.0)**: 탐색기 아래쪽의 **프로젝트 구조 (CubeIDE)**를 펼치면 CubeIDE 프로젝트와 같은 폴더 트리가 보인다: `<이름>.ioc`, `Core/Inc`(main.h, hal_conf.h), `Core/Src`(main.c, stm32xxxx_it.c, syscalls.c, sysmem.c, system_stm32xxxx.c), `Core/Startup`(startup_….s), `Drivers`(CMSIS, HAL 드라이버), 링커 스크립트(`STM32…_FLASH.ld`). 곧은 글씨는 프로젝트 파일이고 기울인 글씨는 빌드가 넣는 파일이다. 기울인 파일을 열면 읽기 전용으로 보이고, **프로젝트로 복사해 수정**을 누르면 그 자리의 프로젝트 파일이 되어 고칠 수 있으며 ARM 빌드가 그 파일을 쓴다(시작 코드와 링커 스크립트도 된다). 복사한 파일은 앱이 다시 만들지 않으므로, 지우면 원래 파일로 돌아간다. `.ioc`는 현재 Pinout 설정을 보여 주기만 하며 Pinout에서 바꾼다.
+- **지원 보드(1.59.0)**: STM32(NUCLEO-F103RB · NUCLEO-F446RE)와 Renesas FPB-RA6E1만 지원한다. ESP32·라즈베리파이 보드와 그 보드의 스케치·Python 실행, ESP32 실물 업로드, 그 보드를 쓰는 예제는 삭제했다. 그 보드가 든 예전 프로젝트를 열면 보드와 연결된 배선만 빼고 열리고, 무엇을 뺐는지 대화상자와 출력 로그로 알려 준다. ESP-01 Wi-Fi 모듈과 HC-05/06 부품, 두 번째 STM32 보드 추가는 그대로다.
 - **RA 이벤트 링크·전송(1.58.0)**: FPB-RA6E1 설정의 Stacks 탭에서 New Stack → Monitoring · System → Event Link Controller(r_elc)를 추가하고, Pins 탭의 Analog 핀에서 ADC Start Trigger를 ELC Event로 고르면 GPT 주기 같은 이벤트가 CPU 없이 ADC 스캔을 시작한다. New Stack → Transfer → r_dtc / r_dmac는 이벤트마다 메모리를 옮기며(ADC 결과는 `R_ADC_InfoGet`의 `p_address`에서), SCI 카드의 Transmit/Receive를 Transfer (r_dtc)로 정하면 UART 송수신을 DTC가 맡는다. 예제: `ra_elc_adc_dtc`. UART + DMAC와 Repeat-Block 모드는 지원하지 않고, ELC 연결은 ADC0 스캔 시작만 동작한다(그 밖의 연결은 아무 일도 하지 않는다).
 - **RA 데이터 플래시(1.57.0)**: FPB-RA6E1 설정 창 Stacks의 New Stack → Storage → Flash (r_flash_hp)로 `g_flash0`을 추가한다. 데이터 플래시는 0x08000000~0x08001FFF(8 KB), 지우기 블록 64바이트, 쓰기 단위 4바이트다. `R_FLASH_HP_Open` 뒤 `R_FLASH_HP_Erase(주소, 블록 수)`로 지운 곳에만 `R_FLASH_HP_Write((uint32_t) 버퍼, 주소, 바이트 수)`로 쓸 수 있고, 지우지 않고 다시 쓰면 `FSP_ERR_WRITE_FAILED`다. 읽기는 주소를 포인터로 한다(`*(uint32_t *) 0x08000000`, `memcpy(&settings, (void *) 0x08000080, sizeof settings)`). 지운 곳을 읽은 값은 실제 칩에서 정해지지 않으므로(시뮬레이터는 0xFF를 주고 한 번 안내) 썼는지는 `R_FLASH_HP_BlankCheck`로 확인한다. Data Flash Background Operation을 켜면 호출이 바로 돌아오고 콜백이 `FLASH_EVENT_ERASE_COMPLETE`·`WRITE_COMPLETE`·`BLANK`·`NOT_BLANK`·`ERR_FAILURE`를 알린다. 내용은 MCU 리셋에도, 실행을 멈췄다 다시 실행해도 남는다(프로젝트 파일에 저장). 처음 상태로 되돌리려면 g_flash0 카드의 **데이터 플래시 지우기**를 누른다. 코드 플래시는 쓸 수 없다. 예제: "데이터 플래시에 부팅 횟수 저장".
 - **RA 저전력 모드(1.56.0)**: FPB-RA6E1 설정 창 Stacks의 New Stack → Power → Low Power Modes로 `g_lpm0`을 추가하고 모드(Sleep / Software Standby / Deep Software Standby), 깨우기 소스, I/O 유지, 해제 소스(IRQn-DS 핀, 엣지)를 정한다. `R_LPM_Open` 뒤 `R_LPM_LowPowerModeEnter`로 들어간다. Sleep·Software Standby는 고른 인터럽트가 깨우면 다음 줄부터 이어 가고, Deep Software Standby는 해제되면 MCU가 리셋되어 처음부터 다시 시작한다(`R_SYSTEM->RSTSR0_b.DPSRSTF`가 1). I/O 유지를 켰으면 리셋 뒤에도 핀이 그대로이므로 `R_LPM_IoKeepClear(NULL)`로 풀어야 핀 설정이 적용된다. 진입·깨어남·해제는 출력 로그에 나오고, 깨울 수 있는 소스가 없으면 안내한다. 예제: "저전력: Deep Software Standby와 S1(IRQ1-DS)로 깨우기". Snooze는 지원하지 않는다.
-- **RA I2C 슬레이브(1.55.0)**: FPB-RA6E1 설정 창의 IIC0·IIC1 카드에서 모드를 Slave로 두고 주소와 콜백을 정하면 `R_IIC_SLAVE_Open`·`Read`·`Write`로 마스터의 쓰기·읽기에 응답한다(콜백의 RX/TX REQUEST에서 Read/Write 호출). ESP32 보드를 추가해 스케치에서 `Wire.begin()` 또는 `Wire.begin(sda, scl)` 뒤 `beginTransmission`·`write`·`endTransmission`·`requestFrom`으로 마스터가 된다. 예제: "I²C 슬레이브 · ESP32 마스터와 통신". 슬레이브는 한 번에 한 채널만 열 수 있다.
+- **RA I2C 슬레이브(1.55.0)**: FPB-RA6E1 설정 창의 IIC0·IIC1 카드에서 모드를 Slave로 두고 주소와 콜백을 정하면 `R_IIC_SLAVE_Open`·`Read`·`Write`로 마스터의 쓰기·읽기에 응답한다(콜백의 RX/TX REQUEST에서 Read/Write 호출). 슬레이브는 한 번에 한 채널만 열 수 있다. ESP32 마스터 예제는 1.59.0에서 ESP32 지원과 함께 삭제했다.
 - **RA 워치독·RTC(1.54.0)**: FPB-RA6E1 설정 창 Stacks → New Stack → Monitoring · System에서 Watchdog(r_wdt), Independent Watchdog(r_iwdt), Realtime Clock(r_rtc)을 추가한다. 워치독은 시간 초과나 창 밖 새로 고침에 MCU를 리셋(실행 로그 "MCU 리셋 · WDT")하거나 NMI 콜백을 부르고, 다시 시작한 프로그램은 `R_SYSTEM->RSTSR1`로 원인을 읽는다. IWDT는 자동 시작(OFS0)만 된다. RTC는 시작 시각을 PC 시각(기본값, 1.57.3부터) 또는 시뮬레이션(2000-01-01에서 멈춘 채 시작, 프로그램이 `R_RTC_CalendarTimeSet`)으로 고르고, 알람·주기 인터럽트 콜백을 쓴다. 예제: "워치독(WDT) 리셋과 리셋 원인 읽기", "RTC 시계".
-- **부품 검색의 보드(1.53.1)**: 부품 검색에 ESP32, 라즈베리파이, NUCLEO를 치면 목록 끝 "다른 보드"에 보드가 나오고 누르면 회로에 놓인다("보드와 핀 → 다른 보드 추가"와 같다).
+- **부품 검색의 보드(1.53.1)**: 부품 검색에 NUCLEO를 치면 목록 끝 "다른 보드"에 STM32 보드가 나오고 누르면 회로에 놓인다("보드와 핀 → 다른 보드 추가"와 같다).
 - **RA SPI(1.53.0)**: FPB-RA6E1 설정 창의 Pins에서 SPI1(D10~D13) 또는 SCI9 Simple SPI를 켜거나 Stacks → New Stack → Connectivity에서 r_spi·r_sci_spi를 추가한다. 예제 "SPI 메모리"는 회로의 SPI 메모리에 쓰고 읽어 SCI9로 결과를 출력한다. 두 실행 방식 모두 로직 분석기에 SPI 파형이 나온다.
 - **RA 프로젝트 바로 실행(1.52.0)**: FPB-RA6E1 프로젝트도 ARM GCC·FSP 없이 실행된다(내장 해석기). 실행 방식에서 "ARM GCC 빌드"를 고르면 전처럼 에뮬레이터로 돌고, 도구가 없으면 그 실행만 해석기로 돌며 출력에 알린다. 레지스터 직접 접근이나 지원하지 않는 FSP 함수는 ARM GCC 빌드에서만 된다.
 - **파일 바로 고치기(1.51.0)**: 탐색기의 "프로젝트 구조 (CubeIDE)"나 F12로 연 파일(it.c, syscalls.c, 시작 코드, 링커 스크립트, HAL·CMSIS 소스와 헤더, system_*.c, hal_conf.h)은 그 자리에서 고친다. 고친 파일만 프로젝트에 저장되고 빌드가 그 파일을 쓴다(트리에 ●). main.c·main.h·it.c·주변장치 .c/.h는 CubeMX처럼 코드를 다시 생성하면 USER CODE 구역 안만 남는다(Ctrl+Z로 되돌리기; 구역 밖 줄을 옅게 그리던 표시는 1.57.1에서, 생성 전 "지워질 줄" 목록과 "ARM GCC 빌드에서만 반영" 안내는 1.57.2에서 없앴다). 원래대로 하려면 트리에서 우클릭 → 원본으로 되돌리기. 새 프로젝트는 처음부터 printf가 UART(USART2)로 나간다.
@@ -263,7 +264,7 @@ Vim은 `highlight ... guifg=#RRGGBB guibg=#RRGGBB gui=...`, `highlight link`, �
 
 **배선 끝 옮기기**: 이미 만든 점퍼선의 끝(핀 부분)을 끌어 다른 핀·구멍에 놓거나, 끝을 한 번 클릭해 집은 뒤(토글) 옮길 핀·구멍을 클릭하면 그 끝만 옮긴다. 집은 상태에서 같은 끝을 다시 누르거나 빈 곳을 누르거나 Esc를 누르면 취소된다(배선은 지워지지 않는다). 끄는 동안 미리보기 선과 놓을 칸 표시(초록: 가능, 빨강: 사용 중)가 보인다. 색·꺾임점·반대쪽 끝은 유지하며 Ctrl+Z로 되돌린다.
 
-**핀 이름 보기**: 핀이나 구멍에 마우스를 올리면 이름이 나온다(라즈베리파이 `3번 GPIO2`처럼 GPIO 번호 포함). 배선이 연결되어 있거나 지나가는 핀도 같고, 실행 중에는 전압도 함께 보여 준다.
+**핀 이름 보기**: 핀이나 구멍에 마우스를 올리면 이름이 나온다. 배선이 연결되어 있거나 지나가는 핀도 같고, 실행 중에는 전압도 함께 보여 준다.
 
 ## STM32 보드 여러 개
 
@@ -289,67 +290,6 @@ Vim은 `highlight ... guifg=#RRGGBB guibg=#RRGGBB gui=...`, `highlight link`, �
 
 한계: SPI 슬레이브의 NSS는 소프트웨어 방식만 있어 항상 선택 상태다. 보드 프로그램은 회로 시간 단계(화면 갱신 단위)만큼 어긋나 돌므로 마스터는 슬레이브가 다음 호출을 할 시간을 두어야 한다. HAL 예제를 적용하면 회로 전체가 예제 회로로 바뀌어 다른 보드도 빠진다(실행 취소로 복구). 보드를 하나 더 실행할 때마다 시뮬레이션 계산이 그만큼 늘어난다(1.12.0에서 회로의 연결 구조를 실행 중 재사용해, 보드 4개 회로가 약 8배 빨라졌다). 1.7.0에서 저장한 여러 STM32 보드 회로는 이전 버전에서 열리지 않는다.
 
-## ESP32·라즈베리파이 보드와 강의 실습 예제
-
-STM32 보드 옆에 **ESP32**와 **Raspberry Pi 5** 보드를 함께 놓을 수 있다. 활동 바 **보드/핀 설정**의 **다른 보드 추가**에서 고른다(다른 보드는 STM32를 포함해 회로당 8개까지). STM32 보드를 여러 개 놓는 방법은 [STM32 보드 여러 개](#stm32-보드-여러-개)를 본다.
-
-- **NodeMCU-32S (ESP-32S, 38핀)**: 강의 보드(NODEMCU ESP-32S V1.1). 핀 배열은 ESP32-DevKitC V4와 같고, 실크 표기는 `P34`·`SVP`·`SD2` 형식이다. 두 핀 열은 22.86 mm(9칸) 떨어져 있다.
-- **ESP32 DevKit 38핀 (ESP32-WROOM-32)**: 같은 배열에 DevKitC 표기(`34`·`VP`)로 그렸다. 실물과 대조하지 않아 "핀 배열 확인 필요"로 표시한다.
-- **Raspberry Pi 5**: 40핀 헤더(물리 핀 1~40, 홀수 핀은 안쪽 열). 3.3 V 로직이고 아날로그 입력이 없다. GPIO2·GPIO3에는 보드의 1.8 kΩ 풀업이 있다.
-
-보드 이름(`ESP32-1`, `RPI-1` …)이 회로 라벨, 탐색기·편집기 탭, 실행 로그(`[ESP32-1] …`), 직렬 모니터 항목에 함께 쓰인다. 이름은 속성 패널에서 바꾸며 다른 부품과 겹칠 수 없다.
-
-- **배선**: 보드 핀을 클릭해 배선한다. 각 보드의 GPIO는 그 보드만의 신호이고 3.3 V·5 V·GND 핀은 공통 전원·GND에 연결된다(USB로 같은 PC에 연결한 상태). 핀을 선택하면 속성 패널과 **장치 Docs**에 기능과 주의(입력 전용, 사용 금지, 스트래핑, ADC2/Wi-Fi, 3.3 V 전용 등)가 나온다.
-- **ESP32는 빵판에 꽂는다**: 끌어서 빵판 가운데 홈을 걸치게 놓으면 38개 핀이 b열·i열(830홀은 90° 돌려 b행·i행)에 꽂힌다. 양쪽에 남는 a·j 구멍으로 배선한다. 라즈베리파이 헤더는 꽂지 않고 점퍼선으로 연결한다. 보드는 R로 90°씩 돌린다.
-- **코드**: 보드마다 `sketch.ino`(ESP32) 또는 `main.py`(라즈베리파이)가 있고 탐색기·편집기 탭에 `ESP32-1 · sketch.ino`처럼 보인다. ESP32 스케치는 편집해서 실행하고, 라즈베리파이 코드는 고정 실행 코드라 읽기 전용이다.
-
-**ESP32 스케치 실행**(1.6.0): ESP32 보드의 `sketch.ino`를 실행할 때 STM32 스케치와 같은 C 해석기로 실행한다. `setup()`/`loop()`, 핀은 GPIO 번호(`pinMode(2, OUTPUT)` = GPIO2), `digitalWrite`·`digitalRead`·`analogRead`(12비트 0~4095)·`delay`·`millis`·`attachInterrupt`, `ledcAttach`/`ledcWrite`(2.x의 `ledcSetup`/`ledcAttachPin`도 가능, 평균 전압으로 계산), `Serial.begin`/`print`/`println`/`printf`, DHT 라이브러리(`#include <DHT.h>`, `DHT dht(13, DHT11)`, `begin`/`readTemperature`/`readHumidity`: 그 핀에 배선되고 전원이 들어간 DHT11/DHT22 모듈의 설정값, 아니면 nan), `Wire` I²C 슬레이브(`Wire.begin(주소)`, `onReceive`/`onRequest`, `available`/`read`/`write`, SDA GPIO21·SCL GPIO22)를 지원한다. GPIO6~11(내장 플래시)과 없는 핀 번호는 오류로 멈춘다. 컴파일 오류는 `ESP32-1 · sketch.ino: 3행: …`처럼 보드와 파일을 붙여 실행 전에 보여 준다. Wi-Fi·Bluetooth·MQTT와 그 밖의 라이브러리는 지원하지 않는다.
-
-**라즈베리파이 main.py 실행**(1.12.0): 라즈베리파이의 `main.py`는 앱의 Python 해석기로 STM32와 같은 회로·시간축에서 실행한다. 코드를 고치면 동작도 바뀐다. 쓸 수 있는 것: 대입·`if/elif/else`·`while`·`for … in`·`break/continue/pass`·`def`(`global`, 기본값 인수)·`lambda`·`try/except/finally`·`raise`·f-string(서식 `.1f`·`.0%`·`5d` 등)·리스트·튜플·딕셔너리·리스트 내포, `print`·`input`(직렬 모니터에서 보낸 줄)·`int`·`float`·`str`·`len`·`range`·`min`·`max`·`round`·`sum`·`abs` 등. 라이브러리: gpiozero `LED`·`PWMLED`·`Button`(`when_pressed`/`when_released`, `pull_up`, `active_state`)·`LEDBoard`, `RPi.GPIO`(`setmode` BCM/BOARD, `setup`, `output`, `input`, `PWM`, `cleanup`), `time.sleep`·`perf_counter`·`time`, `signal.pause`, `sys.exit`. 문장마다 2 µs가 걸려서 `perf_counter()`로 기다리는 반복도 시간이 흐르고, 1 ms보다 빠르게 켜고 끄는 핀(소프트웨어 PWM)은 그 평균 듀티로 LED 밝기가 계산된다. 오류는 `RPI-1 · main.py n행: ValueError: …` 형식으로 실행 로그에 나온다. 그 밖의 모듈(`numpy` 등)·클래스 정의·스레드는 지원하지 않는다.
-
-**고정 실행**(라즈베리파이 커널 모듈): 강의 예제의 리눅스 커널 모듈(C)은 실행하지 않고 그 예제의 시나리오대로 핀을 바꾼다. 아래는 이 방식의 설명이다. 강의 예제에서 불러온 라즈베리파이는 그 예제의 시나리오대로 핀을 바꾸고(LED 깜빡임, PWM 밝기, 스위치 입력에 따른 동작, 직렬 모니터 입력에 따른 동작) 코드가 출력할 내용을 로그와 직렬 모니터에 보여 준다. 핀 상태는 STM32와 같은 회로 계산에 들어가서, 배선이 틀리면 실제처럼 LED가 켜지지 않는다. 강의 예제가 아닌 라즈베리파이는 코드를 실행하지 않고 핀을 입력 상태로 둔 채 전압만 계산한다.
-
-- **실행**: 실행(Ctrl+F5) 한 번에 STM32와 다른 보드가 같은 시간축에서 함께 시작한다. 디버그 중 일시정지하면 다른 보드도 함께 멈춘다.
-- **실행 보드**: 회로에 다른 보드가 있으면 **실행 및 디버그**의 실행 환경에 **실행 보드**(전체 보드 / STM32만 / 보드 하나만)가 나온다. STM32 보드가 없는 회로나 다른 보드 하나만 고르면 STM32 코드는 실행하지 않는다.
-- **직렬 모니터**: 대상에서 `ESP32-1 · Serial (USB)`을 고르면 그 보드의 출력이 보이고, 보낸 글자는 스케치의 `Serial.available`·`Serial.read`로 읽는다. 입력을 읽는 라즈베리파이 예제(LED 제어 쉘·LED 밝기 쉘·커널 PWM LED)는 대상을 `RPI-1`로 고르고 보낸 줄을 프로그램 입력으로 받는다(`> 2`처럼 출력에 함께 보인다). 다른 라즈베리파이 예제에는 보내지 않는다.
-- **PWM 밝기**: PWM 출력(STM32 `analogWrite`·HAL 타이머 PWM, ESP32 `ledcWrite`, 라즈베리파이 예제의 PWM)은 평균 전압으로 계산하고, LED는 켜진 구간의 전류 × 듀티비로 계산한다. 그래서 10%는 어둡고 100%는 밝게 보인다(LED 순방향 전압보다 평균 전압이 낮아도 켜진다). 모터·RC 필터·ADC는 평균 전압을 그대로 쓴다.
-
-**ESP32 실물 보드 빌드·업로드**(1.9.0): ESP32 보드를 USB로 연결하면 **실행 및 디버그**의 실행 대상에 `ESP32 (COM4)`처럼 포트가 보인다(CP210x·CH340/CH9102·FTDI·ESP32 내장 USB). 이 대상을 고르면 편집 중인 ESP32 보드(편집 중인 파일이 ESP32가 아니면 회로의 첫 ESP32 보드)의 `sketch.ino`를 다룬다.
-
-- **빌드**(Ctrl+Shift+B): Arduino CLI와 Espressif esp32 코어로 컴파일한다(보드 설정 `esp32:esp32:esp32` · ESP32 Dev Module). 오류는 문제 목록에 `ESP32-1 · sketch.ino`의 줄로 나온다. 같은 스케치는 다시 컴파일하지 않는다. 처음 컴파일은 몇 분, 그 뒤에는 15~40초쯤 걸린다.
-- **실행**(Ctrl+F5): 빌드한 뒤 고른 COM 포트로 업로드하고, 끝나면 그 포트의 직렬 출력을 **터미널** 탭에 보여 준다. 속도는 스케치의 `Serial.begin(…)`을 따른다(없으면 115200). 입력 대상 **실행 프로그램 stdin · ESP32 직렬**로 보낸 줄은 보드로 간다. 실행 정지(Ctrl+F2)로 직렬 모니터를 닫는다. 다른 프로그램(Arduino IDE 시리얼 모니터 등)이 포트를 쓰고 있으면 업로드할 수 없다.
-- **BOOT 버튼**: 업로드는 보드를 자동으로 다운로드 모드로 리셋한다. 자동 리셋 회로가 없거나 동작하지 않는 보드는 `Connecting......`이 이어지다 "Wrong boot mode"로 실패한다. 이때는 보드의 **BOOT** 버튼을 누른 채로 다시 실행하고 `Writing`이 나오면 손을 뗀다. 업로드가 끝나 보드가 리셋될 때까지 BOOT를 누르고 있으면 보드가 다시 다운로드 모드로 부팅해 직렬 출력에 `waiting for download`만 나온다. 앱이 이를 알려 주며, BOOT에서 손을 뗀 뒤 보드의 **EN**(RST) 버튼을 한 번 누르면 업로드한 스케치가 실행된다.
-- **필요한 도구**: Arduino IDE 2를 설치하면 들어 있는 `arduino-cli.exe`를 자동으로 찾는다(개발 도구 설정의 **ESP32 빌드·업로드** 칸에서 바꿀 수 있다). Arduino IDE의 보드 매니저에서 **esp32 by Espressif Systems**를, 스케치가 쓰는 라이브러리는 라이브러리 관리에서 설치한다. Arduino IDE 2의 설정(`~/.arduinoIDE/arduino-cli.yaml`)을 그대로 써서 IDE에 설치한 코어·라이브러리가 보인다. 라이브러리가 없으면 이름을 알려 준다(예: DHT11 예제는 **DHT sensor library**).
-- 디버그(F10)·중단점·레지스터 보기는 ESP32 대상에서 지원하지 않는다. 변수와 중단점은 시뮬레이터 대상에서 확인한다.
-
-**예제 목록과 분류**: 활동 바의 **예제**(Ctrl+Shift+X)는 보드 종류별로 **Raspberry Pi · STM32 · ESP32** 묶음으로 보인다. 목록 위의 **전체 / Raspberry Pi / STM32 / ESP32** 단추로 한 묶음만 볼 수 있고, 고른 단추는 다음 실행에도 유지된다. 두 종류 이상의 보드를 쓰는 예제(STM32·ESP32 I2C 통신)는 해당 묶음마다 모두 나온다. HAL 예제는 STM32 묶음에 있다. 강의 예제는 **강의 실습**·**강의 과제** 표시와 함께 무엇을 하는 예제인지만 이름으로 보인다. 강의 코드(RPI-02, KER-01, 도전 3 …)와 교재 쪽수로도 검색할 수 있다.
-
-**강의 예제**: 강의 회로도와 같은 보드 핀·부품·연결을 이 앱의 빵판에 만들고, 구멍 위치와 선 경로는 이 앱의 배치를 따른다. 보드 코드는 강의 코드가 아니라 같은 동작을 하는 이 앱의 짧은 예시다. ESP32 예제는 스케치가 실제로 실행되어 코드를 고치면 동작도 바뀐다.
-
-- **배선**: 라즈베리파이는 90° 돌려 빵판 왼쪽에 세운다. 헤더 핀 간격이 빵판 구멍 간격과 같아서, 핀 2k−1·2k가 빵판 k+1번 줄과 나란하고 선은 핀 사이 틈에서 곧게 자기 줄로 들어간다(선 교차 없음). ESP32는 빵판에서 비어 있는 a·j 구멍만 쓰고 선은 구멍 사이 틈으로 지나며 보드 위를 가로지르지 않는다. 핀 순서 때문에 피할 수 없는 교차만 남는다(STM32·ESP32 I2C 1곳, ESP32 입출력 종합 4곳).
-
-| 분류 | 예제 | 내용 |
-|---|---|---|
-| 강의 실습 | 라즈베리파이 3.3V LED | 3.3V(1번 핀) 전원으로 LED 켜기(코드 없음) |
-| 강의 실습 | 라즈베리파이 LED 깜빡이기 / PWM LED | GPIO17 LED 1초 깜빡임 / PWM 밝기 0→100% |
-| 강의 실습 | 라즈베리파이 Tact 스위치 / 풀업 스위치 2개 | GPIO27 내부 풀업 / GPIO27 내부 풀업 + GPIO22 외부 10 kΩ 풀업 |
-| 강의 실습 | 라즈베리파이 커널 드라이버 LED / Tact 스위치 | GPIO20 LED 타이머 깜빡임 / GPIO2 스위치 인터럽트로 GPIO20 LED |
-| 강의 과제 | 라즈베리파이 LED 3개 깜빡이기 | GPIO4·17·22 LED를 0.5초 간격으로 함께 깜빡임(라즈베리파이와AI Day1 도전 1) |
-| 강의 과제 | 라즈베리파이 LED 제어 쉘 | 직렬 모니터로 1·2·3을 보내면 그 LED를 켜고 끔, 그 밖의 숫자는 종료(도전 2) |
-| 강의 과제 | 라즈베리파이 LED 밝기 쉘 | 1은 10% 밝게, 2는 10% 어둡게(0~100%), 그 밖은 종료(도전 3) |
-| 강의 과제 | 라즈베리파이 버튼 LED | 버튼(GPIO26, 외부 10 kΩ 풀업)을 누르는 동안 LED 3개 켜짐(도전 4) |
-| 강의 과제 | 라즈베리파이 버튼 PWM 밝기 | 500 Hz PWM 직접 구현, 버튼1을 누르면 밝기 최대 90%까지, 버튼2는 최소 10%까지(도전 5) |
-| 강의 과제 | 라즈베리파이 크리스마스 트리 | LED 5개, 버튼을 누를 때마다 번갈아 깜빡임 ↔ 함께 깜빡임(도전 6) |
-| 강의 과제 | 라즈베리파이 커널 PWM LED | 앱 입력 10~90을 듀티비로 GPIO20 LED PWM, 그 밖의 값은 LED 끄고 종료(리눅스커널프로그래밍 Day3 도전 2) |
-| 강의 과제 | 라즈베리파이 커널 타이머 LED 2개 | 커널 타이머로 GPIO20 LED 5초, GPIO12 LED 7초 주기, 상태를 구조체로 전달(Day3 도전 3) |
-| 강의 실습 | STM32·ESP32 I2C 통신 | STM32(I²C 마스터, HAL 코드)가 ESP32(I²C 슬레이브 0x08, 스케치)에 1/0을 보내 LED를 켜고 끔 |
-| 강의 실습 | ESP32 LED 깜빡이기 | ESP32 GPIO2 LED 0.5초 깜빡임(보드 내장 파란 LED도 함께) |
-| 강의 실습 | ESP32 LED·스위치·가변저항·DHT11 | LED(GPIO17)·스위치(GPIO18, 외부 풀업)·가변저항(GPIO36)·DHT11(GPIO13), 830홀 빵판 |
-
-강의 과제는 교재의 "도전" 중 회로가 있는 것만 넣었다. 출력만 하는 커널 드라이버 과제, 조사·문서 과제, 카메라·OpenCV·PyTorch·YOLO 과제, Sense HAT 과제는 회로 예제가 아니라서 넣지 않았다. 임베디드Firmware·임베디드AIoT 교재는 이 PC에 없어 그 과제는 넣지 않았다.
-
-한계: 라즈베리파이의 리눅스 커널 모듈(C)은 실행하지 않는다(고정 실행). ESP32 스케치는 회로 시뮬레이터에서 해석 실행하고, 실물 보드에는 **ESP32 (COMn)** 실행 대상으로 Arduino CLI 빌드·업로드한다(1.9.0, 디버그 없음). 로직 분석기에는 다른 보드의 핀이 나오지 않는다. 1.5.0의 회로 파일을 이전 버전에서 열면 다른 보드를 알 수 없어 열리지 않는다.
-
 ## DS3231 RTC 모듈 (1.27.0)
 
 부품 검색에서 `DS3231`으로 찾는다. **DS3231 RTC 모듈 (ZS-042)**은 흔히 쓰는 파란 모듈이다: 왼쪽 6핀 직각 헤더 32K·SQW·SCL·SDA·VCC·GND가 기판 왼쪽으로 다리처럼 나와 빵판에 꽂힌다. 오른쪽 4개 구멍(다음 I²C 장치를 이어 붙이는 통과 구멍)은 1.28.0부터 연결점이 아니다. 새로 놓으면 이름은 `DS3231`, 두 번째는 `DS3231-2`다. 뒷면의 CR2032 홀더는 그리지 않는다.
@@ -374,7 +314,6 @@ STM32 보드 옆에 **ESP32**와 **Raspberry Pi 5** 보드를 함께 놓을 수 
 **예제**(예제 목록, `보드 간 통신` 표시).
 
 - **STM32·STM32 블루투스 통신**: STM32-1(HC-05 마스터)이 STATE로 연결을 확인하고 1초마다 `LED ON`/`LED OFF`를 보내면 STM32-2(HC-06)가 LD2를 켜고 끄고 `ACK`로 답한다.
-- **STM32·ESP32 블루투스 통신**: 같은 명령을 ESP32가 `Serial2`(GPIO16 RX, GPIO17 TX)의 HC-06으로 받아 파란 LED를 켜고 끈다. ESP32 스케치는 `Serial2.begin(baud[, SERIAL_8N1, rx, tx])`, `available`, `read`, `print`, `println`, `write`를 쓸 수 있다.
 - **STM32·STM32 Wi-Fi 통신**: STM32-2의 ESP-01이 AP와 TCP 서버(포트 333)를 열고 STM32-1의 ESP-01이 접속해 명령을 보낸다. `+IPD`로 받은 내용을 읽어 답한다.
 - 부품마다 한 보드 예제도 있다(HC-05·ESP-01 설정, HC-06 AT 응답). 부품의 **HAL 예제**로 연다.
 
@@ -386,20 +325,19 @@ STM32 보드 옆에 **ESP32**와 **Raspberry Pi 5** 보드를 함께 놓을 수 
 
 **회로 밖의 상대.** 직렬 모니터 대상에서 고른다.
 
-- **스마트폰 → 모듈 이름**: 슬레이브로 쓰는 HC-05·HC-06 또는 `BluetoothSerial`을 시작한 ESP32와 처음 보낼 때 페어링하고(1.5초), 양쪽으로 글자를 주고받는다. 이미 다른 모듈과 연결된 모듈이나 마스터는 거부한다.
-- **공유기의 PC**(`192.168.1.100:8080`): ESP-01·ESP32가 AP `STM-Router`(암호 `stm32-router`)에 접속하면 `192.168.1.x` 주소를 받고, `AT+CIPSTART="TCP","192.168.1.100",8080`처럼 PC에 연결한다. 보낸 내용이 모니터에 보인다. 모듈이 TCP 서버를 열어 두었으면 PC가 먼저 보낼 때 그 서버로 접속한다.
+- **스마트폰 → 모듈 이름**: 슬레이브로 쓰는 HC-05·HC-06과 처음 보낼 때 페어링하고(1.5초), 양쪽으로 글자를 주고받는다. 이미 다른 모듈과 연결된 모듈이나 마스터는 거부한다.
+- **공유기의 PC**(`192.168.1.100:8080`): ESP-01이 AP `STM-Router`(암호 `stm32-router`)에 접속하면 `192.168.1.x` 주소를 받고, `AT+CIPSTART="TCP","192.168.1.100",8080`처럼 PC에 연결한다. 보낸 내용이 모니터에 보인다. 모듈이 TCP 서버를 열어 두었으면 PC가 먼저 보낼 때 그 서버로 접속한다.
 
-**인터넷**(1.12.0): 공유기 `STM-Router`에 접속한 모듈·ESP32는 공유기 너머의 두 서버에 TCP로 연결한다(응답은 20 ms 더 늦다).
+**인터넷**(1.12.0): 공유기 `STM-Router`에 접속한 모듈은 공유기 너머의 두 서버에 TCP로 연결한다(응답은 20 ms 더 늦다).
 
 - **MQTT 브로커** `broker.stm-lab.test`(203.0.113.10:1883, MQTT 3.1.1): CONNECT·PUBLISH(QoS 0·1)·SUBSCRIBE(`+`·`#`)·UNSUBSCRIBE·PINGREQ·DISCONNECT. 직렬 모니터 대상 **인터넷 MQTT 브로커**에서 `토픽 메시지`(예: `stm/led 1`)를 보내 발행하고, 오가는 메시지를 본다.
 - **웹 서버** `api.stm-lab.test`(203.0.113.20:80, HTTP/1.1, 응답 뒤 연결을 닫음): `GET /`, `GET /time`(실행 시작 후 초), `GET /led?state=on|off`, `POST /data`(본문 저장). 요청은 직렬 모니터 대상 **인터넷 웹 서버 기록**에 남는다.
-- ESP-01은 `AT+CIPDOMAIN="api.stm-lab.test"`로 주소를 찾고 `AT+CIPSTART="TCP","api.stm-lab.test",80`처럼 이름으로 연결한다. ESP32 스케치는 `HTTPClient`(`begin("http://…")`·`GET`·`POST`·`getString`·`end`)와 `PubSubClient`(`setServer`·`setCallback`·`connect`·`connected`·`subscribe`·`publish`·`loop`)를 쓴다. 예제 `ESP32 인터넷 MQTT·웹 통신`. https·TLS와 그 밖의 라이브러리는 지원하지 않는다.
+- ESP-01은 `AT+CIPDOMAIN="api.stm-lab.test"`로 주소를 찾고 `AT+CIPSTART="TCP","api.stm-lab.test",80`처럼 이름으로 연결한다. https·TLS는 지원하지 않는다.
 
 **ESP-01 패스스루.** `AT+CIPMUX=0`에서 `AT+CIPMODE=1` 다음 인수 없는 `AT+CIPSEND`로 들어간다. 그 뒤로 보내는 내용은 20 ms 동안 조용해지면 나가고, 받는 내용에는 `+IPD`가 붙지 않는다. `+++`만 보내면 끝나고 AT 명령으로 돌아온다.
 
-**ESP32 자체 무선.** 스케치에서 `BluetoothSerial`(`begin`·`available`·`read`·`print`·`println`·`write`·`connected`)과 `WiFi`(`mode`·`softAP`·`begin`·`status`·`disconnect`·`localIP`·`softAPIP`), `WiFiServer`(`begin`·`available`), `WiFiClient`(`connect`·`connected`·`available`·`read`·`print`·`println`·`write`·`stop`)를 쓸 수 있다. 예제 `ESP32·ESP32 Wi-Fi 통신`, `ESP32 스마트폰 블루투스 통신`. 코드는 실물 Arduino 코어로도 빌드되는 형태다.
 
-**한계.** 메시지 단위 모델이라 거리·전파 세기·잡음은 계산하지 않고, 지연은 고정값에 재전송 시간을 더한 값이다(블루투스 20 ms, Wi-Fi 5 ms). 인터넷 쪽에는 아래 두 서버만 있고, 그 밖의 도메인은 찾지 못한다. 마스터 HC-05는 스마트폰에 연결하지 않는다. ESP-01의 SSL과 그 밖의 AT 명령은 `ERROR`로 답하고 통신 로그에 이유를 남긴다. AT로 바꾼 설정은 그 실행 동안만 유지되고 다음 실행에는 속성 패널 값으로 시작한다. 라즈베리파이 코드에서의 모듈 사용은 지원하지 않는다.
+**한계.** 메시지 단위 모델이라 거리·전파 세기·잡음은 계산하지 않고, 지연은 고정값에 재전송 시간을 더한 값이다(블루투스 20 ms, Wi-Fi 5 ms). 인터넷 쪽에는 아래 두 서버만 있고, 그 밖의 도메인은 찾지 못한다. 마스터 HC-05는 스마트폰에 연결하지 않는다. ESP-01의 SSL과 그 밖의 AT 명령은 `ERROR`로 답하고 통신 로그에 이유를 남긴다. AT로 바꾼 설정은 그 실행 동안만 유지되고 다음 실행에는 속성 패널 값으로 시작한다.
 
 ## 패널 크기와 위치
 
@@ -470,7 +408,7 @@ Ctrl+F는 현재 파일 찾기, Ctrl+R은 바꾸기, Ctrl+Z/Y는 프로젝트 �
 
 ## 실제 GCC 빌드와 개발 도구 설치
 
-**실행 대상 고르기**(1.12.3): 제목 표시줄의 실행 버튼 옆 ▾에서도 실행 대상(시뮬레이터, 펌웨어 에뮬레이터, 연결된 실물 보드, ESP32, Windows)을 고를 수 있다. NUCLEO가 새로 연결되면(앱 시작 때 연결돼 있던 보드 포함) 실행 대상이 그 실물 보드로 바뀌고 실행 로그에 알린다. 여러 개면 프로젝트 보드와 같은 종류를 먼저 고르고, 종류가 다르면(1.13.0) 그래도 실행 대상을 바꾼 뒤 보드/핀 설정에서 프로젝트 보드를 바꾸라고 안내한다(기록은 같은 종류의 보드에만 된다). 실행 중에는 바꾸지 않고, 다른 대상을 고르면 보드를 다시 꽂을 때까지 그대로 둔다. ▾ 메뉴는 ▾를 다시 누르거나 메뉴 밖을 누르거나 Esc를 누르거나 다른 창으로 옮기면 닫힌다.
+**실행 대상 고르기**(1.12.3): 제목 표시줄의 실행 버튼 옆 ▾에서도 실행 대상(시뮬레이터, 펌웨어 에뮬레이터, 연결된 실물 보드, Windows)을 고를 수 있다. NUCLEO가 새로 연결되면(앱 시작 때 연결돼 있던 보드 포함) 실행 대상이 그 실물 보드로 바뀌고 실행 로그에 알린다. 여러 개면 프로젝트 보드와 같은 종류를 먼저 고르고, 종류가 다르면(1.13.0) 그래도 실행 대상을 바꾼 뒤 보드/핀 설정에서 프로젝트 보드를 바꾸라고 안내한다(기록은 같은 종류의 보드에만 된다). 실행 중에는 바꾸지 않고, 다른 대상을 고르면 보드를 다시 꽂을 때까지 그대로 둔다. ▾ 메뉴는 ▾를 다시 누르거나 메뉴 밖을 누르거나 Esc를 누르거나 다른 창으로 옮기면 닫힌다.
 
 상단 **실행 대상**에서 `STM32 · ARM GCC` 또는 `Windows · C/C++`를 선택한다. 같은 프로젝트에 저장된 대상·Debug/Release 설정을 다음 실행에서도 복원한다. `.cpp`, `.cc`, `.hpp` 파일을 추가할 수 있으며 C는 C11, C++는 C++17로 각각 컴파일하고 함께 링크한다. `main.c` 이름은 유지한다. C와 C++ 사이에서 함수를 호출할 때 헤더에 `extern "C"`를 적절히 사용한다.
 
@@ -494,7 +432,6 @@ Ctrl+F는 현재 파일 찾기, Ctrl+R은 바꾸기, Ctrl+Z/Y는 프로젝트 �
 | STM32F446RE 펌웨어 빌드 | `arm-none-eabi-gcc.exe`와 같은 배포판의 g++, objcopy, size; STM32CubeF4의 HAL/CMSIS |
 | STM32F103RB 펌웨어 빌드 | 같은 ARM GCC; STM32CubeF1의 HAL/CMSIS (`-mcpu=cortex-m3`, `STM32F103xB`) |
 | 실물 보드 실행·디버그 | `arm-none-eabi-gdb.exe`; OpenOCD + ST-LINK 또는 이미 실행 중인 GDB 서버 |
-| ESP32 빌드·업로드 | `arduino-cli.exe`(Arduino IDE 2에 포함) + 보드 매니저의 esp32 패키지, 스케치가 쓰는 라이브러리 |
 | Windows C/C++ 빌드·실행·디버그 | MinGW-w64 GCC/g++/GDB (MSYS2 UCRT64 권장) |
 | C/C++ 의미 분석 | `clangd.exe`와 해당 대상의 컴파일러·SDK |
 
@@ -550,7 +487,6 @@ ARM 또는 Windows 대상을 선택하고 편집기 아래 **clangd 꺼짐**을 
 | 회로 시뮬레이터 | 컴파일하지 않고 HAL C 소스를 해석해 회로와 함께 실행합니다. NVIC 우선순위 선점, HAL DMA, USART 동기 모드, 카메라·SD 카드 모델을 지원합니다 |
 | 펌웨어 에뮬레이터 · ARM ELF | ARM GCC로 실제 ST HAL·CMSIS를 빌드한 ELF를 Cortex-M 명령어 단위로 실행하고, 프로젝트 보드의 주변장치 레지스터 모델(STM32F446 또는 STM32F103: RCC·GPIO CRL/CRH·AFIO 리맵·DMA1 채널·F1 ADC)을 빵판 회로에 연결합니다. F103RB 모델은 F446과 같은 메모리 버스를 쓰므로 128 KB/20 KB를 넘는 주소 접근을 오류로 막지 않습니다. 소스 줄 중단점, 단계 실행, 레지스터·메모리 조회를 지원합니다. CubeIDE 등에서 만든 ELF는 **파일 → 펌웨어 ELF 열기**로 바로 실행합니다 |
 | STM32 · ARM GCC | 실물 NUCLEO-F446RE/NUCLEO-F103RB에 기록하고 GDB·OpenOCD로 디버그합니다 |
-| ESP32 (COMn) | 회로의 ESP32 보드 `sketch.ino`를 Arduino CLI로 빌드해 실물 ESP32에 업로드하고 직렬 출력을 보여 줍니다(디버그 없음) |
 | Windows · C/C++ | PC용 C/C++ 프로그램을 빌드·실행·디버그합니다 |
 
 - 앱 EXE 자체, 회로 시뮬레이터, 이미 만든 ELF의 에뮬레이터 실행에는 개발 도구가 필요 없습니다. 에뮬레이터용 빌드와 실물 보드·Windows 대상은 ARM GCC, STM32CubeF4/STM32CubeF1 등 해당 도구가 필요합니다.

@@ -10,7 +10,7 @@ Electron 기반 Windows 데스크톱 앱입니다. 네트워크 없이 로컬에
 
 ## Product Purpose
 
-STM32 학습 프로젝트를 생성하고 C/H C/C++ 코드를 작성·컴파일·디버그·실행하면서 NUCLEO-F446RE·NUCLEO-F103RB와 ESP32·라즈베리파이 보드, 빵판 회로의 동작을 함께 확인합니다. VS Code형 IDE를 기본 작업 화면으로 두고 회로 시뮬레이터와 펌웨어 에뮬레이터를 통합합니다.
+STM32 학습 프로젝트를 생성하고 C/H C/C++ 코드를 작성·컴파일·디버그·실행하면서 NUCLEO-F446RE·NUCLEO-F103RB·FPB-RA6E1 보드와 빵판 회로의 동작을 함께 확인합니다. VS Code형 IDE를 기본 작업 화면으로 두고 회로 시뮬레이터와 펌웨어 에뮬레이터를 통합합니다.
 
 ## Operating Context
 

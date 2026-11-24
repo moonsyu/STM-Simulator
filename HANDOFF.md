@@ -1,6 +1,13 @@
 # STM Simulator — 개발 인계
 
-현재 버전: **1.58.0**. 정리일: **2026-11-10**. NUCLEO-F446RE·NUCLEO-F103RB 또는 Renesas FPB-RA6E1(1.20.0, FSP·에뮬레이터 전용)과 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+현재 버전: **1.59.0**. 정리일: **2026-11-10**. NUCLEO-F446RE·NUCLEO-F103RB 또는 Renesas FPB-RA6E1(1.20.0, FSP·에뮬레이터 전용)과 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+
+## 1.59.0 기능 목록 49번: ESP32·라즈베리파이 지원 삭제(STM32와 FPB-RA6E1만)
+
+- **지운 것**: 보드 모델 `esp32-nodemcu-32s`·`esp32-devkit-wroom32`·`rpi5`와 그림(`devboards.js`), 실행기 `src/esp32-sketch.js`·`src/rpi-python.js`·`src/fixed-run.js`, ESP32 실물 빌드·업로드(`desktop/esp32-build.cjs`, IPC `esp32-ports`·`esp32-build`·`esp32-run`, 실행 대상 `ESP32 (COMn)`, 개발 도구의 arduino-cli), CI의 `esp32` 작업(행렬 3개 → CI 작업 18개), 강의 실습·과제 예제 18개 전부, 무선 예제 BT-02·WF-02·BT-03·WF-03, RA 예제 `ra_iic_slave`와 픽스처, 예제 패널의 보드 종류 필터 단추(사용자 승인). ESP32 전용이던 코드도 호출처가 없어져 지웠다: `parser.js`의 ESP32 include·클래스, `runtime.js`의 `libraryInvoke`·`constructs`, `wireless.js`의 `Esp32Bluetooth`·`Esp32Wifi`·`WebServer.request`·Broker `attached`·`radios`, `Stm32Driver.i2cSlave*`·`attachHost`, STM32 I2C 에뮬레이터의 `slaveInfo`.
+- **남긴 것**: ESP-01(`esp01-wifi-8`)·HC-05/06 부품과 예제 BT-01·WF-01·WIRE-01·WIRE-02, 스마트폰·공유기·MQTT·웹 서버 경로, 두 번째 STM32 보드(`type:'devboard'`, kind `stm32`, `stm32-boards.js` — `DEVBOARD_MODELS`에는 이제 STM32 모델만), STM32 GPIO 스케치 모드, RA I2C 슬레이브 기능(r_iic_slave; `ra6e1/iic.js`의 `slaveInfo`와 `fsp-interp`의 `i2cSlave*`는 테스트용 마스터 시험이 써서 유지). 앱 안에는 RA 슬레이브를 부를 마스터가 없다(RA 프로젝트에 STM32 보드를 둘 수 없음).
+- **예전 프로젝트 열기** `src/project.js` `stripUnsupportedBoards(data)` → `{data, removed}`: 남은 모델에 없는 devboard, 그 보드 핀이 끝점인 배선, 그 보드 핀에 꽂힌 부품의 부착을 빼고 실행 대상 `esp32`는 `simulator`로. `validateProject`가 첫 단계에서 거친다(형식 버전 그대로). 여는 경로(`app-files.js` `openProjectData`: 파일·끌어 놓기·폴더, localStorage 복원은 `state.restoreRemoved`)가 `noticeRemovedBoards`로 출력 로그(warning)와 `#removed-boards-dialog`를 띄운다(문구 `removedBoardsMessage`; 뺀 보드가 없으면 띄우지 않음). 폴더 프로젝트의 `board-<id>-sketch.ino`·`main.py`는 디스크에 그대로 둔다.
+- 1.55.0 이전 항목들의 ESP32·라즈베리파이 설명은 그때의 기록이다.
 
 ## 1.58.0 기능 목록 36번: RA ELC·DTC·DMAC(r_elc, r_dtc, r_dmac)
 
