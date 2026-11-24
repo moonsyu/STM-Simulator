@@ -36,9 +36,6 @@ const PLAN={
  // Deep Software Standby after 1 s; S1 at 1500 ms cancels it (IRQ1-DS): one reset on both engines, LED2 from then on, and
  // the second Deep Software Standby at about 2.5 s with LED2 kept on by IOKEEP.
  ra_lpm_deep:{ms:3000,buttons:false,at:{1500:s=>s.setPressed({SW1:true}),1600:s=>s.setPressed({})},vars:{from_deep_standby:0},resets:1},
- // The ESP32 sketch (I2C master) runs on both: it writes the LED byte and reads two bytes every 500 ms. On the emulator
- // a read waits for the slave's interrupts (clock stretching, a few ms), so LED2's edges may come that much later.
- ra_iic_slave:{buttons:false,window:12,board:/RA /,vars:{writes_seen:0,reads_answered:0,aborted:0,command:0}},
  // The boot counter in the data flash: S1 pressed 300-400 ms and 1300-1400 ms resets the MCU twice (NVIC_SystemReset on
  // release), so SCI9 prints the counts 1, 2 and 3 and the data flash ends with 3 on both engines.
  ra_flash_counter:{window:3,vars:{boot_count:0,flash_error:0},resets:2,warn:/^\[NVIC\] /,flash:[{at:0,hex:'03000000'}]},
@@ -103,6 +100,5 @@ test('parity: ra_spi_memory (r_spi SPI1 with SSL0, the SPI memory, SCI9 output)'
 test('parity: ra_wdt_reset (WDT reset and RSTSR1.WDTRF)',{skip,timeout:900000},()=>compare(['ra_wdt_reset']));
 test('parity: ra_rtc_clock (RTC calendar, 1 s periodic interrupt, alarm)',{skip,timeout:900000},()=>compare(['ra_rtc_clock']));
 test('parity: ra_lpm_deep (Deep Software Standby, S1 on IRQ1-DS, RSTSR0.DPSRSTF, IOKEEP)',{skip,timeout:900000},()=>compare(['ra_lpm_deep']));
-test('parity: ra_iic_slave (r_iic_slave with the ESP32 sketch as the I2C master)',{skip,timeout:900000},()=>compare(['ra_iic_slave']));
 test('parity: ra_elc_adc_dtc (GPT1 → ELC → ADC0, DTC into an array, SCI9 by DTC)',{skip,timeout:900000},()=>compare(['ra_elc_adc_dtc']));
 test('parity: ra_flash_counter (r_flash_hp boot counter in the data flash across two resets)',{skip,timeout:900000},()=>compare(['ra_flash_counter']));

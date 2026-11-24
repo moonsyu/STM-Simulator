@@ -1,10 +1,6 @@
-// What goes beyond two modules in the circuit: loss on the air, ESP-01 transparent mode, the phone and the router's PC, an ESP32's own radio.
+// What goes beyond two modules in the circuit: loss on the air, ESP-01 transparent mode, the phone and the router's PC.
 import {test,describe} from 'node:test';
 import assert from 'node:assert/strict';
-import {applyLectureExample} from '../../src/lecture-examples.js';
-import {SimulationSession} from '../../src/session.js';
-import {createBoardDrivers} from '../../src/fixed-run.js';
-import {connectStm32Drivers} from '../../src/stm32-boards.js';
 import {WirelessHub,ROUTER,PC} from '../../src/wireless.js';
 
 function bench(modules){
@@ -69,32 +65,5 @@ describe('loss on the air',()=>{
  test('UDP is not retried: a lossy link drops datagrams and the same run repeats',()=>{
   const run=()=>{const b=joined();b.hub.modules.get('w').part.airLoss=50;b.send('w','AT+CIPSTART="UDP","'+PC.ip+'",'+PC.port+'\r\n');b.advance(3000);for(let i=0;i<40;i++){b.send('w','AT+CIPSEND=1\r\n');b.advance(1000);b.send('w','u');b.advance(2000);}return b.hub.outsideOutput('pc').length;};
   const got=run();assert.ok(got>5&&got<35,String(got));assert.equal(run(),got);
- });
-});
-describe('an ESP32\'s own radio',()=>{
- function runEsp(project,ms,during){
-  const out=[],session=new SimulationSession({...project,code:'void setup(){}\nvoid loop(){delay(10);}',firmware:{mode:'sketch',files:[]}},{print:()=>{}});
-  session.circuit.drivers=createBoardDrivers(project,{log:t=>out.push(t)});connectStm32Drivers(session);session.tick(0);
-  for(let t=20;t<=ms;t+=20){session.tick(t);during?.(t,session);}
-  return {out,session};
- }
- test('WF-02: one ESP32 opens an AP and a server, the other joins, connects and drives its LED',()=>{
-  const {out,session}=runEsp(applyLectureExample('wireless-wifi-esp32').project,5000),text=out.join('\n');
-  assert.match(text,/AP ready/);assert.match(text,/connected/);assert.match(text,/got 1/);assert.match(text,/got 0/);assert.match(text,/ack/);
-  assert.ok(session.circuit.drivers[0].runtime.gpio.GPIO2,'the LED pin was driven');
- });
- test('a wrong password never joins',()=>{
-  const {project}=applyLectureExample('wireless-wifi-esp32');project.components.find(p=>p.id==='esp2').code=project.components.find(p=>p.id==='esp2').code.replace('"esp32-lab"','"wrong-pass"');
-  assert.doesNotMatch(runEsp(project,3000).out.join('\n'),/connected/);
- });
- test('BT-03: the phone turns the LED on and gets the answer',()=>{
-  let sent=false;const {session}=runEsp(applyLectureExample('wireless-bt-phone').project,3000,(t,s)=>{if(t===200&&!sent){sent=true;assert.equal(s.wireless.outsideInput('phone:esp32bt:esp1','1',t*1000),1);}});
-  assert.match(session.wireless.outsideOutput('phone:esp32bt:esp1'),/LED ON/);
-  const gpio=session.circuit.drivers[0].runtime.gpio.GPIO2;assert.ok(gpio?.value>0||gpio===1,JSON.stringify(gpio));
- });
- test('an HC-05 master pairs with an ESP32 running BluetoothSerial',()=>{
-  const {project}=applyLectureExample('wireless-bt-phone');
-  project.components.push({id:'m',type:'wireless',catalogVariant:'hc05-bluetooth-6',name:'HC-05',x:800,y:300,rotation:0,baud:9600,role:'master',btPin:'1234'});
-  const {session}=runEsp(project,300),radio=session.wireless.bluetooth().find(m=>m.virtual);assert.ok(radio,'the sketch started its radio');assert.equal(radio.discoverable,true);
  });
 });

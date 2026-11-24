@@ -99,11 +99,7 @@ export const inspector=setupInspector({
  running,log,autosave,checkpoint,changed,syncEditor,tab,updateReadouts,copyCircuit,removeSelected,rotateSelected,recompute,setWireColor,editBoard,svg
 });
 $('part-search').addEventListener('input',filterParts);filterParts();
-// Lecture circuits (ESP32 / Raspberry Pi) come first in the example list: value `lecture:<id>`, tag 강의 실습.
-// Examples are grouped by board (Raspberry Pi, STM32, ESP32); one that uses several kinds of board is listed in each
-// of their groups. The board filter above the list keeps one group (or all of them).
-state.exampleBoard='all';try{state.exampleBoard=localStorage.getItem('stm-simulator.example-board')||'all';}catch{}
-document.querySelectorAll('[data-example-board]').forEach(button=>button.addEventListener('click',()=>{state.exampleBoard=button.dataset.exampleBoard;try{localStorage.setItem('stm-simulator.example-board',state.exampleBoard);}catch{}filterExamples();}));
+// Board-to-board examples come first in the STM32 group of the example list: value `lecture:<id>`, tag 보드 간 통신.
 $('hal-example-search').oninput=filterExamples;filterExamples();
 export const uartLines=new Map();
 // The data flash a run (still going, or stopped on an error) left goes into the project before it is saved.

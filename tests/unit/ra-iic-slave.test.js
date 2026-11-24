@@ -1,11 +1,10 @@
 // Feature 33: the RA6E1 I2C slave (r_iic_slave g_i2c_slaveN on IIC0 / IIC1) — settings, the generated FSP files, the
 // built-in interpreter (R_IIC_SLAVE_* and the callback's events as r_iic_slave.c orders them), the emulator's slave
-// model at its registers, and the example with an ESP32 sketch as the master.
+// model at its registers.
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {SimulationSession} from '../../src/session.js';
 import {projectForBoard,validateProject} from '../../src/project.js';
-import {raExample} from '../../src/ra-examples.js';
 import {generateRaFiles,raVectors,raInstances} from '../../src/ra-generator.js';
 import {raDefaultMcu,validateRaMcu,raNameProblem,raIicSlaveClock,RA_IIC_SLAVE_ADDRESS} from '../../src/ra-config.js';
 import {fspPrelude} from '../../src/fsp-interp.js';
@@ -13,7 +12,7 @@ import {raAssistance} from '../../src/ra-assistance.js';
 import {createBoardDrivers} from '../../src/fixed-run.js';
 import {connectStm32Drivers} from '../../src/stm32-boards.js';
 import {Iic,IIC_EVENT_BASE} from '../../src/emu/ra6e1/iic.js';
-import {SLAVE_PROBE,SLAVE_SEQUENCES,slaveProbeMcu,SLAVE_SKETCH_LINES,SLAVE_SKETCH_EVENTS,slaveSketchProject} from './helpers/ra-iic-slave.js';
+import {SLAVE_PROBE,SLAVE_SEQUENCES,slaveProbeMcu} from './helpers/ra-iic-slave.js';
 
 const slave=(extra={})=>{const m=slaveProbeMcu();Object.assign(m.peripherals.IIC0,extra);return m;};
 const base=()=>projectForBoard('fpb-ra6e1');
@@ -158,12 +157,6 @@ void hal_entry(void)
  assert.equal(s.hal.i2cSlaveInfo(),null);assert.deepEqual(s.hal.i2cSlaveRequest(2,s.runtime),[0xff,0xff]);
 });
 
-test('interpreter: the ESP32 sketch as the master of the probe program — NACK ends a write, an unserved transfer is aborted, Wire.begin(sda, scl), a write of no bytes',()=>{
- const {session:s,log}=open(slaveSketchProject(base(),raExample('ra_iic_slave').circuit()));run(s,600);
- assert.deepEqual(log.board.filter(l=>/ S\d /.test(l)).map(l=>l.replace('[ESP32-1] ','')),[...SLAVE_SKETCH_LINES]);
- assert.deepEqual(Array.from({length:s.readVariable('n')},(_,i)=>[s.readVariable(`ev[${i}]`),s.readVariable(`nb[${i}]`)]),SLAVE_SKETCH_EVENTS());
- assert.deepEqual(log.warn,[]);
-});
 
 // The registers as r_iic_slave.c writes them at Open, then the bus events another board's master stands for.
 test('RA6E1 RIIC slave model: address match, RDRF per byte with ACKBT as the ACK, TDRE one byte ahead, TEND, NACKF, STOP, IICRST',()=>{
@@ -202,14 +195,3 @@ test('RA6E1 RIIC slave model: address match, RDRF per byte with ACKBT as the ACK
  t.write(0x00,0x40,1);assert.equal(t.read(0x0a,1),0);assert.equal(t.slaveListens(0x42),false);
 });
 
-test('ra_iic_slave on the interpreter: the ESP32 sketch (Wire master) writes the LED byte and reads the counter back',()=>{
- const e=raExample('ra_iic_slave'),p={...base(),mcu:e.mcu(),code:e.code},c=e.circuit();p.components=c.components;p.wires=c.wires;delete p.surfaces;
- const {session:s,log}=open(p);run(s,1800);
- assert.deepEqual(log.board.filter(l=>/RA /.test(l)).slice(0,3),['[ESP32-1] RA count=0 led=1 error=0','[ESP32-1] RA count=1 led=0 error=0','[ESP32-1] RA count=2 led=1 error=0']);
- assert.ok(s.readVariable('writes_seen')>=3&&s.readVariable('reads_answered')>=3);assert.equal(s.readVariable('aborted'),0);assert.deepEqual(log.warn,[]);
- assert.equal(s.runtime.gpio.P407.value>1.65?1:0,s.readVariable('command')&1,'LED2 follows the byte the master wrote');
- assert.ok(log.trace.some(x=>/ESP32-1 · 0x42 WRITE 1 B · ACK/.test(x.message))&&log.trace.some(x=>/ESP32-1 · 0x42 READ 2 B · ACK/.test(x.message)));
- // Without the SDA wire nothing answers: the sketch reports the NACK and the slave sees no transfer.
- const q={...p,wires:p.wires.filter(w=>w.id!=='w_sda')},{session:s2,log:log2}=open(q);run(s2,700);
- assert.ok(log2.board.some(l=>/RA no answer error=2/.test(l)),JSON.stringify(log2.board));assert.equal(s2.readVariable('writes_seen'),0);
-});

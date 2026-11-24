@@ -197,49 +197,6 @@ export function bluetoothStm32(){
  module(p,'hc06','hc06-bluetooth-4','HC-06',MODULE_X+SECOND_DX,MODULE_Y);hookBluetooth(p,'hc06',HC06,stm32Pin('stm2'),SECOND_DX);
  return p;
 }
-const ESP32_MODEL='esp32-nodemcu-32s';
-const ESP32_SKETCH=`// HC-06 (슬레이브)을 Serial2(GPIO16 RX, GPIO17 TX)에 연결합니다. 받은 명령으로 2번 핀(파란 LED)을 켜고 끕니다.
-char line[32];
-int length = 0;
-
-void setup() {
-  pinMode(2, OUTPUT);
-  Serial2.begin(9600, SERIAL_8N1, 16, 17);
-  Serial.printf("HC-06 waiting\\n");
-}
-
-void loop() {
-  while (Serial2.available() > 0) {
-    int c = Serial2.read();
-    if (c == '\\n') {
-      line[length] = 0;
-      length = 0;
-      Serial.printf("got: %s\\n", line);
-      if (strcmp(line, "LED ON") == 0) {
-        digitalWrite(2, HIGH);
-        Serial2.print("ACK ON\\r\\n");
-      } else if (strcmp(line, "LED OFF") == 0) {
-        digitalWrite(2, LOW);
-        Serial2.print("ACK OFF\\r\\n");
-      }
-    } else if (c != '\\r' && length < 31) {
-      line[length] = c;
-      length = length + 1;
-    }
-  }
-  delay(1);
-}
-`;
-export function bluetoothEsp32(){
- const p=circuit('STM32·ESP32 블루투스 통신');setMain(p,BT_MASTER());masterModule(p);
- const X=950,Y=275;p.components.push({id:'esp32',type:'devboard',model:ESP32_MODEL,name:'ESP32-1',x:X,y:Y,rotation:0,code:ESP32_SKETCH});
- module(p,'hc06','hc06-bluetooth-4','HC-06',X+190,Y-15);
- const pin=key=>'devboard:esp32:'+key,end=n=>`part:hc06:p${n}`,a=at(p,pin('L19')),b=at(p,end(HC06.VCC));
- // 5 V is on the board's left row: around the top of the board to the first lane.
- wire(p,pin('L19'),end(HC06.VCC),COLORS.power,[{x:a.x-16,y:a.y},{x:a.x-16,y:Y-170},{x:b.x-16,y:Y-170},{x:b.x-16,y:b.y}]);
- lane(p,pin('R7'),end(HC06.GND),COLORS.ground,X+80);lane(p,pin('R12'),end(HC06.TXD),COLORS.rx,X+95);lane(p,pin('R11'),end(HC06.RXD),COLORS.tx,X+110);
- return p;
-}
 const NET='\\"STM-LAB\\",\\"stm32-lab\\"';
 // ESP-01 as an access point with a TCP server on port 333; each command switches LD2 and gets an answer on its link.
 const WIFI_SERVER=()=>halProgram({baud:115200,pins:{PA5:pinConfig('GPIO_Output')},helpers:AT+WIFI_SEND,globals:'char line[96];',
@@ -330,114 +287,9 @@ export function spiStm32(){
  overBoard(p,'PA5',COLORS.control,0);overBoard(p,'PA6',COLORS.rx,1);overBoard(p,'PA7',COLORS.tx,2);sharedGround(p,3);
  return p;
 }
-// ---------------------------------------------------------------- an ESP32's own radio
-function esp32Circuit(name){const p=circuit(name);p.surfaces={board:{hidden:true},breadboard:{hidden:true}};return p;}
-const WIFI_AP_SKETCH=`// ESP32 자체 Wi-Fi: AP와 TCP 서버(포트 80)를 열고, 받은 명령으로 2번 핀(파란 LED)을 켜고 끕니다.
-#include <WiFi.h>
-WiFiServer server(80);
-WiFiClient client;
-
-void setup() {
-  pinMode(2, OUTPUT);
-  Serial.begin(115200);
-  WiFi.softAP("ESP32-LAB", "esp32-lab");
-  server.begin();
-  Serial.printf("AP ready\\n");
-}
-
-void loop() {
-  if (!client.connected()) {
-    WiFiClient next = server.available();
-    if (next) client = next;
-  }
-  while (client.available() > 0) {
-    int c = client.read();
-    if (c == '1') digitalWrite(2, HIGH);
-    if (c == '0') digitalWrite(2, LOW);
-    Serial.printf("got %c\\n", c);
-    client.print("ACK\\n");
-  }
-  delay(1);
-}
-`;
-const WIFI_STA_SKETCH=`// ESP32 자체 Wi-Fi: 다른 ESP32의 AP에 접속해 1초마다 LED 명령을 보냅니다.
-#include <WiFi.h>
-WiFiClient client;
-int led = 0;
-
-void setup() {
-  Serial.begin(115200);
-  WiFi.begin("ESP32-LAB", "esp32-lab");
-}
-
-void loop() {
-  if (WiFi.status() != WL_CONNECTED) {
-    delay(100);
-    return;
-  }
-  if (!client.connected()) {
-    if (!client.connect("192.168.4.1", 80)) {
-      delay(500);
-      return;
-    }
-    Serial.printf("connected\\n");
-  }
-  led = !led;
-  client.print(led ? "1" : "0");
-  delay(1000);
-  while (client.available() > 0) {
-    int c = client.read();
-    if (c == 'A') Serial.printf("ack\\n");
-  }
-}
-`;
-const BT_SKETCH=`// ESP32 자체 Bluetooth: 스마트폰이 보낸 1/0으로 2번 핀(파란 LED)을 켜고 끄고 답합니다.
-#include <BluetoothSerial.h>
-BluetoothSerial SerialBT;
-
-void setup() {
-  pinMode(2, OUTPUT);
-  Serial.begin(115200);
-  SerialBT.begin("ESP32-LAB");
-}
-
-void loop() {
-  while (SerialBT.available() > 0) {
-    int c = SerialBT.read();
-    if (c == '1') {
-      digitalWrite(2, HIGH);
-      SerialBT.print("LED ON\\r\\n");
-    } else if (c == '0') {
-      digitalWrite(2, LOW);
-      SerialBT.print("LED OFF\\r\\n");
-    }
-  }
-  delay(1);
-}
-`;
-export function wifiEsp32(){
- const p=esp32Circuit('ESP32·ESP32 Wi-Fi 통신');
- p.components.push({id:'esp1',type:'devboard',model:ESP32_MODEL,name:'ESP32-1',x:300,y:275,rotation:0,code:WIFI_AP_SKETCH},{id:'esp2',type:'devboard',model:ESP32_MODEL,name:'ESP32-2',x:700,y:275,rotation:0,code:WIFI_STA_SKETCH});
- return p;
-}
-export function bluetoothPhone(){
- const p=esp32Circuit('ESP32 스마트폰 블루투스 통신');
- p.components.push({id:'esp1',type:'devboard',model:ESP32_MODEL,name:'ESP32-1',x:300,y:275,rotation:0,code:BT_SKETCH});
- return p;
-}
-const INTERNET_SKETCH="// ESP32 자체 Wi-Fi로 공유기(STM-Router)에 접속해 인터넷의 웹 서버에서 시간을 읽고,\n// MQTT 브로커의 stm/led 토픽으로 받은 1/0에 따라 2번 핀(파란 LED)을 켜고 끕니다. 2초마다 stm/status로 상태를 보냅니다.\n// 직렬 모니터에서 \"인터넷 MQTT 브로커\"를 고르고 \"stm/led 1\"을 보내 보세요.\n#include <WiFi.h>\n#include <HTTPClient.h>\n#include <PubSubClient.h>\n\nWiFiClient net;\nPubSubClient mqtt(net);\nunsigned long last = 0;\n\nvoid received(char *topic, byte *payload, unsigned int length) {\n  if (length > 0 && payload[0] == '1') digitalWrite(2, HIGH);\n  if (length > 0 && payload[0] == '0') digitalWrite(2, LOW);\n  Serial.printf(\"%s: %c\\n\", topic, payload[0]);\n}\n\nvoid setup() {\n  pinMode(2, OUTPUT);\n  Serial.begin(115200);\n  WiFi.begin(\"STM-Router\", \"stm32-router\");\n  while (WiFi.status() != WL_CONNECTED) delay(100);\n  Serial.println(WiFi.localIP());\n  HTTPClient http;\n  http.begin(\"http://api.stm-lab.test/time\");\n  int code = http.GET();\n  Serial.printf(\"HTTP %d\\n\", code);\n  Serial.println(http.getString());\n  http.end();\n  mqtt.setServer(\"broker.stm-lab.test\", 1883);\n  mqtt.setCallback(received);\n}\n\nvoid loop() {\n  if (!mqtt.connected()) {\n    if (mqtt.connect(\"esp32-lab\")) {\n      mqtt.subscribe(\"stm/led\");\n      Serial.printf(\"MQTT connected\\n\");\n    } else {\n      delay(500);\n      return;\n    }\n  }\n  mqtt.loop();\n  if (millis() - last > 2000) {\n    last = millis();\n    mqtt.publish(\"stm/status\", digitalRead(2) ? \"LED ON\" : \"LED OFF\");\n  }\n  delay(10);\n}\n";
-export function internetEsp32(){
- const p=esp32Circuit('ESP32 인터넷 MQTT·웹 통신');
- p.components.push({id:'esp1',type:'devboard',model:ESP32_MODEL,name:'ESP32-1',x:300,y:275,rotation:0,code:INTERNET_SKETCH});
- return p;
-}
 export const WIRELESS_EXAMPLES=Object.freeze([
  {id:'wireless-bt-stm32',code:'BT-01',kind:'통신',boards:['stm32'],title:'STM32·STM32 블루투스 통신',ref:'HC-05 마스터 · HC-06 슬레이브',how:'STM32-1이 1초마다 보낸 LED 명령을 STM32-2가 받아 LD2를 켜고 끄고 답합니다. 실물은 HC-05를 AT+ROLE=1로 먼저 설정해야 합니다.',build:bluetoothStm32},
- {id:'wireless-bt-esp32',code:'BT-02',kind:'통신',boards:['stm32','esp32'],title:'STM32·ESP32 블루투스 통신',ref:'HC-05 마스터 · ESP32 Serial2 · HC-06 슬레이브',how:'STM32가 1초마다 보낸 LED 명령을 ESP32가 받아 파란 LED를 켜고 끄고 답합니다. 실물은 HC-05를 AT+ROLE=1로 먼저 설정해야 합니다.',build:bluetoothEsp32},
  {id:'wireless-wifi-stm32',code:'WF-01',kind:'통신',boards:['stm32'],title:'STM32·STM32 Wi-Fi 통신',ref:'ESP-01 AP · TCP 서버 · AT 명령',how:'STM32-2의 ESP-01이 AP와 TCP 서버를 열고, STM32-1의 ESP-01이 접속해 1초마다 LED 명령을 보냅니다.',build:wifiStm32},
  {id:'wired-i2c-stm32',code:'WIRE-01',kind:'통신',boards:['stm32'],title:'STM32·STM32 I²C 통신',ref:'I2C1 마스터 · 슬레이브 주소 0x20 · 4.7 kΩ 풀업',how:'STM32-1이 0.5초마다 보낸 명령으로 STM32-2가 LD2를 켜고 끄고 답합니다. 각 보드의 직렬 모니터에서 확인하세요.',build:i2cStm32},
- {id:'wired-spi-stm32',code:'WIRE-02',kind:'통신',boards:['stm32'],title:'STM32·STM32 SPI 통신',ref:'SPI1 마스터 · 슬레이브 · SCK·MISO·MOSI',how:'STM32-1이 0.2초마다 보낸 바이트를 STM32-2가 받아 다음 전송 때 돌려줍니다. 각 보드의 직렬 모니터에서 확인하세요.',build:spiStm32},
- {id:'wireless-wifi-esp32',code:'WF-02',kind:'통신',boards:['esp32'],title:'ESP32·ESP32 Wi-Fi 통신',ref:'WiFi.softAP · WiFiServer · WiFiClient',how:'ESP32-1이 AP와 서버를 열고, ESP32-2가 접속해 1초마다 LED 명령을 보냅니다. 배선이 필요 없습니다.',build:wifiEsp32},
- {id:'wireless-bt-phone',code:'BT-03',kind:'통신',boards:['esp32'],title:'ESP32 스마트폰 블루투스 통신',ref:'BluetoothSerial · 직렬 모니터의 스마트폰',how:'직렬 모니터 대상에서 스마트폰 → ESP32-1 Bluetooth를 고르고 1 또는 0을 보내면 파란 LED가 켜지고 꺼집니다.',build:bluetoothPhone},
- {id:'wireless-internet-esp32',code:'WF-03',kind:'통신',boards:['esp32'],title:'ESP32 인터넷 MQTT·웹 통신',ref:'HTTPClient · PubSubClient · 공유기 STM-Router',how:'ESP32가 공유기에 접속해 웹 서버의 시간을 읽고 MQTT 토픽 stm/led로 LED를 제어합니다. 직렬 모니터에서 인터넷 MQTT 브로커를 고르고 stm/led 1을 보내 보세요.',build:internetEsp32}
+ {id:'wired-spi-stm32',code:'WIRE-02',kind:'통신',boards:['stm32'],title:'STM32·STM32 SPI 통신',ref:'SPI1 마스터 · 슬레이브 · SCK·MISO·MOSI',how:'STM32-1이 0.2초마다 보낸 바이트를 STM32-2가 받아 다음 전송 때 돌려줍니다. 각 보드의 직렬 모니터에서 확인하세요.',build:spiStm32}
 ]);

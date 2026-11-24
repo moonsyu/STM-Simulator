@@ -8,11 +8,7 @@ import {attachments} from '../../src/components.js';
 import {copySelection,pasteSelection} from '../../src/circuit-edit.js';
 import {DEVBOARD_MODELS,devboardPins,devboardPinInfo,devboardNet,newDevboardFields,removeDevboard,boardFileKey,boardForFile,boardSourceFiles,devboardModel} from '../../src/devboards.js';
 import {defineScenario,createBoardDrivers,FixedRunDriver} from '../../src/fixed-run.js';
-import {LECTURE_EXAMPLES,EXAMPLE_BOARDS,applyLectureExample,searchLectureExamples} from '../../src/lecture-examples.js';
-import {wiringMetrics} from './helpers/wiring-metrics.js';
-import {SimulationSession} from '../../src/session.js';
 import {SketchDriver} from '../../src/esp32-sketch.js';
-import {consoleSink} from './helpers/console.js';
 
 const board=(model,extra={})=>({id:'b1',type:'devboard',model,name:'B1',x:400,y:300,rotation:0,code:'',...extra});
 const project=(...components)=>{const p=startProject();p.components.push(...components);return p;};
@@ -100,85 +96,8 @@ describe('fixed run',()=>{
   r=sim.solve(p,{},{},150);assert.ok(r.voltage('signal:b1.GPIO17')>3);r=sim.solve(p,{},{},260);assert.ok(Math.abs(r.voltage('signal:b1.GPIO18')-1.65)<.01);
   assert.deepEqual(logs,['[B1] 고정 실행 시작 · test-fixed','[B1] LED 1','[B1] LED 0']);
  });
- test('a Raspberry Pi without a scenario stays idle, an ESP32 runs its sketch; scope runs one board only',()=>{
-  const p=validateProject(project(board('rpi5'),{...board('rpi5'),id:'b3',name:'B3',scenario:'lecture-rpi-blink'},{...board('esp32-nodemcu-32s'),id:'b2',name:'B2',code:'void setup(){}\nvoid loop(){}'})),logs=[];
-  const all=createBoardDrivers(p,{log:s=>logs.push(s)});assert.equal(all.length,3);assert.match(logs[0],/실행하지 않습니다/);
-  assert.deepEqual(createBoardDrivers(p,{scope:'b2'}).map(d=>d.part.id),['b2']);assert.ok(all[1] instanceof FixedRunDriver);assert.ok(all[2] instanceof SketchDriver);
- });
 });
 
-describe('lecture examples',()=>{
- // Steps are times (ms) or [time, pressed buttons].
- const run=(id,steps)=>{const {project:p}=applyLectureExample(id),logs=[],sim=new CircuitSimulation();sim.drivers=createBoardDrivers(p,{log:s=>logs.push(s)});let r;for(const step of steps){const [t,pressed={}]=Array.isArray(step)?step:[step];r=sim.solve(p,{},pressed,t);}return {p,r,logs};};
- test('all circuits build, validate and use each pin or hole once',()=>{
-  assert.equal(LECTURE_EXAMPLES.length,26);assert.deepEqual(searchLectureExamples('IOT-01').map(e=>e.code),['IOT-01']);assert.equal(searchLectureExamples('라즈베리파이').length,15);
-  assert.equal(searchLectureExamples('과제').length,8);
-  for(const e of LECTURE_EXAMPLES){const {project:p,file}=applyLectureExample(e.id);assert.ok(p.components.some(c=>c.type==='devboard'),e.code);
-   const used=[...p.wires.flatMap(w=>[w.from,w.to]),...p.components.flatMap(c=>Object.values(attachments(c)))];assert.equal(new Set(used).size,used.length,e.code+': one endpoint per pin/hole');
-   assert.ok(file==='main.c'||boardForFile(p,file),e.code);
-   // Titles say what the example does: no lecture codes, board model numbers or pin lists.
-   assert.ok(!/[A-Z]{2,}-\d|라즈베리파이5|GPIO\d|—/.test(e.title+p.name),e.title);assert.equal(p.name,e.title);}
- });
- test('examples are listed under every kind of board they use',()=>{
-  assert.deepEqual(EXAMPLE_BOARDS.map(b=>b.id),['rpi','stm32','esp32']);
-  const under=id=>LECTURE_EXAMPLES.filter(e=>e.boards.includes(id)).map(e=>e.code);
-  assert.equal(under('rpi').length,15);assert.deepEqual(under('stm32'),['FW-09','BT-01','BT-02','WF-01','WIRE-01','WIRE-02']);assert.deepEqual(under('esp32'),['FW-09','FW-08','IOT-01','BT-02','WF-02','BT-03','WF-03']);
-  for(const e of LECTURE_EXAMPLES){const {project:p}=applyLectureExample(e.id),kinds=new Set(p.components.filter(c=>c.type==='devboard').map(c=>devboardModel(c).kind));if(!p.surfaces.board?.hidden)kinds.add('stm32');assert.deepEqual([...kinds].sort(),[...e.boards].sort(),e.code);}
- });
- test('wiring: Raspberry Pi wires run straight between the holes; ESP32 boards keep only unavoidable crossings',()=>{
-  for(const e of LECTURE_EXAMPLES){const m=wiringMetrics(applyLectureExample(e.id).project);
-   assert.deepEqual(m.overlaps,[],e.code);assert.ok(m.crossings.length<=(({'FW-09':1,'IOT-01':4,'BT-01':4,'BT-02':3,'WF-01':14,'WIRE-01':12,'WIRE-02':12})[e.code]??0),`${e.code}: ${JSON.stringify(m.crossings)}`);}
-  // The Raspberry Pi stands beside the breadboard (turned 90°): no wire is longer than the way across one half.
-  for(const e of LECTURE_EXAMPLES.filter(e=>e.boards.includes('rpi')))assert.ok(wiringMetrics(applyLectureExample(e.id).project).length<1400,e.code);
- });
- test('Raspberry Pi: GPIO17 blinks the LED once a second; a 3.3 V LED stays on',()=>{
-  const a=run('lecture-rpi-02',[0,500]),b=run('lecture-rpi-02',[0,1100]);assert.equal(a.r.parts.LED1.on,true);assert.equal(b.r.parts.LED1.on,false);assert.ok(b.logs.includes('[RPI-1] LED OFF'));
-  assert.equal(run('lecture-rpi-01',[0,10]).r.parts.LED1.on,true);
- });
- test('switches: internal pull-up on GPIO27, external pull-up on GPIO22, kernel driver LED follows GPIO2',()=>{
-  const two=run('lecture-rpi-05',[0,[10,{SW2:true}],[20,{SW2:true}]]);assert.ok(two.logs.includes('[RPI-1] GPIO22 눌림'));assert.ok(!two.logs.includes('[RPI-1] GPIO27 눌림'));
-  const ker=run('lecture-ker-02',[0,[10,{SW1:true}],[20,{SW1:true}]]);assert.equal(ker.r.parts.LED1.on,true);assert.ok(ker.logs.includes('[RPI-1] button_driver: pressed'));
- });
- test('ESP32 IOT-01 sketch: switch lights the LED, the pot reads mid-scale, DHT11 reports its settings',()=>{
-  // The sketch polls the switch once per loop (delay 1000 ms).
-  const io=run('lecture-iot-01',[0,1,1100,2100,[2200,{SW1:true}],[3100,{SW1:true}]]);assert.equal(io.r.parts.LED1.on,true);
-  assert.ok(io.logs.includes('[ESP32-1] 가변저항 2047 (1.65 V)'));assert.ok(io.logs.includes('[ESP32-1] 온도 25.0 C, 습도 50 %'));
- });
- test('assignments: three LEDs blink together; the button lights them; the tree changes mode',()=>{
-  const blink=run('assignment-rpi-1',[0,100]),off=run('assignment-rpi-1',[0,600]);for(const id of ['LED1','LED2','LED3']){assert.equal(blink.r.parts[id].on,true,id);assert.equal(off.r.parts[id].on,false,id);}
-  const button=run('assignment-rpi-4',[0,10,[20,{SW1:true}],[30,{SW1:true}]]);for(const id of ['LED1','LED2','LED3'])assert.equal(button.r.parts[id].on,true,id);
-  assert.equal(run('assignment-rpi-4',[0,10,20]).r.parts.LED1.on,false);
-  // main.py runs: the first pass sets on = True, so the odd LEDs light first.
-  const tree=run('assignment-rpi-6',[0,100]),flip=run('assignment-rpi-6',[0,600]);assert.deepEqual(['LED1','LED2','LED3','LED4','LED5'].map(id=>tree.r.parts[id].on),[true,false,true,false,true]);assert.deepEqual(['LED1','LED2','LED3','LED4','LED5'].map(id=>flip.r.parts[id].on),[false,true,false,true,false]);
-  const two=run('assignment-rpi-6',[0,[10,{SW1:true}],[20,{SW1:true}],30,600]);assert.ok(two.logs.includes('[RPI-1] 모드 2'));assert.equal(new Set(['LED1','LED2','LED3','LED4','LED5'].map(id=>two.r.parts[id].on)).size,1,'mode 2 drives all five together');
- });
- test('assignments: shell programs read serial monitor lines',()=>{
-  const shell=(id,lines,step=10)=>{const {project:p}=applyLectureExample(id),logs=[],sim=new CircuitSimulation();sim.drivers=createBoardDrivers(p,{log:s=>logs.push(s)});let t=0,r=sim.solve(p,{},{},t);
-   assert.equal(sim.drivers[0].acceptsInput,true);for(const line of lines){sim.drivers[0].receive(line+'\n');r=sim.solve(p,{},{},t+=step);}return {r,logs};};
-  const leds=shell('assignment-rpi-2',['2','3','3','x']);assert.deepEqual(['LED1','LED2','LED3'].map(id=>leds.r.parts[id].on),[false,true,false]);assert.ok(leds.logs.includes('[RPI-1] 숫자를 입력하세요.'));
-  assert.ok(shell('assignment-rpi-2',['7','1']).logs.includes('[RPI-1] 종료'));assert.equal(shell('assignment-rpi-2',['7','1']).r.parts.LED1.on,false);
-  // The LED current follows the brightness (PWM duty), so 30% draws about a third of full brightness.
-  const dim=shell('assignment-rpi-3',['1','1','1']),full=shell('assignment-rpi-3',Array(12).fill('1'));
-  assert.ok(dim.logs.includes('[RPI-1] 밝기 30%'));assert.ok(full.logs.includes('[RPI-1] 밝기 100%'));assert.ok(Math.abs(dim.r.parts.LED1.current/full.r.parts.LED1.current-.3)<.02);
-  const kernel=shell('assignment-ker-2',['50']);assert.ok(Math.abs(kernel.r.voltage('signal:rpi.GPIO20')-1.65)<.05);assert.ok(kernel.r.parts.LED1.on);
-  const stop=shell('assignment-ker-2',['50','95']);assert.equal(stop.r.parts.LED1.on,false);assert.ok(stop.logs.some(s=>s.includes('LED 꺼짐')));
-  const {project:p}=applyLectureExample('lecture-rpi-02');assert.equal(createBoardDrivers(p)[0].acceptsInput,false);
- });
- test('assignments: software PWM buttons and kernel timers',()=>{
-  const up=run('assignment-rpi-5',[0,...Array.from({length:12},(_,i)=>[100*(i+1),{SW1:true}])]);assert.ok(up.logs.includes('[RPI-1] 밝기 90%'));assert.ok(!up.logs.includes('[RPI-1] 밝기 95%'));
-  const down=run('assignment-rpi-5',[0,...Array.from({length:12},(_,i)=>[100*(i+1),{SW2:true}])]);assert.ok(down.logs.includes('[RPI-1] 밝기 10%'));
-  assert.ok(up.r.parts.LED1.current>down.r.parts.LED1.current*5);
-  const timers=t=>run('assignment-ker-3',[0,t]).r.parts;assert.deepEqual([timers(4900).LED1.on,timers(4900).LED2.on],[false,false]);
-  assert.deepEqual([timers(5100).LED1.on,timers(5100).LED2.on],[true,false]);assert.deepEqual([timers(7100).LED1.on,timers(7100).LED2.on],[true,true]);assert.deepEqual([timers(10100).LED1.on,timers(10100).LED2.on],[false,true]);
- });
- test('FW-09: the STM32 HAL code writes 1 / 0 over I2C and the ESP32 slave switches its LED',()=>{
-  const {project:p}=applyLectureExample('lecture-fw-09'),out=[],logs=[],session=new SimulationSession(p,consoleSink(out));
-  session.circuit.drivers=createBoardDrivers(p,{log:s=>logs.push(s)});session.buses.boards=()=>session.circuit.drivers;
-  let r=session.tick(0);for(let t=20;t<=1500;t+=20)r=session.tick(t);
-  assert.ok(out.some(s=>/ESP32에 1 보냄 \(status=0\)/.test(s)),out.join('|'));assert.ok(out.some(s=>/ESP32에 0 보냄 \(status=0\)/.test(s)));
-  assert.ok(logs.includes('[ESP32-1] I2C 수신 1 → LED ON'));assert.ok(logs.includes('[ESP32-1] I2C 수신 0 → LED OFF'));
- });
-});
 
 describe('ESP32 sketches',()=>{
  const sketch=(code,extra=[])=>{const p=validateProject(project({...board('esp32-nodemcu-32s'),code},...extra)),logs=[],sim=new CircuitSimulation();sim.drivers=createBoardDrivers(p,{log:s=>logs.push(s)});return {p,sim,logs,driver:sim.drivers[0]};};

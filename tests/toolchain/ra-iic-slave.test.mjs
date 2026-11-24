@@ -1,5 +1,5 @@
 // Feature 33 with the real FSP: r_iic_slave built by ARM GCC with the generated ra_gen/ra_cfg, run on the RA6E1 emulator.
-// The master is another board: the example's ESP32 sketch (Wire master), and a test master that drives the slave model's
+// The master is a test master that drives the slave model's
 // bus interface for the sequences r_iic_slave reports through its callback (RX/TX request, more-request, complete,
 // aborted) — the same sequences the built-in interpreter gives (tests/unit/ra-iic-slave.test.js, SLAVE_SEQUENCES).
 import test from 'node:test';
@@ -10,10 +10,9 @@ import path from 'node:path';
 import {createRequire} from 'node:module';
 import {FirmwareSession} from '../../src/firmware-session.js';
 import {projectForBoard,validateProject} from '../../src/project.js';
-import {raExample} from '../../src/ra-examples.js';
 import {createBoardDrivers} from '../../src/fixed-run.js';
 import {connectStm32Drivers} from '../../src/stm32-boards.js';
-import {SLAVE_PROBE,SLAVE_SEQUENCES,slaveProbeMcu,SLAVE_SKETCH_LINES,SLAVE_SKETCH_EVENTS,slaveSketchProject} from '../unit/helpers/ra-iic-slave.js';
+import {SLAVE_PROBE,SLAVE_SEQUENCES,slaveProbeMcu} from '../unit/helpers/ra-iic-slave.js';
 
 const require=createRequire(import.meta.url),{prepareBuild,build,detectTools}=require('../../desktop/native-build.cjs');
 const tools=await detectTools({armGcc:process.env.ARM_GCC||''});
@@ -31,18 +30,6 @@ async function firmware(project,fn){
  }finally{await fs.rm(root,{recursive:true,force:true});}
 }
 const run=(s,ms)=>{for(let guard=0;guard<200000&&s.now<ms*1000-1;guard++)s.tick(Math.min(ms,Math.floor(s.now/1000)+1));};
-const example=id=>{const e=raExample(id),p={...projectForBoard('fpb-ra6e1'),mcu:e.mcu(),code:e.code},c=e.circuit();p.components=c.components;p.wires=c.wires;delete p.surfaces;return p;};
-
-test('ra_iic_slave: the ESP32 master writes to and reads from the real r_iic_slave on the emulator',{skip,timeout:600000},async()=>{
- await firmware(example('ra_iic_slave'),(s,log)=>{
-  run(s,1800);
-  const lines=log.board.filter(l=>/RA /.test(l));
-  assert.deepEqual(lines.slice(0,3),['[ESP32-1] RA count=0 led=1 error=0','[ESP32-1] RA count=1 led=0 error=0','[ESP32-1] RA count=2 led=1 error=0'],JSON.stringify(log.board));
-  assert.ok(s.readVariable('writes_seen')>=3&&s.readVariable('reads_answered')>=3,'the callback saw the transfers');
-  assert.equal(s.readVariable('aborted'),0);assert.deepEqual(log.warn,[]);
-  assert.equal(s.gpio.P407.value>1.65?1:0,s.readVariable('command')&1,'LED2 follows the byte the master wrote');
- });
-});
 
 test('r_iic_slave callback sequences on the emulator: requests, more-requests, completes and the time-out abort',{skip,timeout:600000},async()=>{
  await firmware({...projectForBoard('fpb-ra6e1'),mcu:slaveProbeMcu(),code:SLAVE_PROBE},s=>{
@@ -67,17 +54,6 @@ test('r_iic_slave callback sequences on the emulator: requests, more-requests, c
  });
 });
 
-// The same program with the ESP32 sketch as the master (tests/unit/ra-iic-slave.test.js runs it on the interpreter):
-// each byte of a write waits for the slave's program, so a NACK ends the write (error 2) and the unserved transfers
-// are aborted by the driver's time-out; then a write of no bytes.
-test('ESP32 master and the real r_iic_slave: NACK ends a write, unserved transfers abort, Wire.begin(sda, scl), a write of no bytes — as on the interpreter',{skip,timeout:600000},async()=>{
- await firmware(slaveSketchProject(projectForBoard('fpb-ra6e1'),raExample('ra_iic_slave').circuit()),(s,log)=>{
-  run(s,700);
-  assert.deepEqual(log.board.filter(l=>/ S\d /.test(l)).map(l=>l.replace('[ESP32-1] ','')),[...SLAVE_SKETCH_LINES]);
-  assert.deepEqual(Array.from({length:s.readVariable('n')},(_,i)=>[s.readVariable(`ev[${i}]`),s.readVariable(`nb[${i}]`)]),SLAVE_SKETCH_EVENTS());
-  assert.deepEqual(log.warn,[]);
- });
-});
 
 test('R_IIC_SLAVE_Close on the emulator: the module is stopped and the board no longer answers its address; CallbackSet\'s callback and context are used',{skip,timeout:600000},async()=>{
  const code=SLAVE_PROBE.replace(/void hal_entry\(void\)[\s\S]*$/,`volatile uint32_t closed = 0, other_calls = 0, context_ok = 0, err_set = 99, err_close = 99, err_close_again = 99;

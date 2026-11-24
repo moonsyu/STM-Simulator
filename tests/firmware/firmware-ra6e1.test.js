@@ -5,8 +5,6 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {open,runUntil,project} from './helpers.mjs';
 import {SimulationSession} from '../../src/session.js';
-import {createBoardDrivers} from '../../src/fixed-run.js';
-import {connectStm32Drivers} from '../../src/stm32-boards.js';
 
 const fixture=name=>'../firmware-ra6e1/'+name;
 
@@ -221,37 +219,6 @@ test('ra_rtc_clock: the real r_rtc on LOCO — set to 2025-12-31 23:59:55, the 1
  // The RTC registers: running (RCR2.START), 24-hour mode, LOCO count source (RCR4.RCKSEL), PES 1 s with PIE and AIE.
  const rtc=session.soc.rtc;assert.equal(rtc.read(0x24,1)&0x41,0x41);assert.equal(rtc.read(0x28,1)&1,1);assert.equal(rtc.read(0x22,1)&0xf5,0xe5);
  assert.deepEqual([rtc.read(0x0e,2),rtc.read(0x0c,1),rtc.read(0x0a,1),rtc.read(0x08,1)],[0x26,0x01,0x01,4],'2026-01-01, a Thursday');
-});
-
-test('ra_iic_slave: IIC0 answers at 0x42 as r_iic_slave; the ESP32 sketch (I2C master) writes the LED byte and reads the counter',()=>{
- const {session,log}=open(fixture('ra_iic_slave')),board=[];
- session.circuit.drivers=createBoardDrivers(session.project,{log:s=>board.push(s)});connectStm32Drivers(session);
- runUntil(session,1300);
- assert.deepEqual(board.filter(l=>/RA /.test(l)),['[ESP32-1] RA count=0 led=1 error=0','[ESP32-1] RA count=1 led=0 error=0','[ESP32-1] RA count=2 led=1 error=0']);
- const iic=session.soc.iics[0];
- // The registers r_iic_slave leaves between transfers: the own address in SARL0 with SAR0E, RXI and TXI enabled, bus free.
- assert.equal(iic.read(0x0a,1),0x42<<1);assert.equal(iic.read(0x06,1)&1,1);assert.equal(iic.read(0x07,1),0xa0);assert.equal(iic.read(0x01,1)&0x80,0);
- assert.ok(iic.slaveListens(0x42));assert.equal(session.soc.i2cs,session.soc.iics,'found by another board\'s I2C master');
- // The first write and read, as the slave saw them on the bus.
- assert.deepEqual(iic.log.slice(0,8).map(e=>[e.type,e.byte??e.read]),[['slave-address',false],['slave-rx',1],['slave-stop',undefined],['slave-address',true],['slave-tx',0],['slave-tx',1],['slave-stop',undefined],['slave-address',false]]);
- assert.equal(session.readVariable('writes_seen'),3);assert.equal(session.readVariable('reads_answered'),3);assert.equal(session.readVariable('aborted'),0);
- assert.ok(session.gpio.P407.value>1.65,'LED2: the last byte written was 1');
- assert.ok(log.trace.some(e=>/ESP32-1 · 0x42 READ 2 B · ACK/.test(e.message)));
-});
-
-// The slave's answer to a byte is known only after its program took the byte before: six bytes into the example's
-// R_IIC_SLAVE_Read(4) and Read(0) end with a NACK on both engines, and a write of no bytes (a bus scan) is ACKed.
-test('ra_iic_slave: a write longer than the slave takes ends with NACK (error 2) for the ESP32 master on the emulator and on the interpreter',()=>{
- const sketch='#include <Wire.h>\nvoid setup() { Serial.begin(115200); Wire.begin(21, 22); delay(100); }\nvoid loop() {\n  Wire.beginTransmission(0x42);\n  Wire.write(1); Wire.write(2); Wire.write(3); Wire.write(4); Wire.write(5); Wire.write(6);\n  int error = Wire.endTransmission();\n  Wire.beginTransmission(0x42);\n  int scan = Wire.endTransmission();\n  Wire.beginTransmission(0x43);\n  int none = Wire.endTransmission();\n  Serial.printf("W6 error=%d scan=%d none=%d\\n", error, scan, none);\n  delay(500);\n}\n';
- const withSketch=p=>{p.components.find(c=>c.id==='esp1').code=sketch;};
- const lines={};
- {const {session}=open(fixture('ra_iic_slave'),{},withSketch),board=[];
-  session.circuit.drivers=createBoardDrivers(session.project,{log:s=>board.push(s)});connectStm32Drivers(session);runUntil(session,400);
-  lines.emulator=board.filter(l=>/W6/.test(l));assert.equal(session.readVariable('writes_seen'),1);assert.equal(session.readVariable('aborted'),0);assert.equal(session.readVariable('command'),1,'the first four bytes were taken');}
- {const p=project(fixture('ra_iic_slave'));withSketch(p);const board=[],session=new SimulationSession(p,{});
-  session.circuit.drivers=createBoardDrivers(session.project,{log:s=>board.push(s)});session.buses.boards=()=>session.circuit.drivers;connectStm32Drivers(session);for(let t=20;t<=400;t+=20)session.tick(t);
-  lines.interpreter=board.filter(l=>/W6/.test(l));assert.equal(session.readVariable('writes_seen'),1);}
- assert.deepEqual(lines,{emulator:['[ESP32-1] W6 error=2 scan=0 none=2'],interpreter:['[ESP32-1] W6 error=2 scan=0 none=2']});
 });
 
 // Feature 39: the real r_flash_hp (no background operation) on the flash sequencer model.

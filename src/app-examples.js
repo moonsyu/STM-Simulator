@@ -1,4 +1,4 @@
-// The part and example lists: filtering by text and board, and applying an example or a lecture circuit.
+// The part and example lists: filtering by text, and applying an example or a lecture circuit.
 import {pinSearch,fitView} from './app-canvas.js';
 import {running,setSaveState,autosave,log,checkpoint,changed,tab} from './app-core.js';
 import {syncEditor} from './app-editor.js';
@@ -12,7 +12,7 @@ import {$} from './common.js';
 import {RA_EXAMPLES,raExample} from './ra-examples.js';
 import {searchHalExamples} from './hal-example-search.js';
 import {applyHalExample,halGuideFor} from './hal-examples.js';
-import {searchLectureExamples,EXAMPLE_BOARDS,LECTURE_PREFIX,applyLectureExample,lectureExample,lectureGuide} from './lecture-examples.js';
+import {searchLectureExamples,LECTURE_PREFIX,applyLectureExample,lectureExample,lectureGuide} from './lecture-examples.js';
 import {searchParts,PART_LIBRARY,boardLibrary,searchBoards} from './part-library.js';
 import {DEVBOARD_MODELS} from './devboards.js';
 import {validateProject} from './project.js';
@@ -32,10 +32,9 @@ export function filterExamples(){
  // An FSP project (FPB-RA6E1) lists the FSP examples instead of the STM32 HAL ones (they need the HAL and CubeMX pins).
  const fsp=state.project.firmware?.mode==='fsp',query=$('hal-example-search').value,matches=fsp?[]:searchHalExamples(query,projectBoard(state.project).mcuFamily),lectures=searchLectureExamples(query);
  const words=query.trim().toLowerCase().split(/\s+/).filter(Boolean),raRows=fsp?RA_EXAMPLES.filter(e=>words.every(w=>(e.name+' '+e.tags.join(' ')+' '+e.id).toLowerCase().includes(w))):[];
- if(!EXAMPLE_BOARDS.some(b=>b.id===state.exampleBoard))state.exampleBoard='all';
- document.querySelectorAll('[data-example-board]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.exampleBoard===state.exampleBoard)));
  const lectureOption=e=>`<option value="${LECTURE_PREFIX}${e.id}">${esc(e.how?'보드 간 통신':e.kind==='과제'?'강의 과제':'강의 실습')} · ${esc(e.title)}</option>`;
- const groups=EXAMPLE_BOARDS.filter(b=>state.exampleBoard==='all'||b.id===state.exampleBoard).map(b=>{const own=lectures.filter(e=>e.boards.includes(b.id)),hal=b.id==='stm32'?matches:[];return {b,count:own.length+hal.length,html:own.map(lectureOption).join('')+hal.map(({id,name,native,simOnly})=>`<option value="${id}">${name}${native?' · ARM':''}${simOnly?' · SIM':''}</option>`).join('')};}).filter(g=>g.count);
+ // One STM32 group: the board-to-board examples, then the HAL examples.
+ const groups=[{id:'stm32',label:'STM32'}].map(b=>{const own=lectures.filter(e=>e.boards.includes(b.id)),hal=matches;return {b,count:own.length+hal.length,html:own.map(lectureOption).join('')+hal.map(({id,name,native,simOnly})=>`<option value="${id}">${name}${native?' · ARM':''}${simOnly?' · SIM':''}</option>`).join('')};}).filter(g=>g.count);
  const total=new Set(groups.flatMap(g=>[...g.html.matchAll(/value="([^"]+)"/g)].map(m=>m[1]))).size;
  const raGroup=raRows.length?`<optgroup label="FPB-RA6E1 · FSP" data-count="${raRows.length}">${raRows.map(e=>`<option value="${RA_PREFIX}${e.id}">${esc(e.name)}</option>`).join('')}</optgroup>`:'';
  $('hal-example').innerHTML='<option value="">'+(total+raRows.length?`예제 선택… (${total+raRows.length})`:'검색 결과 없음')+'</option>'+raGroup+groups.map(g=>`<optgroup label="${esc(g.b.label)}" data-count="${g.count}">${g.html}</optgroup>`).join('');

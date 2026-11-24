@@ -98,10 +98,6 @@ describe('boards talking over the air',()=>{
   const p=structuredClone(applyLectureExample('wireless-bt-stm32').project);for(const w of p.wires){if(w.to==='part:hc06:p4')w.to='part:hc06:p3';else if(w.from==='part:hc06:p3')w.from='part:hc06:p4';}
   const {main}=runBoards(p,3500);assert.ok(main.includes('HC-05 paired'));assert.ok(!main.some(s=>s.startsWith('answer:')),main.join('|'));
  });
- test('BT-02: the ESP32 on Serial2 receives the commands, switches GPIO2 and answers',()=>{
-  const {project}=applyLectureExample('wireless-bt-esp32'),{main,boards,session}=runBoards(project,3200);
-  assert.ok(boards.some(s=>s.includes('got: LED ON')),boards.join('|'));assert.ok(main.includes('answer: ACK ON'),main.join('|'));assert.notEqual(session.result.voltage('signal:esp32.GPIO2'),null);
- });
  test('WF-01: station joins the AP, opens TCP and the server answers each command',()=>{
   const {project}=applyLectureExample('wireless-wifi-stm32'),{main,boards,result}=runBoards(project,6000);
   assert.ok(boards.some(s=>s.includes('server ready')),boards.join('|'));assert.ok(main.includes('connected'),main.join('|'));

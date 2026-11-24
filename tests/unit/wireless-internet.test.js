@@ -1,11 +1,7 @@
-// The internet behind the router: an MQTT broker and a web server, reached from an ESP-01 (AT) and an ESP32 sketch.
+// The internet behind the router: an MQTT broker and a web server, reached from an ESP-01 (AT).
 import {test,describe} from 'node:test';
 import assert from 'node:assert/strict';
 import {WirelessHub,ROUTER,INTERNET,topicMatches} from '../../src/wireless.js';
-import {applyLectureExample} from '../../src/lecture-examples.js';
-import {SimulationSession} from '../../src/session.js';
-import {createBoardDrivers} from '../../src/fixed-run.js';
-import {connectStm32Drivers} from '../../src/stm32-boards.js';
 
 function esp01(){
  const session={project:{components:[{id:'w',type:'wireless',catalogVariant:'esp01-wifi-8',name:'w',baud:115200}]},buses:{trace(){}},sent:[],wirelessRx(m,frames){this.sent.push(...frames.map(f=>f.value));}};
@@ -41,17 +37,5 @@ describe('internet hosts behind the router',()=>{
  test('without joining the router the internet is not there',()=>{
   const session={project:{components:[{id:'w',type:'wireless',catalogVariant:'esp01-wifi-8',name:'w',baud:115200}]},buses:{trace(){}},wirelessRx(){}};
   const hub=new WirelessHub(session);hub.module(session.project.components[0]).joined=null;assert.equal(hub.module(session.project.components[0]).resolve(INTERNET.web.name),null);
- });
-});
-describe('WF-03: an ESP32 sketch with HTTPClient and PubSubClient',()=>{
- test('it joins the router, reads the time, subscribes, follows stm/led and reports on stm/status',()=>{
-  const {project}=applyLectureExample('wireless-internet-esp32'),out=[];
-  const session=new SimulationSession({...project,code:'void setup(){}\nvoid loop(){delay(10);}',firmware:{mode:'sketch',files:[]}},{print:()=>{}});
-  session.circuit.drivers=createBoardDrivers(project,{log:t=>out.push(t)});connectStm32Drivers(session);session.tick(0);
-  for(let t=20;t<=6000;t+=20){session.tick(t);if(t===3000)session.wireless.outsideInput('broker','stm/led 1',t*1000);}
-  const text=out.join('\n');
-  assert.match(text,/192\.168\.1\.\d+/);assert.match(text,/HTTP 200/);assert.match(text,/"seconds"/);assert.match(text,/MQTT connected/);assert.match(text,/stm\/led: 1/);
-  assert.ok(session.circuit.drivers[0].runtime.gpio.GPIO2?.value>0,'LED on');
-  assert.match(session.wireless.outsideOutput('broker'),/esp32-lab → stm\/status: LED ON/);
  });
 });
