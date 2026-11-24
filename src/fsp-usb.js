@@ -264,7 +264,8 @@ export const USB_METHODS={
  // usb_set_event: into the queue of 10 (an overrun overwrites), and to the callback at once when there is one.
  *usbEvent(r,event,ctrl){
   const d=this.usbDrv(),q=d.event;q.code[q.wp]=event;q.ctrl[q.wp]={...ctrl};q.wp=(q.wp+1)%10;
-  if(d.callback){const args={...ctrl,event};yield* this.callback(r,d.callback,'usb_callback_args_t',this.usbFields(r,args));}
+  // (usb_callback_args_t is usb_event_info_t: the structure is made by that name.)
+  if(d.callback){const args={...ctrl,event};yield* this.callback(r,d.callback,'usb_event_info_t',this.usbFields(r,args));}
  },
  // A usb_event_info_t value's members from the driver's record (setup as its own structure).
  usbFields(r,c){const f={module_number:c.module_number??0,device_address:c.device_address??0,pipe:c.pipe??0,type:c.type??0,status:c.status??0,event:c.event??0,data_size:c.data_size??0};
@@ -428,7 +429,7 @@ export const USB_METHODS={
  /** R_USB_* by name: a generator, or null for another name (and without the USB stack). */
  usbCall(name,args,r){if(!this.config.peripherals?.USB?.enabled||!Object.hasOwn(USB_API,name))return null;return USB_API[name].call(this,args,r,name);},
  /** The bytes the serial monitor sends to the device (session.js inject). */
- usbSend(bytes,r){return this.usbDev(r).host.send(bytes);},
+ usbSend(bytes,r){return this.config.peripherals?.USB?.enabled?this.usbDev(r).host.send(bytes):0;},
  usbOutput(){return this.usbFs?.host.output??this.usbKeep??[];}
 };
 

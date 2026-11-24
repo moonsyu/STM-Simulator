@@ -39,7 +39,9 @@ const PLAN={
  ra_flash_counter:{window:3,vars:{boot_count:0,flash_error:0},resets:2,warn:/^\[NVIC\] /,flash:[{at:0,hex:'03000000'}]},
  // GPT1 → ELC → ADC0 every 10 ms, the DTC fills 16 samples, then the ADC callback (LED2 toggles, the average on SCI9 by the
  // UART's DTC); the potentiometer moves at 1 s, so LED1 and the printed averages change on both engines.
- ra_elc_adc_dtc:{at:{1000:s=>{s.project.components.find(p=>p.id==='pot').position=80;}},vars:{blocks:0,average_mv:2}}
+ ra_elc_adc_dtc:{at:{1000:s=>{s.project.components.find(p=>p.id==='pot').position=80;}},vars:{blocks:0,average_mv:2}},
+ // The PC enumerates the USB device (LED1 on when configured), then sends bytes to the virtual COM port twice (feature 41).
+ ra_usb_cdc_echo:{at:{100:s=>s.inject('Hi','usb:pcdc'),700:s=>s.inject('USB!','usb:pcdc')},vars:{g_received:0},usb:'HiUSB!'}
 };
 // The level of a pin each millisecond: its PWM duty, or high/low.
 function timeline(session,id){
@@ -76,6 +78,8 @@ async function compare(ids){
    // The data flash the run leaves (feature 39).
    if(PLAN[id].flash){assert.deepEqual(firmware.dataFlash.encode(),PLAN[id].flash,id+' emulator data flash');assert.deepEqual(simulation.dataFlash.encode(),PLAN[id].flash,id+' interpreter data flash');}
    assert.equal(simulation.buses.received.get('term')??'',firmware.buses.received.get('term')??'',id+' UART part');
+   // What came back over the USB virtual COM port (feature 41).
+   if(PLAN[id].usb!==undefined){assert.equal(String.fromCharCode(...firmware.usbOutput),PLAN[id].usb,id+' emulator USB');assert.equal(String.fromCharCode(...simulation.usbOutput),PLAN[id].usb,id+' interpreter USB');}
    // Variables are read 5 ms after the last 500 ms boundary: the emulator starts hal_entry about 0.2 ms after reset (the
    // FSP start-up code), so a periodic count read at the boundary itself may differ by one.
    {const end=(PLAN[id].ms??MS)+5;firmware.tick(end);simulation.tick(end);}
@@ -96,3 +100,4 @@ test('parity: ra_rtc_clock (RTC calendar, 1 s periodic interrupt, alarm)',{skip,
 test('parity: ra_lpm_deep (Deep Software Standby, S1 on IRQ1-DS, RSTSR0.DPSRSTF, IOKEEP)',{skip,timeout:900000},()=>compare(['ra_lpm_deep']));
 test('parity: ra_elc_adc_dtc (GPT1 → ELC → ADC0, DTC into an array, SCI9 by DTC)',{skip,timeout:900000},()=>compare(['ra_elc_adc_dtc']));
 test('parity: ra_flash_counter (r_flash_hp boot counter in the data flash across two resets)',{skip,timeout:900000},()=>compare(['ra_flash_counter']));
+test('parity: ra_usb_cdc_echo (USB PCDC virtual COM port: enumeration, echo)',{skip,timeout:900000},()=>compare(['ra_usb_cdc_echo']));
