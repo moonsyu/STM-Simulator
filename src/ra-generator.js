@@ -3,7 +3,7 @@
 // linker init tables) and script (linker scripts). The user's code is src/hal_entry.c; the app builds these with the
 // FSP sources (BSP + r_* drivers) and ARM GCC, then runs the ELF on the RA6E1 emulator.
 // Formats follow RASC output for FSP 5.x/6.x (only what the FPB-RA6E1 configurations here need).
-import {raFamily,raPinName,raPortBit,RA_IRQ_PINS,raPsel,RA_PSEL_NAMES,RA_SCI_CHANNELS,RA_GPT_CHANNELS,RA_ADC_CHANNELS,RA_AGT_CHANNELS,RA_IIC_CHANNELS,RA_SPI_CHANNELS,RA_SCI_SPI_CHANNELS,raGptCounts,raAgtCounts,raIicClock,raClockHz,raSpiBitrate,raSciSpiBitrate,RA_WDT,raOfs0,RA_RTC_DEFAULTS,RA_IIC_SLAVE_ADDRESS,raIicSlaveClock,RA_LPM_DEFAULTS,RA_FLASH_DEFAULTS,RA_ELC_PERIPHERALS,RA_TRANSFER_DEFAULTS,RA_USB_DEFAULTS} from './ra-config.js';
+import {raFamily,raPinName,raPortBit,RA_IRQ_PINS,raPsel,RA_PSEL_NAMES,RA_SCI_CHANNELS,RA_GPT_CHANNELS,RA_ADC_CHANNELS,RA_AGT_CHANNELS,RA_IIC_CHANNELS,RA_SPI_CHANNELS,RA_SCI_SPI_CHANNELS,raGptCounts,raAgtCounts,raIicClock,raClockHz,raSpiBitrate,raSciSpiBitrate,RA_WDT,raOfs0,RA_RTC_DEFAULTS,RA_IIC_SLAVE_ADDRESS,raIicSlaveClock,RA_LPM_DEFAULTS,RA_FLASH_DEFAULTS,RA_ELC_PERIPHERALS,RA_TRANSFER_DEFAULTS,RA_USB_DEFAULTS,RA_CAN_DEFAULTS,raCanTiming} from './ra-config.js';
 
 const HEADER=kind=>`/* generated ${kind} - do not edit */\n`;
 const hex=(n,w=8)=>'0x'+(n>>>0).toString(16).toUpperCase().padStart(w,'0');
@@ -542,6 +542,72 @@ export function raUsbClock(hocoMHz){
  return null;
 }
 const PLL_DIV_MACRO={1:'BSP_CLOCKS_PLL_DIV_1',2:'BSP_CLOCKS_PLL_DIV_2',3:'BSP_CLOCKS_PLL_DIV_3'};
+// CAN (r_can g_can0 on R_CAN0, feature 40): normal mailbox mode (no FIFO), the clock PCLKB, four mailboxes and one mask.
+// r_can.c's Open reads mailbox_type of all 32 can_mailbox_t entries (a receive entry past mailbox_count is not set up), so
+// 32 are generated: entries 4-31 are transmit mailboxes with ID 0, which Open leaves cleared. It reads one mask a group of
+// four mailboxes (mailbox_count / 4 = 1): entries 1-7 hold 0x1FFFFFFF (CAN_DEFAULT_MASK, "no mask"), never read.
+const canOf=mcu=>{const p=mcu.peripherals?.CAN0;if(!p?.enabled)return null;const q={...RA_CAN_DEFAULTS,...p};return {...q,name:'g_can0',timing:raCanTiming(raClockHz(mcu,'pclkb'),q.bitrate)};};
+const canDecl=t=>`/** CAN on CAN Instance. */
+extern const can_instance_t ${t.name};
+/** Access the CAN instance using these structures when calling API functions directly (::p_api is not used). */
+extern can_instance_ctrl_t ${t.name}_ctrl;
+extern const can_cfg_t ${t.name}_cfg;
+extern const can_extended_cfg_t ${t.name}_extended_cfg;
+#ifndef ${t.callback}
+void ${t.callback}(can_callback_args_t * p_args);
+#endif`;
+function canInstance(t){
+ const v=(k,field)=>`#if defined(VECTOR_NUMBER_CAN0_${k})\n    .${field.padEnd(12)} = VECTOR_NUMBER_CAN0_${k},\n#else\n    .${field.padEnd(12)} = FSP_INVALID_VECTOR,\n#endif`;
+ const idMode=t.idMode==='EXTENDED'?'CAN_ID_MODE_EXTENDED':'CAN_ID_MODE_STANDARD';
+ const mb=(m,i)=>`    { .mailbox_id = ${hex(m.id,t.idMode==='EXTENDED'?8:3)}, .id_mode = ${idMode}, .frame_type = CAN_FRAME_TYPE_DATA, .mailbox_type = ${m.type==='RECEIVE'?'CAN_MAILBOX_RECEIVE':'CAN_MAILBOX_TRANSMIT'} }, /* MB${i} */`;
+ const unused=Array.from({length:28},(_,i)=>mb({id:0,type:'TRANSMIT'},i+4));
+ return `can_instance_ctrl_t ${t.name}_ctrl;
+can_bit_timing_cfg_t ${t.name}_bit_timing_cfg =
+{
+    .baud_rate_prescaler        = ${t.timing.brp},
+    .time_segment_1             = ${t.timing.tseg1},
+    .time_segment_2             = ${t.timing.tseg2},
+    .synchronization_jump_width = ${t.timing.sjw}
+};
+uint32_t ${t.name}_mailbox_mask[8] =
+{
+    ${hex(t.mask)}, 0x1FFFFFFF, 0x1FFFFFFF, 0x1FFFFFFF, 0x1FFFFFFF, 0x1FFFFFFF, 0x1FFFFFFF, 0x1FFFFFFF
+};
+can_mailbox_t ${t.name}_mailbox[32] =
+{
+${t.mailboxes.map(mb).concat(unused).join('\n')}
+};
+const can_extended_cfg_t ${t.name}_extended_cfg =
+{
+    .clock_source   = CAN_CLOCK_SOURCE_PCLKB,
+    .p_mailbox_mask = ${t.name}_mailbox_mask,
+    .p_mailbox      = ${t.name}_mailbox,
+    .global_id_mode = ${t.idMode==='EXTENDED'?'CAN_GLOBAL_ID_MODE_EXTENDED':'CAN_GLOBAL_ID_MODE_STANDARD'},
+    .mailbox_count  = 4,
+    .message_mode   = CAN_MESSAGE_MODE_OVERWRITE,
+    .p_fifo_int_cfg = NULL,
+    .p_rx_fifo_cfg  = NULL,
+};
+const can_cfg_t ${t.name}_cfg =
+{
+    .channel      = 0,
+    .p_bit_timing = &${t.name}_bit_timing_cfg,
+    .p_callback   = ${t.callback},
+    .p_context    = NULL,
+    .p_extend     = &${t.name}_extended_cfg,
+    .ipl          = (${t.priority}),
+${v('ERROR','error_irq')}
+${v('MAILBOX_RX','rx_irq')}
+${v('MAILBOX_TX','tx_irq')}
+};
+/* Instance structure to use this module. */
+const can_instance_t ${t.name} =
+{
+    .p_ctrl = &${t.name}_ctrl,
+    .p_cfg  = &${t.name}_cfg,
+    .p_api  = &g_can_on_can
+};`;
+}
 
 function ofsCfg(mcu){
  const ofs=raOfs0(mcu),iwdt=mcu.peripherals?.IWDT?.enabled,wdt=mcu.peripherals?.WDT?.enabled&&mcu.peripherals.WDT.startMode==='AUTO';
@@ -553,7 +619,7 @@ function ofsCfg(mcu){
 `;
 }
 /** The FSP instances hal_data.c defines for an RA configuration, as the built-in interpreter declares them (fsp-interp.js). */
-export const raInstances=mcu=>({irqs:irqsOf(mcu),uarts:uartsOf(mcu),gpts:gptsOf(mcu),adc:adcOf(mcu),agts:agtsOf(mcu),iics:iicsOf(mcu),spis:spisOf(mcu),sciSpis:sciSpisOf(mcu),wdts:wdtsOf(mcu),rtc:rtcOf(mcu),iicSlaves:iicSlavesOf(mcu),lpm:lpmOf(mcu),flash:flashOf(mcu),elc:elcOf(mcu),elcLinks:elcLinks(mcu),transfers:transfersOf(mcu),usb:usbOf(mcu)});
+export const raInstances=mcu=>({irqs:irqsOf(mcu),uarts:uartsOf(mcu),gpts:gptsOf(mcu),adc:adcOf(mcu),agts:agtsOf(mcu),iics:iicsOf(mcu),spis:spisOf(mcu),sciSpis:sciSpisOf(mcu),wdts:wdtsOf(mcu),rtc:rtcOf(mcu),iicSlaves:iicSlavesOf(mcu),lpm:lpmOf(mcu),flash:flashOf(mcu),elc:elcOf(mcu),elcLinks:elcLinks(mcu),transfers:transfersOf(mcu),usb:usbOf(mcu),can:canOf(mcu)});
 /** "P408" → "BSP_IO_PORT_04_PIN_08". */
 export const raIoName=pin=>ioName(pin);
 // SPI masters: r_spi on RSPI (g_spiN) and r_sci_spi on an SCI channel in simple SPI mode (g_sci_spiN). Both use spi_cfg_t
@@ -722,6 +788,8 @@ export function raVectors(mcu){
  for(const t of transfersOf(mcu))if(t.driver==='DMAC'&&t.callback)list.push({isr:'dmac_int_isr',event:`DMAC${t.channel}_INT`,label:`DMAC${t.channel} INT (DMAC${t.channel} transfer end)`,vector:`DMAC${t.channel}_INT`});
  // USB PCDC (r_usb_basic, feature 41): USBI and USBR, appended so the slots above keep their numbers.
  if(usbOf(mcu))for(const [k,isr,label]of [['INT','usbfs_interrupt_handler','USBFS interrupt'],['RESUME','usbfs_resume_handler','USBFS resume interrupt']])list.push({isr,event:'USBFS_'+k,label:`USBFS ${k} (${label})`,vector:'USBFS_'+k});
+ // CAN (r_can, feature 40): error, mailbox receive and mailbox transmit, appended so the slots above keep their numbers.
+ if(canOf(mcu))for(const [k,isr,label]of [['ERROR','can_error_isr','Error interrupt'],['MAILBOX_RX','can_rx_isr','Reception complete interrupt'],['MAILBOX_TX','can_tx_isr','Transmission complete interrupt']])list.push({isr,event:'CAN0_'+k,label:`CAN0 ${k} (${label})`,vector:'CAN0_'+k});
  return list.map((v,i)=>({...v,index:i}));
 }
 
@@ -997,7 +1065,7 @@ function halDataH(mcu){
  const irqs=irqsOf(mcu),uarts=uartsOf(mcu),includes=(irqs.length?'#include "r_icu.h"\n#include "r_external_irq_api.h"\n':'')+(uarts.length?'#include "r_sci_uart.h"\n#include "r_uart_api.h"\n':'')+(gptsOf(mcu).length?'#include "r_gpt.h"\n#include "r_timer_api.h"\n':'')+(adcOf(mcu)?'#include "r_adc.h"\n#include "r_adc_api.h"\n':'')+(iicsOf(mcu).length?'#include "r_iic_master.h"\n#include "r_i2c_master_api.h"\n':'')+(agtsOf(mcu).length?'#include "r_agt.h"\n'+(gptsOf(mcu).length?'':'#include "r_timer_api.h"\n'):'')
   +(spisOf(mcu).length?'#include "r_spi.h"\n':'')+(sciSpisOf(mcu).length?'#include "r_sci_spi.h"\n':'')+(spisOf(mcu).length||sciSpisOf(mcu).length?'#include "r_spi_api.h"\n':'')
   +wdtsOf(mcu).map(w=>`#include "r_${w.kind}.h"\n`).join('')+(wdtsOf(mcu).length?'#include "r_wdt_api.h"\n':'')+(rtcOf(mcu)?'#include "r_rtc.h"\n#include "r_rtc_api.h"\n':'')+(iicSlavesOf(mcu).length?'#include "r_iic_slave.h"\n#include "r_i2c_slave_api.h"\n':'')+(lpmOf(mcu)?'#include "r_lpm.h"\n#include "r_lpm_api.h"\n':'')+(flashOf(mcu)?'#include "r_flash_hp.h"\n#include "r_flash_api.h"\n':'')
-  +(transfersOf(mcu).some(t=>t.driver==='DTC')?'#include "r_dtc.h"\n':'')+(transfersOf(mcu).some(t=>t.driver==='DMAC')?'#include "r_dmac.h"\n':'')+(transfersOf(mcu).length?'#include "r_transfer_api.h"\n':'')+(elcOf(mcu)?'#include "r_elc.h"\n#include "r_elc_api.h"\n':'')+(usbOf(mcu)?'#include "r_usb_basic.h"\n#include "r_usb_basic_api.h"\n#include "r_usb_pcdc_api.h"\n':'');
+  +(transfersOf(mcu).some(t=>t.driver==='DTC')?'#include "r_dtc.h"\n':'')+(transfersOf(mcu).some(t=>t.driver==='DMAC')?'#include "r_dmac.h"\n':'')+(transfersOf(mcu).length?'#include "r_transfer_api.h"\n':'')+(elcOf(mcu)?'#include "r_elc.h"\n#include "r_elc_api.h"\n':'')+(usbOf(mcu)?'#include "r_usb_basic.h"\n#include "r_usb_basic_api.h"\n#include "r_usb_pcdc_api.h"\n':'')+(canOf(mcu)?'#include "r_can.h"\n#include "r_can_api.h"\n':'');
  const decls=transfersOf(mcu).map(transferDecl).concat(irqs.map(i=>`/** External IRQ on ICU Instance. */
 extern const external_irq_instance_t ${i.name};
 /** Access the ICU instance using these structures when calling API functions directly (::p_api is not used). */
@@ -1013,7 +1081,7 @@ extern const uart_cfg_t ${u.name}_cfg;
 extern const sci_uart_extended_cfg_t ${u.name}_cfg_extend;
 #ifndef ${u.callback}
 void ${u.callback}(uart_callback_args_t * p_args);
-#endif`)).concat(gptsOf(mcu).map(gptDecl)).concat(adcOf(mcu)?[adcDecl(adcOf(mcu))]:[]).concat(agtsOf(mcu).map(agtDecl)).concat(iicsOf(mcu).map(iicDecl)).concat(spisOf(mcu).map(t=>spiDecl(t,'SPI','spi_instance_ctrl_t'))).concat(sciSpisOf(mcu).map(t=>spiDecl(t,'SCI','sci_spi_instance_ctrl_t'))).concat(wdtsOf(mcu).map(wdtDecl)).concat(rtcOf(mcu)?[rtcDecl(rtcOf(mcu))]:[]).concat(iicSlavesOf(mcu).map(iicSlaveDecl)).concat(lpmOf(mcu)?[lpmDecl(lpmOf(mcu))]:[]).concat(flashOf(mcu)?[flashDecl(flashOf(mcu))]:[]).concat(elcOf(mcu)?[elcDecl()]:[]).concat(usbOf(mcu)?[usbDecl(usbOf(mcu))]:[]).join('\n');
+#endif`)).concat(gptsOf(mcu).map(gptDecl)).concat(adcOf(mcu)?[adcDecl(adcOf(mcu))]:[]).concat(agtsOf(mcu).map(agtDecl)).concat(iicsOf(mcu).map(iicDecl)).concat(spisOf(mcu).map(t=>spiDecl(t,'SPI','spi_instance_ctrl_t'))).concat(sciSpisOf(mcu).map(t=>spiDecl(t,'SCI','sci_spi_instance_ctrl_t'))).concat(wdtsOf(mcu).map(wdtDecl)).concat(rtcOf(mcu)?[rtcDecl(rtcOf(mcu))]:[]).concat(iicSlavesOf(mcu).map(iicSlaveDecl)).concat(lpmOf(mcu)?[lpmDecl(lpmOf(mcu))]:[]).concat(flashOf(mcu)?[flashDecl(flashOf(mcu))]:[]).concat(elcOf(mcu)?[elcDecl()]:[]).concat(usbOf(mcu)?[usbDecl(usbOf(mcu))]:[]).concat(canOf(mcu)?[canDecl(canOf(mcu))]:[]).join('\n');
  return HEADER('HAL header file')+`#ifndef HAL_DATA_H_
 #define HAL_DATA_H_
 #include <stdint.h>
@@ -1105,7 +1173,7 @@ const uart_instance_t ${u.name} =
     .p_ctrl        = &${u.name}_ctrl,
     .p_cfg         = &${u.name}_cfg,
     .p_api         = &g_uart_on_sci
-};`;})).concat(gptsOf(mcu).map(gptInstance)).concat(adcOf(mcu)?[adcInstance(adcOf(mcu))]:[]).concat(agtsOf(mcu).map(agtInstance)).concat(iicsOf(mcu).map(iicInstance)).concat(spisOf(mcu).map(spiInstance)).concat(sciSpisOf(mcu).map(sciSpiInstance)).concat(wdtsOf(mcu).map(wdtInstance)).concat(rtcOf(mcu)?[rtcInstance(rtcOf(mcu))]:[]).concat(iicSlavesOf(mcu).map(iicSlaveInstance)).concat(lpmOf(mcu)?[lpmInstance(lpmOf(mcu))]:[]).concat(flashOf(mcu)?[flashInstance(flashOf(mcu))]:[]).concat(elcOf(mcu)?[elcInstance()]:[]).concat(usbOf(mcu)?[usbInstance(usbOf(mcu))]:[]).join('\n');
+};`;})).concat(gptsOf(mcu).map(gptInstance)).concat(adcOf(mcu)?[adcInstance(adcOf(mcu))]:[]).concat(agtsOf(mcu).map(agtInstance)).concat(iicsOf(mcu).map(iicInstance)).concat(spisOf(mcu).map(spiInstance)).concat(sciSpisOf(mcu).map(sciSpiInstance)).concat(wdtsOf(mcu).map(wdtInstance)).concat(rtcOf(mcu)?[rtcInstance(rtcOf(mcu))]:[]).concat(iicSlavesOf(mcu).map(iicSlaveInstance)).concat(lpmOf(mcu)?[lpmInstance(lpmOf(mcu))]:[]).concat(flashOf(mcu)?[flashInstance(flashOf(mcu))]:[]).concat(elcOf(mcu)?[elcInstance()]:[]).concat(usbOf(mcu)?[usbInstance(usbOf(mcu))]:[]).concat(canOf(mcu)?[canInstance(canOf(mcu))]:[]).join('\n');
  return HEADER('HAL source file')+`#include "hal_data.h"
 ${body}${body?'\n':''}void g_hal_init(void) {
 g_common_init();
@@ -1335,6 +1403,8 @@ export function generateRaFiles(mcu,{board}={}){
    cfg('r_usb_basic_cfg.h',moduleCfg('r_usb_basic_cfg.h','R_USB_BASIC_CFG_H_',['#define USB_CFG_PARAM_CHECKING_ENABLE (BSP_CFG_PARAM_CHECKING_ENABLE)','#define USB_CFG_MODE (USB_CFG_PERI)','#define USB_CFG_PCDC_USE','#define USB_CFG_BC (USB_CFG_DISABLE)','#define USB_CFG_DCP (USB_CFG_DISABLE)','#define USB_CFG_REQUEST (USB_CFG_DISABLE)','#define USB_CFG_DBLB (USB_CFG_DBLBON)','#define USB_CFG_CNTMD (USB_CFG_CNTMDOFF)','#define USB_CFG_DMA (USB_CFG_DISABLE)','#define USB_CFG_DTC (USB_CFG_DISABLE)','#define USB_CFG_COMPLIANCE (USB_CFG_DISABLE)','#define USB_CFG_ELECTRICAL (USB_CFG_DISABLE)'])),
    cfg('r_usb_pcdc_cfg.h',moduleCfg('r_usb_pcdc_cfg.h','R_USB_PCDC_CFG_H_',['/* r_usb_pcdc assigns its pipes from the configuration descriptor: no setting is read here. */']))
   ]:[]),
+  // CAN (feature 40): normal mailbox mode, no FIFO.
+  ...(canOf(mcu)?[cfg('r_can_cfg.h',moduleCfg('r_can_cfg.h','R_CAN_CFG_H_',['#define CAN_CFG_PARAM_CHECKING_ENABLE (BSP_CFG_PARAM_CHECKING_ENABLE)','#define CAN_CFG_FIFO_SUPPORT (0)']))]:[]),
   gen('bsp_clock_cfg.h',clockCfg(c,mcu)),
   gen('common_data.h',HEADER('common header file')+`#ifndef COMMON_DATA_H_\n#define COMMON_DATA_H_\n#include <stdint.h>\n#include "bsp_api.h"\n#include "r_ioport.h"\n#include "bsp_pin_cfg.h"\nFSP_HEADER\n#define IOPORT_CFG_NAME g_bsp_pin_cfg\n#define IOPORT_CFG_OPEN R_IOPORT_Open\n#define IOPORT_CFG_CTRL g_ioport_ctrl\n/* IOPORT Instance */\nextern const ioport_instance_t g_ioport;\n/* IOPORT control structure. */\nextern ioport_instance_ctrl_t g_ioport_ctrl;\nvoid g_common_init(void);\nFSP_FOOTER\n#endif /* COMMON_DATA_H_ */\n`),
   gen('common_data.c',HEADER('common source file')+`#include "common_data.h"\nioport_instance_ctrl_t g_ioport_ctrl;\nconst ioport_instance_t g_ioport =\n{\n    .p_api = &g_ioport_on_ioport,\n    .p_ctrl = &g_ioport_ctrl,\n    .p_cfg = &g_bsp_pin_cfg,\n};\nvoid g_common_init(void) {\n}\n`),

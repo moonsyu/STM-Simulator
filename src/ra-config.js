@@ -85,10 +85,10 @@ const FSP_API_OBJECTS=new Set(['g_adc_on_adc','g_can_on_can','g_elc_on_elc','g_e
 export function raNameProblem(name){
  if(C_WORDS.has(name))return `${name}은(는) C나 생성 코드가 쓰는 이름입니다`;
  if(/^(R_|BSP_|FSP_|IOPORT_|ELC_|ICU_|__)/.test(name)||/^_[A-Z]/.test(name))return `${name}: R_ · BSP_ · FSP_ · IOPORT_ 로 시작하는 이름과 __ 로 시작하는 이름은 FSP와 컴파일러가 씁니다`;
- if(/^g_(ioport|external_irq\d+|uart\d+|timer\d+|agt\d+|adc\d+|i2c_master\d+|i2c_slave\d+|spi\d+|sci_spi\d+|wdt\d+|iwdt\d+|rtc\d+|lpm\d+|flash\d+|transfer\d+|basic\d+|elc|bsp_pin_cfg)(_ctrl|_cfg|_extend|_cfg_extend|_ext_cfg|_channel_cfg|_err_cfg|_info)?$/.test(name))return `${name}은(는) 생성 코드의 인스턴스 이름입니다`;
+ if(/^g_(ioport|external_irq\d+|uart\d+|timer\d+|agt\d+|adc\d+|i2c_master\d+|i2c_slave\d+|spi\d+|sci_spi\d+|wdt\d+|iwdt\d+|rtc\d+|lpm\d+|flash\d+|transfer\d+|basic\d+|elc|bsp_pin_cfg)(_ctrl|_cfg|_extend|_cfg_extend|_ext_cfg|_channel_cfg|_err_cfg|_info)?$/.test(name)||/^g_can\d+(_ctrl|_cfg|_extended_cfg|_bit_timing_cfg|_mailbox|_mailbox_mask)?$/.test(name))return `${name}은(는) 생성 코드의 인스턴스 이름입니다`;
  // The interrupt service routines vector_data.h names (FSP drivers define them) and the drivers' API objects
  // (g_uart_on_sci, g_spi_on_spi, g_timer_on_gpt …: the extern const …_api_t g_<api>_on_<module> of the FSP 6.6 headers).
- if(/^((sci_uart|sci_spi|spi|iic_master|iic_slave)_(rxi|txi|tei|eri)|r_icu|adc_scan_end|agt_int|gpt_counter_overflow|rtc_alarm_periodic|rtc_carry|fcu_frdyi|fcu_fiferr|dmac_int)_isr$/.test(name)||/^usbfs_(interrupt|resume|d0fifo|d1fifo)_handler$/.test(name))return `${name}은(는) FSP 드라이버의 인터럽트 처리 함수(ISR) 이름입니다`;
+ if(/^((sci_uart|sci_spi|spi|iic_master|iic_slave)_(rxi|txi|tei|eri)|r_icu|adc_scan_end|agt_int|gpt_counter_overflow|rtc_alarm_periodic|rtc_carry|fcu_frdyi|fcu_fiferr|dmac_int)_isr$/.test(name)||/^usbfs_(interrupt|resume|d0fifo|d1fifo)_handler$/.test(name)||/^can_(error|rx|tx)_isr$/.test(name))return `${name}은(는) FSP 드라이버의 인터럽트 처리 함수(ISR) 이름입니다`;
  if(FSP_API_OBJECTS.has(name))return `${name}은(는) FSP 드라이버의 API 객체 이름(g_…_on_…)입니다`;
  return '';
 }
@@ -106,6 +106,7 @@ function callbackArgType(where,p){
  if(where==='RTC')return 'rtc_callback_args_t';
  if(where==='FLASH')return 'flash_callback_args_t';
  if(where==='USB')return 'usb_callback_args_t';
+ if(where==='CAN0')return 'can_callback_args_t';
  return where;
 }
 const checkName=(where,name)=>{const problem=raNameProblem(name);if(problem)throw new Error(`${where}: ${problem}. 다른 이름을 쓰세요.`);};
@@ -166,6 +167,7 @@ export function validateRaMcu(mcu){
    if(id==='LPM'){out.peripherals[id]=validateLpm(p);continue;}
    if(id==='ELC'){out.peripherals[id]=validateElc(p);continue;}
    if(id==='USB'){out.peripherals[id]=validateUsb(p);continue;}
+   if(id==='CAN0'){out.peripherals[id]=validateCan(p,fam,mcu.clock);continue;}
    if(/^TRANSFER\d+$/.test(id)&&Number(id.slice(8))<=31){out.peripherals[id]=validateTransfer(id,p);continue;}
    const sci=/^SCI(\d)$/.exec(id);if(!sci||!RA_SCI_CHANNELS.includes(Number(sci[1]))||!p||typeof p.enabled!=='boolean')throw new Error(`${id}: 지원하지 않는 주변장치입니다.`);
    // One SCI channel is either a UART (r_sci_uart, the default) or a simple SPI master (r_sci_spi), as RASC adds one
@@ -476,6 +478,43 @@ function validateUsb(p){
  // One message for every setting (the user's decision of 2026-11-24).
  if(typeof q.callback!=='string'||q.callback!==''&&!C_NAME.test(q.callback))throw new Error('USB: 설정을 확인하세요.');
  for(const k of ['priority','resumePriority'])if(!Number.isInteger(q[k])||q[k]<0||q[k]>15)throw new Error('USB: 설정을 확인하세요.');
+ return q;
+}
+// CAN (r_can g_can0 on R_CAN0, feature 40), a pin-less stack: the RA6E1 has one classic CAN channel (no CAN FD). Four
+// mailboxes in normal mailbox mode (no FIFO), each transmit or receive with its ID, one acceptance mask for the four
+// (mailbox group 0), the bit rate from PCLKB (the board has no main crystal for CANMCLK), the error / receive / transmit
+// interrupt priority and the callback (r_can's Open asserts one).
+export const RA_CAN_BITRATES=Object.freeze([125,250,500,1000]);
+export const RA_CAN_DEFAULTS=Object.freeze({bitrate:500,idMode:'STANDARD',mailboxes:Object.freeze([{type:'TRANSMIT',id:0x000},{type:'RECEIVE',id:0x100},{type:'RECEIVE',id:0x101},{type:'RECEIVE',id:0x102}].map(m=>Object.freeze(m))),mask:0x7FF,priority:12,callback:'can_callback'});
+/** The CAN bit timing (r_can can_bit_timing_cfg_t) that gives `kbps` exactly from `pclkbHz`: bit rate = PCLKB / (BRP ×
+ *  (1 + TSEG1 + TSEG2)) with 8-25 time quanta, TSEG1 1-16, TSEG2 1-8 (the BCR field widths), TSEG1 > TSEG2 >= SJW (what
+ *  R_CAN_Open checks); the sample point (1 + TSEG1) / TQ nearest 80 % (on a tie the larger TQ count), SJW = min(4, TSEG2).
+ *  null when no setting gives the rate exactly. */
+export function raCanTiming(pclkbHz,kbps){
+ const rate=kbps*1000;let best=null;
+ if(!Number.isInteger(rate)||rate<=0)return null;
+ for(let tq=8;tq<=25;tq++){
+  const brp=pclkbHz/(rate*tq);if(!Number.isInteger(brp)||brp<1||brp>1024)continue;
+  for(let tseg2=1;tseg2<=8;tseg2++){
+   const tseg1=tq-1-tseg2;if(tseg1<1||tseg1>16||tseg1<=tseg2)continue;
+   const sample=(1+tseg1)/tq,off=Math.abs(sample-0.8);
+   if(!best||off<best.off-1e-12||Math.abs(off-best.off)<=1e-12&&tq>best.tq)best={brp,tseg1,tseg2,sjw:Math.min(4,tseg2),tq,sample,off};
+  }
+ }
+ if(!best)return null;
+ const {brp,tseg1,tseg2,sjw,tq,sample}=best;return {brp,tseg1,tseg2,sjw,tq,sample};
+}
+function validateCan(p,fam,clock){
+ const bad=()=>new Error('CAN: 설정을 확인하세요.');
+ if(!p||typeof p.enabled!=='boolean')throw bad();
+ const q={enabled:p.enabled,...RA_CAN_DEFAULTS,...Object.fromEntries(Object.keys(RA_CAN_DEFAULTS).filter(k=>p[k]!==undefined).map(k=>[k,p[k]]))};
+ if(!RA_CAN_BITRATES.includes(q.bitrate)||!['STANDARD','EXTENDED'].includes(q.idMode))throw bad();
+ const max=q.idMode==='EXTENDED'?0x1FFFFFFF:0x7FF,id=v=>Number.isInteger(v)&&v>=0&&v<=max;
+ if(!Array.isArray(q.mailboxes)||q.mailboxes.length!==4)throw bad();
+ q.mailboxes=q.mailboxes.map(m=>{if(!m||!['TRANSMIT','RECEIVE'].includes(m.type)||!id(m.id))throw bad();return {type:m.type,id:m.id};});
+ if(!id(q.mask)||!Number.isInteger(q.priority)||q.priority<0||q.priority>15)throw bad();
+ if(typeof q.callback!=='string'||!C_NAME.test(q.callback))throw bad();
+ if(!raCanTiming(raClockHz({family:fam.id,clock},'pclkb'),q.bitrate))throw bad();
  return q;
 }
 // Low power modes (r_lpm g_lpm0), a pin-less stack: the mode R_LPM_LowPowerModeEnter enters, the sources that end it
