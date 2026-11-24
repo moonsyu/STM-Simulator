@@ -4,8 +4,21 @@
 const fs=require('node:fs/promises'),path=require('node:path');
 
 // FSP drivers by the header the generated or user code includes.
-const MODULES=['r_ioport','r_icu','r_sci_uart','r_gpt','r_agt','r_adc','r_iic_master','r_spi','r_sci_spi','r_iic_slave','r_rtc','r_wdt','r_iwdt','r_dmac','r_dtc','r_elc','r_lpm','r_flash_hp','r_can'];
+const MODULES=['r_ioport','r_icu','r_sci_uart','r_gpt','r_agt','r_adc','r_iic_master','r_spi','r_sci_spi','r_iic_slave','r_rtc','r_wdt','r_iwdt','r_dmac','r_dtc','r_elc','r_lpm','r_flash_hp','r_can','r_usb_basic','r_usb_pcdc'];
+// USB (feature 41): r_usb_pcdc has no r_usb_pcdc.h (hal_data.h includes r_usb_pcdc_api.h), and both USB modules keep
+// their sources in subfolders (r_usb_basic: src/driver, src/hw; r_usb_pcdc: src), so every .c below the module folder is
+// compiled (not the .c.template).
+const HEADER_OF={r_usb_pcdc:'r_usb_pcdc_api'};
+const NESTED=new Set(['r_usb_basic','r_usb_pcdc']);
 const exists=p=>fs.access(p).then(()=>true,()=>false);
+async function cSources(dir,nested){
+ const out=[];
+ for(const e of (await fs.readdir(dir,{withFileTypes:true})).sort((a,b)=>a.name<b.name?-1:a.name>b.name?1:0)){
+  if(e.isFile()&&e.name.endsWith('.c'))out.push(path.join(dir,e.name));
+  else if(nested&&e.isDirectory())out.push(...await cSources(path.join(dir,e.name),nested));
+ }
+ return out;
+}
 
 /** Writes the generated FSP files into `directory` and returns the compile units, include flags and linker flags. */
 async function prepareRa({project,tools,directory,userFiles}){
@@ -21,13 +34,13 @@ async function prepareRa({project,tools,directory,userFiles}){
  // Every module the generated hal_data.h or a user source includes is compiled (an unused one costs nothing after
  // --gc-sections, a missing one is a link error the user cannot fix).
  const text=[generated['ra_gen/hal_data.h'],generated['ra_gen/common_data.h'],...userFiles.map(f=>f.text||'')].join('\n');
- const used=MODULES.filter(m=>m==='r_ioport'||new RegExp(`#\\s*include\\s*["<]${m}\\.h[">]`).test(text));
+ const used=MODULES.filter(m=>m==='r_ioport'||new RegExp(`#\\s*include\\s*["<]${HEADER_OF[m]||m}\\.h[">]`).test(text));
  const fspSources=[];
  for(const dir of [path.join(bsp,'mcu/all'),board])for(const f of (await fs.readdir(dir)).sort())if(f.endsWith('.c'))fspSources.push(path.join(dir,f));
  fspSources.push(path.join(bsp,'cmsis/Device/RENESAS/Source/startup.c'),path.join(bsp,'cmsis/Device/RENESAS/Source/system.c'),path.join(mcuDir,'bsp_linker.c'));
  // An FSP folder installed before 1.52.0 has only the first seven drivers: say what to do instead of a missing-file error.
  for(const m of used)if(!await exists(path.join(fsp,'ra/fsp/src',m)))throw new Error(`FSP 모듈 ${m}가 설치돼 있지 않습니다. 도구 → 개발 도구 설치에서 Renesas FSP를 다시 설치하세요.`);
- for(const m of used)for(const f of (await fs.readdir(path.join(fsp,'ra/fsp/src',m))).sort())if(f.endsWith('.c'))fspSources.push(path.join(fsp,'ra/fsp/src',m,f));
+ for(const m of used)if(NESTED.has(m))fspSources.push(...await cSources(path.join(fsp,'ra/fsp/src',m),true));else for(const f of (await fs.readdir(path.join(fsp,'ra/fsp/src',m))).sort())if(f.endsWith('.c'))fspSources.push(path.join(fsp,'ra/fsp/src',m,f));
  // ra_gen/elc_data.c (g_elc_cfg) comes with the Event Link Controller stack (feature 36).
  const genSources=['common_data.c','hal_data.c','main.c','pin_data.c','vector_data.c',...(generated['ra_gen/elc_data.c']?['elc_data.c']:[])].map(f=>path.join(directory,'ra_gen',f));
  const script=path.join(directory,'script');

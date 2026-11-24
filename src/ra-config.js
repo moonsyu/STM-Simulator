@@ -85,10 +85,10 @@ const FSP_API_OBJECTS=new Set(['g_adc_on_adc','g_can_on_can','g_elc_on_elc','g_e
 export function raNameProblem(name){
  if(C_WORDS.has(name))return `${name}은(는) C나 생성 코드가 쓰는 이름입니다`;
  if(/^(R_|BSP_|FSP_|IOPORT_|ELC_|ICU_|__)/.test(name)||/^_[A-Z]/.test(name))return `${name}: R_ · BSP_ · FSP_ · IOPORT_ 로 시작하는 이름과 __ 로 시작하는 이름은 FSP와 컴파일러가 씁니다`;
- if(/^g_(ioport|external_irq\d+|uart\d+|timer\d+|agt\d+|adc\d+|i2c_master\d+|i2c_slave\d+|spi\d+|sci_spi\d+|wdt\d+|iwdt\d+|rtc\d+|lpm\d+|flash\d+|transfer\d+|elc|bsp_pin_cfg)(_ctrl|_cfg|_extend|_cfg_extend|_ext_cfg|_channel_cfg|_err_cfg|_info)?$/.test(name))return `${name}은(는) 생성 코드의 인스턴스 이름입니다`;
+ if(/^g_(ioport|external_irq\d+|uart\d+|timer\d+|agt\d+|adc\d+|i2c_master\d+|i2c_slave\d+|spi\d+|sci_spi\d+|wdt\d+|iwdt\d+|rtc\d+|lpm\d+|flash\d+|transfer\d+|basic\d+|elc|bsp_pin_cfg)(_ctrl|_cfg|_extend|_cfg_extend|_ext_cfg|_channel_cfg|_err_cfg|_info)?$/.test(name))return `${name}은(는) 생성 코드의 인스턴스 이름입니다`;
  // The interrupt service routines vector_data.h names (FSP drivers define them) and the drivers' API objects
  // (g_uart_on_sci, g_spi_on_spi, g_timer_on_gpt …: the extern const …_api_t g_<api>_on_<module> of the FSP 6.6 headers).
- if(/^((sci_uart|sci_spi|spi|iic_master|iic_slave)_(rxi|txi|tei|eri)|r_icu|adc_scan_end|agt_int|gpt_counter_overflow|rtc_alarm_periodic|rtc_carry|fcu_frdyi|fcu_fiferr|dmac_int)_isr$/.test(name))return `${name}은(는) FSP 드라이버의 인터럽트 처리 함수(ISR) 이름입니다`;
+ if(/^((sci_uart|sci_spi|spi|iic_master|iic_slave)_(rxi|txi|tei|eri)|r_icu|adc_scan_end|agt_int|gpt_counter_overflow|rtc_alarm_periodic|rtc_carry|fcu_frdyi|fcu_fiferr|dmac_int)_isr$/.test(name)||/^usbfs_(interrupt|resume|d0fifo|d1fifo)_handler$/.test(name))return `${name}은(는) FSP 드라이버의 인터럽트 처리 함수(ISR) 이름입니다`;
  if(FSP_API_OBJECTS.has(name))return `${name}은(는) FSP 드라이버의 API 객체 이름(g_…_on_…)입니다`;
  return '';
 }
@@ -105,6 +105,7 @@ function callbackArgType(where,p){
  if(/^I?WDT$/.test(where))return 'wdt_callback_args_t';
  if(where==='RTC')return 'rtc_callback_args_t';
  if(where==='FLASH')return 'flash_callback_args_t';
+ if(where==='USB')return 'usb_callback_args_t';
  return where;
 }
 const checkName=(where,name)=>{const problem=raNameProblem(name);if(problem)throw new Error(`${where}: ${problem}. 다른 이름을 쓰세요.`);};
@@ -164,6 +165,7 @@ export function validateRaMcu(mcu){
    if(id==='FLASH'){out.peripherals[id]=validateFlash(p);continue;}
    if(id==='LPM'){out.peripherals[id]=validateLpm(p);continue;}
    if(id==='ELC'){out.peripherals[id]=validateElc(p);continue;}
+   if(id==='USB'){out.peripherals[id]=validateUsb(p);continue;}
    if(/^TRANSFER\d+$/.test(id)&&Number(id.slice(8))<=31){out.peripherals[id]=validateTransfer(id,p);continue;}
    const sci=/^SCI(\d)$/.exec(id);if(!sci||!RA_SCI_CHANNELS.includes(Number(sci[1]))||!p||typeof p.enabled!=='boolean')throw new Error(`${id}: 지원하지 않는 주변장치입니다.`);
    // One SCI channel is either a UART (r_sci_uart, the default) or a simple SPI master (r_sci_spi), as RASC adds one
@@ -462,6 +464,17 @@ function validateFlash(p){
  if(typeof q.callback!=='string'||q.callback!==''&&!C_NAME.test(q.callback))throw new Error('FLASH: 콜백 이름은 C 식별자로 쓰세요(없으면 비워 둡니다).');
  for(const [k,label]of [['readyPriority','Flash Ready'],['errorPriority','Flash Error']])if(!Number.isInteger(q[k])||q[k]<0||q[k]>15)throw new Error(`FLASH: ${label} 인터럽트 우선순위는 0~15입니다.`);
  if(!q.bgo)q.callback='';
+ return q;
+}
+// USB PCDC (r_usb_basic g_basic0 with r_usb_pcdc, feature 41), a pin-less stack: USB_DP / USB_DM are dedicated pins.
+// Peripheral mode, Full-Speed, class PCDC only; the USBI and USBR interrupt priorities and the callback (empty: NULL —
+// the program polls R_USB_EventGet). The VBUS pin is not a setting (which pin it is could not be checked).
+export const RA_USB_DEFAULTS=Object.freeze({callback:'',priority:12,resumePriority:12});
+function validateUsb(p){
+ if(!p||typeof p.enabled!=='boolean')throw new Error('USB: 설정을 확인하세요.');
+ const q={enabled:p.enabled,...RA_USB_DEFAULTS,...Object.fromEntries(Object.keys(RA_USB_DEFAULTS).filter(k=>p[k]!==undefined).map(k=>[k,p[k]]))};
+ if(typeof q.callback!=='string'||q.callback!==''&&!C_NAME.test(q.callback))throw new Error('USB: 콜백 이름은 C 식별자로 쓰세요(없으면 비워 둡니다).');
+ for(const [k,label]of [['priority','USBI'],['resumePriority','USBR']])if(!Number.isInteger(q[k])||q[k]<0||q[k]>15)throw new Error(`USB: ${label} 인터럽트 우선순위는 0~15입니다.`);
  return q;
 }
 // Low power modes (r_lpm g_lpm0), a pin-less stack: the mode R_LPM_LowPowerModeEnter enters, the sources that end it

@@ -3,7 +3,7 @@
 // linker init tables) and script (linker scripts). The user's code is src/hal_entry.c; the app builds these with the
 // FSP sources (BSP + r_* drivers) and ARM GCC, then runs the ELF on the RA6E1 emulator.
 // Formats follow RASC output for FSP 5.x/6.x (only what the FPB-RA6E1 configurations here need).
-import {raFamily,raPinName,raPortBit,RA_IRQ_PINS,raPsel,RA_PSEL_NAMES,RA_SCI_CHANNELS,RA_GPT_CHANNELS,RA_ADC_CHANNELS,RA_AGT_CHANNELS,RA_IIC_CHANNELS,RA_SPI_CHANNELS,RA_SCI_SPI_CHANNELS,raGptCounts,raAgtCounts,raIicClock,raClockHz,raSpiBitrate,raSciSpiBitrate,RA_WDT,raOfs0,RA_RTC_DEFAULTS,RA_IIC_SLAVE_ADDRESS,raIicSlaveClock,RA_LPM_DEFAULTS,RA_FLASH_DEFAULTS,RA_ELC_PERIPHERALS,RA_TRANSFER_DEFAULTS} from './ra-config.js';
+import {raFamily,raPinName,raPortBit,RA_IRQ_PINS,raPsel,RA_PSEL_NAMES,RA_SCI_CHANNELS,RA_GPT_CHANNELS,RA_ADC_CHANNELS,RA_AGT_CHANNELS,RA_IIC_CHANNELS,RA_SPI_CHANNELS,RA_SCI_SPI_CHANNELS,raGptCounts,raAgtCounts,raIicClock,raClockHz,raSpiBitrate,raSciSpiBitrate,RA_WDT,raOfs0,RA_RTC_DEFAULTS,RA_IIC_SLAVE_ADDRESS,raIicSlaveClock,RA_LPM_DEFAULTS,RA_FLASH_DEFAULTS,RA_ELC_PERIPHERALS,RA_TRANSFER_DEFAULTS,RA_USB_DEFAULTS} from './ra-config.js';
 
 const HEADER=kind=>`/* generated ${kind} - do not edit */\n`;
 const hex=(n,w=8)=>'0x'+(n>>>0).toString(16).toUpperCase().padStart(w,'0');
@@ -479,6 +479,69 @@ const transfer_instance_t ${t.name} =
     .p_api         = &g_transfer_on_${t.driver.toLowerCase()}
 };`;
 }
+// USB PCDC (r_usb_basic g_basic0 with r_usb_pcdc, feature 41): peripheral mode, Full-Speed, class PCDC on USBFS (module
+// 0), the USBI (USBFS_INT) and USBR (USBFS_RESUME) interrupts, no DMA/DTC transfer. The descriptors are the user source
+// src/r_usb_pcdc_descriptor.c (FSP's template, src/ra-usb-descriptor.js), which defines g_usb_descriptor as const.
+const usbOf=mcu=>{const p=mcu.peripherals?.USB;if(!p?.enabled)return null;return {...RA_USB_DEFAULTS,...p,name:'g_basic0'};};
+const usbDecl=t=>`/* Basic on USB Instance. */
+extern const usb_instance_t ${t.name};
+/** Access the USB instance using these structures when calling API functions directly (::p_api is not used). */
+extern usb_instance_ctrl_t ${t.name}_ctrl;
+extern const usb_cfg_t ${t.name}_cfg;
+extern const usb_descriptor_t g_usb_descriptor;${t.callback?`
+#ifndef ${t.callback}
+void ${t.callback}(usb_callback_args_t * p_args);
+#endif`:''}`;
+function usbInstance(t){
+ const v=(k,field)=>`#if defined(VECTOR_NUMBER_USBFS_${k})\n    .${field.padEnd(19)} = VECTOR_NUMBER_USBFS_${k},\n#else\n    .${field.padEnd(19)} = FSP_INVALID_VECTOR,\n#endif`;
+ return `usb_instance_ctrl_t ${t.name}_ctrl;
+const usb_cfg_t ${t.name}_cfg =
+{
+    .usb_mode            = USB_MODE_PERI,
+    .usb_speed           = USB_SPEED_FS,
+    .module_number       = 0,
+    .type                = USB_CLASS_PCDC,
+    .p_usb_reg           = (usb_descriptor_t *) &g_usb_descriptor,
+    .usb_complience_cb   = NULL,
+${v('INT','irq')}
+${v('RESUME','irq_r')}
+    .irq_d0              = FSP_INVALID_VECTOR,
+    .irq_d1              = FSP_INVALID_VECTOR,
+    .hsirq               = FSP_INVALID_VECTOR,
+    .hsirq_d0            = FSP_INVALID_VECTOR,
+    .hsirq_d1            = FSP_INVALID_VECTOR,
+    .ipl                 = (${t.priority}),
+    .ipl_r               = (${t.resumePriority}),
+    .ipl_d0              = (BSP_IRQ_DISABLED),
+    .ipl_d1              = (BSP_IRQ_DISABLED),
+    .hsipl               = (BSP_IRQ_DISABLED),
+    .hsipl_d0            = (BSP_IRQ_DISABLED),
+    .hsipl_d1            = (BSP_IRQ_DISABLED),
+    .p_usb_apl_callback  = ${t.callback||'NULL'},
+    .p_context           = NULL,
+    .p_transfer_tx       = NULL,
+    .p_transfer_rx       = NULL,
+    .p_extend            = NULL,
+};
+/* Instance structure to use this module. */
+const usb_instance_t ${t.name} =
+{
+    .p_ctrl        = &${t.name}_ctrl,
+    .p_cfg         = &${t.name}_cfg,
+    .p_api         = &g_usb_on_usb
+};`;
+}
+/** PLL2 and UCLK settings that give the USB clock 48 MHz from the HOCO (`hocoMHz` 16, 18 or 20): PLL2 input 8-24 MHz and
+ *  output 120-240 MHz (BSP_FEATURE_CGC_PLL2_OUT_MIN_HZ / MAX_HZ, the PLL input range of bsp_feature.h), the UCLK dividers of
+ *  bsp_clocks.h (BSP_CLOCKS_USB_CLOCK_DIV_*). PLL2 divider /2 first (the BSP default), then /1 and /3; the largest multiplier. */
+export function raUsbClock(hocoMHz){
+ for(const div of [2,1,3])for(let mul=30;mul>=10;mul--){
+  const input=hocoMHz/div,out=input*mul,usbDiv=out/48;
+  if(input>=8&&input<=24&&out>=120&&out<=240&&[1,2,3,4,5,6,8,10,16].includes(usbDiv))return {pllDiv:div,pllMul:mul,pllMHz:out,usbDiv,uclkMHz:48};
+ }
+ return null;
+}
+const PLL_DIV_MACRO={1:'BSP_CLOCKS_PLL_DIV_1',2:'BSP_CLOCKS_PLL_DIV_2',3:'BSP_CLOCKS_PLL_DIV_3'};
 
 function ofsCfg(mcu){
  const ofs=raOfs0(mcu),iwdt=mcu.peripherals?.IWDT?.enabled,wdt=mcu.peripherals?.WDT?.enabled&&mcu.peripherals.WDT.startMode==='AUTO';
@@ -490,7 +553,7 @@ function ofsCfg(mcu){
 `;
 }
 /** The FSP instances hal_data.c defines for an RA configuration, as the built-in interpreter declares them (fsp-interp.js). */
-export const raInstances=mcu=>({irqs:irqsOf(mcu),uarts:uartsOf(mcu),gpts:gptsOf(mcu),adc:adcOf(mcu),agts:agtsOf(mcu),iics:iicsOf(mcu),spis:spisOf(mcu),sciSpis:sciSpisOf(mcu),wdts:wdtsOf(mcu),rtc:rtcOf(mcu),iicSlaves:iicSlavesOf(mcu),lpm:lpmOf(mcu),flash:flashOf(mcu),elc:elcOf(mcu),elcLinks:elcLinks(mcu),transfers:transfersOf(mcu)});
+export const raInstances=mcu=>({irqs:irqsOf(mcu),uarts:uartsOf(mcu),gpts:gptsOf(mcu),adc:adcOf(mcu),agts:agtsOf(mcu),iics:iicsOf(mcu),spis:spisOf(mcu),sciSpis:sciSpisOf(mcu),wdts:wdtsOf(mcu),rtc:rtcOf(mcu),iicSlaves:iicSlavesOf(mcu),lpm:lpmOf(mcu),flash:flashOf(mcu),elc:elcOf(mcu),elcLinks:elcLinks(mcu),transfers:transfersOf(mcu),usb:usbOf(mcu)});
 /** "P408" → "BSP_IO_PORT_04_PIN_08". */
 export const raIoName=pin=>ioName(pin);
 // SPI masters: r_spi on RSPI (g_spiN) and r_sci_spi on an SCI channel in simple SPI mode (g_sci_spiN). Both use spi_cfg_t
@@ -657,10 +720,15 @@ export function raVectors(mcu){
  if(flashOf(mcu)?.bgo)for(const [k,label]of [['FRDYI','Flash ready interrupt'],['FIFERR','Flash access error interrupt']])list.push({isr:`fcu_${k.toLowerCase()}_isr`,event:'FCU_'+k,label:`FCU ${k} (${label})`,vector:'FCU_'+k});
  // DMAC channels with a callback: the transfer end interrupt (r_dmac dmac_int_isr), in transfer-instance order.
  for(const t of transfersOf(mcu))if(t.driver==='DMAC'&&t.callback)list.push({isr:'dmac_int_isr',event:`DMAC${t.channel}_INT`,label:`DMAC${t.channel} INT (DMAC${t.channel} transfer end)`,vector:`DMAC${t.channel}_INT`});
+ // USB PCDC (r_usb_basic, feature 41): USBI and USBR, appended so the slots above keep their numbers.
+ if(usbOf(mcu))for(const [k,isr,label]of [['INT','usbfs_interrupt_handler','USBFS interrupt'],['RESUME','usbfs_resume_handler','USBFS resume interrupt']])list.push({isr,event:'USBFS_'+k,label:`USBFS ${k} (${label})`,vector:'USBFS_'+k});
  return list.map((v,i)=>({...v,index:i}));
 }
 
 function clockCfg(c,mcu){
+ // With the USB stack (feature 41) PLL2 runs from the HOCO and is the USB clock (UCLK 48 MHz, raUsbClock); without it
+ // the lines are as before.
+ const usb=usbOf(mcu)?raUsbClock(c.hocoMHz):null;
  return HEADER('configuration header file')+`#ifndef BSP_CLOCK_CFG_H_
 #define BSP_CLOCK_CFG_H_
 #define BSP_CFG_CLOCKS_SECURE (0)
@@ -670,12 +738,14 @@ function clockCfg(c,mcu){
 #define BSP_CFG_PLL_SOURCE (BSP_CLOCKS_SOURCE_CLOCK_HOCO) /* PLL Src: HOCO */
 #define BSP_CFG_PLL_DIV (BSP_CLOCKS_PLL_DIV_${c.pllDiv}) /* PLL Div /${c.pllDiv} */
 #define BSP_CFG_PLL_MUL BSP_CLOCKS_PLL_MUL(${c.pllMul},0) /* PLL Mul x${c.pllMul}.0 */
-#define BSP_CFG_PLL2_SOURCE (BSP_CLOCKS_CLOCK_DISABLED) /* PLL2 Disabled */
+${usb?`#define BSP_CFG_PLL2_SOURCE (BSP_CLOCKS_SOURCE_CLOCK_HOCO) /* PLL2 Src: HOCO */
+#define BSP_CFG_PLL2_DIV (${PLL_DIV_MACRO[usb.pllDiv]}) /* PLL2 Div /${usb.pllDiv} */
+#define BSP_CFG_PLL2_MUL BSP_CLOCKS_PLL_MUL(${usb.pllMul},0) /* PLL2 Mul x${usb.pllMul}.0 */`:`#define BSP_CFG_PLL2_SOURCE (BSP_CLOCKS_CLOCK_DISABLED) /* PLL2 Disabled */
 #define BSP_CFG_PLL2_DIV (BSP_CLOCKS_PLL_DIV_2) /* PLL2 Div /2 */
-#define BSP_CFG_PLL2_MUL BSP_CLOCKS_PLL_MUL(20,0) /* PLL2 Mul x20.0 */
+#define BSP_CFG_PLL2_MUL BSP_CLOCKS_PLL_MUL(20,0) /* PLL2 Mul x20.0 */`}
 #define BSP_CFG_CLOCK_SOURCE (BSP_CLOCKS_SOURCE_CLOCK_PLL) /* Clock Src: PLL */
 #define BSP_CFG_CLKOUT_SOURCE (BSP_CLOCKS_CLOCK_DISABLED) /* CLKOUT Disabled */
-#define BSP_CFG_UCLK_SOURCE (BSP_CLOCKS_CLOCK_DISABLED) /* UCLK Disabled */
+${usb?'#define BSP_CFG_UCLK_SOURCE (BSP_CLOCKS_SOURCE_CLOCK_PLL2) /* UCLK Src: PLL2 */':'#define BSP_CFG_UCLK_SOURCE (BSP_CLOCKS_CLOCK_DISABLED) /* UCLK Disabled */'}
 #define BSP_CFG_OCTACLK_SOURCE (BSP_CLOCKS_CLOCK_DISABLED) /* OCTASPICLK Disabled */
 #define BSP_CFG_CANFDCLK_SOURCE (BSP_CLOCKS_CLOCK_DISABLED) /* CANFDCLK Disabled */
 #define BSP_CFG_ICLK_DIV (BSP_CLOCKS_SYS_CLOCK_DIV_${c.iclkDiv}) /* ICLK Div /${c.iclkDiv} */
@@ -687,7 +757,7 @@ function clockCfg(c,mcu){
 #define BSP_CFG_BCLK_OUTPUT (0) /* EBCLK Disabled */
 #define BSP_CFG_FCLK_DIV (BSP_CLOCKS_SYS_CLOCK_DIV_${c.fclkDiv}) /* FCLK Div /${c.fclkDiv} */
 #define BSP_CFG_CLKOUT_DIV (BSP_CLOCKS_SYS_CLOCK_DIV_1) /* CLKOUT Div /1 */
-#define BSP_CFG_UCLK_DIV (BSP_CLOCKS_USB_CLOCK_DIV_5) /* UCLK Div /5 */
+#define BSP_CFG_UCLK_DIV (BSP_CLOCKS_USB_CLOCK_DIV_${usb?usb.usbDiv:5}) /* UCLK Div /${usb?usb.usbDiv:5} */
 #define BSP_CFG_OCTACLK_DIV (BSP_CLOCKS_OCTA_CLOCK_DIV_1) /* OCTASPICLK Div /1 */
 #define BSP_CFG_CANFDCLK_DIV (BSP_CLOCKS_CANFD_CLOCK_DIV_6) /* CANFDCLK Div /6 */${mcu?.peripherals?.RTC?.enabled&&mcu.peripherals.RTC.clockSource==='SUBCLOCK'?`
 #define BSP_CLOCK_CFG_SUBCLOCK_POPULATED (1) /* RTC on the sub-clock: X2 32.768 kHz (FPB-RA6E1: E25/E26 must be closed) */
@@ -927,7 +997,7 @@ function halDataH(mcu){
  const irqs=irqsOf(mcu),uarts=uartsOf(mcu),includes=(irqs.length?'#include "r_icu.h"\n#include "r_external_irq_api.h"\n':'')+(uarts.length?'#include "r_sci_uart.h"\n#include "r_uart_api.h"\n':'')+(gptsOf(mcu).length?'#include "r_gpt.h"\n#include "r_timer_api.h"\n':'')+(adcOf(mcu)?'#include "r_adc.h"\n#include "r_adc_api.h"\n':'')+(iicsOf(mcu).length?'#include "r_iic_master.h"\n#include "r_i2c_master_api.h"\n':'')+(agtsOf(mcu).length?'#include "r_agt.h"\n'+(gptsOf(mcu).length?'':'#include "r_timer_api.h"\n'):'')
   +(spisOf(mcu).length?'#include "r_spi.h"\n':'')+(sciSpisOf(mcu).length?'#include "r_sci_spi.h"\n':'')+(spisOf(mcu).length||sciSpisOf(mcu).length?'#include "r_spi_api.h"\n':'')
   +wdtsOf(mcu).map(w=>`#include "r_${w.kind}.h"\n`).join('')+(wdtsOf(mcu).length?'#include "r_wdt_api.h"\n':'')+(rtcOf(mcu)?'#include "r_rtc.h"\n#include "r_rtc_api.h"\n':'')+(iicSlavesOf(mcu).length?'#include "r_iic_slave.h"\n#include "r_i2c_slave_api.h"\n':'')+(lpmOf(mcu)?'#include "r_lpm.h"\n#include "r_lpm_api.h"\n':'')+(flashOf(mcu)?'#include "r_flash_hp.h"\n#include "r_flash_api.h"\n':'')
-  +(transfersOf(mcu).some(t=>t.driver==='DTC')?'#include "r_dtc.h"\n':'')+(transfersOf(mcu).some(t=>t.driver==='DMAC')?'#include "r_dmac.h"\n':'')+(transfersOf(mcu).length?'#include "r_transfer_api.h"\n':'')+(elcOf(mcu)?'#include "r_elc.h"\n#include "r_elc_api.h"\n':'');
+  +(transfersOf(mcu).some(t=>t.driver==='DTC')?'#include "r_dtc.h"\n':'')+(transfersOf(mcu).some(t=>t.driver==='DMAC')?'#include "r_dmac.h"\n':'')+(transfersOf(mcu).length?'#include "r_transfer_api.h"\n':'')+(elcOf(mcu)?'#include "r_elc.h"\n#include "r_elc_api.h"\n':'')+(usbOf(mcu)?'#include "r_usb_basic.h"\n#include "r_usb_basic_api.h"\n#include "r_usb_pcdc_api.h"\n':'');
  const decls=transfersOf(mcu).map(transferDecl).concat(irqs.map(i=>`/** External IRQ on ICU Instance. */
 extern const external_irq_instance_t ${i.name};
 /** Access the ICU instance using these structures when calling API functions directly (::p_api is not used). */
@@ -943,7 +1013,7 @@ extern const uart_cfg_t ${u.name}_cfg;
 extern const sci_uart_extended_cfg_t ${u.name}_cfg_extend;
 #ifndef ${u.callback}
 void ${u.callback}(uart_callback_args_t * p_args);
-#endif`)).concat(gptsOf(mcu).map(gptDecl)).concat(adcOf(mcu)?[adcDecl(adcOf(mcu))]:[]).concat(agtsOf(mcu).map(agtDecl)).concat(iicsOf(mcu).map(iicDecl)).concat(spisOf(mcu).map(t=>spiDecl(t,'SPI','spi_instance_ctrl_t'))).concat(sciSpisOf(mcu).map(t=>spiDecl(t,'SCI','sci_spi_instance_ctrl_t'))).concat(wdtsOf(mcu).map(wdtDecl)).concat(rtcOf(mcu)?[rtcDecl(rtcOf(mcu))]:[]).concat(iicSlavesOf(mcu).map(iicSlaveDecl)).concat(lpmOf(mcu)?[lpmDecl(lpmOf(mcu))]:[]).concat(flashOf(mcu)?[flashDecl(flashOf(mcu))]:[]).concat(elcOf(mcu)?[elcDecl()]:[]).join('\n');
+#endif`)).concat(gptsOf(mcu).map(gptDecl)).concat(adcOf(mcu)?[adcDecl(adcOf(mcu))]:[]).concat(agtsOf(mcu).map(agtDecl)).concat(iicsOf(mcu).map(iicDecl)).concat(spisOf(mcu).map(t=>spiDecl(t,'SPI','spi_instance_ctrl_t'))).concat(sciSpisOf(mcu).map(t=>spiDecl(t,'SCI','sci_spi_instance_ctrl_t'))).concat(wdtsOf(mcu).map(wdtDecl)).concat(rtcOf(mcu)?[rtcDecl(rtcOf(mcu))]:[]).concat(iicSlavesOf(mcu).map(iicSlaveDecl)).concat(lpmOf(mcu)?[lpmDecl(lpmOf(mcu))]:[]).concat(flashOf(mcu)?[flashDecl(flashOf(mcu))]:[]).concat(elcOf(mcu)?[elcDecl()]:[]).concat(usbOf(mcu)?[usbDecl(usbOf(mcu))]:[]).join('\n');
  return HEADER('HAL header file')+`#ifndef HAL_DATA_H_
 #define HAL_DATA_H_
 #include <stdint.h>
@@ -1035,7 +1105,7 @@ const uart_instance_t ${u.name} =
     .p_ctrl        = &${u.name}_ctrl,
     .p_cfg         = &${u.name}_cfg,
     .p_api         = &g_uart_on_sci
-};`;})).concat(gptsOf(mcu).map(gptInstance)).concat(adcOf(mcu)?[adcInstance(adcOf(mcu))]:[]).concat(agtsOf(mcu).map(agtInstance)).concat(iicsOf(mcu).map(iicInstance)).concat(spisOf(mcu).map(spiInstance)).concat(sciSpisOf(mcu).map(sciSpiInstance)).concat(wdtsOf(mcu).map(wdtInstance)).concat(rtcOf(mcu)?[rtcInstance(rtcOf(mcu))]:[]).concat(iicSlavesOf(mcu).map(iicSlaveInstance)).concat(lpmOf(mcu)?[lpmInstance(lpmOf(mcu))]:[]).concat(flashOf(mcu)?[flashInstance(flashOf(mcu))]:[]).concat(elcOf(mcu)?[elcInstance()]:[]).join('\n');
+};`;})).concat(gptsOf(mcu).map(gptInstance)).concat(adcOf(mcu)?[adcInstance(adcOf(mcu))]:[]).concat(agtsOf(mcu).map(agtInstance)).concat(iicsOf(mcu).map(iicInstance)).concat(spisOf(mcu).map(spiInstance)).concat(sciSpisOf(mcu).map(sciSpiInstance)).concat(wdtsOf(mcu).map(wdtInstance)).concat(rtcOf(mcu)?[rtcInstance(rtcOf(mcu))]:[]).concat(iicSlavesOf(mcu).map(iicSlaveInstance)).concat(lpmOf(mcu)?[lpmInstance(lpmOf(mcu))]:[]).concat(flashOf(mcu)?[flashInstance(flashOf(mcu))]:[]).concat(elcOf(mcu)?[elcInstance()]:[]).concat(usbOf(mcu)?[usbInstance(usbOf(mcu))]:[]).join('\n');
  return HEADER('HAL source file')+`#include "hal_data.h"
 ${body}${body?'\n':''}void g_hal_init(void) {
 g_common_init();
@@ -1257,6 +1327,14 @@ export function generateRaFiles(mcu,{board}={}){
   cfg('r_dmac_cfg.h',moduleCfg('r_dmac_cfg.h','R_DMAC_CFG_H_',['#define DMAC_CFG_PARAM_CHECKING_ENABLE (BSP_CFG_PARAM_CHECKING_ENABLE)'])),
   cfg('r_elc_cfg.h',moduleCfg('r_elc_cfg.h','R_ELC_CFG_H_',['#define ELC_CFG_PARAM_CHECKING_ENABLE (BSP_CFG_PARAM_CHECKING_ENABLE)'])),
   ...(elcOf(mcu)?[gen('elc_data.c',elcData(mcu))]:[]),
+  // USB PCDC (feature 41): FSP has no r_usb_basic_cfg.h / r_usb_pcdc_cfg.h; these are the USB_CFG_* values the driver
+  // sources read in this build (peripheral mode, class PCDC, bare metal, Full-Speed): no DMA/DTC, battery charging,
+  // dedicated charging port, compliance or electrical test; the standard requests stay in the driver (USB_CFG_REQUEST
+  // off); double buffering on and continuous transfer mode off for the pipes (assumed RASC defaults).
+  ...(usbOf(mcu)?[
+   cfg('r_usb_basic_cfg.h',moduleCfg('r_usb_basic_cfg.h','R_USB_BASIC_CFG_H_',['#define USB_CFG_PARAM_CHECKING_ENABLE (BSP_CFG_PARAM_CHECKING_ENABLE)','#define USB_CFG_MODE (USB_CFG_PERI)','#define USB_CFG_PCDC_USE','#define USB_CFG_BC (USB_CFG_DISABLE)','#define USB_CFG_DCP (USB_CFG_DISABLE)','#define USB_CFG_REQUEST (USB_CFG_DISABLE)','#define USB_CFG_DBLB (USB_CFG_DBLBON)','#define USB_CFG_CNTMD (USB_CFG_CNTMDOFF)','#define USB_CFG_DMA (USB_CFG_DISABLE)','#define USB_CFG_DTC (USB_CFG_DISABLE)','#define USB_CFG_COMPLIANCE (USB_CFG_DISABLE)','#define USB_CFG_ELECTRICAL (USB_CFG_DISABLE)'])),
+   cfg('r_usb_pcdc_cfg.h',moduleCfg('r_usb_pcdc_cfg.h','R_USB_PCDC_CFG_H_',['/* r_usb_pcdc assigns its pipes from the configuration descriptor: no setting is read here. */']))
+  ]:[]),
   gen('bsp_clock_cfg.h',clockCfg(c,mcu)),
   gen('common_data.h',HEADER('common header file')+`#ifndef COMMON_DATA_H_\n#define COMMON_DATA_H_\n#include <stdint.h>\n#include "bsp_api.h"\n#include "r_ioport.h"\n#include "bsp_pin_cfg.h"\nFSP_HEADER\n#define IOPORT_CFG_NAME g_bsp_pin_cfg\n#define IOPORT_CFG_OPEN R_IOPORT_Open\n#define IOPORT_CFG_CTRL g_ioport_ctrl\n/* IOPORT Instance */\nextern const ioport_instance_t g_ioport;\n/* IOPORT control structure. */\nextern ioport_instance_ctrl_t g_ioport_ctrl;\nvoid g_common_init(void);\nFSP_FOOTER\n#endif /* COMMON_DATA_H_ */\n`),
   gen('common_data.c',HEADER('common source file')+`#include "common_data.h"\nioport_instance_ctrl_t g_ioport_ctrl;\nconst ioport_instance_t g_ioport =\n{\n    .p_api = &g_ioport_on_ioport,\n    .p_ctrl = &g_ioport_ctrl,\n    .p_cfg = &g_bsp_pin_cfg,\n};\nvoid g_common_init(void) {\n}\n`),
