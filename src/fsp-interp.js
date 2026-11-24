@@ -19,6 +19,7 @@ import {encodeSpiFrames} from './signals.js';
 import {Rtc} from './emu/ra6e1/rtc.js';
 import {FLASH_TYPES,FLASH_METHODS,FLASH_NAMES,flashPrelude} from './fsp-flash.js';
 import {TRANSFER_TYPES,TRANSFER_METHODS,TRANSFER_NAMES,transferPrelude} from './fsp-transfer.js';
+import {USB_TYPES,USB_METHODS,usbPrelude} from './fsp-usb.js';
 
 // RSTSR1 and RSTSR0 reset-cause flags (R7FA6E10F.h): the registers the interpreter lets the program read (FspAdapter.register).
 const RESET_STATUS=[['IWDTRF',0],['WDTRF',1],['SWRF',2]];
@@ -34,7 +35,7 @@ export const FSP_ALIASES=Object.freeze({FSP_CPP_HEADER:'',FSP_CPP_FOOTER:'',FSP_
  IOPORT_CFG_CTRL:'g_ioport_ctrl',IOPORT_CFG_NAME:'g_bsp_pin_cfg',IOPORT_CFG_OPEN:'R_IOPORT_Open'});
 // FSP and generated headers that resolve to the prelude (it has a guard, so including several is fine); the C
 // library headers read as empty.
-const FSP_HEADERS=['hal_data.h','common_data.h','bsp_pin_cfg.h','vector_data.h','bsp_api.h','bsp_cfg.h','bsp_clock_cfg.h','board.h','board_cfg.h','fsp_common_api.h','r_ioport.h','r_ioport_api.h','r_icu.h','r_external_irq_api.h','r_sci_uart.h','r_uart_api.h','r_gpt.h','r_timer_api.h','r_agt.h','r_adc.h','r_adc_api.h','r_iic_master.h','r_i2c_master_api.h','r_spi.h','r_sci_spi.h','r_spi_api.h','r_wdt.h','r_iwdt.h','r_wdt_api.h','r_rtc.h','r_rtc_api.h','r_iic_slave.h','r_i2c_slave_api.h','r_lpm.h','r_lpm_api.h','r_flash_hp.h','r_flash_api.h','r_elc.h','r_elc_api.h','r_dtc.h','r_dmac.h','r_transfer_api.h','bsp_io.h','bsp_delay.h','bsp_common.h'];
+const FSP_HEADERS=['hal_data.h','common_data.h','bsp_pin_cfg.h','vector_data.h','bsp_api.h','bsp_cfg.h','bsp_clock_cfg.h','board.h','board_cfg.h','fsp_common_api.h','r_ioport.h','r_ioport_api.h','r_icu.h','r_external_irq_api.h','r_sci_uart.h','r_uart_api.h','r_gpt.h','r_timer_api.h','r_agt.h','r_adc.h','r_adc_api.h','r_iic_master.h','r_i2c_master_api.h','r_spi.h','r_sci_spi.h','r_spi_api.h','r_wdt.h','r_iwdt.h','r_wdt_api.h','r_rtc.h','r_rtc_api.h','r_iic_slave.h','r_i2c_slave_api.h','r_lpm.h','r_lpm_api.h','r_flash_hp.h','r_flash_api.h','r_elc.h','r_elc_api.h','r_dtc.h','r_dmac.h','r_transfer_api.h','bsp_io.h','bsp_delay.h','bsp_common.h','r_usb_basic.h','r_usb_basic_api.h','r_usb_pcdc_api.h'];
 const C_HEADERS=new Set(['stdint.h','stddef.h','stdbool.h','string.h','stdlib.h','stdio.h','ctype.h','math.h','limits.h','time.h']);
 // Generated and FSP source folders of the project tree: built by ARM GCC only (the prelude stands in for them here).
 const FSP_FILE=/^(ra|ra_gen|ra_cfg|script)\//;
@@ -253,6 +254,8 @@ export function fspPrelude(mcu){
   `const i2c_slave_instance_t ${t.name} = { .p_ctrl = &${t.name}_ctrl, .p_cfg = &${t.name}_cfg, .p_api = NULL };`,`void ${t.callback}(i2c_slave_callback_args_t * p_args);`);}
  // Data flash (r_flash_hp): its types only when the stack is there, as hal_data.h includes r_flash_hp.h then.
  if(flash)out.push(FLASH_TYPES,...flashPrelude(flash,vec));
+ // USB PCDC (r_usb_basic / r_usb_pcdc): their types only with the stack (hal_data.h includes them then).
+ if(inst.usb)out.push(USB_TYPES,...usbPrelude(inst.usb,vec));
  out.push('void hal_entry(void);','void g_hal_init(void);','void g_common_init(void);','void BSP_PinConfigSecurityInit(void);','#endif');
  return out.join('\n')+'\n';
 }
@@ -275,7 +278,9 @@ function substitute(text){
 /** An FSP project (src/hal_entry.c as `source`, its other sources as `files`) as an interpreter program. */
 export function compileFsp(source,files=[],mcu){
  const config=validateRaMcu(mcu),prelude=fspPrelude(config);
- const own=(files||[]).filter(f=>!FSP_FILE.test(f?.name||'')).map(f=>({...f,text:substitute(f.text)}));
+ // The USB descriptors (src/r_usb_pcdc_descriptor.c, feature 41) are not read: the interpreter's driver answers with FSP's
+ // template (fsp-usb.js).
+ const own=(files||[]).filter(f=>!FSP_FILE.test(f?.name||'')&&baseName(f?.name||'')!=='r_usb_pcdc_descriptor.c').map(f=>({...f,text:substitute(f.text)}));
  // A project header of the same name (src/board.h) is the one GCC finds next to hal_entry.c: no stand-in for it.
  const shadowed=new Set(own.map(f=>baseName(f.name))),virtualNames=FSP_HEADERS.filter(name=>!shadowed.has(name)),virtual=Object.fromEntries(virtualNames.map(name=>[name,prelude]));
  const prepared=prepareHalSource(substitute(source),own,{withMap:true,headers:C_HEADERS,defines:[],virtual});
@@ -345,6 +350,8 @@ export class FspAdapter {
   this.rstsr1=pin?0:(old.rstsr1|(RESET_FLAG[old.resetCause]??0))&0xffff;this.rstsr0=pin?0:old.rstsr0|(old.resetCause==='DEEP_STANDBY'?0x80:0);
   this.wdtResets=old.wdtResets;this.rtcDev=old.rtcDev;this.hostTime=old.hostTime;
   this.dataFlash=old.dataFlash;this.flashBlankNoted=old.flashBlankNoted;
+  // USB (feature 41): the PC's terminal keeps what it showed; the old device's host stops (the new one enumerates again).
+  this.usbKeep=old.usbOutput?.();old.usbFs?.host.reset();
   // An RTC stopped for the mode (LOCO without its supply) counts again.
   if(old.low?.rtcStopped)this.rtcDev?.start();
   if(pin)return;
@@ -453,6 +460,8 @@ export class FspAdapter {
   if(name==='R_WDT_Refresh'||name==='R_IWDT_Refresh'){const reset=this.wdtBadRefresh(name,args,r);if(reset)return reset;}
   // R_FLASH_HP_*: generators, as a call waits while the flash programs or erases (fsp-flash.js).
   if(name.startsWith('R_FLASH_HP_')){const flash=this.flashCall(name,args,r);if(flash){if(name==='R_FLASH_HP_StatusGet')r.polls++;return flash;}}
+  // R_USB_*: generators (the driver waits, and calls the callback from R_USB_EventGet); EventGet is polling (fsp-usb.js).
+  if(name.startsWith('R_USB_')){const usb=this.usbCall(name,args,r);if(usb){if(name==='R_USB_EventGet')r.polls++;return usb;}}
   if(name==='NVIC_SystemReset'){const self=this;return (function*(){self.resetCause='SYSRESETREQ';r.warn('[NVIC] 시스템 리셋: 프로그램을 처음부터 다시 실행합니다.');yield {kind:'reset'};})();}
   if((name==='printf'||name==='puts'||name==='putchar')&&!this.inStdio&&this.stdoutHook(r))return this.stdout(name,args,r);
   if(name==='fflush')return this.stdout(name,args,r);
@@ -1033,6 +1042,8 @@ for(const k of ['stdoutHook','stdout','flushStdout','stdinChar','stdin'])FspAdap
 Object.defineProperties(FspAdapter.prototype,Object.getOwnPropertyDescriptors(FLASH_METHODS));
 // ELC, DTC and DMAC, and the event hub of the peripherals (fsp-transfer.js).
 Object.defineProperties(FspAdapter.prototype,Object.getOwnPropertyDescriptors(TRANSFER_METHODS));
+// USB PCDC: R_USB_* (fsp-usb.js, feature 41).
+Object.defineProperties(FspAdapter.prototype,Object.getOwnPropertyDescriptors(USB_METHODS));
 export {FLASH_NAMES};
 
 // FSP API calls, by name: (args, runtime, name) with `this` the adapter. They return fsp_err_t (or the value of an

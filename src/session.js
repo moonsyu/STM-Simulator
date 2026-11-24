@@ -73,6 +73,8 @@ export class SimulationSession {
   get storage(){return this.hal?.storage?.api;}
   // An FSP project's data flash after this run (RaDataFlash; the app saves it into the project when the run ends).
   get dataFlash(){return this.fsp?this.hal.dataFlash:null;}
+  /** What the device sent the PC over the USB virtual COM port (byte codes, the serial monitor's output; feature 41). */
+  get usbOutput(){return this.fsp?this.hal.usbOutput():[];}
   enrich(micros){
     this.hal?.catalog?.update(this.project,this.result,micros);
     this.singleWire.update(this.project,this.result,micros,this.runtime);
@@ -109,6 +111,8 @@ export class SimulationSession {
   }
   setPressed(pressed){this.pressed=this.bounce.press(this.pressed,pressed,this.runtime.microTime/1000);this.changed();this.runtime.pollInterrupts();}
   inject(text,target='Serial1'){
+    // The USB virtual COM port of an FSP project (feature 41): the PC sends the bytes to the device (fsp-usb.js).
+    if(target==='usb:pcdc'){const bytes=[...String(text)].slice(0,256).map(c=>c.charCodeAt(0)&255);if(!this.fsp||!bytes.length)return 0;const count=this.hal.usbSend(bytes,this.runtime);this.runtime.event(this.runtime.microTime/1000,()=>{});return count;}
     if(target==='Serial'){const bytes=[...String(text)].slice(0,256).map(c=>c.charCodeAt(0)&255);if(this.serial.length+bytes.length>4096)throw new Error('Serial 수신 버퍼가 가득 찼습니다.');this.serial.push(...bytes);return bytes.length;}
     const external=target.endsWith(':external'),id=external?target.slice(0,-9):target,bus=this.hal?this.hal.serials.get(id==='Serial1'?'USART2':id)?.bus:this.buses;
     if(!bus)return 0;
