@@ -18,7 +18,7 @@ const require=createRequire(import.meta.url),{prepareBuild,build,detectTools}=re
 const tools=await detectTools({armGcc:process.env.ARM_GCC||''});
 const skip=!(tools.armGcc&&tools.fsp)&&!process.env.CI_REQUIRE_TOOLCHAIN&&'ARM GCC / Renesas FSP not installed';
 const base=()=>projectForBoard('fpb-ra6e1');
-const example=id=>{const e=raExample(id),p={...base(),mcu:e.mcu(),code:e.code};if(e.circuit){const c=e.circuit();p.components=c.components;p.wires=c.wires;delete p.surfaces;}return p;};
+const example=id=>{const e=raExample(id),p={...base(),mcu:e.mcu(),code:e.code};if(e.files)p.firmware={...p.firmware,files:e.files()};if(e.circuit){const c=e.circuit();p.components=c.components;p.wires=c.wires;delete p.surfaces;}return p;};
 const high=(s,pin)=>s.gpio[pin]?.value>1?1:0;
 async function session(project,root){
  const p=validateProject(project),result=await build(await prepareBuild({project:p,tools,root,target:'arm'}));

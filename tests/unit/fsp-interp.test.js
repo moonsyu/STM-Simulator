@@ -13,7 +13,7 @@ import {compileFsp,fspPrelude,FSP_ALIASES} from '../../src/fsp-interp.js';
 import {inspectRuntime} from '../../src/debug-tools.js';
 
 const base=()=>projectForBoard('fpb-ra6e1');
-const example=id=>{const e=raExample(id),p={...base(),mcu:e.mcu(),code:e.code};if(e.circuit){const c=e.circuit();p.components=c.components;p.wires=c.wires;delete p.surfaces;}return p;};
+const example=id=>{const e=raExample(id),p={...base(),mcu:e.mcu(),code:e.code};if(e.files)p.firmware={...p.firmware,files:e.files()};if(e.circuit){const c=e.circuit();p.components=c.components;p.wires=c.wires;delete p.surfaces;}return p;};
 function open(project,options={}){
  const log={uart:[],print:[],trace:[],warn:[]};
  const session=new SimulationSession(validateProject(project),{uart:e=>log.uart.push(e),print:t=>log.print.push(t),trace:e=>log.trace.push(e),warn:m=>log.warn.push(m),...options});

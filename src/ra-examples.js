@@ -1,6 +1,7 @@
 // FSP examples for the FPB-RA6E1 (Renesas RA6E1): hal_entry.c code with the pin settings it needs, as e² studio
 // projects for the board are written (hal_data.h instances, R_IOPORT_*, R_ICU_*, R_BSP_SoftwareDelay).
 import {raDefaultMcu} from './ra-config.js';
+import {RA_USB_DESCRIPTOR_FILE,RA_USB_DESCRIPTOR_C} from './ra-usb-descriptor.js';
 
 const WARM_START=`
 void R_BSP_WarmStart(bsp_warm_start_event_t event)
@@ -898,5 +899,81 @@ void hal_entry(void)
     }
 }
 `+WARM_START});
-RA_EXAMPLES.push(POLL_EXAMPLE,IRQ_COURSE_EXAMPLE,UART_EXAMPLE,GPT_EXAMPLE,ADC_EXAMPLE,AGT_EXAMPLE,IIC_EXAMPLE,SPI_EXAMPLE,CHALLENGE_EXAMPLE,WDT_EXAMPLE,RTC_EXAMPLE,LPM_EXAMPLE,FLASH_EXAMPLE,ELC_DTC_EXAMPLE);
+// USB PCDC virtual COM port (feature 41): the board is a USB serial device on the PC; whatever the PC sends comes back.
+// The PC's serial driver sets the line coding and the control line state with CDC class requests first. Its sources are
+// hal_entry.c and the descriptors (src/r_usb_pcdc_descriptor.c, FSP's template).
+const USB_EXAMPLE=Object.freeze({id:'ra_usb_cdc_echo',name:'USB 가상 COM 에코 (R_USB_Open · EventGet · Read · Write)',tags:['USB','CDC','PCDC','virtual COM','r_usb_basic'],
+ mcu:()=>{const m=raDefaultMcu();m.peripherals={USB:{enabled:true,callback:'',priority:12,resumePriority:12}};return m;},
+ files:()=>[{name:RA_USB_DESCRIPTOR_FILE,text:RA_USB_DESCRIPTOR_C}],
+ code:HEAD+`
+#define LINE_CODING_LENGTH (7U)
+
+static uint8_t g_buf[64];
+static usb_pcdc_linecoding_t g_line_coding;
+volatile uint32_t g_received = 0;
+
+void external_irq1_callback(external_irq_callback_args_t *p_args)
+{
+    (void) p_args;
+}
+
+void hal_entry(void)
+{
+    usb_status_t event;
+
+    /* g_basic0: USB Full-Speed peripheral of class PCDC (a virtual COM port on the PC). */
+    R_USB_Open(&g_basic0_ctrl, &g_basic0_cfg);
+
+    while (1)
+    {
+        /* One USB event a call (USB_STATUS_NONE when nothing happened); its details are in g_basic0_ctrl. */
+        R_USB_EventGet(&g_basic0_ctrl, &event);
+        switch (event)
+        {
+            case USB_STATUS_CONFIGURED:
+            {
+                /* The PC configured the device: LED1 on, then wait for the first bytes. */
+                R_IOPORT_PinWrite(&g_ioport_ctrl, LED1, BSP_IO_LEVEL_HIGH);
+                R_USB_Read(&g_basic0_ctrl, g_buf, sizeof(g_buf), USB_CLASS_PCDC);
+                break;
+            }
+            case USB_STATUS_READ_COMPLETE:
+            {
+                /* g_basic0_ctrl.data_size bytes arrived: send them back. */
+                g_received += g_basic0_ctrl.data_size;
+                R_USB_Write(&g_basic0_ctrl, g_buf, g_basic0_ctrl.data_size, USB_CLASS_PCDC);
+                break;
+            }
+            case USB_STATUS_WRITE_COMPLETE:
+            {
+                /* Sent: read the next bytes. */
+                R_USB_Read(&g_basic0_ctrl, g_buf, sizeof(g_buf), USB_CLASS_PCDC);
+                break;
+            }
+            case USB_STATUS_REQUEST:
+            {
+                /* CDC class requests of the PC's serial driver. */
+                if (USB_PCDC_SET_LINE_CODING == (g_basic0_ctrl.setup.request_type & USB_BREQUEST))
+                {
+                    R_USB_PeriControlDataGet(&g_basic0_ctrl, (uint8_t *) &g_line_coding, LINE_CODING_LENGTH);
+                }
+                else if (USB_PCDC_GET_LINE_CODING == (g_basic0_ctrl.setup.request_type & USB_BREQUEST))
+                {
+                    R_USB_PeriControlDataSet(&g_basic0_ctrl, (uint8_t *) &g_line_coding, LINE_CODING_LENGTH);
+                }
+                else if (USB_PCDC_SET_CONTROL_LINE_STATE == (g_basic0_ctrl.setup.request_type & USB_BREQUEST))
+                {
+                    R_USB_PeriControlStatusSet(&g_basic0_ctrl, USB_SETUP_STATUS_ACK);
+                }
+                break;
+            }
+            default:
+            {
+                break;
+            }
+        }
+    }
+}
+`+WARM_START});
+RA_EXAMPLES.push(POLL_EXAMPLE,IRQ_COURSE_EXAMPLE,UART_EXAMPLE,GPT_EXAMPLE,ADC_EXAMPLE,AGT_EXAMPLE,IIC_EXAMPLE,SPI_EXAMPLE,CHALLENGE_EXAMPLE,WDT_EXAMPLE,RTC_EXAMPLE,LPM_EXAMPLE,FLASH_EXAMPLE,ELC_DTC_EXAMPLE,USB_EXAMPLE);
 Object.freeze(RA_EXAMPLES);

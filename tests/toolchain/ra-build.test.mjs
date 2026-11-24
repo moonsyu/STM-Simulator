@@ -14,7 +14,7 @@ const require=createRequire(import.meta.url),{prepareBuild,build,detectTools}=re
 const tools=await detectTools({armGcc:process.env.ARM_GCC||''});
 const ready=!!tools.armGcc&&!!tools.fsp;
 const skip=!ready&&!process.env.CI_REQUIRE_TOOLCHAIN&&'ARM GCC / Renesas FSP not installed';
-const projectOf=ex=>validateProject({...projectForBoard('fpb-ra6e1'),mcu:ex.mcu(),code:ex.code});
+const projectOf=ex=>{const p={...projectForBoard('fpb-ra6e1'),mcu:ex.mcu(),code:ex.code};if(ex.files)p.firmware={...p.firmware,files:ex.files()};return validateProject(p);};
 
 test('every FSP example builds with no warning and runs on the RA6E1 emulator',{skip,timeout:600000},async()=>{
  const root=await fs.mkdtemp(path.join(os.tmpdir(),'ra-build-'));

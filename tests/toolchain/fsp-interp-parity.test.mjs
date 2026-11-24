@@ -16,7 +16,7 @@ import {raExample} from '../../src/ra-examples.js';
 const require=createRequire(import.meta.url),{prepareBuild,build,detectTools}=require('../../desktop/native-build.cjs');
 const tools=await detectTools({armGcc:process.env.ARM_GCC||''});
 const skip=!(tools.armGcc&&tools.fsp)&&!process.env.CI_REQUIRE_TOOLCHAIN&&'ARM GCC / Renesas FSP not installed';
-const example=id=>{const e=raExample(id),p={...projectForBoard('fpb-ra6e1'),mcu:e.mcu(),code:e.code};if(e.circuit){const c=e.circuit();p.components=c.components;p.wires=c.wires;delete p.surfaces;}return validateProject(p);};
+const example=id=>{const e=raExample(id),p={...projectForBoard('fpb-ra6e1'),mcu:e.mcu(),code:e.code};if(e.files)p.firmware={...p.firmware,files:e.files()};if(e.circuit){const c=e.circuit();p.components=c.components;p.wires=c.wires;delete p.surfaces;}return validateProject(p);};
 const MS=2000,LEDS=['P408','P407'];
 // What each example is given while it runs, and the variables both engines must end with (a tolerance where the
 // emulator's ADC or clock differ by a count).

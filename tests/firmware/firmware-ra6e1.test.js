@@ -263,3 +263,19 @@ test('ra_elc_adc_dtc: GPT1 overflows start ADC0 scans through the ELC, the DTC f
  assert.deepEqual([...session.soc.unknown.keys()],[],'no register outside the model');assert.deepEqual(session.warnings,[]);
  assert.ok(session.gpio.P407.value>1.65,'LED2 after an odd number of blocks');
 });
+
+// Feature 41: the real r_usb_basic / r_usb_pcdc on the USBFS model with the PC (emu/ra6e1/usbfs.js).
+test('ra_usb_cdc_echo: the PC enumerates the real r_usb_basic / r_usb_pcdc, sets the line coding, and the bytes it sends come back',()=>{
+ const {session}=open(fixture('ra_usb_cdc_echo'));
+ runUntil(session,60);
+ const host=session.soc.usbfs.host;
+ assert.deepEqual(host.events,['RESET','GET_DESCRIPTOR(Device, 18)','SET_ADDRESS(1)','GET_DESCRIPTOR(Device, 18)','GET_DESCRIPTOR(Configuration, 9)','GET_DESCRIPTOR(Configuration, 67)','SET_CONFIGURATION','SET_LINE_CODING','SET_CONTROL_LINE_STATE']);
+ assert.equal(host.state,'ready');assert.deepEqual(host.endpoints,{bulkIn:{ep:1,maxp:64},bulkOut:{ep:2,maxp:64},intIn:{ep:3,maxp:16}});
+ assert.ok(session.gpio.P408.value>1.65,'LED1: configured');
+ // The SET_LINE_CODING data in the program's static g_line_coding (115200 bps, 1 stop bit, no parity, 8 data bits).
+ const coding=session.elf.findSymbol('g_line_coding').value;
+ assert.deepEqual(Array.from({length:7},(_,i)=>session.machine.bus.peek(coding+i,1)),[0x00,0xc2,0x01,0x00,0x00,0x00,0x08]);
+ assert.equal(session.inject('hello','usb:pcdc'),5);runUntil(session,80);
+ assert.equal(String.fromCharCode(...session.usbOutput),'hello');assert.equal(session.readVariable('g_received'),5);
+ assert.deepEqual([...session.soc.unknown.keys()],[],'no register outside the model');assert.deepEqual(session.warnings,[]);
+});
