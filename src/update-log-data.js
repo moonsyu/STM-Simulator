@@ -1,5 +1,6 @@
 // User-facing update log shown in 도움말 → 업데이트 로그: one entry per released version (date = the release tag's commit date).
 export const UPDATE_LOG=Object.freeze([
+ {version:'1.60.0',date:'2026-11-24',items:['FPB-RA6E1 USB 가상 COM(r_usb_basic · r_usb_pcdc): New Stack → Connectivity → USB PCDC를 추가하면 직렬 모니터의 "USB 가상 COM (PCDC)" 대상으로 보드와 글자를 주고받음','스택을 추가하면 src/r_usb_pcdc_descriptor.c(VID/PID·장치 이름)가 프로젝트에 들어감','예제 "USB 가상 COM 에코 (R_USB_Open · EventGet · Read · Write)"']},
  {version:'1.59.0',date:'2026-11-24',items:['지원 보드를 STM32(NUCLEO-F103RB · NUCLEO-F446RE)와 Renesas FPB-RA6E1로 한정 — ESP32·라즈베리파이 보드, 그 보드의 스케치·Python 실행, ESP32 실물 업로드, 그 보드를 쓰는 예제(강의 실습·과제, ESP32 무선·I²C 예제)를 삭제','ESP32·라즈베리파이 보드가 든 예전 프로젝트는 그 보드와 연결된 배선만 빼고 열리며 무엇을 뺐는지 알려 줌','ESP-01 Wi-Fi 모듈·HC-05/06 부품과 두 번째 STM32 보드 추가는 그대로']},
  {version:'1.58.0',date:'2026-11-18',items:['FPB-RA6E1 이벤트 링크(r_elc): GPT 주기 같은 이벤트가 CPU 없이 ADC 스캔을 시작 — New Stack → Monitoring · System → Event Link Controller, Analog 핀의 ADC Start Trigger','전송(r_dtc · r_dmac): 이벤트마다 메모리를 옮김(ADC 결과를 배열로 등) — New Stack → Transfer, SCI UART 송수신을 DTC로','예제 "ra_elc_adc_dtc": GPT 주기 → ELC → ADC 스캔, 결과를 DTC로 배열에']},
  {version:'1.57.3',date:'2026-11-18',items:['FPB-RA6E1 RTC 스택의 "시작 시각" 기본값을 PC 시각으로 변경 — 새로 넣은 RTC는 실행을 시작할 때 PC 시각을 갖고 돌고 있음(시뮬레이션 2000-01-01은 선택하면 사용, 이미 저장된 설정은 그대로)']},
