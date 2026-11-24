@@ -55,7 +55,10 @@ async function exchange(win,timeout,started){
  await win.waitForFunction(()=>/^CAN 가상 노드\n100 \[1\] 00\n100 \[1\] 01/.test(document.getElementById('uart-output').textContent),null,{timeout})
   .catch(async error=>{throw new Error(`${error.message}\n출력: ${(await consoleText(win)).slice(-1500)}\nCAN: ${await win.textContent('#uart-output')}`);});
  assert.equal(await win.evaluate(()=>document.getElementById('board-led-LED1')?.getAttribute('fill')),LED_OFF,'nothing received yet');
- await win.uncheck('#serial-newline');await win.fill('#serial-input','100 01 02');await win.click('#serial-send');
+ // A line that is not a frame: the monitor says so where it says a send failed.
+ await win.uncheck('#serial-newline');await win.fill('#serial-input','zz');await win.click('#serial-send');
+ assert.equal(await win.textContent('#serial-feedback'),'프레임 형식을 확인하세요. 예: 123 01 02 03 (ID와 데이터 바이트, 16진수)');
+ await win.fill('#serial-input','100 01 02');await win.click('#serial-send');
  await led(win,'LED1',LED_ON,timeout);
  assert.match(await win.textContent('#uart-output'),/^CAN 가상 노드\n(100 \[1\] [0-9A-F]{2}\n?)+$/);
  await win.keyboard.press('Control+F2');await stopped(win);await noCanLines(win);
@@ -86,6 +89,12 @@ test('New Stack → Connectivity → CAN (r_can): the g_can0 card without a hint
   await win.fill(card+' [data-ra-can-mb="2"][data-ra-can-key="id"]','0x1A0');await win.press(card+' [data-ra-can-mb="2"][data-ra-can-key="id"]','Tab');
   await win.waitForFunction(()=>!document.getElementById('ra-pinout-error').textContent);
   assert.equal(await win.inputValue(card+' [data-ra-can-mb="2"][data-ra-can-key="id"]'),'0x1A0');
+  // Text that is not hexadecimal: the value stays and shows again.
+  await win.fill(card+' [data-ra-can-mb="2"][data-ra-can-key="id"]','xyz');await win.press(card+' [data-ra-can-mb="2"][data-ra-can-key="id"]','Tab');
+  await win.waitForFunction(sel=>document.querySelector(sel).value==='0x1A0',card+' [data-ra-can-mb="2"][data-ra-can-key="id"]');
+  // ID Mode sets the mask to compare every ID bit: Extended 0x1FFFFFFF, Standard 0x7FF.
+  await win.selectOption(card+' [data-ra-field="idMode"]','EXTENDED');await win.waitForFunction(sel=>document.querySelector(sel+' [data-ra-field="mask"]').value==='0x1FFFFFFF',card);
+  await win.selectOption(card+' [data-ra-field="idMode"]','STANDARD');await win.waitForFunction(sel=>document.querySelector(sel+' [data-ra-field="mask"]').value==='0x7FF',card);
   await win.click('[data-ra-tab="summary"]');assert.match(await win.textContent('#ra-summary'),/g_can0 \(r_can\)/);
   await win.click('#ra-pinout-apply');await win.waitForFunction(()=>!document.getElementById('ra-pinout-dialog').open);
   const targets=()=>win.evaluate(()=>[...document.querySelectorAll('#serial-target option')].map(o=>[o.value,o.textContent]));
