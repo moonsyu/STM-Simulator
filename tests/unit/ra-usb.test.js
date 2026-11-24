@@ -212,3 +212,11 @@ test('the descriptor source: added to the project with the stack when it has non
  assert.match(a.items.at(-1).code,/void usb_cb\(usb_callback_args_t \*p_args\)/);
  assert.equal(raAssistance(validateRaMcu(mcu({USB}))).find(x=>x.name==='g_basic0').items.length,8);
 });
+
+test('USBFS: a pipe the chip does not have (CURPIPE / PIPESEL 10-15) and an access past the block read 0 and take no write',()=>{
+ const {dev}=bench();
+ for(const sel of [0x20,0x28,0x2c]){W(dev,sel,0x000f);assert.equal(R(dev,sel+2),0);}
+ W(dev,0x20,0x000a);W(dev,0x14,0x41,1);assert.equal(R(dev,0x14),0);W(dev,0x22,0xc000);
+ W(dev,0x64,12);W(dev,0x6c,64);assert.equal(R(dev,0x68),0);assert.equal(R(dev,0x6c),0);
+ assert.equal(R(dev,0x406,4),0);assert.equal(R(dev,0x407,2),0);W(dev,0x406,0x12345678,4);assert.equal(R(dev,0x404,2),0);assert.equal(dev.peek(0x406,4),0);
+});

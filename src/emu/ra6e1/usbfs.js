@@ -81,7 +81,7 @@ export class UsbFs {
   // ------------------------------------------------------------ registers
   read(off, size) {
     this.soc.sync?.();
-    if (this.stopped()) return 0;
+    if (this.stopped() || off + size > this.size) return 0; // past the block: 0
     if (off >= 0x14 && off < 0x20) return this.fifoRead(((off - 0x14) >> 2), size);
     const v = this.reg(off & ~1);
     if (v === undefined) return size === 4 ? this.dv.getUint32(off, true) : size === 2 ? this.dv.getUint16(off, true) : this.dv.getUint8(off);
@@ -90,14 +90,14 @@ export class UsbFs {
   }
   // The debugger's view: no FIFO data is taken.
   peek(off, size) {
-    if (this.stopped() || (off >= 0x14 && off < 0x20)) return 0;
+    if (this.stopped() || off + size > this.size || (off >= 0x14 && off < 0x20)) return 0;
     const v = this.reg(off & ~1);
     if (v === undefined) return size === 4 ? this.dv.getUint32(off, true) : size === 2 ? this.dv.getUint16(off, true) : this.dv.getUint8(off);
     return size === 1 ? (off & 1 ? v >> 8 : v) & 0xff : v & 0xffff;
   }
   write(off, value, size) {
     this.soc.sync?.();
-    if (this.stopped()) return;
+    if (this.stopped() || off + size > this.size) return; // past the block: ignored
     if (off >= 0x14 && off < 0x20) { this.fifoWrite((off - 0x14) >> 2, value, size); this.after(); return; }
     if (size === 4) { this.write16(off, value & 0xffff); if (off + 2 < this.size) this.write16(off + 2, value >>> 16); }
     else if (size === 2) this.write16(off, value & 0xffff);
@@ -131,9 +131,9 @@ export class UsbFs {
       case 0x5e: return this.pipes[0].maxp;
       case 0x60: return this.pipeCtr(this.pipes[0]);
       case 0x64: return this.pipesel;
-      case 0x68: return this.pipesel ? this.pipes[this.pipesel].cfg : 0;
-      case 0x6c: return this.pipesel ? this.pipes[this.pipesel].maxp : 0;
-      case 0x6e: return this.pipesel ? this.pipes[this.pipesel].peri : 0;
+      case 0x68: return this.pipes[this.pipesel] && this.pipesel ? this.pipes[this.pipesel].cfg : 0;
+      case 0x6c: return this.pipes[this.pipesel] && this.pipesel ? this.pipes[this.pipesel].maxp : 0;
+      case 0x6e: return this.pipes[this.pipesel] && this.pipesel ? this.pipes[this.pipesel].peri : 0;
       default: return undefined;
     }
   }
@@ -171,9 +171,9 @@ export class UsbFs {
       case 0x5e: this.pipes[0].maxp = v; return;
       case 0x60: this.writeCtr(this.pipes[0], v); return;
       case 0x64: this.pipesel = v & 0xf; return;
-      case 0x68: if (this.pipesel) this.pipes[this.pipesel].cfg = v; return;
-      case 0x6c: if (this.pipesel) this.pipes[this.pipesel].maxp = v; return;
-      case 0x6e: if (this.pipesel) this.pipes[this.pipesel].peri = v; return;
+      case 0x68: if (this.pipesel && this.pipes[this.pipesel]) this.pipes[this.pipesel].cfg = v; return;
+      case 0x6c: if (this.pipesel && this.pipes[this.pipesel]) this.pipes[this.pipesel].maxp = v; return;
+      case 0x6e: if (this.pipesel && this.pipes[this.pipesel]) this.pipes[this.pipesel].peri = v; return;
       case 0x04: case 0x4c: case 0x50: case 0x54: case 0x56: case 0x58: case 0x5a: return; // read only
       default: this.dv.setUint16(off, v, true);
     }
@@ -191,12 +191,12 @@ export class UsbFs {
   // Whether the CPU side of the port's pipe writes (transmit: the DCP with ISEL, another pipe with PIPECFG.DIR).
   writes(port, p) { return p.n === 0 ? !!(this.fifosel[port] & 0x20) : p.transmit; }
   fifoCtr(port) {
-    const p = this.pipeOf(this.fifosel[port]), b = p.bank(p.cpu);
+    const p = this.pipeOf(this.fifosel[port]); if (!p) return 0; const b = p.bank(p.cpu);
     if (this.writes(port, p)) return (b.valid ? 0 : 0x2000) | (b.valid ? 0 : b.data.length);
     return b.valid ? 0x2000 | (b.data.length - b.read) : 0;
   }
   fifoCtrWrite(port, v) {
-    const p = this.pipeOf(this.fifosel[port]), b = p.bank(p.cpu);
+    const p = this.pipeOf(this.fifosel[port]); if (!p) return; const b = p.bank(p.cpu);
     if (v & 0x4000) { // BCLR: the CPU side's buffer is emptied
       if (this.writes(port, p)) { if (!b.valid) b.data = []; }
       else if (b.valid) this.freeCpu(p);
@@ -213,13 +213,13 @@ export class UsbFs {
     if (p.count === 2 && p.bank(p.cpu).valid) this.brdy(p.n); // the next packet is ready to read
   }
   fifoWrite(port, value, size) {
-    const p = this.pipeOf(this.fifosel[port]), b = p.bank(p.cpu);
+    const p = this.pipeOf(this.fifosel[port]); if (!p) return; const b = p.bank(p.cpu);
     if (!this.writes(port, p) || b.valid) return;
     for (let i = 0; i < size && b.data.length < p.size; i++) b.data.push((value >>> (8 * i)) & 0xff);
     if (b.data.length >= p.size) this.endPacket(p); // a full packet goes out without BVAL
   }
   fifoRead(port, size) {
-    const p = this.pipeOf(this.fifosel[port]), b = p.bank(p.cpu);
+    const p = this.pipeOf(this.fifosel[port]); if (!p) return 0; const b = p.bank(p.cpu);
     if (this.writes(port, p) || !b.valid) return 0;
     let v = 0;
     for (let i = 0; i < size && b.read < b.data.length; i++) v |= b.data[b.read++] << (8 * i);
