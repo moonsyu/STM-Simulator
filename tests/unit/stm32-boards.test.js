@@ -147,3 +147,28 @@ describe('STM32 boards: real boards',()=>{
   await assert.rejects(assignStlinks([item('STM32-1','NUCLEO-F103RB'),item('STM32-2','NUCLEO-F446RE')],links([f1])),/쓸 ST-LINK가 없습니다/);
  });
 });
+
+// From tests/unit/devboards.test.js (feature 49 removed its ESP32 / Raspberry Pi boards): the same checks of the
+// common board functions, on another STM32 board.
+describe('boards: project and editing',()=>{
+ test('removing a board removes its wires',async()=>{
+  const {removeDevboard}=await import('../../src/devboards.js');
+  const p=twoBoards();p.components.push({id:'b3',...newStm32Fields(p,'nucleo-f103rb',600)});
+  p.wires.push(wire('w2','devboard:b2:CN10:13','devboard:b3:CN10:13'));removeDevboard(p,'b2');assert.equal(p.wires.length,0);assert.deepEqual(p.components.map(c=>c.id),['b3']);
+ });
+ test('copy and paste brings a board with its wires and a fresh name',async()=>{
+  const {copySelection,pasteSelection}=await import('../../src/circuit-edit.js');
+  const p=twoBoards();p.wires.push(wire('w2','devboard:b2:CN10:13','devboard:b2:CN10:15'));
+  const clip=copySelection(p,{type:'group',parts:['b2'],wires:['w2']});let n=0;pasteSelection(p,clip,prefix=>prefix+(++n),40);
+  const copy=p.components[1];assert.equal(copy.type,'devboard');assert.equal(copy.name,'STM32-3');assert.notEqual(copy.id,'b2');
+  assert.ok(p.wires.some(w=>w.from===`devboard:${copy.id}:CN10:13`&&w.to===`devboard:${copy.id}:CN10:15`));
+ });
+});
+// The parts search lists the other boards too.
+test('parts search finds the other boards by name, chip and Korean words',async()=>{
+ const {boardLibrary,searchBoards}=await import('../../src/part-library.js');
+ const library=boardLibrary(DEVBOARD_MODELS),ids=q=>searchBoards(library,q).map(b=>b.id);
+ assert.equal(library.length,Object.keys(DEVBOARD_MODELS).length);
+ assert.ok(ids('nucleo').length>=1&&ids('nucleo').every(id=>DEVBOARD_MODELS[id].kind==='stm32'));
+ assert.equal(ids('보드').length,library.length);assert.deepEqual(ids('없는부품zzz'),[]);
+});

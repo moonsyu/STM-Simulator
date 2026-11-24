@@ -108,3 +108,28 @@ describe('boards talking over the air',()=>{
   assert.ok(main.includes('+CWJAP:2'),main.join('|'));assert.ok(!main.includes('connected'));
  });
 });
+
+// From tests/unit/devboards.test.js 'lecture examples' (feature 49 removed the ESP32 / Raspberry Pi examples): the
+// board-to-board examples that stay.
+describe('board-to-board examples',()=>{
+ test('all circuits build, validate and use each pin or hole once',async()=>{
+  const {LECTURE_EXAMPLES}=await import('../../src/lecture-examples.js'),{attachments}=await import('../../src/components.js');
+  assert.equal(LECTURE_EXAMPLES.length,4);
+  for(const e of LECTURE_EXAMPLES){const {project:p,file}=applyLectureExample(e.id);assert.ok(p.components.some(c=>c.type==='devboard'),e.code);
+   const used=[...p.wires.flatMap(w=>[w.from,w.to]),...p.components.flatMap(c=>Object.values(attachments(c)))];assert.equal(new Set(used).size,used.length,e.code+': one endpoint per pin/hole');
+   assert.ok(file==='main.c',e.code);
+   // Titles say what the example does: no lecture codes, board model numbers or pin lists.
+   assert.ok(!/[A-Z]{2,}-\d|GPIO\d|—/.test(e.title+p.name),e.title);assert.equal(p.name,e.title);}
+ });
+ test('examples are listed under every kind of board they use',async()=>{
+  const {LECTURE_EXAMPLES}=await import('../../src/lecture-examples.js'),{devboardModel}=await import('../../src/devboards.js');
+  const under=id=>LECTURE_EXAMPLES.filter(e=>e.boards.includes(id)).map(e=>e.code);
+  assert.deepEqual(under('stm32'),['BT-01','WF-01','WIRE-01','WIRE-02']);
+  for(const e of LECTURE_EXAMPLES){const {project:p}=applyLectureExample(e.id),kinds=new Set(p.components.filter(c=>c.type==='devboard').map(c=>devboardModel(c).kind));if(!p.surfaces.board?.hidden)kinds.add('stm32');assert.deepEqual([...kinds].sort(),[...e.boards].sort(),e.code);}
+ });
+ test('wiring: the boards keep only unavoidable crossings',async()=>{
+  const {LECTURE_EXAMPLES}=await import('../../src/lecture-examples.js'),{wiringMetrics}=await import('./helpers/wiring-metrics.js');
+  for(const e of LECTURE_EXAMPLES){const m=wiringMetrics(applyLectureExample(e.id).project);
+   assert.deepEqual(m.overlaps,[],e.code);assert.ok(m.crossings.length<=(({'BT-01':4,'WF-01':14,'WIRE-01':12,'WIRE-02':12})[e.code]??0),`${e.code}: ${JSON.stringify(m.crossings)}`);}
+ });
+});
