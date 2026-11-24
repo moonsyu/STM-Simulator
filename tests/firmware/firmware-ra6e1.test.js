@@ -279,3 +279,13 @@ test('ra_usb_cdc_echo: the PC enumerates the real r_usb_basic / r_usb_pcdc, sets
  assert.equal(String.fromCharCode(...session.usbOutput),'hello');assert.equal(session.readVariable('g_received'),5);
  assert.deepEqual([...session.soc.unknown.keys()],[],'no register outside the model');assert.deepEqual(session.warnings,[]);
 });
+
+// Feature 40: the real r_can on the CAN0 model in internal loopback (emu/ra6e1/can.js).
+test('ra_can_loopback: the real r_can sends a frame every 500 ms in internal loopback and MB1 takes it back',()=>{
+ const {session}=open(fixture('ra_can_loopback'));
+ runUntil(session,2200);
+ assert.equal(session.readVariable('g_tx_count'),5);assert.equal(session.readVariable('g_rx_count'),5);assert.equal(session.readVariable('g_rx_data'),4);
+ assert.ok(session.gpio.P408.value<1.65,'LED1: bit 0 of the last byte (4)');assert.ok(session.gpio.P407.value>1.65,'LED2: toggled five times');
+ assert.deepEqual(session.canOutput,[],'internal loopback: nothing on the bus');
+ assert.deepEqual([...session.soc.unknown.keys()],[],'no register outside the model');assert.deepEqual(session.warnings,[]);
+});

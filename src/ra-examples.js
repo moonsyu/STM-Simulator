@@ -976,5 +976,63 @@ void hal_entry(void)
     }
 }
 `+WARM_START});
-RA_EXAMPLES.push(POLL_EXAMPLE,IRQ_COURSE_EXAMPLE,UART_EXAMPLE,GPT_EXAMPLE,ADC_EXAMPLE,AGT_EXAMPLE,IIC_EXAMPLE,SPI_EXAMPLE,CHALLENGE_EXAMPLE,WDT_EXAMPLE,RTC_EXAMPLE,LPM_EXAMPLE,FLASH_EXAMPLE,ELC_DTC_EXAMPLE,USB_EXAMPLE);
+// CAN (feature 40): CAN0 in internal loopback — every frame MB0 sends comes back into receive mailbox MB1 (ID 0x100),
+// with no transceiver or other node. The callback counts what was sent and received.
+const CAN_EXAMPLE=Object.freeze({id:'ra_can_loopback',name:'CAN 내부 루프백 (R_CAN_Open · ModeTransition · Write · 콜백)',tags:['CAN','r_can','loopback','mailbox','filter'],
+ mcu:()=>{const m=raDefaultMcu();m.peripherals={CAN0:{enabled:true,bitrate:500,idMode:'STANDARD',mailboxes:[{type:'TRANSMIT',id:0x000},{type:'RECEIVE',id:0x100},{type:'RECEIVE',id:0x101},{type:'RECEIVE',id:0x102}],mask:0x7FF,priority:12,callback:'can_callback'}};return m;},
+ code:HEAD+`
+volatile uint32_t g_tx_count = 0;
+volatile uint32_t g_rx_count = 0;
+volatile uint8_t g_rx_data = 0;
+
+void external_irq1_callback(external_irq_callback_args_t *p_args)
+{
+    (void) p_args;
+}
+
+/* g_can0's interrupts (transmit complete, receive complete, errors) call this. */
+void can_callback(can_callback_args_t *p_args)
+{
+    if (CAN_EVENT_TX_COMPLETE == p_args->event)
+    {
+        g_tx_count++;
+    }
+    else if (CAN_EVENT_RX_COMPLETE == p_args->event)
+    {
+        /* The frame came back: LED1 shows bit 0 of its first data byte. */
+        g_rx_count++;
+        g_rx_data = p_args->frame.data[0];
+        R_IOPORT_PinWrite(&g_ioport_ctrl, LED1, (g_rx_data & 1U) ? BSP_IO_LEVEL_HIGH : BSP_IO_LEVEL_LOW);
+        if (CAN_MAILBOX_ID_1 == p_args->mailbox)
+        {
+            /* MB1 (ID 0x100) took it: LED2 toggles. */
+            static bsp_io_level_t led2 = BSP_IO_LEVEL_LOW;
+            led2 = (BSP_IO_LEVEL_LOW == led2) ? BSP_IO_LEVEL_HIGH : BSP_IO_LEVEL_LOW;
+            R_IOPORT_PinWrite(&g_ioport_ctrl, LED2, led2);
+        }
+    }
+}
+
+void hal_entry(void)
+{
+    can_frame_t frame = { .id = 0x100, .id_mode = CAN_ID_MODE_STANDARD, .type = CAN_FRAME_TYPE_DATA, .data_length_code = 1, .options = 0 };
+    uint8_t counter = 0;
+
+    /* g_can0: 500 kbps, MB0 transmit, MB1-MB3 receive (IDs 0x100-0x102). */
+    R_CAN_Open(&g_can0_ctrl, &g_can0_cfg);
+
+    /* Internal loopback: the frames stay inside the MCU. Delete this line for normal mode, where the frames go on the
+     * bus and the serial monitor's CAN virtual node (CAN 가상 노드) sends and receives them. */
+    R_CAN_ModeTransition(&g_can0_ctrl, CAN_OPERATION_MODE_NORMAL, CAN_TEST_MODE_LOOPBACK_INTERNAL);
+
+    while (1)
+    {
+        /* Every 500 ms MB0 sends ID 0x100 with the counter in its first byte. */
+        frame.data[0] = counter++;
+        R_CAN_Write(&g_can0_ctrl, CAN_MAILBOX_ID_0, &frame);
+        R_BSP_SoftwareDelay(500, BSP_DELAY_UNITS_MILLISECONDS);
+    }
+}
+`+WARM_START});
+RA_EXAMPLES.push(POLL_EXAMPLE,IRQ_COURSE_EXAMPLE,UART_EXAMPLE,GPT_EXAMPLE,ADC_EXAMPLE,AGT_EXAMPLE,IIC_EXAMPLE,SPI_EXAMPLE,CHALLENGE_EXAMPLE,WDT_EXAMPLE,RTC_EXAMPLE,LPM_EXAMPLE,FLASH_EXAMPLE,ELC_DTC_EXAMPLE,USB_EXAMPLE,CAN_EXAMPLE);
 Object.freeze(RA_EXAMPLES);

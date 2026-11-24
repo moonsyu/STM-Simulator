@@ -1,0 +1,74 @@
+{
+ "format": "stm32-circuit-lab",
+ "version": 2,
+ "name": "ra_can_loopback",
+ "code": "#include \"hal_data.h\"\n\nFSP_CPP_HEADER\nvoid R_BSP_WarmStart(bsp_warm_start_event_t event);\nFSP_CPP_FOOTER\n\nvolatile uint32_t g_tx_count = 0;\nvolatile uint32_t g_rx_count = 0;\nvolatile uint8_t g_rx_data = 0;\n\nvoid external_irq1_callback(external_irq_callback_args_t *p_args)\n{\n    (void) p_args;\n}\n\n/* g_can0's interrupts (transmit complete, receive complete, errors) call this. */\nvoid can_callback(can_callback_args_t *p_args)\n{\n    if (CAN_EVENT_TX_COMPLETE == p_args->event)\n    {\n        g_tx_count++;\n    }\n    else if (CAN_EVENT_RX_COMPLETE == p_args->event)\n    {\n        /* The frame came back: LED1 shows bit 0 of its first data byte. */\n        g_rx_count++;\n        g_rx_data = p_args->frame.data[0];\n        R_IOPORT_PinWrite(&g_ioport_ctrl, LED1, (g_rx_data & 1U) ? BSP_IO_LEVEL_HIGH : BSP_IO_LEVEL_LOW);\n        if (CAN_MAILBOX_ID_1 == p_args->mailbox)\n        {\n            /* MB1 (ID 0x100) took it: LED2 toggles. */\n            static bsp_io_level_t led2 = BSP_IO_LEVEL_LOW;\n            led2 = (BSP_IO_LEVEL_LOW == led2) ? BSP_IO_LEVEL_HIGH : BSP_IO_LEVEL_LOW;\n            R_IOPORT_PinWrite(&g_ioport_ctrl, LED2, led2);\n        }\n    }\n}\n\nvoid hal_entry(void)\n{\n    can_frame_t frame = { .id = 0x100, .id_mode = CAN_ID_MODE_STANDARD, .type = CAN_FRAME_TYPE_DATA, .data_length_code = 1, .options = 0 };\n    uint8_t counter = 0;\n\n    /* g_can0: 500 kbps, MB0 transmit, MB1-MB3 receive (IDs 0x100-0x102). */\n    R_CAN_Open(&g_can0_ctrl, &g_can0_cfg);\n\n    /* Internal loopback: the frames stay inside the MCU. Delete this line for normal mode, where the frames go on the\n     * bus and the serial monitor's CAN virtual node (CAN 가상 노드) sends and receives them. */\n    R_CAN_ModeTransition(&g_can0_ctrl, CAN_OPERATION_MODE_NORMAL, CAN_TEST_MODE_LOOPBACK_INTERNAL);\n\n    while (1)\n    {\n        /* Every 500 ms MB0 sends ID 0x100 with the counter in its first byte. */\n        frame.data[0] = counter++;\n        R_CAN_Write(&g_can0_ctrl, CAN_MAILBOX_ID_0, &frame);\n        R_BSP_SoftwareDelay(500, BSP_DELAY_UNITS_MILLISECONDS);\n    }\n}\n\nvoid R_BSP_WarmStart(bsp_warm_start_event_t event)\n{\n    if (BSP_WARM_START_POST_C == event)\n    {\n        /* C runtime environment and system clocks are setup. */\n\n        /* Configure pins. */\n        R_IOPORT_Open (&IOPORT_CFG_CTRL, &IOPORT_CFG_NAME);\n    }\n}\n",
+ "components": [],
+ "wires": [],
+ "boardId": "fpb-ra6e1",
+ "surfaces": {
+  "board": {
+   "hidden": false
+  },
+  "breadboard": {
+   "hidden": true
+  }
+ },
+ "mcu": {
+  "family": "R7FA6E10F",
+  "pins": {
+   "P408": {
+    "function": "GPIO_Output",
+    "label": "LED1",
+    "initial": 0,
+    "drive": "HIGH"
+   },
+   "P407": {
+    "function": "GPIO_Output",
+    "label": "LED2",
+    "initial": 0,
+    "drive": "HIGH"
+   },
+   "P205": {
+    "function": "IRQ",
+    "label": "SW1",
+    "pull": "PULLUP",
+    "edge": "FALLING",
+    "priority": 12,
+    "callback": "external_irq1_callback"
+   }
+  },
+  "peripherals": {
+   "CAN0": {
+    "enabled": true,
+    "bitrate": 500,
+    "idMode": "STANDARD",
+    "mailboxes": [
+     {
+      "type": "TRANSMIT",
+      "id": 0
+     },
+     {
+      "type": "RECEIVE",
+      "id": 256
+     },
+     {
+      "type": "RECEIVE",
+      "id": 257
+     },
+     {
+      "type": "RECEIVE",
+      "id": 258
+     }
+    ],
+    "mask": 2047,
+    "priority": 12,
+    "callback": "can_callback"
+   }
+  }
+ },
+ "firmware": {
+  "mode": "fsp",
+  "files": []
+ }
+}
