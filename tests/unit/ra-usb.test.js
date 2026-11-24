@@ -20,9 +20,9 @@ test('USB stack settings: defaults, priorities 0-15, a callback name or none, na
  assert.deepEqual(validateRaMcu(mcu({USB})).peripherals.USB,{enabled:true,...RA_USB_DEFAULTS});
  assert.deepEqual(RA_USB_DEFAULTS,{callback:'',priority:12,resumePriority:12});
  assert.equal(validateRaMcu(mcu({USB:{enabled:true,callback:'usb_cb',priority:3,resumePriority:15}})).peripherals.USB.callback,'usb_cb');
- assert.throws(()=>validateRaMcu(mcu({USB:{enabled:true,priority:16}})),/USB: USBI 인터럽트 우선순위는 0~15입니다/);
- assert.throws(()=>validateRaMcu(mcu({USB:{enabled:true,resumePriority:-1}})),/USB: USBR 인터럽트 우선순위는 0~15입니다/);
- assert.throws(()=>validateRaMcu(mcu({USB:{enabled:true,callback:'1x'}})),/USB: 콜백 이름은 C 식별자로/);
+ assert.throws(()=>validateRaMcu(mcu({USB:{enabled:true,priority:16}})),/^Error: USB: 설정을 확인하세요.$/);
+ assert.throws(()=>validateRaMcu(mcu({USB:{enabled:true,resumePriority:-1}})),/^Error: USB: 설정을 확인하세요.$/);
+ assert.throws(()=>validateRaMcu(mcu({USB:{enabled:true,callback:'1x'}})),/^Error: USB: 설정을 확인하세요.$/);
  assert.throws(()=>validateRaMcu(mcu({USB:{}})),/USB: 설정을 확인하세요/);
  for(const name of ['g_basic0','g_basic0_ctrl','g_basic0_cfg'])assert.match(raNameProblem(name),/인스턴스 이름/);
  for(const name of ['usbfs_interrupt_handler','usbfs_resume_handler','usbfs_d0fifo_handler','usbfs_d1fifo_handler'])assert.match(raNameProblem(name),/ISR/);

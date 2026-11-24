@@ -473,8 +473,9 @@ export const RA_USB_DEFAULTS=Object.freeze({callback:'',priority:12,resumePriori
 function validateUsb(p){
  if(!p||typeof p.enabled!=='boolean')throw new Error('USB: 설정을 확인하세요.');
  const q={enabled:p.enabled,...RA_USB_DEFAULTS,...Object.fromEntries(Object.keys(RA_USB_DEFAULTS).filter(k=>p[k]!==undefined).map(k=>[k,p[k]]))};
- if(typeof q.callback!=='string'||q.callback!==''&&!C_NAME.test(q.callback))throw new Error('USB: 콜백 이름은 C 식별자로 쓰세요(없으면 비워 둡니다).');
- for(const [k,label]of [['priority','USBI'],['resumePriority','USBR']])if(!Number.isInteger(q[k])||q[k]<0||q[k]>15)throw new Error(`USB: ${label} 인터럽트 우선순위는 0~15입니다.`);
+ // One message for every setting (the user's decision of 2026-11-24).
+ if(typeof q.callback!=='string'||q.callback!==''&&!C_NAME.test(q.callback))throw new Error('USB: 설정을 확인하세요.');
+ for(const k of ['priority','resumePriority'])if(!Number.isInteger(q[k])||q[k]<0||q[k]>15)throw new Error('USB: 설정을 확인하세요.');
  return q;
 }
 // Low power modes (r_lpm g_lpm0), a pin-less stack: the mode R_LPM_LowPowerModeEnter enters, the sources that end it
