@@ -65,15 +65,15 @@ typedef struct st_usb_info { uint8_t class_type; uint8_t speed; uint8_t device_s
 typedef struct st_usb_event_info { uint8_t module_number; uint8_t device_address; uint8_t pipe; usb_class_t type; uint16_t status; usb_status_t event; uint32_t data_size; usb_setup_t setup; void * p_data; void * p_context; const transfer_instance_t * p_transfer_tx; const transfer_instance_t * p_transfer_rx; } usb_event_info_t;
 typedef usb_event_info_t usb_instance_ctrl_t;
 typedef usb_event_info_t usb_callback_args_t;
-typedef struct st_usb_cfg { usb_mode_t usb_mode; usb_speed_t usb_speed; uint8_t module_number; usb_class_t type; usb_descriptor_t * p_usb_reg; void * usb_complience_cb; IRQn_Type irq; IRQn_Type irq_r; IRQn_Type irq_d0; IRQn_Type irq_d1; IRQn_Type hsirq; IRQn_Type hsirq_d0; IRQn_Type hsirq_d1; uint8_t ipl; uint8_t ipl_r; uint8_t ipl_d0; uint8_t ipl_d1; uint8_t hsipl; uint8_t hsipl_d0; uint8_t hsipl_d1; void * p_context; const transfer_instance_t * p_transfer_tx; const transfer_instance_t * p_transfer_rx; void * p_extend; } usb_cfg_t;
+typedef struct st_usb_cfg { usb_mode_t usb_mode; usb_speed_t usb_speed; uint8_t module_number; usb_class_t type; usb_descriptor_t * p_usb_reg; void * usb_complience_cb; IRQn_Type irq; IRQn_Type irq_r; IRQn_Type irq_d0; IRQn_Type irq_d1; IRQn_Type hsirq; IRQn_Type hsirq_d0; IRQn_Type hsirq_d1; uint8_t ipl; uint8_t ipl_r; uint8_t ipl_d0; uint8_t ipl_d1; uint8_t hsipl; uint8_t hsipl_d0; uint8_t hsipl_d1; void (*p_usb_apl_callback)(usb_callback_args_t *); void * p_context; const transfer_instance_t * p_transfer_tx; const transfer_instance_t * p_transfer_rx; void * p_extend; } usb_cfg_t;
 typedef struct st_usb_instance { usb_instance_ctrl_t * p_ctrl; const usb_cfg_t * p_cfg; void * p_api; } usb_instance_t;
 typedef struct { uint32_t dw_dte_rate; uint8_t b_char_format; uint8_t b_parity_type; uint8_t b_data_bits; uint8_t rsv; } usb_pcdc_linecoding_t;
 typedef struct { uint16_t bdtr; uint16_t brts; uint16_t rsv; } usb_pcdc_ctrllinestate_t;`;
 /** g_basic0 of hal_data.c (and the descriptor g_usb_descriptor, which the interpreter does not read) for the stand-in header. */
 export function usbPrelude(t,vec){
- return ['const usb_descriptor_t g_usb_descriptor = { NULL, NULL, NULL, NULL, NULL, 7 };','usb_instance_ctrl_t g_basic0_ctrl;',
-  `const usb_cfg_t g_basic0_cfg = { .usb_mode = USB_MODE_PERI, .usb_speed = USB_SPEED_FS, .module_number = 0, .type = USB_CLASS_PCDC, .p_usb_reg = (usb_descriptor_t *) &g_usb_descriptor, .usb_complience_cb = NULL, .irq = ${vec('USBFS_INT')}, .irq_r = ${vec('USBFS_RESUME')}, .irq_d0 = FSP_INVALID_VECTOR, .irq_d1 = FSP_INVALID_VECTOR, .hsirq = FSP_INVALID_VECTOR, .hsirq_d0 = FSP_INVALID_VECTOR, .hsirq_d1 = FSP_INVALID_VECTOR, .ipl = (${t.priority}), .ipl_r = (${t.resumePriority}), .ipl_d0 = (BSP_IRQ_DISABLED), .ipl_d1 = (BSP_IRQ_DISABLED), .hsipl = (BSP_IRQ_DISABLED), .hsipl_d0 = (BSP_IRQ_DISABLED), .hsipl_d1 = (BSP_IRQ_DISABLED), .p_context = NULL, .p_transfer_tx = NULL, .p_transfer_rx = NULL, .p_extend = NULL };`,
-  'const usb_instance_t g_basic0 = { .p_ctrl = &g_basic0_ctrl, .p_cfg = &g_basic0_cfg, .p_api = NULL };',...(t.callback?[`void ${t.callback}(usb_callback_args_t * p_args);`]:[])];
+ return [...(t.callback?[`void ${t.callback}(usb_callback_args_t * p_args);`]:[]),'const usb_descriptor_t g_usb_descriptor = { NULL, NULL, NULL, NULL, NULL, 7 };','usb_instance_ctrl_t g_basic0_ctrl;',
+  `const usb_cfg_t g_basic0_cfg = { .usb_mode = USB_MODE_PERI, .usb_speed = USB_SPEED_FS, .module_number = 0, .type = USB_CLASS_PCDC, .p_usb_reg = (usb_descriptor_t *) &g_usb_descriptor, .usb_complience_cb = NULL, .irq = ${vec('USBFS_INT')}, .irq_r = ${vec('USBFS_RESUME')}, .irq_d0 = FSP_INVALID_VECTOR, .irq_d1 = FSP_INVALID_VECTOR, .hsirq = FSP_INVALID_VECTOR, .hsirq_d0 = FSP_INVALID_VECTOR, .hsirq_d1 = FSP_INVALID_VECTOR, .ipl = (${t.priority}), .ipl_r = (${t.resumePriority}), .ipl_d0 = (BSP_IRQ_DISABLED), .ipl_d1 = (BSP_IRQ_DISABLED), .hsipl = (BSP_IRQ_DISABLED), .hsipl_d0 = (BSP_IRQ_DISABLED), .hsipl_d1 = (BSP_IRQ_DISABLED), .p_usb_apl_callback = ${t.callback||'NULL'}, .p_context = NULL, .p_transfer_tx = NULL, .p_transfer_rx = NULL, .p_extend = NULL };`,
+  'const usb_instance_t g_basic0 = { .p_ctrl = &g_basic0_ctrl, .p_cfg = &g_basic0_cfg, .p_api = NULL };'];
 }
 
 // FSP's r_usb_pcdc_descriptor.c.template: the device and the Full-Speed configuration descriptor (bDescriptorType of the
@@ -439,7 +439,9 @@ const USB_API={
   const d=this.usbDrv(),ctrl=this.usbCtrl(ctrlPtr,r,fn),cfg=this.struct(cfgPtr,r,'usb_cfg_t',fn),f=k=>Number(cfg.fields[k].value);
   if(f('module_number')!==0&&f('module_number')!==1)return E.PARAMETER;
   this.setField(ctrl,'module_number',f('module_number'),r);this.setField(ctrl,'type',f('type')&0x7f,r);
-  d.callback=this.inst.usb?.callback||'';
+  // p_ctrl->p_context and g_usb_apl_callback from the configuration Open is given (its p_usb_apl_callback, NULL: none).
+  if(Object.hasOwn(ctrl.fields,'p_context'))ctrl.fields.p_context.value=cfg.fields.p_context.value;
+  const cb=cfg.fields.p_usb_apl_callback.value;d.callback=cb?.kind==='function'?cb.name:'';
   const speed=f('usb_speed');if(speed!==2&&speed!==1&&speed!==0&&f('usb_mode')!==1)return E.PARAMETER;
   if(f('module_number')===1)return E.PARAMETER;
   const type=f('type')&0x7f,peri=[0,4,10,16,6,9,7,8],host=[11,13,14,15,17,18,19];
