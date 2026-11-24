@@ -65,14 +65,17 @@ async function prepareBuild({project,tools,root,target='arm',configuration='Debu
   const ra=target==='arm'&&isRa(project),place=name=>ra?path.join(directory,'src',base(name)==='main.c'?name.replace(/main\.c$/,'hal_entry.c'):name):path.join(directory,name);
   if(ra)await fs.mkdir(path.join(directory,'src'),{recursive:true});
   const folders=new Set();
-  for(const f of files){if(!SOURCE_PATH.test(f.name))throw new Error('소스 파일명이 올바르지 않습니다.');if(ra&&base(f.name)==='hal_entry.c')throw new Error('hal_entry.c는 FSP 프로젝트의 주 소스 이름입니다. 다른 이름을 쓰세요.');const to=place(f.name);if(f.name.includes('/')){await fs.mkdir(path.dirname(to),{recursive:true});folders.add(path.dirname(to));}await fs.writeFile(to,f.text);if(/\.(c|cpp|cc)$/.test(f.name)||target==='arm'&&/\.s$/.test(f.name))sources.push(place(f.name));}
+  // An RA project without the USB stack does not compile src/r_usb_pcdc_descriptor.c, which stays in the project after
+  // the stack is removed (feature 41; the interpreter leaves the file out by its name too).
+  const skipped=name=>ra&&base(name)==='r_usb_pcdc_descriptor.c'&&!project.mcu?.peripherals?.USB?.enabled;
+  for(const f of files){if(!SOURCE_PATH.test(f.name))throw new Error('소스 파일명이 올바르지 않습니다.');if(ra&&base(f.name)==='hal_entry.c')throw new Error('hal_entry.c는 FSP 프로젝트의 주 소스 이름입니다. 다른 이름을 쓰세요.');const to=place(f.name);if(f.name.includes('/')){await fs.mkdir(path.dirname(to),{recursive:true});folders.add(path.dirname(to));}await fs.writeFile(to,f.text);if(skipped(f.name))continue;if(/\.(c|cpp|cc)$/.test(f.name)||target==='arm'&&/\.s$/.test(f.name))sources.push(place(f.name));}
   if(files.some(f=>base(f.name)==='__stm_environment.c'))throw new Error('__stm_environment.c는 내부 빌드용 파일명입니다.');
   // ARM builds keep DWARF 4 (GCC 15 defaults to 5): STM Studio's GDB reads only DWARF 2-4; the app's emulator, GDB and
   // clangd read both.
   let flags=['-g3',...(target==='arm'?['-gdwarf-4']:[]),configuration==='Debug'?'-O0':'-Os','-ffunction-sections','-fdata-sections','-Wall','-Wextra','-Werror=implicit-function-declaration','-I'+directory,...[...folders].map(d=>'-I'+d)],linkFlags=[],generated=[];
   let sdkFiles=new Set();
   if(ra){
-    const r=await prepareRa({project,tools,directory,userFiles:files});
+    const r=await prepareRa({project,tools,directory,userFiles:files.filter(f=>!skipped(f.name))});
     flags.unshift(...r.cpu);flags.push(...r.includes);generated=r.sdkSources;sdkFiles=new Set(r.sdkSources);linkFlags=r.linkFlags;
   }else if(target==='arm'){
     const cube=tools[sdk.key],hal=path.join(cube||'','Drivers',sdk.hal),device=path.join(cube||'','Drivers/CMSIS/Device/ST',sdk.device),core=path.join(cube||'','Drivers/CMSIS/Include'),p=sdk.prefix;
