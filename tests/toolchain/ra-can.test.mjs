@@ -11,7 +11,7 @@ import {createRequire} from 'node:module';
 import {FirmwareSession} from '../../src/firmware-session.js';
 import {SimulationSession} from '../../src/session.js';
 import {projectForBoard,validateProject} from '../../src/project.js';
-import {raDefaultMcu} from '../../src/ra-config.js';
+import {raDefaultMcu,RA_LPM_DEFAULTS} from '../../src/ra-config.js';
 import {raExample} from '../../src/ra-examples.js';
 
 const require=createRequire(import.meta.url),{prepareBuild,build,detectTools}=require('../../desktop/native-build.cjs');
@@ -82,7 +82,7 @@ async function both(code,ms,names,{can,sends={},project:given}={}){
   const result=await build(await prepareBuild({project,tools,root,target:'arm'}));
   assert.deepEqual(result.diagnostics.filter(d=>d.severity!=='info'),[]);
   const vars=s=>Object.fromEntries(names.map(n=>[n,s.readVariable(n)]));
-  const drive=(s,tick)=>{for(const at of [...Object.keys(sends).map(Number).sort((a,b)=>a-b),ms]){tick(at);if(sends[at]!==undefined)assert.ok(s.inject(sends[at],'can:node')>0,sends[at]);}};
+  const drive=(s,tick)=>{for(const at of [...Object.keys(sends).map(Number).sort((a,b)=>a-b),ms]){tick(at);if(sends[at]!==undefined)for(const line of [].concat(sends[at]))assert.ok(s.inject(line,'can:node')>0,line);}};
   const ew=[],emulator=new FirmwareSession(validateProject(project),{elf:new Uint8Array(await fs.readFile(result.elf)),warn:m=>ew.push(m)});
   drive(emulator,at=>run(emulator,at));
   const iw=[],interpreter=new SimulationSession(validateProject(project),{warn:m=>iw.push(m)});
@@ -249,4 +249,297 @@ void hal_entry (void)
 }`,40,[...LOGGED,...list('st',2)],{sends:{3:'100 01',5:'100 02',17:'100 03',19:'100 04'}});
  same(r,[RX(1,0x100,2),[0x20,1,0,0],RX(1,0x100,3)]);
  assert.equal(r.emulator.vars['st[0]']&0x10,0x10,'overwrite: MSGLOST stays (CAN_STATUS_NORMAL_MBOX_MESSAGE_LOST)');assert.equal(r.emulator.vars['st[1]']&0x10,0,'overrun: the error ISR cleared it');
+});
+
+// ---- The review's programs (feature 40 review): a fuller log (every callback's channel and context, a received frame's
+// options and a checksum of its data bytes), return codes e[] and states st[].
+const RLOG=`
+volatile int32_t ev[48];
+volatile int32_t mb[48];
+volatile int32_t fr[48];
+volatile int32_t dl[48];
+volatile int32_t cx[48];
+volatile int32_t nev = 0;
+volatile int32_t e[32];
+volatile uint32_t st[16];
+static void note (can_callback_args_t * p_args, int32_t tag)
+{
+    if (nev >= 48)
+    {
+        return;
+    }
+    ev[nev] = (int32_t) p_args->event | tag;
+    mb[nev] = (int32_t) p_args->mailbox;
+    fr[nev] = 0;
+    dl[nev] = 0;
+    cx[nev] = (int32_t) ((uint32_t) p_args->channel * 1000U + (NULL != p_args->p_context ? *(uint32_t *) p_args->p_context : 0U));
+    if (CAN_EVENT_RX_COMPLETE == p_args->event)
+    {
+        uint32_t sum = 0;
+        for (uint32_t i = 0; i < p_args->frame.data_length_code; i++) { sum = sum * 3U + p_args->frame.data[i]; }
+        fr[nev] = (int32_t) p_args->frame.id;
+        dl[nev] = (int32_t) (p_args->frame.data_length_code | ((uint32_t) p_args->frame.type << 4) | ((uint32_t) p_args->frame.id_mode << 8) | (p_args->frame.options << 12) | (sum << 16));
+    }
+    nev++;
+}
+can_frame_t frame (uint32_t id, can_id_mode_t mode, uint8_t d0);
+can_frame_t frame (uint32_t id, can_id_mode_t mode, uint8_t d0)
+{
+    can_frame_t f = { .id = id, .id_mode = mode, .type = CAN_FRAME_TYPE_DATA, .data_length_code = 1, .options = 0 };
+    f.data[0] = d0;
+    return f;
+}
+static void wait_ms (uint32_t ms)
+{
+    R_BSP_SoftwareDelay(ms, BSP_DELAY_UNITS_MILLISECONDS);
+}
+`;
+const RCB=`
+void can_callback (can_callback_args_t * p_args)
+{
+    note(p_args, 0);
+}
+`;
+const RLOGGED=(withSt)=>[...list('ev',48),...list('mb',48),...list('fr',48),...list('dl',48),...list('cx',48),'nev',...list('e',32),...(withSt?list('st',16):[])];
+/** Builds and runs a review program on both engines; they must end with the same variables and node lines. */
+async function review(code,ms,{can,sends,peripherals={},st=false}={}){
+ const base=projectForBoard('fpb-ra6e1'),mcu={...raDefaultMcu(),peripherals:{...peripherals,CAN0:{enabled:true,...can}}};
+ const r=await both(null,ms,RLOGGED(st),{sends,project:validateProject({...base,mcu,code:HEAD+RLOG+code})});
+ assert.deepEqual(r.unknown,[],'no register outside the model');
+ assert.deepEqual(r.interpreter.vars,r.emulator.vars);assert.deepEqual(r.interpreter.output,r.emulator.output);
+ const v=r.emulator.vars;
+ return {...r,log:Array.from({length:v.nev},(_,i)=>[v[`ev[${i}]`],v[`mb[${i}]`]]),v};
+}
+const TXS={mailboxes:[{type:'TRANSMIT',id:0},{type:'TRANSMIT',id:0},{type:'TRANSMIT',id:0},{type:'RECEIVE',id:0x100}],mask:0};
+const TWO={mailboxes:[{type:'TRANSMIT',id:0},{type:'TRANSMIT',id:0},{type:'RECEIVE',id:0x100},{type:'RECEIVE',id:0x101}],mask:0x7FF};
+
+test('review: Close takes the CAN interrupts waiting away (with interrupts off, from a callback, with a frame on its way)',{skip,timeout:300000},async()=>{
+ const r=await review(`
+volatile int32_t close_in_cb = 0;
+void can_callback (can_callback_args_t * p_args)
+{
+    note(p_args, 0);
+    if (close_in_cb)
+    {
+        close_in_cb = 0;
+        e[20] = (int32_t) R_CAN_Close(&g_can0_ctrl);
+    }
+}
+void hal_entry (void)
+{
+    can_frame_t a = frame(0x100, CAN_ID_MODE_STANDARD, 0x30);
+    R_CAN_Open(&g_can0_ctrl, &g_can0_cfg);
+    R_CAN_ModeTransition(&g_can0_ctrl, CAN_OPERATION_MODE_NORMAL, CAN_TEST_MODE_LOOPBACK_INTERNAL);
+    __disable_irq();
+    e[0] = (int32_t) R_CAN_Write(&g_can0_ctrl, 0, &a);
+    wait_ms(2);
+    e[1] = (int32_t) R_CAN_Close(&g_can0_ctrl);
+    __enable_irq();
+    wait_ms(2);
+    st[0] = (uint32_t) nev;
+    e[2] = (int32_t) R_CAN_Open(&g_can0_ctrl, &g_can0_cfg);
+    e[3] = (int32_t) R_CAN_ModeTransition(&g_can0_ctrl, CAN_OPERATION_MODE_NORMAL, CAN_TEST_MODE_LOOPBACK_INTERNAL);
+    wait_ms(2);
+    st[1] = (uint32_t) nev;
+    a.data[0] = 0x31;
+    e[4] = (int32_t) R_CAN_Write(&g_can0_ctrl, 0, &a);
+    wait_ms(2);
+    st[2] = (uint32_t) nev;
+    close_in_cb = 1;
+    a.data[0] = 0x32;
+    e[5] = (int32_t) R_CAN_Write(&g_can0_ctrl, 0, &a);
+    wait_ms(2);
+    st[3] = (uint32_t) nev;
+    e[6] = (int32_t) R_CAN_Open(&g_can0_ctrl, &g_can0_cfg);
+    e[7] = (int32_t) R_CAN_ModeTransition(&g_can0_ctrl, CAN_OPERATION_MODE_NORMAL, CAN_TEST_MODE_LOOPBACK_INTERNAL);
+    a.data[0] = 0x33;
+    e[8] = (int32_t) R_CAN_Write(&g_can0_ctrl, 0, &a);
+    wait_ms(2);
+    st[4] = (uint32_t) nev;
+    a.data[0] = 0x34;
+    e[9] = (int32_t) R_CAN_Write(&g_can0_ctrl, 0, &a);
+    e[10] = (int32_t) R_CAN_Close(&g_can0_ctrl);
+    wait_ms(2);
+    e[11] = (int32_t) R_CAN_Open(&g_can0_ctrl, &g_can0_cfg);
+    e[12] = (int32_t) R_CAN_ModeTransition(&g_can0_ctrl, CAN_OPERATION_MODE_NORMAL, CAN_TEST_MODE_LOOPBACK_INTERNAL);
+    wait_ms(2);
+    st[5] = (uint32_t) nev;
+    a.data[0] = 0x35;
+    e[13] = (int32_t) R_CAN_Write(&g_can0_ctrl, 0, &a);
+    wait_ms(2);
+    while (1) { wait_ms(1); }
+}`,40,{st:true});
+ assert.deepEqual([0,1,2,3,4,5].map(i=>r.v[`st[${i}]`]),[0,0,2,3,5,5],'nothing from before a Close');
+});
+
+test('review: CAN interrupts waiting together are taken as the NVIC takes them (receive, receive, transmit, transmit)',{skip,timeout:300000},async()=>{
+ const r=await review(RCB+`
+void hal_entry (void)
+{
+    can_frame_t a = frame(0x100, CAN_ID_MODE_STANDARD, 0xA0);
+    can_frame_t b = frame(0x101, CAN_ID_MODE_STANDARD, 0xB0);
+    R_CAN_Open(&g_can0_ctrl, &g_can0_cfg);
+    R_CAN_ModeTransition(&g_can0_ctrl, CAN_OPERATION_MODE_NORMAL, CAN_TEST_MODE_LOOPBACK_INTERNAL);
+    __disable_irq();
+    R_CAN_Write(&g_can0_ctrl, 0, &a);
+    R_CAN_Write(&g_can0_ctrl, 1, &b);
+    R_BSP_SoftwareDelay(2, BSP_DELAY_UNITS_MILLISECONDS);
+    __enable_irq();
+    R_BSP_SoftwareDelay(2, BSP_DELAY_UNITS_MILLISECONDS);
+    e[0] = 1;
+    while (1) { wait_ms(1); }
+}`,20,{can:TWO});
+ assert.deepEqual(r.log,[[0x400,2],[0x400,3],[0x800,0],[0x800,1]]);
+});
+
+test('review: overrun mode with interrupts off — the error interrupt three times (one a lost mailbox), then the receive interrupts',{skip,timeout:300000},async()=>{
+ const r=await review(RCB+`
+static can_extended_cfg_t g_ext;
+static can_cfg_t g_cfg;
+void hal_entry (void)
+{
+    can_info_t info;
+    g_ext = g_can0_extended_cfg; g_ext.message_mode = CAN_MESSAGE_MODE_OVERRUN;
+    g_cfg = g_can0_cfg; g_cfg.p_extend = &g_ext;
+    R_CAN_Open(&g_can0_ctrl, &g_cfg);
+    e[0] = 1;
+    __disable_irq();
+    R_BSP_SoftwareDelay(6500, BSP_DELAY_UNITS_MICROSECONDS);
+    R_CAN_InfoGet(&g_can0_ctrl, &info); st[0] = info.status;
+    __enable_irq();
+    R_BSP_SoftwareDelay(1000, BSP_DELAY_UNITS_MICROSECONDS);
+    R_CAN_InfoGet(&g_can0_ctrl, &info); st[1] = info.status;
+    while (1) { wait_ms(1); }
+}`,30,{st:true,sends:{2:['100 11','101 12','102 13'],3:['100 14','101 15','102 16'],4:['100 17'],9:['100 21','101 22']}});
+ assert.deepEqual(r.log.slice(0,6),[[0x20,1],[0x20,2],[0x20,3],[0x400,1],[0x400,2],[0x400,3]]);
+});
+
+test('review: p_args->buffer is the mailbox; a configuration copy with a 4-entry mailbox array; a remote frame in loopback',{skip,timeout:300000},async()=>{
+ const b=await review(`
+void can_callback (can_callback_args_t * p_args)
+{
+    note(p_args, 0);
+    st[0] = p_args->buffer + 100U;
+}
+void hal_entry (void)
+{
+    can_frame_t a = frame(0x100, CAN_ID_MODE_STANDARD, 0xA0);
+    R_CAN_Open(&g_can0_ctrl, &g_can0_cfg);
+    R_CAN_ModeTransition(&g_can0_ctrl, CAN_OPERATION_MODE_NORMAL, CAN_TEST_MODE_LOOPBACK_INTERNAL);
+    e[0] = (int32_t) R_CAN_Write(&g_can0_ctrl, CAN_MAILBOX_ID_0, &a);
+    wait_ms(2);
+    e[1] = 1;
+    while (1) { wait_ms(1); }
+}`,10,{st:true});
+ assert.deepEqual(b.log,[[0x400,1],[0x800,0]]);assert.equal(b.v['st[0]'],100,'the last callback (transmit, MB0)');
+ const f=await review(RCB+`
+static can_extended_cfg_t g_ext;
+static can_cfg_t g_cfg;
+static can_mailbox_t g_four[4];
+void hal_entry (void)
+{
+    can_frame_t a = frame(0x321, CAN_ID_MODE_STANDARD, 0xA0);
+    g_ext = g_can0_extended_cfg; g_cfg = g_can0_cfg; g_cfg.p_extend = &g_ext; g_ext.p_mailbox = g_four;
+    for (int i = 0; i < 4; i++) { g_four[i] = g_can0_extended_cfg.p_mailbox[i]; }
+    g_four[1].mailbox_id = 0x321;
+    e[0] = (int32_t) R_CAN_Open(&g_can0_ctrl, &g_cfg);
+    e[1] = (int32_t) R_CAN_ModeTransition(&g_can0_ctrl, CAN_OPERATION_MODE_NORMAL, CAN_TEST_MODE_LOOPBACK_INTERNAL);
+    e[2] = (int32_t) R_CAN_Write(&g_can0_ctrl, 0, &a);
+    wait_ms(2);
+    e[3] = 1;
+    while (1) { wait_ms(1); }
+}`,10);
+ assert.deepEqual(f.log,[[0x400,1],[0x800,0]]);assert.equal(f.v['fr[0]'],0x321);
+ // A remote frame (DLC 5): it comes back with the ID and the DLC and no data (the receive mailbox's data bytes stay).
+ const m=await review(RCB+`
+static can_mailbox_t g_mbs[32];
+static can_extended_cfg_t g_ext;
+static can_cfg_t g_cfg;
+void hal_entry (void)
+{
+    can_frame_t a = frame(0x321, CAN_ID_MODE_STANDARD, 0xA0);
+    g_ext = g_can0_extended_cfg; g_cfg = g_can0_cfg; g_cfg.p_extend = &g_ext;
+    for (int i = 0; i < 32; i++) { g_mbs[i] = g_can0_extended_cfg.p_mailbox[i]; }
+    g_mbs[1].mailbox_id = 0x321; g_mbs[1].frame_type = CAN_FRAME_TYPE_REMOTE; g_ext.p_mailbox = g_mbs;
+    R_CAN_Open(&g_can0_ctrl, &g_cfg);
+    R_CAN_ModeTransition(&g_can0_ctrl, CAN_OPERATION_MODE_NORMAL, CAN_TEST_MODE_LOOPBACK_INTERNAL);
+    a.type = CAN_FRAME_TYPE_REMOTE; a.data_length_code = 5; a.data[0] = 0x77;
+    e[0] = (int32_t) R_CAN_Write(&g_can0_ctrl, 0, &a);
+    wait_ms(2);
+    while (1) { wait_ms(1); }
+}`,10);
+ assert.deepEqual(m.log,[[0x400,1],[0x800,0]]);assert.equal(m.v['dl[0]'],0x15,'remote, DLC 5, no data');
+});
+
+test('review: Write from the callback (a chain of transmissions, a received frame sent back)',{skip,timeout:300000},async()=>{
+ const r=await review(`
+volatile int32_t chain = 0;
+void can_callback (can_callback_args_t * p_args)
+{
+    note(p_args, 0);
+    if ((CAN_EVENT_TX_COMPLETE == p_args->event) && (chain < 4))
+    {
+        can_frame_t f = frame(0x100U + (uint32_t) chain, CAN_ID_MODE_STANDARD, (uint8_t) chain);
+        chain++;
+        e[chain] = (int32_t) R_CAN_Write(&g_can0_ctrl, p_args->mailbox, &f);
+    }
+    if ((CAN_EVENT_RX_COMPLETE == p_args->event) && (p_args->frame.id == 0x7A0))
+    {
+        can_frame_t f = p_args->frame;
+        f.id = 0x7A1;
+        e[10 + chain] = (int32_t) R_CAN_Write(&g_can0_ctrl, 1, &f);
+    }
+}
+void hal_entry (void)
+{
+    can_frame_t a = frame(0x7A0, CAN_ID_MODE_STANDARD, 0x30);
+    R_CAN_Open(&g_can0_ctrl, &g_can0_cfg);
+    R_CAN_ModeTransition(&g_can0_ctrl, CAN_OPERATION_MODE_NORMAL, CAN_TEST_MODE_LOOPBACK_INTERNAL);
+    e[0] = (int32_t) R_CAN_Write(&g_can0_ctrl, 0, &a);
+    wait_ms(10);
+    while (1) { wait_ms(1); }
+}`,20,{can:TXS});
+ assert.ok(r.log.length>=6);
+});
+
+test('review: an MCU reset (NVIC_SystemReset) with a frame on the bus and the node\'s frames waiting',{skip,timeout:300000},async()=>{
+ const r=await review(RCB+`
+void hal_entry (void)
+{
+    can_frame_t a = frame(0x100, CAN_ID_MODE_STANDARD, 0xA0);
+    uint32_t again = R_SYSTEM->RSTSR1_b.SWRF;
+    e[0] = (int32_t) again;
+    e[1] = (int32_t) R_CAN_Open(&g_can0_ctrl, &g_can0_cfg);
+    a.data[0] = (uint8_t) (0xA0U + again);
+    e[2] = (int32_t) R_CAN_Write(&g_can0_ctrl, 0, &a);
+    if (!again)
+    {
+        R_BSP_SoftwareDelay(5180, BSP_DELAY_UNITS_MICROSECONDS);
+        a.data[0] = 0xEE;
+        R_CAN_Write(&g_can0_ctrl, 0, &a);
+        NVIC_SystemReset();
+    }
+    R_BSP_SoftwareDelay(3500, BSP_DELAY_UNITS_MICROSECONDS);
+    a.data[0] = 0xB0;
+    e[3] = (int32_t) R_CAN_Write(&g_can0_ctrl, 0, &a);
+    while (1) { wait_ms(1); }
+}`,40,{sends:{2:'101 01',5:['101 02','101 03','101 04','101 05'],6:'102 06',12:'102 09'}});
+ assert.equal(r.v['e[0]'],1,'the program runs again after the reset');
+});
+
+test('review: Sleep mode (r_lpm) — a CAN interrupt wakes the core',{skip,timeout:300000},async()=>{
+ const r=await review(RCB+`
+void hal_entry (void)
+{
+    R_CAN_Open(&g_can0_ctrl, &g_can0_cfg);
+    e[0] = (int32_t) R_LPM_Open(&g_lpm0_ctrl, &g_lpm0_cfg);
+    for (int i = 0; i < 3; i++)
+    {
+        e[1 + i] = (int32_t) R_LPM_LowPowerModeEnter(&g_lpm0_ctrl);
+        st[i] = (uint32_t) nev;
+    }
+    e[10] = 1;
+    while (1) { wait_ms(1); }
+}`,40,{st:true,sends:{5:'100 01',9:'555 02',12:'101 03',20:'102 04'},peripherals:{LPM:{enabled:true,...RA_LPM_DEFAULTS,wake:[],cancel:[],cancelRising:[]}}});
+ assert.equal(r.v['e[10]'],1);assert.deepEqual([0,1,2].map(i=>r.v[`st[${i}]`]),[1,2,3]);
 });
