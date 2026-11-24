@@ -27,13 +27,15 @@ export const TOOLCHAIN_SHARDS=Object.freeze([
  // + parity of ADC, AGT, IIC (22 s locally) + parity of the WDT example (10 s locally)
  // + five review programs of ra-lpm (about 17 s locally)
  // + the first review test of ra-transfer (feature 36: four FSP builds on both engines, about 17 s locally)
- [['ra-course','contact bounce on'],['fsp-interp-parity','parity: ra_adc_pot|parity: ra_wdt_reset'],['ra-lpm','review: (agt|iwdt|rtc|wdt|hold) —'],['ra-transfer','^review 1']],
+ // + three review tests of ra-usb (feature 41: five FSP builds on both engines)
+ [['ra-course','contact bounce on'],['fsp-interp-parity','parity: ra_adc_pot|parity: ra_wdt_reset'],['ra-lpm','review: (agt|iwdt|rtc|wdt|hold) —'],['ra-transfer','^review 1'],['ra-usb','^(reads of 200|a system reset|PullUp off)']],
  // 70 + 28 = 98 + parity of blink and IRQ (14 s locally)
  // + parity of the RTC example (11 s locally)
  // + parity of the low power example (feature 37)
  // + ra-iic-slave (feature 33: four FSP builds, about 18 s locally)
  // + the second review test of ra-transfer (feature 36: five FSP builds on both engines, about 20 s locally)
- [['arm-examples','NUCLEO-F446RE'],'bus-instances',['fsp-interp-parity','parity: ra_blink|parity: ra_rtc_clock|parity: ra_lpm_deep'],'ra-iic-slave',['ra-transfer','^review 2']],
+ // + four review tests of ra-usb (feature 41: five FSP builds on both engines)
+ [['arm-examples','NUCLEO-F446RE'],'bus-instances',['fsp-interp-parity','parity: ra_blink|parity: ra_rtc_clock|parity: ra_lpm_deep'],'ra-iic-slave',['ra-transfer','^review 2'],['ra-usb','^(a program that leaves|R_USB_Write of 0|a copy of g_basic0_cfg|the USB stack removed)']],
  // 58 + 38 = 96 + parity of polling and rising IRQ (18 s locally)
  // + the register-start WDT test of ra-wdt-rtc (feature 35: about 16 s locally)
  // + ra-flash (feature 39: fourteen FSP builds with the review's two-engine checks, about 60 s locally)
@@ -47,8 +49,9 @@ export const TOOLCHAIN_SHARDS=Object.freeze([
  // (the tests are named: a "not this one" pattern with a lookahead did not keep the heavy test out)
  // + ra-lpm (feature 37: programs with r_lpm on both engines, about 3 s each locally): its first four tests here (13 s),
  //   the review programs in groups 1, 4 and 7
- // + ra-usb (feature 41: three FSP builds on both engines, about 14 s locally) and the parity of the USB example (10 s locally)
- [['ra-course','Bare Metal - Blinky|switch polling toggles|the challenge:|BSP tab sizes|as the course screen shows it'],'adc-continuous','clock-tree','ra-usb',['fsp-interp-parity','parity: ra_uart_echo|parity: ra_usb_cdc_echo'],['ra-lpm','^R_LPM_\\* return codes|^Software Standby on both engines|^Deep Software Standby on both engines|^a Software Standby nothing can end']],
+ // + the first three tests of ra-usb (feature 41: three FSP builds on both engines, about 14 s locally; its review tests
+ //   in groups 1 and 2) and the parity of the USB example (10 s locally)
+ [['ra-course','Bare Metal - Blinky|switch polling toggles|the challenge:|BSP tab sizes|as the course screen shows it'],'adc-continuous','clock-tree',['ra-usb','^(echo on both engines|R_USB_\\* return codes|the callback \\(Stacks)'],['fsp-interp-parity','parity: ra_uart_echo|parity: ra_usb_cdc_echo'],['ra-lpm','^R_LPM_\\* return codes|^Software Standby on both engines|^Deep Software Standby on both engines|^a Software Standby nothing can end']],
  // 26 + 23 + 22 + 17 + 16 = 104 + parity of the SPI memory (15 s locally, 1.51.x)
  // + the two-engine review tests of ra-wdt-rtc ("on both engines") + parity of the flash counter (feature 39)
  // + parity of the ELC + DTC example (feature 36, about 8 s locally)

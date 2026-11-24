@@ -124,7 +124,8 @@ async function both(code,ms,names,{usb,sends={}}={}){
   const iw=[],interpreter=new SimulationSession(validateProject(project),{warn:m=>iw.push(m)});
   let t=0;drive(interpreter,at=>{for(;t<at;)interpreter.tick(++t);});
   const out=s=>String.fromCharCode(...s.usbOutput);
-  return {emulator:{vars:vars(emulator),output:out(emulator),host:emulator.soc.usbfs.host.events,warn:ew},interpreter:{vars:vars(interpreter),output:out(interpreter),host:interpreter.hal.usbFs.host.events,warn:iw},
+  return {emulator:{vars:vars(emulator),output:out(emulator),host:emulator.soc.usbfs.host.events,state:emulator.soc.usbfs.host.state,queue:emulator.soc.usbfs.host.queue.length,warn:ew},
+   interpreter:{vars:vars(interpreter),output:out(interpreter),host:interpreter.hal.usbFs.host.events,state:interpreter.hal.usbFs.host.state,queue:interpreter.hal.usbFs.host.queue.length,warn:iw},
    unknown:[...emulator.soc.unknown.keys()].map(a=>a.toString(16)),emulatorSession:emulator,interpreterSession:interpreter};
  }finally{await fs.rm(root,{recursive:true,force:true});}
 }
@@ -288,4 +289,287 @@ void hal_entry(void)
  assert.deepEqual(list('cb',v.ncb).map(k=>v[k]),[EV.DEFAULT,EV.CONFIGURED,EV.REQUEST,EV.REQUEST_COMPLETE,EV.REQUEST,EV.READ_COMPLETE,1501]);
  assert.deepEqual(list('ev',v.nev).map(k=>v[k]),[EV.DEFAULT,EV.CONFIGURED,EV.REQUEST,EV.REQUEST_COMPLETE,EV.REQUEST,EV.READ_COMPLETE,EV.WRITE_COMPLETE]);
  assert.equal(v.cb2,1);assert.equal(r.emulator.output,'ab');assert.equal(r.interpreter.output,'ab');
+});
+
+// Both engines ended alike: the same variables, bytes back to the PC, PC state and queue, and (unless told otherwise)
+// the same PC log, with no register outside the model and no warning.
+function alike(r,{host=true,warn=true}={}){
+ assert.deepEqual(r.unknown,[],'no register outside the model');
+ if(warn){assert.deepEqual(r.emulator.warn,[]);assert.deepEqual(r.interpreter.warn,[]);}
+ assert.deepEqual(r.interpreter.vars,r.emulator.vars);assert.equal(r.interpreter.output,r.emulator.output);
+ assert.equal(r.emulator.state,'ready');assert.equal(r.interpreter.state,'ready');assert.equal(r.interpreter.queue,r.emulator.queue);
+ if(host)assert.deepEqual(r.interpreter.host,r.emulator.host);
+}
+const EVN=['nev','configured','line_state','baud','data_bits',...list('ev',32),...list('info',32)];
+// Echo with a buffer of `size` bytes and reads of `readSize`.
+const echoOf=(size,readSize=size)=>SERVICE+`
+static uint8_t buf[${size}];
+volatile uint32_t received = 0;
+void hal_entry(void)
+{
+    R_USB_Open(&g_basic0_ctrl, &g_basic0_cfg);
+    serve_ms(0);
+    while (1)
+    {
+        usb_status_t event = service();
+        if ((USB_STATUS_CONFIGURED == event) || (USB_STATUS_WRITE_COMPLETE == event))
+        {
+            R_USB_Read(&g_basic0_ctrl, buf, ${readSize}, USB_CLASS_PCDC);
+        }
+        else if (USB_STATUS_READ_COMPLETE == event)
+        {
+            received += g_basic0_ctrl.data_size;
+            R_USB_Write(&g_basic0_ctrl, buf, g_basic0_ctrl.data_size > ${size} ? ${size} : g_basic0_ctrl.data_size, USB_CLASS_PCDC);
+        }
+    }
+}
+`;
+
+test('reads of 200, 10 and 70 bytes (not the packet size) on both engines: the same events, sizes and bytes back',{skip,timeout:900000},async()=>{
+ for(const [size,readSize,sends] of [
+  [200,200,{60:'a'.repeat(65),80:'b'.repeat(128),110:'c'.repeat(200),150:'d'.repeat(256),220:'tail'}],
+  [10,10,{60:'12345',80:'0123456789',100:'0123456789X',130:'q'.repeat(64),170:'z'.repeat(100)}],
+  [100,70,{60:'a'.repeat(64),80:'b'.repeat(70),110:'c'.repeat(100),160:'d'.repeat(6)}]]){
+  const r=await both(echoOf(size,readSize),300,[...EVN,'received'],{sends});
+  alike(r);assert.ok(r.emulator.vars.nev>5,`read size ${readSize}: data moved`);
+ }
+});
+
+test('a system reset (NVIC_SystemReset) while configured: the PC enumerates again and the echo goes on, on both engines',{skip,timeout:600000},async()=>{
+ const code=SERVICE+`
+static uint8_t buf[64];
+volatile uint32_t received = 0;
+void hal_entry(void)
+{
+    R_USB_Open(&g_basic0_ctrl, &g_basic0_cfg);
+    serve_ms(0);
+    while (1)
+    {
+        usb_status_t event = service();
+        if ((USB_STATUS_CONFIGURED == event) || (USB_STATUS_WRITE_COMPLETE == event))
+        {
+            R_USB_Read(&g_basic0_ctrl, buf, 64, USB_CLASS_PCDC);
+        }
+        else if (USB_STATUS_READ_COMPLETE == event)
+        {
+            received += g_basic0_ctrl.data_size;
+            if ('R' == buf[0])
+            {
+                NVIC_SystemReset();
+            }
+            R_USB_Write(&g_basic0_ctrl, buf, g_basic0_ctrl.data_size, USB_CLASS_PCDC);
+        }
+    }
+}
+`;
+ const r=await both(code,300,[...EVN,'received'],{sends:{60:'a',80:'R',85:'early',200:'b'}});
+ // The interpreter starts a new USB model at the reset (its PC log begins again); the emulator's PC keeps one log.
+ alike(r,{host:false,warn:false});
+ assert.deepEqual(r.emulator.warn,[]);assert.deepEqual(r.interpreter.warn,['[NVIC] 시스템 리셋: 프로그램을 처음부터 다시 실행합니다.']);
+ assert.deepEqual(r.emulator.host,[...ENUMERATION,...ENUMERATION]);assert.deepEqual(r.interpreter.host,ENUMERATION);
+ assert.equal(r.emulator.output,'aearlyb');assert.equal(r.emulator.vars.received,6);assert.equal(r.emulator.vars.configured,1);
+});
+
+test('PullUp off and on with a read pending: the PC sees the device go and enumerates it again, on both engines',{skip,timeout:600000},async()=>{
+ const code=SERVICE+`
+volatile int32_t e[16];
+volatile int32_t n_e = 0;
+static uint8_t buf[64];
+void hal_entry(void)
+{
+    int n = 0;
+    usb_info_t usb_info;
+    e[n++] = (int32_t) R_USB_PullUp(&g_basic0_ctrl, 1);
+    R_USB_Open(&g_basic0_ctrl, &g_basic0_cfg);
+    serve_ms(40);
+    e[n++] = (int32_t) R_USB_Read(&g_basic0_ctrl, buf, 64, USB_CLASS_PCDC);
+    e[n++] = (int32_t) R_USB_PullUp(&g_basic0_ctrl, 0);
+    serve_ms(10);
+    e[n++] = (int32_t) R_USB_InfoGet(&g_basic0_ctrl, &usb_info, 0);
+    e[n++] = (int32_t) usb_info.device_status;
+    e[n++] = (int32_t) R_USB_Read(&g_basic0_ctrl, buf, 64, USB_CLASS_PCDC);
+    e[n++] = (int32_t) R_USB_Write(&g_basic0_ctrl, buf, 1, USB_CLASS_PCDC);
+    e[n++] = (int32_t) R_USB_PullUp(&g_basic0_ctrl, 1);
+    serve_ms(40);
+    e[n++] = (int32_t) R_USB_InfoGet(&g_basic0_ctrl, &usb_info, 0);
+    e[n++] = (int32_t) usb_info.device_status;
+    e[n++] = (int32_t) R_USB_Read(&g_basic0_ctrl, buf, 64, USB_CLASS_PCDC);
+    n_e = n;
+    while (1)
+    {
+        usb_status_t event = service();
+        if (USB_STATUS_READ_COMPLETE == event)
+        {
+            R_USB_Write(&g_basic0_ctrl, buf, g_basic0_ctrl.data_size, USB_CLASS_PCDC);
+        }
+        if (USB_STATUS_WRITE_COMPLETE == event)
+        {
+            R_USB_Read(&g_basic0_ctrl, buf, 64, USB_CLASS_PCDC);
+        }
+    }
+}
+`;
+ const r=await both(code,220,[...EVN,'n_e',...list('e',16)],{sends:{45:'lost?',150:'after'}});
+ alike(r);
+ const v=r.emulator.vars;
+ assert.deepEqual(list('e',v.n_e).map(k=>v[k]),[0,0,0,0,6,1500,1500,0,0,3,0]);
+ assert.deepEqual(r.emulator.host,[...ENUMERATION,'DETACH',...ENUMERATION]);assert.equal(r.emulator.output,'after');assert.equal(v.configured,2);
+});
+
+test('a program that leaves the CDC requests unanswered, or STALLs one: the PC gives the request up and the echo works, on both engines',{skip,timeout:600000},async()=>{
+ const loop=(request='')=>`
+volatile int32_t ev[64];
+volatile int32_t nev = 0;
+volatile int32_t e[8];
+static uint8_t buf[64];
+${request?'static usb_pcdc_linecoding_t lc;\n':''}void hal_entry(void)
+{
+    usb_status_t event;
+    R_USB_Open(&g_basic0_ctrl, &g_basic0_cfg);
+    while (1)
+    {
+        R_USB_EventGet(&g_basic0_ctrl, &event);
+        if ((USB_STATUS_NONE != event) && (nev < 64))
+        {
+            ev[nev++] = (int32_t) event;
+        }
+        if ((USB_STATUS_CONFIGURED == event) || (USB_STATUS_WRITE_COMPLETE == event))
+        {
+            R_USB_Read(&g_basic0_ctrl, buf, 64, USB_CLASS_PCDC);
+        }
+        if (USB_STATUS_READ_COMPLETE == event)
+        {
+            R_USB_Write(&g_basic0_ctrl, buf, g_basic0_ctrl.data_size, USB_CLASS_PCDC);
+        }
+${request}
+    }
+}
+`;
+ const ignore=await both(loop(),200,['nev',...list('ev',16)],{sends:{80:'abc',120:'def'}});
+ alike(ignore);
+ assert.deepEqual(ignore.emulator.host,[...ENUMERATION.slice(0,8),'TIMEOUT','SET_CONTROL_LINE_STATE']);assert.equal(ignore.emulator.output,'abcdef');
+ const stall=await both(loop(`        if (USB_STATUS_REQUEST == event)
+        {
+            if (USB_PCDC_SET_LINE_CODING == (g_basic0_ctrl.setup.request_type & USB_BREQUEST))
+            {
+                e[0] = (int32_t) R_USB_PeriControlDataGet(&g_basic0_ctrl, (uint8_t *) &lc, 7);
+                e[1] = (int32_t) R_USB_PeriControlDataGet(&g_basic0_ctrl, (uint8_t *) &lc, 7);
+            }
+            else
+            {
+                e[2] = (int32_t) R_USB_PeriControlStatusSet(&g_basic0_ctrl, USB_SETUP_STATUS_STALL);
+                e[3] = (int32_t) g_basic0_ctrl.status;
+            }
+        }`),200,['nev',...list('ev',16),...list('e',4)],{sends:{80:'abc',120:'def'}});
+ alike(stall);
+ assert.deepEqual(stall.emulator.host,[...ENUMERATION,'STALL']);assert.equal(stall.emulator.output,'abcdef');
+ assert.deepEqual(list('e',4).map(k=>stall.emulator.vars[k]),[0,1501,0,1]);
+});
+
+test('R_USB_Write of 0 bytes, BUSY, 64 / 128 / 200 bytes, Stop, PCDCC and wrong arguments: the same codes and bytes on both engines',{skip,timeout:600000},async()=>{
+ const code=SERVICE+`
+volatile int32_t e[40];
+volatile int32_t n_e = 0;
+static uint8_t big[200];
+static uint8_t rb[64];
+void hal_entry(void)
+{
+    int n = 0;
+    for (int i = 0; i < 200; i++)
+    {
+        big[i] = (uint8_t) ('A' + (i % 26));
+    }
+    R_USB_Open(&g_basic0_ctrl, &g_basic0_cfg);
+    serve_ms(40);
+    e[n++] = (int32_t) R_USB_Write(&g_basic0_ctrl, big, 0, USB_CLASS_PCDC);
+    e[n++] = (int32_t) R_USB_Write(&g_basic0_ctrl, NULL, 0, USB_CLASS_PCDC);
+    serve_ms(5);
+    e[n++] = (int32_t) R_USB_Write(&g_basic0_ctrl, NULL, 0, USB_CLASS_PCDC);
+    serve_ms(5);
+    e[n++] = (int32_t) R_USB_Write(&g_basic0_ctrl, big, 64, USB_CLASS_PCDC);
+    e[n++] = (int32_t) R_USB_Write(&g_basic0_ctrl, big, 64, USB_CLASS_PCDC);
+    serve_ms(5);
+    e[n++] = (int32_t) R_USB_Write(&g_basic0_ctrl, big, 200, USB_CLASS_PCDC);
+    e[n++] = (int32_t) R_USB_Stop(&g_basic0_ctrl, USB_TRANSFER_WRITE, USB_CLASS_PCDC);
+    serve_ms(5);
+    e[n++] = (int32_t) R_USB_Write(&g_basic0_ctrl, big, 128, USB_CLASS_PCDC);
+    serve_ms(5);
+    e[n++] = (int32_t) R_USB_Read(&g_basic0_ctrl, rb, 64, USB_CLASS_PCDC);
+    e[n++] = (int32_t) R_USB_Write(&g_basic0_ctrl, big, 3, USB_CLASS_PCDC);
+    serve_ms(5);
+    e[n++] = (int32_t) R_USB_Write(&g_basic0_ctrl, big, 1, USB_CLASS_PCDCC);
+    serve_ms(5);
+    e[n++] = (int32_t) R_USB_Write(&g_basic0_ctrl, big, 2, USB_CLASS_PCDCC);
+    e[n++] = (int32_t) R_USB_Write(&g_basic0_ctrl, big, 2, USB_CLASS_PCDCC);
+    serve_ms(5);
+    e[n++] = (int32_t) R_USB_Stop(&g_basic0_ctrl, USB_TRANSFER_WRITE, USB_CLASS_PCDC);
+    e[n++] = (int32_t) R_USB_Stop(&g_basic0_ctrl, USB_TRANSFER_WRITE, USB_CLASS_PCDCC);
+    e[n++] = (int32_t) R_USB_Stop(&g_basic0_ctrl, USB_TRANSFER_READ, USB_CLASS_PCDC);
+    e[n++] = (int32_t) R_USB_Stop(&g_basic0_ctrl, (usb_transfer_t) 2, USB_CLASS_PCDC);
+    e[n++] = (int32_t) R_USB_Write(&g_basic0_ctrl, big, 2, 0x10);
+    e[n++] = (int32_t) R_USB_Write(&g_basic0_ctrl, big, 2, USB_CLASS_PHID);
+    e[n++] = (int32_t) R_USB_Read(&g_basic0_ctrl, rb, 0, USB_CLASS_PCDC);
+    e[n++] = (int32_t) R_USB_Read(&g_basic0_ctrl, rb, 2, USB_CLASS_PCDC2);
+    e[n++] = (int32_t) R_USB_Callback(NULL);
+    e[n++] = (int32_t) R_USB_PeriControlDataGet(&g_basic0_ctrl, NULL, 2);
+    e[n++] = (int32_t) R_USB_PeriControlStatusSet(NULL, USB_SETUP_STATUS_ACK);
+    n_e = n;
+    while (1)
+    {
+        service();
+    }
+}
+`;
+ const r=await both(code,200,[...EVN,'n_e',...list('e',40)]);
+ alike(r);
+ const v=r.emulator.vars;
+ assert.deepEqual(list('e',v.n_e).map(k=>v[k]),[0,1501,0,0,1501,0,0,0,0,0,0,0,1501,1500,1500,0,1506,1506,1506,1,1506,1,1,1]);
+ assert.ok(r.emulator.output.length>0);
+});
+
+test('a copy of g_basic0_cfg with its own p_usb_apl_callback, given to R_USB_Open: that callback gets the events, on both engines',{skip,timeout:600000},async()=>{
+ const code=SERVICE+`
+volatile int32_t cb[16];
+volatile int32_t ncb = 0;
+static usb_cfg_t my_cfg;
+void my_cb (usb_callback_args_t * p_args)
+{
+    if (ncb < 16)
+    {
+        cb[ncb++] = (int32_t) p_args->event;
+    }
+}
+void hal_entry(void)
+{
+    my_cfg = g_basic0_cfg;
+    my_cfg.p_usb_apl_callback = my_cb;
+    R_USB_Open(&g_basic0_ctrl, &my_cfg);
+    serve_ms(0);
+    while (1)
+    {
+        service();
+    }
+}
+`;
+ const r=await both(code,100,['ncb','nev',...list('cb',16),...list('ev',16)]);
+ alike(r);
+ const v=r.emulator.vars,seq=[EV.DEFAULT,EV.CONFIGURED,EV.REQUEST,EV.REQUEST_COMPLETE,EV.REQUEST];
+ assert.deepEqual(list('cb',v.ncb).map(k=>v[k]),seq);assert.deepEqual(list('ev',v.nev).map(k=>v[k]),seq);
+});
+
+test('the USB stack removed: the src/r_usb_pcdc_descriptor.c left in the project is not built, both engines run; with the stack again it is',{skip,timeout:600000},async()=>{
+ const base=projectForBoard('fpb-ra6e1'),files=[{name:RA_USB_DESCRIPTOR_FILE,text:RA_USB_DESCRIPTOR_C}];
+ const project=validateProject({...base,mcu:raDefaultMcu(),firmware:{...base.firmware,files}});
+ const root=await fs.mkdtemp(path.join(os.tmpdir(),'ra-usb-'));
+ try{
+  const prepared=await prepareBuild({project,tools,root,target:'arm'});
+  assert.ok(!prepared.units.some(u=>path.basename(u.file)===RA_USB_DESCRIPTOR_FILE),'not compiled without the stack');
+  const result=await build(prepared);
+  assert.deepEqual(result.diagnostics.filter(d=>d.severity!=='info'),[]);
+  const ew=[],emulator=new FirmwareSession(validateProject(project),{elf:new Uint8Array(await fs.readFile(result.elf)),warn:m=>ew.push(m)});run(emulator,50);
+  const iw=[],interpreter=new SimulationSession(validateProject(project),{warn:m=>iw.push(m)});for(let t=1;t<=50;t++)interpreter.tick(t);
+  assert.deepEqual(ew,[]);assert.deepEqual(iw,[]);assert.deepEqual([...emulator.soc.unknown.keys()],[]);
+  const again=await prepareBuild({project:validateProject({...project,mcu:usbMcu()}),tools,root:await fs.mkdtemp(path.join(root,'again-')),target:'arm'});
+  assert.ok(again.units.some(u=>path.basename(u.file)===RA_USB_DESCRIPTOR_FILE),'compiled with the stack');
+ }finally{await fs.rm(root,{recursive:true,force:true});}
 });
