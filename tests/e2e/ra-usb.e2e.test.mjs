@@ -5,6 +5,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
+import os from 'node:os';
 import path from 'node:path';
 import {launch} from './harness.mjs';
 
@@ -62,6 +63,26 @@ test('New Stack → Connectivity → USB PCDC: the g_basic0 card, the line about
   assert.ok((await win.evaluate(()=>[...document.querySelectorAll('#source-file option')].map(o=>o.value))).includes('r_usb_pcdc_descriptor.c'),'the descriptor source is in the project');
   assert.match(await win.textContent('#file-tree'),/r_usb_pcdc_descriptor\.c/);
   assert.deepEqual(await win.evaluate(()=>[...document.querySelectorAll('#serial-target option')].map(o=>[o.value,o.textContent])),[['usb:pcdc','USB 가상 COM (PCDC)']]);
+  // Undo takes the stack and the descriptor source away together, redo brings both back; saved and opened again, the
+  // project keeps both.
+  const descriptor=want=>win.waitForFunction(w=>[...document.querySelectorAll('#source-file option')].some(o=>o.value==='r_usb_pcdc_descriptor.c')===w,want);
+  const targets=()=>win.evaluate(()=>[...document.querySelectorAll('#serial-target option')].map(o=>o.value));
+  await win.click('#undo');await descriptor(false);
+  assert.ok(!(await targets()).includes('usb:pcdc'));
+  await win.click('#redo');await descriptor(true);
+  assert.deepEqual(await targets(),['usb:pcdc']);
+  const file=path.join(await fs.mkdtemp(path.join(os.tmpdir(),'stm-usb-')),'usb.stm32lab');
+  await s.app.evaluate(({dialog},p)=>{dialog.showSaveDialog=async()=>({canceled:false,filePath:p});},file);
+  await win.click('#save');await win.waitForFunction(()=>document.getElementById('save-state').textContent.includes('파일 저장됨'));
+  const saved=JSON.parse(await fs.readFile(file,'utf8'));
+  assert.equal(saved.mcu.peripherals.USB.enabled,true);assert.ok(saved.firmware.files.some(f=>f.name==='r_usb_pcdc_descriptor.c'));
+  await newRaProject(win);await descriptor(false);
+  await s.app.evaluate(({dialog},p)=>{dialog.showOpenDialog=async()=>({canceled:false,filePaths:[p]});},file);
+  await win.evaluate(()=>document.getElementById('open').click());
+  await win.waitForFunction(()=>/회로를 열었습니다/.test(document.getElementById('console-output').textContent));
+  await descriptor(true);
+  assert.deepEqual(await targets(),['usb:pcdc']);
+  await fs.rm(path.dirname(file),{recursive:true,force:true});
   // The example on the built-in interpreter: what the monitor sends comes back.
   await newRaProject(win,'ra_usb_cdc_echo');
   await echo(win,'hello',60000);
