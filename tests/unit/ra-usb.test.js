@@ -210,6 +210,9 @@ test('the descriptor source: added to the project with the stack when it has non
  const a=raAssistance(validateRaMcu(mcu({USB:{enabled:true,callback:'usb_cb'}}))).find(x=>x.name==='g_basic0');
  assert.deepEqual(a.items.map(i=>i.label),['Call R_USB_Open()','Call R_USB_EventGet()','Call R_USB_Read()','Call R_USB_Write()','Call R_USB_PeriControlDataGet()','Call R_USB_PeriControlDataSet()','Call R_USB_PeriControlStatusSet()','Call R_USB_Close()','Callback function definition']);
  assert.match(a.items.at(-1).code,/void usb_cb\(usb_callback_args_t \*p_args\)/);
+ // EventGet writes the event's usb_event_info_t into a variable of its own (g_basic0_ctrl stays the instance's).
+ assert.match(a.items[1].code,/usb_event_info_t event_info;[\s\S]*R_USB_EventGet\(&event_info, &event\);/);
+ assert.match(raExample('ra_usb_cdc_echo').code,/R_USB_EventGet\(&event_info, &event\);/);assert.doesNotMatch(raExample('ra_usb_cdc_echo').code,/g_basic0_ctrl\.(data_size|setup)/);
  assert.equal(raAssistance(validateRaMcu(mcu({USB}))).find(x=>x.name==='g_basic0').items.length,8);
 });
 

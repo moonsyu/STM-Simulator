@@ -919,6 +919,7 @@ void external_irq1_callback(external_irq_callback_args_t *p_args)
 
 void hal_entry(void)
 {
+    usb_event_info_t event_info;
     usb_status_t event;
 
     /* g_basic0: USB Full-Speed peripheral of class PCDC (a virtual COM port on the PC). */
@@ -926,8 +927,8 @@ void hal_entry(void)
 
     while (1)
     {
-        /* One USB event a call (USB_STATUS_NONE when nothing happened); its details are in g_basic0_ctrl. */
-        R_USB_EventGet(&g_basic0_ctrl, &event);
+        /* One USB event a call (USB_STATUS_NONE when nothing happened); its details are in event_info. */
+        R_USB_EventGet(&event_info, &event);
         switch (event)
         {
             case USB_STATUS_CONFIGURED:
@@ -939,9 +940,9 @@ void hal_entry(void)
             }
             case USB_STATUS_READ_COMPLETE:
             {
-                /* g_basic0_ctrl.data_size bytes arrived: send them back. */
-                g_received += g_basic0_ctrl.data_size;
-                R_USB_Write(&g_basic0_ctrl, g_buf, g_basic0_ctrl.data_size, USB_CLASS_PCDC);
+                /* event_info.data_size bytes arrived: send them back. */
+                g_received += event_info.data_size;
+                R_USB_Write(&g_basic0_ctrl, g_buf, event_info.data_size, USB_CLASS_PCDC);
                 break;
             }
             case USB_STATUS_WRITE_COMPLETE:
@@ -953,15 +954,15 @@ void hal_entry(void)
             case USB_STATUS_REQUEST:
             {
                 /* CDC class requests of the PC's serial driver. */
-                if (USB_PCDC_SET_LINE_CODING == (g_basic0_ctrl.setup.request_type & USB_BREQUEST))
+                if (USB_PCDC_SET_LINE_CODING == (event_info.setup.request_type & USB_BREQUEST))
                 {
                     R_USB_PeriControlDataGet(&g_basic0_ctrl, (uint8_t *) &g_line_coding, LINE_CODING_LENGTH);
                 }
-                else if (USB_PCDC_GET_LINE_CODING == (g_basic0_ctrl.setup.request_type & USB_BREQUEST))
+                else if (USB_PCDC_GET_LINE_CODING == (event_info.setup.request_type & USB_BREQUEST))
                 {
                     R_USB_PeriControlDataSet(&g_basic0_ctrl, (uint8_t *) &g_line_coding, LINE_CODING_LENGTH);
                 }
-                else if (USB_PCDC_SET_CONTROL_LINE_STATE == (g_basic0_ctrl.setup.request_type & USB_BREQUEST))
+                else if (USB_PCDC_SET_CONTROL_LINE_STATE == (event_info.setup.request_type & USB_BREQUEST))
                 {
                     R_USB_PeriControlStatusSet(&g_basic0_ctrl, USB_SETUP_STATUS_ACK);
                 }

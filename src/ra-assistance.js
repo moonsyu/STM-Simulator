@@ -109,7 +109,7 @@ export function raAssistance(mcu){
   // USB PCDC (r_usb_basic · r_usb_pcdc, feature 41): the events come from R_USB_EventGet (and the callback, when named).
   if(per.USB?.enabled){const q=per.USB;
     out.push({name:'g_basic0',title:'USB PCDC (r_usb_basic · r_usb_pcdc)',items:[call('R_USB_Open','R_USB_Open(&g_basic0_ctrl, &g_basic0_cfg);'),
-      call('R_USB_EventGet','usb_status_t event;\nR_USB_EventGet(&g_basic0_ctrl, &event);'),
+      call('R_USB_EventGet','usb_event_info_t event_info;\nusb_status_t event;\nR_USB_EventGet(&event_info, &event);'),
       call('R_USB_Read','static uint8_t rx[64];\nR_USB_Read(&g_basic0_ctrl, rx, sizeof(rx), USB_CLASS_PCDC);'),
       call('R_USB_Write','R_USB_Write(&g_basic0_ctrl, (uint8_t *) "hello\\r\\n", 7, USB_CLASS_PCDC);'),
       call('R_USB_PeriControlDataGet','static usb_pcdc_linecoding_t line_coding;\nR_USB_PeriControlDataGet(&g_basic0_ctrl, (uint8_t *) &line_coding, 7);'),
