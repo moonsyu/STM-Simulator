@@ -106,5 +106,16 @@ export function raAssistance(mcu){
       ...(api==='DTC'&&q.activation==='ADC0_SCAN_END'?[{label:'ADC result address (R_ADC_InfoGet)',code:`adc_info_t adc_info;\nR_ADC_InfoGet(&g_adc0_ctrl, &adc_info);\nR_DTC_Reset(&${g}_ctrl, (const void *) adc_info.p_address, samples, SAMPLES);\n`}]:[]),
       ...(q.callback?[callback(q.callback,'dmac_callback_args_t','    /* The DMAC transfer has ended. */\n    (void) p_args;')]:[])]});
   }
+  // USB PCDC (r_usb_basic · r_usb_pcdc, feature 41): the events come from R_USB_EventGet (and the callback, when named).
+  if(per.USB?.enabled){const q=per.USB;
+    out.push({name:'g_basic0',title:'USB PCDC (r_usb_basic · r_usb_pcdc)',items:[call('R_USB_Open','R_USB_Open(&g_basic0_ctrl, &g_basic0_cfg);'),
+      call('R_USB_EventGet','usb_status_t event;\nR_USB_EventGet(&g_basic0_ctrl, &event);'),
+      call('R_USB_Read','static uint8_t rx[64];\nR_USB_Read(&g_basic0_ctrl, rx, sizeof(rx), USB_CLASS_PCDC);'),
+      call('R_USB_Write','R_USB_Write(&g_basic0_ctrl, (uint8_t *) "hello\\r\\n", 7, USB_CLASS_PCDC);'),
+      call('R_USB_PeriControlDataGet','static usb_pcdc_linecoding_t line_coding;\nR_USB_PeriControlDataGet(&g_basic0_ctrl, (uint8_t *) &line_coding, 7);'),
+      call('R_USB_PeriControlDataSet','static usb_pcdc_linecoding_t line_coding;\nR_USB_PeriControlDataSet(&g_basic0_ctrl, (uint8_t *) &line_coding, 7);'),
+      call('R_USB_PeriControlStatusSet','R_USB_PeriControlStatusSet(&g_basic0_ctrl, USB_SETUP_STATUS_ACK);'),
+      call('R_USB_Close','R_USB_Close(&g_basic0_ctrl);'),
+      ...(q.callback?[callback(q.callback,'usb_callback_args_t','    if (USB_STATUS_READ_COMPLETE == p_args->event)\n    {\n        /* p_args->data_size bytes were read. */\n    }')]:[])]});}
   return out;
 }

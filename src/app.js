@@ -36,6 +36,7 @@ import {createShell} from './shell.js';
 import {setupUpdateLog} from './update-log-ui.js';
 import {setupLogicAnalyzer} from './logic-analyzer.js';
 import {RaPinoutPanel} from './ra-pinout-ui.js';
+import {addUsbDescriptor} from './ra-usb-descriptor.js';
 import {setupVariableGraph} from './variable-graph-ui.js';
 import {mountIdeChrome,setupIde} from './ide-ui.js';
 import {setupUpdates} from './update-ui.js';
@@ -81,7 +82,11 @@ export const monitor=new Monitor({getSession:()=>state.session,isRunning:()=>run
 export const SOURCE_KEY='stm32lab.sourceFile.v1';
 state.sourceFile=(()=>{try{return localStorage.getItem(SOURCE_KEY)||'main.c';}catch{return 'main.c';}})();state.circuitClipboard=null;state.clipboardOffset=28;state.issuesStamp=0;state.issuesKey='';
 export const pinout=new PinoutPanel({getProject:()=>state.project,isRunning:running,onError:message=>log(message,'error'),apply:({mcu,code,moved=[],files,report=[]})=>{checkpoint();state.project.mcu=mcu;if(code!==null){state.project.code=code;/* The project's other sources stay; edited generated files are regenerated with their USER CODE sections (feature 45). */const kept=state.project.firmware?.mode==='hal'?files??state.project.firmware.files??[]:[];state.project.firmware={...(state.project.firmware?.mode==='hal'?state.project.firmware:{}),mode:'hal',files:kept};if(!kept.some(f=>f.name===state.sourceFile))state.sourceFile='main.c';}syncEditor();changed();log(code===null?'핀 설정을 적용했습니다.':'설정에 맞는 HAL main.c를 생성했습니다.');if(moved.length)log('USER CODE 구역 밖에 있던 코드를 구역 안으로 옮겨 유지했습니다: '+moved.join(', '),'warning');if(report.length)log('다시 생성하며 USER CODE 구역 밖에서 고친 줄을 지웠습니다(Ctrl+Z로 되돌리기): '+report.map(r=>`${r.name} ${r.reset?'원본으로':r.lost+'줄'}`).join(', '),'warning');}});
-pinout.ra=new RaPinoutPanel({getProject:()=>state.project,isRunning:running,onError:message=>log(message,'error'),apply:({mcu})=>{checkpoint();state.project.mcu=mcu;changed();state.ide?.invalidate?.();log('핀 설정을 적용했습니다. 다음 빌드의 ra_gen·bsp_pin_cfg.h에 반영됩니다.');},
+pinout.ra=new RaPinoutPanel({getProject:()=>state.project,isRunning:running,onError:message=>log(message,'error'),apply:({mcu})=>{const usb=!!mcu.peripherals?.USB?.enabled,hadUsb=!!state.project.mcu?.peripherals?.USB?.enabled;checkpoint();state.project.mcu=mcu;
+ // Adding the USB PCDC stack (feature 41) adds src/r_usb_pcdc_descriptor.c when the project has none (one undo step with
+ // the settings); the serial monitor's targets follow the stack.
+ if(usb&&!hadUsb)addUsbDescriptor(state.project);if(usb!==hadUsb)syncEditor();
+ changed();state.ide?.invalidate?.();log('핀 설정을 적용했습니다. 다음 빌드의 ra_gen·bsp_pin_cfg.h에 반영됩니다.');},
  // Stacks → g_flash0 → "데이터 플래시 지우기": the saved data flash contents go (an edit: undo brings them back).
  clearDataFlash:()=>{if(state.session?.dataFlash)state.session.dataFlash.changed=false;if(!state.project.dataFlash)return;checkpoint({dataFlash:true});delete state.project.dataFlash;changed();log('프로젝트에 저장된 데이터 플래시 내용을 지웠습니다. 다음 실행은 지워진(빈) 데이터 플래시로 시작합니다.');}});
 export const updateBoardPicker=setupBoardPicker({getProject:()=>state.project,isRunning:running,onSelect:id=>{state.sourceFile='main.c';replaceProject(projectForBoard(id));log('선택한 보드의 기본 회로로 시작합니다.');}});

@@ -1,5 +1,5 @@
 import {$,esc} from './common.js';
-import {RA6E1_PORTS,RA_IRQ_PINS,RA_RESERVED,FPB_RA6E1,RA_PERIPHERAL_PINS,RA_ADC_CHANNELS,RA_GPT_32BIT,RA_GPT_CHANNELS,RA_AGT_CHANNELS,RA_TIMER_UNITS,RA_CLOCK_LIMITS,RA_IIC_RATES,RA_IIC_CHANNELS,RA_IIC_SLAVE_ADDRESS,raIicSlaveClock,RA_SPI_CHANNELS,RA_SCI_SPI_CHANNELS,raIicClock,raGptCounts,raAgtCounts,raClockHz,raSpiBitrate,raSciSpiBitrate,raFamily,validateRaMcu,raDefaultMcu,raIrqName,RA_BSP_DEFAULTS,RA_WDT,RA_WDT_WINDOW_START,RA_WDT_WINDOW_END,raWdtTiming,RA_RTC_DEFAULTS,RA_IRQ_DS,RA_LPM_DEFAULTS,RA_LPM_MODES,RA_LPM_MODE_NAMES,RA_LPM_WAKE,RA_LPM_CANCEL,raDsPin,RA_FLASH_DEFAULTS,RA_TRANSFER_DEFAULTS,RA_TRANSFER_MODES,RA_TRANSFER_ADDR_MODES,RA_DMAC_CHANNELS,raTransferEvents,raEventHasVector,RA_ADC_ELC_EVENTS} from './ra-config.js';
+import {RA6E1_PORTS,RA_IRQ_PINS,RA_RESERVED,FPB_RA6E1,RA_PERIPHERAL_PINS,RA_ADC_CHANNELS,RA_GPT_32BIT,RA_GPT_CHANNELS,RA_AGT_CHANNELS,RA_TIMER_UNITS,RA_CLOCK_LIMITS,RA_IIC_RATES,RA_IIC_CHANNELS,RA_IIC_SLAVE_ADDRESS,raIicSlaveClock,RA_SPI_CHANNELS,RA_SCI_SPI_CHANNELS,raIicClock,raGptCounts,raAgtCounts,raClockHz,raSpiBitrate,raSciSpiBitrate,raFamily,validateRaMcu,raDefaultMcu,raIrqName,RA_BSP_DEFAULTS,RA_WDT,RA_WDT_WINDOW_START,RA_WDT_WINDOW_END,raWdtTiming,RA_RTC_DEFAULTS,RA_IRQ_DS,RA_LPM_DEFAULTS,RA_LPM_MODES,RA_LPM_MODE_NAMES,RA_LPM_WAKE,RA_LPM_CANCEL,raDsPin,RA_FLASH_DEFAULTS,RA_TRANSFER_DEFAULTS,RA_TRANSFER_MODES,RA_TRANSFER_ADDR_MODES,RA_DMAC_CHANNELS,raTransferEvents,raEventHasVector,RA_ADC_ELC_EVENTS,RA_USB_DEFAULTS} from './ra-config.js';
 import {RA_DF_BASE,RA_DF_SIZE,RA_DF_BLOCK,RA_DF_UNIT,dataFlashUsed} from './ra-data-flash.js';
 import {lpmWakeLabel,lpmCancelLabel} from './ra-lpm.js';
 import {sciBaudSetting,raPclka} from './ra-generator.js';
@@ -23,8 +23,8 @@ const SPI_PIN_GROUPS={SPI1:[{P100:'SPI1_MISO',P101:'SPI1_MOSI',P102:'SPI1_RSPCK'
 // The pins New Stack → Connectivity gives an I2C slave stack (IIC0 on the Arduino SCL/SDA pins first).
 const IIC_PIN_GROUPS={IIC0:[{P400:'IIC0_SCL',P401:'IIC0_SDA'},{P408:'IIC0_SCL',P407:'IIC0_SDA'}],IIC1:[{P205:'IIC1_SCL',P206:'IIC1_SDA'}]};
 // Stacks without pins (added from New Stack, kept until removed there).
-const PINLESS=['WDT','IWDT','RTC','LPM','FLASH','ELC'];
-const STACK_NAMES={WDT:['g_wdt0','Watchdog (r_wdt)'],IWDT:['g_iwdt0','Independent Watchdog (r_iwdt)'],RTC:['g_rtc0','Realtime Clock (r_rtc)'],LPM:['g_lpm0','Low Power Modes (r_lpm)'],FLASH:['g_flash0','Flash (r_flash_hp)'],ELC:['g_elc','Event Link Controller (r_elc)']};
+const PINLESS=['WDT','IWDT','RTC','LPM','FLASH','ELC','USB'];
+const STACK_NAMES={WDT:['g_wdt0','Watchdog (r_wdt)'],IWDT:['g_iwdt0','Independent Watchdog (r_iwdt)'],RTC:['g_rtc0','Realtime Clock (r_rtc)'],LPM:['g_lpm0','Low Power Modes (r_lpm)'],FLASH:['g_flash0','Flash (r_flash_hp)'],ELC:['g_elc','Event Link Controller (r_elc)'],USB:['g_basic0','USB PCDC (r_usb_basic · r_usb_pcdc)']};
 // Transfer stacks (feature 36): g_transferN with r_dtc or r_dmac, any number of them (New Stack → Transfer).
 const isTransfer=id=>/^TRANSFER\d+$/.test(id);
 const EVENT_LABEL=ev=>ev==='SOFTWARE'?'Software start (R_DMAC_SoftwareStart)':ev.replace(/_/g,' ');
@@ -226,7 +226,9 @@ export class RaPinoutPanel {
   const iicFree=RA_IIC_CHANNELS.map(ch=>'IIC'+ch).filter(id=>!per[id]?.enabled);
   const free=[...RA_AGT_CHANNELS.map(ch=>'AGT'+ch),...RA_GPT_CHANNELS.map(ch=>'GPT'+ch)].filter(id=>!per[id]?.enabled);
   const spiFree=[...RA_SPI_CHANNELS.map(ch=>['SPI'+ch,`SPI (r_spi) · SPI${ch}`]),...RA_SCI_SPI_CHANNELS.map(ch=>['SCI'+ch,`SPI (r_sci_spi) · SCI${ch} Simple SPI`])].filter(([id])=>!per[id]?.enabled);
-  $('ra-stacks').innerHTML=`<div class="ra-stack-new"><label>New Stack<select id="ra-stack-add"><optgroup label="Input"><option value="IRQ">External IRQ (r_icu)</option></optgroup>${spiFree.length||iicFree.length?`<optgroup label="Connectivity">${spiFree.map(([id,l])=>`<option value="${id}" data-ra-spi-add>${l}</option>`).join('')}${iicFree.map(id=>`<option value="${id}" data-ra-iic-slave-add>I2C Slave (r_iic_slave) · ${id}</option>`).join('')}</optgroup>`:''}<optgroup label="Timers">${free.map(id=>`<option value="${id}">${id.startsWith('AGT')?`Timer, Low-Power (r_agt) · AGT${id.slice(3)}`:`Timer, General PWM (r_gpt) · GPT${id.slice(3)} Periodic`}</option>`).join('')}</optgroup>${PINLESS_GROUPS.map(([label,ids])=>ids.some(id=>!per[id]?.enabled)?`<optgroup label="${label}">${ids.filter(id=>!per[id]?.enabled).map(id=>`<option value="${id}">${STACK_NAMES[id][1]}</option>`).join('')}</optgroup>`:'').join('')}<optgroup label="Transfer"><option value="DTC" data-ra-transfer-add>Transfer (r_dtc)</option><option value="DMAC" data-ra-transfer-add>Transfer (r_dmac)</option></optgroup></select></label><button type="button" data-ra-add>추가</button></div>${list.length?list.map(card).join(''):'<p class="form-hint">스택이 없습니다. New Stack으로 External IRQ · SPI · 타이머를 넣거나, Pins 탭에서 핀 기능을 정하세요.</p>'}`;
+  // USB PCDC (feature 41) is a Connectivity stack without pins.
+  const usbFree=!per.USB?.enabled;
+  $('ra-stacks').innerHTML=`<div class="ra-stack-new"><label>New Stack<select id="ra-stack-add"><optgroup label="Input"><option value="IRQ">External IRQ (r_icu)</option></optgroup>${spiFree.length||iicFree.length||usbFree?`<optgroup label="Connectivity">${spiFree.map(([id,l])=>`<option value="${id}" data-ra-spi-add>${l}</option>`).join('')}${iicFree.map(id=>`<option value="${id}" data-ra-iic-slave-add>I2C Slave (r_iic_slave) · ${id}</option>`).join('')}${usbFree?`<option value="USB">${STACK_NAMES.USB[1]}</option>`:''}</optgroup>`:''}<optgroup label="Timers">${free.map(id=>`<option value="${id}">${id.startsWith('AGT')?`Timer, Low-Power (r_agt) · AGT${id.slice(3)}`:`Timer, General PWM (r_gpt) · GPT${id.slice(3)} Periodic`}</option>`).join('')}</optgroup>${PINLESS_GROUPS.map(([label,ids])=>ids.some(id=>!per[id]?.enabled)?`<optgroup label="${label}">${ids.filter(id=>!per[id]?.enabled).map(id=>`<option value="${id}">${STACK_NAMES[id][1]}</option>`).join('')}</optgroup>`:'').join('')}<optgroup label="Transfer"><option value="DTC" data-ra-transfer-add>Transfer (r_dtc)</option><option value="DMAC" data-ra-transfer-add>Transfer (r_dmac)</option></optgroup></select></label><button type="button" data-ra-add>추가</button></div>${list.length?list.map(card).join(''):'<p class="form-hint">스택이 없습니다. New Stack으로 External IRQ · SPI · 타이머를 넣거나, Pins 탭에서 핀 기능을 정하세요.</p>'}`;
  }
  // A stack without pins (New Stack → Monitoring · System): the watchdogs with the Properties RASC shows for them.
  pinlessCard(id){
@@ -300,6 +302,11 @@ export class RaPinoutPanel {
     if(q.cancel.some(n=>/^RTC/.test(n))&&!this.draft.peripherals?.RTC?.enabled)notes.push('RTC 스택이 없습니다(New Stack → Realtime Clock).');
    }
    hint=`${notes.join(' ')} R_LPM_Open(&amp;g_lpm0_ctrl, &amp;g_lpm0_cfg) · R_LPM_LowPowerModeEnter(&amp;g_lpm0_ctrl). 다른 모드는 코드에서 lpm_cfg_t를 만들어 R_LPM_LowPowerReconfigure로 바꿉니다. 진입과 깨어남은 실행 로그(LPM)에 남습니다.`;
+  }
+  if(id==='USB'){
+   const q={...RA_USB_DEFAULTS,...p};
+   fields=`<label>Interrupt Priority (USBI)<select data-ra-field="priority">${PRIORITIES(q.priority)}</select></label><label>Interrupt Priority (USBR)<select data-ra-field="resumePriority">${PRIORITIES(q.resumePriority)}</select></label><label>Callback<input data-ra-field="callback" value="${esc(q.callback)}" placeholder="NULL" spellcheck="false"></label>`;
+   hint='실물 보드는 J3·J4의 USB 신호를 USB 커넥터에 직접 배선해야 합니다.';
   }
   return `<article class="ra-stack" data-ra-stack="${id}"><header><b>${name}</b><span>${module}</span><button type="button" data-ra-remove="${id}">삭제</button></header><div class="ra-stack-fields">${fields}</div><p class="form-hint">${hint}</p></article>`;
  }
@@ -382,6 +389,7 @@ export class RaPinoutPanel {
   if(el.closest('[data-ra-add]')&&RA_WDT[$('ra-stack-add').value]){const id=$('ra-stack-add').value;per[id]=WDT_DEFAULTS(id);this.validate();this.renderStacks();return;}
   if(el.closest('[data-ra-add]')&&$('ra-stack-add').value==='RTC'){per.RTC={enabled:true,...RA_RTC_DEFAULTS};this.validate();this.renderStacks();return;}
   if(el.closest('[data-ra-add]')&&$('ra-stack-add').value==='FLASH'){per.FLASH={enabled:true,...RA_FLASH_DEFAULTS};this.validate();this.renderStacks();return;}
+  if(el.closest('[data-ra-add]')&&$('ra-stack-add').value==='USB'){per.USB={enabled:true,...RA_USB_DEFAULTS};this.validate();this.renderStacks();return;}
   // The saved data flash contents are the project's, not this dialog's draft: erased at once (undo brings them back).
   if(el.closest('[data-ra-flash-clear]')){this.clearDataFlash?.();this.renderStacks();return;}
   if(el.closest('[data-ra-add]')&&$('ra-stack-add').value==='LPM'){

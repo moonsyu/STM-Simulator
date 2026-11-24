@@ -2,6 +2,14 @@
 // descriptors (g_usb_descriptor) a project with the USB stack gets as its user source src/r_usb_pcdc_descriptor.c
 // (feature 41). RASC writes the same file from this template.
 export const RA_USB_DESCRIPTOR_FILE='r_usb_pcdc_descriptor.c';
+/** Adds src/r_usb_pcdc_descriptor.c to an FSP project's sources (the USB stack was added) unless a file of that name is
+ *  there; true when it was added. Removing the stack leaves the file. */
+export function addUsbDescriptor(project){
+ const files=project.firmware?.files||[];
+ if(files.some(f=>String(f.name).split('/').at(-1)===RA_USB_DESCRIPTOR_FILE))return false;
+ project.firmware={...project.firmware,files:[...files,{name:RA_USB_DESCRIPTOR_FILE,text:RA_USB_DESCRIPTOR_C}]};
+ return true;
+}
 export const RA_USB_DESCRIPTOR_C=`/* \${REA_DISCLAIMER_PLACEHOLDER} */
 /******************************************************************************
  Includes   <System Includes> , "Project Includes"

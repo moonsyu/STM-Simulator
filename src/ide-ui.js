@@ -192,6 +192,9 @@ export function setupIde(o){
       ['r_elc','r_elc_api.h',has(/^ELC$/)],['r_dtc','r_transfer_api.h',Object.entries(per).some(([id,q])=>/^TRANSFER\d+$/.test(id)&&q?.enabled&&q.driver!=='DMAC')],['r_dmac','r_transfer_api.h',Object.entries(per).some(([id,q])=>/^TRANSFER\d+$/.test(id)&&q?.enabled&&q.driver==='DMAC')]];
     const apis=new Set();
     for(const [m,api,used]of modules)if(used){add(`ra/fsp/src/${m}/${m}.c`);add(`ra/fsp/inc/instances/${m}.h`);if(!apis.has(api)){apis.add(api);add('ra/fsp/inc/api/'+api);}}
+    // USB PCDC (feature 41): r_usb_basic and r_usb_pcdc as FSP lays them out (r_usb_pcdc has its driver under src/ and no
+    // instance header).
+    if(has(/^USB$/))for(const f of ['ra/fsp/src/r_usb_basic/r_usb_basic.c','ra/fsp/inc/instances/r_usb_basic.h','ra/fsp/inc/api/r_usb_basic_api.h','ra/fsp/src/r_usb_pcdc/src/r_usb_pcdc_driver.c','ra/fsp/inc/api/r_usb_pcdc_api.h'])add(f);
     return [...own,...gen,...sdk];
   }
   function buildFilesView(){
