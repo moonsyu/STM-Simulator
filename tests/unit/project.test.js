@@ -409,4 +409,11 @@ describe('a project saved with ESP32 / Raspberry Pi boards',()=>{
     const plain=ledCircuit(),kept=stripUnsupportedBoards(plain);
     assert.equal(kept.removed,null);assert.equal(kept.data,plain);
   });
+  test('an ESP32 run target without such boards becomes the simulator; no board is named (the app shows no notice)',async()=>{
+    const {stripUnsupportedBoards}=await import('../../src/project.js');
+    const p=ledCircuit();p.ide={breakpoints:[],watches:[],native:{target:'esp32',configuration:'Release'}};
+    const {data,removed}=stripUnsupportedBoards(p);
+    assert.deepEqual(removed,{boards:[],wires:0,attachments:0,target:true});
+    assert.equal(data.ide.native.target,'simulator');assert.equal(validateProject(p).ide.native.target,'simulator');
+  });
 });

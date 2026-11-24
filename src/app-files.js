@@ -15,8 +15,8 @@ export async function save(){if(loadPreferences().formatOnSave&&!running()){cons
   if(state.saveTimer){clearTimeout(state.saveTimer);state.saveTimer=null;try{localStorage.setItem('stm32lab.project.v2',JSON.stringify(state.project));}catch{}}
   feedback.clear('save');setSaveState('파일 저장됨','saved');log('회로 파일을 저장했습니다.');}catch(e){setSaveState('파일 저장 실패','error-file');log('저장 실패: '+e.message,'error');feedback.show('파일 저장에 실패했습니다. 저장 위치와 권한을 확인한 뒤 다시 저장해 주세요.','save');}}
 // A project saved with ESP32 / Raspberry Pi boards opens without them (feature 49): what was taken out goes to the log
-// and to a dialog once the project is open.
-export function noticeRemovedBoards(removed){if(!removed)return;const message=removedBoardsMessage(removed);log(message,'warning');$('removed-boards-message').textContent=message;$('removed-boards-dialog').showModal();}
+// and to a dialog once the project is open. An ESP32 run target alone becomes the simulator without a notice.
+export function noticeRemovedBoards(removed){if(!removed?.boards.length)return;const message=removedBoardsMessage(removed);log(message,'warning');$('removed-boards-message').textContent=message;$('removed-boards-dialog').showModal();}
 /** Opens project data read from a file, a dropped file or a project folder. */
 export function openProjectData(data,options){const {removed}=stripUnsupportedBoards(data);replaceProject(validateProject(data),options);noticeRemovedBoards(removed);}
 export async function open(){try{if(window.desktop){const data=await window.desktop.open();if(data!=null){openProjectData(JSON.parse(data));feedback.clear('open');}}else $('file-input').click();}catch(e){log('불러오기 실패: '+e.message,'error');feedback.show('회로 파일을 열지 못했습니다. 현재 작업은 유지됩니다. 올바른 회로 파일을 선택해 주세요.','open');}}

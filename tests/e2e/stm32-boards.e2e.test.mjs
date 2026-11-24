@@ -228,3 +228,18 @@ test('a project saved with an ESP32 board opens without it: a dialog says so, an
   assert.deepEqual(s.errors,[]);
  }finally{await s.close();}
 });
+
+test('a project with only an ESP32 run target opens on the simulator target without a notice',{timeout:120000},async()=>{
+ const {projectForBoard}=await import('../../src/project.js');
+ const p=projectForBoard('nucleo-f103rb');p.name='실행 대상만';p.ide={breakpoints:[],watches:[],native:{target:'esp32',configuration:'Release'}};
+ const s=await launch();
+ try{
+  const {win}=s;
+  await win.setInputFiles('#file-input',{name:'target.stm32lab',mimeType:'application/json',buffer:Buffer.from(JSON.stringify(p))});
+  await win.waitForFunction(()=>document.getElementById('project-name').value==='실행 대상만');
+  assert.equal(await win.evaluate(()=>document.getElementById('native-target').value),'simulator');
+  assert.equal(await win.evaluate(()=>document.getElementById('removed-boards-dialog').open),false);
+  assert.doesNotMatch(await logText(win),/지원하지 않습니다/);
+  assert.deepEqual(s.errors,[]);
+ }finally{await s.close();}
+});
