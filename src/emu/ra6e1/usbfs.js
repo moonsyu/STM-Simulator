@@ -197,7 +197,9 @@ export class UsbFs {
   }
   fifoCtrWrite(port, v) {
     const p = this.pipeOf(this.fifosel[port]); if (!p) return; const b = p.bank(p.cpu);
-    if (v & 0x4000) { // BCLR: the CPU side's buffer is emptied
+    // BCLR on the DCP empties its one buffer, a packet waiting for the PC included (assumed: the manual could not be checked).
+    if (v & 0x4000 && p.n === 0) p.clear();
+    else if (v & 0x4000) { // BCLR: the CPU side's buffer is emptied
       if (this.writes(port, p)) { if (!b.valid) b.data = []; }
       else if (b.valid) this.freeCpu(p);
       else b.data = [];
@@ -231,6 +233,7 @@ export class UsbFs {
   detach() { this.dvsq = 0; this.ctsq = 0; this.dvstctr &= ~7; this.usbaddr = 0; this.host.detached(); }
   busReset() {
     this.dvsq = 1; this.dvstctr = (this.dvstctr & ~7) | 2; this.usbaddr = 0; this.ctsq = 0; this.ccpl = 0; this.pipes[0].pid = PID.NAK;
+    this.pipes[0].clear(); // a bus reset empties the DCP buffer (assumed)
     this.setLatched(DVST);
   }
   setup(bytes) {

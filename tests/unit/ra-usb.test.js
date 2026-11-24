@@ -220,3 +220,10 @@ test('USBFS: a pipe the chip does not have (CURPIPE / PIPESEL 10-15) and an acce
  W(dev,0x64,12);W(dev,0x6c,64);assert.equal(R(dev,0x68),0);assert.equal(R(dev,0x6c),0);
  assert.equal(R(dev,0x406,4),0);assert.equal(R(dev,0x407,2),0);W(dev,0x406,0x12345678,4);assert.equal(R(dev,0x404,2),0);assert.equal(dev.peek(0x406,4),0);
 });
+
+test('USBFS: BCLR and a bus reset empty the DCP buffer, a packet still waiting for the PC included',()=>{
+ const {dev}=bench(),dcp=dev.pipes[0];
+ const fill=()=>{W(dev,0x20,0x20);W(dev,0x14,0x4241);W(dev,0x22,0x8000);W(dev,0x60,1);assert.ok(dcp.anyValid());};
+ fill();W(dev,0x22,0x4000);assert.ok(!dcp.anyValid());assert.equal(dev.inPacket(dcp),null);
+ fill();dev.busReset();assert.ok(!dcp.anyValid());W(dev,0x60,1);assert.equal(dev.inPacket(dcp),null);
+});
