@@ -1,6 +1,17 @@
 # STM Simulator — 개발 인계
 
-현재 버전: **1.60.0**. 정리일: **2026-11-10**. NUCLEO-F446RE·NUCLEO-F103RB 또는 Renesas FPB-RA6E1(1.20.0, FSP·에뮬레이터 전용)과 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+현재 버전: **1.61.0**. 정리일: **2026-11-10**. NUCLEO-F446RE·NUCLEO-F103RB 또는 Renesas FPB-RA6E1(1.20.0, FSP·에뮬레이터 전용)과 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+
+## 1.61.0 기능 목록 40번: RA CAN(r_can)
+
+- **범위**: RA6E1에는 CAN FD가 없고 클래식 CAN 1채널(R_CAN0, `r_can`)이다. 내부 루프백 실습과 직렬 모니터의 가상 CAN 노드까지(사용자 선택). 보드끼리 CAN·트랜시버 부품 연동·Pins 탭의 CAN 핀(CRX0·CTX0 배치가 확인되지 않음)·FIFO 모드·버스 오류와 에러 카운터·송신 중단·원샷은 없다.
+- **설정** `ra-config.js`: `peripherals.CAN0 {enabled, bitrate 125|250|500|1000, idMode STANDARD|EXTENDED, mailboxes[4]{type TRANSMIT|RECEIVE, id}, mask, priority, callback}`(`validateCan` — 잘못된 값과 만들 수 없는 비트레이트는 공통 문구 "CAN: 설정을 확인하세요."), `RA_CAN_DEFAULTS`(500 kbps, MB0 송신 0x000, MB1~3 수신 0x100·0x101·0x102, mask 0x7FF), `raCanTiming(pclkb, bitrate)`: PCLKB / (BRP × (1 + TSEG1 + TSEG2))가 정확히 맞고 TQ 8~25·TSEG1 > TSEG2 ≥ SJW, 샘플 포인트 80 %에 가장 가까운 조합(PCLKB 50 MHz: 125/250/500 kbps는 BRP 20/10/5·TSEG1 15·TSEG2 4·SJW 4, 1000 kbps는 BRP 5·TSEG1 7·TSEG2 2·SJW 2). 클록 설정에 따라 정확한 비트레이트가 없으면 검증이 거부한다.
+- **생성** `ra-generator.js` `canOf`·`canDecl`·`canInstance` → `g_can0`(클록 PCLKB — 보드에 메인 크리스털이 없어 CANMCLK는 쓰지 않음, OVERWRITE 모드, FIFO 없음), 메일박스 배열 32개(r_can.c Open이 32개 항목을 읽으므로; 4~31은 송신·ID 0)와 마스크 8개(1~7은 0x1FFFFFFF), 벡터 CAN0_ERROR·CAN0_MAILBOX_RX·CAN0_MAILBOX_TX는 USB 뒤 맨 끝, `r_can_cfg.h`는 스택이 있을 때만. CAN 스택이 없는 프로젝트의 생성물은 이전과 같다.
+- **에뮬레이터** `src/emu/ra6e1/can.js`: `Can`(0x400A8000, MSTPCRB b2; MB0~31·MKR·MKIVLR·MIER·MCTL·CTLR·STR·BCR·EIER·EIFR·ECSR·CSSR·MSSR/MSMR·TSR·TCR, 그 밖은 값 보관)과 `CanNode`(가상 노드: 항상 버스에 있어 ACK), `parseCanLine`·`formatCanFrame`. 프레임 시간은 표준 47 + 8×DLC, 확장 67 + 8×DLC 비트(스터핑 무시). 테스트 모드: 내부 루프백(자기 프레임만, 버스와 분리), 외부 루프백(노드에도 보내고 자기도 받음), Listen-only(받기만). 덮어쓰기 모드의 메시지 유실은 MSGLOST·NMLST만 서고 오류 인터럽트는 내지 않는다(r_can.c 주석: overrun 모드에서만). "assumed" 주석: 모드 전이가 즉시, 리셋 직후 sleep + reset, reset 모드가 MCTL·대기 송신·EIFR을 지우고 TCR은 유지, 루프백에서 수신 인터럽트가 송신보다 먼저.
+- **해석기** `src/fsp-can.js`: r_can.c를 같은 `Can` 모델 위로 옮긴 것(`CAN_METHODS`, `CAN_TYPES`). R_CAN_Open·Close·Write·Read(항상 `FSP_ERR_UNSUPPORTED`)·ModeTransition·InfoGet·CallbackSet. 함께 대기 중인 CAN 인터럽트는 NVIC처럼 오류 → 수신 → 송신 순서로 처리한다(다른 주변장치와는 도착 순 — 기존 한계). Close는 대기 중인 CAN 인터럽트를 지운다.
+- **가상 노드·모니터**: 두 세션의 `inject(text,'can:node')`와 `canOutput`(줄 배열, 최대 1000줄). 대상 `can:node`("CAN 가상 노드", CAN 스택이 있을 때만, USB 대상 뒤). 입력 한 번 = 프레임 하나: `123 01 02 03`(16진수 ID와 데이터 0~8바이트; ID가 4자리 이상이거나 0x7FF보다 크면 확장), 원격 프레임 `123 R 4`. 출력은 보드가 보낸 프레임마다 `123 [3] 01 02 03`. 형식이 틀리면 "프레임 형식을 확인하세요. 예: 123 01 02 03 (ID와 데이터 바이트, 16진수)"(사용자 승인 문구). 보드가 버스를 듣지 않을 때(Open 전, HALT, 내부 루프백) 보낸 프레임은 버려진다. 출력 탭에 CAN 로그 줄은 없다.
+- **남은 차이·한계**: 드라이버가 채우지 않는 콜백 멤버는 에뮬레이터에서 쓰레기값·해석기에서 0, `g_can0.p_api`는 해석기에서 NULL, `g_can0_mailbox` 등 보조 객체 이름은 해석기에서만 보인다(hal_data.h에 extern 없음), `R_CAN0->…` 직접 접근과 `NVIC_SetPendingIRQ`는 해석기 미지원, 이름 `g_can<n>…`·`can_(error|rx|tx)_isr`은 CAN 스택이 없어도 콜백·핀 이름으로 쓸 수 없다.
+- UI `ra-pinout-ui.js`(Connectivity의 CAN (r_can), 카드 g_can0: Bit Rate·ID Mode·MB0~MB3·Mask·Interrupt Priority·Callback; ID Mode를 바꾸면 Mask를 새 모드의 전체 비교값으로), `ra-assistance.js`, `ide-ui.js`. 예제 `ra_can_loopback`. 시험: `tests/unit/ra-can.test.js`, `fsp-prelude-values.test.js`, `tests/toolchain/ra-can.test.mjs`, parity `ra_can_loopback`, 픽스처, `tests/e2e/ra-can.e2e.test.mjs`.
 
 ## 1.60.0 기능 목록 41번: RA USB PCDC 가상 COM(r_usb_basic · r_usb_pcdc)
 

@@ -205,6 +205,8 @@ export class FirmwareSession {
   get dataFlash() { return this.ra ? this.soc.dataFlash : null; }
   /** What the device sent the PC over the USB virtual COM port (byte codes, the serial monitor's output; feature 41). */
   get usbOutput() { return this.ra ? this.soc.usbfs.host.output : []; }
+  /** The frames the board sent the virtual CAN node, one line each (the serial monitor's output; feature 40). */
+  get canOutput() { return this.ra ? this.soc.can.node.output : []; }
   // Latest camera frame for UI previews.
   cameraFrame() { const f = this.lastFrame; if (!f) return null; const rgba = this.frameRgba(); return rgba ? { width: f.width, height: f.height, format: f.format, rgba } : null; }
   // ------------------------------------------------------------ serial lines
@@ -298,6 +300,8 @@ export class FirmwareSession {
     if (!bytes.length) return 0;
     // The USB virtual COM port (feature 41): the PC sends the bytes to the device's bulk OUT endpoint (emu/ra6e1/usbfs.js).
     if (target === 'usb:pcdc') return this.ra ? this.soc.usbfs.host.send(bytes) : 0;
+    // The virtual CAN node (feature 40): the line is one frame it puts on the bus (emu/ra6e1/can.js).
+    if (target === 'can:node') return this.ra ? this.soc.can.node.send([...String(text)].slice(0, 256).join('')) : 0;
     const external = target.endsWith(':external'), id = external ? target.slice(0, -9) : target === 'Serial1' || target === 'Serial' ? 'USART2' : target;
     const usart = this.soc.usarts[id]; if (!usart) return 0;
     const sig = this.soc.signals, t0 = this.now;

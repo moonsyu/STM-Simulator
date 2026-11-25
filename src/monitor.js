@@ -19,7 +19,7 @@ export class Monitor {
       if($('serial-target').value.startsWith('outside:')){if(!session.wireless.outsideInput($('serial-target').value.slice(8),text,session.now??session.runtime.microTime))throw new Error('받을 상대가 없습니다. 모듈 전원과 연결(공유기 접속·TCP 서버)을 확인하세요.');$('serial-input').value='';$('serial-feedback').textContent='';this.dirty=true;this.render();return;}
       // The other STM32 boards take the text as their input.
       if($('serial-target').value.startsWith('board:')){const board=this.boardDriver(session);if(!board?.acceptsInput)throw new Error('이 보드 예제는 입력을 받지 않습니다.');if(board.receive(text)===0)throw new Error('이 보드의 USART2 PA2/TX·PA3/RX 설정과 HAL_UART_Init() 실행을 확인하세요.');$('serial-input').value='';$('serial-feedback').textContent='';this.dirty=true;this.render();return;}
-      const count=session.inject(text,$('serial-target').value);if(!count)throw new Error($('serial-target').value==='USART2'?'USART2 PA2/TX·PA3/RX 설정과 HAL_UART_Init() 실행을 확인하세요.':'외부 UART 장치의 전원·TX/RX 교차 배선·통신 속도를 확인하세요.');$('serial-input').value='';$('serial-feedback').textContent='';this.trace({micros:session.runtime.microTime,protocol:'INPUT',message:`${count} B → ${$('serial-target').selectedOptions[0].textContent}`});}catch(error){this.onError(error.message);$('serial-feedback').textContent=error.message;}};
+      const count=session.inject(text,$('serial-target').value);if(!count)throw new Error($('serial-target').value==='USART2'?'USART2 PA2/TX·PA3/RX 설정과 HAL_UART_Init() 실행을 확인하세요.':$('serial-target').value==='can:node'?'프레임 형식을 확인하세요. 예: 123 01 02 03 (ID와 데이터 바이트, 16진수)':'외부 UART 장치의 전원·TX/RX 교차 배선·통신 속도를 확인하세요.');$('serial-input').value='';$('serial-feedback').textContent='';this.trace({micros:session.runtime.microTime,protocol:'INPUT',message:`${count} B → ${$('serial-target').selectedOptions[0].textContent}`});}catch(error){this.onError(error.message);$('serial-feedback').textContent=error.message;}};
     $('serial-target').onchange=()=>{$('serial-feedback').textContent='';this.dirty=true;this.render();};
     $('serial-input').onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();$('serial-send').click();}};
   }
@@ -44,6 +44,8 @@ export class Monitor {
       if($('serial-target').value.startsWith('outside:'))$('uart-output').textContent=session?.wireless?`${$('serial-target').selectedOptions[0].textContent}\n${session.wireless.outsideOutput($('serial-target').value.slice(8))}`:'';
       // The USB virtual COM port of an FSP project (feature 41): what the device sent the PC.
       else if($('serial-target').value==='usb:pcdc')$('uart-output').textContent=session?`USB 가상 COM (PCDC)\n${uartMonitorText(String.fromCharCode(...(session.usbOutput||[])))}`:'';
+      // The virtual CAN node of an FSP project (feature 40): the frames the board sent, one line each.
+      else if($('serial-target').value==='can:node')$('uart-output').textContent=session?`CAN 가상 노드\n${(session.canOutput||[]).join('\n')}`:'';
       else if($('serial-target').value.startsWith('board:'))$('uart-output').textContent=board?`${board.part.name} · Serial (USB) · ${board.outputLabel}
 ${board.output??''}`:'이 보드는 이번 실행에 포함되지 않았습니다.';
       else $('uart-output').textContent=session?($('serial-target').value==='USART2'?`ST-LINK VCP · USART2 · ${session.buses.uart.baud} baud\n${uartMonitorText(session.buses.vcpOutput)}`:[...session.buses.received.entries()].map(([id,text])=>`${session.project.components.find(p=>p.id===id)?.name}: ${text}`).join('\n')):'';

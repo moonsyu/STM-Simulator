@@ -20,6 +20,7 @@ import {Rtc} from './emu/ra6e1/rtc.js';
 import {FLASH_TYPES,FLASH_METHODS,FLASH_NAMES,flashPrelude} from './fsp-flash.js';
 import {TRANSFER_TYPES,TRANSFER_METHODS,TRANSFER_NAMES,transferPrelude} from './fsp-transfer.js';
 import {USB_TYPES,USB_METHODS,usbPrelude} from './fsp-usb.js';
+import {CAN_TYPES,CAN_METHODS,canPrelude} from './fsp-can.js';
 
 // RSTSR1 and RSTSR0 reset-cause flags (R7FA6E10F.h): the registers the interpreter lets the program read (FspAdapter.register).
 const RESET_STATUS=[['IWDTRF',0],['WDTRF',1],['SWRF',2]];
@@ -35,7 +36,7 @@ export const FSP_ALIASES=Object.freeze({FSP_CPP_HEADER:'',FSP_CPP_FOOTER:'',FSP_
  IOPORT_CFG_CTRL:'g_ioport_ctrl',IOPORT_CFG_NAME:'g_bsp_pin_cfg',IOPORT_CFG_OPEN:'R_IOPORT_Open'});
 // FSP and generated headers that resolve to the prelude (it has a guard, so including several is fine); the C
 // library headers read as empty.
-const FSP_HEADERS=['hal_data.h','common_data.h','bsp_pin_cfg.h','vector_data.h','bsp_api.h','bsp_cfg.h','bsp_clock_cfg.h','board.h','board_cfg.h','fsp_common_api.h','r_ioport.h','r_ioport_api.h','r_icu.h','r_external_irq_api.h','r_sci_uart.h','r_uart_api.h','r_gpt.h','r_timer_api.h','r_agt.h','r_adc.h','r_adc_api.h','r_iic_master.h','r_i2c_master_api.h','r_spi.h','r_sci_spi.h','r_spi_api.h','r_wdt.h','r_iwdt.h','r_wdt_api.h','r_rtc.h','r_rtc_api.h','r_iic_slave.h','r_i2c_slave_api.h','r_lpm.h','r_lpm_api.h','r_flash_hp.h','r_flash_api.h','r_elc.h','r_elc_api.h','r_dtc.h','r_dmac.h','r_transfer_api.h','bsp_io.h','bsp_delay.h','bsp_common.h','r_usb_basic.h','r_usb_basic_api.h','r_usb_pcdc_api.h'];
+const FSP_HEADERS=['hal_data.h','common_data.h','bsp_pin_cfg.h','vector_data.h','bsp_api.h','bsp_cfg.h','bsp_clock_cfg.h','board.h','board_cfg.h','fsp_common_api.h','r_ioport.h','r_ioport_api.h','r_icu.h','r_external_irq_api.h','r_sci_uart.h','r_uart_api.h','r_gpt.h','r_timer_api.h','r_agt.h','r_adc.h','r_adc_api.h','r_iic_master.h','r_i2c_master_api.h','r_spi.h','r_sci_spi.h','r_spi_api.h','r_wdt.h','r_iwdt.h','r_wdt_api.h','r_rtc.h','r_rtc_api.h','r_iic_slave.h','r_i2c_slave_api.h','r_lpm.h','r_lpm_api.h','r_flash_hp.h','r_flash_api.h','r_elc.h','r_elc_api.h','r_dtc.h','r_dmac.h','r_transfer_api.h','bsp_io.h','bsp_delay.h','bsp_common.h','r_usb_basic.h','r_usb_basic_api.h','r_usb_pcdc_api.h','r_can.h','r_can_api.h'];
 const C_HEADERS=new Set(['stdint.h','stddef.h','stdbool.h','string.h','stdlib.h','stdio.h','ctype.h','math.h','limits.h','time.h']);
 // Generated and FSP source folders of the project tree: built by ARM GCC only (the prelude stands in for them here).
 const FSP_FILE=/^(ra|ra_gen|ra_cfg|script)\//;
@@ -256,6 +257,8 @@ export function fspPrelude(mcu){
  if(flash)out.push(FLASH_TYPES,...flashPrelude(flash,vec));
  // USB PCDC (r_usb_basic / r_usb_pcdc): their types only with the stack (hal_data.h includes them then).
  if(inst.usb)out.push(USB_TYPES,...usbPrelude(inst.usb,vec));
+ // CAN (r_can, feature 40): its types only with the stack.
+ if(inst.can)out.push(CAN_TYPES,...canPrelude(inst.can,vec));
  out.push('void hal_entry(void);','void g_hal_init(void);','void g_common_init(void);','void BSP_PinConfigSecurityInit(void);','#endif');
  return out.join('\n')+'\n';
 }
@@ -307,7 +310,7 @@ const FSP={SUCCESS:0,ASSERTION:1,INVALID_ARGUMENT:3,INVALID_MODE:5,UNSUPPORTED:6
 const KINDS={ioport:[/^g_ioport_ctrl$/,'g_ioport_ctrl'],icu:[/^g_external_irq(\d+)_ctrl$/,'g_external_irq1_ctrl'],uart:[/^g_uart(\d+)_ctrl$/,'g_uart9_ctrl'],gpt:[/^g_timer(\d+)_ctrl$/,'g_timer1_ctrl'],agt:[/^g_agt(\d+)_ctrl$/,'g_agt0_ctrl'],adc:[/^g_adc(\d+)_ctrl$/,'g_adc0_ctrl'],iic:[/^g_i2c_master(\d+)_ctrl$/,'g_i2c_master0_ctrl'],
  spi:[/^g_spi(\d+)_ctrl$/,'g_spi1_ctrl'],sciSpi:[/^g_sci_spi(\d+)_ctrl$/,'g_sci_spi9_ctrl'],wdt:[/^g_wdt(\d+)_ctrl$/,'g_wdt0_ctrl'],iwdt:[/^g_iwdt(\d+)_ctrl$/,'g_iwdt0_ctrl'],rtc:[/^g_rtc(\d+)_ctrl$/,'g_rtc0_ctrl'],iicSlave:[/^g_i2c_slave(\d+)_ctrl$/,'g_i2c_slave0_ctrl'],lpm:[/^g_lpm(\d+)_ctrl$/,'g_lpm0_ctrl'],flash:[/^g_flash(\d+)_ctrl$/,'g_flash0_ctrl'],
  elc:[/^g_elc_ctrl$/,'g_elc_ctrl'],transfer:[/^g_transfer(\d+)_ctrl$/,'g_transfer0_ctrl']};
-const SUPPORTED='R_IOPORT_*, R_BSP_SoftwareDelay · R_BSP_Pin*, R_ICU_ExternalIrq*, R_SCI_UART_*, R_GPT_*, R_AGT_*, R_ADC_*, R_IIC_MASTER_*, R_IIC_SLAVE_*, R_SPI_*, R_SCI_SPI_*, R_WDT_*, R_IWDT_*, R_RTC_*, R_LPM_*, R_FLASH_HP_*(데이터 플래시), R_ELC_*, R_DTC_*, R_DMAC_*, R_USB_*';
+const SUPPORTED='R_IOPORT_*, R_BSP_SoftwareDelay · R_BSP_Pin*, R_ICU_ExternalIrq*, R_SCI_UART_*, R_GPT_*, R_AGT_*, R_ADC_*, R_IIC_MASTER_*, R_IIC_SLAVE_*, R_SPI_*, R_SCI_SPI_*, R_WDT_*, R_IWDT_*, R_RTC_*, R_LPM_*, R_FLASH_HP_*(데이터 플래시), R_ELC_*, R_DTC_*, R_DMAC_*, R_USB_*, R_CAN_*';
 // RTC periodic rates the RA6E1 has (RCR1.PES 6-15): FSP's enum also lists 1 minute … 1 month for other RA parts, which
 // would make R_RTC_PeriodicIrqRateSet wait forever on this one.
 const RTC_PERIOD_S={6:1/256,7:1/128,8:1/64,9:1/32,10:1/16,11:1/8,12:1/4,13:1/2,14:1,15:2};
@@ -352,6 +355,8 @@ export class FspAdapter {
   this.dataFlash=old.dataFlash;this.flashBlankNoted=old.flashBlankNoted;
   // USB (feature 41): the PC's terminal keeps what it showed; the old device's host stops (the new one enumerates again).
   this.usbKeep=old.usbOutput?.();old.usbFs?.host.reset();
+  // CAN (feature 40): the virtual node keeps what it showed; what was on the old board's bus is gone.
+  this.canKeep=old.canOutput?.();old.canHw?.reset();
   // An RTC stopped for the mode (LOCO without its supply) counts again.
   if(old.low?.rtcStopped)this.rtcDev?.start();
   if(pin)return;
@@ -462,6 +467,8 @@ export class FspAdapter {
   if(name.startsWith('R_FLASH_HP_')){const flash=this.flashCall(name,args,r);if(flash){if(name==='R_FLASH_HP_StatusGet')r.polls++;return flash;}}
   // R_USB_*: generators (the driver waits, and calls the callback from R_USB_EventGet); EventGet is polling (fsp-usb.js).
   if(name.startsWith('R_USB_')){const usb=this.usbCall(name,args,r);if(usb){if(name==='R_USB_EventGet')r.polls++;return usb;}}
+  // R_CAN_*: generators (the driver waits for the mode changes); InfoGet is polling (fsp-can.js).
+  if(name.startsWith('R_CAN_')){const can=this.canCall(name,args,r);if(can){if(name==='R_CAN_InfoGet')r.polls++;return can;}}
   if(name==='NVIC_SystemReset'){const self=this;return (function*(){self.resetCause='SYSRESETREQ';r.warn('[NVIC] 시스템 리셋: 프로그램을 처음부터 다시 실행합니다.');yield {kind:'reset'};})();}
   if((name==='printf'||name==='puts'||name==='putchar')&&!this.inStdio&&this.stdoutHook(r))return this.stdout(name,args,r);
   if(name==='fflush')return this.stdout(name,args,r);
@@ -1044,6 +1051,8 @@ Object.defineProperties(FspAdapter.prototype,Object.getOwnPropertyDescriptors(FL
 Object.defineProperties(FspAdapter.prototype,Object.getOwnPropertyDescriptors(TRANSFER_METHODS));
 // USB PCDC: R_USB_* (fsp-usb.js, feature 41).
 Object.defineProperties(FspAdapter.prototype,Object.getOwnPropertyDescriptors(USB_METHODS));
+// CAN: R_CAN_* (fsp-can.js, feature 40).
+Object.defineProperties(FspAdapter.prototype,Object.getOwnPropertyDescriptors(CAN_METHODS));
 export {FLASH_NAMES};
 
 // FSP API calls, by name: (args, runtime, name) with `this` the adapter. They return fsp_err_t (or the value of an

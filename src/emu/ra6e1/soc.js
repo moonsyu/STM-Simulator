@@ -21,6 +21,7 @@ import { Elc } from './elc.js';
 import { Dtc } from './dtc.js';
 import { Dmac } from './dmac.js';
 import { UsbFs } from './usbfs.js';
+import { Can } from './can.js';
 import { EXC_NMI } from '../scs.js';
 import { RA_PERIPHERAL_PINS, RA_SCI_CHANNELS, RA_GPT_CHANNELS, RA_AGT_CHANNELS, RA_IIC_CHANNELS, raPsel } from '../../ra-config.js';
 
@@ -29,7 +30,7 @@ export const RA_BASES = {
   SRAM: 0x40002000, BUS: 0x40003000, DMAC: 0x40005000, DTC: 0x40005400, ICU: 0x40006000, CPSCU: 0x40008000, DEBUG: 0x4001b000,
   FCACHE: 0x4001c000, SYSTEM: 0x4001e000, PORT: 0x40080000, PFS: 0x40080800, PMISC: 0x40080d00, ELC: 0x40082000,
   MSTP: 0x40084000, RTC: 0x40083000, CACHE: 0x40007000, PSCU: 0x400e0000, IWDT: 0x40083200, WDT: 0x40083400,
-  FACI_CMD: 0x407e0000, FACI: 0x407fe000, USBFS: 0x40090000,
+  FACI_CMD: 0x407e0000, FACI: 0x407fe000, USBFS: 0x40090000, CAN0: 0x400a8000,
 };
 // ELC event numbers (FSP bsp_elc.h, RA6E1): ICU IRQ0..15 are 0x001..0x010.
 export const ELC_EVENT_ICU_IRQ = n => 0x001 + n;
@@ -348,6 +349,8 @@ export class Ra6e1 {
     this.bus.onDataFlashOutside = (a, size) => this.faci.outside(a, size);
     // USBFS with the PC it is plugged into (usbfs.js, feature 41).
     this.usbfs = new UsbFs(this);
+    // CAN0 with the virtual CAN node on its bus (can.js, feature 40).
+    this.can = new Can(this);
     const devices = [
       [RA_BASES.SYSTEM, 0x700, this.system],
       [RA_BASES.PORT, 0x1000, this.ports],
@@ -377,6 +380,7 @@ export class Ra6e1 {
       // RTC (calendar, periodic, alarm, carry; rtc.js). It keeps its time across an MCU reset.
       [RA_BASES.RTC, 0x100, this.rtc],
       [RA_BASES.USBFS, 0x408, this.usbfs],
+      [RA_BASES.CAN0, 0x85c, this.can],
     ];
     for (const [base, size, dev] of devices) this.peripherals.set(dev.name, dev);
     // Everything else in the peripheral area reads 0 and keeps writes, noted once (so firmware that touches a module the

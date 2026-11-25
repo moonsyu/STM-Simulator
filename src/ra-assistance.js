@@ -117,5 +117,13 @@ export function raAssistance(mcu){
       call('R_USB_PeriControlStatusSet','R_USB_PeriControlStatusSet(&g_basic0_ctrl, USB_SETUP_STATUS_ACK);'),
       call('R_USB_Close','R_USB_Close(&g_basic0_ctrl);'),
       ...(q.callback?[callback(q.callback,'usb_callback_args_t','    if (USB_STATUS_READ_COMPLETE == p_args->event)\n    {\n        /* p_args->data_size bytes were read. */\n    }')]:[])]});}
+  // CAN (r_can, feature 40): frames come and go through the callback.
+  if(per.CAN0?.enabled){const q=per.CAN0;
+    out.push({name:'g_can0',title:'CAN (r_can)',items:[call('R_CAN_Open','R_CAN_Open(&g_can0_ctrl, &g_can0_cfg);'),
+      call('R_CAN_ModeTransition','R_CAN_ModeTransition(&g_can0_ctrl, CAN_OPERATION_MODE_NORMAL, CAN_TEST_MODE_LOOPBACK_INTERNAL);'),
+      call('R_CAN_Write','can_frame_t frame = { .id = 0x100, .id_mode = CAN_ID_MODE_STANDARD, .type = CAN_FRAME_TYPE_DATA, .data_length_code = 1, .options = 0 };\nframe.data[0] = 0x01;\nR_CAN_Write(&g_can0_ctrl, CAN_MAILBOX_ID_0, &frame);'),
+      call('R_CAN_InfoGet','can_info_t info;\nR_CAN_InfoGet(&g_can0_ctrl, &info);'),
+      call('R_CAN_Close','R_CAN_Close(&g_can0_ctrl);'),
+      callback(q.callback,'can_callback_args_t','    if (CAN_EVENT_RX_COMPLETE == p_args->event)\n    {\n        /* p_args->mailbox received p_args->frame. */\n    }\n    else if (CAN_EVENT_TX_COMPLETE == p_args->event)\n    {\n        /* p_args->mailbox has been sent. */\n    }')]});}
   return out;
 }

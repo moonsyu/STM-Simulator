@@ -8,7 +8,7 @@ import {readdirSync} from 'node:fs';
 import {pathToFileURL} from 'node:url';
 
 export const E2E_SECONDS=Object.freeze({ra6e1:65,emulator:39,shell:39,workflow:38,'stm32-boards':30,'board-switch':9,'adc-continuous':25,'sim-gcc':19,'peripheral-params':12,storage:11,
- 'ra-usb':21,rtc:9,'board-reset':9,help:9,'project-structure':8,'variable-graph':7,definition:6,'adc-group':6});
+ 'ra-usb':21,'ra-can':20,rtc:9,'board-reset':9,help:9,'project-structure':8,'variable-graph':7,definition:6,'adc-group':6});
 const nameOf=file=>file.replace(/\.e2e\.test\.mjs$/,'');
 /** The files of each of `jobs` jobs. */
 export function dealE2e(files,jobs){
