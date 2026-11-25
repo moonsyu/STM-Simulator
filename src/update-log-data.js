@@ -1,5 +1,6 @@
 // User-facing update log shown in 도움말 → 업데이트 로그: one entry per released version (date = the release tag's commit date).
 export const UPDATE_LOG=Object.freeze([
+ {version:'1.63.1',date:'2026-11-25',items:['코드로 빠르게 켜고 끄는 GPIO 핀의 LED가 실제 보드처럼 평균 밝기로 보임 — 전에는 화면을 그리는 순간의 값만 써서 무작위로 깜빡였음(보드 LED와 회로의 LED, STM32와 FPB-RA6E1)','HAL_Delay(500)처럼 눈에 보이는 느린 깜빡임은 그대로 깜빡임']},
  {version:'1.63.0',date:'2026-11-25',items:['탐색기의 "소스 파일" 아래에 프로젝트 전체가 한 트리로 보임 — STM32CubeIDE Project Explorer처럼 Includes · Core(Inc · Src · Startup) · Drivers · 링커 스크립트 · .ioc','Core/Inc의 stm32xxxx_it.h와 Core/Src의 stm32xxxx_hal_msp.c 추가, 모든 파일을 눌러 열고 바로 고칠 수 있음(.ioc는 누르면 Pinout 설정 창이 열림)','생성 파일과 프로젝트 파일의 구분 표시 · 수정됨 표시 · 툴팁 · 안내 문구를 없애고, 생성 파일 머리말을 CubeMX 형식으로 변경']},
  {version:'1.62.2',date:'2026-11-25',items:['"HAL 초기화 코드를 생성할까요?" 확인 창에서 설명 문구를 없앰 — 제목과 취소 · 코드 생성 버튼만 남음']},
  {version:'1.62.1',date:'2026-11-25',items:['편집 → 설정에 "빌드 수준" 탭 추가 — STM32CubeIDE의 Optimization level(None -O0 · -Og · -O1 · -O2 · -O3 · -Os · -Ofast)을 Debug · Release 구성마다 고르고 프로젝트에 저장','기본값은 두 구성 모두 None (-O0) — Release 빌드도 따로 고르지 않으면 -O0(전에는 -Os)']},

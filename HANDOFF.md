@@ -1,6 +1,15 @@
 # STM Simulator — 개발 인계
 
-현재 버전: **1.63.0**. 정리일: **2026-11-10**. NUCLEO-F446RE·NUCLEO-F103RB 또는 Renesas FPB-RA6E1(1.20.0, FSP·에뮬레이터 전용)과 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+현재 버전: **1.63.1**. 정리일: **2026-11-10**. NUCLEO-F446RE·NUCLEO-F103RB 또는 Renesas FPB-RA6E1(1.20.0, FSP·에뮬레이터 전용)과 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+
+## 1.63.1 기능 목록 57번: 코드로 빠르게 토글하는 GPIO 출력을 듀티로 표시
+
+- **오류**: 버튼 EXTI 플래그를 기다리는 반복문에서 PA5를 0/1로 쉬지 않고 쓰는 프로그램이 LD2를 무작위로 깜빡이게 보였다. 원인은 화면에 넘기는 결과가 프레임을 그리는 순간의 핀 값으로 푼 회로였기 때문이다 — LED 전류를 듀티로 계산하는 것은 타이머 PWM 핀(`gpio[pin].pwm`)뿐이었다(`engine.js` `solveCircuit`).
+- **고침**: 프로그램이 출력 핀에 쓸 때마다 핀별로 "프레임 안에서 HIGH였던 시간"을 잰다 — Rust `duty.rs` `Tracker`(`level(now, high)`, `frame(now)` → 듀티 또는 -1). 한 프레임(두 `tick` 사이)에 변화가 2번 이상이고 주파수가 `FAST_HZ`(30 Hz) 이상일 때만 "빠른 핀"이다. 핀 쓰기마다 불리므로 JSON 요청이 아니라 모듈의 숫자 export(`stm_duty_slot`·`stm_duty_level`·`stm_duty_frame`·`stm_duty_frequency`·`stm_duty_reset`, `rust-core.js` `duty`)다.
+- **연결** `src/pin-duty.js`: `PinDuty`(핀별 슬롯, `level`·`clear`·`frame(gpio, us)` → 빠른 핀을 `{value: 평균 전압, pwm:{duty, frequency}}`로 바꾼 GPIO 사본 또는 null), `shownResult(result, averaged)`. 두 세션의 `tick`이 끝날 때 빠른 핀이 있으면 그 사본으로 회로를 한 번 더 풀어(`circuit.hold`, 기존 타이머 PWM과 같은 경로 — LED는 HIGH/LOW 두 상태의 전류를 듀티로 섞음) 화면에 넘긴다: 인터프리터 `session.js`(`runtime.output` → `api.level`; STM32 HAL과 FSP 해석기 공통), 에뮬레이터 `firmware-session.js`(`pinChanged`; ARM GCC 빌드의 STM32·FPB-RA6E1). 보드 LED(LD2, LED1·LED2)는 그 결과의 핀 전압으로 그리므로 함께 어두워진다.
+- **그대로인 것**: 프로그램이 읽는 회로(`session.result`)는 순간값 그대로다 — 평균은 `tick`이 돌려주는 화면용 결과에만 들어간다. 화면용 결과에서 평균으로 바뀌는 것은 전압(`voltage()`)과 각 부품의 voltage·current·power, LED(와 LED로 된 부품)의 on·channels뿐이고, 서보 각도·LCD 내용 같은 장치 상태는 세션이 만든 그대로다. 타이머 PWM 핀, 30 Hz보다 느린 깜빡임(HAL_Delay 500 ms, 100 ms, 25 ms), 디버그 일시정지 중에는 평균하지 않는다.
+- **한계**: 다른 STM32 보드(회로 위의 추가 보드)의 프로그램이 빠르게 토글하는 핀은 평균하지 않는다(그 세션은 주 세션 회로의 뷰에서 돈다). 소프트웨어 PWM의 주기가 프레임 길이에 가까우면(수 ms) 프레임마다 듀티가 조금씩 다르게 잡힌다. 인터프리터는 문장 실행에 시간이 들지 않아, 지연 없이 0/1을 연달아 쓰면 듀티가 0 또는 1로 잡힌다(그때는 전처럼 순간값) — 에뮬레이터(ARM GCC)는 명령 시간대로 잡힌다.
+- 시험: cargo 시험(duty), `tests/unit/pin-duty.test.js`(STM32 HAL·FSP 해석기, 느린 깜빡임 유지, 프로그램이 읽는 값), `tests/toolchain/pin-duty.test.mjs`(신고된 프로그램을 F103RB ARM GCC 빌드로 에뮬레이터에서, FPB-RA6E1 LED1).
 
 ## 1.63.0 기능 목록 56번: 탐색기 — 프로젝트 전체를 한 트리로, 모든 파일을 바로 고침
 

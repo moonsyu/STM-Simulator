@@ -1,5 +1,9 @@
 # 검증 기록
 
+## 1.63.1 빠르게 토글하는 GPIO의 듀티 표시(기능 목록 57번) — 로컬 검증
+
+2026-11-25. 구현 세션이 직접 기획·구현·시험했다. 재현: 블링크 예제의 반복문을 "HIGH 1 ms, LOW 3 ms"로 바꿔 20 ms 프레임으로 돌리면 1.63.0은 LED 전류가 프레임마다 0 또는 3.73 mA로 바뀌었고, 이 버전은 모든 프레임에서 약 0.9 mA(1/4)다. 신고된 프로그램(F103RB, PC13 EXTI, 지연 없는 PA5 0/1)을 ARM GCC로 빌드해 에뮬레이터로 돌리면 버튼 뒤 모든 프레임에서 PA5 표시 전압이 0.15 V 이내로 같다(3회 반복 통과). HAL_Delay 500·100·25 ms 깜빡임은 전과 같이 켜짐/꺼짐으로만 보인다. 시험: Rust 검사(fmt·clippy·cargo test·wasm 빌드) 통과, eslint 0건, npm test 1380건(1379 통과, 1 건너뜀), 툴체인 묶음 1~7 모두 통과, E2E 137건 중 135 통과·1 실패·1 건너뜀 — 실패 1건은 업데이트 로그 창을 마우스로 끄는 시험(help.e2e)으로 단독 재실행 2회 모두 통과, 패키지 검사 통과. 확인하지 못한 것: 실제 보드에서의 밝기와 화면 밝기의 대조, 앱 창에서 눈으로 본 확인(자동 시험의 수치로만 확인).
+
 ## 1.63.0 탐색기 한 트리(기능 목록 56번) — 로컬 검증
 
 2026-11-25. 구현 세션이 직접 기획·구현·시험했다. 탐색기를 캡처해 CubeIDE 캡처(Includes, Core/Inc·Src·Startup, Drivers, .ld, .ioc)와 같은 구조인지 눈으로 확인했다(창은 뒤에 둔 채, 다크 모드). 시험: Rust 검사(fmt·clippy·cargo test·wasm 빌드) 통과, eslint 0건, npm test 1374건(1373 통과, 1 건너뜀; 툴체인 환경 변수 없이 돌리면 1373건 중 1372 통과·2 건너뜀), 툴체인 시험 peripheral-files·copied-files·project-overrides 통과, E2E 16개 파일 43건 통과(project-structure, copy-to-project, definition, peripheral-files, tabs, file-drop, folder-import, appearance 15건과 ra-assistance, ra-iic-slave, ra-rasc, ra-spi, ra6e1, ra-usb, shell, docs 28건; 처음 실행에서 옛 구조를 전제로 실패한 시험들은 새 구조에 맞춘 뒤 다시 돌림). 나머지 E2E는 로컬에서 돌리지 않았다(CI가 전체를 돌림), 패키지 검사 통과. 확인하지 못한 것: 실제 CubeMX가 쓰는 머리말·stm32xxxx_it.h·stm32xxxx_hal_msp.c와의 글자 단위 대조(형식은 CubeMX 생성물의 일반적인 모양을 따름), 실물 보드 실행.
