@@ -638,3 +638,7 @@ body.file-drop-target::after{content:'여기에 놓기 · .c/.h 추가, .ioc·�
 :root[data-shell] #file-tree .tree-children button{padding-left:14px}
 :root[data-shell] #file-tree .tree-children .tree-folder>summary{padding-left:0}
 :root[data-shell] #file-tree .tree-children .tree-children{margin-left:5px}
+
+/* 편집 → 설정 → 빌드 수준 (feature 54) */
+.build-level-row{display:flex;flex-direction:column;gap:6px;margin:14px 0;font-size:12.5px;font-weight:500}
+.build-level-row select{max-width:320px;border:1px solid var(--ide-border);padding:6px 8px;border-radius:6px}

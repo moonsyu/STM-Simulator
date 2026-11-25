@@ -1,4 +1,5 @@
 import {withKey,keyFor} from './keybindings.js';
+import {buildLevelFlag,withBuildLevel} from './build-level.js';
 import {esc} from './render.js';
 import {sourceFiles} from './source-files.js';
 import {$} from './common.js';
@@ -94,7 +95,7 @@ export function setupNativeIde({o,editor,select,showMonitor,points,watches,toggl
   }catch(e){if(state==='paused'&&current===sequence)$('debug-location').textContent=e.message;}
  }
  // A project without its own setting builds Release; debugging always builds Debug (see 'start').
- function sync(){const value=o.getProject().ide?.native||{target:'simulator',configuration:'Release'};$('native-target').value=value.target;selectBoard();$('native-config').value=value.configuration;control();queueLanguage();void recheckTools();}
+ function sync(){const value=o.getProject().ide?.native||{target:'simulator',configuration:'Release'};$('native-target').value=value.target;selectBoard();$('native-config').value=value.configuration;syncLevels();control();queueLanguage();void recheckTools();}
  // Results of the previous target's build (problems, ELF/map list, build folder) do not belong to the new one.
  function clearBuild(){$('build-errors').replaceChildren();$('native-artifact-list').textContent='';$('native-artifacts').disabled=true;$('build-output').textContent='';}
  // Each connected NUCLEO is its own run target: "NUCLEO-F446RE (COM5)". The pick is the ST-LINK serial OpenOCD uses.
@@ -123,7 +124,9 @@ export function setupNativeIde({o,editor,select,showMonitor,points,watches,toggl
  }
  async function refreshBoards(force=false){if(!api?.boards||(!force&&Date.now()-boardsAt<3000))return;boardsAt=Date.now();boards=await api.boards().catch(()=>[]);boards??=[];renderBoards();}
  function pickBoard(){const option=$('native-target').selectedOptions[0];if(option?.value!=='arm')return;connection={...connection,serial:option.dataset.serial||''};try{localStorage.setItem('stm32lab.debugConnection',JSON.stringify(connection));}catch{}}
- function change(){pickBoard();o.getProject().ide??={breakpoints:[],watches:[]};o.getProject().ide.native=config();o.saveLocal();editor.diagnostics([]);clearBuild();editor.updateDebug(points(),null);
+ // Feature 54: the optimisation levels chosen in 편집 → 설정 → 빌드 수준 stay with the project's run target.
+ function syncLevels(){for(const el of document.querySelectorAll('[data-build-level]')){el.value=buildLevelFlag(o.getProject(),el.dataset.buildLevel);el.disabled=busy();}}
+ function change(){pickBoard();const p=o.getProject(),levels=p.ide?.native?.optimization;p.ide??={breakpoints:[],watches:[]};p.ide.native={...config(),...(levels?{optimization:levels}:{})};o.saveLocal();editor.diagnostics([]);clearBuild();editor.updateDebug(points(),null);
   // clangd serves only the ARM and Windows targets; its markers belong to the previous target's flags.
   editor.clearLanguageDiagnostics();if(language&&!gcc()){language=false;languageReady=false;$('language-toggle').textContent='clangd 꺼짐';void guard(()=>api['language-stop']());}
   buildStatus();$('new').disabled=$('open').disabled=$('workspace-open').disabled=false;o.refresh();queueLanguage();void recheckTools();}
@@ -170,6 +173,10 @@ export function setupNativeIde({o,editor,select,showMonitor,points,watches,toggl
  addEventListener('blur',closeMenu);addEventListener('resize',closeMenu);
  $('native-target').addEventListener('change',renderRunTargets);
  for(const ev of ['focus','pointerdown'])$('native-target').addEventListener(ev,()=>void refreshBoards());window.addEventListener('focus',()=>void refreshBoards());void refreshBoards(true);$('native-config').onchange=change;
+ // A level picked in the settings window: stored in the project (undoable); the next build uses it.
+ document.addEventListener('change',e=>{const el=e.target;if(!(el instanceof HTMLSelectElement)||!el.dataset.buildLevel)return;if(busy()){syncLevels();return;}
+  const p=o.getProject();o.checkpoint();p.ide??={breakpoints:[],watches:[]};p.ide.native=withBuildLevel(p.ide.native??config(),el.dataset.buildLevel,el.value);change();syncLevels();});
+ document.addEventListener('focusin',e=>{if(e.target instanceof Element&&e.target.closest('#settings-dialog'))syncLevels();});
  $('run').addEventListener('click',e=>{if(selected()){e.preventDefault();e.stopImmediatePropagation();void command('run');}},true);
  $('native-artifacts').onclick=()=>guard(()=>api.artifacts());
  async function openTools(install=false){const tools=await api.settings();for(const key of Object.keys(TOOL_LABELS))$('tool-'+key).value=tools[key]||'';$('native-tools-error').textContent='';if(!installing)$('native-install').hidden=true;$('native-tools-dialog').showModal();if(install)await showInstall();}

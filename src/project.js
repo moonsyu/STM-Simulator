@@ -7,6 +7,7 @@ import {terminalKeys,TWO_PIN_TYPES,MULTI_PIN_TYPES,normalizeAngle} from './compo
 import {generateHal,defaultMcu,validateMcu,consoleUart} from './mcu-config.js';
 import {expandC} from './c-format.js';
 import {newProjectMcu} from './rust-core.js';
+import {buildLevelSettings} from './build-level.js';
 import {DEFAULT_FAMILY} from './mcu-family.js';
 import {DEFAULT_BOARD_ID,START_BOARD_ID,getBoard} from './boards.js';
 import {isRaFamily,raDefaultMcu,validateRaMcu} from './ra-config.js';
@@ -196,7 +197,9 @@ export function validateProject(data){
     if(s.breakpoints.some(b=>!b||!names.has(b.file)||!Number.isInteger(b.line)||b.line<1||b.line>50000)||s.watches.some(w=>typeof w!=='string'||!w.trim()||w.length>250))throw new Error('중단점 또는 감시식이 올바르지 않습니다.');
     project.ide={breakpoints:s.breakpoints.map(b=>({file:b.file,line:b.line})),watches:[...s.watches]};
     if(s.plots!==undefined){if(!Array.isArray(s.plots)||s.plots.length>8||s.plots.some(w=>typeof w!=='string'||!w.trim()||w.length>250)||new Set(s.plots).size!==s.plots.length)throw new Error('변수 그래프 목록이 올바르지 않습니다.');project.ide.plots=[...s.plots];}
-    if(s.native!==undefined){const n=s.native;if(!n||!['simulator','emulator','arm','host'].includes(n.target)||!['Debug','Release'].includes(n.configuration))throw new Error('IDE 실행 대상 설정을 확인하세요.');project.ide.native={target:n.target,configuration:n.configuration};}
+    if(s.native!==undefined){const n=s.native;if(!n||!['simulator','emulator','arm','host'].includes(n.target)||!['Debug','Release'].includes(n.configuration))throw new Error('IDE 실행 대상 설정을 확인하세요.');project.ide.native={target:n.target,configuration:n.configuration};
+      // Feature 54: the optimisation level of each build configuration (only what is not -O0 is stored).
+      if(n.optimization!==undefined){const optimization=buildLevelSettings(n.optimization);if(Object.keys(optimization).length)project.ide.native.optimization=optimization;}}
   }
   if(data.deviceDocs!==undefined){
     const docs=data.deviceDocs;if(!docs||!Array.isArray(docs.bindings)||docs.bindings.length>100)throw new Error('장치 Docs 연결 정보를 확인하세요.');

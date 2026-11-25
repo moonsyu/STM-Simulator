@@ -44,7 +44,8 @@ export const TOOLCHAIN_SHARDS=Object.freeze([
  // + the IWDT and WDT NMI tests of ra-wdt-rtc (feature 35: about 13 s locally)
  // + four review programs of ra-lpm (about 11 s locally)
  // + ra-transfer but its review tests (feature 36: five FSP builds with ELC, DTC and DMAC on both engines, about 17 s locally)
- ['ra-build','wdg','tim-basic','ra-spi',['ra-transfer','^(r_|the example)'],['fsp-interp-parity','parity: ra_led4_switch2'],['ra-wdt-rtc','IWDT: OFS0|WDT NMI:'],['ra-lpm','review: (isr|isrsleep|pending|flags) —']],
+ // + build-level (feature 54: nine STM32 builds and an FSP build, about 30 s locally)
+ ['ra-build','wdg','tim-basic','ra-spi','build-level',['ra-transfer','^(r_|the example)'],['fsp-interp-parity','parity: ra_led4_switch2'],['ra-wdt-rtc','IWDT: OFS0|WDT NMI:'],['ra-lpm','review: (isr|isrsleep|pending|flags) —']],
  // the rest of ra-course 61 + 26 + 15 = 102 + parity of UART and GPT (16 s locally)
  // (the tests are named: a "not this one" pattern with a lookahead did not keep the heavy test out)
  // + ra-lpm (feature 37: programs with r_lpm on both engines, about 3 s each locally): its first four tests here (13 s),

@@ -2,6 +2,7 @@
 //! one entry point with JSON: `{"fn": name, "args": value}` in, `{"ok": value}` or `{"error": message}` out.
 //! New and changed features are written here (the user's decision of 2026-11-25); the screens stay in JavaScript.
 
+pub mod build_level;
 pub mod couple;
 pub mod csource;
 pub mod docs_regions;
@@ -145,6 +146,24 @@ pub fn dispatch(name: &str, args: &Value) -> Result<Value, String> {
             text(args, "name"),
             text(args, "body"),
         )?)),
+        // → {"levels": [{"flag", "label"}], "default": "-O0", "configurations": ["Debug", "Release"]}
+        "build_levels" => Ok(json!({
+            "levels": build_level::LEVELS
+                .iter()
+                .map(|(flag, label)| json!({ "flag": flag, "label": label }))
+                .collect::<Vec<_>>(),
+            "default": build_level::DEFAULT,
+            "configurations": build_level::CONFIGURATIONS,
+        })),
+        // {"value": {"Debug"?, "Release"?} | null} → what a project stores (the default level left out)
+        "build_level_settings" => Ok(Value::Object(build_level::settings(
+            args.get("value").unwrap_or(&Value::Null),
+        )?)),
+        // {"stored", "configuration"} → "-O0" …
+        "build_level_flag" => Ok(json!(build_level::flag(
+            args.get("stored").unwrap_or(&Value::Null),
+            text(args, "configuration"),
+        ))),
         // → ["STM32F446RE", "STM32F103RB"]
         "families" => Ok(json!(family::FAMILIES)),
         // {"previous", "generated", "previousDefault", "others": [text], "generator": [text]} → {"code", "moved"}

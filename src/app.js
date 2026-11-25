@@ -128,8 +128,8 @@ export const runScope=()=>{const value=$('run-scope')?.value||'all';return value
 export const boardOnlyRun=()=>state.project.components.some(p=>p.type==='devboard')&&(!!state.project.surfaces?.board?.hidden||!['all','stm32'].includes(runScope()));
 setInterval(recordSimulation,2000);
 $('run').onclick=()=>{if(state.runtime?.debug.paused){state.runtime.resume();state.simTime=state.runtime.microTime/1000;state.status='running';state.ide?.debugView();refresh();}else if(running())stop();else if(state.starting)cancelStart();else void startRun({debug:!!state.ide?.breakpoints().length});};
-// The build configuration (Debug -O0 / Release -Os) is part of what the cached ELF was built from.
-export const firmwareKey=()=>JSON.stringify([state.project.code,state.project.firmware?.files,state.project.mcu,$('native-config')?.value]);
+// The build configuration and its optimisation level (feature 54) are part of what the cached ELF was built from.
+export const firmwareKey=()=>JSON.stringify([state.project.code,state.project.firmware?.files,state.project.mcu,$('native-config')?.value,state.project.ide?.native?.optimization]);
 // Other STM32 boards that run this time, and their ELFs for the emulator (built from each board's own view).
 export const runStm32=()=>{const scope=runScope();return scope==='stm32'?[]:stm32Boards(state.project).filter(p=>scope==='all'||scope===p.id);};
 state.boardElfs={};state.boardElfKeys={};

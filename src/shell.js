@@ -2,6 +2,7 @@
 // bottom panel, secondary side bar, status bar, menus and command palette.
 // Existing controls keep their IDs and listeners; the shell only relocates them.
 import {openUnitWindow} from './popout.js';
+import {BUILD_LEVELS,BUILD_CONFIGURATIONS} from './build-level.js';
 import {loadKeybindings,saveKeybindings,createMatcher,eventKey,conflicts,bindingProblem,DEFAULT_KEYBINDINGS,setCurrentKeybindings} from './keybindings.js';
 import {$,clamp} from './common.js';
 const KEY='stm32lab.shellLayout.v1';
@@ -298,11 +299,15 @@ function setupDock(layout,state,save){
 // 편집 → 설정: one floating window with the screen/editor settings, keybindings, updates and the layout reset.
 function setupSettingsDialog(layout){
  const dialog=document.createElement('dialog');dialog.id='settings-dialog';dialog.className='settings-dialog';dialog.setAttribute('aria-labelledby','settings-dialog-title');
- const TABS=[['general','화면 · 편집기'],['keys','단축키'],['update','업데이트'],['layout','레이아웃']];
+ const TABS=[['general','화면 · 편집기'],['keys','단축키'],['build','빌드 수준'],['update','업데이트'],['layout','레이아웃']];
  dialog.innerHTML=`<header class="settings-dialog-head"><h2 id="settings-dialog-title">설정</h2><button type="button" class="dialog-close" id="settings-dialog-close" aria-label="설정 닫기">×</button></header><div class="settings-dialog-body"><nav class="settings-dialog-tabs" role="tablist" aria-label="설정 종류">${TABS.map(([id,label])=>`<button type="button" role="tab" data-settings-tab="${id}" aria-controls="settings-pane-${id}">${label}</button>`).join('')}</nav><div class="settings-dialog-panes">${TABS.map(([id])=>`<section id="settings-pane-${id}" role="tabpanel" data-settings-pane="${id}" hidden></section>`).join('')}</div></div>`;
  document.body.append(dialog);
  const general=$('ide-settings-panel');if(general){general.hidden=false;dialog.querySelector('#settings-pane-general').append(general);}
  const keys=$('view-keybindings');if(keys){keys.hidden=false;keys.classList.remove('sidebar-view');dialog.querySelector('#settings-pane-keys').append(keys);}
+ // 빌드 수준 (feature 54): CubeIDE's Optimization level for each build configuration of the open project. The values are
+ // read and stored by native-ide-ui.js (the project's ide.native).
+ const levels=BUILD_LEVELS.map(l=>`<option value="${l.flag}">${l.label}</option>`).join('');
+ dialog.querySelector('#settings-pane-build').innerHTML='<h3>빌드 수준</h3><p class="form-hint">ARM GCC 빌드의 최적화 수준입니다. STM32CubeIDE의 MCU GCC Compiler → Optimization → Optimization level과 같은 선택지이며, 빌드 구성(Debug · Release)마다 정하고 프로젝트에 저장합니다.</p>'+BUILD_CONFIGURATIONS.map(c=>`<label class="build-level-row">${c} · Optimization level<select id="build-level-${c}" data-build-level="${c}">${levels}</select></label>`).join('');
  dialog.querySelector('#settings-pane-update').innerHTML='<h3>업데이트</h3><p class="form-hint">새 버전이 있으면 제목 표시줄의 테마 버튼 왼쪽에 업데이트 버튼이 나타납니다. 자동 확인·다운로드 설정과 수동 확인은 아래에서 합니다.</p><button type="button" id="settings-update-open" class="run-button">업데이트 확인 · 설정 열기</button>';
  dialog.querySelector('#settings-pane-layout').innerHTML='<h3>레이아웃</h3><p class="form-hint">패널 탭을 끌어 다른 영역에 놓거나 ⧉ 버튼으로 새 창에 띄울 수 있습니다. 처음 배치로 되돌리려면 아래 버튼을 누르세요.</p><button type="button" id="settings-layout-reset">레이아웃 초기화</button>';
  dialog.querySelector('#settings-update-open').onclick=()=>{dialog.close();$('app-update')?.click();};

@@ -45,6 +45,11 @@ async function probeTools(tools){const result={};for(const key of TOOL_KEYS){if(
 // Linker errors with a source location ("main.c:12:(.text.main+0x8): undefined reference to `foo'") are listed too.
 function diagnosticsFrom(text){return text.split(/\r?\n/).flatMap(line=>{const ld=/^(.+?):(\d+):(?:\([^)]*\):)?\s*((?:undefined reference to|multiple definition of) [^;]*)/.exec(line);if(ld)return [{file:path.basename(ld[1]),line:Number(ld[2]),column:1,severity:'error',message:'링크: '+ld[3],path:ld[1]}];const m=/^(.+?):(\d+):(\d+):\s*(fatal error|error|warning|note):\s*(.*)$/.exec(line);return m?[{file:path.basename(m[1]),line:Number(m[2]),column:Number(m[3]),severity:m[4]==='warning'?'warning':m[4]==='note'?'info':'error',message:m[5],path:m[1]}]:[];});}
 function fingerprint(project,config){return createHash('sha256').update(JSON.stringify({code:project.code,firmware:project.firmware,mcu:project.mcu,config})).digest('hex');}
+// Feature 54: the optimisation level of the build configuration, chosen in 편집 → 설정 → 빌드 수준 and stored in the
+// project (ide.native.optimization, checked by rust/stm-core build_level.rs when the project is loaded). Both
+// configurations use -O0 unless the project says otherwise; only a level of CubeIDE's list reaches the compiler.
+const OPTIMIZATION=/^-O(?:0|g|1|2|3|s|fast)$/;
+function optimizationFlag(project,configuration){const level=project?.ide?.native?.optimization?.[configuration];return typeof level==='string'&&OPTIMIZATION.test(level)?level:'-O0';}
 async function prepareBuild({project,tools,root,target='arm',configuration='Debug'}){
   const sdk=sdkFor(project);if(target==='arm'&&!sdk)throw new Error(`${project.mcu.family} ARM 빌드는 지원하지 않습니다.`);
   for(const key of target==='arm'?['armGcc',sdk.key]:['hostGcc'])if(tools[key]&&/[^\x00-\x7f]/.test(tools[key]))throw new Error('Windows GCC와 SDK는 영문 경로에 설치하세요. 프로젝트 폴더는 한글 경로를 사용할 수 있습니다.');
@@ -72,7 +77,7 @@ async function prepareBuild({project,tools,root,target='arm',configuration='Debu
   if(files.some(f=>base(f.name)==='__stm_environment.c'))throw new Error('__stm_environment.c는 내부 빌드용 파일명입니다.');
   // ARM builds keep DWARF 4 (GCC 15 defaults to 5): STM Studio's GDB reads only DWARF 2-4; the app's emulator, GDB and
   // clangd read both.
-  let flags=['-g3',...(target==='arm'?['-gdwarf-4']:[]),configuration==='Debug'?'-O0':'-Os','-ffunction-sections','-fdata-sections','-Wall','-Wextra','-Werror=implicit-function-declaration','-I'+directory,...[...folders].map(d=>'-I'+d)],linkFlags=[],generated=[];
+  let flags=['-g3',...(target==='arm'?['-gdwarf-4']:[]),optimizationFlag(project,configuration),'-ffunction-sections','-fdata-sections','-Wall','-Wextra','-Werror=implicit-function-declaration','-I'+directory,...[...folders].map(d=>'-I'+d)],linkFlags=[],generated=[];
   let sdkFiles=new Set();
   if(ra){
     const r=await prepareRa({project,tools,directory,userFiles:files.filter(f=>!skipped(f.name))});
@@ -161,4 +166,4 @@ async function build(plan,{signal,onOutput=()=>{}}={}){
   const result={...plan,artifacts:manifest,diagnostics:remap(diagnosticsFrom(output)),compiler:version.stdout.split('\n')[0]};
   await fs.writeFile(path.join(plan.directory,'build-result.json'),JSON.stringify({configuration:plan.configuration,target:plan.target,compiler:result.compiler,artifacts:manifest},null,2));return result;
 }
-module.exports={TOOL_KEYS,SDKS,isRa,detectTools,validateTools,probeTools,prepareBuild,build,diagnosticsFrom,fingerprint};
+module.exports={optimizationFlag,TOOL_KEYS,SDKS,isRa,detectTools,validateTools,probeTools,prepareBuild,build,diagnosticsFrom,fingerprint};
