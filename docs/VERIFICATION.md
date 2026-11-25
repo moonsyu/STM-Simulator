@@ -1,5 +1,9 @@
 # 검증 기록
 
+## 1.63.0 탐색기 한 트리(기능 목록 56번) — 로컬 검증
+
+2026-11-25. 구현 세션이 직접 기획·구현·시험했다. 탐색기를 캡처해 CubeIDE 캡처(Includes, Core/Inc·Src·Startup, Drivers, .ld, .ioc)와 같은 구조인지 눈으로 확인했다(창은 뒤에 둔 채, 다크 모드). 시험: Rust 검사(fmt·clippy·cargo test·wasm 빌드) 통과, eslint 0건, npm test 1374건(1373 통과, 1 건너뜀; 툴체인 환경 변수 없이 돌리면 1373건 중 1372 통과·2 건너뜀), 툴체인 시험 peripheral-files·copied-files·project-overrides 통과, E2E 16개 파일 43건 통과(project-structure, copy-to-project, definition, peripheral-files, tabs, file-drop, folder-import, appearance 15건과 ra-assistance, ra-iic-slave, ra-rasc, ra-spi, ra6e1, ra-usb, shell, docs 28건; 처음 실행에서 옛 구조를 전제로 실패한 시험들은 새 구조에 맞춘 뒤 다시 돌림). 나머지 E2E는 로컬에서 돌리지 않았다(CI가 전체를 돌림), 패키지 검사 통과. 확인하지 못한 것: 실제 CubeMX가 쓰는 머리말·stm32xxxx_it.h·stm32xxxx_hal_msp.c와의 글자 단위 대조(형식은 CubeMX 생성물의 일반적인 모양을 따름), 실물 보드 실행.
+
 ## 1.62.2 HAL 코드 생성 확인 창 문구 삭제(기능 목록 55번) — 로컬 검증
 
 2026-11-25. eslint 0건, E2E copy-to-project·peripheral-files(확인 창을 여는 시험) 통과, 패키지 검사 통과. 이 문구를 확인하던 시험은 없었다.

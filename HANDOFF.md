@@ -1,6 +1,16 @@
 # STM Simulator — 개발 인계
 
-현재 버전: **1.62.2**. 정리일: **2026-11-10**. NUCLEO-F446RE·NUCLEO-F103RB 또는 Renesas FPB-RA6E1(1.20.0, FSP·에뮬레이터 전용)과 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+현재 버전: **1.63.0**. 정리일: **2026-11-10**. NUCLEO-F446RE·NUCLEO-F103RB 또는 Renesas FPB-RA6E1(1.20.0, FSP·에뮬레이터 전용)과 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+
+## 1.63.0 기능 목록 56번: 탐색기 — 프로젝트 전체를 한 트리로, 모든 파일을 바로 고침
+
+- **한 트리**: "소스 파일" 아래 목록(`#file-tree`)이 프로젝트 전체 트리다. 접힌 "프로젝트 구조 (CubeIDE)" 구역(`#build-files`, 부제)은 없앴다. HAL·FSP 프로젝트(`wholeTree()`)는 `ide-ui.js` `buildFilesView`가 `#file-tree` 안의 `#build-file-list`에 그리고, 그 밖의 프로젝트는 전처럼 파일 목록을 그린다. 프로젝트 파일 행은 `data-source`와 `data-tree-source`를 함께 갖는다(이름 변경·삭제·탭·포커스 복원이 쓰던 이름 유지). 폴더와 순서는 Rust `explorer.rs` `tree(paths, includes)`가 만든다: Includes(가상 노드 — STM32 빌드의 include 경로 다섯 개를 이름만) → 폴더(알파벳순) → 그 폴더의 파일(대소문자 구분 없이 알파벳순). Core·Core/Inc·Core/Src·Core/Startup은 열려 있고 Includes·Drivers는 접혀 있다.
+- **CubeIDE에 있던 파일**: `build-environment.js`가 `Core/Inc/stm32xxxx_it.h`(it.c 핸들러들의 프로토타입, Rust `it_header`)와 `Core/Src/stm32xxxx_hal_msp.c`(Rust `hal_msp`)를 더 내놓는다. hal_msp.c의 `HAL_MspInit`은 USER CODE 구역만 있다 — 이 앱의 생성기는 클록·핀 설정을 `MX_*_Init` 안에서 하므로 고치기 전에는 HAL의 weak 기본과 같고(빌드에 넣지 않음), 고치면 프로젝트 파일이 되어 컴파일된다. 프로젝트에 같은 이름의 파일이 있으면 내놓지 않는다.
+- **모든 파일을 연다·고친다**: STM32 프로젝트는 45번부터 생성·SDK 파일을 바로 고칠 수 있었다(고친 파일만 프로젝트에 저장). 이번에 `.ioc`를 누르면 Pinout 설정 창이 열리게 했다 — CubeIDE가 .ioc를 Device Configuration Tool로 여는 것과 같고, 설정은 거기서 고친다(읽기 전용 텍스트 보기는 없앰).
+- **표시·문구 삭제**: 트리 행의 툴팁(title), 생성 파일 기울임, "수정됨" ● 표시, 부제, 파일을 처음 고쳤을 때의 출력 로그, 편집기 경로 줄의 "고치면 이 파일만 프로젝트에 저장 · …" 문구, .ioc 머리의 읽기 전용 주석. 고친 생성·SDK 파일의 우클릭 "원본으로 되돌리기"는 그대로다(표시 없이 `data-tree-edited`).
+- **생성 파일 머리말**: "STM Simulator가 … 만드는 코드" 주석 대신 CubeMX 머리말(`/* USER CODE BEGIN Header */ /** … @file … @brief … */ /* USER CODE END Header */`, Rust `cube_header` → `rust-core.js` `cubeHeader`). 대상: it.c·it.h·hal_msp.c·syscalls.c·sysmem.c·main.h·링커 스크립트(`build-environment.js`), 주변장치별 .c/.h(`peripheral-files.js`). 빌드가 컴파일하는 `__stm_environment.c`의 내용은 그대로다.
+- **FPB-RA6E1(FSP)**: 같은 한 트리로 보인다(src · ra_gen · ra_cfg · ra …, e² studio 배치, Includes 노드 없음, 표시·툴팁 없음). ra_gen·ra_cfg·ra 아래 파일은 계속 읽기 전용이다 — FSP 빌드(`desktop/ra-build.cjs`)가 생성물을 프로젝트의 고친 사본으로 바꿔 쓰는 경로가 없어서, 고치게 하려면 빌드와 다시 생성 규칙을 함께 만들어야 한다(이번 범위에 넣지 않음, 기능 목록 56번 비고).
+- dispatch 추가: `explorer_tree`, `cube_header`, `it_header`, `hal_msp`. 시험: cargo 시험(explorer), `tests/unit/explorer-tree.test.js`, `build-environment.test.js`·`project-structure.test.js`, E2E `project-structure`·`copy-to-project`·`tabs`·`definition`·`peripheral-files`·`folder-import`와 RA 쪽 트리 시험.
 
 ## 1.62.2 기능 목록 55번: HAL 코드 생성 확인 창의 설명 문구 삭제
 
