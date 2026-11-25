@@ -1,6 +1,15 @@
 # STM Simulator — 개발 인계
 
-현재 버전: **1.62.0**. 정리일: **2026-11-10**. NUCLEO-F446RE·NUCLEO-F103RB 또는 Renesas FPB-RA6E1(1.20.0, FSP·에뮬레이터 전용)과 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+현재 버전: **1.62.1**. 정리일: **2026-11-10**. NUCLEO-F446RE·NUCLEO-F103RB 또는 Renesas FPB-RA6E1(1.20.0, FSP·에뮬레이터 전용)과 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+
+## 1.62.1 기능 목록 54번: 편집 → 설정의 "빌드 수준" 탭
+
+- **화면**: 설정 창(`shell.js` `setupSettingsDialog`)의 탭이 화면 · 편집기 / 단축키 / **빌드 수준** / 업데이트 / 레이아웃이 됐다. 빌드 수준 탭에는 "Debug · Optimization level"과 "Release · Optimization level" 선택 칸(`#build-level-Debug`·`#build-level-Release`, `data-build-level`)이 있고 선택지는 CubeIDE의 MCU GCC Compiler → Optimization → Optimization level 이름 그대로다: None (-O0), Optimize for Debug (-Og), Optimize (-O1), Optimize more (-O2), Optimize most (-O3), Optimize for size (-Os), Optimize for speed (-Ofast). 툴바의 Debug/Release 선택 칸과 `-g3`은 그대로다.
+- **저장**: 프로젝트의 `ide.native.optimization = {Debug?, Release?}`(프로젝트마다, 구성마다). 기본값 -O0은 저장하지 않는다 — 값이 없는 프로젝트(예전 프로젝트 포함)는 두 구성 모두 -O0이다(전에는 Release가 -Os). `project.js` `validateProject`가 `buildLevelSettings`로 확인하고 목록에 없는 값은 "빌드 수준 설정을 확인하세요."로 거부한다.
+- **Rust** `build_level.rs`: `LEVELS`(플래그·이름), `DEFAULT`, `CONFIGURATIONS`, `settings(value)`(저장 형태로 정리·검증), `flag(stored, configuration)`. dispatch `build_levels`·`build_level_settings`·`build_level_flag` → `src/build-level.js`(`BUILD_LEVELS`, `buildLevelSettings`, `buildLevelFlag`, `withBuildLevel`).
+- **적용**: `native-ide-ui.js`가 선택을 프로젝트에 넣는다(되돌리기 가능, 빌드·디버그 중에는 바꿀 수 없음; 실행 대상·구성을 바꿔도 수준은 유지). 빌드는 `desktop/native-build.cjs` `prepareBuild`의 `optimizationFlag(project, configuration)`이 받은 프로젝트에서 읽는다 — STM32(F446RE·F103RB)와 FPB-RA6E1의 ARM GCC 빌드(시뮬레이터의 ARM GCC 실행, 펌웨어 에뮬레이터, 실물 보드)와 Windows C/C++ 빌드에 같은 플래그가 들어간다. 메인 프로세스는 목록의 플래그만 컴파일러에 넘긴다(정규식 허용 목록; `tests/unit/build-level.test.js`가 Rust 목록과 같은지 본다). 캐시된 ELF의 키(`app.js` `firmwareKey`)에 수준이 들어간다.
+- **이 세션이 정한 것**(사용자 지시 "일일히 묻지 말고 전부 다 구현 해"): 탭 이름 "빌드 수준", 탭 위치(단축키 다음), 안내 문구, 칸 이름 "<구성> · Optimization level". 확인하지 못한 것: 실제 CubeIDE 목록과의 대조(웹 검색으로는 None (-O0), Optimize for Debug (-Og), Optimize for size (-Os)만 확인) — 최신 CubeIDE에 다른 항목이 있으면 `LEVELS`와 `native-build.cjs`의 허용 목록에 더한다.
+- 시험: cargo 시험(build_level), `tests/unit/build-level.test.js`, `tests/toolchain/build-level.test.mjs`(세 보드의 기본 -O0, 구성별 플래그, 모든 수준의 빌드, -Os 빌드의 에뮬레이터 실행), `tests/e2e/build-level.e2e.test.mjs`(탭, 선택지, 저장, 다시 열기, 되돌리기).
 
 ## 1.62.0 기능 목록 51번: STM32 "주변장치별 .c/.h로 생성"을 기본값으로
 

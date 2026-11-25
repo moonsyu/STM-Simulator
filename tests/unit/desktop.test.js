@@ -357,7 +357,7 @@ describe('native build helpers',()=>{
     const plan=await nativeBuild.prepareBuild({project:p,tools:{hostGcc:gcc},root:path.join(dir,'build'),target:'host',configuration:'Release'});
     assert.equal(path.dirname(plan.directory),path.join(dir,'build'));assert.deepEqual(plan.files,['main.c','util.c','util.h','algo.cpp']);
     assert.equal(await readText(path.join(plan.directory,'util.h')),'#pragma once');
-    assert.equal(plan.units.length,3,'headers are not compiled');assert.ok(plan.flags.includes('-Os'));assert.equal(plan.linker,path.join(dir,'bin','g++'),'C++ sources link with g++');
+    assert.equal(plan.units.length,3,'headers are not compiled');assert.ok(plan.flags.includes('-O0')&&!plan.flags.includes('-Os'),'Release without a chosen level builds with -O0 (feature 54)');assert.equal(plan.linker,path.join(dir,'bin','g++'),'C++ sources link with g++');
     const cppUnit=plan.units.find(u=>u.file.endsWith('algo.cpp'));assert.ok(cppUnit.arguments.includes('-std=c++17'));assert.ok(!cppUnit.arguments.includes('-Werror=implicit-function-declaration'));
     assert.deepEqual(JSON.parse(await readText(path.join(plan.directory,'compile_commands.json'))),plan.units);
     assert.equal(plan.elf,path.join(plan.directory,'program.exe'));
