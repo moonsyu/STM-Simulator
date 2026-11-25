@@ -1,0 +1,5 @@
+# The compiler the committed src/rust/stm-core.wasm.js was built with. cargo run under rust/ installs it when missing.
+[toolchain]
+channel = "1.100.0"
+targets = ["wasm32-unknown-unknown"]
+components = ["clippy", "rustfmt"]

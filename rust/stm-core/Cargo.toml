@@ -1,0 +1,22 @@
+[package]
+name = "stm-core"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.85"
+description = "Feature code of STM-Simulator written in Rust, built to WebAssembly and called from the app's JavaScript"
+license = "UNLICENSED"
+publish = false
+
+[lib]
+# cdylib: the .wasm the app loads. rlib: `cargo test` on the host.
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+serde_json = "1"
+
+[profile.release]
+opt-level = "s"
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = true

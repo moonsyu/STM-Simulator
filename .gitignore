@@ -14,3 +14,6 @@ docs/*.png
 .env.*
 *.pem
 *.key
+
+# Rust build output (the generated src/rust/stm-core.wasm.js is committed)
+rust/**/target/

@@ -5,7 +5,7 @@
 import {SERIAL_ROUTES} from './serial-config.js';
 import {F4_BUS_ROUTES,F1_BUS_ROUTES,busIrqs} from './bus-config.js';
 import {TIMER_ROUTES,timerIrq,timerCcIrq} from './timer-config.js';
-import {GPIO_PINS} from './pins.js';
+import {familyGpioPins} from './rust-core.js';
 
 const adcRoutes=pins=>Object.fromEntries(pins.map((p,i)=>['IN'+i,[p]]));
 const ADC_PINS=['PA0','PA1','PA2','PA3','PA4','PA5','PA6','PA7','PB0','PB1','PC0','PC1','PC2','PC3','PC4','PC5'];
@@ -26,7 +26,9 @@ const F4={
   timerMax:id=>['TIM2','TIM5'].includes(id)?4294967295:65535,
   dmaUnits:F4_DMA_STREAMS,
   irqExtra:['ADC_IRQn','SPI1_IRQn','I2C1_EV_IRQn','I2C1_ER_IRQn','DCMI_IRQn','SDIO_IRQn','RTC_Alarm_IRQn','RTC_WKUP_IRQn','WWDG_IRQn',...busIrqs(F4_BUS_ROUTES),...F4_DMA_STREAMS.map(s=>s+'_IRQn')],
-  gpioPins:GPIO_PINS,ports:['A','B','C','D','H'],
+  // The chip's own pins (rust/stm-core family.rs): not the array of the board on the screen, which pins.js rewrites
+  // when the board changes (feature 53: with an FPB-RA6E1 project open the F446RE had lost PA2).
+  gpioPins:familyGpioPins('STM32F446RE'),ports:['A','B','C','D','H'],
   // HSI 16 MHz without PLL; examples run the timers at 84 MHz through the PLL.
   // HSI 16 MHz directly, or an HSI PLL value the generator can build: APB1 timer clock = HCLK <= 90 MHz (APB1 <= 45 MHz),
   // VCO = 16/16 MHz x N (100..432) divided by 2/4/6/8 (the same rule as clockPlan in hal-generator.js).
@@ -76,7 +78,7 @@ const F1={
   dmaUnits:F1_DMA_CHANNELS,dmaRequests:{...Object.fromEntries(Object.entries(F1_DMA_REQUESTS).map(([r,c])=>[r,[[`DMA1_Channel${c}`,null]]])),MEMTOMEM:F1_DMA_CHANNELS.map(c=>[c,null])},
   irqExtra:['ADC1_2_IRQn','SPI1_IRQn','I2C1_EV_IRQn','I2C1_ER_IRQn','RTC_IRQn','RTC_Alarm_IRQn','WWDG_IRQn',...busIrqs(F1_BUS_ROUTES),...F1_DMA_CHANNELS.map(c=>c+'_IRQn')],irqNumbers:F1_IRQ_NUMBERS,
   // Same MB1136 board: CN7-29/31 carry PD0/PD1 (no port H) and CN10-18 is PB11.
-  gpioPins:[...GPIO_PINS.filter(p=>!/^PH/.test(p)),'PB11','PD0','PD1'].sort(),ports:['A','B','C','D'],
+  gpioPins:familyGpioPins('STM32F103RB'),ports:['A','B','C','D'],
   // HSI 8 MHz without PLL; with the PLL, SYSCLK = HSI/2 × PLLMUL (2..16) = 8..64 MHz in 4 MHz steps.
   // APB1 is limited to 36 MHz, so above that it runs at SYSCLK/2 and the timers get ×2: timer clock = SYSCLK.
   clock:{defaultHz:8000000,exampleHz:64000000,minHz:8000000,maxHz:64000000,label:'8~64 MHz (4 MHz 단위)',valid:hz=>Number.isInteger(hz)&&hz>=8000000&&hz<=64000000&&hz%4000000===0},

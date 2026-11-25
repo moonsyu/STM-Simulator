@@ -52,6 +52,15 @@ jobs:
         run: |
           $releaseVersion = (Get-Content package.json -Raw | ConvertFrom-Json).version
           if ($env:GITHUB_REF_NAME -cne "v$releaseVersion" -or $releaseVersion -notmatch '^\d+\.\d+\.\d+$') { throw 'Release tag must match the stable package version.' }
+      # The app's Rust code (rust/stm-core): format, lints and tests on the host, then the WebAssembly is built again
+      # from the sources, so the unit tests of this job run on what the sources make (the other job runs on the committed
+      # src/rust/stm-core.wasm.js; a unit test compares its recorded source hash with the tree).
+      - name: Rust toolchain of rust/rust-toolchain.toml
+        if: matrix.shard == 1
+        run: rustup toolchain install 1.100.0 --profile minimal --component clippy --component rustfmt --target wasm32-unknown-unknown
+      - name: Rust format, lints, tests and the WebAssembly build
+        if: matrix.shard == 1
+        run: npm run test:rust
       - name: Static checks (undefined names, duplicate keys, unreachable code)
         if: matrix.shard == 2
         run: npm run lint

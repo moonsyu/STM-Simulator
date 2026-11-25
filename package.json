@@ -21,6 +21,8 @@
     "build:package": "node scripts/clean-build.cjs && node scripts/build-package.cjs",
     "build:artifact": "node scripts/prepare-artifact.cjs",
     "build:editor": "node scripts/build-editor.mjs",
+    "build:rust": "node scripts/build-rust.mjs",
+    "test:rust": "node scripts/build-rust.mjs --test",
     "lint": "eslint .",
     "build:icon": "electron scripts/prepare-icon.cjs",
     "build:catalog": "node scripts/build-device-catalog.mjs && node scripts/build-device-reference.mjs && node scripts/build-model-gallery.mjs",
