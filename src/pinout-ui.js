@@ -5,7 +5,7 @@ import {MODES,ROUTES,defaultMcu,validateMcu,configProblems,pinFunctions,irqForPi
 import {DMA_REQUESTS} from './hal-dma.js';
 import {expandC} from './c-format.js';
 import {regenerateMain} from './c-source-edit.js';
-import {generationPlan} from './project-overrides.js';
+import {generationPlan,generatorTexts} from './project-overrides.js';
 // What the project's current settings generate: sections still equal to it were never edited.
 const previousDefault=mcu=>{try{return expandC(generateHal(mcu));}catch{return '';}};
 import {isSerial,serialAf,serialFunction,assignSerialPin,setSerialEnabled} from './serial-config.js';
@@ -164,7 +164,7 @@ export class PinoutPanel {
   }
   // Feature 45: what generating the code now does to the project — main.c and the regenerated files it has edited (it.c,
   // main.h, the per-peripheral pairs, hal_conf.h) keep their USER CODE sections; the user's lines outside them go.
-  plan(){try{const mcu=validateMcu(this.draft),project=this.getProject(),previous=previousDefault(project.mcu),regen=regenerateMain(project.code,expandC(generateHal(mcu)),previous,(project.firmware?.files||[]).map(f=>f.text));return {...generationPlan(project,mcu,{main:regen.code,previousMain:previous}),regen};}catch{return null;}}
+  plan(){try{const mcu=validateMcu(this.draft),project=this.getProject(),previous=previousDefault(project.mcu),regen=regenerateMain(project.code,expandC(generateHal(mcu)),previous,(project.firmware?.files||[]).map(f=>f.text),generatorTexts(project.mcu,mcu));return {...generationPlan(project,mcu,{main:regen.code,previousMain:previous}),regen};}catch{return null;}}
   commit(generate){try{this.sync();for(const el of $('pinout-dialog').querySelectorAll('input[type="number"]'))if(!Number.isFinite(numberInput(el)))throw new Error(`${el.getAttribute('aria-label')||(el.id==='timer-clock'?'APB1 타이머 입력 클록':'숫자 설정')}: 숫자를 입력하세요.`);const mcu=validateMcu(this.draft),plan=generate?this.plan():null;if(generate&&!plan)generateHal(mcu);const regen=plan?.regen??null,code=regen?.code??null;this.apply({mcu,code,moved:regen?.moved??[],files:plan?.files,report:plan?.report??[]});$('pinout-dialog').close();}catch(e){$('pinout-errors').textContent=e.message;this.onError(e.message);}}
   // DMA requests of the enabled peripherals: stream/channel, direction, normal/circular, priority.
   dmaCard(config){

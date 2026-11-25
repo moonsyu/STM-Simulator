@@ -14,7 +14,7 @@
 import {buildEnvironment,prefixOf} from './build-environment.js';
 import {peripheralFiles} from './peripheral-files.js';
 import {keepUserCode} from './c-source-edit.js';
-import {generateHal} from './mcu-config.js';
+import {generateHal,validateMcu} from './mcu-config.js';
 import {expandC} from './c-format.js';
 
 const base=name=>String(name).split('/').at(-1);
@@ -73,6 +73,18 @@ export function regenerateOverrides(project,nextMcu){
     if(merged!==after)files.push({...f,text:merged,base:after});
   }
   return {files,report};
+}
+/** Every text the generator makes for these Pinouts, in both forms: main.c as one file, and the per-peripheral files
+ *  (gpio.c/h, usart.c/h …). regenerateMain asks them what is the generator's (feature 52): MX_GPIO_Init or huart2 of a
+ *  main.c generated as one file is not the user's code when "주변장치별 .c/.h" moves it to gpio.c / usart.c. */
+export function generatorTexts(...mcus){
+  const texts=[];
+  for(const mcu of mcus){
+    if(!mcu)continue;
+    try{texts.push(expandC(generateHal({...mcu,coupleFiles:false})));}catch{/* a Pinout the generator refuses */}
+    try{texts.push(...peripheralFiles(validateMcu({...mcu,coupleFiles:true})).map(f=>f.text));}catch{/* the same */}
+  }
+  return texts;
 }
 /** What generating main.c for `nextMcu` changes in the project: the regenerated sources and what goes from them. */
 export function generationPlan(project,nextMcu,{main,previousMain}){

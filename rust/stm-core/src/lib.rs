@@ -2,7 +2,9 @@
 //! one entry point with JSON: `{"fn": name, "args": value}` in, `{"ok": value}` or `{"error": message}` out.
 //! New and changed features are written here (the user's decision of 2026-11-25); the screens stay in JavaScript.
 
+pub mod csource;
 pub mod family;
+pub mod regen;
 
 use serde_json::{json, Value};
 
@@ -21,8 +23,78 @@ pub fn dispatch(name: &str, args: &Value) -> Result<Value, String> {
         }
         // → ["STM32F446RE", "STM32F103RB"]
         "families" => Ok(json!(family::FAMILIES)),
+        // {"previous", "generated", "previousDefault", "others": [text], "generator": [text]} → {"code", "moved"}
+        "regenerate_main" => {
+            let (code, moved) = regen::regenerate_main(
+                text(args, "previous"),
+                text(args, "generated"),
+                text(args, "previousDefault"),
+                &texts(args, "others"),
+                &texts(args, "generator"),
+            );
+            Ok(json!({ "code": code, "moved": moved }))
+        }
+        // {"previous", "generated", "previousDefault"} → text
+        "keep_user_code" => Ok(json!(regen::keep_user_code(
+            text(args, "previous"),
+            text(args, "generated"),
+            text(args, "previousDefault")
+        ))),
+        // {"previous", "generated", "previousDefault", "generator": [text]} → {"source", "moved"}
+        "adopt_outside_code" => {
+            let generator = texts(args, "generator");
+            let mut known = vec![text(args, "generated"), text(args, "previousDefault")];
+            known.extend(generator.iter().map(String::as_str));
+            let (source, moved) = regen::adopt_outside_code(text(args, "previous"), &known);
+            Ok(json!({ "source": source, "moved": moved }))
+        }
+        // {"source", "others": [text]} → text
+        "drop_shadowed_handlers" => Ok(json!(regen::drop_shadowed_handlers(
+            text(args, "source"),
+            &texts(args, "others")
+        ))),
+        // {"source"} → [{"kind", "name", "start", "end", "text", "comment"}] or null; offsets in UTF-16 code units
+        "top_level_items" => {
+            let source = text(args, "source");
+            Ok(match regen::top_level_items(source) {
+                Some(items) => json!(items
+                    .iter()
+                    .map(|k| json!({
+                        "kind": k.kind.as_str(),
+                        "name": k.name,
+                        "start": utf16_offset(source, k.start),
+                        "end": utf16_offset(source, k.end),
+                        "text": k.text,
+                        "comment": k.comment,
+                    }))
+                    .collect::<Vec<_>>()),
+                None => Value::Null,
+            })
+        }
         _ => Err(format!("stm-core: 알 수 없는 함수입니다: {name}")),
     }
+}
+
+/// A text argument; missing or not a string reads as empty (JavaScript's `String(value || '')`).
+fn text<'a>(args: &'a Value, key: &str) -> &'a str {
+    args.get(key).and_then(Value::as_str).unwrap_or("")
+}
+
+/// A list-of-texts argument; entries that are not strings read as empty.
+fn texts(args: &Value, key: &str) -> Vec<String> {
+    args.get(key)
+        .and_then(Value::as_array)
+        .map(|list| {
+            list.iter()
+                .map(|v| v.as_str().unwrap_or("").to_string())
+                .collect()
+        })
+        .unwrap_or_default()
+}
+
+/// A byte offset of `source` as the offset JavaScript uses for the same place (UTF-16 code units).
+fn utf16_offset(source: &str, byte: usize) -> usize {
+    source[..byte.min(source.len())].encode_utf16().count()
 }
 
 /// The JSON text of a request → the JSON text of its answer. A request that is not JSON is an error answer too.
