@@ -372,9 +372,11 @@ export class RaPinoutPanel {
   const k=el.dataset.raField;if(!id||!k)return;
   const v=el.value.trim(),q=this.draft.peripherals[id];
   if(id==='CAN0'&&k==='mask'){if(!Number.isNaN(hexValue(v))){q.mask=hexValue(v);this.validate();}this.renderStacks();return;}
-  if(['unit','callback','startMode','reset','clockSource','start','mode','power','idMode'].includes(k))q[k]=v;
-  // CAN: the mask follows the ID mode — all ID bits compared (the mailbox IDs stay).
-  if(id==='CAN0'&&k==='idMode')q.mask=v==='EXTENDED'?0x1FFFFFFF:0x7FF;
+  if(['unit','callback','startMode','reset','clockSource','start','mode','power','idMode'].includes(k)){
+    q[k]=v;
+    // CAN: the mask follows the ID mode — all ID bits compared (the mailbox IDs stay).
+    if(id==='CAN0'&&k==='idMode')q.mask=v==='EXTENDED'?0x1FFFFFFF:0x7FF;
+  }
   else if(k==='stopInSleep'||k==='ioKeep'||k==='bgo')q[k]=v==='1';
   else if(/Priority$/.test(k)&&v==='')q[k]=null;
   else q[k]=Number(v);
