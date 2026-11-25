@@ -23,3 +23,6 @@ export function rustCall(name,args={}){
 
 /** GPIO pins of an MCU family (rust/stm-core/src/family.rs): a new frozen array, never shared with a board's list. */
 export const familyGpioPins=family=>Object.freeze(rustCall('family_gpio_pins',{family}));
+/** Pinout settings a new STM32 project starts with (rust/stm-core/src/family.rs new_project_mcu): no pins, the
+ *  family's default clock and "주변장치별 .c/.h로 생성" on (feature 51). A new object each call. */
+export const newProjectMcu=family=>rustCall('new_project_mcu',{family});

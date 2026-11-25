@@ -37,9 +37,51 @@ pub fn gpio_pins(family: &str) -> Option<Vec<&'static str>> {
     }
 }
 
+/// The APB1 timer clock a family starts with, in Hz: HSI without the PLL (16 MHz on the F446RE, 8 MHz on the F103RB).
+pub fn default_timer_clock_hz(family: &str) -> Option<u32> {
+    match family {
+        "STM32F446RE" => Some(16_000_000),
+        "STM32F103RB" => Some(8_000_000),
+        _ => None,
+    }
+}
+
+/// Pinout settings of a new project, before any pin is set.
+#[derive(Debug, PartialEq, Eq)]
+pub struct NewProjectMcu {
+    pub family: &'static str,
+    pub timer_clock_hz: u32,
+    /// CubeMX "Generate peripheral initialization as a pair of '.c/.h' files per peripheral": on in a new project
+    /// (feature 51, the user's decision of 2026-11-25), as a new CubeIDE project is made.
+    pub couple_files: bool,
+}
+
+/// The settings a new project of `family` starts with, or `None` for a family this table does not know. A saved
+/// project keeps what it stores: one without the option stays as one file.
+pub fn new_project_mcu(family: &str) -> Option<NewProjectMcu> {
+    let known = FAMILIES.iter().copied().find(|f| *f == family)?;
+    Some(NewProjectMcu {
+        family: known,
+        timer_clock_hz: default_timer_clock_hz(known)?,
+        couple_files: true,
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_new_project_generates_a_pair_of_files_per_peripheral() {
+        for (family, hz) in [("STM32F446RE", 16_000_000), ("STM32F103RB", 8_000_000)] {
+            let mcu = new_project_mcu(family).unwrap();
+            assert_eq!(mcu.family, family);
+            assert_eq!(mcu.timer_clock_hz, hz);
+            assert!(mcu.couple_files);
+        }
+        assert_eq!(new_project_mcu("R7FA6E10F"), None);
+        assert_eq!(default_timer_clock_hz("R7FA6E10F"), None);
+    }
 
     #[test]
     fn f446re_has_its_fifty_pins_in_the_apps_order() {

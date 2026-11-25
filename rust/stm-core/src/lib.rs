@@ -3,6 +3,7 @@
 //! New and changed features are written here (the user's decision of 2026-11-25); the screens stay in JavaScript.
 
 pub mod csource;
+pub mod docs_regions;
 pub mod family;
 pub mod regen;
 
@@ -21,6 +22,78 @@ pub fn dispatch(name: &str, args: &Value) -> Result<Value, String> {
                 .map(|pins| json!(pins))
                 .ok_or_else(|| format!("지원하지 않는 MCU입니다: {family}"))
         }
+        // {"family": "STM32F446RE"} → {"family", "pins": {}, "peripherals": {}, "nvic": {}, "timerClockHz", "coupleFiles"}
+        "new_project_mcu" => {
+            let family = args
+                .get("family")
+                .and_then(Value::as_str)
+                .ok_or("new_project_mcu: family가 필요합니다.")?;
+            let mcu = family::new_project_mcu(family)
+                .ok_or_else(|| format!("지원하지 않는 MCU입니다: {family}"))?;
+            let mut out = json!({
+                "family": mcu.family,
+                "pins": {},
+                "peripherals": {},
+                "nvic": {},
+                "timerClockHz": mcu.timer_clock_hz,
+            });
+            if mcu.couple_files {
+                out["coupleFiles"] = json!(true);
+            }
+            Ok(out)
+        }
+        // {"source", "tag", "module", "others": [{"tag", "needs": [role]}] | null}
+        //   → {"source", "fileRegions": [{"group", "function", "body"}]} | {"needOthers": true}
+        "docs_install" => {
+            let others = docs_others(args);
+            match docs_regions::install_device_regions(
+                text(args, "source"),
+                text(args, "tag"),
+                &docs_module(args.get("module").unwrap_or(&Value::Null)),
+                others.as_deref(),
+            )? {
+                docs_regions::Outcome::NeedOthers => Ok(json!({ "needOthers": true })),
+                docs_regions::Outcome::Done((source, files)) => Ok(json!({
+                    "source": source,
+                    "fileRegions": files
+                        .iter()
+                        .map(|r| json!({ "group": r.group, "function": r.function, "body": r.body }))
+                        .collect::<Vec<_>>(),
+                })),
+            }
+        }
+        // {"source", "tag", "others"} → {"source", "report": {"removed", "retagged", "missing"}} | {"needOthers": true}
+        "docs_remove" => {
+            let others = docs_others(args);
+            match docs_regions::remove_device_regions(
+                text(args, "source"),
+                text(args, "tag"),
+                others.as_deref(),
+            ) {
+                docs_regions::Outcome::NeedOthers => Ok(json!({ "needOthers": true })),
+                docs_regions::Outcome::Done((source, report)) => Ok(json!({
+                    "source": source,
+                    "report": { "removed": report.removed, "retagged": report.retagged, "missing": report.missing },
+                })),
+            }
+        }
+        // {"module"} → [role]
+        "docs_module_needs" => {
+            let mut needs: Vec<String> = docs_regions::module_needs(&docs_module(
+                args.get("module").unwrap_or(&Value::Null),
+            ))
+            .into_iter()
+            .collect();
+            needs.sort_unstable();
+            Ok(json!(needs))
+        }
+        // {"source", "tag", "name", "body"} → the per-peripheral file with the device's region in function `name`
+        "docs_file_function" => Ok(json!(docs_regions::set_file_function_region(
+            text(args, "source"),
+            text(args, "tag"),
+            text(args, "name"),
+            text(args, "body"),
+        )?)),
         // → ["STM32F446RE", "STM32F103RB"]
         "families" => Ok(json!(family::FAMILIES)),
         // {"previous", "generated", "previousDefault", "others": [text], "generator": [text]} → {"code", "moved"}
@@ -73,6 +146,67 @@ pub fn dispatch(name: &str, args: &Value) -> Result<Value, String> {
         }
         _ => Err(format!("stm-core: 알 수 없는 함수입니다: {name}")),
     }
+}
+
+/// {"a": "x", …} → the map; anything else reads as empty.
+fn text_map(value: Option<&Value>) -> std::collections::HashMap<String, String> {
+    value
+        .and_then(Value::as_object)
+        .map(|map| {
+            map.iter()
+                .map(|(k, v)| (k.clone(), v.as_str().unwrap_or("").to_string()))
+                .collect()
+        })
+        .unwrap_or_default()
+}
+
+/// The module of a device as device-assistance.js deviceModule makes it.
+fn docs_module(value: &Value) -> docs_regions::Module {
+    let pairs = |key: &str, first: &str, second: &str| -> Vec<(String, String)> {
+        value
+            .get(key)
+            .and_then(Value::as_array)
+            .map(|list| {
+                list.iter()
+                    .map(|item| {
+                        (
+                            text(item, first).to_string(),
+                            text(item, second).to_string(),
+                        )
+                    })
+                    .collect()
+            })
+            .unwrap_or_default()
+    };
+    docs_regions::Module {
+        declarations: text(value, "declarations").to_string(),
+        init: text(value, "init").to_string(),
+        step: text(value, "step").to_string(),
+        gpio: text(value, "gpio").to_string(),
+        functions: pairs("functions", "name", "body"),
+        handles: pairs("handles", "type", "name"),
+        coupled: value
+            .get("coupled")
+            .filter(|c| c.is_object())
+            .map(|c| docs_regions::Coupled {
+                functions: text_map(c.get("functions")),
+                handles: text_map(c.get("handles")),
+                before: text_map(c.get("before")),
+                in_pair: c.get("inPair").and_then(Value::as_bool).unwrap_or(true),
+            }),
+    }
+}
+
+/// The other applied devices, or `None` when the caller has not worked them out yet.
+fn docs_others(args: &Value) -> Option<Vec<docs_regions::Other>> {
+    args.get("others").and_then(Value::as_array).map(|list| {
+        list.iter()
+            .map(|o| docs_regions::Other {
+                tag: text(o, "tag").to_string(),
+                needs: texts(o, "needs").into_iter().collect(),
+            })
+            .collect()
+    })
 }
 
 /// A text argument; missing or not a string reads as empty (JavaScript's `String(value || '')`).
