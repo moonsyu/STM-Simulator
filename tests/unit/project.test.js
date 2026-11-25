@@ -17,6 +17,7 @@ import {ledCircuit,boardProject,wire} from './helpers/circuit.js';
 import {runHal} from './helpers/run.js';
 import {consoleSink} from './helpers/console.js';
 import {SimulationSession} from '../../src/session.js';
+import {buildEnvironment} from '../../src/build-environment.js';
 
 const pin=(fn,extra={})=>({function:fn,pull:'NOPULL',edge:'FALLING',label:'',initial:0,...extra});
 const IOC=['#MicroXplorer Configuration settings','Mcu.Name=STM32F446R(C-E)Tx','Mcu.IP0=NVIC','Mcu.IP1=USART2',
@@ -349,6 +350,15 @@ describe('.ioc and firmware import',()=>{
     const original=ledCircuit();original.code='#include "main.h"\nint main(void) {\n  HAL_Init();\n  while (1) { }\n}\n';
     const {project,warnings,regenerated}=importFirmware(original,[{name:'x.ioc',text:IOC}]);
     assert.equal(regenerated,false);assert.equal(project.code,original.code);assert.equal(project.mcu.pins.PA5.label,'LD2');assert.match(warnings.join('\n'),/USER CODE 구역이 없어 코드는 그대로/);
+  });
+  // Feature 50: a generated file edited outside its USER CODE sections is regenerated as before, without a warning about the lost lines.
+  test('importFirmware regenerating an edited generated file does not warn about the lines it drops',()=>{
+    const base=blankProject(),it=buildEnvironment(base).files.find(f=>/_it\.c$/.test(f.file)).text;
+    base.firmware.files.push({name:'Core/Src/stm32f4xx_it.c',origin:'gen',text:it.replace('  /* USER CODE BEGIN SysTick_IRQn 1 */\n','  /* USER CODE BEGIN SysTick_IRQn 1 */\n  user_tick();\n').replace('  HAL_IncTick();','  HAL_IncTick();\n  outside_line_a();')});
+    const r=importFirmware(base,[{name:'x.ioc',text:IOC}]);
+    assert.equal(r.regenerated,true);assert.doesNotMatch(r.warnings.join('\n'),/고친 줄을 지웠습니다/);
+    const out=r.project.firmware.files.find(f=>f.name==='Core/Src/stm32f4xx_it.c').text;
+    assert.match(out,/USER CODE BEGIN SysTick_IRQn 1 \*\/\n {2}user_tick\(\);/);assert.doesNotMatch(out,/outside_line_a/);
   });
   test('importFirmware validation errors',()=>{
     const original=ledCircuit();

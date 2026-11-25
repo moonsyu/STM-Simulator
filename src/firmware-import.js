@@ -52,7 +52,7 @@ export function importFirmware(project,files){
     const previous=(()=>{try{return expandC(generateHal(project.mcu));}catch{return '';}})();
     try{const r=regenerateMain(project.code,expandC(generateHal(next.mcu)),previous,(next.firmware?.files||[]).map(f=>f.text),generatorTexts(project.mcu,next.mcu));next.code=r.code;regenerated=true;if(r.moved.length)warnings.push('USER CODE 구역 밖에 있던 코드를 구역 안으로 옮겨 유지했습니다: '+r.moved.join(', '));
       // Edited generated files (feature 45) are regenerated with the new settings as well.
-      const o=regenerateOverrides(project,next.mcu);if(next.firmware)next.firmware.files=o.files;if(o.report.length)warnings.push('다시 생성하며 USER CODE 구역 밖에서 고친 줄을 지웠습니다: '+o.report.map(x=>`${x.name} ${x.reset?'원본으로':x.lost+'줄'}`).join(', '));}
+      const o=regenerateOverrides(project,next.mcu);if(next.firmware)next.firmware.files=o.files;}
     catch(e){warnings.push('main.c는 바꾸지 않았습니다: '+e.message);}
   }
   return {project:validateProject(next),warnings,regenerated};
