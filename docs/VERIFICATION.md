@@ -1,5 +1,9 @@
 # 검증 기록
 
+## 1.62.2 HAL 코드 생성 확인 창 문구 삭제(기능 목록 55번) — 로컬 검증
+
+2026-11-25. eslint 0건, E2E copy-to-project·peripheral-files(확인 창을 여는 시험) 통과, 패키지 검사 통과. 이 문구를 확인하던 시험은 없었다.
+
 ## 1.62.1 빌드 수준 탭(기능 목록 54번) — 로컬 검증
 
 2026-11-25. 구현 세션이 직접 기획·구현·시험했다. 시험: Rust 검사(fmt·clippy·cargo test·wasm 빌드) 통과, eslint 0건, npm test 1371건(1370 통과, 1 건너뜀), 툴체인 시험 build-level 통과(실제 ARM GCC: 세 보드, 모든 수준), E2E build-level·shell 11건 통과, 패키지 검사 통과. 확인하지 못한 것: 실제 CubeIDE의 Optimization level 목록 전체와의 대조, 실물 보드에서 수준별 실행.
