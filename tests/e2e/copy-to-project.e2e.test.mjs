@@ -9,7 +9,7 @@ import {launch} from './harness.mjs';
 const IT='Core/Src/stm32f1xx_it.c';
 const projectFiles=win=>win.evaluate(()=>[...document.querySelectorAll('#file-tree [data-source]')].map(b=>b.dataset.source));
 const shownText=win=>win.evaluate(()=>document.querySelector('#group-code .monaco-editor .view-lines')?.textContent.replace(/ /g,' ')||'');
-async function openTree(win){await win.click('[data-activity="explorer"]');if(!await win.locator('#build-files > summary').isVisible())await win.click('[data-activity="explorer"]');if(!await win.evaluate(()=>document.getElementById('build-files').open))await win.click('#build-files > summary');}
+async function openTree(win){await win.click('[data-activity="explorer"]');if(!await win.locator('#file-tree').isVisible())await win.click('[data-activity="explorer"]');}
 
 test('a generated build file is edited in place: only it is stored, marked, never faded, reverted',{timeout:150000},async()=>{
  const s=await launch();
@@ -20,7 +20,7 @@ test('a generated build file is edited in place: only it is stored, marked, neve
   await win.waitForFunction(()=>/SysTick_Handler/.test(document.querySelector('#group-code .monaco-editor .view-lines')?.textContent||''));
   // No read-only notice and no copy button: the path line says what an edit does.
   assert.equal(await win.locator('#copy-to-project').count(),0);
-  const note=await win.textContent('#source-path');assert.doesNotMatch(note,/읽기 전용/);assert.match(note,/고치면 이 파일만 프로젝트에 저장 · 다시 생성하면 USER CODE 구역 밖은 새로 써짐/);
+  const note=await win.textContent('#source-path');assert.doesNotMatch(note,/읽기 전용|고치면|다시 생성하면/,'no note on a file that can be edited (feature 56)');
   // Feature 46: the lines outside the sections are drawn like any other (no faded view), here and in main.c.
   const faded=()=>win.evaluate(()=>document.querySelectorAll('#group-code .outside-user-code-text, #group-code .outside-user-code').length+[...document.querySelectorAll('#group-code .view-line span')].filter(s=>Number(getComputedStyle(s).opacity)<1).length);
   await win.waitForSelector('#group-code .view-line');assert.equal(await faded(),0);
@@ -34,7 +34,7 @@ test('a generated build file is edited in place: only it is stored, marked, neve
   // The tree: the generated row gives way to the project file, marked as edited.
   assert.equal(await win.locator(row).count(),0);
   assert.equal(await win.locator(`#build-file-list [data-tree-source="${IT}"][data-tree-edited]`).count(),1);
-  assert.match(await win.textContent('#console-output'),/Core\/Src\/stm32f1xx_it\.c을 고쳐 프로젝트에 저장했습니다/);
+  assert.doesNotMatch(await win.textContent('#console-output'),/고쳐 프로젝트에 저장했습니다/,'no note about it (feature 56)');
   // More typing goes on in the project file.
   await win.keyboard.type(' more');await win.waitForFunction(()=>/my change \*\/ more/.test(document.getElementById('code').value));
   // Generating the code: the dialog asks, without a list of the lines that go (feature 47 took the list out).
@@ -67,9 +67,8 @@ test('the .ioc stays read only and says where to change it',{timeout:120000},asy
  try{
   const {win}=s;await openTree(win);
   await win.click('#build-file-list > button[data-build-file$=".ioc"]');
-  await win.waitForFunction(()=>/Mcu\.UserName=/.test(document.querySelector('#group-code .monaco-editor .view-lines')?.textContent||''));
-  assert.match(await win.textContent('#source-path'),/읽기 전용/);
-  const before=await projectFiles(win);await win.evaluate(()=>document.getElementById('code').focus());await win.keyboard.type('zz');await win.waitForTimeout(300);
+  const before=await projectFiles(win);
+  await win.waitForSelector('#pinout-dialog[open]');await win.keyboard.press('Escape');await win.waitForFunction(()=>!document.getElementById('pinout-dialog').open);
   assert.deepEqual(await projectFiles(win),before);
   assert.doesNotMatch(await shownText(win),/zz/);
   assert.deepEqual(s.errors,[]);

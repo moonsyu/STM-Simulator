@@ -287,7 +287,10 @@
 .build-files>summary small{display:block;opacity:.7;margin-left:14px;font-size:10.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 /* 24 px: the title's own 12 px and one step, so the top-level rows stand to the right of the title's arrow. */
 :is(#build-file-list,#ra-assist-list){display:flex;flex-direction:column;padding-left:24px}
-:is(#build-file-list,#ra-assist-list) button{display:flex;align-items:center;gap:6px;min-height:22px;padding:0 12px 0 14px;border:0;background:transparent;text-align:left;font-size:12.5px;font-style:italic;width:100%}
+/* Feature 56: the project tree is the list under "소스 파일" itself; the Includes node lists directories. */
+#file-tree>#build-file-list{padding-left:12px}
+.tree-include{display:block;min-height:22px;line-height:22px;padding:0 12px 0 14px;font-size:12.5px;opacity:.75;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+:is(#build-file-list,#ra-assist-list) button{display:flex;align-items:center;gap:6px;min-height:22px;padding:0 12px 0 14px;border:0;background:transparent;text-align:left;font-size:12.5px;width:100%}
 :is(#build-file-list,#ra-assist-list) button small{margin-left:auto;font-style:normal;opacity:.6;font-size:10.5px}
 :is(#build-file-list,#ra-assist-list) button:hover{background:var(--ide-hover,#e7efec)}
 :is(#build-file-list,#ra-assist-list) button.active{background:var(--ide-selection,#cde7da)}

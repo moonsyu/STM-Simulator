@@ -2,6 +2,7 @@
 // (stm32xxxx_it.c), newlib system calls (syscalls.c) and the heap (sysmem.c). The build compiles them as one file,
 // __stm_environment.c; the editor shows the same text split into CubeIDE's files, read only.
 import {isSerial,serialHandle} from './serial-config.js';
+import {rustCall,cubeHeader} from './rust-core.js';
 import {isTimer} from './timer-config.js';
 import {irqHandlers} from './irq-handlers.js';
 const PREFIX={STM32F446RE:'stm32f4xx',STM32F103RB:'stm32f1xx'},STARTUP={STM32F446RE:'startup_stm32f446xx.s',STM32F103RB:'startup_stm32f103xb.s'};
@@ -92,19 +93,25 @@ export function buildEnvironment(project){
   const syscalls=['__attribute__((weak)) void _init(void) {}','__attribute__((weak)) void _fini(void) {}','__attribute__((weak)) int __io_putchar(int ch) { return ch; }','__attribute__((weak)) int _write(int file, char *ptr, int len) { (void)file; for(int i=0;i<len;i++) __io_putchar(ptr[i]); return len; }',SYSCALLS];
   const includes=['#include "main.h"','#include <stddef.h>','#include <stdint.h>','#include <errno.h>','#include <sys/stat.h>'];
   const text=[...includes,...syscalls,SBRK,...it].join('\n');
-  const note=(file,what,regen)=>`/* ${file} — STM Simulator가 ARM 빌드에 넣는 코드. CubeIDE 프로젝트의 Core/Src/${file}에 해당합니다.\n * ${what}\n * ${regen?'바로 고칠 수 있고 고친 파일만 프로젝트에 저장됩니다. 코드를 다시 생성하면 USER CODE 구역 안만 남고 나머지는 새로 써집니다.':'바로 고칠 수 있고 고친 파일만 프로젝트에 저장됩니다. 한 번 만드는 파일이라 코드를 다시 생성해도 고친 내용이 남습니다.'}\n * 고치기 전에는 빌드가 이 내용을 __stm_environment.c 하나로 합쳐 컴파일하며, 같은 함수를 main.c나 추가 소스에 쓰면 그쪽을 씁니다. */`;
+  // Each file starts with the header CubeMX writes (feature 56: no notes of this app in the files).
+  const note=(file,brief)=>cubeHeader(file,brief);
   // As CubeMX writes stm32xxxx_it.c: each handler between its "<IRQ> 0" and "<IRQ> 1" USER CODE sections.
   const block=line=>{const m=/^void (\w+)\(void\) \{ ([\s\S]*) \}$/.exec(line);if(!m)return [line,''];const irq=m[1].replace(/_IRQHandler$|_Handler$/,'')+'_IRQn';
     return [`void ${m[1]}(void)`,'{',`  /* USER CODE BEGIN ${irq} 0 */`,'',`  /* USER CODE END ${irq} 0 */`,`  ${m[2]}`,`  /* USER CODE BEGIN ${irq} 1 */`,'',`  /* USER CODE END ${irq} 1 */`,'}',''];};
-  const viewIt=[note(`${p}_it.c`,'켜진 인터럽트의 핸들러와 SysTick(HAL 시간)을 처리합니다.',true),'#include "main.h"','','/* USER CODE BEGIN Includes */','/* USER CODE END Includes */','',
+  const viewIt=[note(`${p}_it.c`,'Interrupt Service Routines.'),'#include "main.h"','','/* USER CODE BEGIN Includes */','/* USER CODE END Includes */','',
     ...(skipped.length?['/* 프로젝트 소스에 있어 여기서는 만들지 않는 핸들러:',...skipped.map(([n,f])=>` *   ${n}()${f?' — '+f:''}`),' */','']:[]),
     ...new Set(it.filter(l=>l.startsWith('extern '))),'/* USER CODE BEGIN EV */','/* USER CODE END EV */','',
     ...it.filter(l=>!l.startsWith('extern ')).flatMap(block),'/* USER CODE BEGIN 1 */','/* USER CODE END 1 */','',
     `/* NMI_Handler, HardFault_Handler, MemManage_Handler, BusFault_Handler, UsageFault_Handler, SVC_Handler,\n * DebugMon_Handler, PendSV_Handler와 정의하지 않은 다른 IRQ는 ${startupOf(project.mcu?.family)}의 Default_Handler(무한 반복)가 받습니다. */`];
-  const viewSyscalls=[note('syscalls.c','printf(_write → __io_putchar)·scanf(_read → __io_getchar)가 쓰는 newlib 시스템 호출입니다.',false),'#include <errno.h>','#include <sys/stat.h>','',...syscalls.flatMap(l=>[l,''])];
-  const viewSysmem=[note('sysmem.c','malloc이 쓰는 힙(_sbrk): 링커의 end부터 스택 4 KB 앞(_estack-0x1000)까지입니다.',false),'#include <errno.h>','#include <stddef.h>','#include <stdint.h>','',SBRK];
+  const viewSyscalls=[note('syscalls.c','STM32CubeIDE Minimal System calls file'),'#include <errno.h>','#include <sys/stat.h>','',...syscalls.flatMap(l=>[l,''])];
+  const viewSysmem=[note('sysmem.c','STM32CubeIDE System Memory calls file'),'#include <errno.h>','#include <stddef.h>','#include <stdint.h>','',SBRK];
   // main.h and the linker script are written by the build too, unless the project has its own.
   const has=test=>files.some(f=>test(f.name.split('/').at(-1)));
-  const extra=[...(has(n=>n==='main.h')?[]:[{file:'Core/Inc/main.h',text:`/* main.h — STM Simulator가 ARM 빌드에 넣는 코드. CubeIDE 프로젝트의 Core/Inc/main.h에 해당합니다. Pinout 라벨이 바뀌면 이 내용도 바뀝니다.\n * 바로 고칠 수 있고 고친 파일만 프로젝트에 저장됩니다. 코드를 다시 생성하면 USER CODE 구역 안만 남고 나머지는 새로 써집니다. */\n`+mainHeader(project)}]),...(has(n=>/\.ld$/.test(n))?[]:[{file:linkerName(project.mcu?.family),text:`/* ${linkerName(project.mcu?.family)} — STM Simulator가 ARM 빌드에 넣는 코드. CubeIDE 프로젝트의 링커 스크립트에 해당합니다: FLASH·RAM 크기, 섹션 배치, 힙 1 KB와 스택 4 KB.\n * 바로 고칠 수 있고 고친 파일만 프로젝트에 저장됩니다. 한 번 만드는 파일이라 코드를 다시 생성해도 고친 내용이 남습니다. */\n`+linkerScript(project.mcu?.family)}])];
+  const extra=[...(has(n=>n==='main.h')?[]:[{file:'Core/Inc/main.h',text:note('main.h','Header for main.c file.\nThis file contains the common defines of the application.')+'\n'+mainHeader(project)}]),...(has(n=>/\.ld$/.test(n))?[]:[{file:linkerName(project.mcu?.family),text:note(linkerName(project.mcu?.family),'Linker script: FLASH and RAM sizes, the sections,\na heap of 1 KB and a stack of 4 KB.')+'\n'+linkerScript(project.mcu?.family)}])];
+  // What CubeIDE's Core folder also has (feature 56): the prototypes of the handlers and HAL_MspInit (USER CODE sections
+  // only — the same as the HAL's weak default until something is written there; the build compiles it once it is edited).
+  const handlerNames=it.map(l=>/^void (\w+)\(void\) \{/.exec(l)?.[1]).filter(Boolean);
+  if(!has(n=>n===`${p}_it.h`))extra.push({file:`Core/Inc/${p}_it.h`,text:rustCall('it_header',{prefix:p,handlers:handlerNames})});
+  if(!has(n=>n===`${p}_hal_msp.c`))extra.push({file:`Core/Src/${p}_hal_msp.c`,text:rustCall('hal_msp',{prefix:p})});
   return {text,files:[{file:`Core/Src/${p}_it.c`,text:viewIt.join('\n')+'\n'},{file:'Core/Src/syscalls.c',text:viewSyscalls.join('\n')},{file:'Core/Src/sysmem.c',text:viewSysmem.join('\n')+'\n'},...extra]};
 }

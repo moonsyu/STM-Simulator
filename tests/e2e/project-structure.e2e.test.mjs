@@ -10,25 +10,28 @@ test('the CubeIDE tree lists the whole project; startup code and the linker scri
  const s=await launch();
  try{
   const {win}=s;
-  await win.click('[data-activity="explorer"]');if(!await win.locator('#build-files > summary').isVisible())await win.click('[data-activity="explorer"]');
-  assert.equal(await win.textContent('#build-files-title'),'프로젝트 구조 (CubeIDE)');
-  await win.click('#build-files > summary');
+  await win.click('[data-activity="explorer"]');if(!await win.locator('#file-tree').isVisible())await win.click('[data-activity="explorer"]');
   const folders=()=>win.$$eval('#build-file-list [data-tree-folder]',d=>d.map(x=>x.dataset.treeFolder));
   for(const f of ['Core','Core/Inc','Core/Src','Core/Startup','Drivers','Drivers/STM32F1xx_HAL_Driver/Src','Drivers/CMSIS/Device/ST/STM32F1xx/Include'])assert.ok((await folders()).includes(f),f);
   // Core is open, Drivers folded; the project's main.c is in Core/Src next to what the build adds.
   assert.equal(await win.$eval('#build-file-list [data-tree-folder="Core/Src"]',d=>d.open),true);
   assert.equal(await win.$eval('#build-file-list [data-tree-folder="Drivers"]',d=>d.open),false);
   const inSrc=await win.$$eval('#build-file-list [data-tree-folder="Core/Src"] > .tree-children > button',b=>b.map(x=>x.textContent.replace(/^[A-Z]/,'')));
-  assert.deepEqual(inSrc.sort(),['gpio.c','main.c','stm32f1xx_it.c','syscalls.c','sysmem.c','system_stm32f1xx.c','usart.c'],'a new project generates gpio.c and usart.c (feature 51)');
+  assert.deepEqual(inSrc.sort(),['gpio.c','main.c','stm32f1xx_hal_msp.c','stm32f1xx_it.c','syscalls.c','sysmem.c','system_stm32f1xx.c','usart.c'],'as CubeIDE lists Core/Src (features 51 and 56)');
+  // Feature 56: Core/Inc has stm32f1xx_it.h, the Includes node is first and lists the include directories, no notes.
+  assert.ok((await win.$$eval('#build-file-list [data-tree-folder="Core/Inc"] > .tree-children > button',b=>b.map(x=>x.textContent.replace(/^[A-Z]/,'')))).includes('stm32f1xx_it.h'));
+  assert.deepEqual(await win.$$eval('#build-file-list > details',d=>d.map(x=>x.dataset.treeFolder)),['Includes','Core','Drivers']);
+  assert.deepEqual(await win.$$eval('#build-file-list [data-tree-include]',d=>d.map(x=>x.textContent)),['Core/Inc','Drivers/STM32F1xx_HAL_Driver/Inc','Drivers/STM32F1xx_HAL_Driver/Inc/Legacy','Drivers/CMSIS/Device/ST/STM32F1xx/Include','Drivers/CMSIS/Include']);
+  assert.equal(await win.locator('#build-file-list [title], #build-file-list .tree-edited-mark, #build-files').count(),0,'no tooltips, marks or second list');
+  assert.equal(await win.$eval('#build-file-list [data-build-file$="syscalls.c"]',b=>getComputedStyle(b).fontStyle),'normal');
   assert.equal(await win.$eval('#build-file-list [data-tree-source="main.c"]',b=>b.classList.contains('tree-own')),true);
   const top=await win.$$eval('#build-file-list > button',b=>b.map(x=>x.textContent.replace(/^[A-Z]/,'')));
   assert.ok(top.some(n=>/\.ioc$/.test(n))&&top.includes('STM32F103RBTX_FLASH.ld'),top.join(' '));
-  // The .ioc of the current Pinout: shown read only (it is changed through the Pinout).
+  // The .ioc opens the Pinout window, as CubeIDE opens it in the Device Configuration Tool (feature 56).
   await win.click('#build-file-list > button[data-build-file$=".ioc"]');
-  await win.waitForFunction(()=>/Mcu\.UserName=STM32F103RBTx/.test(document.querySelector('#group-code .monaco-editor .view-lines')?.textContent||''));
-  assert.match(await win.textContent('#source-path'),/읽기 전용/);
+  await win.waitForSelector('#pinout-dialog[open]');await win.keyboard.press('Escape');await win.waitForFunction(()=>!document.getElementById('pinout-dialog').open);
   // The linker script and the startup file become project files when they are edited (feature 45).
-  await win.click('#build-file-list > button[data-build-file$=".ld"]');{const note=await win.textContent('#source-path');assert.match(note,/한 번 만드는 파일 · 고친 내용 유지/);assert.doesNotMatch(note,/ARM GCC/);}await editShown(win,'STM32F103RBTX_FLASH.ld');
+  await win.click('#build-file-list > button[data-build-file$=".ld"]');{const note=await win.textContent('#source-path');assert.doesNotMatch(note,/한 번 만드는 파일|고치면|ARM GCC|읽기 전용/);}await editShown(win,'STM32F103RBTX_FLASH.ld');
   await win.click('#build-file-list [data-build-file$="startup_stm32f103xb.s"]');await editShown(win,'Core/Startup/startup_stm32f103xb.s');
   // In the tree they are the project's now, and the provided ones are gone.
   assert.equal(await win.locator('#build-file-list [data-build-file$=".ld"]').count(),0);assert.equal(await win.locator('#build-file-list [data-build-file$="startup_stm32f103xb.s"]').count(),0);
@@ -56,9 +59,7 @@ test('an FPB-RA6E1 project shows src, ra_gen, ra_cfg, script and ra; hal_entry.c
   await win.evaluate(()=>document.getElementById('new').click());if(await win.evaluate(()=>document.getElementById('replace-dialog').open))await win.click('#replace-confirm');
   await win.waitForSelector('#project-dialog[open]');await win.selectOption('#new-project-board','fpb-ra6e1');await win.selectOption('#new-project-template','ra_button_irq_rising');
   await win.click('#project-create');await win.waitForFunction(()=>!document.getElementById('project-dialog').open);
-  await win.click('[data-activity="explorer"]');if(!await win.locator('#build-files > summary').isVisible())await win.click('[data-activity="explorer"]');
-  assert.equal(await win.textContent('#build-files-title'),'프로젝트 구조 (e² studio)');
-  await win.click('#build-files > summary');
+  await win.click('[data-activity="explorer"]');if(!await win.locator('#file-tree').isVisible())await win.click('[data-activity="explorer"]');
   const folders=await win.$$eval('#build-file-list [data-tree-folder]',d=>d.map(x=>x.dataset.treeFolder));
   for(const f of ['src','ra_gen','ra_cfg','ra_cfg/fsp_cfg/bsp','script','ra','ra/fsp/src/bsp/mcu/all','ra/fsp/src/r_icu','ra/fsp/inc/api','ra/board/ra6e1_fpb'])assert.ok(folders.includes(f),f);
   // This project has an IRQ stack and no UART: r_icu is listed, r_sci_uart is not.
@@ -92,15 +93,14 @@ test('the project tree and Developer Assistance indent one step per level',{time
  const s=await launch();
  try{
   const {win}=s;
-  await win.click('[data-activity="explorer"]');if(!await win.locator('#build-files > summary').isVisible())await win.click('[data-activity="explorer"]');
-  await win.click('#build-files > summary');
+  await win.click('[data-activity="explorer"]');if(!await win.locator('#file-tree').isVisible())await win.click('[data-activity="explorer"]');
   const left=selector=>win.$eval(selector,e=>e.getBoundingClientRect().left);
   // Within a pixel: the window's scale rounds the border and the paddings.
   const near=(actual,expected,message)=>assert.ok(Math.abs(actual-expected)<=1,`${message}: ${actual} for ${expected}`);
-  const step=12,title=await left('#build-files > summary'),core=await left('#build-file-list [data-tree-folder="Core"] > summary');
+  const step=12,title=await left('#file-tree'),core=await left('#build-file-list [data-tree-folder="Core"] > summary');
   // The title's text starts 12 px in (its padding); the top-level folder one step further.
   // The title's arrow starts at its 12 px padding; the top-level rows start one step to the right of it.
-  near(core-title,12+step,'the top-level folder is one step in from the title');
+  near(core-title,step,'the top-level folder is one step in from the list');
   const src=await left('#build-file-list [data-tree-folder="Core/Src"] > summary');near(src-core,step,'Core → Core/Src');
   const file=await left('#build-file-list [data-tree-folder="Core/Src"] > .tree-children > button');near(file-src,step,'Core/Src → its files');
   // A file and a folder of one level start at the same place (the file leaves the arrow's width empty).
@@ -109,8 +109,6 @@ test('the project tree and Developer Assistance indent one step per level',{time
   for(const f of ['Drivers','Drivers/STM32F1xx_HAL_Driver'])await win.click(`#build-file-list [data-tree-folder="${f}"] > summary`);
   const drivers=await left('#build-file-list [data-tree-folder="Drivers"] > summary'),hal=await left('#build-file-list [data-tree-folder="Drivers/STM32F1xx_HAL_Driver"] > summary'),inc=await left('#build-file-list [data-tree-folder="Drivers/STM32F1xx_HAL_Driver/Src"] > summary');
   near(drivers-core,0,'Drivers beside Core');near(hal-drivers,step,'Drivers → HAL driver');near(inc-hal,step,'HAL driver → Src');
-  // The note beside the title sits on its own line and does not wrap.
-  assert.equal(await win.$eval('#build-files > summary small',e=>getComputedStyle(e).display+' '+getComputedStyle(e).whiteSpace),'block nowrap');
   // Developer Assistance (an FSP project): the same rules.
   await win.evaluate(()=>document.getElementById('new').click());if(await win.evaluate(()=>document.getElementById('replace-dialog').open))await win.click('#replace-confirm');
   await win.waitForSelector('#project-dialog[open]');await win.selectOption('#new-project-board','fpb-ra6e1');await win.selectOption('#new-project-template','ra-minimal');
@@ -130,34 +128,34 @@ test('the source file list shows folders as a tree; folding is kept; files open 
  const s=await launch();
  try{
   const {win}=s;
-  await win.click('[data-activity="explorer"]');if(!await win.locator('#build-files > summary').isVisible())await win.click('[data-activity="explorer"]');
-  await win.click('#build-files > summary');
+  await win.click('[data-activity="explorer"]');if(!await win.locator('#file-tree').isVisible())await win.click('[data-activity="explorer"]');
   // Two project files in folders (the startup file and a header) and one at the top (the linker script).
   for(const [file,name]of [['startup_stm32f103xb.s','Core/Startup/startup_stm32f103xb.s'],['main.h','Core/Inc/main.h']]){await win.click(`#build-file-list [data-build-file$="${file}"]`);await editShown(win,name);}
   await win.click('#build-file-list > button[data-build-file$=".ld"]');await editShown(win,'STM32F103RBTX_FLASH.ld');
-  assert.deepEqual(await win.$$eval('#file-tree [data-src-folder]',d=>d.map(x=>x.dataset.srcFolder).sort()),['Core','Core/Inc','Core/Startup']);
   // Files sit in their folders; main.c and the linker script are at the top.
-  assert.deepEqual(await win.$$eval('#file-tree [data-src-folder="Core/Startup"] > .tree-children > [data-source]',b=>b.map(x=>x.dataset.source)),['Core/Startup/startup_stm32f103xb.s']);
-  assert.deepEqual(await win.$$eval('#file-tree [data-src-folder="Core/Inc"] > .tree-children > [data-source]',b=>b.map(x=>x.dataset.source)),['Core/Inc/main.h']);
-  assert.deepEqual(await win.$$eval('#file-tree > [data-source]',b=>b.map(x=>x.dataset.source)),['main.c','STM32F103RBTX_FLASH.ld']);
+  assert.deepEqual(await win.$$eval('#file-tree [data-tree-folder="Core/Startup"] > .tree-children > [data-source]',b=>b.map(x=>x.dataset.source)),['Core/Startup/startup_stm32f103xb.s']);
+  assert.deepEqual(await win.$$eval('#file-tree [data-tree-folder="Core/Inc"] > .tree-children > [data-source]',b=>b.map(x=>x.dataset.source)),['Core/Inc/main.h']);
+  assert.deepEqual(await win.$$eval('#build-file-list > [data-source]',b=>b.map(x=>x.dataset.source)),['STM32F103RBTX_FLASH.ld']);
+  assert.deepEqual(await win.$$eval('#file-tree [data-tree-folder="Core/Src"] > .tree-children > [data-source]',b=>b.map(x=>x.dataset.source)),['main.c']);
   assert.deepEqual(await win.$$eval('#file-tree [data-source] .file-kind',k=>k.map(x=>x.textContent).sort()),['C','H','L','S']);
   // One step (12 px) per level, as in the project structure tree.
   const left=selector=>win.$eval(selector,e=>e.getBoundingClientRect().left),near=(a,b,m)=>assert.ok(Math.abs(a-b)<=1,`${m}: ${a} for ${b}`);
-  const core=await left('#file-tree [data-src-folder="Core"] > summary > *, #file-tree [data-src-folder="Core"] > summary').catch(()=>left('#file-tree [data-src-folder="Core"] > summary'));
+  const core=await left('#file-tree [data-tree-folder="Core"] > summary > *, #file-tree [data-tree-folder="Core"] > summary').catch(()=>left('#file-tree [data-tree-folder="Core"] > summary'));
   const arrow=selector=>win.$eval(selector,e=>e.getBoundingClientRect().left+parseFloat(getComputedStyle(e).paddingLeft));
-  const coreArrow=await arrow('#file-tree [data-src-folder="Core"] > summary'),incArrow=await arrow('#file-tree [data-src-folder="Core/Inc"] > summary');
+  const coreArrow=await arrow('#file-tree [data-tree-folder="Core"] > summary'),incArrow=await arrow('#file-tree [data-tree-folder="Core/Inc"] > summary');
   near(incArrow-coreArrow,12,'Core → Core/Inc');void core;
-  const header=await win.$eval('#file-tree [data-src-folder="Core/Inc"] [data-source] .file-kind',e=>e.getBoundingClientRect().left);
+  const header=await win.$eval('#file-tree [data-tree-folder="Core/Inc"] [data-source] .file-kind',e=>e.getBoundingClientRect().left);
   near(header-incArrow,12+14,'a file is one step in from its folder, after the arrow column');
   // Open a file from inside a folder; fold Core; the fold stays when the list is drawn again.
   await win.click('#file-tree [data-source="Core/Inc/main.h"]');
   await win.waitForFunction(()=>document.querySelector('#file-tree [data-source="Core/Inc/main.h"]')?.classList.contains('active'));
-  await win.click('#file-tree [data-src-folder="Core"] > summary');
-  assert.equal(await win.$eval('#file-tree [data-src-folder="Core"]',d=>d.open),false);
-  await win.click('#file-tree [data-source="main.c"]');
-  await win.waitForFunction(()=>document.querySelector('#file-tree [data-source="main.c"]')?.classList.contains('active'));
-  assert.equal(await win.$eval('#file-tree [data-src-folder="Core"]',d=>d.open),false,'still folded after the list was drawn again');
-  assert.equal(await win.$eval('#file-tree [data-src-folder="Core/Inc"]',d=>d.open),true,'a folder inside keeps its own state');
+  await win.click('#file-tree [data-tree-folder="Core"] > summary');
+  assert.equal(await win.$eval('#file-tree [data-tree-folder="Core"]',d=>d.open),false);
+  // (main.c is inside Core now; the linker script is beside the folders)
+  await win.click('#file-tree [data-source="STM32F103RBTX_FLASH.ld"]');
+  await win.waitForFunction(()=>document.querySelector('#file-tree [data-source="STM32F103RBTX_FLASH.ld"]')?.classList.contains('active'));
+  assert.equal(await win.$eval('#file-tree [data-tree-folder="Core"]',d=>d.open),false,'still folded after the list was drawn again');
+  assert.equal(await win.$eval('#file-tree [data-tree-folder="Core/Inc"]',d=>d.open),true,'a folder inside keeps its own state');
   assert.deepEqual(s.errors,[]);
  }finally{await s.close();}
 });

@@ -63,10 +63,9 @@ test('RA configuration follows RASC: five tabs, IRQ1-DS pin name, External IRQ a
   const summary=await win.textContent('#ra-summary');assert.match(summary,/R7FA6E10F2CFP/);assert.match(summary,/g_ioport \(r_ioport\), g_external_irq6 \(r_icu\)/);
   await win.click('#ra-pinout-apply');await win.waitForFunction(()=>!document.getElementById('ra-pinout-dialog').open);
   // The generated bsp_cfg.h has the stack size.
-  await win.click('[data-activity="explorer"]');if(!await win.locator('#build-files > summary').isVisible())await win.click('[data-activity="explorer"]');
+  await win.click('[data-activity="explorer"]');if(!await win.locator('#file-tree').isVisible())await win.click('[data-activity="explorer"]');
   // Developer Assistance follows the applied stacks: channel 6 now, channel 1 gone.
   assert.deepEqual(await win.$$eval('#ra-assist-list [data-assist]',d=>d.map(x=>x.dataset.assist)),['g_ioport','BSP','g_external_irq6']);
-  await win.click('#build-files > summary');
   for(const f of ['ra_cfg','ra_cfg/fsp_cfg','ra_cfg/fsp_cfg/bsp'])await win.click(`#build-file-list [data-tree-folder="${f}"] > summary`);
   await win.click('#build-file-list [data-build-file="ra_cfg/fsp_cfg/bsp/bsp_cfg.h"]');
   await win.waitForFunction(()=>/BSP_CFG_STACK_MAIN_BYTES.\(0x800\)/.test(document.querySelector('#group-code .monaco-editor .view-lines')?.textContent||''),null,{timeout:15000});

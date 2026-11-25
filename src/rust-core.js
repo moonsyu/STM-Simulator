@@ -26,3 +26,6 @@ export const familyGpioPins=family=>Object.freeze(rustCall('family_gpio_pins',{f
 /** Pinout settings a new STM32 project starts with (rust/stm-core/src/family.rs new_project_mcu): no pins, the
  *  family's default clock and "주변장치별 .c/.h로 생성" on (feature 51). A new object each call. */
 export const newProjectMcu=family=>rustCall('new_project_mcu',{family});
+/** The header CubeMX writes on top of a file it generates (rust/stm-core/src/explorer.rs; feature 56). */
+const headers=new Map();
+export function cubeHeader(file,brief){const key=file+'\n'+brief;if(!headers.has(key))headers.set(key,rustCall('cube_header',{file,brief}));return headers.get(key);}

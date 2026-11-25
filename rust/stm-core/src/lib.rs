@@ -6,6 +6,7 @@ pub mod build_level;
 pub mod couple;
 pub mod csource;
 pub mod docs_regions;
+pub mod explorer;
 pub mod family;
 pub mod regen;
 
@@ -164,6 +165,23 @@ pub fn dispatch(name: &str, args: &Value) -> Result<Value, String> {
             args.get("stored").unwrap_or(&Value::Null),
             text(args, "configuration"),
         ))),
+        // {"paths": [place of each file], "includes": [include directory]} → {"name", "path", "folders", "rows", "includes"}
+        "explorer_tree" => Ok(explorer::to_json(&explorer::tree(
+            &texts(args, "paths"),
+            &texts(args, "includes"),
+        ))),
+        // {"file", "brief"} → the header CubeMX writes on top of a generated file
+        "cube_header" => Ok(json!(explorer::cube_header(
+            text(args, "file"),
+            text(args, "brief")
+        ))),
+        // {"prefix": "stm32f1xx", "handlers": [name]} → stm32f1xx_it.h
+        "it_header" => Ok(json!(explorer::it_header(
+            text(args, "prefix"),
+            &texts(args, "handlers")
+        ))),
+        // {"prefix"} → stm32f1xx_hal_msp.c
+        "hal_msp" => Ok(json!(explorer::hal_msp(text(args, "prefix")))),
         // → ["STM32F446RE", "STM32F103RB"]
         "families" => Ok(json!(family::FAMILIES)),
         // {"previous", "generated", "previousDefault", "others": [text], "generator": [text]} → {"code", "moved"}

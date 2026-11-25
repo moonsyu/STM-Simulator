@@ -42,10 +42,9 @@ test('RA I2C slave stack: New Stack → Connectivity adds g_i2c_slave0 on SCL/SD
   assert.match(await win.textContent('#ra-summary'),/g_i2c_slave0 \(r_iic_slave\)/);
   await win.click('#ra-pinout-apply');await win.waitForFunction(()=>!document.getElementById('ra-pinout-dialog').open);
   // Developer Assistance and the FSP tree follow the stack.
-  await win.click('[data-activity="explorer"]');if(!await win.locator('#build-files > summary').isVisible())await win.click('[data-activity="explorer"]');
+  await win.click('[data-activity="explorer"]');if(!await win.locator('#file-tree').isVisible())await win.click('[data-activity="explorer"]');
   assert.deepEqual(await win.$$eval('#ra-assist-list [data-assist]',d=>d.map(x=>x.dataset.assist)),['g_ioport','BSP','g_external_irq1','g_i2c_slave0']);
   assert.ok(await win.$$eval('#ra-assist-list [data-assist="g_i2c_slave0"] [data-assist-item]',b=>b.some(x=>/R_IIC_SLAVE_Read\(&g_i2c_slave0_ctrl/.test(x.title))));
-  await win.click('#build-files > summary');
   assert.ok(await win.$$eval('#build-file-list [data-build-file]',b=>['ra/fsp/src/r_iic_slave/r_iic_slave.c','ra/fsp/inc/api/r_i2c_slave_api.h','ra_cfg/fsp_cfg/r_iic_slave_cfg.h'].every(f=>b.some(x=>x.dataset.buildFile===f))));
   assert.ok(!await win.$$eval('#build-file-list [data-build-file]',b=>b.some(x=>x.dataset.buildFile==='ra/fsp/src/r_iic_master/r_iic_master.c')),'IIC0 is not a master');
   for(const f of ['ra_cfg','ra_cfg/fsp_cfg'])await win.click(`#build-file-list [data-tree-folder="${f}"] > summary`);

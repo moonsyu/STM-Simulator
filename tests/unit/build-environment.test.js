@@ -13,7 +13,14 @@ test('the build text has the handlers, system calls and heap; the views split it
   const env=buildEnvironment(project(family));
   assert.equal(prefixOf(family),p);assert.match(startupOf(family),/^startup_stm32f(103xb|446xx)\.s$/);
   for(const part of ['void SysTick_Handler(void) { HAL_IncTick(); }','void USART2_IRQHandler(void)','HAL_UART_IRQHandler(&huart2);','void *_sbrk(ptrdiff_t increment)','int _write(int file, char *ptr, int len)','int _read(int file, char *ptr, int len)'])assert.ok(env.text.includes(part),family+' '+part);
-  assert.deepEqual(env.files.map(f=>f.file),[`Core/Src/${p}_it.c`,'Core/Src/syscalls.c','Core/Src/sysmem.c','Core/Inc/main.h',p==='stm32f1xx'?'STM32F103RBTX_FLASH.ld':'STM32F446RETX_FLASH.ld']);
+  assert.deepEqual(env.files.map(f=>f.file),[`Core/Src/${p}_it.c`,'Core/Src/syscalls.c','Core/Src/sysmem.c','Core/Inc/main.h',p==='stm32f1xx'?'STM32F103RBTX_FLASH.ld':'STM32F446RETX_FLASH.ld',`Core/Inc/${p}_it.h`,`Core/Src/${p}_hal_msp.c`]);
+  // Feature 56: each view starts with CubeMX's header, and the two files CubeIDE's Core folder also has are there.
+  for(const f of env.files)assert.match(f.text,new RegExp('^/\\* USER CODE BEGIN Header \\*/\\n/\\*\\*\\n[ *]+\\n  \\* @file    '+f.file.split('/').at(-1).replace(/[.]/g,'\\.')+'\\n'),f.file);
+  assert.doesNotMatch(env.files.map(f=>f.text).join('\n'),/STM Simulator/);
+  const itHeader=env.files.find(f=>f.file===`Core/Inc/${p}_it.h`).text,itSource=env.files.find(f=>f.file===`Core/Src/${p}_it.c`).text;
+  for(const m of itSource.matchAll(/^void (\w+)\(void\)$/gm))assert.ok(itHeader.includes(`void ${m[1]}(void);`),m[1]);
+  assert.match(itHeader,/void SysTick_Handler\(void\);/);
+  assert.match(env.files.find(f=>f.file===`Core/Src/${p}_hal_msp.c`).text,/void HAL_MspInit\(void\)\n\{\n  \/\* USER CODE BEGIN MspInit 0 \*\//);
   const [it,sys,mem]=env.files.map(f=>f.text);
   assert.match(it,/SysTick_Handler[\s\S]*USART2_IRQHandler/);assert.match(it,/Default_Handler/);assert.doesNotMatch(it,/_sbrk/);
   assert.match(sys,/_write[\s\S]*_kill/);assert.doesNotMatch(sys,/SysTick/);assert.match(mem,/_sbrk/);

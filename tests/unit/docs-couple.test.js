@@ -131,8 +131,10 @@ describe('Docs apply with per-peripheral files',()=>{
         if(JSON.stringify(applyDeviceExample(roundTrip(project),target).project)!==JSON.stringify(project))throw new Error('second apply changed the project');
         const a=run(project,400),b=run(one,400);
         if(a.fault)throw new Error('circuit fault');
-        if(JSON.stringify(a.out)!==JSON.stringify(b.out))throw new Error('output differs: '+JSON.stringify(a.out.slice(0,3))+' / '+JSON.stringify(b.out.slice(0,3)));
-        if(JSON.stringify(a.parts)!==JSON.stringify(b.parts))throw new Error('part states differ');
+        // (a clock example prints the PC's time: the two runs may fall in different seconds)
+        const timeless=out=>JSON.stringify(out).replace(/\d\d:\d\d:\d\d/g,'hh:mm:ss');
+        if(timeless(a.out)!==timeless(b.out))throw new Error('output differs: '+JSON.stringify(a.out.slice(0,3))+' / '+JSON.stringify(b.out.slice(0,3)));
+        if(!/ds3231/.test(type)&&JSON.stringify(a.parts)!==JSON.stringify(b.parts))throw new Error('part states differ');
       }catch(e){failures.push(`${type}: ${e.message.slice(0,200)}`);}
     }
     assert.deepEqual(failures,[],failures.join('\n'));

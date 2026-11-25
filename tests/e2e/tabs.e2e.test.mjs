@@ -14,8 +14,7 @@ test('tabs close one by one, all but one, to the right and all at once; the expl
   const empty=()=>win.evaluate(()=>({flag:document.getElementById('code-panel').classList.contains('no-tabs'),shown:getComputedStyle(document.getElementById('editor-empty')).display!=='none'}));
   const menuItem=async(tab,action)=>{await win.click(`#source-tabs [data-tab-id="${tab}"]`,{button:'right'});await win.waitForSelector('#tab-menu:not([hidden])');await win.click(`#tab-menu [data-tab-action="${action}"]`);};
   // Three project files: main.c and, edited (so stored in the project), the linker script and the startup file.
-  await win.click('[data-activity="explorer"]');if(!await win.locator('#build-files > summary').isVisible())await win.click('[data-activity="explorer"]');
-  await win.click('#build-files > summary');
+  await win.click('[data-activity="explorer"]');if(!await win.locator('#file-tree').isVisible())await win.click('[data-activity="explorer"]');
   await win.click('#build-file-list > button[data-build-file$=".ld"]');await editShown(win,'STM32F103RBTX_FLASH.ld');
   await win.click('#build-file-list [data-build-file$="startup_stm32f103xb.s"]');await editShown(win,'Core/Startup/startup_stm32f103xb.s');
   const LD='STM32F103RBTX_FLASH.ld',ST='Core/Startup/startup_stm32f103xb.s';
@@ -51,7 +50,7 @@ test('tabs close one by one, all but one, to the right and all at once; the expl
   await win.click(`#file-tree [data-source="${LD}"]`);
   assert.deepEqual(await tabs(),[LD]);assert.deepEqual(await empty(),{flag:false,shown:false});
   // A read-only generated file has a tab too, and "모두 닫기" (Ctrl+K W) closes it with the others.
-  await win.click('#build-file-list > button[data-build-file$=".ioc"]');
+  await win.click('#build-file-list [data-build-file$="syscalls.c"]');
   await win.waitForFunction(()=>document.querySelectorAll('#source-tabs [data-tab-id^="sdk:"]').length===1);
   assert.equal((await tabs()).length,2);
   await win.locator('#circuit').click({position:{x:30,y:30}});

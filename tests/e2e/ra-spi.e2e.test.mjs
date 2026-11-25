@@ -59,10 +59,9 @@ test('RA SPI stacks: New Stack → Connectivity adds g_spi1 on D10-D13 and g_sci
   // The serial monitor reaches SCI UARTs only: SCI9 as simple SPI is not a target, so the empty-state hint shows.
   assert.deepEqual(await win.$$eval('#serial-target option',o=>o.map(x=>[x.value,x.textContent])),[['','Pins에서 SCI UART 핀을 정하세요']]);
   // Developer Assistance and the FSP tree follow the stacks.
-  await win.click('[data-activity="explorer"]');if(!await win.locator('#build-files > summary').isVisible())await win.click('[data-activity="explorer"]');
+  await win.click('[data-activity="explorer"]');if(!await win.locator('#file-tree').isVisible())await win.click('[data-activity="explorer"]');
   assert.deepEqual(await win.$$eval('#ra-assist-list [data-assist]',d=>d.map(x=>x.dataset.assist)),['g_ioport','BSP','g_external_irq1','g_spi1','g_sci_spi9']);
   assert.ok(await win.$$eval('#ra-assist-list [data-assist="g_spi1"] [data-assist-item]',b=>b.some(x=>/R_SPI_WriteRead\(&g_spi1_ctrl/.test(x.title))));
-  await win.click('#build-files > summary');
   for(const f of ['ra_cfg','ra_cfg/fsp_cfg'])await win.click(`#build-file-list [data-tree-folder="${f}"] > summary`);
   await win.click('#build-file-list [data-build-file="ra_cfg/fsp_cfg/r_spi_cfg.h"]');
   await win.waitForFunction(()=>/SPI_TRANSMIT_FROM_RXI_ISR.\(0\)/.test(document.querySelector('#group-code .monaco-editor .view-lines')?.textContent||''),null,{timeout:15000});

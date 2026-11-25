@@ -34,7 +34,7 @@ test('F12 and Ctrl+click on HAL calls open the SDK source; Outline, Alt+← and 
   assert.match(await win.textContent('#outline-file'),/_hal_uart\.c/);
   await win.waitForFunction(()=>/void\s*HAL_UART_IRQHandler\s*\(UART_HandleTypeDef/.test(document.querySelector('#group-code .monaco-editor .view-lines').textContent.replace(/ /g,' ')),null,{timeout:10000});
   const before=await code();
-  {const note=await win.textContent('#source-path');assert.match(note,/고치면 이 파일만 프로젝트에 저장 · 한 번 만드는 파일 · 고친 내용 유지/);assert.doesNotMatch(note,/ARM GCC/);}
+  {const note=await win.textContent('#source-path');assert.doesNotMatch(note,/고치면|한 번 만드는 파일|읽기 전용/);assert.doesNotMatch(note,/ARM GCC/);}
   assert.deepEqual(await win.$$eval('#file-tree [data-source]',b=>b.map(x=>x.dataset.source)),tree,'opening a file does not add it to the project');
   // Alt+← goes back to main.c at the call.
   await win.keyboard.press('Alt+ArrowLeft');
@@ -51,9 +51,7 @@ test('F12 and Ctrl+click on HAL calls open the SDK source; Outline, Alt+← and 
   await win.click('#source-tabs [data-source="main.c"]');assert.equal(await win.evaluate(()=>document.getElementById('source-path').hidden),true);
   await win.click('[data-sdk-close$="_hal_uart.c"]');assert.equal(await win.locator('[data-sdk-file$="_hal_uart.c"]').count(),0);
   // Core · Startup (closed by default): what the ARM build adds, read only, in CubeIDE's file names.
-  assert.equal(await win.evaluate(()=>document.getElementById('build-files').open),false);
-  await win.click('[data-activity="explorer"]');if(!await win.locator('#build-files > summary').isVisible())await win.click('[data-activity="explorer"]');
-  await win.click('#build-files > summary');
+  await win.click('[data-activity="explorer"]');if(!await win.locator('#file-tree').isVisible())await win.click('[data-activity="explorer"]');
   const rows=await win.$$eval('#build-file-list [data-build-file]',b=>b.map(x=>x.textContent));
   for(const name of [/_it\.c/,/syscalls\.c/,/sysmem\.c/,/system_stm32f[14]xx\.c/,/startup_stm32f(103xb|446xx)\.s/])assert.ok(rows.some(r=>name.test(r)),String(name));
   await win.click('#build-file-list [data-build-file$="_it.c"]');await win.waitForSelector('[data-sdk-file$="_it.c"]');

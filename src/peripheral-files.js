@@ -7,13 +7,15 @@
 // when a project source includes one of their headers — the Pinout option on, or a main.c pasted from a CubeIDE project
 // that was generated this way.
 import {generateMain} from './hal-generator.js';
+import {cubeHeader} from './rust-core.js';
 
 const HANDLE=/^(\w+)_HandleTypeDef (\w+);$/,PROTOTYPE=/^static void (MX_\w+_Init)\(void\);$/;
 // File names as CubeMX writes them: one pair per kind of peripheral (usart.c holds every USART and UART).
 const groupOfInit=name=>{const id=/^MX_([A-Z0-9]+?)\d*_/.exec(name)?.[1]??'';return /^US?ART$/.test(id)?'usart':id==='SDIO'?'sdio':id.toLowerCase();};
 const groupOfHandle=type=>/^US?ART$/.test(type)?'usart':type==='SD'?'sdio':type.toLowerCase();
 const ORDER=['adc','dac','dcmi','dma','i2c','iwdg','rtc','sdio','spi','tim','usart','wwdg','gpio'];
-const note=(file,folder)=>`/* ${file} — STM Simulator가 Pinout 설정으로 만드는 코드. CubeIDE 프로젝트의 Core/${folder}/${file}에 해당합니다 (CubeMX의 "주변장치별 .c/.h 파일로 생성").\n * 바로 고칠 수 있고 고친 파일만 프로젝트에 저장됩니다. 코드를 다시 생성하면 USER CODE 구역 안만 남고 나머지는 Pinout 설정대로 새로 써집니다. */`;
+// The header CubeMX writes on top of each pair (feature 56).
+const note=file=>{const name=file.slice(0,-2);return cubeHeader(file,file.endsWith('.h')?`This file contains all the function prototypes for\nthe ${name}.c file`:name==='gpio'?'This file provides code for the configuration\nof all used GPIO pins.':`This file provides code for the configuration\nof the ${name.toUpperCase()} instances.`);};
 
 /** One-file main.c text → {main: the main.c that includes the pairs, files: [{name:'i2c.h',text}, {name:'i2c.c',text}, …]}. */
 export function splitMain(text){
@@ -38,9 +40,9 @@ export function splitMain(text){
   kept.splice(at+1,0,...names.map(n=>`#include "${n}.h"`));
   const files=names.flatMap(name=>{
     const g=groups.get(name),guard=`__${name.toUpperCase()}_H__`;
-    const header=[note(name+'.h','Inc'),`#ifndef ${guard}`,`#define ${guard}`,'','#include "main.h"','','/* USER CODE BEGIN Includes */','/* USER CODE END Includes */','',...g.handles.map(([type,h])=>`extern ${type}_HandleTypeDef ${h};`),...(g.handles.length?['']:[]),'/* USER CODE BEGIN Private defines */','/* USER CODE END Private defines */','',...g.functions.map(f=>`void ${f.name}(void);`),'','/* USER CODE BEGIN Prototypes */','/* USER CODE END Prototypes */','',`#endif /* ${guard} */`,''];
+    const header=[note(name+'.h'),`#ifndef ${guard}`,`#define ${guard}`,'','#include "main.h"','','/* USER CODE BEGIN Includes */','/* USER CODE END Includes */','',...g.handles.map(([type,h])=>`extern ${type}_HandleTypeDef ${h};`),...(g.handles.length?['']:[]),'/* USER CODE BEGIN Private defines */','/* USER CODE END Private defines */','',...g.functions.map(f=>`void ${f.name}(void);`),'','/* USER CODE BEGIN Prototypes */','/* USER CODE END Prototypes */','',`#endif /* ${guard} */`,''];
     // A peripheral with a DMA request links its handle (kept in dma.c) inside its init function.
-    const source=[note(name+'.c','Src'),`#include "${name}.h"`,...(dma&&name!=='dma'?['#include "dma.h"']:[]),'','/* USER CODE BEGIN 0 */','/* USER CODE END 0 */','',...g.handles.map(([type,h])=>`${type}_HandleTypeDef ${h};`),...g.functions.flatMap(f=>{const tag=f.name.replace(/^MX_|_Init$/g,'');return ['',`void ${f.name}(void) {`,`  /* USER CODE BEGIN ${tag}_Init 0 */`,'',`  /* USER CODE END ${tag}_Init 0 */`,...f.body,`  /* USER CODE BEGIN ${tag}_Init 2 */`,'',`  /* USER CODE END ${tag}_Init 2 */`,'}'];}),'','/* USER CODE BEGIN 1 */','/* USER CODE END 1 */',''];
+    const source=[note(name+'.c'),`#include "${name}.h"`,...(dma&&name!=='dma'?['#include "dma.h"']:[]),'','/* USER CODE BEGIN 0 */','/* USER CODE END 0 */','',...g.handles.map(([type,h])=>`${type}_HandleTypeDef ${h};`),...g.functions.flatMap(f=>{const tag=f.name.replace(/^MX_|_Init$/g,'');return ['',`void ${f.name}(void) {`,`  /* USER CODE BEGIN ${tag}_Init 0 */`,'',`  /* USER CODE END ${tag}_Init 0 */`,...f.body,`  /* USER CODE BEGIN ${tag}_Init 2 */`,'',`  /* USER CODE END ${tag}_Init 2 */`,'}'];}),'','/* USER CODE BEGIN 1 */','/* USER CODE END 1 */',''];
     return [{name:name+'.h',text:header.join('\n')},{name:name+'.c',text:source.join('\n')}];
   });
   return {main:kept.join('\n'),files};

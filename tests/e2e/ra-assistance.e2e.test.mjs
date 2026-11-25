@@ -8,7 +8,7 @@ test('Developer Assistance lists the stacks of an FSP project and a click insert
  const s=await launch();
  try{
   const {win}=s;
-  await win.click('[data-activity="explorer"]');if(!await win.locator('#build-files > summary').isVisible())await win.click('[data-activity="explorer"]');
+  await win.click('[data-activity="explorer"]');if(!await win.locator('#file-tree').isVisible())await win.click('[data-activity="explorer"]');
   // The STM32 start project: no Developer Assistance.
   assert.equal(await win.$eval('#ra-assist',d=>d.hidden),true);
   await win.evaluate(()=>document.getElementById('new').click());if(await win.evaluate(()=>document.getElementById('replace-dialog').open))await win.click('#replace-confirm');
@@ -30,7 +30,7 @@ test('Developer Assistance lists the stacks of an FSP project and a click insert
   await win.click('#ra-assist-list [data-assist="g_external_irq1"] > summary');
   assert.match(await win.$eval('#ra-assist-list [data-assist="g_external_irq1"] [data-assist-item]:last-child',b=>b.title),/^void irq_callback\(external_irq_callback_args_t \*p_args\)/);
   // With a read-only file open nothing is inserted.
-  await win.click('#build-files > summary');await win.click('#build-file-list [data-build-file="ra_gen/main.c"]');
+  await win.click('#build-file-list [data-build-file="ra_gen/main.c"]');
   await win.waitForFunction(()=>/hal_entry\(\)/.test(document.querySelector('#group-code .monaco-editor .view-lines')?.textContent||''));
   const mid=await win.$eval('#code',c=>c.value);
   await win.click('#ra-assist-list [data-assist="BSP"] > summary');await win.click('#ra-assist-list [data-assist="BSP"] [data-assist-item]');

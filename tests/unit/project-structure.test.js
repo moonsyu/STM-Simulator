@@ -26,11 +26,11 @@ test('a project can hold .s and .ld files; they are validated like the other sou
 
 test('what the build writes is offered as views — main.h with the Pinout labels, the linker script — until the project has its own',()=>{
  const p=hal(),names=q=>buildEnvironment(q).files.map(f=>f.file);
- assert.deepEqual(names(p),['Core/Src/stm32f4xx_it.c','Core/Src/syscalls.c','Core/Src/sysmem.c','Core/Inc/main.h','STM32F446RETX_FLASH.ld']);
+ assert.deepEqual(names(p),['Core/Src/stm32f4xx_it.c','Core/Src/syscalls.c','Core/Src/sysmem.c','Core/Inc/main.h','STM32F446RETX_FLASH.ld','Core/Inc/stm32f4xx_it.h','Core/Src/stm32f4xx_hal_msp.c']);
  assert.match(mainHeader(p),/#include "stm32f4xx_hal\.h"[\s\S]*#define LD2_Pin GPIO_PIN_5\n#define LD2_GPIO_Port GPIOA/);
  assert.match(linkerScript('STM32F103RB'),/LENGTH = 128K[\s\S]*LENGTH = 20K/);assert.equal(linkerName('STM32F103RB'),'STM32F103RBTX_FLASH.ld');
  p.firmware.files=[{name:'Core/Inc/main.h',text:mainHeader(p)},{name:'my.ld',text:linkerScript(p.mcu.family)}];
- assert.deepEqual(names(p),['Core/Src/stm32f4xx_it.c','Core/Src/syscalls.c','Core/Src/sysmem.c']);
+ assert.deepEqual(names(p),['Core/Src/stm32f4xx_it.c','Core/Src/syscalls.c','Core/Src/sysmem.c','Core/Inc/stm32f4xx_it.h','Core/Src/stm32f4xx_hal_msp.c']);
  assert.ok(HAL_MODULES.STM32F446RE.includes('hal_gpio')&&HAL_MODULES.STM32F103RB.includes('hal_gpio_ex'));
 });
 
