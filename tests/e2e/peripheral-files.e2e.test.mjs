@@ -52,3 +52,34 @@ test('the Pinout option writes main.c with the peripheral headers; the pairs are
   assert.deepEqual(s.errors,[]);
  }finally{await s.close();}
 });
+
+// Feature 52: main.c generated as one file; the option is switched on and applied with "설정 적용" (no generation), and
+// the code is generated later. MX_GPIO_Init, MX_USART2_UART_Init and huart2 leave main.c for gpio.c / usart.c instead of
+// being kept in USER CODE sections; what the user wrote stays; the program runs.
+test('one file first, the option applied with "설정 적용" and generated later: the generator\'s functions leave main.c',{timeout:150000},async()=>{
+ const s=await launch();
+ try{
+  const {win}=s;
+  await generate(win,false);
+  const before=await code(win);
+  assert.match(before,/^static void MX_GPIO_Init\(void\)\s*\{/m);assert.match(before,/^UART_HandleTypeDef huart2;/m);
+  // The user's line in a section.
+  await win.evaluate(()=>{const e=document.getElementById('code');e.value=e.value.replace('/* USER CODE BEGIN 2 */\n','/* USER CODE BEGIN 2 */\n  printf("mine\\n");\n');e.dispatchEvent(new Event('input',{bubbles:true}));});
+  await win.waitForFunction(()=>/printf\("mine/.test(document.getElementById('code').value));
+  // Tick the box and apply the settings only.
+  await win.evaluate(()=>document.getElementById('pinout-open').click());await win.waitForSelector('#pinout-dialog[open]');
+  await win.setChecked('#pinout-couple',true);await win.click('#pinout-apply');
+  await win.waitForFunction(()=>!document.getElementById('pinout-dialog').open);
+  assert.match(await code(win),/^static void MX_GPIO_Init\(void\)\s*\{/m,'applying does not write the code');
+  // Generate later: the box is still on.
+  await generate(win,true);
+  const after=await code(win);
+  assert.match(after,/#include "gpio\.h"/);assert.match(after,/#include "usart\.h"/);
+  assert.doesNotMatch(after,/^(?:static )?void MX_\w+_Init\(void\)\s*\{/m,'no MX_*_Init is defined in main.c');
+  assert.doesNotMatch(after,/^UART_HandleTypeDef huart2;/m);assert.doesNotMatch(after,/^static void MX_\w+_Init\(void\);/m);
+  assert.match(after,/printf\("mine\\n"\);/,'the user line stays');
+  assert.doesNotMatch(await win.evaluate(()=>document.getElementById('console-output').textContent),/구역 안으로 옮겨 유지했습니다/,'nothing was taken for user code');
+  await win.waitForSelector('#build-file-list [data-build-file="Core/Src/gpio.c"]',{state:'attached'});
+  assert.deepEqual(s.errors,[]);
+ }finally{await s.close();}
+});
