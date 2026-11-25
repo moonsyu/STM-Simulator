@@ -29,3 +29,6 @@ export const newProjectMcu=family=>rustCall('new_project_mcu',{family});
 /** The header CubeMX writes on top of a file it generates (rust/stm-core/src/explorer.rs; feature 56). */
 const headers=new Map();
 export function cubeHeader(file,brief){const key=file+'\n'+brief;if(!headers.has(key))headers.set(key,rustCall('cube_header',{file,brief}));return headers.get(key);}
+/** Measuring the duty of a pin a program switches fast (rust/stm-core/src/duty.rs; feature 57). Called for every pin
+ *  write of a running program, so these are the module's numeric exports, not JSON requests. */
+export const duty=Object.freeze({slot:us=>wasm.stm_duty_slot(us),level:(slot,us,high)=>wasm.stm_duty_level(slot,us,high),frame:(slot,us)=>wasm.stm_duty_frame(slot,us),frequency:slot=>wasm.stm_duty_frequency(slot),reset:(slot,us)=>wasm.stm_duty_reset(slot,us)});

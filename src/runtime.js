@@ -376,7 +376,7 @@ export class Runtime {
   inputLevel(pin){return this.gpio[pin]?.mode==='ANALOG'?0:Number(!!this.api.read?.(pin));}
   interval(value,min=1){checkedNumber(value);if(value<min||value>3600000)throw new Error(`시간 범위: ${min}~3600000 ms`);return value;}
   // `pwm` ({duty, frequency}) marks an averaged PWM output: `value` is its average voltage (see solveCircuit).
-  output(pin,value,pwm=null){if(this.gpio[pin]?.mode!=='OUTPUT')throw new Error(`${pin}: pinMode(${pin}, OUTPUT)을 먼저 설정하세요.`);this.api.beforeChange?.(this.microTime);this.gpio[pin].value=value;if(pwm)this.gpio[pin].pwm=pwm;else delete this.gpio[pin].pwm;this.api.changed?.(this.microTime);this.pollInterrupts();}
+  output(pin,value,pwm=null){if(this.gpio[pin]?.mode!=='OUTPUT')throw new Error(`${pin}: pinMode(${pin}, OUTPUT)을 먼저 설정하세요.`);this.api.beforeChange?.(this.microTime);this.gpio[pin].value=value;if(pwm)this.gpio[pin].pwm=pwm;else delete this.gpio[pin].pwm;this.api.level?.(pin,this.microTime,pwm?null:value);this.api.changed?.(this.microTime);this.pollInterrupts();}
   event(at,fn){if(this.events.length>=4096)throw new Error('예약 이벤트 한도를 넘었습니다.');this.events.push({at,fn,order:this.nextOrder++});}
   timer(period,callback,once=false){
     if(this.timers.size>=32)throw new Error('타이머는 32개까지 사용할 수 있습니다.');this.interval(period);this.callback(callback);

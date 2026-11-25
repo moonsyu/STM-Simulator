@@ -57,7 +57,8 @@ export const TOOLCHAIN_SHARDS=Object.freeze([
  // + the two-engine review tests of ra-wdt-rtc ("on both engines") + parity of the flash counter (feature 39)
  // + parity of the ELC + DTC example (feature 36, about 8 s locally)
  // + ra-can but its review tests (feature 40: five FSP builds on both engines, about 15 s locally) and the parity of the CAN example
- ['emu-accuracy','dwarf-version','board-links','copied-files','adc-group','peripheral-files','project-overrides',['ra-can','^(loopback example|return codes|acceptance filter|extended ID mode|message lost)'],['fsp-interp-parity','parity: ra_spi_memory|parity: ra_flash_counter|parity: ra_elc_adc_dtc|parity: ra_can_loopback'],['ra-wdt-rtc','on both engines']],
+ // + pin-duty (feature 57: an STM32 build and two FSP builds on the emulator, about 9 s locally)
+ ['emu-accuracy','dwarf-version','pin-duty','board-links','copied-files','adc-group','peripheral-files','project-overrides',['ra-can','^(loopback example|return codes|acceptance filter|extended ID mode|message lost)'],['fsp-interp-parity','parity: ra_spi_memory|parity: ra_flash_counter|parity: ra_elc_adc_dtc|parity: ra_can_loopback'],['ra-wdt-rtc','on both engines']],
  // 17 + 16 + 14 + 13 + 11 + 9 + 9 + 9 + 9 = 107
  // + the RTC tests of ra-wdt-rtc (feature 34: about 22 s locally)
  ['tim-oc','adc-sampling','tim-advanced','dac','rtc','source-folders','spi-params','tim-channels','uart-params',['ra-wdt-rtc','RTC \\(ra_rtc_clock\\)|RTC start time'],

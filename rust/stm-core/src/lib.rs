@@ -6,6 +6,7 @@ pub mod build_level;
 pub mod couple;
 pub mod csource;
 pub mod docs_regions;
+pub mod duty;
 pub mod explorer;
 pub mod family;
 pub mod regen;

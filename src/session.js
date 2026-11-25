@@ -1,4 +1,5 @@
 import {CatalogSingleWire} from './catalog-singlewire.js';
+import {PinDuty,shownResult} from './pin-duty.js';
 import {CatalogMotion} from './catalog-motion.js';
 import {physicalToModel,physicalResult} from './catalog-model.js';
 import {MotionDevices} from './device-motion.js';
@@ -27,6 +28,7 @@ export class SimulationSession {
     this.hostTime=hostTime??Date.now();
     const source=project;project=physicalToModel(project);
     this.signalRecorder=new SignalRecorder();this.noise=new NoiseModel(project.simulation?.noise);this.recordPins=new Set();this.warnings=[];this.onStorage=storage;
+    this.duty=new PinDuty();
     this.signals=signalsApi(this.signalRecorder,this.noise,{now:()=>this.runtime.microTime,record:pins=>this.record(pins),onNoise:cfg=>{for(const p of new Set([source,project]))if(p.simulation)p.simulation.noise=cfg;else p.simulation={stepMs:this.stepMs,pwmWaveform:false,noise:cfg};}});
     const warnOut=warn??(message=>trace({micros:this.runtime?.microTime??0,protocol:'경고',message}));
     this.passiveBuzzers=new PassiveBuzzers();
@@ -45,6 +47,8 @@ export class SimulationSession {
       warn:message=>{this.warnings.push(message);if(this.warnings.length>50)this.warnings.shift();warnOut(message);},reset:runtime=>{if(this.hal){const old=this.hal;this.hal=this.createHal();this.hal.inheritReset(old,runtime);if(this.hal.nvicModel)this.hal.nvicModel.tick.lost=Math.floor(runtime.microTime/1000);}},
       print,uart,pwmEnabled:project.simulation?.pwmWaveform??false,
       beforeChange:us=>this.advance(us),changed:us=>this.changed(us),advance:us=>this.advance(us),
+      // Feature 57: plain writes of output pins are measured; a timer's averaged output is not.
+      level:(pin,us,value)=>{if(value===null)this.duty.clear(pin,us);else this.duty.level(pin,us,value);},
       read:pin=>digitalRead(pin,this.result),voltage:pin=>this.result?.voltage('signal:'+pin),
       pulseIn:(pin,state,timeout,us)=>{this.changed(us);return this.sensors.pulseIn(project,this.result,pin,state,timeout,us);},
       construct:(name,args,runtime)=>constructLCD(args,runtime),deviceCall:(device,method,args,runtime)=>callLCD(device,method,args,runtime),
@@ -103,7 +107,13 @@ export class SimulationSession {
     // Contact bounce: the program runs up to each queued flip, the input changes there, and it goes on — so polling code
     // and edge interrupts see every flip.
     while(this.bounce.nextAt()<=time&&!this.runtime.debug.paused){const at=Math.max(this.bounce.nextAt(),this.runtime.time);this.runtime.tick(at);const next=this.bounce.apply(this.pressed,at);if(!next)break;this.pressed=next;this.changed(this.runtime.microTime);this.runtime.pollInterrupts();}
-    if(this.project.components.some(p=>p.type==='catalog_singlewire')){while(this.runtime.time<time&&!this.runtime.debug.paused)this.runtime.tick(Math.min(time,this.runtime.time+1));if(time===0)this.runtime.tick(0);}else this.runtime.tick(time);const result=this.changed(this.runtime.microTime);this.checkNrst();return physicalResult(result,this.project);}
+    if(this.project.components.some(p=>p.type==='catalog_singlewire')){while(this.runtime.time<time&&!this.runtime.debug.paused)this.runtime.tick(Math.min(time,this.runtime.time+1));if(time===0)this.runtime.tick(0);}else this.runtime.tick(time);const result=this.shown(this.changed(this.runtime.microTime));this.checkNrst();return physicalResult(result,this.project);}
+  // Feature 57: what this frame shows. A pin the program switched fast since the last frame counts with its duty (an
+  // LED on it is dimmer, not flickering); the program itself goes on reading the circuit as it is (this.result).
+  shown(result){
+    const view=this.duty.frame(this.runtime.gpio,this.runtime.microTime);if(!view||this.runtime.debug.paused||!this.circuit.withBoards)return result;
+    return shownResult(result,this.circuit.hold(this.project,view,this.pressed,this.sensors.echoHigh(this.runtime.microTime),this.motion.signals));
+  }
   // The NRST header pin pulled LOW (below VIL(NRST) 0.8 V) resets the MCU: the program restarts and stays at its start
   // while the line is LOW. RCC_FLAG_PINRST is the only cause set.
   checkNrst(){

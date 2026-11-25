@@ -1,4 +1,5 @@
 import { WirelessHub } from './wireless.js';
+import { PinDuty, shownResult } from './pin-duty.js';
 import { ButtonBounce } from './button-bounce.js';
 import { CatalogSingleWire } from './catalog-singlewire.js';
 import { CatalogMotion } from './catalog-motion.js';
@@ -52,6 +53,7 @@ export class FirmwareSession {
     this.circuit = new CircuitSimulation(); this.motion = new MotionDevices(); this.catalogMotion = new CatalogMotion(); this.singleWire = new CatalogSingleWire();
     this.sensors = new UltrasonicSignals(); this.lcds = new Map(); this.passiveBuzzers = new PassiveBuzzers(); this.wave = new WaveRecorder(channels);
     this.vars = new VariableRecorder(project.ide?.plots || []); this.typeCache = new Map();
+    this.duty = new PinDuty();
     this.serial = []; this.gpio = {}; this.dirty = true; this.solves = 0; this.solveBudget = 4000; this.realtimeRatio = 1; this.resets = [];
     this.buses = new BusDevices(project, () => this.result, trace);
     this.buses.uart.baud = 115200; this.buses.clocks = new Map(); new WirelessHub(this);
@@ -118,6 +120,8 @@ export class FirmwareSession {
   pinChanged(pin, state) {
     const old = this.gpio[pin];
     this.gpio[pin] = state;
+    // Feature 57: plain writes of output pins are measured; a timer's averaged output is not.
+    if (state.mode === 'OUTPUT' && !state.pwm) this.duty.level(pin, this.now, state.value ?? 0); else this.duty.clear(pin, this.now);
     if (state.pwm) { this.pwmMap.set(pin, state.pwm); this.pwmFrequency.set(pin, state.pwm.frequency); } else { this.pwmMap.delete(pin); this.pwmFrequency.delete(pin); }
     if (!this.soc || !this.pins.includes(pin)) return;
     if (old && old.mode === state.mode && old.value === state.value && old.openDrain === state.openDrain && old.pull === state.pull) return;
@@ -440,7 +444,12 @@ export class FirmwareSession {
     if (wall > 0) this.realtimeRatio = Math.min(1e3, (this.now - startUs) / 1000 / Math.max(wall, 20));
     return this.finishTick();
   }
-  finishTick() { const result = this.changed(this.now); this.checkNrst(); return physicalResult(result, this.project); }
+  finishTick() { const result = this.shown(this.changed(this.now)); this.checkNrst(); return physicalResult(result, this.project); }
+  // Feature 57: what this frame shows — a pin the firmware switched fast since the last frame counts with its duty.
+  shown(result) {
+    const view = this.duty.frame(this.gpio, this.now); if (!view || !this.circuit.withBoards) return result;
+    return shownResult(result, this.circuit.hold(this.project, view, this.pressed, this.sensors.echoHigh(this.now), this.motion.signals));
+  }
   // The NRST header pin pulled LOW (below VIL(NRST) 0.8 V) resets the MCU, again at every tick while it stays LOW.
   checkNrst() {
     if (this.ra) return;
