@@ -6,6 +6,8 @@ import {PIN_BY_ID,holeInfo} from './pins.js';
 import {terminalKeys,TWO_PIN_TYPES,MULTI_PIN_TYPES,normalizeAngle} from './components.js';
 import {generateHal,defaultMcu,validateMcu,consoleUart} from './mcu-config.js';
 import {expandC} from './c-format.js';
+import {newProjectMcu} from './rust-core.js';
+import {DEFAULT_FAMILY} from './mcu-family.js';
 import {DEFAULT_BOARD_ID,START_BOARD_ID,getBoard} from './boards.js';
 import {isRaFamily,raDefaultMcu,validateRaMcu} from './ra-config.js';
 import {validateDataFlash} from './ra-data-flash.js';
@@ -31,7 +33,8 @@ export function blankProject(family){
   if(isRaFamily(family))return {format:'stm32-circuit-lab',version:2,name:'새 회로',components:[],wires:[],surfaces:{board:{hidden:true},breadboard:{hidden:true}},mcu:raDefaultMcu(family),firmware:{mode:'fsp',files:[]},code:raHalEntry()};
   // A new STM32 project prints on the UART (feature 44, 2026-11-12 user decision "기본값도 UART로"): USART2 on PA2 / PA3
   // (the ST-LINK virtual COM port, 115200 8N1) is on, and the generated _write / _read carry printf / scanf.
-  return halBlank(consoleUart({...defaultMcu(family),pins:{}}));}
+  // It generates gpio.c/h, usart.c/h … (feature 51): the settings of a new project come from Rust (newProjectMcu).
+  return halBlank(consoleUart(newProjectMcu(family??DEFAULT_FAMILY)));}
 // The generator's own UART greeting is left out: the new project's main.c says hello once, with printf.
 const withoutGreeting=code=>code.replace(/^[ \t]*uint8_t message\[\] = "HAL ready\\r\\n";\r?\n/m,'').replace(/^[ \t]*HAL_UART_Transmit\(&huart2, message, sizeof\(message\) ?- ?1, 100\);\r?\n/m,'');
 function halBlank(mcu){return {format:'stm32-circuit-lab',version:2,name:'새 회로',components:[],wires:[],surfaces:{board:{hidden:true},breadboard:{hidden:true}},mcu,firmware:{mode:'hal',files:[]},code:expandC(withoutGreeting(generateHal(mcu)).replace('/* USER CODE BEGIN 2 */','/* USER CODE BEGIN 2 */\n  printf("HAL ready\\n");'))};}

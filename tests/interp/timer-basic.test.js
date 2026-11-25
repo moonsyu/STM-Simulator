@@ -4,7 +4,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {halProject,run,advance} from './helpers.js';
-import {blankProject} from '../../src/project.js';
+import {oneFileBlank} from '../unit/helpers/one-file.js';
 import {generateHal} from '../../src/mcu-config.js';
 import {SimulationSession} from '../../src/session.js';
 
@@ -29,7 +29,7 @@ test('TIM6 (TIM6_DAC_IRQn) and TIM7 (TIM7_IRQn) update interrupts call HAL_TIM_P
 });
 
 test('the full generated main.c (handlers, TRGO Reset on TIM7) runs; without the NVIC line the callback does not run',()=>{
- const p=blankProject();Object.assign(p.mcu.peripherals,peripherals);Object.assign(p.mcu.nvic,nvic);p.code=generateHal(p.mcu);
+ const p=oneFileBlank();Object.assign(p.mcu.peripherals,peripherals);Object.assign(p.mcu.nvic,nvic);p.code=generateHal(p.mcu);
  assert.match(p.code,/void TIM6_DAC_IRQHandler\(void\) \{[\s\S]*?HAL_TIM_IRQHandler\(&htim6\);/);
  assert.match(p.code,/sMasterConfig\.MasterOutputTrigger = TIM_TRGO_RESET;\n[^\n]*\n {2}HAL_TIMEx_MasterConfigSynchronization\(&htim7, &sMasterConfig\);/);
  const out=[],s=new SimulationSession(p,{print:x=>out.push(x)});s.tick(0);advance(s,1200,10);assert.ok(!s.result?.fault,out.join('\n'));

@@ -3,12 +3,13 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {launch} from './harness.mjs';
+// Feature 51: a new project generates gpio.c / usart.c …; this test reads the init code in main.c, so it generates as one file.
 
 test('Pinout ADC1 ranks and external trigger, TIM3 TRGO and One Pulse Mode reach main.c',{timeout:150000},async()=>{
  const s=await launch();
  try{
   const {win}=s,code=()=>win.evaluate(()=>document.getElementById('code').value);
-  await win.evaluate(()=>document.getElementById('pinout-open').click());await win.waitForSelector('#pinout-dialog[open]');
+  await win.evaluate(()=>document.getElementById('pinout-open').click());await win.waitForSelector('#pinout-dialog[open]');await win.setChecked('#pinout-couple',false);
   // Two analog pins through the pin panel's function select.
   for(const pin of ['PA0','PA1']){await win.click('#pinout-pins [data-config-pin="'+pin+'"]');await win.click('#pin-menu [data-pin-signal="ADC1_IN'+pin.slice(2)+'"]');await win.waitForFunction(p=>/ADC1_IN/.test(document.querySelector('#pinout-pins [data-config-pin="'+p+'"]').textContent),pin);}
   if(!await win.isChecked('[data-peripheral="ADC1"]'))await win.check('[data-peripheral="ADC1"]');

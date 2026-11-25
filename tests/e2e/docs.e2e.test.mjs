@@ -38,7 +38,8 @@ test('Docs: apply HAL, edit inside the region, remove, undo, then apply the Bare
   await win.waitForFunction(()=>/적용 완료/.test(document.getElementById('docs-result').textContent));
   let text=await code(win);
   assert.match(text,/STM-DOCS BEGIN ref_led_tht_2:\w+ LOOP[\s\S]*HAL_GPIO_TogglePin\(GPIOA, GPIO_PIN_5\)[\s\S]*STM-DOCS END ref_led_tht_2:\w+ LOOP/);
-  assert.match(text.split('static void MX_GPIO_Init(void) {')[1],/STM-DOCS BEGIN ref_led_tht_2:\w+ MX_GPIO_Init[\s\S]*HAL_GPIO_Init\(GPIOA/);
+  // Feature 51: the pin setup is in gpio.c (generated from the Pinout settings Docs changed), not in main.c.
+  assert.doesNotMatch(text,/static void MX_GPIO_Init|STM-DOCS BEGIN ref_led_tht_2:\w+ MX_GPIO_Init|GPIO_InitStruct/);assert.match(text,/#include "gpio\.h"/);
   assert.ok(await win.locator('#docs-remove-code').isVisible()&&await win.locator('#docs-remove-all').isVisible(),'remove choices shown');
 
   // 2. The learner edits inside the inserted region; removal still finds it by markers.
@@ -66,7 +67,9 @@ test('Docs: apply HAL, edit inside the region, remove, undo, then apply the Bare
   await win.waitForFunction(()=>/레지스터 예제/.test(document.getElementById('docs-result').textContent));
   text=await code(win);
   assert.match(text,/STM-DOCS BEGIN ref_led_tht_2:\w+ LOOP[\s\S]*GPIOA->BSRR[\s\S]*STM-DOCS END ref_led_tht_2:\w+ LOOP/);
-  assert.match(text,/RCC->AHB1ENR\s*\|=\s*RCC_AHB1ENR_GPIOAEN/);
+  // The register setup is in MX_GPIO_Init of gpio.c, which the project now stores (an edited generated file).
+  assert.doesNotMatch(text,/RCC->AHB1ENR|static void MX_GPIO_Init/);
+  await win.waitForFunction(()=>/STM-DOCS BEGIN ref_led_tht_2:\w+ MX_GPIO_Init[\s\S]*RCC->AHB1ENR\s*\|=\s*RCC_AHB1ENR_GPIOAEN/.test((JSON.parse(localStorage.getItem('stm32lab.project.v2')||'{}').firmware?.files||[]).find(x=>x.name==='Core/Src/gpio.c')?.text||''));
   assert.doesNotMatch(text,/HAL_GPIO_TogglePin|내가 고친 줄/);
   assert.equal((text.match(/STM-DOCS BEGIN ref_led_tht_2:\w+ LOOP/g)||[]).length,1,'re-apply replaced the region');
   assert.match(await win.textContent('#device-docs-panel .docs-applied'),/Bare-metal/);

@@ -4,7 +4,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {halProject,run,advance,pin} from './helpers.js';
-import {blankProject} from '../../src/project.js';
+import {oneFileBlank} from '../unit/helpers/one-file.js';
 import {generateHal,validateMcu,configProblems} from '../../src/mcu-config.js';
 
 const callbacks='void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *h) { (void)h; ups++; }\nvoid HAL_TIM_OC_DelayElapsedCallback(TIM_HandleTypeDef *h) { (void)h; matches++; }';
@@ -36,7 +36,7 @@ test('TIM8 output compare interrupt comes on TIM8_CC_IRQn and the update interru
 });
 
 test('F103RB: TIM1 uses TIM1_UP_IRQn; complementary pins PA7 / PB0 select the partial AFIO remap',()=>{
- const p=blankProject('STM32F103RB');p.boardId='nucleo-f103rb';Object.assign(p.mcu.pins,{PA8:pin('TIM1_CH1'),PA7:pin('TIM1_CH1N')});p.mcu.peripherals.TIM1={enabled:true,prescaler:7999,period:99,pulse:40,mode:'pwm'};p.mcu.nvic.TIM1_UP_IRQn={enabled:true,priority:0};
+ const p=oneFileBlank('STM32F103RB');p.boardId='nucleo-f103rb';Object.assign(p.mcu.pins,{PA8:pin('TIM1_CH1'),PA7:pin('TIM1_CH1N')});p.mcu.peripherals.TIM1={enabled:true,prescaler:7999,period:99,pulse:40,mode:'pwm'};p.mcu.nvic.TIM1_UP_IRQn={enabled:true,priority:0};
  const full=generateHal(p.mcu);
  assert.match(full,/__HAL_AFIO_REMAP_TIM1_PARTIAL\(\);/);assert.match(full,/void TIM1_UP_IRQHandler\(void\) \{[\s\S]*?HAL_TIM_IRQHandler\(&htim1\);/);
  p.code=generateHal(p.mcu,{minimal:true}).replace('int main(void) {',globals+'\nint main(void) {').replace('  /* USER CODE BEGIN 2 */','  /* USER CODE BEGIN 2 */\n  HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_1);\n  HAL_TIMEx_PWMN_Start(&htim1, TIM_CHANNEL_1);\n  HAL_TIM_Base_Start_IT(&htim1);')+'\n'+callbacks+'\n';
@@ -47,12 +47,12 @@ test('F103RB: TIM1 uses TIM1_UP_IRQn; complementary pins PA7 / PB0 select the pa
 });
 
 test('settings and calls that only the advanced timers have are refused elsewhere',()=>{
- assert.throws(()=>validateMcu({...blankProject().mcu,peripherals:{TIM2:{enabled:true,repetition:3}}}),/TIM2: Repetition Counter는 고급 타이머 TIM1\/TIM8에만 있습니다/);
- assert.throws(()=>validateMcu({...blankProject().mcu,peripherals:{TIM1:{enabled:true,deadTime:256}}}),/TIM1 Dead Time: 0~255/);
- assert.deepEqual(configProblems(validateMcu({...blankProject().mcu,pins:{PA8:pin('TIM1_CH1'),PB13:pin('TIM1_CH1N')},peripherals:{TIM1:{enabled:true,mode:'capture'}}})),['TIM1: 상보 출력(CHxN)은 PWM 또는 출력 비교 모드에서 씁니다.']);
+ assert.throws(()=>validateMcu({...oneFileBlank().mcu,peripherals:{TIM2:{enabled:true,repetition:3}}}),/TIM2: Repetition Counter는 고급 타이머 TIM1\/TIM8에만 있습니다/);
+ assert.throws(()=>validateMcu({...oneFileBlank().mcu,peripherals:{TIM1:{enabled:true,deadTime:256}}}),/TIM1 Dead Time: 0~255/);
+ assert.deepEqual(configProblems(validateMcu({...oneFileBlank().mcu,pins:{PA8:pin('TIM1_CH1'),PB13:pin('TIM1_CH1N')},peripherals:{TIM1:{enabled:true,mode:'capture'}}})),['TIM1: 상보 출력(CHxN)은 PWM 또는 출력 비교 모드에서 씁니다.']);
  const p=halProject({pins:{PA5:pin('TIM2_CH1')},peripherals:{TIM2:{enabled:true,prescaler:15999,period:99,pulse:25,mode:'pwm'}},init:'  HAL_TIMEx_PWMN_Start(&htim2, TIM_CHANNEL_1);'});
  assert.throws(()=>{const {s}=run(p);advance(s,20,10);},/TIM2: 상보 출력\(CHxN\)은 고급 타이머 TIM1\/TIM8에만 있습니다/);
- assert.throws(()=>validateMcu({...blankProject('STM32F103RB').mcu,peripherals:{TIM8:{enabled:true}}}),/TIM8: STM32F103RB에서 지원하지 않는 주변장치입니다/);
+ assert.throws(()=>validateMcu({...oneFileBlank('STM32F103RB').mcu,peripherals:{TIM8:{enabled:true}}}),/TIM8: STM32F103RB에서 지원하지 않는 주변장치입니다/);
 });
 
 test('a complementary pin alone (CH1N without CH1) gets its channel configured; output compare has a complementary output too',()=>{

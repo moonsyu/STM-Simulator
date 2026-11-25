@@ -1,10 +1,11 @@
 // I2C1 Parameter Settings (CubeMX): Primary Address (own 7-bit slave address), Fast Mode Duty Cycle, Clock No Stretch
 // Mode in the Pinout configuration, the generated MX_I2C1_Init, and .ioc import.
 import test from 'node:test';
+import {oneFileHal} from './helpers/one-file.js';
 import assert from 'node:assert/strict';
 import {applyHalExample} from '../../src/hal-examples.js';
 import {blankProject,projectForBoard} from '../../src/project.js';
-import {validateMcu,generateHal,importIoc} from '../../src/mcu-config.js';
+import {validateMcu,importIoc} from '../../src/mcu-config.js';
 
 const i2c=(base=blankProject(),params={})=>{const p=applyHalExample(base,'i2c');Object.assign(p.mcu.peripherals.I2C1,params);return p;};
 
@@ -12,7 +13,7 @@ test('I2C1 parameters: own address, 16/9 duty in fast mode, no stretch; defaults
  for(const base of [blankProject(),projectForBoard('nucleo-f103rb')]){
   const v=validateMcu(i2c(base,{clock:400000,ownAddress:0x3c,dutyCycle:'16_9',noStretch:true}).mcu).peripherals.I2C1;
   assert.deepEqual([v.ownAddress,v.dutyCycle,v.noStretch],[0x3c,'16_9',true]);
-  const src=generateHal(i2c(base,{clock:400000,ownAddress:0x3c,dutyCycle:'16_9',noStretch:true}).mcu);
+  const src=oneFileHal(i2c(base,{clock:400000,ownAddress:0x3c,dutyCycle:'16_9',noStretch:true}).mcu);
   for(const line of ['hi2c1.Init.ClockSpeed = 400000;','hi2c1.Init.DutyCycle = I2C_DUTYCYCLE_16_9;','hi2c1.Init.OwnAddress1 = 0x78;','hi2c1.Init.NoStretchMode = I2C_NOSTRETCH_ENABLE;'])assert.ok(src.includes(line),line);
   assert.deepEqual(Object.keys(validateMcu(i2c(base,{ownAddress:0,dutyCycle:'2',noStretch:false}).mcu).peripherals.I2C1).sort(),['clock','enabled']);
  }

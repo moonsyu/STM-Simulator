@@ -11,7 +11,8 @@ import {applyDeviceExample,removeDeviceExample} from '../../src/device-assistanc
 import {docsRegions,regionBody} from '../../src/device-code-insertion.js';
 import {cFunctions,maskC} from '../../src/c-source-edit.js';
 import {PART_DEFS} from '../../src/components.js';
-import {blankProject,validateProject} from '../../src/project.js';
+import {validateProject} from '../../src/project.js';
+import {oneFileBlank} from './helpers/one-file.js';
 import {SimulationSession} from '../../src/session.js';
 import {compileHal} from '../../src/hal-source.js';
 import {wiringTopology} from '../../src/device-docs-data.js';
@@ -21,7 +22,7 @@ import {consoleSink} from './helpers/console.js';
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'../..');
 const USER_LINE='  int keepMe = 7; /* 학생 코드 */';
 function projectWith(...parts){
-  const p=blankProject();p.code=p.code.replace('/* USER CODE BEGIN 2 */','/* USER CODE BEGIN 2 */\n'+USER_LINE);
+  const p=oneFileBlank();p.code=p.code.replace('/* USER CODE BEGIN 2 */','/* USER CODE BEGIN 2 */\n'+USER_LINE);
   for(const [type,id='sel',extra={}]of parts)p.components.push({id,type,name:type.toUpperCase(),x:800,y:350,rotation:0,span:70,...PART_DEFS[type]?.defaults,...(type==='led'?{color:'red'}:{}),...extra});
   return p;
 }
@@ -67,7 +68,7 @@ describe('Docs apply: BareMetal mode',()=>{
     for(const api of ['all','gpio-write']){
       const {project,binding}=applyDeviceExample(projectWith(['led']),part('sel'),{mode:'baremetal',api});const code=project.code;
       assert.equal(binding.mode,'baremetal');assert.equal(project.ide.native.target,'arm');
-      assert.match(body(code,'led:sel','LOOP'),/GPIOA->BSRR = \(?1UL << 5/);assert.doesNotMatch(code,/HAL_GPIO_TogglePin/);assert.equal(code.split('HAL_GPIO_Init(').length,blankProject().code.split('HAL_GPIO_Init(').length,'only the console pins use HAL_GPIO_Init');
+      assert.match(body(code,'led:sel','LOOP'),/GPIOA->BSRR = \(?1UL << 5/);assert.doesNotMatch(code,/HAL_GPIO_TogglePin/);assert.equal(code.split('HAL_GPIO_Init(').length,oneFileBlank().code.split('HAL_GPIO_Init(').length,'only the console pins use HAL_GPIO_Init');
       assert.match(body(code,'led:sel','MX_GPIO_Init'),/RCC->AHB1ENR\s*\|=\s*RCC_AHB1ENR_GPIOAEN[\s\S]*GPIOA->MODER/);assert.ok(inside(code,'led:sel','MX_GPIO_Init','MX_GPIO_Init'));
     }
     const pot=apply(projectWith(['potentiometer']),'sel',{mode:'baremetal',api:'all'}).code;
@@ -86,7 +87,7 @@ describe('Docs remove',()=>{
     assert.match(applied.code,/내 수정/);
     const {project,report}=removeDeviceExample(applied,part('sel'));
     assert.equal(project.code,withoutDefaultDelay(original.code));assert.deepEqual(report.missing,[]);assert.ok(report.removed>=2);
-    assert.deepEqual(project.mcu.pins,blankProject().mcu.pins);assert.deepEqual(project.deviceDocs.bindings,[]);
+    assert.deepEqual(project.mcu.pins,oneFileBlank().mcu.pins);assert.deepEqual(project.deviceDocs.bindings,[]);
     assert.ok(project.components.some(c=>c.type==='ref_resistor_axial_2'),'code-only removal keeps the circuit');assert.doesNotThrow(()=>compileHal(project.code));
   });
   test('remove with circuit deletes the parts and wires Docs added, keeps the selected part',()=>{
@@ -114,7 +115,7 @@ describe('Docs remove',()=>{
     const {project,report}=removeDeviceExample(p,part('a'));
     assert.ok(report.retagged>=3);assert.ok(regions(project.code,'sht31:b').some(r=>r.role==='MX_I2C1_Init'));assert.ok(project.mcu.peripherals.I2C1?.enabled);
     const out=[],s=new SimulationSession(project,consoleSink(out));for(let t=0;t<=600;t+=50)s.tick(t);assert.ok(out.some(l=>/SHT31=/.test(l)),out.join('\n'));
-    const last=removeDeviceExample(project,part('b')).project;assert.deepEqual(last.mcu.peripherals,blankProject().mcu.peripherals);assert.deepEqual(last.mcu.pins,blankProject().mcu.pins);assert.doesNotMatch(last.code,/STM-DOCS|hi2c1/);
+    const last=removeDeviceExample(project,part('b')).project;assert.deepEqual(last.mcu.peripherals,oneFileBlank().mcu.peripherals);assert.deepEqual(last.mcu.pins,oneFileBlank().mcu.pins);assert.doesNotMatch(last.code,/STM-DOCS|hi2c1/);
   });
   test('a deleted marker is reported and the code around it is left untouched',()=>{
     const p=apply(projectWith(['led']),'sel');p.code=p.code.replace(/[ \t]*\/\* STM-DOCS END led:sel LOOP \*\/\n/,'');

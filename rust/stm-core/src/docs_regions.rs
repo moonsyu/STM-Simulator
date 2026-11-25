@@ -72,6 +72,9 @@ pub struct Coupled {
     /// The pair already holds the body (the generator wrote it from the Pinout). False for register-level examples:
     /// their bodies are returned as `FileRegion`s for the caller to put into the pair.
     pub in_pair: bool,
+    /// Pairs the project stores (an example's hand-written init, a file the user edited): the generator does not
+    /// write them, so the device's bodies for them are returned as `FileRegion`s too.
+    pub stored: HashSet<String>,
 }
 
 /// Another applied device and the shared roles it needs: a shared region this device stops needing goes to it.
@@ -1399,7 +1402,7 @@ pub fn install_device_regions(
             source = set_region(&source, tag, "MX_GPIO_Init", "", &Anchor::Role)?;
             source = include_region(&source, tag, group)?;
             source = call_region(&source, tag, "MX_GPIO_Init", "")?;
-            if !coupled.in_pair {
+            if !coupled.in_pair || coupled.stored.contains(group) {
                 file_regions.push(FileRegion {
                     group: group.clone(),
                     function: "MX_GPIO_Init".into(),
@@ -1464,7 +1467,7 @@ pub fn install_device_regions(
                 source = include_region(&source, tag, group)?;
                 let before = coupled.before.get(name).map_or("", String::as_str);
                 source = call_region(&source, tag, name, before)?;
-                if !coupled.in_pair {
+                if !coupled.in_pair || coupled.stored.contains(group) {
                     file_regions.push(FileRegion {
                         group: group.clone(),
                         function: name.clone(),
@@ -1535,6 +1538,18 @@ pub fn set_file_function_region(
     {
         return Ok(source.to_string());
     }
+    // A function that already initialises the peripheral (HAL_<X>_Init(&handle)) is not given the body a second time.
+    if name != "MX_GPIO_Init"
+        && !regions_of(source)
+            .iter()
+            .any(|r| r.role == name && r.tag == tag)
+    {
+        if let Some(f) = c_functions(source)?.iter().find(|f| f.name == name) {
+            if initialises(source, f, body) {
+                return Ok(source.to_string());
+            }
+        }
+    }
     let body = if name == "MX_GPIO_Init" {
         gpio_body(source, body)?
     } else {
@@ -1543,9 +1558,94 @@ pub fn set_file_function_region(
     set_region(source, tag, name, &body, &Anchor::FunctionEnd(name))
 }
 
+/// What the per-peripheral sources define: init function → pair and handle → pair ("MX_I2C1_Init" → "i2c",
+/// "hi2c1" → "i2c"), read from the generated `<pair>.c` files (`void MX_…_Init(void) {`, `…_HandleTypeDef name;`).
+pub fn coupling_of(
+    files: &[(String, String)],
+) -> (HashMap<String, String>, HashMap<String, String>) {
+    let (mut functions, mut handles) = (HashMap::new(), HashMap::new());
+    for (name, text) in files {
+        let base = name.rsplit('/').next().unwrap_or(name);
+        let Some(group) = base.strip_suffix(".c") else {
+            continue;
+        };
+        for line in text.lines() {
+            let line = line.trim_end();
+            if let Some(function) = line
+                .strip_prefix("void ")
+                .and_then(|l| l.strip_suffix("(void) {"))
+            {
+                if is_mx_init(function) {
+                    functions.insert(function.to_string(), group.to_string());
+                }
+            } else if let Some((kind, handle)) =
+                line.strip_suffix(';').and_then(|l| l.split_once(' '))
+            {
+                if kind.ends_with("_HandleTypeDef")
+                    && kind.bytes().all(is_word)
+                    && !handle.is_empty()
+                    && handle.bytes().all(is_word)
+                {
+                    handles.insert(handle.to_string(), group.to_string());
+                }
+            }
+        }
+    }
+    (functions, handles)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_stored_pair_gets_the_body_as_a_region() {
+        let coupled = Coupled {
+            functions: HashMap::from([
+                ("MX_GPIO_Init".to_string(), "gpio".to_string()),
+                ("MX_I2C1_Init".to_string(), "i2c".to_string()),
+            ]),
+            handles: HashMap::from([("hi2c1".to_string(), "i2c".to_string())]),
+            before: HashMap::new(),
+            in_pair: true,
+            stored: HashSet::from(["gpio".to_string()]),
+        };
+        let (_, files) = done(install_device_regions(
+            COUPLED_MAIN,
+            "lcd:u1",
+            &i2c_module(Some(coupled)),
+            Some(&[]),
+        ));
+        assert_eq!(files.len(), 1);
+        assert_eq!(
+            (files[0].group.as_str(), files[0].function.as_str()),
+            ("gpio", "MX_GPIO_Init")
+        );
+        // A stored i2c.c whose function already initialises the bus is left as it is.
+        let i2c_c = "void MX_I2C1_Init(void) {\n  hi2c1.Init.ClockSpeed = 400000;\n  HAL_I2C_Init(&hi2c1);\n}\n";
+        let body = "hi2c1.Instance = I2C1;\nHAL_I2C_Init(&hi2c1);";
+        assert_eq!(
+            set_file_function_region(i2c_c, "lcd:u1", "MX_I2C1_Init", body).unwrap(),
+            i2c_c
+        );
+    }
+
+    #[test]
+    fn the_pairs_say_what_they_define() {
+        let files = [
+            ("i2c.h".to_string(), "extern I2C_HandleTypeDef hi2c1;\nvoid MX_I2C1_Init(void);\n".to_string()),
+            ("Core/Src/i2c.c".to_string(), "#include \"i2c.h\"\nI2C_HandleTypeDef hi2c1;\n\nvoid MX_I2C1_Init(void) {\n  int x;\n}\n".to_string()),
+            ("gpio.c".to_string(), "void MX_GPIO_Init(void) {\n}\n".to_string()),
+        ];
+        let (functions, handles) = coupling_of(&files);
+        assert_eq!(functions.len(), 2);
+        assert_eq!(functions["MX_I2C1_Init"], "i2c");
+        assert_eq!(functions["MX_GPIO_Init"], "gpio");
+        assert_eq!(
+            handles,
+            HashMap::from([("hi2c1".to_string(), "i2c".to_string())])
+        );
+    }
 
     const MAIN: &str = "#include \"main.h\"\n\nstatic void MX_GPIO_Init(void);\n\nint main(void) {\n  HAL_Init();\n  SystemClock_Config();\n  MX_GPIO_Init();\n  /* USER CODE BEGIN 2 */\n  /* USER CODE END 2 */\n  while (1) {\n    /* USER CODE BEGIN 3 */\n    /* USER CODE END 3 */\n  }\n}\n\nstatic void MX_GPIO_Init(void) {\n  GPIO_InitTypeDef GPIO_InitStruct = {0};\n  __HAL_RCC_GPIOA_CLK_ENABLE();\n}\n";
     const COUPLED_MAIN: &str = "#include \"main.h\"\n#include \"gpio.h\"\n\nint main(void) {\n  HAL_Init();\n  SystemClock_Config();\n  MX_GPIO_Init();\n  /* USER CODE BEGIN 2 */\n  /* USER CODE END 2 */\n  while (1) {\n    /* USER CODE BEGIN 3 */\n    /* USER CODE END 3 */\n  }\n}\n";
@@ -1635,6 +1735,7 @@ mod tests {
             handles: HashMap::from([("hi2c1".to_string(), "i2c".to_string())]),
             before: HashMap::new(),
             in_pair: true,
+            stored: HashSet::new(),
         };
         let module = i2c_module(Some(coupled));
         let (code, files) = done(install_device_regions(

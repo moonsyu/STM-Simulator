@@ -12,6 +12,7 @@ import {SERIAL_ROUTES,SERIAL_IDS,isSerial,serialHandle,serialAf,serialFunction,a
 import {DEFAULT_TIMER_CLOCK_HZ,EXAMPLE_TIMER_CLOCK_HZ,timerDefaults} from '../../src/mcu-defaults.js';
 import {DEFAULT_BOARD_ID} from '../../src/boards.js';
 import {compileHal} from '../../src/hal-source.js';
+import {halFiles} from '../../src/peripheral-files.js';
 import {boardPin} from '../../src/pins.js';
 import {ledCircuit,boardProject,wire} from './helpers/circuit.js';
 import {runHal} from './helpers/run.js';
@@ -37,7 +38,9 @@ describe('blank and example projects',()=>{
     assert.match(p.code,/int _write\(int file, char \*ptr, int len\)/);assert.doesNotMatch(p.code,/ITM_SendChar|uint8_t message\[\]/);
     assert.deepEqual(Object.keys(blankProject('STM32F103RB').mcu.pins),['PA2','PA3']);assert.deepEqual(exampleProject().mcu.pins,{},'examples set their own pins');
     assert.deepEqual(validateProject(p),p,'blank project round-trips unchanged');
-    assert.doesNotThrow(()=>compileHal(p.code));
+    // Feature 51: a new project generates gpio.c/h and usart.c/h; the build adds them.
+    assert.equal(p.mcu.coupleFiles,true);assert.match(p.code,/#include "usart\.h"/);assert.deepEqual(halFiles(p).map(f=>f.name),['usart.h','usart.c','gpio.h','gpio.c']);
+    assert.doesNotThrow(()=>compileHal(p.code,halFiles(p),p.mcu.family));
     assert.notEqual(blankProject().mcu,blankProject().mcu,'fresh objects each call');
   });
   test('blank project prints its greeting when run',()=>{

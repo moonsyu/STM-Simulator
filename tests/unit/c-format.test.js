@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {formatC,blockRange,expandC,formatCode} from '../../src/c-format.js';
 import {formatProjectSources} from '../../src/code-format-ui.js';
-import {applyHalExample,allHalExamples,halExample} from '../../src/hal-examples.js';
+import {applyHalExample,allHalExamples,halExample,tidyExampleSource,halExampleFor} from '../../src/hal-examples.js';
 import {physicalExample} from '../../src/catalog-examples.js';
 const halExampleCode=id=>physicalExample(halExample(id)).code;
 import {blankProject} from '../../src/project.js';
@@ -112,8 +112,8 @@ test('expandC puts each statement on its own line and keeps initializers, for he
 test('every applied HAL example has one statement per line and the same tokens as its compact source',()=>{
  const strip=t=>t.replace(/\s+/g,'');
  for(const id of Object.keys(allHalExamples())){
-  // Without the UART console the app adds when an example is opened (feature 44): only the example's own text.
-  const p=applyHalExample(blankProject(),id,{console:false}),compact=halExampleCode(id);
+  // The example's own text: before the app divides it into per-peripheral files (feature 51) and adds the UART console (feature 44).
+  const p=tidyExampleSource(halExampleFor(id,'nucleo-f446re')),compact=halExampleCode(id);
   // Applying an example also moves its helper functions and globals into USER CODE sections, so the order differs:
   // the same characters must all be there.
   const chars=t=>[...strip(t).replace(/[{}]/g,'')].sort().join('');

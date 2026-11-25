@@ -1,6 +1,6 @@
 import {devboardModel} from './devboards.js';
 import {validateProject} from './project.js';
-import {consoleExample} from './hal-examples.js';
+import {consoleExample,coupleExample} from './hal-examples.js';
 import {WIRELESS_EXAMPLES} from './wireless-examples.js';
 import {reindentC} from './c-format.js';
 
@@ -33,7 +33,9 @@ export function applyLectureExample(id){
  const example=lectureExample(id);if(!example)throw new Error('강의 예제를 찾을 수 없습니다.');
  const project=indentExampleCode(validateProject(example.build()));
  // The STM32 programs print on USART2 (the ST-LINK virtual COM port) where it is free, as the HAL examples do.
- if(!project.surfaces?.board?.hidden)consoleExample(project);
- for(const part of project.components)if(part.type==='devboard'&&devboardModel(part)?.kind==='stm32'&&part.firmware?.mode==='hal'&&part.mcu){const view=consoleExample({firmware:part.firmware,mcu:part.mcu,code:part.code});part.mcu=view.mcu;part.code=view.code;}
- return {project,file:'main.c'};
+ // Feature 51: the main board's program and the boards' programs open divided into per-peripheral files.
+ const divided=coupleExample(project);
+ if(!divided.surfaces?.board?.hidden)consoleExample(divided);
+ for(const part of divided.components)if(part.type==='devboard'&&devboardModel(part)?.kind==='stm32'&&part.firmware?.mode==='hal'&&part.mcu){const view=consoleExample(coupleExample({firmware:part.firmware,mcu:part.mcu,code:part.code}));part.mcu=view.mcu;part.code=view.code;part.firmware=view.firmware;}
+ return {project:validateProject(divided),file:'main.c'};
 }

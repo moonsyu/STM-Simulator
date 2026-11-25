@@ -4,6 +4,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {launch} from './harness.mjs';
+// Feature 51: a new project generates gpio.c / usart.c …; this test reads the init code in main.c, so it generates as one file.
 
 const generate=async win=>{await win.evaluate(()=>document.getElementById('hal-generate').click());if(await win.evaluate(()=>document.getElementById('hal-replace-dialog').open))await win.click('#hal-replace-confirm');};
 const fill=async(win,selector,value)=>{await win.fill(selector,String(value));await win.dispatchEvent(selector,'change');};
@@ -12,7 +13,7 @@ test('Pinout RTC: F103RB calendar + alarm run in the simulator; F446RE 12-hour f
  const s=await launch();
  try{
   const {win}=s,code=()=>win.evaluate(()=>document.getElementById('code').value);
-  await win.evaluate(()=>document.getElementById('pinout-open').click());await win.waitForSelector('#pinout-dialog[open]');
+  await win.evaluate(()=>document.getElementById('pinout-open').click());await win.waitForSelector('#pinout-dialog[open]');await win.setChecked('#pinout-couple',false);
   await win.check('[data-peripheral="RTC"]');await win.waitForSelector('[data-rtc="clockSource"]');
   assert.equal(await win.inputValue('[data-rtc="clockSource"]'),'LSE');
   assert.equal(await win.locator('[data-rtc="hourFormat"]').count(),0,'the F1 RTC has no hour format');
@@ -42,7 +43,7 @@ test('Pinout RTC: F103RB calendar + alarm run in the simulator; F446RE 12-hour f
   await win.evaluate(()=>document.getElementById('board-open').click());await win.click('#board-results [data-board-id="nucleo-f446re"]');
   if(await win.locator('#board-change-dialog').isVisible())await win.click('#board-change-confirm');
   await win.waitForFunction(()=>/F446RE/.test(document.getElementById('current-board-name').textContent));
-  await win.evaluate(()=>document.getElementById('pinout-open').click());await win.waitForSelector('#pinout-dialog[open]');
+  await win.evaluate(()=>document.getElementById('pinout-open').click());await win.waitForSelector('#pinout-dialog[open]');await win.setChecked('#pinout-couple',false);
   if(!await win.locator('[data-peripheral="RTC"]').isChecked())await win.check('[data-peripheral="RTC"]');
   await win.waitForSelector('[data-rtc="hourFormat"]');
   await fill(win,'[data-rtc-time="hours"]',23);await win.selectOption('[data-rtc="hourFormat"]','12');

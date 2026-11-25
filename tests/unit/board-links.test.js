@@ -21,7 +21,10 @@ describe('boards on wires',()=>{
  test('I²C without the pull-ups, or without a slave on the address, gets no answer',()=>{
   const {project}=applyLectureExample('wired-i2c-stm32');project.wires=project.wires.filter(w=>!/part:r[12]:/.test(w.from+w.to));
   assert.match(text(run(project,700).out),/no answer/);
-  const other=applyLectureExample('wired-i2c-stm32').project;other.components.find(p=>p.id==='stm2').code=other.components.find(p=>p.id==='stm2').code.replace('0x20 << 1','0x21 << 1');
+  // The slave's own address is in its i2c.c (the program is divided into per-peripheral files, feature 51).
+  const other=applyLectureExample('wired-i2c-stm32').project,slave=other.components.find(p=>p.id==='stm2'),readdress=t=>t.replace('0x20 << 1','0x21 << 1');
+  const before=JSON.stringify([slave.code,slave.firmware.files]);slave.code=readdress(slave.code);for(const file of slave.firmware.files)file.text=readdress(file.text);
+  assert.notEqual(JSON.stringify([slave.code,slave.firmware.files]),before,'the address was found');
   assert.match(text(run(other,700).out),/no answer/);
  });
  test('SPI: master and slave exchange a byte in each direction',()=>{
@@ -36,7 +39,7 @@ describe('boards on wires',()=>{
  test('a slave with an interrupt reception runs its callback; the master can send to the main board from another board',()=>{
   const {project}=applyLectureExample('wired-i2c-stm32'),board=project.components.find(p=>p.id==='stm2');
   // The other board is the master this time, the main board the slave with HAL_I2C_Slave_Receive_IT.
-  [project.code,board.code]=[board.code,project.code];[project.mcu,board.mcu]=[board.mcu,project.mcu];
+  [project.code,board.code]=[board.code,project.code];[project.mcu,board.mcu]=[board.mcu,project.mcu];[project.firmware,board.firmware]=[board.firmware,project.firmware];
   project.mcu={...project.mcu,nvic:{I2C1_EV_IRQn:{enabled:true,priority:5,subPriority:0}}};
   project.code=project.code.replace(/(\/\* USER CODE BEGIN 3 \*\/)[\s\S]*?(\/\* USER CODE END 3 \*\/)/,(_,a,b)=>a+'\n  HAL_Delay(1);\n'+b).replace('/* USER CODE BEGIN 2 */','/* USER CODE BEGIN 2 */\n  HAL_NVIC_EnableIRQ(I2C1_EV_IRQn);\n  HAL_I2C_Slave_Receive_IT(&hi2c1, &cmd, 1);').replace('int main(void)','void HAL_I2C_SlaveRxCpltCallback(I2C_HandleTypeDef *h) {\n  HAL_GPIO_WritePin(GPIOA, GPIO_PIN_5, cmd ? GPIO_PIN_SET : GPIO_PIN_RESET);\n  uartSend("irq\\r\\n");\n  HAL_I2C_Slave_Receive_IT(&hi2c1, &cmd, 1);\n}\nint main(void)');
   const {out}=run(project,1000);assert.match(text(out),/irq/,text(out).slice(0,400));

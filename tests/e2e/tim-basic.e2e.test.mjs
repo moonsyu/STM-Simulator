@@ -4,6 +4,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {launch} from './harness.mjs';
+// Feature 51: a new project generates gpio.c / usart.c …; this test reads the init code in main.c, so it generates as one file.
 
 // New circuits start on NUCLEO-F103RB, which has no TIM6/TIM7.
 async function useF446(win){
@@ -17,7 +18,7 @@ test('Pinout TIM6: TRGO, TIM6_DAC_IRQn, generated main.c runs the update interru
  try{
   const {win}=s,code=()=>win.evaluate(()=>document.getElementById('code').value);
   await useF446(win);
-  await win.evaluate(()=>document.getElementById('pinout-open').click());await win.waitForSelector('#pinout-dialog[open]');
+  await win.evaluate(()=>document.getElementById('pinout-open').click());await win.waitForSelector('#pinout-dialog[open]');await win.setChecked('#pinout-couple',false);
   const card='#pinout-peripherals section.peripheral-card:has([data-peripheral="TIM6"])';
   await win.check('[data-peripheral="TIM6"]');await win.waitForSelector('[data-timer-trgo="TIM6"]');
   assert.equal(await win.locator(`${card} [data-timer-mode], ${card} [data-timer-counter]`).count(),0,'no mode / Counter Mode choice');

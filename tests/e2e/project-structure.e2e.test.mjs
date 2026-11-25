@@ -19,7 +19,7 @@ test('the CubeIDE tree lists the whole project; startup code and the linker scri
   assert.equal(await win.$eval('#build-file-list [data-tree-folder="Core/Src"]',d=>d.open),true);
   assert.equal(await win.$eval('#build-file-list [data-tree-folder="Drivers"]',d=>d.open),false);
   const inSrc=await win.$$eval('#build-file-list [data-tree-folder="Core/Src"] > .tree-children > button',b=>b.map(x=>x.textContent.replace(/^[A-Z]/,'')));
-  assert.deepEqual(inSrc.sort(),['main.c','stm32f1xx_it.c','syscalls.c','sysmem.c','system_stm32f1xx.c']);
+  assert.deepEqual(inSrc.sort(),['gpio.c','main.c','stm32f1xx_it.c','syscalls.c','sysmem.c','system_stm32f1xx.c','usart.c'],'a new project generates gpio.c and usart.c (feature 51)');
   assert.equal(await win.$eval('#build-file-list [data-tree-source="main.c"]',b=>b.classList.contains('tree-own')),true);
   const top=await win.$$eval('#build-file-list > button',b=>b.map(x=>x.textContent.replace(/^[A-Z]/,'')));
   assert.ok(top.some(n=>/\.ioc$/.test(n))&&top.includes('STM32F103RBTX_FLASH.ld'),top.join(' '));

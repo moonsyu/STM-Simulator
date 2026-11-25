@@ -4,6 +4,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {launch} from './harness.mjs';
+// Feature 51: a new project generates gpio.c / usart.c …; this test reads the init code in main.c, so it generates as one file.
 
 test('Pinout DAC: OUT1 / OUT2 channels, trigger and triangle wave in main.c; the run outputs HAL_DAC_SetValue',{timeout:150000},async()=>{
  const s=await launch();
@@ -12,7 +13,7 @@ test('Pinout DAC: OUT1 / OUT2 channels, trigger and triangle wave in main.c; the
   await win.evaluate(()=>document.getElementById('board-open').click());await win.click('#board-results [data-board-id="nucleo-f446re"]');
   if(await win.locator('#board-change-dialog').isVisible())await win.click('#board-change-confirm');
   await win.waitForFunction(()=>/F446RE/.test(document.getElementById('current-board-name').textContent));
-  await win.evaluate(()=>document.getElementById('pinout-open').click());await win.waitForSelector('#pinout-dialog[open]');
+  await win.evaluate(()=>document.getElementById('pinout-open').click());await win.waitForSelector('#pinout-dialog[open]');await win.setChecked('#pinout-couple',false);
   await win.check('[data-peripheral="DAC"]');await win.waitForSelector('[data-dac-pin="OUT1"]');
   await win.check('[data-dac-pin="OUT1"]');await win.waitForSelector('[data-dac="OUT1"][data-key="trigger"]');
   await win.check('[data-dac-pin="OUT2"]');await win.waitForSelector('[data-dac="OUT2"][data-key="trigger"]');

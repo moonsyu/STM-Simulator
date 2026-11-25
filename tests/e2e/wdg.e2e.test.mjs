@@ -4,12 +4,13 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {launch} from './harness.mjs';
+// Feature 51: a new project generates gpio.c / usart.c …; this test reads the init code in main.c, so it generates as one file.
 
 test('Pinout IWDG / WWDG: timing notes, generated init code, an unrefreshed IWDG restarts the run',{timeout:150000},async()=>{
  const s=await launch();
  try{
   const {win}=s,code=()=>win.evaluate(()=>document.getElementById('code').value);
-  await win.evaluate(()=>document.getElementById('pinout-open').click());await win.waitForSelector('#pinout-dialog[open]');
+  await win.evaluate(()=>document.getElementById('pinout-open').click());await win.waitForSelector('#pinout-dialog[open]');await win.setChecked('#pinout-couple',false);
   await win.check('[data-peripheral="IWDG"]');await win.waitForSelector('[data-wdg="IWDG"][data-key="reload"]');
   const iwdg='#pinout-peripherals section.peripheral-card:has([data-peripheral="IWDG"])',wwdg='#pinout-peripherals section.peripheral-card:has([data-peripheral="WWDG"])';
   assert.match(await win.textContent(iwdg),/LSI 40 kHz \/ 4 · \(4095 \+ 1\) 카운트 = 409\.6 ms/);

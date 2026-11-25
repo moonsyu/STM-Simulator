@@ -20,7 +20,11 @@ test('the Pinout option writes main.c with the peripheral headers; the pairs are
  const s=await launch();
  try{
   const {win}=s;
-  assert.doesNotMatch(await code(win),/#include "gpio\.h"/);
+  // Feature 51: a new project starts with the option on.
+  assert.match(await code(win),/#include "main\.h"\n#include "usart\.h"\n#include "gpio\.h"/);
+  await generate(win,false);
+  await win.waitForFunction(()=>!/#include "gpio\.h"/.test(document.getElementById('code').value));
+  assert.match(await code(win),/^static void MX_GPIO_Init\(void\)\s*\{/m);
   await generate(win,true);
   await win.waitForFunction(()=>/#include "gpio\.h"/.test(document.getElementById('code').value));
   const split=await code(win);

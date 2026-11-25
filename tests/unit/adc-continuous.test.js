@@ -1,18 +1,19 @@
 // ADC1 Continuous Conversion Mode (CubeMX ADC Settings): Pinout setting, generated MX_ADC1_Init, .ioc import, and the
 // interpreter: one HAL_ADC_Start, then HAL_ADC_GetValue follows the potentiometer; single mode keeps one result.
 import test from 'node:test';
+import {oneFileHal} from './helpers/one-file.js';
 import assert from 'node:assert/strict';
 import {applyHalExample} from '../../src/hal-examples.js';
 import {SimulationSession} from '../../src/session.js';
 import {blankProject,projectForBoard} from '../../src/project.js';
-import {validateMcu,generateHal,importIoc} from '../../src/mcu-config.js';
+import {validateMcu,importIoc} from '../../src/mcu-config.js';
 
 const LOOP='    adc_val = HAL_ADC_GetValue(&hadc1);\n    printf("value: %lu\\r\\n", adc_val);\n    HAL_Delay(100);';
 function project(continuous,base=blankProject()){
  const p=applyHalExample(base,'potentiometer');
  if(continuous)p.mcu.peripherals.ADC1.continuous=true;
  // As in the report: start once in USER CODE 2, then only read the result register.
- p.code=generateHal(p.mcu,{minimal:true}).replace('/* USER CODE BEGIN PV */','/* USER CODE BEGIN PV */\nuint32_t adc_val;').replace('/* USER CODE BEGIN Includes */','/* USER CODE BEGIN Includes */\n#include <stdio.h>').replace('  /* USER CODE BEGIN 2 */','  /* USER CODE BEGIN 2 */\n  HAL_ADC_Start(&hadc1);').replace('    /* USER CODE BEGIN 3 */','    /* USER CODE BEGIN 3 */\n'+LOOP);
+ p.code=oneFileHal(p.mcu,{minimal:true}).replace('/* USER CODE BEGIN PV */','/* USER CODE BEGIN PV */\nuint32_t adc_val;').replace('/* USER CODE BEGIN Includes */','/* USER CODE BEGIN Includes */\n#include <stdio.h>').replace('  /* USER CODE BEGIN 2 */','  /* USER CODE BEGIN 2 */\n  HAL_ADC_Start(&hadc1);').replace('    /* USER CODE BEGIN 3 */','    /* USER CODE BEGIN 3 */\n'+LOOP);
  return p;
 }
 function run(p){
@@ -26,8 +27,8 @@ test('Continuous Conversion Mode: validated, generated for F446RE and F103RB, re
  for(const base of [blankProject(),projectForBoard('nucleo-f103rb')]){
   const p=project(true,base);
   assert.equal(validateMcu(p.mcu).peripherals.ADC1.continuous,true);
-  assert.match(generateHal(p.mcu),/hadc1\.Init\.ContinuousConvMode = ENABLE;/);
-  assert.match(generateHal(project(false,base).mcu),/hadc1\.Init\.ContinuousConvMode = DISABLE;/);
+  assert.match(oneFileHal(p.mcu),/hadc1\.Init\.ContinuousConvMode = ENABLE;/);
+  assert.match(oneFileHal(project(false,base).mcu),/hadc1\.Init\.ContinuousConvMode = DISABLE;/);
   assert.equal(validateMcu(project(false,base).mcu).peripherals.ADC1.continuous,undefined,'off is the default (not stored)');
  }
  assert.throws(()=>validateMcu({...project(true).mcu,peripherals:{ADC1:{enabled:true,continuous:'yes'}}}),/Continuous Conversion Mode/);

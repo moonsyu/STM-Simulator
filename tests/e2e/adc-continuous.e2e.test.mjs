@@ -21,9 +21,10 @@ test('Pinout ADC1 Continuous Conversion Mode: one HAL_ADC_Start, the printed val
   assert.match(await win.textContent('#pinout-peripherals'),/HAL_ADC_Start 한 번 뒤 계속 변환/);
   await win.click('#pinout-apply');await win.waitForFunction(()=>!document.getElementById('pinout-dialog').open);
   await win.evaluate(()=>{const c=document.getElementById('code');let v=c.value;
-   v=v.replace(/(\/\* USER CODE BEGIN 2 \*\/)/,'$1\n  HAL_ADC_Start(&hadc1);').replace(/(\/\* USER CODE BEGIN 3 \*\/)[\s\S]*?(\/\* USER CODE END 3 \*\/)/,'$1\n    uint32_t adc_val = HAL_ADC_GetValue(&hadc1);\n    printf("value: %lu\\r\\n", adc_val);\n    HAL_Delay(100);\n    $2').replace('hadc1.Init.ContinuousConvMode = DISABLE;','hadc1.Init.ContinuousConvMode = ENABLE;');
+   v=v.replace(/(\/\* USER CODE BEGIN 2 \*\/)/,'$1\n  HAL_ADC_Start(&hadc1);').replace(/(\/\* USER CODE BEGIN 3 \*\/)[\s\S]*?(\/\* USER CODE END 3 \*\/)/,'$1\n    uint32_t adc_val = HAL_ADC_GetValue(&hadc1);\n    printf("value: %lu\\r\\n", adc_val);\n    HAL_Delay(100);\n    $2');
    c.value=v;c.dispatchEvent(new Event('input',{bubbles:true}));});
-  assert.match(await win.evaluate(()=>document.getElementById('code').value),/ContinuousConvMode = ENABLE/);
+  // Feature 51: the example is divided — MX_ADC1_Init is in adc.c, generated from the settings just applied (Enabled).
+  assert.match(await win.evaluate(()=>document.getElementById('code').value),/#include "adc\.h"/);
   await win.keyboard.press('Control+F5');
   await win.waitForFunction(()=>/value: 204[78]/.test(document.getElementById('console-output').textContent),null,{timeout:30000});
   // Select the potentiometer and move its wiper from the property panel while the program runs.

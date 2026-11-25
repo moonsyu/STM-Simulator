@@ -4,6 +4,7 @@ import {advance} from './helpers.js';
 import {allHalExamples,applyHalExample} from '../../src/hal-examples.js';
 import {blankProject,validateProject} from '../../src/project.js';
 import {SimulationSession} from '../../src/session.js';
+import {halFiles} from '../../src/peripheral-files.js';
 import {searchHalExamples} from '../../src/hal-example-search.js';
 import {consoleSink} from '../unit/helpers/console.js';
 
@@ -37,15 +38,17 @@ test('every HAL example ports to NUCLEO-F103RB and prints the same output as on 
  assert.deepEqual(failures,[]);
 });
 
+// The whole program of a project: main.c and its per-peripheral files (feature 51: examples open divided).
+const program=p=>[p.code,...halFiles(p).map(file=>file.text)].join('\n');
 test('ported F103 examples use F1 clocks, AFIO remaps and DMA1 channels',()=>{
  const uart=project(F1,'dma_uart_echo');
  assert.equal(uart.boardId,F1);assert.equal(uart.mcu.family,'STM32F103RB');
- assert.match(uart.code,/RCC_PLL_MUL16/);assert.match(uart.code,/hdma_usart2_rx\.Instance = DMA1_Channel6;/);
- assert.doesNotMatch(uart.code,/Stream|\.Init\.Channel|FIFOMode|GPIO_AF\d/);
+ assert.match(uart.code,/RCC_PLL_MUL16/);assert.match(program(uart),/hdma_usart2_rx\.Instance = DMA1_Channel6;/);
+ assert.doesNotMatch(program(uart),/Stream|\.Init\.Channel|FIFOMode|GPIO_AF\d/);
  const sonar=project(F1,'ultrasonic');
- assert.match(sonar.code,/htim2\.Init\.Period = 65535;/);assert.match(sonar.code,/\(uint16_t\)\(now - started\)/);
+ assert.match(program(sonar),/htim2\.Init\.Period = 65535;/);assert.match(sonar.code,/\(uint16_t\)\(now - started\)/);
  const can=project(F1,'ref_can_transceiver_6');
- assert.match(can.code,/__HAL_AFIO_REMAP_CAN1_2\(\);/);assert.doesNotMatch(can.code,/GPIO_AF9_CAN1/);
+ assert.match(program(can),/__HAL_AFIO_REMAP_CAN1_2\(\);/);assert.doesNotMatch(program(can),/GPIO_AF9_CAN1/);
 });
 
 test('the example list of an F103 project leaves out examples that need F4-only peripherals',()=>{

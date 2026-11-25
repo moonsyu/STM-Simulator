@@ -4,14 +4,15 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {launch} from './harness.mjs';
+// Feature 51: a new project generates gpio.c / usart.c …; this test reads the init code in main.c, so it generates as one file.
 
 test('Pinout TIM2 Output Compare + Counter Mode: channel note, generated main.c, back to PWM',{timeout:120000},async()=>{
  const s=await launch();
  try{
   const {win}=s,code=()=>win.evaluate(()=>document.getElementById('code').value);
   await win.click('[data-activity="examples"]');if(!await win.locator('#view-examples').isVisible())await win.click('[data-activity="examples"]');
-  await win.selectOption('#hal-example','pwm');await win.waitForFunction(()=>/HAL_TIM_PWM_Init\(&htim2\)/.test(document.getElementById('code').value));
-  await win.evaluate(()=>document.getElementById('pinout-open').click());await win.waitForSelector('#pinout-dialog[open]');
+  await win.selectOption('#hal-example','pwm');await win.waitForFunction(()=>/#include "tim\.h"/.test(document.getElementById('code').value));
+  await win.evaluate(()=>document.getElementById('pinout-open').click());await win.waitForSelector('#pinout-dialog[open]');await win.setChecked('#pinout-couple',false);
   const ch='#pinout-peripherals fieldset.tim-channel';
   await win.selectOption('[data-timer-mode="TIM2"]','oc');
   await win.waitForFunction(c=>/Output Compare CH1 · P[AB]\d+/.test(document.querySelector(c)?.textContent||''),ch);
@@ -28,7 +29,7 @@ test('Pinout TIM2 Output Compare + Counter Mode: channel note, generated main.c,
   await win.waitForFunction(()=>/htim2\.Init\.CounterMode = TIM_COUNTERMODE_CENTERALIGNED1;[\s\S]*HAL_TIM_OC_Init\(&htim2\);[\s\S]*channel\.OCMode = TIM_OCMODE_TOGGLE;[\s\S]*HAL_TIM_OC_ConfigChannel\(&htim2, &channel, TIM_CHANNEL_1\);/.test(document.getElementById('code').value),null,{timeout:10000})
    .catch(async e=>{throw new Error(e.message+'\n'+(await code()).split('\n').filter(l=>/htim2|channel\./.test(l)).join('\n'));});
   // Back to PWM: the Output Compare mode is not a PWM mode, so the channel returns to PWM mode 1.
-  await win.evaluate(()=>document.getElementById('pinout-open').click());await win.waitForSelector('#pinout-dialog[open]');
+  await win.evaluate(()=>document.getElementById('pinout-open').click());await win.waitForSelector('#pinout-dialog[open]');await win.setChecked('#pinout-couple',false);
   await win.selectOption('[data-timer-mode="TIM2"]','pwm');
   await win.waitForFunction(c=>/PWM Generation CH1/.test(document.querySelector(c)?.textContent||''),ch);
   assert.equal(await win.inputValue('[data-tim-channel="TIM2"][data-ch="CH1"][data-key="ocMode"]'),'PWM1');

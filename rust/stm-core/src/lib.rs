@@ -2,6 +2,7 @@
 //! one entry point with JSON: `{"fn": name, "args": value}` in, `{"ok": value}` or `{"error": message}` out.
 //! New and changed features are written here (the user's decision of 2026-11-25); the screens stay in JavaScript.
 
+pub mod couple;
 pub mod csource;
 pub mod docs_regions;
 pub mod family;
@@ -77,6 +78,56 @@ pub fn dispatch(name: &str, args: &Value) -> Result<Value, String> {
                 })),
             }
         }
+        // {"files": [{"name", "text"}], "inPair": bool, "before": {function: statements}}
+        //   → {"functions": {name: pair}, "handles": {name: pair}, "before", "inPair", "stored"}: the `coupled` of a module
+        "docs_coupling" => {
+            let files: Vec<(String, String)> = args
+                .get("files")
+                .and_then(Value::as_array)
+                .map(|list| {
+                    list.iter()
+                        .map(|f| (text(f, "name").to_string(), text(f, "text").to_string()))
+                        .collect()
+                })
+                .unwrap_or_default();
+            let (functions, handles) = docs_regions::coupling_of(&files);
+            Ok(json!({
+                "functions": functions,
+                "handles": handles,
+                "before": text_map(args.get("before")),
+                "inPair": args.get("inPair").and_then(Value::as_bool).unwrap_or(true),
+                "stored": texts(args, "stored"),
+            }))
+        }
+        // {"main", "pairs": [{"name", "text"}]} → {"main", "files": [{"name", "text"}]} | null (it stays one file)
+        "couple_example" => {
+            let pairs: Vec<(String, String)> = args
+                .get("pairs")
+                .and_then(Value::as_array)
+                .map(|list| {
+                    list.iter()
+                        .map(|f| (text(f, "name").to_string(), text(f, "text").to_string()))
+                        .collect()
+                })
+                .unwrap_or_default();
+            Ok(match couple::couple_example(text(args, "main"), &pairs) {
+                Some(out) => json!({
+                    "main": out.main,
+                    "files": out.files.iter().map(|(name, text)| json!({ "name": name, "text": text })).collect::<Vec<_>>(),
+                }),
+                None => Value::Null,
+            })
+        }
+        // {"code", "setup": text | null, "write", "read"} → the code with the UART console | null (it keeps its code)
+        "add_console" => Ok(couple::add_console(
+            text(args, "code"),
+            &couple::ConsolePieces {
+                setup: args.get("setup").and_then(Value::as_str),
+                write: text(args, "write"),
+                read: text(args, "read"),
+            },
+        )
+        .map_or(Value::Null, Value::String)),
         // {"module"} → [role]
         "docs_module_needs" => {
             let mut needs: Vec<String> = docs_regions::module_needs(&docs_module(
@@ -193,6 +244,7 @@ fn docs_module(value: &Value) -> docs_regions::Module {
                 handles: text_map(c.get("handles")),
                 before: text_map(c.get("before")),
                 in_pair: c.get("inPair").and_then(Value::as_bool).unwrap_or(true),
+                stored: texts(c, "stored").into_iter().collect(),
             }),
     }
 }

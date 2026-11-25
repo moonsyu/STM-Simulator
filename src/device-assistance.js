@@ -5,7 +5,9 @@ import {inlineStatements} from './c-inline.js';
 import {showSurface} from './surfaces.js';
 import {CATALOG_BY_TYPE} from './catalog-defs.js';
 import {registerSetup,REGISTER_HELPERS} from './device-register-setup.js';
-import {managedChecksum,managedRegion,stripDeviceRegions,removeLegacyDeviceHooks,docsTag,docsRegions,installDeviceRegions,removeDeviceRegions,moduleNeeds,cutLoose} from './device-code-insertion.js';
+import {managedChecksum,managedRegion,stripDeviceRegions,removeLegacyDeviceHooks,docsTag,docsRegions,installDeviceRegions,removeDeviceRegions,moduleNeeds,cutLoose,setFileFunctionRegion} from './device-code-insertion.js';
+import {rustCall} from './rust-core.js';
+import {peripheralFiles,halFiles} from './peripheral-files.js';
 import {recipeFor,primaryPart,expectedNets,wiringTopology,DEVICE_RECIPES} from './device-docs-data.js';
 import {familyProfile,routesOf} from './mcu-family.js';
 import {projectBoard} from './boards.js';
@@ -138,6 +140,18 @@ function registerCards(config,binding,sample){
  if(!chosen.length)throw new Error('해당 장치에서 사용할 수 없는 레지스터 예제입니다.');return chosen;
 }
 // The code one device contributes: user-facing statements for main and its CubeMX-style init pieces.
+// Feature 51: a project that generates a pair of .c/.h files per peripheral has the device's init code in gpio.c,
+// i2c.c … (the generator writes it from the Pinout settings Docs changed). `coupled` tells the installer which pair
+// defines an init function or a handle, so main.c includes and calls instead of defining them again (Rust
+// docs_regions.rs). `inPair` false: a register-level body the pair does not hold — it is put into the pair's function.
+// `stored`: pairs the project keeps as files (an example's hand-written init, a file the user edited) — the generator
+// does not write those, so the device's init code is added to their functions as Docs regions.
+const storedPairs=project=>(project.firmware?.files||[]).filter(f=>f.origin==='gen'&&/\.c$/.test(f.name)).map(f=>f.name.split('/').at(-1).slice(0,-2));
+function couplingOf(config,project,inPair,before={}){
+ if(!config.coupleFiles)return undefined;
+ let files;try{files=peripheralFiles(validateMcu(config));}catch{return undefined;}
+ return rustCall('docs_coupling',{files,inPair,before,stored:storedPairs(project)});
+}
 export function deviceModule(binding,project,slot=slotOf(project,binding)){
  const sample=bindingSample(binding,project),prefix='STM_D'+slot+'_',config=ownConfig(project,binding);
  if(binding.mode==='baremetal'){
@@ -145,24 +159,51 @@ export function deviceModule(binding,project,slot=slotOf(project,binding)){
   const functions=Object.entries(config.peripherals).filter(([,s])=>s.enabled).map(([id,s])=>({name:'MX_'+id+'_Init',body:setup({...config,pins:{},peripherals:{[id]:s}})})).filter(f=>f.body.trim()).map(f=>({...f,body:expand(f.body)}));
   const step=chosen.length===1?chosen[0].code:chosen.map(c=>'{\n'+c.code+'\n}').join('\n');
   const gpio=setup({...config,peripherals:{}});
-  return {declarations:'',init:'SystemCoreClockUpdate();',step:expand(step+'\nBM_delay(100);'),gpio:gpio.trim()?expand(gpio):'',functions,handles:[]};
+  return {declarations:'',init:'SystemCoreClockUpdate();',step:expand(step+'\nBM_delay(100);'),gpio:gpio.trim()?expand(gpio):'',functions,handles:[],coupled:couplingOf(config,project,false)};
  }
  const parsed=compileHal(sample.code,[],sample.mcu?.family),decls=parsed.globals.flatMap(g=>g.declarations),sampleHandles=decls.filter(d=>d.type.endsWith('_HandleTypeDef')),names={};
  for(const g of decls)if(!sampleHandles.some(h=>h.name===g.name))names[g.name]=prefix+g.name;
  const example=exampleStatements(sample,binding.api,prefix),map=text=>remapCode(replaceIdentifiers(text,names),binding,sample);
  const adc=Object.keys(config.pins).find(pin=>config.pins[pin].function.startsWith('ADC1_')),channel=adc?config.pins[adc].function.slice(7):null;
  const adcSelect=adc?`ADC_ChannelConfTypeDef docsChannel = {0}; docsChannel.Channel = ADC_CHANNEL_${channel}; docsChannel.Rank = 1; docsChannel.SamplingTime = ${config.family==='STM32F103RB'?'ADC_SAMPLETIME_239CYCLES_5':'ADC_SAMPLETIME_3CYCLES'}; HAL_ADC_ConfigChannel(&hadc1, &docsChannel);\n`:'';
- const generated=Object.keys(config.pins).length||Object.keys(config.peripherals).length?generateHal(config):'',fns=cFunctions(generated);
+ const generated=Object.keys(config.pins).length||Object.keys(config.peripherals).length?generateHal({...config,coupleFiles:false}):'',fns=cFunctions(generated);
  // F1: the ADC clock (PCLK2 / ADCPRE <= 14 MHz) is set in the generated SystemClock_Config, which Docs does not replace;
  // a Docs-created MX_ADC1_Init sets it first.
  const adcClock=(/^[ \t]*RCC_PeriphCLKInitTypeDef[\s\S]*?HAL_RCCEx_PeriphCLKConfig[^\n]*\n/m.exec(fns.find(f=>f.name==='SystemClock_Config')?.body||'')||[''])[0];
  const handles=new Map();for(const m of generated.matchAll(/^(\w+_HandleTypeDef)\s+(\w+)\s*;/gm))handles.set(m[2],{type:m[1],name:m[2]});
  for(const h of sampleHandles){const name=remapCode(h.name,binding,sample);if(!handles.has(name))handles.set(name,{type:h.type,name});}
  return {declarations:map(example.globals),init:map(example.init),step:adcSelect+map(example.step),gpio:fns.find(f=>f.name==='MX_GPIO_Init')?.body||'',
-  functions:fns.filter(f=>/^MX_\w+_Init$/.test(f.name)&&f.name!=='MX_GPIO_Init').map(f=>({name:f.name,body:f.name==='MX_ADC1_Init'?adcClock+f.body:f.body})),handles:[...handles.values()]};
+  functions:fns.filter(f=>/^MX_\w+_Init$/.test(f.name)&&f.name!=='MX_GPIO_Init').map(f=>({name:f.name,body:f.name==='MX_ADC1_Init'?adcClock+f.body:f.body})),handles:[...handles.values()],
+  coupled:generated?couplingOf(config,project,true,adcClock.trim()?{MX_ADC1_Init:adcClock}:{}):undefined};
 }
 const othersOf=(project,binding)=>()=>project.deviceDocs.bindings.filter(b=>b!==binding).map(b=>{try{return {tag:docsTag(b),needs:moduleNeeds(deviceModule(b,project))};}catch{return {tag:docsTag(b),needs:new Set()};}});
 function installBinding(project,binding){project.code=installDeviceRegions(project.code,docsTag(binding),deviceModule(binding,project),othersOf(project,binding));}
+// Feature 51: the per-peripheral files the project stores, after Docs changed the applied devices. A pair the
+// generator writes has the device's init code already (it comes from the Pinout settings Docs changed). A stored pair
+// (an example's hand-written init, a file the user edited) and a register-level body get it as a Docs region in the
+// init function: regions of devices that are gone are taken out, the applied devices' are written, and a file
+// Docs made that is back to the generated text is not kept.
+function syncPairFiles(project){
+ if(!project.mcu?.coupleFiles||project.firmware?.mode!=='hal')return;
+ const bindings=project.deviceDocs?.bindings||[],tags=new Set(bindings.map(docsTag)),isPair=x=>x.origin==='gen'&&/\.c$/.test(x.name);
+ const files=project.firmware.files.map(x=>{
+  if(!isPair(x))return x;let text=x.text;
+  for(const tag of new Set(docsRegions(text).regions.map(r=>r.tag)))if(!tags.has(tag))text=removeDeviceRegions(text,tag).source;
+  return text===x.text?x:{...x,text};});
+ project.firmware={...project.firmware,files};
+ let pairs=null;
+ for(const b of bindings){
+  if(b.mode!=='baremetal'&&!files.some(isPair))continue; // a HAL example's init code is what the generator writes into the pair
+  const regions=[];try{installDeviceRegions(project.code,docsTag(b),deviceModule(b,project),othersOf(project,b),regions);}catch{continue;}
+  for(const r of regions){
+   const base=r.group+'.c';let file=project.firmware.files.find(x=>x.name.split('/').at(-1)===base);
+   if(!file){pairs??=peripheralFiles(project.mcu);const text=pairs.find(x=>x.name===base)?.text;if(text===undefined)continue;file={name:'Core/Src/'+base,text,origin:'gen',base:text};project.firmware.files.push(file);}
+   else if(file.origin!=='gen')continue; // the user's own file of that name
+   file.text=setFileFunctionRegion(file.text,docsTag(b),r.function,r.body);
+  }
+ }
+ project.firmware.files=project.firmware.files.filter(x=>!(isPair(x)&&typeof x.base==='string'&&x.text===x.base));
+}
 // ---- Code written by versions before per-device markers ----
 const legacyNames=code=>[...new Set([...code.matchAll(/\/\* STM DEVICE DOCS (\w+) (?:BEGIN|END) \*\//g)].map(m=>m[1]))];
 function legacyTexts(binding,project,slot){
@@ -255,8 +296,9 @@ export function applyDeviceExample(original,target,options={}){
   if(legacy.missing.length&&legacy.removed)report.warnings.push(...legacy.missing);
  }
  installBinding(project,binding);
+ syncPairFiles(project);
  const hasBare=updateTarget(project,original);
- const validated=validateProject(project);if(!hasBare)compileHal(validated.code,validated.firmware.files,validated.mcu?.family);return {project:validated,report,binding,file:'main.c'};
+ const validated=validateProject(project);if(!hasBare)compileHal(validated.code,halFiles(validated),validated.mcu?.family);return {project:validated,report,binding,file:'main.c'};
 }
 // Keeps a removed device's wires when another applied example still depends on them.
 function bindingGroups(project,b){
@@ -308,7 +350,8 @@ export function removeDeviceExample(original,target,{circuit=false}={}){
  if(!legacyNames(project.code).length)delete project.deviceDocs.inlineChecksum;
  restoreConfig(project,binding,report);
  if(circuit)removeCircuit(project,binding,report);
+ syncPairFiles(project);
  const hasBare=updateTarget(project,original),validated=validateProject(project);
- if(!hasBare)try{compileHal(validated.code,validated.firmware.files,validated.mcu?.family);}catch(error){report.warnings.push('제거 후 main.c 확인 필요: '+error.message);}
+ if(!hasBare)try{compileHal(validated.code,halFiles(validated),validated.mcu?.family);}catch(error){report.warnings.push('제거 후 main.c 확인 필요: '+error.message);}
  return {project:validated,report,binding,file:'main.c',action:'remove'};
 }

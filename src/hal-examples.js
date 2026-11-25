@@ -8,6 +8,8 @@ import {DEVICE_EXAMPLES,DEVICE_GUIDES,deviceExample} from './device-examples.js'
 import {exampleProject} from './project.js';
 import {defaultMcu,validateMcu,generateHal,consoleUart} from './mcu-config.js';
 import {compileHal} from './hal-source.js';
+import {rustCall} from './rust-core.js';
+import {peripheralFiles,halFiles} from './peripheral-files.js';
 import {configureHalCircuit} from './hal-circuits.js';
 import {EXAMPLE_TIMER_CLOCK_HZ} from './mcu-defaults.js';
 import {expandC} from './c-format.js';
@@ -80,7 +82,7 @@ export function halExample(kind){
 }
 
 // Example sources are composed from compact snippets; one statement per line makes them readable.
-function tidyExampleSource(p){
+export function tidyExampleSource(p){
   p.code=expandC(p.code);
   // Helper functions, globals and #includes go into USER CODE sections (0 / 4, PV, Includes), so regenerating main.c
   // from the Pinout or an .ioc keeps them.
@@ -113,28 +115,41 @@ export function consoleExample(p){
     // What the generator writes for USART2 alone: its pins (in MX_GPIO_Init), its init and the stdio functions.
     const only=expandC(generateHal({...defaultMcu(mcu.family),timerClockHz:mcu.timerClockHz,pins:{PA2:mcu.pins.PA2,PA3:mcu.pins.PA3},peripherals:{USART2:mcu.peripherals.USART2},nvic:{}})),parts=cFunctions(only),part=name=>parts.find(f=>f.name===name);
     const gpio=part('MX_GPIO_Init').body.replace(/^\n+|\s+$/g,''),init=part('MX_USART2_UART_Init'),write=part('_write'),read=part('_read');
-    const setup=init.text.replace(/\{\n/,()=>'{\n'+gpio+'\n').replace(/^static /,'');
-    let code=p.code;const own=cFunctions(code),has=name=>own.some(f=>f.name===name);
-    if(has('_write')||has('_read')||has('MX_USART2_UART_Init')||/\bhuart2\b/.test(code))return p;
-    const before=(marker,text)=>{const at=code.indexOf(marker);if(at<0)throw new Error(marker);const line=code.lastIndexOf('\n',at-1)+1;code=code.slice(0,line)+text+code.slice(line);};
-    // The ITM __io_putchar the generator (or an advanced example) wrote gives way to _write.
-    const itm=own.find(f=>f.name==='__io_putchar'&&/ITM_SendChar/.test(f.body));
-    if(itm)code=code.slice(0,itm.start).replace(/\n\n$/,'\n')+code.slice(itm.end).replace(/^\n/,'');
-    else if(has('__io_putchar'))return p;
-    before('/* USER CODE BEGIN 4 */',setup+'\n\n'+write.text+'\n\n'+read.text+'\n\n');
-    before('/* USER CODE BEGIN 2 */','    MX_USART2_UART_Init();\n');
-    before('/* USER CODE BEGIN 0 */','void MX_USART2_UART_Init(void);\n\n');
-    before('/* USER CODE BEGIN PV */','UART_HandleTypeDef huart2;\n');
-    code=code.replace(' * printf: SWV ITM port 0 (enable SWV in the debugger). Enable USART2 in Pinout to print on the UART.',' * printf / scanf: USART2 (ST-LINK virtual COM port) through _write / _read below.');
-    compileHal(code,p.firmware?.files||[],mcu.family);
-    p.code=code;p.mcu=mcu;
+    // Feature 51: with per-peripheral files usart.c and gpio.c hold the init code (the generator writes them from
+    // these settings) and main.c includes usart.h. The text changes are in Rust (couple.rs add_console).
+    const coupled=!!mcu.coupleFiles,setup=coupled?null:init.text.replace(/\{\n/,()=>'{\n'+gpio+'\n').replace(/^static /,'');
+    const code=rustCall('add_console',{code:p.code,setup,write:write.text,read:read.text});
+    if(code===null)return p;
+    // A gpio.c the example keeps with its own body does not have the console pins: they are set up at its end.
+    const files=(p.firmware?.files||[]).map(f=>{
+      if(!coupled||f.origin!=='gen'||f.name.split('/').at(-1)!=='gpio.c')return f;
+      const marker=/^[ \t]*\/\* USER CODE BEGIN GPIO_Init 2 \*\//m.exec(f.text);if(!marker)throw new Error('gpio.c');
+      return {...f,text:f.text.slice(0,marker.index)+'  {\n'+gpio+'\n  }\n'+f.text.slice(marker.index)};});
+    const firmware={...p.firmware,files};
+    compileHal(code,halFiles({...p,mcu,code,firmware}),mcu.family);
+    p.code=code;p.mcu=mcu;p.firmware=firmware;
   }catch{/* an example this cannot be added to keeps its code */}
   return p;
+}
+/** Feature 51: an example opens with "주변장치별 .c/.h로 생성" on and its code already divided — the MX_*_Init functions and
+ * handles the pairs of its Pinout settings define leave main.c for gpio.c, i2c.c … (Rust couple.rs). A pair whose init
+ * the example wrote by hand is stored in the project with that body (an edited generated file). An example that cannot
+ * be divided safely, or does not build divided, stays as one file with the option off. */
+export function coupleExample(p){
+  if(p.firmware?.mode!=='hal'||!p.mcu||p.mcu.coupleFiles)return p;
+  try{
+    const mcu={...p.mcu,coupleFiles:true},pairs=peripheralFiles(validateMcu(mcu)),out=rustCall('couple_example',{main:p.code,pairs});
+    if(!out)return p;
+    const stored=out.files.map(f=>({name:'Core/Src/'+f.name,text:f.text,origin:'gen',base:pairs.find(x=>x.name===f.name).text}));
+    const next={...p,mcu,code:out.main,firmware:{...p.firmware,files:[...(p.firmware.files||[]),...stored]}};
+    compileHal(next.code,halFiles(next),mcu.family);
+    return next;
+  }catch{return p;}
 }
 // Laying out a complete example is deterministic, so each one is planned once per session and board.
 const arranged=new Map();
 export function applyHalExample(project,kind,{console=true}={}){
   const boardId=projectBoard(project).id,key=boardId+':'+kind+(console?'':':plain');
-  if(!arranged.has(key)){const p=tidyExampleSource(halExampleFor(kind,boardId));arranged.set(key,arrangeExampleOnBreadboards(console?consoleExample(p):p));}
+  if(!arranged.has(key)){const p=tidyExampleSource(halExampleFor(kind,boardId));const divided=coupleExample(p);arranged.set(key,arrangeExampleOnBreadboards(console?consoleExample(divided):divided));}
   return {...structuredClone(arranged.get(key)),name:project.name};
 }

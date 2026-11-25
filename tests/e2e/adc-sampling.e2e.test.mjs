@@ -3,6 +3,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {launch} from './harness.mjs';
+// Feature 51: a new project generates gpio.c / usart.c …; this test reads the init code in main.c, so it generates as one file.
 
 test('Pinout ADC1 Sampling Time: default kept, conversion time shown, generated into main.c',{timeout:120000},async()=>{
  const s=await launch();
@@ -12,7 +13,7 @@ test('Pinout ADC1 Sampling Time: default kept, conversion time shown, generated 
   await win.selectOption('#hal-example','potentiometer');
   await win.waitForFunction(()=>document.querySelector('#part-layer [data-part="demo"]'));
   await win.click('[data-activity="board"]');if(!await win.locator('#pinout-open').isVisible())await win.click('[data-activity="board"]');
-  await win.click('#pinout-open');await win.waitForSelector('#pinout-dialog[open]');
+  await win.click('#pinout-open');await win.waitForSelector('#pinout-dialog[open]');await win.setChecked('#pinout-couple',false);
   const f103=/STM32F103RB/.test(await win.textContent('#pinout-dialog')),[longest,short,macro]=f103?['239.5','7.5','ADC_SAMPLETIME_7CYCLES_5']:['480','15','ADC_SAMPLETIME_15CYCLES'];
   assert.equal(await win.inputValue('[data-adc-sampling]'),longest,'the time the app always generated');
   const before=await win.textContent('#pinout-peripherals');assert.match(before,/한 번 변환 [\d.]+ µs \(ADC 클록/);

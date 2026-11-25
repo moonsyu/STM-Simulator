@@ -3,6 +3,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {launch} from './harness.mjs';
+// Feature 51: a new project generates gpio.c / usart.c …; this test reads the init code in main.c, so it generates as one file.
 
 const pick=async(win,values)=>{for(const [key,value]of values)if(await win.locator(`[data-uart-param="USART2"][data-key="${key}"]`).count())await win.selectOption(`[data-uart-param="USART2"][data-key="${key}"]`,value);};
 async function generate(win){
@@ -14,7 +15,7 @@ test('USART2 Parameter Settings (9 bits, even parity, 2 stop bits, TX only) are 
  const s=await launch();
  try{
   const {win}=s,code=()=>win.evaluate(()=>document.getElementById('code').value);
-  await win.evaluate(()=>document.getElementById('pinout-open').click());await win.waitForSelector('#pinout-dialog[open]');
+  await win.evaluate(()=>document.getElementById('pinout-open').click());await win.waitForSelector('#pinout-dialog[open]');await win.setChecked('#pinout-couple',false);
   const usart=win.locator('#pinout-peripherals [data-peripheral="USART2"]');
   if(!await usart.isChecked())await usart.check();
   const over=await win.locator('[data-uart-param="USART2"][data-key="overSampling"]').count()>0,f103=/F103/.test(await win.textContent('#pinout-dialog'));
@@ -25,7 +26,7 @@ test('USART2 Parameter Settings (9 bits, even parity, 2 stop bits, TX only) are 
   await win.waitForFunction(()=>/huart2\.Init\.Parity = UART_PARITY_EVEN;/.test(document.getElementById('code').value),null,{timeout:10000});
   const c=await code();
   for(const line of ['huart2.Init.WordLength = UART_WORDLENGTH_9B;','huart2.Init.StopBits = UART_STOPBITS_2;','huart2.Init.Mode = UART_MODE_TX;',over?'huart2.Init.OverSampling = UART_OVERSAMPLING_8;':'huart2.Init.OverSampling = UART_OVERSAMPLING_16;'])assert.ok(c.includes(line),line);
-  if(!await win.evaluate(()=>document.getElementById('pinout-dialog').open)){await win.evaluate(()=>document.getElementById('pinout-open').click());await win.waitForSelector('#pinout-dialog[open]');}
+  if(!await win.evaluate(()=>document.getElementById('pinout-dialog').open)){await win.evaluate(()=>document.getElementById('pinout-open').click());await win.waitForSelector('#pinout-dialog[open]');await win.setChecked('#pinout-couple',false);}
   await pick(win,[['wordLength','8'],['parity','NONE'],['stopBits','1'],['direction','TX_RX'],['overSampling','16']]);
   await generate(win);
   await win.waitForFunction(()=>/huart2\.Init\.Parity = UART_PARITY_NONE;/.test(document.getElementById('code').value),null,{timeout:10000});
@@ -41,7 +42,7 @@ test('SPI1 Parameter Settings (CPOL High, CPHA 2 Edge, 16 bits, LSB first) show 
   // The SPI memory example routes SPI1 (PA5/PA6/PA7) and enables it.
   await win.click('[data-activity="examples"]');if(!await win.locator('#view-examples').isVisible())await win.click('[data-activity="examples"]');
   await win.selectOption('#hal-example','spi');await win.waitForFunction(()=>/MX_SPI1_Init/.test(document.getElementById('code').value));
-  await win.evaluate(()=>document.getElementById('pinout-open').click());await win.waitForSelector('#pinout-dialog[open]');
+  await win.evaluate(()=>document.getElementById('pinout-open').click());await win.waitForSelector('#pinout-dialog[open]');await win.setChecked('#pinout-couple',false);
   assert.equal(await win.locator('#pinout-peripherals [data-peripheral="SPI1"]').isChecked(),true);
   assert.match(await win.textContent('#pinout-peripherals'),/SPI mode 0 · Full-Duplex Master/);
   for(const [key,value]of [['cpol','HIGH'],['cpha','2EDGE'],['dataSize','16'],['firstBit','LSB']])await win.selectOption(`[data-spi="SPI1"][data-spi-param="${key}"]`,value);
@@ -59,8 +60,8 @@ test('TIM2 PWM Generation CH1: its own Pulse and CH Polarity show the duty and a
  try{
   const {win}=s,code=()=>win.evaluate(()=>document.getElementById('code').value);
   await win.click('[data-activity="examples"]');if(!await win.locator('#view-examples').isVisible())await win.click('[data-activity="examples"]');
-  await win.selectOption('#hal-example','pwm');await win.waitForFunction(()=>/HAL_TIM_PWM_Init\(&htim2\)/.test(document.getElementById('code').value));
-  await win.evaluate(()=>document.getElementById('pinout-open').click());await win.waitForSelector('#pinout-dialog[open]');
+  await win.selectOption('#hal-example','pwm');await win.waitForFunction(()=>/#include "tim\.h"/.test(document.getElementById('code').value));
+  await win.evaluate(()=>document.getElementById('pinout-open').click());await win.waitForSelector('#pinout-dialog[open]');await win.setChecked('#pinout-couple',false);
   const ch='#pinout-peripherals fieldset.tim-channel';
   assert.match(await win.textContent(ch),/PWM Generation CH1 · P[AB]\d+/);
   await win.fill('[data-tim-channel="TIM2"][data-ch="CH1"][data-key="pulse"]','300');await win.locator('[data-tim-channel="TIM2"][data-ch="CH1"][data-key="pulse"]').dispatchEvent('change');
@@ -80,7 +81,7 @@ test('I2C1 Parameter Settings: Primary Address, Fast Mode Duty Cycle (above 100 
   const {win}=s,code=()=>win.evaluate(()=>document.getElementById('code').value);
   await win.click('[data-activity="examples"]');if(!await win.locator('#view-examples').isVisible())await win.click('[data-activity="examples"]');
   await win.selectOption('#hal-example','i2c');await win.waitForFunction(()=>/MX_I2C1_Init/.test(document.getElementById('code').value));
-  await win.evaluate(()=>document.getElementById('pinout-open').click());await win.waitForSelector('#pinout-dialog[open]');
+  await win.evaluate(()=>document.getElementById('pinout-open').click());await win.waitForSelector('#pinout-dialog[open]');await win.setChecked('#pinout-couple',false);
   assert.equal(await win.locator('[data-i2c="I2C1"][data-i2c-param="dutyCycle"]').isDisabled(),true,'100 kHz: Standard Mode has no duty choice');
   await win.fill('[data-peripheral-value="I2C1"][data-key="clock"]','400000');await win.locator('[data-peripheral-value="I2C1"][data-key="clock"]').dispatchEvent('change');
   // The clock field updates the card on its change; the duty choice is then enabled.

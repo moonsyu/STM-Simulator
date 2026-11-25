@@ -3,12 +3,13 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {launch} from './harness.mjs';
+// Feature 51: a new project generates gpio.c / usart.c …; this test reads the init code in main.c, so it generates as one file.
 
 test('pin click menu, GPIO speed / open drain, EXTI NVIC and the NVIC tab reach the generated main.c',{timeout:120000},async()=>{
  const s=await launch();
  try{
   const {win}=s,code=()=>win.evaluate(()=>document.getElementById('code').value);
-  await win.evaluate(()=>document.getElementById('pinout-open').click());await win.waitForSelector('#pinout-dialog[open]');
+  await win.evaluate(()=>document.getElementById('pinout-open').click());await win.waitForSelector('#pinout-dialog[open]');await win.setChecked('#pinout-couple',false);
   // System Core › SYS: Serial Wire debug and the SysTick time base (fixed on the NUCLEO), PA13/PA14 shown as SYS pins.
   assert.equal(await win.inputValue('#sys-debug'),'Serial Wire');assert.equal(await win.inputValue('#sys-timebase'),'SysTick');
   assert.match(await win.textContent('[data-config-pin="PA13"]'),/SYS_JTMS-SWDIO/);assert.match(await win.textContent('[data-config-pin="PA14"]'),/SYS_JTCK-SWCLK/);

@@ -11,7 +11,8 @@ import {catalogBodyBounds} from '../../src/model-geometry.js';
 import {ALL_PARTS,MERGED_PARTS,PART_LIBRARY,searchParts} from '../../src/part-library.js';
 import {searchHalExamples} from '../../src/hal-example-search.js';
 import {pluggedKeys,PART_DEFS,terminalKeys,localTerminals,nominalTerminals} from '../../src/components.js';
-import {blankProject,validateProject} from '../../src/project.js';
+import {validateProject} from '../../src/project.js';
+import {oneFileBlank} from './helpers/one-file.js';
 import {SimulationSession} from '../../src/session.js';
 import {boardPin} from '../../src/pins.js';
 import {compileHal} from '../../src/hal-source.js';
@@ -19,7 +20,7 @@ import {consoleSink} from './helpers/console.js';
 
 const USER_LINE='  int keepMe = 7; /* 학생 코드 */';
 function projectWith(...parts){
-  const p=blankProject();p.code=p.code.replace('/* USER CODE BEGIN 2 */','/* USER CODE BEGIN 2 */\n'+USER_LINE);
+  const p=oneFileBlank();p.code=p.code.replace('/* USER CODE BEGIN 2 */','/* USER CODE BEGIN 2 */\n'+USER_LINE);
   for(const [type,id='sel',extra={}]of parts)p.components.push({id,type,name:type.toUpperCase(),x:800,y:350,rotation:0,span:70,...PART_DEFS[type]?.defaults,...(type==='resistor'?{value:10000}:{}),...(type==='led'?{color:'red'}:{}),...extra});
   return p;
 }
@@ -206,7 +207,7 @@ describe('device catalog',()=>{
     assert.deepEqual(problems,[]);
   });
   test('every catalog part with its defaults passes project validation',()=>{
-    const p=blankProject();p.components=types.slice(0,100).map((type,i)=>({id:'c'+i,type,name:'C'+i,x:i*10,y:0,rotation:0,...CATALOG_DEFS[type].defaults,...(CATALOG_TWO_PIN.includes(type)?{span:70}:{})}));
+    const p=oneFileBlank();p.components=types.slice(0,100).map((type,i)=>({id:'c'+i,type,name:'C'+i,x:i*10,y:0,rotation:0,...CATALOG_DEFS[type].defaults,...(CATALOG_TWO_PIN.includes(type)?{span:70}:{})}));
     assert.equal(validateProject(p).components.length,p.components.length);
   });
   test('contact maps translate model terminals to physical pins',()=>{
