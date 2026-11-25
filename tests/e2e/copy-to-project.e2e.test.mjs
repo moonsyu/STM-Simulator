@@ -41,6 +41,8 @@ test('a generated build file is edited in place: only it is stored, marked, neve
   await win.evaluate(()=>document.getElementById('pinout-open').click());await win.waitForSelector('#pinout-dialog[open]');
   await win.evaluate(()=>document.getElementById('hal-generate').click());await win.waitForSelector('#hal-replace-dialog[open]');
   assert.equal(await win.locator('#hal-replace-loss').count(),0);assert.doesNotMatch(await win.textContent('#hal-replace-dialog'),/지워집니다/);
+  // Feature 55: the window is its title and the two buttons — no description, and no empty paragraph in its place.
+  assert.deepEqual(await win.$$eval('#hal-replace-dialog > *',c=>c.map(x=>x.tagName+':'+x.textContent.trim())),['H2:HAL 초기화 코드를 생성할까요?','DIV:취소코드 생성']);
   await win.click('#hal-replace-confirm');await win.waitForFunction(()=>!document.getElementById('pinout-dialog').open);
   // The edit was only outside the sections: the regenerated file equals the generated one, so it is not kept.
   await win.waitForFunction(f=>![...document.querySelectorAll('#file-tree [data-source]')].some(b=>b.dataset.source===f),IT,{timeout:10000});
