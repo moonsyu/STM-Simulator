@@ -1,6 +1,20 @@
 # STM Simulator — 개발 인계
 
-현재 버전: **1.61.1**. 정리일: **2026-11-10**. NUCLEO-F446RE·NUCLEO-F103RB 또는 Renesas FPB-RA6E1(1.20.0, FSP·에뮬레이터 전용)과 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+현재 버전: **1.62.0**. 정리일: **2026-11-10**. NUCLEO-F446RE·NUCLEO-F103RB 또는 Renesas FPB-RA6E1(1.20.0, FSP·에뮬레이터 전용)과 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+
+## 1.62.0 기능 목록 51번: STM32 "주변장치별 .c/.h로 생성"을 기본값으로
+
+- **무엇이 달라지나**: 새로 만드는 STM32 프로젝트(`blankProject` — 보드 선택, 새 회로, 보드 구성 초기화, 빈 템플릿)는 `mcu.coupleFiles:true`로 시작한다. main.c는 `usart.h`·`gpio.h`를 include하고 `MX_GPIO_Init`·`MX_USART2_UART_Init`·`huart2`는 생성 파일(gpio.c·usart.c, 프로젝트에 저장하지 않음)에 있다. 예제(HAL 예제 전체, 강의 예제의 주 보드와 다른 STM32 보드)도 켜진 채, 코드가 나뉜 상태로 열린다(사용자 선택 "코드도 나눠서 시작"). 저장된 프로젝트는 그대로다: 꺼짐은 지금처럼 키 없음이고, `defaultMcu`(키 없음)는 바꾸지 않았으므로 예전 프로젝트와 `mcu`가 없는 프로젝트는 한 파일로 남는다. CubeMX `.ioc` 가져오기는 파일의 `ProjectManager.CoupleFile`을 따른다(없으면 한 파일로 다시 생성).
+- **새 프로젝트 설정** — Rust `family.rs` `new_project_mcu(family)`(계열 기본 타이머 클록 `default_timer_clock_hz`, 핀 없음, coupleFiles 켬) → `rust-core.js` `newProjectMcu` → `project.js` `blankProject`.
+- **부품 Docs 적용**(사용자 선택 "gpio.c 등 해당 파일에") — Docs 영역 설치·제거(`installDeviceRegions`·`removeDeviceRegions`·`moduleNeeds`)를 Rust `docs_regions.rs`로 옮겼다(`device-code-insertion.js`의 같은 이름 함수는 `rustCall` 래퍼; `docsRegions`·`regionBody`·`looseFind`·`cutLoose`와 0.26 이전 형식 처리는 JS 그대로). 다른 장치 목록(`others`)은 공유 영역을 넘겨야 할 때만 필요하므로 Rust가 `needOthers`로 요청하면 JS가 계산해 다시 부른다. 한 파일 main.c에서의 동작은 전과 같다(기존 시험 그대로 통과).
+  - 주변장치별 파일 프로젝트: `deviceModule`이 `coupled`(`docs_coupling` — 어느 쌍이 어떤 init 함수·핸들을 정의하는지, `before`: F103 ADC 클록, `inPair`, `stored`)를 붙인다. 설치기는 쌍이 정의하고 main.c가 직접 정의하지 않는 함수·핸들에 대해 정의·프로토타입·핸들 영역을 만들지 않고, 공유 영역 `INC_<쌍>`(`#include "i2c.h"`, `#include "main.h"` 바로 아래)과 `MX_<X>_Init_CALL`(호출이 없을 때)만 쓴다. 초기화 코드 자체는 Docs가 바꾼 Pinout 설정으로 생성기가 그 파일에 쓴다(HAL 예제의 init 본문은 원래 `generateHal(장치 설정)`에서 잘라 온 것이라 같다). F103의 ADC 클록(`HAL_RCCEx_PeriphCLKConfig`)은 `SystemClock_Config`를 다시 쓰지 않으므로 호출 영역 안, `MX_ADC1_Init();` 앞에 넣는다.
+  - main.c가 그 함수를 아직 직접 정의하면(칸만 켜고 생성하지 않은 상태) 전처럼 그 함수 안에 영역을 넣는다. 쌍이 만들지 않는 주변장치의 핸들(CAN·I2S 예제의 `hcan`·`hi2s`)은 전처럼 main.c에 둔다.
+  - 레지스터 예제(F446RE)와 프로젝트가 저장하고 있는 쌍(예제의 손으로 쓴 init, 사용자가 고친 파일): 그 본문은 생성기가 쓰지 않으므로 `fileRegions`로 돌려받아 `syncPairFiles`가 그 파일의 init 함수 끝에 Docs 영역으로 넣는다(`setFileFunctionRegion`; 파일이 없으면 `Core/Src/<쌍>.c`를 `origin:'gen'`으로 만들어 저장). 적용이 끝난 장치의 영역은 빼고, 생성본과 같아진 파일은 저장하지 않는다. 함수가 이미 `HAL_<X>_Init(&handle)`을 부르면 본문을 다시 넣지 않는다.
+- **예제 나누기** — Rust `couple.rs` `couple_example(main, pairs)`: 예제 설정의 쌍이 정의하는 `MX_*_Init` 정의·프로토타입·핸들을 main.c에서 빼고 쌍의 헤더를 `main.h` 아래에 CubeMX 순서로 include한다. 예제가 생성기와 다르게 쓴 init 본문(공백 무시 비교)은 그 쌍의 소스에 본문을 넣어 돌려주고 `hal-examples.js` `coupleExample`이 `Core/Src/<쌍>.c`(`origin:'gen'`, `base`: 생성본)로 저장한다 — 지금 예제 260개(두 보드) 중 F446RE의 `ref_servo_feedback_4`·`ref_rgb_common_anode_4`·`ref_sevenseg_common_anode_10`(gpio.c)와 두 보드의 `adc_dma_scan`(adc.c)만 해당. 안전하게 나눌 수 없으면(다른 형태의 시그니처, 핸들을 다른 식으로 정의, main.h 없음, 나눈 뒤 해석기 빌드 실패) 한 파일로 둔다(지금은 없음). 순서: 정리(`tidyExampleSource`, 시험용으로 export) → 나누기 → UART 콘솔.
+  - UART 콘솔(`consoleExample`)의 텍스트 수정을 Rust `couple.rs` `add_console`로 옮겼다. 나뉜 형태에서는 `_write`·`_read`와 호출, `#include "usart.h"`만 main.c에 넣고(함수·프로토타입·핸들은 usart.c), 예제가 gpio.c를 저장하고 있으면 콘솔 핀 설정을 그 `MX_GPIO_Init` 끝에 블록으로 덧붙인다. 한 파일 형태는 전과 같다.
+- **dispatch 추가**: `new_project_mcu`, `docs_install`, `docs_remove`, `docs_module_needs`, `docs_file_function`, `docs_coupling`, `couple_example`, `add_console`.
+- **그대로인 것·한계**: "설정으로 HAL 코드 생성"은 저장된 쌍의 USER CODE 구역 밖을 생성본으로 다시 쓴다(기존 규칙) — 그 파일 안의 Docs 영역과 예제의 손으로 쓴 본문도 그때 생성본이 된다(한 파일 main.c에서 생성기 이름의 함수가 다시 생성되는 것과 같음). Docs 레시피(`recipeFor`)와 미리보기의 예제 원문은 한 파일 그대로다. RA(FSP) 프로젝트는 해당 없음.
+- 시험: cargo 시험(docs_regions·couple·family), `tests/unit/docs-couple.test.js`(새 프로젝트, Docs 적용: GPIO·I2C·F103 ADC·레지스터 예제·전체 레시피가 한 파일 프로젝트와 같은 출력), `tests/unit/examples-couple.test.js`(전체 예제가 나뉘어 열리고 빌드됨, 저장되는 파일 목록, 강의 예제, 저장된 gpio.c에 Docs 적용, .ioc), 한 파일 형태를 보는 기존 시험은 `tests/unit/helpers/one-file.js`(`oneFileBlank`: 새 프로젝트에서 칸을 끄고 다시 생성한 것, `oneFileHal`)로 그 형태를 계속 본다.
 
 ## 1.61.1 기능 목록 50·52·53번, Rust 코어(rust/stm-core)
 
