@@ -2,6 +2,14 @@
 
 작업할 때마다 날짜순으로 맨 위에 추가합니다. 무엇을 했는지, 왜 했는지, 어떻게 검증했는지, 커밋·릴리스와 남은 사항을 적습니다. 버전별 구조 설명은 [HANDOFF.md](../HANDOFF.md), 검증 수치는 [VERIFICATION.md](VERIFICATION.md)에 있습니다.
 
+## 2026-11-26 · README 새로 작성(mermaid 도식)
+
+- 요청: 사용자 "README를 처음부터 다시 작성해 / 현재 작성 된 내용을 재활용하지 말고 다음 목적과 목차에 맞춰서 작성해줘 / README에는 이 프로젝트를 만든 목적과 소개, EXE 설치 경로를 넣을거야 / 프로젝트 소개 (EXE 설치 링크 포함), 목적, 개발 계기, 시스템 아키텍처, 애플리케이션 아키텍처, 개발 과정 (기획 과정, 수정 과정 등) / 각 내용에는 글보단 도식화로 넣어줘 / 도식화는 mermaid를 사용한 flowchart, Diagram으로 만들어줘".
+- 한 일과 이유: 기존 README를 지우고 요청한 여섯 절로 새로 썼다. 도식은 mermaid 10개로 그렸다(flowchart 9개, 버전 흐름 timeline 1개). 내용의 근거는 코드 구조(`desktop/`, `src/`, `src/emu/`, `rust/stm-core`), CI(`.github/workflows/build-windows.yml`의 checks·firmware·package·release), 태그 날짜·HANDOFF 버전 제목, 프로젝트 목표다. 요청한 목차에 없는 기존 절(빌드 방법·테스트·라이선스·권리 관련 안내·보드 기본값)은 넣지 않았다.
+- 검증: 브라우저에서 mermaid 11.4.1의 `parse`·`render`로 도식 10개를 모두 오류 없이 그렸다. README 내용을 확인하는 시험은 없다(패키지에 파일로만 들어감).
+- 커밋·릴리스: README·이 기록 `[skip ci]` 커밋. 버전은 올리지 않았다.
+- 남은 사항: 라이선스·권리 안내 절을 다시 넣을지는 사용자 판단.
+
 ## 2026-11-26 · 질문: README 현재 목차
 
 - 요청: 사용자 "README 업데이트할거야 / 현재 목차가 어떻게 되어 있어?"
