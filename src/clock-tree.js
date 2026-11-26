@@ -6,10 +6,13 @@ import {rustCall} from './rust-core.js';
 
 const TABLES=rustCall('clock_tables');
 const frozen=value=>{if(value&&typeof value==='object'){Object.values(value).forEach(frozen);Object.freeze(value);}return value;};
-export const HSI_HZ=frozen(TABLES.hsi),HSE_HZ=TABLES.hse;
+// The Rust side answers with sorted keys: the tables keep the key order they had as JavaScript literals.
+const keyed=(value,keys)=>Object.fromEntries(keys.filter(k=>k in value).map(k=>[k,value[k]]));
+const FAMILIES=['STM32F446RE','STM32F103RB'],LIMIT_KEYS=['pllM','pllN','pllQ','pllMul','vcoIn','vco','pll','sysclk','hclk','pclk1','pclk2','adc'];
+export const HSI_HZ=frozen(keyed(TABLES.hsi,FAMILIES)),HSE_HZ=TABLES.hse;
 export const AHB_DIVIDERS=frozen(TABLES.ahb),APB_DIVIDERS=frozen(TABLES.apb),ADC_PRESCALERS=frozen(TABLES.adc);
 export const PLLP_VALUES=frozen(TABLES.pllP);
-export const LIMITS=frozen(TABLES.limits);
+export const LIMITS=frozen(Object.fromEntries(FAMILIES.map(f=>[f,keyed(TABLES.limits[f],LIMIT_KEYS)])));
 export const isF1Clock=family=>family==='STM32F103RB';
 
 // A tree's fields in the order the project files have them (the Rust side answers with sorted keys).
