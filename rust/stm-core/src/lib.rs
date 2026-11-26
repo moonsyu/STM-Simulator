@@ -6,6 +6,7 @@ pub mod build_level;
 pub mod cformat;
 pub mod clock;
 pub mod couple;
+pub mod csedit;
 pub mod csource;
 pub mod csymbols;
 pub mod docs_regions;
@@ -289,6 +290,7 @@ pub fn dispatch(name: &str, args: &Value) -> Result<Value, String> {
                     .or_else(|| mcu::call(name, list))
                     .or_else(|| cformat::call(name, list))
                     .or_else(|| csymbols::call(name, list))
+                    .or_else(|| csedit::call(name, list))
             })
             .unwrap_or_else(|| Err(format!("stm-core: 알 수 없는 함수입니다: {name}"))),
     }

@@ -102,6 +102,15 @@ pub struct Function {
 /// Functions of a source (`cFunctions`): `name(params) {` at brace depth 0, `if`/`while`/`for`/`switch` excluded.
 /// `Err` when a function's braces do not close.
 pub fn c_functions(source: &str) -> Result<Vec<Function>, String> {
+    c_functions_from(source, false)
+}
+/// The same as the JavaScript `cFunctions` found them: its pattern takes `if (…) … name(…) {` as one match when no
+/// `;`, `{` or `}` is between the `if (` and the function's `)` (a `#if (X == 1)` line above a function), and goes on
+/// after that match — such a function is not listed. The callers that were JavaScript (`csedit.rs`) keep that.
+pub fn c_functions_as_javascript(source: &str) -> Result<Vec<Function>, String> {
+    c_functions_from(source, true)
+}
+fn c_functions_from(source: &str, whole_keyword_match: bool) -> Result<Vec<Function>, String> {
     let masked = mask_c(source);
     let m = masked.as_bytes();
     let src = source.as_bytes();
@@ -110,9 +119,12 @@ pub fn c_functions(source: &str) -> Result<Vec<Function>, String> {
     while let Some((at, name_end, open)) = next_call_head(m, from) {
         let name = &masked[at..name_end];
         if ["if", "while", "for", "switch"].contains(&name) {
-            from = at + 1;
-            // The JavaScript loop continues the search after the whole match; a nested match cannot start inside the
-            // name, so stepping one byte finds the same next match.
+            // Stepping one byte finds a function whose `(…)` the keyword's match would have taken with it.
+            from = if whole_keyword_match {
+                open + 1
+            } else {
+                at + 1
+            };
             continue;
         }
         let depth: i64 = m[..at]
