@@ -3,6 +3,7 @@
 //! New and changed features are written here (the user's decision of 2026-11-25); the screens stay in JavaScript.
 
 pub mod build_level;
+pub mod clock;
 pub mod couple;
 pub mod csource;
 pub mod docs_regions;
@@ -185,6 +186,48 @@ pub fn dispatch(name: &str, args: &Value) -> Result<Value, String> {
         "hal_msp" => Ok(json!(explorer::hal_msp(text(args, "prefix")))),
         // → ["STM32F446RE", "STM32F103RB"]
         "families" => Ok(json!(family::FAMILIES)),
+        // Clock Configuration (clock.rs). A tree is the object a project stores as `mcu.clock`.
+        // → {"hsi", "hse", "ahb", "apb", "adc", "pllP", "limits"}
+        "clock_tables" => Ok(clock::tables()),
+        // {"family"} → tree
+        "clock_default_tree" => Ok(Value::Object(clock::default_tree(text(args, "family")))),
+        // {"family", "hz"} → tree
+        "clock_tree_from_timer_hz" => Ok(Value::Object(clock::tree_from_timer_hz(
+            text(args, "family"),
+            args.get("hz").and_then(Value::as_f64).unwrap_or(f64::NAN),
+        ))),
+        // {"family", "tree"} → {"hsi", "hse", "vcoIn", "vco", "pll", "pllQ", "sysclk", "hclk", "pclk1", "pclk2", "tim1", "tim2", "adc"}
+        "clock_frequencies" => Ok(clock::frequencies_json(&clock::frequencies(
+            text(args, "family"),
+            &object(args, "tree"),
+        ))),
+        // {"family", "hclk"} → {"latency", "overDrive"}
+        "clock_flash" => {
+            let hclk = args.get("hclk").and_then(Value::as_f64).unwrap_or(f64::NAN);
+            Ok(json!({
+                "latency": clock::flash_latency(text(args, "family"), hclk),
+                "overDrive": clock::needs_over_drive(text(args, "family"), hclk),
+            }))
+        }
+        // {"family", "tree"} → {"problems": [text], "adc": text | null}
+        "clock_problems" => {
+            let (family, tree) = (text(args, "family"), object(args, "tree"));
+            Ok(json!({
+                "problems": clock::problems(family, &tree)?,
+                "adc": clock::adc_problem(family, &tree)?,
+            }))
+        }
+        // {"family", "tree": any} → tree, or the error of the first bad field
+        "clock_validate" => Ok(Value::Object(clock::validate(
+            text(args, "family"),
+            args.get("tree").unwrap_or(&Value::Null),
+        )?)),
+        // {"family", "values": {.ioc key: text}} → tree | null
+        "clock_tree_from_ioc" => Ok(clock::tree_from_ioc(
+            text(args, "family"),
+            &object(args, "values"),
+        )?
+        .map_or(Value::Null, Value::Object)),
         // {"previous", "generated", "previousDefault", "others": [text], "generator": [text]} → {"code", "moved"}
         "regenerate_main" => {
             let (code, moved) = regen::regenerate_main(
@@ -300,6 +343,13 @@ fn docs_others(args: &Value) -> Option<Vec<docs_regions::Other>> {
 }
 
 /// A text argument; missing or not a string reads as empty (JavaScript's `String(value || '')`).
+fn object(args: &Value, key: &str) -> serde_json::Map<String, Value> {
+    args.get(key)
+        .and_then(Value::as_object)
+        .cloned()
+        .unwrap_or_default()
+}
+
 fn text<'a>(args: &'a Value, key: &str) -> &'a str {
     args.get(key).and_then(Value::as_str).unwrap_or("")
 }
