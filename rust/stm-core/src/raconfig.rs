@@ -24,7 +24,7 @@ fn marker(v: &Value) -> Option<&str> {
         .and_then(Value::as_str)
 }
 /// `typeof v === 'number'`: the number.
-fn num(v: &Value) -> Option<f64> {
+pub(crate) fn num(v: &Value) -> Option<f64> {
     match marker(v) {
         Some("NaN") => Some(f64::NAN),
         Some("Infinity") => Some(f64::INFINITY),
@@ -34,7 +34,7 @@ fn num(v: &Value) -> Option<f64> {
     }
 }
 /// Whether JavaScript takes the value as true (a NaN or an `undefined` that came as a marker is not).
-fn truthy(v: &Value) -> bool {
+pub(crate) fn truthy(v: &Value) -> bool {
     match marker(v) {
         Some("Infinity" | "-Infinity") => true,
         Some(_) => false,
@@ -55,7 +55,7 @@ fn without_undefined(v: &Value) -> Value {
     }
 }
 /// A number for the answer: one JSON cannot carry goes as the marker.
-fn out(v: f64) -> Value {
+pub(crate) fn out(v: f64) -> Value {
     if v.is_nan() {
         json!({NF: "NaN"})
     } else if v.is_infinite() {
@@ -65,11 +65,11 @@ fn out(v: f64) -> Value {
     }
 }
 /// An argument or a property that is there (`undefined` is not).
-fn there(v: Option<&Value>) -> Option<&Value> {
+pub(crate) fn there(v: Option<&Value>) -> Option<&Value> {
     v.filter(|x| marker(x) != Some("undefined"))
 }
 /// `${v}`.
-fn show(v: Option<&Value>) -> String {
+pub(crate) fn show(v: Option<&Value>) -> String {
     match there(v) {
         None => "undefined".into(),
         Some(x) => match num(x) {
@@ -144,7 +144,7 @@ fn text_number(text: &str) -> f64 {
     sign * body.parse::<f64>().unwrap_or(f64::NAN)
 }
 /// `Number(v)`: what arithmetic makes of a value.
-fn to_num(v: Option<&Value>) -> f64 {
+pub(crate) fn to_num(v: Option<&Value>) -> f64 {
     match there(v) {
         None => f64::NAN,
         Some(x) => match x {
@@ -161,7 +161,7 @@ fn to_num(v: Option<&Value>) -> f64 {
     }
 }
 /// `Math.round`: halves go up.
-fn js_round(v: f64) -> f64 {
+pub(crate) fn js_round(v: f64) -> f64 {
     if v.fract() == -0.5 {
         v.ceil()
     } else {
@@ -169,18 +169,21 @@ fn js_round(v: f64) -> f64 {
     }
 }
 /// `+v.toFixed(3)` printed: three decimals, halves up, without trailing zeros.
-fn fixed3(v: f64) -> String {
+pub(crate) fn fixed3(v: f64) -> String {
+    js_number(to_fixed3(v).parse::<f64>().unwrap_or(f64::NAN))
+}
+/// `v.toFixed(3)`: three decimals, halves up.
+pub(crate) fn to_fixed3(v: f64) -> String {
     if !v.is_finite() {
         return js_number(v);
     }
     // A double is exactly half-way between two thousandths only when it is an odd number of sixteenths.
     let sixteenths = v * 16.0;
-    let text = if sixteenths.fract() == 0.0 && (sixteenths.abs() % 2.0) == 1.0 {
+    if sixteenths.fract() == 0.0 && (sixteenths.abs() % 2.0) == 1.0 {
         format!("{:.3}", ((v * 1000.0).floor() + 1.0) / 1000.0)
     } else {
         format!("{v:.3}")
-    };
-    js_number(text.parse::<f64>().unwrap_or(f64::NAN))
+    }
 }
 /// `Number.isInteger(v)`.
 fn int(v: &Value) -> Option<f64> {
@@ -190,7 +193,7 @@ fn int_in(v: &Value, low: f64, high: f64) -> bool {
     int(v).is_some_and(|x| x >= low && x <= high)
 }
 /// `p[key] ?? default`.
-fn or(p: &Value, key: &str, default: Value) -> Value {
+pub(crate) fn or(p: &Value, key: &str, default: Value) -> Value {
     match p.get(key) {
         Some(v) if !v.is_null() => v.clone(),
         _ => default,
@@ -384,7 +387,7 @@ const CLOCK_DEFAULT: [(&str, f64); 10] = [
 ];
 const PIN_FUNCTIONS: [&str; 5] = ["GPIO_Output", "GPIO_Input", "IRQ", "Analog", "Peripheral"];
 /// Watchdog timeouts, dividers and defaults (timeout, clock divider): WDT, IWDT.
-fn wdt_info(id: &str) -> Option<([f64; 4], [f64; 6], f64, f64)> {
+pub(crate) fn wdt_info(id: &str) -> Option<([f64; 4], [f64; 6], f64, f64)> {
     match id {
         "WDT" => Some((
             [1024.0, 4096.0, 8192.0, 16384.0],
@@ -514,27 +517,45 @@ static ELC_EVENTS: LazyLock<Vec<(String, u32)>> = LazyLock::new(|| {
 fn elc_event(name: &str) -> Option<u32> {
     ELC_EVENTS.iter().find(|(k, _)| k == name).map(|(_, v)| *v)
 }
+/// ELSRn of the RA6E1 (bsp_elc.h elc_peripheral_t). The simulator links ADC0; the others are kept as written.
+pub const ELC_PERIPHERALS: [(&str, u32); 15] = [
+    ("GPT_A", 0),
+    ("GPT_B", 1),
+    ("GPT_C", 2),
+    ("GPT_D", 3),
+    ("GPT_E", 4),
+    ("GPT_F", 5),
+    ("GPT_G", 6),
+    ("GPT_H", 7),
+    ("ADC0", 8),
+    ("ADC0_B", 9),
+    ("DAC0", 12),
+    ("IOPORT1", 14),
+    ("IOPORT2", 15),
+    ("IOPORT3", 16),
+    ("IOPORT4", 17),
+];
 const ADC_TRIGGERS: [&str; 2] = ["SOFTWARE", "ELC"];
 const TRANSFER_MODES: [&str; 3] = ["NORMAL", "REPEAT", "BLOCK"];
 const TRANSFER_ADDR_MODES: [&str; 3] = ["FIXED", "INCREMENTED", "DECREMENTED"];
 
-fn rtc_defaults() -> Value {
+pub(crate) fn rtc_defaults() -> Value {
     json!({"clockSource": "LOCO", "start": "HOST_TIME", "freqCompare": 255, "callback": "rtc_callback", "alarmPriority": 12, "periodicPriority": 12, "carryPriority": 12})
 }
-fn flash_defaults() -> Value {
+pub(crate) fn flash_defaults() -> Value {
     json!({"bgo": false, "callback": "", "readyPriority": 12, "errorPriority": 12})
 }
-fn usb_defaults() -> Value {
+pub(crate) fn usb_defaults() -> Value {
     json!({"callback": "", "priority": 12, "resumePriority": 12})
 }
-fn can_defaults() -> Value {
+pub(crate) fn can_defaults() -> Value {
     json!({"bitrate": 500, "idMode": "STANDARD", "mailboxes": [{"type": "TRANSMIT", "id": 0}, {"type": "RECEIVE", "id": 0x100}, {"type": "RECEIVE", "id": 0x101}, {"type": "RECEIVE", "id": 0x102}],
         "mask": 0x7FF, "priority": 12, "callback": "can_callback"})
 }
-fn lpm_defaults() -> Value {
+pub(crate) fn lpm_defaults() -> Value {
     json!({"mode": "SLEEP", "wake": [], "ioKeep": true, "power": "DEEPCUT0", "cancel": [], "cancelRising": []})
 }
-fn transfer_defaults() -> Value {
+pub(crate) fn transfer_defaults() -> Value {
     json!({"driver": "DTC", "channel": 0, "activation": "ADC0_SCAN_END", "mode": "NORMAL", "size": 2, "srcMode": "FIXED", "destMode": "INCREMENTED", "repeatArea": "DESTINATION", "irq": "END",
         "length": 1, "blocks": 0, "callback": "", "priority": 12})
 }
@@ -617,8 +638,7 @@ pub fn tables() -> Value {
         "RA_LPM_POWER": pairs(&LPM_POWER),
         "RA_LPM_DEFAULTS": lpm_defaults(),
         "RA_ELC_EVENTS": named(&ELC_EVENTS),
-        "RA_ELC_PERIPHERALS": {"GPT_A": 0, "GPT_B": 1, "GPT_C": 2, "GPT_D": 3, "GPT_E": 4, "GPT_F": 5, "GPT_G": 6, "GPT_H": 7, "ADC0": 8, "ADC0_B": 9, "DAC0": 12, "IOPORT1": 14, "IOPORT2": 15,
-            "IOPORT3": 16, "IOPORT4": 17},
+        "RA_ELC_PERIPHERALS": pairs(&ELC_PERIPHERALS),
         "RA_ADC_TRIGGERS": ADC_TRIGGERS,
         "RA_DMAC_CHANNELS": [0, 1, 2, 3, 4, 5, 6, 7],
         "RA_TRANSFER_MODES": TRANSFER_MODES,
@@ -639,7 +659,7 @@ fn adc_elc_events() -> Vec<&'static str> {
 
 // ---------- names ----------
 
-fn irq_of(pin: &str) -> Option<u32> {
+pub(crate) fn irq_of(pin: &str) -> Option<u32> {
     IRQ_PINS.iter().find(|(p, _)| *p == pin).map(|(_, n)| *n)
 }
 /// The RASC name of a pin's interrupt function: "IRQ1-DS", "IRQ6", or "" for a pin without one.
@@ -649,7 +669,7 @@ pub fn irq_name(pin: &str) -> String {
         Some(n) => format!("IRQ{n}{}", if IRQ_DS.contains(&pin) { "-DS" } else { "" }),
     }
 }
-fn family_check(family: Option<&Value>) -> Result<(), String> {
+pub(crate) fn family_check(family: Option<&Value>) -> Result<(), String> {
     if family.and_then(Value::as_str) == Some(FAMILY_ID) {
         Ok(())
     } else {

@@ -24,6 +24,8 @@ pub mod mcuconfig;
 pub mod periph;
 pub mod pfiles;
 pub mod raconfig;
+pub mod ragen;
+pub mod ragen_text;
 pub mod regen;
 
 use serde_json::{json, Value};
@@ -306,6 +308,7 @@ pub fn dispatch(name: &str, args: &Value) -> Result<Value, String> {
                     .or_else(|| iocout::call(name, list))
                     .or_else(|| buildenv::call(name, list))
                     .or_else(|| raconfig::call(name, list))
+                    .or_else(|| ragen::call(name, list))
             })
             .unwrap_or_else(|| Err(format!("stm-core: 알 수 없는 함수입니다: {name}"))),
     }
