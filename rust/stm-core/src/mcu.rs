@@ -524,6 +524,10 @@ fn dma_irq(irq: &str) -> Option<(char, &'static str, char)> {
     }
     None
 }
+/// Whether `irq` is the line of a DMA stream or channel.
+pub fn is_dma_irq(irq: &str) -> bool {
+    dma_irq(irq).is_some()
+}
 pub fn irq_label(irq: &str) -> String {
     if let Some((line, "_IRQn")) = after_digit(irq, "EXTI") {
         return format!("EXTI line{line} interrupt");

@@ -13,6 +13,7 @@ pub mod docs_regions;
 pub mod duty;
 pub mod explorer;
 pub mod family;
+pub mod halgen;
 pub mod jsre;
 pub mod mcu;
 pub mod periph;
@@ -291,6 +292,7 @@ pub fn dispatch(name: &str, args: &Value) -> Result<Value, String> {
                     .or_else(|| cformat::call(name, list))
                     .or_else(|| csymbols::call(name, list))
                     .or_else(|| csedit::call(name, list))
+                    .or_else(|| halgen::call(name, list))
             })
             .unwrap_or_else(|| Err(format!("stm-core: 알 수 없는 함수입니다: {name}"))),
     }

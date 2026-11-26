@@ -298,7 +298,8 @@ fn plain(v: f64) -> String {
         text.to_string()
     }
 }
-fn mhz(hz: f64) -> String {
+/// A frequency for a message: `180 MHz`, `22.5 MHz`.
+pub fn mhz(hz: f64) -> String {
     format!("{} MHz", plain(hz / 1e6))
 }
 
