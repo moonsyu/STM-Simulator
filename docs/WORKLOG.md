@@ -2,6 +2,14 @@
 
 작업할 때마다 날짜순으로 맨 위에 추가합니다. 무엇을 했는지, 왜 했는지, 어떻게 검증했는지, 커밋·릴리스와 남은 사항을 적습니다. 버전별 구조 설명은 [HANDOFF.md](../HANDOFF.md), 검증 수치는 [VERIFICATION.md](VERIFICATION.md)에 있습니다.
 
+## 2026-11-26 · 질문: PR #7이 무엇인지
+
+- 요청: 사용자 "https://github.com/moonsyu/STM-Simulator/pull/7 이거 뭐야".
+- 한 일과 이유: GitHub API로 PR을 확인했다. Dependabot이 2026-11-24에 연 의존성 업데이트 PR이다(`.github/dependabot.yml`의 npm 주간 묶음 build-tools). 내용: dompurify 3.4.17→3.4.18, electron 45.2.1→45.4.1, eslint 10.14.0→10.15.0, globals 17.13.0→17.14.0, playwright 1.64.1→1.65.1(package.json·package-lock.json). 열림 상태이고 충돌은 없다. CI(`build-windows.yml`)는 main push와 태그에서만 돌아서 이 PR에서는 검사가 돌지 않았다.
+- 검증: GitHub API(pulls/7), 워크플로 트리거.
+- 커밋·릴리스: 이 기록 `[skip ci]` 커밋.
+- 남은 사항: 반영 여부는 사용자 답을 기다린다.
+
 ## 2026-11-26 · README 소개·개발 계기·버전 흐름에서도 CubeMX·CubeIDE 이름 빼기
 
 - 요청: 사용자 "그것도 빼 줘"(소개·개발 계기·버전 흐름에 남은 CubeMX·CubeIDE 이름).
