@@ -2,6 +2,14 @@
 
 작업할 때마다 날짜순으로 맨 위에 추가합니다. 무엇을 했는지, 왜 했는지, 어떻게 검증했는지, 커밋·릴리스와 남은 사항을 적습니다. 버전별 구조 설명은 [HANDOFF.md](../HANDOFF.md), 검증 수치는 [VERIFICATION.md](VERIFICATION.md)에 있습니다.
 
+## 2026-11-26 · 질문: Electron과 Tauri 중 무엇이 나은지
+
+- 요청: 사용자 "지금 로직만 Rust 변환 중인데 이거 Electron보다 Tauri가 더 나아? 둘의 차이가 뭐야".
+- 한 일과 이유: 앱이 Electron에서 쓰는 부분을 확인했다. 메인 프로세스(`desktop/*.cjs`, 약 1,400줄)는 Node의 `child_process`로 gcc·OpenOCD·J-Link·gdb·clangd를 실행하고, `fs`·`https`·`crypto`로 작업 공간·도구 설치·업데이트를 처리한다. IPC 핸들러는 17개이고, 1.63.2 EXE는 약 118MB다. 차이를 설명했다. Electron은 Chromium과 Node를 함께 담고, Tauri는 Windows의 WebView2와 Rust 백엔드를 쓴다. Tauri로 바꾸면 크기와 메모리는 줄지만 다시 만들 것이 있다. 메인 프로세스를 Rust로 다시 작성하고, Playwright Electron E2E 하네스와 패키징·자체 업데이트도 바꿔야 한다. 지금은 Rust 코어를 wasm으로 옮기는 작업을 이어 가고, Tauri 전환은 그 뒤에 따로 정하자고 권했다. wasm 코어는 Tauri에서도 그대로 쓸 수 있다.
+- 검증: `package.json`, `desktop/` 모듈 확인, GitHub API(latest release 자산 크기).
+- 커밋·릴리스: 이 기록 `[skip ci]` 커밋.
+- 남은 사항: 전환 여부는 사용자가 정한다(요청 시 기능 목록에 적는다).
+
 ## 2026-11-26 · 1.63.2 의존성 업데이트(기능 목록 58번, PR #7)
 
 - 요청: 기능 목록 58번(사용자 "넣어 줘") — Dependabot PR #7의 의존성 5개를 검사한 뒤 다음 버전에 넣고 PR을 정리.
