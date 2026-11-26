@@ -1,6 +1,16 @@
 # STM Simulator — 개발 인계
 
-현재 버전: **1.63.5**. 정리일: **2026-11-10**. NUCLEO-F446RE·NUCLEO-F103RB 또는 Renesas FPB-RA6E1(1.20.0, FSP·에뮬레이터 전용)과 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+현재 버전: **1.63.6**. 정리일: **2026-11-10**. NUCLEO-F446RE·NUCLEO-F103RB 또는 Renesas FPB-RA6E1(1.20.0, FSP·에뮬레이터 전용)과 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+
+## 1.63.6 기능 목록 62번: Rust 마이그레이션 3단계 시작 — HAL 생성기, Pinout 설정 검사
+
+- **옮긴 것**(JavaScript 파일은 같은 export로 Rust를 부르는 층으로 남음):
+  - Rust `halgen.rs` ← `hal-generator.js`: `generate_main`(핸들, `main`, `SystemClock_Config`, `MX_GPIO_Init`, `MX_DMA_Init`, 주변장치별 `MX_*_Init`, 인터럽트 핸들러, 콜백, printf 연결), `stdio_uart`, `clock_plan`·`clock_plan_f1`, `adc_sampling_macro`.
+  - Rust `mcuconfig.rs` ← `mcu-config.js`의 표와 `validateMcu`·`configProblems`·`pinFunctions`·`irqForPin`·`dmaPeripheral`·`dmaDirection`·`defaultMcu`. RTC·DAC·워치독·ADC 그룹·클록 트리 검사는 Rust 안에서 바로 부른다.
+- **값을 글자로**: 생성기는 설정 값을 JavaScript 템플릿이 쓰던 대로 글자로 바꾼다(`mcu::js_display`, `js_number`). 없는 값은 전처럼 `undefined`로 찍힌다.
+- **아직 JavaScript인 것**: `mcu-config.js`의 `importIoc`·`evalIocNumber`·`userPins`·`consoleUart`·`generateHal`. 옮긴 함수 위에서 돌고, 결과가 전과 같은 것을 비교로 확인했다. 다음에 옮긴다.
+- **달라진 점**: 검사되지 않은 설정(구역이 없거나 값의 종류가 다른 것)에서 JavaScript가 TypeError로 멈추던 곳은 오류로 멈추되 문구가 다르다. 계열에 없는 주변장치가 켜진 설정으로 main.c를 만들면 "…에 없는 주변장치입니다" 오류가 난다. 타이머 클록이 숫자가 아닌 글자면 전에는 숫자로 바꿔 계산했고 지금은 오류다(검사를 거친 설정에는 없는 값).
+- WebAssembly 크기: 약 0.92 MB → 1.14 MB.
 
 ## 1.63.5 기능 목록 62번: Rust 마이그레이션 2단계 — C 소스 도구
 
