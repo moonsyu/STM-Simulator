@@ -39,3 +39,6 @@ export function localTerminals(p){return shape(p).local.map(t=>({...t}));}
 export function nominalTerminals(p){return shape(p).nominal.map(t=>({...t}));}
 export function detachPart(p){delete p.attachA;delete p.attachB;delete p.attachments;}
 export function assignAttachments(p,map){detachPart(p);if(TWO_PIN_TYPES.includes(p.type)){const keys=CATALOG_TWO_PIN.includes(p.type)?['p1','p2']:['a','b'];if(map[keys[0]])p.attachA=map[keys[0]];if(map[keys[1]])p.attachB=map[keys[1]];}else if(Object.keys(map).length)p.attachments={...map};}
+/** What the Rust side reads of a part: its kind, place, size and what it is attached to (only what the part has). */
+const VIEWED=['id','type','name','variant','x','y','rotation','scale','scaleX','scaleY','skewX','span','electricalPins','attachA','attachB','attachments'];
+export const partView=p=>{const view={};for(const key of VIEWED)if(p[key]!==undefined)view[key]=p[key];return view;};

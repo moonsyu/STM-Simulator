@@ -320,7 +320,7 @@ fn hole(id: String, label: String, x: f64, y: f64, bus: String) -> Value {
 }
 /// The 400-point board: 30 rows of two 5-hole strips, and a + and a − rail on each side (each rail one continuous
 /// conductor, despite gaps in the holes).
-fn half_holes() -> Vec<Value> {
+pub(crate) fn half_holes() -> Vec<Value> {
     let mut holes = Vec::new();
     for row in 1..=30 {
         for (c, letter) in LETTERS.iter().enumerate() {
@@ -358,7 +358,7 @@ fn half_holes() -> Vec<Value> {
 }
 /// The 830-point board: columns 1-63 are vertical strips (a-e top block, f-j bottom block); each of the four rail
 /// lines (top/bottom, +/-) is one continuous conductor of 50 holes in groups of 5.
-fn full_holes() -> Vec<Value> {
+pub(crate) fn full_holes() -> Vec<Value> {
     let mut holes = Vec::new();
     for col in 1..=63 {
         for (c, letter) in LETTERS.iter().enumerate() {

@@ -9,7 +9,7 @@ import assert from 'node:assert/strict';
 import {readFileSync,readdirSync} from 'node:fs';
 
 const dir=new URL('../fixtures/moved/',import.meta.url);
-const plain=v=>v===undefined?'<undefined>':typeof v==='number'&&!Number.isFinite(v)?`<${v}>`:typeof v==='function'?'<function>':Array.isArray(v)?v.map(plain):v&&typeof v==='object'?Object.fromEntries(Object.entries(v).map(([k,x])=>[k,plain(x)])):v;
+const plain=v=>v===undefined?'<undefined>':v instanceof Set?['<set>',...[...v].map(plain)]:typeof v==='number'&&!Number.isFinite(v)?`<${v}>`:typeof v==='function'?'<function>':Array.isArray(v)?v.map(plain):v&&typeof v==='object'?Object.fromEntries(Object.entries(v).map(([k,x])=>[k,plain(x)])):v;
 const SPECIAL={'<undefined>':undefined,'<NaN>':NaN,'<Infinity>':Infinity,'<-Infinity>':-Infinity};
 const real=v=>typeof v==='string'&&Object.hasOwn(SPECIAL,v)?SPECIAL[v]:Array.isArray(v)?v.map(real):v&&typeof v==='object'?Object.fromEntries(Object.entries(v).map(([k,x])=>[k,real(x)])):v;
 

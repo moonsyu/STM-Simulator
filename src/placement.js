@@ -1,28 +1,13 @@
-import {circuitHoles,holeInfo} from './pins.js';
-import {attachments,nominalTerminals,assignAttachments,wiredKeys} from './components.js';
+// Putting a part's leads into free breadboard holes. The search is in Rust (rust/stm-core/src/place.rs, feature 62);
+// this file sends what it needs of the circuit and applies the answer to the part.
+import {rustExact} from './rust-core.js';
+import {assignAttachments,partView} from './components.js';
 
-export function occupiedHoles(components,exceptId){const used=new Set();for(const p of components)if(p.id!==exceptId)for(const id of Object.values(attachments(p)))if(holeInfo(id,components))used.add(id);return used;}
+const ends=wires=>wires.map(w=>({from:w.from,to:w.to}));
+export function occupiedHoles(components,exceptId){return new Set(rustExact('occupied_holes',components.map(partView),exceptId));}
 /** Holes holding a jumper wire end: a part lead cannot go into the same hole. */
 export function wiredHoles(wires=[]){return new Set(wires.flatMap(w=>[w.from,w.to]));}
-const distance=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
 // Find one complete, collision-free footprint. Never connect only some new legs.
 // Small lead bends are allowed; all electrical and visible contact points use exact holes.
-export function findMount(p,components=[],radius=15,surfaces,wires=[]){
- if(p.type==='breadboard')return null;
- // Contacts wired directly (screw terminals, connectors) never go into holes; a module with only those stays off the board.
- const wired=wiredKeys(p),terms=nominalTerminals(p).filter(t=>!wired.includes(t.key));if(!terms.length)return null;
- const occupied=new Set([...occupiedHoles(components,p.id),...wiredHoles(wires)]),available=circuitHoles(components,surfaces).filter(h=>!occupied.has(h.id));
- const candidates=available.map(h=>({h,d:distance(h,terms[0])})).filter(x=>x.d<=radius).sort((a,b)=>a.d-b.d).slice(0,8);
- let best=null;
- for(const {h}of candidates){
-   const dx=h.x-terms[0].x,dy=h.y-terms[0].y,used=new Set(),map={},points=[];let error=0,valid=true;
-   for(const t of terms){const target={x:t.x+dx,y:t.y+dy};let near=null,min=8.1;
-     for(const hole of available){if(used.has(hole.id))continue;const d=distance(hole,target);if(d<min){near=hole;min=d;}}
-     if(!near){valid=false;break;}used.add(near.id);map[t.key]=near.id;points.push({...near,key:t.key});error+=min*min;
-   }
-   const score=dx*dx+dy*dy+error*4;
-   if(valid&&(!best||score<best.score))best={x:p.x+dx,y:p.y+dy,attachments:map,points,score};
- }
- return best;
-}
+export function findMount(p,components=[],radius=15,surfaces,wires=[]){return rustExact('find_mount',partView(p),components.map(partView),radius,surfaces,ends(wires));}
 export function applyMount(p,mount){if(!mount)return false;p.x=mount.x;p.y=mount.y;assignAttachments(p,mount.attachments);return true;}

@@ -100,7 +100,7 @@ pub fn surface_point(
     (origin_x + q.0, origin_y + q.1)
 }
 /// `Math.min` / `Math.max` of a list: NaN when any is.
-fn least(values: [f64; 4]) -> f64 {
+pub(crate) fn least(values: [f64; 4]) -> f64 {
     values.into_iter().fold(f64::INFINITY, |a, b| {
         if a.is_nan() || b.is_nan() {
             f64::NAN
@@ -109,7 +109,7 @@ fn least(values: [f64; 4]) -> f64 {
         }
     })
 }
-fn most(values: [f64; 4]) -> f64 {
+pub(crate) fn most(values: [f64; 4]) -> f64 {
     values.into_iter().fold(f64::NEG_INFINITY, |a, b| {
         if a.is_nan() || b.is_nan() {
             f64::NAN
