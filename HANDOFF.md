@@ -1,6 +1,15 @@
 # STM Simulator — 개발 인계
 
-현재 버전: **1.63.8**. 정리일: **2026-11-10**. NUCLEO-F446RE·NUCLEO-F103RB 또는 Renesas FPB-RA6E1(1.20.0, FSP·에뮬레이터 전용)과 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+현재 버전: **1.63.9**. 정리일: **2026-11-10**. NUCLEO-F446RE·NUCLEO-F103RB 또는 Renesas FPB-RA6E1(1.20.0, FSP·에뮬레이터 전용)과 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+
+## 1.63.9 기능 목록 62번: Rust 마이그레이션 3단계 — RA 설정
+
+- **옮긴 것**: Rust `raconfig.rs` ← `ra-config.js`. 표 52개(`ra_tables`), `validate_ra_mcu`(핀·스택·클록·BSP 검사), 속도·카운트 계산(`ra_spi_bitrate`, `ra_sci_spi_bitrate`, `ra_iic_clock`, `ra_agt_counts`, `ra_gpt_counts`, `ra_can_timing`, `ra_clock_hz`), 이름 검사, OFS0, 워치독 시간, LPM 마스크, ELC 이벤트, PSEL.
+- `ra-config.js`는 같은 export로 Rust를 부르는 층이다. `isRaFamily`·`raFamily`는 표를 읽는 한 줄이라 JavaScript에 남겼다(실행 중 자주 불림).
+- **`rustExact`(src/rust-core.js)**: JSON은 NaN·Infinity·undefined를 실어 나르지 못해 null과 구별이 안 된다. RA 설정 검사는 "숫자가 아닌 값은 거절, 없는 값은 기본값"으로 갈리므로 이 값들을 `{"\u0001nf": "NaN"}` 꼴로 보내고 받는다(`sealed`가 싸고 Rust의 `raconfig::NF`가 읽는다). 값이 undefined인 속성은 없는 속성으로 보되, undefined인 핀·스택 항목은 목록에 남겨 거절한다(옮기기 전 동작).
+- 이름·숫자만 받는 함수(`raPinName`, `raPortBit`, `raPsel`, `raDsPin`, `raIrqName`, `raElcEventName`, `raNameProblem`)는 `rustPure`로 한 번만 묻는다. 답이 객체면 얼어 있다(`raPortBit`의 답을 고치면 안 됨).
+- `lib.rs`에 `recursion_limit = "512"`(표를 만드는 json! 매크로가 깊다).
+- WebAssembly 크기: 약 1.42 MB → 1.62 MB.
 
 ## 1.63.8 기능 목록 62번: Rust 마이그레이션 3단계 — .ioc 내보내기, 빌드 환경
 

@@ -1,5 +1,13 @@
 # 검증 기록
 
+## 1.63.9 Rust 마이그레이션 3단계: RA 설정(기능 목록 62번) — 로컬 검증
+
+2026-11-27. 구현 세션이 직접 기획·구현·시험했다. 결과 같음 비교(63번 ③): 옮기기 전(1.63.8)의 JavaScript와 Rust를 같은 호출로 비교.
+- 199,031건: 차이 0건. validateRaMcu 142,503건(FSP 예제 전체와 주변장치 종류별 손으로 만든 설정에서 핀·스택 속성을 하나씩 빼고 값 100여 가지 — undefined·null·NaN·Infinity·숫자·글·목록 — 로 바꾼 것, 핀 종류·주변장치 신호·스택 추가, 같은 콜백 이름, 클록 HOCO·PLL·분주 조합, BSP 스택·힙), raGptCounts 21,948 · raAgtCounts 3,648 · raSpiBitrate·raSciSpiBitrate 각 408 · raIicClock·raIicSlaveClock 각 272 · raCanTiming 255건(클록·속도·단위 격자), raOfs0 10,044 · raWdtTiming 10,665 · raClockHz 5,574 · raEventHasVector 1,897건, 이름 함수들, 표 52개.
+- 옮기기 전 코드가 TypeError로 죽던 입력 18건은 다른 문구의 오류로 답한다(검사를 거치지 않은 잘못된 모양의 입력).
+- 게시 전 검사(63번 ④, 모든 묶음): eslint 오류 0, Rust 검사 통과(cargo 시험 73건). unit 1088 · interp 163 · emu 68 · firmware 74 = 1393건 중 1392 통과·1 건너뜀. toolchain 묶음 1~7 392건 전부 통과. E2E 137건 중 135 통과·1 건너뜀·1 실패(copy의 Ctrl+C 시험 — 이 PC의 클립보드를 읽으면 빈 글이 와서 옮기기 전 코드에서도 똑같이 실패, CI에서는 통과). 패키지 검사 3건 중 2 통과·1 건너뜀.
+- 확인하지 못한 것: 앱 창에서 눈으로 본 확인.
+
 ## 1.63.8 Rust 마이그레이션 3단계: .ioc 내보내기, 빌드 환경(기능 목록 62번) — 로컬 검증
 
 2026-11-26. 구현 세션이 직접 기획·구현·시험했다. 결과 같음 비교(63번 ③): 옮기기 전(1.63.7)의 JavaScript와 Rust를 같은 호출로 비교.
