@@ -2,6 +2,21 @@
 
 작업할 때마다 날짜순으로 맨 위에 추가합니다. 무엇을 했는지, 왜 했는지, 어떻게 검증했는지, 커밋·릴리스와 남은 사항을 적습니다. 버전별 구조 설명은 [HANDOFF.md](../HANDOFF.md), 검증 수치는 [VERIFICATION.md](VERIFICATION.md)에 있습니다.
 
+## 2026-11-26 · 질문: Tauri 전환 때 화면 UI까지 바꾸는 방법
+
+- 요청: 사용자 "타우리 전환 후 화면 ui까지 모두 바꾸는것도 있는것 같던데".
+- 한 일과 이유: 화면을 바꾸는 방법을 세 가지로 나눠 설명했다.
+  - ① 지금 HTML·JS 화면을 그대로 둔다.
+  - ② Rust 웹 UI 프레임워크(Leptos·Yew·Dioxus)로 다시 짠다. 화면은 여전히 WebView2 안에서 HTML·CSS로 그려진다.
+  - ③ WebView를 쓰지 않는 Rust 네이티브 GUI(egui·Iced·Slint·GPUI)로 다시 짠다.
+- 이 앱에서 걸리는 점:
+  - `src`의 JavaScript는 약 3만 7천 줄이다.
+  - 코드 편집기가 Monaco(JS, `src/code-editor.js`·`editor-search.js`·`shell.js`)다. ②는 Monaco를 JS 연동으로 남겨야 하고, ③은 Monaco를 쓸 수 없어 편집기(문법 강조·검색·clangd 연동)를 새로 만들어야 한다.
+- 권한 것: Tauri로 옮기더라도 화면은 ①로 두고, 바꾸려면 기능별로 따로 정하자고 권했다. ②·③은 사용자가 보는 이득이 적고 다시 작성할 양이 크다.
+- 검증: `src` 줄 수, Monaco 사용 파일 확인.
+- 커밋·릴리스: 이 기록 `[skip ci]` 커밋.
+- 남은 사항: 전환 여부는 사용자가 정한다.
+
 ## 2026-11-26 · 질문: Electron과 Tauri 중 무엇이 나은지
 
 - 요청: 사용자 "지금 로직만 Rust 변환 중인데 이거 Electron보다 Tauri가 더 나아? 둘의 차이가 뭐야".
