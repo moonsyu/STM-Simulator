@@ -37,17 +37,17 @@ flowchart LR
 
 ```mermaid
 flowchart TB
-    GOAL(["목적: 보드 없이도 STM32 펌웨어가 실제로 어떻게 동작하는지 보기"])
+    GOAL(["목적: 실물 보드 없이도 MCU 펌웨어가 실제로 어떻게 동작하는지 보기"])
 
-    GOAL --> G1["CubeMX와 같은 설정 경험"]
-    GOAL --> G2["CubeIDE와 같은 코드·빌드 경험"]
+    GOAL --> G1["MCU 설정 도구와 같은 설정"]
+    GOAL --> G2["임베디드 개발 환경과 같은<br/>코드 작성 · 빌드 · 디버그"]
     GOAL --> G3["실물 보드와 같은 실행 결과"]
 
-    G1 --> D1["Pinout · Clock · NVIC · DMA<br/>.ioc 가져오기·내보내기<br/>HAL 초기화 코드 생성"]
-    G2 --> D2["Core/Inc · Core/Src 프로젝트 구조<br/>USER CODE 규칙 · 주변장치별 .c/.h<br/>빌드 수준 · GDB 디버그"]
-    G3 --> D3["실제 ST HAL로 빌드한 ELF를<br/>Cortex-M 명령어 단위로 실행<br/>빵판 회로와 전압·전류 계산"]
+    G1 --> D1["핀 · 클록 · 인터럽트 · DMA 설정<br/>설정 파일 가져오기 · 내보내기<br/>초기화 코드 생성"]
+    G2 --> D2["표준 프로젝트 폴더 구조<br/>사용자 코드 구역 보존 · 주변장치별 .c/.h<br/>빌드 수준 · GDB 디버그"]
+    G3 --> D3["제조사 드라이버로 빌드한 ELF를<br/>Cortex-M 명령어 단위로 실행<br/>빵판 회로와 전압 · 전류 계산"]
 
-    D1 & D2 & D3 --> OUT(["판단 기준: CubeMX/CubeIDE와 같은가, 실물 보드와 같은가"])
+    D1 & D2 & D3 --> OUT(["판단 기준: 제조사 개발 도구와 같은 결과를 내는가,<br/>실물 보드와 같이 동작하는가"])
 ```
 
 ## 개발 계기
@@ -228,7 +228,7 @@ timeline
 flowchart TB
     REQ(["사용자 요청<br/>기능 · 오류 · 질문"]) --> PLAN["기획 세션"]
     PLAN --> CHECK["코드 · 진단 기록으로<br/>현재 동작 확인"]
-    CHECK --> CMP{"CubeMX / CubeIDE /<br/>실물 보드와 같은가?"}
+    CHECK --> CMP{"제조사 개발 도구 ·<br/>실물 보드와 같은가?"}
     CMP -->|"다름"| SCOPE["범위 정리<br/>바뀌는 화면 · 동작 · 기본값"]
     CMP -->|"같음"| ANSWER["원인 설명 · 답변"]
     SCOPE --> ASK{"요청 밖의 추가 사항?"}
