@@ -1,7 +1,9 @@
 // Feature 63 ③ for the modules moved to Rust (feature 62): the answers their JavaScript gave before the move
 // (tests/fixtures/moved/*.json, recorded from the release named in each file) against what the same exports answer
 // now — values, the order of the keys, error messages, and what a function left in the arguments it changes.
-// In the recordings undefined, NaN and Infinity are the texts '<undefined>', '<NaN>' and '<Infinity>'.
+// In the recordings undefined, NaN and Infinity are the texts '<undefined>', '<NaN>' and '<Infinity>'; `fn` is an
+// export or a path from one ('FAMILIES.STM32F446RE.timerMax'); the argument '<number-reader>' is a reader of .ioc
+// numbers, and the values it was asked for (`calls`) are part of the answer.
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync,readdirSync} from 'node:fs';
@@ -19,10 +21,12 @@ for(const name of readdirSync(dir).filter(f=>f.endsWith('.json')).sort()){
   for(const c of cases){
    const m=modules[c.file]??=await import(`../../src/${c.file}`);
    if(c.data!==undefined){assert.equal(JSON.stringify(plain(m[c.data])),JSON.stringify(c.value),`${c.file} ${c.data}`);continue;}
-   const args=real(c.args);let now;
-   try{now={value:plain(m[c.fn](...args))};}catch(e){now={error:e.message};}
-   const after=JSON.stringify(plain(args));if(after!==JSON.stringify(c.args))now.args=JSON.parse(after);
-   const was='error' in c?{error:c.error}:{value:c.value};if('after' in c)was.args=c.after;
+   const calls=[],reader=(raw,fallback)=>{calls.push([raw,fallback]);if(raw===undefined)return fallback;const n=Number(raw);return Number.isInteger(n)?n:fallback;};
+   const args=real(c.args).map(a=>a==='<number-reader>'?reader:a),before=JSON.stringify(plain(args));let now;
+   try{now={value:plain(c.fn.split('.').reduce((at,key)=>at[key],m)(...args))};}catch(e){now={error:e.message};}
+   const after=JSON.stringify(plain(args));if(after!==before)now.after=JSON.parse(after);
+   if(calls.length)now.calls=plain(calls);
+   const was='error' in c?{error:c.error}:{value:c.value};if('after' in c)was.after=c.after;if('calls' in c)was.calls=c.calls;
    assert.equal(JSON.stringify(now),JSON.stringify(was),`${c.file} ${c.fn}(${JSON.stringify(c.args).slice(0,300)})`);
   }
  });

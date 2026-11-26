@@ -49,3 +49,19 @@ export function rustPure(name){
 }
 /** A table of a Rust module, read once and frozen. */
 export const rustTable=name=>frozen(rustCall(name,[]));
+/** Deep-freezes a value (tables built from a Rust answer). */
+export const deepFreeze=frozen;
+/** NaN for a number the Rust side could not send (JSON has no NaN: it arrives as null). */
+export const orNaN=value=>value===null?NaN:value;
+// A .ioc reader on the Rust side leaves `{"\u0001number": [raw, fallback]}` where the caller's own number reader is to
+// be asked (it notes the values it cannot read, in the order they are asked for).
+const NUMBER='\u0001number';
+/** `value` with every such place filled by `number(raw, fallback)`, in the order of the keys. */
+export function withNumbers(value,number){
+ if(Array.isArray(value))return value.map(v=>withNumbers(v,number));
+ if(!value||typeof value!=='object')return value;
+ if(Object.hasOwn(value,NUMBER)){const [raw,fallback]=value[NUMBER];return number(raw===null?undefined:raw,fallback);}
+ const out={};for(const [key,v]of Object.entries(value))out[key]=withNumbers(v,number);return out;
+}
+/** The entries of a .ioc whose key starts with one of the prefixes (what a reader on the Rust side needs). */
+export const iocPart=(values,...prefixes)=>Object.fromEntries(Object.entries(values).filter(([key])=>prefixes.some(p=>key.startsWith(p))));

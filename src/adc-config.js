@@ -1,42 +1,33 @@
 // ADC1 regular group (CubeMX ADC_Regular_ConversionMode): Number Of Conversion (more than one turns Scan Conversion
 // Mode on), the channel of each Rank and the External Trigger Conversion Source (a timer's TRGO instead of software).
-// F446RE triggers: TIM2 / TIM3 / TIM8 TRGO (rising edge); F103RB: TIM3 TRGO.
-export const ADC_TRIGGERS=Object.freeze({STM32F446RE:['SOFTWARE','T2_TRGO','T3_TRGO','T8_TRGO'],STM32F103RB:['SOFTWARE','T3_TRGO']});
-export const ADC_TRIGGER_LABELS=Object.freeze({SOFTWARE:'Regular Conversion launched by software',T2_TRGO:'Timer 2 Trigger Out event',T3_TRGO:'Timer 3 Trigger Out event',T8_TRGO:'Timer 8 Trigger Out event'});
+// The code is in Rust (rust/stm-core/src/mcu.rs; feature 62): this file is what the JavaScript callers import.
+import {rustFn,rustPure,rustTable,iocPart} from './rust-core.js';
+
+const T=rustTable('adc_tables');
+export const ADC_TRIGGERS=T.triggers;
+export const ADC_TRIGGER_LABELS=T.labels;
+const timerOf=rustPure('adc_trigger_timer');
 /** The timer of a trigger ('T3_TRGO' → 'TIM3'), or null for software. */
-export const adcTriggerTimer=trigger=>/^T(\d)_TRGO$/.exec(trigger||'')?.[1]?'TIM'+/^T(\d)_TRGO$/.exec(trigger)[1]:null;
+export const adcTriggerTimer=trigger=>timerOf(String(trigger||''));
+const part=config=>({pins:config.pins,peripherals:config.peripherals});
 /** ADC1 channels that have a pin (ADC1_INn), ascending. */
-export const adcPinChannels=config=>Object.values(config.pins||{}).filter(p=>/^ADC1_IN\d+$/.test(p.function)).map(p=>Number(p.function.slice(7))).sort((a,b)=>a-b);
+export const adcPinChannels=config=>rustFn('adc_pin_channels',{pins:config.pins});
 export const adcConversions=config=>config.peripherals?.ADC1?.conversions??1;
 /** Channel of each rank: the configured one, else the pins' channels in ascending order (the last one repeats). */
-export function adcRanks(config){
- const p=config.peripherals?.ADC1??{},pins=adcPinChannels(config),n=adcConversions(config);
- return Array.from({length:n},(_,i)=>p.ranks?.[i]??pins[Math.min(i,pins.length-1)]??0);
-}
+export const adcRanks=config=>rustFn('adc_ranks',{pins:config.pins,peripherals:{ADC1:config.peripherals?.ADC1}});
+// A rank that is undefined is a bad rank, not an empty one (JSON would turn it into null).
+const sentRanks=ranks=>Array.isArray(ranks)?ranks.map(c=>c===undefined?'<undefined>':c):ranks;
+/** Checks the group settings of `p` and puts what differs from the defaults into `q`. */
 export function validateAdcGroup(p,q,family){
- const f1=family==='STM32F103RB',maxChannel=f1?17:18;
- if(p.conversions!==undefined){if(!Number.isInteger(p.conversions)||p.conversions<1||p.conversions>16)throw new Error('ADC1 Number Of Conversion: 1~16 범위의 정수를 입력하세요.');if(p.conversions>1)q.conversions=p.conversions;}
- if(p.ranks!==undefined){
-  if(!Array.isArray(p.ranks)||p.ranks.length>16||p.ranks.some(c=>c!==null&&(!Number.isInteger(c)||c<0||c>maxChannel)))throw new Error(`ADC1 Rank: 채널 0~${maxChannel}을 Rank마다 하나씩 고르세요.`);
-  const ranks=p.ranks.slice(0,q.conversions??1);while(ranks.length&&ranks.at(-1)===null)ranks.pop();if(ranks.some(c=>c!==null))q.ranks=ranks;
- }
- if(p.trigger!==undefined){if(!ADC_TRIGGERS[family].includes(p.trigger))throw new Error(`ADC1 External Trigger: ${ADC_TRIGGERS[family].join(' / ')} 중에서 고르세요.`);if(p.trigger!=='SOFTWARE')q.trigger=p.trigger;}
+ // What was checked before a bad field stays in `q`, as it always did.
+ const {add,error}=rustFn('validate_adc_group',{conversions:p.conversions,ranks:sentRanks(p.ranks),trigger:p.trigger},q.conversions,family);
+ Object.assign(q,add);if(error)throw new Error(error);
 }
-export function adcGroupProblems(config){
- const p=config.peripherals?.ADC1,errors=[];if(!p?.enabled)return errors;const pins=adcPinChannels(config);
- adcRanks(config).forEach((ch,i)=>{if(ch<16&&!pins.includes(ch))errors.push(`ADC1 Rank ${i+1}: IN${ch} 핀을 ADC1_IN${ch}로 활성화하세요.`);});
- const timer=adcTriggerTimer(p.trigger);
- if(timer){const t=config.peripherals[timer];if(!t?.enabled||t.trgo!=='UPDATE')errors.push(`ADC1 External Trigger ${p.trigger}: ${timer}를 켜고 Trigger Event Selection(TRGO)을 Update Event로 두어야 변환이 시작됩니다.`);}
- return errors;
-}
-/** .ioc: ADC1.NbrOfConversion, ADC1.Channel-N\#ChannelRegularConversion=ADC_CHANNEL_n, ADC1.ExternalTrigConv. */
+export const adcGroupProblems=config=>rustFn('adc_group_problems',part(config));
+/** .ioc: ADC1.NbrOfConversion, ADC1.Channel-N\#ChannelRegularConversion=ADC_CHANNEL_n, ADC1.ExternalTrigConv.
+ *  Changes `target`; → the internal channels (temperature sensor, VREFINT, VBAT) that were left out. */
 export function adcGroupFromIoc(values,family,target){
- const n=Number(values['ADC1.NbrOfConversion']);if(Number.isInteger(n)&&n>1&&n<=16)target.conversions=n;
- // A rank on an internal channel (temperature sensor, VREFINT, VBAT) has no pin and no model here: it is left out, the
- // ranks after it move up, and the names are returned for the import's note.
- const ranks=[],internal=[];for(const [k,v]of Object.entries(values)){const m=/^ADC1\.Channel-(\d+)\\?#ChannelRegularConversion$/.exec(k),ch=/^ADC_CHANNEL_(\d+)$/.exec(v);if(!m||Number(m[1])>=(target.conversions??1))continue;if(ch)ranks[Number(m[1])]=Number(ch[1]);else if(/^ADC_CHANNEL_(TEMPSENSOR|VREFINT|VBAT)/.test(v)){ranks[Number(m[1])]='internal';internal.push(v.replace('ADC_CHANNEL_',''));}}
- if(internal.length){const kept=Array.from(ranks,c=>c??null).filter(c=>c!=='internal');ranks.length=0;ranks.push(...kept);const n=(target.conversions??1)-internal.length;if(n>1)target.conversions=n;else delete target.conversions;}
- if(ranks.length)target.ranks=Array.from(ranks,c=>c??null);else delete target.ranks;
- const t=/^ADC_EXTERNALTRIGCONV_(T\d_TRGO)$/.exec(values['ADC1.ExternalTrigConv']||'')?.[1];if(t&&ADC_TRIGGERS[family].includes(t))target.trigger=t;
+ const {ops,internal}=rustFn('adc_group_from_ioc',iocPart(values,'ADC1.'),family,target.conversions);
+ for(const [op,key,value]of ops){if(op==='set')target[key]=value;else delete target[key];}
  return internal;
 }

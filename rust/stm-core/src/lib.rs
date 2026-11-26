@@ -10,6 +10,7 @@ pub mod docs_regions;
 pub mod duty;
 pub mod explorer;
 pub mod family;
+pub mod mcu;
 pub mod periph;
 pub mod regen;
 
@@ -280,7 +281,7 @@ pub fn dispatch(name: &str, args: &Value) -> Result<Value, String> {
         // [argument, …] → a function of a module that takes its arguments in order (rust-core.js rustFn)
         _ => args
             .as_array()
-            .and_then(|list| periph::call(name, list))
+            .and_then(|list| periph::call(name, list).or_else(|| mcu::call(name, list)))
             .unwrap_or_else(|| Err(format!("stm-core: 알 수 없는 함수입니다: {name}"))),
     }
 }
