@@ -1,6 +1,15 @@
 # STM Simulator — 개발 인계
 
-현재 버전: **1.63.14**. 정리일: **2026-11-10**. NUCLEO-F446RE·NUCLEO-F103RB 또는 Renesas FPB-RA6E1(1.20.0, FSP·에뮬레이터 전용)과 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+현재 버전: **1.63.15**. 정리일: **2026-11-10**. NUCLEO-F446RE·NUCLEO-F103RB 또는 Renesas FPB-RA6E1(1.20.0, FSP·에뮬레이터 전용)과 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+
+## 1.63.15 기능 목록 62번: Rust 마이그레이션 4단계 — 꽂을 자리 찾기, 브레드보드 이동
+
+- **옮긴 것**: Rust `place.rs` ← `placement.js`·`breadboards.js`. `find_mount`(부품의 다리를 빈 구멍에 꽂을 자리), `occupied_holes`, `breadboard_bounds`, `new_breadboard_fields`, `move_breadboard`, `remove_breadboard`.
+- **프로젝트를 고치는 함수의 방식**: Rust는 "무엇이 어떻게 바뀌는지"를 답하고(부품의 번호와 새 자리, 또는 새 붙은 곳; 남는 전선) JavaScript 층이 프로젝트의 객체에 적용한다(`moveBreadboard`, `removeBreadboard`, `applyMount`).
+- **`partView(p)`(components.js)**: 부품에서 Rust가 읽는 속성(id, type, name, variant, 자리·회전·크기·기울기, span, electricalPins, 붙은 곳)만 추린 것. 프로젝트의 부품 목록을 Rust로 보낼 때 쓴다. 값이 없는 속성은 넣지 않는다.
+- **`jsmath::hypot_fast`**: 호스트를 부르지 않는 `hypot`(V8과 같은 방법: 큰 쪽으로 나눈 뒤 Kahan 보정 합). `tests/unit/js-math.test.js`가 `Math.hypot`과 60만여 건을 대조한다. 거리를 아주 많이 구하는 곳에 쓴다.
+- 시간(끄는 동안의 `findMount` 한 번): 부품 30개에서 0.11 → 0.27 ms, 브레드보드 부품 3개가 있으면 0.51 → 0.30 ms. 남은 비용은 계산이 아니라 부품 목록을 JSON에서 값으로 만드는 할당(부품당 약 4 µs)이다. 61번(최적화)에서 줄일 곳: 부품 목록을 serde_json::Value 대신 정해진 구조체로 읽거나, 회로를 Rust에 올려 두는 구조(계획 문서의 설계 메모)로 가면 없어진다.
+- WebAssembly 크기: 약 2.12 MB → 2.16 MB.
 
 ## 1.63.14 기능 목록 62번: Rust 마이그레이션 4단계 — 좌표·행렬 계산, 소수 읽기·찍기
 
