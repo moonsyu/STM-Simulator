@@ -1,3 +1,4 @@
+import {CATALOG_TABLES} from './catalog-tables.js';
 // Wireless UART modules: HC-05 / HC-06 Bluetooth SPP and the ESP-01 with ESP8266 AT firmware. A board talks to its module
 // over a real UART (same net, same baud); what crosses the air is modelled at message level: no radio physics, only a
 // loss rate set on the module. Outside the circuit there are a phone (Bluetooth), a router with a PC on it (Wi-Fi), and
@@ -13,18 +14,12 @@ const PAIR_US=1500000,JOIN_US=1500000,BOOT_US=300000,TCP_US=50000;
 const HC06_GAP_US=500000;
 // Link-layer retries of what may not get lost (Bluetooth, TCP); UDP is just gone. ESP8266 transparent mode sends after this much quiet.
 const RETRIES=7,THROUGH_QUIET_US=20000,THROUGH_MAX=2048;
-export const ROUTER={ssid:'STM-Router',pwd:'stm32-router',ip:'192.168.1.1'},PC={ip:'192.168.1.100',port:8080};
+// ROUTER, PC, INTERNET, WIRELESS_DEFAULTS and WIRELESS_BAUDS are rust/stm-core/src/data/wireless.json (feature 62).
+export const {ROUTER,PC,INTERNET,WIRELESS_DEFAULTS,WIRELESS_BAUDS}=CATALOG_TABLES;
 // The internet behind the router (documentation addresses, RFC 5737): it answers a little later than the local network.
-export const INTERNET={broker:{name:'broker.stm-lab.test',ip:'203.0.113.10',port:1883},web:{name:'api.stm-lab.test',ip:'203.0.113.20',port:80}};
 const INTERNET_US=20000;
 const HC06_BAUDS={1:1200,2:2400,3:4800,4:9600,5:19200,6:38400,7:57600,8:115200,9:230400,A:460800,B:921600,C:1382400};
 const BT_ADDRESSES=[['98d3','31','f5a1b2'],['98d3','31','f5a1b3'],['98d3','31','f5a1b4'],['98d3','31','f5a1b5']];
-export const WIRELESS_DEFAULTS={
- 'hc05-bluetooth-6':{baud:9600,role:'slave',btPin:'1234'},
- 'hc06-bluetooth-4':{baud:9600,btPin:'1234'},
- 'esp01-wifi-8':{baud:115200}
-};
-export const WIRELESS_BAUDS=[1200,2400,4800,9600,19200,38400,57600,115200];
 const high=v=>v!=null&&v>=2;
 
 class Module{

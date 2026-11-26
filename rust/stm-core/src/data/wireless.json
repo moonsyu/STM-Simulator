@@ -1,0 +1,47 @@
+{
+ "ROUTER": {
+  "ssid": "STM-Router",
+  "pwd": "stm32-router",
+  "ip": "192.168.1.1"
+ },
+ "PC": {
+  "ip": "192.168.1.100",
+  "port": 8080
+ },
+ "INTERNET": {
+  "broker": {
+   "name": "broker.stm-lab.test",
+   "ip": "203.0.113.10",
+   "port": 1883
+  },
+  "web": {
+   "name": "api.stm-lab.test",
+   "ip": "203.0.113.20",
+   "port": 80
+  }
+ },
+ "WIRELESS_DEFAULTS": {
+  "hc05-bluetooth-6": {
+   "baud": 9600,
+   "role": "slave",
+   "btPin": "1234"
+  },
+  "hc06-bluetooth-4": {
+   "baud": 9600,
+   "btPin": "1234"
+  },
+  "esp01-wifi-8": {
+   "baud": 115200
+  }
+ },
+ "WIRELESS_BAUDS": [
+  1200,
+  2400,
+  4800,
+  9600,
+  19200,
+  38400,
+  57600,
+  115200
+ ]
+}

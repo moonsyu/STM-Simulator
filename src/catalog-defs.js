@@ -1,112 +1,21 @@
-import {DEVICE_CATALOG} from './device-catalog-data.js';
-import {DEVICE_DEFS} from './device-defs.js';
-import {L298_DEFS} from './l298n.js';
-import {PART_DATASHEETS,UNITS_PER_MM} from './part-datasheets.js';
-import {WIRELESS_DEFAULTS} from './wireless.js';
+// The part types of the catalog of real parts and what is derived for each: its contact map, where its pins stand and
+// the definition the editor places a part from. The tables and the derivation are in Rust
+// (rust/stm-core/src/catalog.rs, feature 62); this file is the JavaScript side.
+import {rustPure,rustFn} from './rust-core.js';
+import {CATALOG_TABLES} from './catalog-tables.js';
+import {PART_DATASHEETS} from './part-datasheets.js';
 // The datasheet name of a catalog part (the catalog's own name when no datasheet was found).
 export const catalogName=v=>PART_DATASHEETS[v.id]?.name??v.name;
 export const catalogType=id=>'ref_'+id.replaceAll('-','_');
-/** Catalog id of the real part each basic (simplified) part type is drawn as. */
-export const LEGACY_PHYSICAL={resistor:'resistor-axial-2',led:'led-tht-2',button:'button-4',ldr:'ldr-bare-2',ntc:'ntc-bare-2',sht31:'sht31-grove-4',mpu6050:'mpu6050-8',pir:'pir-3',potentiometer:'pot-bare-3',slide:'slide-spdt-3',rgb:'rgb-common-cathode-4',capacitor:'capacitor-ceramic-2',diode:'diode-axial-2',buzzer:'buzzer-active-2',passive_buzzer:'buzzer-passive-2',temperature:'tmp36-to92-3',ultrasonic:'hcsr04-4',dc_motor:'dc-motor-2',dc_supply:'dc-supply-2',relay:'relay-module-6',joystick:'joystick-module-5',encoder:'encoder-module-5',lcd:'lcd-parallel-16',oled:'oled-i2c-4',tft:'st7735-8',matrix:'matrix-10',sevenseg:'sevenseg-common-cathode-10',stepper:'stepper-bipolar-4',motor:'motor-driver-hat',l298n:'l298n-module-13',servo:'servo-3',uart:'uart-cable-4',i2c:'i2c-eeprom-8',spi:'spi-eeprom-8'};
-export const CATALOG_BY_TYPE=Object.fromEntries(DEVICE_CATALOG.filter(v=>!['board','breadboard'].includes(v.family)).map(v=>[catalogType(v.id),v]));
-const defaults={resistor:{value:330},led:{color:'red'},button:{switch:0},potentiometer:{value:10000,position:50},slide:{position:0},capacitor:{value:100},uart:{baud:9600},rs485:{baud:9600},i2c:{address:80},temperature:{temperature:25},external_rtc:{temperature:25},ultrasonic:{distance:100},dc_supply:{voltage:12},sd:{sizeMB:64,cardImage:''},dcmi:{pattern:'colorbars',image:''}};
-// Map simulator-model contacts to the physical variant's contact numbers. Additional contacts
-// remain separate until their explicit tie, address, reset or signal behavior is installed.
-export const CONTACT_MAPS={
- 'resistor-axial-2':{a:1,b:2},'led-tht-2':{a:1,b:2},'button-2':{a:1,b:2,c:1,d:2},'button-4':{a:1,b:2,c:3,d:4},'button-module-3':{a:1,b:3,c:1,d:3},
- 'lcd-parallel-16':Array.from({length:16},(_,i)=>i+1),'ldr-bare-2':{a:1,b:2},'ntc-bare-2':{a:1,b:2},
- 'sht31-grove-4':[1,2,3,4],'sht31-breakout-7':[1,2,4,3],'mpu6050-8':[1,2,4,3],'pir-3':[1,3,2],
- 'oled-i2c-4':[1,2,4,3],'st7735-8':[1,2,5,4,3,6,7],'matrix-10':[1,2,4,5,3],
- 'servo-3':[1,2,3],'servo-feedback-4':[1,2,3,4],'dc-motor-2':{a:1,b:2},'relay-module-6':[1,2,3,4,5,6],
- 'joystick-module-5':[1,2,3,4,5],'encoder-module-5':[1,2,3,4,5],
- 'l298n-module-13':Array.from({length:13},(_,i)=>i+1),'l298n-bare-15':[4,8,9,6,5,7,10,12,11,2,3,13,14],
- 'l298p-bare-20':[6,1,12,8,7,9,13,15,14,4,5,16,17],'dc-supply-2':{a:1,b:2},
- 'uart-cable-4':[1,2,3,4],'uart-cable-6':[3,1,4,5],'i2c-eeprom-8':[8,4,5,6],'i2c-eeprom-5':[4,2,3,1],
- 'spi-eeprom-8':[8,4,1,6,5,2],'pot-bare-3':[1,2,3],'pot-module-3':[2,3,1],'slide-spdt-3':[1,2,3],
- 'rgb-common-anode-4':[1,2,3,4],'rgb-common-cathode-4':[1,4,2,3],
- 'capacitor-ceramic-2':{a:1,b:2},'capacitor-electrolytic-2':{a:1,b:2},'diode-axial-2':{a:1,b:2},
- 'buzzer-active-2':{a:1,b:2},'buzzer-active-module-3':{a:1,b:3},'buzzer-passive-2':{a:1,b:2},'buzzer-passive-module-3':{a:1,b:3},
- 'sevenseg-common-cathode-10':Array.from({length:10},(_,i)=>i+1),'sevenseg-common-anode-10':Array.from({length:10},(_,i)=>i+1),
- 'tmp36-to92-3':[1,2,3],'hcsr04-4':[1,2,3,4]
-};
-export function catalogMap(type){const v=CATALOG_BY_TYPE[type],m=CONTACT_MAPS[v?.id];return Array.isArray(m)?Object.fromEntries(m.map((n,i)=>['p'+(i+1),'p'+n])):m?Object.fromEntries(Object.entries(m).map(([k,n])=>[k,'p'+n])):null;}
-// Modules standing on their own contacts (screw terminals, connectors, header holes in the photo; measured in
-// part-art.js PADS). Pins that plug into the breadboard sit on the 2.54 mm grid nearest their contact, a header keeping
-// its pitch, and contacts the photo does not show stand in a row just below the board. Contacts that cannot go into a
-// breadboard (WIRED_CONTACTS: screw terminals, JST connectors, sockets; a DC motor's tabs and a battery holder's wires)
-// stay exactly at the contact and are wired directly.
-export const ON_CONTACT_PINS={
- 'l298n-module-13':[[-80,96],[-50.5,96],[-23.5,96],[8,102],[23.5,102],[39,102],[54,102],[69.5,102],[84.5,102],[-108,9.5],[-108,34.5],[103.5,9.5],[103.5,34.5]],
- 'motor-driver-hat':[[-145,-52],[-145,-62.5],[-114,-52],[-129.5,-62.5],[-114,-62.5],[111,28.5],[-156,28.5],[-138,28.5],[-114.5,28.5],[-98.5,28.5],[145,28.5],[-145,-62.5],[-145,-52],[-129.5,-62.5],[-129.5,-52],[-114,-62.5],[-114,-52],[-98,-62.5],[-98,-52],[-82.5,-62.5],[-82.5,-52],[-67,-62.5],[-67,-52],[-51,-62.5],[-51,-52],[-35.5,-62.5],[-35.5,-52],[-20,-62.5],[-20,-52],[-4,-62.5],[-4,-52],[11.5,-62.5],[11.5,-52],[27,-62.5],[27,-52],[42.5,-62.5],[42.5,-52],[58.5,-62.5],[58.5,-52],[74,-62.5],[74,-52],[89.5,-62.5],[89.5,-52],[105.5,-62.5],[105.5,-52],[121,-62.5],[121,-52],[136.5,-62.5],[136.5,-52],[152.5,-62.5],[152.5,-52]],
- 'relay-module-6':[[137,-8],[137,20],[137,6],[-87.5,-7.5],[-87.5,-33],[-87.5,16.5]],
- 'matrix-10':[[-125,-32],[-125,-18],[-125,-4],[-125,10],[-125,24],[127,-32],[127,-18],[127,-4],[127,10],[127,24]],
- 'max98357a-9':[[-39,66],[-25,66],[-11,66],[3,66],[17,66],[31,66],[45,66],[40.5,-18.5],[21.5,-18.5]],
- 'can-transceiver-6':[[-19,46],[-5,46],[9,46],[23,46],[65.5,-14],[65.5,7.5]],
- 'isolated-rs485':[[94,-50],[94,-38.5],[94,-26.5],[94,-61],[94,38.5],[94,51],[-96.5,-22.5],[-96.5,10],[-12.5,96],[12.5,96]],
- 'sht31-grove-4':[[-79.5,-23.5],[-79.5,18],[-79.5,4],[-79.5,-9.5]],
- 'pot-module-3':[[78.5,-14],[78.5,14],[78.5,0]],
- 'rgb-gravity-3':[[74,-17],[74,6],[74,-5.5]],
- 'sevenseg-tm1637-4':[[109,-21],[109,-9.5],[109,14],[109,2]],
- 'rgb-neopixel-flora-4':[[18,-20],[32,8],[-24,8],[-24,-20]],
- 'stepper-driver-11':[[-41,105],[-27,105],[-13,105],[1,105],[15,105],[29,105],[-54.5,35.5],[-40.5,35.5],[-27.5,35.5],[-13,35.5],[0,35.5]],
- 'oled-configurable-8':[[-49,78],[-35,78],[-21,78],[-7,78],[7,78],[21,78],[35,78],[49,78]],
- 'urm09-trig-3':[[-14,35],[-1.5,35],[13,35]],
- 'urm09-i2c-4':[[-17,33],[17,33],[5,33],[-6.5,33]],
- 'mcp4725-6':[[-55,-16],[-55,-2],[-27,54],[-13,54],[1,54],[15,54]],
- // ZS-042 DS3231: the 6-pin right-angle header on the left edge, its pins two holes (5 mm) left of the header holes.
- 'ds3231-zs042-10':[[-119,-38.5],[-119,-24.5],[-119,-10.5],[-119,3.5],[-119,17.5],[-119,31.5]],
- // ESP-01: 2 × 4 header (table order 1-4 on the upper row, 5-8 back along the lower one).
- 'esp01-wifi-8':[[-20,45],[-7,45],[6.5,45],[20,45],[20,58],[6.5,58],[-7,58],[-20,58]],
-};
-export const WIRED_CONTACTS={'dc-motor-2':'all','dc-supply-2':'all','l298n-module-13':'all','motor-driver-hat':'all','isolated-rs485':'all','sht31-grove-4':'all','pot-module-3':'all','rgb-gravity-3':'all','sevenseg-tm1637-4':'all','urm09-trig-3':'all','urm09-i2c-4':'all','esp01-wifi-8':'all','relay-module-6':[3, 4, 5],'can-transceiver-6':[4, 5],'max98357a-9':[7, 8],'stepper-driver-11':[6, 7, 8, 9, 10]};
+/** LEGACY_PHYSICAL: catalog id of the real part each basic (simplified) part type is drawn as.
+ *  CONTACT_MAPS: simulator-model contacts mapped to the physical variant's contact numbers.
+ *  ON_CONTACT_PINS: modules standing on their own contacts (screw terminals, connectors, header holes in the photo).
+ *  WIRED_CONTACTS: contacts that cannot go into a breadboard and are wired directly.
+ *  CATALOG_SCOPE: the scope notes that appear beside an example and its device-specific Docs. */
+export const {LEGACY_PHYSICAL,CATALOG_BY_TYPE,CONTACT_MAPS,ON_CONTACT_PINS,WIRED_CONTACTS,CATALOG_TWO_PIN,CATALOG_DEFS,CATALOG_SCOPE}=CATALOG_TABLES;
+/** `{p1: 'p3', …}` or `{a: 'p1', …}` for a part type with a contact map, else null (the same frozen answer each time). */
+export const catalogMap=rustPure('catalog_map');
 /** True when pin `index` (0-based) of a catalog part is wired directly instead of plugged into the breadboard. */
 export const isWiredContact=(id,index)=>{const w=WIRED_CONTACTS[id];return w==='all'||!!w?.includes(index);};
-export function catalogGeometry(v){
- const n=v.pins.length,id=v.id,f=v.family;
- let body={width:Math.max(56,n*14+12),height:56},terminals=[];
- const row=(count,y,start=0)=>Array.from({length:count},(_,i)=>[(i-(count-1)/2)*14+start,y]);
- const dip=(count,h=56)=>[...row(Math.ceil(count/2),h/2+14),...row(Math.floor(count/2),-h/2-14).reverse()];
- // Two pin rows on either side of a small package sit just outside its real (datasheet) width, on the 2.54 mm grid:
- // DIP-8 rows 7.62 mm apart, SOT-23 rows one pitch apart, as the parts plug into a breadboard.
- const size=PART_DATASHEETS[id]?.size,rowHalf=size?Math.ceil((Math.min(size.w,size.h)*UNITS_PER_MM/2+2)/7)*7:null;
- if(n===2){body={width:64,height:46};terminals=[[-35,0],[35,0]];}
- // 6 × 6 mm tactile switch: its four pins at the corners, two holes apart each way.
- else if(id==='button-4'){body={width:42,height:28};terminals=[[-14,-14],[14,-14],[-14,14],[14,14]];}
- else if(id==='i2c-eeprom-5'){const r=rowHalf??28;body={width:42,height:28};terminals=[[-14,r],[0,r],[14,r],[14,-r],[-14,-r]];}
- else if(/eeprom-8|l298p-bare-20/.test(id)){body={width:n/2*14+14,height:42};terminals=dip(n,rowHalf?2*(rowHalf-14):42);}
- else if(id==='ov2640-camera'){body={width:140,height:98};terminals=Array.from({length:18},(_,i)=>[(Math.floor(i/2)-4)*14,56+(i%2)*14]);}
- else if(id.startsWith('slide-dp')){const r=rowHalf??28;body={width:n/2*14+14,height:28};terminals=[...row(n/2,-r),...row(n/2,r)];}
- else if(f==='sevenseg'&&n>=10){body={width:n>=12?168:70,height:70};terminals=dip(n,70);}
- // A probe's three wires leave its cable end.
- else if(id==='ds18b20-probe-3')terminals=[[91,-14],[91,0],[91,14]];
- // PEC11: the A/C/B contacts on one side, the push switch's two on the other.
- else if(id==='encoder-bare-5')terminals=[...row(3,42),[-14,-42],[14,-42]];
- // Modules on pins under their own contacts (ON_CONTACT_PINS): only the package drawing size is set here.
- else if(ON_CONTACT_PINS[id]){
-  body=({'motor-driver-hat':{width:294,height:168},'matrix-10':{width:112,height:112},'ds3231-zs042-10':{width:210,height:122},'l298n-module-13':{width:140,height:112},'relay-module-6':{width:98,height:70},'stepper-driver-11':{width:126,height:84},'urm09-i2c-4':{width:126,height:56}})[id]??body;
-  terminals=ON_CONTACT_PINS[id];
- }
- else {
-  if(['lcd','oled','tft','sevenseg'].includes(f))body={width:f==='lcd'?242:144,height:f==='tft'?182:84};
-  if(['servo','dc_motor','stepper'].includes(f))body={width:100,height:84};
-  if(f==='ultrasonic')body={width:126,height:56};
-  if(id==='l298n-bare-15')body={width:224,height:70};
-  terminals=row(n,body.height/2+14);
- }
- return {body,terminals,pinY:body.height/2+14};
-}
-export const CATALOG_TWO_PIN=Object.keys(CATALOG_BY_TYPE).filter(type=>CATALOG_BY_TYPE[type].pins.length===2);
-export const CATALOG_DEFS=Object.fromEntries(Object.entries(CATALOG_BY_TYPE).map(([type,v])=>[type,{name:catalogName(v),prefix:v.id.split('-')[0].toUpperCase(),icon:'▦',hint:`${v.pin_count??'조립'}핀 · ${v.interface}`,labels:v.pins,defaults:{...(defaults[v.family]||{}),...(DEVICE_DEFS[v.family]?.defaults||L298_DEFS[v.family]?.defaults||{}),...(['dht11','dht22'].includes(v.family)?{temperature:25,humidity:50}:{}),...(v.family==='slide'?{position:0}:{}),...WIRELESS_DEFAULTS[v.id]},help:v.appearance+' '+v.notes,...catalogGeometry(v)}]));
-
-// The same scope notes appear beside the example and its device-specific Docs.
-export const CATALOG_SCOPE={
- 'ds18b20-to92-3':'1-Wire 리셋·Skip ROM·750 ms 변환·스크래치패드·CRC를 실행합니다. 단일 센서와 외부 전원을 사용합니다.',
- 'ds18b20-probe-3':'1-Wire 리셋·Skip ROM·750 ms 변환·스크래치패드·CRC를 실행합니다. 단일 센서와 외부 전원을 사용합니다.',
- 'dht11-module-3':'시작 신호와 40비트 온습도·체크섬을 GPIO로 읽습니다. 초기 2초 대기 후 측정합니다.',
- 'dht22-module-3':'시작 신호와 40비트 온습도·체크섬을 GPIO로 읽습니다. 초기 2초 대기 후 측정합니다.',
- 'urm09-trig-3':'한 GPIO를 출력에서 입력으로 전환하여 트리거와 거리 비례 Echo 폭을 측정합니다.',
- 'can-transceiver-6':'기본 예제는 CAN1 내부 루프백입니다. 표준 ID·필터·FIFO 송수신을 검사합니다. NORMAL 모드에서는 외부 상대 노드를 모델링하지 않아 ACK 오류 32가 발생합니다.',
- 'max98357a-9':'I2S2 16 kHz·16비트 스테레오 PCM 전송, SD의 채널 선택·정지, 프레임 수와 주파수를 확인합니다. 소리 버튼은 측정 주파수의 시험음을 재생하며 스피커의 전력·음향 특성은 계산하지 않습니다.',
- 'ov2640-camera':'PA8 XCLK·리셋·전원·SCCB 배선과 센서 뱅크 PID/VER 읽기, SCCB로 해상도(QQVGA/QVGA)·형식(RGB565/YUV422/JPEG 스텁)을 설정합니다. DCMI 데이터 핀 배선은 검사하지 않으며, 프레임 캡처(DCMI DMA)는 NUCLEO-F446RE의 카메라 예제에서 다룹니다.',
- 'sd-storage-board':'SPI 모드(CMD0/8/55/41/58/9/10/13/16/17/18/24/25/12)와 SDIO(HAL_SD) 블록 읽기/쓰기, FatFs(f_open/f_write 등)를 프로젝트에 저장되는 FAT32 카드 이미지로 실행합니다.'
-};
+/** The drawing size of a catalog part's package and where its pins stand. */
+export const catalogGeometry=v=>rustFn('catalog_geometry',v);
