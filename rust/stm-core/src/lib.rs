@@ -13,6 +13,7 @@ pub mod couple;
 pub mod csedit;
 pub mod csource;
 pub mod csymbols;
+pub mod devboards;
 pub mod devdefs;
 pub mod docs_regions;
 pub mod duty;
@@ -326,6 +327,7 @@ pub fn dispatch(name: &str, args: &Value) -> Result<Value, String> {
                     .or_else(|| geom::call(name, list))
                     .or_else(|| pins::call(name, list))
                     .or_else(|| place::call(name, list))
+                    .or_else(|| devboards::call(name, list))
             })
             .unwrap_or_else(|| Err(format!("stm-core: 알 수 없는 함수입니다: {name}"))),
     }
