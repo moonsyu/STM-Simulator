@@ -2,6 +2,14 @@
 
 작업할 때마다 날짜순으로 맨 위에 추가합니다. 무엇을 했는지, 왜 했는지, 어떻게 검증했는지, 커밋·릴리스와 남은 사항을 적습니다. 버전별 구조 설명은 [HANDOFF.md](../HANDOFF.md), 검증 수치는 [VERIFICATION.md](VERIFICATION.md)에 있습니다.
 
+## 2026-11-26 · 질문: 무엇이 계속 실패하는지, GitHub 주소를 다시 줘야 하는지
+
+- 요청: 사용자 "어떤걸 계속 실패하고 있는거야? 깃헙 주소를 다시 줘?", 이어서 "애초에 그냥 push 하면 될텐데 작업 폴더에 이미 인증 정보가 다 있어서".
+- 한 일과 이유: 계속 실패한 것은 `git push`였다. 오류는 "Could not resolve host: github.com"이다. 원격 주소(`https://github.com/moonsyu/STM-Simulator.git`)와 인증은 문제가 아니었다. 이 PC에서 github.com 주소 찾기(DNS)가 잠깐씩 끊긴 것이다. 확인할 때는 `nslookup`·`curl`·`git ls-remote` 모두 정상이었고, 바로 다시 푸시해 밀린 기록 커밋 3개를 올렸다. 구현 세션의 툴체인 시험 1건 실패(RA 깜빡이 실행 시간)는 이것과 별개이고, 1회 실패 뒤 다시 확인하는 중이다.
+- 검증: `nslookup github.com`, `GIT_CURL_VERBOSE=1 git ls-remote`, `git push`(cde927e..dcedea6).
+- 커밋·릴리스: 이 기록 `[skip ci]` 커밋.
+- 남은 사항: DNS가 다시 끊기면 잠시 뒤 다시 푸시한다.
+
 ## 2026-11-26 · 질문: 구현 세션이 Fable을 서브 에이전트로 쓰는지
 
 - 요청: 사용자 "이거 서브에이전트로 Fable 사용중인거 맞아? 구현 세션에서 Fable 사용량이 왤케 적어 보이지".
