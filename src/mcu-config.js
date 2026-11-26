@@ -3,8 +3,6 @@
 // The tables, validateMcu and configProblems are in Rust (rust/stm-core/src/mcuconfig.rs; feature 62); reading a .ioc
 // is still below and moves next.
 import {isBasicTimer,isAdvancedTimer} from './timer-config.js';
-import {generateMain} from './hal-generator.js';
-import {splitMain} from './peripheral-files.js';
 import {timerDefaults} from './mcu-defaults.js';
 import {DMA_REQUESTS} from './hal-dma.js';
 import {familyProfile,routesOf,irqNamesOf,DEFAULT_FAMILY} from './mcu-family.js';
@@ -222,4 +220,6 @@ export function consoleUart(mcu){
   const others=Object.entries(mcu.peripherals),at=others.findIndex(([id])=>rank(id)>rank('USART2'));others.splice(at<0?others.length:at,0,['USART2',{enabled:true,baud:115200}]);mcu.peripherals=Object.fromEntries(others);
   return mcu;
 }
-export function generateHal(config,options){const clean=validateMcu(config),errors=configProblems(clean);if(errors.length)throw new Error(errors.join('\n'));const text=generateMain(clean,options);return clean.coupleFiles&&!options?.minimal?splitMain(text).main:text;}
+/** The main.c of a project's settings: checked first (the problems are the error), split into main.c and the
+ *  per-peripheral pairs' main when the settings ask for that. */
+export const generateHal=(config,options)=>rustFn('generate_hal',config??null,!!options?.minimal,!!options?.legacyGpio);

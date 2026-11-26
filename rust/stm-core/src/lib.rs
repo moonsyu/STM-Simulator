@@ -18,6 +18,7 @@ pub mod jsre;
 pub mod mcu;
 pub mod mcuconfig;
 pub mod periph;
+pub mod pfiles;
 pub mod regen;
 
 use serde_json::{json, Value};
@@ -295,6 +296,7 @@ pub fn dispatch(name: &str, args: &Value) -> Result<Value, String> {
                     .or_else(|| csedit::call(name, list))
                     .or_else(|| halgen::call(name, list))
                     .or_else(|| mcuconfig::call(name, list))
+                    .or_else(|| pfiles::call(name, list))
             })
             .unwrap_or_else(|| Err(format!("stm-core: 알 수 없는 함수입니다: {name}"))),
     }
