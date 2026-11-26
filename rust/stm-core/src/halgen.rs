@@ -114,8 +114,15 @@ pub fn adc_sampling(family: &str) -> Option<&'static [f64]> {
 }
 /// `ADC_SAMPLETIME_480CYCLES` / `ADC_SAMPLETIME_239CYCLES_5`.
 pub fn adc_sampling_macro(cycles: Option<&Value>) -> String {
-    let c = num(cycles);
-    if c.is_finite() && c.fract() == 0.0 {
+    // A whole number is one only when the setting is a number; otherwise JavaScript's conversion (null is 0).
+    let c = match cycles {
+        Some(Value::Null) => 0.0,
+        Some(Value::Bool(b)) => f64::from(u8::from(*b)),
+        Some(Value::String(s)) if s.trim().is_empty() => 0.0,
+        Some(Value::String(s)) => s.trim().parse().unwrap_or(f64::NAN),
+        other => num(other),
+    };
+    if cycles.is_some_and(Value::is_number) && c.is_finite() && c.fract() == 0.0 {
         format!("ADC_SAMPLETIME_{}CYCLES", js_number(c))
     } else {
         format!(
