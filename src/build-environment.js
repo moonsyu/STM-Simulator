@@ -1,117 +1,19 @@
 // The code an STM32 ARM build adds to the project's sources (CubeIDE keeps it in Core/Src): interrupt handlers
 // (stm32xxxx_it.c), newlib system calls (syscalls.c) and the heap (sysmem.c). The build compiles them as one file,
 // __stm_environment.c; the editor shows the same text split into CubeIDE's files, read only.
-import {isSerial,serialHandle} from './serial-config.js';
-import {rustCall,cubeHeader} from './rust-core.js';
-import {isTimer} from './timer-config.js';
-import {irqHandlers} from './irq-handlers.js';
-const PREFIX={STM32F446RE:'stm32f4xx',STM32F103RB:'stm32f1xx'},STARTUP={STM32F446RE:'startup_stm32f446xx.s',STM32F103RB:'startup_stm32f103xb.s'};
-export const prefixOf=family=>PREFIX[family]||'stm32f4xx';
-export const startupOf=family=>STARTUP[family]||STARTUP.STM32F446RE;
-// Lines inside `#if 0` (up to its #else/#elif/#endif, nesting followed) do not define anything; `#if 1 … #else` drops the
-// #else part. Other conditions are kept, both branches.
-function liveLines(text){const stack=[];return text.split('\n').filter(line=>{
-  const d=/^[ \t]*#[ \t]*(if|ifdef|ifndef|elif|else|endif)\b(.*)$/.exec(line),live=()=>stack.every(s=>s.live);
-  if(!d)return live();
-  if(['if','ifdef','ifndef'].includes(d[1])){const c=d[1]==='if'?d[2].trim():'';stack.push({known:c==='0'||c==='1',live:c!=='0',taken:c==='1'});return false;}
-  const top=stack.at(-1);if(!top)return false;
-  if(d[1]==='endif')stack.pop();else if(top.known)top.live=!top.taken&&!top.live,top.taken=top.taken||top.live;else top.live=true;
-  return false;
-}).join('\n');}
-const stripC=text=>liveLines(text.replace(/\/\*[\s\S]*?\*\//g,' ').replace(/\/\/[^\n]*/g,' '));
-const SBRK=`extern char end, _estack;
-__attribute__((weak)) void *_sbrk(ptrdiff_t increment) {
-  static uintptr_t current;
-  const uintptr_t base=(uintptr_t)&end, limit=(uintptr_t)&_estack-0x1000;
-  if(!current) current=base;
-  if((increment>0 && (uintptr_t)increment>limit-current) || (increment<0 && (uintptr_t)(-(increment+1))+1>current-base)) { errno=ENOMEM; return (void*)-1; }
-  void *previous=(void*)current; current+=increment; return previous;
-}`;
-// The remaining newlib system calls, as STM32CubeIDE's syscalls.c has them (weak: a project's own syscalls.c wins).
-// Without them newlib's nosys stubs link in and every build warns "_close is not implemented".
-const SYSCALLS=`__attribute__((weak)) int __io_getchar(void) { return -1; }
-__attribute__((weak)) int _read(int file, char *ptr, int len) { (void)file; int i=0; for(;i<len;i++){ int c=__io_getchar(); if(c<0) break; ptr[i]=(char)c; } return i; }
-__attribute__((weak)) int _close(int file) { (void)file; return -1; }
-__attribute__((weak)) int _fstat(int file, struct stat *st) { (void)file; st->st_mode=S_IFCHR; return 0; }
-__attribute__((weak)) int _isatty(int file) { (void)file; return 1; }
-__attribute__((weak)) int _lseek(int file, int ptr, int dir) { (void)file; (void)ptr; (void)dir; return 0; }
-__attribute__((weak)) int _getpid(void) { return 1; }
-__attribute__((weak)) int _kill(int pid, int sig) { (void)pid; (void)sig; errno=EINVAL; return -1; }`;
-// The HAL modules the ARM build compiles from the SDK (CubeIDE's Drivers/<HAL>/Src), and the memory of each part.
-export const HAL_MODULES=Object.freeze({
-  STM32F446RE:['hal','hal_rcc','hal_rcc_ex','hal_gpio','hal_cortex','hal_pwr','hal_pwr_ex','hal_flash','hal_flash_ex','hal_dma','hal_dma_ex','hal_can','hal_i2s','hal_i2s_ex','hal_uart','hal_usart','hal_adc','hal_adc_ex','hal_i2c','hal_spi','hal_tim','hal_tim_ex','hal_dcmi','hal_dcmi_ex','hal_sd','ll_sdmmc','hal_iwdg','hal_wwdg','hal_rtc','hal_rtc_ex','hal_dac','hal_dac_ex','hal_crc'],
-  STM32F103RB:['hal','hal_rcc','hal_rcc_ex','hal_gpio','hal_gpio_ex','hal_cortex','hal_pwr','hal_flash','hal_flash_ex','hal_dma','hal_can','hal_uart','hal_usart','hal_adc','hal_adc_ex','hal_i2c','hal_spi','hal_tim','hal_tim_ex','hal_iwdg','hal_wwdg','hal_rtc','hal_rtc_ex','hal_crc']});
-const LINKER={STM32F446RE:{name:'STM32F446RETX_FLASH.ld',flash:'512K',ram:'128K'},STM32F103RB:{name:'STM32F103RBTX_FLASH.ld',flash:'128K',ram:'20K'}};
+// The work is done in Rust (rust/stm-core/src/buildenv.rs, feature 62); this file is the JavaScript side of it.
+import {rustFn,rustTable} from './rust-core.js';
+export const prefixOf=family=>rustFn('prefix_of',family);
+export const startupOf=family=>rustFn('startup_of',family);
+// The HAL modules the ARM build compiles from the SDK (CubeIDE's Drivers/<HAL>/Src).
+export const HAL_MODULES=rustTable('hal_modules');
 /** The linker script's file name as CubeIDE names it. */
-export const linkerName=family=>(LINKER[family]||LINKER.STM32F446RE).name;
+export const linkerName=family=>rustFn('linker_name',family);
 /** The linker script the ARM build uses unless the project has its own .ld file. */
-export function linkerScript(family){
-  const m=LINKER[family]||LINKER.STM32F446RE;
-  return `ENTRY(Reset_Handler)
-MEMORY { FLASH (rx) : ORIGIN = 0x08000000, LENGTH = ${m.flash}
-RAM (xrw) : ORIGIN = 0x20000000, LENGTH = ${m.ram} }
-_estack = ORIGIN(RAM) + LENGTH(RAM);
-SECTIONS {
- .isr_vector : { KEEP(*(.isr_vector)) } >FLASH
- .text : { *(.text*) *(.rodata*) KEEP(*(.init)) KEEP(*(.fini)) . = ALIGN(4); } >FLASH
- .ARM.extab : { *(.ARM.extab*) } >FLASH
- .ARM.exidx : { __exidx_start = .; *(.ARM.exidx*) __exidx_end = .; } >FLASH
- .preinit_array : { PROVIDE_HIDDEN(__preinit_array_start = .); KEEP(*(.preinit_array*)) PROVIDE_HIDDEN(__preinit_array_end = .); } >FLASH
- .init_array : { PROVIDE_HIDDEN(__init_array_start = .); KEEP(*(SORT(.init_array.*))) KEEP(*(.init_array)) PROVIDE_HIDDEN(__init_array_end = .); } >FLASH
- .fini_array : { PROVIDE_HIDDEN(__fini_array_start = .); KEEP(*(.fini_array*)) PROVIDE_HIDDEN(__fini_array_end = .); } >FLASH
- _sidata = LOADADDR(.data);
- .data : { . = ALIGN(4); _sdata = .; *(.data*) . = ALIGN(4); _edata = .; } >RAM AT>FLASH
- .bss : { . = ALIGN(4); _sbss = .; __bss_start__ = .; *(.bss*) *(COMMON) . = ALIGN(8); _ebss = .; __bss_end__ = .; end = .; _end = .; } >RAM
- .heap_stack (NOLOAD) : { . = ALIGN(8); . += 0x400; . += 0x1000; . = ALIGN(8); } >RAM
-}
-`;
-}
+export const linkerScript=family=>rustFn('linker_script',family);
+// What the Rust side reads of a project: its main.c, the names and texts of its files and the Pinout settings.
+const part=project=>{const files=project.firmware?.files;return {code:project.code,firmware:{files:Array.isArray(files)?files.map(f=>({name:f.name,text:f.text})):undefined},mcu:project.mcu};};
 /** The main.h the ARM build writes when the project has none: the HAL include, Error_Handler and the Pinout labels. */
-export function mainHeader(project){
-  const p=prefixOf(project.mcu?.family),labels=Object.entries(project.mcu?.pins||{}).filter(([,q])=>q.label);
-  const section=tag=>[`/* USER CODE BEGIN ${tag} */`,'',`/* USER CODE END ${tag} */`,''];
-  return ['#pragma once','',`#include "${p}_hal.h"`,'',...section('Includes'),...section('ET'),...section('EC'),...section('EM'),'void Error_Handler(void);','',...section('EFP'),
-    ...(labels.length?['/* Pinout labels (CubeMX writes them here; the build also passes them to every source). */',...labels.flatMap(([pin,q])=>[`#define ${q.label}_Pin GPIO_PIN_${pin.slice(2)}`,`#define ${q.label}_GPIO_Port GPIO${pin[1]}`]),'']:[]),
-    ...section('Private defines')].join('\n');
-}
+export const mainHeader=project=>rustFn('main_header',{mcu:project.mcu});
 /** The build's added code for a HAL project: {text} for the build and {files} as CubeIDE would name them. */
-export function buildEnvironment(project){
-  const files=[{name:'main.c',text:project.code||''},...(project.firmware?.files||[])],p=prefixOf(project.mcu?.family);
-  // Interrupt handlers must be strong: the startup file's Default_Handler aliases are weak too, and a weak-vs-weak tie
-  // leaves SysTick unhandled (HAL_Delay would hang). A handler the user's sources already define is left out, so
-  // imported Cube stm32f4xx_it.c files still link. Comments and `#if 0` blocks do not count as definitions.
-  const userText=stripC(files.map(f=>f.text||'').join('\n')),defined=name=>new RegExp(`\\b${name}\\s*\\(\\s*(?:void)?\\s*\\)\\s*\\{`).test(userText);
-  const owner=name=>files.find(f=>new RegExp(`\\b${name}\\s*\\(\\s*(?:void)?\\s*\\)\\s*\\{`).test(stripC(f.text||'')))?.name;
-  const handler=(name,body)=>defined(name)?null:`void ${name}(void) { ${body} }`;
-  const it=[],skipped=[];
-  const tick=handler('SysTick_Handler','HAL_IncTick();');if(tick)it.push(tick);else skipped.push(['SysTick_Handler',owner('SysTick_Handler')]);
-  // A synchronous USART uses a USART_HandleTypeDef named husartN (as the generated main.c does).
-  const peripherals=project.mcu?.peripherals||{},sync=id=>peripherals[id]?.mode==='synchronous';
-  for(const [id,q]of Object.entries(peripherals))if(q.enabled){if(isSerial(id))it.push(sync(id)?`extern USART_HandleTypeDef husart${id.replace(/\D/g,'')};`:`extern UART_HandleTypeDef ${serialHandle(id)};`);if(isTimer(id))it.push(`extern TIM_HandleTypeDef htim${id.slice(3)};`);}
-  // DMA streams and every enabled NVIC line get the handler CubeMX writes into stm32xxxx_it.c, unless a source defines it.
-  for(const h of irqHandlers(project.mcu)){const text=handler(h.name,h.body);if(!text){if(h.body)skipped.push([h.name,owner(h.name)]);continue;}if(h.extern)it.push(h.extern);it.push(text);}
-  const syscalls=['__attribute__((weak)) void _init(void) {}','__attribute__((weak)) void _fini(void) {}','__attribute__((weak)) int __io_putchar(int ch) { return ch; }','__attribute__((weak)) int _write(int file, char *ptr, int len) { (void)file; for(int i=0;i<len;i++) __io_putchar(ptr[i]); return len; }',SYSCALLS];
-  const includes=['#include "main.h"','#include <stddef.h>','#include <stdint.h>','#include <errno.h>','#include <sys/stat.h>'];
-  const text=[...includes,...syscalls,SBRK,...it].join('\n');
-  // Each file starts with the header CubeMX writes (feature 56: no notes of this app in the files).
-  const note=(file,brief)=>cubeHeader(file,brief);
-  // As CubeMX writes stm32xxxx_it.c: each handler between its "<IRQ> 0" and "<IRQ> 1" USER CODE sections.
-  const block=line=>{const m=/^void (\w+)\(void\) \{ ([\s\S]*) \}$/.exec(line);if(!m)return [line,''];const irq=m[1].replace(/_IRQHandler$|_Handler$/,'')+'_IRQn';
-    return [`void ${m[1]}(void)`,'{',`  /* USER CODE BEGIN ${irq} 0 */`,'',`  /* USER CODE END ${irq} 0 */`,`  ${m[2]}`,`  /* USER CODE BEGIN ${irq} 1 */`,'',`  /* USER CODE END ${irq} 1 */`,'}',''];};
-  const viewIt=[note(`${p}_it.c`,'Interrupt Service Routines.'),'#include "main.h"','','/* USER CODE BEGIN Includes */','/* USER CODE END Includes */','',
-    ...(skipped.length?['/* 프로젝트 소스에 있어 여기서는 만들지 않는 핸들러:',...skipped.map(([n,f])=>` *   ${n}()${f?' — '+f:''}`),' */','']:[]),
-    ...new Set(it.filter(l=>l.startsWith('extern '))),'/* USER CODE BEGIN EV */','/* USER CODE END EV */','',
-    ...it.filter(l=>!l.startsWith('extern ')).flatMap(block),'/* USER CODE BEGIN 1 */','/* USER CODE END 1 */','',
-    `/* NMI_Handler, HardFault_Handler, MemManage_Handler, BusFault_Handler, UsageFault_Handler, SVC_Handler,\n * DebugMon_Handler, PendSV_Handler와 정의하지 않은 다른 IRQ는 ${startupOf(project.mcu?.family)}의 Default_Handler(무한 반복)가 받습니다. */`];
-  const viewSyscalls=[note('syscalls.c','STM32CubeIDE Minimal System calls file'),'#include <errno.h>','#include <sys/stat.h>','',...syscalls.flatMap(l=>[l,''])];
-  const viewSysmem=[note('sysmem.c','STM32CubeIDE System Memory calls file'),'#include <errno.h>','#include <stddef.h>','#include <stdint.h>','',SBRK];
-  // main.h and the linker script are written by the build too, unless the project has its own.
-  const has=test=>files.some(f=>test(f.name.split('/').at(-1)));
-  const extra=[...(has(n=>n==='main.h')?[]:[{file:'Core/Inc/main.h',text:note('main.h','Header for main.c file.\nThis file contains the common defines of the application.')+'\n'+mainHeader(project)}]),...(has(n=>/\.ld$/.test(n))?[]:[{file:linkerName(project.mcu?.family),text:note(linkerName(project.mcu?.family),'Linker script: FLASH and RAM sizes, the sections,\na heap of 1 KB and a stack of 4 KB.')+'\n'+linkerScript(project.mcu?.family)}])];
-  // What CubeIDE's Core folder also has (feature 56): the prototypes of the handlers and HAL_MspInit (USER CODE sections
-  // only — the same as the HAL's weak default until something is written there; the build compiles it once it is edited).
-  const handlerNames=it.map(l=>/^void (\w+)\(void\) \{/.exec(l)?.[1]).filter(Boolean);
-  if(!has(n=>n===`${p}_it.h`))extra.push({file:`Core/Inc/${p}_it.h`,text:rustCall('it_header',{prefix:p,handlers:handlerNames})});
-  if(!has(n=>n===`${p}_hal_msp.c`))extra.push({file:`Core/Src/${p}_hal_msp.c`,text:rustCall('hal_msp',{prefix:p})});
-  return {text,files:[{file:`Core/Src/${p}_it.c`,text:viewIt.join('\n')+'\n'},{file:'Core/Src/syscalls.c',text:viewSyscalls.join('\n')},{file:'Core/Src/sysmem.c',text:viewSysmem.join('\n')+'\n'},...extra]};
-}
+export const buildEnvironment=project=>rustFn('build_environment',part(project));

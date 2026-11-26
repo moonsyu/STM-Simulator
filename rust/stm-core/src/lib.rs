@@ -3,6 +3,7 @@
 //! New and changed features are written here (the user's decision of 2026-11-25); the screens stay in JavaScript.
 
 pub mod build_level;
+pub mod buildenv;
 pub mod cformat;
 pub mod clock;
 pub mod couple;
@@ -15,6 +16,7 @@ pub mod explorer;
 pub mod family;
 pub mod halgen;
 pub mod ioc;
+pub mod iocout;
 pub mod jsre;
 pub mod mcu;
 pub mod mcuconfig;
@@ -299,6 +301,8 @@ pub fn dispatch(name: &str, args: &Value) -> Result<Value, String> {
                     .or_else(|| mcuconfig::call(name, list))
                     .or_else(|| pfiles::call(name, list))
                     .or_else(|| ioc::call(name, list))
+                    .or_else(|| iocout::call(name, list))
+                    .or_else(|| buildenv::call(name, list))
             })
             .unwrap_or_else(|| Err(format!("stm-core: 알 수 없는 함수입니다: {name}"))),
     }
