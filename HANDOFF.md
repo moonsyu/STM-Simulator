@@ -1,6 +1,16 @@
 # STM Simulator — 개발 인계
 
-현재 버전: **1.63.12**. 정리일: **2026-11-10**. NUCLEO-F446RE·NUCLEO-F103RB 또는 Renesas FPB-RA6E1(1.20.0, FSP·에뮬레이터 전용)과 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+현재 버전: **1.63.13**. 정리일: **2026-11-10**. NUCLEO-F446RE·NUCLEO-F103RB 또는 Renesas FPB-RA6E1(1.20.0, FSP·에뮬레이터 전용)과 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+
+## 1.63.13 기능 목록 62번: Rust 마이그레이션 4단계 — 부품 정의와 단자 위치
+
+- **옮긴 것**: Rust `parts.rs` ← `components.js`. 부품 표(`part_tables`: PART_DEFS, TWO_PIN_TYPES, MULTI_PIN_TYPES, LCD_LABELS, WIRE_COLORS; 기본 부품 13종의 정의는 `data/basic_parts.json`), `part_shape`(단자 키, 자기 좌표, 작업 공간 좌표, 직접 배선·꽂는 단자를 한 번에), `part_terminal_label`, `part_lead_span`, `part_physical_pins`, 숫자 export `stm_rotate`·`stm_rotate_y`·`stm_normalize_angle`.
+- **그릴 때마다 불리는 함수의 방식 — 부품별 기억**: `terminalKeys`·`localTerminals`·`nominalTerminals`·`wiredKeys`·`pluggedKeys`는 `components.js`의 `shape(p)`가 부품 객체별(WeakMap)로 Rust의 답을 기억하고, 부품의 type·x·y·rotation·scale·scaleX·scaleY·skewX·span·electricalPins가 바뀌면 다시 묻는다. 호출자에게는 늘 새 복사본을 준다. 부품의 단자에 영향을 주는 속성을 새로 만들면 이 열쇠에도 넣어야 한다.
+- 좌표는 Rust가 x, y 숫자 목록으로 보내고(`at`: 그 좌표가 속한 단자 키) JavaScript 층이 `{key, x, y}`로 만든다. 단자마다 객체를 만들어 보내는 것은 WebAssembly 안에서 할당이 많아 2~3배 느렸다.
+- `jsmath.rs`에 `sin`·`cos`·`tan` 추가(호스트의 `Math`). 좌표가 마지막 자리까지 전과 같다.
+- JavaScript에 남긴 것: `attachments`(여러 핀 부품은 `p.attachments` 객체를 그대로 돌려줌), `detachPart`·`assignAttachments`(부품을 제자리에서 고침).
+- 시간(부품 48개): 다시 그리기 0.090 → 0.030 ms, 끌기 0.067 → 0.088 ms, 부품 객체가 전부 새것일 때 0.052 → 1.67 ms(프로젝트를 읽은 직후 한 번; Rust 호출 하나에 15~30 µs). 61번(최적화)에서 줄일 곳으로 적어 둔다.
+- WebAssembly 크기: 약 2.02 MB → 2.05 MB.
 
 ## 1.63.12 기능 목록 62번: Rust 마이그레이션 4단계 — 보드·장치 정의·부품 카탈로그 표, 호스트 Math
 
