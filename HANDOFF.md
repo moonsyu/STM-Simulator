@@ -1,6 +1,15 @@
 # STM Simulator — 개발 인계
 
-현재 버전: **1.63.10**. 정리일: **2026-11-10**. NUCLEO-F446RE·NUCLEO-F103RB 또는 Renesas FPB-RA6E1(1.20.0, FSP·에뮬레이터 전용)과 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+현재 버전: **1.63.11**. 정리일: **2026-11-10**. NUCLEO-F446RE·NUCLEO-F103RB 또는 Renesas FPB-RA6E1(1.20.0, FSP·에뮬레이터 전용)과 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+
+## 1.63.11 기능 목록 62번: Rust 마이그레이션 4단계 시작 — 고친 생성 파일의 재생성 처리
+
+- **옮긴 것**: Rust `overrides.rs` ← `project-overrides.js`. `regenerate_overrides`(고친 생성 파일마다 keep / drop / 새 글과 사라지는 줄 보고), `generation_plan`, `generator_texts`, `generated_main`, `override_arm_only`·`override_regenerated`·`override_file_kind`, `override_lost_lines`.
+- 생성 글 만들기(`buildenv`, `pfiles`), USER CODE 구역 유지(`regen::keep_user_code`), 정렬(`cformat`)이 모두 Rust에 있어 한 번의 호출 안에서 끝난다. JavaScript 층은 프로젝트에서 main.c 글, 파일의 이름·글·origin·base, Pinout 설정만 넘기고 답을 프로젝트의 파일 객체에 적용한다(손대지 않은 파일은 같은 객체).
+- JavaScript에 남긴 것: `USER_SECTION` 정규식 상수(역참조 `\2`를 쓰는 패턴, 화면 코드가 씀), 한 줄 조회 `overrides`·`editedLabel`(Set을 받음).
+- USER CODE 구역 찾기는 Rust에서 정규식 없이 손으로 썼다(regex-lite에는 역참조가 없다): BEGIN 주석의 이름을 짧은 것부터 보며 같은 이름의 END 주석이 뒤에 있는지 찾는다.
+- **4단계의 순서를 바꿨다**: `project`·`components`·`pins`·`engine`은 7·8단계로 잡았던 자료 모듈에 기댄다. 단계 번호가 아니라 의존 순서(잎 모듈부터)로 옮긴다. 호출 방식은 계획 문서의 "4단계부터의 경계" 절.
+- WebAssembly 크기: 약 1.82 MB → 1.84 MB.
 
 ## 1.63.10 기능 목록 62번: Rust 마이그레이션 3단계 — RA 생성기
 

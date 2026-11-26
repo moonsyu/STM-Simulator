@@ -1,5 +1,13 @@
 # 검증 기록
 
+## 1.63.11 Rust 마이그레이션 4단계: 고친 생성 파일의 재생성 처리(기능 목록 62번) — 로컬 검증
+
+2026-11-27. 구현 세션이 직접 기획·구현·시험했다. 결과 같음 비교(63번 ③): 옮기기 전(1.63.10)의 JavaScript와 Rust를 같은 호출로 비교.
+- 24,703건: 차이 0건. regenerateOverrides·generationPlan — 두 보드 HAL 예제 전체에서, 트리가 내놓는 생성 파일(it.c, main.h, syscalls.c, 링커 스크립트, 주변장치별 .c/.h, hal_conf.h)을 9가지 방식으로 고친 것(USER CODE 구역 안·밖, 줄 빼기, 핸들러 추가, 빈 글, 닫히지 않은 구역) × 다음 Pinout 7가지(같은 설정, 다른 예제의 설정, 주변장치 반전, 주변장치별 생성 반전, 인터럽트 없음, 없음) × origin·base 모양 5가지, 여러 파일을 한꺼번에 고친 프로젝트. generatorTexts, generatedMain, 파일 이름 44개 × 계열 6가지의 armOnly·regenerated·fileKind, lostLines 글 조합.
+- 옮기기 전 코드가 TypeError로 죽던 입력 2건은 다른 문구의 오류로 답한다.
+- 게시 전 검사(63번 ④, 모든 묶음): eslint 오류 0, Rust 검사 통과(cargo 시험 75건). unit 1090 · interp 163 · emu 68 · firmware 74 = 1395건 중 1394 통과·1 건너뜀. toolchain 묶음 1~7 392건 전부 통과. E2E 137건 중 135 통과·1 건너뜀·1 실패(copy의 Ctrl+C 시험 — 이 PC의 클립보드를 읽으면 빈 글이 와서 옮기기 전 코드에서도 똑같이 실패, CI에서는 통과). 패키지 검사 3건 중 2 통과·1 건너뜀.
+- 확인하지 못한 것: 앱 창에서 눈으로 본 확인. 답을 파일 객체에 적용하는 JavaScript 층(같은 객체 유지)은 기존 unit 시험(project-overrides.test.js)과 E2E가 본다.
+
 ## 1.63.10 Rust 마이그레이션 3단계: RA 생성기(기능 목록 62번) — 로컬 검증
 
 2026-11-27. 구현 세션이 직접 기획·구현·시험했다. 결과 같음 비교(63번 ③): 옮기기 전(1.63.9)의 JavaScript와 Rust를 같은 호출로 비교.
