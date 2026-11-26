@@ -1,6 +1,12 @@
 # STM Simulator — 개발 인계
 
-현재 버전: **1.63.1**. 정리일: **2026-11-10**. NUCLEO-F446RE·NUCLEO-F103RB 또는 Renesas FPB-RA6E1(1.20.0, FSP·에뮬레이터 전용)과 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+현재 버전: **1.63.2**. 정리일: **2026-11-10**. NUCLEO-F446RE·NUCLEO-F103RB 또는 Renesas FPB-RA6E1(1.20.0, FSP·에뮬레이터 전용)과 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+
+## 1.63.2 기능 목록 58번: 의존성 업데이트(Dependabot PR #7과 같은 변경)
+
+- dompurify 3.4.17 → 3.4.18, electron 45.2.1 → 45.4.1(Chromium·V8 등 보안 수정 백포트), eslint 10.14.0 → 10.15.0, globals 17.13.0 → 17.14.0, playwright 1.64.1 → 1.65.1. 바뀐 파일은 `package.json`·`package-lock.json`(PR #7의 잠금 파일과 같음 — 프로젝트 버전 줄만 다름)과 버전 표기(`THIRD_PARTY_NOTICES.md`의 Electron·DOMPurify, 이 문서의 도구 버전 줄)다. 앱 소스는 바뀌지 않았다.
+- 앱에 들어가는 것은 Electron(실행 환경)과 DOMPurify(편집기 번들에 연결, `scripts/build-editor.mjs`)이고, eslint·globals·playwright는 개발·검사 도구다.
+- 공개 이력을 moonsyu 커밋으로 유지하려고 Dependabot 커밋을 합치지 않고 같은 변경을 직접 커밋한 뒤 PR #7을 닫았다(1.12.1의 PR #4와 같은 방식).
 
 ## 1.63.1 기능 목록 57번: 코드로 빠르게 토글하는 GPIO 출력을 듀티로 표시
 
