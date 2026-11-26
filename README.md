@@ -275,3 +275,13 @@ flowchart TB
     PATCH --> VERIFY["CI 전체 통과 · Release 자산 확인"]
     VERIFY --> UPD["자동 업데이트로 사용자에게 전달"]
 ```
+
+## 라이선스
+
+STM Simulator의 소스 코드와 문서는 [MIT 라이선스](LICENSE)로 공개합니다. 사용·복제·수정·배포·판매가 자유롭고, 저작권 표시와 라이선스 문구만 함께 두면 됩니다. 함께 배포하는 Electron·Monaco·DOMPurify 등은 각자의 라이선스를 따르며 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)에 적었습니다.
+
+## 권리 관련 안내
+
+STM Simulator는 STMicroelectronics와 Renesas Electronics의 공식 제품이 아닌 개인 학습 프로젝트이며, 두 회사의 후원·승인·제휴를 주장하지 않습니다. STM32, NUCLEO, STM32CubeMX, STM32CubeIDE, Renesas, RA, FSP, e² studio 등 제품명과 상표의 권리는 각 권리자에게 있습니다.
+
+모든 자료의 권리 관계에 대한 법률 검토가 완료된 것은 아닙니다. **저작권·상표권·라이선스 등 권리 관련 문제 또는 법적 문제가 확인되는 경우, 해당 저장소를 삭제 조치하겠습니다.** 관련 문제는 [GitHub Issues](https://github.com/moonsyu/STM-Simulator/issues)를 통해 알려 주세요.
