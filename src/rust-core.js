@@ -47,6 +47,14 @@ export function rustPure(name){
   const value=frozen(rustCall(name,args));seen.set(key,value);return value;
  };
 }
+// JSON has no NaN, no infinities and no `undefined`: where a module moved from JavaScript must tell them apart from null
+// (a setting that is not a number is refused, not given its default), they travel as {"\u0001nf": "NaN"}.
+const NF='\u0001nf';
+/** A value for the Rust side with those kept: a number JSON cannot carry and an `undefined` argument or list item. */
+export const sealed=v=>v===undefined?{[NF]:'undefined'}:typeof v==='number'?(Number.isFinite(v)?v:{[NF]:String(v)}):Array.isArray(v)?v.map(sealed):v&&typeof v==='object'?Object.fromEntries(Object.entries(v).filter(([,x])=>typeof x!=='function').map(([k,x])=>[k,sealed(x)])):v;
+const opened=v=>Array.isArray(v)?v.map(opened):v&&typeof v==='object'?(Object.hasOwn(v,NF)?(v[NF]==='undefined'?undefined:Number(v[NF])):Object.fromEntries(Object.entries(v).map(([k,x])=>[k,opened(x)]))):v;
+/** A Rust function called with its arguments exactly as given (see `sealed`); its answer may hold such numbers too. */
+export const rustExact=(name,...args)=>opened(rustCall(name,args.map(sealed)));
 /** A table of a Rust module, read once and frozen. */
 export const rustTable=name=>frozen(rustCall(name,[]));
 /** Deep-freezes a value (tables built from a Rust answer). */

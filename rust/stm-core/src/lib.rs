@@ -1,3 +1,4 @@
+#![recursion_limit = "512"]
 //! Feature code of STM-Simulator in Rust. The app loads this crate as WebAssembly (`src/rust-core.js`) and calls
 //! one entry point with JSON: `{"fn": name, "args": value}` in, `{"ok": value}` or `{"error": message}` out.
 //! New and changed features are written here (the user's decision of 2026-11-25); the screens stay in JavaScript.
@@ -22,6 +23,7 @@ pub mod mcu;
 pub mod mcuconfig;
 pub mod periph;
 pub mod pfiles;
+pub mod raconfig;
 pub mod regen;
 
 use serde_json::{json, Value};
@@ -303,6 +305,7 @@ pub fn dispatch(name: &str, args: &Value) -> Result<Value, String> {
                     .or_else(|| ioc::call(name, list))
                     .or_else(|| iocout::call(name, list))
                     .or_else(|| buildenv::call(name, list))
+                    .or_else(|| raconfig::call(name, list))
             })
             .unwrap_or_else(|| Err(format!("stm-core: 알 수 없는 함수입니다: {name}"))),
     }
