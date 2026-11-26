@@ -30,6 +30,7 @@ pub mod overrides;
 pub mod parts;
 pub mod periph;
 pub mod pfiles;
+pub mod pins;
 pub mod raconfig;
 pub mod ragen;
 pub mod ragen_text;
@@ -322,6 +323,7 @@ pub fn dispatch(name: &str, args: &Value) -> Result<Value, String> {
                     .or_else(|| catalog::call(name, list))
                     .or_else(|| parts::call(name, list))
                     .or_else(|| geom::call(name, list))
+                    .or_else(|| pins::call(name, list))
             })
             .unwrap_or_else(|| Err(format!("stm-core: 알 수 없는 함수입니다: {name}"))),
     }
