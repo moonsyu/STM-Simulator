@@ -1,5 +1,6 @@
 // User-facing update log shown in 도움말 → 업데이트 로그: one entry per released version (date = the release tag's commit date).
 export const UPDATE_LOG=Object.freeze([
+ {version:'1.63.12',date:'2026-11-27',items:['내부 정리: 보드 표, 장치 정의, 부품 카탈로그 자료와 파생 표를 Rust로 옮김 — 화면·동작은 그대로']},
  {version:'1.63.11',date:'2026-11-27',items:['내부 정리: Pinout을 바꿔 다시 생성할 때 고친 생성 파일을 처리하는 계산을 Rust로 옮김 — 화면·동작은 그대로']},
  {version:'1.63.10',date:'2026-11-27',items:['내부 정리: FPB-RA6E1(RA) 프로젝트의 FSP 파일 생성을 Rust로 옮김 — 생성되는 파일과 화면·동작은 그대로']},
  {version:'1.63.9',date:'2026-11-27',items:['내부 정리: FPB-RA6E1(RA) 설정 검사와 속도·카운트 계산을 Rust로 옮김 — 화면·동작은 그대로']},

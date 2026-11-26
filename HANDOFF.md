@@ -1,6 +1,19 @@
 # STM Simulator — 개발 인계
 
-현재 버전: **1.63.11**. 정리일: **2026-11-10**. NUCLEO-F446RE·NUCLEO-F103RB 또는 Renesas FPB-RA6E1(1.20.0, FSP·에뮬레이터 전용)과 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+현재 버전: **1.63.12**. 정리일: **2026-11-10**. NUCLEO-F446RE·NUCLEO-F103RB 또는 Renesas FPB-RA6E1(1.20.0, FSP·에뮬레이터 전용)과 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+
+## 1.63.12 기능 목록 62번: Rust 마이그레이션 4단계 — 보드·장치 정의·부품 카탈로그 표, 호스트 Math
+
+- **옮긴 것**
+  - Rust `boards.rs` ← `boards.js`: 보드 표와 검색(`search_boards`). NFKC 정규화는 JavaScript 층이 해서 넘긴다(문자열 기본 기능).
+  - Rust `devdefs.rs` ← `device-defs.js`: 장치 정의 표(`data/device_defs.json`), LDR·NTC 저항 계산.
+  - Rust `catalog.rs` ← `catalog-defs.js`, `device-catalog-data.js`, `part-datasheets.js`, `l298n.js`·`wireless.js`의 표: 자료 표 5개(`data/*.json`)와 파생 표(`CATALOG_BY_TYPE`, `CATALOG_TWO_PIN`, `CATALOG_DEFS` — 패키지 크기·핀 자리 계산 `catalog_geometry` 포함), `catalog_map`.
+- **자료 표는 `rust/stm-core/src/data/*.json`**: JavaScript 모듈의 표를 도구(구현 세션의 `data-extract.mjs`)로 그대로 뽑았다. 부품·장치 자료를 고칠 때는 이 JSON을 고친다. JavaScript는 `src/catalog-tables.js`가 `catalog_tables`를 한 번 읽어 여러 모듈에 나눠 준다. 표는 모두 얼어 있다.
+- **`jsmath.rs` — 초월 함수는 호스트의 `Math`**: Rust의 `powf`는 V8의 `Math.pow`와 마지막 자리가 다를 때가 있다(LDR 저항 약 7,000건 중 190건). 옮긴 코드의 숫자가 전과 같도록 WebAssembly가 `Math.pow`·`Math.exp`를 가져와 쓴다(`src/rust-core.js`가 인스턴스를 만들 때 `{math: {pow, exp}}`를 넘김). 숫자 코드를 옮길 때 초월 함수는 `jsmath`의 것을 쓰고, 필요한 함수는 여기에 더한다. cargo test(네이티브)에서는 Rust 것을 쓴다.
+- **`rustNumber(name)`(src/rust-core.js)**: 숫자만 오가는 export `stm_<name>`을 꺼낸다(JSON 없음). `ldrResistance`·`ntcResistance`가 처음 쓴다 — 회로를 풀 때마다 불리는 함수의 방식.
+- JavaScript에 남긴 한 줄 조회: `getBoard`·`projectBoard`·`boardForFamily`(표의 객체를 그대로 돌려줌), `answersI2c`, `catalogName`·`catalogType`·`isWiredContact`·`datasheetLine`.
+- `l298n.js`의 함수(`l298State` 등)와 `wireless.js`의 클래스는 그대로다(회로 풀이·세션 단계에서 옮긴다).
+- WebAssembly 크기: 약 1.84 MB → 2.02 MB.
 
 ## 1.63.11 기능 목록 62번: Rust 마이그레이션 4단계 시작 — 고친 생성 파일의 재생성 처리
 
