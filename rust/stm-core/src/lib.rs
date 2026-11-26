@@ -21,6 +21,7 @@ pub mod iocout;
 pub mod jsre;
 pub mod mcu;
 pub mod mcuconfig;
+pub mod overrides;
 pub mod periph;
 pub mod pfiles;
 pub mod raconfig;
@@ -309,6 +310,7 @@ pub fn dispatch(name: &str, args: &Value) -> Result<Value, String> {
                     .or_else(|| buildenv::call(name, list))
                     .or_else(|| raconfig::call(name, list))
                     .or_else(|| ragen::call(name, list))
+                    .or_else(|| overrides::call(name, list))
             })
             .unwrap_or_else(|| Err(format!("stm-core: 알 수 없는 함수입니다: {name}"))),
     }
