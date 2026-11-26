@@ -23,7 +23,7 @@
 
 | 단계 | 묶음 | 대상(주요 파일) | 상태 |
 |---|---|---|---|
-| 1 | 설정 계산 | `clock-tree`, `adc-config`, `dac-config`, `rtc-config`, `timer-config`, `wdg-config`, `nvic-config`, `gpio-config`, `serial-config`, `bus-config`, `pin-tolerance`, `mcu-family`, `mcu-defaults` | 진행 중 — `clock-tree`(1.63.3) |
+| 1 | 설정 계산 | `clock-tree`, `adc-config`, `dac-config`, `rtc-config`, `timer-config`, `wdg-config`, `nvic-config`, `gpio-config`, `serial-config`, `bus-config`, `pin-tolerance`, `mcu-family`, `mcu-defaults` | 완료(1.63.4) — `clock-tree`(1.63.3), 나머지(1.63.4). `pin-tolerance`는 `ra-config`·`pins`에 기대므로 3·4단계에서 옮긴다 |
 | 2 | C 소스 도구 | `parser`, `c-format`, `c-symbols`, `c-types`, `c-inline`, `c-struct-fields`, `c-expression-type`, `c-source-edit`, `hal-source`, `source-files`, `irq-handlers`, `irq-duplicates` | 미착수 |
 | 3 | 코드 생성·가져오기 | `mcu-config`, `hal-generator`, `peripheral-files`, `build-environment`, `ioc-export`, `ioc-circuit`, `firmware-import`, `ra-config`, `ra-generator`, `ra-usb-descriptor`, `ra-lpm`, `ra-data-flash` | 미착수 |
 | 4 | 회로 | `engine`(회로 풀이), `pins`, `components`, `breadboards`, `geometry`, `wire-router`, `wire-*`, `circuit-*`, `catalog-*`(그림 제외), `devboards`, `l298n`, `placement`, `project`, `project-overrides` | 미착수 |
@@ -38,4 +38,4 @@
 ## 확인할 것
 
 - 실행 중 경로(5~7단계)는 옮긴 뒤 속도를 잰다 — WebAssembly 경계를 넘는 횟수가 많으면 오히려 느려지므로, 한 프레임의 일을 한 번의 호출로 묶는다.
-- `src/rust/stm-core.wasm.js`의 크기(1.63.3에서 약 0.43 MB의 WebAssembly)가 단계마다 얼마나 늘어나는지 적는다.
+- `src/rust/stm-core.wasm.js`의 WebAssembly 크기: 1.63.3 약 0.43 MB → 1.63.4 약 0.72 MB(표를 `json!`으로 만드는 코드와 preserve_order가 늘린다). 61번(최적화)에서 줄일 곳으로 적어 둔다.

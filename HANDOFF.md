@@ -1,6 +1,21 @@
 # STM Simulator — 개발 인계
 
-현재 버전: **1.63.3**. 정리일: **2026-11-10**. NUCLEO-F446RE·NUCLEO-F103RB 또는 Renesas FPB-RA6E1(1.20.0, FSP·에뮬레이터 전용)과 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+현재 버전: **1.63.4**. 정리일: **2026-11-10**. NUCLEO-F446RE·NUCLEO-F103RB 또는 Renesas FPB-RA6E1(1.20.0, FSP·에뮬레이터 전용)과 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+
+## 1.63.4 기능 목록 62번: Rust 마이그레이션 1단계 완료 — 핀·주변장치 설정 계산
+
+- **옮긴 모듈**(JavaScript 파일은 같은 export로 Rust를 부르는 층으로 남음):
+  - Rust `periph.rs` ← `timer-config.js`, `serial-config.js`, `bus-config.js`, `gpio-config.js`, `mcu-defaults.js`: 타이머(경로·IRQ 이름·AF·ARR 폭·기본값), UART(경로·핸들·AF, `assign_serial_pin`, `set_serial_enabled`), I2C/SPI(경로·AF·IRQ), GPIO 표(`gpio_mode`, `default_speed`, `signal_name`).
+  - Rust `mcu.rs` ← `mcu-family.js`, `nvic-config.js`, `adc-config.js`, `dac-config.js`, `wdg-config.js`, `rtc-config.js`: 두 계열의 프로필, `remap_for`, NVIC(`irq_available`, `nvic_problems` 등), ADC 정규 그룹, DAC, IWDG·WWDG, RTC — 검사, 문제 문구, `MX_*_Init` 줄, .ioc 읽기.
+- **호출 방식** `rust-core.js`: 옮긴 모듈의 함수는 인수를 순서대로 넘긴다 — `rustFn(name, ...args)`. dispatch가 모르는 이름이고 인수가 배열이면 `periph::call` → `mcu::call`이 받는다(JSON 객체를 받는 기존 dispatch 이름은 그대로).
+  - `rustPure(name)`: 인수만으로 답이 정해지는 함수(이름·표 조회)는 한 번 물은 답을 기억한다. 생성과 실행 중에 핀마다 불리기 때문이다. 답이 객체면 얼린다.
+  - `rustTable(name)`: 표를 모듈을 읽을 때 한 번 받아 얼린다.
+  - `withNumbers(value, number)`: .ioc의 숫자는 부르는 쪽의 읽기 함수가 읽는다(읽지 못한 값의 경고 순서 유지). Rust가 `{"\u0001number": [raw, fallback]}`로 자리를 표시해 돌려주고, 키 순서대로 채운다.
+- **키 순서**: serde_json의 `preserve_order`를 켰다(Cargo.toml) — JSON 객체가 키를 넣은 순서를 지킨다. 프로젝트 파일과 생성 코드가 그 순서를 따른다.
+- **그대로 둔 것**: 받은 설정을 그 자리에서 바꾸는 함수(`assignSerialPin`, `validateAdcGroup`, `adcGroupFromIoc`)는 JavaScript 층이 Rust의 답을 받은 객체에 반영한다(바뀌지 않은 핀의 객체는 그대로). 프로필의 `timerMax`·`clock.valid`는 전처럼 함수다. 필드 하나를 읽는 접근자(`nvicGroup`, `tickPriority`, `adcConversions`, `pinSpeed`)는 JavaScript 층에 있다.
+- **달라진 점**: 표와 프로필이 얼린 객체다. 지원하지 않는 MCU 계열을 넘기면 TypeError 대신 "지원하지 않는 MCU입니다" 오류가 난다. 검증 전 값에서 계산이 NaN이 되는 경우 일부는 경계(JSON)에서 null을 거쳐 NaN으로 되돌린다(`orNaN`).
+- **비교 시험**: `tests/unit/moved-to-rust.test.js`가 `tests/fixtures/moved/*.json`(옮기기 전 JavaScript의 답)과 지금 답을 값·키 순서·오류 문구·바뀐 인수·숫자 읽기 순서까지 비교한다. 다음 묶음부터 기록 파일만 더하면 된다.
+- WebAssembly 크기: 약 0.43 MB → 0.72 MB.
 
 ## 1.63.3 기능 목록 62번: Rust 마이그레이션 시작 — 클록 트리(1단계)
 

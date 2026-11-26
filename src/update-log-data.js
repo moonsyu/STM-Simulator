@@ -1,5 +1,6 @@
 // User-facing update log shown in 도움말 → 업데이트 로그: one entry per released version (date = the release tag's commit date).
 export const UPDATE_LOG=Object.freeze([
+ {version:'1.63.4',date:'2026-11-26',items:['내부 정리: 핀·주변장치 설정 계산(타이머, UART, I2C/SPI, GPIO, NVIC, ADC, DAC, 워치독, RTC, MCU 계열 표)을 Rust로 옮김 — 화면과 동작은 그대로']},
  {version:'1.63.3',date:'2026-11-26',items:['내부 정리: 클록 설정 계산을 Rust로 옮김 — 화면과 동작은 그대로']},
  {version:'1.63.2',date:'2026-11-26',items:['Electron 45.4.1(보안 수정 포함)과 DOMPurify 3.4.18로 업데이트 — 화면과 동작은 그대로']},
  {version:'1.63.1',date:'2026-11-25',items:['코드로 빠르게 켜고 끄는 GPIO 핀의 LED가 실제 보드처럼 평균 밝기로 보임 — 전에는 화면을 그리는 순간의 값만 써서 무작위로 깜빡였음(보드 LED와 회로의 LED, STM32와 FPB-RA6E1)','HAL_Delay(500)처럼 눈에 보이는 느린 깜빡임은 그대로 깜빡임']},
