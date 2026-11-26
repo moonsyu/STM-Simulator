@@ -32,3 +32,20 @@ export function cubeHeader(file,brief){const key=file+'\n'+brief;if(!headers.has
 /** Measuring the duty of a pin a program switches fast (rust/stm-core/src/duty.rs; feature 57). Called for every pin
  *  write of a running program, so these are the module's numeric exports, not JSON requests. */
 export const duty=Object.freeze({slot:us=>wasm.stm_duty_slot(us),level:(slot,us,high)=>wasm.stm_duty_level(slot,us,high),frame:(slot,us)=>wasm.stm_duty_frame(slot,us),frequency:slot=>wasm.stm_duty_frequency(slot),reset:(slot,us)=>wasm.stm_duty_reset(slot,us)});
+
+/** A Rust function that takes its arguments in order (the modules moved from JavaScript for feature 62). */
+export const rustFn=(name,...args)=>rustCall(name,args);
+const frozen=value=>{if(value&&typeof value==='object'){Object.values(value).forEach(frozen);Object.freeze(value);}return value;};
+/** The same for a function whose answer depends on its arguments only (names, table look-ups): each answer is asked
+ *  for once and kept — these are called for every pin of every generated file and while a program runs. An answer
+ *  that is an object or a list is frozen (it is shared by every caller). */
+export function rustPure(name){
+ const seen=new Map();
+ return (...args)=>{
+  const key=args.length===1&&typeof args[0]==='string'?args[0]:JSON.stringify(args);
+  if(seen.has(key))return seen.get(key);
+  const value=frozen(rustCall(name,args));seen.set(key,value);return value;
+ };
+}
+/** A table of a Rust module, read once and frozen. */
+export const rustTable=name=>frozen(rustCall(name,[]));

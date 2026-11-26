@@ -10,6 +10,7 @@ pub mod docs_regions;
 pub mod duty;
 pub mod explorer;
 pub mod family;
+pub mod periph;
 pub mod regen;
 
 use serde_json::{json, Value};
@@ -276,7 +277,11 @@ pub fn dispatch(name: &str, args: &Value) -> Result<Value, String> {
                 None => Value::Null,
             })
         }
-        _ => Err(format!("stm-core: 알 수 없는 함수입니다: {name}")),
+        // [argument, …] → a function of a module that takes its arguments in order (rust-core.js rustFn)
+        _ => args
+            .as_array()
+            .and_then(|list| periph::call(name, list))
+            .unwrap_or_else(|| Err(format!("stm-core: 알 수 없는 함수입니다: {name}"))),
     }
 }
 

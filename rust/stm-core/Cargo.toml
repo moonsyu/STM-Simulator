@@ -12,7 +12,9 @@ publish = false
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
-serde_json = "1"
+# preserve_order: objects keep the order their keys were added in, as JavaScript objects do (project files and
+# generated code follow that order).
+serde_json = { version = "1", features = ["preserve_order"] }
 
 [profile.release]
 opt-level = "s"
