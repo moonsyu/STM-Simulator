@@ -1,5 +1,16 @@
 # 검증 기록
 
+## 1.63.14 Rust 마이그레이션 4단계: 좌표·행렬 계산(기능 목록 62번) — 로컬 검증
+
+2026-11-27. 구현 세션이 직접 기획·구현·시험했다. 결과 같음 비교(63번 ③): 옮기기 전(1.63.13)의 JavaScript와 Rust를 같은 호출로 비교.
+- 좌표·행렬 9,087건: 차이 0건. 회전 15가지 × 크기 9가지 × 기울기 8가지의 matrixOf·partVector·scaleTransform·partTransform, 행렬 11개의 inverse·multiply(121쌍)·vector·matrixFields, validScale·scaleFields(크기 16가지의 쌍), assignScale, 표면 16가지 × 이름 3가지의 surfaceOrigin·surfaceTransform·surfaceBounds·surfaceCentre·surfacePoint.
+  - 처음에는 matrixFields 41건이 1e-31 수준으로 달랐다. 계산이 아니라 JSON의 소수를 읽는 정밀도 탓이었고, `float_roundtrip`을 켠 뒤 0건.
+- 핀·구멍 표 1,746건: 차이 0건 — 표 전체(헤더 핀 108 + 32개와 구멍 400 + 830개의 좌표까지), 보드 6가지를 차례로 고르며 boardPins·boardPin·searchPins·bridgeNote·endpoints·endpointInfo·holeInfo, 브레드보드 부품 18가지의 breadboardHoles, circuitHoles.
+- 앞서 기록한 fixture 16개(`tests/unit/moved-to-rust.test.js`)가 소수 읽기·찍기를 바꾼 뒤에도 전부 통과한다.
+- 시간(이 PC, 200번 평균): matrixOf 1000번 0.002 → 0.041 ms, partVector 1000번 0.004 → 0.035 ms, 브레드보드 구멍 400개의 surfacePoint 0.048 → 0.033 ms, surfaceBounds·surfaceCentre 200번 0.170 → 0.040 ms.
+- 게시 전 검사(63번 ④, 모든 묶음): eslint 오류 0, Rust 검사 통과(cargo 시험 82건). unit 1097 · interp 163 · emu 68 · firmware 74 = 1402건 중 1401 통과·1 건너뜀. toolchain 묶음 1~7 392건 전부 통과. E2E 137건 중 135 통과·1 건너뜀·1 실패(copy의 Ctrl+C 시험 — 이 PC의 클립보드를 읽으면 빈 글이 와서 옮기기 전 코드에서도 똑같이 실패, CI에서는 통과). 패키지 검사 3건 중 2 통과·1 건너뜀.
+- 확인하지 못한 것: 앱 창에서 눈으로 본 확인(보드·부품을 옮기고 돌리는 동작은 E2E가 본다).
+
 ## 1.63.13 Rust 마이그레이션 4단계: 부품 정의와 단자 위치(기능 목록 62번) — 로컬 검증
 
 2026-11-27. 구현 세션이 직접 기획·구현·시험했다. 결과 같음 비교(63번 ③): 옮기기 전(1.63.12)의 JavaScript와 Rust를 같은 호출로 비교.

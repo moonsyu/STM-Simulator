@@ -1,5 +1,6 @@
 // User-facing update log shown in 도움말 → 업데이트 로그: one entry per released version (date = the release tag's commit date).
 export const UPDATE_LOG=Object.freeze([
+ {version:'1.63.14',date:'2026-11-27',items:['내부 정리: 좌표·행렬 계산과 헤더 핀·브레드보드 구멍 표를 Rust로 옮김 — 화면·동작은 그대로']},
  {version:'1.63.13',date:'2026-11-27',items:['내부 정리: 부품 정의 표와 단자 위치 계산을 Rust로 옮김 — 화면·동작은 그대로']},
  {version:'1.63.12',date:'2026-11-27',items:['내부 정리: 보드 표, 장치 정의, 부품 카탈로그 자료와 파생 표를 Rust로 옮김 — 화면·동작은 그대로']},
  {version:'1.63.11',date:'2026-11-27',items:['내부 정리: Pinout을 바꿔 다시 생성할 때 고친 생성 파일을 처리하는 계산을 Rust로 옮김 — 화면·동작은 그대로']},

@@ -1,6 +1,17 @@
 # STM Simulator — 개발 인계
 
-현재 버전: **1.63.13**. 정리일: **2026-11-10**. NUCLEO-F446RE·NUCLEO-F103RB 또는 Renesas FPB-RA6E1(1.20.0, FSP·에뮬레이터 전용)과 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+현재 버전: **1.63.14**. 정리일: **2026-11-10**. NUCLEO-F446RE·NUCLEO-F103RB 또는 Renesas FPB-RA6E1(1.20.0, FSP·에뮬레이터 전용)과 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+
+## 1.63.14 기능 목록 62번: Rust 마이그레이션 4단계 — 좌표·행렬 계산, 소수 읽기·찍기
+
+- **옮긴 것**: Rust `geom.rs` ← `geometry.js`. 크기 표(`geometry_tables`: BOARD, BB, FULL_BB, MIN_SCALE, MAX_SCALE), 숫자 export `stm_geom_matrix`·`stm_geom_vector`·`stm_geom_part_vector`·`stm_geom_inverse`·`stm_geom_multiply`·`stm_geom_surface_point`·`stm_geom_surface_bounds`(답이 여러 숫자면 첫 값을 돌려주고 나머지는 바로 뒤에 `stm_geom_1`~`3`으로 읽는다), `valid_scale`·`scale_fields`·`matrix_fields`.
+- JavaScript에 남긴 것: SVG transform 글(`scaleTransform`, `partTransform`, `surfaceTransform`), 한 줄 조회(`scaleOf`·`scaleXOf`·`scaleYOf`, `surfaceOrigin`), 제자리 수정(`assignScale`). `BOARD`·`BB`·`FULL_BB`는 고칠 수 있는 복사본이다(`pins.js`의 `setActiveBoard`가 `BOARD`의 크기를 바꾼다).
+- **`serde_json`의 `float_roundtrip`을 켰다**: 기본 설정은 소수를 읽을 때 마지막 자리가 어긋날 수 있다(`matrixFields` 비교에서 1e-31 수준 차이로 드러남). 이제 JSON으로 받은 숫자가 JavaScript의 값과 정확히 같다.
+- **`mcu::js_number`를 JavaScript의 숫자 찍기와 같게** 고쳤다: 1e21 이상·1e-7 미만은 지수 표기(`1e+21`, `2.5e-9`). 전에는 그 범위에서 다르게 찍혔다(설정값이 그 범위에 드는 일은 없었다).
+- `jsmath.rs`에 `atan`·`atan2`·`hypot` 추가.
+- **`pins.rs` ← `pins.js`의 표**: 보드 헤더 핀(NUCLEO-64와 F103의 신호 차이, FPB-RA6E1), 열린 솔더 브리지, 보드 크기, GPIO 목록, 브레드보드 구멍(400·830홀)을 `pin_tables`로 주고, 브레드보드 부품의 구멍 좌표는 `breadboard_places`가 x, y 숫자 목록으로 준다. `pins.js`에는 실행 중 바뀌는 것(`PINS`·`GPIO_PINS`, `PIN_BY_ID`·`HOLE_BY_ID`, `setActiveBoard`)과 프로젝트의 부품 목록으로 찾는 조회(`endpointInfo`, `holeInfo`, `endpoints`, `circuitHoles`, `boardPin`, `searchPins`, `bridgeNote`)가 남아 있다 — 회로를 Rust에 올려 두는 구조와 함께 옮긴다.
+- 숫자를 옮길 때 지킬 것과 남은 4단계 모듈(`pins`, 회로 풀이)의 설계 메모를 [RUST-MIGRATION-PLAN.md](docs/RUST-MIGRATION-PLAN.md)에 적었다.
+- WebAssembly 크기: 약 2.05 MB → 2.09 MB.
 
 ## 1.63.13 기능 목록 62번: Rust 마이그레이션 4단계 — 부품 정의와 단자 위치
 

@@ -26,7 +26,7 @@
 | 1 | 설정 계산 | `clock-tree`, `adc-config`, `dac-config`, `rtc-config`, `timer-config`, `wdg-config`, `nvic-config`, `gpio-config`, `serial-config`, `bus-config`, `pin-tolerance`, `mcu-family`, `mcu-defaults` | 완료(1.63.4) — `clock-tree`(1.63.3), 나머지(1.63.4). `pin-tolerance`는 `ra-config`·`pins`에 기대므로 3·4단계에서 옮긴다 |
 | 2 | C 소스 도구 | `c-format`, `c-symbols`, `c-struct-fields`, `c-source-edit`, `source-files`, `irq-handlers` | 완료(1.63.5) |
 | 3 | 코드 생성·가져오기 | `mcu-config`, `hal-generator`, `peripheral-files`, `build-environment`, `ioc-export`, `ioc-circuit`, `firmware-import`, `ra-config`, `ra-generator`, `ra-usb-descriptor`, `ra-lpm`, `ra-data-flash` | 진행 중 — `hal-generator`, `mcu-config`의 표·검사·문제 목록(1.63.6), `peripheral-files`와 `mcu-config`의 나머지(generateHal, .ioc 가져오기, UART 콘솔)(1.63.7), `ioc-export`와 `build-environment`(1.63.8), `ra-config`(1.63.9), `ra-generator`(1.63.10). 3단계에서 옮길 것은 끝났다. `ra-usb-descriptor`(글 자료와 프로젝트에 파일을 더하는 함수)는 4단계(프로젝트)에서 함께 옮긴다. `ra-lpm`(실행 로그 클래스)과 `ra-data-flash`(에뮬레이터 버스와 메모리를 함께 쓰는 클래스)는 실행 중 상태를 가지므로 5단계(에뮬레이터)에서 엔진과 함께 옮긴다. `ioc-circuit`과 `firmware-import`는 프로젝트·회로 모듈(`project`, `boards`, `pins`, 예제 회로)에 기대므로 4단계에서 함께 옮긴다 |
-| 4 | 회로 | `engine`(회로 풀이), `pins`, `components`, `breadboards`, `geometry`, `wire-router`, `wire-*`, `circuit-*`, `catalog-*`(그림 제외), `devboards`, `l298n`, `placement`, `project`, `project-overrides` | 진행 중 — `project-overrides`(1.63.11), `boards`·`device-defs`·`catalog-defs`와 자료 표(`device-catalog-data`, `part-datasheets`, `l298n`·`wireless`의 표)(1.63.12), `components`(1.63.13). 4단계의 나머지는 7·8단계의 자료 모듈(`device-defs`, `catalog-defs` ← `device-catalog-data`·`part-datasheets`·`wireless`, `signals`, `sdcard`, `camera`)에 기대므로, 그 잎 모듈부터 올라가며 옮긴다(단계 번호보다 의존 순서를 따른다) |
+| 4 | 회로 | `engine`(회로 풀이), `pins`, `components`, `breadboards`, `geometry`, `wire-router`, `wire-*`, `circuit-*`, `catalog-*`(그림 제외), `devboards`, `l298n`, `placement`, `project`, `project-overrides` | 진행 중 — `project-overrides`(1.63.11), `boards`·`device-defs`·`catalog-defs`와 자료 표(`device-catalog-data`, `part-datasheets`, `l298n`·`wireless`의 표)(1.63.12), `components`(1.63.13), `geometry`와 `pins`의 표(1.63.14). 4단계의 나머지는 7·8단계의 자료 모듈(`device-defs`, `catalog-defs` ← `device-catalog-data`·`part-datasheets`·`wireless`, `signals`, `sdcard`, `camera`)에 기대므로, 그 잎 모듈부터 올라가며 옮긴다(단계 번호보다 의존 순서를 따른다) |
 | 5 | 에뮬레이터 | `emu/cpu`, `emu/bus`, `emu/machine`, `emu/scs`, `emu/elf`, `emu/stm32f446/*`, `emu/stm32f103/*`, `emu/ra6e1/*` | 미착수 |
 | 6 | 인터프리터 | `runtime`, `hal`, `hal-*`(타이머·DMA·RTC·저장장치 등), `fsp-interp`, `fsp-*` | 미착수 — 인터프리터의 앞 단계인 `parser`, `c-types`, `c-expression-type`, `hal-source`, `c-inline`, `irq-duplicates`도 여기서 옮긴다(실행 중 연산마다 불리는 코드라 인터프리터와 떨어뜨리면 느려진다) |
 | 7 | 세션·부품 모델 | `session`, `firmware-session`, `buses`, `device-buses`, `signals`, `wireless`, `sdcard`, `lcd`, `ds3231`, `sensors`, `camera`(계산), `logic-analyzer`(계산), `variable-graph`, `trace`, `debug-tools` | 미착수 |
@@ -50,7 +50,22 @@
 - 결과 같음 비교(63번 ③)는 ②③에도 같은 방법을 쓴다: 옮기기 전 함수와 같은 입력으로 불러 숫자까지 같은지 본다(부동소수 연산 순서를 그대로 옮긴다).
 - 시간 측정: ②③은 옮기기 전후의 호출 시간을 재서 느려지지 않았는지 VERIFICATION에 적는다(61번의 기준선이 된다).
 
+### 숫자를 옮길 때 지킬 것 (1.63.12~1.63.14에서 확인)
+
+- 초월 함수(`pow`, `exp`, `sin`, `cos`, `tan`, `atan`, `atan2`, `hypot` …)는 `jsmath.rs`의 것을 쓴다. WebAssembly에서는 호스트의 `Math` 함수다. Rust 표준 라이브러리의 것은 V8과 마지막 자리가 다를 때가 있다.
+- 사칙연산은 JavaScript와 같은 순서로 쓴다(IEEE 754라 같은 순서면 같은 답). `Math.round`(반은 위로), `Math.min`·`Math.max`(NaN이면 NaN), `%`(부호는 나뉘는 수), `toFixed`는 Rust의 것과 규칙이 달라 따로 쓴 함수를 쓴다(`raconfig::js_round`·`to_fixed3`, `geom`의 `least`·`most`).
+- JSON으로 받는 소수는 `serde_json`의 `float_roundtrip`이 켜져 있어야 JavaScript의 값과 정확히 같다(1.63.14에서 켬).
+- 숫자를 글로 찍을 때는 `mcu::js_number`(JavaScript의 `Number::toString` 규칙).
+- NaN·Infinity·undefined는 JSON에 실리지 않는다. 구별해야 하는 호출은 `rustExact`를 쓴다.
+- 그릴 때·풀 때마다 불리는 함수는 `rustNumber`(숫자 export)로 내거나, 부품 객체별로 답을 기억한다(`components.js`의 `shape`). Rust 호출의 고정 비용은 약 3 µs, WebAssembly 안에서 serde 객체를 많이 만들면 느리다(숫자 목록으로 보낸다).
+
+### 남은 4단계 모듈의 설계 메모 (2026-11-27)
+
+- `pins.js`: 헤더 핀·브레드보드 구멍 표와 보드별 차이는 Rust가 만든다. `PINS`·`GPIO_PINS`(제자리에서 바뀌는 배열), `PIN_BY_ID`·`HOLE_BY_ID`(Map), `BOARD`(보드에 맞춰 크기가 바뀜), `setActiveBoard`는 여러 화면 모듈이 객체 그대로 잡고 있어 JavaScript 층이 껍데기를 유지한다. 브레드보드 부품의 구멍 좌표(400·830개)는 부품 상태별로 Rust에 한 번 물어 숫자 목록으로 받는다.
+- `endpointInfo`·`holeInfo`·`endpoints`처럼 "프로젝트의 부품 목록 + id"로 찾는 함수와 회로 풀이(`engine`)는 호출마다 프로젝트를 JSON으로 넘길 수 없다. Rust 쪽에 회로(부품·전선·표면)를 올려 두고 핸들로 묻는 구조가 필요하다. JavaScript의 프로젝트 객체는 화면 곳곳에서 제자리에서 고쳐지므로, "언제 다시 올릴지"를 정하는 것이 핵심이다: 편집 동작이 끝나는 지점(app-core의 변경 알림)에서 한 번 올리고, 그 사이의 조회는 올려 둔 것을 쓴다. 이 구조는 `project.js`(검사) → `pins`의 조회 → `circuit-topology` → `engine` 순으로 같은 핸들 위에 쌓는다.
+- `l298n`의 함수, `button-bounce`, `wireless`의 클래스는 회로 풀이·세션과 한 몸이라 그때 함께 옮긴다.
+
 ## 확인할 것
 
 - 실행 중 경로(5~7단계)는 옮긴 뒤 속도를 잰다 — WebAssembly 경계를 넘는 횟수가 많으면 오히려 느려지므로, 한 프레임의 일을 한 번의 호출로 묶는다.
-- `src/rust/stm-core.wasm.js`의 WebAssembly 크기: 1.63.3 약 0.43 MB → 1.63.4 약 0.72 MB(표를 `json!`으로 만드는 코드와 preserve_order가 늘린다). → 1.63.5 약 0.92 MB(정규식 엔진 regex-lite 포함) → 1.63.6 약 1.14 MB → 1.63.7 약 1.27 MB → 1.63.8 약 1.42 MB → 1.63.9 약 1.62 MB → 1.63.10 약 1.82 MB → 1.63.11 약 1.84 MB → 1.63.12 약 2.02 MB(자료 표 JSON 약 130 KB 포함) → 1.63.13 약 2.05 MB. 61번(최적화)에서 줄일 곳으로 적어 둔다.
+- `src/rust/stm-core.wasm.js`의 WebAssembly 크기: 1.63.3 약 0.43 MB → 1.63.4 약 0.72 MB(표를 `json!`으로 만드는 코드와 preserve_order가 늘린다). → 1.63.5 약 0.92 MB(정규식 엔진 regex-lite 포함) → 1.63.6 약 1.14 MB → 1.63.7 약 1.27 MB → 1.63.8 약 1.42 MB → 1.63.9 약 1.62 MB → 1.63.10 약 1.82 MB → 1.63.11 약 1.84 MB → 1.63.12 약 2.02 MB(자료 표 JSON 약 130 KB 포함) → 1.63.13 약 2.05 MB → 1.63.14 약 2.12 MB. 61번(최적화)에서 줄일 곳으로 적어 둔다.
