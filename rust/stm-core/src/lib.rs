@@ -26,6 +26,7 @@ pub mod jsre;
 pub mod mcu;
 pub mod mcuconfig;
 pub mod overrides;
+pub mod parts;
 pub mod periph;
 pub mod pfiles;
 pub mod raconfig;
@@ -318,6 +319,7 @@ pub fn dispatch(name: &str, args: &Value) -> Result<Value, String> {
                     .or_else(|| boards::call(name, list))
                     .or_else(|| devdefs::call(name, list))
                     .or_else(|| catalog::call(name, list))
+                    .or_else(|| parts::call(name, list))
             })
             .unwrap_or_else(|| Err(format!("stm-core: 알 수 없는 함수입니다: {name}"))),
     }

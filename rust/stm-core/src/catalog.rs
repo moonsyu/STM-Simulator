@@ -325,12 +325,30 @@ pub fn tables() -> Result<Value, String> {
     Ok(Value::Object(all))
 }
 
+static ALL: LazyLock<Value> = LazyLock::new(|| tables().expect("catalog tables"));
+/// The tables, made once.
+pub fn all() -> &'static Value {
+    &ALL
+}
+/// The catalog entry of a part type (`CATALOG_BY_TYPE[type]`).
+pub fn entry(kind: &str) -> Option<&'static Value> {
+    ALL["CATALOG_BY_TYPE"].get(kind)
+}
+/// True when pin `index` (0-based) of a catalog part is wired directly instead of plugged into the breadboard.
+pub fn is_wired_contact(id: &str, index: usize) -> bool {
+    match ALL["WIRED_CONTACTS"].get(id) {
+        Some(Value::String(all)) => all == "all",
+        Some(Value::Array(list)) => list.iter().any(|n| n.as_u64() == Some(index as u64)),
+        _ => false,
+    }
+}
+
 /// One of this module's functions by name, with its arguments in order (`src/rust-core.js` `rustFn`).
 pub fn call(name: &str, args: &[Value]) -> Option<Result<Value, String>> {
     let null = Value::Null;
     let v = |i: usize| args.get(i).unwrap_or(&null);
     Some(match name {
-        "catalog_tables" => tables(),
+        "catalog_tables" => Ok(all().clone()),
         "catalog_map" => Ok(catalog_map(&js_display(args.first()))),
         "catalog_geometry" => catalog_geometry(v(0)),
         _ => return None,

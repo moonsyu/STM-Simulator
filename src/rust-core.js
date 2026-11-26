@@ -7,7 +7,7 @@ import {WASM_BASE64} from './rust/stm-core.wasm.js';
 const bytes=Uint8Array.from(atob(WASM_BASE64),c=>c.charCodeAt(0));
 // The module takes Math's transcendental functions from here (rust/stm-core/src/jsmath.rs): the numbers of code moved
 // from JavaScript stay the same to the last digit.
-const {exports:wasm}=new WebAssembly.Instance(new WebAssembly.Module(bytes),{math:{pow:Math.pow,exp:Math.exp}});
+const {exports:wasm}=new WebAssembly.Instance(new WebAssembly.Module(bytes),{math:{pow:Math.pow,exp:Math.exp,sin:Math.sin,cos:Math.cos,tan:Math.tan}});
 const encoder=new TextEncoder(),decoder=new TextDecoder();
 
 export function rustCall(name,args={}){

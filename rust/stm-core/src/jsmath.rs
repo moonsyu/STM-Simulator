@@ -12,6 +12,9 @@ mod host {
     extern "C" {
         pub fn pow(x: f64, y: f64) -> f64;
         pub fn exp(x: f64) -> f64;
+        pub fn sin(x: f64) -> f64;
+        pub fn cos(x: f64) -> f64;
+        pub fn tan(x: f64) -> f64;
     }
 }
 
@@ -34,4 +37,34 @@ pub fn exp(x: f64) -> f64 {
     }
     #[cfg(not(target_arch = "wasm32"))]
     x.exp()
+}
+/// `Math.sin(x)`.
+pub fn sin(x: f64) -> f64 {
+    #[cfg(target_arch = "wasm32")]
+    // SAFETY: as for `pow`.
+    unsafe {
+        host::sin(x)
+    }
+    #[cfg(not(target_arch = "wasm32"))]
+    x.sin()
+}
+/// `Math.cos(x)`.
+pub fn cos(x: f64) -> f64 {
+    #[cfg(target_arch = "wasm32")]
+    // SAFETY: as for `pow`.
+    unsafe {
+        host::cos(x)
+    }
+    #[cfg(not(target_arch = "wasm32"))]
+    x.cos()
+}
+/// `Math.tan(x)`.
+pub fn tan(x: f64) -> f64 {
+    #[cfg(target_arch = "wasm32")]
+    // SAFETY: as for `pow`.
+    unsafe {
+        host::tan(x)
+    }
+    #[cfg(not(target_arch = "wasm32"))]
+    x.tan()
 }

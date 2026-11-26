@@ -42,7 +42,7 @@ pub(crate) fn truthy(v: &Value) -> bool {
     }
 }
 /// The value as JSON would have carried it: without the properties that are `undefined`.
-fn without_undefined(v: &Value) -> Value {
+pub(crate) fn without_undefined(v: &Value) -> Value {
     match v {
         Value::Object(o) if marker(v).is_none() => Value::Object(
             o.iter()
