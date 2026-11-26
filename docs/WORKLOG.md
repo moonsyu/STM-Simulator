@@ -2,6 +2,21 @@
 
 작업할 때마다 날짜순으로 맨 위에 추가합니다. 무엇을 했는지, 왜 했는지, 어떻게 검증했는지, 커밋·릴리스와 남은 사항을 적습니다. 버전별 구조 설명은 [HANDOFF.md](../HANDOFF.md), 검증 수치는 [VERIFICATION.md](VERIFICATION.md)에 있습니다.
 
+## 2026-11-26 · 질문: Ubuntu·Red Hat에서 쓰기 어려운지
+
+- 요청: 사용자 "Ubuntu나 레드햇 우분투 환경에서 사용하기 힘든가?"
+- 한 일과 이유: 지금 앱은 Windows 전용이라는 점을 확인했다. 리눅스에서 막히는 곳은 다음과 같다.
+  - 패키지 설정: `package.json` build에 `win`만 있다.
+  - 도구 탐색: `win32` 툴체인 폴더(`native-build.cjs`, `native-ide.cjs`), `C:/Program Files/SEGGER/JLink.exe`(`jlink.cjs`), `%LOCALAPPDATA%\STM-Simulator-Tools`.
+  - 보드·COM 포트 찾기: PowerShell을 쓰고, `win32`가 아니면 빈 목록을 돌려준다.
+  - 업데이트: `.ps1`로 한다.
+- 리눅스를 지원하려면 Electron이든 Tauri든 위 부분을 리눅스용으로 만들어야 한다. 틀 자체의 차이는 다음과 같다.
+  - Electron은 리눅스에서도 같은 Chromium을 담아 화면이 똑같다(AppImage·deb·rpm).
+  - Tauri는 리눅스에서 WebKitGTK를 쓴다. 화면 렌더링과 성능이 Windows(WebView2)와 달라지고, 배포판마다 WebKitGTK 버전도 다르다. 그래서 리눅스 지원이 목표면 Electron이 더 안전하다고 설명했다.
+- 검증: `desktop/*.cjs`에서 Windows 전용 코드 검색, `package.json` build 대상 확인.
+- 커밋·릴리스: 이 기록 `[skip ci]` 커밋.
+- 남은 사항: 리눅스 지원 여부는 사용자가 정한다(요청 시 기능 목록에 적는다).
+
 ## 2026-11-26 · 질문: Tauri로 바꿔도 기능이 같고 더 빠른지
 
 - 요청: 사용자 "타우리로 전환해도 기존에 사용하던 기능, 방법 등은 모두 동일하게 사용 가능하다는거지? 오히려 속도, 자원 면에서 우수하고".
