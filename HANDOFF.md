@@ -1,6 +1,17 @@
 # STM Simulator — 개발 인계
 
-현재 버전: **1.63.7**. 정리일: **2026-11-10**. NUCLEO-F446RE·NUCLEO-F103RB 또는 Renesas FPB-RA6E1(1.20.0, FSP·에뮬레이터 전용)과 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+현재 버전: **1.63.8**. 정리일: **2026-11-10**. NUCLEO-F446RE·NUCLEO-F103RB 또는 Renesas FPB-RA6E1(1.20.0, FSP·에뮬레이터 전용)과 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+
+## 1.63.8 기능 목록 62번: Rust 마이그레이션 3단계 — .ioc 내보내기, 빌드 환경
+
+- **옮긴 것**(JavaScript 파일은 같은 export로 Rust를 부르는 층으로 남음):
+  - Rust `iocout.rs` ← `ioc-export.js`: `export_ioc`, `unexported_pins`. 키를 처음 넣은 순서로 모으고(같은 키를 다시 넣으면 자리는 그대로) 글자 순으로 정렬해 Java-properties 방식으로 이스케이프한다.
+  - Rust `buildenv.rs` ← `build-environment.js`: `prefix_of`, `startup_of`, `hal_modules`, `linker_name`, `linker_script`, `main_header`, `build_environment`. 주석과 `#if 0` 블록을 뺀 소스에서 사용자가 정의한 핸들러를 찾는 것(`strip_c`, `live_lines`, `defines`)을 정규식 없이 손으로 썼다.
+- `build-environment.js`의 JavaScript 층은 프로젝트에서 main.c 글, 파일 이름·글, Pinout 설정만 Rust로 넘긴다(회로 등 나머지는 넘기지 않음).
+- 옮기기 전 코드의 특이 동작을 그대로 둔 것: CRLF로 끝나는 `#if 0` 줄은 지시문으로 보지 않는다(JavaScript 정규식의 `.`이 CR에서 멈추던 것).
+- 그대로 두지 않은 것: 계열 이름이 `constructor`·`toString` 같은 객체 기본 속성 이름일 때 표 조회가 함수를 돌려주던 동작(실제 설정에는 없는 값).
+- `ioc-circuit.js`와 `firmware-import.js`는 4단계(프로젝트·회로)로 옮겼다.
+- WebAssembly 크기: 약 1.27 MB → 1.42 MB.
 
 ## 1.63.7 기능 목록 62번: Rust 마이그레이션 3단계 — 주변장치별 파일, generateHal, .ioc 가져오기
 

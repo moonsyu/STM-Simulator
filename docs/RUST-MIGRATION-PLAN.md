@@ -25,7 +25,7 @@
 |---|---|---|---|
 | 1 | 설정 계산 | `clock-tree`, `adc-config`, `dac-config`, `rtc-config`, `timer-config`, `wdg-config`, `nvic-config`, `gpio-config`, `serial-config`, `bus-config`, `pin-tolerance`, `mcu-family`, `mcu-defaults` | 완료(1.63.4) — `clock-tree`(1.63.3), 나머지(1.63.4). `pin-tolerance`는 `ra-config`·`pins`에 기대므로 3·4단계에서 옮긴다 |
 | 2 | C 소스 도구 | `c-format`, `c-symbols`, `c-struct-fields`, `c-source-edit`, `source-files`, `irq-handlers` | 완료(1.63.5) |
-| 3 | 코드 생성·가져오기 | `mcu-config`, `hal-generator`, `peripheral-files`, `build-environment`, `ioc-export`, `ioc-circuit`, `firmware-import`, `ra-config`, `ra-generator`, `ra-usb-descriptor`, `ra-lpm`, `ra-data-flash` | 진행 중 — `hal-generator`, `mcu-config`의 표·검사·문제 목록(1.63.6), `peripheral-files`와 `mcu-config`의 나머지(generateHal, .ioc 가져오기, UART 콘솔)(1.63.7). 남음: `build-environment`, `ioc-export`, `ioc-circuit`, `firmware-import`, `ra-*` |
+| 3 | 코드 생성·가져오기 | `mcu-config`, `hal-generator`, `peripheral-files`, `build-environment`, `ioc-export`, `ioc-circuit`, `firmware-import`, `ra-config`, `ra-generator`, `ra-usb-descriptor`, `ra-lpm`, `ra-data-flash` | 진행 중 — `hal-generator`, `mcu-config`의 표·검사·문제 목록(1.63.6), `peripheral-files`와 `mcu-config`의 나머지(generateHal, .ioc 가져오기, UART 콘솔)(1.63.7), `ioc-export`와 `build-environment`(1.63.8). 남음: `ra-*`. `ioc-circuit`과 `firmware-import`는 프로젝트·회로 모듈(`project`, `boards`, `pins`, 예제 회로)에 기대므로 4단계에서 함께 옮긴다 |
 | 4 | 회로 | `engine`(회로 풀이), `pins`, `components`, `breadboards`, `geometry`, `wire-router`, `wire-*`, `circuit-*`, `catalog-*`(그림 제외), `devboards`, `l298n`, `placement`, `project`, `project-overrides` | 미착수 |
 | 5 | 에뮬레이터 | `emu/cpu`, `emu/bus`, `emu/machine`, `emu/scs`, `emu/elf`, `emu/stm32f446/*`, `emu/stm32f103/*`, `emu/ra6e1/*` | 미착수 |
 | 6 | 인터프리터 | `runtime`, `hal`, `hal-*`(타이머·DMA·RTC·저장장치 등), `fsp-interp`, `fsp-*` | 미착수 — 인터프리터의 앞 단계인 `parser`, `c-types`, `c-expression-type`, `hal-source`, `c-inline`, `irq-duplicates`도 여기서 옮긴다(실행 중 연산마다 불리는 코드라 인터프리터와 떨어뜨리면 느려진다) |
@@ -38,4 +38,4 @@
 ## 확인할 것
 
 - 실행 중 경로(5~7단계)는 옮긴 뒤 속도를 잰다 — WebAssembly 경계를 넘는 횟수가 많으면 오히려 느려지므로, 한 프레임의 일을 한 번의 호출로 묶는다.
-- `src/rust/stm-core.wasm.js`의 WebAssembly 크기: 1.63.3 약 0.43 MB → 1.63.4 약 0.72 MB(표를 `json!`으로 만드는 코드와 preserve_order가 늘린다). → 1.63.5 약 0.92 MB(정규식 엔진 regex-lite 포함) → 1.63.6 약 1.14 MB → 1.63.7 약 1.27 MB. 61번(최적화)에서 줄일 곳으로 적어 둔다.
+- `src/rust/stm-core.wasm.js`의 WebAssembly 크기: 1.63.3 약 0.43 MB → 1.63.4 약 0.72 MB(표를 `json!`으로 만드는 코드와 preserve_order가 늘린다). → 1.63.5 약 0.92 MB(정규식 엔진 regex-lite 포함) → 1.63.6 약 1.14 MB → 1.63.7 약 1.27 MB → 1.63.8 약 1.42 MB. 61번(최적화)에서 줄일 곳으로 적어 둔다.
