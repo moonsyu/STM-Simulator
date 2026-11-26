@@ -101,3 +101,32 @@ pub fn hypot(x: f64, y: f64) -> f64 {
     #[cfg(not(target_arch = "wasm32"))]
     x.hypot(y)
 }
+/// `Math.hypot(x, y)` without the call to the host, for loops that ask it very often: the engine's own method (the
+/// larger magnitude taken out, the squares summed with Kahan's compensation). `tests/unit/js-math.test.js` holds it
+/// against `Math.hypot`.
+pub fn hypot_fast(x: f64, y: f64) -> f64 {
+    let (a, b) = (x.abs(), y.abs());
+    if a.is_infinite() || b.is_infinite() {
+        return f64::INFINITY;
+    }
+    if a.is_nan() || b.is_nan() {
+        return f64::NAN;
+    }
+    let max = a.max(b);
+    if max == 0.0 {
+        return 0.0;
+    }
+    let (mut sum, mut compensation) = (0.0f64, 0.0f64);
+    for v in [a, b] {
+        let n = v / max;
+        let summand = n * n - compensation;
+        let preliminary = sum + summand;
+        compensation = (preliminary - sum) - summand;
+        sum = preliminary;
+    }
+    sum.sqrt() * max
+}
+#[no_mangle]
+pub extern "C" fn stm_hypot_fast(x: f64, y: f64) -> f64 {
+    hypot_fast(x, y)
+}
