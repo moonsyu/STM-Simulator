@@ -1,5 +1,9 @@
 # 검증 기록
 
+## 1.63.3 Rust 마이그레이션 시작: 클록 트리(기능 목록 62번) — 로컬 검증
+
+2026-11-26. 구현 세션이 직접 기획·구현·시험했다. `clock-tree.js`의 시험(`tests/unit/clock-tree.test.js`, `ioc-real-files.test.js`, `tests/toolchain/clock-tree.test.mjs`)은 고치지 않고 그대로 통과한다. 결과 같음 비교(기능 목록 63번 ③): 1.63.2의 JavaScript 구현과 Rust 구현을 같은 입력 1,227,184건으로 돌려 값·키 순서·오류 문구의 차이 0건(입력의 범위와 기록 시험은 [REGRESSION-CHECKS.md](REGRESSION-CHECKS.md) 단계별 결과). 게시 전 검사(63번 ④, 모든 묶음): eslint 오류 0, Rust 검사 통과(cargo 시험 40건), unit 1077 · interp 163 · emu 68(1 건너뜀) · firmware 74 = 1382건 중 1381 통과, toolchain 묶음 1~7 392건 전부 통과, E2E 137건 중 136 통과·1 건너뜀, 패키지 검사 3건 중 2 통과·1 건너뜀. toolchain `ra-course`의 시간에 민감한 시험 1건은 전체 실행 중(다른 작업과 겹침) 실패했고 조용한 상태에서 두 번 다시 돌려 통과했다. 확인하지 못한 것: 앱 창에서 눈으로 본 확인.
+
 ## 1.63.2 의존성 업데이트(기능 목록 58번) — 로컬 검증
 
 2026-11-26. 구현 세션이 직접 했다. PR #7의 변경을 main에 적용해 설치한 버전: dompurify 3.4.18, electron 45.4.1(`electron --version` v45.4.1), eslint 10.15.0, globals 17.14.0, playwright 1.65.1. 잠금 파일은 PR #7의 것과 프로젝트 버전 줄만 다르다. 시험: eslint 오류 0, Rust 검사(fmt·clippy·cargo test·wasm 빌드) 통과, 단위 1380건(1379 통과·1 건너뜀), E2E 137건(136 통과·1 건너뜀), 패키지 검사 통과. 앱 소스는 바뀌지 않았으므로 화면·동작의 확인은 E2E 전체(앱 창을 띄운 검사)로 했다. 확인하지 못한 것: 앱 창에서 눈으로 본 확인.

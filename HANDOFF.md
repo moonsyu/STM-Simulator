@@ -1,6 +1,16 @@
 # STM Simulator — 개발 인계
 
-현재 버전: **1.63.2**. 정리일: **2026-11-10**. NUCLEO-F446RE·NUCLEO-F103RB 또는 Renesas FPB-RA6E1(1.20.0, FSP·에뮬레이터 전용)과 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+현재 버전: **1.63.3**. 정리일: **2026-11-10**. NUCLEO-F446RE·NUCLEO-F103RB 또는 Renesas FPB-RA6E1(1.20.0, FSP·에뮬레이터 전용)과 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+
+## 1.63.3 기능 목록 62번: Rust 마이그레이션 시작 — 클록 트리(1단계)
+
+- **결정**(사용자, 2026-11-26): 화면과 Electron은 그대로 두고 화면이 아닌 로직을 모두 Rust(`rust/stm-core`, WebAssembly)로 옮긴다. 모듈별로 옮기며 계속 게시한다. 순서(9단계)와 상태는 [docs/RUST-MIGRATION-PLAN.md](docs/RUST-MIGRATION-PLAN.md).
+- **옮기는 방법**: 옮긴 모듈의 JavaScript 파일은 같은 이름의 export로 Rust를 부르는 얇은 파일로 남긴다(부르는 쪽과 시험은 그대로).
+- **이번에 옮긴 것**: Clock Configuration 계산 `src/clock-tree.js` → Rust `clock.rs` — `tables`(HSI·HSE·분주 목록·CubeMX 한계), `default_tree`, `tree_from_timer_hz`, `frequencies`, `flash_latency`·`needs_over_drive`, `problems`·`adc_problem`(붉은 표시의 문구), `validate`, `tree_from_ioc`. dispatch `clock_tables`·`clock_default_tree`·`clock_tree_from_timer_hz`·`clock_frequencies`·`clock_flash`·`clock_problems`·`clock_validate`·`clock_tree_from_ioc`.
+- **JavaScript 쪽** `clock-tree.js`: export 이름은 그대로다(`HSI_HZ`·`LIMITS` 등 표는 모듈을 읽을 때 Rust에서 받아 얼린다). Rust가 정렬된 키로 답하므로 트리의 키 순서를 프로젝트 파일의 순서로 되돌리고(`ordered`), 인터프리터가 같은 트리의 주파수를 반복해 묻는 것은 계열·트리별로 기억한다(256개까지).
+- **비교 시험**: `tests/unit/clock-tree-recorded.test.js`가 1.63.2의 JavaScript가 낸 답 755건(`tests/fixtures/clock-tree-1.63.2.json`)과 지금 답을 값·키 순서·오류 문구까지 비교한다(기능 목록 63번 ③, 기준과 점검표는 [docs/REGRESSION-CHECKS.md](docs/REGRESSION-CHECKS.md)).
+- **달라진 점**: 검증하지 않은 트리(예: PLLM 0)의 주파수가 NaN·Infinity 대신 null로 온다(JSON). 검증된 트리의 값과 오류·경고 문구는 같다. 표(`LIMITS` 등)는 얼린 객체다.
+- 작업 트리: 임시 폴더의 작업 트리가 Windows 정리로 지워져(`.git` 파일과 스크립트), 구현 세션의 작업 트리를 `%LOCALAPPDATA%\STM-Simulator-Tools\wt-rust`로 옮겼다(`node_modules`는 주 체크아웃의 것을 정션으로).
 
 ## 1.63.2 기능 목록 58번: 의존성 업데이트(Dependabot PR #7과 같은 변경)
 
