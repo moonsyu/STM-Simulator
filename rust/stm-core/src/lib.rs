@@ -3,6 +3,7 @@
 //! one entry point with JSON: `{"fn": name, "args": value}` in, `{"ok": value}` or `{"error": message}` out.
 //! New and changed features are written here (the user's decision of 2026-11-25); the screens stay in JavaScript.
 
+pub mod boards;
 pub mod build_level;
 pub mod buildenv;
 pub mod cformat;
@@ -11,6 +12,7 @@ pub mod couple;
 pub mod csedit;
 pub mod csource;
 pub mod csymbols;
+pub mod devdefs;
 pub mod docs_regions;
 pub mod duty;
 pub mod explorer;
@@ -18,6 +20,7 @@ pub mod family;
 pub mod halgen;
 pub mod ioc;
 pub mod iocout;
+pub mod jsmath;
 pub mod jsre;
 pub mod mcu;
 pub mod mcuconfig;
@@ -311,6 +314,8 @@ pub fn dispatch(name: &str, args: &Value) -> Result<Value, String> {
                     .or_else(|| raconfig::call(name, list))
                     .or_else(|| ragen::call(name, list))
                     .or_else(|| overrides::call(name, list))
+                    .or_else(|| boards::call(name, list))
+                    .or_else(|| devdefs::call(name, list))
             })
             .unwrap_or_else(|| Err(format!("stm-core: 알 수 없는 함수입니다: {name}"))),
     }

@@ -5,7 +5,9 @@
 import {WASM_BASE64} from './rust/stm-core.wasm.js';
 
 const bytes=Uint8Array.from(atob(WASM_BASE64),c=>c.charCodeAt(0));
-const {exports:wasm}=new WebAssembly.Instance(new WebAssembly.Module(bytes),{});
+// The module takes Math's transcendental functions from here (rust/stm-core/src/jsmath.rs): the numbers of code moved
+// from JavaScript stay the same to the last digit.
+const {exports:wasm}=new WebAssembly.Instance(new WebAssembly.Module(bytes),{math:{pow:Math.pow,exp:Math.exp}});
 const encoder=new TextEncoder(),decoder=new TextDecoder();
 
 export function rustCall(name,args={}){
@@ -33,6 +35,9 @@ export function cubeHeader(file,brief){const key=file+'\n'+brief;if(!headers.has
  *  write of a running program, so these are the module's numeric exports, not JSON requests. */
 export const duty=Object.freeze({slot:us=>wasm.stm_duty_slot(us),level:(slot,us,high)=>wasm.stm_duty_level(slot,us,high),frame:(slot,us)=>wasm.stm_duty_frame(slot,us),frequency:slot=>wasm.stm_duty_frequency(slot),reset:(slot,us)=>wasm.stm_duty_reset(slot,us)});
 
+/** A Rust function of numbers that answers a number (the module's export `stm_<name>`): for what is called while a
+ *  circuit is solved or drawn, where a JSON request for each call would be too slow. */
+export const rustNumber=name=>{const f=wasm['stm_'+name];if(typeof f!=='function')throw new Error('stm-core: no numeric export '+name);return f;};
 /** A Rust function that takes its arguments in order (the modules moved from JavaScript for feature 62). */
 export const rustFn=(name,...args)=>rustCall(name,args);
 const frozen=value=>{if(value&&typeof value==='object'){Object.values(value).forEach(frozen);Object.freeze(value);}return value;};
