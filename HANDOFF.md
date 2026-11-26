@@ -1,6 +1,15 @@
 # STM Simulator — 개발 인계
 
-현재 버전: **1.63.6**. 정리일: **2026-11-10**. NUCLEO-F446RE·NUCLEO-F103RB 또는 Renesas FPB-RA6E1(1.20.0, FSP·에뮬레이터 전용)과 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+현재 버전: **1.63.7**. 정리일: **2026-11-10**. NUCLEO-F446RE·NUCLEO-F103RB 또는 Renesas FPB-RA6E1(1.20.0, FSP·에뮬레이터 전용)과 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+
+## 1.63.7 기능 목록 62번: Rust 마이그레이션 3단계 — 주변장치별 파일, generateHal, .ioc 가져오기
+
+- **옮긴 것**(JavaScript 파일은 같은 export로 Rust를 부르는 층으로 남음):
+  - Rust `pfiles.rs` ← `peripheral-files.js`와 `mcu-config.js`의 `generateHal`: `split_main`, `peripheral_files`, `generate_split_main`, `generated_sources`, `generate_hal`(검사 → 문제 목록 → 생성 → 설정에 따라 나누기를 Rust 안에서 한 번에).
+  - Rust `ioc.rs` ← `mcu-config.js`의 `importIoc`·`evalIocNumber`·`userPins`·`consoleUart`. .ioc의 숫자 읽기와 알림 순서를 Rust 안에서 처리한다(`filled`가 `mcu::NUMBER` 자리를 키 순서대로 채움).
+- `mcu-config.js`는 이제 전부 Rust를 부르는 층이다. `halFiles`·`userPins`·`consoleUart`는 받은 객체의 파일·핀·주변장치 객체를 그대로 쓰도록 JavaScript 층이 Rust의 답(생성 파일·이름·순서)을 적용한다.
+- serde_json의 순서 보존 Map에서 키를 지울 때는 `shift_remove`를 쓴다(`remove`는 마지막 키를 그 자리로 옮겨 순서가 바뀐다).
+- WebAssembly 크기: 약 1.14 MB → 1.27 MB.
 
 ## 1.63.6 기능 목록 62번: Rust 마이그레이션 3단계 시작 — HAL 생성기, Pinout 설정 검사
 
