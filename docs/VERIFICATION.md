@@ -1,5 +1,13 @@
 # 검증 기록
 
+## 1.63.10 Rust 마이그레이션 3단계: RA 생성기(기능 목록 62번) — 로컬 검증
+
+2026-11-27. 구현 세션이 직접 기획·구현·시험했다. 결과 같음 비교(63번 ③): 옮기기 전(1.63.9)의 JavaScript와 Rust를 같은 호출로 비교.
+- 15,963건: 차이 0건. generateRaFiles·raInstances·raVectors — FSP 예제 전체와 스택 종류별 손으로 만든 설정(UART+DTC, Simple SPI, RSPI, GPT·AGT, ADC+ELC, IIC 마스터·슬레이브, 워치독, RTC, 플래시 BGO, USB, CAN, LPM, DMAC), 스택을 끄거나 뺀 것, 속성을 값 60가지로 바꾼 것(검사를 거친 설정과 거치지 않은 설정), 핀 종류·이름, 클록 HOCO·PLL·분주, BSP 스택·힙, 보드 옵션. pinCfgWord 조합, sciBaudSetting 격자, raUsbClock, raIoName, raPclka, raHalEntry.
+- 옮기기 전 코드가 TypeError로 죽던 입력 93건은 다른 문구의 오류로 답한다(검사를 거치지 않은 잘못된 모양의 입력).
+- 게시 전 검사(63번 ④, 모든 묶음): eslint 오류 0, Rust 검사 통과(cargo 시험 74건). unit 1089 · interp 163 · emu 68 · firmware 74 = 1394건 중 1393 통과·1 건너뜀. toolchain 묶음 1~7 392건 전부 통과(생성 파일로 FSP 예제를 빌드·실행하는 ra-course·ra-usb 포함). E2E 137건 중 135 통과·1 건너뜀·1 실패(copy의 Ctrl+C 시험 — 이 PC의 클립보드를 읽으면 빈 글이 와서 옮기기 전 코드에서도 똑같이 실패, CI에서는 통과). 패키지 검사 3건 중 2 통과·1 건너뜀.
+- 확인하지 못한 것: 앱 창에서 눈으로 본 확인. 생성 파일로 FSP 예제를 실제로 빌드해 실행하는 것은 toolchain 묶음(ra-course, ra-usb)이 한다.
+
 ## 1.63.9 Rust 마이그레이션 3단계: RA 설정(기능 목록 62번) — 로컬 검증
 
 2026-11-27. 구현 세션이 직접 기획·구현·시험했다. 결과 같음 비교(63번 ③): 옮기기 전(1.63.8)의 JavaScript와 Rust를 같은 호출로 비교.

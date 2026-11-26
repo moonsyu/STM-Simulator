@@ -25,7 +25,7 @@
 |---|---|---|---|
 | 1 | 설정 계산 | `clock-tree`, `adc-config`, `dac-config`, `rtc-config`, `timer-config`, `wdg-config`, `nvic-config`, `gpio-config`, `serial-config`, `bus-config`, `pin-tolerance`, `mcu-family`, `mcu-defaults` | 완료(1.63.4) — `clock-tree`(1.63.3), 나머지(1.63.4). `pin-tolerance`는 `ra-config`·`pins`에 기대므로 3·4단계에서 옮긴다 |
 | 2 | C 소스 도구 | `c-format`, `c-symbols`, `c-struct-fields`, `c-source-edit`, `source-files`, `irq-handlers` | 완료(1.63.5) |
-| 3 | 코드 생성·가져오기 | `mcu-config`, `hal-generator`, `peripheral-files`, `build-environment`, `ioc-export`, `ioc-circuit`, `firmware-import`, `ra-config`, `ra-generator`, `ra-usb-descriptor`, `ra-lpm`, `ra-data-flash` | 진행 중 — `hal-generator`, `mcu-config`의 표·검사·문제 목록(1.63.6), `peripheral-files`와 `mcu-config`의 나머지(generateHal, .ioc 가져오기, UART 콘솔)(1.63.7), `ioc-export`와 `build-environment`(1.63.8), `ra-config`(1.63.9). 남음: `ra-generator`, `ra-usb-descriptor`. `ra-lpm`(실행 로그 클래스)과 `ra-data-flash`(에뮬레이터 버스와 메모리를 함께 쓰는 클래스)는 실행 중 상태를 가지므로 5단계(에뮬레이터)에서 엔진과 함께 옮긴다. `ioc-circuit`과 `firmware-import`는 프로젝트·회로 모듈(`project`, `boards`, `pins`, 예제 회로)에 기대므로 4단계에서 함께 옮긴다 |
+| 3 | 코드 생성·가져오기 | `mcu-config`, `hal-generator`, `peripheral-files`, `build-environment`, `ioc-export`, `ioc-circuit`, `firmware-import`, `ra-config`, `ra-generator`, `ra-usb-descriptor`, `ra-lpm`, `ra-data-flash` | 진행 중 — `hal-generator`, `mcu-config`의 표·검사·문제 목록(1.63.6), `peripheral-files`와 `mcu-config`의 나머지(generateHal, .ioc 가져오기, UART 콘솔)(1.63.7), `ioc-export`와 `build-environment`(1.63.8), `ra-config`(1.63.9), `ra-generator`(1.63.10). 3단계에서 옮길 것은 끝났다. `ra-usb-descriptor`(글 자료와 프로젝트에 파일을 더하는 함수)는 4단계(프로젝트)에서 함께 옮긴다. `ra-lpm`(실행 로그 클래스)과 `ra-data-flash`(에뮬레이터 버스와 메모리를 함께 쓰는 클래스)는 실행 중 상태를 가지므로 5단계(에뮬레이터)에서 엔진과 함께 옮긴다. `ioc-circuit`과 `firmware-import`는 프로젝트·회로 모듈(`project`, `boards`, `pins`, 예제 회로)에 기대므로 4단계에서 함께 옮긴다 |
 | 4 | 회로 | `engine`(회로 풀이), `pins`, `components`, `breadboards`, `geometry`, `wire-router`, `wire-*`, `circuit-*`, `catalog-*`(그림 제외), `devboards`, `l298n`, `placement`, `project`, `project-overrides` | 미착수 |
 | 5 | 에뮬레이터 | `emu/cpu`, `emu/bus`, `emu/machine`, `emu/scs`, `emu/elf`, `emu/stm32f446/*`, `emu/stm32f103/*`, `emu/ra6e1/*` | 미착수 |
 | 6 | 인터프리터 | `runtime`, `hal`, `hal-*`(타이머·DMA·RTC·저장장치 등), `fsp-interp`, `fsp-*` | 미착수 — 인터프리터의 앞 단계인 `parser`, `c-types`, `c-expression-type`, `hal-source`, `c-inline`, `irq-duplicates`도 여기서 옮긴다(실행 중 연산마다 불리는 코드라 인터프리터와 떨어뜨리면 느려진다) |
@@ -35,7 +35,22 @@
 
 남기는 것(화면): `app*.js`, `shell.js`, `*-ui.js`, `inspector.js`, `monitor.js`, `code-editor.js`, `editor-search.js`, `render.js`·`part-render.js`·`part-art.js`·`catalog-render.js`(캔버스·SVG 그리기), `popout.js`, `file-drop.js`, `keybindings.js`, 테마, `part-images.js`(그림 데이터), Electron 주 프로세스의 창·메뉴·파일 대화상자.
 
+## 4단계부터의 경계(호출 방식)
+
+1~3단계는 "설정이 바뀔 때 한 번" 부르는 코드라 JSON으로 주고받아도 됐다. 4단계부터는 자주 불리는 코드가 섞여 있어 호출 방식을 셋으로 나눈다(2026-11-27 구현 세션이 정함).
+
+| 불리는 빈도 | 예 | 방식 |
+|---|---|---|
+| 편집할 때 한 번 | 보드 표·검색, 프로젝트 검사(`project`), 배선 위상(`circuit-topology`), 자동 배선(`wire-router`), 부품 놓기(`placement`), 회로 진단, 가져오기(`firmware-import`, `ioc-circuit`) | 지금처럼 JSON(`rustFn`·`rustExact`), 표는 `rustTable` |
+| 그릴 때마다(프레임·부품마다) | `geometry`의 행렬·좌표 함수, `wire-path`, `pins`의 좌표 조회 | 숫자만 오가는 WebAssembly export(`duty`처럼). 답이 여러 숫자면 공유 메모리의 `Float64Array`에 써서 읽는다. JSON을 거치지 않는다 |
+| 시뮬레이션 단계마다 | 회로 풀이(`engine`의 `solveCircuit`), 이후 5~7단계의 에뮬레이터·인터프리터·부품 모델 | Rust 쪽에 상태를 둔다: 프로젝트를 한 번 올려 핸들을 받고(`circuit_load`), 단계마다 바뀐 값(GPIO, 눌린 버튼, 시간)만 숫자로 넘겨 풀고, 결과는 필요한 것만 읽는다(전압·전류 조회). 단계마다 프로젝트 전체를 JSON으로 보내지 않는다 |
+
+- 순서: ① 표와 편집 때 계산(`boards`, `pins`·`components`·`breadboards`·`devboards`의 표와 검사, `project`, `project-overrides`, `placement`, `circuit-topology`, `firmware-import`, `ioc-circuit`, `ra-usb-descriptor`) → ② 그리기용 숫자 함수(`geometry`, `wire-path`, `wire-ends`) → ③ 회로 풀이(`engine`, `l298n`, `catalog-electrical`·`catalog-model`, 상태를 Rust에 둠) → ④ 자동 배선·회로 편집·진단.
+- ③은 풀이 결과 객체(`voltage(key)` 같은 함수를 가진 객체)를 쓰는 곳이 많다. JavaScript 층이 같은 모양의 객체를 주되, 그 함수들이 Rust의 핸들에서 값을 읽게 한다.
+- 결과 같음 비교(63번 ③)는 ②③에도 같은 방법을 쓴다: 옮기기 전 함수와 같은 입력으로 불러 숫자까지 같은지 본다(부동소수 연산 순서를 그대로 옮긴다).
+- 시간 측정: ②③은 옮기기 전후의 호출 시간을 재서 느려지지 않았는지 VERIFICATION에 적는다(61번의 기준선이 된다).
+
 ## 확인할 것
 
 - 실행 중 경로(5~7단계)는 옮긴 뒤 속도를 잰다 — WebAssembly 경계를 넘는 횟수가 많으면 오히려 느려지므로, 한 프레임의 일을 한 번의 호출로 묶는다.
-- `src/rust/stm-core.wasm.js`의 WebAssembly 크기: 1.63.3 약 0.43 MB → 1.63.4 약 0.72 MB(표를 `json!`으로 만드는 코드와 preserve_order가 늘린다). → 1.63.5 약 0.92 MB(정규식 엔진 regex-lite 포함) → 1.63.6 약 1.14 MB → 1.63.7 약 1.27 MB → 1.63.8 약 1.42 MB → 1.63.9 약 1.62 MB. 61번(최적화)에서 줄일 곳으로 적어 둔다.
+- `src/rust/stm-core.wasm.js`의 WebAssembly 크기: 1.63.3 약 0.43 MB → 1.63.4 약 0.72 MB(표를 `json!`으로 만드는 코드와 preserve_order가 늘린다). → 1.63.5 약 0.92 MB(정규식 엔진 regex-lite 포함) → 1.63.6 약 1.14 MB → 1.63.7 약 1.27 MB → 1.63.8 약 1.42 MB → 1.63.9 약 1.62 MB → 1.63.10 약 1.82 MB. 61번(최적화)에서 줄일 곳으로 적어 둔다.

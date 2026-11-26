@@ -1,6 +1,14 @@
 # STM Simulator — 개발 인계
 
-현재 버전: **1.63.9**. 정리일: **2026-11-10**. NUCLEO-F446RE·NUCLEO-F103RB 또는 Renesas FPB-RA6E1(1.20.0, FSP·에뮬레이터 전용)과 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+현재 버전: **1.63.10**. 정리일: **2026-11-10**. NUCLEO-F446RE·NUCLEO-F103RB 또는 Renesas FPB-RA6E1(1.20.0, FSP·에뮬레이터 전용)과 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+
+## 1.63.10 기능 목록 62번: Rust 마이그레이션 3단계 — RA 생성기
+
+- **옮긴 것**: Rust `ragen.rs` ← `ra-generator.js`. `ra_instances`(hal_data.c가 정의하는 FSP 인스턴스), `ra_vectors`(벡터 배정), `ra_generate_files`(ra_cfg·ra_gen·script의 파일 전체), `ra_pin_cfg_word`, `ra_sci_baud`, `ra_usb_clock`, `ra_pclka`, `ra_io_name`, `ra_hal_entry`.
+- **글 템플릿은 `ragen_text.rs`**: 생성 파일의 본문 85개를 상수로 두고, 구멍을 `⟦t.name⟧`(값의 경로)·`⟦#0⟧`(계산한 글)으로 적었다. `ragen.rs`의 `fill(템플릿, 값들, 구멍들)`이 채운다. 생성 파일의 글을 고칠 때는 `ragen_text.rs`의 해당 상수를 고친다.
+- 템플릿은 손으로 옮겨 적지 않고 JavaScript의 템플릿 리터럴에서 도구로 뽑았다(구현 세션의 `tpl-extract.mjs`: acorn으로 큰 템플릿 리터럴을 찾아 Rust 상수와 "계산식만 남긴 뼈대"를 만든다). 다른 생성기를 옮길 때도 같은 방법을 쓴다.
+- 3단계에서 옮길 모듈은 끝났다. `ra-usb-descriptor`·`ioc-circuit`·`firmware-import`는 4단계(프로젝트·회로), `ra-lpm`·`ra-data-flash`는 5단계(에뮬레이터)에서 옮긴다.
+- WebAssembly 크기: 약 1.62 MB → 1.82 MB.
 
 ## 1.63.9 기능 목록 62번: Rust 마이그레이션 3단계 — RA 설정
 
