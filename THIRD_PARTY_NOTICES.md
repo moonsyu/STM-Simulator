@@ -8,11 +8,11 @@ Reference photographs, supplied pin-map images, generated reference illustration
 
 LiquidCrystal, Wire, SPI, and Arduino-style API names describe the compatible portions of the educational sketch interface. The parser, interpreter, LCD controller and communication models are independently implemented in this repository. Arduino library implementations and STM32 firmware are not linked or bundled. The supported subset and references are recorded in `docs/SKETCH-API.md`.
 
-## Electron 45.2.1
+## Electron 45.4.1
 
 Electron is used under the MIT license. The original Electron license is retained as `LICENSE.electron.txt` in the packaged runtime and download bundle. Electron's Chromium and other bundled components have their own notices, retained in the unmodified `LICENSES.chromium.html` file. The portable EXE includes these runtime files in its payload; the download bundle also exposes them for reading.
 
-Source: [Electron v45.2.1](https://github.com/electron/electron/tree/v45.2.1).
+Source: [Electron v45.4.1](https://github.com/electron/electron/tree/v45.4.1).
 
 ```text
 Copyright (c) Electron contributors
@@ -42,7 +42,7 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 Monaco Editor is used under the MIT license, copyright (c) 2016 - present Microsoft Corporation. The editor, language definitions, font and worker are bundled locally. The original license and third-party notices are retained in `src/generated/MONACO-LICENSE.txt` and `src/generated/MONACO-NOTICES.txt` inside the application and as `MONACO-LICENSE.txt` and `MONACO-NOTICES.txt` in the download bundle.
 
-The editor's vendored DOMPurify module is replaced at bundle time by unmodified DOMPurify 3.4.17 from Cure53, under its Apache-2.0 OR MPL-2.0 license. Its original license is retained as `src/generated/DOMPURIFY-LICENSE.txt` and `DOMPURIFY-LICENSE.txt` in the download bundle. The original Monaco notices are preserved for attribution; the build checks that its older sanitizer is not bundled.
+The editor's vendored DOMPurify module is replaced at bundle time by unmodified DOMPurify 3.4.18 from Cure53, under its Apache-2.0 OR MPL-2.0 license. Its original license is retained as `src/generated/DOMPURIFY-LICENSE.txt` and `DOMPURIFY-LICENSE.txt` in the download bundle. The original Monaco notices are preserved for attribution; the build checks that its older sanitizer is not bundled.
 
 Source: [Monaco Editor](https://github.com/microsoft/monaco-editor).
 
