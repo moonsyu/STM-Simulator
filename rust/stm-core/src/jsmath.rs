@@ -15,6 +15,9 @@ mod host {
         pub fn sin(x: f64) -> f64;
         pub fn cos(x: f64) -> f64;
         pub fn tan(x: f64) -> f64;
+        pub fn atan(x: f64) -> f64;
+        pub fn atan2(y: f64, x: f64) -> f64;
+        pub fn hypot(x: f64, y: f64) -> f64;
     }
 }
 
@@ -67,4 +70,34 @@ pub fn tan(x: f64) -> f64 {
     }
     #[cfg(not(target_arch = "wasm32"))]
     x.tan()
+}
+/// `Math.atan(x)`.
+pub fn atan(x: f64) -> f64 {
+    #[cfg(target_arch = "wasm32")]
+    // SAFETY: as for `pow`.
+    unsafe {
+        host::atan(x)
+    }
+    #[cfg(not(target_arch = "wasm32"))]
+    x.atan()
+}
+/// `Math.atan2(y, x)`.
+pub fn atan2(y: f64, x: f64) -> f64 {
+    #[cfg(target_arch = "wasm32")]
+    // SAFETY: as for `pow`.
+    unsafe {
+        host::atan2(y, x)
+    }
+    #[cfg(not(target_arch = "wasm32"))]
+    y.atan2(x)
+}
+/// `Math.hypot(x, y)`.
+pub fn hypot(x: f64, y: f64) -> f64 {
+    #[cfg(target_arch = "wasm32")]
+    // SAFETY: as for `pow`.
+    unsafe {
+        host::hypot(x, y)
+    }
+    #[cfg(not(target_arch = "wasm32"))]
+    x.hypot(y)
 }

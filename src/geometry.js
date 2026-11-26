@@ -1,33 +1,43 @@
 // Everything is drawn at real size: the 2.54 mm pin and hole pitch is 14 units (1 mm = 14/2.54 units).
-// NUCLEO-64 (MB1136): 70 × 82.5 mm (UM1724 Figure 5).
-export const BOARD={x:45,y:48,w:385.83,h:454.72};
+// The sizes and the transforms are in Rust (rust/stm-core/src/geom.rs, feature 62); this file is the JavaScript side.
+// The transforms are asked for every part and hole each time the circuit is drawn, so they are calls of numbers: a
+// function with more than one number to give answers the first, and `more1` … `more3` read the others right after it.
+import {rustTable,rustNumber,rustExact} from './rust-core.js';
+
+const tables=rustTable('geometry_tables');
+// NUCLEO-64 (MB1136): 70 × 82.5 mm (UM1724 Figure 5). pins.js sets the active board's outline here (setActiveBoard).
+export const BOARD={...tables.BOARD};
 // 400-point half-size board (BusBoard BB400 class): 54.3 × 84 mm, 30 rows.
-export const BB={x:644.5,y:99.5,w:301,h:463,startY:128,step:14};
+export const BB={...tables.BB};
 // Full-size 830-point board (BusBoard BB830: 165.1 × 54.6 mm) in its own local frame: 63 columns, two 5-row blocks,
 // rails top and bottom.
-export const FULL_BB={x:0,y:0,w:910,h:301,left:21,step:14,columns:63,rows:{a:76.5,f:174.5},rails:{T:[22.5,36.5],B:[264.5,278.5]}};
-export const MIN_SCALE=.001,MAX_SCALE=1000;
+export const FULL_BB={...tables.FULL_BB,rows:{...tables.FULL_BB.rows},rails:{T:[...tables.FULL_BB.rails.T],B:[...tables.FULL_BB.rails.B]}};
+export const {MIN_SCALE,MAX_SCALE}=tables;
 export const scaleOf=value=>value?.scale??1;
 export const scaleXOf=value=>value?.scaleX??scaleOf(value);
 export const scaleYOf=value=>value?.scaleY??scaleOf(value);
-export function validScale(value){if(!Number.isFinite(value)||value<MIN_SCALE||value>MAX_SCALE)throw new Error('장치 크기가 너무 작거나 작업 범위를 초과합니다.');return value;}
+export function validScale(value){rustExact('valid_scale',value);return value;}
+const more1=rustNumber('geom_1'),more2=rustNumber('geom_2'),more3=rustNumber('geom_3');
+const matrix=rustNumber('geom_matrix'),turn=rustNumber('geom_vector'),partTurn=rustNumber('geom_part_vector'),invert=rustNumber('geom_inverse'),product=rustNumber('geom_multiply');
+const place=rustNumber('geom_surface_point'),bounds=rustNumber('geom_surface_bounds');
 // Quarter turns are exact (cos 90° is 6e-17 in floating point): a board turned four times is where it started.
-const exact=v=>Math.abs(v)<1e-12?0:Math.abs(Math.abs(v)-1)<1e-12?Math.sign(v):v;
-export function matrixOf(value){const r=(value?.rotation??0)*Math.PI/180,c=exact(Math.cos(r)),s=exact(Math.sin(r)),x=scaleXOf(value),y=scaleYOf(value),k=Math.tan((value?.skewX??0)*Math.PI/180);return {a:c*x,b:s*x,c:(c*k-s)*y,d:(s*k+c)*y};}
-export const vector=(m,p)=>({x:m.a*p.x+m.c*p.y,y:m.b*p.x+m.d*p.y});
-export const partVector=(p,x,y)=>vector(matrixOf(p),{x,y});
-export function inverse(m){const det=m.a*m.d-m.b*m.c;return {a:m.d/det,b:-m.b/det,c:-m.c/det,d:m.a/det};}
-export function multiply(m,n){return {a:m.a*n.a+m.c*n.b,b:m.b*n.a+m.d*n.b,c:m.a*n.c+m.c*n.d,d:m.b*n.c+m.d*n.d};}
-export function scaleFields(x,y){validScale(x);validScale(y);return Math.abs(x-y)<1e-10?{scale:x}:{scaleX:x,scaleY:y};}
-export function matrixFields(m){const x=Math.hypot(m.a,m.b),y=(m.a*m.d-m.b*m.c)/x;return {...scaleFields(x,y),rotation:(Math.atan2(m.b,m.a)*180/Math.PI+360)%360,skewX:Math.atan((m.a*m.c+m.b*m.d)/(x*y))*180/Math.PI};}
+export function matrixOf(value){const a=matrix(value?.rotation??0,scaleXOf(value),scaleYOf(value),value?.skewX??0);return {a,b:more1(),c:more2(),d:more3()};}
+export const vector=(m,p)=>{const x=turn(m.a,m.b,m.c,m.d,p.x,p.y);return {x,y:more1()};};
+export const partVector=(p,x,y)=>{const vx=partTurn(p?.rotation??0,scaleXOf(p),scaleYOf(p),p?.skewX??0,x,y);return {x:vx,y:more1()};};
+export function inverse(m){const a=invert(m.a,m.b,m.c,m.d);return {a,b:more1(),c:more2(),d:more3()};}
+export function multiply(m,n){const a=product(m.a,m.b,m.c,m.d,n.a,n.b,n.c,n.d);return {a,b:more1(),c:more2(),d:more3()};}
+export const scaleFields=(x,y)=>rustExact('scale_fields',x,y);
+export const matrixFields=m=>rustExact('matrix_fields',m);
 export function assignScale(object,fields){delete object.scale;delete object.scaleX;delete object.scaleY;Object.assign(object,fields);}
+// The texts of SVG transform attributes (what the screen code writes into the page).
 export function scaleTransform(value){const x=scaleXOf(value),y=scaleYOf(value);return `scale(${x===y?x:`${x} ${y}`})`;}
 export const partTransform=p=>`translate(${p.x} ${p.y}) rotate(${p.rotation}) skewX(${p.skewX??0}) ${scaleTransform(p)}`;
 export function surfaceOrigin(name,surfaces){const base=name==='board'?BOARD:BB,s=surfaces?.[name];return {x:s?.x??base.x,y:s?.y??base.y};}
 // A surface is drawn from its origin (the corner that is top left before turning): turned by `rotation` (the main
 // board, in quarter turns), then scaled. The origin of a turned board is therefore not the top left of what is seen —
 // use surfaceBounds / surfaceCentre for that.
-export function surfacePoint(point,name,surfaces){const base=name==='board'?BOARD:BB,origin=surfaceOrigin(name,surfaces),s=surfaces?.[name];if(!s?.rotation)return {...point,x:origin.x+(point.x-base.x)*scaleXOf(s),y:origin.y+(point.y-base.y)*scaleYOf(s)};const q=vector(matrixOf(s),{x:point.x-base.x,y:point.y-base.y});return {...point,x:origin.x+q.x,y:origin.y+q.y};}
+const placed=(x,y,base,origin,s)=>place(x,y,base.x,base.y,origin.x,origin.y,s?.rotation?1:0,s?.rotation??0,scaleXOf(s),scaleYOf(s),s?.skewX??0);
+export function surfacePoint(point,name,surfaces){const base=name==='board'?BOARD:BB,x=placed(point.x,point.y,base,surfaceOrigin(name,surfaces),surfaces?.[name]);return {...point,x,y:more1()};}
 export function surfaceTransform(name,surfaces){const base=name==='board'?BOARD:BB,origin=surfaceOrigin(name,surfaces),r=surfaces?.[name]?.rotation;return `translate(${origin.x} ${origin.y}) ${r?`rotate(${r}) `:''}${scaleTransform(surfaces?.[name])} translate(${-base.x} ${-base.y})`;}
-export function surfaceBounds(name,surfaces){const base=name==='board'?BOARD:BB,pts=[[0,0],[base.w,0],[0,base.h],[base.w,base.h]].map(([x,y])=>surfacePoint({x:base.x+x,y:base.y+y},name,surfaces)),xs=pts.map(p=>p.x),ys=pts.map(p=>p.y);return {left:Math.min(...xs),right:Math.max(...xs),top:Math.min(...ys),bottom:Math.max(...ys)};}
-export function surfaceCentre(name,surfaces){const base=name==='board'?BOARD:BB;const {x,y}=surfacePoint({x:base.x+base.w/2,y:base.y+base.h/2},name,surfaces);return {x,y};}
+export function surfaceBounds(name,surfaces){const base=name==='board'?BOARD:BB,origin=surfaceOrigin(name,surfaces),s=surfaces?.[name],left=bounds(base.x,base.y,base.w,base.h,origin.x,origin.y,s?.rotation?1:0,s?.rotation??0,scaleXOf(s),scaleYOf(s),s?.skewX??0);return {left,right:more1(),top:more2(),bottom:more3()};}
+export function surfaceCentre(name,surfaces){const base=name==='board'?BOARD:BB,x=placed(base.x+base.w/2,base.y+base.h/2,base,surfaceOrigin(name,surfaces),surfaces?.[name]);return {x,y:more1()};}

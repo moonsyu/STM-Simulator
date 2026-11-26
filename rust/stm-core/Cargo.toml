@@ -14,7 +14,7 @@ crate-type = ["cdylib", "rlib"]
 [dependencies]
 # preserve_order: objects keep the order their keys were added in, as JavaScript objects do (project files and
 # generated code follow that order).
-serde_json = { version = "1", features = ["preserve_order"] }
+serde_json = { version = "1", features = ["preserve_order", "float_roundtrip"] }
 # The regular expressions of the code moved from JavaScript (jsre.rs): small, ASCII \w \d \b as JavaScript's.
 regex-lite = "0.1"
 

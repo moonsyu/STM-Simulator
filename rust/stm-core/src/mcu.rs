@@ -41,16 +41,47 @@ pub fn js_display(value: Option<&Value>) -> String {
         Some(Value::Object(_)) => "[object Object]".into(),
     }
 }
-/// A number as JavaScript prints it.
+/// A number as JavaScript prints it (`Number::toString`): the shortest digits that read back as the same number,
+/// written out for exponents from -7 to 20 and with `e` beyond.
 pub fn js_number(v: f64) -> String {
     if v.is_nan() {
-        "NaN".into()
-    } else if v.is_infinite() {
-        if v > 0.0 { "Infinity" } else { "-Infinity" }.into()
-    } else if v.fract() == 0.0 && v.abs() < 1e21 {
-        format!("{}", v as i128)
+        return "NaN".into();
+    }
+    if v.is_infinite() {
+        return if v > 0.0 { "Infinity" } else { "-Infinity" }.into();
+    }
+    if v == 0.0 {
+        return "0".into();
+    }
+    // Rust's `{:e}` gives those shortest digits: "d.ddde-7".
+    let text = format!("{:e}", v.abs());
+    let (mantissa, exponent) = text.split_once('e').unwrap_or((&text, "0"));
+    let digits: String = mantissa.chars().filter(char::is_ascii_digit).collect();
+    let point = exponent.parse::<i32>().unwrap_or(0) + 1;
+    let count = digits.len() as i32;
+    let body = if count <= point && point <= 21 {
+        format!("{digits}{}", "0".repeat((point - count) as usize))
+    } else if 0 < point && point <= 21 {
+        format!(
+            "{}.{}",
+            &digits[..point as usize],
+            &digits[point as usize..]
+        )
+    } else if -6 < point && point <= 0 {
+        format!("0.{}{digits}", "0".repeat((-point) as usize))
     } else {
-        format!("{v}")
+        let e = point - 1;
+        let sign = if e < 0 { "-" } else { "+" };
+        if count == 1 {
+            format!("{digits}e{sign}{}", e.abs())
+        } else {
+            format!("{}.{}e{sign}{}", &digits[..1], &digits[1..], e.abs())
+        }
+    };
+    if v < 0.0 {
+        format!("-{body}")
+    } else {
+        body
     }
 }
 /// A JSON number that is a whole one (`Number.isInteger`).
