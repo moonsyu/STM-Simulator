@@ -14,7 +14,7 @@ flowchart LR
 
     subgraph APP_IN["한 앱 안에서"]
         direction LR
-        MX["CubeMX처럼<br/>핀·클록·주변장치 설정"] --> IDE["CubeIDE처럼<br/>코드 작성·빌드·디버그"] --> SIM["보드 시뮬레이터<br/>LED·버튼·센서·통신 확인"]
+        MX["MCU 설정 도구처럼<br/>핀·클록·주변장치 설정"] --> IDE["임베디드 개발 환경처럼<br/>코드 작성·빌드·디버그"] --> SIM["보드 시뮬레이터<br/>LED·버튼·센서·통신 확인"]
     end
     APP --> APP_IN
 
@@ -56,7 +56,7 @@ flowchart TB
 flowchart LR
     subgraph BEFORE["기존 STM32 학습 흐름"]
         direction TB
-        A1["CubeMX로 설정"] --> A2["CubeIDE로 코드 작성·빌드"]
+        A1["MCU 설정 도구로 설정"] --> A2["임베디드 개발 환경으로<br/>코드 작성·빌드"]
         A2 --> A3{"보드가 있나?"}
         A3 -- "있음" --> A4["ST-LINK로 기록해 확인"]
         A3 -- "없음" --> A5["동작을 확인할 방법이 없음"]
@@ -216,7 +216,7 @@ timeline
     10-22 : v1.0.0 : 전체 기능 점검 (실물 보드 연동 제외)
     11-04 : v1.13 ~ v1.14 : NUCLEO-64 회로도 기본 연결 : 시뮬레이터를 ARM GCC 빌드로 (실제 HAL ELF 실행)
     11-06 : v1.20 ~ v1.25 : FPB-RA6E1 · RA6E1 에뮬레이터 · Clock 설정
-    11-10 : v1.35 ~ v1.44 : CubeIDE 프로젝트 가져오기 · 전체 파일 구조 수정
+    11-10 : v1.35 ~ v1.44 : 기존 IDE 프로젝트 폴더 가져오기 · 전체 파일 구조 수정
     11-11 : v1.49 : 주변장치별 .c/.h 생성
     11-24 : v1.59 : 지원 보드를 STM32와 FPB-RA6E1로 정리
     11-25 : v1.61 ~ v1.63 : Rust 코어(WebAssembly) · 빌드 수준 · 탐색기 한 트리 · LED 듀티 표시
