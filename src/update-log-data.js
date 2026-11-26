@@ -1,5 +1,6 @@
 // User-facing update log shown in 도움말 → 업데이트 로그: one entry per released version (date = the release tag's commit date).
 export const UPDATE_LOG=Object.freeze([
+ {version:'1.63.5',date:'2026-11-26',items:['내부 정리: C 코드 정렬, 심볼·구조체 필드 읽기, 소스 파일 관리, 인터럽트 핸들러 생성을 Rust로 옮김 — 화면과 동작은 그대로']},
  {version:'1.63.4',date:'2026-11-26',items:['내부 정리: 핀·주변장치 설정 계산(타이머, UART, I2C/SPI, GPIO, NVIC, ADC, DAC, 워치독, RTC, MCU 계열 표)을 Rust로 옮김 — 화면과 동작은 그대로']},
  {version:'1.63.3',date:'2026-11-26',items:['내부 정리: 클록 설정 계산을 Rust로 옮김 — 화면과 동작은 그대로']},
  {version:'1.63.2',date:'2026-11-26',items:['Electron 45.4.1(보안 수정 포함)과 DOMPurify 3.4.18로 업데이트 — 화면과 동작은 그대로']},

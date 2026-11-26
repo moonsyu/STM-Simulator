@@ -1,6 +1,21 @@
 # STM Simulator — 개발 인계
 
-현재 버전: **1.63.4**. 정리일: **2026-11-10**. NUCLEO-F446RE·NUCLEO-F103RB 또는 Renesas FPB-RA6E1(1.20.0, FSP·에뮬레이터 전용)과 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+현재 버전: **1.63.5**. 정리일: **2026-11-10**. NUCLEO-F446RE·NUCLEO-F103RB 또는 Renesas FPB-RA6E1(1.20.0, FSP·에뮬레이터 전용)과 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+
+## 1.63.5 기능 목록 62번: Rust 마이그레이션 2단계 — C 소스 도구
+
+- **옮긴 모듈**(JavaScript 파일은 같은 export로 Rust를 부르는 층으로 남음):
+  - Rust `cformat.rs` ← `c-format.js`: `scan`, `format_c`, `split_statements`, `format_code`, `reindent_c`, `block_range`.
+  - Rust `csymbols.rs` ← `c-symbols.js`, `c-struct-fields.js`: `c_symbols`(개요·정의로 이동), `outline_label`, `pick_definitions`, `struct_fields`, `inline_struct_fields`, `declared_type`, `access_chain`.
+  - Rust `csedit.rs` ← `c-source-edit.js`의 `maskC`·`cFunctions`·`insertMainHooks`·`replaceIdentifiers`·`checksum`, `source-files.js`(이름 규칙, include 해석, 파일 추가·이름 변경·삭제), `irq-handlers.js`(`irq_handlers`, `handler_text`).
+- **JavaScript처럼 동작하게 하는 도우미** `jsre.rs`:
+  - 정규식은 `regex-lite`(Cargo 의존성 추가). `\w`·`\d`·`\b`가 ASCII라 JavaScript(u 플래그 없음)와 같고, `\s`만 달라 JavaScript의 공백 집합으로 바꿔 컴파일한다(`re`, `js_re!`). 앞을 내다보는 `(?=…)`는 없어서, 그 글자를 묶음으로 잡고 다음 탐색을 그 앞에서 잇는다.
+  - `Text`: 문자열을 UTF-16 단위로 다룬다. 단위마다 ASCII 한 바이트인 대역 문자열(`proxy`)에서 찾고(바이트 오프셋 = JavaScript 오프셋), 실제 글자는 원문에서 꺼낸다(`slice`). 편집기에 돌려주는 줄·열과 `cFunctions`의 `start`·`end`·`open`이 JavaScript 때와 같다.
+- **`cFunctions`의 두 가지 동작**: JavaScript의 정규식은 `#if (X == 1)` 줄 바로 아래의 함수를 `if (…) … name(…) {` 한 덩어리로 잡고 건너뛴다. 예전부터 Rust에 있던 `csource::c_functions`(다시 생성 `regen.rs`가 씀, 1.61.1~)는 그 함수를 찾는다. JavaScript였던 호출 쪽은 전과 같아야 하므로 `c_functions_as_javascript`를 따로 두었고, `regen.rs`가 쓰는 쪽은 그대로다.
+- **그대로 둔 것**: `SOURCE_PATH`는 전처럼 RegExp다(패턴 글자는 Rust에서 온다). `sourceFiles(project)`는 파일 객체를 그대로 돌려주는 접근자라 JavaScript 층에 있다.
+- **달라진 점**: `replaceIdentifiers`가 mapping에 없는 `constructor`·`toString` 같은 이름을 그대로 둔다(전에는 JavaScript 내장 함수의 글자로 바뀌는 오류가 있었다). 문자열이 아닌 값을 소스로 넘기면 나는 TypeError의 문구가 다르다.
+- **뒤로 미룬 것**: `parser`, `c-types`, `c-expression-type`, `hal-source`, `c-inline`, `irq-duplicates`는 인터프리터의 앞 단계다. 실행 중 연산마다 불리므로(`arithmetic`, `convert`) 인터프리터(6단계)와 함께 옮긴다.
+- WebAssembly 크기: 약 0.72 MB → 0.92 MB.
 
 ## 1.63.4 기능 목록 62번: Rust 마이그레이션 1단계 완료 — 핀·주변장치 설정 계산
 
