@@ -8,6 +8,7 @@ pub mod build_level;
 pub mod buildenv;
 pub mod catalog;
 pub mod cformat;
+pub mod circuit;
 pub mod clock;
 pub mod couple;
 pub mod csedit;
@@ -322,6 +323,7 @@ pub fn dispatch(name: &str, args: &Value) -> Result<Value, String> {
                     .or_else(|| project::call(name, list))
                     .or_else(|| ptools::call(name, list))
                     .or_else(|| edit::call(name, list))
+                    .or_else(|| circuit::call(name, list))
             })
             .unwrap_or_else(|| Err(format!("stm-core: 알 수 없는 함수입니다: {name}"))),
     }

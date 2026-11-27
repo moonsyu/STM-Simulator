@@ -10,15 +10,21 @@ const bytes=Uint8Array.from(atob(WASM_BASE64),c=>c.charCodeAt(0));
 const {exports:wasm}=new WebAssembly.Instance(new WebAssembly.Module(bytes),{math:{pow:Math.pow,exp:Math.exp,sin:Math.sin,cos:Math.cos,tan:Math.tan,atan:Math.atan,atan2:Math.atan2,hypot:Math.hypot}});
 const encoder=new TextEncoder(),decoder=new TextDecoder();
 
-export function rustCall(name,args={}){
- const request=encoder.encode(JSON.stringify({fn:name,args})),input=wasm.stm_alloc(request.length);
+/** A request as JSON text (`{"fn": name, "args": …}`) answered as JSON text (`{"ok": …}` or `{"error": …}`): for a
+ *  caller that keeps the text — a call repeated with the same request has the same answer. */
+export function rustText(text){
+ const request=encoder.encode(text),input=wasm.stm_alloc(request.length);
  // The memory may grow in a call: take a fresh view of the buffer each time.
  new Uint8Array(wasm.memory.buffer,input,request.length).set(request);
  const packed=wasm.stm_call(input,request.length);
  wasm.stm_free(input,request.length);
  const address=Number(packed>>32n),length=Number(packed&0xffffffffn);
- const answer=JSON.parse(decoder.decode(new Uint8Array(wasm.memory.buffer,address,length)));
+ const answer=decoder.decode(new Uint8Array(wasm.memory.buffer,address,length));
  wasm.stm_free(address,length);
+ return answer;
+}
+export function rustCall(name,args={}){
+ const answer=JSON.parse(rustText(JSON.stringify({fn:name,args})));
  if('error' in answer)throw new Error(answer.error);
  return answer.ok;
 }
@@ -57,7 +63,8 @@ export function rustPure(name){
 const NF='\u0001nf';
 /** A value for the Rust side with those kept: a number JSON cannot carry and an `undefined` argument or list item. */
 export const sealed=v=>v===undefined?{[NF]:'undefined'}:typeof v==='number'?(Number.isFinite(v)?v:{[NF]:String(v)}):Array.isArray(v)?v.map(sealed):v&&typeof v==='object'?Object.fromEntries(Object.entries(v).filter(([,x])=>typeof x!=='function').map(([k,x])=>[k,sealed(x)])):v;
-const opened=v=>Array.isArray(v)?v.map(opened):v&&typeof v==='object'?(Object.hasOwn(v,NF)?(v[NF]==='undefined'?undefined:Number(v[NF])):Object.fromEntries(Object.entries(v).map(([k,x])=>[k,opened(x)]))):v;
+/** An answer of the Rust side with those put back (see `sealed`). */
+export const opened=v=>Array.isArray(v)?v.map(opened):v&&typeof v==='object'?(Object.hasOwn(v,NF)?(v[NF]==='undefined'?undefined:Number(v[NF])):Object.fromEntries(Object.entries(v).map(([k,x])=>[k,opened(x)]))):v;
 /** A Rust function called with its arguments exactly as given (see `sealed`); its answer may hold such numbers too. */
 export const rustExact=(name,...args)=>opened(rustCall(name,args.map(sealed)));
 /** A table of a Rust module, read once and frozen. */
