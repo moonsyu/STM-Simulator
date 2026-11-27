@@ -171,10 +171,12 @@ pub fn folder_of(name: &str) -> &str {
 }
 /// Source text as the app keeps it: no byte order mark, lines ending in \n.
 pub fn normalize_text(text: &str) -> String {
-    text.strip_prefix('\u{FEFF}')
-        .unwrap_or(text)
-        .replace("\r\n", "\n")
-        .replace('\r', "\n")
+    let text = text.strip_prefix('\u{FEFF}').unwrap_or(text);
+    // Most sources are already so: one copy, without looking at each character twice.
+    if !text.contains('\r') {
+        return text.to_string();
+    }
+    text.replace("\r\n", "\n").replace('\r', "\n")
 }
 /// The file an #include "x.h" / "dir/x.h" written in `from` means: the same folder first, then the path from the
 /// root, then any folder.

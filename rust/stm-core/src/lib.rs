@@ -33,6 +33,7 @@ pub mod periph;
 pub mod pfiles;
 pub mod pins;
 pub mod place;
+pub mod project;
 pub mod raconfig;
 pub mod ragen;
 pub mod ragen_text;
@@ -59,19 +60,7 @@ pub fn dispatch(name: &str, args: &Value) -> Result<Value, String> {
                 .get("family")
                 .and_then(Value::as_str)
                 .ok_or("new_project_mcu: family가 필요합니다.")?;
-            let mcu = family::new_project_mcu(family)
-                .ok_or_else(|| format!("지원하지 않는 MCU입니다: {family}"))?;
-            let mut out = json!({
-                "family": mcu.family,
-                "pins": {},
-                "peripherals": {},
-                "nvic": {},
-                "timerClockHz": mcu.timer_clock_hz,
-            });
-            if mcu.couple_files {
-                out["coupleFiles"] = json!(true);
-            }
-            Ok(out)
+            project::new_project_settings(family)
         }
         // {"source", "tag", "module", "others": [{"tag", "needs": [role]}] | null}
         //   → {"source", "fileRegions": [{"group", "function", "body"}]} | {"needOthers": true}
@@ -328,6 +317,7 @@ pub fn dispatch(name: &str, args: &Value) -> Result<Value, String> {
                     .or_else(|| pins::call(name, list))
                     .or_else(|| place::call(name, list))
                     .or_else(|| devboards::call(name, list))
+                    .or_else(|| project::call(name, list))
             })
             .unwrap_or_else(|| Err(format!("stm-core: 알 수 없는 함수입니다: {name}"))),
     }

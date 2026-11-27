@@ -1,224 +1,28 @@
-import {CATALOG_DEFS,CATALOG_BY_TYPE} from './catalog-defs.js';
-import {SOURCE_PATH,MAX_SOURCE_FILES,MAX_SOURCE_BYTES,baseName,nameClash,normalizeText} from './source-files.js';
-import {BOUNCE_MS} from './button-bounce.js';
-import {DEVICE_RANGES,DEVICE_ADDRESSES} from './device-defs.js';
-import {PIN_BY_ID,holeInfo} from './pins.js';
-import {terminalKeys,TWO_PIN_TYPES,MULTI_PIN_TYPES,normalizeAngle} from './components.js';
-import {generateHal,defaultMcu,validateMcu,consoleUart} from './mcu-config.js';
-import {expandC} from './c-format.js';
-import {newProjectMcu} from './rust-core.js';
-import {buildLevelSettings} from './build-level.js';
-import {DEFAULT_FAMILY} from './mcu-family.js';
-import {DEFAULT_BOARD_ID,START_BOARD_ID,getBoard} from './boards.js';
-import {isRaFamily,raDefaultMcu,validateRaMcu} from './ra-config.js';
-import {validateDataFlash} from './ra-data-flash.js';
-import {raHalEntry} from './ra-generator.js';
-import {validScale} from './geometry.js';
-import {validateNoise} from './signals.js';
-import {validCardImage,SD_SIZES} from './sdcard.js';
-import {validCameraImage,CAMERA_PATTERNS} from './camera.js';
-import {DEVBOARD_MODELS,MAX_DEVBOARDS,devboardPinInfo} from './devboards.js';
-const stlinkSerial=(value,name)=>{if(value===undefined)return {};if(typeof value!=='string'||!/^\w{8,40}$/.test(value))throw new Error(name+': ST-LINK 시리얼을 확인하세요.');return {stlink:value};};
-// The fields of an STM32 board component checked as the project it becomes when edited (code, mcu, firmware …).
-function stm32Software(p,version){
-  if(![0,90,180,270].includes(p.rotation))throw new Error(p.name+': STM32 보드는 90° 단위로 회전합니다.');
-  const own=validateProject({format:'stm32-circuit-lab',version,name:'board',code:p.code,components:[],wires:[],boardId:p.model,mcu:p.mcu,firmware:p.firmware,...(p.ide!==undefined?{ide:p.ide}:{}),...(p.deviceDocs!==undefined?{deviceDocs:p.deviceDocs}:{})});
-  const out={model:p.model,code:own.code,...stlinkSerial(p.stlink,p.name)};
-  for(const key of ['mcu','firmware','deviceDocs'])if(own[key]!==undefined)out[key]=own[key];
-  if(own.ide)out.ide={breakpoints:own.ide.breakpoints,watches:own.ide.watches,...(own.ide.plots?{plots:own.ide.plots}:{})};
-  for(const key of ['scale','scaleX','scaleY'])if(p[key]!==undefined)out[key]=validScale(p[key]);
-  return out;
-}
-export function blankProject(family){
-  // A Renesas RA board starts as e² studio's FSP template: the board's pins (LEDs, S1) and an empty hal_entry().
-  if(isRaFamily(family))return {format:'stm32-circuit-lab',version:2,name:'새 회로',components:[],wires:[],surfaces:{board:{hidden:true},breadboard:{hidden:true}},mcu:raDefaultMcu(family),firmware:{mode:'fsp',files:[]},code:raHalEntry()};
-  // A new STM32 project prints on the UART (feature 44, 2026-11-12 user decision "기본값도 UART로"): USART2 on PA2 / PA3
-  // (the ST-LINK virtual COM port, 115200 8N1) is on, and the generated _write / _read carry printf / scanf.
-  // It generates gpio.c/h, usart.c/h … (feature 51): the settings of a new project come from Rust (newProjectMcu).
-  return halBlank(consoleUart(newProjectMcu(family??DEFAULT_FAMILY)));}
-// The generator's own UART greeting is left out: the new project's main.c says hello once, with printf.
-const withoutGreeting=code=>code.replace(/^[ \t]*uint8_t message\[\] = "HAL ready\\r\\n";\r?\n/m,'').replace(/^[ \t]*HAL_UART_Transmit\(&huart2, message, sizeof\(message\) ?- ?1, 100\);\r?\n/m,'');
-function halBlank(mcu){return {format:'stm32-circuit-lab',version:2,name:'새 회로',components:[],wires:[],surfaces:{board:{hidden:true},breadboard:{hidden:true}},mcu,firmware:{mode:'hal',files:[]},code:expandC(withoutGreeting(generateHal(mcu)).replace('/* USER CODE BEGIN 2 */','/* USER CODE BEGIN 2 */\n  printf("HAL ready\\n");'))};}
-// Complete example circuits explicitly include the legacy board and breadboard. They start without the UART console:
-// an example sets its own pins, and the console is added when it is opened as a project (hal-examples.js consoleExample).
-export function exampleProject(){const p=halBlank({...defaultMcu(),pins:{}});delete p.surfaces;return p;}
-// 1.27.0 ZS-042 DS3231 (ref_ds3231_zs042_10) had 4 pass-through pins p7..p10 tied to p3..p6; they were removed in 1.28.0,
-// so their wires and breadboard pins move to the left pin of the same signal.
-function migrateZs042(data){
-  const parts=new Set((Array.isArray(data?.components)?data.components:[]).filter(p=>p?.type==='ref_ds3231_zs042_10').map(p=>p.id));
-  if(!parts.size)return data;
-  const move=id=>{const m=/^part:([^:]+):p(7|8|9|10)$/.exec(id||'');return m&&parts.has(m[1])?`part:${m[1]}:p${Number(m[2])-4}`:id;};
-  const components=data.components.map(p=>{if(!parts.has(p?.id)||!p.attachments||typeof p.attachments!=='object')return p;const a={};for(const [k,v]of Object.entries(p.attachments)){const n=/^p(7|8|9|10)$/.test(k)?'p'+(Number(k.slice(1))-4):k;if(!(n in a)||n===k)a[n]=v;}return {...p,attachments:a};});
-  const wires=Array.isArray(data.wires)?data.wires.map(w=>w&&typeof w==='object'?{...w,from:move(w.from),to:move(w.to)}:w).filter(w=>!w||w.from!==w.to):data.wires;
-  return {...data,components,wires};
-}
-// ESP32 / Raspberry Pi boards are no longer supported (feature 49): a project saved with them opens without those boards,
-// the wires to their pins and the parts' legs plugged into their pins, and an ESP32 run target becomes the simulator.
-// `removed` (null when nothing was taken out) says what went, for the notice when the project is opened.
-export function stripUnsupportedBoards(data){
-  const components=Array.isArray(data?.components)?data.components:null;
-  const boards=components?components.filter(p=>p?.type==='devboard'&&!Object.hasOwn(DEVBOARD_MODELS,p.model)):[];
-  const target=data?.ide?.native?.target==='esp32';
-  if(!boards.length&&!target)return {data,removed:null};
-  const prefixes=boards.map(p=>`devboard:${p.id}:`),onBoard=id=>typeof id==='string'&&prefixes.some(prefix=>id.startsWith(prefix));
-  let wires=data.wires,removedWires=0,detached=0;
-  if(Array.isArray(data.wires)){wires=data.wires.filter(w=>!(w&&typeof w==='object'&&(onBoard(w.from)||onBoard(w.to))));removedWires=data.wires.length-wires.length;}
-  const kept=components?components.filter(p=>!boards.includes(p)).map(p=>{
-    if(!p||typeof p!=='object')return p;
-    const q={...p};let changed=false;
-    for(const key of ['attachA','attachB'])if(onBoard(q[key])){delete q[key];changed=true;}
-    if(q.attachments&&typeof q.attachments==='object'&&Object.values(q.attachments).some(onBoard)){const a=Object.fromEntries(Object.entries(q.attachments).filter(([,id])=>!onBoard(id)));if(Object.keys(a).length)q.attachments=a;else delete q.attachments;changed=true;}
-    if(changed)detached++;return changed?q:p;
-  }):data.components;
-  const out={...data,components:kept,wires};
-  if(target)out.ide={...data.ide,native:{...data.ide.native,target:'simulator'}};
-  return {data:out,removed:{boards:boards.map(p=>({id:p.id,name:p.name,model:p.model})),wires:removedWires,attachments:detached,target}};
-}
+// A project (circuit file): the empty projects a board starts with, and the check every project goes through when it
+// is opened, pasted or changed. The code is in Rust (rust/stm-core/src/project.rs; feature 62): this file is what the
+// JavaScript callers import. Each answer is a new object the caller may change.
+import {rustExact} from './rust-core.js';
+
+/** An empty project of an MCU family (the default family when none is given): a Renesas RA board starts as e² studio's
+ *  FSP template, an STM32 project with the UART console (USART2 on PA2 / PA3) and a main.c that says hello once. */
+export const blankProject=family=>rustExact('blank_project',family);
+/** What an example circuit starts from: no UART console (an example sets its own pins; it is added when the example
+ *  is opened as a project, hal-examples.js consoleExample), the main board and the built-in breadboard shown. */
+export const exampleProject=()=>rustExact('example_project');
+/**
+ * ESP32 / Raspberry Pi boards are no longer supported (feature 49): a project saved with them opens without those
+ * boards, the wires to their pins and the parts' legs plugged into their pins, and an ESP32 run target becomes the
+ * simulator. `removed` (null when nothing was taken out; `data` is then the project as given) says what went, for the
+ * notice when the project is opened.
+ */
+export function stripUnsupportedBoards(data){const answer=rustExact('strip_unsupported_boards',data);return answer.removed?answer:{data,removed:null};}
 /** The notice for a project opened without its ESP32 / Raspberry Pi boards (stripUnsupportedBoards' `removed`). */
-export function removedBoardsMessage(removed){
-  const names=removed.boards.map(b=>b.name).join(', ');
-  return `이 버전은 ESP32·라즈베리파이 보드를 지원하지 않습니다. 보드 ${removed.boards.length}개(${names})${removed.wires?`와 그 보드에 연결된 배선 ${removed.wires}개`:''}를 빼고 열었습니다. STM32·FPB-RA6E1 보드와 나머지 부품은 그대로입니다.${removed.attachments?` 그 보드 핀에 직접 꽂혀 있던 부품 ${removed.attachments}개는 떼어 두었습니다.`:''}`;
-}
-export function validateProject(data){
-  data=migrateZs042(stripUnsupportedBoards(data).data);
-  if(!data||data.format!=='stm32-circuit-lab'||![1,2].includes(data.version))throw new Error('지원하지 않는 회로 파일 형식입니다.');
-  if(typeof data.name!=='string'||data.name.length>120||typeof data.code!=='string'||data.code.length>300000)throw new Error('회로 이름 또는 코드가 올바르지 않습니다.');
-  if(!Array.isArray(data.components)||data.components.length>100||!Array.isArray(data.wires)||data.wires.length>500)throw new Error('부품 100개, 배선 500개까지 지원합니다.');
-  const ids=new Set(),safeId=s=>typeof s==='string'&&/^[A-Za-z0-9_-]{1,64}$/.test(s);
-  if(data.boardId!==undefined&&!getBoard(data.boardId))throw new Error('지원하지 않는 보드입니다.');
-  if(data.components.filter(p=>p?.type==='breadboard').length>8)throw new Error('추가 빵판은 8개까지 지원합니다.');
-  if(data.components.filter(p=>p?.type==='devboard').length>MAX_DEVBOARDS)throw new Error(`보드는 ${MAX_DEVBOARDS}개까지 추가할 수 있습니다.`);
-  if(data.components.filter(p=>p?.type==='devboard'&&DEVBOARD_MODELS[p.model]?.kind==='stm32').length>3)throw new Error('STM32 보드는 한 회로에 4개까지 놓을 수 있습니다.');
-  const base=id=>(data.surfaces?.board?.hidden!==true&&PIN_BY_ID.has(id))||!!holeInfo(id,data.components,data.surfaces)||!!devboardPinInfo(id,data.components);
-  const components=data.components.map(p=>{
-    if(!safeId(p.id)||ids.has(p.id))throw new Error('부품 ID가 중복되거나 올바르지 않습니다.');ids.add(p.id);
-    if(![...TWO_PIN_TYPES,...MULTI_PIN_TYPES,'breadboard','devboard'].includes(p.type)||typeof p.name!=='string'||p.name.length>80)throw new Error('지원하지 않는 부품입니다.');
-    if(!Number.isFinite(p.x)||!Number.isFinite(p.y)||!Number.isFinite(p.rotation)||(data.version===1?![0,1].includes(p.rotation):p.rotation<0||p.rotation>=360))throw new Error('부품 좌표 또는 회전 각도가 올바르지 않습니다.');
-    const q={id:p.id,name:p.name,type:p.type,x:p.x,y:p.y,rotation:data.version===1?p.rotation*90:p.rotation};
-    if(p.type==='breadboard'&&p.variant!==undefined){if(p.variant!=='full')throw new Error('지원하지 않는 빵판 종류입니다.');q.variant='full';}
-    if(p.type==='devboard'){
-      if(!Object.hasOwn(DEVBOARD_MODELS,p.model))throw new Error(p.name+': 지원하지 않는 보드입니다.');
-      // Another STM32 board keeps the software of a whole project: main.c, pin settings, sources, Docs, debug points.
-      return {...q,...stm32Software(p,data.version)};
-    }
-    if(p.scale!==undefined)q.scale=validScale(p.scale);
-    for(const key of ['scaleX','scaleY'])if(p[key]!==undefined)q[key]=validScale(p[key]);
-    if(p.skewX!==undefined){if(!Number.isFinite(p.skewX)||Math.abs(p.skewX)>=90)throw new Error('장치 변형 정보를 확인하세요.');q.skewX=p.skewX;}
-    if(CATALOG_DEFS[p.type])for(const [key,value]of Object.entries(CATALOG_DEFS[p.type].defaults)){const input=p[key]??value;if(typeof value==='number'&&(!Number.isFinite(input)||Math.abs(input)>1e7))throw new Error(p.name+': '+key+' 값을 확인하세요.');if(typeof value==='string'&&typeof input!=='string')throw new Error(p.name+': '+key+' 값을 확인하세요.');q[key]=input;}
-    if(CATALOG_DEFS[p.type]){
-      const family=CATALOG_BY_TYPE[p.type].family,ranges={...({resistor:{value:[1,1e7]},potentiometer:{value:[1,1e7],position:[0,100]},capacitor:{value:[.001,100000]},slide:{position:[0,p.type.includes('dp3t')?2:1]},temperature:{temperature:[-40,125]},ultrasonic:{distance:[2,400]},dc_supply:{voltage:[6,24]},uart:{baud:[300,2000000]},rs485:{baud:[300,2000000]},dht11:{temperature:[0,50],humidity:[20,90]},dht22:{temperature:[-40,80],humidity:[0,100]}})[family],...DEVICE_RANGES[family]};
-      for(const [key,[min,max]]of Object.entries(ranges)){if(q[key]<min||q[key]>max)throw new Error(p.name+': '+key+' 범위는 '+min+'~'+max+'입니다.');}
-      if(family==='slide'&&!Number.isInteger(q.position))throw new Error('스위치 위치는 정수입니다.');
-      if(family==='i2c'&&(!Number.isInteger(q.address)||q.address<8||q.address>119))throw new Error('I2C 주소를 확인하세요.');
-      if(DEVICE_ADDRESSES[family]&&!DEVICE_ADDRESSES[family].includes(q.address))throw new Error(p.name+': 지원하지 않는 I2C 주소입니다.');
-      if(family==='led'&&!['red','green','blue','yellow'].includes(q.color))throw new Error('LED 색상을 확인하세요.');
-      if(family==='sd'&&(!SD_SIZES.includes(q.sizeMB)||!validCardImage(q.cardImage)))throw new Error(p.name+': SD 카드 용량(64/128/256 MB) 또는 카드 이미지(4 MB 이하)를 확인하세요.');
-      if(family==='dcmi'&&(!CAMERA_PATTERNS.includes(q.pattern)||!validCameraImage(q.image)))throw new Error(p.name+': 카메라 패턴 또는 이미지(data URL, 1.5 MB 이하)를 확인하세요.');
-    }
-    if(TWO_PIN_TYPES.includes(p.type)){
-      q.span=p.span??70;if(!Number.isFinite(q.span)||q.span<4||q.span>1000)throw new Error('부품 다리 간격이 올바르지 않습니다.');
-      for(const k of ['attachA','attachB'])if(p[k]!=null){if(!base(p[k]))throw new Error('존재하지 않는 부품 연결점입니다.');q[k]=p[k];}
-      if(q.attachA&&q.attachA===q.attachB)throw new Error('두 다리를 같은 구멍에 꽂을 수 없습니다.');
-      if(data.version===1&&q.attachA&&q.attachB){const a=PIN_BY_ID.get(q.attachA)||holeInfo(q.attachA,data.components),b=PIN_BY_ID.get(q.attachB)||holeInfo(q.attachB,data.components);q.x=(a.x+b.x)/2;q.y=(a.y+b.y)/2;q.span=Math.hypot(b.x-a.x,b.y-a.y);q.rotation=normalizeAngle(Math.atan2(b.y-a.y,b.x-a.x)*180/Math.PI);}
-    }else{
-      const map=data.version===1?{...(p.attachA?{a:p.attachA}:{}),...(p.attachB?{b:p.attachB}:{})}:p.attachments||{};
-      if(!map||typeof map!=='object'||Array.isArray(map))throw new Error('부품 핀 연결 정보가 올바르지 않습니다.');
-      const keys=terminalKeys(q),used=new Set(),clean={};for(const [key,id]of Object.entries(map)){if(!keys.includes(key)||!base(id)||used.has(id))throw new Error('다핀 부품 연결점이 중복되거나 올바르지 않습니다.');used.add(id);clean[key]=id;}
-      if(Object.keys(clean).length)q.attachments=clean;
-    }
-    if(p.type==='resistor'){if(!Number.isFinite(p.value)||p.value<1||p.value>10000000)throw new Error('저항 범위는 1 Ω~10 MΩ입니다.');q.value=p.value;}
-    if(p.type==='led'){if(!['red','green','blue','yellow'].includes(p.color))throw new Error('LED 색상이 올바르지 않습니다.');q.color=p.color;}
-    const number=(key,min,max)=>{if(!Number.isFinite(p[key])||p[key]<min||p[key]>max)throw new Error(`${p.name}: ${key} 범위는 ${min}~${max}입니다.`);q[key]=p[key];};
-    if(p.type==='dc_supply')number('voltage',6,24);
-    if(p.type==='capacitor')number('value',0.001,100000);
-    if(p.type==='potentiometer'){number('value',1,1e7);number('position',0,100);}
-    if(p.type==='slide'){if(![0,1].includes(p.position))throw new Error('스위치 위치가 올바르지 않습니다.');q.position=p.position;}
-    if(p.type==='temperature')number('temperature',-40,125);
-    if(p.type==='ultrasonic')number('distance',2,400);
-    if(p.type==='uart'){number('baud',300,2000000);if(!Number.isInteger(p.baud))throw new Error('UART 속도는 정수여야 합니다.');}
-    if(p.type==='i2c'){number('address',8,119);if(!Number.isInteger(p.address))throw new Error('I²C 주소는 정수여야 합니다.');}
-    for(const [key,[min,max]] of Object.entries(DEVICE_RANGES[p.type]||{})){number(key,min,max);if(['switch','motion'].includes(key)||p.type==='encoder'&&key==='position')if(!Number.isInteger(p[key]))throw new Error(p.name+': 정수 값을 입력하세요.');}
-    if(DEVICE_ADDRESSES[p.type]){if(!DEVICE_ADDRESSES[p.type].includes(p.address))throw new Error(p.name+': 지원하지 않는 I²C 주소입니다.');q.address=p.address;}
-    return q;
-  });
-  const end=id=>{if(base(id))return true;const m=/^part:([^:]+):([a-d]|p\d+)$/.exec(id);const p=m&&components.find(p=>p.id===m[1]);return !!p&&terminalKeys(p).includes(m[2]);};
-  const wireIds=new Set();
-  const wires=data.wires.map(w=>{
-    if(!safeId(w.id)||wireIds.has(w.id)||!end(w.from)||!end(w.to)||w.from===w.to||!/^#[0-9a-fA-F]{6}$/.test(w.color))throw new Error('배선 정보가 올바르지 않습니다.');
-    if(w.points!==undefined&&(!Array.isArray(w.points)||w.points.length>32||w.points.some(p=>!p||!Number.isFinite(p.x)||!Number.isFinite(p.y))))throw new Error('배선 꺾임점은 유효한 좌표로 32개까지 지원합니다.');
-    wireIds.add(w.id);return {id:w.id,from:w.from,to:w.to,color:w.color,...(w.points?{points:w.points.map(p=>({x:p.x,y:p.y}))}:{})};
-  });
-  // Sources are kept with \n line ends (a project saved before 1.43.0 may hold a CubeIDE file with \r\n).
-  const project={format:data.format,version:2,name:data.name,code:normalizeText(data.code),components,wires};
-  if(data.boardId!==undefined)project.boardId=data.boardId;
-  if(data.surfaces!==undefined){
-    if(!data.surfaces||typeof data.surfaces!=='object'||Array.isArray(data.surfaces))throw new Error('보드 크기 설정을 확인하세요.');
-    project.surfaces={};for(const key of ['board','breadboard'])if(data.surfaces[key]!==undefined){
-      const source=data.surfaces[key];if(!source||typeof source!=='object'||Array.isArray(source))throw new Error('보드 크기 설정을 확인하세요.');
-      const surface={};if(source.hidden!==undefined){if(typeof source.hidden!=='boolean')throw new Error('장치 표시 설정을 확인하세요.');surface.hidden=source.hidden;}for(const field of ['scale','scaleX','scaleY'])if(source[field]!==undefined)surface[field]=validScale(source[field]);
-      for(const field of ['x','y'])if(source[field]!==undefined){if(!Number.isFinite(source[field]))throw new Error('보드 위치를 확인하세요.');surface[field]=source[field];}
-      // The main STM32 board's name (STM32-1) and ST-LINK serial, kept with it when another board is edited.
-      // The main board's turn in quarter turns (absent = 0°, as in every file saved before 1.48.0).
-      if(key==='board'&&source.rotation!==undefined){if(![0,90,180,270].includes(source.rotation))throw new Error('보드 회전 각도를 확인하세요 (0, 90, 180, 270).');if(source.rotation)surface.rotation=source.rotation;}
-      if(key==='board'){if(source.name!==undefined){if(typeof source.name!=='string'||!source.name.trim()||source.name.length>80)throw new Error('보드 이름을 확인하세요.');surface.name=source.name;}Object.assign(surface,stlinkSerial(source.stlink,'보드'));}
-      project.surfaces[key]=surface;
-    }
-  }
-  if(data.mcu!==undefined){project.mcu=isRaFamily(data.mcu?.family)?validateRaMcu(data.mcu):validateMcu(data.mcu);const board=getBoard(data.boardId??DEFAULT_BOARD_ID);if(project.mcu.family!==board.mcuFamily)throw new Error(`${board.name} 보드에는 ${board.mcuFamily} 핀 설정이 필요합니다 (${project.mcu.family}).`);}
-  // What runs left in the RA data flash (feature 39, ra-data-flash.js): the programmed 4-byte units as [{at, hex}].
-  // It is not in `mcu` (the build's input), and an earlier app version opens the file without it (the key is dropped).
-  if(data.dataFlash!==undefined&&isRaFamily(project.mcu?.family)){const runs=validateDataFlash(data.dataFlash);if(runs?.length)project.dataFlash=runs;}
-  if(data.firmware!==undefined){
-    if(!data.firmware||!['sketch','hal','fsp'].includes(data.firmware.mode)||!Array.isArray(data.firmware.files)||data.firmware.files.length>MAX_SOURCE_FILES)throw new Error('펌웨어 소스 설정이 올바르지 않습니다.');
-    const names=new Set();let size=data.code.length,sdkSize=0;
-    // Feature 45: a file that started as a generated one (origin 'gen') or an STM32Cube SDK file (origin 'sdk', of: its
-    // path in the SDK) is an edited copy of it. Edited SDK files (HAL, CMSIS) have their own 4 MB beside the 1 MB.
-    const files=data.firmware.files.map(f=>{if(!f||typeof f.name!=='string'||!SOURCE_PATH.test(f.name)||nameClash(names,f.name)||typeof f.text!=='string')throw new Error('소스 파일 이름/내용을 확인하세요.');names.add(f.name.toLowerCase());
-      if(f.origin!==undefined&&f.origin!=='gen'&&f.origin!=='sdk')throw new Error(f.name+': 파일 출처를 확인하세요.');if(f.of!==undefined&&(f.origin!=='sdk'||typeof f.of!=='string'||!/^[\w./-]{1,200}$/.test(f.of)||f.of.split('/').includes('..')))throw new Error(f.name+': SDK 파일 경로를 확인하세요.');
-      // base: the generated text an edited generated file started from (the baseline when it is generated again).
-      if(f.base!==undefined&&(f.origin!=='gen'||typeof f.base!=='string'||f.base.length>300000))throw new Error(f.name+': 생성 원본을 확인하세요.');
-      if(f.origin==='sdk')sdkSize+=f.text.length;else size+=f.text.length;
-      return {name:f.name,text:normalizeText(f.text),...(f.origin?{origin:f.origin}:{}),...(f.of?{of:f.of}:{}),...(typeof f.base==='string'?{base:normalizeText(f.base)}:{})};});
-    if(size>MAX_SOURCE_BYTES)throw new Error('소스 전체는 1 MB 이하로 선택하세요.');
-    if(sdkSize>4e6)throw new Error('고친 SDK 파일은 모두 합쳐 4 MB 이하로 두세요.');
-    // Where main.c sits in an imported CubeIDE project (Core/Src): the build puts it there so its relative includes work.
-    let mainFolder;if(data.firmware.mainFolder!==undefined){if(typeof data.firmware.mainFolder!=='string'||!SOURCE_PATH.test(data.firmware.mainFolder+'/main.c'))throw new Error('main.c 폴더 경로를 확인하세요.');mainFolder=data.firmware.mainFolder;}
-    if(data.firmware.mode==='hal'&&!project.mcu)throw new Error('HAL 프로젝트에는 핀 설정이 필요합니다.');
-    // FSP projects are the Renesas RA boards' only mode (and only theirs).
-    if((data.firmware.mode==='fsp')!==isRaFamily(project.mcu?.family))throw new Error(isRaFamily(project.mcu?.family)?'Renesas RA 보드는 FSP 프로젝트로 작성합니다.':'FSP 프로젝트는 Renesas RA 보드에서만 씁니다.');
-    project.firmware={mode:data.firmware.mode,files,...(mainFolder?{mainFolder}:{})};
-  }
-  if(data.simulation!==undefined){const s=data.simulation;if(!s||typeof s!=='object'||![.1,.5,1,5,20].includes(s.stepMs)||typeof s.pwmWaveform!=='boolean')throw new Error('시뮬레이션 시간 설정이 올바르지 않습니다.');project.simulation={stepMs:s.stepMs,pwmWaveform:s.pwmWaveform};if(s.noise!==undefined)project.simulation.noise=validateNoise(s.noise);
-    // Button contact bounce (button-bounce.js): how long a press or release chatters, in ms. Absent or 0: clean buttons.
-    if(s.bounceMs!==undefined){if(!BOUNCE_MS.includes(s.bounceMs))throw new Error('버튼 채터링 시간이 올바르지 않습니다.');if(s.bounceMs)project.simulation.bounceMs=s.bounceMs;}}
-  if(data.ide!==undefined){
-    const s=data.ide,names=new Set(['main.c',...(project.firmware?.files||[]).map(f=>f.name)]);
-    if(!s||!Array.isArray(s.breakpoints)||s.breakpoints.length>1000||!Array.isArray(s.watches)||s.watches.length>20)throw new Error('디버그 설정을 확인하세요.');
-    if(s.breakpoints.some(b=>!b||!names.has(b.file)||!Number.isInteger(b.line)||b.line<1||b.line>50000)||s.watches.some(w=>typeof w!=='string'||!w.trim()||w.length>250))throw new Error('중단점 또는 감시식이 올바르지 않습니다.');
-    project.ide={breakpoints:s.breakpoints.map(b=>({file:b.file,line:b.line})),watches:[...s.watches]};
-    if(s.plots!==undefined){if(!Array.isArray(s.plots)||s.plots.length>8||s.plots.some(w=>typeof w!=='string'||!w.trim()||w.length>250)||new Set(s.plots).size!==s.plots.length)throw new Error('변수 그래프 목록이 올바르지 않습니다.');project.ide.plots=[...s.plots];}
-    if(s.native!==undefined){const n=s.native;if(!n||!['simulator','emulator','arm','host'].includes(n.target)||!['Debug','Release'].includes(n.configuration))throw new Error('IDE 실행 대상 설정을 확인하세요.');project.ide.native={target:n.target,configuration:n.configuration};
-      // Feature 54: the optimisation level of each build configuration (only what is not -O0 is stored).
-      if(n.optimization!==undefined){const optimization=buildLevelSettings(n.optimization);if(Object.keys(optimization).length)project.ide.native.optimization=optimization;}}
-  }
-  if(data.deviceDocs!==undefined){
-    const docs=data.deviceDocs;if(!docs||!Array.isArray(docs.bindings)||docs.bindings.length>100)throw new Error('장치 Docs 연결 정보를 확인하세요.');
-    const map=value=>{if(!value||typeof value!=='object'||Array.isArray(value)||Object.keys(value).length>100||Object.entries(value).some(([k,v])=>!safeId(k)||!safeId(v)))throw new Error('장치 Docs 매핑을 확인하세요.');return {...value};};
-    const keys=new Set();project.deviceDocs={bindings:docs.bindings.map(b=>{if(!b||!safeId(b.key)||keys.has(b.key)||!safeId(b.type)||typeof b.api!=='string'||b.api.length>100)throw new Error('장치 Docs 식별자를 확인하세요.');keys.add(b.key);const out={key:b.key,type:b.type,api:b.api,mode:b.mode==='baremetal'?'baremetal':'hal',parts:map(b.parts),pins:map(b.pins),peripherals:map(b.peripherals)};
-      // slot: stable name prefix of inserted globals; added: what Docs itself created, restored on removal.
-      if(b.slot!==undefined){if(!Number.isInteger(b.slot)||b.slot<0||b.slot>999)throw new Error('장치 Docs 식별자를 확인하세요.');out.slot=b.slot;}
-      if(b.added!==undefined){const a=b.added;if(!a||typeof a!=='object'||Array.isArray(a))throw new Error('장치 Docs 기록을 확인하세요.');out.added={};for(const k of ['pins','peripherals','nvic','parts','boards','wires']){const list=a[k]??[];if(!Array.isArray(list)||list.length>500||list.some(v=>!safeId(v)))throw new Error('장치 Docs 기록을 확인하세요.');out.added[k]=[...list];}}
-      return out;})};
-    for(const key of ['checksum','headerChecksum','inlineChecksum'])if(docs[key]!==undefined){if(typeof docs[key]!=='string'||!/^[a-f0-9]{1,8}$/.test(docs[key]))throw new Error('장치 Docs 소스 정보를 확인하세요.');project.deviceDocs[key]=docs[key];}
-  }
-  return project;
-}
+export const removedBoardsMessage=removed=>rustExact('removed_boards_message',removed);
+/** A checked copy of a project (version 2, sources with \n line ends); throws with the reason it cannot be used. */
+export const validateProject=data=>rustExact('validate_project',data);
 /** An empty circuit on the start board (NUCLEO-F103RB); the board itself is added from the empty-circuit guide. */
-export function startProject(){const board=getBoard(START_BOARD_ID);return {...blankProject(board.mcuFamily),boardId:board.id};}
-export function projectForBoard(id=DEFAULT_BOARD_ID){const board=getBoard(id);if(!board)throw new Error('지원하지 않는 보드입니다.');return {...blankProject(board.mcuFamily),boardId:id,surfaces:{board:{hidden:false},breadboard:{hidden:true}}};}
-// Compare document contents, not the file-save flag. Saving does not make a circuit blank.
-export function hasBoardChanges(project){
- const normalize=p=>{const q=validateProject(p);return {...q,boardId:q.boardId??DEFAULT_BOARD_ID,simulation:q.simulation??{stepMs:1,pwmWaveform:false}};};
- const stable=value=>Array.isArray(value)?value.map(stable):value&&typeof value==='object'?Object.fromEntries(Object.keys(value).sort().map(key=>[key,stable(value[key])])):value;
- const current=JSON.stringify(stable(normalize(project)));return [blankProject(),startProject(),projectForBoard(project.boardId??DEFAULT_BOARD_ID)].every(base=>current!==JSON.stringify(stable(normalize(base))));
-}
+export const startProject=()=>rustExact('start_project');
+/** An empty project of a board (the default board when none is given), with the board shown. */
+export const projectForBoard=id=>rustExact('project_for_board',id);
+/** Whether a project is more than the empty project of its board (document contents, not the file-save flag). */
+export const hasBoardChanges=project=>rustExact('has_board_changes',project);

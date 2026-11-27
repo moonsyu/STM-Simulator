@@ -158,7 +158,20 @@ static WHOLE_IDS: LazyLock<std::collections::HashSet<&'static str>> =
     LazyLock::new(|| WHOLE.iter().map(|h| h.id.as_str()).collect());
 /// Whether an id names a hole (of the built-in breadboard, or of a breadboard part of the circuit).
 fn is_hole(id: &str, components: &[Value]) -> bool {
-    if HALF_IDS.contains(id) {
+    hole_exists(id, components, false)
+}
+/// Where a hole is in the workspace with the built-in breadboard at its own place, or none for an id that is not a
+/// hole (`holeInfo(id, components)` of pins.js).
+pub(crate) fn hole_place(id: &str, components: &[Value]) -> Option<(f64, f64)> {
+    let (spots, boards) = circuit_holes(components, &Value::Null);
+    spots
+        .iter()
+        .find(|s| boards.id(s) == id)
+        .map(|s| (s.x, s.y))
+}
+/// `is_hole` for a circuit whose built-in breadboard may be hidden (its holes are then not there).
+pub(crate) fn hole_exists(id: &str, components: &[Value], built_in_hidden: bool) -> bool {
+    if HALF_IDS.contains(id) && !built_in_hidden {
         return true;
     }
     let Some(rest) = id.strip_prefix("breadboard:") else {
