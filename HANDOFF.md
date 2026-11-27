@@ -1,6 +1,14 @@
 # STM Simulator — 개발 인계
 
-현재 버전: **1.63.15**. 정리일: **2026-11-10**. NUCLEO-F446RE·NUCLEO-F103RB 또는 Renesas FPB-RA6E1(1.20.0, FSP·에뮬레이터 전용)과 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+현재 버전: **1.63.16**. 정리일: **2026-11-10**. NUCLEO-F446RE·NUCLEO-F103RB 또는 Renesas FPB-RA6E1(1.20.0, FSP·에뮬레이터 전용)과 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+
+## 1.63.16 기능 목록 62번: Rust 마이그레이션 4단계 — 추가 보드 부품
+
+- **옮긴 것**: Rust `devboards.rs` ← `devboards.js`. `devboard_model_pins`(보드 부품의 핀 목록: 헤더 핀을 보드 중심 기준으로, 내장 LED·버튼·ST-LINK·열린 브리지 안내 포함), `devboard_net`(핀이 속한 넷), `devboard_part_pins`(돌리고 키운 보드의 핀 자리와 이름), `devboard_bounds`, `devboard_next_name`, 표(`devboard_tables`).
+- `devboards.js`는 전처럼 보드 부품별(WeakMap)로 답을 기억한다. 모델의 핀 목록은 처음 쓸 때 만들며 그때의 `BOARD` 크기를 Rust로 넘긴다(옮기기 전과 같은 시점).
+- JavaScript에 남긴 것: `updateDevboardSvg`(화면 그리기), `devboardPinInfo`(기억해 둔 목록에서 찾기), `removeDevboard`(전선·부품 목록 거르기), 모델 객체를 조립하는 부분.
+- 4단계에서 남은 것: `project.js`(프로젝트 검사), 프로젝트의 부품 목록으로 찾는 조회(`pins.js`의 `endpointInfo` 등)와 `circuit-topology`·`engine`(회로를 Rust에 올려 두는 구조 — 계획 문서의 설계 메모), `wire-router`·`wire-ends`·`circuit-edit`·`circuit-diagnostics`, `catalog-*`의 모델·예제.
+- WebAssembly 크기: 약 2.16 MB → 2.18 MB.
 
 ## 1.63.15 기능 목록 62번: Rust 마이그레이션 4단계 — 꽂을 자리 찾기, 브레드보드 이동
 
