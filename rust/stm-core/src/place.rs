@@ -39,7 +39,7 @@ fn table(list: Vec<Value>) -> Vec<Hole> {
 static HALF: LazyLock<Vec<Hole>> = LazyLock::new(|| table(crate::pins::half_holes()));
 static WHOLE: LazyLock<Vec<Hole>> = LazyLock::new(|| table(crate::pins::full_holes()));
 
-fn kind(p: &Value) -> &str {
+pub(crate) fn kind(p: &Value) -> &str {
     p.get("type").and_then(Value::as_str).unwrap_or("")
 }
 fn is_full(p: &Value) -> bool {
@@ -53,7 +53,7 @@ fn field(p: &Value, key: &str, default: f64) -> f64 {
     }
 }
 /// (rotation, scaleX, scaleY, skewX) of a part or a surface.
-fn frame_of(p: &Value) -> (f64, f64, f64, f64) {
+pub(crate) fn frame_of(p: &Value) -> (f64, f64, f64, f64) {
     let both = field(p, "scale", 1.0);
     (
         field(p, "rotation", 0.0),
@@ -213,7 +213,7 @@ static TWO_PIN: LazyLock<Vec<String>> = LazyLock::new(|| {
         .collect()
 });
 /// (terminal key, anchor) of what a part is attached to.
-fn attachments(p: &Value) -> Vec<(String, Value)> {
+pub(crate) fn attachments(p: &Value) -> Vec<(String, Value)> {
     let k = kind(p);
     if TWO_PIN.iter().any(|t| t == k) {
         let keys = if catalog_two_pin(k) {

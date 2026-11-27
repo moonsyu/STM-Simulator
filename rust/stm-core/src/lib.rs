@@ -17,6 +17,7 @@ pub mod devboards;
 pub mod devdefs;
 pub mod docs_regions;
 pub mod duty;
+pub mod edit;
 pub mod explorer;
 pub mod family;
 pub mod geom;
@@ -320,6 +321,7 @@ pub fn dispatch(name: &str, args: &Value) -> Result<Value, String> {
                     .or_else(|| devboards::call(name, list))
                     .or_else(|| project::call(name, list))
                     .or_else(|| ptools::call(name, list))
+                    .or_else(|| edit::call(name, list))
             })
             .unwrap_or_else(|| Err(format!("stm-core: 알 수 없는 함수입니다: {name}"))),
     }

@@ -42,3 +42,6 @@ export function assignAttachments(p,map){detachPart(p);if(TWO_PIN_TYPES.includes
 /** What the Rust side reads of a part: its kind, place, size and what it is attached to (only what the part has). */
 const VIEWED=['id','type','name','variant','x','y','rotation','scale','scaleX','scaleY','skewX','span','electricalPins','attachA','attachB','attachments'];
 export const partView=p=>{const view={};for(const key of VIEWED)if(p[key]!==undefined)view[key]=p[key];return view;};
+/** The parts of a project as the Rust side reads them; what is not a list, or not a part, goes as it is (the Rust side
+ *  then stops where the JavaScript stopped on it). */
+export const partsView=components=>Array.isArray(components)?components.map(p=>p&&typeof p==='object'?partView(p):p):components;
