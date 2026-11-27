@@ -1,6 +1,18 @@
 # STM Simulator — 개발 인계
 
-현재 버전: **1.63.18**. 정리일: **2026-11-10**. NUCLEO-F446RE·NUCLEO-F103RB 또는 Renesas FPB-RA6E1(1.20.0, FSP·에뮬레이터 전용)과 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+현재 버전: **1.63.19**. 정리일: **2026-11-10**. NUCLEO-F446RE·NUCLEO-F103RB 또는 Renesas FPB-RA6E1(1.20.0, FSP·에뮬레이터 전용)과 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+
+## 1.63.19 기능 목록 62번: Rust 마이그레이션 4단계 — 크기 조절·보드 이동/회전·표면 제거
+
+- **옮긴 것**: Rust `edit.rs` ← `resize.js`(`resize_object`, `resize_frame`, `resize_from_handle`), `surface-move.js`(`rotate_board`, `rotate_devboard`, `move_surface`), `surfaces.js`(`remove_surface`).
+- **주고받는 것**: JavaScript 층은 프로젝트에서 부품의 종류·자리·크기·붙은 곳(`partsView`), 표면, 전선의 양 끝과 꺾임점만 보낸다. Rust는 "무엇이 어떻게 바뀌는지"를 답한다 — 크기 조절은 `{children: [{index, fields, x, y}], fields, x, y, rotation?}`, 이동·회전은 여기에 `wires: [{index, points}]`. JavaScript 층이 그 답을 프로젝트 객체에 적용한다(`resize-apply.js`의 `applyResize`).
+- **도중에 멈추는 경우**: 전의 JavaScript는 프로젝트를 바꾸다가 읽을 수 없는 값을 만나면 그 자리에서 멈췄다(앞의 것은 이미 바뀜). Rust는 답에 `error`를 함께 넣고, JavaScript 층이 거기까지 적용한 뒤 던진다 — 호출 뒤의 프로젝트가 전과 같다.
+- 주 보드의 크기(`BOARD`)는 편집 중인 보드에 따라 달라지므로 JavaScript 층이 Rust로 넘긴다.
+- JavaScript에 남긴 것: 답을 적용하는 코드, `resizeFrame`의 `point` 함수(조절점을 그릴 때의 좌표 변환), `showSurface`·`surfacePresent`, `removeSurface`의 표면 숨김과 Docs 연결 거르기.
+- 화면 코드로 남기는 것(정함): `wire-path.js`(전선의 SVG 경로 글을 만드는 그리기 코드)와 `wire-draft.js`(그리는 중인 전선의 상태).
+- `stm32-boards.js`는 실행 드라이버(`Stm32Driver`)와 한 파일이라 7단계(세션)에서 옮긴다.
+- 4단계에서 남은 것: 프로젝트의 부품 목록으로 찾는 조회(`pins.js`의 `endpointInfo` 등)와 `circuit-topology`·`engine`(회로를 Rust에 올려 두는 구조), `wire-router`·`wire-ends`·`circuit-edit`·`circuit-diagnostics`, `catalog-*`의 모델·예제.
+- WebAssembly 크기: 약 2.41 MB → 2.44 MB.
 
 ## 1.63.18 기능 목록 62번: Rust 마이그레이션 4단계 — 프로젝트 도구
 
