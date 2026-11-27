@@ -1,6 +1,16 @@
 # STM Simulator — 개발 인계
 
-현재 버전: **1.63.17**. 정리일: **2026-11-10**. NUCLEO-F446RE·NUCLEO-F103RB 또는 Renesas FPB-RA6E1(1.20.0, FSP·에뮬레이터 전용)과 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+현재 버전: **1.63.18**. 정리일: **2026-11-10**. NUCLEO-F446RE·NUCLEO-F103RB 또는 Renesas FPB-RA6E1(1.20.0, FSP·에뮬레이터 전용)과 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+
+## 1.63.18 기능 목록 62번: Rust 마이그레이션 4단계 — 프로젝트 도구
+
+- **옮긴 것**: Rust `ptools.rs` ← `code-reset.js`(`reset_main_code`: main.c를 프로젝트 종류별 시작 코드로), `board-reset.js`(`reset_board_configuration`), `firmware-import.js`(`import_firmware`: .ioc·main.c·소스·시작 코드·링커 스크립트 가져오기, .ioc만이면 main.c 다시 생성), `ioc-circuit.js`(`suggest_circuit`: Pinout에서 첫 회로 제안, `circuit_parts`: 그 부품과 전선), `ra-usb-descriptor.js`(디스크립터 글은 `data/usb_descriptor.json`, `usb_descriptor_missing`).
+- 다섯 JavaScript 파일은 같은 export로 Rust를 한 번 부르는 층이다. 프로젝트는 JavaScript가 가진 그대로 보낸다(`rustExact`).
+- **편집 중인 보드**: `suggestCircuit`·`buildCircuit`은 편집 중인 보드의 헤더 핀을 쓴다(`boardPin`). `pins.js`에 `activeBoard()`(`setActiveBoard`가 받은 id)를 두고 JavaScript 층이 그 id를 Rust로 넘긴다.
+- JavaScript에 남긴 것: `buildCircuit`이 만든 부품을 브레드보드에 놓고 배선하는 호출(`arrangeExampleOnBreadboards(physicalExample(p))` — 예제 배치 엔진은 8단계), `addUsbDescriptor`가 프로젝트 객체에 파일을 더하는 두 줄.
+- 자료 글을 Rust에 둘 때: `include_str!`은 줄 끝을 바꾸지 않으므로, Windows에서 CRLF로 내려받아지는 `.txt` 대신 `.json`(저장소 설정 `eol=lf`)에 넣는다.
+- 4단계에서 남은 것: 프로젝트의 부품 목록으로 찾는 조회(`pins.js`의 `endpointInfo` 등)와 `circuit-topology`·`engine`(회로를 Rust에 올려 두는 구조), `wire-router`·`wire-ends`·`resize`·`surface-move`·`surfaces`·`circuit-edit`·`circuit-diagnostics`, `stm32-boards`, `catalog-*`의 모델·예제.
+- WebAssembly 크기: 약 2.31 MB → 2.41 MB.
 
 ## 1.63.17 기능 목록 62번: Rust 마이그레이션 4단계 — 프로젝트 검사와 빈 프로젝트
 
