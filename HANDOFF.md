@@ -1,6 +1,24 @@
 # STM Simulator — 개발 인계
 
-현재 버전: **1.63.19**. 정리일: **2026-11-10**. NUCLEO-F446RE·NUCLEO-F103RB 또는 Renesas FPB-RA6E1(1.20.0, FSP·에뮬레이터 전용)과 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+현재 버전: **1.63.20**. 정리일: **2026-11-10**. NUCLEO-F446RE·NUCLEO-F103RB 또는 Renesas FPB-RA6E1(1.20.0, FSP·에뮬레이터 전용)과 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+
+## 1.63.20 기능 목록 62번: Rust 마이그레이션 4단계 — 회로의 넷 구성과 풀이
+
+- **옮긴 것**: Rust `circuit.rs` ← `engine.js`(`topology`, `solveCircuit`·`solveOnce`), `circuit-topology.js`(`wiringTopology`), `catalog-topology.js`(`catalogTies`), `catalog-electrical.js`(`catalogBranches`), `l298n.js`의 함수(`l298State`·`l298Branches`·`l298BranchOn`).
+- **넷은 Rust에 올려 둔다**(계획 문서 "4단계부터의 경계"의 셋째 방식): `circuit_nets(회로, 눌린 버튼)` → `{handle, ids, parent}`. Rust가 넷과 회로의 고정된 부분(부품의 id·종류, NRST 배선 여부, 보드)을 handle로 보관한다(최근 24개). JavaScript는 `ids`·`parent`로 `UnionFind`를 만들어 호출자에게 주고(`result.uf`), id가 목록의 몇 번째인지(`index`)를 기억한다.
+- **풀이**: `circuit_solve([handle, 부품별 설정, 핀, 눌린 버튼, 시간 간격·커패시터 전하·에코·엔코더 신호, 편집 중인 보드])` → `{fault, warnings, parts, current, diagnostics, capacitors, hasLed, volts, met?, inexact?}`.
+  - `volts`는 `[넷 자리, 전압, …]` 숫자 목록이다. `result.voltage(id)`는 `uf.find(id)`의 자리로 읽는다.
+  - `met`: 풀이가 처음 만난 id(구동되는 핀의 `drive:PA5` 등). JavaScript의 넷도 같은 순서로 배운다.
+  - 읽기의 `on`이 없는 부품(LED·부저가 아닌 것)은 null로 오고 JavaScript 층이 `undefined`로 되돌린다. NaN·무한대가 섞인 답은 `inexact` 표시와 함께 표식으로 온다.
+  - Rust에 handle이 없으면(`circuit nets: gone`) 넷을 다시 만들어 한 번 더 푼다.
+- **같은 요청은 다시 풀지 않는다**: 풀이는 요청만으로 정해지므로, 넷마다 직전 요청 글과 답 글을 기억해 같으면 답 글을 다시 읽는다(호출마다 새 객체). 실행 중 아무것도 바뀌지 않는 단계가 대부분이라 이 경우가 흔하다.
+- **넷을 기억하는 열쇠**(`structureKey`)와 `CircuitSimulation`(시간·다른 보드 드라이버), `digitalRead`, `UnionFind` 클래스는 `engine.js`에 그대로 있다. 카탈로그 부품을 모델로 바꾸는 `catalog-model.js`는 부품 모델 코드가 그 객체의 상태(`catalogState`)를 고치므로 7단계에서 옮긴다 — `engine.js`가 모델로 바꾼 뒤 Rust를 부른다.
+- JavaScript에서 없앤 것: `catalog-electrical.js`(파일), `l298n.js`의 함수 셋 — `engine.js`만 쓰던 것이다.
+- **숫자**: 가우스 소거의 연산 순서, 넷과 가지를 만난 순서(행렬의 자리), `Math.max`의 NaN 처리, `toFixed(1)`의 반올림을 JavaScript와 같게 했다 — 전압·전류가 비트 단위로 같다.
+- 시간(이 PC, 풀이 한 번): 입력이 그대로인 반복 풀이 24~89 µs → 8~30 µs, 입력이 바뀌는 풀이는 약 1.5~2배(빈 보드 22~30 µs → 45 µs), 넷 다시 만들기 0.1 ms → 0.4~0.7 ms. 남은 비용은 Rust 쪽 메모리 할당과 JSON 변환(61번).
+- 검사 도구: 디버그 시험 실행 파일의 증분 링크 산출물이 한 번 깨져 나온 적이 있다(1.63.19 검사, 다시 링크하면 정상). 로컬 전체 검사는 `CARGO_INCREMENTAL=0`으로 돌린다.
+- 4단계에서 남은 것: `pins.js`의 조회(`endpointInfo` 등), `wire-router`·`wire-ends`·`circuit-edit`·`circuit-diagnostics`, `catalog-*`의 모델·예제.
+- WebAssembly 크기: 약 2.44 MB → 2.58 MB.
 
 ## 1.63.19 기능 목록 62번: Rust 마이그레이션 4단계 — 크기 조절·보드 이동/회전·표면 제거
 

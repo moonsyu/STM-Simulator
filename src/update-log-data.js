@@ -1,5 +1,6 @@
 // User-facing update log shown in 도움말 → 업데이트 로그: one entry per released version (date = the release tag's commit date).
 export const UPDATE_LOG=Object.freeze([
+ {version:'1.63.20',date:'2026-11-27',items:['내부 정리: 회로의 넷 구성과 전압·전류 풀이를 Rust로 옮김 — 화면·동작은 그대로']},
  {version:'1.63.19',date:'2026-11-27',items:['내부 정리: 크기 조절, 보드 이동·회전, 표면 제거 계산을 Rust로 옮김 — 화면·동작은 그대로']},
  {version:'1.63.18',date:'2026-11-27',items:['내부 정리: 코드·보드 초기화, CubeIDE 프로젝트 가져오기, Pinout 회로 제안을 Rust로 옮김 — 화면·동작은 그대로']},
  {version:'1.63.17',date:'2026-11-27',items:['내부 정리: 프로젝트 검사와 빈 프로젝트 만들기를 Rust로 옮김 — 화면·동작은 그대로']},
