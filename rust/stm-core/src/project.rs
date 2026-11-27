@@ -19,25 +19,25 @@ use std::sync::LazyLock;
 type R<T> = Result<T, String>;
 const FORMAT: &str = "stm32-circuit-lab";
 /// What the JavaScript threw on its own when it read a property of something that is not there.
-const BROKEN: &str = "Cannot read properties of undefined";
+pub(crate) const BROKEN: &str = "Cannot read properties of undefined";
 const ZS042: &str = "ref_ds3231_zs042_10";
 const QUARTERS: [f64; 4] = [0.0, 90.0, 180.0, 270.0];
 const LED_COLORS: [&str; 4] = ["red", "green", "blue", "yellow"];
 
 // ---------- values as JavaScript sees them ----------
 
-fn undefined() -> Value {
+pub(crate) fn undefined() -> Value {
     json!({NF: "undefined"})
 }
 /// `v[key]`: none when the property is missing or `undefined` (and for a value that has no properties).
-fn get<'a>(v: &'a Value, key: &str) -> Option<&'a Value> {
+pub(crate) fn get<'a>(v: &'a Value, key: &str) -> Option<&'a Value> {
     there(v.get(key))
 }
 /// The value itself, `undefined` kept.
-fn raw(v: Option<&Value>) -> Value {
+pub(crate) fn raw(v: Option<&Value>) -> Value {
     v.cloned().unwrap_or_else(undefined)
 }
-fn text(v: Option<&Value>) -> Option<&str> {
+pub(crate) fn text(v: Option<&Value>) -> Option<&str> {
     v.and_then(Value::as_str)
 }
 /// `Number.isFinite(v)`.
@@ -59,7 +59,7 @@ fn plain(v: Option<&Value>) -> Option<&Map<String, Value>> {
         .and_then(Value::as_object)
 }
 /// `text.length`: UTF-16 code units.
-fn units(s: &str) -> usize {
+pub(crate) fn units(s: &str) -> usize {
     if s.is_ascii() {
         s.len()
     } else {
@@ -79,7 +79,7 @@ fn same(a: Option<&Value>, b: Option<&Value>) -> bool {
     }
 }
 /// `Object.entries(v)` of an object or a list.
-fn entries(v: &Value) -> Vec<(String, &Value)> {
+pub(crate) fn entries(v: &Value) -> Vec<(String, &Value)> {
     match v {
         Value::Object(o) => o.iter().map(|(k, x)| (k.clone(), x)).collect(),
         Value::Array(items) => items
@@ -92,7 +92,7 @@ fn entries(v: &Value) -> Vec<(String, &Value)> {
 }
 /// The value as `JSON.stringify` carries it: without the properties that are `undefined`, null for what is not a
 /// number (the functions that were called with plain JSON before get it so).
-fn as_json(v: &Value) -> Value {
+pub(crate) fn as_json(v: &Value) -> Value {
     if there(Some(v)).is_none() {
         return Value::Null;
     }
@@ -125,7 +125,7 @@ fn fail<T>(message: impl Into<String>) -> R<T> {
 
 static BOARDS: LazyLock<Value> = LazyLock::new(crate::boards::catalog);
 /// `getBoard(id)`.
-fn board(id: Option<&Value>) -> Option<&'static Value> {
+pub(crate) fn board(id: Option<&Value>) -> Option<&'static Value> {
     let id = text(id)?;
     BOARDS
         .as_array()?

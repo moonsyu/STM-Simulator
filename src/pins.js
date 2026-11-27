@@ -28,8 +28,11 @@ export function boardPins(boardId){
 // Every board's pins (ids differ between NUCLEO and FPB layouts; NUCLEO variants are overwritten by setActiveBoard).
 export const PIN_BY_ID = new Map([...FPB_PINS,...NUCLEO_PINS].map(p=>[p.id,p]));
 // Header pins of the board being edited: labels, the NC check and pin search follow it (NUCLEO-F103RB: PD0/PD1, PB11).
-let activePins=NUCLEO_PINS;
+let activePins=NUCLEO_PINS,activeId;
+/** The id of the board being edited, as setActiveBoard was given it (undefined before that: the NUCLEO-F446RE pins). */
+export const activeBoard=()=>activeId;
 export function setActiveBoard(boardId){
+  activeId=boardId;
   const pins=boardPins(boardId);if(pins===activePins)return;activePins=pins;for(const p of pins)PIN_BY_ID.set(p.id,p);
   PINS.splice(0,PINS.length,...pins);Object.assign(BOARD,BOARD_SIZES[boardId]??NUCLEO_SIZE);
   GPIO_PINS.splice(0,GPIO_PINS.length,...(Object.hasOwn(TABLES.GPIO_BY_BOARD,boardId??'')?TABLES.GPIO_BY_BOARD[boardId]:TABLES.GPIO_PINS));
