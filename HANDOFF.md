@@ -1,6 +1,18 @@
 # STM Simulator — 개발 인계
 
-현재 버전: **1.63.16**. 정리일: **2026-11-10**. NUCLEO-F446RE·NUCLEO-F103RB 또는 Renesas FPB-RA6E1(1.20.0, FSP·에뮬레이터 전용)과 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+현재 버전: **1.63.17**. 정리일: **2026-11-10**. NUCLEO-F446RE·NUCLEO-F103RB 또는 Renesas FPB-RA6E1(1.20.0, FSP·에뮬레이터 전용)과 빵판을 연결하고 HAL C 소스를 해석 실행하거나, ARM GCC로 빌드한 ELF를 Cortex-M 에뮬레이터(STM32F446·STM32F103 모델)에서 실행하는 Windows 학습용 IDE다. 사용자에게는 한국어 존댓말로 응답한다. 공개 릴리스와 로컬 구현 버전을 구분한다.
+
+## 1.63.17 기능 목록 62번: Rust 마이그레이션 4단계 — 프로젝트 검사와 빈 프로젝트
+
+- **옮긴 것**: Rust `project.rs` ← `project.js`(27 KB → 호출 층 2 KB). `validate_project`(프로젝트를 열거나 붙여 넣거나 고칠 때마다 거치는 검사: 부품·전선·표면·핀 설정·소스·시뮬레이션·디버그·장치 Docs·데이터 플래시, 버전 1 파일 옮기기, ZS-042 핀 옮기기, 추가 STM32 보드를 프로젝트 하나로 검사), `blank_project`·`example_project`·`start_project`·`project_for_board`(빈 프로젝트), `strip_unsupported_boards`·`removed_boards_message`(지원이 끝난 보드 빼기와 안내문), `has_board_changes`.
+- 검사가 쓰는 작은 검사도 `project.rs`에 있다: `validate_noise`(signals.js), `valid_card_image`(sdcard.js), `valid_camera_image`(camera.js), `validate_data_flash`(ra-data-flash.js). 그 JavaScript 모듈들의 같은 함수는 아직 그대로이며, 그 모듈이 옮겨질 때 Rust 것을 쓰도록 바꾼다.
+- **한 번의 호출**: 전에는 JavaScript가 검사하면서 핀 설정 검사·소스 줄 끝 정리·이름 충돌 검사마다 Rust를 따로 불렀다. 지금은 프로젝트를 JavaScript가 가진 그대로(`rustExact`: undefined와 숫자가 아닌 값을 없는 값·null과 구분) 한 번 보내고 깨끗한 사본을 받는다. 그래서 같은 입력을 같은 문구로 거절한다.
+- `stripUnsupportedBoards`는 뺀 것이 없으면 받은 객체를 그대로 돌려준다(전과 같음; Rust는 `{removed: null}`만 답한다).
+- 새 프로젝트의 main.c에서 생성기의 UART 인사말 두 줄을 빼는 일은 정규식 대신 줄 비교로 한다. `normalize_text`는 \r이 없는 글을 한 번만 복사한다.
+- `place.rs`의 `hole_exists`(내장 브레드보드가 숨겨졌으면 그 구멍은 없다)·`hole_place`를 프로젝트 검사가 쓴다.
+- 시간(이 PC, 검사 한 번): 빈 프로젝트 0.26 → 0.29 ms, 가장 큰 예제(24 KB) 0.19 → 0.20 ms, 소스 1 MB(파일 40개) 9.1 → 11.4 ms, hasBoardChanges 5.5 → 5.0 ms. 소스가 큰 프로젝트에서 느려진 것은 프로젝트 전체를 JSON 값으로 만드는 비용이다(61번에서 다룬다).
+- 4단계에서 남은 것: 프로젝트의 부품 목록으로 찾는 조회(`pins.js`의 `endpointInfo` 등)와 `circuit-topology`·`engine`(회로를 Rust에 올려 두는 구조 — 계획 문서의 설계 메모), `wire-router`·`wire-ends`·`circuit-edit`·`circuit-diagnostics`, `catalog-*`의 모델·예제.
+- WebAssembly 크기: 약 2.18 MB → 2.31 MB.
 
 ## 1.63.16 기능 목록 62번: Rust 마이그레이션 4단계 — 추가 보드 부품
 
